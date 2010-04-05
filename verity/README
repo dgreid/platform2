@@ -1,0 +1,8 @@
+Verity creates integrity hashes for binary blobs.
+
+Verity is the userspace component for dm-verity.  It creates integrity
+hashes for a given filesystem image file.  For the details of the
+design, see [1].  It is meant to be run in the build environment and not
+on the target device.
+
+[1] http://www.chromium.org/chromium-os/chromiumos-design-docs/verified-boot
