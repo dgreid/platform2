@@ -1,0 +1,36 @@
+/* Copyright (C) 2010 The Chromium OS Authors. All rights reserved.
+ * Use of this source code is governed by the GPL v2 license that can
+ * be found in the LICENSE file.
+ * 
+ * Parts of this file are derived from the Linux kernel from the file with
+ * the same name and path under include/.
+ */
+#ifndef VERITY_INCLUDE_LINUX_CRYPTO_H_
+#define VERITY_INCLUDE_LINUX_CRYPTO_H_
+
+#include <linux/types.h>
+#include <openssl/evp.h>
+
+#define CRYPTO_MAX_ALG_NAME 64
+struct hash_tfm {
+	const EVP_MD *impl;
+	EVP_MD_CTX ctx;
+};
+
+struct hash_desc {
+	struct hash_tfm *tfm;
+};
+
+struct scatterlist;
+
+struct hash_tfm *crypto_alloc_hash(const char *alg_name, int a, int b);
+void crypto_free_hash(struct hash_tfm *tfm);
+unsigned int crypto_hash_digestsize(struct hash_tfm *tfm);
+int crypto_hash_init(struct hash_desc *h);
+int crypto_hash_digest(struct hash_desc *h, struct scatterlist *sg,
+		       unsigned int sz, u8 *dst);
+int crypto_hash_update(struct hash_desc *h, struct scatterlist *sg,
+		       unsigned int size);
+int crypto_hash_final(struct hash_desc *h, u8 *dst);
+
+#endif  /* VERITY_INCLUDE_LINUX_CRYPTO_H_ */
