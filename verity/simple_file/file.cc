@@ -138,7 +138,7 @@ bool File::WriteAt(int bytes, const uint8_t *buf, off_t offset) {
     return true;
   }
   if (out_bytes < 0) {
-    PLOG(ERROR) << "An error occurred writing to the file";
+    PLOG(ERROR) << "An error occurred writing to the file at " << offset;
     return false;
   }
   DLOG(INFO) << "Failed to write the total number of bytes requested.";

@@ -142,14 +142,23 @@ TEST_F(MemoryBhtTest, CreateThenVerifyOk) {
                     digest_size);
 
   unsigned int blocks = kTotalBlocks;
-  do {
-    EXPECT_GE(dm_bht_populate(bht_.get(),
-                              reinterpret_cast<void *>(this),
-                              blocks - 1),
-              DM_BHT_ENTRY_READY);
+  while (blocks-- > 0) {
+    if ((blocks % bht_->node_count) == bht_->node_count - 1) {
+      EXPECT_GE(dm_bht_populate(bht_.get(),
+                                reinterpret_cast<void *>(this),
+                                blocks),
+                DM_BHT_ENTRY_REQUESTED);
+      // Since we're testing synchronously, a second run through should yield
+      // READY.
+      EXPECT_GE(dm_bht_populate(bht_.get(),
+                                reinterpret_cast<void *>(this),
+                                blocks),
+                DM_BHT_ENTRY_READY);
+    }
+    LOG(INFO) << "verifying block: " << blocks;
     EXPECT_EQ(0, dm_bht_verify_block(bht_.get(),
-                                     blocks - 1, digest, digest_size));
-  } while (--blocks > 0);
+                                     blocks, digest, digest_size));
+  }
 
   EXPECT_EQ(0, dm_bht_destroy(bht_.get()));
 }
@@ -164,13 +173,21 @@ TEST_F(MemoryBhtTest, CreateThenVerifyBad) {
 
   // Load the tree from the pre-populated hash data
   unsigned int blocks = kTotalBlocks;
-  do {
-    EXPECT_GE(dm_bht_populate(bht_.get(),
-                              reinterpret_cast<void *>(this),
-                              blocks - 1),
-              DM_BHT_ENTRY_READY);
-    // TODO(wad) add tests for partial tree validity/verification
-  } while (--blocks > 0);
+  while (blocks-- > 0) {
+    if ((blocks % bht_->node_count) == 0) {
+      EXPECT_GE(dm_bht_populate(bht_.get(),
+                                reinterpret_cast<void *>(this),
+                                blocks),
+                DM_BHT_ENTRY_REQUESTED);
+      // Since we're testing synchronously, a second run through should yield
+      // READY.
+      EXPECT_GE(dm_bht_populate(bht_.get(),
+                                reinterpret_cast<void *>(this),
+                                blocks),
+                DM_BHT_ENTRY_READY);
+    }
+  }
+  // TODO(wad) add tests for partial tree validity/verification
 
   // Corrupt one block value
   static const unsigned int kBadBlock = 256;
@@ -188,18 +205,27 @@ TEST_F(MemoryBhtTest, CreateThenVerifyBad) {
                     reinterpret_cast<const u8 *>(kZeroDigest),
                     digest_size);
 
+  // Attempt to verify both the bad block and all the neighbors.
   EXPECT_LT(dm_bht_verify_block(bht_.get(), kBadBlock + 1, digest, digest_size),
             0);
 
   EXPECT_LT(dm_bht_verify_block(bht_.get(), kBadBlock + 2, digest, digest_size),
             0);
 
-  EXPECT_LT(dm_bht_verify_block(bht_.get(), kBadBlock - 1, digest, digest_size),
+  EXPECT_LT(dm_bht_verify_block(bht_.get(), kBadBlock + (bht_->node_count / 2),
+                                digest, digest_size),
             0);
 
   EXPECT_LT(dm_bht_verify_block(bht_.get(), kBadBlock, digest, digest_size), 0);
 
+  // Verify that the prior entry is untouched and still safe
+  EXPECT_EQ(dm_bht_verify_block(bht_.get(), kBadBlock - 1, digest, digest_size),
+            0);
 
+  // Same for the next entry
+  EXPECT_EQ(dm_bht_verify_block(bht_.get(), kBadBlock + bht_->node_count,
+                                digest, digest_size),
+            0);
 
   EXPECT_EQ(0, dm_bht_destroy(bht_.get()));
 }

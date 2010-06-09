@@ -166,9 +166,9 @@ endif
 #  CXXFLAGS := $(filter-out badflag,$(CXXFLAGS)) # Filter out a value
 # The same goes for CFLAGS.
 CXXFLAGS := $(CXXFLAGS) -Wall -Werror -fstack-protector-all  -DFORTIFY_SOURCE \
-  -O2 -ggdb3 -DNDEBUG=1 -Wa,--noexecstack
+  -O2 -ggdb3 -DNDEBUG -Wa,--noexecstack
 CFLAGS := $(CFLAGS) -Wall -Werror -fstack-protector-all -DFORTIFY_SOURCE \
-  -O2 -ggdb3 -DNDEBUG=1 -Wa,--noexecstack
+  -O2 -ggdb3 -DNDEBUG -Wa,--noexecstack
 
 ifeq ($(PROFILING),1)
   CFLAGS := -pg 

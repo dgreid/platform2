@@ -6,7 +6,7 @@
  * compatibility with files under SRC/include.
  */
 
-#include <asm/bug.h>
+#include <linux/bug.h>
 #include <linux/scatterlist.h>
 #include <linux/crypto.h>
 #include <openssl/evp.h>
@@ -28,9 +28,11 @@ struct hash_tfm *crypto_alloc_hash(const char *alg_name, int a, int b)
 
 void crypto_free_hash(struct hash_tfm *tfm) 
 {
-	free(tfm);
-	if (--crypto_refs == 0)
-		EVP_cleanup();
+	if (tfm) {
+		free(tfm);
+		if (--crypto_refs == 0)
+			EVP_cleanup();
+	}
 }
 
 unsigned int crypto_hash_digestsize(struct hash_tfm *tfm) 
@@ -42,27 +44,30 @@ unsigned int crypto_hash_digestsize(struct hash_tfm *tfm)
 	return len;
 }
 
-int crypto_hash_init(struct hash_desc *h) 
+int crypto_hash_init(struct hash_desc *h)
 {
 	EVP_MD_CTX_init(&h->tfm->ctx);
-  	EVP_DigestInit_ex(&h->tfm->ctx, h->tfm->impl, NULL);
+	EVP_DigestInit_ex(&h->tfm->ctx, h->tfm->impl, NULL);
 	return 0;
 }
 
 int crypto_hash_digest(struct hash_desc *h, struct scatterlist *sg,
-		       unsigned int sz, u8 *dst) 
+		       unsigned int sz, u8 *dst)
 {
 	unsigned int available = 0;
 	char *buffer = (char *)(sg->buffer) + sg->offset;
-	EVP_DigestUpdate(&h->tfm->ctx, buffer, sg->length);
+	EVP_DigestUpdate(&h->tfm->ctx, buffer, sg->length - sg->offset);
 	EVP_DigestFinal_ex(&h->tfm->ctx, dst, &available);
 	EVP_MD_CTX_cleanup(&h->tfm->ctx);
+	BUG_ON(available > sz);
 	return 0;
 }
 
-int crypto_hash_update(struct hash_desc *h, struct scatterlist *sg, unsigned int size) {
+int crypto_hash_update(struct hash_desc *h, struct scatterlist *sg,
+		       unsigned int size)
+{
 	char *buffer = (char *)(sg->buffer) + sg->offset;
-	EVP_DigestUpdate(&h->tfm->ctx, buffer, sg->length);
+	EVP_DigestUpdate(&h->tfm->ctx, buffer, sg->length - sg->offset);
 	return 0;
 }
 
@@ -70,7 +75,5 @@ int crypto_hash_final(struct hash_desc *h, u8 *dst) {
 	unsigned int available = 0;
 	EVP_DigestFinal_ex(&h->tfm->ctx, dst, &available);
 	EVP_MD_CTX_cleanup(&h->tfm->ctx);
-	/* We go ahead and free the sg list here since our usage
-	 * pattern allows it. */
 	return 0;
 }

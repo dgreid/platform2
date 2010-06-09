@@ -84,6 +84,9 @@ bool FileHasher::Initialize(simple_file::File *source,
   dm_bht_set_write_cb(&tree_, FileHasher::WriteCallback);
   // No reading is needed.
   dm_bht_set_read_cb(&tree_, dm_bht_zeroread_callback);
+  // Ensure that we don't use the bitmaps otherwise the
+  // hashes will be wrong in intermediate nodes.
+  dm_bht_set_verify_mode(&tree_, DM_BHT_FULL_REVERIFY);
 
   return true;
 }

@@ -21,5 +21,6 @@ void *kcalloc(size_t n, size_t sz, int flags)
 
 void kfree(void *x) 
 {
-	free(x);
+	if (x)
+		free(x);
 }

@@ -8,7 +8,7 @@
 
 #include <stdlib.h>
 
-#include <asm/bug.h>
+#include <linux/bug.h>
 #include <linux/scatterlist.h>
 
 void sg_init_table(struct scatterlist *sg, int pages) 
