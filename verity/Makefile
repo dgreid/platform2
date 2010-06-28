@@ -16,12 +16,10 @@ CXXFLAGS := -Iinclude -I../ $(CXXFLAGS)
 # Use openssl for digests
 LDFLAGS += -lcrypto
 
-ifneq ($(CHROME_OS),0)
-  CXXFLAGS += -DCHROME_OS=1
+ifneq ($(WITH_CHROME),0)
+  CXXFLAGS += -DWITH_CHROME=1
   LDFLAGS += -lpthread -lrt -L/usr/lib -lbase
-  CHROME_OS = 1
-else
-  LDFLAGS += -lglog
+  WITH_CHROME = 1
 endif
 
 # Helper so I can type "make verity" on the prompt
@@ -67,17 +65,23 @@ $(OUT)libdm-bht.so: $(filter-out %verity_main.o,$(C_OBJECTS)) \
 all: $(OUT)libdm-bht.so
 RM_ON_CLEAN += $(OUT)libdm-bht.so
 
-# For this project, only the unittests are CXX
-$(OUT)verity_testrunner: $(filter-out %_main.o,$(CXX_OBJECTS)) \
-                         $(OUT)simple_file/libsimple_file-pie.a \
-                         $(OUT)kernel/libkernel-pie.a
+# Tests require libchrome
+ifneq ($(WITH_CHROME),0)
+  # For this project, only the unittests are CXX
+  $(OUT)verity_testrunner: $(filter-out %_main.o,$(CXX_OBJECTS)) \
+                           $(OUT)simple_file/libsimple_file-pie.a \
+                           $(OUT)kernel/libkernel-pie.a
 	$(call cxx_binary,-lgtest -lgmock)
 
-all: $(OUT)verity_testrunner
-RM_ON_CLEAN += $(OUT)verity_testrunner
-# Will run each prerequisite for tests.
-# If cross-compiled, this is done against the correct architecture.
-small_tests: $(OUT)verity_testrunner
+  all: $(OUT)verity_testrunner
+  RM_ON_CLEAN += $(OUT)verity_testrunner
+  # Will run each prerequisite for tests.
+  # If cross-compiled, this is done against the correct architecture.
+  small_tests: $(OUT)verity_testrunner
 
-# No large tests here so we use the NONE target.
-large_tests: NONE
+  # No large tests here so we use the NONE target.
+  large_tests: NONE
+else
+  small_tests: NONE
+  large_tests: NONE
+endif

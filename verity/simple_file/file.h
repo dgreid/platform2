@@ -8,6 +8,7 @@
 #define VERITY_SIMPLE_FILE_FILE_H__ 1
 
 #include <fcntl.h>
+#include <inttypes.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>

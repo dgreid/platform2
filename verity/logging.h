@@ -3,10 +3,10 @@
 // be found in the LICENSE file.
 //
 // Includes the correct logging library, either google-log or chrome logging.
-#ifndef VERITY_LOGGING_H__
-#define VERITY_LOGGING_H__ 1
+#ifndef VERITY_LOGGING_H_
+#define VERITY_LOGGING_H_
 
-#if defined(CHROME_OS)
+#if defined(WITH_CHROME)
 #  include <base/logging.h>
 #  define INIT_LOGGING(name, flags...) { \
    logging::InitLogging(NULL, \
@@ -15,8 +15,8 @@
                        logging::APPEND_TO_OLD_LOG_FILE); \
    }
 #else
-#  include <glog/logging.h>
-#  define INIT_LOGGING(name, ...) { google::InitGoogleLogging(name); }
+#  include "verity/logging/logging.h"
+#  define INIT_LOGGING(name, flags...) { }
 #endif
 
-#endif   // VERITY_LOGGING_H__
+#endif   // VERITY_LOGGING_H_

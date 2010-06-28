@@ -25,8 +25,7 @@ device.
 
 
 To build outside of Chromium OS:
-- install google-log
-- make all CHROME_OS=0  # it'll fail on the test building.
+- make all WITH_CHROME=0
 
 To use:
 
