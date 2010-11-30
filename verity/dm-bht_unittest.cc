@@ -118,6 +118,20 @@ class MemoryBhtTest : public ::testing::Test {
     // bht is now dead and mbht_ is a prepared hash image
 
     NewBht(depth, total_blocks, digest_algorithm);
+
+    // Load the tree from the pre-populated hash data
+    for (blocks = 0; blocks < total_blocks; blocks += bht_->node_count) {
+      EXPECT_GE(dm_bht_populate(bht_.get(),
+                                reinterpret_cast<void *>(this),
+                                blocks),
+                DM_BHT_ENTRY_REQUESTED);
+      // Since we're testing synchronously, a second run through should yield
+      // READY.
+      EXPECT_GE(dm_bht_populate(bht_.get(),
+                                reinterpret_cast<void *>(this),
+                                blocks),
+                DM_BHT_ENTRY_READY);
+    }
   }
 
   scoped_ptr<struct dm_bht> bht_;
@@ -127,37 +141,25 @@ class MemoryBhtTest : public ::testing::Test {
 
 TEST_F(MemoryBhtTest, CreateThenVerifyOk) {
   static const unsigned int total_blocks = 16384;
-  SetupBht(2, total_blocks, "sha256");
   // Set the root hash for a 0-filled image
   static const char kRootDigest[] =
     "45d65d6f9e5a962f4d80b5f1bd7a918152251c27bdad8c5f52b590c129833372";
-  dm_bht_set_root_hexdigest(bht_.get(),
-                            reinterpret_cast<const u8 *>(kRootDigest));
-
   // This should match what dm_bht_store_block computed earlier.
   static const char kZeroDigest[] =
     "ad7facb2586fc6e966c004d7d1d16b024f5805ff7cb47c7a85dabd8b48892ca7";
   u8 digest[(sizeof(kZeroDigest) - 1) >> 1];
   // TODO(wad) write a test for hex_to_bin and bin_to_hex
   unsigned int digest_size = strlen(kZeroDigest) >> 1;
+
   dm_bht_hex_to_bin(digest,
                     reinterpret_cast<const u8 *>(kZeroDigest),
                     digest_size);
 
-  // Load the tree from the pre-populated hash data
+  SetupBht(2, total_blocks, "sha256");
+  dm_bht_set_root_hexdigest(bht_.get(),
+                            reinterpret_cast<const u8 *>(kRootDigest));
+
   for (unsigned int blocks = 0; blocks < total_blocks; ++blocks) {
-    if ((blocks % bht_->node_count) == 0) {
-      EXPECT_GE(dm_bht_populate(bht_.get(),
-                                reinterpret_cast<void *>(this),
-                                blocks),
-                DM_BHT_ENTRY_REQUESTED);
-      // Since we're testing synchronously, a second run through should yield
-      // READY.
-      EXPECT_GE(dm_bht_populate(bht_.get(),
-                                reinterpret_cast<void *>(this),
-                                blocks),
-                DM_BHT_ENTRY_READY);
-    }
     LOG(INFO) << "verifying block: " << blocks;
     EXPECT_EQ(0, dm_bht_verify_block(bht_.get(), blocks, digest, digest_size));
   }
@@ -167,37 +169,25 @@ TEST_F(MemoryBhtTest, CreateThenVerifyOk) {
 
 TEST_F(MemoryBhtTest, CreateThenVerifyMultipleLevels) {
   static const unsigned int total_blocks = 16384;
-  SetupBht(4, total_blocks, "sha256");
   // Set the root hash for a 0-filled image
   static const char kRootDigest[] =
     "c86619624d3456f711dbb94d4ad79a4b029f6fd3b5a4a90b155c856bf5b3409b";
-  dm_bht_set_root_hexdigest(bht_.get(),
-                            reinterpret_cast<const u8 *>(kRootDigest));
-
   // This should match what dm_bht_store_block computed earlier.
   static const char kZeroDigest[] =
     "ad7facb2586fc6e966c004d7d1d16b024f5805ff7cb47c7a85dabd8b48892ca7";
   u8 digest[(sizeof(kZeroDigest) - 1) >> 1];
   // TODO(wad) write a test for hex_to_bin and bin_to_hex
   unsigned int digest_size = strlen(kZeroDigest) >> 1;
+
   dm_bht_hex_to_bin(digest,
                     reinterpret_cast<const u8 *>(kZeroDigest),
                     digest_size);
 
-  // Load the tree from the pre-populated hash data
-  for (unsigned int blocks = 0; blocks < total_blocks; blocks++) {
-    if ((blocks % bht_->node_count) == 0) {
-      EXPECT_GE(dm_bht_populate(bht_.get(),
-                                reinterpret_cast<void *>(this),
-                                blocks),
-                DM_BHT_ENTRY_REQUESTED);
-      // Since we're testing synchronously, a second run through should yield
-      // READY.
-      EXPECT_GE(dm_bht_populate(bht_.get(),
-                                reinterpret_cast<void *>(this),
-                                blocks),
-                DM_BHT_ENTRY_READY);
-    }
+  SetupBht(4, total_blocks, "sha256");
+  dm_bht_set_root_hexdigest(bht_.get(),
+                            reinterpret_cast<const u8 *>(kRootDigest));
+
+  for (unsigned int blocks = 0; blocks < total_blocks; ++blocks) {
     LOG(INFO) << "verifying block: " << blocks;
     EXPECT_EQ(0, dm_bht_verify_block(bht_.get(), blocks, digest, digest_size));
   }
@@ -214,21 +204,6 @@ TEST_F(MemoryBhtTest, CreateThenVerifyBad) {
   dm_bht_set_root_hexdigest(bht_.get(),
                             reinterpret_cast<const u8 *>(kRootDigest));
 
-  // Load the tree from the pre-populated hash data
-  for (unsigned int blocks = 0; blocks < total_blocks; blocks++) {
-    if ((blocks % bht_->node_count) == 0) {
-      EXPECT_GE(dm_bht_populate(bht_.get(),
-                                reinterpret_cast<void *>(this),
-                                blocks),
-                DM_BHT_ENTRY_REQUESTED);
-      // Since we're testing synchronously, a second run through should yield
-      // READY.
-      EXPECT_GE(dm_bht_populate(bht_.get(),
-                                reinterpret_cast<void *>(this),
-                                blocks),
-                DM_BHT_ENTRY_READY);
-    }
-  }
   // TODO(wad) add tests for partial tree validity/verification
 
   // Corrupt one block value
