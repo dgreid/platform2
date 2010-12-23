@@ -31,8 +31,15 @@ TEST(DmBht, CreateFailOnOverflow) {
 TEST(DmBht, CreateZeroPopulateDestroy) {
   struct dm_bht bht;
   // This should fail.
-  EXPECT_EQ(0, dm_bht_create(&bht, 2, 16384, "sha256"));
+  unsigned int blocks = 16384;
+  u8 data[PAGE_SIZE];
+  // Store all the block hashes of blocks of 0.
+  memset(reinterpret_cast<void *>(data), 0, sizeof(data));
+  EXPECT_EQ(0, dm_bht_create(&bht, 2, blocks, "sha256"));
   dm_bht_set_read_cb(&bht, dm_bht_zeroread_callback);
+  do {
+    EXPECT_EQ(dm_bht_store_block(&bht, blocks - 1, data), 0);
+  } while (--blocks > 0);
   EXPECT_EQ(0, dm_bht_compute(&bht, NULL));
   EXPECT_EQ(0, dm_bht_destroy(&bht));
 }
