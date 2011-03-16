@@ -107,9 +107,7 @@ class MemoryBhtTest : public ::testing::Test {
                 const char *digest_algorithm) {
     NewBht(depth, total_blocks, digest_algorithm);
 
-    u8 data[PAGE_SIZE];
-    // Store all the block hashes of blocks of 0.
-    memset(reinterpret_cast<void *>(data), 0, sizeof(data));
+    u8 data[PAGE_SIZE] = { 0 };
     unsigned int blocks = total_blocks;
     do {
       EXPECT_EQ(dm_bht_store_block(bht_.get(), blocks - 1, data), 0);
@@ -151,16 +149,8 @@ TEST_F(MemoryBhtTest, CreateThenVerifyOk) {
   // Set the root hash for a 0-filled image
   static const char kRootDigest[] =
     "45d65d6f9e5a962f4d80b5f1bd7a918152251c27bdad8c5f52b590c129833372";
-  // This should match what dm_bht_store_block computed earlier.
-  static const char kZeroDigest[] =
-    "ad7facb2586fc6e966c004d7d1d16b024f5805ff7cb47c7a85dabd8b48892ca7";
-  u8 digest[(sizeof(kZeroDigest) - 1) >> 1];
-  // TODO(wad) write a test for hex_to_bin and bin_to_hex
-  unsigned int digest_size = strlen(kZeroDigest) >> 1;
-
-  dm_bht_hex_to_bin(digest,
-                    reinterpret_cast<const u8 *>(kZeroDigest),
-                    digest_size);
+  // A page of all zeros
+  static const char kZeroPage[PAGE_SIZE] = { 0 };
 
   SetupBht(2, total_blocks, "sha256");
   dm_bht_set_root_hexdigest(bht_.get(),
@@ -168,7 +158,7 @@ TEST_F(MemoryBhtTest, CreateThenVerifyOk) {
 
   for (unsigned int blocks = 0; blocks < total_blocks; ++blocks) {
     DLOG(INFO) << "verifying block: " << blocks;
-    EXPECT_EQ(0, dm_bht_verify_block(bht_.get(), blocks, digest, digest_size));
+    EXPECT_EQ(0, dm_bht_verify_block(bht_.get(), blocks, kZeroPage));
   }
 
   EXPECT_EQ(0, dm_bht_destroy(bht_.get()));
@@ -179,16 +169,8 @@ TEST_F(MemoryBhtTest, CreateThenVerifyMultipleLevels) {
   // Set the root hash for a 0-filled image
   static const char kRootDigest[] =
     "c86619624d3456f711dbb94d4ad79a4b029f6fd3b5a4a90b155c856bf5b3409b";
-  // This should match what dm_bht_store_block computed earlier.
-  static const char kZeroDigest[] =
-    "ad7facb2586fc6e966c004d7d1d16b024f5805ff7cb47c7a85dabd8b48892ca7";
-  u8 digest[(sizeof(kZeroDigest) - 1) >> 1];
-  // TODO(wad) write a test for hex_to_bin and bin_to_hex
-  unsigned int digest_size = strlen(kZeroDigest) >> 1;
-
-  dm_bht_hex_to_bin(digest,
-                    reinterpret_cast<const u8 *>(kZeroDigest),
-                    digest_size);
+  // A page of all zeros
+  static const char kZeroPage[PAGE_SIZE] = { 0 };
 
   SetupBht(4, total_blocks, "sha256");
   dm_bht_set_root_hexdigest(bht_.get(),
@@ -196,7 +178,7 @@ TEST_F(MemoryBhtTest, CreateThenVerifyMultipleLevels) {
 
   for (unsigned int blocks = 0; blocks < total_blocks; ++blocks) {
     DLOG(INFO) << "verifying block: " << blocks;
-    EXPECT_EQ(0, dm_bht_verify_block(bht_.get(), blocks, digest, digest_size));
+    EXPECT_EQ(0, dm_bht_verify_block(bht_.get(), blocks, kZeroPage));
   }
 
   EXPECT_EQ(0, dm_bht_destroy(bht_.get()));
@@ -207,16 +189,8 @@ TEST_F(MemoryBhtTest, CreateThenVerifyOddCount) {
   // Set the root hash for a 0-filled image
   static const char kRootDigest[] =
     "c78d187c430465bd7831fe4908247b6ab5107e3a826d933b71e85aa9a932e03c";
-  // This should match what dm_bht_store_block computed earlier.
-  static const char kZeroDigest[] =
-    "ad7facb2586fc6e966c004d7d1d16b024f5805ff7cb47c7a85dabd8b48892ca7";
-  u8 digest[(sizeof(kZeroDigest) - 1) >> 1];
-  // TODO(wad) write a test for hex_to_bin and bin_to_hex
-  unsigned int digest_size = strlen(kZeroDigest) >> 1;
-
-  dm_bht_hex_to_bin(digest,
-                    reinterpret_cast<const u8 *>(kZeroDigest),
-                    digest_size);
+  // A page of all zeros
+  static const char kZeroPage[PAGE_SIZE] = { 0 };
 
   SetupBht(4, total_blocks, "sha256");
   dm_bht_set_root_hexdigest(bht_.get(),
@@ -224,15 +198,17 @@ TEST_F(MemoryBhtTest, CreateThenVerifyOddCount) {
 
   for (unsigned int blocks = 0; blocks < total_blocks; ++blocks) {
     DLOG(INFO) << "verifying block: " << blocks;
-    EXPECT_EQ(0, dm_bht_verify_block(bht_.get(), blocks, digest, digest_size));
+    EXPECT_EQ(0, dm_bht_verify_block(bht_.get(), blocks, kZeroPage));
   }
 
   EXPECT_EQ(0, dm_bht_destroy(bht_.get()));
 }
 
-TEST_F(MemoryBhtTest, CreateThenVerifyBad) {
+TEST_F(MemoryBhtTest, CreateThenVerifyBadHashBlock) {
   static const unsigned int total_blocks = 16384;
   SetupBht(2, total_blocks, "sha256");
+  // A page of all zeros
+  static const char kZeroPage[PAGE_SIZE] = { 0 };
   // Set the root hash for a 0-filled image
   static const char kRootDigest[] =
     "45d65d6f9e5a962f4d80b5f1bd7a918152251c27bdad8c5f52b590c129833372";
@@ -241,43 +217,51 @@ TEST_F(MemoryBhtTest, CreateThenVerifyBad) {
 
   // TODO(wad) add tests for partial tree validity/verification
 
-  // Corrupt one block value
+  // Corrupt one has hblock
   static const unsigned int kBadBlock = 256;
   u8 data[PAGE_SIZE];
   memset(reinterpret_cast<void *>(data), 'A', sizeof(data));
   EXPECT_EQ(dm_bht_store_block(bht_.get(), kBadBlock, data), 0);
 
-  // This should match what dm_bht_store_block computed earlier.
-  static const char kZeroDigest[] =
-    "ad7facb2586fc6e966c004d7d1d16b024f5805ff7cb47c7a85dabd8b48892ca7";
-  u8 digest[(sizeof(kZeroDigest) - 1) >> 1];
-  // TODO(wad) write a test for hex_to_bin and bin_to_hex
-  unsigned int digest_size = strlen(kZeroDigest) >> 1;
-  dm_bht_hex_to_bin(digest,
-                    reinterpret_cast<const u8 *>(kZeroDigest),
-                    digest_size);
-
   // Attempt to verify both the bad block and all the neighbors.
-  EXPECT_LT(dm_bht_verify_block(bht_.get(), kBadBlock + 1, digest, digest_size),
-            0);
+  EXPECT_LT(dm_bht_verify_block(bht_.get(), kBadBlock + 1, kZeroPage), 0);
 
-  EXPECT_LT(dm_bht_verify_block(bht_.get(), kBadBlock + 2, digest, digest_size),
-            0);
+  EXPECT_LT(dm_bht_verify_block(bht_.get(), kBadBlock + 2, kZeroPage), 0);
 
   EXPECT_LT(dm_bht_verify_block(bht_.get(), kBadBlock + (bht_->node_count / 2),
-                                digest, digest_size),
+                                kZeroPage),
             0);
 
-  EXPECT_LT(dm_bht_verify_block(bht_.get(), kBadBlock, digest, digest_size), 0);
+  EXPECT_LT(dm_bht_verify_block(bht_.get(), kBadBlock, kZeroPage), 0);
 
   // Verify that the prior entry is untouched and still safe
-  EXPECT_EQ(dm_bht_verify_block(bht_.get(), kBadBlock - 1, digest, digest_size),
-            0);
+  EXPECT_EQ(dm_bht_verify_block(bht_.get(), kBadBlock - 1, kZeroPage), 0);
 
   // Same for the next entry
   EXPECT_EQ(dm_bht_verify_block(bht_.get(), kBadBlock + bht_->node_count,
-                                digest, digest_size),
+                                kZeroPage),
             0);
+
+  EXPECT_EQ(0, dm_bht_destroy(bht_.get()));
+}
+
+TEST_F(MemoryBhtTest, CreateThenVerifyBadDataBlock) {
+  static const unsigned int total_blocks = 384;
+  SetupBht(2, total_blocks, "sha256");
+  // Set the root hash for a 0-filled image
+  static const char kRootDigest[] =
+    "45d65d6f9e5a962f4d80b5f1bd7a918152251c27bdad8c5f52b590c129833372";
+  dm_bht_set_root_hexdigest(bht_.get(),
+                            reinterpret_cast<const u8 *>(kRootDigest));
+  // A corrupt page
+  static const u8 kBadPage[PAGE_SIZE] = { 'A' };
+
+  EXPECT_LT(dm_bht_verify_block(bht_.get(), 0, kBadPage), 0);
+  EXPECT_LT(dm_bht_verify_block(bht_.get(), 127, kBadPage), 0);
+  EXPECT_LT(dm_bht_verify_block(bht_.get(), 128, kBadPage), 0);
+  EXPECT_LT(dm_bht_verify_block(bht_.get(), 255, kBadPage), 0);
+  EXPECT_LT(dm_bht_verify_block(bht_.get(), 256, kBadPage), 0);
+  EXPECT_LT(dm_bht_verify_block(bht_.get(), 383, kBadPage), 0);
 
   EXPECT_EQ(0, dm_bht_destroy(bht_.get()));
 }
