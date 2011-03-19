@@ -30,8 +30,12 @@ void mempool_destroy(mempool_t *m)
 
 void *mempool_alloc(mempool_t *m, int flags) 
 {
+	void *memptr;
 	m->out++;
-	return calloc(1, sizeof(struct page));
+
+	if (posix_memalign(&memptr, sizeof(struct page), sizeof(struct page)))
+	    return NULL;
+	return memptr;
 }
 
 void mempool_free(void *e, mempool_t *m) 
