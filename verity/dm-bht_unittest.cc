@@ -206,11 +206,57 @@ TEST_F(MemoryBhtTest, CreateThenVerifyMultipleLevels) {
   free(zero_page);
 }
 
-TEST_F(MemoryBhtTest, CreateThenVerifyOddCount) {
+TEST_F(MemoryBhtTest, CreateThenVerifyRealParameters) {
+  static const unsigned int total_blocks = 217600;
+  // Set the root hash for a 0-filled image
+  static const char kRootDigest[] =
+    "15d5a180b5080a1d43e3fbd1f2cd021d0fc3ea91a8e330bad468b980c2fd4d8b";
+  // A page of all zeros
+  u8 *zero_page = (u8 *)my_memalign(PAGE_SIZE, PAGE_SIZE);
+
+  memset(zero_page, 0, PAGE_SIZE);
+
+  SetupBht(3, total_blocks, "sha256");
+  dm_bht_set_root_hexdigest(bht_.get(),
+                            reinterpret_cast<const u8 *>(kRootDigest));
+
+  for (unsigned int blocks = 0; blocks < total_blocks; ++blocks) {
+    DLOG(INFO) << "verifying block: " << blocks;
+    EXPECT_EQ(0, dm_bht_verify_block(bht_.get(), blocks, zero_page));
+  }
+
+  EXPECT_EQ(0, dm_bht_destroy(bht_.get()));
+  free(zero_page);
+}
+
+TEST_F(MemoryBhtTest, CreateThenVerifyOddLeafCount) {
   static const unsigned int total_blocks = 16383;
   // Set the root hash for a 0-filled image
   static const char kRootDigest[] =
     "c78d187c430465bd7831fe4908247b6ab5107e3a826d933b71e85aa9a932e03c";
+  // A page of all zeros
+  u8 *zero_page = (u8 *)my_memalign(PAGE_SIZE, PAGE_SIZE);
+
+  memset(zero_page, 0, PAGE_SIZE);
+
+  SetupBht(4, total_blocks, "sha256");
+  dm_bht_set_root_hexdigest(bht_.get(),
+                            reinterpret_cast<const u8 *>(kRootDigest));
+
+  for (unsigned int blocks = 0; blocks < total_blocks; ++blocks) {
+    DLOG(INFO) << "verifying block: " << blocks;
+    EXPECT_EQ(0, dm_bht_verify_block(bht_.get(), blocks, zero_page));
+  }
+
+  EXPECT_EQ(0, dm_bht_destroy(bht_.get()));
+  free(zero_page);
+}
+
+TEST_F(MemoryBhtTest, CreateThenVerifyOddNodeCount) {
+  static const unsigned int total_blocks = 16000;
+  // Set the root hash for a 0-filled image
+  static const char kRootDigest[] =
+    "13e04b6aa410187b900834aa23e45f3e5240b0c4d2fadb2d8836a357c33499f0";
   // A page of all zeros
   u8 *zero_page = (u8 *)my_memalign(PAGE_SIZE, PAGE_SIZE);
 
