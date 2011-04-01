@@ -206,6 +206,29 @@ TEST_F(MemoryBhtTest, CreateThenVerifyMultipleLevels) {
   free(zero_page);
 }
 
+TEST_F(MemoryBhtTest, CreateThenVerifyZeroDepth) {
+  static const unsigned int total_blocks = 16384;
+  // Set the root hash for a 0-filled image
+  static const char kRootDigest[] =
+    "45d65d6f9e5a962f4d80b5f1bd7a918152251c27bdad8c5f52b590c129833372";
+  // A page of all zeros
+  u8 *zero_page = (u8 *)my_memalign(PAGE_SIZE, PAGE_SIZE);
+
+  memset(zero_page, 0, PAGE_SIZE);
+
+  SetupBht(0, total_blocks, "sha256");
+  dm_bht_set_root_hexdigest(bht_.get(),
+                            reinterpret_cast<const u8 *>(kRootDigest));
+
+  for (unsigned int blocks = 0; blocks < total_blocks; ++blocks) {
+    DLOG(INFO) << "verifying block: " << blocks;
+    EXPECT_EQ(0, dm_bht_verify_block(bht_.get(), blocks, zero_page));
+  }
+
+  EXPECT_EQ(0, dm_bht_destroy(bht_.get()));
+  free(zero_page);
+}
+
 TEST_F(MemoryBhtTest, CreateThenVerifyRealParameters) {
   static const unsigned int total_blocks = 217600;
   // Set the root hash for a 0-filled image

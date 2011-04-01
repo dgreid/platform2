@@ -15,6 +15,8 @@
 #define __ALIGN_MASK(x,mask)	(((x)+(mask))&~(mask))
 #define IS_ALIGNED(x, a)		(((x) & ((typeof(x))(a) - 1)) == 0)
 
+#define DIV_ROUND_UP(n,d) (((n) + (d) - 1) / (d))
+
 #define sector_div(n, b) ({ \
 	int _res; \
 	_res = (n) % (b); \
