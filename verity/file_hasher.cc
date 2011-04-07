@@ -48,7 +48,7 @@ bool FileHasher::Initialize(simple_file::File *source,
                             unsigned int depth,
                             unsigned int blocks,
                             const char *alg) {
-  if (depth == 0 || !alg || !source || !destination) {
+  if (!alg || !source || !destination) {
      LOG(ERROR) << "Invalid arguments supplied to Initialize";
      LOG(INFO) << "depth: " << depth;
      LOG(INFO) << "s: " << source << " d: " << destination;
