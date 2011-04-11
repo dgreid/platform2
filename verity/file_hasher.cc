@@ -45,12 +45,10 @@ int FileHasher::WriteCallback(void *file,
  
 bool FileHasher::Initialize(simple_file::File *source,
                             simple_file::File *destination,
-                            unsigned int depth,
                             unsigned int blocks,
                             const char *alg) {
   if (!alg || !source || !destination) {
      LOG(ERROR) << "Invalid arguments supplied to Initialize";
-     LOG(INFO) << "depth: " << depth;
      LOG(INFO) << "s: " << source << " d: " << destination;
      return false;
   }
@@ -73,11 +71,10 @@ bool FileHasher::Initialize(simple_file::File *source,
   alg_ = alg;
   source_ = source;
   destination_ = destination;
-  depth_ = depth;
   block_limit_ = blocks;
 
   // Now we initialize the tree
-  if (dm_bht_create(&tree_, depth_, block_limit_, alg_)) {
+  if (dm_bht_create(&tree_, block_limit_, alg_)) {
     LOG(ERROR) << "Could not create the BH tree";
     return false;
   }
@@ -120,8 +117,8 @@ void FileHasher::PrintTable(bool colocated) {
   unsigned int hash_start = 0;
   unsigned int root_end = to_sector(block_limit_ << PAGE_SHIFT);
   if (colocated) hash_start = root_end;
-  printf("0 %u verity ROOT_DEV HASH_DEV %u %u %s %s\n",
-         root_end, hash_start, depth_, alg_, digest);
+  printf("0 %u verity ROOT_DEV HASH_DEV %u 0 %s %s\n",
+         root_end, hash_start, alg_, digest);
 }
 
 }  // namespace verity

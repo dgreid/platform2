@@ -20,7 +20,7 @@ void print_usage(const char *name) {
 "- mode:	May be create or verify\n"
 "		If create, the `hash_image' will be created.\n"
 "		If verify, the `hash_image` will be used to verify `image'.\n"
-"- depth:	Integer specifying the hash tree depth (excl root node)\n"
+"- depth:	Deprecated. Must be `0'.\n"
 "- alg:		Cryptographic hash algorithm to use\n"
 "		Valid values: sha512 sha384 sha256 sha224 sha1 sha\n"
 "			      mdc2 ripemd160 md5 md4 md2\n"
@@ -50,8 +50,7 @@ static unsigned int parse_blocks(const char *block_s) {
 }
 }  // namespace
 
-static int verity_create(unsigned int depth,
-                         const char *alg,
+static int verity_create(const char *alg,
                          const char *image_path,
                          unsigned int image_blocks,
                          const char *hash_path);
@@ -62,9 +61,13 @@ int main(int argc, char **argv) {
     return 1;
   }
 
+  if (parse_depth(argv[2]) != 0) {
+    LOG(FATAL) << "depth must be 0";
+    return -1;
+  }
+
   if (parse_mode(argv[1]) == VERITY_CREATE) {
-    return verity_create(parse_depth(argv[2]),
-                         argv[3],  // alg
+    return verity_create(argv[3],  // alg
                          argv[4],  // image_path
                          parse_blocks(argv[5]),
                          argv[6]);  // hash path
@@ -74,9 +77,8 @@ int main(int argc, char **argv) {
   return -1;
 }
 
-static int verity_create(unsigned int depth,
-                         const char *alg,
-                         const char *image_path, 
+static int verity_create(const char *alg,
+                         const char *image_path,
                          unsigned int image_blocks,
                          const char *hash_path) {
   // Configure files
@@ -95,7 +97,6 @@ static int verity_create(unsigned int depth,
   verity::FileHasher hasher;
   LOG_IF(FATAL, !hasher.Initialize(&source,
                                    &destination,
-                                   depth,
                                    image_blocks,
                                    alg))
     << "Failed to initialize hasher";

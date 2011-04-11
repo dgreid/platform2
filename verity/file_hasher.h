@@ -28,7 +28,6 @@ class FileHasher {
   virtual ~FileHasher() { dm_bht_destroy(&tree_); }
   virtual bool Initialize(simple_file::File *source,
                           simple_file::File *destination,
-                          unsigned int depth,
                           unsigned int blocks,
                           const char *alg);
   virtual bool Hash();
@@ -44,7 +43,6 @@ class FileHasher {
  private:
   simple_file::File *source_;
   simple_file::File *destination_;
-  unsigned int depth_;
   unsigned int block_limit_;
   const char *alg_;
   struct dm_bht tree_;
