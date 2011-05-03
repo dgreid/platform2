@@ -136,18 +136,11 @@ class MemoryBhtTest : public ::testing::Test {
     NewBht(total_blocks, digest_algorithm);
 
     // Load the tree from the pre-populated hash data
-    for (blocks = 0; blocks < total_blocks; blocks += bht_->node_count) {
+    for (blocks = 0; blocks < total_blocks; blocks += bht_->node_count)
       EXPECT_GE(dm_bht_populate(bht_.get(),
                                 reinterpret_cast<void *>(this),
                                 blocks),
-                DM_BHT_ENTRY_REQUESTED);
-      // Since we're testing synchronously, a second run through should yield
-      // READY.
-      EXPECT_GE(dm_bht_populate(bht_.get(),
-                                reinterpret_cast<void *>(this),
-                                blocks),
-                DM_BHT_ENTRY_READY);
-    }
+                0);
     free(data);
   }
 
@@ -256,7 +249,7 @@ TEST_F(MemoryBhtTest, CreateThenVerifyOddNodeCount) {
   static const unsigned int total_blocks = 16000;
   // Set the root hash for a 0-filled image
   static const char kRootDigest[] =
-    "10832dd62c427bcf68c56c8de0d1f9c32b61d9e5ddf43c77c56a97b372ad4b07";
+    "074434bb97fd11751231d4bb069985e1de42d3add1fbdd2bee9db08044a87b2d";
   // A page of all zeros
   u8 *zero_page = (u8 *)my_memalign(PAGE_SIZE, PAGE_SIZE);
 
