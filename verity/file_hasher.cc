@@ -117,8 +117,8 @@ void FileHasher::PrintTable(bool colocated) {
   unsigned int hash_start = 0;
   unsigned int root_end = to_sector(block_limit_ << PAGE_SHIFT);
   if (colocated) hash_start = root_end;
-  printf("0 %u verity ROOT_DEV HASH_DEV %u 0 %s %s\n",
-         root_end, hash_start, alg_, digest);
+  printf("0 %u verity payload=ROOT_DEV hashtree=HASH_DEV hashstart=%u alg=%s"
+         " root_hexdigest=%s\n", root_end, hash_start, alg_, digest);
 }
 
 }  // namespace verity
