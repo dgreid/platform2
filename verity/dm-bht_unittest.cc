@@ -249,7 +249,7 @@ TEST_F(MemoryBhtTest, CreateThenVerifyOddNodeCount) {
   static const unsigned int total_blocks = 16000;
   // Set the root hash for a 0-filled image
   static const char kRootDigest[] =
-    "074434bb97fd11751231d4bb069985e1de42d3add1fbdd2bee9db08044a87b2d";
+    "10832dd62c427bcf68c56c8de0d1f9c32b61d9e5ddf43c77c56a97b372ad4b07";
   // A page of all zeros
   u8 *zero_page = (u8 *)my_memalign(PAGE_SIZE, PAGE_SIZE);
 
