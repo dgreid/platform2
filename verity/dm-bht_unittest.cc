@@ -140,7 +140,7 @@ class MemoryBhtTest : public ::testing::Test {
       EXPECT_GE(dm_bht_populate(bht_.get(),
                                 reinterpret_cast<void *>(this),
                                 blocks),
-                DM_BHT_ENTRY_PENDING);
+                DM_BHT_ENTRY_REQUESTED);
       // Since we're testing synchronously, a second run through should yield
       // READY.
       EXPECT_GE(dm_bht_populate(bht_.get(),
