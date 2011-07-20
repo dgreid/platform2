@@ -51,7 +51,6 @@ int main(int argc, char **argv) {
   const char *alg = NULL;
   const char *payload = NULL;
   const char *hashtree = NULL;
-  const char *root_hexdigest = NULL;
   unsigned int payload_blocks = 0;
   int i;
   char *key, *val;
@@ -67,7 +66,8 @@ int main(int argc, char **argv) {
     else if (!strcmp(key, "hashtree"))
       hashtree = val;
     else if (!strcmp(key, "root_hexdigest"))
-      root_hexdigest = val;
+      // Silently drop root_hexdigest for now...
+      ;
     else if (!strcmp(key, "mode"))
       // Silently drop the mode for now...
       ;
