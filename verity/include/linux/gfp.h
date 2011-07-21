@@ -11,4 +11,20 @@
 #define GFP_KERNEL 0
 #define GFP_NOIO 1
 
+static inline struct page *alloc_page(int flags)
+{
+	struct page *memptr;
+
+	if (posix_memalign((void **)&memptr,
+			   sizeof(struct page),
+			   sizeof(struct page)))
+	    return NULL;
+	return memptr;
+}
+
+static inline void __free_page(struct page *page)
+{
+	free(page);
+}
+
 #endif  /* VERITY_INCLUDE_LINUX_GFP_H_ */
