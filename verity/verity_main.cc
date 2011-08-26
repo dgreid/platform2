@@ -25,6 +25,7 @@ void print_usage(const char *name) {
 "  payload_blocks    Size of the image, in blocks (4096 bytes)\n"
 "  hashtree          Path to a hash tree to create or read from\n"
 "  root_hexdigest    Digest of the root node (in hex) for verification\n"
+"  salt              Salt (in hex)\n"
 "\n", name);
 }
 
@@ -38,7 +39,8 @@ static unsigned int parse_blocks(const char *block_s) {
 static int verity_create(const char *alg,
                          const char *image_path,
                          unsigned int image_blocks,
-                         const char *hash_path);
+                         const char *hash_path,
+                         const char *salt);
 
 void splitarg(char *arg, char **key, char **val) {
   char *sp = NULL;
@@ -51,6 +53,7 @@ int main(int argc, char **argv) {
   const char *alg = NULL;
   const char *payload = NULL;
   const char *hashtree = NULL;
+  const char *salt = NULL;
   unsigned int payload_blocks = 0;
   int i;
   char *key, *val;
@@ -71,6 +74,8 @@ int main(int argc, char **argv) {
     else if (!strcmp(key, "mode"))
       // Silently drop the mode for now...
       ;
+    else if (!strcmp(key, "salt"))
+      salt = val;
     else {
       fprintf(stderr, "bogus key: '%s'\n", key);
       print_usage(argv[0]);
@@ -88,7 +93,7 @@ int main(int argc, char **argv) {
   }
 
   if (mode == VERITY_CREATE) {
-    return verity_create(alg, payload, payload_blocks, hashtree);
+    return verity_create(alg, payload, payload_blocks, hashtree, salt);
   } else {
     LOG(FATAL) << "Verification not done yet";
   }
@@ -98,7 +103,8 @@ int main(int argc, char **argv) {
 static int verity_create(const char *alg,
                          const char *image_path,
                          unsigned int image_blocks,
-                         const char *hash_path) {
+                         const char *hash_path,
+                         const char *salt) {
   // Configure files
   simple_file::Env env;
 
@@ -118,6 +124,8 @@ static int verity_create(const char *alg,
                                    image_blocks,
                                    alg))
     << "Failed to initialize hasher";
+  if (salt)
+    hasher.set_salt(salt);
   LOG_IF(FATAL, !hasher.Hash());
   LOG_IF(FATAL, !hasher.Store());
   hasher.PrintTable(true);

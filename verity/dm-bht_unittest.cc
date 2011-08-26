@@ -100,20 +100,23 @@ class MemoryBhtTest : public ::testing::Test {
  protected:
   // Creates a new dm_bht and sets it in the existing MemoryBht.
   void NewBht(const unsigned int total_blocks,
-              const char *digest_algorithm) {
+              const char *digest_algorithm,
+              const char *salt) {
     bht_.reset(new dm_bht());
-    EXPECT_EQ(0, dm_bht_create(bht_.get(), total_blocks,
-                               digest_algorithm));
+    EXPECT_EQ(0, dm_bht_create(bht_.get(), total_blocks, digest_algorithm));
     if (hash_data_.get() == NULL) {
       sectors_ = dm_bht_sectors(bht_.get());
       hash_data_.reset(new u8[to_bytes(sectors_)]);
     }
     dm_bht_set_write_cb(bht_.get(), MemoryBhtTest::WriteCallback);
     dm_bht_set_read_cb(bht_.get(), MemoryBhtTest::ReadCallback);
+    if (salt)
+      dm_bht_set_salt(bht_.get(), salt);
   }
   void SetupBht(const unsigned int total_blocks,
-                const char *digest_algorithm) {
-    NewBht(total_blocks, digest_algorithm);
+                const char *digest_algorithm,
+                const char *salt) {
+    NewBht(total_blocks, digest_algorithm, salt);
 
     u8 *data = (u8 *)my_memalign(PAGE_SIZE, PAGE_SIZE);
 
@@ -133,7 +136,7 @@ class MemoryBhtTest : public ::testing::Test {
     EXPECT_EQ(0, dm_bht_destroy(bht_.get()));
     // bht is now dead and mbht_ is a prepared hash image
 
-    NewBht(total_blocks, digest_algorithm);
+    NewBht(total_blocks, digest_algorithm, salt);
 
     // Load the tree from the pre-populated hash data
     for (blocks = 0; blocks < total_blocks; blocks += bht_->node_count)
@@ -159,7 +162,7 @@ TEST_F(MemoryBhtTest, CreateThenVerifyOk) {
 
   memset(zero_page, 0, PAGE_SIZE);
 
-  SetupBht(total_blocks, "sha256");
+  SetupBht(total_blocks, "sha256", NULL);
   dm_bht_set_root_hexdigest(bht_.get(),
                             reinterpret_cast<const u8 *>(kRootDigest));
 
@@ -183,7 +186,7 @@ TEST_F(MemoryBhtTest, CreateThenVerifySingleLevel) {
 
   memset(zero_page, 0, PAGE_SIZE);
 
-  SetupBht(total_blocks, "sha256");
+  SetupBht(total_blocks, "sha256", NULL);
   dm_bht_set_root_hexdigest(bht_.get(),
                             reinterpret_cast<const u8 *>(kRootDigest));
 
@@ -207,7 +210,7 @@ TEST_F(MemoryBhtTest, CreateThenVerifyRealParameters) {
 
   memset(zero_page, 0, PAGE_SIZE);
 
-  SetupBht(total_blocks, "sha256");
+  SetupBht(total_blocks, "sha256", NULL);
   dm_bht_set_root_hexdigest(bht_.get(),
                             reinterpret_cast<const u8 *>(kRootDigest));
 
@@ -231,7 +234,7 @@ TEST_F(MemoryBhtTest, CreateThenVerifyOddLeafCount) {
 
   memset(zero_page, 0, PAGE_SIZE);
 
-  SetupBht(total_blocks, "sha256");
+  SetupBht(total_blocks, "sha256", NULL);
   dm_bht_set_root_hexdigest(bht_.get(),
                             reinterpret_cast<const u8 *>(kRootDigest));
 
@@ -255,7 +258,7 @@ TEST_F(MemoryBhtTest, CreateThenVerifyOddNodeCount) {
 
   memset(zero_page, 0, PAGE_SIZE);
 
-  SetupBht(total_blocks, "sha256");
+  SetupBht(total_blocks, "sha256", NULL);
   dm_bht_set_root_hexdigest(bht_.get(),
                             reinterpret_cast<const u8 *>(kRootDigest));
 
@@ -279,7 +282,7 @@ TEST_F(MemoryBhtTest, CreateThenVerifyBadHashBlock) {
 
   memset(zero_page, 0, PAGE_SIZE);
 
-  SetupBht(total_blocks, "sha256");
+  SetupBht(total_blocks, "sha256", NULL);
 
   dm_bht_set_root_hexdigest(bht_.get(),
                             reinterpret_cast<const u8 *>(kRootDigest));
@@ -320,7 +323,7 @@ TEST_F(MemoryBhtTest, CreateThenVerifyBadHashBlock) {
 
 TEST_F(MemoryBhtTest, CreateThenVerifyBadDataBlock) {
   static const unsigned int total_blocks = 384;
-  SetupBht(total_blocks, "sha256");
+  SetupBht(total_blocks, "sha256", NULL);
   // Set the root hash for a 0-filled image
   static const char kRootDigest[] =
     "45d65d6f9e5a962f4d80b5f1bd7a918152251c27bdad8c5f52b590c129833372";
@@ -341,4 +344,56 @@ TEST_F(MemoryBhtTest, CreateThenVerifyBadDataBlock) {
 
   EXPECT_EQ(0, dm_bht_destroy(bht_.get()));
   free(bad_page);
+}
+
+TEST_F(MemoryBhtTest, CreateThenVerifyOkSalt) {
+  static const unsigned int total_blocks = 16384;
+  // Set the root hash for a 0-filled image
+  static const char kRootDigest[] =
+    "8015fea349568f5135ecc833bbc79c9179377207382b53c68d93190b286b1256";
+  static const char salt[] =
+    "01ad1f06255d452d91337bf037953053cc3e452541db4b8ca05811bf3e2b6027";
+  // A page of all zeros
+  u8 *zero_page = (u8 *)my_memalign(PAGE_SIZE, PAGE_SIZE);
+
+  memset(zero_page, 0, PAGE_SIZE);
+
+  SetupBht(total_blocks, "sha256", salt);
+  dm_bht_set_root_hexdigest(bht_.get(),
+                            reinterpret_cast<const u8 *>(kRootDigest));
+
+  for (unsigned int blocks = 0; blocks < total_blocks; ++blocks) {
+    DLOG(INFO) << "verifying block: " << blocks;
+    EXPECT_EQ(0, dm_bht_verify_block(bht_.get(), blocks,
+                                     virt_to_page(zero_page), 0));
+  }
+
+  EXPECT_EQ(0, dm_bht_destroy(bht_.get()));
+  free(zero_page);
+}
+
+TEST_F(MemoryBhtTest, CreateThenVerifyOkLongSalt) {
+  static const unsigned int total_blocks = 16384;
+  // Set the root hash for a 0-filled image
+  static const char kRootDigest[] =
+    "8015fea349568f5135ecc833bbc79c9179377207382b53c68d93190b286b1256";
+  static const char salt[] =
+    "01ad1f06255d452d91337bf037953053cc3e452541db4b8ca05811bf3e2b6027b2188a1d";
+  // A page of all zeros
+  u8 *zero_page = (u8 *)my_memalign(PAGE_SIZE, PAGE_SIZE);
+
+  memset(zero_page, 0, PAGE_SIZE);
+
+  SetupBht(total_blocks, "sha256", salt);
+  dm_bht_set_root_hexdigest(bht_.get(),
+                            reinterpret_cast<const u8 *>(kRootDigest));
+
+  for (unsigned int blocks = 0; blocks < total_blocks; ++blocks) {
+    DLOG(INFO) << "verifying block: " << blocks;
+    EXPECT_EQ(0, dm_bht_verify_block(bht_.get(), blocks,
+                                     virt_to_page(zero_page), 0));
+  }
+
+  EXPECT_EQ(0, dm_bht_destroy(bht_.get()));
+  free(zero_page);
 }

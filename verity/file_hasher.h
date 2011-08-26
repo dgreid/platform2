@@ -35,6 +35,12 @@ class FileHasher {
   // Print a table to stdout which contains a dmsetup compatible format
   virtual void PrintTable(bool colocated);
 
+  virtual void set_salt(const char *salt) {
+    dm_bht_set_salt(&tree_, salt);
+    salt_ = salt;
+  }
+  virtual const char *salt(void) { return salt_; }
+
   static int WriteCallback(void *file,
                            sector_t start,
                            u8 *dst,
@@ -45,6 +51,7 @@ class FileHasher {
   simple_file::File *destination_;
   unsigned int block_limit_;
   const char *alg_;
+  const char *salt_;
   struct dm_bht tree_;
 };
 
