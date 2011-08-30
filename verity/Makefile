@@ -69,6 +69,7 @@ RM_ON_CLEAN += $(OUT)libdm-bht.so
 ifneq ($(WITH_CHROME),0)
   # For this project, only the unittests are CXX
   $(OUT)verity_testrunner: $(filter-out %_main.o,$(CXX_OBJECTS)) \
+                           $(filter %dm-bht-userspace.o,$(C_OBJECTS)) \
                            $(OUT)simple_file/libsimple_file-pie.a \
                            $(OUT)kernel/libkernel-pie.a
 	$(call cxx_binary,-lgtest -lgmock)

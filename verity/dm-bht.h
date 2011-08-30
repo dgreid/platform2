@@ -143,4 +143,55 @@ int dm_bht_zeroread_callback(void *ctx, sector_t start, u8 *dst, sector_t count,
 			     struct dm_bht_entry *entry);
 void dm_bht_read_completed(struct dm_bht_entry *entry, int status);
 void dm_bht_write_completed(struct dm_bht_entry *entry, int status);
+
+/* Functions for converting indices to nodes. */
+
+static inline struct dm_bht_level *dm_bht_get_level(struct dm_bht *bht,
+						    int depth)
+{
+	return &bht->levels[depth];
+}
+
+static inline unsigned int dm_bht_get_level_shift(struct dm_bht *bht,
+						  int depth)
+{
+	return (bht->depth - depth) * bht->node_count_shift;
+}
+
+/* For the given depth, this is the entry index.  At depth+1 it is the node
+ * index for depth.
+ */
+static inline unsigned int dm_bht_index_at_level(struct dm_bht *bht,
+							int depth,
+							unsigned int leaf)
+{
+	return leaf >> dm_bht_get_level_shift(bht, depth);
+}
+
+static inline u8 *dm_bht_node(struct dm_bht *bht,
+			      struct dm_bht_entry *entry,
+			      unsigned int node_index)
+{
+	return &entry->nodes[node_index * bht->digest_size];
+}
+
+static inline struct dm_bht_entry *dm_bht_get_entry(struct dm_bht *bht,
+						    int depth,
+						    unsigned int block)
+{
+	unsigned int index = dm_bht_index_at_level(bht, depth, block);
+	struct dm_bht_level *level = dm_bht_get_level(bht, depth);
+
+	return &level->entries[index];
+}
+
+static inline u8 *dm_bht_get_node(struct dm_bht *bht,
+				  struct dm_bht_entry *entry,
+				  int depth,
+				  unsigned int block)
+{
+	unsigned int index = dm_bht_index_at_level(bht, depth, block);
+
+	return dm_bht_node(bht, entry, index % bht->node_count);
+}
 #endif  /* __LINUX_DM_BHT_H */
