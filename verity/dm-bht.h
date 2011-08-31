@@ -103,9 +103,8 @@ struct dm_bht {
 	/* bool verified;  Full tree is verified */
 	u8 root_digest[DM_BHT_MAX_DIGEST_SIZE];
 	struct dm_bht_level *levels;  /* in reverse order */
-	/* Callbacks for reading and/or writing to the hash device */
+	/* Callback for reading from the hash device */
 	dm_bht_callback read_cb;
-	dm_bht_callback write_cb;
 };
 
 /* Constructor for struct dm_bht instances. */
@@ -118,7 +117,6 @@ int dm_bht_destroy(struct dm_bht *bht);
 /* Basic accessors for struct dm_bht */
 sector_t dm_bht_sectors(const struct dm_bht *bht);
 void dm_bht_set_read_cb(struct dm_bht *bht, dm_bht_callback read_cb);
-void dm_bht_set_write_cb(struct dm_bht *bht, dm_bht_callback write_cb);
 int dm_bht_set_root_hexdigest(struct dm_bht *bht, const u8 *hexdigest);
 int dm_bht_root_hexdigest(struct dm_bht *bht, u8 *hexdigest, int available);
 void dm_bht_set_salt(struct dm_bht *bht, const char *hexsalt);
@@ -142,7 +140,6 @@ int dm_bht_store_block(struct dm_bht *bht, unsigned int block,
 int dm_bht_zeroread_callback(void *ctx, sector_t start, u8 *dst, sector_t count,
 			     struct dm_bht_entry *entry);
 void dm_bht_read_completed(struct dm_bht_entry *entry, int status);
-void dm_bht_write_completed(struct dm_bht_entry *entry, int status);
 
 /* Functions for converting indices to nodes. */
 

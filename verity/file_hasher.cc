@@ -26,23 +26,6 @@ static inline bool power_of_two(T num) {
   return false;
 }
 
-int FileHasher::WriteCallback(void *file,
-                              sector_t start,
-                              u8 *dst,
-                              sector_t count,
-                              struct dm_bht_entry *entry) {
-  simple_file::File *f = reinterpret_cast<simple_file::File *>(file);
-  int offset = static_cast<int>(to_bytes(start));
-  LOG_IF(FATAL, (static_cast<sector_t>(offset) != to_bytes(start)))
-    << "cast to bytes truncated value";
-  if (!f->WriteAt(to_bytes(count), dst, offset)) {
-    dm_bht_write_completed(entry, -EIO);
-    return -1;
-  }
-  dm_bht_write_completed(entry, 0);
-  return 0;
-}
- 
 bool FileHasher::Initialize(simple_file::File *source,
                             simple_file::File *destination,
                             unsigned int blocks,
@@ -82,7 +65,6 @@ bool FileHasher::Initialize(simple_file::File *source,
   sectors_ = dm_bht_sectors(&tree_);
   hash_data_ = new u8[to_bytes(sectors_)];
 
-  dm_bht_set_write_cb(&tree_, FileHasher::WriteCallback);
   // No reading is needed.
   dm_bht_set_read_cb(&tree_, dm_bht_zeroread_callback);
   dm_bht_set_buffer(&tree_, hash_data_);

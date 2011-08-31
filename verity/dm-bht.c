@@ -138,9 +138,6 @@ static int dm_bht_initialize_entries(struct dm_bht *bht);
 static int dm_bht_read_callback_stub(void *ctx, sector_t start, u8 *dst,
 				     sector_t count,
 				     struct dm_bht_entry *entry);
-static int dm_bht_write_callback_stub(void *ctx, sector_t start,
-				      u8 *dst, sector_t count,
-				      struct dm_bht_entry *entry);
 
 /**
  * dm_bht_create - prepares @bht for us
@@ -236,9 +233,8 @@ int dm_bht_create(struct dm_bht *bht, unsigned int block_count,
 		goto bad_level_alloc;
 	}
 
-	/* Setup callback stubs */
+	/* Setup read callback stub */
 	bht->read_cb = &dm_bht_read_callback_stub;
-	bht->write_cb = &dm_bht_write_callback_stub;
 
 	status = dm_bht_initialize_entries(bht);
 	if (status)
@@ -343,15 +339,6 @@ static int dm_bht_read_callback_stub(void *ctx, sector_t start, u8 *dst,
 	return -EIO;
 }
 
-static int dm_bht_write_callback_stub(void *ctx, sector_t start,
-				      u8 *dst, sector_t count,
-				      struct dm_bht_entry *entry)
-{
-	DMCRIT("dm_bht_write_callback_stub called!");
-	dm_bht_write_completed(entry, -EIO);
-	return -EIO;
-}
-
 /**
  * dm_bht_read_completed
  * @entry:	pointer to the entry that's been loaded
@@ -371,24 +358,6 @@ void dm_bht_read_completed(struct dm_bht_entry *entry, int status)
 	atomic_set(&entry->state, DM_BHT_ENTRY_READY);
 }
 EXPORT_SYMBOL(dm_bht_read_completed);
-
-/**
- * dm_bht_write_completed
- * @entry:	pointer to the entry that's been loaded
- * @status:	I/O status. Non-zero is failure.
- * Should be called after a write_cb completes. Currently only catches
- * errors which more writers don't care about.
- */
-void dm_bht_write_completed(struct dm_bht_entry *entry, int status)
-{
-	if (status) {
-		DMCRIT("an I/O error occurred while writing entry");
-		atomic_set(&entry->state, DM_BHT_ENTRY_ERROR_IO);
-		/* entry->nodes will be freed later */
-		return;
-	}
-}
-EXPORT_SYMBOL(dm_bht_write_completed);
 
 /* dm_bht_verify_path
  * Verifies the path. Returns 0 on ok.
@@ -651,17 +620,6 @@ void dm_bht_set_read_cb(struct dm_bht *bht, dm_bht_callback read_cb)
 	bht->read_cb = read_cb;
 }
 EXPORT_SYMBOL(dm_bht_set_read_cb);
-
-/**
- * dm_bht_set_write_cb - set write callback
- * @bht:	pointer to a dm_bht_create()d bht
- * @write_cb:	callback function used for all write requests by @bht
- */
-void dm_bht_set_write_cb(struct dm_bht *bht, dm_bht_callback write_cb)
-{
-	bht->write_cb = write_cb;
-}
-EXPORT_SYMBOL(dm_bht_set_write_cb);
 
 /**
  * dm_bht_set_root_hexdigest - sets an unverified root digest hash from hex
