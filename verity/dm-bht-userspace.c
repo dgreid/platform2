@@ -53,23 +53,33 @@ static int dm_bht_compute_hash(struct dm_bht *bht, struct page *pg,
 	return 0;
 }
 
+void dm_bht_set_buffer(struct dm_bht *bht, void *buffer) {
+	int depth;
+
+	for (depth = 0; depth < bht->depth; ++depth) {
+		struct dm_bht_level *level = dm_bht_get_level(bht, depth);
+		struct dm_bht_entry *entry_end = level->entries + level->count;
+		struct dm_bht_entry *entry;
+
+		for (entry = level->entries; entry < entry_end; ++entry) {
+			entry->nodes = buffer;
+			memset(buffer, 0, PAGE_SIZE);
+			buffer += PAGE_SIZE;
+		}
+	}
+}
+
 /**
  * dm_bht_compute - computes and updates all non-block-level hashes in a tree
  * @bht:	pointer to a dm_bht_create()d bht
- * @read_cb_ctx:opaque read_cb context for all I/O on this call
  *
  * Returns 0 on success, >0 when data is pending, and <0 when a IO or other
  * error has occurred.
  *
  * Walks the tree and computes the hashes at each level from the
- * hashes below. This can only be called once per tree creation
- * since it will mark entries verified. Expects dm_bht_populate() to
- * correctly populate the tree from the read_callback_stub.
- *
- * This function should not be used when verifying the same tree and
- * should not be used with multiple simultaneous operators on @bht.
+ * hashes below.
  */
-int dm_bht_compute(struct dm_bht *bht, void *read_cb_ctx)
+int dm_bht_compute(struct dm_bht *bht)
 {
 	int depth, r = 0;
 
@@ -82,15 +92,7 @@ int dm_bht_compute(struct dm_bht *bht, void *read_cb_ctx)
 
 		for (i = 0; i < level->count; i++, entry++) {
 			unsigned int count = bht->node_count;
-			struct page *pg;
 
-			pg = alloc_page(GFP_NOIO);
-			if (!pg) {
-				DMCRIT("an error occurred while reading entry");
-				goto out;
-			}
-
-			entry->nodes = page_address(pg);
 			memset(entry->nodes, 0, PAGE_SIZE);
 			atomic_set(&entry->state, DM_BHT_ENTRY_READY);
 
@@ -122,126 +124,25 @@ out:
 }
 
 /**
- * dm_bht_sync - writes the tree in memory to disk
- * @bht:	pointer to a dm_bht_create()d bht
- * @write_ctx:	callback context for writes issued
- *
- * Since all entry nodes are PAGE_SIZE, the data will be pre-aligned and
- * padded.
- */
-int dm_bht_sync(struct dm_bht *bht, void *write_cb_ctx)
-{
-	int depth;
-	int ret = 0;
-	int state;
-	sector_t sector;
-	struct dm_bht_level *level;
-	struct dm_bht_entry *entry;
-	struct dm_bht_entry *entry_end;
-
-	for (depth = 0; depth < bht->depth; ++depth) {
-		level = dm_bht_get_level(bht, depth);
-		entry_end = level->entries + level->count;
-		sector = level->sector;
-		for (entry = level->entries; entry < entry_end; ++entry) {
-			state = atomic_read(&entry->state);
-			if (state <= DM_BHT_ENTRY_PENDING) {
-				DMERR("At depth %d, entry %lu is not ready",
-				      depth,
-				      (unsigned long)(entry - level->entries));
-				return state;
-			}
-			ret = bht->write_cb(write_cb_ctx,
-					    sector,
-					    entry->nodes,
-					    to_sector(PAGE_SIZE),
-					    entry);
-			if (ret) {
-				DMCRIT("an error occurred writing entry %lu",
-				      (unsigned long)(entry - level->entries));
-				return ret;
-			}
-			sector += to_sector(PAGE_SIZE);
-		}
-	}
-
-	return 0;
-}
-
-/**
  * dm_bht_store_block - sets a given block's hash in the tree
  * @bht:	pointer to a dm_bht_create()d bht
  * @block:	numeric index of the block in the tree
- * @digest:	array of u8s containing the digest of length @bht->digest_size
+ * @block_data:	array of u8s containing the block of data to hash
  *
- * Returns 0 on success, >0 when data is pending, and <0 when a IO or other
- * error has occurred.
+ * Returns 0 on success.
  *
  * If the containing entry in the tree is unallocated, it will allocate memory
- * and mark the entry as ready.  All other block entries will be 0s.  This
- * function is not safe for simultaneous use when verifying data and should not
- * be used if the @bht is being accessed by any other functions in any other
- * threads/processes.
+ * and mark the entry as ready.  All other block entries will be 0s.
  *
- * It is expected that virt_to_page will work on |block_data|.
+ * It is up to the users of the update interface to ensure the entry data is
+ * fully populated prior to use. The number of updated entries is NOT tracked.
  */
 int dm_bht_store_block(struct dm_bht *bht, unsigned int block,
 		       u8 *block_data)
 {
-	int depth;
-	unsigned int index;
-	unsigned int node_index;
-	struct dm_bht_entry *entry;
-	struct dm_bht_level *level;
-	int state;
-	struct page *node_page = NULL;
+	int depth = bht->depth;
+	struct dm_bht_entry *entry = dm_bht_get_entry(bht, depth - 1, block);
+	u8 *node = dm_bht_get_node(bht, entry, depth, block);
 
-	/* Look at the last level of nodes above the leaves (data blocks) */
-	depth = bht->depth - 1;
-
-	/* Index into the level */
-	level = dm_bht_get_level(bht, depth);
-	index = dm_bht_index_at_level(bht, depth, block);
-	/* Grab the node index into the current entry by getting the
-	 * index at the leaf-level.
-	 */
-	node_index = dm_bht_index_at_level(bht, depth + 1, block) %
-		     bht->node_count;
-	entry = &level->entries[index];
-
-	DMDEBUG("Storing block %u in d=%d,ei=%u,ni=%u,s=%d",
-		block, depth, index, node_index,
-		atomic_read(&entry->state));
-
-	state = atomic_cmpxchg(&entry->state,
-			       DM_BHT_ENTRY_UNALLOCATED,
-			       DM_BHT_ENTRY_PENDING);
-	/* !!! Note. It is up to the users of the update interface to
-	 *     ensure the entry data is fully populated prior to use.
-	 *     The number of updated entries is NOT tracked.
-	 */
-	if (state == DM_BHT_ENTRY_UNALLOCATED) {
-		node_page = alloc_page(GFP_KERNEL);
-		if (!node_page) {
-			atomic_set(&entry->state, DM_BHT_ENTRY_ERROR);
-			return -ENOMEM;
-		}
-		entry->nodes = page_address(node_page);
-		memset(entry->nodes, 0, PAGE_SIZE);
-		/* TODO(wad) could expose this to the caller to that they
-		 * can transition from unallocated to ready manually.
-		 */
-		atomic_set(&entry->state, DM_BHT_ENTRY_READY);
-	} else if (state <= DM_BHT_ENTRY_ERROR) {
-		DMCRIT("leaf entry for block %u is invalid",
-		      block);
-		return state;
-	} else if (state == DM_BHT_ENTRY_PENDING) {
-		DMERR("leaf data is pending for block %u", block);
-		return 1;
-	}
-
-	dm_bht_compute_hash(bht, virt_to_page(block_data), 0,
-			    dm_bht_node(bht, entry, node_index));
-	return 0;
+	return dm_bht_compute_hash(bht, virt_to_page(block_data), 0, node);
 }

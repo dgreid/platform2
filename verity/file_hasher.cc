@@ -78,15 +78,19 @@ bool FileHasher::Initialize(simple_file::File *source,
     LOG(ERROR) << "Could not create the BH tree";
     return false;
   }
+
+  sectors_ = dm_bht_sectors(&tree_);
+  hash_data_ = new u8[to_bytes(sectors_)];
+
   dm_bht_set_write_cb(&tree_, FileHasher::WriteCallback);
   // No reading is needed.
   dm_bht_set_read_cb(&tree_, dm_bht_zeroread_callback);
-
+  dm_bht_set_buffer(&tree_, hash_data_);
   return true;
 }
 
 bool FileHasher::Store() {
-        return !dm_bht_sync(&tree_, reinterpret_cast<void *>(destination_));
+  return destination_->WriteAt(to_bytes(sectors_), hash_data_, 0);
 }
 
 bool FileHasher::Hash() {
@@ -105,7 +109,7 @@ bool FileHasher::Hash() {
     }
     ++block;
   }
-  return !dm_bht_compute(&tree_, reinterpret_cast<void *>(destination_));
+  return !dm_bht_compute(&tree_);
 }
 
 void FileHasher::PrintTable(bool colocated) {

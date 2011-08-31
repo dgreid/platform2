@@ -38,19 +38,34 @@ TEST(DmBht, CreateFailOnOverflow) {
 // Simple test to help valgrind/tcmalloc catch bad mem management
 TEST(DmBht, CreateZeroPopulateDestroy) {
   struct dm_bht bht;
+  sector_t sectors;
   // This should fail.
-  unsigned int blocks = 16384;
+  unsigned int blocks, total_blocks = 16384;
   u8 *data = (u8 *)my_memalign(PAGE_SIZE, PAGE_SIZE);
+  void * hash_data;
+
+  blocks = total_blocks;
 
   // Store all the block hashes of blocks of 0.
   memset(reinterpret_cast<void *>(data), 0, sizeof(data));
   EXPECT_EQ(0, dm_bht_create(&bht, blocks, "sha256"));
   dm_bht_set_read_cb(&bht, dm_bht_zeroread_callback);
+  sectors = dm_bht_sectors(&bht);
+  hash_data = new u8[to_bytes(sectors)];
+  dm_bht_set_buffer(&bht, hash_data);
+
   do {
     EXPECT_EQ(dm_bht_store_block(&bht, blocks - 1, data), 0);
   } while (--blocks > 0);
-  EXPECT_EQ(0, dm_bht_compute(&bht, NULL));
+  // Load the tree from the pre-populated hash data
+  for (blocks = 0; blocks < total_blocks; blocks += bht.node_count)
+    EXPECT_GE(dm_bht_populate(&bht,
+			      reinterpret_cast<void *>(this),
+			      blocks),
+	      0);
+  EXPECT_EQ(0, dm_bht_compute(&bht));
   EXPECT_EQ(0, dm_bht_destroy(&bht));
+  free(hash_data);
   free(data);
 }
 
@@ -59,30 +74,11 @@ class MemoryBhtTest : public ::testing::Test {
   void SetUp() {
   }
 
-  int Write(sector_t start, u8 *src, sector_t count) {
-    EXPECT_LT(start, sectors_);
-    EXPECT_EQ(to_bytes(count), PAGE_SIZE);
-    u8 *dst = &hash_data_[to_bytes(start)];
-    memcpy(dst, src, to_bytes(count));
-    return 0;
-  }
-
   int Read(sector_t start, u8 *dst, sector_t count) {
     EXPECT_LT(start, sectors_);
     EXPECT_EQ(to_bytes(count), PAGE_SIZE);
     u8 *src = &hash_data_[to_bytes(start)];
     memcpy(dst, src, to_bytes(count));
-    return 0;
-  }
-
-  static int WriteCallback(void *mbht_instance,
-                           sector_t start,
-                           u8 *src,
-                           sector_t count,
-                           struct dm_bht_entry *entry) {
-    MemoryBhtTest *mbht = reinterpret_cast<MemoryBhtTest *>(mbht_instance);
-    mbht->Write(start, src, count);
-    dm_bht_write_completed(entry, 0);
     return 0;
   }
 
@@ -99,52 +95,57 @@ class MemoryBhtTest : public ::testing::Test {
 
  protected:
   // Creates a new dm_bht and sets it in the existing MemoryBht.
-  void NewBht(const unsigned int total_blocks,
-              const char *digest_algorithm,
-              const char *salt) {
-    bht_.reset(new dm_bht());
-    EXPECT_EQ(0, dm_bht_create(bht_.get(), total_blocks, digest_algorithm));
-    if (hash_data_.get() == NULL) {
-      sectors_ = dm_bht_sectors(bht_.get());
-      hash_data_.reset(new u8[to_bytes(sectors_)]);
-    }
-    dm_bht_set_write_cb(bht_.get(), MemoryBhtTest::WriteCallback);
-    dm_bht_set_read_cb(bht_.get(), MemoryBhtTest::ReadCallback);
-    if (salt)
-      dm_bht_set_salt(bht_.get(), salt);
-  }
-  void SetupBht(const unsigned int total_blocks,
-                const char *digest_algorithm,
-                const char *salt) {
-    NewBht(total_blocks, digest_algorithm, salt);
-
+  void SetupHash(const unsigned int total_blocks,
+		 const char *digest_algorithm,
+		 const char *salt,
+		 void *hash_data) {
+    struct dm_bht bht;
     u8 *data = (u8 *)my_memalign(PAGE_SIZE, PAGE_SIZE);
 
     memset(data, 0, PAGE_SIZE);
 
+    EXPECT_EQ(0, dm_bht_create(&bht, total_blocks, digest_algorithm));
+    if (salt)
+      dm_bht_set_salt(&bht, salt);
+    dm_bht_set_buffer(&bht, hash_data);
+
     unsigned int blocks = total_blocks;
     do {
-      EXPECT_EQ(dm_bht_store_block(bht_.get(), blocks - 1, data), 0);
+      EXPECT_EQ(dm_bht_store_block(&bht, blocks - 1, data), 0);
     } while (--blocks > 0);
 
-    dm_bht_set_read_cb(bht_.get(), dm_bht_zeroread_callback);
-    EXPECT_EQ(0, dm_bht_compute(bht_.get(), NULL));
-    EXPECT_EQ(0, dm_bht_sync(bht_.get(), reinterpret_cast<void *>(this)));
-    u8 digest[1024];
-    dm_bht_root_hexdigest(bht_.get(), digest, sizeof(digest));
-    LOG(INFO) << "MemoryBhtTest root is " << digest;
-    EXPECT_EQ(0, dm_bht_destroy(bht_.get()));
-    // bht is now dead and mbht_ is a prepared hash image
+    EXPECT_EQ(0, dm_bht_compute(&bht));
 
-    NewBht(total_blocks, digest_algorithm, salt);
+    u8 digest[1024];
+    dm_bht_root_hexdigest(&bht, digest, sizeof(digest));
+    LOG(INFO) << "MemoryBhtTest root is " << digest;
+
+    free(data);
+  }
+  void SetupBht(const unsigned int total_blocks,
+                const char *digest_algorithm,
+                const char *salt) {
+    bht_.reset(new dm_bht());
+
+    EXPECT_EQ(0, dm_bht_create(bht_.get(), total_blocks, digest_algorithm));
+       if (hash_data_.get() == NULL) {
+      sectors_ = dm_bht_sectors(bht_.get());
+      hash_data_.reset(new u8[to_bytes(sectors_)]);
+    }
+
+    if (salt)
+      dm_bht_set_salt(bht_.get(), salt);
+
+    SetupHash(total_blocks, digest_algorithm, salt, &hash_data_[0]);
+    dm_bht_set_read_cb(bht_.get(), MemoryBhtTest::ReadCallback);
 
     // Load the tree from the pre-populated hash data
+    unsigned int blocks;
     for (blocks = 0; blocks < total_blocks; blocks += bht_->node_count)
       EXPECT_GE(dm_bht_populate(bht_.get(),
                                 reinterpret_cast<void *>(this),
                                 blocks),
                 0);
-    free(data);
   }
 
   scoped_ptr<struct dm_bht> bht_;

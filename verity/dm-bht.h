@@ -135,8 +135,8 @@ int dm_bht_verify_block(struct dm_bht *bht, unsigned int block,
  * should not be directly used for verification. (It should be repopulated.)
  * In addition, these functions aren't meant to be called in parallel.
  */
-int dm_bht_compute(struct dm_bht *bht, void *read_cb_ctx);
-int dm_bht_sync(struct dm_bht *bht, void *write_cb_ctx);
+int dm_bht_compute(struct dm_bht *bht);
+void dm_bht_set_buffer(struct dm_bht *bht, void *buffer);
 int dm_bht_store_block(struct dm_bht *bht, unsigned int block,
 		       u8 *block_data);
 int dm_bht_zeroread_callback(void *ctx, sector_t start, u8 *dst, sector_t count,

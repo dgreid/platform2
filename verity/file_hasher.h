@@ -25,7 +25,6 @@ class FileHasher {
                  block_limit_(0),
                  alg_(NULL) { }
   // TODO(wad) add initialized_ variable to check.
-  virtual ~FileHasher() { dm_bht_destroy(&tree_); }
   virtual bool Initialize(simple_file::File *source,
                           simple_file::File *destination,
                           unsigned int blocks,
@@ -52,7 +51,9 @@ class FileHasher {
   unsigned int block_limit_;
   const char *alg_;
   const char *salt_;
+  u8 *hash_data_;
   struct dm_bht tree_;
+  sector_t sectors_;
 };
 
 }  // namespace verity
