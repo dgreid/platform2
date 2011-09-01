@@ -9,6 +9,7 @@
 
 extern "C" {
 #include "verity/dm-bht.h"
+#include "verity/dm-bht-userspace.h"
 }
 #include "verity/simple_file/file.h"
 #include "verity/include/asm/page.h"

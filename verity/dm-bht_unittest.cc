@@ -20,6 +20,7 @@ extern "C" {
 #else
 #  include "dm-bht.c"
 #endif
+#include "dm-bht-userspace.h"
 }
 
 void *my_memalign(size_t boundary, size_t size) {
