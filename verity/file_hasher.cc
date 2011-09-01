@@ -111,14 +111,21 @@ bool FileHasher::Hash() {
 void FileHasher::PrintTable(bool colocated) {
   // Grab the digest (up to 1kbit supported)
   uint8_t digest[128];
+  char hexsalt[DM_BHT_SALT_SIZE * 2 + 1];
+  bool have_salt;
+
   dm_bht_root_hexdigest(&tree_, digest, sizeof(digest));
+  have_salt = dm_bht_salt(&tree_, hexsalt) == 0;
 
   // TODO(wad) later support sizes that need 64-bit sectors.
   unsigned int hash_start = 0;
   unsigned int root_end = to_sector(block_limit_ << PAGE_SHIFT);
   if (colocated) hash_start = root_end;
   printf("0 %u verity payload=ROOT_DEV hashtree=HASH_DEV hashstart=%u alg=%s "
-         "root_hexdigest=%s\n", root_end, hash_start, alg_, digest);
+         "root_hexdigest=%s", root_end, hash_start, alg_, digest);
+  if (have_salt)
+    printf(" salt=%s", hexsalt);
+  printf("\n");
 }
 
 }  // namespace verity
