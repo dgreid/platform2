@@ -60,6 +60,8 @@ int main(int argc, char **argv) {
 
   for (i = 1; i < argc; i++) {
     splitarg(argv[i], &key, &val);
+    if (!key || !val)
+      continue;
     if (!strcmp(key, "alg"))
       alg = val;
     else if (!strcmp(key, "payload"))
