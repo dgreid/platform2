@@ -60,8 +60,13 @@ int main(int argc, char **argv) {
 
   for (i = 1; i < argc; i++) {
     splitarg(argv[i], &key, &val);
-    if (!key || !val)
+    if (!key)
       continue;
+    if (!val) {
+      fprintf(stderr, "missing value: %s\n", key);
+      print_usage(argv[0]);
+      return -1;
+    }
     if (!strcmp(key, "alg"))
       alg = val;
     else if (!strcmp(key, "payload"))
