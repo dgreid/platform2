@@ -1,4 +1,4 @@
-# Copyright (C) 2010 The Chromium OS Authors. All rights reserved.
+# Copyright (C) 2011 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE.makefile file.
 #
@@ -368,20 +368,15 @@ ifeq ($(USE_QEMU),1)
 endif
 	
 qemu: FORCE
-ifeq ($(USE_QEMU),1)
-	$(QUIET)$(ECHO) "QEMU	Preparing qemu-$(QEMU_ARCH)"
-	$(QUIET)cp -f /usr/bin/qemu-$(QEMU_ARCH) $(PWD)/qemu-$(QEMU_ARCH)
-	$(QUIET)chmod a+rx $(PWD)/qemu-$(QEMU_ARCH)
-endif
-
 # TODO(wad) separate chroot from qemu to make it possible to cross-compile
 #           and test outside of the chroot.
 ifeq ($(USE_QEMU),1)
-  export QEMU_CMD = sudo chroot $(SYSROOT) \
-    $(subst $(SYSROOT),,$(PWD))/qemu-$(QEMU_ARCH) \
+  export QEMU_CMD = sudo /usr/bin/qemu-$(QEMU_ARCH) \
+    -L $(SYSROOT) \
     -drop-ld-preload \
     -E LD_LIBRARY_PATH="$(SYSROOT_LDPATH)" \
-    -E HOME="$(HOME)" --
+    -E HOME="$(HOME)" -- \
+    $(SYSROOT)/bin/chroot $(SYSROOT)
 endif
 
 VALGRIND_CMD =
