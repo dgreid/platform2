@@ -38,7 +38,8 @@
 #   - COLOR=[0|1] to set ANSI color output (default: 1)
 #   - VERBOSE=[0|1] to hide/show commands (default: 0)
 #   - MODE=dbg to turn down optimizations (default: opt)
-#   - ARCH=[x86|arm|supported qemu name] (default: from portage or uname -m)
+#   - ARCH=[x86|amd64|arm|supported qemu name]
+#     (default: from portage or uname -m)
 #   - SPLITDEBUG=[0|1] splits debug info in target.debug (default: 1)
 #                      [SPLITDEBUG=0 MODE=opt will disable compiling with -g]
 #   - VALGRIND=[0|1] runs tests under valgrind (default: 0)
@@ -303,15 +304,15 @@ endef
 # Architecture detection and QEMU wrapping
 #
 
-ARCH ?= $(shell uname -m)
 HOST_ARCH ?= $(shell uname -m)
 # emake will supply "x86" or "arm" for ARCH, but
 # if uname -m runs and you get x86_64, then this subst
 # will break.
+QEMU_ARCH = $(ARCH)
 ifeq ($(subst x86,i386,$(ARCH)),i386)
   QEMU_ARCH := $(subst x86,i386,$(ARCH))  # x86 -> i386
-else
-  QEMU_ARCH = $(ARCH)
+else ifeq ($(subst amd64,x86_64,$(ARCH)),x86_64)
+  QEMU_ARCH := $(subst amd64,x86_64,$(ARCH))  # amd64 -> x86_64
 endif
 
 # If we're cross-compiling, try to use qemu for running the tests.
