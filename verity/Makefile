@@ -35,12 +35,19 @@ verity: $(OUT)verity
 #RM_ON_CLEAN += $(OUT)verity-l
 
 # Current toolchain doesn't support -pie statically linked binaries
-#$(OUT)verity-static: $(C_OBJECTS) $(OUT)kernel/libkernel-pie.a \
-#                       /usr/lib/libcrypto.a
-#	@# Build the target as a binary with extra flags
-#	$(call cc_binary,-static)
-#all: $(OUT)verity-static
-#RM_ON_CLEAN += $(wildcard $(OUT)verity-static)
+$(OUT)verity-static: \
+                     $(filter-out %_testrunner.o %_unittest.o,$(CXX_OBJECTS)) \
+                     $(C_OBJECTS) $(OUT)kernel/libkernel-pic.a \
+                     $(OUT)simple_file/libsimple_file-pic.a \
+                     $(shell $(CXX) -print-file-name=libcrypto.a) \
+                     $(shell $(CXX) -print-file-name=libz.a) \
+                     $(shell $(CXX) -print-file-name=libdl.a) \
+                     $(shell $(CXX) -print-file-name=libstdc++.a) \
+                     $(shell $(CXX) -print-file-name=libc.a)
+	@# Build the target as a binary with extra flags
+	$(call cc_binary,-static)
+all: $(OUT)verity-static
+RM_ON_CLEAN += $(wildcard $(OUT)verity-static)
 
 $(OUT)verity: $(filter-out %_testrunner.o %_unittest.o,$(CXX_OBJECTS)) \
               $(C_OBJECTS) \
