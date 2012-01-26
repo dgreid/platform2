@@ -5,14 +5,15 @@
  * Parts of this file are derived from the Linux kernel from the file with
  * the same name and path under include/.
  */
-#ifndef VERITY_INCLUDE_LINUX_MODULE_H_
-#define VERITY_INCLUDE_LINUX_MODULE_H_
+#ifndef VERITY_INCLUDE_CRYPTO_INTERNAL_HASH_H_
+#define VERITY_INCLUDE_CRYPTO_INTERNAL_HASH_H_
 
-#define EXPORT_SYMBOL(x)
-#define MODULE_LICENSE(x)
-#define MODULE_DESCRIPTION(x)
-#define MODULE_ALIAS(x)
+#include <crypto/hash.h>
 
-#define THIS_MODULE NULL
+int crypto_register_shash(struct shash_alg *alg);
+static inline int crypto_unregister_shash(struct shash_alg *alg)
+{
+	return 0;
+}
 
-#endif  /* VERITY_INCLUDE_LINUX_MODULE_H_ */
+#endif

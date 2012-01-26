@@ -1,7 +1,7 @@
-/* Copyright (C) 2010 The Chromium OS Authors. All rights reserved.
+/* Copyright (C) 2012 The Chromium OS Authors. All rights reserved.
  * Use of this source code is governed by the GPL v2 license that can
  * be found in the LICENSE file.
- * 
+ *
  * Parts of this file are derived from the Linux kernel from the file with
  * the same name and path under include/.
  */
@@ -22,7 +22,26 @@
 #include <asm-generic/bitops/fls.h>
 #include <asm-generic/bitops/non-atomic.h>
 #include <strings.h>
+#include <linux/types.h>
 
+/**
+ * rol32 - rotate a 32-bit value left
+ * @word: value to rotate
+ * @shift: bits to roll
+ */
+static inline __u32 rol32(__u32 word, unsigned int shift)
+{
+	return (word << shift) | (word >> (32 - shift));
+}
 
+/**
+ * ror32 - rotate a 32-bit value right
+ * @word: value to rotate
+ * @shift: bits to roll
+ */
+static inline __u32 ror32(__u32 word, unsigned int shift)
+{
+	return (word >> shift) | (word << (32 - shift));
+}
 
 #endif  /* VERITY_INCLUDE_LINUX_BITOPS_H_ */

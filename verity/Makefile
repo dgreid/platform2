@@ -10,8 +10,6 @@ include common.mk
 # Prepend with our include
 CFLAGS += -I$(SRC)/include -I$(SRC)/..
 CXXFLAGS += -I$(SRC)/include -I$(SRC)/..
-# Use openssl for digests
-LDFLAGS += -lcrypto
 
 ifneq ($(WITH_CHROME),0)
   CXXFLAGS += -DWITH_CHROME=1

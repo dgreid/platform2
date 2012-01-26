@@ -4,6 +4,7 @@
 //
 // Driver program for creating verity hash images.
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "verity/file_hasher.h"
 #include "verity/logging.h"

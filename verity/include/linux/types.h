@@ -1,7 +1,7 @@
-/* Copyright (C) 2010 The Chromium OS Authors. All rights reserved.
+/* Copyright (C) 2012 The Chromium OS Authors. All rights reserved.
  * Use of this source code is governed by the GPL v2 license that can
  * be found in the LICENSE file.
- * 
+ *
  * Parts of this file are derived from the Linux kernel from the file with
  * the same name and path under include/.
  */
@@ -15,8 +15,15 @@
 #include <asm/types.h>
 
 typedef u_int8_t u8;
+typedef u_int16_t u16;
 typedef u_int32_t u32;
 typedef u_int64_t u64;
+typedef u16 __le16;
+typedef u32 __le32;
+typedef u64 __le64;
+typedef u16 __be16;
+typedef u32 __be32;
+typedef u64 __be64;
 /* Assume CONFIG_LBDAF */
 typedef u64 sector_t;
 
