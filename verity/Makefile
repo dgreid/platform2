@@ -18,7 +18,7 @@ LDFLAGS += -lcrypto
 
 ifneq ($(WITH_CHROME),0)
   CXXFLAGS += -DWITH_CHROME=1
-  LDFLAGS += -lpthread -lrt -L/usr/lib -lbase
+  LDFLAGS += -lpthread -lrt -lbase
   WITH_CHROME = 1
 endif
 
