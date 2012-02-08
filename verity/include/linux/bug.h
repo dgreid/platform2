@@ -13,7 +13,8 @@
 #define BUG() abort()
 #define BUG_ON(val) { \
 	if (val) { \
-		fprintf(stderr, "!! BUG_ON: %s\n\n", #val); \
+		fprintf(stderr, "!! %s:%s:%i: BUG_ON: %s\n\n", \
+			__FILE__, __func__, __LINE__, #val); \
 		abort(); \
 	} \
 }
