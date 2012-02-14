@@ -4,12 +4,6 @@
 
 include common.mk
 
-$(OUT)kernel/libkernel-pic.a: $(kernel_C_OBJECTS)
-	$(call update_archive,pic)
-$(OUT)kernel/libkernel-pie.a: $(kernel_C_OBJECTS)
-	$(call update_archive,pie)
-
-# Add our target
-all: $(OUT)kernel/libkernel-pie.a $(OUT)kernel/libkernel-pic.a
-# Ditto
-RM_ON_CLEAN += $(OUT)kernel/libkernel-*.a
+CXX_STATIC_LIBRARY(kernel/libkernel.pic.a): $(kernel_C_OBJECTS)
+CXX_STATIC_LIBRARY(kernel/libkernel.pie.a): $(kernel_C_OBJECTS)
+clean: CLEAN(kernel/libkernel.pic.a) CLEAN(kernel/libkernel.pie.a)

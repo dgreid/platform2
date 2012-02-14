@@ -7,89 +7,58 @@
 # Pull in chromium os defaults
 include common.mk
 
-# Force g++ use.
-#CC = $(CXX)
-
 # Prepend with our include
-CFLAGS := -Iinclude $(CFLAGS)
-CXXFLAGS := -Iinclude -I../ $(CXXFLAGS)
+CFLAGS += -I$(SRC)/include -I$(SRC)/..
+CXXFLAGS += -I$(SRC)/include -I$(SRC)/..
 # Use openssl for digests
 LDFLAGS += -lcrypto
 
 ifneq ($(WITH_CHROME),0)
   CXXFLAGS += -DWITH_CHROME=1
-  LDFLAGS += -lpthread -lrt -lbase
+  LDFLAGS += -lbase -lpthread -lrt
   WITH_CHROME = 1
 endif
 
-# Helper so I can type "make verity" on the prompt
-verity: $(OUT)verity
-
-## Binary target linked against a shared libdm-bht.so
-#$(OUT)verity-l: $(OUT)libdm-bht.so $(OUT)verity_main.o
-#	@# Build the target as a binary with extra flags
-#	$(call cc_binary,-L$(OUT) -ldm-bht)
-## Adds verity to the default compile
-#all: $(OUT)verity-l
-## Add our targets to get auto-rm'd
-#RM_ON_CLEAN += $(OUT)verity-l
-
 # Current toolchain doesn't support -pie statically linked binaries
-$(OUT)verity-static: \
-                     $(filter-out %_testrunner.o %_unittest.o,$(CXX_OBJECTS)) \
-                     $(C_OBJECTS) $(OUT)kernel/libkernel-pic.a \
-                     $(OUT)simple_file/libsimple_file-pic.a \
-                     $(shell $(CXX) -print-file-name=libcrypto.a) \
-                     $(shell $(CXX) -print-file-name=libz.a) \
-                     $(shell $(CXX) -print-file-name=libdl.a) \
-                     $(shell $(CXX) -print-file-name=libstdc++.a) \
-                     $(shell $(CXX) -print-file-name=libc.a)
-	@# Build the target as a binary with extra flags
-	$(call cc_binary,-static)
-all: $(OUT)verity-static
-RM_ON_CLEAN += $(wildcard $(OUT)verity-static)
+CXX_STATIC_BINARY(verity-static): \
+  $(filter-out %_testrunner.o %_unittest.o,$(CXX_OBJECTS)) \
+  $(C_OBJECTS) \
+  CXX_STATIC_LIBRARY(kernel/libkernel.pic.a) \
+  CXX_STATIC_LIBRARY(simple_file/libsimple_file.pic.a) \
+  $(shell $(CXX) -print-file-name=libcrypto.a) \
+  $(shell $(CXX) -print-file-name=libz.a) \
+  $(shell $(CXX) -print-file-name=libdl.a) \
+  $(shell $(CXX) -print-file-name=libstdc++.a) \
+  $(shell $(CXX) -print-file-name=libc.a)
+all: CXX_STATIC_BINARY(verity-static)
+clean: CLEAN(verity-static)
 
-$(OUT)verity: $(filter-out %_testrunner.o %_unittest.o,$(CXX_OBJECTS)) \
-              $(C_OBJECTS) \
-              $(OUT)kernel/libkernel-pie.a \
-              $(OUT)simple_file/libsimple_file-pie.a
-	$(call cxx_binary)
-all: $(OUT)verity
-RM_ON_CLEAN += $(OUT)verity
+CXX_BINARY(verity): $(filter-out %_testrunner.o %_unittest.o,$(CXX_OBJECTS)) \
+                    $(C_OBJECTS) \
+                    CXX_STATIC_LIBRARY(kernel/libkernel.pie.a) \
+                    CXX_STATIC_LIBRARY(simple_file/libsimple_file.pie.a)
+all: CXX_BINARY(verity)
+clean: CLEAN(verity)
 
-# Current toolchain doesn't support -pie statically linked binaries
-#$(OUT)verity-static: $(C_OBJECTS) $(OUT)kernel/libkernel-pie.a \
-#                       /usr/lib/libcrypto.a
-#	@# Build the target as a binary with extra flags
-#	$(call cc_binary,-static)
-#all: $(OUT)verity-static
-#m_clean: $(wildcard $(OUT)verity)
+# Simple helper. Not ideal but here it is.
+verity: CXX_BINARY(verity)
 
 # Shared dm-bht library
-$(OUT)libdm-bht.so: $(filter-out %verity_main.o,$(C_OBJECTS)) \
-                      $(OUT)kernel/libkernel-pic.a
-	$(call cc_library)
-all: $(OUT)libdm-bht.so
-RM_ON_CLEAN += $(OUT)libdm-bht.so
+CXX_LIBRARY(libdm-bht.so): $(filter-out %verity_main.o,$(C_OBJECTS)) \
+                          $(kernel_C_OBJECTS)
+all: CXX_LIBRARY(libdm-bht.so)
+clean: CLEAN(libdm-bht.so)
 
 # Tests require libchrome
 ifneq ($(WITH_CHROME),0)
   # For this project, only the unittests are CXX
-  $(OUT)verity_testrunner: $(filter-out %_main.o,$(CXX_OBJECTS)) \
+  CXX_BINARY(verity_testrunner): $(filter-out %_main.o,$(CXX_OBJECTS)) \
                            $(filter %dm-bht-userspace.o,$(C_OBJECTS)) \
-                           $(OUT)simple_file/libsimple_file-pie.a \
-                           $(OUT)kernel/libkernel-pie.a
+                           CXX_STATIC_LIBRARY(kernel/libkernel.pie.a) \
+                           CXX_STATIC_LIBRARY(simple_file/libsimple_file.pie.a)
 	$(call cxx_binary,-lgtest -lgmock)
 
-  all: $(OUT)verity_testrunner
-  RM_ON_CLEAN += $(OUT)verity_testrunner
-  # Will run each prerequisite for tests.
-  # If cross-compiled, this is done against the correct architecture.
-  small_tests: $(OUT)verity_testrunner
-
-  # No large tests here so we use the NONE target.
-  large_tests: NONE
-else
-  small_tests: NONE
-  large_tests: NONE
+  all: CXX_BINARY(verity_testrunner)
+  clean: CLEAN(verity_testrunner)
+  tests: TEST(CXX_BINARY(verity_testrunner))
 endif
