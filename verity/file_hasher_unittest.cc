@@ -5,11 +5,10 @@
 // Tests for verity::FileHasher
 #include "verity/file_hasher.h"
 
-#include <base/basictypes.h>
-#include <base/memory/scoped_ptr.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "verity/logging.h"
 #include "verity/simple_file/mock_file.h"
 #include "verity/utils.h"
 
@@ -25,14 +24,21 @@ class FileHasherTest : public ::testing::Test {
   FileHasherTest() :
     src_(new simple_file::MockFile()),
     dst_(new simple_file::MockFile()) { }
-  ~FileHasherTest() { }
+  ~FileHasherTest() {
+    delete src_;
+    delete dst_;
+    if (hasher_)
+      delete hasher_;
+  }
   void SetUp() {
-    hasher_.reset(new verity::FileHasher());
+    if (hasher_)
+      delete hasher_;
+    hasher_ = new verity::FileHasher();
   }
  protected:
-  scoped_ptr<simple_file::MockFile> src_;
-  scoped_ptr<simple_file::MockFile> dst_;
-  scoped_ptr<verity::FileHasher> hasher_;
+  simple_file::MockFile *src_;
+  simple_file::MockFile *dst_;
+  verity::FileHasher *hasher_;
 };
 
 static char last_digest_match[256] = { 0 };

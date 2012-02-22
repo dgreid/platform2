@@ -11,12 +11,6 @@ include common.mk
 CFLAGS += -I$(SRC)/include -I$(SRC)/..
 CXXFLAGS += -I$(SRC)/include -I$(SRC)/..
 
-ifneq ($(WITH_CHROME),0)
-  CXXFLAGS += -DWITH_CHROME=1
-  LDFLAGS += -lbase -lpthread -lrt
-  WITH_CHROME = 1
-endif
-
 # Current toolchain doesn't support -pie statically linked binaries
 CXX_STATIC_BINARY(verity-static): \
   $(filter-out %_testrunner.o %_unittest.o,$(CXX_OBJECTS)) \
@@ -43,16 +37,13 @@ CXX_LIBRARY(libdm-bht.so): $(filter-out %verity_main.o,$(C_OBJECTS)) \
 all: CXX_LIBRARY(libdm-bht.so)
 clean: CLEAN(libdm-bht.so)
 
-# Tests require libchrome
-ifneq ($(WITH_CHROME),0)
-  # For this project, only the unittests are CXX
-  CXX_BINARY(verity_testrunner): $(filter-out %_main.o,$(CXX_OBJECTS)) \
-                           $(filter %dm-bht-userspace.o,$(C_OBJECTS)) \
+# For this project, only the unittests are CXX
+CXX_BINARY(verity_testrunner): $(filter-out %_main.o,$(CXX_OBJECTS)) \
+                          $(filter %dm-bht-userspace.o,$(C_OBJECTS)) \
                            CXX_STATIC_LIBRARY(kernel/libkernel.pie.a) \
                            CXX_STATIC_LIBRARY(simple_file/libsimple_file.pie.a)
-	$(call cxx_binary,-lgtest -lgmock)
+	$(call cxx_binary,-lgtest -lgmock -lpthread)
 
-  all: CXX_BINARY(verity_testrunner)
-  clean: CLEAN(verity_testrunner)
-  tests: TEST(CXX_BINARY(verity_testrunner))
-endif
+all: CXX_BINARY(verity_testrunner)
+clean: CLEAN(verity_testrunner)
+tests: TEST(CXX_BINARY(verity_testrunner))

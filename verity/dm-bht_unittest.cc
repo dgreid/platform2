@@ -4,11 +4,13 @@
 //
 // Basic unittesting of dm-bht using google-gtest.
 
-#include <base/basictypes.h>
-#include <base/logging.h>
-#include <base/memory/scoped_ptr.h>
 #include <gtest/gtest.h>
 #include <stdlib.h>
+
+#include <string>
+#include <vector>
+
+#include "verity/logging.h"
 
 // Pull in dm-bht.c so that we can access static functions.
 // But disable verbose logging.
@@ -43,7 +45,7 @@ TEST(DmBht, CreateZeroPopulateDestroy) {
   // This should fail.
   unsigned int blocks, total_blocks = 16384;
   u8 *data = (u8 *)my_memalign(PAGE_SIZE, PAGE_SIZE);
-  void * hash_data;
+  u8 *hash_data;
 
   blocks = total_blocks;
 
@@ -66,13 +68,21 @@ TEST(DmBht, CreateZeroPopulateDestroy) {
 	      0);
   EXPECT_EQ(0, dm_bht_compute(&bht));
   EXPECT_EQ(0, dm_bht_destroy(&bht));
-  free(hash_data);
+  delete hash_data;
   free(data);
 }
 
 class MemoryBhtTest : public ::testing::Test {
  public:
   void SetUp() {
+    bht_ = NULL;
+  }
+
+  void TearDown() {
+    hash_data_.clear();
+    if (bht_)
+      delete bht_;
+    bht_ = NULL;
   }
 
   int Read(sector_t start, u8 *dst, sector_t count) {
@@ -126,31 +136,31 @@ class MemoryBhtTest : public ::testing::Test {
   void SetupBht(const unsigned int total_blocks,
                 const char *digest_algorithm,
                 const char *salt) {
-    bht_.reset(new dm_bht());
+    if (bht_)
+      delete bht_;
+    bht_ = new dm_bht;
 
-    EXPECT_EQ(0, dm_bht_create(bht_.get(), total_blocks, digest_algorithm));
-       if (hash_data_.get() == NULL) {
-      sectors_ = dm_bht_sectors(bht_.get());
-      hash_data_.reset(new u8[to_bytes(sectors_)]);
-    }
+    EXPECT_EQ(0, dm_bht_create(bht_, total_blocks, digest_algorithm));
+    sectors_ = dm_bht_sectors(bht_);
+    hash_data_.resize(to_bytes(sectors_));
 
     if (salt)
-      dm_bht_set_salt(bht_.get(), salt);
+      dm_bht_set_salt(bht_, salt);
 
     SetupHash(total_blocks, digest_algorithm, salt, &hash_data_[0]);
-    dm_bht_set_read_cb(bht_.get(), MemoryBhtTest::ReadCallback);
+    dm_bht_set_read_cb(bht_, MemoryBhtTest::ReadCallback);
 
     // Load the tree from the pre-populated hash data
     unsigned int blocks;
     for (blocks = 0; blocks < total_blocks; blocks += bht_->node_count)
-      EXPECT_GE(dm_bht_populate(bht_.get(),
+      EXPECT_GE(dm_bht_populate(bht_,
                                 reinterpret_cast<void *>(this),
                                 blocks),
                 0);
   }
 
-  scoped_ptr<struct dm_bht> bht_;
-  scoped_array<u8> hash_data_;
+  struct dm_bht *bht_;
+  std::vector<u8> hash_data_;
   sector_t sectors_;
 };
 
@@ -165,16 +175,16 @@ TEST_F(MemoryBhtTest, CreateThenVerifyOk) {
   memset(zero_page, 0, PAGE_SIZE);
 
   SetupBht(total_blocks, "sha256", NULL);
-  dm_bht_set_root_hexdigest(bht_.get(),
+  dm_bht_set_root_hexdigest(bht_,
                             reinterpret_cast<const u8 *>(kRootDigest));
 
   for (unsigned int blocks = 0; blocks < total_blocks; ++blocks) {
     DLOG(INFO) << "verifying block: " << blocks;
-    EXPECT_EQ(0, dm_bht_verify_block(bht_.get(), blocks,
+    EXPECT_EQ(0, dm_bht_verify_block(bht_, blocks,
                                      virt_to_page(zero_page), 0));
   }
 
-  EXPECT_EQ(0, dm_bht_destroy(bht_.get()));
+  EXPECT_EQ(0, dm_bht_destroy(bht_));
   free(zero_page);
 }
 
@@ -189,16 +199,16 @@ TEST_F(MemoryBhtTest, CreateThenVerifySingleLevel) {
   memset(zero_page, 0, PAGE_SIZE);
 
   SetupBht(total_blocks, "sha256", NULL);
-  dm_bht_set_root_hexdigest(bht_.get(),
+  dm_bht_set_root_hexdigest(bht_,
                             reinterpret_cast<const u8 *>(kRootDigest));
 
   for (unsigned int blocks = 0; blocks < total_blocks; ++blocks) {
     DLOG(INFO) << "verifying block: " << blocks;
-    EXPECT_EQ(0, dm_bht_verify_block(bht_.get(), blocks,
+    EXPECT_EQ(0, dm_bht_verify_block(bht_, blocks,
                                      virt_to_page(zero_page), 0));
   }
 
-  EXPECT_EQ(0, dm_bht_destroy(bht_.get()));
+  EXPECT_EQ(0, dm_bht_destroy(bht_));
   free(zero_page);
 }
 
@@ -213,16 +223,16 @@ TEST_F(MemoryBhtTest, CreateThenVerifyRealParameters) {
   memset(zero_page, 0, PAGE_SIZE);
 
   SetupBht(total_blocks, "sha256", NULL);
-  dm_bht_set_root_hexdigest(bht_.get(),
+  dm_bht_set_root_hexdigest(bht_,
                             reinterpret_cast<const u8 *>(kRootDigest));
 
   for (unsigned int blocks = 0; blocks < total_blocks; ++blocks) {
     DLOG(INFO) << "verifying block: " << blocks;
-    EXPECT_EQ(0, dm_bht_verify_block(bht_.get(), blocks,
+    EXPECT_EQ(0, dm_bht_verify_block(bht_, blocks,
                                      virt_to_page(zero_page), 0));
   }
 
-  EXPECT_EQ(0, dm_bht_destroy(bht_.get()));
+  EXPECT_EQ(0, dm_bht_destroy(bht_));
   free(zero_page);
 }
 
@@ -237,16 +247,16 @@ TEST_F(MemoryBhtTest, CreateThenVerifyOddLeafCount) {
   memset(zero_page, 0, PAGE_SIZE);
 
   SetupBht(total_blocks, "sha256", NULL);
-  dm_bht_set_root_hexdigest(bht_.get(),
+  dm_bht_set_root_hexdigest(bht_,
                             reinterpret_cast<const u8 *>(kRootDigest));
 
   for (unsigned int blocks = 0; blocks < total_blocks; ++blocks) {
     DLOG(INFO) << "verifying block: " << blocks;
-    EXPECT_EQ(0, dm_bht_verify_block(bht_.get(), blocks,
+    EXPECT_EQ(0, dm_bht_verify_block(bht_, blocks,
                                      virt_to_page(zero_page), 0));
   }
 
-  EXPECT_EQ(0, dm_bht_destroy(bht_.get()));
+  EXPECT_EQ(0, dm_bht_destroy(bht_));
   free(zero_page);
 }
 
@@ -261,16 +271,16 @@ TEST_F(MemoryBhtTest, CreateThenVerifyOddNodeCount) {
   memset(zero_page, 0, PAGE_SIZE);
 
   SetupBht(total_blocks, "sha256", NULL);
-  dm_bht_set_root_hexdigest(bht_.get(),
+  dm_bht_set_root_hexdigest(bht_,
                             reinterpret_cast<const u8 *>(kRootDigest));
 
   for (unsigned int blocks = 0; blocks < total_blocks; ++blocks) {
     DLOG(INFO) << "verifying block: " << blocks;
-    EXPECT_EQ(0, dm_bht_verify_block(bht_.get(), blocks,
+    EXPECT_EQ(0, dm_bht_verify_block(bht_, blocks,
                                      virt_to_page(zero_page), 0));
   }
 
-  EXPECT_EQ(0, dm_bht_destroy(bht_.get()));
+  EXPECT_EQ(0, dm_bht_destroy(bht_));
   free(zero_page);
 }
 
@@ -286,7 +296,7 @@ TEST_F(MemoryBhtTest, CreateThenVerifyBadHashBlock) {
 
   SetupBht(total_blocks, "sha256", NULL);
 
-  dm_bht_set_root_hexdigest(bht_.get(),
+  dm_bht_set_root_hexdigest(bht_,
                             reinterpret_cast<const u8 *>(kRootDigest));
 
   // TODO(wad) add tests for partial tree validity/verification
@@ -295,30 +305,30 @@ TEST_F(MemoryBhtTest, CreateThenVerifyBadHashBlock) {
   static const unsigned int kBadBlock = 256;
   u8 *bad_hash_block= (u8 *)my_memalign(PAGE_SIZE, PAGE_SIZE);
   memset(bad_hash_block, 'A', PAGE_SIZE);
-  EXPECT_EQ(dm_bht_store_block(bht_.get(), kBadBlock, bad_hash_block), 0);
+  EXPECT_EQ(dm_bht_store_block(bht_, kBadBlock, bad_hash_block), 0);
 
   // Attempt to verify both the bad block and all the neighbors.
-  EXPECT_LT(dm_bht_verify_block(bht_.get(), kBadBlock + 1,
+  EXPECT_LT(dm_bht_verify_block(bht_, kBadBlock + 1,
                                 virt_to_page(zero_page), 0), 0);
 
-  EXPECT_LT(dm_bht_verify_block(bht_.get(), kBadBlock + 2,
+  EXPECT_LT(dm_bht_verify_block(bht_, kBadBlock + 2,
                                 virt_to_page(zero_page), 0), 0);
 
-  EXPECT_LT(dm_bht_verify_block(bht_.get(), kBadBlock + (bht_->node_count / 2),
+  EXPECT_LT(dm_bht_verify_block(bht_, kBadBlock + (bht_->node_count / 2),
                                 virt_to_page(zero_page), 0), 0);
 
-  EXPECT_LT(dm_bht_verify_block(bht_.get(), kBadBlock,
+  EXPECT_LT(dm_bht_verify_block(bht_, kBadBlock,
                                 virt_to_page(zero_page), 0), 0);
 
   // Verify that the prior entry is untouched and still safe
-  EXPECT_EQ(dm_bht_verify_block(bht_.get(), kBadBlock - 1,
+  EXPECT_EQ(dm_bht_verify_block(bht_, kBadBlock - 1,
                                 virt_to_page(zero_page), 0), 0);
 
   // Same for the next entry
-  EXPECT_EQ(dm_bht_verify_block(bht_.get(), kBadBlock + bht_->node_count,
+  EXPECT_EQ(dm_bht_verify_block(bht_, kBadBlock + bht_->node_count,
                                 virt_to_page(zero_page), 0), 0);
 
-  EXPECT_EQ(0, dm_bht_destroy(bht_.get()));
+  EXPECT_EQ(0, dm_bht_destroy(bht_));
   free(bad_hash_block);
   free(zero_page);
 }
@@ -329,7 +339,7 @@ TEST_F(MemoryBhtTest, CreateThenVerifyBadDataBlock) {
   // Set the root hash for a 0-filled image
   static const char kRootDigest[] =
     "45d65d6f9e5a962f4d80b5f1bd7a918152251c27bdad8c5f52b590c129833372";
-  dm_bht_set_root_hexdigest(bht_.get(),
+  dm_bht_set_root_hexdigest(bht_,
                             reinterpret_cast<const u8 *>(kRootDigest));
   // A corrupt page
   u8 *bad_page = (u8 *)my_memalign(PAGE_SIZE, PAGE_SIZE);
@@ -337,14 +347,14 @@ TEST_F(MemoryBhtTest, CreateThenVerifyBadDataBlock) {
   memset(bad_page, 'A', PAGE_SIZE);
 
 
-  EXPECT_LT(dm_bht_verify_block(bht_.get(), 0, virt_to_page(bad_page), 0), 0);
-  EXPECT_LT(dm_bht_verify_block(bht_.get(), 127, virt_to_page(bad_page), 0), 0);
-  EXPECT_LT(dm_bht_verify_block(bht_.get(), 128, virt_to_page(bad_page), 0), 0);
-  EXPECT_LT(dm_bht_verify_block(bht_.get(), 255, virt_to_page(bad_page), 0), 0);
-  EXPECT_LT(dm_bht_verify_block(bht_.get(), 256, virt_to_page(bad_page), 0), 0);
-  EXPECT_LT(dm_bht_verify_block(bht_.get(), 383, virt_to_page(bad_page), 0), 0);
+  EXPECT_LT(dm_bht_verify_block(bht_, 0, virt_to_page(bad_page), 0), 0);
+  EXPECT_LT(dm_bht_verify_block(bht_, 127, virt_to_page(bad_page), 0), 0);
+  EXPECT_LT(dm_bht_verify_block(bht_, 128, virt_to_page(bad_page), 0), 0);
+  EXPECT_LT(dm_bht_verify_block(bht_, 255, virt_to_page(bad_page), 0), 0);
+  EXPECT_LT(dm_bht_verify_block(bht_, 256, virt_to_page(bad_page), 0), 0);
+  EXPECT_LT(dm_bht_verify_block(bht_, 383, virt_to_page(bad_page), 0), 0);
 
-  EXPECT_EQ(0, dm_bht_destroy(bht_.get()));
+  EXPECT_EQ(0, dm_bht_destroy(bht_));
   free(bad_page);
 }
 
@@ -361,16 +371,16 @@ TEST_F(MemoryBhtTest, CreateThenVerifyOkSalt) {
   memset(zero_page, 0, PAGE_SIZE);
 
   SetupBht(total_blocks, "sha256", salt);
-  dm_bht_set_root_hexdigest(bht_.get(),
+  dm_bht_set_root_hexdigest(bht_,
                             reinterpret_cast<const u8 *>(kRootDigest));
 
   for (unsigned int blocks = 0; blocks < total_blocks; ++blocks) {
     DLOG(INFO) << "verifying block: " << blocks;
-    EXPECT_EQ(0, dm_bht_verify_block(bht_.get(), blocks,
+    EXPECT_EQ(0, dm_bht_verify_block(bht_, blocks,
                                      virt_to_page(zero_page), 0));
   }
 
-  EXPECT_EQ(0, dm_bht_destroy(bht_.get()));
+  EXPECT_EQ(0, dm_bht_destroy(bht_));
   free(zero_page);
 }
 
@@ -387,15 +397,15 @@ TEST_F(MemoryBhtTest, CreateThenVerifyOkLongSalt) {
   memset(zero_page, 0, PAGE_SIZE);
 
   SetupBht(total_blocks, "sha256", salt);
-  dm_bht_set_root_hexdigest(bht_.get(),
+  dm_bht_set_root_hexdigest(bht_,
                             reinterpret_cast<const u8 *>(kRootDigest));
 
   for (unsigned int blocks = 0; blocks < total_blocks; ++blocks) {
     DLOG(INFO) << "verifying block: " << blocks;
-    EXPECT_EQ(0, dm_bht_verify_block(bht_.get(), blocks,
+    EXPECT_EQ(0, dm_bht_verify_block(bht_, blocks,
                                      virt_to_page(zero_page), 0));
   }
 
-  EXPECT_EQ(0, dm_bht_destroy(bht_.get()));
+  EXPECT_EQ(0, dm_bht_destroy(bht_));
   free(zero_page);
 }
