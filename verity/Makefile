@@ -37,6 +37,21 @@ CXX_LIBRARY(libdm-bht.so): $(filter-out %verity_main.o,$(C_OBJECTS)) \
 all: CXX_LIBRARY(libdm-bht.so)
 clean: CLEAN(libdm-bht.so)
 
+CXX_STATIC_LIBRARY(libdm-bht.pic.a): $(C_OBJECTS) \
+				     $(kernel_C_OBJECTS)
+
+clean: CLEAN(libdm-bht.pic.a)
+
+# Give libdm-bht.pic.a a slightly cleaner name
+# But, we have to do some odd stuff like use $(OUT) and use "cp"
+# rather than mv because it gets called twice and can ace with the
+# actual build of libdm-bht.pic.a
+# TODO(wad) fix the double invocation problem and clean this up
+libdm-bht.a: CXX_STATIC_LIBRARY(libdm-bht.pic.a)
+	cp $(OUT)libdm-bht.pic.a $(OUT)libdm-bht.a || true
+
+all: libdm-bht.a
+
 # For this project, only the unittests are CXX
 CXX_BINARY(verity_testrunner): $(filter-out %_main.o,$(CXX_OBJECTS)) \
                           $(filter %dm-bht-userspace.o,$(C_OBJECTS)) \
