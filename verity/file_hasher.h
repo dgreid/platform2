@@ -41,6 +41,7 @@ class FileHasher {
   }
   virtual const char *salt(void) { return salt_; }
 
+  virtual ~FileHasher() {};
   static int WriteCallback(void *file,
                            sector_t start,
                            u8 *dst,
