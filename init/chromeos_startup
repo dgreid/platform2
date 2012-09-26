@@ -118,7 +118,8 @@ add_clobber_crash_report() {
   sync
 }
 
-mount -n -t debugfs -o nodev,noexec,nosuid,mode=0750,uid=0,gid=debugfs-access \
+mount -n -i -c -t debugfs \
+  -o nodev,noexec,nosuid,mode=0750,uid=0,gid=debugfs-access \
   debugfs /sys/kernel/debug
 
 # bootstat writes timings to tmpfs.
@@ -129,12 +130,12 @@ bootstat pre-startup
 . /usr/share/cros/startup_utils.sh
 
 mkdir -p /dev/pts /dev/shm
-mount -n -t tmpfs -o nodev,noexec,nosuid shmfs /dev/shm
-mount -n -t devpts -o noexec,nosuid,gid=5,mode=0620 devpts /dev/pts
+mount -n -i -c -t tmpfs -o nodev,noexec,nosuid shmfs /dev/shm
+mount -n -i -c -t devpts -o noexec,nosuid,gid=5,mode=0620 devpts /dev/pts
 
 # Mount configfs, if present.
 if [ -d /sys/kernel/config ]; then
-  mount -n -t configfs -o nodev,nosuid,noexec configfs \
+  mount -n -i -c -t configfs -o nodev,nosuid,noexec configfs \
     /sys/kernel/config
 fi
 
@@ -146,7 +147,8 @@ fi
 
 if [ "${DISABLE_STATEFUL_SECURITY_HARDENING}" = "false" ]; then
   # Mount securityfs as it is used to configure inode security policies below.
-  mount -n -t securityfs -o nodev,noexec,nosuid securityfs /sys/kernel/security
+  mount -n -i -c -t securityfs -o nodev,noexec,nosuid securityfs \
+    /sys/kernel/security
 fi
 
 # Initialize kernel sysctl settings early so that they take effect for boot
