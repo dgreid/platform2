@@ -57,7 +57,7 @@ CXX_BINARY(verity_testrunner): $(filter-out %_main.o,$(CXX_OBJECTS)) \
                           $(filter %dm-bht-userspace.o,$(C_OBJECTS)) \
                            CXX_STATIC_LIBRARY(kernel/libkernel.pie.a) \
                            CXX_STATIC_LIBRARY(simple_file/libsimple_file.pie.a)
-	$(call cxx_binary,-lgtest -lgmock -lpthread)
+CXX_BINARY(verity_testrunner): LDLIBS += -lgtest -lgmock -lpthread
 
 all: CXX_BINARY(verity_testrunner)
 clean: CLEAN(verity_testrunner)
