@@ -134,8 +134,10 @@ static int verity_create(const char *alg,
     << "Failed to initialize hasher";
   if (salt)
     hasher.set_salt(salt);
-  LOG_IF(FATAL, !hasher.Hash());
-  LOG_IF(FATAL, !hasher.Store());
+  LOG_IF(FATAL, !hasher.Hash())
+    << "Failed to hash hasher";
+  LOG_IF(FATAL, !hasher.Store())
+    << "Failed to store hasher";
   hasher.PrintTable(true);
   return 0;
 }

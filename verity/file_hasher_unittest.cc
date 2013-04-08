@@ -41,9 +41,8 @@ class FileHasherTest : public ::testing::Test {
   verity::FileHasher *hasher_;
 };
 
-static char last_digest_match[256] = { 0 };
-
 MATCHER_P(DigestMatch, a, "given hexdigest matches binary digest arg") {
+  static char last_digest_match[256] = { 0 };
   char *hexdigest = new char[strlen(a) + 1];
   verity_utils::to_hex(hexdigest, arg, strlen(a)/2);
   bool ok = !strcmp(a, hexdigest);

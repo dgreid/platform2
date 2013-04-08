@@ -59,7 +59,8 @@ static u8 from_hex(u8 ch)
 static void dm_bht_bin_to_hex(u8 *binary, u8 *hex, unsigned int binary_len)
 {
 	while (binary_len-- > 0) {
-		sprintf((char *__restrict__)hex, "%02hhx", (int)*binary);
+                sprintf((char *__restrict__)hex, "%02hhx",
+                        (unsigned char)*binary);
 		hex += 2;
 		binary++;
 	}
