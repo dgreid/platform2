@@ -1,7 +1,7 @@
 #!/usr/bin/ruby
 # Rapid prototyping helper for the math impaired.
 # Copyright 2010 The Chromium OS Authors. All rights reserved.
-# Licensed under a BSD-style license found at git.chromium.org.
+# Licensed under a BSD-style license found at chromium.googlesource.com.
 
 class Fixnum
 def ffs()
