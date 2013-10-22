@@ -32,6 +32,9 @@
 /* Additional possible return codes */
 #define DM_BHT_ENTRY_ERROR_MISMATCH -3 /* Digest mismatch */
 
+/* Forward declaration */
+struct page;
+
 /* dm_bht_entry
  * Contains dm_bht->node_count tree nodes at a given tree depth.
  * state is used to transactionally assure that data is paged in
