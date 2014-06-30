@@ -137,8 +137,10 @@ void CreateDirectories(ChromiumCommandBuilder* builder) {
   // Enable us to keep track of the user's chosen time zone.
   // Default to Pacific if we don't have one set.
   const base::FilePath timezone_file("/var/lib/timezone/localtime");
+  // TODO(derat): Move this back into the !base::PathExists() block in M39 or
+  // later, after http://crbug.com/390188 has had time to be cleaned up.
+  CHECK(EnsureDirectoryExists(timezone_file.DirName(), uid, gid, 0755));
   if (!base::PathExists(timezone_file)) {
-    CHECK(EnsureDirectoryExists(timezone_file.DirName(), uid, gid, 0700));
     CHECK(base::CreateSymbolicLink(
         base::FilePath("/usr/share/zoneinfo/US/Pacific"), timezone_file));
   }
