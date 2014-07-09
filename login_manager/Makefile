@@ -21,9 +21,11 @@ LDLIBS += -lchrome_crypto $(PC_LIBS) -lprotobuf-lite -lmetrics-$(BASE_VER) \
 
 # Special logic for generating protobuffer bindings.
 PROTO_PATH = $(SYSROOT)/usr/include/proto
-PROTO_BINDINGS = chrome_device_policy.pb.cc device_management_backend.pb.cc
+PROTO_BINDINGS = chrome_device_policy.pb.cc device_management_backend.pb.cc \
+	install_attributes.pb.cc
 PROTO_HEADERS = $(patsubst %.cc,%.h,$(PROTO_BINDINGS))
-PROTO_OBJS = chrome_device_policy.pb.o device_management_backend.pb.o
+PROTO_OBJS = chrome_device_policy.pb.o device_management_backend.pb.o \
+	install_attributes.pb.o
 $(PROTO_HEADERS): %.h: %.cc ;
 $(PROTO_BINDINGS): %.pb.cc: $(PROTO_PATH)/%.proto
 	protoc --proto_path=$(PROTO_PATH) --cpp_out=$(OUT) $<

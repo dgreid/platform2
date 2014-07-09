@@ -22,6 +22,7 @@
 
 #include "login_manager/chrome_device_policy.pb.h"
 #include "login_manager/device_management_backend.pb.h"
+#include "login_manager/install_attributes.pb.h"
 #include "login_manager/matchers.h"
 #include "login_manager/mock_metrics.h"
 #include "login_manager/mock_mitigator.h"
@@ -73,6 +74,8 @@ class DevicePolicyServiceTest : public ::testing::Test {
         tmpdir_.path().AppendASCII("serial_recovery_flag");
     policy_file_ =
         tmpdir_.path().AppendASCII("policy");
+    install_attributes_file_ =
+        tmpdir_.path().AppendASCII("install_attributes.pb");
   }
 
   void InitPolicy(const em::ChromeDeviceSettingsProto& settings,
@@ -117,6 +120,7 @@ class DevicePolicyServiceTest : public ::testing::Test {
     service_.reset(new DevicePolicyService(
         serial_recovery_flag_file_,
         policy_file_,
+        install_attributes_file_,
         scoped_ptr<PolicyStore>(store_),
         &key_,
         message_loop,
@@ -312,6 +316,7 @@ class DevicePolicyServiceTest : public ::testing::Test {
   base::ScopedTempDir tmpdir_;
   base::FilePath serial_recovery_flag_file_;
   base::FilePath policy_file_;
+  base::FilePath install_attributes_file_;
 
   // Use StrictMock to make sure that no unexpected policy or key mutations can
   // occur without the test failing.
@@ -966,6 +971,34 @@ TEST_F(DevicePolicyServiceTest, SerialRecoveryFlagFileUpdating) {
                       policy_str_.size(), &completion_,
                       PolicyService::KEY_CLOBBER));
   EXPECT_FALSE(base::PathExists(serial_recovery_flag_file_));
+
+
+  // Create install attributes file to mock enterprise enrolled device.
+  cryptohome::SerializedInstallAttributes install_attributes;
+  cryptohome::SerializedInstallAttributes_Attribute *attribute =
+      install_attributes.add_attributes();
+  attribute->set_name(DevicePolicyService::kAttrEnterpriseMode);
+  attribute->set_value(DevicePolicyService::kEnterpriseDeviceMode);
+  std::string serialized;
+  EXPECT_TRUE(install_attributes.SerializeToString(&serialized));
+  base::WriteFile(install_attributes_file_,
+                  serialized.c_str(), serialized.size());
+
+  // In case DM tokens exists, the flag file should not be created.
+  ASSERT_NO_FATAL_FAILURE(InitPolicy(settings, owner_, fake_sig_, "t", false));
+  EXPECT_TRUE(
+      service_->Store(reinterpret_cast<const uint8*>(policy_str_.c_str()),
+                      policy_str_.size(), &completion_,
+                      PolicyService::KEY_CLOBBER));
+  EXPECT_FALSE(base::PathExists(serial_recovery_flag_file_));
+
+  // Missing DM token should lead to creation of flag file.
+  ASSERT_NO_FATAL_FAILURE(InitPolicy(settings, owner_, fake_sig_, "", false));
+  EXPECT_TRUE(
+      service_->Store(reinterpret_cast<const uint8*>(policy_str_.c_str()),
+                      policy_str_.size(), &completion_,
+                      PolicyService::KEY_CLOBBER));
+  EXPECT_TRUE(base::PathExists(serial_recovery_flag_file_));
 }
 
 TEST_F(DevicePolicyServiceTest, GetSettings) {

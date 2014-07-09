@@ -19,6 +19,7 @@
 #include "login_manager/chrome_device_policy.pb.h"
 #include "login_manager/dbus_error_types.h"
 #include "login_manager/device_management_backend.pb.h"
+#include "login_manager/install_attributes.pb.h"
 #include "login_manager/key_generator.h"
 #include "login_manager/login_metrics.h"
 #include "login_manager/nss_util.h"
@@ -33,6 +34,7 @@ using crypto::RSAPrivateKey;
 using google::protobuf::RepeatedPtrField;
 
 namespace {
+
 // Returns true if |policy| was not pushed by an enterprise.
 bool IsConsumerPolicy(const em::PolicyFetchResponse& policy) {
   em::PolicyData poldata;
@@ -42,6 +44,9 @@ bool IsConsumerPolicy(const em::PolicyFetchResponse& policy) {
   }
   return !poldata.has_request_token() && poldata.has_username();
 }
+
+const char kInstallAttributesPath[] = "/home/.shadow/install_attributes.pb";
+
 }  // namespace
 
 // static
@@ -51,6 +56,10 @@ const char DevicePolicyService::kSerialRecoveryFlagFile[] =
     "/var/lib/enterprise_serial_number_recovery";
 // static
 const char DevicePolicyService::kDevicePolicyType[] = "google/chromeos/device";
+// static
+const char DevicePolicyService::kAttrEnterpriseMode[] = "enterprise.mode";
+// static
+const char DevicePolicyService::kEnterpriseDeviceMode[] = "enterprise";
 
 DevicePolicyService::~DevicePolicyService() {
 }
@@ -65,6 +74,7 @@ DevicePolicyService* DevicePolicyService::Create(
   return new DevicePolicyService(
       base::FilePath(kSerialRecoveryFlagFile),
       base::FilePath(kPolicyPath),
+      base::FilePath(kInstallAttributesPath),
       scoped_ptr<PolicyStore>(
           new PolicyStore(base::FilePath(kPolicyPath))),
       owner_key,
@@ -143,6 +153,7 @@ bool DevicePolicyService::ValidateAndStoreOwnerKey(
 DevicePolicyService::DevicePolicyService(
     const base::FilePath& serial_recovery_flag_file,
     const base::FilePath& policy_file,
+    const base::FilePath& install_attributes_file,
     scoped_ptr<PolicyStore> policy_store,
     PolicyKey* policy_key,
     const scoped_refptr<base::MessageLoopProxy>& main_loop,
@@ -152,6 +163,7 @@ DevicePolicyService::DevicePolicyService(
     : PolicyService(policy_store.Pass(), policy_key, main_loop),
       serial_recovery_flag_file_(serial_recovery_flag_file),
       policy_file_(policy_file),
+      install_attributes_file_(install_attributes_file),
       metrics_(metrics),
       mitigator_(mitigator),
       nss_(nss) {
@@ -442,19 +454,44 @@ bool DevicePolicyService::GivenUserIsOwner(const std::string& current_user) {
 }
 
 void DevicePolicyService::UpdateSerialNumberRecoveryFlagFile() {
-  const em::PolicyFetchResponse& policy(store()->Get());
-  em::PolicyData policy_data;
-  int64 policy_size = 0;
   bool recovery_needed = false;
+  int64 policy_size = 0;
   if (!base::GetFileSize(base::FilePath(policy_file_), &policy_size) ||
       !policy_size) {
+    LOG(WARNING) << "Policy file empty or missing.";
     recovery_needed = true;
   }
-  if (policy.has_policy_data() &&
-      policy_data.ParseFromString(policy.policy_data()) &&
-      !policy_data.request_token().empty() &&
+
+  const em::PolicyFetchResponse& policy(store()->Get());
+  em::PolicyData policy_data;
+  bool policy_parsed =
+      policy.has_policy_data() &&
+      policy_data.ParseFromString(policy.policy_data());
+
+  if (policy_parsed && !policy_data.request_token().empty() &&
       policy_data.valid_serial_number_missing()) {
+    LOG(WARNING) << "Serial number missing flag encountered in policy data.";
     recovery_needed = true;
+  }
+
+  // Expose serial number on "spontaneously unenrolled" devices to allow them to
+  // go through the enrollment flow again:  https://crbug.com/389481
+  if (policy_parsed && policy_data.request_token().empty()) {
+    std::string contents;
+    base::ReadFileToString(install_attributes_file_, &contents);
+    cryptohome::SerializedInstallAttributes install_attributes;
+    if (install_attributes.ParseFromString(contents)) {
+      for (int i = 0; i < install_attributes.attributes_size(); ++i) {
+        const cryptohome::SerializedInstallAttributes_Attribute &attribute =
+            install_attributes.attributes(i);
+        if (attribute.name() == kAttrEnterpriseMode &&
+            attribute.value() == kEnterpriseDeviceMode) {
+          LOG(WARNING) << "DM token missing on enrolled device.";
+          recovery_needed = true;
+          break;
+        }
+      }
+    }
   }
 
   // We need to recreate the machine info file if |valid_serial_number_missing|

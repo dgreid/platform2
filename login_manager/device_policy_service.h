@@ -106,6 +106,11 @@ class DevicePolicyService : public PolicyService {
   // Format of this string is documented in device_management_backend.proto.
   static const char kDevicePolicyType[];
 
+  // These are defined in Chromium source at
+  // chrome/browser/chromeos/policy/enterprise_install_attributes.cc.
+  static const char kAttrEnterpriseMode[];
+  static const char kEnterpriseDeviceMode[];
+
  private:
   friend class DevicePolicyServiceTest;
   friend class MockDevicePolicyService;
@@ -113,6 +118,7 @@ class DevicePolicyService : public PolicyService {
   // Takes ownership of |policy_store| and |mitigator|.
   DevicePolicyService(const base::FilePath& serial_recovery_flag_file,
                       const base::FilePath& policy_file,
+                      const base::FilePath& install_attributes_file,
                       scoped_ptr<PolicyStore> policy_store,
                       PolicyKey* owner_key,
                       const scoped_refptr<base::MessageLoopProxy>& main_loop,
@@ -152,6 +158,7 @@ class DevicePolicyService : public PolicyService {
 
   const base::FilePath serial_recovery_flag_file_;
   const base::FilePath policy_file_;
+  const base::FilePath install_attributes_file_;
   LoginMetrics* metrics_;
   OwnerKeyLossMitigator* mitigator_;
   NssUtil* nss_;

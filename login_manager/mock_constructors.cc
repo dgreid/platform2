@@ -37,7 +37,7 @@
 
 namespace login_manager {
 MockDevicePolicyService::MockDevicePolicyService()
-    : DevicePolicyService(base::FilePath(), base::FilePath(),
+    : DevicePolicyService(base::FilePath(), base::FilePath(), base::FilePath(),
                           scoped_ptr<PolicyStore>(),
                           NULL, NULL, NULL, NULL, NULL) {}
 MockDevicePolicyService::~MockDevicePolicyService() {}
