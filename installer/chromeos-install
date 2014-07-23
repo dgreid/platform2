@@ -50,8 +50,6 @@ DEFINE_boolean large_test_partitions ${FLAGS_FALSE} \
 DEFINE_boolean skip_postinstall ${FLAGS_FALSE} \
   "Skip postinstall for situations where you're building for a \
 non-native arch. Note that this will probably break verity."
-DEFINE_string lab_preserve_logs "" "Path to a file containing logs to be \
-preserved"
 
 
 # Parse command line
@@ -522,35 +520,6 @@ install_stateful() {
   esac
   mount_on_loop_dev readwrite
 
-  # Move log files listed in FLAGS_lab_preserve_logs from stateful_partition to
-  # a dedicated location. This flag is used to enable Autotest to collect log
-  # files before reimage deleting all prior logs.
-  if crossystem 'cros_debug?1' && [ -n "${FLAGS_lab_preserve_logs}" ]; then
-    local gatherme="${TMPMNT}/.gatherme"
-    touch "${gatherme}"
-    local prior_log_dir="${TMPMNT}/unencrypted/prior_logs"
-    mkdir -p "${prior_log_dir}"
-    local log_path
-    for log_path in $(sed -e '/^#/ d' -e '/^$/ d' "${FLAGS_lab_preserve_logs}"); do
-      case "${log_path}" in
-        /dev/* | /sys/*)
-          ;;
-        /*)
-          echo "${log_path}" >> "${gatherme}"
-          continue
-          ;;
-        *)
-          log_path="${TMPMNT}/${log_path}"
-          ;;
-      esac
-      if [ -d "${log_path}" ]; then
-        cp -au -r --parents "${log_path}" "${prior_log_dir}" || true
-      elif [ -f "${log_path}" ]; then
-        cp -au "${log_path}" "${prior_log_dir}" || true
-      fi
-    done
-  fi
-
   # Whitelist files to copy onto the stateful partition.
   #
   # When adding to the whitelist, consider the need for related changes in
@@ -578,6 +547,14 @@ install_stateful() {
     touch ${TMPMNT}/.developer_mode
   fi
 
+  # Does our copy of 'cp' support -u? Not sure why -u is desired, but
+  # may be related to --preserve_stateful.
+  #
+  local opt_u=""
+  if cp -u /dev/null /dev/zero 2>/dev/null; then
+    opt_u="u"
+  fi
+
   local dir
   for dir in ${dirlist}; do
     if [ ! -d "${ROOT}/mnt/stateful_partition/${dir}" ]; then
@@ -585,7 +562,7 @@ install_stateful() {
     fi
     local parent=$(dirname "${dir}")
     mkdir -p "${TMPMNT}/${parent}"
-    cp -au "${ROOT}/mnt/stateful_partition/${dir}" "${TMPMNT}/${dir}"
+    cp -a${opt_u} "${ROOT}/mnt/stateful_partition/${dir}" "${TMPMNT}/${dir}"
   done
 
   umount_from_loop_dev
@@ -761,8 +738,7 @@ if [ ${FLAGS_skip_rootfs} -eq ${FLAGS_TRUE} ]; then
   exit 0
 fi
 
-if [ ${FLAGS_preserve_stateful} -eq ${FLAGS_FALSE} -a \
-     ! -n "${FLAGS_lab_preserve_logs}"]; then
+if [ ${FLAGS_preserve_stateful} -eq ${FLAGS_FALSE} ]; then
   wipe_stateful
 fi
 

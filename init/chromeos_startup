@@ -329,24 +329,6 @@ remember_mount /var
 remember_mount /home/chronos
 mount_var_and_home_chronos ${FACTORY_MODE} || cleanup_mounts "var and home"
 
-# For dev/test images, if .gatherme presents, copy files listed in .gatherme to
-# /mnt/stateful_partition/unencrypted/prior_logs.
-LAB_PRESERVE_LOGS="/mnt/stateful_partition/.gatherme"
-PRIOR_LOG_DIR="/mnt/stateful_partition/unencrypted/prior_logs"
-
-if [ ${CROS_DEBUG} -eq 1 -a -f "${LAB_PRESERVE_LOGS}" ]; then
-  for log_path in $(sed -e '/^#/ d' -e '/^$/ d' "${LAB_PRESERVE_LOGS}"); do
-    if [ -d "${log_path}" ]; then
-      cp -a -r --parents "${log_path}" "${PRIOR_LOG_DIR}" || true
-    elif [ -f "${log_path}" ]; then
-      cp -a "${log_path}" "${PRIOR_LOG_DIR}" || true
-    fi
-  done
-  rm -rf /var/*
-  rm -rf /home/chronos/*
-  rm "${LAB_PRESERVE_LOGS}"
-fi
-
 # /run is now tmpfs used for runtime data. Make sure /var/run and /var/lock
 # are sym links to /run and /run/lock respectively for backwards compatibility.
 if [ ! -L /var/run ]; then
@@ -375,7 +357,7 @@ chmod 1775 /var/log
 mount -n -t tmpfs -o nodev,noexec,nosuid media /media
 
 # Mount stateful partition for dev packages.
-if [ ${CROS_DEBUG} -eq 1 ]; then
+if [ $CROS_DEBUG -eq 1 ]; then
   # Capture a snapshot of "normal" mount state here, for auditability,
   # before we start applying devmode-specific changes.
   cat /proc/mounts > /var/log/mount_options.log
