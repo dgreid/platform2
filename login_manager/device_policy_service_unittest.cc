@@ -978,7 +978,8 @@ TEST_F(DevicePolicyServiceTest, SerialRecoveryFlagFileUpdating) {
   cryptohome::SerializedInstallAttributes_Attribute *attribute =
       install_attributes.add_attributes();
   attribute->set_name(DevicePolicyService::kAttrEnterpriseMode);
-  attribute->set_value(DevicePolicyService::kEnterpriseDeviceMode);
+  attribute->set_value(std::string(DevicePolicyService::kEnterpriseDeviceMode)
+                       + "\0");  // Sadly, values contain trailing zeroes.
   std::string serialized;
   EXPECT_TRUE(install_attributes.SerializeToString(&serialized));
   base::WriteFile(install_attributes_file_,

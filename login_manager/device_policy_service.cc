@@ -484,8 +484,9 @@ void DevicePolicyService::UpdateSerialNumberRecoveryFlagFile() {
       for (int i = 0; i < install_attributes.attributes_size(); ++i) {
         const cryptohome::SerializedInstallAttributes_Attribute &attribute =
             install_attributes.attributes(i);
+        // Cast value to C string and back to remove trailing zero.
         if (attribute.name() == kAttrEnterpriseMode &&
-            attribute.value() == kEnterpriseDeviceMode) {
+            std::string(attribute.value().c_str()) == kEnterpriseDeviceMode) {
           LOG(WARNING) << "DM token missing on enrolled device.";
           recovery_needed = true;
           break;

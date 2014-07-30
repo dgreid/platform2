@@ -107,7 +107,8 @@ class DevicePolicyService : public PolicyService {
   static const char kDevicePolicyType[];
 
   // These are defined in Chromium source at
-  // chrome/browser/chromeos/policy/enterprise_install_attributes.cc.
+  // chrome/browser/chromeos/policy/enterprise_install_attributes.cc.  Sadly,
+  // the protobuf contains a trailing zero after kEnterpriseDeviceMode.
   static const char kAttrEnterpriseMode[];
   static const char kEnterpriseDeviceMode[];
 
