@@ -298,6 +298,7 @@ void Suspender::HandleEvent(Event event) {
           // have the ability to properly transition from dark resume to fully
           // resumed.
           if (state_ == STATE_WAITING_FOR_SUSPEND_DELAYS ||
+              !dark_resume_->InDarkResume() ||
               delegate_->CanSafelyExitDarkResume()) {
             FinishRequest(false);
             state_ = STATE_IDLE;
@@ -305,6 +306,7 @@ void Suspender::HandleEvent(Event event) {
           break;
         case EVENT_SHUTDOWN_STARTED:
           if (state_ == STATE_WAITING_FOR_SUSPEND_DELAYS ||
+              !dark_resume_->InDarkResume() ||
               delegate_->CanSafelyExitDarkResume())
             FinishRequest(false);
           state_ = STATE_SHUTTING_DOWN;

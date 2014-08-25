@@ -438,6 +438,10 @@ TEST_F(SuspenderTest, ShutDownAfterRepeatedFailures) {
 // if activity that should cancel the current suspend attempt was previously
 // received.
 TEST_F(SuspenderTest, CancelBeforeSuspend) {
+  // This test doesn't exercise the dark resume code. Make sure that resuspend
+  // attempts are still handled correctly on kernels that can't exit dark
+  // resume: http://crbug.com/406512
+  delegate_.set_can_safely_exit_dark_resume(false);
   Init();
 
   // User activity should cancel suspending.
