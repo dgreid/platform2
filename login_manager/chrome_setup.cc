@@ -238,8 +238,8 @@ void AddEnterpriseFlags(ChromiumCommandBuilder* builder) {
       "--device-management-url=https://m.google.com/devicemanagement/data/api");
 
   builder->AddArg("--enterprise-enable-forced-re-enrollment");
-  builder->AddArg("--enterprise-enrollment-initial-modulus=11");
-  builder->AddArg("--enterprise-enrollment-modulus-limit=15");
+  builder->AddArg("--enterprise-enrollment-initial-modulus=12");
+  builder->AddArg("--enterprise-enrollment-modulus-limit=16");
 }
 
 // Adds patterns to the --vmodule flag.
