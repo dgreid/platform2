@@ -63,9 +63,11 @@ bool PowerManager::AddSuspendDelay(
   }
 
   int delay_id = 0;
-  if (!power_manager_proxy_->RegisterSuspendDelay(
-          timeout, description, &delay_id)) {
-    return false;
+  bool is_registered = power_manager_proxy_->RegisterSuspendDelay(
+      timeout, description, &delay_id);
+  if (!is_registered) {
+    LOG(INFO) << "Initial suspend delay registration for " << description
+              << " failed, but is queued.";
   }
 
   SuspendDelay delay;
@@ -75,8 +77,9 @@ bool PowerManager::AddSuspendDelay(
   delay.imminent_callback = imminent_callback;
   delay.done_callback = done_callback;
   delay.delay_id = delay_id;
+  delay.is_registered = is_registered;
   suspend_delays_[key] = delay;
-  return true;
+  return is_registered;
 }
 
 bool PowerManager::RemoveSuspendDelay(const string &key) {
@@ -88,7 +91,8 @@ bool PowerManager::RemoveSuspendDelay(const string &key) {
 
   // We may attempt to unregister with a stale |delay_id| if powerd has
   // reappeared behind our back. It is safe to do so.
-  if (!power_manager_proxy_->UnregisterSuspendDelay(it->second.delay_id)) {
+  if (it->second.is_registered &&
+      !power_manager_proxy_->UnregisterSuspendDelay(it->second.delay_id)) {
     return false;
   }
 
@@ -101,6 +105,11 @@ bool PowerManager::ReportSuspendReadiness(const string &key,
   SuspendDelayMap::const_iterator it = suspend_delays_.find(key);
   if (it == suspend_delays_.end()) {
     LOG(ERROR) << "Ignoring unknown key " << key;
+    return false;
+  }
+
+  if (!it->second.is_registered) {
+    LOG(ERROR) << "Ignoring unregistered key " << key;
     return false;
   }
 
@@ -156,17 +165,26 @@ void PowerManager::OnPowerManagerAppeared(const string &/*name*/,
     // where |AddSuspendDelay| managed to register a suspend delay with the
     // newly appeared powerd instance before this function had a chance to
     // run.
-    power_manager_proxy_->UnregisterSuspendDelay(delay.delay_id);
+    if (delay.is_registered) {
+      power_manager_proxy_->UnregisterSuspendDelay(delay.delay_id);
+    }
 
     int delay_id = delay.delay_id;
     if (!power_manager_proxy_->RegisterSuspendDelay(
             delay.timeout, delay.description, &delay_id)) {
       // In case of failure, we leave |delay| unchanged.
+      LOG(INFO) << "Re-registration of suspend delay for " << delay.description
+                << " failed.  Will retry when " << __func__
+                << "is called again.";
       // We will retry re-registering this delay whenever
       // |OnPowerManagerAppeared| is called next. In the meantime, this |delay|
       // will be handled as if we had not received a notification for powerd's
       // restart.
       continue;
+    } else if (!delay.is_registered) {
+      LOG(INFO) << "Delayed suspend delay registration for "
+                << delay.description << " succeeded.";
+      delay.is_registered = true;
     }
     delay.delay_id = delay_id;
   }

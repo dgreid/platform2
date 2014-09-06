@@ -265,10 +265,45 @@ TEST_F(PowerManagerTest, RegisterSuspendDelayFailure) {
                    suspend_imminent_callback1_, suspend_done_callback1_));
   Mock::VerifyAndClearExpectations(power_manager_proxy_);
 
-  // No callbacks should be invoked.
+  // Although the registration failed, we should still relay notifications.
+  EXPECT_CALL(*this, SuspendImminentAction1(kSuspendId1));
   OnSuspendImminent(kSuspendId1);
+  EXPECT_CALL(*this, SuspendDoneAction1(kSuspendId1));
   OnSuspendDone(kSuspendId1);
   Mock::VerifyAndClearExpectations(this);
+
+  // However, calls to ReportSuspendReadiness() should be ignored.
+  EXPECT_CALL(*power_manager_proxy_, ReportSuspendReadiness(_, _)).Times(0);
+  EXPECT_FALSE(power_manager_.ReportSuspendReadiness(kKey1, kSuspendId1));
+  Mock::VerifyAndClearExpectations(power_manager_proxy_);
+
+  // Also, UnregisterSuspendDelay() will not be called, but otherwise
+  // removing the suspend delay should succeed.
+  EXPECT_CALL(*power_manager_proxy_, UnregisterSuspendDelay(_)).Times(0);
+  EXPECT_TRUE(power_manager_.RemoveSuspendDelay(kKey1));
+  Mock::VerifyAndClearExpectations(power_manager_proxy_);
+}
+
+TEST_F(PowerManagerTest, RegisterSuspendDelayAfterFailure) {
+  AddProxyRegisterSuspendDelayExpectation(
+      kTimeout, kDescription1, kDelayId1, false);
+  EXPECT_FALSE(power_manager_.AddSuspendDelay(
+                   kKey1, kDescription1, kTimeout,
+                   suspend_imminent_callback1_, suspend_done_callback1_));
+  Mock::VerifyAndClearExpectations(power_manager_proxy_);
+
+  // The next time the power manager appears, we should attempt to re-register.
+  EXPECT_CALL(*power_manager_proxy_, UnregisterSuspendDelay(_)).Times(0);
+  AddProxyRegisterSuspendDelayExpectation(
+      kTimeout, kDescription1, kDelayId1, true);
+  OnPowerManagerAppeared(power_manager::kPowerManagerServicePath,
+                         kPowerManagerDefaultOwner);
+  Mock::VerifyAndClearExpectations(power_manager_proxy_);
+
+  // Since the re-registration succeeded, ReportSuspendReadiness will work.
+  AddProxyReportSuspendReadinessExpectation(kDelayId1, kSuspendId1, true);
+  EXPECT_TRUE(power_manager_.ReportSuspendReadiness(kKey1, kSuspendId1));
+  Mock::VerifyAndClearExpectations(power_manager_proxy_);
 }
 
 TEST_F(PowerManagerTest, ReportSuspendReadinessFailure) {

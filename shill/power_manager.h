@@ -91,6 +91,7 @@ class PowerManager : public PowerManagerProxyDelegate {
     SuspendImminentCallback imminent_callback;
     SuspendDoneCallback done_callback;
     int delay_id;
+    bool is_registered;
   };
 
   // Keyed by the |key| argument to AddSuspendDelay().
