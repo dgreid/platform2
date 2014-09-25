@@ -6,10 +6,17 @@
 
 #include <string>
 
+#include "base/logging.h"
 #include "permission_broker/deny_claimed_hidraw_device_rule.h"
 #include "permission_broker/udev_scopers.h"
 
 namespace permission_broker {
+
+namespace {
+
+const char kLogitechUnifyingReceiverDriver[] = "logitech-djreceiver";
+
+}
 
 DenyClaimedHidrawDeviceRule::DenyClaimedHidrawDeviceRule()
     : HidrawSubsystemUdevRule("DenyClaimedHidrawDeviceRule") {}
@@ -23,6 +30,21 @@ Rule::Result DenyClaimedHidrawDeviceRule::ProcessHidrawDevice(
   if (!usb_interface) {
     return DENY;
   }
+
+  // Add an exception to the rule for Logitech Unifying receiver.
+  // This hidraw device is a parent of devices that have input
+  // subsystem. Yet the traffic to those children is not available on
+  // the hidraw node of the receiver, so it is safe to white-list it.
+  struct udev_device* hid_parent =
+      udev_device_get_parent_with_subsystem_devtype(device, "hid", NULL);
+  if (hid_parent) {
+    const char* hid_parent_driver = udev_device_get_driver(hid_parent);
+    if (strcmp(hid_parent_driver, kLogitechUnifyingReceiverDriver) == 0) {
+      LOG(INFO) << "Found Logitech Unifying receiver. Skipping rule.";
+      return IGNORE;
+    }
+  }
+
   std::string usb_interface_path(udev_device_get_syspath(usb_interface));
 
   // Scan all children of the USB interface for subsystems other than generic

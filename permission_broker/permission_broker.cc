@@ -110,10 +110,12 @@ bool PermissionBroker::ProcessPath(const string &path,
                                                         interface_id);
     LOG(INFO) << "  " << rules_[i]->name() << ": "
               << Rule::ResultToString(rule_result);
-    if (rule_result == Rule::DENY)
-      return false;
-    else if (rule_result == Rule::ALLOW)
+    if (rule_result == Rule::DENY) {
+      result = Rule::DENY;
+      break;
+    } else if (rule_result == Rule::ALLOW) {
       result = Rule::ALLOW;
+    }
   }
   LOG(INFO) << "Verdict for " << path << ": " << Rule::ResultToString(result);
 
