@@ -341,8 +341,10 @@ bool WiFiProvider::OnServiceUnloaded(const WiFiServiceRefPtr &service) {
   return true;
 }
 
-void WiFiProvider::LoadAndFixupServiceEntries(
-    StoreInterface *storage, bool is_default_profile) {
+void WiFiProvider::LoadAndFixupServiceEntries(Profile *profile) {
+  CHECK(profile);
+  StoreInterface *storage = profile->GetStorage();
+  bool is_default_profile = profile->IsDefault();
   if (WiFiService::FixupServiceEntries(storage)) {
     storage->Flush();
     Metrics::ServiceFixupProfileType profile_type =
@@ -672,4 +674,5 @@ void WiFiProvider::ReportAutoConnectableServices() {
     metrics_->NotifyWifiAutoConnectableServices(num_services);
   }
 }
+
 }  // namespace shill

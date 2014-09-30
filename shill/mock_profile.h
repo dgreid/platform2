@@ -35,7 +35,9 @@ class MockProfile : public Profile {
   MOCK_METHOD1(UpdateDevice, bool(const DeviceRefPtr &device));
   MOCK_METHOD1(UpdateWiFiProvider, bool(const WiFiProvider &wifi_provider));
   MOCK_METHOD0(Save, bool());
+  MOCK_METHOD0(GetStorage, StoreInterface *());
   MOCK_CONST_METHOD0(GetConstStorage, const StoreInterface *());
+  MOCK_CONST_METHOD0(IsDefault, bool());
 
  private:
   DISALLOW_COPY_AND_ASSIGN(MockProfile);

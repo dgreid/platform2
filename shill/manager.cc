@@ -764,13 +764,8 @@ bool Manager::IsTechnologyAutoConnectDisabled(
   return IsTechnologyInList(props_.no_auto_connect_technologies, technology);
 }
 
-bool Manager::IsDefaultProfile(StoreInterface *storage) {
-  return profiles_.empty() || storage == profiles_.front()->GetConstStorage();
-}
-
-void Manager::OnProfileStorageInitialized(StoreInterface *storage) {
-  wifi_provider_->LoadAndFixupServiceEntries(storage,
-                                             IsDefaultProfile(storage));
+void Manager::OnProfileStorageInitialized(Profile *profile) {
+  wifi_provider_->LoadAndFixupServiceEntries(profile);
 }
 
 DeviceRefPtr Manager::GetEnabledDeviceWithTechnology(

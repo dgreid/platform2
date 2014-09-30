@@ -267,7 +267,7 @@ class Manager : public base::SupportsWeakPtr<Manager> {
       Technology::Identifier technology) const;
 
   // Called by Profile when a |storage| completes initialization.
-  void OnProfileStorageInitialized(StoreInterface *storage);
+  void OnProfileStorageInitialized(Profile *storage);
 
   // Return a Device with technology |technology| in the enabled state.
   DeviceRefPtr GetEnabledDeviceWithTechnology(
@@ -497,7 +497,6 @@ class Manager : public base::SupportsWeakPtr<Manager> {
   void EmitDefaultService();
   bool IsTechnologyInList(const std::string &technology_list,
                           Technology::Identifier tech) const;
-  bool IsDefaultProfile(StoreInterface *storage);
   void EmitDeviceProperties();
   bool SetDisableWiFiVHT(const bool &disable_wifi_vht, Error *error);
   bool GetDisableWiFiVHT(Error *error);

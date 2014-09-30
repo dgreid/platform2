@@ -181,10 +181,16 @@ class Profile : public base::RefCounted<Profile> {
   // Returns the user_hash component of the profile identifier.
   const std::string &GetUserHash() const { return name_.user_hash; }
 
+  virtual StoreInterface *GetStorage() {
+    return storage_.get();
+  }
+
   // Returns a read-only copy of the backing storage of the profile.
   virtual const StoreInterface *GetConstStorage() const {
     return storage_.get();
   }
+
+  virtual bool IsDefault() const { return false; }
 
  protected:
   // Protected getters

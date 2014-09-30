@@ -55,6 +55,8 @@ class DefaultProfile : public Profile {
   // Inherited from Profile.
   virtual bool UpdateWiFiProvider(const WiFiProvider &wifi_provider);
 
+  bool IsDefault() const override { return true; }
+
  protected:
   // Sets |path| to the persistent store file path for the default, global
   // profile. Returns true on success, and false if unable to determine an

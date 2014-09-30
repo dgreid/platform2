@@ -100,8 +100,7 @@ class WiFiProvider : public ProviderInterface {
 
   // Calls WiFiService::FixupServiceEntries() and adds a UMA metric if
   // this causes entries to be updated.
-  virtual void LoadAndFixupServiceEntries(StoreInterface *storage,
-                                          bool is_default_profile);
+  virtual void LoadAndFixupServiceEntries(Profile *profile);
 
   // Save configuration for wifi_provider to |storage|.
   virtual bool Save(StoreInterface *storage) const;
@@ -127,7 +126,8 @@ class WiFiProvider : public ProviderInterface {
   FRIEND_TEST(WiFiProviderTest, FrequencyMapToStringListEmpty);
   FRIEND_TEST(WiFiProviderTest, IncrementConnectCount);
   FRIEND_TEST(WiFiProviderTest, IncrementConnectCountCreateNew);
-  FRIEND_TEST(WiFiProviderTest, LoadAndFixupServiceEntries);
+  FRIEND_TEST(WiFiProviderTest, LoadAndFixupServiceEntriesDefaultProfile);
+  FRIEND_TEST(WiFiProviderTest, LoadAndFixupServiceEntriesUserProfile);
   FRIEND_TEST(WiFiProviderTest, LoadAndFixupServiceEntriesNothingToDo);
   FRIEND_TEST(WiFiProviderTest, StringListToFrequencyMap);
   FRIEND_TEST(WiFiProviderTest, StringListToFrequencyMapEmpty);
