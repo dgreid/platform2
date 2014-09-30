@@ -61,6 +61,11 @@ const int Metrics::kMetricNetworkSignalStrengthMax = 200;
 const int Metrics::kMetricNetworkSignalStrengthMin = 0;
 const int Metrics::kMetricNetworkSignalStrengthNumBuckets = 40;
 
+constexpr char
+    Metrics::kMetricRememberedSystemWiFiNetworkCountBySecurityModeFormat[];
+constexpr char
+    Metrics::kMetricRememberedUserWiFiNetworkCountBySecurityModeFormat[];
+
 const char Metrics::kMetricRememberedWiFiNetworkCount[] =
     "Network.Shill.WiFi.RememberedNetworkCount";
 const int Metrics::kMetricRememberedWiFiNetworkCountMax = 1024;

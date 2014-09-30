@@ -35,6 +35,7 @@ using std::set;
 using std::string;
 using std::vector;
 using ::testing::_;
+using ::testing::AnyNumber;
 using ::testing::ContainerEq;
 using ::testing::Eq;
 using ::testing::Invoke;
@@ -42,6 +43,7 @@ using ::testing::Mock;
 using ::testing::NiceMock;
 using ::testing::Return;
 using ::testing::SetArgumentPointee;
+using ::testing::StartsWith;
 using ::testing::StrictMock;
 
 namespace shill {
@@ -109,6 +111,30 @@ class WiFiProviderTest : public testing::Test {
         .WillRepeatedly(Return(&user_profile_storage_));
     EXPECT_CALL(*user_profile_, GetConstStorage())
         .WillRepeatedly(Return(&user_profile_storage_));
+
+    // Default expectations for UMA metrics. Individual test cases
+    // will override these, by adding later expectations.
+    EXPECT_CALL(metrics_, SendToUMA(
+        Metrics::kMetricRememberedWiFiNetworkCount,
+        _,
+        Metrics::kMetricRememberedWiFiNetworkCountMin,
+        Metrics::kMetricRememberedWiFiNetworkCountMax,
+        Metrics::kMetricRememberedWiFiNetworkCountNumBuckets))
+        .Times(AnyNumber());
+    EXPECT_CALL(metrics_, SendToUMA(
+        StartsWith("Network.Shill.WiFi.RememberedPrivateNetworkCount."),
+        _,
+        Metrics::kMetricRememberedWiFiNetworkCountMin,
+        Metrics::kMetricRememberedWiFiNetworkCountMax,
+        Metrics::kMetricRememberedWiFiNetworkCountNumBuckets))
+        .Times(AnyNumber());
+    EXPECT_CALL(metrics_, SendToUMA(
+        StartsWith("Network.Shill.WiFi.RememberedSharedNetworkCount."),
+        _,
+        Metrics::kMetricRememberedWiFiNetworkCountMin,
+        Metrics::kMetricRememberedWiFiNetworkCountMax,
+        Metrics::kMetricRememberedWiFiNetworkCountNumBuckets))
+        .Times(AnyNumber());
   }
 
   bool GetStringList(const std::string &/*group*/,
@@ -714,6 +740,70 @@ TEST_F(WiFiProviderTest, CreateTwoServices) {
   Mock::VerifyAndClearExpectations(&manager_);
 
   EXPECT_EQ(2, GetServices().size());
+}
+
+TEST_F(WiFiProviderTest, ServiceSourceStats) {
+  set<string> default_profile_groups;
+  default_profile_groups.insert(
+      AddServiceToProfileStorage(
+          default_profile_, "foo", kModeManaged, kSecurityWpa, false, true));
+  EXPECT_CALL(default_profile_storage_,
+              GetGroupsWithProperties(TypeWiFiPropertyMatch()))
+      .WillRepeatedly(Return(default_profile_groups));
+  EXPECT_CALL(manager_, RegisterService(_))
+      .WillOnce(Invoke(this, &WiFiProviderTest::BindServiceToDefaultProfile));
+  EXPECT_CALL(manager_, IsServiceEphemeral(_)).WillRepeatedly(Return(false));
+  // Processing default profile does not generate UMA metrics.
+  EXPECT_CALL(metrics_, SendToUMA(
+      StartsWith("Network.Shill.WiFi.RememberedSystemNetworkCount."),
+      _, _, _, _))
+      .Times(0);
+  EXPECT_CALL(metrics_, SendToUMA(
+      StartsWith("Network.Shill.WiFi.RememberedUserNetworkCount."),
+      _, _, _, _))
+      .Times(0);
+  CreateServicesFromProfile(default_profile_);
+  Mock::VerifyAndClearExpectations(&manager_);
+
+  set<string> user_profile_groups;
+  user_profile_groups.insert(
+      AddServiceToProfileStorage(
+          user_profile_, "bar", kModeManaged, kSecurityRsn, false, true));
+  EXPECT_CALL(user_profile_storage_,
+              GetGroupsWithProperties(TypeWiFiPropertyMatch()))
+      .WillRepeatedly(Return(user_profile_groups));
+  EXPECT_CALL(manager_, RegisterService(_))
+      .WillOnce(Invoke(this, &WiFiProviderTest::BindServiceToUserProfile));
+  EXPECT_CALL(manager_, IsServiceEphemeral(_)).WillRepeatedly(Return(false));
+  // Processing user profile generates metrics for both, default profile,
+  // and user profile.
+  EXPECT_CALL(metrics_, SendToUMA(
+      StartsWith("Network.Shill.WiFi.RememberedSystemNetworkCount."),
+      0,
+      Metrics::kMetricRememberedWiFiNetworkCountMin,
+      Metrics::kMetricRememberedWiFiNetworkCountMax,
+      Metrics::kMetricRememberedWiFiNetworkCountNumBuckets))
+      .Times(3);  // none, wep, 802.1x
+  EXPECT_CALL(metrics_, SendToUMA(
+      StartsWith("Network.Shill.WiFi.RememberedUserNetworkCount."),
+      0,
+      Metrics::kMetricRememberedWiFiNetworkCountMin,
+      Metrics::kMetricRememberedWiFiNetworkCountMax,
+      Metrics::kMetricRememberedWiFiNetworkCountNumBuckets))
+      .Times(3);  // none, wep, 802.1x
+  EXPECT_CALL(metrics_, SendToUMA(
+      StartsWith("Network.Shill.WiFi.RememberedSystemNetworkCount.psk"),
+      1,
+      Metrics::kMetricRememberedWiFiNetworkCountMin,
+      Metrics::kMetricRememberedWiFiNetworkCountMax,
+      Metrics::kMetricRememberedWiFiNetworkCountNumBuckets));
+  EXPECT_CALL(metrics_, SendToUMA(
+      StartsWith("Network.Shill.WiFi.RememberedUserNetworkCount.psk"),
+      1,
+      Metrics::kMetricRememberedWiFiNetworkCountMin,
+      Metrics::kMetricRememberedWiFiNetworkCountMax,
+      Metrics::kMetricRememberedWiFiNetworkCountNumBuckets));
+  CreateServicesFromProfile(user_profile_);
 }
 
 TEST_F(WiFiProviderTest, GetServiceEmptyMode) {

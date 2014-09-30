@@ -6,6 +6,7 @@
 
 #include <stdlib.h>
 
+#include <algorithm>
 #include <limits>
 #include <set>
 #include <string>
@@ -156,18 +157,14 @@ void WiFiProvider::CreateServicesFromProfile(const ProfileRefPtr &profile) {
     manager_->RequestScan(Device::kProgressiveScan, kTypeWifi, &unused_error);
   }
 
-  int remembered_network_count = 0;
-  for (const auto &service : services_) {
-    if (service->IsRemembered()) {
-      remembered_network_count++;
-    }
+  ReportRememberedNetworkCount();
+
+  // Only report service source metrics when a user profile is pushed.
+  // This ensures that we have an equal number of samples for the
+  // default profile and user profiles.
+  if (!profile->IsDefault()) {
+    ReportServiceSourceMetrics();
   }
-  metrics_->SendToUMA(
-      Metrics::kMetricRememberedWiFiNetworkCount,
-      remembered_network_count,
-      Metrics::kMetricRememberedWiFiNetworkCountMin,
-      Metrics::kMetricRememberedWiFiNetworkCountMax,
-      Metrics::kMetricRememberedWiFiNetworkCountNumBuckets);
 }
 
 ServiceRefPtr WiFiProvider::FindSimilarService(
@@ -471,6 +468,51 @@ void WiFiProvider::ForgetService(const WiFiServiceRefPtr &service) {
   }
   (*it)->ResetWiFi();
   services_.erase(it);
+}
+
+void WiFiProvider::ReportRememberedNetworkCount() {
+  metrics_->SendToUMA(
+      Metrics::kMetricRememberedWiFiNetworkCount,
+      std::count_if(
+          services_.begin(), services_.end(),
+          [](ServiceRefPtr s) { return s->IsRemembered(); }),
+      Metrics::kMetricRememberedWiFiNetworkCountMin,
+      Metrics::kMetricRememberedWiFiNetworkCountMax,
+      Metrics::kMetricRememberedWiFiNetworkCountNumBuckets);
+}
+
+void WiFiProvider::ReportServiceSourceMetrics() {
+  for (const auto &security_mode :
+    {kSecurityNone, kSecurityWep, kSecurityPsk, kSecurity8021x}) {
+    metrics_->SendToUMA(
+        base::StringPrintf(
+            Metrics::
+            kMetricRememberedSystemWiFiNetworkCountBySecurityModeFormat,
+            security_mode),
+        std::count_if(
+            services_.begin(), services_.end(),
+            [security_mode](WiFiServiceRefPtr s) {
+              return s->IsRemembered() && s->IsSecurityMatch(security_mode) &&
+                  s->profile()->IsDefault();
+            }),
+        Metrics::kMetricRememberedWiFiNetworkCountMin,
+        Metrics::kMetricRememberedWiFiNetworkCountMax,
+        Metrics::kMetricRememberedWiFiNetworkCountNumBuckets);
+    metrics_->SendToUMA(
+        base::StringPrintf(
+            Metrics::
+            kMetricRememberedUserWiFiNetworkCountBySecurityModeFormat,
+            security_mode),
+        std::count_if(
+            services_.begin(), services_.end(),
+            [security_mode](WiFiServiceRefPtr s) {
+              return s->IsRemembered() && s->IsSecurityMatch(security_mode) &&
+                  !s->profile()->IsDefault();
+            }),
+        Metrics::kMetricRememberedWiFiNetworkCountMin,
+        Metrics::kMetricRememberedWiFiNetworkCountMax,
+        Metrics::kMetricRememberedWiFiNetworkCountNumBuckets);
+  }
 }
 
 // static

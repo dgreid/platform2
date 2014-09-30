@@ -410,6 +410,15 @@ class Metrics {
   static const int kMetricNetworkSignalStrengthMin;
   static const int kMetricNetworkSignalStrengthMax;
   static const int kMetricNetworkSignalStrengthNumBuckets;
+  // Histogram parameters for next two are the same as for
+  // kMetricRememberedWiFiNetworkCount. Must be constexpr, for static
+  // checking of format string. Must be defined inline, for constexpr.
+  static constexpr char
+      kMetricRememberedSystemWiFiNetworkCountBySecurityModeFormat[] =
+      "Network.Shill.WiFi.RememberedSystemNetworkCount.%s";
+  static constexpr char
+      kMetricRememberedUserWiFiNetworkCountBySecurityModeFormat[] =
+      "Network.Shill.WiFi.RememberedUserNetworkCount.%s";
   static const char kMetricRememberedWiFiNetworkCount[];
   static const int kMetricRememberedWiFiNetworkCountMin;
   static const int kMetricRememberedWiFiNetworkCountMax;

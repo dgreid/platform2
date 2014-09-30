@@ -165,6 +165,9 @@ class WiFiProvider : public ProviderInterface {
   // services_ vector.
   void ForgetService(const WiFiServiceRefPtr &service);
 
+  void ReportRememberedNetworkCount();
+  void ReportServiceSourceMetrics();
+
   // Retrieve a WiFi service's identifying properties from passed-in |args|.
   // Returns true if |args| are valid and populates |ssid|, |mode|,
   // |security| and |hidden_ssid|, if successful.  Otherwise, this function
