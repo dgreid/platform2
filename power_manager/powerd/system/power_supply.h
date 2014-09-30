@@ -214,6 +214,14 @@ class PowerSupply : public PowerSupplyInterface, public UdevSubsystemObserver {
   // equal to or less than this threshold (in the range [0.0, 100.0)).
   static const double kLowBatteryShutdownSafetyPercent;
 
+  // String value reported in the line power "model_name" file if an original
+  // spring AC charger is connected.
+  static const char kOriginalSpringChargerModelName[];
+
+  // String value reported in the line power "model_name" file if the EC
+  // firmware is outdated and is incapable of reporting the model.
+  static const char kOldFirmwareModelName[];
+
   PowerSupply();
   virtual ~PowerSupply();
 

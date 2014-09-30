@@ -49,14 +49,6 @@ const char kMainsType[] = "Mains";
 const char kBatteryStatusCharging[] = "Charging";
 const char kBatteryStatusFull[] = "Full";
 
-// String value reported in the line power "model_name" file if an original
-// spring AC charger is connected.
-const char kOriginalSpringChargerModelName[] = "0x17";
-
-// String value reported in the line power "model_name" file if the EC firmware
-// is outdated and is incapable of reporting the model.
-const char kOldFirmwareModelName[] = "0x00";
-
 // Reads the contents of |filename| within |directory| into |out|, trimming
 // trailing whitespace.  Returns true on success.
 bool ReadAndTrimString(const base::FilePath& directory,
@@ -101,8 +93,8 @@ bool IsUsbType(const std::string& type) {
 // AC charger is connected if the firmware is outdated and doesn't report the
 // model.
 bool IsOriginalSpringCharger(const std::string& model_name) {
-  return model_name == kOriginalSpringChargerModelName ||
-      model_name == kOldFirmwareModelName;
+  return model_name == PowerSupply::kOriginalSpringChargerModelName ||
+      model_name == PowerSupply::kOldFirmwareModelName;
 }
 
 }  // namespace
@@ -133,6 +125,8 @@ const char PowerSupply::kUdevSubsystem[] = "power_supply";
 const int PowerSupply::kObservedBatteryChargeRateMinMs = kDefaultPollMs;
 const int PowerSupply::kBatteryStabilizedSlackMs = 50;
 const double PowerSupply::kLowBatteryShutdownSafetyPercent = 5.0;
+const char PowerSupply::kOriginalSpringChargerModelName[] = "0x17";
+const char PowerSupply::kOldFirmwareModelName[] = "0x00";
 
 PowerSupply::PowerSupply()
     : prefs_(NULL),
