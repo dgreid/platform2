@@ -521,7 +521,8 @@ void Daemon::Init() {
 
   power_supply_->Init(base::FilePath(kPowerStatusPath),
                       prefs_.get(), udev_.get());
-  power_supply_->RefreshImmediately();
+  if (!power_supply_->RefreshImmediately())
+    LOG(ERROR) << "Initial power supply refresh failed; brace for weirdness";
   const system::PowerStatus power_status = power_supply_->GetPowerStatus();
 
   metrics_collector_->Init(prefs_.get(), display_backlight_controller_.get(),

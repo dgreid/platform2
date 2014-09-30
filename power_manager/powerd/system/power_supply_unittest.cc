@@ -186,14 +186,13 @@ class PowerSupplyTest : public ::testing::Test {
         static_cast<int>(status.battery_time_to_full.InSeconds()));
   }
 
-  // Refreshes and updates |status|.  Returns false if the refresh failed.
+  // Refreshes and updates |status|. Returns false if the refresh failed (but
+  // still copies |power_supply_|'s current status to |status|).
   bool UpdateStatus(PowerStatus* status) WARN_UNUSED_RESULT {
     CHECK(status);
-    if (!power_supply_->RefreshImmediately())
-      return false;
-
+    const bool success = power_supply_->RefreshImmediately();
     *status = power_supply_->GetPowerStatus();
-    return true;
+    return success;
   }
 
   FakePrefs prefs_;
@@ -664,12 +663,42 @@ TEST_F(PowerSupplyTest, DisplayBatteryPercent) {
   EXPECT_DOUBLE_EQ(0.0, status.display_battery_percentage);
 
   UpdateChargeAndCurrent(0.0, 0.0);
-  ASSERT_TRUE(UpdateStatus(&status));
+  EXPECT_TRUE(UpdateStatus(&status));
   EXPECT_DOUBLE_EQ(0.0, status.display_battery_percentage);
 
   UpdateChargeAndCurrent(-0.1, 0.0);
-  ASSERT_TRUE(UpdateStatus(&status));
+  EXPECT_TRUE(UpdateStatus(&status));
   EXPECT_DOUBLE_EQ(0.0, status.display_battery_percentage);
+}
+
+TEST_F(PowerSupplyTest, IgnoreReadingsDuringFirmwareUpdate) {
+  // Check that reading broken battery data the first time through yields
+  // failure but still results in the partially-correct status being recorded.
+  // At startup, powerd needs to use what it can get.
+  WriteDefaultValues(POWER_AC);
+  UpdateChargeAndCurrent(0.0, 0.0);
+  WriteDoubleValue(battery_dir_, "voltage_min_design", 0.0);
+  Init();
+
+  PowerStatus status;
+  EXPECT_FALSE(UpdateStatus(&status));
+  EXPECT_TRUE(status.line_power_on);
+  EXPECT_FALSE(status.battery_below_shutdown_threshold);
+  EXPECT_EQ(PowerSupplyProperties_ExternalPower_AC, status.external_power);
+  EXPECT_EQ(PowerSupplyProperties_BatteryState_NOT_PRESENT,
+            status.battery_state);
+
+  // Report a full battery.
+  UpdateChargeAndCurrent(1.0, 0.0);
+  WriteDoubleValue(battery_dir_, "voltage_min_design", kVoltage);
+  EXPECT_TRUE(UpdateStatus(&status));
+  EXPECT_DOUBLE_EQ(100.0, status.display_battery_percentage);
+
+  // Now check that another invalid reading is completely ignored.
+  UpdateChargeAndCurrent(0.0, 0.0);
+  WriteDoubleValue(battery_dir_, "voltage_min_design", 0.0);
+  EXPECT_FALSE(UpdateStatus(&status));
+  EXPECT_DOUBLE_EQ(100.0, status.display_battery_percentage);
 }
 
 TEST_F(PowerSupplyTest, CheckForLowBattery) {

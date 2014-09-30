@@ -272,6 +272,8 @@ bool PowerSupply::UpdatePowerStatus() {
   VLOG(1) << "Updating power status";
   PowerStatus status;
 
+  CHECK(prefs_) << "PowerSupply::Init() wasn't called";
+
   if (battery_path_.empty() || line_power_path_.empty())
     GetPowerSupplyPaths();
 
@@ -334,6 +336,12 @@ bool PowerSupply::UpdatePowerStatus() {
     return true;
   }
 
+  // Even though we haven't successfully finished initializing the status yet,
+  // save what we have so far so that if we bail out early due to a messed-up
+  // battery we'll at least start out knowing whether line power is connected.
+  if (!power_status_initialized_)
+    power_status_ = status;
+
   // POWER_SUPPLY_PROP_VENDOR does not seem to be a valid property
   // defined in <linux/power_supply.h>.
   if (base::PathExists(battery_path_.Append("manufacturer")))
@@ -347,23 +355,23 @@ bool PowerSupply::UpdatePowerStatus() {
   double battery_voltage = ReadScaledDouble(battery_path_, "voltage_now");
   status.battery_voltage = battery_voltage;
 
-  // Attempt to determine nominal voltage for time remaining calculations.
-  // The battery voltage used in calculating time remaining.  This may or may
-  // not be the same as the instantaneous voltage |battery_voltage|, as voltage
-  // levels vary over the time the battery is charged or discharged.
+  // Attempt to determine nominal voltage for time-remaining calculations. This
+  // may or may not be the same as the instantaneous voltage |battery_voltage|,
+  // as voltage levels vary over the time the battery is charged or discharged.
   double nominal_voltage = 0.0;
   if (base::PathExists(battery_path_.Append("voltage_min_design")))
     nominal_voltage = ReadScaledDouble(battery_path_, "voltage_min_design");
   else if (base::PathExists(battery_path_.Append("voltage_max_design")))
     nominal_voltage = ReadScaledDouble(battery_path_, "voltage_max_design");
 
-  // Nominal voltage is not required to obtain charge level.  If it is missing,
-  // just log a message, set to |battery_voltage| so time remaining
-  // calculations will function, and proceed.
+  // Nominal voltage is not required to obtain the charge level; if it's
+  // missing, just use |battery_voltage|. Save the fact that it was zero so it
+  // can be used later to detect cases where battery info has been zeroed out
+  // during an in-progress firmware update, though.
+  const bool read_zero_nominal_voltage = nominal_voltage == 0.0;
   if (nominal_voltage <= 0) {
-    LOG(WARNING) << "Invalid voltage_min/max_design reading: "
-                 << nominal_voltage << "V."
-                 << " Time remaining calculations will not be available.";
+    LOG(WARNING) << "Got nominal voltage " << nominal_voltage << "; using "
+                 << "instantaneous voltage " << battery_voltage << " instead";
     nominal_voltage = battery_voltage;
   }
   status.nominal_voltage = nominal_voltage;
@@ -407,13 +415,20 @@ bool PowerSupply::UpdatePowerStatus() {
     return false;
   }
 
+  if (battery_charge == 0.0 && read_zero_nominal_voltage) {
+    LOG(WARNING) << "Ignoring reading with zero battery charge and nominal "
+                 << "voltage (firmware update in progress?)";
+    return false;
+  }
+  if (battery_charge_full <= 0.0) {
+    LOG(WARNING) << "Ignoring reading with battery charge of " << battery_charge
+                 << " and battery-full charge of " << battery_charge_full;
+    return false;
+  }
+
   status.battery_charge_full = battery_charge_full;
   status.battery_charge_full_design = battery_charge_full_design;
   status.battery_charge = battery_charge;
-  if (status.battery_charge_full <= 0.0) {
-    LOG(WARNING) << "Got battery-full charge of " << status.battery_charge_full;
-    return false;
-  }
 
   // The current can be reported as negative on some systems but not on
   // others, so it can't be used to determine whether the battery is
