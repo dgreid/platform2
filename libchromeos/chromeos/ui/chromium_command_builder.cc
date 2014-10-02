@@ -481,9 +481,6 @@ void ChromiumCommandBuilder::AddUiFlags() {
   if (IsBoard("peach_pi"))
     AddArg("--ignore-resolution-limits-for-accelerated-video-decode");
 
-  // TODO(posciak): remove after crbug.com/405814 is fixed.
-  AddArg("--disable-vaapi-accelerated-video-encode");
-
   // Ozone platform configuration.
   if (IsBoard("link_freon") && UseFlagIsSet("ozone_platform_gbm")) {
     // TODO(spang): Use freon/chromeos platform, not GBM example platform.
