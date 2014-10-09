@@ -13,6 +13,8 @@
 #include "power_manager/powerd/system/udev_tagged_device_observer.h"
 
 namespace power_manager {
+class PrefsInterface;
+
 namespace system {
 class AcpiWakeupHelperInterface;
 class TaggedDevice;
@@ -58,9 +60,12 @@ class WakeupController : public system::UdevTaggedDeviceObserver {
 
   void Init(system::UdevInterface* udev,
             system::AcpiWakeupHelperInterface* acpi_wakeup_helper,
-            LidState lid_state);
+            LidState lid_state,
+            DisplayMode display_mode,
+            PrefsInterface* prefs);
 
   void SetLidState(LidState lid_state);
+  void SetDisplayMode(DisplayMode display_mode);
 
   // Implementation of TaggedDeviceObserver.
   void OnTaggedDeviceChanged(const system::TaggedDevice& device) override;
@@ -88,7 +93,11 @@ class WakeupController : public system::UdevTaggedDeviceObserver {
   system::UdevInterface* udev_;  // weak
   system::AcpiWakeupHelperInterface* acpi_wakeup_helper_;  // weak
 
+  PrefsInterface* prefs_;  // weak
+
   LidState lid_state_;
+  DisplayMode display_mode_;
+  bool allow_docked_mode_;
 
   // The mode calculated in the most recent invocation of UpdatePolicy().
   WakeupMode mode_;

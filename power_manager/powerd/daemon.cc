@@ -538,7 +538,8 @@ void Daemon::Init() {
                           dbus_sender_.get(), prefs_.get());
 
   const LidState lid_state = input_watcher_->QueryLidState();
-  wakeup_controller_->Init(udev_.get(), acpi_wakeup_helper_.get(), lid_state);
+  wakeup_controller_->Init(udev_.get(), acpi_wakeup_helper_.get(), lid_state,
+                           DISPLAY_NORMAL, prefs_.get());
 
   const PowerSource power_source =
       power_status.line_power_on ? POWER_AC : POWER_BATTERY;
@@ -1340,6 +1341,7 @@ scoped_ptr<dbus::Response> Daemon::HandleSetIsProjectingMethod(
 
   DisplayMode mode = is_projecting ? DISPLAY_PRESENTATION : DISPLAY_NORMAL;
   state_controller_->HandleDisplayModeChange(mode);
+  wakeup_controller_->SetDisplayMode(mode);
   if (display_backlight_controller_)
     display_backlight_controller_->HandleDisplayModeChange(mode);
   return scoped_ptr<dbus::Response>();

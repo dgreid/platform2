@@ -7,6 +7,7 @@
 #include <base/logging.h>
 #include <vector>
 
+#include "power_manager/common/prefs.h"
 #include "power_manager/powerd/system/acpi_wakeup_helper.h"
 #include "power_manager/powerd/system/tagged_device.h"
 #include "power_manager/powerd/system/udev.h"
@@ -48,7 +49,10 @@ const char WakeupController::kTSCR[] = "TSCR";
 WakeupController::WakeupController()
     : udev_(NULL),
       acpi_wakeup_helper_(NULL),
+      prefs_(NULL),
       lid_state_(LID_OPEN),
+      display_mode_(DISPLAY_NORMAL),
+      allow_docked_mode_(false),
       mode_(WAKEUP_MODE_LAPTOP),
       initialized_(false) {}
 
@@ -60,14 +64,20 @@ WakeupController::~WakeupController() {
 void WakeupController::Init(
     system::UdevInterface* udev,
     system::AcpiWakeupHelperInterface* acpi_wakeup_helper,
-    LidState lid_state) {
+    LidState lid_state,
+    DisplayMode display_mode,
+    PrefsInterface* prefs) {
   udev_ = udev;
   acpi_wakeup_helper_ = acpi_wakeup_helper;
 
   udev_->AddTaggedDeviceObserver(this);
 
   // Trigger initial configuration.
+  prefs_ = prefs;
   lid_state_ = lid_state;
+  display_mode_ = display_mode;
+  prefs_->GetBool(kAllowDockedModePref, &allow_docked_mode_);
+
   UpdatePolicy();
 
   initialized_ = true;
@@ -75,6 +85,11 @@ void WakeupController::Init(
 
 void WakeupController::SetLidState(LidState lid_state) {
   lid_state_ = lid_state;
+  UpdatePolicy();
+}
+
+void WakeupController::SetDisplayMode(DisplayMode display_mode) {
+  display_mode_ = display_mode;
   UpdatePolicy();
 }
 
@@ -145,6 +160,10 @@ void WakeupController::ConfigureAcpiWakeup() {
 }
 
 WakeupMode WakeupController::GetWakeupMode() const {
+  if (allow_docked_mode_ && display_mode_ == DISPLAY_PRESENTATION &&
+      lid_state_ == LID_CLOSED)
+    return WAKEUP_MODE_DOCKED;
+
   if (lid_state_ == LID_OPEN)
     return WAKEUP_MODE_LAPTOP;
   else if (lid_state_ == LID_CLOSED)
