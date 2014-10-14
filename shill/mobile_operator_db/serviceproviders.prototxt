@@ -13970,14 +13970,14 @@ mno {
     }
     mccmnc : "46692"
     mobile_apn {
+      apn : "internet"
+      plan : POSTPAID
+    }
+    mobile_apn {
       apn : "emome"
       plan : POSTPAID
       username : "web"
       password : "web"
-    }
-    mobile_apn {
-      apn : "internet"
-      plan : POSTPAID
     }
   }
 }
