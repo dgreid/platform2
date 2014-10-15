@@ -370,6 +370,18 @@ void DiskManager::RegisterDefaultFilesystems() {
   udf_fs.set_accepts_user_and_group_id(true);
   udf_fs.AddExtraMountOption(MountOptions::kOptionUtf8);
   RegisterFilesystem(udf_fs);
+
+  Filesystem ext2_fs("ext2");
+  ext2_fs.AddExtraMountOption(MountOptions::kOptionDirSync);
+  RegisterFilesystem(ext2_fs);
+
+  Filesystem ext3_fs("ext3");
+  ext3_fs.AddExtraMountOption(MountOptions::kOptionDirSync);
+  RegisterFilesystem(ext3_fs);
+
+  Filesystem ext4_fs("ext4");
+  ext4_fs.AddExtraMountOption(MountOptions::kOptionDirSync);
+  RegisterFilesystem(ext4_fs);
 }
 
 void DiskManager::RegisterFilesystem(const Filesystem& filesystem) {
