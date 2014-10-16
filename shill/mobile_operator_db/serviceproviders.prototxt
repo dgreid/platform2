@@ -5172,9 +5172,8 @@ mno {
         name : "HP DataPass"
       }
       mobile_apn {
-        apn : "HP DataPass"
+        apn : "hpdp-internet.foggmobile.com"
         plan : PREPAID
-        gateway : "hpdp-internet.foggmobile.com"
       }
     }
   }
@@ -15986,9 +15985,8 @@ mno {
     mccmnc : "20812"
     mccmnc : "312620"
     mobile_apn {
-      apn : "HP DataPass"
+      apn : "hpdp-internet.foggmobile.com"
       plan : PREPAID
-      gateway : "hpdp-internet.foggmobile.com"
     }
   }
   # If the IMSI range is correct, we still want to treat this as an MVNO.
