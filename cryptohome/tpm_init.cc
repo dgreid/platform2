@@ -642,4 +642,16 @@ TSS_HKEY TpmInit::GetCryptohomeKey() {
   return cryptohome_key_.value();
 }
 
+bool TpmInit::ReloadCryptohomeKey() {
+  CHECK(HasCryptohomeKey());
+  TSS_HKEY new_key;
+  TSS_RESULT result;
+  if (!LoadCryptohomeKey(GetCryptohomeContext(), &new_key, &result)) {
+    LOG(ERROR) << "Error reloading Cryptohome key.";
+    return false;
+  }
+  cryptohome_key_.reset(GetCryptohomeContext(), new_key);
+  return true;
+}
+
 }  // namespace cryptohome

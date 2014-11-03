@@ -124,6 +124,8 @@ class TpmInit {
 
   virtual TSS_HKEY GetCryptohomeKey();
 
+  virtual bool ReloadCryptohomeKey();
+
  private:
   virtual void ThreadMain();
 

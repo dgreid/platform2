@@ -274,6 +274,15 @@ bool Crypto::IsTPMPubkeyHash(const string& hash,
   retry_action = tpm_->GetPublicKeyHash(tpm_init_->GetCryptohomeContext(),
                                         tpm_init_->GetCryptohomeKey(),
                                         &pub_key_hash);
+  if (retry_action == Tpm::RetryCommFailure) {
+    if (!tpm_init_->ReloadCryptohomeKey()) {
+      LOG(ERROR) << "Unable to reload key";
+    } else {
+      retry_action = tpm_->GetPublicKeyHash(tpm_init_->GetCryptohomeContext(),
+                                            tpm_init_->GetCryptohomeKey(),
+                                            &pub_key_hash);
+    }
+  }
   if (retry_action != Tpm::RetryNone) {
     LOG(ERROR) << "Unable to get the cryptohome public key from the TPM.";
     if (error)
@@ -361,19 +370,39 @@ bool Crypto::DecryptTPM(const SerializedVaultKeyset& serialized,
                             serialized.tpm_key().length(), 0);
   SecureBlob key;
   CryptoLib::PasskeyToAesKey(vault_key, salt, rounds, &key, NULL);
+  Tpm::TpmRetryAction retry_action;
+  bool tpm_unwrap_success = true;
   if (!tpm_->DecryptBlob(tpm_init_->GetCryptohomeContext(),
                          tpm_init_->GetCryptohomeKey(),
                          tpm_key,
                          key,
                          &local_vault_key,
                          &result)) {
-    Tpm::TpmRetryAction retry_action = tpm_->HandleError(result);
-    LOG(ERROR) << "The TPM failed to unwrap the intermediate key with the "
-               << "supplied credentials";
-    if (error)
-      // This is a fatal error only if we don't get a transient error code.
-      *error = TpmErrorToCrypto(retry_action);
-    return false;
+    retry_action = tpm_->HandleError(result);
+    if (retry_action == Tpm::RetryCommFailure) {
+      if (!tpm_init_->ReloadCryptohomeKey()) {
+        LOG(ERROR) << "Unable to reload Cryptohome key.";
+        tpm_unwrap_success = false;
+      } else {
+        if (!tpm_->DecryptBlob(tpm_init_->GetCryptohomeContext(),
+                               tpm_init_->GetCryptohomeKey(),
+                               tpm_key,
+                               key,
+                               &local_vault_key,
+                               &result)) {
+          retry_action = tpm_->HandleError(result);
+          tpm_unwrap_success = false;
+        }
+      }
+    }
+    if (!tpm_unwrap_success) {
+      LOG(ERROR) << "The TPM failed to unwrap the intermediate key with the "
+                 << "supplied credentials";
+      if (error)
+        // This is a fatal error only if we don't get a transient error code.
+        *error = TpmErrorToCrypto(retry_action);
+      return false;
+    }
   }
 
   SecureBlob aes_key;
