@@ -6,6 +6,8 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <unistd.h>
 
 #include "installer/cgpt_manager.h"
@@ -15,6 +17,10 @@
 #include "installer/inst_util.h"
 
 using std::string;
+
+namespace {
+const char kStatefulMount[] = "/mnt/stateful_partition";
+}  // namespace
 
 bool ConfigureInstall(const string& install_dev,
                       const string& install_path,
@@ -145,6 +151,37 @@ int FirmwareUpdate(const string &install_dir, bool is_update) {
   return result;
 }
 
+// Fix the unencrypted permission. The permission on this file have been
+// deployed with wrong values (0766 for the permission) and/or the wrong
+// uid:gid.
+void FixUnencryptedPermission() {
+  string unencrypted_dir = string(kStatefulMount) + "/unencrypted";
+  printf("Checking %s permission.\n", unencrypted_dir.c_str());
+  struct stat unencrypted_stat;
+  const mode_t target_mode = S_IFDIR | S_IRWXU | (S_IRGRP | S_IXGRP) | (
+      S_IROTH | S_IXOTH);  // 040755
+  if (stat(unencrypted_dir.c_str(), &unencrypted_stat) != 0) {
+    perror("Couldn't check the current permission, ignored");
+  } else if (unencrypted_stat.st_uid == 0 &&
+             unencrypted_stat.st_gid == 0 &&
+             unencrypted_stat.st_mode == target_mode) {
+    printf("Permission is ok.\n");
+  } else {
+    bool ok = true;
+    // chmod(2) only takes the last four octal digits, so we flip the IFDIR bit.
+    if (chmod(unencrypted_dir.c_str(), target_mode ^ S_IFDIR) != 0) {
+      perror("chmod");
+      ok = false;
+    }
+    if (chown(unencrypted_dir.c_str(), 0, 0) != 0) {
+      perror("chown");
+      ok = false;
+    }
+    if (ok)
+      printf("Permission changed successfully.\n");
+  }
+}
+
 // Do post install stuff.
 //
 // Install kernel, set up the proper bootable partition in
@@ -252,6 +289,7 @@ bool ChromeosChrootPostinst(const InstallConfig& install_config,
   // and a reboot will boot into it. Thus, it's important that any future
   // errors in this script do not cause this script to return failure unless
   // in factory mode.
+  FixUnencryptedPermission();
 
   // We have a new image, making the ureadahead pack files
   // out-of-date.  Delete the files so that ureadahead will
@@ -266,8 +304,7 @@ bool ChromeosChrootPostinst(const InstallConfig& install_config,
   // Create a file indicating that the install is completed. The file
   // will be used in /sbin/chromeos_startup to run tasks on the next boot.
   // See comments above about removing ureadahead files.
-  string stateful_mnt = "/mnt/stateful_partition";
-  string install_completed = stateful_mnt + "/.install_completed";
+  string install_completed = string(kStatefulMount) + "/.install_completed";
   if (!Touch(install_completed)) {
     printf("Touch(%s) FAILED\n", install_completed.c_str());
     if (is_factory_install)
@@ -276,7 +313,7 @@ bool ChromeosChrootPostinst(const InstallConfig& install_config,
 
   // If present, remove firmware checking completion file to force a disk
   // firmware check at reboot.
-  string disk_fw_check_complete = stateful_mnt +
+  string disk_fw_check_complete = string(kStatefulMount) +
       "/unencrypted/cache/.disk_firmware_upgrade_completed";
   unlink(disk_fw_check_complete.c_str());
 
@@ -372,7 +409,7 @@ bool RunPostInstall(const string& install_dir,
   }
 
   // If we can read in the stateful lsb-release we are updating FROM, log it.
-  if (ReadFileToString("/mnt/stateful_partition/etc/lsb-release",
+  if (ReadFileToString(string(kStatefulMount) + "/etc/lsb-release",
                        &lsb_contents)) {
     printf("\nFROM (stateful):\n%s", lsb_contents.c_str());
   }
