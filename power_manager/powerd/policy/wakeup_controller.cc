@@ -40,6 +40,7 @@ const char WakeupController::kTagWakeupDisabled[] = "wakeup_disabled";
 const char WakeupController::kPowerWakeup[] = "power/wakeup";
 const char WakeupController::kEnabled[] = "enabled";
 const char WakeupController::kDisabled[] = "disabled";
+const char WakeupController::kUSBDevice[] = "usb_device";
 
 const char WakeupController::kInhibited[] = "inhibited";
 
@@ -108,10 +109,13 @@ void WakeupController::SetWakeupFromS3(const system::TaggedDevice& device,
   // itself, but the corresponding USB device does. If the matching device does
   // not have a power/wakeup property, we thus fall back to the first ancestor
   // that has one. Conflicts should not arise, since real-world USB input
-  // devices typically only expose one input interface anyway.
+  // devices typically only expose one input interface anyway. However,
+  // crawling up sysfs should only reach the first "usb_device" node, because
+  // higher-level nodes include USB hubs, and enabling wakeups on those isn't
+  // a good idea.
   std::string parent_syspath;
   if (!udev_->FindParentWithSysattr(device.syspath(), kPowerWakeup,
-                                    &parent_syspath)) {
+                                    kUSBDevice, &parent_syspath)) {
     LOG(WARNING) << "No " << kPowerWakeup << " sysattr available for "
                  << device.syspath();
     return;

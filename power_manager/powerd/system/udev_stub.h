@@ -50,6 +50,7 @@ class UdevStub : public UdevInterface {
                   const std::string& value) override;
   bool FindParentWithSysattr(const std::string& syspath,
                              const std::string& sysattr,
+                             const std::string& stop_at_devtype,
                              std::string* parent_syspath) override;
 
  private:
