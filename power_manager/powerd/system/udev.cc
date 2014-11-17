@@ -168,6 +168,7 @@ bool Udev::SetSysattr(const std::string& syspath,
 
 bool Udev::FindParentWithSysattr(const std::string& syspath,
                                  const std::string& sysattr,
+                                 const std::string& stop_at_devtype,
                                  std::string* parent_syspath) {
   DCHECK(udev_);
 
@@ -180,10 +181,14 @@ bool Udev::FindParentWithSysattr(const std::string& syspath,
   struct udev_device* parent = device;
   while (parent) {
     const char* value = udev_device_get_sysattr_value(parent, sysattr.c_str());
+    const char* devtype = udev_device_get_devtype(parent);
     if (value)
       break;
-    // Go up one level.
-    parent = udev_device_get_parent(parent);
+    // Go up one level unless the devtype matches stop_at_devtype.
+    if (devtype && strcmp(stop_at_devtype.c_str(), devtype) == 0)
+        parent = nullptr;
+    else
+        parent = udev_device_get_parent(parent);
   }
   if (parent)
     *parent_syspath = udev_device_get_syspath(parent);

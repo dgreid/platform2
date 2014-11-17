@@ -71,10 +71,13 @@ class UdevInterface {
 
   // For the device specified by |syspath|, finds the first parent device which
   // has a sysattr named |sysattr|, and stores the parent's syspath in
-  // |parent_syspath|. Returs true on success, or false on failure or when no
+  // |parent_syspath|. If |stop_at_devtype| is a nonempty string, then no parent
+  // devices will be considered beyond the first device matching
+  // |stop_at_devtype|. Returns true on success, or false on failure or when no
   // matching parent device was found.
   virtual bool FindParentWithSysattr(const std::string& syspath,
                                      const std::string& sysattr,
+                                     const std::string& stop_at_devtype,
                                      std::string* parent_syspath) = 0;
 };
 
@@ -103,6 +106,7 @@ class Udev : public UdevInterface, public base::MessageLoopForIO::Watcher {
                   const std::string& value) override;
   bool FindParentWithSysattr(const std::string& syspath,
                              const std::string& sysattr,
+                             const std::string& stopat_devtype,
                              std::string* parent_syspath) override;
 
   // base::MessageLoopForIO::Watcher implementation:

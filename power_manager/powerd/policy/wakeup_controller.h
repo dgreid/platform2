@@ -48,6 +48,7 @@ class WakeupController : public system::UdevTaggedDeviceObserver {
   static const char kPowerWakeup[];
   static const char kEnabled[];
   static const char kDisabled[];
+  static const char kUSBDevice[];
 
   static const char kInhibited[];
 

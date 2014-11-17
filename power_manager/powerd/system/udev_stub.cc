@@ -84,6 +84,7 @@ bool UdevStub::SetSysattr(const std::string& syspath,
 
 bool UdevStub::FindParentWithSysattr(const std::string& syspath,
                                      const std::string& sysattr,
+                                     const std::string& stop_at_devtype,
                                      std::string* parent_syspath) {
   *parent_syspath = syspath;
   return true;
