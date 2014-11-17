@@ -3,8 +3,8 @@ ENV{POWERD_ROLE}=="internal_touchpad",    ENV{POWERD_TAGS_USABLE}="usable_when_l
 ENV{POWERD_ROLE}=="internal_touchscreen", ENV{POWERD_TAGS_USABLE}="usable_when_laptop usable_when_tablet"
 ENV{POWERD_ROLE}=="external_input",       ENV{POWERD_TAGS_USABLE}="usable_when_docked usable_when_laptop usable_when_tablet"
 
-ENV{POWERD_ROLE}=="internal_keyboard", KERNEL=="input*",                   ENV{POWERD_TAGS_WAKEUP}="wakeup wakeup_only_when_usable"
-ENV{POWERD_ROLE}=="internal_touchpad", KERNEL=="input*",                   ENV{POWERD_TAGS_WAKEUP}="wakeup wakeup_only_when_usable"
-ENV{POWERD_ROLE}=="external_input",    KERNEL=="input*", ATTR{wakeup}!="", ENV{POWERD_TAGS_WAKEUP}="wakeup wakeup_only_when_usable"
+ENV{POWERD_ROLE}=="internal_keyboard", KERNEL=="input*", ENV{POWERD_TAGS_WAKEUP}="wakeup wakeup_only_when_usable"
+ENV{POWERD_ROLE}=="internal_touchpad", KERNEL=="input*", ENV{POWERD_TAGS_WAKEUP}="wakeup wakeup_only_when_usable"
+ENV{POWERD_ROLE}=="external_input",    KERNEL=="input*", ENV{POWERD_TAGS_WAKEUP}="wakeup wakeup_only_when_usable"
 
 ENV{POWERD_ROLE}!="", KERNEL=="input*", ATTR{inhibited}!="", ENV{POWERD_TAGS_INHIBIT}="inhibit"
