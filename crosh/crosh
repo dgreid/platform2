@@ -155,9 +155,6 @@ HELP_ADVANCED='
   effect after re-connecting to Ethernet and is not persistent across system
   restarts.
 
- set_wake_on_wifi <true | false>
-  Enable or disable Wake on WiFi functionality for WiFi devices.
-
  set_cellular_ppp [-u <username>] [-p <password>]
   Set the PPP username and/or password for an existing cellular connection.
   If neither -u nor -p is provided, show the existing PPP username for
@@ -679,21 +676,6 @@ cmd_set_wake_on_lan() (
       ;;
     "")
       /usr/bin/set_wake_on_lan
-      ;;
-    *)
-      echo "Unknown option: $1"
-      return 1
-      ;;
-  esac
-)
-
-cmd_set_wake_on_wifi() (
-  case "$1" in
-    "true"|"false")
-      /usr/bin/set_wake_on_wifi "$1"
-      ;;
-    "")
-      /usr/bin/set_wake_on_wifi
       ;;
     *)
       echo "Unknown option: $1"
