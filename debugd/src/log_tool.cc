@@ -99,7 +99,9 @@ static const Log common_logs[] = {
     "/proc/device-tree/chosen/ap-console-buffer 2> /dev/null" },
   { "bios_times", "/bin/cat /var/log/bios_times.txt" },
   { "board-specific",
-        "/usr/share/userfeedback/scripts/get_board_specific_info" },
+    "/usr/share/userfeedback/scripts/get_board_specific_info" },
+  { "clobber.log", "/bin/cat /var/log/clobber.log 2> /dev/null" },
+  { "clobber-state.log", "/bin/cat /var/log/clobber-state.log 2> /dev/null" },
   { "chrome_system_log", "/bin/cat /var/log/chrome/chrome" },
   { "console-ramoops", "/bin/cat /dev/pstore/console-ramoops 2> /dev/null" },
   { "cpu", "/usr/bin/uname -p" },
@@ -142,8 +144,8 @@ static const Log common_logs[] = {
   { "lspci", "/usr/sbin/lspci" },
   { "lsusb", "lsusb" },
   {
-      "mali_memory",
-      "/bin/cat /sys/class/misc/mali0/device/memory 2> /dev/null"
+    "mali_memory",
+    "/bin/cat /sys/class/misc/mali0/device/memory 2> /dev/null"
   },
   { "meminfo", "cat /proc/meminfo" },
   { "memory_spd_info", "/bin/cat /var/log/memory_spd_info.txt" },
@@ -162,6 +164,7 @@ static const Log common_logs[] = {
   { "powerd.LATEST", "/bin/cat /var/log/power_manager/powerd.LATEST" },
   { "powerd.PREVIOUS", "/bin/cat /var/log/power_manager/powerd.PREVIOUS" },
   { "powerd.out", "/bin/cat /var/log/powerd.out" },
+  { "powerwash_count", "/bin/cat /var/log/powerwash_count 2> /dev/null" },
   // Changed from 'ps ux' to 'ps aux' since we're running as debugd, not chronos
   { "ps", "/bin/ps aux" },
   { "storage_info", "/bin/cat /var/log/storage_info.txt" },
@@ -176,7 +179,7 @@ static const Log common_logs[] = {
   { "ui_log", "/usr/share/userfeedback/scripts/get_log /var/log/ui/ui.LATEST" },
   { "uname", "/bin/uname -a" },
   { "update_engine.log", "cat $(ls -1tr /var/log/update_engine | tail -5 | sed"
-         " s.^./var/log/update_engine/.)" },
+                         " s.^./var/log/update_engine/.)" },
   { "verified boot", "/bin/cat /var/log/debug_vboot_noisy.log" },
   { "vpd_2.0", "/bin/cat /var/log/vpd_2.0.txt" },
   { "wifi_status", "/usr/bin/network_diag --wifi-internal --no-log" },
