@@ -171,13 +171,6 @@ HELP_ADVANCED='
   Sets the system time if the the system has been unable to get it from the
   network.  The <time string> uses the format of the GNU coreutils date command.
 
- sound <command> <argument>
-  Low level sound configuration.  Can be used to play/record audio samples
-  and enable beam forming on Pixel.
-  "sound beamforming <on|off>" will enable/disable the feature.
-  "sound record [duration]" will start recording.
-  "sound play <filename>" will play the recorded audio samples.
-
  storage_test_1
   Performs a short offline SMART test.
 
@@ -365,62 +358,6 @@ cmd_set_time() (
   *)
     echo "An unexpected response was received: ${code}"
     echo "Details: ${reply}"
-  esac
-)
-
-cmd_sound() (
-  case "$1" in
-  "beamforming")
-    card=$(aplay -l | egrep '^card .*\bCA0132\b' | sed 's/card \([0-9]\+\).*/\1/')
-    if [ -z "$card" ]; then
-      echo "No supported card found"
-      return 1
-    fi
-    if [ "$2" != "on" -a "$2" != "off" ]; then
-      echo "invalid option $2."
-      echo "Valid choices: on, off."
-      return 1
-    else
-      amixer -c"$card" cset name='"Voice Focus Capture Switch"' "$2"
-    fi
-    ;;
-  "play")
-    if [ -z "$2" ]; then
-      echo "Please specify the audio sample file name."
-      return 1
-    fi
-    echo "playing $2"
-    cras_test_client --playback_file "$2"
-    ;;
-  "record")
-    local record_time=0
-    if [ $# -lt 2 ]; then
-      record_time=30
-    else
-      record_time="$2"
-    fi
-    case ${record_time} in
-    ""|*[!0-9]*)
-      echo "Recording duration has to be numeric."
-      return 1
-    esac
-    if [ ${record_time} -gt 30 -o ${record_time} -lt 1 ]; then
-      echo "Recording duration has to be in between 1-30."
-      return 1
-    fi
-
-    local filename="${HOME}/Downloads/audio_$(date '+%Y%m%d%H%M%S')"
-    echo "Recording..."
-    cras_test_client --capture_file ${filename} --duration_seconds "${record_time}"
-    echo "Audio samples recorded at ${filename}"
-    ;;
-  *)
-    echo "Usage:"
-    echo "  sound beamforming <on/off>"
-    echo "  sound record [duration]"
-    echo "  sound play <filename>"
-    return 1
-    ;;
   esac
 )
 
