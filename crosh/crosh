@@ -11,6 +11,10 @@
 # Please test that any changes continue to work in dash by running
 # '/build/$BOARD/bin/dash crosh --dash' before checking them in.
 
+# Disable path expansion at the command line.  None of our builtins need or want
+# it, and it's safer/saner to disallow it in the first place.
+set -f noglob
+
 # Don't allow SIGHUP to terminate crosh. This guarantees that even if the user
 # closes the crosh window, we make our way back up to the main loop, which gives
 # cleanup code in command handlers a chance to run.
