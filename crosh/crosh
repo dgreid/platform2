@@ -13,7 +13,7 @@
 
 # Disable path expansion at the command line.  None of our builtins need or want
 # it, and it's safer/saner to disallow it in the first place.
-set -f noglob
+set -f
 
 # Don't allow SIGHUP to terminate crosh. This guarantees that even if the user
 # closes the crosh window, we make our way back up to the main loop, which gives
