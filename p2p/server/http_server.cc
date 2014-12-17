@@ -82,7 +82,6 @@ class HttpServerExternalProcess : public HttpServer {
   int num_connections_;
   GPid pid_;
   int child_stdout_fd_;
-  guint child_stdout_channel_source_id_;
   NumConnectionsCallback num_connections_callback_;
 
   // A message watch for child P2PServerMessages.
@@ -106,9 +105,8 @@ HttpServerExternalProcess::HttpServerExternalProcess(
       child_stdout_fd_(-1) {}
 
 HttpServerExternalProcess::~HttpServerExternalProcess() {
-  if (child_stdout_channel_source_id_ != 0) {
-    g_source_remove(child_stdout_channel_source_id_);
-  }
+  child_watch_.reset(nullptr);
+
   if (child_stdout_fd_ != -1) {
     close(child_stdout_fd_);
   }
@@ -273,10 +271,7 @@ bool HttpServerExternalProcess::Stop() {
     return false;
   }
 
-  if (child_stdout_channel_source_id_ != 0) {
-    g_source_remove(child_stdout_channel_source_id_);
-  }
-  child_stdout_channel_source_id_ = 0;
+  child_watch_.reset(nullptr);
 
   if (child_stdout_fd_ != -1) {
     close(child_stdout_fd_);
