@@ -249,8 +249,16 @@ disk_mmc_upgrade() {
   local device="$1"
   local fw_file="$2"
   local fw_options="$3"
+  local options=""
 
-  "${FLAGS_mmc}" ffu "${fw_file##*/}" "/dev/${device}"
+  if [ "${fw_options}" != "-" ]; then
+     # Options for mmc in the config files are separated with commas.
+     # Translate the option for the command line.
+     options=$(echo "${fw_options}" | sed 's/,/ -k /g')
+     options="-k ${options}"
+  fi
+
+  "${FLAGS_mmc}" ffu ${options} "${fw_file##*/}" "/dev/${device}"
 }
 
 # disk_upgrade - Upgrade the firmware on the disk

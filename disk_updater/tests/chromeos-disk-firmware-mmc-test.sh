@@ -33,6 +33,7 @@ disk_mmc_info() {
   disk_model="${mmc_model[${id_idx}]}"
   disk_fw_rev="${mmc_fwrev[${id_idx}]}"
   : $(( id_idx += 1))
+  return 0
 }
 
 prepare_test() {
@@ -74,19 +75,26 @@ list_fixed_mmc_disks() {
 }
 
 prepare_test
+
 mmc_fwrev=(
   '0x0b00000000000000'
   '0xff00000000000000'
+  '0xff00000000000000'
   '00'
-  '00'
+  '0x0c00000000000000'
+  '0xfe00000000000000'
+  '0xfe00000000000000'
   '0x0b00000000000000'
   '0xff00000000000000'
 )
 mmc_model=(
   'MAG2GC'
   'MAG2GC'
+  'MAG2GC'
   'NO FFU'
-  'NO FFU'
+  'MAG3GC'
+  'MAG3GC'
+  'MAG3GC'
   'MAG2GC'
   'MAG2GC'
 )
@@ -99,14 +107,18 @@ run_test
 check_test 2 mmc_good 0 $?
 echo MMC PASS 2
 
+run_test
+check_test 3 mmc_upgraded 0 $?
+echo MMC PASS 3
+
 # set firmware upgrade to fail
 disk_mmc_upgrade() {
   return 1
 }
 
 run_test
-check_test 3 mmc_upgrade_failed 1 $?
-echo MMC PASS 3
+check_test 4 mmc_upgrade_failed 1 $?
+echo MMC PASS 4
 
 
 rm -rf "${DISK_TEMP}"
