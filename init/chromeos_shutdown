@@ -64,6 +64,14 @@ bootstat_archive /var/log/metrics/shutdown.$(date '+%Y%m%d%H%M%S')
 
 # Lazy umount the tmpfs dirs under /var so we can immediately umount it.
 umount -n -l /var/run /var/lock
+
+# Remove symbolic links so that in case of auto-update rollback, the pre-38
+# chromeos_startup does not choke on them (which has been widely observed in the
+# wild, cf. https://crbug.com/447227).
+# TODO(tnagel): Remove once the amount of pre-38 installations has become
+# negligible.
+rm -f /var/run /var/lock
+
 if [ -e /dev/mapper/encstateful ]; then
   # Give mount-encrypted umount 10 times to retry, otherwise
   # it will fail with 'device is busy' because lazy umount does not finish
