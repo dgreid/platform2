@@ -482,14 +482,6 @@ void ChromiumCommandBuilder::AddUiFlags() {
       IsBoard("nyan_blaze"))
     AddArg("--ignore-resolution-limits-for-accelerated-video-decode");
 
-  if (IsBoard("rush_ryu")) {
-    // Workaround for wrong bounds from touchscreen firmware.
-    AddArg("--touch-calibration=0,-1511,0,-1069");
-
-    // Workaround for lack of highdpi detection in athena.
-    AddArg("--force-device-scale-factor=2");
-  }
-
   // Ozone platform configuration.
   if ((IsBoard("link_freon") || IsBoard("peppy_freon") ||
        IsBoard("zako_freon")) && UseFlagIsSet("ozone_platform_gbm")) {
