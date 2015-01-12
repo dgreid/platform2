@@ -30,7 +30,8 @@ declare -a mmc_rc
 declare -i id_idx
 
 disk_mmc_info() {
-  disk_model="${mmc_model[${id_idx}]}"
+  disk_model="$(echo ${mmc_model[${id_idx}]} | \
+                tr -d '\n' | od -t x1 -A none -v | sed 's/ //g')"
   disk_fw_rev="${mmc_fwrev[${id_idx}]}"
   : $(( id_idx += 1))
   return 0
