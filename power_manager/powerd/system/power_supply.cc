@@ -482,6 +482,9 @@ bool PowerSupply::UpdatePowerStatus() {
   VLOG(1) << "Updating power status";
   PowerStatus status;
 
+  // Track whether we found at least one (possibly offline) power source.
+  bool saw_power_source = false;
+
   // The battery state is dependent on the line power state, so defer reading it
   // until all other directories have been examined.
   base::FilePath battery_path;
@@ -499,6 +502,8 @@ bool PowerSupply::UpdatePowerStatus() {
       continue;
     base::TrimWhitespaceASCII(type, base::TRIM_TRAILING, &type);
 
+    saw_power_source = true;
+
     if (type == kBatteryType) {
       if (battery_path.empty())
         battery_path = path;
@@ -512,8 +517,13 @@ bool PowerSupply::UpdatePowerStatus() {
   // If no battery was found, assume that the system is actually on AC power.
   if (!status.line_power_on &&
       (battery_path.empty() || !IsBatteryPresent(battery_path))) {
-    LOG(WARNING) << "Found neither line power nor a battery; assuming that "
-                 << "line power is connected";
+    if (saw_power_source) {
+      // Batteryless Chromeboxes sometimes don't report any power sources. If we
+      // saw at least one source but it wasn't online, the battery status might
+      // be getting misreported, though; log a warning.
+      LOG(WARNING) << "Found neither line power nor a battery; assuming that "
+                   << "line power is connected";
+    }
     status.line_power_on = true;
     status.line_power_type = kMainsType;
     status.external_power = PowerSupplyProperties_ExternalPower_AC;
