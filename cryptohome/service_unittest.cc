@@ -410,13 +410,22 @@ TEST_F(ServiceInterfaceTest, GetSanitizedUsername) {
 TEST(Standalone, CheckAutoCleanupCallback) {
   // Checks that AutoCleanupCallback() is called periodically.
   MockHomeDirs homedirs;
+  NiceMock<MockPlatform> platform;
+  NiceMock<MockInstallAttributes> attrs;
+  NiceMock<MockTpm> tpm;
+  NiceMock<MockAttestation> attest;
+  NiceMock<chaps::TokenManagerClientMock> chaps;
+  NiceMock<MockBootAttributes> boot_attributes;
   Service service;
   service.set_homedirs(&homedirs);
-  NiceMock<MockPlatform> platform;
   service.set_platform(&platform);
-  NiceMock<MockInstallAttributes> attrs;
   service.set_install_attrs(&attrs);
   service.set_initialize_tpm(false);
+  service.set_use_tpm(false);
+  service.set_tpm(&tpm);
+  service.set_boot_attributes(&boot_attributes);
+  service.set_attestation(&attest);
+  service.set_chaps_client(&chaps);
 
   // Service will schedule periodic clean-ups. Wait a bit and make
   // sure that we had at least 3 executed.
@@ -432,10 +441,6 @@ TEST(Standalone, CheckAutoCleanupCallback) {
 
   service.set_auto_cleanup_period(2);  // 2ms = 500HZ
   service.set_update_user_activity_period(2);  // 2 x 5ms = 25HZ
-  NiceMock<MockAttestation> attest;
-  service.set_attestation(&attest);
-  NiceMock<chaps::TokenManagerClientMock> chaps;
-  service.set_chaps_client(&chaps);
   service.Initialize();
   PlatformThread::Sleep(base::TimeDelta::FromMilliseconds(100));
 }
@@ -443,15 +448,22 @@ TEST(Standalone, CheckAutoCleanupCallback) {
 TEST(Standalone, CheckAutoCleanupCallbackFirst) {
   // Checks that AutoCleanupCallback() is called first right after init.
   MockHomeDirs homedirs;
+  NiceMock<MockInstallAttributes> attrs;
+  NiceMock<MockTpm> tpm;
+  NiceMock<MockAttestation> attest;
+  NiceMock<MockPlatform> platform;
+  NiceMock<MockBootAttributes> boot_attributes;
+  NiceMock<chaps::TokenManagerClientMock> chaps;
   Service service;
   service.set_homedirs(&homedirs);
-  NiceMock<MockInstallAttributes> attrs;
   service.set_install_attrs(&attrs);
   service.set_initialize_tpm(false);
-  NiceMock<MockAttestation> attest;
+  service.set_use_tpm(false);
+  service.set_tpm(&tpm);
   service.set_attestation(&attest);
-  NiceMock<MockPlatform> platform;
   service.set_platform(&platform);
+  service.set_boot_attributes(&boot_attributes);
+  service.set_chaps_client(&chaps);
 
   // Service will schedule first cleanup right after its init.
   EXPECT_CALL(homedirs, Init(&platform, service.crypto(), _))

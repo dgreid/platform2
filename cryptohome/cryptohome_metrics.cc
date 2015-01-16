@@ -19,6 +19,9 @@ struct TimerHistogramParams {
 
 const char kCryptohomeErrorHistogram[] = "Cryptohome.Errors";
 const int kCryptohomeErrorNumBuckets = 50;
+const char kDictionaryAttackResetStatusHistogram[] =
+    "Platform.TPM.DictionaryAttackResetStatus";
+const int kDictionaryAttackResetStatusNumBuckets = 10;
 
 // Histogram parameters. This should match the order of 'TimerType'.
 // Min and max samples are in milliseconds.
@@ -113,6 +116,15 @@ void ReportTimerStop(TimerType timer_type) {
     LOG(WARNING) << "Timer " << kTimerHistogramParams[timer_type].metric_name
                  << " failed to report.";
   }
+}
+
+void ReportDictionaryAttackResetStatus(DictionaryAttackResetStatus status) {
+  if (!g_metrics) {
+    return;
+  }
+  g_metrics->SendEnumToUMA(kDictionaryAttackResetStatusHistogram,
+                           status,
+                           kDictionaryAttackResetStatusNumBuckets);
 }
 
 }  // namespace cryptohome

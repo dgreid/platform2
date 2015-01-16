@@ -196,12 +196,12 @@ Service::Service()
 }
 
 Service::~Service() {
-  if (loop_)
+  mount_thread_.Stop();
+  if (loop_) {
     g_main_loop_unref(loop_);
-  if (cryptohome_)
+  }
+  if (cryptohome_) {
     g_object_unref(cryptohome_);
-  if (mount_thread_.IsRunning()) {
-    mount_thread_.Stop();
   }
 }
 
@@ -2905,6 +2905,9 @@ void Service::AutoCleanupCallback() {
 
   homedirs_->FreeDiskSpace();
 
+  // Reset the dictionary attack counter if possible and necessary.
+  ResetDictionaryAttackMitigation();
+
   // Schedule our next call. If the thread is terminating, we would
   // not be called. We use base::Unretained here because the Service object is
   // never destroyed.
@@ -2912,6 +2915,39 @@ void Service::AutoCleanupCallback() {
       FROM_HERE,
       base::Bind(&Service::AutoCleanupCallback, base::Unretained(this)),
       base::TimeDelta::FromMilliseconds(auto_cleanup_period_));
+}
+
+void Service::ResetDictionaryAttackMitigation() {
+  chromeos::SecureBlob delegate_blob, delegate_secret;
+  bool has_reset_lock_permissions = false;
+  if (!attestation_->GetDelegateCredentials(&delegate_blob,
+                                            &delegate_secret,
+                                            &has_reset_lock_permissions)) {
+    ReportDictionaryAttackResetStatus(kDelegateNotAvailable);
+    return;
+  }
+  if (!has_reset_lock_permissions) {
+    ReportDictionaryAttackResetStatus(kDelegateNotAllowed);
+    return;
+  }
+  int counter = 0;
+  int threshold;
+  int seconds_remaining;
+  bool lockout;
+  if (!tpm_->GetDictionaryAttackInfo(&counter, &threshold, &lockout,
+                                     &seconds_remaining)) {
+    ReportDictionaryAttackResetStatus(kCounterQueryFailed);
+    return;
+  }
+  if (counter == 0) {
+    ReportDictionaryAttackResetStatus(kResetNotNecessary);
+    return;
+  }
+  if (!tpm_->ResetDictionaryAttackMitigation(delegate_blob, delegate_secret)) {
+    ReportDictionaryAttackResetStatus(kResetAttemptFailed);
+    return;
+  }
+  ReportDictionaryAttackResetStatus(kResetAttemptSucceeded);
 }
 
 void Service::DetectEnterpriseOwnership() {

@@ -321,10 +321,13 @@ bool Tpm::GetDictionaryAttackInfo(int* counter,
   return true;
 }
 
-bool Tpm::ResetDictionaryAttackMitigation() {
+bool Tpm::ResetDictionaryAttackMitigation(
+    const chromeos::SecureBlob& delegate_blob,
+    const chromeos::SecureBlob& delegate_secret) {
   ScopedTssContext context_handle;
   TSS_HTPM tpm_handle;
-  if (!ConnectContextAsOwner(context_handle.ptr(), &tpm_handle)) {
+  if (!ConnectContextAsDelegate(delegate_blob, delegate_secret,
+                                context_handle.ptr(), &tpm_handle)) {
     LOG(ERROR) << __func__ << ": Failed to connect to the TPM.";
     return false;
   }
@@ -335,7 +338,7 @@ bool Tpm::ResetDictionaryAttackMitigation() {
     TPM_LOG(ERROR, result) << __func__ << ": Failed to reset lock.";
     return false;
   }
-  VLOG(1) << __func__ << ": Success!";
+  LOG(WARNING) << "Dictionary attack mitigation has been reset.";
   return true;
 }
 
@@ -2208,7 +2211,9 @@ bool Tpm::CreateDelegate(const SecureBlob& identity_key_blob,
   }
   // These are the privileged operations we will allow the delegate to perform.
   const UINT32 permissions = TPM_DELEGATE_ActivateIdentity |
-                             TPM_DELEGATE_DAA_Join | TPM_DELEGATE_DAA_Sign;
+                             TPM_DELEGATE_DAA_Join |
+                             TPM_DELEGATE_DAA_Sign |
+                             TPM_DELEGATE_ResetLockValue;
   result = Tspi_SetAttribUint32(policy, TSS_TSPATTRIB_POLICY_DELEGATION_INFO,
                                 TSS_TSPATTRIB_POLDEL_PER1, permissions);
   if (TPM_ERROR(result)) {

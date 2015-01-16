@@ -91,6 +91,9 @@ class MockAttestation : public Attestation {
   MOCK_METHOD1(set_enterprise_test_key, void(RSA*));  // NOLINT "unnamed" param.
   MOCK_METHOD0(ThreadMain, void());
   MOCK_METHOD0(OnFinalized, void());
+  MOCK_METHOD3(GetDelegateCredentials, bool(chromeos::SecureBlob*,
+                                            chromeos::SecureBlob*,
+                                            bool*));
 };
 
 }  // namespace cryptohome

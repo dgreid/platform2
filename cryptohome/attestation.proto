@@ -64,6 +64,8 @@ message Delegation {
   optional bytes blob = 1;
   // The authorization secret.
   optional bytes secret = 2;
+  // Whether this delegate has permissions to call TPM_ResetLockValue.
+  optional bool has_reset_lock_permissions = 3;
 }
 
 // This message holds all information to be sent to the attestation server in

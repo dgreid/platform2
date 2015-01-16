@@ -327,6 +327,12 @@ class Attestation : public base::PlatformThread::Delegate,
   // cannot be decrypted locally.
   virtual void FinalizeEndorsementData();
 
+  // Provides the owner delegate credentials normally used for AIK activation.
+  // Returns true on success.
+  virtual bool GetDelegateCredentials(chromeos::SecureBlob* blob,
+                                      chromeos::SecureBlob* secret,
+                                      bool* has_reset_lock_permissions);
+
   // Sets an alternative attestation database location. Useful in testing.
   virtual void set_database_path(const char* path) {
     database_path_ = base::FilePath(path);

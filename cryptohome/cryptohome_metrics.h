@@ -36,6 +36,15 @@ enum TimerType {
   kNumTimerTypes  // For the number of timer types.
 };
 
+enum DictionaryAttackResetStatus {
+  kResetNotNecessary,
+  kResetAttemptSucceeded,
+  kResetAttemptFailed,
+  kDelegateNotAllowed,
+  kDelegateNotAvailable,
+  kCounterQueryFailed,
+};
+
 // Cros events emitted by cryptohome.
 const char kAttestationOriginSpecificIdentifiersExhausted[] =
     "Attestation.OriginSpecificExhausted";
@@ -61,6 +70,10 @@ void ReportTimerStart(TimerType timer_type);
 // Stops a timer and reports in milliseconds. Timers are reported to the
 // "Cryptohome.TimeTo*" histograms.
 void ReportTimerStop(TimerType timer_type);
+
+// Reports a status value on the "Platform.TPM.DictionaryAttackResetStatus"
+// histogram.
+void ReportDictionaryAttackResetStatus(DictionaryAttackResetStatus status);
 
 // Initialization helper.
 class ScopedMetricsInitializer {

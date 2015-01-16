@@ -526,6 +526,7 @@ void Attestation::PrepareForEnrollment() {
   Delegation* delegate_pb = database_pb_.mutable_delegate();
   delegate_pb->set_blob(delegate_blob.data(), delegate_blob.size());
   delegate_pb->set_secret(delegate_secret.data(), delegate_secret.size());
+  delegate_pb->set_has_reset_lock_permissions(true);
 
   string serial_encrypted_db;
   if (!EncryptDatabase(database_pb_, &serial_encrypted_db)) {
@@ -2050,6 +2051,21 @@ void Attestation::FinalizeEndorsementData() {
   if (!PersistDatabaseChanges()) {
     LOG(ERROR) << "Attestation: Failed to persist database changes.";
   }
+}
+
+bool Attestation::GetDelegateCredentials(chromeos::SecureBlob* blob,
+                                         chromeos::SecureBlob* secret,
+                                         bool* has_reset_lock_permissions) {
+  if (!IsPreparedForEnrollment()) {
+    return false;
+  }
+  SecureBlob tmp_blob(database_pb_.delegate().blob());
+  blob->swap(tmp_blob);
+  SecureBlob tmp_secret(database_pb_.delegate().secret());
+  secret->swap(tmp_secret);
+  *has_reset_lock_permissions =
+      database_pb_.delegate().has_reset_lock_permissions();
+  return true;
 }
 
 bool Attestation::IsTPMReady() {

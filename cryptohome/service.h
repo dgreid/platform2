@@ -621,6 +621,10 @@ class Service : public chromeos::dbus::AbstractDbusService,
                                   MountError return_code,
                                   bool return_status);
 
+  // Called on Mount thread. This method calls ReportDictionaryAttackResetStatus
+  // exactly once (i.e. records one sample) with the status of the operation.
+  void ResetDictionaryAttackMitigation();
+
   bool use_tpm_;
 
   GMainLoop* loop_;
