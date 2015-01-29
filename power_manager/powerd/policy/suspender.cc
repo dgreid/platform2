@@ -440,6 +440,9 @@ Suspender::State Suspender::Suspend() {
   const Delegate::SuspendResult result =
       delegate_->DoSuspend(wakeup_count_, wakeup_count_valid_, duration);
 
+  if (result == Delegate::SUSPEND_SUCCESSFUL)
+    dark_resume_->HandleSuccessfulResume();
+
   // At this point, we've either resumed successfully or failed to suspend in
   // the first place.
   const bool in_dark_resume = dark_resume_->InDarkResume();

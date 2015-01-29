@@ -54,6 +54,9 @@ class DarkResumeInterface {
       Action* action,
       base::TimeDelta* suspend_duration) = 0;
 
+  // Reads the system state to see if it's in a dark resume.
+  virtual void HandleSuccessfulResume() = 0;
+
   // Returns true if the system is currently in dark resume.
   virtual bool InDarkResume() = 0;
 
@@ -110,6 +113,7 @@ class DarkResume : public DarkResumeInterface {
   void UndoPrepareForSuspendRequest() override;
   void GetActionForSuspendAttempt(Action* action,
                                   base::TimeDelta* suspend_duration) override;
+  void HandleSuccessfulResume() override;
   bool InDarkResume() override;
   bool IsEnabled() override;
 
@@ -141,6 +145,9 @@ class DarkResume : public DarkResumeInterface {
   // line power status, and shutdown threshold. |next_action_| will then be
   // used on the next suspend to decide whether to shut down or not.
   void UpdateNextAction();
+
+  // Are we currently in dark resume?
+  bool in_dark_resume_;
 
   // Is dark resume enabled?
   bool enabled_;

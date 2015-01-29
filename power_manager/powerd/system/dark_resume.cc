@@ -44,7 +44,8 @@ const char DarkResume::kAutomatic[] = "automatic";
 const char DarkResume::kUnknown[] = "unknown";
 
 DarkResume::DarkResume()
-    : using_wakeup_type_(false),
+    : in_dark_resume_(false),
+      using_wakeup_type_(false),
       power_supply_(NULL),
       prefs_(NULL),
       legacy_state_path_(kDarkResumeStatePath),
@@ -104,6 +105,8 @@ void DarkResume::PrepareForSuspendRequest() {
 void DarkResume::UndoPrepareForSuspendRequest() {
   if (timer_)
     timer_->Stop();
+
+  in_dark_resume_ = false;
 }
 
 void DarkResume::GetActionForSuspendAttempt(Action* action,
@@ -168,23 +171,30 @@ void DarkResume::UpdateNextAction() {
       ? SHUT_DOWN : SUSPEND;
 }
 
-bool DarkResume::InDarkResume() {
-  if (!enabled_)
-    return false;
+void DarkResume::HandleSuccessfulResume() {
+  if (!enabled_) {
+    in_dark_resume_ = false;
+    return;
+  }
 
   std::string buf;
   if (!base::ReadFileToString(state_path_, &buf)) {
     PLOG(ERROR) << "Unable to read " << state_path_.value();
-    return false;
+    in_dark_resume_ = false;
+    return;
   }
 
   base::TrimWhitespaceASCII(buf, base::TRIM_TRAILING, &buf);
   if (using_wakeup_type_) {
-    return buf == kAutomatic;
+    in_dark_resume_ = buf == kAutomatic;
   } else {
     uint64_t value = 0;
-    return base::StringToUint64(buf, &value) && value;
+    in_dark_resume_ = base::StringToUint64(buf, &value) && value;
   }
+}
+
+bool DarkResume::InDarkResume() {
+  return in_dark_resume_;
 }
 
 bool DarkResume::IsEnabled() {

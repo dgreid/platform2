@@ -29,6 +29,8 @@ void DarkResumeStub::GetActionForSuspendAttempt(
   *suspend_duration = suspend_duration_;
 }
 
+void DarkResumeStub::HandleSuccessfulResume() {}
+
 bool DarkResumeStub::InDarkResume() {
   return in_dark_resume_;
 }

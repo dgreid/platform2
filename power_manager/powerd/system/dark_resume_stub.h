@@ -30,6 +30,7 @@ class DarkResumeStub : public DarkResumeInterface {
   void UndoPrepareForSuspendRequest() override;
   void GetActionForSuspendAttempt(Action* action,
                                   base::TimeDelta* suspend_duration) override;
+  void HandleSuccessfulResume() override;
   bool InDarkResume() override;
   bool IsEnabled() override;
 

@@ -199,6 +199,7 @@ class DarkResumeTest : public ::testing::Test {
                bool woken_by_timer) {
     system_.Suspend(dark_resume_.get(), action, suspend_duration,
                              woken_by_timer);
+    dark_resume_->HandleSuccessfulResume();
   }
 
   base::ScopedTempDir temp_dir_;
@@ -494,6 +495,32 @@ TYPED_TEST(DarkResumeTest, InterruptedDarkResume) {
   this->Suspend(&action, &suspend_duration, false);
   EXPECT_EQ(DarkResumeInterface::SUSPEND, action);
   EXPECT_EQ(20, suspend_duration.InSeconds());
+}
+
+// Check that we suspend normally after exiting dark resume after user activity.
+TYPED_TEST(DarkResumeTest, ExitDarkResume) {
+  this->prefs_.SetString(kDarkResumeSuspendDurationsPref, "0.0 10\n"
+                                                          "50.0 20\n");
+  this->Init();
+  this->SetBattery(80.0, false);
+  DarkResumeInterface::Action action;
+  base::TimeDelta suspend_duration;
+
+  this->dark_resume_->PrepareForSuspendRequest();
+  // Set dark resume state for suspend.
+  this->WriteDarkResumeState(true);
+  this->Suspend(&action, &suspend_duration, false);
+
+  // This should bring the system out of dark resume.
+  this->dark_resume_->UndoPrepareForSuspendRequest();
+  EXPECT_EQ(DarkResumeInterface::SUSPEND, action);
+  EXPECT_EQ(20, suspend_duration.InSeconds());
+
+  this->SetBattery(40.0, false);
+  this->dark_resume_->PrepareForSuspendRequest();
+  this->Suspend(&action, &suspend_duration, false);
+  EXPECT_EQ(DarkResumeInterface::SUSPEND, action);
+  EXPECT_EQ(10, suspend_duration.InSeconds());
 }
 
 }  // namespace system
