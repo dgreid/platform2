@@ -16,6 +16,7 @@
 #include <base/strings/string_split.h>
 #include <base/strings/string_util.h>
 
+#include "power_manager/common/clock.h"
 #include "power_manager/common/prefs.h"
 #include "power_manager/common/util.h"
 #include "power_manager/powerd/system/backlight_interface.h"
@@ -56,18 +57,33 @@ KeyboardBacklightController::TestApi::TestApi(
 
 KeyboardBacklightController::TestApi::~TestApi() {}
 
-void KeyboardBacklightController::TestApi::TriggerVideoTimeout() {
-  CHECK(controller_->video_timer_.IsRunning());
+bool KeyboardBacklightController::TestApi::TriggerHoverTimeout() {
+  if (!controller_->hover_timer_.IsRunning())
+    return false;
+
+  controller_->hover_timer_.Stop();
+  controller_->UpdateState();
+  return true;
+}
+
+bool KeyboardBacklightController::TestApi::TriggerVideoTimeout() {
+  if (!controller_->video_timer_.IsRunning())
+    return false;
+
   controller_->video_timer_.Stop();
   controller_->HandleVideoTimeout();
+  return true;
 }
 
 const double KeyboardBacklightController::kDimPercent = 10.0;
+const int KeyboardBacklightController::kKeepOnAfterHoveringStopsMs = 5000;
 
 KeyboardBacklightController::KeyboardBacklightController()
-    : backlight_(NULL),
+    : clock_(new Clock),
+      backlight_(NULL),
       prefs_(NULL),
       display_backlight_controller_(NULL),
+      supports_hover_(false),
       session_state_(SESSION_STOPPED),
       dimmed_for_inactivity_(false),
       off_for_inactivity_(false),
@@ -105,6 +121,8 @@ void KeyboardBacklightController::Init(
     ambient_light_handler_.reset(new AmbientLightHandler(sensor, this));
     ambient_light_handler_->set_name("keyboard");
   }
+
+  prefs_->GetBool(kDetectHoverPref, &supports_hover_);
 
   max_level_ = backlight_->GetMaxBrightnessLevel();
   current_level_ = backlight_->GetCurrentBrightnessLevel();
@@ -174,7 +192,23 @@ void KeyboardBacklightController::HandleVideoActivity(bool is_fullscreen) {
 void KeyboardBacklightController::HandleHoverStateChanged(bool hovering) {
   if (hovering == hovering_)
     return;
+
   hovering_ = hovering;
+
+  hover_timer_.Stop();
+  if (!hovering_) {
+    // If the user stopped hovering, start a timer to turn the backlight off in
+    // a little while. If this is updated to do something else instead of
+    // calling UpdateState(), TestApi::TriggerHoverTimeout() must also be
+    // updated.
+    last_hover_time_ = clock_->GetCurrentTime();
+    hover_timer_.Start(FROM_HERE,
+        base::TimeDelta::FromMilliseconds(kKeepOnAfterHoveringStopsMs),
+        this, &KeyboardBacklightController::UpdateState);
+  } else {
+    last_hover_time_ = base::TimeTicks();
+  }
+
   UpdateState();
 }
 
@@ -339,8 +373,22 @@ void KeyboardBacklightController::InitUserStepIndex() {
 }
 
 double KeyboardBacklightController::GetUndimmedPercent() const {
-  return user_step_index_ != -1 ? user_steps_[user_step_index_] :
-      percent_for_ambient_light_;
+  // If the user has explictly set the brightness, use what they requested.
+  if (user_step_index_ != -1)
+    return user_steps_[user_step_index_];
+
+  // On systems that can detect hovering, keep the backlight off unless the
+  // user's hands are or were recently hovering over the touchpad.
+  if (supports_hover_) {
+    const bool currently_or_recently_hovering = hovering_ ||
+        (!last_hover_time_.is_null() &&
+         (clock_->GetCurrentTime() - last_hover_time_).InMilliseconds() <
+         kKeepOnAfterHoveringStopsMs);
+    if (!currently_or_recently_hovering)
+      return 0.0;
+  }
+
+  return percent_for_ambient_light_;
 }
 
 bool KeyboardBacklightController::UpdateUndimmedBrightness(
@@ -353,10 +401,10 @@ bool KeyboardBacklightController::UpdateUndimmedBrightness(
   return ApplyBrightnessPercent(GetUndimmedPercent(), transition, cause);
 }
 
-bool KeyboardBacklightController::UpdateState() {
+void KeyboardBacklightController::UpdateState() {
   double percent = 0.0;
   TransitionStyle transition = TRANSITION_SLOW;
-  bool use_user = user_step_index_ != -1;
+  const bool use_user = user_step_index_ != -1;
 
   if (shutting_down_ || docked_) {
     percent = 0.0;
@@ -376,8 +424,7 @@ bool KeyboardBacklightController::UpdateState() {
     percent = GetUndimmedPercent();
   }
 
-  return ApplyBrightnessPercent(percent, transition,
-                                BRIGHTNESS_CHANGE_AUTOMATED);
+  ApplyBrightnessPercent(percent, transition, BRIGHTNESS_CHANGE_AUTOMATED);
 }
 
 bool KeyboardBacklightController::ApplyBrightnessPercent(
