@@ -21,6 +21,7 @@
 
 namespace power_manager {
 
+class Clock;
 class PrefsInterface;
 
 namespace system {
@@ -44,8 +45,12 @@ class KeyboardBacklightController
     explicit TestApi(KeyboardBacklightController* controller);
     ~TestApi();
 
-    // Triggers |video_timeout_id_|, which must be set.
-    void TriggerVideoTimeout();
+    Clock* clock() { return controller_->clock_.get(); }
+
+    // Triggers |hover_timer_| or |video_timer_| and returns true. Returns false
+    // if the timer wasn't running.
+    bool TriggerHoverTimeout() WARN_UNUSED_RESULT;
+    bool TriggerVideoTimeout() WARN_UNUSED_RESULT;
 
    private:
     KeyboardBacklightController* controller_;  // weak
@@ -55,6 +60,10 @@ class KeyboardBacklightController
 
   // Backlight brightness percent to use when the screen is dimmed.
   static const double kDimPercent;
+
+  // Milliseconds after the user's hands stop hovering over the touchpad for
+  // which the backlight should be kept on.
+  static const int kKeepOnAfterHoveringStopsMs;
 
   KeyboardBacklightController();
   virtual ~KeyboardBacklightController();
@@ -128,13 +137,15 @@ class KeyboardBacklightController
   // Updates the current brightness after assessing the current state
   // (based on |dimmed_for_inactivity_|, |off_for_inactivity_|, etc.).
   // Should be called whenever the state changes.
-  bool UpdateState();
+  void UpdateState();
 
   // Sets the backlight's brightness to |percent| over |transition|.
   // Returns true and notifies observers if the brightness was changed.
   bool ApplyBrightnessPercent(double percent,
                               TransitionStyle transition,
                               BrightnessChangeCause cause);
+
+  scoped_ptr<Clock> clock_;
 
   // Backlight used for dimming. Weak pointer.
   system::BacklightInterface* backlight_;
@@ -150,6 +161,10 @@ class KeyboardBacklightController
 
   // Observers to notify about changes.
   ObserverList<BacklightControllerObserver> observers_;
+
+  // True if the system is capable of detecting whether the user's hands are
+  // hovering over the touchpad.
+  bool supports_hover_;
 
   SessionState session_state_;
 
@@ -183,6 +198,14 @@ class KeyboardBacklightController
   // |ambient_light_handler_|. If no ambient light sensor is present, it is
   // initialized from kKeyboardBacklightNoAlsBrightnessPref.
   double automated_percent_;
+
+  // Time at which the user's hands stopped hovering over the touchpad. Unset if
+  // |hovering_| is true or |supports_hover_| is false.
+  base::TimeTicks last_hover_time_;
+
+  // Runs UpdateState() kKeepOnAfterHoveringStopsMs milliseconds after the
+  // user's hands stop hovering over the touchpad.
+  base::OneShotTimer<KeyboardBacklightController> hover_timer_;
 
   // Runs HandleVideoTimeout().
   base::OneShotTimer<KeyboardBacklightController> video_timer_;

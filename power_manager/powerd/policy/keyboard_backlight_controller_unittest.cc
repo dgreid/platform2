@@ -10,6 +10,7 @@
 #include <base/memory/scoped_ptr.h>
 #include <gtest/gtest.h>
 
+#include "power_manager/common/clock.h"
 #include "power_manager/common/fake_prefs.h"
 #include "power_manager/common/power_constants.h"
 #include "power_manager/common/util.h"
@@ -32,9 +33,12 @@ class KeyboardBacklightControllerTest : public ::testing::Test {
         als_steps_pref_("20.0 -1 50\n50.0 35 75\n75.0 60 -1"),
         user_steps_pref_("0.0\n10.0\n40.0\n60.0\n100.0"),
         no_als_brightness_pref_(40.0),
+        detect_hover_pref_(0),
         backlight_(max_backlight_level_, initial_backlight_level_),
         light_sensor_(initial_als_lux_),
         test_api_(&controller_) {
+    test_api_.clock()->set_current_time_for_testing(
+        base::TimeTicks::FromInternalValue(1000));
     controller_.AddObserver(&observer_);
   }
 
@@ -52,6 +56,7 @@ class KeyboardBacklightControllerTest : public ::testing::Test {
     prefs_.SetString(kKeyboardBacklightUserStepsPref, user_steps_pref_);
     prefs_.SetDouble(kKeyboardBacklightNoAlsBrightnessPref,
                      no_als_brightness_pref_);
+    prefs_.SetInt64(kDetectHoverPref, detect_hover_pref_);
 
     controller_.Init(&backlight_, &prefs_,
                      pass_light_sensor_? &light_sensor_ : NULL,
@@ -64,6 +69,12 @@ class KeyboardBacklightControllerTest : public ::testing::Test {
   int64_t GetDimmedLevel() {
     return static_cast<int64_t>(lround(
         KeyboardBacklightController::kDimPercent / 100 * max_backlight_level_));
+  }
+
+  // Advances |controller_|'s clock by |interval|.
+  void AdvanceTime(const base::TimeDelta& interval) {
+    test_api_.clock()->set_current_time_for_testing(
+        test_api_.clock()->GetCurrentTime() + interval);
   }
 
   BacklightControllerStub display_backlight_controller_;
@@ -83,6 +94,7 @@ class KeyboardBacklightControllerTest : public ::testing::Test {
   std::string als_steps_pref_;
   std::string user_steps_pref_;
   double no_als_brightness_pref_;
+  int64 detect_hover_pref_;
 
   FakePrefs prefs_;
   system::BacklightStub backlight_;
@@ -140,7 +152,7 @@ TEST_F(KeyboardBacklightControllerTest, DimForFullscreenVideo) {
 
   // If the timeout fires to indicate that video has stopped, the backlight
   // should be turned on.
-  test_api_.TriggerVideoTimeout();
+  ASSERT_TRUE(test_api_.TriggerVideoTimeout());
   EXPECT_EQ(20, backlight_.current_level());
   EXPECT_EQ(kSlowBacklightTransitionMs,
             backlight_.current_interval().InMilliseconds());
@@ -454,22 +466,23 @@ TEST_F(KeyboardBacklightControllerTest, TurnOffWhenDisplayBacklightIsOff) {
 TEST_F(KeyboardBacklightControllerTest, Hover) {
   als_steps_pref_ = "50.0 -1 -1";
   user_steps_pref_ = "0.0\n100.0";
+  detect_hover_pref_ = 1;
   Init();
   controller_.HandleSessionStateChange(SESSION_STARTED);
   light_sensor_.NotifyObservers();
-  ASSERT_EQ(50, backlight_.current_level());
 
-  // Fullscreen video should turn the backlight off.
-  controller_.HandleVideoActivity(true);
+  // The backlight should initially be off since the user isn't hovering.
   EXPECT_EQ(0, backlight_.current_level());
-  EXPECT_EQ(kSlowBacklightTransitionMs,
-            backlight_.current_interval().InMilliseconds());
 
-  // If hovering is detected, the backlight should be forced on.
+  // If hovering is detected, the backlight should be turned on quickly.
   controller_.HandleHoverStateChanged(true);
   EXPECT_EQ(50, backlight_.current_level());
   EXPECT_EQ(kFastBacklightTransitionMs,
             backlight_.current_interval().InMilliseconds());
+
+  // It should remain on despite fullscreen video if hovering continues.
+  controller_.HandleVideoActivity(true);
+  EXPECT_EQ(50, backlight_.current_level());
 
   // Stopping hovering while the video is still playing should result in the
   // backlight going off again.
@@ -478,17 +491,27 @@ TEST_F(KeyboardBacklightControllerTest, Hover) {
   EXPECT_EQ(kSlowBacklightTransitionMs,
             backlight_.current_interval().InMilliseconds());
 
-  // Stop the video.
-  test_api_.TriggerVideoTimeout();
+  // Stop the video. Since the user was hovering recently, the backlight should
+  // turn back on.
+  ASSERT_TRUE(test_api_.TriggerVideoTimeout());
   EXPECT_EQ(50, backlight_.current_level());
+  EXPECT_EQ(kSlowBacklightTransitionMs,
+            backlight_.current_interval().InMilliseconds());
+
+  // After the hover timeout, the backlight should turn off slowly.
+  AdvanceTime(base::TimeDelta::FromMilliseconds(
+      KeyboardBacklightController::kKeepOnAfterHoveringStopsMs));
+  ASSERT_TRUE(test_api_.TriggerHoverTimeout());
+  EXPECT_EQ(0, backlight_.current_level());
   EXPECT_EQ(kSlowBacklightTransitionMs,
             backlight_.current_interval().InMilliseconds());
 
   // Increase the brightness to 100, dim for inactivity, and check that hover
   // restores the user-requested level.
   ASSERT_TRUE(controller_.IncreaseUserBrightness());
+  EXPECT_EQ(100, backlight_.current_level());
   controller_.SetDimmedForInactivity(true);
-  ASSERT_EQ(GetDimmedLevel(), backlight_.current_level());
+  EXPECT_EQ(GetDimmedLevel(), backlight_.current_level());
   controller_.HandleHoverStateChanged(true);
   EXPECT_EQ(100, backlight_.current_level());
   EXPECT_EQ(kFastBacklightTransitionMs,
