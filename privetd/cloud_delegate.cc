@@ -26,47 +26,31 @@ using chromeos::ErrorPtr;
 
 const int kMaxSetupRetries = 5;
 const int kFirstRetryTimeoutMs = 100;
+const char kBuffetStatus[] = "Status";
 
 class CloudDelegateImpl : public CloudDelegate {
  public:
   CloudDelegateImpl(const scoped_refptr<dbus::Bus>& bus,
                     DeviceDelegate* device,
                     const base::Closure& on_changed)
-      : manager_proxy_{bus}, device_{device}, on_changed_{on_changed} {}
+      : object_manager_{bus}, device_{device}, on_changed_{on_changed} {
+    object_manager_.SetManagerAddedCallback(
+        base::Bind(&CloudDelegateImpl::OnManagerAdded,
+                   weak_factory_.GetWeakPtr()));
+    object_manager_.SetManagerRemovedCallback(
+        base::Bind(&CloudDelegateImpl::OnManagerRemoved,
+                   weak_factory_.GetWeakPtr()));
+  }
 
   ~CloudDelegateImpl() override = default;
-
-  bool Init() {
-    // TODO(vitalybuka): check if buffet available and return false if missing.
-    ErrorPtr error;
-    // TODO(vitalybuka): monitor registration status.
-    if (!manager_proxy_.CheckDeviceRegistered(&cloud_id_, &error)) {
-      LOG(ERROR) << "CheckDeviceRegistered failed:" << error->GetMessage();
-      state_ = ConnectionState(ConnectionState::kUnconfigured);
-      return true;
-    }
-
-    std::string json;
-    // TODO(vitalybuka): monitor device status using state of GCD notification
-    // channel.
-    if (!manager_proxy_.GetDeviceInfo(&json, &error)) {
-      LOG(ERROR) << "GetDeviceInfo failed:" << error->GetMessage();
-      state_ = ConnectionState(ConnectionState::kOffline);
-      return true;
-    }
-
-    LOG(ERROR) << "GetDeviceInfo:" << json;
-
-    state_ = ConnectionState(ConnectionState::kOnline);
-    return true;
-  }
 
   ConnectionState GetConnectionState() const override { return state_; }
 
   SetupState GetSetupState() const override { return setup_state_; }
 
   bool Setup(const std::string& ticket_id, const std::string& user) override {
-    if (setup_state_.status == SetupState::kInProgress)
+    if (setup_state_.status == SetupState::kInProgress ||
+        GetManagerProxy() == nullptr)
       return false;
     VLOG(1) << "GCD Setup started. ticket_id: " << ticket_id
             << ", user:" << user;
@@ -85,7 +69,75 @@ class CloudDelegateImpl : public CloudDelegate {
   std::string GetCloudId() const override { return cloud_id_; }
 
  private:
+  org::chromium::Buffet::ManagerProxy* GetManagerProxy() {
+    if (!manager_path_.IsValid())
+      return nullptr;
+    return object_manager_.GetManagerProxy(manager_path_);
+  }
+
+  void OnManagerAdded(org::chromium::Buffet::ManagerProxy* manager) {
+    manager_path_ = manager->GetObjectPath();
+    manager->SetPropertyChangedCallback(
+        base::Bind(&CloudDelegateImpl::OnManagerPropertyChanged,
+                   weak_factory_.GetWeakPtr()));
+    OnManagerPropertyChanged(manager, kBuffetStatus);
+    // TODO(wiley) Get the device id (cloud_id_) here if we're online
+  }
+
+  void OnManagerPropertyChanged(org::chromium::Buffet::ManagerProxy* manager,
+                                const std::string& property_name) {
+    if (property_name != kBuffetStatus)
+      return;
+    std::string status{manager->status()};
+    if (status == "offline")
+      state_ = ConnectionState(ConnectionState::kOffline);
+    else if (status == "cloud_error")
+      state_ = ConnectionState(ConnectionState::kError);
+    else if (status == "unregistered")
+      state_ = ConnectionState(ConnectionState::kUnconfigured);
+    else if (status == "registering")
+      state_ = ConnectionState(ConnectionState::kConnecting);
+    else if (status == "registered")
+      state_ = ConnectionState(ConnectionState::kOnline);
+    else
+      state_ = ConnectionState(ConnectionState::kError);
+    on_changed_.Run();
+  }
+
+  void OnManagerRemoved(const dbus::ObjectPath& path) {
+    state_ = ConnectionState(ConnectionState::kOffline);
+    manager_path_ = dbus::ObjectPath();
+    on_changed_.Run();
+  }
+
+  void RetryRegister(const std::string& ticket_id,
+                     int retries,
+                     chromeos::Error* error) {
+    if (retries >= kMaxSetupRetries) {
+      setup_state_ = SetupState(Error::kServerError);
+      return;
+    }
+    base::MessageLoop::current()->PostDelayedTask(
+        FROM_HERE,
+        base::Bind(&CloudDelegateImpl::CallManagerRegisterDevice,
+                   setup_weak_factory_.GetWeakPtr(), ticket_id, retries + 1),
+        base::TimeDelta::FromSeconds(kFirstRetryTimeoutMs * (1 << retries)));
+  }
+
+  void OnRegisterSuccess(const std::string& device_id) {
+    VLOG(1) << "Device registered: " << device_id;
+    cloud_id_ = device_id;
+    setup_state_ = SetupState(SetupState::kSuccess);
+    on_changed_.Run();
+  }
+
   void CallManagerRegisterDevice(const std::string& ticket_id, int retries) {
+    auto manager_proxy = GetManagerProxy();
+    if (!manager_proxy) {
+      LOG(ERROR) << "Couldn't register because Buffet was offline.";
+      RetryRegister(ticket_id, retries, nullptr);
+      return;
+    }
     VariantDictionary params{
         {"ticket_id", ticket_id},
         {"display_name", device_->GetName()},
@@ -93,29 +145,18 @@ class CloudDelegateImpl : public CloudDelegate {
         {"location", device_->GetLocation()},
         {"model_id", device_->GetModelId()},
     };
-
-    ErrorPtr error;
-    // TODO(vitalybuka): async call with updating setup_state_ from result.
-    if (!manager_proxy_.RegisterDevice(params, &cloud_id_, &error)) {
-      LOG(ERROR) << "Failed to receive a response:" << error->GetMessage();
-      if (retries >= kMaxSetupRetries) {
-        setup_state_ = SetupState(Error::kServerError);
-        return;
-      }
-      base::MessageLoop::current()->PostDelayedTask(
-          FROM_HERE,
-          base::Bind(&CloudDelegateImpl::CallManagerRegisterDevice,
-                     setup_weak_factory_.GetWeakPtr(), ticket_id, retries + 1),
-          base::TimeDelta::FromSeconds(kFirstRetryTimeoutMs * (1 << retries)));
-      return;
-    }
-    VLOG(1) << "Device registered: " << cloud_id_ << std::endl;
-    setup_state_ = SetupState(SetupState::kSuccess);
-
-    on_changed_.Run();
+    manager_proxy->RegisterDeviceAsync(
+        params,
+        base::Bind(&CloudDelegateImpl::OnRegisterSuccess,
+                   setup_weak_factory_.GetWeakPtr()),
+        base::Bind(&CloudDelegateImpl::RetryRegister,
+                   setup_weak_factory_.GetWeakPtr(),
+                   ticket_id,
+                   retries));
   }
 
-  org::chromium::Buffet::ManagerProxy manager_proxy_;
+  org::chromium::Buffet::ObjectManagerProxy object_manager_;
+  dbus::ObjectPath manager_path_;
 
   DeviceDelegate* device_;
 
@@ -130,7 +171,11 @@ class CloudDelegateImpl : public CloudDelegate {
   // Cloud ID if device is registered.
   std::string cloud_id_;
 
+  // |setup_weak_factory_| tracks the lifetime of callbacks used in connection
+  // with a particular invocation of Setup().
   base::WeakPtrFactory<CloudDelegateImpl> setup_weak_factory_{this};
+  // |weak_factory_| tracks the lifetime of |this|.
+  base::WeakPtrFactory<CloudDelegateImpl> weak_factory_{this};
 };
 
 }  // namespace
@@ -146,11 +191,8 @@ std::unique_ptr<CloudDelegate> CloudDelegate::CreateDefault(
     const scoped_refptr<dbus::Bus>& bus,
     DeviceDelegate* device,
     const base::Closure& on_changed) {
-  std::unique_ptr<CloudDelegateImpl> gcd(
+  return std::unique_ptr<CloudDelegateImpl>(
       new CloudDelegateImpl(bus, device, on_changed));
-  if (!gcd->Init())
-    gcd.reset();
-  return std::move(gcd);
 }
 
 }  // namespace privetd

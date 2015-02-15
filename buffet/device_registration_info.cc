@@ -146,12 +146,14 @@ DeviceRegistrationInfo::DeviceRegistrationInfo(
     const std::shared_ptr<StateManager>& state_manager,
     std::unique_ptr<chromeos::KeyValueStore> config_store,
     const std::shared_ptr<chromeos::http::Transport>& transport,
-    const std::shared_ptr<StorageInterface>& state_store)
+    const std::shared_ptr<StorageInterface>& state_store,
+    const StatusHandler& status_handler)
     : transport_{transport},
       storage_{state_store},
       command_manager_{command_manager},
       state_manager_{state_manager},
-      config_store_{std::move(config_store)} {
+      config_store_{std::move(config_store)},
+      registration_status_handler_{status_handler} {
 }
 
 DeviceRegistrationInfo::~DeviceRegistrationInfo() = default;
@@ -251,6 +253,9 @@ bool DeviceRegistrationInfo::Load() {
   description_          = description;
   location_             = location;
 
+  if (HaveRegistrationCredentials(nullptr))
+    SetRegistrationStatus(RegistrationStatus::kOffline);
+
   return true;
 }
 
@@ -286,19 +291,23 @@ void DeviceRegistrationInfo::ScheduleStartDevice(const base::TimeDelta& later) {
 }
 
 bool DeviceRegistrationInfo::CheckRegistration(chromeos::ErrorPtr* error) {
-  LOG(INFO) << "Checking device registration record.";
-  if (refresh_token_.empty() ||
-      device_id_.empty() ||
-      device_robot_account_.empty()) {
-    LOG(INFO) << "No valid device registration record found.";
+  return HaveRegistrationCredentials(error) &&
+         ValidateAndRefreshAccessToken(error);
+}
+
+bool DeviceRegistrationInfo::HaveRegistrationCredentials(
+    chromeos::ErrorPtr* error) {
+  const bool have_credentials = !refresh_token_.empty() &&
+                                !device_id_.empty() &&
+                                !device_robot_account_.empty();
+
+  VLOG(1) << "Device registration record "
+          << ((have_credentials) ? "found" : "not found.");
+  if (!have_credentials)
     chromeos::Error::AddTo(error, FROM_HERE, kErrorDomainGCD,
                            "device_not_registered",
                            "No valid device registration record found");
-    return false;
-  }
-
-  LOG(INFO) << "Device registration record found.";
-  return ValidateAndRefreshAccessToken(error);
+  return have_credentials;
 }
 
 bool DeviceRegistrationInfo::ValidateAndRefreshAccessToken(
@@ -543,6 +552,7 @@ std::string DeviceRegistrationInfo::RegisterDevice(
   // We're going to respond with our success immediately and we'll StartDevice
   // shortly after.
   ScheduleStartDevice(base::TimeDelta::FromSeconds(0));
+  SetRegistrationStatus(RegistrationStatus::kRegistered);
   return device_id_;
 }
 
@@ -704,7 +714,6 @@ void DeviceRegistrationInfo::DoCloudRequest(
 void DeviceRegistrationInfo::StartDevice(chromeos::ErrorPtr* error) {
   if (!CheckRegistration(error))
     return;
-
   base::Bind(
       &DeviceRegistrationInfo::UpdateDeviceResource,
       base::Unretained(this),
@@ -820,6 +829,10 @@ void DeviceRegistrationInfo::PeriodicallyPollCommands() {
       base::Bind(&DeviceRegistrationInfo::PublishStateUpdates,
                  base::Unretained(this)),
       base::TimeDelta::FromSeconds(7));
+  // TODO(wiley): This is the very bare minimum of state to report to local
+  //              services interested in our GCD state.  Build a more
+  //              robust model of our state with respect to the server.
+  SetRegistrationStatus(RegistrationStatus::kRegistered);
 }
 
 void DeviceRegistrationInfo::PublishCommands(const base::ListValue& commands) {
@@ -913,6 +926,16 @@ bool DeviceRegistrationInfo::GetParamValue(
                                "Parameter %s not specified",
                                param_name.c_str());
   return false;
+}
+
+void DeviceRegistrationInfo::SetRegistrationStatus(
+    RegistrationStatus new_status) {
+  if (new_status == registration_status_)
+    return;
+  VLOG(1) << "Changing registration status to " << StatusToString(new_status);
+  registration_status_ = new_status;
+  if (!registration_status_handler_.is_null())
+    registration_status_handler_.Run(registration_status_);
 }
 
 }  // namespace buffet

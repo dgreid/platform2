@@ -75,6 +75,8 @@ class Manager final : public org::chromium::Buffet::ManagerInterface {
   // Handles calls to org.chromium.Buffet.Manager.Test()
   std::string TestMethod(const std::string& message) override;
 
+  void OnRegistrationStatusChange(RegistrationStatus status);
+
   org::chromium::Buffet::ManagerAdaptor dbus_adaptor_{this};
   chromeos::dbus_utils::DBusObject dbus_object_;
 

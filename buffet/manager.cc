@@ -63,12 +63,16 @@ void Manager::RegisterAsync(
   // TODO(avakulenko): Figure out security implications of storing
   // device info state data unencrypted.
   device_info_ = std::unique_ptr<DeviceRegistrationInfo>(
-      new DeviceRegistrationInfo(command_manager_,
-                                 state_manager_,
-                                 std::move(config_store),
-                                 chromeos::http::Transport::CreateDefault(),
-                                 std::move(state_store)));
+      new DeviceRegistrationInfo(
+          command_manager_,
+          state_manager_,
+          std::move(config_store),
+          chromeos::http::Transport::CreateDefault(),
+          std::move(state_store),
+          base::Bind(&Manager::OnRegistrationStatusChange,
+                     base::Unretained(this))));
   device_info_->Load();
+  OnRegistrationStatusChange(device_info_->GetRegistrationStatus());
   // Wait a significant amount of time for local daemons to publish their
   // state to Buffet before publishing it to the cloud.
   // TODO(wiley) We could do a lot of things here to either expose this
@@ -216,6 +220,10 @@ void Manager::AddCommand(DBusMethodResponse<> response,
 std::string Manager::TestMethod(const std::string& message) {
   LOG(INFO) << "Received call to test method: " << message;
   return message;
+}
+
+void Manager::OnRegistrationStatusChange(RegistrationStatus status) {
+  dbus_adaptor_.SetStatus(StatusToString(status));
 }
 
 }  // namespace buffet

@@ -37,6 +37,7 @@
         'dbus_bindings/org.chromium.Buffet.Manager.xml',
         'dbus_constants.cc',
         'manager.cc',
+        'registration_status.cc',
         'storage_impls.cc',
         'states/error_codes.cc',
         'states/state_change_queue.cc',

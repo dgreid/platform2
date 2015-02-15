@@ -19,6 +19,7 @@
 #include <chromeos/errors/error.h>
 #include <chromeos/http/http_transport.h>
 
+#include "buffet/registration_status.h"
 #include "buffet/storage_interface.h"
 #include "buffet/xmpp/xmpp_client.h"
 
@@ -44,13 +45,15 @@ class DeviceRegistrationInfo : public base::MessageLoopForIO::Watcher {
  public:
   // This is a helper class for unit testing.
   class TestHelper;
+  using StatusHandler = base::Callback<void(RegistrationStatus)>;
 
   DeviceRegistrationInfo(
       const std::shared_ptr<CommandManager>& command_manager,
       const std::shared_ptr<StateManager>& state_manager,
       std::unique_ptr<chromeos::KeyValueStore> config_store,
       const std::shared_ptr<chromeos::http::Transport>& transport,
-      const std::shared_ptr<StorageInterface>& state_store);
+      const std::shared_ptr<StorageInterface>& state_store,
+      const StatusHandler& status_handler);
 
   ~DeviceRegistrationInfo() override;
 
@@ -58,6 +61,11 @@ class DeviceRegistrationInfo : public base::MessageLoopForIO::Watcher {
 
   void OnFileCanWriteWithoutBlocking(int fd) override {
     LOG(FATAL) << "No write watcher is configured";
+  }
+
+  // Returns our current best known registration status.
+  RegistrationStatus GetRegistrationStatus() const {
+    return registration_status_;
   }
 
   // Returns the authorization HTTP header that can be used to talk
@@ -136,6 +144,9 @@ class DeviceRegistrationInfo : public base::MessageLoopForIO::Watcher {
   // Saves the device registration to cache.
   bool Save() const;
 
+  // Checks whether we have credentials generated during registration.
+  bool HaveRegistrationCredentials(chromeos::ErrorPtr* error);
+
   // Makes sure the access token is available and up-to-date.
   bool ValidateAndRefreshAccessToken(chromeos::ErrorPtr* error);
 
@@ -191,6 +202,8 @@ class DeviceRegistrationInfo : public base::MessageLoopForIO::Watcher {
   std::unique_ptr<base::DictionaryValue> BuildDeviceResource(
       chromeos::ErrorPtr* error);
 
+  void SetRegistrationStatus(RegistrationStatus new_status);
+
   std::unique_ptr<XmppClient> xmpp_client_;
   base::MessageLoopForIO::FileDescriptorWatcher fd_watcher_;
 
@@ -224,6 +237,10 @@ class DeviceRegistrationInfo : public base::MessageLoopForIO::Watcher {
 
   // Buffet configuration.
   std::unique_ptr<chromeos::KeyValueStore> config_store_;
+
+  // Tracks our current registration status.
+  RegistrationStatus registration_status_{RegistrationStatus::kUnregistered};
+  StatusHandler registration_status_handler_;
 
   friend class TestHelper;
   base::WeakPtrFactory<DeviceRegistrationInfo> weak_factory_{this};
