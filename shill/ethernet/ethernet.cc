@@ -80,6 +80,7 @@ Ethernet::Ethernet(ControlInterface *control_interface,
                            &is_eap_authenticated_);
   store->RegisterConstBool(kEapAuthenticatorDetectedProperty,
                            &is_eap_detected_);
+  store->RegisterConstBool(kLinkUpProperty, &link_up_);
   store->RegisterDerivedBool(kPPPoEProperty, BoolAccessor(
       new CustomAccessor<Ethernet, bool>(this,
                                          &Ethernet::GetPPPoEMode,
@@ -120,6 +121,7 @@ void Ethernet::LinkEvent(unsigned int flags, unsigned int change) {
   Device::LinkEvent(flags, change);
   if ((flags & IFF_LOWER_UP) != 0 && !link_up_) {
     link_up_ = true;
+    adaptor()->EmitBoolChanged(kLinkUpProperty, link_up_);
     // We SetupWakeOnLan() here, instead of in Start(), because with
     // r8139, "ethtool -s eth0 wol g" fails when no cable is plugged
     // in.
@@ -129,6 +131,7 @@ void Ethernet::LinkEvent(unsigned int flags, unsigned int change) {
     eap_listener_->Start();
   } else if ((flags & IFF_LOWER_UP) == 0 && link_up_) {
     link_up_ = false;
+    adaptor()->EmitBoolChanged(kLinkUpProperty, link_up_);
     is_eap_detected_ = false;
     DestroyIPConfig();
     SelectService(nullptr);

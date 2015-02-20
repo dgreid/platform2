@@ -489,6 +489,11 @@ Properties	string Address [readonly]
 			(Ethernet only) Indicates whether an EAP (802.1X)
 			authentication is currently valid on this interface.
 
+		bool Ethernet.LinkUp [readonly]
+
+			(Ethernet only) Indicates whether the underlying
+			device has detected the presence of a physical link.
+
 		string Interface [readonly]
 
 			The device interface (for example "eth0" etc.)
