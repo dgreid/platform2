@@ -712,8 +712,9 @@ void DeviceRegistrationInfo::DoCloudRequest(
 }
 
 void DeviceRegistrationInfo::StartDevice(chromeos::ErrorPtr* error) {
-  if (!CheckRegistration(error))
+  if (!HaveRegistrationCredentials(error))
     return;
+
   base::Bind(
       &DeviceRegistrationInfo::UpdateDeviceResource,
       base::Unretained(this),
