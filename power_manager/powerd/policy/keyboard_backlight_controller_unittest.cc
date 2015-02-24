@@ -32,6 +32,7 @@ class KeyboardBacklightControllerTest : public ::testing::Test {
         als_steps_pref_("20.0 -1 50\n50.0 35 75\n75.0 60 -1"),
         user_steps_pref_("0.0\n10.0\n40.0\n60.0\n100.0"),
         detect_hover_pref_(0),
+        hover_delay_ms_pref_(0),
         backlight_(max_backlight_level_, initial_backlight_level_),
         light_sensor_(initial_als_lux_),
         test_api_(&controller_) {
@@ -53,6 +54,8 @@ class KeyboardBacklightControllerTest : public ::testing::Test {
     prefs_.SetString(kKeyboardBacklightAlsStepsPref, als_steps_pref_);
     prefs_.SetString(kKeyboardBacklightUserStepsPref, user_steps_pref_);
     prefs_.SetInt64(kDetectHoverPref, detect_hover_pref_);
+    prefs_.SetInt64(kKeyboardBacklightKeepOnAfterHoverMsPref,
+                    hover_delay_ms_pref_);
 
     controller_.Init(&backlight_, &prefs_, &light_sensor_,
                      &display_backlight_controller_);
@@ -86,6 +89,7 @@ class KeyboardBacklightControllerTest : public ::testing::Test {
   std::string als_steps_pref_;
   std::string user_steps_pref_;
   int64 detect_hover_pref_;
+  int64 hover_delay_ms_pref_;
 
   FakePrefs prefs_;
   system::BacklightStub backlight_;
@@ -458,6 +462,7 @@ TEST_F(KeyboardBacklightControllerTest, Hover) {
   als_steps_pref_ = "50.0 -1 -1";
   user_steps_pref_ = "0.0\n100.0";
   detect_hover_pref_ = 1;
+  hover_delay_ms_pref_ = 30000;
   Init();
   controller_.HandleSessionStateChange(SESSION_STARTED);
   light_sensor_.NotifyObservers();
@@ -486,12 +491,23 @@ TEST_F(KeyboardBacklightControllerTest, Hover) {
   // turn back on.
   ASSERT_TRUE(test_api_.TriggerVideoTimeout());
   EXPECT_EQ(50, backlight_.current_level());
-  EXPECT_EQ(kSlowBacklightTransitionMs,
+  EXPECT_EQ(kFastBacklightTransitionMs,
             backlight_.current_interval().InMilliseconds());
 
   // After the hover timeout, the backlight should turn off slowly.
-  AdvanceTime(base::TimeDelta::FromMilliseconds(
-      KeyboardBacklightController::kKeepOnAfterHoveringStopsMs));
+  AdvanceTime(base::TimeDelta::FromMilliseconds(hover_delay_ms_pref_));
+  ASSERT_TRUE(test_api_.TriggerHoverTimeout());
+  EXPECT_EQ(0, backlight_.current_level());
+  EXPECT_EQ(kSlowBacklightTransitionMs,
+            backlight_.current_interval().InMilliseconds());
+
+  // User activity should also turn the keyboard backlight on for the full
+  // delay.
+  controller_.HandleUserActivity(USER_ACTIVITY_OTHER);
+  EXPECT_EQ(50, backlight_.current_level());
+  EXPECT_EQ(kFastBacklightTransitionMs,
+            backlight_.current_interval().InMilliseconds());
+  AdvanceTime(base::TimeDelta::FromMilliseconds(hover_delay_ms_pref_));
   ASSERT_TRUE(test_api_.TriggerHoverTimeout());
   EXPECT_EQ(0, backlight_.current_level());
   EXPECT_EQ(kSlowBacklightTransitionMs,

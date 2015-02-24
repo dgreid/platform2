@@ -86,6 +86,10 @@ extern const char kKeyboardBacklightAlsStepsPref[];
 // newline-separated percentages in the range [0.0, 100.0].
 extern const char kKeyboardBacklightUserStepsPref[];
 
+// Duration in milliseconds the keyboard backlight should remain on after
+// hovering stops (on systems that support hover detection).
+extern const char kKeyboardBacklightKeepOnAfterHoverMsPref[];
+
 // If true, the system won't be suspended due to user inactivity unless a USB
 // input device is connected.
 extern const char kRequireUsbInputDeviceToSuspendPref[];
