@@ -78,7 +78,7 @@ void GeneratorJob::Kill(int signal, const std::string& message) {
 void GeneratorJob::WaitAndAbort(base::TimeDelta timeout) {
   if (subprocess_.pid() < 0)
     return;
-  if (!system_->ChildIsGone(subprocess_.pid(), timeout))
+  if (!system_->ProcessGroupIsGone(subprocess_.pid(), timeout))
     KillEverything(SIGABRT, std::string());
   else
     DLOG(INFO) << "Cleaned up child " << subprocess_.pid();

@@ -250,8 +250,9 @@ bool SessionManagerService::IsManagedJob(pid_t pid) {
 void SessionManagerService::HandleExit(const siginfo_t& ignored) {
   LOG(INFO) << "Exiting process is " << browser_->GetName() << ".";
 
-  // If I could wait for descendants here, I would.  Instead, I kill them.
-  browser_->KillEverything(SIGKILL, "Session termination");
+  // Clears up the whole job's process group.
+  browser_->KillEverything(SIGKILL, "Ensuring browser processes are gone.");
+  browser_->WaitAndAbort(GetKillTimeout());
   browser_->ClearPid();
 
   // Do nothing if already shutting down.

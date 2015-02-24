@@ -69,7 +69,8 @@ pid_t SystemUtilsImpl::fork() {
   return ::fork();
 }
 
-bool SystemUtilsImpl::ChildIsGone(pid_t child_spec, base::TimeDelta timeout) {
+bool SystemUtilsImpl::ProcessGroupIsGone(pid_t child_spec,
+                                         base::TimeDelta timeout) {
   base::TimeTicks start = base::TimeTicks::Now();
   base::TimeDelta elapsed;
   int ret;
@@ -80,7 +81,7 @@ bool SystemUtilsImpl::ChildIsGone(pid_t child_spec, base::TimeDelta timeout) {
   alarm(static_cast<int32_t>(timeout.InSeconds()));
   do {
     errno = 0;
-    ret = ::waitpid(child_spec, NULL, 0);
+    ret = ::waitpid(-child_spec, NULL, 0);
     elapsed = base::TimeTicks::Now() - start;
   } while (ret > 0 || (errno == EINTR && elapsed < timeout));
 

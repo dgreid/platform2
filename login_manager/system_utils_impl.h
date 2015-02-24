@@ -35,7 +35,7 @@ class SystemUtilsImpl : public SystemUtils {
   time_t time(time_t* t) override;
   pid_t fork() override;
   int IsDevMode() override;
-  bool ChildIsGone(pid_t child_spec, base::TimeDelta timeout) override;
+  bool ProcessGroupIsGone(pid_t child_spec, base::TimeDelta timeout) override;
 
   bool EnsureAndReturnSafeFileSize(const base::FilePath& file,
                                    int32_t* file_size_32) override;

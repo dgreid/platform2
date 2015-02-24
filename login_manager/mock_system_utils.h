@@ -31,7 +31,8 @@ class MockSystemUtils : public SystemUtils {
   MOCK_METHOD1(time, time_t(time_t*));  // NOLINT
   MOCK_METHOD0(fork, pid_t(void));
   MOCK_METHOD0(IsDevMode, int(void));
-  MOCK_METHOD2(ChildIsGone, bool(pid_t child_spec, base::TimeDelta timeout));
+  MOCK_METHOD2(ProcessGroupIsGone, bool(pid_t child_spec,
+                                        base::TimeDelta timeout));
 
   // All filesystem-touching methods write to a ScopedTempDir that's owned by
   // this class.

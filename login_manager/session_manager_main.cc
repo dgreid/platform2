@@ -5,6 +5,7 @@
 #include <errno.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <sys/prctl.h>
 #include <sys/types.h>
 #include <unistd.h>
 
@@ -121,6 +122,10 @@ int main(int argc, char* argv[]) {
   base::CommandLine::Init(argc, argv);
   base::CommandLine* cl = base::CommandLine::ForCurrentProcess();
   chromeos::InitLog(chromeos::kLogToSyslog | chromeos::kLogHeader);
+
+  // Allow waiting for all descendants, not just immediate children
+  if (::prctl(PR_SET_CHILD_SUBREAPER, 1))
+    PLOG(ERROR) << "Couldn't set child subreaper";
 
   if (cl->HasSwitch(switches::kHelp)) {
     LOG(INFO) << switches::kHelpMessage;
