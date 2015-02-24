@@ -47,9 +47,10 @@ class SystemUtils {
   // Returns 0 if normal mode, 1 if developer mode, -1 if error.
   virtual int IsDevMode() = 0;
 
-  // Returns: true if child specified by |child_spec| exited,
+  // Returns: true if process group specified by |child_spec| exited,
   //          false if we time out.
-  virtual bool ChildIsGone(pid_t child_spec, base::TimeDelta timeout) = 0;
+  virtual bool ProcessGroupIsGone(pid_t child_spec,
+                                  base::TimeDelta timeout) = 0;
 
   virtual bool EnsureAndReturnSafeFileSize(const base::FilePath& file,
                                            int32_t* file_size_32) = 0;

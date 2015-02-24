@@ -130,12 +130,12 @@ void BrowserJob::Kill(int signal, const std::string& message) {
 void BrowserJob::WaitAndAbort(base::TimeDelta timeout) {
   if (subprocess_.pid() < 0)
     return;
-  if (!system_->ChildIsGone(subprocess_.pid(), timeout)) {
+  if (!system_->ProcessGroupIsGone(subprocess_.pid(), timeout)) {
     LOG(WARNING) << "Aborting child process " << subprocess_.pid()
                  << "'s process group " << timeout.InSeconds()
-                 << " seconds after sending TERM signal";
+                 << " seconds after sending signal";
     std::string message = base::StringPrintf("Browser took more than %" PRId64
-                                             " seconds to exit after TERM.",
+                                             " seconds to exit after signal.",
                                              timeout.InSeconds());
     KillEverything(SIGABRT, message);
   } else {

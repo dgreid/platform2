@@ -107,7 +107,7 @@ TEST_F(BrowserJobTest, WaitAndAbort) {
   EXPECT_CALL(utils_, fork()).WillOnce(Return(kDummyPid));
   EXPECT_CALL(utils_, kill(-kDummyPid, _, SIGABRT)).Times(1);
   EXPECT_CALL(utils_, time(NULL)).WillRepeatedly(Return(0));
-  EXPECT_CALL(utils_, ChildIsGone(kDummyPid, _)).WillOnce(Return(false));
+  EXPECT_CALL(utils_, ProcessGroupIsGone(kDummyPid, _)).WillOnce(Return(false));
 
   EXPECT_CALL(metrics_, HasRecordedChromeExec()).WillRepeatedly(Return(false));
   EXPECT_CALL(metrics_, RecordStats(_)).Times(AnyNumber());
@@ -124,7 +124,7 @@ TEST_F(BrowserJobTest, WaitAndAbort_AlreadyGone) {
   pid_t kDummyPid = 4;
   EXPECT_CALL(utils_, fork()).WillOnce(Return(kDummyPid));
   EXPECT_CALL(utils_, time(NULL)).WillRepeatedly(Return(0));
-  EXPECT_CALL(utils_, ChildIsGone(kDummyPid, _)).WillOnce(Return(true));
+  EXPECT_CALL(utils_, ProcessGroupIsGone(kDummyPid, _)).WillOnce(Return(true));
 
   EXPECT_CALL(metrics_, HasRecordedChromeExec()).WillRepeatedly(Return(false));
   EXPECT_CALL(metrics_, RecordStats(_)).Times(AnyNumber());
