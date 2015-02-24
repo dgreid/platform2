@@ -61,10 +61,6 @@ class KeyboardBacklightController
   // Backlight brightness percent to use when the screen is dimmed.
   static const double kDimPercent;
 
-  // Milliseconds after the user's hands stop hovering over the touchpad for
-  // which the backlight should be kept on.
-  static const int kKeepOnAfterHoveringStopsMs;
-
   KeyboardBacklightController();
   virtual ~KeyboardBacklightController();
 
@@ -121,6 +117,10 @@ class KeyboardBacklightController
   int64_t PercentToLevel(double percent) const;
   double LevelToPercent(int64_t level) const;
 
+  // Returns true if |last_hover_or_user_activity_time_| was less than
+  // |keep_on_after_hover_delay_| ago.
+  bool RecentlyHovering() const;
+
   // Returns the brightness from the current step in either |als_steps_| or
   // |user_steps_|, depending on which is in use.
   double GetUndimmedPercent() const;
@@ -145,7 +145,7 @@ class KeyboardBacklightController
                               TransitionStyle transition,
                               BrightnessChangeCause cause);
 
-  scoped_ptr<Clock> clock_;
+  mutable scoped_ptr<Clock> clock_;
 
   // Backlight used for dimming. Weak pointer.
   system::BacklightInterface* backlight_;
@@ -199,12 +199,17 @@ class KeyboardBacklightController
   // initialized from kKeyboardBacklightNoAlsBrightnessPref.
   double automated_percent_;
 
-  // Time at which the user's hands stopped hovering over the touchpad. Unset if
+  // Time at which the user's hands stopped hovering over the touchpad or at
+  // which user activity was last observed (whichever is greater). Unset if
   // |hovering_| is true or |supports_hover_| is false.
-  base::TimeTicks last_hover_time_;
+  base::TimeTicks last_hover_or_user_activity_time_;
 
-  // Runs UpdateState() kKeepOnAfterHoveringStopsMs milliseconds after the
-  // user's hands stop hovering over the touchpad.
+  // Duration the backlight should remain on after hovering stops (on systems
+  // that support hover detection).
+  base::TimeDelta keep_on_after_hover_delay_;
+
+  // Runs UpdateState() |keep_on_after_hover_delay_| after the user's hands stop
+  // hovering over the touchpad.
   base::OneShotTimer<KeyboardBacklightController> hover_timer_;
 
   // Runs HandleVideoTimeout().
