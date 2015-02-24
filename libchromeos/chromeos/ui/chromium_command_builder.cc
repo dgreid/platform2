@@ -478,7 +478,7 @@ void ChromiumCommandBuilder::AddUiFlags() {
     AddArg("--enable-webrtc-hw-vp8-encoding");
 
   if (IsBoard("peach_pi") || IsBoard("nyan") || IsBoard("nyan_big") ||
-      IsBoard("nyan_blaze"))
+      IsBoard("nyan_blaze") || IsBoard("nyan_kitty"))
     AddArg("--ignore-resolution-limits-for-accelerated-video-decode");
 
   // Ozone platform configuration.
