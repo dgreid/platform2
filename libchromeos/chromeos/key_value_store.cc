@@ -13,6 +13,7 @@
 #include <base/strings/string_split.h>
 #include <base/strings/string_util.h>
 #include <chromeos/strings/string_utils.h>
+#include <chromeos/map_utils.h>
 
 using std::map;
 using std::string;
@@ -111,6 +112,10 @@ bool KeyValueStore::GetBoolean(const string& key, bool* value) const {
 
 void KeyValueStore::SetBoolean(const string& key, bool value) {
   SetString(key, value ? kTrueValue : kFalseValue);
+}
+
+std::vector<std::string> KeyValueStore::GetKeys() const {
+  return GetMapKeysAsVector(store_);
 }
 
 }  // namespace chromeos

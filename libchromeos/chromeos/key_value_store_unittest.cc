@@ -6,17 +6,20 @@
 
 #include <map>
 #include <string>
+#include <vector>
 
 #include <base/files/file_util.h>
 #include <base/files/scoped_temp_dir.h>
 #include <base/logging.h>
 #include <base/strings/string_util.h>
+#include <chromeos/map_utils.h>
 #include <gtest/gtest.h>
 
 using base::FilePath;
 using base::ReadFileToString;
 using std::map;
 using std::string;
+using std::vector;
 
 namespace chromeos {
 
@@ -194,6 +197,18 @@ TEST_F(KeyValueStoreTest, UnterminatedMultilineValue) {
   blob = "a=foo\\\n\n# blah\n";
   ASSERT_EQ(blob.size(), base::WriteFile(temp_file_, blob.data(), blob.size()));
   EXPECT_FALSE(store_.Load(temp_file_));
+}
+
+TEST_F(KeyValueStoreTest, GetKeys) {
+  map<string, string> entries = {
+    {"1", "apple"}, {"2", "banana"}, {"3", "cherry"}
+  };
+  for (const auto& it : entries) {
+    store_.SetString(it.first, it.second);
+  }
+
+  vector<string> keys = GetMapKeysAsVector(entries);
+  EXPECT_EQ(keys, store_.GetKeys());
 }
 
 }  // namespace chromeos

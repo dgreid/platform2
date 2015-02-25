@@ -11,6 +11,7 @@
 
 #include <map>
 #include <string>
+#include <vector>
 
 #include <base/files/file_path.h>
 #include <chromeos/chromeos_export.h>
@@ -48,6 +49,9 @@ class CHROMEOS_EXPORT KeyValueStore {
 
   // Boolean setter. Sets the value as "true" or "false".
   void SetBoolean(const std::string& key, bool value);
+
+  // Retrieves the keys for all values currently stored in the map.
+  std::vector<std::string> GetKeys() const;
 
  private:
   // The map storing all the key-value pairs.
