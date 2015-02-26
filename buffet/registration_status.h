@@ -16,6 +16,7 @@ enum class RegistrationStatus {
   kUnregistered,  // We have no credentials.
   kRegistering,  // We've just been given credentials.
   kRegistered,  // We're registered and online.
+  kInvalidCredentials,  // Our registration has been revoked.
 };
 
 std::string StatusToString(RegistrationStatus status);

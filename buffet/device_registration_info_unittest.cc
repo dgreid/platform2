@@ -124,6 +124,28 @@ void OAuth2Handler(const ServerRequest& request, ServerResponse* response) {
   response->ReplyJson(chromeos::http::status_code::Ok, &json);
 }
 
+void OAuth2HandlerFail(const ServerRequest& request,
+                       ServerResponse* response) {
+  base::DictionaryValue json;
+  EXPECT_EQ("refresh_token", request.GetFormField("grant_type"));
+  EXPECT_EQ(test_data::kRefreshToken, request.GetFormField("refresh_token"));
+  EXPECT_EQ(test_data::kClientId, request.GetFormField("client_id"));
+  EXPECT_EQ(test_data::kClientSecret, request.GetFormField("client_secret"));
+  json.SetString("error", "unable_to_authenticate");
+  response->ReplyJson(chromeos::http::status_code::BadRequest, &json);
+}
+
+void OAuth2HandlerDeregister(const ServerRequest& request,
+                             ServerResponse* response) {
+  base::DictionaryValue json;
+  EXPECT_EQ("refresh_token", request.GetFormField("grant_type"));
+  EXPECT_EQ(test_data::kRefreshToken, request.GetFormField("refresh_token"));
+  EXPECT_EQ(test_data::kClientId, request.GetFormField("client_id"));
+  EXPECT_EQ(test_data::kClientSecret, request.GetFormField("client_secret"));
+  json.SetString("error", "invalid_grant");
+  response->ReplyJson(chromeos::http::status_code::BadRequest, &json);
+}
+
 void DeviceInfoHandler(const ServerRequest& request, ServerResponse* response) {
   std::string auth = "Bearer ";
   auth += test_data::kAccessToken;
@@ -291,6 +313,46 @@ TEST_F(DeviceRegistrationInfoTest, CheckRegistration) {
   transport_->ResetRequestCount();
   EXPECT_TRUE(dev_reg_->CheckRegistration(nullptr));
   EXPECT_EQ(1, transport_->GetRequestCount());
+}
+
+TEST_F(DeviceRegistrationInfoTest, CheckAuthenticationFailure) {
+  SetDefaultDeviceRegistration(&data_);
+  storage_->Save(&data_);
+  EXPECT_TRUE(dev_reg_->Load());
+  EXPECT_EQ(RegistrationStatus::kOffline,
+            dev_reg_->GetRegistrationStatus());
+
+  transport_->AddHandler(dev_reg_->GetOAuthURL("token"),
+                         chromeos::http::request_type::kPost,
+                         base::Bind(OAuth2HandlerFail));
+  transport_->ResetRequestCount();
+  chromeos::ErrorPtr error;
+  EXPECT_FALSE(dev_reg_->CheckRegistration(&error));
+  EXPECT_EQ(1, transport_->GetRequestCount());
+  EXPECT_TRUE(error->HasError(buffet::kErrorDomainOAuth2,
+                              "unable_to_authenticate"));
+  EXPECT_EQ(RegistrationStatus::kOffline,
+            dev_reg_->GetRegistrationStatus());
+}
+
+TEST_F(DeviceRegistrationInfoTest, CheckDeregistration) {
+  SetDefaultDeviceRegistration(&data_);
+  storage_->Save(&data_);
+  EXPECT_TRUE(dev_reg_->Load());
+  EXPECT_EQ(RegistrationStatus::kOffline,
+            dev_reg_->GetRegistrationStatus());
+
+  transport_->AddHandler(dev_reg_->GetOAuthURL("token"),
+                         chromeos::http::request_type::kPost,
+                         base::Bind(OAuth2HandlerDeregister));
+  transport_->ResetRequestCount();
+  chromeos::ErrorPtr error;
+  EXPECT_FALSE(dev_reg_->CheckRegistration(&error));
+  EXPECT_EQ(1, transport_->GetRequestCount());
+  EXPECT_TRUE(error->HasError(buffet::kErrorDomainOAuth2,
+                              "invalid_grant"));
+  EXPECT_EQ(RegistrationStatus::kInvalidCredentials,
+            dev_reg_->GetRegistrationStatus());
 }
 
 TEST_F(DeviceRegistrationInfoTest, GetDeviceInfo) {

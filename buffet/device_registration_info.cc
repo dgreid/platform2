@@ -66,27 +66,6 @@ std::pair<std::string, std::string> BuildAuthHeader(
   return {chromeos::http::request_header::kAuthorization, authorization};
 }
 
-std::unique_ptr<base::DictionaryValue> ParseOAuthResponse(
-    const chromeos::http::Response* response, chromeos::ErrorPtr* error) {
-  int code = 0;
-  auto resp = chromeos::http::ParseJsonResponse(response, &code, error);
-  if (resp && code >= chromeos::http::status_code::BadRequest) {
-    if (error) {
-      std::string error_code, error_message;
-      if (resp->GetString("error", &error_code) &&
-          resp->GetString("error_description", &error_message)) {
-        chromeos::Error::AddTo(error, FROM_HERE, buffet::kErrorDomainOAuth2,
-                               error_code, error_message);
-      } else {
-        chromeos::Error::AddTo(error, FROM_HERE, buffet::kErrorDomainOAuth2,
-                               "unexpected_response", "Unexpected OAuth error");
-      }
-    }
-    return std::unique_ptr<base::DictionaryValue>();
-  }
-  return resp;
-}
-
 inline void SetUnexpectedError(chromeos::ErrorPtr* error) {
   chromeos::Error::AddTo(error, FROM_HERE, buffet::kErrorDomainGCD,
                          "unexpected_response", "Unexpected GCD error");
@@ -94,9 +73,6 @@ inline void SetUnexpectedError(chromeos::ErrorPtr* error) {
 
 void ParseGCDError(const base::DictionaryValue* json,
                    chromeos::ErrorPtr* error) {
-  if (!error)
-    return;
-
   const base::Value* list_value = nullptr;
   const base::ListValue* error_list = nullptr;
   if (!json->Get("error.errors", &list_value) ||
@@ -308,6 +284,31 @@ bool DeviceRegistrationInfo::HaveRegistrationCredentials(
                            "device_not_registered",
                            "No valid device registration record found");
   return have_credentials;
+}
+
+std::unique_ptr<base::DictionaryValue>
+DeviceRegistrationInfo::ParseOAuthResponse(
+    const chromeos::http::Response* response, chromeos::ErrorPtr* error) {
+  int code = 0;
+  auto resp = chromeos::http::ParseJsonResponse(response, &code, error);
+  if (resp && code >= chromeos::http::status_code::BadRequest) {
+    std::string error_code, error_message;
+    if (!resp->GetString("error", &error_code)) {
+      error_code = "unexpected_response";
+    }
+    if (error_code == "invalid_grant") {
+      LOG(INFO) << "The device's registration has been revoked.";
+      SetRegistrationStatus(RegistrationStatus::kInvalidCredentials);
+    }
+    // I have never actually seen an error_description returned.
+    if (!resp->GetString("error_description", &error_message)) {
+      error_message = "Unexpected OAuth error";
+    }
+    chromeos::Error::AddTo(error, FROM_HERE, buffet::kErrorDomainOAuth2,
+                           error_code, error_message);
+    return std::unique_ptr<base::DictionaryValue>();
+  }
+  return resp;
 }
 
 bool DeviceRegistrationInfo::ValidateAndRefreshAccessToken(

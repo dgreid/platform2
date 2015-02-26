@@ -18,6 +18,8 @@ std::string StatusToString(RegistrationStatus status) {
       return "registering";
     case RegistrationStatus::kRegistered:
       return "registered";
+    case RegistrationStatus::kInvalidCredentials:
+      return "invalid_credentials";
   }
   return "unknown";
 }
