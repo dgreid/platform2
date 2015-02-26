@@ -266,9 +266,13 @@ class WakeOnWiFi {
   // Tests that need WakeOnWiFi::kDarkResumeActionsTimeoutMilliseconds
   FRIEND_TEST(WakeOnWiFiTestWithMockDispatcher,
               OnBeforeSuspend_DHCPLeaseRenewal);
-  // Tests that need WakeOnWiFi::kMaxDarkResumesPerPeriod
+  // Tests that need WakeOnWiFi::kMaxDarkResumesPerPeriodShort
   FRIEND_TEST(WakeOnWiFiTestWithDispatcher, OnBeforeSuspend_ClearsEventHistory);
-  FRIEND_TEST(WakeOnWiFiTestWithDispatcher, OnDarkResume_NotConnected_Throttle);
+  FRIEND_TEST(WakeOnWiFiTestWithDispatcher,
+              OnDarkResume_NotConnected_MaxDarkResumes_ShortPeriod);
+  // Tests that need WakeOnWiFi::kMaxDarkResumesPerPeriodLong
+  FRIEND_TEST(WakeOnWiFiTestWithDispatcher,
+              OnDarkResume_NotConnected_MaxDarkResumes_LongPeriod);
 
   static const char kWakeOnIPAddressPatternsNotSupported[];
   static const char kWakeOnWiFiDisabled[];
@@ -279,8 +283,10 @@ class WakeOnWiFi {
   static const uint32_t kDefaultWakeToScanPeriodSeconds;
   static const uint32_t kDefaultNetDetectScanPeriodSeconds;
   static const uint32_t kImmediateDHCPLeaseRenewalThresholdSeconds;
-  static const int kDarkResumeFrequencySamplingPeriodMinutes;
-  static const int kMaxDarkResumesPerPeriod;
+  static const int kDarkResumeFrequencySamplingPeriodShortMinutes;
+  static const int kDarkResumeFrequencySamplingPeriodLongMinutes;
+  static const int kMaxDarkResumesPerPeriodShort;
+  static const int kMaxDarkResumesPerPeriodLong;
   static int64_t DarkResumeActionsTimeoutMilliseconds;  // non-const for testing
 
   std::string GetWakeOnWiFiFeaturesEnabled(Error *error);
@@ -489,8 +495,9 @@ class WakeOnWiFi {
   // Period (in seconds) between instances where the NIC performs Net Detect
   // scans while the system is suspended.
   uint32_t net_detect_scan_period_seconds_;
-  // Timestamps of dark resume wakes since the last suspend.
-  EventHistory dark_resumes_since_last_suspend_;
+  // Timestamps of dark resume wakes that took place during the current
+  // or most recent suspend.
+  EventHistory dark_resume_history_;
   // Last wake reason reported by the kernel.
   WakeOnWiFiTrigger last_wake_reason_;
 

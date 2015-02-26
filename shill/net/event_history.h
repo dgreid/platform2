@@ -16,12 +16,17 @@
 
 namespace shill {
 
-// EventHistory is a list of timestamps tracking the occurence of one or more
+// EventHistory is a list of timestamps tracking the occurrence of one or more
 // events. Events are ordered from earliest to latest. |max_events_saved|
 // can optionally be provided to limit the number of event timestamps saved
 // at any one time.
 class SHILL_EXPORT EventHistory {
  public:
+  enum ClockType {
+    kClockTypeBoottime = 0,
+    kClockTypeMonotonic = 1,
+  };
+
   EventHistory() : max_events_specified_(false), time_(Time::GetInstance()) {}
   explicit EventHistory(int max_events_saved)
       : max_events_specified_(true),
@@ -35,21 +40,24 @@ class SHILL_EXPORT EventHistory {
   void RecordEvent();
 
   // Start at the head of |events_| and remove all entries that occurred
-  // more than |seconds_ago| prior to the current time. We count suspend time
-  // (i.e. use the boottime clock) if |count_suspend_time| is true, otherwise,
-  // we do not necessarily do so (i.e. use the monotic clock).
-  void ExpireEventsBefore(int seconds_ago, bool count_suspend_time);
+  // more than |seconds_ago| prior to the current time. |clock_type| determines
+  // what time of clock we use for time-related calculations.
+  void ExpireEventsBefore(int seconds_ago, ClockType clock_type);
 
   // Records the current event by adding the current time to the list, and uses
   // this same timestamp to remove all entries that occurred more than
-  // |seconds_ago|. |count_suspend_time| is used to choose between the monotonic
-  // and boottime clock, as described above in EventHistory::ExpireEventsBefore.
-  void RecordEventAndExpireEventsBefore(int seconds_ago,
-                                        bool count_suspend_time);
+  // |seconds_ago|. |clock_type| determines what time of clock we use for time-
+  // related calculations.
+  void RecordEventAndExpireEventsBefore(int seconds_ago, ClockType clock_type);
 
   // Returns a vector of human-readable strings representing each timestamp in
   // |events_|.
   Strings ExtractWallClockToStrings() const;
+
+  // Returns the number of timestamps in |events_| within the interval spanning
+  // now and the time |seconds_ago| before now (inclusive). |clock_type|
+  // determines what time of clock we use for time-related calculations.
+  int CountEventsWithinInterval(int seconds_ago, ClockType clock_type);
 
   size_t Size() const { return events_.size(); }
   bool Empty() { return events_.empty(); }
@@ -63,7 +71,7 @@ class SHILL_EXPORT EventHistory {
   void RecordEventInternal(Timestamp now);
 
   void ExpireEventsBeforeInternal(int seconds_ago, Timestamp now,
-                                  bool count_suspend_time);
+                                  ClockType clock_type);
 
   bool max_events_specified_;
   int max_events_saved_;

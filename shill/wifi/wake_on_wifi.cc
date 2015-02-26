@@ -54,11 +54,12 @@ const int WakeOnWiFi::kMetricsReportingFrequencySeconds = 600;
 const uint32_t WakeOnWiFi::kDefaultWakeToScanPeriodSeconds = 900;
 const uint32_t WakeOnWiFi::kDefaultNetDetectScanPeriodSeconds = 120;
 const uint32_t WakeOnWiFi::kImmediateDHCPLeaseRenewalThresholdSeconds = 60;
-// We tolerate no more than 5 dark resumes where we wake up disconnected per
-// minute before throttling the feature (i.e. disabling wake on WiFi on the
-// NIC).
-const int WakeOnWiFi::kDarkResumeFrequencySamplingPeriodMinutes = 1;
-const int WakeOnWiFi::kMaxDarkResumesPerPeriod = 5;
+// We tolerate no more than 3 dark resumes per minute and 10 dark resumes per
+// 10 minutes  before we disable wake on WiFi on the NIC.
+const int WakeOnWiFi::kDarkResumeFrequencySamplingPeriodShortMinutes = 1;
+const int WakeOnWiFi::kDarkResumeFrequencySamplingPeriodLongMinutes = 10;
+const int WakeOnWiFi::kMaxDarkResumesPerPeriodShort = 3;
+const int WakeOnWiFi::kMaxDarkResumesPerPeriodLong = 10;
 // If a connection is not established during dark resume, give up and prepare
 // the system to wake on SSID 1 second before suspending again.
 // TODO(samueltan): link this to
@@ -91,7 +92,6 @@ WakeOnWiFi::WakeOnWiFi(NetlinkManager *netlink_manager,
       in_dark_resume_(false),
       wake_to_scan_period_seconds_(kDefaultWakeToScanPeriodSeconds),
       net_detect_scan_period_seconds_(kDefaultNetDetectScanPeriodSeconds),
-      dark_resumes_since_last_suspend_(kMaxDarkResumesPerPeriod),
       last_wake_reason_(kWakeTriggerUnsupported),
       weak_ptr_factory_(this) {
   netlink_manager_->AddBroadcastHandler(Bind(
@@ -1229,7 +1229,7 @@ void WakeOnWiFi::OnBeforeSuspend(
 #else
   suspend_actions_done_callback_ = done_callback;
   wake_on_ssid_whitelist_ = ssid_whitelist;
-  dark_resumes_since_last_suspend_.Clear();
+  dark_resume_history_.Clear();
   if (have_dhcp_lease && is_connected &&
       time_to_next_lease_renewal < kImmediateDHCPLeaseRenewalThresholdSeconds) {
     // Renew DHCP lease immediately if we have one that is expiring soon.
@@ -1285,11 +1285,14 @@ void WakeOnWiFi::OnDarkResume(
     // incoming network traffic). We check the connection status on dark resume
     // rather than the |last_wake_reason_| in case the WiFi driver does not
     // support wakeup reason reporting.
-    dark_resumes_since_last_suspend_.RecordEventAndExpireEventsBefore(
-        kDarkResumeFrequencySamplingPeriodMinutes * 60, true);
+    dark_resume_history_.RecordEvent();
   }
-  if (dark_resumes_since_last_suspend_.Size() >=
-      static_cast<size_t>(kMaxDarkResumesPerPeriod)) {
+  if (dark_resume_history_.CountEventsWithinInterval(
+          kDarkResumeFrequencySamplingPeriodShortMinutes * 60,
+          EventHistory::kClockTypeBoottime) >= kMaxDarkResumesPerPeriodShort ||
+      dark_resume_history_.CountEventsWithinInterval(
+          kDarkResumeFrequencySamplingPeriodLongMinutes * 60,
+          EventHistory::kClockTypeBoottime) >= kMaxDarkResumesPerPeriodLong) {
     LOG(ERROR) << __func__ << ": "
                << "Too many dark resumes; disabling wake on WiFi";
     // If too many dark resumes have triggered recently, we are probably
@@ -1298,7 +1301,7 @@ void WakeOnWiFi::OnDarkResume(
     dhcp_lease_renewal_timer_.Stop();
     wake_to_scan_timer_.Stop();
     DisableWakeOnWiFi();
-    dark_resumes_since_last_suspend_.Clear();
+    dark_resume_history_.Clear();
     metrics_->NotifyWakeOnWiFiThrottled();
     return;
   }

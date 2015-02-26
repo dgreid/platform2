@@ -53,16 +53,15 @@ class EventHistoryTest : public ::testing::Test {
   }
 
   void ExpireEventsBefore(int seconds_ago, Timestamp now,
-                          bool count_suspend_time) {
+                          EventHistory::ClockType clock_type) {
     EXPECT_CALL(time_, GetNow()).WillOnce(Return(now));
-    event_history_->ExpireEventsBefore(seconds_ago, count_suspend_time);
+    event_history_->ExpireEventsBefore(seconds_ago, clock_type);
   }
 
   void RecordEventAndExpireEventsBefore(int seconds_ago, Timestamp now,
-                                        bool count_suspend_time) {
+                                        EventHistory::ClockType clock_type) {
     EXPECT_CALL(time_, GetNow()).WillOnce(Return(now));
-    event_history_->RecordEventAndExpireEventsBefore(seconds_ago,
-                                                     count_suspend_time);
+    event_history_->RecordEventAndExpireEventsBefore(seconds_ago, clock_type);
   }
 
   Strings ExtractWallClockToStrings() {
@@ -74,6 +73,13 @@ class EventHistoryTest : public ::testing::Test {
     struct timeval monotonic = {.tv_sec = monotonic_seconds, .tv_usec = 0};
     struct timeval boottime = {.tv_sec = boottime_seconds, .tv_usec = 0};
     return Timestamp(monotonic, boottime, wall_clock);
+  }
+
+  int CountEventsWithinInterval(int seconds_ago,
+                                EventHistory::ClockType clock_type,
+                                Timestamp now) {
+    EXPECT_CALL(time_, GetNow()).WillOnce(Return(now));
+    return event_history_->CountEventsWithinInterval(seconds_ago, clock_type);
   }
 
  protected:
@@ -143,7 +149,8 @@ TEST_F(EventHistoryTest, ExpireEventsBefore_EvictExpiredEvents) {
   // Expect that all the kTimeEarly event timestamps will be evicted since
   // they took place more than kExpiryThresholdSeconds ago.
   ExpireEventsBefore(kExpiryThresholdSeconds,
-                     GetTimestamp(kTimeLate, kTimeLate, ""), true);
+                     GetTimestamp(kTimeLate, kTimeLate, ""),
+                     EventHistory::kClockTypeBoottime);
   EXPECT_EQ(1, GetEvents()->size());
   EXPECT_EQ(kTimeLate, GetEvents()->front().monotonic.tv_sec);
   EXPECT_EQ(kTimeLate, GetEvents()->front().boottime.tv_sec);
@@ -153,7 +160,7 @@ TEST_F(EventHistoryTest, ExpireEventsBefore_UseSuspendTime) {
   const int kExpiryThresholdSeconds = 10;
   const int kTime1 = 5;
 
-  bool count_suspend_time;
+  EventHistory::ClockType clock_type;
 
   EXPECT_TRUE(GetEvents()->empty());
   RecordEvent(GetTimestamp(kTime1, kTime1, ""));
@@ -166,18 +173,16 @@ TEST_F(EventHistoryTest, ExpireEventsBefore_UseSuspendTime) {
   // If we don't count suspend time (i.e. use the monotonic clock), we will not
   // expire the event because it took place less than kExpiryThresholdSeconds
   // ago.
-  count_suspend_time = false;
+  clock_type = EventHistory::kClockTypeMonotonic;
   ExpireEventsBefore(kExpiryThresholdSeconds,
-                     GetTimestamp(kTime2Monotonic, kTime2Boot, ""),
-                     count_suspend_time);
+                     GetTimestamp(kTime2Monotonic, kTime2Boot, ""), clock_type);
   EXPECT_EQ(1, GetEvents()->size());
 
   // If we count suspend time (i.e. use the boottime clock), we will expire the
   // event because it took place more than kExpiryThresholdSeconds ago.
-  count_suspend_time = true;
+  clock_type = EventHistory::kClockTypeBoottime;
   ExpireEventsBefore(kExpiryThresholdSeconds,
-                     GetTimestamp(kTime2Monotonic, kTime2Boot, ""),
-                     count_suspend_time);
+                     GetTimestamp(kTime2Monotonic, kTime2Boot, ""), clock_type);
   EXPECT_TRUE(GetEvents()->empty());
 }
 
@@ -193,7 +198,7 @@ TEST_F(EventHistoryTest, RecordEventAndExpireEventsBefore) {
   for (int i = 0; i < kNumEarlierEvents; ++i) {
     RecordEventAndExpireEventsBefore(kExpiryThresholdSeconds,
                                      GetTimestamp(kTimeEarly, kTimeEarly, ""),
-                                     true);
+                                     EventHistory::kClockTypeBoottime);
   }
   // kNumEarlierEvents is greater than kMaxEventsThreshold, so only
   // kMaxEventsThreshold events should be saved.
@@ -205,8 +210,9 @@ TEST_F(EventHistoryTest, RecordEventAndExpireEventsBefore) {
   // event timestamps will be evicted since the the former took place less than
   // kExpiryThresholdSeconds ago and the latter took place more than
   // kExpiryThresholdSeconds ago.
-  RecordEventAndExpireEventsBefore(
-      kExpiryThresholdSeconds, GetTimestamp(kTimeLate, kTimeLate, ""), true);
+  RecordEventAndExpireEventsBefore(kExpiryThresholdSeconds,
+                                   GetTimestamp(kTimeLate, kTimeLate, ""),
+                                   EventHistory::kClockTypeBoottime);
   EXPECT_EQ(1, GetEvents()->size());
   EXPECT_EQ(kTimeLate, GetEvents()->front().monotonic.tv_sec);
   EXPECT_EQ(kTimeLate, GetEvents()->front().boottime.tv_sec);
@@ -228,6 +234,37 @@ TEST_F(EventHistoryTest, ConvertTimestampsToStrings) {
   for (size_t i = 0; i < arraysize(kValues); i++) {
     EXPECT_EQ(kValues[i].wall_clock, strings[i]);
   }
+}
+
+TEST_F(EventHistoryTest, CountEventsWithinInterval) {
+  const int kExpiryThresholdSeconds = 10;
+  const int kTimeEarly = 5;
+  const int kTimeLate = kTimeEarly + kExpiryThresholdSeconds + 1;
+  const int kNumEarlierEvents = 20;
+  const int kNumLaterEvents = 10;
+  const int kMaxEventsThreshold = kNumEarlierEvents + kNumLaterEvents;
+
+  SetMaxEventsSaved(kMaxEventsThreshold);
+  EXPECT_TRUE(GetEvents()->empty());
+  for (int i = 0; i < kNumEarlierEvents; ++i) {
+    RecordEvent(GetTimestamp(kTimeEarly, kTimeEarly, ""));
+  }
+  for (int i = 0; i < kNumLaterEvents; ++i) {
+    RecordEvent(GetTimestamp(kTimeLate, kTimeLate, ""));
+  }
+  EXPECT_EQ(kMaxEventsThreshold, GetEvents()->size());
+
+  // Only count later events.
+  EXPECT_EQ(kNumLaterEvents,
+            CountEventsWithinInterval(kExpiryThresholdSeconds,
+                                      EventHistory::kClockTypeBoottime,
+                                      GetTimestamp(kTimeLate, kTimeLate, "")));
+
+  // Count all events.
+  EXPECT_EQ(
+      kMaxEventsThreshold,
+      CountEventsWithinInterval(kTimeLate, EventHistory::kClockTypeBoottime,
+                                GetTimestamp(kTimeLate, kTimeLate, "")));
 }
 
 }  // namespace shill

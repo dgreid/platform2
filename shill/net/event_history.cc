@@ -19,16 +19,15 @@ void EventHistory::RecordEvent() {
   RecordEventInternal(time_->GetNow());
 }
 
-void EventHistory::ExpireEventsBefore(int seconds_ago,
-                                      bool count_suspend_time) {
-  ExpireEventsBeforeInternal(seconds_ago, time_->GetNow(), count_suspend_time);
+void EventHistory::ExpireEventsBefore(int seconds_ago, ClockType clock_type) {
+  ExpireEventsBeforeInternal(seconds_ago, time_->GetNow(), clock_type);
 }
 
 void EventHistory::RecordEventAndExpireEventsBefore(int seconds_ago,
-                                                    bool count_suspend_time) {
+                                                    ClockType clock_type) {
   Timestamp now = time_->GetNow();
   RecordEventInternal(now);
-  ExpireEventsBeforeInternal(seconds_ago, now, count_suspend_time);
+  ExpireEventsBeforeInternal(seconds_ago, now, clock_type);
 }
 
 Strings EventHistory::ExtractWallClockToStrings() const {
@@ -49,20 +48,60 @@ void EventHistory::RecordEventInternal(Timestamp now) {
 }
 
 void EventHistory::ExpireEventsBeforeInternal(int seconds_ago, Timestamp now,
-                                              bool count_suspend_time) {
-  struct timeval period = (const struct timeval){seconds_ago};
+                                              ClockType clock_type) {
+  struct timeval interval = (const struct timeval){seconds_ago};
   while (!events_.empty()) {
     struct timeval elapsed = {0, 0};
-    if (count_suspend_time) {
-      timersub(&now.boottime, &events_.front().boottime, &elapsed);
-    } else {
-      timersub(&now.monotonic, &events_.front().monotonic, &elapsed);
+    switch (clock_type) {
+      case kClockTypeBoottime:
+        timersub(&now.boottime, &events_.front().boottime, &elapsed);
+        break;
+      case kClockTypeMonotonic:
+        timersub(&now.monotonic, &events_.front().monotonic, &elapsed);
+        break;
+      default: {
+        NOTIMPLEMENTED()
+            << __func__ << ": "
+            << "Invalid clock type specified - defaulting to boottime clock";
+        timersub(&now.boottime, &events_.front().boottime, &elapsed);
+      }
     }
-    if (timercmp(&elapsed, &period, < )) {
+    if (timercmp(&elapsed, &interval, < )) {
       break;
     }
     events_.pop_front();
   }
+}
+
+int EventHistory::CountEventsWithinInterval(int seconds_ago,
+                                            ClockType clock_type) {
+  int num_events_in_interval = 0;
+  Timestamp now = time_->GetNow();
+  struct timeval interval = (const struct timeval){seconds_ago};
+  int i = 0;
+  for (const auto &event : events_) {
+    struct timeval elapsed = {0, 0};
+    switch (clock_type) {
+      case kClockTypeBoottime:
+        timersub(&now.boottime, &event.boottime, &elapsed);
+        break;
+      case kClockTypeMonotonic:
+        timersub(&now.monotonic, &event.monotonic, &elapsed);
+        break;
+      default: {
+        NOTIMPLEMENTED()
+            << __func__ << ": "
+            << "Invalid clock type specified - defaulting to boottime clock";
+        timersub(&now.boottime, &event.boottime, &elapsed);
+      }
+    }
+    if (timercmp(&elapsed, &interval, <= )) {
+      num_events_in_interval = events_.size() - i;
+      break;
+    }
+    ++i;
+  }
+  return num_events_in_interval;
 }
 
 }  // namespace shill

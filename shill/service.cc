@@ -981,7 +981,8 @@ void Service::NoteDisconnectEvent() {
         << "Not connected or connecting, state transition ignored.";
     return;
   }
-  events->RecordEventAndExpireEventsBefore(period, false);
+  events->RecordEventAndExpireEventsBefore(period,
+                                           EventHistory::kClockTypeMonotonic);
   if (events->Size() >= threshold) {
     diagnostics_reporter_->OnConnectivityEvent();
   }
@@ -1017,8 +1018,10 @@ void Service::ReportUserInitiatedConnectionResult(ConnectState state) {
 }
 
 bool Service::HasRecentConnectionIssues() {
-  disconnects_.ExpireEventsBefore(kDisconnectsMonitorSeconds, false);
-  misconnects_.ExpireEventsBefore(kMisconnectsMonitorSeconds, false);
+  disconnects_.ExpireEventsBefore(kDisconnectsMonitorSeconds,
+                                  EventHistory::kClockTypeMonotonic);
+  misconnects_.ExpireEventsBefore(kMisconnectsMonitorSeconds,
+                                  EventHistory::kClockTypeMonotonic);
   return !disconnects_.Empty() || !misconnects_.Empty();
 }
 

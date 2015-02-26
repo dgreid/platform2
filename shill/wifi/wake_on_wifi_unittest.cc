@@ -946,8 +946,8 @@ class WakeOnWiFiTest : public ::testing::Test {
         ssid_whitelist, remove_supplicant_networks_callback);
   }
 
-  EventHistory *GetDarkResumesSinceLastSuspend() {
-    return &wake_on_wifi_->dark_resumes_since_last_suspend_;
+  EventHistory *GetDarkResumeHistory() {
+    return &wake_on_wifi_->dark_resume_history_;
   }
 
   void SetNetDetectScanPeriodSeconds(uint32_t period) {
@@ -2154,14 +2154,14 @@ TEST_F(WakeOnWiFiTestWithMockDispatcher, AddRemoveWakeOnPacketConnection) {
 }
 
 TEST_F(WakeOnWiFiTestWithDispatcher, OnBeforeSuspend_ClearsEventHistory) {
-  const int kNumEvents = WakeOnWiFi::kMaxDarkResumesPerPeriod - 1;
+  const int kNumEvents = WakeOnWiFi::kMaxDarkResumesPerPeriodShort - 1;
   vector<ByteString> whitelist;
   for (int i = 0; i < kNumEvents; ++i) {
-    GetDarkResumesSinceLastSuspend()->RecordEvent();
+    GetDarkResumeHistory()->RecordEvent();
   }
-  EXPECT_EQ(kNumEvents, GetDarkResumesSinceLastSuspend()->Size());
+  EXPECT_EQ(kNumEvents, GetDarkResumeHistory()->Size());
   OnBeforeSuspend(true, whitelist, true, 0);
-  EXPECT_TRUE(GetDarkResumesSinceLastSuspend()->Empty());
+  EXPECT_TRUE(GetDarkResumeHistory()->Empty());
 }
 
 TEST_F(WakeOnWiFiTestWithDispatcher, OnBeforeSuspend_SetsWakeOnSSIDWhitelist) {
@@ -2602,31 +2602,32 @@ TEST_F(WakeOnWiFiTestWithDispatcher,
 TEST_F(WakeOnWiFiTestWithDispatcher, OnDarkResume_Connected_DoNotRecordEvent) {
   const bool is_connected = true;
   vector<ByteString> whitelist;
-  EXPECT_TRUE(GetDarkResumesSinceLastSuspend()->Empty());
+  EXPECT_TRUE(GetDarkResumeHistory()->Empty());
   OnDarkResume(is_connected, whitelist);
-  EXPECT_TRUE(GetDarkResumesSinceLastSuspend()->Empty());
+  EXPECT_TRUE(GetDarkResumeHistory()->Empty());
 }
 
 TEST_F(WakeOnWiFiTestWithDispatcher, OnDarkResume_NotConnected_RecordEvent) {
   const bool is_connected = false;
   vector<ByteString> whitelist;
-  EXPECT_TRUE(GetDarkResumesSinceLastSuspend()->Empty());
+  EXPECT_TRUE(GetDarkResumeHistory()->Empty());
   OnDarkResume(is_connected, whitelist);
-  EXPECT_EQ(1, GetDarkResumesSinceLastSuspend()->Size());
+  EXPECT_EQ(1, GetDarkResumeHistory()->Size());
 }
 
-TEST_F(WakeOnWiFiTestWithDispatcher, OnDarkResume_NotConnected_Throttle) {
+TEST_F(WakeOnWiFiTestWithDispatcher,
+       OnDarkResume_NotConnected_MaxDarkResumes_ShortPeriod) {
   const bool is_connected = false;
   vector<ByteString> whitelist;
-  EXPECT_TRUE(GetDarkResumesSinceLastSuspend()->Empty());
-  for (int i = 0; i < WakeOnWiFi::kMaxDarkResumesPerPeriod - 1; ++i) {
+  EXPECT_TRUE(GetDarkResumeHistory()->Empty());
+  for (int i = 0; i < WakeOnWiFi::kMaxDarkResumesPerPeriodShort - 1; ++i) {
     OnDarkResume(is_connected, whitelist);
   }
-  EXPECT_EQ(WakeOnWiFi::kMaxDarkResumesPerPeriod - 1,
-            GetDarkResumesSinceLastSuspend()->Size());
+  EXPECT_EQ(WakeOnWiFi::kMaxDarkResumesPerPeriodShort - 1,
+            GetDarkResumeHistory()->Size());
 
-  // Max dark resumes per period reached, so disable wake on WiFi and stop all
-  // RTC timers.
+  // Max dark resumes per (short) period reached, so disable wake on WiFi and
+  // stop all RTC timers.
   SetInDarkResume(false);
   ResetSuspendActionsDoneCallback();
   StartDHCPLeaseRenewalTimer();
@@ -2634,13 +2635,46 @@ TEST_F(WakeOnWiFiTestWithDispatcher, OnDarkResume_NotConnected_Throttle) {
   EXPECT_TRUE(SuspendActionsCallbackIsNull());
   EXPECT_TRUE(DHCPLeaseRenewalTimerIsRunning());
   EXPECT_TRUE(WakeToScanTimerIsRunning());
-  EXPECT_FALSE(GetDarkResumesSinceLastSuspend()->Empty());
+  EXPECT_FALSE(GetDarkResumeHistory()->Empty());
   EXPECT_CALL(metrics_, NotifyWakeOnWiFiThrottled());
   OnDarkResume(is_connected, whitelist);
   EXPECT_FALSE(SuspendActionsCallbackIsNull());
   EXPECT_FALSE(DHCPLeaseRenewalTimerIsRunning());
   EXPECT_FALSE(WakeToScanTimerIsRunning());
-  EXPECT_TRUE(GetDarkResumesSinceLastSuspend()->Empty());
+  EXPECT_TRUE(GetDarkResumeHistory()->Empty());
+  EXPECT_FALSE(GetInDarkResume());
+}
+
+TEST_F(WakeOnWiFiTestWithDispatcher,
+       OnDarkResume_NotConnected_MaxDarkResumes_LongPeriod) {
+  const bool is_connected = false;
+  vector<ByteString> whitelist;
+  EXPECT_TRUE(GetDarkResumeHistory()->Empty());
+  // Simulate case where 1 dark resume happens every minute,  so the short
+  // history would not reach its throttling threshold, but the long history
+  // will.
+  for (int i = 0; i < WakeOnWiFi::kMaxDarkResumesPerPeriodLong - 1; ++i) {
+    GetDarkResumeHistory()->RecordEvent();
+  }
+  EXPECT_EQ(WakeOnWiFi::kMaxDarkResumesPerPeriodLong - 1,
+            GetDarkResumeHistory()->Size());
+
+  // Max dark resumes per (long) period reached, so disable wake on WiFi and
+  // stop all RTC timers.
+  SetInDarkResume(false);
+  ResetSuspendActionsDoneCallback();
+  StartDHCPLeaseRenewalTimer();
+  StartWakeToScanTimer();
+  EXPECT_TRUE(SuspendActionsCallbackIsNull());
+  EXPECT_TRUE(DHCPLeaseRenewalTimerIsRunning());
+  EXPECT_TRUE(WakeToScanTimerIsRunning());
+  EXPECT_FALSE(GetDarkResumeHistory()->Empty());
+  EXPECT_CALL(metrics_, NotifyWakeOnWiFiThrottled());
+  OnDarkResume(is_connected, whitelist);
+  EXPECT_FALSE(SuspendActionsCallbackIsNull());
+  EXPECT_FALSE(DHCPLeaseRenewalTimerIsRunning());
+  EXPECT_FALSE(WakeToScanTimerIsRunning());
+  EXPECT_TRUE(GetDarkResumeHistory()->Empty());
   EXPECT_FALSE(GetInDarkResume());
 }
 
