@@ -148,7 +148,7 @@ factory_wipe_firmware() {
 # bit set to 1 (only tries).
 ensure_bootable_kernel() {
   local kernel_num="$1"
-  local dst="$(rootdev -d -s)"
+  local dst="$2"
   local active_flag="$(cgpt show -S -i "${kernel_num}" "${dst}")"
   local priority="$(cgpt show -P -i "${kernel_num}" "${dst}")"
 
@@ -163,7 +163,19 @@ ensure_bootable_kernel() {
 
 # Root devs are sda3, sda5.
 # Kernel devs to go along with these are sda2, sda4 respectively.
-ROOT_DEV=$(rootdev -s)
+
+# As we move factory wiping from release image to factory test image,
+# clobber-state will be invoked directly under a tmpfs. 'rootdev' cannot
+# report correct output under such a situation. Therefore, the output of
+# 'rootdev' is preserved then assigned to environment variables
+# ${ROOT_DEV}/${ROOT_DISK} for clobber-state. For other cases, the
+# environment variables will be empty and it fallbacks to use 'rootdev'.
+if [ -z "${ROOT_DEV}" ]; then
+  ROOT_DEV=$(rootdev -s)
+fi
+if [ -z "${ROOT_DISK}" ]; then
+  ROOT_DISK=$(rootdev -d -s)
+fi
 STATE_DEV=${ROOT_DEV%[0-9]*}1
 OTHER_ROOT_DEV=$(echo $ROOT_DEV | tr '35' '53')
 KERNEL_DEV=$(echo $ROOT_DEV | tr '35' '24')
@@ -255,14 +267,14 @@ if [ "$FAST_WIPE" = "fast" ]; then
   # the stateful partition.
   dd bs=4M count=1 if=/dev/zero of=${STATE_DEV}
   if [ -z "${KEEPIMG}" ]; then
-    ensure_bootable_kernel "${KERNEL_PART_NUM}"
+    ensure_bootable_kernel "${KERNEL_PART_NUM}" "${ROOT_DISK}"
     dd bs=4M count=1 if=/dev/zero of=${OTHER_ROOT_DEV}
     dd bs=4M count=1 if=/dev/zero of=${OTHER_KERNEL_DEV}
   fi
 else
 
   if [ -z "${KEEPIMG}" ]; then
-    ensure_bootable_kernel "${KERNEL_PART_NUM}"
+    ensure_bootable_kernel "${KERNEL_PART_NUM}" "${ROOT_DISK}"
     wipedev ${OTHER_ROOT_DEV}
     wipedev ${OTHER_KERNEL_DEV}
   fi
