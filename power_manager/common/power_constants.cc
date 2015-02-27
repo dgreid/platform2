@@ -72,6 +72,7 @@ const char kLockVTBeforeSuspendPref[] = "lock_vt_before_suspend";
 const char kMosysEventlogPref[] = "mosys_eventlog";
 const char kCheckActiveVTPref[] = "check_active_vt";
 const char kUseCrasPref[] = "use_cras";
+const char kTpmCounterSuspendThresholdPref[] = "tpm_counter_suspend_threshold";
 
 // Miscellaneous constants.
 const char kReadWritePrefsDir[] = "/var/lib/power_manager";

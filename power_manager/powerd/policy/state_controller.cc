@@ -236,6 +236,8 @@ StateController::StateController()
       disable_idle_suspend_(false),
       allow_docked_mode_(false),
       ignore_external_policy_(false),
+      tpm_dictionary_attack_count_(0),
+      tpm_dictionary_attack_suspend_threshold_(0),
       audio_is_active_(false),
       idle_action_(DO_NOTHING),
       lid_closed_action_(DO_NOTHING),
@@ -417,6 +419,11 @@ void StateController::HandleAudioStateChange(bool active) {
     audio_inactive_time_ = clock_->GetCurrentTime();
   audio_is_active_ = active;
   UpdateState();
+}
+
+void StateController::HandleTpmStatus(int dictionary_attack_count) {
+  tpm_dictionary_attack_count_ = dictionary_attack_count;
+  UpdateSettingsAndState();
 }
 
 void StateController::OnPrefChanged(const std::string& pref_name) {
@@ -608,6 +615,10 @@ void StateController::LoadPrefs() {
   prefs_->GetBool(kIgnoreExternalPolicyPref, &ignore_external_policy_);
   prefs_->GetBool(kAllowDockedModePref, &allow_docked_mode_);
 
+  int64_t tpm_threshold = 0;
+  prefs_->GetInt64(kTpmCounterSuspendThresholdPref, &tpm_threshold);
+  tpm_dictionary_attack_suspend_threshold_ = static_cast<int>(tpm_threshold);
+
   CHECK(GetMillisecondPref(prefs_, kPluggedSuspendMsPref,
                            &pref_ac_delays_.idle));
   CHECK(GetMillisecondPref(prefs_, kPluggedOffMsPref,
@@ -702,6 +713,21 @@ void StateController::UpdateSettingsAndState() {
   // Ignore the lid being closed while presenting to support docked mode.
   if (allow_docked_mode_ && presenting)
     lid_closed_action_ = DO_NOTHING;
+
+  // Override the idle and lid-closed actions to suspend instead of shutting
+  // down if the TPM dictionary-attack counter is high.
+  if (tpm_dictionary_attack_suspend_threshold_ > 0 &&
+      tpm_dictionary_attack_count_ >=
+      tpm_dictionary_attack_suspend_threshold_) {
+    LOG(WARNING) << "TPM dictionary attack count is "
+                 << tpm_dictionary_attack_count_ << " (threshold is "
+                 << tpm_dictionary_attack_suspend_threshold_ << "); "
+                 << "overriding actions to suspend instead of shutting down";
+    if (idle_action_ == SHUT_DOWN)
+      idle_action_ = SUSPEND;
+    if (lid_closed_action_ == SHUT_DOWN)
+      lid_closed_action_ = SUSPEND;
+  }
 
   // If the idle or lid-closed actions changed, make sure that we perform
   // the new actions in the event that the system is already idle or the
