@@ -150,8 +150,11 @@ class StateController : public PrefsObserver {
   void HandleUserActivity();
   void HandleVideoActivity();
 
-  // Handle audio activity starting or stopping.
+  // Handles audio activity starting or stopping.
   void HandleAudioStateChange(bool active);
+
+  // Handles updates to the TPM status.
+  void HandleTpmStatus(int dictionary_attack_count);
 
   // PrefsInterface::Observer implementation:
   void OnPrefChanged(const std::string& pref_name) override;
@@ -366,6 +369,14 @@ class StateController : public PrefsObserver {
 
   // Should |policy_| be ignored?  Used by tests and developers.
   bool ignore_external_policy_;
+
+  // TPM dictionary-attack counter value.
+  int tpm_dictionary_attack_count_;
+
+  // |tpm_dictionary_attack_count_| value at or above which the system will
+  // suspend instead of shutting down in some cases (see
+  // http://crbug.com/462428), or 0 if disabled.
+  int tpm_dictionary_attack_suspend_threshold_;
 
   base::TimeTicks last_user_activity_time_;
   base::TimeTicks last_video_activity_time_;

@@ -173,6 +173,11 @@ extern const char kCheckActiveVTPref[];
 // to mute audio when suspending.
 extern const char kUseCrasPref[];
 
+// Integer TPM dictionary-attack counter value at or above which the system will
+// suspend instead of shutting down in response to idle or lid-close (see
+// http://crbug.com/462428). Set to 0 to disable querying the TPM.
+extern const char kTpmCounterSuspendThresholdPref[];
+
 // Miscellaneous constants.
 
 // Default directories where read/write and read-only powerd preference files

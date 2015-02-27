@@ -1529,5 +1529,64 @@ TEST_F(StateControllerTest, WaitForInitialUserActivity) {
   ASSERT_TRUE(AdvanceTimeAndTriggerTimeout(kWarningDelay));
 }
 
+// Tests that idle and lid-closed "shut down" actions are overridden to instead
+// suspend when the TPM dictionary-attack count is high.
+TEST_F(StateControllerTest, SuspendInsteadOfShuttingDownForTpmCounter) {
+  const base::TimeDelta kIdleDelay = base::TimeDelta::FromSeconds(300);
+  initial_policy_.mutable_ac_delays()->set_screen_dim_ms(0);
+  initial_policy_.mutable_ac_delays()->set_screen_off_ms(0);
+  initial_policy_.mutable_ac_delays()->set_screen_lock_ms(0);
+  initial_policy_.mutable_ac_delays()->set_idle_ms(kIdleDelay.InMilliseconds());
+  initial_policy_.set_ac_idle_action(PowerManagementPolicy_Action_SHUT_DOWN);
+  initial_policy_.set_lid_closed_action(PowerManagementPolicy_Action_SHUT_DOWN);
+
+  const int kThreshold = 10;
+  prefs_.SetInt64(kTpmCounterSuspendThresholdPref, kThreshold);
+  Init();
+
+  // With the count below the threshold, the "shut down" lid-closed action
+  // should be honored.
+  controller_.HandleTpmStatus(kThreshold - 1);
+  delegate_.set_lid_state(LID_CLOSED);
+  controller_.HandleLidStateChange(LID_CLOSED);
+  EXPECT_EQ(kShutDown, delegate_.GetActions());
+  delegate_.set_lid_state(LID_OPEN);
+  controller_.HandleLidStateChange(LID_OPEN);
+
+  // Ditto for the idle action.
+  EXPECT_TRUE(AdvanceTimeAndTriggerTimeout(kIdleDelay));
+  EXPECT_EQ(kShutDown, delegate_.GetActions());
+  controller_.HandleUserActivity();
+
+  // If the count reaches the threshold, the system should suspend instead of
+  // shutting down.
+  controller_.HandleTpmStatus(kThreshold);
+  delegate_.set_lid_state(LID_CLOSED);
+  controller_.HandleLidStateChange(LID_CLOSED);
+  EXPECT_EQ(kSuspend, delegate_.GetActions());
+  delegate_.set_lid_state(LID_OPEN);
+  controller_.HandleLidStateChange(LID_OPEN);
+
+  EXPECT_TRUE(AdvanceTimeAndTriggerTimeout(kIdleDelay));
+  EXPECT_EQ(kSuspend, delegate_.GetActions());
+  controller_.HandleUserActivity();
+
+  // If non-"shut down" actions are set, they shouldn't be overridden.
+  initial_policy_.set_ac_idle_action(PowerManagementPolicy_Action_DO_NOTHING);
+  initial_policy_.set_lid_closed_action(
+      PowerManagementPolicy_Action_STOP_SESSION);
+  controller_.HandlePolicyChange(initial_policy_);
+
+  delegate_.set_lid_state(LID_CLOSED);
+  controller_.HandleLidStateChange(LID_CLOSED);
+  EXPECT_EQ(kStopSession, delegate_.GetActions());
+  delegate_.set_lid_state(LID_OPEN);
+  controller_.HandleLidStateChange(LID_OPEN);
+
+  EXPECT_TRUE(AdvanceTimeAndTriggerTimeout(kIdleDelay));
+  EXPECT_EQ(kNoActions, delegate_.GetActions());
+  controller_.HandleUserActivity();
+}
+
 }  // namespace policy
 }  // namespace power_manager

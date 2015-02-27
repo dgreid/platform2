@@ -17,6 +17,7 @@
 #include <chromeos/dbus/service_constants.h>
 #include <metrics/metrics_library.h>
 
+#include "cryptohome/proto_bindings/rpc.pb.h"
 #include "power_manager/common/dbus_sender.h"
 #include "power_manager/common/metrics_sender.h"
 #include "power_manager/common/power_constants.h"
@@ -83,6 +84,7 @@ const int kRetryShutdownForFlashromSec = 5;
 // processes.
 const int kSessionManagerDBusTimeoutMs = 3000;
 const int kUpdateEngineDBusTimeoutMs = 3000;
+const int kCryptohomedDBusTimeoutMs = 2 * 60 * 1000;  // Two minutes.
 
 // If we go from a dark resume directly to a full resume several devices will be
 // left in an awkward state.  This won't be a problem once selective resume is
@@ -320,6 +322,7 @@ Daemon::Daemon(const base::FilePath& read_write_prefs_dir,
       session_manager_dbus_proxy_(NULL),
       cras_dbus_proxy_(NULL),
       update_engine_dbus_proxy_(NULL),
+      cryptohomed_dbus_proxy_(NULL),
       state_controller_delegate_(new StateControllerDelegate(this)),
       dbus_sender_(new DBusSender),
       display_watcher_(new system::DisplayWatcher),
@@ -344,7 +347,8 @@ Daemon::Daemon(const base::FilePath& read_write_prefs_dir,
       lock_vt_before_suspend_(false),
       log_suspend_with_mosys_eventlog_(false),
       can_safely_exit_dark_resume_(
-          base::PathExists(base::FilePath(kPMTestDelayPath))) {
+          base::PathExists(base::FilePath(kPMTestDelayPath))),
+      weak_ptr_factory_(this) {
   scoped_ptr<MetricsLibrary> metrics_lib(new MetricsLibrary);
   metrics_lib->Init();
   metrics_sender_.reset(new MetricsSender(metrics_lib.Pass()));
@@ -789,20 +793,21 @@ void Daemon::InitDBus() {
       dbus::ObjectPath(chromeos::kLibCrosServicePath));
   chrome_dbus_proxy_->WaitForServiceToBeAvailable(
       base::Bind(&Daemon::HandleChromeAvailableOrRestarted,
-                 base::Unretained(this)));
+                 weak_ptr_factory_.GetWeakPtr()));
 
   session_manager_dbus_proxy_ = bus_->GetObjectProxy(
       login_manager::kSessionManagerServiceName,
       dbus::ObjectPath(login_manager::kSessionManagerServicePath));
   session_manager_dbus_proxy_->WaitForServiceToBeAvailable(
       base::Bind(&Daemon::HandleSessionManagerAvailableOrRestarted,
-                 base::Unretained(this)));
+                 weak_ptr_factory_.GetWeakPtr()));
   session_manager_dbus_proxy_->ConnectToSignal(
       login_manager::kSessionManagerInterface,
       login_manager::kSessionStateChangedSignal,
       base::Bind(&Daemon::HandleSessionStateChangedSignal,
-                 base::Unretained(this)),
-      base::Bind(&Daemon::HandleDBusSignalConnected, base::Unretained(this)));
+                 weak_ptr_factory_.GetWeakPtr()),
+      base::Bind(&Daemon::HandleDBusSignalConnected,
+                 weak_ptr_factory_.GetWeakPtr()));
 
   if (audio_client_) {
     cras_dbus_proxy_ = bus_->GetObjectProxy(
@@ -810,39 +815,54 @@ void Daemon::InitDBus() {
         dbus::ObjectPath(cras::kCrasServicePath));
     cras_dbus_proxy_->WaitForServiceToBeAvailable(
         base::Bind(&Daemon::HandleCrasAvailableOrRestarted,
-                   base::Unretained(this)));
+                   weak_ptr_factory_.GetWeakPtr()));
     cras_dbus_proxy_->ConnectToSignal(
         cras::kCrasControlInterface,
         cras::kNodesChanged,
         base::Bind(&Daemon::HandleCrasNodesChangedSignal,
-                   base::Unretained(this)),
-        base::Bind(&Daemon::HandleDBusSignalConnected, base::Unretained(this)));
+                   weak_ptr_factory_.GetWeakPtr()),
+        base::Bind(&Daemon::HandleDBusSignalConnected,
+                   weak_ptr_factory_.GetWeakPtr()));
     cras_dbus_proxy_->ConnectToSignal(
         cras::kCrasControlInterface,
         cras::kActiveOutputNodeChanged,
         base::Bind(&Daemon::HandleCrasActiveOutputNodeChangedSignal,
-                   base::Unretained(this)),
-        base::Bind(&Daemon::HandleDBusSignalConnected, base::Unretained(this)));
+                   weak_ptr_factory_.GetWeakPtr()),
+        base::Bind(&Daemon::HandleDBusSignalConnected,
+                   weak_ptr_factory_.GetWeakPtr()));
     cras_dbus_proxy_->ConnectToSignal(
         cras::kCrasControlInterface,
         cras::kNumberOfActiveStreamsChanged,
         base::Bind(&Daemon::HandleCrasNumberOfActiveStreamsChanged,
-                   base::Unretained(this)),
-        base::Bind(&Daemon::HandleDBusSignalConnected, base::Unretained(this)));
+                   weak_ptr_factory_.GetWeakPtr()),
+        base::Bind(&Daemon::HandleDBusSignalConnected,
+                   weak_ptr_factory_.GetWeakPtr()));
   }
 
   update_engine_dbus_proxy_ = bus_->GetObjectProxy(
       update_engine::kUpdateEngineServiceName,
       dbus::ObjectPath(update_engine::kUpdateEngineServicePath));
   update_engine_dbus_proxy_->WaitForServiceToBeAvailable(
-      base::Bind(&Daemon::HandleUpdateEngineAvailableOrRestarted,
-                 base::Unretained(this)));
+      base::Bind(&Daemon::HandleUpdateEngineAvailable,
+                 weak_ptr_factory_.GetWeakPtr()));
   update_engine_dbus_proxy_->ConnectToSignal(
       update_engine::kUpdateEngineInterface,
       update_engine::kStatusUpdate,
       base::Bind(&Daemon::HandleUpdateEngineStatusUpdateSignal,
-                 base::Unretained(this)),
-      base::Bind(&Daemon::HandleDBusSignalConnected, base::Unretained(this)));
+                 weak_ptr_factory_.GetWeakPtr()),
+      base::Bind(&Daemon::HandleDBusSignalConnected,
+                 weak_ptr_factory_.GetWeakPtr()));
+
+  int64 tpm_threshold = 0;
+  prefs_->GetInt64(kTpmCounterSuspendThresholdPref, &tpm_threshold);
+  if (tpm_threshold > 0) {
+    cryptohomed_dbus_proxy_ = bus_->GetObjectProxy(
+        cryptohome::kCryptohomeServiceName,
+        dbus::ObjectPath(cryptohome::kCryptohomeServicePath));
+    cryptohomed_dbus_proxy_->WaitForServiceToBeAvailable(
+        base::Bind(&Daemon::HandleCryptohomedAvailable,
+                   weak_ptr_factory_.GetWeakPtr()));
+  }
 
   powerd_dbus_object_ = bus_->GetExportedObject(
       dbus::ObjectPath(kPowerManagerServicePath));
@@ -921,8 +941,10 @@ void Daemon::InitDBus() {
   dbus::ObjectProxy* proxy = bus_->GetObjectProxy(
       kBusServiceName, dbus::ObjectPath(kBusServicePath));
   proxy->ConnectToSignal(kBusInterface, kNameOwnerChangedSignal,
-      base::Bind(&Daemon::HandleDBusNameOwnerChanged, base::Unretained(this)),
-      base::Bind(&Daemon::HandleDBusSignalConnected, base::Unretained(this)));
+      base::Bind(&Daemon::HandleDBusNameOwnerChanged,
+                 weak_ptr_factory_.GetWeakPtr()),
+      base::Bind(&Daemon::HandleDBusSignalConnected,
+                 weak_ptr_factory_.GetWeakPtr()));
 
   dbus_sender_->Init(powerd_dbus_object_, kPowerManagerInterface);
 }
@@ -970,7 +992,7 @@ void Daemon::HandleCrasAvailableOrRestarted(bool available) {
     audio_client_->LoadInitialState();
 }
 
-void Daemon::HandleUpdateEngineAvailableOrRestarted(bool available) {
+void Daemon::HandleUpdateEngineAvailable(bool available) {
   if (!available) {
     LOG(ERROR) << "Failed waiting for update engine to become available";
     return;
@@ -995,6 +1017,23 @@ void Daemon::HandleUpdateEngineAvailableOrRestarted(bool available) {
     return;
   }
   OnUpdateOperation(operation);
+}
+
+void Daemon::HandleCryptohomedAvailable(bool available) {
+  if (!available) {
+    LOG(ERROR) << "Failed waiting for cryptohomed to become available";
+    return;
+  }
+  if (cryptohomed_dbus_proxy_) {
+    dbus::MethodCall method_call(cryptohome::kCryptohomeInterface,
+                                 cryptohome::kCryptohomeGetTpmStatus);
+    dbus::MessageWriter writer(&method_call);
+    writer.AppendProtoAsArrayOfBytes(cryptohome::GetTpmStatusRequest());
+    cryptohomed_dbus_proxy_->CallMethod(
+        &method_call, kCryptohomedDBusTimeoutMs,
+        base::Bind(&Daemon::HandleGetTpmStatusResponse,
+                   weak_ptr_factory_.GetWeakPtr()));
+  }
 }
 
 void Daemon::HandleDBusNameOwnerChanged(dbus::Signal* signal) {
@@ -1074,6 +1113,38 @@ void Daemon::HandleCrasActiveOutputNodeChangedSignal(dbus::Signal* signal) {
 void Daemon::HandleCrasNumberOfActiveStreamsChanged(dbus::Signal* signal) {
   DCHECK(audio_client_);
   audio_client_->UpdateNumActiveStreams();
+}
+
+void Daemon::HandleGetTpmStatusResponse(dbus::Response* response) {
+  if (!response) {
+    LOG(ERROR) << cryptohome::kCryptohomeGetTpmStatus << " call failed";
+    return;
+  }
+
+  cryptohome::BaseReply base_reply;
+  dbus::MessageReader reader(response);
+  if (!reader.PopArrayOfBytesAsProto(&base_reply)) {
+    LOG(ERROR) << "Unable to parse " << cryptohome::kCryptohomeGetTpmStatus
+               << "response";
+    return;
+  }
+  if (base_reply.has_error()) {
+    LOG(ERROR) << cryptohome::kCryptohomeGetTpmStatus << " response contains "
+               << "error code " << base_reply.error();
+    return;
+  }
+  if (!base_reply.HasExtension(cryptohome::GetTpmStatusReply::reply)) {
+    LOG(ERROR) << cryptohome::kCryptohomeGetTpmStatus << " response doesn't "
+               << "contain nested reply";
+    return;
+  }
+
+  cryptohome::GetTpmStatusReply tpm_reply =
+      base_reply.GetExtension(cryptohome::GetTpmStatusReply::reply);
+  LOG(INFO) << "Received " << cryptohome::kCryptohomeGetTpmStatus
+            << " response with dictionary attack count "
+            << tpm_reply.dictionary_attack_counter();
+  state_controller_->HandleTpmStatus(tpm_reply.dictionary_attack_counter());
 }
 
 scoped_ptr<dbus::Response> Daemon::HandleRequestShutdownMethod(
@@ -1372,7 +1443,8 @@ void Daemon::ShutDown(ShutdownMode mode, ShutdownReason reason) {
     if (!retry_shutdown_for_flashrom_timer_.IsRunning()) {
       retry_shutdown_for_flashrom_timer_.Start(
           FROM_HERE, base::TimeDelta::FromSeconds(kRetryShutdownForFlashromSec),
-          base::Bind(&Daemon::ShutDown, base::Unretained(this), mode, reason));
+          base::Bind(&Daemon::ShutDown, weak_ptr_factory_.GetWeakPtr(), mode,
+                     reason));
     }
     return;
   }
