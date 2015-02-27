@@ -1570,7 +1570,7 @@ int main(int argc, char **argv) {
                      action.c_str())) {
     cryptohome::GetTpmStatusRequest request;
     cryptohome::BaseReply reply;
-    if (!MakeProtoDBusCall("GetTpmStatus",
+    if (!MakeProtoDBusCall(cryptohome::kCryptohomeGetTpmStatus,
                            DBUS_METHOD(get_tpm_status),
                            DBUS_METHOD(get_tpm_status_async),
                            cl, &proxy, request, &reply)) {

@@ -14,6 +14,7 @@
 #include <base/files/file_path.h>
 #include <base/macros.h>
 #include <base/memory/scoped_ptr.h>
+#include <base/memory/weak_ptr.h>
 #include <base/time/time.h>
 #include <base/timer/timer.h>
 #include <dbus/bus.h>
@@ -156,7 +157,11 @@ class Daemon : public policy::BacklightControllerObserver,
   void HandleChromeAvailableOrRestarted(bool available);
   void HandleSessionManagerAvailableOrRestarted(bool available);
   void HandleCrasAvailableOrRestarted(bool available);
-  void HandleUpdateEngineAvailableOrRestarted(bool available);
+
+  // Handles other D-Bus services just becoming initially available (i.e.
+  // restarts are ignored).
+  void HandleUpdateEngineAvailable(bool available);
+  void HandleCryptohomedAvailable(bool available);
 
   // Handles changes to D-Bus name ownership.
   void HandleDBusNameOwnerChanged(dbus::Signal* signal);
@@ -177,6 +182,7 @@ class Daemon : public policy::BacklightControllerObserver,
   void HandleCrasNodesChangedSignal(dbus::Signal* signal);
   void HandleCrasActiveOutputNodeChangedSignal(dbus::Signal* signal);
   void HandleCrasNumberOfActiveStreamsChanged(dbus::Signal* signal);
+  void HandleGetTpmStatusResponse(dbus::Response* response);
   scoped_ptr<dbus::Response> HandleRequestShutdownMethod(
       dbus::MethodCall* method_call);
   scoped_ptr<dbus::Response> HandleRequestRestartMethod(
@@ -239,6 +245,8 @@ class Daemon : public policy::BacklightControllerObserver,
   dbus::ObjectProxy* session_manager_dbus_proxy_;  // weak; owned by |bus_|
   dbus::ObjectProxy* cras_dbus_proxy_;  // weak; owned by |bus_| and may be NULL
   dbus::ObjectProxy* update_engine_dbus_proxy_;  // weak; owned by |bus_|
+  // May be null if the TPM status is not needed.
+  dbus::ObjectProxy* cryptohomed_dbus_proxy_;  // weak; owned by |bus_|
 
   scoped_ptr<StateControllerDelegate> state_controller_delegate_;
   scoped_ptr<MetricsSender> metrics_sender_;
@@ -299,6 +307,10 @@ class Daemon : public policy::BacklightControllerObserver,
   // True if the system can properly transition from dark resume to fully
   // resumed.
   bool can_safely_exit_dark_resume_;
+
+  // Must come last so that weak pointers will be invalidated before other
+  // members are destroyed.
+  base::WeakPtrFactory<Daemon> weak_ptr_factory_;
 
   DISALLOW_COPY_AND_ASSIGN(Daemon);
 };
