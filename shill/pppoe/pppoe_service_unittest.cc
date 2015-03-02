@@ -163,4 +163,14 @@ TEST_F(PPPoEServiceTest, Disconnect) {
   }
 }
 
+TEST_F(PPPoEServiceTest, DisconnectDuringAssociation) {
+  FakeConnectionSuccess();
+
+  Error error;
+  service_->Disconnect(&error, "in test");
+  EXPECT_TRUE(error.IsSuccess());
+
+  EXPECT_EQ(service_->state(), Service::kStateIdle);
+}
+
 }  // namespace shill

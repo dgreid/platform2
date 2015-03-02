@@ -105,6 +105,11 @@ void PPPoEService::Disconnect(Error *error, const char *reason) {
   EthernetService::Disconnect(error, reason);
   if (ppp_device_) {
     ppp_device_->DropConnection();
+  } else {
+    // If no PPPDevice has been associated with this service then nothing will
+    // drive this service's transition into the idle state.  This must be forced
+    // here to ensure that the service is not left in any intermediate state.
+    SetState(Service::kStateIdle);
   }
   ppp_device_ = nullptr;
   pppd_.reset();
@@ -200,14 +205,14 @@ void PPPoEService::OnPPPConnected(const map<string, string> &params) {
 void PPPoEService::OnPPPDisconnected() {
   pppd_.release()->DestroyLater(dispatcher());
 
+  Error unused_error;
+  Disconnect(&unused_error, __func__);
+
   if (authenticating_) {
     SetFailure(Service::kFailurePPPAuth);
   } else {
     SetFailure(Service::kFailureUnknown);
   }
-
-  Error error;
-  Disconnect(&error, __func__);
 }
 
 }  // namespace shill
