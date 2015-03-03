@@ -32,8 +32,9 @@ SAFE_WIPE=$(echo "$@" | grep -sqw safe && echo "safe")
 FACTORY_WIPE_FIRMWARE_PID=""
 
 PRESERVED_TAR="/tmp/preserve.tar"
+LABMACHINE=".labmachine"
 STATE_PATH="/mnt/stateful_partition"
-POWERWASH_COUNT="/mnt/stateful_partition/unencrypted/preserve/powerwash_count"
+POWERWASH_COUNT="${STATE_PATH}/unencrypted/preserve/powerwash_count"
 
 # List of files to preserve relative to /mnt/stateful_partition/
 PRESERVED_FILES=""
@@ -67,6 +68,16 @@ if [ "$FACTORY_WIPE" = "factory" ]; then
        "unencrypted/import_extensions/extensions/*.crx" ]; then
     PRESERVED_FILES="${PRESERVED_FILES} ${IMPORT_FILES}"
   fi
+fi
+
+# Test images in the lab enable certain extra behaviors if the
+# .labmachine flag file is present.  Those behaviors include some
+# important recovery behaviors (cf. the recover_duts upstart job).
+# We need those behaviors to survive across power wash, otherwise,
+# the current boot could wind up as a black hole.
+if [ -f "${STATE_PATH}/${LABMACHINE}" ] &&
+    crossystem 'debug_build?1'; then
+  PRESERVED_FILES="${PRESERVED_FILES} ${LABMACHINE}"
 fi
 
 PRESERVED_LIST=""
