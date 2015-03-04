@@ -247,7 +247,9 @@ class WakeOnWiFi {
  private:
   friend class WakeOnWiFiTest;  // access to several members for tests
   friend class WiFiObjectTest;  // netlink_manager_
-  // Tests that need kWakeOnWiFiDisabled.
+  // Tests that need kWakeOnWiFiNotSupported.
+  FRIEND_TEST(WakeOnWiFiTestWithMockDispatcher,
+              WakeOnWiFiDisabled_SetWakeOnWiFiFeaturesEnabled);
   FRIEND_TEST(WakeOnWiFiTestWithMockDispatcher,
               WakeOnWiFiDisabled_AddWakeOnPacketConnection_ReturnsError);
   FRIEND_TEST(WakeOnWiFiTestWithMockDispatcher,
@@ -275,7 +277,7 @@ class WakeOnWiFi {
               OnDarkResume_NotConnected_MaxDarkResumes_LongPeriod);
 
   static const char kWakeOnIPAddressPatternsNotSupported[];
-  static const char kWakeOnWiFiDisabled[];
+  static const char kWakeOnWiFiNotSupported[];
   static const uint32_t kDefaultWiphyIndex;
   static const int kVerifyWakeOnWiFiSettingsDelayMilliseconds;
   static const int kMaxSetWakeOnPacketRetries;

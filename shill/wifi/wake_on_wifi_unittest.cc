@@ -2990,7 +2990,7 @@ TEST_F(WakeOnWiFiTestWithMockDispatcher,
   Error e;
   AddWakeOnPacketConnection("1.1.1.1", &e);
   EXPECT_EQ(e.type(), Error::kNotSupported);
-  EXPECT_STREQ(e.message().c_str(), WakeOnWiFi::kWakeOnWiFiDisabled);
+  EXPECT_STREQ(e.message().c_str(), WakeOnWiFi::kWakeOnWiFiNotSupported);
 }
 
 TEST_F(WakeOnWiFiTestWithMockDispatcher,
@@ -2999,7 +2999,7 @@ TEST_F(WakeOnWiFiTestWithMockDispatcher,
   Error e;
   RemoveWakeOnPacketConnection("1.1.1.1", &e);
   EXPECT_EQ(e.type(), Error::kNotSupported);
-  EXPECT_STREQ(e.message().c_str(), WakeOnWiFi::kWakeOnWiFiDisabled);
+  EXPECT_STREQ(e.message().c_str(), WakeOnWiFi::kWakeOnWiFiNotSupported);
 }
 
 TEST_F(WakeOnWiFiTestWithMockDispatcher,
@@ -3008,7 +3008,7 @@ TEST_F(WakeOnWiFiTestWithMockDispatcher,
   Error e;
   RemoveAllWakeOnPacketConnections(&e);
   EXPECT_EQ(e.type(), Error::kNotSupported);
-  EXPECT_STREQ(e.message().c_str(), WakeOnWiFi::kWakeOnWiFiDisabled);
+  EXPECT_STREQ(e.message().c_str(), WakeOnWiFi::kWakeOnWiFiNotSupported);
 }
 
 TEST_F(WakeOnWiFiTestWithMockDispatcher,
@@ -3063,14 +3063,14 @@ TEST_F(WakeOnWiFiTestWithMockDispatcher,
   EXPECT_STREQ(GetWakeOnWiFiFeaturesEnabled().c_str(),
                kWakeOnWiFiFeaturesEnabledNotSupported);
   EXPECT_EQ(e.type(), Error::kNotSupported);
-  EXPECT_STREQ(e.message().c_str(), "Wake on WiFi is not supported");
+  EXPECT_STREQ(e.message().c_str(), WakeOnWiFi::kWakeOnWiFiNotSupported);
 
   EXPECT_FALSE(
       SetWakeOnWiFiFeaturesEnabled(kWakeOnWiFiFeaturesEnabledPacket, &e));
   EXPECT_STREQ(GetWakeOnWiFiFeaturesEnabled().c_str(),
                kWakeOnWiFiFeaturesEnabledNotSupported);
   EXPECT_EQ(e.type(), Error::kNotSupported);
-  EXPECT_STREQ(e.message().c_str(), "Wake on WiFi is not supported");
+  EXPECT_STREQ(e.message().c_str(), WakeOnWiFi::kWakeOnWiFiNotSupported);
 }
 
 TEST_F(WakeOnWiFiTestWithMockDispatcher,

@@ -46,7 +46,7 @@ static std::string ObjectID(WakeOnWiFi *w) { return "(wake_on_wifi)"; }
 
 const char WakeOnWiFi::kWakeOnIPAddressPatternsNotSupported[] =
     "Wake on IP address patterns not supported by this WiFi device";
-const char WakeOnWiFi::kWakeOnWiFiDisabled[] = "Wake on WiFi is disabled";
+const char WakeOnWiFi::kWakeOnWiFiNotSupported[] = "Wake on WiFi not supported";
 const uint32_t WakeOnWiFi::kDefaultWiphyIndex = 999;
 const int WakeOnWiFi::kVerifyWakeOnWiFiSettingsDelayMilliseconds = 300;
 const int WakeOnWiFi::kMaxSetWakeOnPacketRetries = 2;
@@ -82,9 +82,9 @@ WakeOnWiFi::WakeOnWiFi(NetlinkManager *netlink_manager,
 #if defined(DISABLE_WAKE_ON_WIFI)
       wake_on_wifi_features_enabled_(kWakeOnWiFiFeaturesEnabledNotSupported),
 #else
-      // Wake on WiFi features temporarily disabled at run-time for boards that
-      // support wake on WiFi.
-      // TODO(samueltan): re-enable once pending issues have been resolved.
+      // Wake on WiFi features disabled by default at run-time for boards that
+      // support wake on WiFi. Rely on Chrome to enable appropriate features via
+      // DBus.
       wake_on_wifi_features_enabled_(kWakeOnWiFiFeaturesEnabledNone),
 #endif  // DISABLE_WAKE_ON_WIFI
       dhcp_lease_renewal_timer_(true, false),
@@ -126,8 +126,8 @@ string WakeOnWiFi::GetWakeOnWiFiFeaturesEnabled(Error *error) {
 bool WakeOnWiFi::SetWakeOnWiFiFeaturesEnabled(const std::string &enabled,
                                               Error *error) {
 #if defined(DISABLE_WAKE_ON_WIFI)
-  Error::PopulateAndLog(FROM_HERE, error, Error::kNotSupported,
-                        "Wake on WiFi is not supported");
+  error->Populate(Error::kNotSupported, kWakeOnWiFiNotSupported);
+  SLOG(this, 7) << __func__ << ": " << kWakeOnWiFiNotSupported;
   return false;
 #else
   if (wake_on_wifi_features_enabled_ == enabled) {
@@ -785,8 +785,8 @@ void WakeOnWiFi::AddWakeOnPacketConnection(const string &ip_endpoint,
   }
   wake_on_packet_connections_.AddUnique(ip_addr);
 #else
-  Error::PopulateAndLog(
-      FROM_HERE, error, Error::kNotSupported, kWakeOnWiFiDisabled);
+  error->Populate(Error::kNotSupported, kWakeOnWiFiNotSupported);
+  SLOG(this, 7) << __func__ << ": " << kWakeOnWiFiNotSupported;
 #endif  // DISABLE_WAKE_ON_WIFI
 }
 
@@ -812,8 +812,8 @@ void WakeOnWiFi::RemoveWakeOnPacketConnection(const string &ip_endpoint,
   }
   wake_on_packet_connections_.Remove(ip_addr);
 #else
-  Error::PopulateAndLog(
-      FROM_HERE, error, Error::kNotSupported, kWakeOnWiFiDisabled);
+  error->Populate(Error::kNotSupported, kWakeOnWiFiNotSupported);
+  SLOG(this, 7) << __func__ << ": " << kWakeOnWiFiNotSupported;
 #endif  // DISABLE_WAKE_ON_WIFI
 }
 
@@ -827,8 +827,8 @@ void WakeOnWiFi::RemoveAllWakeOnPacketConnections(Error *error) {
   }
   wake_on_packet_connections_.Clear();
 #else
-  Error::PopulateAndLog(
-      FROM_HERE, error, Error::kNotSupported, kWakeOnWiFiDisabled);
+  error->Populate(Error::kNotSupported, kWakeOnWiFiNotSupported);
+  SLOG(this, 7) << __func__ << ": " << kWakeOnWiFiNotSupported;
 #endif  // DISABLE_WAKE_ON_WIFI
 }
 
@@ -1224,7 +1224,7 @@ void WakeOnWiFi::OnBeforeSuspend(
   SLOG(this, 1) << __func__ << ": "
                 << (is_connected ? "connected" : "not connected");
 #if defined(DISABLE_WAKE_ON_WIFI)
-  // Wake on WiFi disabled, so immediately report success.
+  // Wake on WiFi not supported, so immediately report success.
   done_callback.Run(Error(Error::kSuccess));
 #else
   suspend_actions_done_callback_ = done_callback;
