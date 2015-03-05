@@ -79,7 +79,7 @@ void Manager::RegisterAsync(
   //             timeout as a configurable knob or allow local
   //             daemons to signal that their state is up to date so that
   //             we need not wait for them.
-  device_info_->ScheduleStartDevice(base::TimeDelta::FromSeconds(5));
+  device_info_->ScheduleStartDevice(base::TimeDelta::FromSeconds(15));
   dbus_adaptor_.RegisterWithDBusObject(&dbus_object_);
   dbus_object_.RegisterAsync(cb);
 }
