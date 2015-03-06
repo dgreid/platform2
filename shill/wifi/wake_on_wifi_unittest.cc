@@ -978,6 +978,10 @@ class WakeOnWiFiTest : public ::testing::Test {
     return wake_on_wifi_->last_wake_reason_;
   }
 
+  void OnScanStarted(bool is_active_scan) {
+    wake_on_wifi_->OnScanStarted(is_active_scan);
+  }
+
   MOCK_METHOD1(DoneCallback, void(const Error &error));
   MOCK_METHOD0(RenewDHCPLeaseCallback, void(void));
   MOCK_METHOD0(InitiateScanCallback, void(void));
@@ -1978,6 +1982,47 @@ TEST_F(WakeOnWiFiTestWithMockDispatcher, ParseWakeOnWakeOnSSIDResults) {
   for (size_t i = 0; i < result.second.size(); ++i) {
     EXPECT_EQ(kSSID1FreqMatches[i], result.second[i]);
   }
+}
+
+TEST_F(WakeOnWiFiTestWithMockDispatcher, OnScanStarted_NotInDarkResume) {
+  SetInDarkResume(false);
+  EXPECT_CALL(metrics_, NotifyScanStartedInDarkResume(_)).Times(0);
+  OnScanStarted(false);
+}
+
+TEST_F(WakeOnWiFiTestWithMockDispatcher, OnScanStarted_IgnoredWakeReasons) {
+  // Do not log metrics if we entered dark resume because of wake on SSID or
+  // wake on disconnect.
+  SetInDarkResume(true);
+  SetLastWakeReason(WakeOnWiFi::kWakeTriggerSSID);
+  EXPECT_CALL(metrics_, NotifyScanStartedInDarkResume(_)).Times(0);
+  OnScanStarted(false);
+
+  SetLastWakeReason(WakeOnWiFi::kWakeTriggerDisconnect);
+  EXPECT_CALL(metrics_, NotifyScanStartedInDarkResume(_)).Times(0);
+  OnScanStarted(false);
+}
+
+TEST_F(WakeOnWiFiTestWithMockDispatcher, OnScanStarted_LogMetrics) {
+  // Log metrics if we entered dark resume because of wake on pattern or an
+  // unsupported wake reason.
+  SetInDarkResume(true);
+  SetLastWakeReason(WakeOnWiFi::kWakeTriggerUnsupported);
+  EXPECT_CALL(metrics_, NotifyScanStartedInDarkResume(_));
+  OnScanStarted(false);
+
+  SetLastWakeReason(WakeOnWiFi::kWakeTriggerPattern);
+  EXPECT_CALL(metrics_, NotifyScanStartedInDarkResume(_));
+  OnScanStarted(false);
+
+  // Log error if an active scan is launched.
+  ScopedMockLog log;
+  EXPECT_CALL(log, Log(_, _, _)).Times(AnyNumber());
+  EXPECT_CALL(log,
+              Log(logging::LOG_ERROR, _,
+                  HasSubstr("Unexpected active scan launched in dark resume")));
+  EXPECT_CALL(metrics_, NotifyScanStartedInDarkResume(_));
+  OnScanStarted(true);
 }
 
 #if !defined(DISABLE_WAKE_ON_WIFI)

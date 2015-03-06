@@ -82,6 +82,7 @@ class MockMetrics : public Metrics {
   MOCK_METHOD0(NotifyWakeupReasonReceived, void());
   MOCK_METHOD1(NotifyWakeOnWiFiOnDarkResume,
                void(WakeOnWiFi::WakeOnWiFiTrigger reason));
+  MOCK_METHOD1(NotifyScanStartedInDarkResume, void(bool is_active_scan));
 
  private:
   DISALLOW_COPY_AND_ASSIGN(MockMetrics);

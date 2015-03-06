@@ -591,6 +591,10 @@ class WiFi : public Device, public SupplicantEventDelegateInterface {
   // Returns true iff the wiphy index was parsed successfully, false otherwise.
   bool ParseWiphyIndex(const Nl80211Message &nl80211_message);
 
+  // Callback invoked when the kernel broadcasts a notification that a scan has
+  // started.
+  virtual void OnScanStarted(const NetlinkMessage &netlink_message);
+
   // Pointer to the provider object that maintains WiFiService objects.
   WiFiProvider *provider_;
 

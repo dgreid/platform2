@@ -443,6 +443,12 @@ class Metrics {
     kDarkResumeWakeReasonMax
   };
 
+  enum DarkResumeScanType {
+    kDarkResumeScanTypeActive = 0,
+    kDarkResumeScanTypePassive = 1,
+    kDarkResumeScanTypeMax
+  };
+
   static const char kMetricDisconnectSuffix[];
   static const int kMetricDisconnectMax;
   static const int kMetricDisconnectMin;
@@ -605,6 +611,7 @@ class Metrics {
   // executes.
   static const char kMetricWakeReasonReceivedBeforeOnDarkResume[];
   static const char kMetricDarkResumeWakeReason[];
+  static const char kMetricDarkResumeScanType[];
 
   // WiFiService Entry Fixup.
   static const char kMetricServiceFixupEntriesSuffix[];
@@ -818,7 +825,8 @@ class Metrics {
   // |success| is true, if the dark resume actions completed successfully.
   void NotifyDarkResumeActionsCompleted(bool success);
 
-  // Notifies this object that a scan has been initiated while in dark resume.
+  // Notifies this object that a scan has been initiated by shill while in dark
+  // resume.
   virtual void NotifyDarkResumeInitiateScan();
 
   // Notifies this object that a scan results have been received in dark resume.
@@ -991,6 +999,15 @@ class Metrics {
   // and that the dark resume was caused by |reason|.
   virtual void NotifyWakeOnWiFiOnDarkResume(
       WakeOnWiFi::WakeOnWiFiTrigger reason);
+
+  // Notifies this object that a scan was started in dark resume. If
+  // |is_active_scan| is true, the scan started was an active scan. Otherwise
+  // the scan started was a passive scan.
+  // Note: Metrics::NotifyDarkResumeInitiateScan is called when shill initiates
+  // a scan in dark resume, while Metrics::NotifyScanStartedInDarkResume is
+  // called when the kernel notifies shill that a scan (shill-initiated or not)
+  // has actually started.
+  virtual void NotifyScanStartedInDarkResume(bool is_active_scan);
 
  private:
   friend class MetricsTest;

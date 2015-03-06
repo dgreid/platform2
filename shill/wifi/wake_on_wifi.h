@@ -71,7 +71,7 @@ class WiFi;
 //
 // +-------------+      +------------+     Unsupported     +----------+
 // |  Too many   +----->|Wake reason?+-------------------->|Connected?|
-// |dark resumes?|  No  +-++---------+                     +-+-----+--+
+// |dark resumes?|  No  +-+----------+                     +-+-----+--+
 // +------+------+        |       |                          |     |
 //        | Yes           |       | Disconnect/           No |     | Yes
 //        v               |       |    SSID                  |     |
@@ -239,6 +239,10 @@ class WakeOnWiFi {
   virtual void OnNoAutoConnectableServicesAfterScan(
       const std::vector<ByteString> &ssid_whitelist,
       const base::Closure &remove_supplicant_networks_callback);
+  // Called by WiFi when it is notified by the kernel that a scan has started.
+  // If |is_active_scan| is true, the scan is an active scan. Otherwise, the
+  // scan is a passive scan.
+  virtual void OnScanStarted(bool is_active_scan);
 
   bool in_dark_resume() { return in_dark_resume_; }
 

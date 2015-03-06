@@ -205,6 +205,8 @@ WiFi::WiFi(ControlInterface *control_interface,
       ScopeLogger::kWiFi,
       Bind(&WiFi::OnWiFiDebugScopeChanged, weak_ptr_factory_.GetWeakPtr()));
   CHECK(netlink_manager_);
+  netlink_manager_->AddBroadcastHandler(Bind(
+      &WiFi::OnScanStarted, weak_ptr_factory_.GetWeakPtr()));
   // TODO(wdg): Remove after progressive scan field trial is over.
   // Only do the field trial if the user hasn't already enabled progressive
   // scan manually.  crbug.com/250945
@@ -1250,6 +1252,44 @@ bool WiFi::ParseWiphyIndex(const Nl80211Message &nl80211_message) {
     return false;
   }
   return true;
+}
+
+void WiFi::OnScanStarted(const NetlinkMessage &netlink_message) {
+  // We only handle scan triggers in this handler, which is are nl80211 messages
+  // with the NL80211_CMD_TRIGGER_SCAN command.
+  if (netlink_message.message_type() != Nl80211Message::GetMessageType()) {
+    SLOG(this, 7) << __func__ << ": "
+                  << "Not a NL80211 Message";
+    return;
+  }
+  const Nl80211Message &scan_trigger_msg =
+      *reinterpret_cast<const Nl80211Message *>(&netlink_message);
+  if (scan_trigger_msg.command() != TriggerScanMessage::kCommand) {
+    SLOG(this, 7) << __func__ << ": "
+                  << "Not a NL80211_CMD_TRIGGER_SCAN message";
+    return;
+  }
+  uint32_t wiphy_index;
+  if (!scan_trigger_msg.const_attributes()->GetU32AttributeValue(
+          NL80211_ATTR_WIPHY, &wiphy_index)) {
+    LOG(ERROR) << "NL80211_CMD_TRIGGER_SCAN had no NL80211_ATTR_WIPHY";
+    return;
+  }
+  if (wiphy_index != wiphy_index_) {
+    SLOG(this, 7) << __func__ << ": "
+                  << "Scan trigger not meant for this interface";
+    return;
+  }
+  bool is_active_scan = false;
+  AttributeListConstRefPtr ssids;
+  if (scan_trigger_msg.const_attributes()->ConstGetNestedAttributeList(
+          NL80211_ATTR_SCAN_SSIDS, &ssids)) {
+    AttributeIdIterator ssid_iter(*ssids);
+    // If any SSIDs (even the empty wild card) are reported, an active scan was
+    // launched. Otherwise, a passive scan was launched.
+    is_active_scan = !ssid_iter.AtEnd();
+  }
+  wake_on_wifi_->OnScanStarted(is_active_scan);
 }
 
 void WiFi::BSSAddedTask(

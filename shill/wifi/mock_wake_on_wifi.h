@@ -50,6 +50,7 @@ class MockWakeOnWiFi : public WakeOnWiFi {
   MOCK_METHOD1(OnWiphyIndexReceived, void(uint32_t));
   MOCK_METHOD1(ParseWakeOnWiFiCapabilities,
                void(const Nl80211Message &nl80211_message));
+  MOCK_METHOD1(OnScanStarted, void(bool is_active_scan));
 
  private:
   DISALLOW_COPY_AND_ASSIGN(MockWakeOnWiFi);

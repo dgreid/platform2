@@ -1541,4 +1541,19 @@ void WakeOnWiFi::OnWiphyIndexReceived(uint32_t index) {
   wiphy_index_received_ = true;
 }
 
+void WakeOnWiFi::OnScanStarted(bool is_active_scan) {
+  if (!in_dark_resume_) {
+    return;
+  }
+  if (last_wake_reason_ == kWakeTriggerUnsupported ||
+      last_wake_reason_ == kWakeTriggerPattern) {
+    // We don't expect active scans to be started when we wake on pattern or
+    // RTC timers.
+    if (is_active_scan) {
+      LOG(ERROR) << "Unexpected active scan launched in dark resume";
+    }
+    metrics_->NotifyScanStartedInDarkResume(is_active_scan);
+  }
+}
+
 }  // namespace shill

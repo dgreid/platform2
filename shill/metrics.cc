@@ -190,6 +190,8 @@ const char Metrics::kMetricWakeReasonReceivedBeforeOnDarkResume[] =
     "Network.Shill.WiFi.WakeReasonReceivedBeforeOnDarkResume";
 const char Metrics::kMetricDarkResumeWakeReason[] =
     "Network.Shill.WiFi.DarkResumeWakeReason";
+const char Metrics::kMetricDarkResumeScanType[] =
+    "Network.Shill.WiFi.DarkResumeScanType";
 
 // static
 const char Metrics::kMetricServiceFixupEntriesSuffix[] = "ServiceFixupEntries";
@@ -1473,6 +1475,12 @@ void Metrics::NotifyWakeOnWiFiOnDarkResume(
   }
   SendEnumToUMA(kMetricDarkResumeWakeReason, wake_reason,
                 kDarkResumeWakeReasonMax);
+}
+
+void Metrics::NotifyScanStartedInDarkResume(bool is_active_scan) {
+  DarkResumeScanType scan_type =
+      is_active_scan ? kDarkResumeScanTypeActive : kDarkResumeScanTypePassive;
+  SendEnumToUMA(kMetricDarkResumeScanType, scan_type, kDarkResumeScanTypeMax);
 }
 
 void Metrics::InitializeCommonServiceMetrics(const Service &service) {
