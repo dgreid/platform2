@@ -1022,6 +1022,31 @@ Properties	boolean AutoConnect [readwrite]
 			The current value of this property is readable in the
 			"Provider" property of this service.
 
+		int PPPoE.LCPEchoFailure
+
+			(PPPoE only) If non-zero, the number of LCP echo
+			responses that this service will tolerate missing from
+			the PPP peer before terminating the connection.
+
+		int PPPoE.LCPEchoInterval
+
+			(PPPoE only) If non-zero, used as the number of seconds
+			between sending LCP echo requests to the PPP peer.
+
+		string PPPoE.Password
+
+			(PPPoE only) This string is used as the password
+			during authentication with a PPPoE server.  If empty,
+			it will still be used during authentication if
+			requested.
+
+		string PPPoE.Username
+
+			(PPPoE only) If non-empty, this string is used as the
+			username during authentication with a PPPoE server.  If
+			empty, it will still be used during authentication if
+			requested.
+
 		string Passphrase [readwrite]
 
 			If the service type is "wifi", then this property

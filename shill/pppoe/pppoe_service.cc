@@ -30,6 +30,9 @@ using std::unique_ptr;
 
 namespace shill {
 
+const int PPPoEService::kDefaultLCPEchoInterval = 30;
+const int PPPoEService::kDefaultLCPEchoFailure = 3;
+
 PPPoEService::PPPoEService(ControlInterface *control_interface,
                            EventDispatcher *dispatcher,
                            Metrics *metrics,
@@ -38,11 +41,15 @@ PPPoEService::PPPoEService(ControlInterface *control_interface,
     : EthernetService(control_interface, dispatcher, metrics, manager,
                       Technology::kPPPoE, ethernet),
       control_interface_(control_interface),
+      lcp_echo_interval_(kDefaultLCPEchoInterval),
+      lcp_echo_failure_(kDefaultLCPEchoFailure),
       authenticating_(false),
       weak_ptr_factory_(this) {
   PropertyStore *store = this->mutable_store();
   store->RegisterString(kPPPoEUsernameProperty, &username_);
   store->RegisterString(kPPPoEPasswordProperty, &password_);
+  store->RegisterInt32(kPPPoELCPEchoIntervalProperty, &lcp_echo_interval_);
+  store->RegisterInt32(kPPPoELCPEchoFailureProperty, &lcp_echo_failure_);
 
   set_friendly_name("PPPoE");
   SetConnectable(true);
@@ -87,6 +94,8 @@ void PPPoEService::Connect(Error *error, const char *reason) {
   options.no_default_route = true;
   options.use_peer_dns = true;
   options.use_pppoe_plugin = true;
+  options.lcp_echo_interval = kDefaultLCPEchoInterval;
+  options.lcp_echo_failure = kDefaultLCPEchoFailure;
 
   pppd_ = PPPDaemon::Start(
       control_interface_, manager()->glib(), weak_ptr_factory_.GetWeakPtr(),
@@ -123,6 +132,8 @@ bool PPPoEService::Load(StoreInterface *storage) {
   const string id = GetStorageIdentifier();
   storage->GetString(id, kPPPoEUsernameProperty, &username_);
   storage->GetString(id, kPPPoEPasswordProperty, &password_);
+  storage->GetInt(id, kPPPoELCPEchoIntervalProperty, &lcp_echo_interval_);
+  storage->GetInt(id, kPPPoELCPEchoFailureProperty, &lcp_echo_failure_);
 
   return true;
 }
@@ -135,6 +146,8 @@ bool PPPoEService::Save(StoreInterface *storage) {
   const string id = GetStorageIdentifier();
   storage->SetString(id, kPPPoEUsernameProperty, username_);
   storage->SetString(id, kPPPoEPasswordProperty, password_);
+  storage->SetInt(id, kPPPoELCPEchoIntervalProperty, lcp_echo_interval_);
+  storage->SetInt(id, kPPPoELCPEchoFailureProperty, lcp_echo_failure_);
 
   return true;
 }

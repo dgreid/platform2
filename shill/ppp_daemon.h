@@ -39,7 +39,9 @@ class PPPDaemon {
           no_default_route(false),
           use_peer_dns(false),
           use_shim_plugin(true),
-          use_pppoe_plugin(false) {}
+          use_pppoe_plugin(false),
+          lcp_echo_interval(0),
+          lcp_echo_failure(0) {}
 
     // Causes pppd to emit log messages useful for debugging connectivity.
     bool debug;
@@ -62,6 +64,12 @@ class PPPDaemon {
     // If set, enables the rp-pppoe plugin which allows pppd to be used over
     // ethernet devices.
     bool use_pppoe_plugin;
+
+    // The number of seconds between sending LCP echo requests.
+    unsigned int lcp_echo_interval;
+
+    // The number of missed LCP echo responses tolerated before disconnecting.
+    unsigned int lcp_echo_failure;
   };
 
   // The path to the pppd plugin provided by shill.

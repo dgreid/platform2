@@ -54,6 +54,9 @@ class PPPoEService : public EthernetService, public RPCTaskDelegate {
  private:
   FRIEND_TEST(PPPoEServiceTest, Disconnect);
 
+  static const int kDefaultLCPEchoInterval;
+  static const int kDefaultLCPEchoFailure;
+
   void OnPPPAuthenticating();
   void OnPPPAuthenticated();
   void OnPPPConnected(const std::map<std::string, std::string> &params);
@@ -61,10 +64,11 @@ class PPPoEService : public EthernetService, public RPCTaskDelegate {
   void OnPPPDied(pid_t pid, int exit);
 
   ControlInterface *control_interface_;
-  base::WeakPtr<Ethernet> ethernet_;
 
   std::string username_;
   std::string password_;
+  int lcp_echo_interval_;
+  int lcp_echo_failure_;
 
   bool authenticating_;
   std::unique_ptr<ExternalTask> pppd_;

@@ -10,6 +10,7 @@
 
 #include <base/files/file_path.h>
 #include <base/memory/weak_ptr.h>
+#include <base/strings/string_number_conversions.h>
 
 #include "shill/control_interface.h"
 #include "shill/error.h"
@@ -51,6 +52,14 @@ std::unique_ptr<ExternalTask> PPPDaemon::Start(
   if (options.use_pppoe_plugin) {
     arguments.push_back("plugin");
     arguments.push_back(kPPPoEPluginPath);
+  }
+  if (options.lcp_echo_interval) {
+    arguments.push_back("lcp-echo-interval");
+    arguments.push_back(base::UintToString(options.lcp_echo_interval));
+  }
+  if (options.lcp_echo_failure) {
+    arguments.push_back("lcp-echo-failure");
+    arguments.push_back(base::UintToString(options.lcp_echo_failure));
   }
 
   arguments.push_back(device);
