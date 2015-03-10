@@ -171,10 +171,8 @@ class WakeOnWiFi {
   // Given a NL80211_CMD_NEW_WIPHY message |nl80211_message|, parses the
   // wake on WiFi capabilities of the NIC and set relevant members of this
   // WakeOnWiFi object to reflect the supported capbilities.
-  void ParseWakeOnWiFiCapabilities(const Nl80211Message &nl80211_message);
-  // Given a NL80211_CMD_NEW_WIPHY message |nl80211_message|, parses the
-  // wiphy index of the NIC and sets |wiphy_index_| with the parsed index.
-  void ParseWiphyIndex(const Nl80211Message &nl80211_message);
+  virtual void ParseWakeOnWiFiCapabilities(
+      const Nl80211Message &nl80211_message);
   // Callback invoked when the system reports its wakeup reason.
   //
   // Arguments:
@@ -244,6 +242,8 @@ class WakeOnWiFi {
 
   bool in_dark_resume() { return in_dark_resume_; }
 
+  virtual void OnWiphyIndexReceived(uint32_t index);
+
  private:
   friend class WakeOnWiFiTest;  // access to several members for tests
   friend class WiFiObjectTest;  // netlink_manager_
@@ -256,8 +256,6 @@ class WakeOnWiFi {
               WakeOnWiFiDisabled_RemoveWakeOnPacketConnection_ReturnsError);
   FRIEND_TEST(WakeOnWiFiTestWithMockDispatcher,
               WakeOnWiFiDisabled_RemoveAllWakeOnPacketConnections_ReturnsError);
-  FRIEND_TEST(WakeOnWiFiTestWithMockDispatcher,
-              ParseWiphyIndex_Success);  // kDefaultWiphyIndex
   // Tests that need kMaxSetWakeOnPacketRetries.
   FRIEND_TEST(WakeOnWiFiTestWithMockDispatcher,
               RetrySetWakeOnPacketConnections_LessThanMaxRetries);
@@ -278,7 +276,6 @@ class WakeOnWiFi {
 
   static const char kWakeOnIPAddressPatternsNotSupported[];
   static const char kWakeOnWiFiNotSupported[];
-  static const uint32_t kDefaultWiphyIndex;
   static const int kVerifyWakeOnWiFiSettingsDelayMilliseconds;
   static const int kMaxSetWakeOnPacketRetries;
   static const int kMetricsReportingFrequencySeconds;

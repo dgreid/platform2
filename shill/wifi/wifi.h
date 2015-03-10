@@ -331,6 +331,7 @@ class WiFi : public Device, public SupplicantEventDelegateInterface {
   FRIEND_TEST(WiFiTimerTest, RequestStationInfo);  // kRequestStationInfoPeriod
   // kPostWakeConnectivityReportDelayMilliseconds
   FRIEND_TEST(WiFiTimerTest, ResumeDispatchesConnectivityReportTask);
+  FRIEND_TEST(WiFiMainTest, ParseWiphyIndex_Success);  // kDefaultWiphyIndex
 
   typedef std::map<const std::string, WiFiEndpointRefPtr> EndpointMap;
   typedef std::map<const WiFiService *, std::string> ReverseServiceMap;
@@ -359,6 +360,10 @@ class WiFi : public Device, public SupplicantEventDelegateInterface {
   // Number of milliseconds to wait after waking from suspend to report the
   // connection status to metrics.
   static const int kPostWakeConnectivityReportDelayMilliseconds;
+  // Used to instantiate |wiphy_index_| in WiFi. Assigned a large value so that
+  // any attempts to match the default value of |wiphy_index_| against an actual
+  // wiphy index reported in an NL80211 message will fail.
+  static const uint32_t kDefaultWiphyIndex;
 
   // TODO(wdg): Remove after progressive scan field trial is over.
   void ParseFieldTrialFile(const base::FilePath &field_trial_file_path);
@@ -581,6 +586,11 @@ class WiFi : public Device, public SupplicantEventDelegateInterface {
   // Callback invoked to handle pending scan results from AddPendingScanResult.
   void PendingScanResultsHandler();
 
+  // Given a NL80211_CMD_NEW_WIPHY message |nl80211_message|, parses the
+  // wiphy index of the NIC and sets |wiphy_index_| with the parsed index.
+  // Returns true iff the wiphy index was parsed successfully, false otherwise.
+  bool ParseWiphyIndex(const Nl80211Message &nl80211_message);
+
   // Pointer to the provider object that maintains WiFiService objects.
   WiFiProvider *provider_;
 
@@ -681,6 +691,9 @@ class WiFi : public Device, public SupplicantEventDelegateInterface {
 
   // Used to report the current state of our wireless link.
   KeyValueStore link_statistics_;
+
+  // Wiphy interface index of this WiFi device.
+  uint32_t wiphy_index_;
 
   std::unique_ptr<WakeOnWiFi> wake_on_wifi_;
 

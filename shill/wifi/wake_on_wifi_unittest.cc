@@ -216,11 +216,11 @@ const uint8_t kSSIDBytes2[] = {0x54, 0x50, 0x2d, 0x4c, 0x49, 0x4e, 0x4b,
                                0x5f, 0x38, 0x37, 0x36, 0x44, 0x33, 0x35};
 const uint32_t kNetDetectScanIntervalSeconds = 120;
 
-// Bytes representing a NL80211_CMD_NEW_WIPHY reporting the WiFi capabilities
-// of a NIC with wiphy index |kNewWiphyNlMsg_WiphyIndex|. This message reports
-// that the NIC supports wake on pattern (on up to |kNewWiphyNlMsg_MaxPatterns|
-// registered patterns), supports wake on SSID (on up to
-// |kNewWiphyNlMsg_MaxSSIDs| SSIDs), and supports wake on disconnect.
+// Bytes representing a NL80211_CMD_NEW_WIPHY message reporting the WiFi
+// capabilities of a NIC. This message reports that the NIC supports wake on
+// pattern (on up to |kNewWiphyNlMsg_MaxPatterns| registered patterns), supports
+// wake on SSID (on up to |kNewWiphyNlMsg_MaxSSIDs| SSIDs), and supports wake on
+// disconnect.
 const uint8_t kNewWiphyNlMsg[] = {
     0xb8, 0x0d, 0x00, 0x00, 0x13, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00,
     0xd9, 0x53, 0x00, 0x00, 0x03, 0x01, 0x00, 0x00, 0x08, 0x00, 0x01, 0x00,
@@ -515,10 +515,8 @@ const uint8_t kNewWiphyNlMsg[] = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0c, 0x00, 0xa9, 0x00,
     0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x40, 0x0c, 0x00, 0xaa, 0x00,
     0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x40};
-const uint32_t kNewWiphyNlMsg_WiphyIndex = 2;
 const uint32_t kNewWiphyNlMsg_MaxPatterns = 20;
 const uint32_t kNewWiphyNlMsg_MaxSSIDs = 11;
-const int kNewWiphyNlMsg_Nl80211AttrWiphyOffset = 20;
 const int kNewWiphyNlMsg_PattSupportOffset = 3316;
 const int kNewWiphyNlMsg_WowlanTrigNetDetectAttributeOffset = 3332;
 const int kNewWiphyNlMsg_WowlanTrigDisconnectAttributeOffset = 3284;
@@ -822,14 +820,6 @@ class WakeOnWiFiTest : public ::testing::Test {
 
   void SetWiphyIndex(uint32_t wiphy_index) {
     wake_on_wifi_->wiphy_index_ = wiphy_index;
-  }
-
-  uint32_t GetWiphyIndex() { return wake_on_wifi_->wiphy_index_; }
-
-  bool GetWiphyIndexReceived() { return wake_on_wifi_->wiphy_index_received_; }
-
-  void ParseWiphyIndex(const Nl80211Message &nl80211_message) {
-    wake_on_wifi_->ParseWiphyIndex(nl80211_message);
   }
 
   void ParseWakeOnWiFiCapabilities(const Nl80211Message &nl80211_message) {
@@ -1598,44 +1588,6 @@ TEST_F(WakeOnWiFiTestWithMockDispatcher,
   RetrySetWakeOnPacketConnections();
   ScopeLogger::GetInstance()->EnableScopesByName("-wifi");
   ScopeLogger::GetInstance()->set_verbose_level(0);
-}
-
-TEST_F(WakeOnWiFiTestWithMockDispatcher, ParseWiphyIndex_Success) {
-  // Verify that the wiphy index in kNewWiphyNlMsg is parsed, and that the flag
-  // for having the wiphy index is set by ParseWiphyIndex.
-  SetWiphyIndexReceivedToFalse();
-  EXPECT_FALSE(GetWiphyIndexReceived());
-  EXPECT_EQ(GetWiphyIndex(), WakeOnWiFi::kDefaultWiphyIndex);
-  NewWiphyMessage msg;
-  msg.InitFromNlmsg(reinterpret_cast<const nlmsghdr *>(kNewWiphyNlMsg),
-                    NetlinkMessage::MessageContext());
-  ParseWiphyIndex(msg);
-  EXPECT_EQ(GetWiphyIndex(), kNewWiphyNlMsg_WiphyIndex);
-  EXPECT_TRUE(GetWiphyIndexReceived());
-}
-
-TEST_F(WakeOnWiFiTestWithMockDispatcher, ParseWiphyIndex_Failure) {
-  ScopedMockLog log;
-  SetWiphyIndexReceivedToFalse();
-  EXPECT_FALSE(GetWiphyIndexReceived());
-  // Change the NL80211_ATTR_WIPHY U32 attribute to the NL80211_ATTR_WIPHY_FREQ
-  // U32 attribute, so that this message no longer contains a wiphy_index to be
-  // parsed.
-  NewWiphyMessage msg;
-  uint8_t message_memory[sizeof(kNewWiphyNlMsg)];
-  memcpy(message_memory, kNewWiphyNlMsg, sizeof(kNewWiphyNlMsg));
-  struct nlattr *nl80211_attr_wiphy = reinterpret_cast<struct nlattr *>(
-      &message_memory[kNewWiphyNlMsg_Nl80211AttrWiphyOffset]);
-  nl80211_attr_wiphy->nla_type = NL80211_ATTR_WIPHY_FREQ;
-  msg.InitFromNlmsg(reinterpret_cast<const nlmsghdr *>(message_memory),
-                    NetlinkMessage::MessageContext());
-  EXPECT_CALL(log, Log(_, _, _)).Times(AnyNumber());
-  EXPECT_CALL(log, Log(logging::LOG_ERROR, _,
-                       "NL80211_CMD_NEW_WIPHY had no NL80211_ATTR_WIPHY"));
-  ParseWiphyIndex(msg);
-  // Since we failed to find NL80211_ATTR_WIPHY in the message,
-  // |wiphy_index_received| should remain false.
-  EXPECT_FALSE(GetWiphyIndexReceived());
 }
 
 TEST_F(WakeOnWiFiTestWithMockDispatcher,

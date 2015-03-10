@@ -10,6 +10,7 @@
 
 #include <gmock/gmock.h>
 
+#include "shill/net/nl80211_message.h"
 #include "shill/wifi/wake_on_wifi.h"
 
 namespace shill {
@@ -46,6 +47,9 @@ class MockWakeOnWiFi : public WakeOnWiFi {
   MOCK_METHOD0(NotifyWakeupReasonReceived, void());
   MOCK_METHOD1(NotifyWakeOnWiFiOnDarkResume,
                void(WakeOnWiFi::WakeOnWiFiTrigger reason));
+  MOCK_METHOD1(OnWiphyIndexReceived, void(uint32_t));
+  MOCK_METHOD1(ParseWakeOnWiFiCapabilities,
+               void(const Nl80211Message &nl80211_message));
 
  private:
   DISALLOW_COPY_AND_ASSIGN(MockWakeOnWiFi);

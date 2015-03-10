@@ -103,6 +103,7 @@ const size_t WiFi::kStuckQueueLengthThreshold = 40;  // ~1 full-channel scan
 // connection after waking, but should be enough time for supplicant to update
 // its state.
 const int WiFi::kPostWakeConnectivityReportDelayMilliseconds = 1000;
+const uint32_t WiFi::kDefaultWiphyIndex = UINT32_MAX;
 
 WiFi::WiFi(ControlInterface *control_interface,
            EventDispatcher *dispatcher,
@@ -154,6 +155,7 @@ WiFi::WiFi(ControlInterface *control_interface,
       scan_state_(kScanIdle),
       scan_method_(kScanMethodNone),
       receive_byte_count_at_connect_(0),
+      wiphy_index_(kDefaultWiphyIndex),
       wake_on_wifi_(new WakeOnWiFi(netlink_manager_, dispatcher, metrics)) {
   PropertyStore *store = this->mutable_store();
   store->RegisterDerivedString(
@@ -1236,6 +1238,20 @@ void WiFi::PendingScanResultsHandler() {
   pending_scan_results_.reset();
 }
 
+bool WiFi::ParseWiphyIndex(const Nl80211Message &nl80211_message) {
+  // Verify NL80211_CMD_NEW_WIPHY.
+  if (nl80211_message.command() != NewWiphyMessage::kCommand) {
+    LOG(ERROR) << "Received unexpected command: " << nl80211_message.command();
+    return false;
+  }
+  if (!nl80211_message.const_attributes()->GetU32AttributeValue(
+          NL80211_ATTR_WIPHY, &wiphy_index_)) {
+    LOG(ERROR) << "NL80211_CMD_NEW_WIPHY had no NL80211_ATTR_WIPHY";
+    return false;
+  }
+  return true;
+}
+
 void WiFi::BSSAddedTask(
     const ::DBus::Path &path,
     const map<string, ::DBus::Variant> &properties) {
@@ -2306,7 +2322,9 @@ void WiFi::OnNewWiphy(const Nl80211Message &nl80211_message) {
   mac80211_monitor_->Start(phy_name_);
 
   wake_on_wifi_->ParseWakeOnWiFiCapabilities(nl80211_message);
-  wake_on_wifi_->ParseWiphyIndex(nl80211_message);
+  if (ParseWiphyIndex(nl80211_message)) {
+    wake_on_wifi_->OnWiphyIndexReceived(wiphy_index_);
+  }
 
   // The attributes, for this message, are complicated.
   // NL80211_ATTR_BANDS contains an array of bands...

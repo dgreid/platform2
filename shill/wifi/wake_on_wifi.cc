@@ -47,7 +47,6 @@ static std::string ObjectID(WakeOnWiFi *w) { return "(wake_on_wifi)"; }
 const char WakeOnWiFi::kWakeOnIPAddressPatternsNotSupported[] =
     "Wake on IP address patterns not supported by this WiFi device";
 const char WakeOnWiFi::kWakeOnWiFiNotSupported[] = "Wake on WiFi not supported";
-const uint32_t WakeOnWiFi::kDefaultWiphyIndex = 999;
 const int WakeOnWiFi::kVerifyWakeOnWiFiSettingsDelayMilliseconds = 300;
 const int WakeOnWiFi::kMaxSetWakeOnPacketRetries = 2;
 const int WakeOnWiFi::kMetricsReportingFrequencySeconds = 600;
@@ -77,7 +76,7 @@ WakeOnWiFi::WakeOnWiFi(NetlinkManager *netlink_manager,
       num_set_wake_on_packet_retries_(0),
       wake_on_wifi_max_patterns_(0),
       wake_on_wifi_max_ssids_(0),
-      wiphy_index_(kDefaultWiphyIndex),
+      wiphy_index_(0),
       wiphy_index_received_(false),
 #if defined(DISABLE_WAKE_ON_WIFI)
       wake_on_wifi_features_enabled_(kWakeOnWiFiFeaturesEnabledNotSupported),
@@ -884,6 +883,7 @@ void WakeOnWiFi::RequestWakeOnPacketSettings() {
   SLOG(this, 3) << __func__;
   Error e;
   GetWakeOnPacketConnMessage get_wowlan_msg;
+  CHECK(wiphy_index_received_);
   if (!ConfigureGetWakeOnWiFiSettingsMessage(&get_wowlan_msg, wiphy_index_,
                                              &e)) {
     LOG(ERROR) << e.message();
@@ -964,6 +964,7 @@ void WakeOnWiFi::DisableWakeOnWiFi() {
   SLOG(this, 3) << __func__;
   Error error;
   SetWakeOnPacketConnMessage disable_wowlan_msg;
+  CHECK(wiphy_index_received_);
   if (!ConfigureDisableWakeOnWiFiMessage(&disable_wowlan_msg, wiphy_index_,
                                          &error)) {
     LOG(ERROR) << error.message();
@@ -1115,20 +1116,6 @@ void WakeOnWiFi::ParseWakeOnWiFiCapabilities(
   }
 }
 
-void WakeOnWiFi::ParseWiphyIndex(const Nl80211Message &nl80211_message) {
-  // Verify NL80211_CMD_NEW_WIPHY.
-  if (nl80211_message.command() != NewWiphyMessage::kCommand) {
-    LOG(ERROR) << "Received unexpected command:" << nl80211_message.command();
-    return;
-  }
-  if (!nl80211_message.const_attributes()->GetU32AttributeValue(
-          NL80211_ATTR_WIPHY, &wiphy_index_)) {
-    LOG(ERROR) << "NL80211_CMD_NEW_WIPHY had no NL80211_ATTR_WIPHY";
-    return;
-  }
-  wiphy_index_received_ = true;
-}
-
 void WakeOnWiFi::OnWakeupReasonReceived(const NetlinkMessage &netlink_message) {
 #if defined(DISABLE_WAKE_ON_WIFI)
   SLOG(this, 7) << __func__ << ": "
@@ -1153,6 +1140,11 @@ void WakeOnWiFi::OnWakeupReasonReceived(const NetlinkMessage &netlink_message) {
   if (!wakeup_reason_msg.const_attributes()->GetU32AttributeValue(
           NL80211_ATTR_WIPHY, &wiphy_index)) {
     LOG(ERROR) << "NL80211_CMD_NEW_WIPHY had no NL80211_ATTR_WIPHY";
+    return;
+  }
+  if (!wiphy_index_received_) {
+    SLOG(this, 7) << __func__ << ": "
+                  << "Interface index not yet received";
     return;
   }
   if (wiphy_index != wiphy_index_) {
@@ -1542,6 +1534,11 @@ void WakeOnWiFi::OnNoAutoConnectableServicesAfterScan(
     BeforeSuspendActions(false, false, 0, remove_supplicant_networks_callback);
   }
 #endif  // DISABLE_WAKE_ON_WIFI
+}
+
+void WakeOnWiFi::OnWiphyIndexReceived(uint32_t index) {
+  wiphy_index_ = index;
+  wiphy_index_received_ = true;
 }
 
 }  // namespace shill
