@@ -1296,10 +1296,13 @@ void WakeOnWiFi::OnDarkResume(
     LOG(ERROR) << __func__ << ": "
                << "Too many dark resumes; disabling wake on WiFi";
     // If too many dark resumes have triggered recently, we are probably
-    // thrashing. Stop this by disabling wake on WiFi on the NIC and
-    // stopping all RTC timers that might trigger another dark resume.
+    // thrashing. Stop this by disabling wake on WiFi on the NIC, and
+    // starting the wake to scan timer so that normal wake on WiFi behavior
+    // resumes only |wake_to_scan_period_seconds_| later.
     dhcp_lease_renewal_timer_.Stop();
-    wake_to_scan_timer_.Stop();
+    wake_to_scan_timer_.Start(
+        FROM_HERE, base::TimeDelta::FromSeconds(wake_to_scan_period_seconds_),
+        Bind(&WakeOnWiFi::OnTimerWakeDoNothing, base::Unretained(this)));
     DisableWakeOnWiFi();
     dark_resume_history_.Clear();
     metrics_->NotifyWakeOnWiFiThrottled();

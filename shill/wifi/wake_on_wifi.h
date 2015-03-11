@@ -75,12 +75,12 @@ class WiFi;
 // +------+------+        |       |                          |     |
 //        | Yes           |       | Disconnect/           No |     | Yes
 //        v               |       |    SSID                  |     |
-// +----------------+     |       v                          |     |
-// |  Disable Wake  |     |     +------------+               |     v
-// |   on WiFi &    |     |     |  Initiate  |<--------------+    +--------+
-// |report readiness|     |     |passive scan|                    |Get DHCP|
-// +----------------+     |     +-+----------+           +------->| Lease  |
-//                        |       | ScanDone         Yes |        +--+---+-+
+// +-------------------+  |       v                          |     |
+// |  Disable Wake on  |  |     +------------+               |     v
+// |  WiFi, start wake |  |     |  Initiate  |<--------------+    +--------+
+// |  to scan timer &  |  |     |passive scan|                    |Get DHCP|
+// |  report readiness |  |     +-+----------+           +------->| Lease  |
+// +-------------------+  |       | ScanDone         Yes |        +--+---+-+
 //    +-------------------+       v                      |           |   |
 //    | Pattern                 +-------------+      +---------+     |   |
 //    |                    No   | Any services| Yes  |Connected|     |   |
