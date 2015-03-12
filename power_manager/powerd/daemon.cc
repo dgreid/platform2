@@ -855,7 +855,7 @@ void Daemon::InitDBus() {
       base::Bind(&Daemon::HandleDBusSignalConnected,
                  weak_ptr_factory_.GetWeakPtr()));
 
-  int64 tpm_threshold = 0;
+  int64_t tpm_threshold = 0;
   prefs_->GetInt64(kTpmCounterSuspendThresholdPref, &tpm_threshold);
   if (tpm_threshold > 0) {
     cryptohomed_dbus_proxy_ = bus_->GetObjectProxy(
@@ -864,6 +864,10 @@ void Daemon::InitDBus() {
     cryptohomed_dbus_proxy_->WaitForServiceToBeAvailable(
         base::Bind(&Daemon::HandleCryptohomedAvailable,
                    weak_ptr_factory_.GetWeakPtr()));
+
+    int64_t tpm_status_sec = 0;
+    prefs_->GetInt64(kTpmStatusIntervalSecPref, &tpm_status_sec);
+    tpm_status_interval_ = base::TimeDelta::FromSeconds(tpm_status_sec);
   }
 
   powerd_dbus_object_ = bus_->GetExportedObject(
@@ -1026,15 +1030,13 @@ void Daemon::HandleCryptohomedAvailable(bool available) {
     LOG(ERROR) << "Failed waiting for cryptohomed to become available";
     return;
   }
-  if (cryptohomed_dbus_proxy_) {
-    dbus::MethodCall method_call(cryptohome::kCryptohomeInterface,
-                                 cryptohome::kCryptohomeGetTpmStatus);
-    dbus::MessageWriter writer(&method_call);
-    writer.AppendProtoAsArrayOfBytes(cryptohome::GetTpmStatusRequest());
-    cryptohomed_dbus_proxy_->CallMethod(
-        &method_call, kCryptohomedDBusTimeoutMs,
-        base::Bind(&Daemon::HandleGetTpmStatusResponse,
-                   weak_ptr_factory_.GetWeakPtr()));
+  if (!cryptohomed_dbus_proxy_)
+    return;
+
+  RequestTpmStatus();
+  if (tpm_status_interval_ > base::TimeDelta::FromSeconds(0)) {
+    tpm_status_timer_.Start(FROM_HERE, tpm_status_interval_,
+                            this, &Daemon::RequestTpmStatus);
   }
 }
 
@@ -1432,6 +1434,18 @@ void Daemon::OnUpdateOperation(const std::string& operation) {
     state = UPDATER_UPDATED;
   }
   state_controller_->HandleUpdaterStateChange(state);
+}
+
+void Daemon::RequestTpmStatus() {
+  DCHECK(cryptohomed_dbus_proxy_);
+  dbus::MethodCall method_call(cryptohome::kCryptohomeInterface,
+                               cryptohome::kCryptohomeGetTpmStatus);
+  dbus::MessageWriter writer(&method_call);
+  writer.AppendProtoAsArrayOfBytes(cryptohome::GetTpmStatusRequest());
+  cryptohomed_dbus_proxy_->CallMethod(
+      &method_call, kCryptohomedDBusTimeoutMs,
+      base::Bind(&Daemon::HandleGetTpmStatusResponse,
+                 weak_ptr_factory_.GetWeakPtr()));
 }
 
 void Daemon::ShutDown(ShutdownMode mode, ShutdownReason reason) {

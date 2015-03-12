@@ -222,6 +222,10 @@ class Daemon : public policy::BacklightControllerObserver,
   // Handles the "operation" field from an update engine status message.
   void OnUpdateOperation(const std::string& operation);
 
+  // Asynchronously asks |cryptohomed_dbus_proxy| (which must be non-null) to
+  // return the TPM status, which is handled by HandleGetTpmStatusResponse().
+  void RequestTpmStatus();
+
   // Shuts the system down immediately.
   void ShutDown(ShutdownMode mode, ShutdownReason reason);
 
@@ -283,6 +287,13 @@ class Daemon : public policy::BacklightControllerObserver,
   // running flashrom process. ShutDown() is called repeatedly so the system
   // will eventually be shut down after flashrom exits.
   base::Timer retry_shutdown_for_flashrom_timer_;
+
+  // Timer that periodically calls RequestTpmStatus() if
+  // |cryptohome_dbus_proxy_| is non-null.
+  base::RepeatingTimer<Daemon> tpm_status_timer_;
+
+  // Delay with which |tpm_status_timer_| should fire.
+  base::TimeDelta tpm_status_interval_;
 
   // Path to a file that's touched when a suspend attempt's commencement is
   // announced to other processes and unlinked when the attempt's completion is

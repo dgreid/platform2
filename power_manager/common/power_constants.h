@@ -169,6 +169,9 @@ extern const char kUseCrasPref[];
 // http://crbug.com/462428). Set to 0 to disable querying the TPM.
 extern const char kTpmCounterSuspendThresholdPref[];
 
+// Time interval between fetches of the TPM status, in seconds.
+extern const char kTpmStatusIntervalSecPref[];
+
 // Miscellaneous constants.
 
 // Default directories where read/write and read-only powerd preference files
