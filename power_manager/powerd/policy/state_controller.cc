@@ -422,6 +422,9 @@ void StateController::HandleAudioStateChange(bool active) {
 }
 
 void StateController::HandleTpmStatus(int dictionary_attack_count) {
+  if (tpm_dictionary_attack_count_ == dictionary_attack_count)
+    return;
+
   tpm_dictionary_attack_count_ = dictionary_attack_count;
   UpdateSettingsAndState();
 }

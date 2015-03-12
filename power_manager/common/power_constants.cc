@@ -73,6 +73,7 @@ const char kMosysEventlogPref[] = "mosys_eventlog";
 const char kCheckActiveVTPref[] = "check_active_vt";
 const char kUseCrasPref[] = "use_cras";
 const char kTpmCounterSuspendThresholdPref[] = "tpm_counter_suspend_threshold";
+const char kTpmStatusIntervalSecPref[] = "tpm_status_interval_sec";
 
 // Miscellaneous constants.
 const char kReadWritePrefsDir[] = "/var/lib/power_manager";
