@@ -147,8 +147,13 @@ class DeviceRegistrationInfo : public base::MessageLoopForIO::Watcher {
   // Checks whether we have credentials generated during registration.
   bool HaveRegistrationCredentials(chromeos::ErrorPtr* error);
 
-  // Makes sure the access token is available and up-to-date.
-  bool ValidateAndRefreshAccessToken(chromeos::ErrorPtr* error);
+  // If we currently have an access token and it doesn't like like it
+  // has expired yet, returns true immediately. Otherwise calls
+  // RefreshAccessToken().
+  bool MaybeRefreshAccessToken(chromeos::ErrorPtr* error);
+
+  // Forcibly refreshes the access token.
+  bool RefreshAccessToken(chromeos::ErrorPtr* error);
 
   // Parse the OAuth response, and sets registration status to
   // kInvalidCredentials if our registration is no longer valid.
