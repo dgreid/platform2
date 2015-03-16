@@ -292,7 +292,7 @@ void DeviceRegistrationInfo::ScheduleStartDevice(const base::TimeDelta& later) {
 
 bool DeviceRegistrationInfo::CheckRegistration(chromeos::ErrorPtr* error) {
   return HaveRegistrationCredentials(error) &&
-         MaybeRefreshAccessToken(error);
+         ValidateAndRefreshAccessToken(error);
 }
 
 bool DeviceRegistrationInfo::HaveRegistrationCredentials(
@@ -310,7 +310,7 @@ bool DeviceRegistrationInfo::HaveRegistrationCredentials(
   return have_credentials;
 }
 
-bool DeviceRegistrationInfo::MaybeRefreshAccessToken(
+bool DeviceRegistrationInfo::ValidateAndRefreshAccessToken(
     chromeos::ErrorPtr* error) {
   LOG(INFO) << "Checking access token expiration.";
   if (!access_token_.empty() &&
@@ -319,12 +319,7 @@ bool DeviceRegistrationInfo::MaybeRefreshAccessToken(
     LOG(INFO) << "Access token is still valid.";
     return true;
   }
-  return RefreshAccessToken(error);
-}
 
-bool DeviceRegistrationInfo::RefreshAccessToken(
-    chromeos::ErrorPtr* error) {
-  LOG(INFO) << "Refreshing access token.";
   auto response = chromeos::http::PostFormDataAndBlock(GetOAuthURL("token"), {
     {"refresh_token", refresh_token_},
     {"client_id", client_id_},
@@ -691,8 +686,7 @@ void DeviceRegistrationInfo::DoCloudRequest(
     if (error->HasError(chromeos::errors::http::kDomain,
                         std::to_string(chromeos::http::status_code::Denied))) {
       chromeos::ErrorPtr reauthorization_error;
-      // Forcibly refresh the access token.
-      if (!self->RefreshAccessToken(&reauthorization_error)) {
+      if (!self->ValidateAndRefreshAccessToken(&reauthorization_error)) {
         // TODO(antonm): Check if the device has been actually removed.
         error_cb(request_id, reauthorization_error.get());
         return;
