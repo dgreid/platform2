@@ -2962,6 +2962,20 @@ void Service::AutoCleanupCallback() {
 }
 
 void Service::ResetDictionaryAttackMitigation() {
+  int counter = 0;
+  int threshold;
+  int seconds_remaining;
+  bool lockout;
+  if (!tpm_->GetDictionaryAttackInfo(&counter, &threshold, &lockout,
+                                     &seconds_remaining)) {
+    ReportDictionaryAttackResetStatus(kCounterQueryFailed);
+    return;
+  }
+  ReportDictionaryAttackCounter(counter);
+  if (counter == 0) {
+    ReportDictionaryAttackResetStatus(kResetNotNecessary);
+    return;
+  }
   chromeos::SecureBlob delegate_blob, delegate_secret;
   bool has_reset_lock_permissions = false;
   if (!attestation_->GetDelegateCredentials(&delegate_blob,
@@ -2972,19 +2986,6 @@ void Service::ResetDictionaryAttackMitigation() {
   }
   if (!has_reset_lock_permissions) {
     ReportDictionaryAttackResetStatus(kDelegateNotAllowed);
-    return;
-  }
-  int counter = 0;
-  int threshold;
-  int seconds_remaining;
-  bool lockout;
-  if (!tpm_->GetDictionaryAttackInfo(&counter, &threshold, &lockout,
-                                     &seconds_remaining)) {
-    ReportDictionaryAttackResetStatus(kCounterQueryFailed);
-    return;
-  }
-  if (counter == 0) {
-    ReportDictionaryAttackResetStatus(kResetNotNecessary);
     return;
   }
   if (!tpm_->ResetDictionaryAttackMitigation(delegate_blob, delegate_secret)) {

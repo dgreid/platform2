@@ -75,6 +75,10 @@ void ReportTimerStop(TimerType timer_type);
 // histogram.
 void ReportDictionaryAttackResetStatus(DictionaryAttackResetStatus status);
 
+// Reports a dictionary attack counter value to the
+// "Platform.TPM.DictionaryAttackCounter" histogram.
+void ReportDictionaryAttackCounter(int counter);
+
 // Initialization helper.
 class ScopedMetricsInitializer {
  public:

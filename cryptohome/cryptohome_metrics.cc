@@ -22,6 +22,9 @@ const int kCryptohomeErrorNumBuckets = 50;
 const char kDictionaryAttackResetStatusHistogram[] =
     "Platform.TPM.DictionaryAttackResetStatus";
 const int kDictionaryAttackResetStatusNumBuckets = 10;
+const char kDictionaryAttackCounterHistogram[] =
+    "Platform.TPM.DictionaryAttackCounter";
+const char kDictionaryAttackCounterNumBuckets = 100;
 
 // Histogram parameters. This should match the order of 'TimerType'.
 // Min and max samples are in milliseconds.
@@ -125,6 +128,15 @@ void ReportDictionaryAttackResetStatus(DictionaryAttackResetStatus status) {
   g_metrics->SendEnumToUMA(kDictionaryAttackResetStatusHistogram,
                            status,
                            kDictionaryAttackResetStatusNumBuckets);
+}
+
+void ReportDictionaryAttackCounter(int counter) {
+  if (!g_metrics) {
+    return;
+  }
+  g_metrics->SendEnumToUMA(kDictionaryAttackCounterHistogram,
+                           counter,
+                           kDictionaryAttackCounterNumBuckets);
 }
 
 }  // namespace cryptohome
