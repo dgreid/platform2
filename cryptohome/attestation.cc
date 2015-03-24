@@ -1931,12 +1931,14 @@ bool Attestation::CreateSignedPublicKey(
     return false;
 
   // Fill in the signature and algorithm.
-  buffer = reinterpret_cast<unsigned char*>(OPENSSL_malloc(signature.size()));
-  if (!buffer)
+  if (!ASN1_BIT_STRING_set(spki.get()->signature,
+                           reinterpret_cast<unsigned char*>(signature.data()),
+                           signature.size())) {
     return false;
-  memcpy(buffer, signature.data(), signature.size());
-  spki.get()->signature->data = buffer;
-  spki.get()->signature->length = signature.size();
+  }
+  // Be explicit that there are zero unused bits; otherwise i2d below will
+  // automatically detect unused bits but signatures require zero unused bits.
+  spki.get()->signature->flags = ASN1_STRING_FLAG_BITS_LEFT;
   X509_ALGOR_set0(spki.get()->sig_algor,
                   OBJ_nid2obj(NID_sha256WithRSAEncryption),
                   V_ASN1_NULL,
