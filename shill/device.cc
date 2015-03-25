@@ -845,7 +845,6 @@ void Device::PrependDNSServers(const IPAddress::Family family,
 void Device::OnIPConfigUpdated(const IPConfigRefPtr &ipconfig,
                                bool /*new_lease_acquired*/) {
   SLOG(this, 2) << __func__;
-  PrependDNSServersIntoIPConfig(ipconfig);
   if (selected_service_) {
     ipconfig->ApplyStaticIPParameters(
         selected_service_->mutable_static_ip_parameters());
@@ -860,6 +859,7 @@ void Device::OnIPConfigUpdated(const IPConfigRefPtr &ipconfig,
       ipconfig->ReleaseIP(IPConfig::kReleaseReasonStaticIP);
     }
   }
+  PrependDNSServersIntoIPConfig(ipconfig);
   SetupConnection(ipconfig);
   UpdateIPConfigsProperty();
 }

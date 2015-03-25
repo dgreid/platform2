@@ -1428,6 +1428,43 @@ TEST_F(DeviceTest, PrependIPv6DNSServers) {
   EXPECT_EQ(device_->ip6config()->properties().dns_servers, expected);
 }
 
+TEST_F(DeviceTest, PrependWithStaticConfiguration) {
+  MockManager manager(control_interface(), dispatcher(), metrics(), glib());
+  manager.set_mock_device_info(&device_info_);
+  manager.SetPrependDNSServers("8.8.8.8");
+  SetManager(&manager);
+
+  scoped_refptr<IPConfig> ipconfig = new IPConfig(control_interface(),
+                                                  kDeviceName);
+
+  scoped_refptr<MockService> service = new MockService(control_interface(),
+                                                       dispatcher(),
+                                                       metrics(),
+                                                       &manager);
+
+  EXPECT_CALL(*service, IsPortalDetectionDisabled())
+      .WillRepeatedly(Return(true));
+  SelectService(service);
+
+  auto parameters = service->mutable_static_ip_parameters();
+  parameters->args_.SetString(kAddressProperty, "1.1.1.1");
+  parameters->args_.SetStrings(kNameServersProperty,
+                               {"8.8.4.4", "8.8.8.8", "2.2.2.2"});
+  parameters->args_.SetInt(kPrefixlenProperty, 16);
+
+  scoped_refptr<MockConnection> connection = new MockConnection(&device_info_);
+  SetConnection(connection);
+
+  device_->set_ipconfig(ipconfig);
+  OnIPConfigUpdated(ipconfig.get());
+
+  // We expect that the prepend DNS servers have been added to the resolver set,
+  // and that the prepend servers (if present in the static configuration) have
+  // been pulled to the front.
+  const vector<string> servers = {"8.8.8.8", "8.8.4.4", "2.2.2.2"};
+  EXPECT_EQ(servers, device_->ipconfig()->properties().dns_servers);
+}
+
 class DevicePortalDetectionTest : public DeviceTest {
  public:
   DevicePortalDetectionTest()
