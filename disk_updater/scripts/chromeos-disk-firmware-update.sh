@@ -134,7 +134,7 @@ disk_hdparm_info() {
 #
 disk_mmc_info() {
   # Some vendor use hexa decimal character for indentification.
-  disk_model=$(cat "/sys/block/$1/device/cid" | tail -c +7 | head -c 12)
+  disk_model=$(cat "/sys/block/$1/device/cid" | cut -c 7-18)
   disk_fw_rev=$(cat "/sys/block/$1/device/fwrev")
   if [ -z "${disk_model}" -o -z "${disk_fw_rev}" ]; then
     return 1
