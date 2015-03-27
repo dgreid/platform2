@@ -2087,8 +2087,9 @@ bool Attestation::GetCachedEndorsementData(
     return false;
   }
   const TPMCredentials& credentials = database_pb_.credentials();
-  if (!credentials.has_endorsement_public_key() ||
-      !credentials.has_endorsement_credential()) {
+  // If the TPM is not owned it's possible we have access to the public key but
+  // not to the certificate.
+  if (!credentials.has_endorsement_public_key()) {
     return false;
   }
   SecureBlob tmp_public_key(credentials.endorsement_public_key());
@@ -2096,6 +2097,24 @@ bool Attestation::GetCachedEndorsementData(
   SecureBlob tmp_credential(credentials.endorsement_credential());
   ek_certificate->swap(tmp_credential);
   return true;
+}
+
+void Attestation::CacheEndorsementData() {
+  // Before taking ownership we can only cache the public key. After taking
+  // ownership this is taken care of by the prepare-for-enrollment process.
+  if (tpm_->IsOwned() ||
+      (database_pb_.has_credentials() &&
+       database_pb_.credentials().has_endorsement_public_key())) {
+    return;
+  }
+  SecureBlob public_key_blob;
+  if (!tpm_->GetEndorsementPublicKey(&public_key_blob)) {
+    LOG(WARNING) << "TPM is not owned but failed to cache EK public key.";
+    return;
+  }
+  database_pb_.mutable_credentials()->set_endorsement_public_key(
+      public_key_blob.data(),
+      public_key_blob.size());
 }
 
 bool Attestation::IsTPMReady() {

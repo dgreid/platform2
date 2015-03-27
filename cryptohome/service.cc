@@ -389,6 +389,7 @@ bool Service::Initialize() {
     if (!SeedUrandom()) {
       LOG(ERROR) << "FAILED TO SEED /dev/urandom AT START";
     }
+    attestation_->CacheEndorsementData();
     chromeos::SecureBlob password;
     if (tpm_init_->IsTpmReady() && tpm_init_->GetTpmPassword(&password)) {
       attestation_->PrepareForEnrollmentAsync();
@@ -2883,7 +2884,9 @@ void Service::DoGetEndorsementInfo(const chromeos::SecureBlob& request,
     GetEndorsementInfoReply* extension = reply.MutableExtension(
         GetEndorsementInfoReply::reply);
     extension->set_ek_public_key(public_key.to_string());
-    extension->set_ek_certificate(certificate.to_string());
+    if (!certificate.empty()) {
+      extension->set_ek_certificate(certificate.to_string());
+    }
   } else {
     reply.set_error(CRYPTOHOME_ERROR_TPM_EK_NOT_AVAILABLE);
   }

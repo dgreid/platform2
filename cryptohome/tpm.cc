@@ -1420,16 +1420,23 @@ bool Tpm::PerformEnabledOwnedCheck(bool* enabled, bool* owned) {
 }
 
 bool Tpm::GetEndorsementPublicKey(SecureBlob* ek_public_key) {
-  // Connect to the TPM as the owner.
+  // Connect to the TPM as the owner if owned, user otherwise.
   ScopedTssContext context_handle;
   TSS_HTPM tpm_handle;
-  if (!ConnectContextAsOwner(context_handle.ptr(), &tpm_handle)) {
-    LOG(ERROR) << "GetEndorsementPublicKey: Could not connect to the TPM.";
-    return false;
+  if (is_owned_) {
+    if (!ConnectContextAsOwner(context_handle.ptr(), &tpm_handle)) {
+      LOG(ERROR) << "GetEndorsementPublicKey: Could not connect to the TPM.";
+      return false;
+    }
+  } else {
+    if (!ConnectContextAsUser(context_handle.ptr(), &tpm_handle)) {
+      LOG(ERROR) << "GetEndorsementPublicKey: Could not connect to the TPM.";
+      return false;
+    }
   }
   // Get a handle to the EK public key.
   ScopedTssKey ek_public_key_object(context_handle);
-  TSS_RESULT result = Tspi_TPM_GetPubEndorsementKey(tpm_handle, true, NULL,
+  TSS_RESULT result = Tspi_TPM_GetPubEndorsementKey(tpm_handle, is_owned_, NULL,
                                                     ek_public_key_object.ptr());
   if (TPM_ERROR(result)) {
     TPM_LOG(ERROR, result) << "GetEndorsementPublicKey: Failed to get key.";

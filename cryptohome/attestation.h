@@ -336,10 +336,15 @@ class Attestation : public base::PlatformThread::Delegate,
                                       chromeos::SecureBlob* secret,
                                       bool* has_reset_lock_permissions);
 
-  // Provides cached |ek_public_key| and |ek_certificate| if they exist,
-  // otherwise returns false.
+  // Provides cached |ek_public_key| and |ek_certificate| if they exist. If only
+  // the public key is found then it will be provided and the certificate will
+  // be empty. Returns false if the public key is not found (i.e. not cached).
   virtual bool GetCachedEndorsementData(chromeos::SecureBlob* ek_public_key,
                                         chromeos::SecureBlob* ek_certificate);
+
+  // Caches the endorsement public key if the TPM is not owned. If the TPM is
+  // owned or the public key is already known this will have no effect.
+  virtual void CacheEndorsementData();
 
   // Sets an alternative attestation database location. Useful in testing.
   virtual void set_database_path(const char* path) {
