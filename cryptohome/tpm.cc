@@ -11,6 +11,31 @@ namespace cryptohome {
 Tpm* Tpm::singleton_ = NULL;
 base::Lock Tpm::singleton_lock_;
 
+ScopedKeyHandle::ScopedKeyHandle()
+    : tpm_(nullptr), handle_(kInvalidKeyHandle) {}
+
+ScopedKeyHandle::~ScopedKeyHandle() {
+  if (tpm_ != nullptr && handle_ != kInvalidKeyHandle) {
+    tpm_->CloseHandle(handle_);
+  }
+}
+
+TpmKeyHandle ScopedKeyHandle::value() {
+  return handle_;
+}
+
+TpmKeyHandle ScopedKeyHandle::release() {
+  TpmKeyHandle return_handle = handle_;
+  tpm_ = nullptr;
+  handle_ = kInvalidKeyHandle;
+  return return_handle;
+}
+
+void ScopedKeyHandle::reset(Tpm* tpm, TpmKeyHandle handle) {
+  tpm_ = tpm;
+  handle_ = handle;
+}
+
 Tpm* Tpm::GetSingleton() {
   // TODO(fes): Replace with a better atomic operation
   singleton_lock_.Acquire();

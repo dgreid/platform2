@@ -1,6 +1,7 @@
 // Copyright (c) 2012 The Chromium OS Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
 #ifndef CRYPTOHOME_STUB_TPM_H_
 #define CRYPTOHOME_STUB_TPM_H_
 
@@ -19,20 +20,17 @@ class StubTpm : public Tpm {
   ~StubTpm() override { }
 
   // See tpm.h for comments
-  TpmRetryAction EncryptBlob(TSS_HCONTEXT context_handle,
-                             TSS_HKEY key_handle,
+  TpmRetryAction EncryptBlob(TpmKeyHandle key_handle,
                              const SecureBlob& plaintext,
                              const SecureBlob& key,
                              SecureBlob* ciphertext) override
     { return kTpmRetryFatal; }
-  TpmRetryAction DecryptBlob(TSS_HCONTEXT context_handle,
-                             TSS_HKEY key_handle,
+  TpmRetryAction DecryptBlob(TpmKeyHandle key_handle,
                              const SecureBlob& ciphertext,
                              const SecureBlob& key,
                              SecureBlob* plaintext) override
     { return kTpmRetryFatal; }
-  TpmRetryAction GetPublicKeyHash(TSS_HCONTEXT context_handle,
-                                  TSS_HKEY key_handle,
+  TpmRetryAction GetPublicKeyHash(TpmKeyHandle key_handle,
                                   SecureBlob* hash) override
     { return kTpmRetryNone; }
   bool IsEnabled() const override { return false; }
@@ -115,39 +113,27 @@ class StubTpm : public Tpm {
   bool ExtendPCR(int pcr_index, const SecureBlob& extension) override
     { return false; }
   bool ReadPCR(int pcr_index, SecureBlob* pcr_value) override { return false; }
-  TSS_HCONTEXT ConnectContext() override { return 0; }
-  void CloseContext(TSS_HCONTEXT context_handle) const override {}
-  bool IsEndorsementKeyAvailable(TSS_HCONTEXT context_handle) override
-    { return false; }
-  bool CreateEndorsementKey(TSS_HCONTEXT context_handle) override
-    { return false; }
-  bool TakeOwnership(TSS_HCONTEXT context_handle,
-                     int max_timeout_tries,
+  bool IsEndorsementKeyAvailable() override { return false; }
+  bool CreateEndorsementKey() override { return false; }
+  bool TakeOwnership(int max_timeout_tries,
                      const SecureBlob& owner_password) override
     { return false; }
-  bool InitializeSrk(TSS_HCONTEXT context_handle,
-                     const SecureBlob& owner_password) override
+  bool InitializeSrk(const SecureBlob& owner_password) override
     { return false; }
-  bool ChangeOwnerPassword(TSS_HCONTEXT context_handle,
-                           const SecureBlob& previous_owner_password,
+  bool ChangeOwnerPassword(const SecureBlob& previous_owner_password,
                            const SecureBlob& owner_password) override
     { return false; }
-  bool TestTpmAuth(TSS_HCONTEXT context_handle,
-                   const SecureBlob& owner_password) override { return false; }
+  bool TestTpmAuth(const SecureBlob& owner_password) override { return false; }
   void SetOwnerPassword(const SecureBlob& owner_password) override {}
   bool IsTransient(TpmRetryAction retry_action) override { return false; }
-  bool CreateWrappedRsaKey(TSS_HCONTEXT context_handle,
-                           SecureBlob* wrapped_key) override { return false; }
-  TpmRetryAction LoadWrappedKey(TSS_HCONTEXT context_handle,
-                                const SecureBlob& wrapped_key,
-                                TSS_HKEY* key_handle) const override
+  bool CreateWrappedRsaKey(SecureBlob* wrapped_key) override { return false; }
+  TpmRetryAction LoadWrappedKey(const SecureBlob& wrapped_key,
+                                ScopedKeyHandle* key_handle) override
     { return kTpmRetryFatal; }
-  bool LoadKeyByUuid(TSS_HCONTEXT context_handle,
-                     TSS_UUID key_uuid,
-                     TSS_HKEY* key_handle,
-                     SecureBlob* key_blob) const override { return false; }
-  void GetStatus(
-      TSS_HCONTEXT context, TSS_HKEY key, TpmStatusInfo* status) override {}
+  bool LegacyLoadCryptohomeKey(ScopedKeyHandle* key_handle,
+                               SecureBlob* key_blob) override { return false; }
+  void CloseHandle(TpmKeyHandle key_handle) override {};
+  void GetStatus(TpmKeyHandle key, TpmStatusInfo* status) override {}
   bool GetDictionaryAttackInfo(int* counter,
                                int* threshold,
                                bool* lockout,

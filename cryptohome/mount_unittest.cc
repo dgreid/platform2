@@ -84,19 +84,19 @@ ACTION_P(SetEphemeralUsersEnabled, ephemeral_users_enabled) {
 }
 
 // Straight pass through.
-Tpm::TpmRetryAction TpmPassthroughEncrypt(
-    TSS_HCONTEXT _context, TSS_HKEY _key,
-    const chromeos::SecureBlob &plaintext, Unused,
-    chromeos::SecureBlob *ciphertext) {
+Tpm::TpmRetryAction TpmPassthroughEncrypt(uint32_t _key,
+                                          const SecureBlob &plaintext,
+                                          Unused,
+                                          SecureBlob *ciphertext) {
   ciphertext->resize(plaintext.size());
   memcpy(ciphertext->data(), plaintext.data(), plaintext.size());
   return Tpm::kTpmRetryNone;
 }
 
-Tpm::TpmRetryAction TpmPassthroughDecrypt(
-    TSS_HCONTEXT _context, TSS_HKEY _key,
-    const chromeos::SecureBlob &ciphertext, Unused,
-    chromeos::SecureBlob *plaintext) {
+Tpm::TpmRetryAction TpmPassthroughDecrypt(uint32_t _key,
+                                          const SecureBlob &ciphertext,
+                                          Unused,
+                                          SecureBlob *plaintext) {
   plaintext->resize(ciphertext.size());
   memcpy(plaintext->data(), ciphertext.data(), ciphertext.size());
   return Tpm::kTpmRetryNone;
@@ -755,11 +755,11 @@ TEST_F(MountTest, GoodReDecryptTest) {
     .WillOnce(Return(true));
 
   // Create the "TPM-wrapped" value by letting it save the plaintext.
-  EXPECT_CALL(tpm_, EncryptBlob(_, _, _, _, _))
+  EXPECT_CALL(tpm_, EncryptBlob(_, _, _, _))
     .WillRepeatedly(Invoke(TpmPassthroughEncrypt));
   chromeos::SecureBlob fake_pub_key("A");
-  EXPECT_CALL(tpm_, GetPublicKeyHash(_, _, _))
-    .WillRepeatedly(DoAll(SetArgumentPointee<2>(fake_pub_key),
+  EXPECT_CALL(tpm_, GetPublicKeyHash(_, _))
+    .WillRepeatedly(DoAll(SetArgumentPointee<1>(fake_pub_key),
                           Return(Tpm::kTpmRetryNone)));
 
   chromeos::Blob migrated_keyset;
@@ -797,7 +797,7 @@ TEST_F(MountTest, GoodReDecryptTest) {
   EXPECT_CALL(platform_, ReadFile(user->salt_path, _))
     .WillRepeatedly(DoAll(SetArgumentPointee<1>(user->user_salt),
                           Return(true)));
-  EXPECT_CALL(tpm_, DecryptBlob(_, _, _, _, _))
+  EXPECT_CALL(tpm_, DecryptBlob(_, _, _, _))
     .WillRepeatedly(Invoke(TpmPassthroughDecrypt));
 
     MockFileEnumerator* files = new MockFileEnumerator();

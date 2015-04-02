@@ -273,7 +273,6 @@ bool Crypto::IsTPMPubkeyHash(const string& hash,
                              CryptoError* error) const {
   SecureBlob pub_key_hash;
   Tpm::TpmRetryAction retry_action = tpm_->GetPublicKeyHash(
-      tpm_init_->GetCryptohomeContext(),
       tpm_init_->GetCryptohomeKey(),
       &pub_key_hash);
   if (retry_action == Tpm::kTpmRetryLoadFail) {
@@ -281,8 +280,7 @@ bool Crypto::IsTPMPubkeyHash(const string& hash,
       LOG(ERROR) << "Unable to reload key.";
       retry_action = Tpm::kTpmRetryFatal;
     } else {
-      retry_action = tpm_->GetPublicKeyHash(tpm_init_->GetCryptohomeContext(),
-                                            tpm_init_->GetCryptohomeKey(),
+      retry_action = tpm_->GetPublicKeyHash(tpm_init_->GetCryptohomeKey(),
                                             &pub_key_hash);
     }
   }
@@ -376,7 +374,6 @@ bool Crypto::DecryptTPM(const SerializedVaultKeyset& serialized,
   SecureBlob key;
   CryptoLib::PasskeyToAesKey(vault_key, salt, rounds, &key, NULL);
   Tpm::TpmRetryAction retry_action = tpm_->DecryptBlob(
-      tpm_init_->GetCryptohomeContext(),
       tpm_init_->GetCryptohomeKey(),
       tpm_key,
       key,
@@ -386,8 +383,7 @@ bool Crypto::DecryptTPM(const SerializedVaultKeyset& serialized,
       LOG(ERROR) << "Unable to reload Cryptohome key.";
       retry_action = Tpm::kTpmRetryFatal;
     } else {
-      retry_action = tpm_->DecryptBlob(tpm_init_->GetCryptohomeContext(),
-                                       tpm_init_->GetCryptohomeKey(),
+      retry_action = tpm_->DecryptBlob(tpm_init_->GetCryptohomeKey(),
                                        tpm_key,
                                        key,
                                        &local_vault_key);
@@ -603,8 +599,7 @@ bool Crypto::EncryptTPM(const VaultKeyset& vault_keyset,
   // Encrypt the VKK using the TPM and the user's passkey.  The output is an
   // encrypted blob in tpm_key, which is stored in the serialized vault
   // keyset.
-  if (tpm_->EncryptBlob(tpm_init_->GetCryptohomeContext(),
-                        tpm_init_->GetCryptohomeKey(),
+  if (tpm_->EncryptBlob(tpm_init_->GetCryptohomeKey(),
                         local_blob,
                         derived_key,
                         &tpm_key) != Tpm::kTpmRetryNone) {
@@ -637,8 +632,7 @@ bool Crypto::EncryptTPM(const VaultKeyset& vault_keyset,
   // detect a TPM clear.  If this fails due to a transient issue, then on next
   // successful login, the vault keyset will be re-saved anyway.
   SecureBlob pub_key_hash;
-  if (tpm_->GetPublicKeyHash(tpm_init_->GetCryptohomeContext(),
-                             tpm_init_->GetCryptohomeKey(),
+  if (tpm_->GetPublicKeyHash(tpm_init_->GetCryptohomeKey(),
                              &pub_key_hash) == Tpm::kTpmRetryNone)
     serialized->set_tpm_public_key_hash(pub_key_hash.data(),
                                         pub_key_hash.size());

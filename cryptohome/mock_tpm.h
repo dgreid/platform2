@@ -24,16 +24,15 @@ class MockTpm : public Tpm {
  public:
   MockTpm();
   ~MockTpm();
-  MOCK_METHOD5(EncryptBlob, TpmRetryAction(TSS_HCONTEXT, TSS_HKEY,
+  MOCK_METHOD4(EncryptBlob, TpmRetryAction(TpmKeyHandle,
                                            const chromeos::SecureBlob&,
                                            const chromeos::SecureBlob&,
                                            chromeos::SecureBlob*));
-  MOCK_METHOD5(DecryptBlob, TpmRetryAction(TSS_HCONTEXT, TSS_HKEY,
+  MOCK_METHOD4(DecryptBlob, TpmRetryAction(TpmKeyHandle,
                                            const chromeos::SecureBlob&,
                                            const chromeos::SecureBlob&,
                                            chromeos::SecureBlob*));
-  MOCK_METHOD3(GetPublicKeyHash, TpmRetryAction(TSS_HCONTEXT,
-                                                TSS_HKEY,
+  MOCK_METHOD2(GetPublicKeyHash, TpmRetryAction(TpmKeyHandle,
                                                 chromeos::SecureBlob*));
   MOCK_METHOD1(GetOwnerPassword, bool(chromeos::Blob*));
   MOCK_CONST_METHOD0(IsEnabled, bool());
@@ -100,34 +99,28 @@ class MockTpm : public Tpm {
                                        const chromeos::SecureBlob&));
   MOCK_METHOD2(ExtendPCR, bool(int, const chromeos::SecureBlob&));
   MOCK_METHOD2(ReadPCR, bool(int, chromeos::SecureBlob*));
-  MOCK_METHOD0(ConnectContext, TSS_HCONTEXT());
-  MOCK_CONST_METHOD1(CloseContext, void(TSS_HCONTEXT));
-  MOCK_METHOD1(IsEndorsementKeyAvailable, bool(TSS_HCONTEXT));
-  MOCK_METHOD1(CreateEndorsementKey, bool(TSS_HCONTEXT));
-  MOCK_METHOD3(TakeOwnership, bool(TSS_HCONTEXT, int,
-                                   const chromeos::SecureBlob&));
-  MOCK_METHOD2(InitializeSrk, bool(TSS_HCONTEXT, const chromeos::SecureBlob&));
-  MOCK_METHOD3(ChangeOwnerPassword, bool(TSS_HCONTEXT,
-                                         const chromeos::SecureBlob&,
+  MOCK_METHOD0(IsEndorsementKeyAvailable, bool());
+  MOCK_METHOD0(CreateEndorsementKey, bool());
+  MOCK_METHOD2(TakeOwnership, bool(int, const chromeos::SecureBlob&));
+  MOCK_METHOD1(InitializeSrk, bool(const chromeos::SecureBlob&));
+  MOCK_METHOD2(ChangeOwnerPassword, bool(const chromeos::SecureBlob&,
                                          const chromeos::SecureBlob&));
-  MOCK_METHOD2(TestTpmAuth, bool(TSS_HCONTEXT, const chromeos::SecureBlob&));
+  MOCK_METHOD1(TestTpmAuth, bool(const chromeos::SecureBlob&));
   MOCK_METHOD1(SetOwnerPassword, void(const chromeos::SecureBlob&));
   MOCK_METHOD1(IsTransient, bool(TpmRetryAction));
-  MOCK_METHOD2(CreateWrappedRsaKey, bool(TSS_HCONTEXT,
-                                         chromeos::SecureBlob*));
-  MOCK_CONST_METHOD3(LoadWrappedKey, TpmRetryAction(TSS_HCONTEXT,
-                                                    const chromeos::SecureBlob&,
-                                                    TSS_HKEY*));
-  MOCK_CONST_METHOD4(LoadKeyByUuid, bool(TSS_HCONTEXT, TSS_UUID, TSS_HKEY*,
-                                         chromeos::SecureBlob*));
-  MOCK_METHOD3(GetStatus, void(TSS_HCONTEXT, TSS_HKEY, TpmStatusInfo*));
+  MOCK_METHOD1(CreateWrappedRsaKey, bool(chromeos::SecureBlob*));
+  MOCK_METHOD2(LoadWrappedKey, TpmRetryAction(const chromeos::SecureBlob&,
+                                              ScopedKeyHandle*));
+  MOCK_METHOD2(LegacyLoadCryptohomeKey, bool(ScopedKeyHandle*,
+                                             chromeos::SecureBlob*));
+  MOCK_METHOD1(CloseHandle, void(TpmKeyHandle));
+  MOCK_METHOD2(GetStatus, void(TpmKeyHandle, TpmStatusInfo*));
   MOCK_METHOD4(GetDictionaryAttackInfo, bool(int*, int*, bool*, int*));
   MOCK_METHOD2(ResetDictionaryAttackMitigation,
                bool(const chromeos::SecureBlob&, const chromeos::SecureBlob&));
 
  private:
-  TpmRetryAction Xor(TSS_HCONTEXT _context,
-                     TSS_HKEY _key,
+  TpmRetryAction Xor(TpmKeyHandle _key,
                      const chromeos::SecureBlob& plaintext,
                      const chromeos::SecureBlob& key,
                      chromeos::SecureBlob* ciphertext) {

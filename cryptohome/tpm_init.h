@@ -9,7 +9,6 @@
 #include <base/macros.h>
 #include <base/memory/scoped_ptr.h>
 #include <chromeos/secure_blob.h>
-#include <trousers/scoped_tss_type.h>
 
 #include "cryptohome/tpm.h"
 
@@ -120,9 +119,7 @@ class TpmInit {
 
   virtual bool HasCryptohomeKey();
 
-  virtual TSS_HCONTEXT GetCryptohomeContext();
-
-  virtual TSS_HKEY GetCryptohomeKey();
+  virtual TpmKeyHandle GetCryptohomeKey();
 
   virtual bool ReloadCryptohomeKey();
 
@@ -162,12 +159,11 @@ class TpmInit {
 
   bool SaveCryptohomeKey(const chromeos::SecureBlob& wrapped_key);
 
-  bool LoadCryptohomeKey(TSS_HCONTEXT context_handle, TSS_HKEY* key_handle);
+  bool LoadCryptohomeKey(ScopedKeyHandle* key_handle);
 
-  bool CreateCryptohomeKey(TSS_HCONTEXT context_handle);
+  bool CreateCryptohomeKey();
 
-  bool LoadOrCreateCryptohomeKey(TSS_HCONTEXT context_handle,
-                                 TSS_HKEY* key_handle);
+  bool LoadOrCreateCryptohomeKey(ScopedKeyHandle* key_handle);
 
   // Returns true if the first byte of the file |file_name| is "1"
   bool CheckSysfsForOne(const char* file_name) const;
@@ -183,8 +179,7 @@ class TpmInit {
   bool initialize_took_ownership_;
   int64_t initialization_time_;
   Platform* platform_;
-  trousers::ScopedTssContext cryptohome_context_;
-  trousers::ScopedTssKey cryptohome_key_;
+  ScopedKeyHandle cryptohome_key_;
 
   DISALLOW_COPY_AND_ASSIGN(TpmInit);
 };

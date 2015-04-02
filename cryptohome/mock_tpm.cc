@@ -14,11 +14,11 @@ using testing::Return;
 namespace cryptohome {
 
 MockTpm::MockTpm() {
-  ON_CALL(*this, EncryptBlob(_, _, _, _, _))
+  ON_CALL(*this, EncryptBlob(_, _, _, _))
       .WillByDefault(Invoke(this, &MockTpm::Xor));
-  ON_CALL(*this, DecryptBlob(_, _, _, _, _))
+  ON_CALL(*this, DecryptBlob(_, _, _, _))
       .WillByDefault(Invoke(this, &MockTpm::Xor));
-  ON_CALL(*this, GetPublicKeyHash(_, _, _))
+  ON_CALL(*this, GetPublicKeyHash(_, _))
       .WillByDefault(Return(kTpmRetryNone));
   ON_CALL(*this, GetEndorsementPublicKey(_))
       .WillByDefault(Return(true));

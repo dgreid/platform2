@@ -3011,8 +3011,7 @@ gboolean Service::GetStatusString(gchar** OUT_status, GError** error) {
   base::Value* attrs = install_attrs_->GetStatus();
 
   Tpm::TpmStatusInfo tpm_status_info;
-  tpm_->GetStatus(tpm_init_->GetCryptohomeContext(),
-                  tpm_init_->GetCryptohomeKey(),
+  tpm_->GetStatus(tpm_init_->GetCryptohomeKey(),
                   &tpm_status_info);
   base::DictionaryValue* tpm = new base::DictionaryValue();
   tpm->SetBoolean("can_connect", tpm_status_info.can_connect);

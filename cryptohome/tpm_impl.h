@@ -2,10 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "cryptohome/tpm.h"
-
 #ifndef CRYPTOHOME_TPM_IMPL_H_
 #define CRYPTOHOME_TPM_IMPL_H_
+
+#include "cryptohome/tpm.h"
+
+#include <trousers/scoped_tss_type.h>
+#include <trousers/tss.h>
+#include <trousers/trousers.h>  // NOLINT(build/include_alpha)
 
 namespace cryptohome {
 
@@ -14,18 +18,15 @@ class TpmImpl : public Tpm {
   TpmImpl();
   virtual ~TpmImpl();
   // Tpm methods
-  TpmRetryAction EncryptBlob(TSS_HCONTEXT context_handle,
-                             TSS_HKEY key_handle,
+  TpmRetryAction EncryptBlob(TpmKeyHandle key_handle,
                              const chromeos::SecureBlob& plaintext,
                              const chromeos::SecureBlob& key,
                              chromeos::SecureBlob* ciphertext) override;
-  TpmRetryAction DecryptBlob(TSS_HCONTEXT context_handle,
-                             TSS_HKEY key_handle,
+  TpmRetryAction DecryptBlob(TpmKeyHandle key_handle,
                              const chromeos::SecureBlob& ciphertext,
                              const chromeos::SecureBlob& key,
                              chromeos::SecureBlob* plaintext) override;
-  TpmRetryAction GetPublicKeyHash(TSS_HCONTEXT context_handle,
-                                  TSS_HKEY key_handle,
+  TpmRetryAction GetPublicKeyHash(TpmKeyHandle key_handle,
                                   chromeos::SecureBlob* hash) override;
   bool GetOwnerPassword(chromeos::Blob* owner_password) override;
   bool IsEnabled() const override { return !is_disabled_; }
@@ -95,33 +96,23 @@ class TpmImpl : public Tpm {
                          const chromeos::SecureBlob& key_blob) override;
   bool ExtendPCR(int pcr_index, const chromeos::SecureBlob& extension) override;
   bool ReadPCR(int pcr_index, chromeos::SecureBlob* pcr_value) override;
-  TSS_HCONTEXT ConnectContext() override;
-  void CloseContext(TSS_HCONTEXT context_handle) const override;
-  bool IsEndorsementKeyAvailable(TSS_HCONTEXT context_handle) override;
-  bool CreateEndorsementKey(TSS_HCONTEXT context_handle) override;
-  bool TakeOwnership(TSS_HCONTEXT context_handle, int max_timeout_tries,
+  bool IsEndorsementKeyAvailable() override;
+  bool CreateEndorsementKey() override;
+  bool TakeOwnership(int max_timeout_tries,
                      const chromeos::SecureBlob& owner_password) override;
-  bool InitializeSrk(TSS_HCONTEXT context_handle,
-                     const chromeos::SecureBlob& owner_password) override;
-  bool ChangeOwnerPassword(TSS_HCONTEXT context_handle,
-                           const chromeos::SecureBlob& previous_owner_password,
+  bool InitializeSrk(const chromeos::SecureBlob& owner_password) override;
+  bool ChangeOwnerPassword(const chromeos::SecureBlob& previous_owner_password,
                            const chromeos::SecureBlob& owner_password) override;
-  bool TestTpmAuth(TSS_HCONTEXT context_handle,
-                   const chromeos::SecureBlob& owner_password) override;
+  bool TestTpmAuth(const chromeos::SecureBlob& owner_password) override;
   void SetOwnerPassword(const chromeos::SecureBlob& owner_password) override;
   bool IsTransient(TpmRetryAction retry_action) override;
-  bool CreateWrappedRsaKey(TSS_HCONTEXT context_handle,
-                           chromeos::SecureBlob* wrapped_key) override;
-  TpmRetryAction LoadWrappedKey(TSS_HCONTEXT context_handle,
-                                const chromeos::SecureBlob& wrapped_key,
-                                TSS_HKEY* key_handle) const override;
-  bool LoadKeyByUuid(TSS_HCONTEXT context_handle,
-                     TSS_UUID key_uuid,
-                     TSS_HKEY* key_handle,
-                     chromeos::SecureBlob* key_blob) const override;
-  void GetStatus(TSS_HCONTEXT context,
-                 TSS_HKEY key,
-                 TpmStatusInfo* status) override;
+  bool CreateWrappedRsaKey(chromeos::SecureBlob* wrapped_key) override;
+  TpmRetryAction LoadWrappedKey(const chromeos::SecureBlob& wrapped_key,
+                                ScopedKeyHandle* key_handle) override;
+  bool LegacyLoadCryptohomeKey(ScopedKeyHandle* key_handle,
+                               chromeos::SecureBlob* key_blob) override;
+  void CloseHandle(TpmKeyHandle key_handle) override;
+  void GetStatus(TpmKeyHandle key, TpmStatusInfo* status) override;
   bool GetDictionaryAttackInfo(int* counter,
                                int* threshold,
                                bool* lockout,
@@ -166,6 +157,9 @@ class TpmImpl : public Tpm {
   //   owner_password - The owner password for the TPM
   bool UnrestrictSrk(TSS_HCONTEXT context_handle,
                      const chromeos::SecureBlob& owner_password);
+
+  // Tries to connect to the TPM
+  TSS_HCONTEXT ConnectContext();
 
   // Populates |context_handle| with a valid TSS_HCONTEXT and |tpm_handle| with
   // its matching TPM object iff the owner password is available and
@@ -325,6 +319,9 @@ class TpmImpl : public Tpm {
 
   // Indicates if the TPM is being owned
   bool is_being_owned_;
+
+  // Tpm Context information
+  trousers::ScopedTssContext tpm_context_;
 
   DISALLOW_COPY_AND_ASSIGN(TpmImpl);
 };

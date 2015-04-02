@@ -38,8 +38,6 @@ const char kDefaultCryptohomeKeyFile[] = "/home/.shadow/cryptohome.key";
 
 const int kOwnerPasswordLength = 12;
 const char kTpmWellKnownPassword[] = TSS_WELL_KNOWN_SECRET;
-const TSS_UUID kCryptohomeWellKnownUuid = {0x0203040b, 0, 0, 0, 0,
-                                           {0, 9, 8, 1, 0, 3}};
 
 // TpmInitTask is a private class used to handle asynchronous initialization of
 // the TPM.
@@ -83,9 +81,7 @@ TpmInit::TpmInit(Tpm* tpm, Platform* platform)
       initialize_called_(false),
       initialize_took_ownership_(false),
       initialization_time_(0),
-      platform_(platform),
-      cryptohome_context_(0),
-      cryptohome_key_(0, 0) {
+      platform_(platform) {
   set_tpm(tpm);
 }
 
@@ -255,19 +251,8 @@ bool TpmInit::SetupTpm(bool load_key) {
 
   if (load_key) {
     // load cryptohome key
-    TSS_HCONTEXT context_handle = get_tpm()->ConnectContext();
-    if (context_handle) {
-      TSS_HKEY key_handle;
-      if (LoadOrCreateCryptohomeKey(
-          context_handle, &key_handle)) {
-        cryptohome_context_.reset(0, context_handle);
-        cryptohome_key_.reset(context_handle, key_handle);
-      } else {
-        get_tpm()->CloseContext(context_handle);
-      }
-    }
+    LoadOrCreateCryptohomeKey(&cryptohome_key_);
   }
-
   return true;
 }
 
@@ -287,12 +272,6 @@ bool TpmInit::InitializeTpm(bool* OUT_took_ownership) {
     return false;
   }
 
-  trousers::ScopedTssContext context_handle;
-  if (!(*(context_handle.ptr()) = get_tpm()->ConnectContext())) {
-    LOG(ERROR) << "Failed to connect to TPM";
-    return false;
-  }
-
   SecureBlob default_owner_password(sizeof(kTpmWellKnownPassword));
   memcpy(default_owner_password.data(), kTpmWellKnownPassword,
          sizeof(kTpmWellKnownPassword));
@@ -304,22 +283,21 @@ bool TpmInit::InitializeTpm(bool* OUT_took_ownership) {
     platform_->DeleteFileDurable(kTpmOwnedFile, false);
     platform_->DeleteFileDurable(kTpmStatusFile, false);
 
-    if (!get_tpm()->IsEndorsementKeyAvailable(context_handle)) {
-      if (!get_tpm()->CreateEndorsementKey(context_handle)) {
+    if (!get_tpm()->IsEndorsementKeyAvailable()) {
+      if (!get_tpm()->CreateEndorsementKey()) {
         LOG(ERROR) << "Failed to create endorsement key";
         SetTpmBeingOwned(false);
         return false;
       }
     }
 
-    if (!get_tpm()->IsEndorsementKeyAvailable(context_handle)) {
+    if (!get_tpm()->IsEndorsementKeyAvailable()) {
       LOG(ERROR) << "Endorsement key is not available";
       SetTpmBeingOwned(false);
       return false;
     }
 
-    if (!get_tpm()->TakeOwnership(context_handle, kMaxTimeoutRetries,
-                                  default_owner_password)) {
+    if (!get_tpm()->TakeOwnership(kMaxTimeoutRetries, default_owner_password)) {
       LOG(ERROR) << "Take Ownership failed";
       SetTpmBeingOwned(false);
       return false;
@@ -343,8 +321,8 @@ bool TpmInit::InitializeTpm(bool* OUT_took_ownership) {
   // If we can open the TPM with the default password, then we still need to
   // zero the SRK password and unrestrict it, then change the owner password.
   if (!platform_->FileExists(kTpmOwnedFile) &&
-      get_tpm()->TestTpmAuth(context_handle, default_owner_password)) {
-    if (!get_tpm()->InitializeSrk(context_handle, default_owner_password)) {
+      get_tpm()->TestTpmAuth(default_owner_password)) {
+    if (!get_tpm()->InitializeSrk(default_owner_password)) {
       LOG(ERROR) << "Couldn't initialize the SRK";
       SetTpmBeingOwned(false);
       return false;
@@ -362,8 +340,7 @@ bool TpmInit::InitializeTpm(bool* OUT_took_ownership) {
     }
     StoreTpmStatus(tpm_status);
 
-    if ((get_tpm()->ChangeOwnerPassword(context_handle,
-                                        default_owner_password,
+    if ((get_tpm()->ChangeOwnerPassword(default_owner_password,
                                         owner_password))) {
       get_tpm()->SetOwnerPassword(owner_password);
     }
@@ -514,9 +491,9 @@ bool TpmInit::IsOwnedCheckViaSysfs() {
   return CheckSysfsForOne(kTpmCheckOwnedFile);
 }
 
-bool TpmInit::CreateCryptohomeKey(TSS_HCONTEXT context_handle) {
+bool TpmInit::CreateCryptohomeKey() {
   chromeos::SecureBlob wrapped_key;
-  if (!get_tpm()->CreateWrappedRsaKey(context_handle, &wrapped_key)) {
+  if (!get_tpm()->CreateWrappedRsaKey(&wrapped_key)) {
     LOG(ERROR) << "Couldn't create cryptohome key";
     return false;
   }
@@ -538,14 +515,14 @@ bool TpmInit::SaveCryptohomeKey(const chromeos::SecureBlob& raw_key) {
   return ok;
 }
 
-bool TpmInit::LoadCryptohomeKey(TSS_HCONTEXT context_handle,
-                                TSS_HKEY* key_handle) {
+bool TpmInit::LoadCryptohomeKey(ScopedKeyHandle* key_handle) {
+  CHECK(key_handle);
   // First, try loading the key from the key file
   {
     SecureBlob raw_key;
     if (platform_->ReadFile(kDefaultCryptohomeKeyFile, &raw_key)) {
       Tpm::TpmRetryAction retry_action = get_tpm()->LoadWrappedKey(
-          context_handle, raw_key, key_handle);
+          raw_key, key_handle);
       if (retry_action == Tpm::kTpmRetryNone) {
         return true;
       }
@@ -557,11 +534,8 @@ bool TpmInit::LoadCryptohomeKey(TSS_HCONTEXT context_handle,
 
   // Then try loading the key by the UUID (this is a legacy upgrade path)
   SecureBlob raw_key;
-  trousers::ScopedTssKey local_key_handle(context_handle);
-  if (!get_tpm()->LoadKeyByUuid(context_handle,
-                               kCryptohomeWellKnownUuid,
-                               local_key_handle.ptr(),
-                               &raw_key)) {
+  if (!get_tpm()->LegacyLoadCryptohomeKey(key_handle,
+                                          &raw_key)) {
     return false;
   }
 
@@ -570,22 +544,20 @@ bool TpmInit::LoadCryptohomeKey(TSS_HCONTEXT context_handle,
     LOG(ERROR) << "Couldn't save cryptohome key";
     return false;
   }
-
-  *key_handle = local_key_handle.release();
   return true;
 }
 
-bool TpmInit::LoadOrCreateCryptohomeKey(TSS_HCONTEXT context_handle,
-                                        TSS_HKEY* key_handle) {
+bool TpmInit::LoadOrCreateCryptohomeKey(ScopedKeyHandle* key_handle) {
+  CHECK(key_handle);
   // Try to load the cryptohome key.
-  if (LoadCryptohomeKey(context_handle, key_handle)) {
+  if (LoadCryptohomeKey(key_handle)) {
     return true;
   }
 
   // Otherwise, the key couldn't be loaded, and it wasn't due to a transient
   // error, so we must create the key.
-  if (CreateCryptohomeKey(context_handle)) {
-    if (LoadCryptohomeKey(context_handle, key_handle)) {
+  if (CreateCryptohomeKey()) {
+    if (LoadCryptohomeKey(key_handle)) {
       return true;
     }
   }
@@ -593,25 +565,19 @@ bool TpmInit::LoadOrCreateCryptohomeKey(TSS_HCONTEXT context_handle,
 }
 
 bool TpmInit::HasCryptohomeKey() {
-  return cryptohome_context_.value() && cryptohome_key_.value();
+  return (cryptohome_key_.value() != kInvalidKeyHandle);
 }
 
-TSS_HCONTEXT TpmInit::GetCryptohomeContext() {
-  return cryptohome_context_.value();
-}
-
-TSS_HKEY TpmInit::GetCryptohomeKey() {
+TpmKeyHandle TpmInit::GetCryptohomeKey() {
   return cryptohome_key_.value();
 }
 
 bool TpmInit::ReloadCryptohomeKey() {
   CHECK(HasCryptohomeKey());
-  TSS_HKEY new_key;
-  if (!LoadCryptohomeKey(GetCryptohomeContext(), &new_key)) {
+  if (!LoadCryptohomeKey(&cryptohome_key_)) {
     LOG(ERROR) << "Error reloading Cryptohome key.";
     return false;
   }
-  cryptohome_key_.reset(GetCryptohomeContext(), new_key);
   return true;
 }
 
