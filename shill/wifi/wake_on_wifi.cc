@@ -1213,11 +1213,12 @@ void WakeOnWiFi::OnBeforeSuspend(
     const Closure &renew_dhcp_lease_callback,
     const Closure &remove_supplicant_networks_callback, bool have_dhcp_lease,
     uint32_t time_to_next_lease_renewal) {
-  SLOG(this, 1) << __func__;
 #if defined(DISABLE_WAKE_ON_WIFI)
   // Wake on WiFi not supported, so immediately report success.
   done_callback.Run(Error(Error::kSuccess));
 #else
+  LOG(INFO) << __func__ << ": Wake on WiFi features enabled: "
+            << wake_on_wifi_features_enabled_;
   suspend_actions_done_callback_ = done_callback;
   wake_on_ssid_whitelist_ = ssid_whitelist;
   dark_resume_history_.Clear();
@@ -1239,8 +1240,8 @@ void WakeOnWiFi::OnBeforeSuspend(
 }
 
 void WakeOnWiFi::OnAfterResume() {
-  SLOG(this, 1) << __func__;
 #if !defined(DISABLE_WAKE_ON_WIFI)
+  SLOG(this, 1) << __func__;
   wake_to_scan_timer_.Stop();
   dhcp_lease_renewal_timer_.Stop();
   if (WakeOnPacketEnabledAndSupported() || WakeOnSSIDEnabledAndSupported()) {
@@ -1259,11 +1260,11 @@ void WakeOnWiFi::OnDarkResume(
     const Closure &renew_dhcp_lease_callback,
     const Closure &initiate_scan_callback,
     const Closure &remove_supplicant_networks_callback) {
-  SLOG(this, 1) << __func__ << ": "
-                << "Wake reason " << last_wake_reason_;
 #if defined(DISABLE_WAKE_ON_WIFI)
   done_callback.Run(Error(Error::kSuccess));
 #else
+  LOG(INFO) << __func__ << ": "
+            << "Wake reason " << last_wake_reason_;
   metrics_->NotifyWakeOnWiFiOnDarkResume(last_wake_reason_);
   suspend_actions_done_callback_ = done_callback;
   wake_on_ssid_whitelist_ = ssid_whitelist;
@@ -1347,8 +1348,8 @@ void WakeOnWiFi::BeforeSuspendActions(
     bool start_lease_renewal_timer,
     uint32_t time_to_next_lease_renewal,
     const Closure &remove_supplicant_networks_callback) {
-  SLOG(this, 1) << __func__ << ": "
-                << (is_connected ? "connected" : "not connected");
+  LOG(INFO) << __func__ << ": "
+            << (is_connected ? "connected" : "not connected");
   // Note: No conditional compilation because all entry points to this functions
   // are already conditionally compiled based on DISABLE_WAKE_ON_WIFI.
 
