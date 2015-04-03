@@ -1213,8 +1213,7 @@ void WakeOnWiFi::OnBeforeSuspend(
     const Closure &renew_dhcp_lease_callback,
     const Closure &remove_supplicant_networks_callback, bool have_dhcp_lease,
     uint32_t time_to_next_lease_renewal) {
-  SLOG(this, 1) << __func__ << ": "
-                << (is_connected ? "connected" : "not connected");
+  SLOG(this, 1) << __func__;
 #if defined(DISABLE_WAKE_ON_WIFI)
   // Wake on WiFi not supported, so immediately report success.
   done_callback.Run(Error(Error::kSuccess));
@@ -1261,8 +1260,7 @@ void WakeOnWiFi::OnDarkResume(
     const Closure &initiate_scan_callback,
     const Closure &remove_supplicant_networks_callback) {
   SLOG(this, 1) << __func__ << ": "
-                << (is_connected ? "connected" : "not connected")
-                << ", Wake reason " << last_wake_reason_;
+                << "Wake reason " << last_wake_reason_;
 #if defined(DISABLE_WAKE_ON_WIFI)
   done_callback.Run(Error(Error::kSuccess));
 #else
