@@ -1,0 +1,41 @@
+#!/bin/sh
+#
+# Copyright 2015 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+#
+# UDEV event helper script that sets the system's WiFi regulatory domain
+# from VPD data.
+
+set -e
+
+# TODO(quiche): When fixing crbug.com/474657, we may need to remove
+# toupper().
+country_code=$(
+  # Example output of dump_vpd_log --stdout:
+  # "initial_timezone"="America/Los_Angeles"
+  # "region"="us"
+  dump_vpd_log --stdout |
+  awk -F'=' \
+    '/^"region"="[-0-9a-zA-Z.]+"$/ {
+       gsub(/"/, "", $2)
+       print toupper($2)
+       exit
+     }'
+)
+
+# TODO(quiche): Replace this code using the regions database and jq.
+# crbug.com/474657.
+country_code="${country_code%%.*}"
+case "${country_code}" in
+  "LATAM-ES-419")
+    country_code="MX"
+    ;;
+  "NORDIC")
+    country_code="SE"
+    ;;
+esac
+
+if [ -n "${country_code}" ]; then
+  iw reg set "${country_code}"
+fi
