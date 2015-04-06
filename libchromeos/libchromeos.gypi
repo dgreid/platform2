@@ -183,6 +183,7 @@
       'type': 'shared_library',
       'dependencies': [
         'libchromeos-bootstat-<(libbase_ver)',
+        'libchromeos-core-<(libbase_ver)',
       ],
       'cflags': [
         '-fvisibility=default',
