@@ -108,6 +108,12 @@ void CreateDirectories(ChromiumCommandBuilder* builder) {
   CHECK(EnsureDirectoryExists(
       base::FilePath("/var/lib/whitelist"), kRootUid, gid, 0710));
 
+  // Create the directory where policies for extensions installed in
+  // device-local accounts are cached. This data is read and written by chronos.
+  CHECK(EnsureDirectoryExists(
+      base::FilePath("/var/cache/device_local_account_component_policy"),
+      uid, gid, 0700));
+
   // Create the directory where external data referenced by policies is cached
   // for device-local accounts. This data is read and written by chronos.
   CHECK(EnsureDirectoryExists(
