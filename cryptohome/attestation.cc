@@ -292,7 +292,12 @@ void Attestation::Initialize(Tpm* tpm,
 
 bool Attestation::IsPreparedForEnrollment() {
   base::AutoLock lock(lock_);
-  return database_pb_.has_credentials();
+  if (!database_pb_.has_credentials()) {
+    return false;
+  }
+  return (database_pb_.credentials().has_endorsement_credential() ||
+          database_pb_.credentials()
+              .has_default_encrypted_endorsement_credential());
 }
 
 bool Attestation::IsEnrolled() {
