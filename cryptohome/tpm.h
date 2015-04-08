@@ -48,6 +48,7 @@ class Tpm {
  public:
   enum TpmRetryAction {
     kTpmRetryNone,
+    kTpmRetryFailNoRetry,
     kTpmRetryCommFailure,
     kTpmRetryDefendLock,
     kTpmRetryFatal,

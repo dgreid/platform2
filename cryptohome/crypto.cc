@@ -278,7 +278,7 @@ bool Crypto::IsTPMPubkeyHash(const string& hash,
   if (retry_action == Tpm::kTpmRetryLoadFail) {
     if (!tpm_init_->ReloadCryptohomeKey()) {
       LOG(ERROR) << "Unable to reload key.";
-      retry_action = Tpm::kTpmRetryFatal;
+      retry_action = Tpm::kTpmRetryFailNoRetry;
     } else {
       retry_action = tpm_->GetPublicKeyHash(tpm_init_->GetCryptohomeKey(),
                                             &pub_key_hash);
@@ -381,7 +381,7 @@ bool Crypto::DecryptTPM(const SerializedVaultKeyset& serialized,
   if (retry_action == Tpm::kTpmRetryLoadFail) {
     if (!tpm_init_->ReloadCryptohomeKey()) {
       LOG(ERROR) << "Unable to reload Cryptohome key.";
-      retry_action = Tpm::kTpmRetryFatal;
+      retry_action = Tpm::kTpmRetryFailNoRetry;
     } else {
       retry_action = tpm_->DecryptBlob(tpm_init_->GetCryptohomeKey(),
                                        tpm_key,

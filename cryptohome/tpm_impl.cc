@@ -77,7 +77,7 @@ cryptohome::Tpm::TpmRetryAction ResultToRetryAction(TSS_RESULT result) {
       LOG(ERROR) << "The TPM returned TPM_E_FAIL.  A reboot is required.";
       break;
     default:
-      status = cryptohome::Tpm::kTpmRetryFatal;
+      status = cryptohome::Tpm::kTpmRetryFailNoRetry;
       break;
   }
   return status;
@@ -474,11 +474,11 @@ Tpm::TpmRetryAction TpmImpl::EncryptBlob(TpmKeyHandle key_handle,
                         TSS_TSPATTRIB_ENCDATABLOB_BLOB,
                         &enc_data_blob)) {
     LOG(ERROR) << __func__ << ": Failed to read encrypted blob.";
-    return kTpmRetryFatal;
+    return kTpmRetryFailNoRetry;
   }
   if (!ObscureRSAMessage(enc_data_blob, key, ciphertext)) {
     LOG(ERROR) << "Error obscuring message.";
-    return kTpmRetryFatal;
+    return kTpmRetryFailNoRetry;
   }
   return kTpmRetryNone;
 }
