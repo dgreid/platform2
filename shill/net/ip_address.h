@@ -102,10 +102,11 @@ class SHILL_EXPORT IPAddress {
   // Similar to IntoString, but returns by value. Convenient for logging.
   std::string ToString() const;
 
-  bool Equals(const IPAddress &b) const {
-    return family_ == b.family_ && address_.Equals(b.address_) &&
-        prefix_ == b.prefix_;
-  }
+  // Returns whether |b| has the same family, address and prefix as |this|.
+  bool Equals(const IPAddress &b) const;
+
+  // Returns whether |b| has the same family and address as |this|.
+  bool HasSameAddressAs(const IPAddress &b) const;
 
   // Perform an AND operation between the address data of |this| and that
   // of |b|.  Returns an IPAddress containing the result of the operation.

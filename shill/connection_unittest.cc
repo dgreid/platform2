@@ -866,7 +866,8 @@ TEST_F(ConnectionTest, FixGatewayReachability) {
   // should be modified to allow routing to work correctly.
   ASSERT_TRUE(gateway.SetAddressFromString(kUnreachableGateway));
   ASSERT_TRUE(peer.SetAddressFromString(kUnreachableGateway));
-  ASSERT_TRUE(trusted_ip.SetAddressFromString(kUnreachableGateway));
+  ASSERT_TRUE(trusted_ip.SetAddressAndPrefixFromString(
+      string(kUnreachableGateway) + "/32"));
   EXPECT_TRUE(Connection::FixGatewayReachability(
       &local, &peer, &gateway, trusted_ip));
   EXPECT_TRUE(peer.IsDefault());
