@@ -222,6 +222,15 @@ string IPAddress::ToString() const {
   return out;
 }
 
+bool IPAddress::Equals(const IPAddress &b) const {
+  return family_ == b.family_ && address_.Equals(b.address_) &&
+      prefix_ == b.prefix_;
+}
+
+bool IPAddress::HasSameAddressAs(const IPAddress &b) const {
+  return family_ == b.family_ && address_.Equals(b.address_);
+}
+
 IPAddress IPAddress::MaskWith(const IPAddress &b) const {
   CHECK(IsValid());
   CHECK(b.IsValid());

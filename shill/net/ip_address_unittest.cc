@@ -147,6 +147,21 @@ TEST_F(IPAddressTest, SetAddressAndPrefixFromString) {
   EXPECT_TRUE(kAddress1.Equals(address.address()));
 }
 
+TEST_F(IPAddressTest, HasSameAddressAs) {
+  const string kString1(kV4String1);
+  IPAddress address0(IPAddress::kFamilyIPv4);
+  EXPECT_TRUE(address0.SetAddressAndPrefixFromString(kString1 + "/0"));
+  IPAddress address1(IPAddress::kFamilyIPv4);
+  EXPECT_TRUE(address1.SetAddressAndPrefixFromString(kString1 + "/10"));
+  IPAddress address2(IPAddress::kFamilyIPv4);
+  EXPECT_TRUE(address2.SetAddressAndPrefixFromString(kString1 + "/0"));
+
+  EXPECT_FALSE(address0.Equals(address1));
+  EXPECT_TRUE(address0.Equals(address2));
+  EXPECT_TRUE(address0.HasSameAddressAs(address1));
+  EXPECT_TRUE(address0.HasSameAddressAs(address2));
+}
+
 struct PrefixMapping {
   PrefixMapping() : family(IPAddress::kFamilyUnknown), prefix(0) {}
   PrefixMapping(IPAddress::Family family_in,

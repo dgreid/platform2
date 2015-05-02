@@ -32,6 +32,8 @@ namespace shill {
 namespace Logging {
 static auto kModuleLogScope = ScopeLogger::kConnection;
 static string ObjectID(Connection *c) {
+  if (c == nullptr)
+    return "(connection)";
   return c->interface_name();
 }
 }
@@ -395,20 +397,25 @@ bool Connection::FixGatewayReachability(IPAddress *local,
                                         IPAddress *peer,
                                         IPAddress *gateway,
                                         const IPAddress &trusted_ip) {
+  SLOG(nullptr, 2) << __func__
+      << " local " << local->ToString()
+      << ", peer " << peer->ToString()
+      << ", gateway " << gateway->ToString()
+      << ", trusted_ip " << trusted_ip.ToString();
   if (!gateway->IsValid()) {
     LOG(WARNING) << "No gateway address was provided for this connection.";
     return false;
   }
 
   if (peer->IsValid()) {
-    if (!gateway->Equals(*peer)) {
+    if (!gateway->HasSameAddressAs(*peer)) {
       LOG(WARNING) << "Gateway address "
                    << gateway->ToString()
                    << " does not match peer address "
                    << peer->ToString();
       return false;
     }
-    if (gateway->Equals(trusted_ip)) {
+    if (gateway->HasSameAddressAs(trusted_ip)) {
       // In order to send outgoing traffic in a point-to-point network,
       // the gateway IP address isn't of significance.  As opposed to
       // broadcast networks, we never ARP for the gateway IP address,
