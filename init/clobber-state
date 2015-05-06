@@ -15,6 +15,7 @@ set -x
 
 # Log file to store the output of this run.
 CLOBBER_STATE_LOG="/tmp/clobber-state.log"
+: ${TTY=/dev/tty1}
 
 # Redirect stdout to our log.
 exec > "$CLOBBER_STATE_LOG" 2>&1
@@ -119,11 +120,11 @@ wipe_block_dev() {
     # terminal attributes. To prevent user input echo and ctrl-breaks, we need
     # to allocate and configure the terminal before using tty for output.
     # Note &2 is currently used for debug messages dumping so we can't redirect
-    # subshell by 2>/dev/tty1.
-    ( stty -F /dev/tty1 raw -echo -cread
-      pv -etp -s $((4 * 1024 * 1024 * ${FULL_BLKS})) /dev/zero 2>/dev/tty1 |
+    # subshell by 2>"${TTY}".
+    ( stty -F "${TTY}" raw -echo -cread
+      pv -etp -s $((4 * 1024 * 1024 * ${FULL_BLKS})) /dev/zero 2>"${TTY}" |
         dd of=${DEV} bs=4M count=${FULL_BLKS} iflag=fullblock oflag=sync
-    ) >/dev/tty1
+    ) >"${TTY}"
   else
     dd if=/dev/zero of=${DEV} bs=4M count=${FULL_BLKS}
   fi
@@ -350,14 +351,14 @@ if [ "$FAST_WIPE" != "fast" ] && [ "$ROTATIONAL" = "1" ]; then
   # Since the above rm/shred combo can be very fast, force a minimum of a 5
   # minute delay for this mode.
   delay=300
-  ( stty -F /dev/tty1 raw -echo -cread
+  ( stty -F "${TTY}" raw -echo -cread
     while [ "${delay}" -ge 0 ]; do
       printf "%2d:%02d\r" $(( delay / 60 )) $(( delay % 60 ))
       sleep 1
       : $(( delay -= 1 ))
     done
     echo
-  ) >/dev/tty1
+  ) >"${TTY}"
   wait
   FAST_WIPE="fast"
 fi
