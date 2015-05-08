@@ -667,6 +667,7 @@ bool DeltaDiffGenerator::ReadUnwrittenBlocks(
     int blobs_fd,
     off_t* blobs_length,
     const string& old_image_path,
+    const uint64_t old_image_size,
     const string& new_image_path,
     Vertex* vertex) {
   vertex->file_name = "<rootfs-non-file-data>";
@@ -735,16 +736,21 @@ bool DeltaDiffGenerator::ReadUnwrittenBlocks(
       TEST_AND_RETURN_FALSE_ERRNO(rc >= 0);
       TEST_AND_RETURN_FALSE(static_cast<size_t>(rc) == count);
 
-      rc = pread(old_image_fd, old_buf.data(), count, offset);
+      const off_t old_offset = min(offset, static_cast<off_t>(old_image_size));
+      const size_t old_count =
+          min(static_cast<size_t>(offset + count),
+              static_cast<size_t>(old_image_size)) - old_offset;
+      rc = pread(old_image_fd, old_buf.data(), old_count, old_offset);
       TEST_AND_RETURN_FALSE_ERRNO(rc >= 0);
-      TEST_AND_RETURN_FALSE(static_cast<size_t>(rc) == count);
+      TEST_AND_RETURN_FALSE(static_cast<size_t>(rc) == old_count);
 
       // Compare each block in the buffer to its counterpart in the old image
       // and only compress it if its content has changed.
       int buf_offset = 0;
       for (int i = 0; i < copy_block_cnt; ++i) {
         int buf_end_offset = buf_offset + kBlockSize;
-        if (!std::equal(new_buf.begin() + buf_offset,
+        if (static_cast<size_t>(buf_end_offset) > old_count ||
+            !std::equal(new_buf.begin() + buf_offset,
                         new_buf.begin() + buf_end_offset,
                         old_buf.begin() + buf_offset)) {
           BZ2_bzWrite(&err, bz_file, &new_buf[buf_offset], kBlockSize);
@@ -982,6 +988,7 @@ bool DeltaDiffGenerator::GenerateOperations(
                                             data_file_fd,
                                             data_file_size,
                                             config.source.rootfs_part,
+                                            config.source.rootfs_size,
                                             config.target.rootfs_part,
                                             &unwritten_vertex));
   if (unwritten_vertex.op.data_length() == 0) {

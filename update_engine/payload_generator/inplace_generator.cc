@@ -714,6 +714,7 @@ bool InplaceGenerator::GenerateOperations(
                                               data_file_fd,
                                               data_file_size,
                                               config.source.rootfs_part,
+                                              config.source.rootfs_size,
                                               config.target.rootfs_part,
                                               &graph.back()));
   if (graph.back().op.data_length() == 0) {
