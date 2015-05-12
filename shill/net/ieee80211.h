@@ -99,7 +99,6 @@ const uint16_t kWlanCapMaskDsssOfdm = 0x2000;
 const uint16_t kWlanCapMaskDelayedBlockAck = 0x4000;
 const uint16_t kWlanCapMaskImmediateBlockAck = 0x8000;
 
-
 // This structure is incomplete.  Fields will be added as necessary.
 //
 // NOTE: the uint16_t stuff is in little-endian format so conversions are
