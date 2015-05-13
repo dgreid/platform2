@@ -16,6 +16,7 @@
 
 #include "power_manager/common/clock.h"
 #include "power_manager/common/power_constants.h"
+#include "power_manager/powerd/policy/suspender.h"
 #include "power_manager/powerd/system/power_supply.h"
 
 namespace power_manager {
@@ -80,7 +81,7 @@ class MetricsCollector {
   // the corresponding wake.  |suspend_duration| is the total time the system
   // spent in user-visible suspend (including the time spent in dark resume).
   void GenerateDarkResumeMetrics(
-      const std::vector<base::TimeDelta>& wake_durations,
+      const std::vector<policy::Suspender::DarkResumeInfo>& wake_durations,
       base::TimeDelta suspend_duration);
 
   // Generates UMA metrics on when leaving the idle state.
@@ -100,6 +101,8 @@ class MetricsCollector {
   friend class MetricsCollectorTest;
   FRIEND_TEST(MetricsCollectorTest, BacklightLevel);
   FRIEND_TEST(MetricsCollectorTest, SendMetricWithPowerSource);
+  FRIEND_TEST(MetricsCollectorTest, WakeReasonToHistogramName);
+  FRIEND_TEST(MetricsCollectorTest, GatherDarkResumeMetrics);
 
   // These methods append the current power source to |name|.
   bool SendMetricWithPowerSource(const std::string& name,

@@ -762,7 +762,8 @@ void Daemon::UndoPrepareToSuspend(bool success,
 }
 
 void Daemon::GenerateDarkResumeMetrics(
-    const std::vector<base::TimeDelta>& dark_resume_wake_durations,
+    const std::vector<policy::Suspender::DarkResumeInfo>&
+        dark_resume_wake_durations,
     base::TimeDelta suspend_duration) {
   metrics_collector_->GenerateDarkResumeMetrics(dark_resume_wake_durations,
                                                 suspend_duration);
@@ -959,6 +960,10 @@ void Daemon::InitDBus() {
   CHECK(powerd_dbus_object_->ExportMethodAndBlock(
       kPowerManagerInterface, kHandleDarkSuspendReadinessMethod,
       base::Bind(&policy::Suspender::HandleDarkSuspendReadiness,
+                 base::Unretained(suspender_.get()))));
+  CHECK(powerd_dbus_object_->ExportMethodAndBlock(
+      kPowerManagerInterface, kRecordDarkResumeWakeReasonMethod,
+      base::Bind(&policy::Suspender::RecordDarkResumeWakeReason,
                  base::Unretained(suspender_.get()))));
 
   // Note that this needs to happen *after* the above methods are exported

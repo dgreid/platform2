@@ -10,12 +10,21 @@
 #include <cmath>
 
 #include <base/logging.h>
+#include <base/strings/stringprintf.h>
 
 #include "power_manager/common/metrics_constants.h"
 #include "power_manager/common/metrics_sender.h"
 #include "power_manager/common/prefs.h"
 #include "power_manager/common/util.h"
 #include "power_manager/powerd/policy/backlight_controller.h"
+
+namespace {
+// Generates the histogram name under which dark resume wake duration metrics
+// are logged for the dark resume triggered by |wake_reason|.
+std::string WakeReasonToHistogramName(const std::string& wake_reason) {
+  return std::string("Power.DarkResumeWakeDurationMs.").append(wake_reason);
+}
+}  // namespace
 
 namespace power_manager {
 
@@ -197,10 +206,9 @@ void MetricsCollector::HandleCanceledSuspendRequest(int num_suspend_attempts) {
 }
 
 void MetricsCollector::GenerateDarkResumeMetrics(
-    const std::vector<base::TimeDelta>& wake_durations,
+    const std::vector<policy::Suspender::DarkResumeInfo>& wake_durations,
     base::TimeDelta suspend_duration) {
-  if (suspend_duration.InSeconds() <= 0)
-    return;
+  if (suspend_duration.InSeconds() <= 0) return;
 
   // We want to get metrics even if the system suspended for less than an hour
   // so we scale the number of wakes up.
@@ -212,9 +220,16 @@ void MetricsCollector::GenerateDarkResumeMetrics(
              kMetricDarkResumeWakeupsPerHourMax,
              kMetricDefaultBuckets);
 
-  for (const base::TimeDelta& duration : wake_durations) {
+  for (const auto& pair : wake_durations) {
+    // Send aggregated dark resume duration metric.
     SendMetric(kMetricDarkResumeWakeDurationMsName,
-               duration.InMilliseconds(),
+               pair.second.InMilliseconds(),
+               kMetricDarkResumeWakeDurationMsMin,
+               kMetricDarkResumeWakeDurationMsMax,
+               kMetricDefaultBuckets);
+    // Send wake reason-specific dark resume duration metric.
+    SendMetric(WakeReasonToHistogramName(pair.first),
+               pair.second.InMilliseconds(),
                kMetricDarkResumeWakeDurationMsMin,
                kMetricDarkResumeWakeDurationMsMax,
                kMetricDefaultBuckets);

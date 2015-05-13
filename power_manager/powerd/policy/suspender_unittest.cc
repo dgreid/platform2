@@ -84,7 +84,8 @@ class TestDelegate : public Suspender::Delegate, public ActionRecorder {
     return suspend_canceled_while_in_dark_resume_;
   }
 
-  const std::vector<base::TimeDelta>& dark_resume_wake_durations() const {
+  const std::vector<Suspender::DarkResumeInfo>& dark_resume_wake_durations()
+      const {
     return dark_resume_wake_durations_;
   }
   base::TimeDelta last_suspend_duration() const {
@@ -136,7 +137,7 @@ class TestDelegate : public Suspender::Delegate, public ActionRecorder {
   }
 
   void GenerateDarkResumeMetrics(
-      const std::vector<base::TimeDelta>& dark_resume_wake_durations,
+      const std::vector<Suspender::DarkResumeInfo>& dark_resume_wake_durations,
       base::TimeDelta suspend_duration) override {
     AppendAction(kGenerateDarkResumeMetrics);
     dark_resume_wake_durations_ = dark_resume_wake_durations;
@@ -205,7 +206,7 @@ class TestDelegate : public Suspender::Delegate, public ActionRecorder {
   bool can_safely_exit_dark_resume_;
 
   // Dark resume wake data provided to GenerateDarkResumeMetrics().
-  std::vector<base::TimeDelta> dark_resume_wake_durations_;
+  std::vector<Suspender::DarkResumeInfo> dark_resume_wake_durations_;
   base::TimeDelta last_suspend_duration_;
 
   DISALLOW_COPY_AND_ASSIGN(TestDelegate);
@@ -267,6 +268,13 @@ class SuspenderTest : public testing::Test {
   void AnnounceReadyForDarkSuspend(int dark_suspend_id) {
     suspender_.OnReadyForSuspend(
         test_api_.dark_suspend_delay_controller(), dark_suspend_id);
+  }
+
+  // Records the |last_dark_resume_wake_reason_| in |suspender_|.  Takes a
+  // shortcut and sets the member rather than simulating the actual DBus method
+  // call handling.
+  void RecordDarkResumeWakeReason(const std::string& wake_reason) {
+    test_api_.set_last_dark_resume_wake_reason(wake_reason);
   }
 
   FakePrefs prefs_;
@@ -1001,6 +1009,7 @@ TEST_F(SuspenderTest, DarkResumeWakeData) {
   const base::TimeDelta kSuspendDuration = base::TimeDelta::FromMinutes(24);
   const base::Time kRequestTime = base::Time::FromInternalValue(1576);
   const base::Time kCompletionTime = kRequestTime + kSuspendDuration;
+  const std::string kWakeReason = "WiFi.Pattern";
 
   test_api_.SetCurrentWallTime(kRequestTime);
   suspender_.RequestSuspend();
@@ -1030,7 +1039,10 @@ TEST_F(SuspenderTest, DarkResumeWakeData) {
   AnnounceReadyForDarkSuspend(test_api_.dark_suspend_id());
 
   ASSERT_EQ(1, delegate_.dark_resume_wake_durations().size());
-  EXPECT_EQ(kDarkResumeDuration, delegate_.dark_resume_wake_durations().at(0));
+  EXPECT_STREQ(test_api_.GetDefaultWakeReason().c_str(),
+               delegate_.dark_resume_wake_durations().at(0).first.c_str());
+  EXPECT_EQ(kDarkResumeDuration,
+            delegate_.dark_resume_wake_durations().at(0).second);
   EXPECT_EQ(kDarkResumeFinishTime - kRequestTime,
             delegate_.last_suspend_duration());
 
@@ -1046,6 +1058,7 @@ TEST_F(SuspenderTest, DarkResumeWakeData) {
   dark_resume_.set_in_dark_resume(true);
   AnnounceReadyForSuspend(test_api_.suspend_id());
 
+  RecordDarkResumeWakeReason(kWakeReason);
   test_api_.SetCurrentWallTime(kDarkResumeFinishTime);
   delegate_.set_suspend_result(Suspender::Delegate::SUSPEND_CANCELED);
   AnnounceReadyForDarkSuspend(test_api_.dark_suspend_id());
@@ -1056,8 +1069,10 @@ TEST_F(SuspenderTest, DarkResumeWakeData) {
   AnnounceReadyForDarkSuspend(test_api_.dark_suspend_id());
 
   ASSERT_EQ(1, delegate_.dark_resume_wake_durations().size());
+  EXPECT_STREQ(kWakeReason.c_str(),
+               delegate_.dark_resume_wake_durations().at(0).first.c_str());
   EXPECT_EQ(kDarkResumeDuration + kResuspendDuration,
-            delegate_.dark_resume_wake_durations().at(0));
+            delegate_.dark_resume_wake_durations().at(0).second);
   EXPECT_EQ(kResuspendTime - kRequestTime, delegate_.last_suspend_duration());
 }
 

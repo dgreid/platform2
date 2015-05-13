@@ -9,6 +9,7 @@
 
 #include <queue>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <base/compiler_specific.h>
@@ -72,6 +73,10 @@ class SuspendDelayController;
 // current suspend attempt.
 class Suspender : public SuspendDelayObserver {
  public:
+  // Information about dark resumes used for histograms.
+  // First value is wake reason; second is wake duration.
+  using DarkResumeInfo = std::pair<std::string, base::TimeDelta>;
+
   // Interface for classes responsible for performing actions on behalf of
   // Suspender.  The general sequence when suspending is:
   //
@@ -146,7 +151,7 @@ class Suspender : public SuspendDelayObserver {
 
     // Generates and reports metrics for wakeups in dark resume.
     virtual void GenerateDarkResumeMetrics(
-        const std::vector<base::TimeDelta>& dark_resume_wake_durations,
+        const std::vector<DarkResumeInfo>& dark_resume_wake_durations,
         base::TimeDelta suspend_duration_) = 0;
 
     // Shuts the system down in response to repeated failed suspend attempts.
@@ -182,6 +187,12 @@ class Suspender : public SuspendDelayObserver {
     // Runs Suspender::HandleEvent(EVENT_READY_TO_RESUSPEND) if
     // |resuspend_timer_| is running. Returns false otherwise.
     bool TriggerResuspendTimeout();
+
+    void set_last_dark_resume_wake_reason(const std::string& wake_reason) {
+      suspender_->last_dark_resume_wake_reason_ = wake_reason;
+    }
+
+    std::string GetDefaultWakeReason() const;
 
    private:
     Suspender* suspender_;  // weak
@@ -225,6 +236,9 @@ class Suspender : public SuspendDelayObserver {
       dbus::MethodCall* method_call,
       dbus::ExportedObject::ResponseSender response_sender);
   void HandleDarkSuspendReadiness(
+      dbus::MethodCall* method_call,
+      dbus::ExportedObject::ResponseSender response_sender);
+  void RecordDarkResumeWakeReason(
       dbus::MethodCall* method_call,
       dbus::ExportedObject::ResponseSender response_sender);
 
@@ -377,9 +391,13 @@ class Suspender : public SuspendDelayObserver {
   // The time at which the system entered dark resume.
   base::Time dark_resume_start_time_;
 
-  // The amount of time spent in dark resume for each wake.  The number of wakes
-  // in dark resume is the size of this vector.
-  std::vector<base::TimeDelta> dark_resume_wake_durations_;
+  // The amount of time spent in dark resume for each wake, along with the wake
+  // reason-specific histogram to log wake duration metrics to.  The number of
+  // wakes in dark resume is the size of this vector.
+  std::vector<DarkResumeInfo> dark_resume_wake_durations_;
+
+  // The wake reason for the last dark resume.
+  std::string last_dark_resume_wake_reason_;
 
   // Runs HandleEvent(EVENT_READY_TO_RESUSPEND).
   base::OneShotTimer<Suspender> resuspend_timer_;

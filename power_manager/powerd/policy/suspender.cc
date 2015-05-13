@@ -21,6 +21,12 @@
 #include "power_manager/powerd/system/input_watcher.h"
 #include "power_manager/proto_bindings/suspend.pb.h"
 
+namespace {
+// Default wake reason powerd uses to report wake-reason-specific wake duration
+// metrics.
+const char kDefaultWakeReason[] = "Other";
+}  // namespace
+
 namespace power_manager {
 namespace policy {
 
@@ -39,6 +45,10 @@ bool Suspender::TestApi::TriggerResuspendTimeout() {
   return true;
 }
 
+std::string Suspender::TestApi::GetDefaultWakeReason() const {
+  return kDefaultWakeReason;
+}
+
 Suspender::Suspender()
     : delegate_(NULL),
       dbus_sender_(NULL),
@@ -55,8 +65,8 @@ Suspender::Suspender()
       wakeup_count_valid_(false),
       max_retries_(0),
       current_num_attempts_(0),
-      initial_num_attempts_(0) {
-}
+      initial_num_attempts_(0),
+      last_dark_resume_wake_reason_(kDefaultWakeReason) {}
 
 Suspender::~Suspender() {
 }
@@ -147,6 +157,48 @@ void Suspender::HandleDarkSuspendReadiness(
     dbus::ExportedObject::ResponseSender response_sender) {
   HandleSuspendReadinessInternal(
       dark_suspend_delay_controller_.get(), method_call, response_sender);
+}
+
+// Daemons that want powerd to log the wake duration metrics for the current
+// dark resume to a wake-reason-specific histogram should send the wake reason
+// to powerd during that dark resume.
+//
+// This string should take the form $SUBSYSTEM.$REASON, where $SUBSYSTEM refers
+// to the subsystem that caused the wake, and $REASON is the specific reason for
+// the subsystem waking the system. For example, the wake reason
+// "WiFi.Disconnect" should be passed to this function to indicate that the WiFi
+// subsystem woke the system in dark resume because of disconnection from an AP.
+//
+// Note: If multiple daemons send wake reason to powerd during the same dark
+// resume, a race condition will be created, and only the last histogram name
+// reported to powerd will be used to log wake-reason-specific wake duration
+// metrics for that dark resume. Daemons using this function should coordinate
+// with each other to ensure that no more than one wake reason is reported to
+// powerd per dark resume.
+void Suspender::RecordDarkResumeWakeReason(
+    dbus::MethodCall* method_call,
+    dbus::ExportedObject::ResponseSender response_sender) {
+  bool overwriting_wake_reason = false;
+  std::string old_wake_reason;
+  if (last_dark_resume_wake_reason_ != kDefaultWakeReason) {
+    overwriting_wake_reason = true;
+    old_wake_reason = last_dark_resume_wake_reason_;
+  }
+  dbus::MessageReader reader(method_call);
+  if (!reader.PopString(&last_dark_resume_wake_reason_)) {
+    LOG(ERROR) << "Unable to parse " << method_call->GetMember() << " request";
+    response_sender.Run(
+        scoped_ptr<dbus::Response>(dbus::ErrorResponse::FromMethodCall(
+            method_call, DBUS_ERROR_INVALID_ARGS,
+            "Expected wake reason string")));
+    return;
+  }
+  if (overwriting_wake_reason) {
+    LOG(WARNING) << "Overwrote existing dark resume wake reason "
+                 << old_wake_reason << " with wake reason "
+                 << last_dark_resume_wake_reason_;
+  }
+  response_sender.Run(dbus::Response::FromMethodCall(method_call));
 }
 
 void Suspender::HandleLidOpened() {
@@ -354,6 +406,7 @@ void Suspender::StartRequest() {
   initial_num_attempts_ = 0;
 
   dark_resume_wake_durations_.clear();
+  last_dark_resume_wake_reason_ = kDefaultWakeReason;
 
   // Call PrepareToSuspend() before emitting SuspendImminent -- powerd needs to
   // set the backlight level to 0 before Chrome turns the display on in response
@@ -434,7 +487,9 @@ Suspender::State Suspender::Suspend() {
   // successful, ensuring that we account for all the time spent in dark resume
   // during a particular wake.
   if (!dark_resume_wake_durations_.empty()) {
-    dark_resume_wake_durations_.back() =
+    dark_resume_wake_durations_.back().first =
+        last_dark_resume_wake_reason_;
+    dark_resume_wake_durations_.back().second =
         std::max(base::TimeDelta(),
                  clock_->GetCurrentWallTime() - dark_resume_start_time_);
   }
@@ -487,7 +542,9 @@ Suspender::State Suspender::Suspend() {
     if (result == Delegate::SUSPEND_SUCCESSFUL) {
       // This is the start of a new dark resume wake.
       dark_resume_start_time_ = clock_->GetCurrentWallTime();
-      dark_resume_wake_durations_.push_back(base::TimeDelta());
+      dark_resume_wake_durations_.push_back(
+          DarkResumeInfo(kDefaultWakeReason, base::TimeDelta()));
+      last_dark_resume_wake_reason_ = kDefaultWakeReason;
 
       // We only reset the retry count if the suspend was successful.
       current_num_attempts_ = 0;

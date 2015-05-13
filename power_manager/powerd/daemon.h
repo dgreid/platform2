@@ -112,7 +112,8 @@ class Daemon : public policy::BacklightControllerObserver,
                             int num_suspend_attempts,
                             bool canceled_while_in_dark_resume) override;
   void GenerateDarkResumeMetrics(
-      const std::vector<base::TimeDelta>& dark_resume_wake_durations,
+      const std::vector<policy::Suspender::DarkResumeInfo>&
+          dark_resume_wake_durations,
       base::TimeDelta suspend_duration) override;
 
   void ShutDownForFailedSuspend() override;

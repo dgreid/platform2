@@ -9,6 +9,7 @@
 #include <cmath>
 #include <set>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <base/format_macros.h>
@@ -24,6 +25,7 @@
 #include "power_manager/common/metrics_sender.h"
 #include "power_manager/common/power_constants.h"
 #include "power_manager/powerd/policy/backlight_controller_stub.h"
+#include "power_manager/powerd/policy/suspender.h"
 #include "power_manager/powerd/system/power_supply.h"
 
 using ::testing::_;
@@ -456,29 +458,52 @@ TEST_F(MetricsCollectorTest, PowerButtonDownMetric) {
 TEST_F(MetricsCollectorTest, GatherDarkResumeMetrics) {
   Init();
 
-  std::vector<base::TimeDelta> wake_durations;
+  std::vector<policy::Suspender::DarkResumeInfo> wake_durations;
   base::TimeDelta suspend_duration;
+  base::TimeDelta kTimeDelta1 = base::TimeDelta::FromSeconds(2);
+  base::TimeDelta kTimeDelta2 = base::TimeDelta::FromSeconds(6);
+  base::TimeDelta kTimeDelta3 = base::TimeDelta::FromMilliseconds(573);
+  base::TimeDelta kTimeDelta4 = base::TimeDelta::FromSeconds(7);
+  std::string kWakeReason1 = "WiFi.Pattern";
+  std::string kWakeReason2 = "WiFi.Disconnect";
+  std::string kWakeReason3 = "WiFi.SSID";
+  std::string kWakeReason4 = "Other";
+  std::string kExpectedHistogramPrefix = "Power.DarkResumeWakeDurationMs.";
+  std::string kExpectedHistogram1 = kExpectedHistogramPrefix + kWakeReason1;
+  std::string kExpectedHistogram2 = kExpectedHistogramPrefix + kWakeReason2;
+  std::string kExpectedHistogram3 = kExpectedHistogramPrefix + kWakeReason3;
+  std::string kExpectedHistogram4 = kExpectedHistogramPrefix + kWakeReason4;
 
   // First test the basic case.
-  wake_durations.push_back(base::TimeDelta::FromSeconds(2));
-  wake_durations.push_back(base::TimeDelta::FromSeconds(6));
-  wake_durations.push_back(base::TimeDelta::FromMilliseconds(573));
-  wake_durations.push_back(base::TimeDelta::FromSeconds(7));
+  wake_durations.push_back(std::make_pair(kWakeReason1, kTimeDelta1));
+  wake_durations.push_back(std::make_pair(kWakeReason2, kTimeDelta2));
+  wake_durations.push_back(std::make_pair(kWakeReason3, kTimeDelta3));
+  wake_durations.push_back(std::make_pair(kWakeReason4, kTimeDelta4));
 
   suspend_duration = base::TimeDelta::FromHours(2);
 
   ExpectMetric(kMetricDarkResumeWakeupsPerHourName,
                wake_durations.size() / suspend_duration.InHours(),
                kMetricDarkResumeWakeupsPerHourMin,
-               kMetricDarkResumeWakeupsPerHourMax,
-               kMetricDefaultBuckets);
-  for (const base::TimeDelta& duration : wake_durations) {
-    ExpectMetric(kMetricDarkResumeWakeDurationMsName,
-                 duration.InMilliseconds(),
+               kMetricDarkResumeWakeupsPerHourMax, kMetricDefaultBuckets);
+  for (const auto& pair : wake_durations) {
+    const base::TimeDelta& duration = pair.second;
+    ExpectMetric(kMetricDarkResumeWakeDurationMsName, duration.InMilliseconds(),
                  kMetricDarkResumeWakeDurationMsMin,
-                 kMetricDarkResumeWakeDurationMsMax,
-                 kMetricDefaultBuckets);
+                 kMetricDarkResumeWakeDurationMsMax, kMetricDefaultBuckets);
   }
+  ExpectMetric(kExpectedHistogram1, kTimeDelta1.InMilliseconds(),
+               kMetricDarkResumeWakeDurationMsMin,
+               kMetricDarkResumeWakeDurationMsMax, kMetricDefaultBuckets);
+  ExpectMetric(kExpectedHistogram2, kTimeDelta2.InMilliseconds(),
+               kMetricDarkResumeWakeDurationMsMin,
+               kMetricDarkResumeWakeDurationMsMax, kMetricDefaultBuckets);
+  ExpectMetric(kExpectedHistogram3, kTimeDelta3.InMilliseconds(),
+               kMetricDarkResumeWakeDurationMsMin,
+               kMetricDarkResumeWakeDurationMsMax, kMetricDefaultBuckets);
+  ExpectMetric(kExpectedHistogram4, kTimeDelta4.InMilliseconds(),
+               kMetricDarkResumeWakeDurationMsMin,
+               kMetricDarkResumeWakeDurationMsMax, kMetricDefaultBuckets);
 
   collector_.GenerateDarkResumeMetrics(wake_durations, suspend_duration);
 
@@ -487,14 +512,15 @@ TEST_F(MetricsCollectorTest, GatherDarkResumeMetrics) {
   Mock::VerifyAndClearExpectations(metrics_lib_);
   wake_durations.clear();
 
-  wake_durations.push_back(base::TimeDelta::FromMilliseconds(359));
+  wake_durations.push_back(
+      std::make_pair(kWakeReason1, base::TimeDelta::FromMilliseconds(359)));
   suspend_duration = base::TimeDelta::FromMinutes(13);
 
   IgnoreMetric(kMetricDarkResumeWakeDurationMsName);
+  IgnoreMetric(kExpectedHistogram1);
   ExpectMetric(kMetricDarkResumeWakeupsPerHourName, 4,
                kMetricDarkResumeWakeupsPerHourMin,
-               kMetricDarkResumeWakeupsPerHourMax,
-               kMetricDefaultBuckets);
+               kMetricDarkResumeWakeupsPerHourMax, kMetricDefaultBuckets);
 
   collector_.GenerateDarkResumeMetrics(wake_durations, suspend_duration);
 }
