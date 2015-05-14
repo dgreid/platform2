@@ -373,7 +373,8 @@ TEST_F(DeviceRegistrationInfoTest, RegisterDevice) {
               'minimum': 10,
               'type': 'integer'
             }
-          }
+          },
+          'minimalRole': 'user'
         }
       },
       'robot': {
@@ -382,7 +383,8 @@ TEST_F(DeviceRegistrationInfoTest, RegisterDevice) {
             '_height': {
               'type': 'integer'
             }
-          }
+          },
+          'minimalRole': 'user'
         }
       }
     })";
@@ -406,10 +408,12 @@ TEST_F(DeviceRegistrationInfoTest, RegisterDevice) {
     'base': {
       'reboot': {
         'parameters': {'delay': 'integer'},
+        'minimalRole': 'user',
         'results': {}
       },
       'shutdown': {
         'parameters': {},
+        'minimalRole': 'user',
         'results': {}
       }
     }
@@ -419,12 +423,14 @@ TEST_F(DeviceRegistrationInfoTest, RegisterDevice) {
     'base': {
       'reboot': {
         'parameters': {'delay': {'minimum': 10}},
+        'minimalRole': 'user',
         'results': {}
       }
     },
     'robot': {
       '_jump': {
         'parameters': {'_height': 'integer'},
+        'minimalRole': 'user',
         'results': {}
       }
     }
@@ -481,7 +487,8 @@ TEST_F(DeviceRegistrationInfoTest, UpdateCommand) {
     'robot': {
       '_jump': {
         'parameters': {'_height': 'integer'},
-        'results': {'status': 'string'}
+        'results': {'status': 'string'},
+        'minimalRole': 'user'
       }
     }
   })");
@@ -492,7 +499,8 @@ TEST_F(DeviceRegistrationInfoTest, UpdateCommand) {
   auto commands_json = unittests::CreateValue(R"([{
     'name':'robot._jump',
     'id':'1234',
-    'parameters': {'_height': 100}
+    'parameters': {'_height': 100},
+    'minimalRole': 'user'
   }])");
   ASSERT_NE(nullptr, commands_json.get());
   const base::ListValue* command_list = nullptr;

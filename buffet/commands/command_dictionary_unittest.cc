@@ -230,12 +230,14 @@ TEST(CommandDictionary, GetCommandsAsJson) {
   auto expected = R"({
     'base': {
       'reboot': {
-        'parameters': {'delay': {'minimum': 10}}
+        'parameters': {'delay': {'minimum': 10}},
+        'minimalRole': 'user'
       }
     },
     'robot': {
       '_jump': {
-        'parameters': {'_height': 'integer'}
+        'parameters': {'_height': 'integer'},
+        'minimalRole': 'user'
       }
     }
   })";
@@ -253,7 +255,8 @@ TEST(CommandDictionary, GetCommandsAsJson) {
             'minimum': 10,
             'type': 'integer'
           }
-        }
+        },
+        'minimalRole': 'user'
       }
     },
     'robot': {
@@ -262,7 +265,8 @@ TEST(CommandDictionary, GetCommandsAsJson) {
           '_height': {
            'type': 'integer'
           }
-        }
+        },
+        'minimalRole': 'user'
       }
     }
   })";
@@ -322,14 +326,14 @@ TEST(CommandDictionary, GetCommandsAsJsonWithVisibility) {
   ASSERT_NE(nullptr, json.get());
   auto expected = R"({
     'test': {
-      'command1': {'parameters': {}},
-      'command2': {'parameters': {}},
-      'command3': {'parameters': {}},
-      'command4': {'parameters': {}},
-      'command5': {'parameters': {}},
-      'command6': {'parameters': {}},
-      'command7': {'parameters': {}},
-      'command8': {'parameters': {}}
+      'command1': {'parameters': {}, 'minimalRole': 'user'},
+      'command2': {'parameters': {}, 'minimalRole': 'user'},
+      'command3': {'parameters': {}, 'minimalRole': 'user'},
+      'command4': {'parameters': {}, 'minimalRole': 'user'},
+      'command5': {'parameters': {}, 'minimalRole': 'user'},
+      'command6': {'parameters': {}, 'minimalRole': 'user'},
+      'command7': {'parameters': {}, 'minimalRole': 'user'},
+      'command8': {'parameters': {}, 'minimalRole': 'user'}
     }
   })";
   EXPECT_JSON_EQ(expected, *json);
@@ -340,10 +344,10 @@ TEST(CommandDictionary, GetCommandsAsJsonWithVisibility) {
   ASSERT_NE(nullptr, json.get());
   expected = R"({
     'test': {
-      'command2': {'parameters': {}},
-      'command4': {'parameters': {}},
-      'command6': {'parameters': {}},
-      'command8': {'parameters': {}}
+      'command2': {'parameters': {}, 'minimalRole': 'user'},
+      'command4': {'parameters': {}, 'minimalRole': 'user'},
+      'command6': {'parameters': {}, 'minimalRole': 'user'},
+      'command8': {'parameters': {}, 'minimalRole': 'user'}
     }
   })";
   EXPECT_JSON_EQ(expected, *json);
@@ -354,10 +358,10 @@ TEST(CommandDictionary, GetCommandsAsJsonWithVisibility) {
   ASSERT_NE(nullptr, json.get());
   expected = R"({
     'test': {
-      'command3': {'parameters': {}},
-      'command4': {'parameters': {}},
-      'command7': {'parameters': {}},
-      'command8': {'parameters': {}}
+      'command3': {'parameters': {}, 'minimalRole': 'user'},
+      'command4': {'parameters': {}, 'minimalRole': 'user'},
+      'command7': {'parameters': {}, 'minimalRole': 'user'},
+      'command8': {'parameters': {}, 'minimalRole': 'user'}
     }
   })";
   EXPECT_JSON_EQ(expected, *json);
@@ -369,67 +373,14 @@ TEST(CommandDictionary, GetCommandsAsJsonWithVisibility) {
   ASSERT_NE(nullptr, json.get());
   expected = R"({
     'test': {
-      'command4': {'parameters': {}},
-      'command8': {'parameters': {}}
+      'command4': {'parameters': {}, 'minimalRole': 'user'},
+      'command8': {'parameters': {}, 'minimalRole': 'user'}
     }
   })";
   EXPECT_JSON_EQ(expected, *json);
 }
 
-TEST(CommandDictionary, LoadCommandsWithVisibility) {
-  CommandDictionary dict;
-  auto json = CreateDictionaryValue(R"({
-    'base': {
-      'command1': {
-        'parameters': {},
-        'results': {},
-        'visibility':'none'
-      },
-      'command2': {
-        'parameters': {},
-        'results': {},
-        'visibility':'local'
-      },
-      'command3': {
-        'parameters': {},
-        'results': {},
-        'visibility':'cloud'
-      },
-      'command4': {
-        'parameters': {},
-        'results': {},
-        'visibility':'all'
-      },
-      'command5': {
-        'parameters': {},
-        'results': {},
-        'visibility':'cloud,local'
-      }
-    }
-  })");
-  EXPECT_TRUE(dict.LoadCommands(*json, "testd", nullptr, nullptr));
-  auto cmd = dict.FindCommand("base.command1");
-  ASSERT_NE(nullptr, cmd);
-  EXPECT_EQ("none", cmd->GetVisibility().ToString());
-
-  cmd = dict.FindCommand("base.command2");
-  ASSERT_NE(nullptr, cmd);
-  EXPECT_EQ("local", cmd->GetVisibility().ToString());
-
-  cmd = dict.FindCommand("base.command3");
-  ASSERT_NE(nullptr, cmd);
-  EXPECT_EQ("cloud", cmd->GetVisibility().ToString());
-
-  cmd = dict.FindCommand("base.command4");
-  ASSERT_NE(nullptr, cmd);
-  EXPECT_EQ("all", cmd->GetVisibility().ToString());
-
-  cmd = dict.FindCommand("base.command5");
-  ASSERT_NE(nullptr, cmd);
-  EXPECT_EQ("all", cmd->GetVisibility().ToString());
-}
-
-TEST(CommandDictionary, LoadCommandsWithVisibility_Inheritance) {
+TEST(CommandDictionary, LoadWithPermissions) {
   CommandDictionary base_dict;
   auto json = CreateDictionaryValue(R"({
     'base': {
@@ -439,21 +390,25 @@ TEST(CommandDictionary, LoadCommandsWithVisibility_Inheritance) {
         'visibility':'none'
       },
       'command2': {
+        'minimalRole': 'viewer',
         'parameters': {},
         'results': {},
         'visibility':'local'
       },
       'command3': {
+        'minimalRole': 'user',
         'parameters': {},
         'results': {},
         'visibility':'cloud'
       },
       'command4': {
+        'minimalRole': 'manager',
         'parameters': {},
         'results': {},
         'visibility':'all'
       },
       'command5': {
+        'minimalRole': 'owner',
         'parameters': {},
         'results': {},
         'visibility':'local,cloud'
@@ -461,6 +416,31 @@ TEST(CommandDictionary, LoadCommandsWithVisibility_Inheritance) {
     }
   })");
   EXPECT_TRUE(base_dict.LoadCommands(*json, "testd", nullptr, nullptr));
+
+  auto cmd = base_dict.FindCommand("base.command1");
+  ASSERT_NE(nullptr, cmd);
+  EXPECT_EQ("none", cmd->GetVisibility().ToString());
+  EXPECT_EQ(UserRole::kUser, cmd->GetMinimalRole());
+
+  cmd = base_dict.FindCommand("base.command2");
+  ASSERT_NE(nullptr, cmd);
+  EXPECT_EQ("local", cmd->GetVisibility().ToString());
+  EXPECT_EQ(UserRole::kViewer, cmd->GetMinimalRole());
+
+  cmd = base_dict.FindCommand("base.command3");
+  ASSERT_NE(nullptr, cmd);
+  EXPECT_EQ("cloud", cmd->GetVisibility().ToString());
+  EXPECT_EQ(UserRole::kUser, cmd->GetMinimalRole());
+
+  cmd = base_dict.FindCommand("base.command4");
+  ASSERT_NE(nullptr, cmd);
+  EXPECT_EQ("all", cmd->GetVisibility().ToString());
+  EXPECT_EQ(UserRole::kManager, cmd->GetMinimalRole());
+
+  cmd = base_dict.FindCommand("base.command5");
+  ASSERT_NE(nullptr, cmd);
+  EXPECT_EQ("all", cmd->GetVisibility().ToString());
+  EXPECT_EQ(UserRole::kOwner, cmd->GetMinimalRole());
 
   CommandDictionary dict;
   json = CreateDictionaryValue(R"({
@@ -493,32 +473,38 @@ TEST(CommandDictionary, LoadCommandsWithVisibility_Inheritance) {
   })");
   EXPECT_TRUE(dict.LoadCommands(*json, "testd", &base_dict, nullptr));
 
-  auto cmd = dict.FindCommand("base.command1");
+  cmd = dict.FindCommand("base.command1");
   ASSERT_NE(nullptr, cmd);
   EXPECT_EQ("none", cmd->GetVisibility().ToString());
+  EXPECT_EQ(UserRole::kUser, cmd->GetMinimalRole());
 
   cmd = dict.FindCommand("base.command2");
   ASSERT_NE(nullptr, cmd);
   EXPECT_EQ("local", cmd->GetVisibility().ToString());
+  EXPECT_EQ(UserRole::kViewer, cmd->GetMinimalRole());
 
   cmd = dict.FindCommand("base.command3");
   ASSERT_NE(nullptr, cmd);
   EXPECT_EQ("cloud", cmd->GetVisibility().ToString());
+  EXPECT_EQ(UserRole::kUser, cmd->GetMinimalRole());
 
   cmd = dict.FindCommand("base.command4");
   ASSERT_NE(nullptr, cmd);
   EXPECT_EQ("all", cmd->GetVisibility().ToString());
+  EXPECT_EQ(UserRole::kManager, cmd->GetMinimalRole());
 
   cmd = dict.FindCommand("base.command5");
   ASSERT_NE(nullptr, cmd);
   EXPECT_EQ("all", cmd->GetVisibility().ToString());
+  EXPECT_EQ(UserRole::kOwner, cmd->GetMinimalRole());
 
   cmd = dict.FindCommand("base._command6");
   ASSERT_NE(nullptr, cmd);
   EXPECT_EQ("all", cmd->GetVisibility().ToString());
+  EXPECT_EQ(UserRole::kUser, cmd->GetMinimalRole());
 }
 
-TEST(CommandDictionary, LoadCommandsWithVisibility_Failures) {
+TEST(CommandDictionary, LoadWithPermissions_InvalidVisibility) {
   CommandDictionary dict;
   chromeos::ErrorPtr error;
 
@@ -533,10 +519,27 @@ TEST(CommandDictionary, LoadCommandsWithVisibility_Failures) {
   })");
   EXPECT_FALSE(dict.LoadCommands(*json, "testd", nullptr, &error));
   EXPECT_EQ("invalid_command_visibility", error->GetCode());
-  EXPECT_EQ("Error parsing command 'base.jump'", error->GetMessage());
   EXPECT_EQ("invalid_parameter_value", error->GetInnerError()->GetCode());
-  EXPECT_EQ("Invalid command visibility value 'foo'",
-            error->GetInnerError()->GetMessage());
+  error.reset();
+}
+
+TEST(CommandDictionary, LoadWithPermissions_InvalidRole) {
+  CommandDictionary dict;
+  chromeos::ErrorPtr error;
+
+  auto json = CreateDictionaryValue(R"({
+    'base': {
+      'jump': {
+        'parameters': {},
+        'results': {},
+        'visibility':'local,cloud',
+        'minimalRole':'foo'
+      }
+    }
+  })");
+  EXPECT_FALSE(dict.LoadCommands(*json, "testd", nullptr, &error));
+  EXPECT_EQ("invalid_minimal_role", error->GetCode());
+  EXPECT_EQ("invalid_parameter_value", error->GetInnerError()->GetCode());
   error.reset();
 }
 

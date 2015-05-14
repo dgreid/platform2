@@ -27,6 +27,7 @@ extern const char kDuplicateCommandDef[];
 extern const char kInvalidCommandName[];
 extern const char kCommandFailed[];
 extern const char kInvalidCommandVisibility[];
+extern const char kInvalidMinimalRole[];
 }  // namespace commands
 }  // namespace errors
 
@@ -56,6 +57,13 @@ extern const char kCommand_Parameters[];
 extern const char kCommand_Progress[];
 extern const char kCommand_Results[];
 extern const char kCommand_State[];
+
+extern const char kCommand_Role[];
+extern const char kCommand_Role_Manager[];
+extern const char kCommand_Role_Owner[];
+extern const char kCommand_Role_User[];
+extern const char kCommand_Role_Viewer[];
+
 extern const char kCommand_ErrorCode[];
 extern const char kCommand_ErrorMessage[];
 
@@ -64,6 +72,7 @@ extern const char kCommand_Visibility_None[];
 extern const char kCommand_Visibility_Local[];
 extern const char kCommand_Visibility_Cloud[];
 extern const char kCommand_Visibility_All[];
+
 }  // namespace attributes
 }  // namespace commands
 

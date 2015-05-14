@@ -72,6 +72,7 @@ bool CommandDictionary::LoadCommands(const base::DictionaryValue& json,
       const ObjectSchema* base_results_def = nullptr;
       // By default make it available to all clients.
       auto visibility = CommandDefinition::Visibility::GetAll();
+      UserRole minimal_role{UserRole::kUser};
       if (base_commands) {
         auto cmd = base_commands->FindCommand(full_command_name);
         if (cmd) {
@@ -79,6 +80,7 @@ bool CommandDictionary::LoadCommands(const base::DictionaryValue& json,
           base_progress_def = cmd->GetProgress();
           base_results_def = cmd->GetResults();
           visibility = cmd->GetVisibility();
+          minimal_role = cmd->GetMinimalRole();
         }
 
         // If the base command dictionary was provided but the command was not
@@ -123,12 +125,23 @@ bool CommandDictionary::LoadCommands(const base::DictionaryValue& json,
         return false;
 
       std::string value;
-      using commands::attributes::kCommand_Visibility;
-      if (command_def_json->GetString(kCommand_Visibility, &value)) {
+      if (command_def_json->GetString(commands::attributes::kCommand_Visibility,
+                                      &value)) {
         if (!visibility.FromString(value, error)) {
           chromeos::Error::AddToPrintf(
               error, FROM_HERE, errors::commands::kDomain,
               errors::commands::kInvalidCommandVisibility,
+              "Error parsing command '%s'", full_command_name.c_str());
+          return false;
+        }
+      }
+
+      if (command_def_json->GetString(commands::attributes::kCommand_Role,
+                                      &value)) {
+        if (!FromString(value, &minimal_role, error)) {
+          chromeos::Error::AddToPrintf(
+              error, FROM_HERE, errors::commands::kDomain,
+              errors::commands::kInvalidMinimalRole,
               "Error parsing command '%s'", full_command_name.c_str());
           return false;
         }
@@ -140,6 +153,7 @@ bool CommandDictionary::LoadCommands(const base::DictionaryValue& json,
                                 std::move(progress_schema),
                                 std::move(results_schema)}};
       command_def->SetVisibility(visibility);
+      command_def->SetMinimalRole(minimal_role);
       new_defs.emplace(full_command_name, std::move(command_def));
 
       command_iter.Advance();
@@ -227,6 +241,8 @@ std::unique_ptr<base::DictionaryValue> CommandDictionary::GetCommandsAsJson(
     base::DictionaryValue* command_def = new base::DictionaryValue;
     command_def->Set(commands::attributes::kCommand_Parameters,
                      parameters.release());
+    command_def->SetString(commands::attributes::kCommand_Role,
+                           ToString(pair.second->GetMinimalRole()));
     package->SetWithoutPathExpansion(command_name, command_def);
   }
   return dict;

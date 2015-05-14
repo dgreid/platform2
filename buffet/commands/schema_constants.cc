@@ -24,11 +24,13 @@ const char kDuplicateCommandDef[] = "duplicate_command_definition";
 const char kInvalidCommandName[] = "invalid_command_name";
 const char kCommandFailed[] = "command_failed";
 const char kInvalidCommandVisibility[] = "invalid_command_visibility";
+const char kInvalidMinimalRole[] = "invalid_minimal_role";
 }  // namespace commands
 }  // namespace errors
 
 namespace commands {
 namespace attributes {
+
 const char kType[] = "type";
 const char kDisplayName[] = "displayName";
 const char kDefault[] = "default";
@@ -52,6 +54,13 @@ const char kCommand_Parameters[] = "parameters";
 const char kCommand_Progress[] = "progress";
 const char kCommand_Results[] = "results";
 const char kCommand_State[] = "state";
+
+const char kCommand_Role[] = "minimalRole";
+const char kCommand_Role_Manager[] = "manager";
+const char kCommand_Role_Owner[] = "owner";
+const char kCommand_Role_User[] = "user";
+const char kCommand_Role_Viewer[] = "viewer";
+
 const char kCommand_ErrorCode[] = "error.code";
 const char kCommand_ErrorMessage[] = "error.message";
 
@@ -60,6 +69,7 @@ const char kCommand_Visibility_None[] = "none";
 const char kCommand_Visibility_Local[] = "local";
 const char kCommand_Visibility_Cloud[] = "cloud";
 const char kCommand_Visibility_All[] = "all";
+
 }  // namespace attributes
 }  // namespace commands
 

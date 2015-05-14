@@ -35,6 +35,7 @@
         'commands/prop_values.cc',
         'commands/schema_constants.cc',
         'commands/schema_utils.cc',
+        'commands/user_role.cc',
         'device_registration_info.cc',
         'dbus_bindings/org.chromium.Buffet.Command.xml',
         'dbus_bindings/org.chromium.Buffet.Manager.xml',

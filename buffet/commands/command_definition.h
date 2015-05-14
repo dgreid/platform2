@@ -11,6 +11,7 @@
 #include <base/macros.h>
 
 #include "buffet/commands/object_schema.h"
+#include "buffet/commands/user_role.h"
 
 namespace buffet {
 
@@ -61,6 +62,10 @@ class CommandDefinition {
   const Visibility& GetVisibility() const { return visibility_; }
   // Changes the command visibility.
   void SetVisibility(const Visibility& visibility);
+  // Returns the role required to execute command.
+  UserRole GetMinimalRole() const { return minimal_role_; }
+  // Changes the role required to execute command.
+  void SetMinimalRole(UserRole minimal_role) { minimal_role_ = minimal_role; }
 
  private:
   std::string category_;  // Cmd category. Could be "powerd" for "base.reboot".
@@ -68,6 +73,8 @@ class CommandDefinition {
   std::unique_ptr<const ObjectSchema> progress_;    // Command progress def.
   std::unique_ptr<const ObjectSchema> results_;  // Command results def.
   Visibility visibility_;  // Available to all by default.
+  // Minimal role required to execute command.
+  UserRole minimal_role_{UserRole::kUser};
 
   DISALLOW_COPY_AND_ASSIGN(CommandDefinition);
 };
