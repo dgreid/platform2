@@ -66,6 +66,7 @@ class CHROMEOS_EXPORT TlsStream : public Stream {
   bool WaitForDataBlocking(AccessMode in_mode,
                            AccessMode* out_mode,
                            ErrorPtr* error) override;
+  void CancelPendingAsyncOperations() override;
 
  private:
   class TlsStreamImpl;

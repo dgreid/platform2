@@ -124,6 +124,7 @@ class MockFileDescriptor : public FileStream::FileDescriptorInterface {
   MOCK_METHOD2(WaitForData, void(Stream::AccessMode, const DataCallback&));
   MOCK_METHOD2(WaitForDataBlocking,
                int(Stream::AccessMode, Stream::AccessMode*));
+  MOCK_METHOD0(CancelPendingAsyncOperations, void());
 };
 
 class FileStreamTest : public testing::Test {

@@ -103,6 +103,8 @@ class CHROMEOS_EXPORT InputStreamSet : public Stream {
                            AccessMode* out_mode,
                            ErrorPtr* error) override;
 
+  void CancelPendingAsyncOperations() override;
+
  private:
   friend class InputStreamSetTest;
 

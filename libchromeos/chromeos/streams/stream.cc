@@ -283,4 +283,10 @@ void Stream::FlushAsyncCallback(const base::Closure& success_callback,
   }
 }
 
+void Stream::CancelPendingAsyncOperations() {
+  weak_ptr_factory_.InvalidateWeakPtrs();
+  async_read_buffer_ = nullptr;
+  async_write_buffer_ = nullptr;
+}
+
 }  // namespace chromeos

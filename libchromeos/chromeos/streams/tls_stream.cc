@@ -94,6 +94,7 @@ class TlsStream::TlsStreamImpl {
   bool WaitForDataBlocking(AccessMode in_mode,
                            AccessMode* out_mode,
                            ErrorPtr* error);
+  void CancelPendingAsyncOperations();
 
  private:
   bool ReportError(ErrorPtr* error,
@@ -265,6 +266,11 @@ bool TlsStream::TlsStreamImpl::WaitForDataBlocking(AccessMode in_mode,
   }
   in_mode = stream_utils::MakeAccessMode(is_read, is_write);
   return socket_->WaitForDataBlocking(in_mode, out_mode, error);
+}
+
+void TlsStream::TlsStreamImpl::CancelPendingAsyncOperations() {
+  socket_->CancelPendingAsyncOperations();
+  weak_ptr_factory_.InvalidateWeakPtrs();
 }
 
 bool TlsStream::TlsStreamImpl::ReportError(
@@ -514,6 +520,11 @@ bool TlsStream::WaitForDataBlocking(AccessMode in_mode,
   if (!impl_)
     return stream_utils::ErrorStreamClosed(FROM_HERE, error);
   return impl_->WaitForDataBlocking(in_mode, out_mode, error);
+}
+
+void TlsStream::CancelPendingAsyncOperations() {
+  if (impl_)
+    impl_->CancelPendingAsyncOperations();
 }
 
 }  // namespace chromeos

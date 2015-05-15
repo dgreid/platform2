@@ -122,6 +122,11 @@ class FileDescriptor : public base::MessageLoopForIO::Watcher,
     return res;
   }
 
+  void CancelPendingAsyncOperations() override {
+    read_watcher_.StopWatchingFileDescriptor();
+    write_watcher_.StopWatchingFileDescriptor();
+  }
+
   // Overrides for base::MessageLoopForIO::Watcher interface methods.
   void OnFileCanReadWithoutBlocking(int fd) override {
     read_data_callback_.Run(Stream::AccessMode::READ);
@@ -473,11 +478,21 @@ bool FileStream::WaitForData(
 bool FileStream::WaitForDataBlocking(AccessMode in_mode,
                                      AccessMode* out_mode,
                                      ErrorPtr* error) {
+  if (!IsOpen())
+    return stream_utils::ErrorStreamClosed(FROM_HERE, error);
+
   if (fd_interface_->WaitForDataBlocking(in_mode, out_mode) < 0) {
     errors::system::AddSystemError(error, FROM_HERE, errno);
     return false;
   }
   return true;
+}
+
+void FileStream::CancelPendingAsyncOperations() {
+  if (IsOpen()) {
+    fd_interface_->CancelPendingAsyncOperations();
+  }
+  Stream::CancelPendingAsyncOperations();
 }
 
 }  // namespace chromeos

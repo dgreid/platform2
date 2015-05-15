@@ -196,4 +196,11 @@ bool InputStreamSet::WaitForDataBlocking(AccessMode in_mode,
   return true;
 }
 
+void InputStreamSet::CancelPendingAsyncOperations() {
+  if (IsOpen() && !source_streams_.empty()) {
+    Stream* stream = source_streams_.front();
+    stream->CancelPendingAsyncOperations();
+  }
+}
+
 }  // namespace chromeos

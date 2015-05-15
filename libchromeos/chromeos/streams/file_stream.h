@@ -49,6 +49,7 @@ class CHROMEOS_EXPORT FileStream : public Stream {
                              const DataCallback& data_callback) = 0;
     virtual int WaitForDataBlocking(AccessMode in_mode,
                                     AccessMode* out_mode) = 0;
+    virtual void CancelPendingAsyncOperations() = 0;
   };
 
   // == Construction ==========================================================
@@ -138,6 +139,9 @@ class CHROMEOS_EXPORT FileStream : public Stream {
   bool WaitForDataBlocking(AccessMode in_mode,
                            AccessMode* out_mode,
                            ErrorPtr* error) override;
+
+  // Cancels pending asynchronous read/write operations.
+  void CancelPendingAsyncOperations() override;
 
  private:
   friend class FileStreamTest;

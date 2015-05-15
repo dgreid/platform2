@@ -383,6 +383,9 @@ class CHROMEOS_EXPORT Stream {
                                    AccessMode* out_mode,
                                    ErrorPtr* error) = 0;
 
+  // Cancels pending asynchronous read/write operations.
+  virtual void CancelPendingAsyncOperations();
+
  protected:
   Stream() = default;
 
