@@ -17,7 +17,7 @@
       <annotation name="org.chromium.DBus.Method.Kind" value="async"/>
     </method>
     <method name="RegisterDevice">
-      <arg name="params" type="a{sv}" direction="in"/>
+      <arg name="ticket_id" type="s" direction="in"/>
       <arg name="device_id" type="s" direction="out"/>
       <annotation name="org.chromium.DBus.Method.Kind" value="async"/>
     </method>

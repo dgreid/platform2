@@ -116,22 +116,11 @@ void Manager::GetDeviceInfo(DBusMethodResponse<std::string> response) {
 }
 
 void Manager::RegisterDevice(DBusMethodResponse<std::string> response,
-                             const chromeos::VariantDictionary& params) {
+                             const std::string& ticket_id) {
   LOG(INFO) << "Received call to Manager.RegisterDevice()";
 
   chromeos::ErrorPtr error;
-  std::map<std::string, std::string> str_params;
-  for (const auto& pair : params) {
-    if (!pair.second.IsTypeCompatible<std::string>()) {
-      response->ReplyWithError(FROM_HERE, chromeos::errors::dbus::kDomain,
-                               DBUS_ERROR_INVALID_ARGS,
-                               "String value expected");
-      return;
-    }
-    str_params.emplace_hint(str_params.end(), pair.first,
-                            pair.second.Get<std::string>());
-  }
-  std::string device_id = device_info_->RegisterDevice(str_params, &error);
+  std::string device_id = device_info_->RegisterDevice(ticket_id, &error);
   if (!device_id.empty()) {
     response->Return(device_id);
     return;

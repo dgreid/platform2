@@ -62,7 +62,7 @@ class Manager final : public org::chromium::Buffet::ManagerInterface {
   void CheckDeviceRegistered(DBusMethodResponse<std::string> response) override;
   void GetDeviceInfo(DBusMethodResponse<std::string> response) override;
   void RegisterDevice(DBusMethodResponse<std::string> response,
-                      const chromeos::VariantDictionary& params) override;
+                      const std::string& ticket_id) override;
   bool UpdateDeviceInfo(chromeos::ErrorPtr* error,
                         const std::string& in_name,
                         const std::string& in_description,

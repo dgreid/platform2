@@ -16,7 +16,6 @@
 
 #include "buffet/commands/command_manager.h"
 #include "buffet/commands/unittest_utils.h"
-#include "buffet/device_registration_storage_keys.h"
 #include "buffet/states/mock_state_change_queue_interface.h"
 #include "buffet/states/state_manager.h"
 #include "buffet/storage_impls.h"
@@ -55,14 +54,13 @@ const char kUserAccessToken[]      = "sd56.4.FGDjG_F-gFGF-dFG6gGOG9Dxm5NgdS9"
                                      "VZDei530-w0yE2urpQ";
 const char kUserRefreshToken[]     = "1/zQLKjlKJlkLkLKjLkjLKjLkjLjLkjl0ftc6"
                                      "cp1nI-GQ";
-
 }  // namespace test_data
 
 // Add the test device registration information.
 void SetDefaultDeviceRegistration(base::DictionaryValue* data) {
-  data->SetString(storage_keys::kRefreshToken, test_data::kRefreshToken);
-  data->SetString(storage_keys::kDeviceId, test_data::kDeviceId);
-  data->SetString(storage_keys::kRobotAccount, test_data::kRobotAccountEmail);
+  data->SetString("refresh_token", test_data::kRefreshToken);
+  data->SetString("device_id", test_data::kDeviceId);
+  data->SetString("robot_account", test_data::kRobotAccountEmail);
 }
 
 void OAuth2Handler(const ServerRequest& request, ServerResponse* response) {
@@ -447,9 +445,8 @@ TEST_F(DeviceRegistrationInfoTest, RegisterDevice) {
   transport_->AddHandler(dev_reg_->GetOAuthURL("token"),
                          chromeos::http::request_type::kPost,
                          base::Bind(OAuth2Handler));
-  std::map<std::string, std::string> params;
-  params["ticket_id"] = test_data::kClaimTicketId;
-  std::string device_id = dev_reg_->RegisterDevice(params, nullptr);
+  std::string device_id =
+      dev_reg_->RegisterDevice(test_data::kClaimTicketId, nullptr);
 
   EXPECT_EQ(test_data::kDeviceId, device_id);
   EXPECT_EQ(3, transport_->GetRequestCount());
@@ -460,11 +457,11 @@ TEST_F(DeviceRegistrationInfoTest, RegisterDevice) {
   base::DictionaryValue* dict = nullptr;
   EXPECT_TRUE(storage_data->GetAsDictionary(&dict));
   std::string value;
-  EXPECT_TRUE(dict->GetString(storage_keys::kDeviceId, &value));
+  EXPECT_TRUE(dict->GetString("device_id", &value));
   EXPECT_EQ(test_data::kDeviceId, value);
-  EXPECT_TRUE(dict->GetString(storage_keys::kRefreshToken, &value));
+  EXPECT_TRUE(dict->GetString("refresh_token", &value));
   EXPECT_EQ(test_data::kRefreshToken, value);
-  EXPECT_TRUE(dict->GetString(storage_keys::kRobotAccount, &value));
+  EXPECT_TRUE(dict->GetString("robot_account", &value));
   EXPECT_EQ(test_data::kRobotAccountEmail, value);
 }
 

@@ -26,7 +26,6 @@
 #include "buffet/commands/command_definition.h"
 #include "buffet/commands/command_manager.h"
 #include "buffet/commands/schema_constants.h"
-#include "buffet/device_registration_storage_keys.h"
 #include "buffet/notification/xmpp_channel.h"
 #include "buffet/states/state_manager.h"
 #include "buffet/utils.h"
@@ -34,23 +33,6 @@
 const char buffet::kErrorDomainOAuth2[] = "oauth2";
 const char buffet::kErrorDomainGCD[] = "gcd";
 const char buffet::kErrorDomainGCDServer[] = "gcd_server";
-
-namespace buffet {
-namespace storage_keys {
-
-// Persistent keys
-const char kRefreshToken[] = "refresh_token";
-const char kDeviceId[] = "device_id";
-const char kRobotAccount[] = "robot_account";
-const char kName[] = "name";
-const char kDescription[] = "description";
-const char kLocation[] = "location";
-const char kLocalAnonymousAccessRole[] = "local_anonymous_access_role";
-const char kLocalDiscoveryEnabled[] = "local_discovery_enabled";
-const char kLocalPairingEnabled[] = "local_pairing_enabled";
-
-}  // namespace storage_keys
-}  // namespace buffet
 
 namespace {
 
@@ -390,47 +372,8 @@ std::unique_ptr<base::DictionaryValue> DeviceRegistrationInfo::GetDeviceInfo(
   return json;
 }
 
-namespace {
-
-bool GetWithDefault(const std::map<std::string, std::string>& source,
-                    const std::string& key,
-                    const std::string& default_value,
-                    std::string* output) {
-  auto it = source.find(key);
-  if (it == source.end()) {
-    *output = default_value;
-    return false;
-  }
-  *output = it->second;
-  return true;
-}
-
-}  // namespace
-
-std::string DeviceRegistrationInfo::RegisterDevice(
-    const std::map<std::string, std::string>& params,
-    chromeos::ErrorPtr* error) {
-  std::string ticket_id;
-  if (!GetWithDefault(params, "ticket_id", "", &ticket_id)) {
-    chromeos::Error::AddTo(error, FROM_HERE, kErrorDomainBuffet,
-                           "missing_parameter",
-                           "Need ticket_id parameter for RegisterDevice()");
-    return std::string();
-  }
-
-  // These fields are optional, and will default to values from the manufacturer
-  // supplied config.
-  std::string name;
-  GetWithDefault(params, storage_keys::kName, config_->name(), &name);
-  std::string description;
-  GetWithDefault(params, storage_keys::kDescription, config_->description(),
-                 &description);
-  std::string location;
-  GetWithDefault(params, storage_keys::kLocation, config_->location(),
-                 &location);
-  if (!UpdateDeviceInfo(name, description, location, error))
-    return std::string();
-
+std::string DeviceRegistrationInfo::RegisterDevice(const std::string& ticket_id,
+                                                   chromeos::ErrorPtr* error) {
   std::unique_ptr<base::DictionaryValue> device_draft =
       BuildDeviceResource(error);
   if (!device_draft)

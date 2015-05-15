@@ -105,13 +105,8 @@ class DeviceRegistrationInfo : public NotificationDelegate {
       chromeos::ErrorPtr* error);
 
   // Registers the device.
-  //
-  // |params| are a list of key-value pairs of device information,
-  // such as client_id, client_secret, and so on. If a particular key-value pair
-  // is omitted, a default value is used when possible.
   // Returns a device ID on success.
-  // The values are all strings for now.
-  std::string RegisterDevice(const std::map<std::string, std::string>& params,
+  std::string RegisterDevice(const std::string& ticket_id,
                              chromeos::ErrorPtr* error);
 
   // Updates a command.

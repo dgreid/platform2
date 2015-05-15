@@ -338,17 +338,11 @@ class CloudDelegateImpl : public CloudDelegate {
       RetryRegister(ticket_id, retries, nullptr);
       return;
     }
-    VariantDictionary params{
-        {"ticket_id", ticket_id},
-    };
     manager_proxy->RegisterDeviceAsync(
-        params,
-        base::Bind(&CloudDelegateImpl::OnRegisterSuccess,
-                   setup_weak_factory_.GetWeakPtr()),
+        ticket_id, base::Bind(&CloudDelegateImpl::OnRegisterSuccess,
+                              setup_weak_factory_.GetWeakPtr()),
         base::Bind(&CloudDelegateImpl::RetryRegister,
-                   setup_weak_factory_.GetWeakPtr(),
-                   ticket_id,
-                   retries));
+                   setup_weak_factory_.GetWeakPtr(), ticket_id, retries));
   }
 
   void OnAddCommandSucceeded(const SuccessCallback& success_callback,

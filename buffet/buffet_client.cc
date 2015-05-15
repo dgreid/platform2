@@ -313,17 +313,18 @@ class Daemon : public chromeos::DBusDaemon {
 
   void CallRegisterDevice(const std::string& args,
                           ManagerProxy* manager_proxy) {
-    chromeos::VariantDictionary params;
+    std::string ticket_id;
     if (!args.empty()) {
       auto key_values = chromeos::data_encoding::WebParamsDecode(args);
       for (const auto& pair : key_values) {
-        params.insert(std::make_pair(pair.first, chromeos::Any(pair.second)));
+        if (pair.first == "ticket_id")
+          ticket_id = pair.second;
       }
     }
 
     ErrorPtr error;
     std::string device_id;
-    if (!manager_proxy->RegisterDevice(params, &device_id, &error)) {
+    if (!manager_proxy->RegisterDevice(ticket_id, &device_id, &error)) {
       return ReportError(error.get());
     }
 
@@ -380,8 +381,8 @@ class Daemon : public chromeos::DBusDaemon {
   }
 
   void CallSetCommandVisibility(const std::string& command_list,
-                                    const std::string& visibility,
-                                    ManagerProxy* manager_proxy) {
+                                const std::string& visibility,
+                                ManagerProxy* manager_proxy) {
     ErrorPtr error;
     std::vector<std::string> commands =
         chromeos::string_utils::Split(command_list, ",", true, true);
