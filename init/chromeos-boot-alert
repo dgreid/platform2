@@ -61,6 +61,15 @@ find_current_locale() {
   echo "${locale}"
 }
 
+# Determine the right console. On Freon systems, the default TTY (/dev/tty1) may
+# not exist until we've invoked Frecon (via display_boot_message) and would
+# cause problems when we try to write then read (for example, warn_dev).  To
+# prevent that, fall back to /dev/null if not available.
+setup_tty() {
+  TTY=/dev/tty1
+  [ -e "${TTY}" ] || TTY=/dev/null
+}
+
 # Shows boot messages in assets folder on screen center if available.
 # Arguments: message in /usr/share/chromeos-assets/text/boot_messages/$locale
 show_assets_message() {
@@ -79,7 +88,10 @@ show_assets_message() {
   done
   locale_list="$locale_list en-US en"
 
-  if ! display_boot_message "${message}" "${locale_list}"; then
+  if display_boot_message "${message}" "${locale_list}"; then
+    # Frecon may create the text terminal so we want to setup TTY again.
+    setup_tty
+  else
     # Display the message code itself as fallback.
     echo "${message}" >>"${TTY}"
   fi
@@ -202,7 +214,10 @@ mode_update_firmware() {
 mode_wipe() {
   local message_file="$1"
 
-  if ! display_boot_message "show_spinner" "${message_file}"; then
+  if display_boot_message "show_spinner" "${message_file}"; then
+    # Frecon may create the text terminal so we want to setup TTY again.
+    setup_tty
+  else
     echo "Wiping" >>"${TTY}"
   fi
 }
@@ -326,13 +341,7 @@ main() {
     (echo "chromeos-boot-alert: ${mode}" >>"${output}") 2>/dev/null || true
   done
 
-  # Determine the right console. On Frecon, the default TTY (/dev/tty1) may
-  # not exist and would cause problems when we try to write then read (for
-  # example, warn_dev).  To prevent that, fall back to /dev/null if not
-  # available.
-  # TODO(hungte) Request console when Frecon supports no-dbus mode.
-  TTY=/dev/tty1
-  [ -e "${TTY}" ] || TTY=/dev/null
+  setup_tty
 
   if [ -x /usr/sbin/board_boot_alert ]; then
     # Allow overriding boot-alert behavior (usually for headless devices).
