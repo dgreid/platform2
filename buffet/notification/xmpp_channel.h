@@ -5,6 +5,7 @@
 #ifndef BUFFET_NOTIFICATION_XMPP_CHANNEL_H_
 #define BUFFET_NOTIFICATION_XMPP_CHANNEL_H_
 
+#include <map>
 #include <memory>
 #include <string>
 #include <vector>
@@ -17,10 +18,12 @@
 #include <chromeos/streams/stream.h>
 
 #include "buffet/notification/notification_channel.h"
+#include "buffet/notification/xmpp_stream_parser.h"
 
 namespace buffet {
 
-class XmppChannel : public NotificationChannel {
+class XmppChannel : public NotificationChannel,
+                    public XmppStreamParser::Delegate {
  public:
   // |account| is the robot account for buffet and |access_token|
   // it the OAuth token. Note that the OAuth token expires fairly frequently
@@ -59,13 +62,24 @@ class XmppChannel : public NotificationChannel {
   chromeos::Stream* stream_{nullptr};
 
  private:
+  // Overrides from XmppStreamParser::Delegate.
+  void OnStreamStart(const std::string& node_name,
+                     std::map<std::string, std::string> attributes) override;
+  void OnStreamEnd(const std::string& node_name) override;
+  void OnStanza(std::unique_ptr<XmlNode> stanza) override;
+
+  void HandleStanza(std::unique_ptr<XmlNode> stanza);
+  void RestartXmppStream();
+
   void SendMessage(const std::string& message);
   void WaitForMessage();
 
   void OnConnected();
   void OnMessageRead(size_t size);
   void OnMessageSent();
-  void OnError(const chromeos::Error* error);
+  void OnReadError(const chromeos::Error* error);
+  void OnWriteError(const chromeos::Error* error);
+  void Restart();
 
   // Robot account name for the device.
   std::string account_;
@@ -79,10 +93,14 @@ class XmppChannel : public NotificationChannel {
   std::vector<char> read_socket_data_;
   // Write buffer for outgoing message packets.
   std::string write_socket_data_;
+  std::string queued_write_data_;
 
   chromeos::BackoffEntry backoff_entry_;
   NotificationDelegate* delegate_{nullptr};
   scoped_refptr<base::TaskRunner> task_runner_;
+  XmppStreamParser stream_parser_{this};
+  bool read_pending_{false};
+  bool write_pending_{false};
 
   base::WeakPtrFactory<XmppChannel> weak_ptr_factory_{this};
   DISALLOW_COPY_AND_ASSIGN(XmppChannel);

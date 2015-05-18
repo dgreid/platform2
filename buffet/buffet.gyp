@@ -3,6 +3,7 @@
     'variables': {
       'deps': [
         'dbus-1',
+        'expat',
         'libchrome-<(libbase_ver)',
         'libchromeos-<(libbase_ver)',
       ],
@@ -39,7 +40,9 @@
         'dbus_bindings/org.chromium.Buffet.Manager.xml',
         'dbus_constants.cc',
         'manager.cc',
+        'notification/xml_node.cc',
         'notification/xmpp_channel.cc',
+        'notification/xmpp_stream_parser.cc',
         'registration_status.cc',
         'storage_impls.cc',
         'states/error_codes.cc',
@@ -120,7 +123,9 @@
             'commands/schema_utils_unittest.cc',
             'commands/unittest_utils.cc',
             'device_registration_info_unittest.cc',
+            'notification/xml_node_unittest.cc',
             'notification/xmpp_channel_unittest.cc',
+            'notification/xmpp_stream_parser_unittest.cc',
             'states/state_change_queue_unittest.cc',
             'states/state_manager_unittest.cc',
             'states/state_package_unittest.cc',
