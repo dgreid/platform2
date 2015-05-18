@@ -15,6 +15,8 @@ namespace buffet {
 // the details of this storage behind an interface for test purposes.
 class StorageInterface {
  public:
+  virtual ~StorageInterface() = default;
+
   // Load the dictionary from storage. If it fails (e.g. the storage container
   // [file?] doesn't exist), then it returns empty unique_ptr (aka nullptr).
   virtual std::unique_ptr<base::DictionaryValue> Load() = 0;
