@@ -82,12 +82,14 @@ class FileDescriptor : public base::MessageLoopForIO::Watcher,
         << "MessageLoopForIO is required for asynchronous operations";
 
     if (stream_utils::IsReadAccessMode(mode)) {
+      CHECK(read_data_callback_.is_null());
       read_watcher_.StopWatchingFileDescriptor();
       read_data_callback_ = data_callback;
       base::MessageLoopForIO::current()->WatchFileDescriptor(
           fd_, false, base::MessageLoopForIO::WATCH_READ, &read_watcher_, this);
     }
     if (stream_utils::IsWriteAccessMode(mode)) {
+      CHECK(write_data_callback_.is_null());
       write_watcher_.StopWatchingFileDescriptor();
       write_data_callback_ = data_callback;
       base::MessageLoopForIO::current()->WatchFileDescriptor(
@@ -123,17 +125,26 @@ class FileDescriptor : public base::MessageLoopForIO::Watcher,
   }
 
   void CancelPendingAsyncOperations() override {
+    read_data_callback_.Reset();
     read_watcher_.StopWatchingFileDescriptor();
+
+    write_data_callback_.Reset();
     write_watcher_.StopWatchingFileDescriptor();
   }
 
   // Overrides for base::MessageLoopForIO::Watcher interface methods.
   void OnFileCanReadWithoutBlocking(int fd) override {
-    read_data_callback_.Run(Stream::AccessMode::READ);
+    CHECK(!read_data_callback_.is_null());
+    DataCallback cb = read_data_callback_;
+    read_data_callback_.Reset();
+    cb.Run(Stream::AccessMode::READ);
   }
 
   void OnFileCanWriteWithoutBlocking(int fd) override {
-    write_data_callback_.Run(Stream::AccessMode::WRITE);
+    CHECK(!write_data_callback_.is_null());
+    DataCallback cb = write_data_callback_;
+    write_data_callback_.Reset();
+    cb.Run(Stream::AccessMode::WRITE);
   }
 
  private:

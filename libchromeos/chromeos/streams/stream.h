@@ -390,9 +390,21 @@ class CHROMEOS_EXPORT Stream {
   Stream() = default;
 
  private:
-  // Called from WaitForData() when read or write operations can be performed
+  // Called from WaitForData() when read operations can be performed
   // without blocking (the type of operation is provided in |mode|).
-  void OnDataAvailable(AccessMode mode);
+  void OnReadAvailable(void* buffer,
+                       size_t size,
+                       const base::Callback<void(size_t)>& success_callback,
+                       const ErrorCallback& error_callback,
+                       AccessMode mode);
+
+  // Called from WaitForData() when write operations can be performed
+  // without blocking (the type of operation is provided in |mode|).
+  void OnWriteAvailable(const void* buffer,
+                        size_t size,
+                        const base::Callback<void(size_t)>& success_callback,
+                        const ErrorCallback& error_callback,
+                        AccessMode mode);
 
   // Helper callbacks to implement ReadAllAsync/WriteAllAsync.
   CHROMEOS_PRIVATE void ReadAllAsyncCallback(
@@ -414,16 +426,10 @@ class CHROMEOS_EXPORT Stream {
       const ErrorCallback& error_callback);
 
   // Data members for asynchronous read operations.
-  void* async_read_buffer_{nullptr};
-  size_t async_read_size_{0};
-  base::Callback<void(size_t)> read_success_callback_;
-  ErrorCallback read_error_callback_;
+  bool is_async_read_pending_{false};
 
   // Data members for asynchronous write operations.
-  const void* async_write_buffer_{nullptr};
-  size_t async_write_size_{0};
-  base::Callback<void(size_t)> write_success_callback_;
-  ErrorCallback write_error_callback_;
+  bool is_async_write_pending_{false};
 
   base::WeakPtrFactory<Stream> weak_ptr_factory_{this};
   DISALLOW_COPY_AND_ASSIGN(Stream);

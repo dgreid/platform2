@@ -29,24 +29,20 @@ bool Stream::ReadAsync(void* buffer,
                        const base::Callback<void(size_t)>& success_callback,
                        const ErrorCallback& error_callback,
                        ErrorPtr* error) {
-  if (async_read_buffer_) {
+  if (is_async_read_pending_) {
     Error::AddTo(error, FROM_HERE, errors::stream::kDomain,
                  errors::stream::kOperationNotSupported,
                  "Another asynchronous operation is still pending");
     return false;
   }
-  async_read_buffer_ = buffer;
-  async_read_size_ = size_to_read;
-  read_success_callback_ = success_callback;
-  read_error_callback_ = error_callback;
-  bool success = WaitForData(
+  is_async_read_pending_ = true;
+
+  is_async_read_pending_ = WaitForData(
       AccessMode::READ,
-      base::Bind(&Stream::OnDataAvailable, weak_ptr_factory_.GetWeakPtr()),
+      base::Bind(&Stream::OnReadAvailable, weak_ptr_factory_.GetWeakPtr(),
+                 buffer, size_to_read, success_callback, error_callback),
       error);
-  if (!success) {
-    async_read_buffer_ = nullptr;
-  }
-  return success;
+  return is_async_read_pending_;
 }
 
 bool Stream::ReadAllAsync(void* buffer,
@@ -100,24 +96,19 @@ bool Stream::WriteAsync(const void* buffer,
                         const base::Callback<void(size_t)>& success_callback,
                         const ErrorCallback& error_callback,
                         ErrorPtr* error) {
-  if (async_write_buffer_) {
+  if (is_async_write_pending_) {
     Error::AddTo(error, FROM_HERE, errors::stream::kDomain,
                  errors::stream::kOperationNotSupported,
                  "Another asynchronous operation is still pending");
     return false;
   }
-  async_write_buffer_ = buffer;
-  async_write_size_ = size_to_write;
-  write_success_callback_ = success_callback;
-  write_error_callback_ = error_callback;
-  bool success = WaitForData(
+  is_async_write_pending_ = true;
+  is_async_write_pending_ = WaitForData(
       AccessMode::WRITE,
-      base::Bind(&Stream::OnDataAvailable, weak_ptr_factory_.GetWeakPtr()),
+      base::Bind(&Stream::OnWriteAvailable, weak_ptr_factory_.GetWeakPtr(),
+                 buffer, size_to_write, success_callback, error_callback),
       error);
-  if (!success) {
-    async_write_buffer_ = nullptr;
-  }
-  return success;
+  return is_async_write_pending_;
 }
 
 bool Stream::WriteAllAsync(const void* buffer,
@@ -180,48 +171,54 @@ bool Stream::FlushAsync(const base::Closure& success_callback,
   return true;
 }
 
-void Stream::OnDataAvailable(AccessMode mode) {
+void Stream::OnReadAvailable(
+    void* buffer,
+    size_t size,
+    const base::Callback<void(size_t)>& success_callback,
+    const ErrorCallback& error_callback,
+    AccessMode mode) {
+  CHECK(stream_utils::IsReadAccessMode(mode));
+  CHECK(is_async_read_pending_);
+  is_async_read_pending_ = false;
   ErrorPtr error;
-  if (stream_utils::IsReadAccessMode(mode) && async_read_buffer_ != nullptr) {
-    size_t read = 0;
-    bool eos = false;
-    void* buffer = async_read_buffer_;
-    async_read_buffer_ = nullptr;  // reset the ptr to indicate end of read.
-    if (ReadNonBlocking(buffer, async_read_size_, &read, &eos, &error)) {
-      if (read > 0 || eos) {
-        // If we have some data read, or if we reached the end of stream, call
-        // the success callback.
-        read_success_callback_.Run(read);
-      } else {
-        // Otherwise just reschedule the read operation.
-        if (!ReadAsync(buffer, async_read_size_, read_success_callback_,
-            read_error_callback_, &error)) {
-          read_error_callback_.Run(error.get());
-        }
-      }
-    } else {
-      read_error_callback_.Run(error.get());
-    }
-  }
+  size_t read = 0;
+  bool eos = false;
+  if (!ReadNonBlocking(buffer, size, &read, &eos, &error))
+    return error_callback.Run(error.get());
 
-  error.reset();
-  if (stream_utils::IsWriteAccessMode(mode) && async_write_buffer_ != nullptr) {
-    size_t written = 0;
-    const void* buffer = async_write_buffer_;
-    async_write_buffer_ = nullptr;  // reset the ptr to indicate end of write.
-    if (WriteNonBlocking(buffer, async_write_size_, &written, &error)) {
-      if (written > 0) {
-        write_success_callback_.Run(written);
-      } else {
-        if (!WriteAsync(buffer, async_read_size_, write_success_callback_,
-            write_error_callback_, &error)) {
-          write_error_callback_.Run(error.get());
-        }
-      }
-    } else {
-      write_error_callback_.Run(error.get());
-    }
-  }
+  // If we have some data read, or if we reached the end of stream, call
+  // the success callback.
+  if (read > 0 || eos)
+    return success_callback.Run(read);
+
+  // Otherwise just reschedule the read operation.
+  if (!ReadAsync(buffer, size, success_callback, error_callback, &error))
+    return error_callback.Run(error.get());
+
+  return;
+}
+
+void Stream::OnWriteAvailable(
+    const void* buffer,
+    size_t size,
+    const base::Callback<void(size_t)>& success_callback,
+    const ErrorCallback& error_callback,
+    AccessMode mode) {
+  CHECK(stream_utils::IsWriteAccessMode(mode));
+  CHECK(is_async_write_pending_);
+  is_async_write_pending_ = false;
+  ErrorPtr error;
+  size_t written = 0;
+  if (!WriteNonBlocking(buffer, size, &written, &error))
+    error_callback.Run(error.get());
+
+  if (written > 0)
+    return success_callback.Run(written);
+
+  if (!WriteAsync(buffer, size, success_callback, error_callback, &error))
+    return error_callback.Run(error.get());
+
+  return;
 }
 
 void Stream::ReadAllAsyncCallback(void* buffer,
@@ -285,8 +282,8 @@ void Stream::FlushAsyncCallback(const base::Closure& success_callback,
 
 void Stream::CancelPendingAsyncOperations() {
   weak_ptr_factory_.InvalidateWeakPtrs();
-  async_read_buffer_ = nullptr;
-  async_write_buffer_ = nullptr;
+  is_async_read_pending_ = false;
+  is_async_write_pending_ = false;
 }
 
 }  // namespace chromeos
