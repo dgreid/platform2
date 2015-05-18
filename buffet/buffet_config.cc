@@ -4,6 +4,7 @@
 
 #include "buffet/buffet_config.h"
 
+#include <base/files/file_util.h>
 #include <base/logging.h>
 #include <base/strings/string_number_conversions.h>
 
@@ -84,9 +85,11 @@ BuffetConfig::BuffetConfig(const base::FilePath& state_path)
 
 void BuffetConfig::Load(const base::FilePath& config_path) {
   chromeos::KeyValueStore store;
-  if (store.Load(config_path)) {
-    Load(store);
+  if (base::PathExists(config_path)) {
+    CHECK(store.Load(config_path)) << "Unable to read or parse config file at"
+                                   << config_path.value();
   }
+  Load(store);
 }
 
 void BuffetConfig::Load(const chromeos::KeyValueStore& store) {
