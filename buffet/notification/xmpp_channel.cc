@@ -10,6 +10,7 @@
 #include <chromeos/backoff_entry.h>
 #include <chromeos/data_encoding.h>
 #include <chromeos/streams/file_stream.h>
+#include <chromeos/streams/tls_stream.h>
 
 #include "buffet/notification/notification_delegate.h"
 #include "buffet/notification/xml_node.h"
@@ -137,9 +138,22 @@ void XmppChannel::OnStanza(std::unique_ptr<XmlNode> stanza) {
 void XmppChannel::HandleStanza(std::unique_ptr<XmlNode> stanza) {
   VLOG(2) << "XMPP stanza received: " << stanza->ToString();
 
-  // TODO(nathanbullock): Need to add support for TLS (brillo:191).
   switch (state_) {
     case XmppState::kStarted:
+      if (stanza->name() == "stream:features" &&
+          stanza->FindFirstChild("starttls/required", false)) {
+        state_ = XmppState::kTlsStarted;
+        SendMessage("<starttls xmlns='urn:ietf:params:xml:ns:xmpp-tls'/>");
+        return;
+      }
+      break;
+    case XmppState::kTlsStarted:
+      if (stanza->name() == "proceed") {
+        StartTlsHandshake();
+        return;
+      }
+      break;
+    case XmppState::kTlsCompleted:
       if (stanza->name() == "stream:features") {
         auto children = stanza->FindChildren("mechanisms/mechanism", false);
         for (const auto& child : children) {
@@ -206,6 +220,28 @@ void XmppChannel::HandleStanza(std::unique_ptr<XmlNode> stanza) {
   LOG(ERROR) << "Error condition occurred handling stanza: "
              << stanza->ToString();
   SendMessage("</stream:stream>");
+}
+
+void XmppChannel::StartTlsHandshake() {
+  stream_->CancelPendingAsyncOperations();
+  chromeos::TlsStream::Connect(
+      std::move(raw_socket_), host_,
+      base::Bind(&XmppChannel::OnTlsHandshakeComplete,
+                 weak_ptr_factory_.GetWeakPtr()),
+      base::Bind(&XmppChannel::OnTlsError,
+                 weak_ptr_factory_.GetWeakPtr()));
+}
+
+void XmppChannel::OnTlsHandshakeComplete(chromeos::StreamPtr tls_stream) {
+  tls_stream_ = std::move(tls_stream);
+  stream_ = tls_stream_.get();
+  state_ = XmppState::kTlsCompleted;
+  RestartXmppStream();
+}
+
+void XmppChannel::OnTlsError(const chromeos::Error* error) {
+  LOG(ERROR) << "TLS handshake failed. Restarting XMPP connection";
+  Restart();
 }
 
 void XmppChannel::SendMessage(const std::string& message) {
@@ -285,6 +321,8 @@ void XmppChannel::Connect(const std::string& host, uint16_t port,
 
   backoff_entry_.InformOfRequest(raw_socket_ != nullptr);
   if (raw_socket_) {
+    host_ = host;
+    port_ = port;
     stream_ = raw_socket_.get();
     callback.Run();
   } else {
@@ -325,6 +363,10 @@ void XmppChannel::Stop() {
     delegate_->OnDisconnected();
 
   weak_ptr_factory_.InvalidateWeakPtrs();
+  if (tls_stream_) {
+    tls_stream_->CloseBlocking(nullptr);
+    tls_stream_.reset();
+  }
   if (raw_socket_) {
     raw_socket_->CloseBlocking(nullptr);
     raw_socket_.reset();

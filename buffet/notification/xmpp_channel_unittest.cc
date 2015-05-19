@@ -33,6 +33,10 @@ constexpr char kStartStreamResponse[] =
     "<required/></starttls><mechanisms "
     "xmlns=\"urn:ietf:params:xml:ns:xmpp-sasl\"><mechanism>X-OAUTH2</mechanism>"
     "<mechanism>X-GOOGLE-TOKEN</mechanism></mechanisms></stream:features>";
+constexpr char kTlsStreamResponse[] =
+    "<stream:features><mechanisms xmlns=\"urn:ietf:params:xml:ns:xmpp-sasl\">"
+    "<mechanism>X-OAUTH2</mechanism>"
+    "<mechanism>X-GOOGLE-TOKEN</mechanism></mechanisms></stream:features>";
 constexpr char kAuthenticationSucceededResponse[] =
     "<success xmlns=\"urn:ietf:params:xml:ns:xmpp-sasl\"/>";
 constexpr char kAuthenticationFailedResponse[] =
@@ -59,6 +63,8 @@ constexpr char kStartStreamMessage[] =
     "<stream:stream to='clouddevices.gserviceaccount.com' "
     "xmlns:stream='http://etherx.jabber.org/streams' xml:lang='*' "
     "version='1.0' xmlns='jabber:client'>";
+constexpr char kStartTlsMessage[] =
+    "<starttls xmlns='urn:ietf:params:xml:ns:xmpp-tls'/>";
 constexpr char kAuthenticationMessage[] =
     "<auth xmlns='urn:ietf:params:xml:ns:xmpp-sasl' mechanism='X-OAUTH2' "
     "auth:service='oauth2' auth:allow-non-google-login='true' "
@@ -130,8 +136,7 @@ class XmppChannelTest : public ::testing::Test {
   void StartStream() {
     xmpp_client_->fake_stream_.ExpectWritePacketString({}, kStartStreamMessage);
     xmpp_client_->fake_stream_.AddReadPacketString({}, kStartStreamResponse);
-    xmpp_client_->fake_stream_.ExpectWritePacketString({},
-                                                       kAuthenticationMessage);
+    xmpp_client_->fake_stream_.ExpectWritePacketString({}, kStartTlsMessage);
     xmpp_client_->Start(nullptr);
     RunTasks(4);
   }
@@ -166,6 +171,16 @@ TEST_F(XmppChannelTest, StartStream) {
 
 TEST_F(XmppChannelTest, HandleStartedResponse) {
   StartStream();
+  EXPECT_EQ(XmppChannel::XmppState::kTlsStarted, xmpp_client_->state());
+}
+
+TEST_F(XmppChannelTest, HandleTLSCompleted) {
+  StartWithState(XmppChannel::XmppState::kTlsCompleted);
+  xmpp_client_->fake_stream_.AddReadPacketString(
+      {}, kTlsStreamResponse);
+  xmpp_client_->fake_stream_.ExpectWritePacketString({},
+                                                     kAuthenticationMessage);
+  RunTasks(4);
   EXPECT_EQ(XmppChannel::XmppState::kAuthenticationStarted,
             xmpp_client_->state());
 }

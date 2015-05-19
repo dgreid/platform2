@@ -43,6 +43,8 @@ class XmppChannel : public NotificationChannel,
   enum class XmppState {
     kNotStarted,
     kStarted,
+    kTlsStarted,
+    kTlsCompleted,
     kAuthenticationStarted,
     kAuthenticationFailed,
     kStreamRestartedPostAuthentication,
@@ -71,6 +73,10 @@ class XmppChannel : public NotificationChannel,
   void HandleStanza(std::unique_ptr<XmlNode> stanza);
   void RestartXmppStream();
 
+  void StartTlsHandshake();
+  void OnTlsHandshakeComplete(chromeos::StreamPtr tls_stream);
+  void OnTlsError(const chromeos::Error* error);
+
   void SendMessage(const std::string& message);
   void WaitForMessage();
 
@@ -88,12 +94,17 @@ class XmppChannel : public NotificationChannel,
   std::string access_token_;
 
   chromeos::StreamPtr raw_socket_;
+  chromeos::StreamPtr tls_stream_;
 
   // Read buffer for incoming message packets.
   std::vector<char> read_socket_data_;
   // Write buffer for outgoing message packets.
   std::string write_socket_data_;
   std::string queued_write_data_;
+
+  // XMPP server name and port used for connection.
+  std::string host_;
+  uint16_t port_{0};
 
   chromeos::BackoffEntry backoff_entry_;
   NotificationDelegate* delegate_{nullptr};
