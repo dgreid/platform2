@@ -201,6 +201,7 @@ void InputStreamSet::CancelPendingAsyncOperations() {
     Stream* stream = source_streams_.front();
     stream->CancelPendingAsyncOperations();
   }
+  Stream::CancelPendingAsyncOperations();
 }
 
 }  // namespace chromeos

@@ -525,6 +525,7 @@ bool TlsStream::WaitForDataBlocking(AccessMode in_mode,
 void TlsStream::CancelPendingAsyncOperations() {
   if (impl_)
     impl_->CancelPendingAsyncOperations();
+  Stream::CancelPendingAsyncOperations();
 }
 
 }  // namespace chromeos
