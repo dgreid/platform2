@@ -55,15 +55,11 @@ class Transport::SocketPollData : public base::MessageLoopForIO::Watcher {
   // Notify CURL of the action it needs to take on the socket file descriptor.
   void OnSocketReady(int fd, int action) {
     CHECK_EQ(socket_fd_, fd) << "Unexpected socket file descriptor";
-    CURLMcode code = CURLM_OK;
-    do {
-      int still_running_count = 0;
-      // CURL might return CURLM_CALL_MULTI_PERFORM "error" code to indicate
-      // that more data is available and can be processed immediately.
-      // In this case, just call curl_multi_socket_action() again.
-      code = curl_interface_->MultiSocketAction(
-          curl_multi_handle_, socket_fd_, action, &still_running_count);
-    } while (code == CURLM_CALL_MULTI_PERFORM);
+    int still_running_count = 0;
+    CURLMcode code = curl_interface_->MultiSocketAction(
+        curl_multi_handle_, socket_fd_, action, &still_running_count);
+    CHECK_NE(CURLM_CALL_MULTI_PERFORM, code)
+        << "CURL should no longer return CURLM_CALL_MULTI_PERFORM here";
 
     if (code == CURLM_OK)
       transport_->ProcessAsyncCurlMessages();
@@ -354,6 +350,10 @@ int Transport::MultiSocketCallback(CURL* easy,
     transport->curl_interface_->MultiAssign(
         transport->curl_multi_handle_, s, nullptr);
     transport->poll_data_map_.erase(std::make_pair(easy, s));
+
+    // Make sure we stop watching the socket file descriptor now, before
+    // we schedule the SocketPollData for deletion.
+    poll_data->GetWatcher()->StopWatchingFileDescriptor();
     // This method can be called indirectly from SocketPollData::OnSocketReady,
     // so delay destruction of SocketPollData object till the next loop cycle.
     base::MessageLoopForIO::current()->DeleteSoon(FROM_HERE, poll_data);
@@ -396,37 +396,25 @@ int Transport::MultiTimerCallback(CURLM* multi,
                                   long timeout_ms,  // NOLINT(runtime/int)
                                   void* userp) {
   auto transport = static_cast<Transport*>(userp);
-  if (timeout_ms > 0) {
-    transport->timer_delay_ = base::TimeDelta::FromMilliseconds(timeout_ms);
-    transport->ScheduleTimer(++transport->current_timer_id_);
-  } else {
-    // This will effectively cancel the next invocation of the timer.
-    ++transport->current_timer_id_;
+  // Cancel any previous timer callbacks.
+  transport->weak_ptr_factory_for_timer_.InvalidateWeakPtrs();
+  if (timeout_ms >= 0) {
+    base::MessageLoopForIO::current()->PostDelayedTask(
+      FROM_HERE,
+      base::Bind(&Transport::OnTimer,
+                 transport->weak_ptr_factory_for_timer_.GetWeakPtr()),
+      base::TimeDelta::FromMilliseconds(timeout_ms));
   }
   return 0;
 }
 
-void Transport::OnTimer(int timer_id) {
+void Transport::OnTimer() {
   if (curl_multi_handle_) {
     int still_running_count = 0;
     curl_interface_->MultiSocketAction(
         curl_multi_handle_, CURL_SOCKET_TIMEOUT, 0, &still_running_count);
     ProcessAsyncCurlMessages();
   }
-
-  if (timer_id == current_timer_id_) {
-    // Reschedule a periodic check only if this is the latest timer event.
-    // If not, a newer event has already been scheduled, so there is nothing
-    // else to do here.
-    ScheduleTimer(timer_id);
-  }
-}
-
-void Transport::ScheduleTimer(int timer_id) {
-  base::MessageLoopForIO::current()->PostDelayedTask(
-      FROM_HERE,
-      base::Bind(&Transport::OnTimer, weak_ptr_factory_.GetWeakPtr(), timer_id),
-      timer_delay_);
 }
 
 void Transport::ProcessAsyncCurlMessages() {

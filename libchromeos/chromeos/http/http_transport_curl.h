@@ -93,19 +93,8 @@ class CHROMEOS_EXPORT Transport : public http::Transport {
   // on a connection.
   void CleanAsyncConnection(http::curl::Connection* connection);
 
-  // Called periodically to provide CURL a chance to perform asynchronous
-  // operations in the background. |timer_id| is the timer ID which was
-  // used to start the timer in ScheduleTimer() method.
-  void OnTimer(int timer_id);
-
-  // Start a timer with the delay specified in |timer_delay_| and the given
-  // |timer_id|. The timer ID is used to identify multiple pending delayed
-  // tasks. If the ID matches the latest |current_timer_id_| when OnTimer()
-  // is called, the timer task will be re-scheduled automatically. If not,
-  // this means that a newer timer even has been scheduled (probably with
-  // a different time-out delay) and the old pending task should not be
-  // rescheduled.
-  void ScheduleTimer(int timer_id);
+  // Called after a timeout delay requested by CURL has elapsed.
+  void OnTimer();
 
   // Callback for CURL to handle curl_socket_callback() notifications.
   // The parameters correspond to those of curl_socket_callback().
@@ -134,19 +123,12 @@ class CHROMEOS_EXPORT Transport : public http::Transport {
   std::map<Connection*, std::unique_ptr<AsyncRequestData>> async_requests_;
   // Internal data associated with in-progress asynchronous operations.
   std::map<std::pair<CURL*, curl_socket_t>, SocketPollData*> poll_data_map_;
-  // The current ID used to schedule a periodic poll of data on CURL multi-
-  // handle. When CURL calls MultiTimerCallback with a new timeout, we post
-  // a new timer task with a different ID and let the current one just
-  // trigger as needed and not rescheduled.
-  int current_timer_id_{0};
-  // The timeout delay that CURL asked us to call back in to check on the
-  // progress on asynchronous operations.
-  base::TimeDelta timer_delay_;
   // The last request ID used for asynchronous operations.
   RequestID last_request_id_{0};
   // The connection timeout for the requests made.
   base::TimeDelta connection_timeout_;
 
+  base::WeakPtrFactory<Transport> weak_ptr_factory_for_timer_{this};
   base::WeakPtrFactory<Transport> weak_ptr_factory_{this};
   DISALLOW_COPY_AND_ASSIGN(Transport);
 };
