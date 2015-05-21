@@ -95,10 +95,10 @@ class ProtocolHandler final {
     std::unique_ptr<RequestHandlerInterface> handler;
   };
 
+  // Schedules an asynchronous call to DoWork().
+  void ScheduleWork();
   // Called when new data is available on sockets for libmicrohttpd to process.
   void DoWork();
-  // Called periodically as requested by libmicrohttpd.
-  void TimerCallback();
 
   // libmicrohttpd daemon class.
   MHD_Daemon* server_{nullptr};
@@ -121,7 +121,7 @@ class ProtocolHandler final {
   // File descriptor watchers for current active sockets.
   std::vector<std::unique_ptr<Watcher>> watchers_;
   // Set to true when a timer request is scheduled.
-  bool timer_scheduled_{false};
+  bool work_scheduled_{false};
 
   base::WeakPtrFactory<ProtocolHandler> weak_ptr_factory_{this};
   DISALLOW_COPY_AND_ASSIGN(ProtocolHandler);

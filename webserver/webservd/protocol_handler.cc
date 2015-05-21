@@ -4,11 +4,14 @@
 
 #include "webserver/webservd/protocol_handler.h"
 
-#include <limits>
 #include <linux/tcp.h>
 #include <microhttpd.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
+
+#include <algorithm>
+#include <limits>
+#include <vector>
 
 #include <base/bind.h>
 #include <base/guid.h>
@@ -62,6 +65,10 @@ class ServerHelper {
                                MHD_Connection* connection,
                                void** con_cls,
                                MHD_RequestTerminationCode toe) {
+    if (toe != MHD_REQUEST_TERMINATED_COMPLETED_OK) {
+      LOG(ERROR) << "Web request terminated abnormally with error code: "
+                 << toe;
+    }
     auto request = reinterpret_cast<Request*>(*con_cls);
     *con_cls = nullptr;
     delete request;
@@ -280,44 +287,71 @@ Request* ProtocolHandler::GetRequest(const std::string& request_id) const {
 
 // A file descriptor watcher class that oversees I/O operation notification
 // on particular socket file descriptor.
-class ProtocolHandler::Watcher final
-    : public base::MessageLoopForIO::Watcher{
+class ProtocolHandler::Watcher final : public base::MessageLoopForIO::Watcher {
  public:
-  Watcher(ProtocolHandler* handler,
-          int fd,
-          base::MessageLoopForIO::Mode mode,
-          base::MessageLoopForIO* message_loop)
-      : handler_{handler} {
-    message_loop->WatchFileDescriptor(fd, false, mode, &controller_, this);
+  Watcher(ProtocolHandler* handler, int fd) : fd_{fd}, handler_{handler} {}
+
+  void Watch(bool read, bool write) {
+    if (read == watching_read_ && write == watching_write_ && !triggered_)
+      return;
+
+    controller_.StopWatchingFileDescriptor();
+    watching_read_ = read;
+    watching_write_ = write;
+    triggered_ = false;
+
+    auto mode = base::MessageLoopForIO::WATCH_READ_WRITE;
+    if (watching_read_ && watching_write_)
+      mode = base::MessageLoopForIO::WATCH_READ_WRITE;
+    else if (watching_read_)
+      mode = base::MessageLoopForIO::WATCH_READ;
+    else if (watching_write_)
+      mode = base::MessageLoopForIO::WATCH_WRITE;
+    base::MessageLoopForIO::current()->WatchFileDescriptor(fd_, false, mode,
+                                                           &controller_, this);
   }
 
   // Overrides from base::MessageLoopForIO::Watcher.
   void OnFileCanReadWithoutBlocking(int fd) override {
-    handler_->DoWork();
+    triggered_ = true;
+    handler_->ScheduleWork();
   }
 
   void OnFileCanWriteWithoutBlocking(int fd) override {
-    handler_->DoWork();
+    triggered_ = true;
+    handler_->ScheduleWork();
   }
 
+  int GetFileDescriptor() const { return fd_; }
+
  private:
-  ProtocolHandler* handler_;
+  int fd_{-1};
+  ProtocolHandler* handler_{nullptr};
+  bool watching_read_{false};
+  bool watching_write_{false};
+  bool triggered_{false};
   base::MessageLoopForIO::FileDescriptorWatcher controller_;
 
   DISALLOW_COPY_AND_ASSIGN(Watcher);
 };
 
 void ProtocolHandler::OnResponseDataReceived() {
+  ScheduleWork();
+}
+
+void ProtocolHandler::ScheduleWork() {
+  if (work_scheduled_)
+    return;
+
+  work_scheduled_ = true;
   base::MessageLoopForIO::current()->PostTask(
       FROM_HERE,
       base::Bind(&ProtocolHandler::DoWork, weak_ptr_factory_.GetWeakPtr()));
 }
 
 void ProtocolHandler::DoWork() {
-  base::MessageLoopForIO* message_loop = base::MessageLoopForIO::current();
-
-  // Remove the old watchers first.
-  watchers_.clear();
+  work_scheduled_ = false;
+  weak_ptr_factory_.InvalidateWeakPtrs();
 
   // Check if there is any pending work to be done in libmicrohttpd.
   MHD_run(server_);
@@ -332,39 +366,42 @@ void ProtocolHandler::DoWork() {
   FD_ZERO(&ws);
   FD_ZERO(&es);
   CHECK_EQ(MHD_YES, MHD_get_fdset(server_, &rs, &ws, &es, &max_fd));
+
+  for (auto& watcher : watchers_) {
+    int fd = watcher->GetFileDescriptor();
+    if (FD_ISSET(fd, &rs) || FD_ISSET(fd, &ws)) {
+      watcher->Watch(FD_ISSET(fd, &rs), FD_ISSET(fd, &ws));
+      FD_CLR(fd, &rs);
+      FD_CLR(fd, &ws);
+    } else {
+      watcher.reset();
+    }
+  }
+
+  watchers_.erase(std::remove(watchers_.begin(), watchers_.end(), nullptr),
+                  watchers_.end());
+
   for (int fd = 0; fd <= max_fd; fd++) {
     // libmicrohttpd is not using exception FDs, so lets put our expectations
     // upfront.
     CHECK(!FD_ISSET(fd, &es));
     if (FD_ISSET(fd, &rs) || FD_ISSET(fd, &ws)) {
-      base::MessageLoopForIO::Mode mode = base::MessageLoopForIO::WATCH_READ;
-      if (FD_ISSET(fd, &rs) && FD_ISSET(fd, &ws))
-        mode = base::MessageLoopForIO::WATCH_READ_WRITE;
-      else if (FD_ISSET(fd, &rs))
-        mode = base::MessageLoopForIO::WATCH_READ;
-      else if (FD_ISSET(fd, &ws))
-        mode = base::MessageLoopForIO::WATCH_WRITE;
       // libmicrohttpd should never use any of stdin/stdout/stderr descriptors.
       CHECK_GT(fd, STDERR_FILENO);
-      watchers_.emplace_back(new Watcher{this, fd, mode, message_loop});
+      std::unique_ptr<Watcher> watcher{new Watcher{this, fd}};
+      watcher->Watch(FD_ISSET(fd, &rs), FD_ISSET(fd, &ws));
+      watchers_.push_back(std::move(watcher));
     }
   }
 
   // Schedule a time-out timer, if asked by libmicrohttpd.
   MHD_UNSIGNED_LONG_LONG mhd_timeout = 0;
-  if (!timer_scheduled_ && MHD_get_timeout(server_, &mhd_timeout) == MHD_YES) {
-    timer_scheduled_ = true;
-    message_loop->PostDelayedTask(
+  if (MHD_get_timeout(server_, &mhd_timeout) == MHD_YES) {
+    base::MessageLoopForIO::current()->PostDelayedTask(
         FROM_HERE,
-        base::Bind(&ProtocolHandler::DoWork,
-                   weak_ptr_factory_.GetWeakPtr()),
+        base::Bind(&ProtocolHandler::DoWork, weak_ptr_factory_.GetWeakPtr()),
         base::TimeDelta::FromMilliseconds(mhd_timeout));
   }
-}
-
-void ProtocolHandler::TimerCallback() {
-  timer_scheduled_ = false;
-  DoWork();
 }
 
 }  // namespace webservd
