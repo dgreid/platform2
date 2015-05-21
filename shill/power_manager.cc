@@ -94,6 +94,10 @@ bool PowerManager::ReportDarkSuspendReadiness() {
       current_dark_suspend_id_);
 }
 
+bool PowerManager::RecordDarkResumeWakeReason(const string &wake_reason) {
+  return power_manager_proxy_->RecordDarkResumeWakeReason(wake_reason);
+}
+
 void PowerManager::OnSuspendImminent(int suspend_id) {
   LOG(INFO) << __func__ << "(" << suspend_id << ")";
   current_suspend_id_ = suspend_id;

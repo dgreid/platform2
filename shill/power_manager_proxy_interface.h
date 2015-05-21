@@ -54,6 +54,10 @@ class PowerManagerProxyInterface {
   // Calls the power manager's HandleDarkSuspendReadiness method. Arguments are
   // as explained for ReportSuspendReadiness. Returns true on success.
   virtual bool ReportDarkSuspendReadiness(int delay_id, int suspend_id) = 0;
+
+  // Calls the power manager's RecordDarkResumeWakeReason method to record the
+  // wake reason for the current dark resume. Returns true on success.
+  virtual bool RecordDarkResumeWakeReason(const std::string &wake_reason) = 0;
 };
 
 // PowerManager signal delegate to be associated with the proxy.

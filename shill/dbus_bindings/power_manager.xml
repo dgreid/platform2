@@ -30,6 +30,9 @@
     <method name="HandleDarkSuspendReadiness">
       <arg name="serialized_proto" direction="in" type="ay"/>
     </method>
+    <method name="RecordDarkResumeWakeReason">
+      <arg name="serialized_proto" direction="in" type="ay"/>
+    </method>
     <signal name="DarkSuspendImminent">
       <arg name="serialized_proto" type="ay"/>
     </signal>

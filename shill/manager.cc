@@ -1182,6 +1182,10 @@ bool Manager::IsSuspending() {
   return false;
 }
 
+void Manager::RecordDarkResumeWakeReason(const string &wake_reason) {
+  power_manager_->RecordDarkResumeWakeReason(wake_reason);
+}
+
 void Manager::RegisterDevice(const DeviceRefPtr &to_manage) {
   LOG(INFO) << "Device " << to_manage->FriendlyName() << " registered.";
   // Manager is running in passive mode when default claimer is created, which

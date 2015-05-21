@@ -40,6 +40,7 @@ class PowerManagerProxy : public PowerManagerProxyInterface {
                                 int *delay_id_out) override;
   bool UnregisterDarkSuspendDelay(int delay_id) override;
   bool ReportDarkSuspendReadiness(int delay_id, int suspend_id) override;
+  bool RecordDarkResumeWakeReason(const std::string &wake_reason) override;
 
  private:
   // Only this factory method can create a PowerManagerProxy.

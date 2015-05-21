@@ -132,6 +132,9 @@ class SetWakeOnPacketConnMessage;
 class WakeOnWiFi {
  public:
   typedef base::Callback<void(const WiFi::FreqSet &)> InitiateScanCallback;
+  // Callback used to report the wake reason for the current dark resume to
+  // powerd.
+  typedef base::Callback<void(const std::string &)> RecordWakeReasonCallback;
 
   // Types of triggers that we can program the NIC to wake the WiFi device.
   enum WakeOnWiFiTrigger {
@@ -142,7 +145,8 @@ class WakeOnWiFi {
   };
 
   WakeOnWiFi(NetlinkManager *netlink_manager, EventDispatcher *dispatcher,
-             Metrics *metrics);
+             Metrics *metrics,
+             RecordWakeReasonCallback record_wake_reason_callback);
   virtual ~WakeOnWiFi();
 
   // Registers |store| with properties related to wake on WiFi.
@@ -269,6 +273,12 @@ class WakeOnWiFi {
   // Tests that need WakeOnWiFi::kDarkResumeActionsTimeoutMilliseconds
   FRIEND_TEST(WakeOnWiFiTestWithMockDispatcher,
               OnBeforeSuspend_DHCPLeaseRenewal);
+  // Tests that need dark resume wake reason strings
+  // (e.g. WakeOnWiFi::kWakeReasonStringDisconnect)
+  FRIEND_TEST(WakeOnWiFiTestWithMockDispatcher,
+              OnWakeupReasonReceived_Disconnect);
+  FRIEND_TEST(WakeOnWiFiTestWithMockDispatcher, OnWakeupReasonReceived_SSID);
+  FRIEND_TEST(WakeOnWiFiTestWithMockDispatcher, OnWakeupReasonReceived_Pattern);
   // Tests that need WakeOnWiFi::kMaxDarkResumesPerPeriodShort
   FRIEND_TEST(WakeOnWiFiTestWithDispatcher, OnBeforeSuspend_ClearsEventHistory);
   FRIEND_TEST(WakeOnWiFiTestWithDispatcher,
@@ -294,6 +304,12 @@ class WakeOnWiFi {
   static int64_t DarkResumeActionsTimeoutMilliseconds;  // non-const for testing
   static const int kMaxFreqsForDarkResumeScanRetries;
   static const int kMaxDarkResumeScanRetries;
+  // Dark resume wake reason names. These will be sent to powerd via
+  // RecordDarkResumeWakeReason, to tell it the reason the system woke in the
+  // current dark resume.
+  static const char kWakeReasonStringPattern[];
+  static const char kWakeReasonStringDisconnect[];
+  static const char kWakeReasonStringSSID[];
 
   std::string GetWakeOnWiFiFeaturesEnabled(Error *error);
   bool SetWakeOnWiFiFeaturesEnabled(const std::string &enabled, Error *error);
@@ -520,6 +536,10 @@ class WakeOnWiFi {
   // How many more times to retry the last dark resume scan that shill launched
   // if no auto-connectable services were found.
   int dark_resume_scan_retries_left_;
+
+  // Callback invoked to report the wake reason for the current dark resume to
+  // powerd.
+  RecordWakeReasonCallback record_wake_reason_callback_;
 
   base::WeakPtrFactory<WakeOnWiFi> weak_ptr_factory_;
 

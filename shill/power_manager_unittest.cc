@@ -113,27 +113,20 @@ class PowerManagerTest : public Test {
     dbus_manager_.Start();
 
     EXPECT_CALL(*factory_.dbus_service_proxy(),
-                GetNameOwner(power_manager::kPowerManagerServiceName,
-                             _, _, _));
-    power_manager_.Start(&dbus_manager_,
-                         kTimeout,
-                         suspend_imminent_callback_,
+                GetNameOwner(power_manager::kPowerManagerServiceName, _, _, _));
+    power_manager_.Start(&dbus_manager_, kTimeout, suspend_imminent_callback_,
                          suspend_done_callback_,
                          dark_suspend_imminent_callback_);
     Mock::VerifyAndClearExpectations(factory_.dbus_service_proxy());
   }
 
-  virtual void TearDown() {
-    dbus_manager_.Stop();
-  }
+  virtual void TearDown() { dbus_manager_.Stop(); }
 
-  void AddProxyRegisterSuspendDelayExpectation(
-      int delay_id,
-      bool return_value) {
+  void AddProxyRegisterSuspendDelayExpectation(int delay_id,
+                                               bool return_value) {
     EXPECT_CALL(*power_manager_proxy_,
                 RegisterSuspendDelay(kTimeout, kDescription, _))
-        .WillOnce(DoAll(SetArgumentPointee<2>(delay_id),
-                        Return(return_value)));
+        .WillOnce(DoAll(SetArgumentPointee<2>(delay_id), Return(return_value)));
   }
 
   void AddProxyUnregisterSuspendDelayExpectation(int delay_id,
@@ -142,21 +135,24 @@ class PowerManagerTest : public Test {
         .WillOnce(Return(return_value));
   }
 
-  void AddProxyReportSuspendReadinessExpectation(int delay_id,
-                                                 int suspend_id,
+  void AddProxyReportSuspendReadinessExpectation(int delay_id, int suspend_id,
                                                  bool return_value) {
     EXPECT_CALL(*power_manager_proxy_,
                 ReportSuspendReadiness(delay_id, suspend_id))
         .WillOnce(Return(return_value));
   }
 
-  void AddProxyRegisterDarkSuspendDelayExpectation(
-      int delay_id,
-      bool return_value) {
+  void AddProxyRecordDarkResumeWakeReasonExpectation(const string &wake_reason,
+                                                     bool return_value) {
+    EXPECT_CALL(*power_manager_proxy_, RecordDarkResumeWakeReason(wake_reason))
+        .WillOnce(Return(return_value));
+  }
+
+  void AddProxyRegisterDarkSuspendDelayExpectation(int delay_id,
+                                                   bool return_value) {
     EXPECT_CALL(*power_manager_proxy_,
                 RegisterDarkSuspendDelay(kTimeout, kDarkDescription, _))
-        .WillOnce(DoAll(SetArgumentPointee<2>(delay_id),
-                        Return(return_value)));
+        .WillOnce(DoAll(SetArgumentPointee<2>(delay_id), Return(return_value)));
   }
 
   void AddProxyReportDarkSuspendReadinessExpectation(int delay_id,
@@ -196,8 +192,7 @@ class PowerManagerTest : public Test {
 
   void OnPowerManagerAppeared() {
     power_manager_.OnPowerManagerAppeared(
-        power_manager::kPowerManagerServicePath,
-        kPowerManagerDefaultOwner);
+        power_manager::kPowerManagerServicePath, kPowerManagerDefaultOwner);
   }
 
   void OnPowerManagerVanished() {
@@ -276,6 +271,24 @@ TEST_F(PowerManagerTest, ReportSuspendReadinessFailure) {
   EXPECT_FALSE(power_manager_.ReportSuspendReadiness());
 }
 
+TEST_F(PowerManagerTest, RecordDarkResumeWakeReasonFailure) {
+  const string kWakeReason = "WiFi.Disconnect";
+  RegisterSuspendDelays();
+  EXPECT_CALL(*this, DarkSuspendImminentAction());
+  OnDarkSuspendImminent(kSuspendId1);
+  AddProxyRecordDarkResumeWakeReasonExpectation(kWakeReason, false);
+  EXPECT_FALSE(power_manager_.RecordDarkResumeWakeReason(kWakeReason));
+}
+
+TEST_F(PowerManagerTest, RecordDarkResumeWakeReasonSuccess) {
+  const string kWakeReason = "WiFi.Disconnect";
+  RegisterSuspendDelays();
+  EXPECT_CALL(*this, DarkSuspendImminentAction());
+  OnDarkSuspendImminent(kSuspendId1);
+  AddProxyRecordDarkResumeWakeReasonExpectation(kWakeReason, true);
+  EXPECT_TRUE(power_manager_.RecordDarkResumeWakeReason(kWakeReason));
+}
+
 TEST_F(PowerManagerTest, ReportDarkSuspendReadinessFailure) {
   RegisterSuspendDelays();
   EXPECT_CALL(*this, DarkSuspendImminentAction());
@@ -286,8 +299,7 @@ TEST_F(PowerManagerTest, ReportDarkSuspendReadinessFailure) {
 
 TEST_F(PowerManagerTest, ReportSuspendReadinessFailsOutsideSuspend) {
   RegisterSuspendDelays();
-  EXPECT_CALL(*power_manager_proxy_,
-              ReportSuspendReadiness(_, _)).Times(0);
+  EXPECT_CALL(*power_manager_proxy_, ReportSuspendReadiness(_, _)).Times(0);
   EXPECT_FALSE(power_manager_.ReportSuspendReadiness());
 }
 
@@ -295,13 +307,11 @@ TEST_F(PowerManagerTest, ReportSuspendReadinessSynchronous) {
   // Verifies that a synchronous ReportSuspendReadiness call by shill on a
   // SuspendImminent callback is routed back to powerd.
   RegisterSuspendDelays();
-  EXPECT_CALL(*power_manager_proxy_,
-              ReportSuspendReadiness(_, _))
+  EXPECT_CALL(*power_manager_proxy_, ReportSuspendReadiness(_, _))
       .WillOnce(Return(true));
   EXPECT_CALL(*this, SuspendImminentAction())
-      .WillOnce(IgnoreResult(
-          InvokeWithoutArgs(&power_manager_,
-                            &PowerManager::ReportSuspendReadiness)));
+      .WillOnce(IgnoreResult(InvokeWithoutArgs(
+          &power_manager_, &PowerManager::ReportSuspendReadiness)));
   OnSuspendImminent(kSuspendId1);
 }
 
@@ -309,13 +319,11 @@ TEST_F(PowerManagerTest, ReportDarkSuspendReadinessSynchronous) {
   // Verifies that a synchronous ReportDarkSuspendReadiness call by shill on a
   // DarkSuspendImminent callback is routed back to powerd.
   RegisterSuspendDelays();
-  EXPECT_CALL(*power_manager_proxy_,
-              ReportDarkSuspendReadiness(_, _))
+  EXPECT_CALL(*power_manager_proxy_, ReportDarkSuspendReadiness(_, _))
       .WillOnce(Return(true));
   EXPECT_CALL(*this, DarkSuspendImminentAction())
-      .WillOnce(IgnoreResult(
-          InvokeWithoutArgs(&power_manager_,
-                            &PowerManager::ReportDarkSuspendReadiness)));
+      .WillOnce(IgnoreResult(InvokeWithoutArgs(
+          &power_manager_, &PowerManager::ReportDarkSuspendReadiness)));
   OnDarkSuspendImminent(kSuspendId1);
 }
 

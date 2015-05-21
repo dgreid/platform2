@@ -1014,6 +1014,8 @@ class WakeOnWiFiTest : public ::testing::Test {
   MOCK_METHOD0(RemoveSupplicantNetworksCallback, void(void));
   MOCK_METHOD0(DarkResumeActionsTimeoutCallback, void(void));
   MOCK_METHOD0(OnTimerWakeDoNothing, void(void));
+  MOCK_METHOD1(RecordDarkResumeWakeReasonCallback,
+               void(const string &wake_reason));
 
  protected:
   NiceMockControl control_interface_;
@@ -1027,7 +1029,9 @@ class WakeOnWiFiTestWithDispatcher : public WakeOnWiFiTest {
  public:
   WakeOnWiFiTestWithDispatcher() : WakeOnWiFiTest() {
     wake_on_wifi_.reset(
-        new WakeOnWiFi(&netlink_manager_, &dispatcher_, &metrics_));
+        new WakeOnWiFi(&netlink_manager_, &dispatcher_, &metrics_,
+                       Bind(&WakeOnWiFiTest::RecordDarkResumeWakeReasonCallback,
+                            Unretained(this))));
   }
   virtual ~WakeOnWiFiTestWithDispatcher() {}
 
@@ -1039,7 +1043,9 @@ class WakeOnWiFiTestWithMockDispatcher : public WakeOnWiFiTest {
  public:
   WakeOnWiFiTestWithMockDispatcher() : WakeOnWiFiTest() {
     wake_on_wifi_.reset(
-        new WakeOnWiFi(&netlink_manager_, &mock_dispatcher_, &metrics_));
+        new WakeOnWiFi(&netlink_manager_, &mock_dispatcher_, &metrics_,
+                       Bind(&WakeOnWiFiTest::RecordDarkResumeWakeReasonCallback,
+                            Unretained(this))));
   }
   virtual ~WakeOnWiFiTestWithMockDispatcher() {}
 
@@ -2975,6 +2981,7 @@ TEST_F(WakeOnWiFiTestWithMockDispatcher, OnWakeupReasonReceived_Unsupported) {
   EXPECT_CALL(log,
               Log(_, _, HasSubstr("Wakeup reason: Not wake on WiFi related")));
   EXPECT_CALL(metrics_, NotifyWakeupReasonReceived());
+  EXPECT_CALL(*this, RecordDarkResumeWakeReasonCallback(_)).Times(0);
   OnWakeupReasonReceived(msg);
   EXPECT_EQ(WakeOnWiFi::kWakeTriggerUnsupported, GetLastWakeReason());
 
@@ -2995,6 +3002,8 @@ TEST_F(WakeOnWiFiTestWithMockDispatcher, OnWakeupReasonReceived_Disconnect) {
   EXPECT_CALL(log, Log(_, _, _)).Times(AnyNumber());
   EXPECT_CALL(log, Log(_, _, HasSubstr("Wakeup reason: Disconnect")));
   EXPECT_CALL(metrics_, NotifyWakeupReasonReceived());
+  EXPECT_CALL(*this, RecordDarkResumeWakeReasonCallback(
+                         WakeOnWiFi::kWakeReasonStringDisconnect));
   OnWakeupReasonReceived(msg);
   EXPECT_EQ(WakeOnWiFi::kWakeTriggerDisconnect, GetLastWakeReason());
 
@@ -3014,6 +3023,8 @@ TEST_F(WakeOnWiFiTestWithMockDispatcher, OnWakeupReasonReceived_SSID) {
   EXPECT_CALL(log, Log(_, _, _)).Times(AnyNumber());
   EXPECT_CALL(log, Log(_, _, HasSubstr("Wakeup reason: SSID")));
   EXPECT_CALL(metrics_, NotifyWakeupReasonReceived());
+  EXPECT_CALL(*this, RecordDarkResumeWakeReasonCallback(
+                         WakeOnWiFi::kWakeReasonStringSSID));
   OnWakeupReasonReceived(msg);
   EXPECT_EQ(WakeOnWiFi::kWakeTriggerSSID, GetLastWakeReason());
   EXPECT_EQ(arraysize(kSSID1FreqMatches), GetLastSSIDMatchFreqs().size());
@@ -3040,6 +3051,8 @@ TEST_F(WakeOnWiFiTestWithMockDispatcher, OnWakeupReasonReceived_Pattern) {
   EXPECT_CALL(log, Log(_, _, HasSubstr("Wakeup reason: Pattern " +
                                        kWakeReasonPatternNlMsg_PattIndex)));
   EXPECT_CALL(metrics_, NotifyWakeupReasonReceived());
+  EXPECT_CALL(*this, RecordDarkResumeWakeReasonCallback(
+                         WakeOnWiFi::kWakeReasonStringPattern));
   OnWakeupReasonReceived(msg);
   EXPECT_EQ(WakeOnWiFi::kWakeTriggerPattern, GetLastWakeReason());
 
@@ -3061,10 +3074,11 @@ TEST_F(WakeOnWiFiTestWithMockDispatcher, OnWakeupReasonReceived_Error) {
   EXPECT_CALL(log, Log(_, _, _)).Times(AnyNumber());
   EXPECT_CALL(log, Log(_, _, HasSubstr("Not a NL80211 Message")));
   EXPECT_CALL(metrics_, NotifyWakeupReasonReceived()).Times(0);
+  EXPECT_CALL(*this, RecordDarkResumeWakeReasonCallback(_)).Times(0);
   OnWakeupReasonReceived(msg0);
   EXPECT_EQ(WakeOnWiFi::kWakeTriggerUnsupported, GetLastWakeReason());
 
-  // This message has commend NL80211_CMD_GET_WOWLAN, not a
+  // This message has command NL80211_CMD_GET_WOWLAN, not a
   // NL80211_CMD_SET_WOWLAN.
   GetWakeOnPacketConnMessage msg1;
   msg1.InitFromNlmsg(reinterpret_cast<const nlmsghdr *>(kResponseNoIPAddresses),
@@ -3073,6 +3087,7 @@ TEST_F(WakeOnWiFiTestWithMockDispatcher, OnWakeupReasonReceived_Error) {
   EXPECT_CALL(log,
               Log(_, _, HasSubstr("Not a NL80211_CMD_SET_WOWLAN message")));
   EXPECT_CALL(metrics_, NotifyWakeupReasonReceived()).Times(0);
+  EXPECT_CALL(*this, RecordDarkResumeWakeReasonCallback(_)).Times(0);
   OnWakeupReasonReceived(msg1);
   EXPECT_EQ(WakeOnWiFi::kWakeTriggerUnsupported, GetLastWakeReason());
 
@@ -3086,6 +3101,7 @@ TEST_F(WakeOnWiFiTestWithMockDispatcher, OnWakeupReasonReceived_Error) {
   EXPECT_CALL(
       log, Log(_, _, HasSubstr("Wakeup reason not meant for this interface")));
   EXPECT_CALL(metrics_, NotifyWakeupReasonReceived()).Times(0);
+  EXPECT_CALL(*this, RecordDarkResumeWakeReasonCallback(_)).Times(0);
   OnWakeupReasonReceived(msg2);
   EXPECT_EQ(WakeOnWiFi::kWakeTriggerUnsupported, GetLastWakeReason());
 
@@ -3263,6 +3279,7 @@ TEST_F(WakeOnWiFiTestWithMockDispatcher, OnWakeupReasonReceived_DoesNothing) {
   EXPECT_CALL(
       log, Log(_, _, HasSubstr("Wake on WiFi not supported, so do nothing")));
   EXPECT_CALL(metrics_, NotifyWakeupReasonReceived()).Times(0);
+  EXPECT_CALL(*this, RecordDarkResumeWakeReasonCallback(_)).Times(0);
   OnWakeupReasonReceived(msg);
 
   ScopeLogger::GetInstance()->EnableScopesByName("-wifi");

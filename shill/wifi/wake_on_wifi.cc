@@ -69,9 +69,14 @@ int64_t WakeOnWiFi::DarkResumeActionsTimeoutMilliseconds = 18500;
 // take about 4 seconds, which is how long a full scan typically takes.
 const int WakeOnWiFi::kMaxFreqsForDarkResumeScanRetries = 8;
 const int WakeOnWiFi::kMaxDarkResumeScanRetries = 5;
+const char WakeOnWiFi::kWakeReasonStringPattern[] = "WiFi.Pattern";
+const char WakeOnWiFi::kWakeReasonStringDisconnect[] = "WiFi.Disconnect";
+const char WakeOnWiFi::kWakeReasonStringSSID[] = "WiFi.SSID";
 
-WakeOnWiFi::WakeOnWiFi(NetlinkManager *netlink_manager,
-                       EventDispatcher *dispatcher, Metrics *metrics)
+WakeOnWiFi::WakeOnWiFi(
+    NetlinkManager *netlink_manager, EventDispatcher *dispatcher,
+    Metrics *metrics,
+    RecordWakeReasonCallback record_wake_reason_callback)
     : dispatcher_(dispatcher),
       netlink_manager_(netlink_manager),
       metrics_(metrics),
@@ -98,6 +103,7 @@ WakeOnWiFi::WakeOnWiFi(NetlinkManager *netlink_manager,
       last_wake_reason_(kWakeTriggerUnsupported),
       force_wake_to_scan_timer_(false),
       dark_resume_scan_retries_left_(0),
+      record_wake_reason_callback_(record_wake_reason_callback),
       weak_ptr_factory_(this) {
   netlink_manager_->AddBroadcastHandler(Bind(
       &WakeOnWiFi::OnWakeupReasonReceived, weak_ptr_factory_.GetWeakPtr()));
@@ -1175,6 +1181,7 @@ void WakeOnWiFi::OnWakeupReasonReceived(const NetlinkMessage &netlink_message) {
     SLOG(this, 3) << __func__ << ": "
                   << "Wakeup reason: Disconnect";
     last_wake_reason_ = kWakeTriggerDisconnect;
+    record_wake_reason_callback_.Run(kWakeReasonStringDisconnect);
     return;
   }
   uint32_t wake_pattern_index;
@@ -1183,6 +1190,7 @@ void WakeOnWiFi::OnWakeupReasonReceived(const NetlinkMessage &netlink_message) {
     SLOG(this, 3) << __func__ << ": "
                   << "Wakeup reason: Pattern " << wake_pattern_index;
     last_wake_reason_ = kWakeTriggerPattern;
+    record_wake_reason_callback_.Run(kWakeReasonStringPattern);
     return;
   }
   AttributeListConstRefPtr results_list;
@@ -1197,6 +1205,7 @@ void WakeOnWiFi::OnWakeupReasonReceived(const NetlinkMessage &netlink_message) {
     SLOG(this, 3) << __func__ << ": "
                   << "Wakeup reason: SSID";
     last_wake_reason_ = kWakeTriggerSSID;
+    record_wake_reason_callback_.Run(kWakeReasonStringSSID);
     last_ssid_match_freqs_ = ParseWakeOnWakeOnSSIDResults(results_list);
     return;
   }

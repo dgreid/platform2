@@ -85,6 +85,23 @@ bool PowerManagerProxy::ReportDarkSuspendReadiness(int delay_id,
   return ReportSuspendReadinessInternal(true, delay_id, suspend_id);
 }
 
+bool PowerManagerProxy::RecordDarkResumeWakeReason(const string &wake_reason) {
+  LOG(INFO) << __func__;
+
+  power_manager::DarkResumeWakeReason proto;
+  proto.set_wake_reason(wake_reason);
+  vector<uint8_t> serialized_proto;
+  CHECK(SerializeProtocolBuffer(proto, &serialized_proto));
+
+  try {
+    proxy_.RecordDarkResumeWakeReason(serialized_proto);
+  } catch (const DBus::Error &e) {
+    LOG(ERROR) << "DBus exception: " << e.name() << ": " << e.what();
+    return false;
+  }
+  return true;
+}
+
 bool PowerManagerProxy::RegisterSuspendDelayInternal(
     bool is_dark,
     base::TimeDelta timeout,

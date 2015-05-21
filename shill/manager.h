@@ -490,6 +490,8 @@ class Manager : public base::SupportsWeakPtr<Manager> {
   void set_suppress_autoconnect(bool val) { suppress_autoconnect_ = val; }
   bool suppress_autoconnect() { return suppress_autoconnect_; }
 
+  void RecordDarkResumeWakeReason(const std::string &wake_reason);
+
  private:
   friend class CellularTest;
   friend class DeviceInfoTest;

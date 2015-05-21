@@ -31,6 +31,8 @@ class MockPowerManagerProxy : public PowerManagerProxyInterface {
                     int *delay_id_out));
   MOCK_METHOD1(UnregisterDarkSuspendDelay, bool(int delay_id));
   MOCK_METHOD2(ReportDarkSuspendReadiness, bool(int delay_id, int suspend_id));
+  MOCK_METHOD1(RecordDarkResumeWakeReason,
+               bool(const std::string &wake_reason));
 
  private:
   DISALLOW_COPY_AND_ASSIGN(MockPowerManagerProxy);

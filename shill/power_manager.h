@@ -80,6 +80,9 @@ class PowerManager : public PowerManagerProxyDelegate {
   // Report dark suspend readiness. See ReportSuspendReadiness for more details.
   virtual bool ReportDarkSuspendReadiness();
 
+  // Record the wake reason for the current dark resume.
+  bool RecordDarkResumeWakeReason(const std::string &wake_reason);
+
   // Methods inherited from PowerManagerProxyDelegate.
   void OnSuspendImminent(int suspend_id) override;
   void OnSuspendDone(int suspend_id) override;
