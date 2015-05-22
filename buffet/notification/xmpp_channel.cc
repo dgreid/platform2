@@ -158,7 +158,7 @@ void XmppChannel::HandleStanza(std::unique_ptr<XmlNode> stanza) {
       if (stanza->name() == "stream:features") {
         auto children = stanza->FindChildren("mechanisms/mechanism", false);
         for (const auto& child : children) {
-          if (child->text() == "X-GOOGLE-TOKEN") {
+          if (child->text() == "X-OAUTH2") {
             state_ = XmppState::kAuthenticationStarted;
             SendMessage(BuildXmppAuthenticateCommand(account_, access_token_));
             return;
