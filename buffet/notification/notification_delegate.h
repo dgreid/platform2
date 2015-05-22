@@ -5,7 +5,10 @@
 #ifndef BUFFET_NOTIFICATION_NOTIFICATION_DELEGATE_H_
 #define BUFFET_NOTIFICATION_NOTIFICATION_DELEGATE_H_
 
+#include <memory>
 #include <string>
+
+#include <base/values.h>
 
 namespace buffet {
 
@@ -14,6 +17,8 @@ class NotificationDelegate {
   virtual void OnConnected(const std::string& channel_name) = 0;
   virtual void OnDisconnected() = 0;
   virtual void OnPermanentFailure() = 0;
+  // Called when a new command is sent via the notification channel.
+  virtual void OnCommandCreated(const base::DictionaryValue& command) = 0;
 
  protected:
   virtual ~NotificationDelegate() = default;

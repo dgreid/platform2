@@ -71,6 +71,7 @@ class XmppChannel : public NotificationChannel,
   void OnStanza(std::unique_ptr<XmlNode> stanza) override;
 
   void HandleStanza(std::unique_ptr<XmlNode> stanza);
+  void HandleMessageStanza(std::unique_ptr<XmlNode> stanza);
   void RestartXmppStream();
 
   void StartTlsHandshake();

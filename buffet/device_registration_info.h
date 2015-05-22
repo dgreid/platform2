@@ -93,7 +93,7 @@ class DeviceRegistrationInfo : public NotificationDelegate {
     const std::string& subpath = {},
     const chromeos::data_encoding::WebParamList& params = {}) const;
 
-  // Starts GCD device if credentials avalible.
+  // Starts GCD device if credentials available.
   void Start();
 
   // Checks whether we have credentials generated during registration.
@@ -199,6 +199,7 @@ class DeviceRegistrationInfo : public NotificationDelegate {
   void PeriodicallyPollCommands();
 
   void PublishCommands(const base::ListValue& commands);
+  void PublishCommand(const base::DictionaryValue& command);
 
   void PublishStateUpdates();
 
@@ -228,6 +229,7 @@ class DeviceRegistrationInfo : public NotificationDelegate {
   void OnConnected(const std::string& channel_name) override;
   void OnDisconnected() override;
   void OnPermanentFailure() override;
+  void OnCommandCreated(const base::DictionaryValue& command) override;
 
   // Transient data
   std::string access_token_;

@@ -13,6 +13,7 @@
 #include <chromeos/streams/tls_stream.h>
 
 #include "buffet/notification/notification_delegate.h"
+#include "buffet/notification/notification_parser.h"
 #include "buffet/notification/xml_node.h"
 #include "buffet/utils.h"
 
@@ -213,6 +214,10 @@ void XmppChannel::HandleStanza(std::unique_ptr<XmlNode> stanza) {
       }
       break;
     default:
+      if (stanza->name() == "message") {
+        HandleMessageStanza(std::move(stanza));
+        return;
+      }
       LOG(INFO) << "Unexpected XMPP stanza ignored: " << stanza->ToString();
       return;
   }
@@ -220,6 +225,25 @@ void XmppChannel::HandleStanza(std::unique_ptr<XmlNode> stanza) {
   LOG(ERROR) << "Error condition occurred handling stanza: "
              << stanza->ToString();
   SendMessage("</stream:stream>");
+}
+
+void XmppChannel::HandleMessageStanza(std::unique_ptr<XmlNode> stanza) {
+  const XmlNode* node = stanza->FindFirstChild("push:push/push:data", true);
+  if (!node) {
+    LOG(WARNING) << "XMPP message stanza is missing <push:data> element";
+    return;
+  }
+  std::string data = node->text();
+  std::string json_data;
+  if (!chromeos::data_encoding::Base64Decode(data, &json_data)) {
+    LOG(WARNING) << "Failed to decode base64-encoded message payload: " << data;
+    return;
+  }
+
+  VLOG(2) << "XMPP push notification data: " << json_data;
+  auto json_dict = LoadJsonDict(json_data, nullptr);
+  if (json_dict && delegate_)
+    ParseNotificationJson(*json_dict, delegate_);
 }
 
 void XmppChannel::StartTlsHandshake() {

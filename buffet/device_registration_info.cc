@@ -844,36 +844,38 @@ void DeviceRegistrationInfo::PeriodicallyPollCommands() {
 }
 
 void DeviceRegistrationInfo::PublishCommands(const base::ListValue& commands) {
-  const CommandDictionary& command_dictionary =
-      command_manager_->GetCommandDictionary();
-
-  const size_t size{commands.GetSize()};
-  for (size_t i = 0; i < size; ++i) {
-    const base::DictionaryValue* command{nullptr};
-    if (!commands.GetDictionary(i, &command)) {
-      LOG(WARNING) << "No command resource at " << i;
+  for (const base::Value* command : commands) {
+    const base::DictionaryValue* command_dict{nullptr};
+    if (!command->GetAsDictionary(&command_dict)) {
+      LOG(WARNING) << "Not a command dictionary: " << *command;
       continue;
     }
+    PublishCommand(*command_dict);
+  }
+}
 
-    std::string command_id;
-    chromeos::ErrorPtr error;
-    auto command_instance = CommandInstance::FromJson(
-        command, commands::attributes::kCommand_Visibility_Cloud,
-        command_dictionary, &command_id, &error);
-    if (!command_instance) {
-      LOG(WARNING) << "Failed to parse a command with ID: " << command_id;
-      if (!command_id.empty())
-        NotifyCommandAborted(command_id, std::move(error));
-      continue;
-    }
+void DeviceRegistrationInfo::PublishCommand(
+    const base::DictionaryValue& command) {
+  std::string command_id;
+  chromeos::ErrorPtr error;
+  auto command_instance = CommandInstance::FromJson(
+      &command, commands::attributes::kCommand_Visibility_Cloud,
+      command_manager_->GetCommandDictionary(), &command_id, &error);
+  if (!command_instance) {
+    LOG(WARNING) << "Failed to parse a command instance: " << command;
+    if (!command_id.empty())
+      NotifyCommandAborted(command_id, std::move(error));
+    return;
+  }
 
-    // TODO(antonm): Properly process cancellation of commands.
-    if (!command_manager_->FindCommand(command_instance->GetID())) {
-      std::unique_ptr<CommandProxyInterface> cloud_proxy{
-          new CloudCommandProxy(command_instance.get(), this)};
-      command_instance->AddProxy(std::move(cloud_proxy));
-      command_manager_->AddCommand(std::move(command_instance));
-    }
+  // TODO(antonm): Properly process cancellation of commands.
+  if (!command_manager_->FindCommand(command_instance->GetID())) {
+    LOG(INFO) << "New command '" << command_instance->GetName()
+              << "' arrived, ID: " << command_instance->GetID();
+    std::unique_ptr<CommandProxyInterface> cloud_proxy{
+        new CloudCommandProxy(command_instance.get(), this)};
+    command_instance->AddProxy(std::move(cloud_proxy));
+    command_manager_->AddCommand(std::move(command_instance));
   }
 }
 
@@ -951,5 +953,18 @@ void DeviceRegistrationInfo::OnDisconnected() {
 void DeviceRegistrationInfo::OnPermanentFailure() {
   LOG(ERROR) << "Failed to establish notification channel.";
 }
+
+void DeviceRegistrationInfo::OnCommandCreated(
+    const base::DictionaryValue& command) {
+  if (!command.empty()) {
+    // GCD spec indicates that the command parameter in notification object
+    // "may be empty if command size is too big".
+    PublishCommand(command);
+    return;
+  }
+  // TODO(avakulenko): If the command was too big to be delivered over a
+  // notification channel, perform a manual poll from the server here.
+}
+
 
 }  // namespace buffet
