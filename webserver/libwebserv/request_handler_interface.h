@@ -20,6 +20,7 @@ class RequestHandlerInterface {
  public:
   using HandlerSignature =
       void(std::unique_ptr<Request>, std::unique_ptr<Response>);
+  virtual ~RequestHandlerInterface() = default;
 
   virtual void HandleRequest(std::unique_ptr<Request> request,
                              std::unique_ptr<Response> response) = 0;
