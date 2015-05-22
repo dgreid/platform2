@@ -124,12 +124,15 @@ void Server::Connect(
 }
 
 void Server::Disconnect() {
-  object_manager_.reset();
   on_server_offline_.Reset();
   on_server_online_.Reset();
-  dbus_object_.reset();
   protocol_handlers_ids_.clear();
   protocol_handlers_names_.clear();
+  // Release D-Bus object manager proxy after all the dependent maps are freed
+  // (e.g. |protocol_handlers_names_| contains pointers to ProtocolHandlerProxy,
+  // instances of which are owned by the D-Bus object manager).
+  object_manager_.reset();
+  dbus_object_.reset();
 }
 
 void Server::Online(org::chromium::WebServer::ServerProxy* server) {
