@@ -52,7 +52,7 @@ class PeerManagerInterface;
 //  resolver from Avahi.  When we have no peers advertising a particular
 //  service type via root _serbus records, we remove the service browser for
 //  that type.
-class AvahiServiceDiscoverer {
+class AvahiServiceDiscoverer final {
  public:
   AvahiServiceDiscoverer(const scoped_refptr<dbus::Bus>& bus,
                          dbus::ObjectProxy* avahi_proxy,

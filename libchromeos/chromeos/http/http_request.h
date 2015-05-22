@@ -211,7 +211,7 @@ class FormData;
 // and obtain the server response. The returned Response object can be
 // used to inspect the response code, HTTP headers and/or response body.
 ///////////////////////////////////////////////////////////////////////////////
-class CHROMEOS_EXPORT Request {
+class CHROMEOS_EXPORT Request final {
  public:
   // The main constructor. |url| specifies the remote host address/path
   // to send the request to. |method| is the HTTP request verb and
@@ -334,7 +334,7 @@ class CHROMEOS_EXPORT Request {
 // to get to response status, error codes, response HTTP headers and response
 // data (body) if available.
 ///////////////////////////////////////////////////////////////////////////////
-class CHROMEOS_EXPORT Response {
+class CHROMEOS_EXPORT Response final {
  public:
   explicit Response(const std::shared_ptr<Connection>& connection);
   ~Response();

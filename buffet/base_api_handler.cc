@@ -15,7 +15,7 @@ namespace {
 
 // Helps to get parameters from native_types::Object representing
 // CommandInstance parameters.
-class ParametersReader {
+class ParametersReader final {
  public:
   explicit ParametersReader(const native_types::Object* parameters)
       : parameters_{parameters} {}

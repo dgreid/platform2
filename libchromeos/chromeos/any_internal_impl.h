@@ -216,7 +216,7 @@ struct TypedData : public Data {
 // non-trivially copyable, then the contained class is allocated in a separate
 // memory block and the pointer to that memory is contained within this memory
 // buffer class.
-class Buffer {
+class Buffer final {
  public:
   enum StorageType { kExternal, kContained };
   Buffer() : external_ptr_(nullptr), storage_(kExternal) {}

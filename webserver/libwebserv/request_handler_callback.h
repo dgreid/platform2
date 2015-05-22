@@ -15,7 +15,7 @@ namespace libwebserv {
 // A simple request handler that wraps a callback function.
 // Essentially, it redirects the RequestHandlerInterface::HandleRequest calls
 // to the provided callback.
-class LIBWEBSERV_EXPORT RequestHandlerCallback
+class LIBWEBSERV_EXPORT RequestHandlerCallback final
     : public RequestHandlerInterface {
  public:
   explicit RequestHandlerCallback(

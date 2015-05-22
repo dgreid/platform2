@@ -22,7 +22,7 @@ namespace dbus_utils {
 
 // Helper friend class to call DBusInterface::HandleMethodCall() since it is
 // a private method of the class and we don't want to make it public.
-class DBusInterfaceTestHelper {
+class DBusInterfaceTestHelper final {
  public:
   static void HandleMethodCall(DBusInterface* itf,
                                dbus::MethodCall* method_call,
@@ -39,7 +39,7 @@ namespace testing {
 // synchronously. Otherwise the ResponseHolder object will be destroyed and
 // ResponseHolder::ReceiveResponse() will not be called since we bind the
 // callback to the object instance via a weak pointer.
-struct ResponseHolder : public base::SupportsWeakPtr<ResponseHolder> {
+struct ResponseHolder final : public base::SupportsWeakPtr<ResponseHolder> {
   void ReceiveResponse(scoped_ptr<dbus::Response> response) {
     response_.reset(response.release());
   }

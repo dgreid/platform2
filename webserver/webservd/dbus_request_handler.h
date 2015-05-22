@@ -18,7 +18,7 @@ namespace webservd {
 class Server;
 
 // A D-Bus interface for a request handler.
-class DBusRequestHandler : public RequestHandlerInterface {
+class DBusRequestHandler final : public RequestHandlerInterface {
  public:
   using RequestHandlerProxy = org::chromium::WebServer::RequestHandlerProxy;
   DBusRequestHandler(Server* server,

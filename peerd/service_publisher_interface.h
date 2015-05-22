@@ -15,6 +15,8 @@ namespace peerd {
 
 class ServicePublisherInterface {
  public:
+  virtual ~ServicePublisherInterface() = default;
+
   // Should be called with each service we want to advertise over this
   // publisher.  Returns true if adding the service to the publisher
   // succeeded and false on error.  Note that while publishers

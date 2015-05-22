@@ -22,6 +22,7 @@ class CHROMEOS_EXPORT KeyValueStore {
  public:
   // Creates an empty KeyValueStore.
   KeyValueStore() = default;
+  virtual ~KeyValueStore() = default;
 
   // Loads the key=value pairs from the given |path|. Lines starting with '#'
   // and empty lines are ignored, and whitespace around keys is trimmed.

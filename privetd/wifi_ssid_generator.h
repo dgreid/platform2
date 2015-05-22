@@ -14,7 +14,7 @@ namespace privetd {
 class CloudDelegate;
 class WifiDelegate;
 
-class WifiSsidGenerator {
+class WifiSsidGenerator final {
  public:
   WifiSsidGenerator(const CloudDelegate* gcd, const WifiDelegate* wifi);
   ~WifiSsidGenerator() = default;

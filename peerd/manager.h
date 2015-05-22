@@ -55,7 +55,7 @@ class Manager : public org::chromium::peerd::ManagerInterface {
  public:
   Manager(chromeos::dbus_utils::ExportedObjectManager* object_manager,
           const std::string& initial_mdns_prefix);
-  virtual ~Manager() = default;
+  ~Manager() override = default;
   void RegisterAsync(const CompletionAction& completion_callback);
 
   // DBus handlers

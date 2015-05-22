@@ -79,7 +79,7 @@ std::string GetIPAddress(const sockaddr* addr) {
 }  // Anonymous namespace
 
 // Logger class to write the log data to a log file.
-class FileLogger : public LogManager::LoggerInterface {
+class FileLogger final : public LogManager::LoggerInterface {
  public:
   FileLogger(const base::FilePath& log_directory, LogManager* log_manager)
       : log_directory_(log_directory), log_manager_{log_manager} {}

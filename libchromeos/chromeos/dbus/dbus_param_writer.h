@@ -20,7 +20,7 @@
 namespace chromeos {
 namespace dbus_utils {
 
-class DBusParamWriter {
+class DBusParamWriter final {
  public:
   // Generic writer method that takes 1 or more arguments. It recursively calls
   // itself (each time with one fewer arguments) until no more is left.

@@ -39,7 +39,7 @@ class AvahiServicePublisher : public ServicePublisherInterface {
                         const scoped_refptr<dbus::Bus>& bus,
                         dbus::ObjectProxy* avahi_proxy,
                         const base::Closure& on_publish_failure);
-  ~AvahiServicePublisher();
+  ~AvahiServicePublisher() override;
   base::WeakPtr<AvahiServicePublisher> GetWeakPtr();
 
   // See comments in ServicePublisherInterface.

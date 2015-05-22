@@ -30,7 +30,7 @@ class ObjectSchema;
 // the map) is a compound name in a form of "package_name.command_name",
 // where "package_name" is a name of command package such as "base", "printers",
 // and others. So the full command name could be "base.reboot", for example.
-class CommandDictionary {
+class CommandDictionary final {
  public:
   CommandDictionary() = default;
 

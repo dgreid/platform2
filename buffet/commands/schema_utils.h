@@ -43,7 +43,7 @@ std::string ToString(const native_types::Array& arr);
 // is inherited or overridden, while |is_inherited| can be used to identify
 // if the attribute was inherited (true) or overridden (false).
 template<typename T>
-class InheritableAttribute {
+class InheritableAttribute final {
  public:
   InheritableAttribute() = default;
   explicit InheritableAttribute(T val)

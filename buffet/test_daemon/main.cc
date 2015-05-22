@@ -72,7 +72,7 @@ std::string DictionaryToString(const chromeos::VariantDictionary& dictionary) {
 
 }  // anonymous namespace
 
-class Daemon : public chromeos::DBusDaemon {
+class Daemon final : public chromeos::DBusDaemon {
  public:
   Daemon() = default;
 

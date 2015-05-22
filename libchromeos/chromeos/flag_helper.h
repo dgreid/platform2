@@ -72,6 +72,7 @@ class Flag {
        const char* default_value,
        const char* help,
        bool visible);
+  virtual ~Flag() = default;
 
   // Sets the associated FLAGS_xxxx value, taking into account the flag type
   virtual bool SetValue(const std::string& value) = 0;
@@ -85,7 +86,7 @@ class Flag {
   bool visible_;
 };
 
-class CHROMEOS_EXPORT BoolFlag : public Flag {
+class CHROMEOS_EXPORT BoolFlag final : public Flag {
  public:
   BoolFlag(const char* name,
            bool* value,
@@ -102,7 +103,7 @@ class CHROMEOS_EXPORT BoolFlag : public Flag {
   bool* no_value_;
 };
 
-class CHROMEOS_EXPORT Int32Flag : public Flag {
+class CHROMEOS_EXPORT Int32Flag final : public Flag {
  public:
   Int32Flag(const char* name,
             int* value,
@@ -117,7 +118,7 @@ class CHROMEOS_EXPORT Int32Flag : public Flag {
   int* value_;
 };
 
-class CHROMEOS_EXPORT Int64Flag : public Flag {
+class CHROMEOS_EXPORT Int64Flag final : public Flag {
  public:
   Int64Flag(const char* name,
             int64_t* value,
@@ -132,7 +133,7 @@ class CHROMEOS_EXPORT Int64Flag : public Flag {
   int64_t* value_;
 };
 
-class CHROMEOS_EXPORT UInt64Flag : public Flag {
+class CHROMEOS_EXPORT UInt64Flag final : public Flag {
  public:
   UInt64Flag(const char* name,
              uint64_t* value,
@@ -147,7 +148,7 @@ class CHROMEOS_EXPORT UInt64Flag : public Flag {
   uint64_t* value_;
 };
 
-class CHROMEOS_EXPORT DoubleFlag : public Flag {
+class CHROMEOS_EXPORT DoubleFlag final : public Flag {
  public:
   DoubleFlag(const char* name,
              double* value,
@@ -162,7 +163,7 @@ class CHROMEOS_EXPORT DoubleFlag : public Flag {
   double* value_;
 };
 
-class CHROMEOS_EXPORT StringFlag : public Flag {
+class CHROMEOS_EXPORT StringFlag final : public Flag {
  public:
   StringFlag(const char* name,
              std::string* value,
@@ -216,7 +217,7 @@ class CHROMEOS_EXPORT StringFlag : public Flag {
 // line flags and pointers to their associated scoped variables, so that
 // the variables can be updated once the command line arguments have been
 // parsed by base::CommandLine.
-class CHROMEOS_EXPORT FlagHelper {
+class CHROMEOS_EXPORT FlagHelper final {
  public:
   // The singleton accessor function.
   static FlagHelper* GetInstance();

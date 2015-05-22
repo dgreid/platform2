@@ -47,6 +47,9 @@ class XmppStreamParser final {
         std::map<std::string, std::string> attributes) = 0;
     virtual void OnStreamEnd(const std::string& node_name) = 0;
     virtual void OnStanza(std::unique_ptr<XmlNode> stanza) = 0;
+
+   protected:
+    virtual ~Delegate() = default;
   };
 
   explicit XmppStreamParser(Delegate* delegate);

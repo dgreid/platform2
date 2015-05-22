@@ -66,7 +66,7 @@ class CommandQueue final {
   // Returns current time.
   base::Time Now() const;
 
-  // Overrided value to be returned from Now().
+  // Overridden value to be returned from Now().
   base::Time test_now_;
 
   // ID-to-CommandInstance map.

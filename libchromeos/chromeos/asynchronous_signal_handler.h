@@ -25,7 +25,7 @@ class CHROMEOS_EXPORT AsynchronousSignalHandler
     : public base::MessageLoopForIO::Watcher {
  public:
   AsynchronousSignalHandler();
-  virtual ~AsynchronousSignalHandler();
+  ~AsynchronousSignalHandler() override;
 
   // The callback called when a signal is received.
   typedef base::Callback<bool(const struct signalfd_siginfo&)> SignalHandler;

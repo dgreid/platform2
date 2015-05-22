@@ -28,7 +28,7 @@ enum class GcdBootstrapMode {
 
 enum class PairingType;
 
-class PrivetdConfigParser {
+class PrivetdConfigParser final {
  public:
   PrivetdConfigParser();
 

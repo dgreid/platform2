@@ -56,7 +56,7 @@ class DeviceRegistrationInfo : public NotificationDelegate {
       const std::shared_ptr<chromeos::http::Transport>& transport,
       bool notifications_enabled);
 
-  virtual ~DeviceRegistrationInfo();
+  ~DeviceRegistrationInfo() override;
 
   // Add callback to listen for changes in registration status.
   void AddOnRegistrationChangedCallback(

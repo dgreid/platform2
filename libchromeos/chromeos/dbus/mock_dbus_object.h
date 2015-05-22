@@ -20,7 +20,7 @@ class MockDBusObject : public DBusObject {
                  const scoped_refptr<dbus::Bus>& bus,
                  const dbus::ObjectPath& object_path)
       : DBusObject(object_manager, bus, object_path) {}
-  virtual ~MockDBusObject() = default;
+  ~MockDBusObject() override = default;
 
   MOCK_METHOD1(RegisterAsync,
                void(const AsyncEventSequencer::CompletionAction&));

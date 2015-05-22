@@ -20,7 +20,7 @@ namespace buffet {
 // constraints. See comments for CommandDefinitions::LoadCommands for the
 // detailed description of what command categories are and what they are used
 // for.
-class CommandDefinition {
+class CommandDefinition final {
  public:
   struct Visibility {
     Visibility() = default;

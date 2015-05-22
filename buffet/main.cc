@@ -21,7 +21,7 @@ using buffet::dbus_constants::kRootServicePath;
 
 namespace buffet {
 
-class Daemon : public DBusServiceDaemon {
+class Daemon final : public DBusServiceDaemon {
  public:
   Daemon(const base::FilePath& config_path,
          const base::FilePath& state_path,

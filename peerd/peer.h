@@ -43,7 +43,7 @@ class Peer : public org::chromium::peerd::PeerInterface {
   Peer(const scoped_refptr<dbus::Bus>& bus,
        chromeos::dbus_utils::ExportedObjectManager* object_manager,
        const dbus::ObjectPath& path);
-  virtual ~Peer() = default;
+  ~Peer() override = default;
   bool RegisterAsync(
       chromeos::ErrorPtr* error,
       const std::string& uuid,

@@ -17,7 +17,7 @@ namespace privetd {
 
 // Manages soft AP for wifi bootstrapping.
 // Once created can handle multiple Start/Stop requests.
-class ApManagerClient {
+class ApManagerClient final {
  public:
   explicit ApManagerClient(const scoped_refptr<dbus::Bus>& bus);
   ~ApManagerClient();

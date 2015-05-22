@@ -31,7 +31,7 @@ class XmppChannel : public NotificationChannel,
   XmppChannel(const std::string& account,
               const std::string& access_token,
               const scoped_refptr<base::TaskRunner>& task_runner);
-  virtual ~XmppChannel() = default;
+  ~XmppChannel() override = default;
 
   // Overrides from NotificationChannel.
   std::string GetName() const override;

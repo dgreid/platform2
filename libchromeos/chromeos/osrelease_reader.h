@@ -17,7 +17,7 @@
 
 namespace chromeos {
 
-class CHROMEOS_EXPORT OsReleaseReader {
+class CHROMEOS_EXPORT OsReleaseReader final {
  public:
   // Create an empty reader
   OsReleaseReader() = default;

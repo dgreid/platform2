@@ -17,7 +17,7 @@ namespace buffet {
 class FileStorage : public StorageInterface {
  public:
   explicit FileStorage(const base::FilePath& file_path);
-  virtual ~FileStorage() = default;
+  ~FileStorage() override = default;
   std::unique_ptr<base::DictionaryValue> Load() override;
   bool Save(const base::DictionaryValue& config) override;
 
@@ -30,7 +30,7 @@ class FileStorage : public StorageInterface {
 class MemStorage : public StorageInterface {
  public:
   MemStorage() = default;
-  virtual ~MemStorage() = default;
+  ~MemStorage() override = default;
   std::unique_ptr<base::DictionaryValue> Load() override;
   bool Save(const base::DictionaryValue& config) override;
 

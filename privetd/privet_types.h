@@ -11,7 +11,7 @@
 
 namespace privetd {
 
-class ConnectionState {
+class ConnectionState final {
  public:
   enum Status {
     kDisabled,
@@ -43,7 +43,7 @@ class ConnectionState {
   chromeos::ErrorPtr error_;
 };
 
-class SetupState {
+class SetupState final {
  public:
   enum Status {
     kNone,

@@ -30,7 +30,7 @@ enum class ServiceState {
 
 std::string ServiceStateToString(ServiceState state);
 
-class ShillClient {
+class ShillClient final {
  public:
   // A callback that interested parties can register to be notified of
   // transitions from online to offline and vice versa.  The boolean

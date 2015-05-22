@@ -121,7 +121,7 @@ std::unique_ptr<base::ListValue> ToValue(const Container& list) {
 }
 
 template <typename T>
-class EnumToStringMap {
+class EnumToStringMap final {
  public:
   static std::string FindNameById(T id) {
     for (const Map& m : kMap) {

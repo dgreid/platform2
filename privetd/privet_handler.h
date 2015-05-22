@@ -45,7 +45,7 @@ class PrivetHandler : public CloudDelegate::Observer {
                 SecurityDelegate* pairing,
                 WifiDelegate* wifi,
                 IdentityDelegate* identity);
-  ~PrivetHandler();
+  ~PrivetHandler() override;
 
   void OnCommandDefsChanged() override;
   void OnStateChanged() override;

@@ -19,7 +19,7 @@ namespace webservd {
 
 // A class that manages web server log files and helps with logging web request
 // information.
-class LogManager {
+class LogManager final {
  public:
   // Abstract interface for writing a log entry to a storage medium.
   // LogManager provides its own implementation for writing to a log file,

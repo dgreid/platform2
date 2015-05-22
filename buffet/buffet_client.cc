@@ -139,7 +139,7 @@ chromeos::Any GetJsonList(const base::ListValue& list) {
   return val;
 }
 
-class Daemon : public chromeos::DBusDaemon {
+class Daemon final : public chromeos::DBusDaemon {
  public:
   Daemon() = default;
 

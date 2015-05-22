@@ -29,7 +29,7 @@ const char kRootServicePath[] = "/org/chromium/WebServer";
 const char kWebServerUserName[] = "webservd";
 const char kWebServerGroupName[] = "webservd";
 
-class Daemon : public chromeos::DBusServiceDaemon {
+class Daemon final : public chromeos::DBusServiceDaemon {
  public:
   explicit Daemon(webservd::Config config)
       : DBusServiceDaemon{kServiceName, kRootServicePath},

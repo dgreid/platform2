@@ -26,7 +26,7 @@ namespace webservd {
 
 // Helper class to provide static callback methods to libmicrohttpd library,
 // with the ability to access private methods of Server class.
-class ServerHelper {
+class ServerHelper final {
  public:
   static int ConnectionHandler(void *cls,
                                MHD_Connection* connection,

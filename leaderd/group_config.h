@@ -21,7 +21,7 @@ extern const char kIsPersistent[];
 
 }  // namespace group_options
 
-class GroupConfig {
+class GroupConfig final {
  public:
   GroupConfig() = default;
 

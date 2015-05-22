@@ -28,7 +28,7 @@ class CommandInstance;
 // update the command handling progress. Once command is handled,
 // DBusCommandProxy::Done() is called and the command is removed from the
 // command queue and D-Bus ExportedObjectManager.
-class DBusCommandDispacher {
+class DBusCommandDispacher final {
  public:
   explicit DBusCommandDispacher(const base::WeakPtr<
       chromeos::dbus_utils::ExportedObjectManager>& object_manager);
