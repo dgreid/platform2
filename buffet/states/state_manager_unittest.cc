@@ -7,6 +7,7 @@
 #include <cstdlib>  // for abs().
 #include <vector>
 
+#include <base/bind.h>
 #include <base/values.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -56,6 +57,11 @@ class StateManagerTest : public ::testing::Test {
     EXPECT_CALL(mock_state_change_queue_, GetAndClearRecordedStateChanges())
         .Times(0);
     mgr_.reset(new StateManager(&mock_state_change_queue_));
+
+    EXPECT_CALL(*this, OnStateChanged()).Times(1);
+    mgr_->AddOnChangedCallback(
+        base::Bind(&StateManagerTest::OnStateChanged, base::Unretained(this)));
+
     LoadStateDefinition(GetTestSchema().get(), "default", nullptr);
     ASSERT_TRUE(mgr_->LoadStateDefaults(*GetTestValues().get(), nullptr));
   }
@@ -67,6 +73,15 @@ class StateManagerTest : public ::testing::Test {
     ASSERT_TRUE(mgr_->LoadStateDefinition(*json, category, error));
   }
 
+  bool SetPropertyValue(const std::string& name,
+                        const chromeos::Any& value,
+                        chromeos::ErrorPtr* error) {
+    return mgr_->SetPropertyValue(name, value, timestamp_, error);
+  }
+
+  MOCK_CONST_METHOD0(OnStateChanged, void());
+
+  base::Time timestamp_{base::Time::Now()};
   std::unique_ptr<StateManager> mgr_;
   MockStateChangeQueueInterface mock_state_change_queue_;
 };
@@ -120,12 +135,11 @@ TEST_F(StateManagerTest, SetPropertyValue) {
   native_types::Object expected_prop_set{
       {"terminator.target", unittests::make_string_prop_value("John Connor")},
   };
-  base::Time timestamp = base::Time::Now();
   EXPECT_CALL(mock_state_change_queue_,
-              NotifyPropertiesUpdated(timestamp, expected_prop_set))
+              NotifyPropertiesUpdated(timestamp_, expected_prop_set))
       .WillOnce(Return(true));
-  ASSERT_TRUE(mgr_->SetPropertyValue(
-      "terminator.target", std::string{"John Connor"}, timestamp, nullptr));
+  ASSERT_TRUE(SetPropertyValue("terminator.target", std::string{"John Connor"},
+                               nullptr));
   auto expected = R"({
     'base': {
       'manufacturer': 'Skynet',
@@ -140,7 +154,7 @@ TEST_F(StateManagerTest, SetPropertyValue) {
 
 TEST_F(StateManagerTest, SetPropertyValue_Error_NoName) {
   chromeos::ErrorPtr error;
-  ASSERT_FALSE(mgr_->SetPropertyValue("", int{0}, base::Time::Now(), &error));
+  ASSERT_FALSE(SetPropertyValue("", int{0}, &error));
   EXPECT_EQ(errors::state::kDomain, error->GetDomain());
   EXPECT_EQ(errors::state::kPropertyNameMissing, error->GetCode());
   EXPECT_EQ("Property name is missing", error->GetMessage());
@@ -148,8 +162,7 @@ TEST_F(StateManagerTest, SetPropertyValue_Error_NoName) {
 
 TEST_F(StateManagerTest, SetPropertyValue_Error_NoPackage) {
   chromeos::ErrorPtr error;
-  ASSERT_FALSE(
-      mgr_->SetPropertyValue("target", int{0}, base::Time::Now(), &error));
+  ASSERT_FALSE(SetPropertyValue("target", int{0}, &error));
   EXPECT_EQ(errors::state::kDomain, error->GetDomain());
   EXPECT_EQ(errors::state::kPackageNameMissing, error->GetCode());
   EXPECT_EQ("Package name is missing in the property name",
@@ -158,8 +171,7 @@ TEST_F(StateManagerTest, SetPropertyValue_Error_NoPackage) {
 
 TEST_F(StateManagerTest, SetPropertyValue_Error_UnknownPackage) {
   chromeos::ErrorPtr error;
-  ASSERT_FALSE(
-      mgr_->SetPropertyValue("power.level", int{0}, base::Time::Now(), &error));
+  ASSERT_FALSE(SetPropertyValue("power.level", int{0}, &error));
   EXPECT_EQ(errors::state::kDomain, error->GetDomain());
   EXPECT_EQ(errors::state::kPropertyNotDefined, error->GetCode());
   EXPECT_EQ("Unknown state property package 'power'", error->GetMessage());
@@ -167,22 +179,20 @@ TEST_F(StateManagerTest, SetPropertyValue_Error_UnknownPackage) {
 
 TEST_F(StateManagerTest, SetPropertyValue_Error_UnknownProperty) {
   chromeos::ErrorPtr error;
-  ASSERT_FALSE(
-      mgr_->SetPropertyValue("base.level", int{0}, base::Time::Now(), &error));
+  ASSERT_FALSE(SetPropertyValue("base.level", int{0}, &error));
   EXPECT_EQ(errors::state::kDomain, error->GetDomain());
   EXPECT_EQ(errors::state::kPropertyNotDefined, error->GetCode());
   EXPECT_EQ("State property 'base.level' is not defined", error->GetMessage());
 }
 
 TEST_F(StateManagerTest, GetAndClearRecordedStateChanges) {
-  base::Time timestamp = base::Time::Now();
-  EXPECT_CALL(mock_state_change_queue_, NotifyPropertiesUpdated(timestamp, _))
+  EXPECT_CALL(mock_state_change_queue_, NotifyPropertiesUpdated(timestamp_, _))
       .WillOnce(Return(true));
-  ASSERT_TRUE(mgr_->SetPropertyValue(
-      "terminator.target", std::string{"John Connor"}, timestamp, nullptr));
+  ASSERT_TRUE(SetPropertyValue("terminator.target", std::string{"John Connor"},
+                               nullptr));
   std::vector<StateChange> expected_val;
   expected_val.emplace_back(
-      timestamp,
+      timestamp_,
       native_types::Object{{"terminator.target",
                             unittests::make_string_prop_value("John Connor")}});
   EXPECT_CALL(mock_state_change_queue_, GetAndClearRecordedStateChanges())
@@ -192,6 +202,30 @@ TEST_F(StateManagerTest, GetAndClearRecordedStateChanges) {
   EXPECT_EQ(expected_val.back().timestamp, changes.back().timestamp);
   EXPECT_EQ(expected_val.back().changed_properties,
             changes.back().changed_properties);
+}
+
+TEST_F(StateManagerTest, SetProperties) {
+  native_types::Object expected_prop_set{
+      {"base.manufacturer", unittests::make_string_prop_value("No Name")},
+  };
+  EXPECT_CALL(mock_state_change_queue_,
+              NotifyPropertiesUpdated(_, expected_prop_set))
+      .WillOnce(Return(true));
+
+  EXPECT_CALL(*this, OnStateChanged()).Times(1);
+  ASSERT_TRUE(mgr_->SetProperties(
+      {{"base.manufacturer", std::string("No Name")}}, nullptr));
+
+  auto expected = R"({
+    'base': {
+      'manufacturer': 'No Name',
+      'serialNumber': 'T1000'
+    },
+    'terminator': {
+      'target': ''
+    }
+  })";
+  EXPECT_JSON_EQ(expected, *mgr_->GetStateValuesAsJson(nullptr));
 }
 
 }  // namespace buffet

@@ -137,17 +137,7 @@ void Manager::RegisterDevice(DBusMethodResponse<std::string> response,
 void Manager::UpdateState(DBusMethodResponse<> response,
                           const chromeos::VariantDictionary& property_set) {
   chromeos::ErrorPtr error;
-  base::Time timestamp = base::Time::Now();
-  bool all_success = true;
-  for (const auto& pair : property_set) {
-    if (!state_manager_->SetPropertyValue(pair.first, pair.second, timestamp,
-                                          &error)) {
-      // Remember that an error occurred but keep going and update the rest of
-      // the properties if possible.
-      all_success = false;
-    }
-  }
-  if (!all_success)
+  if (!state_manager_->SetProperties(property_set, &error))
     response->ReplyWithError(error.get());
   else
     response->Return();

@@ -30,6 +30,11 @@ StateManager::StateManager(StateChangeQueueInterface* state_change_queue)
   CHECK(state_change_queue_) << "State change queue not specified";
 }
 
+void StateManager::AddOnChangedCallback(const base::Closure& callback) {
+  on_changed_.push_back(callback);
+  callback.Run();  // Force to read current state.
+}
+
 void StateManager::Startup() {
   LOG(INFO) << "Initializing StateManager.";
 
@@ -88,6 +93,9 @@ void StateManager::Startup() {
                          firmware_version,
                          base::Time::Now(),
                          nullptr));
+
+  for (const auto& cb : on_changed_)
+    cb.Run();
 }
 
 std::unique_ptr<base::DictionaryValue> StateManager::GetStateValuesAsJson(
@@ -102,6 +110,23 @@ std::unique_ptr<base::DictionaryValue> StateManager::GetStateValuesAsJson(
     dict->SetWithoutPathExpansion(pair.first, pkg_value.release());
   }
   return dict;
+}
+
+bool StateManager::SetProperties(
+    const chromeos::VariantDictionary& property_set,
+    chromeos::ErrorPtr* error) {
+  base::Time timestamp = base::Time::Now();
+  bool all_success = true;
+  for (const auto& pair : property_set) {
+    if (!SetPropertyValue(pair.first, pair.second, timestamp, error)) {
+      // Remember that an error occurred but keep going and update the rest of
+      // the properties if possible.
+      all_success = false;
+    }
+  }
+  for (const auto& cb : on_changed_)
+    cb.Run();
+  return all_success;
 }
 
 bool StateManager::SetPropertyValue(const std::string& full_property_name,

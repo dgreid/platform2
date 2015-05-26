@@ -11,6 +11,7 @@
 #include <string>
 #include <vector>
 
+#include <base/callback.h>
 #include <base/macros.h>
 #include <chromeos/errors/error.h>
 #include <chromeos/variant_dictionary.h>
@@ -33,6 +34,8 @@ class StateManager final {
  public:
   explicit StateManager(StateChangeQueueInterface* state_change_queue);
 
+  void AddOnChangedCallback(const base::Closure& callback);
+
   // Initializes the state manager and load device state fragments.
   // Called by Buffet daemon at startup.
   void Startup();
@@ -42,12 +45,9 @@ class StateManager final {
   std::unique_ptr<base::DictionaryValue> GetStateValuesAsJson(
       chromeos::ErrorPtr* error) const;
 
-  // Updates a single property value. |full_property_name| must be the full
-  // name of the property to update in format "package.property".
-  bool SetPropertyValue(const std::string& full_property_name,
-                        const chromeos::Any& value,
-                        const base::Time& timestamp,
-                        chromeos::ErrorPtr* error);
+  // Updates a multiple property values.
+  bool SetProperties(const chromeos::VariantDictionary& property_set,
+                     chromeos::ErrorPtr* error);
 
   // Returns all the categories the state properties are registered from.
   // As with GCD command handling, the category normally represent a device
@@ -61,6 +61,15 @@ class StateManager final {
   std::vector<StateChange> GetAndClearRecordedStateChanges();
 
  private:
+  friend class StateManagerTest;
+
+  // Updates a single property value. |full_property_name| must be the full
+  // name of the property to update in format "package.property".
+  bool SetPropertyValue(const std::string& full_property_name,
+                        const chromeos::Any& value,
+                        const base::Time& timestamp,
+                        chromeos::ErrorPtr* error);
+
   // Loads a device state fragment from a JSON object. |category| represents
   // a device daemon providing the state fragment or empty string for the
   // base state fragment.
@@ -96,7 +105,8 @@ class StateManager final {
   std::map<std::string, std::unique_ptr<StatePackage>> packages_;
   std::set<std::string> categories_;
 
-  friend class StateManagerTest;
+  std::vector<base::Closure> on_changed_;
+
   DISALLOW_COPY_AND_ASSIGN(StateManager);
 };
 
