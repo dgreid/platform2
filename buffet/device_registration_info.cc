@@ -295,6 +295,9 @@ void DeviceRegistrationInfo::StartNotificationChannel() {
   // TODO(avakulenko): Move this into a notification channel factory and out of
   // this class completely. Also to be added the secondary (poll) notification
   // channel.
+  if (primary_notification_channel_)
+    primary_notification_channel_->Stop();
+
   primary_notification_channel_.reset(
       new XmppChannel{config_->robot_account(),
                       access_token_,

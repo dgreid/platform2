@@ -95,7 +95,7 @@ class XmppChannel : public NotificationChannel,
   std::string access_token_;
 
   chromeos::StreamPtr raw_socket_;
-  chromeos::StreamPtr tls_stream_;
+  chromeos::StreamPtr tls_stream_;  // Must follow |raw_socket_|.
 
   // Read buffer for incoming message packets.
   std::vector<char> read_socket_data_;

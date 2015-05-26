@@ -438,7 +438,11 @@ void TlsStream::TlsStreamImpl::DoHandshake(
 TlsStream::TlsStream(std::unique_ptr<TlsStreamImpl> impl)
     : impl_{std::move(impl)} {}
 
-TlsStream::~TlsStream() {}
+TlsStream::~TlsStream() {
+  if (impl_) {
+    impl_->Close(nullptr);
+  }
+}
 
 void TlsStream::Connect(StreamPtr socket,
                         const std::string& host,

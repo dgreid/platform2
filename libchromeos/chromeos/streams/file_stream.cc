@@ -30,6 +30,11 @@ class FileDescriptor : public base::MessageLoopForIO::Watcher,
                        public FileStream::FileDescriptorInterface {
  public:
   FileDescriptor(int fd, bool own) : fd_{fd}, own_{own} {}
+  ~FileDescriptor() override {
+    if (IsOpen()) {
+      Close();
+    }
+  }
 
   // Overrides for FileStream::FileDescriptorInterface methods.
   bool IsOpen() const override { return fd_ >= 0; }
