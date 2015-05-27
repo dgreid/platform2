@@ -7,6 +7,7 @@
 #include "buffet/commands/command_instance.h"
 #include "buffet/commands/command_manager.h"
 #include "buffet/device_registration_info.h"
+#include "buffet/states/state_manager.h"
 
 namespace buffet {
 
@@ -30,6 +31,17 @@ class ParametersReader {
     return true;
   }
 
+  bool GetParameter(const std::string& name, bool* value) const {
+    auto it = parameters_->find(name);
+    if (it == parameters_->end())
+      return false;
+    const BooleanValue* bool_value = it->second->GetBoolean();
+    if (!bool_value)
+      return false;
+    *value = bool_value->GetValue();
+    return true;
+  }
+
  private:
   const native_types::Object* parameters_;
 };
@@ -38,8 +50,9 @@ class ParametersReader {
 
 BaseApiHandler::BaseApiHandler(
     const base::WeakPtr<DeviceRegistrationInfo>& device_info,
+    const std::shared_ptr<StateManager>& state_manager,
     const std::shared_ptr<CommandManager>& command_manager)
-    : device_info_{device_info} {
+    : device_info_{device_info}, state_manager_{state_manager} {
   command_manager->AddOnCommandAddedCallback(base::Bind(
       &BaseApiHandler::OnCommandAdded, weak_ptr_factory_.GetWeakPtr()));
 }
@@ -48,8 +61,42 @@ void BaseApiHandler::OnCommandAdded(CommandInstance* command) {
   if (command->GetStatus() != CommandInstance::kStatusQueued)
     return;
 
+  if (command->GetName() == "base.updateBaseConfiguration")
+    return UpdateBaseConfiguration(command);
+
   if (command->GetName() == "base.updateDeviceInfo")
     return UpdateDeviceInfo(command);
+}
+
+void BaseApiHandler::UpdateBaseConfiguration(CommandInstance* command) {
+  command->SetProgress({});
+
+  const BuffetConfig& config{device_info_->GetConfig()};
+  std::string anonymous_access_role{config.local_anonymous_access_role()};
+  bool discovery_enabled{config.local_discovery_enabled()};
+  bool pairing_enabled{config.local_pairing_enabled()};
+
+  ParametersReader parameters{&command->GetParameters()};
+  parameters.GetParameter("localAnonymousAccessMaxRole",
+                          &anonymous_access_role);
+  parameters.GetParameter("localDiscoveryEnabled", &discovery_enabled);
+  parameters.GetParameter("localPairingEnabled", &pairing_enabled);
+
+  chromeos::VariantDictionary state{
+      {"base.localAnonymousAccessMaxRole", anonymous_access_role},
+      {"base.localDiscoveryEnabled", discovery_enabled},
+      {"base.localPairingEnabled", pairing_enabled},
+  };
+  if (!state_manager_->SetProperties(state, nullptr)) {
+    return command->Abort();
+  }
+
+  if (!device_info_->UpdateBaseConfig(anonymous_access_role, discovery_enabled,
+                                      pairing_enabled, nullptr)) {
+    return command->Abort();
+  }
+
+  command->Done();
 }
 
 void BaseApiHandler::UpdateDeviceInfo(CommandInstance* command) {

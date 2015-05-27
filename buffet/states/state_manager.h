@@ -61,6 +61,7 @@ class StateManager final {
   std::vector<StateChange> GetAndClearRecordedStateChanges();
 
  private:
+  friend class BaseApiHandlerTest;
   friend class StateManagerTest;
 
   // Updates a single property value. |full_property_name| must be the full

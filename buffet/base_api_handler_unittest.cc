@@ -25,13 +25,37 @@ class BaseApiHandlerTest : public ::testing::Test {
     transport_ = std::make_shared<chromeos::http::fake::Transport>();
     command_manager_ = std::make_shared<CommandManager>();
     state_manager_ = std::make_shared<StateManager>(&mock_state_change_queue_);
-    state_manager_->Startup();
+    auto state_definition = unittests::CreateDictionaryValue(R"({
+      'base': {
+        'firmwareVersion': 'string',
+        'localDiscoveryEnabled': 'boolean',
+        'localAnonymousAccessMaxRole': [ 'none', 'viewer', 'user' ],
+        'localPairingEnabled': 'boolean',
+        'network': {
+          'properties': {
+            'name': 'string'
+          }
+        }
+      }
+    })");
+    auto state_defaults = unittests::CreateDictionaryValue(R"({
+      'base': {
+        'firmwareVersion': '123123',
+        'localDiscoveryEnabled': false,
+        'localAnonymousAccessMaxRole': 'none',
+        'localPairingEnabled': false
+      }
+    })");
+    ASSERT_TRUE(state_manager_->LoadStateDefinition(*state_definition, "base",
+                                                    nullptr));
+    ASSERT_TRUE(state_manager_->LoadStateDefaults(*state_defaults, nullptr));
     dev_reg_.reset(new DeviceRegistrationInfo(
         command_manager_, state_manager_,
         std::unique_ptr<BuffetConfig>{new BuffetConfig{
             std::unique_ptr<StorageInterface>{new MemStorage}}},
         transport_, true));
-    handler_.reset(new BaseApiHandler{dev_reg_->AsWeakPtr(), command_manager_});
+    handler_.reset(new BaseApiHandler{
+        dev_reg_->AsWeakPtr(), state_manager_, command_manager_});
   }
 
   void LoadCommands(const std::string& command_definitions) {
@@ -62,6 +86,68 @@ class BaseApiHandlerTest : public ::testing::Test {
   std::unique_ptr<BaseApiHandler> handler_;
   int command_id_{0};
 };
+
+TEST_F(BaseApiHandlerTest, UpdateBaseConfiguration) {
+  LoadCommands(R"({
+    'base': {
+      'updateBaseConfiguration': {
+        'parameters': {
+          'localDiscoveryEnabled': 'boolean',
+          'localAnonymousAccessMaxRole': [ 'none', 'viewer', 'user' ],
+          'localPairingEnabled': 'boolean'
+         },
+         'results': {}
+      }
+    }
+  })");
+
+  const BuffetConfig& config{dev_reg_->GetConfig()};
+
+  AddCommand(R"({
+    'name' : 'base.updateBaseConfiguration',
+    'parameters': {
+      'localDiscoveryEnabled': false,
+      'localAnonymousAccessMaxRole': 'none',
+      'localPairingEnabled': false
+    }
+  })");
+  EXPECT_EQ("none", config.local_anonymous_access_role());
+  EXPECT_FALSE(config.local_discovery_enabled());
+  EXPECT_FALSE(config.local_pairing_enabled());
+
+  auto expected = R"({
+    'base': {
+      'firmwareVersion': '123123',
+      'localAnonymousAccessMaxRole': 'none',
+      'localDiscoveryEnabled': false,
+      'localPairingEnabled': false,
+      'network': {}
+    }
+  })";
+  EXPECT_JSON_EQ(expected, *state_manager_->GetStateValuesAsJson(nullptr));
+
+  AddCommand(R"({
+    'name' : 'base.updateBaseConfiguration',
+    'parameters': {
+      'localDiscoveryEnabled': true,
+      'localAnonymousAccessMaxRole': 'user',
+      'localPairingEnabled': true
+    }
+  })");
+  EXPECT_EQ("user", config.local_anonymous_access_role());
+  EXPECT_TRUE(config.local_discovery_enabled());
+  EXPECT_TRUE(config.local_pairing_enabled());
+  expected = R"({
+    'base': {
+      'firmwareVersion': '123123',
+      'localAnonymousAccessMaxRole': 'user',
+      'localDiscoveryEnabled': true,
+      'localPairingEnabled': true,
+      'network': {}
+    }
+  })";
+  EXPECT_JSON_EQ(expected, *state_manager_->GetStateValuesAsJson(nullptr));
+}
 
 TEST_F(BaseApiHandlerTest, UpdateDeviceInfo) {
   LoadCommands(R"({

@@ -122,6 +122,12 @@ class DeviceRegistrationInfo : public NotificationDelegate {
                         const std::string& location,
                         chromeos::ErrorPtr* error);
 
+  // Updates base device config.
+  bool UpdateBaseConfig(const std::string& anonymous_access_role,
+                        bool local_discovery_enabled,
+                        bool local_pairing_enabled,
+                        chromeos::ErrorPtr* error);
+
   // Updates GCD service configuration. Usually for testing.
   bool UpdateServiceConfig(const std::string& client_id,
                            const std::string& client_secret,

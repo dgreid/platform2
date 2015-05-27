@@ -672,6 +672,25 @@ bool DeviceRegistrationInfo::UpdateDeviceInfo(const std::string& name,
   return true;
 }
 
+bool DeviceRegistrationInfo::UpdateBaseConfig(
+    const std::string& anonymous_access_role,
+    bool local_discovery_enabled,
+    bool local_pairing_enabled,
+    chromeos::ErrorPtr* error) {
+  BuffetConfig::Transaction change(config_.get());
+  if (!change.set_local_anonymous_access_role(anonymous_access_role)) {
+    chromeos::Error::AddToPrintf(error, FROM_HERE, kErrorDomainBuffet,
+                                 "invalid_parameter", "Invalid role: %s",
+                                 anonymous_access_role.c_str());
+    return false;
+  }
+
+  change.set_local_discovery_enabled(local_discovery_enabled);
+  change.set_local_pairing_enabled(local_pairing_enabled);
+
+  return true;
+}
+
 bool DeviceRegistrationInfo::UpdateServiceConfig(
     const std::string& client_id,
     const std::string& client_secret,

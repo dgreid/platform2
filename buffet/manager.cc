@@ -77,8 +77,8 @@ void Manager::Start(const base::FilePath& config_path,
   device_info_->AddOnRegistrationChangedCallback(base::Bind(
       &Manager::OnRegistrationChanged, weak_ptr_factory_.GetWeakPtr()));
 
-  base_api_handler_.reset(
-      new BaseApiHandler{device_info_->AsWeakPtr(), command_manager_});
+  base_api_handler_.reset(new BaseApiHandler{
+      device_info_->AsWeakPtr(), state_manager_, command_manager_});
 
   device_info_->Start();
   dbus_adaptor_.RegisterWithDBusObject(&dbus_object_);
