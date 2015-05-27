@@ -23,6 +23,7 @@
 #include "buffet/commands/command_manager.h"
 #include "buffet/notification/notification_channel.h"
 #include "buffet/notification/notification_delegate.h"
+#include "buffet/notification/pull_channel.h"
 #include "buffet/registration_status.h"
 #include "buffet/storage_interface.h"
 
@@ -193,10 +194,10 @@ class DeviceRegistrationInfo : public NotificationDelegate {
       const base::Callback<void(const base::ListValue&)>& on_success,
       const CloudRequestErrorCallback& on_failure);
 
-  void AbortLimboCommands(const base::Closure& callback,
-                          const base::ListValue& commands);
-
-  void PeriodicallyPollCommands();
+  // Processes the command list that is fetched from the server on connection.
+  // Aborts commands which are in transitional states and publishes queued
+  // commands which are queued.
+  void ProcessInitialCommandList(const base::ListValue& commands);
 
   void PublishCommands(const base::ListValue& commands);
   void PublishCommand(const base::DictionaryValue& command);
@@ -247,11 +248,11 @@ class DeviceRegistrationInfo : public NotificationDelegate {
 
   const bool notifications_enabled_;
   std::unique_ptr<NotificationChannel> primary_notification_channel_;
+  std::unique_ptr<PullChannel> pull_channel_;
+  NotificationChannel* current_notification_channel_{nullptr};
 
   // Tracks our current registration status.
   RegistrationStatus registration_status_{RegistrationStatus::kUnconfigured};
-
-  base::RepeatingTimer<DeviceRegistrationInfo> command_poll_timer_;
 
   std::vector<OnRegistrationChangedCallback> on_registration_changed_;
 

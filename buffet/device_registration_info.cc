@@ -157,6 +157,7 @@ std::string DeviceRegistrationInfo::GetOAuthURL(
 
 void DeviceRegistrationInfo::Start() {
   if (HaveRegistrationCredentials(nullptr)) {
+    StartNotificationChannel();
     // Wait a significant amount of time for local daemons to publish their
     // state to Buffet before publishing it to the cloud.
     // TODO(wiley) We could do a lot of things here to either expose this
@@ -279,32 +280,46 @@ bool DeviceRegistrationInfo::RefreshAccessToken(
   LOG(INFO) << "Access token is refreshed for additional " << expires_in
             << " seconds.";
 
-  StartNotificationChannel();
-
   return true;
 }
 
 void DeviceRegistrationInfo::StartNotificationChannel() {
-  if (!notifications_enabled_) {
-    LOG(WARNING) << "Notification support disabled by flag.";
-    return;
-  }
   // If no MessageLoop assume we're in unittests.
   if (!base::MessageLoop::current()) {
-    LOG(INFO) << "No MessageLoop, not starting XMPP";
+    LOG(INFO) << "No MessageLoop, not starting notification channel";
     return;
   }
 
-  // TODO(avakulenko): Move this into a notification channel factory and out of
-  // this class completely. Also to be added the secondary (poll) notification
-  // channel.
-  if (primary_notification_channel_)
+  auto task_runner = base::MessageLoop::current()->task_runner();
+
+  if (primary_notification_channel_) {
     primary_notification_channel_->Stop();
+    primary_notification_channel_.reset();
+    current_notification_channel_ = nullptr;
+  }
+
+  // Start with just regular polling at the pre-configured polling interval.
+  // Once the primary notification channel is connected successfully, it will
+  // call back to OnConnected() and at that time we'll switch to use the
+  // primary channel and switch periodic poll into much more infrequent backup
+  // poll mode.
+  const base::TimeDelta pull_interval =
+      base::TimeDelta::FromMilliseconds(config_->polling_period_ms());
+  if (!pull_channel_) {
+    pull_channel_.reset(new PullChannel{pull_interval, task_runner});
+    pull_channel_->Start(this);
+  } else {
+    pull_channel_->UpdatePullInterval(pull_interval);
+  }
+  current_notification_channel_ = pull_channel_.get();
+
+  if (!notifications_enabled_) {
+    LOG(WARNING) << "Notification channel disabled by flag.";
+    return;
+  }
 
   primary_notification_channel_.reset(
-      new XmppChannel{config_->robot_account(),
-                      access_token_,
-                      base::MessageLoop::current()->task_runner()});
+      new XmppChannel{config_->robot_account(), access_token_, task_runner});
   primary_notification_channel_->Start(this);
 }
 
@@ -339,15 +354,12 @@ DeviceRegistrationInfo::BuildDeviceResource(chromeos::ErrorPtr* error) {
   resource->SetString("modelManifestId", config_->model_id());
   resource->SetString("deviceKind", config_->device_kind());
   std::unique_ptr<base::DictionaryValue> channel{new base::DictionaryValue};
-  if (primary_notification_channel_) {
+  if (current_notification_channel_) {
     channel->SetString("supportedType",
-                       primary_notification_channel_->GetName());
-    primary_notification_channel_->AddChannelParameters(channel.get());
+                       current_notification_channel_->GetName());
+    current_notification_channel_->AddChannelParameters(channel.get());
   } else {
-    // TODO(avakulenko): Currently GCD server doesn't support changing supported
-    // channel, so here we cannot use "pull" as supported channel type until
-    // this is fixed. See b/20895223
-    channel->SetString("supportedType", "xmpp");
+    channel->SetString("supportedType", "pull");
   }
   resource->Set("channel", channel.release());
   resource->Set("commandDefs", commands.release());
@@ -472,16 +484,6 @@ std::string DeviceRegistrationInfo::RegisterDevice(const std::string& ticket_id,
 }
 
 namespace {
-
-template <class T>
-void PostToCallback(base::Callback<void(const T&)> callback,
-                    std::unique_ptr<T> value) {
-  auto cb = [callback] (T* result) {
-    callback.Run(*result);
-  };
-  base::MessageLoop::current()->PostTask(
-      FROM_HERE, base::Bind(cb, base::Owned(value.release())));
-}
 
 using ResponsePtr = std::unique_ptr<chromeos::http::Response>;
 
@@ -636,15 +638,10 @@ void DeviceRegistrationInfo::StartDevice(
   //   1) push an updated device resource
   //   2) fetch an initial set of outstanding commands
   //   3) abort any commands that we've previously marked as "in progress"
-  //      or as being in an error state.
-  //   4) Initiate periodic polling for commands.
-  auto periodically_poll_commands_cb = base::Bind(
-      &DeviceRegistrationInfo::PeriodicallyPollCommands,
-      weak_factory_.GetWeakPtr());
+  //      or as being in an error state; publish queued commands
   auto abort_commands_cb = base::Bind(
-      &DeviceRegistrationInfo::AbortLimboCommands,
-      weak_factory_.GetWeakPtr(),
-      periodically_poll_commands_cb);
+      &DeviceRegistrationInfo::ProcessInitialCommandList,
+      weak_factory_.GetWeakPtr());
   auto fetch_commands_cb = base::Bind(
       &DeviceRegistrationInfo::FetchCommands,
       weak_factory_.GetWeakPtr(),
@@ -790,55 +787,42 @@ void DeviceRegistrationInfo::FetchCommands(
       nullptr, base::Bind(&HandleFetchCommandsResult, on_success), on_failure);
 }
 
-void DeviceRegistrationInfo::AbortLimboCommands(
-    const base::Closure& callback, const base::ListValue& commands) {
-  const size_t size{commands.GetSize()};
-  for (size_t i = 0; i < size; ++i) {
-    const base::DictionaryValue* command{nullptr};
-    if (!commands.GetDictionary(i, &command)) {
-      LOG(WARNING) << "No command resource at " << i;
+void DeviceRegistrationInfo::ProcessInitialCommandList(
+    const base::ListValue& commands) {
+  for (const base::Value* command : commands) {
+    const base::DictionaryValue* command_dict{nullptr};
+    if (!command->GetAsDictionary(&command_dict)) {
+      LOG(WARNING) << "Not a command dictionary: " << *command;
       continue;
     }
     std::string command_state;
-    if (!command->GetString("state", &command_state)) {
-      LOG(WARNING) << "Command with no state at " << i;
+    if (!command_dict->GetString("state", &command_state)) {
+      LOG(WARNING) << "Command with no state at " << *command;
       continue;
     }
-    if (command_state != "error" &&
-        command_state != "inProgress" &&
-        command_state != "paused") {
-      // It's not a limbo command, ignore.
-      continue;
-    }
-    std::string command_id;
-    if (!command->GetString("id", &command_id)) {
-      LOG(WARNING) << "Command with no ID at " << i;
-      continue;
-    }
+    if (command_state == "error" &&
+        command_state == "inProgress" &&
+        command_state == "paused") {
+      // It's a limbo command, abort it.
+      std::string command_id;
+      if (!command_dict->GetString("id", &command_id)) {
+        LOG(WARNING) << "Command with no ID at " << *command;
+        continue;
+      }
 
-    std::unique_ptr<base::DictionaryValue> command_copy{command->DeepCopy()};
-    command_copy->SetString("state", "aborted");
-    // TODO(wiley) We could consider handling this error case more gracefully.
-    DoCloudRequest(
-        chromeos::http::request_type::kPut,
-        GetServiceURL("commands/" + command_id),
-        command_copy.get(),
-        base::Bind(&IgnoreCloudResult), base::Bind(&IgnoreCloudError));
+      std::unique_ptr<base::DictionaryValue> cmd_copy{command_dict->DeepCopy()};
+      cmd_copy->SetString("state", "aborted");
+      // TODO(wiley) We could consider handling this error case more gracefully.
+      DoCloudRequest(
+          chromeos::http::request_type::kPut,
+          GetServiceURL("commands/" + command_id),
+          cmd_copy.get(),
+          base::Bind(&IgnoreCloudResult), base::Bind(&IgnoreCloudError));
+    } else {
+      // Normal command, publish it to local clients.
+      PublishCommand(*command_dict);
+    }
   }
-
-  base::MessageLoop::current()->PostTask(FROM_HERE, callback);
-}
-
-void DeviceRegistrationInfo::PeriodicallyPollCommands() {
-  VLOG(1) << "Poll commands";
-  command_poll_timer_.Start(
-      FROM_HERE,
-      base::TimeDelta::FromMilliseconds(config_->polling_period_ms()),
-      base::Bind(&DeviceRegistrationInfo::FetchCommands,
-                 base::Unretained(this),
-                 base::Bind(&DeviceRegistrationInfo::PublishCommands,
-                            base::Unretained(this)),
-                            base::Bind(&IgnoreCloudError)));
 }
 
 void DeviceRegistrationInfo::PublishCommands(const base::ListValue& commands) {
@@ -949,12 +933,21 @@ void DeviceRegistrationInfo::OnStateChanged() {
 void DeviceRegistrationInfo::OnConnected(const std::string& channel_name) {
   LOG(INFO) << "Notification channel successfully established over "
             << channel_name;
-  // TODO(avakulenko): Notify GCD server of changed supported channel.
+  CHECK_EQ(primary_notification_channel_->GetName(), channel_name);
+  pull_channel_->UpdatePullInterval(
+      base::TimeDelta::FromMilliseconds(config_->backup_polling_period_ms()));
+  current_notification_channel_ = primary_notification_channel_.get();
+  UpdateDeviceResource(base::Bind(&base::DoNothing),
+                       base::Bind(&IgnoreCloudError));
 }
 
 void DeviceRegistrationInfo::OnDisconnected() {
   LOG(INFO) << "Notification channel disconnected";
-  // TODO(avakulenko): Notify GCD server of changed supported channel.
+  pull_channel_->UpdatePullInterval(
+      base::TimeDelta::FromMilliseconds(config_->polling_period_ms()));
+  current_notification_channel_ = pull_channel_.get();
+  UpdateDeviceResource(base::Bind(&base::DoNothing),
+                       base::Bind(&IgnoreCloudError));
 }
 
 void DeviceRegistrationInfo::OnPermanentFailure() {
@@ -969,8 +962,12 @@ void DeviceRegistrationInfo::OnCommandCreated(
     PublishCommand(command);
     return;
   }
-  // TODO(avakulenko): If the command was too big to be delivered over a
-  // notification channel, perform a manual poll from the server here.
+  // If the command was too big to be delivered over a notification channel,
+  // or OnCommandCreated() was initiated from the Pull notification,
+  // perform a manual command fetch from the server here.
+  FetchCommands(base::Bind(&DeviceRegistrationInfo::PublishCommands,
+                           weak_factory_.GetWeakPtr()),
+                base::Bind(&IgnoreCloudError));
 }
 
 

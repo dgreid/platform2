@@ -41,6 +41,7 @@
         'dbus_constants.cc',
         'manager.cc',
         'notification/notification_parser.cc',
+        'notification/pull_channel.cc',
         'notification/xml_node.cc',
         'notification/xmpp_channel.cc',
         'notification/xmpp_stream_parser.cc',

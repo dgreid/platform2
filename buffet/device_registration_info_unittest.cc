@@ -348,7 +348,7 @@ TEST_F(DeviceRegistrationInfoTest, RegisterDevice) {
     EXPECT_TRUE(json->GetString("id", &value));
     EXPECT_EQ(test_data::kClaimTicketId, value);
     EXPECT_TRUE(json->GetString("deviceDraft.channel.supportedType", &value));
-    EXPECT_EQ("xmpp", value);
+    EXPECT_EQ("pull", value);
     EXPECT_TRUE(json->GetString("oauthClientId", &value));
     EXPECT_EQ(test_data::kClientId, value);
     EXPECT_TRUE(json->GetString("deviceDraft.deviceKind", &value));

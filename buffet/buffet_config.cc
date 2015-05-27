@@ -68,6 +68,7 @@ const char kOemName[] = "oem_name";
 const char kModelName[] = "model_name";
 const char kModelId[] = "model_id";
 const char kPollingPeriodMs[] = "polling_period_ms";
+const char kBackupPollingPeriodMs[] = "backup_polling_period_ms";
 const char kRefreshToken[] = "refresh_token";
 const char kDeviceId[] = "device_id";
 const char kRobotAccount[] = "robot_account";
@@ -123,6 +124,9 @@ void BuffetConfig::Load(const chromeos::KeyValueStore& store) {
   std::string polling_period_str;
   if (store.GetString(config_keys::kPollingPeriodMs, &polling_period_str))
     CHECK(base::StringToUint64(polling_period_str, &polling_period_ms_));
+
+  if (store.GetString(config_keys::kBackupPollingPeriodMs, &polling_period_str))
+    CHECK(base::StringToUint64(polling_period_str, &backup_polling_period_ms_));
 
   store.GetString(config_keys::kName, &name_);
   CHECK(!name_.empty());

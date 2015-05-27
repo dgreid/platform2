@@ -97,6 +97,9 @@ class BuffetConfig final {
   const std::string& model_id() const { return model_id_; }
   const std::string& device_kind() const { return device_kind_; }
   uint64_t polling_period_ms() const { return polling_period_ms_; }
+  uint64_t backup_polling_period_ms() const {
+    return backup_polling_period_ms_;
+  }
 
   const std::string& name() const { return name_; }
   const std::string& description() const { return description_; }
@@ -129,7 +132,8 @@ class BuffetConfig final {
   std::string model_name_{"Brillo"};
   std::string model_id_{"AAAAA"};
   std::string device_kind_{"vendor"};
-  uint64_t polling_period_ms_{7000};
+  uint64_t polling_period_ms_{7000};  // 7 seconds.
+  uint64_t backup_polling_period_ms_{30 * 60 * 1000};  // 30 minutes.
 
   std::string device_id_;
   std::string refresh_token_;
