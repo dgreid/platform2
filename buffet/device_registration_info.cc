@@ -123,6 +123,9 @@ DeviceRegistrationInfo::DeviceRegistrationInfo(
   command_manager_->AddOnCommandDefChanged(
       base::Bind(&DeviceRegistrationInfo::OnCommandDefsChanged,
                  weak_factory_.GetWeakPtr()));
+  state_manager_->AddOnChangedCallback(
+      base::Bind(&DeviceRegistrationInfo::OnStateChanged,
+                 weak_factory_.GetWeakPtr()));
 }
 
 DeviceRegistrationInfo::~DeviceRegistrationInfo() = default;
@@ -836,14 +839,6 @@ void DeviceRegistrationInfo::PeriodicallyPollCommands() {
                  base::Bind(&DeviceRegistrationInfo::PublishCommands,
                             base::Unretained(this)),
                             base::Bind(&IgnoreCloudError)));
-  // TODO(antonm): Use better trigger: when StateManager registers new updates,
-  // it should call closure which will post a task, probably with some
-  // throttling, to publish state updates.
-  state_push_timer_.Start(
-      FROM_HERE,
-      base::TimeDelta::FromMilliseconds(config_->polling_period_ms()),
-      base::Bind(&DeviceRegistrationInfo::PublishStateUpdates,
-                 base::Unretained(this)));
 }
 
 void DeviceRegistrationInfo::PublishCommands(const base::ListValue& commands) {
@@ -940,6 +935,15 @@ void DeviceRegistrationInfo::OnCommandDefsChanged() {
 
   UpdateDeviceResource(base::Bind(&base::DoNothing),
                        base::Bind(&IgnoreCloudError));
+}
+
+void DeviceRegistrationInfo::OnStateChanged() {
+  VLOG(1) << "StateChanged notification received";
+  if (!HaveRegistrationCredentials(nullptr))
+    return;
+
+  // TODO(vitalybuka): Integrate BackoffEntry.
+  PublishStateUpdates();
 }
 
 void DeviceRegistrationInfo::OnConnected(const std::string& channel_name) {

@@ -224,6 +224,7 @@ class DeviceRegistrationInfo : public NotificationDelegate {
 
   // Callback called when command definitions are changed to re-publish new CDD.
   void OnCommandDefsChanged();
+  void OnStateChanged();
 
   // Overrides from NotificationDelegate
   void OnConnected(const std::string& channel_name) override;
@@ -251,7 +252,6 @@ class DeviceRegistrationInfo : public NotificationDelegate {
   RegistrationStatus registration_status_{RegistrationStatus::kUnconfigured};
 
   base::RepeatingTimer<DeviceRegistrationInfo> command_poll_timer_;
-  base::RepeatingTimer<DeviceRegistrationInfo> state_push_timer_;
 
   std::vector<OnRegistrationChangedCallback> on_registration_changed_;
 
