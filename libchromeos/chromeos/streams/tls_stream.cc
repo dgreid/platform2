@@ -110,14 +110,11 @@ class TlsStream::TlsStreamImpl {
   static int OnCertVerifyResultsStatic(int ok, X509_STORE_CTX* ctx);
 
   StreamPtr socket_;
-  std::string host_;  // Expected host name used to verify the server identity.
   std::unique_ptr<SSL_CTX, decltype(&SSL_CTX_free)> ctx_{nullptr, SSL_CTX_free};
   std::unique_ptr<SSL, decltype(&SSL_free)> ssl_{nullptr, SSL_free};
   BIO* stream_bio_{nullptr};
   bool need_more_read_{false};
   bool need_more_write_{false};
-
-  Blob io_buffer;
 
   base::WeakPtrFactory<TlsStreamImpl> weak_ptr_factory_{this};
   DISALLOW_COPY_AND_ASSIGN(TlsStreamImpl);
@@ -130,7 +127,6 @@ TlsStream::TlsStreamImpl::TlsStreamImpl() {
     ssl_ctx_private_data_index =
         SSL_CTX_get_ex_new_index(0, nullptr, nullptr, nullptr, nullptr);
   }
-  io_buffer.resize(4096);
 }
 
 TlsStream::TlsStreamImpl::~TlsStreamImpl() {
@@ -309,9 +305,6 @@ int TlsStream::TlsStreamImpl::OnCertVerifyResults(int ok, X509_STORE_CTX* ctx) {
   if (!ok) {
     LOG(ERROR) << "Server certificate validation failed: "
                << X509_verify_cert_error_string(X509_STORE_CTX_get_error(ctx));
-  } else {
-    // TODO(avakulenko): Verify the server name in the certificate against
-    // |host_| name expected by the caller: brbug.com/1050
   }
   return ok;
 }
@@ -336,7 +329,6 @@ bool TlsStream::TlsStreamImpl::Init(StreamPtr socket,
                                     const base::Closure& success_callback,
                                     const Stream::ErrorCallback& error_callback,
                                     ErrorPtr* error) {
-  host_ = host;
   ctx_.reset(SSL_CTX_new(TLSv1_2_client_method()));
   if (!ctx_)
     return ReportError(error, FROM_HERE, "Cannot create SSL_CTX");
@@ -360,6 +352,12 @@ bool TlsStream::TlsStreamImpl::Init(StreamPtr socket,
 
   // Store a pointer to "this" into SSL_CTX instance.
   SSL_CTX_set_ex_data(ctx_.get(), ssl_ctx_private_data_index, this);
+
+  // Ask OpenSSL to validate the server host from the certificate to match
+  // the expected host name we are given:
+  X509_VERIFY_PARAM* param = SSL_CTX_get0_param(ctx_.get());
+  X509_VERIFY_PARAM_set1_host(param, host.c_str(), host.size());
+
   SSL_CTX_set_verify(ctx_.get(), SSL_VERIFY_PEER,
                      &TlsStreamImpl::OnCertVerifyResultsStatic);
 
