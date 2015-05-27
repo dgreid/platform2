@@ -87,6 +87,7 @@ class Manager final : public org::chromium::Buffet::ManagerInterface {
   std::string TestMethod(const std::string& message) override;
 
   void OnCommandDefsChanged();
+  void OnStateChanged();
   void OnRegistrationChanged(RegistrationStatus status);
   void OnConfigChanged(const BuffetConfig& config);
 

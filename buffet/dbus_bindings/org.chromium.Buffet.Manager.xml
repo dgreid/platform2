@@ -103,6 +103,11 @@
         JSON with command definitions of the devices.
       </tp:docstring>
     </property>
+    <property name="State" type="s" access="read">
+      <tp:docstring>
+        JSON with state of the devices.
+      </tp:docstring>
+    </property>
     <property name="OemName" type="s" access="read">
       <tp:docstring>
         Name of the device maker.

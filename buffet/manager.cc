@@ -60,6 +60,8 @@ void Manager::Start(const base::FilePath& config_path,
                             test_definitions_path);
   state_change_queue_.reset(new StateChangeQueue(kMaxStateChangeQueueSize));
   state_manager_ = std::make_shared<StateManager>(state_change_queue_.get());
+  state_manager_->AddOnChangedCallback(
+      base::Bind(&Manager::OnStateChanged, weak_ptr_factory_.GetWeakPtr()));
   state_manager_->Startup();
 
   std::unique_ptr<BuffetConfig> config{new BuffetConfig{state_path}};
@@ -233,17 +235,25 @@ bool Manager::UpdateServiceConfig(chromeos::ErrorPtr* error,
 }
 
 void Manager::OnCommandDefsChanged() {
-  chromeos::ErrorPtr error;
   // Limit only to commands that are visible to the local clients.
   auto commands = command_manager_->GetCommandDictionary().GetCommandsAsJson(
       [](const buffet::CommandDefinition* def) {
         return def->GetVisibility().local;
-      }, true, &error);
+      }, true, nullptr);
   CHECK(commands);
   std::string json;
   base::JSONWriter::WriteWithOptions(commands.get(),
       base::JSONWriter::OPTIONS_PRETTY_PRINT, &json);
   dbus_adaptor_.SetCommandDefs(json);
+}
+
+void Manager::OnStateChanged() {
+  auto state = state_manager_->GetStateValuesAsJson(nullptr);
+  CHECK(state);
+  std::string json;
+  base::JSONWriter::WriteWithOptions(
+      state.get(), base::JSONWriter::OPTIONS_PRETTY_PRINT, &json);
+  dbus_adaptor_.SetState(json);
 }
 
 void Manager::OnRegistrationChanged(RegistrationStatus status) {
