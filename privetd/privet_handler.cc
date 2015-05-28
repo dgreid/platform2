@@ -100,6 +100,7 @@ const char kSetupStartTicketIdKey[] = "ticketId";
 const char kSetupStartUserKey[] = "user";
 
 const char kFingerprintKey[] = "fingerprint";
+const char kStateKey[] = "state";
 const char kCommandsKey[] = "commands";
 const char kCommandsIdKey[] = "id";
 
@@ -467,6 +468,8 @@ PrivetHandler::PrivetHandler(CloudDelegate* cloud,
              AuthScope::kOwner);
   AddHandler("/privet/v3/setup/status", &PrivetHandler::HandleSetupStatus,
              AuthScope::kOwner);
+  AddHandler("/privet/v3/state", &PrivetHandler::HandleState,
+             AuthScope::kViewer);
   AddHandler("/privet/v3/commandDefs", &PrivetHandler::HandleCommandDefs,
              AuthScope::kViewer);
   AddHandler("/privet/v3/commands/execute",
@@ -484,6 +487,10 @@ PrivetHandler::~PrivetHandler() {
 
 void PrivetHandler::OnCommandDefsChanged() {
   ++command_defs_fingerprint_;
+}
+
+void PrivetHandler::OnStateChanged() {
+  ++state_fingerprint_;
 }
 
 void PrivetHandler::HandleRequest(const std::string& api,
@@ -829,6 +836,16 @@ void PrivetHandler::ReplyWithSetupStatus(
         wifi->SetString(kInfoWifiSsidKey, wifi_->GetCurrentlyConnectedSsid());
     }
   }
+
+  callback.Run(chromeos::http::status_code::Ok, output);
+}
+
+void PrivetHandler::HandleState(const base::DictionaryValue& input,
+                                const RequestCallback& callback) {
+  base::DictionaryValue output;
+  base::DictionaryValue* defs = cloud_->GetState().DeepCopy();
+  output.Set(kStateKey, defs);
+  output.SetString(kFingerprintKey, base::IntToString(state_fingerprint_));
 
   callback.Run(chromeos::http::status_code::Ok, output);
 }

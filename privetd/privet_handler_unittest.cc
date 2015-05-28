@@ -624,6 +624,16 @@ TEST_F(PrivetHandlerSetupTest, GcdSetup) {
                HandleRequest("/privet/v3/setup/start", kInput));
 }
 
+TEST_F(PrivetHandlerSetupTest, State) {
+  EXPECT_PRED2(IsEqualJson, "{'state': {'test': {}}, 'fingerprint': '0'}",
+               HandleRequest("/privet/v3/state", "{}"));
+
+  cloud_.NotifyOnStateChanged();
+
+  EXPECT_PRED2(IsEqualJson, "{'state': {'test': {}}, 'fingerprint': '1'}",
+               HandleRequest("/privet/v3/state", "{}"));
+}
+
 TEST_F(PrivetHandlerSetupTest, CommandsDefs) {
   EXPECT_PRED2(IsEqualJson, "{'commands': {'test':{}}, 'fingerprint': '0'}",
                HandleRequest("/privet/v3/commandDefs", "{}"));

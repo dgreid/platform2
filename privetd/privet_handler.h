@@ -48,6 +48,7 @@ class PrivetHandler : public CloudDelegate::Observer {
   ~PrivetHandler();
 
   void OnCommandDefsChanged() override;
+  void OnStateChanged() override;
 
   // Handles HTTP/HTTPS Privet request.
   // |api| is the path from the HTTP request, e.g /privet/info.
@@ -81,6 +82,8 @@ class PrivetHandler : public CloudDelegate::Observer {
                         const RequestCallback& callback);
   void HandleSetupStatus(const base::DictionaryValue&,
                          const RequestCallback& callback);
+  void HandleState(const base::DictionaryValue& input,
+                   const RequestCallback& callback);
   void HandleCommandDefs(const base::DictionaryValue& input,
                          const RequestCallback& callback);
   void HandleCommandsExecute(const base::DictionaryValue& input,
@@ -107,6 +110,7 @@ class PrivetHandler : public CloudDelegate::Observer {
 
   std::map<std::string, std::pair<AuthScope, ApiHandler>> handlers_;
 
+  int state_fingerprint_{0};
   int command_defs_fingerprint_{0};
   ScopedObserver<CloudDelegate, CloudDelegate::Observer> cloud_observer_{this};
 

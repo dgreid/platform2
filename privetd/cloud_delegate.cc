@@ -171,6 +171,8 @@ class CloudDelegateImpl : public CloudDelegate {
     return manager_ ? manager_->device_id() : std::string{};
   }
 
+  const base::DictionaryValue& GetState() const override { return state_; }
+
   const base::DictionaryValue& GetCommandDef() const override {
     return command_defs_;
   }
@@ -266,6 +268,10 @@ class CloudDelegateImpl : public CloudDelegate {
       NotifyOnDeviceInfoChanged();
     }
 
+    if (property_name.empty() || property_name == ManagerProxy::StateName()) {
+      OnStatePropertyChanged();
+    }
+
     if (property_name.empty() ||
         property_name == ManagerProxy::CommandDefsName()) {
       OnCommandDefsPropertyChanged();
@@ -291,11 +297,21 @@ class CloudDelegateImpl : public CloudDelegate {
     NotifyOnDeviceInfoChanged();
   }
 
+  void OnStatePropertyChanged() {
+    state_.Clear();
+    std::unique_ptr<base::Value> value{
+        base::JSONReader::Read(manager_->state())};
+    const base::DictionaryValue* state{nullptr};
+    if (value && value->GetAsDictionary(&state))
+      state_.MergeDictionary(state);
+    NotifyOnStateChanged();
+  }
+
   void OnCommandDefsPropertyChanged() {
     command_defs_.Clear();
     std::unique_ptr<base::Value> value{
         base::JSONReader::Read(manager_->command_defs())};
-    base::DictionaryValue* defs{nullptr};
+    const base::DictionaryValue* defs{nullptr};
     if (value && value->GetAsDictionary(&defs))
       command_defs_.MergeDictionary(defs);
     NotifyOnCommandDefsChanged();
@@ -304,6 +320,7 @@ class CloudDelegateImpl : public CloudDelegate {
   void OnManagerRemoved(const dbus::ObjectPath& path) {
     manager_ = nullptr;
     connection_state_ = ConnectionState(ConnectionState::kDisabled);
+    state_.Clear();
     command_defs_.Clear();
     NotifyOnDeviceInfoChanged();
     NotifyOnCommandDefsChanged();
@@ -427,6 +444,9 @@ class CloudDelegateImpl : public CloudDelegate {
 
   // State of the current or last setup.
   SetupState setup_state_{SetupState::kNone};
+
+  // Current device state.
+  base::DictionaryValue state_;
 
   // Current commands definitions.
   base::DictionaryValue command_defs_;

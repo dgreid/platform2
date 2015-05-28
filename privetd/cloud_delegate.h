@@ -91,6 +91,9 @@ class CloudDelegate {
   // Returns cloud id if the registered device or empty string if unregistered.
   virtual std::string GetCloudId() const = 0;
 
+  // Returns dictionary with device state.
+  virtual const base::DictionaryValue& GetState() const = 0;
+
   // Returns dictionary with commands definitions.
   virtual const base::DictionaryValue& GetCommandDef() const = 0;
 
