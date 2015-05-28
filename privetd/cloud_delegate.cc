@@ -130,7 +130,9 @@ class CloudDelegateImpl : public CloudDelegate {
     return AuthScope::kGuest;
   }
 
-  const ConnectionState& GetConnectionState() const override { return state_; }
+  const ConnectionState& GetConnectionState() const override {
+    return connection_state_;
+  }
 
   const SetupState& GetSetupState() const override { return setup_state_; }
 
@@ -273,18 +275,18 @@ class CloudDelegateImpl : public CloudDelegate {
   void OnStatusPropertyChanged() {
     const std::string& status = manager_->status();
     if (status == "unconfigured") {
-      state_ = ConnectionState{ConnectionState::kUnconfigured};
+      connection_state_ = ConnectionState{ConnectionState::kUnconfigured};
     } else if (status == "connecting") {
       // TODO(vitalybuka): Find conditions for kOffline.
-      state_ = ConnectionState{ConnectionState::kConnecting};
+      connection_state_ = ConnectionState{ConnectionState::kConnecting};
     } else if (status == "connected") {
-      state_ = ConnectionState{ConnectionState::kOnline};
+      connection_state_ = ConnectionState{ConnectionState::kOnline};
     } else {
       chromeos::ErrorPtr error;
       chromeos::Error::AddToPrintf(
           &error, FROM_HERE, errors::kDomain, errors::kInvalidState,
           "Unexpected buffet status: %s", status.c_str());
-      state_ = ConnectionState{std::move(error)};
+      connection_state_ = ConnectionState{std::move(error)};
     }
     NotifyOnDeviceInfoChanged();
   }
@@ -301,7 +303,7 @@ class CloudDelegateImpl : public CloudDelegate {
 
   void OnManagerRemoved(const dbus::ObjectPath& path) {
     manager_ = nullptr;
-    state_ = ConnectionState(ConnectionState::kDisabled);
+    connection_state_ = ConnectionState(ConnectionState::kDisabled);
     command_defs_.Clear();
     NotifyOnDeviceInfoChanged();
     NotifyOnCommandDefsChanged();
@@ -421,7 +423,7 @@ class CloudDelegateImpl : public CloudDelegate {
   ManagerProxy* manager_{nullptr};
 
   // Primary state of GCD.
-  ConnectionState state_{ConnectionState::kDisabled};
+  ConnectionState connection_state_{ConnectionState::kDisabled};
 
   // State of the current or last setup.
   SetupState setup_state_{SetupState::kNone};
