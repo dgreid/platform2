@@ -16,6 +16,7 @@
 #include <chromeos/dbus/async_event_sequencer.h>
 #include <chromeos/dbus/exported_object_manager.h>
 #include <chromeos/errors/error.h>
+#include <chromeos/http/http_transport.h>
 #include <chromeos/key_value_store.h>
 #include <dbus/bus.h>
 #include <dbus/object_path.h>
@@ -36,6 +37,8 @@ namespace buffet {
 namespace {
 // Max of 100 state update events should be enough in the queue.
 const size_t kMaxStateChangeQueueSize = 100;
+// The number of seconds each HTTP request will be allowed before timing out.
+const int kRequestTimeoutSeconds = 30;
 }  // anonymous namespace
 
 Manager::Manager(const base::WeakPtr<ExportedObjectManager>& object_manager)
@@ -69,11 +72,15 @@ void Manager::Start(const base::FilePath& config_path,
       base::Bind(&Manager::OnConfigChanged, weak_ptr_factory_.GetWeakPtr()));
   config->Load(config_path);
 
+  auto transport = chromeos::http::Transport::CreateDefault();
+  transport->SetDefaultTimeout(base::TimeDelta::FromSeconds(
+      kRequestTimeoutSeconds));
+
   // TODO(avakulenko): Figure out security implications of storing
   // device info state data unencrypted.
   device_info_.reset(new DeviceRegistrationInfo(
-      command_manager_, state_manager_, std::move(config),
-      chromeos::http::Transport::CreateDefault(), xmpp_enabled));
+      command_manager_, state_manager_, std::move(config), transport,
+      xmpp_enabled));
   device_info_->AddOnRegistrationChangedCallback(base::Bind(
       &Manager::OnRegistrationChanged, weak_ptr_factory_.GetWeakPtr()));
 
