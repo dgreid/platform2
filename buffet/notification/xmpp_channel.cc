@@ -119,10 +119,18 @@ void XmppChannel::OnStreamStart(const std::string& node_name,
 }
 
 void XmppChannel::OnStreamEnd(const std::string& node_name) {
-  VLOG(2) << "XMPP stream ended: " << node_name << ". Restarting XMPP";
-  task_runner_->PostTask(FROM_HERE,
-                         base::Bind(&XmppChannel::Restart,
-                                    weak_ptr_factory_.GetWeakPtr()));
+  VLOG(2) << "XMPP stream ended: " << node_name;
+  if (IsConnected()) {
+    // If we had a fully-established connection, restart it now.
+    // However, if the connection has never been established yet (e.g.
+    // authorization failed), do not restart right now. Wait till we get
+    // new credentials.
+    task_runner_->PostTask(FROM_HERE,
+                           base::Bind(&XmppChannel::Restart,
+                                      weak_ptr_factory_.GetWeakPtr()));
+  } else if (delegate_) {
+    delegate_->OnPermanentFailure();
+  }
 }
 
 void XmppChannel::OnStanza(std::unique_ptr<XmlNode> stanza) {
@@ -174,8 +182,6 @@ void XmppChannel::HandleStanza(std::unique_ptr<XmlNode> stanza) {
       } else if (stanza->name() == "failure") {
         if (stanza->FindFirstChild("not-authorized", false)) {
           state_ = XmppState::kAuthenticationFailed;
-          if (delegate_)
-            delegate_->OnPermanentFailure();
           return;
         }
       }
@@ -365,6 +371,10 @@ std::string XmppChannel::GetName() const {
   return "xmpp";
 }
 
+bool XmppChannel::IsConnected() const {
+  return state_ == XmppState::kSubscribed;
+}
+
 void XmppChannel::AddChannelParameters(base::DictionaryValue* channel_json) {
   // No extra parameters needed for XMPP.
 }
@@ -383,7 +393,7 @@ void XmppChannel::Start(NotificationDelegate* delegate) {
 }
 
 void XmppChannel::Stop() {
-  if (state_ == XmppState::kSubscribed && delegate_)
+  if (IsConnected() && delegate_)
     delegate_->OnDisconnected();
 
   weak_ptr_factory_.InvalidateWeakPtrs();

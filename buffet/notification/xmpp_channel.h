@@ -35,6 +35,7 @@ class XmppChannel : public NotificationChannel,
 
   // Overrides from NotificationChannel.
   std::string GetName() const override;
+  bool IsConnected() const override;
   void AddChannelParameters(base::DictionaryValue* channel_json) override;
   void Start(NotificationDelegate* delegate) override;
   void Stop() override;

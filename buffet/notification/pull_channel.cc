@@ -22,6 +22,8 @@ std::string PullChannel::GetName() const {
   return "pull";
 }
 
+bool PullChannel::IsConnected() const { return true; }
+
 void PullChannel::AddChannelParameters(base::DictionaryValue* channel_json) {
   // No extra parameters needed for "Pull" channel.
 }

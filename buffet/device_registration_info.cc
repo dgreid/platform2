@@ -280,10 +280,23 @@ bool DeviceRegistrationInfo::RefreshAccessToken(
   LOG(INFO) << "Access token is refreshed for additional " << expires_in
             << " seconds.";
 
+  if (primary_notification_channel_ &&
+      !primary_notification_channel_->IsConnected()) {
+    // If we have disconnected channel, it is due to failed credentials.
+    // Now that we have a new access token, retry the connection.
+    StartNotificationChannel();
+  }
   return true;
 }
 
+void DeviceRegistrationInfo::RunRefreshAccessToken() {
+  RefreshAccessToken(nullptr);
+}
+
 void DeviceRegistrationInfo::StartNotificationChannel() {
+  if (notification_channel_starting_)
+    return;
+
   // If no MessageLoop assume we're in unittests.
   if (!base::MessageLoop::current()) {
     LOG(INFO) << "No MessageLoop, not starting notification channel";
@@ -318,6 +331,7 @@ void DeviceRegistrationInfo::StartNotificationChannel() {
     return;
   }
 
+  notification_channel_starting_ = true;
   primary_notification_channel_.reset(
       new XmppChannel{config_->robot_account(), access_token_, task_runner});
   primary_notification_channel_->Start(this);
@@ -953,6 +967,7 @@ void DeviceRegistrationInfo::OnConnected(const std::string& channel_name) {
   LOG(INFO) << "Notification channel successfully established over "
             << channel_name;
   CHECK_EQ(primary_notification_channel_->GetName(), channel_name);
+  notification_channel_starting_ = false;
   pull_channel_->UpdatePullInterval(
       base::TimeDelta::FromMilliseconds(config_->backup_polling_period_ms()));
   current_notification_channel_ = primary_notification_channel_.get();
@@ -971,6 +986,11 @@ void DeviceRegistrationInfo::OnDisconnected() {
 
 void DeviceRegistrationInfo::OnPermanentFailure() {
   LOG(ERROR) << "Failed to establish notification channel.";
+  notification_channel_starting_ = false;
+  base::MessageLoop::current()->PostTask(
+      FROM_HERE,
+      base::Bind(&DeviceRegistrationInfo::RunRefreshAccessToken,
+                 weak_factory_.GetWeakPtr()));
 }
 
 void DeviceRegistrationInfo::OnCommandCreated(

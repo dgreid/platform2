@@ -167,6 +167,9 @@ class DeviceRegistrationInfo : public NotificationDelegate {
   // Forcibly refreshes the access token.
   bool RefreshAccessToken(chromeos::ErrorPtr* error);
 
+  // Calls RefreshAccessToken(nullptr). Used as a closure.
+  void RunRefreshAccessToken();
+
   // Parse the OAuth response, and sets registration status to
   // kInvalidCredentials if our registration is no longer valid.
   std::unique_ptr<base::DictionaryValue> ParseOAuthResponse(
@@ -256,6 +259,7 @@ class DeviceRegistrationInfo : public NotificationDelegate {
   std::unique_ptr<NotificationChannel> primary_notification_channel_;
   std::unique_ptr<PullChannel> pull_channel_;
   NotificationChannel* current_notification_channel_{nullptr};
+  bool notification_channel_starting_{false};
 
   // Tracks our current registration status.
   RegistrationStatus registration_status_{RegistrationStatus::kUnconfigured};

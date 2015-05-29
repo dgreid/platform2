@@ -20,6 +20,7 @@ class NotificationChannel {
   virtual ~NotificationChannel() = default;
 
   virtual std::string GetName() const = 0;
+  virtual bool IsConnected() const = 0;
   virtual void AddChannelParameters(base::DictionaryValue* channel_json) = 0;
 
   virtual void Start(NotificationDelegate* delegate) = 0;
