@@ -116,6 +116,9 @@ class FakeXmppChannel : public XmppChannel {
     callback.Run();
   }
 
+  void StartPingTimer() override {}
+  void StopPingTimer() override {}
+
   chromeos::FakeStream fake_stream_;
 };
 

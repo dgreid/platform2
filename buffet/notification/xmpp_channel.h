@@ -14,6 +14,7 @@
 #include <base/macros.h>
 #include <base/memory/weak_ptr.h>
 #include <base/single_thread_task_runner.h>
+#include <base/timer/timer.h>
 #include <chromeos/backoff_entry.h>
 #include <chromeos/streams/stream.h>
 
@@ -73,6 +74,8 @@ class XmppChannel : public NotificationChannel,
   // to help provide unit-test-specific functionality.
   virtual void Connect(const std::string& host, uint16_t port,
                        const base::Closure& callback);
+  virtual void StartPingTimer();
+  virtual void StopPingTimer();
 
   XmppState state_{XmppState::kNotStarted};
 
@@ -114,6 +117,12 @@ class XmppChannel : public NotificationChannel,
   void OnSessionEstablished(std::unique_ptr<XmlNode> reply);
   void OnSubscribed(std::unique_ptr<XmlNode> reply);
 
+  // Sends a ping request to the server to check if the connection is still
+  // valid.
+  void PingServer();
+  void OnPingResponse(std::unique_ptr<XmlNode> reply);
+  void OnPingTimeout();
+
   // Robot account name for the device.
   std::string account_;
 
@@ -143,6 +152,8 @@ class XmppChannel : public NotificationChannel,
   bool read_pending_{false};
   bool write_pending_{false};
   std::unique_ptr<IqStanzaHandler> iq_stanza_handler_;
+
+  base::Timer ping_timer_{true, true};
 
   base::WeakPtrFactory<XmppChannel> weak_ptr_factory_{this};
   DISALLOW_COPY_AND_ASSIGN(XmppChannel);

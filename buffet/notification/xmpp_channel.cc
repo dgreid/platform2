@@ -75,6 +75,7 @@ const chromeos::BackoffEntry::Policy kDefaultBackoffPolicy = {
 
 const char kDefaultXmppHost[] = "talk.google.com";
 const uint16_t kDefaultXmppPort = 5222;
+const uint64_t kPingIntervalSeconds = 60;  // 1 minute.
 
 }  // namespace
 
@@ -88,6 +89,7 @@ XmppChannel::XmppChannel(
       task_runner_{task_runner},
       iq_stanza_handler_{new IqStanzaHandler{this, task_runner}} {
   read_socket_data_.resize(4096);
+  ping_timer_.SetTaskRunner(task_runner);
 }
 
 void XmppChannel::OnMessageRead(size_t size) {
@@ -417,6 +419,8 @@ void XmppChannel::Stop() {
     delegate_->OnDisconnected();
 
   weak_ptr_factory_.InvalidateWeakPtrs();
+  StopPingTimer();
+
   if (tls_stream_) {
     tls_stream_->CloseBlocking(nullptr);
     tls_stream_.reset();
@@ -432,6 +436,7 @@ void XmppChannel::Stop() {
 void XmppChannel::OnConnected() {
   state_ = XmppState::kStarted;
   RestartXmppStream();
+  StartPingTimer();
 }
 
 void XmppChannel::RestartXmppStream() {
@@ -440,6 +445,36 @@ void XmppChannel::RestartXmppStream() {
   read_pending_ = false;
   write_pending_ = false;
   SendMessage(BuildXmppStartStreamCommand());
+}
+
+void XmppChannel::StartPingTimer() {
+  ping_timer_.Start(FROM_HERE,
+                    base::TimeDelta::FromSeconds(kPingIntervalSeconds),
+                    base::Bind(&XmppChannel::PingServer,
+                               weak_ptr_factory_.GetWeakPtr()));
+}
+
+void XmppChannel::StopPingTimer() {
+  ping_timer_.Stop();
+}
+
+void XmppChannel::PingServer() {
+  // Send an XMPP Ping request as defined in XEP-0199 extension:
+  // http://xmpp.org/extensions/xep-0199.html
+  iq_stanza_handler_->SendRequest(
+      "get", jid_, account_, "<ping xmlns='urn:xmpp:ping'/>",
+      base::Bind(&XmppChannel::OnPingResponse, weak_ptr_factory_.GetWeakPtr()),
+      base::Bind(&XmppChannel::OnPingTimeout, weak_ptr_factory_.GetWeakPtr()));
+}
+
+void XmppChannel::OnPingResponse(std::unique_ptr<XmlNode> reply) {
+  // Ping response received from server. Everything seems to be in order.
+  // Nothing else to do.
+}
+
+void XmppChannel::OnPingTimeout() {
+  LOG(WARNING) << "XMPP channel seems to be disconnected - ping timed out";
+  Restart();
 }
 
 }  // namespace buffet
