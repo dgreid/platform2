@@ -47,18 +47,18 @@ constexpr char kRestartStreamResponse[] =
     "<session xmlns=\"urn:ietf:params:xml:ns:xmpp-session\"/>"
     "</stream:features>";
 constexpr char kBindResponse[] =
-    "<iq id=\"0\" type=\"result\">"
+    "<iq id=\"1\" type=\"result\">"
     "<bind xmlns=\"urn:ietf:params:xml:ns:xmpp-bind\">"
     "<jid>110cc78f78d7032cc7bf2c6e14c1fa7d@clouddevices.gserviceaccount.com"
     "/19853128</jid></bind></iq>";
 constexpr char kSessionResponse[] =
-    "<iq type=\"result\" id=\"1\"/>";
+    "<iq type=\"result\" id=\"2\"/>";
 constexpr char kSubscribedResponse[] =
     "<iq to=\""
     "110cc78f78d7032cc7bf2c6e14c1fa7d@clouddevices.gserviceaccount.com/"
     "19853128\" from=\""
     "110cc78f78d7032cc7bf2c6e14c1fa7d@clouddevices.gserviceaccount.com\" "
-    "id=\"pushsubscribe1\" type=\"result\"/>";
+    "id=\"3\" type=\"result\"/>";
 constexpr char kStartStreamMessage[] =
     "<stream:stream to='clouddevices.gserviceaccount.com' "
     "xmlns:stream='http://etherx.jabber.org/streams' xml:lang='*' "
@@ -72,31 +72,37 @@ constexpr char kAuthenticationMessage[] =
     "xmlns:auth='http://www.google.com/talk/protocol/auth'>"
     "AEFjY291bnRATmFtZQBBY2Nlc3NUb2tlbg==</auth>";
 constexpr char kBindMessage[] =
-    "<iq type='set' id='0'><bind "
+    "<iq id='1' type='set'><bind "
     "xmlns='urn:ietf:params:xml:ns:xmpp-bind'/></iq>";
 constexpr char kSessionMessage[] =
-    "<iq type='set' id='1'><session "
+    "<iq id='2' type='set'><session "
     "xmlns='urn:ietf:params:xml:ns:xmpp-session'/></iq>";
 constexpr char kSubscribeMessage[] =
-    "<iq type='set' to='Account@Name' id='pushsubscribe1'>"
+    "<iq id='3' type='set' to='Account@Name'>"
     "<subscribe xmlns='google:push'><item channel='cloud_devices' from=''/>"
     "</subscribe></iq>";
 }  // namespace
 
 // Mock-like task runner that allow the tests to inspect the calls to
 // TaskRunner::PostDelayedTask and verify the delays.
-class TestTaskRunner : public base::TaskRunner {
+class TestTaskRunner : public base::SingleThreadTaskRunner {
  public:
   MOCK_METHOD3(PostDelayedTask, bool(const tracked_objects::Location&,
                                      const base::Closure&,
                                      base::TimeDelta));
+  MOCK_METHOD3(PostNonNestableDelayedTask,
+               bool(const tracked_objects::Location&,
+                    const base::Closure&,
+                    base::TimeDelta));
+
   bool RunsTasksOnCurrentThread() const { return true; }
 };
 
 class FakeXmppChannel : public XmppChannel {
  public:
-  FakeXmppChannel(const scoped_refptr<base::TaskRunner>& task_runner,
-                  base::Clock* clock)
+  FakeXmppChannel(
+      const scoped_refptr<base::SingleThreadTaskRunner>& task_runner,
+      base::Clock* clock)
       : XmppChannel{kAccountName, kAccessToken, task_runner},
         fake_stream_{chromeos::Stream::AccessMode::READ_WRITE, task_runner,
                      clock} {}
@@ -121,6 +127,8 @@ class XmppChannelTest : public ::testing::Test {
     auto callback = [this](const tracked_objects::Location& from_here,
                            const base::Closure& task,
                            base::TimeDelta delay) -> bool {
+      if (ignore_delayed_tasks_ && delay > base::TimeDelta::FromMilliseconds(0))
+        return true;
       clock_.Advance(delay);
       message_queue_.push(task);
       return true;
@@ -155,10 +163,16 @@ class XmppChannelTest : public ::testing::Test {
       count--;
     }
   }
+
+  void SetIgnoreDelayedTasks(bool ignore) {
+    ignore_delayed_tasks_ = true;
+  }
+
   std::unique_ptr<FakeXmppChannel> xmpp_client_;
   base::SimpleTestClock clock_;
   scoped_refptr<TestTaskRunner> task_runner_;
   std::queue<base::Closure> message_queue_;
+  bool ignore_delayed_tasks_{false};
 };
 
 TEST_F(XmppChannelTest, StartStream) {
@@ -205,36 +219,31 @@ TEST_F(XmppChannelTest, HandleAuthenticationFailedResponse) {
 }
 
 TEST_F(XmppChannelTest, HandleStreamRestartedResponse) {
+  SetIgnoreDelayedTasks(true);
   StartWithState(XmppChannel::XmppState::kStreamRestartedPostAuthentication);
   xmpp_client_->fake_stream_.AddReadPacketString({}, kRestartStreamResponse);
   xmpp_client_->fake_stream_.ExpectWritePacketString({}, kBindMessage);
-  RunTasks(4);
+  RunTasks(3);
   EXPECT_EQ(XmppChannel::XmppState::kBindSent,
             xmpp_client_->state());
-}
+  EXPECT_TRUE(xmpp_client_->jid().empty());
 
-TEST_F(XmppChannelTest, HandleBindResponse) {
-  StartWithState(XmppChannel::XmppState::kBindSent);
   xmpp_client_->fake_stream_.AddReadPacketString({}, kBindResponse);
   xmpp_client_->fake_stream_.ExpectWritePacketString({}, kSessionMessage);
-  RunTasks(4);
+  RunTasks(9);
   EXPECT_EQ(XmppChannel::XmppState::kSessionStarted,
             xmpp_client_->state());
-}
+  EXPECT_EQ("110cc78f78d7032cc7bf2c6e14c1fa7d@clouddevices.gserviceaccount.com"
+            "/19853128", xmpp_client_->jid());
 
-TEST_F(XmppChannelTest, HandleSessionResponse) {
-  StartWithState(XmppChannel::XmppState::kSessionStarted);
   xmpp_client_->fake_stream_.AddReadPacketString({}, kSessionResponse);
   xmpp_client_->fake_stream_.ExpectWritePacketString({}, kSubscribeMessage);
   RunTasks(4);
   EXPECT_EQ(XmppChannel::XmppState::kSubscribeStarted,
             xmpp_client_->state());
-}
 
-TEST_F(XmppChannelTest, HandleSubscribeResponse) {
-  StartWithState(XmppChannel::XmppState::kSubscribeStarted);
   xmpp_client_->fake_stream_.AddReadPacketString({}, kSubscribedResponse);
-  RunTasks(3);
+  RunTasks(5);
   EXPECT_EQ(XmppChannel::XmppState::kSubscribed,
             xmpp_client_->state());
 }

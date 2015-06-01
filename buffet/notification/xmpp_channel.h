@@ -13,24 +13,35 @@
 #include <base/callback_forward.h>
 #include <base/macros.h>
 #include <base/memory/weak_ptr.h>
-#include <base/task_runner.h>
+#include <base/single_thread_task_runner.h>
 #include <chromeos/backoff_entry.h>
 #include <chromeos/streams/stream.h>
 
 #include "buffet/notification/notification_channel.h"
+#include "buffet/notification/xmpp_iq_stanza_handler.h"
 #include "buffet/notification/xmpp_stream_parser.h"
 
 namespace buffet {
 
+// Simple interface to abstract XmppChannel's SendMessage() method.
+class XmppChannelInterface {
+ public:
+  virtual void SendMessage(const std::string& message) = 0;
+
+ protected:
+  virtual ~XmppChannelInterface() = default;
+};
+
 class XmppChannel : public NotificationChannel,
-                    public XmppStreamParser::Delegate {
+                    public XmppStreamParser::Delegate,
+                    public XmppChannelInterface {
  public:
   // |account| is the robot account for buffet and |access_token|
   // it the OAuth token. Note that the OAuth token expires fairly frequently
   // so you will need to reset the XmppClient every time this happens.
   XmppChannel(const std::string& account,
               const std::string& access_token,
-              const scoped_refptr<base::TaskRunner>& task_runner);
+              const scoped_refptr<base::SingleThreadTaskRunner>& task_runner);
   ~XmppChannel() override = default;
 
   // Overrides from NotificationChannel.
@@ -39,6 +50,8 @@ class XmppChannel : public NotificationChannel,
   void AddChannelParameters(base::DictionaryValue* channel_json) override;
   void Start(NotificationDelegate* delegate) override;
   void Stop() override;
+
+  const std::string& jid() const { return jid_; }
 
   // Internal states for the XMPP stream.
   enum class XmppState {
@@ -56,6 +69,8 @@ class XmppChannel : public NotificationChannel,
   };
 
  protected:
+  // These methods are internal helpers that can be overloaded by unit tests
+  // to help provide unit-test-specific functionality.
   virtual void Connect(const std::string& host, uint16_t port,
                        const base::Closure& callback);
 
@@ -65,11 +80,16 @@ class XmppChannel : public NotificationChannel,
   chromeos::Stream* stream_{nullptr};
 
  private:
+  friend class IqStanzaHandler;
+
   // Overrides from XmppStreamParser::Delegate.
   void OnStreamStart(const std::string& node_name,
                      std::map<std::string, std::string> attributes) override;
   void OnStreamEnd(const std::string& node_name) override;
   void OnStanza(std::unique_ptr<XmlNode> stanza) override;
+
+  // Overrides from XmppChannelInterface.
+  void SendMessage(const std::string& message) override;
 
   void HandleStanza(std::unique_ptr<XmlNode> stanza);
   void HandleMessageStanza(std::unique_ptr<XmlNode> stanza);
@@ -79,7 +99,6 @@ class XmppChannel : public NotificationChannel,
   void OnTlsHandshakeComplete(chromeos::StreamPtr tls_stream);
   void OnTlsError(const chromeos::Error* error);
 
-  void SendMessage(const std::string& message);
   void WaitForMessage();
 
   void OnConnected();
@@ -88,9 +107,18 @@ class XmppChannel : public NotificationChannel,
   void OnReadError(const chromeos::Error* error);
   void OnWriteError(const chromeos::Error* error);
   void Restart();
+  void CloseStream();
+
+  // XMPP connection state machine's state handlers.
+  void OnBindCompleted(std::unique_ptr<XmlNode> reply);
+  void OnSessionEstablished(std::unique_ptr<XmlNode> reply);
+  void OnSubscribed(std::unique_ptr<XmlNode> reply);
 
   // Robot account name for the device.
   std::string account_;
+
+  // Full JID of this device.
+  std::string jid_;
 
   // OAuth access token for the account. Expires fairly frequently.
   std::string access_token_;
@@ -110,10 +138,11 @@ class XmppChannel : public NotificationChannel,
 
   chromeos::BackoffEntry backoff_entry_;
   NotificationDelegate* delegate_{nullptr};
-  scoped_refptr<base::TaskRunner> task_runner_;
+  scoped_refptr<base::SingleThreadTaskRunner> task_runner_;
   XmppStreamParser stream_parser_{this};
   bool read_pending_{false};
   bool write_pending_{false};
+  std::unique_ptr<IqStanzaHandler> iq_stanza_handler_;
 
   base::WeakPtrFactory<XmppChannel> weak_ptr_factory_{this};
   DISALLOW_COPY_AND_ASSIGN(XmppChannel);
