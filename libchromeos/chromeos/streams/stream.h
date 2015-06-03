@@ -11,6 +11,7 @@
 #include <base/callback.h>
 #include <base/macros.h>
 #include <base/memory/weak_ptr.h>
+#include <base/time/time.h>
 #include <chromeos/errors/error.h>
 #include <chromeos/chromeos_export.h>
 
@@ -379,7 +380,10 @@ class CHROMEOS_EXPORT Stream {
   // performed. For example, watching a stream for READ_WRITE while only
   // READ can be performed, |out_mode| would contain READ even though |in_mode|
   // was set to READ_WRITE.
+  // |timeout| is the maximum amount of time to wait. Set it to TimeDelta::Max()
+  // to wait indefinitely.
   virtual bool WaitForDataBlocking(AccessMode in_mode,
+                                   base::TimeDelta timeout,
                                    AccessMode* out_mode,
                                    ErrorPtr* error) = 0;
 

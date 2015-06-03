@@ -178,6 +178,7 @@ bool InputStreamSet::WaitForData(
 }
 
 bool InputStreamSet::WaitForDataBlocking(AccessMode in_mode,
+                                         base::TimeDelta timeout,
                                          AccessMode* out_mode,
                                          ErrorPtr* error) {
   if (!IsOpen())
@@ -188,7 +189,7 @@ bool InputStreamSet::WaitForDataBlocking(AccessMode in_mode,
 
   if (!source_streams_.empty()) {
     Stream* stream = source_streams_.front();
-    return stream->WaitForDataBlocking(in_mode, out_mode, error);
+    return stream->WaitForDataBlocking(in_mode, timeout, out_mode, error);
   }
 
   if (out_mode)

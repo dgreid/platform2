@@ -41,6 +41,17 @@ bool ErrorReadPastEndOfStream(const tracked_objects::Location& location,
   return false;
 }
 
+bool ErrorOperationTimeout(const tracked_objects::Location& location,
+                           ErrorPtr* error) {
+  Error::AddTo(error,
+               location,
+               errors::stream::kDomain,
+               errors::stream::kTimeout,
+               "Operation timed out");
+  return false;
+}
+
+
 bool CheckInt64Overflow(const tracked_objects::Location& location,
                         uint64_t position,
                         int64_t offset,

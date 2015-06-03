@@ -24,6 +24,10 @@ CHROMEOS_EXPORT bool ErrorOperationNotSupported(
 CHROMEOS_EXPORT bool ErrorReadPastEndOfStream(
     const tracked_objects::Location& location, ErrorPtr* error);
 
+// Generates "Operation time out" error and returns false.
+CHROMEOS_EXPORT bool ErrorOperationTimeout(
+    const tracked_objects::Location& location, ErrorPtr* error);
+
 // Checks if |position| + |offset| fit within the constraint of positive
 // signed int64_t type. We use uint64_t for absolute stream pointer positions,
 // however many implementations, including file-descriptor-based I/O do not

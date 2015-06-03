@@ -48,6 +48,7 @@ class CHROMEOS_EXPORT FileStream : public Stream {
     virtual void WaitForData(AccessMode mode,
                              const DataCallback& data_callback) = 0;
     virtual int WaitForDataBlocking(AccessMode in_mode,
+                                    base::TimeDelta timeout,
                                     AccessMode* out_mode) = 0;
     virtual void CancelPendingAsyncOperations() = 0;
   };
@@ -137,6 +138,7 @@ class CHROMEOS_EXPORT FileStream : public Stream {
   // Runs select() on the file descriptor to wait until we can do non-blocking
   // I/O on it.
   bool WaitForDataBlocking(AccessMode in_mode,
+                           base::TimeDelta timeout,
                            AccessMode* out_mode,
                            ErrorPtr* error) override;
 

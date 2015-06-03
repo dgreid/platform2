@@ -18,6 +18,7 @@ CHROMEOS_EXPORT extern const char kStreamClosed[];
 CHROMEOS_EXPORT extern const char kOperationNotSupported[];
 CHROMEOS_EXPORT extern const char kPartialData[];
 CHROMEOS_EXPORT extern const char kInvalidParameter[];
+CHROMEOS_EXPORT extern const char kTimeout[];
 
 }  // namespace stream
 }  // namespace errors

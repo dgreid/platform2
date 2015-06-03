@@ -68,8 +68,10 @@ bool Stream::ReadBlocking(void* buffer,
     if (*size_read > 0 || eos)
       break;
 
-    if (!WaitForDataBlocking(AccessMode::READ, nullptr, error))
+    if (!WaitForDataBlocking(AccessMode::READ, base::TimeDelta::Max(), nullptr,
+                             error)) {
       return false;
+    }
   }
   return true;
 }
@@ -133,8 +135,10 @@ bool Stream::WriteBlocking(const void* buffer,
     if (*size_written > 0 || size_to_write == 0)
       break;
 
-    if (!WaitForDataBlocking(AccessMode::WRITE, nullptr, error))
+    if (!WaitForDataBlocking(AccessMode::WRITE, base::TimeDelta::Max(), nullptr,
+                             error)) {
       return false;
+    }
   }
   return true;
 }

@@ -14,6 +14,7 @@ const char kStreamClosed[] = "stream_closed";
 const char kOperationNotSupported[] = "operation_not_supported";
 const char kPartialData[] = "partial_data";
 const char kInvalidParameter[] = "invalid_parameter";
+const char kTimeout[] = "time_out";
 
 }  // namespace stream
 }  // namespace errors

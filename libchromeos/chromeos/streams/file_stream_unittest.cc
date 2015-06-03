@@ -122,8 +122,8 @@ class MockFileDescriptor : public FileStream::FileDescriptorInterface {
   MOCK_METHOD0(Flush, int());
   MOCK_METHOD0(Close, int());
   MOCK_METHOD2(WaitForData, void(Stream::AccessMode, const DataCallback&));
-  MOCK_METHOD2(WaitForDataBlocking,
-               int(Stream::AccessMode, Stream::AccessMode*));
+  MOCK_METHOD3(WaitForDataBlocking,
+               int(Stream::AccessMode, base::TimeDelta, Stream::AccessMode*));
   MOCK_METHOD0(CancelPendingAsyncOperations, void());
 };
 
@@ -430,8 +430,8 @@ TEST_F(FileStreamTest, ReadBlocking) {
     InSequence seq;
     EXPECT_CALL(fd_mock(), Read(test_read_buffer_, 80))
         .WillOnce(SetErrnoAndReturn(EAGAIN, -1));
-    EXPECT_CALL(fd_mock(), WaitForDataBlocking(Stream::AccessMode::READ, _))
-        .WillOnce(Return(0));
+    EXPECT_CALL(fd_mock(), WaitForDataBlocking(Stream::AccessMode::READ, _, _))
+        .WillOnce(Return(1));
     EXPECT_CALL(fd_mock(), Read(test_read_buffer_, 80)).WillOnce(Return(45));
   }
   EXPECT_TRUE(stream_->ReadBlocking(test_read_buffer_, 80, &size, nullptr));
@@ -447,7 +447,7 @@ TEST_F(FileStreamTest, ReadBlocking_Fail) {
     InSequence seq;
     EXPECT_CALL(fd_mock(), Read(test_read_buffer_, 80))
         .WillOnce(SetErrnoAndReturn(EAGAIN, -1));
-    EXPECT_CALL(fd_mock(), WaitForDataBlocking(Stream::AccessMode::READ, _))
+    EXPECT_CALL(fd_mock(), WaitForDataBlocking(Stream::AccessMode::READ, _, _))
         .WillOnce(SetErrnoAndReturn(EBADF, -1));
   }
   chromeos::ErrorPtr error;
@@ -463,18 +463,18 @@ TEST_F(FileStreamTest, ReadAllBlocking) {
     EXPECT_CALL(fd_mock(), Read(test_read_buffer_, 100)).WillOnce(Return(20));
     EXPECT_CALL(fd_mock(), Read(test_read_buffer_ + 20, 80))
         .WillOnce(SetErrnoAndReturn(EAGAIN, -1));
-    EXPECT_CALL(fd_mock(), WaitForDataBlocking(Stream::AccessMode::READ, _))
-        .WillOnce(Return(0));
+    EXPECT_CALL(fd_mock(), WaitForDataBlocking(Stream::AccessMode::READ, _, _))
+        .WillOnce(Return(1));
     EXPECT_CALL(fd_mock(), Read(test_read_buffer_ + 20, 80))
         .WillOnce(Return(45));
     EXPECT_CALL(fd_mock(), Read(test_read_buffer_ + 65, 35))
         .WillOnce(SetErrnoAndReturn(EAGAIN, -1));
-    EXPECT_CALL(fd_mock(), WaitForDataBlocking(Stream::AccessMode::READ, _))
-        .WillOnce(Return(0));
+    EXPECT_CALL(fd_mock(), WaitForDataBlocking(Stream::AccessMode::READ, _, _))
+        .WillOnce(Return(1));
     EXPECT_CALL(fd_mock(), Read(test_read_buffer_ + 65, 35))
         .WillOnce(SetErrnoAndReturn(EAGAIN, -1));
-    EXPECT_CALL(fd_mock(), WaitForDataBlocking(Stream::AccessMode::READ, _))
-        .WillOnce(Return(0));
+    EXPECT_CALL(fd_mock(), WaitForDataBlocking(Stream::AccessMode::READ, _, _))
+        .WillOnce(Return(1));
     EXPECT_CALL(fd_mock(), Read(test_read_buffer_ + 65, 35))
         .WillOnce(Return(35));
   }
@@ -561,8 +561,8 @@ TEST_F(FileStreamTest, WriteBlocking) {
     InSequence seq;
     EXPECT_CALL(fd_mock(), Write(test_write_buffer_, 80))
         .WillOnce(SetErrnoAndReturn(EAGAIN, -1));
-    EXPECT_CALL(fd_mock(), WaitForDataBlocking(Stream::AccessMode::WRITE, _))
-        .WillOnce(Return(0));
+    EXPECT_CALL(fd_mock(), WaitForDataBlocking(Stream::AccessMode::WRITE, _, _))
+        .WillOnce(Return(1));
     EXPECT_CALL(fd_mock(), Write(test_write_buffer_, 80)).WillOnce(Return(45));
   }
   EXPECT_TRUE(stream_->WriteBlocking(test_write_buffer_, 80, &size, nullptr));
@@ -571,8 +571,8 @@ TEST_F(FileStreamTest, WriteBlocking) {
   {
     InSequence seq;
     EXPECT_CALL(fd_mock(), Write(test_write_buffer_, 50)).WillOnce(Return(0));
-    EXPECT_CALL(fd_mock(), WaitForDataBlocking(Stream::AccessMode::WRITE, _))
-        .WillOnce(Return(0));
+    EXPECT_CALL(fd_mock(), WaitForDataBlocking(Stream::AccessMode::WRITE, _, _))
+        .WillOnce(Return(1));
     EXPECT_CALL(fd_mock(), Write(test_write_buffer_, 50)).WillOnce(Return(1));
   }
   EXPECT_TRUE(stream_->WriteBlocking(test_write_buffer_, 50, &size, nullptr));
@@ -584,7 +584,7 @@ TEST_F(FileStreamTest, WriteBlocking_Fail) {
     InSequence seq;
     EXPECT_CALL(fd_mock(), Write(test_write_buffer_, 80))
         .WillOnce(SetErrnoAndReturn(EAGAIN, -1));
-    EXPECT_CALL(fd_mock(), WaitForDataBlocking(Stream::AccessMode::WRITE, _))
+    EXPECT_CALL(fd_mock(), WaitForDataBlocking(Stream::AccessMode::WRITE, _, _))
         .WillOnce(SetErrnoAndReturn(EBADF, -1));
   }
   chromeos::ErrorPtr error;
@@ -600,18 +600,18 @@ TEST_F(FileStreamTest, WriteAllBlocking) {
     EXPECT_CALL(fd_mock(), Write(test_write_buffer_, 100)).WillOnce(Return(20));
     EXPECT_CALL(fd_mock(), Write(test_write_buffer_ + 20, 80))
         .WillOnce(SetErrnoAndReturn(EAGAIN, -1));
-    EXPECT_CALL(fd_mock(), WaitForDataBlocking(Stream::AccessMode::WRITE, _))
-        .WillOnce(Return(0));
+    EXPECT_CALL(fd_mock(), WaitForDataBlocking(Stream::AccessMode::WRITE, _, _))
+        .WillOnce(Return(1));
     EXPECT_CALL(fd_mock(), Write(test_write_buffer_ + 20, 80))
         .WillOnce(Return(45));
     EXPECT_CALL(fd_mock(), Write(test_write_buffer_ + 65, 35))
         .WillOnce(SetErrnoAndReturn(EAGAIN, -1));
-    EXPECT_CALL(fd_mock(), WaitForDataBlocking(Stream::AccessMode::WRITE, _))
-        .WillOnce(Return(0));
+    EXPECT_CALL(fd_mock(), WaitForDataBlocking(Stream::AccessMode::WRITE, _, _))
+        .WillOnce(Return(1));
     EXPECT_CALL(fd_mock(), Write(test_write_buffer_ + 65, 35))
         .WillOnce(SetErrnoAndReturn(EAGAIN, -1));
-    EXPECT_CALL(fd_mock(), WaitForDataBlocking(Stream::AccessMode::WRITE, _))
-        .WillOnce(Return(0));
+    EXPECT_CALL(fd_mock(), WaitForDataBlocking(Stream::AccessMode::WRITE, _, _))
+        .WillOnce(Return(1));
     EXPECT_CALL(fd_mock(), Write(test_write_buffer_ + 65, 35))
         .WillOnce(Return(35));
   }
@@ -623,13 +623,23 @@ TEST_F(FileStreamTest, WriteAllBlocking_Fail) {
     InSequence seq;
     EXPECT_CALL(fd_mock(), Write(test_write_buffer_, 80))
         .WillOnce(SetErrnoAndReturn(EAGAIN, -1));
-    EXPECT_CALL(fd_mock(), WaitForDataBlocking(Stream::AccessMode::WRITE, _))
+    EXPECT_CALL(fd_mock(), WaitForDataBlocking(Stream::AccessMode::WRITE, _, _))
         .WillOnce(SetErrnoAndReturn(EBADF, -1));
   }
   chromeos::ErrorPtr error;
   EXPECT_FALSE(stream_->WriteAllBlocking(test_write_buffer_, 80, &error));
   EXPECT_EQ(errors::system::kDomain, error->GetDomain());
   EXPECT_EQ("EBADF", error->GetCode());
+}
+
+TEST_F(FileStreamTest, WaitForDataBlocking_Timeout) {
+  EXPECT_CALL(fd_mock(), WaitForDataBlocking(Stream::AccessMode::WRITE, _, _))
+      .WillOnce(Return(0));
+  chromeos::ErrorPtr error;
+  EXPECT_FALSE(stream_->WaitForDataBlocking(Stream::AccessMode::WRITE, {},
+                                            nullptr, &error));
+  EXPECT_EQ(errors::stream::kDomain, error->GetDomain());
+  EXPECT_EQ(errors::stream::kTimeout, error->GetCode());
 }
 
 TEST_F(FileStreamTest, FlushBlocking) {

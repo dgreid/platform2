@@ -104,6 +104,7 @@ class FileDescriptor : public base::MessageLoopForIO::Watcher,
   }
 
   int WaitForDataBlocking(Stream::AccessMode in_mode,
+                          base::TimeDelta timeout,
                           Stream::AccessMode* out_mode) override {
     fd_set read_fds;
     fd_set write_fds;
@@ -120,9 +121,14 @@ class FileDescriptor : public base::MessageLoopForIO::Watcher,
       FD_SET(fd_, &write_fds);
 
     FD_SET(fd_, &error_fds);
+    timeval timeout_val = {};
+    if (!timeout.is_max()) {
+      const timespec ts = timeout.ToTimeSpec();
+      TIMESPEC_TO_TIMEVAL(&timeout_val, &ts);
+    }
     int res = HANDLE_EINTR(select(fd_ + 1, &read_fds, &write_fds, &error_fds,
-                                  nullptr));
-    if (res >= 0 && out_mode) {
+                                  timeout.is_max() ? nullptr : &timeout_val));
+    if (res > 0 && out_mode) {
       *out_mode = stream_utils::MakeAccessMode(FD_ISSET(fd_, &read_fds),
                                                FD_ISSET(fd_, &write_fds));
     }
@@ -492,15 +498,20 @@ bool FileStream::WaitForData(
 }
 
 bool FileStream::WaitForDataBlocking(AccessMode in_mode,
+                                     base::TimeDelta timeout,
                                      AccessMode* out_mode,
                                      ErrorPtr* error) {
   if (!IsOpen())
     return stream_utils::ErrorStreamClosed(FROM_HERE, error);
 
-  if (fd_interface_->WaitForDataBlocking(in_mode, out_mode) < 0) {
+  int ret = fd_interface_->WaitForDataBlocking(in_mode, timeout, out_mode);
+  if (ret < 0) {
     errors::system::AddSystemError(error, FROM_HERE, errno);
     return false;
   }
+  if (ret == 0)
+    return stream_utils::ErrorOperationTimeout(FROM_HERE, error);
+
   return true;
 }
 

@@ -63,7 +63,8 @@ class MockStream : public Stream {
   MOCK_METHOD3(WaitForData, bool(AccessMode,
                                  const base::Callback<void(AccessMode)>&,
                                  ErrorPtr*));
-  MOCK_METHOD3(WaitForDataBlocking, bool(AccessMode, AccessMode*, ErrorPtr*));
+  MOCK_METHOD4(WaitForDataBlocking,
+               bool(AccessMode, base::TimeDelta, AccessMode*, ErrorPtr*));
 
  private:
   DISALLOW_COPY_AND_ASSIGN(MockStream);

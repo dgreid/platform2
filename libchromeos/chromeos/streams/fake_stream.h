@@ -112,6 +112,7 @@ class FakeStream : public Stream {
                    const base::Callback<void(AccessMode)>& callback,
                    ErrorPtr* error) override;
   bool WaitForDataBlocking(AccessMode in_mode,
+                           base::TimeDelta timeout,
                            AccessMode* out_mode,
                            ErrorPtr* error) override;
 

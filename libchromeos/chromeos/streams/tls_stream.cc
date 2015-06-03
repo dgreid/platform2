@@ -92,6 +92,7 @@ class TlsStream::TlsStreamImpl {
                    const base::Callback<void(AccessMode)>& callback,
                    ErrorPtr* error);
   bool WaitForDataBlocking(AccessMode in_mode,
+                           base::TimeDelta timeout,
                            AccessMode* out_mode,
                            ErrorPtr* error);
   void CancelPendingAsyncOperations();
@@ -203,6 +204,8 @@ bool TlsStream::TlsStreamImpl::Flush(ErrorPtr* error) {
 }
 
 bool TlsStream::TlsStreamImpl::Close(ErrorPtr* error) {
+  // 2 seconds should be plenty here.
+  const base::TimeDelta kTimeout = base::TimeDelta::FromSeconds(2);
   int retry_count = 0;
   while (retry_count < 2) {
     int ret = SSL_shutdown(ssl_.get());
@@ -216,11 +219,15 @@ bool TlsStream::TlsStreamImpl::Close(ErrorPtr* error) {
 
     int err = SSL_get_error(ssl_.get(), ret);
     if (err == SSL_ERROR_WANT_READ) {
-      if (!socket_->WaitForDataBlocking(AccessMode::READ, nullptr, error))
+      if (!socket_->WaitForDataBlocking(AccessMode::READ, kTimeout, nullptr,
+                                        error)) {
         break;
+      }
     } else if (err == SSL_ERROR_WANT_WRITE) {
-      if (!socket_->WaitForDataBlocking(AccessMode::WRITE, nullptr, error))
+      if (!socket_->WaitForDataBlocking(AccessMode::WRITE, kTimeout, nullptr,
+                                        error)) {
         break;
+      }
     } else {
       ReportError(error, FROM_HERE, "Failed to shut down TLS socket");
       break;
@@ -248,6 +255,7 @@ bool TlsStream::TlsStreamImpl::WaitForData(
 }
 
 bool TlsStream::TlsStreamImpl::WaitForDataBlocking(AccessMode in_mode,
+                                                   base::TimeDelta timeout,
                                                    AccessMode* out_mode,
                                                    ErrorPtr* error) {
   bool is_read = stream_utils::IsReadAccessMode(in_mode);
@@ -261,7 +269,7 @@ bool TlsStream::TlsStreamImpl::WaitForDataBlocking(AccessMode in_mode,
     return true;
   }
   in_mode = stream_utils::MakeAccessMode(is_read, is_write);
-  return socket_->WaitForDataBlocking(in_mode, out_mode, error);
+  return socket_->WaitForDataBlocking(in_mode, timeout, out_mode, error);
 }
 
 void TlsStream::TlsStreamImpl::CancelPendingAsyncOperations() {
@@ -517,11 +525,12 @@ bool TlsStream::WaitForData(AccessMode mode,
 }
 
 bool TlsStream::WaitForDataBlocking(AccessMode in_mode,
+                                    base::TimeDelta timeout,
                                     AccessMode* out_mode,
                                     ErrorPtr* error) {
   if (!impl_)
     return stream_utils::ErrorStreamClosed(FROM_HERE, error);
-  return impl_->WaitForDataBlocking(in_mode, out_mode, error);
+  return impl_->WaitForDataBlocking(in_mode, timeout, out_mode, error);
 }
 
 void TlsStream::CancelPendingAsyncOperations() {

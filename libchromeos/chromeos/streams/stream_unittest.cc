@@ -63,7 +63,8 @@ class MockStreamImpl : public Stream {
   MOCK_METHOD3(WaitForData, bool(AccessMode,
                                  const base::Callback<void(AccessMode)>&,
                                  ErrorPtr*));
-  MOCK_METHOD3(WaitForDataBlocking, bool(AccessMode, AccessMode*, ErrorPtr*));
+  MOCK_METHOD4(WaitForDataBlocking,
+               bool(AccessMode, base::TimeDelta, AccessMode*, ErrorPtr*));
 
  private:
   DISALLOW_COPY_AND_ASSIGN(MockStreamImpl);
@@ -232,13 +233,13 @@ TEST(Stream, ReadBlocking) {
         .WillOnce(DoAll(SetArgPointee<2>(0),
                         SetArgPointee<3>(false),
                         Return(true)));
-    EXPECT_CALL(stream_mock, WaitForDataBlocking(AccessMode::READ, _, _))
+    EXPECT_CALL(stream_mock, WaitForDataBlocking(AccessMode::READ, _, _, _))
         .WillOnce(Return(true));
     EXPECT_CALL(stream_mock, ReadNonBlocking(buf, 1024, _, _, _))
         .WillOnce(DoAll(SetArgPointee<2>(0),
                         SetArgPointee<3>(false),
                         Return(true)));
-    EXPECT_CALL(stream_mock, WaitForDataBlocking(AccessMode::READ, _, _))
+    EXPECT_CALL(stream_mock, WaitForDataBlocking(AccessMode::READ, _, _, _))
         .WillOnce(Return(true));
     EXPECT_CALL(stream_mock, ReadNonBlocking(buf, 1024, _, _, _))
         .WillOnce(DoAll(SetArgPointee<2>(124),
@@ -254,7 +255,7 @@ TEST(Stream, ReadBlocking) {
         .WillOnce(DoAll(SetArgPointee<2>(0),
                         SetArgPointee<3>(false),
                         Return(true)));
-    EXPECT_CALL(stream_mock, WaitForDataBlocking(AccessMode::READ, _, _))
+    EXPECT_CALL(stream_mock, WaitForDataBlocking(AccessMode::READ, _, _, _))
         .WillOnce(Return(false));
   }
   EXPECT_FALSE(stream_mock.ReadBlocking(buf, sizeof(buf), &read, nullptr));
@@ -366,11 +367,11 @@ TEST(Stream, WriteBlocking) {
     InSequence seq;
     EXPECT_CALL(stream_mock, WriteNonBlocking(buf, 1024, _, _))
           .WillOnce(DoAll(SetArgPointee<2>(0), Return(true)));
-    EXPECT_CALL(stream_mock, WaitForDataBlocking(AccessMode::WRITE, _, _))
+    EXPECT_CALL(stream_mock, WaitForDataBlocking(AccessMode::WRITE, _, _, _))
         .WillOnce(Return(true));
     EXPECT_CALL(stream_mock, WriteNonBlocking(buf, 1024, _, _))
           .WillOnce(DoAll(SetArgPointee<2>(0), Return(true)));
-    EXPECT_CALL(stream_mock, WaitForDataBlocking(AccessMode::WRITE, _, _))
+    EXPECT_CALL(stream_mock, WaitForDataBlocking(AccessMode::WRITE, _, _, _))
         .WillOnce(Return(true));
     EXPECT_CALL(stream_mock, WriteNonBlocking(buf, 1024, _, _))
           .WillOnce(DoAll(SetArgPointee<2>(124), Return(true)));
@@ -382,7 +383,7 @@ TEST(Stream, WriteBlocking) {
     InSequence seq;
     EXPECT_CALL(stream_mock, WriteNonBlocking(buf, 1024, _, _))
           .WillOnce(DoAll(SetArgPointee<2>(0), Return(true)));
-    EXPECT_CALL(stream_mock, WaitForDataBlocking(AccessMode::WRITE, _, _))
+    EXPECT_CALL(stream_mock, WaitForDataBlocking(AccessMode::WRITE, _, _, _))
         .WillOnce(Return(false));
   }
   EXPECT_FALSE(stream_mock.WriteBlocking(buf, sizeof(buf), &written, nullptr));

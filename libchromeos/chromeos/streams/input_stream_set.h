@@ -100,6 +100,7 @@ class CHROMEOS_EXPORT InputStreamSet : public Stream {
                    ErrorPtr* error) override;
 
   bool WaitForDataBlocking(AccessMode in_mode,
+                           base::TimeDelta timeout,
                            AccessMode* out_mode,
                            ErrorPtr* error) override;
 

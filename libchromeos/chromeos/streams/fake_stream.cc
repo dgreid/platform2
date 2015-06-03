@@ -378,6 +378,7 @@ bool FakeStream::WaitForData(AccessMode mode,
 }
 
 bool FakeStream::WaitForDataBlocking(AccessMode in_mode,
+                                     base::TimeDelta timeout,
                                      AccessMode* out_mode,
                                      ErrorPtr* error) {
   const base::TimeDelta zero_delay;
@@ -390,6 +391,9 @@ bool FakeStream::WaitForDataBlocking(AccessMode in_mode,
   base::TimeDelta delay;
   GetMinDelayAndMode(clock_->Now(), read_requested, delay_input_until_,
                      write_requested, delay_output_until_, out_mode, &delay);
+
+  if (timeout < delay)
+    return stream_utils::ErrorOperationTimeout(FROM_HERE, error);
 
   LOG(INFO) << "TEST: Would have blocked for " << delay.InMilliseconds()
             << " ms.";

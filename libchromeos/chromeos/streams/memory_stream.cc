@@ -195,6 +195,7 @@ bool MemoryStream::WaitForData(AccessMode mode,
 }
 
 bool MemoryStream::WaitForDataBlocking(AccessMode in_mode,
+                                       base::TimeDelta timeout,
                                        AccessMode* out_mode,
                                        ErrorPtr* error) {
   if (out_mode)
