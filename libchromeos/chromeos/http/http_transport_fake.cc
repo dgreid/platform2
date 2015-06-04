@@ -152,7 +152,9 @@ void ServerRequestResponseBase::SetData(StreamPtr stream) {
   if (stream) {
     uint8_t buffer[1024];
     size_t size = 0;
-    data_.reserve(stream->GetRemainingSize());
+    if (stream->CanGetSize())
+      data_.reserve(stream->GetRemainingSize());
+
     do {
       CHECK(stream->ReadBlocking(buffer, sizeof(buffer), &size, nullptr));
       data_.insert(data_.end(), buffer, buffer + size);

@@ -89,20 +89,31 @@ void Connection::PrepareRequest() {
     curl_interface_->EasySetOptInt(curl_handle_, CURLOPT_VERBOSE, 1);
   }
 
-  // Set up HTTP request data.
-  uint64_t data_size =
-      request_data_stream_ ? request_data_stream_->GetRemainingSize() : 0;
-  if (method_ == request_type::kPut) {
-    curl_interface_->EasySetOptOffT(
-        curl_handle_, CURLOPT_INFILESIZE_LARGE, data_size);
-  } else {
-    curl_interface_->EasySetOptOffT(
-        curl_handle_, CURLOPT_POSTFIELDSIZE_LARGE, data_size);
-  }
-  if (request_data_stream_) {
-    curl_interface_->EasySetOptCallback(
-        curl_handle_, CURLOPT_READFUNCTION, &Connection::read_callback);
-    curl_interface_->EasySetOptPtr(curl_handle_, CURLOPT_READDATA, this);
+  if (method_ != request_type::kGet) {
+    // Set up HTTP request data.
+    uint64_t data_size = 0;
+    if (request_data_stream_ && request_data_stream_->CanGetSize())
+        data_size = request_data_stream_->GetRemainingSize();
+
+    if (!request_data_stream_ || request_data_stream_->CanGetSize()) {
+      // Data size is known (either no data, or data size is available).
+      if (method_ == request_type::kPut) {
+        curl_interface_->EasySetOptOffT(
+            curl_handle_, CURLOPT_INFILESIZE_LARGE, data_size);
+      } else {
+        curl_interface_->EasySetOptOffT(
+            curl_handle_, CURLOPT_POSTFIELDSIZE_LARGE, data_size);
+      }
+    } else {
+      // Data size is unknown, so use chunked upload.
+      headers_.emplace(http::request_header::kTransferEncoding, "chunked");
+    }
+
+    if (request_data_stream_) {
+      curl_interface_->EasySetOptCallback(
+          curl_handle_, CURLOPT_READFUNCTION, &Connection::read_callback);
+      curl_interface_->EasySetOptPtr(curl_handle_, CURLOPT_READDATA, this);
+    }
   }
 
   if (!headers_.empty()) {

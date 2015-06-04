@@ -129,7 +129,7 @@ RequestID SendRequest(const std::string& method,
                       const ErrorCallback& error_callback) {
   Request request(url, method, transport);
   request.AddHeaders(headers);
-  if (stream && stream->GetRemainingSize() > 0) {
+  if (stream && (!stream->CanGetSize() || stream->GetRemainingSize() > 0)) {
     CHECK(!mime_type.empty()) << "MIME type must be specified if request body "
                                  "message is provided";
     request.SetContentType(mime_type);
