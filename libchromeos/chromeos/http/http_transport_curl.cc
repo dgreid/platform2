@@ -451,8 +451,8 @@ void Transport::OnTransferComplete(Connection* connection, CURLcode code) {
     chromeos::ErrorPtr error;
     // Rewind the response data stream to the beginning so the clients can
     // read the data back.
-    if (request_data->connection->response_data_ &&
-        !request_data->connection->response_data_->SetPosition(0, &error)) {
+    const auto& stream = request_data->connection->response_data_stream_;
+    if (stream && stream->CanSeek() && !stream->SetPosition(0, &error)) {
       RunCallbackAsync(FROM_HERE,
                        base::Bind(request_data->error_callback,
                                   p->second->request_id,

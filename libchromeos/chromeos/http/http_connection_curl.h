@@ -33,6 +33,7 @@ class CHROMEOS_EXPORT Connection : public http::Connection {
   bool SendHeaders(const HeaderList& headers,
                    chromeos::ErrorPtr* error) override;
   bool SetRequestData(StreamPtr stream, chromeos::ErrorPtr* error) override;
+  void SetResponseData(StreamPtr stream) override;
   bool FinishRequest(chromeos::ErrorPtr* error) override;
   RequestID FinishRequestAsync(
       const SuccessCallback& success_callback,
@@ -72,7 +73,7 @@ class CHROMEOS_EXPORT Connection : public http::Connection {
   StreamPtr request_data_stream_;
 
   // Received response data.
-  StreamPtr response_data_;
+  StreamPtr response_data_stream_;
 
   // List of optional request headers provided by the caller.
   // After request has been sent, contains the received response headers.

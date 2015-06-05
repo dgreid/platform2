@@ -206,6 +206,13 @@ bool Request::AddRequestBodyAsFormData(std::unique_ptr<FormData> form_data,
   return connection_->SetRequestData(form_data->ExtractDataStream(), error);
 }
 
+bool Request::AddResponseStream(StreamPtr stream, chromeos::ErrorPtr* error) {
+  if (!SendRequestIfNeeded(error))
+    return false;
+  connection_->SetResponseData(std::move(stream));
+  return true;
+}
+
 const std::string& Request::GetRequestURL() const {
   return request_url_;
 }

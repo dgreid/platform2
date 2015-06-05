@@ -58,6 +58,9 @@ class CHROMEOS_EXPORT Connection
   // If needed, this function can be called to send the request body data.
   virtual bool SetRequestData(StreamPtr stream,
                               chromeos::ErrorPtr* error) = 0;
+  // If needed, this function can be called to customize where the response
+  // data is streamed to.
+  virtual void SetResponseData(StreamPtr stream) = 0;
   // This function is called when all the data is sent off and it's time
   // to receive the response data. The method will block until the whole
   // response message is received, or if an error occur in which case the

@@ -21,6 +21,7 @@ class MockConnection : public Connection {
 
   MOCK_METHOD2(SendHeaders, bool(const HeaderList&, ErrorPtr*));
   MOCK_METHOD2(MockSetRequestData, bool(Stream*, ErrorPtr*));
+  MOCK_METHOD1(MockSetResponseData, void(Stream*));
   MOCK_METHOD1(FinishRequest, bool(ErrorPtr*));
   MOCK_METHOD2(FinishRequestAsync,
                RequestID(const SuccessCallback&, const ErrorCallback&));
@@ -33,6 +34,9 @@ class MockConnection : public Connection {
  private:
   bool SetRequestData(StreamPtr stream, chromeos::ErrorPtr* error) override {
     return MockSetRequestData(stream.get(), error);
+  }
+  void SetResponseData(StreamPtr stream) override {
+    MockSetResponseData(stream.get());
   }
   StreamPtr ExtractDataStream(chromeos::ErrorPtr* error) override {
     return StreamPtr{MockExtractDataStream(error)};

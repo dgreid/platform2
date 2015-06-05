@@ -82,6 +82,10 @@ bool Connection::SetRequestData(StreamPtr stream, chromeos::ErrorPtr* error) {
   return true;
 }
 
+void Connection::SetResponseData(StreamPtr stream) {
+  response_data_stream_ = std::move(stream);
+}
+
 void Connection::PrepareRequest() {
   if (VLOG_IS_ON(3)) {
     curl_interface_->EasySetOptCallback(
@@ -131,7 +135,8 @@ void Connection::PrepareRequest() {
   headers_.clear();
 
   // Set up HTTP response data.
-  response_data_ = MemoryStream::Create(nullptr);
+  if (!response_data_stream_)
+    response_data_stream_ = MemoryStream::Create(nullptr);
   if (method_ != request_type::kHead) {
     curl_interface_->EasySetOptCallback(
         curl_handle_, CURLOPT_WRITEFUNCTION, &Connection::write_callback);
@@ -151,7 +156,8 @@ bool Connection::FinishRequest(chromeos::ErrorPtr* error) {
     Transport::AddEasyCurlError(error, FROM_HERE, ret, curl_interface_.get());
   } else {
     // Rewind our data stream to the beginning so that it can be read back.
-    if (!response_data_->SetPosition(0, error))
+    if (response_data_stream_->CanSeek() &&
+        !response_data_stream_->SetPosition(0, error))
       return false;
     LOG(INFO) << "Response: " << GetResponseStatusCode() << " ("
               << GetResponseStatusText() << ")";
@@ -188,10 +194,10 @@ std::string Connection::GetResponseHeader(
 }
 
 StreamPtr Connection::ExtractDataStream(chromeos::ErrorPtr* error) {
-  if (!response_data_) {
+  if (!response_data_stream_) {
     stream_utils::ErrorStreamClosed(FROM_HERE, error);
   }
-  return std::move(response_data_);
+  return std::move(response_data_stream_);
 }
 
 size_t Connection::write_callback(char* ptr,
@@ -202,7 +208,10 @@ size_t Connection::write_callback(char* ptr,
   size_t data_len = size * num;
   VLOG(2) << "Response data (" << data_len << "): "
           << std::string{ptr, data_len};
-  if (!me->response_data_->WriteAllBlocking(ptr, data_len, nullptr)) {
+  // TODO(nathanbullock): Currently we are relying on the stream not blocking,
+  // but if the stream is representing a pipe or some other construct that might
+  // block then this code will behave badly.
+  if (!me->response_data_stream_->WriteAllBlocking(ptr, data_len, nullptr)) {
     LOG(ERROR) << "Failed to write response data";
     data_len = 0;
   }

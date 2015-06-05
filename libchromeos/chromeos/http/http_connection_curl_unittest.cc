@@ -13,6 +13,7 @@
 #include <chromeos/http/mock_curl_api.h>
 #include <chromeos/http/mock_transport.h>
 #include <chromeos/streams/memory_stream.h>
+#include <chromeos/streams/mock_stream.h>
 #include <chromeos/strings/string_utils.h>
 #include <chromeos/mime_utils.h>
 #include <gmock/gmock.h>
@@ -213,13 +214,12 @@ TEST_F(HttpCurlConnectionTest, FinishRequestAsync) {
 
   EXPECT_CALL(*transport_, StartAsyncTransfer(connection_.get(), _, _))
       .Times(1);
-
   connection_->FinishRequestAsync({}, {});
 }
 
 TEST_F(HttpCurlConnectionTest, FinishRequest) {
-  // Set up the request data.
   std::string request_data{"Foo Bar Baz"};
+  std::string response_data{"<html><body>OK</body></html>"};
   StreamPtr stream = MemoryStream::OpenRef(request_data, nullptr);
   HeaderList headers{
       {request_header::kAccept, "*/*"},
@@ -227,6 +227,13 @@ TEST_F(HttpCurlConnectionTest, FinishRequest) {
       {request_header::kContentLength, std::to_string(request_data.size())},
       {"X-Foo", "bar"},
   };
+  std::unique_ptr<MockStream> response_stream(new MockStream);
+  EXPECT_CALL(*response_stream, WriteAllBlocking(response_data.c_str(),
+                                                 response_data.size(), _))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*response_stream, CanSeek())
+      .WillOnce(Return(false));
+  connection_->SetResponseData(std::move(response_stream));
   EXPECT_TRUE(connection_->SetRequestData(std::move(stream), nullptr));
   EXPECT_TRUE(connection_->SendHeaders(headers, nullptr));
 
@@ -277,7 +284,6 @@ TEST_F(HttpCurlConnectionTest, FinishRequest) {
       .WillOnce(DoAll(SetArgPointee<2>(status_code::Ok), Return(CURLE_OK)));
 
   // Set up the CurlPerformer with the response data expected to be received.
-  std::string response_data{"<html><body>OK</body></html>"};
   HeaderList response_headers{
       {response_header::kContentLength, std::to_string(response_data.size())},
       {response_header::kContentType, mime::text::kHtml},
@@ -306,11 +312,6 @@ TEST_F(HttpCurlConnectionTest, FinishRequest) {
   EXPECT_EQ("baz", connection_->GetResponseHeader("X-Foo"));
   auto data_stream = connection_->ExtractDataStream(nullptr);
   ASSERT_NE(nullptr, data_stream.get());
-  char buffer[100];
-  size_t size_read = 0;
-  EXPECT_TRUE(data_stream->ReadBlocking(buffer, sizeof(buffer), &size_read,
-                                        nullptr));
-  EXPECT_EQ(response_data, (std::string{buffer, size_read}));
 }
 
 }  // namespace curl

@@ -246,6 +246,9 @@ class CHROMEOS_EXPORT Request final {
   bool AddRequestBodyAsFormData(std::unique_ptr<FormData> form_data,
                                 chromeos::ErrorPtr* error);
 
+  // Adds a stream for the response. Otherwise a MemoryStream will be used.
+  bool AddResponseStream(StreamPtr stream, chromeos::ErrorPtr* error);
+
   // Makes a request for a subrange of data. Specifies a partial range with
   // either from beginning of the data to the specified offset (if |bytes| is
   // negative) or from the specified offset to the end of data (if |bytes| is
