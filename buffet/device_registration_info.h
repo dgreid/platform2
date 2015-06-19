@@ -235,6 +235,8 @@ class DeviceRegistrationInfo : public NotificationDelegate {
   void PublishCommand(const base::DictionaryValue& command);
 
   void PublishStateUpdates();
+  void OnPublishStateSuccess(const base::DictionaryValue& reply);
+  void OnPublishStateError(const chromeos::Error* error);
 
   // If unrecoverable error occurred (e.g. error parsing command instance),
   // notify the server that the command is aborted by the device.
@@ -281,6 +283,10 @@ class DeviceRegistrationInfo : public NotificationDelegate {
   // Backoff manager for DoCloudRequest() method.
   std::unique_ptr<chromeos::BackoffEntry::Policy> cloud_backoff_policy_;
   std::unique_ptr<chromeos::BackoffEntry> cloud_backoff_entry_;
+
+  // Flag set to true while a device state update patch request is in flight
+  // to the cloud server.
+  bool device_state_update_pending_{false};
 
   const bool notifications_enabled_;
   std::unique_ptr<NotificationChannel> primary_notification_channel_;

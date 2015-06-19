@@ -886,7 +886,10 @@ void DeviceRegistrationInfo::PublishCommand(
 }
 
 void DeviceRegistrationInfo::PublishStateUpdates() {
-  VLOG(1) << "PublishStateUpdates";
+  // If we have pending state update requests, don't send any more for now.
+  if (device_state_update_pending_)
+    return;
+
   const std::vector<StateChange> state_changes{
       state_manager_->GetAndClearRecordedStateChanges()};
   if (state_changes.empty())
@@ -920,11 +923,24 @@ void DeviceRegistrationInfo::PublishStateUpdates() {
                  std::to_string(base::Time::Now().ToJavaTime()));
   body.Set("patches", patches.release());
 
+  device_state_update_pending_ = true;
   DoCloudRequest(
-      chromeos::http::request_type::kPost,
-      GetDeviceURL("patchState"),
-      &body,
-      base::Bind(&IgnoreCloudResult), base::Bind(&IgnoreCloudError));
+      chromeos::http::request_type::kPost, GetDeviceURL("patchState"), &body,
+      base::Bind(&DeviceRegistrationInfo::OnPublishStateSuccess, AsWeakPtr()),
+      base::Bind(&DeviceRegistrationInfo::OnPublishStateError, AsWeakPtr()));
+}
+
+void DeviceRegistrationInfo::OnPublishStateSuccess(
+    const base::DictionaryValue& reply) {
+  device_state_update_pending_ = false;
+  // See if there were more pending state updates since the previous request
+  // had been sent out.
+  PublishStateUpdates();
+}
+
+void DeviceRegistrationInfo::OnPublishStateError(const chromeos::Error* error) {
+  LOG(ERROR) << "Permanent failure while trying to update device state";
+  device_state_update_pending_ = false;
 }
 
 void DeviceRegistrationInfo::SetRegistrationStatus(
