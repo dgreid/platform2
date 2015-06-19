@@ -37,8 +37,12 @@ class StateChangeQueue;
 class StateManager;
 
 template<typename... Types>
-using DBusMethodResponse =
+using DBusMethodResponsePtr =
     std::unique_ptr<chromeos::dbus_utils::DBusMethodResponse<Types...>>;
+
+template<typename... Types>
+using DBusMethodResponse =
+    chromeos::dbus_utils::DBusMethodResponse<Types...>;
 
 // The Manager is responsible for global state of Buffet.  It exposes
 // interfaces which affect the entire device such as device registration and
@@ -59,9 +63,10 @@ class Manager final : public org::chromium::Buffet::ManagerInterface {
 
  private:
   // DBus methods:
-  void CheckDeviceRegistered(DBusMethodResponse<std::string> response) override;
-  void GetDeviceInfo(DBusMethodResponse<std::string> response) override;
-  void RegisterDevice(DBusMethodResponse<std::string> response,
+  void CheckDeviceRegistered(
+      DBusMethodResponsePtr<std::string> response) override;
+  void GetDeviceInfo(DBusMethodResponsePtr<std::string> response) override;
+  void RegisterDevice(DBusMethodResponsePtr<std::string> response,
                       const std::string& ticket_id) override;
   bool UpdateDeviceInfo(chromeos::ErrorPtr* error,
                         const std::string& in_name,
@@ -73,18 +78,24 @@ class Manager final : public org::chromium::Buffet::ManagerInterface {
                            const std::string& api_key,
                            const std::string& oauth_url,
                            const std::string& service_url) override;
-  void UpdateState(DBusMethodResponse<> response,
+  void UpdateState(DBusMethodResponsePtr<> response,
                    const chromeos::VariantDictionary& property_set) override;
   bool GetState(chromeos::ErrorPtr* error, std::string* state) override;
-  void AddCommand(DBusMethodResponse<std::string> response,
+  void AddCommand(DBusMethodResponsePtr<std::string> response,
                   const std::string& json_command) override;
-  void GetCommand(DBusMethodResponse<std::string> response,
+  void GetCommand(DBusMethodResponsePtr<std::string> response,
                   const std::string& id) override;
-  void SetCommandVisibility(
-      std::unique_ptr<chromeos::dbus_utils::DBusMethodResponse<>> response,
-      const std::vector<std::string>& in_names,
-      const std::string& in_visibility) override;
+  void SetCommandVisibility(DBusMethodResponsePtr<> response,
+                            const std::vector<std::string>& in_names,
+                            const std::string& in_visibility) override;
   std::string TestMethod(const std::string& message) override;
+
+  void OnGetDeviceInfoSuccess(
+      const std::shared_ptr<DBusMethodResponse<std::string>>& response,
+      const base::DictionaryValue& device_info);
+  void OnGetDeviceInfoError(
+      const std::shared_ptr<DBusMethodResponse<std::string>>& response,
+      const chromeos::Error* error);
 
   void OnCommandDefsChanged();
   void OnStateChanged();

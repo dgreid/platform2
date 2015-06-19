@@ -6,6 +6,8 @@
 
 #include <base/json/json_reader.h>
 #include <base/json/json_writer.h>
+#include <base/message_loop/message_loop.h>
+#include <base/run_loop.h>
 #include <base/values.h>
 #include <chromeos/bind_lambda.h>
 #include <chromeos/http/http_request.h>
@@ -200,8 +202,28 @@ class DeviceRegistrationInfoTest : public ::testing::Test {
     return dev_reg_->PublishCommands(commands);
   }
 
-  bool CheckRegistration(chromeos::ErrorPtr* error) const {
-    return dev_reg_->CheckRegistration(error);
+  bool RefreshAccessToken(chromeos::ErrorPtr* error) const {
+    base::MessageLoopForIO message_loop;
+    base::RunLoop run_loop;
+
+    bool succeeded = false;
+    auto on_success = [&run_loop, &succeeded]() {
+      succeeded = true;
+      run_loop.Quit();
+    };
+    auto on_failure = [&run_loop, &error](const chromeos::Error* in_error) {
+      if (error)
+        *error = in_error->Clone();
+      run_loop.Quit();
+    };
+    dev_reg_->RefreshAccessToken(base::Bind(on_success),
+                                 base::Bind(on_failure));
+    run_loop.Run();
+    return succeeded;
+  }
+
+  void SetAccessToken() {
+    dev_reg_->access_token_ = test_data::kAccessToken;
   }
 
   RegistrationStatus GetRegistrationStatus() const {
@@ -252,8 +274,8 @@ TEST_F(DeviceRegistrationInfoTest, GetOAuthURL) {
   }));
 }
 
-TEST_F(DeviceRegistrationInfoTest, CheckRegistration) {
-  EXPECT_FALSE(CheckRegistration(nullptr));
+TEST_F(DeviceRegistrationInfoTest, HaveRegistrationCredentials) {
+  EXPECT_FALSE(dev_reg_->HaveRegistrationCredentials(nullptr));
   EXPECT_EQ(0, transport_->GetRequestCount());
 
   SetDefaultDeviceRegistration(&data_);
@@ -264,8 +286,9 @@ TEST_F(DeviceRegistrationInfoTest, CheckRegistration) {
                          chromeos::http::request_type::kPost,
                          base::Bind(OAuth2Handler));
   transport_->ResetRequestCount();
-  EXPECT_TRUE(CheckRegistration(nullptr));
+  EXPECT_TRUE(RefreshAccessToken(nullptr));
   EXPECT_EQ(1, transport_->GetRequestCount());
+  EXPECT_TRUE(dev_reg_->HaveRegistrationCredentials(nullptr));
 }
 
 TEST_F(DeviceRegistrationInfoTest, CheckAuthenticationFailure) {
@@ -279,7 +302,7 @@ TEST_F(DeviceRegistrationInfoTest, CheckAuthenticationFailure) {
                          base::Bind(OAuth2HandlerFail));
   transport_->ResetRequestCount();
   chromeos::ErrorPtr error;
-  EXPECT_FALSE(CheckRegistration(&error));
+  EXPECT_FALSE(RefreshAccessToken(&error));
   EXPECT_EQ(1, transport_->GetRequestCount());
   EXPECT_TRUE(error->HasError(kErrorDomainOAuth2, "unable_to_authenticate"));
   EXPECT_EQ(RegistrationStatus::kConnecting, GetRegistrationStatus());
@@ -296,7 +319,7 @@ TEST_F(DeviceRegistrationInfoTest, CheckDeregistration) {
                          base::Bind(OAuth2HandlerDeregister));
   transport_->ResetRequestCount();
   chromeos::ErrorPtr error;
-  EXPECT_FALSE(CheckRegistration(&error));
+  EXPECT_FALSE(RefreshAccessToken(&error));
   EXPECT_EQ(1, transport_->GetRequestCount());
   EXPECT_TRUE(error->HasError(kErrorDomainOAuth2, "invalid_grant"));
   EXPECT_EQ(RegistrationStatus::kInvalidCredentials, GetRegistrationStatus());
@@ -306,36 +329,32 @@ TEST_F(DeviceRegistrationInfoTest, GetDeviceInfo) {
   SetDefaultDeviceRegistration(&data_);
   storage_->Save(data_);
   ReloadConfig();
+  SetAccessToken();
 
-  transport_->AddHandler(dev_reg_->GetOAuthURL("token"),
-                         chromeos::http::request_type::kPost,
-                         base::Bind(OAuth2Handler));
   transport_->AddHandler(dev_reg_->GetDeviceURL(),
                          chromeos::http::request_type::kGet,
                          base::Bind(DeviceInfoHandler));
   transport_->ResetRequestCount();
-  auto device_info = dev_reg_->GetDeviceInfo(nullptr);
-  EXPECT_EQ(2, transport_->GetRequestCount());
-  EXPECT_NE(nullptr, device_info.get());
-  base::DictionaryValue* dict = nullptr;
-  EXPECT_TRUE(device_info->GetAsDictionary(&dict));
-  std::string id;
-  EXPECT_TRUE(dict->GetString("id", &id));
-  EXPECT_EQ(test_data::kDeviceId, id);
-}
+  base::MessageLoopForIO message_loop;
+  base::RunLoop run_loop;
 
-TEST_F(DeviceRegistrationInfoTest, GetDeviceId) {
-  SetDefaultDeviceRegistration(&data_);
-  storage_->Save(data_);
-  ReloadConfig();
-
-  transport_->AddHandler(dev_reg_->GetOAuthURL("token"),
-                         chromeos::http::request_type::kPost,
-                         base::Bind(OAuth2Handler));
-  transport_->AddHandler(dev_reg_->GetDeviceURL(),
-                         chromeos::http::request_type::kGet,
-                         base::Bind(DeviceInfoHandler));
-  EXPECT_EQ(test_data::kDeviceId, config_->device_id());
+  bool succeeded = false;
+  auto on_success =
+      [&run_loop, &succeeded, this](const base::DictionaryValue& info) {
+    EXPECT_EQ(1, transport_->GetRequestCount());
+    std::string id;
+    EXPECT_TRUE(info.GetString("id", &id));
+    EXPECT_EQ(test_data::kDeviceId, id);
+    succeeded = true;
+    run_loop.Quit();
+  };
+  auto on_failure = [&run_loop](const chromeos::Error* error) {
+    run_loop.Quit();
+    FAIL() << "Should not be called";
+  };
+  dev_reg_->GetDeviceInfo(base::Bind(on_success), base::Bind(on_failure));
+  run_loop.Run();
+  EXPECT_TRUE(succeeded);
 }
 
 TEST_F(DeviceRegistrationInfoTest, RegisterDevice) {
@@ -483,6 +502,11 @@ TEST_F(DeviceRegistrationInfoTest, OOBRegistrationStatus) {
 }
 
 TEST_F(DeviceRegistrationInfoTest, UpdateCommand) {
+  SetDefaultDeviceRegistration(&data_);
+  storage_->Save(data_);
+  ReloadConfig();
+  SetAccessToken();
+
   auto json_cmds = unittests::CreateDictionaryValue(R"({
     'robot': {
       '_jump': {

@@ -92,7 +92,8 @@ void Manager::Start(const base::FilePath& config_path,
   dbus_object_.RegisterAsync(cb);
 }
 
-void Manager::CheckDeviceRegistered(DBusMethodResponse<std::string> response) {
+void Manager::CheckDeviceRegistered(
+    DBusMethodResponsePtr<std::string> response) {
   LOG(INFO) << "Received call to Manager.CheckDeviceRegistered()";
   chromeos::ErrorPtr error;
   bool registered = device_info_->HaveRegistrationCredentials(&error);
@@ -108,23 +109,34 @@ void Manager::CheckDeviceRegistered(DBusMethodResponse<std::string> response) {
                               : std::string());
 }
 
-void Manager::GetDeviceInfo(DBusMethodResponse<std::string> response) {
+void Manager::GetDeviceInfo(DBusMethodResponsePtr<std::string> response) {
   LOG(INFO) << "Received call to Manager.GetDeviceInfo()";
+  std::shared_ptr<DBusMethodResponse<std::string>> shared_response =
+      std::move(response);
 
-  chromeos::ErrorPtr error;
-  auto device_info = device_info_->GetDeviceInfo(&error);
-  if (!device_info) {
-    response->ReplyWithError(error.get());
-    return;
-  }
+  device_info_->GetDeviceInfo(
+      base::Bind(&Manager::OnGetDeviceInfoSuccess,
+                 weak_ptr_factory_.GetWeakPtr(), shared_response),
+      base::Bind(&Manager::OnGetDeviceInfoError,
+                 weak_ptr_factory_.GetWeakPtr(), shared_response));
+}
 
+void Manager::OnGetDeviceInfoSuccess(
+    const std::shared_ptr<DBusMethodResponse<std::string>>& response,
+    const base::DictionaryValue& device_info) {
   std::string device_info_str;
-  base::JSONWriter::WriteWithOptions(device_info.get(),
-      base::JSONWriter::OPTIONS_PRETTY_PRINT, &device_info_str);
+  base::JSONWriter::WriteWithOptions(
+      &device_info, base::JSONWriter::OPTIONS_PRETTY_PRINT, &device_info_str);
   response->Return(device_info_str);
 }
 
-void Manager::RegisterDevice(DBusMethodResponse<std::string> response,
+void Manager::OnGetDeviceInfoError(
+    const std::shared_ptr<DBusMethodResponse<std::string>>& response,
+    const chromeos::Error* error) {
+  response->ReplyWithError(error);
+}
+
+void Manager::RegisterDevice(DBusMethodResponsePtr<std::string> response,
                              const std::string& ticket_id) {
   LOG(INFO) << "Received call to Manager.RegisterDevice()";
 
@@ -143,7 +155,7 @@ void Manager::RegisterDevice(DBusMethodResponse<std::string> response,
   response->ReplyWithError(error.get());
 }
 
-void Manager::UpdateState(DBusMethodResponse<> response,
+void Manager::UpdateState(DBusMethodResponsePtr<> response,
                           const chromeos::VariantDictionary& property_set) {
   chromeos::ErrorPtr error;
   if (!state_manager_->SetProperties(property_set, &error))
@@ -161,7 +173,7 @@ bool Manager::GetState(chromeos::ErrorPtr* error, std::string* state) {
   return true;
 }
 
-void Manager::AddCommand(DBusMethodResponse<std::string> response,
+void Manager::AddCommand(DBusMethodResponsePtr<std::string> response,
                          const std::string& json_command) {
   static int next_id = 0;
   std::string error_message;
@@ -187,7 +199,7 @@ void Manager::AddCommand(DBusMethodResponse<std::string> response,
   response->Return(id);
 }
 
-void Manager::GetCommand(DBusMethodResponse<std::string> response,
+void Manager::GetCommand(DBusMethodResponsePtr<std::string> response,
                          const std::string& id) {
   const CommandInstance* command = command_manager_->FindCommand(id);
   if (!command) {
@@ -201,10 +213,9 @@ void Manager::GetCommand(DBusMethodResponse<std::string> response,
   response->Return(command_str);
 }
 
-void Manager::SetCommandVisibility(
-    std::unique_ptr<chromeos::dbus_utils::DBusMethodResponse<>> response,
-    const std::vector<std::string>& in_names,
-    const std::string& in_visibility) {
+void Manager::SetCommandVisibility(DBusMethodResponsePtr<> response,
+                                   const std::vector<std::string>& in_names,
+                                   const std::string& in_visibility) {
   CommandDefinition::Visibility visibility;
   chromeos::ErrorPtr error;
   if (!visibility.FromString(in_visibility, &error)) {

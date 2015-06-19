@@ -11,10 +11,12 @@
 #include <utility>
 #include <vector>
 
+#include <base/callback.h>
 #include <base/macros.h>
 #include <base/memory/weak_ptr.h>
 #include <base/time/time.h>
 #include <base/timer/timer.h>
+#include <chromeos/backoff_entry.h>
 #include <chromeos/data_encoding.h>
 #include <chromeos/errors/error.h>
 #include <chromeos/http/http_transport.h>
@@ -48,6 +50,10 @@ class DeviceRegistrationInfo : public NotificationDelegate {
  public:
   using OnRegistrationChangedCallback =
       base::Callback<void(RegistrationStatus)>;
+  using CloudRequestCallback =
+      base::Callback<void(const base::DictionaryValue&)>;
+  using CloudRequestErrorCallback =
+      base::Callback<void(const chromeos::Error* error)>;
 
   DeviceRegistrationInfo(
       const std::shared_ptr<CommandManager>& command_manager,
@@ -100,10 +106,11 @@ class DeviceRegistrationInfo : public NotificationDelegate {
   // Checks whether we have credentials generated during registration.
   bool HaveRegistrationCredentials(chromeos::ErrorPtr* error);
 
-  // Gets the full device description JSON object, or nullptr if
-  // the device is not registered or communication failure.
-  std::unique_ptr<base::DictionaryValue> GetDeviceInfo(
-      chromeos::ErrorPtr* error);
+  // Gets the full device description JSON object asynchronously.
+  // Passes the device info as the first argument to |callback|, or nullptr if
+  // the device is not registered or in case of communication failure.
+  void GetDeviceInfo(const CloudRequestCallback& success_callback,
+                     const CloudRequestErrorCallback& error_callback);
 
   // Registers the device.
   // Returns a device ID on success.
@@ -155,20 +162,16 @@ class DeviceRegistrationInfo : public NotificationDelegate {
   void StartDevice(chromeos::ErrorPtr* error,
                    const base::TimeDelta& retry_delay);
 
-  // Checks for the valid device registration as well as refreshes
-  // the device access token, if available.
-  bool CheckRegistration(chromeos::ErrorPtr* error);
-
-  // If we currently have an access token and it doesn't look like it
-  // has expired yet, returns true immediately. Otherwise calls
-  // RefreshAccessToken().
-  bool MaybeRefreshAccessToken(chromeos::ErrorPtr* error);
-
   // Forcibly refreshes the access token.
-  bool RefreshAccessToken(chromeos::ErrorPtr* error);
+  void RefreshAccessToken(const base::Closure& success_callback,
+                          const CloudRequestErrorCallback& error_callback);
 
-  // Calls RefreshAccessToken(nullptr). Used as a closure.
-  void RunRefreshAccessToken();
+  // Success callback for RefreshAccessToken().
+  void OnRefreshAccessTokenSuccess(
+      const base::Closure& success_callback,
+      const std::shared_ptr<CloudRequestErrorCallback>& error_callback,
+      chromeos::http::RequestID id,
+      std::unique_ptr<chromeos::http::Response> response);
 
   // Parse the OAuth response, and sets registration status to
   // kInvalidCredentials if our registration is no longer valid.
@@ -178,11 +181,6 @@ class DeviceRegistrationInfo : public NotificationDelegate {
   // This attempts to open a notification channel. The channel needs to be
   // restarted anytime the access_token is refreshed.
   void StartNotificationChannel();
-
-  using CloudRequestCallback =
-      base::Callback<void(const base::DictionaryValue&)>;
-  using CloudRequestErrorCallback =
-      base::Callback<void(const chromeos::Error* error)>;
 
   // Do a HTTPS request to cloud services.
   // Handles many cases like reauthorization, 5xx HTTP response codes
@@ -195,6 +193,31 @@ class DeviceRegistrationInfo : public NotificationDelegate {
       const base::DictionaryValue* body,
       const CloudRequestCallback& success_callback,
       const CloudRequestErrorCallback& error_callback);
+
+  // Helper for DoCloudRequest().
+  struct CloudRequestData {
+    std::string method;
+    std::string url;
+    std::string body;
+    CloudRequestCallback success_callback;
+    CloudRequestErrorCallback error_callback;
+  };
+  void SendCloudRequest(const std::shared_ptr<const CloudRequestData>& data);
+  void OnCloudRequestSuccess(
+      const std::shared_ptr<const CloudRequestData>& data,
+      chromeos::http::RequestID request_id,
+      std::unique_ptr<chromeos::http::Response> response);
+  void OnCloudRequestError(
+      const std::shared_ptr<const CloudRequestData>& data,
+      chromeos::http::RequestID request_id,
+      const chromeos::Error* error);
+  void RetryCloudRequest(
+      const std::shared_ptr<const CloudRequestData>& data);
+  void OnAccessTokenRefreshed(
+      const std::shared_ptr<const CloudRequestData>& data);
+  void OnAccessTokenError(
+      const std::shared_ptr<const CloudRequestData>& data,
+      const chromeos::Error* error);
 
   void UpdateDeviceResource(const base::Closure& on_success,
                             const CloudRequestErrorCallback& on_failure);
@@ -254,6 +277,10 @@ class DeviceRegistrationInfo : public NotificationDelegate {
   std::shared_ptr<StateManager> state_manager_;
 
   std::unique_ptr<BuffetConfig> config_;
+
+  // Backoff manager for DoCloudRequest() method.
+  std::unique_ptr<chromeos::BackoffEntry::Policy> cloud_backoff_policy_;
+  std::unique_ptr<chromeos::BackoffEntry> cloud_backoff_entry_;
 
   const bool notifications_enabled_;
   std::unique_ptr<NotificationChannel> primary_notification_channel_;
