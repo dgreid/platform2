@@ -949,7 +949,11 @@ cmd_memory_test() (
 cmd_battery_firmware() (
   option="$1"
   case "${option}" in
-    info|check|update)
+    info|check)
+      debugd --reply-timeout=$(( 10 * 60 * 1000 )) BatteryFirmware "string:${option}"
+      echo ""
+      ;;
+    update)
       # Increased the reply-timeout to 10 min for Battery Firmware update process.
       # Battery Firmware Update process time includes the following:
       #   1  setup delay time before entery battery firmware update mode.
@@ -958,6 +962,17 @@ cmd_battery_firmware() (
       #   4  battery flash program/write time.
       #   5  re-try time on errors.
       # Note: take ~2 min on a success battery firmware update case.
+      echo ""
+      echo "================================================================================"
+      echo "                  Battery firmware update is in progress."
+      echo "================================================================================"
+      echo "Please DO NOT remove the power adapter cable, otherwise the update will fail."
+      echo ""
+      echo "To recover from a failed battery firmware update,"
+      echo "   please plug in the power adapter cable, reboot and run this command again."
+      echo ""
+      echo "================================================================================"
+      echo ""
       debugd --reply-timeout=$(( 10 * 60 * 1000 )) BatteryFirmware "string:${option}"
       echo ""
       ;;
