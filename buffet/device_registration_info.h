@@ -109,7 +109,10 @@ class DeviceRegistrationInfo : public NotificationDelegate {
   void Start();
 
   // Checks whether we have credentials generated during registration.
-  bool HaveRegistrationCredentials(chromeos::ErrorPtr* error);
+  bool HaveRegistrationCredentials() const;
+  // Calls HaveRegistrationCredentials() and logs an error if no credentials
+  // are available.
+  bool VerifyRegistrationCredentials(chromeos::ErrorPtr* error) const;
 
   // Gets the full device description JSON object asynchronously.
   // Passes the device info as the first argument to |callback|, or nullptr if
@@ -271,6 +274,9 @@ class DeviceRegistrationInfo : public NotificationDelegate {
   void OnDisconnected() override;
   void OnPermanentFailure() override;
   void OnCommandCreated(const base::DictionaryValue& command) override;
+
+  // Wipes out the device registration information and stops server connections.
+  void MarkDeviceUnregistered();
 
   // Transient data
   std::string access_token_;

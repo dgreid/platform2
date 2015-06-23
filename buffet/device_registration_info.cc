@@ -169,7 +169,7 @@ std::string DeviceRegistrationInfo::GetOAuthURL(
 }
 
 void DeviceRegistrationInfo::Start() {
-  if (HaveRegistrationCredentials(nullptr)) {
+  if (HaveRegistrationCredentials()) {
     StartNotificationChannel();
     // Wait a significant amount of time for local daemons to publish their
     // state to Buffet before publishing it to the cloud.
@@ -201,11 +201,15 @@ void DeviceRegistrationInfo::ScheduleStartDevice(const base::TimeDelta& later) {
       later);
 }
 
-bool DeviceRegistrationInfo::HaveRegistrationCredentials(
-    chromeos::ErrorPtr* error) {
-  const bool have_credentials = !config_->refresh_token().empty() &&
-                                !config_->device_id().empty() &&
-                                !config_->robot_account().empty();
+bool DeviceRegistrationInfo::HaveRegistrationCredentials() const {
+  return !config_->refresh_token().empty() &&
+         !config_->device_id().empty() &&
+         !config_->robot_account().empty();
+}
+
+bool DeviceRegistrationInfo::VerifyRegistrationCredentials(
+    chromeos::ErrorPtr* error) const {
+  const bool have_credentials = HaveRegistrationCredentials();
 
   VLOG(1) << "Device registration record "
           << ((have_credentials) ? "found" : "not found.");
@@ -245,6 +249,13 @@ void DeviceRegistrationInfo::RefreshAccessToken(
     const base::Closure& success_callback,
     const CloudRequestErrorCallback& error_callback) {
   LOG(INFO) << "Refreshing access token.";
+
+  chromeos::ErrorPtr error;
+  if (!VerifyRegistrationCredentials(&error)) {
+    error_callback.Run(error.get());
+    return;
+  }
+
   // Make a shared pointer to |error_callback| since we are going to share this
   // callback with both success and error callbacks for PostFormData() and if
   // |error_callback| has any move-only types, one of the copies will be bad.
@@ -313,6 +324,8 @@ void DeviceRegistrationInfo::OnRefreshAccessTokenSuccess(
 void DeviceRegistrationInfo::StartNotificationChannel() {
   if (notification_channel_starting_)
     return;
+
+  LOG(INFO) << "Starting notification channel";
 
   // If no MessageLoop assume we're in unittests.
   if (!base::MessageLoop::current()) {
@@ -528,7 +541,7 @@ void DeviceRegistrationInfo::SendCloudRequest(
   VLOG(1) << "Sending cloud request '" << data->method << "' to '" << data->url
           << "' with request body '" << data->body << "'";
   chromeos::ErrorPtr error;
-  if (!HaveRegistrationCredentials(&error)) {
+  if (!VerifyRegistrationCredentials(&error)) {
     data->error_callback.Run(error.get());
     return;
   }
@@ -628,13 +641,15 @@ void DeviceRegistrationInfo::OnAccessTokenRefreshed(
 void DeviceRegistrationInfo::OnAccessTokenError(
     const std::shared_ptr<const CloudRequestData>& data,
     const chromeos::Error* error) {
+  if (error->HasError(buffet::kErrorDomainOAuth2, "invalid_grant"))
+    MarkDeviceUnregistered();
   data->error_callback.Run(error);
 }
 
 void DeviceRegistrationInfo::StartDevice(
     chromeos::ErrorPtr* error,
     const base::TimeDelta& retry_delay) {
-  if (!HaveRegistrationCredentials(error))
+  if (!VerifyRegistrationCredentials(error))
     return;
   auto handle_start_device_failure_cb = base::Bind(
       &IgnoreCloudErrorWithCallback,
@@ -671,7 +686,7 @@ bool DeviceRegistrationInfo::UpdateDeviceInfo(const std::string& name,
   change.set_location(location);
   change.Commit();
 
-  if (HaveRegistrationCredentials(nullptr)) {
+  if (HaveRegistrationCredentials()) {
     UpdateDeviceResource(base::Bind(&base::DoNothing),
                          base::Bind(&IgnoreCloudError));
   }
@@ -705,7 +720,7 @@ bool DeviceRegistrationInfo::UpdateServiceConfig(
     const std::string& oauth_url,
     const std::string& service_url,
     chromeos::ErrorPtr* error) {
-  if (HaveRegistrationCredentials(nullptr)) {
+  if (HaveRegistrationCredentials()) {
     chromeos::Error::AddTo(error, FROM_HERE, kErrorDomainBuffet,
                            "already_registered",
                            "Unable to change config for registered device");
@@ -956,7 +971,7 @@ void DeviceRegistrationInfo::SetRegistrationStatus(
 
 void DeviceRegistrationInfo::OnCommandDefsChanged() {
   VLOG(1) << "CommandDefinitionChanged notification received";
-  if (!HaveRegistrationCredentials(nullptr))
+  if (!HaveRegistrationCredentials())
     return;
 
   UpdateDeviceResource(base::Bind(&base::DoNothing),
@@ -965,7 +980,7 @@ void DeviceRegistrationInfo::OnCommandDefsChanged() {
 
 void DeviceRegistrationInfo::OnStateChanged() {
   VLOG(1) << "StateChanged notification received";
-  if (!HaveRegistrationCredentials(nullptr))
+  if (!HaveRegistrationCredentials())
     return;
 
   // TODO(vitalybuka): Integrate BackoffEntry.
@@ -986,6 +1001,9 @@ void DeviceRegistrationInfo::OnConnected(const std::string& channel_name) {
 
 void DeviceRegistrationInfo::OnDisconnected() {
   LOG(INFO) << "Notification channel disconnected";
+  if (!HaveRegistrationCredentials())
+    return;
+
   pull_channel_->UpdatePullInterval(
       base::TimeDelta::FromMilliseconds(config_->polling_period_ms()));
   current_notification_channel_ = pull_channel_.get();
@@ -996,8 +1014,13 @@ void DeviceRegistrationInfo::OnDisconnected() {
 void DeviceRegistrationInfo::OnPermanentFailure() {
   LOG(ERROR) << "Failed to establish notification channel.";
   notification_channel_starting_ = false;
-  RefreshAccessToken(base::Bind(&base::DoNothing),
-                     base::Bind(&IgnoreCloudError));
+  auto mark_unregistered =
+      base::Bind(&DeviceRegistrationInfo::MarkDeviceUnregistered, AsWeakPtr());
+  auto error_callback = [mark_unregistered](const chromeos::Error* error) {
+    if (error->HasError(buffet::kErrorDomainOAuth2, "invalid_grant"))
+      mark_unregistered.Run();
+  };
+  RefreshAccessToken(base::Bind(&base::DoNothing), base::Bind(error_callback));
 }
 
 void DeviceRegistrationInfo::OnCommandCreated(
@@ -1016,5 +1039,27 @@ void DeviceRegistrationInfo::OnCommandCreated(
                 base::Bind(&IgnoreCloudError));
 }
 
+void DeviceRegistrationInfo::MarkDeviceUnregistered() {
+  if (!HaveRegistrationCredentials())
+    return;
+
+  LOG(INFO) << "Device is unregistered from the cloud. Deleting credentials";
+  BuffetConfig::Transaction change{config_.get()};
+  change.set_device_id("");
+  change.set_robot_account("");
+  change.set_refresh_token("");
+  change.Commit();
+
+  current_notification_channel_ = nullptr;
+  if (primary_notification_channel_) {
+    primary_notification_channel_->Stop();
+    primary_notification_channel_.reset();
+  }
+  if (pull_channel_) {
+    pull_channel_->Stop();
+    pull_channel_.reset();
+  }
+  notification_channel_starting_ = false;
+}
 
 }  // namespace buffet

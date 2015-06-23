@@ -275,7 +275,7 @@ TEST_F(DeviceRegistrationInfoTest, GetOAuthURL) {
 }
 
 TEST_F(DeviceRegistrationInfoTest, HaveRegistrationCredentials) {
-  EXPECT_FALSE(dev_reg_->HaveRegistrationCredentials(nullptr));
+  EXPECT_FALSE(dev_reg_->HaveRegistrationCredentials());
   EXPECT_EQ(0, transport_->GetRequestCount());
 
   SetDefaultDeviceRegistration(&data_);
@@ -288,7 +288,7 @@ TEST_F(DeviceRegistrationInfoTest, HaveRegistrationCredentials) {
   transport_->ResetRequestCount();
   EXPECT_TRUE(RefreshAccessToken(nullptr));
   EXPECT_EQ(1, transport_->GetRequestCount());
-  EXPECT_TRUE(dev_reg_->HaveRegistrationCredentials(nullptr));
+  EXPECT_TRUE(dev_reg_->HaveRegistrationCredentials());
 }
 
 TEST_F(DeviceRegistrationInfoTest, CheckAuthenticationFailure) {
