@@ -41,7 +41,7 @@ constexpr char kAuthenticationSucceededResponse[] =
     "<success xmlns=\"urn:ietf:params:xml:ns:xmpp-sasl\"/>";
 constexpr char kAuthenticationFailedResponse[] =
     "<failure xmlns=\"urn:ietf:params:xml:ns:xmpp-sasl\"><not-authorized/>"
-    "</failure></stream:stream>";
+    "</failure>";
 constexpr char kRestartStreamResponse[] =
     "<stream:features><bind xmlns=\"urn:ietf:params:xml:ns:xmpp-bind\"/>"
     "<session xmlns=\"urn:ietf:params:xml:ns:xmpp-session\"/>"

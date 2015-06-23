@@ -121,6 +121,7 @@ void XmppChannel::OnStreamStart(const std::string& node_name,
 
 void XmppChannel::OnStreamEnd(const std::string& node_name) {
   VLOG(2) << "XMPP stream ended: " << node_name;
+  Stop();
   if (IsConnected()) {
     // If we had a fully-established connection, restart it now.
     // However, if the connection has never been established yet (e.g.
@@ -344,7 +345,7 @@ void XmppChannel::OnMessageSent() {
 }
 
 void XmppChannel::WaitForMessage() {
-  if (read_pending_)
+  if (read_pending_ || !stream_)
     return;
 
   chromeos::ErrorPtr error;
