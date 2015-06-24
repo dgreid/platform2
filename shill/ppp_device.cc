@@ -88,6 +88,13 @@ IPConfig::Properties PPPDevice::ParseIPConfiguration(
       size_t prefix = IPAddress::GetMaxPrefixLength(properties.address_family);
       properties.exclusion_list.push_back(value + "/" +
                                           base::SizeTToString(prefix));
+    } else if (key == kPPPMRU) {
+      int mru;
+      if (!base::StringToInt(value, &mru)) {
+        LOG(WARNING) << "Failed to parse MRU: " << value;
+        continue;
+      }
+      properties.mtu = mru;
     } else {
       SLOG(PPP, nullptr, 2) << "Key ignored.";
     }

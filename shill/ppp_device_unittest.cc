@@ -34,6 +34,7 @@ TEST(PPPDeviceTest, ParseIPConfiguration) {
   config[kPPPDNS2] = "2.2.2.2";
   config[kPPPInterfaceName] = "ppp0";
   config[kPPPLNSAddress] = "99.88.77.66";
+  config[kPPPMRU] = "1492";
   config["foo"] = "bar";  // Unrecognized keys don't cause crash.
   IPConfig::Properties props =
       PPPDevice::ParseIPConfiguration("in-test", config);
@@ -48,6 +49,7 @@ TEST(PPPDeviceTest, ParseIPConfiguration) {
   EXPECT_EQ("2.2.2.2", props.dns_servers[1]);
   EXPECT_EQ("99.88.77.66/32", props.exclusion_list[0]);
   EXPECT_EQ(1, props.exclusion_list.size());
+  EXPECT_EQ(1492, props.mtu);
 
   // No gateway specified.
   config.erase(kPPPGatewayAddress);

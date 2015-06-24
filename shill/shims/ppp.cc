@@ -2,6 +2,25 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// pppd.h, which is required by lcp.h, is not C++ compatible.  The following
+// contortions are required before including anything else to ensure that we
+// control the definition of bool before stdbool get indirectly included so that
+// we can redefine it.
+
+#include <sys/types.h>
+
+extern "C" {
+#include <pppd/fsm.h>
+#include <pppd/ipcp.h>
+
+#define class class_num
+#define bool pppd_bool_t
+#include <pppd/pppd.h>
+#undef bool
+#undef class
+#include <pppd/lcp.h>
+}
+
 #include "shill/shims/ppp.h"
 
 #include <arpa/inet.h>
@@ -9,13 +28,9 @@
 
 #include <map>
 
-extern "C" {
-#include <pppd/fsm.h>
-#include <pppd/ipcp.h>
-}
-
 #include <base/command_line.h>
 #include <base/logging.h>
+#include <base/strings/string_number_conversions.h>
 #include <chromeos/syslog_logging.h>
 #include <dbus-c++/eventloop-integration.h>
 
@@ -98,6 +113,9 @@ void PPP::OnConnect(const string &ifname) {
   }
   if (ipcp_gotoptions[0].dnsaddr[1]) {
     dict[kPPPDNS2] = ConvertIPToText(&ipcp_gotoptions[0].dnsaddr[1]);
+  }
+  if (lcp_gotoptions[0].mru) {
+    dict[kPPPMRU] = base::IntToString(lcp_gotoptions[0].mru);
   }
   string lns_address;
   if (Environment::GetInstance()->GetVariable("LNS_ADDRESS", &lns_address)) {
