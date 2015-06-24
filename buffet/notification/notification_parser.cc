@@ -23,6 +23,19 @@ bool ParseCommandCreated(const base::DictionaryValue& notification,
   return true;
 }
 
+// Processes DEVICE_DELETED notifications.
+bool ParseDeviceDeleted(const base::DictionaryValue& notification,
+                        NotificationDelegate* delegate) {
+  std::string device_id;
+  if (!notification.GetString("deviceId", &device_id)) {
+    LOG(ERROR) << "DEVICE_DELETED notification is missing 'deviceId' property";
+    return false;
+  }
+
+  delegate->OnDeviceDeleted(device_id);
+  return true;
+}
+
 }  // anonymous namespace
 
 bool ParseNotificationJson(const base::DictionaryValue& notification,
@@ -45,6 +58,9 @@ bool ParseNotificationJson(const base::DictionaryValue& notification,
 
   if (type == "COMMAND_CREATED")
     return ParseCommandCreated(notification, delegate);
+
+  if (type == "DEVICE_DELETED")
+    return ParseDeviceDeleted(notification, delegate);
 
   // Here we ignore other types of notifications for now.
   LOG(INFO) << "Ignoring push notification of type " << type;

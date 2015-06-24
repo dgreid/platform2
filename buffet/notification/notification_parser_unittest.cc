@@ -9,6 +9,7 @@
 
 #include "buffet/commands/unittest_utils.h"
 
+using testing::SaveArg;
 using testing::Invoke;
 using testing::_;
 
@@ -22,6 +23,7 @@ class MockNotificationDelegate : public NotificationDelegate {
   MOCK_METHOD0(OnDisconnected, void());
   MOCK_METHOD0(OnPermanentFailure, void());
   MOCK_METHOD1(OnCommandCreated, void(const base::DictionaryValue& command));
+  MOCK_METHOD1(OnDeviceDeleted, void(const std::string&));
 };
 
 class NotificationParserTest : public ::testing::Test {
@@ -70,6 +72,19 @@ TEST_F(NotificationParserTest, CommandCreated) {
       "creationTimeMs": "1403444174811"
     })";
   EXPECT_JSON_EQ(expected_json, command_instance);
+}
+
+TEST_F(NotificationParserTest, DeviceDeleted) {
+  auto json = CreateDictionaryValue(R"({
+    "kind":"clouddevices#notification",
+    "type":"DEVICE_DELETED",
+    "deviceId":"some_device_id"
+  })");
+
+  std::string device_id;
+  EXPECT_CALL(delegate_, OnDeviceDeleted(_)).WillOnce(SaveArg<0>(&device_id));
+  EXPECT_TRUE(ParseNotificationJson(*json, &delegate_));
+  EXPECT_EQ("some_device_id", device_id);
 }
 
 TEST_F(NotificationParserTest, Failure_NoKind) {

@@ -269,11 +269,12 @@ class DeviceRegistrationInfo : public NotificationDelegate {
   void OnCommandDefsChanged();
   void OnStateChanged();
 
-  // Overrides from NotificationDelegate
+  // Overrides from NotificationDelegate.
   void OnConnected(const std::string& channel_name) override;
   void OnDisconnected() override;
   void OnPermanentFailure() override;
   void OnCommandCreated(const base::DictionaryValue& command) override;
+  void OnDeviceDeleted(const std::string& device_id) override;
 
   // Wipes out the device registration information and stops server connections.
   void MarkDeviceUnregistered();

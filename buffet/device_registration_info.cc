@@ -1039,6 +1039,15 @@ void DeviceRegistrationInfo::OnCommandCreated(
                 base::Bind(&IgnoreCloudError));
 }
 
+void DeviceRegistrationInfo::OnDeviceDeleted(const std::string& device_id) {
+  if (device_id != config_->device_id()) {
+    LOG(WARNING) << "Unexpected device deletion notification for device ID '"
+                 << device_id << "'";
+    return;
+  }
+  MarkDeviceUnregistered();
+}
+
 void DeviceRegistrationInfo::MarkDeviceUnregistered() {
   if (!HaveRegistrationCredentials())
     return;
