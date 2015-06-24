@@ -124,7 +124,7 @@ DeviceRegistrationInfo::DeviceRegistrationInfo(
       shill_client_{shill_client} {
   cloud_backoff_policy_.reset(new chromeos::BackoffEntry::Policy{});
   cloud_backoff_policy_->num_errors_to_ignore = 0;
-  cloud_backoff_policy_->initial_delay_ms = 100;
+  cloud_backoff_policy_->initial_delay_ms = 1000;
   cloud_backoff_policy_->multiply_factor = 2.0;
   cloud_backoff_policy_->jitter_factor = 0.1;
   cloud_backoff_policy_->maximum_backoff_ms = 30000;
@@ -598,8 +598,6 @@ void DeviceRegistrationInfo::OnCloudRequestSuccess(
     return;
   }
 
-  cloud_backoff_entry_->InformOfRequest(true);
-
   chromeos::ErrorPtr error;
   auto json_resp = chromeos::http::ParseJsonResponse(response.get(), nullptr,
                                                      &error);
@@ -610,10 +608,17 @@ void DeviceRegistrationInfo::OnCloudRequestSuccess(
 
   if (!response->IsSuccessful()) {
     ParseGCDError(json_resp.get(), &error);
+    if (status_code == chromeos::http::status_code::Forbidden &&
+        error->HasError(buffet::kErrorDomainGCDServer, "rateLimitExceeded")) {
+      // If we exceeded server quota, retry the request later.
+      RetryCloudRequest(data);
+      return;
+    }
     data->error_callback.Run(error.get());
     return;
   }
 
+  cloud_backoff_entry_->InformOfRequest(true);
   SetRegistrationStatus(RegistrationStatus::kConnected);
   data->success_callback.Run(*json_resp);
 }
@@ -628,6 +633,7 @@ void DeviceRegistrationInfo::OnCloudRequestError(
 
 void DeviceRegistrationInfo::RetryCloudRequest(
     const std::shared_ptr<const CloudRequestData>& data) {
+  // TODO(avakulenko): Tie connecting/connected status to XMPP channel instead.
   SetRegistrationStatus(RegistrationStatus::kConnecting);
   cloud_backoff_entry_->InformOfRequest(false);
   SendCloudRequest(data);
