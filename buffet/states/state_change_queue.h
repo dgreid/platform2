@@ -26,6 +26,7 @@ class StateChangeQueue : public StateChangeQueueInterface {
       base::Time timestamp,
       native_types::Object changed_properties) override;
   std::vector<StateChange> GetAndClearRecordedStateChanges() override;
+  UpdateID GetLastStateChangeId() const override { return last_change_id_; }
 
  private:
   // To make sure we do not call NotifyPropertiesUpdated() and
@@ -39,6 +40,10 @@ class StateChangeQueue : public StateChangeQueueInterface {
 
   // Accumulated list of device state change notifications.
   std::map<base::Time, native_types::Object> state_changes_;
+
+  // An ID of last state change update. Each NotifyPropertiesUpdated()
+  // invocation increments this value by 1.
+  UpdateID last_change_id_{0};
 
   DISALLOW_COPY_AND_ASSIGN(StateChangeQueue);
 };

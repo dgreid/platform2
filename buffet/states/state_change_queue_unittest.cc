@@ -26,6 +26,7 @@ class StateChangeQueueTest : public ::testing::Test {
 
 TEST_F(StateChangeQueueTest, Empty) {
   EXPECT_TRUE(queue_->IsEmpty());
+  EXPECT_EQ(0, queue_->GetLastStateChangeId());
   EXPECT_TRUE(queue_->GetAndClearRecordedStateChanges().empty());
 }
 
@@ -37,7 +38,9 @@ TEST_F(StateChangeQueueTest, UpdateOne) {
   ASSERT_TRUE(queue_->NotifyPropertiesUpdated(change.timestamp,
                                               change.changed_properties));
   EXPECT_FALSE(queue_->IsEmpty());
+  EXPECT_EQ(1, queue_->GetLastStateChangeId());
   auto changes = queue_->GetAndClearRecordedStateChanges();
+  EXPECT_EQ(1, queue_->GetLastStateChangeId());
   ASSERT_EQ(1, changes.size());
   EXPECT_EQ(change.timestamp, changes.front().timestamp);
   EXPECT_EQ(change.changed_properties, changes.front().changed_properties);
@@ -62,6 +65,7 @@ TEST_F(StateChangeQueueTest, UpdateMany) {
   };
   ASSERT_TRUE(queue_->NotifyPropertiesUpdated(change2.timestamp,
                                               change2.changed_properties));
+  EXPECT_EQ(2, queue_->GetLastStateChangeId());
   EXPECT_FALSE(queue_->IsEmpty());
   auto changes = queue_->GetAndClearRecordedStateChanges();
   ASSERT_EQ(2, changes.size());
@@ -94,6 +98,7 @@ TEST_F(StateChangeQueueTest, GroupByTimestamp) {
       native_types::Object{{"prop.name1", unittests::make_int_prop_value(4)}}));
 
   auto changes = queue_->GetAndClearRecordedStateChanges();
+  EXPECT_EQ(4, queue_->GetLastStateChangeId());
   ASSERT_EQ(2, changes.size());
 
   native_types::Object expected1{
@@ -136,6 +141,7 @@ TEST_F(StateChangeQueueTest, MaxQueueSize) {
         {"prop.name11", unittests::make_int_prop_value(11)},
       }));
 
+  EXPECT_EQ(3, queue_->GetLastStateChangeId());
   auto changes = queue_->GetAndClearRecordedStateChanges();
   ASSERT_EQ(2, changes.size());
 

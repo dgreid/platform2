@@ -20,6 +20,8 @@ class MockStateChangeQueueInterface : public StateChangeQueueInterface {
                bool(base::Time timestamp,
                     native_types::Object changed_properties));
   MOCK_METHOD0(GetAndClearRecordedStateChanges, std::vector<StateChange>());
+  MOCK_CONST_METHOD0(GetLastStateChangeId,
+                     StateChangeQueueInterface::UpdateID());
 };
 
 }  // namespace buffet

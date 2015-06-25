@@ -10,7 +10,7 @@
 #include <base/time/time.h>
 #include <chromeos/variant_dictionary.h>
 
-#include "commands/schema_utils.h"
+#include "buffet/commands/schema_utils.h"
 
 namespace buffet {
 
@@ -29,6 +29,8 @@ struct StateChange {
 // change notification events.
 class StateChangeQueueInterface {
  public:
+  using UpdateID = uint64_t;
+
   // Returns true if the state change notification queue is empty.
   virtual bool IsEmpty() const = 0;
 
@@ -40,9 +42,13 @@ class StateChangeQueueInterface {
   // Returns the recorded state changes since last time this method was called.
   virtual std::vector<StateChange> GetAndClearRecordedStateChanges() = 0;
 
+  // Returns an ID of last state change update. Each NotifyPropertiesUpdated()
+  // invocation increments this value by 1.
+  virtual UpdateID GetLastStateChangeId() const = 0;
+
  protected:
   // No one should attempt do destroy the queue through the interface.
-  ~StateChangeQueueInterface() {}
+  virtual ~StateChangeQueueInterface() {}
 };
 
 }  // namespace buffet

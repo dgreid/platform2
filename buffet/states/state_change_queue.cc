@@ -42,6 +42,7 @@ bool StateChangeQueue::NotifyPropertiesUpdated(
                                element_old->second.end());
     state_changes_.erase(element_old);
   }
+  ++last_change_id_;
   return true;
 }
 
