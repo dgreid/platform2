@@ -58,16 +58,30 @@ void IqStanzaHandler::SendRequest(
     const std::string& body,
     const ResponseCallback& response_callback,
     const TimeoutCallback& timeout_callback) {
+  return SendRequestWithCustomTimeout(
+      type, from, to, body,
+      base::TimeDelta::FromSeconds(kTimeoutIntervalSeconds), response_callback,
+      timeout_callback);
+}
+
+void IqStanzaHandler::SendRequestWithCustomTimeout(
+    const std::string& type,
+    const std::string& from,
+    const std::string& to,
+    const std::string& body,
+    base::TimeDelta timeout,
+    const ResponseCallback& response_callback,
+    const TimeoutCallback& timeout_callback) {
   // Remember the response callback to call later.
   requests_.emplace(++last_request_id_, response_callback);
   // Schedule a time-out callback for this request.
-  task_runner_->PostDelayedTask(
-      FROM_HERE,
-      base::Bind(&IqStanzaHandler::OnTimeOut,
-                 weak_ptr_factory_.GetWeakPtr(),
-                 last_request_id_,
-                 timeout_callback),
-      base::TimeDelta::FromSeconds(kTimeoutIntervalSeconds));
+  if (timeout < base::TimeDelta::Max()) {
+    task_runner_->PostDelayedTask(
+        FROM_HERE,
+        base::Bind(&IqStanzaHandler::OnTimeOut, weak_ptr_factory_.GetWeakPtr(),
+                   last_request_id_, timeout_callback),
+        timeout);
+  }
 
   std::string message = BuildIqStanza(std::to_string(last_request_id_),
                                       type, to, from, body);

@@ -45,6 +45,16 @@ class IqStanzaHandler {
                    const ResponseCallback& response_callback,
                    const TimeoutCallback& timeout_callback);
 
+  // |timeout| is the custom time interval after which requests should be
+  // considered failed.
+  void SendRequestWithCustomTimeout(const std::string& type,
+                                    const std::string& from,
+                                    const std::string& to,
+                                    const std::string& body,
+                                    base::TimeDelta timeout,
+                                    const ResponseCallback& response_callback,
+                                    const TimeoutCallback& timeout_callback);
+
   // Processes an <iq> stanza is received from the server. This will match the
   // stanza's 'id' attribute with pending request ID and if found, will
   // call the |response_callback|, or if the request is not found, an error

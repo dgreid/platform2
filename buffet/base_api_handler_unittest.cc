@@ -53,7 +53,7 @@ class BaseApiHandlerTest : public ::testing::Test {
         command_manager_, state_manager_,
         std::unique_ptr<BuffetConfig>{new BuffetConfig{
             std::unique_ptr<StorageInterface>{new MemStorage}}},
-        transport_, true));
+        transport_, true, nullptr));
     handler_.reset(new BaseApiHandler{
         dev_reg_->AsWeakPtr(), state_manager_, command_manager_});
   }

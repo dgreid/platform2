@@ -25,6 +25,7 @@
 #include "buffet/base_api_handler.h"
 #include "buffet/commands/command_instance.h"
 #include "buffet/commands/schema_constants.h"
+#include "buffet/privet/shill_client.h"
 #include "buffet/states/state_change_queue.h"
 #include "buffet/states/state_manager.h"
 #include "buffet/storage_impls.h"
@@ -76,11 +77,13 @@ void Manager::Start(const base::FilePath& config_path,
   transport->SetDefaultTimeout(base::TimeDelta::FromSeconds(
       kRequestTimeoutSeconds));
 
+  shill_client_.reset(new privetd::ShillClient(dbus_object_.GetBus(), {}));
+
   // TODO(avakulenko): Figure out security implications of storing
   // device info state data unencrypted.
   device_info_.reset(new DeviceRegistrationInfo(
       command_manager_, state_manager_, std::move(config), transport,
-      xmpp_enabled));
+      xmpp_enabled, shill_client_.get()));
   device_info_->AddOnRegistrationChangedCallback(base::Bind(
       &Manager::OnRegistrationChanged, weak_ptr_factory_.GetWeakPtr()));
 

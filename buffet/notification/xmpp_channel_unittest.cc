@@ -103,7 +103,7 @@ class FakeXmppChannel : public XmppChannel {
   FakeXmppChannel(
       const scoped_refptr<base::SingleThreadTaskRunner>& task_runner,
       base::Clock* clock)
-      : XmppChannel{kAccountName, kAccessToken, task_runner},
+      : XmppChannel{kAccountName, kAccessToken, task_runner, nullptr},
         fake_stream_{chromeos::Stream::AccessMode::READ_WRITE, task_runner,
                      clock} {}
 
@@ -112,12 +112,13 @@ class FakeXmppChannel : public XmppChannel {
 
   void Connect(const std::string& host, uint16_t port,
                const base::Closure& callback) override {
+    set_state(XmppState::kConnecting);
     stream_ = &fake_stream_;
     callback.Run();
   }
 
-  void StartPingTimer() override {}
-  void StopPingTimer() override {}
+  void SchedulePing(base::TimeDelta interval,
+                    base::TimeDelta timeout) override {}
 
   chromeos::FakeStream fake_stream_;
 };
@@ -183,7 +184,7 @@ TEST_F(XmppChannelTest, StartStream) {
   xmpp_client_->fake_stream_.ExpectWritePacketString({}, kStartStreamMessage);
   xmpp_client_->Start(nullptr);
   RunTasks(1);
-  EXPECT_EQ(XmppChannel::XmppState::kStarted, xmpp_client_->state());
+  EXPECT_EQ(XmppChannel::XmppState::kConnected, xmpp_client_->state());
 }
 
 TEST_F(XmppChannelTest, HandleStartedResponse) {

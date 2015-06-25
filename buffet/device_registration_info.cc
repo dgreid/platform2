@@ -114,12 +114,14 @@ DeviceRegistrationInfo::DeviceRegistrationInfo(
     const std::shared_ptr<StateManager>& state_manager,
     std::unique_ptr<BuffetConfig> config,
     const std::shared_ptr<chromeos::http::Transport>& transport,
-    bool notifications_enabled)
+    bool notifications_enabled,
+    privetd::ShillClient* shill_client)
     : transport_{transport},
       command_manager_{command_manager},
       state_manager_{state_manager},
       config_{std::move(config)},
-      notifications_enabled_{notifications_enabled} {
+      notifications_enabled_{notifications_enabled},
+      shill_client_{shill_client} {
   cloud_backoff_policy_.reset(new chromeos::BackoffEntry::Policy{});
   cloud_backoff_policy_->num_errors_to_ignore = 0;
   cloud_backoff_policy_->initial_delay_ms = 100;
@@ -347,8 +349,8 @@ void DeviceRegistrationInfo::StartNotificationChannel() {
   }
 
   notification_channel_starting_ = true;
-  primary_notification_channel_.reset(
-      new XmppChannel{config_->robot_account(), access_token_, task_runner});
+  primary_notification_channel_.reset(new XmppChannel{
+      config_->robot_account(), access_token_, task_runner, shill_client_});
   primary_notification_channel_->Start(this);
 }
 

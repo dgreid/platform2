@@ -110,6 +110,7 @@ class Manager final : public org::chromium::Buffet::ManagerInterface {
   std::shared_ptr<StateManager> state_manager_;
   std::unique_ptr<DeviceRegistrationInfo> device_info_;
   std::unique_ptr<BaseApiHandler> base_api_handler_;
+  std::unique_ptr<privetd::ShillClient> shill_client_;
 
   base::WeakPtrFactory<Manager> weak_ptr_factory_{this};
   DISALLOW_COPY_AND_ASSIGN(Manager);

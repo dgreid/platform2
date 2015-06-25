@@ -14,13 +14,16 @@
 #include <base/macros.h>
 #include <base/memory/weak_ptr.h>
 #include <base/single_thread_task_runner.h>
-#include <base/timer/timer.h>
 #include <chromeos/backoff_entry.h>
 #include <chromeos/streams/stream.h>
 
 #include "buffet/notification/notification_channel.h"
 #include "buffet/notification/xmpp_iq_stanza_handler.h"
 #include "buffet/notification/xmpp_stream_parser.h"
+
+namespace privetd {
+class ShillClient;
+}
 
 namespace buffet {
 
@@ -42,7 +45,8 @@ class XmppChannel : public NotificationChannel,
   // so you will need to reset the XmppClient every time this happens.
   XmppChannel(const std::string& account,
               const std::string& access_token,
-              const scoped_refptr<base::SingleThreadTaskRunner>& task_runner);
+              const scoped_refptr<base::SingleThreadTaskRunner>& task_runner,
+              privetd::ShillClient* shill);
   ~XmppChannel() override = default;
 
   // Overrides from NotificationChannel.
@@ -57,7 +61,8 @@ class XmppChannel : public NotificationChannel,
   // Internal states for the XMPP stream.
   enum class XmppState {
     kNotStarted,
-    kStarted,
+    kConnecting,
+    kConnected,
     kTlsStarted,
     kTlsCompleted,
     kAuthenticationStarted,
@@ -74,8 +79,9 @@ class XmppChannel : public NotificationChannel,
   // to help provide unit-test-specific functionality.
   virtual void Connect(const std::string& host, uint16_t port,
                        const base::Closure& callback);
-  virtual void StartPingTimer();
-  virtual void StopPingTimer();
+  virtual void SchedulePing(base::TimeDelta interval, base::TimeDelta timeout);
+  void ScheduleRegularPing();
+  void ScheduleFastPing();
 
   XmppState state_{XmppState::kNotStarted};
 
@@ -119,9 +125,11 @@ class XmppChannel : public NotificationChannel,
 
   // Sends a ping request to the server to check if the connection is still
   // valid.
-  void PingServer();
-  void OnPingResponse(std::unique_ptr<XmlNode> reply);
-  void OnPingTimeout();
+  void PingServer(base::TimeDelta timeout);
+  void OnPingResponse(base::Time sent_time, std::unique_ptr<XmlNode> reply);
+  void OnPingTimeout(base::Time sent_time);
+
+  void OnConnectivityChanged(bool online);
 
   // Robot account name for the device.
   std::string account_;
@@ -153,8 +161,8 @@ class XmppChannel : public NotificationChannel,
   bool write_pending_{false};
   std::unique_ptr<IqStanzaHandler> iq_stanza_handler_;
 
-  base::Timer ping_timer_{true, true};
-
+  base::WeakPtrFactory<XmppChannel> ping_ptr_factory_{this};
+  base::WeakPtrFactory<XmppChannel> task_ptr_factory_{this};
   base::WeakPtrFactory<XmppChannel> weak_ptr_factory_{this};
   DISALLOW_COPY_AND_ASSIGN(XmppChannel);
 };

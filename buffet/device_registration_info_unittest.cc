@@ -174,9 +174,9 @@ class DeviceRegistrationInfoTest : public ::testing::Test {
 
     std::unique_ptr<BuffetConfig> config{new BuffetConfig{std::move(storage)}};
     config_ = config.get();
-    dev_reg_ = std::unique_ptr<DeviceRegistrationInfo>(
-        new DeviceRegistrationInfo(command_manager_, state_manager_,
-                                   std::move(config), transport_, true));
+    dev_reg_.reset(new DeviceRegistrationInfo{command_manager_, state_manager_,
+                                              std::move(config), transport_,
+                                              true, nullptr});
 
     ReloadConfig();
   }

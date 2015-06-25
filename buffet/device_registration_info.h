@@ -37,6 +37,10 @@ namespace chromeos {
 class KeyValueStore;
 }  // namespace chromeos
 
+namespace privetd {
+class ShillClient;
+}
+
 namespace buffet {
 
 class StateManager;
@@ -60,7 +64,8 @@ class DeviceRegistrationInfo : public NotificationDelegate {
       const std::shared_ptr<StateManager>& state_manager,
       std::unique_ptr<BuffetConfig> config,
       const std::shared_ptr<chromeos::http::Transport>& transport,
-      bool notifications_enabled);
+      bool notifications_enabled,
+      privetd::ShillClient* shill_client);
 
   ~DeviceRegistrationInfo() override;
 
@@ -293,6 +298,8 @@ class DeviceRegistrationInfo : public NotificationDelegate {
   std::unique_ptr<PullChannel> pull_channel_;
   NotificationChannel* current_notification_channel_{nullptr};
   bool notification_channel_starting_{false};
+
+  privetd::ShillClient* shill_client_{nullptr};
 
   // Tracks our current registration status.
   RegistrationStatus registration_status_{RegistrationStatus::kUnconfigured};
