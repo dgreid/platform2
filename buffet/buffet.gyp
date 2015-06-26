@@ -131,6 +131,7 @@
             'base_api_handler_unittest.cc',
             'buffet_testrunner.cc',
             'buffet_config_unittest.cc',
+            'commands/cloud_command_proxy_unittest.cc',
             'commands/command_definition_unittest.cc',
             'commands/command_dictionary_unittest.cc',
             'commands/command_instance_unittest.cc',

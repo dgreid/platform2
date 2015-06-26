@@ -57,4 +57,15 @@ std::vector<StateChange> StateChangeQueue::GetAndClearRecordedStateChanges() {
   return changes;
 }
 
+StateChangeQueueInterface::Token StateChangeQueue::AddOnStateUpdatedCallback(
+    const base::Callback<void(UpdateID)>& callback) {
+  if (state_changes_.empty())
+    callback.Run(last_change_id_);
+  return Token{callbacks_.Add(callback).release()};
+}
+
+void StateChangeQueue::NotifyStateUpdatedOnServer(UpdateID update_id) {
+  callbacks_.Notify(update_id);
+}
+
 }  // namespace buffet

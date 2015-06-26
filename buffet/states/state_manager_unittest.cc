@@ -198,10 +198,10 @@ TEST_F(StateManagerTest, GetAndClearRecordedStateChanges) {
   EXPECT_CALL(mock_state_change_queue_, GetAndClearRecordedStateChanges())
       .WillOnce(Return(expected_val));
   auto changes = mgr_->GetAndClearRecordedStateChanges();
-  ASSERT_EQ(1, changes.size());
-  EXPECT_EQ(expected_val.back().timestamp, changes.back().timestamp);
+  ASSERT_EQ(1, changes.second.size());
+  EXPECT_EQ(expected_val.back().timestamp, changes.second.back().timestamp);
   EXPECT_EQ(expected_val.back().changed_properties,
-            changes.back().changed_properties);
+            changes.second.back().changed_properties);
 }
 
 TEST_F(StateManagerTest, SetProperties) {

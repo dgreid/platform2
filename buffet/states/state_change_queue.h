@@ -27,6 +27,9 @@ class StateChangeQueue : public StateChangeQueueInterface {
       native_types::Object changed_properties) override;
   std::vector<StateChange> GetAndClearRecordedStateChanges() override;
   UpdateID GetLastStateChangeId() const override { return last_change_id_; }
+  Token AddOnStateUpdatedCallback(
+      const base::Callback<void(UpdateID)>& callback) override;
+  void NotifyStateUpdatedOnServer(UpdateID update_id) override;
 
  private:
   // To make sure we do not call NotifyPropertiesUpdated() and
@@ -44,6 +47,9 @@ class StateChangeQueue : public StateChangeQueueInterface {
   // An ID of last state change update. Each NotifyPropertiesUpdated()
   // invocation increments this value by 1.
   UpdateID last_change_id_{0};
+
+  // Callback list for state change queue even sinks.
+  base::CallbackList<void(UpdateID)> callbacks_;
 
   DISALLOW_COPY_AND_ASSIGN(StateChangeQueue);
 };

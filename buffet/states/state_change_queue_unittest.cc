@@ -5,6 +5,7 @@
 
 #include "buffet/states/state_change_queue.h"
 
+#include <chromeos/bind_lambda.h>
 #include <gtest/gtest.h>
 
 #include "buffet/commands/unittest_utils.h"
@@ -159,6 +160,31 @@ TEST_F(StateChangeQueueTest, MaxQueueSize) {
   };
   EXPECT_EQ(start_time + time_delta2, changes[1].timestamp);
   EXPECT_EQ(expected2, changes[1].changed_properties);
+}
+
+TEST_F(StateChangeQueueTest, ImmediateStateChangeNotification) {
+  // When queue is empty, registering a new callback will trigger it.
+  bool called = false;
+  auto callback = [&called](StateChangeQueueInterface::UpdateID id) {
+    called = true;
+  };
+  queue_->AddOnStateUpdatedCallback(base::Bind(callback));
+  EXPECT_TRUE(called);
+}
+
+TEST_F(StateChangeQueueTest, DelayedStateChangeNotification) {
+  // When queue is not empty, registering a new callback will not trigger it.
+  ASSERT_TRUE(queue_->NotifyPropertiesUpdated(
+      base::Time::Now(),
+      native_types::Object{
+        {"prop.name1", unittests::make_int_prop_value(1)},
+        {"prop.name2", unittests::make_int_prop_value(2)},
+      }));
+
+  auto callback = [](StateChangeQueueInterface::UpdateID id) {
+    FAIL() << "This should not be called";
+  };
+  queue_->AddOnStateUpdatedCallback(base::Bind(callback));
 }
 
 }  // namespace buffet

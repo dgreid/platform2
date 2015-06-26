@@ -30,6 +30,7 @@
 #include "buffet/notification/notification_delegate.h"
 #include "buffet/notification/pull_channel.h"
 #include "buffet/registration_status.h"
+#include "buffet/states/state_change_queue_interface.h"
 #include "buffet/storage_interface.h"
 
 namespace base {
@@ -248,7 +249,8 @@ class DeviceRegistrationInfo : public NotificationDelegate,
   void PublishCommand(const base::DictionaryValue& command);
 
   void PublishStateUpdates();
-  void OnPublishStateSuccess(const base::DictionaryValue& reply);
+  void OnPublishStateSuccess(StateChangeQueueInterface::UpdateID update_id,
+                             const base::DictionaryValue& reply);
   void OnPublishStateError(const chromeos::Error* error);
 
   // If unrecoverable error occurred (e.g. error parsing command instance),

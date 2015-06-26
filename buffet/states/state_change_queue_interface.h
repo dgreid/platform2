@@ -7,6 +7,7 @@
 
 #include <vector>
 
+#include <base/callback_list.h>
 #include <base/time/time.h>
 #include <chromeos/variant_dictionary.h>
 
@@ -30,6 +31,8 @@ struct StateChange {
 class StateChangeQueueInterface {
  public:
   using UpdateID = uint64_t;
+  using Token =
+      std::unique_ptr<base::CallbackList<void(UpdateID)>::Subscription>;
 
   // Returns true if the state change notification queue is empty.
   virtual bool IsEmpty() const = 0;
@@ -45,6 +48,16 @@ class StateChangeQueueInterface {
   // Returns an ID of last state change update. Each NotifyPropertiesUpdated()
   // invocation increments this value by 1.
   virtual UpdateID GetLastStateChangeId() const = 0;
+
+  // Subscribes for device state update notifications from cloud server.
+  // The |callback| will be called every time a state patch with given ID is
+  // successfully received and processed by GCD server.
+  // Returns a subscription token. As soon as this token is destroyed, the
+  // respective callback is removed from the callback list.
+  virtual Token AddOnStateUpdatedCallback(
+      const base::Callback<void(UpdateID)>& callback) WARN_UNUSED_RESULT = 0;
+
+  virtual void NotifyStateUpdatedOnServer(UpdateID update_id) = 0;
 
  protected:
   // No one should attempt do destroy the queue through the interface.

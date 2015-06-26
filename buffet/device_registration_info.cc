@@ -899,8 +899,12 @@ void DeviceRegistrationInfo::PublishCommand(
   if (!command_manager_->FindCommand(command_instance->GetID())) {
     LOG(INFO) << "New command '" << command_instance->GetName()
               << "' arrived, ID: " << command_instance->GetID();
+    std::unique_ptr<chromeos::BackoffEntry> backoff_entry{
+        new chromeos::BackoffEntry{cloud_backoff_policy_.get()}};
     std::unique_ptr<CommandProxyInterface> cloud_proxy{
-        new CloudCommandProxy{command_instance.get(), this}};
+        new CloudCommandProxy{command_instance.get(), this,
+                              state_manager_->GetStateChangeQueue(),
+                              std::move(backoff_entry), task_runner_}};
     command_instance->AddProxy(std::move(cloud_proxy));
     command_manager_->AddCommand(std::move(command_instance));
   }
@@ -911,8 +915,10 @@ void DeviceRegistrationInfo::PublishStateUpdates() {
   if (device_state_update_pending_)
     return;
 
-  const std::vector<StateChange> state_changes{
-      state_manager_->GetAndClearRecordedStateChanges()};
+  StateChangeQueueInterface::UpdateID update_id = 0;
+  std::vector<StateChange> state_changes;
+  std::tie(update_id, state_changes) =
+    state_manager_->GetAndClearRecordedStateChanges();
   if (state_changes.empty())
     return;
 
@@ -947,13 +953,16 @@ void DeviceRegistrationInfo::PublishStateUpdates() {
   device_state_update_pending_ = true;
   DoCloudRequest(
       chromeos::http::request_type::kPost, GetDeviceURL("patchState"), &body,
-      base::Bind(&DeviceRegistrationInfo::OnPublishStateSuccess, AsWeakPtr()),
+      base::Bind(&DeviceRegistrationInfo::OnPublishStateSuccess, AsWeakPtr(),
+                 update_id),
       base::Bind(&DeviceRegistrationInfo::OnPublishStateError, AsWeakPtr()));
 }
 
 void DeviceRegistrationInfo::OnPublishStateSuccess(
+    StateChangeQueueInterface::UpdateID update_id,
     const base::DictionaryValue& reply) {
   device_state_update_pending_ = false;
+  state_manager_->NotifyStateUpdatedOnServer(update_id);
   // See if there were more pending state updates since the previous request
   // had been sent out.
   PublishStateUpdates();

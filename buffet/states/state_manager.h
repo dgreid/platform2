@@ -9,6 +9,7 @@
 #include <memory>
 #include <set>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <base/callback.h>
@@ -58,7 +59,16 @@ class StateManager final {
 
   // Returns the recorded state changes since last time this method has been
   // called.
-  std::vector<StateChange> GetAndClearRecordedStateChanges();
+  std::pair<StateChangeQueueInterface::UpdateID, std::vector<StateChange>>
+  GetAndClearRecordedStateChanges();
+
+  // Called to notify that the state patch with |id| has been successfully sent
+  // to the server and processed.
+  void NotifyStateUpdatedOnServer(StateChangeQueueInterface::UpdateID id);
+
+  StateChangeQueueInterface* GetStateChangeQueue() const {
+    return state_change_queue_;
+  }
 
  private:
   friend class BaseApiHandlerTest;

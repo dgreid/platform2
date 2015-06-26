@@ -166,8 +166,15 @@ bool StateManager::SetPropertyValue(const std::string& full_property_name,
   return true;
 }
 
-std::vector<StateChange> StateManager::GetAndClearRecordedStateChanges() {
-  return state_change_queue_->GetAndClearRecordedStateChanges();
+std::pair<StateChangeQueueInterface::UpdateID, std::vector<StateChange>>
+StateManager::GetAndClearRecordedStateChanges() {
+  return std::make_pair(state_change_queue_->GetLastStateChangeId(),
+                        state_change_queue_->GetAndClearRecordedStateChanges());
+}
+
+void StateManager::NotifyStateUpdatedOnServer(
+    StateChangeQueueInterface::UpdateID id) {
+  state_change_queue_->NotifyStateUpdatedOnServer(id);
 }
 
 bool StateManager::LoadStateDefinition(const base::DictionaryValue& json,
