@@ -176,7 +176,7 @@ class DeviceRegistrationInfoTest : public ::testing::Test {
     config_ = config.get();
     dev_reg_.reset(new DeviceRegistrationInfo{command_manager_, state_manager_,
                                               std::move(config), transport_,
-                                              true, nullptr});
+                                              nullptr, true, nullptr});
 
     ReloadConfig();
   }

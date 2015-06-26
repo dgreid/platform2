@@ -11,7 +11,6 @@
 
 #include <base/bind.h>
 #include <base/json/json_writer.h>
-#include <base/message_loop/message_loop.h>
 #include <base/values.h>
 #include <chromeos/bind_lambda.h>
 #include <chromeos/data_encoding.h>
@@ -114,9 +113,11 @@ DeviceRegistrationInfo::DeviceRegistrationInfo(
     const std::shared_ptr<StateManager>& state_manager,
     std::unique_ptr<BuffetConfig> config,
     const std::shared_ptr<chromeos::http::Transport>& transport,
+    const scoped_refptr<base::SingleThreadTaskRunner>& task_runner,
     bool notifications_enabled,
     privetd::ShillClient* shill_client)
     : transport_{transport},
+      task_runner_{task_runner},
       command_manager_{command_manager},
       state_manager_{state_manager},
       config_{std::move(config)},
@@ -183,8 +184,7 @@ void DeviceRegistrationInfo::Start() {
 
 void DeviceRegistrationInfo::ScheduleStartDevice(const base::TimeDelta& later) {
   SetRegistrationStatus(RegistrationStatus::kConnecting);
-  base::MessageLoop* current = base::MessageLoop::current();
-  if (!current)
+  if (!task_runner_)
     return;  // Assume we're in unittests
   base::TimeDelta max_delay =
       base::TimeDelta::FromMinutes(kMaxStartDeviceRetryDelayMinutes);
@@ -193,7 +193,7 @@ void DeviceRegistrationInfo::ScheduleStartDevice(const base::TimeDelta& later) {
   base::TimeDelta retry_delay = later * 2;
   if (retry_delay > max_delay) { retry_delay = max_delay; }
   if (retry_delay < min_delay) { retry_delay = min_delay; }
-  current->PostDelayedTask(
+  task_runner_->PostDelayedTask(
       FROM_HERE,
       base::Bind(&DeviceRegistrationInfo::StartDevice,
                  weak_factory_.GetWeakPtr(), nullptr,
@@ -327,13 +327,11 @@ void DeviceRegistrationInfo::StartNotificationChannel() {
 
   LOG(INFO) << "Starting notification channel";
 
-  // If no MessageLoop assume we're in unittests.
-  if (!base::MessageLoop::current()) {
-    LOG(INFO) << "No MessageLoop, not starting notification channel";
+  // If no TaskRunner assume we're in unittests.
+  if (!task_runner_) {
+    LOG(INFO) << "No TaskRunner, not starting notification channel";
     return;
   }
-
-  auto task_runner = base::MessageLoop::current()->task_runner();
 
   if (primary_notification_channel_) {
     primary_notification_channel_->Stop();
@@ -349,7 +347,7 @@ void DeviceRegistrationInfo::StartNotificationChannel() {
   const base::TimeDelta pull_interval =
       base::TimeDelta::FromMilliseconds(config_->polling_period_ms());
   if (!pull_channel_) {
-    pull_channel_.reset(new PullChannel{pull_interval, task_runner});
+    pull_channel_.reset(new PullChannel{pull_interval, task_runner_});
     pull_channel_->Start(this);
   } else {
     pull_channel_->UpdatePullInterval(pull_interval);
@@ -363,7 +361,7 @@ void DeviceRegistrationInfo::StartNotificationChannel() {
 
   notification_channel_starting_ = true;
   primary_notification_channel_.reset(new XmppChannel{
-      config_->robot_account(), access_token_, task_runner, shill_client_});
+      config_->robot_account(), access_token_, task_runner_, shill_client_});
   primary_notification_channel_->Start(this);
 }
 
@@ -550,7 +548,7 @@ void DeviceRegistrationInfo::SendCloudRequest(
     VLOG(1) << "Cloud request delayed for "
             << cloud_backoff_entry_->GetTimeUntilRelease()
             << " due to backoff policy";
-    base::MessageLoop::current()->PostDelayedTask(
+    task_runner_->PostDelayedTask(
         FROM_HERE,
         base::Bind(&DeviceRegistrationInfo::SendCloudRequest, AsWeakPtr(),
                    data),
@@ -785,7 +783,7 @@ void DeviceRegistrationInfo::NotifyCommandAborted(
 void DeviceRegistrationInfo::RetryNotifyCommandAborted(
     const std::string& command_id,
     chromeos::ErrorPtr error) {
-  base::MessageLoop::current()->PostDelayedTask(
+  task_runner_->PostDelayedTask(
       FROM_HERE,
       base::Bind(&DeviceRegistrationInfo::NotifyCommandAborted,
                  weak_factory_.GetWeakPtr(),
@@ -902,7 +900,7 @@ void DeviceRegistrationInfo::PublishCommand(
     LOG(INFO) << "New command '" << command_instance->GetName()
               << "' arrived, ID: " << command_instance->GetID();
     std::unique_ptr<CommandProxyInterface> cloud_proxy{
-        new CloudCommandProxy(command_instance.get(), this)};
+        new CloudCommandProxy{command_instance.get(), this}};
     command_instance->AddProxy(std::move(cloud_proxy));
     command_manager_->AddCommand(std::move(command_instance));
   }

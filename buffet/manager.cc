@@ -12,6 +12,7 @@
 #include <base/bind_helpers.h>
 #include <base/json/json_reader.h>
 #include <base/json/json_writer.h>
+#include <base/message_loop/message_loop.h>
 #include <base/time/time.h>
 #include <chromeos/dbus/async_event_sequencer.h>
 #include <chromeos/dbus/exported_object_manager.h>
@@ -83,6 +84,7 @@ void Manager::Start(const base::FilePath& config_path,
   // device info state data unencrypted.
   device_info_.reset(new DeviceRegistrationInfo(
       command_manager_, state_manager_, std::move(config), transport,
+      base::MessageLoop::current()->task_runner(),
       xmpp_enabled, shill_client_.get()));
   device_info_->AddOnRegistrationChangedCallback(base::Bind(
       &Manager::OnRegistrationChanged, weak_ptr_factory_.GetWeakPtr()));

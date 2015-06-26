@@ -13,7 +13,9 @@
 
 #include <base/callback.h>
 #include <base/macros.h>
+#include <base/memory/ref_counted.h>
 #include <base/memory/weak_ptr.h>
+#include <base/single_thread_task_runner.h>
 #include <base/time/time.h>
 #include <base/timer/timer.h>
 #include <chromeos/backoff_entry.h>
@@ -66,6 +68,7 @@ class DeviceRegistrationInfo : public NotificationDelegate,
       const std::shared_ptr<StateManager>& state_manager,
       std::unique_ptr<BuffetConfig> config,
       const std::shared_ptr<chromeos::http::Transport>& transport,
+      const scoped_refptr<base::SingleThreadTaskRunner>& task_runner,
       bool notifications_enabled,
       privetd::ShillClient* shill_client);
 
@@ -287,6 +290,7 @@ class DeviceRegistrationInfo : public NotificationDelegate,
 
   // HTTP transport used for communications.
   std::shared_ptr<chromeos::http::Transport> transport_;
+  scoped_refptr<base::SingleThreadTaskRunner> task_runner_;
   // Global command manager.
   std::shared_ptr<CommandManager> command_manager_;
   // Device state manager.
