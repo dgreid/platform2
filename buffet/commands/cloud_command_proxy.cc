@@ -29,9 +29,9 @@ static const int64_t kCommandUpdateRetryTimeoutSeconds = 5;
 
 CloudCommandProxy::CloudCommandProxy(
     CommandInstance* command_instance,
-    DeviceRegistrationInfo* device_registration_info)
-    : command_instance_(command_instance),
-      device_registration_info_(device_registration_info) {
+    CloudCommandUpdateInterface* cloud_command_updater)
+    : command_instance_{command_instance},
+      cloud_command_updater_{cloud_command_updater} {
 }
 
 void CloudCommandProxy::OnResultsChanged() {
@@ -71,7 +71,7 @@ void CloudCommandProxy::SendCommandUpdate() {
   command_update_in_progress_ = true;
   in_progress_command_updates_ = new_pending_command_updates_;
   new_pending_command_updates_.reset();
-  device_registration_info_->UpdateCommand(
+  cloud_command_updater_->UpdateCommand(
       command_instance_->GetID(), patch,
       base::Bind(&CloudCommandProxy::OnUpdateCommandFinished,
                  weak_ptr_factory_.GetWeakPtr(), true),

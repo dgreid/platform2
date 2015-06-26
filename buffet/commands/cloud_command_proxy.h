@@ -11,18 +11,18 @@
 #include <base/macros.h>
 #include <base/memory/weak_ptr.h>
 
+#include "buffet/commands/cloud_command_update_interface.h"
 #include "buffet/commands/command_proxy_interface.h"
 
 namespace buffet {
 
 class CommandInstance;
-class DeviceRegistrationInfo;
 
 // Command proxy which publishes command updates to the cloud.
 class CloudCommandProxy final : public CommandProxyInterface {
  public:
   CloudCommandProxy(CommandInstance* command_instance,
-                    DeviceRegistrationInfo* device_registration_info);
+                    CloudCommandUpdateInterface* cloud_command_updater);
   ~CloudCommandProxy() override = default;
 
   // CommandProxyInterface implementation/overloads.
@@ -47,7 +47,7 @@ class CloudCommandProxy final : public CommandProxyInterface {
   void OnUpdateCommandFinished(bool success);
 
   CommandInstance* command_instance_;
-  DeviceRegistrationInfo* device_registration_info_;
+  CloudCommandUpdateInterface* cloud_command_updater_;
 
   // Set to true while a pending PATCH request is in flight to the server.
   bool command_update_in_progress_{false};

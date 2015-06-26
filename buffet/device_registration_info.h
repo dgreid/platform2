@@ -22,6 +22,7 @@
 #include <chromeos/http/http_transport.h>
 
 #include "buffet/buffet_config.h"
+#include "buffet/commands/cloud_command_update_interface.h"
 #include "buffet/commands/command_manager.h"
 #include "buffet/notification/notification_channel.h"
 #include "buffet/notification/notification_delegate.h"
@@ -50,7 +51,8 @@ extern const char kErrorDomainGCD[];
 extern const char kErrorDomainGCDServer[];
 
 // The DeviceRegistrationInfo class represents device registration information.
-class DeviceRegistrationInfo : public NotificationDelegate {
+class DeviceRegistrationInfo : public NotificationDelegate,
+                               public CloudCommandUpdateInterface {
  public:
   using OnRegistrationChangedCallback =
       base::Callback<void(RegistrationStatus)>;
@@ -125,11 +127,11 @@ class DeviceRegistrationInfo : public NotificationDelegate {
   std::string RegisterDevice(const std::string& ticket_id,
                              chromeos::ErrorPtr* error);
 
-  // Updates a command.
+  // Updates a command (override from buffet::CloudCommandUpdateInterface).
   void UpdateCommand(const std::string& command_id,
                      const base::DictionaryValue& command_patch,
                      const base::Closure& on_success,
-                     const base::Closure& on_error);
+                     const base::Closure& on_error) override;
 
   // Updates basic device information.
   bool UpdateDeviceInfo(const std::string& name,
