@@ -1075,6 +1075,7 @@ void DeviceRegistrationInfo::MarkDeviceUnregistered() {
     pull_channel_.reset();
   }
   notification_channel_starting_ = false;
+  SetRegistrationStatus(RegistrationStatus::kInvalidCredentials);
 }
 
 }  // namespace buffet
