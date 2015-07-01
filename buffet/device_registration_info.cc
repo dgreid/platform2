@@ -4,6 +4,7 @@
 
 #include "buffet/device_registration_info.h"
 
+#include <algorithm>
 #include <memory>
 #include <set>
 #include <utility>
@@ -794,18 +795,62 @@ void DeviceRegistrationInfo::RetryNotifyCommandAborted(
 void DeviceRegistrationInfo::UpdateDeviceResource(
     const base::Closure& on_success,
     const CloudRequestErrorCallback& on_failure) {
-  VLOG(1) << "Updating GCD server with CDD...";
-  std::unique_ptr<base::DictionaryValue> device_resource =
-      BuildDeviceResource(nullptr);
-  if (!device_resource)
+  queued_resource_update_callbacks_.emplace_back(on_success, on_failure);
+  if (!in_progress_resource_update_callbacks_.empty()) {
+    VLOG(1) << "Another request is already pending.";
     return;
+  }
+
+  StartQueuedUpdateDeviceResource();
+}
+
+void DeviceRegistrationInfo::StartQueuedUpdateDeviceResource() {
+  CHECK(in_progress_resource_update_callbacks_.empty());
+  if (queued_resource_update_callbacks_.empty())
+    return;
+
+  std::swap(queued_resource_update_callbacks_,
+            in_progress_resource_update_callbacks_);
+
+  VLOG(1) << "Updating GCD server with CDD...";
+  chromeos::ErrorPtr error;
+  std::unique_ptr<base::DictionaryValue> device_resource =
+      BuildDeviceResource(&error);
+  if (!device_resource) {
+    OnUpdateDeviceResourceError(error.get());
+    return;
+  }
 
   DoCloudRequest(
       chromeos::http::request_type::kPut,
       GetDeviceURL(),
       device_resource.get(),
-      base::Bind(&IgnoreCloudResultWithCallback, on_success),
-      on_failure);
+      base::Bind(&DeviceRegistrationInfo::OnUpdateDeviceResourceSuccess,
+                 AsWeakPtr()),
+      base::Bind(&DeviceRegistrationInfo::OnUpdateDeviceResourceError,
+                 AsWeakPtr()));
+}
+
+void DeviceRegistrationInfo::OnUpdateDeviceResourceSuccess(
+    const base::DictionaryValue& reply) {
+  // Make a copy of the callback list so that if the callback triggers another
+  // call to UpdateDeviceResource(), we do not modify the list we are iterating
+  // over.
+  auto callback_list = std::move(in_progress_resource_update_callbacks_);
+  for (const auto& callback_pair : callback_list)
+    callback_pair.first.Run();
+  StartQueuedUpdateDeviceResource();
+}
+
+void DeviceRegistrationInfo::OnUpdateDeviceResourceError(
+    const chromeos::Error* error) {
+  // Make a copy of the callback list so that if the callback triggers another
+  // call to UpdateDeviceResource(), we do not modify the list we are iterating
+  // over.
+  auto callback_list = std::move(in_progress_resource_update_callbacks_);
+  for (const auto& callback_pair : callback_list)
+    callback_pair.second.Run(error);
+  StartQueuedUpdateDeviceResource();
 }
 
 namespace {

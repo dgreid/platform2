@@ -235,6 +235,10 @@ class DeviceRegistrationInfo : public NotificationDelegate,
 
   void UpdateDeviceResource(const base::Closure& on_success,
                             const CloudRequestErrorCallback& on_failure);
+  void StartQueuedUpdateDeviceResource();
+  // Success/failure callbacks for UpdateDeviceResource().
+  void OnUpdateDeviceResourceSuccess(const base::DictionaryValue& reply);
+  void OnUpdateDeviceResourceError(const chromeos::Error* error);
 
   void FetchCommands(
       const base::Callback<void(const base::ListValue&)>& on_success,
@@ -307,6 +311,15 @@ class DeviceRegistrationInfo : public NotificationDelegate,
   // Flag set to true while a device state update patch request is in flight
   // to the cloud server.
   bool device_state_update_pending_{false};
+
+  using ResourceUpdateCallbackList =
+      std::vector<std::pair<base::Closure, CloudRequestErrorCallback>>;
+  // Success/error callbacks for device resource update request currently in
+  // flight to the cloud server.
+  ResourceUpdateCallbackList in_progress_resource_update_callbacks_;
+  // Success/error callbacks for device resource update requests queued while
+  // another request is in flight to the cloud server.
+  ResourceUpdateCallbackList queued_resource_update_callbacks_;
 
   const bool notifications_enabled_;
   std::unique_ptr<NotificationChannel> primary_notification_channel_;
