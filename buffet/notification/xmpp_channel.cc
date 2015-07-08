@@ -310,6 +310,7 @@ void XmppChannel::OnTlsError(const chromeos::Error* error) {
 }
 
 void XmppChannel::SendMessage(const std::string& message) {
+  CHECK(stream_) << "No XMPP socket stream available";
   if (write_pending_) {
     queued_write_data_ += message;
     return;
@@ -484,6 +485,12 @@ void XmppChannel::ScheduleFastPing() {
 
 void XmppChannel::PingServer(base::TimeDelta timeout) {
   VLOG(1) << "Sending XMPP ping";
+  if (!IsConnected()) {
+    LOG(WARNING) << "XMPP channel is not connected";
+    Restart();
+    return;
+  }
+
   // Send an XMPP Ping request as defined in XEP-0199 extension:
   // http://xmpp.org/extensions/xep-0199.html
   iq_stanza_handler_->SendRequestWithCustomTimeout(
