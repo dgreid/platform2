@@ -1673,10 +1673,12 @@ void Manager::OnDarkSuspendImminent() {
   auto result_aggregator(make_scoped_refptr(new ResultAggregator(
       Bind(&Manager::OnDarkResumeActionsComplete, AsWeakPtr()), dispatcher_,
       kTerminationActionsTimeoutMilliseconds)));
-  for (const auto &device : devices_) {
-    ResultCallback aggregator_callback(
-        Bind(&ResultAggregator::ReportResult, result_aggregator));
-    device->OnDarkResume(aggregator_callback);
+  for (const auto& device : devices_) {
+    if (device->enabled()) {
+      ResultCallback aggregator_callback(
+          Bind(&ResultAggregator::ReportResult, result_aggregator));
+      device->OnDarkResume(aggregator_callback);
+    }
   }
 }
 

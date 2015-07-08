@@ -3218,13 +3218,16 @@ TEST_F(ManagerTest, OnSuspendImminentNoDevicesPresent) {
 }
 
 TEST_F(ManagerTest, OnDarkSuspendImminentDevicesPresent) {
-  EXPECT_CALL(*mock_devices_[0].get(), OnDarkResume(_));
-  EXPECT_CALL(*mock_devices_[1].get(), OnDarkResume(_));
-  EXPECT_CALL(*mock_devices_[2].get(), OnDarkResume(_));
+  SetPowerManager();
   manager()->RegisterDevice(mock_devices_[0]);
   manager()->RegisterDevice(mock_devices_[1]);
   manager()->RegisterDevice(mock_devices_[2]);
-  SetPowerManager();
+  mock_devices_[0]->enabled_ = false;
+  mock_devices_[1]->enabled_ = true;
+  mock_devices_[2]->enabled_ = true;
+  EXPECT_CALL(*mock_devices_[0].get(), OnDarkResume(_)).Times(0);
+  EXPECT_CALL(*mock_devices_[1].get(), OnDarkResume(_));
+  EXPECT_CALL(*mock_devices_[2].get(), OnDarkResume(_));
   OnDarkSuspendImminent();
 }
 
