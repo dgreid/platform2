@@ -1934,7 +1934,10 @@ void WiFi::HelpRegisterConstDerivedBool(
       BoolAccessor(new CustomAccessor<WiFi, bool>(this, get, nullptr)));
 }
 
-void WiFi::OnBeforeSuspend(const ResultCallback &callback) {
+void WiFi::OnBeforeSuspend(const ResultCallback& callback) {
+  if (!enabled()) {
+    return;
+  }
   LOG(INFO) << __func__ << ": "
             << (IsConnectedToCurrentService() ? "connected" : "not connected");
   StopScanTimer();
@@ -1951,7 +1954,10 @@ void WiFi::OnBeforeSuspend(const ResultCallback &callback) {
       time_to_next_lease_renewal);
 }
 
-void WiFi::OnDarkResume(const ResultCallback &callback) {
+void WiFi::OnDarkResume(const ResultCallback& callback) {
+  if (!enabled()) {
+    return;
+  }
   LOG(INFO) << __func__ << ": "
             << (IsConnectedToCurrentService() ? "connected" : "not connected");
   StopScanTimer();
