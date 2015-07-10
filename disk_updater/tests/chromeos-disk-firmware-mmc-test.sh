@@ -11,7 +11,8 @@
 # Works only in the chromium chroot.
 
 export LC_ALL=C
-DISK_TEMP=$(mktemp -d)
+DISK_TEMP_TEMPLACE=test_fw.XXXXXX
+DISK_TEMP=$(mktemp -d --tmpdir "${DISK_TEMP_TEMPLACE}")
 
 
 # source the script to test: The test script is in bash to
@@ -19,7 +20,7 @@ DISK_TEMP=$(mktemp -d)
 . scripts/chromeos-disk-firmware-update.sh \
   --tmp_dir "${DISK_TEMP}" \
   --fw_package_dir "tests/test_mmc_dir" \
-  --mmc ':' \
+  --mmc "tests/mmc" \
   --test
 
 # Overwrite funtions that call hdparm

@@ -15,6 +15,8 @@
 DEFINE_string 'tmp_dir' '' "Use existing temporary directory."
 DEFINE_string 'fw_package_dir' '' "Location of the firmware package."
 DEFINE_string 'hdparm' '/sbin/hdparm' "hdparm binary to use."
+DEFINE_string 'smartctl' '/usr/sbin/smartctl' "smartctl binary to use."
+DEFINE_string 'pwr_suspend' '/usr/bin/powerd_dbus_suspend' "To power cycle SSD"
 DEFINE_string 'mmc' '/usr/bin/mmc' "mmc binary to use."
 DEFINE_string 'status' '' "Status file to write to."
 DEFINE_boolean 'test' ${FLAGS_FALSE} "For unit testing."
@@ -211,7 +213,51 @@ disk_info() {
   esac
 }
 
-# disk_hdparm_upgrade - Upgrade the firmware on the dsik
+# disk_ata_power_cnt - Get the number of power cycle
+#
+# inputs:
+#     device            -- the device name [sda,...]
+#
+disk_ata_power_cnt() {
+  local device="$1"
+
+  "${FLAGS_smartctl}" -A "/dev/${device}" | awk '
+    BEGIN { count = 0 }
+    $2 == "Power_Cycle_Count" { count = $10 }
+    END { print count }
+    '
+}
+
+# disk_ata_power_cycle - Power cycle ATA SSD
+#
+# Suspend/resume the machine to power cycle the SSD.
+#
+# inputs:
+#     device            -- the device name [sda,...]
+#
+# returns non 0 on error
+#
+disk_ata_power_cycle() {
+  local device="$1"
+  local tries=4
+  local old_pwr_cycle_count
+  local new_pwr_cycle_count
+
+  old_pwr_cycle_count=$(disk_ata_power_cnt "${device}")
+  new_pwr_cycle_count=${old_pwr_cycle_count}
+  # Gather power cycle count.
+  while [ ${old_pwr_cycle_count} -eq ${new_pwr_cycle_count} -a ${tries} -gt 0 ]; do
+     : $(( tries -= 1 ))
+     "${FLAGS_pwr_suspend}" --wakeup_timeout=4 --timeout=10
+     new_pwr_cycle_count=$(disk_ata_power_cnt "${device}")
+  done
+  if [ ${old_pwr_cycle_count} -eq ${new_pwr_cycle_count} ]; then
+    log_msg "Unable to power cycle ${device}"
+  fi
+}
+
+
+# disk_hdparm_upgrade - Upgrade the firmware on the disk
 #
 # Update the firmware on the disk.
 # TODO(gwendal): We assume the device can be updated in one shot.
@@ -229,10 +275,30 @@ disk_hdparm_upgrade() {
   local device="$1"
   local fw_file="$2"
   local fw_options="$3"
+  local hdparm_opt="--fwdownload-mode7"
+  local power_cyle=0
 
-  "${FLAGS_hdparm}" --fwdownload-mode7 "${fw_file}" \
+  if [ "${fw_options}" != "-" ]; then
+    if echo "${fw_options}" | grep -q "mode3_max"; then
+      hdparm_opt="--fwdownload-mode3-max"
+    fi
+    if echo "${fw_options}" | grep -q "power_cycle"; then
+      power_cyle=1
+    fi
+  fi
+
+  # hdparm_opt could be several options, shell must see separator.
+  "${FLAGS_hdparm}" ${hdparm_opt} "${fw_file}" \
     --yes-i-know-what-i-am-doing --please-destroy-my-drive \
     "/dev/${device}"
+
+  if [ $? -ne 0 ]; then
+    return $?
+  fi
+
+  if [ ${power_cyle} -ne 0 ]; then
+    disk_ata_power_cycle "${device}"
+  fi
 }
 
 # disk_mmc_upgrade - Upgrade the firmware on the eMMC storage

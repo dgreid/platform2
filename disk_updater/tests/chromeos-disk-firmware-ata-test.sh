@@ -11,15 +11,17 @@
 # Works only in the chromium chroot.
 
 export LC_ALL=C
-DISK_TEMP=$(mktemp -d)
-
+DISK_TEMP_TEMPLACE=test_fw.XXXXXX
+DISK_TEMP=$(mktemp -d --tmpdir "${DISK_TEMP_TEMPLACE}")
 
 # source the script to test: The test script is in bash to
 # allow paramters to be taken into account.
 . scripts/chromeos-disk-firmware-update.sh \
   --tmp_dir "${DISK_TEMP}" \
   --fw_package_dir "tests/test_fw_dir" \
-  --hdparm ':' \
+  --hdparm "tests/hdparm" \
+  --smartctl "test_smartctl" \
+  --pwr_suspend "tests/powerd_dbus_suspend" \
   --test
 
 # Overwrite funtions that call hdparm
@@ -27,7 +29,6 @@ DISK_TEMP=$(mktemp -d)
 declare -a hdparm_files
 declare -a hdparm_rc
 declare -i id_idx
-declare -i hdparm_fw_rc=0
 
 disk_hdparm_info() {
   local rc=${hdparm_rc[${id_idx}]}
@@ -36,6 +37,13 @@ disk_hdparm_info() {
   fi
   : $(( id_idx += 1))
   return ${rc}
+}
+
+test_smartctl() {
+  # Given smartctl run in a subshell, we have no memory.
+  # Never assume the power count increases. We just print a message if it fails,
+  # But at least we test the internal logic of power cycling function.
+  echo " 12 Power_Cycle_Count  0x0012   100   100   000  Old_age   Always - 123"
 }
 
 prepare_test() {
@@ -127,5 +135,20 @@ hdparm_rc=(0)
 run_test
 check_test 5 file_missing 1 $?
 echo ATA PASS 5
+
+# Test 6: Kingston update
+# A disk that matches the upgrade file
+prepare_test
+hdparm_files=(
+  'KINGSTON_RBU_SUS151S364GD-S9FM01.8'
+  'KINGSTON_RBU_SUS151S364GD-S9FM02.3'
+  'KINGSTON_RBU_SUS151S364GD-S9FM02.3'
+)
+hdparm_rc=(0 0 0)
+smartctl_pwr_count=(12 12 13)
+
+run_test
+check_test 6 disk_upgraded 0 $?
+echo ATA PASS 6
 
 rm -rf "${DISK_TEMP}"
