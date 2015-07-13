@@ -4434,12 +4434,14 @@ TEST_F(WiFiMainTest, OnBeforeSuspend_CallsWakeOnWiFi) {
   EXPECT_CALL(
       *wake_on_wifi_,
       OnBeforeSuspend(IsConnectedToCurrentService(), _, _, _, _, _, _));
+  EXPECT_CALL(*this, SuspendCallback(_)).Times(0);
   OnBeforeSuspend();
 
   SetWiFiEnabled(false);
   EXPECT_CALL(*wake_on_wifi_,
               OnBeforeSuspend(IsConnectedToCurrentService(), _, _, _, _, _, _))
       .Times(0);
+  EXPECT_CALL(*this, SuspendCallback(ErrorTypeIs(Error::kSuccess)));
   OnBeforeSuspend();
 }
 
@@ -4447,12 +4449,14 @@ TEST_F(WiFiMainTest, OnDarkResume_CallsWakeOnWiFi) {
   SetWiFiEnabled(true);
   EXPECT_CALL(*wake_on_wifi_,
               OnDarkResume(IsConnectedToCurrentService(), _, _, _, _, _));
+  EXPECT_CALL(*this, SuspendCallback(_)).Times(0);
   OnDarkResume();
 
   SetWiFiEnabled(false);
   EXPECT_CALL(*wake_on_wifi_,
               OnDarkResume(IsConnectedToCurrentService(), _, _, _, _, _))
       .Times(0);
+  EXPECT_CALL(*this, SuspendCallback(ErrorTypeIs(Error::kSuccess)));
   OnDarkResume();
 }
 

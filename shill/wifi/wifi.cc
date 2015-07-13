@@ -1861,6 +1861,7 @@ void WiFi::HelpRegisterConstDerivedBool(
 
 void WiFi::OnBeforeSuspend(const ResultCallback& callback) {
   if (!enabled()) {
+    callback.Run(Error(Error::kSuccess));
     return;
   }
   LOG(INFO) << __func__ << ": "
@@ -1881,6 +1882,7 @@ void WiFi::OnBeforeSuspend(const ResultCallback& callback) {
 
 void WiFi::OnDarkResume(const ResultCallback& callback) {
   if (!enabled()) {
+    callback.Run(Error(Error::kSuccess));
     return;
   }
   LOG(INFO) << __func__ << ": "
