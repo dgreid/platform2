@@ -19,8 +19,4 @@ fi
 # repeat the sequence three times at 10 FPS.
 SEQUENCE="$(ls $IMAGES ; ls -r $IMAGES)"
 FRAMES="$SEQUENCE $SEQUENCE $SEQUENCE"
-if [ -x /sbin/frecon ]; then
-  frecon --clear 0x000000 --frame-interval=100 --loop-start 2 $FRAMES
-else
-  ply-image --clear 0x000000 --frame-interval=100 $FRAMES
-fi
+ply-image --clear 0x000000 --frame-interval=100 $FRAMES
