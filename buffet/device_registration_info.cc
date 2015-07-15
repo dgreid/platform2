@@ -212,7 +212,7 @@ bool DeviceRegistrationInfo::VerifyRegistrationCredentials(
     chromeos::ErrorPtr* error) const {
   const bool have_credentials = HaveRegistrationCredentials();
 
-  VLOG(1) << "Device registration record "
+  VLOG(2) << "Device registration record "
           << ((have_credentials) ? "found" : "not found.");
   if (!have_credentials)
     chromeos::Error::AddTo(error, FROM_HERE, kErrorDomainGCD,
@@ -266,6 +266,7 @@ void DeviceRegistrationInfo::RefreshAccessToken(
   auto on_refresh_error = [shared_error_callback](
       chromeos::http::RequestID id,
       const chromeos::Error* error) {
+    VLOG(1) << "Refresh access token request with ID " << id << " failed";
     shared_error_callback->Run(error);
   };
 
@@ -276,12 +277,14 @@ void DeviceRegistrationInfo::RefreshAccessToken(
     {"grant_type", "refresh_token"},
   };
 
-  chromeos::http::PostFormData(
+  chromeos::http::RequestID request_id = chromeos::http::PostFormData(
       GetOAuthURL("token"), form_data, {}, transport_,
       base::Bind(&DeviceRegistrationInfo::OnRefreshAccessTokenSuccess,
                  weak_factory_.GetWeakPtr(),
                  success_callback, shared_error_callback),
       base::Bind(on_refresh_error));
+  VLOG(1) << "Refresh access token request dispatched. Request ID = "
+          << request_id;
 }
 
 void DeviceRegistrationInfo::OnRefreshAccessTokenSuccess(
@@ -289,6 +292,7 @@ void DeviceRegistrationInfo::OnRefreshAccessTokenSuccess(
     const std::shared_ptr<CloudRequestErrorCallback>& error_callback,
     chromeos::http::RequestID id,
     std::unique_ptr<chromeos::http::Response> response) {
+  VLOG(1) << "Refresh access token request with ID " << id << " completed";
   chromeos::ErrorPtr error;
   auto json = ParseOAuthResponse(response.get(), &error);
   if (!json) {
@@ -860,7 +864,7 @@ void HandleFetchCommandsResult(
     const base::DictionaryValue& json) {
   const base::ListValue* commands{nullptr};
   if (!json.GetList("commands", &commands)) {
-    VLOG(1) << "No commands in the response.";
+    VLOG(2) << "No commands in the response.";
   }
   const base::ListValue empty;
   callback.Run(commands ? *commands : empty);
