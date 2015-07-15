@@ -881,6 +881,12 @@ void DeviceRegistrationInfo::FetchCommands(
       nullptr, base::Bind(&HandleFetchCommandsResult, on_success), on_failure);
 }
 
+void DeviceRegistrationInfo::FetchAndPublishCommands() {
+  FetchCommands(base::Bind(&DeviceRegistrationInfo::PublishCommands,
+                           weak_factory_.GetWeakPtr()),
+                base::Bind(&IgnoreCloudError));
+}
+
 void DeviceRegistrationInfo::ProcessInitialCommandList(
     const base::ListValue& commands) {
   for (const base::Value* command : commands) {
@@ -1057,8 +1063,14 @@ void DeviceRegistrationInfo::OnConnected(const std::string& channel_name) {
   pull_channel_->UpdatePullInterval(
       base::TimeDelta::FromMilliseconds(config_->backup_polling_period_ms()));
   current_notification_channel_ = primary_notification_channel_.get();
-  UpdateDeviceResource(base::Bind(&base::DoNothing),
-                       base::Bind(&IgnoreCloudError));
+  // Once we update the device resource with the new notification channel,
+  // do the last poll for commands from the server, to make sure we have the
+  // latest command baseline and no other commands have been queued between
+  // the moment of the last poll and the time we successfully told the server
+  // to send new commands over the new notification channel.
+  UpdateDeviceResource(
+      base::Bind(&DeviceRegistrationInfo::FetchAndPublishCommands, AsWeakPtr()),
+      base::Bind(&IgnoreCloudError));
 }
 
 void DeviceRegistrationInfo::OnDisconnected() {
@@ -1096,9 +1108,7 @@ void DeviceRegistrationInfo::OnCommandCreated(
   // If the command was too big to be delivered over a notification channel,
   // or OnCommandCreated() was initiated from the Pull notification,
   // perform a manual command fetch from the server here.
-  FetchCommands(base::Bind(&DeviceRegistrationInfo::PublishCommands,
-                           weak_factory_.GetWeakPtr()),
-                base::Bind(&IgnoreCloudError));
+  FetchAndPublishCommands();
 }
 
 void DeviceRegistrationInfo::OnDeviceDeleted(const std::string& device_id) {

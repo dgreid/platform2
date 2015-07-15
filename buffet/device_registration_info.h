@@ -252,6 +252,10 @@ class DeviceRegistrationInfo : public NotificationDelegate,
   void PublishCommands(const base::ListValue& commands);
   void PublishCommand(const base::DictionaryValue& command);
 
+  // Helper function to pull the pending command list from the server using
+  // FetchCommands() and make them available on D-Bus with PublishCommands().
+  void FetchAndPublishCommands();
+
   void PublishStateUpdates();
   void OnPublishStateSuccess(StateChangeQueueInterface::UpdateID update_id,
                              const base::DictionaryValue& reply);
