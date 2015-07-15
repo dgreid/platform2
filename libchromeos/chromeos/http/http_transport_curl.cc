@@ -94,18 +94,18 @@ struct Transport::AsyncRequestData {
 
 Transport::Transport(const std::shared_ptr<CurlInterface>& curl_interface)
     : curl_interface_{curl_interface} {
-  VLOG(1) << "curl::Transport created";
+  VLOG(2) << "curl::Transport created";
 }
 
 Transport::Transport(const std::shared_ptr<CurlInterface>& curl_interface,
                      const std::string& proxy)
     : curl_interface_{curl_interface}, proxy_{proxy} {
-  VLOG(1) << "curl::Transport created with proxy " << proxy;
+  VLOG(2) << "curl::Transport created with proxy " << proxy;
 }
 
 Transport::~Transport() {
   ShutDownAsyncCurl();
-  VLOG(1) << "curl::Transport destroyed";
+  VLOG(2) << "curl::Transport destroyed";
 }
 
 std::shared_ptr<http::Connection> Transport::CreateConnection(
@@ -241,6 +241,7 @@ RequestID Transport::StartAsyncTransfer(http::Connection* connection,
     request_id_map_.erase(request_id);
     return 0;
   }
+  VLOG(1) << "Started asynchronous HTTP request with ID " << request_id;
   return request_id;
 }
 
@@ -440,6 +441,8 @@ void Transport::OnTransferComplete(Connection* connection, CURLcode code) {
   auto p = async_requests_.find(connection);
   CHECK(p != async_requests_.end()) << "Unknown connection";
   AsyncRequestData* request_data = p->second.get();
+  VLOG(1) << "HTTP request # " << request_data->request_id << " has completed "
+          << (code == CURLE_OK ? "successfully" : "with an error");
   if (code != CURLE_OK) {
     chromeos::ErrorPtr error;
     AddEasyCurlError(&error, FROM_HERE, code, curl_interface_.get());

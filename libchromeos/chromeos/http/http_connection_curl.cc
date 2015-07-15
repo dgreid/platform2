@@ -61,14 +61,14 @@ Connection::Connection(CURL* curl_handle,
   // Store the connection pointer inside the CURL handle so we can easily
   // retrieve it when doing asynchronous I/O.
   curl_interface_->EasySetOptPtr(curl_handle_, CURLOPT_PRIVATE, this);
-  VLOG(1) << "curl::Connection created: " << method_;
+  VLOG(2) << "curl::Connection created: " << method_;
 }
 
 Connection::~Connection() {
   if (header_list_)
     curl_slist_free_all(header_list_);
   curl_interface_->EasyCleanup(curl_handle_);
-  VLOG(1) << "curl::Connection destroyed";
+  VLOG(2) << "curl::Connection destroyed";
 }
 
 bool Connection::SendHeaders(const HeaderList& headers,
@@ -206,7 +206,7 @@ size_t Connection::write_callback(char* ptr,
                                   void* data) {
   Connection* me = reinterpret_cast<Connection*>(data);
   size_t data_len = size * num;
-  VLOG(2) << "Response data (" << data_len << "): "
+  VLOG(1) << "Response data (" << data_len << "): "
           << std::string{ptr, data_len};
   // TODO(nathanbullock): Currently we are relying on the stream not blocking,
   // but if the stream is representing a pipe or some other construct that might
