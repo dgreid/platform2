@@ -1439,8 +1439,6 @@ TEST_F(WakeOnWiFiTestWithMockDispatcher, RequestWakeOnPacketSettings) {
   RequestWakeOnPacketSettings();
 }
 
-MATCHER_P(ErrorType, type, "") { return arg.type() == type; }
-
 TEST_F(WakeOnWiFiTestWithMockDispatcher,
        VerifyWakeOnWiFiSettings_NoWakeOnPacketRules) {
   ScopedMockLog log;
@@ -1455,7 +1453,7 @@ TEST_F(WakeOnWiFiTestWithMockDispatcher,
   ScopeLogger::GetInstance()->set_verbose_level(2);
   EXPECT_TRUE(GetWakeOnPacketConnections()->Empty());
   EXPECT_FALSE(SuspendActionsCallbackIsNull());
-  EXPECT_CALL(*this, DoneCallback(ErrorType(Error::kSuccess))).Times(1);
+  EXPECT_CALL(*this, DoneCallback(ErrorTypeIs(Error::kSuccess))).Times(1);
   EXPECT_CALL(log, Log(_, _, _)).Times(AnyNumber());
   EXPECT_CALL(
       log, Log(_, _, HasSubstr("Wake on WiFi settings successfully verified")));
@@ -1498,7 +1496,7 @@ TEST_F(WakeOnWiFiTestWithMockDispatcher,
   GetWakeOnWiFiTriggers()->insert(WakeOnWiFi::kWakeTriggerDisconnect);
   ScopeLogger::GetInstance()->EnableScopesByName("wifi");
   ScopeLogger::GetInstance()->set_verbose_level(2);
-  EXPECT_CALL(*this, DoneCallback(ErrorType(Error::kSuccess))).Times(1);
+  EXPECT_CALL(*this, DoneCallback(ErrorTypeIs(Error::kSuccess))).Times(1);
   EXPECT_CALL(log, Log(_, _, _)).Times(AnyNumber());
   EXPECT_CALL(
       log, Log(_, _, HasSubstr("Wake on WiFi settings successfully verified")));
@@ -1544,7 +1542,7 @@ TEST_F(WakeOnWiFiTestWithMockDispatcher,
   SetNetDetectScanPeriodSeconds(kNetDetectScanIntervalSeconds);
   ScopeLogger::GetInstance()->EnableScopesByName("wifi");
   ScopeLogger::GetInstance()->set_verbose_level(2);
-  EXPECT_CALL(*this, DoneCallback(ErrorType(Error::kSuccess))).Times(1);
+  EXPECT_CALL(*this, DoneCallback(ErrorTypeIs(Error::kSuccess))).Times(1);
   EXPECT_CALL(log, Log(_, _, _)).Times(AnyNumber());
   EXPECT_CALL(
       log, Log(_, _, HasSubstr("Wake on WiFi settings successfully verified")));
@@ -1608,7 +1606,8 @@ TEST_F(WakeOnWiFiTestWithMockDispatcher,
   ScopeLogger::GetInstance()->EnableScopesByName("wifi");
   ScopeLogger::GetInstance()->set_verbose_level(3);
   EXPECT_FALSE(SuspendActionsCallbackIsNull());
-  EXPECT_CALL(*this, DoneCallback(ErrorType(Error::kOperationFailed))).Times(1);
+  EXPECT_CALL(*this, DoneCallback(ErrorTypeIs(Error::kOperationFailed)))
+      .Times(1);
   EXPECT_CALL(netlink_manager_, SendNl80211Message(_, _, _, _)).Times(0);
   EXPECT_CALL(log, Log(_, _, _)).Times(AnyNumber());
   EXPECT_CALL(log, Log(_, _, HasSubstr("max retry attempts reached")));
@@ -3201,12 +3200,12 @@ TEST_F(WakeOnWiFiTestWithMockDispatcher,
   const bool have_dhcp_lease = true;
   vector<ByteString> whitelist;
   AddSSIDToWhitelist(kSSIDBytes1, sizeof(kSSIDBytes1), &whitelist);
-  EXPECT_CALL(*this, DoneCallback(ErrorType(Error::kSuccess))).Times(1);
+  EXPECT_CALL(*this, DoneCallback(ErrorTypeIs(Error::kSuccess))).Times(1);
   EXPECT_CALL(*this, RenewDHCPLeaseCallback()).Times(0);
   OnBeforeSuspend(is_connected, whitelist, have_dhcp_lease,
                   kTimeToNextLeaseRenewalShort);
 
-  EXPECT_CALL(*this, DoneCallback(ErrorType(Error::kSuccess))).Times(1);
+  EXPECT_CALL(*this, DoneCallback(ErrorTypeIs(Error::kSuccess))).Times(1);
   EXPECT_CALL(*this, RenewDHCPLeaseCallback()).Times(0);
   OnBeforeSuspend(is_connected, whitelist, have_dhcp_lease,
                   kTimeToNextLeaseRenewalLong);
@@ -3217,12 +3216,12 @@ TEST_F(WakeOnWiFiTestWithMockDispatcher,
   const bool is_connected = true;
   vector<ByteString> whitelist;
   AddSSIDToWhitelist(kSSIDBytes1, sizeof(kSSIDBytes1), &whitelist);
-  EXPECT_CALL(*this, DoneCallback(ErrorType(Error::kSuccess))).Times(1);
+  EXPECT_CALL(*this, DoneCallback(ErrorTypeIs(Error::kSuccess))).Times(1);
   EXPECT_CALL(mock_dispatcher_, PostDelayedTask(_, _)).Times(0);
   EXPECT_CALL(metrics_, NotifyWakeOnWiFiOnDarkResume(_)).Times(0);
   OnDarkResume(is_connected, whitelist);
 
-  EXPECT_CALL(*this, DoneCallback(ErrorType(Error::kSuccess))).Times(1);
+  EXPECT_CALL(*this, DoneCallback(ErrorTypeIs(Error::kSuccess))).Times(1);
   EXPECT_CALL(mock_dispatcher_, PostDelayedTask(_, _)).Times(0);
   EXPECT_CALL(metrics_, NotifyWakeOnWiFiOnDarkResume(_)).Times(0);
   OnDarkResume(is_connected, whitelist);

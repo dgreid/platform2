@@ -46,6 +46,10 @@ MATCHER_P2(ErrorIs, error_type, error_message, "") {
   return error_type == arg.type() && error_message == arg.message();
 }
 
+MATCHER_P(ErrorTypeIs, error_type, "") {
+  return error_type == arg.type();
+}
+
 MATCHER(IsNullRefPtr, "") {
   return !arg.get();
 }

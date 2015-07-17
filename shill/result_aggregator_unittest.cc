@@ -10,6 +10,7 @@
 #include <gtest/gtest.h>
 
 #include "shill/mock_event_dispatcher.h"
+#include "shill/testing.h"
 
 namespace shill {
 
@@ -80,14 +81,12 @@ class ResultGenerator {
   DISALLOW_COPY_AND_ASSIGN(ResultGenerator);
 };
 
-MATCHER_P(ErrorType, type, "") { return arg.type() == type; }
-
 TEST_F(ResultAggregatorTestWithMockDispatcher, Unused) {
-  EXPECT_CALL(*this, ReportResult(ErrorType(Error::kSuccess))).Times(0);
+  EXPECT_CALL(*this, ReportResult(ErrorTypeIs(Error::kSuccess))).Times(0);
 }
 
 TEST_F(ResultAggregatorTestWithMockDispatcher, BothSucceed) {
-  EXPECT_CALL(*this, ReportResult(ErrorType(Error::kSuccess)));
+  EXPECT_CALL(*this, ReportResult(ErrorTypeIs(Error::kSuccess)));
   ResultGenerator first_generator(aggregator_);
   ResultGenerator second_generator(aggregator_);
   first_generator.GenerateResult(Error::kSuccess);
@@ -95,7 +94,7 @@ TEST_F(ResultAggregatorTestWithMockDispatcher, BothSucceed) {
 }
 
 TEST_F(ResultAggregatorTestWithMockDispatcher, FirstFails) {
-  EXPECT_CALL(*this, ReportResult(ErrorType(Error::kOperationTimeout)));
+  EXPECT_CALL(*this, ReportResult(ErrorTypeIs(Error::kOperationTimeout)));
   ResultGenerator first_generator(aggregator_);
   ResultGenerator second_generator(aggregator_);
   first_generator.GenerateResult(Error::kOperationTimeout);
@@ -103,7 +102,7 @@ TEST_F(ResultAggregatorTestWithMockDispatcher, FirstFails) {
 }
 
 TEST_F(ResultAggregatorTestWithMockDispatcher, SecondFails) {
-  EXPECT_CALL(*this, ReportResult(ErrorType(Error::kOperationTimeout)));
+  EXPECT_CALL(*this, ReportResult(ErrorTypeIs(Error::kOperationTimeout)));
   ResultGenerator first_generator(aggregator_);
   ResultGenerator second_generator(aggregator_);
   first_generator.GenerateResult(Error::kSuccess);
@@ -111,7 +110,7 @@ TEST_F(ResultAggregatorTestWithMockDispatcher, SecondFails) {
 }
 
 TEST_F(ResultAggregatorTestWithMockDispatcher, BothFail) {
-  EXPECT_CALL(*this, ReportResult(ErrorType(Error::kOperationTimeout)));
+  EXPECT_CALL(*this, ReportResult(ErrorTypeIs(Error::kOperationTimeout)));
   ResultGenerator first_generator(aggregator_);
   ResultGenerator second_generator(aggregator_);
   first_generator.GenerateResult(Error::kOperationTimeout);
@@ -129,7 +128,7 @@ TEST_F(ResultAggregatorTestWithMockDispatcher,
 TEST_F(ResultAggregatorTestWithDispatcher,
        TimeoutReceivedWithoutAnyResultsReceived) {
   InitializeResultAggregatorWithTimeout();
-  EXPECT_CALL(*this, ReportResult(ErrorType(Error::kOperationTimeout)));
+  EXPECT_CALL(*this, ReportResult(ErrorTypeIs(Error::kOperationTimeout)));
   ResultGenerator generator(aggregator_);
   dispatcher_.DispatchPendingEvents();  // Invoke timeout callback.
 }
@@ -137,7 +136,7 @@ TEST_F(ResultAggregatorTestWithDispatcher,
 TEST_F(ResultAggregatorTestWithDispatcher, TimeoutAndOtherResultReceived) {
   // Timeout should override any other error results.
   InitializeResultAggregatorWithTimeout();
-  EXPECT_CALL(*this, ReportResult(ErrorType(Error::kOperationTimeout)));
+  EXPECT_CALL(*this, ReportResult(ErrorTypeIs(Error::kOperationTimeout)));
   ResultGenerator first_generator(aggregator_);
   ResultGenerator second_generator(aggregator_);
   first_generator.GenerateResult(Error::kSuccess);
@@ -156,11 +155,11 @@ TEST_F(ResultAggregatorTestWithDispatcher,
     // with the error type kPermissionDenied that it copied.
     ResultGenerator generator(result_aggregator);
     generator.GenerateResult(Error::kPermissionDenied);
-    EXPECT_CALL(*this, ReportResult(ErrorType(Error::kPermissionDenied)));
+    EXPECT_CALL(*this, ReportResult(ErrorTypeIs(Error::kPermissionDenied)));
   }
   // The timeout callback should be canceled after the ResultAggregator went
   // out of scope and was destructed.
-  EXPECT_CALL(*this, ReportResult(ErrorType(Error::kOperationTimeout)))
+  EXPECT_CALL(*this, ReportResult(ErrorTypeIs(Error::kOperationTimeout)))
       .Times(0);
   dispatcher_.DispatchPendingEvents();
 }
