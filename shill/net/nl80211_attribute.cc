@@ -648,6 +648,12 @@ Nl80211AttributeStaInfo::Nl80211AttributeStaInfo()
       AttrDataPair(NL80211_STA_INFO_TX_BYTES,
                    NestedData(NLA_U32, "NL80211_STA_INFO_TX_BYTES", false)));
   nested_template_.insert(
+      AttrDataPair(NL80211_STA_INFO_RX_BYTES64,
+                   NestedData(NLA_U64, "NL80211_STA_INFO_RX_BYTES64", false)));
+  nested_template_.insert(
+      AttrDataPair(NL80211_STA_INFO_TX_BYTES64,
+                   NestedData(NLA_U64, "NL80211_STA_INFO_TX_BYTES64", false)));
+  nested_template_.insert(
       AttrDataPair(NL80211_STA_INFO_LLID,
                    NestedData(NLA_U16, "NL80211_STA_INFO_LLID", false)));
   nested_template_.insert(
