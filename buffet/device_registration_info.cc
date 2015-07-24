@@ -12,6 +12,7 @@
 
 #include <base/bind.h>
 #include <base/json/json_writer.h>
+#include <base/strings/string_number_conversions.h>
 #include <base/values.h>
 #include <chromeos/bind_lambda.h>
 #include <chromeos/data_encoding.h>
@@ -35,10 +36,6 @@ const char buffet::kErrorDomainGCD[] = "gcd";
 const char buffet::kErrorDomainGCDServer[] = "gcd_server";
 
 namespace {
-
-const int kMaxStartDeviceRetryDelayMinutes{1};
-const int64_t kMinStartDeviceRetryDelaySeconds{5};
-const int64_t kAbortCommandRetryDelaySeconds{5};
 
 std::pair<std::string, std::string> BuildAuthHeader(
     const std::string& access_token_type,
@@ -179,27 +176,19 @@ void DeviceRegistrationInfo::Start() {
     //             timeout as a configurable knob or allow local
     //             daemons to signal that their state is up to date so that
     //             we need not wait for them.
-    ScheduleStartDevice(base::TimeDelta::FromSeconds(5));
+    ScheduleCloudConnection(base::TimeDelta::FromSeconds(5));
   }
 }
 
-void DeviceRegistrationInfo::ScheduleStartDevice(const base::TimeDelta& later) {
+void DeviceRegistrationInfo::ScheduleCloudConnection(
+    const base::TimeDelta& delay) {
   SetRegistrationStatus(RegistrationStatus::kConnecting);
   if (!task_runner_)
     return;  // Assume we're in unittests
-  base::TimeDelta max_delay =
-      base::TimeDelta::FromMinutes(kMaxStartDeviceRetryDelayMinutes);
-  base::TimeDelta min_delay =
-      base::TimeDelta::FromSeconds(kMinStartDeviceRetryDelaySeconds);
-  base::TimeDelta retry_delay = later * 2;
-  if (retry_delay > max_delay) { retry_delay = max_delay; }
-  if (retry_delay < min_delay) { retry_delay = min_delay; }
   task_runner_->PostDelayedTask(
       FROM_HERE,
-      base::Bind(&DeviceRegistrationInfo::StartDevice,
-                 weak_factory_.GetWeakPtr(), nullptr,
-                 retry_delay),
-      later);
+      base::Bind(&DeviceRegistrationInfo::ConnectToCloud, AsWeakPtr()),
+      delay);
 }
 
 bool DeviceRegistrationInfo::HaveRegistrationCredentials() const {
@@ -447,8 +436,8 @@ std::string DeviceRegistrationInfo::RegisterDevice(const std::string& ticket_id,
     return std::string();
   }
 
-  url = GetServiceURL("registrationTickets/" + ticket_id +
-                      "/finalize?key=" + config_->api_key());
+  url = GetServiceURL("registrationTickets/" + ticket_id + "/finalize",
+                      {{"key", config_->api_key()}});
   response = chromeos::http::SendRequestWithNoDataAndBlock(
       chromeos::http::request_type::kPost, url, {}, transport_, error);
   if (!response)
@@ -464,14 +453,18 @@ std::string DeviceRegistrationInfo::RegisterDevice(const std::string& ticket_id,
   std::string auth_code;
   std::string device_id;
   std::string robot_account;
+  const base::DictionaryValue* device_draft_response = nullptr;
   if (!json_resp->GetString("robotAccountEmail", &robot_account) ||
       !json_resp->GetString("robotAccountAuthorizationCode", &auth_code) ||
-      !json_resp->GetString("deviceDraft.id", &device_id)) {
+      !json_resp->GetDictionary("deviceDraft", &device_draft_response) ||
+      !device_draft_response->GetString("id", &device_id)) {
     chromeos::Error::AddTo(error, FROM_HERE, kErrorDomainGCD,
                            "unexpected_response",
                            "Device account missing in response");
     return std::string();
   }
+
+  UpdateDeviceInfoTimestamp(*device_draft_response);
 
   // Now get access_token and refresh_token
   response = chromeos::http::PostFormDataAndBlock(GetOAuthURL("token"), {
@@ -509,9 +502,9 @@ std::string DeviceRegistrationInfo::RegisterDevice(const std::string& ticket_id,
 
   StartNotificationChannel();
 
-  // We're going to respond with our success immediately and we'll StartDevice
-  // shortly after.
-  ScheduleStartDevice(base::TimeDelta::FromSeconds(0));
+  // We're going to respond with our success immediately and we'll connect to
+  // cloud shortly after.
+  ScheduleCloudConnection(base::TimeDelta::FromSeconds(0));
   return device_id;
 }
 
@@ -584,6 +577,7 @@ void DeviceRegistrationInfo::OnCloudRequestSuccess(
   VLOG(1) << "Response for cloud request with ID " << request_id
           << " received with status code " << status_code;
   if (status_code == chromeos::http::status_code::Denied) {
+    cloud_backoff_entry_->InformOfRequest(true);
     RefreshAccessToken(
         base::Bind(&DeviceRegistrationInfo::OnAccessTokenRefreshed, AsWeakPtr(),
                    data),
@@ -606,6 +600,7 @@ void DeviceRegistrationInfo::OnCloudRequestSuccess(
                                                      &error);
   if (!json_resp) {
     data->error_callback.Run(error.get());
+    cloud_backoff_entry_->InformOfRequest(true);
     return;
   }
 
@@ -617,6 +612,7 @@ void DeviceRegistrationInfo::OnCloudRequestSuccess(
       RetryCloudRequest(data);
       return;
     }
+    cloud_backoff_entry_->InformOfRequest(true);
     data->error_callback.Run(error.get());
     return;
   }
@@ -650,35 +646,48 @@ void DeviceRegistrationInfo::OnAccessTokenRefreshed(
 void DeviceRegistrationInfo::OnAccessTokenError(
     const std::shared_ptr<const CloudRequestData>& data,
     const chromeos::Error* error) {
-  if (error->HasError(buffet::kErrorDomainOAuth2, "invalid_grant"))
-    MarkDeviceUnregistered();
+  CheckAccessTokenError(error);
   data->error_callback.Run(error);
 }
 
-void DeviceRegistrationInfo::StartDevice(
-    chromeos::ErrorPtr* error,
-    const base::TimeDelta& retry_delay) {
-  if (!VerifyRegistrationCredentials(error))
+void DeviceRegistrationInfo::CheckAccessTokenError(
+    const chromeos::Error* error) {
+  if (error->HasError(kErrorDomainOAuth2, "invalid_grant"))
+    MarkDeviceUnregistered();
+}
+
+void DeviceRegistrationInfo::ConnectToCloud() {
+  connected_to_cloud_ = false;
+  if (!VerifyRegistrationCredentials(nullptr))
     return;
-  auto handle_start_device_failure_cb = base::Bind(
-      &IgnoreCloudErrorWithCallback,
-      base::Bind(&DeviceRegistrationInfo::ScheduleStartDevice,
-                 weak_factory_.GetWeakPtr(),
-                 retry_delay));
-  // "Starting" a device just means that we:
+
+  if (access_token_.empty()) {
+    RefreshAccessToken(
+        base::Bind(&DeviceRegistrationInfo::ConnectToCloud, AsWeakPtr()),
+        base::Bind(&DeviceRegistrationInfo::CheckAccessTokenError,
+                   AsWeakPtr()));
+    return;
+  }
+
+  // Connecting a device to cloud just means that we:
   //   1) push an updated device resource
   //   2) fetch an initial set of outstanding commands
   //   3) abort any commands that we've previously marked as "in progress"
   //      or as being in an error state; publish queued commands
-  auto abort_commands_cb = base::Bind(
-      &DeviceRegistrationInfo::ProcessInitialCommandList,
-      weak_factory_.GetWeakPtr());
-  auto fetch_commands_cb = base::Bind(
-      &DeviceRegistrationInfo::FetchCommands,
-      weak_factory_.GetWeakPtr(),
-      abort_commands_cb,
-      handle_start_device_failure_cb);
-  UpdateDeviceResource(fetch_commands_cb, handle_start_device_failure_cb);
+  UpdateDeviceResource(
+      base::Bind(&DeviceRegistrationInfo::OnConnectedToCloud, AsWeakPtr()),
+      base::Bind(&IgnoreCloudError));
+}
+
+void DeviceRegistrationInfo::OnConnectedToCloud() {
+  LOG(INFO) << "Device connected to cloud server";
+  connected_to_cloud_ = true;
+  FetchCommands(base::Bind(&DeviceRegistrationInfo::ProcessInitialCommandList,
+                           AsWeakPtr()),
+                base::Bind(&IgnoreCloudError));
+  // In case there are any pending state updates since we sent off the initial
+  // UpdateDeviceResource() request, update the server with any state changes.
+  PublishStateUpdates();
 }
 
 bool DeviceRegistrationInfo::UpdateDeviceInfo(const std::string& name,
@@ -777,23 +786,8 @@ void DeviceRegistrationInfo::NotifyCommandAborted(
     command_patch.SetString(commands::attributes::kCommand_ErrorMessage,
                             chromeos::string_utils::Join(";", messages));
   }
-  UpdateCommand(command_id,
-                command_patch,
-                base::Bind(&base::DoNothing),
-                base::Bind(&DeviceRegistrationInfo::RetryNotifyCommandAborted,
-                           weak_factory_.GetWeakPtr(),
-                           command_id, base::Passed(std::move(error))));
-}
-
-void DeviceRegistrationInfo::RetryNotifyCommandAborted(
-    const std::string& command_id,
-    chromeos::ErrorPtr error) {
-  task_runner_->PostDelayedTask(
-      FROM_HERE,
-      base::Bind(&DeviceRegistrationInfo::NotifyCommandAborted,
-                 weak_factory_.GetWeakPtr(),
-                 command_id, base::Passed(std::move(error))),
-      base::TimeDelta::FromSeconds(kAbortCommandRetryDelaySeconds));
+  UpdateCommand(command_id, command_patch, base::Bind(&base::DoNothing),
+                base::Bind(&base::DoNothing));
 }
 
 void DeviceRegistrationInfo::UpdateDeviceResource(
@@ -809,12 +803,28 @@ void DeviceRegistrationInfo::UpdateDeviceResource(
 }
 
 void DeviceRegistrationInfo::StartQueuedUpdateDeviceResource() {
-  CHECK(in_progress_resource_update_callbacks_.empty());
-  if (queued_resource_update_callbacks_.empty())
+  if (in_progress_resource_update_callbacks_.empty() &&
+      queued_resource_update_callbacks_.empty())
     return;
 
-  std::swap(queued_resource_update_callbacks_,
-            in_progress_resource_update_callbacks_);
+  if (last_device_resource_updated_timestamp_.empty()) {
+    // We don't know the current time stamp of the device resource from the
+    // server side. We need to provide the time stamp to the server as part of
+    // the request to guard against out-of-order requests overwriting settings
+    // specified by later requests.
+    VLOG(1) << "Getting the last device resource timestamp from server...";
+    GetDeviceInfo(
+        base::Bind(&DeviceRegistrationInfo::OnDeviceInfoRetrieved, AsWeakPtr()),
+        base::Bind(&DeviceRegistrationInfo::OnUpdateDeviceResourceError,
+                   AsWeakPtr()));
+    return;
+  }
+
+  in_progress_resource_update_callbacks_.insert(
+      in_progress_resource_update_callbacks_.end(),
+      queued_resource_update_callbacks_.begin(),
+      queued_resource_update_callbacks_.end());
+  queued_resource_update_callbacks_.clear();
 
   VLOG(1) << "Updating GCD server with CDD...";
   chromeos::ErrorPtr error;
@@ -825,18 +835,40 @@ void DeviceRegistrationInfo::StartQueuedUpdateDeviceResource() {
     return;
   }
 
+  std::string url = GetDeviceURL(
+      {}, {{"lastUpdateTimeMs", last_device_resource_updated_timestamp_}});
+
   DoCloudRequest(
-      chromeos::http::request_type::kPut,
-      GetDeviceURL(),
-      device_resource.get(),
+      chromeos::http::request_type::kPut, url, device_resource.get(),
       base::Bind(&DeviceRegistrationInfo::OnUpdateDeviceResourceSuccess,
                  AsWeakPtr()),
       base::Bind(&DeviceRegistrationInfo::OnUpdateDeviceResourceError,
                  AsWeakPtr()));
 }
 
+void DeviceRegistrationInfo::OnDeviceInfoRetrieved(
+    const base::DictionaryValue& device_info) {
+  if (UpdateDeviceInfoTimestamp(device_info))
+    StartQueuedUpdateDeviceResource();
+}
+
+bool DeviceRegistrationInfo::UpdateDeviceInfoTimestamp(
+    const base::DictionaryValue& device_info) {
+  // For newly created devices, "lastUpdateTimeMs" may not be present, but
+  // "creationTimeMs" should be there at least.
+  if (!device_info.GetString("lastUpdateTimeMs",
+                             &last_device_resource_updated_timestamp_) &&
+      !device_info.GetString("creationTimeMs",
+                             &last_device_resource_updated_timestamp_)) {
+    LOG(WARNING) << "Device resource timestamp is missing";
+    return false;
+  }
+  return true;
+}
+
 void DeviceRegistrationInfo::OnUpdateDeviceResourceSuccess(
-    const base::DictionaryValue& reply) {
+    const base::DictionaryValue& device_info) {
+  UpdateDeviceInfoTimestamp(device_info);
   // Make a copy of the callback list so that if the callback triggers another
   // call to UpdateDeviceResource(), we do not modify the list we are iterating
   // over.
@@ -848,12 +880,24 @@ void DeviceRegistrationInfo::OnUpdateDeviceResourceSuccess(
 
 void DeviceRegistrationInfo::OnUpdateDeviceResourceError(
     const chromeos::Error* error) {
+  if (error->HasError(kErrorDomainGCDServer, "invalid_last_update_time_ms")) {
+    // If the server rejected our previous request, retrieve the latest
+    // timestamp from the server and retry.
+    VLOG(1) << "Getting the last device resource timestamp from server...";
+    GetDeviceInfo(
+        base::Bind(&DeviceRegistrationInfo::OnDeviceInfoRetrieved, AsWeakPtr()),
+        base::Bind(&DeviceRegistrationInfo::OnUpdateDeviceResourceError,
+                   AsWeakPtr()));
+    return;
+  }
+
   // Make a copy of the callback list so that if the callback triggers another
   // call to UpdateDeviceResource(), we do not modify the list we are iterating
   // over.
   auto callback_list = std::move(in_progress_resource_update_callbacks_);
   for (const auto& callback_pair : callback_list)
     callback_pair.second.Run(error);
+
   StartQueuedUpdateDeviceResource();
 }
 
@@ -973,7 +1017,7 @@ void DeviceRegistrationInfo::PublishStateUpdates() {
   StateChangeQueueInterface::UpdateID update_id = 0;
   std::vector<StateChange> state_changes;
   std::tie(update_id, state_changes) =
-    state_manager_->GetAndClearRecordedStateChanges();
+      state_manager_->GetAndClearRecordedStateChanges();
   if (state_changes.empty())
     return;
 
@@ -1039,7 +1083,7 @@ void DeviceRegistrationInfo::SetRegistrationStatus(
 
 void DeviceRegistrationInfo::OnCommandDefsChanged() {
   VLOG(1) << "CommandDefinitionChanged notification received";
-  if (!HaveRegistrationCredentials())
+  if (!HaveRegistrationCredentials() || !connected_to_cloud_)
     return;
 
   UpdateDeviceResource(base::Bind(&base::DoNothing),
@@ -1048,7 +1092,7 @@ void DeviceRegistrationInfo::OnCommandDefsChanged() {
 
 void DeviceRegistrationInfo::OnStateChanged() {
   VLOG(1) << "StateChanged notification received";
-  if (!HaveRegistrationCredentials())
+  if (!HaveRegistrationCredentials() || !connected_to_cloud_)
     return;
 
   // TODO(vitalybuka): Integrate BackoffEntry.
@@ -1063,6 +1107,10 @@ void DeviceRegistrationInfo::OnConnected(const std::string& channel_name) {
   pull_channel_->UpdatePullInterval(
       base::TimeDelta::FromMilliseconds(config_->backup_polling_period_ms()));
   current_notification_channel_ = primary_notification_channel_.get();
+
+  if (!connected_to_cloud_)
+    return;
+
   // Once we update the device resource with the new notification channel,
   // do the last poll for commands from the server, to make sure we have the
   // latest command baseline and no other commands have been queued between
@@ -1075,7 +1123,7 @@ void DeviceRegistrationInfo::OnConnected(const std::string& channel_name) {
 
 void DeviceRegistrationInfo::OnDisconnected() {
   LOG(INFO) << "Notification channel disconnected";
-  if (!HaveRegistrationCredentials())
+  if (!HaveRegistrationCredentials() || !connected_to_cloud_)
     return;
 
   pull_channel_->UpdatePullInterval(
@@ -1088,17 +1136,16 @@ void DeviceRegistrationInfo::OnDisconnected() {
 void DeviceRegistrationInfo::OnPermanentFailure() {
   LOG(ERROR) << "Failed to establish notification channel.";
   notification_channel_starting_ = false;
-  auto mark_unregistered =
-      base::Bind(&DeviceRegistrationInfo::MarkDeviceUnregistered, AsWeakPtr());
-  auto error_callback = [mark_unregistered](const chromeos::Error* error) {
-    if (error->HasError(buffet::kErrorDomainOAuth2, "invalid_grant"))
-      mark_unregistered.Run();
-  };
-  RefreshAccessToken(base::Bind(&base::DoNothing), base::Bind(error_callback));
+  RefreshAccessToken(base::Bind(&base::DoNothing),
+                     base::Bind(&DeviceRegistrationInfo::CheckAccessTokenError,
+                                AsWeakPtr()));
 }
 
 void DeviceRegistrationInfo::OnCommandCreated(
     const base::DictionaryValue& command) {
+  if (!connected_to_cloud_)
+    return;
+
   if (!command.empty()) {
     // GCD spec indicates that the command parameter in notification object
     // "may be empty if command size is too big".
@@ -1123,6 +1170,8 @@ void DeviceRegistrationInfo::OnDeviceDeleted(const std::string& device_id) {
 void DeviceRegistrationInfo::MarkDeviceUnregistered() {
   if (!HaveRegistrationCredentials())
     return;
+
+  connected_to_cloud_ = false;
 
   LOG(INFO) << "Device is unregistered from the cloud. Deleting credentials";
   BuffetConfig::Transaction change{config_.get()};
