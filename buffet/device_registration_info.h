@@ -181,12 +181,17 @@ class DeviceRegistrationInfo : public NotificationDelegate,
   void RefreshAccessToken(const base::Closure& success_callback,
                           const CloudRequestErrorCallback& error_callback);
 
-  // Success callback for RefreshAccessToken().
+  // Callbacks for RefreshAccessToken().
   void OnRefreshAccessTokenSuccess(
-      const base::Closure& success_callback,
+      const std::shared_ptr<base::Closure>& success_callback,
       const std::shared_ptr<CloudRequestErrorCallback>& error_callback,
       chromeos::http::RequestID id,
       std::unique_ptr<chromeos::http::Response> response);
+  void OnRefreshAccessTokenError(
+      const std::shared_ptr<base::Closure>& success_callback,
+      const std::shared_ptr<CloudRequestErrorCallback>& error_callback,
+      chromeos::http::RequestID id,
+      const chromeos::Error* error);
 
   // Parse the OAuth response, and sets registration status to
   // kInvalidCredentials if our registration is no longer valid.
@@ -324,6 +329,7 @@ class DeviceRegistrationInfo : public NotificationDelegate,
   // Backoff manager for DoCloudRequest() method.
   std::unique_ptr<chromeos::BackoffEntry::Policy> cloud_backoff_policy_;
   std::unique_ptr<chromeos::BackoffEntry> cloud_backoff_entry_;
+  std::unique_ptr<chromeos::BackoffEntry> oauth2_backoff_entry_;
 
   // Flag set to true while a device state update patch request is in flight
   // to the cloud server.

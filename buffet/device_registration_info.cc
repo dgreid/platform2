@@ -131,6 +131,8 @@ DeviceRegistrationInfo::DeviceRegistrationInfo(
   cloud_backoff_policy_->always_use_initial_delay = false;
   cloud_backoff_entry_.reset(
       new chromeos::BackoffEntry{cloud_backoff_policy_.get()});
+  oauth2_backoff_entry_.reset(
+      new chromeos::BackoffEntry{cloud_backoff_policy_.get()});
 
   command_manager_->AddOnCommandDefChanged(
       base::Bind(&DeviceRegistrationInfo::OnCommandDefsChanged,
@@ -246,18 +248,25 @@ void DeviceRegistrationInfo::RefreshAccessToken(
     return;
   }
 
-  // Make a shared pointer to |error_callback| since we are going to share this
-  // callback with both success and error callbacks for PostFormData() and if
-  // |error_callback| has any move-only types, one of the copies will be bad.
+  if (oauth2_backoff_entry_->ShouldRejectRequest()) {
+    VLOG(1) << "RefreshToken request delayed for "
+            << oauth2_backoff_entry_->GetTimeUntilRelease()
+            << " due to backoff policy";
+    task_runner_->PostDelayedTask(
+        FROM_HERE, base::Bind(&DeviceRegistrationInfo::RefreshAccessToken,
+                              AsWeakPtr(), success_callback, error_callback),
+        oauth2_backoff_entry_->GetTimeUntilRelease());
+    return;
+  }
+
+  // Make a shared pointer to |success_callback| and |error_callback| since we
+  // are going to share these callbacks with both success and error callbacks
+  // for PostFormData() and if the callbacks have any move-only types,
+  // one of the copies will be bad.
+  auto shared_success_callback =
+      std::make_shared<base::Closure>(success_callback);
   auto shared_error_callback =
       std::make_shared<CloudRequestErrorCallback>(error_callback);
-
-  auto on_refresh_error = [shared_error_callback](
-      chromeos::http::RequestID id,
-      const chromeos::Error* error) {
-    VLOG(1) << "Refresh access token request with ID " << id << " failed";
-    shared_error_callback->Run(error);
-  };
 
   chromeos::http::FormFieldList form_data{
     {"refresh_token", config_->refresh_token()},
@@ -269,19 +278,22 @@ void DeviceRegistrationInfo::RefreshAccessToken(
   chromeos::http::RequestID request_id = chromeos::http::PostFormData(
       GetOAuthURL("token"), form_data, {}, transport_,
       base::Bind(&DeviceRegistrationInfo::OnRefreshAccessTokenSuccess,
-                 weak_factory_.GetWeakPtr(),
-                 success_callback, shared_error_callback),
-      base::Bind(on_refresh_error));
+                 weak_factory_.GetWeakPtr(), shared_success_callback,
+                 shared_error_callback),
+      base::Bind(&DeviceRegistrationInfo::OnRefreshAccessTokenError,
+                 weak_factory_.GetWeakPtr(), shared_success_callback,
+                 shared_error_callback));
   VLOG(1) << "Refresh access token request dispatched. Request ID = "
           << request_id;
 }
 
 void DeviceRegistrationInfo::OnRefreshAccessTokenSuccess(
-    const base::Closure& success_callback,
+    const std::shared_ptr<base::Closure>& success_callback,
     const std::shared_ptr<CloudRequestErrorCallback>& error_callback,
     chromeos::http::RequestID id,
     std::unique_ptr<chromeos::http::Response> response) {
   VLOG(1) << "Refresh access token request with ID " << id << " completed";
+  oauth2_backoff_entry_->InformOfRequest(true);
   chromeos::ErrorPtr error;
   auto json = ParseOAuthResponse(response.get(), &error);
   if (!json) {
@@ -312,7 +324,17 @@ void DeviceRegistrationInfo::OnRefreshAccessTokenSuccess(
     // Now that we have a new access token, retry the connection.
     StartNotificationChannel();
   }
-  success_callback.Run();
+  success_callback->Run();
+}
+
+void DeviceRegistrationInfo::OnRefreshAccessTokenError(
+    const std::shared_ptr<base::Closure>& success_callback,
+    const std::shared_ptr<CloudRequestErrorCallback>& error_callback,
+    chromeos::http::RequestID id,
+    const chromeos::Error* error) {
+  VLOG(1) << "Refresh access token request with ID " << id << " failed";
+  oauth2_backoff_entry_->InformOfRequest(false);
+  RefreshAccessToken(*success_callback, *error_callback);
 }
 
 void DeviceRegistrationInfo::StartNotificationChannel() {
