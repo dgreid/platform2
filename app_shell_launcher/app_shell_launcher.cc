@@ -151,9 +151,6 @@ void AddAppShellFlags(ChromiumCommandBuilder* builder) {
 
 // Replaces the currently-running process with app_shell.
 void ExecAppShell(const ChromiumCommandBuilder& builder) {
-  if (setpriority(PRIO_PROCESS, 0, -20) != 0)
-    PLOG(WARNING) << "setpriority() failed";
-
   PCHECK(initgroups(ChromiumCommandBuilder::kUser, builder.gid()) == 0);
   PCHECK(setgid(builder.gid()) == 0);
   PCHECK(setuid(builder.uid()) == 0);
