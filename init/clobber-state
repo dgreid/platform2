@@ -115,7 +115,8 @@ wipe_block_dev() {
   FULL_BLKS=$(($FS_BLOCKS / $BLOCKS_4M))
   REMAINDER_SECTORS=$(($FS_BLOCKS % $BLOCKS_4M))
 
-  if type pv; then
+  # WORKAROUND (crosbug.com/p/43469): Never show progress bar.
+  if false; then
     # Opening a TTY device with no one else attached will allocate and reset
     # terminal attributes. To prevent user input echo and ctrl-breaks, we need
     # to allocate and configure the terminal before using tty for output.
