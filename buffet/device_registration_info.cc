@@ -1130,7 +1130,10 @@ void DeviceRegistrationInfo::OnConnected(const std::string& channel_name) {
       base::TimeDelta::FromMilliseconds(config_->backup_polling_period_ms()));
   current_notification_channel_ = primary_notification_channel_.get();
 
-  if (!connected_to_cloud_)
+  // If we have not successfully connected to the cloud server and we have not
+  // initiated the first device resource update, there is nothing we need to
+  // do now to update the server of the notification channel change.
+  if (!connected_to_cloud_ && in_progress_resource_update_callbacks_.empty())
     return;
 
   // Once we update the device resource with the new notification channel,
