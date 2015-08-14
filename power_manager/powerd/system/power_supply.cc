@@ -786,6 +786,7 @@ bool PowerSupply::ReadBatteryDirectory(const base::FilePath& path,
                  << "instantaneous voltage " << voltage << " instead";
     nominal_voltage = voltage;
   }
+
   status->nominal_voltage = nominal_voltage;
 
   // ACPI has two different battery types: charge_battery and energy_battery.
@@ -798,26 +799,36 @@ bool PowerSupply::ReadBatteryDirectory(const base::FilePath& path,
   // Change all the energy readings to charge format.
   // If both energy and charge reading are present (some non-ACPI drivers
   // expose both readings), read only the charge format.
+  //
+  // Some other batteries have more than that. If it has the charge attributes,
+  // just read those and the energy_now attribute.
   double charge_full = 0;
   double charge_full_design = 0;
   double charge = 0;
+  double energy = 0;
+
+  if (base::PathExists(path.Append("energy_now")))
+    energy = ReadScaledDouble(path, "energy_now");
 
   if (base::PathExists(path.Append("charge_full"))) {
     charge_full = ReadScaledDouble(path, "charge_full");
     charge_full_design = ReadScaledDouble(path, "charge_full_design");
     charge = ReadScaledDouble(path, "charge_now");
+    if (energy <= 0.0)
+      energy = charge * nominal_voltage;
   } else if (base::PathExists(path.Append("energy_full"))) {
     // Valid voltage is required to determine the charge so return early if it
     // is not present. In this case, we know nothing about battery state or
     // remaining percentage, so set proper status.
-    if (voltage <= 0) {
-      LOG(WARNING) << "Invalid voltage_now reading for energy-to-charge"
-                   << " conversion: " << voltage;
+    if (nominal_voltage <= 0) {
+      LOG(WARNING) << "Invalid nominal voltage reading for energy-to-charge"
+                   << " conversion: " << nominal_voltage;
       return false;
     }
-    charge_full = ReadScaledDouble(path, "energy_full") / voltage;
-    charge_full_design = ReadScaledDouble(path, "energy_full_design") / voltage;
-    charge = ReadScaledDouble(path, "energy_now") / voltage;
+    charge_full = ReadScaledDouble(path, "energy_full") / nominal_voltage;
+    charge_full_design = ReadScaledDouble(path, "energy_full_design") /
+                         nominal_voltage;
+    charge = energy / nominal_voltage;
   } else {
     LOG(WARNING) << "No charge/energy readings for battery";
     return false;
@@ -837,6 +848,7 @@ bool PowerSupply::ReadBatteryDirectory(const base::FilePath& path,
   status->battery_charge_full = charge_full;
   status->battery_charge_full_design = charge_full_design;
   status->battery_charge = charge;
+  status->battery_energy = energy;
 
   // The current can be reported as negative on some systems but not on others,
   // so it can't be used to determine whether the battery is charging or
@@ -845,8 +857,6 @@ bool PowerSupply::ReadBatteryDirectory(const base::FilePath& path,
       fabs(ReadScaledDouble(path, "power_now")) / voltage :
       fabs(ReadScaledDouble(path, "current_now"));
   status->battery_current = current;
-
-  status->battery_energy = charge * nominal_voltage;
   status->battery_energy_rate = current * voltage;
 
   status->battery_percentage = util::ClampPercent(100.0 * charge / charge_full);

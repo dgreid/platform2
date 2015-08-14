@@ -541,12 +541,16 @@ TEST_F(PowerSupplyTest, EnergyDischarging) {
   base::DeleteFile(battery_dir_.Append("charge_full_design"), false);
   base::DeleteFile(battery_dir_.Append("charge_now"), false);
   base::DeleteFile(battery_dir_.Append("current_now"), false);
+  base::DeleteFile(battery_dir_.Append("voltage_min_design"), false);
 
+  const double kNominalVoltage = kVoltage + 1.0;
   const double kChargeFull = 2.40;
   const double kChargeNow = 1.80;
   const double kCurrentNow = 0.20;
-  const double kEnergyFull = kChargeFull * kVoltage;
-  const double kEnergyNow = kChargeNow * kVoltage;
+  // Use nominal voltage when calculating remaining battery charge and the
+  // current voltage when calculating current.
+  const double kEnergyFull = kChargeFull * kNominalVoltage;
+  const double kEnergyNow = kChargeNow * kNominalVoltage;
   const double kPowerNow = kCurrentNow * kVoltage;
   const double kEnergyRate = kCurrentNow * kVoltage;
   const double kPercentage = 100.0 * kChargeNow / kChargeFull;
@@ -554,6 +558,7 @@ TEST_F(PowerSupplyTest, EnergyDischarging) {
   WriteDoubleValue(battery_dir_, "energy_full_design", kEnergyFull);
   WriteDoubleValue(battery_dir_, "energy_now", kEnergyNow);
   WriteDoubleValue(battery_dir_, "power_now", kPowerNow);
+  WriteDoubleValue(battery_dir_, "voltage_min_design", kNominalVoltage);
 
   Init();
   PowerStatus power_status;
@@ -1329,6 +1334,25 @@ TEST_F(PowerSupplyTest, CopyPowerStatusToProtocolBuffer) {
   proto.Clear();
   CopyPowerStatusToProtocolBuffer(status, &proto);
   EXPECT_TRUE(proto.is_calculating_battery_time());
+}
+
+TEST_F(PowerSupplyTest, BatteryEnergyValue) {
+  const double kCharge = 1.0;
+  // Set energy_now attribute to charge times voltage + 1 to double check that
+  // it is used instead of a value calculated from voltage and charge.
+  const double kEnergy = kVoltage * kCharge + 1.0;
+
+  WriteDefaultValues(POWER_BATTERY);
+  UpdateChargeAndCurrent(kCharge, 0.0);
+  WriteDoubleValue(battery_dir_, "energy_now", kEnergy);
+  Init();
+
+  // Check that the energy_now attribute is used for battery_energy when
+  // available.
+  PowerStatus status;
+  ASSERT_TRUE(UpdateStatus(&status));
+  EXPECT_DOUBLE_EQ(kEnergy, status.battery_energy);
+  EXPECT_DOUBLE_EQ(kCharge, status.battery_charge);
 }
 
 }  // namespace system
