@@ -175,7 +175,6 @@ TEST_F(LoggingTest, DcheckStreamsAreLazy) {
   DCHECK_EQ(0, 0) << mock_log_source.Log();
 #else
   DCHECK(mock_log_source.Log()) << mock_log_source.Log();
-  DPCHECK(mock_log_source.Log()) << mock_log_source.Log();
   DCHECK_EQ(0, 0) << mock_log_source.Log();
   DCHECK_EQ(mock_log_source.Log(), static_cast<const char*>(NULL))
       << mock_log_source.Log();

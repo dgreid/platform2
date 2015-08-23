@@ -157,7 +157,7 @@ struct BASE_EXPORT LoggingSettings {
 // Implementation of the InitLogging() method declared below.  We use a
 // more-specific name so we can #define it above without affecting other code
 // that has named stuff "InitLogging".
-bool BASE_EXPORT BaseInitLoggingImpl(const LoggingSettings& settings);
+BASE_EXPORT bool BaseInitLoggingImpl(const LoggingSettings& settings);
 
 // Sets the log file name and other global logging state. Calling this function
 // is recommended, and is normally done at the beginning of application init.
