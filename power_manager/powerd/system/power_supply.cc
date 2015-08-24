@@ -770,7 +770,9 @@ bool PowerSupply::ReadBatteryDirectory(const base::FilePath& path,
   // Attempt to determine nominal voltage for time-remaining calculations. This
   // may or may not be the same as the instantaneous voltage |battery_voltage|,
   // as voltage levels vary over the time the battery is charged or discharged.
-  double nominal_voltage = 0.0;
+  // Some batteries don't have a voltage_min/max_design attribute, so just use
+  // the current voltage in that case.
+  double nominal_voltage = voltage;
   if (base::PathExists(path.Append("voltage_min_design")))
     nominal_voltage = ReadScaledDouble(path, "voltage_min_design");
   else if (base::PathExists(path.Append("voltage_max_design")))

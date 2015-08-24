@@ -1355,5 +1355,24 @@ TEST_F(PowerSupplyTest, BatteryEnergyValue) {
   EXPECT_DOUBLE_EQ(kCharge, status.battery_charge);
 }
 
+TEST_F(PowerSupplyTest, NoNominalVoltage) {
+  const double kCharge = 0.5;
+  const double kCurrent = 1.0;
+  WriteDefaultValues(POWER_BATTERY);
+  UpdateChargeAndCurrent(kCharge, kCurrent);
+
+  // Remove the default min voltage attribute from the battery
+  base::DeleteFile(battery_dir_.Append("voltage_min_design"), false);
+  Init();
+
+  // The battery should use the current voltage if there is no
+  // voltage_min/max_design attribute.
+  PowerStatus status;
+  ASSERT_TRUE(UpdateStatus(&status));
+  EXPECT_DOUBLE_EQ(kVoltage, status.nominal_voltage);
+  EXPECT_DOUBLE_EQ(kVoltage * kCharge, status.battery_energy);
+  EXPECT_DOUBLE_EQ(kVoltage * kCurrent, status.battery_energy_rate);
+}
+
 }  // namespace system
 }  // namespace power_manager
