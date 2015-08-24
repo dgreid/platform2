@@ -30,7 +30,7 @@ bool ConvertConnectState(
     Service::ConnectState* internal_state) {
   switch (external_state) {
     case ThirdPartyVpnAdaptor::kStateConnected:
-      *internal_state = Service::kStateConnected;
+      *internal_state = Service::kStateOnline;
       break;
     case ThirdPartyVpnAdaptor::kStateFailure:
       *internal_state = Service::kStateFailure;
