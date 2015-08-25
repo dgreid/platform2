@@ -68,6 +68,12 @@ bool KeyValueStore::ContainsRpcIdentifier(const string& name) const {
       properties_.find(name)->second.GetType() == typeid(dbus::ObjectPath);
 }
 
+bool KeyValueStore::ContainsRpcIdentifiers(const string& name) const {
+  return ContainsKey(properties_, name) &&
+      properties_.find(name)->second.GetType() ==
+          typeid(vector<dbus::ObjectPath>);
+}
+
 bool KeyValueStore::ContainsString(const string& name) const {
   return ContainsKey(properties_, name) &&
       properties_.find(name)->second.GetType() == typeid(string);
@@ -152,6 +158,17 @@ const string& KeyValueStore::GetRpcIdentifier(const string& name) const {
   return it->second.Get<dbus::ObjectPath>().value();
 }
 
+vector<string> KeyValueStore::GetRpcIdentifiers(const string& name) const {
+  const auto it(properties_.find(name));
+  CHECK(it != properties_.end() && it->second.GetType() ==
+      typeid(vector<dbus::ObjectPath>))
+      << "for rpc identifier property " << name;
+  RpcIdentifiers ids;
+  KeyValueStore::ConvertPathsToRpcIdentifiers(
+      it->second.Get<vector<dbus::ObjectPath>>(), &ids);
+  return ids;
+}
+
 const string& KeyValueStore::GetString(const string& name) const {
   const auto it(properties_.find(name));
   CHECK(it != properties_.end() && it->second.GetType() == typeid(string))
@@ -233,6 +250,15 @@ void KeyValueStore::SetKeyValueStore(const string& name,
 
 void KeyValueStore::SetRpcIdentifier(const string& name, const string& value) {
   properties_[name] = chromeos::Any(dbus::ObjectPath(value));
+}
+
+void KeyValueStore::SetRpcIdentifiers(const string& name,
+                                      const vector<string>& value) {
+  vector<dbus::ObjectPath> paths;
+  for (const auto& rpcid : value) {
+    paths.push_back(dbus::ObjectPath(rpcid));
+  }
+  properties_[name] = chromeos::Any(paths);
 }
 
 void KeyValueStore::SetString(const string& name, const string& value) {

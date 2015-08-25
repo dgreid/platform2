@@ -99,6 +99,15 @@ TEST_F(KeyValueStoreTest, RpcIdentifier) {
   EXPECT_FALSE(store_.ContainsRpcIdentifier(kKey));
 }
 
+TEST_F(KeyValueStoreTest, RpcIdentifiers) {
+  const string kKey("foo");
+  const vector<string> kValue{ "baz0", "baz1", "baz2" };
+  EXPECT_FALSE(store_.ContainsRpcIdentifiers(kKey));
+  store_.SetRpcIdentifiers(kKey, kValue);
+  EXPECT_TRUE(store_.ContainsRpcIdentifiers(kKey));
+  EXPECT_EQ(kValue, store_.GetRpcIdentifiers(kKey));
+}
+
 TEST_F(KeyValueStoreTest, String) {
   const string kKey("foo");
   const string kDefaultValue("bar");

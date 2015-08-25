@@ -45,6 +45,7 @@ class KeyValueStore {
   bool ContainsInt16(const std::string& name) const;
   bool ContainsKeyValueStore(const std::string& name) const;
   bool ContainsRpcIdentifier(const std::string& name) const;
+  bool ContainsRpcIdentifiers(const std::string& name) const;
   bool ContainsString(const std::string& name) const;
   bool ContainsStringmap(const std::string& name) const;
   bool ContainsStrings(const std::string& name) const;
@@ -61,6 +62,7 @@ class KeyValueStore {
   int16_t GetInt16(const std::string& name) const;
   const KeyValueStore& GetKeyValueStore(const std::string& name) const;
   const std::string& GetRpcIdentifier(const std::string& name) const;
+  std::vector<std::string> GetRpcIdentifiers(const std::string& name) const;
   const std::string& GetString(const std::string& name) const;
   const std::map<std::string, std::string>& GetStringmap(
       const std::string& name) const;
@@ -81,6 +83,8 @@ class KeyValueStore {
   void SetInt16(const std::string& name, int16_t value);
   void SetKeyValueStore(const std::string& name, const KeyValueStore& value);
   void SetRpcIdentifier(const std::string& name, const std::string& value);
+  void SetRpcIdentifiers(const std::string& name,
+                         const std::vector<std::string>& value);
   void SetString(const std::string& name, const std::string& value);
   void SetStringmap(const std::string& name,
                     const std::map<std::string, std::string>& value);
