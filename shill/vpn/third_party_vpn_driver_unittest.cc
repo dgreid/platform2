@@ -159,8 +159,8 @@ TEST_F(ThirdPartyVpnDriverTest, UpdateConnectionState) {
 
   error.clear();
   driver_->service_ = service_;
-  EXPECT_CALL(*service_, SetState(Service::kStateConnected)).Times(1);
-  driver_->UpdateConnectionState(Service::kStateConnected, &error);
+  EXPECT_CALL(*service_, SetState(_)).Times(0);
+  driver_->UpdateConnectionState(Service::kStateOnline, &error);
   EXPECT_TRUE(error.empty());
   Mock::VerifyAndClearExpectations(service_.get());
 

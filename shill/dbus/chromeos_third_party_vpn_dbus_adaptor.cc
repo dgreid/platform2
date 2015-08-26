@@ -33,7 +33,7 @@ bool ConvertConnectState(
     Service::ConnectState* internal_state) {
   switch (external_state) {
     case ChromeosThirdPartyVpnDBusAdaptor::kStateConnected:
-      *internal_state = Service::kStateConnected;
+      *internal_state = Service::kStateOnline;
       break;
     case ChromeosThirdPartyVpnDBusAdaptor::kStateFailure:
       *internal_state = Service::kStateFailure;

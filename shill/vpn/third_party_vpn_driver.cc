@@ -140,14 +140,14 @@ void ThirdPartyVpnDriver::UpdateConnectionState(
     error_message->append("Unexpected call");
     return;
   }
-  if (service_ && (connection_state == Service::kStateConnected ||
-                   connection_state == Service::kStateFailure)) {
+  if (service_ && connection_state == Service::kStateFailure) {
     service_->SetState(connection_state);
-    if (Service::kStateFailure == connection_state) {
-      Cleanup(Service::kStateFailure, Service::kFailureUnknown,
-              Service::kErrorDetailsNone);
-    }
-  } else {
+    Cleanup(Service::kStateFailure, Service::kFailureUnknown,
+            Service::kErrorDetailsNone);
+  } else if (!service_ || connection_state != Service::kStateOnline) {
+    // We expect "failure" and "connected" messages from the client, but we
+    // only set state for these "failure" messages. "connected" message (which
+    // is corresponding to kStateOnline here) will simply be ignored.
     error_message->append("Invalid argument");
   }
 }
