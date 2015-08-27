@@ -1247,7 +1247,7 @@ repl() {
 
   # Create a colorized prompt to make it easier to see commands start/finish.
   local prompt
-  prompt="$(printf '%bcrosh>%b ' '\033[1;33m' '\033[0m')"
+  prompt="$(printf '%bcrosh>%b ' '\001\033[1;33m\002' '\001\033[0m\002')"
 
   while [ -z "${exit}" ]; do
     if shell_read "${prompt}" LINE_; then
