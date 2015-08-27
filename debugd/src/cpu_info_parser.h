@@ -20,30 +20,22 @@ namespace debugd {
 // cpu_model_name should now contain something like "Intel (R) Celeron(R) CPU".
 class CPUInfoParser {
  public:
-  // Constructor.
+  // Reads the contents of /proc/cpuinfo.
   CPUInfoParser();
 
-  // Get particular key from the cpu information file. Note that this function
-  // reads the CPU information file every time it is called. This is because the
-  // contents of the file can change with time.
-  bool GetKey(const std::string& key, std::string* value);
+  // Reads the contents of |cpuinfo_filename|
+  explicit CPUInfoParser(const std::string& cpuinfo_filename);
 
-  // Setter for cpu_info_filename_.
-  void set_cpu_info_filename(const std::string& filename) {
-    cpu_info_filename_ = filename;
-  }
+  // Sets the contents from |contents| without reading a file.
+  enum SetContentsType { SET_CONTENTS };
+  CPUInfoParser(SetContentsType set_contents, const std::string& contents);
 
-  // Getter for cpu_info_filename_.
-  std::string cpu_info_filename() const {
-    return cpu_info_filename_;
-  }
+  // Get particular key from the cached cpu information file.
+  bool GetKey(const std::string& key, std::string* value) const;
 
  private:
   // The entire /proc/cpuinfo contents.
   std::string contents_;
-
-  // The name of the cpu info file.
-  std::string cpu_info_filename_;
 };
 
 }  // namespace debugd

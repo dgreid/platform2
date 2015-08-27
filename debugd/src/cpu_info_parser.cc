@@ -4,10 +4,12 @@
 
 #include "debugd/src/cpu_info_parser.h"
 
-#include <fstream>  // NOLINT
+#include <sstream>  // NOLINT
 #include <string>
 #include <vector>
 
+#include <base/files/file_path.h>
+#include <base/files/file_util.h>
 #include <base/logging.h>
 #include <base/strings/string_split.h>
 #include <base/strings/string_util.h>
@@ -15,7 +17,7 @@
 namespace {
 
 // The filename that contains CPU information.
-const char kCPUInfoFilename[] = "/proc/cpuinfo";
+const char kDefaultCPUInfoFilename[] = "/proc/cpuinfo";
 
 // The delimiter used in the CPU information filename to separate keys and
 // values.
@@ -25,11 +27,19 @@ const char kCPUInfoKeyValueDelimiter = ':';
 
 namespace debugd {
 
-CPUInfoParser::CPUInfoParser() : cpu_info_filename_(kCPUInfoFilename) {}
+CPUInfoParser::CPUInfoParser() : CPUInfoParser(kDefaultCPUInfoFilename) {}
 
-bool CPUInfoParser::GetKey(const std::string& key, std::string* value) {
-  std::ifstream infile(cpu_info_filename_.c_str());
-  CHECK(infile.good());
+CPUInfoParser::CPUInfoParser(const std::string& cpuinfo_filename) {
+  CHECK(base::ReadFileToString(base::FilePath(cpuinfo_filename), &contents_));
+}
+
+CPUInfoParser::CPUInfoParser(
+    SetContentsType set_contents, const std::string& contents)
+  : contents_(contents) {
+}
+
+bool CPUInfoParser::GetKey(const std::string& key, std::string* value) const {
+  std::stringstream infile(contents_);
   std::string line;
   while (std::getline(infile, line)) {
     std::vector<std::string> tokens;
