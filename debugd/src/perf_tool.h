@@ -6,6 +6,7 @@
 #define DEBUGD_SRC_PERF_TOOL_H_
 
 #include <stdint.h>
+#include <sys/utsname.h>
 
 #include <memory>
 #include <string>
@@ -14,42 +15,24 @@
 #include <base/macros.h>
 #include <dbus-c++/dbus.h>
 
+#include "debugd/src/cpu_info_parser.h"
+
 namespace debugd {
 
 class RandomSelector;
 
 class PerfTool {
  public:
-  // Class that returns the CPU arch and model. This is in a separate class so
-  // it can be mocked out for testing.
-  class CPUInfoReader {
-   public:
-    CPUInfoReader();
-    virtual ~CPUInfoReader() {}
-
-    // Accessors
-    const std::string& arch() const {
-      return arch_;
-    }
-    const std::string& model_name() const {
-      return model_name_;
-    }
-    const std::string& intel_family_model() const {
-      return intel_family_model_;
-    }
-
-   protected:
-    // The CPU arch and model info.
-    std::string arch_;
-    std::string model_name_;  // e.g. "Intel(R) Celeron(R) 2955U @ 1.40GHz"
-    std::string intel_family_model_;  // e.g. "06_45"
-  };
+  // For injection of uname(2)
+  typedef std::function<int(struct utsname*)> UnameFunc;
 
   PerfTool();
-  // This is a special constructor for testing that takes in CPUInfoReader and
-  // RandomSelector args. In particular, it takes ownership of
+  // This is a special constructor for testing that takes in CPUInfoParser and
+  // RandomSelector args and allows injection of uname(2). It takes ownership of
   // |random_selector|.
-  PerfTool(const CPUInfoReader& cpu_info, RandomSelector* random_selector);
+  PerfTool(const CPUInfoParser& cpu_info,
+           RandomSelector* random_selector,
+           UnameFunc uname_func);
   ~PerfTool() = default;
 
   // Runs the perf tool with the request command for |duration_secs| seconds
