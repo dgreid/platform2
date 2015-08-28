@@ -81,7 +81,6 @@ void IcmpSession::Stop() {
     return;
   }
   timeout_callback_.Cancel();
-  result_callback_.Reset();
   echo_reply_handler_.reset();
   icmp_->Stop();
 }
@@ -223,8 +222,13 @@ void IcmpSession::ReportResultAndStopSession() {
     LOG(WARNING) << "ICMP session not started";
     return;
   }
-  result_callback_.Run(GenerateIcmpResult());
   Stop();
+  // Invoke result callback after calling IcmpSession::Stop, since the callback
+  // might delete this object. (Any subsequent call to IcmpSession::Stop leads
+  // to a segfault since this function belongs to the deleted object.)
+  if (!result_callback_.is_null()) {
+    result_callback_.Run(GenerateIcmpResult());
+  }
 }
 
 }  // namespace shill

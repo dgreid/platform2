@@ -118,7 +118,6 @@ class IcmpSessionTest : public Test {
 
   void VerifyIcmpSessionStopped() {
     EXPECT_TRUE(icmp_session_.timeout_callback_.IsCancelled());
-    EXPECT_TRUE(icmp_session_.result_callback_.is_null());
     EXPECT_FALSE(icmp_session_.echo_reply_handler_);
   }
 
