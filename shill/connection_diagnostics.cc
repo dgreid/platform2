@@ -592,7 +592,7 @@ void ConnectionDiagnostics::PingHost(const IPAddress& address) {
 
 void ConnectionDiagnostics::OnPingDNSServerComplete(
     int dns_server_index, const vector<base::TimeDelta>& result) {
-  SLOG(this, 3) << __func__ << "(DNS server index" << dns_server_index << ")";
+  SLOG(this, 3) << __func__ << "(DNS server index " << dns_server_index << ")";
 
   if (!id_to_pending_dns_server_icmp_session_.erase(dns_server_index)) {
     // This should not happen, since we expect exactly one callback for each

@@ -23,6 +23,11 @@ namespace shill {
 
 namespace {
 
+// Note: this header is given in network byte order, since
+// IcmpSession::OnEchoReplyReceived expects to receive a raw IP packet.
+const uint8_t kIpHeader[] = {0x45, 0x80, 0x00, 0x1c, 0x63, 0xd3, 0x00,
+                             0x00, 0x39, 0x01, 0xcc, 0x9f, 0x4a, 0x7d,
+                             0xe0, 0x18, 0x64, 0x6e, 0xc1, 0xea};
 // ICMP echo replies with 0 bytes of data and and echo ID 0. Sequence numbers
 // are 0x8, 0x9, and 0xa respectively to simulate replies to a sequence of sent
 // echo requests.
@@ -236,8 +241,10 @@ TEST_F(IcmpSessionTest, SessionSuccess) {
   // Receive first reply.
   testing_clock_.Advance(kRecvTime1 - now);
   now = testing_clock_.NowTicks();
-  uint8_t buffer_1[sizeof(kIcmpEchoReply1)];
-  memcpy(buffer_1, kIcmpEchoReply1, sizeof(kIcmpEchoReply1));
+  uint8_t buffer_1[sizeof(kIpHeader) + sizeof(kIcmpEchoReply1)];
+  memcpy(buffer_1, kIpHeader, sizeof(kIpHeader));
+  memcpy(buffer_1 + sizeof(kIpHeader), kIcmpEchoReply1,
+         sizeof(kIcmpEchoReply1));
   InputData data_1(reinterpret_cast<unsigned char*>(buffer_1),
                    sizeof(buffer_1));
   EXPECT_CALL(*this, ResultCallback(_)).Times(0);
@@ -272,8 +279,10 @@ TEST_F(IcmpSessionTest, SessionSuccess) {
   // Receive second reply.
   testing_clock_.Advance(kRecvTime2 - now);
   now = testing_clock_.NowTicks();
-  uint8_t buffer_2[sizeof(kIcmpEchoReply2)];
-  memcpy(buffer_2, kIcmpEchoReply2, sizeof(kIcmpEchoReply2));
+  uint8_t buffer_2[sizeof(kIpHeader) + sizeof(kIcmpEchoReply2)];
+  memcpy(buffer_2, kIpHeader, sizeof(kIpHeader));
+  memcpy(buffer_2 + sizeof(kIpHeader), kIcmpEchoReply2,
+         sizeof(kIcmpEchoReply2));
   InputData data_2(reinterpret_cast<unsigned char*>(buffer_2),
                    sizeof(buffer_2));
   EXPECT_CALL(*this, ResultCallback(_)).Times(0);
@@ -287,8 +296,9 @@ TEST_F(IcmpSessionTest, SessionSuccess) {
   // ICMP session. This reply will not be processed.
   testing_clock_.Advance(kWrongEchoIDRecvTime - now);
   now = testing_clock_.NowTicks();
-  uint8_t buffer_3[sizeof(kIcmpEchoReplyDifferentEchoID)];
-  memcpy(buffer_3, kIcmpEchoReplyDifferentEchoID,
+  uint8_t buffer_3[sizeof(kIpHeader) + sizeof(kIcmpEchoReplyDifferentEchoID)];
+  memcpy(buffer_3, kIpHeader, sizeof(kIpHeader));
+  memcpy(buffer_3 + sizeof(kIpHeader), kIcmpEchoReplyDifferentEchoID,
          sizeof(kIcmpEchoReplyDifferentEchoID));
   InputData data_3(reinterpret_cast<unsigned char*>(buffer_3),
                    sizeof(buffer_3));
@@ -301,8 +311,10 @@ TEST_F(IcmpSessionTest, SessionSuccess) {
   // Receive third reply, which concludes the ICMP session.
   testing_clock_.Advance(kRecvTime3 - now);
   now = testing_clock_.NowTicks();
-  uint8_t buffer_4[sizeof(kIcmpEchoReply3)];
-  memcpy(buffer_4, kIcmpEchoReply3, sizeof(kIcmpEchoReply3));
+  uint8_t buffer_4[sizeof(kIpHeader) + sizeof(kIcmpEchoReply3)];
+  memcpy(buffer_4, kIpHeader, sizeof(kIpHeader));
+  memcpy(buffer_4 + sizeof(kIpHeader), kIcmpEchoReply3,
+         sizeof(kIcmpEchoReply3));
   InputData data_4(reinterpret_cast<unsigned char*>(buffer_4),
                    sizeof(buffer_4));
   EXPECT_CALL(*this, ResultCallback(expected_result));
@@ -365,8 +377,10 @@ TEST_F(IcmpSessionTest, SessionTimeoutOrInterrupted) {
   // Receive first reply.
   testing_clock_.Advance(kRecvTime1 - now);
   now = testing_clock_.NowTicks();
-  uint8_t buffer_1[sizeof(kIcmpEchoReply1)];
-  memcpy(buffer_1, kIcmpEchoReply1, sizeof(kIcmpEchoReply1));
+  uint8_t buffer_1[sizeof(kIpHeader) + sizeof(kIcmpEchoReply1)];
+  memcpy(buffer_1, kIpHeader, sizeof(kIpHeader));
+  memcpy(buffer_1 + sizeof(kIpHeader), kIcmpEchoReply1,
+         sizeof(kIcmpEchoReply1));
   InputData data_1(reinterpret_cast<unsigned char*>(buffer_1),
                    sizeof(buffer_1));
   EXPECT_CALL(*this, ResultCallback(_)).Times(0);

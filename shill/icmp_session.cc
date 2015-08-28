@@ -5,6 +5,7 @@
 #include "shill/icmp_session.h"
 
 #include <arpa/inet.h>
+#include <netinet/ip.h>
 
 #include <base/time/default_tick_clock.h>
 
@@ -13,6 +14,10 @@
 #include "shill/net/byte_string.h"
 #include "shill/net/ip_address.h"
 #include "shill/net/sockets.h"
+
+namespace {
+const int kIPHeaderLengthUnitBytes = 4;
+}
 
 namespace shill {
 
@@ -145,13 +150,17 @@ void IcmpSession::TransmitEchoRequestTask(const IPAddress& destination) {
 
 void IcmpSession::OnEchoReplyReceived(InputData* data) {
   ByteString message(data->buf, data->len);
-  if (message.GetLength() < sizeof(struct icmphdr)) {
+  if (message.GetLength() < sizeof(struct iphdr) + sizeof(struct icmphdr)) {
     LOG(WARNING) << "Received ICMP packet is too short to contain ICMP header";
     return;
   }
 
+  const struct iphdr* received_ip_header =
+      reinterpret_cast<const struct iphdr*>(message.GetConstData());
   const struct icmphdr* received_icmp_header =
-      reinterpret_cast<const struct icmphdr*>(message.GetConstData());
+      reinterpret_cast<const struct icmphdr*>(message.GetConstData() +
+                                              received_ip_header->ihl *
+                                                  kIPHeaderLengthUnitBytes);
   // We might have received other types of ICMP traffic, so ensure that the
   // message is an echo reply before handling it.
   if (received_icmp_header->type != ICMP_ECHOREPLY) {
