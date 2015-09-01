@@ -320,6 +320,13 @@ void DBusProperties::ConvertMapToKeyValueStore(
         ::DBus::type<vector<uint32_t>>::sig()) {
       SLOG(DBus, nullptr, 5) << "Got vector<uint32_t> property " << key;
       store->SetUint32s(key, key_value_pair.second.operator vector<uint32_t>());
+    } else if (key_value_pair.second.signature() ==
+        ::DBus::type<vector<::DBus::Path>>::sig()) {
+      SLOG(DBus, nullptr, 5) << "Got vector<Path> property " << key;
+      auto path_vec = key_value_pair.second.operator vector<::DBus::Path>();
+      vector<string> str_vec;
+      ConvertPathsToRpcIdentifiers(path_vec, &str_vec);
+      store->SetRpcIdentifiers(key, str_vec);
     } else {
       Error::PopulateAndLog(FROM_HERE, error, Error::kInternalError,
                             "unsupported type for property " + key);

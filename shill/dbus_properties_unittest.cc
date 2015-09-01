@@ -167,6 +167,8 @@ TEST_F(DBusPropertiesTest, ConvertMapToKeyValueStore) {
   const int16_t kInt16Value = 123;
   static const char kRpcIdentifierKey[] = "RpcIdentifierKey";
   static const char kRpcIdentifierValue[] = "/org/chromium/test";
+  static const char kRpcIdentifiersKey[] = "RpcIdentifiersKey";
+  const vector<string> kRpcIdentifiersValue = {"/obj/3", "/obj/4", "/obj/5"};
   static const char kUint16Key[] = "Uint16Key";
   const uint16_t kUint16Value = 123;
   static const char kUint8Key[] = "Uint8Key";
@@ -178,7 +180,6 @@ TEST_F(DBusPropertiesTest, ConvertMapToKeyValueStore) {
   static const char kKeyValueStoreKey[] = "KeyValueStoreKey";
   static const char kNestedInt32Key[] = "NestedKey32Key";
   const int32_t kNestedInt32Value = 1;
-
   DBusPropertiesMap props;
   props[kStringKey].writer().append_string(kStringValue);
   {
@@ -198,6 +199,16 @@ TEST_F(DBusPropertiesTest, ConvertMapToKeyValueStore) {
   }
   props[kInt16Key].writer().append_int16(kInt16Value);
   props[kRpcIdentifierKey].writer().append_path(kRpcIdentifierValue);
+  {
+    // Do type conversion,
+    // otherwise the signature will be 'as' instead of 'ao'.
+    vector<DBus::Path> paths;
+    for (string path : kRpcIdentifiersValue) {
+      paths.push_back(path);
+    }
+    DBus::MessageIter writer = props[kRpcIdentifiersKey].writer();
+    writer << paths;
+  }
   props[kUint16Key].writer().append_uint16(kUint16Value);
   props[kUint8Key].writer().append_byte(kUint8Value);
   {
@@ -236,6 +247,8 @@ TEST_F(DBusPropertiesTest, ConvertMapToKeyValueStore) {
   EXPECT_EQ(kInt16Value, store.GetInt16(kInt16Key));
   EXPECT_TRUE(store.ContainsRpcIdentifier(kRpcIdentifierKey));
   EXPECT_EQ(kRpcIdentifierValue, store.GetRpcIdentifier(kRpcIdentifierKey));
+  EXPECT_TRUE(store.ContainsRpcIdentifiers(kRpcIdentifiersKey));
+  EXPECT_EQ(kRpcIdentifiersValue, store.GetRpcIdentifiers(kRpcIdentifiersKey));
   EXPECT_TRUE(store.ContainsUint16(kUint16Key));
   EXPECT_EQ(kUint16Value, store.GetUint16(kUint16Key));
   EXPECT_TRUE(store.ContainsUint8(kUint8Key));
