@@ -174,7 +174,10 @@ void IcmpSession::OnEchoReplyReceived(InputData* data) {
   }
 
   if (received_icmp_header->un.echo.id != echo_id_) {
-    SLOG(nullptr, 3) << received_icmp_header->un.echo.id << " and " << echo_id_;
+    SLOG(this, 3) << "received message echo id ("
+                  << received_icmp_header->un.echo.id
+                  << ") does not match this ICMP session's echo id ("
+                  << echo_id_ << ")";
     return;
   }
 

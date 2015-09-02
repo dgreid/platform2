@@ -204,10 +204,6 @@ class ConnectionDiagnostics {
 
   void Stop();
 
-  // Returns a string representation of all the events in |diagnostic_events|.
-  static std::string EventsToString(
-      const std::vector<Event>& diagnostic_events);
-
   // Returns a string representation of |event|.
   static std::string EventToString(const Event& event);
 

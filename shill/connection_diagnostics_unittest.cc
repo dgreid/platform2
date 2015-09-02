@@ -78,11 +78,16 @@ MATCHER_P(IsEventList, expected_events, "") {
                               expected_events[i]);
       *result_listener << "\n  Actual: "
                        << ConnectionDiagnostics::EventToString(arg[i]);
-      *result_listener << "\nExpected "
-                       << ConnectionDiagnostics::EventsToString(
-                              expected_events);
-      *result_listener << "\nActual "
-                       << ConnectionDiagnostics::EventsToString(arg);
+      *result_listener << "\nExpected connection diagnostics events:";
+      for (const auto& expected_event : expected_events) {
+        *result_listener << "\n" << ConnectionDiagnostics::EventToString(
+                                        expected_event);
+      }
+      *result_listener << "\nActual connection diagnostics events:";
+      for (const auto& actual_event : expected_events) {
+        *result_listener << "\n"
+                         << ConnectionDiagnostics::EventToString(actual_event);
+      }
       return false;
     }
   }

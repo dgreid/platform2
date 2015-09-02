@@ -232,19 +232,6 @@ void ConnectionDiagnostics::Stop() {
 }
 
 // static
-string ConnectionDiagnostics::EventsToString(
-    const vector<Event>& diagnostic_events) {
-  string message("Connection Diagnostics events:\n");
-  for (size_t i = 0; i < diagnostic_events.size(); ++i) {
-    message.append(EventToString(diagnostic_events[i]));
-    if (i < diagnostic_events.size() - 1) {
-      message.append("\n");
-    }
-  }
-  return message;
-}
-
-// static
 string ConnectionDiagnostics::EventToString(const Event& event) {
   string message("");
   message.append(StringPrintf("Event: %-26sPhase: %-17sResult: %-10s",
@@ -271,7 +258,11 @@ void ConnectionDiagnostics::ReportResultAndStop(const string& issue) {
 
   metrics_->NotifyConnectionDiagnosticsIssue(issue);
   if (!result_callback_.is_null()) {
-    SLOG(this, 4) << EventsToString(diagnostic_events_);
+    SLOG(this, 4) << "Connection diagnostics events:";
+    for (size_t i = 0; i < diagnostic_events_.size(); ++i) {
+      SLOG(this, 4) << "  #" << i << ": "
+                    << EventToString(diagnostic_events_[i]);
+    }
     LOG(INFO) << "Connection diagnostics completed. Connection issue: "
               << issue;
     result_callback_.Run(issue, diagnostic_events_);
@@ -359,7 +350,8 @@ void ConnectionDiagnostics::ResolveTargetServerIPAddress(
 
   AddEventWithMessage(kTypeResolveTargetServerIP, kPhaseStart, kResultSuccess,
                       StringPrintf("Attempt #%d", num_dns_attempts_));
-  SLOG(this, 3) << __func__ << ": attempt #" << num_dns_attempts_;
+  SLOG(this, 3) << __func__ << ": looking up " << target_url_->host()
+                << " (attempt " << num_dns_attempts_ << ")";
   ++num_dns_attempts_;
 }
 
@@ -687,7 +679,7 @@ void ConnectionDiagnostics::OnPingHostComplete(
     const vector<base::TimeDelta>& result) {
   SLOG(this, 3) << __func__;
 
-  string message(StringPrintf("Destination: %s,\tLatencies: ",
+  string message(StringPrintf("Destination: %s,  Latencies: ",
                               address_pinged.ToString().c_str()));
   for (const auto& latency : result) {
     if (latency.is_zero()) {
