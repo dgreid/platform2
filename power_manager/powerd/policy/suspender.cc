@@ -184,15 +184,17 @@ void Suspender::RecordDarkResumeWakeReason(
     overwriting_wake_reason = true;
     old_wake_reason = last_dark_resume_wake_reason_;
   }
+  DarkResumeWakeReason proto;
   dbus::MessageReader reader(method_call);
-  if (!reader.PopString(&last_dark_resume_wake_reason_)) {
+  if (!reader.PopArrayOfBytesAsProto(&proto)) {
     LOG(ERROR) << "Unable to parse " << method_call->GetMember() << " request";
     response_sender.Run(
         scoped_ptr<dbus::Response>(dbus::ErrorResponse::FromMethodCall(
             method_call, DBUS_ERROR_INVALID_ARGS,
-            "Expected wake reason string")));
+            "Expected wake reason proto")));
     return;
   }
+  last_dark_resume_wake_reason_ = proto.wake_reason();
   if (overwriting_wake_reason) {
     LOG(WARNING) << "Overwrote existing dark resume wake reason "
                  << old_wake_reason << " with wake reason "
