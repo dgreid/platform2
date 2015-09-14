@@ -1008,11 +1008,10 @@ void DeviceRegistrationInfo::OnUpdateDeviceResourceError(const Error* error) {
   StartQueuedUpdateDeviceResource();
 }
 
-namespace {
-
-void HandleFetchCommandsResult(
+void DeviceRegistrationInfo::OnFetchCommandsSuccess(
     const base::Callback<void(const base::ListValue&)>& callback,
     const base::DictionaryValue& json) {
+  OnFetchCommandsReturned();
   const base::ListValue* commands{nullptr};
   if (!json.GetList("commands", &commands)) {
     VLOG(2) << "No commands in the response.";
@@ -1021,18 +1020,41 @@ void HandleFetchCommandsResult(
   callback.Run(commands ? *commands : empty);
 }
 
-}  // namespace
+void DeviceRegistrationInfo::OnFetchCommandsError(
+    const CloudRequestErrorCallback& callback,
+    const Error* error) {
+  OnFetchCommandsReturned();
+  callback.Run(error);
+}
+
+void DeviceRegistrationInfo::OnFetchCommandsReturned() {
+  fetch_commands_request_sent_ = false;
+  // If we have additional requests queued, send them out now.
+  if (fetch_commands_request_queued_)
+    FetchAndPublishCommands();
+}
 
 void DeviceRegistrationInfo::FetchCommands(
     const base::Callback<void(const base::ListValue&)>& on_success,
     const CloudRequestErrorCallback& on_failure) {
+  fetch_commands_request_sent_ = true;
+  fetch_commands_request_queued_ = false;
   DoCloudRequest(
       http::kGet,
       GetServiceURL("commands/queue", {{"deviceId", config_->device_id()}}),
-      nullptr, base::Bind(&HandleFetchCommandsResult, on_success), on_failure);
+      nullptr,
+      base::Bind(&DeviceRegistrationInfo::OnFetchCommandsSuccess, AsWeakPtr(),
+                 on_success),
+      base::Bind(&DeviceRegistrationInfo::OnFetchCommandsError, AsWeakPtr(),
+                 on_failure));
 }
 
 void DeviceRegistrationInfo::FetchAndPublishCommands() {
+  if (fetch_commands_request_sent_) {
+    fetch_commands_request_queued_ = true;
+    return;
+  }
+
   FetchCommands(base::Bind(&DeviceRegistrationInfo::PublishCommands,
                            weak_factory_.GetWeakPtr()),
                 base::Bind(&IgnoreCloudError));

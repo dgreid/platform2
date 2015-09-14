@@ -233,6 +233,15 @@ class DeviceRegistrationInfo : public Cloud,
   void FetchCommands(
       const base::Callback<void(const base::ListValue&)>& on_success,
       const CloudRequestErrorCallback& on_failure);
+  // Success/failure callbacks for FetchCommands().
+  void OnFetchCommandsSuccess(
+      const base::Callback<void(const base::ListValue&)>& callback,
+      const base::DictionaryValue& json);
+  void OnFetchCommandsError(const CloudRequestErrorCallback& callback,
+                            const Error* error);
+  // Called when FetchCommands completes (with either success or error).
+  // This method reschedules any pending/queued fetch requests.
+  void OnFetchCommandsReturned();
 
   // Processes the command list that is fetched from the server on connection.
   // Aborts commands which are in transitional states and publishes queued
@@ -306,6 +315,12 @@ class DeviceRegistrationInfo : public Cloud,
   // Flag set to true while a device state update patch request is in flight
   // to the cloud server.
   bool device_state_update_pending_{false};
+
+  // Set to true when command queue fetch request is in flight to the server.
+  bool fetch_commands_request_sent_{false};
+  // Set to true when another command queue fetch request is queued while
+  // another one was in flight.
+  bool fetch_commands_request_queued_{false};
 
   using ResourceUpdateCallbackList =
       std::vector<std::pair<base::Closure, CloudRequestErrorCallback>>;
