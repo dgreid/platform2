@@ -103,6 +103,14 @@ class FakeStream : public Stream {
                  const base::Callback<void(size_t)>& success_callback,
                  const base::Callback<void(const Error*)>& error_callback,
                  ErrorPtr* error) override {
+    if (read_data_.empty()) {
+      task_runner_->PostDelayedTask(
+          FROM_HERE, base::Bind(base::IgnoreResult(&FakeStream::ReadAsync),
+                                base::Unretained(this), buffer, size_to_read,
+                                success_callback, error_callback, nullptr),
+          base::TimeDelta::FromSeconds(0));
+      return true;
+    }
     size_t size = std::min(size_to_read, read_data_.size());
     memcpy(buffer, read_data_.data(), size);
     read_data_ = read_data_.substr(size);
