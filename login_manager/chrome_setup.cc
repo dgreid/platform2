@@ -218,6 +218,9 @@ void AddUiFlags(ChromiumCommandBuilder* builder) {
     builder->AddArg("--aura-legacy-power-button");
 
   if (builder->UseFlagIsSet("touchview")) {
+    builder->AddArg("--enable-touchview");
+    // TODO(jonross): Remove these flags once --enable-touchview controls
+    // everything: http://crbug.com/521440
     builder->AddArg("--ash-enable-power-button-quick-lock");
     builder->AddArg("--enable-centered-app-list");
   }
