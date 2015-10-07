@@ -23,14 +23,9 @@ struct UdevDeviceDeleter {
   void operator()(udev_device* device) const;
 };
 
-struct UdevQueueDeleter {
-  void operator()(udev_queue* queue) const;
-};
-
 typedef scoped_ptr<udev, UdevDeleter> ScopedUdevPtr;
 typedef scoped_ptr<udev_enumerate, UdevEnumerateDeleter> ScopedUdevEnumeratePtr;
 typedef scoped_ptr<udev_device, UdevDeviceDeleter> ScopedUdevDevicePtr;
-typedef scoped_ptr<udev_queue, UdevQueueDeleter> ScopedUdevQueuePtr;
 
 }  // namespace permission_broker
 

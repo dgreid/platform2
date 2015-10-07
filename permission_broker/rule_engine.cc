@@ -66,25 +66,31 @@ Rule::Result RuleEngine::ProcessPath(const std::string& path) {
 }
 
 void RuleEngine::WaitForEmptyUdevQueue() {
-  ScopedUdevQueuePtr queue(udev_queue_new(udev_.get()));
-  if (udev_queue_get_queue_is_empty(queue.get()))
+  struct udev_queue* queue = udev_queue_new(udev_.get());
+  if (udev_queue_get_queue_is_empty(queue)) {
+    udev_queue_unref(queue);
     return;
+  }
 
   struct pollfd udev_poll;
   memset(&udev_poll, 0, sizeof(udev_poll));
-  udev_poll.fd = udev_queue_get_fd(queue.get());
+  udev_poll.fd = inotify_init();
   udev_poll.events = POLLIN;
 
-  if (udev_poll.fd < 0) {
-    LOG(ERROR) << "Failed to get udev queue fd: "
-               << logging::SystemErrorCodeToString(-udev_poll.fd);
-    return;
-  }
+  int watch =
+      inotify_add_watch(udev_poll.fd, udev_run_path_.c_str(), IN_MOVED_TO);
+  CHECK_NE(watch, -1) << "Could not add watch for udev run directory.";
 
-  while (!udev_queue_get_queue_is_empty(queue.get())) {
-    if (poll(&udev_poll, 1, poll_interval_msecs_) > 0)
-      udev_queue_flush(queue.get());
+  while (!udev_queue_get_queue_is_empty(queue)) {
+    if (poll(&udev_poll, 1, poll_interval_msecs_) > 0) {
+      char buffer[sizeof(struct inotify_event)];
+      const ssize_t result = read(udev_poll.fd, buffer, sizeof(buffer));
+      if (result < 0)
+        LOG(WARNING) << "Did not read complete udev event.";
+    }
   }
+  udev_queue_unref(queue);
+  close(udev_poll.fd);
 }
 
 ScopedUdevDevicePtr RuleEngine::FindUdevDevice(const std::string& path) {

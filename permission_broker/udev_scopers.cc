@@ -18,8 +18,4 @@ void UdevDeviceDeleter::operator()(udev_device* device) const {
   udev_device_unref(device);
 }
 
-void UdevQueueDeleter::operator()(udev_queue* queue) const {
-  udev_queue_unref(queue);
-}
-
 }  // namespace permission_broker
