@@ -44,7 +44,7 @@ uint16_t NetlinkPacket::GetMessageType() const {
   return GetNlMsgHeader().nlmsg_type;
 }
 
-uint16_t NetlinkPacket::GetMessageSequence() const {
+uint32_t NetlinkPacket::GetMessageSequence() const {
   return GetNlMsgHeader().nlmsg_seq;
 }
 
@@ -116,7 +116,7 @@ void MutableNetlinkPacket::SetMessageType(uint16_t type) {
   mutable_header()->nlmsg_type = type;
 }
 
-void MutableNetlinkPacket::SetMessageSequence(uint16_t sequence) {
+void MutableNetlinkPacket::SetMessageSequence(uint32_t sequence) {
   mutable_header()->nlmsg_seq = sequence;
 }
 

@@ -402,7 +402,7 @@ class SHILL_EXPORT NetlinkManager {
 
   // Returns the sequence number of the pending netlink dump request message iff
   // there is a pending dump. Otherwise, returns 0.
-  uint16_t PendingDumpSequenceNumber();
+  uint32_t PendingDumpSequenceNumber();
 
   // NetlinkManager Handlers, OnRawNlMessageReceived invokes each of these
   // User-supplied callback object when _it_ gets called to read netlink data.

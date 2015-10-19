@@ -603,7 +603,7 @@ bool NetlinkManager::IsDumpPending() {
   return dump_pending_ && !pending_messages_.empty();
 }
 
-uint16_t NetlinkManager::PendingDumpSequenceNumber() {
+uint32_t NetlinkManager::PendingDumpSequenceNumber() {
   if (!IsDumpPending()) {
     LOG(ERROR) << __func__ << ": no pending dump";
     return 0;
