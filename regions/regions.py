@@ -288,10 +288,9 @@ REGIONS_LIST = [
             "Canadian Multilingual keyboard; you probably don't want this. See "
             'http://goto/cros-canada'), 10),
     Region(
-        'ch', 'xkb:ch::ger', 'Europe/Zurich', 'en-US', _KML.ISO,
+        'ch', 'xkb:ch::ger', 'Europe/Zurich', 'de-CH', _KML.ISO,
         'Switzerland',
-        'German keyboard, but US English to be language-neutral; used in '
-        'the common case that there is only a single Swiss SKU.', 11),
+        'German keyboard', 11),
     Region(
         'de', 'xkb:de::ger', 'Europe/Berlin', 'de', _KML.ISO, 'Germany',
         None, 12),
