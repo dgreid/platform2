@@ -14,6 +14,7 @@
 #include <base/strings/string_util.h>
 #include <base/strings/stringprintf.h>
 #include <gtest/gtest.h>
+#include <linux/fb.h>
 
 #include "power_manager/common/clock.h"
 
@@ -59,23 +60,26 @@ class InternalBacklightTest : public ::testing::Test {
     }
   }
 
+  // Reads and returns an int64 value from |path|. -1 is returned on error.
+  int64_t ReadFile(const base::FilePath& path) {
+    std::string data;
+    if (!base::ReadFileToString(path, &data)) {
+      LOG(ERROR) << "Unable to read data from " << path.value();
+      return -1;
+    }
+    int64_t value = 0;
+    base::TrimWhitespaceASCII(data, base::TRIM_TRAILING, &data);
+    if (!base::StringToInt64(data, &value)) {
+      LOG(ERROR) << "Unable to parse \"" << value << "\" from " << path.value();
+      return -1;
+    }
+    return value;
+  }
+
   // Returns the value from the "brightness" file in |directory|.
   // -1 is returned on error.
   int64_t ReadBrightness(const base::FilePath& directory) {
-    std::string data;
-    base::FilePath file =
-        directory.Append(InternalBacklight::kBrightnessFilename);
-    if (!base::ReadFileToString(file, &data)) {
-      LOG(ERROR) << "Unable to read data from " << file.value();
-      return -1;
-    }
-    int64_t level = 0;
-    base::TrimWhitespaceASCII(data, base::TRIM_TRAILING, &data);
-    if (!base::StringToInt64(data, &level)) {
-      LOG(ERROR) << "Unable to parse \"" << level << "\" from " << file.value();
-      return -1;
-    }
-    return level;
+    return ReadFile(directory.Append(InternalBacklight::kBrightnessFilename));
   }
 
  protected:
@@ -273,6 +277,75 @@ TEST_F(InternalBacklightTest, InterruptTransition) {
       backlight.clock()->GetCurrentTime() + kDuration);
   EXPECT_FALSE(backlight.TriggerTransitionTimeoutForTesting());
   EXPECT_EQ(kThreeQuartersBrightness, ReadBrightness(backlight_dir));
+}
+
+TEST_F(InternalBacklightTest, BlPower) {
+  const int kMaxBrightness = 100;
+  const base::FilePath kDir = test_path_.Append("backlight");
+  PopulateBacklightDir(kDir, kMaxBrightness, kMaxBrightness, kMaxBrightness);
+
+  const base::FilePath kPowerFile =
+      kDir.Append(InternalBacklight::kBlPowerFilename);
+  ASSERT_EQ(0, base::WriteFile(kPowerFile, "", 0));
+
+  // The bl_power file shouldn't be touched initially.
+  InternalBacklight backlight;
+  backlight.clock()->set_current_time_for_testing(
+      base::TimeTicks::FromInternalValue(10000));
+  ASSERT_TRUE(backlight.Init(test_path_, "*"));
+  std::string data;
+  ASSERT_TRUE(base::ReadFileToString(kPowerFile, &data));
+  EXPECT_EQ("", data);
+
+  // A transition from nonzero brightness to 0 should result in
+  // FB_BLANK_POWERDOWN being written to bl_power. This should happen before the
+  // updated level is written, but there's no easy way to test this without
+  // adding yet another delegate.
+  backlight.SetBrightnessLevel(0, base::TimeDelta());
+  EXPECT_EQ(FB_BLANK_POWERDOWN, ReadFile(kPowerFile));
+
+  // When the brightness goes from 0 to nonzero, FB_BLANK_UNBLANK should be written to
+  // bl_power.
+  backlight.SetBrightnessLevel(1, base::TimeDelta());
+  EXPECT_EQ(FB_BLANK_UNBLANK, ReadFile(kPowerFile));
+
+  // Clear the file and check that it doesn't get rewritten when moving between
+  // two nonzero levels.
+  const std::string kUnblankValue = base::StringPrintf("%d", FB_BLANK_UNBLANK);
+  ASSERT_EQ(0, base::WriteFile(kPowerFile, "", 0));
+  backlight.SetBrightnessLevel(kMaxBrightness, base::TimeDelta());
+  ASSERT_TRUE(base::ReadFileToString(kPowerFile, &data));
+  EXPECT_EQ("", data);
+  ASSERT_EQ(base::WriteFile(kPowerFile, kUnblankValue.c_str(), kUnblankValue.size()), 1);
+
+  // Now do an animated transition. bl_power should remain at FB_BLANK_UNBLANK
+  // until the backlight level reaches 0.
+  const base::TimeDelta kDuration = base::TimeDelta::FromSeconds(1);
+  backlight.SetBrightnessLevel(0, kDuration);
+  EXPECT_EQ(FB_BLANK_UNBLANK, ReadFile(kPowerFile));
+
+  backlight.clock()->set_current_time_for_testing(
+      backlight.clock()->GetCurrentTime() + kDuration / 2);
+  ASSERT_TRUE(backlight.TriggerTransitionTimeoutForTesting());
+  ASSERT_NE(0, ReadBrightness(kDir));
+  EXPECT_EQ(FB_BLANK_UNBLANK, ReadFile(kPowerFile));
+
+  backlight.clock()->set_current_time_for_testing(
+      backlight.clock()->GetCurrentTime() + kDuration / 2);
+  ASSERT_FALSE(backlight.TriggerTransitionTimeoutForTesting());
+  ASSERT_EQ(0, ReadBrightness(kDir));
+  EXPECT_EQ(FB_BLANK_POWERDOWN, ReadFile(kPowerFile));
+
+  // Animate back to the max brightness and check that bl_power goes to 1 in
+  // conjunction with the first nonzero level.
+  backlight.SetBrightnessLevel(kMaxBrightness, kDuration);
+  EXPECT_EQ(FB_BLANK_POWERDOWN, ReadFile(kPowerFile));
+
+  backlight.clock()->set_current_time_for_testing(
+      backlight.clock()->GetCurrentTime() + kDuration / 2);
+  ASSERT_TRUE(backlight.TriggerTransitionTimeoutForTesting());
+  ASSERT_NE(0, ReadBrightness(kDir));
+  EXPECT_EQ(FB_BLANK_UNBLANK, ReadFile(kPowerFile));
 }
 
 }  // namespace system

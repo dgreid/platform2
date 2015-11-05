@@ -29,6 +29,7 @@ class InternalBacklight : public BacklightInterface {
   static const char kMaxBrightnessFilename[];
   static const char kActualBrightnessFilename[];
   static const char kResumeBrightnessFilename[];
+  static const char kBlPowerFilename[];
 
   InternalBacklight();
   virtual ~InternalBacklight();
@@ -66,6 +67,12 @@ class InternalBacklight : public BacklightInterface {
   bool TransitionInProgress() const override;
 
  private:
+  // Helper method that actually writes to |brightness_path_| and updates
+  // |current_brightness_level_|, also writing to |bl_power_path_| if necessary.
+  // Called by SetBrightnessLevel() and HandleTransitionTimeout(). Returns true
+  // on success.
+  bool WriteBrightness(int64_t new_level);
+
   // Sets the brightness level appropriately for the current point in the
   // transition.  When the transition is done, stops |transition_timer_|.
   void HandleTransitionTimeout();
@@ -81,6 +88,11 @@ class InternalBacklight : public BacklightInterface {
   base::FilePath brightness_path_;
   base::FilePath max_brightness_path_;
   base::FilePath resume_brightness_path_;
+
+  // Path to a bl_power file in sysfs that can be used to turn the backlight on
+  // or off. Empty if the file isn't present. See http://crbug.com/396218 for
+  // details.
+  base::FilePath bl_power_path_;
 
   // Cached maximum and last-set brightness levels.
   int64_t max_brightness_level_;

@@ -13,6 +13,7 @@
 #include <base/logging.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_util.h>
+#include <linux/fb.h>
 
 #include "power_manager/common/clock.h"
 #include "power_manager/common/util.h"
@@ -28,7 +29,7 @@ bool ReadBrightnessLevelFromFile(const base::FilePath& path, int64_t* level) {
 
   std::string level_str;
   if (!base::ReadFileToString(path, &level_str)) {
-    LOG(ERROR) << "Unable to read brightness from " << path.value();
+    PLOG(ERROR) << "Unable to read brightness from " << path.value();
     return false;
   }
 
@@ -42,13 +43,12 @@ bool ReadBrightnessLevelFromFile(const base::FilePath& path, int64_t* level) {
   return true;
 }
 
-// Writes |level| to |path|. Returns false on failure.
-bool WriteBrightnessLevelToFile(const base::FilePath& path, int64_t level) {
-  std::string buf = base::Int64ToString(level);
+// Writes |value| to |path|. Returns false on failure.
+bool WriteFile(const base::FilePath& path, int64_t value) {
+  std::string buf = base::Int64ToString(value);
   VLOG(1) << "Writing " << buf << " to " << path.value();
   if (base::WriteFile(path, buf.data(), buf.size()) == -1) {
-    LOG(ERROR) << "Unable to write brightness \"" << buf << "\" to "
-               << path.value();
+    PLOG(ERROR) << "Unable to write \"" << buf << "\" to " << path.value();
     return false;
   }
   return true;
@@ -64,6 +64,7 @@ const char InternalBacklight::kBrightnessFilename[] = "brightness";
 const char InternalBacklight::kMaxBrightnessFilename[] = "max_brightness";
 const char InternalBacklight::kActualBrightnessFilename[] = "actual_brightness";
 const char InternalBacklight::kResumeBrightnessFilename[] = "resume_brightness";
+const char InternalBacklight::kBlPowerFilename[] = "bl_power";
 
 InternalBacklight::InternalBacklight()
     : clock_(new Clock),
@@ -87,14 +88,14 @@ bool InternalBacklight::Init(const base::FilePath& base_path,
       continue;
 
     const base::FilePath max_brightness_path =
-        device_path.Append(InternalBacklight::kMaxBrightnessFilename);
+        device_path.Append(kMaxBrightnessFilename);
     if (!base::PathExists(max_brightness_path)) {
       LOG(WARNING) << "Can't find " << max_brightness_path.value();
       continue;
     }
 
     const base::FilePath brightness_path =
-        device_path.Append(InternalBacklight::kBrightnessFilename);
+        device_path.Append(kBrightnessFilename);
     if (access(brightness_path.value().c_str(), R_OK | W_OK) != 0) {
       LOG(WARNING) << "Can't write to " << brightness_path.value();
       continue;
@@ -114,13 +115,15 @@ bool InternalBacklight::Init(const base::FilePath& base_path,
     // Technically all screen backlights should implement actual_brightness,
     // but we'll handle ones that don't. This allows us to work with keyboard
     // backlights too.
-    actual_brightness_path_ =
-        device_path.Append(InternalBacklight::kActualBrightnessFilename);
+    actual_brightness_path_ = device_path.Append(kActualBrightnessFilename);
     if (!base::PathExists(actual_brightness_path_))
       actual_brightness_path_ = brightness_path_;
 
-    resume_brightness_path_ =
-        device_path.Append(InternalBacklight::kResumeBrightnessFilename);
+    resume_brightness_path_ = device_path.Append(kResumeBrightnessFilename);
+
+    const base::FilePath power_path = device_path.Append(kBlPowerFilename);
+    if (base::PathExists(power_path))
+      bl_power_path_ = power_path;
   }
 
   if (max_brightness_level_ <= 0) {
@@ -161,10 +164,7 @@ bool InternalBacklight::SetBrightnessLevel(int64_t level,
 
   if (interval.InMilliseconds() <= kTransitionIntervalMs) {
     CancelTransition();
-    if (!WriteBrightnessLevelToFile(brightness_path_, level))
-      return false;
-    current_brightness_level_ = level;
-    return true;
+    return WriteBrightness(level);
   }
 
   transition_start_time_ = clock_->GetCurrentTime();
@@ -186,11 +186,30 @@ bool InternalBacklight::SetResumeBrightnessLevel(int64_t level) {
     return false;
   }
 
-  return WriteBrightnessLevelToFile(resume_brightness_path_, level);
+  return WriteFile(resume_brightness_path_, level);
 }
 
 bool InternalBacklight::TransitionInProgress() const {
   return transition_timer_.IsRunning();
+}
+
+bool InternalBacklight::WriteBrightness(int64_t new_level) {
+  // If the backlight is about to be turned on, write FB_BLANK_UNBLANK
+  // to bl_power first.
+  if (current_brightness_level_ == 0 && !bl_power_path_.empty())
+    WriteFile(bl_power_path_, FB_BLANK_UNBLANK);
+
+  if (!WriteFile(brightness_path_, new_level))
+    return false;
+
+  current_brightness_level_ = new_level;
+
+  // If the backlight level just went to 0, write FB_BLANK_POWERDOWN
+  // to bl_power.
+  if (current_brightness_level_ == 0 && !bl_power_path_.empty())
+    WriteFile(bl_power_path_, FB_BLANK_POWERDOWN);
+
+  return true;
 }
 
 void InternalBacklight::HandleTransitionTimeout() {
@@ -210,9 +229,10 @@ void InternalBacklight::HandleTransitionTimeout() {
     new_level = transition_start_level_ + intermediate_amount;
   }
 
-  if (new_level != current_brightness_level_ &&
-      WriteBrightnessLevelToFile(brightness_path_, new_level))
-    current_brightness_level_ = new_level;
+  if (new_level == current_brightness_level_)
+    return;
+
+  WriteBrightness(new_level);
 }
 
 void InternalBacklight::CancelTransition() {
