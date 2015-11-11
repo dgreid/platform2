@@ -245,6 +245,9 @@ void AddUiFlags(ChromiumCommandBuilder* builder) {
   // at crbug.com/309806.
   if (builder->UseFlagIsSet("moblab"))
     builder->AddArg("--disable-demo-mode");
+
+  // Re-enable prefixed EME by default in Chrome OS.
+  builder->AddArg("--enable-prefixed-encrypted-media");
 }
 
 // Adds enterprise-related flags to the command line.
