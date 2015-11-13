@@ -579,6 +579,21 @@ class Platform {
 
   void PostWorkerTask(const base::Closure& task);
 
+  // Computes a checksum and returns an ASCII representation.
+  std::string GetChecksum(const void* input, size_t input_size);
+
+  // Computes a checksum of |content| and writes it atomically to the same
+  // |path| but with a .sum suffix and the given |mode|.
+  void WriteChecksum(const std::string& path,
+                     const void* content,
+                     size_t content_size,
+                     mode_t mode);
+
+  // Looks for a .sum file for |path| and verifies the checksum if it exists.
+  void VerifyChecksum(const std::string& path,
+                      const void* content,
+                      size_t content_size);
+
   std::string mtab_path_;
 
   friend class PlatformTest;

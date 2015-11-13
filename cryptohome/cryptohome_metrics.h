@@ -23,6 +23,7 @@ enum CryptohomeError {
   kTpmBadKeyProperty = 13,
   kLoadPkcs11TokenFailed = 14,
   kEncryptWithTpmFailed = 15,
+  kCryptohomeErrorNumBuckets = 16
 };
 
 enum TimerType {
@@ -43,6 +44,15 @@ enum DictionaryAttackResetStatus {
   kDelegateNotAllowed,
   kDelegateNotAvailable,
   kCounterQueryFailed,
+  kDictionaryAttackResetStatusNumBuckets
+};
+
+enum ChecksumStatus {
+  kChecksumOK,
+  kChecksumDoesNotExist,
+  kChecksumReadError,
+  kChecksumMismatch,
+  kChecksumStatusNumBuckets
 };
 
 // Cros events emitted by cryptohome.
@@ -78,6 +88,8 @@ void ReportDictionaryAttackResetStatus(DictionaryAttackResetStatus status);
 // Reports a dictionary attack counter value to the
 // "Platform.TPM.DictionaryAttackCounter" histogram.
 void ReportDictionaryAttackCounter(int counter);
+
+void ReportChecksum(ChecksumStatus status);
 
 // Initialization helper.
 class ScopedMetricsInitializer {
