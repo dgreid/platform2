@@ -23,12 +23,14 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+#include <sstream>
 #include <utility>
 
 #include <base/bind.h>
 #include <base/callback.h>
 #include <base/files/file_util.h>
 #include <base/location.h>
+#include <base/logging.h>
 #include <base/posix/eintr_wrapper.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_split.h>
@@ -41,10 +43,13 @@
 #include <chromeos/secure_blob.h>
 #include <openssl/rand.h>
 
-// Uses libvboot_host for accessing crossystem variables.
 extern "C" {
+#include "cryptohome/crc32.h"
+// Uses libvboot_host for accessing crossystem variables.
 #include <vboot/crossystem.h>
 }
+
+#include "cryptohome/cryptohome_metrics.h"
 
 using base::FilePath;
 using base::SplitString;
@@ -625,6 +630,7 @@ bool Platform::WriteStringToFileAtomicDurable(const std::string& path,
                                               mode_t mode) {
   if (!WriteStringToFileAtomic(path, data, mode))
     return false;
+  WriteChecksum(path, data.data(), data.size(), mode);
   return SyncDirectory(FilePath(path).DirName().value());
 }
 
@@ -661,11 +667,16 @@ bool Platform::ReadFile(const std::string& path, chromeos::Blob* blob) {
     return false;
   }
   blob->swap(buf);
+  VerifyChecksum(path, blob->data(), blob->size());
   return true;
 }
 
 bool Platform::ReadFileToString(const std::string& path, std::string* string) {
-  return base::ReadFileToString(FilePath(path), string);
+  if (!base::ReadFileToString(FilePath(path), string)) {
+    return false;
+  }
+  VerifyChecksum(path, string->data(), string->size());
+  return true;
 }
 
 bool Platform::CreateDirectory(const std::string& path) {
@@ -1008,6 +1019,47 @@ bool Platform::WalkPath(const std::string& path,
     }
   }
   return true;
+}
+
+std::string Platform::GetChecksum(const void* input, size_t input_size) {
+  uint32_t sum = Crc32(input, input_size);
+  return base::HexEncode(&sum, 4);
+}
+
+void Platform::WriteChecksum(const std::string& path,
+                             const void* content,
+                             const size_t content_size,
+                             mode_t mode) {
+  WriteStringToFileAtomic(path + ".sum", GetChecksum(content, content_size),
+                          mode);
+}
+
+void Platform::VerifyChecksum(const std::string& path,
+                              const void* content,
+                              const size_t content_size) {
+  // Exclude some system paths.
+  if (base::StartsWithASCII(path, "/etc", true) ||
+      base::StartsWithASCII(path, "/dev", true) ||
+      base::StartsWithASCII(path, "/sys", true) ||
+      base::StartsWithASCII(path, "/proc", true)) {
+    return;
+  }
+  if (!FileExists(path + ".sum")) {
+    ReportChecksum(kChecksumDoesNotExist);
+    return;
+  }
+  std::string saved_sum;
+  if (!base::ReadFileToString(FilePath(path + ".sum"), &saved_sum)) {
+    LOG(ERROR) << "CHECKSUM: Failed to read checksum for " << path;
+    ReportChecksum(kChecksumReadError);
+    return;
+  }
+  if (saved_sum != GetChecksum(content, content_size)) {
+    LOG(ERROR) << "CHECKSUM: Failed to verify checksum for " << path;
+    ReportChecksum(kChecksumMismatch);
+    return;
+  }
+  ReportChecksum(kChecksumOK);
 }
 
 FileEnumerator::FileInfo::FileInfo(

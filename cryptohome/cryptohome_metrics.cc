@@ -18,13 +18,12 @@ struct TimerHistogramParams {
 };
 
 const char kCryptohomeErrorHistogram[] = "Cryptohome.Errors";
-const int kCryptohomeErrorNumBuckets = 50;
 const char kDictionaryAttackResetStatusHistogram[] =
     "Platform.TPM.DictionaryAttackResetStatus";
-const int kDictionaryAttackResetStatusNumBuckets = 10;
 const char kDictionaryAttackCounterHistogram[] =
     "Platform.TPM.DictionaryAttackCounter";
-const char kDictionaryAttackCounterNumBuckets = 100;
+const int kDictionaryAttackCounterNumBuckets = 100;
+const char kChecksumStatusHistogram[] = "Cryptohome.ChecksumStatus";
 
 // Histogram parameters. This should match the order of 'TimerType'.
 // Min and max samples are in milliseconds.
@@ -137,6 +136,15 @@ void ReportDictionaryAttackCounter(int counter) {
   g_metrics->SendEnumToUMA(kDictionaryAttackCounterHistogram,
                            counter,
                            kDictionaryAttackCounterNumBuckets);
+}
+
+void ReportChecksum(ChecksumStatus status) {
+  if (!g_metrics) {
+    return;
+  }
+  g_metrics->SendEnumToUMA(kChecksumStatusHistogram,
+                           status,
+                           kChecksumStatusNumBuckets);
 }
 
 }  // namespace cryptohome

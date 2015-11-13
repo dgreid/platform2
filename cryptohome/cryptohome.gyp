@@ -107,6 +107,7 @@
       'sources': [
         'attestation.cc',
         'boot_lockbox.cc',
+        'crc32.c',
         'crypto.cc',
         'cryptohome_metrics.cc',
         'cryptolib.cc',
@@ -275,6 +276,7 @@
         ],
       },
       'sources': [
+        'crc32.c',
         'lockbox.cc',
         'lockbox-cache.cc',
         'lockbox-cache-main.cc',
