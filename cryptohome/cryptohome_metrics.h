@@ -23,7 +23,9 @@ enum CryptohomeError {
   kTpmBadKeyProperty = 13,
   kLoadPkcs11TokenFailed = 14,
   kEncryptWithTpmFailed = 15,
-  kCryptohomeErrorNumBuckets = 16
+  kTssCommunicationFailure = 16,
+  kTssInvalidHandle = 17,
+  kCryptohomeErrorNumBuckets = 18,  // Must be the last entry.
 };
 
 enum TimerType {

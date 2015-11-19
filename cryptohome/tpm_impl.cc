@@ -58,13 +58,14 @@ cryptohome::Tpm::TpmRetryAction ResultToRetryAction(TSS_RESULT result) {
       break;
     case ERROR_CODE(TSS_E_COMM_FAILURE):
       LOG(ERROR) << "Communications failure with the TPM.";
+      ReportCryptohomeError(cryptohome::kTssCommunicationFailure);
       status = cryptohome::Tpm::kTpmRetryCommFailure;
       break;
     case ERROR_CODE(TSS_E_INVALID_HANDLE):
       LOG(ERROR) << "Invalid handle to the TPM.";
+      ReportCryptohomeError(cryptohome::kTssInvalidHandle);
       status = cryptohome::Tpm::kTpmRetryInvalidHandle;
       break;
-    // TODO(fes): We're considering this a communication failure for now.
     case ERROR_CODE(TCS_E_KM_LOADFAILED):
       LOG(ERROR) << "Key load failed; problem with parent key authorization.";
       ReportCryptohomeError(cryptohome::kTcsKeyLoadFailed);
