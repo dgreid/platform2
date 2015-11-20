@@ -381,7 +381,9 @@ bool Crypto::DecryptTPM(const SerializedVaultKeyset& serialized,
       tpm_key,
       key,
       &local_vault_key);
-  if (retry_action == Tpm::kTpmRetryLoadFail) {
+  if (retry_action == Tpm::kTpmRetryLoadFail ||
+      retry_action == Tpm::kTpmRetryInvalidHandle ||
+      retry_action == Tpm::kTpmRetryCommFailure) {
     if (!tpm_init_->ReloadCryptohomeKey()) {
       LOG(ERROR) << "Unable to reload Cryptohome key.";
       retry_action = Tpm::kTpmRetryFailNoRetry;
