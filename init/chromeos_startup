@@ -125,16 +125,15 @@ fi
 # This file indicates a blocked developer mode transition attempt has occurred.
 BLOCKED_DEV_MODE_FILE="/mnt/stateful_partition/.blocked_dev_mode"
 
-# Check whether the device is allowed to boot in dev mode. If firmware write
-# protect is off or a debug build is already installed on the system, ignore
-# block_devmode. It is pointless in these cases, as the device is already in a
-# state where the local user has full control.
+# Check whether the device is allowed to boot in dev mode. If a debug
+# build is already installed on the system, ignore block_devmode. It
+# is pointless in this case, as the device is already in a state where
+# the local user has full control.
 #
 # The up-front CROS_DEBUG check avoids forking a crossystem process in verified
 # mode, thus keeping the check as lightweight as possible for normal boot.
 if [ $CROS_DEBUG -eq 1 ]; then
-  if crossystem "block_devmode?1" "wpsw_boot?1" "debug_build?0" \
-                "devsw_boot?1"; then
+  if crossystem "block_devmode?1" "debug_build?0" "devsw_boot?1"; then
     # Put a flag file into place that will trigger a stateful partition wipe
     # after reboot in verified mode.
     touch ${BLOCKED_DEV_MODE_FILE}
