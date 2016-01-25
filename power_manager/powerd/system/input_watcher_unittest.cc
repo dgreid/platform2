@@ -316,7 +316,7 @@ TEST_F(InputWatcherTest, TabletModeSwitch) {
   EXPECT_EQ(TABLET_MODE_ON, input_watcher_->GetTabletMode());
 }
 
-TEST_F(InputWatcherTest, Hover) {
+TEST_F(InputWatcherTest, HoverMultitouch) {
   linked_ptr<EventDeviceStub> touchpad(new EventDeviceStub);
   touchpad->set_debug_name("touchpad");
   touchpad->set_hover_supported(true);
@@ -385,6 +385,72 @@ TEST_F(InputWatcherTest, Hover) {
   detect_hover_pref_ = 0;
   Init();
   touchpad->AppendEvent(EV_ABS, ABS_MT_TRACKING_ID, 0);
+  touchpad->AppendEvent(EV_SYN, SYN_REPORT, 0);
+  touchpad->NotifyAboutEvents();
+  EXPECT_EQ(kNoActions, observer_->GetActions());
+}
+
+TEST_F(InputWatcherTest, HoverSingletouch) {
+  linked_ptr<EventDeviceStub> touchpad(new EventDeviceStub);
+  touchpad->set_debug_name("touchpad");
+  touchpad->set_hover_supported(true);
+  touchpad->set_has_left_button(true);
+  AddDevice("event0", touchpad);
+
+  linked_ptr<EventDeviceStub> touchscreen(new EventDeviceStub);
+  touchscreen->set_debug_name("touchscreen");
+  touchscreen->set_hover_supported(true);
+  touchscreen->set_has_left_button(false);
+  AddDevice("event1", touchscreen);
+
+  detect_hover_pref_ = 1;
+  Init();
+
+  // Show a finger approaching the pad, but not touching it yet.
+  touchpad->AppendEvent(EV_ABS, ABS_DISTANCE, 1);
+  touchpad->AppendEvent(EV_KEY, BTN_TOOL_FINGER, 1);
+  touchpad->NotifyAboutEvents();
+  EXPECT_EQ(kNoActions, observer_->GetActions());
+
+  // After a SYN_REPORT indicating the end of the current report, hovering
+  // should be reported.
+  touchpad->AppendEvent(EV_SYN, SYN_REPORT, 0);
+  touchpad->NotifyAboutEvents();
+  EXPECT_EQ(kHoverOnAction, observer_->GetActions());
+
+  // Invalidate the hovering finger (leaving without touching the pad at
+  // all) which should turn hover off.
+  touchpad->AppendEvent(EV_KEY, BTN_TOOL_FINGER, 0);
+  touchpad->AppendEvent(EV_SYN, SYN_REPORT, 0);
+  touchpad->NotifyAboutEvents();
+  EXPECT_EQ(kHoverOffAction, observer_->GetActions());
+
+  // Report The finger coming back, but actually touching this time.
+  touchpad->AppendEvent(EV_ABS, ABS_MT_SLOT, 1);
+  touchpad->AppendEvent(EV_ABS, ABS_MT_TRACKING_ID, 1);
+  touchpad->AppendEvent(EV_ABS, ABS_MT_POSITION_X, 100);
+  touchpad->AppendEvent(EV_ABS, ABS_MT_POSITION_Y, 100);
+  touchpad->AppendEvent(EV_ABS, ABS_MT_PRESSURE, 50);
+  touchpad->AppendEvent(EV_KEY, BTN_TOOL_FINGER, 1);
+  touchpad->AppendEvent(EV_KEY, BTN_TOUCH, 1);
+  touchpad->AppendEvent(EV_SYN, SYN_REPORT, 0);
+  touchpad->AppendEvent(EV_ABS, ABS_DISTANCE, 0);
+  touchpad->AppendEvent(EV_SYN, SYN_REPORT, 0);
+  touchpad->NotifyAboutEvents();
+  EXPECT_EQ(kHoverOnAction, observer_->GetActions());
+
+  // Finger leaving the pad now.
+  touchpad->AppendEvent(EV_ABS, ABS_MT_TRACKING_ID, -1);
+  touchpad->AppendEvent(EV_KEY, BTN_TOOL_FINGER, 0);
+  touchpad->AppendEvent(EV_SYN, SYN_REPORT, 0);
+  touchpad->NotifyAboutEvents();
+  EXPECT_EQ(kHoverOffAction, observer_->GetActions());
+
+  // The touchpad should be ignored when the pref is set to false.
+  detect_hover_pref_ = 0;
+  Init();
+  touchpad->AppendEvent(EV_ABS, ABS_DISTANCE, 1);
+  touchpad->AppendEvent(EV_KEY, BTN_TOOL_FINGER, 1);
   touchpad->AppendEvent(EV_SYN, SYN_REPORT, 0);
   touchpad->NotifyAboutEvents();
   EXPECT_EQ(kNoActions, observer_->GetActions());

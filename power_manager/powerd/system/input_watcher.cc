@@ -116,6 +116,8 @@ InputWatcher::InputWatcher()
       hovering_(false),
       current_multitouch_slot_(0),
       multitouch_slots_hover_state_(0),
+      single_touch_hover_valid_(false),
+      single_touch_hover_distance_nonzero_(false),
       power_button_to_skip_(kPowerButtonToSkip),
       console_fd_(-1),
       udev_(nullptr),
@@ -373,12 +375,26 @@ void InputWatcher::ProcessHoverEvent(const input_event& event) {
       else
         multitouch_slots_hover_state_ &= ~slot_bit;
     }
+  } else if (event.type == EV_ABS && event.code == ABS_DISTANCE) {
+    // For single-touch presence-only hover touchpads, ABS_DISTANCE indicates
+    // the distance above the pad the single-touch finger is hovering
+    VLOG(2) << "ABS_DISTANCE " << event.value;
+    single_touch_hover_distance_nonzero_ = (event.value > 0);
+  } else if (event.type == EV_KEY && event.code == BTN_TOOL_FINGER) {
+    // For single-touch presence-only hover touchpads, BTN_TOOL_FINGER tells
+    // us if the single-touch contact is valid (if we should believe the
+    // value in ABS_DISTANCE)
+    VLOG(2) << "BTN_TOOL_FINGER " << event.value;
+    single_touch_hover_valid_ = (event.value == 1);
   } else if (event.type == EV_SYN && event.code == SYN_REPORT) {
     // SYN_REPORT events indicate the end of the current set of multitouch data.
     // Check whether the overall hovering state is different from before and
     // notify observers if so.
     VLOG(2) << "SYN_REPORT";
-    bool hovering = multitouch_slots_hover_state_ != 0;
+    bool multi_touch_hovering = multitouch_slots_hover_state_ != 0;
+    bool single_touch_hovering = (single_touch_hover_distance_nonzero_ &&
+                                  single_touch_hover_valid_);
+    bool hovering = multi_touch_hovering || single_touch_hovering;
     if (hovering != hovering_) {
       VLOG(1) << "Notifying observers about hover state change to "
               << (hovering ? "on" : "off");

@@ -173,6 +173,13 @@ class InputWatcher : public InputWatcherInterface,
   // hover event above the touchpad or a touch event on the touchpad.
   uint64_t multitouch_slots_hover_state_;
 
+  // Some touch devices only provide a binary hover value for the whole sensor
+  // instead of the signals by finger.  These variables track that hover
+  // state when it's not tied to a specific slot by using btn_tool_finger to
+  // confirm that the abs_distance value is valid.
+  bool single_touch_hover_valid_;
+  bool single_touch_hover_distance_nonzero_;
+
   // (Events, DeviceType-bitfield) tuples read from |lid_device_| by
   // QueryLidState() that haven't yet been sent to observers.
   std::vector<std::pair<input_event, uint32_t>> queued_events_;

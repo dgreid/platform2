@@ -66,7 +66,19 @@ bool EventDevice::IsPowerButton() {
 }
 
 bool EventDevice::HoverSupported() {
-  return HasEventBit(0, EV_ABS) && HasEventBit(EV_ABS, ABS_MT_DISTANCE);
+  // Multitouch hover uses just the ABS_MT_DISTANCE event in addition to
+  // the normal multi-touch events.
+  if (HasEventBit(0, EV_ABS) && HasEventBit(EV_ABS, ABS_MT_DISTANCE))
+    return true;
+
+  // Simple single-touch hover presence-only detection uses 3 events:
+  // ABS_DISTANCE, BTN_TOUCH, and BTN_TOOL_FINGER.
+  if (HasEventBit(0, EV_ABS) && HasEventBit(EV_ABS, ABS_DISTANCE) &&
+      HasEventBit(0, EV_KEY) && HasEventBit(EV_KEY, BTN_TOUCH) &&
+      HasEventBit(EV_KEY, BTN_TOOL_FINGER))
+    return true;
+
+  return false;
 }
 
 bool EventDevice::HasLeftButton() {
