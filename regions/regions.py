@@ -369,8 +369,8 @@ REGIONS_LIST = [
         'jp', 'xkb:jp::jpn', 'Asia/Tokyo', 'ja', _KML.JIS, 'Japan', None,
         30),
     Region(
-        'za', 'xkb:us:intl:eng', 'Africa/Johannesburg', 'en-ZA',
-        _KML.ANSI, 'South Africa', None, 31),
+        'za', 'xkb:gb:extd:eng', 'Africa/Johannesburg', 'en-ZA',
+        _KML.ISO, 'South Africa', None, 31),
     Region(
         'ng', 'xkb:us:intl:eng', 'Africa/Lagos', 'en-GB', _KML.ANSI,
         'Nigeria', None, 32),
