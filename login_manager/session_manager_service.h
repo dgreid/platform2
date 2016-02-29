@@ -20,16 +20,18 @@
 #include <dbus/message.h>
 
 #include "login_manager/child_exit_handler.h"
+#include "login_manager/crossystem_impl.h"
 #include "login_manager/job_manager.h"
 #include "login_manager/key_generator.h"
 #include "login_manager/liveness_checker.h"
+#include "login_manager/policy_key.h"
 #include "login_manager/process_manager_service_interface.h"
 #include "login_manager/server_backed_state_key_generator.h"
 #include "login_manager/session_manager_interface.h"
+#include "login_manager/vpd_process_impl.h"
 
 struct signalfd_siginfo;
 
-class Crossystem;
 class MessageLoop;
 
 namespace dbus {
@@ -143,8 +145,7 @@ class SessionManagerService
                         bool enable_browser_abort_on_hang,
                         base::TimeDelta hang_detection_interval,
                         LoginMetrics* metrics,
-                        SystemUtils* system,
-                        Crossystem* crossystem);
+                        SystemUtils* system);
   virtual ~SessionManagerService();
 
   // TestApi exposes internal routines for testing purposes.
@@ -272,11 +273,13 @@ class SessionManagerService
 
   LoginMetrics* login_metrics_;  // Owned by the caller.
   SystemUtils* system_;          // Owned by the caller.
-  Crossystem* crossystem_;       // Owned by the caller.
 
   scoped_ptr<NssUtil> nss_;
+  PolicyKey owner_key_;
   KeyGenerator key_gen_;
   ServerBackedStateKeyGenerator state_key_generator_;
+  CrossystemImpl crossystem_;
+  VpdProcessImpl vpd_process_;
   scoped_ptr<DBusSignalEmitterInterface> dbus_emitter_;
   scoped_ptr<LivenessChecker> liveness_checker_;
   const bool enable_browser_abort_on_hang_;

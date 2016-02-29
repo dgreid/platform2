@@ -80,6 +80,7 @@
         'upstart_signal_emitter.cc',
         'user_policy_service.cc',
         'user_policy_service_factory.cc',
+        'vpd_process_impl.cc'
       ],
     },
     {

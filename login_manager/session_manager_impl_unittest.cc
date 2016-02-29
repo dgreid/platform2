@@ -27,6 +27,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "bindings/chrome_device_policy.pb.h"
 #include "bindings/device_management_backend.pb.h"
 #include "login_manager/dbus_error_types.h"
 #include "login_manager/device_local_account_policy_service.h"
@@ -39,10 +40,12 @@
 #include "login_manager/mock_key_generator.h"
 #include "login_manager/mock_metrics.h"
 #include "login_manager/mock_nss_util.h"
+#include "login_manager/mock_policy_key.h"
 #include "login_manager/mock_policy_service.h"
 #include "login_manager/mock_process_manager_service.h"
 #include "login_manager/mock_system_utils.h"
 #include "login_manager/mock_user_policy_service_factory.h"
+#include "login_manager/mock_vpd_process.h"
 #include "login_manager/server_backed_state_key_generator.h"
 #include "login_manager/stub_upstart_signal_emitter.h"
 
@@ -62,6 +65,8 @@ using ::testing::_;
 using brillo::cryptohome::home::SanitizeUserName;
 using brillo::cryptohome::home::SetSystemSalt;
 using brillo::cryptohome::home::kGuestUserName;
+
+using enterprise_management::ChromeDeviceSettingsProto;
 
 using std::map;
 using std::string;
@@ -89,7 +94,9 @@ class SessionManagerImplTest : public ::testing::Test {
               &metrics_,
               &nss_,
               &utils_,
-              &crossystem_),
+              &crossystem_,
+              &vpd_process_,
+              &owner_key_),
         fake_salt_("fake salt"),
         actual_locks_(0),
         expected_locks_(0),
@@ -117,6 +124,10 @@ class SessionManagerImplTest : public ::testing::Test {
     SetSystemSalt(NULL);
     EXPECT_EQ(actual_locks_, expected_locks_);
     EXPECT_EQ(actual_restarts_, expected_restarts_);
+  }
+
+  void UpdateSystemSettings() {
+    impl_.UpdateSystemSettings();
   }
 
  protected:
@@ -199,6 +210,8 @@ class SessionManagerImplTest : public ::testing::Test {
   MockNssUtil nss_;
   MockSystemUtils utils_;
   FakeCrossystem crossystem_;
+  MockVpdProcess vpd_process_;
+  MockPolicyKey owner_key_;
 
   SessionManagerImpl impl_;
   SessionManagerImpl::Error error_;
@@ -797,6 +810,58 @@ TEST_F(SessionManagerImplTest, ArcInstanceStart) {
   impl_.StartArcInstance(kSocketPath, &error_);
   EXPECT_EQ(dbus_error::kNotAvailable, error_.name());
 #endif
+}
+
+// Ensure block devmode is set properly.
+TEST_F(SessionManagerImplTest, UpdateSystemSettingsSetBlockDevMode) {
+  crossystem_.VbSetSystemPropertyString("mainfw_type", "normal");
+  crossystem_.VbSetSystemPropertyInt("block_devmode", 0);
+  crossystem_.VbSetSystemPropertyInt("nvram_cleared", 1);
+
+  EXPECT_CALL(owner_key_, IsPopulated())
+      .Times(1)
+      .WillOnce(Return(true));
+
+  ChromeDeviceSettingsProto proto;
+  proto.mutable_system_settings()->set_block_devmode(true);
+  EXPECT_CALL(*device_policy_service_, GetSettingsProxy())
+      .Times(1)
+      .WillOnce(Return(proto));
+
+  EXPECT_CALL(vpd_process_, RunInBackground(_, true))
+      .Times(1)
+      .WillOnce(Return(true));
+
+  UpdateSystemSettings();
+
+  EXPECT_EQ(0, crossystem_.VbGetSystemPropertyInt("nvram_cleared"));
+  EXPECT_EQ(1, crossystem_.VbGetSystemPropertyInt("block_devmode"));
+}
+
+// Ensure block devmode is unset properly.
+TEST_F(SessionManagerImplTest, UpdateSystemSettingsUnsetBlockDevMode) {
+  crossystem_.VbSetSystemPropertyString("mainfw_type", "normal");
+  crossystem_.VbSetSystemPropertyInt("block_devmode", 1);
+  crossystem_.VbSetSystemPropertyInt("nvram_cleared", 1);
+
+  EXPECT_CALL(owner_key_, IsPopulated())
+      .Times(1)
+      .WillOnce(Return(true));
+
+  ChromeDeviceSettingsProto proto;
+  proto.mutable_system_settings()->set_block_devmode(false);
+  EXPECT_CALL(*device_policy_service_, GetSettingsProxy())
+      .Times(1)
+      .WillOnce(Return(proto));
+
+  EXPECT_CALL(vpd_process_, RunInBackground(_, false))
+      .Times(1)
+      .WillOnce(Return(true));
+
+  UpdateSystemSettings();
+
+  EXPECT_EQ(0, crossystem_.VbGetSystemPropertyInt("nvram_cleared"));
+  EXPECT_EQ(0, crossystem_.VbGetSystemPropertyInt("block_devmode"));
 }
 
 class SessionManagerImplStaticTest : public ::testing::Test {

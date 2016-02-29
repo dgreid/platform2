@@ -40,6 +40,7 @@
 #include "login_manager/system_utils.h"
 #include "login_manager/upstart_signal_emitter.h"
 #include "login_manager/user_policy_service_factory.h"
+#include "login_manager/vpd_process.h"
 
 using base::FilePath;
 using brillo::cryptohome::home::GetUserPath;
@@ -81,15 +82,6 @@ const char kTestingChannelFlag[] = "--testing-channel=NamedTestingInterface:";
 // Device-local account state directory.
 const base::FilePath::CharType kDeviceLocalAccountStateDir[] =
     FILE_PATH_LITERAL("/var/lib/device_local_accounts");
-
-// The name of the flag that indicates whether dev mode should be blocked.
-const char kCrossystemBlockDevmode[] = "block_devmode";
-
-// Crossystem property indicating firmware type.
-const char kCrossystemMainfwType[] = "mainfw_type";
-
-// Firmware type string returned when there is no Chrome OS firmware present.
-const char kCrossystemMainfwTypeNonchrome[] = "nonchrome";
 
 bool IsIncognitoUserId(const std::string& user_id) {
   const std::string lower_case_id(base::ToLowerASCII(user_id));
@@ -150,7 +142,9 @@ SessionManagerImpl::SessionManagerImpl(
     LoginMetrics* metrics,
     NssUtil* nss,
     SystemUtils* utils,
-    Crossystem* crossystem)
+    Crossystem* crossystem,
+    VpdProcess* vpd_process,
+    PolicyKey* owner_key)
     : session_started_(false),
       session_stopping_(false),
       screen_locked_(false),
@@ -167,7 +161,8 @@ SessionManagerImpl::SessionManagerImpl(
       nss_(nss),
       system_(utils),
       crossystem_(crossystem),
-      owner_key_(nss->GetOwnerKeyFilePath(), nss),
+      vpd_process_(vpd_process),
+      owner_key_(owner_key),
       mitigator_(key_gen) {
 }
 
@@ -208,13 +203,13 @@ bool SessionManagerImpl::Initialize() {
   key_gen_->set_delegate(this);
 
   device_policy_.reset(DevicePolicyService::Create(
-      login_metrics_, &owner_key_, &mitigator_, nss_));
+      login_metrics_, owner_key_, &mitigator_, nss_));
   device_policy_->set_delegate(this);
 
   user_policy_factory_.reset(
       new UserPolicyServiceFactory(getuid(), nss_, system_));
   device_local_account_policy_.reset(new DeviceLocalAccountPolicyService(
-      base::FilePath(kDeviceLocalAccountStateDir), &owner_key_));
+      base::FilePath(kDeviceLocalAccountStateDir), owner_key_));
 
   if (device_policy_->Initialize()) {
     device_local_account_policy_->UpdateDeviceSettings(
@@ -739,26 +734,51 @@ PolicyService* SessionManagerImpl::GetPolicyService(const std::string& user) {
 
 void SessionManagerImpl::UpdateSystemSettings() {
   // Only write settings when device ownership is established.
-  if (!owner_key_.IsPopulated())
+  if (!owner_key_->IsPopulated())
     return;
 
   // Only write verified boot settings if running on Chrome OS firmware.
   char buffer[Crossystem::kVbMaxStringProperty];
-  if (crossystem_->VbGetSystemPropertyString(kCrossystemMainfwType, buffer,
+  if (crossystem_->VbGetSystemPropertyString(Crossystem::kMainfwType, buffer,
                                              sizeof(buffer)) &&
-      strcmp(kCrossystemMainfwTypeNonchrome, buffer)) {
-    int block_devmode_setting =
-        device_policy_->GetSettings().system_settings().block_devmode() ? 1 : 0;
+      strcmp(Crossystem::kMainfwTypeNonchrome, buffer)) {
+    const int block_devmode_setting =
+        device_policy_->GetSettings().system_settings().block_devmode();
     int block_devmode_value =
-        crossystem_->VbGetSystemPropertyInt(kCrossystemBlockDevmode);
-    if (block_devmode_value == -1)
+        crossystem_->VbGetSystemPropertyInt(Crossystem::kBlockDevmode);
+    if (block_devmode_value == -1) {
       LOG(ERROR) << "Failed to read block_devmode flag!";
+    }
 
-    if (block_devmode_setting != block_devmode_value) {
-      if (crossystem_->VbSetSystemPropertyInt(kCrossystemBlockDevmode,
+    // Set crossystem block_devmode flag.
+    if (block_devmode_value != block_devmode_setting) {
+      if (crossystem_->VbSetSystemPropertyInt(Crossystem::kBlockDevmode,
                                               block_devmode_setting)) {
         LOG(ERROR) << "Failed to write block_devmode flag!";
+      } else {
+        block_devmode_value = block_devmode_setting;
       }
+    }
+
+    // Clear nvram_cleared if block_devmode has the correct state now.  (This is
+    // OK as long as block_devmode is the only consumer of nvram_cleared.  Once
+    // other use cases crop up, clearing has to be done in cooperation.)
+    if (block_devmode_value == block_devmode_setting) {
+      const int nvram_cleared_value =
+          crossystem_->VbGetSystemPropertyInt(Crossystem::kNvramCleared);
+      if (nvram_cleared_value == -1) {
+        LOG(ERROR) << "Failed to read nvram_cleared flag!";
+      }
+      if (nvram_cleared_value != 0) {
+        if (crossystem_->VbSetSystemPropertyInt(Crossystem::kNvramCleared, 0)) {
+          LOG(ERROR) << "Failed to clear nvram_cleared flag!";
+        }
+      }
+    }
+
+    // Back up block_devmode flag in VPD.
+    if (!vpd_process_->RunInBackground(system_, block_devmode_setting)) {
+      LOG(ERROR) << "Could not start VPD process!";
     }
   }
 }

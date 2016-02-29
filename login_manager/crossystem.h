@@ -7,13 +7,29 @@
 
 #include <cstddef>
 
-// Light-weight interface to crossystem keeping the original C semantics to make
-// it an easy drop-in replacement.  (C++ semantics may be added in the future.)
+// Light-weight interface to crossystem keeping the original char* semantics to
+// make it an easy drop-in replacement.  (std::string semantics may be added in
+// the future.)
 class Crossystem {
  public:
+  virtual ~Crossystem() {}
+
   // Recommended size for string property buffers used with
   // VbGetSystemPropertyString().
   static const std::size_t kVbMaxStringProperty = 8192;
+
+  // The name of the flag that indicates whether dev mode should be blocked.
+  static const char kBlockDevmode[];
+
+  // The name of the flag that indicates whether NVRAM has been cleared (eg. due
+  // to loss of power).
+  static const char kNvramCleared[];
+
+  // Crossystem property indicating firmware type.
+  static const char kMainfwType[];
+
+  // Firmware type string returned when there is no Chrome OS firmware present.
+  static const char kMainfwTypeNonchrome[];
 
   // Reads a system property integer.
   //

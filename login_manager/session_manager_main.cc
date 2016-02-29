@@ -33,7 +33,6 @@
 
 #include "login_manager/browser_job.h"
 #include "login_manager/chrome_setup.h"
-#include "login_manager/crossystem_impl.h"
 #include "login_manager/file_checker.h"
 #include "login_manager/login_metrics.h"
 #include "login_manager/regen_mitigator.h"
@@ -153,7 +152,6 @@ int main(int argc, char* argv[]) {
 
   // Shim that wraps system calls, file system ops, etc.
   SystemUtilsImpl system;
-  CrossystemImpl crossystem;
 
   // Checks magic file that causes the session_manager to stop managing the
   // browser process. Devs and tests can use this to keep the session_manager
@@ -206,8 +204,7 @@ int main(int argc, char* argv[]) {
       enable_hang_detection,
       base::TimeDelta::FromSeconds(hang_detection_interval),
       &metrics,
-      &system,
-      &crossystem);
+      &system);
 
   if (manager->Initialize()) {
     // Allows devs to start/stop browser manually.

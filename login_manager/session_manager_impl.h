@@ -18,7 +18,6 @@
 
 #include "login_manager/device_policy_service.h"
 #include "login_manager/key_generator.h"
-#include "login_manager/policy_key.h"
 #include "login_manager/policy_service.h"
 #include "login_manager/regen_mitigator.h"
 #include "login_manager/server_backed_state_key_generator.h"
@@ -31,13 +30,16 @@ class DeviceLocalAccountPolicyService;
 class KeyGenerator;
 class LoginMetrics;
 class NssUtil;
+class PolicyKey;
 class ProcessManagerServiceInterface;
 class SystemUtils;
 class UpstartSignalEmitter;
 class UserPolicyServiceFactory;
+class VpdProcess;
 
 // Friend test classes.
 class SessionManagerImplStaticTest;
+class SessionManagerImplTest;
 
 // Implements the DBus SessionManagerInterface.
 //
@@ -89,7 +91,9 @@ class SessionManagerImpl : public SessionManagerInterface,
                      LoginMetrics* metrics,
                      NssUtil* nss,
                      SystemUtils* utils,
-                     Crossystem* crossystem);
+                     Crossystem* crossystem,
+                     VpdProcess* vpd_process,
+                     PolicyKey* owner_key);
   virtual ~SessionManagerImpl();
 
   void InjectPolicyServices(
@@ -184,6 +188,7 @@ class SessionManagerImpl : public SessionManagerInterface,
   struct UserSession;
 
   friend class SessionManagerImplStaticTest;
+  friend class SessionManagerImplTest;
 
   typedef std::map<std::string, UserSession*> UserSessionMap;
 
@@ -232,11 +237,12 @@ class SessionManagerImpl : public SessionManagerInterface,
   NssUtil* nss_;                                        // Owned by the caller.
   SystemUtils* system_;                                 // Owned by the caller.
   Crossystem* crossystem_;                              // Owned by the caller.
+  VpdProcess* vpd_process_;                             // Owned by the caller.
+  PolicyKey* owner_key_;                                // Owned by the caller.
 
   scoped_ptr<DevicePolicyService> device_policy_;
   scoped_ptr<UserPolicyServiceFactory> user_policy_factory_;
   scoped_ptr<DeviceLocalAccountPolicyService> device_local_account_policy_;
-  PolicyKey owner_key_;
   RegenMitigator mitigator_;
 
   // Map of the currently signed-in users to their state.

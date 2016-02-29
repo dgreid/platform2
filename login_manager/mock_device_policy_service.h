@@ -38,8 +38,17 @@ class MockDevicePolicyService : public DevicePolicyService {
   MOCK_METHOD0(Mitigating, bool(void));
   MOCK_METHOD0(Initialize, bool(void));
   MOCK_METHOD2(ReportPolicyFileMetrics, void(bool, bool));
-  MOCK_METHOD0(GetSettings,
-               const enterprise_management::ChromeDeviceSettingsProto&(void));
+
+  // Work around lack of support for reference return values in GMock.
+  const enterprise_management::ChromeDeviceSettingsProto& GetSettings() {
+    proto_ = GetSettingsProxy();
+    return proto_;
+  }
+  MOCK_METHOD0(GetSettingsProxy,
+               const enterprise_management::ChromeDeviceSettingsProto(void));
+
+ private:
+  enterprise_management::ChromeDeviceSettingsProto proto_;
 };
 }  // namespace login_manager
 
