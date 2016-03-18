@@ -254,6 +254,12 @@ void AddUiFlags(ChromiumCommandBuilder* builder) {
 void AddEnterpriseFlags(ChromiumCommandBuilder* builder) {
   builder->AddArg("--enterprise-enrollment-initial-modulus=14");
   builder->AddArg("--enterprise-enrollment-modulus-limit=18");
+
+  // This flag is only used in M49 to enable bootstrapping for ChromeBit. All
+  // Chrome OS devices will be eligible for bootstrapping starting from M50.
+  // TODO(xdai): Remove this after it's cherry-picked in M49.
+  if (builder->IsBoard("veyron_mickey"))
+    builder->AddArg("--oobe-bootstrapping-slave");
 }
 
 // Adds patterns to the --vmodule flag.
