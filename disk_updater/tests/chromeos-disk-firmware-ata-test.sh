@@ -20,6 +20,7 @@ DISK_TEMP=$(mktemp -d --tmpdir "${DISK_TEMP_TEMPLACE}")
   --tmp_dir "${DISK_TEMP}" \
   --fw_package_dir "tests/test_fw_dir" \
   --hdparm "tests/hdparm" \
+  --hdparm_kingston "tests/hdparm_kingston" \
   --smartctl "test_smartctl" \
   --pwr_suspend "tests/powerd_dbus_suspend" \
   --test
@@ -150,5 +151,23 @@ smartctl_pwr_count=(12 12 13)
 run_test
 check_test 6 disk_upgraded 0 $?
 echo ATA PASS 6
+
+# Test 7: Kingston reformat
+prepare_test
+hdparm_files=(
+  'KINGSTON_RBU_SUS151S364GD-S9FM01.7'
+  'PS3109S9'
+  'PS3109S9'
+  'KINGSTON_RBU_SUS151S364GD-S9FM02.3'
+  'KINGSTON_RBU_SUS151S364GD-S9FM02.3'
+)
+hdparm_rc=(0 0 0 0 0)
+samus_ata1_power_cycle() {
+  echo "samus power cycle: $1"
+}
+
+run_test
+check_test 7 disk_reformatted 0 $?
+echo ATA PASS 7
 
 rm -rf "${DISK_TEMP}"

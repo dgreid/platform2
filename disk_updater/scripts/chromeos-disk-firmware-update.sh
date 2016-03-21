@@ -15,6 +15,7 @@
 DEFINE_string 'tmp_dir' '' "Use existing temporary directory."
 DEFINE_string 'fw_package_dir' '' "Location of the firmware package."
 DEFINE_string 'hdparm' '/sbin/hdparm' "hdparm binary to use."
+DEFINE_string 'hdparm_kingston' '/sbin/hdparm_kingston' "hdparm for kingston recovery."
 DEFINE_string 'smartctl' '/usr/sbin/smartctl' "smartctl binary to use."
 DEFINE_string 'pwr_suspend' '/usr/bin/powerd_dbus_suspend' "To power cycle SSD"
 DEFINE_string 'mmc' '/usr/bin/mmc' "mmc binary to use."
@@ -228,6 +229,51 @@ disk_ata_power_cnt() {
     '
 }
 
+# samus_ata1_power_cycle - Power Cycle the Samus uSSD
+#
+# When reformating the samus uSSD, we can not use powerd.
+# Toggle manually GPIOs.
+samus_ata1_power_cycle() {
+  # SSD_RESET_L : 47 => 256 - 94 + 47 = 209
+  # PP3300_SSD_EN : 21 => 256 - 94 + 21 = 183
+  local SSD_RESET_L_ID=209
+  local PP3300_SSD_EN=183
+  local GPIO_PATH="/sys/class/gpio"
+
+  local SSD_RESET_L_ID_PATH="${GPIO_PATH}/gpio${SSD_RESET_L_ID}"
+  local PP3300_SSD_EN_PATH="${GPIO_PATH}/gpio${PP3300_SSD_EN}"
+
+  local EXPORT_PATH="${GPIO_PATH}/export"
+
+  local device="$1"
+
+  if [ ! -d "${SSD_RESET_L_ID_PATH}" ]; then
+    for i in ${SSD_RESET_L_ID} ${PP3300_SSD_EN}; do
+      echo $i > "${EXPORT_PATH}"
+    done
+    echo out > "${SSD_RESET_L_ID_PATH}/direction"
+    echo 1 > "${SSD_RESET_L_ID_PATH}/active_low"
+
+    echo out > "${PP3300_SSD_EN_PATH}/direction"
+
+    echo 1 > "${PP3300_SSD_EN_PATH}/value"
+    echo 0 > "${SSD_RESET_L_ID_PATH}/value"
+  fi
+
+  # Down
+  echo 1 > "${SSD_RESET_L_ID_PATH}/value"
+  sleep 1
+  echo 0 > "${PP3300_SSD_EN_PATH}/value"
+
+  sleep 4
+  # up
+  echo 1 > "${PP3300_SSD_EN_PATH}/value"
+  sleep 1
+  echo 0 > "${SSD_RESET_L_ID_PATH}/value"
+
+  disk_hdparm_info "${device}" > /dev/null
+}
+
 # disk_ata_power_cycle - Power cycle ATA SSD
 #
 # Suspend/resume the machine to power cycle the SSD.
@@ -276,29 +322,41 @@ disk_hdparm_upgrade() {
   local fw_file="$2"
   local fw_options="$3"
   local hdparm_opt="--fwdownload-mode7"
-  local power_cyle=0
+  local power_cyle=true
+  local use_regular_hdparm=true
 
   if [ "${fw_options}" != "-" ]; then
     if echo "${fw_options}" | grep -q "mode3_max"; then
       hdparm_opt="--fwdownload-mode3-max"
     fi
     if echo "${fw_options}" | grep -q "power_cycle"; then
-      power_cyle=1
+      power_cyle=disk_ata_power_cycle
+    fi
+    if echo "${fw_options}" | grep -q "kingston_erase"; then
+      use_regular_hdparm=false
+      power_cyle=samus_ata1_power_cycle
+      "${FLAGS_hdparm_kingston}" --eraseall "/dev/${device}"
+    fi
+    if echo "${fw_options}" | grep -q "kingston_reformat"; then
+      use_regular_hdparm=false
+      power_cyle=samus_ata1_power_cycle
+      "${FLAGS_hdparm_kingston}" --mp_f1 "${fw_file}" \
+        "KINGSTON_RBU_SUS151S3rr" "/dev/${device}"
     fi
   fi
 
-  # hdparm_opt could be several options, shell must see separator.
-  "${FLAGS_hdparm}" ${hdparm_opt} "${fw_file}" \
-    --yes-i-know-what-i-am-doing --please-destroy-my-drive \
-    "/dev/${device}"
+  if "${use_regular_hdparm}"; then
+    # hdparm_opt could be several options, shell must see separator.
+    "${FLAGS_hdparm}" ${hdparm_opt} "${fw_file}" \
+      --yes-i-know-what-i-am-doing --please-destroy-my-drive \
+      "/dev/${device}"
+  fi
 
   if [ $? -ne 0 ]; then
     return $?
   fi
 
-  if [ ${power_cyle} -ne 0 ]; then
-    disk_ata_power_cycle "${device}"
-  fi
+  ${power_cyle} "${device}"
 }
 
 # disk_mmc_upgrade - Upgrade the firmware on the eMMC storage
