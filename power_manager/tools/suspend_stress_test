@@ -95,6 +95,7 @@ restore_dark_resume_state() {
 dump_stats_and_exit() {
   echo "${preserved_pm_print_times}" > /sys/power/pm_print_times
   restore_dark_resume_state
+  start tlsdated
   echo ""
   echo "Finished ${cur} iterations."
   echo "Suspend_failures: $(( cur -
@@ -151,6 +152,9 @@ echo 1 > /sys/power/pm_print_times
 
 trap dump_stats_and_exit INT
 disable_dark_resume
+
+# Turn off network sync of time to prevent any spurious RTC wake events
+stop tlsdated
 
 cur=0
 firmware_errors=0
