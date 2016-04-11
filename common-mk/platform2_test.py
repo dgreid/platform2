@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+#!/usr/bin/env python
 # Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -13,11 +13,8 @@ from __future__ import print_function
 
 import argparse
 import contextlib
-import ctypes
-import ctypes.util
 import errno
 import os
-import psutil
 import re
 import signal
 import sys
@@ -33,33 +30,19 @@ from chromite.lib import retry_util
 from chromite.lib import signals
 
 
-PR_SET_CHILD_SUBREAPER = 0x24
-libc = ctypes.CDLL(ctypes.util.find_library('c'), use_errno=True)
-
-def _MakeProcessSubreaper():
-  """Marks the current process as a subreaper.
-
-  This causes all child orphaned processes to be reparented to this process
-  instead of the init process.
-  """
-  if libc.prctl(ctypes.c_int(PR_SET_CHILD_SUBREAPER), ctypes.c_int(1)) != 0:
-    e = ctypes.get_errno()
-    raise OSError(e, os.strerror(e))
-
-
 # Compiled regular expressions for determining what environment variables to
 # let through to the test env when we do sudo. If any character at the
 # beginning of an environment variable matches one of the regular expression
 # patterns (i.e. matching via re.match), the environment variable is let
 # through.
-ENV_PASSTHRU_REGEX_LIST = map(re.compile, [
+ENV_PASSTHRU_REGEX_LIST = [re.compile(x) for x in (
     # Used by various sanitizers.
     '[AL]SAN_OPTIONS$',
     # Used by QEMU.
     'QEMU_',
     # Used to select profiling output location for gcov.
     'GCOV_',
-])
+)]
 
 
 class Platform2Test(object):
@@ -281,11 +264,6 @@ class Platform2Test(object):
     # and dropping them into / would make them fail.
     cwd = self.removeSysrootPrefix(os.getcwd())
 
-    # Make orphaned child processes reparent to this process instead of the init
-    # process. This allows us to kill them if they do not terminate after the
-    # test has finished running.
-    _MakeProcessSubreaper()
-
     # Fork off a child to run the test.  This way we can make tweaks to the
     # env that only affect the child (gid/uid/chroot/cwd/etc...).  We have
     # to fork anyways to run the test, so might as well do it all ourselves
@@ -298,11 +276,6 @@ class Platform2Test(object):
       print('cmd: {%s} %s' % (cmd, ' '.join(map(repr, argv))))
       os.chroot(self.sysroot)
       os.chdir(cwd)
-
-      # Set the childs pgid to its pid, so we can kill any processes that the
-      # child creates after the child terminates.
-      os.setpgid(0, 0)
-
       # The TERM the user is leveraging might not exist in the sysroot.
       # Force a sane default that supports standard color sequences.
       os.environ['TERM'] = 'ansi'
@@ -322,29 +295,6 @@ class Platform2Test(object):
     signal.signal(signal.SIGINT, signal.SIG_IGN)
     _, status = os.waitpid(child, 0)
 
-    # Reap any children which were killed by the test but reparented to us.
-    psutil.wait_procs(psutil.Process().get_children(), 0)
-    leaked_children = bool(psutil.Process().get_children())
-
-    if leaked_children:
-      # It's possible the child forked and the forked processes are still
-      # running. Kill the forked processes.
-      try:
-        os.killpg(child, signal.SIGTERM)
-      except OSError as e:
-        if e.errno != errno.ESRCH:
-          print('Warning: while trying to kill pgid %s caught exception\n%s' %
-                (child, e), file=sys.stderr)
-
-      # Kill any orphaned processes originally created by the test that were in
-      # a different process group. This will also kill any processes that did
-      # not respond to the SIGTERM.
-      for child in psutil.Process().get_children(recursive=True):
-        try:
-          child.kill()
-        except psutil.NoSuchProcess:
-          pass
-
     failmsg = None
     if os.WIFSIGNALED(status):
       sig = os.WTERMSIG(status)
@@ -355,11 +305,6 @@ class Platform2Test(object):
         failmsg = 'exit code %i' % exit_status
     if failmsg:
       print('Error: %s: failed with %s' % (cmd, failmsg), file=sys.stderr)
-
-    if leaked_children:
-      print('Error: the test process started auxillary processes which did not '
-            'shutdown (they were forcefully killed)', file=sys.stderr)
-      sys.exit(100)
 
     process_util.ExitAsStatus(status)
 
