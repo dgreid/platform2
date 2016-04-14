@@ -15,7 +15,8 @@
 DEFINE_string 'tmp_dir' '' "Use existing temporary directory."
 DEFINE_string 'fw_package_dir' '' "Location of the firmware package."
 DEFINE_string 'hdparm' '/sbin/hdparm' "hdparm binary to use."
-DEFINE_string 'hdparm_kingston' '/sbin/hdparm_kingston' "hdparm for kingston recovery."
+DEFINE_string 'hdparm_kingston' '/opt/google/disk/bin/hdparm_kingston' \
+              "hdparm for kingston recovery."
 DEFINE_string 'smartctl' '/usr/sbin/smartctl' "smartctl binary to use."
 DEFINE_string 'pwr_suspend' '/usr/bin/powerd_dbus_suspend' "To power cycle SSD"
 DEFINE_string 'mmc' '/usr/bin/mmc' "mmc binary to use."
@@ -231,7 +232,7 @@ disk_ata_power_cnt() {
 
 # samus_ata1_power_cycle - Power Cycle the Samus uSSD
 #
-# When reformating the samus uSSD, we can not use powerd.
+# When reformatting the samus uSSD, we can not use powerd.
 # Toggle manually GPIOs.
 samus_ata1_power_cycle() {
   # SSD_RESET_L : 47 => 256 - 94 + 47 = 209
@@ -260,13 +261,13 @@ samus_ata1_power_cycle() {
     echo 0 > "${SSD_RESET_L_ID_PATH}/value"
   fi
 
-  # Down
+  # Down.
   echo 1 > "${SSD_RESET_L_ID_PATH}/value"
   sleep 1
   echo 0 > "${PP3300_SSD_EN_PATH}/value"
 
   sleep 4
-  # up
+  # Up.
   echo 1 > "${PP3300_SSD_EN_PATH}/value"
   sleep 1
   echo 0 > "${SSD_RESET_L_ID_PATH}/value"
@@ -322,24 +323,24 @@ disk_hdparm_upgrade() {
   local fw_file="$2"
   local fw_options="$3"
   local hdparm_opt="--fwdownload-mode7"
-  local power_cyle=true
-  local use_regular_hdparm=true
+  local power_cyle="true"
+  local use_regular_hdparm="true"
 
   if [ "${fw_options}" != "-" ]; then
     if echo "${fw_options}" | grep -q "mode3_max"; then
       hdparm_opt="--fwdownload-mode3-max"
     fi
     if echo "${fw_options}" | grep -q "power_cycle"; then
-      power_cyle=disk_ata_power_cycle
+      power_cyle="disk_ata_power_cycle"
     fi
     if echo "${fw_options}" | grep -q "kingston_erase"; then
       use_regular_hdparm=false
-      power_cyle=samus_ata1_power_cycle
+      power_cyle="samus_ata1_power_cycle"
       "${FLAGS_hdparm_kingston}" --eraseall "/dev/${device}"
     fi
     if echo "${fw_options}" | grep -q "kingston_reformat"; then
       use_regular_hdparm=false
-      power_cyle=samus_ata1_power_cycle
+      power_cyle="samus_ata1_power_cycle"
       "${FLAGS_hdparm_kingston}" --mp_f1 "${fw_file}" \
         "KINGSTON_RBU_SUS151S3rr" "/dev/${device}"
     fi
