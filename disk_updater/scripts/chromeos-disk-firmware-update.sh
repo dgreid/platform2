@@ -342,7 +342,7 @@ disk_hdparm_upgrade() {
       use_regular_hdparm=false
       power_cyle="samus_ata1_power_cycle"
       "${FLAGS_hdparm_kingston}" --mp_f1 "${fw_file}" \
-        "KINGSTON_RBU_SUS151S3rr" "/dev/${device}"
+        "KINGSTON RBU-SUS151S3r2" "/dev/${device}"
     fi
   fi
 
