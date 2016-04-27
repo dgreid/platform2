@@ -202,11 +202,20 @@ void TpmInit::MigrateStatusFiles() {
 }
 
 bool TpmInit::SetupTpm(bool load_key) {
-  if (get_tpm()->IsInitialized()) {
-    return false;
+  const bool was_initialized = get_tpm()->IsInitialized();
+  if (!was_initialized) {
+    get_tpm()->SetIsInitialized(true);
+    RestoreTpmStateFromStorage();
   }
-  get_tpm()->SetIsInitialized(true);
 
+  if (load_key) {
+    // load cryptohome key
+    LoadOrCreateCryptohomeKey(&cryptohome_key_);
+  }
+  return !was_initialized;
+}
+
+void TpmInit::RestoreTpmStateFromStorage() {
   MigrateStatusFiles();
 
   // Checking disabled and owned either via sysfs or via TSS calls will block if
@@ -255,12 +264,6 @@ bool TpmInit::SetupTpm(bool load_key) {
       }
     }
   }
-
-  if (load_key) {
-    // load cryptohome key
-    LoadOrCreateCryptohomeKey(&cryptohome_key_);
-  }
-  return true;
 }
 
 bool TpmInit::InitializeTpm(bool* OUT_took_ownership) {

@@ -126,6 +126,9 @@ class TpmInit {
  private:
   virtual void ThreadMain();
 
+  // Invoked by SetupTpm to restore TPM state from saved state in storage.
+  void RestoreTpmStateFromStorage();
+
   // Loads the TpmStatus object
   bool LoadTpmStatus(TpmStatus* serialized);
 
