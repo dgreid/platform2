@@ -164,6 +164,16 @@
       'sources': ['powerd/powerd_setuid_helper.cc'],
     },
     {
+      'target_name': 'set_wifi_transmit_power',
+      'type': 'executable',
+      'sources': ['powerd/set_wifi_transmit_power.cc'],
+      'variables': {
+        'deps': [
+          'libnl-genl-3.0',
+        ],
+      },
+    },
+    {
       'target_name': 'backlight_dbus_tool',
       'type': 'executable',
       'sources': ['tools/backlight_dbus_tool.cc'],

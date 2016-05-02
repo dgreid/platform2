@@ -79,6 +79,9 @@ const char kUseCrasPref[] = "use_cras";
 const char kTpmCounterSuspendThresholdPref[] = "tpm_counter_suspend_threshold";
 const char kTpmStatusIntervalSecPref[] = "tpm_status_interval_sec";
 const char kSuspendToIdlePref[] = "suspend_to_idle";
+const char kSetWifiTransmitPowerForTabletModePref[] =
+    "set_wifi_transmit_power_for_tablet_mode";
+const char kIwlWifiTransmitPowerTablePref[] = "iwl_wifi_transmit_power_table";
 
 // Miscellaneous constants.
 const char kReadWritePrefsDir[] = "/var/lib/power_manager";

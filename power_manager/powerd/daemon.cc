@@ -12,6 +12,7 @@
 #include <base/format_macros.h>
 #include <base/logging.h>
 #include <base/strings/string_number_conversions.h>
+#include <base/strings/string_split.h>
 #include <base/strings/string_util.h>
 #include <base/strings/stringprintf.h>
 #include <base/threading/platform_thread.h>
@@ -365,6 +366,7 @@ Daemon::Daemon(const base::FilePath& read_write_prefs_dir,
       suspend_to_idle_(false),
       can_safely_exit_dark_resume_(
           base::PathExists(base::FilePath(kPMTestDelayPath))),
+      set_wifi_transmit_power_for_tablet_mode_(false),
       weak_ptr_factory_(this) {
   std::unique_ptr<MetricsLibrary> metrics_lib(new MetricsLibrary);
   metrics_lib->Init();
@@ -480,6 +482,11 @@ void Daemon::Init() {
 
   peripheral_battery_watcher_->Init(dbus_sender_.get());
 
+  prefs_->GetBool(kSetWifiTransmitPowerForTabletModePref,
+                  &set_wifi_transmit_power_for_tablet_mode_);
+  if (set_wifi_transmit_power_for_tablet_mode_)
+    PopulateIwlWifiTransmitPowerTable();
+
   // Call this last to ensure that all of our members are already initialized.
   OnPowerStatusUpdate();
 }
@@ -568,6 +575,20 @@ void Daemon::HandleTabletModeChanged(TabletMode mode) {
             << " tablet mode";
   if (keyboard_backlight_controller_)
     keyboard_backlight_controller_->HandleTabletModeChange(mode);
+
+  if (set_wifi_transmit_power_for_tablet_mode_) {
+    std::string args = (mode == TABLET_MODE_ON) ?
+        "--wifi_transmit_power_tablet" : "--nowifi_transmit_power_tablet";
+
+    // Intel iwlwifi driver requires extra power table.
+    if (!iwl_wifi_power_table_.empty()) {
+      args += " --wifi_transmit_power_iwl_power_table=" + iwl_wifi_power_table_;
+    }
+
+    LOG(INFO) << ((mode == TABLET_MODE_ON) ? "Enabling": "Disabling")
+              << " tablet mode wifi transmit power";
+    util::RunSetuidHelper("set_wifi_transmit_power", args, false);
+  }
 }
 
 void Daemon::DeferInactivityTimeoutForVT2() {
@@ -1605,6 +1626,34 @@ void Daemon::SetBacklightsDocked(bool docked) {
     display_backlight_controller_->SetDocked(docked);
   if (keyboard_backlight_controller_)
     keyboard_backlight_controller_->SetDocked(docked);
+}
+
+void Daemon::PopulateIwlWifiTransmitPowerTable() {
+  if (!prefs_->GetString(kIwlWifiTransmitPowerTablePref,
+                         &iwl_wifi_power_table_))
+    return;
+
+  // Perform format checking to ensure no one can inject shell command.
+  std::vector<std::string> str_values =
+      base::SplitString(iwl_wifi_power_table_, ":", base::TRIM_WHITESPACE,
+                        base::SPLIT_WANT_ALL);
+
+  if (str_values.size() != 6) {
+    LOG(ERROR) << "Wrong number of power table literal "
+               << "(expected: 6; got: " << str_values.size() << ")";
+    iwl_wifi_power_table_.clear();
+    return;
+  }
+
+  // Parse string value to unsigned integers.
+  for (const auto& str_value : str_values) {
+    unsigned output;
+    if (!base::StringToUint(str_value, &output)) {
+      LOG(ERROR) << "Invalid power table literal \"" << str_value << "\"";
+      iwl_wifi_power_table_.clear();
+      return;
+    }
+  }
 }
 
 }  // namespace power_manager

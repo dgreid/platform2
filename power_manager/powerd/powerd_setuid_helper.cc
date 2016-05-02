@@ -73,8 +73,8 @@ void SetVTSwitchingAllowed(bool allowed) {
 
 int main(int argc, char* argv[]) {
   DEFINE_string(action, "", "Action to perform.  Must be one of \"lock_vt\", "
-                "\"mosys_eventlog\", \"reboot\", \"shut_down\", \"suspend\", "
-                "and \"unlock_vt\".");
+                "\"mosys_eventlog\", \"reboot\", \"set_wifi_transmit_power\", "
+                "\"shut_down\", \"suspend\", " "and \"unlock_vt\".");
   DEFINE_string(mosys_eventlog_code, "", "Hexadecimal byte, e.g. \"0xa7\", "
                 "describing the event being logged.");
   DEFINE_string(shutdown_reason, "", "Optional shutdown reason starting with a "
@@ -89,6 +89,10 @@ int main(int argc, char* argv[]) {
               "Should --suspend_wakeup_count be honored?");
   DEFINE_bool(suspend_to_idle, false,
               "Should the system suspend to idle (freeze)?");
+  DEFINE_bool(wifi_transmit_power_tablet, false,
+              "Set wifi transmit power mode to tablet mode");
+  DEFINE_string(wifi_transmit_power_iwl_power_table, "",
+                "Power table for iwlwifi driver");
   brillo::FlagHelper::Init(argc, argv, "powerd setuid helper");
 
   if (FLAGS_action == "lock_vt") {
@@ -103,6 +107,16 @@ int main(int argc, char* argv[]) {
                NULL);
   } else if (FLAGS_action == "reboot") {
     RunCommand("shutdown", "-r", "now", NULL);
+  } else if (FLAGS_action == "set_wifi_transmit_power") {
+    const char* tablet = FLAGS_wifi_transmit_power_tablet ?
+        "--tablet" : "--notablet";
+    std::string power_table;
+    if (!FLAGS_wifi_transmit_power_iwl_power_table.empty()) {
+      power_table = "--iwl_power_table=" +
+          FLAGS_wifi_transmit_power_iwl_power_table;
+    }
+    RunCommand("set_wifi_transmit_power", tablet,
+               (power_table.empty() ? NULL : power_table.c_str()), NULL);
   } else if (FLAGS_action == "shut_down") {
     std::string reason_arg;
     if (!FLAGS_shutdown_reason.empty()) {

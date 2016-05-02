@@ -205,6 +205,15 @@ extern const char kTpmStatusIntervalSecPref[];
 // suspend by writing mem to /sys/power/state.
 extern const char kSuspendToIdlePref[];
 
+// If true, update wifi transmit power when in tablet vs. clamshell mode.
+extern const char kSetWifiTransmitPowerForTabletModePref[];
+
+// Power table for the iwlwifi driver.
+// The table is a string containing 6 unsigned integers separated by colon.
+// The first 3 integers are the power table values for clamshell mode, and the
+// later 3 integers are the power table values for tablet mode.
+extern const char kIwlWifiTransmitPowerTablePref[];
+
 // Miscellaneous constants.
 
 // Default directories where read/write and read-only powerd preference files

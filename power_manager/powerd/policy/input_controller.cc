@@ -130,8 +130,6 @@ void InputController::OnTabletModeEvent(TabletMode mode) {
                  InputEvent_Type_TABLET_MODE_OFF);
   proto.set_timestamp(clock_->GetCurrentTime().ToInternalValue());
   dbus_sender_->EmitSignalWithProtocolBuffer(kInputEventSignal, proto);
-
-  // TODO(wnhuang): Update wifi transmit power if needed.
 }
 
 void InputController::OnPowerButtonEvent(ButtonState state) {

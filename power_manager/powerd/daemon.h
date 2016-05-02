@@ -244,6 +244,10 @@ class Daemon : public policy::BacklightControllerObserver,
   void SetBacklightsSuspended(bool suspended);
   void SetBacklightsDocked(bool docked);
 
+  // Parses kIwlWifiTransmitPowerTablePref if set and updates
+  // |iwl_wifi_power_table_|.
+  void PopulateIwlWifiTransmitPowerTable();
+
   std::unique_ptr<Prefs> prefs_;
 
   scoped_refptr<dbus::Bus> bus_;
@@ -330,6 +334,12 @@ class Daemon : public policy::BacklightControllerObserver,
   // True if the system can properly transition from dark resume to fully
   // resumed.
   bool can_safely_exit_dark_resume_;
+
+  // Set wifi transmit power for tablet mode.
+  bool set_wifi_transmit_power_for_tablet_mode_;
+
+  // Intel iwlwifi driver power table.
+  std::string iwl_wifi_power_table_;
 
   // Must come last so that weak pointers will be invalidated before other
   // members are destroyed.
