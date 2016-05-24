@@ -11,6 +11,7 @@
 #include <brillo/process.h>
 
 #include "debugd/src/process_with_output.h"
+#include "debugd/src/sandboxed_process.h"
 
 namespace debugd {
 
@@ -56,7 +57,7 @@ void SystraceTool::Stop(const DBus::FileDescriptor& outfd, DBus::Error* error) {
   if (!SandboxedProcess::GetHelperPath(kSystraceHelper, &path))
     return;
 
-  ProcessWithOutput p;
+  SandboxedProcess p;
   p.SandboxAs(SandboxedProcess::kDefaultUser, kDebugfsGroup);
   p.Init();
   p.AddArg(path);

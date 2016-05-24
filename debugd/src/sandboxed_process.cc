@@ -28,6 +28,11 @@ SandboxedProcess::SandboxedProcess()
       group_(kDefaultGroup) {
 }
 
+SandboxedProcess::~SandboxedProcess() {
+  for (const auto& fd : bound_fds_)
+    close(fd);
+}
+
 // static
 bool SandboxedProcess::GetHelperPath(const std::string& relative_path,
                                      std::string* full_path) {
@@ -76,6 +81,11 @@ bool SandboxedProcess::Init() {
   AddArg("--");
 
   return true;
+}
+
+void SandboxedProcess::BindFd(int parent_fd, int child_fd) {
+  ProcessImpl::BindFd(parent_fd, child_fd);
+  bound_fds_.push_back(parent_fd);
 }
 
 void SandboxedProcess::DisableSandbox() {

@@ -25,6 +25,7 @@ void DebugLogsTool::GetDebugLogs(bool is_compressed,
   p.AddArg(kSystemLogs);
   p.BindFd(fd.get(), STDOUT_FILENO);
   p.Run();
+  close(fd.get());
 }
 
 }  // namespace debugd
