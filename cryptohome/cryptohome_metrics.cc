@@ -8,6 +8,8 @@
 #include <metrics/metrics_library.h>
 #include <metrics/timer.h>
 
+#include "cryptohome/tpm_metrics.h"
+
 namespace {
 
 struct TimerHistogramParams {
@@ -17,13 +19,14 @@ struct TimerHistogramParams {
   int num_buckets;
 };
 
-const char kCryptohomeErrorHistogram[] = "Cryptohome.Errors";
-const char kDictionaryAttackResetStatusHistogram[] =
+constexpr char kCryptohomeErrorHistogram[] = "Cryptohome.Errors";
+constexpr char kDictionaryAttackResetStatusHistogram[] =
     "Platform.TPM.DictionaryAttackResetStatus";
-const char kDictionaryAttackCounterHistogram[] =
+constexpr char kDictionaryAttackCounterHistogram[] =
     "Platform.TPM.DictionaryAttackCounter";
-const int kDictionaryAttackCounterNumBuckets = 100;
-const char kChecksumStatusHistogram[] = "Cryptohome.ChecksumStatus";
+constexpr int kDictionaryAttackCounterNumBuckets = 100;
+constexpr char kChecksumStatusHistogram[] = "Cryptohome.ChecksumStatus";
+constexpr char kCryptohomeTpmResultsHistogram[] = "Cryptohome.TpmResults";
 
 // Histogram parameters. This should match the order of 'TimerType'.
 // Min and max samples are in milliseconds.
@@ -87,6 +90,15 @@ void ReportCryptohomeError(CryptohomeError error) {
   g_metrics->SendEnumToUMA(kCryptohomeErrorHistogram,
                            error,
                            kCryptohomeErrorNumBuckets);
+}
+
+void ReportTpmResult(TSS_RESULT result) {
+  if (!g_metrics) {
+    return;
+  }
+  g_metrics->SendEnumToUMA(kCryptohomeTpmResultsHistogram,
+                           GetTpmResultSample(result),
+                           kTpmResultNumberOfBuckets);
 }
 
 void ReportCrosEvent(const char* event) {

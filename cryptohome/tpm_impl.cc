@@ -52,6 +52,7 @@ const TSS_UUID kCryptohomeWellKnownUuid = {0x0203040b, 0, 0, 0, 0,
 
 cryptohome::Tpm::TpmRetryAction ResultToRetryAction(TSS_RESULT result) {
   cryptohome::Tpm::TpmRetryAction status = cryptohome::Tpm::kTpmRetryFatal;
+  cryptohome::ReportTpmResult(result);
   switch (ERROR_CODE(result)) {
     case ERROR_CODE(TSS_SUCCESS):
       status = cryptohome::Tpm::kTpmRetryNone;
