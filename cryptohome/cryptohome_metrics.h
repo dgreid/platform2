@@ -25,7 +25,8 @@ enum CryptohomeError {
   kEncryptWithTpmFailed = 15,
   kTssCommunicationFailure = 16,
   kTssInvalidHandle = 17,
-  kCryptohomeErrorNumBuckets = 18,  // Must be the last entry.
+  kBothTpmAndScryptWrappedKeyset = 18,
+  kCryptohomeErrorNumBuckets,  // Must be the last entry.
 };
 
 enum TimerType {

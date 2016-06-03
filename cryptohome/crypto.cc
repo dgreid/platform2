@@ -575,11 +575,24 @@ bool Crypto::DecryptVaultKeyset(const SerializedVaultKeyset& serialized,
     *crypt_flags = serialized.flags();
   if (error)
     *error = CE_NONE;
-  // Check if the vault keyset was TPM-wrapped
-  if (serialized.flags() & SerializedVaultKeyset::TPM_WRAPPED) {
+  // Check if the vault keyset was Scrypt-wrapped
+  // (start with Scrypt to avoid reaching to TPM if both flags are set)
+  unsigned int flags = serialized.flags();
+  if (flags & SerializedVaultKeyset::SCRYPT_WRAPPED) {
+    bool should_try_tpm = false;
+    if (flags & SerializedVaultKeyset::TPM_WRAPPED) {
+      LOG(ERROR) << "Keyset wrapped with both TPM and Scrypt?";
+      ReportCryptohomeError(cryptohome::kBothTpmAndScryptWrappedKeyset);
+      // Fallback for the bug when both flags were set: try both methods
+      should_try_tpm = true;
+    }
+    if (DecryptScrypt(serialized, vault_key, error, vault_keyset))
+      return true;
+    if (!should_try_tpm)
+      return false;
+  }
+  if (flags & SerializedVaultKeyset::TPM_WRAPPED) {
     return DecryptTPM(serialized, vault_key, error, vault_keyset);
-  } else if (serialized.flags() & SerializedVaultKeyset::SCRYPT_WRAPPED) {
-    return DecryptScrypt(serialized, vault_key, error, vault_keyset);
   } else {
     LOG(ERROR) << "Keyset wrapped with neither TPM nor Scrypt?";
     return false;
@@ -644,7 +657,8 @@ bool Crypto::EncryptTPM(const VaultKeyset& vault_keyset,
 
   unsigned int flags = serialized->flags();
   serialized->set_password_rounds(rounds);
-  serialized->set_flags(flags | SerializedVaultKeyset::TPM_WRAPPED);
+  serialized->set_flags((flags & ~SerializedVaultKeyset::SCRYPT_WRAPPED)
+                        | SerializedVaultKeyset::TPM_WRAPPED);
   serialized->set_tpm_key(tpm_key.data(), tpm_key.size());
   serialized->set_wrapped_keyset(cipher_text.data(), cipher_text.size());
   if (vault_keyset.chaps_key().size() == CRYPTOHOME_CHAPS_KEY_LENGTH) {
@@ -732,7 +746,8 @@ bool Crypto::EncryptScrypt(const VaultKeyset& vault_keyset,
     return false;
   }
   unsigned int flags = serialized->flags();
-  serialized->set_flags(flags | SerializedVaultKeyset::SCRYPT_WRAPPED);
+  serialized->set_flags((flags & ~SerializedVaultKeyset::TPM_WRAPPED)
+                        | SerializedVaultKeyset::SCRYPT_WRAPPED);
   serialized->set_wrapped_keyset(cipher_text.data(), cipher_text.size());
   if (vault_keyset.chaps_key().size() == CRYPTOHOME_CHAPS_KEY_LENGTH) {
     serialized->set_wrapped_chaps_key(wrapped_chaps_key.data(),

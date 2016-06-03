@@ -722,6 +722,7 @@ TEST_F(MountTest, GoodReDecryptTest) {
   // Ensure we're starting from scrypt so we can test migrate to a mock-TPM.
   EXPECT_EQ((serialized.flags() & SerializedVaultKeyset::SCRYPT_WRAPPED),
             SerializedVaultKeyset::SCRYPT_WRAPPED);
+  EXPECT_EQ((serialized.flags() & SerializedVaultKeyset::TPM_WRAPPED), 0);
 
   // Call DecryptVaultKeyset first, allowing migration (the test data is not
   // scrypt nor TPM wrapped) to a TPM-wrapped keyset
@@ -788,6 +789,7 @@ TEST_F(MountTest, GoodReDecryptTest) {
   // Did it migrate?
   EXPECT_EQ((serialized_tpm.flags() & SerializedVaultKeyset::TPM_WRAPPED),
             SerializedVaultKeyset::TPM_WRAPPED);
+  EXPECT_EQ((serialized.flags() & SerializedVaultKeyset::SCRYPT_WRAPPED), 0);
 
   // Inject the migrated keyset
   Mock::VerifyAndClearExpectations(&platform_);
@@ -1250,6 +1252,154 @@ TEST_F(MountTest, LockboxGetsFinalized) {
   MountError error = MOUNT_ERROR_NONE;
   mount_->MountCryptohome(up, args, &error);
   mount_->MountGuestCryptohome();
+}
+
+TEST_F(MountTest, TwoWayKeysetMigrationTest) {
+  // Checks that in the following scenario the keyset is not corrupted
+  // 1) Have TPM present - keys are TPM wrapped.
+  // 2) Decrypt while no TPM - keys are migrated to Scrypt.
+  // 3) Decrypt with TPM again - keys are migrated back to TPM.
+
+  // Start with TPM enabled
+  mount_->set_use_tpm(true);
+  crypto_.set_use_tpm(true);
+
+  // TPM-wrapped is just plaintext
+  brillo::SecureBlob fake_pub_key("A");
+  EXPECT_CALL(tpm_, GetPublicKeyHash(_, _))
+    .WillRepeatedly(DoAll(SetArgumentPointee<1>(fake_pub_key),
+                          Return(Tpm::kTpmRetryNone)));
+  EXPECT_CALL(tpm_, EncryptBlob(_, _, _, _))
+    .WillRepeatedly(Invoke(TpmPassthroughEncrypt));
+  EXPECT_CALL(tpm_, DecryptBlob(_, _, _, _))
+    .WillRepeatedly(Invoke(TpmPassthroughDecrypt));
+
+  // TPM calls are always ok. Control TPM presence with set_use_tpm()
+  EXPECT_CALL(tpm_init_, HasCryptohomeKey())
+    .WillRepeatedly(Return(true));
+  EXPECT_CALL(tpm_init_, SetupTpm(_))
+    .WillRepeatedly(Return(true));
+  EXPECT_CALL(tpm_, IsEnabled())
+    .WillRepeatedly(Return(true));
+  EXPECT_CALL(tpm_, IsOwned())
+    .WillRepeatedly(Return(true));
+  crypto_.Init(&tpm_init_);
+
+  InsertTestUsers(&kDefaultUsers[7], 1);
+  TestUser *user = &helper_.users[0];
+  UsernamePasskey up(user->username, user->passkey);
+  user->InjectKeyset(&platform_, false);
+  // We now have Scrypt-wrapped key injected
+
+  // Mock file and homedir ops
+  HomeDirs homedirs;
+  homedirs.set_shadow_root(kImageDir);
+  EXPECT_CALL(platform_, DirectoryExists(kImageDir))
+    .WillRepeatedly(Return(true));
+  EXPECT_TRUE(DoMountInit());
+
+  int key_index = 0;
+  std::vector<int> key_indices;
+  key_indices.push_back(0);
+  EXPECT_CALL(homedirs_, GetVaultKeysets(user->obfuscated_username, _))
+    .WillRepeatedly(DoAll(SetArgumentPointee<1>(key_indices),
+                          Return(true)));
+
+  // Allow the "backup"s to be written during migrations
+  EXPECT_CALL(platform_,
+      FileExists(StringPrintf("%s.bak", user->keyset_path.c_str())))
+    .WillRepeatedly(Return(false));
+  EXPECT_CALL(platform_,
+      FileExists(StringPrintf("%s.bak", user->salt_path.c_str())))
+    .WillRepeatedly(Return(false));
+  EXPECT_CALL(platform_,
+      Move(user->keyset_path,
+           StringPrintf("%s.bak", user->keyset_path.c_str())))
+    .WillRepeatedly(Return(true));
+  EXPECT_CALL(platform_,
+      Move(user->salt_path, StringPrintf("%s.bak", user->salt_path.c_str())))
+    .WillRepeatedly(Return(true));
+
+  // Capture the migrated keysets when written to file
+  brillo::Blob migrated_keyset;
+  EXPECT_CALL(platform_, WriteFileAtomicDurable(user->keyset_path, _, _))
+    .WillRepeatedly(DoAll(SaveArg<1>(&migrated_keyset), Return(true)));
+
+  EXPECT_CALL(platform_, FileExists(user->salt_path))
+    .WillRepeatedly(Return(true));
+  EXPECT_CALL(platform_, ReadFile(user->salt_path, _))
+    .WillRepeatedly(DoAll(SetArgumentPointee<1>(user->user_salt),
+                          Return(true)));
+
+  // Step 1: TPM is present. Get a TPM-wrapped key.
+  VaultKeyset vault_keyset;
+  vault_keyset.Initialize(&platform_, mount_->crypto());
+
+  MountError error;
+  cryptohome::SerializedVaultKeyset serialized;
+
+  // Migrate to TPM-wrapped from the original Scrypt-wrapped
+  error = MOUNT_ERROR_NONE;
+  EXPECT_TRUE(mount_->DecryptVaultKeyset(up, true, &vault_keyset, &serialized,
+                                        &key_index, &error));
+  ASSERT_EQ(error, MOUNT_ERROR_NONE);
+  ASSERT_NE(migrated_keyset.size(), 0);
+
+  // Check and fix the flags if needed
+  // Erroneous cryptohome code might have set the TPM vs Scrypt flags
+  // incorrectly. We (a) check for it here, (b) reset flags to the
+  // correct value to complete the rest of the test that needs
+  // TPM-wrapped keys with correct flags
+  error = MOUNT_ERROR_NONE;
+  EXPECT_CALL(platform_, ReadFile(user->keyset_path, _))
+    .WillOnce(DoAll(SetArgumentPointee<1>(migrated_keyset),
+                    Return(true)));
+
+  EXPECT_TRUE(mount_->DecryptVaultKeyset(up, true, &vault_keyset, &serialized,
+                                        &key_index, &error));
+
+  unsigned int flags = serialized.flags();
+  EXPECT_EQ((flags & SerializedVaultKeyset::TPM_WRAPPED),
+            SerializedVaultKeyset::TPM_WRAPPED);
+  EXPECT_EQ((flags & SerializedVaultKeyset::SCRYPT_WRAPPED), 0);
+
+  if (flags & SerializedVaultKeyset::SCRYPT_WRAPPED) {
+    EXPECT_CALL(platform_, ReadFile(user->keyset_path, _))
+      .WillOnce(DoAll(SetArgumentPointee<1>(migrated_keyset),
+                      Return(true)));
+    serialized.set_flags(flags & ~SerializedVaultKeyset::SCRYPT_WRAPPED);
+    EXPECT_TRUE(mount_->ReEncryptVaultKeyset(up, vault_keyset, 0, &serialized));
+  }
+  // Now we have the TPM-wrapped keyset with correct flags
+
+  // Step 2: No TPM. Migrate to Scrypt-wrapped.
+  mount_->set_use_tpm(false);
+  crypto_.set_use_tpm(false);
+
+  error = MOUNT_ERROR_NONE;
+  EXPECT_CALL(platform_, ReadFile(user->keyset_path, _))
+    .WillOnce(DoAll(SetArgumentPointee<1>(migrated_keyset),
+                    Return(true)));
+
+  EXPECT_TRUE(mount_->DecryptVaultKeyset(up, true, &vault_keyset, &serialized,
+                                        &key_index, &error));
+  ASSERT_EQ(error, MOUNT_ERROR_NONE);
+  ASSERT_NE(migrated_keyset.size(), 0);
+
+  // Step 3: TPMi back on. Migrate to TPM-wrapped.
+  // If flags were set incorrectly by the previous migration (i.e it is
+  // Scrypt-wrapped w/ both TPM and Scrypt flags set), Decrypt will fail.
+  mount_->set_use_tpm(true);
+  crypto_.set_use_tpm(true);
+
+  error = MOUNT_ERROR_NONE;
+  EXPECT_CALL(platform_, ReadFile(user->keyset_path, _))
+    .WillOnce(DoAll(SetArgumentPointee<1>(migrated_keyset),
+                    Return(true)));
+
+  ASSERT_TRUE(mount_->DecryptVaultKeyset(up, true, &vault_keyset, &serialized,
+                                        &key_index, &error));
+  ASSERT_EQ(error, MOUNT_ERROR_NONE);
 }
 
 // Test setup that initially has no cryptohomes.
