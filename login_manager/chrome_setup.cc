@@ -271,8 +271,8 @@ void AddUiFlags(ChromiumCommandBuilder* builder) {
 
 // Adds enterprise-related flags to the command line.
 void AddEnterpriseFlags(ChromiumCommandBuilder* builder) {
-  builder->AddArg("--enterprise-enrollment-initial-modulus=14");
-  builder->AddArg("--enterprise-enrollment-modulus-limit=18");
+  builder->AddArg("--enterprise-enrollment-initial-modulus=15");
+  builder->AddArg("--enterprise-enrollment-modulus-limit=19");
 
   // This flag is only used in M49 to enable bootstrapping for ChromeBit. All
   // Chrome OS devices will be eligible for bootstrapping starting from M50.
