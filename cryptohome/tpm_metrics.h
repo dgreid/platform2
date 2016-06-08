@@ -9,6 +9,8 @@
 
 namespace cryptohome {
 
+// WARNING: The values in the following enum are written to logs and the
+// elements must not be renumbered or deleted (and hence possibly reused).
 enum TpmResult {
   kTpmSuccess = 1,  // TSS_SUCCESS.
 
