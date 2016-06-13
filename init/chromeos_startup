@@ -363,6 +363,9 @@ chown chronos:chronos /home/chronos /var/log/metrics
 # rsyslog needs to be able to create new logfiles, but not delete other logs
 chgrp syslog /var/log
 chmod 1775 /var/log
+# /var/cache, /var/db, and /var/empty may already exist with wrong permissions.
+# Force the correct ones.
+chmod 0755 /var/cache /var/db /var/empty
 
 mount -n -t tmpfs -o nodev,noexec,nosuid media /media
 
