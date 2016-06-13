@@ -54,6 +54,10 @@ class HomeDirs {
   // there is now at least kEnoughFreeSpace, or false otherwise.
   virtual bool FreeDiskSpace();
 
+  // Return the available disk space in bytes for home directories, or -1 on
+  // failure.
+  virtual int64_t AmountOfFreeDiskSpace();
+
   // Removes all cryptohomes owned by anyone other than the owner user (if set),
   // regardless of free disk space.
   virtual void RemoveNonOwnerCryptohomes();

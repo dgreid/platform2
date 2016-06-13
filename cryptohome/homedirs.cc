@@ -164,6 +164,10 @@ bool HomeDirs::FreeDiskSpace() {
   return true;
 }
 
+int64_t HomeDirs::AmountOfFreeDiskSpace() {
+  return platform_->AmountOfFreeDiskSpace(shadow_root_);
+}
+
 void HomeDirs::LoadDevicePolicy() {
   policy_provider_->Reload();
 }

@@ -18,12 +18,14 @@
 #include <brillo/cryptohome.h>
 #include <brillo/secure_blob.h>
 #include <chaps/token_manager_client_mock.h>
+#include <glib-object.h>
 #include <gtest/gtest.h>
 #include <policy/libpolicy.h>
 #include <policy/mock_device_policy.h>
 #include <chromeos/constants/cryptohome.h>
 
 #include "cryptohome/crypto.h"
+#include "cryptohome/interface.h"
 #include "cryptohome/make_tests.h"
 #include "cryptohome/mock_attestation.h"
 #include "cryptohome/mock_boot_attributes.h"
@@ -61,6 +63,8 @@ namespace {
 
 const char kImageDir[] = "test_image_dir";
 const char kSaltFile[] = "test_image_dir/salt";
+// Keep in sync with service.cc
+const int64_t kNotifyDiskSpaceThreshold = 1 << 30;
 
 class FakeEventSourceSink : public cryptohome::CryptohomeEventSourceSink {
  public:
@@ -114,6 +118,8 @@ class ServiceTestNotInitialized : public ::testing::Test {
     test_helper_.SetUpSystemSalt();
     ON_CALL(homedirs_, FreeDiskSpace()).WillByDefault(Return(true));
     ON_CALL(homedirs_, Init(_, _, _)).WillByDefault(Return(true));
+    ON_CALL(homedirs_, AmountOfFreeDiskSpace()).WillByDefault(
+        Return(kNotifyDiskSpaceThreshold));
     ON_CALL(boot_attributes_, Load()).WillByDefault(Return(true));
     // Empty token list by default.  The effect is that there are no attempts
     // to unload tokens unless a test explicitly sets up the token list.
@@ -414,6 +420,49 @@ TEST_F(ServiceTestNotInitialized, CheckAutoCleanupCallbackFirst) {
   // short delay to see the first invocation
   PlatformThread::Sleep(base::TimeDelta::FromMilliseconds(10));
 }
+
+static gboolean SignalCounter(GSignalInvocationHint *ihint,
+              guint n_param_values,
+              const GValue *param_values,
+              gpointer data) {
+  int *count = reinterpret_cast<int *>(data);
+  (*count)++;
+  return true;
+}
+
+TEST_F(ServiceTestNotInitialized, CheckLowDiskCallback) {
+  // Checks that LowDiskCallback is called periodically.
+  EXPECT_CALL(homedirs_, AmountOfFreeDiskSpace()).Times(::testing::AtLeast(3))
+      .WillOnce(Return(kNotifyDiskSpaceThreshold + 1))
+      .WillOnce(Return(kNotifyDiskSpaceThreshold - 1))
+      .WillRepeatedly(Return(kNotifyDiskSpaceThreshold + 1));
+  service_.set_low_disk_notification_period_ms(2);
+
+  guint low_disk_space_signal = g_signal_lookup("low_disk_space",
+                                           gobject::cryptohome_get_type());
+  if (!low_disk_space_signal) {
+    low_disk_space_signal = g_signal_new("low_disk_space",
+                                         gobject::cryptohome_get_type(),
+                                         G_SIGNAL_RUN_LAST,
+                                         0,
+                                         NULL,
+                                         NULL,
+                                         nullptr,
+                                         G_TYPE_NONE,
+                                         1,
+                                         G_TYPE_UINT64);
+  }
+  int count = 0;
+  gulong hook_id = g_signal_add_emission_hook(
+      low_disk_space_signal, 0, SignalCounter, &count, NULL);
+
+  service_.Initialize();
+
+  PlatformThread::Sleep(base::TimeDelta::FromMilliseconds(100));
+  EXPECT_EQ(1, count);
+  g_signal_remove_emission_hook(low_disk_space_signal, hook_id);
+}
+
 
 struct Mounts {
   const char* src;

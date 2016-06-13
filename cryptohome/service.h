@@ -180,6 +180,10 @@ class Service : public brillo::dbus::AbstractDbusService,
     firmware_management_parameters_ = fwmp;
   }
 
+  virtual void set_low_disk_notification_period_ms(int value) {
+    low_disk_notification_period_ms_ = value;
+  }
+
   // Service implementation functions as wrapped in interface.cc
   // and defined in cryptohome.xml.
   virtual gboolean CheckKey(gchar *user,
@@ -592,6 +596,9 @@ class Service : public brillo::dbus::AbstractDbusService,
   // Called periodically on Mount thread to initiate automatic disk
   // cleanup if needed.
   virtual void AutoCleanupCallback();
+  // Called periodically on Mount thread to detect low disk space and emit a
+  // signal if detected.
+  virtual void LowDiskCallback();
   // Returns true if there are any existing mounts and populates
   // |mounts| with the mount point.
   virtual bool GetExistingMounts(
@@ -700,6 +707,7 @@ class Service : public brillo::dbus::AbstractDbusService,
   // A completion signal for async calls that return data.
   guint async_data_complete_signal_;
   guint tpm_init_signal_;
+  guint low_disk_space_signal_;
   CryptohomeEventSource event_source_;
   CryptohomeEventSourceSink* event_source_sink_;
   int auto_cleanup_period_;
@@ -743,6 +751,7 @@ class Service : public brillo::dbus::AbstractDbusService,
   BootAttributes* boot_attributes_;
   scoped_ptr<FirmwareManagementParameters> default_firmware_management_params_;
   FirmwareManagementParameters* firmware_management_parameters_;
+  int low_disk_notification_period_ms_;
 
   DISALLOW_COPY_AND_ASSIGN(Service);
 };

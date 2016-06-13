@@ -46,6 +46,7 @@ class MockHomeDirs : public HomeDirs {
                                                  const KeyData&));
   MOCK_METHOD2(ForceRemoveKeyset, bool(const std::string&, int));
   MOCK_METHOD3(MoveKeyset, bool(const std::string&, int, int));
+  MOCK_METHOD0(AmountOfFreeDiskSpace, int64_t(void));
 
   // Some unit tests require that MockHomeDirs actually call the real
   // GetPlainOwner() function. In those cases, you can use this function

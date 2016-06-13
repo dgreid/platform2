@@ -534,6 +534,8 @@
                finished and the call returns only status.
            AsyncCallStatusWithData: Emitted when a legacy asynchronous call has
                finished and the call returns status and data.
+           LowDiskSpace: Emitted when the system is running low on disk space
+               for home directories.
     -->
     <signal name="TpmInitStatus">
       <arg type="b" name="ready" />
@@ -549,6 +551,9 @@
       <arg type="i" name="async_id" />
       <arg type="b" name="return_status" />
       <arg type="ay" name="data" />
+    </signal>
+    <signal name="LowDiskSpace">
+      <arg type="t" name="disk_free_bytes" />
     </signal>
   </interface>
 </node>

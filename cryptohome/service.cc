@@ -79,6 +79,8 @@ const char kPublicMountSaltFilePath[] = "/var/lib/public_mount_salt";
 const char kChapsSystemToken[] = "/var/lib/chaps";
 const int kAutoCleanupPeriodMS = 1000 * 60 * 60;  // 1 hour
 const int kUpdateUserActivityPeriod = 24;  // divider of the former
+const int kLowDiskNotificationPeriodMS = 1000 * 60 * 1;  // 1 minute
+const int64_t kNotifyDiskSpaceThreshold = 1 << 30;  // 1GB
 const int kDefaultRandomSeedLength = 64;
 const char kMountThreadName[] = "MountThread";
 const char kTpmInitStatusEventType[] = "TpmInitStatus";
@@ -182,6 +184,7 @@ Service::Service()
       async_complete_signal_(-1),
       async_data_complete_signal_(-1),
       tpm_init_signal_(-1),
+      low_disk_space_signal_(-1),
       event_source_(),
       event_source_sink_(this),
       auto_cleanup_period_(kAutoCleanupPeriodMS),
@@ -207,7 +210,8 @@ Service::Service()
       attestation_(default_attestation_.get()),
       boot_lockbox_(nullptr),
       boot_attributes_(nullptr),
-      firmware_management_parameters_(nullptr) {
+      firmware_management_parameters_(nullptr),
+      low_disk_notification_period_ms_(kLowDiskNotificationPeriodMS) {
 }
 
 Service::~Service() {
@@ -489,6 +493,21 @@ bool Service::Initialize() {
                                     G_TYPE_BOOLEAN);
   }
 
+  low_disk_space_signal_ = g_signal_lookup("low_disk_space",
+                                           gobject::cryptohome_get_type());
+  if (!low_disk_space_signal_) {
+    low_disk_space_signal_ = g_signal_new("low_disk_space",
+                                          gobject::cryptohome_get_type(),
+                                          G_SIGNAL_RUN_LAST,
+                                          0,
+                                          NULL,
+                                          NULL,
+                                          nullptr,
+                                          G_TYPE_NONE,
+                                          1,
+                                          G_TYPE_UINT64);
+  }
+
   mount_thread_.Start();
 
   // Start scheduling periodic cleanup events. Subsequent events are scheduled
@@ -496,6 +515,12 @@ bool Service::Initialize() {
   mount_thread_.message_loop()->PostTask(
       FROM_HERE,
       base::Bind(&Service::AutoCleanupCallback, base::Unretained(this)));
+
+  // Start scheduling periodic check for low-disk space.  Subsequent events are
+  // scheduled by teh callback itself.
+  mount_thread_.message_loop()->PostTask(
+      FROM_HERE,
+      base::Bind(&Service::LowDiskCallback, base::Unretained(this)));
 
   // TODO(keescook,ellyjones) Make this mock-able.
   StatefulRecovery recovery(platform_, this);
@@ -3317,6 +3342,22 @@ void Service::AutoCleanupCallback() {
       FROM_HERE,
       base::Bind(&Service::AutoCleanupCallback, base::Unretained(this)),
       base::TimeDelta::FromMilliseconds(auto_cleanup_period_));
+}
+
+// Called on Mount thread.
+void Service::LowDiskCallback() {
+  int64_t free_disk_space = homedirs_->AmountOfFreeDiskSpace();
+  if (free_disk_space < 0)
+    LOG(ERROR) << "Error getting free disk space, got: " << free_disk_space;
+  else if (free_disk_space < kNotifyDiskSpaceThreshold)
+    g_signal_emit(cryptohome_, low_disk_space_signal_,
+                  0 /* signal detail (not used) */,
+                  static_cast<uint64_t>(free_disk_space));
+
+  mount_thread_.message_loop()->PostDelayedTask(
+      FROM_HERE,
+      base::Bind(&Service::LowDiskCallback, base::Unretained(this)),
+      base::TimeDelta::FromMilliseconds(low_disk_notification_period_ms_));
 }
 
 void Service::ResetDictionaryAttackMitigation() {
