@@ -34,6 +34,7 @@ namespace cryptohome {
 
 const int64_t kEnoughFreeSpace = 1LL << 30;
 extern const char kGCacheFilesAttribute[];
+extern const char kAndroidCacheFilesAttribute[];
 
 class Credentials;
 class Platform;
@@ -224,6 +225,8 @@ class HomeDirs {
   bool FindGCacheFilesDir(const base::FilePath& vault, std::string* dir);
   // Callback used during FreeDiskSpace().
   void DeleteGCacheTmpCallback(const base::FilePath& vault);
+  // Callback used during FreeDiskSpace().
+  void DeleteAndroidCacheCallback(const base::FilePath& vault);
   // Recursively deletes all contents of a directory while leaving the directory
   // itself intact.
   void DeleteDirectoryContents(const base::FilePath& dir);

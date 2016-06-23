@@ -268,7 +268,7 @@ class FreeDiskSpaceTest : public HomeDirsTest {
           DoAll(SetArgPointee<2>(homedir_paths_),
                 Return(true)));
     EXPECT_CALL(platform_, AmountOfFreeDiskSpace(kTestRoot))
-      .Times(3).WillRepeatedly(Return(0))
+      .Times(4).WillRepeatedly(Return(0))
       .RetiresOnSaturation();
     EXPECT_CALL(platform_, DirectoryExists(_))
       .WillRepeatedly(Return(true));
@@ -276,16 +276,17 @@ class FreeDiskSpaceTest : public HomeDirsTest {
     EXPECT_CALL(platform_, GetFileEnumerator(_, false, _))
       .Times(user_count * 2)
       .WillRepeatedly(InvokeWithoutArgs(CreateMockFileEnumerator));
-    // N users * 1 GCache files dir
+    // N users * (1 GCache files dir + 1 Android cache dir)
     EXPECT_CALL(platform_, GetFileEnumerator(_, true, _))
-      .Times(user_count)
+      .Times(user_count * 2)
       .WillRepeatedly(InvokeWithoutArgs(CreateMockFileEnumerator));
   }
 };
 
 TEST_F(FreeDiskSpaceTest, InitializeTimeCacheWithNoTime) {
-  // To get to the init logic, we need to fail three kEnoughFreeSpace checks.
+  // To get to the init logic, we need to fail four kEnoughFreeSpace checks.
   EXPECT_CALL(platform_, AmountOfFreeDiskSpace(kTestRoot))
+    .WillOnce(Return(0))
     .WillOnce(Return(0))
     .WillOnce(Return(0))
     .WillOnce(Return(kEnoughFreeSpace - 1));
@@ -313,6 +314,11 @@ TEST_F(FreeDiskSpaceTest, InitializeTimeCacheWithNoTime) {
       .WillRepeatedly(InvokeWithoutArgs(CreateMockFileEnumerator));
   EXPECT_CALL(platform_,
               GetFileEnumerator(EndsWith("user/GCache/v1"), true, _))
+      .Times(4)
+      .WillRepeatedly(InvokeWithoutArgs(CreateMockFileEnumerator));
+  EXPECT_CALL(platform_,
+              GetFileEnumerator(EndsWith(
+                  std::string(kVaultDir) + "/root"), true, _))
       .Times(4)
       .WillRepeatedly(InvokeWithoutArgs(CreateMockFileEnumerator));
 
@@ -346,8 +352,9 @@ TEST_F(FreeDiskSpaceTest, InitializeTimeCacheWithNoTime) {
 }
 
 TEST_F(FreeDiskSpaceTest, InitializeTimeCacheWithOneTime) {
-  // To get to the init logic, we need to fail three kEnoughFreeSpace checks.
+  // To get to the init logic, we need to fail four kEnoughFreeSpace checks.
   EXPECT_CALL(platform_, AmountOfFreeDiskSpace(kTestRoot))
+    .WillOnce(Return(0))
     .WillOnce(Return(0))
     .WillOnce(Return(0))
     .WillOnce(Return(kEnoughFreeSpace - 1));
@@ -372,6 +379,11 @@ TEST_F(FreeDiskSpaceTest, InitializeTimeCacheWithOneTime) {
       .WillRepeatedly(InvokeWithoutArgs(CreateMockFileEnumerator));
   EXPECT_CALL(platform_, GetFileEnumerator(EndsWith(std::string(kVaultDir) +
                                                     "/user/GCache/v1"),
+                                           true, _))
+      .Times(4)
+      .WillRepeatedly(InvokeWithoutArgs(CreateMockFileEnumerator));
+  EXPECT_CALL(platform_, GetFileEnumerator(EndsWith(std::string(kVaultDir) +
+                                                    "/root"),
                                            true, _))
       .Times(4)
       .WillRepeatedly(InvokeWithoutArgs(CreateMockFileEnumerator));
@@ -556,6 +568,77 @@ TEST_F(FreeDiskSpaceTest, CacheAndGCacheCleanup) {
   // Confirm removable file is removed.
   EXPECT_CALL(platform_, DeleteFile(EndsWith("/GCache/v1/files/removable"), _))
     .WillOnce(Return(true));
+
+  EXPECT_TRUE(homedirs_.FreeDiskSpace());
+}
+
+TEST_F(FreeDiskSpaceTest, CacheAndGCacheAndAndroidCleanup) {
+  EXPECT_CALL(platform_, EnumerateDirectoryEntries(kTestRoot, false, _))
+    .WillRepeatedly(
+        DoAll(SetArgPointee<2>(homedir_paths_),
+              Return(true)));
+  EXPECT_CALL(platform_, AmountOfFreeDiskSpace(kTestRoot))
+    .WillOnce(Return(0))
+    .WillOnce(Return(0))
+    .WillOnce(Return(0))
+    .WillOnce(Return(kEnoughFreeSpace + 1));
+  EXPECT_CALL(platform_, DirectoryExists(_))
+    .WillRepeatedly(Return(true));
+
+  // Skip per-cache and GCache enumerations done per user in order to
+  // test Android cache deletions.
+  EXPECT_CALL(platform_, GetFileEnumerator(EndsWith("/Cache"), false, _))
+      .Times(4)
+      .WillRepeatedly(InvokeWithoutArgs(CreateMockFileEnumerator));
+
+  // DeleteGCacheTmpCallback enumerate all directories to find GCache files
+  // directory.
+  EXPECT_CALL(
+      platform_,
+      GetFileEnumerator(EndsWith(std::string(kVaultDir) + "/user/GCache/v1"),
+                        true, base::FileEnumerator::DIRECTORIES))
+      .Times(4)
+      .WillRepeatedly(InvokeWithoutArgs(CreateMockFileEnumerator));
+  EXPECT_CALL(platform_,
+              GetFileEnumerator(EndsWith("/GCache/v1/tmp"), false, _))
+      .Times(4)
+      .WillRepeatedly(InvokeWithoutArgs(CreateMockFileEnumerator));
+
+  // Now test for the Android user, just test for the first user.
+  NiceMock<MockFileEnumerator>* fe = new NiceMock<MockFileEnumerator>;
+  EXPECT_CALL(platform_, GetFileEnumerator(EndsWith(
+      std::string(kVaultDir) + "/root"), true, _))
+      .WillOnce(Return(fe))
+      .WillOnce(InvokeWithoutArgs(CreateMockFileEnumerator))
+      .WillOnce(InvokeWithoutArgs(CreateMockFileEnumerator))
+      .WillOnce(InvokeWithoutArgs(CreateMockFileEnumerator));
+
+  // Return a cache and non-cache directory.
+  EXPECT_CALL(*fe, Next())
+      .WillOnce(Return(StringPrintf(
+          "%s/%s", homedir_paths_[0].c_str(),
+          "android-data/data/data/com.google.hogehoge/cache")))
+      .WillOnce(Return(StringPrintf(
+          "%s/%s", homedir_paths_[0].c_str(),
+          "android-data/data/data/com.google.hogehoge/data")))
+      .WillRepeatedly(Return(""));
+
+  EXPECT_CALL(platform_, HasExtendedFileAttribute(
+      EndsWith("android-data/data/data/com.google.hogehoge/cache"),
+      kAndroidCacheFilesAttribute))
+      .WillOnce(Return(true));
+  EXPECT_CALL(platform_, HasExtendedFileAttribute(
+      EndsWith("android-data/data/data/com.google.hogehoge/data"),
+      kAndroidCacheFilesAttribute))
+      .WillOnce(Return(false));
+
+  // Confirm android cache dir is removed and data directory is not.
+  EXPECT_CALL(platform_, DeleteFile(
+      EndsWith("android-data/data/data/com.google.hogehoge/cache"), _))
+      .WillOnce(Return(true));
+  EXPECT_CALL(platform_, DeleteFile(
+      EndsWith("android-data/data/data/com.google.hogehoge/data"), _))
+      .Times(0);
 
   EXPECT_TRUE(homedirs_.FreeDiskSpace());
 }
@@ -865,18 +948,18 @@ TEST_F(FreeDiskSpaceTest, DontCleanUpMountedUser) {
   // 3 users * (1 Cache dir + 1 GCache tmp dir)
   EXPECT_CALL(platform_, GetFileEnumerator(_, false, _))
     .Times(6).WillRepeatedly(InvokeWithoutArgs(CreateMockFileEnumerator));
-  // 3 users * 1 GCache files dir
+  // 3 users * (1 GCache files dir + 1 Android cache)
   EXPECT_CALL(platform_, GetFileEnumerator(_, true, _))
-    .Times(3).WillRepeatedly(InvokeWithoutArgs(CreateMockFileEnumerator));
+    .Times(6).WillRepeatedly(InvokeWithoutArgs(CreateMockFileEnumerator));
 
   EXPECT_CALL(platform_,
       IsDirectoryMountedWith(StartsWith(homedir_paths_[0]), _))
-    .Times(4)  // Cache, GCache, mounted dir count, user removal
+    .Times(5)  // Cache, GCache, android, mounted dir count, user removal
     .WillRepeatedly(Return(true));
   for (size_t i = 1; i < arraysize(kHomedirs); ++i) {
     EXPECT_CALL(platform_,
         IsDirectoryMountedWith(StartsWith(homedir_paths_[i]), _))
-      .Times(3)  // Cache, GCache, mounted dir count
+      .Times(4)  // Cache, GCache, android, mounted dir count
       .WillRepeatedly(Return(false));
   }
 

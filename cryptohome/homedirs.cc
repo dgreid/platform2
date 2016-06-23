@@ -36,6 +36,7 @@ namespace cryptohome {
 const char *kShadowRoot = "/home/.shadow";
 const char *kEmptyOwner = "";
 const char kGCacheFilesAttribute[] = "user.GCacheFiles";
+const char kAndroidCacheFilesAttribute[] = "user.AndroidCache";
 
 HomeDirs::HomeDirs()
     : default_platform_(new Platform()),
@@ -96,6 +97,14 @@ bool HomeDirs::FreeDiskSpace() {
                                  1024);
 
   if (freeDiskSpace >= kEnoughFreeSpace)
+    return true;
+
+  // Clean Cache directories for every user (except current one).
+  DoForEveryUnmountedCryptohome(base::Bind(
+      &HomeDirs::DeleteAndroidCacheCallback,
+      base::Unretained(this)));
+
+  if (platform_->AmountOfFreeDiskSpace(shadow_root_) >= kEnoughFreeSpace)
     return true;
 
   // Initialize user timestamp cache if it has not been yet. This reads the
@@ -857,6 +866,31 @@ void HomeDirs::DeleteGCacheTmpCallback(const FilePath& vault) {
       if (!platform_->DeleteFile(current, false)) {
         PLOG(WARNING) << "DeleteFile: " << current;
       }
+    }
+  }
+}
+
+void HomeDirs::DeleteAndroidCacheCallback(const FilePath& vault) {
+  const FilePath root = vault.Append(kRootHomeSuffix);
+  // Find the cache directory by walking under vault/root directory
+  // and looking for AndroidCache xattr set. Data is stored under
+  // root/android-data/data/data/[package name]/cache. It is not
+  // desirable to make all package name directories unencrypted, they
+  // are not marked as tracked directory.
+  // TODO(crbug/625872): Mark root/android/data/data/ as pass through.
+  // TODO(uekawa): Not all boards have android running, we probably
+  // don't need to check for board that do not have an android
+  // configuration.
+  std::unique_ptr<cryptohome::FileEnumerator> file_enumerator(
+      platform_->GetFileEnumerator(root.value(), true,
+                                   base::FileEnumerator::DIRECTORIES));
+  std::string next_path;
+  while (!(next_path = file_enumerator->Next()).empty()) {
+    std::string value;
+    if (platform_->HasExtendedFileAttribute(
+            next_path, kAndroidCacheFilesAttribute)) {
+      LOG(WARNING) << "Deleting Android Cache " << next_path;
+      platform_->DeleteFile(next_path, true);
     }
   }
 }
