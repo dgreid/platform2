@@ -117,27 +117,19 @@ class KeyboardBacklightController
   int64_t PercentToLevel(double percent) const;
   double LevelToPercent(int64_t level) const;
 
-  // Returns true if |last_hover_or_user_activity_time_| was less than
-  // |keep_on_delay_| ago.
+  // Returns true if |hovering_| is true, or |last_hover_time_| or
+  // |last_user_activity_time_| were less than |keep_on_delay_| ago.
   bool RecentlyHoveringOrUserActive() const;
-
-  // Returns the brightness from the current step in either |als_steps_| or
-  // |user_steps_|, depending on which is in use.
-  double GetUndimmedPercent() const;
 
   // Initializes |user_step_index_| when transitioning from ALS to user control.
   void InitUserStepIndex();
 
-  // Passes GetUndimmedPercent() to ApplyBrightnessPercent() if currently
-  // in a state where the undimmed brightness should be used.  Returns true
-  // if the brightness was changed.
-  bool UpdateUndimmedBrightness(TransitionStyle transition,
-                                BrightnessChangeCause cause);
-
-  // Updates the current brightness after assessing the current state
-  // (based on |dimmed_for_inactivity_|, |off_for_inactivity_|, etc.).
-  // Should be called whenever the state changes.
-  void UpdateState();
+  // Updates the current brightness after assessing the current state (based on
+  // |dimmed_for_inactivity_|, |off_for_inactivity_|, etc.). Should be called
+  // whenever the state changes. |transition| and |cause| are passed to
+  // ApplyBrightnessPercent(). Returns true if the brightness was changed and
+  // false otherwise.
+  bool UpdateState(TransitionStyle transition, BrightnessChangeCause cause);
 
   // Sets the backlight's brightness to |percent| over |transition|.
   // Returns true and notifies observers if the brightness was changed.
@@ -217,7 +209,7 @@ class KeyboardBacklightController
 
   // Duration the backlight should remain on after hovering stops (on systems
   // that support hover detection) or after user activity (if
-  // turn_on_for_user_activity_ is set).
+  // |turn_on_for_user_activity_| is set).
   base::TimeDelta keep_on_delay_;
 
   // Runs UpdateState() |keep_on_delay_| after the user's hands stop hovering

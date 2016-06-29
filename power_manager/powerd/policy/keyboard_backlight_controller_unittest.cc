@@ -160,7 +160,7 @@ TEST_F(KeyboardBacklightControllerTest, TurnOffForFullscreenVideo) {
   // should be turned on.
   ASSERT_TRUE(test_api_.TriggerVideoTimeout());
   EXPECT_EQ(20, backlight_.current_level());
-  EXPECT_EQ(kSlowBacklightTransitionMs,
+  EXPECT_EQ(kFastBacklightTransitionMs,
             backlight_.current_interval().InMilliseconds());
 
   // Fullscreen video should be ignored when the user isn't logged in.
