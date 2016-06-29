@@ -136,6 +136,8 @@ void KeyboardBacklightController::Init(
   int64_t delay_ms = 0;
   CHECK(prefs->GetInt64(kKeyboardBacklightKeepOnMsPref, &delay_ms));
   keep_on_delay_ = base::TimeDelta::FromMilliseconds(delay_ms);
+  CHECK(prefs->GetInt64(kKeyboardBacklightKeepOnDuringVideoMsPref, &delay_ms));
+  keep_on_during_video_delay_ = base::TimeDelta::FromMilliseconds(delay_ms);
 
   max_level_ = backlight_->GetMaxBrightnessLevel();
   current_level_ = backlight_->GetCurrentBrightnessLevel();
@@ -220,12 +222,7 @@ void KeyboardBacklightController::HandleHoverStateChanged(bool hovering) {
     // calling UpdateState(), TestApi::TriggerTurnOffTimeout() must also be
     // updated.
     last_hover_time_ = clock_->GetCurrentTime();
-    turn_off_timer_.Start(
-        FROM_HERE, keep_on_delay_,
-        base::Bind(
-            base::IgnoreResult(&KeyboardBacklightController::UpdateState),
-            base::Unretained(this), TRANSITION_SLOW,
-            BRIGHTNESS_CHANGE_AUTOMATED));
+    UpdateTurnOffTimer();
 
     // Hovering can start and stop frequently. To avoid spamming the logs, wait
     // a while before logging that it's stopped.
@@ -263,15 +260,8 @@ void KeyboardBacklightController::HandlePowerButtonPress() {}
 
 void KeyboardBacklightController::HandleUserActivity(UserActivityType type) {
   last_user_activity_time_ = clock_->GetCurrentTime();
-  if ((supports_hover_ || turn_on_for_user_activity_) && !hovering_) {
-    turn_off_timer_.Start(
-        FROM_HERE, keep_on_delay_,
-        base::Bind(
-            base::IgnoreResult(&KeyboardBacklightController::UpdateState),
-            base::Unretained(this), TRANSITION_SLOW,
-            BRIGHTNESS_CHANGE_AUTOMATED));
-    UpdateState(TRANSITION_FAST, BRIGHTNESS_CHANGE_AUTOMATED);
-  }
+  UpdateTurnOffTimer();
+  UpdateState(TRANSITION_FAST, BRIGHTNESS_CHANGE_AUTOMATED);
 }
 
 void KeyboardBacklightController::HandlePolicyChange(
@@ -390,6 +380,7 @@ void KeyboardBacklightController::HandleVideoTimeout() {
     VLOG(1) << "Fullscreen video stopped";
   fullscreen_video_playing_ = false;
   UpdateState(TRANSITION_FAST, BRIGHTNESS_CHANGE_AUTOMATED);
+  UpdateTurnOffTimer();
 }
 
 int64_t KeyboardBacklightController::PercentToLevel(double percent) const {
@@ -411,10 +402,11 @@ bool KeyboardBacklightController::RecentlyHoveringOrUserActive() const {
     return true;
 
   const base::TimeTicks now = clock_->GetCurrentTime();
-  return (!last_hover_time_.is_null() &&
-          (now - last_hover_time_ < keep_on_delay_)) ||
+  const base::TimeDelta delay =
+      fullscreen_video_playing_ ? keep_on_during_video_delay_ : keep_on_delay_;
+  return (!last_hover_time_.is_null() && (now - last_hover_time_ < delay)) ||
          (!last_user_activity_time_.is_null() &&
-          (now - last_user_activity_time_ < keep_on_delay_));
+          (now - last_user_activity_time_ < delay));
 }
 
 void KeyboardBacklightController::InitUserStepIndex() {
@@ -435,6 +427,37 @@ void KeyboardBacklightController::InitUserStepIndex() {
       << "Failed to find brightness step for level " << current_level_;
 }
 
+void KeyboardBacklightController::UpdateTurnOffTimer() {
+  if (!supports_hover_ && !turn_on_for_user_activity_)
+    return;
+
+  turn_off_timer_.Stop();
+
+  // The timer shouldn't start until hovering stops.
+  if (hovering_)
+    return;
+
+  // Determine how much time is left.
+  const base::TimeTicks timeout_start =
+      std::max(last_hover_time_, last_user_activity_time_);
+  if (timeout_start.is_null())
+    return;
+
+  const base::TimeDelta full_delay =
+      fullscreen_video_playing_ ? keep_on_during_video_delay_ : keep_on_delay_;
+  const base::TimeDelta remaining_delay =
+      full_delay - (clock_->GetCurrentTime() - timeout_start);
+  if (remaining_delay <= base::TimeDelta::FromMilliseconds(0))
+    return;
+
+  turn_off_timer_.Start(
+      FROM_HERE, remaining_delay,
+      base::Bind(
+          base::IgnoreResult(&KeyboardBacklightController::UpdateState),
+          base::Unretained(this), TRANSITION_SLOW,
+          BRIGHTNESS_CHANGE_AUTOMATED));
+}
+
 bool KeyboardBacklightController::UpdateState(TransitionStyle transition,
                                               BrightnessChangeCause cause) {
   // Force the display off immediately in several special cases.
@@ -450,9 +473,14 @@ bool KeyboardBacklightController::UpdateState(TransitionStyle transition,
     return ApplyBrightnessPercent(percent, transition, cause);
   }
 
-  // If the user's hands are hovering over the touchpad, turn the backlight on.
-  if (hovering_)
-    return ApplyBrightnessPercent(automated_percent_, transition, cause);
+  // If requested, force the backlight on if the user is currently or was
+  // recently active and off otherwise.
+  if (supports_hover_ || turn_on_for_user_activity_) {
+    if (RecentlyHoveringOrUserActive())
+      return ApplyBrightnessPercent(automated_percent_, transition, cause);
+    else
+      return ApplyBrightnessPercent(0.0, transition, cause);
+  }
 
   // Force the backlight off for several more lower-priority conditions.
   // TODO(derat): Restructure this so the backlight is kept on for at least a
@@ -461,15 +489,6 @@ bool KeyboardBacklightController::UpdateState(TransitionStyle transition,
   if (fullscreen_video_playing_ || display_brightness_is_zero_ ||
       off_for_inactivity_) {
     return ApplyBrightnessPercent(0.0, transition, cause);
-  }
-
-  // If we turn the backlight on and off dynamically, force the backlight on if
-  // the user is currently or was recently active and off otherwise.
-  if (supports_hover_ || turn_on_for_user_activity_) {
-    if (RecentlyHoveringOrUserActive())
-      return ApplyBrightnessPercent(automated_percent_, transition, cause);
-    else
-      return ApplyBrightnessPercent(0.0, transition, cause);
   }
 
   if (dimmed_for_inactivity_) {

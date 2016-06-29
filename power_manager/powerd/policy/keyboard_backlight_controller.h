@@ -117,12 +117,16 @@ class KeyboardBacklightController
   int64_t PercentToLevel(double percent) const;
   double LevelToPercent(int64_t level) const;
 
-  // Returns true if |hovering_| is true, or |last_hover_time_| or
-  // |last_user_activity_time_| were less than |keep_on_delay_| ago.
+  // Returns true if hovering is active or if user activity or hovering was
+  // observed recently enough that the backlight should be kept on.
   bool RecentlyHoveringOrUserActive() const;
 
   // Initializes |user_step_index_| when transitioning from ALS to user control.
   void InitUserStepIndex();
+
+  // Stops or starts |turn_off_timer_| as needed based on the current values of
+  // |hovering_|, |last_hover_time_|, and |last_user_activity_time_|.
+  void UpdateTurnOffTimer();
 
   // Updates the current brightness after assessing the current state (based on
   // |dimmed_for_inactivity_|, |off_for_inactivity_|, etc.). Should be called
@@ -212,9 +216,12 @@ class KeyboardBacklightController
   // |turn_on_for_user_activity_| is set).
   base::TimeDelta keep_on_delay_;
 
-  // Runs UpdateState() |keep_on_delay_| after the user's hands stop hovering
-  // over the touchpad (or after user activity is last observed, if
-  // |turn_on_for_user_activity_| is true).
+  // Like |keep_on_delay_|, but used while fullscreen video is playing.
+  base::TimeDelta keep_on_during_video_delay_;
+
+  // Runs UpdateState() |keep_on_delay_| or |keep_on_during_video_delay_| after
+  // the user's hands stop hovering over the touchpad (or after user activity is
+  // last observed, if |turn_on_for_user_activity_| is true).
   base::OneShotTimer turn_off_timer_;
 
   // Runs HandleVideoTimeout().

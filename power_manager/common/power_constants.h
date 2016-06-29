@@ -97,6 +97,10 @@ extern const char kKeyboardBacklightNoAlsBrightnessPref[];
 // enabled).
 extern const char kKeyboardBacklightKeepOnMsPref[];
 
+// Alternate delay used in place of |kKeyboardBacklightKeepOnMsPref| while
+// fullscreen video is playing.
+extern const char kKeyboardBacklightKeepOnDuringVideoMsPref[];
+
 // If true, powerd will dynamically turn the keyboard backlight on when user
 // activity is detected and disable it after kKeyboardBacklightKeepOnMsPref.
 // This can be set on systems that lack ambient light sensors and hover

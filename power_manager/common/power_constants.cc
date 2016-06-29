@@ -41,6 +41,8 @@ const char kKeyboardBacklightUserStepsPref[] = "keyboard_backlight_user_steps";
 const char kKeyboardBacklightNoAlsBrightnessPref[] =
     "keyboard_backlight_no_als_brightness";
 const char kKeyboardBacklightKeepOnMsPref[] = "keyboard_backlight_keep_on_ms";
+const char kKeyboardBacklightKeepOnDuringVideoMsPref[] =
+    "keyboard_backlight_keep_on_during_video_ms";
 const char kKeyboardBacklightTurnOnForUserActivityPref[] =
     "keyboard_backlight_turn_on_for_user_activity";
 const char kRequireUsbInputDeviceToSuspendPref[] =

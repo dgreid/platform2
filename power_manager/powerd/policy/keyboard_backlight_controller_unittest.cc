@@ -35,6 +35,7 @@ class KeyboardBacklightControllerTest : public ::testing::Test {
         detect_hover_pref_(0),
         turn_on_for_user_activity_pref_(0),
         keep_on_ms_pref_(0),
+        keep_on_during_video_ms_pref_(0),
         backlight_(max_backlight_level_, initial_backlight_level_),
         light_sensor_(initial_als_lux_),
         test_api_(&controller_) {
@@ -61,6 +62,8 @@ class KeyboardBacklightControllerTest : public ::testing::Test {
     prefs_.SetInt64(kKeyboardBacklightTurnOnForUserActivityPref,
                     turn_on_for_user_activity_pref_);
     prefs_.SetInt64(kKeyboardBacklightKeepOnMsPref, keep_on_ms_pref_);
+    prefs_.SetInt64(kKeyboardBacklightKeepOnDuringVideoMsPref,
+                    keep_on_during_video_ms_pref_);
 
     controller_.Init(&backlight_, &prefs_,
                      pass_light_sensor_? &light_sensor_ : NULL,
@@ -101,6 +104,7 @@ class KeyboardBacklightControllerTest : public ::testing::Test {
   int64_t detect_hover_pref_;
   int64_t turn_on_for_user_activity_pref_;
   int64_t keep_on_ms_pref_;
+  int64_t keep_on_during_video_ms_pref_;
 
   FakePrefs prefs_;
   system::BacklightStub backlight_;
@@ -493,6 +497,7 @@ TEST_F(KeyboardBacklightControllerTest, Hover) {
   user_steps_pref_ = "0.0\n100.0";
   detect_hover_pref_ = 1;
   keep_on_ms_pref_ = 30000;
+  keep_on_during_video_ms_pref_ = 3000;
   Init();
   controller_.HandleSessionStateChange(SESSION_STARTED);
   light_sensor_.NotifyObservers();
@@ -510,9 +515,14 @@ TEST_F(KeyboardBacklightControllerTest, Hover) {
   controller_.HandleVideoActivity(true);
   EXPECT_EQ(50, backlight_.current_level());
 
-  // Stopping hovering while the video is still playing should result in the
-  // backlight going off again.
+  // It should remain on for a short period of time if hovering stops while the
+  // video is still playing.
   controller_.HandleHoverStateChanged(false);
+  EXPECT_EQ(50, backlight_.current_level());
+
+  // After enough time, the backlight should turn off.
+  AdvanceTime(base::TimeDelta::FromMilliseconds(keep_on_during_video_ms_pref_));
+  ASSERT_TRUE(test_api_.TriggerTurnOffTimeout());
   EXPECT_EQ(0, backlight_.current_level());
   EXPECT_EQ(kSlowBacklightTransitionMs,
             backlight_.current_interval().InMilliseconds());
@@ -524,8 +534,9 @@ TEST_F(KeyboardBacklightControllerTest, Hover) {
   EXPECT_EQ(kFastBacklightTransitionMs,
             backlight_.current_interval().InMilliseconds());
 
-  // After the hover timeout, the backlight should turn off slowly.
-  AdvanceTime(base::TimeDelta::FromMilliseconds(keep_on_ms_pref_));
+  // After the rest of the full timeout, the backlight should turn off slowly.
+  AdvanceTime(base::TimeDelta::FromMilliseconds(keep_on_ms_pref_ -
+                                                keep_on_during_video_ms_pref_));
   ASSERT_TRUE(test_api_.TriggerTurnOffTimeout());
   EXPECT_EQ(0, backlight_.current_level());
   EXPECT_EQ(kSlowBacklightTransitionMs,
