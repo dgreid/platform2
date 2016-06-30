@@ -698,7 +698,7 @@ int container_start(struct container *c, const struct container_config *config)
 		if (dev->copy_minor) {
 			struct stat st_buff;
 			if (stat(dev->path, &st_buff) < 0)
-				goto error_rmdir;
+				continue;
 			/* Use the minor macro to extract the device number. */
 			minor = minor(st_buff.st_rdev);
 		}
