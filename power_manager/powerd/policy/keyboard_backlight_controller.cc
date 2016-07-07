@@ -460,7 +460,7 @@ void KeyboardBacklightController::UpdateTurnOffTimer() {
 
 bool KeyboardBacklightController::UpdateState(TransitionStyle transition,
                                               BrightnessChangeCause cause) {
-  // Force the display off immediately in several special cases.
+  // Force the backlight off immediately in several special cases.
   if (shutting_down_ || docked_ || suspended_)
     return ApplyBrightnessPercent(0.0, transition, cause);
 
