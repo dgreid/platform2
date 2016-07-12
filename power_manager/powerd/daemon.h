@@ -93,6 +93,7 @@ class Daemon : public policy::BacklightControllerObserver,
   void HandleLidOpened() override;
   void HandlePowerButtonEvent(ButtonState state) override;
   void HandleHoverStateChanged(bool hovering) override;
+  void HandleTabletModeChanged(TabletMode mode) override;
   void DeferInactivityTimeoutForVT2() override;
   void ShutDownForPowerButtonWithNoDisplay() override;
   void HandleMissingPowerButtonAcknowledgment() override;

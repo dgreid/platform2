@@ -91,6 +91,7 @@ KeyboardBacklightController::KeyboardBacklightController()
       supports_hover_(false),
       turn_on_for_user_activity_(false),
       session_state_(SESSION_STOPPED),
+      tablet_mode_(TABLET_MODE_OFF),
       dimmed_for_inactivity_(false),
       off_for_inactivity_(false),
       suspended_(false),
@@ -116,9 +117,11 @@ void KeyboardBacklightController::Init(
     system::BacklightInterface* backlight,
     PrefsInterface* prefs,
     system::AmbientLightSensorInterface* sensor,
-    BacklightController* display_backlight_controller) {
+    BacklightController* display_backlight_controller,
+    TabletMode initial_tablet_mode) {
   backlight_ = backlight;
   prefs_ = prefs;
+  tablet_mode_ = initial_tablet_mode;
 
   display_backlight_controller_ = display_backlight_controller;
   if (display_backlight_controller_)
@@ -242,6 +245,14 @@ void KeyboardBacklightController::HandleHoverStateChanged(bool hovering) {
 
   UpdateState(hovering_ ? TRANSITION_FAST : TRANSITION_SLOW,
               BRIGHTNESS_CHANGE_AUTOMATED);
+}
+
+void KeyboardBacklightController::HandleTabletModeChange(TabletMode mode) {
+  if (mode == tablet_mode_)
+    return;
+
+  tablet_mode_ = mode;
+  UpdateState(TRANSITION_FAST, BRIGHTNESS_CHANGE_AUTOMATED);
 }
 
 void KeyboardBacklightController::HandlePowerSourceChange(PowerSource source) {}
@@ -461,7 +472,7 @@ void KeyboardBacklightController::UpdateTurnOffTimer() {
 bool KeyboardBacklightController::UpdateState(TransitionStyle transition,
                                               BrightnessChangeCause cause) {
   // Force the backlight off immediately in several special cases.
-  if (shutting_down_ || docked_ || suspended_)
+  if (shutting_down_ || docked_ || suspended_ || tablet_mode_ == TABLET_MODE_ON)
     return ApplyBrightnessPercent(0.0, transition, cause);
 
   // If the user has asked for a specific brightness level, use it unless the

@@ -121,6 +121,9 @@ void InputController::OnLidEvent(LidState state) {
 
 void InputController::OnTabletModeEvent(TabletMode mode) {
   tablet_mode_ = mode;
+
+  delegate_->HandleTabletModeChanged(mode);
+
   InputEvent proto;
   proto.set_type(tablet_mode_ == TABLET_MODE_ON ?
                  InputEvent_Type_TABLET_MODE_ON :

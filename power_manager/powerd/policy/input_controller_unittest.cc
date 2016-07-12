@@ -38,6 +38,8 @@ const char kShutDown[] = "shut_down";
 const char kMissingPowerButtonAcknowledgment[] = "missing_power_button_ack";
 const char kHoverOn[] = "hover_on";
 const char kHoverOff[] = "hover_off";
+const char kTabletOn[] = "tablet_on";
+const char kTabletOff[] = "tablet_off";
 
 std::string GetAcknowledgmentDelayAction(base::TimeDelta delay) {
   return base::StringPrintf("power_button_ack_delay(%" PRId64 ")",
@@ -60,6 +62,12 @@ class TestInputControllerDelegate : public InputController::Delegate,
   void HandlePowerButtonEvent(ButtonState state) override {
     AppendAction(state == BUTTON_DOWN ? kPowerButtonDown : kPowerButtonUp);
   }
+  void HandleHoverStateChanged(bool hovering) override {
+    AppendAction(hovering ? kHoverOn : kHoverOff);
+  }
+  void HandleTabletModeChanged(TabletMode mode) override {
+    AppendAction(mode == TABLET_MODE_ON ? kTabletOn : kTabletOff);
+  }
   void DeferInactivityTimeoutForVT2() override {
     AppendAction(kDeferInactivity);
   }
@@ -71,9 +79,6 @@ class TestInputControllerDelegate : public InputController::Delegate,
   }
   void ReportPowerButtonAcknowledgmentDelay(base::TimeDelta delay) override {
     AppendAction(GetAcknowledgmentDelayAction(delay));
-  }
-  void HandleHoverStateChanged(bool hovering) override {
-    AppendAction(hovering ? kHoverOn : kHoverOff);
   }
 
  private:
@@ -169,6 +174,7 @@ TEST_F(InputControllerTest, TabletModeEvents) {
   AdvanceTime(base::TimeDelta::FromSeconds(1));
   input_watcher_.set_tablet_mode(TABLET_MODE_ON);
   input_watcher_.NotifyObserversAboutTabletMode();
+  EXPECT_EQ(kTabletOn, delegate_.GetActions());
   EXPECT_EQ(InputEvent_Type_TABLET_MODE_ON, GetInputEventSignalType());
   EXPECT_EQ(Now().ToInternalValue(), GetInputEventSignalTimestamp());
   dbus_sender_.ClearSentSignals();
@@ -176,6 +182,7 @@ TEST_F(InputControllerTest, TabletModeEvents) {
   AdvanceTime(base::TimeDelta::FromSeconds(1));
   input_watcher_.set_tablet_mode(TABLET_MODE_OFF);
   input_watcher_.NotifyObserversAboutTabletMode();
+  EXPECT_EQ(kTabletOff, delegate_.GetActions());
   EXPECT_EQ(InputEvent_Type_TABLET_MODE_OFF, GetInputEventSignalType());
   EXPECT_EQ(Now().ToInternalValue(), GetInputEventSignalTimestamp());
   dbus_sender_.ClearSentSignals();

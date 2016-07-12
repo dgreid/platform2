@@ -69,13 +69,17 @@ class KeyboardBacklightController
   void Init(system::BacklightInterface* backlight,
             PrefsInterface* prefs,
             system::AmbientLightSensorInterface* sensor,
-            BacklightController* display_backlight_controller);
+            BacklightController* display_backlight_controller,
+            TabletMode initial_tablet_mode);
 
   // Called when a notification about video activity has been received.
   void HandleVideoActivity(bool is_fullscreen);
 
   // Called when the user's hands start or stop hovering over the touchpad.
   void HandleHoverStateChanged(bool hovering);
+
+  // Called when a convertible system enters or exits tablet mode.
+  void HandleTabletModeChange(TabletMode mode);
 
   // BacklightController implementation:
   void AddObserver(BacklightControllerObserver* observer) override;
@@ -171,6 +175,7 @@ class KeyboardBacklightController
   bool turn_on_for_user_activity_;
 
   SessionState session_state_;
+  TabletMode tablet_mode_;
 
   bool dimmed_for_inactivity_;
   bool off_for_inactivity_;

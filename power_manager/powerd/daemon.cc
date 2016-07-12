@@ -430,11 +430,12 @@ void Daemon::Init() {
       LOG(ERROR) << "Cannot initialize keyboard backlight";
       keyboard_backlight_.reset();
     } else {
+      const TabletMode tablet_mode = input_watcher_->GetTabletMode();
       keyboard_backlight_controller_.reset(
           new policy::KeyboardBacklightController);
       keyboard_backlight_controller_->Init(
           keyboard_backlight_.get(), prefs_.get(), light_sensor_.get(),
-          display_backlight_controller_.get());
+          display_backlight_controller_.get(), tablet_mode);
     }
   }
 
@@ -560,6 +561,13 @@ void Daemon::HandleHoverStateChanged(bool hovering) {
   VLOG(1) << "Hovering " << (hovering ? "on" : "off");
   if (keyboard_backlight_controller_)
     keyboard_backlight_controller_->HandleHoverStateChanged(hovering);
+}
+
+void Daemon::HandleTabletModeChanged(TabletMode mode) {
+  LOG(INFO) << (mode == TABLET_MODE_ON ? "Entered" : "Exited")
+            << " tablet mode";
+  if (keyboard_backlight_controller_)
+    keyboard_backlight_controller_->HandleTabletModeChange(mode);
 }
 
 void Daemon::DeferInactivityTimeoutForVT2() {

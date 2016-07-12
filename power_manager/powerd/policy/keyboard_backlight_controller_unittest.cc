@@ -29,6 +29,7 @@ class KeyboardBacklightControllerTest : public ::testing::Test {
         initial_backlight_level_(50),
         pass_light_sensor_(true),
         initial_als_lux_(0),
+        initial_tablet_mode_(TABLET_MODE_OFF),
         als_steps_pref_("20.0 -1 50\n50.0 35 75\n75.0 60 -1"),
         user_steps_pref_("0.0\n10.0\n40.0\n60.0\n100.0"),
         no_als_brightness_pref_(40.0),
@@ -67,7 +68,7 @@ class KeyboardBacklightControllerTest : public ::testing::Test {
 
     controller_.Init(&backlight_, &prefs_,
                      pass_light_sensor_? &light_sensor_ : NULL,
-                     &display_backlight_controller_);
+                     &display_backlight_controller_, initial_tablet_mode_);
   }
 
  protected:
@@ -95,6 +96,9 @@ class KeyboardBacklightControllerTest : public ::testing::Test {
 
   // Initial lux level reported by |light_sensor_|.
   int initial_als_lux_;
+
+  // Initial tablet mode passed to |controller_|.
+  TabletMode initial_tablet_mode_;
 
   // Values for various preferences.  These can be changed by tests before
   // Init() is called.
@@ -657,6 +661,31 @@ TEST_F(KeyboardBacklightControllerTest, PreemptTransitionForShutdown) {
   controller_.SetShuttingDown(true);
   EXPECT_EQ(0, backlight_.current_level());
   EXPECT_EQ(0, backlight_.current_interval().InMilliseconds());
+}
+
+TEST_F(KeyboardBacklightControllerTest, TurnOffWhenInTabletMode) {
+  // The backlight should be initially turned off if the device is already in
+  // tablet mode.
+  initial_backlight_level_ = 100;
+  no_als_brightness_pref_ = 100.0;
+  pass_light_sensor_ = false;
+  initial_tablet_mode_ = TABLET_MODE_ON;
+  Init();
+  EXPECT_EQ(0, backlight_.current_level());
+  EXPECT_EQ(kSlowBacklightTransitionMs,
+            backlight_.current_interval().InMilliseconds());
+
+  // It should quickly turn on when the device leaves tablet mode.
+  controller_.HandleTabletModeChange(TABLET_MODE_OFF);
+  EXPECT_EQ(100, backlight_.current_level());
+  EXPECT_EQ(kFastBacklightTransitionMs,
+            backlight_.current_interval().InMilliseconds());
+
+  // Going back to tablet mode should turn the backlight off again.
+  controller_.HandleTabletModeChange(TABLET_MODE_ON);
+  EXPECT_EQ(0, backlight_.current_level());
+  EXPECT_EQ(kFastBacklightTransitionMs,
+            backlight_.current_interval().InMilliseconds());
 }
 
 }  // namespace policy

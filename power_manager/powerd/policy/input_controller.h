@@ -51,6 +51,9 @@ class InputController : public system::InputObserver {
     // Handles hovering/proximity changes.
     virtual void HandleHoverStateChanged(bool hovering) = 0;
 
+    // Handles the device entering or leaving tablet mode.
+    virtual void HandleTabletModeChanged(TabletMode mode) = 0;
+
     // Defers the inactivity timeout in response to VT2 being active (since
     // Chrome can't detect user activity).
     virtual void DeferInactivityTimeoutForVT2() = 0;
