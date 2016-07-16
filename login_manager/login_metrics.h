@@ -10,6 +10,9 @@
 #include <metrics/metrics_library.h>
 
 namespace login_manager {
+
+class CumulativeUseTimeMetric;
+
 class LoginMetrics {
  public:
   enum AllowedUsersState {
@@ -98,6 +101,14 @@ class LoginMetrics {
   // Return true if we have already recorded that Chrome has exec'd.
   virtual bool HasRecordedChromeExec();
 
+  // Starts tracking cumulative ARC usage time. Should be called when ARC
+  // container is started.
+  virtual void StartTrackingArcUseTime();
+
+  // Stops tracking culumative ARC usage time. Should be called when ARC
+  // container is stopped.
+  virtual void StopTrackingArcUseTime();
+
  private:
   friend class LoginMetricsTest;
   friend class UserTypeTest;
@@ -114,6 +125,7 @@ class LoginMetrics {
 
   const base::FilePath per_boot_flag_file_;
   MetricsLibrary metrics_lib_;
+  std::unique_ptr<CumulativeUseTimeMetric> arc_cumulative_use_time_;
 
   DISALLOW_COPY_AND_ASSIGN(LoginMetrics);
 };

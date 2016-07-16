@@ -6,9 +6,17 @@
 
 #include "login_manager/login_metrics.h"
 
+#include <string>
+
 #include <base/files/file_util.h>
+#include <base/sys_info.h>
+#include <base/time/default_clock.h>
+#include <base/time/default_tick_clock.h>
+#include <brillo/make_unique_ptr.h>
 #include <metrics/bootstat.h>
 #include <metrics/metrics_library.h>
+
+#include "login_manager/cumulative_use_time_metric.h"
 
 namespace login_manager {
 namespace {
@@ -24,6 +32,10 @@ const char kLoginUserTypeMetric[] = "Login.UserType";
 const char kLoginStateKeyGenerationStatus[] = "Login.StateKeyGenerationStatus";
 const int kMaxPolicyFilesValue = 64;
 const char kLoginMetricsFlagFile[] = "per_boot_flag";
+const char kMetricsDir[] = "/var/lib/metrics";
+
+const char kArcCumulativeUseTimeMetric[] = "Arc.CumulativeUseTime";
+
 }  // namespace
 
 // static
@@ -36,7 +48,20 @@ int LoginMetrics::PolicyFilesStatusCode(const PolicyFilesStatus& status) {
 LoginMetrics::LoginMetrics(const base::FilePath& per_boot_flag_dir)
     : per_boot_flag_file_(per_boot_flag_dir.Append(kLoginMetricsFlagFile)) {
   metrics_lib_.Init();
+
+  if (metrics_lib_.AreMetricsEnabled()) {
+    arc_cumulative_use_time_.reset(new CumulativeUseTimeMetric(
+        kArcCumulativeUseTimeMetric,
+        &metrics_lib_,
+        base::FilePath(kMetricsDir),
+        brillo::make_unique_ptr(new base::DefaultClock()),
+        brillo::make_unique_ptr(new base::DefaultTickClock())));
+    std::string version;
+    base::SysInfo::GetLsbReleaseValue("CHROMEOS_RELEASE_VERSION", &version);
+    arc_cumulative_use_time_->Init(version);
+  }
 }
+
 LoginMetrics::~LoginMetrics() {}
 
 void LoginMetrics::SendConsumerAllowsNewUsers(bool allowed) {
@@ -74,6 +99,16 @@ void LoginMetrics::RecordStats(const char* tag) {
 
 bool LoginMetrics::HasRecordedChromeExec() {
   return base::PathExists(base::FilePath(kChromeUptimeFile));
+}
+
+void LoginMetrics::StartTrackingArcUseTime() {
+  if (arc_cumulative_use_time_)
+    arc_cumulative_use_time_->Start();
+}
+
+void LoginMetrics::StopTrackingArcUseTime() {
+  if (arc_cumulative_use_time_)
+    arc_cumulative_use_time_->Stop();
 }
 
 // static
