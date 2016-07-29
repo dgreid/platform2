@@ -58,6 +58,9 @@ class CrashCollector {
   FRIEND_TEST(ForkExecAndPipeTest, NoParams);
   FRIEND_TEST(ForkExecAndPipeTest, SegFaultHandling);
 
+  // Default value if version cannot be determined.
+  static const char * const kUnknownVersion;
+
   // Set maximum enqueued crashes in a crash directory.
   static const int kMaxCrashDirectorySize;
 
@@ -147,6 +150,9 @@ class CrashCollector {
   // Like AddCrashMetaUploadData, but loads the value from the file at |path|.
   // The file is not uploaded as an attachment, unlike AddCrashMetaUploadFile.
   void AddCrashMetaUploadText(const std::string &key, const std::string &path);
+
+  // Returns the version written to the metadata file.
+  virtual std::string GetVersion() const;
 
   // Write a file of metadata about crash.
   void WriteCrashMetaData(const base::FilePath &meta_path,

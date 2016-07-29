@@ -69,6 +69,8 @@ const uid_t kRootGroup = 0;
 
 }  // namespace
 
+const char * const CrashCollector::kUnknownVersion = "unknown";
+
 // Maximum crash reports per crash spool directory.  Note that this is
 // a separate maximum from the maximum rate at which we upload these
 // diagnostics.  The higher this rate is, the more space we allow for
@@ -459,22 +461,28 @@ void CrashCollector::AddCrashMetaUploadText(const std::string &key,
     AddCrashMetaData(kUploadTextPrefix + key, path);
 }
 
-void CrashCollector::WriteCrashMetaData(const FilePath &meta_path,
-                                        const std::string &exec_name,
-                                        const std::string &payload_path) {
+std::string CrashCollector::GetVersion() const {
   brillo::KeyValueStore store;
   if (!store.Load(FilePath(lsb_release_))) {
     LOG(ERROR) << "Problem parsing " << lsb_release_;
     // Even though there was some failure, take as much as we could read.
   }
 
-  std::string version("unknown");
+  std::string version = kUnknownVersion;
   if (!store.GetString(kLsbVersionKey, &version)) {
     LOG(ERROR) << "Unable to read " << kLsbVersionKey << " from "
                << lsb_release_;
   }
+
+  return version;
+}
+
+void CrashCollector::WriteCrashMetaData(const FilePath &meta_path,
+                                        const std::string &exec_name,
+                                        const std::string &payload_path) {
   int64_t payload_size = -1;
   base::GetFileSize(FilePath(payload_path), &payload_size);
+  const std::string version = GetVersion();
   std::string meta_data = StringPrintf("%sexec_name=%s\n"
                                        "ver=%s\n"
                                        "payload=%s\n"

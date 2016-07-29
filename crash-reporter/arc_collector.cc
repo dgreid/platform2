@@ -55,7 +55,7 @@ const char kArcProduct[] = "ChromeOS_ARC";
 // Metadata fields included in reports.
 const char kArcVersionField[] = "arc_version";
 const char kBoardField[] = "board";
-const char kChromeVersionField[] = "chrome_version";
+const char kChromeOsVersionField[] = "chrome_os_version";
 const char kCpuAbiField[] = "cpu_abi";
 const char kCrashTypeField[] = "crash_type";
 const char kDeviceField[] = "device";
@@ -256,6 +256,11 @@ bool ArcCollector::ArcContext::GetCommand(pid_t pid,
   return true;
 }
 
+std::string ArcCollector::GetVersion() const {
+  std::string version;
+  return GetChromeVersion(&version) ? version : kUnknownVersion;
+}
+
 bool ArcCollector::GetExecutableBaseNameFromPid(pid_t pid,
                                                 std::string *base_name) {
   if (!context_->GetExeBaseName(pid, base_name))
@@ -343,12 +348,9 @@ void ArcCollector::AddArcMetaData(const std::string &process,
   AddCrashMetaUploadData(kProductField, kArcProduct);
   AddCrashMetaUploadData(kProcessField, process);
   AddCrashMetaUploadData(kCrashTypeField, crash_type);
+  AddCrashMetaUploadData(kChromeOsVersionField, CrashCollector::GetVersion());
 
-  std::string version;
-  if (GetChromeVersion(&version))
-    AddCrashMetaUploadData(kChromeVersionField, version);
-
-  std::string device, board, cpu_abi;
+  std::string version, device, board, cpu_abi;
 
   if (add_arc_properties &&
       GetArcProperties(&version, &device, &board, &cpu_abi)) {
