@@ -164,7 +164,7 @@ static int HandleUserCrash(UserCollector *user_collector,
   return 0;
 }
 
-#if USE_ARC
+#if USE_CHEETS
 static int HandleArcCrash(ArcCollector *arc_collector,
                           const std::string& user) {
   brillo::LogToString(true);
@@ -292,7 +292,7 @@ int main(int argc, char *argv[]) {
   DEFINE_bool(directory_failure, false, "Spool directory failure test");
   DEFINE_string(filter_in, "",
                 "Ignore all crashes but this for testing");
-#if USE_ARC
+#if USE_CHEETS
   DEFINE_string(arc_java_crash, "",
       "Read Java crash log of the given type from standard input");
   DEFINE_string(arc_device, "", "Metadata for --arc_java_crash");
@@ -311,7 +311,7 @@ int main(int argc, char *argv[]) {
   kernel_collector.Initialize(CountKernelCrash, IsFeedbackAllowed);
   UserCollector user_collector;
   UserCollector::FilterOutFunction filter_out = [](pid_t) { return false; };
-#if USE_ARC
+#if USE_CHEETS
   ArcCollector arc_collector;
   arc_collector.Initialize(CountUserCrash,
                            IsFeedbackAllowed,
@@ -378,7 +378,7 @@ int main(int argc, char *argv[]) {
                              FLAGS_exe);
   }
 
-#if USE_ARC
+#if USE_CHEETS
   if (!FLAGS_arc_java_crash.empty())
     return HandleArcJavaCrash(&arc_collector, FLAGS_arc_java_crash,
         FLAGS_arc_device, FLAGS_arc_board, FLAGS_arc_cpu_abi);
@@ -386,7 +386,7 @@ int main(int argc, char *argv[]) {
 
   int exit_code = HandleUserCrash(&user_collector,
                                   FLAGS_user, FLAGS_crash_test);
-#if USE_ARC
+#if USE_CHEETS
   if (ArcCollector::IsArcRunning())
     exit_code |= HandleArcCrash(&arc_collector, FLAGS_user);
 #endif

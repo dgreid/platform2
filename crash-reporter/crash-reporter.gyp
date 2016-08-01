@@ -40,7 +40,7 @@
         'user_collector_base.cc',
       ],
       'conditions': [
-        ['USE_arc == 1', {
+        ['USE_cheets == 1', {
           'sources': [
             'arc_collector.cc',
           ],
@@ -60,7 +60,7 @@
         'libcrash',
       ],
       'defines': [
-        'USE_ARC=<(USE_arc)',
+        'USE_CHEETS=<(USE_cheets)',
       ],
       'sources': [
         'crash_reporter.cc',
@@ -113,7 +113,7 @@
     },
   ],
   'conditions': [
-    ['USE_arc == 1', {
+    ['USE_cheets == 1', {
       'targets': [
         {
           'target_name': 'core_collector',
@@ -165,7 +165,7 @@
             'user_collector_test.cc',
           ],
           'conditions': [
-            ['USE_arc == 1', {
+            ['USE_cheets == 1', {
               'sources': [
                 'arc_collector_test.cc',
               ],
