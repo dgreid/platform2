@@ -613,6 +613,7 @@ void SessionManagerImpl::StartArcInstance(const std::string& user_id,
   const std::vector<std::string>& keyvals = {
       base::StringPrintf("ANDROID_DATA_DIR=%s",
                          android_data_dir.value().c_str()),
+      base::StringPrintf("CHROMEOS_USER=%s", actual_user_id.c_str()),
   };
 
   if (!init_controller_->TriggerImpulse(kArcStartSignal, keyvals)) {

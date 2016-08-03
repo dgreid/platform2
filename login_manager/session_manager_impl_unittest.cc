@@ -816,7 +816,8 @@ TEST_F(SessionManagerImplTest, ArcInstanceStart) {
       upstart_signal_emitter_delegate_,
       OnSignalEmitted(
           StrEq(SessionManagerImpl::kArcStartSignal),
-          ElementsAre(StartsWith("ANDROID_DATA_DIR="))))
+          ElementsAre(StartsWith("ANDROID_DATA_DIR="),
+                      std::string("CHROMEOS_USER=") + kSaneEmail)))
       .Times(1);
   EXPECT_CALL(
       upstart_signal_emitter_delegate_,
@@ -867,7 +868,8 @@ TEST_F(SessionManagerImplTest, ArcInstanceCrash) {
   EXPECT_CALL(
       upstart_signal_emitter_delegate_,
       OnSignalEmitted(StrEq(SessionManagerImpl::kArcStartSignal),
-                      ElementsAre(StartsWith("ANDROID_DATA_DIR="))))
+                      ElementsAre(StartsWith("ANDROID_DATA_DIR="),
+                                  std::string("CHROMEOS_USER=") + kSaneEmail)))
       .Times(1);
   EXPECT_CALL(
       upstart_signal_emitter_delegate_,
