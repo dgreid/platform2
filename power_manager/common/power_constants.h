@@ -212,6 +212,8 @@ extern const char kSetWifiTransmitPowerForTabletModePref[];
 // The table is a string containing 6 unsigned integers separated by colon.
 // The first 3 integers are the power table values for clamshell mode, and the
 // later 3 integers are the power table values for tablet mode.
+// These value are the values measured by the Intel wifi power measurement tool,
+// which will be multiplied by 8 before being passed to Intel iwlwifi driver.
 extern const char kIwlWifiTransmitPowerTablePref[];
 
 // Miscellaneous constants.

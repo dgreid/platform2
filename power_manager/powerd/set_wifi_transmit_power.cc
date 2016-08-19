@@ -221,15 +221,15 @@ void SetWiFiTransmitPower::FillMessageIwl(struct nl_msg* msg,
   int group = tablet ? 1 : 0;
 
   err = nla_put_u32(msg, IWL_MVM_VENDOR_ATTR_TXP_LIMIT_24,
-                    values[group * 3 + 0]);
+                    values[group * 3 + 0] * 8);
   CHECK(!err) << "Failed to put MWIFIEX_VENDOR_CMD_ATTR_TXP_LIMIT_24";
 
   err = nla_put_u32(msg, IWL_MVM_VENDOR_ATTR_TXP_LIMIT_52L,
-                    values[group * 3 + 1]);
+                    values[group * 3 + 1] * 8);
   CHECK(!err) << "Failed to put MWIFIEX_VENDOR_CMD_ATTR_TXP_LIMIT_52L";
 
   err = nla_put_u32(msg, IWL_MVM_VENDOR_ATTR_TXP_LIMIT_52H,
-                    values[group * 3 + 2]);
+                    values[group * 3 + 2] * 8);
   CHECK(!err) << "Failed to put MWIFIEX_VENDOR_CMD_ATTR_TXP_LIMIT_52H";
 
   err = nla_nest_end(msg, limits);
