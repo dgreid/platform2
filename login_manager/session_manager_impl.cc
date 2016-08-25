@@ -69,6 +69,9 @@ const char SessionManagerImpl::kArcNetworkStopSignal[] = "stop-arc-network";
 
 const base::FilePath::CharType SessionManagerImpl::kAndroidDataDirName[] =
     FILE_PATH_LITERAL("android-data");
+const base::FilePath::CharType
+SessionManagerImpl::kAndroidDataOldDirName[] =
+    FILE_PATH_LITERAL("android-data-old");
 
 namespace {
 
@@ -108,6 +111,12 @@ base::FilePath GetAndroidDataDirForUser(
     const std::string& normalized_account_id) {
   return GetRootPath(normalized_account_id).Append(
       SessionManagerImpl::kAndroidDataDirName);
+}
+
+base::FilePath GetAndroidDataOldDirForUser(
+    const std::string& normalized_account_id) {
+  return GetRootPath(normalized_account_id).Append(
+      SessionManagerImpl::kAndroidDataOldDirName);
 }
 #endif  // USE_CHEETS
 
@@ -605,11 +614,20 @@ void SessionManagerImpl::StartArcInstance(const std::string& account_id,
 
   const base::FilePath android_data_dir =
       GetAndroidDataDirForUser(actual_account_id);
-  const std::vector<std::string>& keyvals = {
+  std::vector<std::string> keyvals = {
       base::StringPrintf("ANDROID_DATA_DIR=%s",
                          android_data_dir.value().c_str()),
       base::StringPrintf("CHROMEOS_USER=%s", actual_account_id.c_str()),
   };
+
+  const base::FilePath android_data_old_dir =
+      GetAndroidDataOldDirForUser(actual_account_id);
+  if (system_->DirectoryExists(android_data_old_dir)) {
+    // A stale old directory exists. Emit the signal with |android_data_old_dir|
+    // so the signal receiver can remove the directory.
+    keyvals.emplace_back(base::StringPrintf(
+        "ANDROID_DATA_OLD_DIR=%s", android_data_old_dir.value().c_str()));
+  }
 
   if (!init_controller_->TriggerImpulse(kArcStartSignal, keyvals)) {
     static const char msg[] = "Emitting start-arc-instance signal failed.";
@@ -697,10 +715,85 @@ void SessionManagerImpl::RemoveArcData(const std::string& account_id,
   }
   const base::FilePath android_data_dir =
       GetAndroidDataDirForUser(actual_account_id);
+  const base::FilePath android_data_old_dir =
+      GetAndroidDataOldDirForUser(actual_account_id);
+
+  if (RemoveArcDataInternal(android_data_dir, android_data_old_dir, error))
+    return;  // all done.
+
+  PLOG(WARNING) << "Failed to rename " << android_data_dir.value()
+                << "; directly deleting it instead";
+  // As a last resort, directly delete the directory although it's not always
+  // safe to do. If session_manager is killed or the device is shut down while
+  // doing the removal, the directory will have an unusual set of files which
+  // may confuse ARC and prevent it from booting.
   system_->RemoveDirTree(android_data_dir);
+  LOG(INFO) << "Finished removing " << android_data_dir.value();
 #else
   error->Set(dbus_error::kNotAvailable, "ARC not supported.");
 #endif  // USE_CHEETS
+}
+
+bool SessionManagerImpl::RemoveArcDataInternal(
+    const base::FilePath& android_data_dir,
+    const base::FilePath& android_data_old_dir,
+    Error* error) {
+#if USE_CHEETS
+  // It should never happen, but in case |android_data_old_dir| is a file,
+  // remove it. RemoveFile() immediately returns false (i.e. no-op) when
+  // |android_data_old_dir| is a directory.
+  system_->RemoveFile(android_data_old_dir);
+
+  if (!system_->DirectoryExists(android_data_dir) &&
+      !system_->DirectoryExists(android_data_old_dir)) {
+    return true;  // nothing to do.
+  }
+
+  // If |android_data_old_dir| already exists, rename |android_data_dir| to
+  // |android_data_old_dir|/<random_string>/. If |android_data_old_dir| does
+  // not exist, simply rename |android_data_dir| to |android_data_old_dir|.
+  base::FilePath target_dir_name = android_data_old_dir;
+  if (system_->DirectoryExists(android_data_old_dir)) {
+    // The previous RemoveDirTree(android_data_old_dir) operation didn't
+    // successfully finish.
+    LOG(WARNING) << android_data_old_dir.value()
+                 << " already exists; previous removal didn't finish";
+
+    if (!system_->CreateTemporaryDirIn(
+            android_data_old_dir, &target_dir_name)) {
+      LOG(WARNING) << "Failed to create a temporary directory in "
+                   << android_data_old_dir.value();
+      return false;
+    }
+    // Note: Renaming a directory to an existing empty directory works.
+    LOG(INFO) << "Renaming " << android_data_dir.value() << " to "
+              << target_dir_name.value();
+  }
+
+  // Does the actual renaming here with rename(2). Note that if the process
+  // (or the device itself) is killed / turned off right before the rename(2)
+  // operation, both |android_data_dir| and |android_data_old_dir| will remain
+  // while ARC is disabled in the browser side. In that case, the browser will
+  // call RemoveArcData() later as needed, and both directories will disappear.
+  if (system_->DirectoryExists(android_data_dir)) {
+    if (!system_->RenameDir(android_data_dir, target_dir_name)) {
+      LOG(WARNING) << "Failed to rename " << android_data_dir.value()
+                   << " to " << target_dir_name.value();
+      return false;
+    }
+  }
+
+  // Recursively remove |android_data_old_dir| which is, or contains, the data
+  // directory to remove. The operation can be very slow, and the process (or
+  // even the device itself) could be killed / turned off.
+  // TODO(yusukes): Move the blocking call to an init job.
+  LOG(INFO) << "Removing " << android_data_old_dir.value();
+  if (!system_->RemoveDirTree(android_data_old_dir))
+    PLOG(ERROR) << "Failed to remove " << android_data_old_dir.value();
+#else
+  error->Set(dbus_error::kNotAvailable, "ARC not supported.");
+#endif  // USE_CHEETS
+  return true;
 }
 
 void SessionManagerImpl::OnPolicyPersisted(bool success) {

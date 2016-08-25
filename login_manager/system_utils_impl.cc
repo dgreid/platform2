@@ -173,4 +173,24 @@ bool SystemUtilsImpl::AtomicFileWrite(const base::FilePath& filename,
       base::SetPosixFilePermissions(filename, (S_IRUSR | S_IWUSR | S_IROTH)));
 }
 
+bool SystemUtilsImpl::DirectoryExists(const base::FilePath& dir) {
+  return base::DirectoryExists(dir);
+}
+
+bool SystemUtilsImpl::CreateTemporaryDirIn(const base::FilePath& parent_dir,
+                                           base::FilePath* out_dir) {
+  return base::CreateTemporaryDirInDir(parent_dir, "temp", out_dir);
+}
+
+bool SystemUtilsImpl::RenameDir(const base::FilePath& source,
+                                const base::FilePath& target) {
+  if (!base::DirectoryExists(source))
+    return false;
+  return base::ReplaceFile(source, target, nullptr);
+}
+
+bool SystemUtilsImpl::CreateDir(const base::FilePath& dir) {
+  return base::CreateDirectoryAndGetError(dir, nullptr);
+}
+
 }  // namespace login_manager

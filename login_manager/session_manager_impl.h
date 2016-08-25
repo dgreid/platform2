@@ -66,6 +66,8 @@ class SessionManagerImpl : public SessionManagerInterface,
 
   // Name of android-data directory.
   static const base::FilePath::CharType kAndroidDataDirName[];
+  // Name of android-data-old directory which RemoveArcDataInternal uses.
+  static const base::FilePath::CharType kAndroidDataOldDirName[];
 
   // Name of the Android container.
   static const char kArcContainerName[];
@@ -250,6 +252,13 @@ class SessionManagerImpl : public SessionManagerInterface,
   bool StartArcInstanceInternal(bool* started_container_out,
                                 const char** dbus_error_out,
                                 std::string* error_message_out);
+
+  // Renames android-data/ in the user's home directory to android-data-old/,
+  // then recursively removes the renamed directory. Returns false when it
+  // fails to rename android-data/.
+  bool RemoveArcDataInternal(const base::FilePath& android_data_dir,
+                             const base::FilePath& android_data_old_dir,
+                             Error* error);
 
   bool session_started_;
   bool session_stopping_;

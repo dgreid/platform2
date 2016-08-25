@@ -56,6 +56,32 @@ bool MockSystemUtils::RemoveFile(const base::FilePath& file) {
   return EnsureTempDir() && real_utils_.RemoveFile(PutInsideTempdir(file));
 }
 
+bool MockSystemUtils::DirectoryExists(const base::FilePath& dir) {
+  return EnsureTempDir() && real_utils_.DirectoryExists(PutInsideTempdir(dir));
+}
+
+bool MockSystemUtils::CreateTemporaryDirIn(const base::FilePath& parent_dir,
+                                           base::FilePath* out_dir) {
+  base::FilePath new_dir;
+  if (EnsureTempDir() && real_utils_.CreateTemporaryDirIn(
+          PutInsideTempdir(parent_dir), &new_dir)) {
+    out_dir->clear();
+    // Remove |temp_dir_| part from |new_dir| and store it in |out_dir|.
+    return temp_dir_.path().AppendRelativePath(new_dir, out_dir);
+  }
+  return false;
+}
+
+bool MockSystemUtils::RenameDir(const base::FilePath& source,
+                                const base::FilePath& target) {
+  return (EnsureTempDir() && real_utils_.RenameDir(
+      PutInsideTempdir(source), PutInsideTempdir(target)));
+}
+
+bool MockSystemUtils::CreateDir(const base::FilePath& dir) {
+  return EnsureTempDir() && real_utils_.CreateDir(PutInsideTempdir(dir));
+}
+
 bool MockSystemUtils::GetUniqueFilenameInWriteOnlyTempDir(
     base::FilePath* temp_file_path) {
   return CreateReadOnlyFileInTempDir(temp_file_path);

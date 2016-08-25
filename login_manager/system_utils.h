@@ -58,10 +58,22 @@ class SystemUtils {
   // Returns whether a file exists.
   virtual bool Exists(const base::FilePath& file) = 0;
 
+  // Returns whether a directory exists.
+  virtual bool DirectoryExists(const base::FilePath& dir) = 0;
+
   // Creates a uniquely-named read-only file under |dir|.
   // Upon success, sets |temp_file| and returns true. Upon failure, |temp_file|
   // remains untouched.
   virtual bool CreateReadOnlyFileInTempDir(base::FilePath* temp_file) = 0;
+
+  // Creates a uniquely-named directory under |parent_dir|.
+  // Upon success, sets |out_dir| and returns true. Upon failure, |out_dir|
+  // remains untouched.
+  virtual bool CreateTemporaryDirIn(const base::FilePath& parent_dir,
+                                    base::FilePath* out_dir) = 0;
+
+  // Creates a directory.
+  virtual bool CreateDir(const base::FilePath& dir) = 0;
 
   // Generates a guaranteed-unique filename in a write-only temp dir.
   // Returns false upon failure.
@@ -73,6 +85,10 @@ class SystemUtils {
 
   // Removes a file.
   virtual bool RemoveFile(const base::FilePath& filename) = 0;
+
+  // Renames a directory.
+  virtual bool RenameDir(const base::FilePath& source,
+                         const base::FilePath& target) = 0;
 
   // Atomically writes the given buffer into the file, overwriting any
   // data that was previously there.  Returns true upon success, false

@@ -31,4 +31,40 @@ TEST(SystemUtilsTest, CorrectFileWrite) {
   ASSERT_EQ(new_data, written_data);
 }
 
+TEST(SystemUtilsTest, CreateTemporaryDirIn) {
+  base::ScopedTempDir tmpdir;
+  ASSERT_TRUE(tmpdir.CreateUniqueTempDir());
+
+  SystemUtilsImpl utils;
+  base::FilePath scratch1, scratch2;
+  ASSERT_TRUE(utils.CreateTemporaryDirIn(tmpdir.path(), &scratch1));
+  ASSERT_TRUE(utils.CreateTemporaryDirIn(tmpdir.path(), &scratch2));
+
+  EXPECT_TRUE(base::DirectoryExists(scratch1));
+  EXPECT_TRUE(base::DirectoryExists(scratch2));
+  EXPECT_TRUE(tmpdir.path().IsParent(scratch1));
+  EXPECT_TRUE(tmpdir.path().IsParent(scratch2));
+  EXPECT_NE(scratch1, scratch2);
+}
+
+TEST(SystemUtilsTest, RenameDir) {
+  base::ScopedTempDir tmpdir1, tmpdir2;
+  ASSERT_TRUE(tmpdir1.CreateUniqueTempDir());
+  ASSERT_TRUE(tmpdir2.CreateUniqueTempDir());
+  base::FilePath scratch;
+  ASSERT_TRUE(base::CreateTemporaryFileInDir(tmpdir1.path(), &scratch));
+  ASSERT_FALSE(base::IsDirectoryEmpty(tmpdir1.path()));
+  ASSERT_TRUE(base::IsDirectoryEmpty(tmpdir2.path()));
+
+  // Check that renaming to an existing empty directory is allowed.
+  SystemUtilsImpl utils;
+  EXPECT_TRUE(utils.RenameDir(tmpdir1.path(), tmpdir2.path()));
+
+  EXPECT_FALSE(base::DirectoryExists(tmpdir1.path()));
+  EXPECT_TRUE(base::DirectoryExists(tmpdir2.path()));
+  EXPECT_FALSE(base::IsDirectoryEmpty(tmpdir2.path()));
+
+  tmpdir1.Take();  // |tmpdir1| no longer exists.
+}
+
 }  // namespace login_manager

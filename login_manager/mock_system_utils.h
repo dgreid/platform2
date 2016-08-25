@@ -37,13 +37,19 @@ class MockSystemUtils : public SystemUtils {
   // All filesystem-touching methods write to a ScopedTempDir that's owned by
   // this class.
   bool Exists(const base::FilePath& file) override;
+  bool DirectoryExists(const base::FilePath& dir) override;
   bool AtomicFileWrite(const base::FilePath& file,
                        const std::string& data) override;
+  bool CreateTemporaryDirIn(const base::FilePath& parent_dir,
+                            base::FilePath* out_dir) override;
+  bool CreateDir(const base::FilePath& dir) override;
   bool ReadFileToString(const base::FilePath& file, std::string* out);
   bool EnsureAndReturnSafeFileSize(const base::FilePath& file,
                                    int32_t* file_size_32) override;
   bool RemoveDirTree(const base::FilePath& dir) override;
   bool RemoveFile(const base::FilePath& file) override;
+  bool RenameDir(const base::FilePath& source,
+                 const base::FilePath& target) override;
 
   bool GetUniqueFilenameInWriteOnlyTempDir(
       base::FilePath* temp_file_path) override;
