@@ -213,6 +213,7 @@ void AddUiFlags(ChromiumCommandBuilder* builder) {
   if (builder->IsBoard("kevin") || builder->IsBoard("kevin-tpm2")) {
     builder->AddFeatureEnableOverride("QuickUnlockPin");
     builder->AddArg("--ash-enable-palette");
+    builder->AddArg("--num-raster-threads=1");
   }
   if (builder->IsBoard("veyron_minnie"))
     builder->AddArg("--enable-hardware-overlays=single-fullscreen");
