@@ -82,6 +82,10 @@ bool MockSystemUtils::CreateDir(const base::FilePath& dir) {
   return EnsureTempDir() && real_utils_.CreateDir(PutInsideTempdir(dir));
 }
 
+bool MockSystemUtils::IsDirectoryEmpty(const base::FilePath& dir) {
+  return EnsureTempDir() && real_utils_.IsDirectoryEmpty(PutInsideTempdir(dir));
+}
+
 bool MockSystemUtils::GetUniqueFilenameInWriteOnlyTempDir(
     base::FilePath* temp_file_path) {
   return CreateReadOnlyFileInTempDir(temp_file_path);

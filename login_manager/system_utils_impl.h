@@ -41,6 +41,7 @@ class SystemUtilsImpl : public SystemUtils {
                                    int32_t* file_size_32) override;
   bool Exists(const base::FilePath& file) override;
   bool DirectoryExists(const base::FilePath& dir) override;
+  bool IsDirectoryEmpty(const base::FilePath& dir) override;
   bool CreateReadOnlyFileInTempDir(base::FilePath* temp_file) override;
   bool CreateTemporaryDirIn(const base::FilePath& parent_dir,
                             base::FilePath* out_dir) override;

@@ -77,6 +77,7 @@ class SessionManagerImpl : public SessionManagerInterface,
   static const char kArcStopSignal[];
   static const char kArcNetworkStartSignal[];
   static const char kArcNetworkStopSignal[];
+  static const char kArcRemoveOldDataSignal[];
 
   class Error {
    public:

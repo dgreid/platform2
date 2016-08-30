@@ -193,4 +193,8 @@ bool SystemUtilsImpl::CreateDir(const base::FilePath& dir) {
   return base::CreateDirectoryAndGetError(dir, nullptr);
 }
 
+bool SystemUtilsImpl::IsDirectoryEmpty(const base::FilePath& dir) {
+  return !DirectoryExists(dir) || base::IsDirectoryEmpty(dir);
+}
+
 }  // namespace login_manager

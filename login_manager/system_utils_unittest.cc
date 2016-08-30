@@ -67,4 +67,17 @@ TEST(SystemUtilsTest, RenameDir) {
   tmpdir1.Take();  // |tmpdir1| no longer exists.
 }
 
+TEST(SystemUtilsTest, IsDirectoryEmpty) {
+  SystemUtilsImpl utils;
+  base::ScopedTempDir tmpdir;
+  ASSERT_TRUE(tmpdir.CreateUniqueTempDir());
+  EXPECT_TRUE(utils.IsDirectoryEmpty(tmpdir.path()));
+
+  base::FilePath scratch;
+  ASSERT_TRUE(base::CreateTemporaryFileInDir(tmpdir.path(), &scratch));
+  EXPECT_FALSE(utils.IsDirectoryEmpty(tmpdir.path()));
+
+  EXPECT_TRUE(utils.IsDirectoryEmpty(tmpdir.path().Append("non-existent")));
+}
+
 }  // namespace login_manager

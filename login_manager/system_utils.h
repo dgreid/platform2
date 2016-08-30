@@ -61,6 +61,9 @@ class SystemUtils {
   // Returns whether a directory exists.
   virtual bool DirectoryExists(const base::FilePath& dir) = 0;
 
+  // Returns true if the given directory is empty or does not exist.
+  virtual bool IsDirectoryEmpty(const base::FilePath& dir) = 0;
+
   // Creates a uniquely-named read-only file under |dir|.
   // Upon success, sets |temp_file| and returns true. Upon failure, |temp_file|
   // remains untouched.

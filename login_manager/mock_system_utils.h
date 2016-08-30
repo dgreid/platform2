@@ -38,6 +38,7 @@ class MockSystemUtils : public SystemUtils {
   // this class.
   bool Exists(const base::FilePath& file) override;
   bool DirectoryExists(const base::FilePath& dir) override;
+  bool IsDirectoryEmpty(const base::FilePath& dir) override;
   bool AtomicFileWrite(const base::FilePath& file,
                        const std::string& data) override;
   bool CreateTemporaryDirIn(const base::FilePath& parent_dir,

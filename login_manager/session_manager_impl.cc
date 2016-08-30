@@ -66,6 +66,8 @@ const char SessionManagerImpl::kArcStartSignal[] = "start-arc-instance";
 const char SessionManagerImpl::kArcStopSignal[] = "stop-arc-instance";
 const char SessionManagerImpl::kArcNetworkStartSignal[] = "start-arc-network";
 const char SessionManagerImpl::kArcNetworkStopSignal[] = "stop-arc-network";
+const char SessionManagerImpl::kArcRemoveOldDataSignal[] =
+    "remove-old-arc-data";
 
 const base::FilePath::CharType SessionManagerImpl::kAndroidDataDirName[] =
     FILE_PATH_LITERAL("android-data");
@@ -622,7 +624,7 @@ void SessionManagerImpl::StartArcInstance(const std::string& account_id,
 
   const base::FilePath android_data_old_dir =
       GetAndroidDataOldDirForUser(actual_account_id);
-  if (system_->DirectoryExists(android_data_old_dir)) {
+  if (!system_->IsDirectoryEmpty(android_data_old_dir)) {
     // A stale old directory exists. Emit the signal with |android_data_old_dir|
     // so the signal receiver can remove the directory.
     keyvals.emplace_back(base::StringPrintf(
@@ -744,31 +746,30 @@ bool SessionManagerImpl::RemoveArcDataInternal(
   // |android_data_old_dir| is a directory.
   system_->RemoveFile(android_data_old_dir);
 
+  // Create |android_data_old_dir| if it doesn't exist.
+  if (!system_->DirectoryExists(android_data_old_dir)) {
+    if (!system_->CreateDir(android_data_old_dir)) {
+      PLOG(ERROR) << "Failed to create " << android_data_old_dir.value();
+      return false;
+    }
+  }
+
   if (!system_->DirectoryExists(android_data_dir) &&
-      !system_->DirectoryExists(android_data_old_dir)) {
+      system_->IsDirectoryEmpty(android_data_old_dir)) {
     return true;  // nothing to do.
   }
 
-  // If |android_data_old_dir| already exists, rename |android_data_dir| to
-  // |android_data_old_dir|/<random_string>/. If |android_data_old_dir| does
-  // not exist, simply rename |android_data_dir| to |android_data_old_dir|.
-  base::FilePath target_dir_name = android_data_old_dir;
-  if (system_->DirectoryExists(android_data_old_dir)) {
-    // The previous RemoveDirTree(android_data_old_dir) operation didn't
-    // successfully finish.
-    LOG(WARNING) << android_data_old_dir.value()
-                 << " already exists; previous removal didn't finish";
-
-    if (!system_->CreateTemporaryDirIn(
-            android_data_old_dir, &target_dir_name)) {
-      LOG(WARNING) << "Failed to create a temporary directory in "
-                   << android_data_old_dir.value();
-      return false;
-    }
-    // Note: Renaming a directory to an existing empty directory works.
-    LOG(INFO) << "Renaming " << android_data_dir.value() << " to "
-              << target_dir_name.value();
+  // Create a random temporary directory in |android_data_old_dir|.
+  // Note: Renaming a directory to an existing empty directory works.
+  base::FilePath target_dir_name;
+  if (!system_->CreateTemporaryDirIn(
+          android_data_old_dir, &target_dir_name)) {
+    LOG(WARNING) << "Failed to create a temporary directory in "
+                 << android_data_old_dir.value();
+    return false;
   }
+  LOG(INFO) << "Renaming " << android_data_dir.value() << " to "
+            << target_dir_name.value();
 
   // Does the actual renaming here with rename(2). Note that if the process
   // (or the device itself) is killed / turned off right before the rename(2)
@@ -783,13 +784,18 @@ bool SessionManagerImpl::RemoveArcDataInternal(
     }
   }
 
-  // Recursively remove |android_data_old_dir| which is, or contains, the data
-  // directory to remove. The operation can be very slow, and the process (or
-  // even the device itself) could be killed / turned off.
-  // TODO(yusukes): Move the blocking call to an init job.
-  LOG(INFO) << "Removing " << android_data_old_dir.value();
-  if (!system_->RemoveDirTree(android_data_old_dir))
-    PLOG(ERROR) << "Failed to remove " << android_data_old_dir.value();
+  // Ask init to remove all files and directories in |android_data_old_dir|.
+  // Note that the init job never deletes |android_data_old_dir| itself so the
+  // rename() operation above never fails.
+  LOG(INFO) << "Removing contents in " << android_data_old_dir.value();
+  const std::vector<std::string> keyvals = {
+      base::StringPrintf("ANDROID_DATA_OLD_DIR=%s",
+                         android_data_old_dir.value().c_str()),
+  };
+  if (!init_controller_->TriggerImpulse(kArcRemoveOldDataSignal, keyvals)) {
+    LOG(ERROR) << "Failed to emit " << kArcRemoveOldDataSignal
+               << " upstart signal";
+  }
 #else
   error->Set(dbus_error::kNotAvailable, "ARC not supported.");
 #endif  // USE_CHEETS
