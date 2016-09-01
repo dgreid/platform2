@@ -66,7 +66,10 @@ const Log common_logs[] = {
   { "cros_ec",
     "/bin/cat /var/log/cros_ec.previous /var/log/cros_ec.log 2> /dev/null" },
   { "cros_ec_panicinfo",
-    "/bin/cat /sys/kernel/debug/cros_ec/panicinfo 2> /dev/null" },
+    "/bin/cat /sys/kernel/debug/cros_ec/panicinfo 2> /dev/null",
+    SandboxedProcess::kDefaultUser,
+    kDebugfsGroup
+  },
   { "dmesg", "/bin/dmesg" },
   { "ec_info", "/bin/cat /var/log/ec_info.txt" },
   { "eventlog", "/bin/cat /var/log/eventlog.txt" },
