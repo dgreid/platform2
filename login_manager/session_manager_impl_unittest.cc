@@ -1099,6 +1099,13 @@ TEST_F(SessionManagerImplTest, ArcRemoveData) {
 }
 #endif
 
+TEST_F(SessionManagerImplTest, PrioritizeArcInstance) {
+#if !USE_CHEETS
+  impl_.PrioritizeArcInstance(&error_);
+  EXPECT_EQ(dbus_error::kNotAvailable, error_.name());
+#endif
+}
+
 class SessionManagerImplStaticTest : public ::testing::Test {
  public:
   SessionManagerImplStaticTest() {}

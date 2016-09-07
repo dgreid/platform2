@@ -194,6 +194,7 @@ class SessionManagerImpl : public SessionManagerInterface,
 
   void StartArcInstance(const std::string& account_id, Error* error);
   void StopArcInstance(Error* error);
+  void PrioritizeArcInstance(Error* error);
   base::TimeTicks GetArcStartTime(Error* error);
   void RemoveArcData(const std::string& account_id, Error* error);
 

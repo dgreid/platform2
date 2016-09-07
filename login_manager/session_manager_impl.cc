@@ -678,6 +678,18 @@ void SessionManagerImpl::StopArcInstance(Error* error) {
 #endif  // USE_CHEETS
 }
 
+void SessionManagerImpl::PrioritizeArcInstance(Error* error) {
+#if USE_CHEETS
+  if (!android_container_->PrioritizeContainer()) {
+    constexpr char msg[] = "Error updating Android container's cgroups.";
+    LOG(ERROR) << msg;
+    error->Set(dbus_error::kNotAvailable, msg);
+  }
+#else
+  error->Set(dbus_error::kNotAvailable, "ARC not supported.");
+#endif
+}
+
 base::TimeTicks SessionManagerImpl::GetArcStartTime(Error* error) {
 #if USE_CHEETS
   if (arc_start_time_.is_null())

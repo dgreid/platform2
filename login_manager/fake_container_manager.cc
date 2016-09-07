@@ -43,6 +43,10 @@ bool FakeContainerManager::GetContainerPID(pid_t* pid_out) const {
   return true;
 }
 
+bool FakeContainerManager::PrioritizeContainer() {
+  return true;
+}
+
 void FakeContainerManager::SimulateCrash() {
   LOG_IF(FATAL, !running_) << "Trying to crash an already stopped container";
   running_ = false;

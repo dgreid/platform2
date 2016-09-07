@@ -85,6 +85,7 @@ class SessionManagerDBusAdaptor {
 
   scoped_ptr<dbus::Response> StartArcInstance(dbus::MethodCall* call);
   scoped_ptr<dbus::Response> StopArcInstance(dbus::MethodCall* call);
+  scoped_ptr<dbus::Response> PrioritizeArcInstance(dbus::MethodCall* call);
   scoped_ptr<dbus::Response> GetArcStartTimeTicks(dbus::MethodCall* call);
   scoped_ptr<dbus::Response> RemoveArcData(dbus::MethodCall* call);
 

@@ -288,6 +288,9 @@ void SessionManagerDBusAdaptor::ExportDBusMethods(
                        kSessionManagerStopArcInstance,
                        &SessionManagerDBusAdaptor::StopArcInstance);
   ExportSyncDBusMethod(object,
+                       kSessionManagerPrioritizeArcInstance,
+                       &SessionManagerDBusAdaptor::PrioritizeArcInstance);
+  ExportSyncDBusMethod(object,
                        kSessionManagerGetArcStartTimeTicks,
                        &SessionManagerDBusAdaptor::GetArcStartTimeTicks);
   ExportSyncDBusMethod(object,
@@ -589,7 +592,6 @@ scoped_ptr<dbus::Response> SessionManagerDBusAdaptor::StopContainer(
     return CreateInvalidArgsError(call, call->GetSignature());
 
   SessionManagerImpl::Error error;
-
   impl_->StopContainer(name, &error);
   if (error.is_set())
     return CreateError(call, error.name(), error.message());
@@ -613,8 +615,16 @@ scoped_ptr<dbus::Response> SessionManagerDBusAdaptor::StartArcInstance(
 scoped_ptr<dbus::Response> SessionManagerDBusAdaptor::StopArcInstance(
     dbus::MethodCall* call) {
   SessionManagerImpl::Error error;
-
   impl_->StopArcInstance(&error);
+  if (error.is_set())
+    return CreateError(call, error.name(), error.message());
+  return scoped_ptr<dbus::Response>(dbus::Response::FromMethodCall(call));
+}
+
+scoped_ptr<dbus::Response> SessionManagerDBusAdaptor::PrioritizeArcInstance(
+    dbus::MethodCall* call) {
+  SessionManagerImpl::Error error;
+  impl_->PrioritizeArcInstance(&error);
   if (error.is_set())
     return CreateError(call, error.name(), error.message());
   return scoped_ptr<dbus::Response>(dbus::Response::FromMethodCall(call));

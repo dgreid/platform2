@@ -35,6 +35,9 @@ class ContainerManagerInterface : public JobManagerInterface {
 
   // Gets the process ID of the container.
   virtual bool GetContainerPID(pid_t* pid_out) const = 0;
+
+  // Prioritizes the container by reverting cgroups settings back to default.
+  virtual bool PrioritizeContainer() = 0;
 };
 
 }  // namespace login_manager

@@ -181,6 +181,11 @@ bool ContainerManagerImpl::GetContainerPID(pid_t* pid_out) const {
   return true;
 }
 
+bool ContainerManagerImpl::PrioritizeContainer() {
+  // TODO(yusukes|dgreid): Implement this and change the return value to true.
+  return false;
+}
+
 bool ContainerManagerImpl::RequestTermination() {
   return false;
 }
