@@ -46,6 +46,7 @@ UserCollector::UserCollector()
     : UserCollectorBase("user", false),
       core_pattern_file_(kCorePatternFile),
       core_pipe_limit_file_(kCorePipeLimitFile),
+      filter_path_(kFilterPath),
       core2md_failure_(false) {
 }
 
@@ -234,14 +235,14 @@ bool UserCollector::RunFilter(pid_t pid) {
   int exec_mode = base::FILE_PERMISSION_EXECUTE_BY_USER |
       base::FILE_PERMISSION_EXECUTE_BY_GROUP |
       base::FILE_PERMISSION_EXECUTE_BY_OTHERS;
-  if (!base::GetPosixFilePermissions(base::FilePath(kFilterPath), &mode) ||
+  if (!base::GetPosixFilePermissions(base::FilePath(filter_path_), &mode) ||
       (mode & exec_mode) != exec_mode) {
     // Filter does not exist or is not executable.
     return true;
   }
 
   brillo::ProcessImpl filter;
-  filter.AddArg(kFilterPath);
+  filter.AddArg(filter_path_);
   filter.AddArg(StringPrintf("%d", pid));
 
   return filter.Run() == 0;

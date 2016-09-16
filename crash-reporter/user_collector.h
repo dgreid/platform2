@@ -54,6 +54,10 @@ class UserCollector : public UserCollectorBase {
     core_pipe_limit_file_ = path;
   }
 
+  void set_filter_path(const std::string &filter_path) {
+    filter_path_ = filter_path;
+  }
+
  private:
   friend class UserCollectorTest;
   FRIEND_TEST(UserCollectorTest, ClobberContainerDirectory);
@@ -121,6 +125,7 @@ class UserCollector : public UserCollectorBase {
   std::string core_pattern_file_;
   std::string core_pipe_limit_file_;
   std::string our_path_;
+  std::string filter_path_;
 
   bool core2md_failure_;
 

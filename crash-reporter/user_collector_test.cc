@@ -66,6 +66,7 @@ class UserCollectorTest : public ::testing::Test {
     mkdir("test", 0777);
     collector_.set_core_pattern_file("test/core_pattern");
     collector_.set_core_pipe_limit_file("test/core_pipe_limit");
+    collector_.set_filter_path("test/no_filter");
     pid_ = pid;
     brillo::ClearLog();
   }
