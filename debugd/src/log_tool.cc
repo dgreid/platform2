@@ -240,7 +240,7 @@ string Run(const Log& log) {
   string output;
   ProcessWithOutput p;
   string tailed_cmdline = std::string(log.command) + " | tail -c " +
-                          (log.size_cap ? log.size_cap : "256K");
+                          (log.size_cap ? log.size_cap : "512K");
   if (log.user && log.group)
     p.SandboxAs(log.user, log.group);
   if (!p.Init())
