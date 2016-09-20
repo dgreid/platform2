@@ -8,7 +8,7 @@
 # stdout according to a time specification.  By default the last day of
 # msgs written to /var/log/messages is printed. Options:
 # --last <time>    collect most recent msgs up to <time> (default 1 day)
-# --bytes N        cap collected data at N bytes (default 130K)
+# --bytes N        cap collected data at N bytes (default 512K)
 #
 # Note option order is important (TODO(sleffler) rewrite w/ shflags)
 
@@ -20,8 +20,7 @@ fi
 if [ "$1" = "--bytes" -o "$1" = "-c" ]; then
   MAXDATA="$2"; shift; shift
 else
-  # NB: 1000 lines at 132 chars/line is ~130Kbytes
-  MAXDATA='130K'
+  MAXDATA='512K'
 fi
 LOGFILE=${1:-/var/log/messages}
 
