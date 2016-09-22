@@ -17,6 +17,7 @@
 #include "base/logging.h"
 #include "base/macros.h"
 #include "chromiumos-wide-profiling/compat/proto.h"
+#include "chromiumos-wide-profiling/file_reader.h"
 
 namespace {
 
@@ -26,15 +27,6 @@ const int kNumHexDigitsInByte = 2;
 }  // namespace
 
 namespace quipper {
-
-int64_t GetFileSizeFromHandle(FILE* fp) {
-  int64_t position = ftell(fp);
-  fseek(fp, 0, SEEK_END);
-  int64_t file_size = ftell(fp);
-  // Restore the original file handle position.
-  fseek(fp, position, SEEK_SET);
-  return file_size;
-}
 
 static uint64_t Md5Prefix(
     const unsigned char* data,
@@ -65,15 +57,18 @@ uint64_t Md5Prefix(const std::vector<char>& input) {
 }
 
 bool FileToBuffer(const string& filename, std::vector<char>* contents) {
-  FILE* fp = fopen(filename.c_str(), "rb");
-  if (!fp)
+  FileReader reader(filename);
+  if (!reader.IsOpen())
     return false;
-  int64_t file_size = quipper::GetFileSizeFromHandle(fp);
+  size_t file_size = reader.size();
   contents->resize(file_size);
   // Do not read anything if the file exists but is empty.
-  if (file_size > 0)
-    CHECK_GT(fread(contents->data(), file_size, 1, fp), 0U);
-  fclose(fp);
+  if (file_size > 0 &&
+      !reader.ReadData(file_size, contents->data())) {
+    LOG(ERROR) << "Failed to read " << file_size << " bytes from file "
+               << filename << ", only read " << reader.Tell();
+    return false;
+  }
   return true;
 }
 
