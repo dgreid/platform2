@@ -81,6 +81,7 @@ struct container_cpu_cgroup {
  * Structure that configures how the container is run.
  *
  * rootfs - Path to the root of the container's filesystem.
+ * rootfs_mount_flags - Flags that will be passed to mount() for the rootfs.
  * premounted_runfs - Path to where the container will be run.
  * pid_file_path - Path to the file where the pid should be written.
  * program_argv - The program to run and args, e.g. "/sbin/init".
@@ -102,6 +103,7 @@ struct container_cpu_cgroup {
  */
 struct container_config {
 	char *rootfs;
+	unsigned long rootfs_mount_flags;
 	char *premounted_runfs;
 	char *pid_file_path;
 	char **program_argv;
@@ -187,6 +189,23 @@ int container_config_rootfs(struct container_config *c, const char *rootfs)
 const char *container_config_get_rootfs(const struct container_config *c)
 {
 	return c->rootfs;
+}
+
+void container_config_rootfs_mount_flags(struct container_config *c,
+					 unsigned long rootfs_mount_flags)
+{
+	/* Since we are going to add MS_REMOUNT anyways, add it here so we can
+	 * simply check against zero later. MS_BIND is also added to avoid
+	 * re-mounting the original filesystem, since the rootfs is always
+	 * bind-mounted.
+	 */
+	c->rootfs_mount_flags = MS_REMOUNT | MS_BIND | rootfs_mount_flags;
+}
+
+unsigned long container_config_get_rootfs_mount_flags(
+		const struct container_config *c)
+{
+	return c->rootfs_mount_flags;
 }
 
 int container_config_premounted_runfs(struct container_config *c, const char *runfs)
@@ -836,8 +855,17 @@ static int mount_runfs(struct container *c, const struct container_config *confi
 	if (chmod(c->runfsroot, root_dir_mode))
 		return -errno;
 
-	if (mount(rootfs, c->runfsroot, "", MS_BIND | MS_RDONLY, NULL))
+	if (mount(rootfs, c->runfsroot, "", MS_BIND, NULL))
 		return -errno;
+
+	/* MS_BIND ignores any flags passed to it (except MS_REC). We need a
+	 * second call to mount() to actually set them.
+	 */
+	if (config->rootfs_mount_flags &&
+	    mount(rootfs, c->runfsroot, "",
+		  config->rootfs_mount_flags, NULL)) {
+		return -errno;
+	}
 
 	return 0;
 }

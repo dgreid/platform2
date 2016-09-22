@@ -26,6 +26,15 @@ int container_config_rootfs(struct container_config *c, const char *rootfs);
 /* Get the configured rootfs path. */
 const char *container_config_get_rootfs(const struct container_config *c);
 
+/* rootfs_mount_flags - Flags that will be passed to the mount() call when
+ * mounting the root of the container's filesystem. */
+void container_config_rootfs_mount_flags(struct container_config *c,
+					 unsigned long flags);
+
+/* Get the configured rootfs mount() flags. */
+unsigned long container_config_get_rootfs_mount_flags(
+		const struct container_config *c);
+
 /* runfs - Path to where the container filesystem has been mounted. */
 int container_config_premounted_runfs(struct container_config *c, const char *runfs);
 
