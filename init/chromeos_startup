@@ -37,6 +37,15 @@ mount_or_fail()
   fi
   cleanup_mounts "failed to mount $*"
 }
+# Assert that the argument is a directory.
+# On failure, clobbers the stateful partition.
+check_directory()
+{
+  local path="$1"
+  if [ ! -d "${path}" ]; then
+    cleanup_mounts "${d} is not a directory"
+  fi
+}
 
 # Mount debugfs as bootstat depends on /sys/kernel/debug
 mount -n -t debugfs -o nodev,noexec,nosuid,mode=0750,uid=0,gid=debugfs-access \
@@ -309,8 +318,9 @@ fi
 # Any non-common directories should be created in the device implementation of
 # "mount_var_and_home_chronos".
 for d in home home/chronos home/root home/user \
-         unencrypted/cache unencrypted/preserve; do
-  mkdir -p -m 0755 /mnt/stateful_partition/$d
+         unencrypted unencrypted/cache unencrypted/preserve; do
+  mkdir -p -m 0755 "/mnt/stateful_partition/${d}"
+  check_directory "/mnt/stateful_partition/${d}"
 done
 
 # Mount /home.  This mount inherits nodev,noexec,nosuid from
@@ -341,18 +351,21 @@ fi
 
 # /run is now tmpfs used for runtime data. Make sure /var/run and /var/lock
 # are sym links to /run and /run/lock respectively for backwards compatibility.
-if [ ! -L /var/run ]; then
-  rm -rf /var/run
-  ln -s /run /var/run
-fi
-if [ ! -L /var/lock ]; then
-  rm -rf /var/lock
-  ln -s /run/lock /var/lock
-fi
+rm -rf /var/run /var/lock || \
+    cleanup_mounts "failed to delete /var/run and /var/lock"
+ln -s /run /var/run
+ln -s /run/lock /var/lock
 
 # Make sure required /var subdirectories exist.
 mkdir -p -m 0755 /var/cache /var/db /var/empty /var/log/metrics \
                  /var/tmp
+
+# Before operating on them, verify that all stateful partition paths are
+# directories (as opposed to say, symlinks).
+for d in /var/cache /var/db /var/empty /var/log /var/log/metrics \
+         /var/tmp /home/chronos /home/root; do
+  check_directory "${d}"
+done
 
 # /var/tmp must be world-writable and sticky
 chmod 1777 /var/tmp
