@@ -39,7 +39,18 @@ bool ParseRootFileSystemConfig(const base::DictionaryValue& config_root_dict,
   }
   container_config_rootfs(config_out->get(),
                           named_path.Append(rootfs_path).value().c_str());
-  // rootfs is assumed read only when starting a container.
+  // Explicitly set the mount flags of the rootfs to 0.
+  //
+  // In Chrome OS, the rootfs is mounted nosuid, nodev, noexec. We need the
+  // filesystem to be mounted without those three flags within the container for
+  // it to work correctly, so explicitly remount with no flags. Since the image
+  // is originally mounted through a loopback device, and loopback devices that
+  // are originally created as read-only cannot be set to writable after
+  // creation, not setting the MS_RDONLY flag is safe here and will preserve the
+  // read-only protection if the original filesystem is read-only, and will make
+  // it writable for developers that have manually made the original filesystem
+  // writable.
+  container_config_rootfs_mount_flags(config_out->get(), 0);
   return true;
 }
 
