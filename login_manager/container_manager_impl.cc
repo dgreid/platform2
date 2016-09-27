@@ -33,6 +33,7 @@ const char kSessionManagerCgroup[] = "session_manager_containers";
 const char kCpuSharesFile[] =
     "/sys/fs/cgroup/cpu/session_manager_containers/cpu.shares";
 const char kCpuSharesDefault[] = "1024";
+const char kMountinfoPath[] = "/proc/self/mountinfo";
 
 std::string libcontainer_strerror(int err) {
   if (err < 0) {
@@ -141,10 +142,17 @@ bool ContainerManagerImpl::StartContainer(const ExitCallback& exit_callback) {
     return false;
   }
 
+  std::string mountinfo_data;
+  if (!base::ReadFileToString(base::FilePath(kMountinfoPath),
+                              &mountinfo_data)) {
+    LOG(WARNING) << "Fail to read mountinfo data from " << kMountinfoPath
+                 << ". Assuming all mounts are read-only.";
+  }
+
   ContainerConfigPtr config(container_config_create(),
                             &container_config_destroy);
-  if (!ParseContainerConfig(config_json_data, runtime_json_data, name_,
-                            kSessionManagerCgroup, container_directory_,
+  if (!ParseContainerConfig(config_json_data, runtime_json_data, mountinfo_data,
+                            name_, kSessionManagerCgroup, container_directory_,
                             &config)) {
     LOG(ERROR) << "Failed to parse container configuration for " << name_;
     return false;

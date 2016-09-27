@@ -5,8 +5,8 @@
 #ifndef LOGIN_MANAGER_CONTAINER_CONFIG_PARSER_H_
 #define LOGIN_MANAGER_CONTAINER_CONFIG_PARSER_H_
 
-#include <string>
 #include <memory>
+#include <string>
 
 #include <libcontainer/libcontainer.h>
 #include <base/files/file_path.h>
@@ -21,12 +21,14 @@ using ContainerConfigPtr = std::unique_ptr<container_config,
 // specified in https://github.com/opencontainers/runtime-spec/tree/v0.2.0
 //  |config_json_data| - The text from config.json.
 //  |runtime_json_data| - The text from runtime.json.
+//  |mountinfo_data| - The text from /proc/self/mountinfo.
 //  |container_name| - Unique name for the container.
 //  |parent_cgroup_name| - Name of the parent cgroup for this container.
 //  |named_container_path| - Path to the base of the container data and rootfs.
 //  |config_out| - Filled with the configuration, defined in libcontainer.
 bool ParseContainerConfig(const std::string& config_json_data,
                           const std::string& runtime_json_data,
+                          const std::string& mountinfo_data,
                           const std::string& container_name,
                           const std::string& parent_cgroup_name,
                           const base::FilePath& named_container_path,

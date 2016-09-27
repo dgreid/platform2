@@ -9,10 +9,15 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include <algorithm>
+#include <string>
 #include <vector>
 
 #include <base/files/file_path.h>
+#include <base/files/file_util.h>
 #include <base/json/json_reader.h>
+#include <base/strings/string_split.h>
+#include <base/strings/string_util.h>
 #include <base/values.h>
 
 #include <libcontainer/libcontainer.h>
@@ -21,10 +26,48 @@ namespace login_manager {
 
 namespace {
 
+// Parses |mountinfo_data| (the contents of /proc/self/mountinfo) to determine
+// whether |rootfs_path| was originally mounted as read-only.
+bool IsOriginalRootfsReadOnly(const std::string& mountinfo_data,
+                              const base::FilePath& rootfs_path) {
+  constexpr size_t kMountinfoMountPointIndex = 4;
+  constexpr size_t kMountinfoMountOptionsIndex = 5;
+  const size_t kMountinfoMinNumberOfTokens =
+      std::max(kMountinfoMountPointIndex, kMountinfoMountOptionsIndex) + 1;
+
+  std::vector<std::string> lines =
+      base::SplitString(mountinfo_data, "\n", base::TRIM_WHITESPACE,
+                        base::SPLIT_WANT_NONEMPTY);
+
+  for (const auto& line : lines) {
+    std::vector<std::string> tokens =
+        base::SplitString(line, base::kWhitespaceASCII, base::TRIM_WHITESPACE,
+                          base::SPLIT_WANT_NONEMPTY);
+    // Some fields in /proc/self/mountinfo are optional. We only need the line
+    // to have |kMountinfoMinNumberOfTokens|.
+    if (tokens.size() < kMountinfoMinNumberOfTokens)
+      continue;
+    if (tokens[kMountinfoMountPointIndex] != rootfs_path.value())
+      continue;
+
+    std::vector<std::string> options =
+        base::SplitString(tokens[kMountinfoMountOptionsIndex], ",",
+                          base::TRIM_WHITESPACE, base::SPLIT_WANT_NONEMPTY);
+
+    return std::find(options.begin(), options.end(), "ro") != options.end();
+  }
+
+  LOG(WARNING) << "Did not find mount information for " << rootfs_path.value()
+               << ". Assuming mounted read-only.";
+
+  return true;
+}
+
 // Sets the rootfs of |config| to point to where the rootfs of the container
 // is mounted.
 bool ParseRootFileSystemConfig(const base::DictionaryValue& config_root_dict,
                                const base::FilePath& named_path,
+                               const std::string& mountinfo_data,
                                ContainerConfigPtr* config_out) {
   // |rootfs_dict| stays owned by |config_root_dict|
   const base::DictionaryValue* rootfs_dict = nullptr;
@@ -39,18 +82,20 @@ bool ParseRootFileSystemConfig(const base::DictionaryValue& config_root_dict,
   }
   container_config_rootfs(config_out->get(),
                           named_path.Append(rootfs_path).value().c_str());
-  // Explicitly set the mount flags of the rootfs to 0.
+  // Explicitly set the mount flags of the rootfs.
   //
   // In Chrome OS, the rootfs is mounted nosuid, nodev, noexec. We need the
   // filesystem to be mounted without those three flags within the container for
-  // it to work correctly, so explicitly remount with no flags. Since the image
-  // is originally mounted through a loopback device, and loopback devices that
-  // are originally created as read-only cannot be set to writable after
-  // creation, not setting the MS_RDONLY flag is safe here and will preserve the
-  // read-only protection if the original filesystem is read-only, and will make
-  // it writable for developers that have manually made the original filesystem
-  // writable.
-  container_config_rootfs_mount_flags(config_out->get(), 0);
+  // it to work correctly, so explicitly remount with none of those flags. We
+  // need to preserve the ro/rw state of the original mount, though, since the
+  // internal namespace will reflect whatever flag was passed here instead of
+  // respecting the original filesystem's ro/rw state.
+  uint32_t flags = 0;
+  if (IsOriginalRootfsReadOnly(mountinfo_data,
+                               named_path.Append(rootfs_path))) {
+    flags |= MS_RDONLY;
+  }
+  container_config_rootfs_mount_flags(config_out->get(), flags);
   return true;
 }
 
@@ -458,10 +503,13 @@ bool ParseLinuxConfigDict(const base::DictionaryValue& runtime_root_dict,
 bool ParseConfigDicts(const base::DictionaryValue& config_root_dict,
                       const base::DictionaryValue& runtime_root_dict,
                       const base::FilePath& named_path,
+                      const std::string& mountinfo_data,
                       ContainerConfigPtr* config_out) {
   // Root fs info
-  if (!ParseRootFileSystemConfig(config_root_dict, named_path, config_out))
+  if (!ParseRootFileSystemConfig(config_root_dict, named_path,
+                                 mountinfo_data, config_out)) {
     return false;
+  }
 
   // Process info
   uid_t uid;
@@ -490,6 +538,7 @@ bool ParseConfigDicts(const base::DictionaryValue& config_root_dict,
 
 bool ParseContainerConfig(const std::string& config_json_data,
                           const std::string& runtime_json_data,
+                          const std::string& mountinfo_data,
                           const std::string& container_name,
                           const std::string& parent_cgroup_name,
                           const base::FilePath& named_container_path,
@@ -522,8 +571,9 @@ bool ParseContainerConfig(const std::string& config_json_data,
     return false;
   }
   if (!ParseConfigDicts(*config_dict, *runtime_dict, named_container_path,
-                        config_out))
+                        mountinfo_data, config_out)) {
     return false;
+  }
 
   // Set the cgroup configuration
   if (container_config_set_cgroup_parent(

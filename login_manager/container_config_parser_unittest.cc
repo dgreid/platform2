@@ -148,6 +148,21 @@ const char kCpuCgroupJsonRuntimeData[] = R"json(
 
 const char kCgroupParent[] = "test_cgroup";
 
+const char kTestcMountinfo[] = R"(
+104 99 0:57 / /proc rw,relatime - proc none rw
+73 15 7:1 /container.bin /var/run/containers/testc/rootfs_path ro,relatime -
+)";
+
+const char kAndroidReadonlyMountinfo[] = R"(
+104 99 0:57 / /proc rw,relatime - proc none rw
+73 15 7:1 /container.bin /var/run/containers/android/rootfs_path ro,relatime -
+)";
+
+const char kAndroidWritableMountinfo[] = R"(
+104 99 0:57 / /proc rw,relatime - proc none rw
+73 15 7:1 /container.bin /var/run/containers/android/rootfs_path rw,relatime -
+)";
+
 }  // anonymous namespace
 
 namespace login_manager {
@@ -158,7 +173,8 @@ TEST(ContainerConfigParserTest, TestBasicConfig) {
   ContainerConfigPtr config(container_config_create(),
                             &container_config_destroy);
   EXPECT_TRUE(ParseContainerConfig(kBasicJsonConfigData,
-                                   kBasicJsonRuntimeData, "testc",
+                                   kBasicJsonRuntimeData,
+                                   kTestcMountinfo, "testc",
                                    kCgroupParent,
                                    kNamedContainerPath, &config));
   EXPECT_EQ(kNamedContainerPath.Append("rootfs_path").value(),
@@ -185,7 +201,8 @@ TEST(ContainerConfigParserTest, TestBasicConfigAndroid) {
   ContainerConfigPtr config(container_config_create(),
                             &container_config_destroy);
   EXPECT_TRUE(ParseContainerConfig(kBasicJsonConfigData,
-                                   kBasicJsonRuntimeData, "android",
+                                   kBasicJsonRuntimeData,
+                                   kAndroidReadonlyMountinfo, "android",
                                    kCgroupParent,
                                    kNamedContainerPath, &config));
   EXPECT_EQ(kNamedContainerPath.Append("rootfs_path").value(),
@@ -197,6 +214,22 @@ TEST(ContainerConfigParserTest, TestBasicConfigAndroid) {
             container_config_get_run_setfiles(config.get()));
   EXPECT_EQ(std::string(kCgroupParent),
             container_config_get_cgroup_parent(config.get()));
+  EXPECT_EQ(MS_BIND | MS_REMOUNT | MS_RDONLY,
+            container_config_get_rootfs_mount_flags(config.get()));
+}
+
+TEST(ContainerConfigParserTest, TestWritableMountConfigAndroid) {
+  const base::FilePath kNamedContainerPath("/var/run/containers/android");
+
+  ContainerConfigPtr config(container_config_create(),
+                            &container_config_destroy);
+  EXPECT_TRUE(ParseContainerConfig(kBasicJsonConfigData,
+                                   kBasicJsonRuntimeData,
+                                   kAndroidWritableMountinfo, "android",
+                                   kCgroupParent,
+                                   kNamedContainerPath, &config));
+  EXPECT_EQ(MS_BIND | MS_REMOUNT,
+            container_config_get_rootfs_mount_flags(config.get()));
 }
 
 TEST(ContainerConfigParserTest, TestFailedConfigRootDictEmpty) {
@@ -206,7 +239,8 @@ TEST(ContainerConfigParserTest, TestFailedConfigRootDictEmpty) {
   ContainerConfigPtr config(container_config_create(),
                             &container_config_destroy);
   EXPECT_FALSE(ParseContainerConfig(kEmptyJsonConfigData,
-                                    kBasicJsonRuntimeData, "testc",
+                                    kBasicJsonRuntimeData,
+                                    kTestcMountinfo, "testc",
                                     kCgroupParent,
                                     kNamedContainerPath, &config));
 }
@@ -218,7 +252,8 @@ TEST(ContainerConfigParserTest, TestFailedConfigUnknownMount) {
   ContainerConfigPtr config(container_config_create(),
                             &container_config_destroy);
   EXPECT_FALSE(ParseContainerConfig(kExtraMountJsonConfigData,
-                                    kBasicJsonRuntimeData, "testc",
+                                    kBasicJsonRuntimeData,
+                                    kTestcMountinfo, "testc",
                                     kCgroupParent,
                                     kNamedContainerPath, &config));
 }
@@ -229,7 +264,8 @@ TEST(ContainerConfigParserTest, TestCpuCgroupConfig) {
   ContainerConfigPtr config(container_config_create(),
                             &container_config_destroy);
   EXPECT_TRUE(ParseContainerConfig(kBasicJsonConfigData,
-                                   kCpuCgroupJsonRuntimeData, "testc",
+                                   kCpuCgroupJsonRuntimeData,
+                                   kTestcMountinfo, "testc",
                                    kCgroupParent,
                                    kNamedContainerPath, &config));
   EXPECT_EQ(1024, container_config_get_cpu_shares(config.get()));
