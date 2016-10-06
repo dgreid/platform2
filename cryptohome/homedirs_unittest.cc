@@ -604,6 +604,53 @@ TEST_F(FreeDiskSpaceTest, GCacheCleanup) {
   EXPECT_TRUE(homedirs_.FreeDiskSpace());
 }
 
+TEST_F(FreeDiskSpaceTest, CacheAndGCacheCleanup) {
+  EXPECT_CALL(platform_, EnumerateDirectoryEntries(kTestRoot, false, _))
+    .WillRepeatedly(
+        DoAll(SetArgPointee<2>(homedir_paths_),
+              Return(true)));
+  EXPECT_CALL(platform_, AmountOfFreeDiskSpace(kTestRoot))
+    .WillOnce(Return(0))  // Before cleanup
+    .WillOnce(Return(0))  // After removing cache
+    .WillOnce(Return(kMinFreeSpaceInBytes + 1));  // After removing gcache
+  EXPECT_CALL(platform_, DirectoryExists(_))
+    .WillRepeatedly(Return(true));
+
+  // Skip per-cache and Cache enumerations done per user in order to
+  // test cache and GCache deletion.
+  EXPECT_CALL(platform_, GetFileEnumerator(
+        Property(&FilePath::value, EndsWith("/user/Cache")),
+        false, _))
+    .Times(4)
+    .WillRepeatedly(InvokeWithoutArgs(CreateMockFileEnumerator));
+
+  // DeleteGCacheTmpCallback enumerate all directories to find GCache files
+  // directory.
+  EXPECT_CALL(platform_, GetFileEnumerator(
+        Property(
+          &FilePath::value,
+          EndsWith(std::string(kVaultDir) + "/user/GCache/v1")),
+        true, base::FileEnumerator::DIRECTORIES))
+    .Times(4)
+    .WillRepeatedly(InvokeWithoutArgs(CreateMockFileEnumerator));
+  EXPECT_CALL(platform_, GetFileEnumerator(
+        Property(&FilePath::value, EndsWith("user/GCache/v1/tmp")),
+        false, _))
+    .Times(4)
+    .WillRepeatedly(InvokeWithoutArgs(CreateMockFileEnumerator));
+
+  // Should not attempt to remove Android cache. (by getting enumerator first)
+  EXPECT_CALL(platform_, GetFileEnumerator(
+      Property(&FilePath::value, EndsWith(std::string(kVaultDir) + "/root")),
+          true, _))
+      .Times(0);
+
+  // Should finish cleaning up because the free space size exceeds
+  // |kMinFreeSpaceInBytes| after deleting gcache, although it's still
+  // below |kTargetFreeSpaceAfterCleanup|.
+  EXPECT_FALSE(homedirs_.FreeDiskSpace());
+}
+
 TEST_F(FreeDiskSpaceTest, CacheAndGCacheAndAndroidCleanup) {
   EXPECT_CALL(platform_, EnumerateDirectoryEntries(kTestRoot, false, _))
     .WillRepeatedly(
@@ -612,7 +659,7 @@ TEST_F(FreeDiskSpaceTest, CacheAndGCacheAndAndroidCleanup) {
   EXPECT_CALL(platform_, AmountOfFreeDiskSpace(kTestRoot))
     .WillOnce(Return(0))
     .WillOnce(Return(0))
-    .WillOnce(Return(0))
+    .WillOnce(Return(kMinFreeSpaceInBytes - 1))
     .WillOnce(Return(kMinFreeSpaceInBytes + 1));
   EXPECT_CALL(platform_, DirectoryExists(_))
     .WillRepeatedly(Return(true));

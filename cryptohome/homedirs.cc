@@ -103,6 +103,11 @@ bool HomeDirs::FreeDiskSpace() {
   if (freeDiskSpace >= kTargetFreeSpaceAfterCleanup)
     return true;
 
+  if (freeDiskSpace >= kMinFreeSpaceInBytes)
+    // Disk space is still less than |kTargetFreeSpaceAfterCleanup|, but more
+    // than the threshold to do more aggressive cleanups.
+    return false;
+
   // Clean Android cache directories for every user (except current one).
   DoForEveryUnmountedCryptohome(base::Bind(
       &HomeDirs::DeleteAndroidCacheCallback,
