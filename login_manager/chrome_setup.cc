@@ -323,10 +323,6 @@ void AddVmodulePatterns(ChromiumCommandBuilder* builder) {
   // TODO(xiyuan): Remove after http://crbug.com/547857 is resolved.
   builder->AddVmodulePattern("*chromeos/login/*=1");
 
-  // TODO(derat): Remove after http://crbug.com/648580 is fixed.
-  builder->AddVmodulePattern("power_manager_client=1");
-  builder->AddVmodulePattern("renderer_freezer=1");
-
   if (builder->UseFlagIsSet("cheets"))
     builder->AddVmodulePattern("*arc/*=1");
 }
