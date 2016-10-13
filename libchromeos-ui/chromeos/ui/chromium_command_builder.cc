@@ -157,7 +157,6 @@ bool ChromiumCommandBuilder::SetUpChromium(const base::FilePath& xauth_path) {
   AddEnvVar("LOGNAME", kUser);
   AddEnvVar("SHELL", "/bin/sh");
   AddEnvVar("PATH", "/bin:/usr/bin");
-  AddEnvVar("LC_ALL", "en_US.utf8");
   AddEnvVar("XDG_RUNTIME_DIR", "/run/chrome");
 
   const base::FilePath data_dir(GetPath("/home").Append(kUser));
