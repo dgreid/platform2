@@ -111,6 +111,7 @@ class SessionManagerService
     }
     void set_suspend_delay_id(int id) {
       session_manager_service_->suspend_delay_id_ = id;
+      session_manager_service_->suspend_delay_set_up_ = true;
     }
 
     // Executes the CleanupChildren() method on the manager.
@@ -247,6 +248,9 @@ class SessionManagerService
   // Sets up suspend delay with powerd.
   void SetUpSuspendHandler();
 
+  // Tear down suspend delay handler set up with powerd.
+  void TearDownSuspendHandler();
+
   // Callbacks for suspend/resume.
   void HandleSuspendImminent(dbus::Signal* signal);
   void HandleSuspendDone(dbus::Signal* signal);
@@ -270,6 +274,7 @@ class SessionManagerService
   // after we are done freezing the instance to let it know we're ready
   // to suspend.
   base::FilePath arc_cgroup_freezer_state_path_;
+  bool suspend_delay_set_up_;
   int suspend_delay_id_;
 
   LoginMetrics* login_metrics_;  // Owned by the caller.

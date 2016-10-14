@@ -113,6 +113,8 @@ class SessionManagerImplTest : public ::testing::Test {
                          base::Unretained(this)),
               base::Bind(&SessionManagerImplTest::FakeStartArcInstance,
                          base::Unretained(this)),
+              base::Bind(&SessionManagerImplTest::FakeStopArcInstance,
+                         base::Unretained(this)),
               &key_gen_,
               &state_key_generator_,
               &manager_,
@@ -271,6 +273,10 @@ class SessionManagerImplTest : public ::testing::Test {
   MockPolicyKey owner_key_;
   FakeContainerManager android_container_;
 
+  // Used by fake closures to simulate calling into powerd to set up
+  // suspend delays when ARC starts or stops.
+  bool suspend_delay_set_up_;
+
   SessionManagerImpl impl_;
   SessionManagerImpl::Error error_;
   base::ScopedTempDir tmpdir_;
@@ -343,7 +349,9 @@ class SessionManagerImplTest : public ::testing::Test {
 
   void FakeRestartDevice() { actual_restarts_++; }
 
-  void FakeStartArcInstance() {}
+  void FakeStartArcInstance() { suspend_delay_set_up_ = true; }
+
+  void FakeStopArcInstance() { suspend_delay_set_up_ = false; }
 
   string fake_salt_;
 
@@ -911,10 +919,12 @@ TEST_F(SessionManagerImplTest, ArcInstanceStart) {
       utils_, GetDevModeState()).WillOnce(Return(DevModeState::DEV_MODE_OFF));
   impl_.StartArcInstance(kSaneEmail, false, &error_);
   EXPECT_TRUE(android_container_.running());
+  EXPECT_TRUE(suspend_delay_set_up_);
   EXPECT_NE(base::TimeTicks(), impl_.GetArcStartTime(&start_time_error));
   impl_.StopArcInstance(&error_);
   EXPECT_FALSE(error_.is_set());
   EXPECT_FALSE(android_container_.running());
+  EXPECT_FALSE(suspend_delay_set_up_);
 #else
   impl_.StartArcInstance(kSaneEmail, false, &error_);
   EXPECT_EQ(dbus_error::kNotAvailable, error_.name());
@@ -989,8 +999,10 @@ TEST_F(SessionManagerImplTest, ArcInstanceCrash) {
       utils_, GetDevModeState()).WillOnce(Return(DevModeState::DEV_MODE_ON));
   impl_.StartArcInstance(kSaneEmail, false, &error_);
   EXPECT_TRUE(android_container_.running());
+  EXPECT_TRUE(suspend_delay_set_up_);
   android_container_.SimulateCrash();
   EXPECT_FALSE(android_container_.running());
+  EXPECT_FALSE(suspend_delay_set_up_);
   // This should now fail since the container was cleaned up already.
   impl_.StopArcInstance(&error_);
   EXPECT_EQ(dbus_error::kContainerShutdownFail, error_.name());

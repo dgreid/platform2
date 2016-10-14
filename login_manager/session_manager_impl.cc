@@ -175,6 +175,7 @@ SessionManagerImpl::SessionManagerImpl(
     base::Closure lock_screen_closure,
     base::Closure restart_device_closure,
     base::Closure start_arc_instance_closure,
+    base::Closure stop_arc_instance_closure,
     KeyGenerator* key_gen,
     ServerBackedStateKeyGenerator* state_key_generator,
     ProcessManagerServiceInterface* manager,
@@ -193,6 +194,7 @@ SessionManagerImpl::SessionManagerImpl(
       lock_screen_closure_(lock_screen_closure),
       restart_device_closure_(restart_device_closure),
       start_arc_instance_closure_(start_arc_instance_closure),
+      stop_arc_instance_closure_(stop_arc_instance_closure),
       dbus_emitter_(dbus_emitter),
       key_gen_(key_gen),
       state_key_generator_(state_key_generator),
@@ -1041,6 +1043,8 @@ void SessionManagerImpl::OnAndroidContainerStopped(pid_t pid, bool clean) {
   } else {
     LOG(ERROR) << "Android Container with pid " << pid << " crashed";
   }
+
+  stop_arc_instance_closure_.Run();
 
   login_metrics_->StopTrackingArcUseTime();
 

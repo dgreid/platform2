@@ -138,6 +138,7 @@ SessionManagerService::SessionManagerService(
       match_rule_(base::StringPrintf("type='method_call', interface='%s'",
                                      kSessionManagerInterface)),
       arc_cgroup_freezer_state_path_(kArcCgroupFreezerStatePath),
+      suspend_delay_set_up_(false),
       suspend_delay_id_(-1),
       login_metrics_(metrics),
       system_(utils),
@@ -203,6 +204,8 @@ bool SessionManagerService::Initialize() {
                  power_manager::kPowerManagerInterface,
                  power_manager::kRequestRestartMethod),
       base::Bind(&SessionManagerService::SetUpSuspendHandler,
+                 base::Unretained(this)),
+      base::Bind(&SessionManagerService::TearDownSuspendHandler,
                  base::Unretained(this)),
       &key_gen_,
       &state_key_generator_,
@@ -459,6 +462,22 @@ void SessionManagerService::SetUpSuspendHandler() {
   }
   LOG(INFO) << "Registered delay " << reply.delay_id();
   suspend_delay_id_ = reply.delay_id();
+  suspend_delay_set_up_ = true;
+}
+
+void SessionManagerService::TearDownSuspendHandler() {
+  if (!suspend_delay_set_up_) {
+    LOG(WARNING) << "TearDownSuspendHandler called, no delay registered?";
+    return;
+  }
+
+  power_manager::UnregisterSuspendDelayRequest request;
+  request.set_delay_id(suspend_delay_id_);
+
+  CallPowerdMethod(power_manager::kUnregisterSuspendDelayMethod,
+                   request, nullptr);
+  LOG(INFO) << "Unregistered delay " << suspend_delay_id_;
+  suspend_delay_set_up_ = false;
 }
 
 void SessionManagerService::SetArcCgroupState(const std::string& state) {
@@ -467,11 +486,16 @@ void SessionManagerService::SetArcCgroupState(const std::string& state) {
   LOG(INFO) << "Setting ARC instance state to " << state;
   if (base::WriteFile(arc_cgroup_freezer_state_path_,
                       state.c_str(), state.size()) < 0) {
-    LOG(WARNING) << "Failed to write to cgroup state file";
+    PLOG(WARNING) << "Failed to write to cgroup state file";
   }
 }
 
 void SessionManagerService::HandleSuspendImminent(dbus::Signal* signal) {
+  if (!suspend_delay_set_up_) {
+    LOG(WARNING) << "HandleSuspendImminent raced with unregister";
+    return;
+  }
+
   power_manager::SuspendImminent info;
   dbus::MessageReader reader(signal);
   CHECK(reader.PopArrayOfBytesAsProto(&info));
