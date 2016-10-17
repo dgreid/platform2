@@ -7,6 +7,9 @@
 #include <string>
 #include <vector>
 
+#include <base/strings/string_util.h>
+#include <base/sys_info.h>
+
 #include "login_manager/dbus_error_types.h"
 
 namespace login_manager {
@@ -71,8 +74,16 @@ void VpdProcessImpl::HandleExit(const siginfo_t& info) {
     completion_.Run(PolicyService::Error());
   } else {
     LOG(ERROR) << "Failed to update VPD, code = " << info.si_status;
-    completion_.Run(PolicyService::Error(dbus_error::kVpdUpdateFailed,
-                   "Failed to update VPD"));
+    // TODO(igorcov): Remove the success completion code when crbug/653814 is
+    // fixed.
+    std::string board_name = base::ToLowerASCII(
+        base::SysInfo::GetLsbReleaseBoard());
+    if (board_name == "parrot" || board_name == "glimmer") {
+      completion_.Run(PolicyService::Error());
+    } else {
+      completion_.Run(PolicyService::Error(dbus_error::kVpdUpdateFailed,
+                     "Failed to update VPD"));
+    }
   }
 
   // Reset the completion to ensure we won't call it again.
