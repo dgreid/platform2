@@ -428,8 +428,15 @@ void ChromiumCommandBuilder::SetUpPepperPlugins() {
     if (plugin_name == "Shockwave Flash") {
       AddArg("--ppapi-flash-path=" + file_name);
       AddArg("--ppapi-flash-version=" + version);
+      std::vector<std::string> flash_args;
+      if (UseFlagIsSet("disable_flash_hw_video_decode")) {
+        flash_args.push_back("enable_hw_video_decode=0");
+        flash_args.push_back("enable_hw_video_decode_ave=0");
+      }
       if (UseFlagIsSet("disable_low_latency_audio"))
-        AddArg("--ppapi-flash-args=enable_low_latency_audio=0");
+        flash_args.push_back("enable_low_latency_audio=0");
+      if (!flash_args.empty())
+        AddArg("--ppapi-flash-args=" + base::JoinString(flash_args, ","));
     } else {
       const std::string description = LookUpInStringPairs(pairs, "DESCRIPTION");
       const std::string mime_types = LookUpInStringPairs(pairs, "MIME_TYPES");
