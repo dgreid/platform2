@@ -159,6 +159,7 @@ TEST_F(ChromiumCommandBuilderTest, BasicEnvironment) {
   EXPECT_EQ("chronos", ReadEnvVar("LOGNAME"));
   EXPECT_EQ("/bin/sh", ReadEnvVar("SHELL"));
   EXPECT_FALSE(ReadEnvVar("PATH").empty());
+  EXPECT_EQ("en_US.utf8", ReadEnvVar("LC_ALL"));
   base::FilePath data_dir(util::GetReparentedPath("/home/chronos", base_path_));
   EXPECT_EQ(data_dir.value(), ReadEnvVar("DATA_DIR"));
   EXPECT_TRUE(base::DirectoryExists(data_dir));
