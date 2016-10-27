@@ -94,6 +94,23 @@ bool FileHasher::Hash() {
   return !dm_bht_compute(&tree_);
 }
 
+const char *FileHasher::RandomSalt() {
+  uint8_t buf[DM_BHT_SALT_SIZE];
+  const char urandom_path[] = "/dev/urandom";
+  simple_file::File source;
+
+  LOG_IF(FATAL, !source.Initialize(urandom_path, O_RDONLY, NULL))
+    << "Failed to open the random source: " << urandom_path;
+  PLOG_IF(FATAL, !source.Read(sizeof(buf), buf))
+    << "Failed to read the random source";
+
+  for (size_t i = 0; i < sizeof(buf); ++i)
+    sprintf(&random_salt_[i * 2], "%02x", buf[i]);
+  random_salt_[sizeof(random_salt_) - 1] = '\0';
+
+  return random_salt_;
+}
+
 void FileHasher::PrintTable(bool colocated) {
   // Grab the digest (up to 1kbit supported)
   uint8_t digest[128];

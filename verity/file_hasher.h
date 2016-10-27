@@ -35,7 +35,10 @@ class FileHasher {
   // Print a table to stdout which contains a dmsetup compatible format
   virtual void PrintTable(bool colocated);
 
+  virtual const char *RandomSalt();
   virtual void set_salt(const char *salt) {
+    if (!strcmp(salt, "random"))
+      salt = RandomSalt();
     dm_bht_set_salt(&tree_, salt);
     salt_ = salt;
   }
@@ -53,6 +56,7 @@ class FileHasher {
   unsigned int block_limit_;
   const char *alg_;
   const char *salt_;
+  char random_salt_[DM_BHT_SALT_SIZE * 2 + 1];
   u8 *hash_data_;
   struct dm_bht tree_;
   sector_t sectors_;
