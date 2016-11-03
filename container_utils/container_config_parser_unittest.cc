@@ -242,7 +242,19 @@ const char kBasicJsonData[] = R"json(
                 "/proc/irq",
                 "/proc/sys",
                 "/proc/sysrq-trigger"
-            ]
+            ],
+            "seccomp": {
+                "defaultAction": "SCP_ACT_KILL",
+                "architectures": [
+                    "SCP_ARCH_X86"
+                ],
+                "syscalls": [
+                    {
+                        "name": "read",
+                        "action": "SCP_ACT_ALLOW"
+                    }
+                ]
+            }
         }
     }
 )json";
@@ -288,6 +300,12 @@ TEST(OciConfigParserTest, TestBasicConfig) {
   EXPECT_EQ(id_map->host_id, 1000);
   EXPECT_EQ(id_map->container_id, 0);
   EXPECT_EQ(id_map->size, 10);
+  // seccomp
+  OciSeccomp *seccomp = &basic_config->linux_config.seccomp;
+  EXPECT_EQ(seccomp->default_action, "SCP_ACT_KILL");
+  EXPECT_EQ(seccomp->architectures[0], "SCP_ARCH_X86");
+  EXPECT_EQ(seccomp->syscalls[0].name, "read");
+  EXPECT_EQ(seccomp->syscalls[0].action, "SCP_ACT_ALLOW");
 }
 
 }  // namespace container_utils

@@ -64,6 +64,18 @@ struct OciLinuxDevice {
   uint32_t gid;  // Optional
 };
 
+struct OciSeccompSyscall {
+  std::string name;
+  std::string action;
+}
+
+struct OciSeccomp {
+  // json field name - defaultAction
+  std::string default_action;
+  std::vector<std::string> architectures;
+  std::vector<OciSeccompSyscall> syscalls;
+}
+
 struct OciLinux {
   std::vector<OciLinuxDevice> devices;  // Optional
   // json field name - cgroupsPath
@@ -73,7 +85,7 @@ struct OciLinux {
   std::vector<OciLinuxNamespaceMapping> uid_mappings;  // Optional
   // json field name - gidMappings
   std::vector<OciLinuxNamespaceMapping> gid_mappings;  // Optional
-  // TODO seccomp
+  OciSeccomp seccomp;
   // Unused: maskedPaths, readonlyPaths, rootfsPropagation, mountLabel, sysctl
 };
 

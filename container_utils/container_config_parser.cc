@@ -250,6 +250,53 @@ bool ParseLinuxIdMappings(const base::ListValue* id_map_list,
   return true;
 }
 
+// Parses the seccomp node if it is present
+bool ParseLinuxSeccompInfo(const base::DictionaryValue& seccomp_dict,
+                           OciSeccomp* seccomp_out) {
+  if (!seccomp_dict.GetString("defaultAction",
+                              *seccom_out->default_architecture))
+    return false;
+
+  // Get the list of architectures
+  const base::ListValue* architectures = nullptr;
+  if (!seccom_dict.GetList("architectures", &architectures)) {
+    LOG(ERROR) << "Fail to read seccomp architectures";
+    return false;
+  }
+  for (int i = 0; i < architectures.GetSize(); ++i) {
+    std::string this_arch;
+    if (!architectures->GetString(i, *this_arch)) {
+      LOG(ERROR) << "Fail to parse seccomp architecture list";
+      return false;
+    }
+    seccomp_out->architectures.push_back(this_arch);
+  }
+
+  // Get the list of syscalls
+  const base::ListValue* syscalls = nullptr;
+  if (!seccom_dict.GetList("syscalls", &syscalls)) {
+    LOG(ERROR) << "Fail to read seccomp syscalls";
+    return false;
+  }
+  for (int i = 0; i < syscalls.GetSize(); ++i) {
+    const base::DictionaryValue* syscall_dict;
+    if (!syscalls->GetDictionary(i, *syscall_dict)) {
+      LOG(ERROR) << "Fail to parse seccomp syscalls list";
+      return false;
+    }
+    OciLinuxSeccompSyscall this_syscall;
+    if (!syscalls->GetString("name", &this_syscall->name)) {
+      LOG(ERROR) << "Fail to parse syscall name " << i;
+      return false;
+    }
+    if (!syscalls->GetString("action", &this_syscall->action)) {
+      LOG(ERROR) << "Fail to parse syscall action " << i;
+      return false;
+    }
+    seccomp_out->syscalls.push_back(this_syscall);
+  }
+}
+
 // Parses the linux node which has information about setting up a user
 // namespace, and the list of devices for the container.
 bool ParseLinuxConfigDict(const base::DictionaryValue& runtime_root_dict,
@@ -279,6 +326,12 @@ bool ParseLinuxConfigDict(const base::DictionaryValue& runtime_root_dict,
 
   if (!ParseDeviceList(*linux_dict, config_out))
     return false;
+
+  const base::DictionaryValue* seccomp_dict = nullptr;
+  if (linux_dict->GetList("seccomp", &seccomp_dict)) {
+    if (!ParseSeccompInfo(*seccomp_dict, config_out))
+      return false;
+  }
 
   return true;
 }
