@@ -63,7 +63,7 @@ bool FileHasher::Initialize(simple_file::File *source,
   }
 
   sectors_ = dm_bht_sectors(&tree_);
-  hash_data_ = new u8[to_bytes(sectors_)];
+  hash_data_ = new u8[verity_to_bytes(sectors_)];
 
   // No reading is needed.
   dm_bht_set_read_cb(&tree_, dm_bht_zeroread_callback);
@@ -72,7 +72,7 @@ bool FileHasher::Initialize(simple_file::File *source,
 }
 
 bool FileHasher::Store() {
-  return destination_->WriteAt(to_bytes(sectors_), hash_data_, 0);
+  return destination_->WriteAt(verity_to_bytes(sectors_), hash_data_, 0);
 }
 
 bool FileHasher::Hash() {

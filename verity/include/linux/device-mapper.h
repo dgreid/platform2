@@ -28,6 +28,6 @@
 
 #define SECTOR_SHIFT 9
 #define to_sector(x) ((x) >> SECTOR_SHIFT)
-#define to_bytes(x) ((x) << SECTOR_SHIFT)
+#define verity_to_bytes(x) ((x) << SECTOR_SHIFT)
 
 #endif  /* VERITY_INCLUDE_LINUX_DEVICE_MAPPER_H_ */

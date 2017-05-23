@@ -286,7 +286,7 @@ static int dm_bht_initialize_entries(struct dm_bht *bht)
 	 * on allocation or sector calculation.
 	 */
 	if (((last_index >> bht->node_count_shift) + 1) >
-	    UINT_MAX / max((unsigned int)sizeof(struct dm_bht_entry),
+	    UINT_MAX / MAX((unsigned int)sizeof(struct dm_bht_entry),
 			   (unsigned int)to_sector(PAGE_SIZE))) {
 		DMCRIT("required entries %u is too large",
 		       last_index + 1);
@@ -438,7 +438,7 @@ mismatch:
 int dm_bht_zeroread_callback(void *ctx, sector_t start, u8 *dst,
 			     sector_t count, struct dm_bht_entry *entry)
 {
-	memset(dst, 0, to_bytes(count));
+	memset(dst, 0, verity_to_bytes(count));
 	dm_bht_read_completed(entry, 0);
 	return 0;
 }
@@ -671,7 +671,7 @@ EXPORT_SYMBOL(dm_bht_root_hexdigest);
  */
 void dm_bht_set_salt(struct dm_bht *bht, const char *hexsalt)
 {
-	size_t saltlen = min(strlen(hexsalt) / 2, sizeof(bht->salt));
+	size_t saltlen = MIN(strlen(hexsalt) / 2, sizeof(bht->salt));
 	bht->have_salt = true;
 	memset(bht->salt, 0, sizeof(bht->salt));
 	dm_bht_hex_to_bin(bht->salt, (const u8 *)hexsalt, saltlen);

@@ -54,7 +54,7 @@ TEST(DmBht, CreateZeroPopulateDestroy) {
   EXPECT_EQ(0, dm_bht_create(&bht, blocks, "sha256"));
   dm_bht_set_read_cb(&bht, dm_bht_zeroread_callback);
   sectors = dm_bht_sectors(&bht);
-  hash_data = new u8[to_bytes(sectors)];
+  hash_data = new u8[verity_to_bytes(sectors)];
   dm_bht_set_buffer(&bht, hash_data);
 
   do {
@@ -87,9 +87,9 @@ class MemoryBhtTest : public ::testing::Test {
 
   int Read(sector_t start, u8 *dst, sector_t count) {
     EXPECT_LT(start, sectors_);
-    EXPECT_EQ(to_bytes(count), PAGE_SIZE);
-    u8 *src = &hash_data_[to_bytes(start)];
-    memcpy(dst, src, to_bytes(count));
+    EXPECT_EQ(verity_to_bytes(count), PAGE_SIZE);
+    u8 *src = &hash_data_[verity_to_bytes(start)];
+    memcpy(dst, src, verity_to_bytes(count));
     return 0;
   }
 
@@ -142,7 +142,7 @@ class MemoryBhtTest : public ::testing::Test {
 
     EXPECT_EQ(0, dm_bht_create(bht_, total_blocks, digest_algorithm));
     sectors_ = dm_bht_sectors(bht_);
-    hash_data_.resize(to_bytes(sectors_));
+    hash_data_.resize(verity_to_bytes(sectors_));
 
     if (salt)
       dm_bht_set_salt(bht_, salt);
