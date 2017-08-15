@@ -23,7 +23,7 @@ enum MessageLevel { LEVEL_INFO, LEVEL_WARNING, LEVEL_ERROR, LEVEL_FATAL };
 
 static MessageLevel min_level = LEVEL_INFO;
 
-class Message : public std::ostream {
+class Message  {
  public:
   Message(MessageLevel level,
           MessageType type,
@@ -72,6 +72,20 @@ class Message : public std::ostream {
       exit(1);
    }
 
+  template<typename T>
+  const Message& operator<<(const T& t) const {
+#ifdef NDEBUG
+    if (type() == TYPE_DEBUG)
+      return *this;
+#endif
+
+    if (type() == TYPE_NULL || level() < min_level)
+      return *this;
+
+    std::cerr << t;
+    return *this;
+  }
+
   MessageLevel level() const { return level_; }
   MessageType type() const { return type_; }
   int log_errno() const { return log_errno_; }
@@ -80,9 +94,6 @@ class Message : public std::ostream {
 
   void set_level(MessageLevel l) { level_ = l; }
 
-  // Returns 'this' to simplify the macros.
-  virtual Message *stream() { return this; }
-
  private:
   MessageLevel level_;
   MessageType type_;
@@ -90,48 +101,33 @@ class Message : public std::ostream {
   const char *file_;
   unsigned long line_;
 };
-
-template <typename T>
-Message &operator<<(Message &s, T t) {
-#ifdef NDEBUG
-  if (s.type() == TYPE_DEBUG)
-    return s;
-#endif
-
-  if (s.type() == TYPE_NULL || s.level() < min_level)
-    return s;
-
-  std::cerr << t;
-  return s;
-}
-
 }  // namespace logging
 
 // Interface macros
 #define LOG(_level) \
-  *logging::Message(logging::LEVEL_##_level, \
+  logging::Message(logging::LEVEL_##_level, \
                     logging::TYPE_NORMAL, \
                     0, \
                     __FILE__, \
-                    __LINE__).stream()
+                    __LINE__)
 #define PLOG(_level) \
-  *logging::Message(logging::LEVEL_##_level, \
+  logging::Message(logging::LEVEL_##_level, \
                     logging::TYPE_ERRNO,\
                     errno, \
                     __FILE__, \
-                    __LINE__).stream()
+                    __LINE__)
 #define DLOG(_level) \
-  *logging::Message(logging::LEVEL_##_level,\
+  logging::Message(logging::LEVEL_##_level,\
                     logging::TYPE_DEBUG, \
                     0, \
                     __FILE__, \
-                    __LINE__).stream()
+                    __LINE__)
 #define LOG_NULL \
-  *logging::Message(logging::LEVEL_INFO, \
+  logging::Message(logging::LEVEL_INFO, \
                     logging::TYPE_NULL, \
                     0, \
                     __FILE__, \
-                    __LINE__).stream()
+                    __LINE__)
 
 #define LOG_IF(_level, cond) ((cond) ? LOG(_level) : LOG_NULL)
 #define PLOG_IF(_level, cond) ((cond) ? PLOG(_level) : LOG_NULL)
