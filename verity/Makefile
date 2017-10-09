@@ -60,6 +60,5 @@ CXX_BINARY(verity_testrunner): $(filter-out %_main.o,$(CXX_OBJECTS)) \
 UNITTEST_LIBS := $(shell gmock-config --libs) $(shell gtest-config --libs)
 CXX_BINARY(verity_testrunner): LDLIBS += $(UNITTEST_LIBS)
 
-all: CXX_BINARY(verity_testrunner)
 clean: CLEAN(verity_testrunner)
 tests: TEST(CXX_BINARY(verity_testrunner))
