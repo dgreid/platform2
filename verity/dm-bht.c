@@ -19,7 +19,6 @@
 #include <linux/gfp.h>
 #include <linux/kernel.h>
 #include <linux/scatterlist.h>
-#include <linux/slab.h>  /* k*alloc */
 
 #include "verity/dm-bht.h"
 
@@ -227,8 +226,7 @@ int dm_bht_create(struct dm_bht *bht, unsigned int block_count,
 	 * nodes on the subsequent level or of a specific block on disk.
 	 */
 	bht->levels = (struct dm_bht_level *)
-			kcalloc(bht->depth,
-				sizeof(struct dm_bht_level), GFP_KERNEL);
+			calloc(bht->depth, sizeof(struct dm_bht_level));
 	if (!bht->levels) {
 		DMERR("failed to allocate tree levels");
 		status = -ENOMEM;
@@ -249,8 +247,8 @@ int dm_bht_create(struct dm_bht *bht, unsigned int block_count,
 
 bad_entries_alloc:
 	while (bht->depth-- > 0)
-		kfree(bht->levels[bht->depth].entries);
-	kfree(bht->levels);
+		free(bht->levels[bht->depth].entries);
+	free(bht->levels);
 bad_node_count:
 bad_level_alloc:
 bad_block_count:
@@ -309,9 +307,7 @@ static int dm_bht_initialize_entries(struct dm_bht *bht)
 		 * (b) which specific nodes have been verified.
 		 */
 		level->entries = (struct dm_bht_entry *)
-				 kcalloc(level->count,
-					 sizeof(struct dm_bht_entry),
-					 GFP_KERNEL);
+				 calloc(level->count, sizeof(struct dm_bht_entry));
 		if (!level->entries) {
 			DMERR("failed to allocate entries for depth %d",
 			      bht->depth);
@@ -581,10 +577,10 @@ int dm_bht_destroy(struct dm_bht *bht)
 				break;
 			}
 		}
-		kfree(bht->levels[depth].entries);
+		free(bht->levels[depth].entries);
 		bht->levels[depth].entries = NULL;
 	}
-	kfree(bht->levels);
+	free(bht->levels);
 	for (cpu = 0; cpu < nr_cpu_ids; ++cpu)
 		if (bht->hash_desc[cpu].tfm)
 			crypto_free_hash(bht->hash_desc[cpu].tfm);
