@@ -17,13 +17,14 @@
 #include <linux/err.h>
 #include <linux/errno.h>
 #include <linux/gfp.h>
-#include <linux/dm-bht.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/mm_types.h>
 #include <linux/scatterlist.h>
 #include <linux/slab.h>  /* k*alloc */
 #include <linux/string.h>  /* memset */
+
+#include "verity/dm-bht.h"
 
 #define DM_MSG_PREFIX "dm bht"
 

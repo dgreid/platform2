@@ -12,9 +12,10 @@
 #include <asm/atomic.h>
 #include <asm/page.h>
 #include <linux/device-mapper.h>
-#include <linux/dm-bht.h>
 #include <linux/gfp.h>
 #include <linux/scatterlist.h>
+
+#include "verity/dm-bht.h"
 
 #define DM_MSG_PREFIX "dm bht"
 
