@@ -15,7 +15,6 @@
 #include <linux/bug.h>
 /* #define CONFIG_DM_DEBUG 1 */
 #include <linux/device-mapper.h>
-#include <linux/err.h>
 #include <linux/errno.h>
 #include <linux/gfp.h>
 #include <linux/kernel.h>
@@ -165,7 +164,7 @@ int dm_bht_create(struct dm_bht *bht, unsigned int block_count,
 	/* Setup the hash first. Its length determines much of the bht layout */
 	for (cpu = 0; cpu < nr_cpu_ids; ++cpu) {
 		bht->hash_desc[cpu].tfm = crypto_alloc_hash(alg_name, 0, 0);
-		if (IS_ERR(bht->hash_desc[cpu].tfm)) {
+		if (bht->hash_desc[cpu].tfm == NULL) {
 			DMERR("failed to allocate crypto hash '%s'", alg_name);
 			status = -ENOMEM;
 			bht->hash_desc[cpu].tfm = NULL;
