@@ -11,7 +11,6 @@
 
 #include <asm/page.h>
 #include <linux/device-mapper.h>
-#include <linux/gfp.h>
 #include <linux/scatterlist.h>
 
 #include "verity/dm-bht.h"

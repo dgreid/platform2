@@ -15,7 +15,6 @@
 /* #define CONFIG_DM_DEBUG 1 */
 #include <linux/device-mapper.h>
 #include <linux/errno.h>
-#include <linux/gfp.h>
 #include <linux/kernel.h>
 #include <linux/scatterlist.h>
 
@@ -38,6 +37,17 @@
 /* We assume we only have one CPU in userland. */
 #define nr_cpu_ids 1
 #define smp_processor_id(_x) 0
+
+static inline struct page *alloc_page(void)
+{
+	struct page *memptr;
+
+	if (posix_memalign((void **)&memptr,
+			   sizeof(struct page),
+			   sizeof(struct page)))
+	    return NULL;
+	return memptr;
+}
 
 static u8 from_hex(u8 ch)
 {
@@ -496,7 +506,7 @@ int dm_bht_populate(struct dm_bht *bht, void *ctx,
 			continue;
 
 		/* Current entry is claimed for allocation and loading */
-		pg = alloc_page(GFP_NOIO);
+		pg = alloc_page();
 		if (!pg)
 			goto nomem;
 
@@ -569,7 +579,7 @@ int dm_bht_destroy(struct dm_bht *bht)
 				continue;
 			default:
 				BUG_ON(!entry->nodes);
-				__free_page(virt_to_page(entry->nodes));
+				free(virt_to_page(entry->nodes));
 				break;
 			}
 		}
