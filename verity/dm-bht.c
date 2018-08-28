@@ -7,6 +7,7 @@
  * This file is released under the GPL.
  */
 
+#include <limits.h>
 #include <string.h>
 
 #include <asm/page.h>
