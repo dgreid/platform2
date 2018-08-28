@@ -8,7 +8,6 @@
 #ifndef VERITY_INCLUDE_LINUX_CRYPTO_H_
 #define VERITY_INCLUDE_LINUX_CRYPTO_H_
 
-#include <linux/compiler.h>
 #include <linux/string.h>
 #include <linux/kernel.h>
 

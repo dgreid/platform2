@@ -9,7 +9,6 @@
 #ifndef __LINUX_DM_BHT_H
 #define __LINUX_DM_BHT_H
 
-#include <linux/compiler.h>
 #include <linux/crypto.h>
 #include <linux/types.h>
 
