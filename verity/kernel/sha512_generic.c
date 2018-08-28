@@ -211,8 +211,8 @@ sha512_final(struct shash_desc *desc, u8 *hash)
 	int i;
 
 	/* Save number of bits */
-	bits[1] = cpu_to_be64(sctx->count[0] << 3);
-	bits[0] = cpu_to_be64(sctx->count[1] << 3 | sctx->count[0] >> 61);
+	bits[1] = __cpu_to_be64(sctx->count[0] << 3);
+	bits[0] = __cpu_to_be64(sctx->count[1] << 3 | sctx->count[0] >> 61);
 
 	/* Pad out to 112 mod 128. */
 	index = sctx->count[0] & 0x7f;
@@ -224,7 +224,7 @@ sha512_final(struct shash_desc *desc, u8 *hash)
 
 	/* Store state in digest */
 	for (i = 0; i < 8; i++)
-		dst[i] = cpu_to_be64(sctx->state[i]);
+		dst[i] = __cpu_to_be64(sctx->state[i]);
 
 	/* Zeroize sensitive information. */
 	memset(sctx, 0, sizeof(struct sha512_state));

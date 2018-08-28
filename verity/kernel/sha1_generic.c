@@ -80,7 +80,7 @@ static int sha1_final(struct shash_desc *desc, u8 *out)
 	__be64 bits;
 	static const u8 padding[64] = { 0x80, };
 
-	bits = cpu_to_be64(sctx->count << 3);
+	bits = __cpu_to_be64(sctx->count << 3);
 
 	/* Pad out to 56 mod 64 */
 	index = sctx->count & 0x3f;
@@ -92,7 +92,7 @@ static int sha1_final(struct shash_desc *desc, u8 *out)
 
 	/* Store state in digest */
 	for (i = 0; i < 5; i++)
-		dst[i] = cpu_to_be32(sctx->state[i]);
+		dst[i] = __cpu_to_be32(sctx->state[i]);
 
 	/* Wipe context */
 	memset(sctx, 0, sizeof *sctx);

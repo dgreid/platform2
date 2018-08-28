@@ -287,7 +287,7 @@ static int sha256_final(struct shash_desc *desc, u8 *out)
 	static const u8 padding[64] = { 0x80, };
 
 	/* Save number of bits */
-	bits = cpu_to_be64(sctx->count << 3);
+	bits = __cpu_to_be64(sctx->count << 3);
 
 	/* Pad out to 56 mod 64. */
 	index = sctx->count & 0x3f;
@@ -299,7 +299,7 @@ static int sha256_final(struct shash_desc *desc, u8 *out)
 
 	/* Store state in digest */
 	for (i = 0; i < 8; i++)
-		dst[i] = cpu_to_be32(sctx->state[i]);
+		dst[i] = __cpu_to_be32(sctx->state[i]);
 
 	/* Zeroize sensitive information. */
 	memset(sctx, 0, sizeof(*sctx));
