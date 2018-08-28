@@ -26,6 +26,4 @@ typedef struct {
 	volatile int counter;
 } atomic_t;
 
-#define NR_CPUS 4 /* TODO(msb) put this in the proper header file */
-
 #endif  /* VERITY_INCLUDE_LINUX_TYPES_H_ */

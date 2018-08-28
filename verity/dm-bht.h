@@ -99,7 +99,8 @@ struct dm_bht {
 	unsigned int node_count;  /* Data size (in hashes) for each entry */
 	unsigned int node_count_shift;  /* first bit set - 1 */
 	/* There is one per CPU so that verified can be simultaneous. */
-	struct hash_desc hash_desc[NR_CPUS];  /* Container for the hash alg */
+	/* We assume we only have one CPU in userland. */
+	struct hash_desc hash_desc[1];  /* Container for the hash alg */
 	unsigned int digest_size;
 	sector_t sectors;  /* Number of disk sectors used */
 

@@ -13,7 +13,6 @@
 #include <asm/page.h>
 #include <linux/bitops.h>  /* for fls() */
 #include <linux/bug.h>
-#include <linux/cpumask.h>  /* nr_cpu_ids */
 /* #define CONFIG_DM_DEBUG 1 */
 #include <linux/device-mapper.h>
 #include <linux/err.h>
@@ -35,10 +34,13 @@
 #endif
 #define PRIu64 __PRIS_PREFIX "u"
 
-
 /*-----------------------------------------------
  * Utilities
  *-----------------------------------------------*/
+
+/* We assume we only have one CPU in userland. */
+#define nr_cpu_ids 1
+#define smp_processor_id(_x) 0
 
 static u8 from_hex(u8 ch)
 {
