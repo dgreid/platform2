@@ -12,7 +12,6 @@
  */
 #include <crypto/internal/hash.h>
 #include <linux/kernel.h>
-#include <linux/mm.h>
 #include <linux/init.h>
 #include <linux/crypto.h>
 #include <linux/types.h>

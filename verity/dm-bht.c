@@ -7,6 +7,8 @@
  * This file is released under the GPL.
  */
 
+#include <string.h>
+
 #include <asm/atomic.h>
 #include <asm/page.h>
 #include <linux/bitops.h>  /* for fls() */
@@ -18,10 +20,8 @@
 #include <linux/errno.h>
 #include <linux/gfp.h>
 #include <linux/kernel.h>
-#include <linux/mm_types.h>
 #include <linux/scatterlist.h>
 #include <linux/slab.h>  /* k*alloc */
-#include <linux/string.h>  /* memset */
 
 #include "verity/dm-bht.h"
 
