@@ -11,21 +11,14 @@
 #include <stdbool.h>
 #include <sys/types.h>
 
-/* Since we're shadowing linux/types.h we should pull in asm if we can */
-#include <asm/types.h>
+#include_next <linux/types.h>
 
-typedef u_int8_t u8;
-typedef u_int16_t u16;
-typedef u_int32_t u32;
-typedef u_int64_t u64;
-typedef u16 __le16;
-typedef u32 __le32;
-typedef u64 __le64;
-typedef u16 __be16;
-typedef u32 __be32;
-typedef u64 __be64;
+typedef __u8 u8;
+typedef __u16 u16;
+typedef __u32 u32;
+typedef __u64 u64;
 /* Assume CONFIG_LBDAF */
-typedef u64 sector_t;
+typedef __u64 sector_t;
 
 /* Not a tested atomic implementation, but enough for testing and generating
  * trees in a single-threaded capacity. */
