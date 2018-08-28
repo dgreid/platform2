@@ -18,7 +18,6 @@
 #include <linux/errno.h>
 #include <linux/gfp.h>
 #include <linux/kernel.h>
-#include <linux/module.h>
 #include <linux/mm_types.h>
 #include <linux/scatterlist.h>
 #include <linux/slab.h>  /* k*alloc */
@@ -261,7 +260,6 @@ bad_hash_alg:
 			crypto_free_hash(bht->hash_desc[cpu].tfm);
 	return status;
 }
-EXPORT_SYMBOL(dm_bht_create);
 
 static int dm_bht_initialize_entries(struct dm_bht *bht)
 {
@@ -359,7 +357,6 @@ void dm_bht_read_completed(struct dm_bht_entry *entry, int status)
 	BUG_ON(atomic_read(&entry->state) != DM_BHT_ENTRY_PENDING);
 	atomic_set(&entry->state, DM_BHT_ENTRY_READY);
 }
-EXPORT_SYMBOL(dm_bht_read_completed);
 
 /* dm_bht_verify_path
  * Verifies the path. Returns 0 on ok.
@@ -443,7 +440,6 @@ int dm_bht_zeroread_callback(void *ctx, sector_t start, u8 *dst,
 	dm_bht_read_completed(entry, 0);
 	return 0;
 }
-EXPORT_SYMBOL(dm_bht_zeroread_callback);
 
 /**
  * dm_bht_is_populated - check that entries from disk needed to verify a given
@@ -467,7 +463,6 @@ bool dm_bht_is_populated(struct dm_bht *bht, unsigned int block)
 
 	return true;
 }
-EXPORT_SYMBOL(dm_bht_is_populated);
 
 /**
  * dm_bht_populate - reads entries from disk needed to verify a given block
@@ -531,7 +526,6 @@ nomem:
 	DMCRIT("failed to allocate memory for entry->nodes");
 	return -ENOMEM;
 }
-EXPORT_SYMBOL(dm_bht_populate);
 
 
 /**
@@ -552,7 +546,6 @@ int dm_bht_verify_block(struct dm_bht *bht, unsigned int block,
 
 	return  dm_bht_verify_path(bht, block, pg, offset);
 }
-EXPORT_SYMBOL(dm_bht_verify_block);
 
 /**
  * dm_bht_destroy - cleans up all memory used by @bht
@@ -596,7 +589,6 @@ int dm_bht_destroy(struct dm_bht *bht)
 			crypto_free_hash(bht->hash_desc[cpu].tfm);
 	return 0;
 }
-EXPORT_SYMBOL(dm_bht_destroy);
 
 /*-----------------------------------------------
  * Accessors
@@ -610,7 +602,6 @@ sector_t dm_bht_sectors(const struct dm_bht *bht)
 {
 	return bht->sectors;
 }
-EXPORT_SYMBOL(dm_bht_sectors);
 
 /**
  * dm_bht_set_read_cb - set read callback
@@ -621,7 +612,6 @@ void dm_bht_set_read_cb(struct dm_bht *bht, dm_bht_callback read_cb)
 {
 	bht->read_cb = read_cb;
 }
-EXPORT_SYMBOL(dm_bht_set_read_cb);
 
 /**
  * dm_bht_set_root_hexdigest - sets an unverified root digest hash from hex
@@ -644,7 +634,6 @@ int dm_bht_set_root_hexdigest(struct dm_bht *bht, const u8 *hexdigest)
 #endif
 	return 0;
 }
-EXPORT_SYMBOL(dm_bht_set_root_hexdigest);
 
 /**
  * dm_bht_root_hexdigest - returns root digest in hex
@@ -662,7 +651,6 @@ int dm_bht_root_hexdigest(struct dm_bht *bht, u8 *hexdigest, int available)
 	dm_bht_bin_to_hex(bht->root_digest, hexdigest, bht->digest_size);
 	return 0;
 }
-EXPORT_SYMBOL(dm_bht_root_hexdigest);
 
 /**
  * dm_bht_set_salt - sets the salt used, in hex

@@ -1,5 +1,4 @@
 #include <linux/kernel.h>
-#include <linux/module.h>
 #include <linux/cryptohash.h>
 
 #define F1(x, y, z)	(z ^ (x & (y ^ z)))
@@ -92,4 +91,3 @@ void md5_transform(__u32 *hash, __u32 const *in)
 	hash[2] += c;
 	hash[3] += d;
 }
-EXPORT_SYMBOL(md5_transform);

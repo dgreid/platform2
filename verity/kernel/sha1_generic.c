@@ -18,7 +18,6 @@
  */
 #include <crypto/internal/hash.h>
 #include <linux/init.h>
-#include <linux/module.h>
 #include <linux/mm.h>
 #include <linux/cryptohash.h>
 #include <linux/types.h>
@@ -131,7 +130,7 @@ static struct shash_alg alg = {
 		.cra_driver_name=	"sha1-generic",
 		.cra_flags	=	CRYPTO_ALG_TYPE_SHASH,
 		.cra_blocksize	=	SHA1_BLOCK_SIZE,
-		.cra_module	=	THIS_MODULE,
+		.cra_module	=	NULL,
 	}
 };
 
@@ -147,8 +146,3 @@ static void __exit sha1_generic_mod_fini(void)
 
 module_init(sha1_generic_mod_init);
 module_exit(sha1_generic_mod_fini);
-
-MODULE_LICENSE("GPL");
-MODULE_DESCRIPTION("SHA1 Secure Hash Algorithm");
-
-MODULE_ALIAS("sha1");

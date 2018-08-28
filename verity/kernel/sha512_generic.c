@@ -12,7 +12,6 @@
  */
 #include <crypto/internal/hash.h>
 #include <linux/kernel.h>
-#include <linux/module.h>
 #include <linux/mm.h>
 #include <linux/init.h>
 #include <linux/crypto.h>
@@ -255,7 +254,7 @@ static struct shash_alg sha512 = {
 		.cra_name	=	"sha512",
 		.cra_flags	=	CRYPTO_ALG_TYPE_SHASH,
 		.cra_blocksize	=	SHA512_BLOCK_SIZE,
-		.cra_module	=	THIS_MODULE,
+		.cra_module	=	NULL,
 	}
 };
 
@@ -269,7 +268,7 @@ static struct shash_alg sha384 = {
 		.cra_name	=	"sha384",
 		.cra_flags	=	CRYPTO_ALG_TYPE_SHASH,
 		.cra_blocksize	=	SHA384_BLOCK_SIZE,
-		.cra_module	=	THIS_MODULE,
+		.cra_module	=	NULL,
 	}
 };
 
@@ -293,9 +292,3 @@ static void __exit sha512_generic_mod_fini(void)
 
 module_init(sha512_generic_mod_init);
 module_exit(sha512_generic_mod_fini);
-
-MODULE_LICENSE("GPL");
-MODULE_DESCRIPTION("SHA-512 and SHA-384 Secure Hash Algorithms");
-
-MODULE_ALIAS("sha384");
-MODULE_ALIAS("sha512");

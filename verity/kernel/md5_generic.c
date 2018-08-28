@@ -18,7 +18,6 @@
 #include <crypto/internal/hash.h>
 #include <crypto/md5.h>
 #include <linux/init.h>
-#include <linux/module.h>
 #include <linux/string.h>
 #include <linux/types.h>
 #include <linux/cryptohash.h>
@@ -149,7 +148,7 @@ static struct shash_alg alg = {
 		.cra_name	=	"md5",
 		.cra_flags	=	CRYPTO_ALG_TYPE_SHASH,
 		.cra_blocksize	=	MD5_HMAC_BLOCK_SIZE,
-		.cra_module	=	THIS_MODULE,
+		.cra_module	=	NULL,
 	}
 };
 
@@ -165,6 +164,3 @@ static void __exit md5_mod_fini(void)
 
 module_init(md5_mod_init);
 module_exit(md5_mod_fini);
-
-MODULE_LICENSE("GPL");
-MODULE_DESCRIPTION("MD5 Message Digest Algorithm");

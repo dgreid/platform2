@@ -19,7 +19,6 @@
  */
 #include <crypto/internal/hash.h>
 #include <linux/init.h>
-#include <linux/module.h>
 #include <linux/mm.h>
 #include <linux/types.h>
 #include <crypto/sha.h>
@@ -350,7 +349,7 @@ struct shash_alg sha256 = {
 		.cra_driver_name=	"sha256-generic",
 		.cra_flags	=	CRYPTO_ALG_TYPE_SHASH,
 		.cra_blocksize	=	SHA256_BLOCK_SIZE,
-		.cra_module	=	THIS_MODULE,
+		.cra_module	=	NULL,
 	}
 };
 
@@ -365,7 +364,7 @@ struct shash_alg sha224 = {
 		.cra_driver_name=	"sha224-generic",
 		.cra_flags	=	CRYPTO_ALG_TYPE_SHASH,
 		.cra_blocksize	=	SHA224_BLOCK_SIZE,
-		.cra_module	=	THIS_MODULE,
+		.cra_module	=	NULL,
 	}
 };
 
@@ -394,9 +393,3 @@ static void __exit sha256_generic_mod_fini(void)
 
 module_init(sha256_generic_mod_init);
 module_exit(sha256_generic_mod_fini);
-
-MODULE_LICENSE("GPL");
-MODULE_DESCRIPTION("SHA-224 and SHA-256 Secure Hash Algorithm");
-
-MODULE_ALIAS("sha224");
-MODULE_ALIAS("sha256");
