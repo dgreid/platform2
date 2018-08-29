@@ -14,14 +14,15 @@
 
 namespace {
 void print_usage(const char *name) {
+  // We used to advertise more algorithms, but they've never been implemented:
+  // sha512 sha384 sha mdc2 ripemd160 md4 md2
   fprintf(stderr,
 "Usage:\n"
 "  %s <arg>=<value>...\n"
 "Options:\n"
 "  mode              One of 'create' or 'verify'\n"
 "  alg               Hash algorithm to use. One of:\n"
-"                      sha512 sha384 sha256 sha224 sha1 sha\n"
-"                      mdc2 ripemd160 md5 md4 md2\n"
+"                      sha256 sha224 sha1 md5\n"
 "  payload           Path to the image to hash\n"
 "  payload_blocks    Size of the image, in blocks (4096 bytes)\n"
 "  hashtree          Path to a hash tree to create or read from\n"
