@@ -20,7 +20,6 @@
 #define BITS_TO_LONGS(nr)       DIV_ROUND_UP(nr, BITS_PER_BYTE * sizeof(long))
 
 #include <asm-generic/bitops/fls.h>
-#include <asm-generic/bitops/non-atomic.h>
 #include <strings.h>
 #include <linux/types.h>
 
