@@ -7,7 +7,6 @@
  */
 
 #include <linux/bug.h>
-#include <linux/scatterlist.h>
 #include <linux/crypto.h>
 #include <linux/init.h>
 #include <crypto/hash.h>
@@ -66,22 +65,10 @@ int crypto_hash_init(struct hash_desc *h)
 	return alg->init(desc);
 }
 
-int crypto_hash_digest(struct hash_desc *h, struct scatterlist *sg,
-		       unsigned int sz, u8 *dst)
+int crypto_hash_update(struct hash_desc *h, const u8 *buffer, unsigned int size)
 {
 	const struct shash_alg *alg = h->tfm->alg;
 	struct shash_desc *desc = &h->tfm->desc;
-	u8 *buffer = (u8 *)(sg->buffer) + sg->offset;
-
-	return alg->digest(desc, buffer, sz, dst);
-}
-
-int crypto_hash_update(struct hash_desc *h, struct scatterlist *sg,
-		       unsigned int size)
-{
-	const struct shash_alg *alg = h->tfm->alg;
-	struct shash_desc *desc = &h->tfm->desc;
-	u8 *buffer = (u8 *)(sg->buffer) + sg->offset;
 
 	return alg->update(desc, buffer, size);
 }

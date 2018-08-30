@@ -16,7 +16,6 @@
 #include <linux/device-mapper.h>
 #include <linux/errno.h>
 #include <linux/kernel.h>
-#include <linux/scatterlist.h>
 
 #include "verity/dm-bht.h"
 
@@ -106,27 +105,22 @@ typedef int (*dm_bht_compare_cb)(struct dm_bht *, u8 *, u8 *);
 /**
  * dm_bht_compute_hash: hashes a page of data
  */
-static int dm_bht_compute_hash(struct dm_bht *bht, struct page *pg,
-			       unsigned int offset, u8 *digest)
+static int dm_bht_compute_hash(struct dm_bht *bht, struct page *pg, u8 *digest)
 {
 	struct hash_desc *hash_desc = &bht->hash_desc[smp_processor_id()];
-	struct scatterlist sg;
 
-	sg_init_table(&sg, 1);
-	sg_set_page(&sg, pg, PAGE_SIZE, offset);
 	/* Note, this is synchronous. */
 	if (crypto_hash_init(hash_desc)) {
 		DMCRIT("failed to reinitialize crypto hash (proc:%d)",
 			smp_processor_id());
 		return -EINVAL;
 	}
-	if (crypto_hash_update(hash_desc, &sg, PAGE_SIZE)) {
+	if (crypto_hash_update(hash_desc, (const u8 *)pg, PAGE_SIZE)) {
 		DMCRIT("crypto_hash_update failed");
 		return -EINVAL;
 	}
 	if (bht->have_salt) {
-		sg_set_buf(&sg, bht->salt, sizeof(bht->salt));
-		if (crypto_hash_update(hash_desc, &sg, sizeof(bht->salt))) {
+		if (crypto_hash_update(hash_desc, bht->salt, sizeof(bht->salt))) {
 			DMCRIT("crypto_hash_update failed");
 			return -EINVAL;
 		}
@@ -368,7 +362,7 @@ void dm_bht_read_completed(struct dm_bht_entry *entry, int status)
  * Verifies the path. Returns 0 on ok.
  */
 static int dm_bht_verify_path(struct dm_bht *bht, unsigned int block,
-			      struct page *pg, unsigned int offset)
+			      struct page *pg)
 {
 	int depth = bht->depth;
 	u8 digest[DM_BHT_MAX_DIGEST_SIZE];
@@ -388,7 +382,7 @@ static int dm_bht_verify_path(struct dm_bht *bht, unsigned int block,
 		BUG_ON(state < DM_BHT_ENTRY_READY);
 		node = dm_bht_get_node(bht, entry, depth, block);
 
-		if (dm_bht_compute_hash(bht, pg, offset, digest) ||
+		if (dm_bht_compute_hash(bht, pg, digest) ||
 		    memcmp(digest, node, bht->digest_size))
 			goto mismatch;
 
@@ -396,11 +390,10 @@ static int dm_bht_verify_path(struct dm_bht *bht, unsigned int block,
 		 * next pass.
 		 */
 		pg = virt_to_page(entry->nodes);
-		offset = 0;
 	} while (--depth > 0 && state != DM_BHT_ENTRY_VERIFIED);
 
 	if (depth == 0 && state != DM_BHT_ENTRY_VERIFIED) {
-		if (dm_bht_compute_hash(bht, pg, offset, digest) ||
+		if (dm_bht_compute_hash(bht, pg, digest) ||
 		    memcmp(digest, bht->root_digest, bht->digest_size))
 			goto mismatch;
 		entry->state = DM_BHT_ENTRY_VERIFIED;
@@ -549,7 +542,7 @@ int dm_bht_verify_block(struct dm_bht *bht, unsigned int block,
 {
 	BUG_ON(offset != 0);
 
-	return  dm_bht_verify_path(bht, block, pg, offset);
+	return dm_bht_verify_path(bht, block, pg);
 }
 
 /**

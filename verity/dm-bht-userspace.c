@@ -11,7 +11,6 @@
 
 #include <asm/page.h>
 #include <linux/device-mapper.h>
-#include <linux/scatterlist.h>
 
 #include "verity/dm-bht.h"
 
@@ -20,26 +19,21 @@
 /**
  * dm_bht_compute_hash: hashes a page of data
  */
-static int dm_bht_compute_hash(struct dm_bht *bht, struct page *pg,
-			       unsigned int offset, u8 *digest)
+static int dm_bht_compute_hash(struct dm_bht *bht, struct page *pg, u8 *digest)
 {
 	struct hash_desc *hash_desc = &bht->hash_desc[0];
-	struct scatterlist sg;
 
-	sg_init_table(&sg, 1);
-	sg_set_page(&sg, pg, PAGE_SIZE, offset);
 	/* Note, this is synchronous. */
 	if (crypto_hash_init(hash_desc)) {
 	  DMCRIT("failed to reinitialize crypto hash");
 		return -EINVAL;
 	}
-	if (crypto_hash_update(hash_desc, &sg, PAGE_SIZE)) {
+	if (crypto_hash_update(hash_desc, (const u8 *)pg, PAGE_SIZE)) {
 		DMCRIT("crypto_hash_update failed");
 		return -EINVAL;
 	}
 	if (bht->have_salt) {
-		sg_set_buf(&sg, bht->salt, sizeof(bht->salt));
-		if (crypto_hash_update(hash_desc, &sg, sizeof(bht->salt))) {
+		if (crypto_hash_update(hash_desc, bht->salt, sizeof(bht->salt))) {
 			DMCRIT("crypto_hash_update failed");
 			return -EINVAL;
 		}
@@ -103,7 +97,7 @@ int dm_bht_compute(struct dm_bht *bht)
 				struct page *pg = virt_to_page(child->nodes);
 				u8 *digest = dm_bht_node(bht, entry, j);
 
-				r = dm_bht_compute_hash(bht, pg, 0, digest);
+				r = dm_bht_compute_hash(bht, pg, digest);
 				if (r) {
 					DMERR("Failed to update (d=%d,i=%u)",
 					      depth, i);
@@ -114,7 +108,7 @@ int dm_bht_compute(struct dm_bht *bht)
 	}
 	r = dm_bht_compute_hash(bht,
 				virt_to_page(bht->levels[0].entries->nodes),
-				0, bht->root_digest);
+				bht->root_digest);
 	if (r)
 		DMERR("Failed to update root hash");
 
@@ -143,5 +137,5 @@ int dm_bht_store_block(struct dm_bht *bht, unsigned int block,
 	struct dm_bht_entry *entry = dm_bht_get_entry(bht, depth - 1, block);
 	u8 *node = dm_bht_get_node(bht, entry, depth, block);
 
-	return dm_bht_compute_hash(bht, virt_to_page(block_data), 0, node);
+	return dm_bht_compute_hash(bht, virt_to_page(block_data), node);
 }

@@ -34,15 +34,11 @@ struct hash_desc {
 	struct hash_tfm *tfm;
 };
 
-struct scatterlist;
-
 struct hash_tfm *crypto_alloc_hash(const char *alg_name, int a, int b);
 void crypto_free_hash(struct hash_tfm *tfm);
 unsigned int crypto_hash_digestsize(struct hash_tfm *tfm);
 int crypto_hash_init(struct hash_desc *h);
-int crypto_hash_digest(struct hash_desc *h, struct scatterlist *sg,
-		       unsigned int sz, u8 *dst);
-int crypto_hash_update(struct hash_desc *h, struct scatterlist *sg,
+int crypto_hash_update(struct hash_desc *h, const u8 *buffer,
 		       unsigned int size);
 int crypto_hash_final(struct hash_desc *h, u8 *dst);
 
