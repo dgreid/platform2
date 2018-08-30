@@ -7,7 +7,6 @@
 
 #include <linux/kernel.h>
 #include <linux/bitops.h>
-#include <asm/unaligned.h>
 
 /*
  * If you have 32 registers or more, the compiler can (and should)
@@ -41,6 +40,16 @@
 
 /* This "rolls" over the 512-bit array */
 #define W(x) (array[(x)&15])
+
+static inline u32 __get_unaligned_be32(const u8 *p)
+{
+	return p[0] << 24 | p[1] << 16 | p[2] << 8 | p[3];
+}
+
+static inline u32 get_unaligned_be32(const void *p)
+{
+	return __get_unaligned_be32((const u8 *)p);
+}
 
 /*
  * Where do we get the source from? The first 16 iterations get it from
