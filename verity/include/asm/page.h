@@ -8,17 +8,7 @@
 #ifndef VERITY_INCLUDE_ASM_PAGE_H_
 #define VERITY_INCLUDE_ASM_PAGE_H_
 
-#include <linux/types.h>
-
 #define PAGE_SIZE 4096
 #define PAGE_SHIFT 12
-
-/* A, uh, simple page dummy. */
-struct page {
-  u8 data[PAGE_SIZE];
-};
-
-#define page_address(p) ((p)->data)
-#define virt_to_page(x) ((struct page *)(x))
 
 #endif  /* VERITY_INCLUDE_ASM_PAGE_H_ */

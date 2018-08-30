@@ -19,7 +19,7 @@
 /**
  * dm_bht_compute_hash: hashes a page of data
  */
-static int dm_bht_compute_hash(struct dm_bht *bht, struct page *pg, u8 *digest)
+static int dm_bht_compute_hash(struct dm_bht *bht, const u8 *buffer, u8 *digest)
 {
 	struct hash_desc *hash_desc = &bht->hash_desc[0];
 
@@ -28,7 +28,7 @@ static int dm_bht_compute_hash(struct dm_bht *bht, struct page *pg, u8 *digest)
 	  DMCRIT("failed to reinitialize crypto hash");
 		return -EINVAL;
 	}
-	if (crypto_hash_update(hash_desc, (const u8 *)pg, PAGE_SIZE)) {
+	if (crypto_hash_update(hash_desc, buffer, PAGE_SIZE)) {
 		DMCRIT("crypto_hash_update failed");
 		return -EINVAL;
 	}
@@ -94,10 +94,9 @@ int dm_bht_compute(struct dm_bht *bht)
 			if (count == 0)
 				count = bht->node_count;
 			for (j = 0; j < count; j++, child++) {
-				struct page *pg = virt_to_page(child->nodes);
 				u8 *digest = dm_bht_node(bht, entry, j);
 
-				r = dm_bht_compute_hash(bht, pg, digest);
+				r = dm_bht_compute_hash(bht, child->nodes, digest);
 				if (r) {
 					DMERR("Failed to update (d=%d,i=%u)",
 					      depth, i);
@@ -107,7 +106,7 @@ int dm_bht_compute(struct dm_bht *bht)
 		}
 	}
 	r = dm_bht_compute_hash(bht,
-				virt_to_page(bht->levels[0].entries->nodes),
+				bht->levels[0].entries->nodes,
 				bht->root_digest);
 	if (r)
 		DMERR("Failed to update root hash");
@@ -137,5 +136,5 @@ int dm_bht_store_block(struct dm_bht *bht, unsigned int block,
 	struct dm_bht_entry *entry = dm_bht_get_entry(bht, depth - 1, block);
 	u8 *node = dm_bht_get_node(bht, entry, depth, block);
 
-	return dm_bht_compute_hash(bht, virt_to_page(block_data), node);
+	return dm_bht_compute_hash(bht, block_data, node);
 }

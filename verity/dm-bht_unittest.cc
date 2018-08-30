@@ -180,8 +180,7 @@ TEST_F(MemoryBhtTest, CreateThenVerifyOk) {
 
   for (unsigned int blocks = 0; blocks < total_blocks; ++blocks) {
     DLOG(INFO) << "verifying block: " << blocks;
-    EXPECT_EQ(0, dm_bht_verify_block(bht_, blocks,
-                                     virt_to_page(zero_page), 0));
+    EXPECT_EQ(0, dm_bht_verify_block(bht_, blocks, zero_page, 0));
   }
 
   EXPECT_EQ(0, dm_bht_destroy(bht_));
@@ -204,8 +203,7 @@ TEST_F(MemoryBhtTest, CreateThenVerifySingleLevel) {
 
   for (unsigned int blocks = 0; blocks < total_blocks; ++blocks) {
     DLOG(INFO) << "verifying block: " << blocks;
-    EXPECT_EQ(0, dm_bht_verify_block(bht_, blocks,
-                                     virt_to_page(zero_page), 0));
+    EXPECT_EQ(0, dm_bht_verify_block(bht_, blocks, zero_page, 0));
   }
 
   EXPECT_EQ(0, dm_bht_destroy(bht_));
@@ -228,8 +226,7 @@ TEST_F(MemoryBhtTest, CreateThenVerifyRealParameters) {
 
   for (unsigned int blocks = 0; blocks < total_blocks; ++blocks) {
     DLOG(INFO) << "verifying block: " << blocks;
-    EXPECT_EQ(0, dm_bht_verify_block(bht_, blocks,
-                                     virt_to_page(zero_page), 0));
+    EXPECT_EQ(0, dm_bht_verify_block(bht_, blocks, zero_page, 0));
   }
 
   EXPECT_EQ(0, dm_bht_destroy(bht_));
@@ -252,8 +249,7 @@ TEST_F(MemoryBhtTest, CreateThenVerifyOddLeafCount) {
 
   for (unsigned int blocks = 0; blocks < total_blocks; ++blocks) {
     DLOG(INFO) << "verifying block: " << blocks;
-    EXPECT_EQ(0, dm_bht_verify_block(bht_, blocks,
-                                     virt_to_page(zero_page), 0));
+    EXPECT_EQ(0, dm_bht_verify_block(bht_, blocks, zero_page, 0));
   }
 
   EXPECT_EQ(0, dm_bht_destroy(bht_));
@@ -276,8 +272,7 @@ TEST_F(MemoryBhtTest, CreateThenVerifyOddNodeCount) {
 
   for (unsigned int blocks = 0; blocks < total_blocks; ++blocks) {
     DLOG(INFO) << "verifying block: " << blocks;
-    EXPECT_EQ(0, dm_bht_verify_block(bht_, blocks,
-                                     virt_to_page(zero_page), 0));
+    EXPECT_EQ(0, dm_bht_verify_block(bht_, blocks, zero_page, 0));
   }
 
   EXPECT_EQ(0, dm_bht_destroy(bht_));
@@ -308,25 +303,18 @@ TEST_F(MemoryBhtTest, CreateThenVerifyBadHashBlock) {
   EXPECT_EQ(dm_bht_store_block(bht_, kBadBlock, bad_hash_block), 0);
 
   // Attempt to verify both the bad block and all the neighbors.
-  EXPECT_LT(dm_bht_verify_block(bht_, kBadBlock + 1,
-                                virt_to_page(zero_page), 0), 0);
-
-  EXPECT_LT(dm_bht_verify_block(bht_, kBadBlock + 2,
-                                virt_to_page(zero_page), 0), 0);
-
+  EXPECT_LT(dm_bht_verify_block(bht_, kBadBlock + 1, zero_page, 0), 0);
+  EXPECT_LT(dm_bht_verify_block(bht_, kBadBlock + 2, zero_page, 0), 0);
   EXPECT_LT(dm_bht_verify_block(bht_, kBadBlock + (bht_->node_count / 2),
-                                virt_to_page(zero_page), 0), 0);
-
-  EXPECT_LT(dm_bht_verify_block(bht_, kBadBlock,
-                                virt_to_page(zero_page), 0), 0);
+                                zero_page, 0), 0);
+  EXPECT_LT(dm_bht_verify_block(bht_, kBadBlock, zero_page, 0), 0);
 
   // Verify that the prior entry is untouched and still safe
-  EXPECT_EQ(dm_bht_verify_block(bht_, kBadBlock - 1,
-                                virt_to_page(zero_page), 0), 0);
+  EXPECT_EQ(dm_bht_verify_block(bht_, kBadBlock - 1, zero_page, 0), 0);
 
   // Same for the next entry
   EXPECT_EQ(dm_bht_verify_block(bht_, kBadBlock + bht_->node_count,
-                                virt_to_page(zero_page), 0), 0);
+                                zero_page, 0), 0);
 
   EXPECT_EQ(0, dm_bht_destroy(bht_));
   free(bad_hash_block);
@@ -346,13 +334,12 @@ TEST_F(MemoryBhtTest, CreateThenVerifyBadDataBlock) {
 
   memset(bad_page, 'A', PAGE_SIZE);
 
-
-  EXPECT_LT(dm_bht_verify_block(bht_, 0, virt_to_page(bad_page), 0), 0);
-  EXPECT_LT(dm_bht_verify_block(bht_, 127, virt_to_page(bad_page), 0), 0);
-  EXPECT_LT(dm_bht_verify_block(bht_, 128, virt_to_page(bad_page), 0), 0);
-  EXPECT_LT(dm_bht_verify_block(bht_, 255, virt_to_page(bad_page), 0), 0);
-  EXPECT_LT(dm_bht_verify_block(bht_, 256, virt_to_page(bad_page), 0), 0);
-  EXPECT_LT(dm_bht_verify_block(bht_, 383, virt_to_page(bad_page), 0), 0);
+  EXPECT_LT(dm_bht_verify_block(bht_, 0, bad_page, 0), 0);
+  EXPECT_LT(dm_bht_verify_block(bht_, 127, bad_page, 0), 0);
+  EXPECT_LT(dm_bht_verify_block(bht_, 128, bad_page, 0), 0);
+  EXPECT_LT(dm_bht_verify_block(bht_, 255, bad_page, 0), 0);
+  EXPECT_LT(dm_bht_verify_block(bht_, 256, bad_page, 0), 0);
+  EXPECT_LT(dm_bht_verify_block(bht_, 383, bad_page, 0), 0);
 
   EXPECT_EQ(0, dm_bht_destroy(bht_));
   free(bad_page);
@@ -376,8 +363,7 @@ TEST_F(MemoryBhtTest, CreateThenVerifyOkSalt) {
 
   for (unsigned int blocks = 0; blocks < total_blocks; ++blocks) {
     DLOG(INFO) << "verifying block: " << blocks;
-    EXPECT_EQ(0, dm_bht_verify_block(bht_, blocks,
-                                     virt_to_page(zero_page), 0));
+    EXPECT_EQ(0, dm_bht_verify_block(bht_, blocks, zero_page, 0));
   }
 
   EXPECT_EQ(0, dm_bht_destroy(bht_));
@@ -402,8 +388,7 @@ TEST_F(MemoryBhtTest, CreateThenVerifyOkLongSalt) {
 
   for (unsigned int blocks = 0; blocks < total_blocks; ++blocks) {
     DLOG(INFO) << "verifying block: " << blocks;
-    EXPECT_EQ(0, dm_bht_verify_block(bht_, blocks,
-                                     virt_to_page(zero_page), 0));
+    EXPECT_EQ(0, dm_bht_verify_block(bht_, blocks, zero_page, 0));
   }
 
   EXPECT_EQ(0, dm_bht_destroy(bht_));

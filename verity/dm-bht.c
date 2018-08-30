@@ -37,13 +37,11 @@
 #define nr_cpu_ids 1
 #define smp_processor_id(_x) 0
 
-static inline struct page *alloc_page(void)
+static inline void *alloc_page(void)
 {
-	struct page *memptr;
+	void *memptr;
 
-	if (posix_memalign((void **)&memptr,
-			   sizeof(struct page),
-			   sizeof(struct page)))
+	if (posix_memalign((void **)&memptr, PAGE_SIZE, PAGE_SIZE))
 	    return NULL;
 	return memptr;
 }
@@ -105,7 +103,7 @@ typedef int (*dm_bht_compare_cb)(struct dm_bht *, u8 *, u8 *);
 /**
  * dm_bht_compute_hash: hashes a page of data
  */
-static int dm_bht_compute_hash(struct dm_bht *bht, struct page *pg, u8 *digest)
+static int dm_bht_compute_hash(struct dm_bht *bht, const u8 *buffer, u8 *digest)
 {
 	struct hash_desc *hash_desc = &bht->hash_desc[smp_processor_id()];
 
@@ -115,7 +113,7 @@ static int dm_bht_compute_hash(struct dm_bht *bht, struct page *pg, u8 *digest)
 			smp_processor_id());
 		return -EINVAL;
 	}
-	if (crypto_hash_update(hash_desc, (const u8 *)pg, PAGE_SIZE)) {
+	if (crypto_hash_update(hash_desc, buffer, PAGE_SIZE)) {
 		DMCRIT("crypto_hash_update failed");
 		return -EINVAL;
 	}
@@ -362,7 +360,7 @@ void dm_bht_read_completed(struct dm_bht_entry *entry, int status)
  * Verifies the path. Returns 0 on ok.
  */
 static int dm_bht_verify_path(struct dm_bht *bht, unsigned int block,
-			      struct page *pg)
+			      const u8 *buffer)
 {
 	int depth = bht->depth;
 	u8 digest[DM_BHT_MAX_DIGEST_SIZE];
@@ -382,18 +380,18 @@ static int dm_bht_verify_path(struct dm_bht *bht, unsigned int block,
 		BUG_ON(state < DM_BHT_ENTRY_READY);
 		node = dm_bht_get_node(bht, entry, depth, block);
 
-		if (dm_bht_compute_hash(bht, pg, digest) ||
+		if (dm_bht_compute_hash(bht, buffer, digest) ||
 		    memcmp(digest, node, bht->digest_size))
 			goto mismatch;
 
 		/* Keep the containing block of hashes to be verified in the
 		 * next pass.
 		 */
-		pg = virt_to_page(entry->nodes);
+		buffer = entry->nodes;
 	} while (--depth > 0 && state != DM_BHT_ENTRY_VERIFIED);
 
 	if (depth == 0 && state != DM_BHT_ENTRY_VERIFIED) {
-		if (dm_bht_compute_hash(bht, pg, digest) ||
+		if (dm_bht_compute_hash(bht, buffer, digest) ||
 		    memcmp(digest, bht->root_digest, bht->digest_size))
 			goto mismatch;
 		entry->state = DM_BHT_ENTRY_VERIFIED;
@@ -484,7 +482,7 @@ int dm_bht_populate(struct dm_bht *bht, void *ctx,
 		struct dm_bht_level *level;
 		struct dm_bht_entry *entry;
 		unsigned int index;
-		struct page *pg;
+		u8 *buffer;
 
 		entry = dm_bht_get_entry(bht, depth, block);
 		state = entry->state;
@@ -499,12 +497,12 @@ int dm_bht_populate(struct dm_bht *bht, void *ctx,
 			continue;
 
 		/* Current entry is claimed for allocation and loading */
-		pg = alloc_page();
-		if (!pg)
+		buffer = (u8 *)alloc_page();
+		if (!buffer)
 			goto nomem;
 
 		/* dm-bht guarantees page-aligned memory for callbacks. */
-		entry->nodes = page_address(pg);
+		entry->nodes = buffer;
 
 		/* TODO(wad) error check callback here too */
 
@@ -530,7 +528,7 @@ nomem:
  * dm_bht_verify_block - checks that all nodes in the path for @block are valid
  * @bht:	pointer to a dm_bht_create()d bht
  * @block:	specific block data is expected from
- * @pg:		page holding the block data
+ * @buffer:	page holding the block data
  * @offset:	offset into the page
  *
  * Returns 0 on success, 1 on missing data, and a negative error
@@ -538,11 +536,11 @@ nomem:
  * should return similarly.
  */
 int dm_bht_verify_block(struct dm_bht *bht, unsigned int block,
-			struct page *pg, unsigned int offset)
+			const u8 *buffer, unsigned int offset)
 {
 	BUG_ON(offset != 0);
 
-	return dm_bht_verify_path(bht, block, pg);
+	return dm_bht_verify_path(bht, block, buffer);
 }
 
 /**
@@ -572,7 +570,7 @@ int dm_bht_destroy(struct dm_bht *bht)
 				continue;
 			default:
 				BUG_ON(!entry->nodes);
-				free(virt_to_page(entry->nodes));
+				free(entry->nodes);
 				break;
 			}
 		}

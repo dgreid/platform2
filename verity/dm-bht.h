@@ -35,9 +35,6 @@ extern "C" {
 /* Additional possible return codes */
 #define DM_BHT_ENTRY_ERROR_MISMATCH -3 /* Digest mismatch */
 
-/* Forward declaration */
-struct page;
-
 /* dm_bht_entry
  * Contains dm_bht->node_count tree nodes at a given tree depth.
  * state is used to transactionally assure that data is paged in
@@ -134,7 +131,7 @@ bool dm_bht_is_populated(struct dm_bht *bht, unsigned int block);
 int dm_bht_populate(struct dm_bht *bht, void *read_cb_ctx,
 		    unsigned int block);
 int dm_bht_verify_block(struct dm_bht *bht, unsigned int block,
-			struct page *pg, unsigned int offset);
+			const u8 *buffer, unsigned int offset);
 int dm_bht_zeroread_callback(void *ctx, sector_t start, u8 *dst, sector_t count,
 			     struct dm_bht_entry *entry);
 void dm_bht_read_completed(struct dm_bht_entry *entry, int status);
