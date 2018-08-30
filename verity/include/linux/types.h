@@ -20,10 +20,4 @@ typedef __u64 u64;
 /* Assume CONFIG_LBDAF */
 typedef __u64 sector_t;
 
-/* Not a tested atomic implementation, but enough for testing and generating
- * trees in a single-threaded capacity. */
-typedef struct {
-	volatile int counter;
-} atomic_t;
-
 #endif  /* VERITY_INCLUDE_LINUX_TYPES_H_ */

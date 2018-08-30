@@ -9,7 +9,6 @@
 #include <errno.h>
 #include <string.h>
 
-#include <asm/atomic.h>
 #include <asm/page.h>
 #include <linux/device-mapper.h>
 #include <linux/gfp.h>
@@ -95,7 +94,7 @@ int dm_bht_compute(struct dm_bht *bht)
 			unsigned int count = bht->node_count;
 
 			memset(entry->nodes, 0, PAGE_SIZE);
-			atomic_set(&entry->state, DM_BHT_ENTRY_READY);
+			entry->state = DM_BHT_ENTRY_READY;
 
 			if (i == (level->count - 1))
 				count = child_level->count % bht->node_count;

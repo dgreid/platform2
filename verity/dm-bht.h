@@ -45,7 +45,7 @@ struct page;
  * level, we need to load in the data for on-demand verification.
  */
 struct dm_bht_entry {
-	atomic_t state; /* see defines */
+	volatile int state; /* see defines */
 	/* Keeping an extra pointer per entry wastes up to ~33k of
 	 * memory if a 1m blocks are used (or 66 on 64-bit arch)
 	 */

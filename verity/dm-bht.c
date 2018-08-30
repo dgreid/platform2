@@ -9,7 +9,6 @@
 
 #include <string.h>
 
-#include <asm/atomic.h>
 #include <asm/page.h>
 #include <linux/bitops.h>  /* for fls() */
 #include <linux/bug.h>
@@ -347,12 +346,12 @@ void dm_bht_read_completed(struct dm_bht_entry *entry, int status)
 	if (status) {
 		/* TODO(wad) add retry support */
 		DMCRIT("an I/O error occurred while reading entry");
-		atomic_set(&entry->state, DM_BHT_ENTRY_ERROR_IO);
+		entry->state = DM_BHT_ENTRY_ERROR_IO;
 		/* entry->nodes will be freed later */
 		return;
 	}
-	BUG_ON(atomic_read(&entry->state) != DM_BHT_ENTRY_PENDING);
-	atomic_set(&entry->state, DM_BHT_ENTRY_READY);
+	BUG_ON(entry->state != DM_BHT_ENTRY_PENDING);
+	entry->state = DM_BHT_ENTRY_READY;
 }
 
 /* dm_bht_verify_path
@@ -372,7 +371,7 @@ static int dm_bht_verify_path(struct dm_bht *bht, unsigned int block,
 		 * in its parent.
 		 */
 		entry = dm_bht_get_entry(bht, depth - 1, block);
-		state = atomic_read(&entry->state);
+		state = entry->state;
 		/* This call is only safe if all nodes along the path
 		 * are already populated (i.e. READY) via dm_bht_populate.
 		 */
@@ -394,16 +393,15 @@ static int dm_bht_verify_path(struct dm_bht *bht, unsigned int block,
 		if (dm_bht_compute_hash(bht, pg, offset, digest) ||
 		    memcmp(digest, bht->root_digest, bht->digest_size))
 			goto mismatch;
-		atomic_set(&entry->state, DM_BHT_ENTRY_VERIFIED);
+		entry->state = DM_BHT_ENTRY_VERIFIED;
 	}
 
 	/* Mark path to leaf as verified. */
 	for (depth++; depth < bht->depth; depth++) {
 		entry = dm_bht_get_entry(bht, depth, block);
 		/* At this point, entry can only be in VERIFIED or READY state.
-		 * So it is safe to use atomic_set instead of atomic_cmpxchg.
 		 */
-		atomic_set(&entry->state, DM_BHT_ENTRY_VERIFIED);
+		entry->state = DM_BHT_ENTRY_VERIFIED;
 	}
 
 	DMDEBUG("verify_path: node %u is verified to root", block);
@@ -454,7 +452,7 @@ bool dm_bht_is_populated(struct dm_bht *bht, unsigned int block)
 	for (depth = bht->depth - 1; depth >= 0; depth--) {
 		struct dm_bht_entry *entry = dm_bht_get_entry(bht, depth,
 							      block);
-		if (atomic_read(&entry->state) < DM_BHT_ENTRY_READY)
+		if (entry->state < DM_BHT_ENTRY_READY)
 			return false;
 	}
 
@@ -486,9 +484,9 @@ int dm_bht_populate(struct dm_bht *bht, void *ctx,
 		struct page *pg;
 
 		entry = dm_bht_get_entry(bht, depth, block);
-		state = atomic_cmpxchg(&entry->state,
-				       DM_BHT_ENTRY_UNALLOCATED,
-				       DM_BHT_ENTRY_PENDING);
+		state = entry->state;
+		if (state == DM_BHT_ENTRY_UNALLOCATED)
+			entry->state = DM_BHT_ENTRY_PENDING;
 
 		if (state == DM_BHT_ENTRY_VERIFIED)
 			break;
@@ -560,10 +558,8 @@ int dm_bht_destroy(struct dm_bht *bht)
 		struct dm_bht_entry *entry = bht->levels[depth].entries;
 		struct dm_bht_entry *entry_end = entry +
 						 bht->levels[depth].count;
-		int state = 0;
 		for (; entry < entry_end; ++entry) {
-			state = atomic_read(&entry->state);
-			switch (state) {
+			switch (entry->state) {
 			/* At present, no other states free memory,
 			 * but that will change.
 			 */
