@@ -9,6 +9,10 @@
 #ifndef __LINUX_DM_BHT_H
 #define __LINUX_DM_BHT_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <linux/crypto.h>
 #include <linux/types.h>
 
@@ -185,4 +189,9 @@ static inline u8 *dm_bht_get_node(struct dm_bht *bht,
 
 	return dm_bht_node(bht, entry, index % bht->node_count);
 }
+
+#ifdef __cplusplus
+}
+#endif
+
 #endif  /* __LINUX_DM_BHT_H */

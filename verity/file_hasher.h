@@ -7,10 +7,8 @@
 #ifndef VERITY_FILE_HASHER_H__
 #define VERITY_FILE_HASHER_H__ 1
 
-extern "C" {
 #include "verity/dm-bht.h"
 #include "verity/dm-bht-userspace.h"
-}
 #include "verity/simple_file/file.h"
 #include "verity/include/asm/page.h"
 
