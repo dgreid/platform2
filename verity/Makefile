@@ -11,16 +11,6 @@ include common.mk
 CFLAGS += -I$(SRC)/include -I$(SRC)/..
 CXXFLAGS += -I$(SRC)/include -I$(SRC)/..
 
-# Current toolchain doesn't support -pie statically linked binaries
-CXX_STATIC_BINARY(verity-static): \
-  $(filter-out %_testrunner.o %_unittest.o,$(CXX_OBJECTS)) \
-  $(C_OBJECTS) \
-  CXX_STATIC_LIBRARY(kernel/libkernel.pic.a) \
-  CXX_STATIC_LIBRARY(simple_file/libsimple_file.pic.a)
-
-all: CXX_STATIC_BINARY(verity-static)
-clean: CLEAN(verity-static)
-
 CXX_BINARY(verity): $(filter-out %_testrunner.o %_unittest.o,$(CXX_OBJECTS)) \
                     $(C_OBJECTS) \
                     CXX_STATIC_LIBRARY(kernel/libkernel.pie.a) \
