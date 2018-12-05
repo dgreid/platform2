@@ -977,6 +977,8 @@ std::unique_ptr<dbus::Response> Service::UnsharePath(
   base::FilePath server_root =
       iter->second.root_dir().GetPath().Append(&kServerRoot[1]);
   base::FilePath dst = server_root.Append(path);
+  base::FilePath my_files = server_root.Append("MyFiles");
+  base::FilePath my_files_downloads = my_files.Append("Downloads");
   // Ensure path exists.
   if (!base::PathExists(dst)) {
     LOG(ERROR) << "Unshare path does not exist";
@@ -1065,6 +1067,24 @@ std::unique_ptr<dbus::Response> Service::UnsharePath(
   for (auto iter = mount_points.rbegin(), end = mount_points.rend();
        iter != end; ++iter) {
     if (umount(iter->value().c_str()) != 0) {
+      // When MyFiles is shared, its MyFiles/Downloads mount propagates. It
+      // seems that the kernel does not allow us to unmount MyFiles/Downloads
+      // with EINVAL, and then also fails to unmount MyFiles with EBUSY even
+      // when no files are open.
+      if (errno == EINVAL && dst == my_files &&
+          iter->value() == my_files_downloads.value()) {
+        // Ignore EINVAL when unsharing MyFiles and MyFiles/Downloads fails.
+        PLOG(WARNING)
+            << "Unmount MyFiles/Downloads failed with EINVAL, ignoring";
+        continue;
+      } else if (errno == EBUSY && iter->value() == my_files.value()) {
+        // If/when unmount MyFiles fails with EBUSY, we retry with MNT_DETACH.
+        PLOG(WARNING)
+            << "Unmount MyFiles failed with EBUSY, attempting MNT_DETACH";
+        if (umount2(iter->value().c_str(), MNT_DETACH) == 0) {
+          continue;
+        }
+      }
       PLOG(ERROR) << "Failed to unmount";
       response.set_failure_reason("Failed to unmount");
       writer.AppendProtoAsArrayOfBytes(response);
