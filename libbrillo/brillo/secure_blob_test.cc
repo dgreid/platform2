@@ -234,16 +234,18 @@ class TestSecureAllocator : public SecureAllocator<T> {
  public:
   using typename SecureAllocator<T>::pointer;
   using typename SecureAllocator<T>::size_type;
+  using typename SecureAllocator<T>::value_type;
 
   int GetErasedCount() { return erased_count; }
 
  protected:
   void clear_contents(pointer p, size_type n) override {
     SecureAllocator<T>::clear_contents(p, n);
+    unsigned char *v = reinterpret_cast<unsigned char*>(p);
     for (int i = 0; i < n; i++) {
-      EXPECT_EQ(p[i], 0);
+      EXPECT_EQ(v[i], 0);
+      erased_count++;
     }
-    erased_count++;
   }
 
  private:
@@ -259,7 +261,54 @@ TEST(SecureAllocator, ErasureOnDeallocation) {
 
   // Deallocate memory; the mock class should check for cleared data.
   e.deallocate(test_string_addr, 15);
-  EXPECT_EQ(e.GetErasedCount(), 1);
+  // The deallocation should have traversed the complete page.
+  EXPECT_EQ(e.GetErasedCount(), 4096);
 }
+
+TEST(SecureAllocator, MultiPageCorrectness) {
+  // Make sure that the contents are cleared on deallocation.
+  TestSecureAllocator<uint64_t> e;
+
+  // Allocate 4100*8 bytes.
+  uint64_t *test_array = e.allocate(4100);
+
+  // Check if the space was correctly allocated for long long.
+  for (int i = 0; i < 4100; i++)
+      test_array[i] = 0xF0F0F0F0F0F0F0F0;
+
+  // Deallocate memory; the mock class should check for cleared data.
+  e.deallocate(test_array, 4100);
+  // 36864 bytes is the next highest size that is a multiple of the page size.
+  EXPECT_EQ(e.GetErasedCount(), 36864);
+}
+
+// DeathTests fork a new process and check how it proceeds. Take advantage
+// of this and check if the value of SecureString is passed on to
+// forked children.
+#if GTEST_IS_THREADSAFE
+// Check if the contents of the container are zeroed out.
+void CheckPropagationOnFork(const brillo::SecureBlob& forked_blob,
+                            const Blob& reference) {
+  LOG(INFO) << forked_blob.to_string();
+  for (int i = 0; i < forked_blob.size(); i++) {
+    CHECK_NE(reference[i], forked_blob[i]);
+    CHECK_EQ(forked_blob[i], 0);
+  }
+  exit(0);
+}
+
+TEST(SecureAllocatorDeathTest, ErasureOnFork) {
+  Blob reference = BlobFromString("Test String");
+  SecureBlob erasable_blob(reference.begin(), reference.end());
+
+  EXPECT_EXIT(CheckPropagationOnFork(erasable_blob, reference),
+              ::testing::ExitedWithCode(0), "");
+
+  // In the original process, check the SecureBlob to see if it has not
+  // changed.
+  for (int i = 0; i < erasable_blob.size(); i++)
+    EXPECT_EQ(erasable_blob[i], reference[i]);
+}
+#endif  // GTEST_IS_THREADSAFE
 
 }  // namespace brillo

@@ -16,6 +16,9 @@
 namespace brillo {
 
 using Blob = std::vector<uint8_t>;
+
+// Define types based on the SecureAllocator for instantiation.
+// ------------------------------------------------------------
 // Define SecureVector as a vector using a SecureAllocator.
 // Over time, the goal is to remove the differentiating functions
 // from SecureBlob (to_string(), char_data()) till it converges with
