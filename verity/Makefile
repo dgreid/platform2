@@ -47,7 +47,7 @@ CXX_BINARY(verity_testrunner): $(filter-out %_main.o,$(CXX_OBJECTS)) \
                           $(filter %dm-bht-userspace.o,$(C_OBJECTS)) \
                            CXX_STATIC_LIBRARY(kernel/libkernel.pie.a) \
                            CXX_STATIC_LIBRARY(simple_file/libsimple_file.pie.a)
-UNITTEST_LIBS := $(shell gmock-config --libs) $(shell gtest-config --libs)
+UNITTEST_LIBS := -lgmock -lgtest -pthread -lpthread
 CXX_BINARY(verity_testrunner): LDLIBS += $(UNITTEST_LIBS)
 
 clean: CLEAN(verity_testrunner)
