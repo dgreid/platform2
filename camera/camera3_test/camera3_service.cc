@@ -208,10 +208,6 @@ const camera_metadata_t* Camera3Service::ConstructDefaultRequestSettings(
 
 int Camera3Service::Camera3DeviceService::Initialize() {
   Camera3Module cam_module;
-  if (cam_module.Initialize() != 0) {
-    LOG(ERROR) << "Camera module initialization fails";
-    return -ENODEV;
-  }
   if (cam_device_.Initialize(&cam_module) != 0) {
     LOG(ERROR) << "Camera device initialization fails";
     return -ENODEV;

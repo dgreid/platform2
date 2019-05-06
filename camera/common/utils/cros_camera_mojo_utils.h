@@ -4,8 +4,8 @@
  * found in the LICENSE file.
  */
 
-#ifndef CAMERA_HAL_ADAPTER_CROS_CAMERA_MOJO_UTILS_H_
-#define CAMERA_HAL_ADAPTER_CROS_CAMERA_MOJO_UTILS_H_
+#ifndef CAMERA_COMMON_UTILS_CROS_CAMERA_MOJO_UTILS_H_
+#define CAMERA_COMMON_UTILS_CROS_CAMERA_MOJO_UTILS_H_
 
 #include <map>
 #include <memory>
@@ -20,9 +20,9 @@
 #include <base/synchronization/lock.h>
 #include <mojo/public/cpp/bindings/binding.h>
 
+#include "common/utils/common_types.h"
 #include "cros-camera/common.h"
 #include "cros-camera/future.h"
-#include "hal_adapter/common_types.h"
 #include "mojo/camera3.mojom.h"
 
 namespace cros {
@@ -229,4 +229,4 @@ class MojoBinding : public T {
 }  // namespace internal
 }  // namespace cros
 
-#endif  // CAMERA_HAL_ADAPTER_CROS_CAMERA_MOJO_UTILS_H_
+#endif  // CAMERA_COMMON_UTILS_CROS_CAMERA_MOJO_UTILS_H_

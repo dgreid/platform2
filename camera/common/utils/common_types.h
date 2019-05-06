@@ -4,8 +4,8 @@
  * found in the LICENSE file.
  */
 
-#ifndef CAMERA_HAL_ADAPTER_COMMON_TYPES_H_
-#define CAMERA_HAL_ADAPTER_COMMON_TYPES_H_
+#ifndef CAMERA_COMMON_UTILS_COMMON_TYPES_H_
+#define CAMERA_COMMON_UTILS_COMMON_TYPES_H_
 
 #include <map>
 #include <memory>
@@ -33,4 +33,4 @@ using ScopedStreams = std::map<uint64_t, std::unique_ptr<camera3_stream_t>>;
 }  // namespace internal
 }  // namespace cros
 
-#endif  // CAMERA_HAL_ADAPTER_COMMON_TYPES_H_
+#endif  // CAMERA_COMMON_UTILS_COMMON_TYPES_H_

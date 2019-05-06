@@ -8,6 +8,7 @@
 #include <dlfcn.h>
 
 #include <map>
+#include <memory>
 #include <tuple>
 #include <vector>
 
@@ -15,7 +16,8 @@
 #include <base/synchronization/lock.h>
 #include <cros-camera/camera_thread.h>
 #include <gtest/gtest.h>
-#include <hardware/camera3.h>
+
+#include "camera3_test/camera3_module_connector.h"
 
 namespace camera3_test {
 
@@ -90,15 +92,16 @@ class CameraModuleCallbacksHandler {
 };
 
 struct CameraModuleCallbacksAux : camera_module_callbacks_t {
+  static CameraModuleCallbacksAux* GetInstance();
+
+  CameraModuleCallbacksAux();
+
   CameraModuleCallbacksHandler* handler;
 };
 
 class Camera3Module {
  public:
   Camera3Module();
-
-  // Initialize
-  int Initialize();
 
   // Get number of cameras
   int GetNumberOfCameras();
@@ -140,14 +143,6 @@ class Camera3Module {
                                     const ResolutionInfo& resolution);
 
  private:
-  void GetNumberOfCamerasOnHalThread(int* result);
-
-  void GetCameraInfoOnHalThread(int cam_id, camera_info* info, int* result);
-
-  void OpenDeviceOnHalThread(int cam_id, camera3_device_t** cam_device);
-
-  void CloseDeviceOnDevThread(camera3_device_t* cam_device, int* result);
-
   void GetStreamConfigEntry(int cam_id,
                             int32_t key,
                             camera_metadata_ro_entry_t* entry);
@@ -158,22 +153,11 @@ class Camera3Module {
                                    int32_t key,
                                    int32_t index);
 
-  const camera_module_t* cam_module_;
+  std::unique_ptr<ModuleConnector> cam_module_connector_;
 
   // Id of cameras to be tested exclusively. Empty vector for test all available
   // cameras.
   std::vector<int> test_camera_ids_;
-
-  // This thread is needed because of the Chrome OS camera HAL adapter
-  // assumption that all the camera_module functions should be called on the
-  // same Chromium thread. It is expected to start this thread before gtest
-  // initialization in main() because test case instantiation needs it running
-  // to get the camera ID list.
-  cros::CameraThread* hal_thread_;
-
-  // Use a separate thread from |hal_thread_| to close camera device to
-  // simulate hal_adapter behavior.
-  cros::CameraThread dev_thread_;
 
   DISALLOW_COPY_AND_ASSIGN(Camera3Module);
 };
@@ -181,8 +165,6 @@ class Camera3Module {
 class Camera3ModuleFixture : public testing::Test {
  public:
   Camera3ModuleFixture() {}
-
-  void SetUp() override;
 
  protected:
   Camera3Module cam_module_;

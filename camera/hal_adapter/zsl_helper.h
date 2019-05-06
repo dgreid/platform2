@@ -20,9 +20,9 @@
 #include <base/synchronization/lock.h>
 #include <camera/camera_metadata.h>
 #include <system/camera_metadata.h>
+#include "common/utils/common_types.h"
 
 #include "cros-camera/camera_buffer_manager.h"
-#include "hal_adapter/common_types.h"
 #include "hal_adapter/frame_number_mapper.h"
 
 namespace cros {

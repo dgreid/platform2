@@ -24,11 +24,11 @@
 #include <mojo/public/cpp/bindings/binding.h>
 #include <system/camera_metadata.h>
 
+#include "common/utils/common_types.h"
+#include "common/utils/cros_camera_mojo_utils.h"
 #include "cros-camera/camera_buffer_manager.h"
 #include "cros-camera/camera_metrics.h"
 #include "hal_adapter/camera_metadata_inspector.h"
-#include "hal_adapter/common_types.h"
-#include "hal_adapter/cros_camera_mojo_utils.h"
 #include "hal_adapter/frame_number_mapper.h"
 #include "hal_adapter/scoped_yuv_buffer_handle.h"
 #include "hal_adapter/zsl_helper.h"

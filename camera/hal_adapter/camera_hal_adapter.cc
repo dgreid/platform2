@@ -20,6 +20,7 @@
 #include <camera/camera_metadata.h>
 #include <system/camera_metadata_hidden.h>
 
+#include "common/utils/cros_camera_mojo_utils.h"
 #include "cros-camera/camera_metrics.h"
 #include "cros-camera/common.h"
 #include "cros-camera/future.h"
@@ -27,7 +28,6 @@
 #include "hal_adapter/camera_module_callbacks_delegate.h"
 #include "hal_adapter/camera_module_delegate.h"
 #include "hal_adapter/camera_trace_event.h"
-#include "hal_adapter/cros_camera_mojo_utils.h"
 #include "hal_adapter/vendor_tag_ops_delegate.h"
 
 namespace cros {

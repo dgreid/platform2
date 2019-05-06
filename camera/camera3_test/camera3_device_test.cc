@@ -624,9 +624,6 @@ int32_t Camera3Device::StaticInfo::GetSensorPixelArraySize(
 // Test fixture
 
 void Camera3DeviceFixture::SetUp() {
-  ASSERT_EQ(0, cam_module_.Initialize())
-      << "Camera module initialization fails";
-
   ASSERT_EQ(0, cam_device_.Initialize(&cam_module_))
       << "Camera device initialization fails";
   cam_device_.RegisterResultMetadataOutputBufferCallback(

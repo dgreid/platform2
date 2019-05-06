@@ -9,7 +9,7 @@
 
 #include <vector>
 
-#include "hal_adapter/cros_camera_mojo_utils.h"
+#include "common/utils/cros_camera_mojo_utils.h"
 #include "mojo/camera3.mojom.h"
 
 namespace cros {

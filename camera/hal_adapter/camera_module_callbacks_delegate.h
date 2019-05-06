@@ -7,8 +7,8 @@
 #ifndef CAMERA_HAL_ADAPTER_CAMERA_MODULE_CALLBACKS_DELEGATE_H_
 #define CAMERA_HAL_ADAPTER_CAMERA_MODULE_CALLBACKS_DELEGATE_H_
 
+#include "common/utils/cros_camera_mojo_utils.h"
 #include "cros-camera/future.h"
-#include "hal_adapter/cros_camera_mojo_utils.h"
 #include "mojo/camera_common.mojom.h"
 
 namespace cros {

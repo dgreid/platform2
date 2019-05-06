@@ -30,10 +30,10 @@ namespace camera3_test {
 
 static camera_module_t* g_cam_module = NULL;
 
-// TODO(shik): Objects with static storage duration are forbidden unless they
-// are trivially destructible. CameraThread is trivially not trivially
-// destructible.
-static cros::CameraThread g_module_thread("Camera3 Test Module Thread");
+static cros::CameraThread& GetModuleThread() {
+  static base::NoDestructor<cros::CameraThread> t("Camera3TestModuleThread");
+  return *t;
+}
 
 bool isHardwareLevelSupported(int32_t actual_level, int32_t required_level) {
   constexpr int32_t kSortedLevels[] = {
@@ -235,30 +235,34 @@ static std::vector<int> GetCmdLineTestCameraIds() {
   return ids;
 }
 
-static void InitCameraModuleOnThread(camera_module_t* cam_module) {
-  static CameraModuleCallbacksAux* callbacks = []() {
-    auto* aux = new CameraModuleCallbacksAux();
-    aux->camera_device_status_change =
-        &CameraModuleCallbacksHandler::camera_device_status_change;
-    aux->torch_mode_status_change =
-        &CameraModuleCallbacksHandler::torch_mode_status_change;
-    aux->handler = CameraModuleCallbacksHandler::GetInstance();
-    return aux;
-  }();
+// static
+CameraModuleCallbacksAux* CameraModuleCallbacksAux::GetInstance() {
+  static base::NoDestructor<CameraModuleCallbacksAux> aux;
+  return aux.get();
+}
 
+CameraModuleCallbacksAux::CameraModuleCallbacksAux() {
+  camera_device_status_change =
+      &CameraModuleCallbacksHandler::camera_device_status_change;
+  torch_mode_status_change =
+      &CameraModuleCallbacksHandler::torch_mode_status_change;
+  handler = CameraModuleCallbacksHandler::GetInstance();
+}
+
+static void InitCameraModuleOnThread(camera_module_t* cam_module) {
   if (cam_module->get_vendor_tag_ops) {
     static vendor_tag_ops ops = {};
     cam_module->get_vendor_tag_ops(&ops);
     ASSERT_EQ(0, set_camera_metadata_vendor_ops(&ops))
         << "Failed to set camera metadata vendor ops";
   }
-
   if (cam_module->init) {
     ASSERT_EQ(0, cam_module->init());
   }
   int num_builtin_cameras = cam_module->get_number_of_cameras();
   VLOGF(1) << "num_builtin_cameras = " << num_builtin_cameras;
-  ASSERT_EQ(0, cam_module->set_callbacks(callbacks));
+  ASSERT_EQ(0,
+            cam_module->set_callbacks(CameraModuleCallbacksAux::GetInstance()));
 }
 
 // On successfully Initialized, |cam_module_| will pointed to valid
@@ -281,7 +285,7 @@ static void InitCameraModule(const base::FilePath& camera_hal_path,
     ASSERT_GT(module->get_number_of_cameras(), id)
         << "No such test camera id in HAL";
   }
-  ASSERT_EQ(0, g_module_thread.PostTaskSync(
+  ASSERT_EQ(0, GetModuleThread().PostTaskSync(
                    FROM_HERE, base::Bind(&InitCameraModuleOnThread, module)));
   *cam_module = module;
 }
@@ -344,35 +348,25 @@ static camera_module_t* GetCameraModule() {
 
 // Camera module
 
-Camera3Module::Camera3Module()
-    : cam_module_(GetCameraModule()),
-      test_camera_ids_(GetCmdLineTestCameraIds()),
-      hal_thread_(&g_module_thread),
-      dev_thread_("Camera3 Test Device Thread") {
-  dev_thread_.Start();
-}
-
-int Camera3Module::Initialize() {
-  return cam_module_ ? 0 : -ENODEV;
+Camera3Module::Camera3Module() : test_camera_ids_(GetCmdLineTestCameraIds()) {
+  if (g_cam_module != nullptr) {
+    cam_module_connector_ = std::make_unique<HalModuleConnector>(
+        GetCameraModule(), &GetModuleThread());
+  } else {
+    cam_module_connector_ =
+        std::make_unique<ClientModuleConnector>(CameraHalClient::GetInstance());
+  }
 }
 
 int Camera3Module::GetNumberOfCameras() {
-  if (!cam_module_) {
-    return -ENODEV;
-  }
-  int result = -EINVAL;
-  hal_thread_->PostTaskSync(
-      FROM_HERE, base::Bind(&Camera3Module::GetNumberOfCamerasOnHalThread,
-                            base::Unretained(this), &result));
-  return result;
+  return cam_module_connector_->GetNumberOfCameras();
 }
 
 std::vector<int> Camera3Module::GetCameraIds() {
-  if (!cam_module_) {
+  int num_cams = GetNumberOfCameras();
+  if (num_cams <= 0) {
     return std::vector<int>();
   }
-
-  int num_cams = GetNumberOfCameras();
   std::vector<int> ids(num_cams);
   for (int i = 0; i < num_cams; i++) {
     ids[i] = i;
@@ -392,7 +386,7 @@ void Camera3Module::GetStreamConfigEntry(int cam_id,
 
   camera_info info;
   ASSERT_EQ(0, GetCameraInfo(cam_id, &info))
-      << "Can't get camera info for" << cam_id;
+      << "Can't get info for camera " << cam_id;
 
   camera_metadata_ro_entry_t local_entry = {};
   ASSERT_EQ(
@@ -407,10 +401,6 @@ void Camera3Module::GetStreamConfigEntry(int cam_id,
 }
 
 bool Camera3Module::IsFormatAvailable(int cam_id, int format) {
-  if (!cam_module_) {
-    return false;
-  }
-
   camera_metadata_ro_entry_t available_config = {};
   GetStreamConfigEntry(cam_id, ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS,
                        &available_config);
@@ -426,44 +416,18 @@ bool Camera3Module::IsFormatAvailable(int cam_id, int format) {
 }
 
 camera3_device* Camera3Module::OpenDevice(int cam_id) {
-  if (!cam_module_) {
-    return NULL;
-  }
-  camera3_device_t* cam_device = nullptr;
-  hal_thread_->PostTaskSync(
-      FROM_HERE, base::Bind(&Camera3Module::OpenDeviceOnHalThread,
-                            base::Unretained(this), cam_id, &cam_device));
-  return cam_device;
+  return cam_module_connector_->OpenDevice(cam_id);
 }
 
 int Camera3Module::CloseDevice(camera3_device* cam_device) {
-  VLOGF_ENTER();
-  if (!cam_module_) {
-    return -ENODEV;
-  }
-  int result = -ENODEV;
-  dev_thread_.PostTaskSync(
-      FROM_HERE, base::Bind(&Camera3Module::CloseDeviceOnDevThread,
-                            base::Unretained(this), cam_device, &result));
-  return result;
+  return cam_module_connector_->CloseDevice(cam_device);
 }
 
 int Camera3Module::GetCameraInfo(int cam_id, camera_info* info) {
-  if (!cam_module_) {
-    return -ENODEV;
-  }
-  int result = -ENODEV;
-  hal_thread_->PostTaskSync(
-      FROM_HERE, base::Bind(&Camera3Module::GetCameraInfoOnHalThread,
-                            base::Unretained(this), cam_id, info, &result));
-  return result;
+  return cam_module_connector_->GetCameraInfo(cam_id, info);
 }
 
 std::vector<int32_t> Camera3Module::GetOutputFormats(int cam_id) {
-  if (!cam_module_) {
-    return std::vector<int32_t>();
-  }
-
   camera_metadata_ro_entry_t available_config = {};
   GetStreamConfigEntry(cam_id, ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS,
                        &available_config);
@@ -484,10 +448,6 @@ std::vector<int32_t> Camera3Module::GetOutputFormats(int cam_id) {
 
 std::vector<ResolutionInfo> Camera3Module::GetSortedOutputResolutions(
     int cam_id, int32_t format) {
-  if (!cam_module_) {
-    return std::vector<ResolutionInfo>();
-  }
-
   camera_metadata_ro_entry_t available_config = {};
   GetStreamConfigEntry(cam_id, ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS,
                        &available_config);
@@ -515,10 +475,6 @@ int64_t Camera3Module::GetOutputKeyParameterI64(
     const ResolutionInfo& resolution,
     int32_t key,
     int32_t index) {
-  if (!cam_module_) {
-    return -EINVAL;
-  }
-
   camera_metadata_ro_entry_t available_config = {};
   GetStreamConfigEntry(cam_id, key, &available_config);
 
@@ -551,43 +507,6 @@ int64_t Camera3Module::GetOutputMinFrameDuration(
   return GetOutputKeyParameterI64(cam_id, format, resolution,
                                   ANDROID_SCALER_AVAILABLE_MIN_FRAME_DURATIONS,
                                   STREAM_CONFIG_MIN_DURATION_INDEX);
-}
-
-void Camera3Module::GetNumberOfCamerasOnHalThread(int* result) {
-  *result = cam_module_->get_number_of_cameras();
-}
-
-void Camera3Module::GetCameraInfoOnHalThread(int cam_id,
-                                             camera_info* info,
-                                             int* result) {
-  *result = cam_module_->get_camera_info(cam_id, info);
-}
-
-void Camera3Module::OpenDeviceOnHalThread(int cam_id,
-                                          camera3_device_t** cam_device) {
-  *cam_device = nullptr;
-  hw_device_t* device = nullptr;
-  char cam_id_name[3];
-  snprintf(cam_id_name, sizeof(cam_id_name), "%d", cam_id);
-  if (cam_module_->common.methods->open((const hw_module_t*)cam_module_,
-                                        cam_id_name, &device) == 0) {
-    *cam_device = reinterpret_cast<camera3_device_t*>(device);
-  }
-}
-
-void Camera3Module::CloseDeviceOnDevThread(camera3_device_t* cam_device,
-                                           int* result) {
-  VLOGF_ENTER();
-  ASSERT_NE(nullptr, cam_device->common.close)
-      << "Camera close() is not implemented";
-  *result = cam_device->common.close(&cam_device->common);
-}
-
-// Test fixture
-
-void Camera3ModuleFixture::SetUp() {
-  ASSERT_EQ(0, cam_module_.Initialize())
-      << "Camera module initialization fails";
 }
 
 // Test cases
@@ -1326,38 +1245,27 @@ bool InitializeTest(int* argc, char*** argv, void** cam_hal_handle) {
   } else if (camera_hal_path.empty()) {
     std::vector<base::FilePath> camera_hal_paths = cros::GetCameraHalPaths();
 
-    if (camera_hal_paths.size() == 1) {
-      // TODO(shik): Ignore usb.so if there is no built-in USB camera, so we
-      // have a better heuristic guess.
-
-      camera_hal_path = camera_hal_paths[0];
-
-      LOG(INFO) << "camera_hal_path unspecified, using "
-                << camera_hal_path.value() << " as default. "
-                << "You can override this behavior by the command line "
-                << "argument `--camera_hal_path=`";
-    } else {
-      LOGF(ERROR) << "camera_hal_path unspecified. "
-                  << "Since we cannot determine the suitable one, please add "
-                  << "`--camera_hal_path=` into command line argument.";
-
-      if (!camera_hal_paths.empty()) {
-        LOGF(ERROR) << "List of possible paths:";
-        for (const auto& path : camera_hal_paths) {
-          LOGF(ERROR) << path.value();
-        }
-      }
-
-      return false;
+    LOGF(INFO) << "camera_hal_path unspecified. Connecting to the camera "
+                  "service via Mojo. To test against the HAL directly, add "
+                  "`--camera_hal_path=` into command line argument.";
+    LOGF(INFO) << "List of possible paths:";
+    for (const auto& path : camera_hal_paths) {
+      LOGF(ERROR) << path.value();
     }
   }
 
   // Open camera HAL and get module
-  camera3_test::g_module_thread.Start();
   if (facing != -ENOENT) {
+    camera3_test::GetModuleThread().Start();
     camera3_test::InitCameraModuleByFacing(facing, cam_hal_handle);
-  } else {
+  } else if (!camera_hal_path.empty()) {
+    camera3_test::GetModuleThread().Start();
     camera3_test::InitCameraModuleByHalPath(camera_hal_path, cam_hal_handle);
+  } else {
+    if (camera3_test::CameraHalClient::GetInstance()->Start(
+            camera3_test::CameraModuleCallbacksAux::GetInstance()) != 0) {
+      return false;
+    }
   }
 
   camera3_test::InitPerfLog();
@@ -1365,7 +1273,6 @@ bool InitializeTest(int* argc, char*** argv, void** cam_hal_handle) {
   // Initialize gtest
   ::testing::InitGoogleTest(argc, *argv);
   if (testing::Test::HasFailure()) {
-    camera3_test::g_module_thread.Stop();
     return false;
   }
 
@@ -1413,17 +1320,17 @@ int main(int argc, char** argv) {
   base::NoDestructor<base::AtExitManager> leaky_at_exit_manager;
   int result = EXIT_FAILURE;
   void* cam_hal_handle = NULL;
-  if (!InitializeTest(&argc, &argv, &cam_hal_handle)) {
-    return result;
-  } else {
+  if (InitializeTest(&argc, &argv, &cam_hal_handle)) {
     result = RUN_ALL_TESTS();
   }
-  camera3_test::g_module_thread.Stop();
 
   // Close Camera HAL
-  if (cam_hal_handle && dlclose(cam_hal_handle) != 0) {
-    PLOGF(ERROR) << "Failed to dlclose(cam_hal_handle)";
-    result = EXIT_FAILURE;
+  if (cam_hal_handle) {
+    camera3_test::GetModuleThread().Stop();
+    if (dlclose(cam_hal_handle) != 0) {
+      PLOGF(ERROR) << "Failed to dlclose(cam_hal_handle)";
+      result = EXIT_FAILURE;
+    }
   }
 
   return result;
