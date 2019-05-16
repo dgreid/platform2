@@ -16,6 +16,7 @@
 #include <gtest/gtest.h>
 #include <system/camera_metadata_hidden.h>
 
+#include "camera3_test/camera3_device_connector.h"
 #include "cros-camera/constants.h"
 #include "cros-camera/ipc_util.h"
 
@@ -23,15 +24,7 @@ namespace camera3_test {
 
 HalModuleConnector::HalModuleConnector(camera_module_t* cam_module,
                                        cros::CameraThread* hal_thread)
-    : cam_module_(cam_module),
-      hal_thread_(hal_thread),
-      dev_thread_("Camera3TestDeviceThread") {
-  dev_thread_.Start();
-}
-
-HalModuleConnector::~HalModuleConnector() {
-  dev_thread_.Stop();
-}
+    : cam_module_(cam_module), hal_thread_(hal_thread) {}
 
 int HalModuleConnector::GetNumberOfCameras() {
   if (!cam_module_) {
@@ -48,47 +41,27 @@ void HalModuleConnector::GetNumberOfCamerasOnHalThread(int* result) {
   *result = cam_module_->get_number_of_cameras();
 }
 
-camera3_device* HalModuleConnector::OpenDevice(int cam_id) {
+std::unique_ptr<DeviceConnector> HalModuleConnector::OpenDevice(int cam_id) {
   if (!cam_module_) {
     return nullptr;
   }
-  camera3_device_t* cam_device = nullptr;
+  std::unique_ptr<DeviceConnector> dev_connector;
   hal_thread_->PostTaskSync(
       FROM_HERE, base::Bind(&HalModuleConnector::OpenDeviceOnHalThread,
-                            base::Unretained(this), cam_id, &cam_device));
-  return cam_device;
+                            base::Unretained(this), cam_id, &dev_connector));
+  return dev_connector;
 }
 
-void HalModuleConnector::OpenDeviceOnHalThread(int cam_id,
-                                               camera3_device_t** cam_device) {
-  *cam_device = nullptr;
+void HalModuleConnector::OpenDeviceOnHalThread(
+    int cam_id, std::unique_ptr<DeviceConnector>* dev_connector) {
   hw_device_t* device = nullptr;
   char cam_id_name[3];
   snprintf(cam_id_name, sizeof(cam_id_name), "%d", cam_id);
   if (cam_module_->common.methods->open(&cam_module_->common, cam_id_name,
                                         &device) == 0) {
-    *cam_device = reinterpret_cast<camera3_device_t*>(device);
+    *dev_connector = std::make_unique<HalDeviceConnector>(
+        cam_id, reinterpret_cast<camera3_device_t*>(device));
   }
-}
-
-int HalModuleConnector::CloseDevice(camera3_device* cam_device) {
-  VLOGF_ENTER();
-  if (!cam_module_) {
-    return -ENODEV;
-  }
-  int result = -ENODEV;
-  dev_thread_.PostTaskSync(
-      FROM_HERE, base::Bind(&HalModuleConnector::CloseDeviceOnDevThread,
-                            base::Unretained(this), cam_device, &result));
-  return result;
-}
-
-void HalModuleConnector::CloseDeviceOnDevThread(camera3_device_t* cam_device,
-                                                int* result) {
-  VLOGF_ENTER();
-  ASSERT_NE(nullptr, cam_device->common.close)
-      << "Camera close() is not implemented";
-  *result = cam_device->common.close(&cam_device->common);
 }
 
 int HalModuleConnector::GetCameraInfo(int cam_id, camera_info* info) {
@@ -118,14 +91,12 @@ int ClientModuleConnector::GetNumberOfCameras() {
   return cam_client_->GetNumberOfCameras();
 }
 
-camera3_device* ClientModuleConnector::OpenDevice(int cam_id) {
-  // TODO(hywu): implement this
-  return nullptr;
-}
-
-int ClientModuleConnector::CloseDevice(camera3_device* cam_device) {
-  // TODO(hywu): implement this
-  return -ENODEV;
+std::unique_ptr<DeviceConnector> ClientModuleConnector::OpenDevice(int cam_id) {
+  cros::mojom::Camera3DeviceOpsPtr dev_ops = cam_client_->OpenDevice(cam_id);
+  if (!dev_ops.is_bound()) {
+    return nullptr;
+  }
+  return std::make_unique<ClientDeviceConnector>(std::move(dev_ops));
 }
 
 int ClientModuleConnector::GetCameraInfo(int cam_id, camera_info* info) {
@@ -378,6 +349,35 @@ void CameraHalClient::OnGotCameraInfo(int cam_id,
     info->conflicting_devices = conflicting_devices_map_[cam_id].data();
   }
   cb.Run(result);
+}
+
+cros::mojom::Camera3DeviceOpsPtr CameraHalClient::OpenDevice(int cam_id) {
+  VLOGF_ENTER();
+  cros::mojom::Camera3DeviceOpsPtr dev_ops;
+  auto future = cros::Future<int32_t>::Create(nullptr);
+  ipc_thread_.task_runner()->PostTask(
+      FROM_HERE, base::BindOnce(&CameraHalClient::OpenDeviceOnIpcThread,
+                                base::Unretained(this), cam_id, &dev_ops,
+                                cros::GetFutureCallback(future)));
+  if (!future->Wait()) {
+    ADD_FAILURE() << __func__ << " timeout";
+    return nullptr;
+  }
+  return dev_ops;
+}
+
+void CameraHalClient::OpenDeviceOnIpcThread(
+    int cam_id,
+    cros::mojom::Camera3DeviceOpsPtr* dev_ops,
+    base::Callback<void(int32_t)> cb) {
+  VLOGF_ENTER();
+  if (!ipc_initialized_.IsSignaled()) {
+    cb.Run(-ENODEV);
+    return;
+  }
+  cros::mojom::Camera3DeviceOpsRequest device_ops_request =
+      mojo::MakeRequest(dev_ops);
+  camera_module_->OpenDevice(cam_id, std::move(device_ops_request), cb);
 }
 
 void CameraHalClient::CameraDeviceStatusChange(

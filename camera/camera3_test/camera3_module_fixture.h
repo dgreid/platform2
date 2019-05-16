@@ -17,6 +17,7 @@
 #include <cros-camera/camera_thread.h>
 #include <gtest/gtest.h>
 
+#include "camera3_test/camera3_device_connector.h"
 #include "camera3_test/camera3_module_connector.h"
 #include "camera3_test/common_types.h"
 
@@ -90,17 +91,14 @@ class Camera3Module {
   // |GetCameraIds|
   std::vector<int> GetTestCameraIds();
 
-  // Open camera device
-  camera3_device* OpenDevice(int cam_id);
-
-  // Close camera device
-  int CloseDevice(camera3_device* cam_device);
-
   // Check if a stream format is supported
   bool IsFormatAvailable(int cam_id, int format);
 
   // Get camera information
   int GetCameraInfo(int cam_id, camera_info* info);
+
+  // Open camera device
+  std::unique_ptr<DeviceConnector> OpenDevice(int cam_id);
 
   // Get the image output formats in this stream configuration
   std::vector<int32_t> GetOutputFormats(int cam_id);

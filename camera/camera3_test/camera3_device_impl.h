@@ -16,6 +16,7 @@
 
 #include <base/threading/thread_checker.h>
 
+#include "camera3_test/camera3_device_connector.h"
 #include "camera3_test/camera3_device_fixture.h"
 
 namespace camera3_test {
@@ -177,7 +178,7 @@ class Camera3DeviceImpl : protected camera3_callback_ops {
 
   bool initialized_;
 
-  camera3_device* cam_device_;
+  std::unique_ptr<DeviceConnector> dev_connector_;
 
   std::unique_ptr<Camera3Device::StaticInfo> static_info_;
 

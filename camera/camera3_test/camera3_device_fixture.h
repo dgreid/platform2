@@ -8,7 +8,6 @@
 #include <memory>
 #include <vector>
 
-#include <camera/camera_metadata.h>
 #include <gtest/gtest.h>
 #include <hardware/camera3.h>
 #include <hardware/hardware.h>
@@ -16,12 +15,10 @@
 #include "camera3_test/camera3_device.h"
 #include "camera3_test/camera3_module_fixture.h"
 #include "camera3_test/camera3_test_gralloc.h"
+#include "camera3_test/common_types.h"
 #include "common/camera_buffer_handle.h"
 
 namespace camera3_test {
-
-// Forward declaration
-class Camera3DeviceImpl;
 
 template <typename T>
 int UpdateMetadata(uint32_t tag,

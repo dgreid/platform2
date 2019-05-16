@@ -22,6 +22,9 @@
 
 namespace camera3_test {
 
+// Forward declaration
+class DeviceConnector;
+
 class ModuleConnector {
  public:
   virtual ~ModuleConnector() = default;
@@ -29,14 +32,11 @@ class ModuleConnector {
   // Get number of cameras; a negative error code is returned if failed.
   virtual int GetNumberOfCameras() = 0;
 
-  // Open camera device.
-  virtual camera3_device* OpenDevice(int cam_id) = 0;
-
-  // Close camera device.
-  virtual int CloseDevice(camera3_device* cam_device) = 0;
-
   // Get camera information.
   virtual int GetCameraInfo(int cam_id, camera_info* info) = 0;
+
+  // Open camera device
+  virtual std::unique_ptr<DeviceConnector> OpenDevice(int cam_id) = 0;
 };
 
 class HalModuleConnector final : public ModuleConnector {
@@ -44,19 +44,16 @@ class HalModuleConnector final : public ModuleConnector {
   HalModuleConnector(camera_module_t* cam_module,
                      cros::CameraThread* hal_thread);
 
-  ~HalModuleConnector();
-
   // ModuleConnector implementations.
   int GetNumberOfCameras() override;
-  camera3_device* OpenDevice(int cam_id) override;
-  int CloseDevice(camera3_device* cam_device) override;
   int GetCameraInfo(int cam_id, camera_info* info) override;
+  std::unique_ptr<DeviceConnector> OpenDevice(int cam_id) override;
 
  private:
   void GetNumberOfCamerasOnHalThread(int* result);
   void GetCameraInfoOnHalThread(int cam_id, camera_info* info, int* result);
-  void OpenDeviceOnHalThread(int cam_id, camera3_device_t** cam_device);
-  void CloseDeviceOnDevThread(camera3_device_t* cam_device, int* result);
+  void OpenDeviceOnHalThread(int cam_id,
+                             std::unique_ptr<DeviceConnector>* dev_connector);
 
   const camera_module_t* cam_module_;
 
@@ -66,10 +63,6 @@ class HalModuleConnector final : public ModuleConnector {
   // initialization in main() because test case instantiation needs it running
   // to get the camera ID list.
   cros::CameraThread* hal_thread_;
-
-  // Use a separate thread from |hal_thread_| to close camera device to
-  // simulate hal_adapter behavior.
-  cros::CameraThread dev_thread_;
 
   HalModuleConnector(const HalModuleConnector&) = delete;
   HalModuleConnector& operator=(const HalModuleConnector&) = delete;
@@ -84,9 +77,8 @@ class ClientModuleConnector final : public ModuleConnector {
 
   // ModuleConnector implementations.
   int GetNumberOfCameras() override;
-  camera3_device* OpenDevice(int cam_id) override;
-  int CloseDevice(camera3_device* cam_device) override;
   int GetCameraInfo(int cam_id, camera_info* info) override;
+  std::unique_ptr<DeviceConnector> OpenDevice(int cam_id) override;
 
  private:
   CameraHalClient* cam_client_;
@@ -110,6 +102,8 @@ class CameraHalClient final : public cros::mojom::CameraHalClient,
 
   // Get camera information.
   int GetCameraInfo(int cam_id, camera_info* info);
+
+  cros::mojom::Camera3DeviceOpsPtr OpenDevice(int cam_id);
 
  private:
   // Asynchronously registers to CameraHalDispatcher to acquire camera HAL
@@ -137,6 +131,9 @@ class CameraHalClient final : public cros::mojom::CameraHalClient,
                        base::Callback<void(int32_t)> cb,
                        int32_t result,
                        cros::mojom::CameraInfoPtr camera_info);
+  void OpenDeviceOnIpcThread(int cam_id,
+                             cros::mojom::Camera3DeviceOpsPtr* dev_ops,
+                             base::Callback<void(int32_t)> cb);
   void CameraDeviceStatusChange(
       int32_t camera_id, cros::mojom::CameraDeviceStatus new_status) override;
   void TorchModeStatusChange(int32_t camera_id,

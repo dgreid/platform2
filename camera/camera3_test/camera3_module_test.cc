@@ -20,6 +20,7 @@
 #include <base/sys_info.h>
 #include <system/camera_metadata_hidden.h>
 
+#include "camera3_test/camera3_device.h"
 #include "camera3_test/camera3_perf_log.h"
 #include "camera3_test/camera3_test_data_forwarder.h"
 #include "common/utils/camera_hal_enumerator.h"
@@ -415,16 +416,12 @@ bool Camera3Module::IsFormatAvailable(int cam_id, int format) {
   return false;
 }
 
-camera3_device* Camera3Module::OpenDevice(int cam_id) {
-  return cam_module_connector_->OpenDevice(cam_id);
-}
-
-int Camera3Module::CloseDevice(camera3_device* cam_device) {
-  return cam_module_connector_->CloseDevice(cam_device);
-}
-
 int Camera3Module::GetCameraInfo(int cam_id, camera_info* info) {
   return cam_module_connector_->GetCameraInfo(cam_id, info);
+}
+
+std::unique_ptr<DeviceConnector> Camera3Module::OpenDevice(int cam_id) {
+  return cam_module_connector_->OpenDevice(cam_id);
 }
 
 std::vector<int32_t> Camera3Module::GetOutputFormats(int cam_id) {
@@ -530,7 +527,8 @@ TEST_F(Camera3ModuleFixture, OpenDeviceOfBadIndices) {
   // Possible TOCTOU race here if the external camera is plugged after
   // |IsExternalCameraPresent()|, but before |OpenDevice()|.
   for (int id : bad_ids) {
-    ASSERT_EQ(nullptr, cam_module_.OpenDevice(id))
+    Camera3Device cam_dev(id);
+    ASSERT_NE(0, cam_dev.Initialize(&cam_module_))
         << "Open camera device of bad id " << id;
   }
 }
@@ -567,21 +565,32 @@ TEST_F(Camera3ModuleFixture, IsActiveArraySizeSubsetOfPixelArraySize) {
 
 TEST_F(Camera3ModuleFixture, OpenDevice) {
   for (int cam_id = 0; cam_id < cam_module_.GetNumberOfCameras(); cam_id++) {
-    camera3_device* cam_dev = cam_module_.OpenDevice(cam_id);
-    ASSERT_NE(nullptr, cam_dev) << "Camera open() returned a NULL device";
-    cam_module_.CloseDevice(cam_dev);
+    Camera3Device cam_dev(cam_id);
+    ASSERT_EQ(0, cam_dev.Initialize(&cam_module_))
+        << "Camera open device failed";
+    cam_dev.Destroy();
+  }
+}
+
+TEST_F(Camera3ModuleFixture, DeviceVersion) {
+  camera_info info;
+  for (int cam_id = 0; cam_id < cam_module_.GetNumberOfCameras(); cam_id++) {
+    ASSERT_EQ(0, cam_module_.GetCameraInfo(cam_id, &info))
+        << "Can't get camera info for " << cam_id;
+    EXPECT_GE(info.device_version, (uint16_t)HARDWARE_MODULE_API_VERSION(3, 3))
+        << "Device " << cam_id << " fails to support at least HALv3.3";
   }
 }
 
 TEST_F(Camera3ModuleFixture, OpenDeviceTwice) {
   for (int cam_id = 0; cam_id < cam_module_.GetNumberOfCameras(); cam_id++) {
-    camera3_device* cam_dev = cam_module_.OpenDevice(cam_id);
-    ASSERT_NE(nullptr, cam_dev) << "Camera open() returned a NULL device";
+    Camera3Device cam_dev(cam_id);
+    ASSERT_EQ(0, cam_dev.Initialize(&cam_module_))
+        << "Camera open device failed";
     // Open the device again
-    camera3_device* cam_bad_dev = cam_module_.OpenDevice(cam_id);
-    ASSERT_EQ(nullptr, cam_bad_dev)
-        << "Opening camera device " << cam_id << " should have failed";
-    cam_module_.CloseDevice(cam_dev);
+    Camera3Device cam_bad_dev(cam_id);
+    ASSERT_NE(0, cam_bad_dev.Initialize(&cam_module_))
+        << "Opening camera device twice should have failed";
   }
 }
 

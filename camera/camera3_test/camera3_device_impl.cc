@@ -29,7 +29,6 @@ Camera3DeviceImpl::Camera3DeviceImpl(int cam_id)
     : cam_id_(cam_id),
       hal_thread_(GetThreadName(cam_id).c_str()),
       initialized_(false),
-      cam_device_(NULL),
       cam_stream_idx_(0),
       gralloc_(Camera3TestGralloc::GetInstance()),
       request_frame_number_(kInitialFrameNumber) {
@@ -202,9 +201,9 @@ int Camera3DeviceImpl::WaitCaptureResult(const struct timespec& timeout) {
 }
 
 int Camera3DeviceImpl::Flush() {
-  DCHECK(cam_device_);
+  DCHECK(dev_connector_);
   VLOGF_ENTER();
-  return cam_device_->ops->flush(cam_device_);
+  return dev_connector_->Flush();
 }
 
 void Camera3DeviceImpl::InitializeOnThread(Camera3Module* cam_module,
@@ -219,14 +218,12 @@ void Camera3DeviceImpl::InitializeOnThread(Camera3Module* cam_module,
   Camera3PerfLog::GetInstance()->UpdateDeviceEvent(
       cam_id_, DeviceEvent::OPENING, base::TimeTicks::Now());
   *result = -ENODEV;
-  cam_device_ = cam_module->OpenDevice(cam_id_);
-  ASSERT_NE(nullptr, cam_device_) << "Failed to open device " << cam_id_;
+  dev_connector_ = cam_module->OpenDevice(cam_id_);
+  if (!dev_connector_) {
+    return;
+  }
 
   *result = -EINVAL;
-  ASSERT_GE(((const hw_device_t*)cam_device_)->version,
-            (uint16_t)HARDWARE_MODULE_API_VERSION(3, 3))
-      << "The device must support at least HALv3.3";
-
   ASSERT_NE(nullptr, gralloc_) << "Gralloc initialization fails";
 
   camera_info cam_info;
@@ -239,8 +236,10 @@ void Camera3DeviceImpl::InitializeOnThread(Camera3Module* cam_module,
   Camera3DeviceImpl::notify = Camera3DeviceImpl::NotifyForwarder;
   Camera3DeviceImpl::process_capture_result =
       Camera3DeviceImpl::ProcessCaptureResultForwarder;
-  *result = cam_device_->ops->initialize(cam_device_, this);
-  ASSERT_EQ(0, *result) << "Camera device initialization fails";
+  *result = dev_connector_->Initialize(this);
+  if (*result) {
+    return;
+  }
   Camera3PerfLog::GetInstance()->UpdateDeviceEvent(cam_id_, DeviceEvent::OPENED,
                                                    base::TimeTicks::Now());
 
@@ -290,8 +289,7 @@ void Camera3DeviceImpl::ConstructDefaultRequestSettingsOnThread(
     int type, const camera_metadata_t** result) {
   DCHECK(thread_checker_.CalledOnValidThread());
   if (initialized_) {
-    *result =
-        cam_device_->ops->construct_default_request_settings(cam_device_, type);
+    *result = dev_connector_->ConstructDefaultRequestSettings(type);
   }
 }
 
@@ -310,6 +308,9 @@ void Camera3DeviceImpl::AddStreamOnThread(int format,
     stream.height = height;
     stream.format = format;
     stream.crop_rotate_scale_degrees = crop_rotate_scale_degrees;
+    if (format == HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED) {
+      stream.usage = GRALLOC_USAGE_HW_COMPOSER | GRALLOC_USAGE_HW_TEXTURE;
+    }
     cur_stream.push_back(stream);
   }
 }
@@ -339,8 +340,7 @@ void Camera3DeviceImpl::ConfigureStreamsOnThread(
   cam_stream_config.operation_mode = CAMERA3_STREAM_CONFIGURATION_NORMAL_MODE;
 
   // Configure streams now
-  *result =
-      cam_device_->ops->configure_streams(cam_device_, &cam_stream_config);
+  *result = dev_connector_->ConfigureStreams(&cam_stream_config);
   if (*result == 0) {
     for (const auto& it : cam_stream_[!cam_stream_idx_]) {
       if (it.max_buffers == 0) {
@@ -462,8 +462,7 @@ void Camera3DeviceImpl::ProcessCaptureRequestOnThread(
           *request->output_buffers[i].buffer);
     }
   }
-  *result = cam_device_->ops->process_capture_request(
-      cam_device_,
+  *result = dev_connector_->ProcessCaptureRequest(
       request ? &capture_request_map_[request_frame_number_] : request);
   if (*result == 0) {
     request->frame_number = request_frame_number_;
@@ -622,13 +621,13 @@ void Camera3DeviceImpl::DestroyOnThread(int* result) {
     *result = -ENODEV;
     return;
   }
-  ASSERT_NE(nullptr, cam_device_->common.close)
-      << "Camera close() is not implemented";
-  *result = cam_device_->common.close(&cam_device_->common);
+
+  dev_connector_.reset();
 
   sem_destroy(&shutter_sem_);
   sem_destroy(&capture_result_sem_);
   initialized_ = false;
+  *result = 0;
 }
 
 const Camera3Device::StaticInfo* Camera3DeviceImpl::GetStaticInfo() const {

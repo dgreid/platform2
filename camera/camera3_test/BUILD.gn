@@ -32,6 +32,7 @@ executable("cros_camera_test") {
     "//camera/common/utils/camera_hal_enumerator.cc",
     "//camera/common/utils/cros_camera_mojo_utils.cc",
     "//camera/common/vendor_tag_manager.cc",
+    "camera3_device_connector.cc",
     "camera3_device_impl.cc",
     "camera3_device_test.cc",
     "camera3_exif_validator.cc",

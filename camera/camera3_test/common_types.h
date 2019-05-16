@@ -5,6 +5,10 @@
 #ifndef CAMERA_CAMERA3_TEST_COMMON_TYPES_H_
 #define CAMERA_CAMERA3_TEST_COMMON_TYPES_H_
 
+#include <memory>
+
+#include <camera/camera_metadata.h>
+
 namespace camera3_test {
 
 class ResolutionInfo {
@@ -30,6 +34,17 @@ class ResolutionInfo {
  private:
   int32_t width_, height_;
 };
+
+struct CameraMetadataDeleter {
+  inline void operator()(camera_metadata_t* metadata) {
+    if (metadata) {
+      free_camera_metadata(metadata);
+    }
+  }
+};
+
+typedef std::unique_ptr<camera_metadata_t, struct CameraMetadataDeleter>
+    ScopedCameraMetadata;
 
 }  // namespace camera3_test
 
