@@ -5,6 +5,7 @@
 #include <brillo/blkdev_utils/loop_device.h>
 
 #include <fcntl.h>
+#include <linux/loop.h>
 #include <linux/major.h>
 #include <sys/ioctl.h>
 #include <sys/types.h>
@@ -209,6 +210,11 @@ std::unique_ptr<LoopDevice> LoopDeviceManager::AttachDeviceToFile(
                << kMaxLoopDeviceAttachTries << " retries.";
     return CreateLoopDevice(-1, base::FilePath());
   }
+
+  // Set direct I/O mode for the backing file for the loop device, if supported.
+  if (loop_ioctl_.Run(CreateDevicePath(device_number), LOOP_SET_DIRECT_IO, 1,
+                      kLoopDeviceIoctlFlags) != 0)
+    PLOG(WARNING) << "Direct I/O mode is not supported.";
 
   // All steps of setting up the loop device succeeded.
   return CreateLoopDevice(device_number, backing_file);
