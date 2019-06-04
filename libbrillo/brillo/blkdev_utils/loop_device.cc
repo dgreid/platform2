@@ -35,6 +35,8 @@ constexpr char kDeviceIdPath[] = "dev";
 constexpr char kLoopBackingFile[] = "loop/backing_file";
 constexpr int kLoopDeviceIoctlFlags = O_RDWR | O_NOFOLLOW | O_CLOEXEC;
 constexpr int kLoopControlIoctlFlags = O_RDONLY | O_NOFOLLOW | O_CLOEXEC;
+// Arbitrary retry limit for attempting to attach a loop device.
+constexpr int kMaxLoopDeviceAttachTries = 10;
 
 // ioctl runner for LoopDevice and LoopDeviceManager
 int LoopDeviceIoctl(const base::FilePath& device,
@@ -165,7 +167,9 @@ LoopDeviceManager::LoopDeviceManager(LoopIoctl ioctl_runner)
 std::unique_ptr<LoopDevice> LoopDeviceManager::AttachDeviceToFile(
     const base::FilePath& backing_file) {
   int device_number = -1;
-  while (true) {
+  int retries = kMaxLoopDeviceAttachTries;
+
+  while (retries >= 0) {
     device_number =
         loop_ioctl_.Run(base::FilePath(kLoopControl), LOOP_CTL_GET_FREE, 0,
                         kLoopControlIoctlFlags);
@@ -193,7 +197,19 @@ std::unique_ptr<LoopDevice> LoopDeviceManager::AttachDeviceToFile(
       LOG(ERROR) << "ioctl(LOOP_SET_FD) failed";
       return CreateLoopDevice(-1, base::FilePath());
     }
+
+    // Other users could have set the file descriptor between get a valid
+    // loop device number and using it. Continue to loop until the device is
+    // created.
+    retries--;
   }
+
+  if (retries < 0) {
+    LOG(ERROR) << "Failed to set up loop device after "
+               << kMaxLoopDeviceAttachTries << " retries.";
+    return CreateLoopDevice(-1, base::FilePath());
+  }
+
   // All steps of setting up the loop device succeeded.
   return CreateLoopDevice(device_number, backing_file);
 }
