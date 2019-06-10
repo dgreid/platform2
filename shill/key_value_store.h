@@ -62,7 +62,7 @@ class KeyValueStore {
   bool ContainsUint8(const std::string& name) const;
   bool ContainsUint8s(const std::string& name) const;
   bool ContainsUint32s(const std::string& name) const;
-  bool Contains(const std::string& name) const;
+  bool ContainsVariant(const std::string& name) const;
 
   bool GetBool(const std::string& name) const;
   const std::vector<bool>& GetBools(const std::string& name) const;
@@ -87,7 +87,7 @@ class KeyValueStore {
   uint8_t GetUint8(const std::string& name) const;
   const std::vector<uint8_t>& GetUint8s(const std::string& name) const;
   const std::vector<uint32_t>& GetUint32s(const std::string& name) const;
-  const brillo::Any& Get(const std::string& name) const;
+  const brillo::Any& GetVariant(const std::string& name) const;
 
   // TODO(crbug.com/936111): remove type specific set functions and add a
   // generic set function instead.  This way, we don't need to add new functions
@@ -116,7 +116,7 @@ class KeyValueStore {
   void SetUint8(const std::string& name, uint8_t value);
   void SetUint8s(const std::string& name, const std::vector<uint8_t>& value);
   void SetUint32s(const std::string& name, const std::vector<uint32_t>& value);
-  void Set(const std::string& name, const brillo::Any& value);
+  void SetVariant(const std::string& name, const brillo::Any& value);
 
   void Remove(const std::string& name);
 

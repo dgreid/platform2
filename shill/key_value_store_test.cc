@@ -97,12 +97,12 @@ class KeyValueStoreTest : public Test {
 };
 
 TEST_F(KeyValueStoreTest, Any) {
-  EXPECT_FALSE(store_.Contains(kStringKey));
-  store_.Set(kStringKey, brillo::Any(string(kStringValue)));
-  EXPECT_TRUE(store_.Contains(kStringKey));
-  EXPECT_EQ(string(kStringValue), store_.Get(kStringKey).Get<string>());
+  EXPECT_FALSE(store_.ContainsVariant(kStringKey));
+  store_.SetVariant(kStringKey, brillo::Any(string(kStringValue)));
+  EXPECT_TRUE(store_.ContainsVariant(kStringKey));
+  EXPECT_EQ(string(kStringValue), store_.GetVariant(kStringKey).Get<string>());
   store_.Remove(kStringKey);
-  EXPECT_FALSE(store_.Contains(kStringKey));
+  EXPECT_FALSE(store_.ContainsVariant(kStringKey));
 }
 
 TEST_F(KeyValueStoreTest, Bool) {

@@ -202,10 +202,10 @@ bool DHCPv6Config::ParseConfiguration(const KeyValueStore& configuration) {
     }
   }
 
-  if (configuration.Contains(kConfigurationKeyDNS)) {
+  if (configuration.ContainsStrings(kConfigurationKeyDNS)) {
     properties_.dns_servers = configuration.GetStrings(kConfigurationKeyDNS);
   }
-  if (configuration.Contains(kConfigurationKeyDomainSearch)) {
+  if (configuration.ContainsStrings(kConfigurationKeyDomainSearch)) {
     properties_.domain_search =
         configuration.GetStrings(kConfigurationKeyDomainSearch);
   }

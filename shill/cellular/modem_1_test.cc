@@ -88,7 +88,7 @@ TEST_F(Modem1Test, CreateDeviceMM1) {
                            MM_MODEM_LOCK_NONE);
   std::vector<std::tuple<std::string, uint32_t>> ports = {
       std::make_tuple(kLinkName, MM_MODEM_PORT_TYPE_NET)};
-  modem_properties.Set(MM_MODEM_PROPERTY_PORTS, brillo::Any(ports));
+  modem_properties.SetVariant(MM_MODEM_PROPERTY_PORTS, brillo::Any(ports));
   properties[MM_DBUS_INTERFACE_MODEM] = modem_properties;
 
   KeyValueStore modem3gpp_properties;

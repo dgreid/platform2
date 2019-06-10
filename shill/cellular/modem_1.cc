@@ -21,12 +21,12 @@ Modem1::Modem1(const string& service,
 Modem1::~Modem1() = default;
 
 bool Modem1::GetLinkName(const KeyValueStore& modem_props, string* name) const {
-  if (!modem_props.Contains(MM_MODEM_PROPERTY_PORTS)) {
+  if (!modem_props.ContainsVariant(MM_MODEM_PROPERTY_PORTS)) {
     LOG(ERROR) << "Device missing property: " << MM_MODEM_PROPERTY_PORTS;
     return false;
   }
 
-  auto ports = modem_props.Get(MM_MODEM_PROPERTY_PORTS)
+  auto ports = modem_props.GetVariant(MM_MODEM_PROPERTY_PORTS)
                    .Get<std::vector<std::tuple<string, uint32_t>>>();
   string net_port;
   for (const auto& port_pair : ports) {

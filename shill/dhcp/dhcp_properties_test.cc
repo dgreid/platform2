@@ -172,7 +172,7 @@ TEST_F(DhcpPropertiesTest, LoadWithValuesSetAndClearRequired) {
   dhcp_properties_.Load(&storage, kStorageID);
   EXPECT_EQ(kVendorClass,
             dhcp_properties_.properties_.GetString("VendorClass"));
-  EXPECT_FALSE(dhcp_properties_.properties_.Contains("Hostname"));
+  EXPECT_FALSE(dhcp_properties_.properties_.ContainsVariant("Hostname"));
 }
 
 TEST_F(DhcpPropertiesTest, SaveWithValuesSet) {

@@ -1150,9 +1150,9 @@ void CellularCapability3gpp::OnModemPropertiesChanged(
   }
 
   // Unlock retries
-  if (properties.Contains(MM_MODEM_PROPERTY_UNLOCKRETRIES)) {
-    OnLockRetriesChanged(
-        properties.Get(MM_MODEM_PROPERTY_UNLOCKRETRIES).Get<LockRetryData>());
+  if (properties.ContainsVariant(MM_MODEM_PROPERTY_UNLOCKRETRIES)) {
+    OnLockRetriesChanged(properties.GetVariant(MM_MODEM_PROPERTY_UNLOCKRETRIES)
+                             .Get<LockRetryData>());
     lock_status_changed = true;
   }
 
@@ -1164,9 +1164,10 @@ void CellularCapability3gpp::OnModemPropertiesChanged(
         properties.GetUint(MM_MODEM_PROPERTY_ACCESSTECHNOLOGIES));
   }
 
-  if (properties.Contains(MM_MODEM_PROPERTY_SIGNALQUALITY)) {
+  if (properties.ContainsVariant(MM_MODEM_PROPERTY_SIGNALQUALITY)) {
     SignalQuality quality =
-        properties.Get(MM_MODEM_PROPERTY_SIGNALQUALITY).Get<SignalQuality>();
+        properties.GetVariant(MM_MODEM_PROPERTY_SIGNALQUALITY)
+            .Get<SignalQuality>();
     OnSignalQualityChanged(std::get<0>(quality));
   }
 
@@ -1412,14 +1413,15 @@ void CellularCapability3gpp::OnModem3gppPropertiesChanged(
     OnFacilityLocksChanged(
         properties.GetUint(MM_MODEM_MODEM3GPP_PROPERTY_ENABLEDFACILITYLOCKS));
 
-  if (properties.Contains(MM_MODEM_MODEM3GPP_PROPERTY_PCO)) {
+  if (properties.ContainsVariant(MM_MODEM_MODEM3GPP_PROPERTY_PCO)) {
     OnPcoChanged(
-        properties.Get(MM_MODEM_MODEM3GPP_PROPERTY_PCO).Get<PcoList>());
+        properties.GetVariant(MM_MODEM_MODEM3GPP_PROPERTY_PCO).Get<PcoList>());
   }
 
-  if (properties.Contains(MM_MODEM_MODEM3GPP_PROPERTY_PROFILES)) {
+  if (properties.ContainsVariant(MM_MODEM_MODEM3GPP_PROPERTY_PROFILES)) {
     OnProfilesChanged(
-        properties.Get(MM_MODEM_MODEM3GPP_PROPERTY_PROFILES).Get<Profiles>());
+        properties.GetVariant(MM_MODEM_MODEM3GPP_PROPERTY_PROFILES)
+            .Get<Profiles>());
   }
 }
 

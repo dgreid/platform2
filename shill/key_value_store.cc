@@ -143,7 +143,7 @@ bool KeyValueStore::ContainsUint32s(const string& name) const {
          properties_.find(name)->second.IsTypeCompatible<vector<uint32_t>>();
 }
 
-bool KeyValueStore::Contains(const string& name) const {
+bool KeyValueStore::ContainsVariant(const string& name) const {
   return base::ContainsKey(properties_, name);
 }
 
@@ -305,7 +305,7 @@ const vector<uint32_t>& KeyValueStore::GetUint32s(const string& name) const {
   return it->second.Get<vector<uint32_t>>();
 }
 
-const brillo::Any& KeyValueStore::Get(const string& name) const {
+const brillo::Any& KeyValueStore::GetVariant(const string& name) const {
   const auto it(properties_.find(name));
   CHECK(it != properties_.end());
   return it->second;
@@ -409,7 +409,7 @@ void KeyValueStore::SetUint32s(const string& name,
   properties_[name] = brillo::Any(value);
 }
 
-void KeyValueStore::Set(const string& name, const brillo::Any& value) {
+void KeyValueStore::SetVariant(const string& name, const brillo::Any& value) {
   properties_[name] = value;
 }
 

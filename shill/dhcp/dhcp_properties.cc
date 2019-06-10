@@ -78,7 +78,7 @@ void DhcpProperties::Save(StoreInterface* storage, const string& id) const {
   SLOG(this, 2) << __func__;
   for (const auto& name : kPropertyNames) {
     string property_value;
-    if (properties_.Contains(name)) {
+    if (properties_.ContainsVariant(name)) {
       // The property is in the property store and it may have a setting or be
       // set to an empty string.  This setting should be saved to the profile.
       property_value = properties_.GetString(name);
@@ -100,7 +100,7 @@ std::unique_ptr<DhcpProperties> DhcpProperties::Combine(
   for (const auto& it : to_merge.properties_.properties()) {
     const string& name = it.first;
     const brillo::Any& value = it.second;
-    to_return->properties_.Set(name, value);
+    to_return->properties_.SetVariant(name, value);
   }
   return to_return;
 }
