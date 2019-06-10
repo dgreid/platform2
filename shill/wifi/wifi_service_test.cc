@@ -186,13 +186,13 @@ const char WiFiServiceTest::fake_mac[] = "AaBBcCDDeeFF";
 
 MATCHER_P3(ContainsWiFiProperties, ssid, mode, security, "") {
   string hex_ssid = base::HexEncode(ssid.data(), ssid.size());
-  return arg.ContainsString(WiFiService::kStorageType) &&
+  return arg.template Contains<string>(WiFiService::kStorageType) &&
          arg.GetString(WiFiService::kStorageType) == kTypeWifi &&
-         arg.ContainsString(WiFiService::kStorageSSID) &&
+         arg.template Contains<string>(WiFiService::kStorageSSID) &&
          arg.GetString(WiFiService::kStorageSSID) == hex_ssid &&
-         arg.ContainsString(WiFiService::kStorageMode) &&
+         arg.template Contains<string>(WiFiService::kStorageMode) &&
          arg.GetString(WiFiService::kStorageMode) == mode &&
-         arg.ContainsString(WiFiService::kStorageSecurityClass) &&
+         arg.template Contains<string>(WiFiService::kStorageSecurityClass) &&
          arg.GetString(WiFiService::kStorageSecurityClass) == security;
 }
 
@@ -425,10 +425,11 @@ TEST_F(WiFiServiceTest, NonUTF8SSID) {
 }
 
 MATCHER(PSKSecurityArgs, "") {
-  return arg.ContainsString(WPASupplicant::kPropertySecurityProtocol) &&
+  return arg.template Contains<string>(
+             WPASupplicant::kPropertySecurityProtocol) &&
          arg.GetString(WPASupplicant::kPropertySecurityProtocol) ==
              string("WPA RSN") &&
-         arg.ContainsString(WPASupplicant::kPropertyPreSharedKey);
+         arg.template Contains<string>(WPASupplicant::kPropertyPreSharedKey);
 }
 
 TEST_F(WiFiServiceTest, ConnectReportBSSes) {
@@ -527,8 +528,9 @@ TEST_F(WiFiServiceTest, ConnectTaskRawPMK) {
   service->SetPassphrase(string(IEEE_80211::kWPAHexLen, '1'), &error);
   service->Connect(nullptr, "in test");
   KeyValueStore params = service->GetSupplicantConfigurationParameters();
-  EXPECT_FALSE(params.ContainsString(WPASupplicant::kPropertyPreSharedKey));
-  EXPECT_TRUE(params.ContainsUint8s(WPASupplicant::kPropertyPreSharedKey));
+  EXPECT_FALSE(params.Contains<string>(WPASupplicant::kPropertyPreSharedKey));
+  EXPECT_TRUE(
+      params.Contains<vector<uint8_t>>(WPASupplicant::kPropertyPreSharedKey));
 }
 
 TEST_F(WiFiServiceTest, ConnectTask8021x) {
@@ -540,8 +542,8 @@ TEST_F(WiFiServiceTest, ConnectTask8021x) {
   service->Connect(nullptr, "in test");
   KeyValueStore params = service->GetSupplicantConfigurationParameters();
   EXPECT_TRUE(
-      params.ContainsString(WPASupplicant::kNetworkPropertyEapIdentity));
-  EXPECT_TRUE(params.ContainsString(WPASupplicant::kNetworkPropertyCaPath));
+      params.Contains<string>(WPASupplicant::kNetworkPropertyEapIdentity));
+  EXPECT_TRUE(params.Contains<string>(WPASupplicant::kNetworkPropertyCaPath));
 }
 
 TEST_F(WiFiServiceTest, ConnectTask8021xWithMockEap) {
@@ -570,17 +572,20 @@ TEST_F(WiFiServiceTest, ConnectTaskWPA80211w) {
   wifi_service->Connect(nullptr, "in test");
 
   KeyValueStore params = wifi_service->GetSupplicantConfigurationParameters();
-  EXPECT_TRUE(params.ContainsString(WPASupplicant::kPropertySecurityProtocol));
-  EXPECT_TRUE(params.ContainsString(WPASupplicant::kPropertyPreSharedKey));
-  EXPECT_TRUE(params.ContainsUint(WPASupplicant::kNetworkPropertyIeee80211w));
+  EXPECT_TRUE(
+      params.Contains<string>(WPASupplicant::kPropertySecurityProtocol));
+  EXPECT_TRUE(params.Contains<string>(WPASupplicant::kPropertyPreSharedKey));
+  EXPECT_TRUE(
+      params.Contains<uint32_t>(WPASupplicant::kNetworkPropertyIeee80211w));
 }
 
 MATCHER_P(WEPSecurityArgsKeyIndex, index, "") {
   uint32_t index_u32 = index;
-  return arg.ContainsString(WPASupplicant::kPropertyAuthAlg) &&
-         arg.ContainsUint8s(WPASupplicant::kPropertyWEPKey +
-                            base::NumberToString(index)) &&
-         arg.ContainsUint(WPASupplicant::kPropertyWEPTxKeyIndex) &&
+  return arg.template Contains<string>(WPASupplicant::kPropertyAuthAlg) &&
+         arg.template Contains<vector<uint8_t>>(WPASupplicant::kPropertyWEPKey +
+                                                base::IntToString(index)) &&
+         arg.template Contains<uint32_t>(
+             WPASupplicant::kPropertyWEPTxKeyIndex) &&
          (arg.GetUint(WPASupplicant::kPropertyWEPTxKeyIndex) == index_u32);
 }
 
@@ -630,9 +635,10 @@ TEST_F(WiFiServiceTest, ConnectTaskDynamicWEP) {
   wifi_service->Connect(nullptr, "in test");
   KeyValueStore params = wifi_service->GetSupplicantConfigurationParameters();
   EXPECT_TRUE(
-      params.ContainsString(WPASupplicant::kNetworkPropertyEapIdentity));
-  EXPECT_TRUE(params.ContainsString(WPASupplicant::kNetworkPropertyCaPath));
-  EXPECT_FALSE(params.ContainsString(WPASupplicant::kPropertySecurityProtocol));
+      params.Contains<string>(WPASupplicant::kNetworkPropertyEapIdentity));
+  EXPECT_TRUE(params.Contains<string>(WPASupplicant::kNetworkPropertyCaPath));
+  EXPECT_FALSE(
+      params.Contains<string>(WPASupplicant::kPropertySecurityProtocol));
 }
 
 TEST_F(WiFiServiceTest, ConnectTaskFT) {

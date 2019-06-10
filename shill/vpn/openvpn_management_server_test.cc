@@ -343,7 +343,7 @@ TEST_F(OpenVPNManagementServerTest, ProcessNeedPasswordMessageAuthSC) {
   ExpectOTPStaticChallengeResponse();
   EXPECT_TRUE(server_.ProcessNeedPasswordMessage(
       ">PASSWORD:Need 'Auth' SC:user/password/otp"));
-  EXPECT_FALSE(driver_.args()->ContainsString(kOpenVPNOTPProperty));
+  EXPECT_FALSE(driver_.args()->Contains<string>(kOpenVPNOTPProperty));
 }
 
 TEST_F(OpenVPNManagementServerTest, ProcessNeedPasswordMessageAuth) {
@@ -407,13 +407,13 @@ TEST_F(OpenVPNManagementServerTest, PerformStaticChallengeNoCreds) {
 TEST_F(OpenVPNManagementServerTest, PerformStaticChallengeOTP) {
   ExpectOTPStaticChallengeResponse();
   server_.PerformStaticChallenge("Auth");
-  EXPECT_FALSE(driver_.args()->ContainsString(kOpenVPNOTPProperty));
+  EXPECT_FALSE(driver_.args()->Contains<string>(kOpenVPNOTPProperty));
 }
 
 TEST_F(OpenVPNManagementServerTest, PerformStaticChallengeToken) {
   ExpectTokenStaticChallengeResponse();
   server_.PerformStaticChallenge("Auth");
-  EXPECT_FALSE(driver_.args()->ContainsString(kOpenVPNTokenProperty));
+  EXPECT_FALSE(driver_.args()->Contains<string>(kOpenVPNTokenProperty));
 }
 
 TEST_F(OpenVPNManagementServerTest, PerformAuthenticationNoCreds) {

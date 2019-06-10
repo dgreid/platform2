@@ -84,7 +84,7 @@ void ModemTest::TearDown() {
 }
 
 MATCHER_P2(HasPropertyWithValueU32, key, value, "") {
-  return arg.ContainsUint(key) && value == arg.GetUint(key);
+  return arg.template Contains<uint32_t>(key) && value == arg.GetUint(key);
 }
 
 TEST_F(ModemTest, PendingDevicePropertiesAndCreate) {

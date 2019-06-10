@@ -107,7 +107,7 @@ std::unique_ptr<DhcpProperties> DhcpProperties::Combine(
 
 bool DhcpProperties::GetValueForProperty(const string& name,
                                          string* value) const {
-  if (properties_.ContainsString(name)) {
+  if (properties_.Contains<string>(name)) {
     *value = properties_.GetString(name);
     return true;
   }
@@ -117,7 +117,7 @@ bool DhcpProperties::GetValueForProperty(const string& name,
 void DhcpProperties::ClearMappedStringProperty(const size_t& index,
                                                Error* error) {
   CHECK(index < arraysize(kPropertyNames));
-  if (properties_.ContainsString(kPropertyNames[index])) {
+  if (properties_.Contains<string>(kPropertyNames[index])) {
     properties_.Remove(kPropertyNames[index]);
   } else {
     error->Populate(Error::kNotFound, "Property is not set");
@@ -127,7 +127,7 @@ void DhcpProperties::ClearMappedStringProperty(const size_t& index,
 string DhcpProperties::GetMappedStringProperty(const size_t& index,
                                                Error* error) {
   CHECK(index < arraysize(kPropertyNames));
-  if (properties_.ContainsString(kPropertyNames[index])) {
+  if (properties_.Contains<string>(kPropertyNames[index])) {
     return properties_.GetString(kPropertyNames[index]);
   }
   error->Populate(Error::kNotFound, "Property is not set");
@@ -138,7 +138,7 @@ bool DhcpProperties::SetMappedStringProperty(const size_t& index,
                                              const string& value,
                                              Error* error) {
   CHECK(index < arraysize(kPropertyNames));
-  if (properties_.ContainsString(kPropertyNames[index]) &&
+  if (properties_.Contains<string>(kPropertyNames[index]) &&
       properties_.GetString(kPropertyNames[index]) == value) {
     return false;
   }

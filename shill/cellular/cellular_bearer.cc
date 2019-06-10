@@ -94,7 +94,7 @@ void CellularBearer::GetIPConfigMethodAndProperties(
   DCHECK(ipconfig_properties);
 
   uint32_t method = MM_BEARER_IP_METHOD_UNKNOWN;
-  if (properties.ContainsUint(kPropertyMethod)) {
+  if (properties.Contains<uint32_t>(kPropertyMethod)) {
     method = properties.GetUint(kPropertyMethod);
   } else {
     SLOG(this, 2) << "Bearer '" << dbus_path_.value()
@@ -107,8 +107,8 @@ void CellularBearer::GetIPConfigMethodAndProperties(
   if (*ipconfig_method != IPConfig::kMethodStatic)
     return;
 
-  if (!properties.ContainsString(kPropertyAddress) ||
-      !properties.ContainsString(kPropertyGateway)) {
+  if (!properties.Contains<string>(kPropertyAddress) ||
+      !properties.Contains<string>(kPropertyGateway)) {
     SLOG(this, 2) << "Bearer '" << dbus_path_.value()
                   << "' static IP configuration does not specify valid "
                      "address/gateway information.";
@@ -129,26 +129,26 @@ void CellularBearer::GetIPConfigMethodAndProperties(
   }
 
   uint32_t prefix;
-  if (!properties.ContainsUint(kPropertyPrefix)) {
+  if (!properties.Contains<uint32_t>(kPropertyPrefix)) {
     prefix = IPAddress::GetMaxPrefixLength(address_family);
   } else {
     prefix = properties.GetUint(kPropertyPrefix);
   }
   (*ipconfig_properties)->subnet_prefix = prefix;
 
-  if (properties.ContainsString(kPropertyDNS1)) {
+  if (properties.Contains<string>(kPropertyDNS1)) {
     (*ipconfig_properties)
         ->dns_servers.push_back(properties.GetString(kPropertyDNS1));
   }
-  if (properties.ContainsString(kPropertyDNS2)) {
+  if (properties.Contains<string>(kPropertyDNS2)) {
     (*ipconfig_properties)
         ->dns_servers.push_back(properties.GetString(kPropertyDNS2));
   }
-  if (properties.ContainsString(kPropertyDNS3)) {
+  if (properties.Contains<string>(kPropertyDNS3)) {
     (*ipconfig_properties)
         ->dns_servers.push_back(properties.GetString(kPropertyDNS3));
   }
-  if (properties.ContainsUint(kPropertyMtu)) {
+  if (properties.Contains<uint32_t>(kPropertyMtu)) {
     uint32_t mtu = properties.GetUint(kPropertyMtu);
     // TODO(b/139816862): A larger-than-expected MTU value has been observed
     // on some modem. Here we temporarily ignore any MTU value larger than
@@ -196,24 +196,26 @@ void CellularBearer::OnPropertiesChanged(
   if (interface != MM_DBUS_INTERFACE_BEARER)
     return;
 
-  if (changed_properties.ContainsBool(MM_BEARER_PROPERTY_CONNECTED)) {
+  if (changed_properties.Contains<bool>(MM_BEARER_PROPERTY_CONNECTED)) {
     connected_ = changed_properties.GetBool(MM_BEARER_PROPERTY_CONNECTED);
   }
 
   string data_interface;
-  if (changed_properties.ContainsString(MM_BEARER_PROPERTY_INTERFACE)) {
+  if (changed_properties.Contains<string>(MM_BEARER_PROPERTY_INTERFACE)) {
     data_interface_ =
         changed_properties.GetString(MM_BEARER_PROPERTY_INTERFACE);
   }
 
-  if (changed_properties.ContainsKeyValueStore(MM_BEARER_PROPERTY_IP4CONFIG)) {
+  if (changed_properties.Contains<KeyValueStore>(
+          MM_BEARER_PROPERTY_IP4CONFIG)) {
     KeyValueStore ipconfig =
         changed_properties.GetKeyValueStore(MM_BEARER_PROPERTY_IP4CONFIG);
     GetIPConfigMethodAndProperties(ipconfig, IPAddress::kFamilyIPv4,
                                    &ipv4_config_method_,
                                    &ipv4_config_properties_);
   }
-  if (changed_properties.ContainsKeyValueStore(MM_BEARER_PROPERTY_IP6CONFIG)) {
+  if (changed_properties.Contains<KeyValueStore>(
+          MM_BEARER_PROPERTY_IP6CONFIG)) {
     KeyValueStore ipconfig =
         changed_properties.GetKeyValueStore(MM_BEARER_PROPERTY_IP6CONFIG);
     GetIPConfigMethodAndProperties(ipconfig, IPAddress::kFamilyIPv6,

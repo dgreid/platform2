@@ -55,7 +55,7 @@ void Modem1::CreateDeviceMM1(const InterfaceToProperties& properties) {
     return;
   }
   const KeyValueStore& modem_props = it->second;
-  if (modem_props.ContainsUint(MM_MODEM_PROPERTY_CURRENTCAPABILITIES)) {
+  if (modem_props.Contains<uint32_t>(MM_MODEM_PROPERTY_CURRENTCAPABILITIES)) {
     capabilities = modem_props.GetUint(MM_MODEM_PROPERTY_CURRENTCAPABILITIES);
   }
 

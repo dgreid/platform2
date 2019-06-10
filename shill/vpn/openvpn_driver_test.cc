@@ -1293,7 +1293,7 @@ TEST_F(OpenVPNDriverTest, PassphraseRequired) {
   props = GetProviderProperties(store);
   EXPECT_FALSE(props.LookupBool(kPassphraseRequiredProperty, true));
   // This parameter should be write-only.
-  EXPECT_FALSE(props.ContainsString(kOpenVPNPasswordProperty));
+  EXPECT_FALSE(props.Contains<string>(kOpenVPNPasswordProperty));
 
   SetArg(kOpenVPNPasswordProperty, "");
   props = GetProviderProperties(store);
@@ -1303,7 +1303,7 @@ TEST_F(OpenVPNDriverTest, PassphraseRequired) {
   props = GetProviderProperties(store);
   EXPECT_FALSE(props.LookupBool(kPassphraseRequiredProperty, true));
   // This parameter should be write-only.
-  EXPECT_FALSE(props.ContainsString(kOpenVPNTokenProperty));
+  EXPECT_FALSE(props.Contains<string>(kOpenVPNTokenProperty));
 }
 
 TEST_F(OpenVPNDriverTest, GetCommandLineArgs) {

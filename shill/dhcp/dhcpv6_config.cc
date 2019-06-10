@@ -139,10 +139,10 @@ bool DHCPv6Config::ParseConfiguration(const KeyValueStore& configuration) {
   properties_.method = kTypeDHCP6;
   properties_.address_family = IPAddress::kFamilyIPv6;
 
-  if (configuration.ContainsUint(kConfigurationKeyIPAddressIaid)) {
+  if (configuration.Contains<uint32_t>(kConfigurationKeyIPAddressIaid)) {
     properties_.dhcpv6_addresses.clear();
   }
-  if (configuration.ContainsUint(kConfigurationKeyDelegatedPrefixIaid)) {
+  if (configuration.Contains<uint32_t>(kConfigurationKeyDelegatedPrefixIaid)) {
     properties_.dhcpv6_delegated_prefixes.clear();
   }
 
@@ -158,10 +158,10 @@ bool DHCPv6Config::ParseConfiguration(const KeyValueStore& configuration) {
     const std::string prefix_preferred_lease_time_key = base::StringPrintf(
         "%s%d", kConfigurationKeyDelegatedPrefixPreferredLeaseTime, i);
 
-    if (configuration.ContainsString(prefix_key) &&
-        configuration.ContainsUint(prefix_length_key) &&
-        configuration.ContainsUint(prefix_lease_time_key) &&
-        configuration.ContainsUint(prefix_preferred_lease_time_key)) {
+    if (configuration.Contains<string>(prefix_key) &&
+        configuration.Contains<uint32_t>(prefix_length_key) &&
+        configuration.Contains<uint32_t>(prefix_lease_time_key) &&
+        configuration.Contains<uint32_t>(prefix_preferred_lease_time_key)) {
       uint32_t lease_time = configuration.GetUint(prefix_lease_time_key);
       uint32_t preferred_lease_time =
           configuration.GetUint(prefix_preferred_lease_time_key);
@@ -184,9 +184,9 @@ bool DHCPv6Config::ParseConfiguration(const KeyValueStore& configuration) {
     const std::string address_preferred_lease_time_key = base::StringPrintf(
         "%s%d", kConfigurationKeyIPAddressPreferredLeaseTime, i);
 
-    if (configuration.ContainsString(address_key) &&
-        configuration.ContainsUint(address_lease_time_key) &&
-        configuration.ContainsUint(address_preferred_lease_time_key)) {
+    if (configuration.Contains<string>(address_key) &&
+        configuration.Contains<uint32_t>(address_lease_time_key) &&
+        configuration.Contains<uint32_t>(address_preferred_lease_time_key)) {
       uint32_t lease_time = configuration.GetUint(address_lease_time_key);
       uint32_t preferred_lease_time =
           configuration.GetUint(address_preferred_lease_time_key);
@@ -202,10 +202,10 @@ bool DHCPv6Config::ParseConfiguration(const KeyValueStore& configuration) {
     }
   }
 
-  if (configuration.ContainsStrings(kConfigurationKeyDNS)) {
+  if (configuration.Contains<Strings>(kConfigurationKeyDNS)) {
     properties_.dns_servers = configuration.GetStrings(kConfigurationKeyDNS);
   }
-  if (configuration.ContainsStrings(kConfigurationKeyDomainSearch)) {
+  if (configuration.Contains<Strings>(kConfigurationKeyDomainSearch)) {
     properties_.domain_search =
         configuration.GetStrings(kConfigurationKeyDomainSearch);
   }

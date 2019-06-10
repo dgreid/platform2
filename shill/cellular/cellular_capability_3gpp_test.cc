@@ -57,35 +57,39 @@ using testing::SaveArg;
 namespace shill {
 
 MATCHER_P(HasApn, expected_apn, "") {
-  return arg.ContainsString(CellularCapability3gpp::kConnectApn) &&
+  return arg.template Contains<string>(CellularCapability3gpp::kConnectApn) &&
          expected_apn == arg.GetString(CellularCapability3gpp::kConnectApn);
 }
 
 MATCHER(HasNoUser, "") {
-  return !arg.ContainsString(CellularCapability3gpp::kConnectUser);
+  return !arg.template Contains<string>(CellularCapability3gpp::kConnectUser);
 }
 
 MATCHER_P(HasUser, expected_user, "") {
-  return arg.ContainsString(CellularCapability3gpp::kConnectUser) &&
+  return arg.template Contains<string>(CellularCapability3gpp::kConnectUser) &&
          expected_user == arg.GetString(CellularCapability3gpp::kConnectUser);
 }
 
 MATCHER(HasNoPassword, "") {
-  return !arg.ContainsString(CellularCapability3gpp::kConnectPassword);
+  return !arg.template Contains<string>(
+      CellularCapability3gpp::kConnectPassword);
 }
 
 MATCHER_P(HasPassword, expected_password, "") {
-  return arg.ContainsString(CellularCapability3gpp::kConnectPassword) &&
+  return arg.template Contains<string>(
+             CellularCapability3gpp::kConnectPassword) &&
          expected_password ==
              arg.GetString(CellularCapability3gpp::kConnectPassword);
 }
 
 MATCHER(HasNoAllowedAuth, "") {
-  return !arg.ContainsString(CellularCapability3gpp::kConnectAllowedAuth);
+  return !arg.template Contains<string>(
+      CellularCapability3gpp::kConnectAllowedAuth);
 }
 
 MATCHER_P(HasAllowedAuth, expected_authentication, "") {
-  return arg.ContainsUint(CellularCapability3gpp::kConnectAllowedAuth) &&
+  return arg.template Contains<uint32_t>(
+             CellularCapability3gpp::kConnectAllowedAuth) &&
          expected_authentication ==
              arg.GetUint(CellularCapability3gpp::kConnectAllowedAuth);
 }

@@ -229,9 +229,9 @@ TEST_F(StaticIPParametersTest, ControlInterface) {
   EXPECT_EQ(kTestAddress, props.address);
   EXPECT_EQ(kTestMtu, props.mtu);
 
-  EXPECT_FALSE(static_args()->ContainsString("Address"));
+  EXPECT_FALSE(static_args()->Contains<string>("Address"));
   EXPECT_EQ(kGateway, static_args()->GetString("Gateway"));
-  EXPECT_FALSE(static_args()->ContainsInt("Mtu"));
+  EXPECT_FALSE(static_args()->Contains<int32_t>("Mtu"));
   vector<string> kTestNameServers({VersionedAddress(kNameServer0, version),
                                    VersionedAddress(kNameServer1, version)});
   EXPECT_EQ(kTestNameServers, static_args()->GetStrings("NameServers"));

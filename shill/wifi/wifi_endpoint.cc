@@ -51,14 +51,14 @@ WiFiEndpoint::WiFiEndpoint(ControlInterface* control_interface,
   ssid_ = properties.GetUint8s(WPASupplicant::kBSSPropertySSID);
   bssid_ = properties.GetUint8s(WPASupplicant::kBSSPropertyBSSID);
   signal_strength_ = properties.GetInt16(WPASupplicant::kBSSPropertySignal);
-  if (properties.ContainsUint(WPASupplicant::kBSSPropertyAge)) {
+  if (properties.Contains<uint32_t>(WPASupplicant::kBSSPropertyAge)) {
     last_seen_ = base::TimeTicks::Now() -
                  base::TimeDelta::FromSeconds(
                      properties.GetUint(WPASupplicant::kBSSPropertyAge));
   } else {
     last_seen_ = base::TimeTicks();
   }
-  if (properties.ContainsUint16(WPASupplicant::kBSSPropertyFrequency)) {
+  if (properties.Contains<uint16_t>(WPASupplicant::kBSSPropertyFrequency)) {
     frequency_ = properties.GetUint16(WPASupplicant::kBSSPropertyFrequency);
   }
 
@@ -73,9 +73,9 @@ WiFiEndpoint::WiFiEndpoint(ControlInterface* control_interface,
       ParseMode(properties.GetString(WPASupplicant::kBSSPropertyMode));
   set_security_mode(ParseSecurity(properties, &security_flags_));
   has_rsn_property_ =
-      properties.ContainsKeyValueStore(WPASupplicant::kPropertyRSN);
+      properties.Contains<KeyValueStore>(WPASupplicant::kPropertyRSN);
   has_wpa_property_ =
-      properties.ContainsKeyValueStore(WPASupplicant::kPropertyWPA);
+      properties.Contains<KeyValueStore>(WPASupplicant::kPropertyWPA);
 
   ssid_string_ = string(ssid_.begin(), ssid_.end());
   WiFi::SanitizeSSID(&ssid_string_);
@@ -96,19 +96,19 @@ void WiFiEndpoint::Start() {
 void WiFiEndpoint::PropertiesChanged(const KeyValueStore& properties) {
   SLOG(this, 2) << __func__;
   bool should_notify = false;
-  if (properties.ContainsInt16(WPASupplicant::kBSSPropertySignal)) {
+  if (properties.Contains<int16_t>(WPASupplicant::kBSSPropertySignal)) {
     signal_strength_ = properties.GetInt16(WPASupplicant::kBSSPropertySignal);
     should_notify = true;
   }
 
-  if (properties.ContainsUint(WPASupplicant::kBSSPropertyAge)) {
+  if (properties.Contains<uint32_t>(WPASupplicant::kBSSPropertyAge)) {
     last_seen_ = base::TimeTicks::Now() -
                  base::TimeDelta::FromSeconds(
                      properties.GetUint(WPASupplicant::kBSSPropertyAge));
     should_notify = true;
   }
 
-  if (properties.ContainsString(WPASupplicant::kBSSPropertyMode)) {
+  if (properties.Contains<string>(WPASupplicant::kBSSPropertyMode)) {
     string new_mode =
         ParseMode(properties.GetString(WPASupplicant::kBSSPropertyMode));
     if (!new_mode.empty() && new_mode != network_mode_) {
@@ -119,7 +119,7 @@ void WiFiEndpoint::PropertiesChanged(const KeyValueStore& properties) {
     }
   }
 
-  if (properties.ContainsUint16(WPASupplicant::kBSSPropertyFrequency)) {
+  if (properties.Contains<uint16_t>(WPASupplicant::kBSSPropertyFrequency)) {
     uint16_t new_frequency =
         properties.GetUint16(WPASupplicant::kBSSPropertyFrequency);
     if (new_frequency != frequency_) {
@@ -342,7 +342,7 @@ string WiFiEndpoint::ParseMode(const string& mode_string) {
 // static
 const char* WiFiEndpoint::ParseSecurity(const KeyValueStore& properties,
                                         SecurityFlags* flags) {
-  if (properties.ContainsKeyValueStore(WPASupplicant::kPropertyRSN)) {
+  if (properties.Contains<KeyValueStore>(WPASupplicant::kPropertyRSN)) {
     KeyValueStore rsn_properties =
         properties.GetKeyValueStore(WPASupplicant::kPropertyRSN);
     set<KeyManagement> key_management;
@@ -351,7 +351,7 @@ const char* WiFiEndpoint::ParseSecurity(const KeyValueStore& properties,
     flags->rsn_psk = base::ContainsKey(key_management, kKeyManagementPSK);
   }
 
-  if (properties.ContainsKeyValueStore(WPASupplicant::kPropertyWPA)) {
+  if (properties.Contains<KeyValueStore>(WPASupplicant::kPropertyWPA)) {
     KeyValueStore rsn_properties =
         properties.GetKeyValueStore(WPASupplicant::kPropertyWPA);
     set<KeyManagement> key_management;
@@ -360,7 +360,7 @@ const char* WiFiEndpoint::ParseSecurity(const KeyValueStore& properties,
     flags->wpa_psk = base::ContainsKey(key_management, kKeyManagementPSK);
   }
 
-  if (properties.ContainsBool(WPASupplicant::kPropertyPrivacy)) {
+  if (properties.Contains<bool>(WPASupplicant::kPropertyPrivacy)) {
     flags->privacy = properties.GetBool(WPASupplicant::kPropertyPrivacy);
   }
 
@@ -381,7 +381,7 @@ const char* WiFiEndpoint::ParseSecurity(const KeyValueStore& properties,
 void WiFiEndpoint::ParseKeyManagementMethods(
     const KeyValueStore& security_method_properties,
     set<KeyManagement>* key_management_methods) {
-  if (!security_method_properties.ContainsStrings(
+  if (!security_method_properties.Contains<Strings>(
           WPASupplicant::kSecurityMethodPropertyKeyManagement)) {
     return;
   }
@@ -406,7 +406,7 @@ void WiFiEndpoint::ParseKeyManagementMethods(
 Metrics::WiFiNetworkPhyMode WiFiEndpoint::DeterminePhyModeFromFrequency(
     const KeyValueStore& properties, uint16_t frequency) {
   uint32_t max_rate = 0;
-  if (properties.ContainsUint32s(WPASupplicant::kBSSPropertyRates)) {
+  if (properties.Contains<vector<uint32_t>>(WPASupplicant::kBSSPropertyRates)) {
     vector<uint32_t> rates =
         properties.GetUint32s(WPASupplicant::kBSSPropertyRates);
     if (!rates.empty()) {
@@ -436,7 +436,7 @@ bool WiFiEndpoint::ParseIEs(const KeyValueStore& properties,
                             bool* ieee80211w_required,
                             string* country_code,
                             Ap80211krvSupport* krv_support) {
-  if (!properties.ContainsUint8s(WPASupplicant::kBSSPropertyIEs)) {
+  if (!properties.Contains<vector<uint8_t>>(WPASupplicant::kBSSPropertyIEs)) {
     SLOG(nullptr, 2) << __func__ << ": No IE property in BSS.";
     return false;
   }

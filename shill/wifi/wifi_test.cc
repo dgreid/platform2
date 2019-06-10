@@ -2201,7 +2201,7 @@ TEST_F(WiFiMainTest, ReconnectTimer) {
 }
 
 MATCHER_P(ScanRequestHasHiddenSSID, ssid, "") {
-  if (!arg.ContainsByteArrays(WPASupplicant::kPropertyScanSSIDs)) {
+  if (!arg.template Contains<ByteArrays>(WPASupplicant::kPropertyScanSSIDs)) {
     return false;
   }
 
@@ -2214,7 +2214,7 @@ MATCHER_P(ScanRequestHasHiddenSSID, ssid, "") {
 }
 
 MATCHER(ScanRequestHasNoHiddenSSID, "") {
-  return !arg.ContainsByteArrays(WPASupplicant::kPropertyScanSSIDs);
+  return !arg.template Contains<ByteArrays>(WPASupplicant::kPropertyScanSSIDs);
 }
 
 TEST_F(WiFiMainTest, ScanHidden) {
@@ -2504,9 +2504,12 @@ TEST_F(WiFiMainTest, IsIdle) {
 }
 
 MATCHER_P(WiFiAddedArgs, bgscan, "") {
-  return arg.ContainsUint(WPASupplicant::kNetworkPropertyScanSSID) &&
-         arg.ContainsUint(WPASupplicant::kNetworkPropertyDisableVHT) &&
-         arg.ContainsString(WPASupplicant::kNetworkPropertyBgscan) == bgscan;
+  return arg.template Contains<uint32_t>(
+             WPASupplicant::kNetworkPropertyScanSSID) &&
+         arg.template Contains<uint32_t>(
+             WPASupplicant::kNetworkPropertyDisableVHT) &&
+         arg.template Contains<string>(WPASupplicant::kNetworkPropertyBgscan) ==
+             bgscan;
 }
 
 TEST_F(WiFiMainTest, AddNetworkArgs) {
@@ -2539,7 +2542,8 @@ TEST_F(WiFiMainTest, AppendBgscan) {
     EXPECT_CALL(*service, GetEndpointCount()).WillOnce(Return(1));
     AppendBgscan(service.get(), &params);
     Mock::VerifyAndClearExpectations(service.get());
-    EXPECT_FALSE(params.ContainsString(WPASupplicant::kNetworkPropertyBgscan));
+    EXPECT_FALSE(
+        params.Contains<string>(WPASupplicant::kNetworkPropertyBgscan));
   }
   {
     // 2 endpoints, default bgscan method -- background scan frequency reduced.
@@ -2548,7 +2552,7 @@ TEST_F(WiFiMainTest, AppendBgscan) {
     AppendBgscan(service.get(), &params);
     Mock::VerifyAndClearExpectations(service.get());
     string config_string;
-    EXPECT_TRUE(params.ContainsString(WPASupplicant::kNetworkPropertyBgscan));
+    EXPECT_TRUE(params.Contains<string>(WPASupplicant::kNetworkPropertyBgscan));
     config_string = params.GetString(WPASupplicant::kNetworkPropertyBgscan);
     vector<string> elements = base::SplitString(
         config_string, ":", base::TRIM_WHITESPACE, base::SPLIT_WANT_ALL);
@@ -2564,7 +2568,7 @@ TEST_F(WiFiMainTest, AppendBgscan) {
     EXPECT_CALL(*service, GetEndpointCount()).Times(0);
     AppendBgscan(service.get(), &params);
     Mock::VerifyAndClearExpectations(service.get());
-    EXPECT_TRUE(params.ContainsString(WPASupplicant::kNetworkPropertyBgscan));
+    EXPECT_TRUE(params.Contains<string>(WPASupplicant::kNetworkPropertyBgscan));
     string config_string =
         params.GetString(WPASupplicant::kNetworkPropertyBgscan);
     vector<string> elements = base::SplitString(
@@ -2581,7 +2585,8 @@ TEST_F(WiFiMainTest, AppendBgscan) {
     AppendBgscan(service.get(), &params);
     Mock::VerifyAndClearExpectations(service.get());
     string config_string;
-    EXPECT_FALSE(params.ContainsString(WPASupplicant::kNetworkPropertyBgscan));
+    EXPECT_FALSE(
+        params.Contains<string>(WPASupplicant::kNetworkPropertyBgscan));
   }
 }
 
@@ -3218,25 +3223,30 @@ TEST_F(WiFiTimerTest, RequestStationInfo) {
 
   link_statistics = GetLinkStatistics();
   ASSERT_FALSE(link_statistics.IsEmpty());
-  ASSERT_TRUE(link_statistics.ContainsInt(kLastReceiveSignalDbmProperty));
+  ASSERT_TRUE(link_statistics.Contains<int32_t>(kLastReceiveSignalDbmProperty));
   EXPECT_EQ(kSignalValue,
             link_statistics.GetInt(kLastReceiveSignalDbmProperty));
-  ASSERT_TRUE(link_statistics.ContainsInt(kAverageReceiveSignalDbmProperty));
+  ASSERT_TRUE(
+      link_statistics.Contains<int32_t>(kAverageReceiveSignalDbmProperty));
   EXPECT_EQ(kSignalAvgValue,
             link_statistics.GetInt(kAverageReceiveSignalDbmProperty));
-  ASSERT_TRUE(link_statistics.ContainsUint(kInactiveTimeMillisecondsProperty));
+  ASSERT_TRUE(
+      link_statistics.Contains<uint32_t>(kInactiveTimeMillisecondsProperty));
   EXPECT_EQ(kInactiveTime,
             link_statistics.GetUint(kInactiveTimeMillisecondsProperty));
-  ASSERT_TRUE(link_statistics.ContainsUint(kPacketReceiveSuccessesProperty));
+  ASSERT_TRUE(
+      link_statistics.Contains<uint32_t>(kPacketReceiveSuccessesProperty));
   EXPECT_EQ(kReceiveSuccesses,
             link_statistics.GetUint(kPacketReceiveSuccessesProperty));
-  ASSERT_TRUE(link_statistics.ContainsUint(kPacketTransmitFailuresProperty));
+  ASSERT_TRUE(
+      link_statistics.Contains<uint32_t>(kPacketTransmitFailuresProperty));
   EXPECT_EQ(kTransmitFailed,
             link_statistics.GetUint(kPacketTransmitFailuresProperty));
-  ASSERT_TRUE(link_statistics.ContainsUint(kPacketTransmitSuccessesProperty));
+  ASSERT_TRUE(
+      link_statistics.Contains<uint32_t>(kPacketTransmitSuccessesProperty));
   EXPECT_EQ(kTransmitSuccesses,
             link_statistics.GetUint(kPacketTransmitSuccessesProperty));
-  ASSERT_TRUE(link_statistics.ContainsUint(kTransmitRetriesProperty));
+  ASSERT_TRUE(link_statistics.Contains<uint32_t>(kTransmitRetriesProperty));
   EXPECT_EQ(kTransmitRetries,
             link_statistics.GetUint(kTransmitRetriesProperty));
   EXPECT_EQ(StringPrintf("%d.%d MBit/s MCS %d 40MHz", kBitrate / 10,

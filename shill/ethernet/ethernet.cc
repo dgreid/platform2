@@ -284,7 +284,7 @@ void Ethernet::EAPEvent(const string& status, const string& parameter) {
 }
 
 void Ethernet::PropertiesChanged(const KeyValueStore& properties) {
-  if (!properties.ContainsString(WPASupplicant::kInterfacePropertyState)) {
+  if (!properties.Contains<string>(WPASupplicant::kInterfacePropertyState)) {
     return;
   }
   dispatcher()->PostTask(

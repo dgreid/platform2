@@ -283,35 +283,38 @@ TEST_F(EapCredentialsTest, PopulateSupplicantProperties) {
   PopulateSupplicantProperties();
   // Test that only non-empty 802.1x properties are populated.
   EXPECT_TRUE(
-      params_.ContainsString(WPASupplicant::kNetworkPropertyEapIdentity));
-  EXPECT_FALSE(params_.ContainsString(WPASupplicant::kNetworkPropertyEapKeyId));
+      params_.Contains<string>(WPASupplicant::kNetworkPropertyEapIdentity));
   EXPECT_FALSE(
-      params_.ContainsString(WPASupplicant::kNetworkPropertyEapCaCert));
+      params_.Contains<string>(WPASupplicant::kNetworkPropertyEapKeyId));
+  EXPECT_FALSE(
+      params_.Contains<string>(WPASupplicant::kNetworkPropertyEapCaCert));
 
   // Test that CA path is set by default.
-  EXPECT_TRUE(params_.ContainsString(WPASupplicant::kNetworkPropertyCaPath));
+  EXPECT_TRUE(params_.Contains<string>(WPASupplicant::kNetworkPropertyCaPath));
 
   // Test that hardware-backed security arguments are not set, since
   // neither key-id nor cert-id were set.
-  EXPECT_FALSE(params_.ContainsString(WPASupplicant::kNetworkPropertyEapPin));
-  EXPECT_FALSE(params_.ContainsUint(WPASupplicant::kNetworkPropertyEngine));
-  EXPECT_FALSE(params_.ContainsString(WPASupplicant::kNetworkPropertyEngineId));
+  EXPECT_FALSE(params_.Contains<string>(WPASupplicant::kNetworkPropertyEapPin));
+  EXPECT_FALSE(
+      params_.Contains<uint32_t>(WPASupplicant::kNetworkPropertyEngine));
+  EXPECT_FALSE(
+      params_.Contains<string>(WPASupplicant::kNetworkPropertyEngineId));
 
   // Test EAP version translation.  The "phase1" supplicant parameter is
   // normally empty, but it will contain a "tls_disable" flag if this
   // service requests an old TLS version.
   EXPECT_FALSE(
-      params_.ContainsString(WPASupplicant::kNetworkPropertyEapOuterEap));
+      params_.Contains<string>(WPASupplicant::kNetworkPropertyEapOuterEap));
 
   SetTLSVersionMax("1.2");
   PopulateSupplicantProperties();
   EXPECT_FALSE(
-      params_.ContainsString(WPASupplicant::kNetworkPropertyEapOuterEap));
+      params_.Contains<string>(WPASupplicant::kNetworkPropertyEapOuterEap));
 
   SetTLSVersionMax("1.0");
   PopulateSupplicantProperties();
   EXPECT_TRUE(
-      params_.ContainsString(WPASupplicant::kNetworkPropertyEapOuterEap));
+      params_.Contains<string>(WPASupplicant::kNetworkPropertyEapOuterEap));
   string phase1 = params_.GetString(WPASupplicant::kNetworkPropertyEapOuterEap);
   EXPECT_EQ(string::npos, phase1.find("disable_tlsv1_0=1"));
   EXPECT_NE(string::npos, phase1.find("disable_tlsv1_1=1"));
@@ -323,7 +326,7 @@ TEST_F(EapCredentialsTest, PopulateSupplicantPropertiesNoSystemCAs) {
   SetUseSystemCAs(false);
   PopulateSupplicantProperties();
   // Test that CA path is not set if use_system_cas is explicitly false.
-  EXPECT_FALSE(params_.ContainsString(WPASupplicant::kNetworkPropertyCaPath));
+  EXPECT_FALSE(params_.Contains<string>(WPASupplicant::kNetworkPropertyCaPath));
 }
 
 TEST_F(EapCredentialsTest,
@@ -331,7 +334,7 @@ TEST_F(EapCredentialsTest,
   SetIdentity("testidentity");
   PopulateSupplicantProperties();
 
-  ASSERT_TRUE(params_.ContainsUint(
+  ASSERT_TRUE(params_.Contains<uint32_t>(
       WPASupplicant::kNetworkPropertyEapProactiveKeyCaching));
 
   const uint32_t kProactiveKeyCachingDisabled(0);
@@ -347,7 +350,7 @@ TEST_F(EapCredentialsTest,
   SetUseProactiveKeyCaching(true);
   PopulateSupplicantProperties();
 
-  ASSERT_TRUE(params_.ContainsUint(
+  ASSERT_TRUE(params_.Contains<uint32_t>(
       WPASupplicant::kNetworkPropertyEapProactiveKeyCaching));
 
   const uint32_t kProactiveKeyCachingEnabled(1);
@@ -363,7 +366,7 @@ TEST_F(EapCredentialsTest,
   SetUseProactiveKeyCaching(false);
   PopulateSupplicantProperties();
 
-  ASSERT_TRUE(params_.ContainsUint(
+  ASSERT_TRUE(params_.Contains<uint32_t>(
       WPASupplicant::kNetworkPropertyEapProactiveKeyCaching));
 
   const uint32_t kProactiveKeyCachingDisabled(0);
@@ -381,29 +384,38 @@ TEST_F(EapCredentialsTest, PopulateSupplicantPropertiesUsingHardwareAuth) {
   PopulateSupplicantProperties();
   // Test that EAP engine parameters are not set if the authentication type
   // is not one that accepts a client certificate.
-  EXPECT_FALSE(params_.ContainsString(WPASupplicant::kNetworkPropertyEapPin));
-  EXPECT_FALSE(params_.ContainsString(WPASupplicant::kNetworkPropertyEapKeyId));
-  EXPECT_FALSE(params_.ContainsUint(WPASupplicant::kNetworkPropertyEngine));
-  EXPECT_FALSE(params_.ContainsString(WPASupplicant::kNetworkPropertyEngineId));
+  EXPECT_FALSE(params_.Contains<string>(WPASupplicant::kNetworkPropertyEapPin));
+  EXPECT_FALSE(
+      params_.Contains<string>(WPASupplicant::kNetworkPropertyEapKeyId));
+  EXPECT_FALSE(
+      params_.Contains<uint32_t>(WPASupplicant::kNetworkPropertyEngine));
+  EXPECT_FALSE(
+      params_.Contains<string>(WPASupplicant::kNetworkPropertyEngineId));
 
   // Test that EAP engine parameters are set if key_id is set and the
   // authentication type accepts a client certificate.
   params_.Clear();
   SetEap("TLS");
   PopulateSupplicantProperties();
-  EXPECT_TRUE(params_.ContainsString(WPASupplicant::kNetworkPropertyEapPin));
-  EXPECT_TRUE(params_.ContainsString(WPASupplicant::kNetworkPropertyEapKeyId));
-  EXPECT_TRUE(params_.ContainsUint(WPASupplicant::kNetworkPropertyEngine));
-  EXPECT_TRUE(params_.ContainsString(WPASupplicant::kNetworkPropertyEngineId));
+  EXPECT_TRUE(params_.Contains<string>(WPASupplicant::kNetworkPropertyEapPin));
+  EXPECT_TRUE(
+      params_.Contains<string>(WPASupplicant::kNetworkPropertyEapKeyId));
+  EXPECT_TRUE(
+      params_.Contains<uint32_t>(WPASupplicant::kNetworkPropertyEngine));
+  EXPECT_TRUE(
+      params_.Contains<string>(WPASupplicant::kNetworkPropertyEngineId));
 
   // An empty EAP parameter should be considered to be possibly "TLS".
   params_.Clear();
   SetEap("");
   PopulateSupplicantProperties();
-  EXPECT_TRUE(params_.ContainsString(WPASupplicant::kNetworkPropertyEapPin));
-  EXPECT_TRUE(params_.ContainsString(WPASupplicant::kNetworkPropertyEapKeyId));
-  EXPECT_TRUE(params_.ContainsUint(WPASupplicant::kNetworkPropertyEngine));
-  EXPECT_TRUE(params_.ContainsString(WPASupplicant::kNetworkPropertyEngineId));
+  EXPECT_TRUE(params_.Contains<string>(WPASupplicant::kNetworkPropertyEapPin));
+  EXPECT_TRUE(
+      params_.Contains<string>(WPASupplicant::kNetworkPropertyEapKeyId));
+  EXPECT_TRUE(
+      params_.Contains<uint32_t>(WPASupplicant::kNetworkPropertyEngine));
+  EXPECT_TRUE(
+      params_.Contains<string>(WPASupplicant::kNetworkPropertyEngineId));
 
   // Test that EAP engine parameters are set if ca_cert_id is set even if the
   // authentication type does not accept a client certificate.  However,
@@ -412,12 +424,15 @@ TEST_F(EapCredentialsTest, PopulateSupplicantPropertiesUsingHardwareAuth) {
   SetEap("PEAP");
   SetCACertId("certid");
   PopulateSupplicantProperties();
-  EXPECT_TRUE(params_.ContainsString(WPASupplicant::kNetworkPropertyEapPin));
-  EXPECT_FALSE(params_.ContainsString(WPASupplicant::kNetworkPropertyEapKeyId));
-  EXPECT_TRUE(params_.ContainsUint(WPASupplicant::kNetworkPropertyEngine));
-  EXPECT_TRUE(params_.ContainsString(WPASupplicant::kNetworkPropertyEngineId));
+  EXPECT_TRUE(params_.Contains<string>(WPASupplicant::kNetworkPropertyEapPin));
+  EXPECT_FALSE(
+      params_.Contains<string>(WPASupplicant::kNetworkPropertyEapKeyId));
   EXPECT_TRUE(
-      params_.ContainsString(WPASupplicant::kNetworkPropertyEapCaCertId));
+      params_.Contains<uint32_t>(WPASupplicant::kNetworkPropertyEngine));
+  EXPECT_TRUE(
+      params_.Contains<string>(WPASupplicant::kNetworkPropertyEngineId));
+  EXPECT_TRUE(
+      params_.Contains<string>(WPASupplicant::kNetworkPropertyEapCaCertId));
 }
 
 TEST_F(EapCredentialsTest, PopulateSupplicantPropertiesPEM) {
@@ -429,8 +444,9 @@ TEST_F(EapCredentialsTest, PopulateSupplicantPropertiesPEM) {
       .WillOnce(Return(pem_cert));
 
   PopulateSupplicantProperties();
-  EXPECT_TRUE(params_.ContainsString(WPASupplicant::kNetworkPropertyEapCaCert));
-  if (params_.ContainsString(WPASupplicant::kNetworkPropertyEapCaCert)) {
+  EXPECT_TRUE(
+      params_.Contains<string>(WPASupplicant::kNetworkPropertyEapCaCert));
+  if (params_.Contains<string>(WPASupplicant::kNetworkPropertyEapCaCert)) {
     EXPECT_EQ(kPEMCertfile,
               params_.GetString(WPASupplicant::kNetworkPropertyEapCaCert));
   }
@@ -511,7 +527,7 @@ TEST_F(EapCredentialsTest, TestUseLoginPassword) {
   PopulateSupplicantProperties();
 
   EXPECT_TRUE(
-      params_.ContainsString(WPASupplicant::kNetworkPropertyEapCaPassword));
+      params_.Contains<string>(WPASupplicant::kNetworkPropertyEapCaPassword));
   string used_password =
       params_.GetString(WPASupplicant::kNetworkPropertyEapCaPassword);
   EXPECT_EQ(used_password, kPasswordStr);
@@ -525,7 +541,7 @@ TEST_F(EapCredentialsTest, TestDontUseLoginPassword) {
   PopulateSupplicantProperties();
 
   EXPECT_FALSE(
-      params_.ContainsString(WPASupplicant::kNetworkPropertyEapCaPassword));
+      params_.Contains<string>(WPASupplicant::kNetworkPropertyEapCaPassword));
 }
 
 TEST_F(EapCredentialsTest, TestSubjectAlternativeNameMatchTranslation) {

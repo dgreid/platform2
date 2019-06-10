@@ -174,11 +174,12 @@ const char WPASupplicant::kSupplicantConfPath[] =
 bool WPASupplicant::ExtractRemoteCertification(const KeyValueStore& properties,
                                                std::string* subject,
                                                uint32_t* depth) {
-  if (!properties.ContainsUint(WPASupplicant::kInterfacePropertyDepth)) {
+  if (!properties.Contains<uint32_t>(WPASupplicant::kInterfacePropertyDepth)) {
     LOG(ERROR) << __func__ << " no depth parameter.";
     return false;
   }
-  if (!properties.ContainsString(WPASupplicant::kInterfacePropertySubject)) {
+  if (!properties.Contains<std::string>(
+          WPASupplicant::kInterfacePropertySubject)) {
     LOG(ERROR) << __func__ << " no subject parameter.";
     return false;
   }

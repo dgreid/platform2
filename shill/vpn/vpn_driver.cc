@@ -88,14 +88,14 @@ bool VPNDriver::Save(StoreInterface* storage,
     const string property = properties_[i].property;
     if (properties_[i].flags & Property::kArray) {
       CHECK(!credential) << "Property cannot be both an array and a credential";
-      if (!args_.ContainsStrings(property)) {
+      if (!args_.Contains<Strings>(property)) {
         storage->DeleteKey(storage_id, property);
         continue;
       }
       Strings value = args_.GetStrings(property);
       storage->SetStringList(storage_id, property, value);
     } else {
-      if (!args_.ContainsString(property) ||
+      if (!args_.Contains<string>(property) ||
           (credential && !save_credentials)) {
         storage->DeleteKey(storage_id, property);
         continue;
@@ -149,7 +149,7 @@ void VPNDriver::InitPropertyStore(PropertyStore* store) {
 
 void VPNDriver::ClearMappedStringProperty(const size_t& index, Error* error) {
   CHECK(index < property_count_);
-  if (args_.ContainsString(properties_[index].property)) {
+  if (args_.Contains<string>(properties_[index].property)) {
     args_.Remove(properties_[index].property);
   } else {
     error->Populate(Error::kNotFound, "Property is not set");
@@ -158,7 +158,7 @@ void VPNDriver::ClearMappedStringProperty(const size_t& index, Error* error) {
 
 void VPNDriver::ClearMappedStringsProperty(const size_t& index, Error* error) {
   CHECK(index < property_count_);
-  if (args_.ContainsStrings(properties_[index].property)) {
+  if (args_.Contains<Strings>(properties_[index].property)) {
     args_.Remove(properties_[index].property);
   } else {
     error->Populate(Error::kNotFound, "Property is not set");
@@ -191,7 +191,7 @@ bool VPNDriver::SetMappedStringProperty(const size_t& index,
                                         const string& value,
                                         Error* error) {
   CHECK(index < property_count_);
-  if (args_.ContainsString(properties_[index].property) &&
+  if (args_.Contains<string>(properties_[index].property) &&
       args_.GetString(properties_[index].property) == value) {
     return false;
   }
@@ -203,7 +203,7 @@ bool VPNDriver::SetMappedStringsProperty(const size_t& index,
                                          const Strings& value,
                                          Error* error) {
   CHECK(index < property_count_);
-  if (args_.ContainsStrings(properties_[index].property) &&
+  if (args_.Contains<Strings>(properties_[index].property) &&
       args_.GetStrings(properties_[index].property) == value) {
     return false;
   }
@@ -232,13 +232,13 @@ KeyValueStore VPNDriver::GetProvider(Error* error) {
     }
 
     if (properties_[i].flags & Property::kArray) {
-      if (!args_.ContainsStrings(prop)) {
+      if (!args_.Contains<Strings>(prop)) {
         continue;
       }
       Strings value = args_.GetStrings(prop);
       provider_properties.SetStrings(chopped_prop, value);
     } else {
-      if (!args_.ContainsString(prop)) {
+      if (!args_.Contains<string>(prop)) {
         continue;
       }
       string value = args_.GetString(prop);
