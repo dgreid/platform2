@@ -253,6 +253,9 @@ class Camera3Device::StaticInfo {
   // Get sensor pixel array size
   int32_t GetSensorPixelArraySize(uint32_t* width, uint32_t* height) const;
 
+  // Get available request keys
+  std::set<int32_t> GetAvailableRequestKeys() const;
+
  private:
   // Return the supported hardware level of the device, or fail if no value is
   // reported

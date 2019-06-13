@@ -24,7 +24,29 @@ namespace camera3_test {
 
 HalModuleConnector::HalModuleConnector(camera_module_t* cam_module,
                                        cros::CameraThread* hal_thread)
-    : cam_module_(cam_module), hal_thread_(hal_thread) {}
+    : cam_module_(cam_module), hal_thread_(hal_thread) {
+  hal_thread_->PostTaskSync(
+      FROM_HERE, base::Bind(&HalModuleConnector::GetVendorTagsOnHalThread,
+                            base::Unretained(this)));
+}
+
+void HalModuleConnector::GetVendorTagsOnHalThread() {
+  vendor_tag_ops_t ops;
+  if (cam_module_->get_vendor_tag_ops != nullptr) {
+    cam_module_->get_vendor_tag_ops(&ops);
+    int count = ops.get_tag_count(&ops);
+    if (count > 0) {
+      std::vector<uint32_t> tag_array(count, 0);
+      ops.get_all_tags(&ops, tag_array.data());
+      for (const auto& tag : tag_array) {
+        vendor_tag_map_.emplace(std::make_pair(
+            tag, VendorTagInfo{.section_name = ops.get_section_name(&ops, tag),
+                               .tag_name = ops.get_tag_name(&ops, tag),
+                               .type = ops.get_tag_type(&ops, tag)}));
+      }
+    }
+  }
+}
 
 int HalModuleConnector::GetNumberOfCameras() {
   if (!cam_module_) {
@@ -81,6 +103,21 @@ void HalModuleConnector::GetCameraInfoOnHalThread(int cam_id,
   *result = cam_module_->get_camera_info(cam_id, info);
 }
 
+bool HalModuleConnector::GetVendorTagByName(const std::string name,
+                                            uint32_t* tag) {
+  if (!tag) {
+    return false;
+  }
+  auto it = std::find_if(vendor_tag_map_.begin(), vendor_tag_map_.end(),
+                         [&](const std::pair<uint32_t, VendorTagInfo>& v) {
+                           return v.second.tag_name == name;
+                         });
+  if (it != vendor_tag_map_.end()) {
+    *tag = it->first;
+  }
+  return it != vendor_tag_map_.end();
+}
+
 ClientModuleConnector::ClientModuleConnector(CameraHalClient* cam_client)
     : cam_client_(cam_client) {}
 
@@ -104,6 +141,11 @@ int ClientModuleConnector::GetCameraInfo(int cam_id, camera_info* info) {
     return -ENODEV;
   }
   return cam_client_->GetCameraInfo(cam_id, info);
+}
+
+bool ClientModuleConnector::GetVendorTagByName(const std::string name,
+                                               uint32_t* tag) {
+  return cam_client_->GetVendorTagByName(name, tag);
 }
 
 // static
@@ -378,6 +420,22 @@ void CameraHalClient::OpenDeviceOnIpcThread(
   cros::mojom::Camera3DeviceOpsRequest device_ops_request =
       mojo::MakeRequest(dev_ops);
   camera_module_->OpenDevice(cam_id, std::move(device_ops_request), cb);
+}
+
+bool CameraHalClient::GetVendorTagByName(const std::string name,
+                                         uint32_t* tag) {
+  if (!tag) {
+    return false;
+  }
+  std::vector<uint32_t> tags(vendor_tag_manager_.GetTagCount());
+  vendor_tag_manager_.GetAllTags(tags.data());
+  for (const auto& t : tags) {
+    if (name.compare(vendor_tag_manager_.GetTagName(t)) == 0) {
+      *tag = t;
+      return true;
+    }
+  }
+  return false;
 }
 
 void CameraHalClient::CameraDeviceStatusChange(

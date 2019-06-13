@@ -624,6 +624,19 @@ int32_t Camera3Device::StaticInfo::GetSensorPixelArraySize(
   return result;
 }
 
+std::set<int32_t> Camera3Device::StaticInfo::GetAvailableRequestKeys() const {
+  camera_metadata_ro_entry_t entry = {};
+  if (find_camera_metadata_ro_entry(characteristics_,
+                                    ANDROID_REQUEST_AVAILABLE_REQUEST_KEYS,
+                                    &entry) != 0 ||
+      entry.count == 0) {
+    ADD_FAILURE() << "Fail to find metadata key "
+                     "ANDROID_REQUEST_AVAILABLE_REQUEST_KEYS";
+    return std::set<int32_t>();
+  }
+  return std::set<int32_t>(entry.data.i32, entry.data.i32 + entry.count);
+}
+
 // Test fixture
 
 void Camera3DeviceFixture::SetUp() {

@@ -25,6 +25,8 @@ enum class FrameEvent {
   PREVIEW_RESULT,
   STILL_CAPTURE_RESULT,
   VIDEO_RECORD_RESULT,
+  PORTRAIT_MODE_STARTED,
+  PORTRAIT_MODE_ENDED,
 };
 
 class Camera3PerfLog final {

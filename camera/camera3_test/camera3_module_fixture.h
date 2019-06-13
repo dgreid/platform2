@@ -9,6 +9,7 @@
 
 #include <map>
 #include <memory>
+#include <string>
 #include <tuple>
 #include <vector>
 
@@ -99,6 +100,9 @@ class Camera3Module {
 
   // Open camera device
   std::unique_ptr<DeviceConnector> OpenDevice(int cam_id);
+
+  // Get vendor tag by the tag name; False is returned if not found.
+  bool GetVendorTagByName(const std::string name, uint32_t* tag);
 
   // Get the image output formats in this stream configuration
   std::vector<int32_t> GetOutputFormats(int cam_id);

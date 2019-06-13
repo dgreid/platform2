@@ -21,6 +21,8 @@
 #include <jpeglib.h>
 #include <libyuv.h>
 
+#include "camera3_test/camera3_perf_log.h"
+
 namespace camera3_test {
 
 int32_t Camera3FrameFixture::CreateCaptureRequest(
@@ -1712,6 +1714,246 @@ TEST_P(Camera3PortraitRotationTest, GetFrame) {
   }
 }
 
+// Test parameters:
+// - Camera ID
+class Camera3PortraitModeTest : public Camera3FrameFixture,
+                                public ::testing::WithParamInterface<int32_t> {
+ public:
+  const uint32_t kPortraitModeTimeoutMs = 10000;
+
+  Camera3PortraitModeTest() : Camera3FrameFixture(GetParam()) {}
+
+ protected:
+  void ProcessResultMetadataOutputBuffers(
+      uint32_t frame_number,
+      ScopedCameraMetadata metadata,
+      std::vector<ScopedBufferHandle> buffers) override;
+
+  // Get portrait mode vendor tags; return false if the tag  is not listed in
+  // available request keys.
+  bool GetPortraitModeVendorTags(uint32_t* portrait_mode_vendor_tag,
+                                 uint32_t* segmentation_result_vendor_tag);
+
+  bool LoadTestImage(uint32_t width, uint32_t height);
+
+  ScopedCameraMetadata result_metadata_;
+  ScopedBufferHandle yuv_buffer_handle_;
+  ScopedBufferHandle blob_buffer_handle_;
+};
+
+void Camera3PortraitModeTest::ProcessResultMetadataOutputBuffers(
+    uint32_t frame_number,
+    ScopedCameraMetadata metadata,
+    std::vector<ScopedBufferHandle> buffers) {
+  result_metadata_ = std::move(metadata);
+  for (auto& buffer : buffers) {
+    auto* native_handle = camera_buffer_handle_t::FromBufferHandle(*buffer);
+    if (native_handle->hal_pixel_format == HAL_PIXEL_FORMAT_BLOB) {
+      blob_buffer_handle_ = std::move(buffer);
+    } else {
+      yuv_buffer_handle_ = std::move(buffer);
+    }
+  }
+}
+
+bool Camera3PortraitModeTest::GetPortraitModeVendorTags(
+    uint32_t* portrait_mode_vendor_tag,
+    uint32_t* segmentation_result_vendor_tag) {
+  if (!cam_module_.GetVendorTagByName("com.google.effect.portraitMode",
+                                      portrait_mode_vendor_tag) ||
+      !cam_module_.GetVendorTagByName(
+          "com.google.effect.portraitModeSegmentationResult",
+          segmentation_result_vendor_tag)) {
+    return false;
+  }
+  auto available_request_keys =
+      cam_device_.GetStaticInfo()->GetAvailableRequestKeys();
+  if (available_request_keys.find(*portrait_mode_vendor_tag) ==
+      available_request_keys.end()) {
+    return false;
+  }
+  return true;
+}
+
+bool Camera3PortraitModeTest::LoadTestImage(uint32_t width, uint32_t height) {
+  base::CommandLine* cmd_line = base::CommandLine::ForCurrentProcess();
+  base::FilePath portrait_mode_test_data_path =
+      cmd_line->GetSwitchValuePath("portrait_mode_test_data");
+  if (portrait_mode_test_data_path.empty()) {
+    LOGF(ERROR) << "Failed to find test data. Did you specify "
+                   "'--portrait_mode_test_data='?";
+    return false;
+  }
+  int64_t file_size = 0;
+  if (!base::GetFileSize(portrait_mode_test_data_path, &file_size) ||
+      file_size <= 0) {
+    LOGF(ERROR) << "Failed get file size";
+    return false;
+  }
+  auto test_image = std::vector<char>(file_size);
+  int test_image_size = base::ReadFile(portrait_mode_test_data_path,
+                                       test_image.data(), file_size);
+  if (test_image_size < file_size) {
+    LOGF(ERROR) << "Failed to read test image "
+                << portrait_mode_test_data_path.value();
+    return false;
+  }
+  libyuv::MJpegDecoder decoder;
+  if (!decoder.LoadFrame(reinterpret_cast<uint8_t*>(test_image.data()),
+                         test_image_size)) {
+    LOGF(ERROR) << "Failed to parse test image";
+    return false;
+  }
+  ScopedImage i420_image(new Image(decoder.GetWidth(), decoder.GetHeight(),
+                                   ImageFormat::IMAGE_FORMAT_I420));
+  if (libyuv::MJPGToI420(
+          reinterpret_cast<uint8_t*>(test_image.data()), test_image_size,
+          i420_image->planes[0].addr, i420_image->planes[0].stride,
+          i420_image->planes[1].addr, i420_image->planes[1].stride,
+          i420_image->planes[2].addr, i420_image->planes[2].stride,
+          decoder.GetWidth(), decoder.GetHeight(), decoder.GetWidth(),
+          decoder.GetHeight()) != 0) {
+    LOGF(ERROR) << "Failed to convert test image to I420";
+    return false;
+  }
+  i420_image = CropRotateScale(std::move(i420_image), 0, width, height);
+  if (!i420_image) {
+    LOGF(ERROR) << "Failed to crop, rotate and scale test image";
+    return false;
+  }
+
+  auto gralloc = Camera3TestGralloc::GetInstance();
+  struct android_ycbcr ycbcr_info;
+  if (gralloc->LockYCbCr(*yuv_buffer_handle_, 0, 0, 0, width, height,
+                         &ycbcr_info) != 0) {
+    LOGF(ERROR) << "Failed to lock YUV buffer";
+    return false;
+  }
+  uint32_t v4l2_format =
+      cros::CameraBufferManager::GetV4L2PixelFormat(*yuv_buffer_handle_);
+  bool res = false;
+  switch (v4l2_format) {
+    case V4L2_PIX_FMT_NV12:
+    case V4L2_PIX_FMT_NV12M:
+      if (libyuv::I420ToNV12(
+              i420_image->planes[0].addr, i420_image->planes[0].stride,
+              i420_image->planes[1].addr, i420_image->planes[1].stride,
+              i420_image->planes[2].addr, i420_image->planes[2].stride,
+              static_cast<uint8_t*>(ycbcr_info.y), ycbcr_info.ystride,
+              static_cast<uint8_t*>(ycbcr_info.cb), ycbcr_info.cstride, width,
+              height) == 0) {
+        res = true;
+      } else {
+        LOGF(ERROR) << "Failed to convert test image to NV12";
+      }
+      break;
+    default:
+      LOGF(ERROR) << "Unsupported format " << FormatToString(v4l2_format);
+  }
+  gralloc->Unlock(*yuv_buffer_handle_);
+  return res;
+}
+
+TEST_P(Camera3PortraitModeTest, BasicOperation) {
+  uint32_t portrait_mode_vendor_tag;
+  uint32_t segmentation_result_vendor_tag;
+  if (!GetPortraitModeVendorTags(&portrait_mode_vendor_tag,
+                                 &segmentation_result_vendor_tag)) {
+    GTEST_SKIP();
+  }
+  auto out_resolutions =
+      cam_device_.GetStaticInfo()->GetSortedOutputResolutions(
+          HAL_PIXEL_FORMAT_BLOB);
+  ASSERT_FALSE(out_resolutions.empty())
+      << "Failed to get JPEG format output resolutions";
+  ResolutionInfo resolution = out_resolutions.back();
+  auto in_resolutions = cam_device_.GetStaticInfo()->GetSortedOutputResolutions(
+      HAL_PIXEL_FORMAT_YCbCr_420_888);
+  ASSERT_TRUE(std::binary_search(in_resolutions.begin(), in_resolutions.end(),
+                                 resolution))
+      << "Failed to find " << resolution << " in input YUV resolutions";
+
+  cam_device_.AddInputStream(HAL_PIXEL_FORMAT_YCbCr_420_888, resolution.Width(),
+                             resolution.Height());
+  cam_device_.AddOutputStream(HAL_PIXEL_FORMAT_YCbCr_420_888,
+                              resolution.Width(), resolution.Height(),
+                              CAMERA3_STREAM_ROTATION_0);
+  cam_device_.AddOutputStream(HAL_PIXEL_FORMAT_BLOB, resolution.Width(),
+                              resolution.Height(), CAMERA3_STREAM_ROTATION_0);
+  std::vector<const camera3_stream_t*> streams;
+  ASSERT_EQ(0, cam_device_.ConfigureStreams(&streams))
+      << "Configuring stream fails";
+  ASSERT_EQ(0, CreateCaptureRequestByTemplate(CAMERA3_TEMPLATE_STILL_CAPTURE,
+                                              nullptr))
+      << "Creating capture request fails";
+
+  struct timespec timeout;
+  GetTimeOfTimeout(kDefaultTimeoutMs, &timeout);
+  WaitShutterAndCaptureResult(timeout);
+  ASSERT_NE(nullptr, yuv_buffer_handle_) << "Failed to get YUV output buffer";
+  ASSERT_NE(nullptr, blob_buffer_handle_) << "Failed to get BLOB output buffer";
+
+  std::vector<uint8_t> enable_portrait_mode(1, 1);
+  UpdateMetadata(portrait_mode_vendor_tag, enable_portrait_mode.data(), 1,
+                 &result_metadata_);
+
+  auto GetStream = [&streams](int32_t format, bool is_output) {
+    auto dir = is_output ? CAMERA3_STREAM_OUTPUT : CAMERA3_STREAM_INPUT;
+    auto it = std::find_if(
+        streams.begin(), streams.end(), [&](const camera3_stream_t* stream) {
+          return stream->format == format && stream->stream_type == dir;
+        });
+    return it == streams.end() ? nullptr : *it;
+  };
+  // prepare input_buffer
+  ASSERT_TRUE(LoadTestImage(resolution.Width(), resolution.Height()));
+  auto in_buffer = std::move(yuv_buffer_handle_);
+  auto in_stream = GetStream(HAL_PIXEL_FORMAT_YCbCr_420_888, false);
+  ASSERT_NE(in_stream, nullptr);
+  camera3_stream_buffer_t input_buffer = {
+      .stream = const_cast<camera3_stream_t*>(in_stream),
+      .buffer = in_buffer.get(),
+      .status = CAMERA3_BUFFER_STATUS_OK,
+      .acquire_fence = -1,
+      .release_fence = -1};
+  // prepare output_buffer
+  std::vector<camera3_stream_buffer_t> output_buffers;
+  auto out_stream = GetStream(HAL_PIXEL_FORMAT_BLOB, true);
+  ASSERT_NE(out_stream, nullptr);
+  ASSERT_EQ(0, cam_device_.AllocateOutputBuffersByStreams({out_stream},
+                                                          &output_buffers))
+      << "Failed to allocate buffers for capture request";
+  camera3_capture_request_t capture_request = {
+      .frame_number = UINT32_MAX,
+      .settings = result_metadata_.get(),
+      .input_buffer = &input_buffer,
+      .num_output_buffers = static_cast<uint32_t>(output_buffers.size()),
+      .output_buffers = output_buffers.data()};
+
+  // Process capture request
+  ASSERT_EQ(0, cam_device_.ProcessCaptureRequest(&capture_request))
+      << "Creating capture request fails";
+  Camera3PerfLog::GetInstance()->UpdateFrameEvent(
+      cam_id_, capture_request.frame_number, FrameEvent::PORTRAIT_MODE_STARTED,
+      base::TimeTicks::Now());
+
+  GetTimeOfTimeout(kPortraitModeTimeoutMs, &timeout);
+  WaitShutterAndCaptureResult(timeout);
+  ASSERT_NE(nullptr, blob_buffer_handle_) << "Failed to get BLOB output buffer";
+  Camera3PerfLog::GetInstance()->UpdateFrameEvent(
+      cam_id_, capture_request.frame_number, FrameEvent::PORTRAIT_MODE_ENDED,
+      base::TimeTicks::Now());
+  camera_metadata_ro_entry_t entry = {};
+  ASSERT_EQ(
+      0, find_camera_metadata_ro_entry(result_metadata_.get(),
+                                       segmentation_result_vendor_tag, &entry))
+      << "Fail to find "
+      << get_camera_metadata_tag_name(segmentation_result_vendor_tag)
+      << " in result metadata";
+  ASSERT_EQ(1, entry.count);
+  ASSERT_EQ(0, entry.data.u8[0]) << "Portrait mode failed";
+}
+
 INSTANTIATE_TEST_CASE_P(
     Camera3FrameTest,
     Camera3SingleFrameTest,
@@ -1817,5 +2059,10 @@ INSTANTIATE_TEST_CASE_P(
     Camera3PortraitRotationTest,
     ::testing::Combine(::testing::ValuesIn(IterateCameraIdFormatResolution()),
                        ::testing::Values(90, 270)));
+
+INSTANTIATE_TEST_CASE_P(
+    Camera3FrameTest,
+    Camera3PortraitModeTest,
+    ::testing::ValuesIn(Camera3Module().GetTestCameraIds()));
 
 }  // namespace camera3_test

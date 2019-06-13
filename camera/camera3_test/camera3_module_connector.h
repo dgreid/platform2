@@ -25,6 +25,12 @@ namespace camera3_test {
 // Forward declaration
 class DeviceConnector;
 
+struct VendorTagInfo {
+  std::string section_name;
+  std::string tag_name;
+  int type;
+};
+
 class ModuleConnector {
  public:
   virtual ~ModuleConnector() = default;
@@ -37,6 +43,9 @@ class ModuleConnector {
 
   // Open camera device
   virtual std::unique_ptr<DeviceConnector> OpenDevice(int cam_id) = 0;
+
+  // Get vendor tag by the tag name; False is returned if not found.
+  virtual bool GetVendorTagByName(const std::string name, uint32_t* tag) = 0;
 };
 
 class HalModuleConnector final : public ModuleConnector {
@@ -48,8 +57,11 @@ class HalModuleConnector final : public ModuleConnector {
   int GetNumberOfCameras() override;
   int GetCameraInfo(int cam_id, camera_info* info) override;
   std::unique_ptr<DeviceConnector> OpenDevice(int cam_id) override;
+  bool GetVendorTagByName(const std::string name, uint32_t* tag) override;
 
  private:
+  void GetVendorTagsOnHalThread();
+
   void GetNumberOfCamerasOnHalThread(int* result);
   void GetCameraInfoOnHalThread(int cam_id, camera_info* info, int* result);
   void OpenDeviceOnHalThread(int cam_id,
@@ -63,6 +75,9 @@ class HalModuleConnector final : public ModuleConnector {
   // initialization in main() because test case instantiation needs it running
   // to get the camera ID list.
   cros::CameraThread* hal_thread_;
+
+  // Map of vendor tag information with tag value as the key
+  std::map<uint32_t, VendorTagInfo> vendor_tag_map_;
 
   HalModuleConnector(const HalModuleConnector&) = delete;
   HalModuleConnector& operator=(const HalModuleConnector&) = delete;
@@ -79,6 +94,7 @@ class ClientModuleConnector final : public ModuleConnector {
   int GetNumberOfCameras() override;
   int GetCameraInfo(int cam_id, camera_info* info) override;
   std::unique_ptr<DeviceConnector> OpenDevice(int cam_id) override;
+  bool GetVendorTagByName(const std::string name, uint32_t* tag) override;
 
  private:
   CameraHalClient* cam_client_;
@@ -103,7 +119,11 @@ class CameraHalClient final : public cros::mojom::CameraHalClient,
   // Get camera information.
   int GetCameraInfo(int cam_id, camera_info* info);
 
+  // Open camera device
   cros::mojom::Camera3DeviceOpsPtr OpenDevice(int cam_id);
+
+  // Get vendor tag by the tag name; False is returned if not found.
+  bool GetVendorTagByName(const std::string name, uint32_t* tag);
 
  private:
   // Asynchronously registers to CameraHalDispatcher to acquire camera HAL
@@ -152,14 +172,8 @@ class CameraHalClient final : public cros::mojom::CameraHalClient,
 
   std::atomic<size_t> vendor_tag_count_;
 
-  struct vendor_tag_info {
-    std::string section_name;
-    std::string tag_name;
-    int type;
-  };
-
   // Map of vendor tag information with tag value as the key.
-  std::map<uint32_t, vendor_tag_info> vendor_tag_map_;
+  std::map<uint32_t, VendorTagInfo> vendor_tag_map_;
 
   // The vendor tag manager.
   cros::VendorTagManager vendor_tag_manager_;

@@ -424,6 +424,10 @@ std::unique_ptr<DeviceConnector> Camera3Module::OpenDevice(int cam_id) {
   return cam_module_connector_->OpenDevice(cam_id);
 }
 
+bool Camera3Module::GetVendorTagByName(const std::string name, uint32_t* tag) {
+  return cam_module_connector_->GetVendorTagByName(name, tag);
+}
+
 std::vector<int32_t> Camera3Module::GetOutputFormats(int cam_id) {
   camera_metadata_ro_entry_t available_config = {};
   GetStreamConfigEntry(cam_id, ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS,

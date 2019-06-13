@@ -194,6 +194,20 @@ std::vector<std::pair<std::string, int64_t>> Camera3PerfLog::CollectPerfLogs(
           "shot_to_shot",
           std::accumulate(logs.begin(), logs.end(), 0) / logs.size());
     }
+
+    // Portrait mode time.
+    for (const auto& it : frame_events_.at(cam_id)) {
+      if (!base::ContainsKey(it.second, FrameEvent::PORTRAIT_MODE_STARTED) ||
+          !base::ContainsKey(it.second, FrameEvent::PORTRAIT_MODE_ENDED))
+        continue;
+      const base::TimeTicks start_ticks =
+          it.second.at(FrameEvent::PORTRAIT_MODE_STARTED);
+      const base::TimeTicks end_ticks =
+          it.second.at(FrameEvent::PORTRAIT_MODE_ENDED);
+      perf_logs.emplace_back("portrait_mode",
+                             (end_ticks - start_ticks).InMicroseconds());
+      break;
+    }
   }
 
   return perf_logs;
