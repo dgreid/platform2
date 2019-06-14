@@ -48,6 +48,22 @@ template <typename T, typename Types>
 using EnableIfIsOneOf =
   std::enable_if_t<type_list::is_one_of<T, Types>::value>;
 
+// Enables a template if the type T is in the typelist Types and T is an
+// arithmetic type (some sort of int or floating-point number).
+template <typename T, typename Types>
+using EnableIfIsOneOfArithmetic =
+    std::enable_if_t<std::is_arithmetic<T>::value &&
+                         type_list::is_one_of<T, Types>::value,
+                     int>;
+
+// Enables a template if the type T is in the typelist Types and T is not an
+// arithmetic type (is void, nullptr_t, or a non-fundamental type).
+template <typename T, typename Types>
+using EnableIfIsOneOfNonArithmetic =
+    std::enable_if_t<!std::is_arithmetic<T>::value &&
+                         type_list::is_one_of<T, Types>::value,
+                     int>;
+
 }  // namespace brillo
 
 #endif  // LIBBRILLO_BRILLO_TYPE_LIST_H_

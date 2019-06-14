@@ -71,7 +71,8 @@ TEST_F(DhcpPropertiesTest, SetMappedStringPropertyOverrideExisting) {
   Error error;
   EXPECT_TRUE(
       store.SetStringProperty("DHCPProperty.Hostname", kOverrideValue, &error));
-  EXPECT_EQ(kOverrideValue, dhcp_properties_.properties_.GetString("Hostname"));
+  EXPECT_EQ(kOverrideValue,
+            dhcp_properties_.properties_.Get<string>("Hostname"));
 }
 
 TEST_F(DhcpPropertiesTest, SetMappedStringPropertyNoExistingValue) {
@@ -81,7 +82,7 @@ TEST_F(DhcpPropertiesTest, SetMappedStringPropertyNoExistingValue) {
   Error error;
   EXPECT_TRUE(
       store.SetStringProperty("DHCPProperty.Hostname", kHostname, &error));
-  EXPECT_EQ(kHostname, dhcp_properties_.properties_.GetString("Hostname"));
+  EXPECT_EQ(kHostname, dhcp_properties_.properties_.Get<string>("Hostname"));
 }
 
 TEST_F(DhcpPropertiesTest, SetMappedStringPropertySameAsExistingValue) {
@@ -92,7 +93,7 @@ TEST_F(DhcpPropertiesTest, SetMappedStringPropertySameAsExistingValue) {
   Error error;
   EXPECT_FALSE(
       store.SetStringProperty("DHCPProperty.Hostname", kHostname, &error));
-  EXPECT_EQ(kHostname, dhcp_properties_.properties_.GetString("Hostname"));
+  EXPECT_EQ(kHostname, dhcp_properties_.properties_.Get<string>("Hostname"));
 }
 
 TEST_F(DhcpPropertiesTest, GetMappedStringPropertyWithSetValue) {
@@ -157,8 +158,8 @@ TEST_F(DhcpPropertiesTest, Load) {
       .WillOnce(DoAll(SetArgPointee<2>(string(kHostname)), Return(true)));
   dhcp_properties_.Load(&storage, kStorageID);
   EXPECT_EQ(kVendorClass,
-            dhcp_properties_.properties_.GetString("VendorClass"));
-  EXPECT_EQ(kHostname, dhcp_properties_.properties_.GetString("Hostname"));
+            dhcp_properties_.properties_.Get<string>("VendorClass"));
+  EXPECT_EQ(kHostname, dhcp_properties_.properties_.Get<string>("Hostname"));
 }
 
 TEST_F(DhcpPropertiesTest, LoadWithValuesSetAndClearRequired) {
@@ -171,7 +172,7 @@ TEST_F(DhcpPropertiesTest, LoadWithValuesSetAndClearRequired) {
       .WillOnce(Return(false));
   dhcp_properties_.Load(&storage, kStorageID);
   EXPECT_EQ(kVendorClass,
-            dhcp_properties_.properties_.GetString("VendorClass"));
+            dhcp_properties_.properties_.Get<string>("VendorClass"));
   EXPECT_FALSE(dhcp_properties_.properties_.ContainsVariant("Hostname"));
 }
 
@@ -229,8 +230,9 @@ TEST_F(DhcpPropertiesTest, CombineConflicting) {
 
   unique_ptr<DhcpProperties> merged_props =
       DhcpProperties::Combine(dhcp_properties_, to_merge);
-  EXPECT_EQ(kOverrideValue, merged_props->properties_.GetString("VendorClass"));
-  EXPECT_EQ(kHostname, merged_props->properties_.GetString("Hostname"));
+  EXPECT_EQ(kOverrideValue,
+            merged_props->properties_.Get<string>("VendorClass"));
+  EXPECT_EQ(kHostname, merged_props->properties_.Get<string>("Hostname"));
 }
 
 TEST_F(DhcpPropertiesTest, GetValueForProperty) {

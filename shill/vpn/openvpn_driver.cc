@@ -653,8 +653,9 @@ void OpenVPNDriver::InitOptions(vector<vector<string>>* options, Error* error) {
   AppendOption("tls-client", options);
 
   AppendRemoteOption(vpnhost, options);
-  if (args()->Contains<Strings>(kOpenVPNExtraHostsProperty)) {
-    for (const auto& host : args()->GetStrings(kOpenVPNExtraHostsProperty)) {
+  if (args()->Contains<vector<string>>(kOpenVPNExtraHostsProperty)) {
+    for (const auto& host :
+         args()->Get<vector<string>>(kOpenVPNExtraHostsProperty)) {
       AppendRemoteOption(host, options);
     }
   }
@@ -689,7 +690,7 @@ void OpenVPNDriver::InitOptions(vector<vector<string>>* options, Error* error) {
 
   if (args()->Contains<string>(kOpenVPNTLSVersionMinProperty)) {
     AppendOption("tls-version-min",
-                 args()->GetString(kOpenVPNTLSVersionMinProperty), options);
+                 args()->Get<string>(kOpenVPNTLSVersionMinProperty), options);
   }
 
   string tls_remote = args()->LookupString(kOpenVPNTLSRemoteProperty, "");
@@ -771,8 +772,8 @@ void OpenVPNDriver::InitOptions(vector<vector<string>>* options, Error* error) {
 bool OpenVPNDriver::InitCAOptions(vector<vector<string>>* options,
                                   Error* error) {
   vector<string> ca_cert_pem;
-  if (args()->Contains<Strings>(kOpenVPNCaCertPemProperty)) {
-    ca_cert_pem = args()->GetStrings(kOpenVPNCaCertPemProperty);
+  if (args()->Contains<vector<string>>(kOpenVPNCaCertPemProperty)) {
+    ca_cert_pem = args()->Get<vector<string>>(kOpenVPNCaCertPemProperty);
   }
   if (ca_cert_pem.empty()) {
     // Use default CAs if no CA certificate is provided.
@@ -806,12 +807,13 @@ void OpenVPNDriver::InitCertificateVerifyOptions(
 
 bool OpenVPNDriver::InitExtraCertOptions(vector<vector<string>>* options,
                                          Error* error) {
-  if (!args()->Contains<Strings>(kOpenVPNExtraCertPemProperty)) {
+  if (!args()->Contains<vector<string>>(kOpenVPNExtraCertPemProperty)) {
     // It's okay for this parameter to be unspecified.
     return true;
   }
 
-  vector<string> extra_certs = args()->GetStrings(kOpenVPNExtraCertPemProperty);
+  vector<string> extra_certs =
+      args()->Get<vector<string>>(kOpenVPNExtraCertPemProperty);
   if (extra_certs.empty()) {
     // It's okay for this parameter to be empty.
     return true;
@@ -1118,8 +1120,8 @@ void OpenVPNDriver::ReportConnectionMetrics() {
                            Metrics::kVpnDriverOpenVpn,
                            Metrics::kMetricVpnDriverMax);
 
-  if (args()->Contains<Strings>(kOpenVPNCaCertPemProperty) &&
-      !args()->GetStrings(kOpenVPNCaCertPemProperty).empty()) {
+  if (args()->Contains<vector<string>>(kOpenVPNCaCertPemProperty) &&
+      !args()->Get<vector<string>>(kOpenVPNCaCertPemProperty).empty()) {
     metrics()->SendEnumToUMA(
         Metrics::kMetricVpnRemoteAuthenticationType,
         Metrics::kVpnRemoteAuthenticationTypeOpenVpnCertificate,

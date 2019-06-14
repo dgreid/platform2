@@ -10,6 +10,7 @@
 #include <vector>
 
 #include <brillo/type_list.h>
+#include <brillo/type_name_undecorate.h>
 #include <brillo/variant_dictionary.h>
 
 #include "shill/data_types.h"
@@ -75,29 +76,24 @@ class KeyValueStore {
   }
   bool ContainsVariant(const std::string& name) const;
 
-  bool GetBool(const std::string& name) const;
-  const std::vector<bool>& GetBools(const std::string& name) const;
-  const std::vector<std::vector<uint8_t>>& GetByteArrays(
-      const std::string& name) const;
-  int32_t GetInt(const std::string& name) const;
-  const std::vector<int32_t>& GetInts(const std::string& name) const;
-  int16_t GetInt16(const std::string& name) const;
-  int64_t GetInt64(const std::string& name) const;
-  const std::vector<int64_t>& GetInt64s(const std::string& name) const;
-  double GetDouble(const std::string& name) const;
-  const std::vector<double>& GetDoubles(const std::string& name) const;
-  const KeyValueStore& GetKeyValueStore(const std::string& name) const;
-  const RpcIdentifier& GetRpcIdentifier(const std::string& name) const;
-  const RpcIdentifiers& GetRpcIdentifiers(const std::string& name) const;
-  const std::string& GetString(const std::string& name) const;
-  const std::map<std::string, std::string>& GetStringmap(
-      const std::string& name) const;
-  const std::vector<std::string>& GetStrings(const std::string& name) const;
-  uint32_t GetUint(const std::string& name) const;
-  uint16_t GetUint16(const std::string& name) const;
-  uint8_t GetUint8(const std::string& name) const;
-  const std::vector<uint8_t>& GetUint8s(const std::string& name) const;
-  const std::vector<uint32_t>& GetUint32s(const std::string& name) const;
+  template <typename T,
+            typename brillo::EnableIfIsOneOfArithmetic<T, KeyValueTypes> = 0>
+  T Get(const std::string& name) const {
+    const auto& value = GetVariant(name);
+    CHECK(value.IsTypeCompatible<T>())
+        << "for " << brillo::GetTypeTag<T>() << " property " << name;
+    return value.Get<T>();
+  }
+
+  template <typename T,
+            typename brillo::EnableIfIsOneOfNonArithmetic<T, KeyValueTypes> = 0>
+  const T& Get(const std::string& name) const {
+    const auto& value = GetVariant(name);
+    CHECK(value.IsTypeCompatible<T>())
+        << "for " << brillo::GetTypeTag<T>() << " property " << name;
+    return value.Get<T>();
+  }
+
   const brillo::Any& GetVariant(const std::string& name) const;
 
   // TODO(crbug.com/936111): remove type specific set functions and add a

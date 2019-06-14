@@ -81,7 +81,7 @@ void DhcpProperties::Save(StoreInterface* storage, const string& id) const {
     if (properties_.ContainsVariant(name)) {
       // The property is in the property store and it may have a setting or be
       // set to an empty string.  This setting should be saved to the profile.
-      property_value = properties_.GetString(name);
+      property_value = properties_.Get<string>(name);
       storage->SetString(id, GetFullPropertyName(name), property_value);
       SLOG(this, 3) << "saved " << GetFullPropertyName(name);
     } else {
@@ -108,7 +108,7 @@ std::unique_ptr<DhcpProperties> DhcpProperties::Combine(
 bool DhcpProperties::GetValueForProperty(const string& name,
                                          string* value) const {
   if (properties_.Contains<string>(name)) {
-    *value = properties_.GetString(name);
+    *value = properties_.Get<string>(name);
     return true;
   }
   return false;
@@ -128,7 +128,7 @@ string DhcpProperties::GetMappedStringProperty(const size_t& index,
                                                Error* error) {
   CHECK(index < arraysize(kPropertyNames));
   if (properties_.Contains<string>(kPropertyNames[index])) {
-    return properties_.GetString(kPropertyNames[index]);
+    return properties_.Get<string>(kPropertyNames[index]);
   }
   error->Populate(Error::kNotFound, "Property is not set");
   return string();
@@ -139,7 +139,7 @@ bool DhcpProperties::SetMappedStringProperty(const size_t& index,
                                              Error* error) {
   CHECK(index < arraysize(kPropertyNames));
   if (properties_.Contains<string>(kPropertyNames[index]) &&
-      properties_.GetString(kPropertyNames[index]) == value) {
+      properties_.Get<string>(kPropertyNames[index]) == value) {
     return false;
   }
   properties_.SetString(kPropertyNames[index], value);

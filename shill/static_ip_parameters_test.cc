@@ -122,27 +122,27 @@ class StaticIPParametersTest : public Test {
     EXPECT_TRUE(store->GetKeyValueStoreProperty(property_prefix + "Config",
                                                 &args, &unused_error));
     EXPECT_EQ(VersionedAddress(kAddress, version),
-              args.GetString(kAddressProperty));
+              args.Get<string>(kAddressProperty));
     EXPECT_EQ(VersionedAddress(kGateway, version),
-              args.GetString(kGatewayProperty));
-    EXPECT_EQ(kMtu + version, args.GetInt(kMtuProperty));
+              args.Get<string>(kGatewayProperty));
+    EXPECT_EQ(kMtu + version, args.Get<int32_t>(kMtuProperty));
     vector<string> kTestNameServers({VersionedAddress(kNameServer0, version),
                                      VersionedAddress(kNameServer1, version)});
-    EXPECT_EQ(kTestNameServers, args.GetStrings(kNameServersProperty));
+    EXPECT_EQ(kTestNameServers, args.Get<Strings>(kNameServersProperty));
     vector<string> kTestSearchDomains(
         {VersionedAddress(kSearchDomain0, version),
          VersionedAddress(kSearchDomain1, version)});
-    EXPECT_EQ(kTestSearchDomains, args.GetStrings(kSearchDomainsProperty));
+    EXPECT_EQ(kTestSearchDomains, args.Get<Strings>(kSearchDomainsProperty));
     EXPECT_EQ(VersionedAddress(kPeerAddress, version),
-              args.GetString(kPeerAddressProperty));
-    EXPECT_EQ(kPrefixLen + version, args.GetInt(kPrefixlenProperty));
+              args.Get<string>(kPeerAddressProperty));
+    EXPECT_EQ(kPrefixLen + version, args.Get<int32_t>(kPrefixlenProperty));
     vector<string> kTestExcludedRoutes(
         {VersionedAddress(kExcludedRoute0, version),
          VersionedAddress(kExcludedRoute1, version)});
-    EXPECT_EQ(kTestExcludedRoutes, args.GetStrings(kExcludedRoutesProperty));
+    EXPECT_EQ(kTestExcludedRoutes, args.Get<Strings>(kExcludedRoutesProperty));
     vector<string> kTestIncludedRoutes(
         {VersionedAddress(kIncludedRoutes, version)});
-    EXPECT_EQ(kTestIncludedRoutes, args.GetStrings(kIncludedRoutesProperty));
+    EXPECT_EQ(kTestIncludedRoutes, args.Get<Strings>(kIncludedRoutesProperty));
   }
   void ExpectProperties(PropertyStore* store, const string& property_prefix) {
     ExpectPropertiesWithVersion(store, property_prefix, 0);
@@ -230,25 +230,25 @@ TEST_F(StaticIPParametersTest, ControlInterface) {
   EXPECT_EQ(kTestMtu, props.mtu);
 
   EXPECT_FALSE(static_args()->Contains<string>("Address"));
-  EXPECT_EQ(kGateway, static_args()->GetString("Gateway"));
+  EXPECT_EQ(kGateway, static_args()->Get<string>("Gateway"));
   EXPECT_FALSE(static_args()->Contains<int32_t>("Mtu"));
   vector<string> kTestNameServers({VersionedAddress(kNameServer0, version),
                                    VersionedAddress(kNameServer1, version)});
-  EXPECT_EQ(kTestNameServers, static_args()->GetStrings("NameServers"));
+  EXPECT_EQ(kTestNameServers, static_args()->Get<Strings>("NameServers"));
   vector<string> kTestSearchDomains(
       {VersionedAddress(kSearchDomain0, version),
        VersionedAddress(kSearchDomain1, version)});
-  EXPECT_EQ(kTestSearchDomains, static_args()->GetStrings("SearchDomains"));
+  EXPECT_EQ(kTestSearchDomains, static_args()->Get<Strings>("SearchDomains"));
   EXPECT_EQ(VersionedAddress(kPeerAddress, version),
-            static_args()->GetString("PeerAddress"));
-  EXPECT_EQ(kPrefixLen + version, static_args()->GetInt("Prefixlen"));
+            static_args()->Get<string>("PeerAddress"));
+  EXPECT_EQ(kPrefixLen + version, static_args()->Get<int32_t>("Prefixlen"));
   vector<string> kTestExcludedRoutes(
       {VersionedAddress(kExcludedRoute0, version),
        VersionedAddress(kExcludedRoute1, version)});
-  EXPECT_EQ(kTestExcludedRoutes, static_args()->GetStrings("ExcludedRoutes"));
+  EXPECT_EQ(kTestExcludedRoutes, static_args()->Get<Strings>("ExcludedRoutes"));
   vector<string> kTestIncludedRoutes(
       {VersionedAddress(kIncludedRoutes, version)});
-  EXPECT_EQ(kTestIncludedRoutes, static_args()->GetStrings("IncludedRoutes"));
+  EXPECT_EQ(kTestIncludedRoutes, static_args()->Get<Strings>("IncludedRoutes"));
 }
 
 TEST_F(StaticIPParametersTest, Profile) {

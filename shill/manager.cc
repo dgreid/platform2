@@ -2233,7 +2233,7 @@ ServiceRefPtr Manager::GetServiceInner(const KeyValueStore& args,
   if (args.Contains<string>(kGuidProperty)) {
     SLOG(this, 2) << __func__ << ": searching by GUID";
     ServiceRefPtr service =
-        GetServiceWithGUID(args.GetString(kGuidProperty), nullptr);
+        GetServiceWithGUID(args.Get<string>(kGuidProperty), nullptr);
     if (service) {
       return service;
     }
@@ -2245,7 +2245,7 @@ ServiceRefPtr Manager::GetServiceInner(const KeyValueStore& args,
     return nullptr;
   }
 
-  string type = args.GetString(kTypeProperty);
+  string type = args.Get<string>(kTypeProperty);
   Technology technology = Technology::CreateFromName(type);
   if (!base::ContainsKey(providers_, technology)) {
     Error::PopulateAndLog(FROM_HERE, error, Error::kNotSupported,
@@ -2263,7 +2263,7 @@ ServiceRefPtr Manager::ConfigureService(const KeyValueStore& args,
   ProfileRefPtr profile = ActiveProfile();
   bool profile_specified = args.Contains<string>(kProfileProperty);
   if (profile_specified) {
-    string profile_rpcid(args.GetString(kProfileProperty));
+    string profile_rpcid(args.Get<string>(kProfileProperty));
     profile = LookupProfileByRpcIdentifier(profile_rpcid);
     if (!profile) {
       Error::PopulateAndLog(FROM_HERE, error, Error::kInvalidArguments,
@@ -2335,7 +2335,7 @@ ServiceRefPtr Manager::ConfigureServiceForProfile(const string& profile_rpcid,
     return nullptr;
   }
 
-  string type = args.GetString(kTypeProperty);
+  string type = args.Get<string>(kTypeProperty);
   Technology technology = Technology::CreateFromName(type);
 
   if (!base::ContainsKey(providers_, technology)) {
@@ -2362,7 +2362,7 @@ ServiceRefPtr Manager::ConfigureServiceForProfile(const string& profile_rpcid,
   ServiceRefPtr service;
   if (args.Contains<string>(kGuidProperty)) {
     SLOG(this, 2) << __func__ << ": searching by GUID";
-    service = GetServiceWithGUID(args.GetString(kGuidProperty), nullptr);
+    service = GetServiceWithGUID(args.Get<string>(kGuidProperty), nullptr);
     if (service && service->technology() != technology) {
       Error::PopulateAndLog(
           FROM_HERE, error, Error::kNotSupported,

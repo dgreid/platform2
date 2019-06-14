@@ -291,7 +291,7 @@ void Ethernet::PropertiesChanged(const KeyValueStore& properties) {
       FROM_HERE,
       Bind(&Ethernet::SupplicantStateChangedTask,
            weak_ptr_factory_.GetWeakPtr(),
-           properties.GetString(WPASupplicant::kInterfacePropertyState)));
+           properties.Get<string>(WPASupplicant::kInterfacePropertyState)));
 }
 
 void Ethernet::ScanDone(const bool& /*success*/) {

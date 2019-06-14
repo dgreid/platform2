@@ -118,21 +118,21 @@ TEST_F(KeyValueStoreTest, Bool) {
   EXPECT_EQ(static_cast<int>(kValue),
             static_cast<int>(store_.LookupBool(kBoolKey, kDefaultValue)));
   EXPECT_EQ(static_cast<int>(kValue),
-            static_cast<int>(store_.GetBool(kBoolKey)));
+            static_cast<int>(store_.Get<bool>(kBoolKey)));
 }
 
 TEST_F(KeyValueStoreTest, Bools) {
   EXPECT_FALSE(store_.Contains<vector<bool>>(kBoolsKey));
   store_.SetBools(kBoolsKey, kBoolsValue);
   EXPECT_TRUE(store_.Contains<vector<bool>>(kBoolsKey));
-  EXPECT_EQ(kBoolsValue, store_.GetBools(kBoolsKey));
+  EXPECT_EQ(kBoolsValue, store_.Get<vector<bool>>(kBoolsKey));
 }
 
 TEST_F(KeyValueStoreTest, ByteArrays) {
   EXPECT_FALSE(store_.Contains<ByteArrays>(kByteArraysKey));
   store_.SetByteArrays(kByteArraysKey, kByteArraysValue);
   EXPECT_TRUE(store_.Contains<ByteArrays>(kByteArraysKey));
-  EXPECT_EQ(kByteArraysValue, store_.GetByteArrays(kByteArraysKey));
+  EXPECT_EQ(kByteArraysValue, store_.Get<ByteArrays>(kByteArraysKey));
   store_.Remove(kByteArraysKey);
   EXPECT_FALSE(store_.Contains<ByteArrays>(kByteArraysKey));
 }
@@ -144,7 +144,7 @@ TEST_F(KeyValueStoreTest, Int) {
   EXPECT_EQ(kDefaultValue, store_.LookupInt(kIntKey, kDefaultValue));
   store_.SetInt(kIntKey, kValue);
   EXPECT_TRUE(store_.Contains<int32_t>(kIntKey));
-  EXPECT_EQ(kValue, store_.GetInt(kIntKey));
+  EXPECT_EQ(kValue, store_.Get<int32_t>(kIntKey));
   EXPECT_EQ(kValue, store_.LookupInt(kIntKey, kDefaultValue));
   store_.Remove(kIntKey);
   EXPECT_FALSE(store_.Contains<int32_t>(kIntKey));
@@ -154,14 +154,14 @@ TEST_F(KeyValueStoreTest, Ints) {
   EXPECT_FALSE(store_.Contains<vector<int32_t>>(kIntsKey));
   store_.SetInts(kIntsKey, kIntsValue);
   EXPECT_TRUE(store_.Contains<vector<int32_t>>(kIntsKey));
-  EXPECT_EQ(kIntsValue, store_.GetInts(kIntsKey));
+  EXPECT_EQ(kIntsValue, store_.Get<vector<int32_t>>(kIntsKey));
 }
 
 TEST_F(KeyValueStoreTest, Int16) {
   EXPECT_FALSE(store_.Contains<int16_t>(kInt16Key));
   store_.SetInt16(kInt16Key, kInt16Value);
   EXPECT_TRUE(store_.Contains<int16_t>(kInt16Key));
-  EXPECT_EQ(kInt16Value, store_.GetInt16(kInt16Key));
+  EXPECT_EQ(kInt16Value, store_.Get<int16_t>(kInt16Key));
   store_.Remove(kInt16Key);
   EXPECT_FALSE(store_.Contains<int16_t>(kInt16Key));
 }
@@ -170,28 +170,28 @@ TEST_F(KeyValueStoreTest, Int64) {
   EXPECT_FALSE(store_.Contains<int64_t>(kInt64Key));
   store_.SetInt64(kInt64Key, kInt64Value);
   EXPECT_TRUE(store_.Contains<int64_t>(kInt64Key));
-  EXPECT_EQ(kInt64Value, store_.GetInt64(kInt64Key));
+  EXPECT_EQ(kInt64Value, store_.Get<int64_t>(kInt64Key));
 }
 
 TEST_F(KeyValueStoreTest, Int64s) {
   EXPECT_FALSE(store_.Contains<vector<int64_t>>(kInt64sKey));
   store_.SetInt64s(kInt64sKey, kInt64sValue);
   EXPECT_TRUE(store_.Contains<vector<int64_t>>(kInt64sKey));
-  EXPECT_EQ(kInt64sValue, store_.GetInt64s(kInt64sKey));
+  EXPECT_EQ(kInt64sValue, store_.Get<vector<int64_t>>(kInt64sKey));
 }
 
 TEST_F(KeyValueStoreTest, Double) {
   EXPECT_FALSE(store_.Contains<double>(kDoubleKey));
   store_.SetDouble(kDoubleKey, kDoubleValue);
   EXPECT_TRUE(store_.Contains<double>(kDoubleKey));
-  EXPECT_DOUBLE_EQ(kDoubleValue, store_.GetDouble(kDoubleKey));
+  EXPECT_DOUBLE_EQ(kDoubleValue, store_.Get<double>(kDoubleKey));
 }
 
 TEST_F(KeyValueStoreTest, Doubles) {
   EXPECT_FALSE(store_.Contains<vector<double>>(kDoublesKey));
   store_.SetDoubles(kDoublesKey, kDoublesValue);
   EXPECT_TRUE(store_.Contains<vector<double>>(kDoublesKey));
-  vector<double> ret = store_.GetDoubles(kDoublesKey);
+  vector<double> ret = store_.Get<vector<double>>(kDoublesKey);
   EXPECT_EQ(kDoublesValueSize, ret.size());
   for (size_t i = 0; i < kDoublesValueSize; ++i) {
     EXPECT_DOUBLE_EQ(kDoublesValue[i], ret[i]);
@@ -204,7 +204,7 @@ TEST_F(KeyValueStoreTest, KeyValueStore) {
   EXPECT_FALSE(store_.Contains<KeyValueStore>(kKeyValueStoreKey));
   store_.SetKeyValueStore(kKeyValueStoreKey, value);
   EXPECT_TRUE(store_.Contains<KeyValueStore>(kKeyValueStoreKey));
-  EXPECT_EQ(value, store_.GetKeyValueStore(kKeyValueStoreKey));
+  EXPECT_EQ(value, store_.Get<KeyValueStore>(kKeyValueStoreKey));
   store_.Remove(kKeyValueStoreKey);
   EXPECT_FALSE(store_.Contains<KeyValueStore>(kKeyValueStoreKey));
 }
@@ -213,7 +213,7 @@ TEST_F(KeyValueStoreTest, RpcIdentifier) {
   EXPECT_FALSE(store_.Contains<RpcIdentifier>(kRpcIdentifierKey));
   store_.SetRpcIdentifier(kRpcIdentifierKey, kRpcIdentifierValue);
   EXPECT_TRUE(store_.Contains<RpcIdentifier>(kRpcIdentifierKey));
-  EXPECT_EQ(kRpcIdentifierValue, store_.GetRpcIdentifier(kRpcIdentifierKey));
+  EXPECT_EQ(kRpcIdentifierValue, store_.Get<RpcIdentifier>(kRpcIdentifierKey));
   store_.Remove(kRpcIdentifierKey);
   EXPECT_FALSE(store_.Contains<RpcIdentifier>(kRpcIdentifierKey));
 }
@@ -222,7 +222,8 @@ TEST_F(KeyValueStoreTest, RpcIdentifiers) {
   EXPECT_FALSE(store_.Contains<RpcIdentifiers>(kRpcIdentifiersKey));
   store_.SetRpcIdentifiers(kRpcIdentifiersKey, kRpcIdentifiersValue);
   EXPECT_TRUE(store_.Contains<RpcIdentifiers>(kRpcIdentifiersKey));
-  EXPECT_EQ(kRpcIdentifiersValue, store_.GetRpcIdentifiers(kRpcIdentifiersKey));
+  EXPECT_EQ(kRpcIdentifiersValue,
+            store_.Get<RpcIdentifiers>(kRpcIdentifiersKey));
   store_.Remove(kRpcIdentifiersKey);
   EXPECT_FALSE(store_.Contains<RpcIdentifiers>(kRpcIdentifiersKey));
 }
@@ -235,7 +236,7 @@ TEST_F(KeyValueStoreTest, String) {
   store_.SetString(kStringKey, kValue);
   EXPECT_TRUE(store_.Contains<string>(kStringKey));
   EXPECT_EQ(kValue, store_.LookupString(kStringKey, kDefaultValue));
-  EXPECT_EQ(kValue, store_.GetString(kStringKey));
+  EXPECT_EQ(kValue, store_.Get<string>(kStringKey));
   store_.Remove(kStringKey);
   EXPECT_FALSE(store_.Contains<string>(kStringKey));
   EXPECT_EQ(kDefaultValue, store_.LookupString(kStringKey, kDefaultValue));
@@ -245,7 +246,7 @@ TEST_F(KeyValueStoreTest, Stringmap) {
   EXPECT_FALSE(store_.Contains<Stringmap>(kStringmapKey));
   store_.SetStringmap(kStringmapKey, kStringmapValue);
   EXPECT_TRUE(store_.Contains<Stringmap>(kStringmapKey));
-  EXPECT_EQ(kStringmapValue, store_.GetStringmap(kStringmapKey));
+  EXPECT_EQ(kStringmapValue, store_.Get<Stringmap>(kStringmapKey));
   store_.Remove(kStringmapKey);
   EXPECT_FALSE(store_.Contains<Stringmap>(kStringmapKey));
 }
@@ -254,7 +255,7 @@ TEST_F(KeyValueStoreTest, Strings) {
   EXPECT_FALSE(store_.Contains<Strings>(kStringsKey));
   store_.SetStrings(kStringsKey, kStringsValue);
   EXPECT_TRUE(store_.Contains<Strings>(kStringsKey));
-  EXPECT_EQ(kStringsValue, store_.GetStrings(kStringsKey));
+  EXPECT_EQ(kStringsValue, store_.Get<Strings>(kStringsKey));
   store_.Remove(kStringsKey);
   EXPECT_FALSE(store_.Contains<Strings>(kStringsKey));
 }
@@ -263,21 +264,21 @@ TEST_F(KeyValueStoreTest, Uint) {
   EXPECT_FALSE(store_.Contains<uint32_t>(kUintKey));
   store_.SetUint(kUintKey, kUintValue);
   EXPECT_TRUE(store_.Contains<uint32_t>(kUintKey));
-  EXPECT_EQ(kUintValue, store_.GetUint(kUintKey));
+  EXPECT_EQ(kUintValue, store_.Get<uint32_t>(kUintKey));
 }
 
 TEST_F(KeyValueStoreTest, Uint16) {
   EXPECT_FALSE(store_.Contains<uint16_t>(kUint16Key));
   store_.SetUint16(kUint16Key, kUint16Value);
   EXPECT_TRUE(store_.Contains<uint16_t>(kUint16Key));
-  EXPECT_EQ(kUint16Value, store_.GetUint16(kUint16Key));
+  EXPECT_EQ(kUint16Value, store_.Get<uint16_t>(kUint16Key));
 }
 
 TEST_F(KeyValueStoreTest, Uint8) {
   EXPECT_FALSE(store_.Contains<uint8_t>(kUint8Key));
   store_.SetUint8(kUint8Key, kUint8Value);
   EXPECT_TRUE(store_.Contains<uint8_t>(kUint8Key));
-  EXPECT_EQ(kUint8Value, store_.GetUint8(kUint8Key));
+  EXPECT_EQ(kUint8Value, store_.Get<uint8_t>(kUint8Key));
   store_.Remove(kUint8Key);
   EXPECT_FALSE(store_.Contains<uint8_t>(kUint8Key));
 }
@@ -286,7 +287,7 @@ TEST_F(KeyValueStoreTest, Uint8s) {
   EXPECT_FALSE(store_.Contains<vector<uint8_t>>(kUint8sKey));
   store_.SetUint8s(kUint8sKey, kUint8sValue);
   EXPECT_TRUE(store_.Contains<vector<uint8_t>>(kUint8sKey));
-  EXPECT_EQ(kUint8sValue, store_.GetUint8s(kUint8sKey));
+  EXPECT_EQ(kUint8sValue, store_.Get<vector<uint8_t>>(kUint8sKey));
   store_.Remove(kUint8sKey);
   EXPECT_FALSE(store_.Contains<vector<uint8_t>>(kUint8sKey));
 }
@@ -295,7 +296,7 @@ TEST_F(KeyValueStoreTest, Uint32s) {
   EXPECT_FALSE(store_.Contains<vector<uint32_t>>(kUint32sKey));
   store_.SetUint32s(kUint32sKey, kUint32sValue);
   EXPECT_TRUE(store_.Contains<vector<uint32_t>>(kUint32sKey));
-  EXPECT_EQ(kUint32sValue, store_.GetUint32s(kUint32sKey));
+  EXPECT_EQ(kUint32sValue, store_.Get<vector<uint32_t>>(kUint32sKey));
   store_.Remove(kUint32sKey);
   EXPECT_FALSE(store_.Contains<vector<uint32_t>>(kUint32sKey));
 }
@@ -755,49 +756,49 @@ TEST_F(KeyValueStoreTest, ConvertFromVariantDictionary) {
 
   KeyValueStore store = KeyValueStore::ConvertFromVariantDictionary(dict);
   EXPECT_TRUE(store.Contains<string>(kStringKey));
-  EXPECT_EQ(kStringValue, store.GetString(kStringKey));
+  EXPECT_EQ(kStringValue, store.Get<string>(kStringKey));
   EXPECT_TRUE(store.Contains<Stringmap>(kStringmapKey));
-  EXPECT_EQ(kStringmapValue, store.GetStringmap(kStringmapKey));
+  EXPECT_EQ(kStringmapValue, store.Get<Stringmap>(kStringmapKey));
   EXPECT_TRUE(store.Contains<Strings>(kStringsKey));
-  EXPECT_EQ(kStringsValue, store.GetStrings(kStringsKey));
+  EXPECT_EQ(kStringsValue, store.Get<Strings>(kStringsKey));
   EXPECT_TRUE(store.Contains<bool>(kBoolKey));
-  EXPECT_EQ(kBoolValue, store.GetBool(kBoolKey));
+  EXPECT_EQ(kBoolValue, store.Get<bool>(kBoolKey));
   EXPECT_TRUE(store.Contains<vector<bool>>(kBoolsKey));
-  EXPECT_EQ(kBoolsValue, store.GetBools(kBoolsKey));
+  EXPECT_EQ(kBoolsValue, store.Get<vector<bool>>(kBoolsKey));
   EXPECT_TRUE(store.Contains<int32_t>(kIntKey));
-  EXPECT_EQ(kIntValue, store.GetInt(kIntKey));
+  EXPECT_EQ(kIntValue, store.Get<int32_t>(kIntKey));
   EXPECT_TRUE(store.Contains<vector<int32_t>>(kIntsKey));
-  EXPECT_EQ(kIntsValue, store.GetInts(kIntsKey));
+  EXPECT_EQ(kIntsValue, store.Get<vector<int32_t>>(kIntsKey));
   EXPECT_TRUE(store.Contains<uint32_t>(kUintKey));
-  EXPECT_EQ(kUintValue, store.GetUint(kUintKey));
+  EXPECT_EQ(kUintValue, store.Get<uint32_t>(kUintKey));
   EXPECT_TRUE(store.Contains<ByteArrays>(kByteArraysKey));
-  EXPECT_EQ(kByteArraysValue, store.GetByteArrays(kByteArraysKey));
+  EXPECT_EQ(kByteArraysValue, store.Get<ByteArrays>(kByteArraysKey));
   EXPECT_TRUE(store.Contains<int16_t>(kInt16Key));
-  EXPECT_EQ(kInt16Value, store.GetInt16(kInt16Key));
+  EXPECT_EQ(kInt16Value, store.Get<int16_t>(kInt16Key));
   EXPECT_TRUE(store.Contains<int64_t>(kInt64Key));
-  EXPECT_EQ(kInt64Value, store.GetInt64(kInt64Key));
+  EXPECT_EQ(kInt64Value, store.Get<int64_t>(kInt64Key));
   EXPECT_TRUE(store.Contains<vector<int64_t>>(kInt64sKey));
-  EXPECT_EQ(kInt64sValue, store.GetInt64s(kInt64sKey));
+  EXPECT_EQ(kInt64sValue, store.Get<vector<int64_t>>(kInt64sKey));
   EXPECT_TRUE(store.Contains<double>(kDoubleKey));
-  EXPECT_DOUBLE_EQ(kDoubleValue, store.GetDouble(kDoubleKey));
+  EXPECT_DOUBLE_EQ(kDoubleValue, store.Get<double>(kDoubleKey));
   EXPECT_TRUE(store.Contains<vector<double>>(kDoublesKey));
-  vector<double> doubles_value = store.GetDoubles(kDoublesKey);
+  vector<double> doubles_value = store.Get<vector<double>>(kDoublesKey);
   EXPECT_EQ(kDoublesValueSize, doubles_value.size());
   for (size_t i = 0; i < kDoublesValueSize; ++i) {
     EXPECT_DOUBLE_EQ(kDoublesValue[i], doubles_value[i]);
   }
   EXPECT_TRUE(store.Contains<RpcIdentifier>(kRpcIdentifierKey));
-  EXPECT_EQ(kRpcIdentifierValue, store.GetRpcIdentifier(kRpcIdentifierKey));
+  EXPECT_EQ(kRpcIdentifierValue, store.Get<RpcIdentifier>(kRpcIdentifierKey));
   EXPECT_TRUE(store.Contains<uint16_t>(kUint16Key));
-  EXPECT_EQ(kUint16Value, store.GetUint16(kUint16Key));
+  EXPECT_EQ(kUint16Value, store.Get<uint16_t>(kUint16Key));
   EXPECT_TRUE(store.Contains<vector<uint8_t>>(kUint8sKey));
-  EXPECT_EQ(kUint8sValue, store.GetUint8s(kUint8sKey));
+  EXPECT_EQ(kUint8sValue, store.Get<vector<uint8_t>>(kUint8sKey));
   EXPECT_TRUE(store.Contains<vector<uint32_t>>(kUint32sKey));
-  EXPECT_EQ(kUint32sValue, store.GetUint32s(kUint32sKey));
+  EXPECT_EQ(kUint32sValue, store.Get<vector<uint32_t>>(kUint32sKey));
   EXPECT_TRUE(store.Contains<KeyValueStore>(kKeyValueStoreKey));
   KeyValueStore nested_store;
   nested_store.SetInt(kNestedInt32Key, kNestedInt32Value);
-  EXPECT_EQ(nested_store, store.GetKeyValueStore(kKeyValueStoreKey));
+  EXPECT_EQ(nested_store, store.Get<KeyValueStore>(kKeyValueStoreKey));
 }
 
 }  // namespace shill

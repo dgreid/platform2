@@ -326,7 +326,7 @@ bool L2TPIPSecDriver::InitPSKOptions(vector<string>* options, Error* error) {
 bool L2TPIPSecDriver::InitPEMOptions(vector<string>* options) {
   vector<string> ca_certs;
   if (args()->Contains<Strings>(kL2tpIpsecCaCertPemProperty)) {
-    ca_certs = args()->GetStrings(kL2tpIpsecCaCertPemProperty);
+    ca_certs = args()->Get<Strings>(kL2tpIpsecCaCertPemProperty);
   }
   if (ca_certs.empty()) {
     return false;
@@ -499,7 +499,7 @@ void L2TPIPSecDriver::ReportConnectionMetrics() {
   // even if more than one is set at the same time.
   bool has_remote_authentication = false;
   if (args()->Contains<Strings>(kL2tpIpsecCaCertPemProperty) &&
-      !args()->GetStrings(kL2tpIpsecCaCertPemProperty).empty()) {
+      !args()->Get<Strings>(kL2tpIpsecCaCertPemProperty).empty()) {
     metrics()->SendEnumToUMA(
         Metrics::kMetricVpnRemoteAuthenticationType,
         Metrics::kVpnRemoteAuthenticationTypeL2tpIpsecCertificate,

@@ -2205,7 +2205,8 @@ MATCHER_P(ScanRequestHasHiddenSSID, ssid, "") {
     return false;
   }
 
-  ByteArrays ssids = arg.GetByteArrays(WPASupplicant::kPropertyScanSSIDs);
+  ByteArrays ssids =
+      arg.template Get<ByteArrays>(WPASupplicant::kPropertyScanSSIDs);
   // A valid Scan containing a single hidden SSID should contain
   // two SSID entries: one containing the SSID we are looking for,
   // and an empty entry, signifying that we also want to do a
@@ -2553,7 +2554,7 @@ TEST_F(WiFiMainTest, AppendBgscan) {
     Mock::VerifyAndClearExpectations(service.get());
     string config_string;
     EXPECT_TRUE(params.Contains<string>(WPASupplicant::kNetworkPropertyBgscan));
-    config_string = params.GetString(WPASupplicant::kNetworkPropertyBgscan);
+    config_string = params.Get<string>(WPASupplicant::kNetworkPropertyBgscan);
     vector<string> elements = base::SplitString(
         config_string, ":", base::TRIM_WHITESPACE, base::SPLIT_WANT_ALL);
     ASSERT_EQ(4, elements.size());
@@ -2570,7 +2571,7 @@ TEST_F(WiFiMainTest, AppendBgscan) {
     Mock::VerifyAndClearExpectations(service.get());
     EXPECT_TRUE(params.Contains<string>(WPASupplicant::kNetworkPropertyBgscan));
     string config_string =
-        params.GetString(WPASupplicant::kNetworkPropertyBgscan);
+        params.Get<string>(WPASupplicant::kNetworkPropertyBgscan);
     vector<string> elements = base::SplitString(
         config_string, ":", base::TRIM_WHITESPACE, base::SPLIT_WANT_ALL);
     ASSERT_EQ(4, elements.size());
@@ -3225,30 +3226,30 @@ TEST_F(WiFiTimerTest, RequestStationInfo) {
   ASSERT_FALSE(link_statistics.IsEmpty());
   ASSERT_TRUE(link_statistics.Contains<int32_t>(kLastReceiveSignalDbmProperty));
   EXPECT_EQ(kSignalValue,
-            link_statistics.GetInt(kLastReceiveSignalDbmProperty));
+            link_statistics.Get<int32_t>(kLastReceiveSignalDbmProperty));
   ASSERT_TRUE(
       link_statistics.Contains<int32_t>(kAverageReceiveSignalDbmProperty));
   EXPECT_EQ(kSignalAvgValue,
-            link_statistics.GetInt(kAverageReceiveSignalDbmProperty));
+            link_statistics.Get<int32_t>(kAverageReceiveSignalDbmProperty));
   ASSERT_TRUE(
       link_statistics.Contains<uint32_t>(kInactiveTimeMillisecondsProperty));
   EXPECT_EQ(kInactiveTime,
-            link_statistics.GetUint(kInactiveTimeMillisecondsProperty));
+            link_statistics.Get<uint32_t>(kInactiveTimeMillisecondsProperty));
   ASSERT_TRUE(
       link_statistics.Contains<uint32_t>(kPacketReceiveSuccessesProperty));
   EXPECT_EQ(kReceiveSuccesses,
-            link_statistics.GetUint(kPacketReceiveSuccessesProperty));
+            link_statistics.Get<uint32_t>(kPacketReceiveSuccessesProperty));
   ASSERT_TRUE(
       link_statistics.Contains<uint32_t>(kPacketTransmitFailuresProperty));
   EXPECT_EQ(kTransmitFailed,
-            link_statistics.GetUint(kPacketTransmitFailuresProperty));
+            link_statistics.Get<uint32_t>(kPacketTransmitFailuresProperty));
   ASSERT_TRUE(
       link_statistics.Contains<uint32_t>(kPacketTransmitSuccessesProperty));
   EXPECT_EQ(kTransmitSuccesses,
-            link_statistics.GetUint(kPacketTransmitSuccessesProperty));
+            link_statistics.Get<uint32_t>(kPacketTransmitSuccessesProperty));
   ASSERT_TRUE(link_statistics.Contains<uint32_t>(kTransmitRetriesProperty));
   EXPECT_EQ(kTransmitRetries,
-            link_statistics.GetUint(kTransmitRetriesProperty));
+            link_statistics.Get<uint32_t>(kTransmitRetriesProperty));
   EXPECT_EQ(StringPrintf("%d.%d MBit/s MCS %d 40MHz", kBitrate / 10,
                          kBitrate % 10, kMCS),
             link_statistics.LookupString(kTransmitBitrateProperty, ""));

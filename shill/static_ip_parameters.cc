@@ -110,13 +110,14 @@ void StaticIPParameters::Save(StoreInterface* storage,
       case Property::kTypeInt32:
         if (args_.Contains<int32_t>(property.name)) {
           property_exists = true;
-          storage->SetInt(storage_id, name, args_.GetInt(property.name));
+          storage->SetInt(storage_id, name, args_.Get<int32_t>(property.name));
         }
         break;
       case Property::kTypeString:
         if (args_.Contains<string>(property.name)) {
           property_exists = true;
-          storage->SetString(storage_id, name, args_.GetString(property.name));
+          storage->SetString(storage_id, name,
+                             args_.Get<string>(property.name));
         }
         break;
       case Property::kTypeStrings:
@@ -126,7 +127,7 @@ void StaticIPParameters::Save(StoreInterface* storage,
           // Keep it as is to be backward compatible.
           storage->SetString(
               storage_id, name,
-              base::JoinString(args_.GetStrings(property.name), ","));
+              base::JoinString(args_.Get<Strings>(property.name), ","));
         }
         break;
       default:
@@ -142,7 +143,7 @@ void StaticIPParameters::Save(StoreInterface* storage,
 void StaticIPParameters::ApplyInt(const string& property, int32_t* value_out) {
   saved_args_.SetInt(property, *value_out);
   if (args_.Contains<int32_t>(property)) {
-    *value_out = args_.GetInt(property);
+    *value_out = args_.Get<int32_t>(property);
   }
 }
 
@@ -150,7 +151,7 @@ void StaticIPParameters::ApplyString(const string& property,
                                      string* value_out) {
   saved_args_.SetString(property, *value_out);
   if (args_.Contains<string>(property)) {
-    *value_out = args_.GetString(property);
+    *value_out = args_.Get<string>(property);
   }
 }
 
@@ -158,14 +159,14 @@ void StaticIPParameters::ApplyStrings(const string& property,
                                       vector<string>* value_out) {
   saved_args_.SetStrings(property, *value_out);
   if (args_.Contains<Strings>(property)) {
-    *value_out = args_.GetStrings(property);
+    *value_out = args_.Get<Strings>(property);
   }
 }
 
 void StaticIPParameters::RestoreStrings(const string& property,
                                         vector<string>* value_out) {
   if (saved_args_.Contains<Strings>(property)) {
-    *value_out = saved_args_.GetStrings(property);
+    *value_out = saved_args_.Get<Strings>(property);
   } else {
     value_out->clear();
   }
@@ -207,7 +208,7 @@ void StaticIPParameters::ApplyRoutes(const string& property,
     return;
   }
   value_out->clear();
-  ParseRoutes(args_.GetStrings(property), gateway, value_out);
+  ParseRoutes(args_.Get<Strings>(property), gateway, value_out);
 }
 
 void StaticIPParameters::RestoreRoutes(const string& property,
@@ -215,7 +216,7 @@ void StaticIPParameters::RestoreRoutes(const string& property,
                                        vector<IPConfig::Route>* value_out) {
   value_out->clear();
   if (saved_args_.Contains<Strings>(property)) {
-    ParseRoutes(saved_args_.GetStrings(property), gateway, value_out);
+    ParseRoutes(saved_args_.Get<Strings>(property), gateway, value_out);
   }
 }
 

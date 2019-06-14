@@ -32,8 +32,10 @@ namespace shill {
 
 MATCHER_P2(ContainsCellularProperties, key, value, "") {
   return arg.template Contains<string>(CellularService::kStorageType) &&
-         arg.GetString(CellularService::kStorageType) == kTypeCellular &&
-         arg.template Contains<string>(key) && arg.GetString(key) == value;
+         arg.template Get<string>(CellularService::kStorageType) ==
+             kTypeCellular &&
+         arg.template Contains<string>(key) &&
+         arg.template Get<string>(key) == value;
 }
 
 class CellularServiceTest : public testing::Test {
