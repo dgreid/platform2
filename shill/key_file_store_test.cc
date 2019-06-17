@@ -220,8 +220,8 @@ TEST_F(KeyFileStoreTest, GetGroupsWithProperties) {
   ASSERT_TRUE(store_->Open());
   {
     KeyValueStore args;
-    args.SetString(kAttributeA, kValueA_0);
-    args.SetInt(kAttributeB, kValueB_0);
+    args.Set<string>(kAttributeA, kValueA_0);
+    args.Set<int32_t>(kAttributeB, kValueB_0);
     set<string> results = store_->GetGroupsWithProperties(args);
     EXPECT_EQ(2, results.size());
     EXPECT_TRUE(results.find(kGroupA) != results.end());
@@ -229,8 +229,8 @@ TEST_F(KeyFileStoreTest, GetGroupsWithProperties) {
   }
   {
     KeyValueStore args;
-    args.SetString(kAttributeA, kValueA_0);
-    args.SetBool(kAttributeC, kValueC_0);
+    args.Set<string>(kAttributeA, kValueA_0);
+    args.Set<bool>(kAttributeC, kValueC_0);
     set<string> results = store_->GetGroupsWithProperties(args);
     EXPECT_EQ(2, results.size());
     EXPECT_TRUE(results.find(kGroupA) != results.end());
@@ -238,14 +238,14 @@ TEST_F(KeyFileStoreTest, GetGroupsWithProperties) {
   }
   {
     KeyValueStore args;
-    args.SetBool(kAttributeC, kValueC_1);
+    args.Set<bool>(kAttributeC, kValueC_1);
     set<string> results = store_->GetGroupsWithProperties(args);
     EXPECT_EQ(1, results.size());
     EXPECT_TRUE(results.find(kGroupC) != results.end());
   }
   {
     KeyValueStore args;
-    args.SetString(kAttributeA, kValueA_0);
+    args.Set<string>(kAttributeA, kValueA_0);
     set<string> results = store_->GetGroupsWithProperties(args);
     EXPECT_EQ(3, results.size());
     EXPECT_TRUE(results.find(kGroupA) != results.end());
@@ -254,7 +254,7 @@ TEST_F(KeyFileStoreTest, GetGroupsWithProperties) {
   }
   {
     KeyValueStore args;
-    args.SetString(kAttributeA, kValueA_1);
+    args.Set<string>(kAttributeA, kValueA_1);
     set<string> results = store_->GetGroupsWithProperties(args);
     EXPECT_EQ(0, results.size());
   }

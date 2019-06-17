@@ -63,15 +63,15 @@ class CellularBearerTest : public testing::Test {
   static KeyValueStore ConstructIPv4ConfigProperties(
       MMBearerIpMethod ipconfig_method) {
     KeyValueStore ipconfig_properties;
-    ipconfig_properties.SetUint("method", ipconfig_method);
+    ipconfig_properties.Set<uint32_t>("method", ipconfig_method);
     if (ipconfig_method == MM_BEARER_IP_METHOD_STATIC) {
-      ipconfig_properties.SetString("address", kIPv4Address);
-      ipconfig_properties.SetString("gateway", kIPv4Gateway);
-      ipconfig_properties.SetUint("prefix", kIPv4SubnetPrefix);
-      ipconfig_properties.SetString("dns1", kIPv4DNS[0]);
-      ipconfig_properties.SetString("dns2", kIPv4DNS[1]);
-      ipconfig_properties.SetString("dns3", kIPv4DNS[2]);
-      ipconfig_properties.SetUint("mtu", kIPv4Mtu);
+      ipconfig_properties.Set<string>("address", kIPv4Address);
+      ipconfig_properties.Set<string>("gateway", kIPv4Gateway);
+      ipconfig_properties.Set<uint32_t>("prefix", kIPv4SubnetPrefix);
+      ipconfig_properties.Set<string>("dns1", kIPv4DNS[0]);
+      ipconfig_properties.Set<string>("dns2", kIPv4DNS[1]);
+      ipconfig_properties.Set<string>("dns3", kIPv4DNS[2]);
+      ipconfig_properties.Set<uint32_t>("mtu", kIPv4Mtu);
     }
     return ipconfig_properties;
   }
@@ -79,15 +79,15 @@ class CellularBearerTest : public testing::Test {
   static KeyValueStore ConstructIPv6ConfigProperties(
       MMBearerIpMethod ipconfig_method) {
     KeyValueStore ipconfig_properties;
-    ipconfig_properties.SetUint("method", ipconfig_method);
+    ipconfig_properties.Set<uint32_t>("method", ipconfig_method);
     if (ipconfig_method == MM_BEARER_IP_METHOD_STATIC) {
-      ipconfig_properties.SetString("address", kIPv6Address);
-      ipconfig_properties.SetString("gateway", kIPv6Gateway);
-      ipconfig_properties.SetUint("prefix", kIPv6SubnetPrefix);
-      ipconfig_properties.SetString("dns1", kIPv6DNS[0]);
-      ipconfig_properties.SetString("dns2", kIPv6DNS[1]);
-      ipconfig_properties.SetString("dns3", kIPv6DNS[2]);
-      ipconfig_properties.SetUint("mtu", kIPv6Mtu);
+      ipconfig_properties.Set<string>("address", kIPv6Address);
+      ipconfig_properties.Set<string>("gateway", kIPv6Gateway);
+      ipconfig_properties.Set<uint32_t>("prefix", kIPv6SubnetPrefix);
+      ipconfig_properties.Set<string>("dns1", kIPv6DNS[0]);
+      ipconfig_properties.Set<string>("dns2", kIPv6DNS[1]);
+      ipconfig_properties.Set<string>("dns3", kIPv6DNS[2]);
+      ipconfig_properties.Set<uint32_t>("mtu", kIPv6Mtu);
     }
     return ipconfig_properties;
   }
@@ -98,13 +98,13 @@ class CellularBearerTest : public testing::Test {
       MMBearerIpMethod ipv4_config_method,
       MMBearerIpMethod ipv6_config_method) {
     KeyValueStore properties;
-    properties.SetBool(MM_BEARER_PROPERTY_CONNECTED, connected);
-    properties.SetString(MM_BEARER_PROPERTY_INTERFACE, data_interface);
+    properties.Set<bool>(MM_BEARER_PROPERTY_CONNECTED, connected);
+    properties.Set<string>(MM_BEARER_PROPERTY_INTERFACE, data_interface);
 
-    properties.SetKeyValueStore(
+    properties.Set<KeyValueStore>(
         MM_BEARER_PROPERTY_IP4CONFIG,
         ConstructIPv4ConfigProperties(ipv4_config_method));
-    properties.SetKeyValueStore(
+    properties.Set<KeyValueStore>(
         MM_BEARER_PROPERTY_IP6CONFIG,
         ConstructIPv6ConfigProperties(ipv6_config_method));
     return properties;
@@ -183,20 +183,20 @@ TEST_F(CellularBearerTest, OnPropertiesChanged) {
   bearer_.OnPropertiesChanged("", properties, vector<string>());
   VerifyDefaultProperties();
 
-  properties.SetBool(MM_BEARER_PROPERTY_CONNECTED, true);
+  properties.Set<bool>(MM_BEARER_PROPERTY_CONNECTED, true);
   bearer_.OnPropertiesChanged("", properties, vector<string>());
   VerifyDefaultProperties();
 
   // Update 'interface' property.
   properties.Clear();
-  properties.SetString(MM_BEARER_PROPERTY_INTERFACE, kDataInterface);
+  properties.Set<string>(MM_BEARER_PROPERTY_INTERFACE, kDataInterface);
   bearer_.OnPropertiesChanged(MM_DBUS_INTERFACE_BEARER, properties,
                               vector<string>());
   EXPECT_EQ(kDataInterface, bearer_.data_interface());
 
   // Update 'connected' property.
   properties.Clear();
-  properties.SetBool(MM_BEARER_PROPERTY_CONNECTED, true);
+  properties.Set<bool>(MM_BEARER_PROPERTY_CONNECTED, true);
   bearer_.OnPropertiesChanged(MM_DBUS_INTERFACE_BEARER, properties,
                               vector<string>());
   EXPECT_TRUE(bearer_.connected());
@@ -205,7 +205,7 @@ TEST_F(CellularBearerTest, OnPropertiesChanged) {
 
   // Update 'ip4config' property.
   properties.Clear();
-  properties.SetKeyValueStore(
+  properties.Set<KeyValueStore>(
       MM_BEARER_PROPERTY_IP4CONFIG,
       ConstructIPv4ConfigProperties(MM_BEARER_IP_METHOD_UNKNOWN));
   bearer_.OnPropertiesChanged(MM_DBUS_INTERFACE_BEARER, properties,
@@ -213,7 +213,7 @@ TEST_F(CellularBearerTest, OnPropertiesChanged) {
   EXPECT_EQ(IPConfig::kMethodUnknown, bearer_.ipv4_config_method());
 
   properties.Clear();
-  properties.SetKeyValueStore(
+  properties.Set<KeyValueStore>(
       MM_BEARER_PROPERTY_IP4CONFIG,
       ConstructIPv4ConfigProperties(MM_BEARER_IP_METHOD_PPP));
   bearer_.OnPropertiesChanged(MM_DBUS_INTERFACE_BEARER, properties,
@@ -221,7 +221,7 @@ TEST_F(CellularBearerTest, OnPropertiesChanged) {
   EXPECT_EQ(IPConfig::kMethodPPP, bearer_.ipv4_config_method());
 
   properties.Clear();
-  properties.SetKeyValueStore(
+  properties.Set<KeyValueStore>(
       MM_BEARER_PROPERTY_IP4CONFIG,
       ConstructIPv4ConfigProperties(MM_BEARER_IP_METHOD_STATIC));
   bearer_.OnPropertiesChanged(MM_DBUS_INTERFACE_BEARER, properties,
@@ -230,7 +230,7 @@ TEST_F(CellularBearerTest, OnPropertiesChanged) {
   VerifyStaticIPv4ConfigMethodAndProperties();
 
   properties.Clear();
-  properties.SetKeyValueStore(
+  properties.Set<KeyValueStore>(
       MM_BEARER_PROPERTY_IP4CONFIG,
       ConstructIPv4ConfigProperties(MM_BEARER_IP_METHOD_DHCP));
   bearer_.OnPropertiesChanged(MM_DBUS_INTERFACE_BEARER, properties,
@@ -239,7 +239,7 @@ TEST_F(CellularBearerTest, OnPropertiesChanged) {
 
   // Update 'ip6config' property.
   properties.Clear();
-  properties.SetKeyValueStore(
+  properties.Set<KeyValueStore>(
       MM_BEARER_PROPERTY_IP6CONFIG,
       ConstructIPv6ConfigProperties(MM_BEARER_IP_METHOD_UNKNOWN));
   bearer_.OnPropertiesChanged(MM_DBUS_INTERFACE_BEARER, properties,
@@ -247,7 +247,7 @@ TEST_F(CellularBearerTest, OnPropertiesChanged) {
   EXPECT_EQ(IPConfig::kMethodUnknown, bearer_.ipv6_config_method());
 
   properties.Clear();
-  properties.SetKeyValueStore(
+  properties.Set<KeyValueStore>(
       MM_BEARER_PROPERTY_IP6CONFIG,
       ConstructIPv6ConfigProperties(MM_BEARER_IP_METHOD_PPP));
   bearer_.OnPropertiesChanged(MM_DBUS_INTERFACE_BEARER, properties,
@@ -255,7 +255,7 @@ TEST_F(CellularBearerTest, OnPropertiesChanged) {
   EXPECT_EQ(IPConfig::kMethodPPP, bearer_.ipv6_config_method());
 
   properties.Clear();
-  properties.SetKeyValueStore(
+  properties.Set<KeyValueStore>(
       MM_BEARER_PROPERTY_IP6CONFIG,
       ConstructIPv6ConfigProperties(MM_BEARER_IP_METHOD_STATIC));
   bearer_.OnPropertiesChanged(MM_DBUS_INTERFACE_BEARER, properties,
@@ -264,7 +264,7 @@ TEST_F(CellularBearerTest, OnPropertiesChanged) {
   VerifyStaticIPv6ConfigMethodAndProperties();
 
   properties.Clear();
-  properties.SetKeyValueStore(
+  properties.Set<KeyValueStore>(
       MM_BEARER_PROPERTY_IP6CONFIG,
       ConstructIPv6ConfigProperties(MM_BEARER_IP_METHOD_DHCP));
   bearer_.OnPropertiesChanged(MM_DBUS_INTERFACE_BEARER, properties,

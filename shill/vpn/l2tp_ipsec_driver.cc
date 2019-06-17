@@ -484,9 +484,9 @@ bool L2TPIPSecDriver::IsPskRequired() const {
 KeyValueStore L2TPIPSecDriver::GetProvider(Error* error) {
   SLOG(this, 2) << __func__;
   KeyValueStore props = VPNDriver::GetProvider(error);
-  props.SetBool(kPassphraseRequiredProperty,
-                args()->LookupString(kL2tpIpsecPasswordProperty, "").empty());
-  props.SetBool(kL2tpIpsecPskRequiredProperty, IsPskRequired());
+  props.Set<bool>(kPassphraseRequiredProperty,
+                  args()->LookupString(kL2tpIpsecPasswordProperty, "").empty());
+  props.Set<bool>(kL2tpIpsecPskRequiredProperty, IsPskRequired());
   return props;
 }
 

@@ -298,7 +298,7 @@ void WiFiProvider::Stop() {
 void WiFiProvider::CreateServicesFromProfile(const ProfileRefPtr& profile) {
   const StoreInterface* storage = profile->GetConstStorage();
   KeyValueStore args;
-  args.SetString(kTypeProperty, kTypeWifi);
+  args.Set<string>(kTypeProperty, kTypeWifi);
   bool created_hidden_service = false;
   for (const auto& group : storage->GetGroupsWithProperties(args)) {
     vector<uint8_t> ssid_bytes;

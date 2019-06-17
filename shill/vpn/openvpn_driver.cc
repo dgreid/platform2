@@ -1028,9 +1028,9 @@ string OpenVPNDriver::GetProviderType() const {
 KeyValueStore OpenVPNDriver::GetProvider(Error* error) {
   SLOG(this, 2) << __func__;
   KeyValueStore props = VPNDriver::GetProvider(error);
-  props.SetBool(kPassphraseRequiredProperty,
-                args()->LookupString(kOpenVPNPasswordProperty, "").empty() &&
-                    args()->LookupString(kOpenVPNTokenProperty, "").empty());
+  props.Set<bool>(kPassphraseRequiredProperty,
+                  args()->LookupString(kOpenVPNPasswordProperty, "").empty() &&
+                      args()->LookupString(kOpenVPNTokenProperty, "").empty());
   return props;
 }
 

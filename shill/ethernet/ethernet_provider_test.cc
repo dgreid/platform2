@@ -80,7 +80,7 @@ TEST_F(EthernetProviderTest, ServiceConstructors) {
   provider_.Start();
   ServiceRefPtr service = provider_.service();
   KeyValueStore args;
-  args.SetString(kTypeProperty, kTypeEthernet);
+  args.Set<std::string>(kTypeProperty, kTypeEthernet);
   {
     Error error;
     EXPECT_EQ(service, provider_.GetService(args, &error));

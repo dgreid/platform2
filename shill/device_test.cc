@@ -724,8 +724,8 @@ TEST_F(DeviceTest, IPConfigUpdatedFailureWithStatic) {
       new MockIPConfig(control_interface(), kDeviceName);
   scoped_refptr<MockService> service(new StrictMock<MockService>(manager()));
   SelectService(service);
-  service->static_ip_parameters_.args_.SetString(kAddressProperty, "1.1.1.1");
-  service->static_ip_parameters_.args_.SetInt(kPrefixlenProperty, 16);
+  service->static_ip_parameters_.args_.Set<string>(kAddressProperty, "1.1.1.1");
+  service->static_ip_parameters_.args_.Set<int32_t>(kPrefixlenProperty, 16);
   // Even though we won't call DisconnectWithFailure, we should still have
   // the service learn from the failed DHCP attempt.
   EXPECT_CALL(*service, DisconnectWithFailure(_, _, _)).Times(0);
@@ -1687,8 +1687,8 @@ TEST_F(DeviceTest, PrependWithStaticConfiguration) {
   SelectService(service);
 
   auto parameters = service->mutable_static_ip_parameters();
-  parameters->args_.SetString(kAddressProperty, "1.1.1.1");
-  parameters->args_.SetInt(kPrefixlenProperty, 16);
+  parameters->args_.Set<string>(kAddressProperty, "1.1.1.1");
+  parameters->args_.Set<int32_t>(kPrefixlenProperty, 16);
 
   scoped_refptr<MockConnection> connection = new MockConnection(&device_info_);
   SetConnection(connection);
@@ -1705,7 +1705,7 @@ TEST_F(DeviceTest, PrependWithStaticConfiguration) {
   // Ensure that when nameservers are statically configured that the prepend DNS
   // servers are not used.
   const vector<string> static_servers = {"4.4.4.4", "5.5.5.5"};
-  parameters->args_.SetStrings(kNameServersProperty, static_servers);
+  parameters->args_.Set<Strings>(kNameServersProperty, static_servers);
   EXPECT_CALL(*service, HasStaticNameServers()).WillOnce(Return(true));
   OnIPConfigUpdated(ipconfig.get());
   EXPECT_EQ(static_servers, device_->ipconfig()->properties().dns_servers);

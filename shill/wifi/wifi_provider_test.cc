@@ -244,20 +244,20 @@ class WiFiProviderTest : public testing::Test {
                             bool is_hidden,
                             bool provide_hidden,
                             KeyValueStore* args) {
-    args->SetString(kTypeProperty, kTypeWifi);
+    args->Set<string>(kTypeProperty, kTypeWifi);
     if (ssid) {
       // TODO(pstew): When Chrome switches to using kWifiHexSsid primarily for
       // GetService and friends, we should switch to doing so here ourselves.
-      args->SetString(kSSIDProperty, ssid);
+      args->Set<string>(kSSIDProperty, ssid);
     }
     if (mode) {
-      args->SetString(kModeProperty, mode);
+      args->Set<string>(kModeProperty, mode);
     }
     if (security_class) {
-      args->SetString(kSecurityClassProperty, security_class);
+      args->Set<string>(kSecurityClassProperty, security_class);
     }
     if (provide_hidden) {
-      args->SetBool(kWifiHiddenSsid, is_hidden);
+      args->Set<bool>(kWifiHiddenSsid, is_hidden);
     }
   }
 
@@ -962,10 +962,10 @@ TEST_F(WiFiProviderTest, GetServiceByHexSsid) {
   const string kHexSsid(base::HexEncode(kSSID.c_str(), kSSID.length()));
 
   KeyValueStore args;
-  args.SetString(kTypeProperty, kTypeWifi);
-  args.SetString(kWifiHexSsid, kHexSsid);
-  args.SetString(kSecurityProperty, kSecurityPsk);
-  args.SetBool(kWifiHiddenSsid, false);
+  args.Set<string>(kTypeProperty, kTypeWifi);
+  args.Set<string>(kWifiHexSsid, kHexSsid);
+  args.Set<string>(kSecurityProperty, kSecurityPsk);
+  args.Set<bool>(kWifiHiddenSsid, false);
 
   Error error;
   WiFiServiceRefPtr service = GetWiFiService(args, &error);
@@ -987,11 +987,11 @@ TEST_F(WiFiProviderTest, GetServiceByHexSsid) {
 TEST_F(WiFiProviderTest, GetServiceWithSecurityAndSecurityClassMismatched) {
   const string kSSID("bar");
   KeyValueStore args;
-  args.SetString(kTypeProperty, kTypeWifi);
-  args.SetString(kSSIDProperty, kSSID);
-  args.SetString(kSecurityProperty, kSecurityRsn);
-  args.SetString(kSecurityClassProperty, kSecurityPsk);
-  args.SetBool(kWifiHiddenSsid, false);
+  args.Set<string>(kTypeProperty, kTypeWifi);
+  args.Set<string>(kSSIDProperty, kSSID);
+  args.Set<string>(kSecurityProperty, kSecurityRsn);
+  args.Set<string>(kSecurityClassProperty, kSecurityPsk);
+  args.Set<bool>(kWifiHiddenSsid, false);
 
   Error error;
   WiFiServiceRefPtr service;
@@ -1003,11 +1003,11 @@ TEST_F(WiFiProviderTest, GetServiceWithSecurityAndSecurityClassMismatched) {
 TEST_F(WiFiProviderTest, GetServiceWithSecurityAndSecurityClassMatching) {
   const string kSSID("bar");
   KeyValueStore args;
-  args.SetString(kTypeProperty, kTypeWifi);
-  args.SetString(kSSIDProperty, kSSID);
-  args.SetString(kSecurityProperty, kSecurityPsk);
-  args.SetString(kSecurityClassProperty, kSecurityPsk);
-  args.SetBool(kWifiHiddenSsid, false);
+  args.Set<string>(kTypeProperty, kTypeWifi);
+  args.Set<string>(kSSIDProperty, kSSID);
+  args.Set<string>(kSecurityProperty, kSecurityPsk);
+  args.Set<string>(kSecurityClassProperty, kSecurityPsk);
+  args.Set<bool>(kWifiHiddenSsid, false);
 
   Error error;
   WiFiServiceRefPtr service;
@@ -1020,11 +1020,11 @@ TEST_F(WiFiProviderTest,
        GetServiceWithSecurityAndSecurityClassMatchingButInvalidClass) {
   const string kSSID("bar");
   KeyValueStore args;
-  args.SetString(kTypeProperty, kTypeWifi);
-  args.SetString(kSSIDProperty, kSSID);
-  args.SetString(kSecurityProperty, kSecurityRsn);
-  args.SetString(kSecurityClassProperty, kSecurityRsn);
-  args.SetBool(kWifiHiddenSsid, false);
+  args.Set<string>(kTypeProperty, kTypeWifi);
+  args.Set<string>(kSSIDProperty, kSSID);
+  args.Set<string>(kSecurityProperty, kSecurityRsn);
+  args.Set<string>(kSecurityClassProperty, kSecurityRsn);
+  args.Set<bool>(kWifiHiddenSsid, false);
   EXPECT_CALL(manager_, RegisterService(_)).Times(0);
 
   Error error;
@@ -1036,10 +1036,10 @@ TEST_F(WiFiProviderTest,
 TEST_F(WiFiProviderTest, GetServiceBadSecurity) {
   const string kSSID("bar");
   KeyValueStore args;
-  args.SetString(kTypeProperty, kTypeWifi);
-  args.SetString(kSSIDProperty, kSSID);
-  args.SetString(kSecurityProperty, "pig-80211");
-  args.SetBool(kWifiHiddenSsid, false);
+  args.Set<string>(kTypeProperty, kTypeWifi);
+  args.Set<string>(kSSIDProperty, kSSID);
+  args.Set<string>(kSecurityProperty, "pig-80211");
+  args.Set<bool>(kWifiHiddenSsid, false);
 
   Error error;
   WiFiServiceRefPtr service;
@@ -1069,7 +1069,7 @@ TEST_F(WiFiProviderTest, FindSimilarService) {
     EXPECT_TRUE(error.IsSuccess());
   }
 
-  args.SetBool(kWifiHiddenSsid, false);
+  args.Set<bool>(kWifiHiddenSsid, false);
 
   {
     Error error;
@@ -1078,7 +1078,7 @@ TEST_F(WiFiProviderTest, FindSimilarService) {
     EXPECT_TRUE(error.IsSuccess());
   }
 
-  args.SetString(kSecurityClassProperty, kSecurityPsk);
+  args.Set<string>(kSecurityClassProperty, kSecurityPsk);
 
   {
     Error error;
@@ -1117,7 +1117,7 @@ TEST_F(WiFiProviderTest, FindServiceWPA) {
   KeyValueStore args;
   SetServiceParameters(kSSID.c_str(), kModeManaged, nullptr, false, false,
                        &args);
-  args.SetString(kSecurityProperty, kSecurityRsn);
+  args.Set<string>(kSecurityProperty, kSecurityRsn);
   WiFiServiceRefPtr service = GetWiFiService(args, &error);
   ASSERT_NE(nullptr, service);
   const vector<uint8_t> ssid_bytes(kSSID.begin(), kSSID.end());

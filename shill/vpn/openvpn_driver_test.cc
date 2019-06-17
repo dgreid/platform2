@@ -143,11 +143,11 @@ class OpenVPNDriverTest
   static const char kOpenVPNConfigDirectory[];
 
   void SetArg(const string& arg, const string& value) {
-    driver_->args()->SetString(arg, value);
+    driver_->args()->Set<string>(arg, value);
   }
 
   void SetArgArray(const string& arg, const vector<string>& value) {
-    driver_->args()->SetStrings(arg, value);
+    driver_->args()->Set<Strings>(arg, value);
   }
 
   KeyValueStore* GetArgs() { return driver_->args(); }

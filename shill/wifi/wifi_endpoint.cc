@@ -298,23 +298,23 @@ WiFiEndpointRefPtr WiFiEndpoint::MakeEndpoint(
     bool has_rsn_property) {
   KeyValueStore args;
 
-  args.SetUint8s(WPASupplicant::kBSSPropertySSID,
-                 vector<uint8_t>(ssid.begin(), ssid.end()));
+  args.Set<vector<uint8_t>>(WPASupplicant::kBSSPropertySSID,
+                            vector<uint8_t>(ssid.begin(), ssid.end()));
 
   vector<uint8_t> bssid_bytes = Device::MakeHardwareAddressFromString(bssid);
-  args.SetUint8s(WPASupplicant::kBSSPropertyBSSID, bssid_bytes);
+  args.Set<vector<uint8_t>>(WPASupplicant::kBSSPropertyBSSID, bssid_bytes);
 
-  args.SetInt16(WPASupplicant::kBSSPropertySignal, signal_dbm);
-  args.SetUint16(WPASupplicant::kBSSPropertyFrequency, frequency);
-  args.SetString(WPASupplicant::kBSSPropertyMode, network_mode);
+  args.Set<int16_t>(WPASupplicant::kBSSPropertySignal, signal_dbm);
+  args.Set<uint16_t>(WPASupplicant::kBSSPropertyFrequency, frequency);
+  args.Set<string>(WPASupplicant::kBSSPropertyMode, network_mode);
 
   if (has_wpa_property) {
     KeyValueStore empty_args;
-    args.SetKeyValueStore(WPASupplicant::kPropertyWPA, empty_args);
+    args.Set<KeyValueStore>(WPASupplicant::kPropertyWPA, empty_args);
   }
   if (has_rsn_property) {
     KeyValueStore empty_args;
-    args.SetKeyValueStore(WPASupplicant::kPropertyRSN, empty_args);
+    args.Set<KeyValueStore>(WPASupplicant::kPropertyRSN, empty_args);
   }
 
   return new WiFiEndpoint(control_interface, wifi,

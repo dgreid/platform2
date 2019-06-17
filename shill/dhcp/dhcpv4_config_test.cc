@@ -252,21 +252,24 @@ TEST_F(DHCPv4ConfigTest, ParseClasslessStaticRoutes) {
 
 TEST_F(DHCPv4ConfigTest, ParseConfiguration) {
   KeyValueStore conf;
-  conf.SetUint(DHCPv4Config::kConfigurationKeyIPAddress, 0x01020304);
-  conf.SetUint8(DHCPv4Config::kConfigurationKeySubnetCIDR, 16);
-  conf.SetUint(DHCPv4Config::kConfigurationKeyBroadcastAddress, 0x10203040);
-  conf.SetUint32s(DHCPv4Config::kConfigurationKeyRouters,
-                  {0x02040608, 0x03050709});
-  conf.SetUint32s(DHCPv4Config::kConfigurationKeyDNS, {0x09070503, 0x08060402});
-  conf.SetString(DHCPv4Config::kConfigurationKeyDomainName, "domain-name");
-  conf.SetStrings(DHCPv4Config::kConfigurationKeyDomainSearch,
-                  {"foo.com", "bar.com"});
-  conf.SetUint16(DHCPv4Config::kConfigurationKeyMTU, 600);
-  conf.SetString(DHCPv4Config::kConfigurationKeyHostname, "hostname");
-  conf.SetString("UnknownKey", "UnknownValue");
+  conf.Set<uint32_t>(DHCPv4Config::kConfigurationKeyIPAddress, 0x01020304);
+  conf.Set<uint8_t>(DHCPv4Config::kConfigurationKeySubnetCIDR, 16);
+  conf.Set<uint32_t>(DHCPv4Config::kConfigurationKeyBroadcastAddress,
+                     0x10203040);
+  conf.Set<std::vector<uint32_t>>(DHCPv4Config::kConfigurationKeyRouters,
+                                  {0x02040608, 0x03050709});
+  conf.Set<std::vector<uint32_t>>(DHCPv4Config::kConfigurationKeyDNS,
+                                  {0x09070503, 0x08060402});
+  conf.Set<string>(DHCPv4Config::kConfigurationKeyDomainName, "domain-name");
+  conf.Set<Strings>(DHCPv4Config::kConfigurationKeyDomainSearch,
+                    {"foo.com", "bar.com"});
+  conf.Set<uint16_t>(DHCPv4Config::kConfigurationKeyMTU, 600);
+  conf.Set<string>(DHCPv4Config::kConfigurationKeyHostname, "hostname");
+  conf.Set<string>("UnknownKey", "UnknownValue");
 
   ByteArray isns_data{0x1, 0x2, 0x3, 0x4};
-  conf.SetUint8s(DHCPv4Config::kConfigurationKeyiSNSOptionData, isns_data);
+  conf.Set<std::vector<uint8_t>>(DHCPv4Config::kConfigurationKeyiSNSOptionData,
+                                 isns_data);
 
   EXPECT_CALL(*metrics(),
               SendSparseToUMA(Metrics::kMetricDhcpClientMTUValue, 600));
@@ -293,7 +296,7 @@ TEST_F(DHCPv4ConfigTest, ParseConfiguration) {
 TEST_F(DHCPv4ConfigTest, ParseConfigurationWithMinimumMTU) {
   // Even without a minimum MTU set, we should ignore a 576 value.
   KeyValueStore conf;
-  conf.SetUint16(DHCPv4Config::kConfigurationKeyMTU, 576);
+  conf.Set<uint16_t>(DHCPv4Config::kConfigurationKeyMTU, 576);
 
   IPConfig::Properties properties;
   EXPECT_CALL(*metrics(),
@@ -305,7 +308,7 @@ TEST_F(DHCPv4ConfigTest, ParseConfigurationWithMinimumMTU) {
   // With a minimum MTU set, values below the minimum should be ignored.
   config_->set_minimum_mtu(1500);
   conf.Remove(DHCPv4Config::kConfigurationKeyMTU);
-  conf.SetUint16(DHCPv4Config::kConfigurationKeyMTU, 1499);
+  conf.Set<uint16_t>(DHCPv4Config::kConfigurationKeyMTU, 1499);
   EXPECT_CALL(*metrics(),
               SendSparseToUMA(Metrics::kMetricDhcpClientMTUValue, 1499));
   ASSERT_TRUE(config_->ParseConfiguration(conf, &properties));
@@ -315,7 +318,7 @@ TEST_F(DHCPv4ConfigTest, ParseConfigurationWithMinimumMTU) {
   // A value (other than 576) should be accepted if it is >= mimimum_mtu.
   config_->set_minimum_mtu(577);
   conf.Remove(DHCPv4Config::kConfigurationKeyMTU);
-  conf.SetUint16(DHCPv4Config::kConfigurationKeyMTU, 577);
+  conf.Set<uint16_t>(DHCPv4Config::kConfigurationKeyMTU, 577);
   EXPECT_CALL(*metrics(),
               SendSparseToUMA(Metrics::kMetricDhcpClientMTUValue, 577));
   ASSERT_TRUE(config_->ParseConfiguration(conf, &properties));
@@ -462,7 +465,7 @@ class DHCPv4ConfigCallbackTest : public DHCPv4ConfigTest {
 
 TEST_F(DHCPv4ConfigCallbackTest, ProcessEventSignalFail) {
   KeyValueStore conf;
-  conf.SetUint(DHCPv4Config::kConfigurationKeyIPAddress, 0x01020304);
+  conf.Set<uint32_t>(DHCPv4Config::kConfigurationKeyIPAddress, 0x01020304);
   EXPECT_CALL(*this, SuccessCallback(_, _)).Times(0);
   EXPECT_CALL(*this, FailureCallback(ConfigRef()));
   config_->ProcessEventSignal(DHCPv4Config::kReasonFail, conf);
@@ -477,10 +480,12 @@ TEST_F(DHCPv4ConfigCallbackTest, ProcessEventSignalSuccess) {
     int address_octet = 0;
     for (const auto lease_time_given : {false, true}) {
       KeyValueStore conf;
-      conf.SetUint(DHCPv4Config::kConfigurationKeyIPAddress, ++address_octet);
+      conf.Set<uint32_t>(DHCPv4Config::kConfigurationKeyIPAddress,
+                         ++address_octet);
       if (lease_time_given) {
         const uint32_t kLeaseTime = 1;
-        conf.SetUint(DHCPv4Config::kConfigurationKeyLeaseTime, kLeaseTime);
+        conf.Set<uint32_t>(DHCPv4Config::kConfigurationKeyLeaseTime,
+                           kLeaseTime);
       }
       EXPECT_CALL(*this, SuccessCallback(ConfigRef(), true));
       EXPECT_CALL(*this, FailureCallback(_)).Times(0);
@@ -497,7 +502,7 @@ TEST_F(DHCPv4ConfigCallbackTest, ProcessEventSignalSuccess) {
 
 TEST_F(DHCPv4ConfigCallbackTest, StoppedDuringFailureCallback) {
   KeyValueStore conf;
-  conf.SetUint(DHCPv4Config::kConfigurationKeyIPAddress, 0x01020304);
+  conf.Set<uint32_t>(DHCPv4Config::kConfigurationKeyIPAddress, 0x01020304);
   // Stop the DHCP config while it is calling the failure callback.  We
   // need to ensure that no callbacks are left running inadvertently as
   // a result.
@@ -509,9 +514,9 @@ TEST_F(DHCPv4ConfigCallbackTest, StoppedDuringFailureCallback) {
 
 TEST_F(DHCPv4ConfigCallbackTest, StoppedDuringSuccessCallback) {
   KeyValueStore conf;
-  conf.SetUint(DHCPv4Config::kConfigurationKeyIPAddress, 0x01020304);
+  conf.Set<uint32_t>(DHCPv4Config::kConfigurationKeyIPAddress, 0x01020304);
   const uint32_t kLeaseTime = 1;
-  conf.SetUint(DHCPv4Config::kConfigurationKeyLeaseTime, kLeaseTime);
+  conf.Set<uint32_t>(DHCPv4Config::kConfigurationKeyLeaseTime, kLeaseTime);
   // Stop the DHCP config while it is calling the success callback.  This
   // can happen if the device has a static IP configuration and releases
   // the lease after accepting other network parameters from the DHCP
@@ -525,7 +530,7 @@ TEST_F(DHCPv4ConfigCallbackTest, StoppedDuringSuccessCallback) {
 
 TEST_F(DHCPv4ConfigCallbackTest, ProcessEventSignalUnknown) {
   KeyValueStore conf;
-  conf.SetUint(DHCPv4Config::kConfigurationKeyIPAddress, 0x01020304);
+  conf.Set<uint32_t>(DHCPv4Config::kConfigurationKeyIPAddress, 0x01020304);
   static const char kReasonUnknown[] = "UNKNOWN_REASON";
   EXPECT_CALL(*this, SuccessCallback(_, _)).Times(0);
   EXPECT_CALL(*this, FailureCallback(_)).Times(0);
@@ -536,7 +541,7 @@ TEST_F(DHCPv4ConfigCallbackTest, ProcessEventSignalUnknown) {
 
 TEST_F(DHCPv4ConfigCallbackTest, ProcessEventSignalGatewayArp) {
   KeyValueStore conf;
-  conf.SetUint(DHCPv4Config::kConfigurationKeyIPAddress, 0x01020304);
+  conf.Set<uint32_t>(DHCPv4Config::kConfigurationKeyIPAddress, 0x01020304);
   EXPECT_CALL(*this, SuccessCallback(ConfigRef(), false));
   EXPECT_CALL(*this, FailureCallback(_)).Times(0);
   EXPECT_CALL(process_manager_,
@@ -562,7 +567,7 @@ TEST_F(DHCPv4ConfigCallbackTest, ProcessEventSignalGatewayArp) {
 
 TEST_F(DHCPv4ConfigCallbackTest, ProcessEventSignalGatewayArpNak) {
   KeyValueStore conf;
-  conf.SetUint(DHCPv4Config::kConfigurationKeyIPAddress, 0x01020304);
+  conf.Set<uint32_t>(DHCPv4Config::kConfigurationKeyIPAddress, 0x01020304);
   EXPECT_CALL(process_manager_,
               StartProcessInMinijail(_, _, _, _, _, _, _, _, _, _))
       .WillOnce(Return(0));

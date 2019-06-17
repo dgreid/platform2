@@ -163,23 +163,23 @@ class StaticIPParametersTest : public Test {
   }
   void SetStaticPropertiesWithVersion(PropertyStore* store, int version) {
     KeyValueStore args;
-    args.SetString(kAddressProperty, VersionedAddress(kAddress, version));
-    args.SetString(kGatewayProperty, VersionedAddress(kGateway, version));
-    args.SetInt(kMtuProperty, kMtu + version);
-    args.SetStrings(kNameServersProperty,
-                    {VersionedAddress(kNameServer0, version),
-                     VersionedAddress(kNameServer1, version)});
-    args.SetStrings(kSearchDomainsProperty,
-                    {VersionedAddress(kSearchDomain0, version),
-                     VersionedAddress(kSearchDomain1, version)});
-    args.SetString(kPeerAddressProperty,
-                   VersionedAddress(kPeerAddress, version));
-    args.SetInt(kPrefixlenProperty, kPrefixLen + version);
-    args.SetStrings(kExcludedRoutesProperty,
-                    {VersionedAddress(kExcludedRoute0, version),
-                     VersionedAddress(kExcludedRoute1, version)});
-    args.SetStrings(kIncludedRoutesProperty,
-                    {VersionedAddress(kIncludedRoutes, version)});
+    args.Set<string>(kAddressProperty, VersionedAddress(kAddress, version));
+    args.Set<string>(kGatewayProperty, VersionedAddress(kGateway, version));
+    args.Set<int32_t>(kMtuProperty, kMtu + version);
+    args.Set<Strings>(kNameServersProperty,
+                      {VersionedAddress(kNameServer0, version),
+                       VersionedAddress(kNameServer1, version)});
+    args.Set<Strings>(kSearchDomainsProperty,
+                      {VersionedAddress(kSearchDomain0, version),
+                       VersionedAddress(kSearchDomain1, version)});
+    args.Set<string>(kPeerAddressProperty,
+                     VersionedAddress(kPeerAddress, version));
+    args.Set<int32_t>(kPrefixlenProperty, kPrefixLen + version);
+    args.Set<Strings>(kExcludedRoutesProperty,
+                      {VersionedAddress(kExcludedRoute0, version),
+                       VersionedAddress(kExcludedRoute1, version)});
+    args.Set<Strings>(kIncludedRoutesProperty,
+                      {VersionedAddress(kIncludedRoutes, version)});
 
     Error error;
     store->SetKeyValueStoreProperty(kStaticIPConfigProperty, args, &error);

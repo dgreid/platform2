@@ -224,7 +224,7 @@ void VPNProvider::CreateServicesFromProfile(const ProfileRefPtr& profile) {
   SLOG(this, 2) << __func__;
   const StoreInterface* storage = profile->GetConstStorage();
   KeyValueStore args;
-  args.SetString(kTypeProperty, kTypeVPN);
+  args.Set<string>(kTypeProperty, kTypeVPN);
   for (const auto& group : storage->GetGroupsWithProperties(args)) {
     string type;
     string name;

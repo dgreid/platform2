@@ -332,12 +332,12 @@ bool Ethernet::StartSupplicant() {
 
   RpcIdentifier interface_path;
   KeyValueStore create_interface_args;
-  create_interface_args.SetString(WPASupplicant::kInterfacePropertyName,
-                                  link_name());
-  create_interface_args.SetString(WPASupplicant::kInterfacePropertyDriver,
-                                  WPASupplicant::kDriverWired);
-  create_interface_args.SetString(WPASupplicant::kInterfacePropertyConfigFile,
-                                  WPASupplicant::kSupplicantConfPath);
+  create_interface_args.Set<string>(WPASupplicant::kInterfacePropertyName,
+                                    link_name());
+  create_interface_args.Set<string>(WPASupplicant::kInterfacePropertyDriver,
+                                    WPASupplicant::kDriverWired);
+  create_interface_args.Set<string>(WPASupplicant::kInterfacePropertyConfigFile,
+                                    WPASupplicant::kSupplicantConfPath);
   if (!supplicant_process_proxy()->CreateInterface(create_interface_args,
                                                    &interface_path)) {
     // Interface might've already been created, try to retrieve it.
@@ -359,10 +359,10 @@ bool Ethernet::StartEapAuthentication() {
   KeyValueStore params;
   GetEapService()->eap()->PopulateSupplicantProperties(&certificate_file_,
                                                        &params);
-  params.SetString(WPASupplicant::kNetworkPropertyEapKeyManagement,
-                   WPASupplicant::kKeyManagementIeee8021X);
-  params.SetUint(WPASupplicant::kNetworkPropertyEapolFlags, 0);
-  params.SetUint(WPASupplicant::kNetworkPropertyScanSSID, 0);
+  params.Set<string>(WPASupplicant::kNetworkPropertyEapKeyManagement,
+                     WPASupplicant::kKeyManagementIeee8021X);
+  params.Set<uint32_t>(WPASupplicant::kNetworkPropertyEapolFlags, 0);
+  params.Set<uint32_t>(WPASupplicant::kNetworkPropertyScanSSID, 0);
 
   service_->ClearEAPCertification();
   eap_state_handler_.Reset();

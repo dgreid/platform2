@@ -51,14 +51,14 @@ class WiFiEndpointTest : public PropertyStoreTest {
   KeyValueStore MakeKeyManagementArgs(
       vector<string> key_management_method_strings) {
     KeyValueStore args;
-    args.SetStrings(WPASupplicant::kSecurityMethodPropertyKeyManagement,
-                    key_management_method_strings);
+    args.Set<Strings>(WPASupplicant::kSecurityMethodPropertyKeyManagement,
+                      key_management_method_strings);
     return args;
   }
 
   KeyValueStore MakePrivacyArgs(bool is_private) {
     KeyValueStore props;
-    props.SetBool(WPASupplicant::kPropertyPrivacy, is_private);
+    props.Set<bool>(WPASupplicant::kPropertyPrivacy, is_private);
     return props;
   }
 
@@ -69,8 +69,8 @@ class WiFiEndpointTest : public PropertyStoreTest {
     if (!key_management_method.empty()) {
       key_management_method_vector = {key_management_method};
     }
-    args.SetKeyValueStore(security_protocol,
-                          MakeKeyManagementArgs(key_management_method_vector));
+    args.Set<KeyValueStore>(
+        security_protocol, MakeKeyManagementArgs(key_management_method_vector));
     return args;
   }
 
@@ -113,7 +113,7 @@ class WiFiEndpointTest : public PropertyStoreTest {
 
   KeyValueStore MakeBSSPropertiesWithIEs(const vector<uint8_t>& ies) {
     KeyValueStore properties;
-    properties.SetUint8s(WPASupplicant::kBSSPropertyIEs, ies);
+    properties.Set<vector<uint8_t>>(WPASupplicant::kBSSPropertyIEs, ies);
     return properties;
   }
 
@@ -287,21 +287,21 @@ TEST_F(WiFiEndpointTest, DeterminePhyModeFromFrequency) {
   {
     KeyValueStore properties;
     vector<uint32_t> rates(1, 22000000);
-    properties.SetUint32s(WPASupplicant::kBSSPropertyRates, rates);
+    properties.Set<vector<uint32_t>>(WPASupplicant::kBSSPropertyRates, rates);
     EXPECT_EQ(Metrics::kWiFiNetworkPhyMode11b,
               WiFiEndpoint::DeterminePhyModeFromFrequency(properties, 2400));
   }
   {
     KeyValueStore properties;
     vector<uint32_t> rates(1, 54000000);
-    properties.SetUint32s(WPASupplicant::kBSSPropertyRates, rates);
+    properties.Set<vector<uint32_t>>(WPASupplicant::kBSSPropertyRates, rates);
     EXPECT_EQ(Metrics::kWiFiNetworkPhyMode11g,
               WiFiEndpoint::DeterminePhyModeFromFrequency(properties, 2400));
   }
   {
     KeyValueStore properties;
     vector<uint32_t> rates;
-    properties.SetUint32s(WPASupplicant::kBSSPropertyRates, rates);
+    properties.Set<vector<uint32_t>>(WPASupplicant::kBSSPropertyRates, rates);
     EXPECT_EQ(Metrics::kWiFiNetworkPhyMode11b,
               WiFiEndpoint::DeterminePhyModeFromFrequency(properties, 2400));
   }
@@ -803,8 +803,8 @@ TEST_F(WiFiEndpointTest, PropertiesChangedStrength) {
   int16_t signal_strength = 10;
 
   EXPECT_NE(signal_strength, endpoint->signal_strength());
-  changed_properties.SetInt16(WPASupplicant::kBSSPropertySignal,
-                              signal_strength);
+  changed_properties.Set<int16_t>(WPASupplicant::kBSSPropertySignal,
+                                  signal_strength);
 
   EXPECT_CALL(*wifi(), NotifyEndpointChanged(_));
   endpoint->PropertiesChanged(changed_properties);
@@ -818,8 +818,8 @@ TEST_F(WiFiEndpointTest, PropertiesChangedNetworkMode) {
   // AdHoc mode is not supported. Mode should not change.
   EXPECT_CALL(*wifi(), NotifyEndpointChanged(_)).Times(0);
   KeyValueStore changed_properties;
-  changed_properties.SetString(WPASupplicant::kBSSPropertyMode,
-                               WPASupplicant::kNetworkModeAdHoc);
+  changed_properties.Set<string>(WPASupplicant::kBSSPropertyMode,
+                                 WPASupplicant::kNetworkModeAdHoc);
   endpoint->PropertiesChanged(changed_properties);
   EXPECT_EQ(kModeManaged, endpoint->network_mode());
 }
@@ -831,7 +831,8 @@ TEST_F(WiFiEndpointTest, PropertiesChangedFrequency) {
   uint16_t frequency = 2412;
 
   EXPECT_NE(frequency, endpoint->frequency());
-  changed_properties.SetUint16(WPASupplicant::kBSSPropertyFrequency, frequency);
+  changed_properties.Set<uint16_t>(WPASupplicant::kBSSPropertyFrequency,
+                                   frequency);
 
   EXPECT_CALL(*wifi(), NotifyEndpointChanged(_));
   endpoint->PropertiesChanged(changed_properties);

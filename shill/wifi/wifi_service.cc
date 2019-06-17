@@ -575,8 +575,8 @@ void WiFiService::OnConnect(Error* error) {
 KeyValueStore WiFiService::GetSupplicantConfigurationParameters() const {
   KeyValueStore params;
 
-  params.SetUint(WPASupplicant::kNetworkPropertyMode,
-                 WiFiEndpoint::ModeStringToUint(mode_));
+  params.Set<uint32_t>(WPASupplicant::kNetworkPropertyMode,
+                       WiFiEndpoint::ModeStringToUint(mode_));
 
   if (Is8021x()) {
     eap()->PopulateSupplicantProperties(certificate_file_.get(), &params);
@@ -585,28 +585,29 @@ KeyValueStore WiFiService::GetSupplicantConfigurationParameters() const {
     const string psk_proto =
         base::StringPrintf("%s %s", WPASupplicant::kSecurityModeWPA,
                            WPASupplicant::kSecurityModeRSN);
-    params.SetString(WPASupplicant::kPropertySecurityProtocol, psk_proto);
+    params.Set<string>(WPASupplicant::kPropertySecurityProtocol, psk_proto);
     vector<uint8_t> passphrase_bytes;
     Error error;
     ParseWPAPassphrase(passphrase_, &passphrase_bytes, &error);
     if (!error.IsSuccess()) {
       LOG(ERROR) << "Invalid passphrase";
     } else if (!passphrase_bytes.empty()) {
-      params.SetUint8s(WPASupplicant::kPropertyPreSharedKey, passphrase_bytes);
+      params.Set<vector<uint8_t>>(WPASupplicant::kPropertyPreSharedKey,
+                                  passphrase_bytes);
     } else {
-      params.SetString(WPASupplicant::kPropertyPreSharedKey, passphrase_);
+      params.Set<string>(WPASupplicant::kPropertyPreSharedKey, passphrase_);
     }
   } else if (security_ == kSecurityWep) {
-    params.SetString(WPASupplicant::kPropertyAuthAlg,
-                     WPASupplicant::kSecurityAuthAlg);
+    params.Set<string>(WPASupplicant::kPropertyAuthAlg,
+                       WPASupplicant::kSecurityAuthAlg);
     Error unused_error;
     int key_index;
     std::vector<uint8_t> password_bytes;
     ParseWEPPassphrase(passphrase_, &key_index, &password_bytes, &unused_error);
-    params.SetUint8s(
+    params.Set<vector<uint8_t>>(
         WPASupplicant::kPropertyWEPKey + base::NumberToString(key_index),
         password_bytes);
-    params.SetUint(WPASupplicant::kPropertyWEPTxKeyIndex, key_index);
+    params.Set<uint32_t>(WPASupplicant::kPropertyWEPTxKeyIndex, key_index);
   } else if (security_ == kSecurityNone) {
     // Nothing special to do here.
   } else {
@@ -624,17 +625,17 @@ KeyValueStore WiFiService::GetSupplicantConfigurationParameters() const {
           base::StringPrintf("%s %s", WPASupplicant::kKeyManagementWPAEAP,
                              WPASupplicant::kKeyManagementFTEAP);
   }
-  params.SetString(WPASupplicant::kNetworkPropertyEapKeyManagement, key_mgmt);
+  params.Set<string>(WPASupplicant::kNetworkPropertyEapKeyManagement, key_mgmt);
 
   if (ieee80211w_required_) {
     // TODO(pstew): We should also enable IEEE 802.11w if the user
     // explicitly enables support for this through a service / device
     // property.  crbug.com/219950
-    params.SetUint(WPASupplicant::kNetworkPropertyIeee80211w,
-                   WPASupplicant::kNetworkIeee80211wEnabled);
+    params.Set<uint32_t>(WPASupplicant::kNetworkPropertyIeee80211w,
+                         WPASupplicant::kNetworkIeee80211wEnabled);
   }
 
-  params.SetUint8s(WPASupplicant::kNetworkPropertySSID, ssid_);
+  params.Set<vector<uint8_t>>(WPASupplicant::kNetworkPropertySSID, ssid_);
 
   return params;
 }
@@ -1105,10 +1106,10 @@ uint8_t WiFiService::SignalToStrength(int16_t signal_dbm) {
 
 KeyValueStore WiFiService::GetStorageProperties() const {
   KeyValueStore args;
-  args.SetString(kStorageType, kTypeWifi);
-  args.SetString(kStorageSSID, hex_ssid_);
-  args.SetString(kStorageMode, mode_);
-  args.SetString(kStorageSecurityClass, ComputeSecurityClass(security_));
+  args.Set<string>(kStorageType, kTypeWifi);
+  args.Set<string>(kStorageSSID, hex_ssid_);
+  args.Set<string>(kStorageMode, mode_);
+  args.Set<string>(kStorageSecurityClass, ComputeSecurityClass(security_));
   return args;
 }
 

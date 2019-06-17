@@ -430,10 +430,11 @@ void WiFi::ConnectTo(WiFiService* service, Error* error) {
     KeyValueStore service_params =
         service->GetSupplicantConfigurationParameters();
     const uint32_t scan_ssid = 1;  // "True": Use directed probe.
-    service_params.SetUint(WPASupplicant::kNetworkPropertyScanSSID, scan_ssid);
+    service_params.Set<uint32_t>(WPASupplicant::kNetworkPropertyScanSSID,
+                                 scan_ssid);
     AppendBgscan(service, &service_params);
-    service_params.SetUint(WPASupplicant::kNetworkPropertyDisableVHT,
-                           provider_->disable_vht());
+    service_params.Set<uint32_t>(WPASupplicant::kNetworkPropertyDisableVHT,
+                                 provider_->disable_vht());
     if (!supplicant_interface_proxy_->AddNetwork(service_params,
                                                  &network_rpcid)) {
       Error::PopulateAndLog(FROM_HERE, error, Error::kOperationFailed,
@@ -628,8 +629,8 @@ void WiFi::AppendBgscan(WiFiService* service,
       "%s:%d:%d:%d", method.c_str(), bgscan_short_interval_seconds_,
       bgscan_signal_threshold_dbm_, scan_interval);
   LOG(INFO) << "Background scan: " << config_string;
-  service_params->SetString(WPASupplicant::kNetworkPropertyBgscan,
-                            config_string);
+  service_params->Set<string>(WPASupplicant::kNetworkPropertyBgscan,
+                              config_string);
 }
 
 string WiFi::GetBgscanMethod(Error* /* error */) {
@@ -1712,8 +1713,8 @@ void WiFi::ScanTask() {
     return;
   }
   KeyValueStore scan_args;
-  scan_args.SetString(WPASupplicant::kPropertyScanType,
-                      WPASupplicant::kScanTypeActive);
+  scan_args.Set<string>(WPASupplicant::kPropertyScanType,
+                        WPASupplicant::kScanTypeActive);
 
   ByteArrays hidden_ssids = provider_->GetHiddenSSIDList();
   if (!hidden_ssids.empty()) {
@@ -1729,7 +1730,7 @@ void WiFi::ScanTask() {
     // behavior of doing a broadcast probe.
     hidden_ssids.push_back(ByteArray());
 
-    scan_args.SetByteArrays(WPASupplicant::kPropertyScanSSIDs, hidden_ssids);
+    scan_args.Set<ByteArrays>(WPASupplicant::kPropertyScanSSIDs, hidden_ssids);
   }
 
   if (!supplicant_interface_proxy_->Scan(scan_args)) {
@@ -2530,12 +2531,12 @@ void WiFi::ConnectToSupplicant() {
       ScopeLogger::GetInstance()->IsScopeEnabled(ScopeLogger::kWiFi));
 
   KeyValueStore create_interface_args;
-  create_interface_args.SetString(WPASupplicant::kInterfacePropertyName,
-                                  link_name());
-  create_interface_args.SetString(WPASupplicant::kInterfacePropertyDriver,
-                                  WPASupplicant::kDriverNL80211);
-  create_interface_args.SetString(WPASupplicant::kInterfacePropertyConfigFile,
-                                  WPASupplicant::kSupplicantConfPath);
+  create_interface_args.Set<string>(WPASupplicant::kInterfacePropertyName,
+                                    link_name());
+  create_interface_args.Set<string>(WPASupplicant::kInterfacePropertyDriver,
+                                    WPASupplicant::kDriverNL80211);
+  create_interface_args.Set<string>(WPASupplicant::kInterfacePropertyConfigFile,
+                                    WPASupplicant::kSupplicantConfPath);
   supplicant_connect_attempts_++;
   if (!supplicant_process_proxy()->CreateInterface(
           create_interface_args, &supplicant_interface_path_)) {
@@ -3059,7 +3060,7 @@ void WiFi::OnReceivedStationInfo(const Nl80211Message& nl80211_message) {
   for (const auto& kv : u32_property_map) {
     uint32_t value;
     if (station_info->GetU32AttributeValue(kv.first, &value)) {
-      link_statistics_.SetUint(kv.second, value);
+      link_statistics_.Set<uint32_t>(kv.second, value);
     }
   }
 
@@ -3072,7 +3073,7 @@ void WiFi::OnReceivedStationInfo(const Nl80211Message& nl80211_message) {
     if (station_info->GetU8AttributeValue(kv.first, &value)) {
       // Despite these values being reported as a U8 by the kernel, these
       // should be interpreted as signed char.
-      link_statistics_.SetInt(kv.second, static_cast<signed char>(value));
+      link_statistics_.Set<int32_t>(kv.second, static_cast<signed char>(value));
     }
   }
 
@@ -3082,7 +3083,7 @@ void WiFi::OnReceivedStationInfo(const Nl80211Message& nl80211_message) {
     string str;
     int rate;
     if (ParseStationBitrate(transmit_info, &str, &rate)) {
-      link_statistics_.SetString(kTransmitBitrateProperty, str);
+      link_statistics_.Set<string>(kTransmitBitrateProperty, str);
       metrics()->NotifyWifiTxBitrate(rate);
     }
   }
@@ -3093,7 +3094,7 @@ void WiFi::OnReceivedStationInfo(const Nl80211Message& nl80211_message) {
     string str;
     int rate;
     if (ParseStationBitrate(receive_info, &str, &rate)) {
-      link_statistics_.SetString(kReceiveBitrateProperty, str);
+      link_statistics_.Set<string>(kReceiveBitrateProperty, str);
     }
   }
 }

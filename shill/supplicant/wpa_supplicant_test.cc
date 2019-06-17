@@ -38,7 +38,8 @@ TEST_F(WPASupplicantTest, ExtractRemoteCertificationDepthOnly) {
   string subject;
   const uint32_t kDepthValue = 100;
   uint32_t depth = kDepthValue - 1;
-  property_map_.SetUint(WPASupplicant::kInterfacePropertyDepth, kDepthValue);
+  property_map_.Set<uint32_t>(WPASupplicant::kInterfacePropertyDepth,
+                              kDepthValue);
   ScopedMockLog log;
   EXPECT_CALL(log,
               Log(logging::LOG_ERROR, _, EndsWith("no subject parameter.")));
@@ -52,8 +53,8 @@ TEST_F(WPASupplicantTest, ExtractRemoteCertificationSubjectOnly) {
   const char kSubjectName[] = "subject-name";
   string subject;
   uint32_t depth = 0;
-  property_map_.SetString(WPASupplicant::kInterfacePropertySubject,
-                          kSubjectName);
+  property_map_.Set<string>(WPASupplicant::kInterfacePropertySubject,
+                            kSubjectName);
   ScopedMockLog log;
   EXPECT_CALL(log, Log(logging::LOG_ERROR, _, EndsWith("no depth parameter.")));
   EXPECT_FALSE(WPASupplicant::ExtractRemoteCertification(property_map_,
@@ -67,9 +68,10 @@ TEST_F(WPASupplicantTest, ExtractRemoteCertificationSubjectAndDepth) {
   string subject;
   const uint32_t kDepthValue = 100;
   uint32_t depth = 0;
-  property_map_.SetString(WPASupplicant::kInterfacePropertySubject,
-                          kSubjectName);
-  property_map_.SetUint(WPASupplicant::kInterfacePropertyDepth, kDepthValue);
+  property_map_.Set<string>(WPASupplicant::kInterfacePropertySubject,
+                            kSubjectName);
+  property_map_.Set<uint32_t>(WPASupplicant::kInterfacePropertyDepth,
+                              kDepthValue);
   EXPECT_TRUE(WPASupplicant::ExtractRemoteCertification(property_map_, &subject,
                                                         &depth));
   EXPECT_EQ(kSubjectName, subject);

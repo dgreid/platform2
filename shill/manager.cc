@@ -2381,7 +2381,7 @@ ServiceRefPtr Manager::ConfigureServiceForProfile(const string& profile_rpcid,
   if (!service) {
     KeyValueStore configure_args;
     configure_args.CopyFrom(args);
-    configure_args.SetString(kProfileProperty, profile_rpcid);
+    configure_args.Set<string>(kProfileProperty, profile_rpcid);
     return ConfigureService(configure_args, error);
   }
 

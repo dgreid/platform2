@@ -188,7 +188,7 @@ bool VPNService::SetNameProperty(const string& name, Error* error) {
             << " -> " << name;
 
   KeyValueStore* args = driver_->args();
-  args->SetString(kNameProperty, name);
+  args->Set<string>(kNameProperty, name);
   string new_storage_id = CreateStorageIdentifier(*args, error);
   if (new_storage_id.empty()) {
     return false;

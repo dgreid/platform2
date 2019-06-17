@@ -66,7 +66,7 @@ TEST_F(DhcpPropertiesTest, InitPropertyStore) {
 TEST_F(DhcpPropertiesTest, SetMappedStringPropertyOverrideExisting) {
   PropertyStore store;
   dhcp_properties_.InitPropertyStore(&store);
-  dhcp_properties_.properties_.SetString("Hostname", kHostname);
+  dhcp_properties_.properties_.Set<string>("Hostname", kHostname);
 
   Error error;
   EXPECT_TRUE(
@@ -88,7 +88,7 @@ TEST_F(DhcpPropertiesTest, SetMappedStringPropertyNoExistingValue) {
 TEST_F(DhcpPropertiesTest, SetMappedStringPropertySameAsExistingValue) {
   PropertyStore store;
   dhcp_properties_.InitPropertyStore(&store);
-  dhcp_properties_.properties_.SetString("Hostname", kHostname);
+  dhcp_properties_.properties_.Set<string>("Hostname", kHostname);
 
   Error error;
   EXPECT_FALSE(
@@ -99,7 +99,7 @@ TEST_F(DhcpPropertiesTest, SetMappedStringPropertySameAsExistingValue) {
 TEST_F(DhcpPropertiesTest, GetMappedStringPropertyWithSetValue) {
   PropertyStore store;
   dhcp_properties_.InitPropertyStore(&store);
-  dhcp_properties_.properties_.SetString("Hostname", kHostname);
+  dhcp_properties_.properties_.Set<string>("Hostname", kHostname);
 
   Error error;
   string value_in_prop_store;
@@ -122,7 +122,7 @@ TEST_F(DhcpPropertiesTest, GetMappedStringPropertyNoExistingValue) {
 TEST_F(DhcpPropertiesTest, ClearMappedStringPropertyWithSetValue) {
   PropertyStore store;
   dhcp_properties_.InitPropertyStore(&store);
-  dhcp_properties_.properties_.SetString("Hostname", kHostname);
+  dhcp_properties_.properties_.Set<string>("Hostname", kHostname);
 
   Error error;
   string value_in_prop_store;
@@ -164,7 +164,7 @@ TEST_F(DhcpPropertiesTest, Load) {
 
 TEST_F(DhcpPropertiesTest, LoadWithValuesSetAndClearRequired) {
   MockStore storage;
-  dhcp_properties_.properties_.SetString("Hostname", kHostname);
+  dhcp_properties_.properties_.Set<string>("Hostname", kHostname);
 
   EXPECT_CALL(storage, GetString(kStorageID, "DHCPProperty.VendorClass", _))
       .WillOnce(DoAll(SetArgPointee<2>(string(kVendorClass)), Return(true)));
@@ -178,8 +178,8 @@ TEST_F(DhcpPropertiesTest, LoadWithValuesSetAndClearRequired) {
 
 TEST_F(DhcpPropertiesTest, SaveWithValuesSet) {
   MockStore storage;
-  dhcp_properties_.properties_.SetString("VendorClass", kVendorClass);
-  dhcp_properties_.properties_.SetString("Hostname", "");
+  dhcp_properties_.properties_.Set<string>("VendorClass", kVendorClass);
+  dhcp_properties_.properties_.Set<string>("Hostname", "");
 
   EXPECT_CALL(storage,
               SetString(kStorageID, "DHCPProperty.VendorClass", kVendorClass))
@@ -191,7 +191,7 @@ TEST_F(DhcpPropertiesTest, SaveWithValuesSet) {
 
 TEST_F(DhcpPropertiesTest, SavePropertyNotSetShouldBeDeleted) {
   MockStore storage;
-  dhcp_properties_.properties_.SetString("VendorClass", kVendorClass);
+  dhcp_properties_.properties_.Set<string>("VendorClass", kVendorClass);
 
   EXPECT_CALL(storage, SetString(_, _, _)).Times(0);
   EXPECT_CALL(storage,
@@ -204,8 +204,8 @@ TEST_F(DhcpPropertiesTest, SavePropertyNotSetShouldBeDeleted) {
 
 TEST_F(DhcpPropertiesTest, CombineIntoEmpty) {
   DhcpProperties to_merge;
-  to_merge.properties_.SetString("VendorClass", kVendorClass);
-  to_merge.properties_.SetString("Hostname", kHostname);
+  to_merge.properties_.Set<string>("VendorClass", kVendorClass);
+  to_merge.properties_.Set<string>("Hostname", kHostname);
 
   unique_ptr<DhcpProperties> merged_props =
       DhcpProperties::Combine(dhcp_properties_, to_merge);
@@ -214,8 +214,8 @@ TEST_F(DhcpPropertiesTest, CombineIntoEmpty) {
 
 TEST_F(DhcpPropertiesTest, CombineEmptyIntoExisting) {
   DhcpProperties to_merge;
-  dhcp_properties_.properties_.SetString("VendorClass", kVendorClass);
-  dhcp_properties_.properties_.SetString("Hostname", kHostname);
+  dhcp_properties_.properties_.Set<string>("VendorClass", kVendorClass);
+  dhcp_properties_.properties_.Set<string>("Hostname", kHostname);
 
   unique_ptr<DhcpProperties> merged_props =
       DhcpProperties::Combine(dhcp_properties_, to_merge);
@@ -224,9 +224,9 @@ TEST_F(DhcpPropertiesTest, CombineEmptyIntoExisting) {
 
 TEST_F(DhcpPropertiesTest, CombineConflicting) {
   DhcpProperties to_merge;
-  to_merge.properties_.SetString("VendorClass", kOverrideValue);
-  to_merge.properties_.SetString("Hostname", kHostname);
-  dhcp_properties_.properties_.SetString("VendorClass", kVendorClass);
+  to_merge.properties_.Set<string>("VendorClass", kOverrideValue);
+  to_merge.properties_.Set<string>("Hostname", kHostname);
+  dhcp_properties_.properties_.Set<string>("VendorClass", kVendorClass);
 
   unique_ptr<DhcpProperties> merged_props =
       DhcpProperties::Combine(dhcp_properties_, to_merge);
@@ -240,12 +240,12 @@ TEST_F(DhcpPropertiesTest, GetValueForProperty) {
   EXPECT_FALSE(dhcp_properties_.GetValueForProperty("VendorClass", &value));
   EXPECT_FALSE(dhcp_properties_.GetValueForProperty("Hostname", &value));
 
-  dhcp_properties_.properties_.SetString("VendorClass", kVendorClass);
+  dhcp_properties_.properties_.Set<string>("VendorClass", kVendorClass);
   EXPECT_TRUE(dhcp_properties_.GetValueForProperty("VendorClass", &value));
   EXPECT_EQ(kVendorClass, value);
   EXPECT_FALSE(dhcp_properties_.GetValueForProperty("Hostname", &value));
 
-  dhcp_properties_.properties_.SetString("Hostname", kHostname);
+  dhcp_properties_.properties_.Set<string>("Hostname", kHostname);
   EXPECT_TRUE(dhcp_properties_.GetValueForProperty("VendorClass", &value));
   EXPECT_EQ(kVendorClass, value);
   EXPECT_TRUE(dhcp_properties_.GetValueForProperty("Hostname", &value));

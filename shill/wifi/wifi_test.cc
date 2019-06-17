@@ -1248,17 +1248,19 @@ KeyValueStore WiFiObjectTest::CreateBSSProperties(const string& ssid,
                                                   uint16_t frequency,
                                                   const char* mode) {
   KeyValueStore bss_properties;
-  bss_properties.SetUint8s("SSID", vector<uint8_t>(ssid.begin(), ssid.end()));
+  bss_properties.Set<vector<uint8_t>>(
+      "SSID", vector<uint8_t>(ssid.begin(), ssid.end()));
   {
     string bssid_nosep;
     vector<uint8_t> bssid_bytes;
     base::RemoveChars(bssid, ":", &bssid_nosep);
     base::HexStringToBytes(bssid_nosep, &bssid_bytes);
-    bss_properties.SetUint8s("BSSID", bssid_bytes);
+    bss_properties.Set<vector<uint8_t>>("BSSID", bssid_bytes);
   }
-  bss_properties.SetInt16(WPASupplicant::kBSSPropertySignal, signal_strength);
-  bss_properties.SetUint16(WPASupplicant::kBSSPropertyFrequency, frequency);
-  bss_properties.SetString(WPASupplicant::kBSSPropertyMode, mode);
+  bss_properties.Set<int16_t>(WPASupplicant::kBSSPropertySignal,
+                              signal_strength);
+  bss_properties.Set<uint16_t>(WPASupplicant::kBSSPropertyFrequency, frequency);
+  bss_properties.Set<string>(WPASupplicant::kBSSPropertyMode, mode);
 
   return bss_properties;
 }
@@ -3376,7 +3378,7 @@ TEST_F(WiFiMainTest, EAPCertification) {
   Mock::VerifyAndClearExpectations(&log);
 
   const uint32_t kDepth = 123;
-  args.SetUint(WPASupplicant::kInterfacePropertyDepth, kDepth);
+  args.Set<uint32_t>(WPASupplicant::kInterfacePropertyDepth, kDepth);
 
   EXPECT_CALL(log,
               Log(logging::LOG_ERROR, _, EndsWith("no subject parameter.")));
@@ -3384,7 +3386,7 @@ TEST_F(WiFiMainTest, EAPCertification) {
   Mock::VerifyAndClearExpectations(&log);
 
   const string kSubject("subject");
-  args.SetString(WPASupplicant::kInterfacePropertySubject, kSubject);
+  args.Set<string>(WPASupplicant::kInterfacePropertySubject, kSubject);
   EXPECT_CALL(*service, AddEAPCertification(kSubject, kDepth)).Times(1);
   ReportCertification(args);
 }

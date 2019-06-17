@@ -142,7 +142,7 @@ TEST_F(VPNServiceTest, Disconnect) {
 TEST_F(VPNServiceTest, CreateStorageIdentifierNoHost) {
   KeyValueStore args;
   Error error;
-  args.SetString(kNameProperty, "vpn-name");
+  args.Set<string>(kNameProperty, "vpn-name");
   EXPECT_EQ("", VPNService::CreateStorageIdentifier(args, &error));
   EXPECT_EQ(Error::kInvalidProperty, error.type());
 }
@@ -150,7 +150,7 @@ TEST_F(VPNServiceTest, CreateStorageIdentifierNoHost) {
 TEST_F(VPNServiceTest, CreateStorageIdentifierNoName) {
   KeyValueStore args;
   Error error;
-  args.SetString(kProviderHostProperty, "10.8.0.1");
+  args.Set<string>(kProviderHostProperty, "10.8.0.1");
   EXPECT_EQ("", VPNService::CreateStorageIdentifier(args, &error));
   EXPECT_EQ(Error::kNotSupported, error.type());
 }
@@ -158,8 +158,8 @@ TEST_F(VPNServiceTest, CreateStorageIdentifierNoName) {
 TEST_F(VPNServiceTest, CreateStorageIdentifier) {
   KeyValueStore args;
   Error error;
-  args.SetString(kNameProperty, "vpn-name");
-  args.SetString(kProviderHostProperty, "10.8.0.1");
+  args.Set<string>(kNameProperty, "vpn-name");
+  args.Set<string>(kProviderHostProperty, "10.8.0.1");
   EXPECT_EQ("vpn_10_8_0_1_vpn_name",
             VPNService::CreateStorageIdentifier(args, &error));
   EXPECT_TRUE(error.IsSuccess());
@@ -304,7 +304,7 @@ TEST_F(VPNServiceTest, SetNamePropertyTrivial) {
 
 TEST_F(VPNServiceTest, SetNameProperty) {
   const string kHost = "1.2.3.4";
-  driver_->args()->SetString(kProviderHostProperty, kHost);
+  driver_->args()->Set<string>(kProviderHostProperty, kHost);
   string kOldId = service_->GetStorageIdentifier();
   Error error;
   const string kName = "New Name";
@@ -325,7 +325,7 @@ TEST_F(VPNServiceTest, PropertyChanges) {
   const string kHost = "1.2.3.4";
   scoped_refptr<MockProfile> profile(new NiceMock<MockProfile>(&manager_));
   service_->set_profile(profile);
-  driver_->args()->SetString(kProviderHostProperty, kHost);
+  driver_->args()->Set<string>(kProviderHostProperty, kHost);
   TestNamePropertyChange(service_, GetAdaptor());
 }
 

@@ -109,11 +109,11 @@ class VPNDriverTest : public Test {
   void StopConnectTimeout() { driver_.StopConnectTimeout(); }
 
   void SetArg(const string& arg, const string& value) {
-    driver_.args()->SetString(arg, value);
+    driver_.args()->Set<string>(arg, value);
   }
 
   void SetArgArray(const string& arg, const vector<string>& value) {
-    driver_.args()->SetStrings(arg, value);
+    driver_.args()->Set<Strings>(arg, value);
   }
 
   KeyValueStore* GetArgs() { return driver_.args(); }
@@ -168,10 +168,10 @@ bool VPNDriverTest::GetProviderPropertyStrings(const PropertyStore& store,
 
 TEST_F(VPNDriverTest, Load) {
   MockStore storage;
-  GetArgs()->SetString(kVPNHostProperty, "1.2.3.4");
-  GetArgs()->SetString(kPSKProperty, "1234");
-  GetArgs()->SetStrings(kL2tpIpsecCaCertPemProperty,
-                        vector<string>{"cleared-cert0", "cleared-cert1"});
+  GetArgs()->Set<string>(kVPNHostProperty, "1.2.3.4");
+  GetArgs()->Set<string>(kPSKProperty, "1234");
+  GetArgs()->Set<Strings>(kL2tpIpsecCaCertPemProperty,
+                          vector<string>{"cleared-cert0", "cleared-cert1"});
   EXPECT_CALL(storage, GetString(kStorageID, _, _))
       .WillRepeatedly(Return(false));
   EXPECT_CALL(storage, GetStringList(kStorageID, _, _))

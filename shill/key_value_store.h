@@ -69,12 +69,15 @@ class KeyValueStore {
   void CopyFrom(const KeyValueStore& b);
   bool IsEmpty();
 
+  bool ContainsVariant(const std::string& name) const;
+  const brillo::Any& GetVariant(const std::string& name) const;
+  void SetVariant(const std::string& name, const brillo::Any& value);
+
   template <typename T, typename = brillo::EnableIfIsOneOf<T, KeyValueTypes>>
   bool Contains(const std::string& name) const {
     return ContainsVariant(name) &&
            properties_.find(name)->second.IsTypeCompatible<T>();
   }
-  bool ContainsVariant(const std::string& name) const;
 
   template <typename T,
             typename brillo::EnableIfIsOneOfArithmetic<T, KeyValueTypes> = 0>
@@ -94,36 +97,17 @@ class KeyValueStore {
     return value.Get<T>();
   }
 
-  const brillo::Any& GetVariant(const std::string& name) const;
+  template <typename T,
+            typename brillo::EnableIfIsOneOfArithmetic<T, KeyValueTypes> = 0>
+  void Set(const std::string& name, T value) {
+    SetVariant(name, brillo::Any(value));
+  }
 
-  // TODO(crbug.com/936111): remove type specific set functions and add a
-  // generic set function instead.  This way, we don't need to add new functions
-  // every time we need to support a new type.
-  void SetBool(const std::string& name, bool value);
-  void SetBools(const std::string& name, const std::vector<bool>& value);
-  void SetByteArrays(const std::string& name,
-                     const std::vector<std::vector<uint8_t>>& value);
-  void SetInt(const std::string& name, int32_t value);
-  void SetInts(const std::string& name, const std::vector<int32_t>& value);
-  void SetInt16(const std::string& name, int16_t value);
-  void SetInt64(const std::string& name, int64_t value);
-  void SetInt64s(const std::string& name, const std::vector<int64_t>& value);
-  void SetDouble(const std::string& name, double value);
-  void SetDoubles(const std::string& name, const std::vector<double>& value);
-  void SetKeyValueStore(const std::string& name, const KeyValueStore& value);
-  void SetRpcIdentifier(const std::string& name, const RpcIdentifier& value);
-  void SetRpcIdentifiers(const std::string& name, const RpcIdentifiers& value);
-  void SetString(const std::string& name, const std::string& value);
-  void SetStringmap(const std::string& name,
-                    const std::map<std::string, std::string>& value);
-  void SetStrings(const std::string& name,
-                  const std::vector<std::string>& value);
-  void SetUint(const std::string& name, uint32_t value);
-  void SetUint16(const std::string& name, uint16_t value);
-  void SetUint8(const std::string& name, uint8_t value);
-  void SetUint8s(const std::string& name, const std::vector<uint8_t>& value);
-  void SetUint32s(const std::string& name, const std::vector<uint32_t>& value);
-  void SetVariant(const std::string& name, const brillo::Any& value);
+  template <typename T,
+            typename brillo::EnableIfIsOneOfNonArithmetic<T, KeyValueTypes> = 0>
+  void Set(const std::string& name, const T& value) {
+    SetVariant(name, brillo::Any(value));
+  }
 
   void Remove(const std::string& name);
 
