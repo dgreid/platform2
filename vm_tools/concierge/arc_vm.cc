@@ -394,5 +394,17 @@ bool ArcVm::GetVmEnterpriseReportingInfo(
   return false;
 }
 
+vm_tools::concierge::DiskImageStatus ArcVm::ResizeDisk(
+    uint64_t new_size, std::string* failure_reason) {
+  *failure_reason = "Not implemented";
+  return DiskImageStatus::DISK_STATUS_FAILED;
+}
+
+vm_tools::concierge::DiskImageStatus ArcVm::GetDiskResizeStatus(
+    std::string* failure_reason) {
+  *failure_reason = "Not implemented";
+  return DiskImageStatus::DISK_STATUS_FAILED;
+}
+
 }  // namespace concierge
 }  // namespace vm_tools

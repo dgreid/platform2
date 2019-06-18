@@ -986,6 +986,8 @@ class Init::Worker {
     bool wait_for_exit;
 
     std::list<base::Time> spawn_times;
+
+    base::Optional<base::Callback<void(ProcessStatus, int)>> exit_cb;
   };
 
   Worker() = default;
@@ -1251,19 +1253,29 @@ void Init::Worker::OnSignalReadable() {
       children_.erase(iter);
     }
 
+    ProcessStatus proc_status = ProcessStatus::UNKNOWN;
+    int code = -1;
     if (WIFEXITED(status)) {
       LOG(INFO) << (info.argv.size() == 0 ? "<unknown process>"
                                           : info.argv[0].c_str())
                 << " (" << pid << ") exited with status "
                 << WEXITSTATUS(status);
+      proc_status = ProcessStatus::EXITED;
+      code = WEXITSTATUS(status);
     } else if (WIFSIGNALED(status)) {
       LOG(INFO) << (info.argv.size() == 0 ? "<unknown process>"
                                           : info.argv[0].c_str())
                 << " (" << pid << ") killed by signal " << WTERMSIG(status)
                 << (WCOREDUMP(status) ? " (core dumped)" : "");
+      proc_status = ProcessStatus::SIGNALED;
+      code = WTERMSIG(status);
     } else {
       LOG(WARNING) << "Unknown exit status " << status << " for process "
                    << pid;
+    }
+
+    if (info.exit_cb) {
+      info.exit_cb.value().Run(proc_status, code);
     }
 
     if (!info.respawn) {
@@ -1341,12 +1353,14 @@ Init::~Init() {
   }
 }
 
-bool Init::Spawn(std::vector<string> argv,
-                 std::map<string, string> env,
-                 bool respawn,
-                 bool use_console,
-                 bool wait_for_exit,
-                 ProcessLaunchInfo* launch_info) {
+bool Init::Spawn(
+    std::vector<string> argv,
+    std::map<string, string> env,
+    bool respawn,
+    bool use_console,
+    bool wait_for_exit,
+    ProcessLaunchInfo* launch_info,
+    base::Optional<base::Callback<void(ProcessStatus, int)>> exit_cb) {
   CHECK(!argv.empty());
   CHECK(!(respawn && wait_for_exit));
   CHECK(launch_info);
@@ -1361,7 +1375,8 @@ bool Init::Spawn(std::vector<string> argv,
                                    .env = std::move(env),
                                    .respawn = respawn,
                                    .use_console = use_console,
-                                   .wait_for_exit = wait_for_exit};
+                                   .wait_for_exit = wait_for_exit,
+                                   .exit_cb = std::move(exit_cb)};
 
   // Create a semaphore that we will use to wait for the worker thread to launch
   // the process and fill in the the ProcessLaunchInfo struct with the result.

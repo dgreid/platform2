@@ -30,8 +30,10 @@
 #include <utility>
 #include <vector>
 
+#include <base/bind.h>
 #include <base/files/file_util.h>
 #include <base/files/scoped_file.h>
+#include <base/synchronization/lock.h>
 #include <base/logging.h>
 #include <base/posix/eintr_wrapper.h>
 #include <base/posix/safe_strerror.h>
@@ -642,6 +644,69 @@ grpc::Status ServiceImpl::StartTermina(grpc::ServerContext* ctx,
     LOG(WARNING) << "ndproxyd did not launch";
   }
 
+  return grpc::Status::OK;
+}
+
+void ServiceImpl::ResizeCommandExitCallback(Init::ProcessStatus status,
+                                            int code) {
+  base::AutoLock auto_lock(resize_state_.lock);
+  LOG(INFO) << "Resize command completed";
+  resize_state_.resize_in_progress = false;
+
+  if (status == Init::ProcessStatus::EXITED) {
+    LOG(INFO) << "btrfs filesystem resize exited with code " << code;
+    if (code == 0) {
+      // Resize was successful.
+      resize_state_.current_size = resize_state_.target_size;
+    }
+  } else if (status == Init::ProcessStatus::SIGNALED) {
+    LOG(INFO) << "btrfs filesystem resize was terminated by signal " << code;
+  } else {
+    LOG(ERROR) << "Unexpected exit status " << static_cast<int>(status);
+  }
+}
+
+grpc::Status ServiceImpl::ResizeFilesystem(
+    grpc::ServerContext* ctx,
+    const ResizeFilesystemRequest* request,
+    ResizeFilesystemResponse* response) {
+  base::AutoLock auto_lock(resize_state_.lock);
+
+  if (resize_state_.resize_in_progress) {
+    LOG(INFO) << "Resize already in progress";
+    response->set_status(ResizeFilesystemResponse::ALREADY_IN_PROGRESS);
+    return grpc::Status::OK;
+  }
+
+  Init::ProcessLaunchInfo launch_info;
+  if (!init_->Spawn({"btrfs", "filesystem", "resize",
+                     std::to_string(request->size()), "/mnt/stateful"},
+                    kLxdEnv, false /*respawn*/, true /*use_console*/,
+                    false /*wait_for_exit*/, &launch_info,
+                    base::Bind(&ServiceImpl::ResizeCommandExitCallback,
+                               base::Unretained(this)))) {
+    return grpc::Status(grpc::INTERNAL, "failed to spawn btrfs resize");
+  }
+
+  if (launch_info.status != Init::ProcessStatus::LAUNCHED) {
+    return grpc::Status(grpc::INTERNAL, "btrfs resize could not be launched");
+  }
+
+  resize_state_.resize_in_progress = true;
+  resize_state_.target_size = request->size();
+
+  response->set_status(ResizeFilesystemResponse::STARTED);
+  return grpc::Status::OK;
+}
+
+grpc::Status ServiceImpl::GetResizeStatus(
+    grpc::ServerContext* ctx,
+    const EmptyMessage* request,
+    vm_tools::GetResizeStatusResponse* response) {
+  base::AutoLock auto_lock(resize_state_.lock);
+  response->set_resize_in_progress(resize_state_.resize_in_progress);
+  response->set_current_size(resize_state_.current_size);
+  response->set_target_size(resize_state_.target_size);
   return grpc::Status::OK;
 }
 

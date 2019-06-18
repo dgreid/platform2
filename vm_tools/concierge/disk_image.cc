@@ -21,6 +21,7 @@
 
 #include "vm_tools/concierge/disk_image.h"
 #include "vm_tools/concierge/plugin_vm_helper.h"
+#include "vm_tools/concierge/service.h"
 #include "vm_tools/concierge/vmplugin_dispatcher_interface.h"
 
 namespace {
@@ -761,6 +762,62 @@ void PluginVmImportOperation::Finalize() {
 
   set_status(DISK_STATUS_CREATED);
 }
+
+std::unique_ptr<VmResizeOperation> VmResizeOperation::Create(
+    const VmId vm_id,
+    const base::FilePath disk_path,
+    uint64_t disk_size,
+    base::Callback<void(const std::string&,
+                        const std::string&,
+                        uint64_t,
+                        DiskImageStatus*,
+                        std::string*)> start_resize_cb,
+    base::Callback<void(
+        const std::string&, const std::string&, DiskImageStatus*, std::string*)>
+        process_resize_cb) {
+  auto op = base::WrapUnique(new VmResizeOperation(
+      std::move(vm_id), std::move(disk_path), std::move(disk_size),
+      std::move(process_resize_cb)));
+  DiskImageStatus status = DiskImageStatus::DISK_STATUS_UNKNOWN;
+  std::string failure_reason;
+  start_resize_cb.Run(vm_id.owner_id(), vm_id.name(), disk_size, &status,
+                      &failure_reason);
+
+  op->set_status(status);
+  op->set_failure_reason(failure_reason);
+
+  return op;
+}
+
+VmResizeOperation::VmResizeOperation(
+    const VmId vm_id,
+    const base::FilePath disk_path,
+    uint64_t disk_size,
+    base::Callback<void(
+        const std::string&, const std::string&, DiskImageStatus*, std::string*)>
+        process_resize_cb)
+    : process_resize_cb_(std::move(process_resize_cb)),
+      vm_id_(std::move(vm_id)),
+      disk_path_(std::move(disk_path)),
+      target_size_(std::move(disk_size)) {}
+
+bool VmResizeOperation::ExecuteIo(uint64_t io_limit) {
+  DiskImageStatus status = DiskImageStatus::DISK_STATUS_UNKNOWN;
+  std::string failure_reason;
+  process_resize_cb_.Run(vm_id_.owner_id(), vm_id_.name(), &status,
+                         &failure_reason);
+
+  set_status(status);
+  set_failure_reason(failure_reason);
+
+  if (status != DISK_STATUS_IN_PROGRESS) {
+    return true;
+  }
+
+  return false;
+}
+
+void VmResizeOperation::Finalize() {}
 
 }  // namespace concierge
 }  // namespace vm_tools

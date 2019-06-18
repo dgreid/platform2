@@ -67,6 +67,12 @@ class TerminaVm final : public VmInterface {
     bool sparse;
   };
 
+  enum class DiskResizeType {
+    NONE,
+    EXPAND,
+    SHRINK,
+  };
+
   // Starts a new virtual machine.  Returns nullptr if the virtual machine
   // failed to start for any reason.
   static std::unique_ptr<TerminaVm> Create(
@@ -80,6 +86,7 @@ class TerminaVm final : public VmInterface {
       base::FilePath runtime_dir,
       std::string rootfs_device,
       std::string stateful_device,
+      uint64_t stateful_size,
       VmFeatures features);
   ~TerminaVm() override;
 
@@ -183,6 +190,10 @@ class TerminaVm final : public VmInterface {
   void HandleSuspendDone() override;
   bool GetVmEnterpriseReportingInfo(
       GetVmEnterpriseReportingInfoResponse* response) override;
+  vm_tools::concierge::DiskImageStatus ResizeDisk(
+      uint64_t new_size, std::string* failure_reason) override;
+  vm_tools::concierge::DiskImageStatus GetDiskResizeStatus(
+      std::string* failure_reason) override;
 
   void SetTremplinStarted() override { is_tremplin_started_ = true; }
   void VmToolsStateChanged(bool running) override { NOTREACHED(); }
@@ -196,6 +207,7 @@ class TerminaVm final : public VmInterface {
       base::FilePath runtime_dir,
       std::string rootfs_device,
       std::string stateful_device,
+      uint64_t stateful_size,
       std::string kernel_version,
       std::unique_ptr<vm_tools::Maitred::Stub> stub);
 
@@ -206,6 +218,7 @@ class TerminaVm final : public VmInterface {
             base::FilePath runtime_dir,
             std::string rootfs_device,
             std::string stateful_device,
+            uint64_t stateful_size,
             VmFeatures features);
 
   // Constructor for testing only.
@@ -215,6 +228,7 @@ class TerminaVm final : public VmInterface {
             base::FilePath runtime_dir,
             std::string rootfs_device,
             std::string stateful_device,
+            uint64_t stateful_size,
             VmFeatures features);
 
   // Returns the path to the VM control socket.
@@ -231,6 +245,9 @@ class TerminaVm final : public VmInterface {
 
   // Helper version to record the VM kernel version at startup.
   void RecordKernelVersionForEnterpriseReporting();
+
+  bool ResizeDiskImage(uint64_t new_size);
+  bool ResizeFilesystem(uint64_t new_size);
 
   void set_kernel_version_for_testing(std::string kernel_version);
   void set_stub_for_testing(std::unique_ptr<vm_tools::Maitred::Stub> stub);
@@ -276,6 +293,22 @@ class TerminaVm final : public VmInterface {
 
   // Stateful device name.
   std::string stateful_device_;
+
+  // Current size of the stateful disk.
+  uint64_t stateful_size_;
+
+  // Target size of the stateful disk during a resize (when
+  // stateful_resize_type_ is not NONE).
+  uint64_t stateful_target_size_;
+
+  // Type of disk resize currently in progress.
+  // If this is NONE, then no resize is in progress right now.
+  enum DiskResizeType stateful_resize_type_;
+
+  // Status of the current resize operation (or most recent resize operation,
+  // if no resize is currently in progress).
+  vm_tools::concierge::DiskImageStatus last_stateful_resize_status_ =
+      DiskImageStatus::DISK_STATUS_RESIZED;
 
   DISALLOW_COPY_AND_ASSIGN(TerminaVm);
 };

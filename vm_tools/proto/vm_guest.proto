@@ -177,6 +177,44 @@ message GetKernelVersionResponse {
   string kernel_version = 2;
 }
 
+// Request to resize the stateful filesystem to a new size.
+// This is an asynchronous request; its state may be queried with
+// the GetResizeStatus method.
+message ResizeFilesystemRequest {
+  // Requested size of the stateful filesystem in bytes.
+  uint64 size = 1;
+}
+
+// Response to ResizeFilesystemRequest.
+message ResizeFilesystemResponse {
+  enum ResizeStatus {
+    // Could not start the filesystem request due to an error.
+    FAILED = 0;
+
+    // Another resize request is already in progress; this request will not be
+    // carried out.
+    ALREADY_IN_PROGRESS = 1;
+
+    // Resize is started and can be monitored via GetResizeStatus.
+    STARTED = 2;
+  }
+
+  ResizeStatus status = 1;
+}
+
+// Response to GetResizeStatus request.
+message GetResizeStatusResponse {
+  // True if a resize operation started by ResizeFilesystemRequest is underway.
+  bool resize_in_progress = 1;
+
+  // Current size of the stateful partition.
+  // If a resize is in progress, this is the size before the resize started.
+  uint64 current_size = 2;
+
+  // Final target size of the current resize operation, if one is in progress.
+  uint64 target_size = 3;
+}
+
 // Implemented by maitred inside the VM.
 service Maitred {
   // Set up networking inside the VM so that it can access the internet.
@@ -210,4 +248,11 @@ service Maitred {
 
   // Returns the kernel release and version for enterprise reporting.
   rpc GetKernelVersion(EmptyMessage) returns (GetKernelVersionResponse);
+
+  // Resizes the stateful filesystem.
+  rpc ResizeFilesystem(ResizeFilesystemRequest)
+      returns (ResizeFilesystemResponse);
+
+  // Queries the status of the most recent ResizeFilesystem request.
+  rpc GetResizeStatus(EmptyMessage) returns (GetResizeStatusResponse);
 }

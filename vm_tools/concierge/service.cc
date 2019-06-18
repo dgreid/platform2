@@ -775,6 +775,7 @@ bool Service::Init() {
        &Service::GetVmEnterpriseReportingInfo},
       {kCreateDiskImageMethod, &Service::CreateDiskImage},
       {kDestroyDiskImageMethod, &Service::DestroyDiskImage},
+      {kResizeDiskImageMethod, &Service::ResizeDiskImage},
       {kExportDiskImageMethod, &Service::ExportDiskImage},
       {kImportDiskImageMethod, &Service::ImportDiskImage},
       {kDiskImageStatusMethod, &Service::CheckDiskImageStatus},
@@ -1186,8 +1187,25 @@ std::unique_ptr<dbus::Response> Service::StartVm(
     tools_device = base::StringPrintf("/dev/vd%c", disk_letter++);
   }
 
+  if (request.disks().size() == 0) {
+    LOG(ERROR) << "Missing required stateful disk";
+    response.set_failure_reason("Missing required stateful disk");
+    writer.AppendProtoAsArrayOfBytes(response);
+    return dbus_response;
+  }
+
   // Assume the stateful device is the first disk in the request.
   string stateful_device = base::StringPrintf("/dev/vd%c", disk_letter);
+
+  auto stateful_path = base::FilePath(request.disks()[0].path());
+  int64_t stateful_size = -1;
+  if (!base::GetFileSize(stateful_path, &stateful_size)) {
+    LOG(ERROR) << "Could not determine stateful disk size";
+    response.set_failure_reason(
+        "Internal error: unable to determine stateful disk size");
+    writer.AppendProtoAsArrayOfBytes(response);
+    return dbus_response;
+  }
 
   for (const auto& disk : request.disks()) {
     if (!base::PathExists(base::FilePath(disk.path()))) {
@@ -1273,7 +1291,7 @@ std::unique_ptr<dbus::Response> Service::StartVm(
       std::move(kernel), std::move(rootfs), cpus, std::move(disks), vsock_cid,
       std::move(network_client), std::move(server_proxy),
       std::move(runtime_dir), std::move(rootfs_device),
-      std::move(stateful_device), features);
+      std::move(stateful_device), std::move(stateful_size), features);
   if (!vm) {
     LOG(ERROR) << "Unable to start VM";
 
@@ -2497,6 +2515,96 @@ std::unique_ptr<dbus::Response> Service::DestroyDiskImage(
   writer.AppendProtoAsArrayOfBytes(response);
 
   return dbus_response;
+}
+
+std::unique_ptr<dbus::Response> Service::ResizeDiskImage(
+    dbus::MethodCall* method_call) {
+  DCHECK(sequence_checker_.CalledOnValidSequence());
+  LOG(INFO) << "Received ResizeDiskImage request";
+
+  std::unique_ptr<dbus::Response> dbus_response(
+      dbus::Response::FromMethodCall(method_call));
+
+  dbus::MessageReader reader(method_call);
+  dbus::MessageWriter writer(dbus_response.get());
+
+  ResizeDiskImageRequest request;
+  ResizeDiskImageResponse response;
+
+  if (!reader.PopArrayOfBytesAsProto(&request)) {
+    LOG(ERROR) << "Unable to parse ResizeDiskImageRequest from message";
+    response.set_status(DISK_STATUS_FAILED);
+    response.set_failure_reason("Unable to parse ResizeDiskImageRequest");
+    writer.AppendProtoAsArrayOfBytes(response);
+    return dbus_response;
+  }
+
+  base::FilePath disk_path;
+  StorageLocation location;
+  if (!CheckVmExists(request.disk_path(), request.cryptohome_id(), &disk_path,
+                     &location)) {
+    response.set_status(DISK_STATUS_DOES_NOT_EXIST);
+    response.set_failure_reason("Resize image doesn't exist");
+    writer.AppendProtoAsArrayOfBytes(response);
+    return dbus_response;
+  }
+
+  auto size = request.disk_size() & kDiskSizeMask;
+  if (size != request.disk_size()) {
+    LOG(INFO) << "Rounded requested disk size from " << request.disk_size()
+              << " to " << size;
+  }
+
+  auto op = VmResizeOperation::Create(
+      VmId(request.cryptohome_id(), request.disk_path()), disk_path, size,
+      base::Bind(&Service::ResizeDisk, weak_ptr_factory_.GetWeakPtr()),
+      base::Bind(&Service::ProcessResize, weak_ptr_factory_.GetWeakPtr()));
+
+  response.set_status(op->status());
+  response.set_command_uuid(op->uuid());
+  response.set_failure_reason(op->failure_reason());
+
+  if (op->status() == DISK_STATUS_IN_PROGRESS) {
+    std::string uuid = op->uuid();
+    disk_image_ops_.emplace_back(DiskOpInfo(std::move(op)));
+    base::ThreadTaskRunnerHandle::Get()->PostTask(
+        FROM_HERE, base::Bind(&Service::RunDiskImageOperation,
+                              weak_ptr_factory_.GetWeakPtr(), std::move(uuid)));
+  }
+
+  writer.AppendProtoAsArrayOfBytes(response);
+  return dbus_response;
+}
+
+void Service::ResizeDisk(const std::string& owner_id,
+                         const std::string& vm_name,
+                         uint64_t new_size,
+                         DiskImageStatus* status,
+                         std::string* failure_reason) {
+  auto iter = FindVm(owner_id, vm_name);
+  if (iter == vms_.end()) {
+    LOG(ERROR) << "Unable to find VM " << vm_name;
+    *failure_reason = "No such image";
+    *status = DISK_STATUS_DOES_NOT_EXIST;
+    return;
+  }
+
+  *status = iter->second->ResizeDisk(new_size, failure_reason);
+}
+
+void Service::ProcessResize(const std::string& owner_id,
+                            const std::string& vm_name,
+                            DiskImageStatus* status,
+                            std::string* failure_reason) {
+  auto iter = FindVm(owner_id, vm_name);
+  if (iter == vms_.end()) {
+    LOG(ERROR) << "Unable to find VM " << vm_name;
+    *failure_reason = "No such image";
+    *status = DISK_STATUS_DOES_NOT_EXIST;
+    return;
+  }
+
+  *status = iter->second->GetDiskResizeStatus(failure_reason);
 }
 
 std::unique_ptr<dbus::Response> Service::ExportDiskImage(

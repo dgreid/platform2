@@ -26,6 +26,8 @@
 namespace vm_tools {
 namespace concierge {
 
+class Service;
+
 class DiskImageOperation {
  public:
   virtual ~DiskImageOperation() = default;
@@ -265,6 +267,49 @@ class PluginVmImportOperation : public DiskImageOperation {
   ArchiveWriter out_;
 
   DISALLOW_COPY_AND_ASSIGN(PluginVmImportOperation);
+};
+
+class VmResizeOperation : public DiskImageOperation {
+ public:
+  static std::unique_ptr<VmResizeOperation> Create(
+      const VmId vm_id,
+      const base::FilePath disk_path,
+      uint64_t disk_size,
+      base::Callback<void(const std::string&,
+                          const std::string&,
+                          uint64_t,
+                          DiskImageStatus*,
+                          std::string*)> start_resize_cb,
+      base::Callback<void(const std::string&,
+                          const std::string&,
+                          DiskImageStatus*,
+                          std::string*)> process_resize_cb);
+
+ protected:
+  bool ExecuteIo(uint64_t io_limit) override;
+  void Finalize() override;
+
+ private:
+  VmResizeOperation(const VmId vm_id,
+                    const base::FilePath disk_path,
+                    uint64_t size,
+                    base::Callback<void(const std::string&,
+                                        const std::string&,
+                                        DiskImageStatus*,
+                                        std::string*)> process_resize_cb);
+
+  base::Callback<void(
+      const std::string&, const std::string&, DiskImageStatus*, std::string*)>
+      process_resize_cb_;
+
+  // VM owner and name.
+  const VmId vm_id_;
+
+  base::FilePath disk_path_;
+
+  uint64_t target_size_;
+
+  DISALLOW_COPY_AND_ASSIGN(VmResizeOperation);
 };
 
 }  // namespace concierge

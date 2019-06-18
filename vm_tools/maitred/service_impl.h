@@ -67,12 +67,33 @@ class ServiceImpl final : public vm_tools::Maitred::Service {
       const vm_tools::EmptyMessage* request,
       vm_tools::GetKernelVersionResponse* response) override;
 
+  grpc::Status ResizeFilesystem(
+      grpc::ServerContext* ctx,
+      const vm_tools::ResizeFilesystemRequest* request,
+      vm_tools::ResizeFilesystemResponse* response) override;
+
+  grpc::Status GetResizeStatus(
+      grpc::ServerContext* ctx,
+      const vm_tools::EmptyMessage* request,
+      vm_tools::GetResizeStatusResponse* response) override;
+
  private:
   std::unique_ptr<vm_tools::maitred::Init> init_;
 
   // Callback used for shutting down the gRPC server.  Called when handling a
   // Shutdown RPC.
   base::Callback<bool(void)> shutdown_cb_;
+
+  void ResizeCommandExitCallback(Init::ProcessStatus status, int code);
+
+  // Global resize status for the stateful filesystem (/mnt/stateful).
+  // All accesses must be done while resize_state_.lock is held.
+  struct {
+    base::Lock lock;
+    bool resize_in_progress = false;
+    uint64_t current_size = 0;
+    uint64_t target_size = 0;
+  } resize_state_;
 
   DISALLOW_COPY_AND_ASSIGN(ServiceImpl);
 };

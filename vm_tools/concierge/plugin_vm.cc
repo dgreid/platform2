@@ -170,6 +170,18 @@ bool PluginVm::GetVmEnterpriseReportingInfo(
   return false;
 }
 
+vm_tools::concierge::DiskImageStatus PluginVm::ResizeDisk(
+    uint64_t new_size, std::string* failure_reason) {
+  *failure_reason = "Not implemented";
+  return DiskImageStatus::DISK_STATUS_FAILED;
+}
+
+vm_tools::concierge::DiskImageStatus PluginVm::GetDiskResizeStatus(
+    std::string* failure_reason) {
+  *failure_reason = "Not implemented";
+  return DiskImageStatus::DISK_STATUS_FAILED;
+}
+
 // static
 base::ScopedFD PluginVm::CreateUnixSocket(const base::FilePath& path,
                                           int type) {

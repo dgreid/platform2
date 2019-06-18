@@ -69,6 +69,11 @@ bool DetachUsbDevice(std::string socket_path,
 // Lists all usb devices attached to guest.
 bool ListUsbDevice(std::string socket_path, std::vector<UsbDevice>* devices);
 
+// Resizes the disk identified by |disk_index| to |new_size| in bytes.
+bool CrosvmDiskResize(std::string socket_path,
+                      int disk_index,
+                      uint64_t new_size);
+
 // Updates |cpu_cgroup|'s cpu.shares to |cpu_shares|.
 bool UpdateCpuShares(const base::FilePath& cpu_cgroup, int cpu_shares);
 

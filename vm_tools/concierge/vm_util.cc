@@ -307,6 +307,19 @@ bool ListUsbDevice(std::string socket_path, std::vector<UsbDevice>* device) {
   return true;
 }
 
+bool CrosvmDiskResize(std::string socket_path,
+                      int disk_index,
+                      uint64_t new_size) {
+  brillo::ProcessImpl crosvm;
+  crosvm.AddArg(kCrosvmBin);
+  crosvm.AddArg("disk");
+  crosvm.AddArg("resize");
+  crosvm.AddArg(std::to_string(disk_index));
+  crosvm.AddArg(std::to_string(new_size));
+  crosvm.AddArg(std::move(socket_path));
+  return crosvm.Run() == 0;
+}
+
 bool UpdateCpuShares(const base::FilePath& cpu_cgroup, int cpu_shares) {
   const std::string cpu_shares_str = std::to_string(cpu_shares);
   return base::WriteFile(cpu_cgroup.Append("cpu.shares"),

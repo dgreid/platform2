@@ -64,6 +64,10 @@ constexpr size_t kGuestAddressOffset = 1;
 // The CPU cgroup where all the Termina crosvm processes should belong to.
 constexpr char kTerminaCpuCgroup[] = "/sys/fs/cgroup/cpu/vms/termina";
 
+// Special value to represent an invalid disk index for `crosvm disk`
+// operations.
+constexpr int kInvalidDiskIndex = -1;
+
 std::unique_ptr<arc_networkd::Subnet>
 MakeSubnet(const patchpanel::IPv4Subnet& subnet) {
   return std::make_unique<arc_networkd::Subnet>(
@@ -79,13 +83,16 @@ TerminaVm::TerminaVm(
     base::FilePath runtime_dir,
     std::string rootfs_device,
     std::string stateful_device,
+    uint64_t stateful_size,
     VmFeatures features)
     : vsock_cid_(vsock_cid),
       network_client_(std::move(network_client)),
       seneschal_server_proxy_(std::move(seneschal_server_proxy)),
       features_(features),
       rootfs_device_(rootfs_device),
-      stateful_device_(stateful_device) {
+      stateful_device_(stateful_device),
+      stateful_size_(stateful_size),
+      stateful_resize_type_(DiskResizeType::NONE) {
   CHECK(base::DirectoryExists(runtime_dir));
 
   // Take ownership of the runtime directory.
@@ -100,13 +107,16 @@ TerminaVm::TerminaVm(
     base::FilePath runtime_dir,
     std::string rootfs_device,
     std::string stateful_device,
+    uint64_t stateful_size,
     VmFeatures features)
     : subnet_(std::move(subnet)),
       vsock_cid_(vsock_cid),
       seneschal_server_proxy_(std::move(seneschal_server_proxy)),
       features_(features),
       rootfs_device_(rootfs_device),
-      stateful_device_(stateful_device) {
+      stateful_device_(stateful_device),
+      stateful_size_(stateful_size),
+      stateful_resize_type_(DiskResizeType::NONE) {
   CHECK(subnet_);
   CHECK(base::DirectoryExists(runtime_dir));
 
@@ -129,11 +139,12 @@ std::unique_ptr<TerminaVm> TerminaVm::Create(
     base::FilePath runtime_dir,
     std::string rootfs_device,
     std::string stateful_device,
+    uint64_t stateful_size,
     VmFeatures features) {
   auto vm = base::WrapUnique(new TerminaVm(
-      vsock_cid, std::move(network_client),
-      std::move(seneschal_server_proxy), std::move(runtime_dir),
-      std::move(rootfs_device), std::move(stateful_device), features));
+      vsock_cid, std::move(network_client), std::move(seneschal_server_proxy),
+      std::move(runtime_dir), std::move(rootfs_device),
+      std::move(stateful_device), std::move(stateful_size), features));
 
   if (!vm->Start(std::move(kernel), std::move(rootfs), cpus,
                  std::move(disks))) {
@@ -581,6 +592,168 @@ bool TerminaVm::SetVmCpuRestriction(CpuRestrictionState cpu_restriction_state) {
   return UpdateCpuShares(base::FilePath(kTerminaCpuCgroup), cpu_shares);
 }
 
+// Extract the disk index of a virtio-blk device name.
+// |name| should match "/dev/vdX", where X is in the range 'a' to 'z'.
+// Returns the zero-based index of the disk (e.g. 'a' = 0, 'b' = 1, etc.).
+static int DiskIndexFromName(const std::string& name) {
+  // TODO(dverkamp): handle more than 26 disks? (e.g. /dev/vdaa)
+  if (name.length() != 8) {
+    return kInvalidDiskIndex;
+  }
+
+  int disk_letter = name[7];
+  if (disk_letter < 'a' || disk_letter > 'z') {
+    return kInvalidDiskIndex;
+  }
+
+  return disk_letter - 'a';
+}
+
+bool TerminaVm::ResizeDiskImage(uint64_t new_size) {
+  auto disk_index = DiskIndexFromName(stateful_device_);
+  if (disk_index == kInvalidDiskIndex) {
+    LOG(ERROR) << "Could not determine disk index from stateful device name "
+               << stateful_device_;
+    return false;
+  }
+  return CrosvmDiskResize(GetVmSocketPath(), disk_index, new_size);
+}
+
+bool TerminaVm::ResizeFilesystem(uint64_t new_size) {
+  grpc::ClientContext ctx;
+  ctx.set_deadline(gpr_time_add(
+      gpr_now(GPR_CLOCK_MONOTONIC),
+      gpr_time_from_seconds(kDefaultTimeoutSeconds, GPR_TIMESPAN)));
+
+  vm_tools::ResizeFilesystemRequest request;
+  vm_tools::ResizeFilesystemResponse response;
+  request.set_size(new_size);
+  grpc::Status status = stub_->ResizeFilesystem(&ctx, request, &response);
+  return status.ok();
+}
+
+vm_tools::concierge::DiskImageStatus TerminaVm::ResizeDisk(
+    uint64_t new_size, std::string* failure_reason) {
+  if (stateful_resize_type_ != DiskResizeType::NONE) {
+    LOG(ERROR) << "Attempted resize while resize is already in progress";
+    *failure_reason = "Resize already in progress";
+    last_stateful_resize_status_ = DiskImageStatus::DISK_STATUS_FAILED;
+    return last_stateful_resize_status_;
+  }
+
+  LOG(INFO) << "TerminaVm resize request: current size = " << stateful_size_
+            << " new size = " << new_size;
+
+  if (new_size == stateful_size_) {
+    LOG(INFO) << "Disk is already requested size";
+    last_stateful_resize_status_ = DiskImageStatus::DISK_STATUS_RESIZED;
+    return last_stateful_resize_status_;
+  }
+
+  stateful_target_size_ = new_size;
+
+  if (new_size > stateful_size_) {
+    LOG(INFO) << "Expanding disk";
+    // Expand disk image first, then expand filesystem.
+    if (!ResizeDiskImage(new_size)) {
+      LOG(ERROR) << "ResizeDiskImage failed";
+      *failure_reason = "ResizeDiskImage failed";
+      last_stateful_resize_status_ = DiskImageStatus::DISK_STATUS_FAILED;
+      return last_stateful_resize_status_;
+    }
+
+    if (!ResizeFilesystem(new_size)) {
+      LOG(ERROR) << "ResizeFilesystem failed";
+      *failure_reason = "ResizeFilesystem failed";
+      last_stateful_resize_status_ = DiskImageStatus::DISK_STATUS_FAILED;
+      return last_stateful_resize_status_;
+    }
+
+    LOG(INFO) << "ResizeFilesystem in progress";
+    stateful_resize_type_ = DiskResizeType::EXPAND;
+    last_stateful_resize_status_ = DiskImageStatus::DISK_STATUS_IN_PROGRESS;
+    return last_stateful_resize_status_;
+  } else {
+    DCHECK(new_size < stateful_size_);
+
+    LOG(INFO) << "Shrinking disk";
+
+    // Shrink filesystem first, then shrink disk image.
+    if (!ResizeFilesystem(new_size)) {
+      LOG(ERROR) << "ResizeFilesystem failed";
+      *failure_reason = "ResizeFilesystem failed";
+      last_stateful_resize_status_ = DiskImageStatus::DISK_STATUS_FAILED;
+      return last_stateful_resize_status_;
+    }
+
+    LOG(INFO) << "ResizeFilesystem in progress";
+    stateful_resize_type_ = DiskResizeType::SHRINK;
+    last_stateful_resize_status_ = DiskImageStatus::DISK_STATUS_IN_PROGRESS;
+    return last_stateful_resize_status_;
+  }
+}
+
+vm_tools::concierge::DiskImageStatus TerminaVm::GetDiskResizeStatus(
+    std::string* failure_reason) {
+  if (stateful_resize_type_ == DiskResizeType::NONE) {
+    return last_stateful_resize_status_;
+  }
+
+  // If a resize is in progress, then we must be waiting on filesystem resize to
+  // complete. Check its status and update our state to match.
+  grpc::ClientContext ctx;
+  ctx.set_deadline(gpr_time_add(
+      gpr_now(GPR_CLOCK_MONOTONIC),
+      gpr_time_from_seconds(kDefaultTimeoutSeconds, GPR_TIMESPAN)));
+
+  vm_tools::EmptyMessage request;
+  vm_tools::GetResizeStatusResponse response;
+
+  grpc::Status status = stub_->GetResizeStatus(&ctx, request, &response);
+
+  if (!status.ok()) {
+    stateful_resize_type_ = DiskResizeType::NONE;
+    LOG(ERROR) << "GetResizeStatus RPC failed";
+    *failure_reason = "GetResizeStatus RPC failed";
+    last_stateful_resize_status_ = DiskImageStatus::DISK_STATUS_FAILED;
+    return last_stateful_resize_status_;
+  }
+
+  if (response.resize_in_progress()) {
+    last_stateful_resize_status_ = DiskImageStatus::DISK_STATUS_IN_PROGRESS;
+    return last_stateful_resize_status_;
+  }
+
+  if (response.current_size() != stateful_target_size_) {
+    stateful_resize_type_ = DiskResizeType::NONE;
+    LOG(ERROR) << "Unexpected size after filesystem resize: got "
+               << response.current_size() << ", expected "
+               << stateful_target_size_;
+    *failure_reason = "Unexpected size after filesystem resize";
+    last_stateful_resize_status_ = DiskImageStatus::DISK_STATUS_FAILED;
+    return last_stateful_resize_status_;
+  }
+
+  stateful_size_ = response.current_size();
+
+  if (stateful_resize_type_ == DiskResizeType::SHRINK) {
+    LOG(INFO) << "Filesystem shrink complete; shrinking disk image";
+    if (!ResizeDiskImage(response.current_size())) {
+      LOG(ERROR) << "ResizeDiskImage failed";
+      *failure_reason = "ResizeDiskImage failed";
+      last_stateful_resize_status_ = DiskImageStatus::DISK_STATUS_FAILED;
+      return last_stateful_resize_status_;
+    }
+  } else {
+    LOG(INFO) << "Filesystem expansion complete";
+  }
+
+  LOG(INFO) << "Disk resize successful";
+  stateful_resize_type_ = DiskResizeType::NONE;
+  last_stateful_resize_status_ = DiskImageStatus::DISK_STATUS_RESIZED;
+  return last_stateful_resize_status_;
+}
+
 uint32_t TerminaVm::GatewayAddress() const {
   return subnet_->AddressAtOffset(kHostAddressOffset);
 }
@@ -642,6 +815,7 @@ std::unique_ptr<TerminaVm> TerminaVm::CreateForTesting(
     base::FilePath runtime_dir,
     std::string rootfs_device,
     std::string stateful_device,
+    uint64_t stateful_size,
     std::string kernel_version,
     std::unique_ptr<vm_tools::Maitred::Stub> stub) {
   VmFeatures features{
@@ -649,10 +823,10 @@ std::unique_ptr<TerminaVm> TerminaVm::CreateForTesting(
       .software_tpm = false,
       .audio_capture = false,
   };
-  auto vm = base::WrapUnique(
-      new TerminaVm(std::move(subnet), vsock_cid, nullptr,
-                    std::move(runtime_dir), std::move(rootfs_device),
-                    std::move(stateful_device), features));
+  auto vm = base::WrapUnique(new TerminaVm(
+      std::move(subnet), vsock_cid, nullptr, std::move(runtime_dir),
+      std::move(rootfs_device), std::move(stateful_device),
+      std::move(stateful_size), features));
   vm->set_kernel_version_for_testing(kernel_version);
   vm->set_stub_for_testing(std::move(stub));
 

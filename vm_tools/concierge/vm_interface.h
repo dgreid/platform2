@@ -97,6 +97,15 @@ class VmInterface {
 
   // Notes that guest agent is running in the VM.
   virtual void VmToolsStateChanged(bool running) = 0;
+
+  // Initiate a disk resize operation for the VM.
+  // |new_size| is the requested size in bytes.
+  virtual vm_tools::concierge::DiskImageStatus ResizeDisk(
+      uint64_t new_size, std::string* failure_reason) = 0;
+
+  // Get the status of the most recent ResizeDisk operation.
+  virtual vm_tools::concierge::DiskImageStatus GetDiskResizeStatus(
+      std::string* failure_reason) = 0;
 };
 
 }  // namespace concierge

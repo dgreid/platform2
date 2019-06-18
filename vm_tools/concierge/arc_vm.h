@@ -111,6 +111,10 @@ class ArcVm final : public VmInterface {
   bool SetTime(std::string* failure_reason) override { return true; }
   void SetTremplinStarted() override { NOTREACHED(); }
   void VmToolsStateChanged(bool running) override { NOTREACHED(); }
+  vm_tools::concierge::DiskImageStatus ResizeDisk(
+      uint64_t new_size, std::string* failure_reason) override;
+  vm_tools::concierge::DiskImageStatus GetDiskResizeStatus(
+      std::string* failure_reason) override;
 
   // Adjusts the amount of CPU the ARCVM processes are allowed to use.
   static bool SetVmCpuRestriction(CpuRestrictionState cpu_restriction_state);

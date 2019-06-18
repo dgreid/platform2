@@ -104,6 +104,14 @@ class Service final {
   std::unique_ptr<dbus::Response> DestroyDiskImage(
       dbus::MethodCall* method_call);
 
+  // Handles a request to resize a disk image.
+  std::unique_ptr<dbus::Response> ResizeDiskImage(
+      dbus::MethodCall* method_call);
+
+  // Handles a request to get disk resize status.
+  std::unique_ptr<dbus::Response> GetDiskResizeStatus(
+      dbus::MethodCall* method_call);
+
   // Handles a request to export a disk image.
   std::unique_ptr<dbus::Response> ExportDiskImage(
       dbus::MethodCall* method_call);
@@ -179,6 +187,21 @@ class Service final {
   // resumed from suspend.
   void HandleSuspendImminent();
   void HandleSuspendDone();
+
+  // Initiate a disk resize request for the VM identified by |owner_id| and
+  // |vm_name|.
+  void ResizeDisk(const std::string& owner_id,
+                  const std::string& vm_name,
+                  uint64_t new_size,
+                  DiskImageStatus* status,
+                  std::string* failure_reason);
+  // Query the status of the most recent ResizeDisk request.
+  // If this returns DISK_STATUS_FAILED, |failure_reason| will be filled with an
+  // error message.
+  void ProcessResize(const std::string& owner_id,
+                     const std::string& vm_name,
+                     DiskImageStatus* status,
+                     std::string* failure_reason);
 
   using VmMap = std::map<VmId, std::unique_ptr<VmInterface>>;
 
