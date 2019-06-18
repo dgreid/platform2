@@ -402,7 +402,7 @@ class WiFiProviderTest : public testing::Test {
 
 MATCHER(TypeWiFiPropertyMatch, "") {
   return arg.properties().size() == 1 &&
-         arg.LookupString(kTypeProperty, "") == kTypeWifi;
+         arg.template Lookup<string>(kTypeProperty, "") == kTypeWifi;
 }
 
 MATCHER_P(RefPtrMatch, ref, "") {

@@ -79,7 +79,8 @@ void ArcVpnDriver::Connect(const VPNServiceRefPtr& service, Error* error) {
   service->SetState(Service::kStateConnected);
 
   IPConfig::Properties ip_properties;
-  if (args()->LookupString(kArcVpnTunnelChromeProperty, "false") != "true") {
+  if (args()->Lookup<std::string>(kArcVpnTunnelChromeProperty, "false") !=
+      "true") {
     // If Chrome tunneling is disabled, traffic will not be passed through
     // this interface, but users will still be able to see VPN status
     // and disconnect the VPN through the UI.  In this case the IP address

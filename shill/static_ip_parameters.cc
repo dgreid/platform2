@@ -240,13 +240,13 @@ void StaticIPParameters::ApplyTo(IPConfig::Properties* props) {
 }
 
 void StaticIPParameters::RestoreTo(IPConfig::Properties* props) {
-  props->address = saved_args_.LookupString(kAddressProperty, "");
-  props->gateway = saved_args_.LookupString(kGatewayProperty, "");
-  props->mtu = saved_args_.LookupInt(kMtuProperty, 0);
+  props->address = saved_args_.Lookup<string>(kAddressProperty, "");
+  props->gateway = saved_args_.Lookup<string>(kGatewayProperty, "");
+  props->mtu = saved_args_.Lookup<int32_t>(kMtuProperty, 0);
   RestoreStrings(kNameServersProperty, &props->dns_servers);
   RestoreStrings(kSearchDomainsProperty, &props->domain_search);
-  props->peer_address = saved_args_.LookupString(kPeerAddressProperty, "");
-  props->subnet_prefix = saved_args_.LookupInt(kPrefixlenProperty, 0);
+  props->peer_address = saved_args_.Lookup<string>(kPeerAddressProperty, "");
+  props->subnet_prefix = saved_args_.Lookup<int32_t>(kPrefixlenProperty, 0);
   RestoreStrings(kExcludedRoutesProperty, &props->exclusion_list);
   RestoreRoutes(kIncludedRoutesProperty, props->gateway, &props->routes);
   ClearSavedParameters();

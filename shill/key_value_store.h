@@ -65,9 +65,13 @@ class KeyValueStore {
   bool operator==(const KeyValueStore& rhs) const;
   bool operator!=(const KeyValueStore& rhs) const;
 
+  const brillo::VariantDictionary& properties() const { return properties_; }
+
   void Clear();
   void CopyFrom(const KeyValueStore& b);
   bool IsEmpty();
+
+  void Remove(const std::string& name);
 
   bool ContainsVariant(const std::string& name) const;
   const brillo::Any& GetVariant(const std::string& name) const;
@@ -109,16 +113,31 @@ class KeyValueStore {
     SetVariant(name, brillo::Any(value));
   }
 
-  void Remove(const std::string& name);
-
   // If |name| is in this store returns its value, otherwise returns
   // |default_value|.
-  bool LookupBool(const std::string& name, bool default_value) const;
-  int LookupInt(const std::string& name, int default_value) const;
-  std::string LookupString(const std::string& name,
-                           const std::string& default_value) const;
+  template <typename T,
+            typename brillo::EnableIfIsOneOfArithmetic<T, KeyValueTypes> = 0>
+  T Lookup(const std::string& name, T default_value) const {
+    const auto it(properties_.find(name));
+    if (it == properties_.end()) {
+      return default_value;
+    }
+    CHECK(it->second.IsTypeCompatible<T>())
+        << "for " << brillo::GetTypeTag<T>() << " property " << name;
+    return it->second.Get<T>();
+  }
 
-  const brillo::VariantDictionary& properties() const { return properties_; }
+  template <typename T,
+            typename brillo::EnableIfIsOneOfNonArithmetic<T, KeyValueTypes> = 0>
+  const T& Lookup(const std::string& name, const T& default_value) const {
+    const auto it(properties_.find(name));
+    if (it == properties_.end()) {
+      return default_value;
+    }
+    CHECK(it->second.IsTypeCompatible<T>())
+        << "for " << brillo::GetTypeTag<T>() << " property " << name;
+    return it->second.Get<T>();
+  }
 
   // Conversion function between KeyValueStore and brillo::VariantDictionary.
   // Since we already use brillo::VariantDictionary for storing key value

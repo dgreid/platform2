@@ -68,13 +68,13 @@ bool VPNService::IsAlwaysOnVpn(const string& package) const {
 // static
 string VPNService::CreateStorageIdentifier(const KeyValueStore& args,
                                            Error* error) {
-  string host = args.LookupString(kProviderHostProperty, "");
+  string host = args.Lookup<string>(kProviderHostProperty, "");
   if (host.empty()) {
     Error::PopulateAndLog(FROM_HERE, error, Error::kInvalidProperty,
                           "Missing VPN host.");
     return "";
   }
-  string name = args.LookupString(kNameProperty, "");
+  string name = args.Lookup<string>(kNameProperty, "");
   if (name.empty()) {
     Error::PopulateAndLog(FROM_HERE, error, Error::kNotSupported,
                           "Missing VPN name.");

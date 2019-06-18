@@ -109,14 +109,14 @@ TEST_F(KeyValueStoreTest, Bool) {
   const bool kDefaultValue = true;
   const bool kValue = false;
   EXPECT_FALSE(store_.Contains<bool>(kBoolKey));
-  EXPECT_EQ(kDefaultValue, store_.LookupBool(kBoolKey, kDefaultValue));
+  EXPECT_EQ(kDefaultValue, store_.Lookup<bool>(kBoolKey, kDefaultValue));
   store_.Set<bool>(kBoolKey, kValue);
   EXPECT_TRUE(store_.Contains<bool>(kBoolKey));
   // TODO(shenhan): investigate if a newer version of gtest handles EXPECT_EQ
   // for bools in a manner that gcc 4.7 is happy with. (Improper conversion from
   // "false" to "NULL").
   EXPECT_EQ(static_cast<int>(kValue),
-            static_cast<int>(store_.LookupBool(kBoolKey, kDefaultValue)));
+            static_cast<int>(store_.Lookup<bool>(kBoolKey, kDefaultValue)));
   EXPECT_EQ(static_cast<int>(kValue),
             static_cast<int>(store_.Get<bool>(kBoolKey)));
 }
@@ -141,11 +141,11 @@ TEST_F(KeyValueStoreTest, Int) {
   EXPECT_FALSE(store_.Contains<int32_t>(kIntKey));
   const int kDefaultValue = 789;
   const int kValue = 456;
-  EXPECT_EQ(kDefaultValue, store_.LookupInt(kIntKey, kDefaultValue));
+  EXPECT_EQ(kDefaultValue, store_.Lookup<int32_t>(kIntKey, kDefaultValue));
   store_.Set<int32_t>(kIntKey, kValue);
   EXPECT_TRUE(store_.Contains<int32_t>(kIntKey));
   EXPECT_EQ(kValue, store_.Get<int32_t>(kIntKey));
-  EXPECT_EQ(kValue, store_.LookupInt(kIntKey, kDefaultValue));
+  EXPECT_EQ(kValue, store_.Lookup<int32_t>(kIntKey, kDefaultValue));
   store_.Remove(kIntKey);
   EXPECT_FALSE(store_.Contains<int32_t>(kIntKey));
 }
@@ -232,14 +232,14 @@ TEST_F(KeyValueStoreTest, String) {
   const string kDefaultValue("bar");
   const string kValue("baz");
   EXPECT_FALSE(store_.Contains<string>(kStringKey));
-  EXPECT_EQ(kDefaultValue, store_.LookupString(kStringKey, kDefaultValue));
+  EXPECT_EQ(kDefaultValue, store_.Lookup<string>(kStringKey, kDefaultValue));
   store_.Set<string>(kStringKey, kValue);
   EXPECT_TRUE(store_.Contains<string>(kStringKey));
-  EXPECT_EQ(kValue, store_.LookupString(kStringKey, kDefaultValue));
+  EXPECT_EQ(kValue, store_.Lookup<string>(kStringKey, kDefaultValue));
   EXPECT_EQ(kValue, store_.Get<string>(kStringKey));
   store_.Remove(kStringKey);
   EXPECT_FALSE(store_.Contains<string>(kStringKey));
-  EXPECT_EQ(kDefaultValue, store_.LookupString(kStringKey, kDefaultValue));
+  EXPECT_EQ(kDefaultValue, store_.Lookup<string>(kStringKey, kDefaultValue));
 }
 
 TEST_F(KeyValueStoreTest, Stringmap) {

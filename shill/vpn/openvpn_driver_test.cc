@@ -1280,28 +1280,28 @@ TEST_F(OpenVPNDriverTest, InitPropertyStore) {
   Error error;
   EXPECT_TRUE(store.SetStringProperty(kOpenVPNUserProperty, kUser, &error));
   EXPECT_TRUE(error.IsSuccess());
-  EXPECT_EQ(kUser, GetArgs()->LookupString(kOpenVPNUserProperty, ""));
+  EXPECT_EQ(kUser, GetArgs()->Lookup<string>(kOpenVPNUserProperty, ""));
 }
 
 TEST_F(OpenVPNDriverTest, PassphraseRequired) {
   PropertyStore store;
   driver_->InitPropertyStore(&store);
   KeyValueStore props = GetProviderProperties(store);
-  EXPECT_TRUE(props.LookupBool(kPassphraseRequiredProperty, false));
+  EXPECT_TRUE(props.Lookup<bool>(kPassphraseRequiredProperty, false));
 
   SetArg(kOpenVPNPasswordProperty, "random-password");
   props = GetProviderProperties(store);
-  EXPECT_FALSE(props.LookupBool(kPassphraseRequiredProperty, true));
+  EXPECT_FALSE(props.Lookup<bool>(kPassphraseRequiredProperty, true));
   // This parameter should be write-only.
   EXPECT_FALSE(props.Contains<string>(kOpenVPNPasswordProperty));
 
   SetArg(kOpenVPNPasswordProperty, "");
   props = GetProviderProperties(store);
-  EXPECT_TRUE(props.LookupBool(kPassphraseRequiredProperty, false));
+  EXPECT_TRUE(props.Lookup<bool>(kPassphraseRequiredProperty, false));
 
   SetArg(kOpenVPNTokenProperty, "random-token");
   props = GetProviderProperties(store);
-  EXPECT_FALSE(props.LookupBool(kPassphraseRequiredProperty, true));
+  EXPECT_FALSE(props.Lookup<bool>(kPassphraseRequiredProperty, true));
   // This parameter should be write-only.
   EXPECT_FALSE(props.Contains<string>(kOpenVPNTokenProperty));
 }

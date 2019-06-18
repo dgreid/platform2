@@ -196,9 +196,9 @@ TEST_F(VPNDriverTest, Load) {
   if (GetArgs()->Contains<Strings>(kEapCaCertPemProperty)) {
     EXPECT_EQ(kCaCerts, GetArgs()->Get<Strings>(kEapCaCertPemProperty));
   }
-  EXPECT_EQ(kPort, GetArgs()->LookupString(kPortProperty, ""));
-  EXPECT_EQ(kPin, GetArgs()->LookupString(kPinProperty, ""));
-  EXPECT_EQ(kPassword, GetArgs()->LookupString(kPasswordProperty, ""));
+  EXPECT_EQ(kPort, GetArgs()->Lookup<string>(kPortProperty, ""));
+  EXPECT_EQ(kPin, GetArgs()->Lookup<string>(kPinProperty, ""));
+  EXPECT_EQ(kPassword, GetArgs()->Lookup<string>(kPasswordProperty, ""));
 
   // Properties missing from the persistent store should be deleted.
   EXPECT_FALSE(GetArgs()->Contains<string>(kVPNHostProperty));
@@ -259,7 +259,7 @@ TEST_F(VPNDriverTest, UnloadCredentials) {
   driver_.UnloadCredentials();
   EXPECT_FALSE(GetArgs()->Contains<string>(kOTPProperty));
   EXPECT_FALSE(GetArgs()->Contains<string>(kPasswordProperty));
-  EXPECT_EQ(kPort, GetArgs()->LookupString(kPortProperty, ""));
+  EXPECT_EQ(kPort, GetArgs()->Lookup<string>(kPortProperty, ""));
 }
 
 TEST_F(VPNDriverTest, InitPropertyStore) {

@@ -54,34 +54,6 @@ void KeyValueStore::Remove(const string& name) {
   properties_.erase(name);
 }
 
-bool KeyValueStore::LookupBool(const string& name, bool default_value) const {
-  const auto it(properties_.find(name));
-  if (it == properties_.end()) {
-    return default_value;
-  }
-  CHECK(it->second.IsTypeCompatible<bool>()) << "type mismatched";
-  return it->second.Get<bool>();
-}
-
-int KeyValueStore::LookupInt(const string& name, int default_value) const {
-  const auto it(properties_.find(name));
-  if (it == properties_.end()) {
-    return default_value;
-  }
-  CHECK(it->second.IsTypeCompatible<int32_t>()) << "type mismatched";
-  return it->second.Get<int32_t>();
-}
-
-string KeyValueStore::LookupString(const string& name,
-                                   const string& default_value) const {
-  const auto it(properties_.find(name));
-  if (it == properties_.end()) {
-    return default_value;
-  }
-  CHECK(it->second.IsTypeCompatible<string>()) << "type mismatched";
-  return it->second.Get<string>();
-}
-
 // static.
 brillo::VariantDictionary KeyValueStore::ConvertToVariantDictionary(
     const KeyValueStore& in_store) {

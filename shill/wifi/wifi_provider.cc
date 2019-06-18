@@ -83,9 +83,9 @@ bool GetServiceParametersFromArgs(const KeyValueStore& args,
                                   string* security_method,
                                   bool* hidden_ssid,
                                   Error* error) {
-  CHECK_EQ(args.LookupString(kTypeProperty, ""), kTypeWifi);
+  CHECK_EQ(args.Lookup<string>(kTypeProperty, ""), kTypeWifi);
 
-  string mode_test = args.LookupString(kModeProperty, kModeManaged);
+  string mode_test = args.Lookup<string>(kModeProperty, kModeManaged);
   if (!WiFiService::IsValidMode(mode_test)) {
     Error::PopulateAndLog(FROM_HERE, error, Error::kNotSupported,
                           kManagerErrorUnsupportedServiceMode);
@@ -124,8 +124,8 @@ bool GetServiceParametersFromArgs(const KeyValueStore& args,
   const string kDefaultSecurity = kSecurityNone;
   if (args.Contains<string>(kSecurityProperty) &&
       args.Contains<string>(kSecurityClassProperty) &&
-      args.LookupString(kSecurityClassProperty, kDefaultSecurity) !=
-          args.LookupString(kSecurityProperty, kDefaultSecurity)) {
+      args.Lookup<string>(kSecurityClassProperty, kDefaultSecurity) !=
+          args.Lookup<string>(kSecurityProperty, kDefaultSecurity)) {
     Error::PopulateAndLog(FROM_HERE, error, Error::kInvalidArguments,
                           kManagerErrorArgumentConflict);
     return false;
@@ -133,7 +133,7 @@ bool GetServiceParametersFromArgs(const KeyValueStore& args,
 
   if (args.Contains<string>(kSecurityClassProperty)) {
     string security_class_test =
-        args.LookupString(kSecurityClassProperty, kDefaultSecurity);
+        args.Lookup<string>(kSecurityClassProperty, kDefaultSecurity);
     if (!WiFiService::IsValidSecurityClass(security_class_test)) {
       Error::PopulateAndLog(FROM_HERE, error, Error::kNotSupported,
                             kManagerErrorUnsupportedSecurityClass);
@@ -142,7 +142,7 @@ bool GetServiceParametersFromArgs(const KeyValueStore& args,
     *security_method = security_class_test;
   } else if (args.Contains<string>(kSecurityProperty)) {
     string security_method_test =
-        args.LookupString(kSecurityProperty, kDefaultSecurity);
+        args.Lookup<string>(kSecurityProperty, kDefaultSecurity);
     if (!WiFiService::IsValidSecurityMethod(security_method_test)) {
       Error::PopulateAndLog(FROM_HERE, error, Error::kNotSupported,
                             kManagerErrorUnsupportedSecurityMode);
@@ -157,7 +157,7 @@ bool GetServiceParametersFromArgs(const KeyValueStore& args,
   *mode = mode_test;
 
   // If the caller hasn't specified otherwise, we assume it is a hidden service.
-  *hidden_ssid = args.LookupBool(kWifiHiddenSsid, true);
+  *hidden_ssid = args.Lookup<bool>(kWifiHiddenSsid, true);
 
   return true;
 }

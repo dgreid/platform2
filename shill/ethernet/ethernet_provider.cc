@@ -35,7 +35,7 @@ void EthernetProvider::CreateServicesFromProfile(const ProfileRefPtr& profile) {
 
 ServiceRefPtr EthernetProvider::FindSimilarService(const KeyValueStore& args,
                                                    Error* error) const {
-  CHECK_EQ(kTypeEthernet, args.LookupString(kTypeProperty, ""))
+  CHECK_EQ(kTypeEthernet, args.Lookup<string>(kTypeProperty, ""))
       << "Service type must be Ethernet!";
   ServiceRefPtr service = manager_->GetFirstEthernetService();
   if (service) {

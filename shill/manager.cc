@@ -2352,7 +2352,7 @@ ServiceRefPtr Manager::ConfigureServiceForProfile(const string& profile_rpcid,
                           "Profile specified was not found");
     return nullptr;
   }
-  if (args.LookupString(kProfileProperty, profile_rpcid) != profile_rpcid) {
+  if (args.Lookup<string>(kProfileProperty, profile_rpcid) != profile_rpcid) {
     Error::PopulateAndLog(FROM_HERE, error, Error::kInvalidArguments,
                           "Profile argument does not match that in "
                           "the configuration arguments");

@@ -265,10 +265,11 @@ string OpenVPNManagementServer::ParsePasswordFailedReason(
 
 void OpenVPNManagementServer::PerformStaticChallenge(const string& tag) {
   LOG(INFO) << "Perform static challenge: " << tag;
-  string user = driver_->args()->LookupString(kOpenVPNUserProperty, "");
-  string password = driver_->args()->LookupString(kOpenVPNPasswordProperty, "");
-  string otp = driver_->args()->LookupString(kOpenVPNOTPProperty, "");
-  string token = driver_->args()->LookupString(kOpenVPNTokenProperty, "");
+  string user = driver_->args()->Lookup<string>(kOpenVPNUserProperty, "");
+  string password =
+      driver_->args()->Lookup<string>(kOpenVPNPasswordProperty, "");
+  string otp = driver_->args()->Lookup<string>(kOpenVPNOTPProperty, "");
+  string token = driver_->args()->Lookup<string>(kOpenVPNTokenProperty, "");
   if (user.empty() || (token.empty() && (password.empty() || otp.empty()))) {
     NOTIMPLEMENTED() << ": Missing credentials:"
                      << (user.empty() ? " no-user" : "")
@@ -298,8 +299,9 @@ void OpenVPNManagementServer::PerformStaticChallenge(const string& tag) {
 
 void OpenVPNManagementServer::PerformAuthentication(const string& tag) {
   LOG(INFO) << "Perform authentication: " << tag;
-  string user = driver_->args()->LookupString(kOpenVPNUserProperty, "");
-  string password = driver_->args()->LookupString(kOpenVPNPasswordProperty, "");
+  string user = driver_->args()->Lookup<string>(kOpenVPNUserProperty, "");
+  string password =
+      driver_->args()->Lookup<string>(kOpenVPNPasswordProperty, "");
   if (user.empty() || password.empty()) {
     NOTIMPLEMENTED() << ": Missing credentials:"
                      << (user.empty() ? " no-user" : "")
@@ -313,7 +315,7 @@ void OpenVPNManagementServer::PerformAuthentication(const string& tag) {
 
 void OpenVPNManagementServer::SupplyTPMToken(const string& tag) {
   SLOG(this, 2) << __func__ << "(" << tag << ")";
-  string pin = driver_->args()->LookupString(kOpenVPNPinProperty, "");
+  string pin = driver_->args()->Lookup<string>(kOpenVPNPinProperty, "");
   if (pin.empty()) {
     NOTIMPLEMENTED() << ": Missing PIN.";
     driver_->FailService(Service::kFailureInternal, Service::kErrorDetailsNone);
