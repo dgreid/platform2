@@ -713,6 +713,8 @@ bool KernelCollector::HandleCrash(const std::string& kernel_dump,
         StringPrintf("%s.kcrash", dump_basename.c_str()));
     FilePath bios_dump_path = root_crash_directory.Append(
         StringPrintf("%s.%s", dump_basename.c_str(), kBiosDumpName));
+    FilePath log_path = root_crash_directory.Append(
+        StringPrintf("%s.log", dump_basename.c_str()));
 
     // We must use WriteNewFile instead of base::WriteFile as we
     // do not want to write with root access to a symlink that an attacker
@@ -737,6 +739,12 @@ bool KernelCollector::HandleCrash(const std::string& kernel_dump,
     }
 
     AddCrashMetaData(kKernelSignatureKey, signature);
+
+    // Collect additional logs if one is specified in the config file.
+    if (GetLogContents(log_config_path_, kKernelExecName, log_path)) {
+      AddCrashMetaUploadFile("log", log_path.BaseName().value());
+    }
+
     FinishCrash(root_crash_directory.Append(
                     StringPrintf("%s.meta", dump_basename.c_str())),
                 kKernelExecName, kernel_crash_path.BaseName().value());
