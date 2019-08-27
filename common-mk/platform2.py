@@ -53,6 +53,7 @@ _IUSE = [
     'direncryption',
     'dlc',
     'double_extend_pcr_issue',
+    'enable_slow_boot_notify',
     'fake_drivefs_launcher',
     'fast_transition',
     'feedback',

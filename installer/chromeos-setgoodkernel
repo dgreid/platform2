@@ -93,6 +93,12 @@ if [ -x "${SET_GOOD_FIRMWARE_SCRIPT}" ]; then
   "${SET_GOOD_FIRMWARE_SCRIPT}"
 fi
 
+# Remove slow_boot_required file if it exists.
+SLOW_BOOT_REQ_FILE='/mnt/stateful_partition/etc/slow_boot_required'
+if [ -f "${SLOW_BOOT_REQ_FILE}" ]; then
+  rm "${SLOW_BOOT_REQ_FILE}"
+fi
+
 # Run the verified boot debugging tool now, because we won't be able to run it
 # manually if there's a problem (no root shell). It leaves a log file that we
 # can look at.

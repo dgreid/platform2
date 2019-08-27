@@ -2,19 +2,25 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "installer/chromeos_postinst.h"
-
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
 
+#include <string>
+
+#include <base/files/file_path.h>
+#include <base/files/file_util.h>
+
 #include "installer/cgpt_manager.h"
 #include "installer/chromeos_install_config.h"
 #include "installer/chromeos_legacy.h"
+#include "installer/chromeos_postinst.h"
 #include "installer/chromeos_setimage.h"
 #include "installer/inst_util.h"
+#include "installer/slow_boot_notify.h"
 
 using std::string;
 
@@ -354,7 +360,15 @@ bool ChromeosChrootPostinst(const InstallConfig& install_config,
   // mini-omaha server, and we don't want to try updates inside postinst.
   if (attempt_firmware_update) {
     *exit_code = FirmwareUpdate(install_config.root.mount(), is_update);
-    if (*exit_code != 0) {
+    if (*exit_code == 0) {
+      if (SlowBootNotifyRequired()) {
+        base::FilePath slow_boot_req_file(string(kStatefulMount) +
+                                          "/etc/slow_boot_required");
+        if (WriteFile(slow_boot_req_file, "1", 1) != 1)
+          fprintf(stderr, "Unable to write to file %s - failure reason %s\n",
+                  slow_boot_req_file.value().c_str(), strerror(errno));
+      }
+    } else {
       // Note: This will only rollback the ChromeOS verified boot target.
       // The assumption is that systems running firmware autoupdate
       // are not running legacy (non-ChromeOS) firmware. If the firmware

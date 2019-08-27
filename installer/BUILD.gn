@@ -38,6 +38,12 @@ static_library("libcros_installer") {
     "chromeos_verity.cc",
     "inst_util.cc",
   ]
+
+  if (use.enable_slow_boot_notify) {
+    sources += [ "slow_boot_notify_enable.cc" ]
+  } else {
+    sources += [ "slow_boot_notify_stub.cc" ]
+  }
 }
 
 pkg_config("cros_installer_config") {
