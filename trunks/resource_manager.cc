@@ -361,10 +361,11 @@ std::vector<TPM_HANDLE> ResourceManager::ExtractHandlesFromBuffer(
     size_t number_of_handles,
     std::string* buffer) {
   std::vector<TPM_HANDLE> handles(number_of_handles);
-  for (size_t i = 0; i < number_of_handles; ++i) {
-    TPM_HANDLE handle;
-    if (TPM_RC_SUCCESS == Parse_TPM_HANDLE(buffer, &handle, nullptr)) {
-      handles[i] = handle;
+  for (auto& handle : handles) {
+    if (Parse_TPM_HANDLE(buffer, &handle, nullptr) != TPM_RC_SUCCESS) {
+      LOG(WARNING) << "Failed to extract the expected number of handles";
+      handles.clear();
+      break;
     }
   }
   return handles;
