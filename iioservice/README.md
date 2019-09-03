@@ -4,6 +4,7 @@ The repository hosts the core Chrome OS platform iioservice components,
 including:
 
 - Mojo IPC library for clients to connect to iioservice
+- [Iioservice test executable](iioservice_test) for Iio Service IPC
 
 ## Mojo IPC library
 
