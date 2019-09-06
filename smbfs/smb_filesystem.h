@@ -76,6 +76,14 @@ class SmbFilesystem : public Filesystem {
   void Release(std::unique_ptr<SimpleRequest> request,
                fuse_ino_t inode,
                uint64_t file_handle) override;
+  void Rename(std::unique_ptr<SimpleRequest> request,
+              fuse_ino_t old_parent_inode,
+              const std::string& old_name,
+              fuse_ino_t new_parent_inode,
+              const std::string& new_name) override;
+  void Unlink(std::unique_ptr<SimpleRequest> request,
+              fuse_ino_t parent_inode,
+              const std::string& name) override;
   void OpenDir(std::unique_ptr<OpenRequest> request,
                fuse_ino_t inode,
                int flags) override;
@@ -120,6 +128,14 @@ class SmbFilesystem : public Filesystem {
   void ReleaseInternal(std::unique_ptr<SimpleRequest> request,
                        fuse_ino_t inode,
                        uint64_t file_handle);
+  void RenameInternal(std::unique_ptr<SimpleRequest> request,
+                      fuse_ino_t old_parent_inode,
+                      const std::string& old_name,
+                      fuse_ino_t new_parent_inode,
+                      const std::string& new_name);
+  void UnlinkInternal(std::unique_ptr<SimpleRequest> request,
+                      fuse_ino_t parent_inode,
+                      const std::string& name);
   void OpenDirInternal(std::unique_ptr<OpenRequest> request,
                        fuse_ino_t inode,
                        int flags);
@@ -185,8 +201,10 @@ class SmbFilesystem : public Filesystem {
   smbc_opendir_fn smbc_opendir_ctx_ = nullptr;
   smbc_read_fn smbc_read_ctx_ = nullptr;
   smbc_readdir_fn smbc_readdir_ctx_ = nullptr;
+  smbc_rename_fn smbc_rename_ctx_ = nullptr;
   smbc_stat_fn smbc_stat_ctx_ = nullptr;
   smbc_telldir_fn smbc_telldir_ctx_ = nullptr;
+  smbc_unlink_fn smbc_unlink_ctx_ = nullptr;
   smbc_write_fn smbc_write_ctx_ = nullptr;
 
   DISALLOW_IMPLICIT_CONSTRUCTORS(SmbFilesystem);
