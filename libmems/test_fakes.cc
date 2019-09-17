@@ -91,6 +91,14 @@ bool FakeIioDevice::SetTrigger(IioDevice* trigger) {
   return true;
 }
 
+std::vector<IioChannel*> FakeIioDevice::GetAllChannels() {
+  std::vector<IioChannel*> channels;
+  for (auto channel : channels_)
+    channels.push_back(channel.second);
+
+  return channels;
+}
+
 IioChannel* FakeIioDevice::GetChannel(const std::string& id) {
   auto k = channels_.find(id);
   if (k == channels_.end())

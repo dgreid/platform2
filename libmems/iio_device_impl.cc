@@ -202,6 +202,24 @@ IioDevice* IioDeviceImpl::GetTrigger() {
   return trigger_device;
 }
 
+std::vector<IioChannel*> IioDeviceImpl::GetAllChannels() {
+  std::vector<IioChannel*> channels;
+  uint32_t chn_count = iio_device_get_channels_count(device_);
+
+  for (int i = 0; i < chn_count; ++i) {
+    iio_channel* channel = iio_device_get_channel(device_, i);
+    if (channel == nullptr) {
+      LOG(WARNING) << "Unable to get " << i
+                   << "th channel from device: " << GetId();
+      continue;
+    }
+
+    channels.push_back(GetChannel(iio_channel_get_id(channel)));
+  }
+
+  return channels;
+}
+
 IioChannel* IioDeviceImpl::GetChannel(const std::string& name) {
   auto k = channels_.find(name);
   if (k != channels_.end())

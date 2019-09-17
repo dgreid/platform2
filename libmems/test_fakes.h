@@ -80,6 +80,7 @@ class LIBMEMS_EXPORT FakeIioDevice : public IioDevice {
 
   void AddChannel(IioChannel* chan) { channels_.emplace(chan->GetId(), chan); }
 
+  std::vector<IioChannel*> GetAllChannels() override;
   IioChannel* GetChannel(const std::string& id) override;
 
   bool EnableBuffer(size_t n) override;

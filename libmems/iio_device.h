@@ -94,8 +94,11 @@ class LIBMEMS_EXPORT IioDevice {
   // has no trigger, or the trigger can't be found.
   virtual IioDevice* GetTrigger() = 0;
 
-  // Finds the IIO channel |name| for this device and returns it. It will
-  // return nullptr if no such channel can be found.
+  // Returns all channels belonging to this device.
+  virtual std::vector<IioChannel*> GetAllChannels() = 0;
+
+  // Finds the IIO channel |name| as id or name for this device and returns it.
+  // It will return nullptr if no such channel can be found.
   virtual IioChannel* GetChannel(const std::string& name) = 0;
 
   // Returns the sample size in this device.

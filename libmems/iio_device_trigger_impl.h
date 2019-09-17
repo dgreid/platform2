@@ -62,6 +62,9 @@ class LIBMEMS_EXPORT IioDeviceTriggerImpl : public IioDevice {
   bool SetTrigger(IioDevice* trigger_device) override { return false; }
   IioDevice* GetTrigger() override { return nullptr; }
 
+  std::vector<IioChannel*> GetAllChannels() override {
+    return std::vector<IioChannel*>();
+  }
   IioChannel* GetChannel(const std::string& name) override { return nullptr; }
 
   base::Optional<size_t> GetSampleSize() const override {
