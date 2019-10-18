@@ -359,16 +359,27 @@ bool ChromeosChrootPostinst(const InstallConfig& install_config,
   // In factory process, firmware is either pre-flashed or assigned by
   // mini-omaha server, and we don't want to try updates inside postinst.
   if (attempt_firmware_update) {
+    base::FilePath fspm_main;
+    if (CreateTemporaryFile(&fspm_main))
+      SlowBootNotifyPreFwUpdate(fspm_main);
+
     *exit_code = FirmwareUpdate(install_config.root.mount(), is_update);
     if (*exit_code == 0) {
-      if (SlowBootNotifyRequired()) {
+      base::FilePath fspm_next;
+      if (CreateTemporaryFile(&fspm_next))
+        SlowBootNotifyPostFwUpdate(fspm_next);
+
+      if (SlowBootNotifyRequired(fspm_main, fspm_next)) {
         base::FilePath slow_boot_req_file(string(kStatefulMount) +
                                           "/etc/slow_boot_required");
         if (WriteFile(slow_boot_req_file, "1", 1) != 1)
           fprintf(stderr, "Unable to write to file %s - failure reason %s\n",
                   slow_boot_req_file.value().c_str(), strerror(errno));
       }
+      base::DeleteFile(fspm_main, false);
+      base::DeleteFile(fspm_next, false);
     } else {
+      base::DeleteFile(fspm_main, false);
       // Note: This will only rollback the ChromeOS verified boot target.
       // The assumption is that systems running firmware autoupdate
       // are not running legacy (non-ChromeOS) firmware. If the firmware

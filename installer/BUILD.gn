@@ -21,6 +21,7 @@ group("all") {
 pkg_config("target_defaults") {
   pkg_deps = [
     "libbrillo",
+    "libchrome-${libbase_ver}",
     "vboot_host",
   ]
   include_dirs = [ "${sysroot}/usr/include/verity" ]
@@ -125,5 +126,8 @@ if (use.test) {
       "chromeos_legacy_test.cc",
       "inst_util_test.cc",
     ]
+    if (use.enable_slow_boot_notify) {
+      sources += [ "slow_boot_notify_test.cc" ]
+    }
   }
 }
