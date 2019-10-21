@@ -13,6 +13,8 @@
 
 #include <base/macros.h>
 #include <brillo/secure_blob.h>
+#include <crypto/scoped_openssl_types.h>
+#include <openssl/rsa.h>
 
 #include "cryptohome/signature_sealing_backend.h"
 
@@ -52,6 +54,18 @@ class SignatureSealingBackendTpm1Impl final : public SignatureSealingBackend {
 
   DISALLOW_COPY_AND_ASSIGN(SignatureSealingBackendTpm1Impl);
 };
+
+// Extracts the CMK's private key from the output of the migration procedure:
+// the TPM_KEY12 blob of the migrated CMK in |migrated_cmk_key12_blob|, and the
+// migration random XOR-mask in |migration_random_blob|. Returns the OpenSSL
+// private key object.
+crypto::ScopedRSA ExtractCmkPrivateKeyFromMigratedBlob(
+    const brillo::Blob& migrated_cmk_key12_blob,
+    const brillo::Blob& migration_random_blob,
+    const brillo::Blob& cmk_pubkey,
+    const brillo::Blob& cmk_pubkey_digest,
+    const brillo::Blob& msa_composite_digest,
+    RSA* migration_destination_rsa);
 
 }  // namespace cryptohome
 

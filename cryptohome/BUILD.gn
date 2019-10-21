@@ -42,6 +42,7 @@ group("all") {
     deps += [
       ":cryptohome_cryptolib_blob_to_hex_fuzzer",
       ":cryptohome_cryptolib_rsa_oaep_decrypt_fuzzer",
+      ":cryptohome_tpm1_cmk_migration_parser_fuzzer",
     ]
   }
   if (use.tpm2) {
@@ -685,7 +686,10 @@ if (use.tpm2) {
 if (use.fuzzer) {
   executable("cryptohome_cryptolib_rsa_oaep_decrypt_fuzzer") {
     configs += [ "//common-mk/common_fuzzer" ]
-    sources = [ "fuzzers/cryptolib_rsa_oaep_decrypt_fuzzer.cc" ]
+    sources = [
+      "fuzzers/blob_mutator.cc",
+      "fuzzers/cryptolib_rsa_oaep_decrypt_fuzzer.cc",
+    ]
     deps = [ "libs:libcrosplatform" ]
     libs = [ "scrypt" ]
     pkg_deps = [
@@ -693,6 +697,25 @@ if (use.fuzzer) {
       "libchrome-${libbase_ver}",
       "libchrome-test-${libbase_ver}",
       "openssl",
+    ]
+  }
+
+  executable("cryptohome_tpm1_cmk_migration_parser_fuzzer") {
+    configs += [ "//common-mk/common_fuzzer" ]
+    sources = [
+      "fuzzers/blob_mutator.cc",
+      "fuzzers/tpm1_cmk_migration_parser_fuzzer.cc",
+    ]
+    deps = [
+      "libs:libcrosplatform",
+      "libs:libcrostpm",
+    ]
+    pkg_deps = [
+      "libbrillo-${libbase_ver}",
+      "libchrome-${libbase_ver}",
+      "libchrome-test-${libbase_ver}",
+      "openssl",
+      "system_api",
     ]
   }
 
