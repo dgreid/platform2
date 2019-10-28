@@ -55,12 +55,18 @@ struct DeviceInfo {
   // These fields are not available for external cameras.
   std::vector<float> lens_info_available_apertures;
   std::vector<float> lens_info_available_focal_lengths;
-  float lens_info_minimum_focus_distance;
-  float lens_info_optimal_focus_distance;
-  int32_t sensor_info_pixel_array_size_width;
-  int32_t sensor_info_pixel_array_size_height;
-  float sensor_info_physical_size_width;
-  float sensor_info_physical_size_height;
+  float lens_info_minimum_focus_distance = 0;
+  float lens_info_optimal_focus_distance = 0;
+  int32_t sensor_info_pixel_array_size_width = 0;
+  int32_t sensor_info_pixel_array_size_height = 0;
+  float sensor_info_physical_size_width = 0;
+  float sensor_info_physical_size_height = 0;
+
+  // These values are only used for legacy devices (v1 devices).
+  float horizontal_view_angle_16_9 = 0;
+  float horizontal_view_angle_4_3 = 0;
+  float vertical_view_angle_16_9 = 0;
+  float vertical_view_angle_4_3 = 0;
 };
 
 typedef std::vector<DeviceInfo> DeviceInfos;

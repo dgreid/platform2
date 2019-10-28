@@ -30,8 +30,6 @@ namespace {
 
 bool IsUsbV1Key(const std::string& key) {
   static const std::set<std::string> kV1Keys = {
-      "horizontal_view_angle_16_9",      "horizontal_view_angle_4_3",
-      "vertical_view_angle_16_9",        "vertical_view_angle_4_3",
       "resolution_1280x960_unsupported", "resolution_1600x1200_unsupported",
       "allow_external_camera",
   };
@@ -105,6 +103,14 @@ void SetEntry(const std::string& key,
   } else if (key == "sensor_info_pixel_array_size") {
     ParseSize(value, &info->sensor_info_pixel_array_size_width,
               &info->sensor_info_pixel_array_size_height);
+  } else if (key == "horizontal_view_angle_16_9") {
+    info->horizontal_view_angle_16_9 = stof(value);
+  } else if (key == "horizontal_view_angle_4_3") {
+    info->horizontal_view_angle_4_3 = stof(value);
+  } else if (key == "vertical_view_angle_16_9") {
+    info->vertical_view_angle_16_9 = stof(value);
+  } else if (key == "vertical_view_angle_4_3") {
+    info->vertical_view_angle_4_3 = stof(value);
   } else if (IsUsbV1Key(key)) {
     VLOGF(1) << "Ignored v1 key: " << key << " value: " << value;
   } else {

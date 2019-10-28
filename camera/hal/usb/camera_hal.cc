@@ -27,6 +27,7 @@ namespace cros {
 namespace {
 
 bool FillMetadata(const DeviceInfo& device_info,
+                  const CrosDeviceConfig& cros_device_config,
                   android::CameraMetadata* static_metadata,
                   android::CameraMetadata* request_metadata) {
   if (MetadataHandler::FillDefaultMetadata(static_metadata, request_metadata) !=
@@ -34,8 +35,9 @@ bool FillMetadata(const DeviceInfo& device_info,
     return false;
   }
 
-  if (MetadataHandler::FillMetadataFromDeviceInfo(device_info, static_metadata,
-                                                  request_metadata) != 0) {
+  if (MetadataHandler::FillMetadataFromDeviceInfo(
+          device_info, cros_device_config, static_metadata, request_metadata) !=
+      0) {
     return false;
   }
 
@@ -44,8 +46,8 @@ bool FillMetadata(const DeviceInfo& device_info,
   SupportedFormats qualified_formats =
       GetQualifiedFormats(supported_formats, device_info.quirks);
   if (MetadataHandler::FillMetadataFromSupportedFormats(
-          qualified_formats, device_info, static_metadata, request_metadata) !=
-      0) {
+          qualified_formats, device_info, cros_device_config, static_metadata,
+          request_metadata) != 0) {
     return false;
   }
 
@@ -138,7 +140,7 @@ int CameraHal::OpenDevice(int id,
     LOGF(ERROR) << "Camera " << id << " is already opened";
     return -EBUSY;
   }
-  if (!cameras_.empty() && model_name_ == "treeya360") {
+  if (!cameras_.empty() && cros_device_config_.model_name == "treeya360") {
     // It cannot open multiple cameras at the same time due to USB bandwidth
     // limitation (b/147333530).
     // TODO(shik): Use |conflicting_devices| to implement this logic after we
@@ -272,13 +274,12 @@ int CameraHal::Init() {
 
   next_external_camera_id_ = num_builtin_cameras_;
 
-  if (!cros_config_.Init() ||
-      !cros_config_.GetString("/", "name", &model_name_)) {
+  cros_device_config_ = CrosDeviceConfig::Get();
+  if (!cros_device_config_.is_initialized) {
     LOGF(ERROR) << "Failed to initialize CrOS device config";
     // TODO(b/150578054): Return -ENODEV once the issue is fixed. For now, let's
-    // ignore such error and leave |model_name_| empty if it fails.
+    // ignore such error.
   }
-
   return 0;
 }
 
@@ -424,7 +425,8 @@ void CameraHal::OnDeviceAdded(ScopedUdevDevicePtr dev) {
   }
 
   android::CameraMetadata static_metadata, request_template;
-  if (!FillMetadata(info, &static_metadata, &request_template)) {
+  if (!FillMetadata(info, cros_device_config_, &static_metadata,
+                    &request_template)) {
     if (info.lens_facing == ANDROID_LENS_FACING_EXTERNAL) {
       LOGF(ERROR) << "FillMetadata failed, the new external "
                      "camera would be ignored";

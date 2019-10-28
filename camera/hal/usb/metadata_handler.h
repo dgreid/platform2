@@ -13,6 +13,7 @@
 #include <hardware/camera3.h>
 
 #include "hal/usb/common_types.h"
+#include "hal/usb/cros_device_config.h"
 #include "hal/usb/sensor_handler.h"
 #include "hal/usb/v4l2_camera_device.h"
 
@@ -44,13 +45,20 @@ class MetadataHandler {
   static int FillMetadataFromSupportedFormats(
       const SupportedFormats& supported_formats,
       const DeviceInfo& device_info,
+      const CrosDeviceConfig& cros_device_config,
       android::CameraMetadata* static_metadata,
       android::CameraMetadata* request_metadata);
 
   static int FillMetadataFromDeviceInfo(
       const DeviceInfo& device_info,
+      const CrosDeviceConfig& cros_device_config,
       android::CameraMetadata* static_metadata,
       android::CameraMetadata* request_metadata);
+
+  static int FillSensorInfo(const DeviceInfo& device_info,
+                            android::CameraMetadata* metadata,
+                            int32_t array_width,
+                            int32_t array_height);
 
   // Get default settings according to the |template_type|. Can be called on
   // any thread.

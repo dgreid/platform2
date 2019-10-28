@@ -1,17 +1,21 @@
-/* Copyright 2016 The Chromium OS Authors. All rights reserved.
+/*
+ * Copyright 2016 The Chromium OS Authors. All rights reserved.
  * Use of this source code is governed by a BSD-style license that can be
  * found in the LICENSE file.
  */
 
 #include "hal/usb/metadata_handler.h"
 
+#include <algorithm>
 #include <cmath>
 #include <limits>
 #include <map>
 #include <set>
+#include <string>
 #include <unordered_map>
 #include <vector>
 
+#include <chromeos-config/libcros_config/cros_config.h>
 #include "cros-camera/common.h"
 #include "cros-camera/utils/camera_config.h"
 #include "hal/usb/quirks.h"
@@ -23,6 +27,24 @@
 namespace {
 
 constexpr int32_t kMinFps = 1;
+constexpr float kDefaultAvailableFocalLength = 1.6f;
+constexpr float kDefaultMinimumFocusDistance = 0.3f;
+constexpr float kDefaultLensFocusDistance = 0.5f;
+
+std::vector<float> GetPhysicalSize(float horiz_fov,
+                                   float vert_fov,
+                                   float focal_length,
+                                   float array_aspect,
+                                   float still_aspect) {
+  float angle_to_rad_ratio = M_PI / 180.f;
+  float crop_factor = still_aspect / array_aspect;
+  float horiz_crop_factor = std::min(1.f, crop_factor);
+  float vert_crop_factor = std::min(1.f, 1.f / crop_factor);
+  return {2.f * focal_length * std::tan(horiz_fov * angle_to_rad_ratio / 2.f) /
+              horiz_crop_factor,
+          2.f * focal_length * std::tan(vert_fov * angle_to_rad_ratio / 2.f) /
+              vert_crop_factor};
+}
 
 class MetadataUpdater {
  public:
@@ -264,9 +286,12 @@ int MetadataHandler::FillDefaultMetadata(
 int MetadataHandler::FillMetadataFromSupportedFormats(
     const SupportedFormats& supported_formats,
     const DeviceInfo& device_info,
+    const CrosDeviceConfig& cros_device_config,
     android::CameraMetadata* static_metadata,
     android::CameraMetadata* request_metadata) {
   bool is_external = device_info.lens_facing == ANDROID_LENS_FACING_EXTERNAL;
+  bool is_builtin = !is_external;
+  bool is_v1_builtin = is_builtin && cros_device_config.is_v1_device;
 
   if (supported_formats.empty()) {
     return -EINVAL;
@@ -331,7 +356,7 @@ int MetadataHandler::FillMetadataFromSupportedFormats(
     }
 
     for (const auto& format : hal_formats) {
-      if (!is_external) {
+      if (is_builtin) {
         if (supported_format.width > max_hal_width_by_format[format]) {
           LOGF(INFO) << "Filter Format: 0x" << std::hex << format << std::dec
                      << "-width " << supported_format.width << ". max is "
@@ -436,10 +461,19 @@ int MetadataHandler::FillMetadataFromSupportedFormats(
                 active_array_size);
   update_static(ANDROID_SENSOR_INFO_ACTIVE_ARRAY_SIZE, active_array_size);
 
-  if (is_external) {
+  if (is_v1_builtin) {
+    if (FillSensorInfo(device_info, static_metadata,
+                       static_cast<int32_t>(maximum_format.width),
+                       static_cast<int32_t>(maximum_format.height)) != 0) {
+      LOGF(ERROR)
+          << "Failed to fill sensor info for v1 built-in/external camera";
+      return -EINVAL;
+    }
+  } else if (is_external) {
     // It's a sensible value for external camera, since it's required on all
     // devices per spec.  For built-in camera, this would be filled in
-    // FillMetadataFromDeviceInfo() using the value from the configuration file.
+    // FillMetadataFromDeviceInfo() or FillSensorInfo() using the value from the
+    // configuration file.
     // References:
     // * The official document for this field
     //   https://developer.android.com/reference/android/hardware/camera2/CameraCharacteristics.html#SENSOR_INFO_PIXEL_ARRAY_SIZE
@@ -457,6 +491,7 @@ int MetadataHandler::FillMetadataFromSupportedFormats(
 // static
 int MetadataHandler::FillMetadataFromDeviceInfo(
     const DeviceInfo& device_info,
+    const CrosDeviceConfig& cros_device_config,
     android::CameraMetadata* static_metadata,
     android::CameraMetadata* request_metadata) {
   MetadataUpdater update_static(static_metadata);
@@ -464,6 +499,8 @@ int MetadataHandler::FillMetadataFromDeviceInfo(
 
   bool is_external = device_info.lens_facing == ANDROID_LENS_FACING_EXTERNAL;
   bool is_builtin = !is_external;
+  bool is_v1_builtin = is_builtin && cros_device_config.is_v1_device;
+  bool is_v3_builtin = is_builtin && !is_v1_builtin;
 
   std::vector<int32_t> available_request_keys = {
       ANDROID_COLOR_CORRECTION_ABERRATION_MODE,
@@ -611,10 +648,18 @@ int MetadataHandler::FillMetadataFromDeviceInfo(
       ANDROID_SYNC_MAX_LATENCY,
   };
   if (is_builtin) {
+    if (!device_info.lens_info_available_apertures.empty()) {
+      // This field is optional. Only list it if it presents in the
+      // configuration.
+      available_characteristics_keys.insert(
+          available_characteristics_keys.end(),
+          {
+              ANDROID_LENS_INFO_AVAILABLE_APERTURES,
+          });
+    }
     available_characteristics_keys.insert(
         available_characteristics_keys.end(),
         {
-            ANDROID_LENS_INFO_AVAILABLE_APERTURES,
             ANDROID_LENS_INFO_AVAILABLE_FOCAL_LENGTHS,
             ANDROID_LENS_INFO_MINIMUM_FOCUS_DISTANCE,
             ANDROID_SENSOR_INFO_PHYSICAL_SIZE,
@@ -627,7 +672,7 @@ int MetadataHandler::FillMetadataFromDeviceInfo(
   update_static(ANDROID_LENS_FACING,
                 static_cast<uint8_t>(device_info.lens_facing));
 
-  if (is_builtin) {
+  if (is_v3_builtin) {
     update_static(ANDROID_INFO_SUPPORTED_HARDWARE_LEVEL,
                   ANDROID_INFO_SUPPORTED_HARDWARE_LEVEL_LIMITED);
 
@@ -653,11 +698,56 @@ int MetadataHandler::FillMetadataFromDeviceInfo(
         ANDROID_SENSOR_INFO_PHYSICAL_SIZE,
         std::vector<float>{device_info.sensor_info_physical_size_width,
                            device_info.sensor_info_physical_size_height});
-
     update_static(
         ANDROID_SENSOR_INFO_PIXEL_ARRAY_SIZE,
         std::vector<int32_t>{device_info.sensor_info_pixel_array_size_width,
                              device_info.sensor_info_pixel_array_size_height});
+  } else if (is_v1_builtin) {
+    update_static(ANDROID_INFO_SUPPORTED_HARDWARE_LEVEL,
+                  ANDROID_INFO_SUPPORTED_HARDWARE_LEVEL_EXTERNAL);
+
+    if (device_info.lens_info_available_apertures.size() > 0) {
+      update_static(ANDROID_LENS_INFO_AVAILABLE_APERTURES,
+                    device_info.lens_info_available_apertures);
+      update_request(ANDROID_LENS_APERTURE,
+                     device_info.lens_info_available_apertures[0]);
+    }
+
+    if (device_info.lens_info_available_focal_lengths.size() > 0) {
+      update_static(ANDROID_LENS_INFO_AVAILABLE_FOCAL_LENGTHS,
+                    device_info.lens_info_available_focal_lengths);
+      update_request(ANDROID_LENS_FOCAL_LENGTH,
+                     device_info.lens_info_available_focal_lengths[0]);
+    } else {
+      update_static(ANDROID_LENS_INFO_AVAILABLE_FOCAL_LENGTHS,
+                    kDefaultAvailableFocalLength);
+      update_request(ANDROID_LENS_FOCAL_LENGTH, kDefaultAvailableFocalLength);
+    }
+
+    if (device_info.lens_info_minimum_focus_distance > 0) {
+      update_static(ANDROID_LENS_INFO_MINIMUM_FOCUS_DISTANCE,
+                    device_info.lens_info_minimum_focus_distance);
+    } else {
+      update_static(ANDROID_LENS_INFO_MINIMUM_FOCUS_DISTANCE,
+                    kDefaultMinimumFocusDistance);
+    }
+
+    if (device_info.lens_info_optimal_focus_distance > 0) {
+      update_request(ANDROID_LENS_FOCUS_DISTANCE,
+                     device_info.lens_info_optimal_focus_distance);
+    } else {
+      update_request(ANDROID_LENS_FOCUS_DISTANCE, kDefaultLensFocusDistance);
+    }
+
+    if (device_info.sensor_info_pixel_array_size_width > 0 &&
+        device_info.sensor_info_pixel_array_size_height > 0) {
+      update_static(ANDROID_SENSOR_INFO_PIXEL_ARRAY_SIZE,
+                    std::vector<int32_t>{
+                        device_info.sensor_info_pixel_array_size_width,
+                        device_info.sensor_info_pixel_array_size_height});
+    }
+    // For |sensor_info_physical_size|, fill them later with supported formats
+    // information.
   } else {
     update_static(ANDROID_INFO_SUPPORTED_HARDWARE_LEVEL,
                   ANDROID_INFO_SUPPORTED_HARDWARE_LEVEL_EXTERNAL);
@@ -696,6 +786,58 @@ int MetadataHandler::FillMetadataFromDeviceInfo(
   }
 
   return update_static.ok() && update_request.ok() ? 0 : -EINVAL;
+}
+
+int MetadataHandler::FillSensorInfo(const DeviceInfo& device_info,
+                                    android::CameraMetadata* metadata,
+                                    int32_t array_width,
+                                    int32_t array_height) {
+  MetadataUpdater update_static(metadata);
+
+  if (device_info.sensor_info_pixel_array_size_width <= 0 ||
+      device_info.sensor_info_pixel_array_size_height <= 0) {
+    update_static(ANDROID_SENSOR_INFO_PIXEL_ARRAY_SIZE,
+                  std::vector<int32_t>{array_width, array_height});
+  }
+
+  float focal_length = device_info.lens_info_available_focal_lengths.size() > 0
+                           ? device_info.lens_info_available_focal_lengths[0]
+                           : kDefaultAvailableFocalLength;
+
+  float aspect_ratio = 1.f * array_width / array_height;
+  bool is_closer_to_16_9 = std::fabs(aspect_ratio - 16.f / 9.f) <
+                           std::fabs(aspect_ratio - 4.f / 3.f);
+  bool has_fov_info_16_9 = device_info.horizontal_view_angle_16_9 > 0.f &&
+                           device_info.vertical_view_angle_16_9 > 0.f;
+  bool has_fov_info_4_3 = device_info.horizontal_view_angle_4_3 > 0.f &&
+                          device_info.vertical_view_angle_4_3 > 0.f;
+
+  // Use the FOV information (16:9 or 4:3) whose aspect ratio is closer to the
+  // ratio of sensor array size to calculate the sensor physical size.
+  if (has_fov_info_16_9 && (is_closer_to_16_9 || !has_fov_info_4_3)) {
+    update_static(ANDROID_SENSOR_INFO_PHYSICAL_SIZE,
+                  GetPhysicalSize(device_info.horizontal_view_angle_16_9,
+                                  device_info.vertical_view_angle_16_9,
+                                  focal_length, aspect_ratio, 16.f / 9.f));
+  } else if (has_fov_info_4_3) {
+    update_static(ANDROID_SENSOR_INFO_PHYSICAL_SIZE,
+                  GetPhysicalSize(device_info.horizontal_view_angle_4_3,
+                                  device_info.vertical_view_angle_4_3,
+                                  focal_length, aspect_ratio, 4.f / 3.f));
+  } else if (device_info.sensor_info_physical_size_width > 0.f &&
+             device_info.sensor_info_physical_size_height > 0.f) {
+    // Since the sensor physical size might be incorrect, only use these values
+    // when there are no view angle information.
+    update_static(
+        ANDROID_SENSOR_INFO_PHYSICAL_SIZE,
+        std::vector<float>{device_info.sensor_info_physical_size_width,
+                           device_info.sensor_info_physical_size_height});
+  } else {
+    LOGF(ERROR)
+        << "Neither sensor physical size nor view angle information is found";
+    return -EINVAL;
+  }
+  return update_static.ok() ? 0 : -EINVAL;
 }
 
 const camera_metadata_t* MetadataHandler::GetDefaultRequestSettings(

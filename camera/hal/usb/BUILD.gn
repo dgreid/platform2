@@ -54,6 +54,7 @@ shared_library("libcamera_hal") {
     "camera_hal.cc",
     "camera_hal_device_ops.cc",
     "capture_request.cc",
+    "cros_device_config.cc",
     "frame_buffer.cc",
     "image_processor.cc",
     "metadata_handler.cc",
