@@ -169,3 +169,194 @@ TEST_F(KernelWarningCollectorTest, FeedbackNotAllowed) {
       collector_.Collect(KernelWarningCollector::WarningType::kGeneric));
   EXPECT_TRUE(IsDirectoryEmpty(test_crash_directory_));
 }
+
+TEST_F(KernelWarningCollectorTest, CollectUMACOK) {
+  // Collector produces a crash report.
+  ASSERT_TRUE(test_util::CreateFile(
+      test_path_,
+      "iwlwifi 0000:00:14.3: Microcode SW error detected. Restarting 0x0.\n"
+      "iwlwifi 0000:00:14.3: Start IWL Error Log Dump:\n"
+      "iwlwifi 0000:00:14.3: Status: 0x00000040, count: 6\n"
+      "iwlwifi 0000:00:14.3: Loaded firmware version: 53.c31ac674.0 "
+      "QuZ-a0-hr-b0-53.ucode\n"
+      "iwlwifi 0000:00:14.3: 0x00000071 | NMI_INTERRUPT_UMAC_FATAL    \n"
+      "iwlwifi 0000:00:14.3: 0x000022F0 | trm_hw_status0\n"
+      "iwlwifi 0000:00:14.3: 0x00000000 | trm_hw_status1\n"
+      "iwlwifi 0000:00:14.3: 0x004C9C3A | branchlink2\n"
+      "iwlwifi 0000:00:14.3: 0x00016176 | interruptlink1\n"
+      "iwlwifi 0000:00:14.3: 0x00016176 | interruptlink2\n"
+      "iwlwifi 0000:00:14.3: 0x004C496C | data1\n"
+      "iwlwifi 0000:00:14.3: 0x00001000 | data2\n"
+      "iwlwifi 0000:00:14.3: 0x00000000 | data3\n"
+      "iwlwifi 0000:00:14.3: 0x2D807673 | beacon time\n"
+      "iwlwifi 0000:00:14.3: 0x95C4099B | tsf low\n"
+      "iwlwifi 0000:00:14.3: 0x00000002 | tsf hi\n"
+      "iwlwifi 0000:00:14.3: 0x00000000 | time gp1\n"
+      "iwlwifi 0000:00:14.3: 0x011EEC18 | time gp2\n"
+      "iwlwifi 0000:00:14.3: 0x00000001 | uCode revision type\n"
+      "iwlwifi 0000:00:14.3: 0x00000035 | uCode version major\n"
+      "iwlwifi 0000:00:14.3: 0xC31AC674 | uCode version minor\n"
+      "iwlwifi 0000:00:14.3: 0x00000351 | hw version\n"
+      "iwlwifi 0000:00:14.3: 0x00C89004 | board version\n"
+      "iwlwifi 0000:00:14.3: 0x80B1FC19 | hcmd\n"
+      "iwlwifi 0000:00:14.3: 0x00020000 | isr0\n"
+      "iwlwifi 0000:00:14.3: 0x00000000 | isr1\n"
+      "iwlwifi 0000:00:14.3: 0x08F00002 | isr2\n"
+      "iwlwifi 0000:00:14.3: 0x04C37FCC | isr3\n"
+      "iwlwifi 0000:00:14.3: 0x00000000 | isr4\n"
+      "iwlwifi 0000:00:14.3: 0x003B019C | last cmd Id\n"
+      "iwlwifi 0000:00:14.3: 0x004C496C | wait_event\n"
+      "iwlwifi 0000:00:14.3: 0x00000000 | l2p_control\n"
+      "iwlwifi 0000:00:14.3: 0x00000000 | l2p_duration\n"
+      "iwlwifi 0000:00:14.3: 0x00000000 | l2p_mhvalid\n"
+      "iwlwifi 0000:00:14.3: 0x00000000 | l2p_addr_match\n"
+      "iwlwifi 0000:00:14.3: 0x0000004B | lmpm_pmg_sel\n"
+      "iwlwifi 0000:00:14.3: 0x00000000 | timestamp\n"
+      "iwlwifi 0000:00:14.3: 0x000050A8 | flow_handler\n"
+      "iwlwifi 0000:00:14.3: Start IWL Error Log Dump:\n"
+      "iwlwifi 0000:00:14.3: Status: 0x00000040, count: 7\n"
+      "iwlwifi 0000:00:14.3: 0x201002FF | ADVANCED_SYSASSERT\n"
+      "iwlwifi 0000:00:14.3: 0x00000000 | umac branchlink1\n"
+      "iwlwifi 0000:00:14.3: 0x80467A40 | umac branchlink2\n"
+      "iwlwifi 0000:00:14.3: 0xC00866A8 | umac interruptlink1\n"
+      "iwlwifi 0000:00:14.3: 0x00000000 | umac interruptlink2\n"
+      "iwlwifi 0000:00:14.3: 0x003C0102 | umac data1\n"
+      "iwlwifi 0000:00:14.3: 0xDEADBEEF | umac data2\n"
+      "iwlwifi 0000:00:14.3: 0xDEADBEEF | umac data3\n"
+      "iwlwifi 0000:00:14.3: 0x00000035 | umac major\n"
+      "iwlwifi 0000:00:14.3: 0xC31AC674 | umac minor\n"
+      "iwlwifi 0000:00:14.3: 0x011EEC0D | frame pointer\n"
+      "iwlwifi 0000:00:14.3: 0xC0886C40 | stack pointer\n"
+      "iwlwifi 0000:00:14.3: 0x003C0102 | last host cmd\n"
+      "iwlwifi 0000:00:14.3: 0x00000000 | isr status reg\n"
+      "iwlwifi 0000:00:14.3: Fseq Registers:\n"
+      "iwlwifi 0000:00:14.3: 0x60000000 | FSEQ_ERROR_CODE\n"
+      "iwlwifi 0000:00:14.3: 0x80290033 | FSEQ_TOP_INIT_VERSION\n"
+      "iwlwifi 0000:00:14.3: 0x00090006 | FSEQ_CNVIO_INIT_VERSION\n"
+      "iwlwifi 0000:00:14.3: 0x0000A481 | FSEQ_OTP_VERSION\n"
+      "iwlwifi 0000:00:14.3: 0x00000003 | FSEQ_TOP_CONTENT_VERSION\n"
+      "iwlwifi 0000:00:14.3: 0x4552414E | FSEQ_ALIVE_TOKEN\n"
+      "iwlwifi 0000:00:14.3: 0x20000302 | FSEQ_CNVI_ID\n"
+      "iwlwifi 0000:00:14.3: 0x01300504 | FSEQ_CNVR_ID\n"
+      "iwlwifi 0000:00:14.3: 0x20000302 | CNVI_AUX_MISC_CHIP\n"
+      "iwlwifi 0000:00:14.3: 0x01300504 | CNVR_AUX_MISC_CHIP\n"
+      "iwlwifi 0000:00:14.3: 0x05B0905B | "
+      "CNVR_SCU_SD_REGS_SD_REG_DIG_DCDC_VTRIM\n"
+      "iwlwifi 0000:00:14.3: 0x0000025B | "
+      "CNVR_SCU_SD_REGS_SD_REG_ACTIVE_VDIG_MIRROR\n"
+      "iwlwifi 0000:00:14.3: Collecting data: trigger 2 fired.\n"
+      "<remaining log contents>"));
+  EXPECT_TRUE(
+      collector_.Collect(KernelWarningCollector::WarningType::kIwlwifi));
+  EXPECT_TRUE(DirectoryHasFileWithPatternAndContents(
+      test_crash_directory_, "kernel_iwlwifi_error_ADVANCED_SYSASSERT.*.meta",
+      "sig=iwlwifi 0000:00:14.3: 0x201002FF | ADVANCED_SYSASSERT"));
+}
+
+TEST_F(KernelWarningCollectorTest, CollectLMACOK) {
+  // Collector produces a crash report.
+  ASSERT_TRUE(test_util::CreateFile(
+      test_path_,
+      "iwlwifi 0000:00:14.3: Microcode SW error detected. Restarting 0x0.\n"
+      "iwlwifi 0000:00:14.3: Start IWL Error Log Dump:\n"
+      "iwlwifi 0000:00:14.3: Status: 0x00000040, count: 6\n"
+      "iwlwifi 0000:00:14.3: Loaded firmware version: 53.c31ac674.0 "
+      "QuZ-a0-hr-b0-53.ucode\n"
+      "iwlwifi 0000:00:14.3: 0x00000084 | NMI_INTERRUPT_UNKNOWN       \n"
+      "iwlwifi 0000:00:14.3: 0x000022F0 | trm_hw_status0\n"
+      "iwlwifi 0000:00:14.3: 0x00000000 | trm_hw_status1\n"
+      "iwlwifi 0000:00:14.3: 0x004C9C3A | branchlink2\n"
+      "iwlwifi 0000:00:14.3: 0x0000890E | interruptlink1\n"
+      "iwlwifi 0000:00:14.3: 0x0000890E | interruptlink2\n"
+      "iwlwifi 0000:00:14.3: 0x004C492A | data1\n"
+      "iwlwifi 0000:00:14.3: 0xFF000000 | data2\n"
+      "iwlwifi 0000:00:14.3: 0x00000000 | data3\n"
+      "iwlwifi 0000:00:14.3: 0xB180600C | beacon time\n"
+      "iwlwifi 0000:00:14.3: 0x94A49FFF | tsf low\n"
+      "iwlwifi 0000:00:14.3: 0x00000002 | tsf hi\n"
+      "iwlwifi 0000:00:14.3: 0x00000000 | time gp1\n"
+      "iwlwifi 0000:00:14.3: 0x10D5DCA1 | time gp2\n"
+      "iwlwifi 0000:00:14.3: 0x00000001 | uCode revision type\n"
+      "iwlwifi 0000:00:14.3: 0x00000035 | uCode version major\n"
+      "iwlwifi 0000:00:14.3: 0xC31AC674 | uCode version minor\n"
+      "iwlwifi 0000:00:14.3: 0x00000351 | hw version\n"
+      "iwlwifi 0000:00:14.3: 0x00C89004 | board version\n"
+      "iwlwifi 0000:00:14.3: 0x80F3FC19 | hcmd\n"
+      "iwlwifi 0000:00:14.3: 0x00020000 | isr0\n"
+      "iwlwifi 0000:00:14.3: 0x00000000 | isr1\n"
+      "iwlwifi 0000:00:14.3: 0x08F04002 | isr2\n"
+      "iwlwifi 0000:00:14.3: 0x04C01FCC | isr3\n"
+      "iwlwifi 0000:00:14.3: 0x00000000 | isr4\n"
+      "iwlwifi 0000:00:14.3: 0x00E4019C | last cmd Id\n"
+      "iwlwifi 0000:00:14.3: 0x004C492A | wait_event\n"
+      "iwlwifi 0000:00:14.3: 0x00000000 | l2p_control\n"
+      "iwlwifi 0000:00:14.3: 0x00000000 | l2p_duration\n"
+      "iwlwifi 0000:00:14.3: 0x00000000 | l2p_mhvalid\n"
+      "iwlwifi 0000:00:14.3: 0x00000000 | l2p_addr_match\n"
+      "iwlwifi 0000:00:14.3: 0x00000048 | lmpm_pmg_sel\n"
+      "iwlwifi 0000:00:14.3: 0x00000000 | timestamp\n"
+      "iwlwifi 0000:00:14.3: 0x0000A8B8 | flow_handler\n"
+      "iwlwifi 0000:00:14.3: Start IWL Error Log Dump:\n"
+      "iwlwifi 0000:00:14.3: Status: 0x00000040, count: 7\n"
+      "iwlwifi 0000:00:14.3: 0x20000066 | NMI_INTERRUPT_HOST\n"
+      "iwlwifi 0000:00:14.3: 0x00000000 | umac branchlink1\n"
+      "iwlwifi 0000:00:14.3: 0x80467A40 | umac branchlink2\n"
+      "iwlwifi 0000:00:14.3: 0x00000000 | umac interruptlink1\n"
+      "iwlwifi 0000:00:14.3: 0x80475DFC | umac interruptlink2\n"
+      "iwlwifi 0000:00:14.3: 0x01000000 | umac data1\n"
+      "iwlwifi 0000:00:14.3: 0x80475DFC | umac data2\n"
+      "iwlwifi 0000:00:14.3: 0x00000000 | umac data3\n"
+      "iwlwifi 0000:00:14.3: 0x00000035 | umac major\n"
+      "iwlwifi 0000:00:14.3: 0xC31AC674 | umac minor\n"
+      "iwlwifi 0000:00:14.3: 0x10D5DCA0 | frame pointer\n"
+      "iwlwifi 0000:00:14.3: 0xC088621C | stack pointer\n"
+      "iwlwifi 0000:00:14.3: 0x00E60400 | last host cmd\n"
+      "iwlwifi 0000:00:14.3: 0x00000009 | isr status reg\n"
+      "iwlwifi 0000:00:14.3: Fseq Registers:\n"
+      "iwlwifi 0000:00:14.3: 0x60000000 | FSEQ_ERROR_CODE\n"
+      "iwlwifi 0000:00:14.3: 0x80290033 | FSEQ_TOP_INIT_VERSION\n"
+      "iwlwifi 0000:00:14.3: 0x00090006 | FSEQ_CNVIO_INIT_VERSION\n"
+      "iwlwifi 0000:00:14.3: 0x0000A481 | FSEQ_OTP_VERSION\n"
+      "iwlwifi 0000:00:14.3: 0x00000003 | FSEQ_TOP_CONTENT_VERSION\n"
+      "iwlwifi 0000:00:14.3: 0x4552414E | FSEQ_ALIVE_TOKEN\n"
+      "iwlwifi 0000:00:14.3: 0x20000302 | FSEQ_CNVI_ID\n"
+      "iwlwifi 0000:00:14.3: 0x01300504 | FSEQ_CNVR_ID\n"
+      "iwlwifi 0000:00:14.3: 0x20000302 | CNVI_AUX_MISC_CHIP\n"
+      "iwlwifi 0000:00:14.3: 0x01300504 | CNVR_AUX_MISC_CHIP\n"
+      "iwlwifi 0000:00:14.3: 0x05B0905B | "
+      "CNVR_SCU_SD_REGS_SD_REG_DIG_DCDC_VTRIM\n"
+      "iwlwifi 0000:00:14.3: 0x0000025B | "
+      "CNVR_SCU_SD_REGS_SD_REG_ACTIVE_VDIG_MIRROR\n"
+      "<remaining log contents>"));
+  EXPECT_TRUE(
+      collector_.Collect(KernelWarningCollector::WarningType::kIwlwifi));
+  EXPECT_TRUE(DirectoryHasFileWithPatternAndContents(
+      test_crash_directory_,
+      "kernel_iwlwifi_error_NMI_INTERRUPT_UNKNOWN.*.meta",
+      "sig=iwlwifi 0000:00:14.3: 0x00000084 | NMI_INTERRUPT_UNKNOWN       "));
+}
+
+TEST_F(KernelWarningCollectorTest, CollectOKBadIwlwifiSig) {
+  // Collector produces a crash report.
+  ASSERT_TRUE(test_util::CreateFile(
+      test_path_,
+      "iwlwifi 0000:01:00.0: Microcode SW error detected. Restarting 0x0.\n"
+      "iwlwifi 0000:01:00.0: Start IWL Error Log Dump:\n"
+      "iwlwifi 0000:01:00.0: Status: 0x00000100, count: 6\n"
+      "iwlwifi 0000:01:00.0: Loaded firmware version: 43.95eb4e97.0\n"
+      "iwlwifi 0000:01:00.0: 0x00000071 | BAD_COMMAND\n"
+      "iwlwifi 0000:01:00.0: 0x000022F0 | trm_hw_status0\n"
+      "iwlwifi 0000:01:00.0: 0x00000000 | trm_hw_status1\n"
+      "iwlwifi 0000:01:00.0: 0x0000C860 | flow_handler\n"
+      "iwlwifi 0000:01:00.0: Start IWL Error Log Dump:\n"
+      "iwlwifi 0000:01:00.0: Status: 0x00000100, count: 7\n"
+      "iwlwifi 0000:01:00.0: 0x20000079 | \n"
+      "iwlwifi 0000:01:00.0: 0x00000000 | umac branchlink1\n"
+      "<remaining log contents>"));
+  EXPECT_TRUE(
+      collector_.Collect(KernelWarningCollector::WarningType::kIwlwifi));
+  EXPECT_TRUE(DirectoryHasFileWithPatternAndContents(
+      test_crash_directory_, "kernel_iwlwifi_error.*.meta",
+      "sig=iwlwifi 0000:01:00.0: Microcode SW error detected. Restarting "
+      "0x0."));
+}

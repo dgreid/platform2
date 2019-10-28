@@ -264,6 +264,8 @@ int main(int argc, char* argv[]) {
   DEFINE_string(user, "", "User crash info (pid:signal:exec_name)");
   DEFINE_string(udev, "", "Udev event description (type:device:subsystem)");
   DEFINE_bool(kernel_warning, false, "Report collected kernel warning");
+  DEFINE_bool(kernel_iwlwifi_error, false,
+              "Report collected kernel iwlwifi error");
   DEFINE_bool(kernel_wifi_warning, false,
               "Report collected kernel wifi warning");
   DEFINE_bool(kernel_suspend_warning, false,
@@ -588,6 +590,12 @@ int main(int argc, char* argv[]) {
                        .cb = base::BindRepeating(
                            kernel_warn_cb,
                            KernelWarningCollector::WarningType::kSuspend),
+                   },
+                   {
+                       .should_handle = FLAGS_kernel_iwlwifi_error,
+                       .cb = base::BindRepeating(
+                           kernel_warn_cb,
+                           KernelWarningCollector::WarningType::kIwlwifi),
                    }},
   });
 

@@ -16,6 +16,7 @@ namespace {
 const char kGenericWarningExecName[] = "kernel-warning";
 const char kWifiWarningExecName[] = "kernel-wifi-warning";
 const char kSuspendWarningExecName[] = "kernel-suspend-warning";
+const char kKernelIwlwifiErrorExecName[] = "kernel-iwlwifi-error";
 const char kKernelWarningSignatureKey[] = "sig";
 const pid_t kKernelPid = 0;
 }  // namespace
@@ -28,29 +29,54 @@ KernelWarningCollector::KernelWarningCollector()
 
 KernelWarningCollector::~KernelWarningCollector() {}
 
-// Extract the crashing function name from the signature.
-// Signature example: 6a839c19-lkdtm_do_action+0x225/0x5bc
-// Signature example2: 6a839c19-unknown-function+0x161/0x344 [iwlmvm]
-constexpr LazyRE2 sig_re = {R"(^[0-9a-fA-F]+-([0-9a-zA-Z_-]+)\+.*$)"};
-
 bool KernelWarningCollector::LoadKernelWarning(std::string* content,
                                                std::string* signature,
-                                               std::string* func_name) {
+                                               std::string* func_name,
+                                               WarningType type) {
   FilePath kernel_warning_path(warning_report_path_.c_str());
   if (!base::ReadFileToString(kernel_warning_path, content)) {
     PLOG(ERROR) << "Could not open " << kernel_warning_path.value();
     return false;
   }
+
+  if (type == kIwlwifi) {
+    if (!ExtractIwlwifiSignature(*content, signature, func_name)) {
+      return false;
+    } else if (signature->length() > 0) {
+      return true;
+    }
+  } else {
+    if (!ExtractSignature(*content, signature, func_name)) {
+      return false;
+    } else if (signature->length() > 0) {
+      return true;
+    }
+  }
+
+  LOG(WARNING) << "Couldn't find match for signature line. "
+               << "Falling back to first line of warning.";
+  *signature = content->substr(0, content->find('\n'));
+  return true;
+}
+
+// Extract the crashing function name from the signature.
+// Signature example: 6a839c19-lkdtm_do_action+0x225/0x5bc
+// Signature example2: 6a839c19-unknown-function+0x161/0x344 [iwlmvm]
+constexpr LazyRE2 sig_re = {R"(^[0-9a-fA-F]+-([0-9a-zA-Z_-]+)\+.*$)"};
+
+bool KernelWarningCollector::ExtractSignature(const std::string& content,
+                                              std::string* signature,
+                                              std::string* func_name) {
   // The signature is in the first or second line.
   // First, try the first, and if it's not there, try the second.
-  std::string::size_type end_position = content->find('\n');
+  std::string::size_type end_position = content.find('\n');
   if (end_position == std::string::npos) {
     LOG(ERROR) << "unexpected kernel warning format";
     return false;
   }
   size_t start = 0;
   for (int i = 0; i < 2; i++) {
-    *signature = content->substr(start, end_position - start);
+    *signature = content.substr(start, end_position - start);
 
     if (RE2::FullMatch(*signature, *sig_re, func_name)) {
       return true;
@@ -62,12 +88,121 @@ bool KernelWarningCollector::LoadKernelWarning(std::string* content,
 
     // Else, try the next line.
     start = end_position + 1;
-    end_position = content->find('\n', start);
+    end_position = content.find('\n', start);
   }
 
-  LOG(WARNING) << "Couldn't find match for signature line. "
-               << "Falling back to first line of warning.";
-  *signature = content->substr(0, content->find('\n'));
+  return true;
+}
+
+// Extract the crashing function name from the signature.
+// The crashing function for the lmac appears after the line:
+// Loaded firmware version: 46.b20aefee.0
+// Signature example: 0x00000084 | NMI_INTERRUPT_UNKNOWN
+// The crashing function for the umac appears after the line:
+// iwlwifi 0000:00:0c.0: Status: 0x00000100, count: 7
+// Signature example: 0x20000066 | NMI_INTERRUPT_HOST
+constexpr LazyRE2 before_iwlwifi_assert_lmac = {
+    R"(iwlwifi (?:.+): Loaded firmware version:)"};
+constexpr LazyRE2 before_iwlwifi_assert_umac = {R"(iwlwifi (?:.+): Status:)"};
+constexpr LazyRE2 iwlwifi_sig_re = {
+    R"(iwlwifi (?:.+): \b(\w+)\b \| \b(\w+)\b)"};
+
+enum class LineType {
+  Umac,
+  Lmac,
+  None,
+  CheckUmac,
+};
+
+bool KernelWarningCollector::ExtractIwlwifiSignature(const std::string& content,
+                                                     std::string* signature,
+                                                     std::string* func_name) {
+  LineType last_line = LineType::None;
+  // Extracting the function name depends on where the assert occurs in
+  // lmac/umac:
+  // 1- Assert in lmac:
+  //       The umac have the default assert value in its signature
+  //       (0x20000070).
+  // 2- Assert in umac:
+  //       The lmac have the default assert value in its signature
+  //       (0x00000071).
+  // Based on that, the function name in lmac/umac should be ignored if the
+  // assert number in the signature is equal to 0x00000071 in lmac or 0x20000070
+  // in umac.
+  const std::string default_lmac_assert = "0x00000071";
+  const std::string default_umac_assert = "0x20000070";
+  std::string assert_number;
+  std::string::size_type end_position = content.find('\n');
+  if (end_position == std::string::npos) {
+    LOG(ERROR) << "unexpected kernel iwlwifi error format";
+    return false;
+  }
+
+  // Look for the signature in the lmac and check the assert number. if the lmac
+  // assert number not equal (0x00000071), then return that as the signature.
+  // Otherwise, check the signature of the umac. if the umac assert number not
+  // equal (0x20000070), then return that as the signature. Otherwise, break.
+  size_t start = 0;
+  size_t end = content.size();
+  while (start < end && end_position != std::string::npos) {
+    *signature = content.substr(start, end_position - start);
+
+    if (last_line == LineType::None) {
+      if (RE2::PartialMatch(*signature, *before_iwlwifi_assert_lmac)) {
+        last_line = LineType::Lmac;
+      }
+    } else if (last_line == LineType::Lmac) {
+      // Check the signature of the lmac.
+      if (RE2::PartialMatch(*signature, *iwlwifi_sig_re, &assert_number,
+                            func_name)) {
+        if (default_lmac_assert != assert_number) {
+          return true;
+        } else {
+          // Check umac if the lmac assertion number == default_lmac_assert.
+          last_line = LineType::CheckUmac;
+          signature->clear();
+          func_name->clear();
+        }
+      } else {
+        // Break if the signature of the lmac didn't match.
+        LOG(INFO) << *signature << " does not match regex";
+        signature->clear();
+        func_name->clear();
+        break;
+      }
+    } else if (last_line == LineType::CheckUmac) {
+      // Check the line before the umac signature.
+      if (RE2::PartialMatch(*signature, *before_iwlwifi_assert_umac)) {
+        last_line = LineType::Umac;
+      }
+    } else if (last_line == LineType::Umac) {
+      // Check the signature of the umac.
+      if (RE2::PartialMatch(*signature, *iwlwifi_sig_re, &assert_number,
+                            func_name)) {
+        if (default_umac_assert != assert_number) {
+          return true;
+        } else {
+          // Break if the umac assertion number == default_umac_assert.
+          LOG(ERROR) << "unexpected kernel iwlwifi error format. "
+                        "Both umac/lmac dumps have the default assert numbers.";
+          signature->clear();
+          func_name->clear();
+          break;
+        }
+      } else {
+        // Break if the signature of the umac didn't match.
+        LOG(INFO) << *signature << " does not match regex";
+        signature->clear();
+        func_name->clear();
+        break;
+      }
+    }
+
+    // Else, try the next line.
+    start = end_position + 1;
+    end_position = content.find('\n', start);
+  }
+
   return true;
 }
 
@@ -91,7 +226,8 @@ bool KernelWarningCollector::Collect(WarningType type) {
   std::string kernel_warning;
   std::string warning_signature;
   std::string func_name;
-  if (!LoadKernelWarning(&kernel_warning, &warning_signature, &func_name)) {
+  if (!LoadKernelWarning(&kernel_warning, &warning_signature, &func_name,
+                         type)) {
     return true;
   }
 
@@ -106,8 +242,10 @@ bool KernelWarningCollector::Collect(WarningType type) {
     exec_name = kWifiWarningExecName;
   else if (type == kSuspend)
     exec_name = kSuspendWarningExecName;
-  else
+  else if (type == kGeneric)
     exec_name = kGenericWarningExecName;
+  else
+    exec_name = kKernelIwlwifiErrorExecName;
 
   // Attempt to make the exec_name more unique to avoid collisions.
   if (!func_name.empty()) {

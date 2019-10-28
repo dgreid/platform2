@@ -23,6 +23,9 @@ class KernelWarningCollector : public CrashCollector {
     kGeneric,
     kWifi,
     kSuspend,
+    // Iwlwifi is the name of Intel WiFi driver that we want to collect its
+    // error dumps.
+    kIwlwifi,
   };
 
   KernelWarningCollector();
@@ -42,7 +45,14 @@ class KernelWarningCollector : public CrashCollector {
   // Reads the full content of the kernel warn dump and its signature.
   bool LoadKernelWarning(std::string* content,
                          std::string* signature,
-                         std::string* func_name);
+                         std::string* func_name,
+                         WarningType type);
+  bool ExtractSignature(const std::string& content,
+                        std::string* signature,
+                        std::string* func_name);
+  bool ExtractIwlwifiSignature(const std::string& content,
+                               std::string* signature,
+                               std::string* func_name);
 
   DISALLOW_COPY_AND_ASSIGN(KernelWarningCollector);
 };

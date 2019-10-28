@@ -91,7 +91,22 @@ class KernelParser : public Parser {
   MaybeCrashReport ParseLogEntry(const std::string& line) override;
 
  private:
+  // Iwlwifi is the name of Intel WiFi driver that we want to parse its error
+  // dumps.
+  enum class IwlwifiLineType {
+    // The following enum values are used to parse the iwlwifi error. The None
+    // value means that there is no error detected in the log. The Start value
+    // means that the first line of the dump was found. The Lmac value means
+    // that the lmac end was found and should continue parsing the umac. The
+    // first part of the dump is the lmac. The umac comes after the lmac, if it
+    // exists.
+    None,
+    Start,
+    Lmac,
+  };
   LineType last_line_ = LineType::None;
+  IwlwifiLineType iwlwifi_last_line_ = IwlwifiLineType::None;
+  std::string iwlwifi_text_;
   std::string text_;
   std::string flag_;
 

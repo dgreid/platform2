@@ -174,8 +174,21 @@ std::string DetermineFlag(const std::string& info) {
     return "--kernel_wifi_warning";
   if (info.find("drivers/idle") != std::string::npos)
     return "--kernel_suspend_warning";
+
   return "--kernel_warning";
 }
+
+// Older wifi chips have lmac dump only and newer wifi chips have lmac followed
+// by umac dumps. The KernelParser should parse the dumps accordingly.
+// The following regexps identify the beginning of the iwlwifi dump.
+constexpr LazyRE2 start_iwlwifi_dump = {
+    R"(iwlwifi.*(Microcode SW error detected\. Restarting|Microcode CT kill"
+  " error detected\.|Hardware error detected\. Restarting))"};
+// The following regexps separates the umac and lmac.
+constexpr LazyRE2 start_iwlwifi_dump_umac = {R"(Start IWL Error Log Dump(.+))"};
+// The following regexps identify the iwlwifi error dump end.
+constexpr LazyRE2 end_iwlwifi_dump_umac = {R"((.+)isr status reg)"};
+constexpr LazyRE2 end_iwlwifi_dump_lmac = {R"((.+)flow_handler)"};
 
 constexpr char cut_here[] = "------------[ cut here";
 constexpr char end_trace[] = "---[ end trace";
@@ -231,6 +244,40 @@ MaybeCrashReport KernelParser::ParseLogEntry(const std::string& line) {
     text_ += line + "\n";
   }
 
+  if (iwlwifi_last_line_ == IwlwifiLineType::None) {
+    if (RE2::PartialMatch(line, *start_iwlwifi_dump)) {
+      iwlwifi_last_line_ = IwlwifiLineType::Start;
+      iwlwifi_text_ += line + "\n";
+    }
+  } else if (iwlwifi_last_line_ == IwlwifiLineType::Start) {
+    if (RE2::PartialMatch(line, *end_iwlwifi_dump_lmac)) {
+      iwlwifi_last_line_ = IwlwifiLineType::Lmac;
+    } else if (RE2::PartialMatch(line, *end_iwlwifi_dump_umac)) {
+      // Return if the line is equal to the umac end. There is never anything
+      // after the umac end.
+      iwlwifi_last_line_ = IwlwifiLineType::None;
+      iwlwifi_text_ += line + "\n";
+      std::string iwlwifi_text_tmp;
+      iwlwifi_text_tmp.swap(iwlwifi_text_);
+      return CrashReport(std::move(iwlwifi_text_tmp),
+                         {std::move("--kernel_iwlwifi_error")});
+    }
+    iwlwifi_text_ += line + "\n";
+  } else if (iwlwifi_last_line_ == IwlwifiLineType::Lmac) {
+    // Check if there is an umac dump.
+    if (RE2::PartialMatch(line, *start_iwlwifi_dump_umac)) {
+      iwlwifi_last_line_ = IwlwifiLineType::Start;
+      iwlwifi_text_ += line + "\n";
+    } else {
+      // Return if there is no umac.
+      iwlwifi_last_line_ = IwlwifiLineType::None;
+      std::string iwlwifi_text_tmp;
+      iwlwifi_text_tmp.swap(iwlwifi_text_);
+      return CrashReport(std::move(iwlwifi_text_tmp),
+                         {std::move("--kernel_iwlwifi_error")});
+    }
+  }
+
   if (line.find(crash_report_rlimit) != std::string::npos) {
     LOG(INFO) << "crash_reporter crashed!";
     // Rate limit reporting crash_reporter failures to prevent crash loops.
@@ -238,7 +285,7 @@ MaybeCrashReport KernelParser::ParseLogEntry(const std::string& line) {
         (base::TimeTicks::Now() - crash_reporter_last_crashed_) >
             base::TimeDelta::FromHours(1)) {
       crash_reporter_last_crashed_ = base::TimeTicks::Now();
-      return CrashReport("", {"--crash_reporter_crashed"});
+      return CrashReport("", {std::move("--crash_reporter_crashed")});
     }
   }
 
