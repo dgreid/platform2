@@ -1,0 +1,475 @@
+#
+#  Copyright (C) 2019-2020 Intel Corporation
+#
+#  Licensed under the Apache License, Version 2.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
+#
+
+group("all") {
+  deps = [
+    ":libcam_algo",
+    ":libcamhal",
+  ]
+  if (use.ipu6se) {
+    deps += [
+      ":libcam_algo_vendor_gpu",
+    ]
+  }
+}
+
+shared_library("libcamhal") {
+  sources = [
+    "aal/Camera3AMetadata.cpp",
+    "aal/Camera3HAL.cpp",
+    "aal/Camera3HALModule.cpp",
+    "aal/Camera3Stream.cpp",
+    "aal/HALv3Utils.cpp",
+    "aal/IntelAEStateMachine.cpp",
+    "aal/IntelAFStateMachine.cpp",
+    "aal/IntelAWBStateMachine.cpp",
+    "aal/MetadataConvert.cpp",
+    "aal/PostProcessor.cpp",
+    "aal/RequestManager.cpp",
+    "aal/ResultProcessor.cpp",
+    "modules/ia_cipr/src/Buffer.cpp",
+    "modules/ia_cipr/src/Command.cpp",
+    "modules/ia_cipr/src/Context.cpp",
+    "modules/ia_cipr/src/Event.cpp",
+    "modules/ia_cipr/src/Utils.cpp",
+    "modules/sandboxing/client/IntelAlgoClient.cpp",
+    "modules/sandboxing/client/IntelAlgoCommon.cpp",
+    "modules/sandboxing/client/IntelLard.cpp",
+    "modules/sandboxing/client/IntelFaceDetection.cpp",
+    "modules/sandboxing/client/GraphConfigImpl.cpp",
+    "modules/sandboxing/client/IntelCmc.cpp",
+    "modules/sandboxing/client/IntelMkn.cpp",
+    "modules/sandboxing/client/IntelLtm.cpp",
+    "modules/sandboxing/client/IntelAiq.cpp",
+    "modules/sandboxing/client/IntelDvs.cpp",
+    "modules/sandboxing/client/IntelIspParamAdaptor.cpp",
+    "modules/sandboxing/client/IntelPGParam.cpp",
+    "modules/sandboxing/IPCCommon.cpp",
+    "modules/sandboxing/IPCIntelLard.cpp",
+    "modules/sandboxing/IPCIntelFD.cpp",
+    "modules/sandboxing/IPCGraphConfig.cpp",
+    "modules/sandboxing/IPCIntelCmc.cpp",
+    "modules/sandboxing/IPCIntelMkn.cpp",
+    "modules/sandboxing/IPCIntelLtm.cpp",
+    "modules/sandboxing/IPCIntelAiq.cpp",
+    "modules/sandboxing/IPCIntelDvs.cpp",
+    "modules/sandboxing/IPCIspParamAdaptor.cpp",
+    "modules/sandboxing/IPCIntelPGParam.cpp",
+    "modules/memory/Camera3BufferPool.cpp",
+    "modules/memory/chrome/Camera3Buffer.cpp",
+    "src/3a/AiqCore.cpp",
+    "src/3a/AiqEngine.cpp",
+    "src/3a/AiqResult.cpp",
+    "src/3a/AiqResultStorage.cpp",
+    "src/3a/AiqSetting.cpp",
+    "src/3a/AiqStatistics.cpp",
+    "src/3a/AiqUnit.cpp",
+    "src/3a/AiqUtils.cpp",
+    "src/3a/I3AControlFactory.cpp",
+    "src/3a/DvsResult.cpp",
+    "src/3a/Dvs.cpp",
+    "src/3a/MakerNote.cpp",
+    "src/3a/LensManager.cpp",
+    "src/3a/Ltm.cpp",
+    "src/3a/SensorManager.cpp",
+    "src/3a/intel3a/Intel3AParameter.cpp",
+    "src/core/BufferQueue.cpp",
+    "src/core/CameraBuffer.cpp",
+    "src/core/CameraDevice.cpp",
+    "src/core/CameraEvent.cpp",
+    "src/core/CameraStream.cpp",
+    "src/core/CaptureUnit.cpp",
+    "src/core/DeviceBase.cpp",
+    "src/core/IspParamAdaptor.cpp",
+    "src/core/LensHw.cpp",
+    "src/core/PSysProcessor.cpp",
+    "src/core/ProcessorManager.cpp",
+    "src/core/RequestThread.cpp",
+    "src/core/SensorHwCtrl.cpp",
+    "src/core/SofSource.cpp",
+    "src/core/SwImageProcessor.cpp",
+    "src/core/SyncManager.cpp",
+    "src/core/psysprocessor/PGCommon.cpp",
+    "src/core/psysprocessor/PGUtils.cpp",
+    "src/core/psysprocessor/PSysDAG.cpp",
+    "src/core/psysprocessor/PipeLiteExecutor.cpp",
+    "src/core/psysprocessor/PolicyManager.cpp",
+    "src/core/psysprocessor/ShareReferBufferPool.cpp",
+    "src/fd/FaceDetection.cpp",
+    "src/hal/CameraHal.cpp",
+    "src/hal/ICamera.cpp",
+    "src/image_process/ImageConverter.cpp",
+    "src/image_process/ImageScalerCore.cpp",
+    "src/image_process/PostProcessorBase.cpp",
+    "src/image_process/PostProcessorCore.cpp",
+    "src/image_process/chrome/ImageProcessorCore.cpp",
+    "src/iutils/CameraDump.cpp",
+    "src/iutils/CameraLog.cpp",
+    "src/iutils/ScopedAtrace.cpp",
+    "src/iutils/SwImageConverter.cpp",
+    "src/iutils/Thread.cpp",
+    "src/iutils/Trace.cpp",
+    "src/iutils/Utils.cpp",
+    "src/jpeg/EXIFMaker.cpp",
+    "src/jpeg/EXIFMetaData.cpp",
+    "src/jpeg/ExifCreater.cpp",
+    "src/jpeg/JpegMaker.cpp",
+    "src/jpeg/chrome/JpegEncoderCore.cpp",  # TODO: Migrate to hardware JPEG encoding later
+    "src/metadata/CameraMetadata.cpp",
+    "src/metadata/ParameterGenerator.cpp",
+    "src/metadata/ParameterHelper.cpp",
+    "src/metadata/Parameters.cpp",
+    "src/metadata/icamera_metadata_base.cpp",
+    "src/platformdata/AiqInitData.cpp",
+    "src/platformdata/CameraParser.cpp",
+    "src/platformdata/ParserBase.cpp",
+    "src/platformdata/PlatformData.cpp",
+    "src/platformdata/PolicyParser.cpp",
+    "src/platformdata/gc/FormatUtils.cpp",
+    "src/platformdata/gc/GraphConfig.cpp",
+    "src/platformdata/gc/GraphConfigManager.cpp",
+    "src/platformdata/gc/GraphUtils.cpp",
+    "src/v4l2/MediaControl.cpp",
+    "src/v4l2/SysCall.cpp",
+    "src/v4l2/V4l2DeviceFactory.cpp",
+    "src/v4l2/NodeInfo.cpp",
+  ]
+  cflags_cc = [
+    "-fvisibility=default",
+  ]
+  include_dirs = [
+    ".",
+    "include",
+    "include/api",
+    "include/utils",
+    "include/linux",
+    "src",
+    "src/fd",
+    "src/platformdata",
+    "src/platformdata/gc",
+    "src/v4l2",
+    "src/iutils",
+    "src/core",
+    "src/core/psysprocessor",
+    "src/metadata",
+    "src/3a/intel3a",
+    "src/3a/external",
+    "src/3a",
+    "src/image_process",
+    "src/image_process/chrome",
+    "src/jpeg/",
+    "src/jpeg/chrome",
+    "aal",
+    "aal/chrome",
+    "modules/ia_cipr/include",
+    "modules/ia_cipr/src/common",
+    "modules/ia_cipr/src/linux/linux",
+    "modules/memory",
+    "modules/memory/chrome",
+    "include/ia_imaging",
+    "include",
+    "include/gcss",
+  ]
+  defines = [
+    "CAL_BUILD",
+    "IPU_SYSVER_IPU6",
+    "USE_PG_LITE_PIPE",
+    "HAVE_LINUX_OS",
+    "__STDC_FORMAT_MACROS",
+    "HAVE_PTHREADS",
+    "HAVE_IA_TYPES",
+    "HAVE_PRCTL",
+    "CAMERA_HAL_DEBUG",
+    "DUMP_IMAGE",
+    "HAL_PIXEL_FORMAT_NV12_LINEAR_CAMERA_INTEL=0x10F",
+    "ENABLE_SANDBOXING",
+    "FACE_DETECTION",
+  ]
+  libs = [
+    "camera_client",
+    "camera_metadata",
+    "camera_common",
+    "cbm",
+    "jpeg",
+    "dl",
+    "cros_config",
+  ]
+  pkg_deps = [
+    "cros-camera-android-headers",
+    "expat",
+    "libcab",
+    "libcamera_client",
+    "libcamera_common",
+    "libcamera_exif",
+    "libcamera_metadata",
+    "libcamera_v4l2_device",
+    "libcbm",
+    "libchrome",
+    "libmojo",
+    "libsync",
+    "libyuv",
+  ]
+  if (use.ipu6se) {
+    sources += [
+      "modules/ia_css/ipu6se/src/ia_css_program_group_param.c",
+      "modules/ia_css/ipu6se/src/ia_css_psys_process_group.c",
+      "modules/ia_css/ipu6se/src/ia_css_psys_program_group_manifest.c",
+      "modules/ia_css/ipu6se/src/ia_css_psys_terminal_manifest.c",
+      "modules/ia_css/ipu6se/src/ia_css_kernel_bitmap.c",
+      "modules/ia_css/ipu6se/src/ia_css_terminal_manifest.c",
+      "modules/ia_css/ipu6se/src/ia_css_psys_program_manifest.c",
+      "modules/ia_css/ipu6se/src/ia_css_psys_process.c",
+      "modules/ia_css/ipu6se/src/ia_css_psys_terminal.c",
+      "modules/ia_css/ipu6se/src/ia_css_psys_process_group_cmd_impl.c",
+      "modules/ia_css/ipu6se/src/vied_nci_psys_system.c",
+      "modules/ia_css/ipu6se/src/ia_css_terminal.c",
+      "modules/ia_css/ipu6se/src/ia_css_program_group_data.c",
+      "modules/ia_css/ipu6se/src/ia_css_rbm.c",
+      "src/core/psysprocessor/GPUExecutor.cpp",
+      "modules/sandboxing/client/IntelTNR7US.cpp",
+    ]
+    include_dirs += [
+      "modules/ia_css/ipu6se/include",
+    ]
+    libs += [
+      "broxton_ia_pal",
+    ]
+    defines += [
+      "IPU_SYSVER_ipu6v3",
+      "TNR7_CM",
+    ]
+  } else {
+    sources += [
+      "modules/ia_css/ipu6/src/ia_css_program_group_param.c",
+      "modules/ia_css/ipu6/src/ia_css_psys_process_group.c",
+      "modules/ia_css/ipu6/src/ia_css_psys_program_group_manifest.c",
+      "modules/ia_css/ipu6/src/ia_css_psys_terminal_manifest.c",
+      "modules/ia_css/ipu6/src/ia_css_kernel_bitmap.c",
+      "modules/ia_css/ipu6/src/ia_css_terminal_manifest.c",
+      "modules/ia_css/ipu6/src/ia_css_psys_program_manifest.c",
+      "modules/ia_css/ipu6/src/ia_css_psys_process.c",
+      "modules/ia_css/ipu6/src/ia_css_psys_terminal.c",
+      "modules/ia_css/ipu6/src/ia_css_psys_process_group_cmd_impl.c",
+      "modules/ia_css/ipu6/src/vied_nci_psys_system.c",
+      "modules/ia_css/ipu6/src/ia_css_terminal.c",
+      "modules/ia_css/ipu6/src/ia_css_program_group_data.c",
+      "modules/ia_css/ipu6/src/ia_css_rbm.c",
+    ]
+    include_dirs += [
+      "modules/ia_css/ipu6/include",
+    ]
+  }
+  deps = [ "//camera/common/libcamera_ipc:libcamera_ipc_mojom",
+           "//camera/common:libcamera_jpeg",  ]
+}
+
+shared_library("libcam_algo") {
+  sources = [
+    "src/3a/DvsResult.cpp",
+    "src/iutils/Utils.cpp",
+    "src/iutils/Trace.cpp",
+    "src/iutils/ScopedAtrace.cpp",
+    "src/iutils/Thread.cpp",
+    "src/iutils/CameraLog.cpp",
+    "src/platformdata/gc/FormatUtils.cpp",
+    "src/platformdata/gc/GraphUtils.cpp",
+    "src/core/psysprocessor/PGUtils.cpp",
+    "modules/ia_cipr/src/Utils.cpp",
+    "modules/sandboxing/IPCCommon.cpp",
+    "modules/sandboxing/IPCIntelLard.cpp",
+    "modules/sandboxing/IPCIntelFD.cpp",
+    "modules/sandboxing/IPCGraphConfig.cpp",
+    "modules/sandboxing/IPCIntelCmc.cpp",
+    "modules/sandboxing/IPCIntelMkn.cpp",
+    "modules/sandboxing/IPCIntelLtm.cpp",
+    "modules/sandboxing/IPCIntelAiq.cpp",
+    "modules/sandboxing/IPCIntelDvs.cpp",
+    "modules/sandboxing/IPCIspParamAdaptor.cpp",
+    "modules/sandboxing/IPCIntelPGParam.cpp",
+    "modules/sandboxing/server/IntelCPUAlgoServer.cpp",
+    "modules/sandboxing/server/IntelAlgoServer.cpp",
+    "modules/sandboxing/server/IntelLardServer.cpp",
+    "modules/sandboxing/server/IntelFDServer.cpp",
+    "modules/sandboxing/server/GraphConfigServer.cpp",
+    "modules/sandboxing/server/IntelCmcServer.cpp",
+    "modules/sandboxing/server/IntelMknServer.cpp",
+    "modules/sandboxing/server/IntelLtmServer.cpp",
+    "modules/sandboxing/server/IntelAiqServer.cpp",
+    "modules/sandboxing/server/IntelDvsServer.cpp",
+    "modules/sandboxing/server/IspParamAdaptorServer.cpp",
+    "modules/sandboxing/server/IntelPGParamServer.cpp",
+    "modules/algowrapper/IntelLard.cpp",
+    "modules/algowrapper/IntelFaceDetection.cpp",
+    "modules/algowrapper/graph/GraphConfigImpl.cpp",
+    "modules/algowrapper/graph/GraphConfigPipe.cpp",
+    "modules/algowrapper/IntelCmc.cpp",
+    "modules/algowrapper/IntelMkn.cpp",
+    "modules/algowrapper/IntelLtm.cpp",
+    "modules/algowrapper/IntelAiq.cpp",
+    "modules/algowrapper/IntelDvs.cpp",
+    "modules/algowrapper/IntelIspParamAdaptor.cpp",
+    "modules/algowrapper/IntelPGParam.cpp",
+    "src/3a/AiqUtils.cpp",
+  ]
+  cflags_cc = [
+    "-fvisibility=default",
+  ]
+  include_dirs = [
+    ".",
+    "include",
+    "include/api",
+    "include/utils",
+    "include/linux",
+    "src",
+    "src/fd",
+    "src/platformdata",
+    "src/platformdata/gc",
+    "src/v4l2",
+    "src/iutils",
+    "src/core",
+    "src/core/psysprocessor",
+    "src/metadata",
+    "src/3a/intel3a",
+    "src/3a/external",
+    "src/3a",
+    "src/image_process",
+    "src/image_process/chrome",
+    "src/jpeg/",
+    "src/jpeg/chrome",
+    "aal",
+    "aal/chrome",
+    "modules/memory",
+    "modules/memory/chrome",
+    "include/ia_imaging",
+    "include",
+    "include/gcss",
+ ]
+  defines = [
+    "CAL_BUILD",
+    "IPU_SYSVER_IPU6",
+    "USE_PG_LITE_PIPE",
+    "HAVE_LINUX_OS",
+    "__STDC_FORMAT_MACROS",
+    "HAVE_PTHREADS",
+    "HAVE_IA_TYPES",
+    "HAVE_PRCTL",
+    "CAMERA_HAL_DEBUG",
+    "DUMP_IMAGE",
+    "HAL_PIXEL_FORMAT_NV12_LINEAR_CAMERA_INTEL=0x10F",
+    "ENABLE_SANDBOXING",
+    "FACE_DETECTION",
+  ]
+  libs = [
+    "ia_aiq",
+    "ia_cmc_parser",
+    "ia_exc",
+    "ia_log",
+    "ia_mkn",
+    "ia_ltm",
+    "ia_isp_bxt",
+    "ia_dvs",
+    "ia_lard",
+    "pvl_eye_detection",
+    "pvl_face_detection",
+    "pvl_mouth_detection",
+    "gcss",
+    "ia_aiqb_parser",
+  ]
+  pkg_deps = [
+    "cros-camera-android-headers",
+    "libcab",
+    "libmojo",
+  ]
+  if (use.ipu6se) {
+    libs += [
+      "ipu6sepla",
+      "ia_p2p_ipu6sepla",
+    ]
+    defines += [
+      "IPU_SYSVER_ipu6v3",
+    ]
+    include_dirs += [
+      "modules/ia_css/ipu6se/include",
+    ]
+  } else {
+    libs += [
+      "ipu6",
+      "ia_p2p_ipu6",
+    ]
+    include_dirs += [
+      "modules/ia_css/ipu6/include",
+    ]
+  }
+  deps = [ "//camera/common/libcamera_ipc:libcamera_ipc_mojom" ]
+}
+
+if (use.ipu6se) {
+  shared_library("libcam_algo_vendor_gpu") {
+    sources = [
+      "src/iutils/Utils.cpp",
+      "src/iutils/Trace.cpp",
+      "src/iutils/ScopedAtrace.cpp",
+      "src/iutils/Thread.cpp",
+      "src/iutils/CameraLog.cpp",
+      "modules/sandboxing/IPCCommon.cpp",
+      "modules/sandboxing/server/IntelAlgoServer.cpp",
+      "modules/sandboxing/server/IntelGPUAlgoServer.cpp",
+      "modules/sandboxing/server/IntelTNRServer.cpp",
+      "modules/algowrapper/IntelTNR7US.cpp",
+    ]
+    include_dirs = [
+      ".",
+      "include",
+      "include/api",
+      "include/utils",
+      "include/linux",
+      "src",
+      "src/core",
+      "src/platformdata",
+      "src/3a",
+      "src/platformdata/gc",
+      "src/iutils",
+      "src/metadata",
+      "src/v4l2",
+      "include",
+      "include/ia_imaging",
+      "include/gcss",
+    ]
+    defines = [
+      "CAL_BUILD",
+      "IPU_SYSVER_IPU6",
+      "HAVE_LINUX_OS",
+      "__STDC_FORMAT_MACROS",
+      "HAVE_PTHREADS",
+      "CAMERA_HAL_DEBUG",
+      "ENABLE_SANDBOXING",
+      "IPU_SYSVER_ipu6v3",
+      "GPU_ALGO_SERVER",
+      "TNR7_CM",
+    ]
+    libs = [
+      "ia_log",
+      "tnr7_cm",
+    ]
+    pkg_deps = [
+      "cros-camera-android-headers",
+      "libcab",
+      "igfxcmrt",
+      "libmojo",
+    ]
+    deps = [ "//camera/common/libcamera_ipc:libcamera_ipc_mojom" ]
+  }
+}
