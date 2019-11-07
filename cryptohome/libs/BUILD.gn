@@ -29,10 +29,11 @@ action("cryptohome-proto-external") {
   policy_proto_path = "${sysroot}/usr/include/proto"
   script = "external_proto_generator.py"
   inputs = [
+    "${dbus_proto_path}/fido.proto",
     "${dbus_proto_path}/key.proto",
     "${dbus_proto_path}/rpc.proto",
-    "${dbus_proto_path}/UserDataAuth.proto",
     "${dbus_proto_path}/signed_secret.proto",
+    "${dbus_proto_path}/UserDataAuth.proto",
     "${policy_proto_path}/install_attributes.proto",
   ]
   outputs =
