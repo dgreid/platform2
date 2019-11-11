@@ -1,4 +1,5 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 # Copyright 2018 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -8,7 +9,6 @@
 from __future__ import print_function
 
 import argparse
-import cherrypy
 from datetime import datetime
 import json
 import os
@@ -17,6 +17,8 @@ import subprocess
 import sys
 import threading
 import time
+
+import cherrypy
 from ws4py.server.cherrypyserver import WebSocketPlugin, WebSocketTool
 from ws4py.websocket import WebSocket
 
@@ -37,9 +39,9 @@ errors = [
 ]
 
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
-HTML_DIR = os.path.join(SCRIPT_DIR, "html")
+HTML_DIR = os.path.join(SCRIPT_DIR, 'html')
 
-ECTOOL = "ectool"
+ECTOOL = 'ectool'
 # Wait to see a finger on the sensor
 FP_MODE_FINGER_DOWN = 2
 # Poll until the finger has left the sensor
@@ -81,20 +83,20 @@ class FingerWebSocket(WebSocket):
 
   def closed(self, code, reason=''):
     self.abort_request = True
-    cherrypy.log("Websocket closed with code %d / %s" % (code, reason))
+    cherrypy.log('Websocket closed with code %d / %s' % (code, reason))
     if not self.worker:
       cherrypy.log("Worker thread wasn't running.")
       return
-    cherrypy.log("Stopping worker thread.")
+    cherrypy.log('Stopping worker thread.')
     # Wake up the thread so it can exit.
     self.available_req.acquire()
     self.available_req.notify()
     self.available_req.release()
     self.worker.join(10.0)
     if self.worker.isAlive():
-      cherrypy.log("Failed to stop worker thread.")
+      cherrypy.log('Failed to stop worker thread.')
     else:
-      cherrypy.log("Successfully stopped worker thread.")
+      cherrypy.log('Successfully stopped worker thread.')
 
   def received_message(self, m):
     if m.is_binary:
@@ -112,20 +114,23 @@ class FingerWebSocket(WebSocket):
     if not os.path.exists(path):
       os.makedirs(path)
 
-  def ectool(self, command, *params):
+  def ectool(self, command: str, *params) -> bytes:
+    """Run the ectool command and return its stdout as bytes"""
+
     cmdline = [ECTOOL, '--name=cros_fp', command] + list(params)
+    stdout = b''
     while not self.abort_request:
       try:
         stdout = subprocess.check_output(cmdline)
         break
-      except subprocess.CalledProcessError, e:
+      except subprocess.CalledProcessError as e:
         cherrypy.log("command '%s' failed with %d" % (e.cmd, e.returncode))
-        stdout = ''
+        stdout = b''
         # try again
     return stdout
 
-  def ectool_fpmode(self, *params):
-    mode = self.ectool('fpmode', *params)
+  def ectool_fpmode(self, *params) -> int:
+    mode = self.ectool('fpmode', *params).decode('utf-8')
     match_mode = self.FP_MODE_RE.search(mode)
     return int(match_mode.group(1), 16) if match_mode else -1
 
@@ -145,13 +150,15 @@ class FingerWebSocket(WebSocket):
     if not img:
       return
     cherrypy.log("Saving file '%s' size %d" % (raw_file, len(img)))
-    file(raw_file, 'w').write(img)
+    with open(raw_file, 'wb') as f:
+      f.write(img)
     if self.utils:
       rc, fmi = self.utils.image_data_to_fmi(img)
       if rc == 0:
-        file(fmi_file, 'w').write(fmi)
+        with open(fmi_file, 'wb') as f:
+          f.write(fmi)
       else:
-        cherrypy.log("FMI conversion failed %d" % (rc))
+        cherrypy.log('FMI conversion failed %d' % (rc))
 
   def finger_process(self, req):
     # Ensure the user has removed the finger between 2 captures
@@ -167,7 +174,7 @@ class FingerWebSocket(WebSocket):
     # detect the finger removal before the next capture
     self.ectool_fpmode('fingerup')
     # record the outcome of the capture
-    cherrypy.log("Captured finger %02d:%02d in %.2fs" % (req['finger'],
+    cherrypy.log('Captured finger %02d:%02d in %.2fs' % (req['finger'],
                                                          req['picture'],
                                                          t1 - t0))
     req['result'] = 'ok' # ODER req['result'] = errors[ERRNUM_TBD]
@@ -209,7 +216,8 @@ class Root(object):
 
   @cherrypy.expose
   def index(self):
-    return file(os.path.join(SCRIPT_DIR, "html/index.html")).read()
+    with open(os.path.join(SCRIPT_DIR, 'html/index.html')) as f:
+      return f.read()
 
   @cherrypy.expose
   def finger(self):
@@ -218,16 +226,16 @@ class Root(object):
 if __name__ == '__main__':
   # Get study parameters from the command-line
   parser = argparse.ArgumentParser()
-  parser.add_argument("-f", "--finger_count", type=int, default=2,
-                      help="Number of fingers acquired per user")
-  parser.add_argument("-e", "--enrollment_count", type=int, default=20,
-                      help="Number of enrollment images per finger")
-  parser.add_argument("-v", "--verification_count", type=int, default=15,
-                      help="Number of verification images per finger")
+  parser.add_argument('-f', '--finger_count', type=int, default=2,
+                      help='Number of fingers acquired per user')
+  parser.add_argument('-e', '--enrollment_count', type=int, default=20,
+                      help='Number of enrollment images per finger')
+  parser.add_argument('-v', '--verification_count', type=int, default=15,
+                      help='Number of verification images per finger')
   parser.add_argument('-p', '--port', type=int, default=9000,
-                      help="port for the webserver socket")
-  parser.add_argument('-d', '--picture_dir', default="./fingers",
-                      help="Log files directory")
+                      help='port for the webserver socket')
+  parser.add_argument('-d', '--picture_dir', default='./fingers',
+                      help='Log files directory')
   parser.add_argument('-l', '--log_dir')
   args = parser.parse_args()
   # Configure cherrypy server

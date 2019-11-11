@@ -29,9 +29,9 @@ finger press. This does not make use of the FPC python library.
 
 ```bash
 rm -rf /tmp/virtualenv-study
-virtualenv /tmp/virtualenv-study
+virtualenv -p python3 /tmp/virtualenv-study
 . /tmp/virtualenv-study/bin/activate
-pip install -r requirements.txt
+pip3 install -r requirements.txt
 PATH=$(pwd)/mock-bin:$PATH ./study_serve.py
 ```
 
