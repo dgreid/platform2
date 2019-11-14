@@ -418,6 +418,7 @@ if (use.test) {
       "bootlockbox/boot_lockbox_unittest.cc",
       "challenge_credentials/challenge_credentials_helper_impl_unittest.cc",
       "challenge_credentials/challenge_credentials_test_utils.cc",
+      "challenge_credentials/fido_utils_unittest.cc",
       "credentials_unittest.cc",
       "crypto_unittest.cc",
       "cryptohome_event_source_unittest.cc",
