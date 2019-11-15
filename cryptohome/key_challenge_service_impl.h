@@ -5,6 +5,7 @@
 #ifndef CRYPTOHOME_KEY_CHALLENGE_SERVICE_IMPL_H_
 #define CRYPTOHOME_KEY_CHALLENGE_SERVICE_IMPL_H_
 
+#include <memory>
 #include <string>
 
 #include <base/macros.h>
@@ -38,6 +39,16 @@ class KeyChallengeServiceImpl final : public KeyChallengeService {
   void ChallengeKey(const AccountIdentifier& account_id,
                     const KeyChallengeRequest& key_challenge_request,
                     ResponseCallback response_callback) override;
+
+  void FidoMakeCredential(
+      const std::string& client_data_json,
+      const cryptohome::fido::PublicKeyCredentialCreationOptions& options,
+      MakeCredentialCallback response_callback) override;
+
+  void FidoGetAssertion(
+      const std::string& client_data_json,
+      const cryptohome::fido::PublicKeyCredentialRequestOptions& request,
+      GetAssertionCallback response_callback) override;
 
  private:
   const std::string key_delegate_dbus_service_name_;

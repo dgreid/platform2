@@ -36,6 +36,30 @@ class MockKeyChallengeService : public KeyChallengeService {
     // directly. Use ChallengeKeyMovable for all mocking needs.
     ChallengeKeyMovable(account_id, key_challenge_request, &response_callback);
   };
+
+  MOCK_METHOD(void,
+              FidoMakeCredentialMovable,
+              (const std::string&,
+               const cryptohome::fido::PublicKeyCredentialCreationOptions&,
+               MakeCredentialCallback*));
+  void FidoMakeCredential(
+      const std::string& client_data_json,
+      const cryptohome::fido::PublicKeyCredentialCreationOptions& options,
+      MakeCredentialCallback response_callback) override {
+    FidoMakeCredentialMovable(client_data_json, options, &response_callback);
+  };
+
+  MOCK_METHOD(void,
+              FidoGetAssertionMovable,
+              (const std::string&,
+               const cryptohome::fido::PublicKeyCredentialRequestOptions&,
+               GetAssertionCallback*));
+  void FidoGetAssertion(
+      const std::string& client_data,
+      const cryptohome::fido::PublicKeyCredentialRequestOptions& request,
+      GetAssertionCallback response_callback) override {
+    FidoGetAssertionMovable(client_data, request, &response_callback);
+  };
 };
 
 // Helper class for simplifying the use of MockKeyChallengeService.

@@ -104,6 +104,69 @@ void OnDBusChallengeKeyFailure(
   std::move(original_callback).Run(nullptr /* response */);
 }
 
+void OnDBusFidoMakeCredentialSuccess(
+    std::shared_ptr<OnceCallbackHolder<
+        KeyChallengeService::MakeCredentialCallback>> callback_holder,
+    const std::vector<uint8_t>& make_credential_response) {
+  KeyChallengeService::MakeCredentialCallback original_callback =
+      callback_holder->get();
+
+  if (make_credential_response.empty()) {
+    std::move(original_callback).Run(nullptr /* response */);
+    return;
+  }
+  auto response =
+      std::make_unique<cryptohome::fido::MakeCredentialAuthenticatorResponse>();
+  if (!DeserializeProto(make_credential_response, response.get())) {
+    LOG(ERROR) << "Failed to parse MakeCredentialAuthenticatorResponse from "
+               << "FidoMakeCredential D-Bus call";
+    return;
+  }
+  std::move(original_callback).Run(std::move(response));
+}
+
+void OnDBusFidoMakeCredentialFailure(
+    std::shared_ptr<OnceCallbackHolder<
+        KeyChallengeService::MakeCredentialCallback>> callback_holder,
+    brillo::Error* error) {
+  LOG(ERROR) << error->GetMessage();
+  KeyChallengeService::MakeCredentialCallback original_callback =
+      callback_holder->get();
+  std::move(original_callback).Run(nullptr /* response */);
+}
+
+void OnDBusFidoGetAssertionSuccess(
+    std::shared_ptr<OnceCallbackHolder<
+        KeyChallengeService::GetAssertionCallback>> callback_holder,
+    const std::vector<uint8_t>& get_assertion_response) {
+  KeyChallengeService::GetAssertionCallback original_callback =
+      callback_holder->get();
+
+  if (get_assertion_response.empty()) {
+    std::move(original_callback).Run(nullptr /* response */);
+    return;
+  }
+
+  auto response =
+      std::make_unique<cryptohome::fido::GetAssertionAuthenticatorResponse>();
+  if (!DeserializeProto(get_assertion_response, response.get())) {
+    LOG(ERROR) << "Failed to parse GetAssertionAuthenticatorResponse from "
+               << "FidoGetAssertion D-Bus call";
+    return;
+  }
+  std::move(original_callback).Run(std::move(response));
+}
+
+void OnDBusFidoGetAssertionFailure(
+    std::shared_ptr<OnceCallbackHolder<
+        KeyChallengeService::GetAssertionCallback>> callback_holder,
+    brillo::Error* error) {
+  LOG(ERROR) << error->GetMessage();
+  KeyChallengeService::GetAssertionCallback original_callback =
+      callback_holder->get();
+  std::move(original_callback).Run(nullptr /* response */);
+}
+
 }  // namespace
 
 KeyChallengeServiceImpl::KeyChallengeServiceImpl(
@@ -126,7 +189,8 @@ void KeyChallengeServiceImpl::ChallengeKey(
     // Bail out to avoid crashing inside the D-Bus library.
     // TODO(emaxx): Remove this special handling once libchrome is uprev'ed to
     // include the fix from crbug.com/927196.
-    LOG(ERROR) << "Invalid key challenge service name";
+    LOG(ERROR) << "Invalid key challenge service name "
+               << key_delegate_dbus_service_name_;
     std::move(response_callback).Run(nullptr /* response */);
     return;
   }
@@ -149,6 +213,48 @@ void KeyChallengeServiceImpl::ChallengeKey(
       base::Bind(&OnDBusChallengeKeySuccess, callback_holder),
       base::Bind(&OnDBusChallengeKeyFailure, callback_holder),
       /*timeout_ms=*/kDbusCallTimeout.InMilliseconds());
+}
+
+void KeyChallengeServiceImpl::FidoMakeCredential(
+    const std::string& client_data_json,
+    const cryptohome::fido::PublicKeyCredentialCreationOptions& request,
+    MakeCredentialCallback response_callback) {
+  if (!dbus_validate_bus_name(key_delegate_dbus_service_name_.c_str(),
+                              nullptr /* error */)) {
+    LOG(ERROR) << "Invalid key challenge service name "
+               << key_delegate_dbus_service_name_;
+    std::move(response_callback).Run(nullptr /* response */);
+    return;
+  }
+
+  std::shared_ptr<OnceCallbackHolder<MakeCredentialCallback>> callback_holder(
+      new OnceCallbackHolder<MakeCredentialCallback>(
+          std::move(response_callback)));
+  dbus_proxy_.FidoMakeCredentialAsync(
+      client_data_json, SerializeProto(request),
+      base::Bind(&OnDBusFidoMakeCredentialSuccess, callback_holder),
+      base::Bind(&OnDBusFidoMakeCredentialFailure, callback_holder));
+}
+
+void KeyChallengeServiceImpl::FidoGetAssertion(
+    const std::string& client_data_json,
+    const cryptohome::fido::PublicKeyCredentialRequestOptions& request,
+    GetAssertionCallback response_callback) {
+  if (!dbus_validate_bus_name(key_delegate_dbus_service_name_.c_str(),
+                              nullptr)) {
+    LOG(ERROR) << "Invalid key challenge service name "
+               << key_delegate_dbus_service_name_;
+    std::move(response_callback).Run(nullptr /* response */);
+    return;
+  }
+
+  std::shared_ptr<OnceCallbackHolder<GetAssertionCallback>> callback_holder(
+      new OnceCallbackHolder<GetAssertionCallback>(
+          std::move(response_callback)));
+  dbus_proxy_.FidoGetAssertionAsync(
+      client_data_json, SerializeProto(request),
+      base::Bind(&OnDBusFidoGetAssertionSuccess, callback_holder),
+      base::Bind(&OnDBusFidoGetAssertionFailure, callback_holder));
 }
 
 }  // namespace cryptohome

@@ -6,9 +6,11 @@
 #define CRYPTOHOME_KEY_CHALLENGE_SERVICE_H_
 
 #include <memory>
+#include <string>
 
 #include <base/callback.h>
 
+#include "cryptohome/fido.pb.h"
 #include "cryptohome/rpc.pb.h"
 
 namespace cryptohome {
@@ -34,6 +36,16 @@ class KeyChallengeService {
   using ResponseCallback =
       base::OnceCallback<void(std::unique_ptr<KeyChallengeResponse> response)>;
 
+  // This callback is called with a response containing the public key for a
+  // make credential request to a FIDO security key.
+  using MakeCredentialCallback = base::OnceCallback<void(
+      std::unique_ptr<cryptohome::fido::MakeCredentialAuthenticatorResponse>)>;
+
+  // This callback is called with a response containing the FIDO signature for
+  // a FIDO get assertion request from a FIDO security key.
+  using GetAssertionCallback = base::OnceCallback<void(
+      std::unique_ptr<cryptohome::fido::GetAssertionAuthenticatorResponse>)>;
+
   // Starts a challenge request against the specified cryptographic key.
   //
   // The challenge data is passed via |key_challenge_request|, and |account_id|
@@ -42,6 +54,18 @@ class KeyChallengeService {
   virtual void ChallengeKey(const AccountIdentifier& account_id,
                             const KeyChallengeRequest& key_challenge_request,
                             ResponseCallback response_callback) = 0;
+
+  // Create credentials on a FIDO security key.
+  virtual void FidoMakeCredential(
+      const std::string& client_data_json,
+      const cryptohome::fido::PublicKeyCredentialCreationOptions& options,
+      MakeCredentialCallback response_callback) = 0;
+
+  // Challenge a FIDO security key.
+  virtual void FidoGetAssertion(
+      const std::string& client_data,
+      const cryptohome::fido::PublicKeyCredentialRequestOptions& request,
+      GetAssertionCallback response_callback) = 0;
 };
 
 }  // namespace cryptohome
