@@ -108,5 +108,17 @@ expected by the fingerprint study tool, please modify
 
 Navigate to http://127.0.0.1:9000 in a web browser.
 
+### Build Fingerprint Study Image
+
+This is an **untested** method of building an entire Chrome OS image with the
+fingerprint_study package included.
+
+```bash
+(inside) $ BOARD=hatch
+(inside) $ USE=fpstudy ./build_packages --board=$BOARD
+(inside) $ ./build_image --board=$BOARD
+(inside) $ cros flash usb:// $BOARD/latest
+```
+
 [Enable Developer Mode]: https://chromium.googlesource.com/chromiumos/docs/+/HEAD/developer_mode.md#dev-mode
 [Typography conventions]: https://chromium.googlesource.com/chromiumos/docs/+/HEAD/developer_guide.md#typography-conventions
