@@ -218,6 +218,7 @@ int U2fDaemon::StartService() {
       include_g2f_allowlist_data);
 
   CreateU2fHid();
+  InitializeWebAuthnHandler();
 
   return u2fhid_->Init() ? EX_OK : EX_PROTOCOL;
 }
@@ -308,6 +309,16 @@ void U2fDaemon::CreateU2fHid() {
       std::make_unique<u2f::UHidDevice>(vendor_id_, product_id_, kDeviceName,
                                         "u2fd-tpm-cr50"),
       u2f_msg_handler_.get());
+}
+
+void U2fDaemon::InitializeWebAuthnHandler() {
+  std::function<void()> request_presence = [this]() {
+    IgnorePowerButtonPress();
+    SendWinkSignal();
+  };
+
+  webauthn_handler_.Initialize(&tpm_proxy_, user_state_.get(),
+                               request_presence);
 }
 
 bool U2fDaemon::SetVendorMode(U2fMode mode) {

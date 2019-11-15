@@ -67,6 +67,7 @@ class U2fDaemon : public brillo::DBusServiceDaemon {
   void CreateU2fMsgHandler(bool allow_g2f_attestation,
                            bool include_g2f_allowlisting_data);
   void CreateU2fHid();
+  void InitializeWebAuthnHandler();
 
   // Sets the vendor mode in cr50, if applicable, based on U2F mode.
   // Newer builds of cr50 do not have a concept of vendor mode.
