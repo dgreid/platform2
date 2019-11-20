@@ -35,6 +35,20 @@ struct CpuTimeRecord {
   uint64_t total_time_ = 0;
 };
 
+struct PowerDomain {
+  base::FilePath file_path;
+  std::string name;
+  uint64_t max_energy;
+  uint64_t energy_before;
+  uint64_t energy_after;
+  base::TimeTicks ticks_before;
+  base::TimeTicks ticks_after;
+
+  bool operator<(const PowerDomain& that) const {
+    return file_path < that.file_path;
+  }
+};
+
 // Parse cumulative vm statistics from data read from /proc/vmstat.  Returns
 // true for success.
 bool VmStatsParseStats(std::istream* input, struct VmstatRecord* record);
@@ -71,6 +85,39 @@ class GpuInfo {
   GpuType gpu_type_;
 
   DISALLOW_COPY_AND_ASSIGN(GpuInfo);
+};
+
+// Encapsulates access to Intel RAPL information.
+// Running Average Power Limit. See:
+// https://www.kernel.org/doc/Documentation/power/powercap/powercap.txt
+class RAPLInfo {
+ public:
+  enum class CpuType { kIntel, kUnknown };
+  virtual ~RAPLInfo() = default;
+
+  // Detect and get an instance of RAPLInfo to access RAPL information from the
+  // system.
+  static std::unique_ptr<RAPLInfo> Get();
+
+  // Read the RAPL state. Returns true on success or an expected failure.
+  // @param out:  A stream to output the discovered values, in watts.
+  bool GetCurrentPower(std::ostream& out);
+
+  // Print element headers.
+  bool GetHeader(std::ostream& header);
+
+  bool is_unknown() { return cpu_type_ == CpuType::kUnknown; }
+
+ private:
+  RAPLInfo(std::unique_ptr<std::vector<PowerDomain>> rapl_domains,
+           CpuType cpu_type);
+
+  static bool ReadUint64File(const base::FilePath& path, uint64_t* value_out);
+
+  std::unique_ptr<std::vector<PowerDomain>> power_domains_;
+  CpuType cpu_type_;
+
+  DISALLOW_COPY_AND_ASSIGN(RAPLInfo);
 };
 
 // Encapsulates the logic for writing to vmlog and rotating log files when
@@ -140,6 +187,9 @@ class VmlogWriter {
   // Read the GPU frequency.  Returns true on success or an expected failure.
   bool GetGpuFrequency(std::ostream& out);
 
+  // Read the RAPL power.  Returns true on success or an expected failure.
+  bool GetRAPL(std::ostream& out);
+
   std::unique_ptr<VmlogFile> vmlog_;
   // Stream used to read content in /proc/vmstat.
   std::ifstream vmstat_stream_;
@@ -156,6 +206,9 @@ class VmlogWriter {
 
   // |gpu_info_| is used to read GPU frequency.
   std::unique_ptr<GpuInfo> gpu_info_;
+
+  // |rapl_info_| is used to read power state.
+  std::unique_ptr<RAPLInfo> rapl_info_;
 
   base::RepeatingTimer timer_;
   base::OneShotTimer valid_time_delay_timer_;

@@ -4,6 +4,7 @@
 
 #include "metrics/vmlog_writer.h"
 
+#include <algorithm>
 #include <fcntl.h>
 #include <inttypes.h>
 #include <sys/stat.h>
@@ -17,12 +18,18 @@
 
 #include <base/bind.h>
 #include <base/bind_helpers.h>
+#include <base/cpu.h>
+#include <base/files/file.h>
+#include <base/files/file_enumerator.h>
+#include <base/files/file_path.h>
 #include <base/files/file_util.h>
 #include <base/logging.h>
 #include <base/memory/ptr_util.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_split.h>
+#include <base/strings/string_util.h>
 #include <base/strings/stringprintf.h>
+#include <base/sys_info.h>
 #include <brillo/daemons/daemon.h>
 
 namespace chromeos_metrics {
@@ -228,6 +235,161 @@ bool GpuInfo::GetCurrentFrequency(std::ostream& out) {
   return false;
 }
 
+/* ********************** RAPL **************************** */
+
+bool RAPLInfo::ReadUint64File(const base::FilePath& path, uint64_t* value_out) {
+  DCHECK(value_out);
+
+  std::string str;
+  if (!base::ReadFileToString(path, &str)) {
+    PLOG(ERROR) << "Unable to read from " << path.value();
+    return false;
+  }
+
+  base::TrimWhitespaceASCII(str, base::TRIM_TRAILING, &str);
+  if (!base::StringToUint64(str, value_out)) {
+    PLOG(ERROR) << "Unable to parse \"" << str << "\" from " << path.value();
+    return false;
+  }
+  return true;
+}
+
+RAPLInfo::RAPLInfo(std::unique_ptr<std::vector<PowerDomain>> power_domains,
+                   RAPLInfo::CpuType cpu_type)
+    : power_domains_(std::move(power_domains)), cpu_type_(cpu_type) {}
+
+std::unique_ptr<RAPLInfo> RAPLInfo::Get() {
+  // Path to the powercap driver sysfs interface, if it doesn't exist,
+  // either the kernel is old w/o powercap driver, or it is not configured.
+  constexpr const char kPowercapPath[] = "/sys/class/powercap";
+
+  // Kernel v3.13+ supports powercap, it also requires a proper configuration
+  // enabling it; leave a verbose footprint of the kernel string, and examine
+  // whether or not the system supports the powercap driver.
+  base::FilePath powercap_file_path(kPowercapPath);
+
+  // No RAPL on this system.
+  if (!base::PathExists(powercap_file_path)) {
+    PLOG(ERROR) << "No powercap driver sysfs interface, couldn't find "
+                << powercap_file_path.value();
+
+    return base::WrapUnique(new RAPLInfo(0, RAPLInfo::CpuType::kUnknown));
+  }
+
+  std::unique_ptr<std::vector<PowerDomain>> power_domains =
+      std::make_unique<std::vector<PowerDomain>>();
+
+  std::string domain_name;
+
+  // Probe the power domains and sub-domains.
+  base::FilePath powercap_path(kPowercapPath);
+  base::FileEnumerator dirs(powercap_path, false,
+                            base::FileEnumerator::DIRECTORIES, "intel-rapl:*");
+  for (base::FilePath dir = dirs.Next(); !dir.empty(); dir = dirs.Next()) {
+    base::FilePath domain_file_path = dir.Append("name");
+    base::FilePath energy_file_path = dir.Append("energy_uj");
+    base::FilePath maxeng_file_path = dir.Append("max_energy_range_uj");
+    uint64_t max_energy_uj;
+
+    if (!base::PathExists(domain_file_path)) {
+      PLOG(ERROR) << "Unable to find " << domain_file_path.value();
+      continue;
+    }
+    if (!base::PathExists(energy_file_path)) {
+      PLOG(ERROR) << "Unable to find " << energy_file_path.value();
+      continue;
+    }
+    if (!base::PathExists(maxeng_file_path)) {
+      PLOG(ERROR) << "Unable to find " << maxeng_file_path.value();
+      continue;
+    }
+
+    base::ReadFileToString(domain_file_path, &domain_name);
+    base::TrimWhitespaceASCII(domain_name, base::TRIM_ALL, &domain_name);
+
+    ReadUint64File(maxeng_file_path, &max_energy_uj);
+    power_domains->push_back({energy_file_path, domain_name, max_energy_uj});
+  }
+
+  if (power_domains->empty()) {
+    PLOG(ERROR) << "No power domain found at " << powercap_file_path.value();
+    return base::WrapUnique(new RAPLInfo(0, RAPLInfo::CpuType::kUnknown));
+  }
+
+  // As the enumeration above does not guarantee the order, transform the
+  // paths in lexicographical order, make the collecting data in a style
+  // of domain follows by sub-domain, it can be done by sorting.
+  // e.g., package-0 psys core ... -> package-0 core ... psys
+  std::sort(power_domains->begin(), power_domains->end());
+
+  // Initialize base state for calculating delta later. RAPL works by
+  // checking the delta between energy used to calculate power over time.
+  // So we need to seed the state prior to the initial printout.
+  const base::TimeTicks ticks_before = base::TimeTicks::Now();
+  uint32_t num_domains = power_domains->size();
+  for (int i = 0; i < num_domains; ++i) {
+    ReadUint64File(power_domains->at(i).file_path,
+                   &(power_domains->at(i).energy_before));
+    power_domains->at(i).ticks_before = ticks_before;
+  }
+
+  return base::WrapUnique(
+      new RAPLInfo(std::move(power_domains), RAPLInfo::CpuType::kIntel));
+}
+
+bool RAPLInfo::GetHeader(std::ostream& header) {
+  if (is_unknown()) {
+    PLOG(ERROR) << "Unable to parse RAPL from this CPU";
+    return false;
+  }
+
+  // List out the text name of each power domain.
+  for (const auto& domain : *power_domains_)
+    header << " " << domain.name;
+
+  return true;
+}
+
+// Get the power delta from the last reading and output it to the stream.
+bool RAPLInfo::GetCurrentPower(std::ostream& out) {
+  if (is_unknown()) {
+    PLOG(ERROR) << "Unable to parse RAPL from this CPU";
+    return false;
+  }
+  // Cap of a maximal reasonable power in Watts
+  constexpr const double kMaxWatts = 1e3;
+
+  for (auto& domain : *power_domains_) {
+    ReadUint64File(domain.file_path, &(domain.energy_after));
+    domain.ticks_after = base::TimeTicks::Now();
+  }
+
+  for (auto& domain : *power_domains_) {
+    uint64_t energy_delta =
+        (domain.energy_after >= domain.energy_before)
+            ? domain.energy_after - domain.energy_before
+            : domain.max_energy - domain.energy_before + domain.energy_after;
+
+    const base::TimeDelta time_delta = domain.ticks_after - domain.ticks_before;
+
+    double average_power = energy_delta / (time_delta.InSecondsF() * 1e6);
+
+    // Skip enormous sample if the counter is reset during suspend-to-RAM
+    if (average_power > kMaxWatts) {
+      out << " skip";
+      continue;
+    }
+    out << " " << std::setprecision(3) << std::fixed << average_power;
+  }
+
+  for (auto& domain : *power_domains_) {
+    domain.energy_before = domain.energy_after;
+    domain.ticks_before = domain.ticks_after;
+  }
+
+  return true;
+}
+
 VmlogFile::VmlogFile(const base::FilePath& live_path,
                      const base::FilePath& rotated_path,
                      const uint64_t max_size,
@@ -386,6 +548,13 @@ void VmlogWriter::Init(const base::FilePath& vmlog_dir,
   for (int cpu = 0; cpu != cpufreq_streams_.size(); ++cpu) {
     header << " cpufreq" << cpu;
   }
+
+  rapl_info_ = RAPLInfo::Get();
+  DCHECK(rapl_info_.get());
+
+  if (!rapl_info_->is_unknown())
+    rapl_info_->GetHeader(header);
+
   header << "\n";
 
   vmlog_.reset(new VmlogFile(vmlog_current_path, vmlog_rotated_path,
@@ -439,6 +608,15 @@ bool VmlogWriter::GetDeltaVmStat(VmstatRecord* delta_out) {
   return true;
 }
 
+bool VmlogWriter::GetRAPL(std::ostream& out) {
+  if (rapl_info_->is_unknown()) {
+    // Nothing to do if the sysfs entry is not present.
+    return true;
+  }
+
+  return rapl_info_->GetCurrentPower(out);
+}
+
 bool VmlogWriter::GetGpuFrequency(std::ostream& out) {
   if (gpu_info_->is_unknown()) {
     // Nothing to do if the sysfs entry is not present.
@@ -485,7 +663,8 @@ void VmlogWriter::WriteCallback() {
       delta_vmstat.anon_page_faults_, delta_vmstat.swap_in_,
       delta_vmstat.swap_out_, cpu_usage);
 
-  if (!GetGpuFrequency(out_line) || !GetCpuFrequencies(out_line)) {
+  if (!GetGpuFrequency(out_line) || !GetCpuFrequencies(out_line) ||
+      !GetRAPL(out_line)) {
     LOG(ERROR) << "Stop timer because of error reading system info";
     timer_.Stop();
   }
