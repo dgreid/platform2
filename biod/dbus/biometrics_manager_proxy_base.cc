@@ -1,0 +1,102 @@
+// Copyright 2020 The Chromium OS Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#include "biod/dbus/biometrics_manager_proxy_base.h"
+
+#include <memory>
+#include <string>
+
+#include <base/bind.h>
+#include <chromeos/dbus/service_constants.h>
+
+namespace biod {
+
+static const int kDbusTimeoutMs = dbus::ObjectProxy::TIMEOUT_USE_DEFAULT;
+
+using FinishCallback = base::Callback<void(bool success)>;
+
+const char* ScanResultToString(ScanResult result) {
+  switch (result) {
+    case ScanResult::SCAN_RESULT_SUCCESS:
+      return "Success";
+    case ScanResult::SCAN_RESULT_PARTIAL:
+      return "Partial";
+    case ScanResult::SCAN_RESULT_INSUFFICIENT:
+      return "Insufficient";
+    case ScanResult::SCAN_RESULT_SENSOR_DIRTY:
+      return "Sensor Dirty";
+    case ScanResult::SCAN_RESULT_TOO_SLOW:
+      return "Too Slow";
+    case ScanResult::SCAN_RESULT_TOO_FAST:
+      return "Too Fast";
+    case ScanResult::SCAN_RESULT_IMMOBILE:
+      return "Immobile";
+    default:
+      return "Unknown Result";
+  }
+}
+
+BiometricsManagerProxyBase::BiometricsManagerProxyBase(
+    const scoped_refptr<dbus::Bus>& bus, const dbus::ObjectPath& path)
+    : bus_(bus), weak_factory_(this) {
+  proxy_ = bus_->GetObjectProxy(biod::kBiodServiceName, path);
+
+  proxy_->ConnectToSignal(
+      biod::kBiometricsManagerInterface,
+      biod::kBiometricsManagerSessionFailedSignal,
+      base::Bind(&BiometricsManagerProxyBase::OnSessionFailed,
+                 weak_factory_.GetWeakPtr()),
+      base::Bind(&BiometricsManagerProxyBase::OnSignalConnected,
+                 weak_factory_.GetWeakPtr()));
+}
+
+const dbus::ObjectPath BiometricsManagerProxyBase::path() const {
+  return proxy_->object_path();
+}
+
+void BiometricsManagerProxyBase::SetFinishHandler(
+    const FinishCallback& on_finish) {
+  on_finish_ = on_finish;
+}
+
+dbus::ObjectProxy* BiometricsManagerProxyBase::StartAuthSession() {
+  dbus::MethodCall method_call(biod::kBiometricsManagerInterface,
+                               biod::kBiometricsManagerStartAuthSessionMethod);
+
+  std::unique_ptr<dbus::Response> response =
+      proxy_->CallMethodAndBlock(&method_call, kDbusTimeoutMs);
+  if (!response)
+    return nullptr;
+
+  dbus::MessageReader response_reader(response.get());
+  dbus::ObjectPath auth_path;
+  if (!response_reader.PopObjectPath(&auth_path))
+    return nullptr;
+
+  dbus::ObjectProxy* auth_proxy =
+      bus_->GetObjectProxy(biod::kBiodServiceName, auth_path);
+  return auth_proxy;
+}
+
+void BiometricsManagerProxyBase::OnFinish(bool success) {
+  if (on_finish_)
+    on_finish_.Run(success);
+}
+
+void BiometricsManagerProxyBase::OnSessionFailed(dbus::Signal* signal) {
+  LOG(ERROR) << "Biometric device failed";
+  OnFinish(false);
+}
+
+void BiometricsManagerProxyBase::OnSignalConnected(const std::string& interface,
+                                                   const std::string& signal,
+                                                   bool success) {
+  if (!success) {
+    LOG(ERROR) << "Failed to connect to signal " << signal << " on interface "
+               << interface;
+    OnFinish(false);
+  }
+}
+
+}  // namespace biod

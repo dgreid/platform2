@@ -51,6 +51,13 @@ pkg_config("target_defaults") {
   }
 }
 
+static_library("libbiod_proxy") {
+  configs += [ ":target_defaults" ]
+  sources = [
+    "dbus/biometrics_manager_proxy_base.cc",
+  ]
+}
+
 static_library("libbiod") {
   sources = [
     "biod_crypto.cc",
@@ -114,6 +121,9 @@ executable("biod_client_tool") {
     "tools/biod_client_tool.cc",
   ]
   configs += [ ":target_defaults" ]
+  deps = [
+    ":libbiod_proxy",
+  ]
 }
 
 executable("bio_fw_updater") {
@@ -139,6 +149,7 @@ if (use.test) {
       "cros_fp_device_test.cc",
       "cros_fp_firmware_test.cc",
       "cros_fp_updater_test.cc",
+      "dbus/biometrics_manager_proxy_base_test.cc",
       "ec_command_async_test.cc",
       "ec_command_test.cc",
       "fp_context_command_factory_test.cc",
@@ -156,6 +167,7 @@ if (use.test) {
     deps = [
       ":fake_libbiod",
       ":libbiod",
+      ":libbiod_proxy",
       "//common-mk/testrunner",
     ]
   }

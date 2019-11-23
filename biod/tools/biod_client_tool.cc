@@ -11,7 +11,6 @@
 #include <base/command_line.h>
 #include <base/files/file_descriptor_watcher_posix.h>
 #include <base/logging.h>
-#include <base/memory/weak_ptr.h>
 #include <base/message_loop/message_loop.h>
 #include <base/run_loop.h>
 #include <base/strings/string_split.h>
@@ -21,11 +20,9 @@
 
 #include <chromeos/dbus/service_constants.h>
 
-#include <dbus/bus.h>
-#include <dbus/object_manager.h>
-
 #include "biod/biod_version.h"
 #include "biod/biometrics_manager.h"
+#include "biod/dbus/biometrics_manager_proxy_base.h"
 #include "biod/proto_bindings/constants.pb.h"
 #include "biod/proto_bindings/messages.pb.h"
 
@@ -67,27 +64,6 @@ const char* BiometricsManagerTypeToString(BiometricsManagerType type) {
       return "Fingerprint";
     default:
       return "Unknown";
-  }
-}
-
-const char* ScanResultToString(ScanResult result) {
-  switch (result) {
-    case ScanResult::SCAN_RESULT_SUCCESS:
-      return "Success";
-    case ScanResult::SCAN_RESULT_PARTIAL:
-      return "Partial";
-    case ScanResult::SCAN_RESULT_INSUFFICIENT:
-      return "Insufficient";
-    case ScanResult::SCAN_RESULT_SENSOR_DIRTY:
-      return "Sensor Dirty";
-    case ScanResult::SCAN_RESULT_TOO_SLOW:
-      return "Too Slow";
-    case ScanResult::SCAN_RESULT_TOO_FAST:
-      return "Too Fast";
-    case ScanResult::SCAN_RESULT_IMMOBILE:
-      return "Immobile";
-    default:
-      return "Unknown Result";
   }
 }
 
@@ -138,16 +114,14 @@ class RecordProxy {
   std::string label_;
 };
 
-class BiometricsManagerProxy {
+class BiometricsManagerProxy : public biod::BiometricsManagerProxyBase {
  public:
   using FinishCallback = base::Callback<void(bool success)>;
 
   BiometricsManagerProxy(const scoped_refptr<dbus::Bus>& bus,
                          const dbus::ObjectPath& path,
                          dbus::MessageReader* pset_reader)
-      : bus_(bus), weak_factory_(this) {
-    proxy_ = bus_->GetObjectProxy(biod::kBiodServiceName, path);
-
+      : biod::BiometricsManagerProxyBase(bus, path), weak_factory_(this) {
     while (pset_reader->HasMoreData()) {
       dbus::MessageReader pset_entry_reader(nullptr);
       std::string property_name;
@@ -174,21 +148,9 @@ class BiometricsManagerProxy {
                    weak_factory_.GetWeakPtr()),
         base::Bind(&BiometricsManagerProxy::OnSignalConnected,
                    weak_factory_.GetWeakPtr()));
-    proxy_->ConnectToSignal(
-        biod::kBiometricsManagerInterface,
-        biod::kBiometricsManagerSessionFailedSignal,
-        base::Bind(&BiometricsManagerProxy::OnSessionFailed,
-                   weak_factory_.GetWeakPtr()),
-        base::Bind(&BiometricsManagerProxy::OnSignalConnected,
-                   weak_factory_.GetWeakPtr()));
   }
 
-  const dbus::ObjectPath& path() const { return proxy_->object_path(); }
   BiometricsManagerType type() const { return type_; }
-
-  void SetFinishHandler(const FinishCallback& on_finish) {
-    on_finish_ = on_finish;
-  }
 
   dbus::ObjectProxy* StartEnrollSession(const std::string& user_id,
                                         const std::string& label) {
@@ -210,24 +172,6 @@ class BiometricsManagerProxy {
     dbus::ObjectProxy* enroll_session_proxy =
         bus_->GetObjectProxy(biod::kBiodServiceName, enroll_session_path);
     return enroll_session_proxy;
-  }
-
-  dbus::ObjectProxy* StartAuthSession() {
-    dbus::MethodCall method_call(
-        biod::kBiometricsManagerInterface,
-        biod::kBiometricsManagerStartAuthSessionMethod);
-
-    std::unique_ptr<dbus::Response> response =
-        proxy_->CallMethodAndBlock(&method_call, kDbusTimeoutMs);
-    if (!response)
-      return nullptr;
-
-    dbus::MessageReader response_reader(response.get());
-    dbus::ObjectPath auth_path;
-    CHECK(response_reader.PopObjectPath(&auth_path));
-    dbus::ObjectProxy* auth_proxy =
-        bus_->GetObjectProxy(biod::kBiodServiceName, auth_path);
-    return auth_proxy;
   }
 
   bool DestroyAllRecords() {
@@ -265,11 +209,6 @@ class BiometricsManagerProxy {
   }
 
  private:
-  void OnFinish(bool success) {
-    if (!on_finish_.is_null())
-      on_finish_.Run(success);
-  }
-
   void OnEnrollScanDone(dbus::Signal* signal) {
     dbus::MessageReader signal_reader(signal);
     biod::EnrollScanDone proto;
@@ -327,29 +266,8 @@ class BiometricsManagerProxy {
     }
   }
 
-  void OnSessionFailed(dbus::Signal* signal) {
-    LOG(ERROR) << "Biometric device failed";
-    OnFinish(false);
-  }
-
-  void OnSignalConnected(const std::string& interface,
-                         const std::string& signal,
-                         bool success) {
-    if (!success) {
-      LOG(ERROR) << "Failed to connect to signal " << signal << " on interface "
-                 << interface;
-      OnFinish(false);
-    }
-  }
-
-  scoped_refptr<dbus::Bus> bus_;
-  dbus::ObjectProxy* proxy_;
-
   BiometricsManagerType type_;
   std::vector<RecordProxy> records_;
-
-  FinishCallback on_finish_;
-
   base::WeakPtrFactory<BiometricsManagerProxy> weak_factory_;
 
   DISALLOW_COPY_AND_ASSIGN(BiometricsManagerProxy);
@@ -404,8 +322,7 @@ class BiodProxy {
         !base::StartsWith(path, "/", base::CompareCase::SENSITIVE);
 
     for (auto& biometrics_manager : biometrics_managers_) {
-      const std::string& biometrics_manager_path =
-          biometrics_manager->path().value();
+      std::string biometrics_manager_path = biometrics_manager->path().value();
       if (short_path) {
         if (base::EndsWith(biometrics_manager_path, path,
                            base::CompareCase::SENSITIVE)) {
