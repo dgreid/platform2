@@ -296,6 +296,7 @@ static_library("libcryptohome") {
     "../dbus_transition.cc",
     "../dircrypto_data_migrator/atomic_flag.cc",
     "../dircrypto_data_migrator/migration_helper.cc",
+    "../fingerprint_manager.cc",
     "../homedirs.cc",
     "../interface.cc",
     "../key_challenge_service_factory_impl.cc",
@@ -341,6 +342,7 @@ static_library("libcryptohome") {
     ":libcrostpm",
     ":namespace-mounter-ipc-proto",
     ":userdataauth_adaptors",
+    "//biod:libbiod_proxy",
   ]
 
   if (use.tpm2) {

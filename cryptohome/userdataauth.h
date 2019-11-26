@@ -23,6 +23,7 @@
 #include "cryptohome/challenge_credentials/challenge_credentials_helper.h"
 #include "cryptohome/credentials.h"
 #include "cryptohome/crypto.h"
+#include "cryptohome/fingerprint_manager.h"
 #include "cryptohome/firmware_management_parameters.h"
 #include "cryptohome/homedirs.h"
 #include "cryptohome/install_attributes.h"
@@ -479,6 +480,11 @@ class UserDataAuth {
     firmware_management_parameters_ = fwmp;
   }
 
+  // Override |fingerprint_manager_| for testing purpose
+  void set_fingerprint_manager(FingerprintManager* fingerprint_manager) {
+    fingerprint_manager_ = fingerprint_manager;
+  }
+
   void set_tpm_ownership_proxy(
       org::chromium::TpmOwnershipProxyInterface* tpm_ownership_proxy) {
     tpm_ownership_proxy_ = tpm_ownership_proxy;
@@ -659,6 +665,10 @@ class UserDataAuth {
       base::OnceCallback<void(user_data_auth::CryptohomeErrorCode)> on_done,
       std::unique_ptr<Credentials> credentials);
 
+  // Called on Mount thread. This creates a dbus proxy for Biometrics Daemon
+  // and connects to signals.
+  void CreateFingerprintManager();
+
   // =============== Periodic Maintenance Related Methods ===============
 
   // Called periodically on Mount thread to detect low disk space and emit a
@@ -803,6 +813,13 @@ class UserDataAuth {
   // The actual Firmware Management Parameters object that is used by this
   // class, but can be overridden for testing.
   FirmwareManagementParameters* firmware_management_parameters_;
+
+  // The default Fingerprint Manager object for fingerprint authentication.
+  std::unique_ptr<FingerprintManager> default_fingerprint_manager_;
+
+  // The actual Fingerprint Manager object that is used by this class, but
+  // can be overridden for testing.
+  FingerprintManager* fingerprint_manager_;
 
   // The default D-Bus proxy for invoking any ownership related methods in
   // tpm_manager.

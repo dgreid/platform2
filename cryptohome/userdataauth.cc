@@ -124,6 +124,8 @@ UserDataAuth::UserDataAuth()
       default_pkcs11_init_(new Pkcs11Init()),
       pkcs11_init_(default_pkcs11_init_.get()),
       firmware_management_parameters_(nullptr),
+      default_fingerprint_manager_(),
+      fingerprint_manager_(nullptr),
       default_tpm_ownership_proxy_(),
       tpm_ownership_proxy_(nullptr),
       upload_alerts_period_ms_(kUploadAlertsPeriodMS),
@@ -271,7 +273,23 @@ bool UserDataAuth::PostDBusInitialize() {
       base::Bind(&UserDataAuth::OnTpmManagerSignalConnected,
                  base::Unretained(this)));
 
+  PostTaskToMountThread(FROM_HERE,
+                        base::Bind(&UserDataAuth::CreateFingerprintManager,
+                                   base::Unretained(this)));
+
   return true;
+}
+
+void UserDataAuth::CreateFingerprintManager() {
+  if (!default_fingerprint_manager_) {
+    default_fingerprint_manager_ = FingerprintManager::Create(
+        mount_thread_bus_,
+        dbus::ObjectPath(std::string(biod::kBiodServicePath)
+                             .append(kCrosFpBiometricsManagerRelativePath)));
+  }
+
+  if (!fingerprint_manager_)
+    fingerprint_manager_ = default_fingerprint_manager_.get();
 }
 
 void UserDataAuth::OnTpmManagerSignalConnected(const std::string& interface,

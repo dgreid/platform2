@@ -31,6 +31,7 @@
 #include "cryptohome/challenge_credentials/challenge_credentials_helper.h"
 #include "cryptohome/cryptohome_event_source.h"
 #include "cryptohome/dbus_transition.h"
+#include "cryptohome/fingerprint_manager.h"
 #include "cryptohome/firmware_management_parameters.h"
 #include "cryptohome/install_attributes.h"
 #include "cryptohome/key_challenge_service_factory.h"
@@ -642,6 +643,9 @@ class Service : public brillo::dbus::AbstractDbusService,
   virtual gboolean Pkcs11Terminate(gchar* username, GError** error);
   virtual gboolean GetStatusString(gchar** OUT_status, GError** error);
 
+  // Runs on the mount thread.
+  virtual void CreateFingerprintManager();
+
   // InstallAttributes methods
   virtual gboolean InstallAttributesGet(gchar* name,
                               GArray** OUT_value,
@@ -793,6 +797,7 @@ virtual gboolean InstallAttributesIsFirstInstall(gboolean* OUT_first_install,
   Tpm* tpm_;
   std::unique_ptr<TpmInit> default_tpm_init_;
   TpmInit* tpm_init_;
+  std::unique_ptr<FingerprintManager> fingerprint_manager_;
   std::unique_ptr<Pkcs11Init> default_pkcs11_init_;
   Pkcs11Init* pkcs11_init_;
   bool initialize_tpm_;

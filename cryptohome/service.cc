@@ -268,6 +268,7 @@ Service::Service()
       crypto_(default_crypto_.get()),
       tpm_(nullptr),
       tpm_init_(nullptr),
+      fingerprint_manager_(nullptr),
       default_pkcs11_init_(new Pkcs11Init()),
       pkcs11_init_(default_pkcs11_init_.get()),
       initialize_tpm_(true),
@@ -786,6 +787,10 @@ bool Service::Initialize() {
   PostTask(FROM_HERE, base::Bind(&Service::UploadAlertsDataCallback,
                                  base::Unretained(this)));
 
+  // Create a FingerprintManager for talking to biod over dbus..
+  PostTask(FROM_HERE, base::Bind(&Service::CreateFingerprintManager,
+                                 base::Unretained(this)));
+
   // TODO(keescook,ellyjones) Make this mock-able.
   StatefulRecovery recovery(platform_, this);
   if (recovery.Requested()) {
@@ -1090,6 +1095,22 @@ void Service::ConfigureOwnedTpm(bool status, bool took_ownership) {
     if (!guest_mounted)
       install_attrs_->Finalize();
   }
+}
+
+void Service::CreateFingerprintManager() {
+  dbus::Bus::Options options;
+  options.bus_type = dbus::Bus::SYSTEM;
+
+  scoped_refptr<dbus::Bus> bus(new dbus::Bus(options));
+
+  if (!bus->Connect()) {
+    LOG(ERROR) << "CreateFingerprintManager: Cannot connect to D-Bus.";
+    return;
+  }
+
+  fingerprint_manager_ = FingerprintManager::Create(
+      bus, dbus::ObjectPath(std::string(biod::kBiodServicePath)
+                                .append(kCrosFpBiometricsManagerRelativePath)));
 }
 
 void Service::DoCheckKeyEx(std::unique_ptr<AccountIdentifier> identifier,
