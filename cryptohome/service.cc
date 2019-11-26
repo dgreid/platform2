@@ -1113,6 +1113,16 @@ void Service::CreateFingerprintManager() {
                                 .append(kCrosFpBiometricsManagerRelativePath)));
 }
 
+void Service::CompleteFingerprintCheckKeyEx(DBusGMethodInvocation* context,
+                                            FingerprintScanStatus status) {
+  BaseReply reply;
+  if (status == FingerprintScanStatus::FAILED_RETRY_ALLOWED)
+    reply.set_error(CRYPTOHOME_ERROR_FINGERPRINT_RETRY_REQUIRED);
+  if (status == FingerprintScanStatus::FAILED_RETRY_NOT_ALLOWED)
+    reply.set_error(CRYPTOHOME_ERROR_FINGERPRINT_DENIED);
+  SendReply(context, reply);
+}
+
 void Service::DoCheckKeyEx(std::unique_ptr<AccountIdentifier> identifier,
                            std::unique_ptr<AuthorizationRequest> authorization,
                            std::unique_ptr<CheckKeyRequest> check_key_request,
@@ -1132,6 +1142,29 @@ void Service::DoCheckKeyEx(std::unique_ptr<AccountIdentifier> identifier,
       KeyData::KEY_TYPE_CHALLENGE_RESPONSE) {
     DoChallengeResponseCheckKeyEx(std::move(identifier),
                                   std::move(authorization), context);
+    return;
+  }
+
+  if (authorization->key().data().type() == KeyData::KEY_TYPE_FINGERPRINT) {
+    const std::string obfuscated_username =
+        BuildObfuscatedUsername(GetAccountId(*identifier), system_salt_);
+    BaseReply reply;
+    if (!fingerprint_manager_) {
+      // Fingerprint manager failed to initialize, or the device may not
+      // support fingerprint auth at all.
+      reply.set_error(CRYPTOHOME_ERROR_FINGERPRINT_ERROR_INTERNAL);
+      SendReply(context, reply);
+      return;
+    }
+    if (!fingerprint_manager_->HasAuthSessionForUser(obfuscated_username)) {
+      reply.set_error(CRYPTOHOME_ERROR_FINGERPRINT_DENIED);
+      SendReply(context, reply);
+      return;
+    }
+    fingerprint_manager_->SetAuthScanDoneCallback(
+        base::Bind(&Service::CompleteFingerprintCheckKeyEx,
+                   base::Unretained(this), context));
+
     return;
   }
 

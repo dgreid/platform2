@@ -1063,6 +1063,12 @@ virtual gboolean InstallAttributesIsFirstInstall(gboolean* OUT_first_install,
   void OnStartFingerprintAuthSessionDone(DBusGMethodInvocation* context,
                                          bool success);
 
+  // Called on Mount thread. Scheduled by DoCheckKeyEx(). Callback for one
+  // fingerprint scan. Completes fingerprint CheckKeyEx by replying to the
+  // CheckKeyEx call in |context|. Sets the error if the scan has an error.
+  void CompleteFingerprintCheckKeyEx(DBusGMethodInvocation* context,
+                                     FingerprintScanStatus status);
+
   brillo::DBusConnection system_dbus_connection_;
 
   // Tracks Mount objects for each user by username.

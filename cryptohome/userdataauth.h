@@ -695,6 +695,13 @@ class UserDataAuth {
           const user_data_auth::StartFingerprintAuthSessionReply&)> on_done,
       bool success);
 
+  // Called on Mount thread. Scheduled by CheckKey(). Callback for one
+  // fingerprint scan. Completes fingerprint CheckKey by running |on_done|.
+  void CompleteFingerprintCheckKey(
+      base::OnceCallback<void(const user_data_auth::CryptohomeErrorCode)>
+          on_done,
+      FingerprintScanStatus status);
+
   // =============== Periodic Maintenance Related Methods ===============
 
   // Called periodically on Mount thread to detect low disk space and emit a

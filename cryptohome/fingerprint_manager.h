@@ -65,6 +65,8 @@ class FingerprintManager {
   // states.
   virtual void EndAuthSession();
 
+  virtual bool HasAuthSessionForUser(const std::string& user);
+
   // Sets the callback for a fingerprint scan. Must be called after
   // StartAuthSessionAsyncForUser. |auth_scan_done_callback| will be
   // called with the status of a fingerprint match, once biod sends it.

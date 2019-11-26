@@ -22,6 +22,7 @@
 #include "cryptohome/cryptolib.h"
 #include "cryptohome/mock_arc_disk_quota.h"
 #include "cryptohome/mock_crypto.h"
+#include "cryptohome/mock_fingerprint_manager.h"
 #include "cryptohome/mock_firmware_management_parameters.h"
 #include "cryptohome/mock_homedirs.h"
 #include "cryptohome/mock_install_attributes.h"
@@ -100,6 +101,7 @@ class UserDataAuthTestNotInitialized : public ::testing::Test {
     userdataauth_->set_platform(&platform_);
     userdataauth_->set_chaps_client(&chaps_client_);
     userdataauth_->set_firmware_management_parameters(&fwmp_);
+    userdataauth_->set_fingerprint_manager(&fingerprint_manager_);
     userdataauth_->set_arc_disk_quota(&arc_disk_quota_);
     userdataauth_->set_pkcs11_init(&pkcs11_init_);
     userdataauth_->set_mount_factory(&mount_factory_);
@@ -181,6 +183,10 @@ class UserDataAuthTestNotInitialized : public ::testing::Test {
   // Mock Firmware Management Parameters object, will be passed to UserDataAuth
   // for its internal use.
   NiceMock<MockFirmwareManagementParameters> fwmp_;
+
+  // Mock Fingerprint Manager object, will be passed to UserDataAuth for its
+  // internal use.
+  NiceMock<MockFingerprintManager> fingerprint_manager_;
 
   // Mock tpm ownership proxy object, will be passed to UserDataAuth for its
   // internal use.
@@ -2073,8 +2079,173 @@ TEST_F(UserDataAuthExTest, CheckKeyMountCheckFail) {
   EXPECT_CALL(homedirs_, Exists(_)).WillRepeatedly(Return(true));
   EXPECT_CALL(homedirs_, AreCredentialsValid(_)).WillOnce(Return(false));
 
+  CallCheckKeyAndVerify(user_data_auth::CryptohomeErrorCode::
+                            CRYPTOHOME_ERROR_AUTHORIZATION_KEY_FAILED);
+}
+
+TEST_F(UserDataAuthExTest, StartFingerprintAuthSessionInvalid) {
+  PrepareArguments();
+  // No account_id, request is invalid.
+  user_data_auth::StartFingerprintAuthSessionRequest req;
+
+  bool called = false;
+  userdataauth_->StartFingerprintAuthSession(
+      req,
+      base::Bind(
+          [](bool* called_ptr,
+             const user_data_auth::StartFingerprintAuthSessionReply& reply) {
+            EXPECT_EQ(reply.error(),
+                      user_data_auth::CRYPTOHOME_ERROR_INVALID_ARGUMENT);
+            *called_ptr = true;
+          },
+          base::Unretained(&called)));
+
+  EXPECT_TRUE(called);
+}
+
+TEST_F(UserDataAuthExTest, StartFingerprintAuthSessionFail) {
+  PrepareArguments();
+  user_data_auth::StartFingerprintAuthSessionRequest req;
+  req.mutable_account_id()->set_account_id(kUser);
+
+  EXPECT_CALL(homedirs_, Exists(_)).WillOnce(Return(true));
+
+  // Let the fingerprint auth session fail to start.
+  EXPECT_CALL(fingerprint_manager_, StartAuthSessionAsyncForUser(_, _))
+      .WillOnce([](const std::string& user,
+                   base::Callback<void(bool success)>
+                       auth_session_start_client_callback) {
+        std::move(auth_session_start_client_callback).Run(false);
+      });
+
+  bool called = false;
+  userdataauth_->StartFingerprintAuthSession(
+      req,
+      base::Bind(
+          [](bool* called_ptr,
+             const user_data_auth::StartFingerprintAuthSessionReply& reply) {
+            EXPECT_EQ(reply.error(),
+                      user_data_auth::CryptohomeErrorCode::
+                          CRYPTOHOME_ERROR_FINGERPRINT_ERROR_INTERNAL);
+            *called_ptr = true;
+          },
+          base::Unretained(&called)));
+
+  EXPECT_TRUE(called);
+}
+
+TEST_F(UserDataAuthExTest, StartFingerprintAuthSessionSuccess) {
+  PrepareArguments();
+  user_data_auth::StartFingerprintAuthSessionRequest req;
+  req.mutable_account_id()->set_account_id(kUser);
+
+  EXPECT_CALL(homedirs_, Exists(_)).WillOnce(Return(true));
+
+  EXPECT_CALL(fingerprint_manager_, StartAuthSessionAsyncForUser(_, _))
+      .WillOnce([](const std::string& user,
+                   base::Callback<void(bool success)>
+                       auth_session_start_client_callback) {
+        std::move(auth_session_start_client_callback).Run(true);
+      });
+
+  bool called = false;
+  userdataauth_->StartFingerprintAuthSession(
+      req,
+      base::Bind(
+          [](bool* called_ptr,
+             const user_data_auth::StartFingerprintAuthSessionReply& reply) {
+            EXPECT_EQ(reply.error(), user_data_auth::CRYPTOHOME_ERROR_NOT_SET);
+            *called_ptr = true;
+          },
+          base::Unretained(&called)));
+
+  EXPECT_TRUE(called);
+}
+
+TEST_F(UserDataAuthExTest, CheckKeyFingerprintFailRetry) {
+  PrepareArguments();
+
+  check_req_->mutable_account_id()->set_account_id(kUser);
+  check_req_->mutable_authorization_request()
+      ->mutable_key()
+      ->mutable_data()
+      ->set_type(cryptohome::KeyData::KEY_TYPE_FINGERPRINT);
+
+  EXPECT_CALL(fingerprint_manager_, HasAuthSessionForUser(_))
+      .WillOnce(Return(true));
+
+  // Simulate a scan result immediately following SetAuthScanDoneCallback().
+  EXPECT_CALL(fingerprint_manager_, SetAuthScanDoneCallback(_))
+      .WillOnce([](base::Callback<void(FingerprintScanStatus status)>
+                       auth_scan_done_callback) {
+        std::move(auth_scan_done_callback)
+            .Run(FingerprintScanStatus::FAILED_RETRY_ALLOWED);
+      });
+
+  CallCheckKeyAndVerify(user_data_auth::CryptohomeErrorCode::
+                            CRYPTOHOME_ERROR_FINGERPRINT_RETRY_REQUIRED);
+}
+
+TEST_F(UserDataAuthExTest, CheckKeyFingerprintFailNoRetry) {
+  PrepareArguments();
+
+  check_req_->mutable_account_id()->set_account_id(kUser);
+  check_req_->mutable_authorization_request()
+      ->mutable_key()
+      ->mutable_data()
+      ->set_type(cryptohome::KeyData::KEY_TYPE_FINGERPRINT);
+
+  EXPECT_CALL(fingerprint_manager_, HasAuthSessionForUser(_))
+      .WillOnce(Return(true));
+
+  // Simulate a scan result immediately following SetAuthScanDoneCallback().
+  EXPECT_CALL(fingerprint_manager_, SetAuthScanDoneCallback(_))
+      .WillOnce([](base::Callback<void(FingerprintScanStatus status)>
+                       auth_scan_done_callback) {
+        std::move(auth_scan_done_callback)
+            .Run(FingerprintScanStatus::FAILED_RETRY_NOT_ALLOWED);
+      });
+
   CallCheckKeyAndVerify(
-      user_data_auth::CRYPTOHOME_ERROR_AUTHORIZATION_KEY_FAILED);
+      user_data_auth::CryptohomeErrorCode::CRYPTOHOME_ERROR_FINGERPRINT_DENIED);
+}
+
+TEST_F(UserDataAuthExTest, CheckKeyFingerprintWrongUser) {
+  PrepareArguments();
+
+  check_req_->mutable_account_id()->set_account_id(kUser);
+  check_req_->mutable_authorization_request()
+      ->mutable_key()
+      ->mutable_data()
+      ->set_type(cryptohome::KeyData::KEY_TYPE_FINGERPRINT);
+
+  EXPECT_CALL(fingerprint_manager_, HasAuthSessionForUser(_))
+      .WillOnce(Return(false));
+
+  CallCheckKeyAndVerify(
+      user_data_auth::CryptohomeErrorCode::CRYPTOHOME_ERROR_FINGERPRINT_DENIED);
+}
+
+TEST_F(UserDataAuthExTest, CheckKeyFingerprintSuccess) {
+  PrepareArguments();
+
+  check_req_->mutable_account_id()->set_account_id(kUser);
+  check_req_->mutable_authorization_request()
+      ->mutable_key()
+      ->mutable_data()
+      ->set_type(cryptohome::KeyData::KEY_TYPE_FINGERPRINT);
+
+  EXPECT_CALL(fingerprint_manager_, HasAuthSessionForUser(_))
+      .WillOnce(Return(true));
+
+  // Simulate a scan result immediately following SetAuthScanDoneCallback().
+  EXPECT_CALL(fingerprint_manager_, SetAuthScanDoneCallback(_))
+      .WillOnce([](base::Callback<void(FingerprintScanStatus status)>
+                       auth_scan_done_callback) {
+        std::move(auth_scan_done_callback).Run(FingerprintScanStatus::SUCCESS);
+      });
+
+  CallCheckKeyAndVerify(user_data_auth::CRYPTOHOME_ERROR_NOT_SET);
 }
 
 TEST_F(UserDataAuthExTest, CheckKeyInvalidArgs) {

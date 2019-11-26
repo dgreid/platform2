@@ -219,6 +219,18 @@ void FingerprintManager::EndAuthSession() {
   Reset();
 }
 
+bool FingerprintManager::HasAuthSessionForUser(const std::string& user) {
+  DCHECK(base::PlatformThread::CurrentId() == mount_thread_id_);
+
+  if (!proxy_ || !connected_to_auth_scan_done_signal_)
+    return false;
+
+  if (state_ != State::AUTH_SESSION_OPEN || current_user_ != user)
+    return false;
+
+  return true;
+}
+
 void FingerprintManager::SetProxy(biod::BiometricsManagerProxyBase* proxy) {
   proxy_ = proxy;
 }

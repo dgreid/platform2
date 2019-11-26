@@ -1710,6 +1710,28 @@ void UserDataAuth::CheckKey(
     return;
   }
 
+  // Process fingerprint credentials asynchronously.
+  if (request.authorization_request().key().data().type() ==
+      KeyData::KEY_TYPE_FINGERPRINT) {
+    if (!fingerprint_manager_) {
+      // Fingerprint manager failed to initialize, or the device may not
+      // support fingerprint auth at all.
+      std::move(on_done).Run(user_data_auth::CryptohomeErrorCode::
+                                 CRYPTOHOME_ERROR_FINGERPRINT_ERROR_INTERNAL);
+      return;
+    }
+    if (!fingerprint_manager_->HasAuthSessionForUser(
+            BuildObfuscatedUsername(account_id, system_salt_))) {
+      std::move(on_done).Run(user_data_auth::CryptohomeErrorCode::
+                                 CRYPTOHOME_ERROR_FINGERPRINT_DENIED);
+      return;
+    }
+    fingerprint_manager_->SetAuthScanDoneCallback(
+        base::Bind(&UserDataAuth::CompleteFingerprintCheckKey,
+                   base::Unretained(this), base::Passed(std::move(on_done))));
+    return;
+  }
+
   // Note that there's no check for empty AuthorizationRequest key label because
   // such a key will test against all VaultKeysets of a compatible
   // key().data().type(), and thus is valid.
@@ -1760,6 +1782,22 @@ void UserDataAuth::CheckKey(
     homedirs_->ResetLECredentials(credentials);
     std::move(on_done).Run(user_data_auth::CRYPTOHOME_ERROR_NOT_SET);
     return;
+}
+
+void UserDataAuth::CompleteFingerprintCheckKey(
+    base::OnceCallback<void(user_data_auth::CryptohomeErrorCode)> on_done,
+    FingerprintScanStatus status) {
+  if (status == FingerprintScanStatus::FAILED_RETRY_ALLOWED) {
+    std::move(on_done).Run(user_data_auth::CryptohomeErrorCode::
+                               CRYPTOHOME_ERROR_FINGERPRINT_RETRY_REQUIRED);
+    return;
+  } else if (status == FingerprintScanStatus::FAILED_RETRY_NOT_ALLOWED) {
+    std::move(on_done).Run(user_data_auth::CryptohomeErrorCode::
+                               CRYPTOHOME_ERROR_FINGERPRINT_DENIED);
+    return;
+  }
+
+  std::move(on_done).Run(user_data_auth::CRYPTOHOME_ERROR_NOT_SET);
 }
 
 void UserDataAuth::DoChallengeResponseCheckKey(
