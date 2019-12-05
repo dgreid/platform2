@@ -517,6 +517,9 @@ install_stateful() {
   #   sync with those listed in /etc/init/var-overlay.conf:
   #      db/pkg
   #      lib/portage
+  #   These are included to support dlcservice preloading for testing from usb
+  #   flash.
+  #      cache/dlc-images
   #
   # dev_image
   #   This provides tools specifically chosen to be mounted at
@@ -583,6 +586,18 @@ install_stateful() {
       var_overlay/lib/portage
       dev_image
     "
+
+    for f in $(find ${ROOT}/opt/google/dlc -name '*.json'); do
+      local f_path=$(dirname "${f}")
+      local dlc_package=$(basename "${f_path}")
+      local dlc_id=$(basename $(dirname "${f_path}"))
+      if grep '\"preload-allowed\":\s*true' "${f}"; then
+        dirlist="
+          ${dirlist}
+          var_overlay/cache/dlc-images/${dlc_id}/${dlc_package}
+        "
+      fi
+    done
   fi
 
   if crossystem 'devsw_boot?1' ; then

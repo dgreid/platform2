@@ -302,11 +302,16 @@ void DlcBase::PreloadImage() {
     return;
   }
 
-  // Delete the preloaded DLC only after both copies into A and B succeed as
-  // well as mounting.
-  const auto path = SystemState::Get()->preloaded_content_dir().Append(id_);
-  if (!base::DeleteFile(path, true)) {
-    LOG(ERROR) << "Failed to delete preloaded DLC=" << id_;
+  // Don't remove preloaded DLC images when booted from removable device,
+  // otherwise chromeos-install script will not be able to install stateful
+  // partition correctly with preloaded DLC images.
+  if (!SystemState::Get()->IsDeviceRemovable()) {
+    // Delete the preloaded DLC only after both copies into A and B succeed as
+    // well as mounting.
+    const auto path = SystemState::Get()->preloaded_content_dir().Append(id_);
+    if (!base::DeleteFile(path, true)) {
+      LOG(ERROR) << "Failed to delete preloaded DLC=" << id_;
+    }
   }
 }
 

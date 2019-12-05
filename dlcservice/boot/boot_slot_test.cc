@@ -89,10 +89,12 @@ TEST_F(BootSlotTest, GetCurrentSlotTest) {
       .WillOnce(testing::Return("/dev/sda3"))
       .WillOnce(testing::Return("/dev/sda5"))
       .WillOnce(testing::Return("/dev/sdb3"))
-      .WillOnce(testing::Return("/dev/sda"));
+      .WillOnce(testing::Return("/dev/sda"))
+      .WillOnce(testing::Return("/dev/sda3"));
   EXPECT_CALL(*boot_device_, IsRemovableDevice(testing::_))
       .WillOnce(testing::Return(false))
       .WillOnce(testing::Return(false))
+      .WillOnce(testing::Return(true))
       .WillOnce(testing::Return(true));
 
   // Boot from A slot.
@@ -112,6 +114,14 @@ TEST_F(BootSlotTest, GetCurrentSlotTest) {
 
   // Boot from an invalid device.
   EXPECT_FALSE(boot_slot_->GetCurrentSlot(&boot_disk_name, &current_slot));
+
+  // Boot from removable device.
+  bool is_device_removable = false;
+  EXPECT_TRUE(boot_slot_->GetCurrentSlot(&boot_disk_name, &current_slot,
+                                         &is_device_removable));
+  EXPECT_EQ(boot_disk_name, "/dev/sda");
+  EXPECT_EQ(current_slot, BootSlot::Slot::A);
+  EXPECT_TRUE(is_device_removable);
 }
 
 }  // namespace dlcservice

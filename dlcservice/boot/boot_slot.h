@@ -29,9 +29,11 @@ class BootSlot {
   // if the operation returns valid results, otherwise returns false.
   // |boot_disk_name_out| returns the device path of the disk the system is
   // booted from. For example, "/dev/sda". |current_slot_out| returns the slot
-  // the system is currently booted from.
+  // the system is currently booted from. |is_removable_out| returns whether the
+  // system is currently booted from a removable device or not.
   bool GetCurrentSlot(std::string* boot_disk_name_out,
-                      BootSlot::Slot* current_slot_out) const;
+                      BootSlot::Slot* current_slot_out,
+                      bool* is_removable_out = nullptr) const;
 
   // Returns the string representation of |Slot|.
   static std::string ToString(Slot slot);

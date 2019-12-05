@@ -55,6 +55,9 @@ class SystemState {
   BootSlot::Slot active_boot_slot() const;
   BootSlot::Slot inactive_boot_slot() const;
 
+  // Return true if the device is removable.
+  bool IsDeviceRemovable() const;
+
  protected:
   SystemState(
       std::unique_ptr<org::chromium::ImageLoaderInterfaceProxyInterface>
@@ -77,6 +80,7 @@ class SystemState {
   base::FilePath content_dir_;
   base::FilePath prefs_dir_;
   BootSlot::Slot active_boot_slot_;
+  bool is_device_removable_;
 
   static std::unique_ptr<SystemState> g_instance_;
   DISALLOW_COPY_AND_ASSIGN(SystemState);

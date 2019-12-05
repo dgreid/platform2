@@ -25,6 +25,7 @@ TEST_F(SystemStateTest, GettersTest) {
             temp_path.Append("var_lib_dlcservice").Append("dlc"));
   EXPECT_EQ(system_state->active_boot_slot(), BootSlot::Slot::B);
   EXPECT_EQ(system_state->inactive_boot_slot(), BootSlot::Slot::A);
+  EXPECT_FALSE(system_state->IsDeviceRemovable());
 }
 
 }  // namespace dlcservice

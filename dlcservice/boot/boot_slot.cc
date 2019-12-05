@@ -25,7 +25,8 @@ BootSlot::BootSlot(unique_ptr<BootDeviceInterface> boot_device)
 BootSlot::~BootSlot() {}
 
 bool BootSlot::GetCurrentSlot(string* boot_disk_name_out,
-                              Slot* current_slot_out) const {
+                              Slot* current_slot_out,
+                              bool* is_removable_out) const {
   CHECK(boot_disk_name_out);
   CHECK(current_slot_out);
 
@@ -39,7 +40,10 @@ bool BootSlot::GetCurrentSlot(string* boot_disk_name_out,
 
   // All installed Chrome OS devices have two slots. We don't update removable
   // devices, so we will pretend we have only one slot in that case.
-  if (boot_device_->IsRemovableDevice(*boot_disk_name_out))
+  const bool removable = boot_device_->IsRemovableDevice(*boot_disk_name_out);
+  if (is_removable_out)
+    *is_removable_out = removable;
+  if (removable)
     LOG(INFO)
         << "Booted from a removable device, pretending we have only one slot.";
 

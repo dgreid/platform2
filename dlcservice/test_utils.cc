@@ -105,12 +105,7 @@ void BaseTest::CreateImageFileWithRightSize(const base::FilePath& image_path,
                                             const string& package) {
   imageloader::Manifest manifest;
   dlcservice::GetDlcManifest(manifest_path, id, package, &manifest);
-  int64_t image_size = manifest.preallocated_size();
-
-  constexpr uint32_t file_flags =
-      base::File::FLAG_WRITE | base::File::FLAG_READ | base::File::FLAG_CREATE;
-  base::File file(image_path, file_flags);
-  EXPECT_TRUE(file.SetLength(image_size));
+  CreateFile(image_path, manifest.preallocated_size());
 }
 
 // Will create |path|/|id|/|package|/dlc.img file.

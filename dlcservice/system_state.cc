@@ -33,9 +33,11 @@ SystemState::SystemState(
       manifest_dir_(manifest_dir),
       preloaded_content_dir_(preloaded_content_dir),
       content_dir_(content_dir),
-      prefs_dir_(prefs_dir) {
+      prefs_dir_(prefs_dir),
+      is_device_removable_(false) {
   std::string boot_disk_name;
-  PCHECK(boot_slot->GetCurrentSlot(&boot_disk_name, &active_boot_slot_))
+  PCHECK(boot_slot->GetCurrentSlot(&boot_disk_name, &active_boot_slot_,
+                                   &is_device_removable_))
       << "Can not get current boot slot.";
 }
 
@@ -82,6 +84,10 @@ BootSlot::Slot SystemState::active_boot_slot() const {
 BootSlot::Slot SystemState::inactive_boot_slot() const {
   return active_boot_slot_ == BootSlot::Slot::A ? BootSlot::Slot::B
                                                 : BootSlot::Slot::A;
+}
+
+bool SystemState::IsDeviceRemovable() const {
+  return is_device_removable_;
 }
 
 const base::FilePath& SystemState::manifest_dir() const {
