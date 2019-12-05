@@ -19,6 +19,7 @@
 #include <base/callback_helpers.h>
 #include <base/files/file_enumerator.h>
 #include <base/files/file_util.h>
+#include <base/files/scoped_file.h>
 #include <base/json/json_reader.h>
 #include <base/logging.h>
 #include <base/macros.h>
@@ -27,14 +28,18 @@
 #include <base/strings/string_util.h>
 #include <base/system/sys_info.h>
 #include <base/values.h>
+#include <patchpanel/net_util.h>
+
+#include "arc/adbd/arcvm_sock_to_usb.h"
+#include "arc/adbd/arcvm_usb_to_sock.h"
 
 namespace adbd {
-
 namespace {
 
+constexpr uint16_t kAdbProxyPort = 5550;
+constexpr uint32_t kAdbProxySockAddr = patchpanel::Ipv4Addr(127, 0, 0, 1);
 constexpr char kRuntimePath[] = "/run/arc/adbd";
 constexpr char kConfigFSPath[] = "/dev/config";
-constexpr char kFunctionFSPath[] = "/dev/usb-ffs/adb";
 constexpr char kConfigPath[] = "/etc/arc/adbd.json";
 
 // The shifted u/gid of the shell user, used by Android's adbd.
@@ -372,4 +377,66 @@ bool SetupKernelModules(
   }
   return true;
 }
+
+// Initializes a socket to arc adb proxy.
+base::ScopedFD ConnectToAdbProxy() {
+  base::ScopedFD proxy_sock(socket(AF_INET, SOCK_STREAM, 0));
+  if (!proxy_sock.is_valid()) {
+    PLOG(ERROR) << "Failed to create proxy socket";
+    return base::ScopedFD();
+  }
+  struct sockaddr_in addr_in = {};
+  addr_in.sin_family = AF_INET;
+  addr_in.sin_port = htons(kAdbProxyPort);
+  addr_in.sin_addr.s_addr = kAdbProxySockAddr;
+  if (HANDLE_EINTR(connect(proxy_sock.get(),
+                           reinterpret_cast<const struct sockaddr*>(&addr_in),
+                           sizeof(addr_in))) < 0) {
+    PLOG(ERROR) << "Failed to connect to proxy socket";
+    return base::ScopedFD();
+  }
+  return proxy_sock;
+}
+
+void StartArcVmAdbBridge() {
+  auto proxy_sock = ConnectToAdbProxy();
+  if (!proxy_sock.is_valid()) {
+    LOG(ERROR) << "Failed to connect to adb proxy";
+    _exit(EXIT_FAILURE);
+  }
+
+  // Channel direction is from device side, instead of USB perspective.
+  const base::FilePath ep_out =
+      base::FilePath(adbd::kFunctionFSPath).Append("ep1");
+  base::ScopedFD ep_out_fd(
+      HANDLE_EINTR(open(ep_out.value().c_str(), O_RDONLY)));
+  if (!ep_out_fd.is_valid()) {
+    PLOG(ERROR) << "Failed to open OUT usb endpoint";
+    _exit(EXIT_FAILURE);
+  }
+  auto sock_fd = proxy_sock.get();
+  std::unique_ptr<ArcVmUsbToSock> ch_in =
+      std::make_unique<ArcVmUsbToSock>(sock_fd, ep_out_fd.get());
+  if (!ch_in->Start()) {
+    LOG(ERROR) << "IN Channel failed to start";
+    _exit(EXIT_FAILURE);
+  }
+  const base::FilePath ep_in =
+      base::FilePath(adbd::kFunctionFSPath).Append("ep2");
+  base::ScopedFD ep_in_fd(HANDLE_EINTR(open(ep_in.value().c_str(), O_WRONLY)));
+  if (!ep_in_fd.is_valid()) {
+    PLOG(ERROR) << "Failed to open OUT usb endpoint";
+    _exit(EXIT_FAILURE);
+  }
+  std::unique_ptr<ArcVmSockToUsb> ch_out =
+      std::make_unique<ArcVmSockToUsb>(sock_fd, ep_in_fd.get());
+  if (!ch_out->Start()) {
+    LOG(ERROR) << "OUT Channel failed to start";
+    _exit(EXIT_FAILURE);
+  }
+  LOG(INFO) << "arcvm adbd USB bridge started";
+  // The function will not return here because the execution is waiting
+  // for threads to join but that won't happen in normal cases.
+}
+
 }  // namespace adbd

@@ -14,6 +14,12 @@ group("all") {
       ":arc-adbd-setup-function-fs-fuzzer",
     ]
   }
+  if (use.test) {
+    deps += [
+      ":arcvm_sock_to_usb_test",
+      ":arcvm_usb_to_sock_test",
+    ]
+  }
 }
 
 pkg_config("config") {
@@ -27,6 +33,10 @@ static_library("libarcadbd") {
   sources = [
     "adbd.cc",
     "adbd.h",
+    "arcvm_sock_to_usb.cc",
+    "arcvm_sock_to_usb.h",
+    "arcvm_usb_to_sock.cc",
+    "arcvm_usb_to_sock.h",
   ]
   configs += [ ":config" ]
 }
@@ -75,5 +85,32 @@ if (use.fuzzer) {
     ]
 
     deps = [ ":libarcadbd" ]
+  }
+}
+
+if (use.test) {
+  executable("arcvm_sock_to_usb_test") {
+    configs += [
+      "//common-mk:test",
+      ":config",
+    ]
+    deps = [
+      ":libarcadbd",
+      "//common-mk/testrunner:testrunner",
+    ]
+    sources = [ "arcvm_sock_to_usb_test.cc" ]
+    run_test = true
+  }
+  executable("arcvm_usb_to_sock_test") {
+    configs += [
+      "//common-mk:test",
+      ":config",
+    ]
+    deps = [
+      ":libarcadbd",
+      "//common-mk/testrunner:testrunner",
+    ]
+    sources = [ "arcvm_usb_to_sock_test.cc" ]
+    run_test = true
   }
 }

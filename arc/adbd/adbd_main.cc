@@ -107,20 +107,26 @@ int main(int argc, char** argv) {
       }
       configured = true;
     }
-    if (!FLAGS_arcvm) {
-      // Drain the FIFO and wait until the other side closes it.
-      // The data that is sent is kControlPayloadV2 (or kControlPayloadV1)
-      // followed by kControlStrings. We ignore it completely since we have
-      // already sent it to the underlying FunctionFS file, and also to avoid
-      // parsing it to decrease the attack surface area.
-      while (true) {
-        ssize_t bytes_read =
-            HANDLE_EINTR(read(control_pipe.get(), buffer, sizeof(buffer)));
-        if (bytes_read < 0)
-          PLOG(ERROR) << "Failed to read from FIFO";
-        if (bytes_read <= 0)
-          break;
-      }
+    if (FLAGS_arcvm) {
+      adbd::StartArcVmAdbBridge();
+      // TODO(crbug.com/1087440): Once we change the design of bridge to return
+      // instead of terminating the process in error cases, we would
+      // need to replace the LOG(FATAL) with something else since we
+      // don't always want to trigger a crash dump.
+      LOG(FATAL) << "Should not reach here";
+    }
+    // Drain the FIFO and wait until the other side closes it.
+    // The data that is sent is kControlPayloadV2 (or kControlPayloadV1)
+    // followed by kControlStrings. We ignore it completely since we have
+    // already sent it to the underlying FunctionFS file, and also to avoid
+    // parsing it to decrease the attack surface area.
+    while (true) {
+      ssize_t bytes_read =
+          HANDLE_EINTR(read(control_pipe.get(), buffer, sizeof(buffer)));
+      if (bytes_read < 0)
+        PLOG(ERROR) << "Failed to read from FIFO";
+      if (bytes_read <= 0)
+        break;
     }
   }
 }

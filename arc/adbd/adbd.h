@@ -14,6 +14,8 @@
 #include <base/files/scoped_file.h>
 
 namespace adbd {
+// The path of USB function FS where endpoints of ADB interface live.
+constexpr char kFunctionFSPath[] = "/dev/usb-ffs/adb";
 
 // Represents a loadable kernel module. This is then converted to a modprobe(8)
 // invocation.
@@ -69,6 +71,13 @@ bool SetupKernelModules(
 // Bind-mount the bulk-in/bulk-out endpoints into the shared mount for
 // container.
 bool BindMountUsbBulkEndpoints();
+
+// Starts Arcvm usb adb bridge. This function will create two channels
+// to relay ADB data between USB endpoints and a socket to the ARC adb
+// proxy service. This function creates threads that are expected to run
+// until the whole process exits, so it should not return but waiting
+// for the threads to join in the normal cases.
+void StartArcVmAdbBridge();
 }  // namespace adbd
 
 #endif  // ARC_ADBD_ADBD_H_
