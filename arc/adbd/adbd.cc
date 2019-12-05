@@ -284,6 +284,19 @@ bool SetupConfigFS(const std::string& serialnumber,
   return true;
 }
 
+bool BindMountUsbBulkEndpoints() {
+  const base::FilePath functionfs_path(kFunctionFSPath);
+  const base::FilePath runtime_path(kRuntimePath);
+
+  for (const auto& endpoint : {"ep1", "ep2"}) {
+    if (!BindMountFile(functionfs_path.Append(endpoint),
+                       runtime_path.Append(endpoint))) {
+      return false;
+    }
+  }
+  return true;
+}
+
 base::ScopedFD SetupFunctionFS(const std::string& udc_driver_name) {
   const base::FilePath functionfs_path(kFunctionFSPath);
 
@@ -329,15 +342,6 @@ base::ScopedFD SetupFunctionFS(const std::string& udc_driver_name) {
     return base::ScopedFD();
   }
 
-  // Bind-mount the bulk-in/bulk-out endpoints into the shared mount.
-  const base::FilePath runtime_path(kRuntimePath);
-  for (const auto& endpoint : {"ep1", "ep2"}) {
-    if (!BindMountFile(functionfs_path.Append(endpoint),
-                       runtime_path.Append(endpoint))) {
-      return base::ScopedFD();
-    }
-  }
-
   return control_file;
 }
 
@@ -367,5 +371,4 @@ bool SetupKernelModules(
   }
   return true;
 }
-
 }  // namespace adbd

@@ -66,6 +66,9 @@ base::ScopedFD SetupFunctionFS(const std::string& udc_driver_name);
 bool SetupKernelModules(
     const std::vector<AdbdConfigurationKernelModule>& kernel_modules);
 
+// Bind-mount the bulk-in/bulk-out endpoints into the shared mount for
+// container.
+bool BindMountUsbBulkEndpoints();
 }  // namespace adbd
 
 #endif  // ARC_ADBD_ADBD_H_
