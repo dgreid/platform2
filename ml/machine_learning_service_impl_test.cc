@@ -22,6 +22,7 @@
 #include "ml/mojom/graph_executor.mojom.h"
 #include "ml/mojom/machine_learning_service.mojom.h"
 #include "ml/mojom/model.mojom.h"
+#include "ml/mojom/text_classifier.mojom.h"
 #include "ml/tensor_view.h"
 #include "ml/test_utils.h"
 
@@ -168,9 +169,14 @@ constexpr double kTopCat20190722TestInput[] = {
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0
 };
 
+constexpr char kTextClassifierTestInput[] =
+    "user.name@gmail.com. 123 George Street. unknownword. 12pm";
+
 using ::chromeos::machine_learning::mojom::BuiltinModelId;
 using ::chromeos::machine_learning::mojom::BuiltinModelSpec;
 using ::chromeos::machine_learning::mojom::BuiltinModelSpecPtr;
+using ::chromeos::machine_learning::mojom::CodepointSpan;
+using ::chromeos::machine_learning::mojom::CodepointSpanPtr;
 using ::chromeos::machine_learning::mojom::CreateGraphExecutorResult;
 using ::chromeos::machine_learning::mojom::ExecuteResult;
 using ::chromeos::machine_learning::mojom::FlatBufferModelSpec;
@@ -182,6 +188,12 @@ using ::chromeos::machine_learning::mojom::Model;
 using ::chromeos::machine_learning::mojom::ModelPtr;
 using ::chromeos::machine_learning::mojom::ModelRequest;
 using ::chromeos::machine_learning::mojom::TensorPtr;
+using ::chromeos::machine_learning::mojom::TextAnnotationPtr;
+using ::chromeos::machine_learning::mojom::TextAnnotationRequest;
+using ::chromeos::machine_learning::mojom::TextAnnotationRequestPtr;
+using ::chromeos::machine_learning::mojom::TextClassifierPtr;
+using ::chromeos::machine_learning::mojom::TextSuggestSelectionRequest;
+using ::chromeos::machine_learning::mojom::TextSuggestSelectionRequestPtr;
 using ::testing::DoubleEq;
 using ::testing::DoubleNear;
 using ::testing::ElementsAre;
@@ -705,6 +717,254 @@ TEST(DownloadableModelInferenceTest, SmartDim20200206) {
       std::move(inputs), std::move(outputs),
       base::Bind(
           &CheckOutputTensor, expected_shape, -1.07195, &infer_callback_done));
+  base::RunLoop().RunUntilIdle();
+  ASSERT_TRUE(infer_callback_done);
+}
+
+// Test when text classifier can not find the model file.
+TEST(LoadTextClassifierTest, BadModelFilename) {
+  MachineLearningServicePtr ml_service;
+  MachineLearningServiceImplForTesting ml_service_impl(
+      mojo::MakeRequest(&ml_service).PassMessagePipe());
+
+  ml_service_impl.SetTextClassifierModelFilenameForTesting(
+      "bad_model_filename");
+
+  TextClassifierPtr text_classifier;
+  bool model_callback_done = false;
+  ml_service->LoadTextClassifier(
+      mojo::MakeRequest(&text_classifier),
+      base::Bind(
+          [](bool* model_callback_done, const LoadModelResult result) {
+            EXPECT_EQ(result, LoadModelResult::LOAD_MODEL_ERROR);
+            *model_callback_done = true;
+          },
+          &model_callback_done));
+  base::RunLoop().RunUntilIdle();
+  ASSERT_TRUE(model_callback_done);
+}
+
+// Tests loading text classifier only.
+TEST(LoadTextClassifierTest, NoInference) {
+  MachineLearningServicePtr ml_service;
+  const MachineLearningServiceImplForTesting ml_service_impl(
+      mojo::MakeRequest(&ml_service).PassMessagePipe());
+
+  TextClassifierPtr text_classifier;
+  bool model_callback_done = false;
+  ml_service->LoadTextClassifier(
+      mojo::MakeRequest(&text_classifier),
+      base::Bind(
+          [](bool* model_callback_done, const LoadModelResult result) {
+            EXPECT_EQ(result, LoadModelResult::OK);
+            *model_callback_done = true;
+          },
+          &model_callback_done));
+  base::RunLoop().RunUntilIdle();
+  ASSERT_TRUE(model_callback_done);
+}
+
+// Tests text classifier annotator for empty string.
+TEST(TextClassifierAnnotateTest, EmptyString) {
+  MachineLearningServicePtr ml_service;
+  const MachineLearningServiceImplForTesting ml_service_impl(
+      mojo::MakeRequest(&ml_service).PassMessagePipe());
+
+  TextClassifierPtr text_classifier;
+  bool model_callback_done = false;
+  ml_service->LoadTextClassifier(
+      mojo::MakeRequest(&text_classifier),
+      base::Bind(
+          [](bool* model_callback_done, const LoadModelResult result) {
+            EXPECT_EQ(result, LoadModelResult::OK);
+            *model_callback_done = true;
+          },
+          &model_callback_done));
+  base::RunLoop().RunUntilIdle();
+  ASSERT_TRUE(model_callback_done);
+
+  TextAnnotationRequestPtr request = TextAnnotationRequest::New();
+  request->text = "";
+  bool infer_callback_done = false;
+  text_classifier->Annotate(
+      std::move(request),
+      base::Bind(
+          [](bool* infer_callback_done,
+             std::vector<TextAnnotationPtr> annotations) {
+            *infer_callback_done = true;
+            EXPECT_EQ(annotations.size(), 0);
+          },
+          &infer_callback_done));
+  base::RunLoop().RunUntilIdle();
+  ASSERT_TRUE(infer_callback_done);
+}
+
+// Tests text classifier annotator for a complex string.
+TEST(TextClassifierAnnotateTest, ComplexString) {
+  MachineLearningServicePtr ml_service;
+  const MachineLearningServiceImplForTesting ml_service_impl(
+      mojo::MakeRequest(&ml_service).PassMessagePipe());
+
+  TextClassifierPtr text_classifier;
+  bool model_callback_done = false;
+  ml_service->LoadTextClassifier(
+      mojo::MakeRequest(&text_classifier),
+      base::Bind(
+          [](bool* model_callback_done, const LoadModelResult result) {
+            EXPECT_EQ(result, LoadModelResult::OK);
+            *model_callback_done = true;
+          },
+          &model_callback_done));
+  base::RunLoop().RunUntilIdle();
+  ASSERT_TRUE(model_callback_done);
+
+  TextAnnotationRequestPtr request = TextAnnotationRequest::New();
+  request->text = kTextClassifierTestInput;
+  bool infer_callback_done = false;
+  text_classifier->Annotate(
+      std::move(request),
+      base::Bind(
+          [](bool* infer_callback_done,
+             std::vector<TextAnnotationPtr> annotations) {
+            *infer_callback_done = true;
+            EXPECT_EQ(annotations.size(), 4);
+            EXPECT_EQ(annotations[0]->start_offset, 0);
+            EXPECT_EQ(annotations[0]->end_offset, 19);
+            ASSERT_GE(annotations[0]->entities.size(), 1);
+            EXPECT_EQ(annotations[0]->entities[0]->name, "email");
+            EXPECT_EQ(annotations[1]->start_offset, 21);
+            EXPECT_EQ(annotations[1]->end_offset, 38);
+            ASSERT_GE(annotations[1]->entities.size(), 1);
+            EXPECT_EQ(annotations[1]->entities[0]->name, "address");
+            EXPECT_EQ(annotations[2]->start_offset, 40);
+            EXPECT_EQ(annotations[2]->end_offset, 51);
+            ASSERT_GE(annotations[2]->entities.size(), 1);
+            EXPECT_EQ(annotations[2]->entities[0]->name, "dictionary");
+            EXPECT_EQ(annotations[3]->start_offset, 53);
+            EXPECT_EQ(annotations[3]->end_offset, 57);
+            ASSERT_GE(annotations[3]->entities.size(), 1);
+            EXPECT_EQ(annotations[3]->entities[0]->name, "datetime");
+          },
+          &infer_callback_done));
+  base::RunLoop().RunUntilIdle();
+  ASSERT_TRUE(infer_callback_done);
+}
+
+// Tests text classifier selection suggestion for an empty string.
+// In this situation, text classifier will return the input span.
+TEST(TextClassifierSelectionTest, EmptyString) {
+  MachineLearningServicePtr ml_service;
+  const MachineLearningServiceImplForTesting ml_service_impl(
+      mojo::MakeRequest(&ml_service).PassMessagePipe());
+
+  TextClassifierPtr text_classifier;
+  bool model_callback_done = false;
+  ml_service->LoadTextClassifier(
+      mojo::MakeRequest(&text_classifier),
+      base::Bind(
+          [](bool* model_callback_done, const LoadModelResult result) {
+            EXPECT_EQ(result, LoadModelResult::OK);
+            *model_callback_done = true;
+          },
+          &model_callback_done));
+  base::RunLoop().RunUntilIdle();
+  ASSERT_TRUE(model_callback_done);
+
+  TextSuggestSelectionRequestPtr request = TextSuggestSelectionRequest::New();
+  request->text = "";
+  request->user_selection = CodepointSpan::New();
+  request->user_selection->start_offset = 1;
+  request->user_selection->end_offset = 2;
+  bool infer_callback_done = false;
+  text_classifier->SuggestSelection(
+      std::move(request),
+      base::Bind(
+          [](bool* infer_callback_done,
+             CodepointSpanPtr suggested_span) {
+            *infer_callback_done = true;
+            EXPECT_EQ(suggested_span->start_offset, 1);
+            EXPECT_EQ(suggested_span->end_offset, 2);
+          },
+          &infer_callback_done));
+  base::RunLoop().RunUntilIdle();
+  ASSERT_TRUE(infer_callback_done);
+}
+
+// Tests text classifier selection suggestion for a complex string.
+TEST(TextClassifierSelectionTest, ComplexString) {
+  MachineLearningServicePtr ml_service;
+  const MachineLearningServiceImplForTesting ml_service_impl(
+      mojo::MakeRequest(&ml_service).PassMessagePipe());
+
+  TextClassifierPtr text_classifier;
+  bool model_callback_done = false;
+  ml_service->LoadTextClassifier(
+      mojo::MakeRequest(&text_classifier),
+      base::Bind(
+          [](bool* model_callback_done, const LoadModelResult result) {
+            EXPECT_EQ(result, LoadModelResult::OK);
+            *model_callback_done = true;
+          },
+          &model_callback_done));
+  base::RunLoop().RunUntilIdle();
+  ASSERT_TRUE(model_callback_done);
+
+  TextSuggestSelectionRequestPtr request = TextSuggestSelectionRequest::New();
+  request->text = kTextClassifierTestInput;
+  request->user_selection = CodepointSpan::New();
+  request->user_selection->start_offset = 25;
+  request->user_selection->end_offset = 26;
+  bool infer_callback_done = false;
+  text_classifier->SuggestSelection(
+      std::move(request),
+      base::Bind(
+          [](bool* infer_callback_done,
+             CodepointSpanPtr suggested_span) {
+            *infer_callback_done = true;
+            EXPECT_EQ(suggested_span->start_offset, 21);
+            EXPECT_EQ(suggested_span->end_offset, 38);
+          },
+          &infer_callback_done));
+  base::RunLoop().RunUntilIdle();
+  ASSERT_TRUE(infer_callback_done);
+}
+
+// Tests text classifier selection suggestion with wrong inputs.
+// In this situation, text classifier will return the input span.
+TEST(TextClassifierSelectionTest, WrongInput) {
+  MachineLearningServicePtr ml_service;
+  const MachineLearningServiceImplForTesting ml_service_impl(
+      mojo::MakeRequest(&ml_service).PassMessagePipe());
+
+  TextClassifierPtr text_classifier;
+  bool model_callback_done = false;
+  ml_service->LoadTextClassifier(
+      mojo::MakeRequest(&text_classifier),
+      base::Bind(
+          [](bool* model_callback_done, const LoadModelResult result) {
+            EXPECT_EQ(result, LoadModelResult::OK);
+            *model_callback_done = true;
+          },
+          &model_callback_done));
+  base::RunLoop().RunUntilIdle();
+  ASSERT_TRUE(model_callback_done);
+
+  TextSuggestSelectionRequestPtr request = TextSuggestSelectionRequest::New();
+  request->text = kTextClassifierTestInput;
+  request->user_selection = CodepointSpan::New();
+  request->user_selection->start_offset = 30;
+  request->user_selection->end_offset = 26;
+  bool infer_callback_done = false;
+  text_classifier->SuggestSelection(
+      std::move(request),
+      base::Bind(
+          [](bool* infer_callback_done,
+             CodepointSpanPtr suggested_span) {
+            *infer_callback_done = true;
+            EXPECT_EQ(suggested_span->start_offset, 30);
+            EXPECT_EQ(suggested_span->end_offset, 26);
+          },
+          &infer_callback_done));
   base::RunLoop().RunUntilIdle();
   ASSERT_TRUE(infer_callback_done);
 }

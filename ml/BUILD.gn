@@ -20,6 +20,12 @@ group("all") {
   }
 }
 
+source_set("mojo_bindings_traits") {
+  sources = [
+    "mojom/time_mojom_traits.h",
+  ]
+}
+
 generate_mojom_bindings("ml_mojo_bindings") {
   mojo_root = "${platform2_root}"
   sources = [
@@ -27,6 +33,15 @@ generate_mojom_bindings("ml_mojo_bindings") {
     "mojom/machine_learning_service.mojom",
     "mojom/model.mojom",
     "mojom/tensor.mojom",
+    "mojom/text_classifier.mojom",
+    "mojom/time.mojom",
+  ]
+  mojo_extra_args = [
+    "--typemap",
+    rebase_path("mojom/type_mappings.json"),
+  ]
+  deps = [
+    ":mojo_bindings_traits",
   ]
   use_once_callback = true
 }
@@ -37,12 +52,23 @@ pkg_config("ml_common_pkg_deps") {
     "libchrome-${libbase_ver}",
     "libmetrics-${libbase_ver}",
     "libmojo-${libbase_ver}",
+    "zlib",
   ]
 }
 
 static_library("ml_common") {
-  include_dirs = [ "${sysroot}/usr/include/tensorflow" ]
-  libs = [ "tensorflowlite" ]
+  include_dirs = [
+    "${sysroot}/usr/include/icu-chrome/common",
+    "${sysroot}/usr/include/icu-chrome/i18n",
+    "${sysroot}/usr/include/libtextclassifier",
+    "${sysroot}/usr/include/tensorflow",
+  ]
+  libs = [
+    "icui18n-chrome",
+    "icuuc-chrome",
+    "tensorflowlite",
+    "textclassifier",
+  ]
   deps = [
     ":ml_mojo_bindings",
   ]
@@ -56,6 +82,7 @@ static_library("ml_common") {
     "model_metadata.cc",
     "request_metrics.cc",
     "tensor_view.cc",
+    "text_classifier_impl.cc",
     "util.cc",
   ]
 }

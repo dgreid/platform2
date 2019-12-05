@@ -16,6 +16,7 @@ module chromeos.machine_learning.mojom;
 // NOTE: The base directory for 'import' statements is expected to differ
 //       between Chromium and Chrome OS versions of this file.
 import "ml/mojom/model.mojom";
+import "ml/mojom/text_classifier.mojom";
 
 // These values are persisted to logs. Entries should not be renumbered and
 // numeric values should never be reused.
@@ -35,5 +36,8 @@ interface MachineLearningService {
   // metadata.
   LoadFlatBufferModel(FlatBufferModelSpec spec,
                       Model& request)
+      => (LoadModelResult result);
+  // Create a new TextClassifier.
+  LoadTextClassifier(TextClassifier& request)
       => (LoadModelResult result);
 };
