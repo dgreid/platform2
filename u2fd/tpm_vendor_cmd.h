@@ -74,6 +74,9 @@ class TpmVendorCommandProxy : public trunks::TrunksDBusProxy {
   // response was invalid.
   virtual uint32_t GetG2fCertificate(std::string* cert_out);
 
+  // Returns a reference to |lock_|.
+  virtual base::Lock& GetLock();
+
  private:
   // Sends the TPM command with vendor-specific command code |cc| and the
   // payload in |input|, get the reply in |output|. Returns the TPM response
@@ -108,6 +111,11 @@ class TpmVendorCommandProxy : public trunks::TrunksDBusProxy {
   bool vendor_mode_supported_;
   // Mode set on the most recent call to SetU2fVendorMode()
   uint8_t last_u2f_vendor_mode_;
+
+  // A lock to ensure public SendU2fGenerate, SendU2fSign and SendU2fAttest are
+  // executed sequentially. Client code is responsible for acquiring the lock.
+  // TODO(louiscollard): Change to something more robust.
+  base::Lock lock_;
 
   DISALLOW_COPY_AND_ASSIGN(TpmVendorCommandProxy);
 };

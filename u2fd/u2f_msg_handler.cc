@@ -287,6 +287,7 @@ U2fMessageHandler::Cr50CmdStatus U2fMessageHandler::DoU2fGenerate(
     const std::vector<uint8_t>& app_id,
     std::vector<uint8_t>* pub_key,
     std::vector<uint8_t>* key_handle) {
+  base::AutoLock(proxy_->GetLock());
   base::Optional<brillo::SecureBlob> user_secret = user_state_->GetUserSecret();
   if (!user_secret.has_value()) {
     return Cr50CmdStatus::kInvalidState;
@@ -320,6 +321,7 @@ U2fMessageHandler::Cr50CmdStatus U2fMessageHandler::DoU2fSign(
     const std::vector<uint8_t>& key_handle,
     const std::vector<uint8_t>& hash,
     std::vector<uint8_t>* signature_out) {
+  base::AutoLock(proxy_->GetLock());
   base::Optional<brillo::SecureBlob> user_secret = user_state_->GetUserSecret();
   if (!user_secret.has_value()) {
     return Cr50CmdStatus::kInvalidState;
@@ -360,6 +362,7 @@ U2fMessageHandler::Cr50CmdStatus U2fMessageHandler::DoU2fSign(
 U2fMessageHandler::Cr50CmdStatus U2fMessageHandler::DoU2fSignCheckOnly(
     const std::vector<uint8_t>& app_id,
     const std::vector<uint8_t>& key_handle) {
+  base::AutoLock(proxy_->GetLock());
   base::Optional<brillo::SecureBlob> user_secret = user_state_->GetUserSecret();
   if (!user_secret.has_value()) {
     return Cr50CmdStatus::kInvalidState;
@@ -384,6 +387,7 @@ U2fMessageHandler::Cr50CmdStatus U2fMessageHandler::DoG2fAttest(
     const std::vector<uint8_t>& data,
     uint8_t format,
     std::vector<uint8_t>* signature_out) {
+  base::AutoLock(proxy_->GetLock());
   base::Optional<brillo::SecureBlob> user_secret = user_state_->GetUserSecret();
   if (!user_secret.has_value()) {
     return Cr50CmdStatus::kInvalidState;

@@ -7,6 +7,9 @@
 
 #include <functional>
 #include <memory>
+#include <queue>
+
+#include <brillo/dbus/dbus_method_response.h>
 
 #include <u2f/proto_bindings/u2f_interface.pb.h>
 
@@ -14,6 +17,25 @@
 #include "u2fd/user_state.h"
 
 namespace u2f {
+
+using MakeCredentialMethodResponse =
+    brillo::dbus_utils::DBusMethodResponse<MakeCredentialResponse>;
+using GetAssertionMethodResponse =
+    brillo::dbus_utils::DBusMethodResponse<GetAssertionResponse>;
+
+struct MakeCredentialSession {
+  bool empty() { return !response_; }
+  uint64_t session_id;
+  MakeCredentialRequest request_;
+  std::unique_ptr<MakeCredentialMethodResponse> response_;
+};
+
+struct GetAssertionSession {
+  bool empty() { return !response_; }
+  uint64_t session_id;
+  GetAssertionRequest request_;
+  std::unique_ptr<GetAssertionMethodResponse> response_;
+};
 
 // Implementation of the WebAuthn DBus API.
 // More detailed documentation is available in u2f_interface.proto
@@ -33,10 +55,13 @@ class WebAuthnHandler {
                   std::function<void()> request_presence);
 
   // Generates a new credential.
-  MakeCredentialResponse MakeCredential(const MakeCredentialRequest& request);
+  void MakeCredential(
+      std::unique_ptr<MakeCredentialMethodResponse> method_response,
+      const MakeCredentialRequest& request);
 
   // Signs a challenge from the relaying party.
-  GetAssertionResponse GetAssertion(const GetAssertionRequest& request);
+  void GetAssertion(std::unique_ptr<GetAssertionMethodResponse> method_response,
+                    const GetAssertionRequest& request);
 
   // Tests validity and/or presence of specified credentials.
   HasCredentialsResponse HasCredentials(const HasCredentialsRequest& request);
@@ -47,6 +72,9 @@ class WebAuthnHandler {
   TpmVendorCommandProxy* tpm_proxy_;
   UserState* user_state_;
   std::function<void()> request_presence_;
+
+  struct MakeCredentialSession make_credential_session_;
+  struct GetAssertionSession get_assertion_session_;
 };
 
 }  // namespace u2f

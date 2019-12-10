@@ -47,6 +47,10 @@ TpmVendorCommandProxy::TpmVendorCommandProxy()
     : vendor_mode_supported_(true), last_u2f_vendor_mode_(0) {}
 TpmVendorCommandProxy::~TpmVendorCommandProxy() {}
 
+base::Lock& TpmVendorCommandProxy::GetLock() {
+  return lock_;
+}
+
 uint32_t TpmVendorCommandProxy::VendorCommand(uint16_t cc,
                                               const std::string& input,
                                               std::string* output) {

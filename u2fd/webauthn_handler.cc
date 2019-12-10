@@ -7,6 +7,7 @@
 #include <memory>
 #include <utility>
 
+#include <base/time/time.h>
 #include <u2f/proto_bindings/u2f_interface.pb.h>
 
 namespace u2f {
@@ -26,16 +27,16 @@ bool WebAuthnHandler::Initialized() {
   return tpm_proxy_ != nullptr && user_state_ != nullptr;
 }
 
-MakeCredentialResponse WebAuthnHandler::MakeCredential(
+void WebAuthnHandler::MakeCredential(
+    std::unique_ptr<MakeCredentialMethodResponse> method_response,
     const MakeCredentialRequest& request) {
   // TODO(louiscollard): Implement.
-  return MakeCredentialResponse();
 }
 
-GetAssertionResponse WebAuthnHandler::GetAssertion(
+void WebAuthnHandler::GetAssertion(
+    std::unique_ptr<GetAssertionMethodResponse> method_response,
     const GetAssertionRequest& request) {
   // TODO(louiscollard): Implement.
-  return GetAssertionResponse();
 }
 
 HasCredentialsResponse WebAuthnHandler::HasCredentials(

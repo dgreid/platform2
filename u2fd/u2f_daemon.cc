@@ -255,23 +255,14 @@ void U2fDaemon::RegisterDBusObjectsAsync(
   wink_signal_ = u2f_interface->RegisterSignal<u2f::UserNotification>(
       u2f::kU2FUserNotificationSignal);
 
-  // Blocking handlers for the WebAuthn DBus API.
-  //
-  // Requests will be handled sequentially, as will commands sent to the virtual
-  // USB HID device. We are not likely to need to answer multiple requests in
-  // parallel, so this limitation is unlikely to cause problems, and it removes
-  // a race condition (and potential security issue?) where multiple requests
-  // would be competing for user presence, and for example a request received
-  // later could consume a touch of the power button that the user had intended
-  // for the earlier request.
+  // Handlers for the WebAuthn DBus API.
+  u2f_interface->AddMethodHandler(kU2FMakeCredential,
+                                  base::Unretained(&webauthn_handler_),
+                                  &WebAuthnHandler::MakeCredential);
 
-  u2f_interface->AddSimpleMethodHandler(kU2FMakeCredential,
-                                        base::Unretained(&webauthn_handler_),
-                                        &WebAuthnHandler::MakeCredential);
-
-  u2f_interface->AddSimpleMethodHandler(kU2FGetAssertion,
-                                        base::Unretained(&webauthn_handler_),
-                                        &WebAuthnHandler::GetAssertion);
+  u2f_interface->AddMethodHandler(kU2FGetAssertion,
+                                  base::Unretained(&webauthn_handler_),
+                                  &WebAuthnHandler::GetAssertion);
 
   u2f_interface->AddSimpleMethodHandler(kU2FHasCredentials,
                                         base::Unretained(&webauthn_handler_),
