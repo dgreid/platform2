@@ -8,11 +8,15 @@
 #include <limits.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <sys/ioctl.h>
 #include <sys/mount.h>
 #include <sys/stat.h>
 #include <sys/sysmacros.h>
 #include <sys/types.h>
 #include <unistd.h>
+
+// Keep after <sys/mount.h> to avoid build errors.
+#include <linux/fs.h>
 
 #include <algorithm>
 #include <memory>
@@ -36,6 +40,8 @@
 #include <chromeos/secure_erase_file/secure_erase_file.h>
 
 #include "init/crossystem.h"
+
+#define ALIGN_UP(val, align) (((val) + (align)-1) & ~((align)-1))
 
 namespace {
 
@@ -680,16 +686,57 @@ bool ClobberState::WipeBlockDevice(const base::FilePath& device_path,
 
   // Don't display progress in fast mode since it runs so quickly.
   bool display_progress = !fast;
+  base::ScopedClosureRunner stop_wipe_ui;
   if (display_progress) {
-    if (!ui->StartWipeUi(to_write)) {
+    if (ui->StartWipeUi(to_write)) {
+      stop_wipe_ui.ReplaceClosure(
+          base::BindOnce([](ClobberUi* ui) { ui->StopWipeUi(); }, ui));
+    } else {
       display_progress = false;
     }
   }
 
-  const std::vector<char> buffer(write_block_size, '\0');
-  int64_t total_written = 0;
+  uint64_t total_written = 0;
+
+  // Attempt to use the BLKZEROOUT ioctl since it is significantly faster if
+  // supported by the device. It is not supported on kernels before 4.4.
+  // If the device does not support it, the kernel will fall back to writing
+  // 0's manually.
+  // We call BLKZEROOUT in chunks 5% (1/20th) of the disk size so that we can
+  // update progress as we go. Round up the chunk size to a multiple of 128MiB.
+  // BLKZEROOUT requires that its arguments are aligned to at least 512 bytes.
+  const uint64_t zero_block_size = ALIGN_UP(to_write / 20, 128 * 1024 * 1024);
   while (total_written < to_write) {
-    int write_size = std::min(static_cast<int64_t>(write_block_size),
+    uint64_t write_size = std::min(zero_block_size, to_write - total_written);
+    uint64_t range[2] = {total_written, write_size};
+    LOG(INFO) << "Wiping from " << total_written << " to "
+              << (total_written + write_size);
+    int ret = ioctl(device.GetPlatformFile(), BLKZEROOUT, &range);
+    if (ret == 0) {
+      total_written += write_size;
+      if (display_progress) {
+        ui->UpdateWipeProgress(total_written);
+      }
+    } else if (errno == ENOTTY) {
+      LOG(INFO) << "BLKZEROOUT is not supported";
+      break;
+    } else {
+      PLOG(ERROR) << "Wiping with BLKZEROOUT failed";
+      break;
+    }
+  }
+
+  if (total_written == to_write) {
+    LOG(INFO) << "Successfully zeroed " << to_write << " bytes on "
+              << device_path.value();
+    return true;
+  }
+  LOG(INFO) << "Reverting to manual wipe for bytes " << total_written
+            << " through " << to_write;
+
+  const std::vector<char> buffer(write_block_size, '\0');
+  while (total_written < to_write) {
+    int write_size = std::min(static_cast<uint64_t>(write_block_size),
                               to_write - total_written);
     int64_t bytes_written = device.WriteAtCurrentPos(buffer.data(), write_size);
     if (bytes_written < 0) {
@@ -704,10 +751,6 @@ bool ClobberState::WipeBlockDevice(const base::FilePath& device_path,
   }
   LOG(INFO) << "Successfully wrote " << total_written << " bytes to "
             << device_path.value();
-
-  if (display_progress) {
-    ui->StopWipeUi();
-  }
 
   return true;
 }
