@@ -32,9 +32,7 @@ def main(argv):
   opts, cmd_list = parser.parse_known_args(argv)
 
   prefix_len = len(opts.prefix)
-  # TODO(vapier): Move decode('utf-8') to encoding='utf-8' in check_output once
-  # .gn uses shebangs.
-  flags = shlex.split(subprocess.check_output(cmd_list).decode('utf-8'))
+  flags = shlex.split(subprocess.check_output(cmd_list, encoding='utf-8'))
   filtered = [x[prefix_len:] for x in flags if x.startswith(opts.prefix)]
   print('\n'.join(filtered))
 

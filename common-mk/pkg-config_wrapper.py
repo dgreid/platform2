@@ -25,8 +25,8 @@ import subprocess
 
 def get_shell_output(cmd):
   """Run |cmd| and return output as a list."""
-  output = subprocess.check_output(cmd)
-  return shlex.split(output.decode('utf-8'))
+  output = subprocess.check_output(cmd, encoding='utf-8')
+  return shlex.split(output)
 
 
 def main(argv):
