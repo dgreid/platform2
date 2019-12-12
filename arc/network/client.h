@@ -12,7 +12,7 @@
 #include <brillo/brillo_export.h>
 #include <dbus/bus.h>
 #include <dbus/object_proxy.h>
-#include <patchpanel/proto_bindings/patchpanel-service.pb.h>
+#include <patchpanel/proto_bindings/patchpanel_service.pb.h>
 
 namespace patchpanel {
 

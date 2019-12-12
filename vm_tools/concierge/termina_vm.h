@@ -21,7 +21,7 @@
 #include <base/macros.h>
 #include <base/time/time.h>
 #include <brillo/process.h>
-#include <patchpanel/proto_bindings/patchpanel-service.pb.h>
+#include <patchpanel/proto_bindings/patchpanel_service.pb.h>
 #include <vm_concierge/proto_bindings/concierge_service.pb.h>
 #include <vm_protos/proto_bindings/vm_guest.grpc.pb.h>
 

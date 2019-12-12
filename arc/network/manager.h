@@ -15,7 +15,7 @@
 #include <brillo/daemons/dbus_daemon.h>
 #include <brillo/process_reaper.h>
 #include <chromeos/dbus/service_constants.h>
-#include <patchpanel/proto_bindings/patchpanel-service.pb.h>
+#include <patchpanel/proto_bindings/patchpanel_service.pb.h>
 
 #include "arc/network/address_manager.h"
 #include "arc/network/arc_service.h"
