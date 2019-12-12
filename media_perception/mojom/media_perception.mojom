@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 //
-// Next MinVersion: 1
+// Next MinVersion: 2
 
 module chromeos.media_perception.mojom;
 
+import "mojom/appearances.mojom";
 import "mojom/device_management.mojom";
 import "mojom/frame_perception.mojom";
 import "mojom/hotword_detection.mojom";
@@ -25,6 +26,7 @@ struct PerceptionInterfaces {
   HotwordDetectionHandler&? hotword_detection_handler_request@1;
   PresencePerceptionHandler&? presence_perception_handler_request@2;
   OccupancyTriggerHandler&? occupancy_trigger_handler_request@3;
+  [MinVersion=1] AppearancesHandler&? appearances_handler_request@4;
 };
 
 interface MediaPerception {

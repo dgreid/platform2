@@ -150,6 +150,35 @@ OutputManager::OutputManager(
       continue;
     }
 
+    // Appearances interface setup.
+    if (interface.interface_type() ==
+        PerceptionInterfaceType::INTERFACE_APPEARANCES) {
+      (*interfaces_ptr)->appearances_handler_request =
+          mojo::MakeRequest(&appearances_handler_ptr_);
+      appearances_handler_ptr_.set_connection_error_handler(
+          base::Bind(&OnConnectionClosedOrError,
+          "APPEARANCES"));
+
+      // Appearances outputs setup.
+      for (const PipelineOutput& output : interface.output()) {
+        if (output.output_type() ==
+            PipelineOutputType::OUTPUT_APPEARANCES) {
+          SerializedSuccessStatus serialized_status =
+              rtanalytics->SetPipelineOutputHandler(
+                  configuration_name, output.stream_name(),
+                  std::bind(&OutputManager::HandleAppearances,
+                            this, std::placeholders::_1));
+          SuccessStatus status = Serialized<SuccessStatus>(
+              serialized_status).Deserialize();
+          if (!status.success()) {
+            LOG(ERROR) << "Failed to set output handler for "
+                       << configuration_name << " with output "
+                       << output.stream_name();
+          }
+        }
+      }
+      continue;
+    }
   }
 }
 
@@ -224,6 +253,22 @@ void OutputManager::HandleOccupancyTrigger(
       Serialized<OccupancyTrigger>(bytes).Deserialize();
   occupancy_trigger_handler_ptr_->OnOccupancyTrigger(
       chromeos::media_perception::mojom::ToMojom(occupancy_trigger));
+}
+
+void OutputManager::HandleAppearances(
+    const std::vector<uint8_t>& bytes) {
+  if (!appearances_handler_ptr_.is_bound()) {
+    LOG(WARNING)
+        << "Got appearances but handler ptr is not bound.";
+    return;
+  }
+
+  if (appearances_handler_ptr_.get() == nullptr) {
+    LOG(ERROR) << "Handler ptr is null.";
+    return;
+  }
+
+  appearances_handler_ptr_->OnAppearances(bytes);
 }
 
 }  // namespace mri

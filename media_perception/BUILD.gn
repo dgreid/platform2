@@ -38,6 +38,7 @@ proto_library("media_perception_protos") {
 
 generate_mojom_bindings("media_perception_mojo_bindings") {
   sources = [
+    "mojom/appearances.mojom",
     "mojom/buffer_types.mojom",
     "mojom/color_space.mojom",
     "mojom/common.mojom",

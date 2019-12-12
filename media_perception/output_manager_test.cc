@@ -105,6 +105,26 @@ class OccupancyTriggerHandlerImpl :
       binding_;
 };
 
+class AppearancesHandlerImpl :
+  public chromeos::media_perception::mojom::AppearancesHandler {
+ public:
+  AppearancesHandlerImpl(
+      chromeos::media_perception::mojom::AppearancesHandlerRequest
+      request) : binding_(this, std::move(request)) {
+    LOG(INFO) << "Binding is bound: " << binding_.is_bound();
+  }
+
+  void OnAppearances(
+      const std::vector<uint8_t> & appearances) override {
+    appearances_ = appearances;
+  }
+
+  std::vector<uint8_t> appearances_;
+
+  mojo::Binding<chromeos::media_perception::mojom::AppearancesHandler>
+      binding_;
+};
+
 class OutputManagerTest : public testing::Test {
  protected:
   void SetUp() override {
@@ -259,6 +279,47 @@ TEST_F(OutputManagerTest, OccupancyTriggerOutputManagerTest) {
 
   EXPECT_EQ(
       occupancy_trigger_handler_impl.occupancy_trigger_.trigger(), true);
+}
+
+TEST_F(OutputManagerTest, AppearancesOutputManagerTest) {
+  PerceptionInterfaces perception_interfaces;
+  PerceptionInterface* interface = perception_interfaces.add_interface();
+  interface->set_interface_type(
+      PerceptionInterfaceType::INTERFACE_APPEARANCES);
+  PipelineOutput* output = interface->add_output();
+  output->set_output_type(
+      PipelineOutputType::OUTPUT_APPEARANCES);
+  output->set_stream_name("fake_stream_name");
+
+  chromeos::media_perception::mojom::PerceptionInterfacesPtr interfaces_ptr =
+      chromeos::media_perception::mojom::PerceptionInterfaces::New();
+
+  OutputManager output_manager(
+      "fake_presence_perception_configuration",
+      rtanalytics_,
+      perception_interfaces,
+      &interfaces_ptr);
+
+  EXPECT_TRUE(interfaces_ptr->appearances_handler_request.is_pending());
+  EXPECT_EQ(fake_rtanalytics_->GetMostRecentOutputStreamName(),
+            "fake_stream_name");
+
+  AppearancesHandlerImpl appearances_handler_impl(
+      std::move(interfaces_ptr->appearances_handler_request));
+  base::RunLoop().RunUntilIdle();
+
+  std::vector<uint8_t> bytes {0, 1, 2, 3, 1, 2, 3, 2, 1};
+
+  output_manager.HandleAppearances(bytes);
+  base::RunLoop().RunUntilIdle();
+
+  ASSERT_EQ(appearances_handler_impl.appearances_.size(), bytes.size())
+      << "Vectors are of unequal length.";
+
+  for (int i = 0; i < bytes.size(); ++i) {
+    EXPECT_EQ(appearances_handler_impl.appearances_[i], bytes[i])
+        << "Bytes and Output Appearances Vector differ at index "<< i;
+  }
 }
 
 }  // namespace
