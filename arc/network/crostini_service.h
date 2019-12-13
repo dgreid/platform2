@@ -10,6 +10,7 @@
 #include <string>
 
 #include <base/memory/weak_ptr.h>
+#include <permission_broker/dbus-proxies.h>
 
 #include "arc/network/datapath.h"
 #include "arc/network/device.h"
@@ -34,10 +35,35 @@ class CrostiniService {
   bool AddTAP(int32_t cid);
   void OnDefaultInterfaceChanged(const std::string& ifname);
 
+  bool SetupFirewallClient();
+
+  // Setup lifeline pipe to allow the remote firewall server
+  // (permission_broker) to monitor this process, so it can remove the firewall
+  // rules in case this process crashes.
+  int32_t SetupLifelinePipe();
+
+  // Start and stop ADB traffic forwarding from Crostini's TAP device to
+  // arc-networkd's adb-proxy. |ifname| is the Crostini's TAP interface that
+  // will be forwarded. These methods call permission broker DBUS APIs to port
+  // forward and accept traffic.
+  void StartAdbPortForwarding(const std::string& ifname);
+  void StopAdbPortForwarding(const std::string& ifname);
+
   DeviceManagerBase* dev_mgr_;
   Datapath* datapath_;
   // Mapping of VM CIDs to TAP devices
   std::map<int32_t, std::unique_ptr<Device>> taps_;
+
+  scoped_refptr<dbus::Bus> bus_;
+  std::unique_ptr<org::chromium::PermissionBrokerProxy>
+      permission_broker_proxy_;
+
+  // Mapping from Crostini's TAP interface to lifeline write file descriptor.
+  // The file descriptor is the write end of the pipe used for communicating
+  // with remote firewall server (permission_broker), where the remote firewall
+  // server will use the read end of the pipe to detect when this process exits
+  // or close the write end of the pipe.
+  std::map<const std::string, base::ScopedFD> lifeline_fds_;
 
   base::WeakPtrFactory<CrostiniService> weak_factory_{this};
   DISALLOW_COPY_AND_ASSIGN(CrostiniService);

@@ -11,12 +11,39 @@
 #include <base/strings/string_util.h>
 #include <base/strings/stringprintf.h>
 #include <chromeos/constants/vm_tools.h>
+#include <session_manager/dbus-proxies.h>
 
+#include "arc/network/adb_proxy.h"
 #include "arc/network/device.h"
 
 namespace arc_networkd {
 namespace {
 constexpr int32_t kInvalidCID = -1;
+
+bool IsAdbSideloadingEnabled(const scoped_refptr<dbus::Bus>& bus) {
+  static bool checked = false;
+  static bool result = false;
+
+  if (checked)
+    return result;
+
+  auto session_manager_proxy =
+      new org::chromium::SessionManagerInterfaceProxy(bus);
+
+  brillo::ErrorPtr error;
+  session_manager_proxy->QueryAdbSideload(&result, &error);
+
+  if (error) {
+    LOG(ERROR) << "Error calling D-Bus proxy call to interface "
+               << "'" << session_manager_proxy->GetObjectPath().value()
+               << "': " << error->GetMessage();
+    return false;
+  }
+
+  checked = true;
+  return result;
+}
+
 }  // namespace
 
 CrostiniService::CrostiniService(DeviceManagerBase* dev_mgr, Datapath* datapath)
@@ -44,7 +71,11 @@ bool CrostiniService::Start(int32_t cid) {
     return false;
 
   LOG(INFO) << "Crostini network service started for {cid: " << cid << "}";
-  dev_mgr_->StartForwarding(*taps_[cid].get());
+
+  const auto* dev = taps_[cid].get();
+  dev_mgr_->StartForwarding(*dev);
+  StartAdbPortForwarding(dev->ifname());
+
   return true;
 }
 
@@ -58,6 +89,7 @@ void CrostiniService::Stop(int32_t cid) {
   const auto* dev = it->second.get();
   dev_mgr_->StopForwarding(*dev);
   datapath_->RemoveInterface(dev->config().host_ifname());
+  StopAdbPortForwarding(dev->ifname());
   taps_.erase(it);
 
   LOG(INFO) << "Crostini network service stopped for {cid: " << cid << "}";
@@ -139,6 +171,89 @@ void CrostiniService::OnDefaultInterfaceChanged(const std::string& ifname) {
 
   for (const auto& t : taps_)
     dev_mgr_->StartForwarding(*t.second.get());
+}
+
+bool CrostiniService::SetupFirewallClient() {
+  if (bus_)
+    return true;
+
+  dbus::Bus::Options options;
+  options.bus_type = dbus::Bus::SYSTEM;
+
+  bus_ = new dbus::Bus(options);
+  if (!bus_->Connect()) {
+    LOG(ERROR) << "Failed to connect to system bus";
+    return false;
+  }
+
+  permission_broker_proxy_.reset(
+      new org::chromium::PermissionBrokerProxy(bus_));
+
+  return true;
+}
+
+void CrostiniService::StartAdbPortForwarding(const std::string& ifname) {
+  DCHECK(lifeline_fds_.find(ifname) == lifeline_fds_.end());
+  if (!SetupFirewallClient() || !IsAdbSideloadingEnabled(bus_))
+    return;
+
+  // Setup lifeline pipe.
+  int lifeline_fds[2];
+  if (pipe(lifeline_fds) != 0) {
+    PLOG(ERROR) << "Failed to create lifeline pipe";
+    return;
+  }
+  base::ScopedFD lifeline_read_fd(lifeline_fds[0]);
+  base::ScopedFD lifeline_write_fd(lifeline_fds[1]);
+
+  bool allowed = false;
+  brillo::ErrorPtr error;
+  permission_broker_proxy_->RequestAdbPortForward(ifname, lifeline_fds[0],
+                                                  &allowed, &error);
+  if (error) {
+    LOG(ERROR) << "Error calling D-Bus proxy call to interface "
+               << "'" << permission_broker_proxy_->GetObjectPath().value()
+               << "': " << error->GetMessage();
+    return;
+  }
+  if (!allowed) {
+    LOG(ERROR) << "ADB port forwarding on " << ifname << " not allowed";
+    return;
+  }
+
+  permission_broker_proxy_->RequestTcpPortAccess(
+      kAdbProxyTcpListenPort, ifname, lifeline_fds[0], &allowed, &error);
+  if (error) {
+    LOG(ERROR) << "Error calling D-Bus proxy call to interface "
+               << "'" << permission_broker_proxy_->GetObjectPath().value()
+               << "': " << error->GetMessage();
+    return;
+  }
+  if (!allowed) {
+    LOG(ERROR) << "ADB port access on " << ifname << " not allowed";
+    return;
+  }
+
+  if (datapath_->runner().sysctl_w(
+          "net.ipv4.conf." + ifname + ".route_localnet", "1") != 0) {
+    LOG(ERROR) << "Failed to set up route localnet for " << ifname;
+    return;
+  }
+
+  lifeline_fds_.emplace(ifname, std::move(lifeline_write_fd));
+}
+
+void CrostiniService::StopAdbPortForwarding(const std::string& ifname) {
+  if (!SetupFirewallClient() || !IsAdbSideloadingEnabled(bus_))
+    return;
+
+  const auto& lifeline_fd = lifeline_fds_.find(ifname);
+  if (lifeline_fd == lifeline_fds_.end()) {
+    LOG(WARNING) << "Stopping ADB port forwarding on a deleted lifeline fd on "
+                 << ifname;
+    return;
+  }
+  lifeline_fds_.erase(lifeline_fd);
 }
 
 }  // namespace arc_networkd
