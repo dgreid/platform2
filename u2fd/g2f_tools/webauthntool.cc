@@ -39,6 +39,17 @@ Resp SendRequest(dbus::ObjectProxy* proxy,
   return resp;
 }
 
+std::string ResponseStatusToString(int status) {
+  switch (status) {
+    case 1: return "SUCCESS";
+    case 2: return "VERIFICATION_FAILED";
+    case 3: return "VERIFICATION_TIMEOUT";
+    case 4: return "INVALID_REQUEST";
+    case 5: return "INTERNAL_ERROR";
+    default: return "UNKNOWN";
+  }
+}
+
 std::string HexEncodeStr(const std::string& str) {
   return base::HexEncode(str.data(), str.size());
 }
@@ -65,7 +76,7 @@ void MakeCredential(dbus::ObjectProxy* proxy,
       SendRequest<u2f::MakeCredentialRequest, u2f::MakeCredentialResponse>(
           proxy, u2f::kU2FMakeCredential, req);
 
-  LOG(INFO) << "status: " << resp.status();
+  LOG(INFO) << "status: " << ResponseStatusToString(resp.status());
   LOG(INFO) << "authenticator_data: "
             << HexEncodeStr(resp.authenticator_data());
   LOG(INFO) << "attestation_format: " << resp.attestation_format();
@@ -95,7 +106,7 @@ void GetAssertion(dbus::ObjectProxy* proxy,
       SendRequest<u2f::GetAssertionRequest, u2f::GetAssertionResponse>(
           proxy, u2f::kU2FGetAssertion, req);
 
-  LOG(INFO) << "status: " << resp.status();
+  LOG(INFO) << "status: " << ResponseStatusToString(resp.status());
   for (const auto& assertion : resp.assertion()) {
     LOG(INFO) << "credential_id: " << HexEncodeStr(assertion.credential_id());
     LOG(INFO) << "authenticator_data: "
