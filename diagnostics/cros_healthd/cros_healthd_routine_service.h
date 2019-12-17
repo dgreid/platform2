@@ -58,6 +58,14 @@ class CrosHealthdRoutineService {
       const base::Optional<std::string>& expected_power_type,
       int32_t* id,
       MojomCrosHealthdDiagnosticRoutineStatusEnum* status) = 0;
+  virtual void RunCpuCacheRoutine(
+      const base::TimeDelta& exec_duration,
+      int32_t* id,
+      MojomCrosHealthdDiagnosticRoutineStatusEnum* status) = 0;
+  virtual void RunCpuStressRoutine(
+      const base::TimeDelta& exec_duration,
+      int32_t* id,
+      MojomCrosHealthdDiagnosticRoutineStatusEnum* status) = 0;
   virtual void GetRoutineUpdate(
       int32_t id,
       MojomCrosHealthdDiagnosticRoutineCommandEnum command,

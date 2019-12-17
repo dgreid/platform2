@@ -104,6 +104,24 @@ void CrosHealthdMojoService::RunAcPowerRoutine(
   callback.Run(response.Clone());
 }
 
+void CrosHealthdMojoService::RunCpuCacheRoutine(
+    uint32_t length_seconds, const RunCpuCacheRoutineCallback& callback) {
+  RunRoutineResponse response;
+  routine_service_->RunCpuCacheRoutine(
+      base::TimeDelta().FromSeconds(length_seconds), &response.id,
+      &response.status);
+  callback.Run(response.Clone());
+}
+
+void CrosHealthdMojoService::RunCpuStressRoutine(
+    uint32_t length_seconds, const RunCpuStressRoutineCallback& callback) {
+  RunRoutineResponse response;
+  routine_service_->RunCpuStressRoutine(
+      base::TimeDelta().FromSeconds(length_seconds), &response.id,
+      &response.status);
+  callback.Run(response.Clone());
+}
+
 void CrosHealthdMojoService::ProbeTelemetryInfo(
     const std::vector<ProbeCategoryEnum>& categories,
     const ProbeTelemetryInfoCallback& callback) {

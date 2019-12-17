@@ -298,6 +298,8 @@ enum DiagnosticRoutine {
   ROUTINE_BATTERY_SYSFS = 2;
   ROUTINE_URANDOM = 3;
   ROUTINE_SMARTCTL_CHECK = 4;
+  ROUTINE_CPU_CACHE = 5;
+  ROUTINE_CPU_STRESS = 6;
 }
 
 // Enumeration of each of the possible statuses for a diagnostics routine.
@@ -348,6 +350,7 @@ message RunRoutineRequest {
     BatterySysfsRoutineParameters battery_sysfs_params = 3;
     UrandomRoutineParameters urandom_params = 4;
     SmartctlCheckRoutineParameters smartctl_check_params = 5;
+    CpuRoutineParameters cpu_params = 6;
   }
 }
 
@@ -379,6 +382,14 @@ message UrandomRoutineParameters {
 
 // Parameters for the smartctl_check diagnostics routine.
 message SmartctlCheckRoutineParameters {}
+
+// Parameters for the cpu cache/stress diagnostics routine
+message CpuRoutineParameters {
+  // Length of time to run the CPU cache/stress diagnostics in seconds.
+  // Note here, the length of running time should be at least five minutes for
+  // the CPU stress diagnostics and the testing will fail if not.
+  int32 length_seconds = 1;
+}
 
 // Return value of the RunRoutine RPC.
 message RunRoutineResponse {

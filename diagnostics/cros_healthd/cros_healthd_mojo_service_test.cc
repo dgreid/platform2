@@ -75,6 +75,14 @@ class MockCrosHealthdRoutineService : public CrosHealthdRoutineService {
                     const base::Optional<std::string>& expected_power_type,
                     int32_t* id,
                     mojo_ipc::DiagnosticRoutineStatusEnum* status));
+  MOCK_METHOD3(RunCpuCacheRoutine,
+               void(const base::TimeDelta& exec_duration,
+                    int32_t* id,
+                    mojo_ipc::DiagnosticRoutineStatusEnum* status));
+  MOCK_METHOD3(RunCpuStressRoutine,
+               void(const base::TimeDelta& exec_duration,
+                    int32_t* id,
+                    mojo_ipc::DiagnosticRoutineStatusEnum* status));
   MOCK_METHOD4(GetRoutineUpdate,
                void(int32_t uuid,
                     mojo_ipc::DiagnosticRoutineCommandEnum command,
@@ -231,6 +239,50 @@ TEST_F(CrosHealthdMojoServiceTest, RequestAcPowerRoutine) {
   mojo_ipc::RunRoutineResponsePtr response;
   service()->RunAcPowerRoutine(
       kConnected, kPowerType,
+      base::Bind(&SaveMojoResponse<mojo_ipc::RunRoutineResponsePtr>,
+                 &response));
+
+  ASSERT_TRUE(!response.is_null());
+  EXPECT_EQ(response->id, kExpectedId);
+  EXPECT_EQ(response->status, kExpectedStatus);
+}
+
+// Test that we can request the CPU cache routine.
+TEST_F(CrosHealthdMojoServiceTest, RequestCpuCacheRoutine) {
+  constexpr auto exec_duration = base::TimeDelta().FromSeconds(30);
+
+  EXPECT_CALL(*routine_service(), RunCpuCacheRoutine(exec_duration, _, _))
+      .WillOnce(WithArgs<1, 2>(Invoke(
+          [](int32_t* id, mojo_ipc::DiagnosticRoutineStatusEnum* status) {
+            *id = kExpectedId;
+            *status = kExpectedStatus;
+          })));
+
+  mojo_ipc::RunRoutineResponsePtr response;
+  service()->RunCpuCacheRoutine(
+      exec_duration.InSeconds(),
+      base::Bind(&SaveMojoResponse<mojo_ipc::RunRoutineResponsePtr>,
+                 &response));
+
+  ASSERT_TRUE(!response.is_null());
+  EXPECT_EQ(response->id, kExpectedId);
+  EXPECT_EQ(response->status, kExpectedStatus);
+}
+
+// Test that we can request the CPU stress routine.
+TEST_F(CrosHealthdMojoServiceTest, RequestCpuStressRoutine) {
+  constexpr auto exec_duration = base::TimeDelta().FromMinutes(5);
+
+  EXPECT_CALL(*routine_service(), RunCpuStressRoutine(exec_duration, _, _))
+      .WillOnce(WithArgs<1, 2>(Invoke(
+          [](int32_t* id, mojo_ipc::DiagnosticRoutineStatusEnum* status) {
+            *id = kExpectedId;
+            *status = kExpectedStatus;
+          })));
+
+  mojo_ipc::RunRoutineResponsePtr response;
+  service()->RunCpuStressRoutine(
+      exec_duration.InSeconds(),
       base::Bind(&SaveMojoResponse<mojo_ipc::RunRoutineResponsePtr>,
                  &response));
 

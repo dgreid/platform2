@@ -104,6 +104,12 @@ bool GetGrpcRoutineEnumFromMojoRoutineEnum(
     case chromeos::cros_healthd::mojom::DiagnosticRoutineEnum::kSmartctlCheck:
       grpc_enum_out->push_back(grpc_api::ROUTINE_SMARTCTL_CHECK);
       return true;
+    case chromeos::cros_healthd::mojom::DiagnosticRoutineEnum::kCpuCache:
+      grpc_enum_out->push_back(grpc_api::ROUTINE_CPU_CACHE);
+      return true;
+    case chromeos::cros_healthd::mojom::DiagnosticRoutineEnum::kCpuStress:
+      grpc_enum_out->push_back(grpc_api::ROUTINE_CPU_STRESS);
+      return true;
     default:
       LOG(ERROR) << "Unknown mojo routine: " << static_cast<int>(mojo_enum);
       return false;
@@ -265,6 +271,22 @@ void RoutineService::RunRoutine(const grpc_api::RunRoutineRequest& request,
       DCHECK_EQ(request.parameters_case(),
                 grpc_api::RunRoutineRequest::kSmartctlCheckParams);
       service_ptr_->RunSmartctlCheckRoutine(
+          base::Bind(&RoutineService::ForwardRunRoutineResponse,
+                     weak_ptr_factory_.GetWeakPtr(), callback_key));
+      break;
+    case grpc_api::ROUTINE_CPU_CACHE:
+      DCHECK_EQ(request.parameters_case(),
+                grpc_api::RunRoutineRequest::kCpuParams);
+      service_ptr_->RunCpuCacheRoutine(
+          request.cpu_params().length_seconds(),
+          base::Bind(&RoutineService::ForwardRunRoutineResponse,
+                     weak_ptr_factory_.GetWeakPtr(), callback_key));
+      break;
+    case grpc_api::ROUTINE_CPU_STRESS:
+      DCHECK_EQ(request.parameters_case(),
+                grpc_api::RunRoutineRequest::kCpuParams);
+      service_ptr_->RunCpuStressRoutine(
+          request.cpu_params().length_seconds(),
           base::Bind(&RoutineService::ForwardRunRoutineResponse,
                      weak_ptr_factory_.GetWeakPtr(), callback_key));
       break;

@@ -30,7 +30,7 @@ constexpr base::TimeDelta kRoutinePollIntervalTimeDelta =
     base::TimeDelta::FromMilliseconds(100);
 // Maximum time we're willing to wait for a routine to finish.
 constexpr base::TimeDelta kMaximumRoutineExecutionTimeDelta =
-    base::TimeDelta::FromSeconds(60);
+    base::TimeDelta::FromSeconds(600);
 
 const struct {
   const char* switch_name;
@@ -40,7 +40,9 @@ const struct {
     {"battery_health", mojo_ipc::DiagnosticRoutineEnum::kBatteryHealth},
     {"urandom", mojo_ipc::DiagnosticRoutineEnum::kUrandom},
     {"smartctl_check", mojo_ipc::DiagnosticRoutineEnum::kSmartctlCheck},
-    {"ac_power", mojo_ipc::DiagnosticRoutineEnum::kAcPower}};
+    {"ac_power", mojo_ipc::DiagnosticRoutineEnum::kAcPower},
+    {"cpu_cache", mojo_ipc::DiagnosticRoutineEnum::kCpuCache},
+    {"cpu_stress", mojo_ipc::DiagnosticRoutineEnum::kCpuStress}};
 
 const struct {
   const char* readable_status;
@@ -248,6 +250,20 @@ bool ActionRunAcPowerRoutine(bool is_connected, const std::string& power_type) {
   return RunRoutineAndProcessResult(response->id, &adapter);
 }
 
+bool ActionRunCpuCacheRoutine(const base::TimeDelta& exec_duration) {
+  diagnostics::CrosHealthdMojoAdapter adapter;
+  auto response = adapter.RunCpuCacheRoutine(exec_duration);
+  CHECK(response) << "No RunRoutineResponse received.";
+  return RunRoutineAndProcessResult(response->id, &adapter);
+}
+
+bool ActionRunCpuStressRoutine(const base::TimeDelta& exec_duration) {
+  diagnostics::CrosHealthdMojoAdapter adapter;
+  auto response = adapter.RunCpuStressRoutine(exec_duration);
+  CHECK(response) << "No RunRoutineResponse received.";
+  return RunRoutineAndProcessResult(response->id, &adapter);
+}
+
 }  // namespace
 
 // 'diag' command-line tool:
@@ -269,8 +285,7 @@ int main(int argc, char** argv) {
   DEFINE_int32(percent_battery_wear_allowed, 100,
                "Maximum percent battery wear allowed for the battery_sysfs "
                "routine to pass.");
-  DEFINE_int32(length_seconds, 10,
-               "Number of seconds to run the urandom routine for.");
+  DEFINE_int32(length_seconds, 10, "Number of seconds to run the routine for.");
   DEFINE_bool(ac_power_is_connected, true,
               "Whether or not the AC power routine expects the power supply to "
               "be connected.");
@@ -324,6 +339,14 @@ int main(int argc, char** argv) {
       case mojo_ipc::DiagnosticRoutineEnum::kAcPower:
         routine_result = ActionRunAcPowerRoutine(FLAGS_ac_power_is_connected,
                                                  FLAGS_expected_power_type);
+        break;
+      case mojo_ipc::DiagnosticRoutineEnum::kCpuCache:
+        routine_result = ActionRunCpuCacheRoutine(
+            base::TimeDelta().FromSeconds(FLAGS_length_seconds));
+        break;
+      case mojo_ipc::DiagnosticRoutineEnum::kCpuStress:
+        routine_result = ActionRunCpuStressRoutine(
+            base::TimeDelta().FromSeconds(FLAGS_length_seconds));
         break;
       default:
         std::cout << "Unsupported routine: " << FLAGS_routine << std::endl;

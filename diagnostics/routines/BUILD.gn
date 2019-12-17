@@ -54,6 +54,8 @@ source_set("libdiag_routine") {
     "ac_power/ac_power.cc",
     "battery/battery.cc",
     "battery_sysfs/battery_sysfs.cc",
+    "cpu_cache/cpu_cache.cc",
+    "cpu_stress/cpu_stress.cc",
     "diag_process_adapter_impl.cc",
     "smartctl_check/smartctl_check.cc",
     "subproc_routine.cc",

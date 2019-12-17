@@ -67,6 +67,11 @@ class CrosHealthdMojoService final
       chromeos::cros_healthd::mojom::AcPowerStatusEnum expected_status,
       const base::Optional<std::string>& expected_power_type,
       const RunAcPowerRoutineCallback& callback) override;
+  void RunCpuCacheRoutine(uint32_t length_seconds,
+                          const RunCpuCacheRoutineCallback& callback) override;
+  void RunCpuStressRoutine(
+      uint32_t length_seconds,
+      const RunCpuStressRoutineCallback& callback) override;
 
   // chromeos::cros_healthd::mojom::CrosHealthdProbeService overrides:
   void ProbeTelemetryInfo(const std::vector<ProbeCategoryEnum>& categories,

@@ -223,4 +223,16 @@ FakeCrosHealthdRoutineFactory::MakeAcPowerRoutine(
   return std::move(next_routine_);
 }
 
+std::unique_ptr<DiagnosticRoutine>
+FakeCrosHealthdRoutineFactory::MakeCpuCacheRoutine(
+    const base::TimeDelta& exec_duration) {
+  return std::move(next_routine_);
+}
+
+std::unique_ptr<DiagnosticRoutine>
+FakeCrosHealthdRoutineFactory::MakeCpuStressRoutine(
+    const base::TimeDelta& exec_duration) {
+  return std::move(next_routine_);
+}
+
 }  // namespace diagnostics

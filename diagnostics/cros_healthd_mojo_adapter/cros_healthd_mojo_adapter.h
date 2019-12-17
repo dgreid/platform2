@@ -52,6 +52,14 @@ class CrosHealthdMojoAdapter final {
       chromeos::cros_healthd::mojom::AcPowerStatusEnum expected_status,
       const base::Optional<std::string>& expected_power_type);
 
+  // Runs the CPU cache routine.
+  chromeos::cros_healthd::mojom::RunRoutineResponsePtr RunCpuCacheRoutine(
+      const base::TimeDelta& exec_duration);
+
+  // Runs the CPU stress routine.
+  chromeos::cros_healthd::mojom::RunRoutineResponsePtr RunCpuStressRoutine(
+      const base::TimeDelta& exec_duration);
+
   // Returns which routines are available on the platform.
   std::vector<chromeos::cros_healthd::mojom::DiagnosticRoutineEnum>
   GetAvailableRoutines();

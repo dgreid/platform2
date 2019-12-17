@@ -81,6 +81,20 @@ void CrosHealthdRoutineServiceImpl::RunAcPowerRoutine(
              id, status);
 }
 
+void CrosHealthdRoutineServiceImpl::RunCpuCacheRoutine(
+    const base::TimeDelta& exec_duration,
+    int32_t* id,
+    mojo_ipc::DiagnosticRoutineStatusEnum* status) {
+  RunRoutine(routine_factory_->MakeCpuCacheRoutine(exec_duration), id, status);
+}
+
+void CrosHealthdRoutineServiceImpl::RunCpuStressRoutine(
+    const base::TimeDelta& exec_duration,
+    int32_t* id,
+    mojo_ipc::DiagnosticRoutineStatusEnum* status) {
+  RunRoutine(routine_factory_->MakeCpuStressRoutine(exec_duration), id, status);
+}
+
 void CrosHealthdRoutineServiceImpl::GetRoutineUpdate(
     int32_t uuid,
     mojo_ipc::DiagnosticRoutineCommandEnum command,

@@ -79,6 +79,16 @@ void FakeDiagnosticsService::RunAcPowerRoutine(
   callback.Run(run_routine_response_.Clone());
 }
 
+void FakeDiagnosticsService::RunCpuCacheRoutine(
+    uint32_t length_seconds, const RunCpuCacheRoutineCallback& callback) {
+  callback.Run(run_routine_response_.Clone());
+}
+
+void FakeDiagnosticsService::RunCpuStressRoutine(
+    uint32_t length_seconds, const RunCpuStressRoutineCallback& callback) {
+  callback.Run(run_routine_response_.Clone());
+}
+
 void FakeDiagnosticsService::SetMojoServiceIsAvailable(bool is_available) {
   is_available_ = is_available;
 }

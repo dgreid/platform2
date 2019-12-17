@@ -34,6 +34,10 @@ class CrosHealthdRoutineFactoryImpl final : public CrosHealthdRoutineFactory {
   std::unique_ptr<DiagnosticRoutine> MakeAcPowerRoutine(
       chromeos::cros_healthd::mojom::AcPowerStatusEnum expected_status,
       const base::Optional<std::string>& expected_power_type) override;
+  std::unique_ptr<DiagnosticRoutine> MakeCpuCacheRoutine(
+      const base::TimeDelta& exec_duration) override;
+  std::unique_ptr<DiagnosticRoutine> MakeCpuStressRoutine(
+      const base::TimeDelta& exec_duration) override;
 
  private:
   DISALLOW_COPY_AND_ASSIGN(CrosHealthdRoutineFactoryImpl);

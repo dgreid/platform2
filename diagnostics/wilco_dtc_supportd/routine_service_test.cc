@@ -63,6 +63,20 @@ grpc_api::RunRoutineRequest MakeSmartctlCheckRoutineRequest() {
   return request;
 }
 
+grpc_api::RunRoutineRequest MakeCpuCacheRoutineRequest() {
+  grpc_api::RunRoutineRequest request;
+  request.set_routine(grpc_api::ROUTINE_CPU_CACHE);
+  request.mutable_cpu_params()->set_length_seconds(10);
+  return request;
+}
+
+grpc_api::RunRoutineRequest MakeCpuStressRoutineRequest() {
+  grpc_api::RunRoutineRequest request;
+  request.set_routine(grpc_api::ROUTINE_CPU_STRESS);
+  request.mutable_cpu_params()->set_length_seconds(300);
+  return request;
+}
+
 void SaveGetAvailableRoutinesResponse(
     base::Closure callback,
     grpc_api::GetAvailableRoutinesResponse* response,
@@ -158,14 +172,16 @@ TEST_F(RoutineServiceTest, GetAvailableRoutines) {
       {mojo_ipc::DiagnosticRoutineEnum::kBatteryCapacity,
        mojo_ipc::DiagnosticRoutineEnum::kBatteryHealth,
        mojo_ipc::DiagnosticRoutineEnum::kSmartctlCheck,
-       mojo_ipc::DiagnosticRoutineEnum::kUrandom});
+       mojo_ipc::DiagnosticRoutineEnum::kUrandom,
+       mojo_ipc::DiagnosticRoutineEnum::kCpuCache,
+       mojo_ipc::DiagnosticRoutineEnum::kCpuStress});
 
   const auto reply = ExecuteGetAvailableRoutines();
-  EXPECT_THAT(
-      reply.routines(),
-      ElementsAreArray(
-          {grpc_api::ROUTINE_BATTERY, grpc_api::ROUTINE_BATTERY_SYSFS,
-           grpc_api::ROUTINE_SMARTCTL_CHECK, grpc_api::ROUTINE_URANDOM}));
+  EXPECT_THAT(reply.routines(),
+              ElementsAreArray(
+                  {grpc_api::ROUTINE_BATTERY, grpc_api::ROUTINE_BATTERY_SYSFS,
+                   grpc_api::ROUTINE_SMARTCTL_CHECK, grpc_api::ROUTINE_URANDOM,
+                   grpc_api::ROUTINE_CPU_CACHE, grpc_api::ROUTINE_CPU_STRESS}));
   EXPECT_EQ(reply.service_status(), grpc_api::ROUTINE_SERVICE_STATUS_OK);
 }
 
@@ -352,14 +368,16 @@ TEST_F(RoutineServiceTest, RecoverFromNoServiceRequest) {
       {mojo_ipc::DiagnosticRoutineEnum::kBatteryCapacity,
        mojo_ipc::DiagnosticRoutineEnum::kBatteryHealth,
        mojo_ipc::DiagnosticRoutineEnum::kSmartctlCheck,
-       mojo_ipc::DiagnosticRoutineEnum::kUrandom});
+       mojo_ipc::DiagnosticRoutineEnum::kUrandom,
+       mojo_ipc::DiagnosticRoutineEnum::kCpuCache,
+       mojo_ipc::DiagnosticRoutineEnum::kCpuStress});
 
   const auto reply = ExecuteGetAvailableRoutines();
-  EXPECT_THAT(
-      reply.routines(),
-      ElementsAreArray(
-          {grpc_api::ROUTINE_BATTERY, grpc_api::ROUTINE_BATTERY_SYSFS,
-           grpc_api::ROUTINE_SMARTCTL_CHECK, grpc_api::ROUTINE_URANDOM}));
+  EXPECT_THAT(reply.routines(),
+              ElementsAreArray(
+                  {grpc_api::ROUTINE_BATTERY, grpc_api::ROUTINE_BATTERY_SYSFS,
+                   grpc_api::ROUTINE_SMARTCTL_CHECK, grpc_api::ROUTINE_URANDOM,
+                   grpc_api::ROUTINE_CPU_CACHE, grpc_api::ROUTINE_CPU_STRESS}));
   EXPECT_EQ(reply.service_status(), grpc_api::ROUTINE_SERVICE_STATUS_OK);
 }
 
@@ -413,14 +431,16 @@ TEST_F(RoutineServiceTest, RecoverFromDroppedConnection) {
       {mojo_ipc::DiagnosticRoutineEnum::kBatteryCapacity,
        mojo_ipc::DiagnosticRoutineEnum::kBatteryHealth,
        mojo_ipc::DiagnosticRoutineEnum::kSmartctlCheck,
-       mojo_ipc::DiagnosticRoutineEnum::kUrandom});
+       mojo_ipc::DiagnosticRoutineEnum::kUrandom,
+       mojo_ipc::DiagnosticRoutineEnum::kCpuCache,
+       mojo_ipc::DiagnosticRoutineEnum::kCpuStress});
 
   const auto reply = ExecuteGetAvailableRoutines();
-  EXPECT_THAT(
-      reply.routines(),
-      ElementsAreArray(
-          {grpc_api::ROUTINE_BATTERY, grpc_api::ROUTINE_BATTERY_SYSFS,
-           grpc_api::ROUTINE_SMARTCTL_CHECK, grpc_api::ROUTINE_URANDOM}));
+  EXPECT_THAT(reply.routines(),
+              ElementsAreArray(
+                  {grpc_api::ROUTINE_BATTERY, grpc_api::ROUTINE_BATTERY_SYSFS,
+                   grpc_api::ROUTINE_SMARTCTL_CHECK, grpc_api::ROUTINE_URANDOM,
+                   grpc_api::ROUTINE_CPU_CACHE, grpc_api::ROUTINE_CPU_STRESS}));
   EXPECT_EQ(reply.service_status(), grpc_api::ROUTINE_SERVICE_STATUS_OK);
 
   // Reset the connection, make cros_healthd unresponsive, and check to see that
@@ -654,7 +674,9 @@ INSTANTIATE_TEST_CASE_P(,
                                         MakeDefaultBatteryRoutineRequest(),
                                         MakeBatterySysfsRoutineRequest(),
                                         MakeUrandomRoutineRequest(),
-                                        MakeSmartctlCheckRoutineRequest()));
+                                        MakeSmartctlCheckRoutineRequest(),
+                                        MakeCpuCacheRoutineRequest(),
+                                        MakeCpuStressRoutineRequest()));
 
 }  // namespace
 

@@ -52,6 +52,14 @@ class CrosHealthdRoutineServiceImpl final : public CrosHealthdRoutineService {
       const base::Optional<std::string>& expected_power_type,
       int32_t* id,
       MojomCrosHealthdDiagnosticRoutineStatusEnum* status) override;
+  void RunCpuCacheRoutine(
+      const base::TimeDelta& exec_duration,
+      int32_t* id,
+      MojomCrosHealthdDiagnosticRoutineStatusEnum* status) override;
+  void RunCpuStressRoutine(
+      const base::TimeDelta& exec_duration,
+      int32_t* id,
+      MojomCrosHealthdDiagnosticRoutineStatusEnum* status) override;
   void GetRoutineUpdate(
       int32_t id,
       MojomCrosHealthdDiagnosticRoutineCommandEnum command,
@@ -79,7 +87,9 @@ class CrosHealthdRoutineServiceImpl final : public CrosHealthdRoutineService {
               kBatteryCapacity,
           chromeos::cros_healthd::mojom::DiagnosticRoutineEnum::kBatteryHealth,
           chromeos::cros_healthd::mojom::DiagnosticRoutineEnum::kSmartctlCheck,
-          chromeos::cros_healthd::mojom::DiagnosticRoutineEnum::kAcPower};
+          chromeos::cros_healthd::mojom::DiagnosticRoutineEnum::kAcPower,
+          chromeos::cros_healthd::mojom::DiagnosticRoutineEnum::kCpuCache,
+          chromeos::cros_healthd::mojom::DiagnosticRoutineEnum::kCpuStress};
 
   // Responsible for making the routines. Unowned pointer that should outlive
   // this instance.

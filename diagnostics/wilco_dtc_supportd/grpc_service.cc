@@ -510,6 +510,26 @@ void GrpcService::RunRoutine(
         return;
       }
       break;
+    case grpc_api::ROUTINE_CPU_CACHE:
+      if (!request->has_cpu_params()) {
+        LOG(ERROR) << "RunRoutineRequest with routine type CPU CACHE "
+                      "has no cpu parameters.";
+        ForwardRunRoutineResponse(callback, 0 /* uuid */,
+                                  grpc_api::ROUTINE_STATUS_INVALID_FIELD,
+                                  grpc_api::ROUTINE_SERVICE_STATUS_OK);
+        return;
+      }
+      break;
+    case grpc_api::ROUTINE_CPU_STRESS:
+      if (!request->has_cpu_params()) {
+        LOG(ERROR) << "RunRoutineRequest with routine type CPU STRESS "
+                      "has no cpu parameters.";
+        ForwardRunRoutineResponse(callback, 0 /* uuid */,
+                                  grpc_api::ROUTINE_STATUS_INVALID_FIELD,
+                                  grpc_api::ROUTINE_SERVICE_STATUS_OK);
+        return;
+      }
+      break;
     default:
       LOG(ERROR) << "RunRoutineRequest routine type invalid or unset.";
       ForwardRunRoutineResponse(callback, 0 /* uuid */,

@@ -41,6 +41,14 @@ class CrosHealthdRoutineFactory {
   virtual std::unique_ptr<DiagnosticRoutine> MakeAcPowerRoutine(
       chromeos::cros_healthd::mojom::AcPowerStatusEnum expected_status,
       const base::Optional<std::string>& expected_power_type) = 0;
+  // Constructs a new instance of the CPU cache routine. See
+  // diagnostics/routines/cpu_cache for details on the routine itself.
+  virtual std::unique_ptr<DiagnosticRoutine> MakeCpuCacheRoutine(
+      const base::TimeDelta& exec_duration) = 0;
+  // Constructs a new instance of the CPU stress routine. See
+  // diagnostics/routines/cpu_stress for details on the routine itself.
+  virtual std::unique_ptr<DiagnosticRoutine> MakeCpuStressRoutine(
+      const base::TimeDelta& exec_duration) = 0;
 };
 
 }  // namespace diagnostics

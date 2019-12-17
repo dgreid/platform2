@@ -7,6 +7,8 @@
 #include "diagnostics/routines/ac_power/ac_power.h"
 #include "diagnostics/routines/battery/battery.h"
 #include "diagnostics/routines/battery_sysfs/battery_sysfs.h"
+#include "diagnostics/routines/cpu_cache/cpu_cache.h"
+#include "diagnostics/routines/cpu_stress/cpu_stress.h"
 #include "diagnostics/routines/smartctl_check/smartctl_check.h"
 #include "diagnostics/routines/urandom/urandom.h"
 
@@ -43,6 +45,18 @@ CrosHealthdRoutineFactoryImpl::MakeAcPowerRoutine(
     chromeos::cros_healthd::mojom::AcPowerStatusEnum expected_status,
     const base::Optional<std::string>& expected_power_type) {
   return std::make_unique<AcPowerRoutine>(expected_status, expected_power_type);
+}
+
+std::unique_ptr<DiagnosticRoutine>
+CrosHealthdRoutineFactoryImpl::MakeCpuCacheRoutine(
+    const base::TimeDelta& exec_duration) {
+  return CreateCpuCacheRoutine(exec_duration);
+}
+
+std::unique_ptr<DiagnosticRoutine>
+CrosHealthdRoutineFactoryImpl::MakeCpuStressRoutine(
+    const base::TimeDelta& exec_duration) {
+  return CreateCpuStressRoutine(exec_duration);
 }
 
 }  // namespace diagnostics

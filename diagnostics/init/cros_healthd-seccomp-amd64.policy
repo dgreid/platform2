@@ -68,3 +68,9 @@ tgkill: 1
 readlink: 1
 futex: 1
 stat: 1
+getppid: 1
+sched_getaffinity: 1
+sched_setaffinity: 1
+sched_yield: 1
+sysinfo: 1
+nanosleep: 1

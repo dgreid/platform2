@@ -65,7 +65,9 @@ TEST_F(CrosHealthdRoutineServiceImplTest, GetAvailableRoutines) {
       mojo_ipc::DiagnosticRoutineEnum::kBatteryCapacity,
       mojo_ipc::DiagnosticRoutineEnum::kBatteryHealth,
       mojo_ipc::DiagnosticRoutineEnum::kSmartctlCheck,
-      mojo_ipc::DiagnosticRoutineEnum::kAcPower};
+      mojo_ipc::DiagnosticRoutineEnum::kAcPower,
+      mojo_ipc::DiagnosticRoutineEnum::kCpuCache,
+      mojo_ipc::DiagnosticRoutineEnum::kCpuStress};
   auto reply = service()->GetAvailableRoutines();
   EXPECT_EQ(reply, kAvailableRoutines);
 }
@@ -150,6 +152,34 @@ TEST_F(CrosHealthdRoutineServiceImplTest, RunAcPowerRoutine) {
       /*expected_status=*/mojo_ipc::AcPowerStatusEnum::kConnected,
       /*expected_power_type=*/base::Optional<std::string>{"power_type"},
       &response.id, &response.status);
+  EXPECT_EQ(response.id, 1);
+  EXPECT_EQ(response.status, kExpectedStatus);
+}
+
+// Test that the CPU cache routine can be run.
+TEST_F(CrosHealthdRoutineServiceImplTest, RunCpuCacheRoutine) {
+  constexpr mojo_ipc::DiagnosticRoutineStatusEnum kExpectedStatus =
+      mojo_ipc::DiagnosticRoutineStatusEnum::kRunning;
+  routine_factory()->SetNonInteractiveStatus(
+      kExpectedStatus, /*status_message=*/"", /*progress_percent=*/50,
+      /*output=*/"");
+  mojo_ipc::RunRoutineResponse response;
+  service()->RunCpuCacheRoutine(base::TimeDelta().FromSeconds(10), &response.id,
+                                &response.status);
+  EXPECT_EQ(response.id, 1);
+  EXPECT_EQ(response.status, kExpectedStatus);
+}
+
+// Test that the CPU stress routine can be run.
+TEST_F(CrosHealthdRoutineServiceImplTest, RunCpuStressRoutine) {
+  constexpr mojo_ipc::DiagnosticRoutineStatusEnum kExpectedStatus =
+      mojo_ipc::DiagnosticRoutineStatusEnum::kRunning;
+  routine_factory()->SetNonInteractiveStatus(
+      kExpectedStatus, /*status_message=*/"", /*progress_percent=*/50,
+      /*output=*/"");
+  mojo_ipc::RunRoutineResponse response;
+  service()->RunCpuStressRoutine(base::TimeDelta().FromMinutes(5), &response.id,
+                                 &response.status);
   EXPECT_EQ(response.id, 1);
   EXPECT_EQ(response.status, kExpectedStatus);
 }
