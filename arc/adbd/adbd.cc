@@ -23,6 +23,7 @@
 #include <base/logging.h>
 #include <base/macros.h>
 #include <base/process/launch.h>
+#include <base/posix/eintr_wrapper.h>
 #include <base/strings/string_util.h>
 #include <base/system/sys_info.h>
 #include <base/values.h>
@@ -78,7 +79,7 @@ constexpr const uint8_t kControlStrings[] = {
 bool BindMountFile(const base::FilePath& source, const base::FilePath& target) {
   if (!base::PathExists(target)) {
     base::ScopedFD target_file(
-        open(target.value().c_str(), O_WRONLY | O_CREAT, 0600));
+        HANDLE_EINTR(open(target.value().c_str(), O_WRONLY | O_CREAT, 0600)));
     if (!target_file.is_valid()) {
       PLOG(ERROR) << "Failed to touch " << target.value();
       return false;
@@ -312,8 +313,8 @@ base::ScopedFD SetupFunctionFS(const std::string& udc_driver_name) {
   }
 
   // Send the configuration to the real control endpoint.
-  base::ScopedFD control_file(
-      open(functionfs_path.Append("ep0").value().c_str(), O_WRONLY));
+  base::ScopedFD control_file(HANDLE_EINTR(
+      open(functionfs_path.Append("ep0").value().c_str(), O_WRONLY)));
   if (!control_file.is_valid()) {
     PLOG(ERROR) << "Failed to open control file";
     return base::ScopedFD();

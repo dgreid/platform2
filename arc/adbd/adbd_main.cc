@@ -8,6 +8,7 @@
 
 #include <base/at_exit.h>
 #include <base/logging.h>
+#include <base/posix/eintr_wrapper.h>
 #include <brillo/flag_helper.h>
 #include <brillo/syslog_logging.h>
 
@@ -53,8 +54,8 @@ int main(int argc, char** argv) {
       LOG(INFO) << "arc-adbd ready to receive connections";
       // O_RDONLY on a FIFO waits until another endpoint has opened the file
       // with O_WRONLY or O_RDWR.
-      control_pipe =
-          base::ScopedFD(open(control_pipe_path.value().c_str(), O_RDONLY));
+      control_pipe = base::ScopedFD(
+          HANDLE_EINTR(open(control_pipe_path.value().c_str(), O_RDONLY)));
       if (!control_pipe.is_valid()) {
         PLOG(ERROR) << "Failed to open FIFO at " << control_pipe_path.value();
         return 1;
@@ -113,7 +114,8 @@ int main(int argc, char** argv) {
       // already sent it to the underlying FunctionFS file, and also to avoid
       // parsing it to decrease the attack surface area.
       while (true) {
-        ssize_t bytes_read = read(control_pipe.get(), buffer, sizeof(buffer));
+        ssize_t bytes_read =
+            HANDLE_EINTR(read(control_pipe.get(), buffer, sizeof(buffer)));
         if (bytes_read < 0)
           PLOG(ERROR) << "Failed to read from FIFO";
         if (bytes_read <= 0)
