@@ -10,3 +10,13 @@ getopts = "0.2"
 libc = "0.2"
 log = "0.4"
 protobuf = "2.1"
+intrusive-collections = "0.9"
+futures = { version = "0.3", default-features = false, features = ["alloc"] }
+
+[dev-dependencies]
+futures = { version = "0.3", features = ["async-await"] }
+futures-executor = { version = "0.3", features = ["thread-pool"] }
+futures-util = "0.3"
+
+[features]
+nightly = ["intrusive-collections/nightly"]
