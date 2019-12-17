@@ -118,7 +118,6 @@ class LECredentialManager {
   // was reset or created. Returns -1 if |label| is not present in the tree or
   // the tree is corrupted.
   virtual int GetWrongAuthAttempts(const uint64_t& label) = 0;
-
 };
 
 };  // namespace cryptohome

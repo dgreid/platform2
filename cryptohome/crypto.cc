@@ -31,6 +31,7 @@ extern "C" {
 #include "cryptohome/cryptohome_metrics.h"
 #include "cryptohome/cryptolib.h"
 #include "cryptohome/le_credential_manager_impl.h"
+#include "cryptohome/pin_weaver_auth_block.h"
 #include "cryptohome/platform.h"
 #include "cryptohome/tpm_auth_block.h"
 #include "cryptohome/tpm_init.h"
@@ -44,26 +45,6 @@ using brillo::SecureBlob;
 namespace cryptohome {
 
 namespace {
-
-CryptoError ConvertLeError(int le_error) {
-  switch (le_error) {
-    case LE_CRED_ERROR_INVALID_LE_SECRET:
-      return CryptoError::CE_LE_INVALID_SECRET;
-    case LE_CRED_ERROR_TOO_MANY_ATTEMPTS:
-      return CryptoError::CE_TPM_DEFEND_LOCK;
-    case LE_CRED_ERROR_INVALID_LABEL:
-      return CryptoError::CE_OTHER_FATAL;
-    case LE_CRED_ERROR_HASH_TREE:
-      return CryptoError::CE_OTHER_FATAL;
-    case LE_CRED_ERROR_PCR_NOT_MATCH:
-      // We might want to return an error here that will make the device
-      // reboot.
-      LOG(ERROR) << "PCR in unexpected state.";
-      return CryptoError::CE_LE_INVALID_SECRET;
-    default:
-      return CryptoError::CE_OTHER_FATAL;
-  }
-}
 
 // Location where we store the Low Entropy (LE) credential manager related
 // state.
@@ -100,6 +81,8 @@ const mode_t kSaltFilePermissions = 0644;
 
 // String used as vector in HMAC operation to derive vkk_seed from High Entropy
 // secret.
+// TODO(kerrnel): Delete this duplicate definition once EncryptLECredential is
+// re-factored.
 const char kHESecretHmacData[] = "vkk_seed";
 
 // A default delay schedule to be used for LE Credentials.
@@ -423,56 +406,6 @@ bool Crypto::DecryptScrypt(const SerializedVaultKeyset& serialized,
   return true;
 }
 
-bool Crypto::DecryptLECredential(const SerializedVaultKeyset& serialized,
-                                 const SecureBlob& vault_key,
-                                 KeyBlobs* vkk_data,
-                                 SecureBlob* reset_secret,
-                                 CryptoError* error) const {
-  if (!use_tpm_ || !tpm_)
-    return false;
-
-  // Bail immediately if we don't have a valid LECredentialManager.
-  if (!le_manager_) {
-    PopulateError(error, CryptoError::CE_LE_NOT_SUPPORTED);
-    return false;
-  }
-
-  CHECK(serialized.flags() & SerializedVaultKeyset::LE_CREDENTIAL);
-
-  SecureBlob le_secret(kDefaultAesKeySize);
-  SecureBlob kdf_skey(kDefaultAesKeySize);
-  SecureBlob le_iv(kAesBlockSize);
-  SecureBlob salt(serialized.salt().begin(), serialized.salt().end());
-  if (!CryptoLib::DeriveSecretsSCrypt(vault_key, salt,
-                                      {&le_secret, &kdf_skey, &le_iv})) {
-    PopulateError(error, CryptoError::CE_OTHER_FATAL);
-    return false;
-  }
-
-  vkk_data->authorization_data_iv = le_iv;
-  vkk_data->chaps_iv = brillo::SecureBlob(serialized.le_chaps_iv().begin(),
-                                          serialized.le_chaps_iv().end());
-
-  // Try to obtain the HE Secret from the LECredentialManager.
-  SecureBlob he_secret;
-  int ret = le_manager_->CheckCredential(serialized.le_label(), le_secret,
-                                         &he_secret, reset_secret);
-
-  if (ret != LE_CRED_SUCCESS) {
-    PopulateError(error, ConvertLeError(ret));
-    return false;
-  }
-
-  vkk_data->vkk_iv = brillo::SecureBlob(serialized.le_fek_iv().begin(),
-                                        serialized.le_fek_iv().end());
-
-  SecureBlob vkk_seed = CryptoLib::HmacSha256(
-      he_secret, brillo::BlobFromString(kHESecretHmacData));
-  vkk_data->vkk_key = CryptoLib::HmacSha256(kdf_skey, vkk_seed);
-
-  return true;
-}
-
 bool Crypto::DecryptChallengeCredential(const SerializedVaultKeyset& serialized,
                                         const SecureBlob& key,
                                         CryptoError* error,
@@ -501,16 +434,19 @@ bool Crypto::DecryptVaultKeyset(const SerializedVaultKeyset& serialized,
   unsigned int flags = serialized.flags();
 
   if (flags & SerializedVaultKeyset::LE_CREDENTIAL) {
-    SecureBlob reset_secret;
+    PinWeaverAuthBlock pin_weaver_auth(le_manager_.get());
+
+    AuthInput user_input = { vault_key };
+    AuthBlockState auth_state = { serialized };
     KeyBlobs vkk_data;
-    if (!DecryptLECredential(serialized, vault_key, &vkk_data, &reset_secret,
-                             error)) {
+    if (!pin_weaver_auth.Derive(user_input, auth_state, &vkk_data, error)) {
       return false;
     }
 
     // This is possible to be empty if an old version of CR50 is running.
-    if (!reset_secret.empty()) {
-      vault_keyset->set_reset_secret(reset_secret);
+    if (vkk_data.reset_secret.has_value() &&
+        !vkk_data.reset_secret.value().empty()) {
+      vault_keyset->set_reset_secret(vkk_data.reset_secret.value());
     }
 
     return UnwrapVaultKeyset(serialized, vkk_data, vault_keyset, error);

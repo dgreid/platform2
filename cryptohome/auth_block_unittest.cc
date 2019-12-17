@@ -2,25 +2,112 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "cryptohome/tpm_auth_block.h"
+#include "cryptohome/auth_block.h"
 
 #include <string>
 #include <utility>
 #include <vector>
 
+#include <base/files/file_path.h>
 #include <gtest/gtest.h>
 
 #include "cryptohome/crypto.h"
 #include "cryptohome/crypto_error.h"
+#include "cryptohome/mock_le_credential_backend.h"
+#include "cryptohome/mock_le_credential_manager.h"
 #include "cryptohome/mock_tpm.h"
 #include "cryptohome/mock_tpm_init.h"
+#include "cryptohome/pin_weaver_auth_block.h"
+#include "cryptohome/tpm_auth_block.h"
 #include "cryptohome/vault_keyset.h"
 
 using ::testing::_;
 using ::testing::Exactly;
 using ::testing::NiceMock;
+using ::testing::Return;
 
 namespace cryptohome {
+
+TEST(PinWeaverAuthBlockTest, DeriveTest) {
+  brillo::SecureBlob vault_key(20, 'C');
+  brillo::SecureBlob tpm_key(20, 'B');
+  brillo::SecureBlob salt(PKCS5_SALT_LEN, 'A');
+  brillo::SecureBlob chaps_iv(kAesBlockSize, 'F');
+  brillo::SecureBlob fek_iv(kAesBlockSize, 'X');
+
+  brillo::SecureBlob le_secret(kDefaultAesKeySize);
+  ASSERT_TRUE(CryptoLib::DeriveSecretsSCrypt(vault_key, salt, {&le_secret}));
+
+  NiceMock<MockLECredentialManager> le_cred_manager;
+
+  ON_CALL(le_cred_manager, CheckCredential(_, _, _, _))
+      .WillByDefault(Return(LE_CRED_SUCCESS));
+  EXPECT_CALL(le_cred_manager, CheckCredential(_, le_secret, _, _))
+      .Times(Exactly(1));
+
+  PinWeaverAuthBlock auth_block(&le_cred_manager);
+
+  // Construct the vault keyset.
+  SerializedVaultKeyset serialized;
+  serialized.set_flags(SerializedVaultKeyset::LE_CREDENTIAL);
+  serialized.set_salt(salt.data(), salt.size());
+  serialized.set_le_chaps_iv(chaps_iv.data(), chaps_iv.size());
+  serialized.set_le_label(0);
+  serialized.set_le_fek_iv(fek_iv.data(), fek_iv.size());
+
+  CryptoError error;
+  KeyBlobs key_blobs;
+  AuthInput user_input = {vault_key};
+  AuthBlockState auth_state = {
+      base::make_optional<SerializedVaultKeyset>(std::move(serialized))};
+  EXPECT_TRUE(auth_block.Derive(user_input, auth_state, &key_blobs, &error));
+
+  // Set expectations of the key blobs.
+  EXPECT_NE(key_blobs.reset_secret, base::nullopt);
+  EXPECT_NE(key_blobs.authorization_data_iv, base::nullopt);
+  EXPECT_NE(key_blobs.chaps_iv, base::nullopt);
+  EXPECT_NE(key_blobs.vkk_iv, base::nullopt);
+
+  // PinWeaver should always use unique IVs.
+  EXPECT_NE(key_blobs.chaps_iv.value(), key_blobs.vkk_iv.value());
+  EXPECT_NE(key_blobs.authorization_data_iv.value(), key_blobs.vkk_iv.value());
+}
+
+TEST(PinWeaverAuthBlockTest, CheckCredentialFailureTest) {
+  brillo::SecureBlob vault_key(20, 'C');
+  brillo::SecureBlob tpm_key(20, 'B');
+  brillo::SecureBlob salt(PKCS5_SALT_LEN, 'A');
+  brillo::SecureBlob chaps_iv(kAesBlockSize, 'F');
+  brillo::SecureBlob fek_iv(kAesBlockSize, 'X');
+
+  brillo::SecureBlob le_secret(kDefaultAesKeySize);
+  ASSERT_TRUE(CryptoLib::DeriveSecretsSCrypt(vault_key, salt, {&le_secret}));
+
+  NiceMock<MockLECredentialManager> le_cred_manager;
+
+  ON_CALL(le_cred_manager, CheckCredential(_, _, _, _))
+      .WillByDefault(Return(LE_CRED_ERROR_INVALID_LE_SECRET));
+  EXPECT_CALL(le_cred_manager, CheckCredential(_, le_secret, _, _))
+      .Times(Exactly(1));
+
+  PinWeaverAuthBlock auth_block(&le_cred_manager);
+
+  // Construct the vault keyset.
+  SerializedVaultKeyset serialized;
+  serialized.set_flags(SerializedVaultKeyset::LE_CREDENTIAL);
+  serialized.set_salt(salt.data(), salt.size());
+  serialized.set_le_chaps_iv(chaps_iv.data(), chaps_iv.size());
+  serialized.set_le_label(0);
+  serialized.set_le_fek_iv(fek_iv.data(), fek_iv.size());
+
+  CryptoError error;
+  KeyBlobs key_blobs;
+  AuthInput user_input = {vault_key};
+  AuthBlockState auth_state = {
+      base::make_optional<SerializedVaultKeyset>(std::move(serialized))};
+  EXPECT_FALSE(auth_block.Derive(user_input, auth_state, &key_blobs, &error));
+  EXPECT_EQ(CryptoError::CE_LE_INVALID_SECRET, error);
+}
 
 TEST(TPMAuthBlockTest, DecryptBoundToPcrTest) {
   brillo::SecureBlob vault_key(20, 'C');

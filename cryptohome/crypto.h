@@ -338,12 +338,6 @@ class Crypto {
                      CryptoError* error,
                      VaultKeyset* keyset) const;
 
-  bool DecryptLECredential(const SerializedVaultKeyset& serialized,
-                           const brillo::SecureBlob& key,
-                           KeyBlobs* vkk_data,
-                           brillo::SecureBlob* reset_secret,
-                           CryptoError* error) const;
-
   bool DecryptChallengeCredential(const SerializedVaultKeyset& serialized,
                                   const brillo::SecureBlob& key,
                                   CryptoError* error,
