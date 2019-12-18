@@ -170,12 +170,6 @@ std::string GetProtoDebugString(const ResetIdentityRequest& value);
 std::string GetProtoDebugStringWithIndent(const ResetIdentityReply& value,
                                           int indent_size);
 std::string GetProtoDebugString(const ResetIdentityReply& value);
-std::string GetProtoDebugStringWithIndent(const SetSystemSaltRequest& value,
-                                          int indent_size);
-std::string GetProtoDebugString(const SetSystemSaltRequest& value);
-std::string GetProtoDebugStringWithIndent(const SetSystemSaltReply& value,
-                                          int indent_size);
-std::string GetProtoDebugString(const SetSystemSaltReply& value);
 std::string GetProtoDebugStringWithIndent(const GetEnrollmentIdRequest& value,
                                           int indent_size);
 std::string GetProtoDebugString(const GetEnrollmentIdRequest& value);
@@ -183,7 +177,8 @@ std::string GetProtoDebugStringWithIndent(const GetEnrollmentIdReply& value,
                                           int indent_size);
 std::string GetProtoDebugString(const GetEnrollmentIdReply& value);
 std::string GetProtoDebugStringWithIndent(
-    const GetCertifiedNvIndexRequest& value, int indent_size);
+    const GetCertifiedNvIndexRequest& value,
+    int indent_size);
 std::string GetProtoDebugString(const GetCertifiedNvIndexRequest& value);
 std::string GetProtoDebugStringWithIndent(const GetCertifiedNvIndexReply& value,
                                           int indent_size);

@@ -1006,6 +1006,14 @@ std::string GetProtoDebugStringWithIndent(
             .c_str());
     output += "\n";
   }
+  if (value.has_key_type()) {
+    output += indent + "  key_type: ";
+    base::StringAppendF(
+        &output, "%s",
+        GetProtoDebugStringWithIndent(value.key_type(), indent_size + 2)
+            .c_str());
+    output += "\n";
+  }
   output += indent + "}\n";
   return output;
 }
@@ -1157,6 +1165,11 @@ std::string GetProtoDebugStringWithIndent(
         &output, "%s",
         GetProtoDebugStringWithIndent(value.va_type(), indent_size + 2)
             .c_str());
+    output += "\n";
+  }
+  if (value.has_key_name_for_spkac()) {
+    output += indent + "  key_name_for_spkac: ";
+    base::StringAppendF(&output, "%s", value.key_name_for_spkac().c_str());
     output += "\n";
   }
   output += indent + "}\n";
@@ -1401,46 +1414,6 @@ std::string GetProtoDebugStringWithIndent(const ResetIdentityReply& value,
   return output;
 }
 
-std::string GetProtoDebugString(const SetSystemSaltRequest& value) {
-  return GetProtoDebugStringWithIndent(value, 0);
-}
-
-std::string GetProtoDebugStringWithIndent(const SetSystemSaltRequest& value,
-                                          int indent_size) {
-  std::string indent(indent_size, ' ');
-  std::string output =
-      base::StringPrintf("[%s] {\n", value.GetTypeName().c_str());
-
-  if (value.has_system_salt()) {
-    output += indent + "  system_salt: ";
-    base::StringAppendF(&output, "%s", value.system_salt().c_str());
-    output += "\n";
-  }
-  output += indent + "}\n";
-  return output;
-}
-
-std::string GetProtoDebugString(const SetSystemSaltReply& value) {
-  return GetProtoDebugStringWithIndent(value, 0);
-}
-
-std::string GetProtoDebugStringWithIndent(const SetSystemSaltReply& value,
-                                          int indent_size) {
-  std::string indent(indent_size, ' ');
-  std::string output =
-      base::StringPrintf("[%s] {\n", value.GetTypeName().c_str());
-
-  if (value.has_status()) {
-    output += indent + "  status: ";
-    base::StringAppendF(
-        &output, "%s",
-        GetProtoDebugStringWithIndent(value.status(), indent_size + 2).c_str());
-    output += "\n";
-  }
-  output += indent + "}\n";
-  return output;
-}
-
 std::string GetProtoDebugString(const GetEnrollmentIdRequest& value) {
   return GetProtoDebugStringWithIndent(value, 0);
 }
@@ -1491,19 +1464,25 @@ std::string GetProtoDebugString(const GetCertifiedNvIndexRequest& value) {
 }
 
 std::string GetProtoDebugStringWithIndent(
-    const GetCertifiedNvIndexRequest& value, int indent_size) {
+    const GetCertifiedNvIndexRequest& value,
+    int indent_size) {
   std::string indent(indent_size, ' ');
   std::string output =
       base::StringPrintf("[%s] {\n", value.GetTypeName().c_str());
 
   if (value.has_nv_index()) {
     output += indent + "  nv_index: ";
-    base::StringAppendF(&output, "%d", value.nv_index());
+    base::StringAppendF(&output, "%" PRId32, value.nv_index());
     output += "\n";
   }
   if (value.has_nv_size()) {
     output += indent + "  nv_size: ";
-    base::StringAppendF(&output, "%d", value.nv_size());
+    base::StringAppendF(&output, "%" PRId32, value.nv_size());
+    output += "\n";
+  }
+  if (value.has_key_label()) {
+    output += indent + "  key_label: ";
+    base::StringAppendF(&output, "%s", value.key_label().c_str());
     output += "\n";
   }
   output += indent + "}\n";
@@ -1540,7 +1519,6 @@ std::string GetProtoDebugStringWithIndent(const GetCertifiedNvIndexReply& value,
     base::StringAppendF(
         &output, "%s",
         base::HexEncode(value.signature().data(), value.signature().size())
-
             .c_str());
     output += "\n";
   }
@@ -1549,7 +1527,6 @@ std::string GetProtoDebugStringWithIndent(const GetCertifiedNvIndexReply& value,
     base::StringAppendF(&output, "%s",
                         base::HexEncode(value.key_certificate().data(),
                                         value.key_certificate().size())
-
                             .c_str());
     output += "\n";
   }
