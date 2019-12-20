@@ -193,9 +193,6 @@ ignore all other flags).
   outside the container.
 * `/var/run/chrome`: Holds the ARC bridge and Wayland UNIX domain sockets.
 * `/var/run/cras`: Holds the CRAS UNIX domain socket.
-* `/var/run/inputbridge`: Holds a FIFO for doing IPC within the container.
-   surfaceflinger uses the FIFO to propage input events from host to the
-   container.
 * `/sys`: A normal `sysfs`.
 * `/sys/fs/selinux`: This is bind-mounted from `/sys/fs/selinux` outside the
   container.

@@ -344,18 +344,6 @@
 			]
 		},
 		{
-			"destination": "/var/run/inputbridge",
-			"type": "tmpfs",
-			"source": "tmpfs",
-			"options": [
-				"mode=0775",
-				"gid=1000",
-				"noexec",
-				"nodev",
-				"nosuid"
-			]
-		},
-		{
 			"destination": "/sys",
 			"type": "sysfs",
 			"source": "none",
