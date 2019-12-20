@@ -28,6 +28,7 @@
 #include "crash-reporter/generic_failure_collector.h"
 #include "crash-reporter/kernel_collector.h"
 #include "crash-reporter/kernel_warning_collector.h"
+#include "crash-reporter/mount_failure_collector.h"
 #include "crash-reporter/paths.h"
 #include "crash-reporter/selinux_violation_collector.h"
 #include "crash-reporter/service_failure_collector.h"
@@ -379,6 +380,11 @@ int main(int argc, char* argv[]) {
   DEFINE_bool(init, false, "Initialize crash logging");
   DEFINE_bool(boot_collect, false, "Run per-boot crash collection tasks");
   DEFINE_bool(clean_shutdown, false, "Signal clean shutdown");
+  DEFINE_bool(mount_failure, false, "Report mount failure");
+  DEFINE_bool(umount_failure, false, "Report umount failure");
+  DEFINE_string(mount_device, "",
+                "Device that failed to mount. Used with --mount_failure and "
+                "--umount_failure");
   DEFINE_bool(crash_test, false, "Crash test");
   DEFINE_bool(early, false,
               "Modifies crash-reporter to work during early boot");
@@ -458,6 +464,10 @@ int main(int argc, char* argv[]) {
   EarlyCrashMetaCollector early_crash_meta_collector;
   early_crash_meta_collector.Initialize(IsFeedbackAllowed,
                                         FLAGS_preserve_across_clobber);
+
+  MountFailureCollector mount_failure_collector(
+      MountFailureCollector::ValidateStorageDeviceType(FLAGS_mount_device));
+  mount_failure_collector.Initialize(IsFeedbackAllowed, FLAGS_early);
 
   // Decide if we should use Crash-Loop sending mode. If session_manager sees
   // several Chrome crashes in a brief period, it will log the user out. On the
@@ -542,6 +552,11 @@ int main(int argc, char* argv[]) {
     return BootCollect(&kernel_collector, &ec_collector, &bert_collector,
                        &unclean_shutdown_collector,
                        &early_crash_meta_collector);
+  }
+
+  if (FLAGS_mount_failure || FLAGS_umount_failure) {
+    mount_failure_collector.Collect(FLAGS_mount_failure);
+    return 0;
   }
 
   if (FLAGS_clean_shutdown) {
