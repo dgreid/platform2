@@ -31,6 +31,7 @@ namespace {
 constexpr char kEncryptedFSType[] = "ext4";
 constexpr char kCryptDevName[] = "encstateful";
 constexpr char kDevMapperPath[] = "/dev/mapper";
+constexpr char kDumpe2fsLogPath[] = "/run/mount_encrypted/dumpe2fs.log";
 constexpr char kProcDirtyExpirePath[] = "/proc/sys/vm/dirty_expire_centisecs";
 constexpr float kSizePercent = 0.3;
 constexpr uint64_t kSectorSize = 512;
@@ -240,6 +241,16 @@ void CheckSparseFileSize(const base::FilePath& sparse_file, int64_t file_size) {
   }
 }
 
+void Dumpe2fs(const base::FilePath& device_path) {
+  brillo::ProcessImpl dumpe2fs;
+  dumpe2fs.AddArg("/sbin/dumpe2fs");
+  dumpe2fs.AddArg("-fh");
+  dumpe2fs.AddArg(device_path.value());
+  dumpe2fs.RedirectOutput(kDumpe2fsLogPath);
+
+  dumpe2fs.Run();
+}
+
 }  // namespace
 
 EncryptedFs::EncryptedFs(const base::FilePath& rootdir,
@@ -431,6 +442,11 @@ result_code EncryptedFs::Setup(const brillo::SecureBlob& encryption_key,
                         MS_NODEV | MS_NOEXEC | MS_NOSUID | MS_NOATIME,
                         GetMountOpts().c_str())) {
     PLOG(ERROR) << "mount: " << dmcrypt_dev_ << ", " << encrypted_mount_;
+    // On failure to mount, use dumpe2fs to collect debugging data about
+    // the unencrypted block device that failed to mount. Since mount-encrypted
+    // cleans up afterwards, this is the only point where this data can be
+    // collected.
+    Dumpe2fs(dmcrypt_dev_);
     TeardownByStage(TeardownStage::kTeardownDevmapper, true);
     return rc;
   }
