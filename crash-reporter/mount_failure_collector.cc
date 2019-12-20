@@ -1,0 +1,101 @@
+// Copyright 2020 The Chromium OS Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#include "crash-reporter/mount_failure_collector.h"
+
+#include <string>
+#include <vector>
+
+#include <base/files/file_enumerator.h>
+#include <base/files/file_util.h>
+
+#include "crash-reporter/paths.h"
+#include "crash-reporter/util.h"
+
+namespace {
+const char kEncryptedStatefulDeviceLabel[] = "encstateful";
+const char kStatefulDeviceLabel[] = "stateful";
+const char kInvalidDeviceLabel[] = "invalid";
+}  // namespace
+
+MountFailureCollector::MountFailureCollector(StorageDeviceType device_type)
+    : CrashCollector("mount_failure_collector"), device_type_(device_type) {}
+
+// static
+StorageDeviceType MountFailureCollector::ValidateStorageDeviceType(
+    const std::string& device_label) {
+  if (device_label == kStatefulDeviceLabel)
+    return StorageDeviceType::kStateful;
+  else if (device_label == kEncryptedStatefulDeviceLabel)
+    return StorageDeviceType::kEncryptedStateful;
+  else
+    return StorageDeviceType::kInvalidDevice;
+}
+
+// static
+std::string MountFailureCollector::StorageDeviceTypeToString(
+    StorageDeviceType device_type) {
+  switch (device_type) {
+    case StorageDeviceType::kStateful:
+      return kStatefulDeviceLabel;
+    case StorageDeviceType::kEncryptedStateful:
+      return kEncryptedStatefulDeviceLabel;
+    default:
+      return kInvalidDeviceLabel;
+  }
+}
+
+// At the moment, mount failure collection occurs early in the boot process (and
+// as a result of inability to setup the stateful/encrypted stateful
+// partitions).
+void MountFailureCollector::Initialize(
+    IsFeedbackAllowedFunction is_feedback_allowed_function, bool early) {
+  CrashCollector::Initialize(is_feedback_allowed_function, early);
+}
+
+bool MountFailureCollector::Collect() {
+  if (!is_feedback_allowed_function_()) {
+    LOG(INFO) << "Not collecting clobber report; no user consent";
+    return true;
+  }
+
+  if (device_type_ == StorageDeviceType::kInvalidDevice) {
+    LOG(ERROR) << "Invalid storage device.";
+    return true;
+  }
+
+  std::string device_label = StorageDeviceTypeToString(device_type_);
+  std::string exec_name = "mount_failure_" + device_label;
+  std::string dump_basename = FormatDumpBasename(exec_name, time(nullptr), 0);
+
+  base::FilePath crash_directory;
+  if (!GetCreatedCrashDirectoryByEuid(kRootUid, &crash_directory, nullptr)) {
+    return true;
+  }
+
+  // Use exec name as the crash signature.
+  AddCrashMetaData("sig", exec_name);
+
+  // Common logging for mount failure cases:
+  // - dumpe2fs (for the respective block dev).
+  // - dmesg for current run.
+  // - ramoops, if any.
+  std::vector<std::string> cmds = {"dumpe2fs_" + device_label, "kernel-warning",
+                                   "console-ramoops"};
+
+  // For encrypted stateful mount failure, add logs from mount-encrypted.
+  if (device_type_ == StorageDeviceType::kEncryptedStateful)
+    cmds.push_back("mount-encrypted");
+
+  base::FilePath log_path = GetCrashPath(crash_directory, dump_basename, "log");
+  base::FilePath meta_path =
+      GetCrashPath(crash_directory, dump_basename, "meta");
+
+  bool result = GetMultipleLogContents(log_config_path_, cmds, log_path);
+  if (result) {
+    FinishCrash(meta_path, exec_name, log_path.BaseName().value());
+  }
+
+  return true;
+}
