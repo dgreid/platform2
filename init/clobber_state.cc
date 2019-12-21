@@ -65,16 +65,6 @@ constexpr char kUbiRootDisk[] = "/dev/mtd0";
 constexpr char kUbiDevicePrefix[] = "/dev/ubi";
 constexpr char kUbiDeviceStatefulFormat[] = "/dev/ubi%d_0";
 
-// Early boot dmesg log path.
-const char* const kDmesgLogPath = "/run/dmesg.log";
-// Early crash log collection paths.
-const char* const kEarlyBootLogPaths[] = {
-    // mount-encrypted: logs for setting up the encrypted stateful partition.
-    "/run/mount_encrypted/mount-encrypted.log",
-    // Fetch dmesg and log into /run.
-    kDmesgLogPath,
-};
-
 constexpr base::TimeDelta kMinClobberDuration = base::TimeDelta::FromMinutes(5);
 
 // |strip_partition| attempts to remove the partition number from the result.
@@ -186,28 +176,6 @@ void AppendFileToLog(const base::FilePath& file) {
     PLOG(ERROR) << "Appending " << file.value()
                 << " to clobber-state log failed";
   }
-}
-
-void LogContentsIntoClobber(const base::FilePath& log_file) {
-  brillo::ProcessImpl clobber_log;
-  clobber_log.AddArg("/sbin/clobber-log");
-  clobber_log.AddArg("--append_logfile");
-  clobber_log.AddArg(log_file.value().c_str());
-  clobber_log.Run();
-}
-
-void DumpDmesg() {
-  brillo::ProcessImpl dmesg;
-  dmesg.AddArg("/bin/dmesg");
-  dmesg.RedirectOutput(std::string(kDmesgLogPath));
-  dmesg.Run();
-}
-
-void ReplayLogsIntoClobber() {
-  DumpDmesg();
-  // Collect well-known log paths.
-  for (auto path : kEarlyBootLogPaths)
-    LogContentsIntoClobber(base::FilePath(path));
 }
 
 // Attempt to save logs from the boot when the clobber happened into the
@@ -1224,7 +1192,6 @@ int ClobberState::Run() {
       (preserve_dev_mode_crash_reports || IsDeviceEnrolled())) {
     if (CreateEncryptedRebootVault())
       CollectClobberCrashReports();
-    ReplayLogsIntoClobber();
   }
 
   // Destroy less sensitive data.
