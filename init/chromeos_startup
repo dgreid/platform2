@@ -109,6 +109,11 @@ sanity_check_clock() {
   fi
 }
 
+add_clobber_crash_report() {
+  crash_reporter --early --log_to_stderr --mount_failure --mount_device="$1"
+  sync
+}
+
 mount -n -t debugfs -o nodev,noexec,nosuid,mode=0750,uid=0,gid=debugfs-access \
   debugfs /sys/kernel/debug
 
@@ -300,6 +305,8 @@ if [ "$ROOTDEV_RET_CODE" = "0" ] && [ "$ROOTDEV_TYPE" != "/dev/ram" ]; then
     chromeos-boot-alert self_repair
     clobber-log --repair "${STATE_DEV}" \
         "Self-repair corrupted stateful partition"
+    dumpe2fs -fh "${STATE_DEV}" > /run/dumpe2fs_stateful.log
+    add_clobber_crash_report "stateful"
     exec clobber-state "keepimg"
   fi
 
@@ -454,7 +461,10 @@ mount_or_fail --bind /mnt/stateful_partition/home /home
 mount_or_fail --bind /home/root /home/root
 mount --make-shared /home/root
 
-do_mount_var_and_home_chronos || cleanup_mounts "var and home"
+if ! do_mount_var_and_home_chronos; then
+  add_clobber_crash_report "encstateful"
+  cleanup_mounts "var and home"
+fi
 remember_mount "${ENCRYPTED_STATEFUL_MNT}"
 
 # Setup the encrypted reboot vault once the encrypted stateful partition
@@ -479,6 +489,9 @@ fi
 # Gather logs if needed.  This might clear /var, so all init has to be after
 # this.
 dev_gather_logs
+
+# Collect crash reports from early boot/mount failures.
+crash_reporter --ephemeral_collect
 
 if [ "${DISABLE_STATEFUL_SECURITY_HARDENING}" = "false" ]; then
   # Set up symlink traversal and FIFO blocking policy for /var, which may reside
