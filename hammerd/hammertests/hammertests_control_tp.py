@@ -3,10 +3,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-'''Control file for the following tests
+"""Control file for the following tests
 
-   rb_protection.py
-'''
+   transfer_touchpad_works.py
+"""
 
 from __future__ import print_function
 

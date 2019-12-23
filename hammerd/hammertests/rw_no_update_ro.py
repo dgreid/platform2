@@ -28,6 +28,7 @@ def main(argv):
   with open(common.IMAGE, 'rb') as f:
     ec_image = f.read()
   updater.LoadEcImage(ec_image)
+
   common.disable_hammerd()
   common.connect_usb(updater)
   print('PDU Response: %s' % updater.GetFirstResponsePdu().contents)

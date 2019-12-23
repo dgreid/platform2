@@ -48,7 +48,7 @@ def main(argv):
   print('RO: %s' % updater.GetSectionVersion(hammerd_api.SectionName.RO))
   print('RW: %s' % updater.GetSectionVersion(hammerd_api.SectionName.RW))
   print('Is RW locked?:  %s' % updater.IsSectionLocked(1))
-  assert updater.IsSectionLocked(1) is True, 'RW should be locked'
+  assert updater.IsSectionLocked(1), 'RW should be locked'
 
   updater.SendSubcommand(hammerd_api.UpdateExtraCommand.ImmediateReset)
   updater.CloseUsb()
@@ -90,7 +90,7 @@ def flash_invalid_address(updater, rw):
       updater.CloseUsb()
       time.sleep(0.5)
       updater.TryConnectUsb()
-      assert updater.SendFirstPdu() is True, 'Error sending first PDU'
+      assert updater.SendFirstPdu() == True, 'Error sending first PDU'
       updater.SendDone()
 
       print('Current section: %s' % updater.CurrentSection())

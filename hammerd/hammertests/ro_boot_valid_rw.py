@@ -70,9 +70,7 @@ def update_invalid_rw(updater, image, image_desc):
   print(image_desc)
   transfer_rw(updater, image)
   updater.SendSubcommand(hammerd_api.UpdateExtraCommand.JumpToRW)
-  time.sleep(2)
   updater.CloseUsb()
-  time.sleep(0.5)
   # If successful (it should not be), jump to RW resets the base.
   common.connect_usb(updater)
   updater.SendFirstPdu()

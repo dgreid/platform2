@@ -21,9 +21,11 @@ BASE_TABLE = {
     'poppy': 'hammer',
     'soraka': 'staff',
     'nocturne': 'whiskers',
+    'kodama': 'magnemite',
+    'krane': 'masterball',
 }
 
-board_name_cmd = 'grep CHROMEOS_RELEASE_BOARD /etc/lsb-release | cut -d = -f 2'
+board_name_cmd = 'mosys platform model'
 BOARD_NAME = subprocess.check_output(board_name_cmd, shell=True)
 BASE_NAME = BASE_TABLE[BOARD_NAME.rstrip()]
 
@@ -33,16 +35,33 @@ if BASE_NAME == 'staff':
   BASE_PRODUCT_ID = 0x502b
   BASE_USB_PATH = '1-2'
   BASE_CONN_GPIO = 'PP3300_DX_BASE'
+  TP = '/lib/firmware/%s-touchpad.fw' % BASE_NAME
 elif BASE_NAME == 'whiskers':
   BASE_VENDOR_ID = 0x18d1
   BASE_PRODUCT_ID = 0x5030
   BASE_USB_PATH = '1-7'
   BASE_CONN_GPIO = 'BASE_PWR_EN'
+  TP = '/lib/firmware/%s-touchpad.fw' % BASE_NAME
 elif BASE_NAME == 'hammer':
   BASE_VENDOR_ID = 0x18d1
   BASE_PRODUCT_ID = 0x5022
   BASE_USB_PATH = '1-3'
   BASE_CONN_GPIO = 'PP3300_DX_BASE'
+  TP = '/lib/firmware/%s-touchpad.fw' % BASE_NAME
+elif BASE_NAME == 'magnemite':
+  BASE_VENDOR_ID = 0x18d1
+  BASE_PRODUCT_ID = 0x503d
+  BASE_BUS = 1
+  BASE_PORT = '1.1'
+  BASE_CONN_GPIO = 'EN_PP3300_POGO'
+  TP = '/lib/firmware/%s-touch.fw' % BASE_NAME
+elif BASE_NAME == 'masterball':
+  BASE_VENDOR_ID = 0x18d1
+  BASE_PRODUCT_ID = 0x503c
+  BASE_BUS = 1
+  BASE_PORT = '1.1'
+  BASE_CONN_GPIO = 'EN_PP3300_POGO'
+  TP = '/lib/firmware/%s-touch.fw' % BASE_NAME
 else:
   print('Error: unknown board: %s' % BASE_NAME)
 
@@ -61,15 +80,14 @@ EC_FLASH_PROTECT_ROLLBACK_NOW = (1 << 10)
 
 # Path of testing image files.
 IMAGE = os.path.join(IMAGE_DIR, '%s.bin' % BASE_NAME)
-TP = '/lib/firmware/%s-touchpad.fw' % BASE_NAME
 RW_DEV = os.path.join(IMAGE_DIR, '%s.dev' % BASE_NAME)
 RW_CORRUPT_FIRST_BYTE = os.path.join(
     IMAGE_DIR, '%s_corrupt_first_byte.bin' % BASE_NAME)
 RW_CORRUPT_LAST_BYTE = os.path.join(
     IMAGE_DIR, '%s_corrupt_last_byte.bin' % BASE_NAME)
 RW_VALID = os.path.join(IMAGE_DIR, '%s.bin' % BASE_NAME)
-OLDER_IMAGE = os.path.join(IMAGE_DIR, '%solder.bin' % BASE_NAME)
-NEWER_IMAGE = os.path.join(IMAGE_DIR, '%snewer.bin' % BASE_NAME)
+OLDER_IMAGE = os.path.join(IMAGE_DIR, '%s_older.bin' % BASE_NAME)
+NEWER_IMAGE = os.path.join(IMAGE_DIR, '%s.bin' % BASE_NAME)
 # Image should not update RW
 RB_LOWER = os.path.join(IMAGE_DIR, '%s.dev.rb0' % BASE_NAME)
 # Initial DUT image

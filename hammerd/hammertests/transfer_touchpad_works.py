@@ -3,7 +3,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-"""Verify that RO cannot flash to wrong address"""
+"""Verify that RO cannot flash to wrong address. Test needs unlocked image"""
 
 from __future__ import print_function
 
@@ -13,8 +13,6 @@ import time
 import common
 import hammerd_api
 
-# Use unlocked image on dut to verify that TransferTouchpadFirmware call works
-TP = '/lib/firmware/staff-touchpad.fw'
 
 WRONG_ADDRR_KEY_RO = '0x0000ac00'
 WRONG_ADDRR_RO_FRID = '0x000000c4'
@@ -34,6 +32,10 @@ def main(argv):
     sys.exit('Test takes no args!')
   updater = hammerd_api.FirmwareUpdater(common.BASE_VENDOR_ID,
                                         common.BASE_PRODUCT_ID,
+                                        common.BASE_BUS,
+                                        common.BASE_PORT)
+
+# Use unlocked image on dut to verify that TransferTouchpadFirmware call works
                                         common.BASE_USB_PATH)
   with open(common.IMAGE, 'rb') as f:
     ec_image = f.read()

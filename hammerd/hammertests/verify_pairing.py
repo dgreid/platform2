@@ -5,10 +5,10 @@
 
 """Verify pairing between base and lid
 
-During pairing, the base computes it's public key from base_private key
-and authenticator is derived from shared secret. For the lid to verify the
-challenge, it needs to check whether base_public corresponds to one of
-the previously seen bases, and that the returned authenticator matches.
+   During pairing, the base computes it's public key from base_private key
+   and authenticator is derived from shared secret. For the lid to verify the
+   challenge, it needs to check whether base_public corresponds to one of
+   the previously seen bases, and that the returned authenticator matches.
 """
 
 from __future__ import print_function
@@ -36,6 +36,8 @@ def main(argv):
   with open(common.IMAGE, 'rb') as f:
     ec_image = f.read()
   updater.LoadEcImage(ec_image)
+
+  common.disable_hammerd()
 
   print('Connect to base EC.')
   common.connect_usb(updater)
