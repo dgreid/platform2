@@ -274,8 +274,61 @@ std::string StorageTool::Nvme(const std::string& option) {
   if (option == "identify_controller") {
     process.AddArg("id-ctrl");
     process.AddArg("--vendor-specific");
+  } else if (option == "short_self_test") {
+    // Command for selftest
+    process.AddArg("device-self-test");
+    // Namespace of NVMe
+    process.AddArg("-n 1");
+    // type of selftest: short
+    process.AddArg("-s 1");
+  } else if (option == "long_self_test") {
+    // command for selftest
+    process.AddArg("device-self-test");
+    // Namespace of NVMe
+    process.AddArg("-n 1");
+    // type of selftest: long
+    process.AddArg("-s 2");
   } else {
     return "<Option not supported>";
+  }
+
+  const base::FilePath rootdev =
+      GetDevice(base::FilePath(kSource), base::FilePath(kMountFile));
+  process.AddArg(rootdev.value());
+  process.Run();
+  std::string output;
+  process.GetOutput(&output);
+  return output;
+}
+
+std::string StorageTool::NvmeLog(const uint32_t& page_id,
+                                 const uint32_t& length,
+                                 bool raw_binary) {
+  ProcessWithOutput process;
+  // Disabling sandboxing since nvme requires higher privileges.
+  process.DisableSandbox();
+  if (!process.Init())
+    return "<process init failed>";
+
+  process.AddArg(kNvme);
+  process.AddArg("get-log");
+
+  // Log page ID ranging from 0 to 255.
+  if (page_id <= 0xff) {
+    process.AddArg(base::StringPrintf("--log-id=%u", page_id));
+  } else {
+    return "<Page ID invalid>";
+  }
+
+  // Length of byte-data must be larger than 3.
+  if (length >= 4) {
+    process.AddArg(base::StringPrintf("--log-len=%u", length));
+  } else {
+    return "<Length of byte-data invalid. At least 4 bytes for a request>";
+  }
+
+  if (raw_binary) {
+    process.AddArg("--raw-binary");
   }
 
   const base::FilePath rootdev =

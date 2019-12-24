@@ -121,6 +121,9 @@ class DebugdDBusAdaptor : public org::chromium::debugdAdaptor,
   std::string Smartctl(const std::string& option) override;
   std::string Mmc(const std::string& option) override;
   std::string Nvme(const std::string& option) override;
+  std::string NvmeLog(const uint32_t page_id,
+                      const uint32_t length,
+                      bool raw_binary) override;
   std::string MemtesterStart(const base::ScopedFD& outfd,
                              uint32_t memory) override;
   bool MemtesterStop(brillo::ErrorPtr* error,

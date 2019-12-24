@@ -253,6 +253,12 @@ std::string DebugdDBusAdaptor::Nvme(const std::string& option) {
   return storage_tool_->Nvme(option);
 }
 
+std::string DebugdDBusAdaptor::NvmeLog(const uint32_t page_id,
+                                       const uint32_t length,
+                                       bool raw_binary) {
+  return storage_tool_->NvmeLog(page_id, length, raw_binary);
+}
+
 std::string DebugdDBusAdaptor::MemtesterStart(const base::ScopedFD& outfd,
                                               uint32_t memory) {
   return memory_tool_->Start(outfd, memory);

@@ -30,6 +30,9 @@ class StorageTool : public SubprocessTool {
                    std::string* errorMsg);
   std::string Mmc(const std::string& option);
   std::string Nvme(const std::string& option);
+  std::string NvmeLog(const uint32_t& page_id,
+                      const uint32_t& length,
+                      bool raw_binary);
 
  private:
   // Returns the partition of |dst| as a string. |dst| is expected
