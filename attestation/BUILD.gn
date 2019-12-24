@@ -5,6 +5,8 @@
 # TODO: Fix the visibility on these shared libs.
 # gnlint: disable=GnLintVisibilityFlags
 
+import("//common-mk/generate-dbus-adaptors.gni")
+import("//common-mk/generate-dbus-proxies.gni")
 import("//common-mk/pkg_config.gni")
 import("//common-mk/proto_library.gni")
 
@@ -13,6 +15,8 @@ group("all") {
     ":attestation_client",
     ":attestationd",
     ":libattestation",
+    ":pca_agent_client",
+    ":pca_agentd",
   ]
   if (use.test) {
     deps += [ ":attestation_testrunner" ]
@@ -227,6 +231,70 @@ executable("attestationd") {
   ]
 }
 
+generate_dbus_adaptors("pca-agent-adaptors") {
+  sources = [
+    "pca_agent/dbus_bindings/org.chromium.PcaAgent.xml",
+  ]
+  dbus_adaptors_out_dir = "include/attestation/pca-agent/dbus_adaptors"
+  dbus_service_config = "pca_agent/dbus_bindings/dbus-service-config.json"
+}
+
+generate_dbus_proxies("pca-agent-proxies") {
+  sources = [
+    "pca_agent/dbus_bindings/org.chromium.PcaAgent.xml",
+  ]
+  dbus_service_config = "pca_agent/dbus_bindings/dbus-service-config.json"
+  mock_output_file = "include/attestation/pca_agent/dbus-proxy-mocks.h"
+  proxy_output_file = "include/attestation/pca_agent/dbus-proxies.h"
+  proxy_path_in_mocks = "attestation/pca_agent/dbus-proxies.h"
+}
+
+source_set("pca_agent_server_library") {
+  sources = [
+    "pca_agent/server/pca_agent_service.cc",
+  ]
+  configs += [ ":target_defaults" ]
+}
+
+executable("pca_agentd") {
+  sources = [
+    "pca_agent/server/main.cc",
+  ]
+  deps = [
+    ":pca-agent-adaptors",
+    ":pca_agent_server_library",
+  ]
+  configs += [
+    ":attestationd_config",
+    ":target_defaults",
+  ]
+  pkg_deps = [
+    # system_api depends on protobuf (or protobuf-lite). It must appear
+    # before protobuf here or the linker flags won't be in the right
+    # order.
+    "system_api",
+    "protobuf",
+  ]
+}
+
+executable("pca_agent_client") {
+  sources = [
+    "pca_agent/client/main.cc",
+  ]
+  configs += [ ":target_defaults" ]
+  deps = [
+    ":pca-agent-proxies",
+    ":proto_library",
+  ]
+  pkg_deps = [
+    # system_api depends on protobuf (or protobuf-lite). It must appear
+    # before protobuf here or the linker flags won't be in the right
+    # order.
+    "system_api",
+    "protobuf",
+  ]
+}
+
 if (use.test) {
   pkg_config("attestation_testrunner_config") {
     pkg_deps = [
@@ -268,6 +336,7 @@ if (use.test) {
     deps = [
       ":client_library",
       ":common_library",
+      ":pca_agent_server_library",
       ":proto_library",
       ":proto_library_proto",
       ":server_library",
