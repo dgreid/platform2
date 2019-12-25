@@ -3422,7 +3422,9 @@ void Service::OnTremplinStartedSignal(dbus::Signal* signal) {
   auto iter = FindVm(tremplin_started_signal.owner_id(),
                      tremplin_started_signal.vm_name());
   if (iter == vms_.end()) {
-    LOG(ERROR) << "Received signal from an unknown vm.";
+    LOG(ERROR) << "Received signal from an unknown vm."
+               << VmId(tremplin_started_signal.owner_id(),
+                       tremplin_started_signal.vm_name());
     return;
   }
   LOG(INFO) << "Received TremplinStartedSignal for " << iter->first;
@@ -3439,7 +3441,8 @@ void Service::OnVmToolsStateChangedSignal(dbus::Signal* signal) {
 
   auto iter = FindVm(owner_id, vm_name);
   if (iter == vms_.end()) {
-    LOG(ERROR) << "Received signal from an unknown vm.";
+    LOG(ERROR) << "Received signal from an unknown vm "
+               << VmId(owner_id, vm_name);
     return;
   }
   LOG(INFO) << "Received VmToolsStateChangedSignal for " << iter->first;
