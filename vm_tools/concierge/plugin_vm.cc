@@ -51,6 +51,9 @@ constexpr char kStatefulDir[] = "/pvm";
 // Name of the directory holding ISOs inside the jail.
 constexpr char kIsoDir[] = "/iso";
 
+// How long we give VM to suspend.
+constexpr base::TimeDelta kVmSuspendTimeout = base::TimeDelta::FromSeconds(25);
+
 // How long to wait before timing out on child process exits.
 constexpr base::TimeDelta kChildExitTimeout = base::TimeDelta::FromSeconds(10);
 
@@ -115,7 +118,42 @@ bool PluginVm::StopVm() {
     return true;
   }
 
-  if (pvm::dispatcher::SuspendVm(vmplugin_service_proxy_, id_)) {
+  bool dispatcher_shutting_down = false;
+  base::TimeTicks suspend_start_time(base::TimeTicks::Now());
+  do {
+    pvm::dispatcher::VmOpResult result =
+        pvm::dispatcher::SuspendVm(vmplugin_service_proxy_, id_);
+
+    if (result == pvm::dispatcher::VmOpResult::SUCCESS) {
+      process_.Release();
+      return true;
+    } else if (result ==
+               pvm::dispatcher::VmOpResult::DISPATCHER_SHUTTING_DOWN) {
+      // The dispatcher is in process of shutting down, and is supposed
+      // to suspend all running VMs. Wait a second, and try again, until we
+      // get "dispatcher not available" response.
+      if (!dispatcher_shutting_down) {
+        LOG(INFO) << "Dispatcher is shutting down, will retry suspend";
+        dispatcher_shutting_down = true;
+      }
+      base::PlatformThread::Sleep(base::TimeDelta::FromSeconds(1));
+    } else if (result ==
+               pvm::dispatcher::VmOpResult::DISPATCHER_NOT_AVAILABLE) {
+      if (!dispatcher_shutting_down)
+        LOG(ERROR) << "Failed to suspend VM: dispatcher is not available";
+      break;
+    } else {
+      // TODO(dtor): handle cases when suspend fails because VM is already
+      // transitioning into some state, such as suspending or shutting down,
+      // in which case dispatcher will reject our request.
+      LOG(ERROR) << "Failed to suspend VM: " << static_cast<int>(result);
+      break; /* proceed to killing it */
+    }
+  } while (base::TimeTicks::Now() - suspend_start_time < kVmSuspendTimeout);
+
+  // We may have looped a few times, so we should check if VM is still
+  // running before proceeding to kill it.
+  if (!CheckProcessExists(process_.pid())) {
     process_.Release();
     return true;
   }
@@ -147,7 +185,8 @@ bool PluginVm::Shutdown() {
   }
 
   return !CheckProcessExists(process_.pid()) ||
-         pvm::dispatcher::ShutdownVm(vmplugin_service_proxy_, id_);
+         pvm::dispatcher::ShutdownVm(vmplugin_service_proxy_, id_) ==
+             pvm::dispatcher::VmOpResult::SUCCESS;
 }
 
 VmInterface::Info PluginVm::GetInfo() {
@@ -668,8 +707,8 @@ bool PluginVm::Start(uint32_t cpus,
   };
 
   // TODO(kimjae): This is a temporary hack to have relative files to be found
-  // even when started from DLC paths. Clean this up once a cleaner solution can
-  // be leveraged.
+  // even when started from DLC paths. Clean this up once a cleaner solution
+  // can be leveraged.
   bind_mounts.push_back(
       base::StringPrintf("%s:%s:false", kPluginDlcDir, kPluginDlcDir));
 
@@ -696,9 +735,9 @@ bool PluginVm::Start(uint32_t cpus,
     process_.AddArg(std::string("--params=") + param);
   }
 
-  // Change the process group before exec so that crosvm sending SIGKILL to the
-  // whole process group doesn't kill us as well. The function also changes the
-  // cpu cgroup for PluginVm crosvm processes.
+  // Change the process group before exec so that crosvm sending SIGKILL to
+  // the whole process group doesn't kill us as well. The function also
+  // changes the cpu cgroup for PluginVm crosvm processes.
   process_.SetPreExecCallback(base::Bind(
       &SetUpCrosvmProcess, base::FilePath(kPluginVmCpuCgroup).Append("tasks")));
 

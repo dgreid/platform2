@@ -12,6 +12,7 @@
 #include <dbus/exported_object.h>
 #include <dbus/message.h>
 #include <dbus/object_proxy.h>
+#include <dbus/scoped_dbus_error.h>
 
 #include <vm_plugin_dispatcher/proto_bindings/vm_plugin_dispatcher.pb.h>
 
@@ -27,6 +28,23 @@ constexpr char kVmpluginImageDir[] = "/run/pvm-images";
 
 constexpr base::TimeDelta kVmShutdownTimeout = base::TimeDelta::FromMinutes(2);
 constexpr base::TimeDelta kVmSuspendTimeout = base::TimeDelta::FromSeconds(20);
+
+VmOpResult ConvertDispatcherResult(plugin_dispatcher::VmErrorCode result) {
+  switch (result) {
+    case plugin_dispatcher::VM_SUCCESS:
+      return VmOpResult::SUCCESS;
+    case plugin_dispatcher::VM_ERR_LIC_NOT_VALID:
+    case plugin_dispatcher::VM_ERR_LIC_EXPIRED:
+    case plugin_dispatcher::VM_ERR_LIC_WEB_PORTAL_UNAVAILABLE:
+      return VmOpResult::DISPATCHER_LICENSE_ERROR;
+    case plugin_dispatcher::VM_ERR_SRV_SHUTDOWN_IN_PROGRESS:
+      return VmOpResult::DISPATCHER_SHUTTING_DOWN;
+    case plugin_dispatcher::VM_ERR_UNKNOWN:
+      return VmOpResult::DISPATCHER_GENERIC_ERROR;
+    default:
+      return VmOpResult::INTERNAL_ERROR;
+  }
+}
 
 }  // namespace
 
@@ -175,7 +193,7 @@ bool IsVmRegistered(dbus::ObjectProxy* proxy, const VmId& vm_id, bool* result) {
   return true;
 }
 
-bool ShutdownVm(dbus::ObjectProxy* proxy, const VmId& vm_id) {
+VmOpResult ShutdownVm(dbus::ObjectProxy* proxy, const VmId& vm_id) {
   LOG(INFO) << "Shutting down VM " << vm_id;
 
   dbus::MethodCall method_call(
@@ -192,32 +210,40 @@ bool ShutdownVm(dbus::ObjectProxy* proxy, const VmId& vm_id) {
 
   if (!writer.AppendProtoAsArrayOfBytes(request)) {
     LOG(ERROR) << "Failed to encode StopVmRequest protobuf";
-    return false;
+    return VmOpResult::INTERNAL_ERROR;
   }
 
-  std::unique_ptr<dbus::Response> dbus_response = proxy->CallMethodAndBlock(
-      &method_call, kVmShutdownTimeout.InMilliseconds());
+  dbus::ScopedDBusError dbus_error;
+  std::unique_ptr<dbus::Response> dbus_response =
+      proxy->CallMethodAndBlockWithErrorDetails(
+          &method_call, kVmShutdownTimeout.InMilliseconds(), &dbus_error);
   if (!dbus_response) {
-    LOG(ERROR) << "Failed to send StopVm message to dispatcher service";
-    return false;
+    if (dbus_error.is_set() &&
+        strcmp(dbus_error.name(), DBUS_ERROR_SERVICE_UNKNOWN) == 0) {
+      LOG(ERROR) << "Failed to send ShutdownVm request to dispatcher: service "
+                    "unavailable";
+      return VmOpResult::DISPATCHER_NOT_AVAILABLE;
+    } else if (dbus_error.is_set() &&
+               strcmp(dbus_error.name(), DBUS_ERROR_NO_REPLY) == 0) {
+      LOG(ERROR) << "ShutdownVm request to dispatcher timed out";
+      return VmOpResult::DISPATCHER_TIMEOUT;
+    } else {
+      LOG(ERROR) << "Failed to send ShutdownVm message to dispatcher service";
+      return VmOpResult::INTERNAL_ERROR;
+    }
   }
 
   dbus::MessageReader reader(dbus_response.get());
   vm_tools::plugin_dispatcher::StopVmResponse response;
   if (!reader.PopArrayOfBytesAsProto(&response)) {
     LOG(ERROR) << "Failed to parse StopVmResponse protobuf";
-    return false;
+    return VmOpResult::INTERNAL_ERROR;
   }
 
-  if (response.error() != vm_tools::plugin_dispatcher::VM_SUCCESS) {
-    LOG(ERROR) << "Failed to stop VM: " << response.error();
-    return false;
-  }
-
-  return true;
+  return ConvertDispatcherResult(response.error());
 }
 
-bool SuspendVm(dbus::ObjectProxy* proxy, const VmId& vm_id) {
+VmOpResult SuspendVm(dbus::ObjectProxy* proxy, const VmId& vm_id) {
   LOG(INFO) << "Suspending VM " << vm_id;
 
   dbus::MethodCall method_call(
@@ -232,29 +258,34 @@ bool SuspendVm(dbus::ObjectProxy* proxy, const VmId& vm_id) {
 
   if (!writer.AppendProtoAsArrayOfBytes(request)) {
     LOG(ERROR) << "Failed to encode SuspendVmRequest protobuf";
-    return false;
+    return VmOpResult::INTERNAL_ERROR;
   }
 
-  std::unique_ptr<dbus::Response> dbus_response = proxy->CallMethodAndBlock(
-      &method_call, kVmSuspendTimeout.InMilliseconds());
+  dbus::ScopedDBusError dbus_error;
+  std::unique_ptr<dbus::Response> dbus_response =
+      proxy->CallMethodAndBlockWithErrorDetails(
+          &method_call, kVmSuspendTimeout.InMilliseconds(), &dbus_error);
   if (!dbus_response) {
-    LOG(ERROR) << "Failed to send SuspendVm message to dispatcher service";
-    return false;
+    if (dbus_error.is_set() &&
+        strcmp(dbus_error.name(), DBUS_ERROR_SERVICE_UNKNOWN) == 0) {
+      return VmOpResult::DISPATCHER_NOT_AVAILABLE;
+    } else if (dbus_error.is_set() &&
+               strcmp(dbus_error.name(), DBUS_ERROR_NO_REPLY) == 0) {
+      return VmOpResult::DISPATCHER_TIMEOUT;
+    } else {
+      LOG(ERROR) << "Failed to send SuspendVm message to dispatcher service";
+      return VmOpResult::INTERNAL_ERROR;
+    }
   }
 
   dbus::MessageReader reader(dbus_response.get());
   vm_tools::plugin_dispatcher::SuspendVmResponse response;
   if (!reader.PopArrayOfBytesAsProto(&response)) {
     LOG(ERROR) << "Failed to parse SuspendVmResponse protobuf";
-    return false;
+    return VmOpResult::INTERNAL_ERROR;
   }
 
-  if (response.error() != vm_tools::plugin_dispatcher::VM_SUCCESS) {
-    LOG(ERROR) << "Failed to suspend VM: " << response.error();
-    return false;
-  }
-
-  return true;
+  return ConvertDispatcherResult(response.error());
 }
 
 void RegisterVmToolsChangedCallbacks(

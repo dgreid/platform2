@@ -18,6 +18,17 @@ namespace concierge {
 namespace pvm {
 namespace dispatcher {
 
+enum class VmOpResult {
+  SUCCESS,
+  INTERNAL_ERROR,            // Failed to call to dispatcher or parse response.
+  DISPATCHER_NOT_AVAILABLE,  // DBus call to dispatcher failed because the
+                             // service is not there.
+  DISPATCHER_TIMEOUT,        // DBus call to dispatcher timed out.
+  DISPATCHER_SHUTTING_DOWN,
+  DISPATCHER_LICENSE_ERROR,
+  DISPATCHER_GENERIC_ERROR,
+};
+
 dbus::ObjectProxy* GetServiceProxy(scoped_refptr<dbus::Bus> bus);
 
 bool RegisterVm(dbus::ObjectProxy* proxy,
@@ -27,8 +38,8 @@ bool UnregisterVm(dbus::ObjectProxy* proxy, const VmId& vm_id);
 
 bool IsVmRegistered(dbus::ObjectProxy* proxy, const VmId& vm_id, bool* result);
 
-bool ShutdownVm(dbus::ObjectProxy* proxy, const VmId& vm_id);
-bool SuspendVm(dbus::ObjectProxy* proxy, const VmId& vm_id);
+VmOpResult ShutdownVm(dbus::ObjectProxy* proxy, const VmId& vm_id);
+VmOpResult SuspendVm(dbus::ObjectProxy* proxy, const VmId& vm_id);
 
 void RegisterVmToolsChangedCallbacks(
     dbus::ObjectProxy* proxy,
