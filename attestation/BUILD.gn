@@ -186,6 +186,7 @@ config("server_library_config") {
 
 source_set("server_library") {
   sources = [
+    "server/attestation_flow.cc",
     "server/attestation_service.cc",
     "server/database_impl.cc",
     "server/dbus_service.cc",

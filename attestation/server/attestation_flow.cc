@@ -1,0 +1,77 @@
+// Copyright 2020 The Chromium OS Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#include "attestation/server/attestation_flow.h"
+
+namespace attestation {
+
+AttestationFlowData::AttestationFlowData(const EnrollRequest& request,
+                                         const EnrollCallback& callback)
+    : enroll_request_(request), enroll_callback_(callback) {}
+AttestationFlowData::AttestationFlowData(const GetCertificateRequest& request,
+                                         const GetCertificateCallback& callback)
+    : get_certificate_request_(request), get_certificate_callback_(callback) {}
+
+ACAType AttestationFlowData::aca_type() const {
+  if (enroll_request_) {
+    return enroll_request_->aca_type();
+  }
+  return get_certificate_request_->aca_type();
+}
+
+bool AttestationFlowData::shall_enroll() const {
+  return enroll_request_ ||
+         get_certificate_request_->shall_trigger_enrollment();
+}
+
+bool AttestationFlowData::shall_get_certificate() const {
+  return static_cast<bool>(get_certificate_request_);
+}
+
+bool AttestationFlowData::forced_enrollment() const {
+  return enroll_request_ && enroll_request_->forced();
+}
+
+bool AttestationFlowData::forced_get_certificate() const {
+  return get_certificate_request_ && get_certificate_request_->forced();
+}
+
+const GetCertificateRequest& AttestationFlowData::get_certificate_request()
+    const {
+  return *get_certificate_request_;
+}
+
+std::string AttestationFlowData::username() const {
+  DCHECK(get_certificate_request_);
+  return get_certificate_request_->username();
+}
+
+std::string AttestationFlowData::key_label() const {
+  DCHECK(get_certificate_request_);
+  return get_certificate_request_->key_label();
+}
+
+void AttestationFlowData::ReturnStatus() {
+  if (enroll_callback_) {
+    EnrollReply reply;
+    reply.set_status(status_);
+    enroll_callback_->Run(reply);
+  } else {
+    DCHECK(get_certificate_callback_);
+    GetCertificateReply reply;
+    reply.set_status(status_);
+    get_certificate_callback_->Run(reply);
+  }
+}
+
+void AttestationFlowData::ReturnCertificate() {
+  DCHECK(get_certificate_callback_);
+  DCHECK_EQ(status_, STATUS_SUCCESS);
+  GetCertificateReply reply;
+  reply.set_status(STATUS_SUCCESS);
+  reply.set_certificate(certificate_);
+  get_certificate_callback_->Run(reply);
+}
+
+}  // namespace attestation
