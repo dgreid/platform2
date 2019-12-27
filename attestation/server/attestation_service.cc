@@ -8,6 +8,7 @@
 #include <climits>
 #include <set>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <attestation/proto_bindings/attestation_ca.pb.h>
@@ -32,6 +33,8 @@ extern "C" {
 
 #include "attestation/common/database.pb.h"
 #include "attestation/common/tpm_utility_factory.h"
+#include "attestation/pca_agent/client/proxy_factory.h"
+#include "attestation/server/attestation_flow.h"
 #include "attestation/server/database_impl.h"
 
 namespace {
@@ -386,8 +389,25 @@ void LogErrorFromCA(const std::string& func, const std::string& details,
 
 namespace attestation {
 
+namespace {
+
 // Last PCR index to quote (we start at 0).
 constexpr int kLastPcrToQuote = 1;
+
+pca_agent::EnrollRequest ToPcaAgentEnrollRequest(const std::string& request) {
+  pca_agent::EnrollRequest ret;
+  ret.set_request(request);
+  return ret;
+}
+
+pca_agent::GetCertificateRequest ToPcaAgentCertRequest(
+    const std::string& request) {
+  pca_agent::GetCertificateRequest ret;
+  ret.set_request(request);
+  return ret;
+}
+
+}  // namespace
 
 #if USE_TPM2
 
@@ -452,6 +472,15 @@ bool AttestationService::Initialize() {
     worker_thread_->StartWithOptions(
         base::Thread::Options(base::MessageLoop::TYPE_IO, 0));
     LOG(INFO) << "Attestation service started.";
+  }
+  // Creates |default_pca_agent_proxy_| here if needed; unlike other objects,
+  // |default_pca_agent_proxy_| is used in the origin thread instead of worker
+  // thread.
+  if (!pca_agent_proxy_) {
+    default_pca_agent_proxy_ =
+        attestation::pca_agent::client::CreateWithDBusTaskRunner(
+            worker_thread_->task_runner());
+    pca_agent_proxy_ = default_pca_agent_proxy_.get();
   }
   worker_thread_->task_runner()->PostTask(
       FROM_HERE,
@@ -2419,17 +2448,18 @@ void AttestationService::CreateEnrollRequest(
     const CreateEnrollRequestRequest& request,
     const CreateEnrollRequestCallback& callback) {
   auto result = std::make_shared<CreateEnrollRequestReply>();
-  base::Closure task =
-      base::Bind(&AttestationService::CreateEnrollRequestTask,
-                 base::Unretained(this), request, result);
+  base::Closure task = base::Bind(
+      &AttestationService::CreateEnrollRequestTask<CreateEnrollRequestRequest>,
+      base::Unretained(this), request, result);
   base::Closure reply = base::Bind(
       &AttestationService::TaskRelayCallback<CreateEnrollRequestReply>,
       GetWeakPtr(), callback, result);
   worker_thread_->task_runner()->PostTaskAndReply(FROM_HERE, task, reply);
 }
 
+template <typename RequestType>
 void AttestationService::CreateEnrollRequestTask(
-    const CreateEnrollRequestRequest& request,
+    const RequestType& request,
     const std::shared_ptr<CreateEnrollRequestReply>& result) {
   if (!CreateEnrollRequestInternal(request.aca_type(),
                                    result->mutable_pca_request())) {
@@ -2443,7 +2473,7 @@ void AttestationService::FinishEnroll(
     const FinishEnrollCallback& callback) {
   auto result = std::make_shared<FinishEnrollReply>();
   base::Closure task =
-      base::Bind(&AttestationService::FinishEnrollTask,
+      base::Bind(&AttestationService::FinishEnrollTask<FinishEnrollReply>,
                  base::Unretained(this), request, result);
   base::Closure reply = base::Bind(
       &AttestationService::TaskRelayCallback<FinishEnrollReply>,
@@ -2451,9 +2481,10 @@ void AttestationService::FinishEnroll(
   worker_thread_->task_runner()->PostTaskAndReply(FROM_HERE, task, reply);
 }
 
+template <typename ReplyType>
 void AttestationService::FinishEnrollTask(
     const FinishEnrollRequest& request,
-    const std::shared_ptr<FinishEnrollReply>& result) {
+    const std::shared_ptr<ReplyType>& result) {
   std::string server_error;
   if (!FinishEnrollInternal(request.aca_type(), request.pca_response(),
                             &server_error)) {
@@ -2467,9 +2498,187 @@ void AttestationService::FinishEnrollTask(
 
 void AttestationService::Enroll(const EnrollRequest& request,
                                 const EnrollCallback& callback) {
-  auto result = std::make_shared<EnrollReply>();
-  result->set_status(STATUS_NOT_SUPPORTED);
-  callback.Run(*result);
+  auto data = std::make_shared<AttestationFlowData>(request, callback);
+  base::Closure task = base::Bind(&AttestationService::StartEnrollTask,
+                                  base::Unretained(this), data);
+  base::Closure reply =
+      base::Bind(&AttestationService::OnEnrollAction, GetWeakPtr(), data);
+  worker_thread_->task_runner()->PostTaskAndReply(FROM_HERE, task, reply);
+}
+
+void AttestationService::SendEnrollRequest(
+    const std::shared_ptr<AttestationFlowData>& data) {
+  auto pca_request = ToPcaAgentEnrollRequest(data->result_request());
+  auto on_success = base::Bind(&AttestationService::HandlePcaAgentEnrollReply,
+                               GetWeakPtr(), data);
+  auto on_error =
+      base::Bind(&AttestationService::HandlePcaAgentEnrollRequestError,
+                 GetWeakPtr(), data);
+  pca_agent_proxy_->EnrollAsync(pca_request, on_success, on_error);
+}
+
+void AttestationService::HandlePcaAgentEnrollRequestError(
+    const std::shared_ptr<AttestationFlowData>& data,
+    brillo::Error*) {
+  LOG(ERROR) << __func__ << ": Error sending enroll request to |pca_agent|";
+  data->set_status(STATUS_UNEXPECTED_DEVICE_ERROR);
+  data->ReturnStatus();
+}
+
+void AttestationService::OnEnrollAction(
+    const std::shared_ptr<AttestationFlowData>& data) {
+  VLOG(1) << __func__ << ": action is : " << static_cast<int>(data->action());
+  switch (data->action()) {
+    default:
+    case AttestationFlowAction::kUnknown:
+      LOG(DFATAL) << "Unexpected action code: "
+                  << static_cast<int>(data->action());
+      data->set_status(STATUS_NOT_SUPPORTED);
+      data->ReturnStatus();
+      return;
+    case AttestationFlowAction::kAbort:
+      data->ReturnStatus();
+      return;
+    case AttestationFlowAction::kProcessRequest:
+      SendEnrollRequest(data);
+      return;
+    case AttestationFlowAction::kEnqueue:
+      DCHECK(false) << "Not implemented";
+      return;
+    case AttestationFlowAction::kNoop:
+      if (!data->shall_get_certificate()) {
+        data->ReturnStatus();
+        return;
+      }
+  }
+  base::Closure task = base::Bind(&AttestationService::StartCertificateTask,
+                                  base::Unretained(this), data);
+  base::Closure reply = base::Bind(&AttestationService::OnGetCertificateAction,
+                                   GetWeakPtr(), data);
+  worker_thread_->task_runner()->PostTaskAndReply(FROM_HERE, task, reply);
+}
+
+void AttestationService::OnGetCertificateAction(
+    const std::shared_ptr<AttestationFlowData>& data) {
+  VLOG(1) << __func__ << ": action is : " << static_cast<int>(data->action());
+  switch (data->action()) {
+    default:
+    case AttestationFlowAction::kUnknown:
+      LOG(DFATAL) << "Unexpected action code: "
+                  << static_cast<int>(data->action());
+      data->set_status(STATUS_NOT_SUPPORTED);
+      data->ReturnStatus();
+      return;
+    case AttestationFlowAction::kAbort:
+      data->ReturnStatus();
+      return;
+    case AttestationFlowAction::kProcessRequest:
+      SendGetCertificateRequest(data);
+      return;
+    case AttestationFlowAction::kEnqueue:
+      DCHECK(false) << "Not implemented";
+      return;
+    case AttestationFlowAction::kNoop:
+      data->ReturnCertificate();
+      return;
+  }
+}
+
+void AttestationService::StartEnrollTask(
+    const std::shared_ptr<AttestationFlowData>& data) {
+  const bool is_enrolled = IsEnrolledWithACA(data->aca_type());
+  if (is_enrolled && !data->forced_enrollment()) {
+    data->set_action(AttestationFlowAction::kNoop);
+    return;
+  }
+  if (!is_enrolled && !data->shall_enroll()) {
+    data->set_action(AttestationFlowAction::kAbort);
+    data->set_status(STATUS_UNEXPECTED_DEVICE_ERROR);
+    return;
+  }
+  std::string result_request;
+  if (!CreateEnrollRequestInternal(data->aca_type(), &result_request)) {
+    data->set_action(AttestationFlowAction::kAbort);
+    data->set_status(STATUS_UNEXPECTED_DEVICE_ERROR);
+    return;
+  }
+  data->emplace_result_request(std::move(result_request));
+  data->set_action(AttestationFlowAction::kProcessRequest);
+}
+
+void AttestationService::FinishEnrollTaskV2(
+    const std::shared_ptr<AttestationFlowData>& data) {
+  std::string server_error;
+  if (!FinishEnrollInternal(data->aca_type(), data->result_response(),
+                            &server_error)) {
+    if (server_error.empty()) {
+      data->set_status(STATUS_UNEXPECTED_DEVICE_ERROR);
+    } else {
+      data->set_status(STATUS_REQUEST_DENIED_BY_CA);
+    }
+    data->set_action(AttestationFlowAction::kAbort);
+  } else {
+    data->set_action(AttestationFlowAction::kNoop);
+  }
+}
+
+void AttestationService::StartCertificateTask(
+    const std::shared_ptr<AttestationFlowData>& data) {
+  DCHECK(data->shall_get_certificate());
+  CertifiedKey key;
+  if (!data->forced_get_certificate() &&
+      FindKeyByLabel(data->username(), data->key_label(), &key)) {
+    data->emplace_certificate(CreatePEMCertificateChain(key));
+    data->set_action(AttestationFlowAction::kNoop);
+    return;
+  }
+  // Indirects to the existing logic; by doing this we don't have to worry about
+  // changing the current behavior.
+  const GetCertificateRequest& request = data->get_certificate_request();
+  auto reply = std::make_shared<CreateCertificateRequestReply>();
+  CreateCertificateRequestTask(request, reply);
+  if (reply->status() != STATUS_SUCCESS) {
+    data->set_status(reply->status());
+    data->set_action(AttestationFlowAction::kAbort);
+    return;
+  }
+  data->emplace_result_request(std::move(*(reply->mutable_pca_request())));
+  data->set_action(AttestationFlowAction::kProcessRequest);
+}
+
+void AttestationService::FinishCertificateTask(
+    const std::shared_ptr<AttestationFlowData>& data) {
+  // Indirects to the existing logic; by doing this we don't have to worry about
+  // changing the current behavior.
+  FinishCertificateRequestRequest request;
+  request.set_pca_response(data->result_response());
+  request.set_username(data->username());
+  request.set_key_label(data->key_label());
+  auto reply = std::make_shared<FinishCertificateRequestReply>();
+  FinishCertificateRequestTask(request, reply);
+  if (reply->status() != STATUS_SUCCESS) {
+    data->set_status(reply->status());
+    data->set_action(AttestationFlowAction::kAbort);
+    return;
+  }
+  data->emplace_certificate(std::move(*(reply->mutable_certificate())));
+  data->set_action(AttestationFlowAction::kNoop);
+}
+
+void AttestationService::HandlePcaAgentEnrollReply(
+    const std::shared_ptr<AttestationFlowData>& data,
+    const pca_agent::EnrollReply& pca_reply) {
+  if (pca_reply.status() != STATUS_SUCCESS) {
+    data->set_status(pca_reply.status());
+    data->ReturnStatus();
+    return;
+  }
+  data->set_result_response(pca_reply.response());
+  base::Closure task = base::Bind(&AttestationService::FinishEnrollTaskV2,
+                                  base::Unretained(this), data);
+  base::Closure reply =
+      base::Bind(&AttestationService::OnEnrollAction, GetWeakPtr(), data);
+  worker_thread_->task_runner()->PostTaskAndReply(FROM_HERE, task, reply);
 }
 
 void AttestationService::CreateCertificateRequest(
@@ -2477,7 +2686,8 @@ void AttestationService::CreateCertificateRequest(
     const CreateCertificateRequestCallback& callback) {
   auto result = std::make_shared<CreateCertificateRequestReply>();
   base::Closure task =
-      base::Bind(&AttestationService::CreateCertificateRequestTask,
+      base::Bind(&AttestationService::CreateCertificateRequestTask<
+                     CreateCertificateRequestRequest>,
                  base::Unretained(this), request, result);
   base::Closure reply = base::Bind(
       &AttestationService::TaskRelayCallback<CreateCertificateRequestReply>,
@@ -2485,8 +2695,9 @@ void AttestationService::CreateCertificateRequest(
   worker_thread_->task_runner()->PostTaskAndReply(FROM_HERE, task, reply);
 }
 
+template <typename RequestType>
 void AttestationService::CreateCertificateRequestTask(
-    const CreateCertificateRequestRequest& request,
+    const RequestType& request,
     const std::shared_ptr<CreateCertificateRequestReply>& result) {
   const int identity = kFirstIdentity;
   auto database_pb = database_->GetProtobuf();
@@ -2558,7 +2769,8 @@ void AttestationService::FinishCertificateRequest(
     const FinishCertificateRequestCallback& callback) {
   auto result = std::make_shared<FinishCertificateRequestReply>();
   base::Closure task =
-      base::Bind(&AttestationService::FinishCertificateRequestTask,
+      base::Bind(&AttestationService::FinishCertificateRequestTask<
+                     FinishCertificateRequestReply>,
                  base::Unretained(this), request, result);
   base::Closure reply = base::Bind(
       &AttestationService::TaskRelayCallback<FinishCertificateRequestReply>,
@@ -2566,9 +2778,10 @@ void AttestationService::FinishCertificateRequest(
   worker_thread_->task_runner()->PostTaskAndReply(FROM_HERE, task, reply);
 }
 
+template <typename ReplyType>
 void AttestationService::FinishCertificateRequestTask(
     const FinishCertificateRequestRequest& request,
-    const std::shared_ptr<FinishCertificateRequestReply>& result) {
+    const std::shared_ptr<ReplyType>& result) {
   AttestationCertificateResponse response_pb;
   if (!response_pb.ParseFromString(request.pca_response())) {
     LOG(ERROR) << __func__ << ": Failed to parse response from Attestation CA.";
@@ -2610,9 +2823,49 @@ void AttestationService::FinishCertificateRequestTask(
 void AttestationService::GetCertificate(
     const GetCertificateRequest& request,
     const GetCertificateCallback& callback) {
-  auto result = std::make_shared<GetCertificateReply>();
-  result->set_status(STATUS_NOT_SUPPORTED);
-  callback.Run(*result);
+  auto data = std::make_shared<AttestationFlowData>(request, callback);
+  base::Closure task = base::Bind(&AttestationService::StartEnrollTask,
+                                  base::Unretained(this), data);
+  base::Closure reply =
+      base::Bind(&AttestationService::OnEnrollAction, GetWeakPtr(), data);
+  worker_thread_->task_runner()->PostTaskAndReply(FROM_HERE, task, reply);
+}
+
+void AttestationService::SendGetCertificateRequest(
+    const std::shared_ptr<AttestationFlowData>& data) {
+  auto pca_request = ToPcaAgentCertRequest(data->result_request());
+  auto on_success =
+      base::Bind(&AttestationService::HandlePcaAgentGetCertificateReply,
+                 GetWeakPtr(), data);
+  auto on_error =
+      base::Bind(&AttestationService::HandlePcaAgentGetCertificateRequestError,
+                 GetWeakPtr(), data);
+  pca_agent_proxy_->GetCertificateAsync(pca_request, on_success, on_error);
+}
+
+void AttestationService::HandlePcaAgentGetCertificateRequestError(
+    const std::shared_ptr<AttestationFlowData>& data,
+    brillo::Error*) {
+  LOG(ERROR) << __func__
+             << ": Error sending certificate request to |pca_agent|";
+  data->set_status(STATUS_UNEXPECTED_DEVICE_ERROR);
+  data->ReturnStatus();
+}
+
+void AttestationService::HandlePcaAgentGetCertificateReply(
+    const std::shared_ptr<AttestationFlowData>& data,
+    const pca_agent::GetCertificateReply& pca_reply) {
+  if (pca_reply.status() != STATUS_SUCCESS) {
+    data->set_status(pca_reply.status());
+    data->ReturnStatus();
+    return;
+  }
+  data->set_result_response(pca_reply.response());
+  base::Closure task = base::Bind(&AttestationService::FinishCertificateTask,
+                                  base::Unretained(this), data);
+  base::Closure reply = base::Bind(&AttestationService::OnGetCertificateAction,
+                                   GetWeakPtr(), data);
+  worker_thread_->task_runner()->PostTaskAndReply(FROM_HERE, task, reply);
 }
 
 const char *AttestationService::GetEnterpriseSigningHexKey(VAType va_type)

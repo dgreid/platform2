@@ -14,10 +14,11 @@
 #include <string>
 
 #include <attestation/proto_bindings/attestation_ca.pb.h>
-#include <base/optional.h>
+#include <attestation/proto_bindings/pca_agent.pb.h>
 #include <base/callback.h>
 #include <base/macros.h>
 #include <base/memory/weak_ptr.h>
+#include <base/optional.h>
 #include <base/threading/thread.h>
 #include <brillo/secure_blob.h>
 #include <gtest/gtest_prod.h>
@@ -25,6 +26,8 @@
 #include "attestation/common/crypto_utility.h"
 #include "attestation/common/crypto_utility_impl.h"
 #include "attestation/common/tpm_utility_factory.h"
+#include "attestation/pca_agent/dbus-proxies.h"
+#include "attestation/server/attestation_flow.h"
 #include "attestation/server/database.h"
 #include "attestation/server/database_impl.h"
 #include "attestation/server/key_store.h"
@@ -159,6 +162,10 @@ class AttestationService : public AttestationInterface {
 
   void set_abe_data(brillo::SecureBlob* abe_data) { abe_data_ = abe_data; }
 
+  void set_pca_agent_proxy(org::chromium::PcaAgentProxyInterface* proxy) {
+    pca_agent_proxy_ = proxy;
+  }
+
  private:
   enum ACATypeInternal {
     kDefaultACA = 0,
@@ -271,24 +278,27 @@ class AttestationService : public AttestationInterface {
       const std::shared_ptr<VerifyReply>& result);
 
   // A synchronous implementation of CreateEnrollRequest.
+  template <typename RequestType>
   void CreateEnrollRequestTask(
-      const CreateEnrollRequestRequest& request,
+      const RequestType& request,
       const std::shared_ptr<CreateEnrollRequestReply>& result);
 
   // A synchronous implementation of FinishEnroll.
-  void FinishEnrollTask(
-      const FinishEnrollRequest& request,
-      const std::shared_ptr<FinishEnrollReply>& result);
+  template <typename ReplyType>
+  void FinishEnrollTask(const FinishEnrollRequest& request,
+                        const std::shared_ptr<ReplyType>& result);
 
   // A synchronous implementation of CreateCertificateRequest.
+  template <typename RequestType>
   void CreateCertificateRequestTask(
-      const CreateCertificateRequestRequest& request,
+      const RequestType& request,
       const std::shared_ptr<CreateCertificateRequestReply>& result);
 
   // A synchronous implementation of FinishCertificateRequest.
+  template <typename ReplyType>
   void FinishCertificateRequestTask(
       const FinishCertificateRequestRequest& request,
-      const std::shared_ptr<FinishCertificateRequestReply>& result);
+      const std::shared_ptr<ReplyType>& result);
 
   // A synchronous implementation of SignEnterpriseChallenge.
   void SignEnterpriseChallengeTask(
@@ -608,6 +618,80 @@ class AttestationService : public AttestationInterface {
   // credential sharing.
   bool VerifyActivateIdentity(const std::string& aik_public_key_tpm_format);
 
+  // Calls the routine corresponding to the |AttestationFlowAction| stored in
+  // |data| to proceed the next step of the enrollment flow. Most of the actions
+  // taken are quite self-explanatory except a caveat -- Since enrollment might
+  // be followed by certificate flow, upon Receiving
+  // |AttestationFlowAction::kNoop|, the flow might continue by posting
+  // |StartCertificateTask|.
+  void OnEnrollAction(const std::shared_ptr<AttestationFlowData>& data);
+
+  // Sends the enroll request with the content stored in |data| via
+  // |pca_agentd|. See |HandlePcaAgentEnrollRequestError| and
+  // |HandlePcaAgentEnrollReply| for more details.
+  void SendEnrollRequest(const std::shared_ptr<AttestationFlowData>& data);
+
+  // Calls the D-bus method callback stored in |data| with a bad
+  // |AttestationStatus|. Passed as the error callback of
+  // |pca_agent::EnrollAsync|.
+  void HandlePcaAgentEnrollRequestError(
+      const std::shared_ptr<AttestationFlowData>& data,
+      brillo::Error* err);
+
+  // Calls the D-bus method callback stored in |data| with a proper
+  // |AttestationStatus| depending on the response received from PCA server.
+  // Passed as the success callback of |pca_agent::EnrollAsync|.
+  void HandlePcaAgentEnrollReply(
+      const std::shared_ptr<AttestationFlowData>& data,
+      const pca_agent::EnrollReply& pca_reply);
+
+  // Calls the routine corresponding to the |AttestationFlowAction| stored in
+  // |data| to proceed the next step of the certificate flow.
+  void OnGetCertificateAction(const std::shared_ptr<AttestationFlowData>& data);
+
+  // Sends the certificate request with the content stored in |data| via
+  // |pca_agentd|.See |HandlePcaAgentGetCertificateRequestError| and
+  // |HandlePcaAgentGetCertificateReply| for more details.
+  void SendGetCertificateRequest(
+      const std::shared_ptr<AttestationFlowData>& data);
+
+  // Calls the D-bus method callback stored in |data| with a bad
+  // |AttestationStatus|. Passed as the error callback of
+  // |pca_agent::GetCertificateAsync|.
+  void HandlePcaAgentGetCertificateRequestError(
+      const std::shared_ptr<AttestationFlowData>& data,
+      brillo::Error* err);
+
+  // Calls the D-bus method callback stored in |data| with a proper
+  // |AttestationStatus| depending on the response received from PCA server via
+  // |pca_agentd|. Passed as the success callback of
+  // |pca_agent::GetCertificateAsync|.
+  void HandlePcaAgentGetCertificateReply(
+      const std::shared_ptr<AttestationFlowData>& data,
+      const pca_agent::GetCertificateReply& pca_reply);
+
+  // Creates the enroll request and stores the return status code and the result
+  // request (if any) into |data|; also, specifies the next
+  // |AttestationFlowAction| into |data| accordingly.
+  void StartEnrollTask(const std::shared_ptr<AttestationFlowData>& data);
+
+  // Finishes the enroll request  with the response stored in |data|; also,
+  // specifies the next |AttestationFlowAction| into |data| accordingly. Named
+  // with suffix "V2" because the legacy |FinishEnrollTask| exists; function
+  // overloading causes some unnecessary code change because we have to
+  // specify the function signature when we posts |FinishEnrollTask|; thus,
+  // chooses just rename rather than overloading.
+  void FinishEnrollTaskV2(const std::shared_ptr<AttestationFlowData>& data);
+
+  // Creates the certificate request and stores the return status code and the
+  // result request (if any) into |data|; also, specifies the next
+  // |AttestationFlowAction| into |data| accordingly.
+  void StartCertificateTask(const std::shared_ptr<AttestationFlowData>& data);
+
+  // Finishes the certificate request  with the response stored in |data|; also,
+  // specifies the next |AttestationFlowAction| into |data| accordingly.
+  void FinishCertificateTask(const std::shared_ptr<AttestationFlowData>& data);
+
   // Compute the enterprise DEN for attestation-based enrollment.
   std::string ComputeEnterpriseEnrollmentNonce();
 
@@ -661,6 +745,10 @@ class AttestationService : public AttestationInterface {
   // |default_tpm_utility_| is created and destroyed on the |worker_thread_|,
   // and is not available after the thread is stopped/destroyed.
   std::unique_ptr<TpmUtility> default_tpm_utility_;
+
+  std::unique_ptr<org::chromium::PcaAgentProxyInterface>
+      default_pca_agent_proxy_;
+  org::chromium::PcaAgentProxyInterface* pca_agent_proxy_{nullptr};
 
   // All work is done in the background. This serves to serialize requests and
   // allow synchronous implementation of complex methods. This is intentionally
