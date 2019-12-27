@@ -325,16 +325,19 @@ namespace {
 // Last PCR index to quote (we start at 0).
 constexpr int kLastPcrToQuote = 1;
 
-pca_agent::EnrollRequest ToPcaAgentEnrollRequest(const std::string& request) {
+pca_agent::EnrollRequest ToPcaAgentEnrollRequest(
+    const AttestationFlowData& data) {
   pca_agent::EnrollRequest ret;
-  ret.set_request(request);
+  ret.set_aca_type(data.aca_type());
+  ret.set_request(data.result_request());
   return ret;
 }
 
 pca_agent::GetCertificateRequest ToPcaAgentCertRequest(
-    const std::string& request) {
+    const AttestationFlowData& data) {
   pca_agent::GetCertificateRequest ret;
-  ret.set_request(request);
+  ret.set_aca_type(data.aca_type());
+  ret.set_request(data.result_request());
   return ret;
 }
 
@@ -2444,7 +2447,7 @@ void AttestationService::Enroll(const EnrollRequest& request,
 
 void AttestationService::SendEnrollRequest(
     const std::shared_ptr<AttestationFlowData>& data) {
-  auto pca_request = ToPcaAgentEnrollRequest(data->result_request());
+  auto pca_request = ToPcaAgentEnrollRequest(*data);
   auto on_success = base::Bind(&AttestationService::HandlePcaAgentEnrollReply,
                                GetWeakPtr(), data);
   auto on_error =
@@ -2859,7 +2862,7 @@ void AttestationService::GetCertificate(
 
 void AttestationService::SendGetCertificateRequest(
     const std::shared_ptr<AttestationFlowData>& data) {
-  auto pca_request = ToPcaAgentCertRequest(data->result_request());
+  auto pca_request = ToPcaAgentCertRequest(*data);
   auto on_success =
       base::Bind(&AttestationService::HandlePcaAgentGetCertificateReply,
                  GetWeakPtr(), data);
