@@ -61,12 +61,16 @@ void DBusService::Register(const CompletionAction& callback) {
   dbus_interface->AddMethodHandler(
       kFinishEnroll, base::Unretained(this),
       &DBusService::HandleFinishEnroll);
+  dbus_interface->AddMethodHandler(kEnroll, base::Unretained(this),
+                                   &DBusService::HandleEnroll);
   dbus_interface->AddMethodHandler(
       kCreateCertificateRequest, base::Unretained(this),
       &DBusService::HandleCreateCertificateRequest);
   dbus_interface->AddMethodHandler(
       kFinishCertificateRequest, base::Unretained(this),
       &DBusService::HandleFinishCertificateRequest);
+  dbus_interface->AddMethodHandler(kGetCertificate, base::Unretained(this),
+                                   &DBusService::HandleGetCertificate);
   dbus_interface->AddMethodHandler(
       kSignEnterpriseChallenge, base::Unretained(this),
       &DBusService::HandleSignEnterpriseChallenge);
@@ -329,6 +333,22 @@ void DBusService::HandleFinishEnroll(
       base::Bind(callback, SharedResponsePointer(std::move(response))));
 }
 
+void DBusService::HandleEnroll(
+    std::unique_ptr<DBusMethodResponse<const EnrollReply&>> response,
+    const EnrollRequest& request) {
+  VLOG(1) << __func__;
+  // Convert |response| to a shared_ptr so |service_| can safely copy the
+  // callback.
+  using SharedResponsePointer =
+      std::shared_ptr<DBusMethodResponse<const EnrollReply&>>;
+  // A callback that fills the reply protobuf and sends it.
+  auto callback = [](const SharedResponsePointer& response,
+                     const EnrollReply& reply) { response->Return(reply); };
+  service_->Enroll(
+      request,
+      base::Bind(callback, SharedResponsePointer(std::move(response))));
+}
+
 void DBusService::HandleCreateCertificateRequest(
     std::unique_ptr<DBusMethodResponse<const CreateCertificateRequestReply&>>
         response,
@@ -363,6 +383,24 @@ void DBusService::HandleFinishCertificateRequest(
     response->Return(reply);
   };
   service_->FinishCertificateRequest(
+      request,
+      base::Bind(callback, SharedResponsePointer(std::move(response))));
+}
+
+void DBusService::HandleGetCertificate(
+    std::unique_ptr<DBusMethodResponse<const GetCertificateReply&>> response,
+    const GetCertificateRequest& request) {
+  VLOG(1) << __func__;
+  // Convert |response| to a shared_ptr so |service_| can safely copy the
+  // callback.
+  using SharedResponsePointer =
+      std::shared_ptr<DBusMethodResponse<const GetCertificateReply&>>;
+  // A callback that fills the reply protobuf and sends it.
+  auto callback = [](const SharedResponsePointer& response,
+                     const GetCertificateReply& reply) {
+    response->Return(reply);
+  };
+  service_->GetCertificate(
       request,
       base::Bind(callback, SharedResponsePointer(std::move(response))));
 }

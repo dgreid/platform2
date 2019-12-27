@@ -2465,6 +2465,13 @@ void AttestationService::FinishEnrollTask(
   }
 }
 
+void AttestationService::Enroll(const EnrollRequest& request,
+                                const EnrollCallback& callback) {
+  auto result = std::make_shared<EnrollReply>();
+  result->set_status(STATUS_NOT_SUPPORTED);
+  callback.Run(*result);
+}
+
 void AttestationService::CreateCertificateRequest(
     const CreateCertificateRequestRequest& request,
     const CreateCertificateRequestCallback& callback) {
@@ -2598,6 +2605,14 @@ void AttestationService::FinishCertificateRequestTask(
     result->set_status(STATUS_UNEXPECTED_DEVICE_ERROR);
     return;
   }
+}
+
+void AttestationService::GetCertificate(
+    const GetCertificateRequest& request,
+    const GetCertificateCallback& callback) {
+  auto result = std::make_shared<GetCertificateReply>();
+  result->set_status(STATUS_NOT_SUPPORTED);
+  callback.Run(*result);
 }
 
 const char *AttestationService::GetEnterpriseSigningHexKey(VAType va_type)

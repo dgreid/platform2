@@ -1,4 +1,4 @@
-// Copyright 2019 The Chromium OS Authors. All rights reserved.
+// Copyright 2020 The Chromium OS Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -969,6 +969,54 @@ std::string GetProtoDebugStringWithIndent(const FinishEnrollReply& value,
   return output;
 }
 
+std::string GetProtoDebugString(const EnrollRequest& value) {
+  return GetProtoDebugStringWithIndent(value, 0);
+}
+
+std::string GetProtoDebugStringWithIndent(const EnrollRequest& value,
+                                          int indent_size) {
+  std::string indent(indent_size, ' ');
+  std::string output =
+      base::StringPrintf("[%s] {\n", value.GetTypeName().c_str());
+
+  if (value.has_aca_type()) {
+    output += indent + "  aca_type: ";
+    base::StringAppendF(
+        &output, "%s",
+        GetProtoDebugStringWithIndent(value.aca_type(), indent_size + 2)
+            .c_str());
+    output += "\n";
+  }
+  if (value.has_forced()) {
+    output += indent + "  forced: ";
+    base::StringAppendF(&output, "%s", value.forced() ? "true" : "false");
+    output += "\n";
+  }
+  output += indent + "}\n";
+  return output;
+}
+
+std::string GetProtoDebugString(const EnrollReply& value) {
+  return GetProtoDebugStringWithIndent(value, 0);
+}
+
+std::string GetProtoDebugStringWithIndent(const EnrollReply& value,
+                                          int indent_size) {
+  std::string indent(indent_size, ' ');
+  std::string output =
+      base::StringPrintf("[%s] {\n", value.GetTypeName().c_str());
+
+  if (value.has_status()) {
+    output += indent + "  status: ";
+    base::StringAppendF(
+        &output, "%s",
+        GetProtoDebugStringWithIndent(value.status(), indent_size + 2).c_str());
+    output += "\n";
+  }
+  output += indent + "}\n";
+  return output;
+}
+
 std::string GetProtoDebugString(const CreateCertificateRequestRequest& value) {
   return GetProtoDebugStringWithIndent(value, 0);
 }
@@ -1088,6 +1136,99 @@ std::string GetProtoDebugString(const FinishCertificateRequestReply& value) {
 std::string GetProtoDebugStringWithIndent(
     const FinishCertificateRequestReply& value,
     int indent_size) {
+  std::string indent(indent_size, ' ');
+  std::string output =
+      base::StringPrintf("[%s] {\n", value.GetTypeName().c_str());
+
+  if (value.has_status()) {
+    output += indent + "  status: ";
+    base::StringAppendF(
+        &output, "%s",
+        GetProtoDebugStringWithIndent(value.status(), indent_size + 2).c_str());
+    output += "\n";
+  }
+  if (value.has_certificate()) {
+    output += indent + "  certificate: ";
+    base::StringAppendF(
+        &output, "%s",
+        base::HexEncode(value.certificate().data(), value.certificate().size())
+            .c_str());
+    output += "\n";
+  }
+  output += indent + "}\n";
+  return output;
+}
+
+std::string GetProtoDebugString(const GetCertificateRequest& value) {
+  return GetProtoDebugStringWithIndent(value, 0);
+}
+
+std::string GetProtoDebugStringWithIndent(const GetCertificateRequest& value,
+                                          int indent_size) {
+  std::string indent(indent_size, ' ');
+  std::string output =
+      base::StringPrintf("[%s] {\n", value.GetTypeName().c_str());
+
+  if (value.has_certificate_profile()) {
+    output += indent + "  certificate_profile: ";
+    base::StringAppendF(&output, "%s",
+                        GetProtoDebugStringWithIndent(
+                            value.certificate_profile(), indent_size + 2)
+                            .c_str());
+    output += "\n";
+  }
+  if (value.has_username()) {
+    output += indent + "  username: ";
+    base::StringAppendF(&output, "%s", value.username().c_str());
+    output += "\n";
+  }
+  if (value.has_request_origin()) {
+    output += indent + "  request_origin: ";
+    base::StringAppendF(&output, "%s", value.request_origin().c_str());
+    output += "\n";
+  }
+  if (value.has_aca_type()) {
+    output += indent + "  aca_type: ";
+    base::StringAppendF(
+        &output, "%s",
+        GetProtoDebugStringWithIndent(value.aca_type(), indent_size + 2)
+            .c_str());
+    output += "\n";
+  }
+  if (value.has_key_type()) {
+    output += indent + "  key_type: ";
+    base::StringAppendF(
+        &output, "%s",
+        GetProtoDebugStringWithIndent(value.key_type(), indent_size + 2)
+            .c_str());
+    output += "\n";
+  }
+  if (value.has_key_label()) {
+    output += indent + "  key_label: ";
+    base::StringAppendF(&output, "%s", value.key_label().c_str());
+    output += "\n";
+  }
+  if (value.has_forced()) {
+    output += indent + "  forced: ";
+    base::StringAppendF(&output, "%s", value.forced() ? "true" : "false");
+    output += "\n";
+  }
+  if (value.has_shall_trigger_enrollment()) {
+    output += indent + "  shall_trigger_enrollment: ";
+    base::StringAppendF(&output, "%s",
+                        value.shall_trigger_enrollment() ? "true" : "false");
+    output += "\n";
+  }
+  output += indent + "}\n";
+  return output;
+}
+
+std::string GetProtoDebugString(const GetCertificateReply& value) {
+  return GetProtoDebugStringWithIndent(value, 0);
+}
+
+std::string GetProtoDebugStringWithIndent(const GetCertificateReply& value,
+                                          int indent_size) {
   std::string indent(indent_size, ' ');
   std::string output =
       base::StringPrintf("[%s] {\n", value.GetTypeName().c_str());

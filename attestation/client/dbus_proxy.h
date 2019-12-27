@@ -61,12 +61,16 @@ class DBusProxy : public AttestationInterface {
   void FinishEnroll(
       const FinishEnrollRequest& request,
       const FinishEnrollCallback& callback) override;
+  void Enroll(const EnrollRequest& request,
+              const EnrollCallback& callback) override;
   void CreateCertificateRequest(
       const CreateCertificateRequestRequest& request,
       const CreateCertificateRequestCallback& callback) override;
   void FinishCertificateRequest(
       const FinishCertificateRequestRequest& request,
       const FinishCertificateRequestCallback& callback) override;
+  void GetCertificate(const GetCertificateRequest& request,
+                      const GetCertificateCallback& callback) override;
   void SignEnterpriseChallenge(
       const SignEnterpriseChallengeRequest& request,
       const SignEnterpriseChallengeCallback& callback) override;

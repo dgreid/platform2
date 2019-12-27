@@ -41,8 +41,10 @@ const char kRegisterCommand[] = "register";
 const char kStatusCommand[] = "status";
 const char kCreateEnrollRequestCommand[] = "create_enroll_request";
 const char kFinishEnrollCommand[] = "finish_enroll";
+const char kEnrollCommand[] = "enroll";
 const char kCreateCertRequestCommand[] = "create_cert_request";
 const char kFinishCertRequestCommand[] = "finish_cert_request";
+const char kGetCertCommand[] = "get_cert";
 const char kSignChallengeCommand[] = "sign_challenge";
 const char kGetEnrollmentId[] = "get_enrollment_id";
 const char kGetCertifiedNvIndex[] = "get_certified_nv_index";
@@ -97,6 +99,8 @@ Commands:
       Creates enroll request to CA and stores it to |output_file|.
   finish_enroll [--attestation-server=default|test] --input=<input_file>
       Finishes enrollment using the CA response from |input_file|.
+  create_enroll_request [--attestation-server=default|test]
+      Enrolls the device to the specified CA.
   create_cert_request [--attestation-server=default|test]
         [--profile=<profile>] [--user=<user>] [--origin=<origin>]
         [--output=<output_file>]
@@ -108,6 +112,14 @@ Commands:
           [--label=<label>] --input=<input_file>
       Finishes certificate request for |user| using the CA response from
       |input_file|, and stores it in the key with the specified |label|.
+  get_cert [--attestation-server=default|test] [--profile=<profile>]
+        [--label=<label>] [--user=<user>] [--origin=<origin>]
+        [--output=<output_file>]
+      Creates certificate request to CA for |user|, using provided certificate
+      |profile| and |origin|, and sends to the specified CA, then stores it
+      with the specified |label|.
+      Possible |profile| values: user, machine, enrollment, content, cpsi,
+      cast, gfsc. Default is user.
   sign_challenge [--enterprise [--va_server=default|test]] [--user=<user>]
           [--label=<label>] [--domain=<domain>] [--device_id=<device_id>]
           [--spkac] --input=<input_file> [--output=<output_file>]
@@ -346,6 +358,15 @@ class ClientLoop : public ClientLoopBase {
       task = base::Bind(
           &ClientLoop::CallFinishEnroll, weak_factory_.GetWeakPtr(),
           aca_type, input);
+    } else if (args.front() == kEnrollCommand) {
+      ACAType aca_type;
+      int status = GetCertificateAuthorityServerType(command_line, &aca_type);
+      if (status != EX_OK) {
+        return status;
+      }
+      bool forced = command_line->HasSwitch("forced");
+      task = base::Bind(&ClientLoop::CallEnroll, weak_factory_.GetWeakPtr(),
+                        aca_type, forced);
     } else if (args.front() == kCreateCertRequestCommand) {
       ACAType aca_type;
       int status = GetCertificateAuthorityServerType(command_line, &aca_type);
@@ -397,6 +418,44 @@ class ClientLoop : public ClientLoopBase {
           input,
           command_line->GetSwitchValueASCII("label"),
           command_line->GetSwitchValueASCII("user"));
+    } else if (args.front() == kGetCertCommand) {
+      ACAType aca_type;
+      int status = GetCertificateAuthorityServerType(command_line, &aca_type);
+      if (status != EX_OK) {
+        return status;
+      }
+      std::string profile_str = command_line->GetSwitchValueASCII("profile");
+      CertificateProfile profile;
+      if (profile_str.empty() || profile_str == "enterprise_user" ||
+          profile_str == "user" || profile_str == "u") {
+        profile = ENTERPRISE_USER_CERTIFICATE;
+      } else if (profile_str == "enterprise_machine" ||
+                 profile_str == "machine" || profile_str == "m") {
+        profile = ENTERPRISE_MACHINE_CERTIFICATE;
+      } else if (profile_str == "enterprise_enrollment" ||
+                 profile_str == "enrollment" || profile_str == "e") {
+        profile = ENTERPRISE_ENROLLMENT_CERTIFICATE;
+      } else if (profile_str == "content_protection" ||
+                 profile_str == "content" || profile_str == "c") {
+        profile = CONTENT_PROTECTION_CERTIFICATE;
+      } else if (profile_str == "content_protection_with_stable_id" ||
+                 profile_str == "cpsi") {
+        profile = CONTENT_PROTECTION_CERTIFICATE_WITH_STABLE_ID;
+      } else if (profile_str == "cast") {
+        profile = CAST_CERTIFICATE;
+      } else if (profile_str == "gfsc") {
+        profile = GFSC_CERTIFICATE;
+      } else {
+        return EX_USAGE;
+      }
+      bool forced = command_line->HasSwitch("forced");
+      bool shall_trigger_enrollment = command_line->HasSwitch("enroll");
+      task = base::Bind(&ClientLoop::CallGetCert, weak_factory_.GetWeakPtr(),
+                        aca_type, profile,
+                        command_line->GetSwitchValueASCII("label"),
+                        command_line->GetSwitchValueASCII("user"),
+                        command_line->GetSwitchValueASCII("origin"), forced,
+                        shall_trigger_enrollment);
     } else if (args.front() == kSignChallengeCommand) {
       if (!command_line->HasSwitch("input")) {
         return EX_USAGE;
@@ -759,6 +818,15 @@ class ClientLoop : public ClientLoopBase {
         weak_factory_.GetWeakPtr()));
   }
 
+  void CallEnroll(ACAType aca_type, bool forced) {
+    EnrollRequest request;
+    request.set_aca_type(aca_type);
+    request.set_forced(forced);
+    attestation_->Enroll(request,
+                         base::Bind(&ClientLoop::PrintReplyAndQuit<EnrollReply>,
+                                    weak_factory_.GetWeakPtr()));
+  }
+
   void CallCreateCertRequest(ACAType aca_type,
                              CertificateProfile profile,
                              const std::string& username,
@@ -792,6 +860,26 @@ class ClientLoop : public ClientLoopBase {
         request, base::Bind(
             &ClientLoop::PrintReplyAndQuit<FinishCertificateRequestReply>,
             weak_factory_.GetWeakPtr()));
+  }
+
+  void CallGetCert(ACAType aca_type,
+                   CertificateProfile profile,
+                   const std::string& label,
+                   const std::string& username,
+                   const std::string& origin,
+                   bool forced,
+                   bool shall_trigger_enrollment) {
+    GetCertificateRequest request;
+    request.set_aca_type(aca_type);
+    request.set_certificate_profile(profile);
+    request.set_key_label(label);
+    request.set_username(username);
+    request.set_request_origin(origin);
+    request.set_forced(forced);
+    request.set_shall_trigger_enrollment(shall_trigger_enrollment);
+    attestation_->GetCertificate(
+        request, base::Bind(&ClientLoop::PrintReplyAndQuit<GetCertificateReply>,
+                            weak_factory_.GetWeakPtr()));
   }
 
   void CallSignEnterpriseChallenge(VAType va_type,

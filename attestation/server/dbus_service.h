@@ -113,6 +113,12 @@ class DBusService {
           const FinishEnrollReply&>> response,
       const FinishEnrollRequest& request);
 
+  // Handles a Enroll D-Bus call.
+  void HandleEnroll(
+      std::unique_ptr<
+          brillo::dbus_utils::DBusMethodResponse<const EnrollReply&>> response,
+      const EnrollRequest& request);
+
   // Handles a CreateCertificateRequest D-Bus call.
   void HandleCreateCertificateRequest(
       std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
@@ -124,6 +130,12 @@ class DBusService {
       std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
           const FinishCertificateRequestReply&>> response,
       const FinishCertificateRequestRequest& request);
+
+  // Handles a GetCertificate D-Bus call.
+  void HandleGetCertificate(
+      std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
+          const GetCertificateReply&>> response,
+      const GetCertificateRequest& request);
 
   // Handles a SignEnterpriseChallenge D-Bus call.
   void HandleSignEnterpriseChallenge(

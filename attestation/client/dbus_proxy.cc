@@ -225,6 +225,18 @@ void DBusProxy::FinishEnroll(
       base::Bind(on_error, callback), request);
 }
 
+void DBusProxy::Enroll(const EnrollRequest& request,
+                       const EnrollCallback& callback) {
+  auto on_error = [](const EnrollCallback& callback, brillo::Error* error) {
+    EnrollReply reply;
+    reply.set_status(STATUS_NOT_AVAILABLE);
+    callback.Run(reply);
+  };
+  brillo::dbus_utils::CallMethodWithTimeout(
+      kDBusTimeoutMS, object_proxy_, attestation::kAttestationInterface,
+      attestation::kEnroll, callback, base::Bind(on_error, callback), request);
+}
+
 void DBusProxy::CreateCertificateRequest(
     const CreateCertificateRequestRequest& request,
     const CreateCertificateRequestCallback& callback) {
@@ -253,6 +265,20 @@ void DBusProxy::FinishCertificateRequest(
       kDBusTimeoutMS, object_proxy_, attestation::kAttestationInterface,
       attestation::kFinishCertificateRequest, callback,
       base::Bind(on_error, callback), request);
+}
+
+void DBusProxy::GetCertificate(const GetCertificateRequest& request,
+                               const GetCertificateCallback& callback) {
+  auto on_error = [](const GetCertificateCallback& callback,
+                     brillo::Error* error) {
+    GetCertificateReply reply;
+    reply.set_status(STATUS_NOT_AVAILABLE);
+    callback.Run(reply);
+  };
+  brillo::dbus_utils::CallMethodWithTimeout(
+      kDBusTimeoutMS, object_proxy_, attestation::kAttestationInterface,
+      attestation::kGetCertificate, callback, base::Bind(on_error, callback),
+      request);
 }
 
 void DBusProxy::SignEnterpriseChallenge(

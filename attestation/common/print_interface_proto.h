@@ -1,4 +1,4 @@
-// Copyright 2019 The Chromium OS Authors. All rights reserved.
+// Copyright 2020 The Chromium OS Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -121,6 +121,12 @@ std::string GetProtoDebugString(const FinishEnrollRequest& value);
 std::string GetProtoDebugStringWithIndent(const FinishEnrollReply& value,
                                           int indent_size);
 std::string GetProtoDebugString(const FinishEnrollReply& value);
+std::string GetProtoDebugStringWithIndent(const EnrollRequest& value,
+                                          int indent_size);
+std::string GetProtoDebugString(const EnrollRequest& value);
+std::string GetProtoDebugStringWithIndent(const EnrollReply& value,
+                                          int indent_size);
+std::string GetProtoDebugString(const EnrollReply& value);
 std::string GetProtoDebugStringWithIndent(
     const CreateCertificateRequestRequest& value,
     int indent_size);
@@ -137,6 +143,12 @@ std::string GetProtoDebugStringWithIndent(
     const FinishCertificateRequestReply& value,
     int indent_size);
 std::string GetProtoDebugString(const FinishCertificateRequestReply& value);
+std::string GetProtoDebugStringWithIndent(const GetCertificateRequest& value,
+                                          int indent_size);
+std::string GetProtoDebugString(const GetCertificateRequest& value);
+std::string GetProtoDebugStringWithIndent(const GetCertificateReply& value,
+                                          int indent_size);
+std::string GetProtoDebugString(const GetCertificateReply& value);
 std::string GetProtoDebugStringWithIndent(
     const SignEnterpriseChallengeRequest& value,
     int indent_size);
