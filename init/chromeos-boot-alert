@@ -194,6 +194,12 @@ mode_update_detachable_base_firmware() {
   show_assets_message "update_detachable_base_firmware"
 }
 
+# Show a message indicating that we're doing a "several minutes" long
+# unspecified firmware update, with risk to the system if interrupted.
+mode_update_tcon_firmware() {
+  show_assets_message "update_firmware_slow_extra_warning"
+}
+
 # Show a message indicating that we're doing a touchpad firmware update.
 mode_update_touchpad_firmware() {
   show_assets_message "update_touchpad_firmware"
