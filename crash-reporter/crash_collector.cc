@@ -570,10 +570,11 @@ std::string CrashCollector::Sanitize(const std::string& name) {
 }
 
 void CrashCollector::StripSensitiveData(std::string* contents) {
-  // At the moment, the only sensitive data we strip is MAC addresses and
-  // emails.
+  // At the moment, the only sensitive data we strip is MAC addresses, emails
+  // and serial numbers.
   StripMacAddresses(contents);
   StripEmailAddresses(contents);
+  StripSerialNumbers(contents);
 }
 
 void CrashCollector::StripMacAddresses(std::string* contents) {
@@ -668,6 +669,27 @@ void CrashCollector::StripEmailAddresses(std::string* contents) {
 
   while (email_re.Consume(&input, &pre_re_str, &re_str)) {
     result << pre_re_str << "<redacted email address>";
+  }
+  result << input;
+  *contents = result.str();
+}
+
+void CrashCollector::StripSerialNumbers(std::string* contents) {
+  std::ostringstream result;
+  pcrecpp::StringPiece input(*contents);
+  std::string pre_re_str;
+  std::string re_str;
+  // Adapted from chromium:components/feedback/anonymizer_tool.cc
+  pcrecpp::RE serialnumber_re(
+      R"((.*?)(\bserial\s*_?(?:number)?['"]?\s*[:=]\s*['"]?))"
+      R"(([0-9a-zA-Z\-.:\/\\\x00-\x09\x0B-\x1F]+)(\b))",
+      pcrecpp::RE_Options().set_multiline(false).set_dotall(true).set_caseless(
+          true));
+
+  CHECK_EQ("", serialnumber_re.error());
+
+  while (serialnumber_re.Consume(&input, &pre_re_str, &re_str)) {
+    result << pre_re_str << "<redacted serial number>";
   }
   result << input;
   *contents = result.str();

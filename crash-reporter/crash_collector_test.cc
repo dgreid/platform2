@@ -574,6 +574,68 @@ TEST_F(CrashCollectorTest, StripEmailAddresses) {
   EXPECT_EQ(std::string::npos, logs.find("dev.reallylong"));
 }
 
+TEST_F(CrashCollectorTest, StripSerialNumbers) {
+  // Test calling StripSensitiveData w/ some actual lines from a real crash;
+  // included two MAC addresses (though replaced them with some bogusness).
+  const std::string kCrashWithUsbSerialNumbers =
+      "[ 1.974401] usb 1-7: new high-speed USB device number 4 using xhci_hcd\n"
+      "[ 2.159587] usb 1-7: New USB device found, idVendor=2232, "
+      "idProduct=1082, bcdDevice= 0.08\n"
+      "[ 2.159620] usb 1-7: New USB device strings: Mfr=3, Product=1, "
+      "SerialNumber=2\n"
+      "[ 2.159644] usb 1-7: Product: 720p HD Camera\n"
+      "[ 2.159661] usb 1-7: Manufacturer: Namuga\n"
+      "[ 2.159676] usb 1-7: SerialNumber: 200901010001\n"
+      "[ 2.212541] usb 1-2.1: new high-speed USB device number 5 using "
+      "xhci_hcd\n"
+      "[ 2.248559] Switched to clocksource tsc\n"
+      "[ 2.296473] usb 1-2.1: New USB device found, idVendor=0409, "
+      "idProduct=005a, bcdDevice= 1.00\n"
+      "[ 2.296506] usb 1-2.1: New USB device strings: Mfr=0, Product=0, "
+      "SerialNumber=0\n"
+      "[ 2.297266] hub 1-2.1:1.0: USB hub found\n"
+      "[ 2.297326] hub 1-2.1:1.0: 4 ports detected\n"
+      "[ 2.570494] usb 1-2.1.2: new high-speed USB device number 6 using "
+      "xhci_hcd\n"
+      "[ 2.670246] usb 1-2.1.2: New USB device found, idVendor=13fe, "
+      "idProduct=5500, bcdDevice= 1.00\n"
+      "[ 2.670286] usb 1-2.1.2: New USB device strings: Mfr=1, Product=2, "
+      "SerialNumber=3\n"
+      "[ 2.670338] usb 1-2.1.2: Product: Patriot Memory\n"
+      "[ 2.670359] usb 1-2.1.2: Manufacturer:\n"
+      "[ 2.670379] usb 1-2.1.2: SerialNumber: 0701534FB0282809\n";
+  const std::string kCrashWithUsbSerialNumbersStripped =
+      "[ 1.974401] usb 1-7: new high-speed USB device number 4 using xhci_hcd\n"
+      "[ 2.159587] usb 1-7: New USB device found, idVendor=2232, "
+      "idProduct=1082, bcdDevice= 0.08\n"
+      "[ 2.159620] usb 1-7: New USB device strings: Mfr=3, Product=1, "
+      "<redacted serial number>\n"
+      "[ 2.159644] usb 1-7: Product: 720p HD Camera\n"
+      "[ 2.159661] usb 1-7: Manufacturer: Namuga\n"
+      "[ 2.159676] usb 1-7: <redacted serial number>\n"
+      "[ 2.212541] usb 1-2.1: new high-speed USB device number 5 using "
+      "xhci_hcd\n"
+      "[ 2.248559] Switched to clocksource tsc\n"
+      "[ 2.296473] usb 1-2.1: New USB device found, idVendor=0409, "
+      "idProduct=005a, bcdDevice= 1.00\n"
+      "[ 2.296506] usb 1-2.1: New USB device strings: Mfr=0, Product=0, "
+      "<redacted serial number>\n"
+      "[ 2.297266] hub 1-2.1:1.0: USB hub found\n"
+      "[ 2.297326] hub 1-2.1:1.0: 4 ports detected\n"
+      "[ 2.570494] usb 1-2.1.2: new high-speed USB device number 6 using "
+      "xhci_hcd\n"
+      "[ 2.670246] usb 1-2.1.2: New USB device found, idVendor=13fe, "
+      "idProduct=5500, bcdDevice= 1.00\n"
+      "[ 2.670286] usb 1-2.1.2: New USB device strings: Mfr=1, Product=2, "
+      "<redacted serial number>\n"
+      "[ 2.670338] usb 1-2.1.2: Product: Patriot Memory\n"
+      "[ 2.670359] usb 1-2.1.2: Manufacturer:\n"
+      "[ 2.670379] usb 1-2.1.2: <redacted serial number>\n";
+  std::string crash_with_usb_serial_numbers(kCrashWithUsbSerialNumbers);
+  collector_.StripSerialNumbers(&crash_with_usb_serial_numbers);
+  EXPECT_EQ(kCrashWithUsbSerialNumbersStripped, crash_with_usb_serial_numbers);
+}
+
 TEST_F(CrashCollectorTest, GetCrashDirectoryInfo) {
   FilePath path;
   const int kRootUid = 0;
