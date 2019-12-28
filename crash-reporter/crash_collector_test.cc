@@ -900,6 +900,40 @@ TEST_F(CrashCollectorTest, GetLogContents) {
   EXPECT_EQ("hello world\n", contents);
 }
 
+TEST_F(CrashCollectorTest, GetMultipleLogContents) {
+  FilePath config_file = test_dir_.Append("crash_config");
+  FilePath output_file = test_dir_.Append("crash_log");
+  const char kConfigContents[] =
+      "foobaz=echo foobaz\n"
+      "bazbar=echo bazbar";
+  ASSERT_TRUE(test_util::CreateFile(config_file, kConfigContents));
+  base::DeleteFile(FilePath(output_file), false);
+
+  // If both commands fail, expect no output.
+  EXPECT_FALSE(collector_.GetMultipleLogContents(
+      config_file, {"foobar", "barfoo"}, output_file));
+  ASSERT_FALSE(base::PathExists(output_file));
+  EXPECT_EQ(collector_.get_bytes_written(), 0);
+
+  // If one command fails, expect output from the other command.
+  EXPECT_TRUE(collector_.GetMultipleLogContents(
+      config_file, {"foobar", "bazbar"}, output_file));
+  ASSERT_TRUE(base::PathExists(output_file));
+  EXPECT_GT(collector_.get_bytes_written(), 0);
+  std::string contents;
+  EXPECT_TRUE(base::ReadFileToString(output_file, &contents));
+  EXPECT_EQ("bazbar\n", contents);
+  base::DeleteFile(FilePath(output_file), false);
+
+  // Expect output from both commands.
+  EXPECT_TRUE(collector_.GetMultipleLogContents(
+      config_file, {"foobaz", "bazbar"}, output_file));
+  ASSERT_TRUE(base::PathExists(output_file));
+  EXPECT_GT(collector_.get_bytes_written(), 0);
+  EXPECT_TRUE(base::ReadFileToString(output_file, &contents));
+  EXPECT_EQ("foobaz\nbazbar\n", contents);
+}
+
 TEST_F(CrashCollectorTest, GetProcessTree) {
   const FilePath output_file = test_dir_.Append("log");
   std::string contents;

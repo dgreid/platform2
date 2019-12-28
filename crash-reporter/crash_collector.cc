@@ -931,6 +931,13 @@ bool CrashCollector::CheckHasCapacity(const FilePath& crash_directory) {
 bool CrashCollector::GetLogContents(const FilePath& config_path,
                                     const std::string& exec_name,
                                     const FilePath& output_file) {
+  return GetMultipleLogContents(config_path, {exec_name}, output_file);
+}
+
+bool CrashCollector::GetMultipleLogContents(
+    const FilePath& config_path,
+    const std::vector<std::string>& exec_names,
+    const FilePath& output_file) {
   brillo::KeyValueStore store;
   if (!store.Load(config_path)) {
     LOG(WARNING) << "Unable to read log configuration file "
@@ -938,62 +945,72 @@ bool CrashCollector::GetLogContents(const FilePath& config_path,
     return false;
   }
 
-  std::string command;
-  if (!store.GetString(exec_name, &command))
-    return false;
+  std::string collated_log_contents;
+  for (auto exec_name : exec_names) {
+    std::string command;
+    if (!store.GetString(exec_name, &command))
+      continue;
 
-  FilePath raw_output_file;
-  if (!base::CreateTemporaryFile(&raw_output_file)) {
-    PLOG(WARNING) << "Failed to create temporary file for raw log output.";
-    return false;
-  }
-
-  brillo::ProcessImpl diag_process;
-  diag_process.AddArg(kShellPath);
-  diag_process.AddStringOption("-c", command);
-  diag_process.RedirectOutput(raw_output_file.value());
-
-  const int result = diag_process.Run();
-
-  std::string log_contents;
-  const bool fully_read = base::ReadFileToStringWithMaxSize(
-      raw_output_file, &log_contents, max_log_size_);
-  base::DeleteFile(raw_output_file, false);
-
-  if (!fully_read) {
-    if (log_contents.empty()) {
-      LOG(WARNING) << "Failed to read raw log contents.";
-      return false;
+    FilePath raw_output_file;
+    if (!base::CreateTemporaryFile(&raw_output_file)) {
+      PLOG(WARNING) << "Failed to create temporary file for raw log output.";
+      continue;
     }
-    // If ReadFileToStringWithMaxSize returned false and log_contents is
-    // non-empty, this means the log is larger than max_log_size_.
-    LOG(WARNING) << "Log is larger than " << max_log_size_
-                 << " bytes. Truncating.";
-    log_contents.append("\n<TRUNCATED>\n");
+
+    brillo::ProcessImpl diag_process;
+    diag_process.AddArg(kShellPath);
+    diag_process.AddStringOption("-c", command);
+    diag_process.RedirectOutput(raw_output_file.value());
+
+    const int result = diag_process.Run();
+
+    std::string log_contents;
+    const bool fully_read = base::ReadFileToStringWithMaxSize(
+        raw_output_file, &log_contents, max_log_size_);
+    base::DeleteFile(raw_output_file, false);
+
+    if (!fully_read) {
+      if (log_contents.empty()) {
+        LOG(WARNING) << "Failed to read raw log contents.";
+        continue;
+      }
+      // If ReadFileToStringWithMaxSize returned false and log_contents is
+      // non-empty, this means the log is larger than max_log_size_.
+      LOG(WARNING) << "Log is larger than " << max_log_size_
+                   << " bytes. Truncating.";
+      log_contents.append("\n<TRUNCATED>\n");
+    }
+
+    // If the registered command failed, we include any (partial) output it
+    // might have produced to improve crash reports.  But make a note of the
+    // failure.
+    if (result != 0) {
+      const std::string warning = StringPrintf(
+          "\nLog command \"%s\" exited with %i\n", command.c_str(), result);
+      log_contents.append(warning);
+      LOG(WARNING) << warning;
+    }
+
+    collated_log_contents.append(log_contents);
   }
 
-  // If the registered command failed, we include any (partial) output it might
-  // have produced to improve crash reports.  But make a note of the failure.
-  if (result != 0) {
-    const std::string warning = StringPrintf(
-        "\nLog command \"%s\" exited with %i\n", command.c_str(), result);
-    log_contents.append(warning);
-    LOG(WARNING) << warning;
-  }
+  if (collated_log_contents.empty())
+    return false;
 
-  // Always do this after log_contents is "finished" so we don't accidentally
-  // leak data.
-  StripSensitiveData(&log_contents);
+  // Always do this after collated_log_contents is "finished" so we don't
+  // accidentally leak data.
+  StripSensitiveData(&collated_log_contents);
 
   if (output_file.FinalExtension() == ".gz") {
-    if (!WriteNewCompressedFile(output_file, log_contents.data(),
-                                log_contents.size())) {
+    if (!WriteNewCompressedFile(output_file, collated_log_contents.data(),
+                                collated_log_contents.size())) {
       LOG(WARNING) << "Error writing sanitized log to " << output_file.value();
       return false;
     }
   } else {
-    if (WriteNewFile(output_file, log_contents.data(), log_contents.size()) !=
-        static_cast<int>(log_contents.length())) {
+    if (WriteNewFile(output_file, collated_log_contents.data(),
+                     collated_log_contents.size()) !=
+        static_cast<int>(collated_log_contents.length())) {
       PLOG(WARNING) << "Error writing sanitized log to " << output_file.value();
       return false;
     }
