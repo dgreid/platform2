@@ -99,6 +99,18 @@ class WebAuthnHandler {
   // repeatedly until success or timeout.
   void CallAndWaitForPresence(std::function<uint32_t()> fn, uint32_t* status);
 
+  // Creates and returns authenticator data. |include_attested_credential_data|
+  // should be set to true for MakeCredential, false for GetAssertion.
+  std::vector<uint8_t> MakeAuthenticatorData(
+      const std::vector<uint8_t>& rp_id_hash,
+      const std::vector<uint8_t>& credential_id,
+      const std::vector<uint8_t>& credential_public_key,
+      bool user_verified,
+      bool include_attested_credential_data);
+
+  // Appends a none attestation to |response|. Only used in MakeCredential.
+  void AppendNoneAttestation(MakeCredentialResponse* response);
+
   TpmVendorCommandProxy* tpm_proxy_;
   UserState* user_state_;
   std::function<void()> request_presence_;

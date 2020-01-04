@@ -55,6 +55,13 @@ const U2F_GENERATE_RESP kU2fGenerateResponse = {
                .y = {[0 ... 31] = 0xAB}},
     .keyHandle = {[0 ... 63] = 0xFD}};
 
+// AuthenticatorData field sizes, in bytes.
+constexpr int kRpIdHashBytes = 32;
+constexpr int kAuthenticatorDataFlagBytes = 1;
+constexpr int kSignatureCounterBytes = 4;
+constexpr int kAaguidBytes = 16;
+constexpr int kCredentialIdLengthBytes = 2;
+
 brillo::SecureBlob ArrayToSecureBlob(const char* array) {
   brillo::SecureBlob blob;
   CHECK(brillo::SecureBlob::HexStringToSecureBlob(array, &blob));
@@ -109,6 +116,16 @@ class WebAuthnHandlerTest : public ::testing::Test {
       std::vector<uint8_t>* credential_pubkey) {
     return handler_->DoU2fGenerate(kRpIdHash, presence_requirement,
                                    credential_id, credential_pubkey);
+  }
+
+  std::vector<uint8_t> MakeAuthenticatorData(
+      const std::vector<uint8_t>& credential_id,
+      const std::vector<uint8_t>& credential_public_key,
+      bool user_verified,
+      bool include_attested_credential_data) {
+    return handler_->MakeAuthenticatorData(kRpIdHash, credential_id,
+                                           credential_public_key, user_verified,
+                                           include_attested_credential_data);
   }
 
   StrictMock<MockTpmVendorCommandProxy> mock_tpm_proxy_;
@@ -284,6 +301,55 @@ TEST_F(WebAuthnHandlerTest, MakeCredentialPresenceSuccess) {
 
   handler_->MakeCredential(std::move(mock_method_response), request);
   presence_requested_expected_ = 1;
+}
+
+TEST_F(WebAuthnHandlerTest, MakeAuthenticatorDataWithAttestedCredData) {
+  const std::vector<uint8_t> cred_id(64, 0xAA);
+  const std::vector<uint8_t> cred_pubkey(65, 0xBB);
+
+  std::vector<uint8_t> authenticator_data =
+      MakeAuthenticatorData(cred_id, cred_pubkey, /* user_verified = */ false,
+                            /* include_attested_credential_data = */ true);
+  EXPECT_EQ(authenticator_data.size(),
+            kRpIdHashBytes + kAuthenticatorDataFlagBytes +
+                kSignatureCounterBytes + kAaguidBytes +
+                kCredentialIdLengthBytes + cred_id.size() + cred_pubkey.size());
+
+  const std::string rp_id_hash_hex =
+      base::HexEncode(kRpIdHash.data(), kRpIdHash.size());
+  const std::string expected_authenticator_data_regex =
+      rp_id_hash_hex +  // RP ID hash
+      std::string(
+          "41"          // Flag: user present, attested credential data included
+          "(..){4}"     // Signature counter
+          "(00){16}"    // AAGUID
+          "0040"        // Credential ID length
+          "(AA){64}"    // Credential ID
+          "(BB){65}");  // Credential public key
+  EXPECT_TRUE(std::regex_match(
+      base::HexEncode(authenticator_data.data(), authenticator_data.size()),
+      std::regex(expected_authenticator_data_regex)));
+}
+
+TEST_F(WebAuthnHandlerTest, MakeAuthenticatorDataNoAttestedCredData) {
+  std::vector<uint8_t> authenticator_data =
+      MakeAuthenticatorData(std::vector<uint8_t>(), std::vector<uint8_t>(),
+                            /* user_verified = */ false,
+                            /* include_attested_credential_data = */ false);
+  EXPECT_EQ(
+      authenticator_data.size(),
+      kRpIdHashBytes + kAuthenticatorDataFlagBytes + kSignatureCounterBytes);
+
+  const std::string rp_id_hash_hex =
+      base::HexEncode(kRpIdHash.data(), kRpIdHash.size());
+  const std::string expected_authenticator_data_regex =
+      rp_id_hash_hex +  // RP ID hash
+      std::string(
+          "01"          // Flag: user present
+          "(..){4}");   // Signature counter
+  EXPECT_TRUE(std::regex_match(
+      base::HexEncode(authenticator_data.data(), authenticator_data.size()),
+      std::regex(expected_authenticator_data_regex)));
 }
 
 }  // namespace
