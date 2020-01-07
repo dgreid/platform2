@@ -147,6 +147,7 @@ TEST_F(VaultKeysetTest, LoadSaveTest) {
   SecureBlob bytes;
 
   static const int kTestTimestamp = 123;
+  static const int kFscryptPolicyVersion = 2;
   cryptohome::Timestamp timestamp;
   timestamp.set_timestamp(kTestTimestamp);
   SecureBlob tbytes(timestamp.ByteSize());
@@ -155,7 +156,7 @@ TEST_F(VaultKeysetTest, LoadSaveTest) {
   timestamp.SerializeWithCachedSizesToArray(buf);
 
   keyset.mutable_serialized()->set_timestamp_file_exists(true);
-  keyset.SetFscryptPolicyVersion(FSCRYPT_POLICY_V2);
+  keyset.SetFscryptPolicyVersion(kFscryptPolicyVersion);
 
   EXPECT_CALL(platform, WriteFileAtomicDurable(FilePath("foo"), _, _))
       .WillOnce(WithArg<1>(CopyToSecureBlob(&bytes)));
@@ -176,7 +177,7 @@ TEST_F(VaultKeysetTest, LoadSaveTest) {
   EXPECT_EQ(kTestTimestamp, new_keyset.serialized().last_activity_timestamp());
   EXPECT_TRUE(new_keyset.Decrypt(key, false /* locked_to_single_user */,
                                  nullptr /* crypto_error */));
-  EXPECT_EQ(new_keyset.GetFscryptPolicyVersion(), FSCRYPT_POLICY_V2);
+  EXPECT_EQ(new_keyset.GetFscryptPolicyVersion(), kFscryptPolicyVersion);
 }
 
 TEST_F(VaultKeysetTest, WriteError) {
