@@ -35,6 +35,11 @@ class BRILLO_EXPORT Client {
                               patchpanel::IPv4Subnet* container_subnet);
   bool NotifyTerminaVmShutdown(uint32_t cid);
 
+  bool NotifyPluginVmStartup(uint64_t vm_id,
+                             int subnet_index,
+                             patchpanel::Device* device);
+  bool NotifyPluginVmShutdown(uint64_t vm_id);
+
  private:
   scoped_refptr<dbus::Bus> bus_;
   dbus::ObjectProxy* proxy_ = nullptr;  // owned by bus_

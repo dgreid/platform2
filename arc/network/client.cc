@@ -222,4 +222,71 @@ bool Client::NotifyTerminaVmShutdown(uint32_t cid) {
   return true;
 }
 
+bool Client::NotifyPluginVmStartup(uint64_t vm_id,
+                                   int subnet_index,
+                                   patchpanel::Device* device) {
+  dbus::MethodCall method_call(kPatchPanelInterface, kPluginVmStartupMethod);
+  dbus::MessageWriter writer(&method_call);
+
+  PluginVmStartupRequest request;
+  request.set_id(vm_id);
+  request.set_subnet_index(subnet_index);
+
+  if (!writer.AppendProtoAsArrayOfBytes(request)) {
+    LOG(ERROR) << "Failed to encode PluginVmStartupRequest proto";
+    return false;
+  }
+
+  std::unique_ptr<dbus::Response> dbus_response = proxy_->CallMethodAndBlock(
+      &method_call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT);
+  if (!dbus_response) {
+    LOG(ERROR) << "Failed to send dbus message to patchpanel service";
+    return false;
+  }
+
+  dbus::MessageReader reader(dbus_response.get());
+  PluginVmStartupResponse response;
+  if (!reader.PopArrayOfBytesAsProto(&response)) {
+    LOG(ERROR) << "Failed to parse response proto";
+    return false;
+  }
+
+  if (!response.has_device()) {
+    LOG(ERROR) << "No device found";
+    return false;
+  }
+  *device = response.device();
+
+  return true;
+}
+
+bool Client::NotifyPluginVmShutdown(uint64_t vm_id) {
+  dbus::MethodCall method_call(kPatchPanelInterface, kPluginVmShutdownMethod);
+  dbus::MessageWriter writer(&method_call);
+
+  PluginVmShutdownRequest request;
+  request.set_id(vm_id);
+
+  if (!writer.AppendProtoAsArrayOfBytes(request)) {
+    LOG(ERROR) << "Failed to encode PluginVmShutdownRequest proto";
+    return false;
+  }
+
+  std::unique_ptr<dbus::Response> dbus_response = proxy_->CallMethodAndBlock(
+      &method_call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT);
+  if (!dbus_response) {
+    LOG(ERROR) << "Failed to send dbus message to patchpanel service";
+    return false;
+  }
+
+  dbus::MessageReader reader(dbus_response.get());
+  TerminaVmShutdownResponse response;
+  if (!reader.PopArrayOfBytesAsProto(&response)) {
+    LOG(ERROR) << "Failed to parse response proto";
+    return false;
+  }
+
+  return true;
+}
+
 }  // namespace patchpanel
