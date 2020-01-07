@@ -22,6 +22,7 @@ namespace u2f {
 namespace {
 
 using ::testing::_;
+using ::testing::MatchesRegex;
 using ::testing::Return;
 using ::testing::SetArgPointee;
 using ::testing::StrictMock;
@@ -288,16 +289,42 @@ TEST_F(WebAuthnHandlerTest, MakeCredentialPresenceSuccess) {
       .WillOnce(DoAll(SetArgPointee<1>(kU2fGenerateResponse),
                       Return(kCr50StatusSuccess)));
 
+  const std::string expected_authenticator_data_regex =
+      base::HexEncode(kRpIdHash.data(), kRpIdHash.size()) +  // RP ID hash
+      std::string(
+          "41"          // Flag: user present, attested credential data included
+          "(..){4}"     // Signature counter
+          "(00){16}"    // AAGUID
+          "0040"        // Credential ID length
+          "(FD){64}"    // Credential ID, from kU2fGenerateResponse
+                        // CBOR encoded credential public key:
+          "A5"          // Start a CBOR map of 5 elements
+          "01"          // unsigned(1), COSE key type field
+          "02"          // unsigned(2), COSE key type EC2
+          "03"          // unsigned(3), COSE key algorithm field
+          "26"          // negative(6) = -7, COSE key algorithm ES256
+          "20"          // negative(0) = -1, COSE EC key curve field
+          "01"          // unsigned(1), COSE EC key curve
+          "21"          // negative(1) = -2, COSE EC key x coordinate field
+          "5820"        // Start a CBOR array of 32 bytes
+          "(AB){32}"    // x coordinate, from kU2fGenerateResponse
+          "22"          // negative(2) = -3, COSE EC key y coordinate field
+          "5820"        // Start a CBOR array of 32 bytes
+          "(AB){32}");  // y coordinate, from kU2fGenerateResponse
+
   auto mock_method_response =
       std::make_unique<hwsec::MockDBusMethodResponse<MakeCredentialResponse>>();
-  mock_method_response->set_return_callback(
-      base::Bind([](const MakeCredentialResponse& resp) {
+  mock_method_response->set_return_callback(base::Bind(
+      [](const std::string& expected_authenticator_data,
+         const MakeCredentialResponse& resp) {
         EXPECT_EQ(resp.status(), MakeCredentialResponse::SUCCESS);
-        // TODO(yichengli): Check resp.authenticator_data() once it's formatted
-        // correctly (with CBOR encoding).
+        EXPECT_THAT(base::HexEncode(resp.authenticator_data().data(),
+                                    resp.authenticator_data().size()),
+                    MatchesRegex(expected_authenticator_data));
         EXPECT_EQ(resp.attestation_format(), "none");
         EXPECT_EQ(resp.attestation_statement(), "\xa0");
-      }));
+      },
+      expected_authenticator_data_regex));
 
   handler_->MakeCredential(std::move(mock_method_response), request);
   presence_requested_expected_ = 1;
@@ -326,9 +353,9 @@ TEST_F(WebAuthnHandlerTest, MakeAuthenticatorDataWithAttestedCredData) {
           "0040"        // Credential ID length
           "(AA){64}"    // Credential ID
           "(BB){65}");  // Credential public key
-  EXPECT_TRUE(std::regex_match(
+  EXPECT_THAT(
       base::HexEncode(authenticator_data.data(), authenticator_data.size()),
-      std::regex(expected_authenticator_data_regex)));
+      MatchesRegex(expected_authenticator_data_regex));
 }
 
 TEST_F(WebAuthnHandlerTest, MakeAuthenticatorDataNoAttestedCredData) {
@@ -347,9 +374,9 @@ TEST_F(WebAuthnHandlerTest, MakeAuthenticatorDataNoAttestedCredData) {
       std::string(
           "01"          // Flag: user present
           "(..){4}");   // Signature counter
-  EXPECT_TRUE(std::regex_match(
+  EXPECT_THAT(
       base::HexEncode(authenticator_data.data(), authenticator_data.size()),
-      std::regex(expected_authenticator_data_regex)));
+      MatchesRegex(expected_authenticator_data_regex));
 }
 
 }  // namespace

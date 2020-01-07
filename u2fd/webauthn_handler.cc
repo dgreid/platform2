@@ -10,6 +10,8 @@
 #include <vector>
 
 #include <base/time/time.h>
+#include <chromeos/cbor/values.h>
+#include <chromeos/cbor/writer.h>
 #include <u2f/proto_bindings/u2f_interface.pb.h>
 
 #include "u2fd/util.h"
@@ -41,6 +43,19 @@ enum class AuthenticatorDataFlag : uint8_t {
   kExtensionDataIncluded = 1u << 7,
 };
 
+// COSE key parameters.
+// https://tools.ietf.org/html/rfc8152#section-7.1
+const int kCoseKeyKtyLabel = 1;
+const int kCoseKeyKtyEC2 = 2;
+const int kCoseKeyAlgLabel = 3;
+const int kCoseKeyAlgES256 = -7;
+
+// Double coordinate curve parameters.
+// https://tools.ietf.org/html/rfc8152#section-13.1.1
+const int kCoseECKeyCrvLabel = -1;
+const int kCoseECKeyXLabel = -2;
+const int kCoseECKeyYLabel = -3;
+
 std::vector<uint8_t> Uint16ToByteVector(uint16_t value) {
   return std::vector<uint8_t>({static_cast<uint8_t>((value >> 8) & 0xff),
                                static_cast<uint8_t>(value & 0xff)});
@@ -68,6 +83,24 @@ std::vector<uint8_t> GetTimestampSignatureCounter() {
       static_cast<uint8_t>((sign_counter >> 8) & 0xff),
       static_cast<uint8_t>(sign_counter & 0xff),
   };
+}
+
+std::vector<uint8_t> EncodeCredentialPublicKeyInCBOR(
+    const std::vector<uint8_t>& credential_public_key) {
+  DCHECK_EQ(credential_public_key.size(), sizeof(U2F_EC_POINT));
+  cbor::Value::MapValue cbor_map;
+  cbor_map[cbor::Value(kCoseKeyKtyLabel)] = cbor::Value(kCoseKeyKtyEC2);
+  cbor_map[cbor::Value(kCoseKeyAlgLabel)] = cbor::Value(kCoseKeyAlgES256);
+  cbor_map[cbor::Value(kCoseECKeyCrvLabel)] = cbor::Value(1);
+  cbor_map[cbor::Value(kCoseECKeyXLabel)] =
+      cbor::Value(base::make_span<const uint8_t>(
+          credential_public_key.data() + offsetof(U2F_EC_POINT, x),
+          U2F_EC_KEY_SIZE));
+  cbor_map[cbor::Value(kCoseECKeyYLabel)] =
+      cbor::Value(base::make_span<const uint8_t>(
+          credential_public_key.data() + offsetof(U2F_EC_POINT, y),
+          U2F_EC_KEY_SIZE));
+  return *cbor::Writer::Write(cbor::Value(std::move(cbor_map)));
 }
 
 }  // namespace
@@ -143,7 +176,8 @@ void WebAuthnHandler::DoMakeCredential(
   }
 
   AppendToString(MakeAuthenticatorData(
-                     rp_id_hash, credential_id, credential_public_key,
+                     rp_id_hash, credential_id,
+                     EncodeCredentialPublicKeyInCBOR(credential_public_key),
                      session.request_.verification_type() ==
                          VerificationType::VERIFICATION_USER_VERIFICATION,
                      true),

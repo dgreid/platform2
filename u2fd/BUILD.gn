@@ -67,7 +67,10 @@ static_library("libu2fd") {
     "util.cc",
     "webauthn_handler.cc",
   ]
-  libs = [ "policy" ]
+  libs = [
+    "policy",
+    "cbor",
+  ]
   deps = [
     ":user_state_proto",
     "//common-mk/external_dependencies:policy-protos",
