@@ -30,6 +30,7 @@ static_library("libmems_setup") {
     "sensor_kind.cc",
   ]
   public_pkg_deps = [ "libmems" ]
+  defines = [ "USE_IIOSERVICE=${use.iioservice}" ]
 }
 
 executable("mems_setup") {

@@ -7,7 +7,9 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
+#include <base/files/file_path.h>
 #include <base/macros.h>
 
 #include <libmems/iio_device.h>
@@ -18,6 +20,8 @@ namespace mems_setup {
 
 class Configuration {
  public:
+  static const char* GetGroupNameForSysfs();
+
   Configuration(libmems::IioContext* context,
                 libmems::IioDevice* sensor,
                 SensorKind kind,
@@ -45,10 +49,17 @@ class Configuration {
 
   bool EnableCalibration(bool enable);
 
+  bool SetupPermissions();
+  std::vector<base::FilePath> EnumerateAllFiles(base::FilePath file_path);
+  bool SetReadPermissionAndOwnership(base::FilePath file_path);
+  bool SetWritePermissionAndOwnership(base::FilePath file_path);
+
   Delegate* delegate_;  // non-owned
   SensorKind kind_;
   libmems::IioDevice* sensor_;    // non-owned
   libmems::IioContext* context_;  // non-owned
+
+  base::Optional<gid_t> iioservice_gid_ = base::nullopt;
 
   DISALLOW_COPY_AND_ASSIGN(Configuration);
 };

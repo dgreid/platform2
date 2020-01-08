@@ -4,19 +4,27 @@
 
 #include "mems_setup/configuration.h"
 
+#include <algorithm>
 #include <initializer_list>
 #include <string>
 #include <vector>
 
+#include <base/files/file_enumerator.h>
 #include <base/files/file_util.h>
+#include <base/files/file_path.h>
 #include <base/logging.h>
+#include <base/process/launch.h>
+#include <base/stl_util.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_split.h>
 #include <base/strings/stringprintf.h>
 
+#include <libmems/common_types.h>
 #include <libmems/iio_channel.h>
 #include <libmems/iio_context.h>
 #include <libmems/iio_device.h>
+#include <libmems/iio_device_impl.h>
+
 #include "mems_setup/sensor_location.h"
 
 namespace mems_setup {
@@ -41,6 +49,9 @@ struct LightColorCalibrationEntry {
   base::Optional<double> value;
 };
 
+constexpr char kIioServiceGroupName[] = "iioservice";
+constexpr char kArcSensorGroupName[] = "arc-sensor";
+
 constexpr char kCalibrationBias[] = "bias";
 constexpr char kCalibrationScale[] = "scale";
 constexpr char kSysfsTriggerPrefix[] = "sysfstrig";
@@ -56,7 +67,30 @@ constexpr std::initializer_list<const char*> kAccelAxes = {
     "y",
     "z",
 };
+
+constexpr char kTriggerString[] = "trigger";
+
+constexpr char kDevString[] = "/dev/";
+
+constexpr char kFilesToSetReadAndOwnership[][24] = {
+    "buffer/hwfifo_timeout", "buffer/enable", "buffer/length",
+    "trigger/current_trigger"};
+constexpr char kFilesToSetWriteAndOwnership[][24] = {
+    "sampling_frequency", "buffer/hwfifo_timeout", "buffer/hwfifo_flush",
+    "buffer/enable",      "buffer/length",         "trigger/current_trigger"};
+
+constexpr char kScanElementsString[] = "scan_elements";
+constexpr char kChnEnableFormatString[] = "in_%s_en";
+
 }  // namespace
+
+// static
+const char* Configuration::GetGroupNameForSysfs() {
+  if (USE_IIOSERVICE)
+    return kIioServiceGroupName;
+
+  return kArcSensorGroupName;
+}
 
 Configuration::Configuration(libmems::IioContext* context,
                              libmems::IioDevice* sensor,
@@ -65,6 +99,9 @@ Configuration::Configuration(libmems::IioContext* context,
     : delegate_(del), kind_(kind), sensor_(sensor), context_(context) {}
 
 bool Configuration::Configure() {
+  if (!SetupPermissions())
+    return false;
+
   switch (kind_) {
     case SensorKind::ACCELEROMETER:
       return ConfigAccelerometer();
@@ -250,6 +287,17 @@ bool Configuration::CopyImuCalibationFromVpd(int max_value,
 }
 
 bool Configuration::AddSysfsTrigger(int sysfs_trigger_id) {
+  std::string dev_name =
+      libmems::IioDeviceImpl::GetStringFromId(sensor_->GetId());
+  // /sys/bus/iio/devices/iio:deviceX
+  base::FilePath sys_dev_path =
+      base::FilePath(libmems::kSysDevString).Append(dev_name.c_str());
+
+  if (!delegate_->Exists(sys_dev_path.Append(kTriggerString))) {
+    // Uses FIFO and doesn't need a trigger.
+    return true;
+  }
+
   // There is a potential cross-process race here, where multiple instances
   // of this tool may be trying to access the trigger at once. To solve this,
   // first see if the trigger is already there. If not, try to create it, and
@@ -440,7 +488,8 @@ bool Configuration::ConfigAccelerometer() {
     else
       range = 2;
 
-    return sensor_->WriteNumberAttribute(kCalibrationScale, range);
+    if (!sensor_->WriteNumberAttribute(kCalibrationScale, range))
+      return false;
   }
 
   LOG(INFO) << "accelerometer configuration complete";
@@ -457,6 +506,131 @@ bool Configuration::ConfigIlluminance() {
 
   LOG(INFO) << "light configuration complete";
   return true;
+}
+
+bool Configuration::SetupPermissions() {
+  iioservice_gid_ = delegate_->FindGroupId(GetGroupNameForSysfs());
+  if (!iioservice_gid_.has_value()) {
+    LOG(ERROR) << "iioservice group not found";
+    return false;
+  }
+
+  std::vector<base::FilePath> files_to_set_read_own;
+  std::vector<base::FilePath> files_to_set_write_own;
+
+  std::string dev_name =
+      libmems::IioDeviceImpl::GetStringFromId(sensor_->GetId());
+  // /dev/iio:deviceX
+  base::FilePath dev_path = base::FilePath(kDevString).Append(dev_name.c_str());
+  if (!delegate_->Exists(dev_path)) {
+    LOG(ERROR) << "Missing path: " << dev_path.value();
+    return false;
+  }
+
+  // /sys/bus/iio/devices/iio:deviceX
+  base::FilePath sys_dev_path =
+      base::FilePath(libmems::kSysDevString).Append(dev_name.c_str());
+
+  // Setup files_to_set_read_own.
+  files_to_set_read_own.push_back(dev_path);
+
+  // Files under /sys/bus/iio/devices/iio:deviceX/.
+  auto files = EnumerateAllFiles(sys_dev_path);
+  files_to_set_read_own.insert(files_to_set_read_own.end(), files.begin(),
+                               files.end());
+  // Files under /sys/bus/iio/devices/iio:deviceX/scan_elements/.
+  files = EnumerateAllFiles(sys_dev_path.Append(kScanElementsString));
+  files_to_set_read_own.insert(files_to_set_read_own.end(), files.begin(),
+                               files.end());
+
+  for (auto file : kFilesToSetReadAndOwnership)
+    files_to_set_read_own.push_back(sys_dev_path.Append(file));
+
+  // Setup files_to_set_write_own.
+  files_to_set_write_own.push_back(dev_path);
+
+  for (auto file : kFilesToSetWriteAndOwnership)
+    files_to_set_write_own.push_back(sys_dev_path.Append(file));
+
+  for (auto channel : sensor_->GetAllChannels()) {
+    files_to_set_write_own.push_back(
+        sys_dev_path.Append(kScanElementsString)
+            .Append(
+                base::StringPrintf(kChnEnableFormatString, channel->GetId())));
+  }
+
+  // Set permissions and ownerships.
+  bool result = true;
+
+  for (base::FilePath path : files_to_set_read_own)
+    result &= SetReadPermissionAndOwnership(path);
+
+  for (base::FilePath path : files_to_set_write_own)
+    result &= SetWritePermissionAndOwnership(path);
+
+  return result;
+}
+
+std::vector<base::FilePath> Configuration::EnumerateAllFiles(
+    base::FilePath file_path) {
+  std::vector<base::FilePath> files;
+
+  base::FileEnumerator file_enumerator(file_path, false,
+                                       base::FileEnumerator::FILES);
+
+  for (base::FilePath file = file_enumerator.Next(); !file.empty();
+       file = file_enumerator.Next())
+    files.push_back(file);
+
+  return files;
+}
+
+bool Configuration::SetReadPermissionAndOwnership(base::FilePath file_path) {
+  DCHECK(iioservice_gid_.has_value());
+
+  if (!delegate_->Exists(file_path))
+    return true;
+
+  bool result = true;
+
+  int permission = delegate_->GetPermissions(file_path);
+  permission |= base::FILE_PERMISSION_READ_BY_GROUP;
+
+  if (!delegate_->SetPermissions(file_path, permission)) {
+    LOG(ERROR) << "cannot configure permissions on " << file_path.value();
+    result = false;
+  }
+
+  if (!delegate_->SetOwnership(file_path, -1, iioservice_gid_.value())) {
+    LOG(ERROR) << "cannot configure ownership on " << file_path.value();
+    result = false;
+  }
+
+  return result;
+}
+
+bool Configuration::SetWritePermissionAndOwnership(base::FilePath file_path) {
+  DCHECK(iioservice_gid_.has_value());
+
+  if (!delegate_->Exists(file_path))
+    return true;
+
+  bool result = true;
+
+  int permission = delegate_->GetPermissions(file_path);
+  permission |= base::FILE_PERMISSION_WRITE_BY_GROUP;
+
+  if (!delegate_->SetPermissions(file_path, permission)) {
+    LOG(ERROR) << "cannot configure permissions on " << file_path.value();
+    result = false;
+  }
+
+  if (!delegate_->SetOwnership(file_path, -1, iioservice_gid_.value())) {
+    LOG(ERROR) << "cannot configure ownership on " << file_path.value();
+    result = false;
+  }
+
+  return result;
 }
 
 }  // namespace mems_setup

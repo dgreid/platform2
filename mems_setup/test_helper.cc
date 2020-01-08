@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <libmems/common_types.h>
+#include <libmems/iio_device_impl.h>
 #include "mems_setup/test_helper.h"
 
 using libmems::fakes::FakeIioChannel;
@@ -11,6 +13,10 @@ using mems_setup::fakes::FakeDelegate;
 
 namespace mems_setup {
 namespace testing {
+
+namespace {
+constexpr char kDevString[] = "/dev/";
+}
 
 bool FakeSysfsTrigger::WriteNumberAttribute(const std::string& name,
                                             int64_t value) {
@@ -43,6 +49,12 @@ SensorTestBase::SensorTestBase(const char* name, int id, SensorKind kind)
 
   mock_context_->AddDevice(std::move(device));
   mock_context_->AddTrigger(std::move(mock_sysfs_trigger));
+
+  std::string dev_name =
+      libmems::IioDeviceImpl::GetStringFromId(mock_device_->GetId());
+  // /dev/iio:deviceX
+  base::FilePath dev_path = base::FilePath(kDevString).Append(dev_name.c_str());
+  mock_delegate_->CreateFile(dev_path);
 }
 
 void SensorTestBase::SetSingleSensor(const char* location) {

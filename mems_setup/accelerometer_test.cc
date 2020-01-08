@@ -6,8 +6,10 @@
 
 #include <gtest/gtest.h>
 
+#include <libmems/common_types.h>
 #include <libmems/iio_context.h>
 #include <libmems/iio_device.h>
+#include <libmems/iio_device_impl.h>
 #include <libmems/test_fakes.h>
 #include "mems_setup/configuration.h"
 #include "mems_setup/delegate.h"
@@ -26,15 +28,51 @@ namespace mems_setup {
 namespace {
 
 static gid_t kChronosGroupId = 666;
+static gid_t kIioserviceGroupId = 777;
 static gid_t kPowerGroupId = 999;
+
+constexpr int kDeviceId = 1;
+constexpr char kTriggerString[] = "trigger";
+
+constexpr char kDevString[] = "/dev/";
 
 class AccelerometerTest : public SensorTestBase {
  public:
   AccelerometerTest()
-      : SensorTestBase("cros-ec-accel", 1, SensorKind::ACCELEROMETER) {
+      : SensorTestBase("cros-ec-accel", kDeviceId, SensorKind::ACCELEROMETER) {
     mock_delegate_->AddGroup("chronos", kChronosGroupId);
+    mock_delegate_->AddGroup(Configuration::GetGroupNameForSysfs(),
+                             kIioserviceGroupId);
+
+    // Create the file to set the trigger in |AddSysfsTrigger|.
+    std::string dev_name = libmems::IioDeviceImpl::GetStringFromId(kDeviceId);
+    // /sys/bus/iio/devices/iio:device1
+    base::FilePath sys_dev_path =
+        base::FilePath(libmems::kSysDevString).Append(dev_name.c_str());
+    mock_delegate_->CreateFile(sys_dev_path.Append(kTriggerString));
   }
 };
+
+TEST_F(AccelerometerTest, CheckPermissionsAndOwnership) {
+  SetSingleSensor(kBaseSensorLocation);
+  ConfigureVpd({{"in_accel_x_base_calibbias", "100"}});
+
+  EXPECT_TRUE(GetConfiguration()->Configure());
+
+  std::string dev_name = libmems::IioDeviceImpl::GetStringFromId(kDeviceId);
+
+  uid_t user;
+  gid_t group;
+
+  // /dev/iio:deviceX
+  base::FilePath dev_path = base::FilePath(kDevString).Append(dev_name.c_str());
+
+  EXPECT_TRUE(mock_delegate_->GetOwnership(dev_path, &user, &group));
+  EXPECT_EQ(group, kIioserviceGroupId);
+  EXPECT_EQ(base::FILE_PERMISSION_WRITE_BY_GROUP |
+                base::FILE_PERMISSION_READ_BY_GROUP,
+            mock_delegate_->GetPermissions(dev_path));
+}
 
 TEST_F(AccelerometerTest, MissingVpd) {
   SetSingleSensor(kBaseSensorLocation);
