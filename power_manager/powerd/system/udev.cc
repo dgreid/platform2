@@ -14,6 +14,7 @@
 #include <base/files/file_util.h>
 #include <base/logging.h>
 #include <base/memory/free_deleter.h>
+#include <base/strings/string_util.h>
 
 #include "power_manager/common/power_constants.h"
 #include "power_manager/powerd/system/tagged_device.h"
@@ -27,7 +28,13 @@ namespace {
 
 const char kChromeOSClassPath[] = "/sys/class/chromeos/";
 const char kFingerprintSysfsPath[] = "/sys/class/chromeos/cros_fp";
+const char kBluetoothHciSysfsPrefix[] = "/sys/class/bluetooth/hci";
+const char kBluetoothIdentityFileName[] = "identity";
+// Search space for hci devices. i.e. hci0, hci1, etc. Only allow hci0 for now.
+constexpr int kBluetoothMaxHci = 1;
+const char kBluetoothPhysVar[] = "phys";
 const char kPowerdRoleCrosFP[] = "cros_fingerprint";
+const char kPowerdRoleCrosBT[] = "cros_bluetooth";
 const char kPowerdRoleVar[] = "POWERD_ROLE";
 const char kPowerdUdevTag[] = "powerd";
 const char kPowerdTagsVar[] = "POWERD_TAGS";
@@ -64,6 +71,33 @@ struct UdevDeviceDeleter {
       udev_device_unref(dev);
   }
 };
+
+// Find the hci path where the identity matches the phys addr of the peer
+// device. This enforces that the tagged input device actually is correlated to
+// a Bluetooth hci device. For example, checks that
+// /sys/class/bluetooth/hci0/identity matches given address [00:11:22:33:44:55].
+std::string FindHciPathWithAddress(const std::string& addr) {
+  std::string hci_path;
+  if (addr.empty())
+    return hci_path;
+
+  for (int i = 0; i < kBluetoothMaxHci; ++i) {
+    std::string hci_id;
+    base::FilePath tmp_path(
+        base::JoinString({kBluetoothHciSysfsPrefix, std::to_string(i), "/",
+                          kBluetoothIdentityFileName},
+                         ""));
+    if (base::ReadFileToStringWithMaxSize(tmp_path, &hci_id, addr.size())) {
+      if (hci_id == addr) {
+        hci_path =
+            base::JoinString({kBluetoothHciSysfsPrefix, std::to_string(i)}, "");
+        break;
+      }
+    }
+  }
+
+  return hci_path;
+}
 
 };  // namespace
 
@@ -303,6 +337,19 @@ base::FilePath Udev::FindWakeCapableParent(const std::string& syspath) {
           base::FilePath(kChromeOSClassPath).Append(actual_fp_path).value();
       wakeup_device_path =
           FindParentWithSysattr(wakeup_path, kPowerWakeup, kUSBDevice);
+    }
+  } else if (HasPowerdRole(device, kPowerdRoleCrosBT)) {
+    // Check if the input device is assigned the |kPowerdRoleCrosBT| role. If it
+    // has this role, then its wakeup path will be a parent of the hci sysfs
+    // path and not the input device itself.
+    const char* phys = udev_device_get_sysattr_value(device, kBluetoothPhysVar);
+    if (!phys)
+      phys = udev_device_get_sysattr_value(parent, kBluetoothPhysVar);
+
+    std::string hci_path = FindHciPathWithAddress(phys ? phys : "");
+    if (!hci_path.empty()) {
+      wakeup_device_path =
+          FindParentWithSysattr(hci_path, kPowerWakeup, kUSBDevice);
     }
   } else {
     wakeup_device_path =

@@ -1,6 +1,9 @@
 ACTION!="remove", ATTR{power/wakeup}=="*", RUN+="/bin/chown power:power $sys/$devpath/power/wakeup"
 ACTION!="remove", ATTR{inhibited}=="*",    RUN+="/bin/chown power:power $sys/$devpath/inhibited"
 
+# Allow powerd to read bluetooth host controller identity
+ACTION!="remove", SUBSYSTEM=="bluetooth", ENV{DEVTYPE}=="host", RUN+="/bin/chown power:power $sys/$devpath/identity"
+
 # Make pluggable keyboard backlights writable by powerd.
 ACTION!="remove", SUBSYSTEM=="leds", DEVPATH=="*:kbd_backlight", RUN+="/lib/udev/chown-sysfs-backlight-dir.sh $sys/$devpath"
 

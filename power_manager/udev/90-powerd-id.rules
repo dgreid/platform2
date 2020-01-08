@@ -5,6 +5,8 @@ SUBSYSTEM=="input", ENV{ID_INPUT_TOUCHPAD}=="1",    SUBSYSTEMS=="i2c",       ENV
 SUBSYSTEM=="input", ENV{ID_INPUT_TOUCHPAD}=="1",    SUBSYSTEMS=="serio",     ENV{POWERD_ROLE}="internal_touchpad"
 SUBSYSTEM=="input", ENV{ID_INPUT_TOUCHSCREEN}=="1", SUBSYSTEMS=="i2c",       ENV{POWERD_ROLE}="internal_touchscreen"
 SUBSYSTEM=="input", ATTRS{name}=="cros_fp_input",                            ENV{POWERD_ROLE}="cros_fingerprint"
+# Product is BUSTYPE/VENDOR/PRODUCT/VERSION. Bus type 0x5 is Bluetooth
+SUBSYSTEM=="input", ENV{PRODUCT}=="5/*",                                     ENV{POWERD_ROLE}="cros_bluetooth"
 
 # Udev does not make distinction between regular tablets and stylus devices
 # complementing touchscreens, but if we see a "tablet" on an internal bus,
@@ -12,4 +14,3 @@ SUBSYSTEM=="input", ATTRS{name}=="cros_fp_input",                            ENV
 SUBSYSTEM=="input", ENV{ID_INPUT_TABLET}=="1",      SUBSYSTEMS=="i2c",       ENV{POWERD_ROLE}="internal_stylus"
 
 SUBSYSTEM=="input", SUBSYSTEMS=="usb", DRIVERS=="usbhid", ENV{ID_MODEL}!="*[aA]udio*", ENV{POWERD_ROLE}="external_input"
-SUBSYSTEM=="input", SUBSYSTEMS=="usb", DRIVERS=="btusb",  ENV{POWERD_ROLE}="external_input"
