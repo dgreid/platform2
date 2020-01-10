@@ -27,6 +27,50 @@ CROS_DEBUG="$((! $?))"
 
 dev_unmount_packages() { true; }
 
+collect_shutdown_umount_failure_logs() {
+  (
+    # Get mount table as seen by this process. This list may not be
+    # comprehensive: private mounts inside mount namespaces may not
+    # appear in this list.
+    echo "Active mounts:"
+    cat "/proc/self/mountinfo"
+    # Log information about the dm-crypt device.
+    echo "Device-mapper target state:"
+    dmsetup info
+    # Log upstart jobs that are still running: jobs here can stop the
+    # stateful partition from getting unmounted.
+    echo "Active Upstart jobs:"
+    initctl list | grep running
+    # Log dbus services still connected to the bus, with a 1 second timeout.
+    echo "Active D-Bus services:"
+    dbus-send --system --dest=org.freedesktop.DBus --type=method_call \
+      --print-reply --reply-timeout=1000 /org/freedesktop/DBus \
+      org.freedesktop.DBus.ListNames
+
+    # Parse pids of processes with active mount namespaces. PID is the fourth
+    # field and the first line refers to the root mount namespace.
+    for pid in $(lsns --raw -n -t mnt | cut -f4 -d' ' | tail -n+2); do
+      echo "====== Comm: $(cat /proc/${pid}/comm) ======"
+      # The mount namespaces are created by minijail, which shows up as
+      # 'minijail-init': get child processes for better insight into which
+      # process is running here.
+      echo "Child processes:"
+      ps --ppid ${pid}
+      # Use findmnt to look inside the mount namespace for any mounts that
+      # refer to the (enc)stateful partition. These mounts may keep the
+      # stateful partition from unmounting cleanly.
+      echo "Open mounts into (enc)stateful:"
+      findmnt --raw -N ${pid} | grep -e stateful -e mmcblk0p1 -e nvme0n1p1 \
+        -e sda1
+    done
+
+    # Get a list of processes with files open. lsof is verbose: keep it at the
+    # end of the log.
+    echo "Processes with files open:"
+    lsof -n
+  ) >/run/shutdown_umount_failure.log 2>&1
+}
+
 if [ "${CROS_DEBUG}" -eq 1 ]; then
   . /usr/share/cros/dev_utils.sh
 fi
@@ -131,13 +175,11 @@ exit "$(( rc | $? ))"
 ) >/run/mount_encrypted/umount-encrypted.log 2>&1
 
 if [ "$?" -ne 0 ]; then
+  # Collect information about active mount namespaces and if there are bind
+  # mounts open inside these namespaces into the (enc)stateful partition.
+  collect_shutdown_umount_failure_logs
   mv /run/mount_encrypted/umount-encrypted.log /mnt/stateful_partition/
-  (
-    set -x
-    cat "/proc/$$/mountinfo"
-    dmsetup info
-    lsof -n
-  ) > /mnt/stateful_partition/shutdown_stateful_umount_failure 2>&1
+  mv /run/shutdown_umount_failure.log /mnt/stateful_partition/
 else
   if [ -n "${UPDATE_TARGET}" ] && [ -n "${STATE_DEV}" ]; then
     # 10756.0.0 is the first build to turn on ext4 quota.
