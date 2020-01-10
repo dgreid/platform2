@@ -47,6 +47,7 @@ static_library("libruntime_probe") {
     "function_templates/storage.cc",
     "functions/all_functions.cc",
     "functions/ata_storage.cc",
+    "functions/cellular_network.cc",
     "functions/ectool_i2cread.cc",
     "functions/ethernet_network.cc",
     "functions/generic_battery.cc",
