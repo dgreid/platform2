@@ -18,3 +18,4 @@
 #include "runtime_probe/functions/shell.h"
 #include "runtime_probe/functions/sysfs.h"
 #include "runtime_probe/functions/vpd_cached.h"
+#include "runtime_probe/functions/wireless_network.h"

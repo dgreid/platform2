@@ -55,6 +55,7 @@ static_library("libruntime_probe") {
     "functions/sequence.cc",
     "functions/sysfs.cc",
     "functions/vpd_cached.cc",
+    "functions/wireless_network.cc",
     "probe_config.cc",
     "probe_function.cc",
     "probe_function_argument.cc",
