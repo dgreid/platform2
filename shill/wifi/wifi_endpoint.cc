@@ -64,7 +64,8 @@ WiFiEndpoint::WiFiEndpoint(ControlInterface* control_interface,
 
   Metrics::WiFiNetworkPhyMode phy_mode = Metrics::kWiFiNetworkPhyModeUndef;
   if (!ParseIEs(properties, &phy_mode, &vendor_information_,
-                &ieee80211w_required_, &country_code_, &krv_support_)) {
+                &ieee80211w_required_, &country_code_, &krv_support_,
+                &hs20_information_)) {
     phy_mode = DeterminePhyModeFromFrequency(properties, frequency_);
   }
   physical_mode_ = phy_mode;
@@ -272,6 +273,10 @@ const WiFiEndpoint::Ap80211krvSupport& WiFiEndpoint::krv_support() const {
   return krv_support_;
 }
 
+const WiFiEndpoint::HS20Information& WiFiEndpoint::hs20_information() const {
+  return hs20_information_;
+}
+
 // static
 WiFiEndpointRefPtr WiFiEndpoint::MakeOpenEndpoint(
     ControlInterface* control_interface,
@@ -436,7 +441,8 @@ bool WiFiEndpoint::ParseIEs(const KeyValueStore& properties,
                             VendorInformation* vendor_information,
                             bool* ieee80211w_required,
                             string* country_code,
-                            Ap80211krvSupport* krv_support) {
+                            Ap80211krvSupport* krv_support,
+                            HS20Information* hs20_information) {
   if (!properties.Contains<vector<uint8_t>>(WPASupplicant::kBSSPropertyIEs)) {
     SLOG(nullptr, 2) << __func__ << ": No IE property in BSS.";
     return false;
@@ -517,7 +523,7 @@ bool WiFiEndpoint::ParseIEs(const KeyValueStore& properties,
         break;
       case IEEE_80211::kElemIdVendor:
         ParseVendorIE(it + 2, it + ie_len, vendor_information,
-                      ieee80211w_required);
+                      ieee80211w_required, hs20_information);
         break;
       case IEEE_80211::kElemIdVHTCap:
       case IEEE_80211::kElemIdVHTOperation:
@@ -679,14 +685,14 @@ void WiFiEndpoint::ParseWPACapabilities(vector<uint8_t>::const_iterator ie,
 void WiFiEndpoint::ParseVendorIE(vector<uint8_t>::const_iterator ie,
                                  vector<uint8_t>::const_iterator end,
                                  VendorInformation* vendor_information,
-                                 bool* ieee80211w_required) {
+                                 bool* ieee80211w_required,
+                                 HS20Information* hs20_information) {
   // Format of an vendor-specific information element (with type
   // and length field for the IE removed by the caller):
   //        3           1       1 - 248
   // +------------+----------+----------------+
   // | OUI        | OUI Type | Data           |
   // +------------+----------+----------------+
-
   if (std::distance(ie, end) < 4) {
     LOG(ERROR) << __func__ << ": no room in IE for OUI and type field.";
     return;
@@ -728,6 +734,34 @@ void WiFiEndpoint::ParseVendorIE(vector<uint8_t>::const_iterator ie,
         }
       }
       ie += element_length;
+    }
+  } else if (oui == IEEE_80211::kOUIVendorWiFiAlliance &&
+             oui_type == IEEE_80211::kOUITypeWiFiAllianceHS20Indicator) {
+    // Format of a Hotspot 2.0 Indication data element:
+    //            1                  2             2
+    // +-----------------------+-----------+----------------+
+    // | Hotspot Configuration | PPS MO ID | ANQP Domain ID |
+    // +-----------------------+-----------+----------------+
+    //                          (optional)     (optional)
+    //
+    // Format of Hotspot Configuration Field (bits):
+    //         4              1               1
+    // +----------------+----------+------------------------+
+    // | Version Number | Reserved | ANQP Domain ID present |
+    // +----------------+----------+------------------------+
+    //          1                 1
+    // +-------------------+---------------+
+    // | PPS MO ID Present | DGAF Disabled |
+    // +-------------------+---------------+
+    if (std::distance(ie, end) < 1) {
+      LOG(ERROR) << __func__ << ": no room in Hotspot 2.0 indication element"
+                 << " for Hotspot Configuration field.";
+      return;
+    }
+    if (hs20_information) {
+      hs20_information->supported = true;
+      // Parse out the version number from the Hotspot Configuration field.
+      hs20_information->version = (*ie & 0xf0) >> 4;
     }
   } else if (oui == IEEE_80211::kOUIVendorMicrosoft &&
              oui_type == IEEE_80211::kOUIMicrosoftWPA) {

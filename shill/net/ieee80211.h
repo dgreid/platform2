@@ -58,6 +58,9 @@ const uint16_t kWPSElementModelName = 0x1023;
 const uint16_t kWPSElementModelNumber = 0x1024;
 const uint16_t kWPSElementDeviceName = 0x1011;
 
+const uint32_t kOUIVendorWiFiAlliance = 0x506f9a;
+const uint32_t kOUITypeWiFiAllianceHS20Indicator = 0x10;
+
 const int kRSNIEVersionLen = 2;
 const int kRSNIESelectorLen = 4;
 const int kRSNIECipherCountOffset = kRSNIEVersionLen + kRSNIESelectorLen;

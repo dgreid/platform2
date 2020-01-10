@@ -526,6 +526,9 @@ const char Metrics::kMetricRegulatoryDomain[] =
     "Network.Shill.WiFi.RegulatoryDomain";
 
 // static
+const char Metrics::kMetricHS20Support[] = "Network.Shill.WiFi.HS20Support";
+
+// static
 const char Metrics::kMetricUnreliableLinkSignalStrengthSuffix[] =
     "UnreliableLinkSignalStrength";
 const int Metrics::kMetricServiceSignalStrengthMin = 1;
@@ -1931,6 +1934,30 @@ void Metrics::NotifyPortalDetectionMultiProbeResult(
 
   SendEnumToUMA(kMetricPortalDetectionMultiProbeResult, result_enum,
                 kPortalDetectionMultiProbeResultMax);
+}
+
+void Metrics::NotifyHS20Support(bool hs20_supported, int hs20_version_number) {
+  if (!hs20_supported) {
+    SendEnumToUMA(kMetricHS20Support, kHS20Unsupported, kHS20SupportMax);
+    return;
+  }
+  int hotspot_version = kHS20VersionInvalid;
+  switch (hs20_version_number) {
+    // Valid values.
+    case 1:
+      hotspot_version = kHS20Version1;
+      break;
+    case 2:
+      hotspot_version = kHS20Version2;
+      break;
+    case 3:
+      hotspot_version = kHS20Version3;
+      break;
+    // Invalid values.
+    default:
+      break;
+  }
+  SendEnumToUMA(kMetricHS20Support, hotspot_version, kHS20SupportMax);
 }
 
 // static

@@ -62,6 +62,10 @@ class WiFiEndpoint : public base::RefCounted<WiFiEndpoint> {
     bool bss_max_idle_period_supported;
     bool bss_transition_supported;
   };
+  struct HS20Information {
+    bool supported = false;
+    int version = 0;
+  };
   WiFiEndpoint(ControlInterface* control_interface,
                const WiFiRefPtr& device,
                const RpcIdentifier& rpc_id,
@@ -107,6 +111,7 @@ class WiFiEndpoint : public base::RefCounted<WiFiEndpoint> {
   bool has_wpa_property() const;
   bool has_tethering_signature() const;
   const Ap80211krvSupport& krv_support() const;
+  const HS20Information& hs20_information() const;
 
  private:
   friend class WiFiEndpointTest;
@@ -181,7 +186,8 @@ class WiFiEndpoint : public base::RefCounted<WiFiEndpoint> {
                        VendorInformation* vendor_information,
                        bool* ieee80211w_required,
                        std::string* country_code,
-                       Ap80211krvSupport* krv_support);
+                       Ap80211krvSupport* krv_support,
+                       HS20Information* hs20_information);
   // Parse MDE information element and set *|otds_ft_supported| to true if
   // Over-the-DS Fast BSS Transition is supported by this AP.
   static void ParseMobilityDomainElement(
@@ -207,7 +213,8 @@ class WiFiEndpoint : public base::RefCounted<WiFiEndpoint> {
   static void ParseVendorIE(std::vector<uint8_t>::const_iterator ie,
                             std::vector<uint8_t>::const_iterator end,
                             VendorInformation* vendor_information,
-                            bool* ieee80211w_required);
+                            bool* ieee80211w_required,
+                            HS20Information* hs20_information);
 
   // Assigns a value to |has_tethering_signature_|.
   void CheckForTetheringSignature();
@@ -239,6 +246,7 @@ class WiFiEndpoint : public base::RefCounted<WiFiEndpoint> {
   SecurityFlags security_flags_;
   Metrics* metrics_;
 
+  HS20Information hs20_information_;
   Ap80211krvSupport krv_support_;
 
   ControlInterface* control_interface_;

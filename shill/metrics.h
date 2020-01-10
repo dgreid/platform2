@@ -575,6 +575,15 @@ class Metrics : public DefaultServiceObserver {
     kRegDomMaxValue
   };
 
+  enum HS20Support {
+    kHS20Unsupported = 0,
+    kHS20VersionInvalid = 1,
+    kHS20Version1 = 2,
+    kHS20Version2 = 3,
+    kHS20Version3 = 4,
+    kHS20SupportMax
+  };
+
   static const char kMetricDisconnectSuffix[];
   static const int kMetricDisconnectMax;
   static const int kMetricDisconnectMin;
@@ -916,6 +925,9 @@ class Metrics : public DefaultServiceObserver {
 
   // Wireless regulatory domain metric.
   static const char kMetricRegulatoryDomain[];
+
+  // Hotspot 2.0 version number metric.
+  static const char kMetricHS20Support[];
 
   Metrics();
   virtual ~Metrics();
@@ -1285,6 +1297,10 @@ class Metrics : public DefaultServiceObserver {
   virtual void NotifyPortalDetectionMultiProbeResult(
       const PortalDetector::Result& http_result,
       const PortalDetector::Result& https_result);
+
+  // Notifies this object that of the HS20 support of an access that has
+  // been connected to.
+  void NotifyHS20Support(bool hs20_supported, int hs20_version_number);
 
   // Calculate Regulatory domain value given two letter country code.
   // Return value corresponds to Network.Shill.WiFi.RegulatoryDomain histogram

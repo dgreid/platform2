@@ -1071,6 +1071,8 @@ void WiFi::HandleRoam(const RpcIdentifier& new_bss) {
       endpoint->krv_support().bss_max_idle_period_supported);
   metrics()->NotifyAp80211vBSSTransitionSupport(
       endpoint->krv_support().bss_transition_supported);
+  metrics()->NotifyHS20Support(endpoint->hs20_information().supported,
+                               endpoint->hs20_information().version);
 
   SLOG(this, 2) << "WiFi " << link_name() << " roamed to Endpoint "
                 << endpoint->bssid_string() << " "
