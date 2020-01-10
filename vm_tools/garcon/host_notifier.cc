@@ -278,6 +278,8 @@ void HostNotifier::OnApplyAnsiblePlaybookCompletion(
     bool success, const std::string& failure_reason) {
   LOG(INFO) << "Got HostNotifier::OnApplyAnsiblePlaybookCompletion(" << success
             << ", " << failure_reason << ")";
+  RemoveAnsiblePlaybookApplication();
+
   vm_tools::container::ApplyAnsiblePlaybookProgressInfo info;
   info.set_token(token_);
   if (success) {
@@ -291,6 +293,21 @@ void HostNotifier::OnApplyAnsiblePlaybookCompletion(
   task_runner_->PostTask(
       FROM_HERE, base::Bind(&SendApplyAnsiblePlaybookStatusToHost,
                             base::Unretained(stub_.get()), std::move(info)));
+}
+
+void HostNotifier::CreateAnsiblePlaybookApplication(
+    base::WaitableEvent* event,
+    AnsiblePlaybookApplication** ansible_playbook_application_ptr) {
+  DCHECK(!ansible_playbook_application_);
+  ansible_playbook_application_ =
+      std::make_unique<vm_tools::garcon::AnsiblePlaybookApplication>();
+  *ansible_playbook_application_ptr = ansible_playbook_application_.get();
+  event->Signal();
+}
+
+void HostNotifier::RemoveAnsiblePlaybookApplication() {
+  ansible_playbook_application_->RemoveObserver(this);
+  ansible_playbook_application_.reset();
 }
 
 bool HostNotifier::Init(uint32_t vsock_port,

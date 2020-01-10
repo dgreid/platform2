@@ -8,6 +8,8 @@
 #include <fcntl.h>
 #include <map>
 #include <sstream>
+#include <signal.h>
+#include <sys/types.h>
 #include <unistd.h>
 #include <utility>
 #include <vector>
@@ -15,6 +17,7 @@
 #include <base/bind.h>
 #include <base/files/file_path.h>
 #include <base/files/file_util.h>
+#include <base/location.h>
 #include <base/posix/safe_strerror.h>
 #include <base/synchronization/waitable_event.h>
 #include <base/threading/thread_task_runner_handle.h>
@@ -30,6 +33,9 @@ constexpr char kDefaultCallbackPluginPathEnv[] = "ANSIBLE_CALLBACK_PLUGINS";
 constexpr char kStdoutCallbackName[] = "garcon";
 constexpr char kDefaultCallbackPluginPath[] =
     "/usr/share/ansible/plugins/callback";
+// How long we should wait for a ansible-playbook process to finish.
+constexpr base::TimeDelta kAnsibleProcessTimeout =
+    base::TimeDelta::FromHours(1);
 
 bool CreatePipe(base::ScopedFD* read_fd,
                 base::ScopedFD* write_fd,
@@ -112,11 +118,9 @@ bool AnsiblePlaybookApplication::ExecuteAnsiblePlaybook(
   // Set child's process stdout and stderr to write end of pipes.
   int stdio_fd[] = {-1, -1, -1};
   if (!CreatePipe(&read_stdout_, &write_stdout_, error_msg)) {
-    ClearFDs();
     return false;
   }
   if (!CreatePipe(&read_stderr_, &write_stderr_, error_msg)) {
-    ClearFDs();
     return false;
   }
   stdio_fd[STDOUT_FILENO] = write_stdout_.get();
@@ -129,22 +133,28 @@ bool AnsiblePlaybookApplication::ExecuteAnsiblePlaybook(
       base::BindOnce(&AnsiblePlaybookApplication::SetUpStdIOWatchers,
                      weak_ptr_factory_.GetWeakPtr(), &event, error_msg));
   event.Wait();
+
   if (!success) {
     *error_msg = "Failed to post task to set up ansible stdio watchers";
-    ClearFDs();
     return false;
   }
   if (!error_msg->empty()) {
-    ClearFDs();
     return false;
   }
 
-  if (!Spawn(std::move(argv), std::move(env), "", stdio_fd)) {
+  pid_t spawned_pid;
+  if (!Spawn(std::move(argv), std::move(env), "", stdio_fd, &spawned_pid)) {
     *error_msg = "Failed to spawn ansible-playbook process";
-    ClearFDs();
     return false;
   }
 
+  // As we rely on ansible process to finish and close fds, we set up a timeout
+  // after which process is killed.
+  task_runner_->PostDelayedTask(
+      FROM_HERE,
+      base::BindOnce(&AnsiblePlaybookApplication::KillAnsibleProcess,
+                     weak_ptr_factory_.GetWeakPtr(), spawned_pid),
+      kAnsibleProcessTimeout);
   ClearWriteFDs();
   return true;
 }
@@ -210,7 +220,6 @@ void AnsiblePlaybookApplication::OnStdIOProcessed(bool is_stderr) {
     bool success = GetPlaybookApplicationResult(&failure_reason);
     for (auto& observer : observers_)
       observer.OnApplyAnsiblePlaybookCompletion(success, failure_reason);
-    ClearFDs();
   }
 }
 
@@ -234,25 +243,20 @@ bool AnsiblePlaybookApplication::GetPlaybookApplicationResult(
   return true;
 }
 
-void AnsiblePlaybookApplication::ClearFDs() {
-  ClearWriteFDs();
-  ClearReadFDs();
-}
-
 void AnsiblePlaybookApplication::ClearWriteFDs() {
   write_stdout_.reset();
   write_stderr_.reset();
 }
 
-void AnsiblePlaybookApplication::ClearReadFDs() {
-  read_stdout_.reset();
-  read_stderr_.reset();
-  stdout_watcher_.reset();
-  stderr_watcher_.reset();
-  stdout_.str("");
-  stderr_.str("");
-  is_stdout_finished_ = false;
-  is_stderr_finished_ = false;
+void AnsiblePlaybookApplication::KillAnsibleProcess(pid_t pid) {
+  if (kill(pid, SIGTERM) < 0) {
+    LOG(ERROR) << "Failed to kill ansible process: "
+               << base::safe_strerror(errno);
+  }
+
+  for (auto& observer : observers_)
+    observer.OnApplyAnsiblePlaybookCompletion(false /*success*/,
+                                              "ansible process timed out");
 }
 
 }  // namespace garcon

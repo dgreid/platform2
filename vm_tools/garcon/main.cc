@@ -37,6 +37,7 @@ const int kSyslogCritical = LOG_CRIT;
 #include <base/run_loop.h>
 #include <base/strings/stringprintf.h>
 #include <base/synchronization/waitable_event.h>
+#include <base/task_runner.h>
 #include <base/threading/thread.h>
 #include <vm_protos/proto_bindings/container_guest.grpc.pb.h>
 #include <chromeos/constants/vm_tools.h>
@@ -87,8 +88,8 @@ void RunGarconService(vm_tools::garcon::PackageKitProxy* pk_proxy,
                       base::WaitableEvent* event,
                       std::shared_ptr<grpc::Server>* server_copy,
                       int* vsock_listen_port,
-                      vm_tools::garcon::AnsiblePlaybookApplication*
-                          ansible_playbook_application) {
+                      scoped_refptr<base::TaskRunner> task_runner,
+                      vm_tools::garcon::HostNotifier* host_notifier) {
   // We don't want to receive SIGTERM on this thread.
   sigset_t mask;
   sigemptyset(&mask);
@@ -112,8 +113,8 @@ void RunGarconService(vm_tools::garcon::PackageKitProxy* pk_proxy,
         base::StringPrintf("vsock:%u:%d", VMADDR_CID_ANY, *vsock_listen_port),
         grpc::InsecureServerCredentials(), nullptr);
 
-    vm_tools::garcon::ServiceImpl garcon_service(pk_proxy,
-                                                 ansible_playbook_application);
+    vm_tools::garcon::ServiceImpl garcon_service(pk_proxy, task_runner.get(),
+                                                 host_notifier);
     builder.RegisterService(&garcon_service);
 
     std::shared_ptr<grpc::Server> server(builder.BuildAndStart().release());
@@ -145,15 +146,6 @@ void CreatePackageKitProxy(
   sigprocmask(SIG_BLOCK, &mask, nullptr);
 
   *proxy_ptr = vm_tools::garcon::PackageKitProxy::Create(host_notifier);
-  event->Signal();
-}
-
-void CreateAnsiblePlaybookApplication(
-    base::WaitableEvent* event,
-    std::unique_ptr<vm_tools::garcon::AnsiblePlaybookApplication>*
-        ansible_playbook_application_ptr) {
-  *ansible_playbook_application_ptr =
-      std::make_unique<vm_tools::garcon::AnsiblePlaybookApplication>();
   event->Signal();
 }
 
@@ -297,35 +289,14 @@ int main(int argc, char** argv) {
   }
   event.Reset();
 
-  // AnsiblePlaybookApplication is created on garcon service tasks thread,
-  // because Ansible playbook application task is using
-  // base::FileDescriptorWatcher to watch ansible-playbook process stdio.
-  std::unique_ptr<vm_tools::garcon::AnsiblePlaybookApplication>
-      ansible_playbook_application;
-  ret = garcon_service_tasks_thread.task_runner()->PostTask(
-      FROM_HERE, base::Bind(&CreateAnsiblePlaybookApplication, &event,
-                            &ansible_playbook_application));
-  if (!ret) {
-    LOG(ERROR) << "Failed to post AnsiblePlaybookApplication creation to "
-               << "garcon service tasks thread";
-    return -1;
-  }
-  // Wait for the creation to complete.
-  event.Wait();
-  if (!ansible_playbook_application) {
-    LOG(ERROR) << "Failed in creating the AnsiblePlaybookApplication";
-    return -1;
-  }
-  event.Reset();
-  ansible_playbook_application->AddObserver(host_notifier.get());
-
   // Launch the gRPC server on the gRPC thread.
   std::shared_ptr<grpc::Server> server_copy;
   int vsock_listen_port = 0;
   ret = grpc_thread.task_runner()->PostTask(
       FROM_HERE,
       base::Bind(&RunGarconService, pk_proxy.get(), &event, &server_copy,
-                 &vsock_listen_port, ansible_playbook_application.get()));
+                 &vsock_listen_port, garcon_service_tasks_thread.task_runner(),
+                 host_notifier.get()));
   if (!ret) {
     LOG(ERROR) << "Failed to post server startup task to grpc thread";
     return -1;

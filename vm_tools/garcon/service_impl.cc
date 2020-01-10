@@ -48,11 +48,12 @@ constexpr size_t kMaxIconSize = 1048576;  // 1MB, very large for an icon
 
 }  // namespace
 
-ServiceImpl::ServiceImpl(
-    PackageKitProxy* package_kit_proxy,
-    AnsiblePlaybookApplication* ansible_playbook_application)
+ServiceImpl::ServiceImpl(PackageKitProxy* package_kit_proxy,
+                         base::TaskRunner* task_runner,
+                         HostNotifier* host_notifier)
     : package_kit_proxy_(package_kit_proxy),
-      ansible_playbook_application_(ansible_playbook_application) {
+      task_runner_(task_runner),
+      host_notifier_(host_notifier) {
   CHECK(package_kit_proxy_);
 }
 
@@ -379,14 +380,48 @@ grpc::Status ServiceImpl::ApplyAnsiblePlaybook(
     return grpc::Status(grpc::INVALID_ARGUMENT, "playbook cannot be empty");
   }
 
+  AnsiblePlaybookApplication* ansible_playbook_application;
   std::string error_msg;
+  base::WaitableEvent event(base::WaitableEvent::ResetPolicy::AUTOMATIC,
+                            base::WaitableEvent::InitialState::NOT_SIGNALED);
+  // AnsiblePlaybookApplication is created on garcon service tasks thread,
+  // because Ansible playbook application task is using
+  // base::FileDescriptorWatcher to watch ansible-playbook process stdio.
+  bool ret = task_runner_->PostTask(
+      FROM_HERE, base::Bind(&HostNotifier::CreateAnsiblePlaybookApplication,
+                            base::Unretained(host_notifier_), &event,
+                            &ansible_playbook_application));
+  if (!ret) {
+    error_msg =
+        "Failed to post AnsiblePlaybookApplication creation to garcon "
+        "service tasks thread";
+    LOG(ERROR) << "Failed to start Ansible playbook application: " << error_msg;
+    response->set_status(
+        vm_tools::container::ApplyAnsiblePlaybookResponse::FAILED);
+    response->set_failure_reason(error_msg);
+    return grpc::Status::OK;
+  }
+  // Wait for the creation to complete.
+  event.Wait();
+  if (!ansible_playbook_application) {
+    error_msg = "Failed in creating the AnsiblePlaybookApplication";
+    LOG(ERROR) << "Failed to start Ansible playbook application: " << error_msg;
+    response->set_status(
+        vm_tools::container::ApplyAnsiblePlaybookResponse::FAILED);
+    response->set_failure_reason(error_msg);
+    return grpc::Status::OK;
+  }
+  event.Reset();
+  ansible_playbook_application->AddObserver(host_notifier_);
+
   base::FilePath ansible_playbook_file_path =
-      ansible_playbook_application_->CreateAnsiblePlaybookFile(
+      ansible_playbook_application->CreateAnsiblePlaybookFile(
           request->playbook(), &error_msg);
 
   if (ansible_playbook_file_path.empty()) {
     LOG(ERROR) << "Failed to create valid file with Ansible playbook, "
                << "error: " << error_msg;
+    host_notifier_->RemoveAnsiblePlaybookApplication();
     response->set_status(
         vm_tools::container::ApplyAnsiblePlaybookResponse::FAILED);
     response->set_failure_reason(error_msg);
@@ -396,11 +431,12 @@ grpc::Status ServiceImpl::ApplyAnsiblePlaybook(
   LOG(INFO) << "Ansible playbook file created at "
             << ansible_playbook_file_path.value();
 
-  bool success = ansible_playbook_application_->ExecuteAnsiblePlaybook(
+  bool success = ansible_playbook_application->ExecuteAnsiblePlaybook(
       ansible_playbook_file_path, &error_msg);
 
   if (!success) {
     LOG(ERROR) << "Failed to start Ansible playbook application: " << error_msg;
+    host_notifier_->RemoveAnsiblePlaybookApplication();
     response->set_status(
         vm_tools::container::ApplyAnsiblePlaybookResponse::FAILED);
     response->set_failure_reason(error_msg);

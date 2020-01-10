@@ -13,6 +13,7 @@
 #include <base/files/file_path_watcher.h>
 #include <base/files/scoped_file.h>
 #include <base/macros.h>
+#include <base/synchronization/waitable_event.h>
 #include <grpcpp/grpcpp.h>
 #include <vm_protos/proto_bindings/container_host.grpc.pb.h>
 
@@ -61,6 +62,10 @@ class HostNotifier : public PackageKitProxy::PackageKitObserver,
   // vm_tools::garcon::AnsiblePlaybookApplication::Observer overrides.
   void OnApplyAnsiblePlaybookCompletion(
       bool success, const std::string& failure_reason) override;
+  void CreateAnsiblePlaybookApplication(
+      base::WaitableEvent* event,
+      AnsiblePlaybookApplication** ansible_playbook_application_ptr);
+  void RemoveAnsiblePlaybookApplication();
 
  private:
   // Callback structure for SendAppListToHost callback chain.
@@ -158,6 +163,9 @@ class HostNotifier : public PackageKitProxy::PackageKitObserver,
 
   // Pointer to the PackageKit needed for querying package_id data.
   PackageKitProxy* package_kit_proxy_;  // Not owned.
+
+  // HostNotifier manages AnsiblePlaybookApplication life cycle.
+  std::unique_ptr<AnsiblePlaybookApplication> ansible_playbook_application_;
 
   scoped_refptr<base::SingleThreadTaskRunner> task_runner_;
 

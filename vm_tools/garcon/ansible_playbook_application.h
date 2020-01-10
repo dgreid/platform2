@@ -47,9 +47,8 @@ class AnsiblePlaybookApplication {
   void OnStdIOProcessed(bool is_stderr);
   // Return true on successful ansible-playbook result and false otherwise.
   bool GetPlaybookApplicationResult(std::string* failure_reason);
-  void ClearFDs();
-  void ClearReadFDs();
   void ClearWriteFDs();
+  void KillAnsibleProcess(pid_t pid);
 
   scoped_refptr<base::SingleThreadTaskRunner> task_runner_;
   base::ObserverList<Observer> observers_;
