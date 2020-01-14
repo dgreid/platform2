@@ -21,6 +21,7 @@ pkg_config("target_defaults") {
   pkg_deps = [
     "libbrillo",
     "libchrome-${libbase_ver}",
+    "libmetrics-${libbase_ver}",
 
     # system_api depends on protobuf (or protobuf-lite). It must appear
     # before protobuf here or the linker flags won't be in the right
@@ -49,6 +50,7 @@ static_library("libhardware_verifier") {
   sources = [
     "cli.cc",
     "hw_verification_spec_getter_impl.cc",
+    "metrics.cc",
     "probe_result_getter_impl.cc",
     "verifier_impl.cc",
   ]

@@ -7,12 +7,14 @@
 
 #include <cstdlib>
 #include <iostream>
+#include <memory>
 
 #include <base/logging.h>
 #include <brillo/flag_helper.h>
 #include <brillo/syslog_logging.h>
 
 #include "hardware_verifier/cli.h"
+#include "hardware_verifier/metrics.h"
 
 namespace {
 
@@ -84,6 +86,7 @@ int main(int argc, char* argv[]) {
                 "Format of the output verification report, can be either "
                 "\"proto\" for protobuf binary format or \"text\" for human "
                 "readable text format.");
+  DEFINE_bool(send_to_uma, false, "Send data to UMA.");
   brillo::FlagHelper::Init(argc, argv, "ChromeOS Hardware Verifier Tool");
 
   brillo::InitLog(brillo::kLogToSyslog | brillo::kLogToStderr);
@@ -95,10 +98,23 @@ int main(int argc, char* argv[]) {
 
   logging::SetMinLogLevel(log_level);
 
+  std::unique_ptr<hardware_verifier::Metrics> metrics;
+
+  if (FLAGS_send_to_uma) {
+    metrics = std::make_unique<hardware_verifier::UMAMetrics>();
+  } else {
+    metrics = std::make_unique<hardware_verifier::DummyMetrics>();
+  }
+
+  metrics->StartTimer(hardware_verifier::kMetricTimeToFinish);
   // TODO(yhong): Add the D-Bus service mode.
 
   hardware_verifier::CLI cli;
   const auto cli_result = cli.Run(
       FLAGS_probe_result_file, FLAGS_hw_verification_spec_file, output_format);
-  return ConvertCLIVerificationResultToExitStatus(cli_result);
+
+  const auto exit_status = ConvertCLIVerificationResultToExitStatus(cli_result);
+
+  metrics->StopTimer(hardware_verifier::kMetricTimeToFinish);
+  return exit_status;
 }
