@@ -1,0 +1,24 @@
+[package]
+name = "sirenia"
+version = "0.24.52"
+description = "a TEE runtime environment."
+authors = ["The Chromium OS Authors"]
+edition = "2018"
+
+[[bin]]
+name = "dugong"
+path = "src/dugong.rs"
+
+[[bin]]
+name = "trichechus"
+path = "src/trichechus.rs"
+
+[profile.release]
+panic = "abort"
+overflow-checks = true
+
+[dependencies]
+getopts = "0.2"
+libc = "0.2.44"
+minijail = { path = "../../aosp/external/minijail/rust/minijail" } # provided by ebuild
+sys_util = { path = "../../platform/crosvm/sys_util" } # provided by ebuild
