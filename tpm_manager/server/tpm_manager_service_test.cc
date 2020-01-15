@@ -394,7 +394,7 @@ TEST_F(TpmManagerServiceTest, GetDictionaryAttackInfoError) {
 
 TEST_F(TpmManagerServiceTest, ResetDictionaryAttackLockSuccess) {
   EXPECT_CALL(mock_tpm_initializer_, ResetDictionaryAttackLock())
-      .WillOnce(Return(true));
+      .WillOnce(Return(DictionaryAttackResetStatus::kResetAttemptSucceeded));
 
   auto callback = [](TpmManagerServiceTest* self,
                      const ResetDictionaryAttackLockReply& reply) {
@@ -409,7 +409,7 @@ TEST_F(TpmManagerServiceTest, ResetDictionaryAttackLockSuccess) {
 
 TEST_F(TpmManagerServiceTest, ResetDictionaryAttackLockFailure) {
   EXPECT_CALL(mock_tpm_initializer_, ResetDictionaryAttackLock())
-      .WillOnce(Return(false));
+      .WillOnce(Return(DictionaryAttackResetStatus::kResetAttemptFailed));
 
   auto callback = [](TpmManagerServiceTest* self,
                      const ResetDictionaryAttackLockReply& reply) {

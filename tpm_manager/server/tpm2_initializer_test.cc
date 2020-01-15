@@ -296,12 +296,14 @@ TEST_F(Tpm2InitializerTest, DAResetSuccess) {
   fake_local_data_.set_lockout_password("lockout");
   EXPECT_CALL(mock_tpm_utility_, ResetDictionaryAttackLock(_))
       .WillRepeatedly(Return(trunks::TPM_RC_SUCCESS));
-  EXPECT_TRUE(tpm_initializer_->ResetDictionaryAttackLock());
+  EXPECT_EQ(tpm_initializer_->ResetDictionaryAttackLock(),
+            DictionaryAttackResetStatus::kResetAttemptSucceeded);
 }
 
 TEST_F(Tpm2InitializerTest, DAResetNoLockoutPassword) {
   fake_local_data_.clear_lockout_password();
-  EXPECT_FALSE(tpm_initializer_->ResetDictionaryAttackLock());
+  EXPECT_NE(tpm_initializer_->ResetDictionaryAttackLock(),
+            DictionaryAttackResetStatus::kResetAttemptSucceeded);
 }
 
 TEST_F(Tpm2InitializerTest, DAResetFailure) {
@@ -309,7 +311,8 @@ TEST_F(Tpm2InitializerTest, DAResetFailure) {
   EXPECT_CALL(mock_tpm_utility_, ResetDictionaryAttackLock(_))
       .Times(AtLeast(1))
       .WillRepeatedly(Return(trunks::TPM_RC_FAILURE));
-  EXPECT_FALSE(tpm_initializer_->ResetDictionaryAttackLock());
+  EXPECT_NE(tpm_initializer_->ResetDictionaryAttackLock(),
+            DictionaryAttackResetStatus::kResetAttemptSucceeded);
 }
 
 }  // namespace tpm_manager

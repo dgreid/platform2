@@ -124,31 +124,31 @@ void TpmInitializerImpl::VerifiedBootHelper() {
   // Nothing to do.
 }
 
-bool TpmInitializerImpl::ResetDictionaryAttackLock() {
+DictionaryAttackResetStatus TpmInitializerImpl::ResetDictionaryAttackLock() {
   if (reset_da_lock_auth_failed_) {
     // An auth error was encountered in a previous attempt, and there was no
     // auth update after the attempt. Skips the request to avoid further
     // increasing the counter.
     LOG(ERROR) << __func__ << ": skipped the request to avoid repeating a "
                               "previous auth error.";
-    return false;
+    return DictionaryAttackResetStatus::kResetAttemptFailed;
   }
 
   TpmStatus::TpmOwnershipStatus ownership_status;
   if (!tpm_status_->CheckAndNotifyIfTpmOwned(&ownership_status)) {
     LOG(ERROR) << __func__ << ": failed to get tpm ownership status";
-    return false;
+    return DictionaryAttackResetStatus::kResetAttemptFailed;
   }
   if (ownership_status != TpmStatus::kTpmOwned) {
     LOG(ERROR) << __func__ << ": TPM is not initialized yet.";
-    return false;
+    return DictionaryAttackResetStatus::kResetAttemptFailed;
   }
 
   std::string owner_password;
   AuthDelegate owner_delegate;
   if (!ReadOwnerAuthFromLocalData(&owner_password, &owner_delegate)) {
     LOG(ERROR) << __func__ << ": failed to get owner auth.";
-    return false;
+    return DictionaryAttackResetStatus::kResetAttemptFailed;
   }
 
   std::unique_ptr<TpmConnection> connection;
@@ -160,7 +160,7 @@ bool TpmInitializerImpl::ResetDictionaryAttackLock() {
     connection = std::make_unique<TpmConnection>(owner_password);
   } else {
     LOG(ERROR) << __func__ << ": available owner auth not found.";
-    return false;
+    return DictionaryAttackResetStatus::kResetAttemptFailed;
   }
 
   TSS_RESULT result;
@@ -168,7 +168,7 @@ bool TpmInitializerImpl::ResetDictionaryAttackLock() {
   if (TPM_ERROR(result = Tspi_Context_GetTpmObject(connection->GetContext(),
                                                    &tpm_handle))) {
     TPM_LOG(ERROR, result) << "Error getting a TPM handle.";
-    return false;
+    return DictionaryAttackResetStatus::kResetAttemptFailed;
   }
 
   if (TPM_ERROR(result = Tspi_TPM_SetStatus(
@@ -180,11 +180,11 @@ bool TpmInitializerImpl::ResetDictionaryAttackLock() {
       reset_da_lock_auth_failed_ = true;
     }
 
-    return false;
+    return DictionaryAttackResetStatus::kResetAttemptFailed;
   }
 
   LOG(INFO) << __func__ << ": dictionary attack counter has been reset.";
-  return true;
+  return DictionaryAttackResetStatus::kResetAttemptSucceeded;
 }
 
 void TpmInitializerImpl::PruneStoredPasswords() {

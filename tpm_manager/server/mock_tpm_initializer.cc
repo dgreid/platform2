@@ -12,7 +12,9 @@ MockTpmInitializer::MockTpmInitializer() {
   ON_CALL(*this, PreInitializeTpm()).WillByDefault(Return(true));
   ON_CALL(*this, InitializeTpm()).WillByDefault(Return(true));
   ON_CALL(*this, EnsurePersistentOwnerDelegate()).WillByDefault(Return(true));
-  ON_CALL(*this, ResetDictionaryAttackLock()).WillByDefault(Return(true));
+  ON_CALL(*this, ResetDictionaryAttackLock())
+      .WillByDefault(
+          Return(DictionaryAttackResetStatus::kResetAttemptSucceeded));
 }
 MockTpmInitializer::~MockTpmInitializer() {}
 

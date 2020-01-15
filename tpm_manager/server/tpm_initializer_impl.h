@@ -50,7 +50,7 @@ class TpmInitializerImpl : public TpmInitializer {
   bool PreInitializeTpm() override;
   bool EnsurePersistentOwnerDelegate() override;
   void VerifiedBootHelper() override;
-  bool ResetDictionaryAttackLock() override;
+  DictionaryAttackResetStatus ResetDictionaryAttackLock() override;
   void PruneStoredPasswords() override;
 
  private:

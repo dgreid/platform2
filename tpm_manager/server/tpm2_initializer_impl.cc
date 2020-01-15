@@ -172,15 +172,15 @@ void Tpm2InitializerImpl::VerifiedBootHelper() {
   }
 }
 
-bool Tpm2InitializerImpl::ResetDictionaryAttackLock() {
+DictionaryAttackResetStatus Tpm2InitializerImpl::ResetDictionaryAttackLock() {
   LocalData local_data;
   if (!local_data_store_->Read(&local_data)) {
     LOG(ERROR) << __func__ << ": Error reading local data.";
-    return false;
+    return DictionaryAttackResetStatus::kResetAttemptFailed;
   }
   if (!local_data.has_lockout_password()) {
     LOG(ERROR) << __func__ << ": Lockout password not available.";
-    return false;
+    return DictionaryAttackResetStatus::kResetAttemptFailed;
   }
   std::unique_ptr<trunks::HmacSession> session =
       trunks_factory_.GetHmacSession();
@@ -188,7 +188,7 @@ bool Tpm2InitializerImpl::ResetDictionaryAttackLock() {
   if (result != TPM_RC_SUCCESS) {
     LOG(ERROR) << __func__ << ": Error initializing AuthorizationSession: "
                << trunks::GetErrorString(result);
-    return false;
+    return DictionaryAttackResetStatus::kResetAttemptFailed;
   }
   session->SetEntityAuthorizationValue(local_data.lockout_password());
   std::unique_ptr<trunks::TpmUtility> tpm_utility =
@@ -198,9 +198,9 @@ bool Tpm2InitializerImpl::ResetDictionaryAttackLock() {
   if (result != TPM_RC_SUCCESS) {
     LOG(ERROR) << __func__ << ": Error resetting lock: "
                << trunks::GetErrorString(result);
-    return false;
+    return DictionaryAttackResetStatus::kResetAttemptFailed;
   }
-  return true;
+  return DictionaryAttackResetStatus::kResetAttemptSucceeded;
 }
 
 void Tpm2InitializerImpl::PruneStoredPasswords() {

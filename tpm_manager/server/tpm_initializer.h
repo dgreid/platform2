@@ -5,6 +5,8 @@
 #ifndef TPM_MANAGER_SERVER_TPM_INITIALIZER_H_
 #define TPM_MANAGER_SERVER_TPM_INITIALIZER_H_
 
+#include "tpm_manager/server/dictionary_attack_reset_status.h"
+
 namespace tpm_manager {
 
 // TpmInitializer performs initialization tasks on some kind of TPM device.
@@ -40,7 +42,7 @@ class TpmInitializer {
 
   // Reset the state of TPM dictionary attack protection. Returns true on
   // success.
-  virtual bool ResetDictionaryAttackLock() = 0;
+  virtual DictionaryAttackResetStatus ResetDictionaryAttackLock() = 0;
 
   // Removes stale auths and owner dependencies from the on-disk local data, if
   // any. If the local data is already in use, or if we cannot determine that,

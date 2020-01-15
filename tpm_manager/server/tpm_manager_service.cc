@@ -308,7 +308,8 @@ void TpmManagerService::ResetDictionaryAttackLockTask(
     return;
   }
 
-  if (!tpm_initializer_->ResetDictionaryAttackLock()) {
+  if (tpm_initializer_->ResetDictionaryAttackLock() !=
+      DictionaryAttackResetStatus::kResetAttemptSucceeded) {
     LOG(ERROR) << __func__ << ": failed to reset DA lock.";
     reply->set_status(STATUS_DEVICE_ERROR);
     return;
