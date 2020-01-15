@@ -117,6 +117,11 @@ class Manager final : public brillo::DBusDaemon, private TrafficForwarder {
   // Handles DBus requests for setting a VPN intent fwmark on a socket.
   std::unique_ptr<dbus::Response> OnSetVpnIntent(dbus::MethodCall* method_call);
 
+  // Handles DBus requests for connect and routing an existing network
+  // namespace created via minijail or through the rtnl
+  std::unique_ptr<dbus::Response> OnConnectNamespace(
+      dbus::MethodCall* method_call);
+
   // Dispatch |msg| to child processes.
   void SendGuestMessage(const GuestMessage& msg);
 

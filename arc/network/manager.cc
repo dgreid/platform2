@@ -189,6 +189,7 @@ void Manager::InitialSetup() {
       {patchpanel::kPluginVmStartupMethod, &Manager::OnPluginVmStartup},
       {patchpanel::kPluginVmShutdownMethod, &Manager::OnPluginVmShutdown},
       {patchpanel::kSetVpnIntentMethod, &Manager::OnSetVpnIntent},
+      {patchpanel::kConnectNamespaceMethod, &Manager::OnConnectNamespace},
   };
 
   for (const auto& kv : kServiceMethods) {
@@ -664,6 +665,30 @@ std::unique_ptr<dbus::Response> Manager::OnSetVpnIntent(
     success = routing_svc_->SetVpnFwmark(client_socket.get(), request.policy());
 
   response.set_success(success);
+
+  writer.AppendProtoAsArrayOfBytes(response);
+  return dbus_response;
+}
+
+std::unique_ptr<dbus::Response> Manager::OnConnectNamespace(
+    dbus::MethodCall* method_call) {
+  std::unique_ptr<dbus::Response> dbus_response(
+      dbus::Response::FromMethodCall(method_call));
+
+  dbus::MessageReader reader(method_call);
+  dbus::MessageWriter writer(dbus_response.get());
+
+  patchpanel::ConnectNamespaceRequest request;
+  patchpanel::ConnectNamespaceResponse response;
+
+  if (!reader.PopArrayOfBytesAsProto(&request)) {
+    LOG(ERROR) << "Unable to parse request";
+    writer.AppendProtoAsArrayOfBytes(response);
+    return dbus_response;
+  }
+
+  // TODO(hugobenichi, b/147712924): Implement
+
   writer.AppendProtoAsArrayOfBytes(response);
   return dbus_response;
 }
