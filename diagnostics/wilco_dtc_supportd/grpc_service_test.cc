@@ -68,9 +68,12 @@ const DelegateWebRequestHttpMethod kDelegateWebRequestHttpMethodPut =
     DelegateWebRequestHttpMethod::kPut;
 
 constexpr grpc_api::DiagnosticRoutine kFakeAvailableRoutines[] = {
-    grpc_api::ROUTINE_BATTERY, grpc_api::ROUTINE_BATTERY_SYSFS,
-    grpc_api::ROUTINE_SMARTCTL_CHECK, grpc_api::ROUTINE_URANDOM,
-    grpc_api::ROUTINE_FLOATING_POINT_ACCURACY};
+    grpc_api::ROUTINE_BATTERY,
+    grpc_api::ROUTINE_BATTERY_SYSFS,
+    grpc_api::ROUTINE_SMARTCTL_CHECK,
+    grpc_api::ROUTINE_URANDOM,
+    grpc_api::ROUTINE_FLOATING_POINT_ACCURACY,
+    grpc_api::ROUTINE_NVME_WEAR_LEVEL};
 constexpr int kFakeUuid = 13;
 constexpr grpc_api::DiagnosticRoutineStatus kFakeStatus =
     grpc_api::ROUTINE_STATUS_RUNNING;
@@ -191,6 +194,16 @@ MakeRunFloatingPointAccuracyRoutineRequest() {
   request->set_routine(grpc_api::ROUTINE_FLOATING_POINT_ACCURACY);
   request->mutable_floating_point_accuracy_params()->set_length_seconds(
       kLengthSeconds);
+  return request;
+}
+
+std::unique_ptr<grpc_api::RunRoutineRequest>
+MakeRunNvmeWearLevelRoutineRequest() {
+  constexpr int kWearLevelThreshold = 50;
+  auto request = std::make_unique<grpc_api::RunRoutineRequest>();
+  request->set_routine(grpc_api::ROUTINE_NVME_WEAR_LEVEL);
+  request->mutable_nvme_wear_level_params()->set_wear_level_threshold(
+      kWearLevelThreshold);
   return request;
 }
 
@@ -612,11 +625,21 @@ TEST_F(GrpcServiceTest, RunFloatingPointAccuracyRoutine) {
       << "Actual response: {" << response->ShortDebugString() << "}";
 }
 
-// Test that a floating_point_accuracy routine with no parameters will fail.
-TEST_F(GrpcServiceTest, RunFloatingPointAccuracyRoutineNoParameters) {
+// Test that we can request that the nvme_wear_level routine be run.
+TEST_F(GrpcServiceTest, RunNvmeWearLevelRoutine) {
+  std::unique_ptr<grpc_api::RunRoutineResponse> response;
+  ExecuteRunRoutine(MakeRunNvmeWearLevelRoutineRequest(), &response,
+                    true /* is_valid_request */);
+  auto expected_response = MakeRunRoutineResponse();
+  EXPECT_THAT(*response, ProtobufEquals(*expected_response))
+      << "Actual response: {" << response->ShortDebugString() << "}";
+}
+
+// Test that a nvme_wear_level routine with no parameters will fail.
+TEST_F(GrpcServiceTest, RunNvmeWearLevelRoutineNoParameters) {
   std::unique_ptr<grpc_api::RunRoutineResponse> response;
   auto request = std::make_unique<grpc_api::RunRoutineRequest>();
-  request->set_routine(grpc_api::ROUTINE_FLOATING_POINT_ACCURACY);
+  request->set_routine(grpc_api::ROUTINE_NVME_WEAR_LEVEL);
   ExecuteRunRoutine(std::move(request), &response,
                     false /* is_valid_request */);
   EXPECT_EQ(response->uuid(), 0);

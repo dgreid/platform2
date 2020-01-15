@@ -75,6 +75,9 @@ class CrosHealthdMojoService final
   void RunFloatingPointAccuracyRoutine(
       uint32_t length_seconds,
       const RunFloatingPointAccuracyRoutineCallback& callback) override;
+  void RunNvmeWearLevelRoutine(
+      uint32_t wear_level_threshold,
+      const RunNvmeWearLevelRoutineCallback& callback) override;
 
   // chromeos::cros_healthd::mojom::CrosHealthdProbeService overrides:
   void ProbeTelemetryInfo(const std::vector<ProbeCategoryEnum>& categories,

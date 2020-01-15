@@ -44,7 +44,8 @@ const struct {
     {"cpu_cache", mojo_ipc::DiagnosticRoutineEnum::kCpuCache},
     {"cpu_stress", mojo_ipc::DiagnosticRoutineEnum::kCpuStress},
     {"floating_point_accuracy",
-     mojo_ipc::DiagnosticRoutineEnum::kFloatingPointAccuracy}};
+     mojo_ipc::DiagnosticRoutineEnum::kFloatingPointAccuracy},
+    {"nvme_wear_level", mojo_ipc::DiagnosticRoutineEnum::kNvmeWearLevel}};
 
 const struct {
   const char* readable_status;
@@ -274,6 +275,13 @@ bool ActionRunFloatingPointAccuracyRoutine(
   return RunRoutineAndProcessResult(response->id, &adapter);
 }
 
+bool ActionRunNvmeWearLevelRoutine(uint32_t wear_level_threshold) {
+  diagnostics::CrosHealthdMojoAdapter adapter;
+  auto response = adapter.RunNvmeWearLevelRoutine(wear_level_threshold);
+  CHECK(response) << "No RunRoutineResponse received.";
+  return RunRoutineAndProcessResult(response->id, &adapter);
+}
+
 }  // namespace
 
 // 'diag' command-line tool:
@@ -302,6 +310,9 @@ int main(int argc, char** argv) {
   DEFINE_string(
       expected_power_type, "",
       "Optional type of power supply expected for the AC power routine.");
+  DEFINE_int32(wear_level_threshold, 50,
+               "Threshold which routine examines"
+               "wear level of NVMe against.");
   brillo::FlagHelper::Init(argc, argv, "diag - Device diagnostic tool.");
 
   logging::InitLogging(logging::LoggingSettings());
@@ -361,6 +372,10 @@ int main(int argc, char** argv) {
       case mojo_ipc::DiagnosticRoutineEnum::kFloatingPointAccuracy:
         routine_result = ActionRunFloatingPointAccuracyRoutine(
             base::TimeDelta::FromSeconds(FLAGS_length_seconds));
+        break;
+      case mojo_ipc::DiagnosticRoutineEnum::kNvmeWearLevel:
+        routine_result =
+            ActionRunNvmeWearLevelRoutine(FLAGS_wear_level_threshold);
         break;
       default:
         std::cout << "Unsupported routine: " << FLAGS_routine << std::endl;

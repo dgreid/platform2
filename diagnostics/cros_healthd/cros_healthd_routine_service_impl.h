@@ -13,6 +13,7 @@
 #include <base/macros.h>
 #include <base/optional.h>
 
+#include "diagnostics/common/system/debugd_adapter_impl.h"
 #include "diagnostics/cros_healthd/cros_healthd_routine_factory.h"
 #include "diagnostics/cros_healthd/cros_healthd_routine_service.h"
 #include "diagnostics/routines/diag_routine.h"
@@ -23,8 +24,8 @@ namespace diagnostics {
 // Production implementation of the CrosHealthdRoutineService interface.
 class CrosHealthdRoutineServiceImpl final : public CrosHealthdRoutineService {
  public:
-  explicit CrosHealthdRoutineServiceImpl(
-      CrosHealthdRoutineFactory* routine_factory);
+  CrosHealthdRoutineServiceImpl(DebugdAdapter* debugd_adapter,
+                                CrosHealthdRoutineFactory* routine_factory);
   ~CrosHealthdRoutineServiceImpl() override;
 
   // CrosHealthdRoutineService overrides:
@@ -64,6 +65,10 @@ class CrosHealthdRoutineServiceImpl final : public CrosHealthdRoutineService {
       const base::TimeDelta& exec_duration,
       int32_t* id,
       MojomCrosHealthdDiagnosticRoutineStatusEnum* status) override;
+  void RunNvmeWearLevelRoutine(
+      uint32_t wear_level_threshold,
+      int32_t* id,
+      MojomCrosHealthdDiagnosticRoutineStatusEnum* status) override;
   void GetRoutineUpdate(
       int32_t id,
       MojomCrosHealthdDiagnosticRoutineCommandEnum command,
@@ -95,11 +100,14 @@ class CrosHealthdRoutineServiceImpl final : public CrosHealthdRoutineService {
           chromeos::cros_healthd::mojom::DiagnosticRoutineEnum::kCpuCache,
           chromeos::cros_healthd::mojom::DiagnosticRoutineEnum::kCpuStress,
           chromeos::cros_healthd::mojom::DiagnosticRoutineEnum::
-              kFloatingPointAccuracy};
-
+              kFloatingPointAccuracy,
+          chromeos::cros_healthd::mojom::DiagnosticRoutineEnum::kNvmeWearLevel};
+  // Responsible for making async calls to debugd. Unowned pointer that should
+  // outlive this instance.
+  DebugdAdapter* debugd_adapter_ = nullptr;
   // Responsible for making the routines. Unowned pointer that should outlive
   // this instance.
-  CrosHealthdRoutineFactory* routine_factory_;
+  CrosHealthdRoutineFactory* routine_factory_ = nullptr;
 
   DISALLOW_COPY_AND_ASSIGN(CrosHealthdRoutineServiceImpl);
 };

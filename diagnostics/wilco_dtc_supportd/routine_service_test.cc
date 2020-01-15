@@ -84,6 +84,13 @@ grpc_api::RunRoutineRequest MakeFloatingPointAccuracyRoutineRequest() {
   return request;
 }
 
+grpc_api::RunRoutineRequest MakeNvmeWearLevelRoutineRequest() {
+  grpc_api::RunRoutineRequest request;
+  request.set_routine(grpc_api::ROUTINE_NVME_WEAR_LEVEL);
+  request.mutable_nvme_wear_level_params()->set_wear_level_threshold(50);
+  return request;
+}
+
 void SaveGetAvailableRoutinesResponse(
     base::Closure callback,
     grpc_api::GetAvailableRoutinesResponse* response,
@@ -182,7 +189,8 @@ TEST_F(RoutineServiceTest, GetAvailableRoutines) {
        mojo_ipc::DiagnosticRoutineEnum::kUrandom,
        mojo_ipc::DiagnosticRoutineEnum::kCpuCache,
        mojo_ipc::DiagnosticRoutineEnum::kCpuStress,
-       mojo_ipc::DiagnosticRoutineEnum::kFloatingPointAccuracy});
+       mojo_ipc::DiagnosticRoutineEnum::kFloatingPointAccuracy,
+       mojo_ipc::DiagnosticRoutineEnum::kNvmeWearLevel});
 
   const auto reply = ExecuteGetAvailableRoutines();
   EXPECT_THAT(reply.routines(),
@@ -190,7 +198,8 @@ TEST_F(RoutineServiceTest, GetAvailableRoutines) {
                   {grpc_api::ROUTINE_BATTERY, grpc_api::ROUTINE_BATTERY_SYSFS,
                    grpc_api::ROUTINE_SMARTCTL_CHECK, grpc_api::ROUTINE_URANDOM,
                    grpc_api::ROUTINE_CPU_CACHE, grpc_api::ROUTINE_CPU_STRESS,
-                   grpc_api::ROUTINE_FLOATING_POINT_ACCURACY}));
+                   grpc_api::ROUTINE_FLOATING_POINT_ACCURACY,
+                   grpc_api::ROUTINE_NVME_WEAR_LEVEL}));
   EXPECT_EQ(reply.service_status(), grpc_api::ROUTINE_SERVICE_STATUS_OK);
 }
 
@@ -380,7 +389,8 @@ TEST_F(RoutineServiceTest, RecoverFromNoServiceRequest) {
        mojo_ipc::DiagnosticRoutineEnum::kUrandom,
        mojo_ipc::DiagnosticRoutineEnum::kCpuCache,
        mojo_ipc::DiagnosticRoutineEnum::kCpuStress,
-       mojo_ipc::DiagnosticRoutineEnum::kFloatingPointAccuracy});
+       mojo_ipc::DiagnosticRoutineEnum::kFloatingPointAccuracy,
+       mojo_ipc::DiagnosticRoutineEnum::kNvmeWearLevel});
 
   const auto reply = ExecuteGetAvailableRoutines();
   EXPECT_THAT(reply.routines(),
@@ -388,7 +398,8 @@ TEST_F(RoutineServiceTest, RecoverFromNoServiceRequest) {
                   {grpc_api::ROUTINE_BATTERY, grpc_api::ROUTINE_BATTERY_SYSFS,
                    grpc_api::ROUTINE_SMARTCTL_CHECK, grpc_api::ROUTINE_URANDOM,
                    grpc_api::ROUTINE_CPU_CACHE, grpc_api::ROUTINE_CPU_STRESS,
-                   grpc_api::ROUTINE_FLOATING_POINT_ACCURACY}));
+                   grpc_api::ROUTINE_FLOATING_POINT_ACCURACY,
+                   grpc_api::ROUTINE_NVME_WEAR_LEVEL}));
   EXPECT_EQ(reply.service_status(), grpc_api::ROUTINE_SERVICE_STATUS_OK);
 }
 
@@ -691,7 +702,8 @@ INSTANTIATE_TEST_CASE_P(
                     MakeSmartctlCheckRoutineRequest(),
                     MakeCpuCacheRoutineRequest(),
                     MakeCpuStressRoutineRequest(),
-                    MakeFloatingPointAccuracyRoutineRequest()));
+                    MakeFloatingPointAccuracyRoutineRequest(),
+                    MakeNvmeWearLevelRoutineRequest()));
 
 }  // namespace
 

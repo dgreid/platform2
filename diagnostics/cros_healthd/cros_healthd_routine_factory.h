@@ -11,6 +11,7 @@
 
 #include <base/optional.h>
 
+#include "diagnostics/common/system/debugd_adapter_impl.h"
 #include "diagnostics/routines/diag_routine.h"
 #include "mojo/cros_healthd.mojom.h"
 
@@ -53,6 +54,10 @@ class CrosHealthdRoutineFactory {
   // diagnostics/routines/floating_point for details on the routine itself.
   virtual std::unique_ptr<DiagnosticRoutine> MakeFloatingPointAccuracyRoutine(
       const base::TimeDelta& exec_duration) = 0;
+  // Constructs a new instance of the nvme_wear_level routine. See
+  // diagnostics/routines/nvme_wear_level for details on the routine itself.
+  virtual std::unique_ptr<DiagnosticRoutine> MakeNvmeWearLevelRoutine(
+      DebugdAdapter* debugd_adapter, uint32_t wear_level_threshold) = 0;
 };
 
 }  // namespace diagnostics

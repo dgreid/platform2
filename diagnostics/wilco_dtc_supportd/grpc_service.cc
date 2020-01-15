@@ -541,6 +541,17 @@ void GrpcService::RunRoutine(
         return;
       }
       break;
+    case grpc_api::ROUTINE_NVME_WEAR_LEVEL:
+      if (!request->has_nvme_wear_level_params()) {
+        LOG(ERROR) << "RunRoutineRequest with routine type "
+                      "ROUTINE_NVME_WEAR_LEVEL has no nvme_wear_level "
+                      "parameters.";
+        ForwardRunRoutineResponse(callback, 0 /* uuid */,
+                                  grpc_api::ROUTINE_STATUS_INVALID_FIELD,
+                                  grpc_api::ROUTINE_SERVICE_STATUS_OK);
+        return;
+      }
+      break;
     default:
       LOG(ERROR) << "RunRoutineRequest routine type invalid or unset.";
       ForwardRunRoutineResponse(callback, 0 /* uuid */,

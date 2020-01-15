@@ -70,6 +70,10 @@ class CrosHealthdRoutineService {
       const base::TimeDelta& exec_duration,
       int32_t* id,
       MojomCrosHealthdDiagnosticRoutineStatusEnum* status) = 0;
+  virtual void RunNvmeWearLevelRoutine(
+      uint32_t wear_level_threshold,
+      int32_t* id,
+      MojomCrosHealthdDiagnosticRoutineStatusEnum* status) = 0;
   virtual void GetRoutineUpdate(
       int32_t id,
       MojomCrosHealthdDiagnosticRoutineCommandEnum command,

@@ -64,6 +64,9 @@ class FakeDiagnosticsService final
   void RunFloatingPointAccuracyRoutine(
       uint32_t length_seconds,
       const RunFloatingPointAccuracyRoutineCallback& callback) override;
+  void RunNvmeWearLevelRoutine(
+      uint32_t wear_level_threshold,
+      const RunNvmeWearLevelRoutineCallback& callback) override;
 
   // Overrides the default behavior of GetCrosHealthdDiagnosticsService to test
   // situations where mojo methods were called prior to wilco_dtc_supportd's

@@ -132,6 +132,15 @@ void CrosHealthdMojoService::RunFloatingPointAccuracyRoutine(
   callback.Run(response.Clone());
 }
 
+void CrosHealthdMojoService::RunNvmeWearLevelRoutine(
+    uint32_t wear_level_threshold,
+    const RunNvmeWearLevelRoutineCallback& callback) {
+  RunRoutineResponse response;
+  routine_service_->RunNvmeWearLevelRoutine(wear_level_threshold, &response.id,
+                                            &response.status);
+  callback.Run(response.Clone());
+}
+
 void CrosHealthdMojoService::ProbeTelemetryInfo(
     const std::vector<ProbeCategoryEnum>& categories,
     const ProbeTelemetryInfoCallback& callback) {

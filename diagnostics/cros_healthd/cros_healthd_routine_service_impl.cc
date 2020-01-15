@@ -28,8 +28,9 @@ void SetErrorRoutineUpdate(const std::string& status_message,
 }  // namespace
 
 CrosHealthdRoutineServiceImpl::CrosHealthdRoutineServiceImpl(
-    CrosHealthdRoutineFactory* routine_factory)
-    : routine_factory_(routine_factory) {
+    DebugdAdapter* debugd_adapter, CrosHealthdRoutineFactory* routine_factory)
+    : debugd_adapter_(debugd_adapter), routine_factory_(routine_factory) {
+  DCHECK(debugd_adapter_);
   DCHECK(routine_factory_);
 }
 
@@ -100,6 +101,15 @@ void CrosHealthdRoutineServiceImpl::RunFloatingPointAccuracyRoutine(
     int32_t* id,
     mojo_ipc::DiagnosticRoutineStatusEnum* status) {
   RunRoutine(routine_factory_->MakeFloatingPointAccuracyRoutine(exec_duration),
+             id, status);
+}
+
+void CrosHealthdRoutineServiceImpl::RunNvmeWearLevelRoutine(
+    uint32_t wear_level_threshold,
+    int32_t* id,
+    mojo_ipc::DiagnosticRoutineStatusEnum* status) {
+  RunRoutine(routine_factory_->MakeNvmeWearLevelRoutine(debugd_adapter_,
+                                                        wear_level_threshold),
              id, status);
 }
 

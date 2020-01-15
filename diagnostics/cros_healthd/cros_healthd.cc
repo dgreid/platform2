@@ -34,6 +34,8 @@ CrosHealthd::CrosHealthd()
   CHECK(dbus_bus_) << "Failed to connect to the D-Bus system bus.";
 
   debugd_proxy_ = std::make_unique<org::chromium::debugdProxy>(dbus_bus_);
+  debugd_adapter_ = std::make_unique<DebugdAdapterImpl>(
+      std::make_unique<org::chromium::debugdProxy>(dbus_bus_));
 
   power_manager_proxy_ = dbus_bus_->GetObjectProxy(
       power_manager::kPowerManagerServiceName,
@@ -50,8 +52,8 @@ CrosHealthd::CrosHealthd()
 
   cached_vpd_fetcher_ = std::make_unique<CachedVpdFetcher>(cros_config_.get());
 
-  routine_service_ =
-      std::make_unique<CrosHealthdRoutineServiceImpl>(&routine_factory_impl_);
+  routine_service_ = std::make_unique<CrosHealthdRoutineServiceImpl>(
+      debugd_adapter_.get(), &routine_factory_impl_);
 
   mojo_service_ = std::make_unique<CrosHealthdMojoService>(
       backlight_fetcher_.get(), battery_fetcher_.get(),

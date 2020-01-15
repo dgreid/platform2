@@ -30,6 +30,7 @@
 
 using testing::_;
 using testing::Invoke;
+using testing::NotNull;
 using testing::Return;
 using testing::StrictMock;
 using testing::WithArgs;
@@ -85,6 +86,10 @@ class MockCrosHealthdRoutineService : public CrosHealthdRoutineService {
                     mojo_ipc::DiagnosticRoutineStatusEnum* status));
   MOCK_METHOD3(RunFloatingPointAccuracyRoutine,
                void(const base::TimeDelta& exec_duration,
+                    int32_t* id,
+                    mojo_ipc::DiagnosticRoutineStatusEnum* status));
+  MOCK_METHOD3(RunNvmeWearLevelRoutine,
+               void(uint32_t wear_level_threshold,
                     int32_t* id,
                     mojo_ipc::DiagnosticRoutineStatusEnum* status));
   MOCK_METHOD4(GetRoutineUpdate,
@@ -143,8 +148,8 @@ TEST_F(CrosHealthdMojoServiceTest, RequestBatteryCapacityRoutine) {
   constexpr uint32_t low_mah = 10;
   constexpr uint32_t high_mah = 100;
 
-  EXPECT_CALL(*routine_service(),
-              RunBatteryCapacityRoutine(low_mah, high_mah, _, _))
+  EXPECT_CALL(*routine_service(), RunBatteryCapacityRoutine(
+                                      low_mah, high_mah, NotNull(), NotNull()))
       .WillOnce(WithArgs<2, 3>(Invoke(
           [](int32_t* id, mojo_ipc::DiagnosticRoutineStatusEnum* status) {
             *id = kExpectedId;
@@ -167,9 +172,10 @@ TEST_F(CrosHealthdMojoServiceTest, RequestBatteryHealthRoutine) {
   constexpr uint32_t maximum_cycle_count = 44;
   constexpr uint32_t percent_battery_wear_allowed = 13;
 
-  EXPECT_CALL(*routine_service(),
-              RunBatteryHealthRoutine(maximum_cycle_count,
-                                      percent_battery_wear_allowed, _, _))
+  EXPECT_CALL(
+      *routine_service(),
+      RunBatteryHealthRoutine(maximum_cycle_count, percent_battery_wear_allowed,
+                              NotNull(), NotNull()))
       .WillOnce(WithArgs<2, 3>(Invoke(
           [](int32_t* id, mojo_ipc::DiagnosticRoutineStatusEnum* status) {
             *id = kExpectedId;
@@ -191,7 +197,8 @@ TEST_F(CrosHealthdMojoServiceTest, RequestBatteryHealthRoutine) {
 TEST_F(CrosHealthdMojoServiceTest, RequestUrandomRoutine) {
   constexpr uint32_t length_seconds = 22;
 
-  EXPECT_CALL(*routine_service(), RunUrandomRoutine(length_seconds, _, _))
+  EXPECT_CALL(*routine_service(),
+              RunUrandomRoutine(length_seconds, NotNull(), NotNull()))
       .WillOnce(WithArgs<1, 2>(Invoke(
           [](int32_t* id, mojo_ipc::DiagnosticRoutineStatusEnum* status) {
             *id = kExpectedId;
@@ -211,7 +218,7 @@ TEST_F(CrosHealthdMojoServiceTest, RequestUrandomRoutine) {
 
 // Test that we can request the smartctl-check routine.
 TEST_F(CrosHealthdMojoServiceTest, RequestSmartctlCheckRoutine) {
-  EXPECT_CALL(*routine_service(), RunSmartctlCheckRoutine(_, _))
+  EXPECT_CALL(*routine_service(), RunSmartctlCheckRoutine(NotNull(), NotNull()))
       .WillOnce(WithArgs<0, 1>(Invoke(
           [](int32_t* id, mojo_ipc::DiagnosticRoutineStatusEnum* status) {
             *id = kExpectedId;
@@ -233,7 +240,7 @@ TEST_F(CrosHealthdMojoServiceTest, RequestAcPowerRoutine) {
       mojo_ipc::AcPowerStatusEnum::kConnected;
   const base::Optional<std::string> kPowerType{"USB_PD"};
   EXPECT_CALL(*routine_service(),
-              RunAcPowerRoutine(kConnected, kPowerType, _, _))
+              RunAcPowerRoutine(kConnected, kPowerType, NotNull(), NotNull()))
       .WillOnce(WithArgs<2, 3>(Invoke(
           [](int32_t* id, mojo_ipc::DiagnosticRoutineStatusEnum* status) {
             *id = kExpectedId;
@@ -255,7 +262,8 @@ TEST_F(CrosHealthdMojoServiceTest, RequestAcPowerRoutine) {
 TEST_F(CrosHealthdMojoServiceTest, RequestCpuCacheRoutine) {
   constexpr auto exec_duration = base::TimeDelta().FromSeconds(30);
 
-  EXPECT_CALL(*routine_service(), RunCpuCacheRoutine(exec_duration, _, _))
+  EXPECT_CALL(*routine_service(),
+              RunCpuCacheRoutine(exec_duration, NotNull(), NotNull()))
       .WillOnce(WithArgs<1, 2>(Invoke(
           [](int32_t* id, mojo_ipc::DiagnosticRoutineStatusEnum* status) {
             *id = kExpectedId;
@@ -277,7 +285,8 @@ TEST_F(CrosHealthdMojoServiceTest, RequestCpuCacheRoutine) {
 TEST_F(CrosHealthdMojoServiceTest, RequestCpuStressRoutine) {
   constexpr auto exec_duration = base::TimeDelta().FromMinutes(5);
 
-  EXPECT_CALL(*routine_service(), RunCpuStressRoutine(exec_duration, _, _))
+  EXPECT_CALL(*routine_service(),
+              RunCpuStressRoutine(exec_duration, NotNull(), NotNull()))
       .WillOnce(WithArgs<1, 2>(Invoke(
           [](int32_t* id, mojo_ipc::DiagnosticRoutineStatusEnum* status) {
             *id = kExpectedId;
@@ -299,8 +308,8 @@ TEST_F(CrosHealthdMojoServiceTest, RequestCpuStressRoutine) {
 TEST_F(CrosHealthdMojoServiceTest, RequestFloatingPointAccuracyRoutine) {
   constexpr base::TimeDelta exec_duration = base::TimeDelta::FromSeconds(22);
 
-  EXPECT_CALL(*routine_service(),
-              RunFloatingPointAccuracyRoutine(exec_duration, _, _))
+  EXPECT_CALL(*routine_service(), RunFloatingPointAccuracyRoutine(
+                                      exec_duration, NotNull(), NotNull()))
       .WillOnce(WithArgs<1, 2>(Invoke(
           [](int32_t* id, mojo_ipc::DiagnosticRoutineStatusEnum* status) {
             *id = kExpectedId;
@@ -312,6 +321,28 @@ TEST_F(CrosHealthdMojoServiceTest, RequestFloatingPointAccuracyRoutine) {
       exec_duration.InSeconds(),
       base::Bind(&SaveMojoResponse<mojo_ipc::RunRoutineResponsePtr>,
                  &response));
+
+  ASSERT_TRUE(!response.is_null());
+  EXPECT_EQ(response->id, kExpectedId);
+  EXPECT_EQ(response->status, kExpectedStatus);
+}
+
+// Test that we can request the NvmeWearLevel routine.
+TEST_F(CrosHealthdMojoServiceTest, RequestNvmeWearLevelRoutine) {
+  constexpr uint32_t kThreshold = 50;
+
+  EXPECT_CALL(*routine_service(),
+              RunNvmeWearLevelRoutine(kThreshold, NotNull(), NotNull()))
+      .WillOnce(WithArgs<1, 2>(Invoke(
+          [](int32_t* id, mojo_ipc::DiagnosticRoutineStatusEnum* status) {
+            *id = kExpectedId;
+            *status = kExpectedStatus;
+          })));
+
+  mojo_ipc::RunRoutineResponsePtr response;
+  service()->RunNvmeWearLevelRoutine(
+      kThreshold, base::Bind(&SaveMojoResponse<mojo_ipc::RunRoutineResponsePtr>,
+                             &response));
 
   ASSERT_TRUE(!response.is_null());
   EXPECT_EQ(response->id, kExpectedId);
@@ -347,6 +378,7 @@ TEST_F(CrosHealthdMojoServiceTest, RequestAvailableRoutines) {
       mojo_ipc::DiagnosticRoutineEnum::kUrandom,
       mojo_ipc::DiagnosticRoutineEnum::kSmartctlCheck,
       mojo_ipc::DiagnosticRoutineEnum::kFloatingPointAccuracy,
+      mojo_ipc::DiagnosticRoutineEnum::kNvmeWearLevel,
   };
 
   EXPECT_CALL(*routine_service(), GetAvailableRoutines())

@@ -63,6 +63,8 @@ class FakeCrosHealthdRoutineFactory final : public CrosHealthdRoutineFactory {
       const base::TimeDelta& exec_duration) override;
   std::unique_ptr<DiagnosticRoutine> MakeFloatingPointAccuracyRoutine(
       const base::TimeDelta& exec_duration) override;
+  std::unique_ptr<DiagnosticRoutine> MakeNvmeWearLevelRoutine(
+      DebugdAdapter* debugd_adapter, uint32_t wear_level_threshold) override;
 
  private:
   // The routine that will be returned by any calls to MakeSomeRoutine.

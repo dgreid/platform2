@@ -21,6 +21,7 @@
 #include <mojo/public/cpp/bindings/binding_set.h>
 
 #include "debugd/dbus-proxies.h"
+#include "diagnostics/common/system/debugd_adapter_impl.h"
 #include "diagnostics/cros_healthd/cros_healthd_mojo_service.h"
 #include "diagnostics/cros_healthd/cros_healthd_routine_factory_impl.h"
 #include "diagnostics/cros_healthd/cros_healthd_routine_service.h"
@@ -79,6 +80,10 @@ class CrosHealthd final
   // calls out to debugd when it needs to collect smart battery metrics like
   // manufacture_date_smart and temperature_smart.
   std::unique_ptr<org::chromium::debugdProxy> debugd_proxy_;
+  // Use the |debugd_adapter_| to make calls to debugd. Example:
+  // cros_healthd calls out to debugd with async callbacks when it
+  // needs to trigger nvme self-test or collect data like progress info.
+  std::unique_ptr<DebugdAdapterImpl> debugd_adapter_;
   // Use the |power_manager_proxy_| (owned by |dbus_bus_|) to make calls to
   // power_manager. Example: cros_healthd calls out to power_manager when it
   // needs to collect battery metrics like cycle count.

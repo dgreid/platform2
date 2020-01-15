@@ -301,6 +301,7 @@ enum DiagnosticRoutine {
   ROUTINE_CPU_CACHE = 5;
   ROUTINE_CPU_STRESS = 6;
   ROUTINE_FLOATING_POINT_ACCURACY = 7;
+  ROUTINE_NVME_WEAR_LEVEL = 8;
 }
 
 // Enumeration of each of the possible statuses for a diagnostics routine.
@@ -353,6 +354,7 @@ message RunRoutineRequest {
     SmartctlCheckRoutineParameters smartctl_check_params = 5;
     CpuRoutineParameters cpu_params = 6;
     FloatingPointAccuracyRoutineParameters floating_point_accuracy_params = 7;
+    NvmeWearLevelRoutineParameters nvme_wear_level_params = 8;
   }
 }
 
@@ -397,6 +399,12 @@ message CpuRoutineParameters {
 message FloatingPointAccuracyRoutineParameters {
   // Length of time, in seconds, to run the floating_point_accuracy routine for.
   uint32 length_seconds = 1;
+}
+
+// Parameters for wearlevel_check diagnostic routine.
+message NvmeWearLevelRoutineParameters {
+  // Threshold to determine if passed.
+  uint32 wear_level_threshold = 1;
 }
 
 // Return value of the RunRoutine RPC.

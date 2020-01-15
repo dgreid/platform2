@@ -10,6 +10,7 @@
 #include "diagnostics/routines/cpu_cache/cpu_cache.h"
 #include "diagnostics/routines/cpu_stress/cpu_stress.h"
 #include "diagnostics/routines/floating_point/floating_point_accuracy.h"
+#include "diagnostics/routines/nvme_wear_level/nvme_wear_level.h"
 #include "diagnostics/routines/smartctl_check/smartctl_check.h"
 #include "diagnostics/routines/urandom/urandom.h"
 
@@ -64,6 +65,14 @@ std::unique_ptr<DiagnosticRoutine>
 CrosHealthdRoutineFactoryImpl::MakeFloatingPointAccuracyRoutine(
     const base::TimeDelta& exec_duration) {
   return CreateFloatingPointAccuracyRoutine(exec_duration);
+}
+
+std::unique_ptr<DiagnosticRoutine>
+CrosHealthdRoutineFactoryImpl::MakeNvmeWearLevelRoutine(
+    DebugdAdapter* debugd_adapter, uint32_t wear_level_threshold) {
+  DCHECK(debugd_adapter);
+  return std::make_unique<NvmeWearLevelRoutine>(debugd_adapter,
+                                                wear_level_threshold);
 }
 
 }  // namespace diagnostics

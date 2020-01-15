@@ -95,6 +95,12 @@ void FakeDiagnosticsService::RunFloatingPointAccuracyRoutine(
   callback.Run(run_routine_response_.Clone());
 }
 
+void FakeDiagnosticsService::RunNvmeWearLevelRoutine(
+    uint32_t wear_level_threshold,
+    const RunNvmeWearLevelRoutineCallback& callback) {
+  callback.Run(run_routine_response_.Clone());
+}
+
 void FakeDiagnosticsService::SetMojoServiceIsAvailable(bool is_available) {
   is_available_ = is_available;
 }

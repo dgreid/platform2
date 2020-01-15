@@ -60,6 +60,10 @@ class CrosHealthdMojoAdapter final {
   chromeos::cros_healthd::mojom::RunRoutineResponsePtr RunCpuStressRoutine(
       const base::TimeDelta& exec_duration);
 
+  // Runs the NvmeWearLevel routine.
+  chromeos::cros_healthd::mojom::RunRoutineResponsePtr RunNvmeWearLevelRoutine(
+      uint32_t wear_level_threshold);
+
   // Returns which routines are available on the platform.
   std::vector<chromeos::cros_healthd::mojom::DiagnosticRoutineEnum>
   GetAvailableRoutines();

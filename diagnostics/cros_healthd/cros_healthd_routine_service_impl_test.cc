@@ -7,14 +7,18 @@
 #include <utility>
 #include <vector>
 
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 #include "diagnostics/common/mojo_test_utils.h"
 #include "diagnostics/common/mojo_utils.h"
+#include "diagnostics/common/system/mock_debugd_adapter.h"
 #include "diagnostics/cros_healthd/cros_healthd_routine_service_impl.h"
 #include "diagnostics/cros_healthd/fake_cros_healthd_routine_factory.h"
 #include "diagnostics/routines/routine_test_utils.h"
 #include "mojo/cros_healthd_diagnostics.mojom.h"
+
+using testing::StrictMock;
 
 namespace diagnostics {
 namespace mojo_ipc = ::chromeos::cros_healthd::mojom;
@@ -55,7 +59,9 @@ class CrosHealthdRoutineServiceImplTest : public testing::Test {
 
  private:
   FakeCrosHealthdRoutineFactory routine_factory_;
-  CrosHealthdRoutineServiceImpl service_{&routine_factory_};
+  StrictMock<MockDebugdAdapter> mock_debugd_adapter_;
+  CrosHealthdRoutineServiceImpl service_{&mock_debugd_adapter_,
+                                         &routine_factory_};
 };
 
 // Test that GetAvailableRoutines returns the expected list of routines.
@@ -68,7 +74,8 @@ TEST_F(CrosHealthdRoutineServiceImplTest, GetAvailableRoutines) {
       mojo_ipc::DiagnosticRoutineEnum::kAcPower,
       mojo_ipc::DiagnosticRoutineEnum::kCpuCache,
       mojo_ipc::DiagnosticRoutineEnum::kCpuStress,
-      mojo_ipc::DiagnosticRoutineEnum::kFloatingPointAccuracy};
+      mojo_ipc::DiagnosticRoutineEnum::kFloatingPointAccuracy,
+      mojo_ipc::DiagnosticRoutineEnum::kNvmeWearLevel};
   auto reply = service()->GetAvailableRoutines();
   EXPECT_EQ(reply, kAvailableRoutines);
 }
@@ -196,6 +203,20 @@ TEST_F(CrosHealthdRoutineServiceImplTest, RunFloatingPointAccuracyRoutine) {
   service()->RunFloatingPointAccuracyRoutine(
       /*exec_duration=*/base::TimeDelta::FromSeconds(120), &response.id,
       &response.status);
+  EXPECT_EQ(response.id, 1);
+  EXPECT_EQ(response.status, kExpectedStatus);
+}
+
+// Test that the NVMe wear level routine can be run.
+TEST_F(CrosHealthdRoutineServiceImplTest, RunNvmeWearLevelRoutine) {
+  constexpr mojo_ipc::DiagnosticRoutineStatusEnum kExpectedStatus =
+      mojo_ipc::DiagnosticRoutineStatusEnum::kRunning;
+  routine_factory()->SetNonInteractiveStatus(
+      kExpectedStatus, /*status_message=*/"", /*progress_percent=*/50,
+      /*output=*/"");
+  mojo_ipc::RunRoutineResponse response;
+  service()->RunNvmeWearLevelRoutine(
+      /*wear_level_threshold=*/30, &response.id, &response.status);
   EXPECT_EQ(response.id, 1);
   EXPECT_EQ(response.status, kExpectedStatus);
 }

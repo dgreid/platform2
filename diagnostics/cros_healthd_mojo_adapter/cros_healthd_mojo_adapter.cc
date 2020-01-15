@@ -247,6 +247,23 @@ CrosHealthdMojoAdapter::RunFloatingPointAccuracyRoutine(
   return response;
 }
 
+chromeos::cros_healthd::mojom::RunRoutineResponsePtr
+CrosHealthdMojoAdapter::RunNvmeWearLevelRoutine(uint32_t wear_level_threshold) {
+  if (!cros_healthd_service_factory_.is_bound())
+    Connect();
+
+  chromeos::cros_healthd::mojom::RunRoutineResponsePtr response;
+  base::RunLoop run_loop;
+  cros_healthd_diagnostics_service_->RunNvmeWearLevelRoutine(
+      wear_level_threshold,
+      base::Bind(&OnMojoResponseReceived<
+                     chromeos::cros_healthd::mojom::RunRoutineResponsePtr>,
+                 &response, run_loop.QuitClosure()));
+  run_loop.Run();
+
+  return response;
+}
+
 std::vector<chromeos::cros_healthd::mojom::DiagnosticRoutineEnum>
 CrosHealthdMojoAdapter::GetAvailableRoutines() {
   if (!cros_healthd_service_factory_.is_bound())
