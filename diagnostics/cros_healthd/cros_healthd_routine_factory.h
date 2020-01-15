@@ -58,6 +58,12 @@ class CrosHealthdRoutineFactory {
   // diagnostics/routines/nvme_wear_level for details on the routine itself.
   virtual std::unique_ptr<DiagnosticRoutine> MakeNvmeWearLevelRoutine(
       DebugdAdapter* debugd_adapter, uint32_t wear_level_threshold) = 0;
+  // Constructs a new instance of the NvmeSelfTest routine. See
+  // diagnostics/routines/nvme_self_test for details on the routine itself.
+  virtual std::unique_ptr<DiagnosticRoutine> MakeNvmeSelfTestRoutine(
+      DebugdAdapter* debugd_adapter,
+      chromeos::cros_healthd::mojom::NvmeSelfTestTypeEnum
+          nvme_self_test_type) = 0;
 };
 
 }  // namespace diagnostics

@@ -10,6 +10,7 @@
 #include "diagnostics/routines/cpu_cache/cpu_cache.h"
 #include "diagnostics/routines/cpu_stress/cpu_stress.h"
 #include "diagnostics/routines/floating_point/floating_point_accuracy.h"
+#include "diagnostics/routines/nvme_self_test/nvme_self_test.h"
 #include "diagnostics/routines/nvme_wear_level/nvme_wear_level.h"
 #include "diagnostics/routines/smartctl_check/smartctl_check.h"
 #include "diagnostics/routines/urandom/urandom.h"
@@ -73,6 +74,21 @@ CrosHealthdRoutineFactoryImpl::MakeNvmeWearLevelRoutine(
   DCHECK(debugd_adapter);
   return std::make_unique<NvmeWearLevelRoutine>(debugd_adapter,
                                                 wear_level_threshold);
+}
+
+std::unique_ptr<DiagnosticRoutine>
+CrosHealthdRoutineFactoryImpl::MakeNvmeSelfTestRoutine(
+    DebugdAdapter* debugd_adapter,
+    chromeos::cros_healthd::mojom::NvmeSelfTestTypeEnum nvme_self_test_type) {
+  DCHECK(debugd_adapter);
+
+  NvmeSelfTestRoutine::SelfTestType type =
+      nvme_self_test_type == chromeos::cros_healthd::mojom::
+                                 NvmeSelfTestTypeEnum::kShortSelfTest
+          ? NvmeSelfTestRoutine::kRunShortSelfTest
+          : NvmeSelfTestRoutine::kRunLongSelfTest;
+
+  return std::make_unique<NvmeSelfTestRoutine>(debugd_adapter, type);
 }
 
 }  // namespace diagnostics

@@ -117,6 +117,12 @@ bool GetGrpcRoutineEnumFromMojoRoutineEnum(
     case chromeos::cros_healthd::mojom::DiagnosticRoutineEnum::kNvmeWearLevel:
       grpc_enum_out->push_back(grpc_api::ROUTINE_NVME_WEAR_LEVEL);
       return true;
+    // There is only one mojo enum for self_test(short & extended share same
+    // class), but there're 2 gRPC enum for self_test according to requirement.
+    case chromeos::cros_healthd::mojom::DiagnosticRoutineEnum::kNvmeSelfTest:
+      grpc_enum_out->push_back(grpc_api::ROUTINE_NVME_SHORT_SELF_TEST);
+      grpc_enum_out->push_back(grpc_api::ROUTINE_NVME_LONG_SELF_TEST);
+      return true;
     default:
       LOG(ERROR) << "Unknown mojo routine: " << static_cast<int>(mojo_enum);
       return false;
@@ -310,6 +316,22 @@ void RoutineService::RunRoutine(const grpc_api::RunRoutineRequest& request,
                 grpc_api::RunRoutineRequest::kNvmeWearLevelParams);
       service_ptr_->RunNvmeWearLevelRoutine(
           request.nvme_wear_level_params().wear_level_threshold(),
+          base::Bind(&RoutineService::ForwardRunRoutineResponse,
+                     weak_ptr_factory_.GetWeakPtr(), callback_key));
+      break;
+    case grpc_api::ROUTINE_NVME_SHORT_SELF_TEST:
+      DCHECK_EQ(request.parameters_case(),
+                grpc_api::RunRoutineRequest::kNvmeShortSelfTestParams);
+      service_ptr_->RunNvmeSelfTestRoutine(
+          chromeos::cros_healthd::mojom::NvmeSelfTestTypeEnum::kShortSelfTest,
+          base::Bind(&RoutineService::ForwardRunRoutineResponse,
+                     weak_ptr_factory_.GetWeakPtr(), callback_key));
+      break;
+    case grpc_api::ROUTINE_NVME_LONG_SELF_TEST:
+      DCHECK_EQ(request.parameters_case(),
+                grpc_api::RunRoutineRequest::kNvmeLongSelfTestParams);
+      service_ptr_->RunNvmeSelfTestRoutine(
+          chromeos::cros_healthd::mojom::NvmeSelfTestTypeEnum::kLongSelfTest,
           base::Bind(&RoutineService::ForwardRunRoutineResponse,
                      weak_ptr_factory_.GetWeakPtr(), callback_key));
       break;

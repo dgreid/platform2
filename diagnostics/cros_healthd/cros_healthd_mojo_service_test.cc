@@ -92,6 +92,10 @@ class MockCrosHealthdRoutineService : public CrosHealthdRoutineService {
                void(uint32_t wear_level_threshold,
                     int32_t* id,
                     mojo_ipc::DiagnosticRoutineStatusEnum* status));
+  MOCK_METHOD3(RunNvmeSelfTestRoutine,
+               void(mojo_ipc::NvmeSelfTestTypeEnum nvme_self_test_type,
+                    int32_t* id,
+                    mojo_ipc::DiagnosticRoutineStatusEnum* status));
   MOCK_METHOD4(GetRoutineUpdate,
                void(int32_t uuid,
                     mojo_ipc::DiagnosticRoutineCommandEnum command,
@@ -349,6 +353,29 @@ TEST_F(CrosHealthdMojoServiceTest, RequestNvmeWearLevelRoutine) {
   EXPECT_EQ(response->status, kExpectedStatus);
 }
 
+// Test that we can request the NvmeSelfTest routine.
+TEST_F(CrosHealthdMojoServiceTest, RequestNvmeSelfTestRoutine) {
+  constexpr mojo_ipc::NvmeSelfTestTypeEnum kNvmeSelfTestType =
+      mojo_ipc::NvmeSelfTestTypeEnum::kShortSelfTest;
+  EXPECT_CALL(*routine_service(),
+              RunNvmeSelfTestRoutine(kNvmeSelfTestType, NotNull(), NotNull()))
+      .WillOnce(WithArgs<1, 2>(Invoke(
+          [](int32_t* id, mojo_ipc::DiagnosticRoutineStatusEnum* status) {
+            *id = kExpectedId;
+            *status = kExpectedStatus;
+          })));
+
+  mojo_ipc::RunRoutineResponsePtr response;
+  service()->RunNvmeSelfTestRoutine(
+      kNvmeSelfTestType,
+      base::Bind(&SaveMojoResponse<mojo_ipc::RunRoutineResponsePtr>,
+                 &response));
+
+  ASSERT_TRUE(!response.is_null());
+  EXPECT_EQ(response->id, kExpectedId);
+  EXPECT_EQ(response->status, kExpectedStatus);
+}
+
 // Test an update request.
 TEST_F(CrosHealthdMojoServiceTest, RequestRoutineUpdate) {
   constexpr int kId = 3;
@@ -379,6 +406,7 @@ TEST_F(CrosHealthdMojoServiceTest, RequestAvailableRoutines) {
       mojo_ipc::DiagnosticRoutineEnum::kSmartctlCheck,
       mojo_ipc::DiagnosticRoutineEnum::kFloatingPointAccuracy,
       mojo_ipc::DiagnosticRoutineEnum::kNvmeWearLevel,
+      mojo_ipc::DiagnosticRoutineEnum::kNvmeSelfTest,
   };
 
   EXPECT_CALL(*routine_service(), GetAvailableRoutines())

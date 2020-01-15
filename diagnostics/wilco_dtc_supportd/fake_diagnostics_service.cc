@@ -101,6 +101,12 @@ void FakeDiagnosticsService::RunNvmeWearLevelRoutine(
   callback.Run(run_routine_response_.Clone());
 }
 
+void FakeDiagnosticsService::RunNvmeSelfTestRoutine(
+    chromeos::cros_healthd::mojom::NvmeSelfTestTypeEnum nvme_self_test_type,
+    const RunNvmeSelfTestRoutineCallback& callback) {
+  callback.Run(run_routine_response_.Clone());
+}
+
 void FakeDiagnosticsService::SetMojoServiceIsAvailable(bool is_available) {
   is_available_ = is_available;
 }

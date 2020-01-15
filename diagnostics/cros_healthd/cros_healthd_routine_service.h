@@ -26,6 +26,8 @@ class CrosHealthdRoutineService {
       chromeos::cros_healthd::mojom::DiagnosticRoutineStatusEnum;
   using MojomCrosHealthdAcPowerStatusEnum =
       chromeos::cros_healthd::mojom::AcPowerStatusEnum;
+  using MojomCrosHealthdNvmeSelfTestTypeEnum =
+      chromeos::cros_healthd::mojom::NvmeSelfTestTypeEnum;
 
   virtual ~CrosHealthdRoutineService() = default;
 
@@ -72,6 +74,10 @@ class CrosHealthdRoutineService {
       MojomCrosHealthdDiagnosticRoutineStatusEnum* status) = 0;
   virtual void RunNvmeWearLevelRoutine(
       uint32_t wear_level_threshold,
+      int32_t* id,
+      MojomCrosHealthdDiagnosticRoutineStatusEnum* status) = 0;
+  virtual void RunNvmeSelfTestRoutine(
+      MojomCrosHealthdNvmeSelfTestTypeEnum nvme_self_test_type,
       int32_t* id,
       MojomCrosHealthdDiagnosticRoutineStatusEnum* status) = 0;
   virtual void GetRoutineUpdate(

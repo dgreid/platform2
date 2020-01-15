@@ -65,6 +65,10 @@ class FakeCrosHealthdRoutineFactory final : public CrosHealthdRoutineFactory {
       const base::TimeDelta& exec_duration) override;
   std::unique_ptr<DiagnosticRoutine> MakeNvmeWearLevelRoutine(
       DebugdAdapter* debugd_adapter, uint32_t wear_level_threshold) override;
+  std::unique_ptr<DiagnosticRoutine> MakeNvmeSelfTestRoutine(
+      DebugdAdapter* debugd_adapter,
+      chromeos::cros_healthd::mojom::NvmeSelfTestTypeEnum nvme_self_test_type)
+      override;
 
  private:
   // The routine that will be returned by any calls to MakeSomeRoutine.

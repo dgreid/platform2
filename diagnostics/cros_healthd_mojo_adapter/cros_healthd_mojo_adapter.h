@@ -64,6 +64,10 @@ class CrosHealthdMojoAdapter final {
   chromeos::cros_healthd::mojom::RunRoutineResponsePtr RunNvmeWearLevelRoutine(
       uint32_t wear_level_threshold);
 
+  // Runs the NvmeSelfTest routine.
+  chromeos::cros_healthd::mojom::RunRoutineResponsePtr RunNvmeSelfTestRoutine(
+      chromeos::cros_healthd::mojom::NvmeSelfTestTypeEnum nvme_self_test_type);
+
   // Returns which routines are available on the platform.
   std::vector<chromeos::cros_healthd::mojom::DiagnosticRoutineEnum>
   GetAvailableRoutines();

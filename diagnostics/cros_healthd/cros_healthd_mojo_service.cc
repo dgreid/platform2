@@ -141,6 +141,15 @@ void CrosHealthdMojoService::RunNvmeWearLevelRoutine(
   callback.Run(response.Clone());
 }
 
+void CrosHealthdMojoService::RunNvmeSelfTestRoutine(
+    chromeos::cros_healthd::mojom::NvmeSelfTestTypeEnum nvme_self_test_type,
+    const RunNvmeSelfTestRoutineCallback& callback) {
+  RunRoutineResponse response;
+  routine_service_->RunNvmeSelfTestRoutine(nvme_self_test_type, &response.id,
+                                           &response.status);
+  callback.Run(response.Clone());
+}
+
 void CrosHealthdMojoService::ProbeTelemetryInfo(
     const std::vector<ProbeCategoryEnum>& categories,
     const ProbeTelemetryInfoCallback& callback) {

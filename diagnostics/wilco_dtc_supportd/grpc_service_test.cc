@@ -73,7 +73,8 @@ constexpr grpc_api::DiagnosticRoutine kFakeAvailableRoutines[] = {
     grpc_api::ROUTINE_SMARTCTL_CHECK,
     grpc_api::ROUTINE_URANDOM,
     grpc_api::ROUTINE_FLOATING_POINT_ACCURACY,
-    grpc_api::ROUTINE_NVME_WEAR_LEVEL};
+    grpc_api::ROUTINE_NVME_SHORT_SELF_TEST,
+    grpc_api::ROUTINE_NVME_LONG_SELF_TEST};
 constexpr int kFakeUuid = 13;
 constexpr grpc_api::DiagnosticRoutineStatus kFakeStatus =
     grpc_api::ROUTINE_STATUS_RUNNING;
@@ -204,6 +205,22 @@ MakeRunNvmeWearLevelRoutineRequest() {
   request->set_routine(grpc_api::ROUTINE_NVME_WEAR_LEVEL);
   request->mutable_nvme_wear_level_params()->set_wear_level_threshold(
       kWearLevelThreshold);
+  return request;
+}
+
+std::unique_ptr<grpc_api::RunRoutineRequest>
+MakeRunNvmeShortSelfTestRoutineRequest() {
+  auto request = std::make_unique<grpc_api::RunRoutineRequest>();
+  request->set_routine(grpc_api::ROUTINE_NVME_SHORT_SELF_TEST);
+  request->mutable_nvme_short_self_test_params();
+  return request;
+}
+
+std::unique_ptr<grpc_api::RunRoutineRequest>
+MakeRunNvmeLongSelfTestRoutineRequest() {
+  auto request = std::make_unique<grpc_api::RunRoutineRequest>();
+  request->set_routine(grpc_api::ROUTINE_NVME_LONG_SELF_TEST);
+  request->mutable_nvme_long_self_test_params();
   return request;
 }
 
@@ -640,6 +657,52 @@ TEST_F(GrpcServiceTest, RunNvmeWearLevelRoutineNoParameters) {
   std::unique_ptr<grpc_api::RunRoutineResponse> response;
   auto request = std::make_unique<grpc_api::RunRoutineRequest>();
   request->set_routine(grpc_api::ROUTINE_NVME_WEAR_LEVEL);
+  ExecuteRunRoutine(std::move(request), &response,
+                    false /* is_valid_request */);
+  EXPECT_EQ(response->uuid(), 0);
+  EXPECT_EQ(response->status(), grpc_api::ROUTINE_STATUS_INVALID_FIELD);
+}
+
+// Test that we can request that the nvme_self_test routine for short time be
+// run.
+TEST_F(GrpcServiceTest, RunNvmeSelfTestShortRoutine) {
+  std::unique_ptr<grpc_api::RunRoutineResponse> response;
+  ExecuteRunRoutine(MakeRunNvmeShortSelfTestRoutineRequest(), &response,
+                    true /* is_valid_request */);
+  auto expected_response = MakeRunRoutineResponse();
+  EXPECT_THAT(*response, ProtobufEquals(*expected_response))
+      << "Actual response: {" << response->ShortDebugString() << "}";
+}
+
+// Test that a nvme_self_test routine for short time with no parameters will
+// fail.
+TEST_F(GrpcServiceTest, RunNvmeSelfTestShortRoutineNoParameters) {
+  std::unique_ptr<grpc_api::RunRoutineResponse> response;
+  auto request = std::make_unique<grpc_api::RunRoutineRequest>();
+  request->set_routine(grpc_api::ROUTINE_NVME_SHORT_SELF_TEST);
+  ExecuteRunRoutine(std::move(request), &response,
+                    false /* is_valid_request */);
+  EXPECT_EQ(response->uuid(), 0);
+  EXPECT_EQ(response->status(), grpc_api::ROUTINE_STATUS_INVALID_FIELD);
+}
+
+// Test that we can request that the nvme_self_test routine for extended time
+// be run.
+TEST_F(GrpcServiceTest, RunNvmeSelfTestLongRoutine) {
+  std::unique_ptr<grpc_api::RunRoutineResponse> response;
+  ExecuteRunRoutine(MakeRunNvmeLongSelfTestRoutineRequest(), &response,
+                    true /* is_valid_request */);
+  auto expected_response = MakeRunRoutineResponse();
+  EXPECT_THAT(*response, ProtobufEquals(*expected_response))
+      << "Actual response: {" << response->ShortDebugString() << "}";
+}
+
+// Test that a nvme_self_test routine for extended time with no parameters will
+// fail.
+TEST_F(GrpcServiceTest, RunNvmeSelfTestLongRoutineNoParameters) {
+  std::unique_ptr<grpc_api::RunRoutineResponse> response;
+  auto request = std::make_unique<grpc_api::RunRoutineRequest>();
+  request->set_routine(grpc_api::ROUTINE_NVME_LONG_SELF_TEST);
   ExecuteRunRoutine(std::move(request), &response,
                     false /* is_valid_request */);
   EXPECT_EQ(response->uuid(), 0);

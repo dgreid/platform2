@@ -113,6 +113,15 @@ void CrosHealthdRoutineServiceImpl::RunNvmeWearLevelRoutine(
              id, status);
 }
 
+void CrosHealthdRoutineServiceImpl::RunNvmeSelfTestRoutine(
+    mojo_ipc::NvmeSelfTestTypeEnum nvme_self_test_type,
+    int32_t* id,
+    mojo_ipc::DiagnosticRoutineStatusEnum* status) {
+  RunRoutine(routine_factory_->MakeNvmeSelfTestRoutine(debugd_adapter_,
+                                                       nvme_self_test_type),
+             id, status);
+}
+
 void CrosHealthdRoutineServiceImpl::GetRoutineUpdate(
     int32_t uuid,
     mojo_ipc::DiagnosticRoutineCommandEnum command,

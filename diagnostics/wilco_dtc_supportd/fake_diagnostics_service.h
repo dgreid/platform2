@@ -67,6 +67,9 @@ class FakeDiagnosticsService final
   void RunNvmeWearLevelRoutine(
       uint32_t wear_level_threshold,
       const RunNvmeWearLevelRoutineCallback& callback) override;
+  void RunNvmeSelfTestRoutine(
+      chromeos::cros_healthd::mojom::NvmeSelfTestTypeEnum nvme_self_test_type,
+      const RunNvmeSelfTestRoutineCallback& callback) override;
 
   // Overrides the default behavior of GetCrosHealthdDiagnosticsService to test
   // situations where mojo methods were called prior to wilco_dtc_supportd's

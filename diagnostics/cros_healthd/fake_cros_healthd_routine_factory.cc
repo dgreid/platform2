@@ -248,4 +248,12 @@ FakeCrosHealthdRoutineFactory::MakeNvmeWearLevelRoutine(
   return std::move(next_routine_);
 }
 
+std::unique_ptr<DiagnosticRoutine>
+FakeCrosHealthdRoutineFactory::MakeNvmeSelfTestRoutine(
+    DebugdAdapter* debugd_adapter,
+    chromeos::cros_healthd::mojom::NvmeSelfTestTypeEnum nvme_self_test_type) {
+  DCHECK(debugd_adapter);
+  return std::move(next_routine_);
+}
+
 }  // namespace diagnostics

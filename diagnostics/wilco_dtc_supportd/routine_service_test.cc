@@ -90,6 +90,19 @@ grpc_api::RunRoutineRequest MakeNvmeWearLevelRoutineRequest() {
   request.mutable_nvme_wear_level_params()->set_wear_level_threshold(50);
   return request;
 }
+grpc_api::RunRoutineRequest MakeNvmeSelfTestShortRoutineRequest() {
+  grpc_api::RunRoutineRequest request;
+  request.set_routine(grpc_api::ROUTINE_NVME_SHORT_SELF_TEST);
+  request.mutable_nvme_short_self_test_params();
+  return request;
+}
+
+grpc_api::RunRoutineRequest MakeNvmeSelfTestLongRoutineRequest() {
+  grpc_api::RunRoutineRequest request;
+  request.set_routine(grpc_api::ROUTINE_NVME_LONG_SELF_TEST);
+  request.mutable_nvme_long_self_test_params();
+  return request;
+}
 
 void SaveGetAvailableRoutinesResponse(
     base::Closure callback,
@@ -190,7 +203,8 @@ TEST_F(RoutineServiceTest, GetAvailableRoutines) {
        mojo_ipc::DiagnosticRoutineEnum::kCpuCache,
        mojo_ipc::DiagnosticRoutineEnum::kCpuStress,
        mojo_ipc::DiagnosticRoutineEnum::kFloatingPointAccuracy,
-       mojo_ipc::DiagnosticRoutineEnum::kNvmeWearLevel});
+       mojo_ipc::DiagnosticRoutineEnum::kNvmeWearLevel,
+       mojo_ipc::DiagnosticRoutineEnum::kNvmeSelfTest});
 
   const auto reply = ExecuteGetAvailableRoutines();
   EXPECT_THAT(reply.routines(),
@@ -199,7 +213,9 @@ TEST_F(RoutineServiceTest, GetAvailableRoutines) {
                    grpc_api::ROUTINE_SMARTCTL_CHECK, grpc_api::ROUTINE_URANDOM,
                    grpc_api::ROUTINE_CPU_CACHE, grpc_api::ROUTINE_CPU_STRESS,
                    grpc_api::ROUTINE_FLOATING_POINT_ACCURACY,
-                   grpc_api::ROUTINE_NVME_WEAR_LEVEL}));
+                   grpc_api::ROUTINE_NVME_WEAR_LEVEL,
+                   grpc_api::ROUTINE_NVME_SHORT_SELF_TEST,
+                   grpc_api::ROUTINE_NVME_LONG_SELF_TEST}));
   EXPECT_EQ(reply.service_status(), grpc_api::ROUTINE_SERVICE_STATUS_OK);
 }
 
@@ -390,7 +406,8 @@ TEST_F(RoutineServiceTest, RecoverFromNoServiceRequest) {
        mojo_ipc::DiagnosticRoutineEnum::kCpuCache,
        mojo_ipc::DiagnosticRoutineEnum::kCpuStress,
        mojo_ipc::DiagnosticRoutineEnum::kFloatingPointAccuracy,
-       mojo_ipc::DiagnosticRoutineEnum::kNvmeWearLevel});
+       mojo_ipc::DiagnosticRoutineEnum::kNvmeWearLevel,
+       mojo_ipc::DiagnosticRoutineEnum::kNvmeSelfTest});
 
   const auto reply = ExecuteGetAvailableRoutines();
   EXPECT_THAT(reply.routines(),
@@ -399,7 +416,9 @@ TEST_F(RoutineServiceTest, RecoverFromNoServiceRequest) {
                    grpc_api::ROUTINE_SMARTCTL_CHECK, grpc_api::ROUTINE_URANDOM,
                    grpc_api::ROUTINE_CPU_CACHE, grpc_api::ROUTINE_CPU_STRESS,
                    grpc_api::ROUTINE_FLOATING_POINT_ACCURACY,
-                   grpc_api::ROUTINE_NVME_WEAR_LEVEL}));
+                   grpc_api::ROUTINE_NVME_WEAR_LEVEL,
+                   grpc_api::ROUTINE_NVME_SHORT_SELF_TEST,
+                   grpc_api::ROUTINE_NVME_LONG_SELF_TEST}));
   EXPECT_EQ(reply.service_status(), grpc_api::ROUTINE_SERVICE_STATUS_OK);
 }
 
@@ -456,7 +475,9 @@ TEST_F(RoutineServiceTest, RecoverFromDroppedConnection) {
        mojo_ipc::DiagnosticRoutineEnum::kUrandom,
        mojo_ipc::DiagnosticRoutineEnum::kCpuCache,
        mojo_ipc::DiagnosticRoutineEnum::kCpuStress,
-       mojo_ipc::DiagnosticRoutineEnum::kFloatingPointAccuracy});
+       mojo_ipc::DiagnosticRoutineEnum::kFloatingPointAccuracy,
+       mojo_ipc::DiagnosticRoutineEnum::kNvmeWearLevel,
+       mojo_ipc::DiagnosticRoutineEnum::kNvmeSelfTest});
 
   const auto reply = ExecuteGetAvailableRoutines();
   EXPECT_THAT(reply.routines(),
@@ -464,7 +485,11 @@ TEST_F(RoutineServiceTest, RecoverFromDroppedConnection) {
                   {grpc_api::ROUTINE_BATTERY, grpc_api::ROUTINE_BATTERY_SYSFS,
                    grpc_api::ROUTINE_SMARTCTL_CHECK, grpc_api::ROUTINE_URANDOM,
                    grpc_api::ROUTINE_CPU_CACHE, grpc_api::ROUTINE_CPU_STRESS,
-                   grpc_api::ROUTINE_FLOATING_POINT_ACCURACY}));
+                   grpc_api::ROUTINE_FLOATING_POINT_ACCURACY,
+                   grpc_api::ROUTINE_NVME_WEAR_LEVEL,
+                   grpc_api::ROUTINE_NVME_SHORT_SELF_TEST,
+                   grpc_api::ROUTINE_NVME_LONG_SELF_TEST}));
+
   EXPECT_EQ(reply.service_status(), grpc_api::ROUTINE_SERVICE_STATUS_OK);
 
   // Reset the connection, make cros_healthd unresponsive, and check to see that
@@ -703,7 +728,9 @@ INSTANTIATE_TEST_CASE_P(
                     MakeCpuCacheRoutineRequest(),
                     MakeCpuStressRoutineRequest(),
                     MakeFloatingPointAccuracyRoutineRequest(),
-                    MakeNvmeWearLevelRoutineRequest()));
+                    MakeNvmeWearLevelRoutineRequest(),
+                    MakeNvmeSelfTestShortRoutineRequest(),
+                    MakeNvmeSelfTestLongRoutineRequest()));
 
 }  // namespace
 

@@ -552,6 +552,28 @@ void GrpcService::RunRoutine(
         return;
       }
       break;
+    case grpc_api::ROUTINE_NVME_SHORT_SELF_TEST:
+      if (!request->has_nvme_short_self_test_params()) {
+        LOG(ERROR) << "RunRoutineRequest with routine type "
+                      "ROUTINE_NVME_SHORT_SELF_TEST has no "
+                      "nvme_short_self_test parameters.";
+        ForwardRunRoutineResponse(callback, 0 /* uuid */,
+                                  grpc_api::ROUTINE_STATUS_INVALID_FIELD,
+                                  grpc_api::ROUTINE_SERVICE_STATUS_OK);
+        return;
+      }
+      break;
+    case grpc_api::ROUTINE_NVME_LONG_SELF_TEST:
+      if (!request->has_nvme_long_self_test_params()) {
+        LOG(ERROR) << "RunRoutineRequest with routine type "
+                      "ROUTINE_NVME_LONG_SELF_TEST has no "
+                      "nvme_long_self_test parameters.";
+        ForwardRunRoutineResponse(callback, 0 /* uuid */,
+                                  grpc_api::ROUTINE_STATUS_INVALID_FIELD,
+                                  grpc_api::ROUTINE_SERVICE_STATUS_OK);
+        return;
+      }
+      break;
     default:
       LOG(ERROR) << "RunRoutineRequest routine type invalid or unset.";
       ForwardRunRoutineResponse(callback, 0 /* uuid */,

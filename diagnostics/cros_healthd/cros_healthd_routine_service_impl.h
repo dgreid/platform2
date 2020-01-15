@@ -69,6 +69,10 @@ class CrosHealthdRoutineServiceImpl final : public CrosHealthdRoutineService {
       uint32_t wear_level_threshold,
       int32_t* id,
       MojomCrosHealthdDiagnosticRoutineStatusEnum* status) override;
+  void RunNvmeSelfTestRoutine(
+      MojomCrosHealthdNvmeSelfTestTypeEnum nvme_self_test_type,
+      int32_t* id,
+      MojomCrosHealthdDiagnosticRoutineStatusEnum* status) override;
   void GetRoutineUpdate(
       int32_t id,
       MojomCrosHealthdDiagnosticRoutineCommandEnum command,
@@ -101,7 +105,8 @@ class CrosHealthdRoutineServiceImpl final : public CrosHealthdRoutineService {
           chromeos::cros_healthd::mojom::DiagnosticRoutineEnum::kCpuStress,
           chromeos::cros_healthd::mojom::DiagnosticRoutineEnum::
               kFloatingPointAccuracy,
-          chromeos::cros_healthd::mojom::DiagnosticRoutineEnum::kNvmeWearLevel};
+          chromeos::cros_healthd::mojom::DiagnosticRoutineEnum::kNvmeWearLevel,
+          chromeos::cros_healthd::mojom::DiagnosticRoutineEnum::kNvmeSelfTest};
   // Responsible for making async calls to debugd. Unowned pointer that should
   // outlive this instance.
   DebugdAdapter* debugd_adapter_ = nullptr;

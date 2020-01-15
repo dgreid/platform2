@@ -302,6 +302,8 @@ enum DiagnosticRoutine {
   ROUTINE_CPU_STRESS = 6;
   ROUTINE_FLOATING_POINT_ACCURACY = 7;
   ROUTINE_NVME_WEAR_LEVEL = 8;
+  ROUTINE_NVME_SHORT_SELF_TEST = 9;
+  ROUTINE_NVME_LONG_SELF_TEST = 10;
 }
 
 // Enumeration of each of the possible statuses for a diagnostics routine.
@@ -355,6 +357,8 @@ message RunRoutineRequest {
     CpuRoutineParameters cpu_params = 6;
     FloatingPointAccuracyRoutineParameters floating_point_accuracy_params = 7;
     NvmeWearLevelRoutineParameters nvme_wear_level_params = 8;
+    NvmeShortSelfTestRoutineParameters nvme_short_self_test_params = 9;
+    NvmeLongSelfTestRoutineParameters nvme_long_self_test_params = 10;
   }
 }
 
@@ -406,6 +410,12 @@ message NvmeWearLevelRoutineParameters {
   // Threshold to determine if passed.
   uint32 wear_level_threshold = 1;
 }
+
+// Parameters for nvme_short_self-test diagnostic routine.
+message NvmeShortSelfTestRoutineParameters {}
+
+// Parameters for nvme_long_self-test diagnostic routine.
+message NvmeLongSelfTestRoutineParameters {}
 
 // Return value of the RunRoutine RPC.
 message RunRoutineResponse {
