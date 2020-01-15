@@ -118,6 +118,7 @@ static_library("server_library") {
     "server/local_data_migration.cc",
     "server/local_data_store_impl.cc",
     "server/openssl_crypto_util_impl.cc",
+    "server/tpm_manager_metrics.cc",
     "server/tpm_manager_service.cc",
   ]
   if (use.tpm2) {
@@ -151,7 +152,10 @@ static_library("server_library") {
 
 # The tpm_manager daemon.
 pkg_config("tpm_managerd_config") {
-  pkg_deps = [ "libminijail" ]
+  pkg_deps = [
+    "libmetrics-${libbase_ver}",
+    "libminijail",
+  ]
 }
 
 executable("tpm_managerd") {
@@ -221,6 +225,7 @@ if (use.test) {
     pkg_deps = [
       "libbrillo-test",
       "libchrome-test-${libbase_ver}",
+      "libmetrics-${libbase_ver}",
     ]
   }
 
@@ -242,6 +247,7 @@ if (use.test) {
       "server/mock_tpm_initializer.cc",
       "server/mock_tpm_nvram.cc",
       "server/mock_tpm_status.cc",
+      "server/tpm_manager_metrics_test.cc",
       "server/tpm_manager_service_test.cc",
       "tpm_manager_testrunner.cc",
     ]
