@@ -161,7 +161,7 @@ mod tests {
     const USB_SHELL: &str = "removable.d/50-crosh.sh";
 
     // Commands that are excluded from the checks because they are conditionally registered.
-    const IGNORE_COMMANDS: &[&str] = &["verify_ro"];
+    const IGNORE_COMMANDS: &[&str] = &["verify_ro", "vmc"];
 
     enum ShellSource {
         Base,
