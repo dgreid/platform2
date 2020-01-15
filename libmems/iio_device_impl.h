@@ -71,6 +71,7 @@ class LIBMEMS_EXPORT IioDeviceImpl : public IioDevice {
  private:
   static void IioBufferDeleter(iio_buffer* buffer);
 
+  void EnableAllChannels();
   bool CreateBuffer();
 
   IioContextImpl* context_;  // non-owned

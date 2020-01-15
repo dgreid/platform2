@@ -41,6 +41,8 @@ IioDeviceImpl::IioDeviceImpl(IioContextImpl* ctx, iio_device* dev)
       buffer_(nullptr, IioBufferDeleter) {
   CHECK(context_);
   CHECK(device_);
+
+  EnableAllChannels();
 }
 
 IioContext* IioDeviceImpl::GetContext() const {
@@ -321,6 +323,13 @@ bool IioDeviceImpl::ReadEvent(std::vector<uint8_t>* event) {
 void IioDeviceImpl::IioBufferDeleter(iio_buffer* buffer) {
   iio_buffer_cancel(buffer);
   iio_buffer_destroy(buffer);
+}
+
+void IioDeviceImpl::EnableAllChannels() {
+  for (IioChannel* chn : GetAllChannels()) {
+    if (!chn->SetEnabledAndCheck(true))
+      LOG(ERROR) << "Failed to enable channel: " << chn->GetId();
+  }
 }
 
 bool IioDeviceImpl::CreateBuffer() {
