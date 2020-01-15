@@ -60,7 +60,6 @@ const BASE_COMMANDS: &[&str] = &[
     "upload_crashes",
     "upload_devcoredumps",
     "uptime",
-    "verify_ro",
     "vmstat",
     "vsh",
     "wifi_fw_dump",
@@ -161,6 +160,9 @@ mod tests {
     const DEV_SHELL: &str = "dev.d/50-crosh.sh";
     const USB_SHELL: &str = "removable.d/50-crosh.sh";
 
+    // Commands that are excluded from the checks because they are conditionally registered.
+    const IGNORE_COMMANDS: &[&str] = &["verify_ro"];
+
     enum ShellSource {
         Base,
         Dev,
@@ -248,7 +250,9 @@ mod tests {
         // Verify all the crosh.sh commands are registered in rust-crosh.
         for command_name in &command_list {
             available_commands.insert(command_name);
-            if dispatcher.find_by_name(&command_name).is_none() {
+            if dispatcher.find_by_name(&command_name).is_none()
+                && !IGNORE_COMMANDS.contains(&&command_name[..])
+            {
                 missing_commands.push(command_name);
             }
         }
@@ -265,7 +269,7 @@ mod tests {
             ShellSource::Dev => &DEV_COMMANDS[..],
             ShellSource::USB => &USB_COMMANDS[..],
         } {
-            if !available_commands.contains(cmd) {
+            if !available_commands.contains(cmd) && !IGNORE_COMMANDS.contains(&cmd) {
                 extra_commands.push(cmd);
             }
         }

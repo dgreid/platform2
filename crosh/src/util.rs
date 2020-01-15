@@ -9,15 +9,18 @@ use std::error;
 use std::fmt::{self, Display};
 use std::fs::read_to_string;
 use std::io::Read;
+use std::mem;
 use std::process::{Command, Stdio};
+use std::ptr::null_mut;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use dbus::{BusType, Connection, Message};
+use libc::{c_int, sigaction, SA_RESTART, SIG_DFL};
 use regex::Regex;
 use system_api::OrgChromiumSessionManagerInterface;
 
 // 25 seconds is the default timeout for dbus-send.
-const TIMEOUT_MILLIS: i32 = 25000;
+pub const TIMEOUT_MILLIS: i32 = 25000;
 
 const CROS_USER_ID_HASH: &str = "CROS_USER_ID_HASH";
 
@@ -132,6 +135,35 @@ pub fn dev_commands_included() -> bool {
 
 pub fn usb_commands_included() -> bool {
     INCLUDE_USB.load(Ordering::Acquire)
+}
+
+pub fn set_signal_handlers(signums: &[c_int], handler: unsafe extern "C" fn()) {
+    for &signum in signums {
+        unsafe {
+            let mut sigact: sigaction = mem::zeroed();
+            sigact.sa_flags = SA_RESTART;
+            sigact.sa_sigaction = handler as *const () as usize;
+
+            let ret = sigaction(signum, &sigact, null_mut());
+            if ret < 0 {
+                eprintln!("sigaction failed for {}", signum);
+            }
+        }
+    }
+}
+
+pub fn clear_signal_handlers(signums: &[c_int]) {
+    for &signum in signums {
+        unsafe {
+            let mut sigact: sigaction = mem::zeroed();
+            sigact.sa_sigaction = SIG_DFL;
+
+            let ret = sigaction(signum, &sigact, null_mut());
+            if ret < 0 {
+                eprintln!("sigaction failed for {}", signum);
+            }
+        }
+    }
 }
 
 fn root_dev() -> Result<String, Error> {

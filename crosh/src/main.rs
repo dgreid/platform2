@@ -10,15 +10,10 @@ mod util;
 
 use std::env::var;
 use std::io::{stdout, Write};
-use std::mem;
 use std::path::PathBuf;
-use std::ptr::null_mut;
 use std::sync::atomic::{AtomicI32, Ordering};
 
-use libc::{
-    c_int, fork, kill, pid_t, sigaction, waitpid, SA_RESTART, SIGHUP, SIGINT, SIGKILL, SIG_DFL,
-    WIFSTOPPED,
-};
+use libc::{c_int, fork, kill, pid_t, waitpid, SIGHUP, SIGINT, SIGKILL, WIFSTOPPED};
 
 use rustyline::completion::Completer;
 use rustyline::config::Configurer;
@@ -210,47 +205,12 @@ unsafe extern "C" fn sigint_handler() {
 extern "C" fn sighup_handler() {}
 
 fn register_signal_handlers() {
-    unsafe {
-        let mut sigact: sigaction = mem::zeroed();
-        sigact.sa_flags = SA_RESTART;
-        sigact.sa_sigaction = sigint_handler as *const () as usize;
-
-        let ret = sigaction(SIGINT, &sigact, null_mut());
-        if ret < 0 {
-            eprintln!("sigaction failed for SIGINT.");
-        }
-
-        sigact = mem::zeroed();
-        sigact.sa_flags = SA_RESTART;
-        sigact.sa_sigaction = sighup_handler as *const () as usize;
-
-        let ret = sigaction(SIGHUP, &sigact, null_mut());
-        if ret < 0 {
-            eprintln!("sigaction failed for SIGHUP.");
-        }
-    }
+    util::set_signal_handlers(&[SIGINT], sigint_handler);
+    util::set_signal_handlers(&[SIGHUP], sighup_handler);
 }
 
 fn clear_signal_handlers() {
-    unsafe {
-        let mut sigact: sigaction = mem::zeroed();
-        sigact.sa_sigaction = SIG_DFL;
-
-        let ret = sigaction(SIGINT, &sigact, null_mut());
-        if ret < 0 {
-            eprintln!("sigaction failed for SIGINT.");
-        }
-
-        sigact = mem::zeroed();
-        sigact.sa_sigaction = SIG_DFL;
-
-        let ret = sigaction(SIGHUP, &sigact, null_mut());
-        if ret < 0 {
-            eprintln!("sigaction failed for SIGHUP.");
-        }
-
-        // Leave the handler for SIGTTIN.
-    }
+    util::clear_signal_handlers(&[SIGINT, SIGHUP]);
 }
 
 fn parse_command(command: &str) -> Vec<String> {
