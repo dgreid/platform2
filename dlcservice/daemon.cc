@@ -25,6 +25,10 @@ constexpr char kDlcPreloadedImageRootpath[] =
 
 }  // namespace
 
+// The root path of all DLC modules metadata.
+// Keep this in sync with the one in update_engine.
+constexpr char kDlcMetadataRootpath[] = "/var/lib/dlc/";
+
 // kDlcServiceServiceName is defined in
 // chromeos/dbus/dlcservice/dbus-constants.h
 Daemon::Daemon() : DBusServiceDaemon(kDlcServiceServiceName) {}
@@ -58,7 +62,7 @@ void Daemon::RegisterDBusObjectsAsync(
       base::FilePath(imageloader::kDlcManifestRootpath),
       base::FilePath(kDlcPreloadedImageRootpath),
       base::FilePath(imageloader::kDlcImageRootpath),
-      base::FilePath(imageloader::kDlcMetadataRootpath));
+      base::FilePath(kDlcMetadataRootpath));
   CHECK(SystemState::Get());
   dlc_service_ = std::make_unique<DlcService>();
 

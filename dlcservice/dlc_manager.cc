@@ -24,9 +24,9 @@ using std::unique_ptr;
 
 namespace dlcservice {
 
+const char kDlcMetadataActiveValue[] = "1";
 // Keep kDlcMetadataFilePingActive in sync with update_engine's.
 const char kDlcMetadataFilePingActive[] = "active";
-const char kDlcMetadataActiveValue[] = "1";
 
 class DlcManager::DlcManagerImpl {
  public:

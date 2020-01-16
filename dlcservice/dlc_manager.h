@@ -17,13 +17,14 @@
 
 namespace dlcservice {
 
+// Value to be stored in |kDlcMetadataFilePingActive| to indicate an active DLC.
+extern const char kDlcMetadataActiveValue[];
 // |kDlcMetadataFilePingActive| is the name of the file used to store the value
 // of the 'active' metadata. This value indicates if the DLC was active since
 // the last time this value was sent to Omaha. This file name should not be
-// modified since it is also used in update_engine/common/constants.h.
+// modified since it is also used in update_engine/common/constants.h as
+// |kPrefsPingActive|.
 extern const char kDlcMetadataFilePingActive[];
-// Value to be stored in |kDlcMetadataFilePingActive| to indicate an active DLC.
-extern const char kDlcMetadataActiveValue[];
 
 class DlcManager {
  public:
