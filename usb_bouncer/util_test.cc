@@ -4,6 +4,7 @@
 
 #include <base/files/file_util.h>
 #include <base/files/scoped_temp_dir.h>
+#include <base/test/bind_test_util.h>
 #include <gtest/gtest.h>
 
 #include "usb_bouncer/util.h"
@@ -123,14 +124,17 @@ TEST(UtilTest, AuthorizeAll_Failure) {
   EXPECT_TRUE(CheckDeviceNodeAuthorized(deepdir));
 }
 
-TEST(UtilTest, ForkAndWaitIfPathUnavailable_PathExists) {
+TEST(UtilTest, ForkAndWaitIfNotReady_Ready) {
   base::FilePath empty_path;
   base::ScopedTempDir temp_dir_;
   ASSERT_TRUE(temp_dir_.CreateUniqueTempDir()) << strerror(errno);
+  const base::FilePath temp_dir_path = temp_dir_.GetPath();
 
   bool fork_taken = false;
-  EXPECT_TRUE(ForkAndWaitIfDoesNotExist(
-      temp_dir_.GetPath(), base::TimeDelta::FromSeconds(0),
+  EXPECT_TRUE(ForkAndWaitIfNotReady(
+      base::BindLambdaForTesting(
+          [&temp_dir_path]() -> bool { return PathExists(temp_dir_path); }),
+      "temp_dir doesn't exist", base::TimeDelta::FromSeconds(0),
       base::Bind(&ForkMock, base::Unretained(&fork_taken), empty_path)));
   EXPECT_FALSE(fork_taken);
 }
@@ -143,8 +147,10 @@ TEST(UtilTest, ForkAndWaitIfPathUnavailable_PathDoesntExistTimeout) {
   LOG(INFO) << "PATH: " << sub_dir_.value();
 
   bool fork_taken = false;
-  EXPECT_FALSE(ForkAndWaitIfDoesNotExist(
-      sub_dir_, base::TimeDelta::FromSeconds(0),
+  EXPECT_FALSE(ForkAndWaitIfNotReady(
+      base::BindLambdaForTesting(
+          [&sub_dir_]() -> bool { return PathExists(sub_dir_); }),
+      "sub_dir_ doesn't exist", base::TimeDelta::FromSeconds(0),
       base::Bind(&ForkMock, base::Unretained(&fork_taken), empty_path)));
   EXPECT_TRUE(fork_taken);
 }
@@ -155,8 +161,10 @@ TEST(UtilTest, ForkAndWaitIfPathUnavailable_PathDoesntExistSucceed) {
   base::FilePath sub_dir_ = temp_dir_.GetPath().Append("ExistsAfterFork");
 
   bool fork_taken = false;
-  EXPECT_TRUE(ForkAndWaitIfDoesNotExist(
-      sub_dir_, base::TimeDelta::FromSeconds(1),
+  EXPECT_TRUE(ForkAndWaitIfNotReady(
+      base::BindLambdaForTesting(
+          [&sub_dir_]() -> bool { return PathExists(sub_dir_); }),
+      "sub_dir_ doesn't exist", base::TimeDelta::FromSeconds(1),
       base::Bind(&ForkMock, base::Unretained(&fork_taken), sub_dir_)));
   EXPECT_TRUE(fork_taken);
 }

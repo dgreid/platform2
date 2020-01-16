@@ -7,6 +7,7 @@
 #include <cstdio>
 #include <cstdlib>
 
+#include <base/bind.h>
 #include <base/command_line.h>
 #include <brillo/syslog_logging.h>
 #include <brillo/flag_helper.h>
@@ -17,7 +18,8 @@
 #include "usb_bouncer/util.h"
 
 using usb_bouncer::EntryManager;
-using usb_bouncer::ForkAndWaitIfDoesNotExist;
+using usb_bouncer::ForkAndWaitIfNotReady;
+using usb_bouncer::kDBusPath;
 
 namespace {
 
@@ -198,7 +200,11 @@ int HandleUdev(SeccompEnforcement seccomp,
 
   // The return code isn't checked because LOG statements are already present in
   // the function. The return value allows tests to validate the behavior.
-  ForkAndWaitIfDoesNotExist(base::FilePath(kLogPath));
+  ForkAndWaitIfNotReady(base::BindRepeating([]() -> bool {
+                          return base::PathExists(base::FilePath(kLogPath)) &&
+                                 base::PathExists(base::FilePath(kDBusPath));
+                        }),
+                        "logging or D-Bus isn't ready");
 
   EntryManager* entry_manager = GetEntryManagerOrDie(seccomp);
   if (!entry_manager->HandleUdev(action, argv[1])) {

@@ -581,10 +581,11 @@ size_t RemoveEntriesOlderThan(base::TimeDelta cutoff, EntryMap* map) {
   return num_removed;
 }
 
-bool ForkAndWaitIfDoesNotExist(const base::FilePath& watched_path,
-                               const base::TimeDelta& timeout,
-                               base::Callback<pid_t()> fork_func) {
-  if (base::PathExists(watched_path)) {
+bool ForkAndWaitIfNotReady(const base::RepeatingCallback<bool()> ready,
+                           const std::string message,
+                           const base::TimeDelta& timeout,
+                           base::Callback<pid_t()> fork_func) {
+  if (ready.Run()) {
     return true;
   }
 
@@ -594,9 +595,8 @@ bool ForkAndWaitIfDoesNotExist(const base::FilePath& watched_path,
     exit(0);
   }
 
-  if (base::PathExists(watched_path)) {
-    LOG(INFO) << "Forked because '" << watched_path.value()
-              << "' was unavailable.";
+  if (ready.Run()) {
+    LOG(INFO) << "Forked because " << message;
     return true;
   }
 
@@ -605,15 +605,13 @@ bool ForkAndWaitIfDoesNotExist(const base::FilePath& watched_path,
 
   while (base::Time::Now() < deadline) {
     base::PlatformThread::Sleep(check_interval);
-    if (base::PathExists(watched_path)) {
-      LOG(INFO) << "Forked because '" << watched_path.value()
-                << "' was unavailable.";
+    if (ready.Run()) {
+      LOG(INFO) << "Forked because " << message;
       return true;
     }
   }
 
-  LOG(ERROR) << "Timed out after fork waiting for '" << watched_path.value()
-             << "' to be available.";
+  LOG(ERROR) << "Timed out after forking because " << message;
   return false;
 }
 
