@@ -49,11 +49,11 @@ class ChargeControllerHelperStub : public ChargeControllerHelperInterface {
                : std::string();
   }
 
-  PowerManagementPolicy::BatteryChargeMode::Mode battery_charge_mode() {
+  PowerManagementPolicy::BatteryChargeMode::Mode battery_charge_mode() const {
     return battery_charge_mode_;
   }
-  int custom_charge_start() { return custom_charge_start_; }
-  int custom_charge_stop() { return custom_charge_stop_; }
+  int custom_charge_start() const { return custom_charge_start_; }
+  int custom_charge_stop() const { return custom_charge_stop_; }
 
   // ChargeControllerHelperInterface overrides:
   bool SetPeakShiftEnabled(bool enable) override;

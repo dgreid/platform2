@@ -26,6 +26,29 @@ namespace policy {
 // peak shift, advanced battery charge.
 class ChargeController {
  public:
+  // Min and max values for actual battery percentage |start| threshold for
+  // custom battery charge mode.
+  static const int kCustomChargeModeStartMin;
+  static const int kCustomChargeModeStartMax;
+
+  // Min and max values for actual battery percentage |end| threshold for
+  // custom battery charge mode.
+  static const int kCustomChargeModeEndMin;
+  static const int kCustomChargeModeEndMax;
+
+  // Min difference between actual battery percentage thresholds for custom
+  // battery charge mode.
+  static const int kCustomChargeModeThresholdsMinDiff;
+
+  // Clamps actual battery percentage thresholds for custom battery charge
+  // mode:
+  //   1) |start| should be in the range
+  //          [kCustomChargeModeStartMin, kCustomChargeModeStartMax];
+  //   2) |end| should be in the range
+  //          [kCustomChargeModeEndMin, kCustomChargeModeEndMax];
+  //   3) difference between |end| and |start| should be at least 5.
+  static void ClampCustomBatteryChargeThresholds(int* start, int* end);
+
   ChargeController();
   ~ChargeController();
 

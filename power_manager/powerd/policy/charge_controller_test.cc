@@ -7,6 +7,7 @@
 #include <cmath>
 #include <map>
 #include <string>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -65,6 +66,8 @@ void MakeAdvancedBatteryChargeModeDayConfig(
   config_proto->mutable_charge_end_time()->set_minute(configs[1].second);
 }
 
+}  // namespace
+
 class ChargeControllerTest : public ::testing::Test {
  public:
   ChargeControllerTest() {
@@ -74,6 +77,8 @@ class ChargeControllerTest : public ::testing::Test {
   const BatteryPercentageConverter& battery_percentage_converter() const {
     return battery_percentage_converter_;
   }
+
+  const system::ChargeControllerHelperStub& helper() const { return helper_; }
 
  protected:
   // Sets PeakShift policy in PowerManagementPolicy proto.
@@ -169,8 +174,6 @@ class ChargeControllerTest : public ::testing::Test {
   BatteryPercentageConverter battery_percentage_converter_{
       kLowBatteryShutdownPercent, kFullFactor};
 };
-
-}  // namespace
 
 TEST_F(ChargeControllerTest, PeakShiftNoPolicies) {
   controller_.HandlePolicyChange(policy_);
@@ -342,6 +345,44 @@ TEST_F(ChargeControllerTest, BatteryChargeMode) {
       system::ChargeControllerHelperStub::kBatteryChargeModeUnset));
 }
 
+TEST_F(ChargeControllerTest, BatteryChargeModeInvalidThresholds) {
+  constexpr PowerManagementPolicy::BatteryChargeMode::Mode kMode1 =
+      PowerManagementPolicy::BatteryChargeMode::PRIMARILY_AC_USE;
+  constexpr PowerManagementPolicy::BatteryChargeMode::Mode kMode2 =
+      PowerManagementPolicy::BatteryChargeMode::CUSTOM;
+  constexpr int kCustomStartCharge = 79;
+  constexpr int kCustomEndCharge = 80;
+
+  const int actual_custom_end_charge = std::round(
+      battery_percentage_converter().ConvertDisplayToActual(kCustomEndCharge));
+  int actual_custom_start_charge =
+      std::round(battery_percentage_converter().ConvertDisplayToActual(
+          kCustomStartCharge));
+
+  // Verify that ChargeController clamps |start| and |end| thresholds within min
+  // and max range and keeps min difference between them.
+  EXPECT_LT(actual_custom_end_charge - actual_custom_start_charge,
+            ChargeController::kCustomChargeModeThresholdsMinDiff);
+  actual_custom_start_charge =
+      actual_custom_end_charge -
+      ChargeController::kCustomChargeModeThresholdsMinDiff;
+
+  policy_.mutable_battery_charge_mode()->set_mode(kMode1);
+  controller_.HandlePolicyChange(policy_);
+  EXPECT_TRUE(CheckBatteryChargeMode(kMode1));
+
+  SetBatteryChargeMode(kMode2, kCustomStartCharge, kCustomEndCharge);
+  controller_.HandlePolicyChange(policy_);
+  EXPECT_TRUE(CheckBatteryChargeMode(kMode2, actual_custom_start_charge,
+                                     actual_custom_end_charge));
+
+  helper_.Reset();
+
+  controller_.HandlePolicyChange(policy_);
+  EXPECT_TRUE(CheckBatteryChargeMode(
+      system::ChargeControllerHelperStub::kBatteryChargeModeUnset));
+}
+
 // If AdvancedBatteryChargeMode is specified, it overrides BatteryChargeMode.
 TEST_F(ChargeControllerTest,
        AdvancedBatteryChargeModeOverridesBatteryChargeMode) {
@@ -371,6 +412,127 @@ TEST_F(ChargeControllerTest,
       true, {{kDay1, kExpectedDayConfigStartDuration1},
              {kDay2, kExpectedDayConfigStartDuration2}}));
 }
+
+struct CustomChargeThresholdsTestData {
+  // (start, end) input thresholds.
+  std::pair<int, int> input;
+  // (start, end) expected thresholds.
+  std::pair<int, int> expected;
+};
+
+class CustomChargeThresholdsChargeControllerTest
+    : public ::testing::Test,
+      public testing::WithParamInterface<CustomChargeThresholdsTestData> {
+ public:
+  int input_start_threshold() const { return GetParam().input.first; }
+  int input_end_threshold() const { return GetParam().input.second; }
+
+  int expected_start_threshold() const { return GetParam().expected.first; }
+  int expected_end_threshold() const { return GetParam().expected.second; }
+};
+
+TEST_P(CustomChargeThresholdsChargeControllerTest, All) {
+  int start = input_start_threshold();
+  int end = input_end_threshold();
+  ChargeController::ClampCustomBatteryChargeThresholds(&start, &end);
+  EXPECT_EQ(start, expected_start_threshold());
+  EXPECT_EQ(end, expected_end_threshold());
+  EXPECT_GE(end - start, ChargeController::kCustomChargeModeThresholdsMinDiff);
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    _,
+    CustomChargeThresholdsChargeControllerTest,
+    testing::Values(
+        // Valid thresholds.
+        CustomChargeThresholdsTestData{
+            {ChargeController::kCustomChargeModeStartMin,
+             ChargeController::kCustomChargeModeEndMin},
+            {ChargeController::kCustomChargeModeStartMin,
+             ChargeController::kCustomChargeModeEndMin}},
+        CustomChargeThresholdsTestData{
+            {ChargeController::kCustomChargeModeStartMax,
+             ChargeController::kCustomChargeModeEndMax},
+            {ChargeController::kCustomChargeModeStartMax,
+             ChargeController::kCustomChargeModeEndMax}},
+        CustomChargeThresholdsTestData{
+            {ChargeController::kCustomChargeModeStartMin,
+             ChargeController::kCustomChargeModeEndMax},
+            {ChargeController::kCustomChargeModeStartMin,
+             ChargeController::kCustomChargeModeEndMax}},
+        CustomChargeThresholdsTestData{
+            {ChargeController::kCustomChargeModeStartMin + 1,
+             ChargeController::kCustomChargeModeEndMax - 1},
+            {ChargeController::kCustomChargeModeStartMin + 1,
+             ChargeController::kCustomChargeModeEndMax - 1}},
+
+        // |start| threshold less than min value.
+        CustomChargeThresholdsTestData{
+            {ChargeController::kCustomChargeModeStartMin - 1,
+             ChargeController::kCustomChargeModeEndMax},
+            {ChargeController::kCustomChargeModeStartMin,
+             ChargeController::kCustomChargeModeEndMax}},
+
+        // |start| threshold greater than max value.
+        CustomChargeThresholdsTestData{
+            {ChargeController::kCustomChargeModeStartMax + 1,
+             ChargeController::kCustomChargeModeEndMax},
+            {ChargeController::kCustomChargeModeStartMax,
+             ChargeController::kCustomChargeModeEndMax}},
+
+        // |end| threshold less than min value.
+        CustomChargeThresholdsTestData{
+            {ChargeController::kCustomChargeModeStartMin,
+             ChargeController::kCustomChargeModeEndMin - 1},
+            {ChargeController::kCustomChargeModeStartMin,
+             ChargeController::kCustomChargeModeEndMin}},
+
+        // |end| threshold greater than max value.
+        CustomChargeThresholdsTestData{
+            {ChargeController::kCustomChargeModeStartMin,
+             ChargeController::kCustomChargeModeEndMax + 1},
+            {ChargeController::kCustomChargeModeStartMin,
+             ChargeController::kCustomChargeModeEndMax}},
+
+        // Diff between |start| and |end| threshold less than allowed min diff.
+        // Thresholds close to their min values.
+        CustomChargeThresholdsTestData{
+            {ChargeController::kCustomChargeModeStartMin + 1,
+             ChargeController::kCustomChargeModeEndMin},
+            {ChargeController::kCustomChargeModeStartMin,
+             ChargeController::kCustomChargeModeEndMin}},
+
+        // Diff between |start| and |end| threshold less than allowed min diff.
+        // Also |end| threshold less than min value.
+        CustomChargeThresholdsTestData{
+            {ChargeController::kCustomChargeModeStartMin,
+             ChargeController::kCustomChargeModeEndMin - 1},
+            {ChargeController::kCustomChargeModeStartMin,
+             ChargeController::kCustomChargeModeEndMin}},
+
+        // Diff between |start| and |end| threshold less than allowed min diff.
+        // Thresholds between their min and max values.
+        CustomChargeThresholdsTestData{
+            {ChargeController::kCustomChargeModeStartMin + 19,
+             ChargeController::kCustomChargeModeStartMin + 20},
+            {ChargeController::kCustomChargeModeStartMin + 15,
+             ChargeController::kCustomChargeModeStartMin + 20}},
+
+        // Diff between |start| and |end| threshold less than allowed min diff.
+        // Thresholds close to their max values.
+        CustomChargeThresholdsTestData{
+            {ChargeController::kCustomChargeModeStartMax,
+             ChargeController::kCustomChargeModeEndMax - 1},
+            {ChargeController::kCustomChargeModeStartMax - 1,
+             ChargeController::kCustomChargeModeEndMax - 1}},
+
+        // Diff between |start| and |end| threshold less than allowed min diff.
+        // Also |start| threshold greater than max value.
+        CustomChargeThresholdsTestData{
+            {ChargeController::kCustomChargeModeStartMax + 1,
+             ChargeController::kCustomChargeModeEndMax},
+            {ChargeController::kCustomChargeModeStartMax,
+             ChargeController::kCustomChargeModeEndMax}}));
 
 }  // namespace policy
 }  // namespace power_manager

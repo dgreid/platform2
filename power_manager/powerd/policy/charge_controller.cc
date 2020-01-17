@@ -4,9 +4,11 @@
 
 #include "power_manager/powerd/policy/charge_controller.h"
 
+#include <algorithm>
 #include <cmath>
 
 #include <base/logging.h>
+#include <base/numerics/ranges.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_util.h>
 #include <base/strings/stringprintf.h>
@@ -143,6 +145,26 @@ std::string GetPowerPolicyDebugString(const PowerManagementPolicy& policy) {
 
 }  // namespace
 
+constexpr int ChargeController::kCustomChargeModeStartMin = 50;
+constexpr int ChargeController::kCustomChargeModeStartMax = 95;
+
+constexpr int ChargeController::kCustomChargeModeEndMin = 55;
+constexpr int ChargeController::kCustomChargeModeEndMax = 100;
+
+constexpr int ChargeController::kCustomChargeModeThresholdsMinDiff = 5;
+
+// static
+void ChargeController::ClampCustomBatteryChargeThresholds(int* start,
+                                                          int* end) {
+  DCHECK(start);
+  DCHECK(end);
+  *end = base::ClampToRange(*end, kCustomChargeModeEndMin,
+                            kCustomChargeModeEndMax);
+  *start = base::ClampToRange(
+      std::min(*start, *end - kCustomChargeModeThresholdsMinDiff),
+      kCustomChargeModeStartMin, kCustomChargeModeStartMax);
+}
+
 ChargeController::ChargeController() = default;
 
 ChargeController::~ChargeController() = default;
@@ -262,11 +284,18 @@ bool ChargeController::ApplyBatteryChargeModeChange(
                << " charge mode";
     return false;
   }
-  return helper_->SetBatteryChargeCustomThresholds(
+
+  int custom_charge_start =
       std::round(battery_percentage_converter_->ConvertDisplayToActual(
-          policy.battery_charge_mode().custom_charge_start())),
+          policy.battery_charge_mode().custom_charge_start()));
+  int custom_charge_end =
       std::round(battery_percentage_converter_->ConvertDisplayToActual(
-          policy.battery_charge_mode().custom_charge_stop())));
+          policy.battery_charge_mode().custom_charge_stop()));
+
+  ClampCustomBatteryChargeThresholds(&custom_charge_start, &custom_charge_end);
+
+  return helper_->SetBatteryChargeCustomThresholds(custom_charge_start,
+                                                   custom_charge_end);
 }
 
 bool ChargeController::SetPeakShiftDayConfig(
