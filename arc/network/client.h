@@ -9,6 +9,7 @@
 #include <utility>
 #include <vector>
 
+#include "base/files/scoped_file.h"
 #include <brillo/brillo_export.h>
 #include <dbus/bus.h>
 #include <dbus/object_proxy.h>
@@ -54,6 +55,15 @@ class BRILLO_EXPORT Client {
   // Mark a socket to be always routed through the physical network.
   // Must be called before the socket is connected.
   bool BypassVpn(int socket);
+
+  // Sends a ConnectNamespaceRequest for the given namespace pid. Returns a
+  // pair with a valid ScopedFD and the ConnectNamespaceResponse proto message
+  // received if the request succeeded. Closing the ScopedFD will teardown the
+  // veth and routing setup and free the allocated IPv4 subnet.
+  std::pair<base::ScopedFD, patchpanel::ConnectNamespaceResponse>
+  ConnectNamespace(pid_t pid,
+                   const std::string& outbound_ifname,
+                   bool forward_user_traffic);
 
  private:
   scoped_refptr<dbus::Bus> bus_;

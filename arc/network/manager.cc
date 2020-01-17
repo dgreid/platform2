@@ -14,8 +14,8 @@
 
 #include <utility>
 
-#include <base/bind.h>
 #include "base/files/scoped_file.h"
+#include <base/bind.h>
 #include <base/logging.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_split.h>
@@ -27,6 +27,7 @@
 
 #include "arc/network/ipc.pb.h"
 #include "arc/network/routing_service.h"
+#include "arc/network/scoped_ns.h"
 
 namespace arc_networkd {
 namespace {
@@ -681,13 +682,39 @@ std::unique_ptr<dbus::Response> Manager::OnConnectNamespace(
   patchpanel::ConnectNamespaceRequest request;
   patchpanel::ConnectNamespaceResponse response;
 
+  bool success = true;
   if (!reader.PopArrayOfBytesAsProto(&request)) {
-    LOG(ERROR) << "Unable to parse request";
-    writer.AppendProtoAsArrayOfBytes(response);
-    return dbus_response;
+    LOG(ERROR) << "Unable to parse ConnectNamespaceRequest";
+    // Do not return yet to make sure we close the received fd and
+    // validate other arguments.
+    success = false;
   }
 
-  // TODO(hugobenichi, b/147712924): Implement
+  base::ScopedFD client_fd;
+  reader.PopFileDescriptor(&client_fd);
+  if (!client_fd.is_valid()) {
+    LOG(ERROR) << "ConnectNamespaceRequest: invalid file descriptor";
+    success = false;
+  }
+
+  pid_t pid = request.pid();
+  {
+    ScopedNS ns(pid);
+    if (!ns.IsValid()) {
+      LOG(ERROR) << "ConnectNamespaceRequest: invalid namespace pid " << pid;
+      success = false;
+    }
+  }
+
+  const std::string& outbound_ifname = request.outbound_physical_device();
+  if (!outbound_ifname.empty() && !shill_client_->has_device(outbound_ifname)) {
+    LOG(ERROR) << "ConnectNamespaceRequest: invalid outbound ifname "
+               << outbound_ifname;
+    success = false;
+  }
+
+  // TODO(hugobenichi, b/147712924) Store and monitor client_fd and teardown
+  // namespace routing when the client invalidate that fd.
 
   writer.AppendProtoAsArrayOfBytes(response);
   return dbus_response;

@@ -26,6 +26,14 @@ const std::string& ShillClient::default_interface() const {
   return default_interface_;
 }
 
+const std::set<std::string> ShillClient::get_devices() const {
+  return devices_;
+}
+
+bool ShillClient::has_device(const std::string& ifname) const {
+  return devices_.find(ifname) != devices_.end();
+}
+
 void ShillClient::ScanDevices(const DevicesChangeHandler& handler) {
   brillo::VariantDictionary props;
   if (!manager_proxy_->GetProperties(&props, nullptr)) {

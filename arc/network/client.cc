@@ -4,10 +4,14 @@
 
 #include "arc/network/client.h"
 
+#include <fcntl.h>
+
 #include <base/logging.h>
 #include <chromeos/dbus/service_constants.h>
 #include <dbus/message.h>
 #include <dbus/object_path.h>
+
+#include "arc/network/net_util.h"
 
 namespace patchpanel {
 
@@ -340,6 +344,63 @@ bool Client::SendSetVpnIntentRequest(
     return false;
   }
   return true;
+}
+
+std::pair<base::ScopedFD, patchpanel::ConnectNamespaceResponse>
+Client::ConnectNamespace(pid_t pid,
+                         const std::string& outbound_ifname,
+                         bool forward_user_traffic) {
+  // Prepare and serialize the request proto.
+  ConnectNamespaceRequest request;
+  request.set_pid(static_cast<int32_t>(pid));
+  request.set_outbound_physical_device(outbound_ifname);
+  request.set_allow_user_traffic(forward_user_traffic);
+
+  dbus::MethodCall method_call(kPatchPanelInterface, kConnectNamespaceMethod);
+  dbus::MessageWriter writer(&method_call);
+  if (!writer.AppendProtoAsArrayOfBytes(request)) {
+    LOG(ERROR) << "Failed to encode ConnectNamespaceRequest proto";
+    return {};
+  }
+
+  // Prepare an fd pair and append one fd directly after the serialized request.
+  int pipe_fds[2] = {-1, -1};
+  if (pipe2(pipe_fds, O_CLOEXEC) < 0) {
+    PLOG(ERROR) << "Failed to create a pair of fds with pipe2()";
+    return {};
+  }
+  base::ScopedFD fd_local(pipe_fds[0]);
+  // MessageWriter::AppendFileDescriptor duplicates the fd, so use ScopeFD to
+  // make sure the original fd is closed eventually.
+  base::ScopedFD fd_remote(pipe_fds[1]);
+  writer.AppendFileDescriptor(pipe_fds[1]);
+
+  std::unique_ptr<dbus::Response> dbus_response = proxy_->CallMethodAndBlock(
+      &method_call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT);
+  if (!dbus_response) {
+    LOG(ERROR) << "Failed to send ConnectNamespace message to patchpanel";
+    return {};
+  }
+
+  dbus::MessageReader reader(dbus_response.get());
+  ConnectNamespaceResponse response;
+  if (!reader.PopArrayOfBytesAsProto(&response)) {
+    LOG(ERROR) << "Failed to parse ConnectNamespaceResponse proto";
+    return {};
+  }
+
+  if (response.ifname().empty()) {
+    LOG(ERROR) << "ConnectNamespace for netns pid " << pid << " failed";
+    return {};
+  }
+
+  std::string subnet_info = arc_networkd::IPv4AddressToCidrString(
+      response.ipv4_subnet().base_addr(), response.ipv4_subnet().prefix_len());
+  LOG(INFO) << "ConnectNamespace for netns pid " << pid
+            << " succeeded: veth=" << response.ifname()
+            << " subnet=" << subnet_info;
+
+  return std::make_pair(std::move(fd_local), std::move(response));
 }
 
 }  // namespace patchpanel
