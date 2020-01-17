@@ -11,7 +11,7 @@ namespace arc_networkd {
 namespace {
 
 // The 100.115.92.0/24 subnet is reserved and not publicly routable. This subnet
-// is sliced into the following IP pools for use among the various guests:
+// is sliced into the following IP pools for use among the various usages:
 // +---------------+------------+----------------------------------------------+
 // |   IP Range    |    Guest   |                                              |
 // +---------------+------------+----------------------------------------------+
@@ -19,7 +19,8 @@ namespace {
 // | 4       (/30) | ARCVM      | Currently a hard-coded reservation           |
 // | 8-20    (/30) | ARC        | Used to expose multiple host networks to ARC |
 // | 24-124  (/30) | Termina VM | Used by Crostini                             |
-// | 128-188       | Reserved   |                                              |
+// | 128-160 (/30) | Host netns | Used for netns hosting minijailed services   |
+// | 164-192       | Reserved   |                                              |
 // | 192-252 (/28) | Containers | Used by Crostini                             |
 // +---------------+------------+----------------------------------------------+
 //
@@ -29,7 +30,7 @@ namespace {
 
 AddressManager::AddressManager() {
   for (auto g : {Guest::ARC, Guest::ARC_NET, Guest::VM_ARC, Guest::VM_TERMINA,
-                 Guest::VM_PLUGIN, Guest::CONTAINER}) {
+                 Guest::VM_PLUGIN, Guest::CONTAINER, Guest::MINIJAIL_NETNS}) {
     uint32_t base_addr;
     uint32_t prefix_length = 30;
     uint32_t subnets = 1;
@@ -48,15 +49,20 @@ AddressManager::AddressManager() {
         base_addr = Ipv4Addr(100, 115, 92, 24);
         subnets = 26;
         break;
-      case Guest::VM_PLUGIN:
-        base_addr = Ipv4Addr(100, 115, 93, 0);
-        prefix_length = 29;
-        subnets = 32;
+      case Guest::MINIJAIL_NETNS:
+        base_addr = Ipv4Addr(100, 115, 92, 128);
+        prefix_length = 30;
+        subnets = 8;
         break;
       case Guest::CONTAINER:
         base_addr = Ipv4Addr(100, 115, 92, 192);
         prefix_length = 28;
         subnets = 4;
+        break;
+      case Guest::VM_PLUGIN:
+        base_addr = Ipv4Addr(100, 115, 93, 0);
+        prefix_length = 29;
+        subnets = 32;
         break;
     }
     pools_.emplace(g, SubnetPool::New(base_addr, prefix_length, subnets));

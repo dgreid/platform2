@@ -5,6 +5,7 @@
 #ifndef ARC_NETWORK_MANAGER_H_
 #define ARC_NETWORK_MANAGER_H_
 
+#include <iostream>
 #include <map>
 #include <memory>
 #include <set>
@@ -24,6 +25,7 @@
 #include "arc/network/routing_service.h"
 #include "arc/network/shill_client.h"
 #include "arc/network/socket.h"
+#include "arc/network/subnet.h"
 #include "arc/network/traffic_forwarder.h"
 
 namespace arc_networkd {
@@ -31,6 +33,22 @@ namespace arc_networkd {
 // Main class that runs the mainloop and responds to LAN interface changes.
 class Manager final : public brillo::DBusDaemon, private TrafficForwarder {
  public:
+  // Metadata for tracking state associated with a connected namespace.
+  struct ConnectNamespaceInfo {
+    // The pid of the client network namespace.
+    pid_t pid;
+    // Name of the shill device for routing outbound traffic from the client
+    // namespace. Empty if outbound traffic should be forwarded to the highest
+    // priority network (physical or virtual).
+    std::string outbound_ifname;
+    // Name of the "local" veth device visible on the host namespace.
+    std::string host_ifname;
+    // Name of the "remote" veth device moved into the client namespace.
+    std::string client_ifname;
+    // IPv4 subnet assigned to the client namespace.
+    std::unique_ptr<Subnet> client_subnet;
+  };
+
   Manager(std::unique_ptr<HelperProcess> adb_proxy,
           std::unique_ptr<HelperProcess> mcast_proxy,
           std::unique_ptr<HelperProcess> nd_proxy);
@@ -122,6 +140,11 @@ class Manager final : public brillo::DBusDaemon, private TrafficForwarder {
   std::unique_ptr<dbus::Response> OnConnectNamespace(
       dbus::MethodCall* method_call);
 
+  void ConnectNamespace(base::ScopedFD client_fd,
+                        const patchpanel::ConnectNamespaceRequest& request,
+                        patchpanel::ConnectNamespaceResponse& response);
+  void DisconnectNamespace(int client_fd);
+
   // Dispatch |msg| to child processes.
   void SendGuestMessage(const GuestMessage& msg);
 
@@ -152,9 +175,18 @@ class Manager final : public brillo::DBusDaemon, private TrafficForwarder {
   std::unique_ptr<MinijailedProcessRunner> runner_;
   std::unique_ptr<Datapath> datapath_;
 
+  // All namespaces currently connected through patchpanel ConnectNamespace
+  // API, keyed by file descriptors committed by clients when calling
+  // ConnectNamespace.
+  std::map<int, ConnectNamespaceInfo> connected_namespaces_;
+  int connected_namespaces_next_id_{0};
+
   base::WeakPtrFactory<Manager> weak_factory_{this};
   DISALLOW_COPY_AND_ASSIGN(Manager);
 };
+
+std::ostream& operator<<(std::ostream& stream,
+                         const Manager::ConnectNamespaceInfo& ns_info);
 
 }  // namespace arc_networkd
 

@@ -25,6 +25,7 @@ TEST(AddressManager, BaseAddresses) {
       {AddressManager::Guest::VM_TERMINA, Ipv4Addr(100, 115, 92, 24)},
       {AddressManager::Guest::VM_PLUGIN, Ipv4Addr(100, 115, 93, 0)},
       {AddressManager::Guest::CONTAINER, Ipv4Addr(100, 115, 92, 192)},
+      {AddressManager::Guest::MINIJAIL_NETNS, Ipv4Addr(100, 115, 92, 128)},
   };
   AddressManager mgr;
   for (const auto a : addrs) {
@@ -44,6 +45,7 @@ TEST(AddressManager, AddressesPerSubnet) {
       {AddressManager::Guest::VM_TERMINA, 2},
       {AddressManager::Guest::VM_PLUGIN, 6},
       {AddressManager::Guest::CONTAINER, 14},
+      {AddressManager::Guest::MINIJAIL_NETNS, 2},
   };
   AddressManager mgr;
   for (const auto a : addrs) {
@@ -61,6 +63,7 @@ TEST(AddressManager, SubnetsPerPool) {
       {AddressManager::Guest::VM_TERMINA, 26},
       {AddressManager::Guest::VM_PLUGIN, 32},
       {AddressManager::Guest::CONTAINER, 4},
+      {AddressManager::Guest::MINIJAIL_NETNS, 8},
   };
   AddressManager mgr;
   for (const auto a : addrs) {
@@ -83,6 +86,8 @@ TEST(AddressManager, SubnetIndexing) {
   EXPECT_FALSE(mgr.AllocateIPv4Subnet(AddressManager::Guest::VM_TERMINA, 1));
   EXPECT_TRUE(mgr.AllocateIPv4Subnet(AddressManager::Guest::VM_PLUGIN, 1));
   EXPECT_FALSE(mgr.AllocateIPv4Subnet(AddressManager::Guest::CONTAINER, 1));
+  EXPECT_FALSE(
+      mgr.AllocateIPv4Subnet(AddressManager::Guest::MINIJAIL_NETNS, 1));
 }
 
 TEST(AddressManager, StableMacAddresses) {

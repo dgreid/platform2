@@ -23,12 +23,20 @@ namespace arc_networkd {
 class BRILLO_EXPORT AddressManager {
  public:
   enum class Guest {
+    // ARC++ management interface.
     ARC,
+    // ARC++ virtual networks connected to shill Devices.
     ARC_NET,
+    // ARCVM single interface.
     VM_ARC,
+    /// Crostini VM root namespace.
     VM_TERMINA,
+    // Crostini plugin VMs.
     VM_PLUGIN,
+    // Crostini VM user containers.
     CONTAINER,
+    // Other network namespaces hosting minijailed host processes.
+    MINIJAIL_NETNS,
   };
 
   AddressManager();

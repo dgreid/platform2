@@ -26,6 +26,7 @@
 #include <brillo/minijail/minijail.h>
 
 #include "arc/network/ipc.pb.h"
+#include "arc/network/net_util.h"
 #include "arc/network/routing_service.h"
 #include "arc/network/scoped_ns.h"
 
@@ -713,11 +714,76 @@ std::unique_ptr<dbus::Response> Manager::OnConnectNamespace(
     success = false;
   }
 
-  // TODO(hugobenichi, b/147712924) Store and monitor client_fd and teardown
-  // namespace routing when the client invalidate that fd.
+  if (success)
+    ConnectNamespace(std::move(client_fd), request, response);
 
   writer.AppendProtoAsArrayOfBytes(response);
   return dbus_response;
+}
+
+void Manager::ConnectNamespace(
+    base::ScopedFD client_fd,
+    const patchpanel::ConnectNamespaceRequest& request,
+    patchpanel::ConnectNamespaceResponse& response) {
+  std::unique_ptr<Subnet> subnet =
+      addr_mgr_.AllocateIPv4Subnet(AddressManager::Guest::MINIJAIL_NETNS);
+  if (!subnet) {
+    LOG(ERROR) << "ConnectNamespaceRequest: exhausted IPv4 subnet space";
+    return;
+  }
+
+  const std::string ifname_id = std::to_string(connected_namespaces_next_id_);
+  const std::string host_ifname = "arc_ns" + ifname_id;
+  const std::string client_ifname = "veth" + ifname_id;
+
+  // TODO(hugobenichi, b/147712924) Implement:
+  //  - create veth pair inside client namespace.
+  //  - configure IPv4 address on remote veth inside client namespace.
+  //  - add default route inside client namespace.
+  //  - add route to client subnet on host namespace.
+  //  - if allow_user_traffic is true allow forwarding both ways between
+  //  client namespace and other guest OSs and namespaces.
+  //  - if outbound_physical_device is defined, set strong routing.
+
+  // Prepare the response before storing ConnectNamespaceInfo.
+  response.set_ifname(host_ifname);
+  auto* response_subnet = response.mutable_ipv4_subnet();
+  response_subnet->set_base_addr(subnet->BaseAddress());
+  response_subnet->set_prefix_len(subnet->PrefixLength());
+
+  // Store ConnectNamespaceInfo
+  connected_namespaces_next_id_++;
+  int fdkey = client_fd.release();
+  connected_namespaces_[fdkey] = {};
+  ConnectNamespaceInfo& ns_info = connected_namespaces_[fdkey];
+  ns_info.pid = request.pid();
+  ns_info.outbound_ifname = request.outbound_physical_device();
+  ns_info.host_ifname = std::move(host_ifname);
+  ns_info.client_ifname = std::move(client_ifname);
+  ns_info.client_subnet = std::move(subnet);
+
+  // TODO(hugobenichi, b/147712924) Monitor client_fd and call
+  // DisconnectNamespace when the client invalidates client_fd.
+
+  LOG(INFO) << "Connected network namespace " << ns_info;
+}
+
+void Manager::DisconnectNamespace(int client_fd) {
+  auto it = connected_namespaces_.find(client_fd);
+  if (it == connected_namespaces_.end()) {
+    LOG(ERROR) << "No ConnectNamespaceInfo found for client_fd " << client_fd;
+    return;
+  }
+
+  // TODO(hugobenichi, b/147712924) Implement
+  //  - destroy veth pair.
+  //  - remove route to client subnet on host namespace.
+  //  - remove forwarding rules to/from other guest OSs if any.
+
+  LOG(INFO) << "Disconnected network namespace " << it->second;
+
+  // This release the allocated IPv4 subnet.
+  connected_namespaces_.erase(it);
 }
 
 void Manager::SendGuestMessage(const GuestMessage& msg) {
@@ -812,6 +878,18 @@ void Manager::OnDeviceMessageFromNDProxy(const DeviceMessage& msg) {
     LOG(WARNING) << "Failed to setup the IPv6 route for interface "
                  << msg.dev_ifname();
   }
+}
+
+std::ostream& operator<<(std::ostream& stream,
+                         const Manager::ConnectNamespaceInfo& ns_info) {
+  stream << "{ pid: " << ns_info.pid;
+  if (!ns_info.outbound_ifname.empty()) {
+    stream << ", outbound_ifname: " << ns_info.outbound_ifname;
+  }
+  stream << ", host_ifname: " << ns_info.host_ifname
+         << ", client_ifname: " << ns_info.client_ifname
+         << ", subnet: " << ns_info.client_subnet->ToCidrString() << '}';
+  return stream;
 }
 
 }  // namespace arc_networkd
