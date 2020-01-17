@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "vm_tools/common/tzif_parser.h"
+#include "brillo/timezone/tzif_parser.h"
 
 #include <arpa/inet.h>
 #include <stdint.h>
@@ -13,6 +13,7 @@
 #include <base/files/file.h>
 #include <base/files/file_path.h>
 #include <base/logging.h>
+#include <base/stl_util.h>
 #include <base/strings/string_util.h>
 
 namespace {
@@ -94,9 +95,12 @@ bool ParseTzifHeader(base::File* tzfile, struct tzif_header* header) {
 
 }  // namespace
 
-// static
-bool TzifParser::GetPosixTimezone(const base::FilePath& tzif_path,
-                                  std::string* timezone_string_out) {
+namespace brillo {
+
+namespace timezone {
+
+bool GetPosixTimezone(const base::FilePath& tzif_path,
+                      std::string* timezone_string_out) {
   if (!timezone_string_out)
     return false;
   base::FilePath to_parse;
@@ -147,15 +151,18 @@ bool TzifParser::GetPosixTimezone(const base::FilePath& tzif_path,
       1 * second_header.ttisgmtcnt;
   int64_t offset = tzfile.Seek(base::File::FROM_CURRENT, second_body_size);
 
-  std::vector<char> posix_string(tzfile.GetLength() - offset);
-  int read = tzfile.ReadAtCurrentPos(&posix_string[0], posix_string.size());
-  if (read != posix_string.size()) {
+  std::string time_string(tzfile.GetLength() - offset, '\0');
+  if (tzfile.ReadAtCurrentPos(base::data(time_string), time_string.size()) !=
+      time_string.size()) {
     return false;
   }
 
-  std::string time_string(&posix_string[0], posix_string.size());
   // According to the spec, the embedded string is enclosed by '\n' characters.
   base::TrimWhitespaceASCII(time_string, base::TRIM_ALL, &time_string);
   *timezone_string_out = std::move(time_string);
   return true;
 }
+
+}  // namespace timezone
+
+}  // namespace brillo

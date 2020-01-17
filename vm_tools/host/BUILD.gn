@@ -8,7 +8,6 @@ group("host") {
   deps = [
     ":cicerone_client",
     ":concierge_client",
-    ":libtzif_parser",
     ":maitred_client",
     ":seneschal",
     ":seneschal_client",
@@ -21,7 +20,6 @@ group("host") {
   if (use.test) {
     deps += [
       ":cicerone_test",
-      ":common_test",
       ":concierge_test",
       ":syslog_forwarder_test",
     ]
@@ -198,20 +196,6 @@ static_library("libcicerone") {
     "vm_protos",
     "libmetrics-${libbase_ver}",
   ]
-  deps = [
-    ":libtzif_parser",
-  ]
-}
-
-static_library("libtzif_parser") {
-  configs -= [ "//common-mk:use_thin_archive" ]
-  configs += [
-    ":host_target_defaults_pkgs",
-    "//common-mk:nouse_thin_archive",
-  ]
-  sources = [
-    "../common/tzif_parser.cc",
-  ]
 }
 
 executable("vm_cicerone") {
@@ -314,20 +298,6 @@ if (use.test) {
     deps = [
       ":libcicerone",
       ":service_testing_helper_lib",
-      "//common-mk/testrunner:testrunner",
-    ]
-  }
-
-  executable("common_test") {
-    sources = [
-      "../common/tzif_parser_test.cc",
-    ]
-    configs += [
-      "//common-mk:test",
-      ":host_target_defaults",
-    ]
-    deps = [
-      ":libtzif_parser",
       "//common-mk/testrunner:testrunner",
     ]
   }

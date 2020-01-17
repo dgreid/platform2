@@ -412,7 +412,7 @@ message SetTimezoneRequest {
   // (see 'man timezone'). Used if the guest VM does not support timezone-data
   // timezone names.
   //
-  // cicerone/tzif_parser.h can extract these strings from TZif files.
+  // brillo/timezone/tzif_parser.h can extract these strings from TZif files.
   string posix_tz_string = 2;
 
   // Containers for which we want to set the timezone.

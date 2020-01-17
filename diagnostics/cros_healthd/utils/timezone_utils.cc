@@ -7,7 +7,7 @@
 #include <string>
 
 #include <base/files/file_util.h>
-#include <chromeos/tzif_parser.h>
+#include <brillo/timezone/tzif_parser.h>
 
 #include "diagnostics/common/file_utils.h"
 
@@ -45,7 +45,7 @@ bool GetTimezone(const base::FilePath& root,
   }
   *region = timezone_region_path.value();
 
-  if (!TzifParser::GetPosixTimezone(timezone_path, posix)) {
+  if (!brillo::timezone::GetPosixTimezone(timezone_path, posix)) {
     LOG(ERROR) << "Unable to get posix timezone from timezone path: "
                << timezone_path.value();
     return false;

@@ -32,12 +32,11 @@
 #include <base/synchronization/waitable_event.h>
 #include <base/sys_info.h>
 #include <base/threading/thread_task_runner_handle.h>
+#include <brillo/timezone/tzif_parser.h>
 #include <chromeos/dbus/service_constants.h>
 #include <chunneld/proto_bindings/chunneld_service.pb.h>
 #include <dbus/object_proxy.h>
 #include <chromeos/constants/vm_tools.h>
-
-#include "vm_tools/common/tzif_parser.h"
 
 using std::string;
 
@@ -291,7 +290,7 @@ void SetTimezoneForContainer(VirtualMachine* vm,
   }
 
   std::string posix_tz_string;
-  if (!TzifParser::GetPosixTimezone(system_timezone, &posix_tz_string)) {
+  if (!brillo::timezone::GetPosixTimezone(system_timezone, &posix_tz_string)) {
     LOG(WARNING) << "Reading POSIX TZ string failed for timezone file "
                  << system_timezone.value();
     posix_tz_string = "";
@@ -2292,7 +2291,7 @@ std::unique_ptr<dbus::Response> Service::SetTimezone(
   LOG(INFO) << "Received request to SetTimezone to " << request.timezone_name();
 
   std::string posix_tz_string;
-  if (!TzifParser::GetPosixTimezone(
+  if (!brillo::timezone::GetPosixTimezone(
           base::FilePath("/usr/share/zoneinfo").Append(request.timezone_name()),
           &posix_tz_string)) {
     LOG(WARNING) << "Reading POSIX TZ string failed for timezone "
@@ -3240,7 +3239,7 @@ void Service::OnLocaltimeFileChanged(const base::FilePath& path, bool error) {
   }
 
   std::string posix_tz_string;
-  if (!TzifParser::GetPosixTimezone(system_timezone, &posix_tz_string)) {
+  if (!brillo::timezone::GetPosixTimezone(system_timezone, &posix_tz_string)) {
     LOG(WARNING) << "Reading POSIX TZ string failed for timezone file "
                  << system_timezone.value();
     posix_tz_string = "";

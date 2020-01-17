@@ -95,7 +95,6 @@ source_set("libcros_healthd_utils") {
     ":diagnostics_mojo_bindings",
     "//diagnostics/common:libcommon",
   ]
-  libs = [ "tzif_parser" ]
   all_dependent_configs = [ ":libcros_healthd_utils_pkg_deps" ]
   sources = [
     "cros_healthd/utils/backlight_utils.cc",
