@@ -9,6 +9,9 @@ group("all") {
   deps = [
     ":arc-appfuse-provider",
     ":arc-appfuse-provider-adaptors",
+    ":install_init",
+    ":install_policy",
+    ":install_system.d",
     ":libarcappfuse",
   ]
   if (use.test) {
@@ -46,6 +49,7 @@ executable("arc-appfuse-provider") {
   sources = [
     "arc_appfuse_provider.cc",
   ]
+  install_path = "bin"
   configs += [ ":target_defaults" ]
   deps = [
     ":arc-appfuse-provider-adaptors",
@@ -58,6 +62,7 @@ if (use.test) {
     sources = [
       "data_filter_test.cc",
     ]
+    run_test = true
     configs += [
       ":target_defaults",
       "//common-mk:test",
@@ -68,4 +73,29 @@ if (use.test) {
       "//common-mk/testrunner",
     ]
   }
+}
+
+install_config("install_system.d") {
+  sources = [
+    "org.chromium.ArcAppfuseProvider.conf",
+  ]
+  install_path = "/etc/dbus-1/system.d"
+}
+
+install_config("install_init") {
+  sources = [
+    "init/arc-appfuse-provider.conf",
+  ]
+  install_path = "/etc/init"
+}
+
+install_config("install_policy") {
+  arch = getenv("ARCH")
+  sources = [
+    "seccomp/arc-appfuse-provider-seccomp-${arch}.policy",
+  ]
+  outputs = [
+    "arc-appfuse-provider-seccomp.policy",
+  ]
+  install_path = "/usr/share/policy"
 }
