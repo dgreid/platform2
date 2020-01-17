@@ -8,7 +8,7 @@ use std::io::{stdout, Write};
 
 use getopts::Options;
 
-use backends::{Backend, ContainerSource, VmFeatures};
+use backends::{Backend, ContainerSource, DiskOpType, VmFeatures};
 use frontends::Frontend;
 use EnvMap;
 
@@ -17,6 +17,7 @@ enum VmcError {
     ExpectedCrosUserIdHash,
     ExpectedName,
     ExpectedNoArgs,
+    ExpectedSize,
     ExpectedU8Bus,
     ExpectedU8Device,
     ExpectedU8Port,
@@ -25,6 +26,7 @@ enum VmcError {
     ExpectedVmAndFileName,
     ExpectedVmAndMaybeFileName,
     ExpectedVmAndPath,
+    ExpectedVmAndSize,
     ExpectedVmBusDevice,
     ExpectedVmPort,
     InvalidEmail,
@@ -54,6 +56,7 @@ impl fmt::Display for VmcError {
             ),
             ExpectedCrosUserIdHash => write!(f, "expected CROS_USER_ID_HASH environment variable"),
             ExpectedName => write!(f, "expected <name>"),
+            ExpectedSize => write!(f, "expected <size>"),
             ExpectedVmAndContainer => write!(
                 f,
                 "expected <vm name> <container name> [ <image server> <image alias> ]"
@@ -66,6 +69,7 @@ impl fmt::Display for VmcError {
                 "expected <vm name> [<file name> [removable storage name]]"
             ),
             ExpectedVmAndPath => write!(f, "expected <vm name> <path>"),
+            ExpectedVmAndSize => write!(f, "expected <vm name> <size>"),
             ExpectedVmBusDevice => write!(f, "expected <vm name> <bus>:<device>"),
             ExpectedNoArgs => write!(f, "expected no arguments"),
             ExpectedU8Bus => write!(f, "expected <bus> to fit into an 8-bit integer"),
@@ -203,7 +207,7 @@ impl<'a, 'b, 'c> Command<'a, 'b, 'c> {
             params,
         )) {
             println!("VM creation in progress: {}", uuid);
-            self.wait_disk_op_completion(&uuid, user_id_hash)?;
+            self.wait_disk_op_completion(&uuid, user_id_hash, DiskOpType::Create)?;
         }
         Ok(())
     }
@@ -228,9 +232,15 @@ impl<'a, 'b, 'c> Command<'a, 'b, 'c> {
         }
     }
 
-    fn wait_disk_op_completion(&mut self, uuid: &str, user_id_hash: &str) -> VmcResult {
+    fn wait_disk_op_completion(
+        &mut self,
+        uuid: &str,
+        user_id_hash: &str,
+        op_type: DiskOpType,
+    ) -> VmcResult {
         loop {
-            let (done, progress) = try_command!(self.backend.wait_disk_op(&uuid, user_id_hash));
+            let (done, progress) =
+                try_command!(self.backend.wait_disk_op(&uuid, user_id_hash, op_type));
             if done {
                 println!("\rOperation completed successfully");
                 return Ok(());
@@ -239,6 +249,31 @@ impl<'a, 'b, 'c> Command<'a, 'b, 'c> {
             print!("\rOperation in progress: {}% done", progress);
             stdout().flush()?;
         }
+    }
+
+    fn resize(&mut self) -> VmcResult {
+        if self.args.len() != 2 {
+            return Err(ExpectedVmAndSize.into());
+        }
+
+        let vm_name = self.args[0];
+        let size: u64 = self.args[1].parse().or(Err(ExpectedSize))?;
+
+        let user_id_hash = self
+            .environ
+            .get("CROS_USER_ID_HASH")
+            .ok_or(ExpectedCrosUserIdHash)?;
+
+        match try_command!(self.backend.disk_resize(vm_name, user_id_hash, size)) {
+            Some(uuid) => {
+                println!("Resize in progress: {}", uuid);
+                self.wait_disk_op_completion(&uuid, user_id_hash, DiskOpType::Resize)?;
+            }
+            None => {
+                println!("Operation completed successfully");
+            }
+        }
+        Ok(())
     }
 
     fn export(&mut self) -> VmcResult {
@@ -274,7 +309,7 @@ impl<'a, 'b, 'c> Command<'a, 'b, 'c> {
             removable_media
         )) {
             println!("Export in progress: {}", uuid);
-            self.wait_disk_op_completion(&uuid, user_id_hash)?;
+            self.wait_disk_op_completion(&uuid, user_id_hash, DiskOpType::Create)?;
         }
         Ok(())
     }
@@ -304,7 +339,7 @@ impl<'a, 'b, 'c> Command<'a, 'b, 'c> {
             removable_media
         )) {
             println!("Import in progress: {}", uuid);
-            self.wait_disk_op_completion(&uuid, user_id_hash)?;
+            self.wait_disk_op_completion(&uuid, user_id_hash, DiskOpType::Create)?;
         }
         Ok(())
     }
@@ -320,7 +355,10 @@ impl<'a, 'b, 'c> Command<'a, 'b, 'c> {
             .get("CROS_USER_ID_HASH")
             .ok_or(ExpectedCrosUserIdHash)?;
 
-        let (done, progress) = try_command!(self.backend.disk_op_status(uuid, user_id_hash));
+        let (done, progress) =
+            try_command!(self
+                .backend
+                .disk_op_status(uuid, user_id_hash, DiskOpType::Create));
         if done {
             println!("Operation completed successfully");
         } else {
@@ -529,6 +567,7 @@ const USAGE: &str = r#"
      disk-op-status <command UUID> |
      export [-d] <vm name> <file name> [<removable storage name>] |
      import [-p] <vm name> <file name> [<removable storage name>] |
+     resize <vm name> <size> |
      list |
      share <vm name> <path> |
      unshare <vm name> <path> |
@@ -584,6 +623,7 @@ impl Frontend for Vmc {
             "export" => command.export(),
             "import" => command.import(),
             "disk-op-status" => command.disk_op_status(),
+            "resize" => command.resize(),
             "list" => command.list(),
             "share" => command.share(),
             "unshare" => command.unshare(),

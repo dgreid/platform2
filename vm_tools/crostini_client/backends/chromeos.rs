@@ -16,7 +16,7 @@ use std::process::Command;
 use dbus::{BusType, Connection, ConnectionItem, Message, OwnedFd};
 use protobuf::Message as ProtoMessage;
 
-use backends::{Backend, ContainerSource, VmFeatures};
+use backends::{Backend, ContainerSource, DiskOpType, VmFeatures};
 use lsb_release::{LsbRelease, ReleaseChannel};
 use proto::system_api::cicerone_service::{self, *};
 use proto::system_api::concierge_service::*;
@@ -63,6 +63,7 @@ const CREATE_DISK_IMAGE_METHOD: &str = "CreateDiskImage";
 const DESTROY_DISK_IMAGE_METHOD: &str = "DestroyDiskImage";
 const EXPORT_DISK_IMAGE_METHOD: &str = "ExportDiskImage";
 const IMPORT_DISK_IMAGE_METHOD: &str = "ImportDiskImage";
+const RESIZE_DISK_IMAGE_METHOD: &str = "ResizeDiskImage";
 const DISK_IMAGE_STATUS_METHOD: &str = "DiskImageStatus";
 const LIST_VM_DISKS_METHOD: &str = "ListVmDisks";
 const START_CONTAINER_METHOD: &str = "StartContainer";
@@ -753,19 +754,59 @@ impl ChromeOS {
         }
     }
 
-    fn parse_disk_op_status(
+    /// Request that concierge resize the VM's disk.
+    fn resize_disk(
         &mut self,
-        response: DiskImageStatusResponse,
-    ) -> Result<(bool, u32), Box<dyn Error>> {
+        vm_name: &str,
+        user_id_hash: &str,
+        size: u64,
+    ) -> Result<Option<String>, Box<dyn Error>> {
+        let mut request = ResizeDiskImageRequest::new();
+        request.cryptohome_id = user_id_hash.to_owned();
+        request.disk_path = vm_name.to_owned();
+        request.disk_size = size;
+
+        let response: ResizeDiskImageResponse = self.sync_protobus(
+            Message::new_method_call(
+                VM_CONCIERGE_SERVICE_NAME,
+                VM_CONCIERGE_SERVICE_PATH,
+                VM_CONCIERGE_INTERFACE,
+                RESIZE_DISK_IMAGE_METHOD,
+            )?,
+            &request,
+        )?;
+
         match response.status {
-            DiskImageStatus::DISK_STATUS_CREATED => Ok((true, response.progress)),
-            DiskImageStatus::DISK_STATUS_IN_PROGRESS => Ok((false, response.progress)),
+            DiskImageStatus::DISK_STATUS_RESIZED => Ok(None),
+            DiskImageStatus::DISK_STATUS_IN_PROGRESS => Ok(Some(response.command_uuid)),
             _ => Err(BadDiskImageStatus(response.status, response.failure_reason).into()),
         }
     }
 
+    fn parse_disk_op_status(
+        &mut self,
+        response: DiskImageStatusResponse,
+        op_type: DiskOpType,
+    ) -> Result<(bool, u32), Box<dyn Error>> {
+        let expected_status = match op_type {
+            DiskOpType::Create => DiskImageStatus::DISK_STATUS_CREATED,
+            DiskOpType::Resize => DiskImageStatus::DISK_STATUS_RESIZED,
+        };
+        if response.status == expected_status {
+            Ok((true, response.progress))
+        } else if response.status == DiskImageStatus::DISK_STATUS_IN_PROGRESS {
+            Ok((false, response.progress))
+        } else {
+            Err(BadDiskImageStatus(response.status, response.failure_reason).into())
+        }
+    }
+
     /// Request concierge to provide status of a disk operation (import or export) with given UUID.
-    fn check_disk_operation(&mut self, uuid: &str) -> Result<(bool, u32), Box<dyn Error>> {
+    fn check_disk_operation(
+        &mut self,
+        uuid: &str,
+        op_type: DiskOpType,
+    ) -> Result<(bool, u32), Box<dyn Error>> {
         let mut request = DiskImageStatusRequest::new();
         request.command_uuid = uuid.to_owned();
 
@@ -779,11 +820,15 @@ impl ChromeOS {
             &request,
         )?;
 
-        self.parse_disk_op_status(response)
+        self.parse_disk_op_status(response, op_type)
     }
 
     /// Wait for updated status of a disk operation (import or export) with given UUID.
-    fn wait_disk_operation(&mut self, uuid: &str) -> Result<(bool, u32), Box<dyn Error>> {
+    fn wait_disk_operation(
+        &mut self,
+        uuid: &str,
+        op_type: DiskOpType,
+    ) -> Result<(bool, u32), Box<dyn Error>> {
         loop {
             let response: DiskImageStatusResponse = self.protobus_wait_for_signal_timeout(
                 VM_CONCIERGE_INTERFACE,
@@ -792,7 +837,7 @@ impl ChromeOS {
             )?;
 
             if response.command_uuid == uuid {
-                return self.parse_disk_op_status(response);
+                return self.parse_disk_op_status(response, op_type);
             }
         }
     }
@@ -1471,22 +1516,34 @@ impl Backend for ChromeOS {
         Ok((out_images, total_size))
     }
 
+    fn disk_resize(
+        &mut self,
+        vm_name: &str,
+        user_id_hash: &str,
+        size: u64,
+    ) -> Result<Option<String>, Box<dyn Error>> {
+        self.start_vm_infrastructure(user_id_hash)?;
+        self.resize_disk(vm_name, user_id_hash, size)
+    }
+
     fn disk_op_status(
         &mut self,
         uuid: &str,
         user_id_hash: &str,
+        op_type: DiskOpType,
     ) -> Result<(bool, u32), Box<dyn Error>> {
         self.start_vm_infrastructure(user_id_hash)?;
-        self.check_disk_operation(uuid)
+        self.check_disk_operation(uuid, op_type)
     }
 
     fn wait_disk_op(
         &mut self,
         uuid: &str,
         user_id_hash: &str,
+        op_type: DiskOpType,
     ) -> Result<(bool, u32), Box<dyn Error>> {
         self.start_vm_infrastructure(user_id_hash)?;
-        self.wait_disk_operation(uuid)
+        self.wait_disk_operation(uuid, op_type)
     }
 
     fn container_create(

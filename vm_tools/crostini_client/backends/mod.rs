@@ -59,6 +59,18 @@ impl Default for ContainerSource {
     }
 }
 
+#[derive(Copy, Clone)]
+pub enum DiskOpType {
+    Create,
+    Resize,
+}
+
+impl Default for DiskOpType {
+    fn default() -> Self {
+        DiskOpType::Create
+    }
+}
+
 // The input for this macro is an ordinary trait declaration, with some restrictions. Each method
 // must take `&mut self` and return a `Result` where the `Ok` variant implements `Default` and the
 // `Err` variant is `Box<dyn Error>`. All other arguments types must implement `Default` and no provided
@@ -251,18 +263,27 @@ impl_backend! {
             &mut self,
             user_id_hash: &str,
         ) -> Result<(Vec<(String, u64)>, u64), Box<dyn Error>>;
-        /// Checks status of executing disk operation (import, export).
+        /// Checks status of executing disk operation (import, export, resize).
         fn disk_op_status(
             &mut self,
             uuid: &str,
             user_id_hash: &str,
+            op_type: DiskOpType,
         ) -> Result<(bool, u32), Box<dyn Error>>;
-        /// Waits for the status of executing disk operation (import, export) to update.
+        /// Waits for the status of executing disk operation (import, export, resize) to update.
         fn wait_disk_op(
             &mut self,
             uuid: &str,
             user_id_hash: &str,
+            op_type: DiskOpType,
         ) -> Result<(bool, u32), Box<dyn Error>>;
+        /// Resizes the disk of `vm_name` to the requested `size` in bytes.
+        fn disk_resize(
+            &mut self,
+            vm_name: &str,
+            user_id_hash: &str,
+            size: u64,
+        ) -> Result<Option<String>, Box<dyn Error>>;
 
         // Container
 
