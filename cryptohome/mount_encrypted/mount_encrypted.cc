@@ -46,7 +46,8 @@ static const uid_t kBiodUid = 282;
 static const gid_t kBiodGid = 282;
 
 constexpr char kNvramExport[] = "/tmp/lockbox.nvram";
-constexpr char kMountEncryptedMetricsPath[] = "/run/metrics.mount-encrypted";
+constexpr char kMountEncryptedMetricsPath[] =
+    "/run/mount_encrypted/metrics.mount-encrypted";
 }  // namespace
 
 namespace metrics {

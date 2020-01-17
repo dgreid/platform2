@@ -128,10 +128,10 @@ if [ "${rc}" -eq 0 ]; then
   umount -n /mnt/stateful_partition
 fi
 exit "$(( rc | $? ))"
-) >/run/umount-encrypted.log 2>&1
+) >/run/mount_encrypted/umount-encrypted.log 2>&1
 
 if [ "$?" -ne 0 ]; then
-  mv /run/umount-encrypted.log /mnt/stateful_partition/
+  mv /run/mount_encrypted/umount-encrypted.log /mnt/stateful_partition/
   (
     set -x
     cat "/proc/$$/mountinfo"
@@ -151,7 +151,7 @@ else
       fi
     fi
   fi
-  rm -f /run/umount-encrypted.log
+  rm -f /run/mount_encrypted/umount-encrypted.log
 fi
 
 # Just in case something didn't unmount properly above.

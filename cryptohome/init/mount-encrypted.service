@@ -19,4 +19,5 @@ RemainAfterExit=true
 # the default SELinux label for the target. The target should always
 # be removed since we don't want to follow symlinks on the target.
 # Use a trailing slash to require that "log" is a directory.
-ExecStart=-/bin/cp -aPZ --remove-destination /tmp/mount-encrypted.log /var/log/
+ExecStart=-/bin/cp -aPZ --remove-destination \
+    /run/mount_encrypted/mount-encrypted.log /var/log/

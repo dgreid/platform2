@@ -61,7 +61,7 @@ const char* const kDmesgLogPath = "/run/dmesg.log";
 // Early crash log collection paths.
 const char* const kEarlyBootLogPaths[] = {
     // mount-encrypted: logs for setting up the encrypted stateful partition.
-    "/run/mount-encrypted.log",
+    "/run/mount_encrypted/mount-encrypted.log",
     // Fetch dmesg and log into /run.
     kDmesgLogPath,
 };

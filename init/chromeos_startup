@@ -162,6 +162,9 @@ mount --make-private /run/namespaces
 # Create a file where we can bind-mount the Chrome mount namespace.
 touch /run/namespaces/mnt_chrome
 
+# Create a directory for mount-encrypted related logs and metrics.
+mkdir /run/mount_encrypted
+
 # Prepare to mount stateful partition
 ROOT_DEV="$(rootdev -s)"
 ROOTDEV_RET_CODE=$?
