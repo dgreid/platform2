@@ -16,7 +16,6 @@ const BASE_COMMANDS: &[&str] = &[
     "battery_firmware",
     "battery_test",
     "bt_console",
-    "ccd_pass",
     "chaps_debug",
     "connectivity",
     "cras",
@@ -161,7 +160,7 @@ mod tests {
     const USB_SHELL: &str = "removable.d/50-crosh.sh";
 
     // Commands that are excluded from the checks because they are conditionally registered.
-    const IGNORE_COMMANDS: &[&str] = &["verify_ro", "vmc"];
+    const IGNORE_COMMANDS: &[&str] = &["ccd_pass", "verify_ro", "vmc"];
 
     enum ShellSource {
         Base,
