@@ -3601,6 +3601,17 @@ void Service::ResetDictionaryAttackMitigation() {
   if (!use_tpm_ || !tpm_init_ || !tpm_init_->IsTpmReady()) {
     return;
   }
+
+  // If tpm_manager exists, the DA reset and UMA reporting should happen there.
+  if (use_tpm_ && tpm_ && tpm_->DoesUseTpmManager()) {
+    // tpm_manager doesn't take delegate as input.
+    brillo::Blob unused_blob;
+    if (!tpm_->ResetDictionaryAttackMitigation(unused_blob, unused_blob)) {
+      LOG(WARNING) << "Failed to reset DA.";
+    }
+    return;
+  }
+
   int counter = 0;
   int threshold;
   int seconds_remaining;
