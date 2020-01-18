@@ -15,6 +15,8 @@
 
 namespace {
 
+constexpr int kDictionaryAttackResetPeriodInHours = 1;
+
 #if USE_TPM2
 // Timeout waiting for Trunks daemon readiness.
 constexpr base::TimeDelta kTrunksDaemonTimeout =
@@ -60,7 +62,9 @@ TpmManagerService::TpmManagerService(bool wait_for_ownership,
                                      TpmInitializer* tpm_initializer,
                                      TpmNvram* tpm_nvram,
                                      TpmManagerMetrics* tpm_manager_metrics)
-    : local_data_store_(local_data_store),
+    : dictionary_attack_timer_(
+          base::TimeDelta::FromHours(kDictionaryAttackResetPeriodInHours)),
+      local_data_store_(local_data_store),
       tpm_status_(tpm_status),
       tpm_initializer_(tpm_initializer),
       tpm_nvram_(tpm_nvram),
@@ -132,6 +136,16 @@ void TpmManagerService::InitializeTask() {
     LOG(ERROR) << __func__ << ": failed to get tpm ownership status";
     return;
   }
+  // The precondition of DA reset is not satisfied; resets the timer so it
+  // doesn't get triggered immediately.
+  if (ownership_status != TpmStatus::kTpmOwned && wait_for_ownership_) {
+    dictionary_attack_timer_.Reset();
+  }
+  worker_thread_->task_runner()->PostTask(
+      FROM_HERE,
+      base::Bind(&TpmManagerService::PeriodicResetDictionaryAttackCounterTask,
+                 base::Unretained(this)));
+
   if (ownership_status == TpmStatus::kTpmOwned) {
     VLOG(1) << "Tpm is already owned.";
     if (!tpm_initializer_->EnsurePersistentOwnerDelegate()) {
@@ -153,6 +167,7 @@ void TpmManagerService::InitializeTask() {
     VLOG(1) << "Initializing TPM.";
     if (!tpm_initializer_->InitializeTpm()) {
       LOG(WARNING) << __func__ << ": TPM initialization failed.";
+      dictionary_attack_timer_.Reset();
       return;
     }
   } else if (perform_preinit_) {
@@ -316,10 +331,10 @@ void TpmManagerService::ResetDictionaryAttackLockTask(
   if (!ResetDictionaryAttackCounterIfNeeded()) {
     LOG(ERROR) << __func__ << ": failed to reset DA lock.";
     reply->set_status(STATUS_DEVICE_ERROR);
-    return;
+  } else {
+    reply->set_status(STATUS_SUCCESS);
   }
-
-  reply->set_status(STATUS_SUCCESS);
+  dictionary_attack_timer_.Reset();
 }
 
 void TpmManagerService::TakeOwnership(const TakeOwnershipRequest& request,
@@ -343,6 +358,7 @@ void TpmManagerService::TakeOwnershipTask(
   if (!ResetDictionaryAttackCounterIfNeeded()) {
     LOG(WARNING) << __func__ << ": DA reset failed after taking ownership.";
   }
+  dictionary_attack_timer_.Reset();
   reply->set_status(STATUS_SUCCESS);
 }
 
@@ -589,6 +605,28 @@ bool TpmManagerService::ResetDictionaryAttackCounterIfNeeded() {
   auto status = tpm_initializer_->ResetDictionaryAttackLock();
   tpm_manager_metrics_->ReportDictionaryAttackResetStatus(status);
   return status == DictionaryAttackResetStatus::kResetAttemptSucceeded;
+}
+
+void TpmManagerService::PeriodicResetDictionaryAttackCounterTask() {
+  VLOG(1) << __func__;
+  base::TimeDelta time_remaining = dictionary_attack_timer_.TimeRemaining();
+  // if the timer is up, run the task and reset the timer.
+  if (time_remaining.is_zero()) {
+    if (!ResetDictionaryAttackCounterIfNeeded()) {
+      LOG(WARNING) << __func__ << ": DA reset failed.";
+    } else {
+      LOG(INFO) << __func__ << ": DA reset succeeded.";
+    }
+    dictionary_attack_timer_.Reset();
+    time_remaining = dictionary_attack_timer_.TimeRemaining();
+  } else {
+    LOG(INFO) << __func__ << ": Time is not up yet.";
+  }
+  worker_thread_->task_runner()->PostDelayedTask(
+      FROM_HERE,
+      base::Bind(&TpmManagerService::PeriodicResetDictionaryAttackCounterTask,
+                 base::Unretained(this)),
+      time_remaining);
 }
 
 void TpmManagerService::ShutdownTask() {

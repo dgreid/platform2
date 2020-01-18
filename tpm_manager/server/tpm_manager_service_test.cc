@@ -8,6 +8,8 @@
 #include <base/bind.h>
 #include <base/run_loop.h>
 #include <base/synchronization/lock.h>
+#include <base/synchronization/waitable_event.h>
+#include <base/threading/platform_thread.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
@@ -20,12 +22,15 @@
 
 using testing::_;
 using testing::AtLeast;
+using testing::Ge;
 using testing::Invoke;
+using testing::Le;
 using testing::NiceMock;
 using testing::Return;
 using testing::SaveArg;
 using testing::SetArgPointee;
 using testing::StrictMock;
+using testing::WithoutArgs;
 
 namespace {
 
@@ -53,6 +58,7 @@ class TpmManagerServiceTestBase : public testing::Test {
         wait_for_ownership, perform_preinit, &mock_local_data_store_,
         &mock_tpm_status_, &mock_tpm_initializer_, &mock_tpm_nvram_,
         &mock_tpm_manager_metrics_));
+    DisablePeriodicDictionaryAttackReset();
     if (shall_setup_service) {
       SetupService();
     }
@@ -76,6 +82,13 @@ class TpmManagerServiceTestBase : public testing::Test {
   }
 
   void SetupService() { CHECK(service_->Initialize()); }
+
+  void DisablePeriodicDictionaryAttackReset() {
+    // Virtually disables the DA reset timer to reduce noises of expectations.
+    PassiveTimer timer(base::TimeDelta::FromHours(5));
+    timer.Reset();
+    service_->set_dictionary_attack_reset_timer_for_testing(timer);
+  }
 
   NiceMock<MockLocalDataStore> mock_local_data_store_;
   NiceMock<MockTpmInitializer> mock_tpm_initializer_;
@@ -228,6 +241,74 @@ TEST_F(TpmManagerServiceTest_NoPreinit, NoPreInitialize) {
   EXPECT_CALL(mock_tpm_initializer_, PreInitializeTpm()).Times(0);
   SetupService();
   RunServiceWorkerAndQuit();
+}
+
+// This item checks if the prompt reset right after taking ownership does reset
+// the periodic reset timer. For more information, see the comments inlined.
+TEST_F(TpmManagerServiceTest_Preinit, DictionaryAttackResetTimerReset) {
+  EXPECT_CALL(mock_tpm_status_, CheckAndNotifyIfTpmOwned(_))
+      .WillRepeatedly(
+          DoAll(SetArgPointee<0>(TpmStatus::kTpmOwned), Return(true)));
+  EXPECT_CALL(mock_tpm_initializer_, InitializeTpm()).WillOnce(Return(true));
+  EXPECT_CALL(mock_tpm_initializer_, PreInitializeTpm()).Times(0);
+
+  // Sets the period to 50 ms.
+  service_->set_dictionary_attack_reset_timer_for_testing(
+      PassiveTimer(base::TimeDelta::FromMilliseconds(50)));
+  base::WaitableEvent first_periodic_event(
+      base::WaitableEvent::ResetPolicy::MANUAL,
+      base::WaitableEvent::InitialState::NOT_SIGNALED);
+  base::WaitableEvent second_periodic_event(
+      base::WaitableEvent::ResetPolicy::MANUAL,
+      base::WaitableEvent::InitialState::NOT_SIGNALED);
+
+  EXPECT_CALL(mock_tpm_status_, GetDictionaryAttackInfo(_, _, _, _))
+      .WillOnce(DoAll(SetArgPointee<0>(0),
+                      WithoutArgs([&first_periodic_event]() {
+                        first_periodic_event.Signal();
+                      }),
+                      Return(true)))
+      .WillOnce(Return(true))
+      .WillOnce(DoAll(SetArgPointee<0>(0),
+                      WithoutArgs([&second_periodic_event]() {
+                        second_periodic_event.Signal();
+                      }),
+                      Return(true)))
+      .WillRepeatedly(DoAll(SetArgPointee<0>(0), Return(true)));
+  EXPECT_CALL(mock_tpm_manager_metrics_,
+              ReportDictionaryAttackResetStatus(
+                  DictionaryAttackResetStatus::kResetNotNecessary))
+      .Times(AtLeast(3));
+  EXPECT_CALL(mock_tpm_manager_metrics_, ReportDictionaryAttackCounter(0))
+      .Times(AtLeast(3));
+  // The DA reset is triggered for the first time here once the TPM is confirmed
+  // to be owned.
+  SetupService();
+  auto callback = [](TpmManagerServiceTestBase* self,
+                     const TakeOwnershipReply& reply) {
+    EXPECT_EQ(STATUS_SUCCESS, reply.status());
+    self->Quit();
+  };
+  base::TimeTicks start_time = base::TimeTicks::Now();
+  base::PlatformThread::Sleep(base::TimeDelta::FromMilliseconds(25));
+  first_periodic_event.Wait();
+  TakeOwnershipRequest request;
+  // The DA reset is triggered for the second time here once the TPM is owned.
+  service_->TakeOwnership(request, base::Bind(callback, this));
+  Run();
+  second_periodic_event.Wait();
+  base::TimeTicks finish_time = base::TimeTicks::Now();
+  // Supposedly finish_time-start_time is ~75ms and can't be <50ms or >100ms.
+  // 1. Even if the threading doesn't make any promise that the timely trigger
+  // is accurate, 20 ms window should be generous enough.
+  // 2. In case |TakeOwnership| doesn't even trigger DA reset, the duration
+  // would be larger than 100ms and fails the test.
+  EXPECT_THAT(finish_time - start_time,
+              Le(base::TimeDelta::FromMilliseconds(95)));
+  // If the timer doesn't get reset, it could be triggered @ ~50ms and fails the
+  // test.
+  EXPECT_THAT(finish_time - start_time,
+              Ge(base::TimeDelta::FromMilliseconds(55)));
 }
 
 TEST_F(TpmManagerServiceTest, GetTpmStatusSuccess) {

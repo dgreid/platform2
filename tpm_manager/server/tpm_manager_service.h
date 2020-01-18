@@ -20,6 +20,7 @@
 #include "tpm_manager/common/tpm_ownership_interface.h"
 #include "tpm_manager/common/typedefs.h"
 #include "tpm_manager/server/local_data_store.h"
+#include "tpm_manager/server/passive_timer.h"
 #include "tpm_manager/server/tpm_initializer.h"
 #include "tpm_manager/server/tpm_manager_metrics.h"
 #include "tpm_manager/server/tpm_nvram.h"
@@ -128,6 +129,11 @@ class TpmManagerService : public TpmNvramInterface,
 
   inline void SetOwnershipTakenCallback(OwnershipTakenCallBack callback) {
     ownership_taken_callback_ = callback;
+  }
+
+  void set_dictionary_attack_reset_timer_for_testing(
+      const PassiveTimer& timer) {
+    dictionary_attack_timer_ = timer;
   }
 
  private:
@@ -244,6 +250,13 @@ class TpmManagerService : public TpmNvramInterface,
   // zero; returns true iff the DA counter is confirmed to be reset or no need
   // for reset.
   bool ResetDictionaryAttackCounterIfNeeded();
+
+  // This task performs the DA reset and posts itself with the delay determined
+  // by |dictionary_attack_timer_|.
+  void PeriodicResetDictionaryAttackCounterTask();
+  // This timer determines if the periodic DA reset should be triggered. Upon
+  // any source of DA reset this timer should be reset.
+  PassiveTimer dictionary_attack_timer_;
 
   // Shutdown to be run on the worker thread.
   void ShutdownTask();
