@@ -8,6 +8,7 @@
 #include <vector>
 
 #include <base/logging.h>
+#include <base/optional.h>
 #include <tpm_manager/server/tpm_util.h>
 #include <trousers/tss.h>
 #include <trousers/trousers.h>  // NOLINT(build/include_alpha)
@@ -63,8 +64,13 @@ bool TpmStatusImpl::CheckAndNotifyIfTpmOwned(
     return true;
   }
 
-  ownership_status_ =
-      TestTpmWithDefaultOwnerPassword() ? kTpmPreOwned : kTpmOwned;
+  const base::Optional<bool> is_default_owner_password =
+      TestTpmWithDefaultOwnerPassword();
+  if (!is_default_owner_password.has_value()) {
+    LOG(ERROR) << __func__ << ": Failed to test default owner password.";
+    return false;
+  }
+  ownership_status_ = *is_default_owner_password ? kTpmPreOwned : kTpmOwned;
 
   if (kTpmOwned == ownership_status_ && !ownership_taken_callback_.is_null()) {
     // Sends out the ownership taken signal when the value of
@@ -200,15 +206,15 @@ bool TpmStatusImpl::GetVersionInfo(uint32_t* family,
   return true;
 }
 
-bool TpmStatusImpl::TestTpmWithDefaultOwnerPassword() {
-  if (!is_owner_password_state_dirty_) {
+base::Optional<bool> TpmStatusImpl::TestTpmWithDefaultOwnerPassword() {
+  if (is_owner_password_default_) {
     return is_owner_password_default_;
   }
 
   TpmConnection connection(GetDefaultOwnerPassword());
   TSS_HTPM tpm_handle = connection.GetTpm();
   if (tpm_handle == 0) {
-    return false;
+    return base::nullopt;
   }
 
   // Call Tspi_TPM_GetStatus to test the default owner password.
@@ -216,11 +222,13 @@ bool TpmStatusImpl::TestTpmWithDefaultOwnerPassword() {
   TSS_RESULT result = Tspi_TPM_GetStatus(
       tpm_handle, TSS_TPMSTATUS_DISABLED, &current_status);
 
-  // TODO(garryxiao): tell the difference between invalid owner password and TPM
-  // communication errors.
-  is_owner_password_default_ = !TPM_ERROR(result);
-  is_owner_password_state_dirty_ = false;
-
+  if (result == TPM_SUCCESS) {
+    is_owner_password_default_ = true;
+  } else if (result == TPM_ERROR(TPM_E_AUTHFAIL)) {
+    is_owner_password_default_ = false;
+  } else {
+    TPM_LOG(ERROR, result) << "Unexpected error calling |Tspi_TPM_GetStatus|.";
+  }
   return is_owner_password_default_;
 }
 
@@ -269,6 +277,13 @@ bool TpmStatusImpl::GetCapability(uint32_t capability,
   }
   data->assign(buf.value(), buf.value() + length);
   return true;
+}
+
+void TpmStatusImpl::MarkRandomOwnerPasswordSet() {
+  // Also makes sure the state machine is consistent.
+  is_enable_initialized_ = is_enabled_ = is_owned_ = true;
+  ownership_status_ = kTpmOwned;
+  is_owner_password_default_ = false;
 }
 
 }  // namespace tpm_manager

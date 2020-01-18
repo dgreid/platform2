@@ -36,8 +36,7 @@ class MockTpmStatus : public TpmStatus {
                uint64_t*,
                std::vector<uint8_t>*),
               (override));
-  MOCK_METHOD(bool, TestTpmWithDefaultOwnerPassword, (), (override));
-  MOCK_METHOD(void, MarkOwnerPasswordStateDirty, (), (override));
+  MOCK_METHOD(void, MarkRandomOwnerPasswordSet, (), (override));
 };
 
 }  // namespace tpm_manager

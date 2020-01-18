@@ -44,14 +44,7 @@ class Tpm2StatusImpl : public TpmStatus {
                       uint64_t* firmware_version,
                       std::vector<uint8_t>* vendor_specific) override;
 
-  inline void MarkOwnerPasswordStateDirty() override {
-    LOG(ERROR) << __func__ << ": Not implemented";
-  }
-
-  bool TestTpmWithDefaultOwnerPassword() override {
-    LOG(ERROR) << __func__ << ": Not implemented";
-    return false;
-  }
+  void MarkRandomOwnerPasswordSet() override;
 
  private:
   // Refreshes the Tpm state information. Can be called as many times as needed

@@ -96,7 +96,7 @@ bool TpmInitializerImpl::InitializeTpm() {
   if (!ChangeOwnerPassword(&connection, owner_password)) {
     return false;
   }
-  tpm_status_->MarkOwnerPasswordStateDirty();
+  tpm_status_->MarkRandomOwnerPasswordSet();
 
   if (!ownership_taken_callback_.is_null()) {
     ownership_taken_callback_.Run();

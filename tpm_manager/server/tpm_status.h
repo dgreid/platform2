@@ -58,20 +58,10 @@ class TpmStatus {
                               uint64_t* firmware_version,
                               std::vector<uint8_t>* vendor_specific) = 0;
 
-  // We cache the state whether current TPM owner password is the default
-  // password to avoid unnecessary TPM queries. Marking the cache dirty will
-  // force a new TPM query and cache update in the next time
-  // TestTpmWithDefaultOwnerPassword() is called.
+  // Marks the random owner password is set.
   //
   // NOTE: This method should be used by TPM 1.2 only.
-  virtual void MarkOwnerPasswordStateDirty() = 0;
-
-  // This method return true iff the default password is the current owner
-  // password in the TPM. This method can also return false if there was an
-  // error communicating with the TPM.
-  //
-  // NOTE: This method should be used by TPM 1.2 only.
-  virtual bool TestTpmWithDefaultOwnerPassword() = 0;
+  virtual void MarkRandomOwnerPasswordSet() = 0;
 };
 
 }  // namespace tpm_manager

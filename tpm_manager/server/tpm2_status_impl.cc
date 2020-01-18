@@ -126,4 +126,8 @@ bool Tpm2StatusImpl::Refresh() {
   return true;
 }
 
+void Tpm2StatusImpl::MarkRandomOwnerPasswordSet() {
+  LOG(ERROR) << __func__ << ": Not implemented";
+}
+
 }  // namespace tpm_manager

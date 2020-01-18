@@ -11,6 +11,7 @@
 #include <vector>
 
 #include <base/macros.h>
+#include <base/optional.h>
 #include <trousers/tss.h>
 #include <trousers/trousers.h>  // NOLINT(build/include_alpha)
 
@@ -41,13 +42,14 @@ class TpmStatusImpl : public TpmStatus {
                       uint64_t* firmware_version,
                       std::vector<uint8_t>* vendor_specific) override;
 
-  bool TestTpmWithDefaultOwnerPassword() override;
-
-  inline void MarkOwnerPasswordStateDirty() override {
-    is_owner_password_state_dirty_ = true;
-  }
+  void MarkRandomOwnerPasswordSet() override;
 
  private:
+  // Tests if the TPM owner password is the default one. Returns:
+  // 1. true if the test succeed.
+  // 2. false if authentication fails with the default owner password.
+  // 3. base::nullopt if any other errors.
+  base::Optional<bool> TestTpmWithDefaultOwnerPassword();
   // This method refreshes the |is_owned_| and |is_enabled_| status of the
   // Tpm. It can be called multiple times.
   void RefreshOwnedEnabledInfo();
@@ -75,13 +77,9 @@ class TpmStatusImpl : public TpmStatus {
   // Callback function called after TPM ownership is taken.
   OwnershipTakenCallBack ownership_taken_callback_;
 
-  // Whether we should query the TPM again with the default password or use the
-  // cached result in is_owner_password_default_. We should query the TPM for
-  // the first time TestTpmWithDefaultOwnerPassword is called.
-  bool is_owner_password_state_dirty_ = true;
-
-  // Whether current owner password in the TPM is the default one.
-  bool is_owner_password_default_ = false;
+  // Whether current owner password in the TPM is the default one; in case of
+  // nullopt the password status is not determined yet.
+  base::Optional<bool> is_owner_password_default_;
 
   DISALLOW_COPY_AND_ASSIGN(TpmStatusImpl);
 };
