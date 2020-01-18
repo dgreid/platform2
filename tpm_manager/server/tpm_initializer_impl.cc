@@ -11,6 +11,7 @@
 #include <base/logging.h>
 #include <base/stl_util.h>
 #include <base/strings/string_number_conversions.h>
+#include <libhwsec/overalls/overalls_api.h>
 #include <tpm_manager-client/tpm_manager/dbus-constants.h>
 #include <trousers/scoped_tss_type.h>
 #include <trousers/tss.h>
@@ -19,6 +20,8 @@
 #include "tpm_manager/server/tpm_connection.h"
 #include "tpm_manager/server/tpm_status.h"
 #include "tpm_manager/server/tpm_util.h"
+
+using ::hwsec::overalls::GetOveralls;
 
 namespace {
 
@@ -152,35 +155,37 @@ DictionaryAttackResetStatus TpmInitializerImpl::ResetDictionaryAttackLock() {
   }
 
   std::unique_ptr<TpmConnection> connection;
-  if (!owner_delegate.blob().empty() &&
-      !owner_delegate.secret().empty() &&
-      owner_delegate.has_reset_lock_permissions()) {
-    connection = std::make_unique<TpmConnection>(owner_delegate);
-  } else if (!owner_password.empty()) {
+  if (!owner_password.empty()) {
     connection = std::make_unique<TpmConnection>(owner_password);
+  } else if (!owner_delegate.blob().empty() &&
+             !owner_delegate.secret().empty()) {
+    if (!owner_delegate.has_reset_lock_permissions()) {
+      return DictionaryAttackResetStatus::kDelegateNotAllowed;
+    }
+    connection = std::make_unique<TpmConnection>(owner_delegate);
   } else {
     LOG(ERROR) << __func__ << ": available owner auth not found.";
+    return DictionaryAttackResetStatus::kDelegateNotAvailable;
+  }
+
+  TSS_HTPM tpm_handle = connection->GetTpm();
+  if (!tpm_handle) {
+    LOG(ERROR) << __func__ << ": Error getting a TPM handle.";
     return DictionaryAttackResetStatus::kResetAttemptFailed;
   }
 
-  TSS_RESULT result;
-  TSS_HTPM tpm_handle;
-  if (TPM_ERROR(result = Tspi_Context_GetTpmObject(connection->GetContext(),
-                                                   &tpm_handle))) {
-    TPM_LOG(ERROR, result) << "Error getting a TPM handle.";
-    return DictionaryAttackResetStatus::kResetAttemptFailed;
-  }
-
-  if (TPM_ERROR(result = Tspi_TPM_SetStatus(
-      tpm_handle, TSS_TPMSTATUS_RESETLOCK, true /* value will be ignored */))) {
+  TSS_RESULT result = GetOveralls()->Ospi_TPM_SetStatus(
+      tpm_handle, TSS_TPMSTATUS_RESETLOCK, true /* value will be ignored */);
+  if (result != TSS_SUCCESS) {
     TPM_LOG(ERROR, result) << __func__ << ": failed to reset DA lock.";
-
-    if (ERROR_LAYER(result) == TSS_LAYER_TPM &&
-        ERROR_CODE(result) == TPM_E_AUTHFAIL) {
+    if (TPM_ERROR(TPM_E_AUTHFAIL) == result ||
+        TPM_ERROR(TPM_E_AUTH2FAIL) == result) {
       reset_da_lock_auth_failed_ = true;
     }
 
-    return DictionaryAttackResetStatus::kResetAttemptFailed;
+    return result == TPM_ERROR(TPM_E_WRONGPCRVAL)
+               ? DictionaryAttackResetStatus::kInvalidPcr0State
+               : DictionaryAttackResetStatus::kResetAttemptFailed;
   }
 
   LOG(INFO) << __func__ << ": dictionary attack counter has been reset.";

@@ -253,7 +253,10 @@ if (use.test) {
       ]
       libs = [ "trunks_test" ]
     } else {
-      sources += [ "server/tpm_connection_test.cc" ]
+      sources += [
+        "server/tpm_connection_test.cc",
+        "server/tpm_initializer_test.cc",
+      ]
       libs = [ "hwsec_test" ]
     }
     deps = [
