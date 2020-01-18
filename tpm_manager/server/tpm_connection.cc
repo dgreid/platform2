@@ -93,16 +93,16 @@ bool TpmConnection::ConnectContextIfNeeded() {
   }
 
   TSS_HTPM tpm_handle;
-  if (TPM_ERROR(result =
-                    Tspi_Context_GetTpmObject(context_.value(), &tpm_handle))) {
+  if (TPM_ERROR(result = GetOveralls()->Ospi_Context_GetTpmObject(
+                    context_.value(), &tpm_handle))) {
     TPM_LOG(ERROR, result) << "Error getting a handle to the TPM.";
     context_.reset();
     return false;
   }
 
   TSS_HPOLICY tpm_usage_policy;
-  if (TPM_ERROR(result = Tspi_GetPolicyObject(tpm_handle, TSS_POLICY_USAGE,
-                                              &tpm_usage_policy))) {
+  if (TPM_ERROR(result = GetOveralls()->Ospi_GetPolicyObject(
+                    tpm_handle, TSS_POLICY_USAGE, &tpm_usage_policy))) {
     TPM_LOG(ERROR, result) << "Error calling Tspi_GetPolicyObject";
     context_.reset();
     return false;
@@ -111,10 +111,9 @@ bool TpmConnection::ConnectContextIfNeeded() {
   const std::string& secret = connection_type_ == kConnectWithPassword ?
       owner_password_ : owner_delegate_.secret();
   std::vector<BYTE> secret_data(secret.begin(), secret.end());
-  if (TPM_ERROR(result = Tspi_Policy_SetSecret(tpm_usage_policy,
-                                               TSS_SECRET_MODE_PLAIN,
-                                               secret_data.size(),
-                                               secret_data.data()))) {
+  if (TPM_ERROR(result = GetOveralls()->Ospi_Policy_SetSecret(
+                    tpm_usage_policy, TSS_SECRET_MODE_PLAIN, secret_data.size(),
+                    secret_data.data()))) {
     TPM_LOG(ERROR, result) << "Error calling Tspi_Policy_SetSecret";
     context_.reset();
     return false;
@@ -127,12 +126,10 @@ bool TpmConnection::ConnectContextIfNeeded() {
   // For connection with owner delegate, we also need to set attribute data.
   std::vector<BYTE> delegate_blob(owner_delegate_.blob().begin(),
                                   owner_delegate_.blob().end());
-  if (TPM_ERROR(result = Tspi_SetAttribData(
-      tpm_usage_policy,
-      TSS_TSPATTRIB_POLICY_DELEGATION_INFO,
-      TSS_TSPATTRIB_POLDEL_OWNERBLOB,
-      delegate_blob.size(),
-      delegate_blob.data()))) {
+  if (TPM_ERROR(result = GetOveralls()->Ospi_SetAttribData(
+                    tpm_usage_policy, TSS_TSPATTRIB_POLICY_DELEGATION_INFO,
+                    TSS_TSPATTRIB_POLDEL_OWNERBLOB, delegate_blob.size(),
+                    delegate_blob.data()))) {
     TPM_LOG(ERROR, result) << "Error calling Tspi_SetAttribData";
     return false;
   }
