@@ -43,9 +43,12 @@ namespace tpm_manager {
 TpmManagerService::TpmManagerService(bool wait_for_ownership,
                                      bool perform_preinit,
                                      LocalDataStore* local_data_store)
-    : local_data_store_(local_data_store),
-      wait_for_ownership_(wait_for_ownership),
-      perform_preinit_(perform_preinit) {
+    : TpmManagerService(wait_for_ownership,
+                        perform_preinit,
+                        local_data_store,
+                        nullptr,
+                        nullptr,
+                        nullptr) {
   CHECK(local_data_store_);
 }
 
