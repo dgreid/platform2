@@ -3536,8 +3536,6 @@ gboolean Service::GetStatusString(gchar** OUT_status, GError** error) {
 void Service::DoAutoCleanup() {
   homedirs_->FreeDiskSpace();
   last_auto_cleanup_time_ = platform_->GetCurrentTime();
-  // Reset the dictionary attack counter if possible and necessary.
-  ResetDictionaryAttackMitigation();
 }
 
 void Service::UpdateCurrentUserActivityTimestamp() {

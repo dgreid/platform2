@@ -179,6 +179,9 @@ class ServiceMonolithic : public Service {
                                          gboolean* OUT_success,
                                          GError** error) override;
 
+ protected:
+  void DoAutoCleanup() override;
+
  private:
   // Parses |data| and fills in |abe_data|, or clears it if |data| are invalid.
   static bool GetAttestationBasedEnterpriseEnrollmentData(

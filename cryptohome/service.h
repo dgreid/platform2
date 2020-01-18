@@ -897,6 +897,10 @@ virtual gboolean InstallAttributesIsFirstInstall(gboolean* OUT_first_install,
   // information.
   void SendAsyncIdInfoToUma(int async_id, base::Time finished_time);
 
+  // Called on Mount thread. This method calls ReportDictionaryAttackResetStatus
+  // exactly once (i.e. records one sample) with the status of the operation.
+  void ResetDictionaryAttackMitigation();
+
  private:
   FRIEND_TEST(ServiceTest, GetPublicMountPassKey);
 
@@ -908,10 +912,6 @@ virtual gboolean InstallAttributesIsFirstInstall(gboolean* OUT_first_install,
   // successfully. Otherwise, returns false.
   bool GetPublicMountPassKey(const std::string& public_mount_id,
                              std::string* public_mount_passkey);
-
-  // Called on Mount thread. This method calls ReportDictionaryAttackResetStatus
-  // exactly once (i.e. records one sample) with the status of the operation.
-  void ResetDictionaryAttackMitigation();
 
   // Performs the lazy part of the initialization that is required for
   // performing operations with challenge-response keys. Returns whether

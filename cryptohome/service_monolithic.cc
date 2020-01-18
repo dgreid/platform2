@@ -722,4 +722,12 @@ void ServiceMonolithic::ConnectOwnershipTakenSignal() {
   // exist or cryptohomed doesn't talk to tpm_managerd.
 }
 
+void ServiceMonolithic::DoAutoCleanup() {
+  Service::DoAutoCleanup();
+  // In the monolithic mode we also have to reset da because we don't have
+  // tpm_manager.
+  LOG(INFO) << "Reset DA triggered in " << __func__;
+  ResetDictionaryAttackMitigation();
+}
+
 }  // namespace cryptohome
