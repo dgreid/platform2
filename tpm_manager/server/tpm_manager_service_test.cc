@@ -153,13 +153,19 @@ TEST_F(TpmManagerServiceTest_NoWaitForOwnership,
   // Called in InitializeTask()
   EXPECT_CALL(mock_tpm_status_, CheckAndNotifyIfTpmOwned(_))
       .WillOnce(DoAll(SetArgPointee<0>(TpmStatus::kTpmUnowned), Return(true)));
-  EXPECT_CALL(mock_tpm_initializer_, InitializeTpm()).Times(AtLeast(2));
+  EXPECT_CALL(mock_tpm_initializer_, InitializeTpm())
+      .Times(2)
+      .WillRepeatedly(Return(true));
   SetupService();
   auto callback = [](TpmManagerServiceTestBase* self,
                      const TakeOwnershipReply& reply) {
     EXPECT_EQ(STATUS_SUCCESS, reply.status());
     self->Quit();
   };
+  EXPECT_CALL(mock_tpm_manager_metrics_, ReportDictionaryAttackResetStatus(_))
+      .Times(1);
+  EXPECT_CALL(mock_tpm_manager_metrics_, ReportDictionaryAttackCounter(_))
+      .Times(1);
   TakeOwnershipRequest request;
   service_->TakeOwnership(request, base::Bind(callback, this));
   Run();
@@ -448,6 +454,16 @@ TEST_F(TpmManagerServiceTest, ResetDictionaryAttackLockFailure) {
 TEST_F(TpmManagerServiceTest, TakeOwnershipSuccess) {
   // Make sure InitializeTpm doesn't get multiple calls.
   EXPECT_CALL(mock_tpm_initializer_, InitializeTpm()).Times(1);
+  // Successful TPM initialization should trigger the DA reset and metrics
+  // collection.
+  EXPECT_CALL(mock_tpm_status_, GetDictionaryAttackInfo(_, _, _, _))
+      .WillOnce(DoAll(SetArgPointee<0>(0), Return(true)));
+  EXPECT_CALL(mock_tpm_manager_metrics_,
+              ReportDictionaryAttackResetStatus(
+                  DictionaryAttackResetStatus::kResetNotNecessary))
+      .Times(1);
+  EXPECT_CALL(mock_tpm_manager_metrics_, ReportDictionaryAttackCounter(0))
+      .Times(1);
   auto callback = [](TpmManagerServiceTestBase* self,
                      const TakeOwnershipReply& reply) {
     EXPECT_EQ(STATUS_SUCCESS, reply.status());

@@ -340,6 +340,9 @@ void TpmManagerService::TakeOwnershipTask(
     reply->set_status(STATUS_DEVICE_ERROR);
     return;
   }
+  if (!ResetDictionaryAttackCounterIfNeeded()) {
+    LOG(WARNING) << __func__ << ": DA reset failed after taking ownership.";
+  }
   reply->set_status(STATUS_SUCCESS);
 }
 
