@@ -13,17 +13,19 @@
 
 #include "tpm_manager/server/mock_local_data_store.h"
 #include "tpm_manager/server/mock_tpm_initializer.h"
+#include "tpm_manager/server/mock_tpm_manager_metrics.h"
 #include "tpm_manager/server/mock_tpm_nvram.h"
 #include "tpm_manager/server/mock_tpm_status.h"
 #include "tpm_manager/server/tpm_manager_service.h"
 
+using testing::_;
 using testing::AtLeast;
 using testing::Invoke;
 using testing::NiceMock;
 using testing::Return;
 using testing::SaveArg;
 using testing::SetArgPointee;
-using testing::_;
+using testing::StrictMock;
 
 namespace {
 
@@ -49,7 +51,8 @@ class TpmManagerServiceTestBase : public testing::Test {
   void SetUp() override {
     service_.reset(new TpmManagerService(
         wait_for_ownership, perform_preinit, &mock_local_data_store_,
-        &mock_tpm_status_, &mock_tpm_initializer_, &mock_tpm_nvram_));
+        &mock_tpm_status_, &mock_tpm_initializer_, &mock_tpm_nvram_,
+        &mock_tpm_manager_metrics_));
     if (shall_setup_service) {
       SetupService();
     }
@@ -78,6 +81,7 @@ class TpmManagerServiceTestBase : public testing::Test {
   NiceMock<MockTpmInitializer> mock_tpm_initializer_;
   NiceMock<MockTpmNvram> mock_tpm_nvram_;
   NiceMock<MockTpmStatus> mock_tpm_status_;
+  StrictMock<MockTpmManagerMetrics> mock_tpm_manager_metrics_;
   std::unique_ptr<TpmManagerService> service_;
 
  private:
@@ -373,7 +377,15 @@ TEST_F(TpmManagerServiceTest, GetDictionaryAttackInfoError) {
   Run();
 }
 
-TEST_F(TpmManagerServiceTest, ResetDictionaryAttackLockSuccess) {
+TEST_F(TpmManagerServiceTest, ResetDictionaryAttackLockReset) {
+  EXPECT_CALL(mock_tpm_status_, GetDictionaryAttackInfo(_, _, _, _))
+      .WillOnce(DoAll(SetArgPointee<0>(1), Return(true)));
+  EXPECT_CALL(mock_tpm_manager_metrics_, ReportDictionaryAttackCounter(1))
+      .Times(1);
+  EXPECT_CALL(mock_tpm_manager_metrics_,
+              ReportDictionaryAttackResetStatus(
+                  DictionaryAttackResetStatus::kResetAttemptSucceeded))
+      .Times(1);
   EXPECT_CALL(mock_tpm_initializer_, ResetDictionaryAttackLock())
       .WillOnce(Return(DictionaryAttackResetStatus::kResetAttemptSucceeded));
 
@@ -388,7 +400,37 @@ TEST_F(TpmManagerServiceTest, ResetDictionaryAttackLockSuccess) {
   Run();
 }
 
+TEST_F(TpmManagerServiceTest, ResetDictionaryAttackLockSuccessNoNeed) {
+  EXPECT_CALL(mock_tpm_status_, GetDictionaryAttackInfo(_, _, _, _))
+      .WillOnce(DoAll(SetArgPointee<0>(0), Return(true)));
+  EXPECT_CALL(mock_tpm_manager_metrics_,
+              ReportDictionaryAttackResetStatus(
+                  DictionaryAttackResetStatus::kResetNotNecessary))
+      .Times(1);
+  EXPECT_CALL(mock_tpm_manager_metrics_, ReportDictionaryAttackCounter(0))
+      .Times(1);
+  EXPECT_CALL(mock_tpm_initializer_, ResetDictionaryAttackLock()).Times(0);
+
+  auto callback = [](TpmManagerServiceTest* self,
+                     const ResetDictionaryAttackLockReply& reply) {
+    EXPECT_EQ(STATUS_SUCCESS, reply.status());
+    self->Quit();
+  };
+
+  service_->ResetDictionaryAttackLock(ResetDictionaryAttackLockRequest(),
+                                      base::Bind(callback, this));
+  Run();
+}
+
 TEST_F(TpmManagerServiceTest, ResetDictionaryAttackLockFailure) {
+  EXPECT_CALL(mock_tpm_status_, GetDictionaryAttackInfo(_, _, _, _))
+      .WillOnce(DoAll(SetArgPointee<0>(1), Return(true)));
+  EXPECT_CALL(mock_tpm_manager_metrics_, ReportDictionaryAttackCounter(1))
+      .Times(1);
+  EXPECT_CALL(mock_tpm_manager_metrics_,
+              ReportDictionaryAttackResetStatus(
+                  DictionaryAttackResetStatus::kResetAttemptFailed))
+      .Times(1);
   EXPECT_CALL(mock_tpm_initializer_, ResetDictionaryAttackLock())
       .WillOnce(Return(DictionaryAttackResetStatus::kResetAttemptFailed));
 

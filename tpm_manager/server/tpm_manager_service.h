@@ -21,6 +21,7 @@
 #include "tpm_manager/common/typedefs.h"
 #include "tpm_manager/server/local_data_store.h"
 #include "tpm_manager/server/tpm_initializer.h"
+#include "tpm_manager/server/tpm_manager_metrics.h"
 #include "tpm_manager/server/tpm_nvram.h"
 #include "tpm_manager/server/tpm_status.h"
 #if USE_TPM2
@@ -74,13 +75,14 @@ class TpmManagerService : public TpmNvramInterface,
   // additionally set, TPM pre-initialization will be performed in case TPM
   // initialization is postponed.
   // Does not take ownership of |local_data_store|, |tpm_status|,
-  // |tpm_initializer|, or |tpm_nvram|.
+  // |tpm_initializer|, |tpm_nvram|, or |tpm_manager_metrics|.
   TpmManagerService(bool wait_for_ownership,
                     bool perform_preinit,
                     LocalDataStore* local_data_store,
                     TpmStatus* tpm_status,
                     TpmInitializer* tpm_initializer,
-                    TpmNvram* tpm_nvram);
+                    TpmNvram* tpm_nvram,
+                    TpmManagerMetrics* tpm_manager_metrics);
 
   ~TpmManagerService() override;
 
@@ -238,6 +240,11 @@ class TpmManagerService : public TpmNvramInterface,
   // owner password is not available.
   std::string GetOwnerPassword();
 
+  // Resets DA counter if the DA information query indicates the counter is not
+  // zero; returns true iff the DA counter is confirmed to be reset or no need
+  // for reset.
+  bool ResetDictionaryAttackCounterIfNeeded();
+
   // Shutdown to be run on the worker thread.
   void ShutdownTask();
 
@@ -245,6 +252,9 @@ class TpmManagerService : public TpmNvramInterface,
   TpmStatus* tpm_status_ = nullptr;
   TpmInitializer* tpm_initializer_ = nullptr;
   TpmNvram* tpm_nvram_ = nullptr;
+
+  TpmManagerMetrics default_tpm_manager_metrics_;
+  TpmManagerMetrics* tpm_manager_metrics_{nullptr};
 
   // Cache of TPM version info, base::nullopt if cache doesn't exist.
   base::Optional<GetVersionInfoReply> version_info_cache_;

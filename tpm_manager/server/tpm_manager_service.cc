@@ -48,7 +48,8 @@ TpmManagerService::TpmManagerService(bool wait_for_ownership,
                         local_data_store,
                         nullptr,
                         nullptr,
-                        nullptr) {
+                        nullptr,
+                        &default_tpm_manager_metrics_) {
   CHECK(local_data_store_);
 }
 
@@ -57,11 +58,13 @@ TpmManagerService::TpmManagerService(bool wait_for_ownership,
                                      LocalDataStore* local_data_store,
                                      TpmStatus* tpm_status,
                                      TpmInitializer* tpm_initializer,
-                                     TpmNvram* tpm_nvram)
+                                     TpmNvram* tpm_nvram,
+                                     TpmManagerMetrics* tpm_manager_metrics)
     : local_data_store_(local_data_store),
       tpm_status_(tpm_status),
       tpm_initializer_(tpm_initializer),
       tpm_nvram_(tpm_nvram),
+      tpm_manager_metrics_(tpm_manager_metrics),
       wait_for_ownership_(wait_for_ownership),
       perform_preinit_(perform_preinit) {}
 
@@ -310,9 +313,7 @@ void TpmManagerService::ResetDictionaryAttackLockTask(
     reply->set_status(STATUS_NOT_AVAILABLE);
     return;
   }
-
-  if (tpm_initializer_->ResetDictionaryAttackLock() !=
-      DictionaryAttackResetStatus::kResetAttemptSucceeded) {
+  if (!ResetDictionaryAttackCounterIfNeeded()) {
     LOG(ERROR) << __func__ << ": failed to reset DA lock.";
     reply->set_status(STATUS_DEVICE_ERROR);
     return;
@@ -562,6 +563,29 @@ std::string TpmManagerService::GetOwnerPassword() {
   }
   LOG(ERROR) << "TPM owner password requested but not available.";
   return std::string();
+}
+
+bool TpmManagerService::ResetDictionaryAttackCounterIfNeeded() {
+  uint32_t counter = 0;
+  uint32_t threshold = 0;
+  bool lockout = false;
+  uint32_t time_remaining = 0;
+  if (!tpm_status_->GetDictionaryAttackInfo(&counter, &threshold, &lockout,
+                                            &time_remaining)) {
+    // Reports the metrics but no early return since reset itself might work.
+    tpm_manager_metrics_->ReportDictionaryAttackResetStatus(
+        DictionaryAttackResetStatus::kCounterQueryFailed);
+  } else {
+    tpm_manager_metrics_->ReportDictionaryAttackCounter(counter);
+    if (counter == 0) {
+      tpm_manager_metrics_->ReportDictionaryAttackResetStatus(
+          DictionaryAttackResetStatus::kResetNotNecessary);
+      return true;
+    }
+  }
+  auto status = tpm_initializer_->ResetDictionaryAttackLock();
+  tpm_manager_metrics_->ReportDictionaryAttackResetStatus(status);
+  return status == DictionaryAttackResetStatus::kResetAttemptSucceeded;
 }
 
 void TpmManagerService::ShutdownTask() {
