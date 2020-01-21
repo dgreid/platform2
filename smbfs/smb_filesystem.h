@@ -44,7 +44,8 @@ class SmbFilesystem : public Filesystem {
 
   // Ensures that the SMB share can be connected to. Must NOT be called after
   // the filesystem is attached to a FUSE session.
-  ConnectError EnsureConnected();
+  // Virtual for testing.
+  virtual ConnectError EnsureConnected();
 
   // Store the implementation of the mojom::SmbFs Mojo interface.
   void SetSmbFsImpl(std::unique_ptr<SmbFsImpl> impl);
@@ -52,7 +53,8 @@ class SmbFilesystem : public Filesystem {
   // Sets the resolved IP address of the share host. |ip_address| is an IPv4
   // address in network byte order, or empty. If |ip_address| is empty, any
   // existing resolved address will be reset.
-  void SetResolvedAddress(const std::vector<uint8_t>& ip_address);
+  // Virtual for testing.
+  virtual void SetResolvedAddress(const std::vector<uint8_t>& ip_address);
 
   const std::string& resolved_share_path() const {
     return resolved_share_path_;

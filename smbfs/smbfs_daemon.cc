@@ -19,7 +19,6 @@
 #include <mojo/core/embedder/embedder.h>
 #include <mojo/public/cpp/platform/platform_channel.h>
 #include <mojo/public/cpp/system/invitation.h>
-#include <mojo/public/cpp/system/platform_handle.h>
 
 #include "smbfs/authpolicy_client.h"
 #include "smbfs/dbus-proxies.h"
@@ -56,26 +55,6 @@ bool CreateDirectoryAndLog(const base::FilePath& path) {
   LOG_IF(ERROR, !success) << "Failed to create directory " << path.value()
                           << ": " << base::File::ErrorToString(error);
   return success;
-}
-
-mojom::MountError ConnectErrorToMountError(SmbFilesystem::ConnectError error) {
-  switch (error) {
-    case SmbFilesystem::ConnectError::kNotFound:
-      return mojom::MountError::kNotFound;
-    case SmbFilesystem::ConnectError::kAccessDenied:
-      return mojom::MountError::kAccessDenied;
-    case SmbFilesystem::ConnectError::kSmb1Unsupported:
-      return mojom::MountError::kInvalidProtocol;
-    default:
-      return mojom::MountError::kUnknown;
-  }
-}
-
-std::unique_ptr<password_provider::Password> MakePasswordFromMojoHandle(
-    mojo::ScopedHandle handle, int32_t length) {
-  base::ScopedFD fd = mojo::UnwrapPlatformHandle(std::move(handle)).TakeFD();
-  return password_provider::Password::CreateFromFileDescriptor(fd.get(),
-                                                               length);
 }
 
 }  // namespace
@@ -187,88 +166,6 @@ bool SmbFsDaemon::SetupSmbConf() {
              kSmbConfData, sizeof(kSmbConfData)) == sizeof(kSmbConfData);
 }
 
-void SmbFsDaemon::MountShare(mojom::MountOptionsPtr options,
-                             mojom::SmbFsDelegatePtr delegate,
-                             const MountShareCallback& callback) {
-  if (session_) {
-    LOG(ERROR) << "smbfs already connected to a share";
-    callback.Run(mojom::MountError::kUnknown, nullptr);
-    return;
-  }
-
-  if (options->share_path.find("smb://") != 0) {
-    // TODO(amistry): More extensive URL validation.
-    LOG(ERROR) << "Invalid share path: " << options->share_path;
-    callback.Run(mojom::MountError::kInvalidUrl, nullptr);
-    return;
-  }
-
-  std::unique_ptr<SmbCredential> credential = std::make_unique<SmbCredential>(
-      options->workgroup, options->username, nullptr);
-  if (options->kerberos_config) {
-    SetupKerberos(
-        std::move(options->kerberos_config),
-        base::BindOnce(&SmbFsDaemon::OnCredentialsSetup, base::Unretained(this),
-                       std::move(options), std::move(delegate), callback,
-                       std::move(credential)));
-    return;
-  }
-
-  if (options->password) {
-    credential->password = MakePasswordFromMojoHandle(
-        std::move(options->password->fd), options->password->length);
-  }
-
-  OnCredentialsSetup(std::move(options), std::move(delegate), callback,
-                     std::move(credential), true /* setup_success */);
-}
-
-void SmbFsDaemon::OnCredentialsSetup(mojom::MountOptionsPtr options,
-                                     mojom::SmbFsDelegatePtr delegate,
-                                     const MountShareCallback& callback,
-                                     std::unique_ptr<SmbCredential> credential,
-                                     bool setup_success) {
-  if (!setup_success) {
-    callback.Run(mojom::MountError::kUnknown, nullptr);
-    return;
-  }
-
-  auto fs = std::make_unique<SmbFilesystem>(options->share_path, uid_, gid_,
-                                            std::move(credential));
-  // Don't use the resolved address if Kerberos is set up. Kerberos requires the
-  // full hostname to obtain auth tickets.
-  if (options->resolved_host && !kerberos_sync_) {
-    if (options->resolved_host->address_bytes.size() != 4) {
-      LOG(ERROR) << "Invalid IP address size: "
-                 << options->resolved_host->address_bytes.size();
-      callback.Run(mojom::MountError::kInvalidOptions, nullptr);
-      return;
-    }
-    fs->SetResolvedAddress(options->resolved_host->address_bytes);
-  }
-  if (!options->skip_connect) {
-    SmbFilesystem::ConnectError error = fs->EnsureConnected();
-    if (error != SmbFilesystem::ConnectError::kOk) {
-      LOG(ERROR) << "Unable to connect to SMB share " << options->share_path
-                 << ": " << error;
-      callback.Run(ConnectErrorToMountError(error), nullptr);
-      return;
-    }
-  }
-
-  mojom::SmbFsPtr smbfs_ptr;
-  fs->SetSmbFsImpl(
-      std::make_unique<SmbFsImpl>(fs.get(), mojo::MakeRequest(&smbfs_ptr)));
-
-  if (!StartFuseSession(std::move(fs))) {
-    callback.Run(mojom::MountError::kUnknown, nullptr);
-    return;
-  }
-
-  delegate_ = std::move(delegate);
-  callback.Run(mojom::MountError::kOk, std::move(smbfs_ptr));
-}
-
 bool SmbFsDaemon::InitMojo() {
   LOG(INFO) << "Boostrapping connection using Mojo";
 
@@ -292,16 +189,15 @@ bool SmbFsDaemon::InitMojo() {
 
   mojo::IncomingInvitation invitation =
       mojo::IncomingInvitation::Accept(channel.TakeLocalEndpoint());
-
-  bootstrap_binding_.Bind(mojom::SmbFsBootstrapRequest(
-      invitation.ExtractMessagePipe(mojom::kBootstrapPipeName)));
-  bootstrap_binding_.set_connection_error_handler(
-      base::BindOnce(&SmbFsDaemon::OnConnectionError, base::Unretained(this)));
+  bootstrap_impl_ = std::make_unique<SmbFsBootstrapImpl>(
+      mojom::SmbFsBootstrapRequest(
+          invitation.ExtractMessagePipe(mojom::kBootstrapPipeName)),
+      this);
 
   return true;
 }
 
-void SmbFsDaemon::OnConnectionError() {
+void SmbFsDaemon::OnBootstrapConnectionError() {
   if (session_) {
     // Do nothing because the session is running.
     return;
@@ -332,6 +228,12 @@ void SmbFsDaemon::SetupKerberos(
       KerberosConfFilePath(kKrb5ConfFile), KerberosConfFilePath(kCCacheFile),
       kerberos_config->identity, std::move(client));
   kerberos_sync_->SetupKerberos(std::move(callback));
+}
+
+std::unique_ptr<SmbFilesystem> SmbFsDaemon::CreateSmbFilesystem(
+    const std::string& share_path, std::unique_ptr<SmbCredential> credential) {
+  return std::make_unique<SmbFilesystem>(share_path, uid_, gid_,
+                                         std::move(credential));
 }
 
 }  // namespace smbfs

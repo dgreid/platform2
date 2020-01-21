@@ -18,11 +18,14 @@ class SmbFilesystem;
 // control to the browser.
 class SmbFsImpl : public mojom::SmbFs {
  public:
-  explicit SmbFsImpl(SmbFilesystem* fs, mojom::SmbFsRequest request);
+  explicit SmbFsImpl(SmbFilesystem* fs,
+                     mojom::SmbFsDelegatePtr delegate,
+                     mojom::SmbFsRequest request);
   ~SmbFsImpl() override;
 
  private:
   SmbFilesystem* const fs_;
+  mojom::SmbFsDelegatePtr delegate_;
   mojo::Binding<mojom::SmbFs> binding_;
 
   DISALLOW_IMPLICIT_CONSTRUCTORS(SmbFsImpl);

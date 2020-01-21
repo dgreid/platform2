@@ -19,7 +19,7 @@
 #include <mojo/core/embedder/scoped_ipc_support.h>
 #include <mojo/public/cpp/bindings/binding.h>
 
-#include "smbfs/mojom/smbfs.mojom.h"
+#include "smbfs/smbfs_bootstrap_impl.h"
 
 namespace smbfs {
 
@@ -29,7 +29,8 @@ class KerberosArtifactSynchronizer;
 struct Options;
 struct SmbCredential;
 
-class SmbFsDaemon : public brillo::DBusDaemon, public mojom::SmbFsBootstrap {
+class SmbFsDaemon : public brillo::DBusDaemon,
+                    public SmbFsBootstrapImpl::Delegate {
  public:
   SmbFsDaemon(fuse_chan* chan, const Options& options);
   ~SmbFsDaemon() override;
@@ -39,16 +40,16 @@ class SmbFsDaemon : public brillo::DBusDaemon, public mojom::SmbFsBootstrap {
   int OnInit() override;
   int OnEventLoopStarted() override;
 
-  // mojom::SmbFsBootstrap overrides.
-  void MountShare(mojom::MountOptionsPtr options,
-                  mojom::SmbFsDelegatePtr delegate,
-                  const MountShareCallback& callback) override;
+  // SmbFsBootstrapImpl::Delegate overrides.
+  void SetupKerberos(mojom::KerberosConfigPtr kerberos_config,
+                     base::OnceCallback<void(bool success)> callback) override;
+  std::unique_ptr<SmbFilesystem> CreateSmbFilesystem(
+      const std::string& share_path,
+      std::unique_ptr<SmbCredential> credential) override;
+  bool StartFuseSession(std::unique_ptr<Filesystem> fs) override;
+  void OnBootstrapConnectionError() override;
 
  private:
-  // Starts the fuse session using the filesystem |fs|. Returns true if the
-  // session is successfully started.
-  bool StartFuseSession(std::unique_ptr<Filesystem> fs);
-
   // Set up libsmbclient configuration files.
   bool SetupSmbConf();
 
@@ -57,21 +58,6 @@ class SmbFsDaemon : public brillo::DBusDaemon, public mojom::SmbFsBootstrap {
 
   // Initialise Mojo IPC system.
   bool InitMojo();
-
-  // Mojo connection error handler.
-  void OnConnectionError();
-
-  // Sets up Kerberos authentication.
-  void SetupKerberos(mojom::KerberosConfigPtr kerberos_config,
-                     base::OnceCallback<void(bool success)> callback);
-
-  // Callback to continue MountShare after setting up credentials
-  // (username/password, or kerberos).
-  void OnCredentialsSetup(mojom::MountOptionsPtr options,
-                          mojom::SmbFsDelegatePtr delegate,
-                          const MountShareCallback& callback,
-                          std::unique_ptr<SmbCredential> credential,
-                          bool setup_success);
 
   fuse_chan* chan_;
   const bool use_test_fs_;
@@ -85,8 +71,7 @@ class SmbFsDaemon : public brillo::DBusDaemon, public mojom::SmbFsBootstrap {
   std::unique_ptr<KerberosArtifactSynchronizer> kerberos_sync_;
 
   std::unique_ptr<mojo::core::ScopedIPCSupport> ipc_support_;
-  mojo::Binding<mojom::SmbFsBootstrap> bootstrap_binding_{this};
-  mojom::SmbFsDelegatePtr delegate_;
+  std::unique_ptr<SmbFsBootstrapImpl> bootstrap_impl_;
 
   DISALLOW_COPY_AND_ASSIGN(SmbFsDaemon);
 };

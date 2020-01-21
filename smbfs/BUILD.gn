@@ -55,6 +55,8 @@ static_library("libsmbfs") {
     "smb_filesystem.cc",
     "smb_filesystem.h",
     "smbfs.h",
+    "smbfs_bootstrap_impl.cc",
+    "smbfs_bootstrap_impl.h",
     "smbfs_daemon.cc",
     "smbfs_daemon.h",
     "smbfs_impl.cc",
@@ -99,10 +101,14 @@ executable("smbfs") {
 }
 
 if (use.test) {
+  pkg_config("smbfs_test_config") {
+    pkg_deps = [ "libchrome-test-${libbase_ver}" ]
+  }
   executable("smbfs_test") {
     configs += [
       "//common-mk:test",
       ":target_defaults",
+      ":smbfs_test_config",
     ]
     deps = [
       ":libsmbfs",
@@ -114,6 +120,7 @@ if (use.test) {
       "inode_map_test.cc",
       "kerberos_artifact_synchronizer_test.cc",
       "smb_filesystem_test.cc",
+      "smbfs_bootstrap_impl_test.cc",
       "util_test.cc",
     ]
   }
