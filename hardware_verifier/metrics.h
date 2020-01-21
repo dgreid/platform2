@@ -18,6 +18,9 @@ namespace hardware_verifier {
 // Total time to finish execution (initialization + probing + verification).
 const char kMetricTimeToFinish[] = "HardwareVerifier.TimeToFinish";
 
+// Total time to finish probing.
+const char kMetricTimeToProbe[] = "HardwareVerifier.TimeToProbe";
+
 class Metrics {
  public:
   void StartTimer(const std::string& timer_name);
