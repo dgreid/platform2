@@ -34,7 +34,7 @@ MockTpm::MockTpm() {
       .WillByDefault(Return(true));
   ON_CALL(*this, ActivateIdentity(_, _, _, _, _, _))
       .WillByDefault(Return(true));
-  ON_CALL(*this, QuotePCR(_, _, _, _, _, _))
+  ON_CALL(*this, QuotePCR(_, _, _, _, _, _, _))
       .WillByDefault(Return(true));
   ON_CALL(*this, SealToPCR0(_, _))
       .WillByDefault(Return(true));
@@ -68,6 +68,7 @@ MockTpm::MockTpm() {
   ON_CALL(*this, DoesUseTpmManager()).WillByDefault(Return(true));
   ON_CALL(*this, UnsealWithAuthorization(_, _, _, _, _))
       .WillByDefault(Return(Tpm::kTpmRetryNone));
+  ON_CALL(*this, IsCurrentPCR0ValueValid()).WillByDefault(Return(true));
 }
 
 MockTpm::~MockTpm() {}

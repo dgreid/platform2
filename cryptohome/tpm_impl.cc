@@ -2163,6 +2163,7 @@ bool TpmImpl::MakeIdentity(SecureBlob* identity_public_key_der,
 }
 
 bool TpmImpl::QuotePCR(uint32_t pcr_index,
+                       bool check_pcr_value,
                        const SecureBlob& identity_key_blob,
                        const SecureBlob& external_data,
                        Blob* pcr_value,
@@ -2232,6 +2233,12 @@ bool TpmImpl::QuotePCR(uint32_t pcr_index,
   }
   pcr_value->assign(&pcr_value_buffer.value()[0],
                     &pcr_value_buffer.value()[pcr_value_length]);
+
+  if (pcr_index == 0 && check_pcr_value && !IsValidPcr0Value(*pcr_value)) {
+    LOG(ERROR) << "QuotePCR: Bad PCR0 state.";
+    return false;
+  }
+
   // Get the data that was quoted.
   quoted_data->assign(&validation.rgbData[0],
                       &validation.rgbData[validation.ulDataLength]);
@@ -3486,7 +3493,7 @@ bool TpmImpl::DoesUseTpmManager() {
   return false;
 }
 
-bool TpmImpl::CanResetDictionaryAttackWithCurrentPCR0() {
+bool TpmImpl::IsCurrentPCR0ValueValid() {
   Blob pcr_value;
   if (!ReadPCR(0, &pcr_value)) {
     LOG(ERROR) << "Failed to read PCR0";

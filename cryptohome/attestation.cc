@@ -540,6 +540,15 @@ void Attestation::PrepareForEnrollment() {
 
   base::TimeTicks start = base::TimeTicks::Now();
   LOG(INFO) << "Attestation: Preparing for enrollment...";
+
+  // If the PCR0 state is bad, don't bother to get EKpub, create AIK, or
+  // do other preparation below to avoid unnecessary overheads.
+  if (!tpm_->IsCurrentPCR0ValueValid()) {
+    // TODO(b/138324811): add metrics report
+    LOG(ERROR) << "Attestation: Bad PCR0 state.";
+    return;
+  }
+
   SecureBlob ek_public_key;
   if (tpm_->GetEndorsementPublicKey(&ek_public_key) != Tpm::kTpmRetryNone) {
     LOG(ERROR) << "Attestation: Failed to get EK public key.";
@@ -1496,8 +1505,14 @@ bool Attestation::EncryptDatabase(const AttestationDatabase& db,
   }
   SecureBlob serial_data(serial_string.begin(), serial_string.end());
   if (database_key_.empty() || sealed_database_key_.empty()) {
+    if (!tpm_->IsCurrentPCR0ValueValid()) {
+      // TODO(b/138324811): add metrics report
+      LOG(ERROR) << "Bad PCR0 state. Abort generating attestation DB key.";
+      return false;
+    }
+
     if (!crypto_->CreateSealedKey(&database_key_, &sealed_database_key_)) {
-      LOG(ERROR) << "Failed to generate database key.";
+      LOG(ERROR) << "Failed to generate attestation DB key.";
       return false;
     }
   }
@@ -1515,6 +1530,13 @@ bool Attestation::DecryptDatabase(const std::string& serial_encrypted_db,
   if (!crypto_->UnsealKey(serial_encrypted_db, &database_key_,
                           &sealed_database_key_)) {
     LOG(ERROR) << "Attestation: Could not unseal decryption key.";
+
+    // Unseal failure doesn't increase DA counter, so check the PCR0 value
+    // afterward to save a TPM call in the success case.
+    if (!tpm_->IsCurrentPCR0ValueValid()) {
+      // TODO(b/138324811): add metrics report
+      LOG(ERROR) << "Unseal failed due to a bad PCR0 state.";
+    }
     return false;
   }
   SecureBlob serial_blob;
@@ -2750,11 +2772,13 @@ bool Attestation::CreatePCRQuote(
   SecureBlob quote;
 
   if (!tpm_->QuotePCR(pcr_index,
+                      pcr_index == 0,
                       identity_key_blob,
                       external_data,
                       &quoted_pcr_value,
                       &quoted_data,
                       &quote)) {
+    // TODO(b/138324811): add metrics report for the case of bad PCR0 value.
     LOG(ERROR) << "Attestation: Failed to generate PCR" << pcr_index
                << " quote.";
     return false;

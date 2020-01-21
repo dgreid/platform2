@@ -103,6 +103,7 @@ class TpmImpl : public Tpm {
                     brillo::SecureBlob* platform_credential,
                     brillo::SecureBlob* conformance_credential) override;
   bool QuotePCR(uint32_t pcr_index,
+                bool check_pcr_value,
                 const brillo::SecureBlob& identity_key_blob,
                 const brillo::SecureBlob& external_data,
                 brillo::Blob* pcr_value,
@@ -186,7 +187,7 @@ class TpmImpl : public Tpm {
                    bool* has_reset_lock_permissions) override;
   void HandleOwnershipTakenEvent() override;
   bool DoesUseTpmManager() override;
-  bool CanResetDictionaryAttackWithCurrentPCR0() override;
+  bool IsCurrentPCR0ValueValid() override;
   void SetDelegateData(const std::string& delegate_blob,
                        bool has_reset_lock_permissions) override;
   base::Optional<bool> IsDelegateBoundToPcr() override;

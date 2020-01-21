@@ -515,6 +515,35 @@ TEST_F(AttestationBaseTest, IdentityCertificateMapIsDeepCopied) {
   EXPECT_EQ(Attestation::kDefaultPCA, map.at(Attestation::kDefaultPCA).aca());
 }
 
+TEST_F(AttestationBaseTest, PrepareForEnrollmentBadInitialPCR0State) {
+  EXPECT_CALL(tpm_, IsCurrentPCR0ValueValid()).WillOnce(Return(false));
+
+  attestation_.PrepareForEnrollment();
+
+  AttestationDatabase db = GetPersistentDatabase();
+  EXPECT_EQ(db.SerializeAsString(), "");
+}
+
+TEST_F(AttestationBaseTest, CreateIdentityQuotePCR0Error) {
+  EXPECT_CALL(tpm_, QuotePCR(0, _, _, _, _, _, _)).WillOnce(Return(false));
+
+  attestation_.PrepareForEnrollment();
+
+  AttestationDatabase db = GetPersistentDatabase();
+  EXPECT_EQ(db.SerializeAsString(), "");
+}
+
+TEST_F(AttestationBaseTest, PrepareForEnrollmentGenerateDatabaseKeyError) {
+  EXPECT_CALL(tpm_, IsCurrentPCR0ValueValid())
+      .WillOnce(Return(true))
+      .WillOnce(Return(false));
+
+  attestation_.PrepareForEnrollment();
+
+  AttestationDatabase db = GetPersistentDatabase();
+  EXPECT_EQ(db.SerializeAsString(), "");
+}
+
 // Tests DeleteKeysByPrefix with device-wide keys stored in the attestation db.
 TEST_F(AttestationBaseTest, DeleteByPrefixDevice) {
   // Test with an empty db.

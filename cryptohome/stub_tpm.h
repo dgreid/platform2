@@ -106,6 +106,7 @@ class StubTpm : public Tpm {
                     SecureBlob* conformance_credential) override
     { return false; }
   bool QuotePCR(uint32_t pcr_index,
+                bool check_pcr_value,
                 const SecureBlob& identity_key_blob,
                 const SecureBlob& external_data,
                 brillo::Blob* pcr_value,
@@ -207,7 +208,7 @@ class StubTpm : public Tpm {
     return nullptr;
   }
   void HandleOwnershipTakenEvent() override {}
-  bool CanResetDictionaryAttackWithCurrentPCR0() override { return true; }
+  bool IsCurrentPCR0ValueValid() override { return true; }
   void SetDelegateData(const std::string& delegate_blob,
                        bool has_reset_lock_permissions) override {}
   base::Optional<bool> IsDelegateBoundToPcr() override { return true; }

@@ -589,6 +589,7 @@ bool Tpm2Impl::MakeIdentity(SecureBlob* identity_public_key_der,
 }
 
 bool Tpm2Impl::QuotePCR(uint32_t pcr_index,
+                        bool check_pcr_value,
                         const SecureBlob& identity_key_blob,
                         const SecureBlob& external_data,
                         Blob* pcr_value,
@@ -1735,7 +1736,7 @@ bool Tpm2Impl::DoesUseTpmManager() {
   return true;
 }
 
-bool Tpm2Impl::CanResetDictionaryAttackWithCurrentPCR0() {
+bool Tpm2Impl::IsCurrentPCR0ValueValid() {
   return true;
 }
 

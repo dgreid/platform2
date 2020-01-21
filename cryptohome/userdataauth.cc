@@ -2226,7 +2226,7 @@ void UserDataAuth::ResetDictionaryAttackMitigation() {
     ReportDictionaryAttackResetStatus(kDelegateNotAllowed);
     return;
   }
-  if (!tpm_->CanResetDictionaryAttackWithCurrentPCR0()) {
+  if (!tpm_->IsCurrentPCR0ValueValid()) {
     ReportDictionaryAttackResetStatus(kInvalidPcr0State);
     return;
   }

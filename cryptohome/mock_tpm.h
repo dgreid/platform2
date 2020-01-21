@@ -113,6 +113,7 @@ class MockTpm : public Tpm {
   MOCK_METHOD(bool,
               QuotePCR,
               (uint32_t,
+               bool,
                const brillo::SecureBlob&,
                const brillo::SecureBlob&,
                brillo::Blob*,
@@ -236,7 +237,7 @@ class MockTpm : public Tpm {
               (brillo::Blob*, brillo::Blob*, bool*),
               (override));
   MOCK_METHOD(bool, DoesUseTpmManager, (), (override));
-  MOCK_METHOD(bool, CanResetDictionaryAttackWithCurrentPCR0, (), (override));
+  MOCK_METHOD(bool, IsCurrentPCR0ValueValid, (), (override));
   MOCK_METHOD2(SetDelegateData, void(const std::string&, bool));
   MOCK_METHOD0(IsDelegateBoundToPcr, base::Optional<bool>());
   MOCK_METHOD0(DelegateCanResetDACounter, bool());

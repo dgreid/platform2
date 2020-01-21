@@ -464,6 +464,10 @@ class Tpm {
   //
   // Parameters
   //   pcr_index - The index of the PCR to be quoted.
+  //   check_pcr_value - If set, checks if current PCR value is valid. If it's
+  //                     invalid, returns false, in which case the caller
+  //                     shouldn't use the output values. This flag is effective
+  //                     only if pcr_index is 0 and if the TPM version is 1.2.
   //   identity_key_blob - The AIK blob, as provided by MakeIdentity.
   //   external_data - Data to be added to the quote, this must be at least 160
   //                   bits in length and only the first 160 bits will be used.
@@ -476,6 +480,7 @@ class Tpm {
   //
   // Returns true on success.
   virtual bool QuotePCR(uint32_t pcr_index,
+                        bool check_pcr_value,
                         const brillo::SecureBlob& identity_key_blob,
                         const brillo::SecureBlob& external_data,
                         brillo::Blob* pcr_value,
@@ -788,9 +793,12 @@ class Tpm {
   // related functions could also use |tpm_managerd|.
   virtual bool DoesUseTpmManager() = 0;
 
-  // Returns whether the device can attempt to reset the dictionary attack
-  // That happens if PCR0 was not extended multiple times.
-  virtual bool CanResetDictionaryAttackWithCurrentPCR0() = 0;
+  // Returns if current PCR0 value is valid, i.e., hasn't been extended multiple
+  // times.
+  //
+  // This function does the check for TPM 1.2 only. For TPM 2.0, it always
+  // returns true;
+  virtual bool IsCurrentPCR0ValueValid() = 0;
 
   // Processes the delegate blob and establishes if it's bound to any PCR. Also
   // keeps the information about reset_lock_permissions.
