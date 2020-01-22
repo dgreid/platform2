@@ -90,7 +90,12 @@ setsockopt: 1
 set_tid_address: 1
 ARM_set_tls: 1
 signalfd4: 1
-socket: arg0 == AF_UNIX || arg0 == AF_INET || arg0 == AF_INET6
+# Samba uses the getifaddrs() libc function to enumerate network interfaces,
+# which is implemented using netlink in glibc:
+# https://sourceware.org/git/?p=glibc.git;a=blob;f=sysdeps/unix/sysv/linux/ifaddrs.c;hb=d93769405996dfc11d216ddbe415946617b5a494#l258
+#       arg0 == AF_NETLINK && arg2 == NETLINK_ROUTE
+socket: arg0 == AF_UNIX || arg0 == AF_INET || arg0 == AF_INET6 || \
+        arg0 == AF_NETLINK && arg2 == 0
 socketpair: 1
 stat64: 1
 ugetrlimit: 1
