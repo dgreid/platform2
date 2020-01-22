@@ -196,7 +196,6 @@ bool TerminaVm::Start(base::FilePath kernel,
       "--wayland-sock", kWaylandSocket,
       "--serial",       "type=syslog,num=1",
       "--syslog-tag",   base::StringPrintf("VM(%u)", vsock_cid_),
-      "--cras-audio",
       "--params",      "snd_intel8x0.inside_vm=1 snd_intel8x0.ac97_clock=48000",
   };
   // clang-format on
@@ -220,8 +219,13 @@ bool TerminaVm::Start(base::FilePath kernel,
   if (features_.software_tpm)
     args.emplace_back("--software-tpm");
 
-  if (features_.audio_capture)
-    args.emplace_back("--cras-capture");
+  if (features_.audio_capture) {
+    args.emplace_back("--ac97");
+    args.emplace_back("backend=cras,capture=true");
+  } else {
+    args.emplace_back("--ac97");
+    args.emplace_back("backend=cras");
+  }
 
   // Add any extra disks.
   for (const auto& disk : disks) {
