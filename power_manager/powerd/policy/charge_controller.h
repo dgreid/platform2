@@ -40,6 +40,11 @@ class ChargeController {
   // battery charge mode.
   static const int kCustomChargeModeThresholdsMinDiff;
 
+  // Min and max values for actual battery percentage threshold for
+  // peak shift.
+  static const int kPeakShiftBatteryThresholdMin;
+  static const int kPeakShiftBatteryThresholdMax;
+
   // Clamps actual battery percentage thresholds for custom battery charge
   // mode:
   //   1) |start| should be in the range
@@ -49,6 +54,11 @@ class ChargeController {
   //   3) difference between |end| and |start| should be at least 5.
   static void ClampCustomBatteryChargeThresholds(int* start, int* end);
 
+  // Clamps actual battery percentage threshold for peak shift.
+  // Threshold should be in the range:
+  //     [kPeakShiftBatteryThresholdMin, kPeakShiftBatteryThresholdMax].
+  static int ClampPeakShiftBatteryThreshold(int threshold);
+
   ChargeController();
   ~ChargeController();
 
@@ -56,8 +66,8 @@ class ChargeController {
   void Init(system::ChargeControllerHelperInterface* helper,
             BatteryPercentageConverter* battery_percentage_converter);
 
-  // Does nothing if |policy| and |cached_policy_| peak shift related fields are
-  // equal. Otherwise updates the charging configuration per |policy| and
+  // Does nothing if |policy| and |cached_policy_| peak shift related fields
+  // are equal. Otherwise updates the charging configuration per |policy| and
   // copies |policy| to |cached_policy_|.
   void HandlePolicyChange(const PowerManagementPolicy& policy);
 

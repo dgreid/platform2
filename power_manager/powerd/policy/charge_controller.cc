@@ -153,6 +153,9 @@ constexpr int ChargeController::kCustomChargeModeEndMax = 100;
 
 constexpr int ChargeController::kCustomChargeModeThresholdsMinDiff = 5;
 
+constexpr int ChargeController::kPeakShiftBatteryThresholdMin = 15;
+constexpr int ChargeController::kPeakShiftBatteryThresholdMax = 100;
+
 // static
 void ChargeController::ClampCustomBatteryChargeThresholds(int* start,
                                                           int* end) {
@@ -163,6 +166,12 @@ void ChargeController::ClampCustomBatteryChargeThresholds(int* start,
   *start = base::ClampToRange(
       std::min(*start, *end - kCustomChargeModeThresholdsMinDiff),
       kCustomChargeModeStartMin, kCustomChargeModeStartMax);
+}
+
+// static
+int ChargeController::ClampPeakShiftBatteryThreshold(int threshold) {
+  return base::ClampToRange(threshold, kPeakShiftBatteryThresholdMin,
+                            kPeakShiftBatteryThresholdMax);
 }
 
 ChargeController::ChargeController() = default;
@@ -214,9 +223,12 @@ bool ChargeController::ApplyPeakShiftChange(
     return false;
   }
 
-  const int actual_battery_percent_threshold =
+  int actual_battery_percent_threshold =
       std::round(battery_percentage_converter_->ConvertDisplayToActual(
           policy.peak_shift_battery_percent_threshold()));
+  actual_battery_percent_threshold =
+      ClampPeakShiftBatteryThreshold(actual_battery_percent_threshold);
+
   if (!helper_->SetPeakShiftBatteryPercentThreshold(
           actual_battery_percent_threshold)) {
     return false;

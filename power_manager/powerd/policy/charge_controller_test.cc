@@ -200,11 +200,15 @@ TEST_F(ChargeControllerTest, PeakShiftDayConfigsOnly) {
 TEST_F(ChargeControllerTest, PeakShift) {
   constexpr int kThreshold1 = 50;
   constexpr int kThreshold2 = 45;
+  constexpr int kThreshold3 = 10;
 
   const int actual_threshold1 = std::round(
       battery_percentage_converter().ConvertDisplayToActual(kThreshold1));
   const int actual_threshold2 = std::round(
       battery_percentage_converter().ConvertDisplayToActual(kThreshold2));
+  // |kThreshold3| after converting to actual battery percentage will be less
+  // than min allowed value.
+  const int actual_threshold3 = ChargeController::kPeakShiftBatteryThresholdMin;
 
   constexpr PowerManagementPolicy::WeekDay kDay1 =
       PowerManagementPolicy::MONDAY;
@@ -227,6 +231,12 @@ TEST_F(ChargeControllerTest, PeakShift) {
   controller_.HandlePolicyChange(policy_);
   EXPECT_TRUE(CheckPeakShift(
       true, actual_threshold2,
+      {{kDay1, kExpectedDayConfig2}, {kDay2, kExpectedDayConfig1}}));
+
+  SetPeakShift(kThreshold3, {{kDay1, kDayConfig2}, {kDay2, kDayConfig1}});
+  controller_.HandlePolicyChange(policy_);
+  EXPECT_TRUE(CheckPeakShift(
+      true, actual_threshold3,
       {{kDay1, kExpectedDayConfig2}, {kDay2, kExpectedDayConfig1}}));
 
   helper_.Reset();
@@ -533,6 +543,43 @@ INSTANTIATE_TEST_SUITE_P(
              ChargeController::kCustomChargeModeEndMax},
             {ChargeController::kCustomChargeModeStartMax,
              ChargeController::kCustomChargeModeEndMax}}));
+
+class PeakShiftThresholdChargeControllerTest
+    : public ::testing::Test,
+      public testing::WithParamInterface<std::tuple<int, int>> {
+ public:
+  int input_threshold() const { return std::get<0>(GetParam()); }
+
+  int expected_threshold() const { return std::get<1>(GetParam()); }
+};
+
+// Verifies that display percentage threshold for peak shift will be converted
+// into valid actual percentage threshold.
+TEST_P(PeakShiftThresholdChargeControllerTest, ValidActualThreshold) {
+  const int actual_threshold =
+      ChargeController::ClampPeakShiftBatteryThreshold(input_threshold());
+  EXPECT_EQ(actual_threshold, expected_threshold());
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    _,
+    PeakShiftThresholdChargeControllerTest,
+    testing::Values(
+        // Valid values.
+        std::make_tuple(ChargeController::kPeakShiftBatteryThresholdMin,
+                        ChargeController::kPeakShiftBatteryThresholdMin),
+        std::make_tuple(ChargeController::kPeakShiftBatteryThresholdMax,
+                        ChargeController::kPeakShiftBatteryThresholdMax),
+        std::make_tuple(ChargeController::kPeakShiftBatteryThresholdMin + 20,
+                        ChargeController::kPeakShiftBatteryThresholdMin + 20),
+
+        // Threshold less than min value.
+        std::make_tuple(ChargeController::kPeakShiftBatteryThresholdMin - 1,
+                        ChargeController::kPeakShiftBatteryThresholdMin),
+
+        // Threshold greater than max value.
+        std::make_tuple(ChargeController::kPeakShiftBatteryThresholdMax + 1,
+                        ChargeController::kPeakShiftBatteryThresholdMax)));
 
 }  // namespace policy
 }  // namespace power_manager
