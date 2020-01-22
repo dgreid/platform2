@@ -18,6 +18,9 @@ namespace {
 
 constexpr char kSmartctlAttributesOption[] = "attributes";
 constexpr char kNvmeIdentityOption[] = "identify_controller";
+constexpr char kNvmeShortSelfTestOption[] = "short_self_test";
+constexpr char kNvmeLongSelfTestOption[] = "long_self_test";
+constexpr char kNvmeStopSelfTestOption[] = "stop_self_test";
 
 auto CreateSuccessCallback(
     const DebugdAdapter::StringResultCallback& callback) {
@@ -54,6 +57,35 @@ void DebugdAdapterImpl::GetSmartAttributes(
 void DebugdAdapterImpl::GetNvmeIdentity(const StringResultCallback& callback) {
   debugd_proxy_->NvmeAsync(kNvmeIdentityOption, CreateSuccessCallback(callback),
                            CreateErrorCallback(callback));
+}
+
+void DebugdAdapterImpl::RunNvmeShortSelfTest(
+    const StringResultCallback& callback) {
+  debugd_proxy_->NvmeAsync(kNvmeShortSelfTestOption,
+                           CreateSuccessCallback(callback),
+                           CreateErrorCallback(callback));
+}
+
+void DebugdAdapterImpl::RunNvmeLongSelfTest(
+    const StringResultCallback& callback) {
+  debugd_proxy_->NvmeAsync(kNvmeLongSelfTestOption,
+                           CreateSuccessCallback(callback),
+                           CreateErrorCallback(callback));
+}
+
+void DebugdAdapterImpl::StopNvmeSelfTest(const StringResultCallback& callback) {
+  debugd_proxy_->NvmeAsync(kNvmeStopSelfTestOption,
+                           CreateSuccessCallback(callback),
+                           CreateErrorCallback(callback));
+}
+
+void DebugdAdapterImpl::GetNvmeLog(uint32_t page_id,
+                                   uint32_t length,
+                                   bool raw_binary,
+                                   const StringResultCallback& callback) {
+  debugd_proxy_->NvmeLogAsync(page_id, length, raw_binary,
+                              CreateSuccessCallback(callback),
+                              CreateErrorCallback(callback));
 }
 
 }  // namespace diagnostics

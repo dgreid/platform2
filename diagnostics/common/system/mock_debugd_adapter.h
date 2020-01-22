@@ -22,6 +22,22 @@ class MockDebugdAdapter : public DebugdAdapter {
               (const StringResultCallback&),
               (override));
   MOCK_METHOD(void, GetNvmeIdentity, (const StringResultCallback&), (override));
+  MOCK_METHOD(void,
+              RunNvmeShortSelfTest,
+              (const StringResultCallback&),
+              (override));
+  MOCK_METHOD(void,
+              RunNvmeLongSelfTest,
+              (const StringResultCallback&),
+              (override));
+  MOCK_METHOD(void,
+              StopNvmeSelfTest,
+              (const StringResultCallback&),
+              (override));
+  MOCK_METHOD(void,
+              GetNvmeLog,
+              (uint32_t, uint32_t, bool, const StringResultCallback&),
+              (override));
 
  private:
   DISALLOW_COPY_AND_ASSIGN(MockDebugdAdapter);
