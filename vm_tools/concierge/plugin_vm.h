@@ -65,8 +65,6 @@ class PluginVm final : public VmInterface {
                        UsbControlResponse* response) override;
   bool DetachUsbDevice(uint8_t port, UsbControlResponse* response) override;
   bool ListUsbDevice(std::vector<UsbDevice>* devices) override;
-  void HandleSuspendImminent() override {}
-  void HandleSuspendDone() override {}
   bool SetResolvConfig(const std::vector<std::string>& nameservers,
                        const std::vector<std::string>& search_domains) override;
   bool SetTime(std::string* failure_reason) override { return true; }
@@ -106,6 +104,8 @@ class PluginVm final : public VmInterface {
            base::FilePath iso_dir,
            base::FilePath root_dir,
            base::FilePath runtime_dir);
+  void HandleSuspendImminent() override {}
+  void HandleSuspendDone() override {}
   bool Start(uint32_t cpus,
              std::vector<std::string> params,
              base::FilePath stateful_dir);

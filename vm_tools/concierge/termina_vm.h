@@ -186,8 +186,6 @@ class TerminaVm final : public VmInterface {
                        UsbControlResponse* response) override;
   bool DetachUsbDevice(uint8_t port, UsbControlResponse* response) override;
   bool ListUsbDevice(std::vector<UsbDevice>* devices) override;
-  void HandleSuspendImminent() override;
-  void HandleSuspendDone() override;
   bool GetVmEnterpriseReportingInfo(
       GetVmEnterpriseReportingInfoResponse* response) override;
   vm_tools::concierge::DiskImageStatus ResizeDisk(
@@ -231,7 +229,8 @@ class TerminaVm final : public VmInterface {
             std::string stateful_device,
             uint64_t stateful_size,
             VmFeatures features);
-
+  void HandleSuspendImminent() override;
+  void HandleSuspendDone() override;
   // Returns the path to the VM control socket.
   std::string GetVmSocketPath() const;
 

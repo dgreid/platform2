@@ -100,8 +100,7 @@ class ArcVm final : public VmInterface {
                        UsbControlResponse* response) override;
   bool DetachUsbDevice(uint8_t port, UsbControlResponse* response) override;
   bool ListUsbDevice(std::vector<UsbDevice>* devices) override;
-  void HandleSuspendImminent() override;
-  void HandleSuspendDone() override;
+  bool UsesExternalSuspendSignals() override { return true; }
   bool SetResolvConfig(
       const std::vector<std::string>& nameservers,
       const std::vector<std::string>& search_domains) override {
@@ -125,6 +124,9 @@ class ArcVm final : public VmInterface {
         std::unique_ptr<SeneschalServerProxy> seneschal_server_proxy,
         base::FilePath runtime_dir,
         ArcVmFeatures features);
+
+  void HandleSuspendImminent() override;
+  void HandleSuspendDone() override;
 
   // Returns the path to the VM control socket.
   std::string GetVmSocketPath() const;

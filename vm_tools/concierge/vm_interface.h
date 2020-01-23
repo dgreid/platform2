@@ -52,6 +52,20 @@ class VmInterface {
   // once their destructor is called.
   virtual ~VmInterface() = default;
 
+  // Suspends the VM.
+  void Suspend() {
+    HandleSuspendImminent();
+    suspended_ = true;
+  }
+
+  // Resumes the VM.
+  void Resume() {
+    HandleSuspendDone();
+    suspended_ = false;
+  }
+
+  bool IsSuspended() { return suspended_; }
+
   // Shuts down the VM. Returns true if the VM was successfully shut down and
   // false otherwise.
   virtual bool Shutdown() = 0;
@@ -73,11 +87,12 @@ class VmInterface {
   // List all usb devices attached to guest.
   virtual bool ListUsbDevice(std::vector<UsbDevice>* devices) = 0;
 
-  // Handle the device going to suspend.
-  virtual void HandleSuspendImminent() = 0;
-
-  // Handle the device resuming from a suspend.
-  virtual void HandleSuspendDone() = 0;
+  // Returns true if this VM depends on external signals for suspend and resume.
+  // The D-Bus suspend/resume messages from powerd, SuspendImminent and
+  // SuspendDone will not be propagated to this VM. Otherwise,
+  // HandleSuspendImminent and HandleSuspendDone will be invoked when these
+  // messages received.
+  virtual bool UsesExternalSuspendSignals() { return true; }
 
   // Update resolv.conf data.
   virtual bool SetResolvConfig(
@@ -110,6 +125,16 @@ class VmInterface {
   // Get the smallest valid resize parameter for this disk,
   // or 0 for unknown.
   virtual uint64_t GetMinDiskSize() { return 0; }
+
+ private:
+  // Handle the device going to suspend.
+  virtual void HandleSuspendImminent() = 0;
+
+  // Handle the device resuming from a suspend.
+  virtual void HandleSuspendDone() = 0;
+
+  // Whether the VM is currently suspended.
+  bool suspended_ = false;
 };
 
 }  // namespace concierge

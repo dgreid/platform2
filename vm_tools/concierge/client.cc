@@ -396,6 +396,94 @@ base::Optional<vm_tools::concierge::VmInfo> GetVmInfoInternal(
   return base::make_optional(response.vm_info());
 }
 
+int SuspendVm(dbus::ObjectProxy* proxy, string owner_id, string name) {
+  if (name.empty()) {
+    LOG(ERROR) << "--name is required";
+    return -1;
+  }
+
+  LOG(INFO) << "Suspending VM " << name;
+
+  dbus::MethodCall method_call(vm_tools::concierge::kVmConciergeInterface,
+                               vm_tools::concierge::kSuspendVmMethod);
+  dbus::MessageWriter writer(&method_call);
+
+  vm_tools::concierge::SuspendVmRequest request;
+  request.set_owner_id(std::move(owner_id));
+  request.set_name(std::move(name));
+
+  if (!writer.AppendProtoAsArrayOfBytes(request)) {
+    LOG(ERROR) << "Failed to encode SuspendVmRequest protobuf";
+    return -1;
+  }
+
+  std::unique_ptr<dbus::Response> dbus_response =
+      proxy->CallMethodAndBlock(&method_call, kDefaultTimeoutMs);
+  if (!dbus_response) {
+    LOG(ERROR) << "Failed to send dbus message to concierge service";
+    return -1;
+  }
+
+  dbus::MessageReader reader(dbus_response.get());
+  vm_tools::concierge::SuspendVmResponse response;
+  if (!reader.PopArrayOfBytesAsProto(&response)) {
+    LOG(ERROR) << "Failed to parse response protobuf";
+    return -1;
+  }
+
+  if (!response.success()) {
+    LOG(ERROR) << "Failed to suspend VM: " << response.failure_reason();
+    return -1;
+  }
+
+  LOG(INFO) << "Done";
+  return 0;
+}
+
+int ResumeVm(dbus::ObjectProxy* proxy, string owner_id, string name) {
+  if (name.empty()) {
+    LOG(ERROR) << "--name is required";
+    return -1;
+  }
+
+  LOG(INFO) << "Resuming VM " << name;
+
+  dbus::MethodCall method_call(vm_tools::concierge::kVmConciergeInterface,
+                               vm_tools::concierge::kResumeVmMethod);
+  dbus::MessageWriter writer(&method_call);
+
+  vm_tools::concierge::ResumeVmRequest request;
+  request.set_owner_id(std::move(owner_id));
+  request.set_name(std::move(name));
+
+  if (!writer.AppendProtoAsArrayOfBytes(request)) {
+    LOG(ERROR) << "Failed to encode ResumeVmRequest protobuf";
+    return -1;
+  }
+
+  std::unique_ptr<dbus::Response> dbus_response =
+      proxy->CallMethodAndBlock(&method_call, kDefaultTimeoutMs);
+  if (!dbus_response) {
+    LOG(ERROR) << "Failed to send dbus message to concierge service";
+    return -1;
+  }
+
+  dbus::MessageReader reader(dbus_response.get());
+  vm_tools::concierge::ResumeVmResponse response;
+  if (!reader.PopArrayOfBytesAsProto(&response)) {
+    LOG(ERROR) << "Failed to parse response protobuf";
+    return -1;
+  }
+
+  if (!response.success()) {
+    LOG(ERROR) << "Failed to resume VM: " << response.failure_reason();
+    return -1;
+  }
+
+  LOG(INFO) << "Done";
+  return 0;
+}
+
 int GetVmInfo(dbus::ObjectProxy* proxy, string owner_id, string name) {
   LOG(INFO) << "Getting VM info";
 
@@ -1435,6 +1523,8 @@ int main(int argc, char** argv) {
   DEFINE_bool(start, false, "Start a VM");
   DEFINE_bool(stop, false, "Stop a running VM");
   DEFINE_bool(stop_all, false, "Stop all running VMs");
+  DEFINE_bool(suspend, false, "Suspend a running VM");
+  DEFINE_bool(resume, false, "Resume a running VM");
   DEFINE_bool(get_vm_info, false, "Get info for the given VM");
   DEFINE_bool(get_vm_cid, false, "Get vsock cid for the given VM");
   DEFINE_bool(create_disk, false, "Create a disk image");
@@ -1520,24 +1610,24 @@ int main(int argc, char** argv) {
   // The standard says that bool to int conversion is implicit and that
   // false => 0 and true => 1.
   // clang-format off
-  if (FLAGS_start + FLAGS_stop + FLAGS_stop_all + FLAGS_get_vm_info +
-      FLAGS_get_vm_cid + FLAGS_create_disk + FLAGS_create_external_disk +
-      FLAGS_start_termina_vm + FLAGS_destroy_disk + FLAGS_export_disk +
-      FLAGS_import_disk + FLAGS_list_disks + FLAGS_sync_time +
-      FLAGS_attach_usb + FLAGS_detach_usb + FLAGS_list_usb_devices +
-      FLAGS_start_plugin_vm + FLAGS_start_arc_vm +
+  if (FLAGS_start + FLAGS_stop + FLAGS_stop_all + FLAGS_suspend + FLAGS_resume +
+      FLAGS_get_vm_info + FLAGS_get_vm_cid + FLAGS_create_disk +
+      FLAGS_create_external_disk + FLAGS_start_termina_vm + FLAGS_destroy_disk +
+      FLAGS_export_disk + FLAGS_import_disk + FLAGS_list_disks +
+      FLAGS_sync_time + FLAGS_attach_usb + FLAGS_detach_usb +
+      FLAGS_list_usb_devices + FLAGS_start_plugin_vm + FLAGS_start_arc_vm +
       FLAGS_get_vm_enterprise_reporting_info +
       FLAGS_set_vm_cpu_restriction != 1) {
     // clang-format on
     LOG(ERROR)
-        << "Exactly one of --start, --stop, --stop_all, --get_vm_info, "
-        << "--get_vm_cid, --create_disk, --create_external_disk, "
-        << "--destroy_disk, --export_disk --import_disk --list_disks, "
-        << "--start_termina_vm, --sync_time, --attach_usb, --detach_usb, "
+        << "Exactly one of --start, --stop, --stop_all, --suspend, --resume, "
+        << "--get_vm_info, --get_vm_cid, --create_disk, "
+        << "--create_external_disk, --destroy_disk, --export_disk, "
+        << "--import_disk --list_disks, --start_termina_vm, --sync_time, "
+        << "--attach_usb, --detach_usb, "
         << "--list_usb_devices, --start_plugin_vm, --start_arc_vm, "
         << "--get_vm_enterprise_reporting_info, or --set_vm_cpu_restriction "
         << "must be provided";
-
     return -1;
   }
 
@@ -1556,6 +1646,12 @@ int main(int argc, char** argv) {
     return StopVm(proxy, std::move(FLAGS_cryptohome_id), std::move(FLAGS_name));
   } else if (FLAGS_stop_all) {
     return StopAllVms(proxy);
+  } else if (FLAGS_suspend) {
+    return SuspendVm(proxy, std::move(FLAGS_cryptohome_id),
+                     std::move(FLAGS_name));
+  } else if (FLAGS_resume) {
+    return ResumeVm(proxy, std::move(FLAGS_cryptohome_id),
+                    std::move(FLAGS_name));
   } else if (FLAGS_get_vm_info) {
     return GetVmInfo(proxy, std::move(FLAGS_cryptohome_id),
                      std::move(FLAGS_name));

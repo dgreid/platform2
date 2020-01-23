@@ -83,6 +83,14 @@ class Service final {
   // protobuf serialized as an array of bytes.
   std::unique_ptr<dbus::Response> StopVm(dbus::MethodCall* method_call);
 
+  // Handles a request to suspend a VM.  |method_call| must have a
+  // SuspendVmRequest protobuf serialized as an array of bytes.
+  std::unique_ptr<dbus::Response> SuspendVm(dbus::MethodCall* method_call);
+
+  // Handles a request to resume a VM.  |method_call| must have a
+  // ResumeVmRequest protobuf serialized as an array of bytes.
+  std::unique_ptr<dbus::Response> ResumeVm(dbus::MethodCall* method_call);
+
   // Handles a request to stop all running VMs.
   std::unique_ptr<dbus::Response> StopAllVms(dbus::MethodCall* method_call);
 
@@ -269,16 +277,6 @@ class Service final {
 
   // Signal must be connected before we can call SetTremplinStarted in a VM.
   bool is_tremplin_started_signal_connected_ = false;
-
-  // Indicates that the VMs are currently suspended and may not respond to RPCs.
-  bool vms_suspended_ = false;
-
-  // Indicates that we should update the resolv.conf file in each VM after
-  // resume.  This can happen if we get a ResolvCongigChanged message from shill
-  // before receiving a SuspendDone signal from powerd.  Attempting to update
-  // the resolv.conf file will simply result in a timeout so we should do it
-  // after a resume.
-  bool update_resolv_config_on_resume_ = false;
 
   // Whether we should re-synchronize VM clocks on resume from sleep.
   const bool resync_vm_clocks_on_resume_;

@@ -792,6 +792,8 @@ bool Service::Init() {
       {kStartArcVmMethod, &Service::StartArcVm},
       {kStopVmMethod, &Service::StopVm},
       {kStopAllVmsMethod, &Service::StopAllVms},
+      {kSuspendVmMethod, &Service::SuspendVm},
+      {kResumeVmMethod, &Service::ResumeVm},
       {kGetVmInfoMethod, &Service::GetVmInfo},
       {kGetVmEnterpriseReportingInfoMethod,
        &Service::GetVmEnterpriseReportingInfo},
@@ -1933,6 +1935,118 @@ std::unique_ptr<dbus::Response> Service::StopAllVms(
   vms_.clear();
 
   return nullptr;
+}
+
+std::unique_ptr<dbus::Response> Service::SuspendVm(
+    dbus::MethodCall* method_call) {
+  DCHECK(sequence_checker_.CalledOnValidSequence());
+  LOG(INFO) << "Received SuspendVm request";
+
+  std::unique_ptr<dbus::Response> dbus_response(
+      dbus::Response::FromMethodCall(method_call));
+
+  dbus::MessageReader reader(method_call);
+  dbus::MessageWriter writer(dbus_response.get());
+
+  SuspendVmRequest request;
+  SuspendVmResponse response;
+
+  if (!reader.PopArrayOfBytesAsProto(&request)) {
+    LOG(ERROR) << "Unable to parse SuspendVmRequest from message";
+
+    response.set_failure_reason("Unable to parse protobuf");
+    writer.AppendProtoAsArrayOfBytes(response);
+    return dbus_response;
+  }
+
+  auto iter = FindVm(request.owner_id(), request.name());
+  if (iter == vms_.end()) {
+    LOG(ERROR) << "Requested VM does not exist";
+    // This is not an error to Chrome
+    response.set_success(true);
+    writer.AppendProtoAsArrayOfBytes(response);
+    return dbus_response;
+  }
+
+  auto& vm = iter->second;
+  if (!vm->UsesExternalSuspendSignals()) {
+    LOG(ERROR) << "Received D-Bus suspend request for " << iter->first
+               << " but it does not use external suspend signals.";
+
+    response.set_failure_reason(
+        "VM does not support external suspend signals.");
+    writer.AppendProtoAsArrayOfBytes(response);
+    return dbus_response;
+  }
+
+  vm->Suspend();
+
+  response.set_success(true);
+  writer.AppendProtoAsArrayOfBytes(response);
+
+  return dbus_response;
+}
+
+std::unique_ptr<dbus::Response> Service::ResumeVm(
+    dbus::MethodCall* method_call) {
+  DCHECK(sequence_checker_.CalledOnValidSequence());
+  LOG(INFO) << "Received ResumeVm request";
+
+  std::unique_ptr<dbus::Response> dbus_response(
+      dbus::Response::FromMethodCall(method_call));
+
+  dbus::MessageReader reader(method_call);
+  dbus::MessageWriter writer(dbus_response.get());
+
+  ResumeVmRequest request;
+  ResumeVmResponse response;
+
+  if (!reader.PopArrayOfBytesAsProto(&request)) {
+    LOG(ERROR) << "Unable to parse ResumeVmRequest from message";
+
+    response.set_failure_reason("Unable to parse protobuf");
+    writer.AppendProtoAsArrayOfBytes(response);
+    return dbus_response;
+  }
+
+  auto iter = FindVm(request.owner_id(), request.name());
+  if (iter == vms_.end()) {
+    LOG(ERROR) << "Requested VM does not exist";
+    // This is not an error to Chrome
+    response.set_success(true);
+    writer.AppendProtoAsArrayOfBytes(response);
+    return dbus_response;
+  }
+
+  auto& vm = iter->second;
+  if (!vm->UsesExternalSuspendSignals()) {
+    LOG(ERROR) << "Received D-Bus resume request for " << iter->first
+               << " but it does not use external suspend signals.";
+
+    response.set_failure_reason(
+        "VM does not support external suspend signals.");
+    writer.AppendProtoAsArrayOfBytes(response);
+    return dbus_response;
+  }
+
+  vm->Resume();
+
+  if (resync_vm_clocks_on_resume_) {
+    string failure_reason;
+    if (vm->SetTime(&failure_reason)) {
+      LOG(INFO) << "Successfully set VM clock in " << iter->first << ".";
+    } else {
+      LOG(ERROR) << "Failed to set VM clock in " << iter->first << ": "
+                 << failure_reason;
+    }
+  }
+
+  vm->SetResolvConfig(nameservers_, search_domains_);
+
+  response.set_success(true);
+  writer.AppendProtoAsArrayOfBytes(response);
+
+  return dbus_response;
 }
 
 std::unique_ptr<dbus::Response> Service::GetVmInfo(
@@ -3207,15 +3321,14 @@ void Service::OnResolvConfigChanged(std::vector<string> nameservers,
   nameservers_ = std::move(nameservers);
   search_domains_ = std::move(search_domains);
 
-  if (vms_suspended_) {
-    // The VMs are currently suspended and will not respond to RPCs.  Instead
-    // update the resolv.conf files after we get a SuspendDone from powerd.
-    update_resolv_config_on_resume_ = true;
-    return;
-  }
-
   for (auto& vm_entry : vms_) {
-    vm_entry.second->SetResolvConfig(nameservers_, search_domains_);
+    auto& vm = vm_entry.second;
+    if (vm->IsSuspended()) {
+      // The VM is currently suspended and will not respond to RPCs.
+      // SetResolvConfig() will be called when the VM resumes.
+      continue;
+    }
+    vm->SetResolvConfig(nameservers_, search_domains_);
   }
 
   // Broadcast DnsSettingsChanged signal so Plugin VM dispatcher is aware as
@@ -3370,25 +3483,34 @@ void Service::OnSignalConnected(const std::string& interface_name,
 }
 
 void Service::HandleSuspendImminent() {
-  vms_suspended_ = true;
-
   for (const auto& pair : vms_) {
-    pair.second->HandleSuspendImminent();
+    auto& vm = pair.second;
+    if (vm->UsesExternalSuspendSignals()) {
+      continue;
+    }
+    vm->Suspend();
   }
 }
 
 void Service::HandleSuspendDone() {
   for (const auto& pair : vms_) {
-    pair.second->HandleSuspendDone();
+    auto& vm = pair.second;
+    if (vm->UsesExternalSuspendSignals()) {
+      continue;
+    }
+    vm->Resume();
   }
-  vms_suspended_ = false;
 
   // Now that all VMs have been woken up, resync the VM clocks if necessary.
   if (resync_vm_clocks_on_resume_) {
     int successes = 0;
     for (auto& vm_entry : vms_) {
+      auto& vm = vm_entry.second;
+      if (vm->UsesExternalSuspendSignals()) {
+        continue;
+      }
       string failure_reason;
-      if (vm_entry.second->SetTime(&failure_reason)) {
+      if (vm->SetTime(&failure_reason)) {
         successes++;
       } else {
         LOG(ERROR) << "Failed to set VM clock in " << vm_entry.first << ": "
@@ -3399,12 +3521,12 @@ void Service::HandleSuspendDone() {
     LOG(INFO) << "Successfully set " << successes << " VM clocks.";
   }
 
-  if (update_resolv_config_on_resume_) {
-    for (auto& vm_entry : vms_) {
-      vm_entry.second->SetResolvConfig(nameservers_, search_domains_);
+  for (auto& vm_entry : vms_) {
+    auto& vm = vm_entry.second;
+    if (vm->UsesExternalSuspendSignals()) {
+      continue;
     }
-
-    update_resolv_config_on_resume_ = false;
+    vm->SetResolvConfig(nameservers_, search_domains_);
   }
 }
 
