@@ -7,6 +7,7 @@
 #include <tuple>
 #include <utility>
 
+#include <base/bind_helpers.h>
 #include <base/logging.h>
 #include <brillo/map_utils.h>
 #include <brillo/streams/file_stream.h>
@@ -138,10 +139,8 @@ bool DBusProtocolHandler::RemoveHandler(int handler_id) {
     return false;
 
   for (const auto& pair : p->second.remote_handler_ids) {
-    pair.first->RemoveRequestHandlerAsync(
-        pair.second,
-        // TODO(crbug.com/909719): replace with base::DoNothing;
-        base::Bind([]() {}), base::Bind(&IgnoreDBusError));
+    pair.first->RemoveRequestHandlerAsync(pair.second, base::DoNothing(),
+                                          base::Bind(&IgnoreDBusError));
   }
 
   request_handlers_.erase(p);

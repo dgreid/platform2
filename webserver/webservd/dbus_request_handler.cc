@@ -8,6 +8,7 @@
 #include <vector>
 
 #include <base/bind.h>
+#include <base/bind_helpers.h>
 #include <base/strings/string_util.h>
 #include <brillo/http/http_request.h>
 #include <brillo/mime_utils.h>
@@ -92,10 +93,9 @@ void DBusRequestHandler::HandleRequest(Request* request,
                                     request->GetMethod());
 
   base::ScopedFD body_data_pipe(request->GetBodyDataFileDescriptor());
-  handler_proxy_->ProcessRequestAsync(
-      request_id, headers, params, files, body_data_pipe.get(),
-      // TODO(crbug.com/909719): replace with base::DoNothing;
-      base::Bind([]() {}), error_callback, kDbusTimeoutInMsec);
+  handler_proxy_->ProcessRequestAsync(request_id, headers, params, files,
+                                      body_data_pipe.get(), base::DoNothing(),
+                                      error_callback, kDbusTimeoutInMsec);
 }
 
 }  // namespace webservd
