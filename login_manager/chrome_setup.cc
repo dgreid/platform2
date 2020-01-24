@@ -382,6 +382,10 @@ void AddSystemFlags(ChromiumCommandBuilder* builder) {
   // crashpad on those platforms.
   if (builder->UseFlagIsSet("force_crashpad"))
     builder->AddArg("--enable-crashpad");
+
+  // Some platforms have SMT enabled by default.
+  if (builder->UseFlagIsSet("scheduler_configuration_performance"))
+    builder->AddArg("--scheduler-configuration-default=performance");
 }
 
 // Adds UI-related flags to the command line.
