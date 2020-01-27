@@ -22,6 +22,7 @@
 #include <base/strings/stringprintf.h>
 #include <base/sys_info.h>
 #include <brillo/flag_helper.h>
+#include <chromeos-config/libcros_config/cros_config.h>
 #include <netlink/attr.h>
 #include <netlink/genl/ctrl.h>
 #include <netlink/genl/family.h>
@@ -60,6 +61,12 @@
 #define IWL_MVM_VENDOR_ATTR_TXP_LIMIT_52L 14
 #define IWL_MVM_VENDOR_ATTR_TXP_LIMIT_52H 15
 
+#define REALTEK_OUI 0x00E04C
+#define REALTEK_NL80211_VNDCMD_SET_SAR 0x88
+#define REALTEK_VNDCMD_ATTR_SAR_RULES 1
+#define REALTEK_VNDCMD_ATTR_SAR_BAND 2
+#define REALTEK_VNDCMD_ATTR_SAR_POWER 3
+
 namespace {
 
 int ErrorHandler(struct sockaddr_nl* nla, struct nlmsgerr* err, void* arg) {
@@ -81,7 +88,14 @@ int ValidHandler(struct nl_msg* msg, void* arg) {
   return NL_OK;
 }
 
-enum class WirelessDriver { NONE, MWIFIEX, IWL, ATH10K };
+enum class WirelessDriver { NONE, MWIFIEX, IWL, ATH10K, RTW };
+
+enum RealtekVndcmdSARBand {
+  REALTEK_VNDCMD_ATTR_SAR_BAND_2g = 0,
+  REALTEK_VNDCMD_ATTR_SAR_BAND_5g_1 = 1,
+  REALTEK_VNDCMD_ATTR_SAR_BAND_5g_3 = 3,
+  REALTEK_VNDCMD_ATTR_SAR_BAND_5g_4 = 4,
+};
 
 // Returns the type of wireless driver that's present on the system.
 WirelessDriver GetWirelessDriverType(const std::string& device_name) {
@@ -92,6 +106,7 @@ WirelessDriver GetWirelessDriverType(const std::string& device_name) {
       {"iwlwifi", WirelessDriver::IWL},
       {"mwifiex_pcie", WirelessDriver::MWIFIEX},
       {"mwifiex_sdio", WirelessDriver::MWIFIEX},
+      {"rtw_pci", WirelessDriver::RTW},
   };
 
   // .../device/driver symlink should point at the driver's module.
@@ -100,7 +115,6 @@ WirelessDriver GetWirelessDriverType(const std::string& device_name) {
   base::FilePath driver_path;
   CHECK(base::ReadSymbolicLink(link_path, &driver_path));
   base::FilePath driver_name = driver_path.BaseName();
-
   const auto driver = drivers.find(driver_name.value());
   if (driver != drivers.end())
     return driver->second;
@@ -131,6 +145,35 @@ std::vector<std::string> GetWirelessDeviceNames() {
     }
   }
   return names;
+}
+
+// Returns a vector of tx power limits for mode |tablet|.
+// If the board does not store power limits for rtw driver in chromeos-config,
+// the function will fail.
+std::map<enum RealtekVndcmdSARBand, uint8_t> GetRtwChromeosConfigPowerTable(
+    bool tablet) {
+  std::map<enum RealtekVndcmdSARBand, uint8_t> power_table = {};
+  auto config = std::make_unique<brillo::CrosConfig>();
+  CHECK(config->Init()) << "Could not find config";
+  std::string value;
+  std::string wifi_power_table_path =
+      tablet ? "/wifi/tablet-mode-power-table-rtw"
+             : "/wifi/non-tablet-mode-power-table-rtw";
+
+  CHECK(config->GetString(wifi_power_table_path, "limit-2g", &value))
+      << "Could not get ChromeosConfig power table.";
+  power_table[REALTEK_VNDCMD_ATTR_SAR_BAND_2g] = std::stoi(value);
+  CHECK(config->GetString(wifi_power_table_path, "limit-5g-1", &value))
+      << "Could not get ChromeosConfig power table.";
+  power_table[REALTEK_VNDCMD_ATTR_SAR_BAND_5g_1] = std::stoi(value);
+  // Rtw driver does not support 5g band 2, so skip it.
+  CHECK(config->GetString(wifi_power_table_path, "limit-5g-3", &value))
+      << "Could not get ChromeosConfig power table.";
+  power_table[REALTEK_VNDCMD_ATTR_SAR_BAND_5g_3] = std::stoi(value);
+  CHECK(config->GetString(wifi_power_table_path, "limit-5g-4", &value))
+      << "Could not get ChromeosConfig power table.";
+  power_table[REALTEK_VNDCMD_ATTR_SAR_BAND_5g_4] = std::stoi(value);
+  return power_table;
 }
 
 // Fill in nl80211 message for the mwifiex driver.
@@ -204,6 +247,29 @@ void FillMessageIwl(struct nl_msg* msg, bool tablet) {
   CHECK(!nla_nest_end(msg, limits)) << "Failed in nla_nest_end";
 }
 
+// Fill in nl80211 message for the rtw driver.
+void FillMessageRtw(struct nl_msg* msg, bool tablet) {
+  CHECK(!nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, REALTEK_OUI))
+      << "Failed to put NL80211_ATTR_VENDOR_ID";
+  CHECK(!nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
+                     REALTEK_NL80211_VNDCMD_SET_SAR))
+      << "Failed to put NL80211_ATTR_VENDOR_SUBCMD";
+
+  struct nlattr* vendor_cmd = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA);
+  struct nlattr* rules = nla_nest_start(msg, REALTEK_VNDCMD_ATTR_SAR_RULES);
+  for (const auto& limit : GetRtwChromeosConfigPowerTable(tablet)) {
+    struct nlattr* rule = nla_nest_start(msg, 1);
+    CHECK(rule) << "Failed in nla_nest_start";
+    CHECK(!nla_put_u32(msg, REALTEK_VNDCMD_ATTR_SAR_BAND, limit.first))
+        << "Failed to put REALTEK_VNDCMD_ATTR_SAR_BAND";
+    CHECK(!nla_put_u8(msg, REALTEK_VNDCMD_ATTR_SAR_POWER, limit.second))
+        << "Failed to put REALTEK_VNDCMD_ATTR_SAR_POWER";
+    CHECK(!nla_nest_end(msg, rule)) << "Failed in nla_nest_end";
+  }
+  CHECK(!nla_nest_end(msg, rules)) << "Failed in nla_nest_end";
+  CHECK(!nla_nest_end(msg, vendor_cmd)) << "Failed in nla_nest_end";
+}
+
 class PowerSetter {
  public:
   PowerSetter() : nl_sock_(nl_socket_alloc()), cb_(nl_cb_alloc(NL_CB_DEFAULT)) {
@@ -252,6 +318,9 @@ class PowerSetter {
         break;
       case WirelessDriver::IWL:
         FillMessageIwl(msg, tablet);
+        break;
+      case WirelessDriver::RTW:
+        FillMessageRtw(msg, tablet);
         break;
       case WirelessDriver::ATH10K:
         // TODO(https://crbug.com/782924): implement for ath10k.
