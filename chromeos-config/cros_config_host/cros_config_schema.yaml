@@ -96,8 +96,9 @@ typeDefs:
     enum:
     - default
     - old
-  wifi-transmit-power-chain: &wifi-transmit-power-chain
-    description: "WiFi power chain. Currently only used for QCA ath10k drivers."
+  ath10k-wifi-transmit-power-chain: &ath10k-wifi-transmit-power-chain
+    description: "[ath10k] WiFi power chain for use with QCA ath10k drivers. Limits
+      in units of 1 dBm. 5g band power limit applies to all 5g bands."
     type: object
     properties:
       limit-2g:
@@ -110,6 +111,33 @@ typeDefs:
         type: integer
         minimum: 0x0
         maximum: 0xFF
+    additionalProperties: false
+  rtw-wifi-transmit-power-chain: &rtw-wifi-transmit-power-chain
+    description: "[rtw] WiFi power chain for use with Realtek rtw88 drivers. Limits
+      in units of 0.125 dBm. 5g band 2 (channels 5.35G-5.47G) power limit is not supported."
+    type: object
+    properties:
+      limit-2g:
+        description: "2G band power limit: All 2G band channels. (0.125 dBm)"
+        type: integer
+        minimum: 0x0
+        maximum: 0xFF
+      limit-5g-1:
+        description: "5G band 1 power limit: 5.15G-5.35G channels. (0.125 dBm)"
+        type: integer
+        minimum: 0x0
+        maximum: 0xFF
+      limit-5g-3:
+        description: "5G band 3 power limit: 5.47G-5.725G channels. (0.125 dBm)"
+        type: integer
+        minimum: 0x0
+        maximum: 0xFF
+      limit-5g-4:
+        description: "5G band 4 power limit: 5.725G-5.95G channels. (0.125 dBm)"
+        type: integer
+        minimum: 0x0
+        maximum: 0xFF
+    additionalProperties: false
 type: object
 properties:
   chromeos:
@@ -235,10 +263,17 @@ properties:
             wifi:
               type: object
               description: Sets limits on maximum WiFi transmit power for tablet and non-tablet
-                device configurations. Currently only used for QCA ath10k WiFi driver.
-              properties:
-                tablet-mode-power-table: *wifi-transmit-power-chain
-                non-tablet-mode-power-table: *wifi-transmit-power-chain
+                device configurations. This config must contain properties for ath10k wifi driver
+                or rtw88 wifi driver only.
+              oneOf:
+                - properties:
+                    tablet-mode-power-table-ath10k: *ath10k-wifi-transmit-power-chain
+                    non-tablet-mode-power-table-ath10k: *ath10k-wifi-transmit-power-chain
+                  additionalProperties: false
+                - properties:
+                    tablet-mode-power-table-rtw: *rtw-wifi-transmit-power-chain
+                    non-tablet-mode-power-table-rtw: *rtw-wifi-transmit-power-chain
+                  additionalProperties: false
             brand-code:
               description: Brand code of the model (also called RLZ code).
               type: string

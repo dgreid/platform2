@@ -321,7 +321,7 @@ In the tables below,
 | touch | [touch](#touch) |  | False |  | False |  |
 | ui | [ui](#ui) |  | False |  | False |  |
 | wallpaper | string |  | False |  | False | Base filename of the default wallpaper to show on this device. |
-| wifi | [wifi](#wifi) |  | False |  | False | Sets limits on maximum WiFi transmit power for tablet and non-tablet device configurations. Currently only used for QCA ath10k WiFi driver. |
+| wifi | [wifi](#wifi) |  | False |  | False | Sets limits on maximum WiFi transmit power for tablet and non-tablet device configurations. This config must contain properties for ath10k wifi driver or rtw88 wifi driver only. |
 
 ### arc
 | Attribute | Type   | RegEx     | Required | Oneof Group | Build-only | Description |
@@ -564,20 +564,38 @@ In the tables below,
 ### wifi
 | Attribute | Type   | RegEx     | Required | Oneof Group | Build-only | Description |
 | --------- | ------ | --------- | -------- | ----------- | ---------- | ----------- |
-| non-tablet-mode-power-table | [non-tablet-mode-power-table](#non-tablet-mode-power-table) |  | False |  | False | WiFi power chain. Currently only used for QCA ath10k drivers. |
-| tablet-mode-power-table | [tablet-mode-power-table](#tablet-mode-power-table) |  | False |  | False | WiFi power chain. Currently only used for QCA ath10k drivers. |
+| non-tablet-mode-power-table-ath10k | [non-tablet-mode-power-table-ath10k](#non-tablet-mode-power-table-ath10k) |  | False | ath10k | False | [ath10k] WiFi power chain for use with QCA ath10k drivers. Limits in units of 1 dBm. 5g band power limit applies to all 5g bands. |
+| tablet-mode-power-table-ath10k | [tablet-mode-power-table-ath10k](#tablet-mode-power-table-ath10k) |  | False | ath10k | False | [ath10k] WiFi power chain for use with QCA ath10k drivers. Limits in units of 1 dBm. 5g band power limit applies to all 5g bands. |
+| non-tablet-mode-power-table-rtw | [non-tablet-mode-power-table-rtw](#non-tablet-mode-power-table-rtw) |  | False | rtw | False | [rtw] WiFi power chain for use with Realtek rtw88 drivers. Limits in units of 0.125 dBm. 5g band 2 (channels 5.35G-5.47G) power limit is not supported. |
+| tablet-mode-power-table-rtw | [tablet-mode-power-table-rtw](#tablet-mode-power-table-rtw) |  | False | rtw | False | [rtw] WiFi power chain for use with Realtek rtw88 drivers. Limits in units of 0.125 dBm. 5g band 2 (channels 5.35G-5.47G) power limit is not supported. |
 
-### non-tablet-mode-power-table
+### non-tablet-mode-power-table-ath10k
 | Attribute | Type   | RegEx     | Required | Oneof Group | Build-only | Description |
 | --------- | ------ | --------- | -------- | ----------- | ---------- | ----------- |
 | limit-2g | integer |  | False |  | False | 2G band power limit (dBm) Minimum value: 0x0. Maximum value: 0xff. |
 | limit-5g | integer |  | False |  | False | 5G band power limit (dBm) Minimum value: 0x0. Maximum value: 0xff. |
 
-### tablet-mode-power-table
+### tablet-mode-power-table-ath10k
 | Attribute | Type   | RegEx     | Required | Oneof Group | Build-only | Description |
 | --------- | ------ | --------- | -------- | ----------- | ---------- | ----------- |
 | limit-2g | integer |  | False |  | False | 2G band power limit (dBm) Minimum value: 0x0. Maximum value: 0xff. |
 | limit-5g | integer |  | False |  | False | 5G band power limit (dBm) Minimum value: 0x0. Maximum value: 0xff. |
+
+### non-tablet-mode-power-table-rtw
+| Attribute | Type   | RegEx     | Required | Oneof Group | Build-only | Description |
+| --------- | ------ | --------- | -------- | ----------- | ---------- | ----------- |
+| limit-2g | integer |  | False |  | False | 2G band power limit: All 2G band channels. (0.125 dBm) Minimum value: 0x0. Maximum value: 0xff. |
+| limit-5g-1 | integer |  | False |  | False | 5G band 1 power limit: 5.15G-5.35G channels. (0.125 dBm) Minimum value: 0x0. Maximum value: 0xff. |
+| limit-5g-3 | integer |  | False |  | False | 5G band 3 power limit: 5.47G-5.725G channels. (0.125 dBm) Minimum value: 0x0. Maximum value: 0xff. |
+| limit-5g-4 | integer |  | False |  | False | 5G band 4 power limit: 5.725G-5.95G channels. (0.125 dBm) Minimum value: 0x0. Maximum value: 0xff. |
+
+### tablet-mode-power-table-rtw
+| Attribute | Type   | RegEx     | Required | Oneof Group | Build-only | Description |
+| --------- | ------ | --------- | -------- | ----------- | ---------- | ----------- |
+| limit-2g | integer |  | False |  | False | 2G band power limit: All 2G band channels. (0.125 dBm) Minimum value: 0x0. Maximum value: 0xff. |
+| limit-5g-1 | integer |  | False |  | False | 5G band 1 power limit: 5.15G-5.35G channels. (0.125 dBm) Minimum value: 0x0. Maximum value: 0xff. |
+| limit-5g-3 | integer |  | False |  | False | 5G band 3 power limit: 5.47G-5.725G channels. (0.125 dBm) Minimum value: 0x0. Maximum value: 0xff. |
+| limit-5g-4 | integer |  | False |  | False | 5G band 4 power limit: 5.725G-5.95G channels. (0.125 dBm) Minimum value: 0x0. Maximum value: 0xff. |
 
 
 [](end_definitions)
