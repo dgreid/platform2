@@ -40,7 +40,7 @@ void SocketManager::CloseSocket() {
 bool SocketManager::GetMessage(int fd, std::string* msg) {
   uint8_t message_length;
   // Receive the length of the message which is stored in the first byte.
-  if (recv(fd, &message_length, 1, MSG_DONTWAIT) < 0) {
+  if (recv(fd, &message_length, 1, 0) < 0) {
     LOG(ERROR) << "Failed to get message length";
     return false;
   }
@@ -53,7 +53,7 @@ bool SocketManager::GetMessage(int fd, std::string* msg) {
     gotten_size = recv(fd, buf.get() + total_size, message_length - total_size,
                        MSG_DONTWAIT);
     if (gotten_size < 0) {
-      LOG(ERROR) << "Failed to receive message";
+      LOG(ERROR) << "Failed to receive message: " << std::strerror(errno);
       return false;
     }
     total_size += gotten_size;
