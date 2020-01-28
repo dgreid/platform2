@@ -27,14 +27,14 @@
 #include <libusb.h>
 #include <scoped_minijail.h>
 
-#include "ippusb_manager/socket_connection.h"
+#include "ippusb_manager/socket_manager.h"
 #include "ippusb_manager/usb.h"
 
-using ippusb_manager::GetUsbInfo;
-using ippusb_manager::SocketConnection;
-using ippusb_manager::UsbPrinterInfo;
+namespace ippusb_manager {
 
 namespace {
+
+constexpr char kManagerSocketPath[] = "/run/ippusb/ippusb_manager.sock";
 
 // Get the file descriptor of the socket created by upstart.
 base::ScopedFD GetFileDescriptor() {
@@ -97,28 +97,28 @@ void SpawnXD(const std::string& socket_path, UsbPrinterInfo* printer_info) {
 
 }  // namespace
 
-int main(int argc, char* argv[]) {
+int ippusb_manager_main(int argc, char* argv[]) {
   brillo::InitLog(brillo::kLogToSyslog | brillo::kLogToStderrIfTty);
 
   // Get the file descriptor of the socket created by upstart and begin
   // listening on the socket for client connections.
-  SocketConnection socket_connection(GetFileDescriptor());
-  if (!socket_connection.OpenSocket()) {
-    LOG(ERROR) << "Failed to open socket";
+  auto ippusb_socket =
+      ServerSocketManager::Create(kManagerSocketPath, GetFileDescriptor());
+  if (ippusb_socket == nullptr) {
     return 1;
   }
 
   // Since this program is only started by the upstart-socket-bridge once the
   // socket is ready to be read from, if the connection fails to open then
   // something must have gone wrong.
-  if (!socket_connection.OpenConnection()) {
+  if (!ippusb_socket->OpenConnection()) {
     LOG(ERROR) << "Failed to open connection to socket";
     return 1;
   }
 
   // Attempt to receive the message sent by the client.
   std::string usb_info;
-  if (!socket_connection.GetMessage(&usb_info)) {
+  if (!ippusb_socket->GetMessage(&usb_info)) {
     LOG(ERROR) << "Failed to receive message";
     return 1;
   }
@@ -144,9 +144,9 @@ int main(int argc, char* argv[]) {
 
   if (!printer_info->FindDeviceLocation()) {
     LOG(INFO) << "Couldn't find device";
-    socket_connection.SendMessage("Device not found");
-    socket_connection.CloseConnection();
-    socket_connection.CloseSocket();
+    ippusb_socket->SendMessage("Device not found");
+    ippusb_socket->CloseConnection();
+    ippusb_socket->CloseSocket();
     return 0;
   }
 
@@ -162,9 +162,15 @@ int main(int argc, char* argv[]) {
   if (access(socket_path.c_str(), F_OK) == -1)
     SpawnXD(socket_path, printer_info.get());
 
-  socket_connection.SendMessage(socket_name);
+  ippusb_socket->SendMessage(socket_name);
+  ippusb_socket->CloseConnection();
+  ippusb_socket->CloseSocket();
 
-  socket_connection.CloseConnection();
-  socket_connection.CloseSocket();
   return 0;
+}
+
+}  // namespace ippusb_manager
+
+int main(int argc, char* argv[]) {
+  return ippusb_manager::ippusb_manager_main(argc, argv);
 }

@@ -29,7 +29,7 @@ executable("ippusb_manager") {
   configs += [ ":target_defaults" ]
   sources = [
     "ippusb_manager.cc",
-    "socket_connection.cc",
+    "socket_manager.cc",
     "usb.cc",
   ]
 }
