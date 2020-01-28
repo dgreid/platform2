@@ -3,5 +3,32 @@
 <node name="/org/chromium/SystemProxy"
       xmlns:tp="http://telepathy.freedesktop.org/wiki/DbusSpec#extensions-v0">
   <interface name="org.chromium.SystemProxy">
+    <method name="SetSystemTrafficCredentials">
+      <tp:docstring>
+        Sets the credentails for authenticating system services to the remote web proxy.
+      </tp:docstring>
+      <arg name="request" type="ay" direction="in">
+        <tp:docstring>
+          Serialized SetSystemTrafficCredentialsRequest message.
+        </tp:docstring>
+      </arg>
+      <arg name="response" type="ay" direction="out">
+        <tp:docstring>
+          Serialized SetSystemTrafficCredentialsResponse message.
+        </tp:docstring>
+      </arg>
+      <annotation name="org.chromium.DBus.Method.Kind" value="simple"/>
+    </method>
+    <method name="ShutDown">
+      <tp:docstring>
+        Shuts down the daemon. The daemon will exit with code 0 which prevents an Upstart respawn.
+      </tp:docstring>
+      <arg name="response" type="ay" direction="out">
+        <tp:docstring>
+          Serialized ShutDownResponse message.
+        </tp:docstring>
+      </arg>
+      <annotation name="org.chromium.DBus.Method.Kind" value="simple"/>
+    </method>
   </interface>
 </node>

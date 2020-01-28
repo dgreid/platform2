@@ -8,6 +8,7 @@ import("//common-mk/pkg_config.gni")
 group("all") {
   deps = [
     ":dbus_code_generator",
+    ":libsystemproxy",
     ":system_proxy",
     ":system_proxy_worker",
   ]
@@ -31,6 +32,24 @@ pkg_config("target_defaults") {
     "dbus-1",
     "libbrillo-${libbase_ver}",
     "libchrome-${libbase_ver}",
+
+    # system_api depends on protobuf (or protobuf-lite). It must
+    # appear before protobuf or the linker flags won't be in the right
+    # order.
+    "system_api",
+    "protobuf-lite",
+  ]
+}
+
+# System-proxy library (shared between executables and tests).
+static_library("libsystemproxy") {
+  configs += [ ":target_defaults" ]
+  sources = [
+    "system_proxy_adaptor.cc",
+    "system_proxy_daemon.cc",
+  ]
+  deps = [
+    ":dbus_code_generator",
   ]
 }
 
@@ -46,6 +65,9 @@ executable("system_proxy") {
   configs += [ ":target_defaults" ]
   sources = [
     "system_proxy.cc",
+  ]
+  deps = [
+    ":libsystemproxy",
   ]
 }
 
@@ -67,6 +89,7 @@ if (use.test) {
     sources = []
     defines = [ "UNIT_TEST" ]
     deps = [
+      ":libsystemproxy",
       "//common-mk/testrunner:testrunner",
     ]
   }

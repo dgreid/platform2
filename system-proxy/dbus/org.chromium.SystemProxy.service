@@ -4,5 +4,5 @@
 
 [D-BUS Service]
 Name=org.chromium.SystemProxy
-Exec=/sbin/start system_proxy
+Exec=/sbin/start system-proxy
 User=root
