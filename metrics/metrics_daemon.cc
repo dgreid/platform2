@@ -71,7 +71,7 @@ const int kSecondsPerWeek = kSecondsPerDay * kDaysPerWeek;
 const uint32_t kUpdateStatsIntervalMs = 300000;
 
 // Maximum amount of system memory that will be reported without overflow.
-const int kMaximumMemorySizeInKB = 32 * 1000 * 1000;
+const int kMaximumMemorySizeInKB = 128 * 1024 * 1024;
 
 const char kKernelCrashDetectedFile[] =
     "/run/metrics/external/crash-reporter/kernel-crash-detected";
@@ -1293,8 +1293,8 @@ bool MetricsDaemon::ProcessMeminfo(const string& meminfo_raw) {
         SendLinearSample(metrics_name, percent, 100, 101);
         break;
       case kMeminfoOp_HistLog:
-        // report value in kbytes, log scale, 4Gb max
-        SendSample(metrics_name, fields[i].value, 1, 4 * 1000 * 1000, 100);
+        // report value in kbytes, log scale, 256GiB max
+        SendSample(metrics_name, fields[i].value, 1, 256 * 1024 * 1024, 100);
         break;
       case kMeminfoOp_SwapTotal:
         swap_total = fields[i].value;
@@ -1318,7 +1318,8 @@ bool MetricsDaemon::ProcessMeminfo(const string& meminfo_raw) {
   int swap_used = swap_total - swap_free;
   if (swap_total > 0) {
     int swap_used_percent = swap_used * 100 / swap_total;
-    SendSample("Platform.MeminfoSwapUsed", swap_used, 1, 8 * 1000 * 1000, 100);
+    SendSample("Platform.MeminfoSwapUsed", swap_used, 1, 256 * 1024 * 1024,
+               100);
     SendLinearSample("Platform.MeminfoSwapUsedPercent", swap_used_percent, 100,
                      101);
   }
