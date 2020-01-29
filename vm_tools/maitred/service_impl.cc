@@ -38,6 +38,7 @@
 #include <base/posix/eintr_wrapper.h>
 #include <base/posix/safe_strerror.h>
 #include <base/process/launch.h>
+#include <base/strings/string_number_conversions.h>
 #include <base/strings/string_util.h>
 #include <base/strings/stringprintf.h>
 
@@ -707,6 +708,42 @@ grpc::Status ServiceImpl::GetResizeStatus(
   response->set_resize_in_progress(resize_state_.resize_in_progress);
   response->set_current_size(resize_state_.current_size);
   response->set_target_size(resize_state_.target_size);
+  return grpc::Status::OK;
+}
+
+grpc::Status ServiceImpl::GetResizeBounds(
+    grpc::ServerContext* ctx,
+    const EmptyMessage* request,
+    vm_tools::GetResizeBoundsResponse* response) {
+  std::string btrfs_out;
+  if (!base::GetAppOutput(
+          {"btrfs", "inspect-internal", "min-dev-size", "/mnt/stateful"},
+          &btrfs_out)) {
+    LOG(ERROR) << "btrfs inspect-internal min-dev-size failed: " << btrfs_out;
+    return grpc::Status(grpc::INTERNAL,
+                        "btrfs inspect-internal min-dev-size failed");
+  }
+
+  // btrfs inspect-internal min-dev-size returns a string like:
+  // "9701425152 bytes (9.04GiB)"
+  // Extract the first space-separated word and parse it as a 64-bit integer.
+  size_t space_pos = btrfs_out.find_first_of(' ');
+  if (space_pos == std::string::npos) {
+    LOG(ERROR) << "failed to parse btrfs output (no space found): "
+               << btrfs_out;
+    return grpc::Status(grpc::INTERNAL, "failed to parse btrfs output");
+  }
+
+  std::string min_size_str = btrfs_out.substr(0, space_pos);
+  uint64_t min_size = 0;
+  if (!base::StringToUint64(min_size_str, &min_size)) {
+    LOG(ERROR) << "failed to parse btrfs output as uint64: " << min_size_str;
+    return grpc::Status(grpc::INTERNAL, "failed to parse btrfs output");
+  }
+
+  LOG(INFO) << "stateful minimum size: " << min_size;
+
+  response->set_minimum_size(min_size);
   return grpc::Status::OK;
 }
 

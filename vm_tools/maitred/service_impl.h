@@ -77,6 +77,11 @@ class ServiceImpl final : public vm_tools::Maitred::Service {
       const vm_tools::EmptyMessage* request,
       vm_tools::GetResizeStatusResponse* response) override;
 
+  grpc::Status GetResizeBounds(
+      grpc::ServerContext* ctx,
+      const EmptyMessage* request,
+      vm_tools::GetResizeBoundsResponse* response) override;
+
  private:
   std::unique_ptr<vm_tools::maitred::Init> init_;
 

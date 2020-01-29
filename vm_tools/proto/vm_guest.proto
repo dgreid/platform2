@@ -215,6 +215,12 @@ message GetResizeStatusResponse {
   uint64 target_size = 3;
 }
 
+// Response to GetResizeBounds request.
+message GetResizeBoundsResponse {
+  // Minimum size in bytes that can be passed to ResizeFilesystem.
+  uint64 minimum_size = 1;
+}
+
 // Implemented by maitred inside the VM.
 service Maitred {
   // Set up networking inside the VM so that it can access the internet.
@@ -255,4 +261,7 @@ service Maitred {
 
   // Queries the status of the most recent ResizeFilesystem request.
   rpc GetResizeStatus(EmptyMessage) returns (GetResizeStatusResponse);
+
+  // Gets information about the valid range of parameters to ResizeFilesystem.
+  rpc GetResizeBounds(EmptyMessage) returns (GetResizeBoundsResponse);
 }
