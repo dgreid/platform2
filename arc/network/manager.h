@@ -70,8 +70,10 @@ class Manager final : public brillo::DBusDaemon, private TrafficForwarder {
   void StopArc(pid_t pid);
   bool StartArcVm(uint32_t cid);
   void StopArcVm(uint32_t cid);
-  bool StartTerminaVm(uint32_t cid);
-  void StopTerminaVm(uint32_t cid);
+  bool StartCrosVm(uint64_t vm_id,
+                   GuestMessage::GuestType vm_type,
+                   int subnet_index);
+  void StopCrosVm(uint64_t vm_id, GuestMessage::GuestType vm_type);
 
   // Callback from ProcessReaper to notify Manager that one of the
   // subprocesses died.
@@ -104,6 +106,14 @@ class Manager final : public brillo::DBusDaemon, private TrafficForwarder {
 
   // Handles DBus notification indicating a Termina VM is spinning down.
   std::unique_ptr<dbus::Response> OnTerminaVmShutdown(
+      dbus::MethodCall* method_call);
+
+  // Handles DBus notification indicating a Plugin VM is booting up.
+  std::unique_ptr<dbus::Response> OnPluginVmStartup(
+      dbus::MethodCall* method_call);
+
+  // Handles DBus notification indicating a Plugin VM is spinning down.
+  std::unique_ptr<dbus::Response> OnPluginVmShutdown(
       dbus::MethodCall* method_call);
 
   // Dispatch |msg| to child processes.

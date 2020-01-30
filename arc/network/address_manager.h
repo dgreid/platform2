@@ -18,6 +18,7 @@
 #include "arc/network/subnet_pool.h"
 
 namespace arc_networkd {
+constexpr int kAnySubnetIndex = -1;
 
 // Responsible for address provisioning for guest networks.
 class BRILLO_EXPORT AddressManager {
@@ -45,7 +46,8 @@ class BRILLO_EXPORT AddressManager {
   // available for allocation.
   // |index| is used to acquire a particular subnet from the pool, if supported
   // for |guest|.
-  std::unique_ptr<Subnet> AllocateIPv4Subnet(Guest guest, int index = -1);
+  std::unique_ptr<Subnet> AllocateIPv4Subnet(Guest guest,
+                                             int index = kAnySubnetIndex);
 
  private:
   MacAddressGenerator mac_addrs_;

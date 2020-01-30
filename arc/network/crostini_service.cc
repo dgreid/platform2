@@ -18,8 +18,12 @@
 
 namespace arc_networkd {
 namespace {
-constexpr int32_t kInvalidCID = 0;
+constexpr int32_t kInvalidID = 0;
 
+std::string MakeKey(uint64_t vm_id, bool is_termina) {
+  return base::StringPrintf("%s:%s", is_termina ? "t" : "p",
+                            base::NumberToString(vm_id).c_str());
+}
 bool IsAdbSideloadingEnabled(const scoped_refptr<dbus::Bus>& bus) {
   static bool checked = false;
   static bool result = false;
@@ -44,6 +48,7 @@ bool IsAdbSideloadingEnabled(const scoped_refptr<dbus::Bus>& bus) {
   return result;
 }
 
+
 }  // namespace
 
 CrostiniService::CrostiniService(DeviceManagerBase* dev_mgr, Datapath* datapath)
@@ -57,32 +62,36 @@ CrostiniService::CrostiniService(DeviceManagerBase* dev_mgr, Datapath* datapath)
                  base::Unretained(this)));
 }
 
-bool CrostiniService::Start(uint32_t cid) {
-  if (cid == kInvalidCID) {
-    LOG(ERROR) << "Invalid VM cid " << cid;
-    return false;
-  }
-  if (taps_.find(cid) != taps_.end()) {
-    LOG(WARNING) << "Already started for {cid: " << cid << "}";
+bool CrostiniService::Start(uint64_t vm_id, bool is_termina, int subnet_index) {
+  if (vm_id == kInvalidID) {
+    LOG(ERROR) << "Invalid VM id";
     return false;
   }
 
-  if (!AddTAP(cid))
+  const auto key = MakeKey(vm_id, is_termina);
+  if (taps_.find(key) != taps_.end()) {
+    LOG(WARNING) << "Already started for {id: " << vm_id << "}";
     return false;
+  }
 
-  LOG(INFO) << "Crostini network service started for {cid: " << cid << "}";
+  auto tap = AddTAP(is_termina, subnet_index);
+  if (!tap) {
+    LOG(ERROR) << "Cannot start for {id: " << vm_id << "}";
+    return false;
+  }
 
-  const auto* dev = taps_[cid].get();
-  dev_mgr_->StartForwarding(*dev);
-  StartAdbPortForwarding(dev->ifname());
-
+  LOG(INFO) << "Crostini network service started for {id: " << vm_id << "}";
+  dev_mgr_->StartForwarding(*tap.get());
+  StartAdbPortForwarding(tap->ifname());
+  taps_.emplace(key, std::move(tap));
   return true;
 }
 
-void CrostiniService::Stop(uint32_t cid) {
-  const auto it = taps_.find(cid);
+void CrostiniService::Stop(uint64_t vm_id, bool is_termina) {
+  const auto key = MakeKey(vm_id, is_termina);
+  const auto it = taps_.find(key);
   if (it == taps_.end()) {
-    LOG(WARNING) << "Unknown {cid: " << cid << "}";
+    LOG(WARNING) << "Unknown {id: " << vm_id << "}";
     return;
   }
 
@@ -90,49 +99,48 @@ void CrostiniService::Stop(uint32_t cid) {
   dev_mgr_->StopForwarding(*dev);
   datapath_->RemoveInterface(dev->config().host_ifname());
   StopAdbPortForwarding(dev->ifname());
-  taps_.erase(it);
+  taps_.erase(key);
 
-  LOG(INFO) << "Crostini network service stopped for {cid: " << cid << "}";
+  LOG(INFO) << "Crostini network service stopped for {id: " << vm_id << "}";
 }
 
-const Device* const CrostiniService::TAP(uint32_t cid) const {
-  const auto it = taps_.find(cid);
+const Device* const CrostiniService::TAP(uint64_t vm_id,
+                                         bool is_termina) const {
+  const auto it = taps_.find(MakeKey(vm_id, is_termina));
   if (it == taps_.end()) {
     return nullptr;
   }
   return it->second.get();
 }
 
-bool CrostiniService::AddTAP(uint32_t cid) {
+std::unique_ptr<Device> CrostiniService::AddTAP(bool is_termina,
+                                                int subnet_index) {
   auto* const addr_mgr = dev_mgr_->addr_mgr();
-  auto ipv4_subnet =
-      addr_mgr->AllocateIPv4Subnet(AddressManager::Guest::VM_TERMINA);
+  auto ipv4_subnet = addr_mgr->AllocateIPv4Subnet(
+      is_termina ? AddressManager::Guest::VM_TERMINA
+                 : AddressManager::Guest::VM_PLUGIN_EXT,
+      subnet_index);
   if (!ipv4_subnet) {
-    LOG(ERROR)
-        << "Subnet already in use or unavailable. Cannot make device for cid "
-        << cid;
-    return false;
+    LOG(ERROR) << "Subnet already in use or unavailable.";
+    return nullptr;
   }
   auto host_ipv4_addr = ipv4_subnet->AllocateAtOffset(0);
   if (!host_ipv4_addr) {
-    LOG(ERROR) << "Host address already in use or unavailable. Cannot make "
-                  "device for cid "
-               << cid;
-    return false;
+    LOG(ERROR) << "Host address already in use or unavailable.";
+    return nullptr;
   }
   auto guest_ipv4_addr = ipv4_subnet->AllocateAtOffset(1);
   if (!guest_ipv4_addr) {
-    LOG(ERROR) << "VM address already in use or unavailable. Cannot make "
-                  "device for cid "
-               << cid;
-    return false;
+    LOG(ERROR) << "VM address already in use or unavailable.";
+    return nullptr;
   }
-  auto lxd_subnet =
-      addr_mgr->AllocateIPv4Subnet(AddressManager::Guest::CONTAINER);
-  if (!lxd_subnet) {
-    LOG(ERROR) << "lxd subnet already in use or unavailable."
-               << " Cannot make device for cid " << cid;
-    return false;
+  std::unique_ptr<Subnet> lxd_subnet;
+  if (is_termina) {
+    lxd_subnet = addr_mgr->AllocateIPv4Subnet(AddressManager::Guest::CONTAINER);
+    if (!lxd_subnet) {
+      LOG(ERROR) << "lxd subnet already in use or unavailable.";
+      return nullptr;
+    }
   }
 
   const auto mac_addr = addr_mgr->GenerateMacAddress();
@@ -140,8 +148,8 @@ bool CrostiniService::AddTAP(uint32_t cid) {
       datapath_->AddTAP("" /* auto-generate name */, &mac_addr,
                         host_ipv4_addr.get(), vm_tools::kCrosVmUser);
   if (tap.empty()) {
-    LOG(ERROR) << "Failed to create TAP device for cid " << cid;
-    return false;
+    LOG(ERROR) << "Failed to create TAP device.";
+    return nullptr;
   }
 
   auto config = std::make_unique<Device::Config>(
@@ -157,9 +165,8 @@ bool CrostiniService::AddTAP(uint32_t cid) {
       .is_sticky = true,
   };
 
-  taps_.emplace(cid, std::make_unique<Device>(tap, std::move(config), opts,
-                                              GuestMessage::TERMINA_VM));
-  return true;
+  return std::make_unique<Device>(tap, std::move(config), opts,
+                                  GuestMessage::TERMINA_VM);
 }
 
 void CrostiniService::OnDefaultInterfaceChanged(const std::string& ifname) {

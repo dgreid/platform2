@@ -30,6 +30,7 @@ message GuestMessage {
     ARC_LEGACY = 2;  // ARC++ Container (N)
     ARC_VM = 3;      // ARC VM
     TERMINA_VM = 4;  // Crostini Termina VM
+    PLUGIN_VM = 5;   // Plugin VM
   }
   required GuestType type = 1;
 

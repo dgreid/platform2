@@ -61,6 +61,7 @@ Manager::Manager(std::unique_ptr<HelperProcess> adb_proxy,
           AddressManager::Guest::CONTAINER,
           AddressManager::Guest::VM_ARC,
           AddressManager::Guest::VM_TERMINA,
+          AddressManager::Guest::VM_PLUGIN_EXT,
       }) {
   runner_ = std::make_unique<MinijailedProcessRunner>();
   datapath_ = std::make_unique<Datapath>(runner_.get());
@@ -187,6 +188,8 @@ void Manager::InitialSetup() {
       {patchpanel::kArcVmShutdownMethod, &Manager::OnArcVmShutdown},
       {patchpanel::kTerminaVmStartupMethod, &Manager::OnTerminaVmStartup},
       {patchpanel::kTerminaVmShutdownMethod, &Manager::OnTerminaVmShutdown},
+      {patchpanel::kPluginVmStartupMethod, &Manager::OnPluginVmStartup},
+      {patchpanel::kPluginVmShutdownMethod, &Manager::OnPluginVmShutdown},
   };
 
   for (const auto& kv : kServiceMethods) {
@@ -338,26 +341,31 @@ void Manager::StopArcVm(uint32_t cid) {
   arc_svc_->Stop(cid);
 }
 
-bool Manager::StartTerminaVm(uint32_t cid) {
-  if (!cros_svc_->Start(cid))
+bool Manager::StartCrosVm(uint64_t vm_id,
+                          GuestMessage::GuestType vm_type,
+                          int subnet_index) {
+  DCHECK(vm_type == GuestMessage::TERMINA_VM ||
+         vm_type == GuestMessage::PLUGIN_VM);
+
+  if (!cros_svc_->Start(vm_id, vm_type == GuestMessage::TERMINA_VM,
+                        subnet_index))
     return false;
 
   GuestMessage msg;
   msg.set_event(GuestMessage::START);
-  msg.set_type(GuestMessage::TERMINA_VM);
-  msg.set_arcvm_vsock_cid(cid);
+  msg.set_type(vm_type);
   SendGuestMessage(msg);
 
   return true;
 }
 
-void Manager::StopTerminaVm(uint32_t cid) {
+void Manager::StopCrosVm(uint64_t vm_id, GuestMessage::GuestType vm_type) {
   GuestMessage msg;
   msg.set_event(GuestMessage::STOP);
-  msg.set_type(GuestMessage::TERMINA_VM);
+  msg.set_type(vm_type);
   SendGuestMessage(msg);
 
-  cros_svc_->Stop(cid);
+  cros_svc_->Stop(vm_id, vm_type == GuestMessage::TERMINA_VM);
 }
 
 std::unique_ptr<dbus::Response> Manager::OnArcStartup(
@@ -500,13 +508,13 @@ std::unique_ptr<dbus::Response> Manager::OnTerminaVmStartup(
   }
 
   const int32_t cid = request.cid();
-  if (!StartTerminaVm(cid)) {
+  if (!StartCrosVm(cid, GuestMessage::TERMINA_VM, kAnySubnetIndex)) {
     LOG(ERROR) << "Failed to start Termina VM network service";
     writer.AppendProtoAsArrayOfBytes(response);
     return dbus_response;
   }
 
-  const auto* const tap = cros_svc_->TAP(cid);
+  const auto* const tap = cros_svc_->TAP(cid, true /*is_termina*/);
   if (!tap) {
     LOG(DFATAL) << "TAP device missing";
     writer.AppendProtoAsArrayOfBytes(response);
@@ -558,7 +566,86 @@ std::unique_ptr<dbus::Response> Manager::OnTerminaVmShutdown(
     return dbus_response;
   }
 
-  StopTerminaVm(request.cid());
+  StopCrosVm(request.cid(), GuestMessage::TERMINA_VM);
+
+  writer.AppendProtoAsArrayOfBytes(response);
+  return dbus_response;
+}
+
+std::unique_ptr<dbus::Response> Manager::OnPluginVmStartup(
+    dbus::MethodCall* method_call) {
+  LOG(INFO) << "Plugin VM starting up";
+
+  std::unique_ptr<dbus::Response> dbus_response(
+      dbus::Response::FromMethodCall(method_call));
+
+  dbus::MessageReader reader(method_call);
+  dbus::MessageWriter writer(dbus_response.get());
+
+  patchpanel::PluginVmStartupRequest request;
+  patchpanel::PluginVmStartupResponse response;
+
+  if (!reader.PopArrayOfBytesAsProto(&request)) {
+    LOG(ERROR) << "Unable to parse request";
+    writer.AppendProtoAsArrayOfBytes(response);
+    return dbus_response;
+  }
+
+  const int32_t vm_id = request.id();
+  // This field is 1-based so 0 (the proto default value) indicates that any
+  // subnet is acceptable, but the address manager is 0-based so we need to
+  // subtract 1 from the index here.
+  const int subnet_index = request.subnet_index() - 1;
+  if (!StartCrosVm(vm_id, GuestMessage::PLUGIN_VM, subnet_index)) {
+    LOG(ERROR) << "Failed to start Plugin VM network service";
+    writer.AppendProtoAsArrayOfBytes(response);
+    return dbus_response;
+  }
+
+  const auto* const tap = cros_svc_->TAP(vm_id, false /*is_termina*/);
+  if (!tap) {
+    LOG(DFATAL) << "TAP device missing";
+    writer.AppendProtoAsArrayOfBytes(response);
+    return dbus_response;
+  }
+
+  const auto& config = tap->config();
+  auto* dev = response.mutable_device();
+  dev->set_ifname(config.host_ifname());
+  const auto* subnet = config.ipv4_subnet();
+  if (!subnet) {
+    LOG(DFATAL) << "Missing required subnet for {cid: " << vm_id << "}";
+    writer.AppendProtoAsArrayOfBytes(response);
+    return dbus_response;
+  }
+  auto* resp_subnet = dev->mutable_ipv4_subnet();
+  resp_subnet->set_base_addr(subnet->BaseAddress());
+  resp_subnet->set_prefix_len(subnet->PrefixLength());
+
+  writer.AppendProtoAsArrayOfBytes(response);
+  return dbus_response;
+}
+
+std::unique_ptr<dbus::Response> Manager::OnPluginVmShutdown(
+    dbus::MethodCall* method_call) {
+  LOG(INFO) << "Plugin VM shutting down";
+
+  std::unique_ptr<dbus::Response> dbus_response(
+      dbus::Response::FromMethodCall(method_call));
+
+  dbus::MessageReader reader(method_call);
+  dbus::MessageWriter writer(dbus_response.get());
+
+  patchpanel::PluginVmShutdownRequest request;
+  patchpanel::PluginVmShutdownResponse response;
+
+  if (!reader.PopArrayOfBytesAsProto(&request)) {
+    LOG(ERROR) << "Unable to parse request";
+    writer.AppendProtoAsArrayOfBytes(response);
+    return dbus_response;
+  }
+
+  StopCrosVm(request.id(), GuestMessage::PLUGIN_VM);
 
   writer.AppendProtoAsArrayOfBytes(response);
   return dbus_response;

@@ -19,20 +19,20 @@
 namespace arc_networkd {
 
 // Crostini networking service handling address allocation and TAP device
-// management for Termina VMs.
+// management for Crostini VMs.
 class CrostiniService {
  public:
   // |dev_mgr| and |datapath| cannot be null.
   CrostiniService(DeviceManagerBase* dev_mgr, Datapath* datapath);
   ~CrostiniService() = default;
 
-  bool Start(uint32_t cid);
-  void Stop(uint32_t cid);
+  bool Start(uint64_t vm_id, bool is_termina, int subnet_index);
+  void Stop(uint64_t vm_id, bool is_termina);
 
-  const Device* const TAP(uint32_t cid) const;
+  const Device* const TAP(uint64_t vm_id, bool is_termina) const;
 
  private:
-  bool AddTAP(uint32_t cid);
+  std::unique_ptr<Device> AddTAP(bool is_termina, int subnet_index);
   void OnDefaultInterfaceChanged(const std::string& ifname);
 
   bool SetupFirewallClient();
@@ -51,8 +51,8 @@ class CrostiniService {
 
   DeviceManagerBase* dev_mgr_;
   Datapath* datapath_;
-  // Mapping of VM CIDs to TAP devices
-  std::map<uint32_t, std::unique_ptr<Device>> taps_;
+  // Mapping of VM IDs to TAP devices
+  std::map<std::string, std::unique_ptr<Device>> taps_;
 
   scoped_refptr<dbus::Bus> bus_;
   std::unique_ptr<org::chromium::PermissionBrokerProxy>
