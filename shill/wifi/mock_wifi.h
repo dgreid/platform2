@@ -45,7 +45,10 @@ class MockWiFi : public WiFi {
   MOCK_METHOD(void, DisconnectFromIfActive, (WiFiService*), (override));
   MOCK_METHOD(void, DisconnectFrom, (WiFiService*), (override));
   MOCK_METHOD(void, ClearCachedCredentials, (const WiFiService*), (override));
-  MOCK_METHOD(void, ConnectTo, (WiFiService * service), (override));
+  MOCK_METHOD(void,
+              ConnectTo,
+              (WiFiService * service, Error* error),
+              (override));
   MOCK_METHOD(bool, IsIdle, (), (const, override));
   MOCK_METHOD(void,
               NotifyEndpointChanged,

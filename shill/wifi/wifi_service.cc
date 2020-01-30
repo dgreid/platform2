@@ -569,7 +569,7 @@ void WiFiService::OnConnect(Error* error) {
   }
 
   expecting_disconnect_ = false;
-  wifi->ConnectTo(this);
+  wifi->ConnectTo(this, error);
 }
 
 KeyValueStore WiFiService::GetSupplicantConfigurationParameters() const {

@@ -378,7 +378,7 @@ void WiFi::ScanDone(const bool& success) {
   }
 }
 
-void WiFi::ConnectTo(WiFiService* service) {
+void WiFi::ConnectTo(WiFiService* service, Error* error) {
   CHECK(service) << "Can't connect to NULL service.";
   RpcIdentifier network_rpcid;
 
@@ -390,15 +390,17 @@ void WiFi::ConnectTo(WiFiService* service) {
   // service (if this service is configured for auto-connect) when
   // it is discovered in the scan.
   if (!supplicant_present_) {
-    LOG(ERROR) << "Trying to connect before supplicant is present";
+    LOG(WARNING) << "Trying to connect before supplicant is present";
     return;
   }
 
   // TODO(quiche): Handle cases where already connected.
   if (pending_service_ && pending_service_ == service) {
-    // TODO(quiche): Return an error to the caller. crbug.com/206812
-    LOG(INFO) << "WiFi " << link_name() << " ignoring ConnectTo service "
-              << service->unique_name() << ", which is already pending.";
+    Error::PopulateAndLog(
+        FROM_HERE, error, Error::kInProgress,
+        StringPrintf(
+            "%s: ignoring ConnectTo service %s, which is already pending",
+            link_name().c_str(), service->unique_name().c_str()));
     return;
   }
 
@@ -434,7 +436,8 @@ void WiFi::ConnectTo(WiFiService* service) {
                            provider_->disable_vht());
     if (!supplicant_interface_proxy_->AddNetwork(service_params,
                                                  &network_rpcid)) {
-      LOG(ERROR) << "Failed to add network";
+      Error::PopulateAndLog(FROM_HERE, error, Error::kOperationFailed,
+                            "Failed to add network");
       SetScanState(kScanIdle, scan_method_, __func__);
       return;
     }

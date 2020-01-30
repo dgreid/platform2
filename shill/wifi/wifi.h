@@ -167,7 +167,7 @@ class WiFi : public Device, public SupplicantEventDelegateInterface {
   void TDLSDiscoverResponse(const std::string& peer_address) override;
 
   // Called by WiFiService.
-  virtual void ConnectTo(WiFiService* service);
+  virtual void ConnectTo(WiFiService* service, Error* error);
 
   // After checking |service| state is active, initiate
   // process of disconnecting.  Log and return if not active.

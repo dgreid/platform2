@@ -780,7 +780,8 @@ class WiFiObjectTest : public ::testing::TestWithParam<string> {
     return path;
   }
   void InitiateConnect(WiFiServiceRefPtr service) {
-    wifi_->ConnectTo(service.get());
+    Error error;
+    wifi_->ConnectTo(service.get(), &error);
   }
   void InitiateDisconnect(WiFiServiceRefPtr service) {
     wifi_->DisconnectFrom(service.get());
