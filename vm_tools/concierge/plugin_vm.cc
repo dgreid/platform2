@@ -9,6 +9,7 @@
 #include <sys/un.h>
 
 #include <algorithm>
+#include <sstream>
 #include <utility>
 #include <vector>
 
@@ -54,6 +55,17 @@ constexpr base::TimeDelta kChildExitTimeout = base::TimeDelta::FromSeconds(10);
 // The CPU cgroup where all the PluginVm crosvm processes should belong to.
 constexpr char kPluginVmCpuCgroup[] = "/sys/fs/cgroup/cpu/vms/plugin";
 
+// Offset in a subnet of the client/guest.
+constexpr size_t kGuestAddressOffset = 1;
+
+std::unique_ptr<arc_networkd::Subnet> MakeSubnet(
+    const patchpanel::IPv4Subnet& subnet) {
+  return std::make_unique<arc_networkd::Subnet>(
+      subnet.base_addr(), subnet.prefix_len(),
+      // TODO(crbug.com/909719): replace with base::DoNothing;
+      base::Bind([]() {}));
+}
+
 }  // namespace
 
 // static
@@ -61,46 +73,16 @@ std::unique_ptr<PluginVm> PluginVm::Create(
     VmId id,
     uint32_t cpus,
     std::vector<string> params,
-    arc_networkd::MacAddress mac_addr,
-    std::unique_ptr<arc_networkd::SubnetAddress> ipv4_addr,
-    uint32_t ipv4_netmask,
-    uint32_t ipv4_gateway,
     base::FilePath stateful_dir,
     base::FilePath iso_dir,
     base::FilePath root_dir,
     base::FilePath runtime_dir,
+    std::unique_ptr<patchpanel::Client> network_client,
+    int subnet_index,
     std::unique_ptr<SeneschalServerProxy> seneschal_server_proxy,
     dbus::ObjectProxy* vmplugin_service_proxy) {
   auto vm = base::WrapUnique(new PluginVm(
-      std::move(id), std::move(mac_addr), std::move(ipv4_addr), ipv4_netmask,
-      ipv4_gateway, std::move(seneschal_server_proxy), vmplugin_service_proxy,
-      std::move(iso_dir), std::move(root_dir), std::move(runtime_dir)));
-
-  if (!vm->CreateUsbListeningSocket() ||
-      !vm->Start(cpus, std::move(params), std::move(stateful_dir))) {
-    vm.reset();
-  }
-
-  return vm;
-}
-// static
-std::unique_ptr<PluginVm> PluginVm::Create(
-    VmId id,
-    uint32_t cpus,
-    std::vector<string> params,
-    arc_networkd::MacAddress mac_addr,
-    std::unique_ptr<arc_networkd::Subnet> ipv4_subnet,
-    std::unique_ptr<arc_networkd::SubnetAddress> ipv4_gw,
-    std::unique_ptr<arc_networkd::SubnetAddress> ipv4_addr,
-    base::FilePath stateful_dir,
-    base::FilePath iso_dir,
-    base::FilePath root_dir,
-    base::FilePath runtime_dir,
-    std::unique_ptr<SeneschalServerProxy> seneschal_server_proxy,
-    dbus::ObjectProxy* vmplugin_service_proxy) {
-  auto vm = base::WrapUnique(new PluginVm(
-      std::move(id), std::move(mac_addr), std::move(ipv4_subnet),
-      std::move(ipv4_gw), std::move(ipv4_addr),
+      std::move(id), std::move(network_client), subnet_index,
       std::move(seneschal_server_proxy), vmplugin_service_proxy,
       std::move(iso_dir), std::move(root_dir), std::move(runtime_dir)));
 
@@ -117,6 +99,14 @@ PluginVm::~PluginVm() {
 }
 
 bool PluginVm::StopVm() {
+  // Notify arc-networkd that the VM is down.
+  // This should run before the process existence check below since we still
+  // want to release the network resources on crash.
+  // Note the client will only be null during testing.
+  if (network_client_ && !network_client_->NotifyPluginVmShutdown(id_hash_)) {
+    LOG(WARNING) << "Unable to notify networking services";
+  }
+
   // Do a sanity check here to make sure the process is still around.
   if (!CheckProcessExists(process_.pid())) {
     // The process is already gone.
@@ -147,13 +137,21 @@ bool PluginVm::StopVm() {
 }
 
 bool PluginVm::Shutdown() {
+  // Notify arc-networkd that the VM is down.
+  // This should run before the process existence check below since we still
+  // want to release the network resources on crash.
+  // Note the client will only be null during testing.
+  if (network_client_ && !network_client_->NotifyPluginVmShutdown(id_hash_)) {
+    LOG(WARNING) << "Unable to notify networking services";
+  }
+
   return !CheckProcessExists(process_.pid()) ||
          pvm::dispatcher::ShutdownVm(vmplugin_service_proxy_, id_);
 }
 
 VmInterface::Info PluginVm::GetInfo() {
   VmInterface::Info info = {
-      .ipv4_address = ipv4_addr_->Address(),
+      .ipv4_address = subnet_->AddressAtOffset(kGuestAddressOffset),
       .pid = process_.pid(),
       .cid = 0,
       .seneschal_server_handle = seneschal_server_handle(),
@@ -586,10 +584,8 @@ void PluginVm::VmToolsStateChanged(bool running) {
 }
 
 PluginVm::PluginVm(VmId id,
-                   arc_networkd::MacAddress mac_addr,
-                   std::unique_ptr<arc_networkd::SubnetAddress> ipv4_addr,
-                   uint32_t ipv4_netmask,
-                   uint32_t ipv4_gateway,
+                   std::unique_ptr<patchpanel::Client> network_client,
+                   int subnet_index,
                    std::unique_ptr<SeneschalServerProxy> seneschal_server_proxy,
                    dbus::ObjectProxy* vmplugin_service_proxy,
                    base::FilePath iso_dir,
@@ -597,46 +593,11 @@ PluginVm::PluginVm(VmId id,
                    base::FilePath runtime_dir)
     : id_(std::move(id)),
       iso_dir_(std::move(iso_dir)),
-      mac_addr_(std::move(mac_addr)),
-      ipv4_addr_(std::move(ipv4_addr)),
-      netmask_(ipv4_netmask),
-      gateway_(ipv4_gateway),
+      network_client_(std::move(network_client)),
+      subnet_index_(subnet_index),
       seneschal_server_proxy_(std::move(seneschal_server_proxy)),
       vmplugin_service_proxy_(vmplugin_service_proxy),
       usb_last_handle_(0) {
-  CHECK(ipv4_addr_);
-  CHECK(vmplugin_service_proxy_);
-  CHECK(base::DirectoryExists(iso_dir_));
-  CHECK(base::DirectoryExists(root_dir));
-  CHECK(base::DirectoryExists(runtime_dir));
-
-  // Take ownership of the root and runtime directories.
-  CHECK(root_dir_.Set(root_dir));
-  CHECK(runtime_dir_.Set(runtime_dir));
-}
-
-PluginVm::PluginVm(VmId id,
-                   arc_networkd::MacAddress mac_addr,
-                   std::unique_ptr<arc_networkd::Subnet> ipv4_subnet,
-                   std::unique_ptr<arc_networkd::SubnetAddress> ipv4_gw,
-                   std::unique_ptr<arc_networkd::SubnetAddress> ipv4_addr,
-                   std::unique_ptr<SeneschalServerProxy> seneschal_server_proxy,
-                   dbus::ObjectProxy* vmplugin_service_proxy,
-                   base::FilePath iso_dir,
-                   base::FilePath root_dir,
-                   base::FilePath runtime_dir)
-    : id_(std::move(id)),
-      iso_dir_(std::move(iso_dir)),
-      mac_addr_(std::move(mac_addr)),
-      ipv4_subnet_(std::move(ipv4_subnet)),
-      ipv4_gw_(std::move(ipv4_gw)),
-      ipv4_addr_(std::move(ipv4_addr)),
-      seneschal_server_proxy_(std::move(seneschal_server_proxy)),
-      vmplugin_service_proxy_(vmplugin_service_proxy),
-      usb_last_handle_(0) {
-  CHECK(ipv4_subnet_);
-  CHECK(ipv4_gw_);
-  CHECK(ipv4_addr_);
   CHECK(vmplugin_service_proxy_);
   CHECK(base::DirectoryExists(iso_dir_));
   CHECK(base::DirectoryExists(root_dir));
@@ -646,18 +607,29 @@ PluginVm::PluginVm(VmId id,
   CHECK(root_dir_.Set(root_dir));
   CHECK(runtime_dir_.Set(runtime_dir));
 
-  gateway_ = ipv4_gw_->Address();
-  netmask_ = ipv4_subnet_->Netmask();
+  std::ostringstream oss;
+  oss << id_;
+  id_hash_ = std::hash<std::string>{}(oss.str());
 }
 
 bool PluginVm::Start(uint32_t cpus,
                      std::vector<string> params,
                      base::FilePath stateful_dir) {
-  // Set up the tap device.
-  base::ScopedFD tap_fd =
-      BuildTapDevice(mac_addr_, gateway_, netmask_, false /*vnet_hdr*/);
+  // Get the network interface.
+  patchpanel::Device network_device;
+  if (!network_client_->NotifyPluginVmStartup(id_hash_, subnet_index_,
+                                              &network_device)) {
+    LOG(ERROR) << "No network devices available";
+    return false;
+  }
+  subnet_ = MakeSubnet(network_device.ipv4_subnet());
+
+  // Open the tap device.
+  base::ScopedFD tap_fd = OpenTapDevice(
+      network_device.ifname(), false /*vnet_hdr*/, nullptr /*ifname_out*/);
   if (!tap_fd.is_valid()) {
-    LOG(ERROR) << "Unable to build and configure TAP device";
+    LOG(ERROR) << "Unable to open and configure TAP device "
+               << network_device.ifname();
     return false;
   }
 

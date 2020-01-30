@@ -15,7 +15,7 @@
 #include <utility>
 #include <vector>
 
-#include <arc/network/mac_address_generator.h>
+#include <arc/network/client.h>
 #include <arc/network/subnet.h>
 #include <base/files/file_descriptor_watcher_posix.h>
 #include <base/files/file_path.h>
@@ -41,28 +41,12 @@ class PluginVm final : public VmInterface {
       const VmId id,
       uint32_t cpus,
       std::vector<std::string> params,
-      arc_networkd::MacAddress mac_addr,
-      std::unique_ptr<arc_networkd::SubnetAddress> ipv4_addr,
-      uint32_t ipv4_netmask,
-      uint32_t ipv4_gateway,
       base::FilePath stateful_dir,
       base::FilePath iso_dir,
       base::FilePath root_dir,
       base::FilePath runtime_dir,
-      std::unique_ptr<SeneschalServerProxy> seneschal_server_proxy,
-      dbus::ObjectProxy* vmplugin_service_proxy);
-  static std::unique_ptr<PluginVm> Create(
-      const VmId id,
-      uint32_t cpus,
-      std::vector<std::string> params,
-      arc_networkd::MacAddress mac_addr,
-      std::unique_ptr<arc_networkd::Subnet> ipv4_subnet,
-      std::unique_ptr<arc_networkd::SubnetAddress> ipv4_gw,
-      std::unique_ptr<arc_networkd::SubnetAddress> ipv4_addr,
-      base::FilePath stateful_dir,
-      base::FilePath iso_dir,
-      base::FilePath root_dir,
-      base::FilePath runtime_dir,
+      std::unique_ptr<patchpanel::Client> network_client,
+      int subnet_index,
       std::unique_ptr<SeneschalServerProxy> seneschal_server_proxy,
       dbus::ObjectProxy* vmplugin_service_proxy);
   ~PluginVm() override;
@@ -115,20 +99,8 @@ class PluginVm final : public VmInterface {
 
  private:
   PluginVm(const VmId id,
-           arc_networkd::MacAddress mac_addr,
-           std::unique_ptr<arc_networkd::SubnetAddress> ipv4_addr,
-           uint32_t ipv4_netmask,
-           uint32_t ipv4_gateway,
-           std::unique_ptr<SeneschalServerProxy> seneschal_server_proxy,
-           dbus::ObjectProxy* vmplugin_service_proxy,
-           base::FilePath iso_dir,
-           base::FilePath root_dir,
-           base::FilePath runtime_dir);
-  PluginVm(const VmId id,
-           arc_networkd::MacAddress mac_addr,
-           std::unique_ptr<arc_networkd::Subnet> ipv4_subnet,
-           std::unique_ptr<arc_networkd::SubnetAddress> ipv4_gw,
-           std::unique_ptr<arc_networkd::SubnetAddress> ipv4_addr,
+           std::unique_ptr<patchpanel::Client> network_client,
+           int subnet_index,
            std::unique_ptr<SeneschalServerProxy> seneschal_server_proxy,
            dbus::ObjectProxy* vmplugin_service_proxy,
            base::FilePath iso_dir,
@@ -150,6 +122,7 @@ class PluginVm final : public VmInterface {
   // This VM ID. It is used to communicate with the dispatcher to request
   // VM state changes.
   const VmId id_;
+  std::size_t id_hash_;
 
   // Specifies directory holding ISO images that can be attached to the VM.
   base::FilePath iso_dir_;
@@ -165,13 +138,12 @@ class PluginVm final : public VmInterface {
   // Handle to the VM process.
   brillo::ProcessImpl process_;
 
-  // Network configuration.
-  arc_networkd::MacAddress mac_addr_;
-  std::unique_ptr<arc_networkd::Subnet> ipv4_subnet_;
-  std::unique_ptr<arc_networkd::SubnetAddress> ipv4_gw_;
-  std::unique_ptr<arc_networkd::SubnetAddress> ipv4_addr_;
-  uint32_t netmask_;
-  uint32_t gateway_;
+  // Network configuration service.
+  std::unique_ptr<patchpanel::Client> network_client_;
+  // The subnet assigned to the VM.
+  std::unique_ptr<arc_networkd::Subnet> subnet_;
+  // The requested subnet index.
+  const int subnet_index_;
 
   // Proxy to the server providing shared directory access for this VM.
   std::unique_ptr<SeneschalServerProxy> seneschal_server_proxy_;
