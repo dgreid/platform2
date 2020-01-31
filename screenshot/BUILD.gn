@@ -25,8 +25,8 @@ executable("screenshot") {
   configs += [ ":target_defaults" ]
   sources = [
     "capture.cc",
-    "egl_capture.cc",
     "crtc.cc",
+    "egl_capture.cc",
     "main.cc",
     "png.cc",
   ]
