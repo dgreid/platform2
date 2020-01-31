@@ -4,6 +4,7 @@
 
 #include "crash-reporter/vm_support_proper.h"
 
+#include <base/files/file_path.h>
 #include <base/logging.h>
 #include <base/strings/stringprintf.h>
 #include <chromeos/constants/vm_tools.h>
@@ -14,7 +15,19 @@
 
 #include <linux/vm_sockets.h>
 
+#include "crash-reporter/paths.h"
 #include "crash-reporter/user_collector.h"
+#include "crash-reporter/util.h"
+
+namespace {
+
+constexpr char kLsbBoardKey[] = "CHROMEOS_RELEASE_BOARD";
+constexpr char kOsNameKey[] = "PRETTY_NAME";
+constexpr char kContainerOsReleasePath[] =
+    "/mnt/stateful/lxd/storage-pools/default/containers/penguin/rootfs/etc/"
+    "os-release";
+
+}  // namespace
 
 VmSupportProper::VmSupportProper() {
   std::string addr = base::StringPrintf("vsock:%u:%u", VMADDR_CID_HOST,
@@ -31,7 +44,17 @@ VmSupportProper::VmSupportProper() {
 }
 
 void VmSupportProper::AddMetadata(UserCollector* collector) {
-  // TODO(hollingum): implement me.
+  std::string value;
+  base::FilePath lsb_path =
+      base::FilePath(paths::kEtcDirectory).Append(paths::kLsbRelease);
+  util::GetCachedKeyValue(lsb_path.BaseName(), kLsbBoardKey,
+                          {lsb_path.DirName()}, &value);
+  collector->AddCrashMetaData("board", value);
+
+  base::FilePath os_path = base::FilePath(kContainerOsReleasePath);
+  util::GetCachedKeyValue(os_path.BaseName(), kOsNameKey, {os_path.DirName()},
+                          &value);
+  collector->AddCrashMetaData("upload_var_vm_os_release", value);
 }
 
 void VmSupportProper::FinishCrash(const base::FilePath& crash_meta_path) {

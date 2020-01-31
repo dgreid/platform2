@@ -140,6 +140,11 @@ class CrashCollector {
   // Initialize metrics path. Returns true if flag directory is created.
   static bool InitializeSystemMetricsDirectories();
 
+  // Add non-standard meta data to the crash metadata file.  Call
+  // before calling FinishCrash.  Key must not contain "=" or "\n" characters.
+  // Value must not contain "\n" characters.
+  void AddCrashMetaData(const std::string& key, const std::string& value);
+
  protected:
   friend class CrashCollectorTest;
   FRIEND_TEST(ArcContextTest, GetAndroidVersion);
@@ -330,11 +335,6 @@ class CrashCollector {
 
   // Write details about the process tree of |pid| to |output_file|.
   bool GetProcessTree(pid_t pid, const base::FilePath& output_file);
-
-  // Add non-standard meta data to the crash metadata file.  Call
-  // before calling FinishCrash.  Key must not contain "=" or "\n" characters.
-  // Value must not contain "\n" characters.
-  void AddCrashMetaData(const std::string& key, const std::string& value);
 
   // Add a file to be uploaded to the crash reporter server. The file must
   // persist until the crash report is sent; ideally it should live in the same

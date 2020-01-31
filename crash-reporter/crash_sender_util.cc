@@ -833,7 +833,8 @@ std::unique_ptr<brillo::http::FormData> Sender::CreateCrashFormData(
   form_data->AddTextField("exec_name", exec_name);
 
   std::string board;
-  if (!GetCachedKeyValueDefault(base::FilePath(paths::kLsbRelease),
+  if (!details.metadata.GetString("board", &board) &&
+      !GetCachedKeyValueDefault(base::FilePath(paths::kLsbRelease),
                                 "CHROMEOS_RELEASE_BOARD", &board)) {
     board = kUndefined;
   }
