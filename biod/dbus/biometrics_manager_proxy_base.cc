@@ -6,6 +6,7 @@
 
 #include <memory>
 #include <string>
+#include <utility>
 
 #include <base/bind.h>
 #include <chromeos/dbus/service_constants.h>
@@ -39,7 +40,7 @@ const char* ScanResultToString(ScanResult result) {
 
 BiometricsManagerProxyBase::BiometricsManagerProxyBase(
     const scoped_refptr<dbus::Bus>& bus, const dbus::ObjectPath& path)
-    : bus_(bus), weak_factory_(this) {
+    : bus_(bus), weak_factory_(this), biod_auth_session_(nullptr) {
   proxy_ = bus_->GetObjectProxy(biod::kBiodServiceName, path);
 
   proxy_->ConnectToSignal(
@@ -60,23 +61,59 @@ void BiometricsManagerProxyBase::SetFinishHandler(
   on_finish_ = on_finish;
 }
 
-dbus::ObjectProxy* BiometricsManagerProxyBase::StartAuthSession() {
+dbus::ObjectProxy* BiometricsManagerProxyBase::HandleAuthSessionResponse(
+    dbus::Response* response) {
+  if (!response) {
+    LOG(ERROR) << biod::kBiometricsManagerStartAuthSessionMethod
+               << " had no response.";
+    return nullptr;
+  }
+
+  dbus::MessageReader response_reader(response);
+  dbus::ObjectPath auth_path;
+  if (!response_reader.PopObjectPath(&auth_path)) {
+    LOG(ERROR) << biod::kBiometricsManagerStartAuthSessionMethod
+               << " had incorrect response.";
+    return nullptr;
+  }
+  return bus_->GetObjectProxy(biod::kBiodServiceName, auth_path);
+}
+
+bool BiometricsManagerProxyBase::StartAuthSession() {
+  LOG(INFO) << "Starting biometric auth session.";
   dbus::MethodCall method_call(biod::kBiometricsManagerInterface,
                                biod::kBiometricsManagerStartAuthSessionMethod);
 
   std::unique_ptr<dbus::Response> response =
       proxy_->CallMethodAndBlock(&method_call, kDbusTimeoutMs);
-  if (!response)
-    return nullptr;
 
-  dbus::MessageReader response_reader(response.get());
-  dbus::ObjectPath auth_path;
-  if (!response_reader.PopObjectPath(&auth_path))
-    return nullptr;
+  biod_auth_session_ = HandleAuthSessionResponse(response.get());
+  return biod_auth_session_ != nullptr;
+}
 
-  dbus::ObjectProxy* auth_proxy =
-      bus_->GetObjectProxy(biod::kBiodServiceName, auth_path);
-  return auth_proxy;
+void BiometricsManagerProxyBase::OnStartAuthSessionResp(
+    base::Callback<void(bool success)> callback, dbus::Response* response) {
+  biod_auth_session_ = HandleAuthSessionResponse(response);
+  callback.Run(biod_auth_session_ != nullptr);
+}
+
+void BiometricsManagerProxyBase::StartAuthSessionAsync(
+    base::Callback<void(bool success)> callback) {
+  LOG(INFO) << "Starting biometric auth session.";
+  dbus::MethodCall method_call(biod::kBiometricsManagerInterface,
+                               biod::kBiometricsManagerStartAuthSessionMethod);
+
+  proxy_->CallMethod(
+      &method_call, kDbusTimeoutMs,
+      base::Bind(&BiometricsManagerProxyBase::OnStartAuthSessionResp,
+                 base::Unretained(this), std::move(callback)));
+}
+
+void BiometricsManagerProxyBase::EndAuthSession() {
+  LOG(INFO) << "Ending biometric authentication";
+  dbus::MethodCall end_call(biod::kAuthSessionInterface,
+                            biod::kAuthSessionEndMethod);
+  biod_auth_session_->CallMethodAndBlock(&end_call, kDbusTimeoutMs);
 }
 
 void BiometricsManagerProxyBase::OnFinish(bool success) {

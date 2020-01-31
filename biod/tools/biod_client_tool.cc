@@ -397,15 +397,13 @@ int DoEnroll(base::WeakPtr<BiometricsManagerProxy> biometrics_manager,
 }
 
 int DoAuthenticate(base::WeakPtr<BiometricsManagerProxy> biometrics_manager) {
-  dbus::ObjectProxy* auth_session_object =
-      biometrics_manager->StartAuthSession();
+  bool success = biometrics_manager->StartAuthSession();
 
-  if (auth_session_object) {
-    LOG(INFO) << "Biometric authentication started";
-  } else {
+  if (!success) {
     LOG(ERROR) << "Biometric authentication failed to start";
     return 1;
   }
+  LOG(INFO) << "Biometric authentication started";
 
   base::RunLoop run_loop;
 
@@ -415,10 +413,7 @@ int DoAuthenticate(base::WeakPtr<BiometricsManagerProxy> biometrics_manager) {
   run_loop.Run();
 
   if (ret) {
-    LOG(INFO) << "Ending biometric authentication";
-    dbus::MethodCall end_call(biod::kAuthSessionInterface,
-                              biod::kAuthSessionEndMethod);
-    auth_session_object->CallMethodAndBlock(&end_call, kDbusTimeoutMs);
+    biometrics_manager->EndAuthSession();
   }
 
   return ret;

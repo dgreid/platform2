@@ -28,7 +28,15 @@ class BiometricsManagerProxyBase {
 
   void SetFinishHandler(const FinishCallback& on_finish);
 
-  dbus::ObjectProxy* StartAuthSession();
+  // Starts biometrics auth session synchronously.
+  bool StartAuthSession();
+
+  // Starts biometrics auth session asynchronously.
+  // |callback| is called when starting the auth session succeeds/fails.
+  void StartAuthSessionAsync(base::Callback<void(bool success)> callback);
+
+  // Ends biometrics auth session and resets state.
+  void EndAuthSession();
 
  protected:
   void OnFinish(bool success);
@@ -45,9 +53,20 @@ class BiometricsManagerProxyBase {
 
   void OnSessionFailed(dbus::Signal* signal);
 
+  // Handler for StartAuthSessionAsync. |callback| will be called on behalf of
+  // the caller of StartAuthSessionAsync.
+  void OnStartAuthSessionResp(base::Callback<void(bool success)> callback,
+                              dbus::Response* response);
+
+  // Parse a dbus response and return the ObjectProxy implied by the response.
+  // Returns nullptr on error.
+  dbus::ObjectProxy* HandleAuthSessionResponse(dbus::Response* response);
+
   FinishCallback on_finish_;
 
   base::WeakPtrFactory<BiometricsManagerProxyBase> weak_factory_;
+
+  dbus::ObjectProxy* biod_auth_session_;
 
   DISALLOW_COPY_AND_ASSIGN(BiometricsManagerProxyBase);
 };

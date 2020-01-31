@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <functional>
 #include <memory>
 #include <utility>
 
@@ -17,6 +18,7 @@
 
 namespace biod {
 
+using testing::_;
 using testing::ByMove;
 using testing::Return;
 
@@ -48,6 +50,10 @@ class BiometricsManagerProxyBaseTest : public testing::Test {
 
   void CallOnSessionFailed() { proxy_base_->OnSessionFailed(nullptr); }
 
+  dbus::ObjectProxy* GetBiodAuthSession() {
+    return proxy_base_->biod_auth_session_;
+  }
+
   std::unique_ptr<BiometricsManagerProxyBase> proxy_base_;
   scoped_refptr<dbus::MockObjectProxy> mock_object_proxy_;
   scoped_refptr<dbus::MockBus> mock_bus_;
@@ -78,7 +84,8 @@ TEST_F(BiometricsManagerProxyBaseTest, RunFinishHandlerWithFalse) {
 TEST_F(BiometricsManagerProxyBaseTest, StartAuthSessionNoResponse) {
   EXPECT_CALL(*mock_object_proxy_, CallMethodAndBlock)
       .WillOnce(Return(ByMove(dbus::Response::CreateEmpty())));
-  EXPECT_EQ(proxy_base_->StartAuthSession(), nullptr);
+  EXPECT_FALSE(proxy_base_->StartAuthSession());
+  EXPECT_EQ(GetBiodAuthSession(), nullptr);
 }
 
 // Test that StartAuthSession succeeds and the object proxy saved by
@@ -102,7 +109,47 @@ TEST_F(BiometricsManagerProxyBaseTest, StartAuthSessionGetSessionProxy) {
   EXPECT_CALL(*mock_bus_, GetObjectProxy(kBiodServiceName, auth_session_path))
       .WillOnce(Return(auth_session_proxy.get()));
 
-  EXPECT_EQ(proxy_base_->StartAuthSession(), auth_session_proxy.get());
+  EXPECT_TRUE(proxy_base_->StartAuthSession());
+  EXPECT_EQ(GetBiodAuthSession(), auth_session_proxy.get());
+}
+
+// Test that StartAuthSessionAsync succeeds and the object proxy saved by
+// StartAuthSession is what the mock provides.
+TEST_F(BiometricsManagerProxyBaseTest, StartAuthSessionGetSessionProxyAsync) {
+  // The path must be correctly formatted for the writer to accept it.
+  const dbus::ObjectPath auth_session_path("/org/chromium/Foo/AuthSession");
+  scoped_refptr<dbus::MockObjectProxy> auth_session_proxy =
+      new dbus::MockObjectProxy(mock_bus_.get(), kBiodServiceName,
+                                auth_session_path);
+  // Set the underlying |mock_object_proxy_| to invoke the dbus callback (in
+  // this case OnStartAuthSessionResp) with a fake response containing
+  // |auth_session_path|.
+  auto ExecuteCallbackWithFakeResponse =
+      [auth_session_path](
+          dbus::MethodCall* unused_method, int unused_ms,
+          base::OnceCallback<void(dbus::Response*)>* dbus_callback) {
+        std::unique_ptr<dbus::Response> fake_response =
+            dbus::Response::CreateEmpty();
+        dbus::MessageWriter writer(fake_response.get());
+        writer.AppendObjectPath(auth_session_path);
+        std::move(*dbus_callback).Run(fake_response.release());
+      };
+  EXPECT_CALL(*mock_object_proxy_, DoCallMethod(_, _, _))
+      .WillOnce(ExecuteCallbackWithFakeResponse);
+  // Once OnStartAuthSessionResp is invoked with the fake response, it extracts
+  // |auth_session_path| from the fake response and asks |mock_bus_| for the
+  // corresponding ObjectProxy, which we set to be |auth_session_proxy|.
+  // If OnStartAuthSessionResp is unable to extract the correct ObjectPath, the
+  // bus will not return the correct ObjectProxy, which we catch in the end.
+  EXPECT_CALL(*mock_bus_, GetObjectProxy(kBiodServiceName, auth_session_path))
+      .WillOnce(Return(auth_session_proxy.get()));
+
+  status_ = false;
+  // Install a lambda as the client callback and verify it is run.
+  proxy_base_->StartAuthSessionAsync(
+      base::BindLambdaForTesting([this](bool success) { status_ = success; }));
+  EXPECT_TRUE(status_);
+  EXPECT_EQ(GetBiodAuthSession(), auth_session_proxy.get());
 }
 
 // Test that OnSessionFailed will call on_finish_ with false
