@@ -471,9 +471,9 @@ static_assert(
     "user_data_auth:: and cryptohome::");
 
 static_assert(
-    user_data_auth::CryptohomeErrorCode_MAX == 41,
+    user_data_auth::CryptohomeErrorCode_MAX == 44,
     "user_data_auth::CrytpohomeErrorCode's element count is incorrect");
-static_assert(cryptohome::CryptohomeErrorCode_MAX == 41,
+static_assert(cryptohome::CryptohomeErrorCode_MAX == 44,
               "cryptohome::CrytpohomeErrorCode's element count is incorrect");
 }  // namespace CryptohomeErrorCodeEquivalenceTest
 
