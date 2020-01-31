@@ -902,6 +902,9 @@ bool ExpandPropertyContents(const std::string& content,
   return true;
 }
 
+// Obsolete. Do not call.
+// TODO(yusukes): Move the fuzzer to Chromium and remove this function.
+//
 // Note: Do not modify this directly.
 // Modify src/components/arc/session/arc_property_util.cc in Chromium first.
 std::string ComputeOEMKey(brillo::CrosConfigInterface* config,

@@ -83,7 +83,8 @@ namespace {
 constexpr char kAdbdMountDirectory[] = "/run/arc/adbd";
 constexpr char kAdbdUnixSocketMountDirectory[] = "/run/arc/adb";
 constexpr char kAndroidCmdline[] = "/run/arc/cmdline.android";
-constexpr char kAndroidGeneratedPropertiesDirectory[] = "/run/arc/properties";
+constexpr char kAndroidGeneratedPropertiesDirectory[] =
+    "/run/arc/host_generated";
 constexpr char kAndroidKmsgFifo[] = "/run/arc/android.kmsg.fifo";
 constexpr char kAndroidMutableSource[] =
     "/opt/google/containers/android/rootfs/android-data";
@@ -808,36 +809,6 @@ void ArcSetup::ApplyPerBoardConfigurations() {
   // environment issues.
   EXIT_IF(!LaunchAndWait(
       {board_hardware_features.value(), platform_xml_file.value()}));
-}
-
-void ArcSetup::CreateBuildProperties() {
-  EXIT_IF(!brillo::MkdirRecursively(
-               arc_paths_->android_generated_properties_directory, 0755)
-               .is_valid());
-
-  auto config = std::make_unique<brillo::CrosConfig>();
-  EXIT_IF(!config->Init());
-
-  constexpr const char* prop_files[] = {"default.prop", "system/build.prop"};
-  for (const auto& prop_file : prop_files) {
-    const base::FilePath in_prop =
-        arc_paths_->android_rootfs_directory.Append(prop_file);
-    const base::FilePath expanded_prop =
-        arc_paths_->android_generated_properties_directory.Append(
-            in_prop.BaseName());
-    ExpandPropertyFile(in_prop, expanded_prop, config.get());
-  }
-}
-
-void ArcSetup::ExpandPropertyFile(const base::FilePath& input,
-                                  const base::FilePath& output,
-                                  brillo::CrosConfigInterface* config) {
-  std::string content;
-  std::string expanded;
-  EXIT_IF(!base::ReadFileToString(input, &content));
-  EXIT_IF(!ExpandPropertyContents(content, config, &expanded));
-  EXIT_IF(!WriteToFile(output, 0600, expanded));
-  EXIT_IF(!Chown(kRootUid, kRootGid, output));
 }
 
 void ArcSetup::MaybeStartUreadaheadInTracingMode() {
@@ -2178,10 +2149,6 @@ void ArcSetup::OnOnetimeSetup() {
 
   // Setup ownership for <configfs>/sdcard, if the directory exists.
   SetUpOwnershipForSdcardConfigfs();
-
-  // Build properties are needed to finish booting the container, so we need
-  // to set them up here instead of in the per-board setup.
-  CreateBuildProperties();
 }
 
 void ArcSetup::OnOnetimeStop() {

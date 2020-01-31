@@ -502,7 +502,7 @@
 		{
 			"destination": "/default.prop",
 			"type": "bind",
-			"source": "/run/arc/properties/default.prop",
+			"source": "/run/arc/host_generated/default.prop",
 			"options": [
 				"bind"
 			]
@@ -510,7 +510,7 @@
 		{
 			"destination": "/system/build.prop",
 			"type": "bind",
-			"source": "/run/arc/properties/build.prop",
+			"source": "/run/arc/host_generated/build.prop",
 			"options": [
 				"bind"
 			]

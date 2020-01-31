@@ -305,10 +305,6 @@ class ArcSetup {
   // exist.
   void EnsureContainerDirectories();
 
-  // Creates model-specific build properties from shared unibuild templates.
-  // Called during --mode=onetime-setup.
-  void CreateBuildProperties();
-
   // Expands a template Android property file into /run/arc/properties.
   void ExpandPropertyFile(const base::FilePath& input,
                           const base::FilePath& output,

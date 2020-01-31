@@ -252,10 +252,8 @@ bool GetOciContainerState(const base::FilePath& path,
                           pid_t* out_container_pid,
                           base::FilePath* out_rootfs);
 
-// Expands the contents of a template Android property file.  Strings like
-// {property} will be looked up in |config| and replaced with their values.
-// Returns true if all {} strings were successfully expanded, or false if any
-// properties were not found.
+// Obsolete. Do not call.
+// TODO(yusukes): Move the fuzzer to Chromium and remove this function.
 //
 // Note: Do not modify this directly.
 // Modify src/components/arc/session/arc_property_util.cc in Chromium first.
@@ -263,16 +261,16 @@ bool ExpandPropertyContents(const std::string& content,
                             brillo::CrosConfigInterface* config,
                             std::string* expanded_content);
 
-// Computes the value of ro.oem.key1 based on the build-time ro.product.board
-// value and the device's region of origin.
+// Obsolete. Do not call.
+// TODO(yusukes): Move the fuzzer to Chromium and remove this function.
 //
 // Note: Do not modify this directly.
 // Modify src/components/arc/session/arc_property_util.cc in Chromium first.
 std::string ComputeOEMKey(brillo::CrosConfigInterface* config,
                           const std::string& board);
 
-// Truncates the value side of an Android key=val property line, including
-// handling the special case of build fingerprint.
+// Obsolete. Do not call.
+// TODO(yusukes): Move the fuzzer to Chromium and remove this function.
 //
 // Note: Do not modify this directly.
 // Modify src/components/arc/session/arc_property_util.cc in Chromium first.
