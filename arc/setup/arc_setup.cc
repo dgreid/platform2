@@ -100,9 +100,6 @@ constexpr char kCameraProfileDir[] =
 constexpr char kCrasSocketDirectory[] = "/run/cras";
 constexpr char kTestharnessDirectory[] = "/run/arc/testharness";
 constexpr char kDebugfsDirectory[] = "/run/arc/debugfs";
-constexpr char kDefaultAppsBoardDirectory[] = "/var/cache/arc_default_apps";
-constexpr char kDefaultAppsDirectory[] =
-    "/usr/share/google-chrome/extensions/arc";
 constexpr char kFakeKptrRestrict[] = "/run/arc/fake_kptr_restrict";
 constexpr char kFakeMmapRndBits[] = "/run/arc/fake_mmap_rnd_bits";
 constexpr char kFakeMmapRndCompatBits[] = "/run/arc/fake_mmap_rnd_compat_bits";
@@ -1466,40 +1463,6 @@ void ArcSetup::SetUpCameraProperty() {
   EXIT_IF(!WriteToFile(camera_prop_file, 0644, camera_properties));
 }
 
-void ArcSetup::SetUpDefaultApps() {
-  // This sets up default apps customization for the current board. Unibuild
-  // may contain default apps the for particular board only. Default apps that
-  // are shared for all boards of the same image exist in
-  // /usr/share/google-chrome/extensions/arc
-  // If customization exists it is located in
-  // /usr/share/google-chrome/extensions/arc/BOARD_NAME.
-  // Last folder is mapped using symbolic link to /var/cache/arc_default_apps.
-
-  constexpr char kProductBoardProp[] = "ro.product.board";
-  const std::string board = GetSystemBuildPropertyOrDie(kProductBoardProp);
-
-  const base::FilePath default_apps_root =
-      base::FilePath(kDefaultAppsDirectory);
-  const base::FilePath default_apps_board = default_apps_root.Append(board);
-  if (!base::PathExists(default_apps_board)) {
-    LOG(INFO) << "Board default app customization does not exist: "
-              << default_apps_board.value();
-    return;
-  }
-
-  // The DeleteFile call is to make sure that the link is created even if
-  // |link_to_default_apps_board| exists as a file.
-  const base::FilePath link_to_default_apps_board =
-      base::FilePath(kDefaultAppsBoardDirectory);
-  IGNORE_ERRORS(
-      base::DeleteFile(link_to_default_apps_board, false /* recursive */));
-  EXIT_IF(!base::CreateSymbolicLink(default_apps_board,
-                                    link_to_default_apps_board));
-  LOG(INFO) << "Board default app customization created: "
-            << default_apps_board.value() << " -> "
-            << link_to_default_apps_board.value();
-}
-
 void ArcSetup::SetUpSharedApkDirectory() {
   // TODO(yusuks): Remove the migration code in M68.
   if (base::PathExists(arc_paths_->old_apk_cache_dir)) {
@@ -2217,10 +2180,6 @@ void ArcSetup::OnOnetimeSetup() {
   // Build properties are needed to finish booting the container, so we need
   // to set them up here instead of in the per-board setup.
   CreateBuildProperties();
-
-  // Setup per-board default apps. This has to be called after
-  // CreateBuildProperties because CreateBuildProperties sets the name of board.
-  SetUpDefaultApps();
 }
 
 void ArcSetup::OnOnetimeStop() {
