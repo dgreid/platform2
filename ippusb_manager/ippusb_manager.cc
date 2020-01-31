@@ -59,7 +59,7 @@ base::ScopedFD GetFileDescriptor() {
 void SpawnXD(const std::string& socket_path, UsbPrinterInfo* printer_info) {
   std::vector<std::string> string_args = {
       "/usr/bin/ippusbxd",
-      "-d",
+      "-n",
       "-l",
       base::StringPrintf("--bus-device=%03d:%03d", printer_info->bus(),
                          printer_info->device()),
