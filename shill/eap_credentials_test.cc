@@ -570,4 +570,34 @@ TEST_F(EapCredentialsTest, TestSubjectAlternativeNameMatchTranslationFailure) {
   EXPECT_FALSE(altsubject_match.has_value());
 }
 
+TEST_F(EapCredentialsTest, TestEapInnerAuthMschapv2NoRetryFlag) {
+  // If no EAP inner auth is set, no additional  mschapv2_retry flag is added.
+  SetInnerEap("");
+  PopulateSupplicantProperties();
+  EXPECT_FALSE(
+      params_.Contains<string>(WPASupplicant::kNetworkPropertyEapInnerEap));
+
+  // If an EAP inner auth different than MSCHPAV2 is set, also expect no change.
+  SetInnerEap("auth=MD5");
+  PopulateSupplicantProperties();
+  EXPECT_TRUE(
+      params_.Contains<string>(WPASupplicant::kNetworkPropertyEapInnerEap));
+  {
+    const std::string inner_eap =
+        params_.Get<string>(WPASupplicant::kNetworkPropertyEapInnerEap);
+    EXPECT_EQ(inner_eap, "auth=MD5");
+  }
+
+  // If EAP inner auth is set to MSCHAPV2, the flag should be added.
+  SetInnerEap("auth=MSCHAPV2");
+  PopulateSupplicantProperties();
+  EXPECT_TRUE(
+      params_.Contains<string>(WPASupplicant::kNetworkPropertyEapInnerEap));
+  {
+    const std::string inner_eap =
+        params_.Get<string>(WPASupplicant::kNetworkPropertyEapInnerEap);
+    EXPECT_EQ(inner_eap, "auth=MSCHAPV2 mschapv2_retry=0");
+  }
+}
+
 }  // namespace shill

@@ -154,6 +154,8 @@ const char WPASupplicant::kTDLSStatePeerNotConnected[] = "peer not connected";
 
 const char WPASupplicant::kFlagDisableEapTLS1p1[] = "tls_disable_tlsv1_1=1";
 const char WPASupplicant::kFlagDisableEapTLS1p2[] = "tls_disable_tlsv1_2=1";
+const char WPASupplicant::kFlagInnerEapAuthMSCHAPV2[] = "auth=MSCHAPV2";
+const char WPASupplicant::kFlagInnerEapNoMSCHAPV2Retry[] = "mschapv2_retry=0";
 
 const uint32_t WPASupplicant::kDefaultEngine = 1;
 const uint32_t WPASupplicant::kNetworkIeee80211wDisabled = 0;

@@ -10,6 +10,8 @@
 #include <vector>
 
 #include <base/strings/string_tokenizer.h>
+#include <base/strings/string_piece.h>
+#include <base/strings/string_split.h>
 #include <base/strings/string_util.h>
 #include <base/json/json_string_value_serializer.h>
 
@@ -32,6 +34,35 @@ using std::string;
 using std::vector;
 
 namespace shill {
+
+namespace {
+
+// Chrome sends key value pairs for "phase2" inner EAP configuration and shill
+// just forwards that to wpa_supplicant. This function adds additional flags for
+// phase2 if necessary.
+// Currently it adds the mschapv2_retry=0 flag if MSCHAPV2 auth is being used
+// so that wpa_supplicant does not auto-retry. The auto-retry would expect shill
+// to send a new identity/password (https://crbug.com/1027323).
+std::string AddAdditionalInnerEapParams(const std::string& inner_eap) {
+  if (inner_eap.empty())
+    return std::string();
+  std::vector<base::StringPiece> params = base::SplitStringPiece(
+      inner_eap, " ", base::TRIM_WHITESPACE, base::SPLIT_WANT_NONEMPTY);
+  bool has_mschapv2_auth = false;
+  for (const auto& param : params) {
+    if (param == WPASupplicant::kFlagInnerEapAuthMSCHAPV2) {
+      has_mschapv2_auth = true;
+      break;
+    }
+  }
+
+  if (!has_mschapv2_auth)
+    return inner_eap;
+
+  return inner_eap + " " + WPASupplicant::kFlagInnerEapNoMSCHAPV2Retry;
+}
+
+}  // namespace
 
 namespace Logging {
 static auto kModuleLogScope = ScopeLogger::kService;
@@ -84,6 +115,7 @@ void EapCredentials::PopulateSupplicantProperties(
     }
   }
 
+  std::string updated_inner_eap = AddAdditionalInnerEapParams(inner_eap_);
   using KeyVal = std::pair<const char*, const char*>;
   vector<KeyVal> propertyvals = {
       // Authentication properties.
@@ -95,7 +127,8 @@ void EapCredentials::PopulateSupplicantProperties(
       KeyVal(WPASupplicant::kNetworkPropertyEapCaCert, ca_cert.c_str()),
       KeyVal(WPASupplicant::kNetworkPropertyEapCaCertId, ca_cert_id_.c_str()),
       KeyVal(WPASupplicant::kNetworkPropertyEapEap, eap_.c_str()),
-      KeyVal(WPASupplicant::kNetworkPropertyEapInnerEap, inner_eap_.c_str()),
+      KeyVal(WPASupplicant::kNetworkPropertyEapInnerEap,
+             updated_inner_eap.c_str()),
       KeyVal(WPASupplicant::kNetworkPropertyEapSubjectMatch,
              subject_match_.c_str()),
   };

@@ -149,6 +149,8 @@ class WPASupplicant {
 
   static const char kFlagDisableEapTLS1p1[];
   static const char kFlagDisableEapTLS1p2[];
+  static const char kFlagInnerEapAuthMSCHAPV2[];
+  static const char kFlagInnerEapNoMSCHAPV2Retry[];
 
   static const uint32_t kDefaultEngine;
   static const uint32_t kNetworkIeee80211wDisabled;
