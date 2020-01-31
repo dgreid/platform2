@@ -23,6 +23,7 @@
 #include <base/logging.h>
 #include <base/memory/ref_counted.h>
 #include <base/message_loop/message_loop.h>
+#include <base/optional.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_split.h>
 #include <base/strings/string_util.h>
@@ -102,14 +103,14 @@ constexpr base::TimeDelta kHangDetectionIntervalDev =
 constexpr base::TimeDelta kHangDetectionIntervalTest =
     base::TimeDelta::FromSeconds(5);
 
-// Enable further isolation of the user session (including the browser process
-// tree), beyond merely running as user 'chronos'.
-constexpr bool kIsolateUserSession = true;
-
 // Time to wait for children to exit gracefully before killing them
 // with a SIGABRT.
 constexpr int kKillTimeoutDefaultSeconds = 3;
 constexpr int kKillTimeoutLongSeconds = 12;
+
+// Non-root mount namespace to run user sessions in.
+// Currently only used for Guest sessions.
+constexpr char kChromeMountNsPath[] = "/run/namespaces/mnt_chrome";
 
 bool BootDeviceIsRotationalDisk() {
   char full_rootdev_path[PATH_MAX];
@@ -126,6 +127,16 @@ bool BootDeviceIsRotationalDisk() {
   if (!base::ReadFileToString(sysfs_path, &rotational_contents))
     PLOG(WARNING) << "Couldn't read from " << sysfs_path.value();
   return rotational_contents == "1";
+}
+
+// Enable further isolation of the user session (including the browser process
+// tree), beyond merely running as user 'chronos'.
+bool IsolateUserSession() {
+#if USE_USER_SESSION_ISOLATION
+  return true;
+#else
+  return false;
+#endif
 }
 }  // namespace
 
@@ -216,6 +227,7 @@ int main(int argc, char* argv[]) {
 
   // Job configuration.
   BrowserJob::Config config;
+  base::Optional<base::FilePath> ns_path;
   // TODO(crbug.com/188605, crbug.com/216789): Extend user session isolation and
   // make it stricter.
   // Back when the above bugs were filed, the interaction between
@@ -229,9 +241,14 @@ int main(int argc, char* argv[]) {
   // points. Blindly putting the user session (i.e. the Chrome browser process
   // tree) in a bunch of namespaces is bound to subtly break things.
   // Start shaving this yak by isolating Guest mode sessions, which don't
-  // support many of the above features. Put Guest mode process trees in a new
-  // mount namespace to test the waters.
-  config.new_mount_namespace_for_guest = kIsolateUserSession;
+  // support many of the above features. Put Guest mode process trees in a
+  // non-root mount namespace to test the waters.
+  if (IsolateUserSession()) {
+    // Instead of having Chrome unshare a new mount namespace on launch, have
+    // Chrome enter the mount namespace where the user data directory exists.
+    ns_path = base::FilePath(kChromeMountNsPath);
+    config.chrome_mount_ns_path = ns_path;
+  }
 
   // This job encapsulates the command specified on the command line, and the
   // runtime options for it.
@@ -245,7 +262,7 @@ int main(int argc, char* argv[]) {
   brillo_loop.SetAsCurrent();
 
   scoped_refptr<SessionManagerService> manager = new SessionManagerService(
-      std::move(browser_job), uid, kill_timeout, enable_hang_detection,
+      std::move(browser_job), uid, ns_path, kill_timeout, enable_hang_detection,
       hang_detection_interval, &metrics, &system);
 
   if (manager->Initialize()) {

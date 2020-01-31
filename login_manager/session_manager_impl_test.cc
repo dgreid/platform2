@@ -33,6 +33,7 @@
 #include <base/memory/ref_counted.h>
 #include <base/memory/weak_ptr.h>
 #include <base/message_loop/message_loop.h>
+#include <base/optional.h>
 #include <base/run_loop.h>
 #include <base/strings/string_util.h>
 #include <base/test/simple_test_tick_clock.h>
@@ -347,9 +348,9 @@ class SessionManagerImplTest : public ::testing::Test,
     arc_sideload_status_ = new MockArcSideloadStatus();
     impl_ = std::make_unique<SessionManagerImpl>(
         this /* delegate */, base::WrapUnique(init_controller_), bus_.get(),
-        &key_gen_, &state_key_generator_, &manager_, &metrics_, &nss_, &utils_,
-        &crossystem_, &vpd_process_, &owner_key_, &android_container_,
-        &install_attributes_reader_, powerd_proxy_.get(),
+        &key_gen_, &state_key_generator_, &manager_, &metrics_, &nss_,
+        base::nullopt, &utils_, &crossystem_, &vpd_process_, &owner_key_,
+        &android_container_, &install_attributes_reader_, powerd_proxy_.get(),
         system_clock_proxy_.get(), arc_sideload_status_);
     impl_->SetSystemClockLastSyncInfoRetryDelayForTesting(base::TimeDelta());
     impl_->SetUiLogSymlinkPathForTesting(log_symlink_);

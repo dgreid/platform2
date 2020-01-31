@@ -130,12 +130,14 @@ void SessionManagerService::TestApi::ScheduleChildExit(pid_t pid, int status) {
 SessionManagerService::SessionManagerService(
     std::unique_ptr<BrowserJobInterface> child_job,
     uid_t uid,
+    base::Optional<base::FilePath> ns_path,
     int kill_timeout,
     bool enable_browser_abort_on_hang,
     base::TimeDelta hang_detection_interval,
     LoginMetrics* metrics,
     SystemUtils* utils)
     : browser_(std::move(child_job)),
+      chrome_mount_ns_path_(ns_path),
       kill_timeout_(base::TimeDelta::FromSeconds(kill_timeout)),
       match_rule_(base::StringPrintf("type='method_call', interface='%s'",
                                      kSessionManagerInterface)),
@@ -223,9 +225,9 @@ bool SessionManagerService::Initialize() {
       std::make_unique<InitDaemonControllerImpl>(init_dbus_proxy), bus_,
       &key_gen_, &state_key_generator_,
       this /* manager, i.e. ProcessManagerServiceInterface */, login_metrics_,
-      nss_.get(), system_, &crossystem_, &vpd_process_, &owner_key_,
-      android_container_.get(), &install_attributes_reader_, powerd_dbus_proxy_,
-      system_clock_proxy, arc_sideload_status);
+      nss_.get(), chrome_mount_ns_path_, system_, &crossystem_, &vpd_process_,
+      &owner_key_, android_container_.get(), &install_attributes_reader_,
+      powerd_dbus_proxy_, system_clock_proxy, arc_sideload_status);
   if (!InitializeImpl())
     return false;
 

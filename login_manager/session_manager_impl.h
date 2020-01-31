@@ -138,6 +138,7 @@ class SessionManagerImpl
                      ProcessManagerServiceInterface* manager,
                      LoginMetrics* metrics,
                      NssUtil* nss,
+                     base::Optional<base::FilePath> ns_path,
                      SystemUtils* utils,
                      Crossystem* crossystem,
                      VpdProcess* vpd_process,
@@ -440,6 +441,7 @@ class SessionManagerImpl
   ProcessManagerServiceInterface* manager_;
   LoginMetrics* login_metrics_;
   NssUtil* nss_;
+  base::Optional<base::FilePath> chrome_mount_ns_path_;
   SystemUtils* system_;
   Crossystem* crossystem_;
   VpdProcess* vpd_process_;

@@ -17,6 +17,7 @@
 
 #include <base/command_line.h>
 #include <base/logging.h>
+#include <base/optional.h>
 #include <base/strings/string_util.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -95,7 +96,8 @@ void BrowserJobTest::SetUp() {
   argv_ =
       std::vector<std::string>(kArgv, kArgv + arraysize(BrowserJobTest::kArgv));
   job_.reset(new BrowserJob(
-      argv_, env_, &checker_, &metrics_, &utils_, BrowserJob::Config{false},
+      argv_, env_, &checker_, &metrics_, &utils_,
+      BrowserJob::Config{base::nullopt},
       std::make_unique<login_manager::Subprocess>(getuid(), &utils_)));
 }
 
@@ -219,7 +221,7 @@ TEST_F(BrowserJobTest, ShouldRunTest) {
 
 TEST_F(BrowserJobTest, NullFileCheckerTest) {
   BrowserJob job(argv_, env_, nullptr, &metrics_, &utils_,
-                 BrowserJob::Config{false},
+                 BrowserJob::Config{base::nullopt},
                  std::make_unique<login_manager::Subprocess>(1, &utils_));
   EXPECT_TRUE(job.ShouldRunBrowser());
 }
@@ -286,7 +288,7 @@ TEST_F(BrowserJobTest, StartStopSessionTest) {
 
 TEST_F(BrowserJobTest, StartStopMultiSessionTest) {
   BrowserJob job(argv_, env_, &checker_, &metrics_, &utils_,
-                 BrowserJob::Config{false},
+                 BrowserJob::Config{base::nullopt},
                  std::make_unique<login_manager::Subprocess>(1, &utils_));
   job.StartSession(kUser, kHash);
 
@@ -316,7 +318,7 @@ TEST_F(BrowserJobTest, StartStopSessionFromLoginTest) {
   std::vector<std::string> argv(
       kArgvWithLoginFlag, kArgvWithLoginFlag + arraysize(kArgvWithLoginFlag));
   BrowserJob job(argv, env_, &checker_, &metrics_, &utils_,
-                 BrowserJob::Config{false},
+                 BrowserJob::Config{base::nullopt},
                  std::make_unique<login_manager::Subprocess>(1, &utils_));
 
   job.StartSession(kUser, kHash);
@@ -365,7 +367,7 @@ TEST_F(BrowserJobTest, SetExtraArguments) {
 TEST_F(BrowserJobTest, ExportArgv) {
   std::vector<std::string> argv(kArgv, kArgv + arraysize(kArgv));
   BrowserJob job(argv, env_, &checker_, &metrics_, &utils_,
-                 BrowserJob::Config{false},
+                 BrowserJob::Config{base::nullopt},
                  std::make_unique<login_manager::Subprocess>(1, &utils_));
 
   const char* kExtraArgs[] = {"--ichi", "--ni", "--san"};
@@ -379,7 +381,7 @@ TEST_F(BrowserJobTest, ExportArgv) {
 TEST_F(BrowserJobTest, SetExtraEnvironmentVariables) {
   std::vector<std::string> argv(kArgv, kArgv + arraysize(kArgv));
   BrowserJob job(argv, {"A=a"}, &checker_, &metrics_, &utils_,
-                 BrowserJob::Config{false},
+                 BrowserJob::Config{base::nullopt},
                  std::make_unique<login_manager::Subprocess>(1, &utils_));
   job.SetExtraEnvironmentVariables({"B=b", "C="});
   EXPECT_EQ((std::vector<std::string>{"A=a", "B=b", "C="}),
@@ -405,7 +407,7 @@ TEST_F(BrowserJobTest, CombineVModuleArgs) {
         kMultipleVmoduleArgs,
         kMultipleVmoduleArgs + arraysize(kMultipleVmoduleArgs));
     BrowserJob job(argv, env_, &checker_, &metrics_, &utils_,
-                   BrowserJob::Config{false},
+                   BrowserJob::Config{base::nullopt},
                    std::make_unique<login_manager::Subprocess>(1, &utils_));
 
     const char* kCombinedVmodule =
@@ -427,7 +429,7 @@ TEST_F(BrowserJobTest, CombineVModuleArgs) {
                                   kNoVmoduleArgs + arraysize(kNoVmoduleArgs));
 
     BrowserJob job(argv, env_, &checker_, &metrics_, &utils_,
-                   BrowserJob::Config{false},
+                   BrowserJob::Config{base::nullopt},
                    std::make_unique<login_manager::Subprocess>(1, &utils_));
 
     auto job_argv = job.ExportArgv();
@@ -473,7 +475,7 @@ TEST_F(BrowserJobTest, CombineFeatureArgs) {
       kEnable3, kDisable3, kBlinkEnable3, kBlinkDisable3,
   };
   BrowserJob job(kArgv, env_, &checker_, &metrics_, &utils_,
-                 BrowserJob::Config{false},
+                 BrowserJob::Config{base::nullopt},
                  std::make_unique<login_manager::Subprocess>(1, &utils_));
 
   // --enable-features and --disable-features should be merged into args at the

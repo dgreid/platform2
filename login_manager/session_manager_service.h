@@ -13,6 +13,7 @@
 #include <base/files/file_path.h>
 #include <base/macros.h>
 #include <base/memory/ref_counted.h>
+#include <base/optional.h>
 #include <base/time/time.h>
 #include <brillo/asynchronous_signal_handler.h>
 #include <chromeos/dbus/service_constants.h>
@@ -119,6 +120,7 @@ class SessionManagerService
 
   SessionManagerService(std::unique_ptr<BrowserJobInterface> child_job,
                         uid_t uid,
+                        base::Optional<base::FilePath> ns_path,
                         int kill_timeout,
                         bool enable_browser_abort_on_hang,
                         base::TimeDelta hang_detection_interval,
@@ -229,6 +231,7 @@ class SessionManagerService
   void OnLongKillTimeoutEnabled(base::Optional<bool> enabled);
 
   std::unique_ptr<BrowserJobInterface> browser_;
+  base::Optional<base::FilePath> chrome_mount_ns_path_;
   base::TimeTicks last_browser_restart_time_;
   bool exit_on_child_done_ = false;
   const base::TimeDelta kill_timeout_;

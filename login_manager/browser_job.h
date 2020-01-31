@@ -19,6 +19,7 @@
 
 #include <base/files/file_path.h>
 #include <base/macros.h>
+#include <base/optional.h>
 #include <base/time/time.h>
 
 namespace login_manager {
@@ -95,8 +96,8 @@ class BrowserJob : public BrowserJobInterface {
   // a BrowserJob::Config object similarly covers various process types and
   // modes.
   struct Config {
-    // When in Guest mode put the browser process tree in a new mount namespace.
-    bool new_mount_namespace_for_guest = false;
+    // Put the browser process tree in the specified non-root mount namespace.
+    base::Optional<base::FilePath> chrome_mount_ns_path;
   };
 
   BrowserJob(const std::vector<std::string>& arguments,
