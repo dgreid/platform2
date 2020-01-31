@@ -161,6 +161,7 @@ namespace switches {
                                    "get_supported_key_policies",
                                    "lock_to_single_user_mount_until_reboot",
                                    "get_rsu_device_id",
+                                   "check_health",
                                    NULL};
   enum ActionEnum {
     ACTION_MOUNT_EX,
@@ -235,6 +236,7 @@ namespace switches {
     ACTION_GET_SUPPORTED_KEY_POLICIES,
     ACTION_LOCK_TO_SINGLE_USER_MOUNT_UNTIL_REBOOT,
     ACTION_GET_RSU_DEVICE_ID,
+    ACTION_CHECK_HEALTH,
   };
   static const char kUserSwitch[] = "user";
   static const char kPasswordSwitch[] = "password";
@@ -3022,6 +3024,19 @@ int main(int argc, char **argv) {
     }
     if (!reply.HasExtension(cryptohome::GetRsuDeviceIdReply::reply)) {
       printf("GetRsuDeviceIdReply missing.\n");
+      return 1;
+    }
+  } else if (!strcmp(switches::kActions[switches::ACTION_CHECK_HEALTH],
+                     action.c_str())) {
+    cryptohome::CheckHealthRequest request;
+    cryptohome::BaseReply reply;
+    if (!MakeProtoDBusCall("CheckHealth", DBUS_METHOD(check_health),
+                           DBUS_METHOD(check_health_async), cl, &proxy,
+                           request, &reply, true /* print_reply */)) {
+      return 1;
+    }
+    if (!reply.HasExtension(cryptohome::CheckHealthReply::reply)) {
+      printf("CheckHealthReply missing.\n");
       return 1;
     }
   } else {

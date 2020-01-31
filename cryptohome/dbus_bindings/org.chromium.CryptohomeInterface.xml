@@ -995,6 +995,7 @@
     <method name="CheckHealth">
       <annotation name="org.chromium.DBus.Method.Kind"
                   value="async"/>
+      <annotation name="org.freedesktop.DBus.GLib.Async" value="true"/>
       <arg type="ay" name="request" direction="in">
         <annotation name="org.chromium.DBus.Argument.ProtobufClass"
                     value="cryptohome::CheckHealthRequest" />
