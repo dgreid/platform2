@@ -52,9 +52,6 @@ const char kCollectChromeFile[] =
 const char kDefaultLogConfig[] = "/etc/crash_reporter_logs.conf";
 const char kDefaultUserName[] = "chronos";
 const char kShellPath[] = "/bin/sh";
-const char kUploadVarPrefix[] = "upload_var_";
-const char kUploadTextPrefix[] = "upload_text_";
-const char kUploadFilePrefix[] = "upload_file_";
 const char kCollectorNameKey[] = "collector";
 const char kCrashLoopModeKey[] = "crash_loop_mode";
 const char kEarlyCrashKey[] = "is_early_boot";
@@ -1117,14 +1114,14 @@ void CrashCollector::AddCrashMetaUploadFile(const std::string& key,
       LOG(ERROR) << "Upload files must be basenames only: " << path;
       return;
     }
-    AddCrashMetaData(kUploadFilePrefix + key, path);
+    AddCrashMetaData(constants::kUploadFilePrefix + key, path);
   }
 }
 
 void CrashCollector::AddCrashMetaUploadData(const std::string& key,
                                             const std::string& value) {
   if (!value.empty())
-    AddCrashMetaData(kUploadVarPrefix + key, value);
+    AddCrashMetaData(constants::kUploadVarPrefix + key, value);
 }
 
 void CrashCollector::AddCrashMetaUploadText(const std::string& key,
@@ -1134,7 +1131,7 @@ void CrashCollector::AddCrashMetaUploadText(const std::string& key,
       LOG(ERROR) << "Upload files must be basenames only: " << path;
       return;
     }
-    AddCrashMetaData(kUploadTextPrefix + key, path);
+    AddCrashMetaData(constants::kUploadTextPrefix + key, path);
   }
 }
 

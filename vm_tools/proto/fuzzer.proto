@@ -7,6 +7,7 @@ package vm_tools.container;
 import "common.proto";
 import "container_host.proto";
 import "tremplin.proto";
+import "vm_crash.proto";
 
 // A proto representation of a grpc::Status
 
@@ -17,7 +18,7 @@ import "tremplin.proto";
 // This is used for fuzz testing; we get some fuzzed examples of this message
 // and then call the correct rpc handler based on which of the oneof is set.
 message ContainerListenerFuzzerSingleAction {
-  // Next id: 42
+  // Next id: 43
   // Skip [100-108]
   oneof input {
     // Calls to the ContainerListener service.
@@ -34,6 +35,7 @@ message ContainerListenerFuzzerSingleAction {
 
     // Calls to the CrashListener service.
     EmptyMessage metrics_consent_request = 33;
+    vm_tools.cicerone.CrashReport send_crash_report_request = 42;
 
     // Calls to the TremplinListener service.
     vm_tools.tremplin.TremplinStartupInfo tremplin_startup_info = 100;

@@ -4,9 +4,12 @@
 
 #include "crash-reporter/vm_support_proper.h"
 
+#include <base/files/file.h>
 #include <base/files/file_path.h>
+#include <base/files/file_util.h>
 #include <base/logging.h>
 #include <base/strings/stringprintf.h>
+#include <brillo/key_value_store.h>
 #include <chromeos/constants/vm_tools.h>
 #include <grpcpp/grpcpp.h>
 
@@ -15,6 +18,7 @@
 
 #include <linux/vm_sockets.h>
 
+#include "crash-reporter/constants.h"
 #include "crash-reporter/paths.h"
 #include "crash-reporter/user_collector.h"
 #include "crash-reporter/util.h"
@@ -28,6 +32,19 @@ constexpr char kContainerOsReleasePath[] =
     "os-release";
 
 }  // namespace
+
+class ScopedFileDeleter {
+ public:
+  explicit ScopedFileDeleter(base::FilePath path) : path_(path) {}
+  ~ScopedFileDeleter() {
+    if (!base::DeleteFile(path_, false)) {
+      LOG(ERROR) << "Failed to delete file " << path_.value();
+    }
+  }
+
+ private:
+  const base::FilePath path_;
+};
 
 VmSupportProper::VmSupportProper() {
   std::string addr = base::StringPrintf("vsock:%u:%u", VMADDR_CID_HOST,
@@ -57,9 +74,62 @@ void VmSupportProper::AddMetadata(UserCollector* collector) {
   collector->AddCrashMetaData("upload_var_vm_os_release", value);
 }
 
+void VmSupportProper::ProcessFileData(
+    const base::FilePath& crash_meta_path,
+    const brillo::KeyValueStore& metadata,
+    const std::string& key,
+    vm_tools::cicerone::CrashReport* crash_report) {
+  std::string file_name;
+  metadata.GetString(key, &file_name);
+  base::FilePath path = crash_meta_path.DirName().Append(file_name);
+  ScopedFileDeleter file_deleter(path);
+
+  std::string* dest = nullptr;
+  if (key == "payload") {
+    dest = crash_report->mutable_minidump();
+  } else if (key ==
+             std::string(constants::kUploadTextPrefix) + "process_tree") {
+    dest = crash_report->mutable_process_tree();
+  }
+  if (dest && !base::ReadFileToString(path, dest)) {
+    LOG(ERROR) << "Failed to read file " << file_name;
+  }
+}
+
 void VmSupportProper::FinishCrash(const base::FilePath& crash_meta_path) {
-  LOG(INFO) << "A program crashed in the VM";
-  // TODO(hollingum): implement me.
+  // We send crash reports outside the VM via GRPC instead of storing them on
+  // disk, so we delete files as we finish processing them.
+  ScopedFileDeleter metadata_deleter(crash_meta_path);
+  brillo::KeyValueStore metadata;
+  if (!metadata.Load(crash_meta_path)) {
+    LOG(ERROR) << "Failed to read metadata file";
+    return;
+  }
+
+  grpc::ClientContext ctx;
+  vm_tools::cicerone::CrashReport crash_report;
+  vm_tools::EmptyMessage response;
+  for (const auto& key : metadata.GetKeys()) {
+    // These keys store file names, not raw values, which need to be read into
+    // the crash report protobuf and deleted.
+    if (base::StartsWith(key, constants::kUploadFilePrefix,
+                         base::CompareCase::SENSITIVE) ||
+        base::StartsWith(key, constants::kUploadTextPrefix,
+                         base::CompareCase::SENSITIVE) ||
+        key == "payload") {
+      ProcessFileData(crash_meta_path, metadata, key, &crash_report);
+    } else {
+      std::string value;
+      metadata.GetString(key, &value);
+      (*crash_report.mutable_metadata())[key] = value;
+    }
+  }
+
+  grpc::Status status = stub_->SendCrashReport(&ctx, crash_report, &response);
+  if (!status.ok()) {
+    LOG(ERROR) << "Failed to send crash report to cicerone: "
+               << status.error_code() << ", " << status.error_message();
+  }
 }
 
 bool VmSupportProper::GetMetricsConsent() {

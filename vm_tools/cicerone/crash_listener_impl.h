@@ -24,6 +24,10 @@ class CrashListenerImpl final : public CrashListener::Service {
                                    const EmptyMessage* request,
                                    MetricsConsentResponse* response) override;
 
+  grpc::Status SendCrashReport(grpc::ServerContext* ctx,
+                               const CrashReport* crash_report,
+                               EmptyMessage* response) override;
+
  private:
   MetricsLibrary metrics_{};
 };

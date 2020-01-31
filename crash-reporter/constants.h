@@ -9,6 +9,10 @@ namespace constants {
 
 constexpr char kCrashGroupName[] = "crash-access";
 
-}
+const char kUploadVarPrefix[] = "upload_var_";
+const char kUploadTextPrefix[] = "upload_text_";
+const char kUploadFilePrefix[] = "upload_file_";
+
+}  // namespace constants
 
 #endif  // CRASH_REPORTER_CONSTANTS_H_

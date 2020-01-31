@@ -15,5 +15,13 @@ grpc::Status CrashListenerImpl::CheckMetricsConsent(
   return grpc::Status::OK;
 }
 
+grpc::Status CrashListenerImpl::SendCrashReport(grpc::ServerContext* ctx,
+                                                const CrashReport* crash_report,
+                                                EmptyMessage* response) {
+  LOG(INFO) << "A program crashed in the VM";
+
+  return grpc::Status::OK;
+}
+
 }  // namespace cicerone
 }  // namespace vm_tools

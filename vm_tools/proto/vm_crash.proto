@@ -15,9 +15,21 @@ message MetricsConsentResponse {
   bool consent_granted = 1;
 }
 
+message CrashReport {
+  // Key/value pairs for the metadata file.
+  map<string, string> metadata = 1;
+
+  // The binary contents of the minidump to upload.
+  bytes minidump = 2;
+
+  // Data on the process tree collected inside the VM.
+  string process_tree = 3;
+}
+
 // Service that is notified of events from tremplin.
 service CrashListener {
   rpc CheckMetricsConsent(EmptyMessage) returns (MetricsConsentResponse);
+  rpc SendCrashReport(CrashReport) returns (EmptyMessage);
 
   // If adding more rpc's, please update ContainerListenerFuzzerSingleAction as
   // well.

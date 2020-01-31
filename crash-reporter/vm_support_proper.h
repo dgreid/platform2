@@ -12,6 +12,10 @@
 
 #include <vm_protos/proto_bindings/vm_crash.grpc.pb.h>
 
+namespace brillo {
+class KeyValueStore;
+}
+
 class VmSupportProper : public VmSupport {
  public:
   VmSupportProper();
@@ -25,6 +29,11 @@ class VmSupportProper : public VmSupport {
   bool ShouldDump(pid_t pid, std::string* out_reason) override;
 
  private:
+  void ProcessFileData(const base::FilePath& crash_meta_path,
+                       const brillo::KeyValueStore& metadata,
+                       const std::string& key,
+                       vm_tools::cicerone::CrashReport* crash_report);
+
   std::unique_ptr<vm_tools::cicerone::CrashListener::Stub> stub_;
 };
 
