@@ -61,20 +61,24 @@ class UsbEndpointInterface {
   virtual bool IsConnected() const = 0;
 
   // Sends the data to USB endpoint and then reads the result back.
-  // Returns the byte number of the received data. -1 if the process fails.
+  // Returns the byte number of the received data. -1 if the process fails, or
+  // if `allow_less` is false and the received data does not match outlen.
   virtual int Transfer(const void* outbuf,
                        int outlen,
                        void* inbuf,
                        int inlen,
-                       bool allow_less,
+                       bool allow_less = false,
                        unsigned int timeout_ms = 0) = 0;
   // Sends the data to USB endpoint.
-  // Returns the byte number of the received data.
-  virtual int Send(const void* outbuf, int outlen, unsigned int timeout_ms = 0)
-      = 0;
+  // Returns the byte number of the received data. -1 if the process fails, or
+  // if `allow_less` is false and the received data does not match outlen.
+  virtual int Send(const void* outbuf,
+                   int outlen,
+                   bool allow_less = false,
+                   unsigned int timeout_ms = 0) = 0;
   // Receives the data from USB endpoint.
-  // Returns the byte number of the received data. -1 if the amount of received
-  // data is not as required and `allow_less` argument is false.
+  // Returns the byte number of the received data. -1 if the process fails, or
+  // if `allow_less` is false and the received data does not match outlen.
   virtual int Receive(void* inbuf,
                       int inlen,
                       bool allow_less = false,
@@ -102,10 +106,12 @@ class UsbEndpoint : public UsbEndpointInterface {
                int outlen,
                void* inbuf,
                int inlen,
-               bool allow_less,
+               bool allow_less = false,
                unsigned int timeout_ms = 0) override;
-  int Send(const void* outbuf, int outlen, unsigned int timeout_ms = 0)
-      override;
+  int Send(const void* outbuf,
+           int outlen,
+           bool allow_less = false,
+           unsigned int timeout_ms = 0) override;
   int Receive(void* inbuf,
               int inlen,
               bool allow_less = false,

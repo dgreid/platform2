@@ -41,7 +41,7 @@ class MockFirmwareUpdater : public FirmwareUpdaterInterface {
               (override));
   MOCK_METHOD(bool,
               SendSubcommandReceiveResponse,
-              (UpdateExtraCommand, const std::string&, void*, size_t),
+              (UpdateExtraCommand, const std::string&, void*, size_t, bool),
               (override));
   MOCK_METHOD(bool, TransferImage, (SectionName), (override));
   MOCK_METHOD(bool, TransferTouchpadFirmware, (uint32_t, size_t), (override));
@@ -55,6 +55,7 @@ class MockFirmwareUpdater : public FirmwareUpdaterInterface {
   MOCK_METHOD(bool, IsRollbackLocked, (), (const, override));
   MOCK_METHOD(bool, UnlockRollback, (), (override));
   MOCK_METHOD(std::string, GetEcImageVersion, (), (const, override));
+  MOCK_METHOD(std::string, ReadConsole, (), (override));
 };
 
 }  // namespace hammerd

@@ -827,7 +827,8 @@ TEST_F(HammerUpdaterPostRWTest, Run_SkipUpdateWhenKeyChanged) {
     EXPECT_CALL(
         *fw_updater_,
         SendSubcommandReceiveResponse(
-            UpdateExtraCommand::kTouchpadInfo, "", _, sizeof(TouchpadInfo)))
+            UpdateExtraCommand::kTouchpadInfo, "", _, sizeof(TouchpadInfo),
+            false))
         .WillOnce(WriteResponse(static_cast<void *>(&response_)));
     EXPECT_CALL(*fw_updater_, TransferTouchpadFirmware(_, _))
         .Times(0);  // Version matched, skip updating.
@@ -893,7 +894,8 @@ TEST_F(HammerUpdaterPostRWTest, Run_KeyVersionUpdate) {
     EXPECT_CALL(
         *fw_updater_,
         SendSubcommandReceiveResponse(
-            UpdateExtraCommand::kTouchpadInfo, "", _, sizeof(TouchpadInfo)))
+            UpdateExtraCommand::kTouchpadInfo, "", _, sizeof(TouchpadInfo),
+            false))
         .WillOnce(WriteResponse(static_cast<void *>(&response_)));
     EXPECT_CALL(*fw_updater_, TransferTouchpadFirmware(_, _))
         .Times(0);  // Version matched, skip updating.
@@ -911,7 +913,7 @@ TEST_F(HammerUpdaterPostRWTest, Run_KeyVersionUpdate) {
 TEST_F(HammerUpdaterPostRWTest, Run_FailToGetTouchpadInfo) {
   EXPECT_CALL(*fw_updater_,
               SendSubcommandReceiveResponse(UpdateExtraCommand::kTouchpadInfo,
-                                            "", _, sizeof(TouchpadInfo)))
+                                            "", _, sizeof(TouchpadInfo), false))
       .WillOnce(Return(false));
 
   ASSERT_EQ(hammer_updater_->RunTouchpadUpdater(),
@@ -924,7 +926,7 @@ TEST_F(HammerUpdaterPostRWTest, Run_ICSizeMismatchAndStop) {
   response_.fw_size += 9487;
   EXPECT_CALL(*fw_updater_,
               SendSubcommandReceiveResponse(UpdateExtraCommand::kTouchpadInfo,
-                                            "", _, sizeof(TouchpadInfo)))
+                                            "", _, sizeof(TouchpadInfo), false))
       .WillOnce(WriteResponse(reinterpret_cast<void *>(&response_)));
 
   ASSERT_EQ(hammer_updater_->RunTouchpadUpdater(),
@@ -938,7 +940,7 @@ TEST_F(HammerUpdaterPostRWTest, Run_HashMismatchAndStop) {
          SHA256_DIGEST_LENGTH);
   EXPECT_CALL(*fw_updater_,
               SendSubcommandReceiveResponse(UpdateExtraCommand::kTouchpadInfo,
-                                            "", _, sizeof(TouchpadInfo)))
+                                            "", _, sizeof(TouchpadInfo), false))
       .WillOnce(WriteResponse(static_cast<void *>(&response_)));
 
   ASSERT_EQ(hammer_updater_->RunTouchpadUpdater(),
@@ -950,7 +952,7 @@ TEST_F(HammerUpdaterPostRWTest, Run_FailToTransferFirmware) {
   response_.elan.fw_version -= 1;  // Make local fw_ver is newer than base.
   EXPECT_CALL(*fw_updater_,
               SendSubcommandReceiveResponse(UpdateExtraCommand::kTouchpadInfo,
-                                            "", _, sizeof(TouchpadInfo)))
+                                            "", _, sizeof(TouchpadInfo), false))
       .WillOnce(WriteResponse(static_cast<void *>(&response_)));
   EXPECT_CALL(*fw_updater_, TransferTouchpadFirmware(_, _))
       .WillOnce(Return(false));
@@ -975,7 +977,8 @@ TEST_F(HammerUpdaterPostRWTest, Run_UpdateTouchpadOnBoot) {
     EXPECT_CALL(
         *fw_updater_,
         SendSubcommandReceiveResponse(
-            UpdateExtraCommand::kTouchpadInfo, "", _, sizeof(TouchpadInfo)))
+            UpdateExtraCommand::kTouchpadInfo, "", _, sizeof(TouchpadInfo),
+            false))
         .WillOnce(WriteResponse(static_cast<void *>(&response_)));
     EXPECT_CALL(*dbus_wrapper_, SendSignal(kBaseFirmwareUpdateStartedSignal));
     EXPECT_CALL(*fw_updater_, TransferTouchpadFirmware(_, _))

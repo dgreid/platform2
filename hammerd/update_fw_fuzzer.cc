@@ -44,7 +44,8 @@ class FuzzedUsbEndpoint : public UsbEndpointInterface {
     return Receive(inbuf, inlen, allow_less, timeout_ms);
   }
 
-  int Send(const void* outbuf, int outlen, unsigned int timeout_ms) override {
+  int Send(const void* outbuf, int outlen, bool allow_less,
+           unsigned int timeout_ms) override {
     // Just ignore
     return 0;
   }

@@ -42,6 +42,10 @@ const char* ToString(UpdateExtraCommand subcommand) {
       return "PairChallenge";
     case UpdateExtraCommand::kTouchpadInfo:
       return "TouchpadInfo";
+    case UpdateExtraCommand::kConsoleReadInit:
+      return "ConsoleReadInit";
+    case UpdateExtraCommand::kConsoleReadNext:
+      return "ConsoleReadNext";
     default:
       return "UNKNOWN_COMMAND";
   }
@@ -471,7 +475,8 @@ bool FirmwareUpdater::SendSubcommandReceiveResponse(
     UpdateExtraCommand subcommand,
     const std::string& cmd_body,
     void* resp,
-    size_t resp_size) {
+    size_t resp_size,
+    bool allow_less) {
   LOG(INFO) << ">>> SendSubcommand: " << ToString(subcommand);
 
   uint16_t subcommand_value = static_cast<uint16_t>(subcommand);
@@ -495,11 +500,11 @@ bool FirmwareUpdater::SendSubcommandReceiveResponse(
   if (subcommand == UpdateExtraCommand::kImmediateReset) {
     // When sending reset command, we won't get the response. Therefore just
     // check the Send action is successful.
-    int sent = endpoint_->Send(ufh.get(), usb_msg_size, 0);
+    int sent = endpoint_->Send(ufh.get(), usb_msg_size, false, 0);
     return (sent == usb_msg_size);
   }
   int received =
-      endpoint_->Transfer(ufh.get(), usb_msg_size, resp, resp_size, false);
+      endpoint_->Transfer(ufh.get(), usb_msg_size, resp, resp_size, allow_less);
   // The first byte of the response is the status of the subcommand.
   LOG(INFO) << base::StringPrintf("Status of subcommand: %d",
                                   *(reinterpret_cast<uint8_t*>(resp)));
@@ -676,6 +681,38 @@ bool FirmwareUpdater::TransferBlock(UpdateFrameHeader* ufh,
 
 std::string FirmwareUpdater::GetEcImageVersion() const {
   return sections_[0].version;
+}
+
+std::string FirmwareUpdater::ReadConsole() {
+  std::string ret;
+  constexpr size_t CHUNK_SIZE = 64;
+  size_t response_size = 1;
+  char response[CHUNK_SIZE] = { '\0' };
+  const std::string next_payload = "\1";
+  bool cmd_ret;
+
+  cmd_ret = SendSubcommandReceiveResponse(
+      UpdateExtraCommand::kConsoleReadInit, "",
+      reinterpret_cast<void *>(response), response_size);
+  if (!cmd_ret) {
+    LOG(ERROR) << "Failed to init before reading console.";
+    return ret;
+  }
+
+  while (true) {
+    response_size = CHUNK_SIZE;
+    // Enable allow_less because response size can vary.
+    cmd_ret = SendSubcommandReceiveResponse(
+        UpdateExtraCommand::kConsoleReadNext, next_payload,
+        reinterpret_cast<void *>(response), response_size, true);
+    if (response[0] == 0)
+      break;
+
+    response[response_size - 1] = '\0';
+    ret.append(response);
+  }
+
+  return ret;
 }
 
 const FirstResponsePdu* FirmwareUpdater::GetFirstResponsePdu() const {

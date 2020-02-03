@@ -76,6 +76,9 @@ enum class UpdateExtraCommand : uint16_t {
   kInjectEntropy = 5,
   kPairChallenge = 6,
   kTouchpadInfo = 7,
+  kTouchpadDebug = 8,
+  kConsoleReadInit = 9,
+  kConsoleReadNext = 10,
   kMaxValue = kTouchpadInfo
 };
 const char* ToString(UpdateExtraCommand subcommand);
@@ -274,7 +277,8 @@ class FirmwareUpdaterInterface {
   virtual bool SendSubcommandReceiveResponse(UpdateExtraCommand subcommand,
                                              const std::string& cmd_body,
                                              void* resp,
-                                             size_t resp_size) = 0;
+                                             size_t resp_size,
+                                             bool allow_less = false) = 0;
 
   // Transfers the image to the target section.
   virtual bool TransferImage(SectionName section_name) = 0;
@@ -318,6 +322,8 @@ class FirmwareUpdaterInterface {
   virtual bool UnlockRollback() = 0;
 
   virtual std::string GetEcImageVersion() const = 0;
+
+  virtual std::string ReadConsole() = 0;
 };
 
 // Implement the core logic of updating firmware.
@@ -345,7 +351,8 @@ class FirmwareUpdater : public FirmwareUpdaterInterface {
   bool SendSubcommandReceiveResponse(UpdateExtraCommand subcommand,
                                      const std::string& cmd_body,
                                      void* resp,
-                                     size_t resp_size) override;
+                                     size_t resp_size,
+                                     bool allow_less = false) override;
   bool TransferImage(SectionName section_name) override;
   bool TransferTouchpadFirmware(uint32_t section_addr,
                                 size_t data_len) override;
@@ -361,6 +368,7 @@ class FirmwareUpdater : public FirmwareUpdaterInterface {
   bool UnlockRollback() override;
 
   std::string GetEcImageVersion() const override;
+  std::string ReadConsole() override;
   const FirstResponsePdu* GetFirstResponsePdu() const;
   std::string GetSectionVersion(SectionName section_name) const;
 

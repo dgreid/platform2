@@ -121,7 +121,8 @@ TEST_F(PairTest, ChallengePassed) {
               SendSubcommandReceiveResponse(UpdateExtraCommand::kPairChallenge,
                                             request_payload_,
                                             _,
-                                            sizeof(PairChallengeResponse)))
+                                            sizeof(PairChallengeResponse),
+                                            false))
       .WillOnce(SetChallengeResponse(EcResponseStatus::kSuccess,
                                      tv_.bob_public_,
                                      tv_.authenticator_,
@@ -140,7 +141,8 @@ TEST_F(PairTest, ChallengeFailed) {
               SendSubcommandReceiveResponse(UpdateExtraCommand::kPairChallenge,
                                             request_payload_,
                                             _,
-                                            sizeof(PairChallengeResponse)))
+                                            sizeof(PairChallengeResponse),
+                                            false))
       .WillOnce(SetChallengeResponse(EcResponseStatus::kSuccess,
                                      tv_.alice_public_,
                                      tv_.authenticator_,
@@ -156,7 +158,8 @@ TEST_F(PairTest, ChallengeNeedInjectEntropy) {
               SendSubcommandReceiveResponse(UpdateExtraCommand::kPairChallenge,
                                             request_payload_,
                                             _,
-                                            sizeof(PairChallengeResponse)))
+                                            sizeof(PairChallengeResponse),
+                                            false))
       .WillOnce(SetChallengeResponse(EcResponseStatus::kUnavailable,
                                      std::vector<uint8_t>(),
                                      std::vector<uint8_t>(),
@@ -174,7 +177,8 @@ TEST_F(PairTest, UsbDisconnection) {
               SendSubcommandReceiveResponse(UpdateExtraCommand::kPairChallenge,
                                             request_payload_,
                                             _,
-                                            sizeof(PairChallengeResponse)))
+                                            sizeof(PairChallengeResponse),
+                                            false))
       .WillOnce(SetChallengeResponse(EcResponseStatus::kInvalidParam,
                                      std::vector<uint8_t>(),
                                      std::vector<uint8_t>(),
@@ -191,7 +195,8 @@ TEST_F(PairTest, ChallengeUnknownError) {
               SendSubcommandReceiveResponse(UpdateExtraCommand::kPairChallenge,
                                             request_payload_,
                                             _,
-                                            sizeof(PairChallengeResponse)))
+                                            sizeof(PairChallengeResponse),
+                                            false))
       .WillOnce(SetChallengeResponse(EcResponseStatus::kInvalidParam,
                                      std::vector<uint8_t>(),
                                      std::vector<uint8_t>(),

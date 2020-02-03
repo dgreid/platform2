@@ -6,6 +6,7 @@
 
 #include <stdlib.h>
 
+#include <iostream>
 #include <string>
 
 #include <base/files/file_path.h>
@@ -63,6 +64,9 @@ int main(int argc, const char* argv[]) {
                 "      Update as long as the firmware is mismatched.\n"
                 "    always:\n"
                 "      Update anyways, regardless of version");
+  DEFINE_bool(get_console_log, false,
+              "Append detachable base EC console log to /var/log/hammerd.log,\n"
+              "and exit immediately without performing any update.");
   brillo::FlagHelper::Init(argc, argv, "Hammer EC firmware updater daemon");
   brillo::InitLog(brillo::kLogToSyslog | brillo::kLogHeader |
                   brillo::kLogToStderrIfTty);
@@ -78,6 +82,33 @@ int main(int argc, const char* argv[]) {
       FLAGS_usb_bus < 0 || FLAGS_usb_port.empty()) {
     LOG(ERROR) << "Must specify USB vendor/product ID and bus/port number.";
     return static_cast<int>(ExitStatus::kNeedUsbInfo);
+  }
+
+  if (FLAGS_get_console_log) {
+    LOG(INFO) << "Getting EC console log. FW update will not be performed.";
+    std::unique_ptr<hammerd::FirmwareUpdaterInterface> fw_updater =
+      std::make_unique<hammerd::FirmwareUpdater>(
+          std::make_unique<hammerd::UsbEndpoint>(FLAGS_vendor_id,
+                                                 FLAGS_product_id,
+                                                 FLAGS_usb_bus,
+                                                 FLAGS_usb_port));
+    hammerd::UsbConnectStatus connect_status = fw_updater->TryConnectUsb();
+    if (connect_status != hammerd::UsbConnectStatus::kSuccess) {
+      LOG(ERROR) << "Failed to connect USB.";
+      fw_updater->CloseUsb();
+      return static_cast<int>(ExitStatus::kConnectionError);
+    }
+
+    std::string response = fw_updater->ReadConsole();
+    fw_updater->CloseUsb();
+    if (response.size() > 0) {
+      LOG(INFO) << "Console log is:\n" << response << std::endl;
+      std::cout << response << std::endl;
+    } else {
+      LOG(WARNING) << "Failed to read console log, or console log is empty.";
+    }
+
+    return static_cast<int>(ExitStatus::kSuccess);
   }
 
   std::string ec_image;
@@ -119,7 +150,8 @@ int main(int argc, const char* argv[]) {
   hammerd::HammerUpdater updater(
       ec_image, touchpad_image, touchpad_product_id, touchpad_fw_ver,
       FLAGS_vendor_id, FLAGS_product_id,
-      FLAGS_usb_bus, FLAGS_usb_port, FLAGS_at_boot, update_condition);
+      FLAGS_usb_bus, FLAGS_usb_port, FLAGS_at_boot,
+      update_condition);
 
   updater.SetInjectEntropyFlag(FLAGS_force_inject_entropy);
 

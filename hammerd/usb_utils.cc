@@ -211,7 +211,7 @@ int UsbEndpoint::Transfer(const void* outbuf,
                           int inlen,
                           bool allow_less,
                           unsigned int timeout_ms) {
-  if (Send(outbuf, outlen, timeout_ms) != outlen) {
+  if (Send(outbuf, outlen, allow_less, timeout_ms) != outlen) {
     return kError;
   }
   if (inlen == 0) {
@@ -220,12 +220,15 @@ int UsbEndpoint::Transfer(const void* outbuf,
   return Receive(inbuf, inlen, allow_less, timeout_ms);
 }
 
-int UsbEndpoint::Send(const void* outbuf, int outlen, unsigned int timeout_ms) {
+int UsbEndpoint::Send(const void* outbuf,
+                      int outlen,
+                      bool allow_less,
+                      unsigned int timeout_ms) {
   // BulkTransfer() does not modify the buffer while using kUsbEndpointOut
   // direction mask.
   int actual = BulkTransfer(
       const_cast<void*>(outbuf), kUsbEndpointOut, outlen, timeout_ms);
-  if (actual != outlen) {
+  if (!allow_less && actual != outlen) {
     LOG(ERROR) << "Failed to send the complete data.";
   }
   return actual;
@@ -236,7 +239,7 @@ int UsbEndpoint::Receive(void* inbuf,
                          bool allow_less,
                          unsigned int timeout_ms) {
   int actual = BulkTransfer(inbuf, kUsbEndpointIn, inlen, timeout_ms);
-  if ((actual != inlen) && !allow_less) {
+  if (!allow_less && actual != inlen) {
     LOG(ERROR) << "Failed to receive the complete data.";
     return kError;
   }

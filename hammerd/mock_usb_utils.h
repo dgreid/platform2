@@ -35,7 +35,7 @@ class MockUsbEndpoint : public UsbEndpointInterface {
   int Transfer(const void* outbuf, int outlen, void* inbuf, int inlen,
                bool allow_less, unsigned int timeout_ms) override {
     constexpr int kError = -1;
-    if (Send(outbuf, outlen, timeout_ms) != outlen) {
+    if (Send(outbuf, outlen, allow_less, timeout_ms) != outlen) {
       return kError;
     }
     if (inlen == 0) {
@@ -43,7 +43,8 @@ class MockUsbEndpoint : public UsbEndpointInterface {
     }
     return Receive(inbuf, inlen, allow_less, timeout_ms);
   }
-  int Send(const void* outbuf, int outlen, unsigned int timeout_ms) override {
+  int Send(const void* outbuf, int outlen, bool allow_less,
+           unsigned int timeout_ms) override {
     // We only care about the value of the output buffer.
     auto out_ptr = reinterpret_cast<const uint8_t*>(outbuf);
     std::vector<uint8_t> out(out_ptr, out_ptr + outlen);
