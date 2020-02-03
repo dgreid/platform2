@@ -172,7 +172,7 @@ class RegionTest(unittest.TestCase):
     output = StringIO.StringIO()
     regions.main(['--format', 'yaml'], output)
     data = yaml.load(output.getvalue())
-    self.assertEquals(
+    self.assertEqual(
         {'keyboards': ['xkb:us::eng'],
          'keyboard_mechanical_layout': 'ANSI',
          'locales': ['en-US'],
@@ -184,7 +184,7 @@ class RegionTest(unittest.TestCase):
 
   def testFieldsDict(self):
     # 'description' and 'notes' should be missing.
-    self.assertEquals(
+    self.assertEqual(
         {'keyboards': ['xkb:b::b'],
          'keyboard_mechanical_layout': 'e',
          'description': 'description',
@@ -201,7 +201,7 @@ class RegionTest(unittest.TestCase):
     region_list = [regions.Region('aa', 'xkb:b::b', 'c', 'd', 'e')
                    for _ in range(2)]
     # It's OK.
-    self.assertEquals(
+    self.assertEqual(
         {'aa': region_list[0]}, regions.ConsolidateRegions(region_list))
 
     # Modify the second copy.
