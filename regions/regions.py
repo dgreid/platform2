@@ -1263,12 +1263,12 @@ def main(args=sys.argv[1:], out=None):
 
     # Calculate maximum length of each column.
     max_lengths = []
-    for column_no in xrange(num_columns):
+    for column_no in range(num_columns):
       max_lengths.append(max(len(line[column_no]) for line in lines))
 
     # Print each line, padding as necessary to the max column length.
     for line in lines:
-      for column_no in xrange(num_columns):
+      for column_no in range(num_columns):
         out.write(line[column_no].ljust(max_lengths[column_no] + 2))
       out.write('\n')
   else:
