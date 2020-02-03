@@ -307,6 +307,16 @@ class Service final {
                        bool* result,
                        base::WaitableEvent* event);
 
+  // Gets the VirtualMachine that corresponds to a container at |cid|
+  // or the |vm_token| for the VM itself and sets |vm_out| to the
+  // VirtualMachine, |owner_id_out| to the owner id of the VM, and |name_out| to
+  // the name of the VM. Returns false if no such mapping exists.
+  bool GetVirtualMachineForCidOrToken(const uint32_t cid,
+                                      const std::string& vm_token,
+                                      VirtualMachine** vm_out,
+                                      std::string* owner_id_out,
+                                      std::string* name_out);
+
  private:
   explicit Service(base::Closure quit_closure, scoped_refptr<dbus::Bus> bus);
 
@@ -420,16 +430,6 @@ class Service final {
   // Handles a request to cancel an ongoing container upgrade.
   std::unique_ptr<dbus::Response> CancelUpgradeContainer(
       dbus::MethodCall* method_call);
-
-  // Gets the VirtualMachine that corresponds to a container at |cid|
-  // or the |vm_token| for the VM itself and sets |vm_out| to the
-  // VirtualMachine, |owner_id_out| to the owner id of the VM, and |name_out| to
-  // the name of the VM. Returns false if no such mapping exists.
-  bool GetVirtualMachineForCidOrToken(const uint32_t cid,
-                                      const std::string& vm_token,
-                                      VirtualMachine** vm_out,
-                                      std::string* owner_id_out,
-                                      std::string* name_out);
 
   // Gets the container's SSH keys from concierge.
   bool GetContainerSshKeys(const std::string& owner_id,

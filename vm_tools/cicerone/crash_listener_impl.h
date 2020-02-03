@@ -5,6 +5,12 @@
 #ifndef VM_TOOLS_CICERONE_CRASH_LISTENER_IMPL_H_
 #define VM_TOOLS_CICERONE_CRASH_LISTENER_IMPL_H_
 
+#include <string>
+
+#include <base/memory/weak_ptr.h>
+#include <base/optional.h>
+#include <base/sequenced_task_runner.h>
+#include <base/synchronization/waitable_event.h>
 #include <grpcpp/grpcpp.h>
 #include <vm_protos/proto_bindings/vm_crash.grpc.pb.h>
 
@@ -13,9 +19,13 @@
 namespace vm_tools {
 namespace cicerone {
 
+class Service;
+class VirtualMachine;
+
 class CrashListenerImpl final : public CrashListener::Service {
  public:
-  CrashListenerImpl() = default;
+  explicit CrashListenerImpl(
+      base::WeakPtr<vm_tools::cicerone::Service> service);
   CrashListenerImpl(const CrashListenerImpl&) = delete;
   CrashListenerImpl& operator=(const CrashListenerImpl&) = delete;
   ~CrashListenerImpl() override = default;
@@ -29,7 +39,21 @@ class CrashListenerImpl final : public CrashListener::Service {
                                EmptyMessage* response) override;
 
  private:
+  base::Optional<pid_t> GetPidFromPeerAddress(grpc::ServerContext* ctx);
+
+  void GetVirtualMachineForCidOrToken(const uint32_t cid,
+                                      VirtualMachine** vm_out,
+                                      std::string* owner_id_out,
+                                      std::string* name_out,
+                                      bool* ret_value,
+                                      base::WaitableEvent* event);
+
   MetricsLibrary metrics_{};
+
+  base::WeakPtr<vm_tools::cicerone::Service> service_;  // not owned
+  // Task runner for the DBus thread; requests to perform DBus operations
+  // on |service_| generally need to be posted to this thread.
+  scoped_refptr<base::SequencedTaskRunner> task_runner_;
 };
 
 }  // namespace cicerone

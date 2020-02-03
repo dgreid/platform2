@@ -35,6 +35,7 @@
 #include "crash-reporter/unclean_shutdown_collector.h"
 #include "crash-reporter/user_collector.h"
 #include "crash-reporter/util.h"
+#include "crash-reporter/vm_collector.h"
 #include "crash-reporter/vm_support.h"
 
 using base::FilePath;
@@ -298,6 +299,16 @@ int HandleSELinuxViolation(
   return handled ? 0 : 1;
 }
 
+int HandleVmCrash(VmCollector* vm_collector, pid_t pid) {
+  // Accumulate logs to help in diagnosing failures during collection.
+  brillo::LogToString(true);
+  bool handled = vm_collector->Collect(pid);
+  brillo::LogToString(false);
+  if (!handled)
+    return 1;
+  return 0;
+}
+
 void HandleCrashReporterFailure(
     CrashReporterFailureCollector* crash_reporter_failure_collector) {
   // Accumulate logs to help in diagnosing failures during collection.
@@ -382,6 +393,8 @@ int main(int argc, char* argv[]) {
   DEFINE_string(arc_service_failure, "",
                 "The specific ARC service name that failed");
   DEFINE_bool(suspend_failure, false, "Report collected suspend failure logs.");
+  DEFINE_bool(vm_crash, false, "Report collected from VM crash");
+  DEFINE_int32(vm_pid, -1, "PID of the main VM process");
   DEFINE_bool(crash_reporter_crashed, false,
               "Report crash_reporter itself crashing");
   DEFINE_string(service_failure, "", "The specific service name that failed");
@@ -516,6 +529,9 @@ int main(int argc, char* argv[]) {
   CrashReporterFailureCollector crash_reporter_failure_collector;
   crash_reporter_failure_collector.Initialize(IsFeedbackAllowed, FLAGS_early);
 
+  VmCollector vm_collector;
+  vm_collector.Initialize(IsFeedbackAllowed, FLAGS_early);
+
   if (FLAGS_init) {
     return Initialize(&user_collector, &udev_collector, FLAGS_early);
   }
@@ -590,6 +606,10 @@ int main(int argc, char* argv[]) {
     return HandleChromeCrashThroughMemfd(&chrome_collector, FLAGS_chrome_memfd,
                                          FLAGS_pid, FLAGS_uid, FLAGS_exe,
                                          FLAGS_chrome_dump_dir);
+  }
+
+  if (FLAGS_vm_crash) {
+    return HandleVmCrash(&vm_collector, FLAGS_vm_pid);
   }
 
 #if USE_CHEETS

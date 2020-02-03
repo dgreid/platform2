@@ -130,11 +130,13 @@ class VirtualMachine {
   };
 
   // |cid| is nonzero for termina VMs, |vm_token| is non-empty for plugin VMs.
-  VirtualMachine(uint32_t cid, std::string vm_token);
+  VirtualMachine(uint32_t cid, pid_t pid, std::string vm_token);
   ~VirtualMachine();
 
   // The VM's cid.
   uint32_t cid() const { return vsock_cid_; }
+
+  pid_t pid() const { return pid_; }
 
   // The VM's token.
   std::string vm_token() const { return vm_token_; }
@@ -307,6 +309,9 @@ class VirtualMachine {
   // Virtual socket context id to be used when communicating with this VM, only
   // valid for termina VMs.
   uint32_t vsock_cid_;
+
+  // The pid of the main VM process.
+  pid_t pid_;
 
   // Token for identifying this VM. Only valid for plugin VMs which will have a
   // zero value cid.

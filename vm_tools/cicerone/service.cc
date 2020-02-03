@@ -382,7 +382,8 @@ Service::Service(base::Closure quit_closure, scoped_refptr<dbus::Bus> bus)
       std::make_unique<ContainerListenerImpl>(weak_ptr_factory_.GetWeakPtr());
   tremplin_listener_ =
       std::make_unique<TremplinListenerImpl>(weak_ptr_factory_.GetWeakPtr());
-  crash_listener_ = std::make_unique<CrashListenerImpl>();
+  crash_listener_ =
+      std::make_unique<CrashListenerImpl>(weak_ptr_factory_.GetWeakPtr());
 }
 
 Service::~Service() {
@@ -1593,7 +1594,7 @@ std::unique_ptr<dbus::Response> Service::NotifyVmStarted(
   }
 
   vms_[std::make_pair(request.owner_id(), std::move(request.vm_name()))] =
-      std::make_unique<VirtualMachine>(request.cid(),
+      std::make_unique<VirtualMachine>(request.cid(), request.pid(),
                                        std::move(request.vm_token()));
   // Only take this as the primary owner ID if this is not a plugin VM.
   if (request.cid() != 0 && (primary_owner_id_.empty() || vms_.empty())) {

@@ -76,6 +76,7 @@ static_library("libcrash_reporter") {
     "unclean_shutdown_collector.cc",
     "user_collector.cc",
     "user_collector_base.cc",
+    "vm_collector.cc",
     "vm_support.cc",
   ]
   defines = [
@@ -104,14 +105,12 @@ pkg_config("crash_reporter_config") {
     "dbus-1",
     "libmetrics-${libbase_ver}",
     "libminijail",
+    "protobuf",
+    "vm_protos",
   ]
 
   if (use.kvm_guest) {
-    pkg_deps += [
-      "grpc++",
-      "protobuf",
-      "vm_protos",
-    ]
+    pkg_deps += [ "grpc++" ]
   }
 }
 
@@ -242,14 +241,12 @@ if (use.test || use.fuzzer) {
       "libsession_manager-client-test",
       "libshill-client-test",
       "libdebugd-client-test",
+      "protobuf",
+      "vm_protos",
     ]
 
     if (use.kvm_guest) {
-      pkg_deps += [
-        "grpc++",
-        "protobuf",
-        "vm_protos",
-      ]
+      pkg_deps += [ "grpc++" ]
     }
   }
 

@@ -183,6 +183,7 @@ class Service final {
   // events, and generating container tokens.
   void NotifyCiceroneOfVmStarted(const VmId& vm_id,
                                  uint32_t vsock_cid,
+                                 pid_t pid,
                                  std::string vm_token);
   void SendVmStartedSignal(const VmId& vm_id,
                            const vm_tools::concierge::VmInfo& vm_info,

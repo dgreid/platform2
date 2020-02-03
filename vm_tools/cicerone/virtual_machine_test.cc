@@ -35,7 +35,7 @@ constexpr char kVmToken[] = "token";
 // Test fixture for actually testing the VirtualMachine functionality.
 class VirtualMachineTest : public ::testing::Test {
  public:
-  VirtualMachineTest() : termina_vm_(1, ""), plugin_vm_(0, kVmToken) {}
+  VirtualMachineTest() : termina_vm_(1, 2, ""), plugin_vm_(0, 3, kVmToken) {}
   ~VirtualMachineTest() override = default;
 
  protected:

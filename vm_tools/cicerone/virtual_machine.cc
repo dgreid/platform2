@@ -40,8 +40,9 @@ constexpr int64_t kLongOperationTimeoutSeconds = 120;
 
 }  // namespace
 
-VirtualMachine::VirtualMachine(uint32_t cid, std::string vm_token)
+VirtualMachine::VirtualMachine(uint32_t cid, pid_t pid, std::string vm_token)
     : vsock_cid_(cid),
+      pid_(pid),
       vm_token_(std::move(vm_token)),
       using_mock_tremplin_stub_(false),
       weak_ptr_factory_(this) {

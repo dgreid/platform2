@@ -1413,7 +1413,7 @@ std::unique_ptr<dbus::Response> Service::StartVm(
   // We must notify cicerone now before calling StartTermina, but we will only
   // send the VmStartedSignal on success.
   VmId vm_id(request.owner_id(), request.name());
-  NotifyCiceroneOfVmStarted(vm_id, vm->cid(), "");
+  NotifyCiceroneOfVmStarted(vm_id, vm->cid(), vm->GetInfo().pid, "");
 
   string failure_reason;
   vm_tools::StartTerminaResponse::MountResult mount_result =
@@ -1613,7 +1613,7 @@ std::unique_ptr<dbus::Response> Service::StartPluginVm(
   response.set_success(true);
   writer.AppendProtoAsArrayOfBytes(response);
 
-  NotifyCiceroneOfVmStarted(vm_id, 0 /* cid */, std::move(vm_token));
+  NotifyCiceroneOfVmStarted(vm_id, 0 /* cid */, info.pid, std::move(vm_token));
   SendVmStartedSignal(vm_id, *vm_info, response.status());
 
   vms_[vm_id] = std::move(vm);
@@ -3261,6 +3261,7 @@ void Service::OnDefaultNetworkServiceChanged() {
 
 void Service::NotifyCiceroneOfVmStarted(const VmId& vm_id,
                                         uint32_t cid,
+                                        pid_t pid,
                                         std::string vm_token) {
   DCHECK(sequence_checker_.CalledOnValidSequence());
   dbus::MethodCall method_call(vm_tools::cicerone::kVmCiceroneInterface,
@@ -3271,6 +3272,7 @@ void Service::NotifyCiceroneOfVmStarted(const VmId& vm_id,
   request.set_vm_name(vm_id.name());
   request.set_cid(cid);
   request.set_vm_token(std::move(vm_token));
+  request.set_pid(pid);
   writer.AppendProtoAsArrayOfBytes(request);
   std::unique_ptr<dbus::Response> dbus_response =
       cicerone_service_proxy_->CallMethodAndBlock(
