@@ -78,12 +78,12 @@ class RegionTest(unittest.TestCase):
                       missing))
 
   def testBadLocales(self):
-    self.assertRaisesRegexp(
+    self.assertRaisesRegex(
         AssertionError, "Locale 'en-us' does not match", regions.Region,
         'us', 'xkb:us::eng', 'America/Los_Angeles', 'en-us', 'ANSI')
 
   def testBadKeyboard(self):
-    self.assertRaisesRegexp(
+    self.assertRaisesRegex(
         AssertionError, "Keyboard pattern 'xkb:us::' does not match",
         regions.Region, 'us', 'xkb:us::', 'America/Los_Angeles', 'en-US',
         'ANSI')
@@ -207,7 +207,7 @@ class RegionTest(unittest.TestCase):
     # Modify the second copy.
     region_list[1].keyboards = ['f']
     # Not OK anymore!
-    self.assertRaisesRegexp(
+    self.assertRaisesRegex(
         regions.RegionException, "Conflicting definitions for region 'aa':",
         regions.ConsolidateRegions, region_list)
 
