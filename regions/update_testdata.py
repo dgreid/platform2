@@ -35,7 +35,7 @@ def GetChromiumSource(file_path):
     file_path: The relative path to retrieve.
   """
   return base64.b64decode(subprocess.check_output(
-      ['curl', '-s', SRC_GIT_URL + file_path + '?format=TEXT']))
+      ['curl', '-s', SRC_GIT_URL + file_path + '?format=TEXT'])).decode('utf-8')
 
 
 def WriteTestData(name, value):
