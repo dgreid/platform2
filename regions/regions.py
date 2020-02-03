@@ -61,7 +61,7 @@ def MakeList(value):
     otherwise, a list contains only one element.
   """
   if (isinstance(value, collections.Iterable) and
-      not isinstance(value, basestring)):
+      not isinstance(value, str)):
     return list(value)
   return [value]
 
