@@ -12,8 +12,8 @@ testdata pulled from the Chromium sources.
 
 from __future__ import print_function
 
+import io
 import os
-import StringIO
 import unittest
 import logging
 
@@ -169,7 +169,7 @@ class RegionTest(unittest.TestCase):
                        r.region_code, checked_paths)
 
   def testYAMLOutput(self):
-    output = StringIO.StringIO()
+    output = io.StringIO()
     regions.main(['--format', 'yaml'], output)
     data = yaml.load(output.getvalue())
     self.assertEqual(
