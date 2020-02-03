@@ -1199,7 +1199,8 @@ def main(args=sys.argv[1:], out=None):
   args = parser.parse_args(args)
 
   if args.overlay is not None:
-    execfile(args.overlay)
+    with open(args.overlay) as f:
+      exec(f.read())
 
   if args.all:
     # Add an additional 'confirmed' property to help identifying region status,
