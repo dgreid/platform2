@@ -51,7 +51,7 @@ class PluginVm final : public VmInterface {
       base::FilePath runtime_dir,
       std::unique_ptr<SeneschalServerProxy> seneschal_server_proxy,
       dbus::ObjectProxy* vmplugin_service_proxy);
-   static std::unique_ptr<PluginVm> Create(
+  static std::unique_ptr<PluginVm> Create(
       const VmId id,
       uint32_t cpus,
       std::vector<std::string> params,
@@ -120,7 +120,7 @@ class PluginVm final : public VmInterface {
            base::FilePath iso_dir,
            base::FilePath root_dir,
            base::FilePath runtime_dir);
-   PluginVm(const VmId id,
+  PluginVm(const VmId id,
            arc_networkd::MacAddress mac_addr,
            std::unique_ptr<arc_networkd::Subnet> ipv4_subnet,
            std::unique_ptr<arc_networkd::SubnetAddress> ipv4_gw,
