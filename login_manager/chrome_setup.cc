@@ -185,6 +185,14 @@ void AddArcFlags(ChromiumCommandBuilder* builder,
       cros_config->GetString(kArcScalePath, kArcScaleProperty, &arc_scale)) {
     builder->AddArg("--arc-scale=" + arc_scale);
   }
+
+  // Pass USE flags of ARM binary translation libraries to Chrome.
+  if (builder->UseFlagIsSet("houdini"))
+    builder->AddArg("--enable-houdini");
+  if (builder->UseFlagIsSet("houdini64"))
+    builder->AddArg("--enable-houdini64");
+  if (builder->UseFlagIsSet("ndk_translation"))
+    builder->AddArg("--enable-ndk-translation");
 }
 
 void AddCrostiniFlags(ChromiumCommandBuilder* builder) {
