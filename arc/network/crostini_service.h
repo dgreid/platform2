@@ -12,6 +12,7 @@
 #include <base/memory/weak_ptr.h>
 #include <permission_broker/dbus-proxies.h>
 
+#include "arc/network/address_manager.h"
 #include "arc/network/datapath.h"
 #include "arc/network/device.h"
 #include "arc/network/device_manager.h"
@@ -26,8 +27,9 @@ class CrostiniService {
   // All pointers are required and must not be null, and are owned by the
   // caller.
   CrostiniService(ShillClient* shill_client,
-                  DeviceManagerBase* dev_mgr,
-                  Datapath* datapath);
+                  AddressManager* addr_mgr,
+                  Datapath* datapath,
+                  TrafficForwarder* forwarder);
   ~CrostiniService() = default;
 
   bool Start(uint64_t vm_id, bool is_termina, int subnet_index);
@@ -37,7 +39,13 @@ class CrostiniService {
 
  private:
   std::unique_ptr<Device> AddTAP(bool is_termina, int subnet_index);
-  void OnDefaultInterfaceChanged(const std::string& ifname);
+  void OnDefaultInterfaceChanged(const std::string& new_ifname,
+                                 const std::string& prev_ifname);
+  void StartForwarding(const std::string& phys_ifname,
+                       const std::string& virt_ifname,
+                       uint32_t ipv4_addr);
+  void StopForwarding(const std::string& phys_ifname,
+                      const std::string& virt_ifname);
 
   bool SetupFirewallClient();
 
@@ -54,8 +62,10 @@ class CrostiniService {
   void StopAdbPortForwarding(const std::string& ifname);
 
   ShillClient* shill_client_;
-  DeviceManagerBase* dev_mgr_;
+  AddressManager* addr_mgr_;
   Datapath* datapath_;
+  TrafficForwarder* forwarder_;
+
   // Mapping of VM IDs to TAP devices
   std::map<std::string, std::unique_ptr<Device>> taps_;
 

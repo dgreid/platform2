@@ -413,9 +413,10 @@ void ArcService::StopDevice(Device* device) {
   ctx->Stop();
 }
 
-void ArcService::OnDefaultInterfaceChanged(const std::string& ifname) {
+void ArcService::OnDefaultInterfaceChanged(const std::string& new_ifname,
+                                           const std::string& prev_ifname) {
   if (impl_)
-    impl_->OnDefaultInterfaceChanged(ifname);
+    impl_->OnDefaultInterfaceChanged(new_ifname, prev_ifname);
 }
 
 // Context
@@ -633,7 +634,7 @@ void ArcService::ContainerImpl::OnStopDevice(Device* device) {
 }
 
 void ArcService::ContainerImpl::OnDefaultInterfaceChanged(
-    const std::string& ifname) {
+    const std::string& new_ifname, const std::string& prev_ifname) {
   if (!IsStarted())
     return;
 
@@ -649,9 +650,9 @@ void ArcService::ContainerImpl::OnDefaultInterfaceChanged(
     device->StopIPv6RoutingLegacy();
 
     // If a new default interface was given, then re-enable with that.
-    if (!ifname.empty()) {
-      datapath_->AddLegacyIPv4InboundDNAT(ifname);
-      device->StartIPv6RoutingLegacy(ifname);
+    if (!new_ifname.empty()) {
+      datapath_->AddLegacyIPv4InboundDNAT(new_ifname);
+      device->StartIPv6RoutingLegacy(new_ifname);
     }
     return;
   }
@@ -659,16 +660,16 @@ void ArcService::ContainerImpl::OnDefaultInterfaceChanged(
   // For ARC P and later, we're only concerned with resetting the device when it
   // becomes the default (again) in order to ensure any previous configuration.
   // is cleared.
-  if (ifname.empty())
+  if (new_ifname.empty())
     return;
 
-  auto* device = dev_mgr_->FindByGuestInterface(ifname);
+  auto* device = dev_mgr_->FindByGuestInterface(new_ifname);
   if (!device) {
-    LOG(ERROR) << "Expected default device missing: " << ifname;
+    LOG(ERROR) << "Expected default device missing: " << new_ifname;
     return;
   }
   device->StopIPv6RoutingLegacy();
-  device->StartIPv6RoutingLegacy(ifname);
+  device->StartIPv6RoutingLegacy(new_ifname);
 }
 
 void ArcService::ContainerImpl::LinkMsgHandler(const shill::RTNLMessage& msg) {
@@ -702,7 +703,7 @@ void ArcService::ContainerImpl::LinkMsgHandler(const shill::RTNLMessage& msg) {
   LOG(INFO) << ifname << " is now up";
 
   if (device->UsesDefaultInterface()) {
-    OnDefaultInterfaceChanged(dev_mgr_->DefaultInterface());
+    OnDefaultInterfaceChanged(dev_mgr_->DefaultInterface(), "" /*previous*/);
     return;
   }
 
@@ -962,7 +963,7 @@ bool ArcService::VmImpl::OnStartDevice(Device* device) {
   ctx->SetTAP(tap);
   // TODO(garrick): Remove this once ARCVM supports ad hoc interface
   // configurations; but for now ARCVM needs to be treated like ARC++ N.
-  OnDefaultInterfaceChanged(dev_mgr_->DefaultInterface());
+  OnDefaultInterfaceChanged(dev_mgr_->DefaultInterface(), "" /*previous*/);
   dev_mgr_->StartForwarding(*device);
   return true;
 }
@@ -989,7 +990,8 @@ void ArcService::VmImpl::OnStopDevice(Device* device) {
   datapath_->RemoveInterface(ctx->TAP());
 }
 
-void ArcService::VmImpl::OnDefaultInterfaceChanged(const std::string& ifname) {
+void ArcService::VmImpl::OnDefaultInterfaceChanged(
+    const std::string& new_ifname, const std::string& prev_ifname) {
   if (!IsStarted())
     return;
 
@@ -1004,9 +1006,9 @@ void ArcService::VmImpl::OnDefaultInterfaceChanged(const std::string& ifname) {
   device->StopIPv6RoutingLegacy();
 
   // If a new default interface was given, then re-enable with that.
-  if (!ifname.empty()) {
-    datapath_->AddLegacyIPv4InboundDNAT(ifname);
-    device->StartIPv6RoutingLegacy(ifname);
+  if (!new_ifname.empty()) {
+    datapath_->AddLegacyIPv4InboundDNAT(new_ifname);
+    device->StartIPv6RoutingLegacy(new_ifname);
   }
 }
 

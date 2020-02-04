@@ -31,8 +31,9 @@ class ShillClientTest : public testing::Test {
     devices_.clear();
   }
 
-  void DefaultInterfaceChangedHandler(const std::string& name) {
-    default_ifname_ = name;
+  void DefaultInterfaceChangedHandler(const std::string& new_ifname,
+                                      const std::string& prev_ifname) {
+    default_ifname_ = new_ifname;
   }
 
   void DevicesChangedHandler(const std::set<std::string>& devices) {

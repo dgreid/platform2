@@ -234,14 +234,14 @@ void Manager::InitialSetup() {
       &Manager::OnDeviceMessageFromNDProxy, weak_factory_.GetWeakPtr()));
 
   shill_client_ = std::make_unique<ShillClient>(bus_);
-  device_mgr_ = std::make_unique<DeviceManager>(
-      shill_client_.get(), &addr_mgr_, datapath_.get(),
-      static_cast<TrafficForwarder*>(this));
+  auto* const forwarder = static_cast<TrafficForwarder*>(this);
+  device_mgr_ = std::make_unique<DeviceManager>(shill_client_.get(), &addr_mgr_,
+                                                datapath_.get(), forwarder);
 
   arc_svc_ = std::make_unique<ArcService>(shill_client_.get(),
                                           device_mgr_.get(), datapath_.get());
-  cros_svc_ = std::make_unique<CrostiniService>(
-      shill_client_.get(), device_mgr_.get(), datapath_.get());
+  cros_svc_ = std::make_unique<CrostiniService>(shill_client_.get(), &addr_mgr_,
+                                                datapath_.get(), forwarder);
 
   nd_proxy_->Listen();
 }

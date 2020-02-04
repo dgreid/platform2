@@ -24,6 +24,7 @@ std::string MakeKey(uint64_t vm_id, bool is_termina) {
   return base::StringPrintf("%s:%s", is_termina ? "t" : "p",
                             base::NumberToString(vm_id).c_str());
 }
+
 bool IsAdbSideloadingEnabled(const scoped_refptr<dbus::Bus>& bus) {
   static bool checked = false;
   static bool result = false;
@@ -52,11 +53,17 @@ bool IsAdbSideloadingEnabled(const scoped_refptr<dbus::Bus>& bus) {
 }  // namespace
 
 CrostiniService::CrostiniService(ShillClient* shill_client,
-                                 DeviceManagerBase* dev_mgr,
-                                 Datapath* datapath)
-    : shill_client_(shill_client), dev_mgr_(dev_mgr), datapath_(datapath) {
-  DCHECK(shill_client_), DCHECK(dev_mgr_);
+                                 AddressManager* addr_mgr,
+                                 Datapath* datapath,
+                                 TrafficForwarder* forwarder)
+    : shill_client_(shill_client),
+      addr_mgr_(addr_mgr),
+      datapath_(datapath),
+      forwarder_(forwarder) {
+  DCHECK(shill_client_);
+  DCHECK(addr_mgr_);
   DCHECK(datapath_);
+  DCHECK(forwarder_);
 
   shill_client_->RegisterDefaultInterfaceChangedHandler(base::Bind(
       &CrostiniService::OnDefaultInterfaceChanged, weak_factory_.GetWeakPtr()));
@@ -81,7 +88,8 @@ bool CrostiniService::Start(uint64_t vm_id, bool is_termina, int subnet_index) {
   }
 
   LOG(INFO) << "Crostini network service started for {id: " << vm_id << "}";
-  dev_mgr_->StartForwarding(*tap.get());
+  StartForwarding(shill_client_->default_interface(),
+                  tap->config().host_ifname(), tap->config().guest_ipv4_addr());
   StartAdbPortForwarding(tap->ifname());
   taps_.emplace(key, std::move(tap));
   return true;
@@ -96,9 +104,10 @@ void CrostiniService::Stop(uint64_t vm_id, bool is_termina) {
   }
 
   const auto* dev = it->second.get();
-  dev_mgr_->StopForwarding(*dev);
-  datapath_->RemoveInterface(dev->config().host_ifname());
-  StopAdbPortForwarding(dev->ifname());
+  const auto& ifname = dev->config().host_ifname();
+  StopForwarding(shill_client_->default_interface(), ifname);
+  StopAdbPortForwarding(ifname);
+  datapath_->RemoveInterface(ifname);
   taps_.erase(key);
 
   LOG(INFO) << "Crostini network service stopped for {id: " << vm_id << "}";
@@ -115,8 +124,7 @@ const Device* const CrostiniService::TAP(uint64_t vm_id,
 
 std::unique_ptr<Device> CrostiniService::AddTAP(bool is_termina,
                                                 int subnet_index) {
-  auto* const addr_mgr = dev_mgr_->addr_mgr();
-  auto ipv4_subnet = addr_mgr->AllocateIPv4Subnet(
+  auto ipv4_subnet = addr_mgr_->AllocateIPv4Subnet(
       is_termina ? AddressManager::Guest::VM_TERMINA
                  : AddressManager::Guest::VM_PLUGIN_EXT,
       subnet_index);
@@ -136,14 +144,15 @@ std::unique_ptr<Device> CrostiniService::AddTAP(bool is_termina,
   }
   std::unique_ptr<Subnet> lxd_subnet;
   if (is_termina) {
-    lxd_subnet = addr_mgr->AllocateIPv4Subnet(AddressManager::Guest::CONTAINER);
+    lxd_subnet =
+        addr_mgr_->AllocateIPv4Subnet(AddressManager::Guest::CONTAINER);
     if (!lxd_subnet) {
       LOG(ERROR) << "lxd subnet already in use or unavailable.";
       return nullptr;
     }
   }
 
-  const auto mac_addr = addr_mgr->GenerateMacAddress();
+  const auto mac_addr = addr_mgr_->GenerateMacAddress();
   const std::string tap =
       datapath_->AddTAP("" /* auto-generate name */, &mac_addr,
                         host_ipv4_addr.get(), vm_tools::kCrosVmUser);
@@ -169,15 +178,28 @@ std::unique_ptr<Device> CrostiniService::AddTAP(bool is_termina,
                                   GuestMessage::TERMINA_VM);
 }
 
-void CrostiniService::OnDefaultInterfaceChanged(const std::string& ifname) {
-  for (const auto& t : taps_)
-    dev_mgr_->StopForwarding(*t.second.get());
+void CrostiniService::OnDefaultInterfaceChanged(
+    const std::string& new_ifname, const std::string& prev_ifname) {
+  for (const auto& t : taps_) {
+    const auto& config = t.second->config();
+    StopForwarding(prev_ifname, config.host_ifname());
+    StartForwarding(new_ifname, config.host_ifname(), config.guest_ipv4_addr());
+  }
+}
 
-  if (ifname.empty())
-    return;
+void CrostiniService::StartForwarding(const std::string& phys_ifname,
+                                      const std::string& virt_ifname,
+                                      uint32_t ipv4_addr) {
+  if (!phys_ifname.empty())
+    forwarder_->StartForwarding(phys_ifname, virt_ifname, ipv4_addr,
+                                true /*ipv6*/, true /*multicast*/);
+}
 
-  for (const auto& t : taps_)
-    dev_mgr_->StartForwarding(*t.second.get());
+void CrostiniService::StopForwarding(const std::string& phys_ifname,
+                                     const std::string& virt_ifname) {
+  if (!phys_ifname.empty())
+    forwarder_->StopForwarding(phys_ifname, virt_ifname, true /*ipv6*/,
+                               true /*multicast*/);
 }
 
 bool CrostiniService::SetupFirewallClient() {

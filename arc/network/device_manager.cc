@@ -110,7 +110,8 @@ void DeviceManager::RegisterDeviceRemovedHandler(GuestMessage::GuestType guest,
 }
 
 void DeviceManager::RegisterDefaultInterfaceChangedHandler(
-    GuestMessage::GuestType guest, const NameHandler& handler) {
+    GuestMessage::GuestType guest,
+    const ShillClient::DefaultInterfaceChangeHandler& handler) {
   default_iface_handlers_[guest] = handler;
 }
 
@@ -298,19 +299,20 @@ std::unique_ptr<Device> DeviceManager::MakeDevice(
                                       : GuestMessage::ARC);
 }
 
-void DeviceManager::OnDefaultInterfaceChanged(const std::string& ifname) {
-  if (ifname == default_ifname_)
+void DeviceManager::OnDefaultInterfaceChanged(const std::string& new_ifname,
+                                              const std::string& prev_ifname) {
+  if (new_ifname == default_ifname_)
     return;
 
   LOG(INFO) << "Default interface changed from [" << default_ifname_ << "] to ["
-            << ifname << "]";
+            << new_ifname << "]";
 
   for (const auto& d : devices_) {
     if (d.second->UsesDefaultInterface() && d.second->IsFullyUp())
       StopForwarding(*d.second);
   }
 
-  default_ifname_ = ifname;
+  default_ifname_ = new_ifname;
 
   for (const auto& d : devices_) {
     if (d.second->UsesDefaultInterface() && d.second->IsFullyUp())
@@ -318,7 +320,7 @@ void DeviceManager::OnDefaultInterfaceChanged(const std::string& ifname) {
   }
 
   for (const auto& h : default_iface_handlers_) {
-    h.second.Run(default_ifname_);
+    h.second.Run(default_ifname_, prev_ifname);
   }
 }
 

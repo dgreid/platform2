@@ -36,6 +36,10 @@ ShillClient::ShillClient(const scoped_refptr<dbus::Bus>& bus) : bus_(bus) {
                  weak_factory_.GetWeakPtr()));
 }
 
+const std::string& ShillClient::default_interface() const {
+  return default_interface_;
+}
+
 void ShillClient::ScanDevices(
     const base::Callback<void(const std::set<std::string>&)>& callback) {
   brillo::VariantDictionary props;
@@ -165,26 +169,28 @@ void ShillClient::OnManagerPropertyChange(const std::string& property_name,
   SetDefaultInterface(GetDefaultInterface());
 }
 
-void ShillClient::SetDefaultInterface(std::string new_default) {
+std::string ShillClient::SetDefaultInterface(std::string new_default) {
   // When the system default is lost, use the fallback interface instead.
   if (new_default.empty())
     new_default = fallback_default_interface_;
 
   if (default_interface_ == new_default)
-    return;
+    return default_interface_;
 
+  const std::string prev_default = default_interface_;
   default_interface_ = new_default;
   for (const auto& cb : default_interface_callbacks_) {
     if (!cb.is_null())
-      cb.Run(default_interface_);
+      cb.Run(default_interface_, prev_default);
   }
+  return prev_default;
 }
 
 void ShillClient::RegisterDefaultInterfaceChangedHandler(
-    const base::Callback<void(const std::string&)>& callback) {
+    const DefaultInterfaceChangeHandler& callback) {
   default_interface_callbacks_.emplace_back(callback);
-  SetDefaultInterface(GetDefaultInterface());
-  callback.Run(default_interface_);
+  const auto prev_default = SetDefaultInterface(GetDefaultInterface());
+  callback.Run(default_interface_, prev_default);
 }
 
 void ShillClient::RegisterDevicesChangedHandler(

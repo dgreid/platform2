@@ -46,7 +46,8 @@ class MockDeviceManager : public DeviceManagerBase {
   MOCK_METHOD2(RegisterDeviceRemovedHandler,
                void(GuestMessage::GuestType, const DeviceHandler&));
   MOCK_METHOD2(RegisterDefaultInterfaceChangedHandler,
-               void(GuestMessage::GuestType, const NameHandler&));
+               void(GuestMessage::GuestType,
+                    const ShillClient::DefaultInterfaceChangeHandler&));
   MOCK_METHOD2(RegisterDeviceIPv6AddressFoundHandler,
                void(GuestMessage::GuestType, const DeviceHandler&));
   MOCK_METHOD1(UnregisterAllGuestHandlers, void(GuestMessage::GuestType));
@@ -394,7 +395,7 @@ TEST_F(ContainerImplTest, OnDefaultInterfaceChanged_LegacyAndroid) {
       .WillOnce(Return(dev.get()));
   EXPECT_CALL(*datapath_, AddLegacyIPv4InboundDNAT("wlan0"))
       .WillOnce(Return(true));
-  Impl(true)->OnDefaultInterfaceChanged("wlan0");
+  Impl(true)->OnDefaultInterfaceChanged("wlan0", "");
 }
 
 TEST_F(ContainerImplTest, OnDefaultInterfaceChanged_LegacyAndroidNoIfname) {
@@ -403,7 +404,7 @@ TEST_F(ContainerImplTest, OnDefaultInterfaceChanged_LegacyAndroidNoIfname) {
   EXPECT_CALL(*datapath_, RemoveLegacyIPv4InboundDNAT);
   EXPECT_CALL(dev_mgr_, FindByGuestInterface(StrEq("arc0")))
       .WillOnce(Return(dev.get()));
-  Impl(true)->OnDefaultInterfaceChanged("");
+  Impl(true)->OnDefaultInterfaceChanged("", "");
 }
 
 TEST_F(ContainerImplTest, OnDefaultInterfaceChanged_Other) {
@@ -413,7 +414,7 @@ TEST_F(ContainerImplTest, OnDefaultInterfaceChanged_Other) {
   // non-null.
   EXPECT_CALL(dev_mgr_, FindByGuestInterface(StrEq("wlan0")))
       .WillOnce(Return(dev.get()));
-  Impl()->OnDefaultInterfaceChanged("wlan0");
+  Impl()->OnDefaultInterfaceChanged("wlan0", "");
 }
 
 // Nothing happens in this case since it's only concerned about (re)connecting
@@ -421,7 +422,7 @@ TEST_F(ContainerImplTest, OnDefaultInterfaceChanged_Other) {
 TEST_F(ContainerImplTest, OnDefaultInterfaceChanged_OtherNoIfname) {
   auto dev = MakeDevice("eth0", "arc_eth0", "eth0");
   ASSERT_TRUE(dev);
-  Impl()->OnDefaultInterfaceChanged("");
+  Impl()->OnDefaultInterfaceChanged("", "");
 }
 
 // VM Impl

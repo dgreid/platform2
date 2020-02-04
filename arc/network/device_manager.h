@@ -20,7 +20,6 @@
 
 namespace arc_networkd {
 using DeviceHandler = base::Callback<void(Device*)>;
-using NameHandler = base::Callback<void(const std::string&)>;
 
 // Interface to encapsulate traffic forwarding behaviors so individual services
 // are not exposed to dependents.
@@ -58,7 +57,8 @@ class DeviceManagerBase {
   virtual void RegisterDeviceRemovedHandler(GuestMessage::GuestType guest,
                                             const DeviceHandler& handler) = 0;
   virtual void RegisterDefaultInterfaceChangedHandler(
-      GuestMessage::GuestType guest, const NameHandler& handler) = 0;
+      GuestMessage::GuestType guest,
+      const ShillClient::DefaultInterfaceChangeHandler& handler) = 0;
   virtual void UnregisterAllGuestHandlers(GuestMessage::GuestType guest) = 0;
 
   // Invoked when a guest starts or stops.
@@ -110,7 +110,8 @@ class DeviceManager : public DeviceManagerBase {
   void RegisterDeviceRemovedHandler(GuestMessage::GuestType guest,
                                     const DeviceHandler& handler) override;
   void RegisterDefaultInterfaceChangedHandler(
-      GuestMessage::GuestType guest, const NameHandler& handler) override;
+      GuestMessage::GuestType guest,
+      const ShillClient::DefaultInterfaceChangeHandler& handler) override;
   void UnregisterAllGuestHandlers(GuestMessage::GuestType guest) override;
 
   // Invoked when a guest starts or stops.
@@ -147,7 +148,8 @@ class DeviceManager : public DeviceManagerBase {
  private:
   // Callback from ShillClient, invoked whenever the default network
   // interface changes or goes away.
-  void OnDefaultInterfaceChanged(const std::string& ifname);
+  void OnDefaultInterfaceChanged(const std::string& new_ifname,
+                                 const std::string& prev_ifname);
 
   // Callback from ShillClient, invoked whenever the device list changes.
   // |devices| will contain all devices currently connected to shill
@@ -164,7 +166,8 @@ class DeviceManager : public DeviceManagerBase {
   // |devices_|.
   std::map<GuestMessage::GuestType, DeviceHandler> add_handlers_;
   std::map<GuestMessage::GuestType, DeviceHandler> rm_handlers_;
-  std::map<GuestMessage::GuestType, NameHandler> default_iface_handlers_;
+  std::map<GuestMessage::GuestType, ShillClient::DefaultInterfaceChangeHandler>
+      default_iface_handlers_;
 
   // Connected devices keyed by the interface name.
   // The legacy device is mapped to the Android interface name.

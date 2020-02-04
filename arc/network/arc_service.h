@@ -5,6 +5,7 @@
 #ifndef ARC_NETWORK_ARC_SERVICE_H_
 #define ARC_NETWORK_ARC_SERVICE_H_
 
+#include <map>
 #include <memory>
 #include <string>
 
@@ -75,7 +76,8 @@ class ArcService {
     virtual bool IsStarted(uint32_t* id = nullptr) const = 0;
     virtual bool OnStartDevice(Device* device) = 0;
     virtual void OnStopDevice(Device* device) = 0;
-    virtual void OnDefaultInterfaceChanged(const std::string& ifname) = 0;
+    virtual void OnDefaultInterfaceChanged(const std::string& new_ifname,
+                                           const std::string& prev_ifname) = 0;
 
    protected:
     Impl() = default;
@@ -97,7 +99,8 @@ class ArcService {
     bool IsStarted(uint32_t* pid = nullptr) const override;
     bool OnStartDevice(Device* device) override;
     void OnStopDevice(Device* device) override;
-    void OnDefaultInterfaceChanged(const std::string& ifname) override;
+    void OnDefaultInterfaceChanged(const std::string& new_ifname,
+                                   const std::string& prev_ifname) override;
 
    private:
     // Handles RT netlink messages in the container net namespace and if it
@@ -143,7 +146,8 @@ class ArcService {
     bool IsStarted(uint32_t* cid = nullptr) const override;
     bool OnStartDevice(Device* device) override;
     void OnStopDevice(Device* device) override;
-    void OnDefaultInterfaceChanged(const std::string& ifname) override;
+    void OnDefaultInterfaceChanged(const std::string& new_ifname,
+                                   const std::string& prev_ifname) override;
 
    private:
     uint32_t cid_;
@@ -164,7 +168,8 @@ class ArcService {
 
   void OnDeviceAdded(Device* device);
   void OnDeviceRemoved(Device* device);
-  void OnDefaultInterfaceChanged(const std::string& ifname);
+  void OnDefaultInterfaceChanged(const std::string& new_ifname,
+                                 const std::string& prev_ifname);
 
  private:
   void StartDevice(Device* device);

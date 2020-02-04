@@ -20,11 +20,14 @@ namespace arc_networkd {
 // network interface (if any) is being used as the default service.
 class ShillClient {
  public:
+  using DefaultInterfaceChangeHandler = base::Callback<void(
+      const std::string& new_ifname, const std::string& prev_ifname)>;
+
   explicit ShillClient(const scoped_refptr<dbus::Bus>& bus);
   virtual ~ShillClient() = default;
 
   void RegisterDefaultInterfaceChangedHandler(
-      const base::Callback<void(const std::string&)>& callback);
+      const DefaultInterfaceChangeHandler& callback);
 
   void RegisterDevicesChangedHandler(
       const base::Callback<void(const std::set<std::string>&)>& callback);
@@ -32,6 +35,8 @@ class ShillClient {
 
   void ScanDevices(
       const base::Callback<void(const std::set<std::string>&)>& callback);
+
+  const std::string& default_interface() const;
 
  protected:
   void OnManagerPropertyChangeRegistration(const std::string& interface,
@@ -48,8 +53,8 @@ class ShillClient {
   // Sets the internal variable tracking the system default interface and calls
   // the default interface handler if the default interface changed. When the
   // default interface is lost and a fallback exists, the fallback is used
-  // instead.
-  void SetDefaultInterface(std::string new_default);
+  // instead. Returns the previous default interface.
+  std::string SetDefaultInterface(std::string new_default);
 
   // Tracks the name of the system default interface chosen by shill.
   std::string default_interface_;
@@ -59,8 +64,7 @@ class ShillClient {
   // Tracks all network interfaces managed by shill.
   std::set<std::string> devices_;
   // Called when the interface used as the default interface changes.
-  std::vector<base::Callback<void(const std::string&)>>
-      default_interface_callbacks_;
+  std::vector<DefaultInterfaceChangeHandler> default_interface_callbacks_;
   // Called when the list of network interfaces managed by shill changes.
   base::Callback<void(const std::set<std::string>&)> devices_callback_;
 
