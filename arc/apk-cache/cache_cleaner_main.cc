@@ -8,12 +8,12 @@
 #include <brillo/flag_helper.h>
 #include <brillo/syslog_logging.h>
 
+#include "arc/apk-cache/apk_cache_utils.h"
 #include "arc/apk-cache/cache_cleaner.h"
 #include "arc/apk-cache/cache_cleaner_db.h"
 
 namespace {
 
-constexpr char kApkCacheDir[] = "/mnt/stateful_partition/unencrypted/apkcache";
 constexpr char kHelpText[] =
     "Performs cleaning of the APK cache directory: "
     "/mnt/stateful_partition/unencrypted/apkcache/\n"
@@ -37,7 +37,7 @@ int main(int argc, char** argv) {
   brillo::FlagHelper::Init(argc, argv, kHelpText);
   brillo::InitLog(brillo::kLogToSyslog | brillo::kLogToStderrIfTty);
 
-  base::FilePath cache_root(kApkCacheDir);
+  base::FilePath cache_root(apk_cache::kApkCacheDir);
   if (!apk_cache::Clean(cache_root)) {
     LOG(ERROR) << "APK Cache cleaner experienced problem while cleaning.";
     return 1;

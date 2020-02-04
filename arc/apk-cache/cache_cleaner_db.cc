@@ -4,11 +4,12 @@
 
 #include "arc/apk-cache/cache_cleaner_db.h"
 
+#include <stdint.h>
+
 #include <array>
-#include <inttypes.h>
+#include <cinttypes>
 #include <iomanip>
 #include <set>
-#include <stdint.h>
 #include <tuple>
 #include <unordered_set>
 
@@ -21,21 +22,10 @@
 #include <sqlite3.h>
 
 #include "arc/apk-cache/apk_cache_database.h"
+#include "arc/apk-cache/apk_cache_utils.h"
 #include "arc/apk-cache/cache_cleaner_utils.h"
 
 namespace apk_cache {
-
-constexpr std::array<const char*, 4> kDatabaseFiles = {
-    "index.db", "index.db-shm", "index.db-wal", "index.db-journal"};
-constexpr char kFilesBase[] = "files";
-constexpr char kDatabaseFile[] = "index.db";
-
-// Value for |status| in |sessions| table.
-constexpr int32_t kSessionStatusOpen = 1;
-constexpr int32_t kSessionStatusClosed = 2;
-
-// Value for |type| in |file_entries| table.
-constexpr char kFileTypeBaseApk[] = "play.apk.base";
 
 // Cache cleaner session source.
 constexpr char kCacheCleanerSessionSource[] = "cache_cleaner";
@@ -63,10 +53,6 @@ inline bool operator<(const Package& lhs, const Package& rhs) {
 }
 
 }  // namespace
-
-std::string GetFileNameById(int64_t id) {
-  return base::StringPrintf("%016" PRIx64, id);
-}
 
 OpaqueFilesCleaner::OpaqueFilesCleaner(const base::FilePath& cache_root)
     : cache_root_(cache_root),

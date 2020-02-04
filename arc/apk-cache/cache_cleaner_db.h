@@ -21,25 +21,8 @@ class TimeDelta;
 
 namespace apk_cache {
 
-// Expose files directory to old cache cleaner and unit tests.
-extern const char kFilesBase[];
-
-// Database file for testing.
-extern const char kDatabaseFile[];
-
-// Session status for testing.
-extern const int32_t kSessionStatusOpen;
-extern const int32_t kSessionStatusClosed;
-
-// File types for testing.
-extern const char kFileTypeBaseApk[];
-
 // Cache cleaner session source for testing.
 extern const char kCacheCleanerSessionSource[];
-
-// Expose database files to old cache cleaner. Will be removed once old cache
-// cleaner is removed.
-extern const std::array<const char*, 4> kDatabaseFiles;
 
 // Maximum session age for testing.
 extern const base::TimeDelta kSessionMaxAge;

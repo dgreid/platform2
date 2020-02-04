@@ -20,6 +20,7 @@
 #include <base/time/time.h>
 #include <base/values.h>
 
+#include "arc/apk-cache/apk_cache_utils.h"
 #include "arc/apk-cache/cache_cleaner_db.h"
 #include "arc/apk-cache/cache_cleaner_utils.h"
 
@@ -38,8 +39,8 @@ constexpr char kKeyAttributesAtime[] = "attributes.atime";
 // Removes all the files (if any) from cache root. Does not remove
 // directories. Returns true if all the intended files were deleted.
 bool RemoveUnexpectedFilesFromCacheRoot(const base::FilePath& cache_root) {
-  std::unordered_set<std::string> database_files(kDatabaseFiles.begin(),
-                                                 kDatabaseFiles.end());
+  std::unordered_set<std::string> database_files(
+      kDatabaseFiles, kDatabaseFiles + kDatabaseFilesCount);
   return RemoveUnexpectedItemsFromDir(
       cache_root,
       base::FileEnumerator::FileType::FILES |

@@ -6,6 +6,7 @@
 #define ARC_APK_CACHE_APK_CACHE_DATABASE_TEST_UTILS_H_
 
 #include <stdint.h>
+
 #include <string>
 
 namespace base {

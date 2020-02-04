@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "arc/apk-cache/cache_cleaner_db.h"
+
 #include <base/bind.h>
 #include <base/files/file_enumerator.h>
 #include <base/files/file_path.h>
@@ -14,7 +16,7 @@
 
 #include "arc/apk-cache/apk_cache_database.h"
 #include "arc/apk-cache/apk_cache_database_test_utils.h"
-#include "arc/apk-cache/cache_cleaner_db.h"
+#include "arc/apk-cache/apk_cache_utils.h"
 
 namespace apk_cache {
 

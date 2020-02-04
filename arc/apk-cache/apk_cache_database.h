@@ -5,8 +5,9 @@
 #ifndef ARC_APK_CACHE_APK_CACHE_DATABASE_H_
 #define ARC_APK_CACHE_APK_CACHE_DATABASE_H_
 
-#include <memory>
 #include <stdint.h>
+
+#include <memory>
 #include <string>
 #include <vector>
 

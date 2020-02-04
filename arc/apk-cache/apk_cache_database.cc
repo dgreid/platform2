@@ -4,8 +4,8 @@
 
 #include "arc/apk-cache/apk_cache_database.h"
 
+#include <cinttypes>
 #include <cstring>
-#include <inttypes.h>
 #include <memory>
 #include <string>
 #include <utility>

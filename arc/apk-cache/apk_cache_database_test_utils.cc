@@ -5,7 +5,7 @@
 #include "arc/apk-cache/apk_cache_database_test_utils.h"
 
 #include <array>
-#include <inttypes.h>
+#include <cinttypes>
 #include <memory>
 #include <string>
 #include <vector>
