@@ -345,28 +345,39 @@ int32_t CameraDeviceAdapter::ProcessCaptureRequest(
     return 0;
   }
 
+  int ret_split;
   bool is_request_split = still_req.num_output_buffers > 0;
-  frame_number_mapper_.RegisterCaptureRequest(&req, is_request_split,
-                                              false /* is_request_added */);
-  int ret = camera_device_->ops->process_capture_request(camera_device_, &req);
-  if (ret != 0) {
-    return ret;
+  if (is_request_split) {
+    // Swap frame numbers to send the split still capture request first.
+    // When merging the capture results, the shutter message and result metadata
+    // of the second preview capture request will be trimmed, which is safe
+    // because we don't reprocess preview frames.
+    std::swap(req.frame_number, still_req.frame_number);
+    frame_number_mapper_.RegisterCaptureRequest(&still_req, is_request_split,
+                                                /*is_request_added=*/false);
+    ret_split = camera_device_->ops->process_capture_request(camera_device_,
+                                                             &still_req);
+    free_camera_metadata(const_cast<camera_metadata_t*>(still_req.settings));
+    if (ret_split != 0) {
+      LOGF(ERROR) << "Failed to process split still capture request";
+      return ret_split;
+    }
   }
 
+  frame_number_mapper_.RegisterCaptureRequest(
+      &req, is_request_split, /*is_request_added=*/is_request_split);
+  int ret = camera_device_->ops->process_capture_request(camera_device_, &req);
+
   if (is_request_split) {
-    frame_number_mapper_.RegisterCaptureRequest(&still_req, is_request_split,
-                                                true /* is_request_added */);
-    ret = camera_device_->ops->process_capture_request(camera_device_,
-                                                       &still_req);
-    free_camera_metadata(const_cast<camera_metadata_t*>(still_req.settings));
     // No need to process -ENODEV here since it's not recoverable.
     if (ret == -EINVAL) {
       NotifyAddedFrameError(std::move(still_req),
                             std::move(still_output_buffers));
     }
+    // Any errors occurred in the split request are handled separately.
+    return 0;
   }
-  // Any errors occurred in the split request are handled separately.
-  return 0;
+  return ret;
 }
 
 void CameraDeviceAdapter::Dump(mojo::ScopedHandle fd) {
@@ -712,6 +723,16 @@ mojom::Camera3CaptureResultPtr CameraDeviceAdapter::PrepareCaptureResult(
       frame_number_mapper_.GetFrameworkFrameNumber(result->frame_number);
 
   frame_number_mapper_.RegisterCaptureResult(result, partial_result_count_);
+
+  const camera3_stream_buffer_t* attached_output = nullptr;
+  const camera3_stream_buffer_t* transformed_input = nullptr;
+  if (zsl_helper_.IsZslEnabled()) {
+    base::AutoLock streams_lock(streams_lock_);
+    base::AutoLock buffer_handles_lock(buffer_handles_lock_);
+    zsl_helper_.ProcessZslCaptureResult(result, &attached_output,
+                                        &transformed_input);
+  }
+
   if (frame_number_mapper_.IsAddedFrame(result->frame_number)) {
     // We use the metadata from the sister frame.
     LOGF(INFO) << "Trimming metadata for " << result->frame_number
@@ -721,15 +742,6 @@ mojom::Camera3CaptureResultPtr CameraDeviceAdapter::PrepareCaptureResult(
   } else {
     r->result = internal::SerializeCameraMetadata(result->result);
     r->partial_result = result->partial_result;
-  }
-
-  const camera3_stream_buffer_t* attached_output = nullptr;
-  const camera3_stream_buffer_t* transformed_input = nullptr;
-  if (zsl_helper_.IsZslEnabled()) {
-    base::AutoLock streams_lock(streams_lock_);
-    base::AutoLock buffer_handles_lock(buffer_handles_lock_);
-    zsl_helper_.ProcessZslCaptureResult(result, &attached_output,
-                                        &transformed_input);
   }
 
   // Serialize output buffers.  This may be none as num_output_buffers may be 0.
