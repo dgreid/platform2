@@ -73,7 +73,8 @@ bool ParseMetadata(const base::Value* metadata_element,
 Manifest::Manifest()
     : manifest_version_(0),
       fs_type_(FileSystem::kExt4),
-      preallocated_size_(-1),
+      preallocated_size_(0),
+      size_(0),
       is_removable_(false) {}
 
 bool Manifest::ParseManifest(const std::string& manifest_raw) {
@@ -164,12 +165,23 @@ bool Manifest::ParseManifest(const std::string& manifest_raw) {
   manifest_dict->GetString(kPackage, &package_);
   manifest_dict->GetString(kName, &name_);
   manifest_dict->GetString(kImageType, &image_type_);
-  // TODO(http://crbug.com/904539 comment #11): This can overflow, should get
-  // binary blob and convert to size_t.
-  manifest_dict->GetInteger(kPreallocatedSize, &preallocated_size_);
-  // TODO(http://crbug.com/904539 comment #11): This can overflow, should get
-  // binary blob and convert to size_t.
-  manifest_dict->GetInteger(kSize, &size_);
+
+  std::string preallocated_size_str;
+  if (manifest_dict->GetString(kPreallocatedSize, &preallocated_size_str)) {
+    if (!base::StringToInt64(preallocated_size_str, &preallocated_size_)) {
+      LOG(ERROR) << "Manifest pre-allocated-size was malformed: "
+                 << preallocated_size_str;
+      return false;
+    }
+  }
+
+  std::string size_str;
+  if (manifest_dict->GetString(kSize, &size_str)) {
+    if (!base::StringToInt64(size_str, &size_)) {
+      LOG(ERROR) << "Manifest size was malformed: " << size_str;
+      return false;
+    }
+  }
 
   // Copy out the metadata, if it's there.
   const base::Value* metadata = nullptr;

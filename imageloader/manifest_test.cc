@@ -19,8 +19,8 @@ TEST(ManifestTest, ParseManifest) {
   const std::string id = R"("foo")";
   const std::string name = R"("bar")";
   const std::string image_type = R"("dlc")";
-  const std::string preallocated_size = R"(600613)";
-  const std::string size = R"(42)";
+  const std::string preallocated_size = R"("600613")";
+  const std::string size = R"("42")";
   const std::string preload_allowed = R"(true)";
   const std::string manifest_version = R"(1)";
   const std::string manifest_raw = std::string() + R"(
@@ -94,6 +94,10 @@ TEST(ManifestTest, ParseManifestNoOptional) {
   EXPECT_NE(manifest.version().size(), 0);
   EXPECT_EQ(manifest.manifest_version(), 1);
   EXPECT_EQ(manifest.preload_allowed(), false);
+
+  // Sizes should default to 0.
+  EXPECT_EQ(manifest.preallocated_size(), 0);
+  EXPECT_EQ(manifest.size(), 0);
 }
 
 TEST(ManifestTest, ParseManifestNoImageHash) {
@@ -157,6 +161,63 @@ TEST(ManifestTest, ParseManifestNoVersion) {
                                    R"(,
     "manifest-version":)" + manifest_version +
                                    R"(
+    }
+  )";
+  Manifest manifest;
+  // Parse the manifest raw string.
+  ASSERT_FALSE(manifest.ParseManifest(manifest_raw));
+}
+
+TEST(ManifestTest, ParseManifestBadPreallocatedSize) {
+  const std::string is_removable = R"(true)";
+  const std::string image_sha256_hash =
+      R"("4CF41BD11362CCB4707FB93939DBB5AC48745EDFC9DC8D7702852FFAA81B3B3F")";
+  const std::string table_sha256_hash =
+      R"("0E11DA3D7140C6B95496787F50D15152434EBA22B60443BFA7E054FF4C799276")";
+  const std::string version = R"("9824.0.4")";
+  const std::string manifest_version = R"(1)";
+  const std::string pre_allocated_size = R"("not a number")";
+  const std::string manifest_raw = std::string() + R"(
+    {
+    "is-removable":)" + is_removable +
+                                   R"(,
+    "image-sha256-hash":)" + image_sha256_hash +
+                                   R"(,
+    "table-sha256-hash":)" + table_sha256_hash +
+                                   R"(,
+    "version":)" + version + R"(,
+    "manifest-version":)" + manifest_version +
+                                   R"(,
+    "pre-allocated-size":)" + pre_allocated_size +
+                                   R"(
+    }
+  )";
+  Manifest manifest;
+  // Parse the manifest raw string.
+  ASSERT_FALSE(manifest.ParseManifest(manifest_raw));
+}
+
+TEST(ManifestTest, ParseManifestBadSize) {
+  const std::string is_removable = R"(true)";
+  const std::string image_sha256_hash =
+      R"("4CF41BD11362CCB4707FB93939DBB5AC48745EDFC9DC8D7702852FFAA81B3B3F")";
+  const std::string table_sha256_hash =
+      R"("0E11DA3D7140C6B95496787F50D15152434EBA22B60443BFA7E054FF4C799276")";
+  const std::string version = R"("9824.0.4")";
+  const std::string manifest_version = R"(1)";
+  const std::string size = R"("not a number")";
+  const std::string manifest_raw = std::string() + R"(
+    {
+    "is-removable":)" + is_removable +
+                                   R"(,
+    "image-sha256-hash":)" + image_sha256_hash +
+                                   R"(,
+    "table-sha256-hash":)" + table_sha256_hash +
+                                   R"(,
+    "version":)" + version + R"(,
+    "manifest-version":)" + manifest_version +
+                                   R"(,
+    "size":)" + size + R"(
     }
   )";
   Manifest manifest;

@@ -36,8 +36,8 @@ class BRILLO_EXPORT Manifest {
   const std::string& package() const { return package_; }
   const std::string& name() const { return name_; }
   const std::string& image_type() const { return image_type_; }
-  int preallocated_size() const { return preallocated_size_; }
-  int size() const { return size_; }
+  int64_t preallocated_size() const { return preallocated_size_; }
+  int64_t size() const { return size_; }
   bool is_removable() const { return is_removable_; }
   // Indicator for |dlcservice| to allow preloading at a per DLC level.
   bool preload_allowed() const { return preload_allowed_; }
@@ -46,18 +46,20 @@ class BRILLO_EXPORT Manifest {
   }
 
  private:
-  // Manifest fields:
+  // Required manifest fields:
   int manifest_version_;
   std::vector<uint8_t> image_sha256_;
   std::vector<uint8_t> table_sha256_;
   std::string version_;
+
+  // Optional manifest fields:
   FileSystem fs_type_;
   std::string id_;
   std::string package_;
   std::string name_;
   std::string image_type_;
-  int preallocated_size_;
-  int size_;
+  int64_t preallocated_size_;
+  int64_t size_;
   bool is_removable_;
   bool preload_allowed_;
   std::map<std::string, std::string> metadata_;
