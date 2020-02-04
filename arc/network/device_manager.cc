@@ -69,7 +69,6 @@ DeviceManager::DeviceManager(std::unique_ptr<ShillClient> shill_client,
 
 DeviceManager::~DeviceManager() {
   shill_client_->UnregisterDevicesChangedHandler();
-  shill_client_->UnregisterDefaultInterfaceChangedHandler();
 }
 
 bool DeviceManager::IsMulticastInterface(const std::string& ifname) const {

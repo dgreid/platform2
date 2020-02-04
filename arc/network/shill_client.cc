@@ -174,19 +174,17 @@ void ShillClient::SetDefaultInterface(std::string new_default) {
     return;
 
   default_interface_ = new_default;
-  if (!default_interface_callback_.is_null())
-    default_interface_callback_.Run(default_interface_);
+  for (const auto& cb : default_interface_callbacks_) {
+    if (!cb.is_null())
+      cb.Run(default_interface_);
+  }
 }
 
 void ShillClient::RegisterDefaultInterfaceChangedHandler(
     const base::Callback<void(const std::string&)>& callback) {
-  default_interface_callback_ = callback;
+  default_interface_callbacks_.emplace_back(callback);
   SetDefaultInterface(GetDefaultInterface());
-  default_interface_callback_.Run(default_interface_);
-}
-
-void ShillClient::UnregisterDefaultInterfaceChangedHandler() {
-  default_interface_callback_.Reset();
+  callback.Run(default_interface_);
 }
 
 void ShillClient::RegisterDevicesChangedHandler(

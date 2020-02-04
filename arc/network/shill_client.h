@@ -8,6 +8,7 @@
 #include <memory>
 #include <set>
 #include <string>
+#include <vector>
 
 #include <base/macros.h>
 #include <base/memory/weak_ptr.h>
@@ -24,7 +25,6 @@ class ShillClient {
 
   void RegisterDefaultInterfaceChangedHandler(
       const base::Callback<void(const std::string&)>& callback);
-  void UnregisterDefaultInterfaceChangedHandler();
 
   void RegisterDevicesChangedHandler(
       const base::Callback<void(const std::set<std::string>&)>& callback);
@@ -59,7 +59,8 @@ class ShillClient {
   // Tracks all network interfaces managed by shill.
   std::set<std::string> devices_;
   // Called when the interface used as the default interface changes.
-  base::Callback<void(const std::string&)> default_interface_callback_;
+  std::vector<base::Callback<void(const std::string&)>>
+      default_interface_callbacks_;
   // Called when the list of network interfaces managed by shill changes.
   base::Callback<void(const std::set<std::string>&)> devices_callback_;
 
