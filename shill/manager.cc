@@ -2223,14 +2223,6 @@ PortalDetector::Properties Manager::GetPortalCheckProperties() const {
 
 // called via RPC (e.g., from ManagerDBusAdaptor)
 ServiceRefPtr Manager::GetService(const KeyValueStore& args, Error* error) {
-  if (args.ContainsString(kTypeProperty) &&
-      args.GetString(kTypeProperty) == kTypeVPN) {
-    // GetService on a VPN service should actually perform ConfigureService.
-    // TODO(pstew): Remove this hack and change Chrome to use ConfigureService
-    // instead, when we no longer need to support flimflam.  crbug.com/213802
-    return ConfigureService(args, error);
-  }
-
   ServiceRefPtr service = GetServiceInner(args, error);
   if (service) {
     // Configures the service using the rest of the passed-in arguments.

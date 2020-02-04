@@ -1545,41 +1545,6 @@ TEST_F(ManagerTest, GetServiceVPNUnknownType) {
   EXPECT_FALSE(service);
 }
 
-TEST_F(ManagerTest, GetServiceVPN) {
-  KeyValueStore args;
-  Error e;
-  args.SetString(kTypeProperty, kTypeVPN);
-  args.SetString(kProviderTypeProperty, kProviderOpenVpn);
-  args.SetString(kProviderHostProperty, "10.8.0.1");
-  args.SetString(kNameProperty, "vpn-name");
-  scoped_refptr<MockProfile> profile(
-      new StrictMock<MockProfile>(manager(), ""));
-  AdoptProfile(manager(), profile);
-
-#if defined(DISABLE_VPN)
-
-  ServiceRefPtr service = manager()->GetService(args, &e);
-  EXPECT_EQ(Error::kNotSupported, e.type());
-  EXPECT_FALSE(service);
-
-#else
-
-  ServiceRefPtr updated_service;
-  EXPECT_CALL(*profile, UpdateService(_))
-      .WillOnce(DoAll(SaveArg<0>(&updated_service), Return(true)));
-  ServiceRefPtr configured_service;
-  EXPECT_CALL(*profile, LoadService(_)).WillOnce(Return(false));
-  EXPECT_CALL(*profile, ConfigureService(_))
-      .WillOnce(DoAll(SaveArg<0>(&configured_service), Return(true)));
-  ServiceRefPtr service = manager()->GetService(args, &e);
-  EXPECT_TRUE(e.IsSuccess());
-  EXPECT_NE(nullptr, service);
-  EXPECT_EQ(service, updated_service);
-  EXPECT_EQ(service, configured_service);
-
-#endif  // DISABLE_VPN
-}
-
 TEST_F(ManagerTest, ConfigureServiceWithInvalidProfile) {
   // Manager calls ActiveProfile() so we need at least one profile installed.
   scoped_refptr<MockProfile> profile(new NiceMock<MockProfile>(manager(), ""));
