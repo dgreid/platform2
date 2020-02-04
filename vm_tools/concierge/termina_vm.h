@@ -194,6 +194,7 @@ class TerminaVm final : public VmInterface {
       uint64_t new_size, std::string* failure_reason) override;
   vm_tools::concierge::DiskImageStatus GetDiskResizeStatus(
       std::string* failure_reason) override;
+  uint64_t GetMinDiskSize() override;
 
   void SetTremplinStarted() override { is_tremplin_started_ = true; }
   void VmToolsStateChanged(bool running) override { NOTREACHED(); }

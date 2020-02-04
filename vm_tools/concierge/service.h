@@ -210,6 +210,11 @@ class Service final {
   VmMap::iterator FindVm(const std::string& owner_id,
                          const std::string& vm_name);
 
+  bool ListVmDisksInLocation(const std::string& cryptohome_id,
+                             StorageLocation location,
+                             const std::string& lookup_name,
+                             ListVmDisksResponse* response);
+
   // Resource allocators for VMs.
   arc_networkd::MacAddressGenerator mac_address_generator_;
   arc_networkd::AddressManager network_address_manager_;

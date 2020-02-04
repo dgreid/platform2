@@ -106,6 +106,10 @@ class VmInterface {
   // Get the status of the most recent ResizeDisk operation.
   virtual vm_tools::concierge::DiskImageStatus GetDiskResizeStatus(
       std::string* failure_reason) = 0;
+
+  // Get the smallest valid resize parameter for this disk,
+  // or 0 for unknown.
+  virtual uint64_t GetMinDiskSize() { return 0; }
 };
 
 }  // namespace concierge

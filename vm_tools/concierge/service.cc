@@ -577,10 +577,36 @@ uint64_t GetFileUsage(const base::FilePath& path) {
   return 0;
 }
 
-bool ListVmDisksInLocation(const string& cryptohome_id,
-                           StorageLocation location,
-                           const string& lookup_name,
-                           ListVmDisksResponse* response) {
+// Returns the current kernel version. If there is a failure to retrieve the
+// version it returns <INT_MIN, INT_MIN>.
+KernelVersionAndMajorRevision GetKernelVersion() {
+  struct utsname buf;
+  if (uname(&buf))
+    return std::make_pair(INT_MIN, INT_MIN);
+
+  // Parse uname result in the form of x.yy.zzz. The parsed data should be in
+  // the expected format.
+  std::vector<base::StringPiece> versions = base::SplitStringPiece(
+      buf.release, ".", base::WhitespaceHandling::TRIM_WHITESPACE,
+      base::SplitResult::SPLIT_WANT_ALL);
+  DCHECK_EQ(versions.size(), 3);
+  DCHECK(!versions[0].empty());
+  DCHECK(!versions[1].empty());
+  int version;
+  bool result = base::StringToInt(versions[0], &version);
+  DCHECK(result);
+  int major_revision;
+  result = base::StringToInt(versions[1], &major_revision);
+  DCHECK(result);
+  return std::make_pair(version, major_revision);
+}
+
+}  // namespace
+
+bool Service::ListVmDisksInLocation(const string& cryptohome_id,
+                                    StorageLocation location,
+                                    const string& lookup_name,
+                                    ListVmDisksResponse* response) {
   base::FilePath image_dir;
   base::FileEnumerator::FileType file_type = base::FileEnumerator::FILES;
   const char* const* allowed_ext = kDiskImageExtensions;
@@ -645,41 +671,26 @@ bool ListVmDisksInLocation(const string& cryptohome_id,
                         : GetFileUsage(path);
     total_size += size;
 
+    uint64_t min_size;
+    auto iter = FindVm(cryptohome_id, image_name);
+    if (iter == vms_.end()) {
+      // VM may not be running - in this case, we can't determine min_size, so
+      // report 0 for unknown.
+      min_size = 0;
+    } else {
+      min_size = iter->second->GetMinDiskSize();
+    }
+
     VmDiskInfo* image = response->add_images();
     image->set_name(std::move(image_name));
     image->set_storage_location(location);
     image->set_size(size);
+    image->set_min_size(min_size);
   }
 
   response->set_total_size(response->total_size() + total_size);
   return true;
 }
-
-// Returns the current kernel version. If there is a failure to retrieve the
-// version it returns <INT_MIN, INT_MIN>.
-KernelVersionAndMajorRevision GetKernelVersion() {
-  struct utsname buf;
-  if (uname(&buf))
-    return std::make_pair(INT_MIN, INT_MIN);
-
-  // Parse uname result in the form of x.yy.zzz. The parsed data should be in
-  // the expected format.
-  std::vector<base::StringPiece> versions = base::SplitStringPiece(
-      buf.release, ".", base::WhitespaceHandling::TRIM_WHITESPACE,
-      base::SplitResult::SPLIT_WANT_ALL);
-  DCHECK_EQ(versions.size(), 3);
-  DCHECK(!versions[0].empty());
-  DCHECK(!versions[1].empty());
-  int version;
-  bool result = base::StringToInt(versions[0], &version);
-  DCHECK(result);
-  int major_revision;
-  result = base::StringToInt(versions[1], &major_revision);
-  DCHECK(result);
-  return std::make_pair(version, major_revision);
-}
-
-}  // namespace
 
 std::unique_ptr<Service> Service::Create(base::Closure quit_closure) {
   auto service = base::WrapUnique(new Service(std::move(quit_closure)));

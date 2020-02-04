@@ -754,6 +754,28 @@ vm_tools::concierge::DiskImageStatus TerminaVm::GetDiskResizeStatus(
   return last_stateful_resize_status_;
 }
 
+uint64_t TerminaVm::GetMinDiskSize() {
+  grpc::ClientContext ctx;
+  ctx.set_deadline(gpr_time_add(
+      gpr_now(GPR_CLOCK_MONOTONIC),
+      gpr_time_from_seconds(kDefaultTimeoutSeconds, GPR_TIMESPAN)));
+
+  vm_tools::EmptyMessage request;
+  vm_tools::GetResizeBoundsResponse response;
+
+  grpc::Status status = stub_->GetResizeBounds(&ctx, request, &response);
+
+  if (!status.ok()) {
+    LOG(ERROR) << "GetResizeBounds RPC failed";
+    return 0;
+  }
+
+  LOG(INFO) << "maitred GetResizeBounds minimum_size = "
+            << response.minimum_size();
+
+  return response.minimum_size();
+}
+
 uint32_t TerminaVm::GatewayAddress() const {
   return subnet_->AddressAtOffset(kHostAddressOffset);
 }
