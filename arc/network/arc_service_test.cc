@@ -14,6 +14,7 @@
 
 #include "arc/network/device_manager.h"
 #include "arc/network/fake_process_runner.h"
+#include "arc/network/fake_shill_client.h"
 #include "arc/network/mock_datapath.h"
 #include "arc/network/net_util.h"
 
@@ -102,6 +103,7 @@ class ArcServiceTest : public testing::Test {
     runner_ = std::make_unique<FakeProcessRunner>();
     runner_->Capture(false);
     datapath_ = std::make_unique<MockDatapath>(runner_.get());
+    shill_client_ = shill_helper_.Client();
   }
 
   std::unique_ptr<ArcService> NewService(bool arc_legacy = false) {
@@ -112,9 +114,12 @@ class ArcServiceTest : public testing::Test {
 
     arc_networkd::test::guest =
         arc_legacy ? GuestMessage::ARC_LEGACY : GuestMessage::ARC;
-    return std::make_unique<ArcService>(&dev_mgr_, datapath_.get());
+    return std::make_unique<ArcService>(shill_client_.get(), &dev_mgr_,
+                                        datapath_.get());
   }
 
+  FakeShillClientHelper shill_helper_;
+  std::unique_ptr<ShillClient> shill_client_;
   AddressManager addr_mgr_;
   MockDeviceManager dev_mgr_;
   std::unique_ptr<MockDatapath> datapath_;

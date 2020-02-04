@@ -51,15 +51,15 @@ bool IsAdbSideloadingEnabled(const scoped_refptr<dbus::Bus>& bus) {
 
 }  // namespace
 
-CrostiniService::CrostiniService(DeviceManagerBase* dev_mgr, Datapath* datapath)
-    : dev_mgr_(dev_mgr), datapath_(datapath) {
-  DCHECK(dev_mgr_);
+CrostiniService::CrostiniService(ShillClient* shill_client,
+                                 DeviceManagerBase* dev_mgr,
+                                 Datapath* datapath)
+    : shill_client_(shill_client), dev_mgr_(dev_mgr), datapath_(datapath) {
+  DCHECK(shill_client_), DCHECK(dev_mgr_);
   DCHECK(datapath_);
 
-  dev_mgr_->RegisterDefaultInterfaceChangedHandler(
-      GuestMessage::TERMINA_VM,
-      base::Bind(&CrostiniService::OnDefaultInterfaceChanged,
-                 base::Unretained(this)));
+  shill_client_->RegisterDefaultInterfaceChangedHandler(base::Bind(
+      &CrostiniService::OnDefaultInterfaceChanged, weak_factory_.GetWeakPtr()));
 }
 
 bool CrostiniService::Start(uint64_t vm_id, bool is_termina, int subnet_index) {

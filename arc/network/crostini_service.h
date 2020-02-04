@@ -15,6 +15,7 @@
 #include "arc/network/datapath.h"
 #include "arc/network/device.h"
 #include "arc/network/device_manager.h"
+#include "arc/network/shill_client.h"
 
 namespace arc_networkd {
 
@@ -22,8 +23,11 @@ namespace arc_networkd {
 // management for Crostini VMs.
 class CrostiniService {
  public:
-  // |dev_mgr| and |datapath| cannot be null.
-  CrostiniService(DeviceManagerBase* dev_mgr, Datapath* datapath);
+  // All pointers are required and must not be null, and are owned by the
+  // caller.
+  CrostiniService(ShillClient* shill_client,
+                  DeviceManagerBase* dev_mgr,
+                  Datapath* datapath);
   ~CrostiniService() = default;
 
   bool Start(uint64_t vm_id, bool is_termina, int subnet_index);
@@ -49,6 +53,7 @@ class CrostiniService {
   void StartAdbPortForwarding(const std::string& ifname);
   void StopAdbPortForwarding(const std::string& ifname);
 
+  ShillClient* shill_client_;
   DeviceManagerBase* dev_mgr_;
   Datapath* datapath_;
   // Mapping of VM IDs to TAP devices

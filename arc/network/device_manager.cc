@@ -46,11 +46,11 @@ bool IgnoreInterface(const std::string& ifname) {
 
 }  // namespace
 
-DeviceManager::DeviceManager(std::unique_ptr<ShillClient> shill_client,
+DeviceManager::DeviceManager(ShillClient* shill_client,
                              AddressManager* addr_mgr,
                              Datapath* datapath,
                              TrafficForwarder* forwarder)
-    : shill_client_(std::move(shill_client)),
+    : shill_client_(shill_client),
       addr_mgr_(addr_mgr),
       datapath_(datapath),
       forwarder_(forwarder) {

@@ -28,11 +28,11 @@ namespace {
 
 class MockDeviceManager : public DeviceManager {
  public:
-  MockDeviceManager(std::unique_ptr<ShillClient> shill_client,
+  MockDeviceManager(ShillClient* shill_client,
                     AddressManager* addr_mgr,
                     Datapath* datapath,
                     TrafficForwarder* forwarder)
-      : DeviceManager(std::move(shill_client), addr_mgr, datapath, forwarder) {}
+      : DeviceManager(shill_client, addr_mgr, datapath, forwarder) {}
   ~MockDeviceManager() = default;
 
   MOCK_CONST_METHOD1(IsMulticastInterface, bool(const std::string& ifname));
@@ -87,15 +87,14 @@ class DeviceManagerTest : public testing::Test {
 
   std::unique_ptr<MockDeviceManager> NewManager() {
     shill_helper_ = std::make_unique<FakeShillClientHelper>();
-    auto shill_client = shill_helper_->FakeClient();
-    shill_client_ = shill_client.get();
+    shill_client_ = shill_helper_->FakeClient();
 
     auto mgr = std::make_unique<MockDeviceManager>(
-        std::move(shill_client), &addr_mgr_, datapath_.get(), &forwarder_);
+        shill_client_.get(), &addr_mgr_, datapath_.get(), &forwarder_);
     return mgr;
   }
 
-  FakeShillClient* shill_client_;
+  std::unique_ptr<FakeShillClient> shill_client_;
 
  private:
   std::unique_ptr<FakeShillClientHelper> shill_helper_;

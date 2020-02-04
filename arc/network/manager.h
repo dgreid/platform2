@@ -121,6 +121,8 @@ class Manager final : public brillo::DBusDaemon, private TrafficForwarder {
 
   friend std::ostream& operator<<(std::ostream& stream, const Manager& manager);
 
+  std::unique_ptr<ShillClient> shill_client_;
+
   // Guest services.
   std::unique_ptr<ArcService> arc_svc_;
   std::unique_ptr<CrostiniService> cros_svc_;

@@ -92,8 +92,9 @@ class DeviceManagerBase {
 // Virtual methods for testing.
 class DeviceManager : public DeviceManagerBase {
  public:
-  // |addr_mgr| and |datapath| must not be null.
-  DeviceManager(std::unique_ptr<ShillClient> shill_client,
+  // All pointers are required and must not be null; they are also owned by the
+  // caller.
+  DeviceManager(ShillClient* shill_client,
                 AddressManager* addr_mgr,
                 Datapath* datapath,
                 TrafficForwarder* forwarder);
@@ -154,7 +155,7 @@ class DeviceManager : public DeviceManagerBase {
   void OnDevicesChanged(const std::set<std::string>& devices);
 
   // Receives network device updates and notifications from shill.
-  std::unique_ptr<ShillClient> shill_client_;
+  ShillClient* shill_client_;
 
   // Provisions and tracks subnets and addresses.
   AddressManager* addr_mgr_;

@@ -233,13 +233,15 @@ void Manager::InitialSetup() {
   nd_proxy_->RegisterDeviceMessageHandler(base::Bind(
       &Manager::OnDeviceMessageFromNDProxy, weak_factory_.GetWeakPtr()));
 
+  shill_client_ = std::make_unique<ShillClient>(bus_);
   device_mgr_ = std::make_unique<DeviceManager>(
-      std::make_unique<ShillClient>(bus_), &addr_mgr_, datapath_.get(),
+      shill_client_.get(), &addr_mgr_, datapath_.get(),
       static_cast<TrafficForwarder*>(this));
 
-  arc_svc_ = std::make_unique<ArcService>(device_mgr_.get(), datapath_.get());
-  cros_svc_ =
-      std::make_unique<CrostiniService>(device_mgr_.get(), datapath_.get());
+  arc_svc_ = std::make_unique<ArcService>(shill_client_.get(),
+                                          device_mgr_.get(), datapath_.get());
+  cros_svc_ = std::make_unique<CrostiniService>(
+      shill_client_.get(), device_mgr_.get(), datapath_.get());
 
   nd_proxy_->Listen();
 }

@@ -16,6 +16,7 @@
 #include "arc/network/device.h"
 #include "arc/network/device_manager.h"
 #include "arc/network/ipc.pb.h"
+#include "arc/network/shill_client.h"
 
 namespace arc_networkd {
 
@@ -152,9 +153,10 @@ class ArcService {
     DISALLOW_COPY_AND_ASSIGN(VmImpl);
   };
 
-  // |dev_mgr| and |datapath| cannot be null.
-  // |is_legacy| is temporary and intended to be used for testing only.
-  ArcService(DeviceManagerBase* dev_mgr, Datapath* datapath);
+  // All pointers are required and cannot be null, and are owned by the caller.
+  ArcService(ShillClient* shill_client,
+             DeviceManagerBase* dev_mgr,
+             Datapath* datapath);
   ~ArcService();
 
   bool Start(uint32_t id);
@@ -171,6 +173,7 @@ class ArcService {
   // Returns true if the device should be processed by the service.
   bool AllowDevice(Device* device) const;
 
+  ShillClient* shill_client_;
   DeviceManagerBase* dev_mgr_;
   Datapath* datapath_;
   std::unique_ptr<Impl> impl_;

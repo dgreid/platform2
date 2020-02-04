@@ -163,8 +163,11 @@ bool IsArcDevice(const std::string& ifname) {
 
 }  // namespace
 
-ArcService::ArcService(DeviceManagerBase* dev_mgr, Datapath* datapath)
-    : dev_mgr_(dev_mgr), datapath_(datapath) {
+ArcService::ArcService(ShillClient* shill_client,
+                       DeviceManagerBase* dev_mgr,
+                       Datapath* datapath)
+    : shill_client_(shill_client), dev_mgr_(dev_mgr), datapath_(datapath) {
+  DCHECK(shill_client_);
   DCHECK(dev_mgr_);
   DCHECK(datapath_);
 
