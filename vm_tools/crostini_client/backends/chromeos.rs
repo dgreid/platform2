@@ -1514,6 +1514,11 @@ impl Backend for ChromeOS {
             .map(|e| DiskInfo {
                 name: e.name,
                 size: e.size,
+                min_size: if e.min_size != 0 {
+                    Some(e.min_size)
+                } else {
+                    None
+                },
             })
             .collect();
         Ok((out_images, total_size))

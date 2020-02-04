@@ -78,6 +78,8 @@ pub struct DiskInfo {
     pub name: String,
     /// Size of the disk in bytes.
     pub size: u64,
+    /// Minimum size the disk image may be resized to, if known.
+    pub min_size: Option<u64>,
 }
 
 // The input for this macro is an ordinary trait declaration, with some restrictions. Each method

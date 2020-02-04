@@ -379,7 +379,11 @@ impl<'a, 'b, 'c> Command<'a, 'b, 'c> {
 
         let (disk_image_list, total_size) = try_command!(self.backend.disk_list(user_id_hash));
         for disk in disk_image_list {
-            println!("{} ({} bytes)", disk.name, disk.size);
+            let mut extra_info = String::new();
+            if let Some(min_size) = disk.min_size {
+                extra_info.push_str(&format!(", min shrinkable size {} bytes", min_size));
+            }
+            println!("{} ({} bytes{})", disk.name, disk.size, extra_info);
         }
         println!("Total Size (bytes): {}", total_size);
         Ok(())
