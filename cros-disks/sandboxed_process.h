@@ -10,6 +10,7 @@
 #include <string>
 #include <vector>
 
+#include <base/containers/span.h>
 #include <base/files/file.h>
 
 #include "cros-disks/process.h"
@@ -70,11 +71,14 @@ class SandboxedProcess : public Process {
   // Sets the process capabilities of the process to be sandboxed.
   void SetCapabilities(uint64_t capabilities);
 
-  // Sets the group ID of the process to be sandboxed.
+  // Sets the primary group ID of the process to be sandboxed.
   void SetGroupId(gid_t group_id);
 
   // Sets the user ID of the process to be sandboxed.
   void SetUserId(uid_t user_id);
+
+  // Sets supplementary group IDs of the process to be sandboxed.
+  void SetSupplementaryGroupIds(base::span<const gid_t> gids);
 
   // Close all open fds on fork.
   void CloseOpenFds();

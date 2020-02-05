@@ -4,6 +4,8 @@
 
 #include "cros-disks/sandboxed_process.h"
 
+#include <utility>
+
 #include <stdlib.h>
 
 #include <sys/mount.h>
@@ -131,6 +133,10 @@ void SandboxedProcess::SetGroupId(gid_t group_id) {
 
 void SandboxedProcess::SetUserId(uid_t user_id) {
   minijail_change_uid(jail_, user_id);
+}
+
+void SandboxedProcess::SetSupplementaryGroupIds(base::span<const gid_t> gids) {
+  minijail_set_supplementary_gids(jail_, gids.size(), gids.data());
 }
 
 void SandboxedProcess::CloseOpenFds() {

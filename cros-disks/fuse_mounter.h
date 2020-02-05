@@ -12,6 +12,7 @@
 #include <vector>
 
 #include <base/files/file.h>
+#include <base/strings/string_piece.h>
 
 #include "cros-disks/mounter.h"
 
@@ -43,6 +44,9 @@ class FUSEMounter : public MounterCompat {
               const std::vector<BindPath>& accessible_paths,
               bool permit_network_access,
               const std::string& mount_group = {});
+
+  // Adds a supplementary group to run the FUSE mount program with.
+  void AddGroup(base::StringPiece group);
 
   // MounterCompat overrides.
   std::unique_ptr<MountPoint> Mount(const std::string& source,
@@ -78,6 +82,9 @@ class FUSEMounter : public MounterCompat {
 
   // Whether to leave network access to the mount program.
   const bool permit_network_access_;
+
+  // Supplementary groups to run the FUSE mount program with.
+  std::vector<std::string> supplementary_groups_;
 
  private:
   DISALLOW_COPY_AND_ASSIGN(FUSEMounter);

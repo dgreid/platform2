@@ -112,11 +112,13 @@ std::unique_ptr<MountPoint> RarManager::DoMount(
 
   // Run rar2fs.
   // TODO(crbug.com/996549): Create a seccomp policy.
-  // TODO(crbug.com/996549): Handle archives in Play Files.
   FUSEMounter mounter(
       "rarfs", options, platform(), process_reaper(), "/usr/bin/rar2fs",
       "fuse-rar2fs", "" /* seccomp_policy */, GetBindPaths(source_path),
       false /* permit_network_access */, FUSEHelper::kFilesGroup);
+
+  // To access Play Files.
+  mounter.AddGroup("android-everybody");
 
   return mounter.Mount(source_path, mount_path, {}, error);
 }
