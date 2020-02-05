@@ -44,12 +44,92 @@ class RarManager : public MountManager {
                                       MountOptions* applied_options,
                                       MountErrorType* error) override;
 
+  // Increments a sequence of digits or letters [begin, end). Returns true if
+  // success, and false in case of overflow.
+  static bool Increment(std::string::iterator begin, std::string::iterator end);
+
+  // A semi-open index range [begin, end).
+  struct IndexRange {
+    size_t begin, end;
+
+    bool empty() const { return begin == end; }
+    size_t size() const { return end - begin; }
+
+    // Friend operators for testing, logging and debugging.
+    friend std::ostream& operator<<(std::ostream& out, const IndexRange& r) {
+      return out << "{ begin: " << r.begin << ", end: " << r.end << " }";
+    }
+
+    friend bool operator==(const IndexRange& a, const IndexRange& b) {
+      return a.begin == b.begin && a.end == b.end;
+    }
+  };
+
+  // Checks if the given path ends with ".partNNNN.rar", which is the new
+  // naming pattern for multipart archives. Returns the range of characters
+  // forming the numeric part NNNN if path matches the pattern, or an empty
+  // range otherwise.
+  static IndexRange ParseDigits(base::StringPiece path);
+
+  // Adds bind paths using old naming scheme.
+  void AddPathsWithOldNamingScheme(
+      std::vector<FUSEMounter::BindPath>* bind_paths,
+      base::StringPiece original_path) const;
+
+  // Adds bind paths using new naming scheme.
+  void AddPathsWithNewNamingScheme(
+      std::vector<FUSEMounter::BindPath>* bind_paths,
+      base::StringPiece original_path,
+      const IndexRange& digits) const;
+
   // Prepares the bind paths for the given RAR file path.
-  // TODO(crbug.com/221124): Handle multipart archives.
-  std::vector<FUSEMounter::BindPath> GetBindPaths(base::StringPiece s) const;
+  //
+  // If the given path is considered to be part of a multipart archive, this
+  // function tries to find all the related files.
+  //
+  // Two different naming schemes are supported.
+  //
+  // The old naming scheme is:
+  //
+  // basename.rar
+  // basename.r00
+  // basename.r01
+  // ...
+  // basename.r99
+  // basename.s00
+  // basename.s01
+  // ...
+  //
+  //
+  // The new naming scheme is:
+  //
+  // basename.part1.rar
+  // basename.part2.rar
+  // ...
+  // basename.part9.rar
+  //
+  // or
+  //
+  // basename.part01.rar
+  // basename.part02.rar
+  // ...
+  // basename.part99.rar
+  //
+  // or
+  //
+  // basename.part001.rar
+  // ...
+  // etc.
+  std::vector<FUSEMounter::BindPath> GetBindPaths(
+      base::StringPiece original_path) const;
 
   FRIEND_TEST(RarManagerTest, CanMount);
   FRIEND_TEST(RarManagerTest, SuggestMountPath);
+  FRIEND_TEST(RarManagerTest, Increment);
+  FRIEND_TEST(RarManagerTest, ParseDigits);
+  FRIEND_TEST(RarManagerTest, GetBindPathsWithOldNamingScheme);
+  FRIEND_TEST(RarManagerTest, GetBindPathsWithNewNamingScheme);
+  FRIEND_TEST(RarManagerTest, GetBindPathsStopsOnOverflow);
 };
 
 }  // namespace cros_disks

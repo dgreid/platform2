@@ -148,11 +148,15 @@ MountErrorType ConfigureCommonSandbox(SandboxedProcess* sandbox,
     return MOUNT_ERROR_INTERNAL;
   }
 
-  // Data dirs if any are mounted inside /run/fuse.
-  if (!sandbox->Mount("tmpfs", "/run", "tmpfs", "mode=0755,size=10M")) {
-    LOG(ERROR) << "Can't mount /run";
-    return MOUNT_ERROR_INTERNAL;
+  // TODO(crbug.com/1053778) Only create the necessary tmpfs filesystems.
+  for (const char* const dir : {"/run", "/home", "/media"}) {
+    if (!sandbox->Mount("tmpfs", dir, "tmpfs", "mode=0755,size=10M")) {
+      LOG(ERROR) << "Cannot mount " << quote(dir);
+      return MOUNT_ERROR_INTERNAL;
+    }
   }
+
+  // Data dirs if any are mounted inside /run/fuse.
   if (!sandbox->BindMount("/run/fuse", "/run/fuse", false, false)) {
     LOG(ERROR) << "Can't bind /run/fuse";
     return MOUNT_ERROR_INTERNAL;
@@ -283,7 +287,7 @@ FUSEMounter::FUSEMounter(const std::string& filesystem_type,
 std::unique_ptr<MountPoint> FUSEMounter::Mount(
     const std::string& source,
     const base::FilePath& target_path,
-    std::vector<std::string> options,
+    std::vector<std::string> /*options*/,
     MountErrorType* error) const {
   auto mount_process = CreateSandboxedProcess();
   *error = ConfigureCommonSandbox(mount_process.get(), platform_,
@@ -364,13 +368,6 @@ std::unique_ptr<MountPoint> FUSEMounter::Mount(
       *error = MOUNT_ERROR_INVALID_ARGUMENT;
       return nullptr;
     }
-  }
-
-  // TODO(crbug.com/933018): Remove when DriveFS helper is refactored.
-  if (!mount_process->Mount("tmpfs", "/home", "tmpfs", "mode=0755,size=10M")) {
-    LOG(ERROR) << "Can't mount /home";
-    *error = MOUNT_ERROR_INTERNAL;
-    return nullptr;
   }
 
   // This is for additional data dirs.
