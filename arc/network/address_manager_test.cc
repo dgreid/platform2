@@ -124,13 +124,13 @@ TEST(AddressManager, SubnetIndexing) {
       AddressManager::Guest::VM_PLUGIN_EXT,
       AddressManager::Guest::CONTAINER,
   });
-  EXPECT_FALSE(mgr.AllocateIPv4Subnet(AddressManager::Guest::ARC, 0));
-  EXPECT_FALSE(mgr.AllocateIPv4Subnet(AddressManager::Guest::VM_ARC, 0));
-  EXPECT_FALSE(mgr.AllocateIPv4Subnet(AddressManager::Guest::ARC_NET, 0));
-  EXPECT_FALSE(mgr.AllocateIPv4Subnet(AddressManager::Guest::VM_TERMINA, 0));
-  EXPECT_FALSE(mgr.AllocateIPv4Subnet(AddressManager::Guest::VM_PLUGIN, 0));
-  EXPECT_TRUE(mgr.AllocateIPv4Subnet(AddressManager::Guest::VM_PLUGIN_EXT, 0));
-  EXPECT_FALSE(mgr.AllocateIPv4Subnet(AddressManager::Guest::CONTAINER, 0));
+  EXPECT_FALSE(mgr.AllocateIPv4Subnet(AddressManager::Guest::ARC, 1));
+  EXPECT_FALSE(mgr.AllocateIPv4Subnet(AddressManager::Guest::VM_ARC, 1));
+  EXPECT_FALSE(mgr.AllocateIPv4Subnet(AddressManager::Guest::ARC_NET, 1));
+  EXPECT_FALSE(mgr.AllocateIPv4Subnet(AddressManager::Guest::VM_TERMINA, 1));
+  EXPECT_FALSE(mgr.AllocateIPv4Subnet(AddressManager::Guest::VM_PLUGIN, 1));
+  EXPECT_TRUE(mgr.AllocateIPv4Subnet(AddressManager::Guest::VM_PLUGIN_EXT, 1));
+  EXPECT_FALSE(mgr.AllocateIPv4Subnet(AddressManager::Guest::CONTAINER, 1));
 }
 
 }  // namespace arc_networkd

@@ -18,6 +18,8 @@
 #include "arc/network/subnet.h"
 
 namespace arc_networkd {
+constexpr uint32_t kAnySubnetIndex = 0;
+constexpr uint32_t kMaxSubnets = 32;
 
 // Manages up to 32 IPv4 subnets that can be assigned to guest interfaces.
 // These use non-publicly routable addresses in the range 100.115.92.0/24.
@@ -31,8 +33,9 @@ class BRILLO_EXPORT SubnetPool {
   ~SubnetPool();
 
   // Allocates and returns a new subnet or nullptr if none are available.
-  // |index| may be used to request a particular subnet.
-  std::unique_ptr<Subnet> Allocate(int index = -1);
+  // |index| may be used to request a particular subnet, it is 1-based so 0
+  // indicates no preference.
+  std::unique_ptr<Subnet> Allocate(uint32_t index = kAnySubnetIndex);
 
  private:
   SubnetPool(uint32_t base_addr, uint32_t prefix_length, uint32_t num_subnets);
@@ -44,7 +47,7 @@ class BRILLO_EXPORT SubnetPool {
   const uint32_t prefix_length_;
   const uint32_t num_subnets_;
   const uint32_t addr_per_index_;
-  std::bitset<32> subnets_;
+  std::bitset<kMaxSubnets + 1> subnets_;
 
   base::WeakPtrFactory<SubnetPool> weak_ptr_factory_{this};
   DISALLOW_COPY_AND_ASSIGN(SubnetPool);

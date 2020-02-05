@@ -73,8 +73,8 @@ MacAddress AddressManager::GenerateMacAddress() {
 }
 
 std::unique_ptr<Subnet> AddressManager::AllocateIPv4Subnet(
-    AddressManager::Guest guest, int index) {
-  if (index >= 0 && guest != AddressManager::Guest::VM_PLUGIN_EXT) {
+    AddressManager::Guest guest, uint32_t index) {
+  if (index > 0 && guest != AddressManager::Guest::VM_PLUGIN_EXT) {
     LOG(ERROR) << "Subnet indexing not supported for guest";
     return nullptr;
   }

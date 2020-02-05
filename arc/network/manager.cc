@@ -345,7 +345,7 @@ void Manager::StopArcVm(uint32_t cid) {
 
 bool Manager::StartCrosVm(uint64_t vm_id,
                           GuestMessage::GuestType vm_type,
-                          int subnet_index) {
+                          uint32_t subnet_index) {
   DCHECK(vm_type == GuestMessage::TERMINA_VM ||
          vm_type == GuestMessage::PLUGIN_VM);
 
@@ -510,7 +510,7 @@ std::unique_ptr<dbus::Response> Manager::OnTerminaVmStartup(
   }
 
   const int32_t cid = request.cid();
-  if (!StartCrosVm(cid, GuestMessage::TERMINA_VM, kAnySubnetIndex)) {
+  if (!StartCrosVm(cid, GuestMessage::TERMINA_VM)) {
     LOG(ERROR) << "Failed to start Termina VM network service";
     writer.AppendProtoAsArrayOfBytes(response);
     return dbus_response;
@@ -594,11 +594,7 @@ std::unique_ptr<dbus::Response> Manager::OnPluginVmStartup(
   }
 
   const uint64_t vm_id = request.id();
-  // This field is 1-based so 0 (the proto default value) indicates that any
-  // subnet is acceptable, but the address manager is 0-based so we need to
-  // subtract 1 from the index here.
-  const int subnet_index = request.subnet_index() - 1;
-  if (!StartCrosVm(vm_id, GuestMessage::PLUGIN_VM, subnet_index)) {
+  if (!StartCrosVm(vm_id, GuestMessage::PLUGIN_VM, request.subnet_index())) {
     LOG(ERROR) << "Failed to start Plugin VM network service";
     writer.AppendProtoAsArrayOfBytes(response);
     return dbus_response;

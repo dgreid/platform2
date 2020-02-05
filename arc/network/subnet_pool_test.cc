@@ -26,7 +26,6 @@ namespace arc_networkd {
 namespace {
 
 // The maximum number of subnets that can be allocated at a given time.
-constexpr uint32_t kMaxSubnets = 32;
 constexpr uint32_t kBaseAddress = Ipv4Addr(44, 55, 66, 77);
 constexpr uint32_t kPrefixLength = 30;
 
@@ -49,7 +48,7 @@ TEST(SubnetPool, AllocationRange) {
 
     subnets.emplace_back(std::move(subnet));
   }
-
+  EXPECT_EQ(subnets.size(), kMaxSubnets);
   EXPECT_FALSE(pool->Allocate());
 }
 
@@ -92,16 +91,16 @@ TEST(SubnetPool, Release) {
 
 TEST(SubnetPool, Index) {
   auto pool = SubnetPool::New(kBaseAddress, kPrefixLength, kMaxSubnets);
-  auto subnet = pool->Allocate(0);
+  auto subnet = pool->Allocate(1);
   ASSERT_TRUE(subnet);
-  ASSERT_FALSE(pool->Allocate(0));
-  ASSERT_TRUE(pool->Allocate(-1));
-  ASSERT_TRUE(pool->Allocate());
-  ASSERT_TRUE(pool->Allocate(1));
-  ASSERT_FALSE(pool->Allocate(kMaxSubnets));
+  EXPECT_FALSE(pool->Allocate(1));
+  EXPECT_TRUE(pool->Allocate(0));
+  EXPECT_TRUE(pool->Allocate());
+  EXPECT_TRUE(pool->Allocate(2));
+  EXPECT_TRUE(pool->Allocate(kMaxSubnets));
   subnet.reset();
-  ASSERT_TRUE(pool->Allocate(0));
-  ASSERT_FALSE(pool->Allocate(kMaxSubnets + 1));
+  EXPECT_TRUE(pool->Allocate(1));
+  EXPECT_FALSE(pool->Allocate(kMaxSubnets + 1));
 }
 
 }  // namespace arc_networkd

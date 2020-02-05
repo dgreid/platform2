@@ -18,9 +18,6 @@
 using std::string;
 
 namespace arc_networkd {
-namespace {
-constexpr uint32_t kMaxSubnets = 32;
-}  // namespace
 
 // static
 std::unique_ptr<SubnetPool> SubnetPool::New(uint32_t base_addr,
@@ -41,36 +38,47 @@ SubnetPool::SubnetPool(uint32_t base_addr,
     : base_addr_(base_addr),
       prefix_length_(prefix_length),
       num_subnets_(num_subnets),
-      addr_per_index_(1ull << (kMaxSubnets - prefix_length)) {}
+      addr_per_index_(1ull << (kMaxSubnets - prefix_length)) {
+  subnets_.set(0);  // unused.
+}
 
 SubnetPool::~SubnetPool() {
+  subnets_.reset(0);
   if (subnets_.any()) {
     LOG(ERROR) << "SubnetPool destroyed with unreleased subnets";
   }
 }
 
-std::unique_ptr<Subnet> SubnetPool::Allocate(int index) {
-  if (index < 0) {
-    index = 0;
-    // Find the first un-allocated subnet.
-    while (index < num_subnets_ && subnets_.test(index)) {
+std::unique_ptr<Subnet> SubnetPool::Allocate(uint32_t index) {
+  if (index == 0) {
+    while (index <= num_subnets_ && subnets_.test(index)) {
       ++index;
     }
   }
 
-  if (index >= num_subnets_ || subnets_.test(index)) {
-    // No applicable subnet available.
+  if (index > num_subnets_) {
+    LOG(ERROR) << "Desired index (" << index << ") execeeds number of"
+               << " available subnets (" << num_subnets_ << ")";
+    return nullptr;
+  }
+  if (subnets_.test(index)) {
+    LOG(WARNING) << "Subnet at index (" << index << ") is unavailable";
     return nullptr;
   }
 
   subnets_.set(index);
-  uint32_t subnet_addr = htonl(ntohl(base_addr_) + index * addr_per_index_);
+  uint32_t subnet_addr =
+      htonl(ntohl(base_addr_) + (index - 1) * addr_per_index_);
   return std::make_unique<Subnet>(
       subnet_addr, prefix_length_,
       base::Bind(&SubnetPool::Release, weak_ptr_factory_.GetWeakPtr(), index));
 }
 
 void SubnetPool::Release(uint32_t index) {
+  if (index == 0) {
+    LOG(DFATAL) << "Invalid index value: 0";
+    return;
+  }
   DCHECK(subnets_.test(index));
   subnets_.reset(index);
 }

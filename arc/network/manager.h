@@ -72,7 +72,7 @@ class Manager final : public brillo::DBusDaemon, private TrafficForwarder {
   void StopArcVm(uint32_t cid);
   bool StartCrosVm(uint64_t vm_id,
                    GuestMessage::GuestType vm_type,
-                   int subnet_index);
+                   uint32_t subnet_index = kAnySubnetIndex);
   void StopCrosVm(uint64_t vm_id, GuestMessage::GuestType vm_type);
 
   // Callback from ProcessReaper to notify Manager that one of the
