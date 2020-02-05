@@ -13,6 +13,7 @@
 #include "runtime_probe/functions/ectool_i2cread.h"
 #include "runtime_probe/functions/ethernet_network.h"
 #include "runtime_probe/functions/generic_battery.h"
+#include "runtime_probe/functions/generic_network.h"
 #include "runtime_probe/functions/generic_storage.h"
 #include "runtime_probe/functions/mmc_storage.h"
 #include "runtime_probe/functions/nvme_storage.h"
