@@ -53,7 +53,6 @@ config("compiler_defaults") {
   cflags = [
     "-Wall",
     "-Wunused",
-
     # We use C99 array designators in C++ code.  Our compilers support this
     # extension since C++ has no equivalent yet (as of C++20).
     "-Wno-c99-designator",
@@ -65,9 +64,6 @@ config("compiler_defaults") {
     "-fvisibility=internal",
     "-Wa,--noexecstack",
     "-Wimplicit-fallthrough",
-
-    # TODO(crbug.com/1042979): Verify the warning when the issue gets fixed.
-    "-Wno-range-loop-analysis",
   ]
   cflags_c = [ "-std=gnu11" ] + external_cppflags + external_cxxflags
   cflags_cc = [ "-std=gnu++14" ] + external_cppflags + external_cxxflags
