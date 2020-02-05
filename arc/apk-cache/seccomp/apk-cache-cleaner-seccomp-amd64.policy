@@ -53,3 +53,5 @@ fcntl: 1
 # Used by sqlite3 to make sure shm file has the same ownership as db file.
 geteuid: 1
 fchmod: 1
+# Used by sqlite3 to get thread id.
+gettid: 1
