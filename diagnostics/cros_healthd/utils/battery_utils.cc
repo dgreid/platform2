@@ -46,8 +46,17 @@ constexpr char kBatteryPropertiesPath[] = "/cros-healthd/battery";
 // Battery info.
 constexpr char kHasSmartBatteryInfoProperty[] = "has-smart-battery-info";
 
+// The name of the Smart Battery manufacture date metric.
 constexpr char kManufactureDateSmart[] = "manufacture_date_smart";
+// The name of the Smart Battery temperature metric.
 constexpr char kTemperatureSmart[] = "temperature_smart";
+
+// The maximum amount of time to wait for a powerd response.
+constexpr base::TimeDelta kPowerManagerDBusTimeout =
+    base::TimeDelta::FromSeconds(3);
+
+// The maximum amount of time to wait for a debugd response.
+constexpr int kDebugdDBusTimeout = 10 * 1000;
 
 // Converts a Smart Battery manufacture date from the ((year - 1980) * 512 +
 // month * 32 + day) format to yyyy-mm-dd format.
@@ -77,121 +86,120 @@ BatteryFetcher::BatteryFetcher(
 
 BatteryFetcher::~BatteryFetcher() = default;
 
-template <typename T>
-bool BatteryFetcher::FetchSmartBatteryMetric(
-    const std::string& metric_name,
-    T* smart_metric,
-    base::OnceCallback<bool(const base::StringPiece& input, T* output)>
-        convert_string_to_num) {
-  brillo::ErrorPtr error;
-  constexpr int kTimeoutMs = 10 * 1000;
-  std::string debugd_result;
-  if (!debugd_proxy_->CollectSmartBatteryMetric(metric_name, &debugd_result,
-                                                &error, kTimeoutMs)) {
-    LOG(ERROR) << "Failed retrieving " << metric_name
-               << " from debugd: " << error->GetCode() << " "
-               << error->GetMessage();
-    return false;
-  }
-
-  std::move(convert_string_to_num).Run(debugd_result, smart_metric);
-  return true;
-}
-
-// Extract the battery metrics from the PowerSupplyProperties protobuf.
-// Return true if the metrics could be successfully extracted from |response|
-// and put into |output_info|.
-bool BatteryFetcher::ExtractBatteryMetrics(dbus::Response* response,
-                                           BatteryInfoPtr* output_info) {
-  DCHECK(response);
-  DCHECK(output_info);
+BatteryInfoPtr BatteryFetcher::FetchBatteryInfo() {
+  if (!HasBattery())
+    return BatteryInfoPtr();
 
   BatteryInfo info;
+  dbus::MethodCall method_call(power_manager::kPowerManagerInterface,
+                               power_manager::kGetPowerSupplyPropertiesMethod);
+  auto response = power_manager_proxy_->CallMethodAndBlock(
+      &method_call, kPowerManagerDBusTimeout.InMilliseconds());
+  if (!response) {
+    LOG(ERROR) << "Failed to obtain response from powerd.";
+    return BatteryInfoPtr();
+  }
+
+  if (!GetBatteryInfoFromPowerdResponse(response.get(), &info))
+    return BatteryInfoPtr();
+
+  if (HasSmartBatteryInfo()) {
+    SmartBatteryInfo smart_info;
+    GetSmartBatteryInfo(&smart_info);
+    info.smart_battery_info = smart_info.Clone();
+  }
+
+  return info.Clone();
+}
+
+bool BatteryFetcher::GetBatteryInfoFromPowerdResponse(dbus::Response* response,
+                                                      BatteryInfo* info) {
+  DCHECK(response);
+  DCHECK(info);
+
   power_manager::PowerSupplyProperties power_supply_proto;
-  dbus::MessageReader reader_response(response);
-  if (!reader_response.PopArrayOfBytesAsProto(&power_supply_proto)) {
-    LOG(ERROR) << "Could not successfully read power supply protobuf.";
+  dbus::MessageReader reader(response);
+  if (!reader.PopArrayOfBytesAsProto(&power_supply_proto)) {
+    LOG(ERROR) << "Could not successfully read PowerSupplyProperties protobuf.";
     return false;
   }
 
   if (!power_supply_proto.has_battery_state() ||
       power_supply_proto.battery_state() ==
           power_manager::PowerSupplyProperties_BatteryState_NOT_PRESENT) {
-    LOG(ERROR) << "Battery is not present.";
+    LOG(ERROR)
+        << "PowerSupplyProperties protobuf indicates battery is not present.";
     return false;
   }
 
-  info.cycle_count = power_supply_proto.battery_cycle_count();
-  info.vendor = power_supply_proto.battery_vendor();
-  info.voltage_now = power_supply_proto.battery_voltage();
-  info.charge_full = power_supply_proto.battery_charge_full();
-  info.charge_full_design = power_supply_proto.battery_charge_full_design();
-  info.serial_number = power_supply_proto.battery_serial_number();
-  info.voltage_min_design = power_supply_proto.battery_voltage_min_design();
-  info.model_name = power_supply_proto.battery_model_name();
-  info.charge_now = power_supply_proto.battery_charge();
-
-  // Only obtain Smart Battery metrics for devices that support them (i.e.
-  // devices with a Smart Battery).
-  std::string has_smart_battery_info;
-  cros_config_->GetString(kBatteryPropertiesPath, kHasSmartBatteryInfoProperty,
-                          &has_smart_battery_info);
-  if (has_smart_battery_info == "true") {
-    SmartBatteryInfo smart_info;
-    int64_t manufacture_date;
-    base::OnceCallback<bool(const base::StringPiece& input, int64_t* output)>
-        convert_string_to_int =
-            base::BindOnce([](const base::StringPiece& input, int64_t* output) {
-              return base::StringToInt64(input, output);
-            });
-    smart_info.manufacture_date =
-        FetchSmartBatteryMetric<int64_t>(kManufactureDateSmart,
-                                         &manufacture_date,
-                                         std::move(convert_string_to_int))
-            ? ConvertSmartBatteryManufactureDate(manufacture_date)
-            : "0000-00-00";
-    uint64_t temperature;
-    base::OnceCallback<bool(const base::StringPiece& input, uint64_t* output)>
-        convert_string_to_uint = base::BindOnce(
-            [](const base::StringPiece& input, uint64_t* output) {
-              return base::StringToUint64(input, output);
-            });
-    smart_info.temperature =
-        FetchSmartBatteryMetric<uint64_t>(kTemperatureSmart, &temperature,
-                                          std::move(convert_string_to_uint))
-            ? temperature
-            : 0;
-    info.smart_battery_info = smart_info.Clone();
-  }
-
-  *output_info = info.Clone();
+  info->cycle_count = power_supply_proto.battery_cycle_count();
+  info->vendor = power_supply_proto.battery_vendor();
+  info->voltage_now = power_supply_proto.battery_voltage();
+  info->charge_full = power_supply_proto.battery_charge_full();
+  info->charge_full_design = power_supply_proto.battery_charge_full_design();
+  info->serial_number = power_supply_proto.battery_serial_number();
+  info->voltage_min_design = power_supply_proto.battery_voltage_min_design();
+  info->model_name = power_supply_proto.battery_model_name();
+  info->charge_now = power_supply_proto.battery_charge();
 
   return true;
 }
 
-// Make a D-Bus call to get the PowerSupplyProperties proto, which contains the
-// battery metrics.
-bool BatteryFetcher::FetchBatteryMetrics(BatteryInfoPtr* output_info) {
-  constexpr base::TimeDelta kPowerManagerDBusTimeout =
-      base::TimeDelta::FromSeconds(3);
-  dbus::MethodCall method_call(power_manager::kPowerManagerInterface,
-                               power_manager::kGetPowerSupplyPropertiesMethod);
-  auto response = power_manager_proxy_->CallMethodAndBlock(
-      &method_call, kPowerManagerDBusTimeout.InMilliseconds());
-  return ExtractBatteryMetrics(response.get(), output_info);
+void BatteryFetcher::GetSmartBatteryInfo(SmartBatteryInfo* smart_info) {
+  int64_t manufacture_date;
+  auto convert_string_to_int =
+      base::BindOnce([](const base::StringPiece& input, int64_t* output) {
+        return base::StringToInt64(input, output);
+      });
+  smart_info->manufacture_date =
+      GetSmartBatteryMetric<int64_t>(kManufactureDateSmart,
+                                     std::move(convert_string_to_int),
+                                     &manufacture_date)
+          ? ConvertSmartBatteryManufactureDate(manufacture_date)
+          : "0000-00-00";
+  uint64_t temperature;
+  auto convert_string_to_uint =
+      base::BindOnce([](const base::StringPiece& input, uint64_t* output) {
+        return base::StringToUint64(input, output);
+      });
+  smart_info->temperature =
+      GetSmartBatteryMetric<uint64_t>(
+          kTemperatureSmart, std::move(convert_string_to_uint), &temperature)
+          ? temperature
+          : 0;
 }
 
-BatteryInfoPtr BatteryFetcher::FetchBatteryInfo() {
-  std::string psu_type;
-  cros_config_->GetString(kHardwarePropertiesPath, kPsuTypeProperty, &psu_type);
-  if (psu_type != "AC_only") {
-    BatteryInfoPtr info;
-    if (FetchBatteryMetrics(&info)) {
-      return info;
-    }
+template <typename T>
+bool BatteryFetcher::GetSmartBatteryMetric(
+    const std::string& metric_name,
+    base::OnceCallback<bool(const base::StringPiece& input, T* output)>
+        convert_string_to_num,
+    T* metric_value) {
+  brillo::ErrorPtr error;
+  std::string debugd_result;
+  if (!debugd_proxy_->CollectSmartBatteryMetric(metric_name, &debugd_result,
+                                                &error, kDebugdDBusTimeout)) {
+    LOG(ERROR) << "Failed retrieving " << metric_name
+               << " from debugd: " << error->GetCode() << " "
+               << error->GetMessage();
+    return false;
   }
 
-  return {};
+  std::move(convert_string_to_num).Run(debugd_result, metric_value);
+  return true;
+}
+
+bool BatteryFetcher::HasBattery() {
+  std::string psu_type;
+  cros_config_->GetString(kHardwarePropertiesPath, kPsuTypeProperty, &psu_type);
+  return psu_type != "AC_only";
+}
+
+bool BatteryFetcher::HasSmartBatteryInfo() {
+  std::string has_smart_battery_info;
+  cros_config_->GetString(kBatteryPropertiesPath, kHasSmartBatteryInfoProperty,
+                          &has_smart_battery_info);
+  return has_smart_battery_info == "true";
 }
 
 }  // namespace diagnostics

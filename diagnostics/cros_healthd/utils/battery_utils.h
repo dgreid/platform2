@@ -17,10 +17,9 @@
 
 namespace diagnostics {
 
-// The BatteryFetcher class is responsible for gathering the battery specific
-// metrics reported by cros_healthd. Currently, some metrics are fetched via
-// powerd while "smart" battery metrics (ex.  manufacture_date_smart) are
-// collected collected from ectool via debugd.
+// The BatteryFetcher class is responsible for gathering battery info reported
+// by cros_healthd. Some info is fetched via powerd, while Smart Battery info
+// is collected from ectool via debugd.
 class BatteryFetcher {
  public:
   BatteryFetcher(org::chromium::debugdProxyInterface* debugd_proxy,
@@ -28,27 +27,36 @@ class BatteryFetcher {
                  brillo::CrosConfigInterface* cros_config);
   ~BatteryFetcher();
 
-  // Fetches battery info from the device's battery over D-Bus.
+  // Fetches a device's battery info.
   chromeos::cros_healthd::mojom::BatteryInfoPtr FetchBatteryInfo();
 
  private:
-  // Currently, the battery_prober provides the manufacture_date_smart and
-  // temperature_smart property on Sona and Careena devices. Eventualy, this
-  // property will be reported for all devices. Details will be tracked here:
-  // https://crbug.com/978615. The |metric_name| identifies the smart battery
-  // metric cros_healthd wants to request from debugd. Once debugd retrieves
-  // this value via ectool, it populates |smart_metric|.
-  template <typename T>
-  bool FetchSmartBatteryMetric(
-      const std::string& metric_name,
-      T* smart_metric,
-      base::OnceCallback<bool(const base::StringPiece& input, T* output)>
-          convert_string_to_num);
+  // Populates |info| with battery info from |response|. Returns true on
+  // success.
+  bool GetBatteryInfoFromPowerdResponse(
+      dbus::Response* response,
+      chromeos::cros_healthd::mojom::BatteryInfo* info);
 
-  // Make a D-Bus call to get the PowerSupplyProperties proto, which contains
-  // the battery metrics.
-  bool FetchBatteryMetrics(
-      chromeos::cros_healthd::mojom::BatteryInfoPtr* output_info);
+  // Populates |smart_info| with Smart Battery info obtained by using ectool via
+  // debugd.
+  void GetSmartBatteryInfo(
+      chromeos::cros_healthd::mojom::SmartBatteryInfo* smart_info);
+
+  // Populates |metric_value| with the value obtained from requesting
+  // |metric_name| from ectool via debugd. Returns true on success.
+  template <typename T>
+  bool GetSmartBatteryMetric(
+      const std::string& metric_name,
+      base::OnceCallback<bool(const base::StringPiece& input, T* output)>
+          convert_string_to_num,
+      T* metric_value);
+
+  // Returns true if the device's config indicates the device has a battery.
+  bool HasBattery();
+
+  // Returns true if the device's config indicates the device has Smart Battery
+  // info.
+  bool HasSmartBatteryInfo();
 
   // Unowned pointer that outlives this BatteryFetcher instance.
   org::chromium::debugdProxyInterface* debugd_proxy_;
@@ -58,13 +66,6 @@ class BatteryFetcher {
 
   // Unowned pointer that outlives this BatteryFetcher instance.
   brillo::CrosConfigInterface* cros_config_;
-
-  // Extract the battery metrics from the PowerSupplyProperties protobuf. Return
-  // true if the metrics could be successfully extracted from |response| and put
-  // it into |output_info|.
-  bool ExtractBatteryMetrics(
-      dbus::Response* response,
-      chromeos::cros_healthd::mojom::BatteryInfoPtr* output_info);
 
   DISALLOW_COPY_AND_ASSIGN(BatteryFetcher);
 };
