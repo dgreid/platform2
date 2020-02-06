@@ -28,7 +28,8 @@ class ShillClientTest : public testing::Test {
     client_->RegisterDevicesChangedHandler(base::Bind(
         &ShillClientTest::DevicesChangedHandler, base::Unretained(this)));
     default_ifname_.clear();
-    devices_.clear();
+    added_.clear();
+    removed_.clear();
   }
 
   void DefaultInterfaceChangedHandler(const std::string& new_ifname,
@@ -36,13 +37,16 @@ class ShillClientTest : public testing::Test {
     default_ifname_ = new_ifname;
   }
 
-  void DevicesChangedHandler(const std::set<std::string>& devices) {
-    devices_ = devices;
+  void DevicesChangedHandler(const std::set<std::string>& added,
+                             const std::set<std::string>& removed) {
+    added_ = added;
+    removed_ = removed;
   }
 
  protected:
   std::string default_ifname_;
-  std::set<std::string> devices_;
+  std::set<std::string> added_;
+  std::set<std::string> removed_;
   std::unique_ptr<FakeShillClient> client_;
   std::unique_ptr<FakeShillClientHelper> helper_;
 };
@@ -52,21 +56,31 @@ TEST_F(ShillClientTest, DevicesChangedHandlerCalledOnDevicesPropertyChange) {
                                            dbus::ObjectPath("wlan0")};
   auto value = brillo::Any(devices);
   client_->NotifyManagerPropertyChange(shill::kDevicesProperty, value);
-  EXPECT_EQ(devices.size(), devices_.size());
+  EXPECT_EQ(added_.size(), devices.size());
+  EXPECT_EQ(removed_.size(), 0);
   for (const auto d : devices) {
-    EXPECT_NE(devices_.find(d.value()), devices_.end());
+    EXPECT_NE(added_.find(d.value()), added_.end());
   }
   // Implies the default callback was run;
   EXPECT_NE(default_ifname_, "");
-  EXPECT_NE(devices_.find(default_ifname_), devices_.end());
+  EXPECT_NE(added_.find(default_ifname_), added_.end());
+
+  devices.pop_back();
+  devices.emplace_back(dbus::ObjectPath("eth1"));
+  value = brillo::Any(devices);
+  client_->NotifyManagerPropertyChange(shill::kDevicesProperty, value);
+  EXPECT_EQ(added_.size(), 1);
+  EXPECT_EQ(*added_.begin(), "eth1");
+  EXPECT_EQ(removed_.size(), 1);
+  EXPECT_EQ(*removed_.begin(), "wlan0");
 }
 
 TEST_F(ShillClientTest, VerifyDevicesPrefixStripped) {
   std::vector<dbus::ObjectPath> devices = {dbus::ObjectPath("/device/eth0")};
   auto value = brillo::Any(devices);
   client_->NotifyManagerPropertyChange(shill::kDevicesProperty, value);
-  EXPECT_EQ(devices_.size(), 1);
-  EXPECT_EQ(*devices_.begin(), "eth0");
+  EXPECT_EQ(added_.size(), 1);
+  EXPECT_EQ(*added_.begin(), "eth0");
   // Implies the default callback was run;
   EXPECT_EQ(default_ifname_, "eth0");
 }

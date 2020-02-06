@@ -22,19 +22,19 @@ class ShillClient {
  public:
   using DefaultInterfaceChangeHandler = base::Callback<void(
       const std::string& new_ifname, const std::string& prev_ifname)>;
+  using DevicesChangeHandler =
+      base::Callback<void(const std::set<std::string>& added,
+                          const std::set<std::string>& removed)>;
 
   explicit ShillClient(const scoped_refptr<dbus::Bus>& bus);
   virtual ~ShillClient() = default;
 
   void RegisterDefaultInterfaceChangedHandler(
-      const DefaultInterfaceChangeHandler& callback);
+      const DefaultInterfaceChangeHandler& handler);
 
-  void RegisterDevicesChangedHandler(
-      const base::Callback<void(const std::set<std::string>&)>& callback);
-  void UnregisterDevicesChangedHandler();
+  void RegisterDevicesChangedHandler(const DevicesChangeHandler& handler);
 
-  void ScanDevices(
-      const base::Callback<void(const std::set<std::string>&)>& callback);
+  void ScanDevices(const DevicesChangeHandler& handler);
 
   const std::string& default_interface() const;
 
@@ -50,6 +50,8 @@ class ShillClient {
   virtual std::string GetDefaultInterface();
 
  private:
+  void UpdateDevices(const brillo::Any& property_value);
+
   // Sets the internal variable tracking the system default interface and calls
   // the default interface handler if the default interface changed. When the
   // default interface is lost and a fallback exists, the fallback is used
@@ -64,9 +66,9 @@ class ShillClient {
   // Tracks all network interfaces managed by shill.
   std::set<std::string> devices_;
   // Called when the interface used as the default interface changes.
-  std::vector<DefaultInterfaceChangeHandler> default_interface_callbacks_;
+  std::vector<DefaultInterfaceChangeHandler> default_interface_handlers_;
   // Called when the list of network interfaces managed by shill changes.
-  base::Callback<void(const std::set<std::string>&)> devices_callback_;
+  std::vector<DevicesChangeHandler> device_handlers_;
 
   scoped_refptr<dbus::Bus> bus_;
   std::unique_ptr<org::chromium::flimflam::ManagerProxy> manager_proxy_;

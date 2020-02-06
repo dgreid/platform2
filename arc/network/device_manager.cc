@@ -67,10 +67,6 @@ DeviceManager::DeviceManager(ShillClient* shill_client,
       base::Bind(&DeviceManager::OnDevicesChanged, weak_factory_.GetWeakPtr()));
 }
 
-DeviceManager::~DeviceManager() {
-  shill_client_->UnregisterDevicesChangedHandler();
-}
-
 bool DeviceManager::IsMulticastInterface(const std::string& ifname) const {
   if (ifname.empty()) {
     return false;
@@ -171,12 +167,16 @@ bool DeviceManager::Remove(const std::string& name) {
   if (it == devices_.end())
     return false;
 
+  Device* device = it->second.get();
+  if (device->options().is_sticky)
+    return false;
+
   LOG(INFO) << "Removing device " << name;
 
-  StopForwarding(*it->second);
+  StopForwarding(*device);
 
   for (auto& h : rm_handlers_) {
-    h.second.Run(it->second.get());
+    h.second.Run(device);
   }
 
   devices_.erase(it);
@@ -304,9 +304,6 @@ void DeviceManager::OnDefaultInterfaceChanged(const std::string& new_ifname,
   if (new_ifname == default_ifname_)
     return;
 
-  LOG(INFO) << "Default interface changed from [" << default_ifname_ << "] to ["
-            << new_ifname << "]";
-
   for (const auto& d : devices_) {
     if (d.second->UsesDefaultInterface())
       StopForwarding(*d.second);
@@ -340,18 +337,12 @@ void DeviceManager::StopForwarding(const Device& device) {
       device.options().fwd_multicast);
 }
 
-void DeviceManager::OnDevicesChanged(const std::set<std::string>& devices) {
-  std::vector<std::string> removed;
-  for (const auto& d : devices_) {
-    const std::string& name = d.first;
-    if (!d.second->options().is_sticky && devices.find(name) == devices.end())
-      removed.emplace_back(name);
-  }
-
+void DeviceManager::OnDevicesChanged(const std::set<std::string>& added,
+                                     const std::set<std::string>& removed) {
   for (const std::string& name : removed)
     Remove(name);
 
-  for (const std::string& name : devices)
+  for (const std::string& name : added)
     Add(name);
 }
 

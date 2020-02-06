@@ -10,21 +10,6 @@
 #include <base/logging.h>
 #include <chromeos/dbus/service_constants.h>
 
-namespace {
-
-std::set<std::string> GetDevices(const brillo::Any& property_value) {
-  std::set<std::string> devices;
-  for (const auto& path :
-       property_value.TryGet<std::vector<dbus::ObjectPath>>()) {
-    std::string device = path.value();
-    // Strip "/device/" prefix.
-    devices.emplace(device.substr(device.find_last_of('/') + 1));
-  }
-  return devices;
-}
-
-}  // namespace
-
 namespace arc_networkd {
 
 ShillClient::ShillClient(const scoped_refptr<dbus::Bus>& bus) : bus_(bus) {
@@ -40,8 +25,7 @@ const std::string& ShillClient::default_interface() const {
   return default_interface_;
 }
 
-void ShillClient::ScanDevices(
-    const base::Callback<void(const std::set<std::string>&)>& callback) {
+void ShillClient::ScanDevices(const DevicesChangeHandler& handler) {
   brillo::VariantDictionary props;
   if (!manager_proxy_->GetProperties(&props, nullptr)) {
     LOG(ERROR) << "Unable to get manager properties";
@@ -52,7 +36,7 @@ void ShillClient::ScanDevices(
     LOG(WARNING) << "Manager properties is missing devices";
     return;
   }
-  callback.Run(GetDevices(it->second));
+  UpdateDevices(it->second);
 }
 
 std::string ShillClient::GetDefaultInterface() {
@@ -135,11 +119,7 @@ void ShillClient::OnManagerPropertyChangeRegistration(
 void ShillClient::OnManagerPropertyChange(const std::string& property_name,
                                           const brillo::Any& property_value) {
   if (property_name == shill::kDevicesProperty) {
-    devices_ = GetDevices(property_value);
-    // TODO(b:132574450) Only trigger the callback if the content of
-    // |devices_| has actually changed.
-    if (!devices_callback_.is_null())
-      devices_callback_.Run(devices_);
+    UpdateDevices(property_value);
 
     // Choose a fallback interface when any network device exist. Update the
     // fallback interface if it that device does not exist anymore.
@@ -177,29 +157,51 @@ std::string ShillClient::SetDefaultInterface(std::string new_default) {
   if (default_interface_ == new_default)
     return default_interface_;
 
+  LOG(INFO) << "Default interface changed from [" << default_interface_
+            << "] to [" << new_default << "]";
+
   const std::string prev_default = default_interface_;
   default_interface_ = new_default;
-  for (const auto& cb : default_interface_callbacks_) {
-    if (!cb.is_null())
-      cb.Run(default_interface_, prev_default);
+  for (const auto& h : default_interface_handlers_) {
+    if (!h.is_null())
+      h.Run(default_interface_, prev_default);
   }
   return prev_default;
 }
 
 void ShillClient::RegisterDefaultInterfaceChangedHandler(
-    const DefaultInterfaceChangeHandler& callback) {
-  default_interface_callbacks_.emplace_back(callback);
+    const DefaultInterfaceChangeHandler& handler) {
+  default_interface_handlers_.emplace_back(handler);
   const auto prev_default = SetDefaultInterface(GetDefaultInterface());
-  callback.Run(default_interface_, prev_default);
+  handler.Run(default_interface_, prev_default);
 }
 
 void ShillClient::RegisterDevicesChangedHandler(
-    const base::Callback<void(const std::set<std::string>&)>& callback) {
-  devices_callback_ = callback;
+    const DevicesChangeHandler& handler) {
+  device_handlers_.emplace_back(handler);
 }
 
-void ShillClient::UnregisterDevicesChangedHandler() {
-  devices_callback_.Reset();
+void ShillClient::UpdateDevices(const brillo::Any& property_value) {
+  std::set<std::string> new_devices, added, removed;
+  for (const auto& path :
+       property_value.TryGet<std::vector<dbus::ObjectPath>>()) {
+    std::string device = path.value();
+    // Strip "/device/" prefix.
+    device = device.substr(device.find_last_of('/') + 1);
+    new_devices.emplace(device);
+    if (devices_.find(device) == devices_.end())
+      added.insert(device);
+  }
+
+  for (const auto& d : devices_) {
+    if (new_devices.find(d) == new_devices.end())
+      removed.insert(d);
+  }
+
+  devices_ = new_devices;
+
+  for (const auto& h : device_handlers_)
+    h.Run(added, removed);
 }
 
 }  // namespace arc_networkd

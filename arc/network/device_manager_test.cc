@@ -303,13 +303,4 @@ TEST_F(DeviceManagerTest, StickyDevicesNotRemovedByShill) {
   EXPECT_TRUE(mgr->Exists("arc0"));
 }
 
-TEST_F(DeviceManagerTest, StickyDevicesCanBeRemovedManually) {
-  auto mgr = NewManager();
-  mgr->Add("arc0");
-  EXPECT_TRUE(mgr->Exists("arc0"));
-
-  mgr->Remove("arc0");
-  EXPECT_FALSE(mgr->Exists("arc0"));
-}
-
 }  // namespace arc_networkd

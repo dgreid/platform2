@@ -98,7 +98,7 @@ class DeviceManager : public DeviceManagerBase {
                 AddressManager* addr_mgr,
                 Datapath* datapath,
                 TrafficForwarder* forwarder);
-  virtual ~DeviceManager();
+  virtual ~DeviceManager() = default;
 
   // Provided as part of DeviceManager for testing.
   virtual bool IsMulticastInterface(const std::string& ifname) const;
@@ -154,7 +154,8 @@ class DeviceManager : public DeviceManagerBase {
   // Callback from ShillClient, invoked whenever the device list changes.
   // |devices| will contain all devices currently connected to shill
   // (e.g. "eth0", "wlan0", etc).
-  void OnDevicesChanged(const std::set<std::string>& devices);
+  void OnDevicesChanged(const std::set<std::string>& added,
+                        const std::set<std::string>& removed);
 
   // Receives network device updates and notifications from shill.
   ShillClient* shill_client_;
