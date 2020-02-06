@@ -14,8 +14,8 @@
 #include <mojo/public/cpp/system/platform_handle.h>
 
 #include "debugd/dbus-proxies.h"
+#include "diagnostics/common/system/debugd_adapter_impl.h"
 #include "diagnostics/wilco_dtc_supportd/system/bluetooth_client_impl.h"
-#include "diagnostics/wilco_dtc_supportd/system/debugd_adapter_impl.h"
 #include "diagnostics/wilco_dtc_supportd/system/powerd_adapter_impl.h"
 #include "diagnostics/wilco_dtc_supportd/telemetry/bluetooth_event_service_impl.h"
 #include "diagnostics/wilco_dtc_supportd/telemetry/ec_event_service.h"

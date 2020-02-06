@@ -137,7 +137,6 @@ pkg_config("libwilco_dtc_supportd_pkg_deps") {
     "libbrillo",
     "libchrome-${libbase_ver}",
     "libmojo-${libbase_ver}",
-    "libdebugd-client",
     "system_api",
   ]
 }
@@ -164,7 +163,6 @@ source_set("libwilco_dtc_supportd") {
     "wilco_dtc_supportd/routine_service.cc",
     "wilco_dtc_supportd/system/bluetooth_client.cc",
     "wilco_dtc_supportd/system/bluetooth_client_impl.cc",
-    "wilco_dtc_supportd/system/debugd_adapter_impl.cc",
     "wilco_dtc_supportd/system/powerd_adapter_impl.cc",
     "wilco_dtc_supportd/telemetry/bluetooth_event_service.cc",
     "wilco_dtc_supportd/telemetry/bluetooth_event_service_impl.cc",
@@ -319,7 +317,6 @@ if (use.test) {
     pkg_deps = [
       "libchrome-${libbase_ver}",
       "libchrome-test-${libbase_ver}",
-      "libdebugd-client-test",
     ]
   }
 
@@ -346,10 +343,8 @@ if (use.test) {
       "wilco_dtc_supportd/mojo_service_test.cc",
       "wilco_dtc_supportd/routine_service_test.cc",
       "wilco_dtc_supportd/system/bluetooth_client_impl_test.cc",
-      "wilco_dtc_supportd/system/debugd_adapter_impl_test.cc",
       "wilco_dtc_supportd/system/fake_bluetooth_client.cc",
       "wilco_dtc_supportd/system/fake_powerd_adapter.cc",
-      "wilco_dtc_supportd/system/mock_debugd_adapter.cc",
       "wilco_dtc_supportd/system/powerd_adapter_impl_test.cc",
       "wilco_dtc_supportd/telemetry/bluetooth_event_service_impl_test.cc",
       "wilco_dtc_supportd/telemetry/ec_event_service_test.cc",

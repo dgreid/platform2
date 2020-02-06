@@ -14,8 +14,8 @@
 #include <gtest/gtest.h>
 
 #include "debugd/dbus-proxy-mocks.h"
-#include "diagnostics/wilco_dtc_supportd/system/debugd_adapter.h"
-#include "diagnostics/wilco_dtc_supportd/system/debugd_adapter_impl.h"
+#include "diagnostics/common/system/debugd_adapter.h"
+#include "diagnostics/common/system/debugd_adapter_impl.h"
 
 using ::testing::_;
 using ::testing::Invoke;

@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef DIAGNOSTICS_WILCO_DTC_SUPPORTD_SYSTEM_MOCK_DEBUGD_ADAPTER_H_
-#define DIAGNOSTICS_WILCO_DTC_SUPPORTD_SYSTEM_MOCK_DEBUGD_ADAPTER_H_
+#ifndef DIAGNOSTICS_COMMON_SYSTEM_MOCK_DEBUGD_ADAPTER_H_
+#define DIAGNOSTICS_COMMON_SYSTEM_MOCK_DEBUGD_ADAPTER_H_
 
 #include <base/macros.h>
 #include <gmock/gmock.h>
 
-#include "diagnostics/wilco_dtc_supportd/system/debugd_adapter.h"
+#include "diagnostics/common/system/debugd_adapter.h"
 
 namespace diagnostics {
 
@@ -29,4 +29,4 @@ class MockDebugdAdapter : public DebugdAdapter {
 
 }  // namespace diagnostics
 
-#endif  // DIAGNOSTICS_WILCO_DTC_SUPPORTD_SYSTEM_MOCK_DEBUGD_ADAPTER_H_
+#endif  // DIAGNOSTICS_COMMON_SYSTEM_MOCK_DEBUGD_ADAPTER_H_

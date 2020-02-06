@@ -7,7 +7,9 @@ import("//common-mk/pkg_config.gni")
 # Library with utilities common to both cros_healthd and wilco_dtc_supportd.
 pkg_config("libcommon_pkg_deps") {
   pkg_deps = [
+    "libbrillo-${libbase_ver}",
     "libchrome-${libbase_ver}",
+    "libdebugd-client",
     "libmojo-${libbase_ver}",
   ]
 }
@@ -16,6 +18,7 @@ source_set("libcommon") {
   public_configs = [ ":libcommon_pkg_deps" ]
   sources = [
     "mojo_utils.cc",
+    "system/debugd_adapter_impl.cc",
   ]
 }
 
@@ -24,6 +27,7 @@ if (use.test) {
   pkg_config("libcommon_test_utils_pkg_deps") {
     pkg_deps = [
       "libchrome-${libbase_ver}",
+      "libdebugd-client-test",
       "libmojo-${libbase_ver}",
     ]
   }
@@ -36,11 +40,13 @@ if (use.test) {
     sources = [
       "file_test_utils.cc",
       "mojo_test_utils.cc",
+      "system/mock_debugd_adapter.cc",
     ]
   }
 
   pkg_config("libcommon_test_pkg_deps") {
     pkg_deps = [
+      "libdebugd-client-test",
       "libchrome-${libbase_ver}",
       "libchrome-test-${libbase_ver}",
       "libmojo-${libbase_ver}",
@@ -54,10 +60,12 @@ if (use.test) {
     ]
     deps = [
       ":libcommon",
+      ":libcommon_test_utils",
       "//common-mk/testrunner:testrunner",
     ]
     sources = [
       "mojo_utils_test.cc",
+      "system/debugd_adapter_impl_test.cc",
     ]
   }
 }

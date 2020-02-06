@@ -10,9 +10,9 @@
 #include <base/macros.h>
 #include <brillo/daemons/daemon.h>
 
+#include "diagnostics/common/system/debugd_adapter.h"
 #include "diagnostics/wilco_dtc_supportd/core.h"
 #include "diagnostics/wilco_dtc_supportd/system/bluetooth_client.h"
-#include "diagnostics/wilco_dtc_supportd/system/debugd_adapter.h"
 #include "diagnostics/wilco_dtc_supportd/system/powerd_adapter.h"
 #include "diagnostics/wilco_dtc_supportd/telemetry/bluetooth_event_service.h"
 #include "diagnostics/wilco_dtc_supportd/telemetry/ec_event_service.h"
