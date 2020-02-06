@@ -88,12 +88,12 @@ bool Client::NotifyArcShutdown() {
   return true;
 }
 
-std::vector<patchpanel::Device> Client::NotifyArcVmStartup(int cid) {
+std::vector<patchpanel::Device> Client::NotifyArcVmStartup(uint32_t cid) {
   dbus::MethodCall method_call(kPatchPanelInterface, kArcVmStartupMethod);
   dbus::MessageWriter writer(&method_call);
 
   ArcVmStartupRequest request;
-  request.set_cid(static_cast<uint32_t>(cid));
+  request.set_cid(cid);
 
   if (!writer.AppendProtoAsArrayOfBytes(request)) {
     LOG(ERROR) << "Failed to encode ArcVmStartupRequest proto";
@@ -121,12 +121,12 @@ std::vector<patchpanel::Device> Client::NotifyArcVmStartup(int cid) {
   return devices;
 }
 
-bool Client::NotifyArcVmShutdown(int cid) {
+bool Client::NotifyArcVmShutdown(uint32_t cid) {
   dbus::MethodCall method_call(kPatchPanelInterface, kArcVmShutdownMethod);
   dbus::MessageWriter writer(&method_call);
 
   ArcVmShutdownRequest request;
-  request.set_cid(static_cast<uint32_t>(cid));
+  request.set_cid(cid);
 
   if (!writer.AppendProtoAsArrayOfBytes(request)) {
     LOG(ERROR) << "Failed to encode ArcVmShutdownRequest proto";
@@ -150,14 +150,14 @@ bool Client::NotifyArcVmShutdown(int cid) {
   return true;
 }
 
-bool Client::NotifyTerminaVmStartup(int cid,
+bool Client::NotifyTerminaVmStartup(uint32_t cid,
                                     patchpanel::Device* device,
                                     patchpanel::IPv4Subnet* container_subnet) {
   dbus::MethodCall method_call(kPatchPanelInterface, kTerminaVmStartupMethod);
   dbus::MessageWriter writer(&method_call);
 
   TerminaVmStartupRequest request;
-  request.set_cid(static_cast<uint32_t>(cid));
+  request.set_cid(cid);
 
   if (!writer.AppendProtoAsArrayOfBytes(request)) {
     LOG(ERROR) << "Failed to encode TerminaVmStartupRequest proto";
@@ -193,12 +193,12 @@ bool Client::NotifyTerminaVmStartup(int cid,
   return true;
 }
 
-bool Client::NotifyTerminaVmShutdown(int cid) {
+bool Client::NotifyTerminaVmShutdown(uint32_t cid) {
   dbus::MethodCall method_call(kPatchPanelInterface, kTerminaVmShutdownMethod);
   dbus::MessageWriter writer(&method_call);
 
   TerminaVmShutdownRequest request;
-  request.set_cid(static_cast<uint32_t>(cid));
+  request.set_cid(cid);
 
   if (!writer.AppendProtoAsArrayOfBytes(request)) {
     LOG(ERROR) << "Failed to encode TerminaVmShutdownRequest proto";
