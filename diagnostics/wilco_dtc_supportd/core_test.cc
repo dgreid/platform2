@@ -735,42 +735,43 @@ class BootstrappedCoreTest : public StartedCoreTest {
 // Test that the UI message receiver wilco_dtc will receive message from
 // browser.
 TEST_F(BootstrappedCoreTest, SendGrpcUiMessageToWilcoDtc) {
-  const std::string json_message = "{\"some_key\": \"some_value\"}";
-  const std::string response_json_message = "{\"key\": \"value\"}";
+  constexpr char kJsonMessageRequest[] = "{\"message\": \"ping\"}";
+  constexpr char kJsonMessageResponse[] = "{\"message\": \"pong\"}";
 
-  base::RunLoop run_loop_wilco_dtc;
-  base::RunLoop run_loop_fake_browser;
+  base::RunLoop run_loop;
+  const auto barrier_closure = BarrierClosure(2, run_loop.QuitClosure());
 
   fake_ui_message_receiver_wilco_dtc()->set_handle_message_from_ui_callback(
-      run_loop_wilco_dtc.QuitClosure());
+      barrier_closure);
   fake_ui_message_receiver_wilco_dtc()
-      ->set_handle_message_from_ui_json_message_response(response_json_message);
+      ->set_handle_message_from_ui_json_message_response(kJsonMessageResponse);
   fake_wilco_dtc()->set_handle_message_from_ui_callback(base::Bind([]() {
     // The wilco_dtc not eligible to receive messages from UI must not
     // receive them.
     FAIL();
   }));
 
-  auto callback = fake_browser_valid_handle_callback(
-      run_loop_fake_browser.QuitClosure(), response_json_message);
-  EXPECT_TRUE(fake_browser()->SendUiMessageToWilcoDtc(json_message, callback));
+  EXPECT_TRUE(fake_browser()->SendUiMessageToWilcoDtc(
+      kJsonMessageRequest, fake_browser_valid_handle_callback(
+                               barrier_closure, kJsonMessageResponse)));
 
-  run_loop_wilco_dtc.Run();
-  run_loop_fake_browser.Run();
-  EXPECT_EQ(json_message, fake_ui_message_receiver_wilco_dtc()
-                              ->handle_message_from_ui_actual_json_message());
+  run_loop.Run();
+
+  EXPECT_EQ(kJsonMessageRequest,
+            fake_ui_message_receiver_wilco_dtc()
+                ->handle_message_from_ui_actual_json_message());
 }
 
 // Test that the UI message receiver wilco_dtc will not receive message from
 // browser if JSON message is invalid.
 TEST_F(BootstrappedCoreTest, SendGrpcUiMessageToWilcoDtcInvalidJSON) {
-  const std::string json_message = "{'some_key': 'some_value'}";
+  constexpr char kJsonMessage[] = "{'some_key': 'some_value'}";
 
   base::RunLoop run_loop_fake_browser;
 
   auto callback =
       fake_browser_invalid_handle_callback(run_loop_fake_browser.QuitClosure());
-  EXPECT_TRUE(fake_browser()->SendUiMessageToWilcoDtc(json_message, callback));
+  EXPECT_TRUE(fake_browser()->SendUiMessageToWilcoDtc(kJsonMessage, callback));
 
   run_loop_fake_browser.Run();
   // There's no reliable way to wait till the wrong HandleMessageFromUi(), if
@@ -787,25 +788,26 @@ TEST_F(BootstrappedCoreTest, SendGrpcUiMessageToWilcoDtcInvalidJSON) {
 // Test that the UI message receiver wilco_dtc will receive message from
 // browser.
 TEST_F(BootstrappedCoreTest, SendGrpcUiMessageToWilcoDtcInvalidResponseJSON) {
-  const std::string json_message = "{\"some_key\": \"some_value\"}";
-  const std::string response_json_message = "{'key': 'value'}";
+  constexpr char kJsonMessageRequest[] = "{\"some_key\": \"some_value\"}";
+  constexpr char kJsonMessageResponse[] = "{'key': 'value'}";
 
-  base::RunLoop run_loop_wilco_dtc;
-  base::RunLoop run_loop_fake_browser;
+  base::RunLoop run_loop;
+  const auto barrier_closure = BarrierClosure(2, run_loop.QuitClosure());
 
   fake_ui_message_receiver_wilco_dtc()->set_handle_message_from_ui_callback(
-      run_loop_wilco_dtc.QuitClosure());
+      barrier_closure);
   fake_ui_message_receiver_wilco_dtc()
-      ->set_handle_message_from_ui_json_message_response(response_json_message);
+      ->set_handle_message_from_ui_json_message_response(kJsonMessageResponse);
 
-  auto callback =
-      fake_browser_invalid_handle_callback(run_loop_fake_browser.QuitClosure());
-  EXPECT_TRUE(fake_browser()->SendUiMessageToWilcoDtc(json_message, callback));
+  EXPECT_TRUE(fake_browser()->SendUiMessageToWilcoDtc(
+      kJsonMessageRequest,
+      fake_browser_invalid_handle_callback(barrier_closure)));
 
-  run_loop_wilco_dtc.Run();
-  run_loop_fake_browser.Run();
-  EXPECT_EQ(json_message, fake_ui_message_receiver_wilco_dtc()
-                              ->handle_message_from_ui_actual_json_message());
+  run_loop.Run();
+
+  EXPECT_EQ(kJsonMessageRequest,
+            fake_ui_message_receiver_wilco_dtc()
+                ->handle_message_from_ui_actual_json_message());
 }
 
 // Test that wilco_dtc_supportd can get a CrosHealthdDiagnosticsServicePtr from
@@ -858,10 +860,8 @@ TEST_F(BootstrappedCoreTest, NotifyConfigurationDataChanged) {
 // Test that a message can be sent from wilco_dtc to browser and
 // returns an expected response
 TEST_F(BootstrappedCoreTest, SendWilcoDtcMessageToUi) {
-  const std::string kFakeMessageToUi =
-      "{\"fake-request\": \"Fake JSON to UI\"}";
-  const std::string kFakeMessageFromUi =
-      "{\"fake-response\": \"Fake JSON from UI\"}";
+  constexpr char kFakeMessageToUi[] = "{\"message\": \"Fake JSON to UI\"}";
+  constexpr char kFakeMessageFromUi[] = "{\"message\": \"Fake JSON from UI\"}";
   EXPECT_CALL(*wilco_dtc_supportd_client(),
               SendWilcoDtcMessageToUiImpl(kFakeMessageToUi, _))
       .WillOnce(WithArg<1>(
@@ -891,7 +891,7 @@ TEST_F(BootstrappedCoreTest, SendWilcoDtcMessageToUi) {
 // Test that the GetProcData() method exposed by the daemon's gRPC server
 // returns a dump of the corresponding file from the disk.
 TEST_F(BootstrappedCoreTest, GetProcDataGrpcCall) {
-  const std::string kFakeFileContents = "foo";
+  constexpr char kFakeFileContents[] = "foo";
   const base::FilePath file_path = temp_dir_path().Append("proc/uptime");
   ASSERT_TRUE(WriteFileAndCreateParentDirs(file_path, kFakeFileContents));
 
@@ -919,14 +919,14 @@ TEST_F(BootstrappedCoreTest, GetProcDataGrpcCall) {
 // writes payload to devfs file exposed by the EC driver and reads response
 // using the same file.
 TEST_F(BootstrappedCoreTest, GetEcTelemetryGrpcCall) {
-  const base::FilePath file_path =
+  const base::FilePath kFilePath =
       temp_dir_path().Append(kEcGetTelemetryFilePath);
   const std::string kRequestPayload = "12345";
   const std::string kResponsePayload = "67890";
 
   // Write request and response payload because EC telemetry char device is
   // non-seekable.
-  ASSERT_TRUE(WriteFileAndCreateParentDirs(file_path,
+  ASSERT_TRUE(WriteFileAndCreateParentDirs(kFilePath,
                                            kRequestPayload + kResponsePayload));
 
   grpc_api::GetEcTelemetryRequest request;
