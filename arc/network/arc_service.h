@@ -67,11 +67,11 @@ class ArcService {
     virtual ~Impl() = default;
 
     virtual GuestMessage::GuestType guest() const = 0;
-    virtual int32_t id() const = 0;
+    virtual uint32_t id() const = 0;
 
-    virtual bool Start(int32_t id) = 0;
-    virtual void Stop(int32_t id) = 0;
-    virtual bool IsStarted(int32_t* id = nullptr) const = 0;
+    virtual bool Start(uint32_t id) = 0;
+    virtual void Stop(uint32_t id) = 0;
+    virtual bool IsStarted(uint32_t* id = nullptr) const = 0;
     virtual bool OnStartDevice(Device* device) = 0;
     virtual void OnStopDevice(Device* device) = 0;
     virtual void OnDefaultInterfaceChanged(const std::string& ifname) = 0;
@@ -89,11 +89,11 @@ class ArcService {
     ~ContainerImpl() = default;
 
     GuestMessage::GuestType guest() const override;
-    int32_t id() const override;
+    uint32_t id() const override;
 
-    bool Start(int32_t pid) override;
-    void Stop(int32_t pid) override;
-    bool IsStarted(int32_t* pid = nullptr) const override;
+    bool Start(uint32_t pid) override;
+    void Stop(uint32_t pid) override;
+    bool IsStarted(uint32_t* pid = nullptr) const override;
     bool OnStartDevice(Device* device) override;
     void OnStopDevice(Device* device) override;
     void OnDefaultInterfaceChanged(const std::string& ifname) override;
@@ -111,7 +111,7 @@ class ArcService {
     void SetupIPv6(Device* device);
     void TeardownIPv6(Device* device);
 
-    pid_t pid_;
+    uint32_t pid_;
     DeviceManagerBase* dev_mgr_;
     Datapath* datapath_;
     GuestMessage::GuestType guest_;
@@ -135,17 +135,17 @@ class ArcService {
     ~VmImpl() = default;
 
     GuestMessage::GuestType guest() const override;
-    int32_t id() const override;
+    uint32_t id() const override;
 
-    bool Start(int32_t cid) override;
-    void Stop(int32_t cid) override;
-    bool IsStarted(int32_t* cid = nullptr) const override;
+    bool Start(uint32_t cid) override;
+    void Stop(uint32_t cid) override;
+    bool IsStarted(uint32_t* cid = nullptr) const override;
     bool OnStartDevice(Device* device) override;
     void OnStopDevice(Device* device) override;
     void OnDefaultInterfaceChanged(const std::string& ifname) override;
 
    private:
-    int32_t cid_;
+    uint32_t cid_;
     DeviceManagerBase* dev_mgr_;
     Datapath* datapath_;
 
@@ -157,8 +157,8 @@ class ArcService {
   ArcService(DeviceManagerBase* dev_mgr, Datapath* datapath);
   ~ArcService();
 
-  bool Start(int32_t id);
-  void Stop(int32_t id);
+  bool Start(uint32_t id);
+  void Stop(uint32_t id);
 
   void OnDeviceAdded(Device* device);
   void OnDeviceRemoved(Device* device);

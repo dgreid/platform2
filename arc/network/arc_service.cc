@@ -35,9 +35,9 @@ GuestMessage::GuestType guest = GuestMessage::UNKNOWN_GUEST;
 }  // namespace test
 
 namespace {
-constexpr pid_t kInvalidPID = -1;
+constexpr pid_t kInvalidPID = 0;
 constexpr pid_t kTestPID = -2;
-constexpr int32_t kInvalidCID = -1;
+constexpr uint32_t kInvalidCID = 0;
 constexpr int kInvalidTableID = -1;
 constexpr int kMaxTableRetries = 10;  // Based on 1 second delay.
 constexpr base::TimeDelta kTableRetryDelay = base::TimeDelta::FromSeconds(1);
@@ -190,9 +190,9 @@ ArcService::~ArcService() {
   dev_mgr_->UnregisterAllGuestHandlers(GuestMessage::ARC);
 }
 
-bool ArcService::Start(int32_t id) {
+bool ArcService::Start(uint32_t id) {
   if (impl_) {
-    int32_t prev_id;
+    uint32_t prev_id;
     if (impl_->IsStarted(&prev_id)) {
       LOG(WARNING) << "Already running - did something crash?"
                    << " Stopping and restarting...";
@@ -240,7 +240,7 @@ bool ArcService::Start(int32_t id) {
   return true;
 }
 
-void ArcService::Stop(int32_t id) {
+void ArcService::Stop(uint32_t id) {
   if (!impl_)
     return;
 
@@ -495,11 +495,11 @@ GuestMessage::GuestType ArcService::ContainerImpl::guest() const {
   return guest_;
 }
 
-int32_t ArcService::ContainerImpl::id() const {
+uint32_t ArcService::ContainerImpl::id() const {
   return pid_;
 }
 
-bool ArcService::ContainerImpl::Start(int32_t pid) {
+bool ArcService::ContainerImpl::Start(uint32_t pid) {
   // This could happen if something crashes and the stop signal is not sent.
   // It can probably be addressed by stopping and restarting the service.
   if (pid_ != kInvalidPID)
@@ -553,7 +553,7 @@ bool ArcService::ContainerImpl::Start(int32_t pid) {
   return true;
 }
 
-void ArcService::ContainerImpl::Stop(int32_t /*pid*/) {
+void ArcService::ContainerImpl::Stop(uint32_t /*pid*/) {
   if (!IsStarted())
     return;
 
@@ -565,7 +565,7 @@ void ArcService::ContainerImpl::Stop(int32_t /*pid*/) {
   pid_ = kInvalidPID;
 }
 
-bool ArcService::ContainerImpl::IsStarted(int32_t* pid) const {
+bool ArcService::ContainerImpl::IsStarted(uint32_t* pid) const {
   if (pid)
     *pid = pid_;
 
@@ -884,17 +884,17 @@ GuestMessage::GuestType ArcService::VmImpl::guest() const {
   return GuestMessage::ARC_VM;
 }
 
-int32_t ArcService::VmImpl::id() const {
+uint32_t ArcService::VmImpl::id() const {
   return cid_;
 }
 
-bool ArcService::VmImpl::Start(int32_t cid) {
+bool ArcService::VmImpl::Start(uint32_t cid) {
   // This can happen if concierge crashes and doesn't send the vm down RPC.
   // It can probably be addressed by stopping and restarting the service.
   if (cid_ != kInvalidCID)
     return false;
 
-  if (cid <= kInvalidCID) {
+  if (cid == kInvalidCID) {
     LOG(ERROR) << "Invalid VM cid " << cid;
     return false;
   }
@@ -905,7 +905,7 @@ bool ArcService::VmImpl::Start(int32_t cid) {
   return true;
 }
 
-void ArcService::VmImpl::Stop(int32_t cid) {
+void ArcService::VmImpl::Stop(uint32_t cid) {
   if (cid_ != cid) {
     LOG(ERROR) << "Mismatched ARCVM CIDs " << cid_ << " != " << cid;
     return;
@@ -915,11 +915,11 @@ void ArcService::VmImpl::Stop(int32_t cid) {
   cid_ = kInvalidCID;
 }
 
-bool ArcService::VmImpl::IsStarted(int32_t* cid) const {
+bool ArcService::VmImpl::IsStarted(uint32_t* cid) const {
   if (cid)
     *cid = cid_;
 
-  return cid_ > kInvalidCID;
+  return cid_ != kInvalidCID;
 }
 
 bool ArcService::VmImpl::OnStartDevice(Device* device) {

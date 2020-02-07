@@ -68,10 +68,10 @@ class Manager final : public brillo::DBusDaemon, private TrafficForwarder {
 
   bool StartArc(pid_t pid);
   void StopArc(pid_t pid);
-  bool StartArcVm(int32_t cid);
-  void StopArcVm(int32_t cid);
-  bool StartTerminaVm(int32_t cid);
-  void StopTerminaVm(int32_t cid);
+  bool StartArcVm(uint32_t cid);
+  void StopArcVm(uint32_t cid);
+  bool StartTerminaVm(uint32_t cid);
+  void StopTerminaVm(uint32_t cid);
 
   // Callback from ProcessReaper to notify Manager that one of the
   // subprocesses died.

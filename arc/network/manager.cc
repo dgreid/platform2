@@ -316,7 +316,7 @@ void Manager::StopArc(pid_t pid) {
   arc_svc_->Stop(pid);
 }
 
-bool Manager::StartArcVm(int32_t cid) {
+bool Manager::StartArcVm(uint32_t cid) {
   if (!arc_svc_->Start(cid))
     return false;
 
@@ -329,7 +329,7 @@ bool Manager::StartArcVm(int32_t cid) {
   return true;
 }
 
-void Manager::StopArcVm(int32_t cid) {
+void Manager::StopArcVm(uint32_t cid) {
   GuestMessage msg;
   msg.set_event(GuestMessage::STOP);
   msg.set_type(GuestMessage::ARC_VM);
@@ -338,7 +338,7 @@ void Manager::StopArcVm(int32_t cid) {
   arc_svc_->Stop(cid);
 }
 
-bool Manager::StartTerminaVm(int32_t cid) {
+bool Manager::StartTerminaVm(uint32_t cid) {
   if (!cros_svc_->Start(cid))
     return false;
 
@@ -351,7 +351,7 @@ bool Manager::StartTerminaVm(int32_t cid) {
   return true;
 }
 
-void Manager::StopTerminaVm(int32_t cid) {
+void Manager::StopTerminaVm(uint32_t cid) {
   GuestMessage msg;
   msg.set_event(GuestMessage::STOP);
   msg.set_type(GuestMessage::TERMINA_VM);

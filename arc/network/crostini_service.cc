@@ -18,7 +18,7 @@
 
 namespace arc_networkd {
 namespace {
-constexpr int32_t kInvalidCID = -1;
+constexpr int32_t kInvalidCID = 0;
 
 bool IsAdbSideloadingEnabled(const scoped_refptr<dbus::Bus>& bus) {
   static bool checked = false;
@@ -57,8 +57,8 @@ CrostiniService::CrostiniService(DeviceManagerBase* dev_mgr, Datapath* datapath)
                  base::Unretained(this)));
 }
 
-bool CrostiniService::Start(int32_t cid) {
-  if (cid <= kInvalidCID) {
+bool CrostiniService::Start(uint32_t cid) {
+  if (cid == kInvalidCID) {
     LOG(ERROR) << "Invalid VM cid " << cid;
     return false;
   }
@@ -79,7 +79,7 @@ bool CrostiniService::Start(int32_t cid) {
   return true;
 }
 
-void CrostiniService::Stop(int32_t cid) {
+void CrostiniService::Stop(uint32_t cid) {
   const auto it = taps_.find(cid);
   if (it == taps_.end()) {
     LOG(WARNING) << "Unknown {cid: " << cid << "}";
@@ -95,7 +95,7 @@ void CrostiniService::Stop(int32_t cid) {
   LOG(INFO) << "Crostini network service stopped for {cid: " << cid << "}";
 }
 
-const Device* const CrostiniService::TAP(int32_t cid) const {
+const Device* const CrostiniService::TAP(uint32_t cid) const {
   const auto it = taps_.find(cid);
   if (it == taps_.end()) {
     return nullptr;
@@ -103,7 +103,7 @@ const Device* const CrostiniService::TAP(int32_t cid) const {
   return it->second.get();
 }
 
-bool CrostiniService::AddTAP(int32_t cid) {
+bool CrostiniService::AddTAP(uint32_t cid) {
   auto* const addr_mgr = dev_mgr_->addr_mgr();
   auto ipv4_subnet =
       addr_mgr->AllocateIPv4Subnet(AddressManager::Guest::VM_TERMINA);

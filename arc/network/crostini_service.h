@@ -26,13 +26,13 @@ class CrostiniService {
   CrostiniService(DeviceManagerBase* dev_mgr, Datapath* datapath);
   ~CrostiniService() = default;
 
-  bool Start(int32_t cid);
-  void Stop(int32_t cid);
+  bool Start(uint32_t cid);
+  void Stop(uint32_t cid);
 
-  const Device* const TAP(int32_t cid) const;
+  const Device* const TAP(uint32_t cid) const;
 
  private:
-  bool AddTAP(int32_t cid);
+  bool AddTAP(uint32_t cid);
   void OnDefaultInterfaceChanged(const std::string& ifname);
 
   bool SetupFirewallClient();
@@ -52,7 +52,7 @@ class CrostiniService {
   DeviceManagerBase* dev_mgr_;
   Datapath* datapath_;
   // Mapping of VM CIDs to TAP devices
-  std::map<int32_t, std::unique_ptr<Device>> taps_;
+  std::map<uint32_t, std::unique_ptr<Device>> taps_;
 
   scoped_refptr<dbus::Bus> bus_;
   std::unique_ptr<org::chromium::PermissionBrokerProxy>
