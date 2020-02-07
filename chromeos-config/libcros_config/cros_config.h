@@ -69,6 +69,14 @@ class BRILLO_EXPORT CrosConfig : public CrosConfigInterface {
   // @return true on success, false on error.
   bool MountFallbackConfigFS(const base::FilePath& mount_path);
 
+  // Undo a MountConfigFS or MountFallbackConfigFS by unmounting all
+  // associated filesystems. Uses MNT_DETACH (equivalent to umount
+  // --lazy) to prevent blocking if another process has left open a
+  // file descriptor.
+  // @mount_path: The directory which ChromeOS ConfigFS is mounted at.
+  // @return true on success, false on error.
+  bool Unmount(const base::FilePath& mount_path) const;
+
   // CrosConfigInterface:
   bool GetString(const std::string& path,
                  const std::string& property,

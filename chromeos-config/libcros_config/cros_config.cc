@@ -196,6 +196,20 @@ bool CrosConfig::MountFallbackConfigFS(const base::FilePath& mount_path) {
   return Bind(fallback_dir, v1_dir);
 }
 
+bool CrosConfig::Unmount(const base::FilePath& mount_path) const {
+  bool success = true;
+  for (const auto& dir : {kConfigFSV1DirName, kConfigFSPrivateDirName}) {
+    const auto mountpoint = mount_path.Append(dir).value();
+    if (umount2(mountpoint.c_str(), MNT_DETACH) < 0) {
+      success = false;
+      CROS_CONFIG_LOG(ERROR) << "Failed to unmount " << mountpoint << ": "
+                             << logging::SystemErrorCodeToString(
+                                    logging::GetLastSystemErrorCode());
+    }
+  }
+  return success;
+}
+
 bool CrosConfig::InitInternal(const int sku_id,
                               const base::FilePath& json_path,
                               const SystemArchitecture arch,
