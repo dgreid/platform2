@@ -6,6 +6,7 @@
 #define VM_TOOLS_VSH_VSH_FORWARDER_H_
 
 #include <pwd.h>
+#include <sys/types.h>
 
 #include <memory>
 #include <string>
@@ -64,6 +65,7 @@ class VshForwarder {
 
   brillo::AsynchronousSignalHandler signal_handler_;
 
+  pid_t target_pid_;
   bool exit_pending_;
   int exit_code_;
   const std::string default_user_;

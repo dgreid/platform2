@@ -96,6 +96,15 @@ message WindowResizeMessage {
   int32 cols = 2;
 }
 
+// Encapsulates a POSIX signal to be sent to the target program.
+enum Signal {
+  SIGNAL_UNKNOWN = 0;
+  SIGNAL_HUP = 1;
+  SIGNAL_INT = 2;
+  SIGNAL_QUIT = 3;
+  SIGNAL_TERM = 15;
+}
+
 // Wrapper message for all messages that can be sent to the host/client.
 message HostMessage {
   oneof msg {
@@ -110,5 +119,6 @@ message GuestMessage {
     DataMessage data_message = 1;
     ConnectionStatusMessage status_message = 2;
     WindowResizeMessage resize_message = 3;
+    Signal signal = 4;
   }
 }

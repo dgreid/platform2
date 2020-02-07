@@ -172,8 +172,7 @@ bool VshClient::Init(const std::string& user,
   signal_handler_.Init();
   for (int signal : {SIGINT, SIGTERM, SIGHUP, SIGQUIT}) {
     signal_handler_.RegisterHandler(
-        signal,
-        base::Bind(&VshClient::HandleTermSignal, base::Unretained(this)));
+        signal, base::Bind(&VshClient::HandleSignal, base::Unretained(this)));
   }
   signal_handler_.RegisterHandler(
       SIGWINCH,
@@ -182,11 +181,35 @@ bool VshClient::Init(const std::string& user,
   return true;
 }
 
-// Handles a signal that is expected to terminate the process by exiting
-// the main message loop.
-bool VshClient::HandleTermSignal(const struct signalfd_siginfo& siginfo) {
-  Shutdown();
-  return true;
+// Forwards a signal that's expected to terminate the process to the guest.
+bool VshClient::HandleSignal(const struct signalfd_siginfo& siginfo) {
+  GuestMessage guest_message;
+  switch (siginfo.ssi_signo) {
+    case SIGHUP:
+      guest_message.set_signal(SIGNAL_HUP);
+      break;
+    case SIGINT:
+      guest_message.set_signal(SIGNAL_INT);
+      break;
+    case SIGQUIT:
+      guest_message.set_signal(SIGNAL_QUIT);
+      break;
+    case SIGTERM:
+      guest_message.set_signal(SIGNAL_TERM);
+      break;
+    default:
+      LOG(ERROR) << "Received unexpected signal number " << siginfo.ssi_signo;
+      Shutdown();
+      return false;
+  }
+
+  if (!SendMessage(sock_fd_.get(), guest_message)) {
+    LOG(ERROR) << "Failed to send signal message";
+    Shutdown();
+    return false;
+  }
+
+  return false;
 }
 
 // Handles a window resize signal by sending the current window size to the

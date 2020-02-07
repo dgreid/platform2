@@ -52,7 +52,7 @@ class VshClient {
             const std::string& container,
             bool interactive);
 
-  bool HandleTermSignal(const struct signalfd_siginfo& siginfo);
+  bool HandleSignal(const struct signalfd_siginfo& siginfo);
   bool HandleWindowResizeSignal(const struct signalfd_siginfo& siginfo);
   void HandleVsockReadable();
   void HandleHostMessage(const HostMessage& msg);

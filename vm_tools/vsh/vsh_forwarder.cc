@@ -261,7 +261,7 @@ bool VshForwarder::Init() {
   sigprocmask(SIG_BLOCK, &mask, nullptr);
 
   // fork() a child process that will exec the target process/shell.
-  int pid = fork();
+  pid_t pid = fork();
   if (pid == 0) {
     const char* pts = nullptr;
     if (interactive_) {
@@ -289,6 +289,7 @@ bool VshForwarder::Init() {
     // This line shouldn't be reached if exec succeeds.
     return false;
   }
+  target_pid_ = pid;
 
   // Adopt the forwarder-side of the pipes.
   if (!interactive_) {
@@ -581,6 +582,34 @@ void VshForwarder::HandleVsockReadable() {
         PLOG(ERROR) << "Failed to resize window";
         return;
       }
+      break;
+    }
+    case GuestMessage::kSignal: {
+      int signum = 0;
+      switch (guest_message.signal()) {
+        case SIGNAL_HUP:
+          signum = SIGHUP;
+          break;
+        case SIGNAL_INT:
+          signum = SIGINT;
+          break;
+        case SIGNAL_QUIT:
+          signum = SIGQUIT;
+          break;
+        case SIGNAL_TERM:
+          signum = SIGTERM;
+          break;
+        default:
+          LOG(ERROR) << "Received unknown signal " << guest_message.signal();
+          return;
+      }
+
+      if (kill(target_pid_, signum) < 0) {
+        PLOG(ERROR) << "Failed to send signal " << strsignal(signum)
+                    << " to pid " << target_pid_;
+        return;
+      }
+
       break;
     }
     default:
