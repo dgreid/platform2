@@ -6,7 +6,7 @@
 -->
 <node name="/org/chromium/IpPeripheralService"
       xmlns:tp="http://telepathy.freedesktop.org/wiki/DbusSpec#extensions-v0">
-  <interface name="org.chromium.IpPeripheralService">
+  <interface name="org.chromium.IpPeripheralService.CameraDetector">
     <method name="BootstrapMojoConnection">
       <tp:docstring>
         This method takes a handle to a Mojo message pipe which will then be

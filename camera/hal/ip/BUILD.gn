@@ -17,7 +17,7 @@ group("all") {
 generate_dbus_proxies("libcamera_hal_dbus") {
   proxy_output_file = "include/dbus_proxies/dbus-proxies.h"
   sources = [
-    "dbus/org.chromium.IpPeripheralService.xml",
+    "dbus/org.chromium.IpPeripheralService.CameraDetector.xml",
   ]
 }
 

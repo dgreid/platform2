@@ -108,7 +108,7 @@ int CameraHal::Init() {
 
 void CameraHal::InitOnIpcThread(scoped_refptr<Future<int>> return_val) {
   brillo::DBusConnection dbus_connection;
-  org::chromium::IpPeripheralServiceProxy proxy(
+  org::chromium::IpPeripheralService::CameraDetectorProxy proxy(
       dbus_connection.Connect(), "org.chromium.IpPeripheralService");
 
   mojo::PlatformChannel channel;
