@@ -74,7 +74,7 @@ bool FromValue(const base::Value& in_value, std::vector<T, Alloc>* out_value) {
     return false;
   out_value->clear();
   out_value->reserve(list->GetSize());
-  for (const base::Value& item : base::ValueReferenceAdapter(*list)) {
+  for (const base::Value& item : *list) {
     T value{};
     if (!FromValue(item, &value))
       return false;

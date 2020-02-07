@@ -560,7 +560,7 @@ bool DevicePolicyImpl::GetDeviceUpdateStagingSchedule(
   if (!list_val)
     return false;
 
-  for (const auto& pair_value : base::ValueReferenceAdapter(*list_val)) {
+  for (const auto& pair_value : *list_val) {
     const base::DictionaryValue* day_percentage_pair;
     if (!pair_value.GetAsDictionary(&day_percentage_pair))
       return false;
@@ -654,7 +654,7 @@ bool DevicePolicyImpl::GetDisallowedTimeIntervals(
   if (!list_val)
     return false;
 
-  for (const auto& interval_value : base::ValueReferenceAdapter(*list_val)) {
+  for (const auto& interval_value : *list_val) {
     const base::DictionaryValue* interval_dict;
     if (!interval_value.GetAsDictionary(&interval_dict)) {
       LOG(ERROR) << "Invalid JSON string given. Interval is not a dict.";
