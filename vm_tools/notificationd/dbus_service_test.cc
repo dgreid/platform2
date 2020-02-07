@@ -149,8 +149,8 @@ TEST_F(DBusServiceTest, GetCapabilities) {
   auto list = base::ListValue::From(std::move(value));
   ASSERT_TRUE(list.get() != nullptr);
   for (const auto& element : *list) {
-    ASSERT_TRUE(element->is_string());
-    received_data.push_back(element->GetString());
+    ASSERT_TRUE(element.is_string());
+    received_data.push_back(element.GetString());
   }
 
   EXPECT_EQ(received_data, expected_data);
