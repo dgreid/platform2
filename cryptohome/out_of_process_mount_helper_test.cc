@@ -13,6 +13,7 @@
 
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <base/files/file_path.h>
@@ -36,6 +37,7 @@ using ::testing::Return;
 
 namespace {
 
+const FilePath kChromeMountNamespace("/run/namespace/mnt_chrome");
 const FilePath kImageDir("test_image_dir");
 const FilePath kImageSaltFile = kImageDir.Append("salt");
 
@@ -58,7 +60,8 @@ class OutOfProcessMountHelperTest : public ::testing::Test {
     helper_.InjectSystemSalt(&platform_, kImageSaltFile);
 
     out_of_process_mounter_.reset(new OutOfProcessMountHelper(
-        helper_.system_salt, true /* legacy_mount */, &platform_));
+        helper_.system_salt, std::unique_ptr<MountNamespace>(),
+        true /* legacy_mount */, &platform_));
   }
 
   void TearDown() {
@@ -147,6 +150,7 @@ TEST_F(OutOfProcessMountHelperTest, MountGuestUserDirOOPWriteProtobuf) {
   OutOfProcessMountRequest r;
   ASSERT_TRUE(ReadProtobuf(read_end.get(), &r));
   EXPECT_EQ(r.username(), kGuestUserName);
+  EXPECT_EQ(r.mount_namespace_path(), "");
 
   EXPECT_CALL(*process, Kill(SIGTERM, _)).WillOnce(Return(true));
   out_of_process_mounter_->TearDownEphemeralMount();
@@ -156,6 +160,40 @@ TEST_F(OutOfProcessMountHelperTest, MountGuestUserDirOOPFailsToStart) {
   brillo::ProcessMock* process = platform_.mock_process();
   EXPECT_CALL(*process, Start()).WillOnce(Return(false));
   ASSERT_FALSE(out_of_process_mounter_->PerformEphemeralMount(kGuestUserName));
+}
+
+TEST_F(OutOfProcessMountHelperTest, MountGuestUserDirOOPNonRootMountNamespace) {
+  brillo::ProcessMock* process = platform_.mock_process();
+  EXPECT_CALL(*process, Start()).WillOnce(Return(true));
+  EXPECT_CALL(*process, pid()).WillRepeatedly(Return(kOOPHelperPid));
+  EXPECT_CALL(*process, Kill(SIGTERM, _)).WillOnce(Return(true));
+
+  std::unique_ptr<MountNamespace> mnt_ns =
+      std::make_unique<MountNamespace>(kChromeMountNamespace, &platform_);
+  out_of_process_mounter_.reset(
+      new OutOfProcessMountHelper(helper_.system_salt, std::move(mnt_ns),
+                                  true /* legacy_mount */, &platform_));
+
+  // Reading from the helper always succeeds.
+  base::ScopedFD dev_zero = GetDevZeroFd();
+  ASSERT_TRUE(dev_zero.is_valid());
+  EXPECT_CALL(*process, GetPipe(STDOUT_FILENO))
+      .WillOnce(Return(dev_zero.get()));
+
+  // Allow writing from cryptohome's perspective.
+  base::ScopedFD read_end, write_end;
+  ASSERT_TRUE(CreatePipe(&read_end, &write_end));
+  EXPECT_CALL(*process, GetPipe(STDIN_FILENO))
+      .WillOnce(Return(write_end.get()));
+
+  ASSERT_TRUE(out_of_process_mounter_->PerformEphemeralMount(kGuestUserName));
+
+  OutOfProcessMountRequest r;
+  ASSERT_TRUE(ReadProtobuf(read_end.get(), &r));
+  EXPECT_EQ(r.username(), kGuestUserName);
+  EXPECT_EQ(r.mount_namespace_path(), kChromeMountNamespace.value());
+
+  out_of_process_mounter_->TearDownEphemeralMount();
 }
 
 TEST_F(OutOfProcessMountHelperTest, MountGuestUserDirOOPFailsToWriteProtobuf) {

@@ -13,6 +13,7 @@
 #include <memory>
 #include <set>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <base/files/file_path.h>
@@ -23,6 +24,7 @@
 
 #include "cryptohome/mount_constants.h"
 #include "cryptohome/mount_helper.h"
+#include "cryptohome/mount_namespace.h"
 #include "cryptohome/platform.h"
 
 using base::FilePath;
@@ -32,9 +34,11 @@ namespace cryptohome {
 class OutOfProcessMountHelper : public EphemeralMountHelperInterface {
  public:
   OutOfProcessMountHelper(const brillo::SecureBlob& system_salt,
+                          std::unique_ptr<MountNamespace> chrome_mnt_ns,
                           bool legacy_home,
                           Platform* platform)
       : system_salt_(system_salt),
+        chrome_mnt_ns_(std::move(chrome_mnt_ns)),
         legacy_home_(legacy_home),
         platform_(platform),
         username_(),
@@ -65,6 +69,9 @@ class OutOfProcessMountHelper : public EphemeralMountHelperInterface {
 
   // Stores the global system salt.
   brillo::SecureBlob system_salt_;
+
+  // If populated, mount namespace where to perform the mount.
+  std::unique_ptr<MountNamespace> chrome_mnt_ns_;
 
   // Whether to make the legacy home directory (/home/chronos/user) available.
   bool legacy_home_;

@@ -144,6 +144,8 @@ bool OutOfProcessMountHelper::PerformEphemeralMount(
   request.set_username(username);
   request.set_system_salt(SecureBlobToSecureHex(system_salt_).to_string());
   request.set_legacy_home(legacy_home_);
+  request.set_mount_namespace_path(
+      chrome_mnt_ns_ ? chrome_mnt_ns_->path().value() : "");
 
   if (!WriteProtobuf(write_to_helper_, request)) {
     LOG(ERROR) << "Failed to write request protobuf";

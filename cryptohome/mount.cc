@@ -60,6 +60,18 @@ using brillo::cryptohome::home::kGuestUserName;
 using brillo::cryptohome::home::SanitizeUserName;
 using chaps::IsolateCredentialManager;
 
+namespace {
+constexpr char kChromeMountNamespacePath[] = "/run/namespaces/mnt_chrome";
+
+bool IsolateUserSession() {
+#if USE_USER_SESSION_ISOLATION
+  return true;
+#else
+  return false;
+#endif
+}
+}  // namespace
+
 namespace cryptohome {
 
 const char kChapsUserName[] = "chaps";
@@ -194,9 +206,20 @@ bool Mount::Init(Platform* platform, Crypto* crypto,
       default_user_, default_group_, default_access_group_, shadow_root_,
       skel_source_, system_salt_, legacy_mount_, platform_));
 
+  std::unique_ptr<MountNamespace> chrome_mnt_ns;
+  if (IsolateUserSession()) {
+    chrome_mnt_ns = std::make_unique<MountNamespace>(
+        base::FilePath(kChromeMountNamespacePath), platform_);
+    if (!chrome_mnt_ns->Create()) {
+      LOG(ERROR) << "Failed to create mount namespace at "
+                 << kChromeMountNamespacePath;
+      result = false;
+    }
+  }
+
   if (mount_guest_session_out_of_process_) {
-    out_of_process_mounter_.reset(
-        new OutOfProcessMountHelper(system_salt_, legacy_mount_, platform_));
+    out_of_process_mounter_.reset(new OutOfProcessMountHelper(
+        system_salt_, std::move(chrome_mnt_ns), legacy_mount_, platform_));
   }
 
   return result;

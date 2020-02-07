@@ -303,6 +303,7 @@ static_library("libcryptohome") {
     "../mount_constants.cc",
     "../mount_factory.cc",
     "../mount_helper.cc",
+    "../mount_namespace.cc",
     "../mount_stack.cc",
     "../mount_task.cc",
     "../mount_utils.cc",

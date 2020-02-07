@@ -27,6 +27,7 @@
 #include <brillo/asynchronous_signal_handler.h>
 #include <brillo/cryptohome.h>
 #include <brillo/message_loops/base_message_loop.h>
+#include <brillo/scoped_mount_namespace.h>
 #include <brillo/secure_blob.h>
 #include <brillo/syslog_logging.h>
 
@@ -102,6 +103,13 @@ int main(int argc, char** argv) {
   brillo::SecureBlob system_salt;
   brillo::SecureBlob::HexStringToSecureBlob(request.system_salt(),
                                             &system_salt);
+
+  std::unique_ptr<brillo::ScopedMountNamespace> ns_mnt;
+  if (!request.mount_namespace_path().empty()) {
+    // Enter the required mount namespace.
+    ns_mnt = brillo::ScopedMountNamespace::CreateFromPath(
+        base::FilePath(request.mount_namespace_path()));
+  }
 
   cryptohome::Platform platform;
   cryptohome::MountHelper mounter(
