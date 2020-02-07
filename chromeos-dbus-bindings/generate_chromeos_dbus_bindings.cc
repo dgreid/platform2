@@ -110,7 +110,7 @@ bool LoadConfig(const base::FilePath& path, ServiceConfig *config) {
   base::ListValue* list = nullptr;  // Owned by |dict|.
   if (dict->GetListWithoutPathExpansion("ignore_interfaces", &list)) {
     config->ignore_interfaces.reserve(list->GetSize());
-    for (const base::Value& item : base::ValueReferenceAdapter(*list)) {
+    for (const base::Value& item : *list) {
       std::string interface_name;
       if (!item.GetAsString(&interface_name)) {
         LOG(ERROR) << "Invalid interface name in [ignore_interfaces] section";
