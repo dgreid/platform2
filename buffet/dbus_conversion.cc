@@ -31,7 +31,7 @@ brillo::Any ListToAny(const base::ListValue& list,
                       bool (base::Value::*fnc)(T*) const) {
   std::vector<T> result;
   result.reserve(list.GetSize());
-  for (const base::Value& v : base::ValueReferenceAdapter(list)) {
+  for (const base::Value& v : list) {
     T val;
     CHECK((v.*fnc)(&val));
     result.push_back(val);
@@ -42,7 +42,7 @@ brillo::Any ListToAny(const base::ListValue& list,
 brillo::Any DictListToAny(const base::ListValue& list) {
   std::vector<brillo::VariantDictionary> result;
   result.reserve(list.GetSize());
-  for (const base::Value& v : base::ValueReferenceAdapter(list)) {
+  for (const base::Value& v : list) {
     const base::DictionaryValue* dict = nullptr;
     CHECK(v.GetAsDictionary(&dict));
     result.push_back(DictionaryToDBusVariantDictionary(*dict));
@@ -53,7 +53,7 @@ brillo::Any DictListToAny(const base::ListValue& list) {
 brillo::Any ListListToAny(const base::ListValue& list) {
   std::vector<brillo::Any> result;
   result.reserve(list.GetSize());
-  for (const base::Value& v : base::ValueReferenceAdapter(list))
+  for (const base::Value& v : list)
     result.push_back(ValueToAny(v));
   return result;
 }
@@ -90,8 +90,8 @@ brillo::Any ValueToAny(const base::Value& json) {
         prop_value = ListListToAny(*list);
         break;
       }
-      auto type = (*list->begin())->type();
-      for (const base::Value& v : base::ValueReferenceAdapter(*list))
+      auto type = list->begin()->type();
+      for (const base::Value& v : *list)
         CHECK_EQ(v.type(), type) << "Unsupported different type elements";
 
       switch (type) {
@@ -118,7 +118,7 @@ brillo::Any ValueToAny(const base::Value& json) {
           break;
         default:
           LOG(FATAL) << "Unsupported JSON value type for list element: "
-                     << (*list->begin())->type();
+                     << list->begin()->type();
       }
       break;
     }

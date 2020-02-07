@@ -101,7 +101,7 @@ brillo::Any JsonToAny(const base::Value& json) {
       const base::ListValue* list = nullptr;  // Still owned by |json|.
       CHECK(json.GetAsList(&list));
       CHECK(!list->empty()) << "Unable to deduce the type of list elements.";
-      switch ((*list->begin())->type()) {
+      switch (list->begin()->type()) {
         case base::Value::Type::BOOLEAN:
           prop_value = GetJsonList<bool>(*list);
           break;
@@ -119,7 +119,7 @@ brillo::Any JsonToAny(const base::Value& json) {
           break;
         default:
           LOG(FATAL) << "Unsupported JSON value type for list element: "
-                     << (*list->begin())->type();
+                     << list->begin()->type();
       }
       break;
     }
@@ -134,7 +134,7 @@ template <typename T>
 brillo::Any GetJsonList(const base::ListValue& list) {
   std::vector<T> val;
   val.reserve(list.GetSize());
-  for (const base::Value& v : base::ValueReferenceAdapter(list))
+  for (const base::Value& v : list)
     val.push_back(JsonToAny(v).Get<T>());
   return val;
 }
