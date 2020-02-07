@@ -1,6 +1,7 @@
 // Copyright 2020 The Chromium OS Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+#include <unistd.h>
 
 #include <base/bind.h>
 #include <base/command_line.h>
@@ -56,7 +57,23 @@ int main(int argc, char* argv[]) {
     PLOG(ERROR) << "Failed to initialize NDProxy internal state";
     return EXIT_FAILURE;
   }
-  proxy.AddRouterInterfacePair(args[0], args[1]);
+
+  // Crostini depends on another daemon (LXD) creating the guest bridge
+  // interface. This can take a few seconds, so retry if necessary.
+  bool added_interfaces = false;
+  for (int i = 0; i < 10; i++) {
+    if (proxy.AddRouterInterfacePair(args[0], args[1])) {
+      added_interfaces = true;
+      break;
+    }
+    usleep(1000 * 1000 /* 1 second */);
+  }
+  if (!added_interfaces) {
+    LOG(ERROR) << "Network interfaces " << args[0] << " and " << args[1]
+               << " could not be added; do they exist?";
+    return EXIT_FAILURE;
+  }
+
   proxy.RegisterOnGuestIpDiscoveryHandler(
       base::Bind(&OnGuestIpDiscovery, &datapath));
 
