@@ -535,13 +535,12 @@ void DevicePolicyEncoder::EncodeGenericPolicies(
     if (!is_error) {
       proto->set_timezone(timezone);
 
-      for (const base::Value& entry : base::ValueReferenceAdapter(*intervals)) {
+      for (const base::Value& entry : *intervals) {
         is_error |=
             !EncodeWeeklyTimeIntervalProto(entry, proto->add_intervals());
       }
 
-      for (const base::Value& entry :
-           base::ValueReferenceAdapter(*ignored_policy_proto_tags)) {
+      for (const base::Value& entry : *ignored_policy_proto_tags) {
         int tag = 0;
         is_error |= !entry.GetAsInteger(&tag);
         proto->add_ignored_policy_proto_tags(tag);
