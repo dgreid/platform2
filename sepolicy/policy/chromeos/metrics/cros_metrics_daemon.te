@@ -20,6 +20,7 @@ allow cros_metrics_daemon sysfs_zram:file { open read getattr };
 allow cros_metrics_daemon sysfs_devices_system_cpu:file { open read getattr };
 
 allow cros_metrics_daemon {
+proc_buddyinfo
 proc_cmdline
 proc_diskstats
 proc_filesystems
@@ -36,6 +37,7 @@ proc_swaps
 proc_sysrq
 proc_timer
 proc_uptime
+proc_version
 proc_vmallocinfo
 proc_vmstat
 proc_zoneinfo
