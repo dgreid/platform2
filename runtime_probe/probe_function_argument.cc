@@ -41,18 +41,15 @@ bool ParseArgument<std::vector<std::string>>(const char* function_name,
     return false;
   }
 
-  std::vector<std::string> tmp{};
-  const base::ListValue* list_value;
-  value.GetAsList(&list_value);
+  std::vector<std::string> tmp;
 
-  for (auto it = list_value->begin(); it != list_value->end(); it++) {
-    if (!(*it)->is_string()) {
+  for (const auto& v : value.GetList()) {
+    if (!v.is_string()) {
       LOG(ERROR) << "failed to parse " << value << " as a list of string.";
       return false;
     }
 
-    tmp.emplace_back();
-    (*it)->GetAsString(&tmp.back());
+    tmp.push_back(v.GetString());
   }
   member->swap(tmp);
   return true;
@@ -70,18 +67,10 @@ bool ParseArgument<std::vector<std::unique_ptr<ProbeFunction>>>(
     return false;
   }
 
-  std::vector<std::unique_ptr<ProbeFunction>> tmp{};
+  std::vector<std::unique_ptr<ProbeFunction>> tmp;
 
-  const base::ListValue* list_value;
-  value.GetAsList(&list_value);
-
-  for (auto it = list_value->begin(); it != list_value->end(); it++) {
-// TODO(crbug.com/909719): remove this after libchrome uprev
-#if BASE_VER < 576279
-    auto ptr = runtime_probe::ProbeFunction::FromValue(**it);
-#else
-    auto ptr = runtime_probe::ProbeFunction::FromValue(*it);
-#endif
+  for (const auto& v : value.GetList()) {
+    auto ptr = runtime_probe::ProbeFunction::FromValue(v);
     if (!ptr) {
       LOG(ERROR) << "failed to parse " << value
                  << " as a list of probe functions.";

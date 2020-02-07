@@ -35,8 +35,9 @@ std::unique_ptr<ProbeStatement> ProbeStatement::FromDictionaryValue(
   instance->component_name_ = component_name;
 
   // Parse required field "eval"
-  const base::Value* eval_value;
-  if (!dict_value.Get("eval", &eval_value)) {
+  const base::Value* eval_value =
+      dict_value.FindKeyOfType("eval", base::Value::Type::DICTIONARY);
+  if (!eval_value) {
     LOG(ERROR) << "eval should be a DictionaryValue: " << *eval_value;
     return nullptr;
   }
@@ -49,23 +50,18 @@ std::unique_ptr<ProbeStatement> ProbeStatement::FromDictionaryValue(
   }
 
   // Parse optional field "keys"
-  const base::ListValue* keys_value;
-  if (!dict_value.GetList("keys", &keys_value)) {
+  const base::Value* keys_value =
+      dict_value.FindKeyOfType("keys", base::Value::Type::LIST);
+  if (!keys_value) {
     VLOG(1) << "keys does not exist or is not a ListValue";
   } else {
-    for (auto it = keys_value->begin(); it != keys_value->end(); it++) {
-// TODO(crbug.com/909719): remove this after libchrome uprevs to r576279
-#if BASE_VER < 576279
-      const auto v = it->get();
-#else
-      const auto& v = *it;
-#endif
+    for (const auto& v : keys_value->GetList()) {
       // Currently, destroy all previously inserted valid elems
-      if (!v->is_string()) {
+      if (!v.is_string()) {
         LOG(ERROR) << "keys should be a list of string: " << *keys_value;
         instance->key_.clear();
       }
-      instance->key_.insert(v->GetString());
+      instance->key_.insert(v.GetString());
     }
   }
 
