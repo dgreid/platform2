@@ -50,10 +50,7 @@ class DlcManager::DlcManagerImpl {
 
   bool IsInstalling() { return !installing_.empty(); }
 
-  std::set<DlcId> GetSupported() {
-    RefreshInstalled();
-    return supported_;
-  }
+  std::set<DlcId> GetSupported() { return supported_; }
 
   DlcRootMap GetInstalled() {
     RefreshInstalled();
