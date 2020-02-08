@@ -9,6 +9,7 @@ group("all") {
   deps = [
     ":chromeos-config-protos",
     ":cros_config",
+    ":cros_configfs",
   ]
   if (use.test) {
     deps += [
@@ -54,6 +55,19 @@ pkg_config("cros_config_config") {
 executable("cros_config") {
   sources = [
     "cros_config_main.cc",
+  ]
+  configs += [
+    ":cros_config_config",
+    ":target_defaults",
+  ]
+  deps = [
+    ":libcros_config",
+  ]
+}
+
+executable("cros_configfs") {
+  sources = [
+    "cros_configfs_main.cc",
   ]
   configs += [
     ":cros_config_config",
