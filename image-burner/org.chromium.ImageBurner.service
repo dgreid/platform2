@@ -3,5 +3,5 @@
 # found in the LICENSE file.
 [D-BUS Service]
 Name=org.chromium.ImageBurner
-Exec=/usr/sbin/image_burner
+Exec=/sbin/start image-burner
 User=root
