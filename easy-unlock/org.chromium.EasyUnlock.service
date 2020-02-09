@@ -1,4 +1,4 @@
 [D-BUS Service]
 Name=org.chromium.EasyUnlock
-Exec=/opt/google/easy_unlock/easy_unlock
-User=easy-unlock
+Exec=/sbin/start easy-unlock
+User=root
