@@ -1,5 +1,5 @@
 [D-BUS Service]
 Name=org.chromium.lorgnette
-Exec=/usr/bin/lorgnette
+Exec=/sbin/start lorgnette
 User=root
 
