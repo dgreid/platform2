@@ -3,5 +3,5 @@
 # found in the LICENSE file.
 [D-BUS Service]
 Name=org.chromium.VirtualFileProvider
-Exec=/usr/bin/virtual-file-provider-jailed
+Exec=/sbin/start virtual-file-provider
 User=root
