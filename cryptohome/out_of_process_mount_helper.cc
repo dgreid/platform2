@@ -98,10 +98,13 @@ void OutOfProcessMountHelper::KillOutOfProcessHelperIfNecessary() {
     ReportOOPMountCleanupResult(OOPMountCleanupResult::kSuccess);
   } else {
     LOG(ERROR) << "Failed to send SIGTERM to OOP mount helper";
-    ReportOOPMountCleanupResult(OOPMountCleanupResult::kFailedToPoke);
 
     // If the process didn't exit on SIGTERM, attempt SIGKILL.
-    if (!helper_process_->Kill(SIGKILL, 0)) {
+    if (helper_process_->Kill(SIGKILL, 0)) {
+      // If SIGKILL succeeds (with SIGTERM having failed) log the fact that
+      // poking failed.
+      ReportOOPMountCleanupResult(OOPMountCleanupResult::kFailedToPoke);
+    } else {
       LOG(ERROR) << "Failed to kill OOP mount helper";
       ReportOOPMountCleanupResult(OOPMountCleanupResult::kFailedToKill);
     }
