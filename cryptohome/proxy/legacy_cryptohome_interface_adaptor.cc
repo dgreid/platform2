@@ -165,10 +165,23 @@ void LegacyCryptohomeInterfaceAdaptor::MassRemoveKeys(
     const cryptohome::AccountIdentifier& in_account_id,
     const cryptohome::AuthorizationRequest& in_authorization_request,
     const cryptohome::MassRemoveKeysRequest& in_mass_remove_keys_request) {
-  // Not implemented yet
-  response->ReplyWithError(FROM_HERE, brillo::errors::dbus::kDomain,
-                           DBUS_ERROR_NOT_SUPPORTED,
-                           "Method unimplemented yet");
+  auto response_shared =
+      std::make_shared<SharedDBusMethodResponse<cryptohome::BaseReply>>(
+          std::move(response));
+
+  user_data_auth::MassRemoveKeysRequest request;
+  request.mutable_account_id()->CopyFrom(in_account_id);
+  request.mutable_authorization_request()->CopyFrom(in_authorization_request);
+  request.mutable_exempt_key_data()->CopyFrom(
+      in_mass_remove_keys_request.exempt_key_data());
+  userdataauth_proxy_->MassRemoveKeysAsync(
+      request,
+      base::Bind(&LegacyCryptohomeInterfaceAdaptor::ForwardBaseReplyErrorCode<
+                     user_data_auth::MassRemoveKeysReply>,
+                 response_shared),
+      base::Bind(&LegacyCryptohomeInterfaceAdaptor::ForwardError<
+                     cryptohome::BaseReply>,
+                 base::Unretained(this), response_shared));
 }
 
 void LegacyCryptohomeInterfaceAdaptor::GetKeyDataEx(

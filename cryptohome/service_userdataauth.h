@@ -128,6 +128,15 @@ class UserDataAuthAdaptor
                        user_data_auth::RemoveKeyReply>> response,
                    const user_data_auth::RemoveKeyRequest& in_request);
 
+  void MassRemoveKeys(
+      std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
+          user_data_auth::MassRemoveKeysReply>> response,
+      const user_data_auth::MassRemoveKeysRequest& in_request) override;
+  void DoMassRemoveKeys(
+      std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
+          user_data_auth::MassRemoveKeysReply>> response,
+      const user_data_auth::MassRemoveKeysRequest& in_request);
+
   void MigrateKey(std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
                       user_data_auth::MigrateKeyReply>> response,
                   const user_data_auth::MigrateKeyRequest& in_request) override;

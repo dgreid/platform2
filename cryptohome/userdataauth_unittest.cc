@@ -1630,6 +1630,7 @@ class UserDataAuthExTest : public UserDataAuthTest {
     check_req_.reset(new user_data_auth::CheckKeyRequest);
     mount_req_.reset(new user_data_auth::MountRequest);
     remove_req_.reset(new user_data_auth::RemoveKeyRequest);
+    mass_remove_req_.reset(new user_data_auth::MassRemoveKeysRequest);
     list_keys_req_.reset(new user_data_auth::ListKeysRequest);
     get_key_data_req_.reset(new user_data_auth::GetKeyDataRequest);
     update_req_.reset(new user_data_auth::UpdateKeyRequest);
@@ -1658,6 +1659,7 @@ class UserDataAuthExTest : public UserDataAuthTest {
   std::unique_ptr<user_data_auth::CheckKeyRequest> check_req_;
   std::unique_ptr<user_data_auth::MountRequest> mount_req_;
   std::unique_ptr<user_data_auth::RemoveKeyRequest> remove_req_;
+  std::unique_ptr<user_data_auth::MassRemoveKeysRequest> mass_remove_req_;
   std::unique_ptr<user_data_auth::ListKeysRequest> list_keys_req_;
   std::unique_ptr<user_data_auth::GetKeyDataRequest> get_key_data_req_;
   std::unique_ptr<user_data_auth::UpdateKeyRequest> update_req_;
@@ -2146,6 +2148,76 @@ TEST_F(UserDataAuthExTest, RemoveKeyInvalidArgs) {
   remove_req_->mutable_key()->mutable_data();
   EXPECT_EQ(userdataauth_->RemoveKey(*remove_req_.get()),
             user_data_auth::CRYPTOHOME_ERROR_INVALID_ARGUMENT);
+}
+
+TEST_F(UserDataAuthExTest, MassRemoveKeysInvalidArgsNoEmail) {
+  PrepareArguments();
+
+  EXPECT_EQ(userdataauth_->MassRemoveKeys(*mass_remove_req_.get()),
+            user_data_auth::CRYPTOHOME_ERROR_INVALID_ARGUMENT);
+}
+
+TEST_F(UserDataAuthExTest, MassRemoveKeysInvalidArgsNoSecret) {
+  PrepareArguments();
+  mass_remove_req_->mutable_account_id()->set_account_id("foo@gmail.com");
+
+  EXPECT_EQ(userdataauth_->MassRemoveKeys(*mass_remove_req_.get()),
+            user_data_auth::CRYPTOHOME_ERROR_INVALID_ARGUMENT);
+}
+
+TEST_F(UserDataAuthExTest, MassRemoveKeysAccountNotExist) {
+  PrepareArguments();
+  mass_remove_req_->mutable_account_id()->set_account_id("foo@gmail.com");
+  mass_remove_req_->mutable_authorization_request()->mutable_key()->set_secret(
+      "blerg");
+
+  EXPECT_CALL(homedirs_, Exists(_)).WillRepeatedly(Return(false));
+
+  EXPECT_EQ(userdataauth_->MassRemoveKeys(*mass_remove_req_.get()),
+            user_data_auth::CRYPTOHOME_ERROR_ACCOUNT_NOT_FOUND);
+}
+
+TEST_F(UserDataAuthExTest, MassRemoveKeysAuthFailed) {
+  PrepareArguments();
+  mass_remove_req_->mutable_account_id()->set_account_id("foo@gmail.com");
+  mass_remove_req_->mutable_authorization_request()->mutable_key()->set_secret(
+      "blerg");
+
+  EXPECT_CALL(homedirs_, Exists(_)).WillRepeatedly(Return(true));
+  EXPECT_CALL(homedirs_, AreCredentialsValid(_)).WillRepeatedly(Return(false));
+
+  EXPECT_EQ(userdataauth_->MassRemoveKeys(*mass_remove_req_.get()),
+            user_data_auth::CRYPTOHOME_ERROR_AUTHORIZATION_KEY_FAILED);
+}
+
+TEST_F(UserDataAuthExTest, MassRemoveKeysGetLabelsFailed) {
+  PrepareArguments();
+  mass_remove_req_->mutable_account_id()->set_account_id("foo@gmail.com");
+  mass_remove_req_->mutable_authorization_request()->mutable_key()->set_secret(
+      "blerg");
+
+  EXPECT_CALL(homedirs_, Exists(_)).WillRepeatedly(Return(true));
+  EXPECT_CALL(homedirs_, AreCredentialsValid(_)).WillRepeatedly(Return(true));
+  EXPECT_CALL(homedirs_, GetVaultKeysetLabels(_, _))
+      .WillRepeatedly(Return(false));
+
+  EXPECT_EQ(userdataauth_->MassRemoveKeys(*mass_remove_req_.get()),
+            user_data_auth::CRYPTOHOME_ERROR_KEY_NOT_FOUND);
+}
+
+TEST_F(UserDataAuthExTest, MassRemoveKeysForceSuccess) {
+  PrepareArguments();
+  mass_remove_req_->mutable_account_id()->set_account_id("foo@gmail.com");
+  mass_remove_req_->mutable_authorization_request()->mutable_key()->set_secret(
+      "blerg");
+
+  EXPECT_CALL(homedirs_, Exists(_)).WillRepeatedly(Return(true));
+  EXPECT_CALL(homedirs_, AreCredentialsValid(_)).WillRepeatedly(Return(true));
+  EXPECT_CALL(homedirs_, GetVaultKeysetLabels(_, _))
+      .WillRepeatedly(Return(true));
+
+  EXPECT_EQ(userdataauth_->MassRemoveKeys(*mass_remove_req_.get()),
+            user_data_auth::CRYPTOHOME_ERROR_NOT_SET);
 }
 
 constexpr char ListKeysSanityTest_label1[] = "Label 1";

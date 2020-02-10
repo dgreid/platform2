@@ -175,6 +175,14 @@ class UserDataAuth {
   user_data_auth::CryptohomeErrorCode RemoveKey(
       const user_data_auth::RemoveKeyRequest request);
 
+  // Remove all keys under the account specified by |request.account_id| except
+  // those listed in |request.exempt_key_data| (only the label).
+  // |request.authorization_request| contains the authorization to authorize
+  // this change. Returns CRYPTOHOME_ERROR_NOT_SET if the operation is
+  // successful.
+  user_data_auth::CryptohomeErrorCode MassRemoveKeys(
+      const user_data_auth::MassRemoveKeysRequest request);
+
   // List the keys stored in |homedirs_|. If CRYPTOHOME_ERROR_NOT_SET is
   // returned, then |labels_out| contains the label of the keys. Otherwise, the
   // content of |labels_out| is undefined.
