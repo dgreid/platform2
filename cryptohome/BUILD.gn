@@ -683,6 +683,7 @@ if (use.fuzzer) {
     deps = [
       "libs:libcrosplatform",
     ]
+    libs = [ "scrypt" ]
     pkg_deps = [
       "libbrillo",
       "libchrome-${libbase_ver}",
@@ -699,5 +700,6 @@ if (use.fuzzer) {
     deps = [
       "libs:libcrosplatform",
     ]
+    libs = [ "scrypt" ]
   }
 }
