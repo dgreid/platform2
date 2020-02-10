@@ -1145,28 +1145,19 @@ void UserDataAuth::DoMount(
   return;
 }
 
-void UserDataAuth::DoChallengeResponseMount(
-    const user_data_auth::MountRequest& request,
-    const Mount::MountArgs& mount_args,
-    base::OnceCallback<void(const user_data_auth::MountReply&)> on_done) {
-  DCHECK_EQ(request.authorization().key().data().type(),
-            KeyData::KEY_TYPE_CHALLENGE_RESPONSE);
-
-  // Setup a reply for use during error handling.
-  user_data_auth::MountReply reply;
-
+bool UserDataAuth::InitForChallengeResponseAuth(
+    user_data_auth::CryptohomeErrorCode* error_code) {
   if (!tpm_) {
-    LOG(ERROR) << "Cannot do challenge-response mount without TPM";
-    reply.set_error(user_data_auth::CRYPTOHOME_ERROR_MOUNT_FATAL);
-    std::move(on_done).Run(reply);
-    return;
+    LOG(ERROR) << "Cannot do challenge-response authentication without TPM";
+    *error_code = user_data_auth::CRYPTOHOME_ERROR_MOUNT_FATAL;
+    return false;
   }
+
   if (!tpm_init_->IsTpmReady()) {
-    LOG(ERROR)
-        << "TPM must be initialized in order to do challenge-response mount";
-    reply.set_error(user_data_auth::CRYPTOHOME_ERROR_MOUNT_FATAL);
-    std::move(on_done).Run(reply);
-    return;
+    LOG(ERROR) << "TPM must be initialized in order to do challenge-response "
+                  "authentication";
+    *error_code = user_data_auth::CRYPTOHOME_ERROR_MOUNT_FATAL;
+    return false;
   }
 
   if (!challenge_credentials_helper_) {
@@ -1178,15 +1169,42 @@ void UserDataAuth::DoChallengeResponseMount(
     // TPM Delegate is required for TPM1.2. For TPM2.0, this is a no-op.
     if (!tpm_->GetDelegate(&delegate_blob, &delegate_secret,
                            &has_reset_lock_permissions)) {
-      LOG(ERROR) << "Cannot do challenge-response mount without TPM delegate";
-      reply.set_error(user_data_auth::CRYPTOHOME_ERROR_MOUNT_FATAL);
-      std::move(on_done).Run(reply);
-      return;
+      LOG(ERROR)
+          << "Cannot do challenge-response authentication without TPM delegate";
+      *error_code = user_data_auth::CRYPTOHOME_ERROR_MOUNT_FATAL;
+      return false;
     }
 
     challenge_credentials_helper_ =
         std::make_unique<ChallengeCredentialsHelper>(tpm_, delegate_blob,
                                                      delegate_secret);
+  }
+
+  if (!mount_thread_bus_) {
+    LOG(ERROR) << "Cannot do challenge-response mount without system D-Bus bus";
+    *error_code = user_data_auth::CRYPTOHOME_ERROR_MOUNT_FATAL;
+    return false;
+  }
+
+  return true;
+}
+
+void UserDataAuth::DoChallengeResponseMount(
+    const user_data_auth::MountRequest& request,
+    const Mount::MountArgs& mount_args,
+    base::OnceCallback<void(const user_data_auth::MountReply&)> on_done) {
+  DCHECK_EQ(request.authorization().key().data().type(),
+            KeyData::KEY_TYPE_CHALLENGE_RESPONSE);
+
+  // Setup a reply for use during error handling.
+  user_data_auth::MountReply reply;
+
+  user_data_auth::CryptohomeErrorCode error_code =
+      user_data_auth::CRYPTOHOME_ERROR_NOT_SET;
+  if (!InitForChallengeResponseAuth(&error_code)) {
+    reply.set_error(error_code);
+    std::move(on_done).Run(reply);
+    return;
   }
 
   const std::string& account_id = GetAccountId(request.account());
@@ -1206,7 +1224,8 @@ void UserDataAuth::DoChallengeResponseMount(
   // KeyChallengeServiceImpl is tasked with contacting the challenge response
   // DBus service that'll provide the response once we send the challenge.
   auto key_challenge_service = std::make_unique<KeyChallengeServiceImpl>(
-      bus_, request.authorization().key_delegate().dbus_service_name());
+      mount_thread_bus_,
+      request.authorization().key_delegate().dbus_service_name());
 
   if (!homedirs_->Exists(obfuscated_username) &&
       !mount_args.create_if_missing) {

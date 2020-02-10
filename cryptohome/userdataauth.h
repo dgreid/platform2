@@ -597,6 +597,12 @@ class UserDataAuth {
   void MountGuest(
       base::OnceCallback<void(const user_data_auth::MountReply&)> on_done);
 
+  // Performs the lazy part of the initialization that is required for
+  // performing operations with challenge-response keys. Returns whether
+  // succeeded.
+  bool InitForChallengeResponseAuth(
+      user_data_auth::CryptohomeErrorCode* error_code);
+
   // This is a utility function used by DoMount(). It is called if the request
   // mounting operation requires challenge response authentication. i.e. The key
   // for the storage is sealed.
