@@ -195,8 +195,8 @@ Manager::Manager(ControlInterface* control_interface,
       ft_enabled_(false),
 #endif  // DISABLE_FT
       should_blackhole_user_traffic_(false) {
-  HelpRegisterDerivedString(kActiveProfileProperty,
-                            &Manager::GetActiveProfileRpcIdentifier, nullptr);
+  HelpRegisterConstDerivedRpcIdentifier(
+      kActiveProfileProperty, &Manager::GetActiveProfileRpcIdentifier);
   HelpRegisterDerivedString(kAlwaysOnVpnPackageProperty,
                             &Manager::GetAlwaysOnVpnPackage,
                             &Manager::SetAlwaysOnVpnPackage);
@@ -2163,7 +2163,7 @@ RpcIdentifiers Manager::EnumerateWatchedServices(Error* /*error*/) {
   return service_rpc_ids;
 }
 
-string Manager::GetActiveProfileRpcIdentifier(Error* /*error*/) {
+RpcIdentifier Manager::GetActiveProfileRpcIdentifier(Error* /*error*/) {
   return ActiveProfile()->GetRpcIdentifier();
 }
 

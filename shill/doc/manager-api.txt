@@ -411,7 +411,7 @@ Signals		PropertyChanged(string name, variant value)
 			current state and so can avoid to be woken up when
 			other details changes.
 
-Properties 	string ActiveProfile [readwrite]
+Properties 	object ActiveProfile [readwrite]
 
 			Object path of the current active profile.
 
@@ -437,7 +437,7 @@ Properties 	string ActiveProfile [readwrite]
 
 		array{string} ClaimedDevices [readonly]
 
-			The list of devices that have been claimed by
+			The list of the names of devices that have been claimed by
 			the current DeviceClaimer (if it exists).
 
 		array{string} ConnectedTechnologies [readonly]
@@ -453,14 +453,15 @@ Properties 	string ActiveProfile [readwrite]
 			of the connected service states, e.g, "portal" or
 			"online".
 
-		string DefaultService [readonly]
+		object DefaultService [readonly]
 
-			The current connected service with the default route.
+			The object path of the connected Service with the highest
+			priority. If there is no connected Service, returns the
+			"/" object path.
 
 		string DefaultTechnology [readonly]
 
-			The current connected technology which holds the
-			default route.
+			The technology of the DefaultService.
 
 		array{object} Devices [readonly]
 
@@ -567,9 +568,9 @@ Properties 	string ActiveProfile [readwrite]
 			The interval in seconds between re-checking a
 			service in the portal state.
 
-		array{string} Profiles [readonly]
+		array{object} Profiles [readonly]
 
-			List of profile object paths.
+			List of Profile object paths.
 
 		array{object} Services [readonly]
 
@@ -614,27 +615,27 @@ Properties 	string ActiveProfile [readwrite]
 
 		array{object} ServiceCompleteList [readonly]
 
-			Complete list of service object paths, including those
+			Complete list of Service object paths, including those
 			that are not currently visible.  For example, WiFi
-			services that are stored in a loaded profile but
+			Services that are stored in a loaded Profile but
 			cannot currently be connected are presented in this
 			list.
 
-			The services are listed in the same service sorting
+			The Services are listed in the same Service sorting
 			order as the "Services" property above.  Change
 			events for this property are not emitted.
 
 		array{object} ServiceWatchList [readonly]
 
-			List of service object paths that are in a
-			'non-idle' state.  This indicates the set of services
+			List of Service object paths that are in a
+			'non-idle' state.  This indicates the set of Services
 			which are currently listed as associating, configuring,
 			or some other state other than idle, failure or
 			unknown.  This allows a caller to use this property
-			indication to track which services should be monitored
+			indication to track which Services should be monitored
 			for state changes.
 
-			The services are listed in the same service sorting
+			The Services are listed in the same Service sorting
 			order as the "Services" property above, and a change
 			event for this property is emitted every time the
 			Service list is reordered, even if this list has not
