@@ -92,10 +92,26 @@ void Camera3BasicRecordingTest::ValidateRecordingFrameRate(
 
 TEST_P(Camera3BasicRecordingTest, BasicRecording) {
 #define ARRAY_SIZE(A) (sizeof(A) / sizeof(*(A)))
-  ResolutionInfo preview_resolution =
-      cam_service_.GetStaticInfo(cam_id_)
-          ->GetSortedOutputResolutions(HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED)
-          .back();
+  // Choose a preview resolution that is equal to or smaller than full HD so as
+  // to avoid the full-sized one used for the ZSL opaque stream. Ideally we
+  // should check it against the display resolution, but this should do for now.
+  // 1920x1088 is used here since on certain hardware alignment to 16 or higher
+  // is required.
+  const ResolutionInfo full_hd_alt(1920, 1088);
+  auto preview_resolutions =
+      cam_service_.GetStaticInfo(cam_id_)->GetSortedOutputResolutions(
+          HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED);
+  ResolutionInfo preview_resolution(0, 0);
+  for (auto it = preview_resolutions.rbegin(); it != preview_resolutions.rend();
+       ++it) {
+    // Both width and height should be equal to or smaller than the bound
+    // according to getSupportedPreviewSizes() of cts/CameraTestUtils.java.
+    if (it->Width() <= full_hd_alt.Width() &&
+        it->Height() <= full_hd_alt.Height()) {
+      preview_resolution = *it;
+      break;
+    }
+  }
   ResolutionInfo jpeg_resolution(0, 0);
   cam_service_.StartPreview(cam_id_, preview_resolution, jpeg_resolution,
                             recording_resolution_);
