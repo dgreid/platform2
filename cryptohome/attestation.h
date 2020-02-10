@@ -260,8 +260,8 @@ class Attestation : public base::PlatformThread::Delegate,
   //              |is_user_specific| is false.
   //   key_name - The key name; this is the same name previously passed to
   //              FinishCertRequest.
-  //   public_key - The public key in DER form, according to the RSAPublicKey
-  //                ASN.1 type defined in PKCS #1 A.1.1.
+  //   public_key - The public key, in DER-encoded X.509 SubjectPublicKeyInfo
+  //                format.
   virtual bool GetPublicKey(bool is_user_specific,
                             const std::string& username,
                             const std::string& key_name,
