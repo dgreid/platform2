@@ -94,6 +94,9 @@ class UserDataAuthAdaptor
   void DoCheckKey(std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
                       user_data_auth::CheckKeyReply>> response,
                   const user_data_auth::CheckKeyRequest& in_request);
+  void DoCheckKeyDone(std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
+                          user_data_auth::CheckKeyReply>> response,
+                      user_data_auth::CryptohomeErrorCode status);
 
   void AddKey(std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
                   user_data_auth::AddKeyReply>> response,

@@ -1545,20 +1545,30 @@ user_data_auth::CryptohomeErrorCode UserDataAuth::AddKey(
   return static_cast<user_data_auth::CryptohomeErrorCode>(result);
 }
 
-user_data_auth::CryptohomeErrorCode UserDataAuth::CheckKey(
-    const user_data_auth::CheckKeyRequest request) {
+void UserDataAuth::CheckKey(
+    const user_data_auth::CheckKeyRequest& request,
+    base::OnceCallback<void(user_data_auth::CryptohomeErrorCode)> on_done) {
   AssertOnMountThread();
 
   if (!request.has_account_id() || !request.has_authorization_request()) {
     LOG(ERROR)
         << "CheckKeyRequest must have account_id and authorization_request.";
-    return user_data_auth::CRYPTOHOME_ERROR_INVALID_ARGUMENT;
+    std::move(on_done).Run(user_data_auth::CRYPTOHOME_ERROR_INVALID_ARGUMENT);
+    return;
   }
 
   std::string account_id = GetAccountId(request.account_id());
   if (account_id.empty()) {
     LOG(ERROR) << "CheckKeyRequest must have valid account_id.";
-    return user_data_auth::CRYPTOHOME_ERROR_INVALID_ARGUMENT;
+    std::move(on_done).Run(user_data_auth::CRYPTOHOME_ERROR_INVALID_ARGUMENT);
+    return;
+  }
+
+  // Process challenge-response credentials asynchronously.
+  if (request.authorization_request().key().data().type() ==
+      KeyData::KEY_TYPE_CHALLENGE_RESPONSE) {
+    DoChallengeResponseCheckKey(request, std::move(on_done));
+    return;
   }
 
   // Note that there's no check for empty AuthorizationRequest key label because
@@ -1569,7 +1579,8 @@ user_data_auth::CryptohomeErrorCode UserDataAuth::CheckKey(
       request.authorization_request().key().secret();
   if (auth_secret.empty()) {
     LOG(ERROR) << "No key secret in CheckKeyRequest.";
-    return user_data_auth::CRYPTOHOME_ERROR_INVALID_ARGUMENT;
+    std::move(on_done).Run(user_data_auth::CRYPTOHOME_ERROR_INVALID_ARGUMENT);
+    return;
   }
 
   Credentials credentials(account_id.c_str(), SecureBlob(auth_secret));
@@ -1589,23 +1600,92 @@ user_data_auth::CryptohomeErrorCode UserDataAuth::CheckKey(
   if (found_valid_credentials) {
     // Entered the right creds, so reset LE credentials.
     homedirs_->ResetLECredentials(credentials);
-    return user_data_auth::CRYPTOHOME_ERROR_NOT_SET;
-  } else {
-    // Cover different keys for the same user with homedirs.
-    if (!homedirs_->Exists(obfuscated_username)) {
-      return user_data_auth::CRYPTOHOME_ERROR_ACCOUNT_NOT_FOUND;
-    }
+    std::move(on_done).Run(user_data_auth::CRYPTOHOME_ERROR_NOT_SET);
+    return;
+  }
+
+  // Cover different keys for the same user with homedirs.
+  if (!homedirs_->Exists(obfuscated_username)) {
+    std::move(on_done).Run(user_data_auth::CRYPTOHOME_ERROR_ACCOUNT_NOT_FOUND);
+    return;
+  }
 
     if (!homedirs_->AreCredentialsValid(credentials)) {
       // TODO(wad) Should this pass along KEY_NOT_FOUND too?
-      return user_data_auth::CRYPTOHOME_ERROR_AUTHORIZATION_KEY_FAILED;
+      std::move(on_done).Run(
+          user_data_auth::CRYPTOHOME_ERROR_AUTHORIZATION_KEY_FAILED);
+      return;
     }
 
     homedirs_->ResetLECredentials(credentials);
-    return user_data_auth::CRYPTOHOME_ERROR_NOT_SET;
+    std::move(on_done).Run(user_data_auth::CRYPTOHOME_ERROR_NOT_SET);
+    return;
+}
+
+void UserDataAuth::DoChallengeResponseCheckKey(
+    const user_data_auth::CheckKeyRequest& request,
+    base::OnceCallback<void(user_data_auth::CryptohomeErrorCode)> on_done) {
+  const auto& authorization = request.authorization_request();
+  const auto& identifier = request.account_id();
+  DCHECK_EQ(authorization.key().data().type(),
+            KeyData::KEY_TYPE_CHALLENGE_RESPONSE);
+
+  user_data_auth::CryptohomeErrorCode error_code =
+      user_data_auth::CRYPTOHOME_ERROR_NOT_SET;
+  if (!InitForChallengeResponseAuth(&error_code)) {
+    std::move(on_done).Run(error_code);
+    return;
   }
 
-  NOTREACHED();
+  const std::string& account_id = GetAccountId(identifier);
+  const std::string obfuscated_username =
+      BuildObfuscatedUsername(account_id, system_salt_);
+  const KeyData key_data = authorization.key().data();
+
+  if (!authorization.has_key_delegate() ||
+      !authorization.key_delegate().has_dbus_service_name()) {
+    LOG(ERROR) << "Cannot do challenge-response authentication without key "
+                  "delegate information";
+    std::move(on_done).Run(user_data_auth::CRYPTOHOME_ERROR_MOUNT_FATAL);
+    return;
+  }
+  auto key_challenge_service = std::make_unique<KeyChallengeServiceImpl>(
+      mount_thread_bus_, authorization.key_delegate().dbus_service_name());
+
+  if (!homedirs_->Exists(obfuscated_username)) {
+    std::move(on_done).Run(user_data_auth::CRYPTOHOME_ERROR_ACCOUNT_NOT_FOUND);
+    return;
+  }
+
+  std::unique_ptr<VaultKeyset> vault_keyset(homedirs_->GetVaultKeyset(
+      obfuscated_username, authorization.key().data().label()));
+  if (!vault_keyset) {
+    LOG(ERROR) << "No existing challenge-response vault keyset found";
+    std::move(on_done).Run(user_data_auth::CRYPTOHOME_ERROR_MOUNT_FATAL);
+    return;
+  }
+  challenge_credentials_helper_->Decrypt(
+      account_id, key_data,
+      vault_keyset->serialized().signature_challenge_info(),
+      std::move(key_challenge_service),
+      base::BindOnce(&UserDataAuth::CompleteChallengeResponseCheckKey,
+                     base::Unretained(this), std::move(on_done)));
+}
+
+void UserDataAuth::CompleteChallengeResponseCheckKey(
+    base::OnceCallback<void(user_data_auth::CryptohomeErrorCode)> on_done,
+    std::unique_ptr<Credentials> credentials) {
+  if (!credentials) {
+    LOG(ERROR) << "Key checking failed due to failure to obtain "
+                  "challenge-response credentials";
+    std::move(on_done).Run(user_data_auth::CRYPTOHOME_ERROR_MOUNT_FATAL);
+    return;
+  }
+
+  // Entered the right creds, so reset LE credentials.
+  homedirs_->ResetLECredentials(*credentials);
+
+  std::move(on_done).Run(user_data_auth::CRYPTOHOME_ERROR_NOT_SET);
 }
 
 user_data_auth::CryptohomeErrorCode UserDataAuth::RemoveKey(

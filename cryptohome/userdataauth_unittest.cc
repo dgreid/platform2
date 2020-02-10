@@ -1154,8 +1154,7 @@ TEST_F(UserDataAuthTest, OwnershipCallbackSanity) {
   EXPECT_CALL(tpm_, HandleOwnershipTakenEvent).WillOnce(Return());
   // Called by ResetAllTPMContext().
   mount_->set_crypto(&crypto_);
-  EXPECT_CALL(crypto_, EnsureTpm(true))
-      .WillOnce(Return(Crypto::CryptoError::CE_NONE));
+  EXPECT_CALL(crypto_, EnsureTpm(true)).WillOnce(Return(CryptoError::CE_NONE));
   // Called by InitializeInstallAttributes()
   EXPECT_CALL(attrs_, Init(_)).WillOnce(Return(true));
 
@@ -1169,8 +1168,7 @@ TEST_F(UserDataAuthTest, OwnershipCallbackRepeated) {
   EXPECT_CALL(tpm_, HandleOwnershipTakenEvent).WillOnce(Return());
   // Called by ResetAllTPMContext().
   mount_->set_crypto(&crypto_);
-  EXPECT_CALL(crypto_, EnsureTpm(true))
-      .WillOnce(Return(Crypto::CryptoError::CE_NONE));
+  EXPECT_CALL(crypto_, EnsureTpm(true)).WillOnce(Return(CryptoError::CE_NONE));
   // Called by InitializeInstallAttributes()
   EXPECT_CALL(attrs_, Init(_)).WillOnce(Return(true));
 
@@ -1608,6 +1606,23 @@ class UserDataAuthExTest : public UserDataAuthTest {
     return mvk.release();
   }
 
+  void CallCheckKeyAndVerify(
+      user_data_auth::CryptohomeErrorCode expected_error_code) {
+    // Create a callback and verify the error code there.
+    bool called = false;
+    auto on_done = base::BindOnce(
+        [](bool* called_ptr,
+           user_data_auth::CryptohomeErrorCode expected_error_code,
+           user_data_auth::CryptohomeErrorCode error_code) {
+          EXPECT_EQ(error_code, expected_error_code);
+          *called_ptr = true;
+        },
+        base::Unretained(&called), expected_error_code);
+
+    userdataauth_->CheckKey(*check_req_.get(), std::move(on_done));
+    EXPECT_TRUE(called);
+  }
+
  protected:
   void PrepareArguments() {
     add_req_.reset(new user_data_auth::AddKeyRequest);
@@ -1930,8 +1945,8 @@ TEST_F(UserDataAuthExTest, CheckKeyHomedirsCheckSuccess) {
   EXPECT_CALL(*mount_, AreSameUser(_)).WillOnce(Return(false));
   EXPECT_CALL(homedirs_, Exists(_)).WillOnce(Return(true));
   EXPECT_CALL(homedirs_, AreCredentialsValid(_)).WillOnce(Return(true));
-  EXPECT_EQ(userdataauth_->CheckKey(*check_req_.get()),
-            user_data_auth::CRYPTOHOME_ERROR_NOT_SET);
+
+  CallCheckKeyAndVerify(user_data_auth::CRYPTOHOME_ERROR_NOT_SET);
 }
 
 TEST_F(UserDataAuthExTest, CheckKeyHomedirsCheckFail) {
@@ -1946,8 +1961,8 @@ TEST_F(UserDataAuthExTest, CheckKeyHomedirsCheckFail) {
   EXPECT_CALL(homedirs_, Exists(_)).WillRepeatedly(Return(true));
   EXPECT_CALL(homedirs_, AreCredentialsValid(_)).WillOnce(Return(false));
 
-  EXPECT_EQ(userdataauth_->CheckKey(*check_req_.get()),
-            user_data_auth::CRYPTOHOME_ERROR_AUTHORIZATION_KEY_FAILED);
+  CallCheckKeyAndVerify(
+      user_data_auth::CRYPTOHOME_ERROR_AUTHORIZATION_KEY_FAILED);
 }
 
 TEST_F(UserDataAuthExTest, CheckKeyMountCheckSuccess) {
@@ -1960,8 +1975,7 @@ TEST_F(UserDataAuthExTest, CheckKeyMountCheckSuccess) {
   EXPECT_CALL(*mount_, AreSameUser(_)).WillOnce(Return(true));
   EXPECT_CALL(*mount_, AreValid(_)).WillOnce(Return(true));
 
-  EXPECT_EQ(userdataauth_->CheckKey(*check_req_.get()),
-            user_data_auth::CRYPTOHOME_ERROR_NOT_SET);
+  CallCheckKeyAndVerify(user_data_auth::CRYPTOHOME_ERROR_NOT_SET);
 }
 
 TEST_F(UserDataAuthExTest, CheckKeyMountCheckFail) {
@@ -1976,26 +1990,23 @@ TEST_F(UserDataAuthExTest, CheckKeyMountCheckFail) {
   EXPECT_CALL(homedirs_, Exists(_)).WillRepeatedly(Return(true));
   EXPECT_CALL(homedirs_, AreCredentialsValid(_)).WillOnce(Return(false));
 
-  EXPECT_EQ(userdataauth_->CheckKey(*check_req_.get()),
-            user_data_auth::CRYPTOHOME_ERROR_AUTHORIZATION_KEY_FAILED);
+  CallCheckKeyAndVerify(
+      user_data_auth::CRYPTOHOME_ERROR_AUTHORIZATION_KEY_FAILED);
 }
 
 TEST_F(UserDataAuthExTest, CheckKeyInvalidArgs) {
   PrepareArguments();
 
   // No email supplied.
-  EXPECT_EQ(userdataauth_->CheckKey(*check_req_.get()),
-            user_data_auth::CRYPTOHOME_ERROR_INVALID_ARGUMENT);
+  CallCheckKeyAndVerify(user_data_auth::CRYPTOHOME_ERROR_INVALID_ARGUMENT);
 
   // No secret.
   check_req_->mutable_account_id()->set_account_id("foo@gmail.com");
-  EXPECT_EQ(userdataauth_->CheckKey(*check_req_.get()),
-            user_data_auth::CRYPTOHOME_ERROR_INVALID_ARGUMENT);
+  CallCheckKeyAndVerify(user_data_auth::CRYPTOHOME_ERROR_INVALID_ARGUMENT);
 
   // Empty secret.
   check_req_->mutable_authorization_request()->mutable_key()->set_secret("");
-  EXPECT_EQ(userdataauth_->CheckKey(*check_req_.get()),
-            user_data_auth::CRYPTOHOME_ERROR_INVALID_ARGUMENT);
+  CallCheckKeyAndVerify(user_data_auth::CRYPTOHOME_ERROR_INVALID_ARGUMENT);
 }
 
 TEST_F(UserDataAuthExTest, RemoveKeySanity) {

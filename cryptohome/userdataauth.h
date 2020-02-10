@@ -155,10 +155,12 @@ class UserDataAuth {
       const user_data_auth::AddKeyRequest request);
 
   // Check the key given in |request| again the currently mounted directories
-  // and other credentials. Returns CRYPTOHOME_ERROR_NOT_SET if the key is found
-  // to match.
-  user_data_auth::CryptohomeErrorCode CheckKey(
-      const user_data_auth::CheckKeyRequest request);
+  // and other credentials. |on_done| is called once the operation is completed,
+  // and the error code is CRYPTOHOME_ERROR_NOT_SET if the key is found. Note
+  // that this method is asynchronous.
+  void CheckKey(
+      const user_data_auth::CheckKeyRequest& request,
+      base::OnceCallback<void(user_data_auth::CryptohomeErrorCode)> on_done);
 
   // Remove the key given in |request.key| with the authorization given in
   // |request.authorization_request|. Returns CRYPTOHOME_ERROR_NOT_SET if the
@@ -628,6 +630,16 @@ class UserDataAuth {
       std::unique_ptr<Credentials> credentials,
       const Mount::MountArgs& mount_args,
       base::OnceCallback<void(const user_data_auth::MountReply&)> on_done);
+
+  // Called on Mount thread. This triggers the credentials verification steps
+  // that are specific to challenge-response keys, before scheduling
+  // CompleteChallengeResponseCheckKey().
+  void DoChallengeResponseCheckKey(
+      const user_data_auth::CheckKeyRequest& request,
+      base::OnceCallback<void(user_data_auth::CryptohomeErrorCode)> on_done);
+  void CompleteChallengeResponseCheckKey(
+      base::OnceCallback<void(user_data_auth::CryptohomeErrorCode)> on_done,
+      std::unique_ptr<Credentials> credentials);
 
   // =============== Periodic Maintenance Related Methods ===============
 
