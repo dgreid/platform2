@@ -140,8 +140,10 @@ TEST(DatapathTest, AddBridge) {
   MockProcessRunner runner;
   Datapath datapath(&runner);
   EXPECT_CALL(runner, brctl(StrEq("addbr"), ElementsAre("br"), true));
-  EXPECT_CALL(runner, ip(StrEq("addr"), StrEq("add"),
-                         ElementsAre("1.1.1.1/30", "dev", "br"), true));
+  EXPECT_CALL(
+      runner,
+      ip(StrEq("addr"), StrEq("add"),
+         ElementsAre("1.1.1.1/30", "brd", "1.1.1.3", "dev", "br"), true));
   EXPECT_CALL(runner,
               ip(StrEq("link"), StrEq("set"), ElementsAre("br", "up"), true));
   EXPECT_CALL(runner, iptables(StrEq("mangle"),

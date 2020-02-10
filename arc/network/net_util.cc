@@ -13,6 +13,14 @@
 
 namespace arc_networkd {
 
+uint32_t Ipv4Netmask(uint32_t prefix_len) {
+  return htonl((0xffffffffull << (32 - prefix_len)) & 0xffffffff);
+}
+
+uint32_t Ipv4BroadcastAddr(uint32_t base, uint32_t prefix_len) {
+  return (base | ~Ipv4Netmask(prefix_len));
+}
+
 std::string IPv4AddressToString(uint32_t addr) {
   char buf[INET_ADDRSTRLEN] = {0};
   struct in_addr ia;

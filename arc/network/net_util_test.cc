@@ -150,4 +150,21 @@ TEST(Ipv6, IcmpChecksum) {
   EXPECT_EQ(ori_cksum, Icmpv6Checksum(ip6, icmp6));
 }
 
+TEST(Ipv4, BroadcastAddr) {
+  uint32_t base = Ipv4Addr(100, 115, 92, 0);
+  struct {
+    uint32_t prefix_len;
+    uint32_t want;
+  } test_cases[] = {
+      {24, Ipv4Addr(100, 115, 92, 255)},
+      {29, Ipv4Addr(100, 115, 92, 7)},
+      {30, Ipv4Addr(100, 115, 92, 3)},
+      {31, Ipv4Addr(100, 115, 92, 1)},
+  };
+
+  for (const auto& t : test_cases) {
+    EXPECT_EQ(Ipv4BroadcastAddr(base, t.prefix_len), t.want);
+  }
+}
+
 }  // namespace arc_networkd

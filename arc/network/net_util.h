@@ -58,6 +58,12 @@ constexpr uint32_t Ipv4Addr(uint8_t b0, uint8_t b1, uint8_t b2, uint8_t b3) {
   return (b3 << 24) | (b2 << 16) | (b1 << 8) | b0;
 }
 
+// Returns the netmask in network byte order given a prefixl length.
+uint32_t Ipv4Netmask(uint32_t prefix_len);
+
+// Returns the broadcast address in network byte order for the subnet provided.
+uint32_t Ipv4BroadcastAddr(uint32_t base, uint32_t prefix_len);
+
 // Returns the literal representation of the IPv4 address given in network byte
 // order.
 std::string IPv4AddressToString(uint32_t addr);

@@ -111,10 +111,13 @@ int MinijailedProcessRunner::AddInterfaceToContainer(
   if (rc != 0)
     return rc;
 
-  rc = RunSync({kNsEnterPath, "-t", con_pid, "-n", "--", kIpPath, "addr", "add",
-                IPv4AddressToCidrString(con_ipv4_addr, con_ipv4_prefix_len),
-                "dev", con_ifname},
-               mj_, true);
+  rc = RunSync(
+      {kNsEnterPath, "-t", con_pid, "-n", "--", kIpPath, "addr", "add",
+       IPv4AddressToCidrString(con_ipv4_addr, con_ipv4_prefix_len), "brd",
+       IPv4AddressToString(
+           Ipv4BroadcastAddr(con_ipv4_addr, con_ipv4_prefix_len)),
+       "dev", con_ifname},
+      mj_, true);
 
   if (rc != 0)
     return rc;

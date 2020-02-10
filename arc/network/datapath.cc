@@ -56,9 +56,11 @@ bool Datapath::AddBridge(const std::string& ifname,
     return false;
   }
 
-  if (process_runner_->ip("addr", "add",
-                          {IPv4AddressToCidrString(ipv4_addr, ipv4_prefix_len),
-                           "dev", ifname}) != 0) {
+  if (process_runner_->ip(
+          "addr", "add",
+          {IPv4AddressToCidrString(ipv4_addr, ipv4_prefix_len), "brd",
+           IPv4AddressToString(Ipv4BroadcastAddr(ipv4_addr, ipv4_prefix_len)),
+           "dev", ifname}) != 0) {
     RemoveBridge(ifname);
     return false;
   }

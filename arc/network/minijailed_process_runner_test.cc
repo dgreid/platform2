@@ -55,8 +55,8 @@ TEST_F(MinijailProcessRunnerTest, AddInterfaceToContainer) {
       "-t", "12345", "-n", "--", "/bin/ip", "link", "set", "foo", "name", "bar",
   };
   const std::vector<std::string> args_ip2 = {
-      "-t",   "12345", "-n",         "--",  "/bin/ip",
-      "addr", "add",   "1.1.1.1/30", "dev", "bar",
+      "-t",  "12345",      "-n",  "--",      "/bin/ip", "addr",
+      "add", "1.1.1.1/30", "brd", "1.1.1.3", "dev",     "bar",
   };
   const std::vector<std::string> args_ip3 = {
       "-t", "12345", "-n", "--", "/bin/ip", "link", "set", "bar", "up",
@@ -84,8 +84,8 @@ TEST_F(MinijailProcessRunnerTest, AddInterfaceToContainerNoMulticast) {
       "-t", "12345", "-n", "--", "/bin/ip", "link", "set", "foo", "name", "bar",
   };
   const std::vector<std::string> args_ip2 = {
-      "-t",   "12345", "-n",         "--",  "/bin/ip",
-      "addr", "add",   "1.1.1.1/30", "dev", "bar",
+      "-t",  "12345",      "-n",  "--",      "/bin/ip", "addr",
+      "add", "1.1.1.1/30", "brd", "1.1.1.3", "dev",     "bar",
   };
   const std::vector<std::string> args_ip3 = {
       "-t", "12345", "-n", "--", "/bin/ip", "link", "set", "bar", "up",
