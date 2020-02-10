@@ -40,7 +40,7 @@ bool ParseIntFromDict(const base::DictionaryValue& dict,
 // Parse a ListValue structure as vector of integers.
 template <typename T>
 bool ParseIntList(const base::ListValue& list_val, std::vector<T>* val_out) {
-  for (const base::Value& entry : base::ValueReferenceAdapter(list_val)) {
+  for (const base::Value& entry : list_val) {
     double double_val;
     if (!entry.GetAsDouble(&double_val)) {
       return false;
@@ -106,8 +106,7 @@ bool ParseCapabilitiesConfig(const base::DictionaryValue& capabilities_dict,
       continue;
     CapSet caps;
     cap_value_t cap_value;
-    for (const auto& cap_name_value :
-         base::ValueReferenceAdapter(*capset_list)) {
+    for (const auto& cap_name_value : *capset_list) {
       std::string cap_name;
       if (!cap_name_value.GetAsString(&cap_name)) {
         LOG(ERROR) << "Capability list " << set_name
