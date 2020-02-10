@@ -13,6 +13,9 @@
   <policy user="shill">
     <allow send_destination="org.chromium.Chaps"/>
   </policy>
+  <policy user="arc-keymasterd">
+    <allow send_destination="org.chromium.Chaps"/>
+  </policy>
   <policy user="arc-oemcrypto">
     <allow send_destination="org.chromium.Chaps"/>
   </policy>

@@ -57,6 +57,11 @@ config("boringssl_config") {
 }
 
 # Keymaster context
+pkg_config("libarckeymaster_context_config") {
+  pkg_deps = [ "libsession_manager-client" ]
+  libs = [ "chaps" ]
+}
+
 shared_library("libarckeymaster_context") {
   sources = [
     "${keymaster_src}/android_keymaster/logger.cpp",
@@ -64,17 +69,20 @@ shared_library("libarckeymaster_context") {
     "${keymaster_src}/contexts/soft_attestation_cert.cpp",
     "${keymaster_src}/km_openssl/attestation_utils.cpp",
     "${keymaster_src}/km_openssl/soft_keymaster_enforcement.cpp",
+    "context/chaps_client.cc",
+    "context/context_adaptor.cc",
     "context/hook.cc",
     "context/openssl_utils.cc",
     "keymaster_logger.cc",
   ]
-  pkg_deps = [ "libchrome-${libbase_ver}" ]
+  public_configs = [ ":libarckeymaster_context_config" ]
   configs += [
     # Needed since the keymaster context doesn't follow CrOS's guidelines.
     # gnlint: disable=GnLintVisibilityFlags
     "//common-mk:visibility_default",
     ":boringssl_config",
   ]
+  pkg_deps = [ "libchrome-${libbase_ver}" ]
   deps = [
     ":libkeymaster",
   ]
@@ -153,6 +161,7 @@ if (use.test) {
   }
   executable("arc-keymasterd_testrunner") {
     sources = [
+      "context/chaps_client_test.cc",
       "context/openssl_utils_test.cc",
       "conversion.cc",
       "conversion_test.cc",

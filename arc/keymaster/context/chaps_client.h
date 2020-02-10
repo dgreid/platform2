@@ -1,0 +1,95 @@
+// Copyright 2020 The Chromium OS Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#ifndef ARC_KEYMASTER_CONTEXT_CHAPS_CLIENT_H_
+#define ARC_KEYMASTER_CONTEXT_CHAPS_CLIENT_H_
+
+#include <memory>
+#include <string>
+
+#include <base/optional.h>
+#include <base/memory/weak_ptr.h>
+#include <brillo/secure_blob.h>
+#include <chaps/pkcs11/cryptoki.h>
+
+namespace arc {
+namespace keymaster {
+namespace context {
+
+namespace internal {
+
+class ScopedSession;
+
+}  // namespace internal
+
+class ContextAdaptor;
+
+// Exposes chaps functionality through an API that is relevant to the ARC
+// Keymaster context.
+class ChapsClient {
+ public:
+  explicit ChapsClient(base::WeakPtr<ContextAdaptor> context_adaptor);
+  // Not copyable nor assignable.
+  ChapsClient(const ChapsClient&) = delete;
+  ChapsClient& operator=(const ChapsClient&) = delete;
+  ~ChapsClient();
+
+  // Returns the ARC Keymaster AES-256 encryption key material. If the key does
+  // not exist yet it will be generated. Returns base::nullopt if there's an
+  // error in the PKCS #11 operation.
+  base::Optional<brillo::SecureBlob> ExportOrGenerateEncryptionKey();
+
+  // Retrieves an identifier for this client's session. Used to identify
+  // simultaneously existing clients and operations. Returns base::nullopt if
+  // there's an error in the PKCS #11 operation opening the session.
+  base::Optional<CK_SESSION_HANDLE> session_handle();
+
+ private:
+  // Returns a handle to the key with the given |label|. Returns base::nullopt
+  // if there's an error in the PKCS #11 operation.
+  base::Optional<CK_OBJECT_HANDLE> FindKey(const std::string& label);
+
+  // Exports the secret material of a key, given its PKCS #11 |key_handle|. For
+  // this to work the key needs to have been created with CKA_EXTRACTABLE true
+  // and CKA_SENSITIVE false.
+  //
+  // When this function returns CKR_OK the pointer |exported_key| is set with
+  // the key material corresponding to |key_handle|.
+  //
+  // When this function returns CKR_SESSION_HANDLE_INVALID the |key_handle|
+  // given has become invalid, and callers should retry in a new session.
+  //
+  // For any other return value, some error happened.
+  CK_RV ExportKey(CK_OBJECT_HANDLE key_handle,
+                  brillo::SecureBlob* exported_key);
+
+  // Generates the ARC Keymaster AES-256 encryption key material and returns its
+  // handle. Returns base::nullopt if there's an error in the PKCS #11
+  // operation.
+  base::Optional<CK_OBJECT_HANDLE> GenerateEncryptionKey();
+
+  // Retrieves the PKCS #11 byte array CKA_VALUE corresponding to
+  // |attribute_type| of |object_handle|.
+  //
+  // When this function returns CKR_OK the pointer |attribute_value| is set with
+  // the CKA_VALUE byte array.
+  //
+  // When this function returns CKR_SESSION_HANDLE_INVALID the |object_handle|
+  // given has become invalid, and callers should retry in a new session.
+  //
+  // For any other return value, some error happened.
+  CK_RV GetBytesAttribute(CK_OBJECT_HANDLE object_handle,
+                          CK_ATTRIBUTE_TYPE attribute_type,
+                          brillo::SecureBlob* attribute_value);
+
+  std::unique_ptr<internal::ScopedSession> session_;
+
+  base::WeakPtr<ContextAdaptor> context_adaptor_;
+};
+
+}  // namespace context
+}  // namespace keymaster
+}  // namespace arc
+
+#endif  // ARC_KEYMASTER_CONTEXT_CHAPS_CLIENT_H_
