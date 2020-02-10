@@ -116,7 +116,7 @@ bool CrosConfig::MountConfigFS(const base::FilePath& image_path,
     return false;
   }
 
-  if (!Mount(loop_device, private_dir, kConfigFSPrivateFSType, 0)) {
+  if (!Mount(loop_device, private_dir, kConfigFSPrivateFSType, MS_RDONLY)) {
     return false;
   }
 
