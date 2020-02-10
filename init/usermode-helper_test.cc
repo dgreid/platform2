@@ -37,6 +37,11 @@ TEST(ValidateProgramArgs, GoodCrashReporter) {
                                    "--directory_failure", "--filter_in=blah"}));
   EXPECT_TRUE(ValidateProgramArgs(
       {"/sbin/crash_reporter", "--user=foo", "--crash_test"}));
+
+  // crrev.comc/c/2043542 applies the verbose logging flag.
+  // TODO(crbug.com/1043801) Remove this after finishing investigation.
+  EXPECT_TRUE(ValidateProgramArgs(
+      {"/sbin/crash_reporter", "--user=foo", "--filter_in=blah", "-v=2"}));
 }
 
 TEST(ValidateProgramArgs, BadCrashReporter) {

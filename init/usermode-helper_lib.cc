@@ -61,6 +61,14 @@ bool ValidateCrashReporter(int argc, const char* argv[]) {
     return true;
   }
 
+  // crrev.comc/c/2043542 applies the verbose logging flag.
+  // TODO(crbug.com/1043801) Remove this after finishing investigation.
+  if (argc == 4 &&
+      base::StartsWith(argv[1], "--user=", base::CompareCase::SENSITIVE) &&
+      IsFilterIn(argv[2]) && std::string_view(argv[3]) == "-v=2") {
+    return true;
+  }
+
   // Disallow all other invocations.
   LOG(ERROR) << "crash_reporter: unknown invocation";
   return false;
