@@ -16,9 +16,6 @@
 #include "chromeos-config/libcros_config/identity.h"
 
 int main(int argc, char* argv[]) {
-  DEFINE_bool(mount, false, "Mount ChromeOS ConfigFS.");
-  DEFINE_bool(mount_fallback, false,
-              "Mount legacy (non-unibuild) ChromeOS ConfigFS.");
   DEFINE_string(test_file, "",
                 "Override path to system config database for testing.");
   DEFINE_string(test_name, "", "Override platform name for testing.");
@@ -29,9 +26,7 @@ int main(int argc, char* argv[]) {
   DEFINE_string(whitelabel_tag, "", "Override whitelabel tag for testing.");
 
   std::string usage = "Chrome OS Model Configuration\n\nUsage:\n  " +
-                      std::string(argv[0]) + " [flags] <path> <key>\n  " +
-                      std::string(argv[0]) + " --mount <source> <target>\n  " +
-                      std::string(argv[0]) + " --mount_fallback <target>\n\n" +
+                      std::string(argv[0]) + " [flags] <path> <key>\n\n" +
                       "Set CROS_CONFIG_DEBUG=1 in your environment to emit " +
                       "debug logging messages.\n";
   brillo::FlagHelper::Init(argc, argv, usage);
@@ -48,12 +43,11 @@ int main(int argc, char* argv[]) {
   logging::SetMinLogLevel(-3);
 
   brillo::CrosConfig cros_config;
-  bool init_for_testing = !FLAGS_test_file.empty();
-  if (!init_for_testing && !FLAGS_mount && !FLAGS_mount_fallback) {
+  if (FLAGS_test_file.empty()) {
     if (!cros_config.Init(FLAGS_test_sku_id)) {
       return 1;
     }
-  } else if (init_for_testing) {
+  } else {
     if (!cros_config.InitForTest(
             FLAGS_test_sku_id, base::FilePath(FLAGS_test_file),
             brillo::CrosConfigIdentity::CurrentSystemArchitecture(
@@ -66,33 +60,9 @@ int main(int argc, char* argv[]) {
   base::CommandLine::StringVector args =
       base::CommandLine::ForCurrentProcess()->GetArgs();
 
-  int expected_arguments = 2;
-  if (FLAGS_mount_fallback) {
-    expected_arguments = 1;
-  }
-
-  if (args.size() != expected_arguments) {
+  if (args.size() != 2) {
     std::cerr << usage << "\nPass --help for more information." << std::endl;
     return 1;
-  }
-
-  if (FLAGS_mount_fallback) {
-    const base::FilePath target(args[0]);
-    if (!cros_config.MountFallbackConfigFS(target)) {
-      std::cerr << "ConfigFS fallback mount failed!" << std::endl;
-      return 1;
-    }
-    return 0;
-  }
-
-  if (FLAGS_mount) {
-    const base::FilePath source(args[0]);
-    const base::FilePath target(args[1]);
-    if (!cros_config.MountConfigFS(source, target)) {
-      std::cerr << "ConfigFS Mount failed!" << std::endl;
-      return 1;
-    }
-    return 0;
   }
 
   std::string path = args[0];
