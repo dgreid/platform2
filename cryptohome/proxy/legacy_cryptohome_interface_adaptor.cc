@@ -104,8 +104,7 @@ void LegacyCryptohomeInterfaceAdaptor::ListKeysExOnSuccess(
     std::shared_ptr<SharedDBusMethodResponse<cryptohome::BaseReply>> response,
     const user_data_auth::ListKeysReply& reply) {
   cryptohome::BaseReply result;
-  result.set_error(
-      static_cast<cryptohome::CryptohomeErrorCode>(result.error()));
+  result.set_error(static_cast<cryptohome::CryptohomeErrorCode>(reply.error()));
   cryptohome::ListKeysReply* result_extension =
       result.MutableExtension(cryptohome::ListKeysReply::reply);
   result_extension->mutable_labels()->CopyFrom(reply.labels());
@@ -199,8 +198,7 @@ void LegacyCryptohomeInterfaceAdaptor::GetKeyDataOnSuccess(
     std::shared_ptr<SharedDBusMethodResponse<cryptohome::BaseReply>> response,
     const user_data_auth::GetKeyDataReply& reply) {
   cryptohome::BaseReply result;
-  result.set_error(
-      static_cast<cryptohome::CryptohomeErrorCode>(result.error()));
+  result.set_error(static_cast<cryptohome::CryptohomeErrorCode>(reply.error()));
   cryptohome::GetKeyDataReply* result_extension =
       result.MutableExtension(cryptohome::GetKeyDataReply::reply);
   result_extension->mutable_key_data()->CopyFrom(reply.key_data());
@@ -493,8 +491,7 @@ void LegacyCryptohomeInterfaceAdaptor::GetAccountDiskUsageOnSuccess(
     std::shared_ptr<SharedDBusMethodResponse<cryptohome::BaseReply>> response,
     const user_data_auth::GetAccountDiskUsageReply& reply) {
   cryptohome::BaseReply result;
-  result.set_error(
-      static_cast<cryptohome::CryptohomeErrorCode>(result.error()));
+  result.set_error(static_cast<cryptohome::CryptohomeErrorCode>(reply.error()));
   cryptohome::GetAccountDiskUsageReply* result_extension =
       result.MutableExtension(cryptohome::GetAccountDiskUsageReply::reply);
   result_extension->set_size(reply.size());
@@ -1480,8 +1477,8 @@ void LegacyCryptohomeInterfaceAdaptor::TpmAttestationGetKeyPayloadOnSuccess(
                              DBUS_ERROR_FAILED, error_msg);
     return;
   }
-  std::vector<uint8_t> public_key(reply.public_key().begin(),
-                                  reply.public_key().end());
+  std::vector<uint8_t> public_key(reply.payload().begin(),
+                                  reply.payload().end());
   response->Return(
       public_key,
       reply.status() == attestation::AttestationStatus::STATUS_SUCCESS);
@@ -2334,8 +2331,7 @@ void LegacyCryptohomeInterfaceAdaptor::GetFirmwareManagementParametersOnSuccess(
     std::shared_ptr<SharedDBusMethodResponse<cryptohome::BaseReply>> response,
     const user_data_auth::GetFirmwareManagementParametersReply& reply) {
   cryptohome::BaseReply result;
-  result.set_error(
-      static_cast<cryptohome::CryptohomeErrorCode>(result.error()));
+  result.set_error(static_cast<cryptohome::CryptohomeErrorCode>(reply.error()));
   cryptohome::GetFirmwareManagementParametersReply* result_extension =
       result.MutableExtension(
           cryptohome::GetFirmwareManagementParametersReply::reply);
@@ -2557,7 +2553,7 @@ void LegacyCryptohomeInterfaceAdaptor::LockToSingleUserMountUntilReboot(
 
   user_data_auth::LockToSingleUserMountUntilRebootRequest request;
   if (in_request.has_account_id()) {
-    *request.mutable_account_id() = request.account_id();
+    *request.mutable_account_id() = in_request.account_id();
   }
   misc_proxy_->LockToSingleUserMountUntilRebootAsync(
       request,
