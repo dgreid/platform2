@@ -525,6 +525,18 @@ properties:
             wallpaper:
               description: Base filename of the default wallpaper to show on this device.
               type: string
+            demo-mode:
+              type: object
+              description: Properties related to the ChromeOS Demo Mode, defining the user
+                experience when the device is used in retail.
+              additionalProperties: false
+              properties:
+                highlights-extension-id:
+                  description: The Chrome extension ID of the highlights app used during demo mode.
+                  type: string
+                screensaver-extension-id:
+                  description: The Chrome extension ID of the attract loop played during demo mode.
+                  type: string
             regulatory-label:
               description: Base name of the directory containing the regulatory label
                 files to show on this device.

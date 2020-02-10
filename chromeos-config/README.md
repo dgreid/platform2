@@ -303,6 +303,7 @@ In the tables below,
 | brand-code | string |  | False |  | False | Brand code of the model (also called RLZ code). |
 | camera | [camera](#camera) |  | False |  | False |  |
 | cros-healthd | [cros-healthd](#cros-healthd) |  | False |  | False | Contains properties used by cros_healthd for model-specific telemetry. Each property represents a category of information and contains boolean properties that indicate whether a device supports a particular telemetry item. See cros_healthd_probe.mojom for descriptions of each property. |
+| demo-mode | [demo-mode](#demo-mode) |  | False |  | False | Properties related to the ChromeOS Demo Mode, defining the user experience when the device is used in retail. |
 | detachable-base | [detachable-base](#detachable-base) |  | False |  | False | Contains the configuration for the hammerd which is used to update the detachable base firmware. |
 | fingerprint | [fingerprint](#fingerprint) |  | False |  | False | Contains details about the model's fingerprint implementation. |
 | firmware | [firmware](#firmware) |  | True |  | False |  |
@@ -407,6 +408,12 @@ In the tables below,
 | Attribute | Type   | RegEx     | Required | Oneof Group | Build-only | Description |
 | --------- | ------ | --------- | -------- | ----------- | ---------- | ----------- |
 | has-sku-number | boolean |  | False |  | False |  |
+
+### demo-mode
+| Attribute | Type   | RegEx     | Required | Oneof Group | Build-only | Description |
+| --------- | ------ | --------- | -------- | ----------- | ---------- | ----------- |
+| highlights-extension-id | string |  | False |  | False | The Chrome extension ID of the highlights app used during demo mode. |
+| screensaver-extension-id | string |  | False |  | False | The Chrome extension ID of the attract loop played during demo mode. |
 
 ### detachable-base
 | Attribute | Type   | RegEx     | Required | Oneof Group | Build-only | Description |
