@@ -20,6 +20,9 @@ static constexpr int kDefaultRandomSeedLength = 64;
 // The default entropy source to seed with random data from the TPM on startup.
 static constexpr char kDefaultEntropySourcePath[] = "/dev/urandom";
 
+static constexpr int kDefaultDataRestoreKeyLength = 32;
+static constexpr char kDataRestoreKeyLabel[] = "DataRestoreKey";
+
 // The default symmetric key size for cryptohome is the ecryptfs default
 #define CRYPTOHOME_DEFAULT_KEY_SIZE 64           // ECRYPTFS_MAX_KEY_BYTES
 #define CRYPTOHOME_DEFAULT_KEY_SIGNATURE_SIZE 8  // ECRYPTFS_SIG_SIZE

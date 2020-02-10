@@ -254,15 +254,40 @@ void LegacyCryptohomeInterfaceAdaptor::AddKeyEx(
                      cryptohome::BaseReply>,
                  base::Unretained(this), response_shared));
 }
+
 void LegacyCryptohomeInterfaceAdaptor::AddDataRestoreKey(
     std::unique_ptr<
         brillo::dbus_utils::DBusMethodResponse<cryptohome::BaseReply>> response,
     const cryptohome::AccountIdentifier& in_account_id,
     const cryptohome::AuthorizationRequest& in_authorization_request) {
-  // Not implemented yet
-  response->ReplyWithError(FROM_HERE, brillo::errors::dbus::kDomain,
-                           DBUS_ERROR_NOT_SUPPORTED,
-                           "Method unimplemented yet");
+  auto response_shared =
+      std::make_shared<SharedDBusMethodResponse<cryptohome::BaseReply>>(
+          std::move(response));
+
+  user_data_auth::AddDataRestoreKeyRequest request;
+  request.mutable_account_id()->CopyFrom(in_account_id);
+  request.mutable_authorization_request()->CopyFrom(in_authorization_request);
+  userdataauth_proxy_->AddDataRestoreKeyAsync(
+      request,
+      base::Bind(&LegacyCryptohomeInterfaceAdaptor::AddDataRestoreKeyOnSuccess,
+                 base::Unretained(this), response_shared),
+      base::Bind(&LegacyCryptohomeInterfaceAdaptor::ForwardError<
+                     cryptohome::BaseReply>,
+                 base::Unretained(this), response_shared));
+}
+
+void LegacyCryptohomeInterfaceAdaptor::AddDataRestoreKeyOnSuccess(
+    std::shared_ptr<SharedDBusMethodResponse<cryptohome::BaseReply>> response,
+    const user_data_auth::AddDataRestoreKeyReply& reply) {
+  cryptohome::BaseReply result;
+  result.set_error(static_cast<cryptohome::CryptohomeErrorCode>(reply.error()));
+  cryptohome::AddDataRestoreKeyReply* result_extension =
+      result.MutableExtension(cryptohome::AddDataRestoreKeyReply::reply);
+  if (result.error() == CRYPTOHOME_ERROR_NOT_SET) {
+    result_extension->set_data_restore_key(reply.data_restore_key());
+  }
+  ClearErrorIfNotSet(&result);
+  response->Return(result);
 }
 
 void LegacyCryptohomeInterfaceAdaptor::UpdateKeyEx(

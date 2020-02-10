@@ -165,12 +165,10 @@ bool KeyMatchesForLightweightChallengeResponseCheck(
 
 }  // anonymous namespace
 
-const int kDefaultDataRestoreKeyLength = 32;
 const char kMountThreadName[] = "MountThread";
 const char kTpmInitStatusEventType[] = "TpmInitStatus";
 const char kDircryptoMigrationProgressEventType[] =
-                                               "DircryptoMigrationProgress";
-const char kDataRestoreKeyLabel[] = "DataRestoreKey";
+    "DircryptoMigrationProgress";
 
 const char kAttestationMode[] = "attestation_mode";
 

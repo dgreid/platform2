@@ -268,6 +268,36 @@ void UserDataAuthAdaptor::DoAddKey(
   response->Return(reply);
 }
 
+void UserDataAuthAdaptor::AddDataRestoreKey(
+    std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
+        user_data_auth::AddDataRestoreKeyReply>> response,
+    const user_data_auth::AddDataRestoreKeyRequest& in_request) {
+  service_->PostTaskToMountThread(
+      FROM_HERE,
+      base::BindOnce(
+          &UserDataAuthAdaptor::DoAddDataRestoreKey, base::Unretained(this),
+          ThreadSafeDBusMethodResponse<user_data_auth::AddDataRestoreKeyReply>::
+              MakeThreadSafe(std::move(response)),
+          in_request));
+}
+
+void UserDataAuthAdaptor::DoAddDataRestoreKey(
+    std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
+        user_data_auth::AddDataRestoreKeyReply>> response,
+    const user_data_auth::AddDataRestoreKeyRequest& in_request) {
+  user_data_auth::AddDataRestoreKeyReply reply;
+  brillo::SecureBlob data_restore_key;
+  auto status = service_->AddDataRestoreKey(in_request, &data_restore_key);
+
+  // Note, if there's no error, then |status| is set to CRYPTOHOME_ERROR_NOT_SET
+  // to indicate that.
+  reply.set_error(status);
+  if (status == user_data_auth::CRYPTOHOME_ERROR_NOT_SET) {
+    reply.set_data_restore_key(data_restore_key.to_string());
+  }
+  response->Return(reply);
+}
+
 void UserDataAuthAdaptor::UpdateKey(
     std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
         user_data_auth::UpdateKeyReply>> response,

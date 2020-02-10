@@ -105,6 +105,15 @@ class UserDataAuthAdaptor
                     user_data_auth::AddKeyReply>> response,
                 const user_data_auth::AddKeyRequest& in_request);
 
+  void AddDataRestoreKey(
+      std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
+          user_data_auth::AddDataRestoreKeyReply>> response,
+      const user_data_auth::AddDataRestoreKeyRequest& in_request) override;
+  void DoAddDataRestoreKey(
+      std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
+          user_data_auth::AddDataRestoreKeyReply>> response,
+      const user_data_auth::AddDataRestoreKeyRequest& in_request);
+
   void UpdateKey(std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
                      user_data_auth::UpdateKeyReply>> response,
                  const user_data_auth::UpdateKeyRequest& in_request) override;

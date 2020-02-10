@@ -611,6 +611,9 @@ class LegacyCryptohomeInterfaceAdaptor
   void GetKeyDataOnSuccess(
       std::shared_ptr<SharedDBusMethodResponse<cryptohome::BaseReply>> response,
       const user_data_auth::GetKeyDataReply& reply);
+  void AddDataRestoreKeyOnSuccess(
+      std::shared_ptr<SharedDBusMethodResponse<cryptohome::BaseReply>> response,
+      const user_data_auth::AddDataRestoreKeyReply& reply);
   void GetSystemSaltOnSuccess(
       std::shared_ptr<SharedDBusMethodResponse<std::vector<uint8_t>>> response,
       const user_data_auth::GetSystemSaltReply& reply);

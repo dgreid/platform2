@@ -1545,6 +1545,64 @@ user_data_auth::CryptohomeErrorCode UserDataAuth::AddKey(
   return static_cast<user_data_auth::CryptohomeErrorCode>(result);
 }
 
+user_data_auth::CryptohomeErrorCode UserDataAuth::AddDataRestoreKey(
+    const user_data_auth::AddDataRestoreKeyRequest request,
+    brillo::SecureBlob* key_out) {
+  AssertOnMountThread();
+
+  if (!request.has_account_id() || !request.has_authorization_request()) {
+    LOG(ERROR) << "AddDataRestoreKeyRequest must have account_id and "
+                  "authorization_request.";
+    return user_data_auth::CRYPTOHOME_ERROR_INVALID_ARGUMENT;
+  }
+
+  std::string account_id = GetAccountId(request.account_id());
+  if (account_id.empty()) {
+    LOG(ERROR) << "AddDataRestoreKeyRequest must have valid account_id.";
+    return user_data_auth::CRYPTOHOME_ERROR_INVALID_ARGUMENT;
+  }
+
+  if (!request.authorization_request().has_key() ||
+      !request.authorization_request().key().has_secret()) {
+    LOG(ERROR) << "No key secret in AddDataRestoreKeyRequest.";
+    return user_data_auth::CRYPTOHOME_ERROR_INVALID_ARGUMENT;
+  }
+
+  // Generate the data restore key and its associated data.
+  const auto data_restore_key =
+      CryptoLib::CreateSecureRandomBlob(kDefaultDataRestoreKeyLength);
+  KeyData new_key_data;
+  new_key_data.set_label(kDataRestoreKeyLabel);
+
+  const std::string& auth_key_secret =
+      request.authorization_request().key().secret();
+  Credentials credentials(account_id.c_str(), SecureBlob(auth_key_secret));
+  credentials.set_key_data(request.authorization_request().key().data());
+  if (!homedirs_->Exists(credentials.GetObfuscatedUsername(system_salt_))) {
+    return user_data_auth::CRYPTOHOME_ERROR_ACCOUNT_NOT_FOUND;
+  }
+
+  // An integer for AddKeyset to write the resulting index. This is discarded in
+  // the end.
+  int unused_keyset_index;
+
+  CryptohomeErrorCode result;
+  result = homedirs_->AddKeyset(credentials, data_restore_key, &new_key_data,
+                                true, &unused_keyset_index);
+
+  // We need to respond with the data restore key if the operation is
+  // successful.
+  if (result == CRYPTOHOME_ERROR_NOT_SET) {
+    *key_out = data_restore_key;
+  }
+
+  // Note that cryptohome::CryptohomeErrorCode and
+  // user_data_auth::CryptohomeErrorCode are same in content, and it'll remain
+  // so until the end of the refactor, so we can safely cast from one to
+  // another. This is enforced in our unit test.
+  return static_cast<user_data_auth::CryptohomeErrorCode>(result);
+}
+
 void UserDataAuth::CheckKey(
     const user_data_auth::CheckKeyRequest& request,
     base::OnceCallback<void(user_data_auth::CryptohomeErrorCode)> on_done) {

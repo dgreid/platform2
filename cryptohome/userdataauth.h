@@ -154,6 +154,13 @@ class UserDataAuth {
   user_data_auth::CryptohomeErrorCode AddKey(
       const user_data_auth::AddKeyRequest request);
 
+  // Add a data restore key, and save the key in |key_out|. If
+  // CRYPTOHOME_ERROR_NOT_SET is returned, then the key is added and |key_out|
+  // is valid.
+  user_data_auth::CryptohomeErrorCode AddDataRestoreKey(
+      const user_data_auth::AddDataRestoreKeyRequest request,
+      brillo::SecureBlob* key_out);
+
   // Check the key given in |request| again the currently mounted directories
   // and other credentials. |on_done| is called once the operation is completed,
   // and the error code is CRYPTOHOME_ERROR_NOT_SET if the key is found. Note
