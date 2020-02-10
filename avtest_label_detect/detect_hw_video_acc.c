@@ -210,8 +210,11 @@ static bool is_vaapi_enc_h264_device(int fd) {
     VAProfileNone
   };
   if (is_vaapi_support_formats(fd, va_profiles, VAEntrypointEncSlice,
-        VA_RT_FORMAT_YUV420))
-    return true;
+        VA_RT_FORMAT_YUV420) ||
+       is_vaapi_support_formats(fd, va_profiles, VAEntrypointEncSliceLP,
+        VA_RT_FORMAT_YUV420) ) {
+        return true;
+  }
   return false;
 }
 
@@ -227,8 +230,11 @@ static bool is_vaapi_enc_vp8_device(int fd) {
     VAProfileNone
   };
   if (is_vaapi_support_formats(fd, va_profiles, VAEntrypointEncSlice,
-        VA_RT_FORMAT_YUV420))
-    return true;
+        VA_RT_FORMAT_YUV420) ||
+       is_vaapi_support_formats(fd, va_profiles, VAEntrypointEncSliceLP,
+        VA_RT_FORMAT_YUV420) ){
+        return true;
+  }
 #endif
   return false;
 }
@@ -245,8 +251,11 @@ static bool is_vaapi_enc_vp9_device(int fd) {
     VAProfileNone
   };
   if (is_vaapi_support_formats(fd, va_profiles, VAEntrypointEncSlice,
-        VA_RT_FORMAT_YUV420))
+        VA_RT_FORMAT_YUV420) ||
+      is_vaapi_support_formats(fd, va_profiles, VAEntrypointEncSliceLP,
+        VA_RT_FORMAT_YUV420)){
     return true;
+  }
 #endif
   return false;
 }

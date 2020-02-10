@@ -67,7 +67,8 @@ static bool is_vaapi_4k_device_dec_h264(int fd) {
 
 // Determines if is_vaapi_4k_device() for H264 encoding.
 static bool is_vaapi_4k_device_enc_h264(int fd) {
-  return is_vaapi_4k_device(fd, va_profiles_h264, VAEntrypointEncSlice);
+  return (is_vaapi_4k_device(fd, va_profiles_h264, VAEntrypointEncSlice)
+          || is_vaapi_4k_device(fd, va_profiles_h264, VAEntrypointEncSliceLP));
 }
 
 // Determines if is_vaapi_4k_device() for VP8 decoding.
@@ -77,7 +78,8 @@ static bool is_vaapi_4k_device_dec_vp8(int fd) {
 
 // Determines if is_vaapi_4k_device() for VP8 encoding.
 static bool is_vaapi_4k_device_enc_vp8(int fd) {
-  return is_vaapi_4k_device(fd, va_profiles_vp8, VAEntrypointEncSlice);
+  return ( is_vaapi_4k_device(fd, va_profiles_vp8, VAEntrypointEncSlice)
+          || is_vaapi_4k_device(fd, va_profiles_vp8, VAEntrypointEncSliceLP) );
 }
 
 // Determines if is_vaapi_4k_device() for VP9 decoding.
@@ -87,7 +89,8 @@ static bool is_vaapi_4k_device_dec_vp9(int fd) {
 
 // Determines if is_vaapi_4k_device() for VP9 encoding.
 static bool is_vaapi_4k_device_enc_vp9(int fd) {
-  return is_vaapi_4k_device(fd, va_profiles_vp9, VAEntrypointEncSlice);
+  return ( is_vaapi_4k_device(fd, va_profiles_vp9, VAEntrypointEncSlice)
+          || is_vaapi_4k_device(fd, va_profiles_vp9, VAEntrypointEncSliceLP) );
 }
 #endif // VA_CHECK_VERSION(0, 38, 1)
 #endif // defined(USE_VAAPI)

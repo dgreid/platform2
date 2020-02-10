@@ -50,8 +50,9 @@ static bool match_vaapi_capabilities(VADisplay va_display,
   VAStatus va_res;
   VAProfile* profiles;
   int max_profiles = vaMaxNumProfiles(va_display);
-  if (max_profiles < 0) {
-    TRACE("vaMaxNumProfiles returns negative number\n");
+  /* If no profiles are supported do not proceed further */
+  if (max_profiles <= 0) {
+    TRACE("vaMaxNumProfiles returns %d \n ",max_profiles);
     return false;
   }
 
