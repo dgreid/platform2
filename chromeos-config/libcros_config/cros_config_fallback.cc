@@ -11,11 +11,11 @@
 #include <string>
 #include <vector>
 
-#include <base/files/file.h>
 #include <base/files/file_path.h>
 #include <base/files/file_util.h>
 #include <base/process/launch.h>
 #include <base/strings/string_split.h>
+#include <brillo/file_utils.h>
 #include "chromeos-config/libcros_config/cros_config_interface.h"
 
 namespace {
@@ -100,11 +100,11 @@ bool CrosConfigFallback::WriteConfigFS(const base::FilePath& output_dir) {
       path_dir = path_dir.Append(part);
     }
 
-    base::File::Error error;
-    if (!base::CreateDirectoryAndGetError(path_dir, &error)) {
+    if (!MkdirRecursively(path_dir, 0755).is_valid()) {
       CROS_CONFIG_LOG(ERROR)
           << "Unable to create directory " << path_dir.value() << ": "
-          << base::File::ErrorToString(error);
+          << logging::SystemErrorCodeToString(
+                 logging::GetLastSystemErrorCode());
       return false;
     }
 

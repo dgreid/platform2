@@ -21,7 +21,10 @@ group("all") {
 }
 
 pkg_config("target_defaults") {
-  pkg_deps = [ "libchrome-${libbase_ver}" ]
+  pkg_deps = [
+    "libchrome-${libbase_ver}",
+    "libbrillo",
+  ]
 }
 
 proto_library("chromeos-config-protos") {
@@ -48,18 +51,11 @@ shared_library("libcros_config") {
   libs = [ "fdt" ]
 }
 
-pkg_config("cros_config_config") {
-  pkg_deps = [ "libbrillo" ]
-}
-
 executable("cros_config") {
   sources = [
     "cros_config_main.cc",
   ]
-  configs += [
-    ":cros_config_config",
-    ":target_defaults",
-  ]
+  configs += [ ":target_defaults" ]
   deps = [
     ":libcros_config",
   ]
@@ -69,10 +65,7 @@ executable("cros_configfs") {
   sources = [
     "cros_configfs_main.cc",
   ]
-  configs += [
-    ":cros_config_config",
-    ":target_defaults",
-  ]
+  configs += [ ":target_defaults" ]
   deps = [
     ":libcros_config",
   ]

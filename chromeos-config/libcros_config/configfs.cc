@@ -13,7 +13,6 @@
 #include <unistd.h>
 #include <vector>
 
-#include <base/files/file.h>
 #include <base/files/file_path.h>
 #include <base/files/file_util.h>
 #include <base/logging.h>
@@ -21,6 +20,7 @@
 #include <base/strings/stringprintf.h>
 #include <base/threading/platform_thread.h>
 #include <base/time/time.h>
+#include <brillo/file_utils.h>
 #include "chromeos-config/libcros_config/cros_config_interface.h"
 
 namespace brillo {
@@ -42,17 +42,10 @@ bool SetupMountPath(const base::FilePath& mount_path,
   *private_path_out = mount_path.Append(kConfigFSPrivateDirName);
   *v1_path_out = mount_path.Append(kConfigFSV1DirName);
   for (auto path : {*private_path_out, *v1_path_out}) {
-    if (!base::DirectoryExists(path)) {
-      // With mount_path = "/config", these paths should always exist
-      // as portage installs them. However, for tests or for developer
-      // convenience on mounting to another path, we can create the
-      // paths now.
-      base::File::Error error;
-      if (!base::CreateDirectoryAndGetError(path, &error)) {
-        CROS_CONFIG_LOG(ERROR) << "Unable to create " << path.value() << " ("
-                               << base::File::ErrorToString(error) << ").";
-        return false;
-      }
+    if (!MkdirRecursively(path, 0755).is_valid()) {
+      CROS_CONFIG_LOG(ERROR) << "Unable to create " << path.value() << " ("
+                             << logging::SystemErrorCodeToString(errno) << ").";
+      return false;
     }
   }
   return true;

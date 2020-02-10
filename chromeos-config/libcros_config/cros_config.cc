@@ -13,6 +13,7 @@
 #include <base/files/file_path.h>
 #include <base/files/file_util.h>
 #include <base/logging.h>
+#include <brillo/file_utils.h>
 #include "chromeos-config/libcros_config/configfs.h"
 #include "chromeos-config/libcros_config/cros_config_fallback.h"
 #include "chromeos-config/libcros_config/cros_config_json.h"
@@ -175,7 +176,7 @@ bool CrosConfig::MountFallbackConfigFS(const base::FilePath& mount_path) {
   }
 
   const auto fallback_dir = private_dir.Append("fallback");
-  if (!base::CreateDirectory(fallback_dir)) {
+  if (!MkdirRecursively(fallback_dir, 0755).is_valid()) {
     CROS_CONFIG_LOG(ERROR) << "Failed to create directory "
                            << fallback_dir.value();
     return false;
