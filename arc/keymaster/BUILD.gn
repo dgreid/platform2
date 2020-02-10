@@ -65,6 +65,7 @@ shared_library("libarckeymaster_context") {
     "${keymaster_src}/km_openssl/attestation_utils.cpp",
     "${keymaster_src}/km_openssl/soft_keymaster_enforcement.cpp",
     "context/hook.cc",
+    "context/openssl_utils.cc",
     "keymaster_logger.cc",
   ]
   pkg_deps = [ "libchrome-${libbase_ver}" ]
@@ -147,10 +148,12 @@ if (use.test) {
     pkg_deps = [
       "libchrome-${libbase_ver}",
       "libchrome-test-${libbase_ver}",
+      "libbrillo-${libbase_ver}",
     ]
   }
   executable("arc-keymasterd_testrunner") {
     sources = [
+      "context/openssl_utils_test.cc",
       "conversion.cc",
       "conversion_test.cc",
       "keymaster_logger_test.cc",
