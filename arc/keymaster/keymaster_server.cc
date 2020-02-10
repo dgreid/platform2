@@ -4,7 +4,6 @@
 
 #include "arc/keymaster/keymaster_server.h"
 
-#include <memory>
 #include <utility>
 
 #include "arc/keymaster/conversion.h"
@@ -18,8 +17,8 @@ constexpr size_t kOperationTableSize = 16;
 
 }  // namespace
 
-KeymasterServer::KeymasterServer()
-    : context_(new ::keymaster::PureSoftKeymasterContext()),
+KeymasterServer::KeymasterServer(const scoped_refptr<dbus::Bus>& bus)
+    : context_(new context::ArcKeymasterContext(bus)),
       keymaster_(context_, kOperationTableSize) {}
 
 void KeymasterServer::SetSystemVersion(uint32_t os_version,

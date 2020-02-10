@@ -8,9 +8,11 @@
 #include <vector>
 
 #include <base/macros.h>
+#include <base/memory/scoped_refptr.h>
 #include <keymaster/android_keymaster.h>
-#include <keymaster/contexts/pure_soft_keymaster_context.h>
 #include <mojo/keymaster.mojom.h>
+
+#include "arc/keymaster/context/arc_keymaster_context.h"
 
 namespace arc {
 namespace keymaster {
@@ -19,7 +21,7 @@ namespace keymaster {
 // It fulfills requests by forwarding them to the Android Keymaster.
 class KeymasterServer : public arc::mojom::KeymasterServer {
  public:
-  KeymasterServer();
+  explicit KeymasterServer(const scoped_refptr<dbus::Bus>& bus);
 
   ~KeymasterServer() override = default;
 
@@ -65,7 +67,7 @@ class KeymasterServer : public arc::mojom::KeymasterServer {
 
  private:
   // Owned by |keymaster_|.
-  ::keymaster::PureSoftKeymasterContext* context_;
+  context::ArcKeymasterContext* context_;
   ::keymaster::AndroidKeymaster keymaster_;
 
   DISALLOW_COPY_AND_ASSIGN(KeymasterServer);

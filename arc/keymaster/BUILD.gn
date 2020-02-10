@@ -4,6 +4,7 @@
 
 import("//common-mk/mojom_bindings_generator.gni")
 import("//common-mk/pkg_config.gni")
+import("//common-mk/proto_library.gni")
 
 keymaster_src = "../../../aosp/system/keymaster"
 
@@ -69,9 +70,9 @@ shared_library("libarckeymaster_context") {
     "${keymaster_src}/contexts/soft_attestation_cert.cpp",
     "${keymaster_src}/km_openssl/attestation_utils.cpp",
     "${keymaster_src}/km_openssl/soft_keymaster_enforcement.cpp",
+    "context/arc_keymaster_context.cc",
     "context/chaps_client.cc",
     "context/context_adaptor.cc",
-    "context/hook.cc",
     "context/openssl_utils.cc",
     "keymaster_logger.cc",
   ]
@@ -84,6 +85,7 @@ shared_library("libarckeymaster_context") {
   ]
   pkg_deps = [ "libchrome-${libbase_ver}" ]
   deps = [
+    ":context_proto",
     ":libkeymaster",
   ]
 }
@@ -151,6 +153,24 @@ shared_library("libkeymaster") {
   ]
 }
 
+# Key data protobuf
+pkg_config("context_proto_config") {
+  pkg_deps = [ "protobuf" ]
+}
+
+proto_library("context_proto") {
+  proto_in_dir = "./proto"
+  proto_out_dir = "include/arc/keymaster"
+  use_pic = true
+  standalone = true
+  sources = [
+    "proto/key_data.proto",
+  ]
+
+  all_dependent_configs = [ ":context_proto_config" ]
+}
+
+# Test target
 if (use.test) {
   pkg_config("arc-keymasterd_testrunner_config") {
     pkg_deps = [
@@ -161,6 +181,7 @@ if (use.test) {
   }
   executable("arc-keymasterd_testrunner") {
     sources = [
+      "context/arc_keymaster_context_test.cc",
       "context/chaps_client_test.cc",
       "context/openssl_utils_test.cc",
       "conversion.cc",
@@ -170,6 +191,7 @@ if (use.test) {
     configs += [
       "//common-mk:test",
       ":arc-keymasterd_testrunner_config",
+      ":boringssl_config",
     ]
     deps = [
       ":keymaster_mojo_bindings",
