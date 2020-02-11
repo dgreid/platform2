@@ -71,6 +71,31 @@ impl Default for DiskOpType {
     }
 }
 
+#[derive(Copy, Clone, Debug)]
+pub enum VmDiskImageType {
+    Raw,
+    Qcow2,
+    Auto,
+    PluginVm,
+}
+
+impl fmt::Display for VmDiskImageType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            VmDiskImageType::Raw => write!(f, "raw"),
+            VmDiskImageType::Qcow2 => write!(f, "qcow2"),
+            VmDiskImageType::Auto => write!(f, "auto"),
+            VmDiskImageType::PluginVm => write!(f, "pvm"),
+        }
+    }
+}
+
+impl Default for VmDiskImageType {
+    fn default() -> Self {
+        VmDiskImageType::Auto
+    }
+}
+
 /// Information about a single VM disk image.
 #[derive(Default, Debug)]
 pub struct DiskInfo {
@@ -80,6 +105,10 @@ pub struct DiskInfo {
     pub size: u64,
     /// Minimum size the disk image may be resized to, if known.
     pub min_size: Option<u64>,
+    /// Disk image type (raw, QCOW2, etc.).
+    pub image_type: VmDiskImageType,
+    /// Whether the disk size is user-specified (true) or automatically sized (false).
+    pub user_chosen_size: bool,
 }
 
 // The input for this macro is an ordinary trait declaration, with some restrictions. Each method

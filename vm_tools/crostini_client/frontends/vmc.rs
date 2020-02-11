@@ -383,6 +383,10 @@ impl<'a, 'b, 'c> Command<'a, 'b, 'c> {
             if let Some(min_size) = disk.min_size {
                 extra_info.push_str(&format!(", min shrinkable size {} bytes", min_size));
             }
+            extra_info.push_str(&format!(", {}", disk.image_type));
+            if !disk.user_chosen_size {
+                extra_info.push_str(", sparse");
+            }
             println!("{} ({} bytes{})", disk.name, disk.size, extra_info);
         }
         println!("Total Size (bytes): {}", total_size);

@@ -16,7 +16,7 @@ use std::process::Command;
 use dbus::{BusType, Connection, ConnectionItem, Message, OwnedFd};
 use protobuf::Message as ProtoMessage;
 
-use backends::{Backend, ContainerSource, DiskInfo, DiskOpType, VmFeatures};
+use backends::{Backend, ContainerSource, DiskInfo, DiskOpType, VmDiskImageType, VmFeatures};
 use lsb_release::{LsbRelease, ReleaseChannel};
 use proto::system_api::cicerone_service::{self, *};
 use proto::system_api::concierge_service::*;
@@ -1519,6 +1519,13 @@ impl Backend for ChromeOS {
                 } else {
                     None
                 },
+                image_type: match e.image_type {
+                    DiskImageType::DISK_IMAGE_RAW => VmDiskImageType::Raw,
+                    DiskImageType::DISK_IMAGE_QCOW2 => VmDiskImageType::Qcow2,
+                    DiskImageType::DISK_IMAGE_AUTO => VmDiskImageType::Auto,
+                    DiskImageType::DISK_IMAGE_PLUGINVM => VmDiskImageType::PluginVm,
+                },
+                user_chosen_size: e.user_chosen_size,
             })
             .collect();
         Ok((out_images, total_size))

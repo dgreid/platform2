@@ -681,11 +681,22 @@ bool Service::ListVmDisksInLocation(const string& cryptohome_id,
       min_size = iter->second->GetMinDiskSize();
     }
 
+    enum DiskImageType image_type = DiskImageType::DISK_IMAGE_AUTO;
+    if (extension == kRawImageExtension) {
+      image_type = DiskImageType::DISK_IMAGE_RAW;
+    } else if (extension == kQcowImageExtension) {
+      image_type = DiskImageType::DISK_IMAGE_QCOW2;
+    } else if (extension == kPluginVmImageExtension) {
+      image_type = DiskImageType::DISK_IMAGE_PLUGINVM;
+    }
+
     VmDiskInfo* image = response->add_images();
     image->set_name(std::move(image_name));
     image->set_storage_location(location);
     image->set_size(size);
     image->set_min_size(min_size);
+    image->set_image_type(image_type);
+    image->set_user_chosen_size(IsDiskUserChosenSize(path.value()));
   }
 
   response->set_total_size(response->total_size() + total_size);
