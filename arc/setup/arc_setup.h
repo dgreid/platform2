@@ -35,6 +35,7 @@ struct ArcPaths;
 class ArcSetupMetrics;
 
 // This MUST be in sync with 'enum BootType' in metrics.mojom.
+// Note: This enum has to be in sync with Android's arc-boot-type-detector.
 enum class ArcBootType {
   UNKNOWN = 0,
   // This is for the very first (opt-in) boot.

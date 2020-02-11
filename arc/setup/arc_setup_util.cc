@@ -74,9 +74,11 @@ constexpr char kOEMKey1PropertyPrefix[] = "ro.oem.key1=";
 constexpr char kPAIRegionsPropertyName[] = "pai-regions";
 
 // Version element prefix in packages.xml and packages_cache.xml files.
+// Note: This constant has to be in sync with Android's arc-boot-type-detector.
 constexpr char kElementVersion[] = "<version ";
 
 // Fingerprint attribute prefix in packages.xml and packages_cache.xml files.
+// Note: This constant has to be in sync with Android's arc-boot-type-detector.
 constexpr char kAttributeFingerprint[] = " fingerprint=\"";
 
 // Maximum length of an Android property value.
@@ -159,6 +161,7 @@ bool FindProperty(const std::string& line_prefix_to_find,
 
 // Helper function for extracting an attribute value from an XML line.
 // Expects |key| to be suffixed with '=\"' (e.g. ' sdkVersion=\"').
+// Note: This function has to be in sync with Android's arc-boot-type-detector.
 StringPiece GetAttributeValue(const StringPiece& line, const StringPiece& key) {
   StringPiece::size_type key_begin_pos = line.find(key);
   if (key_begin_pos == StringPiece::npos)
@@ -575,6 +578,7 @@ bool GetPropertiesFromFile(const base::FilePath& prop_file_path,
   return true;
 }
 
+// Note: This function has to be in sync with Android's arc-boot-type-detector.
 bool GetFingerprintAndSdkVersionFromPackagesXml(
     const base::FilePath& packages_xml_path,
     std::string* out_fingerprint,
@@ -710,6 +714,7 @@ std::unique_ptr<ArcMounter> GetDefaultMounter() {
   return std::make_unique<ArcMounterImpl>();
 }
 
+// Note: This function has to be in sync with Android's arc-boot-type-detector.
 bool FindLine(const base::FilePath& file_path,
               const base::Callback<bool(const std::string&)>& callback) {
   // Do exactly the same stream handling as TextContentsEqual() in
@@ -1063,6 +1068,7 @@ bool FindAllProperties(std::map<std::string, std::string>* out_properties,
   return false;
 }
 
+// Note: This function has to be in sync with Android's arc-boot-type-detector.
 bool FindFingerprintAndSdkVersion(std::string* out_fingerprint,
                                   std::string* out_sdk_version,
                                   const std::string& line) {

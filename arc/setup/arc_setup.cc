@@ -1596,6 +1596,8 @@ void ArcSetup::RemoveAndroidKmsgFifo() {
       base::DeleteFile(arc_paths_->android_kmsg_fifo, false /* recursive */));
 }
 
+// Note: This function has to be in sync with Android's arc-boot-type-detector.
+// arc-boot-type-detector's main() function is very similar to this.
 void ArcSetup::GetBootTypeAndDataSdkVersion(
     ArcBootType* out_boot_type, AndroidSdkVersion* out_data_sdk_version) {
   const std::string system_fingerprint =
