@@ -57,6 +57,7 @@ const char kUploadTextPrefix[] = "upload_text_";
 const char kUploadFilePrefix[] = "upload_file_";
 const char kCollectorNameKey[] = "collector";
 const char kCrashLoopModeKey[] = "crash_loop_mode";
+const char kEarlyCrashKey[] = "is_early_boot";
 
 // Key of the lsb-release entry containing the OS version.
 const char kLsbOsVersionKey[] = "CHROMEOS_RELEASE_VERSION";
@@ -345,6 +346,7 @@ void CrashCollector::Initialize(
   // Instead, collect the crashes into /run and check consent during boot
   // collection.
   if (early) {
+    AddCrashMetaUploadData(kEarlyCrashKey, "true");
     is_feedback_allowed_function_ = []() { return true; };
     system_crash_path_ = base::FilePath(paths::kSystemRunCrashDirectory);
   }
