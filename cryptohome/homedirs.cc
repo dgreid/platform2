@@ -198,22 +198,50 @@ void HomeDirs::FreeDiskSpace() {
 }
 
 void HomeDirs::FreeDiskSpaceInternal() {
-  auto homedirs = GetHomeDirs();
-  auto unmounted_homedirs = homedirs;
-  FilterMountedHomedirs(&unmounted_homedirs);
-
   // If ephemeral users are enabled, remove all cryptohomes except those
   // currently mounted or belonging to the owner.
   // |AreEphemeralUsers| will reload the policy to guarantee freshness.
   if (AreEphemeralUsersEnabled()) {
-    RemoveNonOwnerCryptohomesInternal(homedirs);
+    RemoveNonOwnerCryptohomes();
     ReportDiskCleanupProgress(
         DiskCleanupProgress::kEphemeralUserProfilesCleaned);
     return;
   }
 
-  // Clean Cache directories for every user (except current one).
-  for (const auto& dir : unmounted_homedirs) {
+  auto homedirs = GetHomeDirs();
+
+  // Initialize user timestamp cache if it has not been yet. This reads the
+  // last-activity time from each homedir's SerializedVaultKeyset.  This value
+  // is only updated in the value keyset on unmount and every 24 hrs, so a
+  // currently logged in user probably doesn't have an up to date value. This
+  // is okay, since we don't delete currently logged in homedirs anyway.  (See
+  // Mount::UpdateCurrentUserActivityTimestamp()).
+  if (!timestamp_cache_->initialized()) {
+    timestamp_cache_->Initialize();
+    for (const auto& dir : homedirs) {
+      HomeDirs::AddUserTimestampToCacheCallback(dir.shadow);
+    }
+  }
+
+  auto unmounted_homedirs = homedirs;
+  FilterMountedHomedirs(&unmounted_homedirs);
+
+  std::sort(unmounted_homedirs.begin(), unmounted_homedirs.end(),
+            [&](const HomeDirs::HomeDir& a, const HomeDirs::HomeDir& b) {
+              return timestamp_cache_->GetLastUserActivityTimestamp(a.shadow) >
+                     timestamp_cache_->GetLastUserActivityTimestamp(b.shadow);
+            });
+
+  auto normal_cleanup_homedirs = unmounted_homedirs;
+
+  if (last_normal_disk_cleanup_complete_) {
+    base::Time cutoff = last_normal_disk_cleanup_complete_.value();
+    FilterHomedirsProcessedBeforeCutoff(cutoff, &normal_cleanup_homedirs);
+  }
+
+  // Clean Cache directories for every unmounted user that has logged out after
+  // the last normal cleanup happened.
+  for (const auto& dir : normal_cleanup_homedirs) {
     HomeDirs::DeleteCacheCallback(dir.shadow);
   }
 
@@ -230,10 +258,13 @@ void HomeDirs::FreeDiskSpaceInternal() {
     return;
   }
 
-  // Clean GCache directories for every user (except current one).
-  for (const auto& dir : unmounted_homedirs) {
+  // Clean GCache directories for every unmounted user that has logged out after
+  // after the last normal cleanup happened.
+  for (const auto& dir : normal_cleanup_homedirs) {
     HomeDirs::DeleteGCacheTmpCallback(dir.shadow);
   }
+
+  last_normal_disk_cleanup_complete_ = platform_->GetCurrentTime();
 
   const auto old_free_disk_space = freeDiskSpace;
   freeDiskSpace = AmountOfFreeDiskSpace();
@@ -270,10 +301,20 @@ void HomeDirs::FreeDiskSpaceInternal() {
       return;
   }
 
-  // Clean Android cache directories for every user (except current one).
-  for (const auto& dir : unmounted_homedirs) {
+  auto aggressive_cleanup_homedirs = unmounted_homedirs;
+
+  if (last_aggressive_disk_cleanup_complete_) {
+    base::Time cutoff = last_aggressive_disk_cleanup_complete_.value();
+    FilterHomedirsProcessedBeforeCutoff(cutoff, &aggressive_cleanup_homedirs);
+  }
+
+  // Clean Android cache directories for every unmounted user that has logged
+  // out after after the last normal cleanup happened.
+  for (const auto& dir : aggressive_cleanup_homedirs) {
     HomeDirs::DeleteAndroidCacheCallback(dir.shadow);
   }
+
+  last_aggressive_disk_cleanup_complete_ = platform_->GetCurrentTime();
 
   switch (GetFreeDiskSpaceState()) {
     case HomeDirs::FreeSpaceState::kAboveTarget:
@@ -314,19 +355,6 @@ void HomeDirs::FreeDiskSpaceInternal() {
 
 int HomeDirs::DeleteUserProfiles(const std::vector<HomeDir>& homedirs) {
   int deleted_users_count = 0;
-
-  // Initialize user timestamp cache if it has not been yet. This reads the
-  // last-activity time from each homedir's SerializedVaultKeyset.  This value
-  // is only updated in the value keyset on unmount and every 24 hrs, so a
-  // currently logged in user probably doesn't have an up to date value. This
-  // is okay, since we don't delete currently logged in homedirs anyway.  (See
-  // Mount::UpdateCurrentUserActivityTimestamp()).
-  if (!timestamp_cache_->initialized()) {
-    timestamp_cache_->Initialize();
-    for (const auto& dir : homedirs) {
-      HomeDirs::AddUserTimestampToCacheCallback(dir.shadow);
-    }
-  }
 
   // Delete old users using timestamp_cache_, the oldest first.
   // Don't delete anyone if we don't know who the owner is.
@@ -1169,6 +1197,18 @@ void HomeDirs::FilterMountedHomedirs(std::vector<HomeDirs::HomeDir>* homedirs) {
       std::remove_if(
           homedirs->begin(), homedirs->end(),
           [](const HomeDirs::HomeDir& dir) { return dir.is_mounted; }),
+      homedirs->end());
+}
+
+void HomeDirs::FilterHomedirsProcessedBeforeCutoff(
+    base::Time cutoff,
+    std::vector<HomeDirs::HomeDir>* homedirs) {
+  homedirs->erase(
+      std::remove_if(homedirs->begin(), homedirs->end(),
+                     [&](const HomeDirs::HomeDir& dir) {
+                       return timestamp_cache_->GetLastUserActivityTimestamp(
+                                  dir.shadow) < cutoff;
+                     }),
       homedirs->end());
 }
 

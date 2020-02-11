@@ -57,6 +57,11 @@ class UserOldestActivityTimestampCache {
   // a timestamp are removed first.
   virtual base::FilePath RemoveOldestUser();
 
+  // Returns the last activity timestamp for a user. For users without a
+  // timestamp it returns the oldest known timestamp.
+  virtual base::Time GetLastUserActivityTimestamp(
+      const base::FilePath& vault) const;
+
  private:
   // Updates oldest known timestamp after the user with |timestamp|
   // has been removed from cache.
@@ -64,6 +69,7 @@ class UserOldestActivityTimestampCache {
 
   typedef std::multimap<base::Time, base::FilePath> UsersTimestamp;
   UsersTimestamp users_timestamp_;
+  std::map<base::FilePath, base::Time> users_timestamp_lookup_;
   base::Time oldest_known_timestamp_;
   bool initialized_;
 

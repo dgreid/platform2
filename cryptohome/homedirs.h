@@ -369,6 +369,9 @@ class HomeDirs {
   std::vector<HomeDir> GetHomeDirs();
   // Removes all mounted homedirs from the vector
   void FilterMountedHomedirs(std::vector<HomeDir>* homedirs);
+  // Removes all homedirs that have not been active since the cutoff
+  void FilterHomedirsProcessedBeforeCutoff(base::Time cutoff,
+                                           std::vector<HomeDir>* homedirs);
   // Used by RemoveNonOwnerCryptohomes and FreeDiskSpace to perform the actual
   // cleanup.
   void RemoveNonOwnerCryptohomesInternal(const std::vector<HomeDir>& homedirs);
@@ -448,6 +451,9 @@ class HomeDirs {
   brillo::SecureBlob system_salt_;
   chaps::TokenManagerClient chaps_client_;
   base::Optional<base::Time> last_free_disk_space_ = base::nullopt;
+  base::Optional<base::Time> last_normal_disk_cleanup_complete_ = base::nullopt;
+  base::Optional<base::Time> last_aggressive_disk_cleanup_complete_ =
+      base::nullopt;
 
   // Disk cleanup thresholds. Can be set using command line flags.
   uint64_t normal_cleanup_threshold_ = kFreeSpaceThresholdToTriggerCleanup;

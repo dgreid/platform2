@@ -32,6 +32,10 @@ class MockUserOldestActivityTimestampCache :
   MOCK_METHOD(base::Time, oldest_known_timestamp, (), (const, override));
   MOCK_METHOD(bool, empty, (), (const, override));
   MOCK_METHOD(base::FilePath, RemoveOldestUser, (), (override));
+  MOCK_METHOD(base::Time,
+              GetLastUserActivityTimestamp,
+              (const base::FilePath&),
+              (const, override));
 
  private:
   base::Time StubOldestKnownTimestamp() const {

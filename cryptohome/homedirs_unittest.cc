@@ -566,6 +566,35 @@ class FreeDiskSpaceTest : public HomeDirsTest {
     }
   }
 
+  void ExpectTimestampCacheInitialization() {
+    EXPECT_CALL(timestamp_cache_, initialized())
+        .WillOnce(Return(false))
+        .WillRepeatedly(Return(true));
+    EXPECT_CALL(timestamp_cache_, Initialize()).Times(1);
+
+    MockVaultKeyset* vk[arraysize(kHomedirs)];
+    EXPECT_CALL(vault_keyset_factory_, New(_, _))
+        .WillOnce(Return(vk[0] = new MockVaultKeyset()))
+        .WillOnce(Return(vk[1] = new MockVaultKeyset()))
+        .WillOnce(Return(vk[2] = new MockVaultKeyset()))
+        .WillOnce(Return(vk[3] = new MockVaultKeyset()));
+    for (size_t i = 0; i < arraysize(vk); ++i) {
+      EXPECT_CALL(*vk[i], Load(_)).WillRepeatedly(Return(false));
+    }
+    homedirs_.set_vault_keyset_factory(&vault_keyset_factory_);
+
+    for (const auto& path : homedir_paths_) {
+      EXPECT_CALL(platform_,
+                  GetFileEnumerator(path, false, base::FileEnumerator::FILES))
+          .WillOnce(InvokeWithoutArgs(CreateMockFileEnumerator))
+          .RetiresOnSaturation();
+    }
+
+    EXPECT_CALL(timestamp_cache_, AddExistingUserNotime(_)).Times(4);
+    EXPECT_CALL(timestamp_cache_, GetLastUserActivityTimestamp(_))
+        .WillRepeatedly(Return(base::Time()));
+  }
+
   // The first half of HomeDirs::FreeDiskSpace does a purge of the Cache and
   // GCached dirs.  Unless these are being explicitly tested, we want these to
   // always succeed for every test. Set those expectations here for the given
@@ -604,7 +633,8 @@ class FreeDiskSpaceTest : public HomeDirsTest {
                 GetFileEnumerator(homedirs_.shadow_root().Append(
                                       homedir_path.BaseName().value()),
                                   false, _))
-        .WillOnce(InvokeWithoutArgs(CreateMockFileEnumerator));
+        .WillOnce(InvokeWithoutArgs(CreateMockFileEnumerator))
+        .RetiresOnSaturation();
   }
 };
 
@@ -614,9 +644,10 @@ INSTANTIATE_TEST_CASE_P(WithDircrypto, FreeDiskSpaceTest,
                         ::testing::Values(false));
 
 TEST_P(FreeDiskSpaceTest, InitializeTimeCacheWithNoTime) {
-  // To get to the init logic, we need to fail
-  // |kTargetFreeSpaceAfterCleanup| checks.
+  // To get to the init logic, we need to fail the check in FreeDiskSpace.
   EXPECT_CALL(platform_, AmountOfFreeDiskSpace(kTestRoot))
+      .WillOnce(Return(0))
+      .WillOnce(Return(kTargetFreeSpaceAfterCleanup + 1))
       .WillRepeatedly(Return(0));
 
   // Expect cache clean ups.
@@ -640,31 +671,6 @@ TEST_P(FreeDiskSpaceTest, InitializeTimeCacheWithNoTime) {
         false, _))
     .Times(4)
     .WillRepeatedly(InvokeWithoutArgs(CreateMockFileEnumerator));
-  EXPECT_CALL(platform_, GetFileEnumerator(
-        Property(&FilePath::value, EndsWith("user/GCache/v1/tmp")),
-        false, _))
-    .Times(4)
-    .WillRepeatedly(InvokeWithoutArgs(CreateMockFileEnumerator));
-  EXPECT_CALL(platform_, GetFileEnumerator(
-        Property(&FilePath::value, EndsWith("user/GCache/v1")),
-        true, _))
-    .Times(4)
-    .WillRepeatedly(InvokeWithoutArgs(CreateMockFileEnumerator));
-  EXPECT_CALL(platform_, GetFileEnumerator(Property(&FilePath::value,
-                                                    EndsWith("user/GCache/v2")),
-                                           true, _))
-      .Times(4)
-      .WillRepeatedly(InvokeWithoutArgs(CreateMockFileEnumerator));
-  EXPECT_CALL(
-      platform_,
-      GetFileEnumerator(
-          Property(&FilePath::value,
-                   EndsWith(std::string(ShouldTestEcryptfs() ? kEcryptfsVaultDir
-                                                             : kMountDir) +
-                            "/root")),
-          true, _))
-      .Times(4)
-      .WillRepeatedly(InvokeWithoutArgs(CreateMockFileEnumerator));
 
   ExpectTrackedDirectoriesEnumeration();
 
@@ -690,6 +696,8 @@ TEST_P(FreeDiskSpaceTest, InitializeTimeCacheWithNoTime) {
   // Expect an addition for all users with no time.
   EXPECT_CALL(timestamp_cache_, AddExistingUserNotime(_))
     .Times(4);
+  EXPECT_CALL(timestamp_cache_, GetLastUserActivityTimestamp(_))
+      .WillRepeatedly(Return(base::Time()));
 
   // Now skip the deletion steps by not having a legit owner.
   set_policy(false, "", false, "");
@@ -701,9 +709,10 @@ TEST_P(FreeDiskSpaceTest, InitializeTimeCacheWithNoTime) {
 }
 
 TEST_P(FreeDiskSpaceTest, InitializeTimeCacheWithOneTime) {
-  // To get to the init logic, we need to fail five
-  // |kTargetFreeSpaceAfterCleanup| checks.
+  // To get to the init logic, we need to fail the check in FreeDiskSpace.
   EXPECT_CALL(platform_, AmountOfFreeDiskSpace(kTestRoot))
+      .WillOnce(Return(0))
+      .WillOnce(Return(kTargetFreeSpaceAfterCleanup + 1))
       .WillRepeatedly(Return(0));
 
   // Expect cache clean ups.
@@ -726,42 +735,6 @@ TEST_P(FreeDiskSpaceTest, InitializeTimeCacheWithOneTime) {
         Property(&FilePath::value, HasSubstr("user/Cache")),
         false, _))
     .Times(4).WillRepeatedly(InvokeWithoutArgs(CreateMockFileEnumerator));
-  EXPECT_CALL(platform_,
-      GetFileEnumerator(
-        Property(&FilePath::value, EndsWith("user/GCache/v1/tmp")),
-        false, _))
-    .Times(4)
-    .WillRepeatedly(InvokeWithoutArgs(CreateMockFileEnumerator));
-  EXPECT_CALL(
-      platform_,
-      GetFileEnumerator(
-          Property(&FilePath::value,
-                   EndsWith(std::string(ShouldTestEcryptfs() ? kEcryptfsVaultDir
-                                                             : kMountDir) +
-                            "/user/GCache/v1")),
-          true, _))
-      .Times(4)
-      .WillRepeatedly(InvokeWithoutArgs(CreateMockFileEnumerator));
-  EXPECT_CALL(
-      platform_,
-      GetFileEnumerator(
-          Property(&FilePath::value,
-                   EndsWith(std::string(ShouldTestEcryptfs() ? kEcryptfsVaultDir
-                                                             : kMountDir) +
-                            "/user/GCache/v2")),
-          true, _))
-      .Times(4)
-      .WillRepeatedly(InvokeWithoutArgs(CreateMockFileEnumerator));
-  EXPECT_CALL(
-      platform_,
-      GetFileEnumerator(
-          Property(&FilePath::value,
-                   EndsWith(std::string(ShouldTestEcryptfs() ? kEcryptfsVaultDir
-                                                             : kMountDir) +
-                            "/root")),
-          true, _))
-      .Times(4)
-      .WillRepeatedly(InvokeWithoutArgs(CreateMockFileEnumerator));
 
   ExpectTrackedDirectoriesEnumeration();
 
@@ -813,13 +786,205 @@ TEST_P(FreeDiskSpaceTest, InitializeTimeCacheWithOneTime) {
   EXPECT_CALL(timestamp_cache_,
               AddExistingUser(homedir_paths_[3], homedir_times_[3]))
     .Times(1);
+  EXPECT_CALL(timestamp_cache_, GetLastUserActivityTimestamp(_))
+      .WillRepeatedly(Return(base::Time()));
+  EXPECT_CALL(timestamp_cache_, GetLastUserActivityTimestamp(homedir_paths_[3]))
+      .WillRepeatedly(Return(homedir_times_[3]));
 
   // Now skip the deletion steps by not having a legit owner.
   set_policy(false, "", false, "");
 
   homedirs_.FreeDiskSpace();
 
-  // Could not delete user, so it doesn't have enough space yet.
+  EXPECT_FALSE(homedirs_.HasTargetFreeSpace());
+}
+
+TEST_P(FreeDiskSpaceTest, TimeCacheSkipNormalCleanupIfNotActive) {
+  // To get to the init logic, we need to fail the check in FreeDiskSpace amd
+  // GCache cleanup.
+  // Cleanup is executed twice.
+  EXPECT_CALL(platform_, AmountOfFreeDiskSpace(kTestRoot))
+      .WillOnce(Return(0))
+      .WillOnce(Return(0))
+      .WillOnce(Return(kTargetFreeSpaceAfterCleanup + 1))
+      .WillOnce(Return(0))
+      .WillOnce(Return(0))
+      .WillOnce(Return(kTargetFreeSpaceAfterCleanup + 1))
+      .WillRepeatedly(Return(0));
+
+  // Expect cache clean ups.
+  EXPECT_CALL(platform_, EnumerateDirectoryEntries(kTestRoot, false, _))
+      .WillRepeatedly(DoAll(SetArgPointee<2>(homedir_paths_), Return(true)));
+  EXPECT_CALL(platform_, DirectoryExists(_)).WillRepeatedly(Return(true));
+  EXPECT_CALL(platform_, DirectoryExists(Property(&FilePath::value,
+                                                  EndsWith(kEcryptfsVaultDir))))
+      .WillRepeatedly(Return(ShouldTestEcryptfs()));
+
+  // The master.* enumerators (wildcard matcher first)
+  EXPECT_CALL(platform_, GetFileEnumerator(_, false, _))
+      .Times(4)
+      .WillRepeatedly(InvokeWithoutArgs(CreateMockFileEnumerator));
+  // Empty enumerators per-user per-cache dirs plus
+  // enumerators for empty vaults.
+  EXPECT_CALL(platform_, GetFileEnumerator(Property(&FilePath::value,
+                                                    HasSubstr("user/Cache")),
+                                           false, _))
+      .Times(5)  // 4 times for the first cleanup, once for the second.
+      .WillRepeatedly(InvokeWithoutArgs(CreateMockFileEnumerator));
+  EXPECT_CALL(
+      platform_,
+      GetFileEnumerator(
+          Property(&FilePath::value, EndsWith("user/GCache/v1/tmp")), false, _))
+      .Times(4)
+      .WillRepeatedly(InvokeWithoutArgs(CreateMockFileEnumerator));
+  EXPECT_CALL(platform_, GetFileEnumerator(Property(&FilePath::value,
+                                                    EndsWith("user/GCache/v1")),
+                                           true, _))
+      .Times(4)
+      .WillRepeatedly(InvokeWithoutArgs(CreateMockFileEnumerator));
+  EXPECT_CALL(platform_, GetFileEnumerator(Property(&FilePath::value,
+                                                    EndsWith("user/GCache/v2")),
+                                           true, _))
+      .Times(4)
+      .WillRepeatedly(InvokeWithoutArgs(CreateMockFileEnumerator));
+
+  ExpectTrackedDirectoriesEnumeration();
+
+  // Now cover the actual initialization piece
+  EXPECT_CALL(timestamp_cache_, initialized())
+      .WillOnce(Return(false))
+      .WillRepeatedly(Return(true));
+  EXPECT_CALL(timestamp_cache_, Initialize()).Times(1);
+
+  // It then walks the user vault to populate.
+  MockVaultKeyset* vk[arraysize(kHomedirs)];
+  EXPECT_CALL(vault_keyset_factory_, New(_, _))
+      .WillOnce(Return(vk[0] = new MockVaultKeyset()))
+      .WillOnce(Return(vk[1] = new MockVaultKeyset()))
+      .WillOnce(Return(vk[2] = new MockVaultKeyset()))
+      .WillOnce(Return(vk[3] = new MockVaultKeyset()));
+  for (size_t i = 0; i < arraysize(vk); ++i) {
+    EXPECT_CALL(*vk[i], Load(_)).WillRepeatedly(Return(false));
+  }
+  homedirs_.set_vault_keyset_factory(&vault_keyset_factory_);
+
+  // Expect an addition for all users with no time.
+  EXPECT_CALL(timestamp_cache_, AddExistingUserNotime(_)).Times(4);
+  EXPECT_CALL(timestamp_cache_, GetLastUserActivityTimestamp(_))
+      .WillRepeatedly(Return(base::Time()));
+
+  // Now skip the deletion steps by not having a legit owner.
+  set_policy(false, "", false, "");
+
+  homedirs_.FreeDiskSpace();
+
+  // Simulate logout
+  EXPECT_CALL(timestamp_cache_, GetLastUserActivityTimestamp(homedir_paths_[2]))
+      .WillRepeatedly(Return(base::Time::Now()));
+
+  homedirs_.FreeDiskSpace();
+
+  EXPECT_FALSE(homedirs_.HasTargetFreeSpace());
+}
+
+TEST_P(FreeDiskSpaceTest, TimeCacheSkipAggressiveCleanupIfNotActive) {
+  // To get to the init logic, we need to fail the check in FreeDiskSpace amd
+  // GCache cleanup.
+  // Cleanup is executed twice.
+  EXPECT_CALL(platform_, AmountOfFreeDiskSpace(kTestRoot))
+      .WillOnce(Return(0))
+      .WillOnce(Return(0))
+      .WillOnce(Return(0))
+      .WillOnce(Return(kTargetFreeSpaceAfterCleanup + 1))
+      .WillOnce(Return(0))
+      .WillOnce(Return(0))
+      .WillOnce(Return(0))
+      .WillOnce(Return(0))
+      .WillOnce(Return(kTargetFreeSpaceAfterCleanup + 1))
+      .WillRepeatedly(Return(0));
+
+  // Expect cache clean ups.
+  EXPECT_CALL(platform_, EnumerateDirectoryEntries(kTestRoot, false, _))
+      .WillRepeatedly(DoAll(SetArgPointee<2>(homedir_paths_), Return(true)));
+  EXPECT_CALL(platform_, DirectoryExists(_)).WillRepeatedly(Return(true));
+  EXPECT_CALL(platform_, DirectoryExists(Property(&FilePath::value,
+                                                  EndsWith(kEcryptfsVaultDir))))
+      .WillRepeatedly(Return(ShouldTestEcryptfs()));
+
+  // The master.* enumerators (wildcard matcher first)
+  EXPECT_CALL(platform_, GetFileEnumerator(_, false, _))
+      .Times(4)
+      .WillRepeatedly(InvokeWithoutArgs(CreateMockFileEnumerator));
+  // Empty enumerators per-user per-cache dirs plus
+  // enumerators for empty vaults.
+  EXPECT_CALL(platform_, GetFileEnumerator(Property(&FilePath::value,
+                                                    HasSubstr("user/Cache")),
+                                           false, _))
+      .Times(5)  // 4 times for the first cleanup, once for the second.
+      .WillRepeatedly(InvokeWithoutArgs(CreateMockFileEnumerator));
+  EXPECT_CALL(
+      platform_,
+      GetFileEnumerator(
+          Property(&FilePath::value, EndsWith("user/GCache/v1/tmp")), false, _))
+      .Times(5)
+      .WillRepeatedly(InvokeWithoutArgs(CreateMockFileEnumerator));
+  EXPECT_CALL(platform_, GetFileEnumerator(Property(&FilePath::value,
+                                                    EndsWith("user/GCache/v1")),
+                                           true, _))
+      .Times(5)
+      .WillRepeatedly(InvokeWithoutArgs(CreateMockFileEnumerator));
+  EXPECT_CALL(platform_, GetFileEnumerator(Property(&FilePath::value,
+                                                    EndsWith("user/GCache/v2")),
+                                           true, _))
+      .Times(5)
+      .WillRepeatedly(InvokeWithoutArgs(CreateMockFileEnumerator));
+  EXPECT_CALL(
+      platform_,
+      GetFileEnumerator(
+          Property(&FilePath::value,
+                   EndsWith(std::string(ShouldTestEcryptfs() ? kEcryptfsVaultDir
+                                                             : kMountDir) +
+                            "/root")),
+          true, _))
+      .Times(5)
+      .WillRepeatedly(InvokeWithoutArgs(CreateMockFileEnumerator));
+
+  ExpectTrackedDirectoriesEnumeration();
+
+  // Now cover the actual initialization piece
+  EXPECT_CALL(timestamp_cache_, initialized())
+      .WillOnce(Return(false))
+      .WillRepeatedly(Return(true));
+  EXPECT_CALL(timestamp_cache_, Initialize()).Times(1);
+
+  // It then walks the user vault to populate.
+  MockVaultKeyset* vk[arraysize(kHomedirs)];
+  EXPECT_CALL(vault_keyset_factory_, New(_, _))
+      .WillOnce(Return(vk[0] = new MockVaultKeyset()))
+      .WillOnce(Return(vk[1] = new MockVaultKeyset()))
+      .WillOnce(Return(vk[2] = new MockVaultKeyset()))
+      .WillOnce(Return(vk[3] = new MockVaultKeyset()));
+  for (size_t i = 0; i < arraysize(vk); ++i) {
+    EXPECT_CALL(*vk[i], Load(_)).WillRepeatedly(Return(false));
+  }
+  homedirs_.set_vault_keyset_factory(&vault_keyset_factory_);
+
+  // Expect an addition for all users with no time.
+  EXPECT_CALL(timestamp_cache_, AddExistingUserNotime(_)).Times(4);
+  EXPECT_CALL(timestamp_cache_, GetLastUserActivityTimestamp(_))
+      .WillRepeatedly(Return(base::Time()));
+
+  // Now skip the deletion steps by not having a legit owner.
+  set_policy(false, "", false, "");
+
+  homedirs_.FreeDiskSpace();
+
+  // Simulate logout
+  EXPECT_CALL(timestamp_cache_, GetLastUserActivityTimestamp(homedir_paths_[2]))
+      .WillRepeatedly(Return(base::Time::Now()));
+
+  homedirs_.FreeDiskSpace();
+
   EXPECT_FALSE(homedirs_.HasTargetFreeSpace());
 }
 
@@ -868,6 +1033,7 @@ TEST_P(FreeDiskSpaceTest, OnlyCacheCleanup) {
     .Times(4)
     .WillRepeatedly(Return(true));
 
+  ExpectTimestampCacheInitialization();
   ExpectTrackedDirectoriesEnumeration();
 
   homedirs_.FreeDiskSpace();
@@ -955,6 +1121,7 @@ TEST_P(FreeDiskSpaceTest, GCacheCleanup) {
                   &FilePath::value, EndsWith("GCache/v2/foobar/unremovable"))))
       .WillOnce(Return(false));
 
+  ExpectTimestampCacheInitialization();
   ExpectTrackedDirectoriesEnumeration();
 
   // Confirm removable file is removed.
@@ -1038,6 +1205,7 @@ TEST_P(FreeDiskSpaceTest, CacheAndGCacheCleanup) {
           true, _))
       .Times(0);
 
+  ExpectTimestampCacheInitialization();
   ExpectTrackedDirectoriesEnumeration();
 
   homedirs_.FreeDiskSpace();
@@ -1101,6 +1269,7 @@ TEST_P(FreeDiskSpaceTest, CacheAndGCacheAndAndroidCleanup) {
     .Times(4)
     .WillRepeatedly(InvokeWithoutArgs(CreateMockFileEnumerator));
 
+  ExpectTimestampCacheInitialization();
   ExpectTrackedDirectoriesEnumeration();
 
   // Now test for the Android user, just test for the first user.
@@ -1176,9 +1345,6 @@ TEST_P(FreeDiskSpaceTest, CacheAndGCacheAndAndroidCleanup) {
 TEST_P(FreeDiskSpaceTest, CleanUpOneUser) {
   // Ensure that the oldest user directory deleted, but not any
   // others, if the first deletion frees enough space.
-  EXPECT_CALL(timestamp_cache_, initialized())
-    .WillRepeatedly(Return(true));
-
   EXPECT_CALL(timestamp_cache_, empty())
     .WillOnce(Return(false));
 
@@ -1192,6 +1358,7 @@ TEST_P(FreeDiskSpaceTest, CleanUpOneUser) {
     .WillOnce(Return(true));
 
   ExpectCacheDirCleanupCalls(4);
+  ExpectTimestampCacheInitialization();
   ExpectDeletedLECredentialEnumeration(homedir_paths_[0]);
 
   homedirs_.FreeDiskSpace();
@@ -1202,9 +1369,6 @@ TEST_P(FreeDiskSpaceTest, CleanUpOneUser) {
 TEST_P(FreeDiskSpaceTest, CleanUpMultipleUsers) {
   // Ensure that the two oldest user directories are deleted, but not any
   // others, if the second deletion frees enough space.
-  EXPECT_CALL(timestamp_cache_, initialized())
-    .WillRepeatedly(Return(true));
-
   EXPECT_CALL(timestamp_cache_, empty())
     .WillOnce(Return(false))
     .WillOnce(Return(false));
@@ -1223,6 +1387,7 @@ TEST_P(FreeDiskSpaceTest, CleanUpMultipleUsers) {
     .WillOnce(Return(true));
 
   ExpectCacheDirCleanupCalls(4);
+  ExpectTimestampCacheInitialization();
   ExpectDeletedLECredentialEnumeration(homedir_paths_[0]);
   ExpectDeletedLECredentialEnumeration(homedir_paths_[1]);
 

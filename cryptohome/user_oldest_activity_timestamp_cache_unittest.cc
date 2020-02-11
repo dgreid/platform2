@@ -35,21 +35,26 @@ TEST(UserOldestActivityTimestampCache, Sequential) {
   // Check that the latest timestamp is actually oldest.
   cache.AddExistingUserNotime(FilePath("a"));
   EXPECT_TRUE(cache.oldest_known_timestamp().is_null());
+  EXPECT_TRUE(cache.GetLastUserActivityTimestamp(FilePath("a")).is_null());
 
   cache.AddExistingUser(FilePath("b"), time_mar1);
   EXPECT_FALSE(cache.oldest_known_timestamp().is_null());
   EXPECT_TRUE(time_mar1 == cache.oldest_known_timestamp());
+  EXPECT_EQ(cache.GetLastUserActivityTimestamp(FilePath("b")), time_mar1);
 
   cache.AddExistingUser(FilePath("c"), time_jan1);
   EXPECT_TRUE(time_jan1 == cache.oldest_known_timestamp());
 
   cache.AddExistingUser(FilePath("d"), time_feb1);
   EXPECT_TRUE(time_jan1 == cache.oldest_known_timestamp());
+  EXPECT_EQ(cache.GetLastUserActivityTimestamp(FilePath("d")), time_feb1);
   cache.UpdateExistingUser(FilePath("d"), time_mar1);
   EXPECT_TRUE(time_jan1 == cache.oldest_known_timestamp());
+  EXPECT_EQ(cache.GetLastUserActivityTimestamp(FilePath("d")), time_mar1);
 
   cache.AddExistingUserNotime(FilePath("e"));
   EXPECT_TRUE(time_jan1 == cache.oldest_known_timestamp());
+  EXPECT_TRUE(cache.GetLastUserActivityTimestamp(FilePath("e")).is_null());
 
   // Remove users one by one, check the remaining oldest timestamp.
   EXPECT_EQ("a", cache.RemoveOldestUser().value());
@@ -81,9 +86,11 @@ TEST(UserOldestActivityTimestampCache, OneUpdatedForward) {
   cache.AddExistingUser(FilePath("x"), time_feb1);
   EXPECT_FALSE(cache.oldest_known_timestamp().is_null());
   EXPECT_TRUE(time_feb1 == cache.oldest_known_timestamp());
+  EXPECT_EQ(cache.GetLastUserActivityTimestamp(FilePath("x")), time_feb1);
 
   cache.UpdateExistingUser(FilePath("x"), time_mar1);
   EXPECT_TRUE(time_mar1 == cache.oldest_known_timestamp());
+  EXPECT_EQ(cache.GetLastUserActivityTimestamp(FilePath("x")), time_mar1);
 
   EXPECT_EQ("x", cache.RemoveOldestUser().value());
   EXPECT_TRUE(cache.oldest_known_timestamp().is_null());
@@ -102,9 +109,11 @@ TEST(UserOldestActivityTimestampCache, OneUpdatedBackward) {
   cache.AddExistingUser(FilePath("x"), time_feb1);
   EXPECT_FALSE(cache.oldest_known_timestamp().is_null());
   EXPECT_TRUE(time_feb1 == cache.oldest_known_timestamp());
+  EXPECT_EQ(cache.GetLastUserActivityTimestamp(FilePath("x")), time_feb1);
 
   cache.UpdateExistingUser(FilePath("x"), time_jan1);
   EXPECT_TRUE(time_jan1 == cache.oldest_known_timestamp());
+  EXPECT_EQ(cache.GetLastUserActivityTimestamp(FilePath("x")), time_jan1);
 
   EXPECT_EQ("x", cache.RemoveOldestUser().value());
   EXPECT_TRUE(cache.oldest_known_timestamp().is_null());
