@@ -71,6 +71,15 @@ impl Default for DiskOpType {
     }
 }
 
+/// Information about a single VM disk image.
+#[derive(Default, Debug)]
+pub struct DiskInfo {
+    /// Name of the VM contained in this disk.
+    pub name: String,
+    /// Size of the disk in bytes.
+    pub size: u64,
+}
+
 // The input for this macro is an ordinary trait declaration, with some restrictions. Each method
 // must take `&mut self` and return a `Result` where the `Ok` variant implements `Default` and the
 // `Err` variant is `Box<dyn Error>`. All other arguments types must implement `Default` and no provided
@@ -262,7 +271,7 @@ impl_backend! {
         fn disk_list(
             &mut self,
             user_id_hash: &str,
-        ) -> Result<(Vec<(String, u64)>, u64), Box<dyn Error>>;
+        ) -> Result<(Vec<DiskInfo>, u64), Box<dyn Error>>;
         /// Checks status of executing disk operation (import, export, resize).
         fn disk_op_status(
             &mut self,

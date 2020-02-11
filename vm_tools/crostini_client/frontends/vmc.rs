@@ -378,8 +378,8 @@ impl<'a, 'b, 'c> Command<'a, 'b, 'c> {
             .ok_or(ExpectedCrosUserIdHash)?;
 
         let (disk_image_list, total_size) = try_command!(self.backend.disk_list(user_id_hash));
-        for (name, size) in disk_image_list {
-            println!("{} ({} bytes)", name, size);
+        for disk in disk_image_list {
+            println!("{} ({} bytes)", disk.name, disk.size);
         }
         println!("Total Size (bytes): {}", total_size);
         Ok(())

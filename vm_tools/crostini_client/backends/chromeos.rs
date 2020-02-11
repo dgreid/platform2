@@ -16,7 +16,7 @@ use std::process::Command;
 use dbus::{BusType, Connection, ConnectionItem, Message, OwnedFd};
 use protobuf::Message as ProtoMessage;
 
-use backends::{Backend, ContainerSource, DiskOpType, VmFeatures};
+use backends::{Backend, ContainerSource, DiskInfo, DiskOpType, VmFeatures};
 use lsb_release::{LsbRelease, ReleaseChannel};
 use proto::system_api::cicerone_service::{self, *};
 use proto::system_api::concierge_service::*;
@@ -1506,13 +1506,16 @@ impl Backend for ChromeOS {
         self.destroy_disk_image(vm_name, user_id_hash)
     }
 
-    fn disk_list(
-        &mut self,
-        user_id_hash: &str,
-    ) -> Result<(Vec<(String, u64)>, u64), Box<dyn Error>> {
+    fn disk_list(&mut self, user_id_hash: &str) -> Result<(Vec<DiskInfo>, u64), Box<dyn Error>> {
         self.start_vm_infrastructure(user_id_hash)?;
         let (images, total_size) = self.list_disk_images(user_id_hash, None, None)?;
-        let out_images: Vec<(String, u64)> = images.into_iter().map(|e| (e.name, e.size)).collect();
+        let out_images: Vec<DiskInfo> = images
+            .into_iter()
+            .map(|e| DiskInfo {
+                name: e.name,
+                size: e.size,
+            })
+            .collect();
         Ok((out_images, total_size))
     }
 
