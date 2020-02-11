@@ -25,7 +25,7 @@ get_dev_by_part_uuid() {
   echo "${dev}"
 }
 
-FAFT_LOCKFILE="/var/tmp/faft/lock"
+FAFT_LOCKFILE="/usr/local/tmp/faft/lock"
 if [ -f "${FAFT_LOCKFILE}" ]; then
   echo "FAFT lockfile exists, skipping chromeos-setgoodkernel actions"
   exit
