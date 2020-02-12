@@ -20,6 +20,7 @@
 #include <string>
 #include <utility>
 
+#include "base/strings/string_split.h"
 #include "screenshot/crtc.h"
 
 namespace screenshot {
@@ -69,6 +70,14 @@ void LoadProgram(const GLchar* vert, const GLchar* frag) {
   glDeleteProgram(program);
   glDeleteShader(vertex_shader);
   glDeleteShader(frag_shader);
+}
+
+bool DoesExtensionExist(const char* extension_string, const char* name) {
+  std::vector<std::string> extensions = base::SplitString(
+      extension_string, " ", base::TRIM_WHITESPACE, base::SPLIT_WANT_ALL);
+
+  return std::find(extensions.begin(), extensions.end(), std::string(name)) !=
+         extensions.end();
 }
 
 }  // namespace
@@ -157,6 +166,10 @@ std::unique_ptr<EglPixelBuf> EglCapture(
   };
 
   size_t attrs_index = 6;
+  const char* extensions = eglQueryString(display, EGL_EXTENSIONS);
+  CHECK(extensions) << "eglQueryString() failed to get egl extensions";
+  const bool import_modifiers_exist =
+      DoesExtensionExist(extensions, "EGL_EXT_image_dma_buf_import_modifiers");
 
   for (size_t plane = 0; plane < num_planes; plane++) {
     attr_list[attrs_index++] = EGL_DMA_BUF_PLANE0_FD_EXT + plane * 3;
@@ -165,10 +178,12 @@ std::unique_ptr<EglPixelBuf> EglCapture(
     attr_list[attrs_index++] = crtc.fb2()->offsets[plane];
     attr_list[attrs_index++] = EGL_DMA_BUF_PLANE0_PITCH_EXT + plane * 3;
     attr_list[attrs_index++] = crtc.fb2()->pitches[plane];
-    attr_list[attrs_index++] = EGL_DMA_BUF_PLANE0_MODIFIER_LO_EXT + plane * 2;
-    attr_list[attrs_index++] = crtc.fb2()->modifier & 0xfffffffful;
-    attr_list[attrs_index++] = EGL_DMA_BUF_PLANE0_MODIFIER_HI_EXT + plane * 2;
-    attr_list[attrs_index++] = crtc.fb2()->modifier >> 32;
+    if (import_modifiers_exist) {
+      attr_list[attrs_index++] = EGL_DMA_BUF_PLANE0_MODIFIER_LO_EXT + plane * 2;
+      attr_list[attrs_index++] = crtc.fb2()->modifier & 0xfffffffful;
+      attr_list[attrs_index++] = EGL_DMA_BUF_PLANE0_MODIFIER_HI_EXT + plane * 2;
+      attr_list[attrs_index++] = crtc.fb2()->modifier >> 32;
+    }
   }
 
   attr_list[attrs_index] = EGL_NONE;
