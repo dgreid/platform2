@@ -7,6 +7,7 @@
 #include <iterator>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "diagnostics/common/mojo_utils.h"
 #include "mojo/cros_healthd.mojom.h"
@@ -88,20 +89,20 @@ bool GetUserMessageFromMojoEnum(
 // Converts from mojo's DiagnosticRoutineEnum to gRPC's DiagnosticRoutine.
 bool GetGrpcRoutineEnumFromMojoRoutineEnum(
     chromeos::cros_healthd::mojom::DiagnosticRoutineEnum mojo_enum,
-    grpc_api::DiagnosticRoutine* grpc_enum_out) {
+    std::vector<grpc_api::DiagnosticRoutine>* grpc_enum_out) {
   DCHECK(grpc_enum_out);
   switch (mojo_enum) {
     case chromeos::cros_healthd::mojom::DiagnosticRoutineEnum::kBatteryCapacity:
-      *grpc_enum_out = grpc_api::ROUTINE_BATTERY;
+      grpc_enum_out->push_back(grpc_api::ROUTINE_BATTERY);
       return true;
     case chromeos::cros_healthd::mojom::DiagnosticRoutineEnum::kBatteryHealth:
-      *grpc_enum_out = grpc_api::ROUTINE_BATTERY_SYSFS;
+      grpc_enum_out->push_back(grpc_api::ROUTINE_BATTERY_SYSFS);
       return true;
     case chromeos::cros_healthd::mojom::DiagnosticRoutineEnum::kUrandom:
-      *grpc_enum_out = grpc_api::ROUTINE_URANDOM;
+      grpc_enum_out->push_back(grpc_api::ROUTINE_URANDOM);
       return true;
     case chromeos::cros_healthd::mojom::DiagnosticRoutineEnum::kSmartctlCheck:
-      *grpc_enum_out = grpc_api::ROUTINE_SMARTCTL_CHECK;
+      grpc_enum_out->push_back(grpc_api::ROUTINE_SMARTCTL_CHECK);
       return true;
     default:
       LOG(ERROR) << "Unknown mojo routine: " << static_cast<int>(mojo_enum);
@@ -324,9 +325,11 @@ void RoutineService::ForwardGetAvailableRoutinesResponse(
 
   std::vector<grpc_api::DiagnosticRoutine> grpc_routines;
   for (auto mojo_routine : mojo_routines) {
-    grpc_api::DiagnosticRoutine grpc_routine;
-    if (GetGrpcRoutineEnumFromMojoRoutineEnum(mojo_routine, &grpc_routine))
-      grpc_routines.push_back(grpc_routine);
+    std::vector<grpc_api::DiagnosticRoutine> grpc_mojo_routines;
+    if (GetGrpcRoutineEnumFromMojoRoutineEnum(mojo_routine,
+                                              &grpc_mojo_routines))
+      for (auto grpc_routine : grpc_mojo_routines)
+        grpc_routines.push_back(grpc_routine);
   }
 
   it->second.Run(std::move(grpc_routines), grpc_api::ROUTINE_SERVICE_STATUS_OK);
