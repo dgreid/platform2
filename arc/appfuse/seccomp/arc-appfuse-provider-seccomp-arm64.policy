@@ -39,6 +39,7 @@ mount: arg3 == MS_NOSUID|MS_NODEV|MS_NOEXEC|MS_NOATIME
 munmap: 1
 signalfd4: 1
 fstat: 1
+newfstatat: 1
 connect: 1
 socket: arg0 == AF_UNIX
 restart_syscall: 1
