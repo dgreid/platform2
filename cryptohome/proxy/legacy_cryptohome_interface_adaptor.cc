@@ -1942,7 +1942,8 @@ void LegacyCryptohomeInterfaceAdaptor::InstallAttributesIsReadyOnSuccess(
     std::shared_ptr<SharedDBusMethodResponse<bool>> response,
     const user_data_auth::InstallAttributesGetStatusReply& reply) {
   bool ready =
-      (reply.state() != user_data_auth::InstallAttributesState::UNKNOWN);
+      (reply.state() != user_data_auth::InstallAttributesState::UNKNOWN &&
+       reply.state() != user_data_auth::InstallAttributesState::TPM_NOT_OWNED);
   response->Return(ready);
 }
 
