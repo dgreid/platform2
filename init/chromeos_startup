@@ -159,6 +159,8 @@ chmod 1777 "${POWER_OVERRIDE_DIR}"
 mkdir /run/namespaces
 mount --bind /run/namespaces /run/namespaces
 mount --make-private /run/namespaces
+# Create a file where we can bind-mount the Chrome mount namespace.
+touch /run/namespaces/mnt_chrome
 
 # Prepare to mount stateful partition
 ROOT_DEV="$(rootdev -s)"
