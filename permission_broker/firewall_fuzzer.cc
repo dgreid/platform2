@@ -64,19 +64,25 @@ void FuzzForwardRules(permission_broker::FakeFirewall& fake_firewall,
                                     : permission_broker::kProtocolUdp;
     uint16_t forwarded_port = data_provider.ConsumeIntegral<uint16_t>();
     uint16_t dst_port = data_provider.ConsumeIntegral<uint16_t>();
-    struct in_addr ip_addr = {.s_addr =
-                                  data_provider.ConsumeIntegral<uint32_t>()};
-    char buffer[INET_ADDRSTRLEN];
-    memset(buffer, 0, INET_ADDRSTRLEN);
-    inet_ntop(AF_INET, &ip_addr, buffer, INET_ADDRSTRLEN);
-    std::string dst_ip = buffer;
+    struct in_addr input_ip_addr = {
+        .s_addr = data_provider.ConsumeIntegral<uint32_t>()};
+    struct in_addr dst_ip_addr = {
+        .s_addr = data_provider.ConsumeIntegral<uint32_t>()};
+    char input_buffer[INET_ADDRSTRLEN];
+    char dst_buffer[INET_ADDRSTRLEN];
+    memset(input_buffer, 0, INET_ADDRSTRLEN);
+    memset(dst_buffer, 0, INET_ADDRSTRLEN);
+    inet_ntop(AF_INET, &input_ip_addr, input_buffer, INET_ADDRSTRLEN);
+    inet_ntop(AF_INET, &dst_ip_addr, dst_buffer, INET_ADDRSTRLEN);
+    std::string input_ip = input_buffer;
+    std::string dst_ip = dst_buffer;
     std::string iface = data_provider.ConsumeRandomLengthString(IFNAMSIZ - 1);
     if (data_provider.ConsumeBool()) {
-      fake_firewall.AddIpv4ForwardRule(proto, forwarded_port, iface, dst_ip,
-                                       dst_port);
+      fake_firewall.AddIpv4ForwardRule(proto, input_ip, forwarded_port, iface,
+                                       dst_ip, dst_port);
     } else {
-      fake_firewall.DeleteIpv4ForwardRule(proto, forwarded_port, iface, dst_ip,
-                                          dst_port);
+      fake_firewall.DeleteIpv4ForwardRule(proto, input_ip, forwarded_port,
+                                          iface, dst_ip, dst_port);
     }
   }
 }
