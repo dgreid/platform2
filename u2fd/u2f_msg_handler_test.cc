@@ -210,7 +210,7 @@ TEST_F(U2fMessageHandlerTest, RegisterSuccess) {
       "(EE){32}"  // User Secret
       "03";       // U2F_AUTH_ENFORCE
 
-  U2F_GENERATE_RESP cr50_response = {.keyHandle = {[0 ... 63] = 0xFD}};
+  struct u2f_generate_resp cr50_response = {.keyHandle = {[0 ... 63] = 0xFD}};
 
   EXPECT_CALL(
       mock_tpm_proxy_,
@@ -311,7 +311,7 @@ constexpr char kCr50ExpectedGenReqRegex[] =
     "03";       // U2F_AUTH_ENFORCE | G2F_ATTEST
 
 // Dummy generate response.
-constexpr U2F_GENERATE_RESP kCr50GenResp = {
+constexpr struct u2f_generate_resp kCr50GenResp = {
     .keyHandle = {[0 ... 63] = 0xFD}};  // cr50_gen_resp
 
 // Example of a cert that would be returned by cr50.
@@ -386,8 +386,8 @@ TEST_F(U2fMessageHandlerTest, RegisterG2fSuccess) {
       // See U2F Raw Message formats for format of data to sign.
       "00(A){64}(C){64}(FD){64}(0){254}";  // Data
 
-  U2F_ATTEST_RESP cr50_attest_resp = {.sig_r = {[0 ... 31] = 0xFF},
-                                      .sig_s = {[0 ... 31] = 0x55}};
+  struct u2f_attest_resp cr50_attest_resp = {.sig_r = {[0 ... 31] = 0xFF},
+                                             .sig_s = {[0 ... 31] = 0x55}};
 
   EXPECT_CALL(
       mock_tpm_proxy_,
@@ -490,8 +490,8 @@ TEST_F(U2fMessageHandlerTest, AuthenticateSuccess) {
       "[0-9A-F]{64}"  // Hash
       "03";           // U2F_AUTH_ENFORCE
 
-  U2F_SIGN_RESP cr50_response = {.sig_r = {[0 ... 31] = 0xFF},
-                                 .sig_s = {[0 ... 31] = 0x55}};
+  struct u2f_sign_resp cr50_response = {.sig_r = {[0 ... 31] = 0xFF},
+                                        .sig_s = {[0 ... 31] = 0x55}};
 
   EXPECT_CALL(mock_tpm_proxy_,
               SendU2fSign(StructMatchesRegex(expected_cr50_request_regex), _))
@@ -607,8 +607,8 @@ TEST_F(U2fMessageHandlerTest, AuthenticateCounterCouldNotUpdate) {
   ExpectGetCounter();
   ExpectGetUserSecret();
 
-  U2F_SIGN_RESP cr50_response = {.sig_r = {[0 ... 31] = 0xFF},
-                                 .sig_s = {[0 ... 31] = 0x55}};
+  struct u2f_sign_resp cr50_response = {.sig_r = {[0 ... 31] = 0xFF},
+                                        .sig_s = {[0 ... 31] = 0x55}};
 
   EXPECT_CALL(mock_tpm_proxy_, SendU2fSign(_, _))
       .WillOnce(DoAll(SetArgPointee<1>(cr50_response), Return(kCr50Success)));

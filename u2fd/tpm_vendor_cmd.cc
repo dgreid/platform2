@@ -102,9 +102,9 @@ std::string RequestToString(const Request& req) {
 }
 
 template <>
-std::string RequestToString(const U2F_ATTEST_REQ& req) {
+std::string RequestToString(const struct u2f_attest_req& req) {
   return std::string(reinterpret_cast<const char*>(&req),
-                     offsetof(U2F_ATTEST_REQ, data) + req.dataLen);
+                     offsetof(struct u2f_attest_req, data) + req.dataLen);
 }
 
 }  // namespace
@@ -164,8 +164,8 @@ uint32_t TpmVendorCommandProxy::SendU2fApdu(const std::string& req,
   return VendorCommand(kVendorCcU2fApdu, req, resp_out);
 }
 
-uint32_t TpmVendorCommandProxy::SendU2fGenerate(const U2F_GENERATE_REQ& req,
-                                                U2F_GENERATE_RESP* resp_out) {
+uint32_t TpmVendorCommandProxy::SendU2fGenerate(
+    const struct u2f_generate_req& req, struct u2f_generate_resp* resp_out) {
   if (!ReloadCr50State()) {
     return kVendorRcInvalidResponse;
   }
@@ -173,8 +173,8 @@ uint32_t TpmVendorCommandProxy::SendU2fGenerate(const U2F_GENERATE_REQ& req,
   return VendorCommandStruct(kVendorCcU2fGenerate, req, resp_out);
 }
 
-uint32_t TpmVendorCommandProxy::SendU2fSign(const U2F_SIGN_REQ& req,
-                                            U2F_SIGN_RESP* resp_out) {
+uint32_t TpmVendorCommandProxy::SendU2fSign(const struct u2f_sign_req& req,
+                                            struct u2f_sign_resp* resp_out) {
   if (!ReloadCr50State()) {
     return kVendorRcInvalidResponse;
   }
@@ -191,12 +191,13 @@ uint32_t TpmVendorCommandProxy::SendU2fSign(const U2F_SIGN_REQ& req,
       // We asked to test ownership of a key handle; success response code
       // indicates it is owned. No response body expected.
       return resp_code;
-    } else if (output_str.size() == sizeof(U2F_SIGN_RESP)) {
+    } else if (output_str.size() == sizeof(struct u2f_sign_resp)) {
       DCHECK(resp_out);  // It is a programming error for this to fail.
       memcpy(resp_out, output_str.data(), sizeof(*resp_out));
     } else {
       LOG(ERROR) << "Invalid response size for successful vendor command, "
-                 << "expected: " << (resp_out ? sizeof(U2F_SIGN_RESP) : 0)
+                 << "expected: "
+                 << (resp_out ? sizeof(struct u2f_sign_resp) : 0)
                  << ", actual: " << output_str.size();
       return kVendorRcInvalidResponse;
     }
@@ -205,8 +206,8 @@ uint32_t TpmVendorCommandProxy::SendU2fSign(const U2F_SIGN_REQ& req,
   return resp_code;
 }
 
-uint32_t TpmVendorCommandProxy::SendU2fAttest(const U2F_ATTEST_REQ& req,
-                                              U2F_ATTEST_RESP* resp_out) {
+uint32_t TpmVendorCommandProxy::SendU2fAttest(
+    const struct u2f_attest_req& req, struct u2f_attest_resp* resp_out) {
   if (!ReloadCr50State()) {
     return kVendorRcInvalidResponse;
   }

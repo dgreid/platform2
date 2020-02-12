@@ -90,14 +90,14 @@ const std::string ExpectedU2fSignCheckOnlyRequestRegex() {
 }
 
 // Dummy cr50 U2F_GENERATE_RESP.
-const U2F_GENERATE_RESP kU2fGenerateResponse = {
+const struct u2f_generate_resp kU2fGenerateResponse = {
     .pubKey = {.pointFormat = 0xAB,
                .x = {[0 ... 31] = 0xAB},
                .y = {[0 ... 31] = 0xAB}},
     .keyHandle = {[0 ... 63] = 0xFD}};
 
 // Dummy cr50 U2F_SIGN_RESP.
-const U2F_SIGN_RESP kU2fSignResponse = {.sig_r = {[0 ... 31] = 0x12},
+const struct u2f_sign_resp kU2fSignResponse = {.sig_r = {[0 ... 31] = 0x12},
                                         .sig_s = {[0 ... 31] = 0x34}};
 
 // AuthenticatorData field sizes, in bytes.

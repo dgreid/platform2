@@ -46,8 +46,8 @@ class TpmVendorCommandProxy : public trunks::TrunksDBusProxy {
   // resp_out with the reply.
   // Returns the TPM response code, or kVendorRcInvalidResponse if the
   // response was invalid.
-  virtual uint32_t SendU2fGenerate(const U2F_GENERATE_REQ& req,
-                                   U2F_GENERATE_RESP* resp_out);
+  virtual uint32_t SendU2fGenerate(const struct u2f_generate_req& req,
+                                   u2f_generate_resp* resp_out);
 
   // Sends the VENDOR_CC_U2F_SIGN command to cr50, and populates
   // resp_out with the reply.
@@ -56,15 +56,15 @@ class TpmVendorCommandProxy : public trunks::TrunksDBusProxy {
   // not be populated. In this case resp_out may be set to nullptr.
   // Returns the TPM response code, or kVendorRcInvalidResponse if the
   // response was invalid.
-  virtual uint32_t SendU2fSign(const U2F_SIGN_REQ& req,
-                               U2F_SIGN_RESP* resp_out);
+  virtual uint32_t SendU2fSign(const struct u2f_sign_req& req,
+                               u2f_sign_resp* resp_out);
 
   // Sends the VENDOR_CC_U2F_ATTEST command to cr50, and populates
   // resp_out with the reply.
   // Returns the TPM response code, or kVendorRcInvalidResponse if the
   // response was invalid.
-  virtual uint32_t SendU2fAttest(const U2F_ATTEST_REQ& req,
-                                 U2F_ATTEST_RESP* resp_out);
+  virtual uint32_t SendU2fAttest(const struct u2f_attest_req& req,
+                                 u2f_attest_resp* resp_out);
 
   // Retrieves the G2F certificate from vNVRAM in cr50 and writes it to
   // cert_out. Note that the certificate read from vNVRAM may include

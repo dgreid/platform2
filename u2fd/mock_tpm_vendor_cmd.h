@@ -19,15 +19,15 @@ class MockTpmVendorCommandProxy : public TpmVendorCommandProxy {
   MOCK_METHOD(uint32_t, SetU2fVendorMode, (uint8_t), (override));
   MOCK_METHOD(uint32_t,
               SendU2fGenerate,
-              (const U2F_GENERATE_REQ&, U2F_GENERATE_RESP*),
+              (const struct u2f_generate_req&, struct u2f_generate_resp*),
               (override));
   MOCK_METHOD(uint32_t,
               SendU2fSign,
-              (const U2F_SIGN_REQ&, U2F_SIGN_RESP*),
+              (const struct u2f_sign_req&, struct u2f_sign_resp*),
               (override));
   MOCK_METHOD(uint32_t,
               SendU2fAttest,
-              (const U2F_ATTEST_REQ&, U2F_ATTEST_RESP*),
+              (const struct u2f_attest_req&, struct u2f_attest_resp*),
               (override));
   MOCK_METHOD(uint32_t, GetG2fCertificate, (std::string*), (override));
 };

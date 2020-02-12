@@ -87,18 +87,18 @@ std::vector<uint8_t> GetTimestampSignatureCounter() {
 
 std::vector<uint8_t> EncodeCredentialPublicKeyInCBOR(
     const std::vector<uint8_t>& credential_public_key) {
-  DCHECK_EQ(credential_public_key.size(), sizeof(U2F_EC_POINT));
+  DCHECK_EQ(credential_public_key.size(), sizeof(struct u2f_ec_point));
   cbor::Value::MapValue cbor_map;
   cbor_map[cbor::Value(kCoseKeyKtyLabel)] = cbor::Value(kCoseKeyKtyEC2);
   cbor_map[cbor::Value(kCoseKeyAlgLabel)] = cbor::Value(kCoseKeyAlgES256);
   cbor_map[cbor::Value(kCoseECKeyCrvLabel)] = cbor::Value(1);
   cbor_map[cbor::Value(kCoseECKeyXLabel)] =
       cbor::Value(base::make_span<const uint8_t>(
-          credential_public_key.data() + offsetof(U2F_EC_POINT, x),
+          credential_public_key.data() + offsetof(struct u2f_ec_point, x),
           U2F_EC_KEY_SIZE));
   cbor_map[cbor::Value(kCoseECKeyYLabel)] =
       cbor::Value(base::make_span<const uint8_t>(
-          credential_public_key.data() + offsetof(U2F_EC_POINT, y),
+          credential_public_key.data() + offsetof(struct u2f_ec_point, y),
           U2F_EC_KEY_SIZE));
   return *cbor::Writer::Write(cbor::Value(std::move(cbor_map)));
 }
@@ -265,13 +265,13 @@ MakeCredentialResponse::MakeCredentialStatus WebAuthnHandler::DoU2fGenerate(
     return MakeCredentialResponse::INTERNAL_ERROR;
   }
 
-  U2F_GENERATE_REQ generate_req = {
+  struct u2f_generate_req generate_req = {
       .flags = U2F_AUTH_ENFORCE  // Require user presence, consume.
   };
   util::VectorToObject(rp_id_hash, generate_req.appId);
   util::VectorToObject(*user_secret, generate_req.userSecret);
 
-  U2F_GENERATE_RESP generate_resp = {};
+  struct u2f_generate_resp generate_resp = {};
 
   uint32_t generate_status = -1;
   base::AutoLock(tpm_proxy_->GetLock());
@@ -392,7 +392,7 @@ GetAssertionResponse::GetAssertionStatus WebAuthnHandler::DoU2fSign(
     return GetAssertionResponse::INTERNAL_ERROR;
   }
 
-  U2F_SIGN_REQ sign_req = {
+  struct u2f_sign_req sign_req = {
       .flags = U2F_AUTH_ENFORCE  // Require user presence, consume.
   };
   util::VectorToObject(rp_id_hash, sign_req.appId);
@@ -400,7 +400,7 @@ GetAssertionResponse::GetAssertionStatus WebAuthnHandler::DoU2fSign(
   util::VectorToObject(credential_id, sign_req.keyHandle);
   util::VectorToObject(hash_to_sign, sign_req.hash);
 
-  U2F_SIGN_RESP sign_resp = {};
+  struct u2f_sign_resp sign_resp = {};
 
   uint32_t sign_status = -1;
   base::AutoLock(tpm_proxy_->GetLock());
@@ -453,12 +453,12 @@ bool WebAuthnHandler::DoU2fSignCheckOnly(
     return false;
   }
 
-  U2F_SIGN_REQ sign_req = {.flags = U2F_AUTH_CHECK_ONLY};
+  struct u2f_sign_req sign_req = {.flags = U2F_AUTH_CHECK_ONLY};
   util::VectorToObject(rp_id_hash, sign_req.appId);
   util::VectorToObject(*user_secret, sign_req.userSecret);
   util::VectorToObject(credential_id, sign_req.keyHandle);
 
-  U2F_SIGN_RESP sign_resp;
+  struct u2f_sign_resp sign_resp;
   base::AutoLock(tpm_proxy_->GetLock());
   uint32_t sign_status = tpm_proxy_->SendU2fSign(sign_req, &sign_resp);
   brillo::SecureMemset(&sign_req.userSecret, 0, sizeof(sign_req.userSecret));

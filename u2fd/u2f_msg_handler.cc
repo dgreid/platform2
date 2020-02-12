@@ -293,13 +293,13 @@ U2fMessageHandler::Cr50CmdStatus U2fMessageHandler::DoU2fGenerate(
     return Cr50CmdStatus::kInvalidState;
   }
 
-  U2F_GENERATE_REQ generate_req = {
+  struct u2f_generate_req generate_req = {
       .flags = U2F_AUTH_ENFORCE  // Require user presence, consume.
   };
   util::VectorToObject(app_id, generate_req.appId);
   util::VectorToObject(*user_secret, generate_req.userSecret);
 
-  U2F_GENERATE_RESP generate_resp = {};
+  struct u2f_generate_resp generate_resp = {};
   Cr50CmdStatus generate_status = static_cast<Cr50CmdStatus>(
       proxy_->SendU2fGenerate(generate_req, &generate_resp));
 
@@ -327,7 +327,7 @@ U2fMessageHandler::Cr50CmdStatus U2fMessageHandler::DoU2fSign(
     return Cr50CmdStatus::kInvalidState;
   }
 
-  U2F_SIGN_REQ sign_req = {
+  struct u2f_sign_req sign_req = {
       .flags = U2F_AUTH_ENFORCE  // Require user presence, consume.
   };
   if (allow_legacy_kh_sign_)
@@ -337,7 +337,7 @@ U2fMessageHandler::Cr50CmdStatus U2fMessageHandler::DoU2fSign(
   util::VectorToObject(key_handle, sign_req.keyHandle);
   util::VectorToObject(hash, sign_req.hash);
 
-  U2F_SIGN_RESP sign_resp = {};
+  struct u2f_sign_resp sign_resp = {};
   Cr50CmdStatus sign_status =
       static_cast<Cr50CmdStatus>(proxy_->SendU2fSign(sign_req, &sign_resp));
 
@@ -368,7 +368,7 @@ U2fMessageHandler::Cr50CmdStatus U2fMessageHandler::DoU2fSignCheckOnly(
     return Cr50CmdStatus::kInvalidState;
   }
 
-  U2F_SIGN_REQ sign_req = {
+  struct u2f_sign_req sign_req = {
       .flags = U2F_AUTH_CHECK_ONLY  // No user presence required, no consume.
   };
   util::VectorToObject(app_id, sign_req.appId);
@@ -393,14 +393,14 @@ U2fMessageHandler::Cr50CmdStatus U2fMessageHandler::DoG2fAttest(
     return Cr50CmdStatus::kInvalidState;
   }
 
-  U2F_ATTEST_REQ attest_req = {.format = format,
-                               .dataLen = static_cast<uint8_t>(data.size())};
+  struct u2f_attest_req attest_req = {
+      .format = format, .dataLen = static_cast<uint8_t>(data.size())};
   util::VectorToObject(*user_secret, attest_req.userSecret);
   // Only a programming error can cause this CHECK to fail.
   CHECK_LE(data.size(), sizeof(attest_req.data));
   util::VectorToObject(data, attest_req.data);
 
-  U2F_ATTEST_RESP attest_resp = {};
+  struct u2f_attest_resp attest_resp = {};
   Cr50CmdStatus attest_status = static_cast<Cr50CmdStatus>(
       proxy_->SendU2fAttest(attest_req, &attest_resp));
 
