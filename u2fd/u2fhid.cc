@@ -197,10 +197,8 @@ struct U2fHid::Transaction {
 };
 
 U2fHid::U2fHid(std::unique_ptr<HidInterface> hid,
-               std::function<void()> wink_fn,
                U2fMessageHandler* msg_handler)
     : hid_(std::move(hid)),
-      wink_fn_(wink_fn),
       free_cid_(1),
       locked_cid_(0),
       msg_handler_(msg_handler) {
@@ -323,12 +321,6 @@ int U2fHid::CmdLock(std::string* resp) {
   return 0;
 }
 
-int U2fHid::CmdWink(std::string* resp) {
-  LOG(INFO) << "WINK!";
-  wink_fn_();
-  return 0;
-}
-
 int U2fHid::CmdSysInfo(std::string* resp) {
   LOG(WARNING) << "Received unsupported SysInfo command";
   ReturnError(U2fHidError::kInvalidCmd, transaction_->cid, true);
@@ -357,9 +349,6 @@ void U2fHid::ExecuteCmd() {
       break;
     case U2fHidCommand::kLock:
       rc = CmdLock(&resp);
-      break;
-    case U2fHidCommand::kWink:
-      rc = CmdWink(&resp);
       break;
     case U2fHidCommand::kVendorSysInfo:
       rc = CmdSysInfo(&resp);

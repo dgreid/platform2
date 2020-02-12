@@ -304,12 +304,10 @@ void U2fDaemon::CreateU2fMsgHandler(bool allow_g2f_attestation,
 }
 
 void U2fDaemon::CreateU2fHid() {
-  std::function<void()> send_wink = [this]() { SendWinkSignal(); };
-
   u2fhid_ = std::make_unique<u2f::U2fHid>(
       std::make_unique<u2f::UHidDevice>(vendor_id_, product_id_, kDeviceName,
                                         "u2fd-tpm-cr50"),
-      send_wink, u2f_msg_handler_.get());
+      u2f_msg_handler_.get());
 }
 
 bool U2fDaemon::SetVendorMode(U2fMode mode) {

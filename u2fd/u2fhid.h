@@ -34,7 +34,6 @@ constexpr uint8_t kFrameTypeInit = 0x80;
 constexpr uint32_t kCidBroadcast = -1U;
 constexpr size_t kInitNonceSize = 8;
 
-constexpr uint8_t kCapFlagWink = 0x01;
 constexpr uint8_t kCapFlagLock = 0x02;
 
 constexpr size_t kMaxPayloadSize = (64 - 7 + 128 * (64 - 5));  // 7609 bytes
@@ -75,7 +74,6 @@ class U2fHid {
   // Create a new virtual U2F HID Device. Does not take ownership of
   // msg_handler, which must outlive this instance.
   U2fHid(std::unique_ptr<HidInterface> hid,
-         std::function<void()> wink_fn,
          U2fMessageHandler* msg_handler);
   ~U2fHid();
   bool Init();
@@ -87,7 +85,6 @@ class U2fHid {
   int CmdMsg(std::string* resp);
   int CmdPing(std::string* resp);
   int CmdSysInfo(std::string* resp);
-  int CmdWink(std::string* resp);
 
   // Fully resets the state of the possibly on-going U2FHID transaction.
   void ClearTransaction();
@@ -117,7 +114,6 @@ class U2fHid {
 
 
   std::unique_ptr<HidInterface> hid_;
-  std::function<void()> wink_fn_;
   uint32_t free_cid_;
   uint32_t locked_cid_;
   base::OneShotTimer lock_timeout_;
