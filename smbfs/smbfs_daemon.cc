@@ -243,12 +243,14 @@ void SmbFsDaemon::OnCredentialsSetup(mojom::MountOptionsPtr options,
 
   auto fs = std::make_unique<SmbFilesystem>(options->share_path, uid_, gid_,
                                             std::move(credential));
-  SmbFilesystem::ConnectError error = fs->EnsureConnected();
-  if (error != SmbFilesystem::ConnectError::kOk) {
-    LOG(ERROR) << "Unable to connect to SMB share " << options->share_path
-               << ": " << error;
-    callback.Run(ConnectErrorToMountError(error), nullptr);
-    return;
+  if (!options->skip_connect) {
+    SmbFilesystem::ConnectError error = fs->EnsureConnected();
+    if (error != SmbFilesystem::ConnectError::kOk) {
+      LOG(ERROR) << "Unable to connect to SMB share " << options->share_path
+                 << ": " << error;
+      callback.Run(ConnectErrorToMountError(error), nullptr);
+      return;
+    }
   }
 
   if (!StartFuseSession(std::move(fs))) {
