@@ -946,6 +946,9 @@ bool Sender::RequestToSendCrash(const CrashDetails& details) {
   std::string product_name;
   std::unique_ptr<brillo::http::FormData> form_data =
       CreateCrashFormData(details, &product_name);
+  if (!form_data) {
+    return false;
+  }
 
   if (test_mode_) {
     LOG(WARNING) << kTestModeSuccessful;
