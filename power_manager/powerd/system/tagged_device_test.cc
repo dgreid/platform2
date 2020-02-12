@@ -13,7 +13,7 @@ namespace system {
 
 TEST(TaggedDeviceTest, HasTag) {
   TaggedDevice tagged_device("/sys/devices/a", base::FilePath("/sys/devices/a"),
-                             "foo bar");
+                             "test_role", "foo bar");
   EXPECT_TRUE(tagged_device.HasTag("foo"));
   EXPECT_TRUE(tagged_device.HasTag("bar"));
   EXPECT_FALSE(tagged_device.HasTag("baz"));

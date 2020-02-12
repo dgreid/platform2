@@ -31,8 +31,10 @@ void UdevStub::NotifySubsystemObservers(const UdevEvent& event) {
 
 void UdevStub::TaggedDeviceChanged(const std::string& syspath,
                                    const base::FilePath& wakeup_device_path,
+                                   const std::string& role,
                                    const std::string& tags) {
-  tagged_devices_[syspath] = TaggedDevice(syspath, wakeup_device_path, tags);
+  tagged_devices_[syspath] =
+      TaggedDevice(syspath, wakeup_device_path, role, tags);
   const TaggedDevice& device = tagged_devices_[syspath];
   for (UdevTaggedDeviceObserver& observer : tagged_device_observers_)
     observer.OnTaggedDeviceChanged(device);

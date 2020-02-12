@@ -130,6 +130,7 @@ class Udev : public UdevInterface {
   void HandleTaggedDevice(UdevEvent::Action action, struct udev_device* dev);
   void TaggedDeviceChanged(const std::string& syspath,
                            const base::FilePath& wakeup_device_path,
+                           const std::string& role,
                            const std::string& tags);
   void TaggedDeviceRemoved(const std::string& syspath);
 

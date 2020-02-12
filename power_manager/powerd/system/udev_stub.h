@@ -37,6 +37,7 @@ class UdevStub : public UdevInterface {
   // UdevTaggedDeviceObservers and modifies the internal list of tagged devices.
   void TaggedDeviceChanged(const std::string& syspath,
                            const base::FilePath& wakeup_device_path,
+                           const std::string& role,
                            const std::string& tags);
   void TaggedDeviceRemoved(const std::string& syspath);
 

@@ -20,10 +20,12 @@ class TaggedDevice {
   TaggedDevice();
   TaggedDevice(const std::string& syspath,
                const base::FilePath& wakeup_device_path,
+               const std::string& role,
                const std::string& tags);
   ~TaggedDevice();
 
   const std::string& syspath() const { return syspath_; }
+  const std::string& role() const { return role_; }
   const base::FilePath& wakeup_device_path() const {
     return wakeup_device_path_;
   }
@@ -34,6 +36,9 @@ class TaggedDevice {
 
  private:
   std::string syspath_;
+  // POWERD_ROLE ENV variable set by |90-powerd-id.rules| based on several udev
+  // attributes. Identifies the type of input device.
+  std::string role_;
   // Directory (of itself/ancestor) with power/wakeup property.
   base::FilePath wakeup_device_path_;
   std::unordered_set<std::string> tags_;
