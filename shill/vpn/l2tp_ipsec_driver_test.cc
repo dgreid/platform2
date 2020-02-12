@@ -560,7 +560,7 @@ TEST_F(L2TPIPSecDriverTest, SpawnL2TPIPSecVPNInMinijail) {
   // though, because ExternalTask is constructed during the
   // call to driver_->Connect.
   EXPECT_CALL(process_manager_,
-              StartProcessInMinijail(_, _, _, _, _, _, _, true, _))
+              StartProcessInMinijail(_, _, _, _, _, _, _, _, true, _))
       .WillOnce(Return(-1))
       .WillOnce(Return(1));
 

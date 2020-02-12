@@ -317,7 +317,7 @@ bool OpenVPNDriver::SpawnOpenVPN() {
     uint64_t capmask = CAP_TO_MASK(CAP_NET_ADMIN) | CAP_TO_MASK(CAP_NET_RAW) |
                        CAP_TO_MASK(CAP_SETUID) | CAP_TO_MASK(CAP_SETGID);
     openvpn_pid = process_manager()->StartProcessInMinijail(
-        FROM_HERE, base::FilePath(kOpenVPNPath), args, "shill", "shill",
+        FROM_HERE, base::FilePath(kOpenVPNPath), args, {}, "shill", "shill",
         capmask, true, true,
         base::Bind(&OpenVPNDriver::OnOpenVPNDied, base::Unretained(this)));
     if (openvpn_pid == -1) {

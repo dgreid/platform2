@@ -233,7 +233,7 @@ bool Throttler::StartTCForCommands(const std::vector<std::string>& commands) {
     &tc_stdin_, nullptr, nullptr
   };
   tc_pid_ = process_manager_->StartProcessInMinijailWithPipes(
-      FROM_HERE, base::FilePath(kTCPath), args, kTCUser, kTCGroup, capmask,
+      FROM_HERE, base::FilePath(kTCPath), args, {}, kTCUser, kTCGroup, capmask,
       false, false, base::Bind(&Throttler::OnProcessExited, AsWeakPtr()),
       std_fds);
 

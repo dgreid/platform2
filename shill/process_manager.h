@@ -63,7 +63,6 @@ class ProcessManager {
       const base::Callback<void(int)>& exit_callback);
 
   // Similar to StartProcess(), with the following differences:
-  // - environment variables are not supported (no need yet)
   // - terminate_with_parent is not supported (may be non-trivial)
   // - the child process will run as |user| and |group|
   // - the |capmask| argument can be used to provide the child process
@@ -75,6 +74,7 @@ class ProcessManager {
       const base::Location& spawn_source,
       const base::FilePath& program,
       const std::vector<std::string>& arguments,
+      const std::map<std::string, std::string>& environment,
       const std::string& user,
       const std::string& group,
       uint64_t capmask,
@@ -82,7 +82,7 @@ class ProcessManager {
       bool close_nonstd_fds,
       const base::Callback<void(int)>& exit_callback) {
     return StartProcessInMinijailWithPipes(
-        spawn_source, program, arguments, user, group, capmask,
+        spawn_source, program, arguments, environment, user, group, capmask,
         inherit_supplementary_groups, close_nonstd_fds, exit_callback,
         (struct std_file_descriptors){nullptr, nullptr, nullptr});
   }
@@ -96,6 +96,7 @@ class ProcessManager {
       const base::Location& spawn_source,
       const base::FilePath& program,
       const std::vector<std::string>& arguments,
+      const std::map<std::string, std::string>& environment,
       const std::string& user,
       const std::string& group,
       uint64_t capmask,

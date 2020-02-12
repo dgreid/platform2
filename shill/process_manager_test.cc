@@ -4,6 +4,7 @@
 
 #include "shill/process_manager.h"
 
+#include <map>
 #include <memory>
 #include <string>
 #include <utility>
@@ -21,6 +22,7 @@ using base::Callback;
 using base::CancelableClosure;
 using base::Closure;
 using base::Unretained;
+using std::map;
 using std::string;
 using std::vector;
 using testing::_;
@@ -112,6 +114,23 @@ MATCHER_P2(IsProcessArgs, program, args, "") {
   return arg[index] == nullptr;
 }
 
+MATCHER_P(IsProcessEnv, env, "") {
+  map<string, string> actual;
+  for (size_t i = 0; i < arg.size() - 1; ++i) {
+    char* str = arg[i];
+    char* eq = strchr(str, '=');
+    if (!eq) {
+      return false;
+    }
+
+    if (!actual.insert(std::make_pair(string(str, eq), string(eq + 1)))
+             .second) {
+      return false;
+    }
+  }
+  return env == actual && arg.back() == nullptr;
+}
+
 TEST_F(ProcessManagerTest, WatchedProcessExited) {
   const pid_t kPid = 123;
   const int kExitStatus = 1;
@@ -139,6 +158,10 @@ TEST_F(ProcessManagerTest,
        StartProcessInMinijailWithPipesReturnsPidAndWatchesChild) {
   const string kProgram = "/usr/bin/dump";
   const vector<string> kArgs = {"-b", "-g"};
+  const map<string, string> kEnv = {
+      {"one", "1"},
+      {"two", "2"},
+  };
   const string kUser = "user";
   const string kGroup = "group";
   const uint64_t kCapMask = 1;
@@ -153,17 +176,18 @@ TEST_F(ProcessManagerTest,
   EXPECT_CALL(minijail_, ResetSignalMask(_)).Times(1);
   EXPECT_CALL(minijail_, CloseOpenFds(_)).Times(1);
   EXPECT_CALL(minijail_, PreserveFd(_, _, _)).Times(3);
-  EXPECT_CALL(minijail_,
-              RunPipesAndDestroy(_,  // minijail*
-                                 IsProcessArgs(kProgram, kArgs),
-                                 _,  // pid_t*
-                                 &stdin_fd, &stdout_fd, &stderr_fd))
-      .WillOnce(DoAll(SetArgPointee<2>(kPid), Return(true)));
+  EXPECT_CALL(
+      minijail_,
+      RunEnvPipesAndDestroy(_,  // minijail*
+                            IsProcessArgs(kProgram, kArgs), IsProcessEnv(kEnv),
+                            _,  // pid_t*
+                            &stdin_fd, &stdout_fd, &stderr_fd))
+      .WillOnce(DoAll(SetArgPointee<3>(kPid), Return(true)));
   struct std_file_descriptors std_fds {
     &stdin_fd, &stdout_fd, &stderr_fd
   };
   pid_t actual_pid = process_manager_->StartProcessInMinijailWithPipes(
-      FROM_HERE, base::FilePath(kProgram), kArgs, kUser, kGroup, kCapMask,
+      FROM_HERE, base::FilePath(kProgram), kArgs, kEnv, kUser, kGroup, kCapMask,
       false, true, Callback<void(int)>(), std_fds);
   EXPECT_EQ(kPid, actual_pid);
   AssertNonEmptyWatchedProcesses();
@@ -173,6 +197,10 @@ TEST_F(ProcessManagerTest,
        StartProcessInMinijailWithPipesHandlesFailureOfDropRoot) {
   const string kProgram = "/usr/bin/dump";
   const vector<string> kArgs = {"-b", "-g"};
+  const map<string, string> kEnv = {
+      {"one", "1"},
+      {"two", "2"},
+  };
   const string kUser = "user";
   const string kGroup = "group";
   const uint64_t kCapMask = 1;
@@ -180,11 +208,12 @@ TEST_F(ProcessManagerTest,
   EXPECT_CALL(minijail_, DropRoot(_, StrEq(kUser), StrEq(kGroup)))
       .WillOnce(Return(false));
   EXPECT_CALL(minijail_,
-              RunPipesAndDestroy(_, IsProcessArgs(kProgram, kArgs), _, _, _, _))
+              RunEnvPipesAndDestroy(_, IsProcessArgs(kProgram, kArgs),
+                                    IsProcessEnv(kEnv), _, _, _, _))
       .Times(0);
   struct std_file_descriptors std_fds = {nullptr, nullptr, nullptr};
   pid_t actual_pid = process_manager_->StartProcessInMinijailWithPipes(
-      FROM_HERE, base::FilePath(kProgram), kArgs, kUser, kGroup, kCapMask,
+      FROM_HERE, base::FilePath(kProgram), kArgs, {}, kUser, kGroup, kCapMask,
       false, false, Callback<void(int)>(), std_fds);
   EXPECT_EQ(-1, actual_pid);
   AssertEmptyWatchedProcesses();
@@ -194,6 +223,10 @@ TEST_F(ProcessManagerTest,
        StartProcessInMinijailWithPipesHandlesFailureOfRunAndDestroy) {
   const string kProgram = "/usr/bin/dump";
   const vector<string> kArgs = {"-b", "-g"};
+  const map<string, string> kEnv = {
+      {"one", "1"},
+      {"two", "2"},
+  };
   const string kUser = "user";
   const string kGroup = "group";
   const uint64_t kCapMask = 1;
@@ -202,11 +235,12 @@ TEST_F(ProcessManagerTest,
       .WillOnce(Return(true));
   EXPECT_CALL(minijail_, UseCapabilities(_, kCapMask)).Times(1);
   EXPECT_CALL(minijail_,
-              RunPipesAndDestroy(_, IsProcessArgs(kProgram, kArgs), _, _, _, _))
+              RunEnvPipesAndDestroy(_, IsProcessArgs(kProgram, kArgs),
+                                    IsProcessEnv(kEnv), _, _, _, _))
       .WillOnce(Return(false));
   struct std_file_descriptors std_fds = {nullptr, nullptr, nullptr};
   pid_t actual_pid = process_manager_->StartProcessInMinijailWithPipes(
-      FROM_HERE, base::FilePath(kProgram), kArgs, kUser, kGroup, kCapMask,
+      FROM_HERE, base::FilePath(kProgram), kArgs, kEnv, kUser, kGroup, kCapMask,
       false, false, Callback<void(int)>(), std_fds);
   EXPECT_EQ(-1, actual_pid);
   AssertEmptyWatchedProcesses();

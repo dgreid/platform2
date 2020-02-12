@@ -175,8 +175,8 @@ bool DHCPConfig::Start() {
                      CAP_TO_MASK(CAP_NET_BROADCAST) |
                      CAP_TO_MASK(CAP_NET_ADMIN) | CAP_TO_MASK(CAP_NET_RAW);
   pid_t pid = process_manager_->StartProcessInMinijail(
-      FROM_HERE, base::FilePath(kDHCPCDPath), args, kDHCPCDUser, kDHCPCDGroup,
-      capmask, false, false,
+      FROM_HERE, base::FilePath(kDHCPCDPath), args, {}, kDHCPCDUser,
+      kDHCPCDGroup, capmask, false, false,
       base::Bind(&DHCPConfig::OnProcessExited, weak_ptr_factory_.GetWeakPtr()));
   if (pid < 0) {
     return false;

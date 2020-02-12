@@ -1220,7 +1220,7 @@ TEST_F(OpenVPNDriverTest, SpawnOpenVPNInMinijail) {
 
   const int kPID = 234678;
   EXPECT_CALL(process_manager_,
-              StartProcessInMinijail(_, _, _, _, _, _, _, true, _))
+              StartProcessInMinijail(_, _, _, _, _, _, _, _, true, _))
       .WillOnce(Return(-1))
       .WillOnce(Return(kPID));
   EXPECT_FALSE(driver_->SpawnOpenVPN());

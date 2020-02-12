@@ -99,7 +99,7 @@ bool ExternalTask::StartInMinijail(const FilePath& program,
                                           task_path_variable->second.c_str()));
 
   pid_t pid = process_manager_->StartProcessInMinijail(
-      FROM_HERE, program, *arguments, user, group, mask,
+      FROM_HERE, program, *arguments, {}, user, group, mask,
       inherit_supplementary_groups, close_nonstd_fds,
       base::Bind(&ExternalTask::OnTaskDied, base::Unretained(this)));
 

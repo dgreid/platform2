@@ -121,6 +121,7 @@ pid_t ProcessManager::StartProcessInMinijailWithPipes(
     const base::Location& spawn_source,
     const base::FilePath& program,
     const std::vector<std::string>& arguments,
+    const map<string, string>& environment,
     const std::string& user,
     const std::string& group,
     uint64_t capmask,
@@ -136,6 +137,17 @@ pid_t ProcessManager::StartProcessInMinijailWithPipes(
     args.push_back(const_cast<char*>(arg.c_str()));
   }
   args.push_back(nullptr);
+
+  vector<string> env_strings;
+  for (const auto& var : environment) {
+    env_strings.push_back(
+        base::StringPrintf("%s=%s", var.first.c_str(), var.second.c_str()));
+  }
+  vector<char*> env;
+  for (const auto& str : env_strings) {
+    env.push_back(const_cast<char*>(str.c_str()));
+  }
+  env.push_back(nullptr);
 
   struct minijail* jail = minijail_->New();
 
@@ -160,8 +172,8 @@ pid_t ProcessManager::StartProcessInMinijailWithPipes(
   }
 
   pid_t pid;
-  if (!minijail_->RunPipesAndDestroy(jail, args, &pid, std_fds.stdin_fd,
-                                     std_fds.stdout_fd, std_fds.stderr_fd)) {
+  if (!minijail_->RunEnvPipesAndDestroy(jail, args, env, &pid, std_fds.stdin_fd,
+                                        std_fds.stdout_fd, std_fds.stderr_fd)) {
     LOG(ERROR) << "Unable to spawn " << program.value() << " in a jail.";
     return -1;
   }

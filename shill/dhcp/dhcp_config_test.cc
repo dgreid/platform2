@@ -121,7 +121,7 @@ TEST_F(DHCPConfigTest, InitProxy) {
 
 TEST_F(DHCPConfigTest, StartFail) {
   EXPECT_CALL(process_manager_,
-              StartProcessInMinijail(_, _, _, _, _, _, _, _, _))
+              StartProcessInMinijail(_, _, _, _, _, _, _, _, _, _))
       .WillOnce(Return(-1));
   EXPECT_FALSE(config_->Start());
   EXPECT_EQ(0, config_->pid_);
@@ -144,7 +144,7 @@ TEST_F(DHCPConfigTest, StartWithoutLeaseSuffix) {
   TestDHCPConfigRefPtr config = CreateMockMinijailConfig(kDeviceName);
   EXPECT_CALL(process_manager_,
               StartProcessInMinijail(_, _, IsDHCPCDArgs(!kHasLeaseSuffix), _, _,
-                                     _, _, _, _))
+                                     _, _, _, _, _))
       .WillOnce(Return(-1));
   EXPECT_FALSE(config->Start());
 }
@@ -291,13 +291,13 @@ TEST_F(DHCPConfigTest, ReleaseIPStaticIPWithoutLease) {
 
 TEST_F(DHCPConfigTest, RenewIP) {
   EXPECT_CALL(process_manager_,
-              StartProcessInMinijail(_, _, _, _, _, _, _, _, _))
+              StartProcessInMinijail(_, _, _, _, _, _, _, _, _, _))
       .WillOnce(Return(-1));
   config_->pid_ = 0;
   EXPECT_FALSE(config_->RenewIP());  // Expect a call to Start() if pid_ is 0.
   Mock::VerifyAndClearExpectations(&process_manager_);
   EXPECT_CALL(process_manager_,
-              StartProcessInMinijail(_, _, _, _, _, _, _, _, _))
+              StartProcessInMinijail(_, _, _, _, _, _, _, _, _, _))
       .Times(0);
   EXPECT_TRUE(config_->lease_acquisition_timeout_callback_.IsCancelled());
   config_->lease_expiration_callback_.Reset(base::Bind(&DoNothing));
@@ -345,7 +345,7 @@ TEST_F(DHCPConfigTest, Restart) {
   EXPECT_CALL(process_manager_, StopProcessAndBlock(kPID1))
       .WillOnce(Return(true));
   EXPECT_CALL(process_manager_,
-              StartProcessInMinijail(_, _, _, _, _, _, _, _, _))
+              StartProcessInMinijail(_, _, _, _, _, _, _, _, _, _))
       .WillOnce(Return(kPID2));
   EXPECT_CALL(provider_, BindPID(kPID2, IsRefPtrTo(config_)));
   EXPECT_TRUE(config_->Restart());
@@ -357,7 +357,7 @@ TEST_F(DHCPConfigTest, RestartNoClient) {
   const int kPID = 777;
   EXPECT_CALL(process_manager_, StopProcessAndBlock(_)).Times(0);
   EXPECT_CALL(process_manager_,
-              StartProcessInMinijail(_, _, _, _, _, _, _, _, _))
+              StartProcessInMinijail(_, _, _, _, _, _, _, _, _, _))
       .WillOnce(Return(kPID));
   EXPECT_CALL(provider_, BindPID(kPID, IsRefPtrTo(config_)));
   EXPECT_TRUE(config_->Restart());
@@ -373,7 +373,7 @@ TEST_F(DHCPConfigCallbackTest, StartTimeout) {
   config_->lease_acquisition_timeout_seconds_ = 0;
   config_->proxy_ = std::move(proxy_);
   EXPECT_CALL(process_manager_,
-              StartProcessInMinijail(_, _, _, _, _, _, _, _, _))
+              StartProcessInMinijail(_, _, _, _, _, _, _, _, _, _))
       .WillOnce(Return(0));
   config_->Start();
   config_->dispatcher_->DispatchPendingEvents();
