@@ -285,9 +285,7 @@ void U2fHid::CmdInit(uint32_t cid, const std::string& payload) {
   msg.AddByte(0);
   msg.AddByte(0);
   // Append Capability flags
-  // TODO(vpalatin) the Wink command is only outputting a trace for now,
-  // do a real action or remove it.
-  msg.AddByte(kCapFlagLock | kCapFlagWink);
+  msg.AddByte(kCapFlagLock);
 
   std::string report;
   msg.BuildReport(0, &report);
