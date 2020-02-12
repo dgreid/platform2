@@ -110,9 +110,16 @@ class ConnectionDelegateTest : public ::testing::Test {
                           reinterpret_cast<struct sockaddr*>(&server_addr),
                           sizeof(server_addr)));
 
-    server_fd_ =
-        accept(servsock, reinterpret_cast<struct sockaddr*>(&client_addr),
-               &client_len);
+    for (int i = 0; i < 3; ++i) {
+      server_fd_ =
+          accept(servsock, reinterpret_cast<struct sockaddr*>(&client_addr),
+                 &client_len);
+      if (server_fd_ == -1 && errno == EAGAIN) {
+        sleep(1);
+        continue;
+      }
+      break;
+    }
     if (server_fd_ == -1)
       PLOG(ERROR) << "Accepting the client connection.";
     ASSERT_NE(server_fd_, -1);
