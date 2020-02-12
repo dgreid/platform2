@@ -65,6 +65,7 @@ type cros_esif_ufd_exec, exec_type, file_type, cros_file_type, cros_system_file_
 type cros_healthd_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_huddly_monitor_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_hwclock_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
+type cros_imageloader_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_jetstream_update_stats_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_journald_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_logger_exec, exec_type, file_type, cros_file_type, cros_system_file_type;

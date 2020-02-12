@@ -110,6 +110,7 @@ include(sepolicy/file_contexts/sysfs_contexts)
 /usr/sbin/daisydog              u:object_r:cros_daisydog_exec:s0
 /usr/sbin/dlcservice            u:object_r:cros_dlcservice_exec:s0
 /usr/sbin/huddly-monitor         u:object_r:cros_huddly_monitor_exec:s0
+/usr/sbin/imageloader           u:object_r:cros_imageloader_exec:s0
 /usr/sbin/jetstream-update-stats u:object_r:cros_jetstream_update_stats_exec:s0
 /usr/sbin/mimo-monitor          u:object_r:cros_mimo_monitor_exec:s0
 /usr/sbin/mtpd                  u:object_r:cros_mtpd_exec:s0
