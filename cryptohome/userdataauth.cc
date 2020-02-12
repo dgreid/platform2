@@ -216,9 +216,8 @@ bool UserDataAuth::Initialize() {
   // Seed /dev/urandom
   SeedUrandom();
 
-  // Initialize the state used by LowDiskCallback(), both variables are set to
-  // the current time.
-  last_auto_cleanup_time_ = platform_->GetCurrentTime();
+  // Initialize the state used by LowDiskCallback(). Last user activity
+  // timestamp is set to the current time.
   last_user_activity_timestamp_time_ = last_auto_cleanup_time_;
 
   if (!disable_threading_) {
@@ -2483,6 +2482,7 @@ void UserDataAuth::ResetDictionaryAttackMitigation() {
 }
 
 void UserDataAuth::DoAutoCleanup() {
+  last_auto_cleanup_time_ = platform_->GetCurrentTime();
   homedirs_->FreeDiskSpace();
   // Reset the dictionary attack counter if possible and necessary.
   ResetDictionaryAttackMitigation();
@@ -2510,12 +2510,12 @@ void UserDataAuth::LowDiskCallback() {
 
   // We shouldn't repeat cleanups on every minute if the disk space
   // stays below the threshold. Trigger it only if there was no notification
-  // previously.
+  // previously or if enterprise owned and free space can be reclaimed.
   const bool early_cleanup_needed =
-      low_disk_space_signal_emitted && !low_disk_space_signal_was_emitted_;
+      low_disk_space_signal_emitted && (!low_disk_space_signal_was_emitted_ ||
+                                        homedirs_->IsFreableDiskSpaceAvaible());
 
   if (time_for_auto_cleanup || early_cleanup_needed) {
-    last_auto_cleanup_time_ = current_time;
     DoAutoCleanup();
   }
 
