@@ -2671,9 +2671,28 @@ void LegacyCryptohomeInterfaceAdaptor::CheckHealth(
     std::unique_ptr<
         brillo::dbus_utils::DBusMethodResponse<cryptohome::BaseReply>> response,
     const cryptohome::CheckHealthRequest& in_request) {
-  response->ReplyWithError(FROM_HERE, brillo::errors::dbus::kDomain,
-                           DBUS_ERROR_NOT_SUPPORTED,
-                           "Method unimplemented yet");
+  auto response_shared =
+      std::make_shared<SharedDBusMethodResponse<cryptohome::BaseReply>>(
+          std::move(response));
+
+  user_data_auth::CheckHealthRequest request;
+  misc_proxy_->CheckHealthAsync(
+      request,
+      base::Bind(&LegacyCryptohomeInterfaceAdaptor::CheckHealthOnSuccess,
+                 base::Unretained(this), response_shared),
+      base::Bind(&LegacyCryptohomeInterfaceAdaptor::ForwardError<
+                     cryptohome::BaseReply>,
+                 base::Unretained(this), response_shared));
+}
+
+void LegacyCryptohomeInterfaceAdaptor::CheckHealthOnSuccess(
+    std::shared_ptr<SharedDBusMethodResponse<cryptohome::BaseReply>> response,
+    const user_data_auth::CheckHealthReply& reply) {
+  cryptohome::BaseReply result;
+  CheckHealthReply* reply_extension =
+      result.MutableExtension(CheckHealthReply::reply);
+  reply_extension->set_requires_powerwash(reply.requires_powerwash());
+  response->Return(result);
 }
 
 void LegacyCryptohomeInterfaceAdaptor::OnDircryptoMigrationProgressSignal(

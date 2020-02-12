@@ -2381,6 +2381,11 @@ bool UserDataAuth::GetRsuDeviceId(std::string* rsu_device_id) {
   return tpm_->GetRsuDeviceId(rsu_device_id);
 }
 
+bool UserDataAuth::RequiresPowerwash() {
+  const bool is_powerwash_required = !crypto_->CanUnsealWithUserAuth();
+  return is_powerwash_required;
+}
+
 user_data_auth::CryptohomeErrorCode
 UserDataAuth::LockToSingleUserMountUntilReboot(
     const cryptohome::AccountIdentifier& account_id) {

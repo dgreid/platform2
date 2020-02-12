@@ -418,6 +418,10 @@ class CryptohomeMiscAdaptor
       std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
           user_data_auth::GetRsuDeviceIdReply>> response,
       const user_data_auth::GetRsuDeviceIdRequest& in_request) override;
+  void CheckHealth(
+      std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
+          user_data_auth::CheckHealthReply>> response,
+      const user_data_auth::CheckHealthRequest& in_request) override;
 
  private:
   brillo::dbus_utils::DBusObject* dbus_object_;

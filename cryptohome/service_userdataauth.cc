@@ -779,4 +779,13 @@ void CryptohomeMiscAdaptor::GetRsuDeviceId(
   response->Return(reply);
 }
 
+void CryptohomeMiscAdaptor::CheckHealth(
+    std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
+        user_data_auth::CheckHealthReply>> response,
+    const user_data_auth::CheckHealthRequest& in_request) {
+  user_data_auth::CheckHealthReply reply;
+  reply.set_requires_powerwash(service_->RequiresPowerwash());
+  response->Return(reply);
+}
+
 }  // namespace cryptohome

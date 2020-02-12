@@ -802,6 +802,9 @@ class LegacyCryptohomeInterfaceAdaptor
   void GetRsuDeviceIdOnSuccess(
       std::shared_ptr<SharedDBusMethodResponse<cryptohome::BaseReply>> response,
       const user_data_auth::GetRsuDeviceIdReply& reply);
+  void CheckHealthOnSuccess(
+      std::shared_ptr<SharedDBusMethodResponse<cryptohome::BaseReply>> response,
+      const user_data_auth::CheckHealthReply& reply);
 
   // This method forwards the error received from calling the new interface back
   // to the old interface

@@ -357,6 +357,9 @@ class UserDataAuth {
   // set to the RSU Device ID.
   bool GetRsuDeviceId(std::string* rsu_device_id);
 
+  // Return true iff powerwash is required. i.e. cannot unseal with user auth.
+  bool RequiresPowerwash();
+
   // Returns true if and only if the loaded device policy specifies an owner
   // user.
   bool OwnerUserExists();

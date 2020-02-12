@@ -549,5 +549,18 @@ do.
                     value="user_data_auth::GetRsuDeviceIdReply" />
       </arg>
     </method>
+
+    <method name="CheckHealth">
+      <annotation name="org.chromium.DBus.Method.Kind"
+                  value="async"/>
+      <arg type="ay" name="request" direction="in">
+        <annotation name="org.chromium.DBus.Argument.ProtobufClass"
+                    value="user_data_auth::CheckHealthRequest" />
+      </arg>
+      <arg type="ay" name="reply" direction="out">
+        <annotation name="org.chromium.DBus.Argument.ProtobufClass"
+                    value="user_data_auth::CheckHealthReply" />
+      </arg>
+    </method>
   </interface>
 </node>
