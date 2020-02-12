@@ -303,6 +303,9 @@ class Sender {
   // Makes sure we have the DBus object initialized and connected.
   void EnsureDBusIsReady();
 
+  // Returns true if we have consent to send crashes to Google.
+  bool HasCrashUploadingConsent();
+
   // Looks through |keys| in the os-release data using brillo::OsReleaseReader.
   // Keys are searched in order until a value is found. Returns the value in
   // the Optional if found, otherwise the Optional is empty.

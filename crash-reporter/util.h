@@ -35,6 +35,9 @@ bool IsTestImage();
 // Returns true if running on an official image.
 bool IsOfficialImage();
 
+// Returns true if we are mocking metrics consent as granted.
+bool HasMockConsent();
+
 // Change group ownership of "file" to "group", and grant g+rw (optionally x).
 bool SetGroupAndPermissions(const base::FilePath& file,
                             const char* group,

@@ -52,7 +52,7 @@ bool always_allow_feedback = false;
 MetricsLibrary s_metrics_lib;
 
 bool IsFeedbackAllowed() {
-  if (always_allow_feedback)
+  if (always_allow_feedback || util::HasMockConsent())
     return true;
 
   VmSupport* vm_support = VmSupport::Get();

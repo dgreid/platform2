@@ -83,6 +83,15 @@ bool IsOfficialImage() {
   return description.find("Official") != std::string::npos;
 }
 
+bool HasMockConsent() {
+  // Don't bypass user consent on real Chromebooks; this is for testing.
+  if (IsOfficialImage()) {
+    return false;
+  }
+  return base::PathExists(
+      paths::GetAt(paths::kSystemRunStateDirectory, paths::kMockConsent));
+}
+
 bool SetGroupAndPermissions(const base::FilePath& file,
                             const char* group,
                             bool execute) {

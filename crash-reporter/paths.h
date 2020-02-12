@@ -52,11 +52,18 @@ constexpr char kFallbackUserCrashDirectory[] = "/home/chronos/crash";
 constexpr char kLeaveCoreFile[] = "/root/.leave_core";
 
 // Base name of file whose existence indicates a crash test is currently
-// running.
+// running. File will be in directory kSystemRunStateDirectory.
 // This is used in integration tests, including tast.platform.KernelWarning and
 // tast.platform.ServiceFailure. (see local/crash/crash.go in the tast-tests
 // repo)
 constexpr char kCrashTestInProgress[] = "crash-test-in-progress";
+
+// Base name of file whose existence indicates that we should treat consent as
+// granted. File will be in directory kSystemRunStateDirectory.
+// This is used in integration tests, including tast.platform.KernelWarning and
+// tast.platform.ServiceFailure. (see local/crash/crash.go in the tast-tests
+// repo)
+constexpr char kMockConsent[] = "mock-consent";
 
 // Base name of file whose existence indicates that the anomaly detector is
 // ready for anomalies.

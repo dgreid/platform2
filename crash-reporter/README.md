@@ -346,10 +346,14 @@ runtime details here.
 *   `/run/crash_reporter/`: Used by all crash-reporter tools (i.e. both
     [crash_reporter] and [crash_sender]) for runtime state.
     *This should be moved to `/run/crash-reporter/` as the project name.*
-*   `/run/crash_reporter/crash-test-in-progress`: Used by autotests to tell
-    tools are being exercised by autotest and to adjust behavior accordingly.
-*   `/run/crash_reporter/mock-crash-sending`: Used by autotests to tell
-    [crash_sender] to mock out its behavior for testing purposes.
+*   `/run/crash_reporter/crash-test-in-progress`: Used by integration tests to
+    tell tools they are being exercised by an integration test that tests the
+    crash system itself and to adjust their behavior accordingly.
+*   `/run/crash_reporter/mock-crash-sending`: Used by integration tests to tell
+    [crash_sender] to mock out the actual upload for testing purposes.
+*   `/run/crash_reporter/mock-consent`: Used by integration tests to tell
+    the crash system to act as if the user had given consent for crashes to be
+    collected and uploaded.
 *   `/run/lock/crash_sender`: Used by [crash_sender] to guarantee only one
     upload instance is active at a time.
 

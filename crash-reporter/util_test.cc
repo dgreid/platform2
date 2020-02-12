@@ -205,6 +205,13 @@ TEST_F(CrashCommonUtilTest, IsOfficialImage) {
   EXPECT_TRUE(IsOfficialImage());
 }
 
+TEST_F(CrashCommonUtilTest, HasMockConsent) {
+  EXPECT_FALSE(HasMockConsent());
+  ASSERT_TRUE(test_util::CreateFile(
+      paths::GetAt(paths::kSystemRunStateDirectory, paths::kMockConsent), ""));
+  EXPECT_TRUE(HasMockConsent());
+}
+
 TEST_F(CrashCommonUtilTest, GetOsTimestamp) {
   // If we can't read /etc/lsb-release then we should be returning the null
   // time.

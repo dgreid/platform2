@@ -577,6 +577,14 @@ base::File Sender::AcquireLockFileOrDie() {
   return lock_file;
 }
 
+bool Sender::HasCrashUploadingConsent() {
+  if (util::HasMockConsent()) {
+    return true;
+  }
+
+  return metrics_lib_->AreMetricsEnabled();
+}
+
 Sender::Action Sender::ChooseAction(const base::FilePath& meta_file,
                                     std::string* reason,
                                     CrashInfo* info) {
@@ -585,21 +593,22 @@ Sender::Action Sender::ChooseAction(const base::FilePath& meta_file,
     return kRemove;
   }
 
-  // AreMetricsEnabled() returns false in guest mode, thus IsGuestMode() should
-  // be checked first (otherwise, all crash files are deleted in guest mode).
+  // HasCrashUploadingConsent() returns false in guest mode, thus IsGuestMode()
+  // should be checked first (otherwise, all crash files are deleted in guest
+  // mode).
   //
   // Note that this check is slightly racey, but should be rare enough for us
   // not to care:
   //
   // - crash_sender checks IsGuestMode() and it returns false
   // - User logs in to guest mode
-  // - crash_sender checks AreMetricsEnabled() and it's now false
+  // - crash_sender checks HasCrashUploadingConsent() and it's now false
   // - Reports are deleted
   if (metrics_lib_->IsGuestMode()) {
     *reason = "Crash sending delayed due to guest mode";
     return kIgnore;
   }
-  if (!metrics_lib_->AreMetricsEnabled()) {
+  if (!HasCrashUploadingConsent()) {
     *reason = "Crash reporting is disabled";
     return kRemove;
   }
@@ -752,7 +761,7 @@ void Sender::SendCrashes(const std::vector<MetaFile>& crash_meta_files) {
     // max_spread_time_ between sends. We only need to check if metrics are
     // enabled and not guest mode because in guest mode, it always indicates
     // that metrics are disabled.
-    if (!metrics_lib_->AreMetricsEnabled()) {
+    if (!HasCrashUploadingConsent()) {
       LOG(INFO) << "Metrics disabled or guest mode entered, delaying crash "
                 << "sending";
       return;
