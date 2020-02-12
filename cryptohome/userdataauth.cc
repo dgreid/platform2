@@ -1450,6 +1450,7 @@ void UserDataAuth::ContinueMountWithCredentials(
 
   if (!status) {
     reply.set_error(MountErrorToCryptohomeError(code));
+    ResetDictionaryAttackMitigation();
   }
   if (code == MOUNT_ERROR_RECREATED) {
     // MOUNT_ERROR_RECREATED is not actually an error, so we'll not reply with
@@ -1673,6 +1674,7 @@ void UserDataAuth::CheckKey(
       // TODO(wad) Should this pass along KEY_NOT_FOUND too?
       std::move(on_done).Run(
           user_data_auth::CRYPTOHOME_ERROR_AUTHORIZATION_KEY_FAILED);
+      ResetDictionaryAttackMitigation();
       return;
     }
 
