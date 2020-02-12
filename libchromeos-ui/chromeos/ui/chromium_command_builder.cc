@@ -229,9 +229,6 @@ bool ChromiumCommandBuilder::SetUpChromium() {
   if (UseFlagIsSet("passive_event_listeners"))
     AddArg("--passive-listeners-default=true");
 
-  if (UseFlagIsSet("disable_cros_video_decoder"))
-    AddFeatureDisableOverride("ChromeosVideoDecoder");
-
   AddArg("--enable-logging");
   AddArg("--log-level=1");
   AddArg("--use-cras");
@@ -532,6 +529,9 @@ void ChromiumCommandBuilder::AddUiFlags() {
 
   if (UseFlagIsSet("native_gpu_memory_buffers"))
     AddArg("--enable-native-gpu-memory-buffers");
+
+  if (UseFlagIsSet("disable_cros_video_decoder"))
+    AddArg("--force-disable-new-accelerated-video-decoder");
 
   // TODO(dcastagna): Get rid of the following code once the proper
   // configuration will be chosen at runtime on DRM atomic boards.
