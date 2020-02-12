@@ -415,7 +415,7 @@ TEST_F(SessionManagerProcessTest, TestAbortedBrowserPidWritten) {
   EXPECT_EQ(kDummyPid, read_pid);
 }
 
-// When the vm_concierge service is running, stop all vms when the session ends.
+// When the vm_concierge service is running, stop all vms when chrome exits.
 TEST_F(SessionManagerProcessTest, StopAllVms) {
   FakeBrowserJob* job = CreateMockJobAndInitManager(true);
   scoped_refptr<dbus::MockObjectProxy> vm_concierge_proxy(
@@ -424,7 +424,7 @@ TEST_F(SessionManagerProcessTest, StopAllVms) {
   manager_->test_api().set_vm_concierge_available(true);
 
   EXPECT_CALL(*vm_concierge_proxy.get(), DoCallMethod(StopAllVmsMethod(), _, _))
-      .Times(AtLeast(1));
+      .Times(2);
 
   ExpectLivenessChecking();
   ExpectOneJobReRun(job, PackSignal(0));
