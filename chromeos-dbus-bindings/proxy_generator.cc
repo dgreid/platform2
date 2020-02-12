@@ -963,7 +963,7 @@ void ProxyGenerator::AddSignalCallbackArg(const Interface::Signal& signal,
   } else {
     string last_argument;
     string prefix{"const base::Callback<void("};
-    for (const auto argument : signal.arguments) {
+    for (const auto& argument : signal.arguments) {
       if (!last_argument.empty()) {
         if (!prefix.empty()) {
           block->AddLineAndPushOffsetTo(
