@@ -115,6 +115,11 @@ makePolicy_Configuration_P1HwSetting_Default() {
         MSize target_rrzo_size = (pParsedAppImageStreamInfo->hasVideo4K)
                                      ? largeYuvStreamSize
                                      : maxYuvStreamSize;
+
+        if (target_rrzo_size.w < sensorSize.w / 4 &&
+            target_rrzo_size.h < sensorSize.h / 4)
+          target_rrzo_size = MSize(sensorSize.w / 4, sensorSize.h / 4);
+
         // align sensor aspect ratio
         if (target_rrzo_size.w * sensorSize.h >
             target_rrzo_size.h * sensorSize.w) {
