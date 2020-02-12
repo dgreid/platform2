@@ -95,9 +95,15 @@ int main(int argc, char** argv) {
     // eCryptfs.
     user_data_auth_daemon.GetUserDataAuth()->set_force_ecryptfs(!direncryption);
 
-    // Initialize the UserDataAuth service.
-    // Note that the initialization should be done after setting the options.
-    CHECK(user_data_auth_daemon.GetUserDataAuth()->Initialize());
+    // Note the startup sequence is as following:
+    // 1. UserDataAuthDaemon constructor => UserDataAuth constructor
+    // 2. UserDataAuthDaemon::OnInit() (called by Daemon::Run())
+    // 3. UserDataAuthDaemon::RegisterDBusObjectAsync() (called by 2.)
+    // 4. UserDataAuth::Initialize() (called by 3.)
+    // 5. UserDataAuth::PostDBusInitialize() (called by 3.)
+    // Daemon::OnInit() needs to be called before Initialize(), because
+    // Initialize() create threads, and thus mess with Daemon's
+    // AsynchronousSignalHandler.
 
     // Start UserDataAuth daemon if the option is selected
     user_data_auth_daemon.Run();

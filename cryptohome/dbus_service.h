@@ -39,6 +39,10 @@ class UserDataAuthDaemon : public brillo::DBusServiceDaemon {
 
   void RegisterDBusObjectsAsync(
       brillo::dbus_utils::AsyncEventSequencer* sequencer) override {
+    // Initialize the UserDataAuth service.
+    // Note that the initialization should be done after setting the options.
+    CHECK(service_->Initialize());
+
     service_->set_dbus(bus_);
 
     service_->PostTaskToMountThread(
