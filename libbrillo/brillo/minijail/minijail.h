@@ -87,6 +87,14 @@ class BRILLO_EXPORT Minijail {
                         int* stdout,
                         int* stderr);
 
+  // minijail_run_env_pid_pipes
+  virtual bool RunEnvPipes(struct minijail* jail,
+                           std::vector<char*> args,
+                           std::vector<char*> env,
+                           pid_t* pid,
+                           int* stdin,
+                           int* stdout,
+                           int* stderr);
   // Run() and Destroy()
   virtual bool RunAndDestroy(struct minijail* jail,
                              std::vector<char*> args,
@@ -110,6 +118,15 @@ class BRILLO_EXPORT Minijail {
                                   int* stdin,
                                   int* stdout,
                                   int* stderr);
+
+  // RunEnvPipes() and Destroy()
+  virtual bool RunEnvPipesAndDestroy(struct minijail* jail,
+                                     std::vector<char*> args,
+                                     std::vector<char*> env,
+                                     pid_t* pid,
+                                     int* stdin,
+                                     int* stdout,
+                                     int* stderr);
 
  protected:
   Minijail();

@@ -120,6 +120,23 @@ bool Minijail::RunPipes(struct minijail* jail,
 #endif  // __ANDROID__
 }
 
+bool Minijail::RunEnvPipes(struct minijail* jail,
+                           vector<char*> args,
+                           vector<char*> env,
+                           pid_t* pid,
+                           int* stdin,
+                           int* stdout,
+                           int* stderr) {
+#if defined(__ANDROID__)
+  return minijail_run_env_pid_pipes_no_preload(jail, args[0], args.data(),
+                                               env.data(), pid, stdin, stdout,
+                                               stderr) == 0;
+#else
+  return minijail_run_env_pid_pipes(jail, args[0], args.data(), env.data(), pid,
+                                    stdin, stdout, stderr) == 0;
+#endif  // __ANDROID__
+}
+
 bool Minijail::RunAndDestroy(struct minijail* jail,
                              vector<char*> args,
                              pid_t* pid) {
@@ -152,6 +169,18 @@ bool Minijail::RunPipesAndDestroy(struct minijail* jail,
                                   int* stdout,
                                   int* stderr) {
   bool res = RunPipes(jail, args, pid, stdin, stdout, stderr);
+  Destroy(jail);
+  return res;
+}
+
+bool Minijail::RunEnvPipesAndDestroy(struct minijail* jail,
+                                     vector<char*> args,
+                                     vector<char*> env,
+                                     pid_t* pid,
+                                     int* stdin,
+                                     int* stdout,
+                                     int* stderr) {
+  bool res = RunEnvPipes(jail, args, env, pid, stdin, stdout, stderr);
   Destroy(jail);
   return res;
 }

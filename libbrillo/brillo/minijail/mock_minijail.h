@@ -44,6 +44,20 @@ class MockMinijail : public brillo::Minijail {
               (struct minijail*, std::vector<char*>, int*),
               (override));
   MOCK_METHOD(bool,
+              RunPipes,
+              (struct minijail*, std::vector<char*>, pid_t*, int*, int*, int*),
+              (override));
+  MOCK_METHOD(bool,
+              RunEnvPipes,
+              (struct minijail*,
+               std::vector<char*>,
+               std::vector<char*>,
+               pid_t*,
+               int*,
+               int*,
+               int*),
+              (override));
+  MOCK_METHOD(bool,
               RunAndDestroy,
               (struct minijail*, std::vector<char*>, pid_t*),
               (override));
@@ -58,6 +72,16 @@ class MockMinijail : public brillo::Minijail {
   MOCK_METHOD(bool,
               RunPipesAndDestroy,
               (struct minijail*, std::vector<char*>, pid_t*, int*, int*, int*),
+              (override));
+  MOCK_METHOD(bool,
+              RunEnvPipesAndDestroy,
+              (struct minijail*,
+               std::vector<char*>,
+               std::vector<char*>,
+               pid_t*,
+               int*,
+               int*,
+               int*),
               (override));
 
  private:
