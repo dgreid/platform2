@@ -223,13 +223,11 @@ requests (e.g. from Chrome):
 2. CreateGraphExecutorResult: request to create graph executor for your model.
 3. ExecuteResult: request to execute your model.
 
-For each request, there are three **ResourceName** corresponding to
-three computer resources:
+For each request, there are two **ResourceName** corresponding to two computer
+resources:
 
 1. CpuTimeMicrosec: cpu time in microseconds used in handling the request.
-2. ElapsedTimeMicrosec: wall-clock time in microseconds used in handling the
-   request.
-3. TotalMemoryDeltaKb: memory usage incurred by handling the request in Kb.
+2. TotalMemoryDeltaKb: memory usage incurred by handling the request in Kb.
 
 
 For the enum histograms, the name format is,

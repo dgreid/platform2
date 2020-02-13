@@ -26,12 +26,11 @@ namespace ml {
 
 // Performs UMA metrics logging for model loading (LoadBuiltinModel or
 // LoadFlatBufferModel), CreateGraphExecutor and Execute. Metrics includes
-// events(enumerators defined by RequestEventEnum), memory_usage, elapsed_time
-// and cpu_time. RequestEventEnum is an enum class which defines different
-// events for some specific actions, currently we reuse the enum classes defined
-// in mojoms. The enum class generally contains an OK and several different
-// Errors, besides, there should be a kMax which shares the value of the highest
-// enumerator.
+// events(enumerators defined by RequestEventEnum), memory_usage, and cpu_time.
+// RequestEventEnum is an enum class which defines different events for some
+// specific actions, currently we reuse the enum classes defined in mojoms. The
+// enum class generally contains an OK and several different Errors, besides,
+// there should be a kMax which shares the value of the highest enumerator.
 template <class RequestEventEnum>
 class RequestMetrics {
  public:
@@ -45,10 +44,10 @@ class RequestMetrics {
   void RecordRequestEvent(RequestEventEnum event);
 
   // When you want to record metrics of some action, call Start func at the
-  // begining of it.
+  // beginning of it.
   void StartRecordingPerformanceMetrics();
 
-  // Send performance metrics(memory_usage, elapsed_time, cpu_time) to UMA
+  // Send performance metrics(memory_usage, cpu_time) to UMA
   // This would usually be called only if the action completes successfully.
   void FinishRecordingPerformanceMetrics();
 
@@ -67,16 +66,12 @@ class RequestMetrics {
 constexpr char kGlobalMetricsPrefix[] = "MachineLearningService.";
 constexpr char kEventSuffix[] = ".Event";
 constexpr char kTotalMemoryDeltaSuffix[] = ".TotalMemoryDeltaKb";
-constexpr char kElapsedTimeSuffix[] = ".ElapsedTimeMicrosec";
 constexpr char kCpuTimeSuffix[] = ".CpuTimeMicrosec";
 
 // UMA histogram ranges:
 constexpr int kMemoryDeltaMinKb = 1;         // 1 KB
 constexpr int kMemoryDeltaMaxKb = 10000000;  // 10 GB
 constexpr int kMemoryDeltaBuckets = 100;
-constexpr int kElapsedTimeMinMicrosec = 1;           // 1 μs
-constexpr int kElapsedTimeMaxMicrosec = 1800000000;  // 30 min
-constexpr int kElapsedTimeBuckets = 100;
 constexpr int kCpuTimeMinMicrosec = 1;           // 1 μs
 constexpr int kCpuTimeMaxMicrosec = 1800000000;  // 30 min
 constexpr int kCpuTimeBuckets = 100;
@@ -117,7 +112,7 @@ void RequestMetrics<RequestEventEnum>::StartRecordingPerformanceMetrics() {
 template <class RequestEventEnum>
 void RequestMetrics<RequestEventEnum>::FinishRecordingPerformanceMetrics() {
   DCHECK(process_metrics_ != nullptr);
-  // Elapsed time
+  // To get CPU time, we multiply elapsed (wall) time by CPU usage percentage.
   timer_.Stop();
   base::TimeDelta elapsed_time;
   DCHECK(timer_.GetElapsedTime(&elapsed_time));
@@ -149,11 +144,6 @@ void RequestMetrics<RequestEventEnum>::FinishRecordingPerformanceMetrics() {
                              kMemoryDeltaMinKb,
                              kMemoryDeltaMaxKb,
                              kMemoryDeltaBuckets);
-  metrics_library_.SendToUMA(name_base_ + kElapsedTimeSuffix,
-                             elapsed_time_microsec,
-                             kElapsedTimeMinMicrosec,
-                             kElapsedTimeMaxMicrosec,
-                             kElapsedTimeBuckets);
   metrics_library_.SendToUMA(name_base_ + kCpuTimeSuffix,
                              cpu_time_microsec,
                              kCpuTimeMinMicrosec,

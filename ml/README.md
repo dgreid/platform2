@@ -45,11 +45,10 @@ request for a particular model:
   request.
 * MachineLearningService.|MetricsModelName|.|request|.TotalMemoryDeltaKb: Total
   (shared+unshared) memory delta caused by the request.
-* MachineLearningService.|MetricsModelName|.|request|.ElapsedTimeMicrosec: Time
-  cost of the request.
 * MachineLearningService.|MetricsModelName|.|request|.CpuTimeMicrosec: CPU time
-  usage of the request, which is scaled to one CPU core, namely it may be
-  greater than ElapsedTimeMicrosec if there are multi cores.
+  usage of the request, which is scaled to one CPU core, i.e. the units are
+  CPU-core\*microsec (10 CPU cores for 1 microsec = 1 CPU core for 10 microsec =
+  recorded value of 10).
 
 |MetricsModelName| is specified in the model's [metadata][model_metadata.cc] for
 builtin models and is specified in |FlatBufferModelSpec| by the client for
