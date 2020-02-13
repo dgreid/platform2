@@ -4,6 +4,9 @@
 
 #include "lorgnette/firewall_manager.h"
 
+#include <algorithm>
+#include <vector>
+
 #include <base/bind.h>
 #include <brillo/errors/error.h>
 
@@ -114,7 +117,12 @@ void FirewallManager::RequestAllPortsAccess() {
 }
 
 void FirewallManager::ReleaseAllPortsAccess() {
-  for (const auto& port : requested_ports_) {
+  auto release_ports = std::vector<decltype(requested_ports_)::value_type>(
+      requested_ports_.size());
+  std::copy(requested_ports_.begin(), requested_ports_.end(),
+            release_ports.begin());
+
+  for (const auto& port : release_ports) {
     ReleaseUdpPortAccess(port);
   }
 }
