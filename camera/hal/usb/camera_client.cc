@@ -648,6 +648,7 @@ void CameraClient::RequestHandler::HandleRequest(
   int target_frame_rate =
       ResolvedFrameRateFromMetadata(*metadata, new_resolution);
   bool should_update_frame_rate =
+      device_->CanUpdateFrameRate() &&
       target_frame_rate != device_->GetFrameRate() &&
       IsValidFrameRate(target_frame_rate);
   if (stream_resolution_reconfigure ||

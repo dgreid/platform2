@@ -28,6 +28,8 @@ const QuirksMap& GetQuirksMap() {
       {{"0bda", "5647"}, kQuirkReportLeastFpsRanges},
       // Logitech Tap HDMI Capture (b/146590270)
       {{"046d", "0876"}, kQuirkRestartOnTimeout},
+      // IPEVO Ziggi-HD Plus
+      {{"1778", "0225"}, kQuirkDisableFrameRateSetting},
   };
   return kQuirksMap;
 }

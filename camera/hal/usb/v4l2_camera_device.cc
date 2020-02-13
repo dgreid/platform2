@@ -112,6 +112,18 @@ int V4L2CameraDevice::Connect(const std::string& device_path) {
     autofocus_supported_ = true;
     autofocus_on_ = control.value;
   }
+
+  // Initialize the capabilities.
+  if (device_info_.quirks & kQuirkDisableFrameRateSetting) {
+    can_update_frame_rate_ = false;
+  } else {
+    v4l2_streamparm streamparm = {};
+    streamparm.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+    can_update_frame_rate_ =
+        TEMP_FAILURE_RETRY(
+            ioctl(device_fd_.get(), VIDIOC_G_PARM, &streamparm)) >= 0 &&
+        (streamparm.parm.capture.capability & V4L2_CAP_TIMEPERFRAME);
+  }
   return 0;
 }
 
@@ -171,7 +183,7 @@ int V4L2CameraDevice::StreamOn(uint32_t width,
     return -EINVAL;
   }
 
-  if (frame_rate != frame_rate_) {
+  if (CanUpdateFrameRate() && frame_rate != frame_rate_) {
     ret = SetFrameRate(frame_rate);
     if (ret < 0) {
       return ret;
@@ -399,6 +411,10 @@ int V4L2CameraDevice::SetAutoFocus(bool enable) {
   return ret;
 }
 
+bool V4L2CameraDevice::CanUpdateFrameRate() {
+  return can_update_frame_rate_;
+}
+
 float V4L2CameraDevice::GetFrameRate() {
   return frame_rate_;
 }
@@ -417,33 +433,30 @@ int V4L2CameraDevice::SetFrameRate(float frame_rate) {
   // The following line checks that the driver knows about framerate get/set.
   if (TEMP_FAILURE_RETRY(ioctl(device_fd_.get(), VIDIOC_G_PARM, &streamparm)) >=
       0) {
-    // Now check if the device is able to accept a capture framerate set.
-    if (streamparm.parm.capture.capability & V4L2_CAP_TIMEPERFRAME) {
-      // |frame_rate| is float, approximate by a fraction.
-      streamparm.parm.capture.timeperframe.numerator = kFrameRatePrecision;
-      streamparm.parm.capture.timeperframe.denominator =
-          (frame_rate * kFrameRatePrecision);
+    // |frame_rate| is float, approximate by a fraction.
+    streamparm.parm.capture.timeperframe.numerator = kFrameRatePrecision;
+    streamparm.parm.capture.timeperframe.denominator =
+        (frame_rate * kFrameRatePrecision);
 
-      if (TEMP_FAILURE_RETRY(
-              ioctl(device_fd_.get(), VIDIOC_S_PARM, &streamparm)) < 0) {
-        LOGF(ERROR) << "Failed to set camera framerate";
-        return -errno;
-      }
-      VLOGF(1) << "Actual camera driver framerate: "
-               << streamparm.parm.capture.timeperframe.denominator << "/"
-               << streamparm.parm.capture.timeperframe.numerator;
+    if (TEMP_FAILURE_RETRY(
+            ioctl(device_fd_.get(), VIDIOC_S_PARM, &streamparm)) < 0) {
+      LOGF(ERROR) << "Failed to set camera framerate";
+      return -errno;
     }
-  }
-  float fps =
-      static_cast<float>(streamparm.parm.capture.timeperframe.denominator) /
-      streamparm.parm.capture.timeperframe.numerator;
-  if (std::fabs(fps - frame_rate) > kFpsDifferenceThreshold) {
-    LOGF(ERROR) << "Unsupported frame rate " << frame_rate;
-    return -EINVAL;
-  }
+    VLOGF(1) << "Actual camera driver framerate: "
+             << streamparm.parm.capture.timeperframe.denominator << "/"
+             << streamparm.parm.capture.timeperframe.numerator;
+    float fps =
+        static_cast<float>(streamparm.parm.capture.timeperframe.denominator) /
+        streamparm.parm.capture.timeperframe.numerator;
+    if (std::fabs(fps - frame_rate) > kFpsDifferenceThreshold) {
+      LOGF(ERROR) << "Unsupported frame rate " << frame_rate;
+      return -EINVAL;
+    }
 
-  VLOGF(1) << "Successfully set the frame rate to: " << fps;
-  frame_rate_ = frame_rate;
+    VLOGF(1) << "Successfully set the frame rate to: " << fps;
+    frame_rate_ = frame_rate;
+  }
 
   return 0;
 }

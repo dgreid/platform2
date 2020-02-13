@@ -86,6 +86,9 @@ class V4L2CameraDevice {
 
   // TODO(shik): Change the type of |device_path| to base::FilePath.
 
+  // Whether the device supports updating frame rate.
+  bool CanUpdateFrameRate();
+
   // Gets the frame rate which is set previously.
   float GetFrameRate();
 
@@ -142,6 +145,7 @@ class V4L2CameraDevice {
   bool autofocus_on_;
   bool autofocus_supported_;
 
+  bool can_update_frame_rate_;
   float frame_rate_;
 
   // True if the buffer is used by client after GetNextFrameBuffer().
