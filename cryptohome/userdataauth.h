@@ -359,8 +359,18 @@ class UserDataAuth {
   void PreMountCallback();
 
   // Set the current dbus connection, this is usually used by the dbus daemon
-  // object that owns the instance of this object.
+  // object that owns the instance of this object. During testing, the test
+  // fixture might call this for dependency injection.
   void set_dbus(scoped_refptr<::dbus::Bus> bus) { bus_ = bus; }
+
+  // Set the current dbus connection for mount thread, this is usually used by
+  // the dbus daemon object that owns the instance of this object. During
+  // testing, the test fixture might call this for dependency injection.
+  // Note that it is the responsibility of the caller to cleanup/destroy the Bus
+  // object during destruction.
+  void set_mount_thread_dbus(scoped_refptr<::dbus::Bus> bus) {
+    mount_thread_bus_ = bus;
+  }
 
   // ================= Threading Utilities ==================
 
@@ -733,9 +743,13 @@ class UserDataAuth {
   chaps::TokenManagerClient* chaps_client_;
 
   // A dbus connection, this is used by any code in this class that needs access
-  // to the system DBus. Such as when creating an instance of
-  // KeyChallengeService.
+  // to the system DBus and accesses it on the origin thread.
   scoped_refptr<::dbus::Bus> bus_;
+
+  // A dbus connection, this is used by any code in this class that needs access
+  // to the system DBus and accesses it on the mount thread. Such as when
+  // creating an instance of KeyChallengeService.
+  scoped_refptr<::dbus::Bus> mount_thread_bus_;
 
   // The default PKCS#11 init object that is used to supply some PKCS#11 related
   // information.
