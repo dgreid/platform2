@@ -235,6 +235,17 @@ void SmbFsDaemon::OnCredentialsSetup(mojom::MountOptionsPtr options,
 
   auto fs = std::make_unique<SmbFilesystem>(options->share_path, uid_, gid_,
                                             std::move(credential));
+  // Don't use the resolved address if Kerberos is set up. Kerberos requires the
+  // full hostname to obtain auth tickets.
+  if (options->resolved_host && !kerberos_sync_) {
+    if (options->resolved_host->address_bytes.size() != 4) {
+      LOG(ERROR) << "Invalid IP address size: "
+                 << options->resolved_host->address_bytes.size();
+      callback.Run(mojom::MountError::kInvalidOptions, nullptr);
+      return;
+    }
+    fs->SetResolvedAddress(options->resolved_host->address_bytes);
+  }
   if (!options->skip_connect) {
     SmbFilesystem::ConnectError error = fs->EnsureConnected();
     if (error != SmbFilesystem::ConnectError::kOk) {

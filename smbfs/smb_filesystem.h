@@ -15,6 +15,7 @@
 #include <vector>
 
 #include <base/macros.h>
+#include <base/synchronization/lock.h>
 #include <base/threading/thread.h>
 
 #include "smbfs/filesystem.h"
@@ -47,6 +48,15 @@ class SmbFilesystem : public Filesystem {
 
   // Store the implementation of the mojom::SmbFs Mojo interface.
   void SetSmbFsImpl(std::unique_ptr<SmbFsImpl> impl);
+
+  // Sets the resolved IP address of the share host. |ip_address| is an IPv4
+  // address in network byte order, or empty. If |ip_address| is empty, any
+  // existing resolved address will be reset.
+  void SetResolvedAddress(const std::vector<uint8_t>& ip_address);
+
+  const std::string& resolved_share_path() const {
+    return resolved_share_path_;
+  }
 
   // Filesystem overrides.
   void Lookup(std::unique_ptr<EntryRequest> request,
@@ -99,6 +109,10 @@ class SmbFilesystem : public Filesystem {
   void ReleaseDir(std::unique_ptr<SimpleRequest> request,
                   fuse_ino_t inode,
                   uint64_t file_handle) override;
+
+ protected:
+  // Protected constructor for unit tests.
+  explicit SmbFilesystem(const std::string& share_path);
 
  private:
   // Filesystem implementations that execute on |samba_thread_|.
@@ -187,8 +201,8 @@ class SmbFilesystem : public Filesystem {
                           int password_len);
 
   const std::string share_path_;
-  const uid_t uid_;
-  const gid_t gid_;
+  const uid_t uid_ = 0;
+  const gid_t gid_ = 0;
   const std::unique_ptr<SmbCredential> credentials_;
   base::Thread samba_thread_;
   InodeMap inode_map_{FUSE_ROOT_ID};
@@ -197,6 +211,9 @@ class SmbFilesystem : public Filesystem {
 
   std::unordered_map<uint64_t, SMBCFILE*> open_files_;
   uint64_t open_files_seq_ = 1;
+
+  mutable base::Lock lock_;
+  std::string resolved_share_path_ = share_path_;
 
   SMBCCTX* context_ = nullptr;
   smbc_close_fn smbc_close_ctx_ = nullptr;

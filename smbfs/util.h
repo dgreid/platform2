@@ -6,6 +6,9 @@
 #define SMBFS_UTIL_H_
 
 #include <string>
+#include <vector>
+
+#include <stdint.h>
 
 namespace smbfs {
 
@@ -16,6 +19,12 @@ std::string OpenFlagsToString(int flags);
 // Returns a string representation of the FUSE_SET_ATTR_* flags combined to
 // produce |flags|.
 std::string ToSetFlagsToString(int flags);
+
+// Returns the string representation of |address|. |address| is expected to be
+// the four bytes of an IPv4 address in network byte order. If |address| is not
+// a valid IPv4 address, return the empty string.
+// TODO(crbug.com/1051291): Support IPv6.
+std::string IpAddressToString(const std::vector<uint8_t>& address);
 
 }  // namespace smbfs
 

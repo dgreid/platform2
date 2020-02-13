@@ -91,4 +91,13 @@ std::string ToSetFlagsToString(int flags) {
   return FlagsToString(kToSetFlags, flags);
 }
 
+std::string IpAddressToString(const std::vector<uint8_t>& address) {
+  if (address.size() != 4) {
+    return {};
+  }
+
+  return base::StringPrintf("%u.%u.%u.%u", address[0], address[1], address[2],
+                            address[3]);
+}
+
 }  // namespace smbfs

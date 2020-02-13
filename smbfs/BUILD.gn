@@ -82,6 +82,7 @@ generate_dbus_proxies("dbus_bindings") {
 generate_mojom_bindings("mojo_bindings") {
   mojo_root = "${platform2_root}"
   sources = [
+    "mojom/ip_address.mojom",
     "mojom/smbfs.mojom",
   ]
   configs = [ ":target_defaults" ]
@@ -112,6 +113,7 @@ if (use.test) {
       "fake_kerberos_artifact_client.h",
       "inode_map_test.cc",
       "kerberos_artifact_synchronizer_test.cc",
+      "smb_filesystem_test.cc",
       "util_test.cc",
     ]
   }

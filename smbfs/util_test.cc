@@ -33,5 +33,15 @@ TEST(UtilTest, ToSetFlagsToString) {
             ToSetFlagsToString(FUSE_SET_ATTR_ATIME | 0x120000));
 }
 
+TEST(UtilTest, IpAddressToString) {
+  EXPECT_EQ("", IpAddressToString({}));
+  EXPECT_EQ("", IpAddressToString({1}));
+  EXPECT_EQ("", IpAddressToString({1, 2, 3, 4, 5}));
+
+  EXPECT_EQ("0.0.0.0", IpAddressToString({0, 0, 0, 0}));
+  EXPECT_EQ("1.2.3.4", IpAddressToString({1, 2, 3, 4}));
+  EXPECT_EQ("255.255.255.255", IpAddressToString({255, 255, 255, 255}));
+}
+
 }  // namespace
 }  // namespace smbfs

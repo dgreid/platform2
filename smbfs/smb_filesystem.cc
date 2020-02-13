@@ -11,15 +11,18 @@
 #include <base/callback_helpers.h>
 #include <base/logging.h>
 #include <base/posix/safe_strerror.h>
+#include <base/strings/string_piece.h>
 #include <base/strings/string_util.h>
 
 #include "smbfs/smbfs_impl.h"
+#include "smbfs/util.h"
 
 namespace smbfs {
 
 namespace {
 
 constexpr char kSambaThreadName[] = "smbfs-libsmb";
+constexpr char kUrlPrefix[] = "smb://";
 
 constexpr double kAttrTimeoutSeconds = 5.0;
 constexpr mode_t kAllowedFileTypes = S_IFREG | S_IFDIR;
@@ -104,15 +107,20 @@ SmbFilesystem::SmbFilesystem(const std::string& share_path,
   CHECK(samba_thread_.Start());
 }
 
+SmbFilesystem::SmbFilesystem(const std::string& share_path)
+    : share_path_(share_path), samba_thread_(kSambaThreadName) {}
+
 SmbFilesystem::~SmbFilesystem() {
-  // Stop the Samba processing thread before destroying the context to avoid a
-  // UAF on the context.
-  samba_thread_.Stop();
-  smbc_free_context(context_, 1 /* shutdown_ctx */);
+  if (context_) {
+    // Stop the Samba processing thread before destroying the context to avoid a
+    // UAF on the context.
+    samba_thread_.Stop();
+    smbc_free_context(context_, 1 /* shutdown_ctx */);
+  }
 }
 
 SmbFilesystem::ConnectError SmbFilesystem::EnsureConnected() {
-  SMBCFILE* dir = smbc_opendir_ctx_(context_, share_path_.c_str());
+  SMBCFILE* dir = smbc_opendir_ctx_(context_, resolved_share_path_.c_str());
   if (!dir) {
     int err = errno;
     PLOG(INFO) << "EnsureConnected smbc_opendir_ctx_ failed";
@@ -148,6 +156,29 @@ void SmbFilesystem::SetSmbFsImpl(std::unique_ptr<SmbFsImpl> impl) {
   smbfs_impl_ = std::move(impl);
 }
 
+void SmbFilesystem::SetResolvedAddress(const std::vector<uint8_t>& ip_address) {
+  base::AutoLock l(lock_);
+
+  if (ip_address.empty()) {
+    resolved_share_path_ = share_path_;
+    return;
+  } else if (ip_address.size() != 4) {
+    // TODO(crbug.com/1051291): Support IPv6.
+    LOG(ERROR) << "Invalid IP address";
+    return;
+  }
+
+  std::string address_str = IpAddressToString(ip_address);
+  DCHECK(!address_str.empty());
+
+  const base::StringPiece prefix(kUrlPrefix);
+  DCHECK(base::StartsWith(share_path_, prefix, base::CompareCase::SENSITIVE));
+  std::string::size_type host_end = share_path_.find('/', prefix.size());
+  DCHECK_NE(host_end, std::string::npos);
+  resolved_share_path_ =
+      std::string(prefix) + address_str + share_path_.substr(host_end);
+}
+
 struct stat SmbFilesystem::MakeStat(ino_t inode,
                                     const struct stat& in_stat) const {
   struct stat stat = {0};
@@ -164,15 +195,22 @@ struct stat SmbFilesystem::MakeStat(ino_t inode,
 }
 
 std::string SmbFilesystem::MakeShareFilePath(const base::FilePath& path) const {
+  std::string base_share_path;
+  {
+    base::AutoLock l(lock_);
+    DCHECK(!resolved_share_path_.empty());
+    base_share_path = resolved_share_path_;
+  }
+
   if (path == base::FilePath("/")) {
-    return share_path_;
+    return base_share_path;
   }
 
   // Paths are constructed and not passed directly over FUSE. Therefore, these
   // two properties should always hold.
   DCHECK(path.IsAbsolute());
   DCHECK(!path.EndsWithSeparator());
-  return share_path_ + path.value();
+  return base_share_path + path.value();
 }
 
 std::string SmbFilesystem::ShareFilePathFromInode(ino_t inode) const {
