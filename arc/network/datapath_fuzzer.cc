@@ -9,6 +9,7 @@
 #include <vector>
 
 #include <base/bind.h>
+#include <base/bind_helpers.h>
 #include <base/logging.h>
 
 #include "arc/network/datapath.h"
@@ -68,20 +69,20 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   while (provider.remaining_bytes() > 0) {
     std::string ifname = provider.ConsumeRandomLengthString(IFNAMSIZ - 1);
     std::string bridge = provider.ConsumeRandomLengthString(IFNAMSIZ - 1);
-    std::string addr =
-        IPv4AddressToString(provider.ConsumeIntegral<uint32_t>());
-    Subnet subnet(provider.ConsumeIntegral<int32_t>(),
-                  provider.ConsumeIntegralInRange<int32_t>(0, 31),
+    uint32_t addr = provider.ConsumeIntegral<uint32_t>();
+    std::string addr_str = IPv4AddressToString(addr);
+    uint32_t prefix_len = provider.ConsumeIntegralInRange<uint32_t>(0, 31);
+    Subnet subnet(provider.ConsumeIntegral<int32_t>(), prefix_len,
                   base::DoNothing());
     std::unique_ptr<SubnetAddress> subnet_addr = subnet.AllocateAtOffset(0);
     MacAddress mac;
     std::vector<uint8_t> bytes = provider.ConsumeBytes<uint8_t>(mac.size());
     std::copy(std::begin(bytes), std::begin(bytes), std::begin(mac));
 
-    datapath.AddBridge(ifname, addr);
+    datapath.AddBridge(ifname, addr, prefix_len);
     datapath.RemoveBridge(ifname);
-    datapath.AddInboundIPv4DNAT(ifname, addr);
-    datapath.RemoveInboundIPv4DNAT(ifname, addr);
+    datapath.AddInboundIPv4DNAT(ifname, addr_str);
+    datapath.RemoveInboundIPv4DNAT(ifname, addr_str);
     datapath.AddVirtualBridgedInterface(ifname, MacAddressToString(mac),
                                         bridge);
     datapath.RemoveInterface(ifname);
