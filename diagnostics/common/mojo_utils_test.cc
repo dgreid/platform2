@@ -39,4 +39,19 @@ TEST_F(MojoUtilsTest, CreateMojoHandleAndRetrieveContent) {
   EXPECT_EQ(content, actual);
 }
 
+TEST_F(MojoUtilsTest, GetReadOnlySharedMemoryFromMojoInvalidHandle) {
+  mojo::ScopedHandle handle;
+  EXPECT_FALSE(handle.is_valid());
+
+  std::unique_ptr<base::SharedMemory> shared_memory =
+      GetReadOnlySharedMemoryFromMojoHandle(std::move(handle));
+  EXPECT_FALSE(shared_memory);
+}
+
+TEST_F(MojoUtilsTest, CreateReadOnlySharedMemoryFromEmptyContent) {
+  mojo::ScopedHandle handle = CreateReadOnlySharedMemoryMojoHandle("");
+  // Cannot create valid handle using empty content line.
+  EXPECT_FALSE(handle.is_valid());
+}
+
 }  // namespace diagnostics
