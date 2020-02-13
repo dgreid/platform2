@@ -11,6 +11,7 @@
 #include "power_manager/common/fake_prefs.h"
 #include "power_manager/common/power_constants.h"
 #include "power_manager/powerd/policy/backlight_controller_stub.h"
+#include "power_manager/powerd/policy/bluetooth_controller_stub.h"
 #include "power_manager/powerd/system/acpi_wakeup_helper_stub.h"
 #include "power_manager/powerd/system/cros_ec_helper_stub.h"
 #include "power_manager/powerd/system/udev_stub.h"
@@ -92,13 +93,14 @@ class InputDeviceControllerTest : public ::testing::Test {
   }
 
   void InitInputDeviceController() {
-    input_device_controller_.Init(&backlight_controller_, &udev_,
-                                  &acpi_wakeup_helper_, &ec_helper_,
-                                  initial_lid_state_, initial_tablet_mode_,
-                                  initial_display_mode_, &prefs_);
+    input_device_controller_.Init(
+        &backlight_controller_, &bluetooth_controller_, &udev_,
+        &acpi_wakeup_helper_, &ec_helper_, initial_lid_state_,
+        initial_tablet_mode_, initial_display_mode_, &prefs_);
   }
 
   policy::BacklightControllerStub backlight_controller_;
+  policy::BluetoothControllerStub bluetooth_controller_;
   system::UdevStub udev_;
   system::AcpiWakeupHelperStub acpi_wakeup_helper_;
   system::CrosEcHelperStub ec_helper_;
@@ -336,9 +338,10 @@ TEST_F(InputDeviceControllerTest, UsableWithoutWakeup) {
 
 TEST_F(InputDeviceControllerTest, InitWithoutBacklightController) {
   // Init with null backlight controller shouldn't crash.
-  input_device_controller_.Init(
-      nullptr, &udev_, &acpi_wakeup_helper_, &ec_helper_, initial_lid_state_,
-      initial_tablet_mode_, initial_display_mode_, &prefs_);
+  input_device_controller_.Init(nullptr, &bluetooth_controller_, &udev_,
+                                &acpi_wakeup_helper_, &ec_helper_,
+                                initial_lid_state_, initial_tablet_mode_,
+                                initial_display_mode_, &prefs_);
 }
 
 }  // namespace policy

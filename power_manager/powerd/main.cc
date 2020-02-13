@@ -167,6 +167,13 @@ class DaemonDelegateImpl : public DaemonDelegate {
     return controller;
   }
 
+  std::unique_ptr<policy::BluetoothControllerInterface>
+  CreateBluetoothController() override {
+    auto controller = std::make_unique<policy::BluetoothController>();
+    controller->Init();
+    return controller;
+  }
+
   std::unique_ptr<system::InputWatcherInterface> CreateInputWatcher(
       PrefsInterface* prefs, system::UdevInterface* udev) override {
     auto watcher = std::make_unique<system::InputWatcher>();

@@ -174,6 +174,7 @@ static_library("libpolicy") {
   sources = [
     "powerd/policy/ambient_light_handler.cc",
     "powerd/policy/backlight_controller.cc",
+    "powerd/policy/bluetooth_controller.cc",
     "powerd/policy/cellular_controller.cc",
     "powerd/policy/charge_controller.cc",
     "powerd/policy/external_backlight_controller.cc",
@@ -197,6 +198,7 @@ static_library("libpolicy_stub") {
   sources = [
     "powerd/policy/backlight_controller_observer_stub.cc",
     "powerd/policy/backlight_controller_stub.cc",
+    "powerd/policy/bluetooth_controller_stub.cc",
   ]
 }
 

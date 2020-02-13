@@ -18,6 +18,7 @@ namespace power_manager {
 
 namespace policy {
 class BacklightController;
+class BluetoothControllerInterface;
 }  // namespace policy
 
 namespace system {
@@ -105,6 +106,9 @@ class DaemonDelegate {
       policy::BacklightController* display_backlight_controller,
       LidState initial_lid_state,
       TabletMode initial_tablet_mode) = 0;
+
+  virtual std::unique_ptr<policy::BluetoothControllerInterface>
+  CreateBluetoothController() = 0;
 
   virtual std::unique_ptr<system::InputWatcherInterface> CreateInputWatcher(
       PrefsInterface* prefs, system::UdevInterface* udev) = 0;
