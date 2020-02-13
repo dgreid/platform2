@@ -585,6 +585,9 @@ std::string ArcSetup::GetPlayStoreAutoUpdateParam(
   }
 }
 
+// Note: This function has to be in sync with Android's arc-boot-type-detector.
+// arc-boot-type-detector's DeleteExecutableFilesInData() function is very
+// similar to this.
 void ArcSetup::DeleteExecutableFilesInData(
     bool should_delete_data_dalvik_cache_directory,
     bool should_delete_data_app_executables) {

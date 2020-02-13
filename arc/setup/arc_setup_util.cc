@@ -654,6 +654,7 @@ uint64_t GetArtCompilationOffsetSeed(const std::string& image_build_id,
   return result;
 }
 
+// Note: This function has to be in sync with Android's arc-boot-type-detector.
 bool MoveDirIntoDataOldDir(const base::FilePath& dir,
                            const base::FilePath& android_data_old_dir) {
   if (!base::DirectoryExists(dir))
