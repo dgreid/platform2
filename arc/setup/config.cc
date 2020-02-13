@@ -37,7 +37,8 @@ bool StringToBool(const std::string str, bool* out) {
 Config::Config(const base::FilePath& config_json,
                std::unique_ptr<base::Environment> config_env)
     : env_(std::move(config_env)) {
-  CHECK(ParseJsonFile(config_json));
+  if (!config_json.empty())
+    CHECK(ParseJsonFile(config_json));
 }
 
 Config::~Config() = default;

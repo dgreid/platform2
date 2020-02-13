@@ -6,6 +6,7 @@ import("//common-mk/pkg_config.gni")
 
 group("all") {
   deps = [
+    ":arc-remove-data",
     ":arc-setup",
     ":generate_squashfs",
   ]
@@ -78,6 +79,16 @@ static_library("libarc_setup") {
 executable("arc-setup") {
   sources = [
     "main.cc",
+  ]
+  configs += [ ":target_defaults" ]
+  deps = [
+    ":libarc_setup",
+  ]
+}
+
+executable("arc-remove-data") {
+  sources = [
+    "arc_remove_data_main.cc",
   ]
   configs += [ ":target_defaults" ]
   deps = [

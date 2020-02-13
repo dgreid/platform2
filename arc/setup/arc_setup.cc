@@ -567,7 +567,9 @@ ArcSetup::ArcSetup(Mode mode, const base::FilePath& config_json)
       config_(config_json, base::Environment::Create()),
       arc_mounter_(GetDefaultMounter()),
       arc_paths_(ArcPaths::Create(mode_, config_)),
-      arc_setup_metrics_(std::make_unique<ArcSetupMetrics>()) {}
+      arc_setup_metrics_(std::make_unique<ArcSetupMetrics>()) {
+  CHECK(mode == Mode::REMOVE_DATA || !config_json.empty());
+}
 
 ArcSetup::~ArcSetup() = default;
 
