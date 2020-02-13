@@ -29,6 +29,7 @@
 #include <dbus/message.h>
 #include <dbus/object_proxy.h>
 
+#include "power_manager/common/util.h"
 #include "power_manager/proto_bindings/suspend.pb.h"
 
 namespace {
@@ -180,8 +181,9 @@ int main(int argc, char* argv[]) {
   // Set an RTC alarm to wake up the system.
   if (FLAGS_wakeup_timeout > 0) {
     std::string alarm_string = "+" + base::NumberToString(FLAGS_wakeup_timeout);
-    CHECK(base::WriteFile(base::FilePath(kRtcWakeAlarmPath),
-                          alarm_string.c_str(), alarm_string.length()));
+    CHECK(power_manager::util::WriteFileFully(base::FilePath(kRtcWakeAlarmPath),
+                                              alarm_string.c_str(),
+                                              alarm_string.length()));
   }
 
   // Enables/Disables dark resume for this script run based on

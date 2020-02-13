@@ -303,6 +303,9 @@ executable("powerd_dbus_suspend") {
   sources = [
     "tools/powerd_dbus_suspend.cc",
   ]
+  deps = [
+    ":libutil",
+  ]
 }
 
 executable("power_supply_info") {
