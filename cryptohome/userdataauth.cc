@@ -1148,6 +1148,11 @@ void UserDataAuth::DoMount(
 
 bool UserDataAuth::InitForChallengeResponseAuth(
     user_data_auth::CryptohomeErrorCode* error_code) {
+  if (challenge_credentials_helper_) {
+    // Already successfully initialized.
+    return true;
+  }
+
   if (!tpm_) {
     LOG(ERROR) << "Cannot do challenge-response authentication without TPM";
     *error_code = user_data_auth::CRYPTOHOME_ERROR_MOUNT_FATAL;
@@ -1161,24 +1166,18 @@ bool UserDataAuth::InitForChallengeResponseAuth(
     return false;
   }
 
-  if (!challenge_credentials_helper_) {
-    // Lazily create the helper object that manages generation/decryption of
-    // credentials for challenge-protected vaults.
-    Blob delegate_blob, delegate_secret;
-
-    bool has_reset_lock_permissions = false;
-    // TPM Delegate is required for TPM1.2. For TPM2.0, this is a no-op.
-    if (!tpm_->GetDelegate(&delegate_blob, &delegate_secret,
-                           &has_reset_lock_permissions)) {
-      LOG(ERROR)
-          << "Cannot do challenge-response authentication without TPM delegate";
-      *error_code = user_data_auth::CRYPTOHOME_ERROR_MOUNT_FATAL;
-      return false;
-    }
-
-    challenge_credentials_helper_ =
-        std::make_unique<ChallengeCredentialsHelper>(tpm_, delegate_blob,
-                                                     delegate_secret);
+  const base::Optional<bool> is_srk_roca_vulnerable =
+      tpm_->IsSrkRocaVulnerable();
+  if (!is_srk_roca_vulnerable.has_value()) {
+    LOG(ERROR) << "Cannot do challenge-response mount: Failed to check for "
+                  "ROCA vulnerability";
+    *error_code = user_data_auth::CRYPTOHOME_ERROR_MOUNT_FATAL;
+    return false;
+  }
+  if (is_srk_roca_vulnerable.value()) {
+    LOG(ERROR) << "Cannot do challenge-response mount: TPM is ROCA vulnerable";
+    *error_code = user_data_auth::CRYPTOHOME_ERROR_TPM_UPDATE_REQUIRED;
+    return false;
   }
 
   if (!mount_thread_bus_) {
@@ -1186,6 +1185,24 @@ bool UserDataAuth::InitForChallengeResponseAuth(
     *error_code = user_data_auth::CRYPTOHOME_ERROR_MOUNT_FATAL;
     return false;
   }
+
+  // Lazily create the helper object that manages generation/decryption of
+  // credentials for challenge-protected vaults.
+
+  Blob delegate_blob, delegate_secret;
+
+  bool has_reset_lock_permissions = false;
+  // TPM Delegate is required for TPM1.2. For TPM2.0, this is a no-op.
+  if (!tpm_->GetDelegate(&delegate_blob, &delegate_secret,
+                         &has_reset_lock_permissions)) {
+    LOG(ERROR)
+        << "Cannot do challenge-response authentication without TPM delegate";
+    *error_code = user_data_auth::CRYPTOHOME_ERROR_MOUNT_FATAL;
+    return false;
+  }
+
+  challenge_credentials_helper_ = std::make_unique<ChallengeCredentialsHelper>(
+      tpm_, delegate_blob, delegate_secret);
 
   return true;
 }
