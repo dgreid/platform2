@@ -1486,14 +1486,10 @@ TEST_F(DeviceInfoTechnologyTest, CDCNcmNonModem) {
 
 TEST_F(DeviceInfoTechnologyTest, PseudoModem) {
   SetDeviceName("pseudomodem");
-  CreateInfoSymLink("device", "device_dir");
-  CreateInfoSymLink("device_dir/driver", "cdc_ether");
-  EXPECT_EQ(Technology::kCellular, GetDeviceTechnology());
+  EXPECT_EQ(Technology::kCellular, GetDeviceTechnology("veth"));
 
   SetDeviceName("pseudomodem9");
-  CreateInfoSymLink("device", "device_dir");
-  CreateInfoSymLink("device_dir/driver", "cdc_ether");
-  EXPECT_EQ(Technology::kCellular, GetDeviceTechnology());
+  EXPECT_EQ(Technology::kCellular, GetDeviceTechnology("veth"));
 }
 
 class DeviceInfoForDelayedCreationTest : public DeviceInfo {

@@ -341,6 +341,21 @@ Technology DeviceInfo::GetDeviceTechnology(const string& iface_name,
     }
   }
 
+  // Special case for pseudo modem veth pairs which are used for testing.
+  if (iface_name.find(kModemPseudoDeviceNamePrefix) == 0) {
+    SLOG(this, 2) << StringPrintf("%s: device %s is a pseudo modem for testing",
+                                  __func__, iface_name.c_str());
+    return Technology::kCellular;
+  }
+
+  // Special case for pseudo ethernet devices which are used for testing.
+  if (iface_name.find(kEthernetPseudoDeviceNamePrefix) == 0) {
+    SLOG(this, 2) << StringPrintf(
+        "%s: device %s is a virtual ethernet device for testing", __func__,
+        iface_name.c_str());
+    return Technology::kEthernet;
+  }
+
   // No point delaying veth devices just because they don't have a device
   // symlink. Treat it as Ethernet directly.
   if (kind.has_value() && kind.value() == kKindVeth) {
@@ -381,21 +396,6 @@ Technology DeviceInfo::GetDeviceTechnology(const string& iface_name,
   if (contents.find(kInterfaceUeventBridgeSignature) != string::npos) {
     SLOG(this, 2) << __func__ << ": device " << iface_name
                   << " has bridge signature in uevent file";
-    return Technology::kEthernet;
-  }
-
-  // Special case for pseudo modems which are used for testing
-  if (iface_name.find(kModemPseudoDeviceNamePrefix) == 0) {
-    SLOG(this, 2) << StringPrintf("%s: device %s is a pseudo modem for testing",
-                                  __func__, iface_name.c_str());
-    return Technology::kCellular;
-  }
-
-  // Special case for pseudo ethernet devices which are used for testing.
-  if (iface_name.find(kEthernetPseudoDeviceNamePrefix) == 0) {
-    SLOG(this, 2) << StringPrintf(
-        "%s: device %s is a virtual ethernet device for testing", __func__,
-        iface_name.c_str());
     return Technology::kEthernet;
   }
 
