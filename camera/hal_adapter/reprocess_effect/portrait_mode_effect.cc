@@ -7,7 +7,9 @@
 #include "hal_adapter/reprocess_effect/portrait_mode_effect.h"
 
 #include <linux/videodev2.h>
+#include <sys/types.h>
 #include <sys/wait.h>
+#include <unistd.h>
 
 #include <memory>
 #include <string>
@@ -20,6 +22,7 @@
 #include <base/logging.h>
 #include <base/macros.h>
 #include <base/memory/shared_memory.h>
+#include <base/numerics/safe_conversions.h>
 #include <base/process/launch.h>
 #include <base/values.h>
 #include <libyuv.h>
@@ -187,7 +190,11 @@ int32_t PortraitModeEffect::ReprocessRequest(
       }
 
       result = -EINVAL;
-      size_t size = result_report_shm.handle().GetSize();
+      // The size stored in the SharedMemoryHandle is not updated after
+      // ftruncate() on the underlying FD (b/149365040). Use lseek() to query
+      // the actual size.
+      const size_t size = base::checked_cast<size_t>(
+          lseek(dup_result_report_fd.get(), 0, SEEK_END));
       if (size == 0) {
         LOGF(ERROR) << "Failed to get report or the report is empty";
         return -EINVAL;
