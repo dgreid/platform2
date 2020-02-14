@@ -131,7 +131,7 @@ bool BootDeviceIsRotationalDisk() {
 
 // Enable further isolation of the user session (including the browser process
 // tree), beyond merely running as user 'chronos'.
-bool IsolateUserSession() {
+bool __attribute__((unused)) IsolateUserSession() {
 #if USE_USER_SESSION_ISOLATION
   return true;
 #else
@@ -243,7 +243,10 @@ int main(int argc, char* argv[]) {
   // Start shaving this yak by isolating Guest mode sessions, which don't
   // support many of the above features. Put Guest mode process trees in a
   // non-root mount namespace to test the waters.
-  if (IsolateUserSession()) {
+  config.isolate_guest_session = false;
+  config.isolate_regular_session = false;
+
+  if (config.isolate_guest_session) {
     // Instead of having Chrome unshare a new mount namespace on launch, have
     // Chrome enter the mount namespace where the user data directory exists.
     ns_path = base::FilePath(kChromeMountNsPath);

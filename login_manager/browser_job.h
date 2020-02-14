@@ -96,6 +96,8 @@ class BrowserJob : public BrowserJobInterface {
   // a BrowserJob::Config object similarly covers various process types and
   // modes.
   struct Config {
+    bool isolate_guest_session;
+    bool isolate_regular_session;
     // Put the browser process tree in the specified non-root mount namespace.
     base::Optional<base::FilePath> chrome_mount_ns_path;
   };

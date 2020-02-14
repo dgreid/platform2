@@ -54,6 +54,7 @@ class BrowserJobTest : public ::testing::Test {
   static const char* kArgv[];
   static const char kUser[];
   static const char kHash[];
+  static const char kChromeMountNamespacePath[];
 
   void ExpectArgsToContainFlag(const std::vector<std::string>& argv,
                                const char name[],
@@ -92,12 +93,15 @@ const char* BrowserJobTest::kArgv[] = {"zero", "one", "two"};
 const char BrowserJobTest::kUser[] = "test@gmail.com";
 const char BrowserJobTest::kHash[] = "fake_hash";
 
+// User session mount namespace for testing. Does not need to be an actual file.
+const char BrowserJobTest::kChromeMountNamespacePath[] = "mnt_chrome";
+
 void BrowserJobTest::SetUp() {
   argv_ =
       std::vector<std::string>(kArgv, kArgv + arraysize(BrowserJobTest::kArgv));
   job_.reset(new BrowserJob(
       argv_, env_, &checker_, &metrics_, &utils_,
-      BrowserJob::Config{base::nullopt},
+      BrowserJob::Config{false, false, base::nullopt},
       std::make_unique<login_manager::Subprocess>(getuid(), &utils_)));
 }
 
@@ -141,6 +145,57 @@ TEST_F(BrowserJobTest, WaitAndAbort_AlreadyGone) {
 
   ASSERT_TRUE(job_->RunInBackground());
   job_->WaitAndAbort(base::TimeDelta::FromSeconds(3));
+}
+
+TEST_F(BrowserJobTest, UnshareMountNamespaceForGuest) {
+  MockSubprocess* mock_subp = new MockSubprocess();
+  EXPECT_CALL(*mock_subp, UseNewMountNamespace());
+  EXPECT_CALL(*mock_subp, ForkAndExec(_, _)).WillOnce(Return(true));
+
+  EXPECT_CALL(utils_, time(nullptr)).WillRepeatedly(Return(0));
+
+  EXPECT_CALL(metrics_, HasRecordedChromeExec()).WillRepeatedly(Return(false));
+  EXPECT_CALL(metrics_, RecordStats(_)).Times(AnyNumber());
+
+  std::unique_ptr<SubprocessInterface> p_subp(mock_subp);
+
+  std::vector<std::string> argv{"zero", "one", "two",
+                                BrowserJobInterface::kGuestSessionFlag};
+
+  BrowserJob job(
+      argv, env_, &checker_, &metrics_, &utils_,
+      BrowserJob::Config{false /*isolate_guest_session*/,
+                         false /*isolate_regular_session*/, base::nullopt},
+      std::move(p_subp));
+
+  ASSERT_TRUE(job.RunInBackground());
+}
+
+TEST_F(BrowserJobTest, EnterMountNamespaceForGuest) {
+  MockSubprocess* mock_subp = new MockSubprocess();
+  EXPECT_CALL(*mock_subp, EnterExistingMountNamespace(base::FilePath(
+                              BrowserJobTest::kChromeMountNamespacePath)));
+  EXPECT_CALL(*mock_subp, ForkAndExec(_, _)).WillOnce(Return(true));
+
+  EXPECT_CALL(utils_, time(nullptr)).WillRepeatedly(Return(0));
+
+  EXPECT_CALL(metrics_, HasRecordedChromeExec()).WillRepeatedly(Return(false));
+  EXPECT_CALL(metrics_, RecordStats(_)).Times(AnyNumber());
+
+  std::unique_ptr<SubprocessInterface> p_subp(mock_subp);
+
+  std::vector<std::string> argv{"zero", "one", "two",
+                                BrowserJobInterface::kGuestSessionFlag};
+
+  BrowserJob job(
+      argv, env_, &checker_, &metrics_, &utils_,
+      BrowserJob::Config{true /*isolate_guest_session*/,
+                         false /*isolate_regular_session*/,
+                         base::Optional<base::FilePath>(
+                             BrowserJobTest::kChromeMountNamespacePath)},
+      std::move(p_subp));
+
+  ASSERT_TRUE(job.RunInBackground());
 }
 
 TEST_F(BrowserJobTest, ShouldStopTest) {
@@ -221,7 +276,7 @@ TEST_F(BrowserJobTest, ShouldRunTest) {
 
 TEST_F(BrowserJobTest, NullFileCheckerTest) {
   BrowserJob job(argv_, env_, nullptr, &metrics_, &utils_,
-                 BrowserJob::Config{base::nullopt},
+                 BrowserJob::Config{false, false, base::nullopt},
                  std::make_unique<login_manager::Subprocess>(1, &utils_));
   EXPECT_TRUE(job.ShouldRunBrowser());
 }
@@ -288,7 +343,7 @@ TEST_F(BrowserJobTest, StartStopSessionTest) {
 
 TEST_F(BrowserJobTest, StartStopMultiSessionTest) {
   BrowserJob job(argv_, env_, &checker_, &metrics_, &utils_,
-                 BrowserJob::Config{base::nullopt},
+                 BrowserJob::Config{false, false, base::nullopt},
                  std::make_unique<login_manager::Subprocess>(1, &utils_));
   job.StartSession(kUser, kHash);
 
@@ -318,7 +373,7 @@ TEST_F(BrowserJobTest, StartStopSessionFromLoginTest) {
   std::vector<std::string> argv(
       kArgvWithLoginFlag, kArgvWithLoginFlag + arraysize(kArgvWithLoginFlag));
   BrowserJob job(argv, env_, &checker_, &metrics_, &utils_,
-                 BrowserJob::Config{base::nullopt},
+                 BrowserJob::Config{false, false, base::nullopt},
                  std::make_unique<login_manager::Subprocess>(1, &utils_));
 
   job.StartSession(kUser, kHash);
@@ -367,7 +422,7 @@ TEST_F(BrowserJobTest, SetExtraArguments) {
 TEST_F(BrowserJobTest, ExportArgv) {
   std::vector<std::string> argv(kArgv, kArgv + arraysize(kArgv));
   BrowserJob job(argv, env_, &checker_, &metrics_, &utils_,
-                 BrowserJob::Config{base::nullopt},
+                 BrowserJob::Config{false, false, base::nullopt},
                  std::make_unique<login_manager::Subprocess>(1, &utils_));
 
   const char* kExtraArgs[] = {"--ichi", "--ni", "--san"};
@@ -381,7 +436,7 @@ TEST_F(BrowserJobTest, ExportArgv) {
 TEST_F(BrowserJobTest, SetExtraEnvironmentVariables) {
   std::vector<std::string> argv(kArgv, kArgv + arraysize(kArgv));
   BrowserJob job(argv, {"A=a"}, &checker_, &metrics_, &utils_,
-                 BrowserJob::Config{base::nullopt},
+                 BrowserJob::Config{false, false, base::nullopt},
                  std::make_unique<login_manager::Subprocess>(1, &utils_));
   job.SetExtraEnvironmentVariables({"B=b", "C="});
   EXPECT_EQ((std::vector<std::string>{"A=a", "B=b", "C="}),
@@ -407,7 +462,7 @@ TEST_F(BrowserJobTest, CombineVModuleArgs) {
         kMultipleVmoduleArgs,
         kMultipleVmoduleArgs + arraysize(kMultipleVmoduleArgs));
     BrowserJob job(argv, env_, &checker_, &metrics_, &utils_,
-                   BrowserJob::Config{base::nullopt},
+                   BrowserJob::Config{false, false, base::nullopt},
                    std::make_unique<login_manager::Subprocess>(1, &utils_));
 
     const char* kCombinedVmodule =
@@ -429,7 +484,7 @@ TEST_F(BrowserJobTest, CombineVModuleArgs) {
                                   kNoVmoduleArgs + arraysize(kNoVmoduleArgs));
 
     BrowserJob job(argv, env_, &checker_, &metrics_, &utils_,
-                   BrowserJob::Config{base::nullopt},
+                   BrowserJob::Config{false, false, base::nullopt},
                    std::make_unique<login_manager::Subprocess>(1, &utils_));
 
     auto job_argv = job.ExportArgv();
@@ -475,7 +530,7 @@ TEST_F(BrowserJobTest, CombineFeatureArgs) {
       kEnable3, kDisable3, kBlinkEnable3, kBlinkDisable3,
   };
   BrowserJob job(kArgv, env_, &checker_, &metrics_, &utils_,
-                 BrowserJob::Config{base::nullopt},
+                 BrowserJob::Config{false, false, base::nullopt},
                  std::make_unique<login_manager::Subprocess>(1, &utils_));
 
   // --enable-features and --disable-features should be merged into args at the

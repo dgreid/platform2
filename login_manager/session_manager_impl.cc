@@ -639,7 +639,8 @@ bool SessionManagerImpl::StartSession(brillo::ErrorPtr* error,
   // Create a UserSession object for this user.
   const bool is_incognito = IsIncognitoAccountId(actual_account_id);
   auto user_session = CreateUserSession(
-      actual_account_id, chrome_mount_ns_path_, is_incognito, error);
+      actual_account_id, is_incognito ? chrome_mount_ns_path_ : base::nullopt,
+      is_incognito, error);
   if (!user_session) {
     DCHECK(*error);
     return false;
@@ -696,7 +697,8 @@ bool SessionManagerImpl::StartSession(brillo::ErrorPtr* error,
   if (device_policy_->KeyMissing() && !is_active_directory &&
       !device_policy_->Mitigating() && is_first_real_user) {
     // This is the first sign-in on this unmanaged device.  Take ownership.
-    key_gen_->Start(actual_account_id, chrome_mount_ns_path_);
+    key_gen_->Start(actual_account_id,
+                    is_incognito ? chrome_mount_ns_path_ : base::nullopt);
   }
 
   // Record that a login has successfully completed on this boot.

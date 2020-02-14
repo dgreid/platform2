@@ -175,7 +175,8 @@ bool BrowserJob::RunInBackground() {
   LOG(INFO) << "Running browser " << base::JoinString(argv, " ");
 
   if (IsGuestSession()) {
-    if (config_.chrome_mount_ns_path.has_value()) {
+    if (config_.isolate_guest_session &&
+        config_.chrome_mount_ns_path.has_value()) {
       base::FilePath ns_path = config_.chrome_mount_ns_path.value();
       LOG(INFO) << "Entering mount namespace '" << ns_path.value()
                 << "' for browser";

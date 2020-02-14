@@ -677,6 +677,7 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
   // operations, but will perform these operations out-of-process.
   // This is currently only used for Guest sessions.
   bool mount_guest_session_out_of_process_;
+  bool mount_guest_session_non_root_namespace_;
   std::unique_ptr<OutOfProcessMountHelper> out_of_process_mounter_;
 
   // This closure will be run in UnmountCryptohome().

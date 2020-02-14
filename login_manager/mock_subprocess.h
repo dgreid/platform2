@@ -24,6 +24,10 @@ class MockSubprocess : public SubprocessInterface {
   ~MockSubprocess() override;
 
   MOCK_METHOD(void, UseNewMountNamespace, (), (override));
+  MOCK_METHOD(void,
+              EnterExistingMountNamespace,
+              (const base::FilePath&),
+              (override));
   MOCK_METHOD(bool,
               ForkAndExec,
               (const std::vector<std::string>&,

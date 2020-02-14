@@ -63,7 +63,7 @@ using chaps::IsolateCredentialManager;
 namespace {
 constexpr char kChromeMountNamespacePath[] = "/run/namespaces/mnt_chrome";
 
-bool IsolateUserSession() {
+bool __attribute__((unused)) IsolateUserSession()  {
 #if USE_USER_SESSION_ISOLATION
   return true;
 #else
@@ -129,7 +129,8 @@ Mount::Mount()
       chaps_client_factory_(default_chaps_client_factory_.get()),
       boot_lockbox_(NULL),
       dircrypto_migration_stopped_condition_(&active_dircrypto_migrator_lock_),
-      mount_guest_session_out_of_process_(true) {}
+      mount_guest_session_out_of_process_(true),
+      mount_guest_session_non_root_namespace_(false) {}
 
 Mount::~Mount() {
   if (IsMounted())
@@ -207,7 +208,7 @@ bool Mount::Init(Platform* platform, Crypto* crypto,
       skel_source_, system_salt_, legacy_mount_, platform_));
 
   std::unique_ptr<MountNamespace> chrome_mnt_ns;
-  if (IsolateUserSession()) {
+  if (mount_guest_session_non_root_namespace_) {
     chrome_mnt_ns = std::make_unique<MountNamespace>(
         base::FilePath(kChromeMountNamespacePath), platform_);
     if (!chrome_mnt_ns->Create()) {
