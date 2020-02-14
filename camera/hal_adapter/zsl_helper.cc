@@ -236,6 +236,15 @@ void ZslHelper::AttachZslStream(camera3_stream_configuration_t* stream_list,
   streams->push_back(bi_stream_.get());
   // There could be memory reallocation happening after the push_back call.
   stream_list->streams = streams->data();
+
+  for (size_t i = 0; i < stream_list->num_streams; ++i) {
+    // GRALLOC_USAGE_STILL_CAPTURE is a private usage from VCD.
+    // We set the usage flag here to let VCD know ZSL is enabled.
+    if ((*streams)[i]->usage & GRALLOC_USAGE_STILL_CAPTURE) {
+      (*streams)[i]->usage |= GRALLOC_USAGE_ZSL_ENABLED;
+    }
+  }
+
   VLOGF(1) << "Attached ZSL streams. The list of streams after attaching:";
   for (size_t i = 0; i < stream_list->num_streams; ++i) {
     VLOGF(1) << "i = " << i
