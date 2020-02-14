@@ -348,7 +348,7 @@ class DlcManager::DlcManagerImpl {
     FilePath image_a_path =
         GetDlcImagePath(content_dir_, id, package, BootSlot::Slot::A);
     if (!CreateFile(image_a_path, image_size)) {
-      *err_code = kErrorInternal;
+      *err_code = kErrorAllocation;
       *err_msg = "Failed to create slot A DLC (" + id + ") image file.";
       return false;
     }
@@ -357,7 +357,7 @@ class DlcManager::DlcManagerImpl {
     FilePath image_b_path =
         GetDlcImagePath(content_dir_, id, package, BootSlot::Slot::B);
     if (!CreateFile(image_b_path, image_size)) {
-      *err_code = kErrorInternal;
+      *err_code = kErrorAllocation;
       *err_msg = "Failed to create slot B DLC (" + id + ") image file.";
       return false;
     }
@@ -392,8 +392,12 @@ class DlcManager::DlcManagerImpl {
       if (!CreateDlcPackagePath(id, package, err_code, err_msg))
         return false;
       if (!CreateFile(inactive_img_path, max_allowed_img_size)) {
+        // Don't make this error |kErrorAllocation|, this is during a refresh
+        // and should be considered and internal problem of keeping DLC(s) in a
+        // completely valid state.
         *err_code = kErrorInternal;
-        *err_msg = "Failed to create DLC image: " + inactive_img_path.value();
+        *err_msg = "Failed to create DLC image during validation: " +
+                   inactive_img_path.value();
         return false;
       }
     }
