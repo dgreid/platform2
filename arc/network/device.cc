@@ -100,26 +100,11 @@ bool Device::UsesDefaultInterface() const {
   return options_.use_default_interface;
 }
 
-bool Device::HostLinkUp(bool link_up) {
-  if (link_up == host_link_up_)
-    return false;
-
-  host_link_up_ = link_up;
-  return true;
-}
-
-bool Device::IsFullyUp() const {
-  if (!host_link_up_)
-    return false;
-
-  return ctx_->IsLinkUp();
-}
-
 void Device::StartIPv6RoutingLegacy(const std::string& ifname) {
   if (!options_.ipv6_enabled || !options_.find_ipv6_routes_legacy)
     return;
 
-  if (!IsFullyUp())
+  if (!ctx_->IsLinkUp())
     return;
 
   if (router_finder_)

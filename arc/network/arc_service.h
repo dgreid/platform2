@@ -108,10 +108,6 @@ class ArcService {
     // accordingly.
     void LinkMsgHandler(const shill::RTNLMessage& msg);
 
-    // Handles RT netlink messages in the host namespace in order to toggle
-    // legacy IPv6 configuration.
-    void HostLinkMsgHandler(const shill::RTNLMessage& msg);
-
     void SetupIPv6(Device* device);
     void TeardownIPv6(Device* device);
 
@@ -123,10 +119,6 @@ class ArcService {
     // These are installed in the ARC net namespace.
     std::unique_ptr<shill::RTNLHandler> rtnl_handler_;
     std::unique_ptr<shill::RTNLListener> link_listener_;
-    // This is installed in the default namespace are are used only to start
-    // and stop legacy IPv6 configuration. Once all boards have been upgraded to
-    // P and are using NDProxy, it should be removed.
-    std::unique_ptr<shill::RTNLListener> host_link_listener_;
 
     base::WeakPtrFactory<ContainerImpl> weak_factory_{this};
     DISALLOW_COPY_AND_ASSIGN(ContainerImpl);

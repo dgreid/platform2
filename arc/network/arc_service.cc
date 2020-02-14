@@ -155,12 +155,6 @@ GuestMessage::GuestType ArcGuest() {
                          : GuestMessage::ARC_LEGACY;
 }
 
-constexpr const char kArcDevicePrefix[] = "arc";
-bool IsArcDevice(const std::string& ifname) {
-  return base::StartsWith(ifname, kArcDevicePrefix,
-                          base::CompareCase::INSENSITIVE_ASCII);
-}
-
 }  // namespace
 
 ArcService::ArcService(ShillClient* shill_client,
@@ -521,17 +515,6 @@ bool ArcService::ContainerImpl::Start(uint32_t pid) {
   }
   pid_ = pid;
 
-  // Start listening for RTNetlink messages to be notified when a virtual ARC
-  // interface is brought up or down.
-  // TODO(garrick): Delete when NDProxy is enabled on all boards.
-  {
-    host_link_listener_ = std::make_unique<shill::RTNLListener>(
-        shill::RTNLHandler::kRequestLink,
-        Bind(&ArcService::ContainerImpl::HostLinkMsgHandler,
-             weak_factory_.GetWeakPtr()));
-    shill::RTNLHandler::GetInstance()->Start(RTMGRP_LINK);
-  }
-
   // Start listening for RTNetlink messages in the container's net namespace
   // to be notified whenever it brings up an interface.
   {
@@ -711,43 +694,6 @@ void ArcService::ContainerImpl::LinkMsgHandler(const shill::RTNLMessage& msg) {
     return;
 
   device->StartIPv6RoutingLegacy(ifname);
-}
-
-// TODO(garrick): Remove once NDProxy is enabled on all boards.
-void ArcService::ContainerImpl::HostLinkMsgHandler(
-    const shill::RTNLMessage& msg) {
-  if (!msg.HasAttribute(IFLA_IFNAME)) {
-    LOG(ERROR) << "Link event message does not have IFLA_IFNAME";
-    return;
-  }
-
-  // Only consider virtual interfaces that were created for guests; for now this
-  // only includes those prefixed with 'arc'.
-  shill::ByteString b(msg.GetAttribute(IFLA_IFNAME));
-  std::string ifname(reinterpret_cast<const char*>(
-      b.GetSubstring(0, IFNAMSIZ).GetConstData()));
-  if (!IsArcDevice(ifname))
-    return;
-
-  bool link_up = msg.link_status().flags & IFF_UP;
-  Device* device = dev_mgr_->FindByHostInterface(ifname);
-
-  if (!device || !device->HostLinkUp(link_up))
-    return;
-
-  if (!link_up) {
-    LOG(INFO) << ifname << " is now down";
-    device->StopIPv6RoutingLegacy();
-    return;
-  }
-
-  // The link is now up.
-  LOG(INFO) << ifname << " is now up";
-
-  if (device->UsesDefaultInterface())
-    device->StartIPv6RoutingLegacy(dev_mgr_->DefaultInterface());
-  else if (!device->IsAndroid())
-    device->StartIPv6RoutingLegacy(device->config().guest_ifname());
 }
 
 void ArcService::ContainerImpl::SetupIPv6(Device* device) {

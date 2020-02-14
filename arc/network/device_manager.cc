@@ -308,14 +308,14 @@ void DeviceManager::OnDefaultInterfaceChanged(const std::string& new_ifname,
             << new_ifname << "]";
 
   for (const auto& d : devices_) {
-    if (d.second->UsesDefaultInterface() && d.second->IsFullyUp())
+    if (d.second->UsesDefaultInterface())
       StopForwarding(*d.second);
   }
 
   default_ifname_ = new_ifname;
 
   for (const auto& d : devices_) {
-    if (d.second->UsesDefaultInterface() && d.second->IsFullyUp())
+    if (d.second->UsesDefaultInterface())
       StartForwarding(*d.second);
   }
 

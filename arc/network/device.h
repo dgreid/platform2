@@ -170,11 +170,6 @@ class Device {
                             const DeviceHandler& down_handler);
   void UnregisterIPv6Handlers();
 
-  // Returns true if the link status changed.
-  bool HostLinkUp(bool link_up);
-
-  bool IsFullyUp() const;
-
   void StartIPv6RoutingLegacy(const std::string& ifname);
   void StopIPv6RoutingLegacy();
 
