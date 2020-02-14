@@ -11,6 +11,7 @@
 #include "runtime_probe/functions/ata_storage.h"
 #include "runtime_probe/functions/cellular_network.h"
 #include "runtime_probe/functions/ectool_i2cread.h"
+#include "runtime_probe/functions/edid.h"
 #include "runtime_probe/functions/ethernet_network.h"
 #include "runtime_probe/functions/generic_battery.h"
 #include "runtime_probe/functions/generic_network.h"
