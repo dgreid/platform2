@@ -22,6 +22,7 @@
 #include "cros-disks/fuse_mount_manager.h"
 #include "cros-disks/metrics.h"
 #include "cros-disks/platform.h"
+#include "cros-disks/rar_manager.h"
 #include "cros-disks/rename_manager.h"
 #include "cros-disks/session_manager_proxy.h"
 
@@ -48,6 +49,7 @@ class Daemon : public brillo::DBusServiceDaemon {
   brillo::ProcessReaper process_reaper_;
   DeviceEjector device_ejector_;
   ArchiveManager archive_manager_;
+  RarManager rar_manager_;
   DiskMonitor disk_monitor_;
   DiskManager disk_manager_;
   FormatManager format_manager_;
