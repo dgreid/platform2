@@ -130,8 +130,7 @@ across device reboot and update.
 Chrome (and other system daemons that can access D-Bus) calls the dlcservice API
 to install/uninstall a DLC module. For calling the dlcservice API inside Chrome,
 use [system_api] to send API calls. For calling dlcservice API outside of
-Chrome, use generated D-Bus bindings. Follow [dlcservice usage example] on how
-to use the API.
+Chrome, use generated D-Bus bindings.
 
 On a locally built test build|image, calling dlcservice API does not download
 the DLC (no DLC is being served). You need to
@@ -180,6 +179,5 @@ user’s device, a DLC is updated at the same time when a device is updated.
 [dlc.eclass]: https://chromium.googlesource.com/chromiumos/overlays/chromiumos-overlay/+/master/eclass/dlc.eclass
 [system_api]: https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/system_api
 [imageloader_impl.cc]: https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/imageloader/imageloader_impl.cc
-[dlcservice usage example]: https://chromium.googlesource.com/chromiumos/platform2/+/master/dlcservice/examples/.
 [tast]: go/tast
 [tast-deps]: go/tast-deps

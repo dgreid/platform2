@@ -9,8 +9,6 @@ group("all") {
   deps = [
     ":dlcservice",
     ":dlcservice_adaptors",
-    ":dlcservice_example_install",
-    ":dlcservice_example_uninstall",
     ":dlcservice_util",
     ":libdlcservice",
     ":libdlcservice_utils",
@@ -110,28 +108,6 @@ executable("dlcservice_util") {
   ]
   deps = [
     ":libdlcservice_utils",
-  ]
-}
-
-# For install example:
-executable("dlcservice_example_install") {
-  configs += [
-    ":target_defaults",
-    ":dlcservice_util_config",
-  ]
-  sources = [
-    "examples/install.cc",
-  ]
-}
-
-# For uninstall example:
-executable("dlcservice_example_uninstall") {
-  configs += [
-    ":target_defaults",
-    ":dlcservice_util_config",
-  ]
-  sources = [
-    "examples/uninstall.cc",
   ]
 }
 
