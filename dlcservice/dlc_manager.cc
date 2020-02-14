@@ -619,15 +619,9 @@ bool DlcManager::InitInstall(const DlcModuleList& dlc_module_list,
   DlcRootMap dlc_root_map =
       ToDlcRootMap(dlc_module_list, [](DlcModuleInfo) { return true; });
 
-  if (dlc_module_list.dlc_module_infos().empty()) {
+  if (dlc_root_map.empty()) {
     *err_code = kErrorInvalidDlc;
     *err_msg = "Must provide at lease one DLC to install.";
-    return false;
-  }
-
-  if (dlc_root_map.size() != dlc_module_list.dlc_module_infos_size()) {
-    *err_code = kErrorInvalidDlc;
-    *err_msg = "Must not pass in duplicate DLC(s) to install.";
     return false;
   }
 

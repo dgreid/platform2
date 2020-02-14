@@ -417,7 +417,7 @@ TEST_F(DlcServiceTest, UninstallUpdatedNeedRebootSuccessTest) {
   EXPECT_FALSE(base::PathExists(JoinPaths(metadata_path_, kFirstDlc)));
 }
 
-TEST_F(DlcServiceTest, InstallEmptyDlcModuleListFailsTest) {
+TEST_F(DlcServiceTest, InstallEmptyDlcModuleListTest) {
   EXPECT_FALSE(dlc_service_->Install({}, nullptr));
 }
 
@@ -483,40 +483,44 @@ TEST_F(DlcServiceTest, InstallAlreadyInstalledValid) {
   EXPECT_STREQ(active_value.c_str(), kDlcMetadataActiveValue);
 }
 
-TEST_F(DlcServiceTest, InstallDuplicatesFail) {
+TEST_F(DlcServiceTest, InstallDuplicatesSucceeds) {
   const string omaha_url_default = "";
   DlcModuleList dlc_module_list =
       CreateDlcModuleList({kSecondDlc, kSecondDlc}, omaha_url_default);
 
   SetMountPath(mount_path_.value());
+  EXPECT_CALL(*mock_update_engine_proxy_ptr_, GetStatusAdvanced(_, _, _))
+      .WillOnce(Return(true));
   EXPECT_CALL(*mock_update_engine_proxy_ptr_,
               AttemptInstall(ProtoHasUrl(omaha_url_default), _, _))
-      .Times(0);
+      .WillOnce(Return(true));
 
-  EXPECT_FALSE(dlc_service_->Install(dlc_module_list, nullptr));
+  EXPECT_TRUE(dlc_service_->Install(dlc_module_list, nullptr));
 
-  EXPECT_TRUE(base::PathExists(JoinPaths(content_path_, (kFirstDlc))));
-  EXPECT_FALSE(base::PathExists(JoinPaths(content_path_, kSecondDlc)));
-  EXPECT_TRUE(base::PathExists(JoinPaths(metadata_path_, kFirstDlc)));
-  EXPECT_FALSE(base::PathExists(JoinPaths(metadata_path_, kSecondDlc)));
+  for (const auto& id : {kFirstDlc, kSecondDlc})
+    for (const auto& path :
+         {JoinPaths(content_path_, id), JoinPaths(metadata_path_, id)})
+      EXPECT_TRUE(base::PathExists(path));
 }
 
-TEST_F(DlcServiceTest, InstallAlreadyInstalledAndDuplicatesFail) {
+TEST_F(DlcServiceTest, InstallAlreadyInstalledAndDuplicatesSucceeds) {
   const string omaha_url_default = "";
   DlcModuleList dlc_module_list = CreateDlcModuleList(
       {kFirstDlc, kSecondDlc, kSecondDlc}, omaha_url_default);
 
   SetMountPath(mount_path_.value());
+  EXPECT_CALL(*mock_update_engine_proxy_ptr_, GetStatusAdvanced(_, _, _))
+      .WillOnce(Return(true));
   EXPECT_CALL(*mock_update_engine_proxy_ptr_,
               AttemptInstall(ProtoHasUrl(omaha_url_default), _, _))
-      .Times(0);
+      .WillOnce(Return(true));
 
-  EXPECT_FALSE(dlc_service_->Install(dlc_module_list, nullptr));
+  EXPECT_TRUE(dlc_service_->Install(dlc_module_list, nullptr));
 
-  EXPECT_TRUE(base::PathExists(JoinPaths(content_path_, (kFirstDlc))));
-  EXPECT_FALSE(base::PathExists(JoinPaths(content_path_, kSecondDlc)));
-  EXPECT_TRUE(base::PathExists(JoinPaths(metadata_path_, kFirstDlc)));
-  EXPECT_FALSE(base::PathExists(JoinPaths(metadata_path_, kSecondDlc)));
+  for (const auto& id : {kFirstDlc, kSecondDlc})
+    for (const auto& path :
+         {JoinPaths(content_path_, id), JoinPaths(metadata_path_, id)})
+      EXPECT_TRUE(base::PathExists(path));
 }
 
 TEST_F(DlcServiceTest, InstallUpdateEngineDownThenBackUpTest) {
