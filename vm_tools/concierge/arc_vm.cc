@@ -62,6 +62,16 @@ constexpr char kKeyToOverrideKernelPath[] = "KERNEL_PATH";
 constexpr char kHostGeneratedSharedDir[] = "/run/arcvm/host_generated";
 constexpr char kHostGeneratedSharedDirTag[] = "host_generated";
 
+// Uid and gid mappings for the android data directory. This is a
+// comma-separated list of 3 values: <start of range inside the user namespace>
+// <start of range outside the user namespace> <count>. The values are taken
+// from platform2/arc/container-bundles/rvc/config.json.
+constexpr char kAndroidUidMap[] =
+    "0 655360 5000,5000 600 50,5050 660410 1994950";
+constexpr char kAndroidGidMap[] =
+    "0 655360 1065,1065 20119 1,1066 656426 3934,5000 600 50,5050 660410 "
+    "1994950";
+
 base::ScopedFD ConnectVSock(int cid) {
   DLOG(INFO) << "Creating VSOCK...";
   struct sockaddr_vm sa = {};
@@ -135,17 +145,19 @@ std::unique_ptr<ArcVm> ArcVm::Create(
     uint32_t pstore_size,
     std::vector<ArcVm::Disk> disks,
     uint32_t vsock_cid,
+    base::FilePath data_dir,
     std::unique_ptr<patchpanel::Client> network_client,
     std::unique_ptr<SeneschalServerProxy> seneschal_server_proxy,
     base::FilePath runtime_dir,
     ArcVmFeatures features,
     std::vector<string> params) {
   auto vm = base::WrapUnique(new ArcVm(vsock_cid, std::move(network_client),
-      std::move(seneschal_server_proxy), std::move(runtime_dir), features));
+                                       std::move(seneschal_server_proxy),
+                                       std::move(runtime_dir), features));
 
   if (!vm->Start(std::move(kernel), std::move(rootfs), std::move(fstab), cpus,
                  std::move(pstore_path), pstore_size, std::move(disks),
-                 std::move(params))) {
+                 std::move(data_dir), std::move(params))) {
     vm.reset();
   }
 
@@ -163,6 +175,7 @@ bool ArcVm::Start(base::FilePath kernel,
                   base::FilePath pstore_path,
                   uint32_t pstore_size,
                   std::vector<ArcVm::Disk> disks,
+                  base::FilePath data_dir,
                   std::vector<string> params) {
   // Get the available network interfaces.
   network_devices_ = network_client_->NotifyArcVmStartup(vsock_cid_);
@@ -194,6 +207,11 @@ bool ArcVm::Start(base::FilePath kernel,
       base::StringPrintf("%s:%s:type=fs:cache=always:timeout=3600",
                          kHostGeneratedSharedDir, kHostGeneratedSharedDirTag);
 
+  // TODO(yusukes): Add another device for /data/media/0 with caching disabled.
+  std::string shared_data = base::StringPrintf(
+      "%s:data:type=fs:cache=always:uidmap=%s:gidmap=%s:timeout=3600",
+      data_dir.value().c_str(), kAndroidUidMap, kAndroidGidMap);
+
   // Build up the process arguments.
   // clang-format off
   base::StringPairs args = {
@@ -217,6 +235,7 @@ bool ArcVm::Start(base::FilePath kernel,
     { "--shared-dir",     base::StringPrintf("%s:%s", kHostGeneratedSharedDir,
                                              kHostGeneratedSharedDirTag) },
     { "--shared-dir",     host_generated_shared_dir },
+    { "--shared-dir",     std::move(shared_data) },
     { "--params",         base::JoinString(params, " ") },
   };
   // clang-format on

@@ -55,6 +55,7 @@ class ArcVm final : public VmBaseImpl {
       uint32_t pstore_size,
       std::vector<Disk> disks,
       uint32_t vsock_cid,
+      base::FilePath data_dir,
       std::unique_ptr<patchpanel::Client> network_client,
       std::unique_ptr<SeneschalServerProxy> seneschal_server_proxy,
       base::FilePath runtime_dir,
@@ -135,6 +136,7 @@ class ArcVm final : public VmBaseImpl {
              base::FilePath pstore_path,
              uint32_t pstore_size,
              std::vector<Disk> disks,
+             base::FilePath data_dir,
              std::vector<std::string> params);
 
   // Virtual socket context id to be used when communicating with this VM.

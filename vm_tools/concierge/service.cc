@@ -1753,10 +1753,22 @@ std::unique_ptr<dbus::Response> Service::StartArcVm(
   }
   const uint32_t pstore_size = 1024 * 1024;
 
+  base::FilePath data_dir = base::FilePath("/home/root")
+                                .Append(request.owner_id())
+                                .Append("android-data")
+                                .Append("data");
+  if (!base::PathExists(data_dir)) {
+    LOG(WARNING) << "Android data directory does not exist";
+
+    response.set_failure_reason("Android data directory does not exist");
+    writer.AppendProtoAsArrayOfBytes(response);
+    return dbus_response;
+  }
+
   auto vm = ArcVm::Create(
       std::move(kernel), std::move(rootfs), std::move(fstab), request.cpus(),
       std::move(*pstore_path), pstore_size, std::move(disks), vsock_cid,
-      std::move(network_client), std::move(server_proxy),
+      std::move(data_dir), std::move(network_client), std::move(server_proxy),
       std::move(runtime_dir), features, std::move(params));
   if (!vm) {
     LOG(ERROR) << "Unable to start VM";
