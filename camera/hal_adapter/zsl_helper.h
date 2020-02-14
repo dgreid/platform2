@@ -101,14 +101,18 @@ class ZslBufferManager {
 
 class ZslHelper {
  public:
-  static const size_t kZslBufferSize = 24;
+  // TODO(lnishan): Replace the ring buffer with a variable-length data
+  // structure and adjust the buffer size by the lookback time.
+  static const size_t kZslBufferSize = 20;
   static const int kZslSyncWaitTimeoutMs = 3;
   static const int kZslPixelFormat = HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED;
   static const uint8_t kZslCapability =
       ANDROID_REQUEST_AVAILABLE_CAPABILITIES_PRIVATE_REPROCESSING;
   // |kZslLoobackNs| accounts for the display latency (i.e., the time it takes
   // for a buffer to be drawn on screen since its start of exposure).
-  static const int64_t kZslLookbackNs = 600'000'000;        // 600ms
+  // TODO(lnishan): Make this a chromeos-config entry and read the
+  // configuration during runtime.
+  static const int64_t kZslLookbackNs = 420'000'000;        // 420ms
   static const int64_t kZslLookbackLengthNs = 150'000'000;  // 150ms
   enum {
     STREAM_CONFIG_FORMAT_INDEX,
