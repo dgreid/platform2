@@ -466,6 +466,8 @@ TEST_F(DlcServiceTest, InstallAlreadyInstalledValid) {
       CreateDlcModuleList({kFirstDlc}, omaha_url_default);
 
   SetMountPath(mount_path_.value());
+  EXPECT_CALL(*mock_update_engine_proxy_ptr_, GetStatusAdvanced(_, _, _))
+      .WillOnce(Return(true));
   EXPECT_CALL(*mock_update_engine_proxy_ptr_,
               AttemptInstall(ProtoHasUrl(omaha_url_default), _, _))
       .Times(0);
@@ -699,10 +701,21 @@ TEST_F(DlcServiceTest, ReportingFailureCleanupTest) {
   for (const string& dlc_id : dlc_ids)
     EXPECT_TRUE(base::PathExists(JoinPaths(content_path_, dlc_id)));
 
-  StatusResult status_result;
-  status_result.set_current_operation(Operation::REPORTING_ERROR_EVENT);
-  status_result.set_is_install(true);
-  dlc_service_->OnStatusUpdateAdvancedSignal(status_result);
+  EXPECT_CALL(*mock_image_loader_proxy_ptr_, LoadDlcImage(_, _, _, _, _, _))
+      .WillOnce(Return(false));
+
+  {
+    StatusResult status_result;
+    status_result.set_current_operation(Operation::REPORTING_ERROR_EVENT);
+    status_result.set_is_install(true);
+    dlc_service_->OnStatusUpdateAdvancedSignal(status_result);
+  }
+  {
+    StatusResult status_result;
+    status_result.set_current_operation(Operation::IDLE);
+    status_result.set_is_install(false);
+    dlc_service_->OnStatusUpdateAdvancedSignal(status_result);
+  }
 
   EXPECT_TRUE(base::PathExists(JoinPaths(content_path_, kFirstDlc)));
   for (const string& dlc_id : dlc_ids)
@@ -723,10 +736,22 @@ TEST_F(DlcServiceTest, ReportingFailureSignalTest) {
   for (const string& dlc_id : dlc_ids)
     EXPECT_TRUE(base::PathExists(JoinPaths(content_path_, dlc_id)));
 
-  StatusResult status_result;
-  status_result.set_current_operation(Operation::REPORTING_ERROR_EVENT);
-  status_result.set_is_install(true);
-  dlc_service_->OnStatusUpdateAdvancedSignal(status_result);
+  EXPECT_CALL(*mock_image_loader_proxy_ptr_, LoadDlcImage(_, _, _, _, _, _))
+      .WillOnce(Return(false));
+
+  {
+    StatusResult status_result;
+    status_result.set_current_operation(Operation::REPORTING_ERROR_EVENT);
+    status_result.set_is_install(true);
+    dlc_service_->OnStatusUpdateAdvancedSignal(status_result);
+  }
+  {
+    StatusResult status_result;
+    status_result.set_current_operation(Operation::IDLE);
+    status_result.set_is_install(false);
+    dlc_service_->OnStatusUpdateAdvancedSignal(status_result);
+  }
+
   EXPECT_EQ(dlc_service_test_observer_->GetInstallStatus().status(),
             Status::FAILED);
 }
@@ -745,7 +770,7 @@ TEST_F(DlcServiceTest, ProbableUpdateEngineRestartCleanupTest) {
   for (const string& dlc_id : dlc_ids)
     EXPECT_TRUE(base::PathExists(JoinPaths(content_path_, dlc_id)));
 
-  EXPECT_CALL(*mock_update_engine_proxy_ptr_, GetLastAttemptError(_, _, _))
+  EXPECT_CALL(*mock_image_loader_proxy_ptr_, LoadDlcImage(_, _, _, _, _, _))
       .WillOnce(Return(false));
 
   StatusResult status_result;

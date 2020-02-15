@@ -82,6 +82,26 @@ bool DlcService::Install(const DlcModuleList& dlc_module_list_in,
     return false;
   }
 
+  // Check what state update_engine is in.
+  Operation update_engine_op;
+  if (!GetUpdateEngineStatus(&update_engine_op)) {
+    LogAndSetError(err, kErrorInternal,
+                   "Failed to get the status of Update Engine.");
+    return false;
+  }
+  switch (update_engine_op) {
+    case update_engine::UPDATED_NEED_REBOOT:
+      LogAndSetError(err, kErrorNeedReboot,
+                     "Update Engine applied update, device needs a reboot.");
+      return false;
+    case update_engine::IDLE:
+      break;
+    default:
+      LogAndSetError(err, kErrorBusy,
+                     "Update Engine is performing operations.");
+      return false;
+  }
+
   string err_code, err_msg;
   if (!dlc_manager_->InitInstall(dlc_module_list_in, &err_code, &err_msg)) {
     LogAndSetError(err, err_code, err_msg);
@@ -105,33 +125,6 @@ bool DlcService::Install(const DlcModuleList& dlc_module_list_in,
     return true;
   }
 
-  const auto CancelInstall = [this] {
-    string throwaway_err_code, throwaway_err_msg;
-    if (!dlc_manager_->CancelInstall(&throwaway_err_code, &throwaway_err_msg))
-      LOG(ERROR) << throwaway_err_code << ":" << throwaway_err_msg;
-  };
-  Operation update_engine_operation;
-  if (!GetUpdateEngineStatus(&update_engine_operation)) {
-    LogAndSetError(err, kErrorInternal,
-                   "Failed to get the status of Update Engine.");
-    CancelInstall();
-    return false;
-  }
-  switch (update_engine_operation) {
-    case update_engine::UPDATED_NEED_REBOOT:
-      LogAndSetError(err, kErrorNeedReboot,
-                     "Update Engine applied update, device needs a reboot.");
-      CancelInstall();
-      return false;
-    case update_engine::IDLE:
-      break;
-    default:
-      LogAndSetError(err, kErrorBusy,
-                     "Update Engine is performing operations.");
-      CancelInstall();
-      return false;
-  }
-
   // Invokes update_engine to install the DLC module.
   if (!update_engine_proxy_->AttemptInstall(unique_dlc_module_list_to_install,
                                             nullptr)) {
@@ -145,7 +138,11 @@ bool DlcService::Install(const DlcModuleList& dlc_module_list_in,
     // correctly then).
     LogAndSetError(err, kErrorBusy,
                    "Update Engine failed to schedule install operations.");
-    CancelInstall();
+    // dlcservice must cancel the install by communicating to dlc_manager who
+    // manages the DLC(s), as update_engine won't be able to install the
+    // initialized DLC(s) for installation.
+    if (!dlc_manager_->CancelInstall(&err_code, &err_msg))
+      LOG(ERROR) << err_code << ":" << err_msg;
     return false;
   }
 
@@ -154,13 +151,13 @@ bool DlcService::Install(const DlcModuleList& dlc_module_list_in,
 }
 
 bool DlcService::Uninstall(const string& id_in, brillo::ErrorPtr* err) {
-  Operation update_engine_operation;
-  if (!GetUpdateEngineStatus(&update_engine_operation)) {
+  Operation update_engine_op;
+  if (!GetUpdateEngineStatus(&update_engine_op)) {
     LogAndSetError(err, kErrorInternal,
                    "Failed to get the status of Update Engine");
     return false;
   }
-  switch (update_engine_operation) {
+  switch (update_engine_op) {
     case update_engine::IDLE:
     case update_engine::UPDATED_NEED_REBOOT:
       break;
@@ -211,14 +208,14 @@ void DlcService::PeriodicInstallCheck() {
     return;
   }
 
-  Operation update_engine_operation;
-  if (!GetUpdateEngineStatus(&update_engine_operation)) {
+  Operation update_engine_op;
+  if (!GetUpdateEngineStatus(&update_engine_op)) {
     LOG(ERROR)
         << "Failed to get the status of update_engine, it is most likely down.";
     SendFailedSignalAndCleanup();
     return;
   }
-  switch (update_engine_operation) {
+  switch (update_engine_op) {
     case update_engine::UPDATED_NEED_REBOOT:
       LOG(ERROR) << "Thought to be installing DLC(s), but update_engine is not "
                     "installing and actually performed an update.";
@@ -274,19 +271,9 @@ bool DlcService::HandleStatusResult(const StatusResult& status_result) {
     scheduled_period_ue_check_id_ = MessageLoop::kTaskIdNull;
   }
 
-  // This situation is reached if update_engine crashes during an install and
-  // dlcservice still believes that it is waiting for an install to complete.
-  // TODO(kimjae): Need to handle checking preiodically if an install is started
-  // and dlcservice hasn't gotten an install progress in a certain period of
-  // time, try to explicitly check update_engine's status and act accordingly.
   if (!status_result.is_install()) {
-    int last_attempt_error;
-    update_engine_proxy_->GetLastAttemptError(&last_attempt_error, nullptr);
-    LOG(ERROR) << "Signal from update_engine indicates non-install, so install "
-               << " failed and update_engine error code is: "
-               << "(" << last_attempt_error << ")";
-    SendFailedSignalAndCleanup();
-    return false;
+    LOG(WARNING) << "Signal from update_engine indicates that it's not for an "
+                    "install, but dlcservice was waiting for an install.";
   }
 
   switch (status_result.current_operation()) {
@@ -296,7 +283,7 @@ bool DlcService::HandleStatusResult(const StatusResult& status_result) {
       return true;
     case Operation::REPORTING_ERROR_EVENT:
       LOG(ERROR) << "Signal from update_engine indicates reporting failure.";
-      SendFailedSignalAndCleanup();
+      SchedulePeriodicInstallCheck(true);
       return false;
     // Only when update_engine's |Operation::DOWNLOADING| should dlcservice send
     // a signal out for |InstallStatus| for |Status::RUNNING|. Majority of the
