@@ -430,7 +430,7 @@ MountErrorType ArchiveManager::MountAVFSPath(const std::string& base_path,
   };
   mount_options.Initialize(options, false, "", "");
 
-  std::unique_ptr<FUSEMounter> fuse_mounter = std::make_unique<FUSEMounter>(
+  FUSEMounter mounter(
       "avfs", mount_options, platform(), process_reaper(), kAVFSMountProgram,
       kAVFSMountUser, kAVFSSeccompFilterPolicyFile,
       std::vector<FUSEMounter::BindPath>({
@@ -441,9 +441,12 @@ MountErrorType ArchiveManager::MountAVFSPath(const std::string& base_path,
       }),
       false /* permit_network_access */, kAVFSMountGroup);
 
+  // To access Play Files.
+  mounter.AddGroup("android-everybody");
+
   MountErrorType mount_error = MOUNT_ERROR_UNKNOWN;
-  std::unique_ptr<MountPoint> mount_point = fuse_mounter->Mount(
-      "", mount_path, mount_options.options(), &mount_error);
+  std::unique_ptr<MountPoint> mount_point =
+      mounter.Mount("", mount_path, mount_options.options(), &mount_error);
   if (mount_error != MOUNT_ERROR_NONE) {
     DCHECK(!mount_point);
     return mount_error;
