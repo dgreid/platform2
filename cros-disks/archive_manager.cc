@@ -63,6 +63,8 @@ const char kAVFSSubdirOptionPrefix[] = "subdir=";
 
 }  // namespace
 
+bool ArchiveManager::is_active_ = true;
+
 class ArchiveManager::ArchiveMountPoint : public MountPoint {
  public:
   ArchiveMountPoint(std::unique_ptr<MountPoint> mount_point,
@@ -116,7 +118,14 @@ bool ArchiveManager::StopSession() {
   return StopAVFS();
 }
 
+bool ArchiveManager::CanUnmount(const std::string& path) const {
+  return is_active_ && MountManager::CanUnmount(path);
+}
+
 bool ArchiveManager::CanMount(const std::string& source_path) const {
+  if (!is_active_)
+    return false;
+
   // The following paths can be mounted:
   //     /home/chronos/u-<user-id>/Downloads/...<file>
   //     /home/chronos/u-<user-id>/MyFiles/...<file>

@@ -33,6 +33,8 @@ class ArchiveManager : public MountManager {
   // Stops a session. Returns true on success.
   bool StopSession() override;
 
+  bool CanUnmount(const std::string& path) const override;
+
   // Returns true if mounting |source_path| is supported.
   bool CanMount(const std::string& source_path) const override;
 
@@ -50,6 +52,9 @@ class ArchiveManager : public MountManager {
   // dot. |avfs_handler| should be in the form like '#uzip', '#ugz#utar', etc.
   void RegisterFileExtension(const std::string& extension,
                              const std::string& avfs_handler);
+
+  // Allows to deactivate ArchiveManager for RarManager to kick in.
+  static void SetActive(bool active) { is_active_ = active; }
 
  protected:
   // Mounts |source_path| to |mount_path| as |source_format| with |options|.
@@ -127,6 +132,9 @@ class ArchiveManager : public MountManager {
   // Mapping of AVFS daemon mount path to MountPoint. Should contain one entry
   // per running AVFS daemon.
   std::map<base::FilePath, std::unique_ptr<MountPoint>> avfsd_mounts_;
+
+  // Allows to deactivate ArchiveManager for RarManager to kick in.
+  static bool is_active_;
 
   FRIEND_TEST(ArchiveManagerTest, GetAVFSPath);
   FRIEND_TEST(ArchiveManagerTest, GetAVFSPathWithInvalidPaths);
