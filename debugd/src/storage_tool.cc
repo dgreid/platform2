@@ -4,18 +4,21 @@
 
 #include "debugd/src/storage_tool.h"
 
-#include <base/files/file.h>
-#include <base/files/file_path.h>
-#include <base/files/file_util.h>
-#include <base/strings/string_split.h>
-#include <base/strings/string_util.h>
 #include <fstream>
 #include <iostream>
 #include <linux/limits.h>
 #include <mntent.h>
 #include <string>
 #include <unistd.h>
+#include <utility>
 #include <vector>
+
+#include <base/base64.h>
+#include <base/files/file.h>
+#include <base/files/file_path.h>
+#include <base/files/file_util.h>
+#include <base/strings/string_split.h>
+#include <base/strings/string_util.h>
 
 #include "debugd/src/helper_utils.h"
 #include "debugd/src/process_with_id.h"
@@ -327,6 +330,7 @@ std::string StorageTool::NvmeLog(const uint32_t& page_id,
     return "<Length of byte-data invalid. At least 4 bytes for a request>";
   }
 
+  // Output in raw format.
   if (raw_binary) {
     process.AddArg("--raw-binary");
   }
@@ -337,6 +341,13 @@ std::string StorageTool::NvmeLog(const uint32_t& page_id,
   process.Run();
   std::string output;
   process.GetOutput(&output);
+
+  if (raw_binary) {
+    std::string input = std::move(output);
+    // Encode output as base64 in case D-Bus drops invalid UTF8 string.
+    base::Base64Encode(input, &output);
+  }
+
   return output;
 }
 
