@@ -392,8 +392,8 @@ static void sl_set_input_focus(struct sl_context* ctx,
     if (!window->managed)
       return;
 
-    xcb_send_event(ctx->connection, 0, window->id,
-                   XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT, (char*)&event);
+    xcb_send_event(ctx->connection, 0, window->id, XCB_EVENT_MASK_NO_EVENT,
+                   (char*)&event);
 
     xcb_set_input_focus(ctx->connection, XCB_INPUT_FOCUS_NONE, window->id,
                         XCB_CURRENT_TIME);
