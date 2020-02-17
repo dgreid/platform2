@@ -18,7 +18,7 @@ pkg_config("target_defaults") {
   pkg_deps = [
     "libchrome-${libbase_ver}",
     "libbrillo",
-    "protobuf",
+    "protobuf-lite",
   ]
 }
 

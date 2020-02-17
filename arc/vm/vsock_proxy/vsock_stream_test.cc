@@ -9,7 +9,6 @@
 
 #include <base/files/scoped_file.h>
 #include <gtest/gtest.h>
-#include <google/protobuf/util/message_differencer.h>
 
 #include "arc/vm/vsock_proxy/file_descriptor_util.h"
 #include "arc/vm/vsock_proxy/message.pb.h"
@@ -34,11 +33,8 @@ TEST(VSockStreamTest, ReadWrite) {
 
   arc_proxy::VSockMessage read_message;
   ASSERT_TRUE(VSockStream(std::move(fd2)).Read(&read_message));
-
-  EXPECT_TRUE(
-      google::protobuf::util::MessageDifferencer::Equals(message, read_message))
-      << "expect: " << message.DebugString()
-      << ", actual: " << read_message.DebugString();
+  EXPECT_EQ(message.data().handle(), read_message.data().handle());
+  EXPECT_EQ(message.data().blob(), read_message.data().blob());
 }
 
 }  // namespace

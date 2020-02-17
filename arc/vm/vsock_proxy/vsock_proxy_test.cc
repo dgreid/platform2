@@ -87,6 +87,13 @@ class VSockProxyTest : public testing::Test {
     client_fd_ = std::move(client_socket_pair->second);
   }
 
+  void TearDown() override {
+    client_fd_.reset();
+    server_fd_.reset();
+    client_ = nullptr;
+    server_ = nullptr;
+  }
+
   VSockProxy* server() { return server_.get(); }
   VSockProxy* client() { return client_.get(); }
 

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 syntax = "proto3";
+option optimize_for = LITE_RUNTIME;
 
 package arc_proxy;
 

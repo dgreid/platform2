@@ -5,6 +5,8 @@
 #ifndef ARC_VM_VSOCK_PROXY_VSOCK_STREAM_H_
 #define ARC_VM_VSOCK_PROXY_VSOCK_STREAM_H_
 
+#include <vector>
+
 #include <base/files/scoped_file.h>
 #include <base/macros.h>
 #include <base/optional.h>
@@ -32,6 +34,7 @@ class VSockStream {
 
  private:
   base::ScopedFD vsock_fd_;
+  std::vector<char> buf_;
 
   DISALLOW_COPY_AND_ASSIGN(VSockStream);
 };

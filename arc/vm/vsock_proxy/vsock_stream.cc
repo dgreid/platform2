@@ -6,13 +6,9 @@
 
 #include <string>
 #include <utility>
-#include <vector>
 
 #include <base/files/file_util.h>
 #include <base/logging.h>
-#include <base/posix/safe_strerror.h>
-#include <google/protobuf/io/zero_copy_stream_impl.h>
-#include <google/protobuf/text_format.h>
 
 namespace arc {
 
@@ -29,46 +25,36 @@ bool VSockStream::Read(arc_proxy::VSockMessage* message) {
     return false;
   }
 
-  std::vector<char> buf(size);
-  if (!base::ReadFromFD(vsock_fd_.get(), buf.data(), buf.size())) {
+  buf_.resize(size);
+  if (!base::ReadFromFD(vsock_fd_.get(), buf_.data(), buf_.size())) {
     PLOG(ERROR) << "Failed to read a proto";
     return false;
   }
 
-  if (!message->ParseFromArray(buf.data(), buf.size())) {
+  if (!message->ParseFromArray(buf_.data(), buf_.size())) {
     LOG(ERROR) << "Failed to parse proto message";
     return false;
   }
-
-  if (VLOG_IS_ON(1)) {
-    std::string text;
-    google::protobuf::TextFormat::PrintToString(*message, &text);
-    LOG(INFO) << "Reading: " << text;
-  }
-
   return true;
 }
 
 bool VSockStream::Write(const arc_proxy::VSockMessage& message) {
-  if (VLOG_IS_ON(1)) {
-    std::string text;
-    google::protobuf::TextFormat::PrintToString(message, &text);
-    LOG(INFO) << "Writing: " << text;
-  }
+  const uint64_t size = message.ByteSize();
+  buf_.resize(sizeof(size) + size);
 
-  uint64_t size = message.ByteSize();
-  if (!base::WriteFileDescriptor(
-          vsock_fd_.get(), reinterpret_cast<char*>(&size), sizeof(size))) {
-    PLOG(ERROR) << "Failed to write buffer size";
+  struct Frame {
+    uint64_t size;
+    char data[];
+  };
+  Frame* frame = reinterpret_cast<Frame*>(buf_.data());
+  frame->size = size;
+  if (!message.SerializeToArray(frame->data, size)) {
+    LOG(ERROR) << "Failed to serialize proto.";
     return false;
   }
 
-  google::protobuf::io::FileOutputStream stream(vsock_fd_.get());
-  if (!message.SerializeToZeroCopyStream(&stream) || !stream.Flush()) {
-    const int error = stream.GetErrno();
-    LOG(ERROR) << "Failed to "
-               << (error ? "write proto: " + base::safe_strerror(error)
-                         : "serialize proto.");
+  if (!base::WriteFileDescriptor(vsock_fd_.get(), buf_.data(), buf_.size())) {
+    PLOG(ERROR) << "Failed to write proto";
     return false;
   }
   return true;
