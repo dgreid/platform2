@@ -69,7 +69,8 @@ const DelegateWebRequestHttpMethod kDelegateWebRequestHttpMethodPut =
 
 constexpr grpc_api::DiagnosticRoutine kFakeAvailableRoutines[] = {
     grpc_api::ROUTINE_BATTERY, grpc_api::ROUTINE_BATTERY_SYSFS,
-    grpc_api::ROUTINE_SMARTCTL_CHECK, grpc_api::ROUTINE_URANDOM};
+    grpc_api::ROUTINE_SMARTCTL_CHECK, grpc_api::ROUTINE_URANDOM,
+    grpc_api::ROUTINE_FLOATING_POINT_ACCURACY};
 constexpr int kFakeUuid = 13;
 constexpr grpc_api::DiagnosticRoutineStatus kFakeStatus =
     grpc_api::ROUTINE_STATUS_RUNNING;
@@ -180,6 +181,16 @@ std::unique_ptr<grpc_api::RunRoutineRequest> MakeRunUrandomRoutineRequest() {
   auto request = std::make_unique<grpc_api::RunRoutineRequest>();
   request->set_routine(grpc_api::ROUTINE_URANDOM);
   request->mutable_urandom_params()->set_length_seconds(kLengthSeconds);
+  return request;
+}
+
+std::unique_ptr<grpc_api::RunRoutineRequest>
+MakeRunFloatingPointAccuracyRoutineRequest() {
+  constexpr int kLengthSeconds = 10;
+  auto request = std::make_unique<grpc_api::RunRoutineRequest>();
+  request->set_routine(grpc_api::ROUTINE_FLOATING_POINT_ACCURACY);
+  request->mutable_floating_point_accuracy_params()->set_length_seconds(
+      kLengthSeconds);
   return request;
 }
 
@@ -585,6 +596,27 @@ TEST_F(GrpcServiceTest, RunUrandomRoutineNoParameters) {
   std::unique_ptr<grpc_api::RunRoutineResponse> response;
   auto request = std::make_unique<grpc_api::RunRoutineRequest>();
   request->set_routine(grpc_api::ROUTINE_URANDOM);
+  ExecuteRunRoutine(std::move(request), &response,
+                    false /* is_valid_request */);
+  EXPECT_EQ(response->uuid(), 0);
+  EXPECT_EQ(response->status(), grpc_api::ROUTINE_STATUS_INVALID_FIELD);
+}
+
+// Test that we can request that the floating_point_accuracy routine be run.
+TEST_F(GrpcServiceTest, RunFloatingPointAccuracyRoutine) {
+  std::unique_ptr<grpc_api::RunRoutineResponse> response;
+  ExecuteRunRoutine(MakeRunFloatingPointAccuracyRoutineRequest(), &response,
+                    true /* is_valid_request */);
+  auto expected_response = MakeRunRoutineResponse();
+  EXPECT_THAT(*response, ProtobufEquals(*expected_response))
+      << "Actual response: {" << response->ShortDebugString() << "}";
+}
+
+// Test that a floating_point_accuracy routine with no parameters will fail.
+TEST_F(GrpcServiceTest, RunFloatingPointAccuracyRoutineNoParameters) {
+  std::unique_ptr<grpc_api::RunRoutineResponse> response;
+  auto request = std::make_unique<grpc_api::RunRoutineRequest>();
+  request->set_routine(grpc_api::ROUTINE_FLOATING_POINT_ACCURACY);
   ExecuteRunRoutine(std::move(request), &response,
                     false /* is_valid_request */);
   EXPECT_EQ(response->uuid(), 0);

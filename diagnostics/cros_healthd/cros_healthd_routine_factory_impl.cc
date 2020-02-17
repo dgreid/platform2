@@ -9,6 +9,7 @@
 #include "diagnostics/routines/battery_sysfs/battery_sysfs.h"
 #include "diagnostics/routines/cpu_cache/cpu_cache.h"
 #include "diagnostics/routines/cpu_stress/cpu_stress.h"
+#include "diagnostics/routines/floating_point/floating_point_accuracy.h"
 #include "diagnostics/routines/smartctl_check/smartctl_check.h"
 #include "diagnostics/routines/urandom/urandom.h"
 
@@ -57,6 +58,12 @@ std::unique_ptr<DiagnosticRoutine>
 CrosHealthdRoutineFactoryImpl::MakeCpuStressRoutine(
     const base::TimeDelta& exec_duration) {
   return CreateCpuStressRoutine(exec_duration);
+}
+
+std::unique_ptr<DiagnosticRoutine>
+CrosHealthdRoutineFactoryImpl::MakeFloatingPointAccuracyRoutine(
+    const base::TimeDelta& exec_duration) {
+  return CreateFloatingPointAccuracyRoutine(exec_duration);
 }
 
 }  // namespace diagnostics

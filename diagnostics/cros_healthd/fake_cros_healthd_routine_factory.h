@@ -61,6 +61,8 @@ class FakeCrosHealthdRoutineFactory final : public CrosHealthdRoutineFactory {
       const base::TimeDelta& exec_duration) override;
   std::unique_ptr<DiagnosticRoutine> MakeCpuStressRoutine(
       const base::TimeDelta& exec_duration) override;
+  std::unique_ptr<DiagnosticRoutine> MakeFloatingPointAccuracyRoutine(
+      const base::TimeDelta& exec_duration) override;
 
  private:
   // The routine that will be returned by any calls to MakeSomeRoutine.

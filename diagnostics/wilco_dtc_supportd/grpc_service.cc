@@ -530,6 +530,17 @@ void GrpcService::RunRoutine(
         return;
       }
       break;
+    case grpc_api::ROUTINE_FLOATING_POINT_ACCURACY:
+      if (!request->has_floating_point_accuracy_params()) {
+        LOG(ERROR) << "RunRoutineRequest with routine type "
+                      "FLOATING_POINT_ACCURACY has no "
+                      "floating_point_accuracy parameters.";
+        ForwardRunRoutineResponse(callback, 0 /* uuid */,
+                                  grpc_api::ROUTINE_STATUS_INVALID_FIELD,
+                                  grpc_api::ROUTINE_SERVICE_STATUS_OK);
+        return;
+      }
+      break;
     default:
       LOG(ERROR) << "RunRoutineRequest routine type invalid or unset.";
       ForwardRunRoutineResponse(callback, 0 /* uuid */,

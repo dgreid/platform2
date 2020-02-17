@@ -83,6 +83,10 @@ class MockCrosHealthdRoutineService : public CrosHealthdRoutineService {
                void(const base::TimeDelta& exec_duration,
                     int32_t* id,
                     mojo_ipc::DiagnosticRoutineStatusEnum* status));
+  MOCK_METHOD3(RunFloatingPointAccuracyRoutine,
+               void(const base::TimeDelta& exec_duration,
+                    int32_t* id,
+                    mojo_ipc::DiagnosticRoutineStatusEnum* status));
   MOCK_METHOD4(GetRoutineUpdate,
                void(int32_t uuid,
                     mojo_ipc::DiagnosticRoutineCommandEnum command,
@@ -291,6 +295,29 @@ TEST_F(CrosHealthdMojoServiceTest, RequestCpuStressRoutine) {
   EXPECT_EQ(response->status, kExpectedStatus);
 }
 
+// Test that we can request the floating-point-accuracy routine.
+TEST_F(CrosHealthdMojoServiceTest, RequestFloatingPointAccuracyRoutine) {
+  constexpr base::TimeDelta exec_duration = base::TimeDelta::FromSeconds(22);
+
+  EXPECT_CALL(*routine_service(),
+              RunFloatingPointAccuracyRoutine(exec_duration, _, _))
+      .WillOnce(WithArgs<1, 2>(Invoke(
+          [](int32_t* id, mojo_ipc::DiagnosticRoutineStatusEnum* status) {
+            *id = kExpectedId;
+            *status = kExpectedStatus;
+          })));
+
+  mojo_ipc::RunRoutineResponsePtr response;
+  service()->RunFloatingPointAccuracyRoutine(
+      exec_duration.InSeconds(),
+      base::Bind(&SaveMojoResponse<mojo_ipc::RunRoutineResponsePtr>,
+                 &response));
+
+  ASSERT_TRUE(!response.is_null());
+  EXPECT_EQ(response->id, kExpectedId);
+  EXPECT_EQ(response->status, kExpectedStatus);
+}
+
 // Test an update request.
 TEST_F(CrosHealthdMojoServiceTest, RequestRoutineUpdate) {
   constexpr int kId = 3;
@@ -319,6 +346,7 @@ TEST_F(CrosHealthdMojoServiceTest, RequestAvailableRoutines) {
   const std::vector<mojo_ipc::DiagnosticRoutineEnum> available_routines = {
       mojo_ipc::DiagnosticRoutineEnum::kUrandom,
       mojo_ipc::DiagnosticRoutineEnum::kSmartctlCheck,
+      mojo_ipc::DiagnosticRoutineEnum::kFloatingPointAccuracy,
   };
 
   EXPECT_CALL(*routine_service(), GetAvailableRoutines())

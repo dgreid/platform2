@@ -89,6 +89,12 @@ void FakeDiagnosticsService::RunCpuStressRoutine(
   callback.Run(run_routine_response_.Clone());
 }
 
+void FakeDiagnosticsService::RunFloatingPointAccuracyRoutine(
+    uint32_t length_seconds,
+    const RunFloatingPointAccuracyRoutineCallback& callback) {
+  callback.Run(run_routine_response_.Clone());
+}
+
 void FakeDiagnosticsService::SetMojoServiceIsAvailable(bool is_available) {
   is_available_ = is_available;
 }

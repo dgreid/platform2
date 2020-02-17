@@ -60,6 +60,10 @@ class CrosHealthdRoutineServiceImpl final : public CrosHealthdRoutineService {
       const base::TimeDelta& exec_duration,
       int32_t* id,
       MojomCrosHealthdDiagnosticRoutineStatusEnum* status) override;
+  void RunFloatingPointAccuracyRoutine(
+      const base::TimeDelta& exec_duration,
+      int32_t* id,
+      MojomCrosHealthdDiagnosticRoutineStatusEnum* status) override;
   void GetRoutineUpdate(
       int32_t id,
       MojomCrosHealthdDiagnosticRoutineCommandEnum command,
@@ -89,7 +93,9 @@ class CrosHealthdRoutineServiceImpl final : public CrosHealthdRoutineService {
           chromeos::cros_healthd::mojom::DiagnosticRoutineEnum::kSmartctlCheck,
           chromeos::cros_healthd::mojom::DiagnosticRoutineEnum::kAcPower,
           chromeos::cros_healthd::mojom::DiagnosticRoutineEnum::kCpuCache,
-          chromeos::cros_healthd::mojom::DiagnosticRoutineEnum::kCpuStress};
+          chromeos::cros_healthd::mojom::DiagnosticRoutineEnum::kCpuStress,
+          chromeos::cros_healthd::mojom::DiagnosticRoutineEnum::
+              kFloatingPointAccuracy};
 
   // Responsible for making the routines. Unowned pointer that should outlive
   // this instance.

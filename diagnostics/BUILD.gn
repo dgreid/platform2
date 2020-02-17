@@ -12,6 +12,7 @@ group("all") {
     ":diag",
     ":telem",
     ":wilco_dtc_supportd",
+    "//diagnostics/routines:floating-point-accuracy",
     "//diagnostics/routines:smartctl-check",
     "//diagnostics/routines:urandom",
   ]

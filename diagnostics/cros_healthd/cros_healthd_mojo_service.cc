@@ -122,6 +122,16 @@ void CrosHealthdMojoService::RunCpuStressRoutine(
   callback.Run(response.Clone());
 }
 
+void CrosHealthdMojoService::RunFloatingPointAccuracyRoutine(
+    uint32_t length_seconds,
+    const RunFloatingPointAccuracyRoutineCallback& callback) {
+  RunRoutineResponse response;
+  routine_service_->RunFloatingPointAccuracyRoutine(
+      base::TimeDelta::FromSeconds(length_seconds), &response.id,
+      &response.status);
+  callback.Run(response.Clone());
+}
+
 void CrosHealthdMojoService::ProbeTelemetryInfo(
     const std::vector<ProbeCategoryEnum>& categories,
     const ProbeTelemetryInfoCallback& callback) {

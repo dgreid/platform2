@@ -72,6 +72,9 @@ class CrosHealthdMojoService final
   void RunCpuStressRoutine(
       uint32_t length_seconds,
       const RunCpuStressRoutineCallback& callback) override;
+  void RunFloatingPointAccuracyRoutine(
+      uint32_t length_seconds,
+      const RunFloatingPointAccuracyRoutineCallback& callback) override;
 
   // chromeos::cros_healthd::mojom::CrosHealthdProbeService overrides:
   void ProbeTelemetryInfo(const std::vector<ProbeCategoryEnum>& categories,

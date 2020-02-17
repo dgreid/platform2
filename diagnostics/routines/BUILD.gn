@@ -36,6 +36,25 @@ executable("smartctl-check") {
   ]
 }
 
+# The floating-point-accuracy tool executable.
+pkg_config("floating-point-accuracy_pkg_deps") {
+  pkg_deps = [
+    "libbrillo-${libbase_ver}",
+    "libchrome-${libbase_ver}",
+  ]
+}
+
+executable("floating-point-accuracy") {
+  configs += [ ":floating-point-accuracy_pkg_deps" ]
+  cflags_cc = [
+    "-msse",
+    "-mno-mmx",
+  ]
+  sources = [
+    "floating_point/main.cc",
+  ]
+}
+
 # Library that provides the diagnostic routine interface.
 pkg_config("libdiag_routine_pkg_deps") {
   pkg_deps = [
@@ -57,6 +76,7 @@ source_set("libdiag_routine") {
     "cpu_cache/cpu_cache.cc",
     "cpu_stress/cpu_stress.cc",
     "diag_process_adapter_impl.cc",
+    "floating_point/floating_point_accuracy.cc",
     "smartctl_check/smartctl_check.cc",
     "subproc_routine.cc",
     "urandom/urandom.cc",

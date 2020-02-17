@@ -61,6 +61,9 @@ class FakeDiagnosticsService final
   void RunCpuStressRoutine(
       uint32_t length_seconds,
       const RunCpuStressRoutineCallback& callback) override;
+  void RunFloatingPointAccuracyRoutine(
+      uint32_t length_seconds,
+      const RunFloatingPointAccuracyRoutineCallback& callback) override;
 
   // Overrides the default behavior of GetCrosHealthdDiagnosticsService to test
   // situations where mojo methods were called prior to wilco_dtc_supportd's

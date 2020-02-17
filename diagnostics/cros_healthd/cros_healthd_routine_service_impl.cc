@@ -95,6 +95,14 @@ void CrosHealthdRoutineServiceImpl::RunCpuStressRoutine(
   RunRoutine(routine_factory_->MakeCpuStressRoutine(exec_duration), id, status);
 }
 
+void CrosHealthdRoutineServiceImpl::RunFloatingPointAccuracyRoutine(
+    const base::TimeDelta& exec_duration,
+    int32_t* id,
+    mojo_ipc::DiagnosticRoutineStatusEnum* status) {
+  RunRoutine(routine_factory_->MakeFloatingPointAccuracyRoutine(exec_duration),
+             id, status);
+}
+
 void CrosHealthdRoutineServiceImpl::GetRoutineUpdate(
     int32_t uuid,
     mojo_ipc::DiagnosticRoutineCommandEnum command,

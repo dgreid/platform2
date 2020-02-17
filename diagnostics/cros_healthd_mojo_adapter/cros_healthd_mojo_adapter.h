@@ -70,6 +70,10 @@ class CrosHealthdMojoAdapter final {
       chromeos::cros_healthd::mojom::DiagnosticRoutineCommandEnum command,
       bool include_output);
 
+  // Runs the floating-point-accuracy routine.
+  chromeos::cros_healthd::mojom::RunRoutineResponsePtr
+  RunFloatingPointAccuracyRoutine(const base::TimeDelta& exec_duration);
+
  private:
   // Establishes a mojo connection with cros_healthd.
   void Connect();

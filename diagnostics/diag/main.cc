@@ -42,7 +42,9 @@ const struct {
     {"smartctl_check", mojo_ipc::DiagnosticRoutineEnum::kSmartctlCheck},
     {"ac_power", mojo_ipc::DiagnosticRoutineEnum::kAcPower},
     {"cpu_cache", mojo_ipc::DiagnosticRoutineEnum::kCpuCache},
-    {"cpu_stress", mojo_ipc::DiagnosticRoutineEnum::kCpuStress}};
+    {"cpu_stress", mojo_ipc::DiagnosticRoutineEnum::kCpuStress},
+    {"floating_point_accuracy",
+     mojo_ipc::DiagnosticRoutineEnum::kFloatingPointAccuracy}};
 
 const struct {
   const char* readable_status;
@@ -264,6 +266,14 @@ bool ActionRunCpuStressRoutine(const base::TimeDelta& exec_duration) {
   return RunRoutineAndProcessResult(response->id, &adapter);
 }
 
+bool ActionRunFloatingPointAccuracyRoutine(
+    const base::TimeDelta& exec_duration) {
+  diagnostics::CrosHealthdMojoAdapter adapter;
+  auto response = adapter.RunFloatingPointAccuracyRoutine(exec_duration);
+  CHECK(response) << "No RunRoutineResponse received.";
+  return RunRoutineAndProcessResult(response->id, &adapter);
+}
+
 }  // namespace
 
 // 'diag' command-line tool:
@@ -347,6 +357,10 @@ int main(int argc, char** argv) {
       case mojo_ipc::DiagnosticRoutineEnum::kCpuStress:
         routine_result = ActionRunCpuStressRoutine(
             base::TimeDelta().FromSeconds(FLAGS_length_seconds));
+        break;
+      case mojo_ipc::DiagnosticRoutineEnum::kFloatingPointAccuracy:
+        routine_result = ActionRunFloatingPointAccuracyRoutine(
+            base::TimeDelta::FromSeconds(FLAGS_length_seconds));
         break;
       default:
         std::cout << "Unsupported routine: " << FLAGS_routine << std::endl;

@@ -67,7 +67,8 @@ TEST_F(CrosHealthdRoutineServiceImplTest, GetAvailableRoutines) {
       mojo_ipc::DiagnosticRoutineEnum::kSmartctlCheck,
       mojo_ipc::DiagnosticRoutineEnum::kAcPower,
       mojo_ipc::DiagnosticRoutineEnum::kCpuCache,
-      mojo_ipc::DiagnosticRoutineEnum::kCpuStress};
+      mojo_ipc::DiagnosticRoutineEnum::kCpuStress,
+      mojo_ipc::DiagnosticRoutineEnum::kFloatingPointAccuracy};
   auto reply = service()->GetAvailableRoutines();
   EXPECT_EQ(reply, kAvailableRoutines);
 }
@@ -180,6 +181,21 @@ TEST_F(CrosHealthdRoutineServiceImplTest, RunCpuStressRoutine) {
   mojo_ipc::RunRoutineResponse response;
   service()->RunCpuStressRoutine(base::TimeDelta().FromMinutes(5), &response.id,
                                  &response.status);
+  EXPECT_EQ(response.id, 1);
+  EXPECT_EQ(response.status, kExpectedStatus);
+}
+
+// Test that the floating point accuracy routine can be run.
+TEST_F(CrosHealthdRoutineServiceImplTest, RunFloatingPointAccuracyRoutine) {
+  constexpr mojo_ipc::DiagnosticRoutineStatusEnum kExpectedStatus =
+      mojo_ipc::DiagnosticRoutineStatusEnum::kRunning;
+  routine_factory()->SetNonInteractiveStatus(
+      kExpectedStatus, /*status_message=*/"", /*progress_percent=*/50,
+      /*output=*/"");
+  mojo_ipc::RunRoutineResponse response;
+  service()->RunFloatingPointAccuracyRoutine(
+      /*exec_duration=*/base::TimeDelta::FromSeconds(120), &response.id,
+      &response.status);
   EXPECT_EQ(response.id, 1);
   EXPECT_EQ(response.status, kExpectedStatus);
 }

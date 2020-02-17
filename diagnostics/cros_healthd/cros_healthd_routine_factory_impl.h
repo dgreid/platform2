@@ -38,6 +38,8 @@ class CrosHealthdRoutineFactoryImpl final : public CrosHealthdRoutineFactory {
       const base::TimeDelta& exec_duration) override;
   std::unique_ptr<DiagnosticRoutine> MakeCpuStressRoutine(
       const base::TimeDelta& exec_duration) override;
+  std::unique_ptr<DiagnosticRoutine> MakeFloatingPointAccuracyRoutine(
+      const base::TimeDelta& exec_duration) override;
 
  private:
   DISALLOW_COPY_AND_ASSIGN(CrosHealthdRoutineFactoryImpl);

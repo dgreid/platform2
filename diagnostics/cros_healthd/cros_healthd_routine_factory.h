@@ -49,6 +49,10 @@ class CrosHealthdRoutineFactory {
   // diagnostics/routines/cpu_stress for details on the routine itself.
   virtual std::unique_ptr<DiagnosticRoutine> MakeCpuStressRoutine(
       const base::TimeDelta& exec_duration) = 0;
+  // Constructs a new instance of the floating point accuracy routine. See
+  // diagnostics/routines/floating_point for details on the routine itself.
+  virtual std::unique_ptr<DiagnosticRoutine> MakeFloatingPointAccuracyRoutine(
+      const base::TimeDelta& exec_duration) = 0;
 };
 
 }  // namespace diagnostics

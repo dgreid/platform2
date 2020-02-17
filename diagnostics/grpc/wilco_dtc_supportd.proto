@@ -300,6 +300,7 @@ enum DiagnosticRoutine {
   ROUTINE_SMARTCTL_CHECK = 4;
   ROUTINE_CPU_CACHE = 5;
   ROUTINE_CPU_STRESS = 6;
+  ROUTINE_FLOATING_POINT_ACCURACY = 7;
 }
 
 // Enumeration of each of the possible statuses for a diagnostics routine.
@@ -351,6 +352,7 @@ message RunRoutineRequest {
     UrandomRoutineParameters urandom_params = 4;
     SmartctlCheckRoutineParameters smartctl_check_params = 5;
     CpuRoutineParameters cpu_params = 6;
+    FloatingPointAccuracyRoutineParameters floating_point_accuracy_params = 7;
   }
 }
 
@@ -389,6 +391,12 @@ message CpuRoutineParameters {
   // Note here, the length of running time should be at least five minutes for
   // the CPU stress diagnostics and the testing will fail if not.
   int32 length_seconds = 1;
+}
+
+// Parameters for the floating_point_accuracy diagnostics routine.
+message FloatingPointAccuracyRoutineParameters {
+  // Length of time, in seconds, to run the floating_point_accuracy routine for.
+  uint32 length_seconds = 1;
 }
 
 // Return value of the RunRoutine RPC.

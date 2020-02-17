@@ -66,6 +66,10 @@ class CrosHealthdRoutineService {
       const base::TimeDelta& exec_duration,
       int32_t* id,
       MojomCrosHealthdDiagnosticRoutineStatusEnum* status) = 0;
+  virtual void RunFloatingPointAccuracyRoutine(
+      const base::TimeDelta& exec_duration,
+      int32_t* id,
+      MojomCrosHealthdDiagnosticRoutineStatusEnum* status) = 0;
   virtual void GetRoutineUpdate(
       int32_t id,
       MojomCrosHealthdDiagnosticRoutineCommandEnum command,
