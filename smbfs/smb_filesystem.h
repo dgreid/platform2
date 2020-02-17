@@ -109,6 +109,13 @@ class SmbFilesystem : public Filesystem {
   void ReleaseDir(std::unique_ptr<SimpleRequest> request,
                   fuse_ino_t inode,
                   uint64_t file_handle) override;
+  void MkDir(std::unique_ptr<EntryRequest> request,
+             fuse_ino_t parent_inode,
+             const std::string& name,
+             mode_t mode) override;
+  void RmDir(std::unique_ptr<SimpleRequest> request,
+             fuse_ino_t parent_inode,
+             const std::string& name) override;
 
  protected:
   // Protected constructor for unit tests.
@@ -165,6 +172,13 @@ class SmbFilesystem : public Filesystem {
   void ReleaseDirInternal(std::unique_ptr<SimpleRequest> request,
                           fuse_ino_t inode,
                           uint64_t file_handle);
+  void MkDirInternal(std::unique_ptr<EntryRequest> request,
+                     fuse_ino_t parent_inode,
+                     const std::string& name,
+                     mode_t mode);
+  void RmDirinternal(std::unique_ptr<SimpleRequest> request,
+                     fuse_ino_t parent_inode,
+                     const std::string& name);
 
   // Constructs a sanitised stat struct for sending as a response.
   struct stat MakeStat(ino_t inode, const struct stat& in_stat) const;
@@ -221,11 +235,13 @@ class SmbFilesystem : public Filesystem {
   smbc_ftruncate_fn smbc_ftruncate_ctx_ = nullptr;
   smbc_lseek_fn smbc_lseek_ctx_ = nullptr;
   smbc_lseekdir_fn smbc_lseekdir_ctx_ = nullptr;
+  smbc_mkdir_fn smbc_mkdir_ctx_ = nullptr;
   smbc_open_fn smbc_open_ctx_ = nullptr;
   smbc_opendir_fn smbc_opendir_ctx_ = nullptr;
   smbc_read_fn smbc_read_ctx_ = nullptr;
   smbc_readdir_fn smbc_readdir_ctx_ = nullptr;
   smbc_rename_fn smbc_rename_ctx_ = nullptr;
+  smbc_rmdir_fn smbc_rmdir_ctx_ = nullptr;
   smbc_stat_fn smbc_stat_ctx_ = nullptr;
   smbc_telldir_fn smbc_telldir_ctx_ = nullptr;
   smbc_unlink_fn smbc_unlink_ctx_ = nullptr;

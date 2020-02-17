@@ -94,11 +94,13 @@ SmbFilesystem::SmbFilesystem(const std::string& share_path,
   smbc_ftruncate_ctx_ = smbc_getFunctionFtruncate(context_);
   smbc_lseek_ctx_ = smbc_getFunctionLseek(context_);
   smbc_lseekdir_ctx_ = smbc_getFunctionLseekdir(context_);
+  smbc_mkdir_ctx_ = smbc_getFunctionMkdir(context_);
   smbc_open_ctx_ = smbc_getFunctionOpen(context_);
   smbc_opendir_ctx_ = smbc_getFunctionOpendir(context_);
   smbc_read_ctx_ = smbc_getFunctionRead(context_);
   smbc_readdir_ctx_ = smbc_getFunctionReaddir(context_);
   smbc_rename_ctx_ = smbc_getFunctionRename(context_);
+  smbc_rmdir_ctx_ = smbc_getFunctionRmdir(context_);
   smbc_stat_ctx_ = smbc_getFunctionStat(context_);
   smbc_telldir_ctx_ = smbc_getFunctionTelldir(context_);
   smbc_unlink_ctx_ = smbc_getFunctionUnlink(context_);
@@ -884,6 +886,81 @@ void SmbFilesystem::ReleaseDirInternal(std::unique_ptr<SimpleRequest> request,
   }
 
   RemoveOpenFile(file_handle);
+  request->ReplyOk();
+}
+
+void SmbFilesystem::MkDir(std::unique_ptr<EntryRequest> request,
+                          fuse_ino_t parent_inode,
+                          const std::string& name,
+                          mode_t mode) {
+  samba_thread_.task_runner()->PostTask(
+      FROM_HERE,
+      base::BindOnce(&SmbFilesystem::MkDirInternal, base::Unretained(this),
+                     std::move(request), parent_inode, name, mode));
+}
+
+void SmbFilesystem::MkDirInternal(std::unique_ptr<EntryRequest> request,
+                                  fuse_ino_t parent_inode,
+                                  const std::string& name,
+                                  mode_t mode) {
+  if (request->IsInterrupted()) {
+    return;
+  }
+
+  const base::FilePath parent_path = inode_map_.GetPath(parent_inode);
+  CHECK(!parent_path.empty())
+      << "Lookup on invalid parent inode: " << parent_inode;
+  const base::FilePath file_path = parent_path.Append(name);
+  const std::string share_file_path = MakeShareFilePath(file_path);
+
+  if (smbc_mkdir_ctx_(context_, share_file_path.c_str(), mode) < 0) {
+    int err = errno;
+    VPLOG(1) << "smbc_mkdir path: " << share_file_path << " failed";
+    request->ReplyError(err);
+    return;
+  }
+
+  ino_t inode = inode_map_.IncInodeRef(file_path);
+  struct stat entry_stat = MakeStat(inode, {0});
+  entry_stat.st_mode = S_IFDIR | mode;
+  fuse_entry_param entry = {0};
+  entry.ino = inode;
+  entry.generation = 1;
+  entry.attr = entry_stat;
+  entry.attr_timeout = kAttrTimeoutSeconds;
+  entry.entry_timeout = kAttrTimeoutSeconds;
+  request->ReplyEntry(entry);
+}
+
+void SmbFilesystem::RmDir(std::unique_ptr<SimpleRequest> request,
+                          fuse_ino_t parent_inode,
+                          const std::string& name) {
+  samba_thread_.task_runner()->PostTask(
+      FROM_HERE,
+      base::BindOnce(&SmbFilesystem::RmDirinternal, base::Unretained(this),
+                     std::move(request), parent_inode, name));
+}
+
+void SmbFilesystem::RmDirinternal(std::unique_ptr<SimpleRequest> request,
+                                  fuse_ino_t parent_inode,
+                                  const std::string& name) {
+  if (request->IsInterrupted()) {
+    return;
+  }
+
+  const base::FilePath parent_path = inode_map_.GetPath(parent_inode);
+  CHECK(!parent_path.empty())
+      << "Lookup on invalid parent inode: " << parent_inode;
+  const base::FilePath file_path = parent_path.Append(name);
+  const std::string share_file_path = MakeShareFilePath(file_path);
+
+  if (smbc_rmdir_ctx_(context_, share_file_path.c_str()) < 0) {
+    int err = errno;
+    VPLOG(1) << "smbc_rmdir path: " << share_file_path << " failed";
+    request->ReplyError(err);
+    return;
+  }
+
   request->ReplyOk();
 }
 
