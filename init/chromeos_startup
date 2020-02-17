@@ -82,8 +82,8 @@ sanity_check_clock() {
   # the system where this image was built/modified, and on the runtime image
   # (in case a dev modified random paths while the clock was out of sync).
   # Calculated using: date -d"01 Jan $(date +%Y) UTC" +%s
-  local year="2019"
-  local base_secs="1546300800"
+  local year="2020"
+  local base_secs="1577836800"
 
   # See if the current time is older than our sanity time.  If so, pull up.
   if [ "$(date -u +%s)" -lt "${base_secs}" ]; then
