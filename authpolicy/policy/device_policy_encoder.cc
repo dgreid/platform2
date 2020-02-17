@@ -9,23 +9,18 @@
 #include <utility>
 
 #include <base/json/json_reader.h>
+#include <base/bind.h>
+#include <base/bind_helpers.h>
+#include <base/callback.h>
 #include <base/strings/string_number_conversions.h>
 #include <components/policy/core/common/registry_dict.h>
 #include <dbus/shill/dbus-constants.h>
 
-#include "authpolicy/log_colors.h"
-#include "authpolicy/policy/policy_encoder_helper.h"
 #include "bindings/chrome_device_policy.pb.h"
 #include "bindings/policy_constants.h"
 
 namespace em = enterprise_management;
 
-namespace {
-
-const char* kColorPolicy = authpolicy::kColorPolicy;
-const char* kColorReset = authpolicy::kColorReset;
-
-}  // namespace
 
 namespace policy {
 
@@ -149,15 +144,27 @@ bool EncodeWeeklyTimeIntervalProto(const base::Value& value,
 
 }  // namespace
 
+DevicePolicyEncoder::DevicePolicyEncoder(const RegistryDict* dict,
+                                         const PolicyLevel level)
+    : dict_(dict), level_(level) {}
+
 void DevicePolicyEncoder::EncodePolicy(
     em::ChromeDeviceSettingsProto* policy) const {
   LOG_IF(INFO, log_policy_values_)
-      << kColorPolicy << "Device policy" << kColorReset;
-  EncodeLoginPolicies(policy);
-  EncodeNetworkPolicies(policy);
-  EncodeAutoUpdatePolicies(policy);
-  EncodeAccessibilityPolicies(policy);
-  EncodeGenericPolicies(policy);
+      << authpolicy::kColorPolicy << "Device policy ("
+      << (level_ == POLICY_LEVEL_RECOMMENDED ? "recommended" : "mandatory")
+      << ")" << authpolicy::kColorReset;
+  if (level_ == POLICY_LEVEL_MANDATORY) {
+    // All of the following policies support only mandatory level, so there's no
+    // benefit on trying re-encoding them when the supported level is
+    // recommended.
+    EncodeLoginPolicies(policy);
+    EncodeNetworkPolicies(policy);
+    EncodeAutoUpdatePolicies(policy);
+    EncodeAccessibilityPolicies(policy);
+    EncodeGenericPolicies(policy);
+  }
+  EncodePoliciesWithPolicyOptions(policy);
 }
 
 void DevicePolicyEncoder::EncodeLoginPolicies(
@@ -352,63 +359,6 @@ void DevicePolicyEncoder::EncodeAccessibilityPolicies(
                   policy->mutable_accessibility_settings()
                       ->set_login_screen_default_large_cursor_enabled(value);
                 });
-  EncodeBoolean(key::kDeviceLoginScreenLargeCursorEnabled,
-                [policy](bool value) {
-                  policy->mutable_accessibility_settings()
-                      ->set_login_screen_large_cursor_enabled(value);
-                });
-  EncodeBoolean(key::kDeviceLoginScreenAutoclickEnabled, [policy](bool value) {
-    policy->mutable_accessibility_settings()
-        ->set_login_screen_autoclick_enabled(value);
-  });
-  EncodeBoolean(key::kDeviceLoginScreenCaretHighlightEnabled,
-                [policy](bool value) {
-                  policy->mutable_accessibility_settings()
-                      ->set_login_screen_caret_highlight_enabled(value);
-                });
-  EncodeBoolean(key::kDeviceLoginScreenCursorHighlightEnabled,
-                [policy](bool value) {
-                  policy->mutable_accessibility_settings()
-                      ->set_login_screen_cursor_highlight_enabled(value);
-                });
-  EncodeBoolean(key::kDeviceLoginScreenDictationEnabled, [policy](bool value) {
-    policy->mutable_accessibility_settings()
-        ->set_login_screen_dictation_enabled(value);
-  });
-  EncodeBoolean(key::kDeviceLoginScreenHighContrastEnabled,
-                [policy](bool value) {
-                  policy->mutable_accessibility_settings()
-                      ->set_login_screen_high_contrast_enabled(value);
-                });
-  EncodeBoolean(key::kDeviceLoginScreenMonoAudioEnabled, [policy](bool value) {
-    policy->mutable_accessibility_settings()
-        ->set_login_screen_mono_audio_enabled(value);
-  });
-  EncodeBoolean(key::kDeviceLoginScreenSelectToSpeakEnabled,
-                [policy](bool value) {
-                  policy->mutable_accessibility_settings()
-                      ->set_login_screen_select_to_speak_enabled(value);
-                });
-  EncodeBoolean(key::kDeviceLoginScreenSpokenFeedbackEnabled,
-                [policy](bool value) {
-                  policy->mutable_accessibility_settings()
-                      ->set_login_screen_spoken_feedback_enabled(value);
-                });
-  EncodeBoolean(key::kDeviceLoginScreenStickyKeysEnabled, [policy](bool value) {
-    policy->mutable_accessibility_settings()
-        ->set_login_screen_sticky_keys_enabled(value);
-  });
-  EncodeBoolean(key::kDeviceLoginScreenVirtualKeyboardEnabled,
-                [policy](bool value) {
-                  policy->mutable_accessibility_settings()
-                      ->set_login_screen_virtual_keyboard_enabled(value);
-                });
-  EncodeIntegerInRange(key::kDeviceLoginScreenScreenMagnifierType,
-                       kScreenMagnifierTypeRangeMin,
-                       kScreenMagnifierTypeRangeMax, [policy](int value) {
-                         policy->mutable_accessibility_settings()
-                             ->set_login_screen_screen_magnifier_type(value);
-                       });
   EncodeBoolean(key::kDeviceLoginScreenDefaultSpokenFeedbackEnabled,
                 [policy](bool value) {
                   policy->mutable_accessibility_settings()
@@ -431,6 +381,125 @@ void DevicePolicyEncoder::EncodeAccessibilityPolicies(
       [policy](bool value) {
         policy->mutable_accessibility_settings()
             ->set_login_screen_default_virtual_keyboard_enabled(value);
+      });
+}
+
+void DevicePolicyEncoder::EncodePoliciesWithPolicyOptions(
+    em::ChromeDeviceSettingsProto* policy) const {
+  EncodeBoolean(key::kDeviceLoginScreenLargeCursorEnabled, [&](bool value) {
+    em::AccessibilitySettingsProto* accessibility_settings =
+        policy->mutable_accessibility_settings();
+    accessibility_settings->set_login_screen_large_cursor_enabled(value);
+    SetPolicyOptions(accessibility_settings
+                         ->mutable_login_screen_large_cursor_enabled_options(),
+                     level_);
+  });
+
+  EncodeBoolean(key::kDeviceLoginScreenAutoclickEnabled, [&](bool value) {
+    em::AccessibilitySettingsProto* accessibility_settings =
+        policy->mutable_accessibility_settings();
+    accessibility_settings->set_login_screen_autoclick_enabled(value);
+    SetPolicyOptions(accessibility_settings
+                         ->mutable_login_screen_autoclick_enabled_options(),
+                     level_);
+  });
+
+  EncodeBoolean(key::kDeviceLoginScreenCaretHighlightEnabled, [&](bool value) {
+    em::AccessibilitySettingsProto* accessibility_settings =
+        policy->mutable_accessibility_settings();
+    accessibility_settings->set_login_screen_caret_highlight_enabled(value);
+    SetPolicyOptions(
+        accessibility_settings
+            ->mutable_login_screen_caret_highlight_enabled_options(),
+        level_);
+  });
+
+  EncodeBoolean(key::kDeviceLoginScreenCursorHighlightEnabled, [&](bool value) {
+    em::AccessibilitySettingsProto* accessibility_settings =
+        policy->mutable_accessibility_settings();
+    accessibility_settings->set_login_screen_cursor_highlight_enabled(value);
+    SetPolicyOptions(
+        accessibility_settings
+            ->mutable_login_screen_cursor_highlight_enabled_options(),
+        level_);
+  });
+
+  EncodeBoolean(key::kDeviceLoginScreenDictationEnabled, [&](bool value) {
+    em::AccessibilitySettingsProto* accessibility_settings =
+        policy->mutable_accessibility_settings();
+    accessibility_settings->set_login_screen_dictation_enabled(value);
+    SetPolicyOptions(accessibility_settings
+                         ->mutable_login_screen_dictation_enabled_options(),
+                     level_);
+  });
+
+  EncodeBoolean(key::kDeviceLoginScreenHighContrastEnabled, [&](bool value) {
+    em::AccessibilitySettingsProto* accessibility_settings =
+        policy->mutable_accessibility_settings();
+    accessibility_settings->set_login_screen_high_contrast_enabled(value);
+    SetPolicyOptions(accessibility_settings
+                         ->mutable_login_screen_high_contrast_enabled_options(),
+                     level_);
+  });
+
+  EncodeBoolean(key::kDeviceLoginScreenMonoAudioEnabled, [&](bool value) {
+    em::AccessibilitySettingsProto* accessibility_settings =
+        policy->mutable_accessibility_settings();
+    accessibility_settings->set_login_screen_mono_audio_enabled(value);
+    SetPolicyOptions(accessibility_settings
+                         ->mutable_login_screen_mono_audio_enabled_options(),
+                     level_);
+  });
+
+  EncodeBoolean(key::kDeviceLoginScreenSelectToSpeakEnabled, [&](bool value) {
+    em::AccessibilitySettingsProto* accessibility_settings =
+        policy->mutable_accessibility_settings();
+    accessibility_settings->set_login_screen_select_to_speak_enabled(value);
+    SetPolicyOptions(
+        accessibility_settings
+            ->mutable_login_screen_select_to_speak_enabled_options(),
+        level_);
+  });
+
+  EncodeBoolean(key::kDeviceLoginScreenSpokenFeedbackEnabled, [&](bool value) {
+    em::AccessibilitySettingsProto* accessibility_settings =
+        policy->mutable_accessibility_settings();
+    accessibility_settings->set_login_screen_spoken_feedback_enabled(value);
+    SetPolicyOptions(
+        accessibility_settings
+            ->mutable_login_screen_spoken_feedback_enabled_options(),
+        level_);
+  });
+
+  EncodeBoolean(key::kDeviceLoginScreenStickyKeysEnabled, [&](bool value) {
+    em::AccessibilitySettingsProto* accessibility_settings =
+        policy->mutable_accessibility_settings();
+    accessibility_settings->set_login_screen_sticky_keys_enabled(value);
+    SetPolicyOptions(accessibility_settings
+                         ->mutable_login_screen_sticky_keys_enabled_options(),
+                     level_);
+  });
+
+  EncodeBoolean(key::kDeviceLoginScreenVirtualKeyboardEnabled, [&](bool value) {
+    em::AccessibilitySettingsProto* accessibility_settings =
+        policy->mutable_accessibility_settings();
+    accessibility_settings->set_login_screen_virtual_keyboard_enabled(value);
+    SetPolicyOptions(
+        accessibility_settings
+            ->mutable_login_screen_virtual_keyboard_enabled_options(),
+        level_);
+  });
+
+  EncodeIntegerInRange(
+      key::kDeviceLoginScreenScreenMagnifierType, kScreenMagnifierTypeRangeMin,
+      kScreenMagnifierTypeRangeMax, [&](int value) {
+        em::AccessibilitySettingsProto* accessibility_settings =
+            policy->mutable_accessibility_settings();
+        accessibility_settings->set_login_screen_screen_magnifier_type(value);
+        SetPolicyOptions(
+            accessibility_settings
+                ->mutable_login_screen_screen_magnifier_type_options(),
+            level_);
       });
 }
 
@@ -745,29 +814,13 @@ void DevicePolicyEncoder::EncodeGenericPolicies(
 }
 
 void DevicePolicyEncoder::EncodeBoolean(
-    const char* policy_name, const BooleanPolicyCallback& set_policy) const {
-  // Try to get policy value from dict.
-  const base::Value* value = dict_->GetValue(policy_name);
-  if (!value)
-    return;
-
-  // Get actual value, doing type conversion if necessary.
-  bool bool_value;
-  if (!GetAsBoolean(value, &bool_value)) {
-    PrintConversionError(value, "boolean", policy_name);
-    return;
-  }
-
-  LOG_IF(INFO, log_policy_values_)
-      << kColorPolicy << "  " << policy_name << " = "
-      << (bool_value ? "true" : "false") << kColorReset;
-
-  // Create proto and set value.
-  set_policy(bool_value);
+    const char* policy_name, const SetBooleanPolicyCallback& set_policy) const {
+  EncodeBooleanPolicy(policy_name, GetValueFromDictCallback(dict_), set_policy,
+                      log_policy_values_);
 }
 
 void DevicePolicyEncoder::EncodeInteger(
-    const char* policy_name, const IntegerPolicyCallback& set_policy) const {
+    const char* policy_name, const SetIntegerPolicyCallback& set_policy) const {
   EncodeIntegerInRange(policy_name, std::numeric_limits<int>::min(),
                        std::numeric_limits<int>::max(), set_policy);
 }
@@ -776,79 +829,27 @@ void DevicePolicyEncoder::EncodeIntegerInRange(
     const char* policy_name,
     int range_min,
     int range_max,
-    const IntegerPolicyCallback& set_policy) const {
-  // Try to get policy value from dict.
-  const base::Value* value = dict_->GetValue(policy_name);
-  if (!value)
-    return;
-
-  // Get actual value, doing type conversion if necessary.
-  int int_value;
-  if (!GetAsIntegerInRangeAndPrintError(value, range_min, range_max,
-                                        policy_name, &int_value)) {
-    return;
-  }
-
-  LOG_IF(INFO, log_policy_values_) << kColorPolicy << "  " << policy_name
-                                   << " = " << int_value << kColorReset;
-
-  // Create proto and set value.
-  set_policy(int_value);
+    const SetIntegerPolicyCallback& set_policy) const {
+  EncodeIntegerInRangePolicy(policy_name, GetValueFromDictCallback(dict_),
+                             range_min, range_max, set_policy,
+                             log_policy_values_);
 }
 
 void DevicePolicyEncoder::EncodeString(
-    const char* policy_name, const StringPolicyCallback& set_policy) const {
-  // Try to get policy value from dict.
-  const base::Value* value = dict_->GetValue(policy_name);
-  if (!value)
-    return;
-
-  // Get actual value, doing type conversion if necessary.
-  std::string string_value;
-  if (!GetAsString(value, &string_value)) {
-    PrintConversionError(value, "string", policy_name);
-    return;
-  }
-
-  LOG_IF(INFO, log_policy_values_) << kColorPolicy << "  " << policy_name
-                                   << " = " << string_value << kColorReset;
-
-  // Create proto and set value.
-  set_policy(string_value);
+    const char* policy_name, const SetStringPolicyCallback& set_policy) const {
+  EncodeStringPolicy(policy_name, GetValueFromDictCallback(dict_), set_policy,
+                     log_policy_values_);
 }
 
 void DevicePolicyEncoder::EncodeStringList(
-    const char* policy_name, const StringListPolicyCallback& set_policy) const {
-  // Try to get policy key from dict.
+    const char* policy_name,
+    const SetStringListPolicyCallback& set_policy) const {
   const RegistryDict* key = dict_->GetKey(policy_name);
   if (!key)
     return;
 
-  // Get and check all values. Do this in advance to prevent partial writes.
-  std::vector<std::string> string_values;
-  for (int index = 0; /* empty */; ++index) {
-    std::string indexStr = base::IntToString(index + 1);
-    const base::Value* value = key->GetValue(indexStr);
-    if (!value)
-      break;
-
-    std::string string_value;
-    if (!GetAsString(value, &string_value)) {
-      PrintConversionError(value, "string", policy_name, &indexStr);
-      return;
-    }
-
-    string_values.push_back(string_value);
-  }
-
-  if (log_policy_values_ && LOG_IS_ON(INFO)) {
-    LOG(INFO) << kColorPolicy << "  " << policy_name << kColorReset;
-    for (const std::string& value : string_values)
-      LOG(INFO) << kColorPolicy << "    " << value << kColorReset;
-  }
-
-  // Create proto and set values.
-  set_policy(string_values);
+  EncodeStringListPolicy(policy_name, GetValueFromDictCallback(key), set_policy,
+                         log_policy_values_);
 }
 
 }  // namespace policy

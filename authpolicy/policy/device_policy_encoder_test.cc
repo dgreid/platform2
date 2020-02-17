@@ -45,7 +45,7 @@ class DevicePolicyEncoderTest
  protected:
   void EncodeDict(em::ChromeDeviceSettingsProto* policy,
                   const RegistryDict* dict) override {
-    DevicePolicyEncoder encoder(dict);
+    DevicePolicyEncoder encoder(dict, POLICY_LEVEL_MANDATORY);
     *policy = em::ChromeDeviceSettingsProto();
     encoder.EncodePolicy(policy);
   }

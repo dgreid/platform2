@@ -5,15 +5,49 @@
 #ifndef AUTHPOLICY_POLICY_POLICY_ENCODER_HELPER_H_
 #define AUTHPOLICY_POLICY_POLICY_ENCODER_HELPER_H_
 
+#include <functional>
 #include <string>
+#include <vector>
 
+#include <base/callback.h>
 #include <base/values.h>
+
+#include <components/policy/core/common/policy_types.h>
+
+#include "authpolicy/log_colors.h"
+#include "authpolicy/policy/policy_encoder_helper.h"
 
 namespace base {
 class FilePath;
 }  // namespace base
 
+namespace enterprise_management {
+class PolicyOptions;
+class BooleanPolicyProto;
+class IntegerPolicyProto;
+class StringPolicyProto;
+class StringListPolicyProto;
+class CloudPolicySettings;
+}  // namespace enterprise_management
+
 namespace policy {
+
+struct BooleanPolicyAccess;
+struct IntegerPolicyAccess;
+struct StringPolicyAccess;
+struct StringListPolicyAccess;
+
+// Callbacks to set policy values. StringListPolicyCallback actually appends
+// a string to the list. It does not set the whole list.
+using SetBooleanPolicyCallback = std::function<void(bool)>;
+using SetIntegerPolicyCallback = std::function<void(int)>;
+using SetStringPolicyCallback = std::function<void(const std::string&)>;
+using SetStringListPolicyCallback =
+    std::function<void(const std::vector<std::string>&)>;
+
+// Callback to get the value of the policy.
+using GetPolicyValueCallback =
+    base::RepeatingCallback<const base::Value*(const std::string&)>;
 
 class RegistryDict;
 
@@ -35,9 +69,15 @@ extern const char kKeyMandatoryExtension[];
 
 // Checks a PReg file for existence and loads all entries in the branch with
 // root |registry_key| into |dict|.
-bool LoadPRegFile(const base::FilePath& preg_file,
-                  const char* registry_key,
-                  RegistryDict* dict);
+bool LoadPRegFileIntoDict(const base::FilePath& preg_file,
+                          const char* registry_key,
+                          RegistryDict* dict);
+
+// Loads the |preg_files| into a the |policy_dict| and returns true if it
+// succeeded for all files, or false otherwise.
+bool LoadPRegFilesIntoDict(const std::vector<base::FilePath>& preg_files,
+                           const char* registry_key,
+                           RegistryDict* policy_dict);
 
 // Similar to base::Value::GetAsBoolean(), but in addition it converts int
 // values of 0 or 1 to bool. Returns true on success and stores the output in
@@ -65,6 +105,40 @@ bool GetAsIntegerInRangeAndPrintError(const base::Value* value,
                                       const char* policy_name,
                                       int* int_value);
 
+// Returns a callback, which gets the policy value from the |policy_dict|.
+GetPolicyValueCallback GetValueFromDictCallback(
+    const RegistryDict* policy_dict);
+
+// Marks a policy recommended or mandatory.
+void SetPolicyOptions(enterprise_management::PolicyOptions* options,
+                      PolicyLevel level);
+
+// Boolean policies.
+void EncodeBooleanPolicy(const char* policy_name,
+                         GetPolicyValueCallback get_policy_value,
+                         const SetBooleanPolicyCallback& set_policy,
+                         bool log_policy_value);
+
+// Integer in range policies.
+void EncodeIntegerInRangePolicy(const char* policy_name,
+                                GetPolicyValueCallback get_policy_value,
+                                int range_min,
+                                int range_max,
+                                const SetIntegerPolicyCallback& set_policy,
+                                bool log_policy_value);
+// String policies.
+void EncodeStringPolicy(const char* policy_name,
+                        GetPolicyValueCallback get_policy_value,
+                        const SetStringPolicyCallback& set_policy,
+                        bool log_policy_value);
+
+// String list policies are a little different. Unlike the basic types they
+// are not stored as registry value, but as registry key with values 1, 2, ...
+// for the entries.
+void EncodeStringListPolicy(const char* policy_name,
+                            GetPolicyValueCallback get_policy_value,
+                            const SetStringListPolicyCallback& set_policy,
+                            bool log_policy_value);
 }  // namespace policy
 
 #endif  // AUTHPOLICY_POLICY_POLICY_ENCODER_HELPER_H_

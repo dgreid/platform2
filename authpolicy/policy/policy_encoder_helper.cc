@@ -5,16 +5,27 @@
 #include "authpolicy/policy/policy_encoder_helper.h"
 
 #include <string>
+#include <utility>
 
+#include <base/bind.h>
+#include <base/bind_helpers.h>
+#include <base/callback.h>
 #include <base/files/file_path.h>
 #include <base/files/file_util.h>
+#include <base/run_loop.h>
 #include <base/strings/string16.h>
+#include <base/strings/string_number_conversions.h>
 #include <base/strings/utf_string_conversions.h>
 #include <base/sys_info.h>
 #include <components/policy/core/common/policy_load_status.h>
 #include <components/policy/core/common/registry_dict.h>
 
+#include "authpolicy/log_colors.h"
 #include "authpolicy/policy/preg_parser.h"
+#include "bindings/policy_common_definitions.pb.h"
+#include "bindings/policy_constants.h"
+
+namespace em = enterprise_management;
 
 namespace policy {
 
@@ -24,9 +35,9 @@ constexpr char kKeyExtensions[] =
 constexpr char kKeyRecommended[] = "Recommended";
 constexpr char kKeyMandatoryExtension[] = "Policy";
 
-bool LoadPRegFile(const base::FilePath& preg_file,
-                  const char* registry_key,
-                  RegistryDict* dict) {
+bool LoadPRegFileIntoDict(const base::FilePath& preg_file,
+                          const char* registry_key,
+                          RegistryDict* dict) {
   if (!base::PathExists(preg_file)) {
     LOG(ERROR) << "PReg file '" << preg_file.value() << "' does not exist";
     return false;
@@ -44,6 +55,16 @@ bool LoadPRegFile(const base::FilePath& preg_file,
     return false;
   }
 
+  return true;
+}
+
+bool LoadPRegFilesIntoDict(const std::vector<base::FilePath>& preg_files,
+                           const char* registry_key,
+                           RegistryDict* policy_dict) {
+  for (const base::FilePath& preg_file : preg_files) {
+    if (!LoadPRegFileIntoDict(preg_file, registry_key, policy_dict))
+      return false;
+  }
   return true;
 }
 
@@ -99,6 +120,127 @@ bool GetAsIntegerInRangeAndPrintError(const base::Value* value,
   }
 
   return true;
+}
+
+GetPolicyValueCallback GetValueFromDictCallback(
+    const RegistryDict* policy_dict) {
+  return base::BindRepeating(
+      [](const RegistryDict* dict, const std::string& policy_name) {
+        return dict->GetValue(policy_name);
+      },
+      policy_dict);
+}
+
+void SetPolicyOptions(em::PolicyOptions* options, PolicyLevel level) {
+  DCHECK(options);
+  options->set_mode(level == POLICY_LEVEL_RECOMMENDED
+                        ? em::PolicyOptions_PolicyMode_RECOMMENDED
+                        : em::PolicyOptions_PolicyMode_MANDATORY);
+}
+
+void EncodeBooleanPolicy(const char* policy_name,
+                         GetPolicyValueCallback get_policy_value,
+                         const SetBooleanPolicyCallback& set_policy,
+                         bool log_policy_value) {
+  const base::Value* value = std::move(get_policy_value).Run(policy_name);
+
+  if (!value)
+    return;
+
+  // Get actual value, doing type conversion if necessary.
+  bool bool_value;
+  if (!GetAsBoolean(value, &bool_value)) {
+    PrintConversionError(value, "boolean", policy_name);
+    return;
+  }
+
+  LOG_IF(INFO, log_policy_value)
+      << authpolicy::kColorPolicy << "  " << policy_name << " = "
+      << (bool_value ? "true" : "false") << authpolicy::kColorReset;
+
+  // Create proto and set value.
+  set_policy(bool_value);
+}
+
+void EncodeIntegerInRangePolicy(const char* policy_name,
+                                GetPolicyValueCallback get_policy_value,
+                                int range_min,
+                                int range_max,
+                                const SetIntegerPolicyCallback& set_policy,
+                                bool log_policy_value) {
+  const base::Value* value = std::move(get_policy_value).Run(policy_name);
+  if (!value)
+    return;
+
+  // Get actual value, doing type conversion if necessary.
+  int int_value;
+  if (!GetAsIntegerInRangeAndPrintError(value, range_min, range_max,
+                                        policy_name, &int_value)) {
+    return;
+  }
+
+  LOG_IF(INFO, log_policy_value)
+      << authpolicy::kColorPolicy << "  " << policy_name << " = " << int_value
+      << authpolicy::kColorReset;
+
+  // Create proto and set value.
+  set_policy(int_value);
+}
+
+void EncodeStringPolicy(const char* policy_name,
+                        GetPolicyValueCallback get_policy_value,
+                        const SetStringPolicyCallback& set_policy,
+                        bool log_policy_value) {
+  // Try to get policy value from dict.
+  const base::Value* value = std::move(get_policy_value).Run(policy_name);
+  if (!value)
+    return;
+
+  // Get actual value, doing type conversion if necessary.
+  std::string string_value;
+  if (!GetAsString(value, &string_value)) {
+    PrintConversionError(value, "string", policy_name);
+    return;
+  }
+
+  LOG_IF(INFO, log_policy_value)
+      << authpolicy::kColorPolicy << "  " << policy_name << " = "
+      << string_value << authpolicy::kColorReset;
+
+  // Create proto and set value.
+  set_policy(string_value);
+}
+
+void EncodeStringListPolicy(const char* policy_name,
+                            GetPolicyValueCallback get_policy_value,
+                            const SetStringListPolicyCallback& set_policy,
+                            bool log_policy_value) {
+  // Get and check all values. Do this in advance to prevent partial writes.
+  std::vector<std::string> string_values;
+  for (int index = 0; /* empty */; ++index) {
+    std::string index_str = base::IntToString(index + 1);
+    const base::Value* value = get_policy_value.Run(index_str);
+    if (!value)
+      break;
+
+    std::string string_value;
+    if (!GetAsString(value, &string_value)) {
+      PrintConversionError(value, "string", policy_name, &index_str);
+      return;
+    }
+    string_values.push_back(string_value);
+  }
+
+  if (log_policy_value && LOG_IS_ON(INFO)) {
+    LOG(INFO) << authpolicy::kColorPolicy << "  " << policy_name
+              << authpolicy::kColorReset;
+    for (const std::string& value : string_values)
+      LOG(INFO) << authpolicy::kColorPolicy << "    " << value
+                << authpolicy::kColorReset;
+  }
+
+  // Create proto and set values.
+  set_policy(string_values);
 }
 
 }  // namespace policy

@@ -10,24 +10,15 @@
 #include <base/bind.h>
 #include <components/policy/core/common/policy_types.h>
 
+#include "authpolicy/policy/policy_encoder_helper.h"
+
 namespace enterprise_management {
-class PolicyOptions;
-class BooleanPolicyProto;
-class IntegerPolicyProto;
-class StringPolicyProto;
-class StringListPolicyProto;
 class CloudPolicySettings;
 }  // namespace enterprise_management
 
 namespace policy {
 
 class RegistryDict;
-
-struct BooleanPolicyAccess;
-struct IntegerPolicyAccess;
-struct StringPolicyAccess;
-struct StringListPolicyAccess;
-
 // Private helper class used to convert a RegistryDict into a user policy
 // protobuf. Don't include directly, use |preg_policy_encoder.h| instead.
 class UserPolicyEncoder {
@@ -41,9 +32,6 @@ class UserPolicyEncoder {
   void EncodePolicy(enterprise_management::CloudPolicySettings* policy) const;
 
  private:
-  // Marks a policy recommended or mandatory.
-  void SetPolicyOptions(enterprise_management::PolicyOptions* options) const;
-
   // Gets a PolicyLevel as string.
   const char* GetLevelStr() const;
 

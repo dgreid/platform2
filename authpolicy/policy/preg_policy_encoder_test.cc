@@ -374,7 +374,7 @@ TEST_F(PregPolicyEncoderTest, TestJsonWithNewlinesRoundtrip) {
   writer1.WriteToFile(preg_1_path_);
 
   RegistryDict dict;
-  EXPECT_TRUE(LoadPRegFile(preg_1_path_, kKeyUserDevice, &dict));
+  EXPECT_TRUE(LoadPRegFileIntoDict(preg_1_path_, kKeyUserDevice, &dict));
   const std::string& roundtripped_json = dict.GetValue("TestJson")->GetString();
   std::unique_ptr<base::DictionaryValue> json_dict =
       JsonStringToDictionaryValue(roundtripped_json);
@@ -413,7 +413,7 @@ TEST_F(PregPolicyEncoderTest, TestJsonWithNewlinesInsideStringRoundtrip) {
   writer1.WriteToFile(preg_1_path_);
 
   RegistryDict dict;
-  EXPECT_TRUE(LoadPRegFile(preg_1_path_, kKeyUserDevice, &dict));
+  EXPECT_TRUE(LoadPRegFileIntoDict(preg_1_path_, kKeyUserDevice, &dict));
   const std::string& roundtripped_json = dict.GetValue("TestJson")->GetString();
   std::unique_ptr<base::DictionaryValue> json_dict =
       JsonStringToDictionaryValue(roundtripped_json);

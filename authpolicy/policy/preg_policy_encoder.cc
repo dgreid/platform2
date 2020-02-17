@@ -25,10 +25,9 @@ bool ParsePRegFilesIntoUserPolicy(const std::vector<base::FilePath>& preg_files,
   DCHECK(policy);
 
   RegistryDict mandatory_dict;
-  for (const base::FilePath& preg_file : preg_files) {
-    if (!LoadPRegFile(preg_file, kKeyUserDevice, &mandatory_dict))
-      return false;
-  }
+
+  if (!LoadPRegFilesIntoDict(preg_files, kKeyUserDevice, &mandatory_dict))
+    return false;
 
   // Recommended policies are stored in their own registry key. This can be
   // nullptr if there is no recommended policy.
@@ -43,11 +42,9 @@ bool ParsePRegFilesIntoUserPolicy(const std::vector<base::FilePath>& preg_files,
     enc.EncodePolicy(policy);
   }
 
-  {
-    UserPolicyEncoder enc(&mandatory_dict, POLICY_LEVEL_MANDATORY);
-    enc.LogPolicyValues(log_policy_values);
-    enc.EncodePolicy(policy);
-  }
+  UserPolicyEncoder enc(&mandatory_dict, POLICY_LEVEL_MANDATORY);
+  enc.LogPolicyValues(log_policy_values);
+  enc.EncodePolicy(policy);
 
   return true;
 }
@@ -58,15 +55,27 @@ bool ParsePRegFilesIntoDevicePolicy(
     bool log_policy_values) {
   DCHECK(policy);
 
-  RegistryDict policy_dict;
-  for (const base::FilePath& preg_file : preg_files) {
-    if (!LoadPRegFile(preg_file, kKeyUserDevice, &policy_dict))
-      return false;
+  RegistryDict mandatory_dict;
+
+  if (!LoadPRegFilesIntoDict(preg_files, kKeyUserDevice, &mandatory_dict))
+    return false;
+
+  // Recommended policies are stored in their own registry key. This can be
+  // nullptr if there is no recommended policy.
+  std::unique_ptr<RegistryDict> recommended_dict =
+      mandatory_dict.RemoveKey(kKeyRecommended);
+
+  // Convert recommended policies first. If a policy is both recommended and
+  // mandatory, it will be overwritten to be mandatory below.
+  if (recommended_dict) {
+    DevicePolicyEncoder enc(recommended_dict.get(), POLICY_LEVEL_RECOMMENDED);
+    enc.LogPolicyValues(log_policy_values);
+    enc.EncodePolicy(policy);
   }
 
-  DevicePolicyEncoder encoder(&policy_dict);
-  encoder.LogPolicyValues(log_policy_values);
-  encoder.EncodePolicy(policy);
+  DevicePolicyEncoder enc(&mandatory_dict, POLICY_LEVEL_MANDATORY);
+  enc.LogPolicyValues(log_policy_values);
+  enc.EncodePolicy(policy);
 
   return true;
 }
@@ -78,10 +87,9 @@ bool ParsePRegFilesIntoExtensionPolicy(
   DCHECK(policy);
 
   RegistryDict policy_dict;
-  for (const base::FilePath& preg_file : preg_files) {
-    if (!LoadPRegFile(preg_file, kKeyExtensions, &policy_dict))
-      return false;
-  }
+
+  if (!LoadPRegFilesIntoDict(preg_files, kKeyExtensions, &policy_dict))
+    return false;
 
   ExtensionPolicyEncoder enc(&policy_dict);
   enc.LogPolicyValues(log_policy_values);

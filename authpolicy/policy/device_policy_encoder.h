@@ -10,6 +10,10 @@
 #include <utility>
 #include <vector>
 
+#include <components/policy/core/common/policy_types.h>
+
+#include "authpolicy/policy/policy_encoder_helper.h"
+
 namespace enterprise_management {
 class ChromeDeviceSettingsProto;
 }  // namespace enterprise_management
@@ -29,7 +33,7 @@ class RegistryDict;
 // protobuf. Don't include directly, use |preg_policy_encoder.h| instead,
 class DevicePolicyEncoder {
  public:
-  explicit DevicePolicyEncoder(const RegistryDict* dict) : dict_(dict) {}
+  DevicePolicyEncoder(const RegistryDict* dict, const PolicyLevel level);
 
   // Toggles logging of policy values.
   void LogPolicyValues(bool enabled) { log_policy_values_ = enabled; }
@@ -40,14 +44,6 @@ class DevicePolicyEncoder {
       enterprise_management::ChromeDeviceSettingsProto* policy) const;
 
  private:
-  // Callbacks to set policy values. StringListPolicyCallback actually appends
-  // a string to the list. It does not set the whole list.
-  using BooleanPolicyCallback = std::function<void(bool)>;
-  using IntegerPolicyCallback = std::function<void(int)>;
-  using StringPolicyCallback = std::function<void(const std::string&)>;
-  using StringListPolicyCallback =
-      std::function<void(const std::vector<std::string>&)>;
-
   // Some logical grouping of policy encoding.
   void EncodeLoginPolicies(
       enterprise_management::ChromeDeviceSettingsProto* policy) const;
@@ -59,27 +55,34 @@ class DevicePolicyEncoder {
       enterprise_management::ChromeDeviceSettingsProto* policy) const;
   void EncodeGenericPolicies(
       enterprise_management::ChromeDeviceSettingsProto* policy) const;
+  void EncodePoliciesWithPolicyOptions(
+      enterprise_management::ChromeDeviceSettingsProto* policy) const;
 
   // Boolean policies.
   void EncodeBoolean(const char* policy_name,
-                     const BooleanPolicyCallback& set_policy) const;
+                     const SetBooleanPolicyCallback& set_policy) const;
+
+  // Boolean policies with PolicyOptions.
+  void EncodeBooleanWithPolicyOptions(
+      const char* policy_name,
+      const SetBooleanPolicyCallback& set_policy) const;
   // Integer policies.
   void EncodeInteger(const char* policy_name,
-                     const IntegerPolicyCallback& set_policy) const;
+                     const SetIntegerPolicyCallback& set_policy) const;
   // Integer in range policies.
   void EncodeIntegerInRange(const char* policy_name,
                             int range_min,
                             int range_max,
-                            const IntegerPolicyCallback& set_policy) const;
+                            const SetIntegerPolicyCallback& set_policy) const;
   // String policies.
   void EncodeString(const char* policy_name,
-                    const StringPolicyCallback& set_policy) const;
+                    const SetStringPolicyCallback& set_policy) const;
 
   // String list policies are a little different. Unlike the basic types they
   // are not stored as registry value, but as registry key with values 1, 2, ...
   // for the entries.
   void EncodeStringList(const char* policy_name,
-                        const StringListPolicyCallback& set_policy) const;
+                        const SetStringListPolicyCallback& set_policy) const;
 
   // Prints out an error message if the |policy_name| is contained in the
   // registry dictionary. Use this for unsupported policies.
@@ -87,6 +90,7 @@ class DevicePolicyEncoder {
 
  private:
   const RegistryDict* dict_ = nullptr;
+  const PolicyLevel level_;
   bool log_policy_values_ = false;
 };
 
