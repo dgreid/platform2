@@ -29,6 +29,7 @@
 #include "smbfs/smb_credential.h"
 #include "smbfs/smb_filesystem.h"
 #include "smbfs/smbfs.h"
+#include "smbfs/smbfs_impl.h"
 #include "smbfs/test_filesystem.h"
 
 namespace smbfs {
@@ -76,15 +77,6 @@ std::unique_ptr<password_provider::Password> MakePasswordFromMojoHandle(
   return password_provider::Password::CreateFromFileDescriptor(fd.get(),
                                                                length);
 }
-
-// Temporary dummy implementation of the SmbFs Mojo interface.
-class SmbFsImpl : public mojom::SmbFs {
- public:
-  SmbFsImpl() = default;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(SmbFsImpl);
-};
 
 }  // namespace
 
@@ -253,14 +245,14 @@ void SmbFsDaemon::OnCredentialsSetup(mojom::MountOptionsPtr options,
     }
   }
 
+  mojom::SmbFsPtr smbfs_ptr;
+  fs->SetSmbFsImpl(
+      std::make_unique<SmbFsImpl>(fs.get(), mojo::MakeRequest(&smbfs_ptr)));
+
   if (!StartFuseSession(std::move(fs))) {
     callback.Run(mojom::MountError::kUnknown, nullptr);
     return;
   }
-
-  mojom::SmbFsPtr smbfs_ptr;
-  smbfs_binding_ = std::make_unique<mojo::Binding<mojom::SmbFs>>(
-      new SmbFsImpl, mojo::MakeRequest(&smbfs_ptr));
 
   delegate_ = std::move(delegate);
   callback.Run(mojom::MountError::kOk, std::move(smbfs_ptr));

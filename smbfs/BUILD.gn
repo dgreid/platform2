@@ -57,6 +57,8 @@ static_library("libsmbfs") {
     "smbfs.h",
     "smbfs_daemon.cc",
     "smbfs_daemon.h",
+    "smbfs_impl.cc",
+    "smbfs_impl.h",
     "test_filesystem.cc",
     "test_filesystem.h",
     "util.cc",

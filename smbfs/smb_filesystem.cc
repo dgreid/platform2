@@ -13,6 +13,8 @@
 #include <base/posix/safe_strerror.h>
 #include <base/strings/string_util.h>
 
+#include "smbfs/smbfs_impl.h"
+
 namespace smbfs {
 
 namespace {
@@ -140,6 +142,10 @@ SmbFilesystem::ConnectError SmbFilesystem::EnsureConnected() {
 
   smbc_closedir_ctx_(context_, dir);
   return ConnectError::kOk;
+}
+
+void SmbFilesystem::SetSmbFsImpl(std::unique_ptr<SmbFsImpl> impl) {
+  smbfs_impl_ = std::move(impl);
 }
 
 struct stat SmbFilesystem::MakeStat(ino_t inode,

@@ -23,6 +23,8 @@
 
 namespace smbfs {
 
+class SmbFsImpl;
+
 class SmbFilesystem : public Filesystem {
  public:
   enum class ConnectError {
@@ -42,6 +44,9 @@ class SmbFilesystem : public Filesystem {
   // Ensures that the SMB share can be connected to. Must NOT be called after
   // the filesystem is attached to a FUSE session.
   ConnectError EnsureConnected();
+
+  // Store the implementation of the mojom::SmbFs Mojo interface.
+  void SetSmbFsImpl(std::unique_ptr<SmbFsImpl> impl);
 
   // Filesystem overrides.
   void Lookup(std::unique_ptr<EntryRequest> request,
@@ -187,6 +192,8 @@ class SmbFilesystem : public Filesystem {
   const std::unique_ptr<SmbCredential> credentials_;
   base::Thread samba_thread_;
   InodeMap inode_map_{FUSE_ROOT_ID};
+
+  std::unique_ptr<SmbFsImpl> smbfs_impl_;
 
   std::unordered_map<uint64_t, SMBCFILE*> open_files_;
   uint64_t open_files_seq_ = 1;

@@ -86,7 +86,6 @@ class SmbFsDaemon : public brillo::DBusDaemon, public mojom::SmbFsBootstrap {
 
   std::unique_ptr<mojo::core::ScopedIPCSupport> ipc_support_;
   mojo::Binding<mojom::SmbFsBootstrap> bootstrap_binding_{this};
-  std::unique_ptr<mojo::Binding<mojom::SmbFs>> smbfs_binding_;
   mojom::SmbFsDelegatePtr delegate_;
 
   DISALLOW_COPY_AND_ASSIGN(SmbFsDaemon);

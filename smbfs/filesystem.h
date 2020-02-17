@@ -17,9 +17,10 @@
 
 namespace smbfs {
 
+// Base class for FUSE filesystems. Functions not overridden will respond to
+// requests with the ENOSYS error.
 class Filesystem {
  public:
-  Filesystem();
   virtual ~Filesystem();
 
   virtual void Lookup(std::unique_ptr<EntryRequest> request,
@@ -83,6 +84,9 @@ class Filesystem {
   virtual void RmDir(std::unique_ptr<SimpleRequest> request,
                      fuse_ino_t parent_inode,
                      const std::string& name);
+
+ protected:
+  Filesystem();
 
  private:
   DISALLOW_COPY_AND_ASSIGN(Filesystem);
