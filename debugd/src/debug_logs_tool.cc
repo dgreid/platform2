@@ -20,6 +20,7 @@ constexpr char kFeedbackLogsDir[] = "feedback";
 
 constexpr char kTar[] = "/bin/tar";
 constexpr char kSystemLogs[] = "/var/log";
+constexpr char kCrashLogs[] = "/var/spool/crash";
 
 }  // namespace
 
@@ -57,6 +58,7 @@ void DebugLogsTool::GetDebugLogs(bool is_compressed,
   p.AddArg(temp_dir.GetPath().value());
   p.AddArg(kFeedbackLogsDir);
   p.AddArg(kSystemLogs);
+  p.AddArg(kCrashLogs);
   p.BindFd(fd.get(), STDOUT_FILENO);
   p.Run();
 }
