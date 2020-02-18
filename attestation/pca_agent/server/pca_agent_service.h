@@ -10,6 +10,7 @@
 #include <attestation/proto_bindings/pca_agent.pb.h>
 #include <base/memory/ref_counted.h>
 #include <brillo/dbus/dbus_object.h>
+#include <brillo/http/http_transport.h>
 #include <dbus/attestation/dbus-constants.h>
 
 #include "attestation/pca-agent/dbus_adaptors/org.chromium.PcaAgent.h"
@@ -19,7 +20,7 @@ namespace pca_agent {
 
 class PcaAgentService : public org::chromium::PcaAgentInterface {
  public:
-  PcaAgentService() = default;
+  PcaAgentService();
   ~PcaAgentService() override = default;
 
   // org::chromium::PcaAgentInterface overrides.
@@ -30,6 +31,11 @@ class PcaAgentService : public org::chromium::PcaAgentInterface {
       std::unique_ptr<
           brillo::dbus_utils::DBusMethodResponse<GetCertificateReply>> response,
       const GetCertificateRequest& in_request) override;
+
+ private:
+  std::shared_ptr<brillo::http::Transport> transport_;
+
+  friend class PcaAgentServiceTest;
 
   DISALLOW_COPY_AND_ASSIGN(PcaAgentService);
 };
