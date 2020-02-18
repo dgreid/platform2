@@ -9,6 +9,7 @@
 
 #include <stdint.h>
 
+#include <atomic>
 #include <map>
 #include <memory>
 #include <string>
@@ -167,6 +168,13 @@ class AttestationService : public AttestationInterface {
   }
 
  private:
+  enum class EnrollmentStatus {
+    kUnknown,
+    kNotEnrolled,
+    kInProgress,
+    kEnrolled,
+  };
+
   enum ACATypeInternal {
     kDefaultACA = 0,
     kTestACA = 1,
@@ -749,6 +757,13 @@ class AttestationService : public AttestationInterface {
   std::unique_ptr<org::chromium::PcaAgentProxyInterface>
       default_pca_agent_proxy_;
   org::chromium::PcaAgentProxyInterface* pca_agent_proxy_{nullptr};
+
+  // Enrollment statuses for respective ACA type is maintained in this array. By
+  // default it is zero-initialized, i.e., EnrollmentStatus::kUnknown. Since
+  // both dbus calling thread and worker thread both mutate the values, we use
+  // atomic variables to prevent data race  and make sure the side effect is
+  // propagated to other threads immediately.
+  std::atomic<EnrollmentStatus> enrollment_statuses_[ACAType_ARRAYSIZE]{};
 
   // All work is done in the background. This serves to serialize requests and
   // allow synchronous implementation of complex methods. This is intentionally

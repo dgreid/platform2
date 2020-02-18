@@ -2522,6 +2522,7 @@ void AttestationService::HandlePcaAgentEnrollRequestError(
     brillo::Error*) {
   LOG(ERROR) << __func__ << ": Error sending enroll request to |pca_agent|";
   data->set_status(STATUS_UNEXPECTED_DEVICE_ERROR);
+  enrollment_statuses_[data->aca_type()] = EnrollmentStatus::kNotEnrolled;
   data->ReturnStatus();
 }
 
@@ -2586,7 +2587,23 @@ void AttestationService::OnGetCertificateAction(
 
 void AttestationService::StartEnrollTask(
     const std::shared_ptr<AttestationFlowData>& data) {
-  const bool is_enrolled = IsEnrolledWithACA(data->aca_type());
+  // When the enrollment is in progress, all the attestation flow entries listen
+  // to the same response.
+  if (enrollment_statuses_[data->aca_type()] == EnrollmentStatus::kInProgress) {
+    data->set_action(AttestationFlowAction::kEnqueue);
+    return;
+  }
+  // This is the place we initialize the enrollment statuses; at this moment
+  // there is no write operation in other threads, so we don't bother using
+  // compare_and_exchange atomic operation.
+  if (enrollment_statuses_[data->aca_type()] == EnrollmentStatus::kUnknown) {
+    enrollment_statuses_[data->aca_type()] =
+        IsEnrolledWithACA(data->aca_type()) ? EnrollmentStatus::kEnrolled
+                                            : EnrollmentStatus::kNotEnrolled;
+  }
+  // At this point, possible statuses are : kEnrolled and kNotEnrolled.
+  const bool is_enrolled =
+      enrollment_statuses_[data->aca_type()] == EnrollmentStatus::kEnrolled;
   if (is_enrolled && !data->forced_enrollment()) {
     data->set_action(AttestationFlowAction::kNoop);
     return;
@@ -2602,6 +2619,7 @@ void AttestationService::StartEnrollTask(
     data->set_status(STATUS_UNEXPECTED_DEVICE_ERROR);
     return;
   }
+  enrollment_statuses_[data->aca_type()] = EnrollmentStatus::kInProgress;
   data->emplace_result_request(std::move(result_request));
   data->set_action(AttestationFlowAction::kProcessRequest);
 }
@@ -2617,8 +2635,10 @@ void AttestationService::FinishEnrollTaskV2(
       data->set_status(STATUS_REQUEST_DENIED_BY_CA);
     }
     data->set_action(AttestationFlowAction::kAbort);
+    enrollment_statuses_[data->aca_type()] = EnrollmentStatus::kNotEnrolled;
   } else {
     data->set_action(AttestationFlowAction::kNoop);
+    enrollment_statuses_[data->aca_type()] = EnrollmentStatus::kEnrolled;
   }
 }
 
@@ -2669,6 +2689,7 @@ void AttestationService::HandlePcaAgentEnrollReply(
     const std::shared_ptr<AttestationFlowData>& data,
     const pca_agent::EnrollReply& pca_reply) {
   if (pca_reply.status() != STATUS_SUCCESS) {
+    enrollment_statuses_[data->aca_type()] = EnrollmentStatus::kNotEnrolled;
     data->set_status(pca_reply.status());
     data->ReturnStatus();
     return;
