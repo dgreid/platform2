@@ -252,6 +252,7 @@ generate_dbus_proxies("pca-agent-proxies") {
 
 source_set("pca_agent_server_library") {
   sources = [
+    "pca_agent/server/default_transport_factory.cc",
     "pca_agent/server/pca_agent_service.cc",
     "pca_agent/server/pca_response_handler.cc",
   ]
