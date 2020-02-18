@@ -29,20 +29,18 @@ SocketStream::SocketStream(base::ScopedFD fd,
 SocketStream::~SocketStream() = default;
 
 StreamBase::ReadResult SocketStream::Read() {
-  std::string buf;
-  buf.resize(4096);
+  char buf[4096];
   std::vector<base::ScopedFD> fds;
-  ssize_t size = can_send_fds_
-                     ? base::UnixDomainSocket::RecvMsg(fd_.get(), &buf[0],
-                                                       buf.size(), &fds)
-                     : HANDLE_EINTR(read(fd_.get(), &buf[0], buf.size()));
+  ssize_t size =
+      can_send_fds_
+          ? base::UnixDomainSocket::RecvMsg(fd_.get(), buf, sizeof(buf), &fds)
+          : HANDLE_EINTR(read(fd_.get(), buf, sizeof(buf)));
   if (size == -1) {
     int error_code = errno;
     PLOG(ERROR) << "Failed to read";
     return {error_code, std::string(), {}};
   }
-  buf.resize(size);
-  return {0 /* succeed */, std::move(buf), std::move(fds)};
+  return {0 /* succeed */, std::string(buf, size), std::move(fds)};
 }
 
 bool SocketStream::Write(std::string blob, std::vector<base::ScopedFD> fds) {
