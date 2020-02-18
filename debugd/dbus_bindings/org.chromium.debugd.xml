@@ -451,6 +451,7 @@
             identify_controller: prints nvme device identity data.
             short_self_test: launches short-time nvme self-test.
             long_self_test: launches long-time nvme self-test.
+            stop_self_test: stops nvme self-test.
         </tp:docstring>
       </arg>
       <arg name="result" type="s" direction="out">

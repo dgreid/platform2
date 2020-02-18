@@ -291,6 +291,13 @@ std::string StorageTool::Nvme(const std::string& option) {
     process.AddArg("-n 1");
     // type of selftest: long
     process.AddArg("-s 2");
+  } else if (option == "stop_self_test") {
+    // command for selftest
+    process.AddArg("device-self-test");
+    // Namespace of NVMe
+    process.AddArg("-n 1");
+    // type of selftest: abort
+    process.AddArg("-s 0xf");
   } else {
     return "<Option not supported>";
   }
