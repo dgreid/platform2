@@ -64,6 +64,9 @@ constexpr char kSmartBatteryManufactureDate[] = "87615";
 constexpr char kConvertedSmartBatteryManufactureDate[] = "2151-01-31";
 constexpr char kBatteryTemperatureSmartChars[] = "981329";
 constexpr int kBatteryTemperatureSmart = 981329;
+constexpr double kBatteryCurrentNow = 6.45;
+constexpr char kBatteryTechnology[] = "Battery technology.";
+constexpr char kBatteryStatus[] = "Discharging";
 
 // Timeouts for the D-Bus calls. Note that D-Bus is mocked out in the test, but
 // the timeouts are still part of the mock calls.
@@ -133,6 +136,9 @@ TEST_F(BatteryUtilsTest, FetchBatteryInfo) {
   power_supply_proto.set_battery_voltage_min_design(kBatteryVoltageMinDesign);
   power_supply_proto.set_battery_model_name(kBatteryModelName);
   power_supply_proto.set_battery_charge(kBatteryChargeNow);
+  power_supply_proto.set_battery_current(kBatteryCurrentNow);
+  power_supply_proto.set_battery_technology(kBatteryTechnology);
+  power_supply_proto.set_battery_status(kBatteryStatus);
 
   // Set the mock power manager response.
   EXPECT_CALL(*mock_power_manager_proxy(),
@@ -173,6 +179,9 @@ TEST_F(BatteryUtilsTest, FetchBatteryInfo) {
   EXPECT_EQ(kBatteryVoltageMinDesign, battery->voltage_min_design);
   EXPECT_EQ(kBatteryModelName, battery->model_name);
   EXPECT_EQ(kBatteryChargeNow, battery->charge_now);
+  EXPECT_EQ(kBatteryCurrentNow, battery->current_now);
+  EXPECT_EQ(kBatteryTechnology, battery->technology);
+  EXPECT_EQ(kBatteryStatus, battery->status);
   EXPECT_EQ(kConvertedSmartBatteryManufactureDate,
             battery->smart_battery_info->manufacture_date);
   EXPECT_EQ(kBatteryTemperatureSmart, battery->smart_battery_info->temperature);

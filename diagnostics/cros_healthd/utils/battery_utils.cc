@@ -141,6 +141,9 @@ bool BatteryFetcher::GetBatteryInfoFromPowerdResponse(dbus::Response* response,
   info->voltage_min_design = power_supply_proto.battery_voltage_min_design();
   info->model_name = power_supply_proto.battery_model_name();
   info->charge_now = power_supply_proto.battery_charge();
+  info->current_now = power_supply_proto.battery_current();
+  info->technology = power_supply_proto.battery_technology();
+  info->status = power_supply_proto.battery_status();
 
   return true;
 }
