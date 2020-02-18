@@ -100,7 +100,7 @@ std::unique_ptr<EglPixelBuf> EglCapture(
   ScopedGbmDevicePtr device(gbm_create_device(crtc.file().GetPlatformFile()));
   CHECK(device) << "gbm_create_device failed";
 
-  EGLDisplay display = eglGetDisplay(device.get());
+  EGLDisplay display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
   CHECK(display != EGL_NO_DISPLAY) << "Could not get EGLDisplay";
 
   EGLBoolean egl_ret = eglInitialize(display, NULL, NULL);
@@ -248,13 +248,13 @@ std::unique_ptr<EglPixelBuf> EglCapture(
 
   const GLchar* frag =
       "#version 300 es\n"
-      "#extension GL_OES_EGL_image_external : require\n"
+      "#extension GL_OES_EGL_image_external_essl3 : require\n"
       "precision highp float;\n"
       "uniform samplerExternalOES tex;\n"
       "in vec2 tex_pos;\n"
       "out vec4 fragColor;\n"
       "void main() {\n"
-      "  fragColor = texture2D(tex, tex_pos);\n"
+      "  fragColor = texture(tex, tex_pos);\n"
       "}\n";
 
   glViewport(0, 0, width, height);
