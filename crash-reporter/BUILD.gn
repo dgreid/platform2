@@ -43,6 +43,7 @@ static_library("libcrash") {
   all_dependent_configs = [ ":libcrash_config" ]
   sources = [
     "paths.cc",
+    "privilege_dropper.cc",
     "util.cc",
   ]
 }

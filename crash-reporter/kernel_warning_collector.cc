@@ -8,6 +8,7 @@
 #include <base/logging.h>
 #include <base/strings/stringprintf.h>
 
+#include "crash-reporter/privilege_dropper.h"
 #include "crash-reporter/util.h"
 
 namespace {
@@ -65,6 +66,10 @@ bool KernelWarningCollector::Collect(WarningType type) {
   if (!LoadKernelWarning(&kernel_warning, &warning_signature)) {
     return true;
   }
+
+  // Drop privileges. We do this _after_ LoadKernelWarning because otherwise we
+  // would not be able to open /dev/stdin.
+  ScopedPrivilegeDropper spd;
 
   FilePath root_crash_directory;
   if (!GetCreatedCrashDirectoryByEuid(kRootUid, &root_crash_directory,
