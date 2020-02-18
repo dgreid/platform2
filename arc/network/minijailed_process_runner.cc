@@ -33,9 +33,7 @@ constexpr char kIptablesPath[] = "/sbin/iptables";
 constexpr char kIp6tablesPath[] = "/sbin/ip6tables";
 constexpr char kModprobePath[] = "/sbin/modprobe";
 constexpr char kNsEnterPath[] = "/usr/bin/nsenter";
-constexpr char kTouchPath[] = "/system/bin/touch";
 constexpr char kSysctlPath[] = "/usr/sbin/sysctl";
-constexpr char kSentinelFile[] = "/dev/.arc_network_ready";
 
 int RunSyncDestroy(const std::vector<std::string>& argv,
                    brillo::Minijail* mj,
@@ -103,12 +101,6 @@ int MinijailedProcessRunner::RestoreDefaultNamespace(const std::string& ifname,
                                                      pid_t pid) {
   return RunSync({kNsEnterPath, "-t", base::IntToString(pid), "-n", "--",
                   kIpPath, "link", "set", ifname, "netns", "1"},
-                 mj_, true);
-}
-
-int MinijailedProcessRunner::WriteSentinelToContainer(pid_t pid) {
-  return RunSync({kNsEnterPath, "-t", base::IntToString(pid), "--mount",
-                  "--pid", "--", kTouchPath, kSentinelFile},
                  mj_, true);
 }
 

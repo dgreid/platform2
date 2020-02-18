@@ -61,23 +61,6 @@ TEST_F(MinijailProcessRunnerTest, RestoreDefaultNamespace) {
   runner_.RestoreDefaultNamespace("foo", 12345);
 }
 
-TEST_F(MinijailProcessRunnerTest, WriteSentinelToContainer) {
-  const std::vector<std::string> args = {
-      "-t",
-      "12345",
-      "--mount",
-      "--pid",
-      "--",
-      "/system/bin/touch",
-      "/dev/.arc_network_ready",
-  };
-  EXPECT_CALL(mj_, New());
-  EXPECT_CALL(mj_, DropRoot(_, _, _)).Times(0);
-  EXPECT_CALL(mj_,
-              RunSyncAndDestroy(_, IsProcessArgs("/usr/bin/nsenter", args), _));
-  runner_.WriteSentinelToContainer(12345);
-}
-
 TEST_F(MinijailProcessRunnerTest, modprobe_all) {
   uint64_t caps = CAP_TO_MASK(CAP_SYS_MODULE);
 

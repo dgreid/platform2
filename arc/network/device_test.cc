@@ -20,19 +20,11 @@ namespace {
 void DoNothing() {}
 
 class DeviceTest : public testing::Test {
- public:
-  void IPv6Up(Device* device) {}
-  void IPv6Down(Device* device) { ipv6_down_ = true; }
-
  protected:
-  void SetUp() override { ipv6_down_ = false; }
-
   std::unique_ptr<Device> NewDevice(const std::string& name) {
     Device::Options options{
         .ipv6_enabled = true,
-        .find_ipv6_routes_legacy = true,
-        .use_default_interface = (name == kAndroidLegacyDevice),
-        .is_android = (name == kAndroidDevice || name == kAndroidLegacyDevice),
+        .is_android = (name == kAndroidDevice),
     };
 
     auto ipv4_subnet = std::make_unique<Subnet>(Ipv4Addr(100, 100, 100, 100),
@@ -52,29 +44,15 @@ class DeviceTest : public testing::Test {
     return std::make_unique<Device>(name, std::move(config), options,
                                     GuestMessage::ARC);
   }
-
-  bool ipv6_down_;
 };
 
 TEST_F(DeviceTest, IsAndroid) {
   auto dev = NewDevice(kAndroidDevice);
   EXPECT_TRUE(dev->IsAndroid());
   EXPECT_FALSE(dev->UsesDefaultInterface());
-  dev = NewDevice(kAndroidLegacyDevice);
-  EXPECT_TRUE(dev->IsAndroid());
-  EXPECT_TRUE(dev->UsesDefaultInterface());
   dev = NewDevice("eth0");
   EXPECT_FALSE(dev->IsAndroid());
   EXPECT_FALSE(dev->UsesDefaultInterface());
-}
-
-TEST_F(DeviceTest, IPv6TeardownHandlerCalledOnDisable) {
-  auto dev = NewDevice("foo");
-  dev->RegisterIPv6Handlers(
-      base::Bind(&DeviceTest::IPv6Up, base::Unretained(this)),
-      base::Bind(&DeviceTest::IPv6Down, base::Unretained(this)));
-  dev->StopIPv6RoutingLegacy();
-  EXPECT_TRUE(ipv6_down_);
 }
 
 }  // namespace

@@ -37,16 +37,6 @@ class ArcService {
     // Returns true if the internal state changed.
     bool SetLinkUp(bool link_up);
 
-    bool HasIPv6() const;
-    // Returns false if |routing_tid| is invalid.
-    bool SetHasIPv6(int routing_tid);
-    // Resets the IPv6 attributes.
-    void ClearIPv6();
-
-    int RoutingTableID() const;
-    // Returns the current value and increments the counter.
-    int RoutingTableAttempts();
-
     // For ARCVM only.
     const std::string& TAP() const;
     void SetTAP(const std::string& tap);
@@ -56,10 +46,6 @@ class ArcService {
     bool started_;
     // Indicates Android has brought up the interface.
     bool link_up_;
-    // The routing table ID found for the interface.
-    int routing_table_id_;
-    // The number of times table ID lookup was attempted.
-    int routing_table_attempts_;
     // For ARCVM, the name of the bound TAP device.
     std::string tap_;
   };
@@ -107,9 +93,6 @@ class ArcService {
     // determines the link status has changed, toggles the device services
     // accordingly.
     void LinkMsgHandler(const shill::RTNLMessage& msg);
-
-    void SetupIPv6(Device* device);
-    void TeardownIPv6(Device* device);
 
     uint32_t pid_;
     DeviceManagerBase* dev_mgr_;

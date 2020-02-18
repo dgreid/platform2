@@ -20,16 +20,12 @@
 
 #include "arc/network/ipc.pb.h"
 #include "arc/network/mac_address_generator.h"
-#include "arc/network/neighbor_finder.h"
-#include "arc/network/router_finder.h"
 #include "arc/network/subnet.h"
 
 namespace arc_networkd {
 
 // Reserved name for the Android device.
 extern const char kAndroidDevice[];
-// Reserved name for the Android device for legacy single network configs.
-extern const char kAndroidLegacyDevice[];
 // Reserved name for the Android device for ARCVM.
 // TODO(garrick): This can be removed
 extern const char kAndroidVmDevice[];
@@ -115,7 +111,6 @@ class Device {
   struct Options {
     bool fwd_multicast;
     bool ipv6_enabled;
-    bool find_ipv6_routes_legacy;
 
     // Indicates this device must track shill's default interface.
     // TODO(garrick): Further qualify if this interface is a physical interface
@@ -135,18 +130,6 @@ class Device {
     bool is_sticky;
   };
 
-  struct IPv6Config {
-    IPv6Config() : prefix_len(0), addr_attempts(0) {}
-
-    void clear();
-
-    struct in6_addr addr;
-    struct in6_addr router;
-    int prefix_len;
-    std::string ifname;
-    int addr_attempts;
-  };
-
   Device(const std::string& ifname,
          std::unique_ptr<Config> config,
          const Options& options,
@@ -155,7 +138,6 @@ class Device {
 
   const std::string& ifname() const;
   Config& config() const;
-  IPv6Config& ipv6_config();
   const Options& options() const;
 
   void set_context(std::unique_ptr<Context> ctx);
@@ -166,29 +148,12 @@ class Device {
 
   bool UsesDefaultInterface() const;
 
-  void RegisterIPv6Handlers(const DeviceHandler& up_handler,
-                            const DeviceHandler& down_handler);
-  void UnregisterIPv6Handlers();
-
-  void StartIPv6RoutingLegacy(const std::string& ifname);
-  void StopIPv6RoutingLegacy();
-
   void OnGuestStart(GuestMessage::GuestType guest);
   void OnGuestStop(GuestMessage::GuestType guest);
 
   friend std::ostream& operator<<(std::ostream& stream, const Device& device);
 
  private:
-  // Callback from RouterFinder.  May be triggered multiple times, e.g.
-  // if the route disappears or changes.
-  void OnRouteFound(const struct in6_addr& prefix,
-                    int prefix_len,
-                    const struct in6_addr& router);
-
-  // Callback from NeighborFinder to indicate whether an IPv6 address
-  // collision was found or not found.
-  void OnNeighborCheckResult(bool found);
-
   const std::string ifname_;
   std::unique_ptr<Config> config_;
   const Options options_;
@@ -198,13 +163,6 @@ class Device {
   // Indicates if the host-side interface is up. Guest-size interfaces
   // may be tracked in the guest-specific context.
   bool host_link_up_;
-
-  IPv6Config ipv6_config_;
-  DeviceHandler ipv6_up_handler_;
-  DeviceHandler ipv6_down_handler_;
-
-  std::unique_ptr<RouterFinder> router_finder_;
-  std::unique_ptr<NeighborFinder> neighbor_finder_;
 
   base::WeakPtrFactory<Device> weak_factory_{this};
 

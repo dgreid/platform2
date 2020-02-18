@@ -28,7 +28,6 @@ pkg_config("target_defaults") {
   pkg_deps = [
     "libbrillo",
     "libchrome-${libbase_ver}",
-    "libndp",
     "libshill-client",
     "libshill-net-${libbase_ver}",
     "protobuf-lite",
@@ -86,10 +85,7 @@ static_library("libarcnetwork") {
     "message_dispatcher.cc",
     "minijailed_process_runner.cc",
     "multicast_forwarder.cc",
-    "ndp_handler.cc",
     "ndproxy.cc",
-    "neighbor_finder.cc",
-    "router_finder.cc",
     "scoped_ns.cc",
     "shill_client.cc",
     "socket_forwarder.cc",

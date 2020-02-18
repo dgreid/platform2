@@ -39,8 +39,8 @@ constexpr int kMaxConn = 16;
 // Reference: "device/google/cheets2/init.usb.rc".
 constexpr char kUnixConnectAddr[] = "/run/arc/adb/adb.sock";
 
-const std::set<GuestMessage::GuestType> kArcGuestTypes{
-    GuestMessage::ARC, GuestMessage::ARC_LEGACY, GuestMessage::ARC_VM};
+const std::set<GuestMessage::GuestType> kArcGuestTypes{GuestMessage::ARC,
+                                                       GuestMessage::ARC_VM};
 }  // namespace
 
 AdbProxy::AdbProxy(base::ScopedFD control_fd)
@@ -116,16 +116,15 @@ std::unique_ptr<Socket> AdbProxy::Connect() const {
         LOG(INFO) << "Established adbd connection to " << addr_un;
         return dst;
       }
-      // We need to be able to fallback on TCP while doing UNIX domain socket
-      // migration to prevent unwanted failures.
-      FALLTHROUGH;
-    }
-    case GuestMessage::ARC_LEGACY: {
+
+      LOG(WARNING) << "Failed to connect to UNIX domain socket: "
+                   << kUnixConnectAddr << " - falling back to TCP";
+
       struct sockaddr_in addr_in = {0};
       addr_in.sin_family = AF_INET;
       addr_in.sin_port = htons(kTcpConnectPort);
       addr_in.sin_addr.s_addr = kTcpAddr;
-      auto dst = std::make_unique<Socket>(AF_INET, SOCK_STREAM);
+      dst = std::make_unique<Socket>(AF_INET, SOCK_STREAM);
       if (!dst->Connect((const struct sockaddr*)&addr_in, sizeof(addr_in)))
         return nullptr;
       LOG(INFO) << "Established adbd connection to " << addr_in;

@@ -724,12 +724,6 @@ void Manager::StopForwarding(const std::string& ifname_physical,
   }
 }
 
-bool Manager::ForwardsLegacyIPv6() const {
-  return !ShouldEnableFeature(kNDProxyMinAndroidSdkVersion,
-                              kNDProxyMinChromeMilestone,
-                              std::vector<std::string>(), kNDProxyFeatureName);
-}
-
 void Manager::OnDeviceMessageFromNDProxy(const DeviceMessage& msg) {
   LOG_IF(DFATAL, msg.dev_ifname().empty())
       << "Received DeviceMessage w/ empty dev_ifname";

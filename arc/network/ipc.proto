@@ -27,10 +27,9 @@ message GuestMessage {
   enum GuestType {
     UNKNOWN_GUEST = 0;
     ARC = 1;         // ARC++ Container (P & higher)
-    ARC_LEGACY = 2;  // ARC++ Container (N)
-    ARC_VM = 3;      // ARC VM
-    TERMINA_VM = 4;  // Crostini Termina VM
-    PLUGIN_VM = 5;   // Plugin VM
+    ARC_VM = 2;      // ARC VM
+    TERMINA_VM = 3;  // Crostini Termina VM
+    PLUGIN_VM = 4;   // Plugin VM
   }
   required GuestType type = 1;
 

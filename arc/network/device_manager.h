@@ -38,8 +38,6 @@ class TrafficForwarder {
                               bool ipv6,
                               bool multicast) = 0;
 
-  virtual bool ForwardsLegacyIPv6() const = 0;
-
  protected:
   TrafficForwarder() = default;
 };

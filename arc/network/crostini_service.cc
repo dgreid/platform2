@@ -149,7 +149,6 @@ std::unique_ptr<Device> CrostiniService::AddTAP(bool is_termina,
   Device::Options opts{
       .fwd_multicast = true,
       .ipv6_enabled = true,
-      .find_ipv6_routes_legacy = false,
       .use_default_interface = true,
       .is_android = false,
       .is_sticky = true,

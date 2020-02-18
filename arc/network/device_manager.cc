@@ -211,7 +211,6 @@ std::unique_ptr<Device> DeviceManager::MakeDevice(
   Device::Options opts{
       .fwd_multicast = false,
       .ipv6_enabled = false,
-      .find_ipv6_routes_legacy = forwarder_->ForwardsLegacyIPv6(),
       .use_default_interface = false,
       .is_android = false,
       .is_sticky = false,
@@ -220,24 +219,18 @@ std::unique_ptr<Device> DeviceManager::MakeDevice(
   AddressManager::Guest guest = AddressManager::Guest::ARC;
   std::unique_ptr<Subnet> lxd_subnet;
 
-  if (name == kAndroidLegacyDevice || name == kAndroidVmDevice) {
-    host_ifname = "arcbr0";
-    guest_ifname = "arc0";
-
-    if (name == kAndroidVmDevice) {
-      guest = AddressManager::Guest::VM_ARC;
-      // (b/145644889) There are a couple things driving this device name:
-      // 1. Until ArcNetworkService is running in ARCVM, arcbr0 cannot be resued
-      // since the IPv4 addresses are different.
-      // 2. Because of crbug/1008686, arcbr0 cannot be destroyed and recreated.
-      // 3. Because shill only treats arcbr0 and devices prefixed with arc_ as
-      // special, arc_br1 has to be used instead of arcbr1.
-      // TODO(garrick): When either b/123431422 or the above crbug is fixed,
-      // this can be removed.
-      host_ifname = "arc_br1";
-      guest_ifname = "arc1";
-      opts.find_ipv6_routes_legacy = false;
-    }
+  if (name == kAndroidVmDevice) {
+    guest = AddressManager::Guest::VM_ARC;
+    // (b/145644889) There are a couple things driving this device name:
+    // 1. Until ArcNetworkService is running in ARCVM, arcbr0 cannot be reused
+    // since the IPv4 addresses are different.
+    // 2. Because of crbug/1008686, arcbr0 cannot be destroyed and recreated.
+    // 3. Because shill only treats arcbr0 and devices prefixed with arc_ as
+    // special, arc_br1 has to be used instead of arcbr1.
+    // TODO(garrick): When either b/123431422 or the above crbug is fixed,
+    // this can be removed.
+    host_ifname = "arc_br1";
+    guest_ifname = "arc1";
 
     opts.ipv6_enabled = true;
     opts.fwd_multicast = true;
@@ -320,9 +313,7 @@ void DeviceManager::StartForwarding(const Device& device) {
   forwarder_->StartForwarding(
       device.UsesDefaultInterface() ? default_ifname_ : device.ifname(),
       device.config().host_ifname(), device.config().guest_ipv4_addr(),
-      device.options().ipv6_enabled &&
-          !device.options().find_ipv6_routes_legacy,
-      device.options().fwd_multicast);
+      device.options().ipv6_enabled, device.options().fwd_multicast);
 }
 
 void DeviceManager::StopForwarding(const Device& device) {

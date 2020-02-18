@@ -48,8 +48,6 @@ class Manager final : public brillo::DBusDaemon, private TrafficForwarder {
                       bool ipv6,
                       bool multicast) override;
 
-  bool ForwardsLegacyIPv6() const override;
-
   // This function is used to enable specific features only on selected
   // combination of Android version, Chrome version, and boards.
   // Empty |supportedBoards| means that the feature should be enabled on all

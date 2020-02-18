@@ -64,7 +64,6 @@ class FakeTrafficForwarder : public TrafficForwarder {
                       const std::string&,
                       bool,
                       bool) override {}
-  bool ForwardsLegacyIPv6() const override { return false; }
 };
 
 class DeviceManagerTest : public testing::Test {
@@ -189,20 +188,6 @@ TEST_F(DeviceManagerTest, MakeDevice_Android) {
   EXPECT_TRUE(arc0->options().is_sticky);
 }
 
-TEST_F(DeviceManagerTest, MakeDevice_LegacyAndroid) {
-  auto mgr = NewManager();
-  auto arc0 = mgr->MakeDevice(kAndroidLegacyDevice);
-  const auto& cfg = arc0->config();
-  EXPECT_EQ(cfg.host_ifname(), "arcbr0");
-  EXPECT_EQ(cfg.guest_ifname(), "arc0");
-  EXPECT_EQ(cfg.host_ipv4_addr(), Ipv4Addr(100, 115, 92, 1));
-  EXPECT_EQ(cfg.guest_ipv4_addr(), Ipv4Addr(100, 115, 92, 2));
-  EXPECT_TRUE(arc0->options().ipv6_enabled);
-  EXPECT_TRUE(arc0->options().is_android);
-  EXPECT_TRUE(arc0->options().use_default_interface);
-  EXPECT_TRUE(arc0->options().is_sticky);
-}
-
 TEST_F(DeviceManagerTest, MakeDevice_AndroidVm) {
   auto mgr = NewManager();
   auto arc0 = mgr->MakeDevice(kAndroidVmDevice);
@@ -281,10 +266,6 @@ TEST_F(DeviceManagerTest, MakeDeviceAndroid_CheckMulticast) {
   auto arc0 = mgr->MakeDevice(kAndroidDevice);
   EXPECT_FALSE(arc0->options().fwd_multicast);
   arc0.reset();
-
-  auto android = mgr->MakeDevice(kAndroidLegacyDevice);
-  EXPECT_TRUE(android->options().fwd_multicast);
-  android.reset();
 
   auto arcvm = mgr->MakeDevice(kAndroidVmDevice);
   EXPECT_TRUE(arcvm->options().fwd_multicast);
