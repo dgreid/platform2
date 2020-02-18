@@ -101,7 +101,9 @@ std::unique_ptr<MountPoint> RarManager::DoMount(
 
   // Prepare FUSE mount options.
   MountOptions options;
-  options.Initialize({MountOptions::kOptionReadOnly}, true,
+  // FUSE umask option in octal 0222 == r-x r-x r-x
+  options.WhitelistOptionPrefix("umask=");
+  options.Initialize({"umask=0222", MountOptions::kOptionReadOnly}, true,
                      base::IntToString(files_uid),
                      base::IntToString(files_gid));
 
