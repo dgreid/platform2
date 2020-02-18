@@ -14,7 +14,7 @@
 #include <brillo/http/http_utils.h>
 #include <brillo/mime_utils.h>
 
-#include "attestation/pca_agent/server/pca_response_handler.h"
+#include "attestation/pca_agent/server/pca_request.h"
 
 namespace attestation {
 namespace pca_agent {
@@ -52,18 +52,10 @@ void PcaAgentService::Enroll(
         response,
     const EnrollRequest& request) {
   VLOG(1) << __func__;
-  const std::string url = EnrollRequestToServerUrl(request);
-
-  auto pca_response_handler = scoped_refptr<PcaResponseHandler<EnrollReply>>(
-      new PcaResponseHandler<EnrollReply>(__func__, std::move(response)));
-  // Ignores the request id.
-  brillo::http::PostText(url, request.request(),
-                         brillo::mime::application::kOctet_stream, {},
-                         transport_,
-                         base::Bind(&PcaResponseHandler<EnrollReply>::OnSuccess,
-                                    base::RetainedRef(pca_response_handler)),
-                         base::Bind(&PcaResponseHandler<EnrollReply>::OnError,
-                                    base::RetainedRef(pca_response_handler)));
+  scoped_refptr<PcaRequest<EnrollReply>> pca_request =
+      new PcaRequest<EnrollReply>(__func__, EnrollRequestToServerUrl(request),
+                                  request.request(), std::move(response));
+  pca_request->SendRequest();
 }
 
 void PcaAgentService::GetCertificate(
@@ -71,20 +63,11 @@ void PcaAgentService::GetCertificate(
         response,
     const GetCertificateRequest& request) {
   VLOG(1) << __func__;
-  const std::string url = CertRequestToServerUrl(request);
-
-  auto pca_response_handler =
-      scoped_refptr<PcaResponseHandler<GetCertificateReply>>(
-          new PcaResponseHandler<GetCertificateReply>(__func__,
-                                                      std::move(response)));
-  // Ignores the request id.
-  brillo::http::PostText(
-      url, request.request(), brillo::mime::application::kOctet_stream, {},
-      transport_,
-      base::Bind(&PcaResponseHandler<GetCertificateReply>::OnSuccess,
-                 base::RetainedRef(pca_response_handler)),
-      base::Bind(&PcaResponseHandler<GetCertificateReply>::OnError,
-                 base::RetainedRef(pca_response_handler)));
+  scoped_refptr<PcaRequest<GetCertificateReply>> pca_request =
+      new PcaRequest<GetCertificateReply>(
+          __func__, CertRequestToServerUrl(request), request.request(),
+          std::move(response));
+  pca_request->SendRequest();
 }
 
 }  // namespace pca_agent
