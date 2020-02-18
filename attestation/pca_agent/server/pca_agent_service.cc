@@ -44,9 +44,6 @@ std::string CertRequestToServerUrl(const GetCertificateRequest& req) {
 
 }  // namespace
 
-PcaAgentService::PcaAgentService()
-    : transport_(brillo::http::Transport::CreateDefault()) {}
-
 void PcaAgentService::Enroll(
     std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<EnrollReply>>
         response,
