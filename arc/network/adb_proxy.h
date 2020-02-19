@@ -51,8 +51,6 @@ class AdbProxy : public brillo::Daemon {
   GuestMessage::GuestType arc_type_;
   uint32_t arcvm_vsock_cid_;
 
-  bool enable_unix_domain_socket_;
-
   base::WeakPtrFactory<AdbProxy> weak_factory_{this};
   DISALLOW_COPY_AND_ASSIGN(AdbProxy);
 };

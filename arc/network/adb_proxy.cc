@@ -37,13 +37,6 @@ constexpr char kUnixConnectAddr[] = "/run/arc/adb/adb.sock";
 
 const std::set<GuestMessage::GuestType> kArcGuestTypes{
     GuestMessage::ARC, GuestMessage::ARC_LEGACY, GuestMessage::ARC_VM};
-
-// TODO(b/133378083): Remove once ADB over AF_UNIX is stable.
-constexpr char kAdbUnixDomainSocketFeatureName[] =
-    "ADB over UNIX domain socket";
-constexpr int kUnixDomainSocketMinAndroidSdkVersion = 28;  // P
-const std::vector<std::string> kUnixDomainSocketSupportedBoards = {"atlas"};
-
 }  // namespace
 
 AdbProxy::AdbProxy(base::ScopedFD control_fd)
@@ -65,10 +58,6 @@ int AdbProxy::OnInit() {
     PLOG(ERROR) << "Failed to created a new session with setsid; exiting";
     return EX_OSERR;
   }
-
-  enable_unix_domain_socket_ = Manager::ShouldEnableFeature(
-      kUnixDomainSocketMinAndroidSdkVersion, 0,
-      kUnixDomainSocketSupportedBoards, kAdbUnixDomainSocketFeatureName);
   EnterChildProcessJail();
   return Daemon::OnInit();
 }
@@ -111,17 +100,15 @@ void AdbProxy::OnFileCanReadWithoutBlocking() {
 std::unique_ptr<Socket> AdbProxy::Connect() const {
   switch (arc_type_) {
     case GuestMessage::ARC: {
-      if (enable_unix_domain_socket_) {
-        struct sockaddr_un addr_un = {0};
-        addr_un.sun_family = AF_UNIX;
-        snprintf(addr_un.sun_path, sizeof(addr_un.sun_path), "%s",
-                 kUnixConnectAddr);
-        auto dst = std::make_unique<Socket>(AF_UNIX, SOCK_STREAM);
-        if (dst->Connect((const struct sockaddr*)&addr_un, sizeof(addr_un)))
-          return dst;
-        LOG(WARNING) << "Failed to connect to UNIX domain socket: "
-                     << kUnixConnectAddr;
-      }
+      struct sockaddr_un addr_un = {0};
+      addr_un.sun_family = AF_UNIX;
+      snprintf(addr_un.sun_path, sizeof(addr_un.sun_path), "%s",
+               kUnixConnectAddr);
+      auto dst = std::make_unique<Socket>(AF_UNIX, SOCK_STREAM);
+      if (dst->Connect((const struct sockaddr*)&addr_un, sizeof(addr_un)))
+        return dst;
+      LOG(WARNING) << "Failed to connect to UNIX domain socket: "
+                   << kUnixConnectAddr;
       // We need to be able to fallback on TCP while doing UNIX domain socket
       // migration to prevent unwanted failures.
       LOG(INFO) << "Fallback to TCP";
