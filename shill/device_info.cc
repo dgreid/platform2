@@ -1098,22 +1098,23 @@ const DeviceInfo::Info* DeviceInfo::GetInfo(int interface_index) const {
 }
 
 void DeviceInfo::DeregisterDevice(int interface_index) {
-  map<int, Info>::iterator iter = infos_.find(interface_index);
-  if (iter != infos_.end()) {
-    SLOG(this, 2) << "Removing info for device index: " << interface_index;
-    // Deregister the device if not deregistered yet.
-    if (iter->second.device.get()) {
-      manager_->DeregisterDevice(iter->second.device);
-      metrics()->DeregisterDevice(interface_index);
-      routing_table_->DeregisterDevice(iter->second.device->interface_index(),
-                                       iter->second.device->link_name());
-    }
-    indices_.erase(iter->second.name);
-    infos_.erase(iter);
-    delayed_devices_.erase(interface_index);
-  } else {
+  auto iter = infos_.find(interface_index);
+  if (iter == infos_.end()) {
     SLOG(this, 2) << __func__ << ": Unknown device index: " << interface_index;
+    return;
   }
+
+  SLOG(this, 2) << "Removing info for device index: " << interface_index;
+  // Deregister the device if not deregistered yet.
+  if (iter->second.device.get()) {
+    manager_->DeregisterDevice(iter->second.device);
+    metrics()->DeregisterDevice(interface_index);
+    routing_table_->DeregisterDevice(iter->second.device->interface_index(),
+                                     iter->second.device->link_name());
+  }
+  indices_.erase(iter->second.name);
+  infos_.erase(iter);
+  delayed_devices_.erase(interface_index);
 }
 
 void DeviceInfo::LinkMsgHandler(const RTNLMessage& msg) {
