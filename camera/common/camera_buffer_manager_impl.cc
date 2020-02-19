@@ -721,8 +721,8 @@ void* CameraBufferManagerImpl::Map(buffer_handle_t buffer,
       // value, we simply override |flags| here.
       flags = GBM_BO_TRANSFER_READ_WRITE;
       uint32_t stride;
-      info->addr = gbm_bo_map(info->bo, 0, 0, handle->width, handle->height,
-                              flags, &stride, &info->map_data, plane);
+      info->addr = gbm_bo_map2(info->bo, 0, 0, handle->width, handle->height,
+                               flags, &stride, &info->map_data, plane);
       if (info->addr == MAP_FAILED) {
         PLOGF(ERROR) << "Failed to map buffer";
         return MAP_FAILED;
