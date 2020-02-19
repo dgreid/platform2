@@ -29,8 +29,6 @@ pkg_config("target_defaults") {
     "libbrillo",
     "libchrome-${libbase_ver}",
     "libndp",
-    "libpermission_broker-client",
-    "libsession_manager-client",
     "libshill-client",
     "libshill-net-${libbase_ver}",
     "protobuf-lite",

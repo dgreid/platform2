@@ -27,7 +27,11 @@
 
 namespace arc_networkd {
 namespace {
-// adb-proxy will connect to adbd on its standard TCP port.
+// adb gets confused if we listen on 5555 and thinks there is an emulator
+// running, which in turn ends up confusing our integration test libraries
+// because multiple devices show up.
+constexpr uint16_t kTcpListenPort = 5550;
+// But we still connect to adbd on its standard TCP port.
 constexpr uint16_t kTcpConnectPort = 5555;
 constexpr uint32_t kTcpAddr = Ipv4Addr(100, 115, 92, 2);
 constexpr uint32_t kVsockPort = 5555;
@@ -165,7 +169,7 @@ void AdbProxy::OnGuestMessage(const GuestMessage& msg) {
     }
     struct sockaddr_in addr = {0};
     addr.sin_family = AF_INET;
-    addr.sin_port = htons(kAdbProxyTcpListenPort);
+    addr.sin_port = htons(kTcpListenPort);
     addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
     if (!src_->Bind((const struct sockaddr*)&addr, sizeof(addr))) {
       LOG(ERROR) << "Cannot bind source socket";
