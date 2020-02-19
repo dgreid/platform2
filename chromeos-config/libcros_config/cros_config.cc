@@ -160,7 +160,7 @@ bool CrosConfig::MountConfigFS(const base::FilePath& image_path,
       private_v1_dir.Append(CrosConfigJson::kRootName)
           .Append(CrosConfigJson::kConfigListName)
           .Append(std::to_string(device_index));
-  return Bind(device_config_dir, v1_dir);
+  return brillo::Bind(device_config_dir, v1_dir);
 }
 
 bool CrosConfig::MountFallbackConfigFS(const base::FilePath& mount_path) {
@@ -194,7 +194,7 @@ bool CrosConfig::MountFallbackConfigFS(const base::FilePath& mount_path) {
     return false;
   }
 
-  return Bind(fallback_dir, v1_dir);
+  return brillo::Bind(fallback_dir, v1_dir);
 }
 
 bool CrosConfig::Unmount(const base::FilePath& mount_path) const {
