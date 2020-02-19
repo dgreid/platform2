@@ -16,22 +16,7 @@
 
 static bool is_blacklisted_driver(
     const char* vendor_string, VAProfile profile, VAEntrypoint entrypoint) {
-  if (strstr(vendor_string, "AMD STONEY") != NULL) {
-    // HW H264 Encoding.
-    // TODO(hiroh): Remove this once https://crbug.com/828482 is fixed.
-    if (entrypoint == VAEntrypointEncSlice) {
-      int i;
-      VAProfile blacklisted_profiles[] = {
-          VAProfileH264Baseline, VAProfileH264Main,
-          VAProfileH264High, VAProfileH264ConstrainedBaseline,
-          VAProfileNone};
-      for (i = 0; blacklisted_profiles[i] != VAProfileNone; i++) {
-        if (profile == blacklisted_profiles[i]) {
-          return true;
-        }
-      }
-    }
-  }
+  // No blacklisted driver today.
   return false;
 }
 
