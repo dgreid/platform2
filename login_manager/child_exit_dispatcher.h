@@ -9,8 +9,7 @@
 
 #include <vector>
 
-#include <base/compiler_specific.h>
-#include <base/macros.h>
+#include <base/memory/weak_ptr.h>
 
 struct signalfd_siginfo;
 
@@ -23,11 +22,22 @@ class ChildExitHandler;
 
 // Listen for SIGCHLD and informs the appropriate object that manages that
 // child.
+// TODO(crbug.com/1053782): Replace this class by libbrillo.
+// Along with the change:
+// - ChildExitDispatcher (or libbrillo equivalent) will be kept alive
+//   during signal dispatching. I.e., the instance should not be destroyed
+//   from the callback (or its descendant calls).
+// - The registration will require a PID to be tracked.
+// - It will register base::OnceCallback, so binding with WeakPtr could
+//   help to maintain callee's lifetime, as common practice in Chrome.
 class ChildExitDispatcher {
  public:
   ChildExitDispatcher(brillo::AsynchronousSignalHandler* signal_handler,
                       const std::vector<ChildExitHandler*>& managers);
   ~ChildExitDispatcher();
+
+  ChildExitDispatcher(const ChildExitDispatcher&) = delete;
+  ChildExitDispatcher& operator=(const ChildExitDispatcher&) = delete;
 
  private:
   // Called by the |AsynchronousSignalHandler| when a new SIGCHLD is received.
@@ -43,7 +53,9 @@ class ChildExitDispatcher {
   // Handlers that will be notified about child exit events.
   const std::vector<ChildExitHandler*> handlers_;
 
-  DISALLOW_COPY_AND_ASSIGN(ChildExitDispatcher);
+  // This should be the last member of this class, so that the weakptr is
+  // destroyed before everything above.
+  base::WeakPtrFactory<ChildExitDispatcher> weak_factory_{this};
 };
 
 }  // namespace login_manager

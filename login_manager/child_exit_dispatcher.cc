@@ -37,6 +37,9 @@ bool ChildExitDispatcher::OnSigChld(const struct signalfd_siginfo& sig_info) {
   if (sig_info.ssi_code == CLD_STOPPED || sig_info.ssi_code == CLD_CONTINUED) {
     return false;
   }
+
+  auto ptr = weak_factory_.GetWeakPtr();
+
   siginfo_t info;
   // Reap all terminated children.
   while (true) {
@@ -49,7 +52,14 @@ bool ChildExitDispatcher::OnSigChld(const struct signalfd_siginfo& sig_info) {
     }
     if (info.si_pid == 0)
       break;
-    Dispatch(info);
+    // Before calling Dispatch(), check if this class is still alive.
+    // If not, do not call Dispatch() to avoid use-after-free.
+    // The situation happens when this instance is destroyed in HandleExit().
+    // Note that this still consumes all pending children even in the case
+    // for consistent behavior.
+    // TODO(crbug.com/1053782): Migrate to libbrillo library.
+    if (ptr)
+      Dispatch(info);
   }
   // Continue listening to SIGCHLD
   return false;
