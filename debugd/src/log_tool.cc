@@ -219,22 +219,14 @@ const std::vector<Log> kCommandLogs {
     SandboxedProcess::kDefaultUser, kDebugfsGroup},
   {kCommand, "oemdata", "/usr/share/cros/oemdata.sh", kRoot, kRoot},
   {kFile, "pagetypeinfo", "/proc/pagetypeinfo"},
-  {kCommand, "platform_info",
-    // mosys may use 'i2c-dev', which may not be loaded yet.
-    "modprobe i2c-dev 2>/dev/null && "
-    "for param in "
-      "vendor "
-      "name "
-      "version "
-      "family "
-      "model "
-
-      "sku "
-      "customization "
-    "; do "
-      "mosys -l platform \"${param}\" 2>/dev/null; "
-    "done",
-    kRoot, kDebugfsGroup},
+  {kFile, "platform_identity_name",
+    "/run/chromeos-config/v1/identity/platform-name"},
+  {kFile, "platform_identity_model", "/run/chromeos-config/v1/name"},
+  {kFile, "platform_identity_sku", "/run/chromeos-config/v1/identity/sku-id"},
+  {kFile, "platform_identity_whitelabel_tag",
+    "/run/chromeos-config/v1/identity/whitelabel-tag"},
+  {kFile, "platform_identity_customization_id",
+    "/run/chromeos-config/v1/identity/customization-id"},
   {kCommand, "power_supply_info", "/usr/bin/power_supply_info"},
   {kCommand, "power_supply_sysfs", "/usr/bin/print_sysfs_power_supply_data"},
   {kFile, "powerd.LATEST", "/var/log/power_manager/powerd.LATEST"},
