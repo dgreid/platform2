@@ -9,6 +9,7 @@
 #include <iostream>
 #include <memory>
 
+#include <base/at_exit.h>
 #include <base/logging.h>
 #include <brillo/flag_helper.h>
 #include <brillo/syslog_logging.h>
@@ -73,6 +74,9 @@ hardware_verifier::CLIOutputFormat SafeConvertOutputFormatFlagToEnum(
 }  // namespace
 
 int main(int argc, char* argv[]) {
+  // Required by dbus in libchrome.
+  base::AtExitManager at_exit_manager;
+
   DEFINE_int32(verbosity, 0,
                "Verbosity level, range from 0 to 5.  The greater number is "
                "set, the more detail messages will be printed.");

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <base/at_exit.h>
 #include <base/files/file_util.h>
 #include <base/logging.h>
 #include <base/process/launch.h>
@@ -55,6 +56,10 @@ int main(int argc, char* argv[]) {
   }
 
   LOG(INFO) << "Running in CLI mode";
+
+  // Required by dbus in libchrome.
+  base::AtExitManager at_exit_manager;
+
   // Invoke as a command line tool. Device can load arbitrary probe config
   // iff cros_debug == 1
   std::string probe_config_path;
