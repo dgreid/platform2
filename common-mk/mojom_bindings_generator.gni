@@ -168,12 +168,8 @@ template("generate_mojom_bindings_gen") {
       "${mojo_output_dir}/{{source_target_relative}}-shared.h",
       "${mojo_output_dir}/{{source_target_relative}}.cc",
       "${mojo_output_dir}/{{source_target_relative}}.h",
+      "${mojo_output_dir}/{{source_target_relative}}-shared-message-ids.h",
     ]
-    if ("${libbase_ver}" == "576279") {
-      outputs += [
-        "${mojo_output_dir}/{{source_target_relative}}-shared-message-ids.h",
-      ]
-    }
     print("Generating mojo C++ bindings")
     script = _mojom_bindings_generator_wrapper
     args = [
@@ -202,11 +198,9 @@ template("generate_mojom_bindings_gen") {
       args += [ "--disallow_interfaces" ]
     }
     deps = [
+      ":${mojo_parse_action_name}",
       ":${mojo_templates_action_name}",
     ]
-    if ("${libbase_ver}" == "576279") {
-      deps += [ ":${mojo_parse_action_name}" ]
-    }
   }
 }
 
