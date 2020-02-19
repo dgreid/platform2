@@ -31,11 +31,8 @@ class BRILLO_EXPORT CrosConfig : public CrosConfigInterface {
   // Prepare the configuration system for access to the configuration for
   // the model this is running on. This reads the configuration file into
   // memory.
-  // @sku_id: If sku_id is kDefaultSkuId, then the SKU of the device
-  //     will be probed. Otherwise (if sku_id is not kDefaultSkuId),
-  //     the value here is used to match the configuration.
   // @return true if OK, false on error.
-  bool Init(const int sku_id = kDefaultSkuId);
+  bool Init();
 
   // Prepare the configuration system for testing.
   // This reads in the given configuration file and selects the config

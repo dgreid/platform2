@@ -31,6 +31,11 @@ int main(int argc, char* argv[]) {
                       "debug logging messages.\n";
   brillo::FlagHelper::Init(argc, argv, usage);
 
+  if (FLAGS_test_sku_id != brillo::kDefaultSkuId && FLAGS_test_file.empty()) {
+    std::cerr << "Passing --test_sku_id requires you pass --test_file.\n";
+    return 1;
+  }
+
   CHECK_EQ(FLAGS_test_file.empty(), FLAGS_test_name.empty())
       << "You must pass both --test_file and --test_name or neither.";
 
@@ -44,7 +49,7 @@ int main(int argc, char* argv[]) {
 
   brillo::CrosConfig cros_config;
   if (FLAGS_test_file.empty()) {
-    if (!cros_config.Init(FLAGS_test_sku_id)) {
+    if (!cros_config.Init()) {
       return 1;
     }
   } else {

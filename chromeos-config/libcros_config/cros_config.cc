@@ -65,7 +65,7 @@ bool CrosConfig::GetDefaultIdentityFiles(const SystemArchitecture arch,
   return true;
 }
 
-bool CrosConfig::Init(const int sku_id) {
+bool CrosConfig::Init() {
   base::FilePath vpd_file;
   base::FilePath product_name_file;
   base::FilePath product_sku_file;
@@ -75,7 +75,7 @@ bool CrosConfig::Init(const int sku_id) {
     return false;
   }
   base::FilePath json_path(kConfigJsonPath);
-  return InitInternal(sku_id, json_path, arch, product_name_file,
+  return InitInternal(kDefaultSkuId, json_path, arch, product_name_file,
                       product_sku_file, vpd_file);
 }
 
