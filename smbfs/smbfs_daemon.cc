@@ -283,7 +283,7 @@ bool SmbFsDaemon::InitMojo() {
       mojo::IncomingInvitation::Accept(channel.TakeLocalEndpoint());
 
   bootstrap_binding_.Bind(mojom::SmbFsBootstrapRequest(
-      invitation.ExtractMessagePipe("smbfs-bootstrap")));
+      invitation.ExtractMessagePipe(mojom::kBootstrapPipeName)));
   bootstrap_binding_.set_connection_error_handler(
       base::BindOnce(&SmbFsDaemon::OnConnectionError, base::Unretained(this)));
 
