@@ -4,6 +4,8 @@
 
 #include "arc/network/arc_service.h"
 
+#include <net/if.h>
+
 #include <utility>
 #include <vector>
 
@@ -19,6 +21,7 @@
 #include "arc/network/net_util.h"
 
 using testing::_;
+using testing::AnyNumber;
 using testing::Return;
 using testing::ReturnRef;
 using testing::StrEq;
@@ -29,6 +32,8 @@ constexpr pid_t kTestPID = -2;
 constexpr uint32_t kTestCID = 2;
 constexpr uint32_t kArcHostIP = Ipv4Addr(100, 115, 92, 1);
 constexpr uint32_t kArcGuestIP = Ipv4Addr(100, 115, 92, 2);
+constexpr uint32_t kArcVmHostIP = Ipv4Addr(100, 115, 92, 5);
+constexpr uint32_t kArcVmGuestIP = Ipv4Addr(100, 115, 92, 6);
 
 static AddressManager addr_mgr({
     AddressManager::Guest::ARC,
@@ -61,18 +66,17 @@ class MockDeviceManager : public DeviceManagerBase {
   MOCK_METHOD2(AddWithContext,
                bool(const std::string&, std::unique_ptr<Device::Context>));
   MOCK_METHOD1(Remove, bool(const std::string&));
-  MOCK_METHOD1(StartForwarding, void(const Device&));
-  MOCK_METHOD1(StopForwarding, void(const Device&));
+  MOCK_METHOD2(StartForwarding, void(const Device&, const std::string&));
+  MOCK_METHOD2(StopForwarding, void(const Device&, const std::string&));
   MOCK_CONST_METHOD0(addr_mgr, AddressManager*());
 };
 
 std::unique_ptr<Device> MakeDevice(const std::string& name,
                                    const std::string& host,
                                    const std::string& guest,
-                                   bool is_arc = true) {
+                                   bool is_arcvm = false) {
   Device::Options opt{
-      .use_default_interface = (name == kAndroidVmDevice),
-      .is_android = (name == kAndroidDevice),
+      .use_default_interface = is_arcvm,
   };
   auto subnet = addr_mgr.AllocateIPv4Subnet(
       opt.is_android ? AddressManager::Guest::ARC
@@ -82,9 +86,7 @@ std::unique_ptr<Device> MakeDevice(const std::string& name,
   auto cfg = std::make_unique<Device::Config>(
       host, guest, addr_mgr.GenerateMacAddress(), std::move(subnet),
       std::move(addr0), std::move(addr1));
-  return std::make_unique<Device>(
-      name, std::move(cfg), opt,
-      is_arc ? GuestMessage::ARC : GuestMessage::UNKNOWN_GUEST);
+  return std::make_unique<Device>(name, std::move(cfg), opt, GuestMessage::ARC);
 }
 
 }  // namespace
@@ -111,6 +113,7 @@ class ArcServiceTest : public testing::Test {
     EXPECT_CALL(dev_mgr_, RegisterDeviceRemovedHandler(_, _));
     EXPECT_CALL(dev_mgr_, RegisterDefaultInterfaceChangedHandler(_, _));
     EXPECT_CALL(dev_mgr_, UnregisterAllGuestHandlers(_));
+    EXPECT_CALL(dev_mgr_, addr_mgr()).WillRepeatedly(Return(&addr_mgr_));
 
     arc_networkd::test::guest = GuestMessage::ARC;
     return std::make_unique<ArcService>(shill_client_.get(), &dev_mgr_,
@@ -124,33 +127,6 @@ class ArcServiceTest : public testing::Test {
   std::unique_ptr<MockDatapath> datapath_;
   std::unique_ptr<FakeProcessRunner> runner_;
 };
-
-TEST_F(ArcServiceTest, VerifyOnDeviceAddedDoesNothingNonArcDevice) {
-  EXPECT_CALL(*datapath_, AddBridge(_, _, _)).Times(0);
-  EXPECT_CALL(*datapath_, AddLegacyIPv4DNAT(_)).Times(0);
-  EXPECT_CALL(*datapath_, AddOutboundIPv4(_)).Times(0);
-
-  auto dev = MakeDevice("foo0", "bar0", "baz0", false);
-  ASSERT_TRUE(dev);
-  NewService()->OnDeviceAdded(dev.get());
-}
-
-TEST_F(ArcServiceTest, VerifyOnDeviceAddedDatapathForAndroid) {
-  EXPECT_CALL(*datapath_, AddBridge(StrEq("arcbr0"), kArcHostIP, 30))
-      .WillOnce(Return(true));
-
-  auto dev = MakeDevice(kAndroidDevice, "arcbr0", "arc0");
-  ASSERT_TRUE(dev);
-  NewService()->OnDeviceAdded(dev.get());
-}
-
-TEST_F(ArcServiceTest, VerifyOnDeviceRemovedDatapathForAndroid) {
-  EXPECT_CALL(*datapath_, RemoveInterface(StrEq("veth_arc0")));
-
-  auto dev = MakeDevice(kAndroidDevice, "arcbr0", "arc0");
-  ASSERT_TRUE(dev);
-  NewService()->OnDeviceRemoved(dev.get());
-}
 
 TEST_F(ArcServiceTest, VerifyOnDeviceAddedDatapath) {
   EXPECT_CALL(*datapath_,
@@ -191,12 +167,30 @@ class ContainerImplTest : public testing::Test {
     runner_ = std::make_unique<FakeProcessRunner>();
     runner_->Capture(false);
     datapath_ = std::make_unique<MockDatapath>(runner_.get());
+    EXPECT_CALL(dev_mgr_, addr_mgr()).WillRepeatedly(Return(&addr_mgr_));
   }
 
-  std::unique_ptr<ArcService::ContainerImpl> Impl() {
+  std::unique_ptr<ArcService::ContainerImpl> Impl(bool start = true) {
     auto impl = std::make_unique<ArcService::ContainerImpl>(
         &dev_mgr_, datapath_.get(), GuestMessage::ARC);
-    impl->Start(kTestPID);
+    if (start) {
+      // Set expectations for tests that want it started already.
+      EXPECT_CALL(*datapath_, AddBridge(StrEq("arcbr0"), kArcHostIP, 30))
+          .WillOnce(Return(true));
+      EXPECT_CALL(*datapath_,
+                  AddVirtualInterfacePair(StrEq("veth_arc0"), StrEq("arc0")))
+          .WillOnce(Return(true));
+      EXPECT_CALL(*datapath_, ConfigureInterface(StrEq("arc0"), _, kArcGuestIP,
+                                                 30, true, _))
+          .WillOnce(Return(true));
+      EXPECT_CALL(*datapath_, ToggleInterface(StrEq("veth_arc0"), true))
+          .WillOnce(Return(true));
+      EXPECT_CALL(*datapath_, AddToBridge(StrEq("arcbr0"), StrEq("veth_arc0")))
+          .WillOnce(Return(true));
+      EXPECT_CALL(dev_mgr_, StartForwarding(_, _)).Times(AnyNumber());
+
+      impl->Start(kTestPID);
+    }
     return impl;
   }
 
@@ -206,7 +200,9 @@ class ContainerImplTest : public testing::Test {
   std::unique_ptr<FakeProcessRunner> runner_;
 };
 
-TEST_F(ContainerImplTest, OnStartDevice_Android) {
+TEST_F(ContainerImplTest, Start) {
+  EXPECT_CALL(*datapath_, AddBridge(StrEq("arcbr0"), kArcHostIP, 30))
+      .WillOnce(Return(true));
   EXPECT_CALL(*datapath_,
               AddVirtualInterfacePair(StrEq("veth_arc0"), StrEq("arc0")))
       .WillOnce(Return(true));
@@ -217,23 +213,24 @@ TEST_F(ContainerImplTest, OnStartDevice_Android) {
       .WillOnce(Return(true));
   EXPECT_CALL(*datapath_, AddToBridge(StrEq("arcbr0"), StrEq("veth_arc0")))
       .WillOnce(Return(true));
-
-  auto dev = MakeDevice(kAndroidDevice, "arcbr0", "arc0");
-  ASSERT_TRUE(dev);
-  EXPECT_TRUE(Impl()->OnStartDevice(dev.get()));
+  EXPECT_CALL(dev_mgr_, StartForwarding(_, _));
+  Impl(false)->Start(kTestPID);
 }
 
-TEST_F(ContainerImplTest, OnStartDevice_FailsToCreateInterface_Android) {
+TEST_F(ContainerImplTest, Start_FailsToCreateInterface_Android) {
+  EXPECT_CALL(*datapath_, AddBridge(StrEq("arcbr0"), kArcHostIP, 30))
+      .WillOnce(Return(true));
   EXPECT_CALL(*datapath_,
               AddVirtualInterfacePair(StrEq("veth_arc0"), StrEq("arc0")))
       .WillOnce(Return(false));
   EXPECT_CALL(*datapath_, ConfigureInterface(_, _, _, _, _, _)).Times(0);
-  auto dev = MakeDevice(kAndroidDevice, "arcbr0", "arc0");
-  ASSERT_TRUE(dev);
-  EXPECT_FALSE(Impl()->OnStartDevice(dev.get()));
+  EXPECT_CALL(*datapath_, RemoveBridge(_)).Times(0);
+  Impl(false)->Start(kTestPID);
 }
 
 TEST_F(ContainerImplTest, OnStartDevice_FailsToConfigureInterface_Android) {
+  EXPECT_CALL(*datapath_, AddBridge(StrEq("arcbr0"), kArcHostIP, 30))
+      .WillOnce(Return(true));
   EXPECT_CALL(*datapath_,
               AddVirtualInterfacePair(StrEq("veth_arc0"), StrEq("arc0")))
       .WillOnce(Return(true));
@@ -243,13 +240,10 @@ TEST_F(ContainerImplTest, OnStartDevice_FailsToConfigureInterface_Android) {
   EXPECT_CALL(*datapath_, ToggleInterface(StrEq("veth_arc0"), true)).Times(0);
   EXPECT_CALL(*datapath_, RemoveInterface(StrEq("arc0")));
   EXPECT_CALL(*datapath_, RemoveBridge(_)).Times(0);
-
-  auto dev = MakeDevice(kAndroidDevice, "arcbr0", "arc0");
-  ASSERT_TRUE(dev);
-  EXPECT_FALSE(Impl()->OnStartDevice(dev.get()));
+  Impl(false)->Start(kTestPID);
 }
 
-TEST_F(ContainerImplTest, OnStartDevice_Other) {
+TEST_F(ContainerImplTest, OnStartDevice) {
   EXPECT_CALL(*datapath_,
               AddVirtualInterfacePair(StrEq("veth_eth0"), StrEq("eth0")))
       .WillOnce(Return(true));
@@ -261,33 +255,27 @@ TEST_F(ContainerImplTest, OnStartDevice_Other) {
       .WillOnce(Return(true));
   EXPECT_CALL(*datapath_, AddToBridge(StrEq("arc_eth0"), StrEq("veth_eth0")))
       .WillOnce(Return(true));
-
   auto dev = MakeDevice("eth0", "arc_eth0", "eth0");
   ASSERT_TRUE(dev);
   Impl()->OnStartDevice(dev.get());
 }
 
-// Verifies the veth interface is not removed.
-TEST_F(ContainerImplTest, OnStopDevice_Android) {
-  EXPECT_CALL(*datapath_, RemoveInterface(_)).Times(0);
-  auto dev = MakeDevice(kAndroidDevice, "arcbr0", "arc0");
-  ASSERT_TRUE(dev);
-  Impl()->OnStopDevice(dev.get());
+TEST_F(ContainerImplTest, Stop) {
+  EXPECT_CALL(*datapath_,
+              MaskInterfaceFlags(StrEq("arcbr0"), IFF_DEBUG, IFF_UP));
+  EXPECT_CALL(*datapath_, RemoveInterface(StrEq("veth_arc0")));
+  EXPECT_CALL(dev_mgr_, StopForwarding(_, _));
+
+  Impl()->Stop(kTestPID);
 }
 
-TEST_F(ContainerImplTest, OnStopDevice_Other) {
+TEST_F(ContainerImplTest, OnStopDevice) {
   EXPECT_CALL(*datapath_, RemoveInterface(StrEq("veth_eth0")));
+  EXPECT_CALL(dev_mgr_, StopForwarding(_, _));
+
   auto dev = MakeDevice("eth0", "arc_eth0", "eth0");
   ASSERT_TRUE(dev);
   Impl()->OnStopDevice(dev.get());
-}
-
-// Nothing happens in this case since it's only concerned about (re)connecting
-// to a network.
-TEST_F(ContainerImplTest, OnDefaultInterfaceChanged_OtherNoIfname) {
-  auto dev = MakeDevice("eth0", "arc_eth0", "eth0");
-  ASSERT_TRUE(dev);
-  Impl()->OnDefaultInterfaceChanged("", "");
 }
 
 // VM Impl
@@ -307,12 +295,18 @@ class VmImplTest : public testing::Test {
     runner_ = std::make_unique<FakeProcessRunner>();
     runner_->Capture(false);
     datapath_ = std::make_unique<MockDatapath>(runner_.get());
+    EXPECT_CALL(dev_mgr_, addr_mgr()).WillRepeatedly(Return(&addr_mgr_));
+    static const std::string eth0 = "eth0";
+    EXPECT_CALL(dev_mgr_, DefaultInterface()).WillRepeatedly(ReturnRef(eth0));
   }
 
-  std::unique_ptr<ArcService::VmImpl> Impl() {
+  std::unique_ptr<ArcService::VmImpl> Impl(bool start = true) {
     auto impl =
         std::make_unique<ArcService::VmImpl>(&dev_mgr_, datapath_.get());
-    impl->Start(kTestCID);
+    if (start) {
+      impl->Start(kTestCID);
+    }
+
     return impl;
   }
 
@@ -322,57 +316,55 @@ class VmImplTest : public testing::Test {
   std::unique_ptr<FakeProcessRunner> runner_;
 };
 
-TEST_F(VmImplTest, OnStartDevice) {
-  // For now, ARCVM uses the legacy device since it behaves similarly.
-  auto dev = MakeDevice(kAndroidVmDevice, "arc_br1", "arc1");
-  ASSERT_TRUE(dev);
-  auto context = std::make_unique<ArcService::Context>();
-  auto* ctx = context.get();
-  dev->set_context(std::move(context));
+TEST_F(VmImplTest, Start) {
+  EXPECT_CALL(*datapath_, AddBridge(StrEq("arc_br1"), kArcVmHostIP, 30))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*datapath_,
+              AddLegacyIPv4DNAT(StrEq(IPv4AddressToString(kArcVmGuestIP))))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*datapath_, AddOutboundIPv4(StrEq("arc_br1")))
+      .WillOnce(Return(true));
   EXPECT_CALL(*datapath_, AddTAP(StrEq(""), nullptr, nullptr, StrEq("crosvm")))
       .WillOnce(Return("vmtap0"));
   EXPECT_CALL(*datapath_, AddToBridge(StrEq("arc_br1"), StrEq("vmtap0")))
       .WillOnce(Return(true));
-  static const std::string eth0 = "eth0";
-  EXPECT_CALL(dev_mgr_, DefaultInterface()).WillOnce(ReturnRef(eth0));
   // OnDefaultInterfaceChanged
+  EXPECT_CALL(dev_mgr_, StopForwarding(_, StrEq("")));
   EXPECT_CALL(*datapath_, RemoveLegacyIPv4InboundDNAT());
-  EXPECT_CALL(dev_mgr_, FindByGuestInterface(StrEq("arc1")))
-      .WillRepeatedly(Return(dev.get()));
+  EXPECT_CALL(dev_mgr_, StartForwarding(_, StrEq("eth0")));
   EXPECT_CALL(*datapath_, AddLegacyIPv4InboundDNAT(StrEq("eth0")));
-  EXPECT_TRUE(Impl()->OnStartDevice(dev.get()));
-  EXPECT_EQ(ctx->TAP(), "vmtap0");
+
+  Impl(false)->Start(kTestCID);
 }
 
-TEST_F(VmImplTest, OnStartDevice_NoContext) {
-  auto dev = MakeDevice(kAndroidVmDevice, "arc_br1", "arc1");
-  ASSERT_TRUE(dev);
-  EXPECT_FALSE(Impl()->OnStartDevice(dev.get()));
-}
+TEST_F(VmImplTest, Stop) {
+  // Start
+  EXPECT_CALL(*datapath_, AddBridge(StrEq("arc_br1"), kArcVmHostIP, 30))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*datapath_,
+              AddLegacyIPv4DNAT(StrEq(IPv4AddressToString(kArcVmGuestIP))))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*datapath_, AddOutboundIPv4(StrEq("arc_br1")))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*datapath_, AddTAP(StrEq(""), nullptr, nullptr, StrEq("crosvm")))
+      .WillOnce(Return("vmtap0"));
+  EXPECT_CALL(*datapath_, AddToBridge(StrEq("arc_br1"), StrEq("vmtap0")))
+      .WillOnce(Return(true));
+  // OnDefaultInterfaceChanged
+  EXPECT_CALL(dev_mgr_, StopForwarding(_, StrEq("")));
+  EXPECT_CALL(dev_mgr_, StartForwarding(_, StrEq("eth0")));
+  EXPECT_CALL(*datapath_, AddLegacyIPv4InboundDNAT(StrEq("eth0")));
 
-TEST_F(VmImplTest, OnStartDevice_OtherDevice) {
-  auto dev = MakeDevice("eth0", "arc_eth0", "eth0");
-  ASSERT_TRUE(dev);
-  EXPECT_FALSE(Impl()->OnStartDevice(dev.get()));
-}
-
-TEST_F(VmImplTest, OnStopDevice) {
-  auto dev = MakeDevice(kAndroidVmDevice, "arc_br1", "arc1");
-  ASSERT_TRUE(dev);
-  auto context = std::make_unique<ArcService::Context>();
-  auto* ctx = context.get();
-  ctx->SetTAP("vmtap0");
-  dev->set_context(std::move(context));
+  // Stop
+  EXPECT_CALL(*datapath_, RemoveOutboundIPv4(StrEq("arc_br1")));
+  EXPECT_CALL(*datapath_, RemoveLegacyIPv4DNAT());
   EXPECT_CALL(*datapath_, RemoveInterface(StrEq("vmtap0")));
-  Impl()->OnStopDevice(dev.get());
-}
-
-TEST_F(VmImplTest, OnStopDevice_OtherDevice) {
-  EXPECT_CALL(*datapath_, RemoveInterface(_)).Times(0);
-  // For now, ARCVM uses the legacy device since it behaves similarly.
-  auto dev = MakeDevice("eth0", "arc_eth0", "eth0");
-  ASSERT_TRUE(dev);
-  Impl()->OnStopDevice(dev.get());
+  EXPECT_CALL(*datapath_, RemoveBridge(StrEq("arc_br1")));
+  // OnDefaultInterfaceChanged
+  EXPECT_CALL(*datapath_, RemoveLegacyIPv4InboundDNAT())
+      .Times(2);  // +1 for Start
+  EXPECT_CALL(dev_mgr_, StopForwarding(_, StrEq("eth0")));
+  Impl()->Stop(kTestCID);
 }
 
 }  // namespace arc_networkd

@@ -24,12 +24,6 @@
 
 namespace arc_networkd {
 
-// Reserved name for the Android device.
-extern const char kAndroidDevice[];
-// Reserved name for the Android device for ARCVM.
-// TODO(garrick): This can be removed
-extern const char kAndroidVmDevice[];
-
 // Encapsulates a physical (e.g. eth0) or proxy (e.g. arc) network device and
 // its configuration spec (interfaces, addresses) on the host and in the
 // container. It manages additional services such as router detection, address

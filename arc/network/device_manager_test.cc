@@ -174,34 +174,6 @@ TEST_F(DeviceManagerTest, MakeCellularDevice) {
   EXPECT_FALSE(wwan0->options().is_sticky);
 }
 
-TEST_F(DeviceManagerTest, MakeDevice_Android) {
-  auto mgr = NewManager();
-  auto arc0 = mgr->MakeDevice(kAndroidDevice);
-  const auto& cfg = arc0->config();
-  EXPECT_EQ(cfg.host_ifname(), "arcbr0");
-  EXPECT_EQ(cfg.guest_ifname(), "arc0");
-  EXPECT_EQ(cfg.host_ipv4_addr(), Ipv4Addr(100, 115, 92, 1));
-  EXPECT_EQ(cfg.guest_ipv4_addr(), Ipv4Addr(100, 115, 92, 2));
-  EXPECT_FALSE(arc0->options().ipv6_enabled);
-  EXPECT_TRUE(arc0->options().is_android);
-  EXPECT_FALSE(arc0->options().use_default_interface);
-  EXPECT_TRUE(arc0->options().is_sticky);
-}
-
-TEST_F(DeviceManagerTest, MakeDevice_AndroidVm) {
-  auto mgr = NewManager();
-  auto arc0 = mgr->MakeDevice(kAndroidVmDevice);
-  const auto& cfg = arc0->config();
-  EXPECT_EQ(cfg.host_ifname(), "arc_br1");
-  EXPECT_EQ(cfg.guest_ifname(), "arc1");
-  EXPECT_EQ(cfg.host_ipv4_addr(), Ipv4Addr(100, 115, 92, 5));
-  EXPECT_EQ(cfg.guest_ipv4_addr(), Ipv4Addr(100, 115, 92, 6));
-  EXPECT_TRUE(arc0->options().ipv6_enabled);
-  EXPECT_TRUE(arc0->options().is_android);
-  EXPECT_TRUE(arc0->options().use_default_interface);
-  EXPECT_TRUE(arc0->options().is_sticky);
-}
-
 TEST_F(DeviceManagerTest, MakeDevice_NoMoreSubnets) {
   auto mgr = NewManager();
   std::vector<std::unique_ptr<Device>> devices;
@@ -257,19 +229,6 @@ TEST_F(DeviceManagerTest, MakeDeviceNonAndroid_CheckMulticast) {
   auto dev1 = mgr->MakeDevice("dev1");
   EXPECT_FALSE(dev1->options().fwd_multicast);
   dev1.reset();
-}
-
-TEST_F(DeviceManagerTest, MakeDeviceAndroid_CheckMulticast) {
-  auto mgr = NewManager();
-  EXPECT_CALL(*mgr, IsMulticastInterface(_)).Times(0);
-
-  auto arc0 = mgr->MakeDevice(kAndroidDevice);
-  EXPECT_FALSE(arc0->options().fwd_multicast);
-  arc0.reset();
-
-  auto arcvm = mgr->MakeDevice(kAndroidVmDevice);
-  EXPECT_TRUE(arcvm->options().fwd_multicast);
-  arcvm.reset();
 }
 
 TEST_F(DeviceManagerTest, StickyDevicesNotRemovedByShill) {

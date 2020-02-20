@@ -65,8 +65,15 @@ class ArcService {
     virtual void OnDefaultInterfaceChanged(const std::string& new_ifname,
                                            const std::string& prev_ifname) = 0;
 
+    // Returns the ARC management interface.
+    Device* ArcDevice() const { return arc_device_.get(); }
+
    protected:
     Impl() = default;
+
+    // For now each implementation manages its own ARC device since ARCVM is
+    // still single-networked.
+    std::unique_ptr<Device> arc_device_;
   };
 
   // Encapsulates all ARC++ container-specific logic.
@@ -128,6 +135,7 @@ class ArcService {
     uint32_t cid_;
     DeviceManagerBase* dev_mgr_;
     Datapath* datapath_;
+    std::string tap_;
 
     DISALLOW_COPY_AND_ASSIGN(VmImpl);
   };
@@ -145,6 +153,8 @@ class ArcService {
   void OnDeviceRemoved(Device* device);
   void OnDefaultInterfaceChanged(const std::string& new_ifname,
                                  const std::string& prev_ifname);
+
+  Device* ArcDevice() const;
 
  private:
   void StartDevice(Device* device);

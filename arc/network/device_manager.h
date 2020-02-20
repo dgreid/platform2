@@ -79,8 +79,10 @@ class DeviceManagerBase {
                               std::unique_ptr<Device::Context>) = 0;
   virtual bool Remove(const std::string& name) = 0;
 
-  virtual void StartForwarding(const Device& device) = 0;
-  virtual void StopForwarding(const Device& device) = 0;
+  virtual void StartForwarding(const Device& device,
+                               const std::string& ifname) = 0;
+  virtual void StopForwarding(const Device& device,
+                              const std::string& ifname) = 0;
 
   virtual AddressManager* addr_mgr() const = 0;
 };
@@ -138,8 +140,9 @@ class DeviceManager : public DeviceManagerBase {
                       std::unique_ptr<Device::Context>) override;
   bool Remove(const std::string& name) override;
 
-  void StartForwarding(const Device& device) override;
-  void StopForwarding(const Device& device) override;
+  void StartForwarding(const Device& device,
+                       const std::string& ifname) override;
+  void StopForwarding(const Device& device, const std::string& ifname) override;
 
   AddressManager* addr_mgr() const override;
 

@@ -176,7 +176,6 @@ if (use.test) {
       "arc_service_test.cc",
       "datapath_test.cc",
       "device_manager_test.cc",
-      "device_test.cc",
       "mac_address_generator_test.cc",
       "minijailed_process_runner_test.cc",
       "ndproxy_test.cc",

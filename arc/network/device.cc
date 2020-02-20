@@ -20,10 +20,6 @@
 
 namespace arc_networkd {
 
-// Special device names used to indicate which ARC guest it represents.
-const char kAndroidDevice[] = "arc0";
-const char kAndroidVmDevice[] = "arcvm";
-
 Device::Config::Config(const std::string& host_ifname,
                        const std::string& guest_ifname,
                        const MacAddress& guest_mac_addr,

@@ -168,7 +168,7 @@ bool DeviceManager::Remove(const std::string& name) {
 
   LOG(INFO) << "Removing device " << name;
 
-  StopForwarding(*device);
+  StopForwarding(*device, device->ifname());
 
   for (auto& h : rm_handlers_) {
     h.second.Run(device);
@@ -205,86 +205,48 @@ const std::string& DeviceManager::DefaultInterface() const {
 }
 
 std::unique_ptr<Device> DeviceManager::MakeDevice(
-    const std::string& name) const {
-  DCHECK(!name.empty());
+    const std::string& ifname) const {
+  DCHECK(!ifname.empty());
 
   Device::Options opts{
-      .fwd_multicast = false,
-      .ipv6_enabled = false,
+      .fwd_multicast = IsMulticastInterface(ifname),
+      // TODO(crbug/726815) Also enable |ipv6_enabled| for cellular networks
+      // once IPv6 is enabled on cellular networks in shill.
+      .ipv6_enabled = IsEthernetInterface(ifname) || IsWifiInterface(ifname),
       .use_default_interface = false,
       .is_android = false,
       .is_sticky = false,
   };
-  std::string host_ifname, guest_ifname;
-  AddressManager::Guest guest = AddressManager::Guest::ARC;
-  std::unique_ptr<Subnet> lxd_subnet;
-
-  if (name == kAndroidVmDevice) {
-    guest = AddressManager::Guest::VM_ARC;
-    // (b/145644889) There are a couple things driving this device name:
-    // 1. Until ArcNetworkService is running in ARCVM, arcbr0 cannot be reused
-    // since the IPv4 addresses are different.
-    // 2. Because of crbug/1008686, arcbr0 cannot be destroyed and recreated.
-    // 3. Because shill only treats arcbr0 and devices prefixed with arc_ as
-    // special, arc_br1 has to be used instead of arcbr1.
-    // TODO(garrick): When either b/123431422 or the above crbug is fixed,
-    // this can be removed.
-    host_ifname = "arc_br1";
-    guest_ifname = "arc1";
-
-    opts.ipv6_enabled = true;
-    opts.fwd_multicast = true;
-    opts.use_default_interface = true;
-    opts.is_android = true;
-    opts.is_sticky = true;
-  } else {
-    if (name == kAndroidDevice) {
-      host_ifname = "arcbr0";
-      opts.is_android = true;
-      opts.is_sticky = true;
-    } else {
-      guest = AddressManager::Guest::ARC_NET;
-      host_ifname = base::StringPrintf("arc_%s", name.c_str());
-      opts.fwd_multicast = IsMulticastInterface(name);
-    }
-    guest_ifname = name;
-    // TODO(crbug/726815) Also enable |ipv6_enabled| for cellular networks
-    // once IPv6 is enabled on cellular networks in shill.
-    opts.ipv6_enabled =
-        IsEthernetInterface(guest_ifname) || IsWifiInterface(guest_ifname);
-  }
-
-  auto ipv4_subnet = addr_mgr_->AllocateIPv4Subnet(guest);
+  std::string host_ifname = base::StringPrintf("arc_%s", ifname.c_str());
+  auto ipv4_subnet =
+      addr_mgr_->AllocateIPv4Subnet(AddressManager::Guest::ARC_NET);
   if (!ipv4_subnet) {
     LOG(ERROR) << "Subnet already in use or unavailable. Cannot make device: "
-               << name;
+               << ifname;
     return nullptr;
   }
   auto host_ipv4_addr = ipv4_subnet->AllocateAtOffset(0);
   if (!host_ipv4_addr) {
     LOG(ERROR)
         << "Bridge address already in use or unavailable. Cannot make device: "
-        << name;
+        << ifname;
     return nullptr;
   }
   auto guest_ipv4_addr = ipv4_subnet->AllocateAtOffset(1);
   if (!guest_ipv4_addr) {
     LOG(ERROR)
         << "ARC address already in use or unavailable. Cannot make device: "
-        << name;
+        << ifname;
     return nullptr;
   }
 
   auto config = std::make_unique<Device::Config>(
-      host_ifname, guest_ifname, addr_mgr_->GenerateMacAddress(),
+      host_ifname, ifname, addr_mgr_->GenerateMacAddress(),
       std::move(ipv4_subnet), std::move(host_ipv4_addr),
-      std::move(guest_ipv4_addr), std::move(lxd_subnet));
+      std::move(guest_ipv4_addr));
 
-  // ARC guest is used for any variant (N, P, VM).
-  return std::make_unique<Device>(name, std::move(config), opts,
-                                  guest == AddressManager::Guest::VM_TERMINA
-                                      ? GuestMessage::TERMINA_VM
-                                      : GuestMessage::ARC);
+  return std::make_unique<Device>(ifname, std::move(config), opts,
+                                  GuestMessage::ARC);
 }
 
 void DeviceManager::OnDefaultInterfaceChanged(const std::string& new_ifname,
@@ -294,33 +256,33 @@ void DeviceManager::OnDefaultInterfaceChanged(const std::string& new_ifname,
 
   for (const auto& d : devices_) {
     if (d.second->UsesDefaultInterface())
-      StopForwarding(*d.second);
+      StopForwarding(*d.second, prev_ifname);
   }
 
   default_ifname_ = new_ifname;
 
   for (const auto& d : devices_) {
     if (d.second->UsesDefaultInterface())
-      StartForwarding(*d.second);
+      StartForwarding(*d.second, new_ifname);
   }
 
   for (const auto& h : default_iface_handlers_) {
-    h.second.Run(default_ifname_, prev_ifname);
+    h.second.Run(new_ifname, prev_ifname);
   }
 }
 
-void DeviceManager::StartForwarding(const Device& device) {
+void DeviceManager::StartForwarding(const Device& device,
+                                    const std::string& ifname) {
   forwarder_->StartForwarding(
-      device.UsesDefaultInterface() ? default_ifname_ : device.ifname(),
-      device.config().host_ifname(), device.config().guest_ipv4_addr(),
+      ifname, device.config().host_ifname(), device.config().guest_ipv4_addr(),
       device.options().ipv6_enabled, device.options().fwd_multicast);
 }
 
-void DeviceManager::StopForwarding(const Device& device) {
-  forwarder_->StopForwarding(
-      device.UsesDefaultInterface() ? default_ifname_ : device.ifname(),
-      device.config().host_ifname(), device.options().ipv6_enabled,
-      device.options().fwd_multicast);
+void DeviceManager::StopForwarding(const Device& device,
+                                   const std::string& ifname) {
+  forwarder_->StopForwarding(ifname, device.config().host_ifname(),
+                             device.options().ipv6_enabled,
+                             device.options().fwd_multicast);
 }
 
 void DeviceManager::OnDevicesChanged(const std::set<std::string>& added,

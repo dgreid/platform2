@@ -458,6 +458,9 @@ std::unique_ptr<dbus::Response> Manager::OnArcVmStartup(
     dev->set_ipv4_addr(config.guest_ipv4_addr());
   };
 
+  if (auto* arc = arc_svc_->ArcDevice())
+    build_resp(&response, arc);
+
   device_mgr_->ProcessDevices(
       base::Bind(build_resp, base::Unretained(&response)));
 
