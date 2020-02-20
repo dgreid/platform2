@@ -11,7 +11,7 @@
 #include <base/json/json_writer.h>
 #include <base/values.h>
 #include <brillo/dbus/dbus_connection.h>
-#include <chromeos/dbus/shill/dbus-constants.h>
+#include <chromeos/dbus/service_constants.h>
 #include <shill/dbus-proxies.h>
 
 #include "runtime_probe/utils/file_utils.h"
@@ -137,7 +137,12 @@ int NetworkFunction::EvalInHelper(std::string* output) const {
 
     DLOG_IF(INFO, node_res.HasKey("type"))
         << "Attribute \"type\" already existed. Overrided.";
-    node_res.SetString("type", device_type);
+    // Align with the category name.
+    if (device_type == shill::kTypeWifi) {
+      node_res.SetString("type", kTypeWireless);
+    } else {
+      node_res.SetString("type", device_type);
+    }
 
     result.Append(node_res.CreateDeepCopy());
   }
