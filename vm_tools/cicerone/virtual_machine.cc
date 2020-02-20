@@ -388,7 +388,8 @@ VirtualMachine::StartLxdContainerStatus VirtualMachine::StartLxdContainer(
     os_release.set_version(response.os_release().version());
     os_release.set_version_id(response.os_release().version_id());
     os_release.set_id(response.os_release().id());
-    container_os_releases_.emplace(container_name, os_release);
+    // We don't use emplace() here because it doesn't replace existing values.
+    container_os_releases_[container_name] = os_release;
   }
 
   switch (response.status()) {
