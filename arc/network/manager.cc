@@ -593,7 +593,7 @@ std::unique_ptr<dbus::Response> Manager::OnPluginVmStartup(
     return dbus_response;
   }
 
-  const int32_t vm_id = request.id();
+  const uint64_t vm_id = request.id();
   // This field is 1-based so 0 (the proto default value) indicates that any
   // subnet is acceptable, but the address manager is 0-based so we need to
   // subtract 1 from the index here.
