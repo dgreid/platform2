@@ -109,15 +109,225 @@ device like the following:
 *   `cros deploy $ACTIVE_DUT runtime_probe`
 *   On the device:
     *   `runtime_probe --vebosity_level=3`
-*   Inside cros_sdk: TODO(itspeter)
 
-# Usage
+## Testing
 
-The code is still underdevelopment, will update when it is ready for use.
+Runtime Probe provides CLI and a D-Bus interface, and our goal is to **make sure
+using Runtime Probe by both interface works correctly**. The main runtime\_probe
+binary executed via CLI is free of minijail and hence is useful for testing the
+correctness of probe function. D-Bus call to Runtime Probe is the main entry
+point we expect in most use cases.  It is guarded by minijail, and the main goal
+is to ensure the integrity of this entry point.
+
+### Via CLI
+
+Simply run the following:
+```shell
+localhost ~ # runtime_probe [--verbosity_level=<level>]
+```
+This command will produce the probe result in json format, also it verifies the
+correctness of probe results and tests the sandbox args of each probe function
+(if `cros_debug` is set to 1).
+
+### Via D-Bus call
+
+The following script tests the D-Bus entry of runtime\_probe remotely. Besides
+the output of the following script, the protocol buffer would also be shown in
+`/var/log/messages` by changing the `verbosity_level` in
+`runtime_probe/init/runtime_probe.conf` to 3. (And deploy to DUT by
+`emerge-${BOARD} runtime_probe && cros deploy "$ACTIVE_DUT" runtime_probe`)
+
+```shell
+#!/bin/sh
+
+PROTO_DIR_PATH="$HOME/trunk/src/platform2/system_api/dbus/runtime_probe/"
+PROTO_PATH="$PROTO_DIR_PATH/runtime_probe.proto"
+
+# Executing the following commands in cros_sdk or change the proto paths above
+
+CATEGORIES="categories:battery\ncategories:vpd_cached\ncategories:storage"
+PROTO_BYTES=$(echo -e "$CATEGORIES" | \
+  protoc --encode runtime_probe.ProbeRequest --proto_path="$PROTO_DIR_PATH" "$PROTO_PATH" | \
+  hexdump -v -e '/1 "%d,"')
+
+RAW_HEX_PROBE_RESULT=$(ssh root@$ACTIVE_DUT sudo -u chronos \
+  dbus-send --system --print-reply=literal \
+  --type=method_call --dest=org.chromium.RuntimeProbe \
+  /org/chromium/RuntimeProbe org.chromium.RuntimeProbe.ProbeCategories \
+  array:byte:"$PROTO_BYTES")
+
+echo "$RAW_HEX_PROBE_RESULT" | sed -e '1d;$d' | \
+  xxd -r -p | \
+  protoc --decode runtime_probe.ProbeResult --proto_path="$PROTO_DIR_PATH" "$PROTO_PATH"
+```
+Sample output:
+```
+storage {
+  name: "generic"
+  values {
+    path: "/sys/class/block/nvme0n1"
+    sectors: 1234567890
+    size: 123456789012
+    type: "NVMe"
+    pci_vendor: 9876
+    pci_device: 5432
+    pci_class: 67890
+  }
+}
+...
+probe_config_checksum: "DA39A3EE5E6B4B0D3255BFEF95601890AFD80709"
+```
+
+### Per probe function
+
+The probe statement of Runtime Probe could be customized for any supported probe
+function.  The following script tests each function via debugd and use the
+corresponding sandbox environment for each probe function.
+
+```shell
+#!/bin/sh
+# on DUT with cros_debug = 1
+# "generic_battery" could be replace with any supported probe function.
+cat << EOF > per_function.json
+{"CUSTOM_CATEGORY": {"CUSTOM_COMPONENT_NAME": {"eval": {"some_new_probe_function": {}}}}}
+EOF
+runtime_probe --config_file_path=./per_function.json
+```
+
+On DUT with `cros_debug` = 0 we cannot use `--config_file_path` option. However,
+we could leverage `/etc/runtime_probe/$MODEL/probe_config.json` like the
+following:
+```shell
+#!/bin/sh
+# backup probe_config.json
+cat << EOF > /etc/runtime_probe/$MODEL/probe_config.json
+{"CUSTOM_CATEGORY": {"CUSTOM_COMPONENT_NAME": {"eval": {"some_new_probe_function": {}}}}}
+EOF
+runtime_probe  # or via D-Bus as described earlier
+```
+
+### On Recovery image
+
+* Get the following from the [image folder](http://go/goldeneye) of a Live,
+  where xxx is the channel [beta, dev, stable] and yyy is the board name and
+  zzz is the version info.
+  * xxx-channel\_yyy\_zzz\_ChromeOS-firmware-...tar.bz2
+    * image-yyy.bin
+  * xxx-channel\_yyy\_zzz\_ChromeOS-recovery-...tar.xz
+    * recovery\_image.bin
+* Flash the dev-signed firmware, image-yyy.bin by either `flashrom` or servo
+  board.
+* Flash to the USB and trigger a recovery install [ Ctrl + Alt + D ]
+* Switch to developer mode and login into console [ Ctrl + Alt + F2 ]
+* Disable rootfs verification
+  * `cd /usr/share/vboot/bin/`
+  * `./make_dev_ssd.sh --remove_rootfs_verification --partitions 2`
+* Reboot the system
+* Enable Developer Console login in normal mode
+  * Delete the following lines in `/etc/init/boot-splash.conf`
+    * `if is_developer_end_user; then`
+    * `fi`
+* Login as root and change the password to non-empty (might just use `test0000`)
+* Reboot the system and disable developer switch
+* You should be able to login as root with the password set before
+* Clear the `/var/log/message` for better check
+  * `echo 0 > /var/log/messages`
+* Acts as chronos
+  * `su chronos`
+* Either execute a script or type manually on DUT
+
+```shell
+#!/bin/sh
+PROTO_BYTES="10,2,1,2"
+PROBO_BYTES="10,1,3"  # for devices report vpd_cached only
+dbus-send --system --print-reply \
+--type=method_call --dest=org.chromium.RuntimeProbe \
+/org/chromium/RuntimeProbe org.chromium.RuntimeProbe.ProbeCategories \
+array:byte:"$PROTO_BYTES"
+```
+
+* `10,2,1,2` is the generated ProbeRequest, which should depend on the version
+  of image. For example `10,1,3` for devices only reporting vpd\_cached.  These
+  value could be encoded by `protoc --encode` command mentioned in [via D-Bus
+  call](#via-d_bus-call).
+* Check the `/var/log/message` if the ProbeResult dumps every field in the
+  protocol buffer.
+* Again this ProbeResult could be decoded from local machine in a way similar to
+  the test script described in [via D-Bus call](#via-d_bus-call)
+
+### Via Tast
+
+[Tast](https://chromium.googlesource.com/chromiumos/platform/tast/+/refs/heads/master/README.md)
+is a golang-based test framework.  Currently tast-tests for Runtime Probe check
+if the probe result matches the cros labels we decoded from the HWID of DUT.
+Please refer to `cros_runtime_probe_*.go` under [platform
+tests](https://chromium.googlesource.com/chromiumos/platform/tast-tests/+/refs/heads/master/src/chromiumos/tast/local/bundles/cros/platform/).
+
+Note that Runtime Probe uses the probe statements at
+`/etc/runtime_probe/$MODEL/probe_config.json` on DUT.  The names of probed
+components are directly under the probe categories (e.g. component
+"MODEL\_COMPONENT1" under category "battery").  This is an
+[example](http://go/runtime-probe-component-example-probe-statement) for such
+component name.
+
+On the other hand, we will compare the above probed component name with one
+described in HWID DB file which is used to generate HWID string.  This is an
+[example](http://go/runtime-probe-component-example-hwid) for the same component
+name described in HWID DB. These component names will be cros labels and be
+passed from `-varsfiles` option of tast.  We can manually create one and run
+tast tests with it in cros\_sdk.
+
+```bash
+#!/bin/sh
+# in cros_sdk
+cat << EOF > labels.yaml
+autotest_host_info_labels: '["model:MODEL", "hwid_component:battery/MODEL_COMPONENT1", "hwid_component:storage/MODEL_COMPONENT2"]'
+EOF
+tast -verbose=true -logtime=false run -build=true -logtime=false -varsfile=labels.yaml "$ACTIVE_DUT" '(!disabled && "group:runtime_probe")'
+```
+In the output there will be the probed component names and expected component
+names for clarification.
+
+Example output:
+```
+Using SSH key ...
+Using SSH dir ...
+Writing results to /tmp/tast/results/20200220-172233
+Connecting to $ACTIVE_DUT
+Getting architecture from target
+Building local_test_runner, cros, remote_test_runner, cros
+Built in 2.778s
+Pushing executables to target
+Pushed executables in 4.104s (sent 9.4 MB)
+Getting data file list from target
+Got data file list with 0 file(s)
+Getting DUT info
+Software features supported by DUT: ...
+Getting initial system state
+[01:22:42.048] Devserver status: [[http://127.0.0.1:28082 UP]]
+[01:22:42.048] Found 0 external linked data file(s), need to download 0
+Started test platform.CrosRuntimeProbeBattery
+[01:22:42.173] Probed battery:MODEL_COMPONENT1
+[01:22:42.173] Skip known generic probe result
+Completed test platform.CrosRuntimeProbeBattery in 89ms with 0 error(s)
+Ran 1 local test(s) in 481ms
+Starting /tmp/tast/build/host/remote_test_runner locally
+Ran 0 remote test(s) in 26ms
+Collecting system information
+--------------------------------------------------------------------------------
+platform.CrosRuntimeProbeBattery  [ PASS ]
+--------------------------------------------------------------------------------
+Results saved to /tmp/tast/results/20200220-172233
+```
+# Useful Reference
+
+* minijail0 manpage (`man 1 minijail0` in cros\_sdk)
+* [docs/sandboxing.md](https://chromium.googlesource.com/chromiumos/docs/+/master/sandboxing.md)
+* [debugd/src/](https://chromium.googlesource.com/chromiumos/platform2/+/master/debugd/src/)
 
 <!-- Footnotes themselves at the bottom. -->
 
-## Notes
+# Notes
 
 [^1]: Subject to change based on the other program, after this quick hack, you
     will not able to switch to developer mode easily.
