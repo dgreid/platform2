@@ -280,7 +280,7 @@ bool Client::NotifyPluginVmShutdown(uint64_t vm_id) {
   }
 
   dbus::MessageReader reader(dbus_response.get());
-  TerminaVmShutdownResponse response;
+  PluginVmShutdownResponse response;
   if (!reader.PopArrayOfBytesAsProto(&response)) {
     LOG(ERROR) << "Failed to parse response proto";
     return false;
