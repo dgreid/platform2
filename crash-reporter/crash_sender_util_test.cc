@@ -21,10 +21,12 @@
 #include <base/files/file_enumerator.h>
 #include <base/files/file_util.h>
 #include <base/files/scoped_temp_dir.h>
+#include <base/json/json_reader.h>
 #include <base/macros.h>
 #include <base/strings/string_split.h>
 #include <base/strings/string_util.h>
 #include <base/time/time.h>
+#include <base/values.h>
 #include <brillo/flag_helper.h>
 #include <brillo/key_value_store.h>
 #include <brillo/process.h>
@@ -73,21 +75,20 @@ class MockClock : public base::Clock {
 // Parses the Chrome uploads.log file from Sender to a vector of items per line.
 // Example:
 //
-// foo1,foo2
-// bar1,bar2
+// {"field1":"foo1","field2":"foo2"}
+// {"field1":"bar1","field2":"bar2"}
 //
-// => [["foo1", "foo2"], ["bar1, "bar2"]]
+// => [{"field1":"foo1","field2":"foo2"}, {"field1":"bar1","field2":"bar2"}]
 //
-std::vector<std::vector<std::string>> ParseChromeUploadsLog(
+std::vector<std::unique_ptr<base::Value>> ParseChromeUploadsLog(
     const std::string& contents) {
-  std::vector<std::vector<std::string>> rows;
+  std::vector<std::unique_ptr<base::Value>> rows;
 
   std::vector<std::string> lines = base::SplitString(
       contents, "\n", base::TRIM_WHITESPACE, base::SPLIT_WANT_NONEMPTY);
   for (const auto& line : lines) {
-    std::vector<std::string> items = base::SplitString(
-        line, ",", base::TRIM_WHITESPACE, base::SPLIT_WANT_NONEMPTY);
-    rows.push_back(items);
+    std::unique_ptr<base::Value> json = base::JSONReader::Read(line);
+    rows.push_back(std::move(json));
   }
 
   return rows;
@@ -1388,7 +1389,8 @@ TEST_F(CrashSenderUtilTest, SendCrashes) {
       "exec_name=exec_foo\n"
       "fake_report_id=123\n"
       "upload_var_prod=foo\n"
-      "done=1\n";
+      "done=1\n"
+      "upload_var_reportTimeMillis=1000000\n";
   ASSERT_TRUE(test_util::CreateFile(system_meta_file, system_meta));
   ASSERT_TRUE(test_util::CreateFile(system_log, ""));
   CrashInfo system_info;
@@ -1409,7 +1411,8 @@ TEST_F(CrashSenderUtilTest, SendCrashes) {
       "exec_name=exec_bar\n"
       "fake_report_id=456\n"
       "upload_var_prod=bar\n"
-      "done=1\n";
+      "done=1\n"
+      "upload_var_reportTimeMillis=2000000\n";
   ASSERT_TRUE(test_util::CreateFile(user_meta_file, user_meta));
   ASSERT_TRUE(test_util::CreateFile(user_log, ""));
   CrashInfo user_info;
@@ -1481,25 +1484,36 @@ TEST_F(CrashSenderUtilTest, SendCrashes) {
   std::string contents;
   ASSERT_TRUE(
       base::ReadFileToString(paths::Get(paths::kChromeCrashLog), &contents));
-  std::vector<std::vector<std::string>> rows = ParseChromeUploadsLog(contents);
+  std::vector<std::unique_ptr<base::Value>> rows =
+      ParseChromeUploadsLog(contents);
   // Should only contain two results, since max_crash_rate is set to 2.
   // FakeSleep should be called three times since we sleep before we check the
   // crash rate.
   ASSERT_EQ(2, rows.size());
   EXPECT_EQ(3, sleep_times.size());
 
-  // Each line of the uploads.log file is "timestamp,report_id,product".
+  // Each line of the uploads.log file is "{"upload_time":<value>,"upload_id":
+  // <value>,"local_id":<value>,"capture_time":<value>,"state":<value>,"source":
+  // <value>}".
   // The first run should be for the meta file in the system directory.
-  std::vector<std::string> row = rows[0];
-  ASSERT_EQ(3, row.size());
-  EXPECT_EQ("123", row[1]);
-  EXPECT_EQ("foo", row[2]);
+  std::unique_ptr<base::Value> row = std::move(rows[0]);
+  ASSERT_EQ(6, row->DictSize());
+  EXPECT_TRUE(row->FindKey("upload_time"));
+  EXPECT_EQ("123", row->FindKey("upload_id")->GetString());
+  EXPECT_EQ("foo", row->FindKey("local_id")->GetString());
+  EXPECT_EQ("1000000", row->FindKey("capture_time")->GetString());
+  EXPECT_EQ(3, row->FindKey("state")->GetInt());
+  EXPECT_EQ("exec_foo", row->FindKey("source")->GetString());
 
   // The second run should be for the meta file in the "user" directory.
-  row = rows[1];
-  ASSERT_EQ(3, row.size());
-  EXPECT_EQ("456", row[1]);
-  EXPECT_EQ("bar", row[2]);
+  row = std::move(rows[1]);
+  ASSERT_EQ(6, row->DictSize());
+  EXPECT_TRUE(row->FindKey("upload_time"));
+  EXPECT_EQ("456", row->FindKey("upload_id")->GetString());
+  EXPECT_EQ("bar", row->FindKey("local_id")->GetString());
+  EXPECT_EQ("2000000", row->FindKey("capture_time")->GetString());
+  EXPECT_EQ(3, row->FindKey("state")->GetInt());
+  EXPECT_EQ("REDACTED", row->FindKey("source")->GetString());
 
   // The uploaded crash files should be removed now.
   EXPECT_FALSE(base::PathExists(system_meta_file));

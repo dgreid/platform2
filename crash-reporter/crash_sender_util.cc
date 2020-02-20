@@ -18,6 +18,7 @@
 #include <base/files/file_enumerator.h>
 #include <base/files/file_util.h>
 #include <base/guid.h>
+#include <base/json/json_writer.h>
 #include <base/rand_util.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_split.h>
@@ -55,6 +56,21 @@ constexpr char kUploadVarPrefix[] = "upload_var_";
 constexpr char kUploadTextPrefix[] = "upload_text_";
 constexpr char kUploadFilePrefix[] = "upload_file_";
 constexpr char kOsTimestamp[] = "os_millis";
+
+// Keys used in uploads.log file.
+constexpr char kJsonLogKeyUploadId[] = "upload_id";
+constexpr char kJsonLogKeyUploadTime[] = "upload_time";
+constexpr char kJsonLogKeyLocalId[] = "local_id";
+constexpr char kJsonLogKeyCaptureTime[] = "capture_time";
+constexpr char kJsonLogKeyState[] = "state";
+constexpr char kJsonLogKeySource[] = "source";
+
+// Keys used in CrashDetails::metadata.
+constexpr char kMetadataKeyCaptureTime[] = "upload_var_reportTimeMillis";
+constexpr char kMetadataKeySource[] = "exec_name";
+
+// Values used for kJsonLogKeySource.
+constexpr char kMetadataValueRedacted[] = "REDACTED";
 
 // Length of the client ID. This is a standard GUID which has the dashes
 // removed.
@@ -942,6 +958,39 @@ std::unique_ptr<brillo::http::FormData> Sender::CreateCrashFormData(
   return form_data;
 }
 
+std::unique_ptr<base::Value> Sender::CreateJsonEntity(
+    const std::string& report_id,
+    const std::string& product_name,
+    const CrashDetails& details) {
+  auto root_dict = std::make_unique<base::Value>(base::Value::Type::DICTIONARY);
+
+  int64_t timestamp = (base::Time::Now() - base::Time::UnixEpoch()).InSeconds();
+  root_dict->SetKey(kJsonLogKeyUploadTime,
+                    base::Value(std::to_string(timestamp)));
+
+  root_dict->SetKey(kJsonLogKeyUploadId, base::Value(report_id));
+  root_dict->SetKey(kJsonLogKeyLocalId, base::Value(product_name));
+
+  std::string capture_timestamp;
+  if (details.metadata.GetString(kMetadataKeyCaptureTime, &capture_timestamp))
+    root_dict->SetKey(kJsonLogKeyCaptureTime, base::Value(capture_timestamp));
+
+  // The state value is always same as
+  // UploadList::UploadInfo::State::Uploaded.
+  root_dict->SetKey(kJsonLogKeyState, base::Value(3));
+
+  std::string source;
+  if (details.metadata.GetString(kMetadataKeySource, &source)) {
+    // Hide the real source to avoid privacy concern if it is not a system
+    // crash.
+    if (!paths::Get(paths::kSystemCrashDirectory).IsParent(details.meta_file))
+      source = kMetadataValueRedacted;
+    root_dict->SetKey(kJsonLogKeySource, base::Value(source));
+  }
+
+  return root_dict;
+}
+
 bool Sender::RequestToSendCrash(const CrashDetails& details) {
   std::string product_name;
   std::unique_ptr<brillo::http::FormData> form_data =
@@ -1039,7 +1088,6 @@ bool Sender::RequestToSendCrash(const CrashDetails& details) {
       report_id = kUndefined;
   }
 
-  int64_t timestamp = (base::Time::Now() - base::Time::UnixEpoch()).InSeconds();
   if (product_name == "Chrome_ChromeOS")
     product_name = "Chrome";
   if (!util::IsOfficialImage()) {
@@ -1058,9 +1106,16 @@ bool Sender::RequestToSendCrash(const CrashDetails& details) {
     base::FilePath normalized_path;
     if (base::NormalizeFilePath(upload_logs_path, &normalized_path) &&
         upload_logs_path == normalized_path) {
-      std::string upload_log_entry =
-          base::StringPrintf("%" PRId64 ",%s,%s\n", timestamp,
-                             report_id.c_str(), product_name.c_str());
+      std::unique_ptr<base::Value> json_entity =
+          CreateJsonEntity(report_id, product_name, details);
+      std::string upload_log_entry;
+      if (!base::JSONWriter::Write(*json_entity, &upload_log_entry)) {
+        LOG(WARNING) << "Cannot construct a valid uploads.log entry in JSON "
+                        "format, so skip the update.";
+        return true;
+      }
+
+      upload_log_entry += "\n";
       if (!upload_logs_file.IsValid() ||
           upload_logs_file.WriteAtCurrentPos(upload_log_entry.c_str(),
                                              upload_log_entry.size()) !=

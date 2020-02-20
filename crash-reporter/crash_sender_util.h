@@ -16,6 +16,7 @@
 #include <base/optional.h>
 #include <base/time/clock.h>
 #include <base/time/time.h>
+#include <base/values.h>
 #include <brillo/http/http_form_data.h>
 #include <brillo/key_value_store.h>
 #include <brillo/osrelease_reader.h>
@@ -290,6 +291,11 @@ class Sender {
 
  private:
   friend class IsNetworkOnlineTest;
+
+  // Creates a JSON entity with the required fields for uploads.log file.
+  std::unique_ptr<base::Value> CreateJsonEntity(const std::string& report_id,
+                                                const std::string& product_name,
+                                                const CrashDetails& details);
 
   // Requests to send a crash report represented with the given crash details.
   bool RequestToSendCrash(const CrashDetails& details);
