@@ -11,7 +11,7 @@
 #include <crypto/openssl_util.h>
 #include <crypto/libcrypto-compat.h>
 #include <crypto/scoped_openssl_types.h>
-#include <openssl/err.h>
+#include <libhwsec/crypto_utility.h>
 #include <openssl/evp.h>
 #if defined(OPENSSL_IS_BORINGSSL)
 #include <openssl/mem.h>
@@ -24,17 +24,9 @@
 #include "trunks/tpm_utility.h"
 
 namespace {
+
 const size_t kWellKnownExponent = 0x10001;
 
-std::string GetOpenSSLError() {
-  BIO* bio = BIO_new(BIO_s_mem());
-  ERR_print_errors(bio);
-  char* data = nullptr;
-  int data_len = BIO_get_mem_data(bio, &data);
-  std::string error_string(data, data_len);
-  BIO_free(bio);
-  return error_string;
-}
 }  // namespace
 
 namespace trunks {
@@ -163,14 +155,16 @@ TPM_RC SessionManagerImpl::EncryptSalt(const std::string& salt,
   crypto::ScopedRSA salting_key_rsa(RSA_new());
   crypto::ScopedBIGNUM n(BN_new()), e(BN_new());
   if (!salting_key_rsa || !n || !e) {
-    LOG(ERROR) << "Failed to allocate RSA or BIGNUM: " << GetOpenSSLError();
+    LOG(ERROR) << "Failed to allocate RSA or BIGNUM: "
+               << hwsec::GetOpensslError();
     return TRUNKS_RC_SESSION_SETUP_ERROR;
   }
 
   if (!BN_set_word(e.get(), kWellKnownExponent) ||
       !BN_bin2bn(public_data.public_area.unique.rsa.buffer,
                  public_data.public_area.unique.rsa.size, n.get())) {
-    LOG(ERROR) << "Error setting public area of rsa key: " << GetOpenSSLError();
+    LOG(ERROR) << "Error setting public area of rsa key: "
+               << hwsec::GetOpensslError();
     return TRUNKS_RC_SESSION_SETUP_ERROR;
   }
   if (!RSA_set0_key(salting_key_rsa.get(), n.release(), e.release(),
@@ -181,11 +175,11 @@ TPM_RC SessionManagerImpl::EncryptSalt(const std::string& salt,
 
   crypto::ScopedEVP_PKEY salting_key(EVP_PKEY_new());
   if (!salting_key) {
-    LOG(ERROR) << "Failed to allocate EVP_PKEY: " << GetOpenSSLError();
+    LOG(ERROR) << "Failed to allocate EVP_PKEY: " << hwsec::GetOpensslError();
     return TRUNKS_RC_SESSION_SETUP_ERROR;
   }
   if (!EVP_PKEY_set1_RSA(salting_key.get(), salting_key_rsa.get())) {
-    LOG(ERROR) << "Error setting up EVP_PKEY: " << GetOpenSSLError();
+    LOG(ERROR) << "Error setting up EVP_PKEY: " << hwsec::GetOpensslError();
     return TRUNKS_RC_SESSION_SETUP_ERROR;
   }
   // Label for RSAES-OAEP. Defined in TPM2.0 Part1 Architecture,
@@ -206,7 +200,7 @@ TPM_RC SessionManagerImpl::EncryptSalt(const std::string& salt,
       !EVP_PKEY_CTX_set0_rsa_oaep_label(salt_encrypt_context.get(), oaep_label,
                                         kOaepLabelSize)) {
     LOG(ERROR) << "Error setting up salt encrypt context: "
-               << GetOpenSSLError();
+               << hwsec::GetOpensslError();
     return TRUNKS_RC_SESSION_SETUP_ERROR;
   }
   size_t out_length = EVP_PKEY_size(salting_key.get());
@@ -215,7 +209,7 @@ TPM_RC SessionManagerImpl::EncryptSalt(const std::string& salt,
           salt_encrypt_context.get(),
           reinterpret_cast<uint8_t*>(base::data(*encrypted_salt)), &out_length,
           reinterpret_cast<const uint8_t*>(salt.data()), salt.size())) {
-    LOG(ERROR) << "Error encrypting salt: " << GetOpenSSLError();
+    LOG(ERROR) << "Error encrypting salt: " << hwsec::GetOpensslError();
     return TRUNKS_RC_SESSION_SETUP_ERROR;
   }
   encrypted_salt->resize(out_length);

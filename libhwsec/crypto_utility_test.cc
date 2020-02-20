@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <limits>
 #include <memory>
 #include <string>
 #include <vector>
@@ -97,6 +98,12 @@ class CryptoUtilityTest : public testing::Test {
   crypto::ScopedRSA rsa_key_;
   crypto::ScopedEC_KEY ecc_key_;
 };
+
+TEST_F(CryptoUtilityTest, CreateSecureRandomBlobBadLength) {
+  static_assert(sizeof(size_t) >= sizeof(int), "size_t is smaller than int!");
+  size_t int_max = static_cast<size_t>(std::numeric_limits<int>::max());
+  EXPECT_EQ(CreateSecureRandomBlob(int_max + 1).size(), 0);
+}
 
 TEST_F(CryptoUtilityTest, PreGeneratedKeyIsValid) {
   EXPECT_TRUE(rsa_key_);

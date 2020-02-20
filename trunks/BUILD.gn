@@ -95,13 +95,14 @@ shared_library("trunks") {
     ":interface_proto",
     ":pinweaver_proto",
   ]
+  libs = [ "hwsec" ]
   if (use.ftdi_tpm) {
     sources += [
       "ftdi/mpsse.c",
       "ftdi/support.c",
       "trunks_ftdi_spi.cc",
     ]
-    libs = [ "ftdi1" ]
+    libs += [ "ftdi1" ]
     defines = [ "SPI_OVER_FTDI=1" ]
   }
 }
