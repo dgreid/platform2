@@ -362,7 +362,7 @@ void CameraHal::OnDeviceAdded(ScopedUdevDevicePtr dev) {
   }
 
   if (!V4L2CameraDevice::IsCameraDevice(path)) {
-    LOGF(INFO) << path << " is not a camera device";
+    VLOGF(1) << path << " is not a camera device";
     return;
   }
 
