@@ -30,11 +30,11 @@
 #include "cros-disks/ntfs_mounter.h"
 #include "cros-disks/platform.h"
 
-using testing::Return;
-using testing::_;
-
 namespace cros_disks {
 namespace {
+
+using testing::_;
+using testing::Return;
 
 const char kMountRootDirectory[] = "/media/removable";
 
@@ -227,40 +227,6 @@ TEST_F(DiskManagerTest, CanMount) {
   EXPECT_FALSE(manager_.CanMount("/media/archive/"));
   EXPECT_FALSE(manager_.CanMount("/home/chronos/user/Downloads"));
   EXPECT_FALSE(manager_.CanMount("/home/chronos/user/Downloads/"));
-}
-
-TEST_F(DiskManagerTest, CanUnmount) {
-  EXPECT_TRUE(manager_.CanUnmount("/dev/sda1"));
-  EXPECT_TRUE(manager_.CanUnmount("/devices/block/sda/sda1"));
-  EXPECT_TRUE(manager_.CanUnmount("/sys/devices/block/sda/sda1"));
-  EXPECT_TRUE(manager_.CanUnmount("/media/removable/disk1"));
-  EXPECT_TRUE(manager_.CanUnmount("/media/removable/disk1/"));
-  EXPECT_TRUE(manager_.CanUnmount("/media/removable/disk 1"));
-  EXPECT_FALSE(manager_.CanUnmount("/media/archive/test.zip"));
-  EXPECT_FALSE(manager_.CanUnmount("/media/archive/test.zip/"));
-  EXPECT_FALSE(manager_.CanUnmount("/media/archive/test 1.zip"));
-  EXPECT_FALSE(manager_.CanUnmount("/media/removable/disk1/test.zip"));
-  EXPECT_FALSE(manager_.CanUnmount("/media/removable/disk1/test 1.zip"));
-  EXPECT_FALSE(manager_.CanUnmount("/media/removable/disk1/dir1/test.zip"));
-  EXPECT_FALSE(manager_.CanUnmount("/media/removable/test.zip/test1.zip"));
-  EXPECT_FALSE(manager_.CanUnmount("/home/chronos/user/Downloads/test1.zip"));
-  EXPECT_FALSE(manager_.CanUnmount("/home/chronos/user/GCache/test1.zip"));
-  EXPECT_FALSE(
-      manager_.CanUnmount("/home/chronos"
-                          "/u-0123456789abcdef0123456789abcdef01234567"
-                          "/Downloads/test1.zip"));
-  EXPECT_FALSE(
-      manager_.CanUnmount("/home/chronos"
-                          "/u-0123456789abcdef0123456789abcdef01234567"
-                          "/GCache/test1.zip"));
-  EXPECT_FALSE(manager_.CanUnmount(""));
-  EXPECT_FALSE(manager_.CanUnmount("/tmp"));
-  EXPECT_FALSE(manager_.CanUnmount("/media/removable"));
-  EXPECT_FALSE(manager_.CanUnmount("/media/removable/"));
-  EXPECT_FALSE(manager_.CanUnmount("/media/archive"));
-  EXPECT_FALSE(manager_.CanUnmount("/media/archive/"));
-  EXPECT_FALSE(manager_.CanUnmount("/home/chronos/user/Downloads"));
-  EXPECT_FALSE(manager_.CanUnmount("/home/chronos/user/Downloads/"));
 }
 
 TEST_F(DiskManagerTest, DoMountDiskWithNonexistentSourcePath) {

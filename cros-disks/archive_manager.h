@@ -33,8 +33,6 @@ class ArchiveManager : public MountManager {
   // Stops a session. Returns true on success.
   bool StopSession() override;
 
-  bool CanUnmount(const std::string& path) const override;
-
   // Returns true if mounting |source_path| is supported.
   bool CanMount(const std::string& source_path) const override;
 

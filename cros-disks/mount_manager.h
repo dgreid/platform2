@@ -93,14 +93,6 @@ class MountManager {
   // |source_path|.
   virtual bool CanMount(const std::string& source_path) const = 0;
 
-  // Returns true if unmounting |path| is supported by the manager.
-  // This base class provides a default implementation such that a path
-  // can be unmounted by the manager if it can be mounted by the manager
-  // or is an immediate child of the mount root directory where mount
-  // directories are created. A derived class can override this method to
-  // support additional paths.
-  virtual bool CanUnmount(const std::string& path) const;
-
   // Implemented by a derived class to return the type of mount sources
   // it supports.
   virtual MountSourceType GetMountSourceType() const = 0;

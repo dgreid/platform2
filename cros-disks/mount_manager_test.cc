@@ -870,7 +870,7 @@ TEST_F(MountManagerTest, UnmountFailedWithEmptyPath) {
   EXPECT_CALL(manager_, DoMount(_, _, _, _, _, _)).Times(0);
   EXPECT_CALL(manager_, SuggestMountPath(_)).Times(0);
 
-  EXPECT_EQ(MOUNT_ERROR_INVALID_ARGUMENT, manager_.Unmount(mount_path_));
+  EXPECT_EQ(MOUNT_ERROR_PATH_NOT_MOUNTED, manager_.Unmount(mount_path_));
 }
 
 // Verifies that MountManager::Unmount() returns an error when it fails to

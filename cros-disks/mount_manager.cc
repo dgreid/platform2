@@ -80,11 +80,6 @@ bool MountManager::StopSession() {
   return UnmountAll();
 }
 
-bool MountManager::CanUnmount(const std::string& path) const {
-  return CanMount(path) ||
-         IsPathImmediateChildOfParent(base::FilePath(path), mount_root_);
-}
-
 MountErrorType MountManager::Mount(const std::string& source_path,
                                    const std::string& filesystem_type,
                                    const std::vector<std::string>& options,
@@ -255,16 +250,10 @@ MountErrorType MountManager::MountNewSource(
 }
 
 MountErrorType MountManager::Unmount(const std::string& path) {
-  if (path.empty()) {
-    LOG(ERROR) << "Failed to unmount an empty path";
-    return MOUNT_ERROR_INVALID_ARGUMENT;
-  }
-
   // Determine whether the path is a source path or a mount path.
   std::string mount_path;
   if (!GetMountPathFromCache(path, &mount_path)) {  // is a source path?
     if (!IsMountPathInCache(path)) {                // is a mount path?
-      LOG(ERROR) << "Path " << quote(path) << " is not mounted";
       return MOUNT_ERROR_PATH_NOT_MOUNTED;
     }
     mount_path = path;

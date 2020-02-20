@@ -125,67 +125,6 @@ TEST_F(ArchiveManagerTest, CanMount) {
                         "/Downloads/test1.zip"));
 }
 
-TEST_F(ArchiveManagerTest, CanUnmount) {
-  EXPECT_FALSE(manager_.CanUnmount("/dev/sda1"));
-  EXPECT_FALSE(manager_.CanUnmount("/devices/block/sda/sda1"));
-  EXPECT_FALSE(manager_.CanUnmount("/sys/devices/block/sda/sda1"));
-  EXPECT_FALSE(manager_.CanUnmount("/media/removable/disk1"));
-  EXPECT_FALSE(manager_.CanUnmount("/media/removable/disk1/"));
-  EXPECT_FALSE(manager_.CanUnmount("/media/removable/disk 1"));
-  EXPECT_TRUE(manager_.CanUnmount("/media/archive/test.zip"));
-  EXPECT_TRUE(manager_.CanUnmount("/media/archive/test.zip/"));
-  EXPECT_TRUE(manager_.CanUnmount("/media/archive/test 1.zip"));
-  EXPECT_TRUE(manager_.CanUnmount("/media/removable/disk1/test.zip"));
-  EXPECT_TRUE(manager_.CanUnmount("/media/removable/disk1/test 1.zip"));
-  EXPECT_TRUE(manager_.CanUnmount("/media/removable/disk1/dir1/test.zip"));
-  EXPECT_TRUE(manager_.CanUnmount("/media/removable/test.zip/test1.zip"));
-  EXPECT_FALSE(manager_.CanUnmount("/home/chronos/user/Downloads/test1.zip"));
-  EXPECT_FALSE(manager_.CanUnmount("/home/chronos/user/GCache/test1.zip"));
-  EXPECT_TRUE(
-      manager_.CanUnmount("/home/chronos"
-                          "/u-0123456789abcdef0123456789abcdef01234567"
-                          "/Downloads/test1.zip"));
-  EXPECT_TRUE(
-      manager_.CanUnmount("/home/chronos"
-                          "/u-0123456789abcdef0123456789abcdef01234567"
-                          "/GCache/test1.zip"));
-  EXPECT_FALSE(manager_.CanUnmount(""));
-  EXPECT_FALSE(manager_.CanUnmount("/tmp"));
-  EXPECT_FALSE(manager_.CanUnmount("/media/removable"));
-  EXPECT_FALSE(manager_.CanUnmount("/media/removable/"));
-  EXPECT_FALSE(manager_.CanUnmount("/media/archive"));
-  EXPECT_FALSE(manager_.CanUnmount("/media/archive/"));
-  EXPECT_FALSE(manager_.CanUnmount("/home/chronos/user/Downloads"));
-  EXPECT_FALSE(manager_.CanUnmount("/home/chronos/user/Downloads/"));
-  EXPECT_FALSE(manager_.CanUnmount("/home/chronos/user/GCache"));
-  EXPECT_FALSE(manager_.CanUnmount("/home/chronos/user/GCache/"));
-  EXPECT_FALSE(manager_.CanUnmount(
-      "/home/chronos/u-0123456789abcdef0123456789abcdef01234567/Downloads"));
-  EXPECT_FALSE(manager_.CanUnmount(
-      "/home/chronos/u-0123456789abcdef0123456789abcdef01234567/Downloads/"));
-  EXPECT_FALSE(manager_.CanUnmount(
-      "/home/chronos/u-0123456789abcdef0123456789abcdef01234567/GCache"));
-  EXPECT_FALSE(manager_.CanUnmount(
-      "/home/chronos/u-0123456789abcdef0123456789abcdef01234567/GCache/"));
-  EXPECT_FALSE(manager_.CanUnmount("/home/chronos/test1.zip"));
-  EXPECT_FALSE(manager_.CanUnmount("/home/chronos/user/test1.zip"));
-  EXPECT_FALSE(manager_.CanUnmount(
-      "/home/chronos/u-0123456789abcdef0123456789abcdef01234567/test1.zip"));
-  EXPECT_FALSE(manager_.CanUnmount("/home/chronos/Downloads/test1.zip"));
-  EXPECT_FALSE(manager_.CanUnmount("/home/chronos/GCache/test1.zip"));
-  EXPECT_FALSE(manager_.CanUnmount("/home/chronos/foo/Downloads/test1.zip"));
-  EXPECT_FALSE(manager_.CanUnmount("/home/chronos/foo/GCache/test1.zip"));
-  EXPECT_FALSE(manager_.CanUnmount("/home/chronos/u-/Downloads/test1.zip"));
-  EXPECT_FALSE(
-      manager_.CanUnmount("/home/chronos"
-                          "/u-0123456789abcdef0123456789abcdef0123456"
-                          "/Downloads/test1.zip"));
-  EXPECT_FALSE(
-      manager_.CanUnmount("/home/chronos"
-                          "/u-xyz3456789abcdef0123456789abcdef01234567"
-                          "/Downloads/test1.zip"));
-}
-
 TEST_F(ArchiveManagerTest, DoMountFailedWithUnsupportedExtension) {
   std::string filesystem_type;
   std::string source_path = "/media/archive/test.zip/doc.zip";

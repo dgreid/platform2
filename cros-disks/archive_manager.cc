@@ -118,10 +118,6 @@ bool ArchiveManager::StopSession() {
   return StopAVFS();
 }
 
-bool ArchiveManager::CanUnmount(const std::string& path) const {
-  return is_active_ && MountManager::CanUnmount(path);
-}
-
 bool ArchiveManager::CanMount(const std::string& source_path) const {
   if (!is_active_)
     return false;
