@@ -6,6 +6,8 @@
 
 #include "hal/usb_v1/arc_camera_dbus_daemon.h"
 
+#include <signal.h>
+
 #include <memory>
 #include <string>
 #include <vector>

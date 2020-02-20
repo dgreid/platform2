@@ -4,6 +4,7 @@
 
 #include <brillo/daemons/daemon.h>
 
+#include <signal.h>
 #include <sysexits.h>
 #include <time.h>
 
