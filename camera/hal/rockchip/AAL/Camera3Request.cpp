@@ -528,10 +528,11 @@ void
 Camera3Request::freePartialResultBuffers(void)
 {
     for (unsigned int i = 0; i < mPartialResultBuffers.size(); i++) {
-        if (mPartialResultBuffers[i].baseBuf != nullptr)
+        if (mPartialResultBuffers[i].baseBuf != nullptr) {
             mPartialResultBuffers[i].metaBuf->release();
             delete[] reinterpret_cast<char*>(mPartialResultBuffers[i].baseBuf);
             delete mPartialResultBuffers[i].metaBuf;
+        }
     }
     mPartialResultBuffers.clear();
     mResultBufferAllocated = false;
