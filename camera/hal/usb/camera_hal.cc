@@ -10,7 +10,6 @@
 
 #include <base/bind.h>
 #include <base/strings/string_util.h>
-#include <base/sys_info.h>
 #include <base/threading/thread_task_runner_handle.h>
 
 #include "cros-camera/common.h"
@@ -273,16 +272,9 @@ int CameraHal::Init() {
 
   next_external_camera_id_ = num_builtin_cameras_;
 
-  if (!cros_config_.Init() || cros_config_.FallbackModeEnabled() ||
+  if (!cros_config_.Init() ||
       !cros_config_.GetString("/", "name", &model_name_)) {
-    // Fallback to the board name on non-unibuild release. Note that our
-    // seccomp policy will block various syscalls needed by the mosys fallback
-    // mode in CrosConfig.
-    model_name_ = base::SysInfo::GetLsbReleaseBoard();
-    auto pos = model_name_.find("-signed-");
-    if (pos != std::string::npos) {
-      model_name_.resize(pos);
-    }
+    return -ENODEV;
   }
 
   return 0;

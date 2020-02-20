@@ -200,13 +200,6 @@ bool CrosConfig::InitInternal(const int sku_id,
                               const base::FilePath& product_name_file,
                               const base::FilePath& product_sku_file,
                               const base::FilePath& vpd_file) {
-  if (!base::PathExists(json_path)) {
-    // Fallback to mosys platform on non-unibuild systems
-    cros_config_ = std::make_unique<CrosConfigFallback>();
-    fallback_mode_ = true;
-    return true;
-  }
-
   auto cros_config_json = std::make_unique<CrosConfigJson>();
   CROS_CONFIG_LOG(INFO) << ">>>>> reading config file: path="
                         << json_path.MaybeAsASCII();

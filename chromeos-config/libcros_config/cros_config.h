@@ -81,10 +81,6 @@ class BRILLO_EXPORT CrosConfig : public CrosConfigInterface {
 
   bool GetDeviceIndex(int* device_index_out) override;
 
-  // @return true if the config file was not found during Init and
-  //     mosys platform will be used, false otherwise
-  bool FallbackModeEnabled() const { return fallback_mode_; }
-
  private:
   // Get the default identity files for the specified architecture.
   // @arch: The current (or tested) system architecture.
@@ -117,9 +113,6 @@ class BRILLO_EXPORT CrosConfig : public CrosConfigInterface {
   // When InitForTest is is called, the underlying CrosConfigJson that
   // is used.
   std::unique_ptr<CrosConfigInterface> cros_config_;
-
-  // Set to true if we are using a CrosConfigFallback.
-  bool fallback_mode_ = false;
 
   DISALLOW_COPY_AND_ASSIGN(CrosConfig);
 };

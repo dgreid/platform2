@@ -31,7 +31,6 @@ class CrosConfigTest : public testing::Test {
     ASSERT_TRUE(cros_config_.InitForTest(sku_id, filepath,
                                          brillo::SystemArchitecture::kX86, name,
                                          whitelabel_name));
-    ASSERT_FALSE(cros_config_.FallbackModeEnabled());
   }
 
   void InitConfigArm(const std::string device_name = "google,some",
@@ -41,25 +40,15 @@ class CrosConfigTest : public testing::Test {
     ASSERT_TRUE(cros_config_.InitForTest(sku_id, filepath,
                                          brillo::SystemArchitecture::kArm,
                                          device_name, whitelabel_name));
-    ASSERT_FALSE(cros_config_.FallbackModeEnabled());
-  }
-
-  void InitConfigInvalid() {
-    base::FilePath filepath(kTestFileInvalid);
-
-    // InitForTest will decide to fallback to mosys platform and should
-    // succeed.
-    ASSERT_TRUE(cros_config_.InitForTest(
-        -1, filepath, brillo::SystemArchitecture::kX86, "Another", ""));
-
-    ASSERT_TRUE(cros_config_.FallbackModeEnabled());
   }
 
   brillo::CrosConfig cros_config_;
 };
 
 TEST_F(CrosConfigTest, CheckMissingFile) {
-  InitConfigInvalid();
+  base::FilePath filepath(kTestFileInvalid);
+  EXPECT_FALSE(cros_config_.InitForTest(
+      -1, filepath, brillo::SystemArchitecture::kX86, "no-model", ""));
 }
 
 TEST_F(CrosConfigTest, CheckUnknownModel) {
@@ -153,48 +142,7 @@ TEST_F(CrosConfigTest, CheckDeviceIndex2) {
   EXPECT_EQ(2, device_index);
 }
 
-TEST_F(CrosConfigTest, CheckFallbackImageName) {
-  InitConfigInvalid();
-
-  // This is defined in the fake mosys under testbin/
-  std::string val;
-  ASSERT_TRUE(cros_config_.GetString("/firmware", "image-name", &val));
-  EXPECT_EQ("test_mosys_model_string", val);
-}
-
-TEST_F(CrosConfigTest, CheckFallbackBrandCode) {
-  InitConfigInvalid();
-
-  // This is defined in the fake mosys under testbin/
-  std::string val;
-  ASSERT_TRUE(cros_config_.GetString("/", "brand-code", &val));
-  EXPECT_EQ("BRND", val);
-}
-
-TEST_F(CrosConfigTest, CheckFallbackInvalidPath) {
-  InitConfigInvalid();
-
-  std::string val;
-  EXPECT_FALSE(cros_config_.GetString("/invalid", "image-name", &val));
-}
-
-TEST_F(CrosConfigTest, CheckFallbackInvalidProperty) {
-  InitConfigInvalid();
-
-  std::string val;
-  EXPECT_FALSE(cros_config_.GetString("/firmware", "invalid-prop", &val));
-}
-
-TEST_F(CrosConfigTest, CheckFallbackDeviceIndex) {
-  InitConfigInvalid();
-
-  int device_index;
-  EXPECT_FALSE(cros_config_.GetDeviceIndex(&device_index));
-}
-
 TEST_F(CrosConfigTest, CheckWriteFallbackFS) {
-  InitConfigInvalid();
-
   base::FilePath tempdir;
   ASSERT_TRUE(base::CreateNewTempDirectory("cros_config_test", &tempdir));
 

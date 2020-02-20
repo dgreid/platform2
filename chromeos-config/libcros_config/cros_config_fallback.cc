@@ -46,7 +46,6 @@ CrosConfigFallback::~CrosConfigFallback() {}
 
 static bool GetStringForEntry(const struct CommandMapEntry& entry,
                               std::string* val_out) {
-  CROS_CONFIG_LOG(INFO) << "Equivalent command is \"" << entry.command << "\"";
   std::vector<std::string> argv = base::SplitString(
       entry.command, " ", base::KEEP_WHITESPACE, base::SPLIT_WANT_ALL);
 
@@ -60,28 +59,6 @@ static bool GetStringForEntry(const struct CommandMapEntry& entry,
   if (val_out->back() == '\n')
     val_out->pop_back();
   return true;
-}
-
-bool CrosConfigFallback::GetString(const std::string& path,
-                                   const std::string& property,
-                                   std::string* val_out) {
-  CROS_CONFIG_LOG(INFO) << "Using fallback configuration";
-
-  for (auto entry : kCommandMap) {
-    if (path == entry.path && property == entry.property) {
-      return GetStringForEntry(entry, val_out);
-    }
-  }
-
-  CROS_CONFIG_LOG(ERROR) << "No defined fallback command for " << path
-                         << " " << property;
-  return false;
-}
-
-bool CrosConfigFallback::GetDeviceIndex(int* device_index_out) {
-  // On non-unibuild devices, there is no concept of a device identity
-  // within the build, so we always return false.
-  return false;
 }
 
 bool CrosConfigFallback::WriteConfigFS(const base::FilePath& output_dir) {
