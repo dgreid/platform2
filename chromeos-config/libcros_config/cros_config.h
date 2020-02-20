@@ -114,12 +114,8 @@ class BRILLO_EXPORT CrosConfig : public CrosConfigInterface {
                     const base::FilePath& product_sku_file,
                     const base::FilePath& vpd_file);
 
-  // Runs a quick init check and prints an error to stderr if it fails.
-  // @return true if OK, false on error.
-  bool InitCheck() const;
-
-  // The underlying CrosConfigJson or CrosConfigFallback used for
-  // GetString
+  // When InitForTest is is called, the underlying CrosConfigJson that
+  // is used.
   std::unique_ptr<CrosConfigInterface> cros_config_;
 
   // Set to true if we are using a CrosConfigFallback.

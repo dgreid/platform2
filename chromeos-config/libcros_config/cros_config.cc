@@ -13,6 +13,7 @@
 #include <base/files/file_path.h>
 #include <base/files/file_util.h>
 #include <base/logging.h>
+#include <base/strings/string_split.h>
 #include <brillo/file_utils.h>
 #include "chromeos-config/libcros_config/configfs.h"
 #include "chromeos-config/libcros_config/cros_config_fallback.h"
@@ -26,7 +27,7 @@ const char kProductName[] = "/sys/devices/virtual/dmi/id/product_name";
 const char kProductSku[] = "/sys/devices/virtual/dmi/id/product_sku";
 const char kArmSkuId[] = "/proc/device-tree/firmware/coreboot/sku-id";
 const char kDeviceTreeCompatiblePath[] = "/proc/device-tree/compatible";
-const char kConfigJsonPath[] = "/usr/share/chromeos-config/config.json";
+const char kConfigFSBasePath[] = "/run/chromeos-config/v1";
 }  // namespace
 
 namespace brillo {
@@ -34,15 +35,6 @@ namespace brillo {
 CrosConfig::CrosConfig() {}
 
 CrosConfig::~CrosConfig() {}
-
-bool CrosConfig::InitCheck() const {
-  if (!cros_config_) {
-    CROS_CONFIG_LOG(ERROR)
-        << "Init*() must be called before accessing configuration";
-    return false;
-  }
-  return true;
-}
 
 bool CrosConfig::GetDefaultIdentityFiles(const SystemArchitecture arch,
                                          base::FilePath* vpd_file_out,
@@ -66,17 +58,8 @@ bool CrosConfig::GetDefaultIdentityFiles(const SystemArchitecture arch,
 }
 
 bool CrosConfig::Init() {
-  base::FilePath vpd_file;
-  base::FilePath product_name_file;
-  base::FilePath product_sku_file;
-  const auto arch = CrosConfigIdentity::CurrentSystemArchitecture();
-  if (!GetDefaultIdentityFiles(arch, &vpd_file, &product_name_file,
-                               &product_sku_file)) {
-    return false;
-  }
-  base::FilePath json_path(kConfigJsonPath);
-  return InitInternal(kDefaultSkuId, json_path, arch, product_name_file,
-                      product_sku_file, vpd_file);
+  // Nothing to do, we're just reading from ConfigFS.
+  return true;
 }
 
 bool CrosConfig::InitForTest(const int sku_id,
@@ -263,14 +246,24 @@ bool CrosConfig::InitInternal(const int sku_id,
 bool CrosConfig::GetString(const std::string& path,
                            const std::string& property,
                            std::string* val_out) {
-  if (!InitCheck()) {
-    return false;
+  if (!cros_config_) {
+    // Using ConfigFS (typical case).
+    auto filepath = base::FilePath(kConfigFSBasePath);
+    for (const auto& part : base::SplitStringPiece(
+             path, "/", base::KEEP_WHITESPACE, base::SPLIT_WANT_NONEMPTY)) {
+      filepath = filepath.Append(part);
+    }
+    filepath = filepath.Append(property);
+    return base::ReadFileToString(filepath, val_out);
   }
+
+  // Only happens if InitForTest was called.
   return cros_config_->GetString(path, property, val_out);
 }
 
 bool CrosConfig::GetDeviceIndex(int* device_index_out) {
-  if (!InitCheck()) {
+  if (!cros_config_) {
+    CROS_CONFIG_LOG(ERROR) << "No device identity has been probed.";
     return false;
   }
   return cros_config_->GetDeviceIndex(device_index_out);
