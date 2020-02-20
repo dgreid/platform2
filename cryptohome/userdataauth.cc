@@ -2513,11 +2513,14 @@ void UserDataAuth::LowDiskCallback() {
 
   bool low_disk_space_signal_emitted = false;
   auto free_disk_space = homedirs_->AmountOfFreeDiskSpace();
-  if (!free_disk_space) {
+  auto free_space_state = homedirs_->GetFreeDiskSpaceState(free_disk_space);
+  if (free_space_state == HomeDirs::FreeSpaceState::kError) {
     LOG(ERROR) << "Error getting free disk space";
-  } else if (free_disk_space.value() < kFreeSpaceThresholdToTriggerCleanup) {
+  } else if (free_space_state == HomeDirs::FreeSpaceState::kNeedNormalCleanup ||
+             free_space_state ==
+                 HomeDirs::FreeSpaceState::kNeedAggressiveCleanup) {
     low_disk_space_callback_.Run(
-      static_cast<uint64_t>(free_disk_space.value()));
+        static_cast<uint64_t>(free_disk_space.value()));
     low_disk_space_signal_emitted = true;
   }
 
