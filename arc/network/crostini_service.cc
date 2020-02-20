@@ -10,13 +10,21 @@
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_util.h>
 #include <base/strings/stringprintf.h>
+#include "base/threading/thread_task_runner_handle.h"
 #include <chromeos/constants/vm_tools.h>
+#include <chromeos/dbus/service_constants.h>
+#include <dbus/message.h>
+#include <dbus/object_path.h>
 
+#include "arc/network/adb_proxy.h"
 #include "arc/network/device.h"
 
 namespace arc_networkd {
 namespace {
 constexpr int32_t kInvalidID = 0;
+constexpr int kDbusTimeoutMs = 200;
+constexpr base::TimeDelta kAdbSideloadUpdateDelay =
+    base::TimeDelta::FromMilliseconds(5000);
 
 std::string MakeKey(uint64_t vm_id, bool is_termina) {
   return base::StringPrintf("%s:%s", is_termina ? "t" : "p",
@@ -32,11 +40,19 @@ CrostiniService::CrostiniService(ShillClient* shill_client,
     : shill_client_(shill_client),
       addr_mgr_(addr_mgr),
       datapath_(datapath),
-      forwarder_(forwarder) {
+      forwarder_(forwarder),
+      adb_sideloading_enabled_(false) {
   DCHECK(shill_client_);
   DCHECK(addr_mgr_);
   DCHECK(datapath_);
   DCHECK(forwarder_);
+
+  // Setup for ADB sideloading.
+  if (!SetupFirewallClient()) {
+    LOG(ERROR) << "Failed to setup firewall client for ADB sideloading";
+  } else {
+    CheckAdbSideloadingStatus();
+  }
 
   shill_client_->RegisterDefaultInterfaceChangedHandler(base::Bind(
       &CrostiniService::OnDefaultInterfaceChanged, weak_factory_.GetWeakPtr()));
@@ -63,6 +79,8 @@ bool CrostiniService::Start(uint64_t vm_id, bool is_termina, int subnet_index) {
   LOG(INFO) << "Crostini network service started for {id: " << vm_id << "}";
   StartForwarding(shill_client_->default_interface(),
                   tap->config().host_ifname());
+  if (adb_sideloading_enabled_)
+    StartAdbPortForwarding(tap->ifname());
   taps_.emplace(key, std::move(tap));
   return true;
 }
@@ -78,6 +96,8 @@ void CrostiniService::Stop(uint64_t vm_id, bool is_termina) {
   const auto* dev = it->second.get();
   const auto& ifname = dev->config().host_ifname();
   StopForwarding(shill_client_->default_interface(), ifname);
+  if (adb_sideloading_enabled_)
+    StopAdbPortForwarding(ifname);
   datapath_->RemoveInterface(ifname);
   taps_.erase(key);
 
@@ -176,6 +196,108 @@ void CrostiniService::StopForwarding(const std::string& phys_ifname,
   if (!phys_ifname.empty())
     forwarder_->StopForwarding(phys_ifname, virt_ifname, true /*ipv6*/,
                                true /*multicast*/);
+}
+
+bool CrostiniService::SetupFirewallClient() {
+  dbus::Bus::Options options;
+  options.bus_type = dbus::Bus::SYSTEM;
+
+  bus_ = new dbus::Bus(options);
+  if (!bus_->Connect()) {
+    LOG(ERROR) << "Failed to connect to system bus";
+    return false;
+  }
+
+  permission_broker_proxy_.reset(
+      new org::chromium::PermissionBrokerProxy(bus_));
+
+  return true;
+}
+
+void CrostiniService::StartAdbPortForwarding(const std::string& ifname) {
+  if (!permission_broker_proxy_)
+    return;
+
+  DCHECK(lifeline_fds_.find(ifname) == lifeline_fds_.end());
+  // Setup lifeline pipe.
+  int lifeline_fds[2];
+  if (pipe(lifeline_fds) != 0) {
+    PLOG(ERROR) << "Failed to create lifeline pipe";
+    return;
+  }
+  base::ScopedFD lifeline_read_fd(lifeline_fds[0]);
+  base::ScopedFD lifeline_write_fd(lifeline_fds[1]);
+
+  bool allowed = false;
+  brillo::ErrorPtr error;
+  permission_broker_proxy_->RequestAdbPortForward(ifname, lifeline_fds[0],
+                                                  &allowed, &error);
+  if (error) {
+    LOG(ERROR) << "Error calling D-Bus proxy call to interface "
+               << "'" << permission_broker_proxy_->GetObjectPath().value()
+               << "': " << error->GetMessage();
+    return;
+  }
+  if (!allowed) {
+    LOG(ERROR) << "ADB port forwarding on " << ifname << " not allowed";
+    return;
+  }
+
+  permission_broker_proxy_->RequestTcpPortAccess(
+      kAdbProxyTcpListenPort, ifname, lifeline_fds[0], &allowed, &error);
+  if (error) {
+    LOG(ERROR) << "Error calling D-Bus proxy call to interface "
+               << "'" << permission_broker_proxy_->GetObjectPath().value()
+               << "': " << error->GetMessage();
+    return;
+  }
+  if (!allowed) {
+    LOG(ERROR) << "ADB port access on " << ifname << " not allowed";
+    return;
+  }
+
+  if (datapath_->runner().sysctl_w(
+          "net.ipv4.conf." + ifname + ".route_localnet", "1") != 0) {
+    LOG(ERROR) << "Failed to set up route localnet for " << ifname;
+    return;
+  }
+
+  lifeline_fds_.emplace(ifname, std::move(lifeline_write_fd));
+}
+
+void CrostiniService::StopAdbPortForwarding(const std::string& ifname) {
+  lifeline_fds_.erase(ifname);
+}
+
+void CrostiniService::CheckAdbSideloadingStatus() {
+  dbus::ObjectProxy* proxy = bus_->GetObjectProxy(
+      login_manager::kSessionManagerServiceName,
+      dbus::ObjectPath(login_manager::kSessionManagerServicePath));
+  dbus::MethodCall method_call(login_manager::kSessionManagerInterface,
+                               login_manager::kSessionManagerQueryAdbSideload);
+  std::unique_ptr<dbus::Response> dbus_response =
+      proxy->CallMethodAndBlock(&method_call, kDbusTimeoutMs);
+
+  if (!dbus_response) {
+    LOG(WARNING) << "Failed to get ADB sideloading status";
+    base::ThreadTaskRunnerHandle::Get()->PostDelayedTask(
+        FROM_HERE,
+        base::BindOnce(&CrostiniService::CheckAdbSideloadingStatus,
+                       weak_factory_.GetWeakPtr()),
+        kAdbSideloadUpdateDelay);
+    return;
+  }
+
+  dbus::MessageReader reader(dbus_response.get());
+  reader.PopBool(&adb_sideloading_enabled_);
+  if (!adb_sideloading_enabled_)
+    return;
+
+  // If ADB sideloading is enabled, start ADB forwarding on all configured
+  // Crostini's TAP interfaces.
+  for (const auto& tap : taps_) {
+    StartAdbPortForwarding(tap.second->ifname());
+  }
 }
 
 }  // namespace arc_networkd

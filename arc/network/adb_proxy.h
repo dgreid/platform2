@@ -19,6 +19,11 @@
 
 namespace arc_networkd {
 
+// ADB gets confused if we listen on 5555 and thinks there is an emulator
+// running, which in turn ends up confusing our integration test libraries
+// because multiple devices show up.
+constexpr uint16_t kAdbProxyTcpListenPort = 5550;
+
 // Subprocess for proxying ADB traffic.
 class AdbProxy : public brillo::Daemon {
  public:
