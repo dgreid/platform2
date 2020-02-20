@@ -36,6 +36,7 @@ constexpr std::pair<const char*,
         {"cpu", chromeos::cros_healthd::mojom::ProbeCategoryEnum::kCpu},
         {"timezone",
          chromeos::cros_healthd::mojom::ProbeCategoryEnum::kTimezone},
+        {"memory", chromeos::cros_healthd::mojom::ProbeCategoryEnum::kMemory},
 };
 
 std::string GetArchitectureString(CpuArchitectureEnum architecture) {
@@ -121,6 +122,17 @@ void DisplayTimezoneInfo(
   printf("%s,%s\n", csv_posix_timezone.c_str(), timezone->region.c_str());
 }
 
+void DisplayMemoryInfo(
+    const chromeos::cros_healthd::mojom::MemoryInfoPtr& memory) {
+  DCHECK(!memory.is_null());
+
+  printf(
+      "total_memory_kib,free_memory_kib,available_memory_kib,page_faults_since_"
+      "last_boot\n");
+  printf("%u,%u,%u,%u\n", memory->total_memory_kib, memory->free_memory_kib,
+         memory->available_memory_kib, memory->page_faults_since_last_boot);
+}
+
 // Displays the retrieved telemetry information to the console.
 void DisplayTelemetryInfo(
     const chromeos::cros_healthd::mojom::TelemetryInfoPtr& info) {
@@ -143,6 +155,10 @@ void DisplayTelemetryInfo(
   const auto& timezone = info->timezone_info;
   if (timezone)
     DisplayTimezoneInfo(timezone);
+
+  const auto& memory = info->memory_info;
+  if (!memory.is_null())
+    DisplayMemoryInfo(memory);
 }
 
 // Create a stringified list of the category names for use in help.

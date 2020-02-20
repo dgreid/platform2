@@ -16,6 +16,7 @@
 
 #include "diagnostics/cros_healthd/utils/cpu_utils.h"
 #include "diagnostics/cros_healthd/utils/disk_utils.h"
+#include "diagnostics/cros_healthd/utils/memory_utils.h"
 #include "diagnostics/cros_healthd/utils/timezone_utils.h"
 
 namespace diagnostics {
@@ -127,6 +128,10 @@ void CrosHealthdMojoService::ProbeTelemetryInfo(
       }
       case ProbeCategoryEnum::kTimezone: {
         telemetry_info.timezone_info = FetchTimezoneInfo(base::FilePath("/"));
+        break;
+      }
+      case ProbeCategoryEnum::kMemory: {
+        telemetry_info.memory_info = FetchMemoryInfo(base::FilePath("/"));
         break;
       }
     }

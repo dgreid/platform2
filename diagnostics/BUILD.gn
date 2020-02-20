@@ -99,6 +99,7 @@ source_set("libcros_healthd_utils") {
     "cros_healthd/utils/cpu_utils.cc",
     "cros_healthd/utils/disk_utils.cc",
     "cros_healthd/utils/file_utils.cc",
+    "cros_healthd/utils/memory_utils.cc",
     "cros_healthd/utils/timezone_utils.cc",
     "cros_healthd/utils/vpd_utils.cc",
   ]
@@ -308,6 +309,7 @@ if (use.test) {
     sources = [
       "cros_healthd/utils/battery_utils_test.cc",
       "cros_healthd/utils/cpu_utils_test.cc",
+      "cros_healthd/utils/memory_utils_test.cc",
       "cros_healthd/utils/timezone_utils_test.cc",
       "cros_healthd/utils/vpd_utils_test.cc",
     ]
