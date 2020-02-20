@@ -39,6 +39,7 @@ include(sepolicy/file_contexts/sysfs_contexts)
 # SBIN_END_HERE
 
 /bin/bash                       u:object_r:sh_exec:s0
+/bin/brltty                     u:object_r:cros_brltty_exec:s0
 /bin/dash                       u:object_r:sh_exec:s0
 /bin/kmod                       u:object_r:cros_modprobe_exec:s0
 /bin/sh                         u:object_r:sh_exec:s0

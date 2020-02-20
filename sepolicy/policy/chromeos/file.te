@@ -38,6 +38,7 @@ type cros_bluetoothd_exec, exec_type, file_type, cros_file_type, cros_system_fil
 type cros_bootlockboxd_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_bootstat_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_brcm_patchram_plus_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
+type cros_brltty_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_btdispatch_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_camera_algo_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_camera_service_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
