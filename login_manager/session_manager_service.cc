@@ -48,7 +48,7 @@
 #include "login_manager/systemd_unit_starter.h"
 #include "login_manager/upstart_signal_emitter.h"
 
-#if USE_CHEETS
+#if USE_ARC_ADB_SIDELOADING
 #include "login_manager/arc_sideload_status.h"
 #else
 #include "login_manager/arc_sideload_status_stub.h"
@@ -202,7 +202,7 @@ bool SessionManagerService::Initialize() {
                                                   enable_browser_abort_on_hang_,
                                                   liveness_checking_interval_));
 
-#if USE_CHEETS
+#if USE_ARC_ADB_SIDELOADING
   boot_lockbox_dbus_proxy_ = bus_->GetObjectProxy(
       cryptohome::kBootLockboxServiceName,
       dbus::ObjectPath(cryptohome::kBootLockboxServicePath));

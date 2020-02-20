@@ -31,6 +31,7 @@ import ebuild_function
 # USE flags whose default values are false.
 _IUSE = [
     'amd64',
+    'arc_adb_sideloading',
     'arm',
     'asan',
     'attestation',

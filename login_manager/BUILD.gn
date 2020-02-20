@@ -53,6 +53,7 @@ pkg_config("target_defaults") {
 
   defines = [
     "OS_CHROMEOS",
+    "USE_ARC_ADB_SIDELOADING=${use.arc_adb_sideloading}",
     "USE_CHEETS=${use.cheets}",
     "USE_NSS_CERTS",
     "USE_SYSTEMD=${use.systemd}",
@@ -113,7 +114,7 @@ static_library("libsession_manager") {
     "validator_utils.cc",
     "vpd_process_impl.cc",
   ]
-  if (use.cheets) {
+  if (use.arc_adb_sideloading) {
     sources += [ "arc_sideload_status.cc" ]
   } else {
     sources += [ "arc_sideload_status_stub.cc" ]
@@ -207,7 +208,7 @@ if (use.test) {
       "user_policy_service_test.cc",
       "validator_utils_test.cc",
     ]
-    if (use.cheets) {
+    if (use.arc_adb_sideloading) {
       sources += [ "arc_sideload_status_test.cc" ]
     }
     defines = [ "UNIT_TEST" ]

@@ -7,8 +7,8 @@
 
 #include "login_manager/arc_sideload_status_interface.h"
 
-#ifndef USE_CHEETS
-#error "This file should only be used if cheets is used"
+#ifndef USE_ARC_ADB_SIDELOADING
+#error "This file should only be used if arc_adb_sideloading is used"
 #endif
 
 #include <memory>

@@ -242,7 +242,7 @@ class SessionManagerService
   dbus::ObjectProxy* screen_lock_dbus_proxy_ = nullptr;
   dbus::ObjectProxy* powerd_dbus_proxy_ = nullptr;
   dbus::ObjectProxy* vm_concierge_dbus_proxy_ = nullptr;
-#if USE_CHEETS
+#if USE_ARC_ADB_SIDELOADING
   dbus::ObjectProxy* boot_lockbox_dbus_proxy_ = nullptr;
 #endif
 
