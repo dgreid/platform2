@@ -83,6 +83,25 @@ CERT_PROVISION_EXPORT Status ProvisionCertificate(
     CertificateProfile cert_profile,
     const ProgressCallback& progress_callback);
 
+// Enroll with the PCA regardless of the current status (re-enroll if already
+// enrolled).
+// The PCA is identified by the |pca_type|. If |pca_url| is not empty, it
+// overrides the default PCA url.
+//
+// |progress_callback| is called after major internal steps or on errors:
+// - on steps: status is set to Status::Success, progress is the number between
+//   0 and 100 that roughly defines the completeness percentage, and message
+//   is the description of the current step.
+// - on errors: status is set to the appropriate error, progress is set to 100,
+//   and message provides error details.
+//
+// Returns Status::Success if the certificate was successfully obtained, and
+// an appropriate other status on errors.
+CERT_PROVISION_EXPORT Status ForceEnroll(
+    PCAType pca_type,
+    const std::string& pca_url,
+    const ProgressCallback& progress_callback);
+
 // Retrieves the provisioned certificate identified by |label| into |cert| in
 // PEM format. If |include_intermediate| is true, all intermediate certificates
 // in its chain are also obtained.

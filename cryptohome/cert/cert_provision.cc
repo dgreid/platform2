@@ -196,6 +196,61 @@ Status ProvisionCertificate(PCAType pca_type,
   return Status::Success;
 }
 
+Status ForceEnroll(PCAType pca_type,
+                   const std::string& pca_url,
+                   const ProgressCallback& progress_callback) {
+  ProgressReporter reporter(progress_callback, kEnrollSteps);
+  std::string url(pca_url);
+  if (url.empty()) {
+    url = GetDefaultPCAUrl(pca_type);
+    if (url.empty()) {
+      return reporter.ReportAndReturn(Status::HttpError,
+                                      "PCA url is not defined.");
+    }
+  }
+  auto pca_proxy = PCAProxy::Create(url);
+  auto c_proxy = CryptohomeProxy::Create();
+
+  OpResult result = c_proxy->Init();
+  if (!result) {
+    return reporter.ReportAndReturn(result);
+  }
+
+  reporter.Step("Checking if ready for enrollment");
+  bool is_prepared;
+  result = c_proxy->CheckIfPrepared(&is_prepared);
+  if (!result) {
+    return reporter.ReportAndReturn(result);
+  }
+  if (!is_prepared) {
+    return reporter.ReportAndReturn(Status::NotPrepared,
+                                    "Not ready for enrollment.");
+  }
+
+  reporter.Step("Creating enroll request");
+  brillo::SecureBlob request;
+  result = c_proxy->CreateEnrollRequest(pca_type, &request);
+  if (!result) {
+    return reporter.ReportAndReturn(result);
+  }
+
+  reporter.Step("Sending enroll request");
+  brillo::SecureBlob response;
+  result = pca_proxy->MakeRequest(kEnrollAction, request, &response);
+  if (!result) {
+    return reporter.ReportAndReturn(result);
+  }
+
+  reporter.Step("Processing enroll response");
+  result = c_proxy->ProcessEnrollResponse(pca_type, response);
+  if (!result) {
+    return reporter.ReportAndReturn(result);
+  }
+
+  reporter.Done();
+  return Status::Success;
+}
+
 Status GetCertificate(const std::string& label,
                       bool include_intermediate,
                       std::string* cert) {

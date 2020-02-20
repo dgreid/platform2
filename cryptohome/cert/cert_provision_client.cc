@@ -26,6 +26,8 @@ void PrintHelp() {
   printf("  --provision --label=<label> --pca=<type> --profile=<profile>\n");
   printf("    where type: default, test\n");
   printf("          profile: cast, jetstream\n");
+  printf("  Force enroll:\n");
+  printf("  --enroll --pca=<type>\n");
   printf("  Print the provisioned certificate:\n");
   printf("  --get --label=<label> --include_chain\n");
   printf("        [--out=<file_out>]\n");
@@ -47,13 +49,13 @@ int main(int argc, char** argv) {
   }
 
   cert_provision::Status sts;
-  std::string cert_label = cl->GetSwitchValueASCII("label");
-  if (cert_label.empty()) {
-    PrintHelp();
-    return 2;
-  }
-
   if (cl->HasSwitch("provision")) {
+    std::string cert_label = cl->GetSwitchValueASCII("label");
+    if (cert_label.empty()) {
+      PrintHelp();
+      return 2;
+    }
+
     cert_provision::PCAType pca_type;
     std::string pca = cl->GetSwitchValueASCII("pca");
     if (pca == "default") {
@@ -87,7 +89,32 @@ int main(int argc, char** argv) {
       return 3;
     }
     VLOG(1) << "ProvisionCertificate returned " << static_cast<int>(sts);
+  } else if (cl->HasSwitch("enroll")) {
+    cert_provision::PCAType pca_type;
+    std::string pca = cl->GetSwitchValueASCII("pca");
+    if (pca == "default") {
+      pca_type = cert_provision::PCAType::kDefaultPCA;
+    } else if (pca == "test") {
+      pca_type = cert_provision::PCAType::kTestPCA;
+    } else {
+      PrintHelp();
+      return 2;
+    }
+
+    sts = cert_provision::ForceEnroll(pca_type, std::string(),
+                                      base::Bind(&ProgressCallback));
+    if (sts != cert_provision::Status::Success) {
+      LOG(ERROR) << "ForceEnroll returned " << static_cast<int>(sts);
+      return 3;
+    }
+    VLOG(1) << "ForceEnroll returned " << static_cast<int>(sts);
   } else if (cl->HasSwitch("get")) {
+    std::string cert_label = cl->GetSwitchValueASCII("label");
+    if (cert_label.empty()) {
+      PrintHelp();
+      return 2;
+    }
+
     std::string certificate;
     sts = cert_provision::GetCertificate(
         cert_label, cl->HasSwitch("include_chain"), &certificate);
@@ -106,6 +133,12 @@ int main(int argc, char** argv) {
       puts(certificate.c_str());
     }
   } else if (cl->HasSwitch("sign")) {
+    std::string cert_label = cl->GetSwitchValueASCII("label");
+    if (cert_label.empty()) {
+      PrintHelp();
+      return 2;
+    }
+
     base::FilePath in(cl->GetSwitchValueASCII("in"));
     if (in.empty()) {
       PrintHelp();
