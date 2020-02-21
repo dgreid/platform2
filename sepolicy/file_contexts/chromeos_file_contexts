@@ -87,6 +87,7 @@ include(sepolicy/file_contexts/sysfs_contexts)
 /usr/bin/u2fd                   u:object_r:cros_u2fd_exec:s0
 /usr/bin/vmlog_forwarder        u:object_r:cros_vmlog_forwarder_exec:s0
 /usr/bin/wilco_dtc_supportd     u:object_r:cros_wilco_dtc_supportd_exec:s0
+/usr/bin/ureadahead-diff        u:object_r:cros_ureadahead_diff_exec:s0
 # USR_BIN_END_HERE
 
 # USR_SBIN_START_HERE
