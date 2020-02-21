@@ -189,16 +189,9 @@ TEST_F(TgtRenewalSchedulerTest, Reschedule) {
   ExpectGetTgtStatus(ERROR_NONE, kValidTgtStatus);
   scheduler_.ScheduleRenewal(true /* notify_expiration */);
 
-#if BASE_VER < 576279
-  // Note: The old callback is technically still scheduled, but it should be
-  // canceled and not execute.
-  EXPECT_EQ(2, task_runner_->GetPendingTaskCount());
-  EXPECT_EQ(delay / 2, task_runner_->NextPendingTaskDelay());
-#else
   // Canceled pending tasks are pruned in TestMockTimeTaskRunner.
   EXPECT_EQ(1, task_runner_->GetPendingTaskCount());
   EXPECT_EQ(delay, task_runner_->NextPendingTaskDelay());
-#endif
 
   // Fast forward to a time after the first callback and before the second.
   // This should NOT trigger RenewTgt() since the callback should have been
