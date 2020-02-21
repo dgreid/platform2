@@ -23,7 +23,8 @@ GPUAlgoManager* GPUAlgoManager::GetInstance() {
   return m;
 }
 
-GPUAlgoManager::GPUAlgoManager() : req_id_(0) {
+GPUAlgoManager::GPUAlgoManager()
+    : camera_algorithm_callback_ops_t{}, req_id_(0) {
   return_callback = GPUAlgoManager::ReturnCallbackForwarder;
   bridge_ = cros::CameraAlgorithmBridge::CreateGPUAlgoInstance();
   if (!bridge_ || bridge_->Initialize(this) != 0) {
