@@ -258,7 +258,7 @@ int MetadataHandler::FillDefaultMetadata(
   // android.sync
   update_static(ANDROID_SYNC_MAX_LATENCY, ANDROID_SYNC_MAX_LATENCY_UNKNOWN);
 
-  return update_static.ok() || update_request.ok() ? 0 : -EINVAL;
+  return update_static.ok() && update_request.ok() ? 0 : -EINVAL;
 }
 
 int MetadataHandler::FillMetadataFromSupportedFormats(
@@ -695,7 +695,7 @@ int MetadataHandler::FillMetadataFromDeviceInfo(
     update_static(kVendorTagTimestampSync, timestamp_sync);
   }
 
-  return 0;
+  return update_static.ok() && update_request.ok() ? 0 : -EINVAL;
 }
 
 const camera_metadata_t* MetadataHandler::GetDefaultRequestSettings(
