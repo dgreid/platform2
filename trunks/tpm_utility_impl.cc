@@ -101,12 +101,14 @@ TPM_RC TpmUtilityImpl::Startup() {
   result = tpm->StartupSync(TPM_SU_CLEAR, nullptr);
   // Ignore TPM_RC_INITIALIZE, that means it was already started.
   if (result && result != TPM_RC_INITIALIZE) {
-    LOG(ERROR) << __func__ << ": " << GetErrorString(result);
+    LOG(ERROR) << __func__ << ": Failed to startup sync: "
+               << GetErrorString(result);
     return result;
   }
   result = tpm->SelfTestSync(YES /* Full test. */, nullptr);
   if (result) {
-    LOG(ERROR) << __func__ << ": " << GetErrorString(result);
+    LOG(ERROR) << __func__ << ": Failed self test sync: "
+               << GetErrorString(result);
     return result;
   }
   return TPM_RC_SUCCESS;
@@ -155,7 +157,8 @@ TPM_RC TpmUtilityImpl::TpmBasicInit(std::unique_ptr<TpmState>* tpm_state) {
   *tpm_state = factory_.GetTpmState();
   result = (*tpm_state)->Initialize();
   if (result) {
-    LOG(ERROR) << __func__ << ": " << GetErrorString(result);
+    LOG(ERROR) << __func__ << ": Failed to initialize TPM state: "
+               << GetErrorString(result);
     return result;
   }
   // Warn about various unexpected conditions.
@@ -177,7 +180,8 @@ TPM_RC TpmUtilityImpl::CheckState() {
   result = TpmBasicInit(&tpm_state);
 
   if (result != TPM_RC_SUCCESS) {
-    LOG(ERROR) << __func__ << ": " << GetErrorString(result);
+    LOG(ERROR) << __func__ << ": Failed TPM basic init: "
+               << GetErrorString(result);
     return result;
   }
 
@@ -200,7 +204,8 @@ TPM_RC TpmUtilityImpl::InitializeTpm() {
 
   result = TpmBasicInit(&tpm_state);
   if (result) {
-    LOG(ERROR) << __func__ << ": " << GetErrorString(result);
+    LOG(ERROR) << __func__ << ": Failed TPM basic init: "
+               << GetErrorString(result);
     return result;
   }
 
@@ -216,19 +221,22 @@ TPM_RC TpmUtilityImpl::InitializeTpm() {
       result = TPM_RC_SUCCESS;
     }
     if (result != TPM_RC_SUCCESS) {
-      LOG(ERROR) << __func__ << ": " << GetErrorString(result);
+      LOG(ERROR) << __func__ << ": Failed to set hierarchy authorization: "
+                 << GetErrorString(result);
       return result;
     }
     result = AllocatePCR(kPlatformPassword);
     if (result != TPM_RC_SUCCESS) {
-      LOG(ERROR) << __func__ << ": " << GetErrorString(result);
+      LOG(ERROR) << __func__ << ": Failed to alocate PCR: "
+                 << GetErrorString(result);
       return result;
     }
     std::unique_ptr<AuthorizationDelegate> authorization(
         factory_.GetPasswordAuthorization(kPlatformPassword));
     result = DisablePlatformHierarchy(authorization.get());
     if (result != TPM_RC_SUCCESS) {
-      LOG(ERROR) << __func__ << ": " << GetErrorString(result);
+      LOG(ERROR) << __func__ << ": Failed to disable platform hierarchy: "
+                 << GetErrorString(result);
       return result;
     }
   }
@@ -366,7 +374,9 @@ TPM_RC TpmUtilityImpl::TakeOwnership(const std::string& owner_password,
     result = SetHierarchyAuthorization(TPM_RH_ENDORSEMENT, endorsement_password,
                                        session->GetDelegate());
     if (result) {
-      LOG(ERROR) << __func__ << ": " << GetErrorString(result);
+      LOG(ERROR) << __func__ << ": Failed to set hierarchy authorization, "
+                 << "endorsement password not set: "
+                 << GetErrorString(result);
       return result;
     }
   }
@@ -375,7 +385,8 @@ TPM_RC TpmUtilityImpl::TakeOwnership(const std::string& owner_password,
     result = SetHierarchyAuthorization(TPM_RH_LOCKOUT, lockout_password,
                                        session->GetDelegate());
     if (result) {
-      LOG(ERROR) << __func__ << ": " << GetErrorString(result);
+      LOG(ERROR) << __func__ << ": Failed to set hierarchy authorization, "
+                 << "lockout password not set: " << GetErrorString(result);
       return result;
     }
   }
@@ -2006,7 +2017,8 @@ TPM_RC TpmUtilityImpl::SetKnownOwnerPassword(
   std::unique_ptr<TpmState> tpm_state(factory_.GetTpmState());
   TPM_RC result = tpm_state->Initialize();
   if (result) {
-    LOG(ERROR) << __func__ << ": " << GetErrorString(result);
+    LOG(ERROR) << __func__ << ": Failed to initialize TPM state: "
+               << GetErrorString(result);
     return result;
   }
   std::unique_ptr<AuthorizationDelegate> delegate =
@@ -2032,7 +2044,8 @@ TPM_RC TpmUtilityImpl::CreateStorageRootKeys(
   std::unique_ptr<TpmState> tpm_state(factory_.GetTpmState());
   result = tpm_state->Initialize();
   if (result) {
-    LOG(ERROR) << __func__ << ": " << GetErrorString(result);
+    LOG(ERROR) << __func__ << ": Failed to initialize tpm_state: "
+               << GetErrorString(result);
     return result;
   }
   Tpm* tpm = factory_.GetTpm();
@@ -2094,7 +2107,8 @@ TPM_RC TpmUtilityImpl::CreateStorageRootKeys(
       &creation_data, &creation_digest, &creation_ticket, &object_name,
       delegate.get());
   if (result) {
-    LOG(ERROR) << __func__ << ": " << GetErrorString(result);
+    LOG(ERROR) << __func__ << ": Failed to create TPM primary sync: "
+               << GetErrorString(result);
     return result;
   }
   ScopedKeyHandle tpm_key(factory_, object_handle);
@@ -2106,7 +2120,8 @@ TPM_RC TpmUtilityImpl::CreateStorageRootKeys(
       TPM_RH_OWNER, NameFromHandle(TPM_RH_OWNER), object_handle,
       StringFrom_TPM2B_NAME(object_name), kStorageRootKey, delegate.get());
   if (result != TPM_RC_SUCCESS) {
-    LOG(ERROR) << __func__ << ": " << GetErrorString(result);
+    LOG(ERROR) << __func__ << ": Failed to evict control sync: "
+               << GetErrorString(result);
     return result;
   }
   return TPM_RC_SUCCESS;
@@ -2182,7 +2197,8 @@ TPM_RC TpmUtilityImpl::CreateSaltingKey(const std::string& owner_password) {
       TPM_RH_OWNER, NameFromHandle(TPM_RH_OWNER), key_handle,
       StringFrom_TPM2B_NAME(key_name), kSaltingKey, owner_delegate.get());
   if (result != TPM_RC_SUCCESS) {
-    LOG(ERROR) << __func__ << ": " << GetErrorString(result);
+    LOG(ERROR) << __func__ << ": Failed to evict control sync: "
+               << GetErrorString(result);
     return result;
   }
   return TPM_RC_SUCCESS;
