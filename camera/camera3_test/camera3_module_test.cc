@@ -18,6 +18,7 @@
 #include <base/strings/string_split.h>
 #include <base/strings/stringprintf.h>
 #include <base/sys_info.h>
+#include <system/camera_metadata_hidden.h>
 
 #include "camera3_test/camera3_perf_log.h"
 #include "camera3_test/camera3_test_data_forwarder.h"
@@ -223,6 +224,13 @@ static void InitCameraModuleOnThread(camera_module_t* cam_module) {
     aux->handler = CameraModuleCallbacksHandler::GetInstance();
     return aux;
   }();
+
+  if (cam_module->get_vendor_tag_ops) {
+    vendor_tag_ops ops = {};
+    cam_module->get_vendor_tag_ops(&ops);
+    ASSERT_EQ(0, set_camera_metadata_vendor_ops(&ops))
+        << "Failed to set camera metadata vendor ops";
+  }
 
   if (cam_module->init) {
     ASSERT_EQ(0, cam_module->init());
