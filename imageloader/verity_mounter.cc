@@ -41,6 +41,9 @@ namespace {
 // Path to devices created by device mapper.
 constexpr char kDeviceMapperPath[] = "/dev/mapper";
 
+// Path to the loop control device.
+constexpr char kDevLoopControl[] = "/dev/loop-control";
+
 using dm_task_ptr = std::unique_ptr<dm_task, void (*)(dm_task*)>;
 
 enum class MountStatus { FAIL, RETRY, SUCCESS };
@@ -231,11 +234,21 @@ void ClearVerityDevice(const std::string& name) {
 }
 
 // Clear the file descriptor behind a loop device.
-void ClearLoopDevice(const std::string& device_path) {
+void ClearLoopDevice(const std::string& device_path, int loop_device_num) {
   base::ScopedFD loop_device_fd(
       open(device_path.c_str(), O_RDONLY | O_CLOEXEC));
   if (loop_device_fd.is_valid())
     ioctl(loop_device_fd.get(), LOOP_CLR_FD, 0);
+
+  base::ScopedFD control(
+      open(kDevLoopControl, O_RDWR | O_CLOEXEC | O_NOCTTY | O_NONBLOCK));
+  if (!control.is_valid()) {
+    PLOG(WARNING) << "Failed to open " << kDevLoopControl;
+    return;
+  }
+
+  if (ioctl(control.get(), LOOP_CTL_REMOVE, loop_device_num) < 0)
+    PLOG(WARNING) << "ioctl LOOP_CTL_REMOVE failed";
 }
 
 bool SetupDeviceMapper(const std::string& device_path,
@@ -333,10 +346,15 @@ bool CreateMountPointIfNeeded(const base::FilePath& mount_point,
 }
 
 // Reserves a loop device and associates it with |image_fd|. The path to the
-// loop device is returned in |device_path_out|. When the loop device is no
+// loop device is returned in |device_path_out| and the int value is in
+// |loop_device_num|. When the loop device is no
 // longer being used, free the resource with ClearLoopDevice().
 MountStatus GetLoopDevice(const base::ScopedFD& image_fd,
-                          std::string* device_path_out) {
+                          std::string* device_path_out,
+                          int* loop_device_num) {
+  DCHECK(device_path_out);
+  DCHECK(loop_device_num);
+
   base::ScopedFD loopctl_fd(open("/dev/loop-control", O_RDONLY | O_CLOEXEC));
   if (!loopctl_fd.is_valid()) {
     PLOG(ERROR) << "loopctl_fd";
@@ -347,6 +365,7 @@ MountStatus GetLoopDevice(const base::ScopedFD& image_fd,
     PLOG(ERROR) << "ioctl : LOOP_CTL_GET_FREE";
     return MountStatus::FAIL;
   }
+  *loop_device_num = device_free_number;
 
   std::string device_path =
       base::StringPrintf("/dev/loop%d", device_free_number);
@@ -405,13 +424,15 @@ bool VerityMounter::Mount(const base::ScopedFD& image_fd,
   if (already_mounted)
     return true;
 
+  int loop_device_num;
   std::string loop_device_path;
   // We need to retry because another program could grap the loop device,
   // resulting in an EBUSY error. If that happens, run again and grab a new
   // device.
   int retries = GET_LOOP_DEVICE_MAX_RETRY;
   while (true) {
-    MountStatus status = GetLoopDevice(image_fd, &loop_device_path);
+    MountStatus status =
+        GetLoopDevice(image_fd, &loop_device_path, &loop_device_num);
     if (status == MountStatus::FAIL ||
         (status == MountStatus::RETRY && retries == 0)) {
       LOG(ERROR) << "GetLoopDevice failed, mount_point: "
@@ -426,7 +447,7 @@ bool VerityMounter::Mount(const base::ScopedFD& image_fd,
   std::string dev_name;
   if (!SetupDeviceMapper(loop_device_path, table, &dev_name)) {
     LOG(ERROR) << "mount_point: " << mount_point.value();
-    ClearLoopDevice(loop_device_path);
+    ClearLoopDevice(loop_device_path, loop_device_num);
     return false;
   }
 
@@ -434,7 +455,7 @@ bool VerityMounter::Mount(const base::ScopedFD& image_fd,
             MS_RDONLY | MS_NOSUID | MS_NODEV, "") < 0) {
     PLOG(ERROR) << "mount, mount_point " << mount_point.value();
     ClearVerityDevice(dev_name);
-    ClearLoopDevice(loop_device_path);
+    ClearLoopDevice(loop_device_path, loop_device_num);
     return false;
   }
 
@@ -523,7 +544,7 @@ bool CleanupImpl(const base::FilePath& mount_point,
   }
 
   // Clear loop device.
-  ClearLoopDevice(base::StringPrintf("/dev/loop%d", loop));
+  ClearLoopDevice(base::StringPrintf("/dev/loop%d", loop), loop);
   return true;
 }
 
