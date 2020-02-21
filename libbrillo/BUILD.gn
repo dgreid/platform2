@@ -177,6 +177,17 @@ libbrillo_sublibs = [
   },
 
   {
+    library_name = "brillo-namespaces"
+    deps = [
+      ":libbrillo-core",
+    ]
+    sources = [
+      "brillo/namespaces/mount_namespace.cc",
+      "brillo/namespaces/platform.cc",
+    ]
+  },
+
+  {
     library_name = "brillo-minijail"
     all_dependent_pkg_deps = [ "libminijail" ]
     sources = [
@@ -282,8 +293,8 @@ generate_pkg_config("libbrillo_pc") {
 
 action("libbrillo") {
   deps = [
+    ":libbrillo-${libbase_ver}_pc",
     ":libbrillo_pc",
-    ":libbrillo-${libbase_ver}_pc"
   ]
   foreach(sublib, libbrillo_sublibs) {
     deps += [ ":lib" + sublib.library_name ]
@@ -369,8 +380,8 @@ static_library("libbrillo-test") {
   ]
   deps = [
     ":libbrillo-http",
-    ":libbrillo-test_pc",
     ":libbrillo-test-${libbase_ver}_pc",
+    ":libbrillo-test_pc",
   ]
   foreach(name, libbrillo_test_deps) {
     deps += [ ":" + name ]
@@ -454,8 +465,8 @@ shared_library("libbrillo-glib") {
   configs += [ ":target_defaults" ]
   deps = [
     ":libbrillo",
-    ":libbrillo-glib_pc",
     ":libbrillo-glib-${libbase_ver}_pc",
+    ":libbrillo-glib_pc",
   ]
   all_dependent_pkg_deps = libbrillo_glib_pkg_deps
   if (use.dbus) {
@@ -474,10 +485,10 @@ if (use.test) {
   static_library("libbrillo_static") {
     configs += [ ":target_defaults" ]
     deps = [
+      ":libbrillo-${libbase_ver}_pc",
       ":libbrillo_pc",
       ":libinstallattributes",
       ":libpolicy",
-      ":libbrillo-${libbase_ver}_pc",
     ]
     foreach(sublib, libbrillo_sublibs) {
       deps += [ ":lib" + sublib.library_name ]
@@ -497,10 +508,10 @@ if (use.test) {
       ":target_defaults",
     ]
     deps = [
-      ":libbrillo_static",
-      ":libbrillo_tests_proto",
       ":libbrillo-glib",
       ":libbrillo-test",
+      ":libbrillo_static",
+      ":libbrillo_tests_proto",
     ]
     pkg_deps = [ "libchrome-test-${libbase_ver}" ]
     cflags = [ "-Wno-format-zero-length" ]
@@ -537,6 +548,7 @@ if (use.test) {
       "brillo/message_loops/fake_message_loop_test.cc",
       "brillo/message_loops/message_loop_test.cc",
       "brillo/mime_utils_test.cc",
+      "brillo/namespaces/mount_namespace_test.cc",
       "brillo/osrelease_reader_test.cc",
       "brillo/process_reaper_test.cc",
       "brillo/process_test.cc",
