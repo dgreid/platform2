@@ -12,6 +12,7 @@
 
 #include <base/bind.h>
 #include <base/bind_helpers.h>
+#include <base/callback_helpers.h>
 #include <base/files/file_path.h>
 #include <base/logging.h>
 #include <base/strings/string_number_conversions.h>
@@ -1594,6 +1595,7 @@ bool HomeDirs::Migrate(const Credentials& newcreds,
       return false;
     }
   }
+  base::ScopedClosureRunner scoped_unmount_runner;
   if (!user_mount->IsMounted()) {
     if (!user_mount->MountCryptohome(oldcreds, Mount::MountArgs(), NULL)) {
       LOG(ERROR) << "Migrate: Mount failed";
@@ -1602,6 +1604,18 @@ bool HomeDirs::Migrate(const Credentials& newcreds,
       // destructor.
       return false;
     }
+    // We've mounted it, so we'll need to unmount it.
+    auto unmount_closure = base::BindOnce(
+        [](scoped_refptr<Mount> user_mount) {
+          if (user_mount->UnmountCryptohome()) {
+            LOG(INFO) << "Unmounted cryptohome after migrating.";
+          } else {
+            LOG(ERROR) << "Failed to unmount cryptohome after migrating.";
+          }
+        },
+        user_mount);
+    scoped_unmount_runner =
+        base::ScopedClosureRunner(std::move(unmount_closure));
   }
   int key_index = user_mount->CurrentKey();
   if (key_index == -1) {
