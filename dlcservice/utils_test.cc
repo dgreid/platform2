@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "dlcservice/utils.h"
-
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -16,6 +14,8 @@
 #include <base/files/scoped_temp_dir.h>
 #include <brillo/file_utils.h>
 #include <gtest/gtest.h>
+
+#include "dlcservice/utils.h"
 
 namespace dlcservice {
 
