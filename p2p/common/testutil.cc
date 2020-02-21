@@ -4,12 +4,12 @@
 
 #include "p2p/common/testutil.h"
 
-#include <attr/xattr.h>
 #include <fcntl.h>
 #include <glib-object.h>
 #include <stdarg.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <sys/xattr.h>
 
 #include <cctype>
 #include <cinttypes>

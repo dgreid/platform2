@@ -65,7 +65,6 @@
 extern "C" {
 #include "cryptohome/crc32.h"
 
-#include <attr/xattr.h>
 #include <keyutils.h>
 #include <linux/fs.h>
 // Uses libvboot_host for accessing crossystem variables.
@@ -786,7 +785,7 @@ bool Platform::HasExtendedFileAttribute(const FilePath& path,
                                         const std::string& name) {
   ssize_t sz = lgetxattr(path.value().c_str(), name.c_str(), nullptr, 0);
   if (sz < 0) {
-    if (errno != ENOATTR) {
+    if (errno != ENODATA) {
       PLOG(ERROR) << "lgetxattr: " << path.value();
     }
     return false;

@@ -5,7 +5,6 @@
 #include "p2p/http_server/connection_delegate.h"
 
 #include <arpa/inet.h>
-#include <attr/xattr.h>
 #include <dirent.h>
 #include <fcntl.h>
 #include <netinet/in.h>
@@ -13,6 +12,7 @@
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <sys/xattr.h>
 #include <unistd.h>
 
 #include <algorithm>

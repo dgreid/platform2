@@ -4,10 +4,10 @@
 
 #include "p2p/common/util.h"
 
-#include <attr/xattr.h>
 #include <glib.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/xattr.h>
 #include <unistd.h>
 
 #include <string>

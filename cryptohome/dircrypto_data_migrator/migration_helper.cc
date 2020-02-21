@@ -30,7 +30,6 @@
 #include "cryptohome/mount.h"
 
 extern "C" {
-#include <attr/xattr.h>
 #include <linux/fs.h>
 }
 
@@ -955,7 +954,7 @@ bool MigrationHelper::SetExtendedAttributeIfNotPresent(
   if (platform_->HasExtendedFileAttribute(file, xattr)) {
     return true;
   }
-  if (errno != ENOATTR) {
+  if (errno != ENODATA) {
     PLOG(ERROR) << "Failed to get extended attribute " << xattr << " for "
                 << file.value();
     RecordFileErrorWithCurrentErrno(kMigrationFailedAtGetAttribute, child);
