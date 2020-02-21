@@ -77,6 +77,7 @@ document](doc/architecture.md).
 ## Subsystem Documentation
 
 *   [Routing subsystem](doc/routing.md)
+*   [VPN subsystem](doc/vpn.md)
 
 ## D-Bus Interface Specification
 
