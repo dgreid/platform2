@@ -135,6 +135,10 @@ class Datapath {
   virtual void RemoveIPv6Neighbor(const std::string& ifname,
                                   const std::string& ipv6_addr);
 
+  virtual bool AddIPv4Route(uint32_t gateway_addr,
+                            uint32_t addr,
+                            uint32_t netmask);
+
   MinijailedProcessRunner& runner() const;
 
  private:

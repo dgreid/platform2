@@ -132,6 +132,16 @@ std::unique_ptr<Device> CrostiniService::AddTAP(bool is_termina,
     return nullptr;
   }
 
+  if (lxd_subnet) {
+    // Setup lxd route for the container using the VM as a gateway.
+    if (!datapath_->AddIPv4Route(ipv4_subnet->AddressAtOffset(1),
+                                 lxd_subnet->AddressAtOffset(0),
+                                 lxd_subnet->Netmask())) {
+      LOG(ERROR) << "Failed to setup lxd route";
+      return nullptr;
+    }
+  }
+
   auto config = std::make_unique<Device::Config>(
       tap, "", mac_addr, std::move(ipv4_subnet), std::move(host_ipv4_addr),
       std::move(guest_ipv4_addr), std::move(lxd_subnet));

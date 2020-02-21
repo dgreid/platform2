@@ -88,6 +88,9 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     datapath.RemoveInterface(ifname);
     datapath.AddTAP(ifname, &mac, subnet_addr.get(), "");
     datapath.RemoveTAP(ifname);
+    datapath.AddIPv4Route(provider.ConsumeIntegral<uint32_t>(),
+                          provider.ConsumeIntegral<uint32_t>(),
+                          provider.ConsumeIntegral<uint32_t>());
   }
 
   return 0;

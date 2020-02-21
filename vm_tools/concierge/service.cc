@@ -2171,46 +2171,8 @@ bool Service::StartTermina(
   DCHECK(result);
   LOG(INFO) << "Starting lxd";
 
-  // Set up a route for the container using the VM as a gateway.
-  uint32_t container_gateway_addr = vm->IPv4Address();
-  uint32_t container_netmask = vm->ContainerNetmask();
-  uint32_t container_subnet_addr = vm->ContainerSubnet();
-
-  struct rtentry route;
-  memset(&route, 0, sizeof(route));
-
-  struct sockaddr_in* gateway =
-      reinterpret_cast<struct sockaddr_in*>(&route.rt_gateway);
-  gateway->sin_family = AF_INET;
-  gateway->sin_addr.s_addr = static_cast<in_addr_t>(container_gateway_addr);
-
-  struct sockaddr_in* dst =
-      reinterpret_cast<struct sockaddr_in*>(&route.rt_dst);
-  dst->sin_family = AF_INET;
-  dst->sin_addr.s_addr = (container_subnet_addr & container_netmask);
-
-  struct sockaddr_in* genmask =
-      reinterpret_cast<struct sockaddr_in*>(&route.rt_genmask);
-  genmask->sin_family = AF_INET;
-  genmask->sin_addr.s_addr = container_netmask;
-
-  route.rt_flags = RTF_UP | RTF_GATEWAY;
-
-  base::ScopedFD fd(socket(AF_INET, SOCK_DGRAM | SOCK_CLOEXEC, 0));
-  if (!fd.is_valid()) {
-    PLOG(ERROR) << "Failed to create socket";
-    *failure_reason = "failed to create socket";
-    return false;
-  }
-
-  if (HANDLE_EINTR(ioctl(fd.get(), SIOCADDRT, &route)) != 0) {
-    PLOG(ERROR) << "Failed to set route for container";
-    *failure_reason = "failed to set route for container";
-    return false;
-  }
-
   std::string dst_addr;
-  IPv4AddressToString(container_subnet_addr, &dst_addr);
+  IPv4AddressToString(vm->ContainerSubnet(), &dst_addr);
   size_t prefix_length = vm->ContainerPrefixLength();
 
   std::string container_subnet_cidr =

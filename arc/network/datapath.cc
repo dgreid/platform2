@@ -4,11 +4,13 @@
 
 #include "arc/network/datapath.h"
 
+#include <arpa/inet.h>
 #include <fcntl.h>
 #include <linux/if_tun.h>
 #include <linux/sockios.h>
 #include <net/if.h>
 #include <net/if_arp.h>
+#include <net/route.h>
 #include <netinet/in.h>
 #include <string.h>
 #include <sys/ioctl.h>
@@ -17,6 +19,7 @@
 #include <base/files/scoped_file.h>
 #include <base/logging.h>
 #include <base/strings/string_number_conversions.h>
+#include "base/posix/eintr_wrapper.h"
 #include <brillo/userdb_utils.h>
 
 #include "arc/network/net_util.h"
@@ -491,6 +494,42 @@ void Datapath::RemoveIPv6Forwarding(const std::string& ifname1,
 
   process_runner_->ip6tables("filter", {"-D", "FORWARD", "-i", ifname2, "-o",
                                         ifname1, "-j", "ACCEPT", "-w"});
+}
+
+bool Datapath::AddIPv4Route(uint32_t gateway_addr,
+                            uint32_t addr,
+                            uint32_t netmask) {
+  struct rtentry route;
+  memset(&route, 0, sizeof(route));
+
+  struct sockaddr_in* gateway =
+      reinterpret_cast<struct sockaddr_in*>(&route.rt_gateway);
+  gateway->sin_family = AF_INET;
+  gateway->sin_addr.s_addr = static_cast<in_addr_t>(gateway_addr);
+
+  struct sockaddr_in* dst =
+      reinterpret_cast<struct sockaddr_in*>(&route.rt_dst);
+  dst->sin_family = AF_INET;
+  dst->sin_addr.s_addr = (addr & netmask);
+
+  struct sockaddr_in* genmask =
+      reinterpret_cast<struct sockaddr_in*>(&route.rt_genmask);
+  genmask->sin_family = AF_INET;
+  genmask->sin_addr.s_addr = netmask;
+
+  route.rt_flags = RTF_UP | RTF_GATEWAY;
+
+  base::ScopedFD fd(socket(AF_INET, SOCK_DGRAM | SOCK_CLOEXEC, 0));
+  if (!fd.is_valid()) {
+    PLOG(ERROR) << "Failed to create socket";
+    return false;
+  }
+
+  if (HANDLE_EINTR(ioctl(fd.get(), SIOCADDRT, &route)) != 0) {
+    PLOG(ERROR) << "Failed to set route for container";
+    return false;
+  }
+  return true;
 }
 
 }  // namespace arc_networkd
