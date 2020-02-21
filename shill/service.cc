@@ -236,7 +236,8 @@ Service::Service(Manager* manager, Technology technology)
   store_.RegisterBool(kLinkMonitorDisableProperty, &link_monitor_disabled_);
   store_.RegisterBool(kManagedCredentialsProperty, &managed_credentials_);
   HelpRegisterDerivedBool(kMeteredProperty, &Service::GetMeteredProperty,
-                          &Service::SetMeteredProperty, nullptr);
+                          &Service::SetMeteredProperty,
+                          &Service::ClearMeteredProperty);
 
   HelpRegisterDerivedBool(kVisibleProperty, &Service::GetVisibleProperty,
                           nullptr, nullptr);
@@ -723,6 +724,8 @@ bool Service::Save(StoreInterface* storage) {
 
   if (metered_override_.has_value()) {
     storage->SetBool(id, kStorageMeteredOverride, metered_override_.value());
+  } else {
+    storage->DeleteKey(id, kStorageMeteredOverride);
   }
 
   static_ip_parameters_.Save(storage, id);
@@ -1728,6 +1731,15 @@ bool Service::SetMeteredProperty(const bool& metered, Error* /*error*/) {
   }
   adaptor_->EmitBoolChanged(kMeteredProperty, metered);
   return true;
+}
+
+void Service::ClearMeteredProperty(Error* /*error*/) {
+  bool was_metered = IsMetered();
+  metered_override_ = base::nullopt;
+
+  bool is_metered = IsMetered();
+  if (was_metered != is_metered)
+    adaptor_->EmitBoolChanged(kMeteredProperty, is_metered);
 }
 
 bool Service::GetVisibleProperty(Error* /*error*/) {

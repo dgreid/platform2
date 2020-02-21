@@ -779,6 +779,7 @@ class Service : public base::RefCounted<Service> {
 
   bool GetMeteredProperty(Error* error);
   bool SetMeteredProperty(const bool& metered, Error* error);
+  void ClearMeteredProperty(Error* error);
 
   void ReEnableAutoConnectTask();
   // Disables autoconnect and posts a task to re-enable it after a cooldown.

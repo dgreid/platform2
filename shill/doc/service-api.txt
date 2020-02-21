@@ -758,6 +758,9 @@ Properties	string ArcVpn.TunnelChrome [writeonly]
 			based on details such as tethering state and technology
 			type.
 
+			If this value is cleared, then the property will revert
+			to being automatically inferred.
+
 		string Mode [readonly]
 
 			If the service type is "wifi", then this property is
