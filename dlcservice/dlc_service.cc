@@ -272,8 +272,10 @@ bool DlcService::HandleStatusResult(const StatusResult& status_result) {
   }
 
   if (!status_result.is_install()) {
-    LOG(WARNING) << "Signal from update_engine indicates that it's not for an "
-                    "install, but dlcservice was waiting for an install.";
+    LOG(ERROR) << "Signal from update_engine indicates that it's not for an "
+                  "install, but dlcservice was waiting for an install.";
+    SendFailedSignalAndCleanup();
+    return false;
   }
 
   switch (status_result.current_operation()) {
@@ -283,7 +285,7 @@ bool DlcService::HandleStatusResult(const StatusResult& status_result) {
       return true;
     case Operation::REPORTING_ERROR_EVENT:
       LOG(ERROR) << "Signal from update_engine indicates reporting failure.";
-      SchedulePeriodicInstallCheck(true);
+      SendFailedSignalAndCleanup();
       return false;
     // Only when update_engine's |Operation::DOWNLOADING| should dlcservice send
     // a signal out for |InstallStatus| for |Status::RUNNING|. Majority of the

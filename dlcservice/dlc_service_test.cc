@@ -702,7 +702,7 @@ TEST_F(DlcServiceTest, ReportingFailureCleanupTest) {
     EXPECT_TRUE(base::PathExists(JoinPaths(content_path_, dlc_id)));
 
   EXPECT_CALL(*mock_image_loader_proxy_ptr_, LoadDlcImage(_, _, _, _, _, _))
-      .WillOnce(Return(false));
+      .Times(0);
 
   {
     StatusResult status_result;
@@ -737,7 +737,7 @@ TEST_F(DlcServiceTest, ReportingFailureSignalTest) {
     EXPECT_TRUE(base::PathExists(JoinPaths(content_path_, dlc_id)));
 
   EXPECT_CALL(*mock_image_loader_proxy_ptr_, LoadDlcImage(_, _, _, _, _, _))
-      .WillOnce(Return(false));
+      .Times(0);
 
   {
     StatusResult status_result;
@@ -771,7 +771,7 @@ TEST_F(DlcServiceTest, ProbableUpdateEngineRestartCleanupTest) {
     EXPECT_TRUE(base::PathExists(JoinPaths(content_path_, dlc_id)));
 
   EXPECT_CALL(*mock_image_loader_proxy_ptr_, LoadDlcImage(_, _, _, _, _, _))
-      .WillOnce(Return(false));
+      .Times(0);
 
   StatusResult status_result;
   status_result.set_current_operation(Operation::IDLE);
