@@ -13,6 +13,7 @@
 #include <utility>
 #include <vector>
 
+#include <base/bind_helpers.h>
 #include <base/files/file.h>
 #include <base/files/file_util.h>
 #include <base/files/scoped_file.h>
@@ -61,9 +62,7 @@ constexpr size_t kGuestAddressOffset = 1;
 std::unique_ptr<arc_networkd::Subnet> MakeSubnet(
     const patchpanel::IPv4Subnet& subnet) {
   return std::make_unique<arc_networkd::Subnet>(
-      subnet.base_addr(), subnet.prefix_len(),
-      // TODO(crbug.com/909719): replace with base::DoNothing;
-      base::Bind([]() {}));
+      subnet.base_addr(), subnet.prefix_len(), base::DoNothing());
 }
 
 }  // namespace

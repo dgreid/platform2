@@ -169,14 +169,10 @@ constexpr struct ContentTestCase {
         // "Invalid(U+dead) code(U+12ffff) points"
         .input = "Invalid\xED\xBA\xAD code\xF4\xAF\xBF\xBF points",
 
-        // "Invalid� code� points"  NOLINT(readability/utf8)
-#if BASE_VER < 576279
-        .output = u8"Invalid\xEF\xBF\xBD code\xEF\xBF\xBD points",
-#else
+        // "Invalid��� code��� points"  NOLINT(readability/utf8)
         .output =
             u8"Invalid\xEF\xBF\xBD\xEF\xBF\xBD\xEF\xBF\xBD "
             u8"code\xEF\xBF\xBD\xEF\xBF\xBD\xEF\xBF\xBD\xEF\xBF\xBD points",
-#endif
     },
     {
         // "Non-(U+fffe) character (U+fde1) code points"
@@ -191,18 +187,12 @@ constexpr struct ContentTestCase {
         .input = "Mix of\xC2\x91 val\x1Cid, invalid\xED\xAA\xAA, "
                  "전체Παγκόσμιος网页на русском, non\xF7\x9F\xBF\xBF-character, "
                  "and\xEF\xBF\xBE control \xEF\xB7\xAA code points",
-#if BASE_VER < 576279
-        .output = u8"Mix of#221 val#034id, invalid\xEF\xBF\xBD, "
-                  u8"전체Παγκόσμιος网页на русском, non\xEF\xBF\xBD-character, "
-                  u8"and#177776 control #176752 code points",
-#else
         .output =
             u8"Mix of#221 val#034id, "
             u8"invalid\xEF\xBF\xBD\xEF\xBF\xBD\xEF\xBF\xBD, "
             u8"전체Παγκόσμιος网页на русском, "
             u8"non\xEF\xBF\xBD\xEF\xBF\xBD\xEF\xBF\xBD\xEF\xBF\xBD-character, "
             u8"and#177776 control #176752 code points",
-#endif
     },
 };
 

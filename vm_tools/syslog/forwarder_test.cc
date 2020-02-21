@@ -56,15 +56,10 @@ constexpr struct {
         },
         // clang-format on
         .content = "Invalid\xED\xBA\xAD code\xF4\xAF\xBF\xBF points",
-#if BASE_VER < 576279
-        .result = u8"<8>Dec 24 18:33:58 VM(0): Invalid\xEF\xBF\xBD "
-                  u8"code\xEF\xBF\xBD points",
-#else
         .result =
             u8"<8>Dec 24 18:33:58 VM(0): "
             u8"Invalid\xEF\xBF\xBD\xEF\xBF\xBD\xEF\xBF\xBD "
             u8"code\xEF\xBF\xBD\xEF\xBF\xBD\xEF\xBF\xBD\xEF\xBF\xBD points",
-#endif
     },
     {
         .severity = vm_tools::DEBUG,
@@ -98,19 +93,12 @@ constexpr struct {
                    "전체Παγκόσμιος网页на русском, "
                    "non\xF7\x9F\xBF\xBF-character, and\xEF\xBF\xBE control "
                    "\xEF\xB7\xAA code points",
-#if BASE_VER < 576279
-        .result = u8"<13>Jun  2 17:15:47 VM(0): Mix of#221 val#034id, "
-                  u8"invalid\xEF\xBF\xBD, 전체Παγκόσμιος网页на русском, "
-                  u8"non\xEF\xBF\xBD-character, and#177776 control #176752 "
-                  u8"code points",
-#else
         .result = u8"<13>Jun  2 17:15:47 VM(0): Mix of#221 val#034id, "
                   u8"invalid\xEF\xBF\xBD\xEF\xBF\xBD\xEF\xBF\xBD, "
                   u8"전체Παγκόσμιος网页на русском, "
                   u8"non\xEF\xBF\xBD\xEF\xBF\xBD\xEF\xBF\xBD\xEF\xBF\xBD-"
                   u8"character, and#177776 control #176752 "
                   u8"code points",
-#endif
     },
 };
 
