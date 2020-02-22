@@ -87,6 +87,19 @@ def PopulateTypeDef(
   for attr_group_name, attrs in attrs_by_group.items():
     for attr in attrs:
       attr_name = attr
+
+      # https://github.com/google/gitiles/blob/master/Documentation/markdown.md#named-anchors
+      attr_anchor = ''
+      for c in attr_name:
+        if c.isalnum():
+          attr_anchor += c
+        elif c.isspace():
+          attr_anchor += '-'
+        else:
+          attr_anchor += '_'
+      attr_anchor = re.sub('-+', '-', attr_anchor)
+      attr_anchor = re.sub('_+', '_', attr_anchor)
+
       type_attrs = attrs[attr]
       if '$ref' in type_attrs:
         type_attrs = ref_types[type_attrs['$ref']]
@@ -106,14 +119,14 @@ def PopulateTypeDef(
         child_types[attr_name] = type_attrs
         if build_only:
           child_types[attr_name]['build-only-element'] = True
-        attr_type = '[%s](#%s)' % (attr_name, attr_name)
+        attr_type = '[%s](#%s)' % (attr_name, attr_anchor)
       elif type_attrs['type'] == 'array':
         description = type_attrs['items'].get('description', '')
         if type_attrs['items']['type'] == 'object':
           child_types[attr_name] = type_attrs['items']
           if build_only:
             child_types[attr_name]['build-only-element'] = True
-          attr_type = 'array - [%s](#%s)' % (attr_name, attr_name)
+          attr_type = 'array - [%s](#%s)' % (attr_name, attr_anchor)
         else:
           attr_type = 'array - %s' % type_attrs['items']['type']
       elif type_attrs['type'] == 'integer':

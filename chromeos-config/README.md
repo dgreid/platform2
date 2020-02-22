@@ -302,13 +302,13 @@ In the tables below,
 | bluetooth | [bluetooth](#bluetooth) |  | False |  | False |  |
 | brand-code | string |  | False |  | False | Brand code of the model (also called RLZ code). |
 | camera | [camera](#camera) |  | False |  | False |  |
-| cros-healthd | [cros-healthd](#cros-healthd) |  | False |  | False | Contains properties used by cros_healthd for model-specific telemetry. Each property represents a category of information and contains boolean properties that indicate whether a device supports a particular telemetry item. See cros_healthd_probe.mojom for descriptions of each property. |
-| demo-mode | [demo-mode](#demo-mode) |  | False |  | False | Properties related to the ChromeOS Demo Mode, defining the user experience when the device is used in retail. |
-| detachable-base | [detachable-base](#detachable-base) |  | False |  | False | Contains the configuration for the hammerd which is used to update the detachable base firmware. |
+| cros-healthd | [cros-healthd](#cros_healthd) |  | False |  | False | Contains properties used by cros_healthd for model-specific telemetry. Each property represents a category of information and contains boolean properties that indicate whether a device supports a particular telemetry item. See cros_healthd_probe.mojom for descriptions of each property. |
+| demo-mode | [demo-mode](#demo_mode) |  | False |  | False | Properties related to the ChromeOS Demo Mode, defining the user experience when the device is used in retail. |
+| detachable-base | [detachable-base](#detachable_base) |  | False |  | False | Contains the configuration for the hammerd which is used to update the detachable base firmware. |
 | fingerprint | [fingerprint](#fingerprint) |  | False |  | False | Contains details about the model's fingerprint implementation. |
 | firmware | [firmware](#firmware) |  | True |  | False |  |
-| firmware-signing | [firmware-signing](#firmware-signing) |  | False |  | True |  |
-| hardware-properties | [hardware-properties](#hardware-properties) |  | False |  | False | Contains boolean flags or enums for hardware properties of this board, for example if it's convertible, has a touchscreen, has a camera, etc. This information is used to auto-generate C code that is consumed by the EC build process in order to do run-time configuration. If a value is defined within a config file, but not for a specific model, that value will be assumed to be false for that model. If a value is an enum and is not specified for a specific model, it will default to "none". All properties must be booleans or enums. If non-boolean properties are desired, the generation code in cros_config_schema.py must be updated to support them. |
+| firmware-signing | [firmware-signing](#firmware_signing) |  | False |  | True |  |
+| hardware-properties | [hardware-properties](#hardware_properties) |  | False |  | False | Contains boolean flags or enums for hardware properties of this board, for example if it's convertible, has a touchscreen, has a camera, etc. This information is used to auto-generate C code that is consumed by the EC build process in order to do run-time configuration. If a value is defined within a config file, but not for a specific model, that value will be assumed to be false for that model. If a value is an enum and is not specified for a specific model, it will default to "none". All properties must be booleans or enums. If non-boolean properties are desired, the generation code in cros_config_schema.py must be updated to support them. |
 | identity | [identity](#identity) |  | False |  | False | Defines attributes that are used by cros_config to detect the identity of the platform and which corresponding config should be used. This tuple must either contain x86 properties only or ARM properties only. |
 | modem | [modem](#modem) |  | False |  | False |  |
 | name | string | ```^[_a-zA-Z0-9]{3,}``` | True |  | False | Unique name for the given model. |
@@ -326,7 +326,7 @@ In the tables below,
 ### arc
 | Attribute | Type   | RegEx     | Required | Oneof Group | Build-only | Description |
 | --------- | ------ | --------- | -------- | ----------- | ---------- | ----------- |
-| build-properties | [build-properties](#build-properties) |  | False |  | False |  |
+| build-properties | [build-properties](#build_properties) |  | False |  | False |  |
 | files | array - [files](#files) |  | False |  | True |  |
 | scale | integer |  | False |  | False | The screen density value in dpi that will be used for ARC apps. This value should be from the list of DPIs in android cdd. |
 
@@ -398,7 +398,7 @@ In the tables below,
 | Attribute | Type   | RegEx     | Required | Oneof Group | Build-only | Description |
 | --------- | ------ | --------- | -------- | ----------- | ---------- | ----------- |
 | battery | [battery](#battery) |  | False |  | False |  |
-| cached-vpd | [cached-vpd](#cached-vpd) |  | False |  | False |  |
+| cached-vpd | [cached-vpd](#cached_vpd) |  | False |  | False |  |
 
 ### battery
 | Attribute | Type   | RegEx     | Required | Oneof Group | Build-only | Description |
@@ -444,7 +444,7 @@ In the tables below,
 | Attribute | Type   | RegEx     | Required | Oneof Group | Build-only | Description |
 | --------- | ------ | --------- | -------- | ----------- | ---------- | ----------- |
 | bcs-overlay | string |  | False |  | True | BCS overlay path used to determine BCS file path for binary firmware downloads. |
-| build-targets | [build-targets](#build-targets) |  | False |  | True |  |
+| build-targets | [build-targets](#build_targets) |  | False |  | True |  |
 | ec-ro-image | string |  | False |  | True | Name of the file located in BCS under the respective bcs-overlay. |
 | firmware-config | integer |  | False |  | False | The firmware config bitmap to be flashed to the CBI. This field is used in the factory. |
 | image-name | string |  | False |  | False | The name of the firmware image used by the firmware updater. Typically the device name, but can differ when a device may have two or more different firmware images. |
@@ -547,8 +547,8 @@ In the tables below,
 ### ui
 | Attribute | Type   | RegEx     | Required | Oneof Group | Build-only | Description |
 | --------- | ------ | --------- | -------- | ----------- | ---------- | ----------- |
-| power-button | [power-button](#power-button) |  | False |  | False |  |
-| side-volume-button | [side-volume-button](#side-volume-button) |  | False |  | False | Defines the position of the side volume button. `region` indicates whether the button is at the side of the "screen" or "keyboard" of the device. `side` indicates which edge the button is anchored to while the device in landscape primary screen orientation. It can be "left", "right", "top", "bottom". |
+| power-button | [power-button](#power_button) |  | False |  | False |  |
+| side-volume-button | [side-volume-button](#side_volume_button) |  | False |  | False | Defines the position of the side volume button. `region` indicates whether the button is at the side of the "screen" or "keyboard" of the device. `side` indicates which edge the button is anchored to while the device in landscape primary screen orientation. It can be "left", "right", "top", "bottom". |
 
 ### power-button
 | Attribute | Type   | RegEx     | Required | Oneof Group | Build-only | Description |
@@ -565,10 +565,10 @@ In the tables below,
 ### wifi
 | Attribute | Type   | RegEx     | Required | Oneof Group | Build-only | Description |
 | --------- | ------ | --------- | -------- | ----------- | ---------- | ----------- |
-| non-tablet-mode-power-table-ath10k | [non-tablet-mode-power-table-ath10k](#non-tablet-mode-power-table-ath10k) |  | False | ath10k | False | [ath10k] WiFi power chain for use with QCA ath10k drivers. Limits in units of 1 dBm. 5g band power limit applies to all 5g bands. |
-| tablet-mode-power-table-ath10k | [tablet-mode-power-table-ath10k](#tablet-mode-power-table-ath10k) |  | False | ath10k | False | [ath10k] WiFi power chain for use with QCA ath10k drivers. Limits in units of 1 dBm. 5g band power limit applies to all 5g bands. |
-| non-tablet-mode-power-table-rtw | [non-tablet-mode-power-table-rtw](#non-tablet-mode-power-table-rtw) |  | False | rtw | False | [rtw] WiFi power chain for use with Realtek rtw88 drivers. Limits in units of 0.125 dBm. 5g band 2 (channels 5.35G-5.47G) power limit is not supported. |
-| tablet-mode-power-table-rtw | [tablet-mode-power-table-rtw](#tablet-mode-power-table-rtw) |  | False | rtw | False | [rtw] WiFi power chain for use with Realtek rtw88 drivers. Limits in units of 0.125 dBm. 5g band 2 (channels 5.35G-5.47G) power limit is not supported. |
+| non-tablet-mode-power-table-ath10k | [non-tablet-mode-power-table-ath10k](#non_tablet_mode_power_table_ath10k) |  | False | ath10k | False | [ath10k] WiFi power chain for use with QCA ath10k drivers. Limits in units of 1 dBm. 5g band power limit applies to all 5g bands. |
+| tablet-mode-power-table-ath10k | [tablet-mode-power-table-ath10k](#tablet_mode_power_table_ath10k) |  | False | ath10k | False | [ath10k] WiFi power chain for use with QCA ath10k drivers. Limits in units of 1 dBm. 5g band power limit applies to all 5g bands. |
+| non-tablet-mode-power-table-rtw | [non-tablet-mode-power-table-rtw](#non_tablet_mode_power_table_rtw) |  | False | rtw | False | [rtw] WiFi power chain for use with Realtek rtw88 drivers. Limits in units of 0.125 dBm. 5g band 2 (channels 5.35G-5.47G) power limit is not supported. |
+| tablet-mode-power-table-rtw | [tablet-mode-power-table-rtw](#tablet_mode_power_table_rtw) |  | False | rtw | False | [rtw] WiFi power chain for use with Realtek rtw88 drivers. Limits in units of 0.125 dBm. 5g band 2 (channels 5.35G-5.47G) power limit is not supported. |
 
 ### non-tablet-mode-power-table-ath10k
 | Attribute | Type   | RegEx     | Required | Oneof Group | Build-only | Description |
