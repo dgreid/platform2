@@ -13,8 +13,8 @@
 
 #include "trunks/error_codes.h"
 #include "trunks/mock_tpm.h"
+#include "trunks/mock_tpm_cache.h"
 #include "trunks/tpm_generated.h"
-#include "trunks/tpm_utility.h"
 #include "trunks/trunks_factory_for_test.h"
 
 using testing::_;
@@ -31,7 +31,10 @@ class SessionManagerTest : public testing::Test {
   }
   ~SessionManagerTest() override {}
 
-  void SetUp() override { factory_.set_tpm(&mock_tpm_); }
+  void SetUp() override {
+    factory_.set_tpm(&mock_tpm_);
+    factory_.set_tpm_cache(&mock_tpm_cache_);
+  }
 
   void SetHandle(TPM_HANDLE handle) {
     session_manager_.session_handle_ = handle;
@@ -59,6 +62,7 @@ class SessionManagerTest : public testing::Test {
  protected:
   TrunksFactoryForTest factory_;
   NiceMock<MockTpm> mock_tpm_;
+  NiceMock<MockTpmCache> mock_tpm_cache_;
   HmacAuthorizationDelegate delegate_;
   SessionManagerImpl session_manager_;
 };
@@ -87,11 +91,11 @@ TEST_F(SessionManagerTest, GetSessionHandleTest) {
 
 TEST_F(SessionManagerTest, StartSessionSuccess) {
   TPM_SE session_type = TPM_SE_TRIAL;
-  TPM2B_PUBLIC public_data;
-  public_data.public_area.type = TPM_ALG_RSA;
-  public_data.public_area.unique.rsa = GetValidRSAPublicKey();
-  EXPECT_CALL(mock_tpm_, ReadPublicSync(kSaltingKey, _, _, _, _, nullptr))
-      .WillOnce(DoAll(SetArgPointee<2>(public_data), Return(TPM_RC_SUCCESS)));
+  TPMT_PUBLIC public_area;
+  public_area.type = TPM_ALG_RSA;
+  public_area.unique.rsa = GetValidRSAPublicKey();
+  EXPECT_CALL(mock_tpm_cache_, GetSaltingKeyPublicArea(_))
+      .WillOnce(DoAll(SetArgPointee<0>(public_area), Return(TPM_RC_SUCCESS)));
   TPM_HANDLE handle = TPM_RH_FIRST;
   TPM2B_NONCE nonce;
   nonce.size = 20;
@@ -103,30 +107,31 @@ TEST_F(SessionManagerTest, StartSessionSuccess) {
                                 &delegate_));
 }
 
+TEST_F(SessionManagerTest, StartSessionGetSaltingKeyError) {
+  EXPECT_CALL(mock_tpm_cache_, GetSaltingKeyPublicArea(_))
+      .WillOnce(Return(TPM_RC_FAILURE));
+  EXPECT_EQ(session_manager_.StartSession(TPM_SE_TRIAL, TPM_RH_NULL, "", true,
+                                          false, &delegate_),
+            TPM_RC_FAILURE);
+}
+
 TEST_F(SessionManagerTest, StartSessionBadSaltingKey) {
-  TPM2B_PUBLIC public_data;
-  public_data.public_area.type = TPM_ALG_RSA;
-  public_data.public_area.unique.rsa.size = 32;
-  EXPECT_CALL(mock_tpm_, ReadPublicSync(kSaltingKey, _, _, _, _, nullptr))
-      .WillOnce(DoAll(SetArgPointee<2>(public_data), Return(TPM_RC_SUCCESS)));
-  EXPECT_EQ(TRUNKS_RC_SESSION_SETUP_ERROR,
-            session_manager_.StartSession(TPM_SE_TRIAL, TPM_RH_NULL, "",
-                                          true, false, &delegate_));
-  public_data.public_area.type = TPM_ALG_ECC;
-  public_data.public_area.unique.rsa.size = 256;
-  EXPECT_CALL(mock_tpm_, ReadPublicSync(kSaltingKey, _, _, _, _, nullptr))
-      .WillOnce(DoAll(SetArgPointee<2>(public_data), Return(TPM_RC_SUCCESS)));
+  TPMT_PUBLIC public_area;
+  public_area.type = TPM_ALG_RSA;
+  public_area.unique.rsa.size = 32;
+  EXPECT_CALL(mock_tpm_cache_, GetSaltingKeyPublicArea(_))
+      .WillOnce(DoAll(SetArgPointee<0>(public_area), Return(TPM_RC_SUCCESS)));
   EXPECT_EQ(TRUNKS_RC_SESSION_SETUP_ERROR,
             session_manager_.StartSession(TPM_SE_TRIAL, TPM_RH_NULL, "",
                                           true, false, &delegate_));
 }
 
 TEST_F(SessionManagerTest, StartSessionFailure) {
-  TPM2B_PUBLIC public_data;
-  public_data.public_area.type = TPM_ALG_RSA;
-  public_data.public_area.unique.rsa = GetValidRSAPublicKey();
-  EXPECT_CALL(mock_tpm_, ReadPublicSync(kSaltingKey, _, _, _, _, nullptr))
-      .WillOnce(DoAll(SetArgPointee<2>(public_data), Return(TPM_RC_SUCCESS)));
+  TPMT_PUBLIC public_area;
+  public_area.type = TPM_ALG_RSA;
+  public_area.unique.rsa = GetValidRSAPublicKey();
+  EXPECT_CALL(mock_tpm_cache_, GetSaltingKeyPublicArea(_))
+      .WillOnce(DoAll(SetArgPointee<0>(public_area), Return(TPM_RC_SUCCESS)));
   EXPECT_CALL(mock_tpm_,
               StartAuthSessionSyncShort(_, TPM_RH_NULL, _, _, _, _, _, _, _, _))
       .WillOnce(Return(TPM_RC_FAILURE));
@@ -137,11 +142,11 @@ TEST_F(SessionManagerTest, StartSessionFailure) {
 
 TEST_F(SessionManagerTest, StartSessionBadNonce) {
   TPM_SE session_type = TPM_SE_TRIAL;
-  TPM2B_PUBLIC public_data;
-  public_data.public_area.type = TPM_ALG_RSA;
-  public_data.public_area.unique.rsa = GetValidRSAPublicKey();
-  EXPECT_CALL(mock_tpm_, ReadPublicSync(kSaltingKey, _, _, _, _, nullptr))
-      .WillOnce(DoAll(SetArgPointee<2>(public_data), Return(TPM_RC_SUCCESS)));
+  TPMT_PUBLIC public_area;
+  public_area.type = TPM_ALG_RSA;
+  public_area.unique.rsa = GetValidRSAPublicKey();
+  EXPECT_CALL(mock_tpm_cache_, GetSaltingKeyPublicArea(_))
+      .WillOnce(DoAll(SetArgPointee<0>(public_area), Return(TPM_RC_SUCCESS)));
   TPM_HANDLE handle = TPM_RH_FIRST;
   TPM2B_NONCE nonce;
   nonce.size = 0;

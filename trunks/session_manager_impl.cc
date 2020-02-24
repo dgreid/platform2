@@ -135,20 +135,15 @@ TPM_RC SessionManagerImpl::StartSession(
 
 TPM_RC SessionManagerImpl::EncryptSalt(const std::string& salt,
                                        std::string* encrypted_salt) {
-  TPM2B_NAME out_name;
-  TPM2B_NAME qualified_name;
-  TPM2B_PUBLIC public_data;
-  public_data.public_area.unique.rsa.size = 0;
-  TPM_RC result = factory_.GetTpm()->ReadPublicSync(
-      kSaltingKey, "" /*object_handle_name (not used)*/, &public_data,
-      &out_name, &qualified_name, nullptr /*authorization_delegate*/);
+  TPMT_PUBLIC public_area;
+  public_area.unique.rsa.size = 0;
+  TPM_RC result = factory_.GetTpmCache()->GetSaltingKeyPublicArea(&public_area);
   if (result != TPM_RC_SUCCESS) {
     LOG(ERROR) << "Error fetching salting key public info: "
                << GetErrorString(result);
     return result;
   }
-  if (public_data.public_area.type != TPM_ALG_RSA ||
-      public_data.public_area.unique.rsa.size != 256) {
+  if (public_area.type != TPM_ALG_RSA || public_area.unique.rsa.size != 256) {
     LOG(ERROR) << "Invalid salting key attributes.";
     return TRUNKS_RC_SESSION_SETUP_ERROR;
   }
@@ -161,8 +156,8 @@ TPM_RC SessionManagerImpl::EncryptSalt(const std::string& salt,
   }
 
   if (!BN_set_word(e.get(), kWellKnownExponent) ||
-      !BN_bin2bn(public_data.public_area.unique.rsa.buffer,
-                 public_data.public_area.unique.rsa.size, n.get())) {
+      !BN_bin2bn(public_area.unique.rsa.buffer,
+                 public_area.unique.rsa.size, n.get())) {
     LOG(ERROR) << "Error setting public area of rsa key: "
                << hwsec::GetOpensslError();
     return TRUNKS_RC_SESSION_SETUP_ERROR;

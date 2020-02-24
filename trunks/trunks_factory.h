@@ -15,6 +15,7 @@
 #include "trunks/hmac_session.h"
 #include "trunks/policy_session.h"
 #include "trunks/session_manager.h"
+#include "trunks/tpm_cache.h"
 #include "trunks/tpm_state.h"
 #include "trunks/tpm_utility.h"
 #include "trunks/trunks_export.h"
@@ -33,6 +34,11 @@ class TRUNKS_EXPORT TrunksFactory {
   // Returns a Tpm instance. The caller does not take ownership. All calls to
   // this method on a given TrunksFactory instance will return the same value.
   virtual Tpm* GetTpm() const = 0;
+
+  // Returns a TpmCache instance. The caller does not take ownership. All calls
+  // to this method on a given TrunksFactory instance will return the same
+  // value.
+  virtual TpmCache* GetTpmCache() const = 0;
 
   // Returns an uninitialized TpmState instance. The caller takes ownership.
   virtual std::unique_ptr<TpmState> GetTpmState() const = 0;
