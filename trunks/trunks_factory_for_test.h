@@ -24,6 +24,7 @@ class MockHmacSession;
 class MockPolicySession;
 class MockSessionManager;
 class MockTpm;
+class MockTpmCache;
 class MockTpmState;
 class MockTpmUtility;
 class HmacSession;
@@ -31,6 +32,7 @@ class PasswordAuthorizationDelegate;
 class PolicySession;
 class SessionManager;
 class Tpm;
+class TpmCache;
 class TpmState;
 class TpmUtility;
 
@@ -51,6 +53,7 @@ class TRUNKS_EXPORT TrunksFactoryForTest : public TrunksFactory {
 
   // TrunksFactory methods.
   Tpm* GetTpm() const override;
+  TpmCache* GetTpmCache() const override;
   std::unique_ptr<TpmState> GetTpmState() const override;
   std::unique_ptr<TpmUtility> GetTpmUtility() const override;
   std::unique_ptr<AuthorizationDelegate> GetPasswordAuthorization(
@@ -63,6 +66,8 @@ class TRUNKS_EXPORT TrunksFactoryForTest : public TrunksFactory {
 
   // Mutators to inject custom mocks.
   void set_tpm(Tpm* tpm) { tpm_ = tpm; }
+
+  void set_tpm_cache(TpmCache* tpm_cache) { tpm_cache_ = tpm_cache; }
 
   void set_tpm_state(TpmState* tpm_state) { tpm_state_ = tpm_state; }
 
@@ -97,6 +102,8 @@ class TRUNKS_EXPORT TrunksFactoryForTest : public TrunksFactory {
  private:
   std::unique_ptr<MockTpm> default_tpm_;
   Tpm* tpm_;
+  std::unique_ptr<MockTpmCache> default_tpm_cache_;
+  TpmCache* tpm_cache_;
   std::unique_ptr<MockTpmState> default_tpm_state_;
   TpmState* tpm_state_;
   std::unique_ptr<MockTpmUtility> default_tpm_utility_;
