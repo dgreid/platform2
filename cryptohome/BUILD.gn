@@ -16,6 +16,7 @@ group("all") {
     ":cryptohome-path",
     ":cryptohome-proxy",
     ":cryptohomed",
+    ":encrypted-reboot-vault",
     ":homedirs_initializer",
     ":lockbox-cache",
     ":mount-encrypted",
@@ -253,6 +254,20 @@ static_library("mount_encrypted_lib") {
   } else {
     sources += [ "mount_encrypted/tpm1.cc" ]
   }
+}
+
+executable("encrypted-reboot-vault") {
+  sources = [
+    "encrypted_reboot_vault/encrypted_reboot_vault.cc",
+    "encrypted_reboot_vault/encrypted_reboot_vault_main.cc",
+  ]
+  deps = [
+    "libs:libcrostpm",
+  ]
+  pkg_deps = [
+    "libbrillo",
+    "libchrome-${libbase_ver}",
+  ]
 }
 
 executable("mount-encrypted") {
