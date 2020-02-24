@@ -335,16 +335,16 @@ do.
       </arg>
     </method>
 
-    <method name="Pkcs11GetTpmTokeInfo">
+    <method name="Pkcs11GetTpmTokenInfo">
       <annotation name="org.chromium.DBus.Method.Kind"
                   value="async"/>
       <arg name="request" type="ay" direction="in">
         <annotation name="org.chromium.DBus.Argument.ProtobufClass"
-                    value="user_data_auth::Pkcs11GetTpmTokeInfoRequest" />
+                    value="user_data_auth::Pkcs11GetTpmTokenInfoRequest" />
       </arg>
       <arg name="reply" type="ay" direction="out">
         <annotation name="org.chromium.DBus.Argument.ProtobufClass"
-                    value="user_data_auth::Pkcs11GetTpmTokeInfoReply" />
+                    value="user_data_auth::Pkcs11GetTpmTokenInfoReply" />
       </arg>
     </method>
 

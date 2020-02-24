@@ -721,7 +721,7 @@ class LegacyCryptohomeInterfaceAdaptor
   void Pkcs11GetTpmTokenInfoOnSuccess(
       std::shared_ptr<
           SharedDBusMethodResponse<std::string, std::string, int32_t>> response,
-      const user_data_auth::Pkcs11GetTpmTokeInfoReply& reply);
+      const user_data_auth::Pkcs11GetTpmTokenInfoReply& reply);
   void Pkcs11TerminateOnSuccess(
       std::shared_ptr<SharedDBusMethodResponse<>> response,
       const user_data_auth::Pkcs11TerminateReply& reply);

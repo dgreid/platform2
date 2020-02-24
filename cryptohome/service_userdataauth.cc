@@ -542,11 +542,11 @@ void Pkcs11Adaptor::DoPkcs11IsTpmTokenReady(
   response->Return(reply);
 }
 
-void Pkcs11Adaptor::Pkcs11GetTpmTokeInfo(
+void Pkcs11Adaptor::Pkcs11GetTpmTokenInfo(
     std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
-        user_data_auth::Pkcs11GetTpmTokeInfoReply>> response,
-    const user_data_auth::Pkcs11GetTpmTokeInfoRequest& in_request) {
-  user_data_auth::Pkcs11GetTpmTokeInfoReply reply;
+        user_data_auth::Pkcs11GetTpmTokenInfoReply>> response,
+    const user_data_auth::Pkcs11GetTpmTokenInfoRequest& in_request) {
+  user_data_auth::Pkcs11GetTpmTokenInfoReply reply;
   *reply.mutable_token_info() =
       service_->Pkcs11GetTpmTokenInfo(in_request.username());
   response->Return(reply);

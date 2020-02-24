@@ -1735,8 +1735,8 @@ void LegacyCryptohomeInterfaceAdaptor::Pkcs11GetTpmTokenInfo(
       SharedDBusMethodResponse<std::string, std::string, int32_t>>(
       std::move(response));
 
-  user_data_auth::Pkcs11GetTpmTokeInfoRequest request;
-  pkcs11_proxy_->Pkcs11GetTpmTokeInfoAsync(
+  user_data_auth::Pkcs11GetTpmTokenInfoRequest request;
+  pkcs11_proxy_->Pkcs11GetTpmTokenInfoAsync(
       request,
       base::Bind(
           &LegacyCryptohomeInterfaceAdaptor::Pkcs11GetTpmTokenInfoOnSuccess,
@@ -1756,12 +1756,12 @@ void LegacyCryptohomeInterfaceAdaptor::Pkcs11GetTpmTokenInfoForUser(
       SharedDBusMethodResponse<std::string, std::string, int32_t>>(
       std::move(response));
 
-  user_data_auth::Pkcs11GetTpmTokeInfoRequest request;
+  user_data_auth::Pkcs11GetTpmTokenInfoRequest request;
   request.set_username(in_username);
   // Note that the response needed for Pkcs11GetTpmTokenInfo and
   // Pkcs11GetTpmTokenInfoForUser are the same, so we'll use the
   // Pkcs11GetTpmTokenInfo version here.
-  pkcs11_proxy_->Pkcs11GetTpmTokeInfoAsync(
+  pkcs11_proxy_->Pkcs11GetTpmTokenInfoAsync(
       request,
       base::Bind(
           &LegacyCryptohomeInterfaceAdaptor::Pkcs11GetTpmTokenInfoOnSuccess,
@@ -1775,7 +1775,7 @@ void LegacyCryptohomeInterfaceAdaptor::Pkcs11GetTpmTokenInfoForUser(
 void LegacyCryptohomeInterfaceAdaptor::Pkcs11GetTpmTokenInfoOnSuccess(
     std::shared_ptr<SharedDBusMethodResponse<std::string, std::string, int32_t>>
         response,
-    const user_data_auth::Pkcs11GetTpmTokeInfoReply& reply) {
+    const user_data_auth::Pkcs11GetTpmTokenInfoReply& reply) {
   response->Return(reply.token_info().label(), reply.token_info().user_pin(),
                    reply.token_info().slot());
 }
