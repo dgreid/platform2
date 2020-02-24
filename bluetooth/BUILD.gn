@@ -15,17 +15,6 @@ group("all") {
   if (use.test) {
     deps += [ ":bluetooth_test" ]
   }
-  if (use.fuzzer) {
-    deps += [ ":bluetooth_parsedataintouuids_fuzzer" ]
-    deps += [ ":bluetooth_parsedataintoservicedata_fuzzer" ]
-    deps += [ ":bluetooth_parseeir_fuzzer" ]
-    deps += [ ":bluetooth_parsereportdescriptor_fuzzer" ]
-    deps += [ ":bluetooth_trimadapterfromobjectpath_fuzzer" ]
-    deps += [ ":bluetooth_trimdevicefromobjectpath_fuzzer" ]
-    deps += [ ":bluetooth_trimservicefromobjectpath_fuzzer" ]
-    deps += [ ":bluetooth_trimcharacteristicfromobjectpath_fuzzer" ]
-    deps += [ ":bluetooth_trimdescriptorfromobjectpath_fuzzer" ]
-  }
 }
 
 pkg_config("target_defaults") {
