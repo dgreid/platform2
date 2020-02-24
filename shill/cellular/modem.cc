@@ -68,8 +68,18 @@ Modem::~Modem() {
   device_->home_provider_info()->RemoveObserver(device_.get());
   device_->serving_operator_info()->RemoveObserver(device_.get());
 
-  // The actual destruction of the Cellular interface occurs in DeviceInfo
-  // after an RTNL link delete message is received.
+  // Ensure that the Cellular interface is fully destroyed here. If we wait for
+  // an RTNL link delete message to be received by DeviceInfo, there's the
+  // possibility that another Modem instance will come up and attempt to create
+  // a Cellular instance with the same name as this device.
+  //
+  // Note that in the case where this destructor is called before the
+  // corresponding RTNL link delete message is received
+  // (i.e. ModemManager1::OnInterfacesRemovedSignal is called first), this means
+  // that DeviceInfo::DelLinkMsgHandler will be called for a DeviceInfo::Info
+  // that DeviceInfo no longer knows about, which DeviceInfo can handle.
+  modem_info_->manager()->device_info()->DeregisterDevice(
+      device_->interface_index());
 }
 
 void Modem::Init() {

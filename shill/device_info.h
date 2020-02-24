@@ -57,6 +57,10 @@ class DeviceInfo : public base::SupportsWeakPtr<DeviceInfo> {
   // Adds |device| to this DeviceInfo instance so that we can handle its link
   // messages, and registers it with the manager.
   virtual void RegisterDevice(const DeviceRefPtr& device);
+  // Deregister the Device instance (if any) from interested parties like
+  // Manager and Metrics, and remove the Info corresponding to this
+  // interface. No-op if there is no Info for this interface index.
+  void DeregisterDevice(int interface_index);
 
   virtual DeviceRefPtr GetDevice(int interface_index) const;
   virtual bool GetMacAddress(int interface_index, ByteString* address) const;
@@ -221,10 +225,6 @@ class DeviceInfo : public base::SupportsWeakPtr<DeviceInfo> {
   void RdnssMsgHandler(const RTNLMessage& msg);
 
   const Info* GetInfo(int interface_index) const;
-  // Deregister the Device instance (if any) from interested parties like
-  // Manager and Metrics, and remove the Info corresponding to this
-  // interface. No-op if there is no Info for this interface index.
-  void DeregisterDevice(int interface_index);
   void DelayDeviceCreation(int interface_index);
   void DelayedDeviceCreationTask();
   void RetrieveLinkStatistics(int interface_index, const RTNLMessage& msg);
