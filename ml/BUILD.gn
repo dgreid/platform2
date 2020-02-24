@@ -40,10 +40,7 @@ pkg_config("ml_common_pkg_deps") {
 }
 
 static_library("ml_common") {
-  include_dirs = [
-    "${sysroot}/usr/include/tensorflow",
-    "${sysroot}/usr/include/tensorflow/third_party/flatbuffers",
-  ]
+  include_dirs = [ "${sysroot}/usr/include/tensorflow" ]
   libs = [ "tensorflowlite" ]
   deps = [
     ":ml_mojo_bindings",
@@ -74,10 +71,7 @@ executable("ml_service") {
 if (use.test) {
   executable("ml_service_test") {
     configs += [ "//common-mk:test" ]
-    include_dirs = [
-      "${sysroot}/usr/include/tensorflow",
-      "${sysroot}/usr/include/tensorflow/third_party/flatbuffers",
-    ]
+    include_dirs = [ "${sysroot}/usr/include/tensorflow" ]
     deps = [
       ":ml_common",
     ]
