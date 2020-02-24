@@ -762,8 +762,6 @@ void OpenVPNDriver::InitOptions(vector<vector<string>>* options, Error* error) {
   // Layer 3 configuration.
   AppendOption("setenv", kRpcTaskServiceVariable,
                rpc_task_->GetRpcConnectionIdentifier(), options);
-  AppendOption("setenv", kRpcTaskServiceVariable,
-               rpc_task_->GetRpcConnectionIdentifier(), options);
   AppendOption("setenv", kRpcTaskPathVariable, rpc_task_->GetRpcIdentifier(),
                options);
   AppendOption("script-security", "2", options);
