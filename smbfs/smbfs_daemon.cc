@@ -82,7 +82,13 @@ int SmbFsDaemon::OnInit() {
   }
 
   if (!share_path_.empty()) {
-    auto fs = std::make_unique<SmbFilesystem>(share_path_, uid_, gid_, nullptr);
+    SmbFilesystem::Options options;
+    options.share_path = share_path_;
+    options.uid = uid_;
+    options.gid = gid_;
+    options.allow_ntlm = true;
+    std::unique_ptr<SmbFilesystem> fs =
+        std::make_unique<SmbFilesystem>(std::move(options));
     SmbFilesystem::ConnectError error = fs->EnsureConnected();
     if (error != SmbFilesystem::ConnectError::kOk) {
       LOG(ERROR) << "Unable to connect to SMB filesystem: " << error;
@@ -231,9 +237,16 @@ void SmbFsDaemon::SetupKerberos(
 }
 
 std::unique_ptr<SmbFilesystem> SmbFsDaemon::CreateSmbFilesystem(
-    const std::string& share_path, std::unique_ptr<SmbCredential> credential) {
-  return std::make_unique<SmbFilesystem>(share_path, uid_, gid_,
-                                         std::move(credential));
+    const std::string& share_path,
+    std::unique_ptr<SmbCredential> credentials,
+    bool allow_ntlm) {
+  SmbFilesystem::Options options;
+  options.share_path = share_path;
+  options.uid = uid_;
+  options.gid = gid_;
+  options.credentials = std::move(credentials);
+  options.allow_ntlm = allow_ntlm;
+  return std::make_unique<SmbFilesystem>(std::move(options));
 }
 
 }  // namespace smbfs

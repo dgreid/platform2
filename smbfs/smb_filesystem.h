@@ -28,6 +28,21 @@ class SmbFsImpl;
 
 class SmbFilesystem : public Filesystem {
  public:
+  struct Options {
+    Options();
+    ~Options();
+
+    // Allow moves.
+    Options(Options&&);
+    Options& operator=(Options&&);
+
+    std::string share_path;
+    uid_t uid = 0;
+    gid_t gid = 0;
+    std::unique_ptr<SmbCredential> credentials;
+    bool allow_ntlm = false;
+  };
+
   enum class ConnectError {
     kOk = 0,
     kNotFound,
@@ -36,10 +51,7 @@ class SmbFilesystem : public Filesystem {
     kUnknownError,
   };
 
-  SmbFilesystem(const std::string& share_path,
-                uid_t uid,
-                gid_t gid,
-                std::unique_ptr<SmbCredential> credentials);
+  explicit SmbFilesystem(Options options);
   ~SmbFilesystem() override;
 
   // Ensures that the SMB share can be connected to. Must NOT be called after

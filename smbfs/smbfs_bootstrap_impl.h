@@ -34,7 +34,8 @@ class SmbFsBootstrapImpl : public mojom::SmbFsBootstrap {
     // SmbFilesystem.
     virtual std::unique_ptr<SmbFilesystem> CreateSmbFilesystem(
         const std::string& share_path,
-        std::unique_ptr<SmbCredential> credential) = 0;
+        std::unique_ptr<SmbCredential> credential,
+        bool allow_ntlm) = 0;
 
     // Starts the fuse session using the filesystem |fs|. Returns true if the
     // session is successfully started.

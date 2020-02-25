@@ -93,8 +93,8 @@ void SmbFsBootstrapImpl::OnCredentialsSetup(
     return;
   }
 
-  auto fs = delegate_->CreateSmbFilesystem(options->share_path,
-                                           std::move(credential));
+  auto fs = delegate_->CreateSmbFilesystem(
+      options->share_path, std::move(credential), options->allow_ntlm);
   // Don't use the resolved address if Kerberos is set up. Kerberos requires the
   // full hostname to obtain auth tickets.
   if (options->resolved_host && !use_kerberos) {

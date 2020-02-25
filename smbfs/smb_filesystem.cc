@@ -56,14 +56,19 @@ void CopyPassword(const password_provider::Password& password,
 
 }  // namespace
 
-SmbFilesystem::SmbFilesystem(const std::string& share_path,
-                             uid_t uid,
-                             gid_t gid,
-                             std::unique_ptr<SmbCredential> credentials)
-    : share_path_(share_path),
-      uid_(uid),
-      gid_(gid),
-      credentials_(std::move(credentials)),
+SmbFilesystem::Options::Options() = default;
+
+SmbFilesystem::Options::~Options() = default;
+
+SmbFilesystem::Options::Options(Options&&) = default;
+
+SmbFilesystem::Options& SmbFilesystem::Options::operator=(Options&&) = default;
+
+SmbFilesystem::SmbFilesystem(Options options)
+    : share_path_(options.share_path),
+      uid_(options.uid),
+      gid_(options.gid),
+      credentials_(std::move(options.credentials)),
       samba_thread_(kSambaThreadName) {
   // Ensure files are not owned by root.
   CHECK_GT(uid_, 0);
@@ -78,7 +83,10 @@ SmbFilesystem::SmbFilesystem(const std::string& share_path,
 
   smbc_setOptionUserData(context_, this);
   smbc_setOptionUseKerberos(context_, 1);
-  smbc_setOptionFallbackAfterKerberos(context_, 1);
+  // Allow fallback to NTLMv2 authentication if Kerberos fails. This does not
+  // prevent fallback to anonymous auth if authentication fails.
+  smbc_setOptionFallbackAfterKerberos(context_, options.allow_ntlm);
+  LOG_IF(WARNING, !options.allow_ntlm) << "NTLM protocol is disabled";
   if (credentials_) {
     smbc_setFunctionAuthDataWithContext(context_, &SmbFilesystem::GetUserAuth);
   }

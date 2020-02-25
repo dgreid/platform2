@@ -45,7 +45,8 @@ class SmbFsDaemon : public brillo::DBusDaemon,
                      base::OnceCallback<void(bool success)> callback) override;
   std::unique_ptr<SmbFilesystem> CreateSmbFilesystem(
       const std::string& share_path,
-      std::unique_ptr<SmbCredential> credential) override;
+      std::unique_ptr<SmbCredential> credential,
+      bool allow_ntlm) override;
   bool StartFuseSession(std::unique_ptr<Filesystem> fs) override;
   void OnBootstrapConnectionError() override;
 
