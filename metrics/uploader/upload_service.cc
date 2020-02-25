@@ -46,10 +46,6 @@ UploadService::UploadService(SystemProfileSetter* setter,
 void UploadService::Init(const base::TimeDelta& upload_interval,
                          const std::string& metrics_file,
                          bool uploads_enabled) {
-// TODO(crbug.com/909719): remove when uprev is done.
-#if BASE_VER < 576279
-  base::StatisticsRecorder::Initialize();
-#endif  // BASE_VER < 576279
   metrics_file_ = metrics_file;
   skip_upload_ = !uploads_enabled;
 
