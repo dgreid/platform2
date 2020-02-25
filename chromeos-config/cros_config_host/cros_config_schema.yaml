@@ -295,6 +295,10 @@ properties:
                 legacy-usb:
                   type: boolean
                   description: Indicates if the device has legacy usb cameras.
+                zsl-lookback:
+                  type: integer
+                  description: Specifies the duration to look back for
+                    Zero-Shutter Lag (ZSL) in milliseconds.
               additionalProperties: false
             fingerprint:
               type: object
