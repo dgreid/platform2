@@ -301,6 +301,9 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
   void set_mount_guest_session_out_of_process(bool oop) {
     mount_guest_session_out_of_process_ = oop;
   }
+  void set_mount_guest_session_non_root_namespace(bool non_root_ns) {
+    mount_guest_session_non_root_namespace_ = non_root_ns;
+  }
 
   FRIEND_TEST(ServiceInterfaceTest, CheckAsyncTestCredentials);
   friend class MakeTests;

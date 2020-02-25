@@ -172,6 +172,9 @@ class MountTest
     mount_->set_shadow_root(kImageDir);
     mount_->set_skel_source(kSkelDir);
     mount_->set_chaps_client_factory(&chaps_client_factory_);
+    // Perform mounts in-process.
+    mount_->set_mount_guest_session_out_of_process(false);
+    mount_->set_mount_guest_session_non_root_namespace(false);
     homedirs_.set_crypto(&crypto_);
     homedirs_.set_platform(&platform_);
     homedirs_.set_shadow_root(kImageDir);
@@ -3888,8 +3891,6 @@ TEST_P(EphemeralNoUserSystemTest, MountGuestUserDir) {
   EXPECT_CALL(tpm_, SetUserType(Tpm::UserType::NonOwner))
       .WillOnce(Return(true));
 
-  // Perform the mount in-process.
-  mount_->set_mount_guest_session_out_of_process(false);
   ASSERT_TRUE(mount_->MountGuestCryptohome());
 
   // Unmount succeeds.
@@ -3966,8 +3967,6 @@ TEST_P(EphemeralNoUserSystemTest, MountGuestUserFailSetUserType) {
   // Detach succeeds.
   ON_CALL(platform_, DetachLoop(_)).WillByDefault(Return(true));
 
-  // Perform the mount in-process.
-  mount_->set_mount_guest_session_out_of_process(false);
   ASSERT_FALSE(mount_->MountGuestCryptohome());
 }
 

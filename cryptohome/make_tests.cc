@@ -276,6 +276,9 @@ void TestUser::GenerateCredentials(bool force_ecryptfs) {
   mount_args.create_as_ecryptfs = force_ecryptfs;
   mount->EnsureCryptohome(local_credentials, mount_args, &created);
   DCHECK(created && credentials.size());
+
+  // Unmount succeeds. This is called when |mount| is destroyed.
+  ON_CALL(platform, Unmount(_, _, _)).WillByDefault(Return(true));
 }
 
 void TestUser::InjectKeyset(MockPlatform* platform, bool enumerate) {
