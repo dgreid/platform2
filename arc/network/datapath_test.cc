@@ -13,6 +13,7 @@
 #include <vector>
 
 #include <base/bind.h>
+#include <base/bind_helpers.h>
 #include <base/strings/string_util.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -89,8 +90,7 @@ TEST(DatapathTest, AddTAP) {
   MockProcessRunner runner;
   Datapath datapath(&runner, ioctl_req_cap);
   MacAddress mac = {1, 2, 3, 4, 5, 6};
-  // TODO(crbug.com/909719): replace with base::DoNothing;
-  Subnet subnet(Ipv4Addr(100, 115, 92, 4), 30, base::Bind([]() {}));
+  Subnet subnet(Ipv4Addr(100, 115, 92, 4), 30, base::DoNothing());
   auto addr = subnet.AllocateAtOffset(0);
   auto ifname = datapath.AddTAP("foo0", &mac, addr.get(), "");
   EXPECT_EQ(ifname, "foo0");
@@ -105,8 +105,7 @@ TEST(DatapathTest, AddTAPWithOwner) {
   MockProcessRunner runner;
   Datapath datapath(&runner, ioctl_req_cap);
   MacAddress mac = {1, 2, 3, 4, 5, 6};
-  // TODO(crbug.com/909719): replace with base::DoNothing;
-  Subnet subnet(Ipv4Addr(100, 115, 92, 4), 30, base::Bind([]() {}));
+  Subnet subnet(Ipv4Addr(100, 115, 92, 4), 30, base::DoNothing());
   auto addr = subnet.AllocateAtOffset(0);
   auto ifname = datapath.AddTAP("foo0", &mac, addr.get(), "root");
   EXPECT_EQ(ifname, "foo0");

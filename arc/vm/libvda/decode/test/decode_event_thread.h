@@ -16,6 +16,7 @@
 #include <base/macros.h>
 #include <base/memory/weak_ptr.h>
 #include <base/threading/thread.h>
+#include <base/threading/thread_checker.h>
 
 #include "arc/vm/libvda/gbm_util.h"
 #include "arc/vm/libvda/libvda_decode.h"
@@ -67,9 +68,7 @@ class DecodeEventThread {
   void CallUseOutputBuffer(int32_t picture_buffer_id, gbm_bo* bo);
 
   base::Thread thread_;
-  // TODO(alexlau): Use THREAD_CHECKER macro after libchrome uprev
-  // (crbug.com/909719).
-  base::ThreadChecker thread_checker_;
+  THREAD_CHECKER(thread_checker_);
 
   base::ScopedFD gbm_device_fd_;
   arc::ScopedGbmDevicePtr gbm_device_;

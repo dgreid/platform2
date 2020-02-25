@@ -16,6 +16,7 @@
 #include <vector>
 
 #include <base/bind.h>
+#include <base/bind_helpers.h>
 #include <base/files/file_descriptor_watcher_posix.h>
 #include <base/files/file_util.h>
 #include <base/files/scoped_file.h>
@@ -86,7 +87,7 @@ TEST_F(SocketStreamTest, ReadEOF) {
 TEST_F(SocketStreamTest, ReadError) {
   // Pass invalid FD.
   auto read_result =
-      SocketStream(base::ScopedFD(), true, base::BindOnce([]() {})).Read();
+      SocketStream(base::ScopedFD(), true, base::DoNothing()).Read();
   EXPECT_EQ(EBADF, read_result.error_code);
 }
 

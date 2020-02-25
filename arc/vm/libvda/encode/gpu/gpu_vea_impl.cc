@@ -9,6 +9,7 @@
 #include <base/files/scoped_file.h>
 #include <base/logging.h>
 #include <base/macros.h>
+#include <base/threading/thread_checker.h>
 #include <mojo/public/cpp/bindings/binding.h>
 #include <mojo/public/cpp/system/platform_handle.h>
 
@@ -115,9 +116,7 @@ class GpuVeaContext : public VeaContext, arc::mojom::VideoEncodeClient {
   void FlushOnIpcThread();
 
   scoped_refptr<base::SingleThreadTaskRunner> ipc_task_runner_;
-  // TODO(alexlau): Use THREAD_CHECKER macro after libchrome uprev
-  // (crbug.com/909719).
-  base::ThreadChecker ipc_thread_checker_;
+  THREAD_CHECKER(ipc_thread_checker_);
   arc::mojom::VideoEncodeAcceleratorPtr vea_ptr_;
   mojo::Binding<arc::mojom::VideoEncodeClient> binding_;
 
