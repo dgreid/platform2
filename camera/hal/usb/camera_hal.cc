@@ -478,8 +478,12 @@ void CameraHal::OnDeviceRemoved(ScopedUdevDevicePtr dev) {
 
   // TODO(shik): Handle this more gracefully, sometimes it even trigger a kernel
   // panic.
-  CHECK(cameras_.find(id) == cameras_.end())
-      << "Unplug an opening camera, abort as intended";
+  if (cameras_.find(id) != cameras_.end()) {
+    LOGF(WARNING)
+        << "Unplug an opening camera, exit the camera service to cleanup";
+    // Upstart will start the service again.
+    _exit(EIO);
+  }
 
   previous_ids_[GetModelId(device_infos_[id])].insert(id);
 
