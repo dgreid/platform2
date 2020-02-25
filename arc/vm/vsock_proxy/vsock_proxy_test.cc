@@ -6,6 +6,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 
@@ -63,8 +64,8 @@ class VSockProxyTest : public testing::Test {
   ~VSockProxyTest() override = default;
 
   void SetUp() override {
-    // Use socket pair instead of VSOCK for testing.
-    auto vsock_pair = CreateSocketPair();
+    // Use a blocking socket pair instead of VSOCK for testing.
+    auto vsock_pair = CreateSocketPair(SOCK_STREAM);
     ASSERT_TRUE(vsock_pair.has_value());
     server_ = std::make_unique<VSockProxy>(&server_delegate_,
                                            std::move(vsock_pair->first));
@@ -72,18 +73,19 @@ class VSockProxyTest : public testing::Test {
                                            std::move(vsock_pair->second));
 
     // Register initial socket pairs.
-    auto server_socket_pair = CreateSocketPair();
+    auto server_socket_pair = CreateSocketPair(SOCK_STREAM | SOCK_NONBLOCK);
     ASSERT_TRUE(server_socket_pair.has_value());
-    auto client_socket_pair = CreateSocketPair();
+    auto client_socket_pair = CreateSocketPair(SOCK_STREAM | SOCK_NONBLOCK);
     ASSERT_TRUE(client_socket_pair.has_value());
 
     int64_t handle = server_->RegisterFileDescriptor(
-        std::move(server_socket_pair->first), arc_proxy::FileDescriptor::SOCKET,
-        0 /* handle */);
+        std::move(server_socket_pair->first),
+        arc_proxy::FileDescriptor::SOCKET_STREAM, 0 /* handle */);
     server_fd_ = std::move(server_socket_pair->second);
 
     client_->RegisterFileDescriptor(std::move(client_socket_pair->first),
-                                    arc_proxy::FileDescriptor::SOCKET, handle);
+                                    arc_proxy::FileDescriptor::SOCKET_STREAM,
+                                    handle);
     client_fd_ = std::move(client_socket_pair->second);
   }
 
@@ -198,11 +200,11 @@ TEST_F(VSockProxyTest, ResetClient) {
 
 TEST_F(VSockProxyTest, FileWriteError) {
   // Register a socket pair to the server.
-  auto server_socket_pair = CreateSocketPair();
+  auto server_socket_pair = CreateSocketPair(SOCK_STREAM | SOCK_NONBLOCK);
   ASSERT_TRUE(server_socket_pair.has_value());
   int64_t handle = server()->RegisterFileDescriptor(
-      std::move(server_socket_pair->first), arc_proxy::FileDescriptor::SOCKET,
-      0 /* handle */);
+      std::move(server_socket_pair->first),
+      arc_proxy::FileDescriptor::SOCKET_STREAM, 0 /* handle */);
   auto server_fd = std::move(server_socket_pair->second);
 
   // Register a read only FD to the client. This will cause a write error.
@@ -220,8 +222,8 @@ TEST_F(VSockProxyTest, FileWriteError) {
   ExpectSocketEof(server_fd.get());
 }
 
-TEST_F(VSockProxyTest, PassSocketFromServer) {
-  auto sockpair = CreateSocketPair();
+TEST_F(VSockProxyTest, PassStreamSocketFromServer) {
+  auto sockpair = CreateSocketPair(SOCK_STREAM | SOCK_NONBLOCK);
   ASSERT_TRUE(sockpair.has_value());
   constexpr char kData[] = "testdata";
   if (!base::UnixDomainSocket::SendMsg(server_fd(), kData, sizeof(kData),
@@ -243,13 +245,13 @@ TEST_F(VSockProxyTest, PassSocketFromServer) {
     EXPECT_EQ(1, fds.size());
     received_fd = std::move(fds[0]);
   }
-
+  EXPECT_EQ(SOCK_STREAM, GetSocketType(received_fd.get()));
   TestDataTransfer(sockpair->first.get(), received_fd.get());
   TestDataTransfer(received_fd.get(), sockpair->first.get());
 }
 
-TEST_F(VSockProxyTest, PassSocketFromClient) {
-  auto sockpair = CreateSocketPair();
+TEST_F(VSockProxyTest, PassStreamSocketSocketFromClient) {
+  auto sockpair = CreateSocketPair(SOCK_STREAM | SOCK_NONBLOCK);
   ASSERT_TRUE(sockpair.has_value());
   constexpr char kData[] = "testdata";
   if (!base::UnixDomainSocket::SendMsg(client_fd(), kData, sizeof(kData),
@@ -271,7 +273,63 @@ TEST_F(VSockProxyTest, PassSocketFromClient) {
     EXPECT_EQ(1, fds.size());
     received_fd = std::move(fds[0]);
   }
+  EXPECT_EQ(SOCK_STREAM, GetSocketType(received_fd.get()));
+  TestDataTransfer(sockpair->first.get(), received_fd.get());
+  TestDataTransfer(received_fd.get(), sockpair->first.get());
+}
 
+TEST_F(VSockProxyTest, PassDgramSocketFromServer) {
+  auto sockpair = CreateSocketPair(SOCK_DGRAM | SOCK_NONBLOCK);
+  ASSERT_TRUE(sockpair.has_value());
+  constexpr char kData[] = "testdata";
+  if (!base::UnixDomainSocket::SendMsg(server_fd(), kData, sizeof(kData),
+                                       {sockpair->second.get()})) {
+    ADD_FAILURE() << "Failed to send message.";
+    return;
+  }
+  sockpair->second.reset();
+
+  base::ScopedFD received_fd;
+  {
+    WaitUntilReadable(client_fd());
+    char buf[256];
+    std::vector<base::ScopedFD> fds;
+    ssize_t size =
+        base::UnixDomainSocket::RecvMsg(client_fd(), buf, sizeof(buf), &fds);
+    EXPECT_EQ(sizeof(kData), size);
+    EXPECT_STREQ(kData, buf);
+    EXPECT_EQ(1, fds.size());
+    received_fd = std::move(fds[0]);
+  }
+  EXPECT_EQ(SOCK_DGRAM, GetSocketType(received_fd.get()));
+  TestDataTransfer(sockpair->first.get(), received_fd.get());
+  TestDataTransfer(received_fd.get(), sockpair->first.get());
+}
+
+TEST_F(VSockProxyTest, PassSeqpacketSocketFromServer) {
+  auto sockpair = CreateSocketPair(SOCK_SEQPACKET | SOCK_NONBLOCK);
+  ASSERT_TRUE(sockpair.has_value());
+  constexpr char kData[] = "testdata";
+  if (!base::UnixDomainSocket::SendMsg(server_fd(), kData, sizeof(kData),
+                                       {sockpair->second.get()})) {
+    ADD_FAILURE() << "Failed to send message.";
+    return;
+  }
+  sockpair->second.reset();
+
+  base::ScopedFD received_fd;
+  {
+    WaitUntilReadable(client_fd());
+    char buf[256];
+    std::vector<base::ScopedFD> fds;
+    ssize_t size =
+        base::UnixDomainSocket::RecvMsg(client_fd(), buf, sizeof(buf), &fds);
+    EXPECT_EQ(sizeof(kData), size);
+    EXPECT_STREQ(kData, buf);
+    EXPECT_EQ(1, fds.size());
+    received_fd = std::move(fds[0]);
+  }
+  EXPECT_EQ(SOCK_SEQPACKET, GetSocketType(received_fd.get()));
   TestDataTransfer(sockpair->first.get(), received_fd.get());
   TestDataTransfer(received_fd.get(), sockpair->first.get());
 }
@@ -306,10 +364,10 @@ TEST_F(VSockProxyTest, Connect) {
   ASSERT_TRUE(handle != static_cast<int64_t>(0));
 
   // Register client side socket.
-  auto client_sock_pair = CreateSocketPair();
+  auto client_sock_pair = CreateSocketPair(SOCK_STREAM | SOCK_NONBLOCK);
   ASSERT_TRUE(client_sock_pair.has_value());
   client()->RegisterFileDescriptor(std::move(client_sock_pair->first),
-                                   arc_proxy::FileDescriptor::SOCKET,
+                                   arc_proxy::FileDescriptor::SOCKET_STREAM,
                                    handle.value());
 
   auto client_fd = std::move(client_sock_pair->second);
@@ -389,11 +447,11 @@ TEST_F(VSockProxyTest, Fstat) {
 }
 
 TEST_F(VSockProxyTest, Fstat_Unsupported) {
-  auto sockpair = CreateSocketPair();
+  auto sockpair = CreateSocketPair(SOCK_STREAM | SOCK_NONBLOCK);
   ASSERT_TRUE(sockpair.has_value());
   ASSERT_TRUE(sockpair->first.is_valid());
   const int64_t handle = client()->RegisterFileDescriptor(
-      std::move(sockpair->first), arc_proxy::FileDescriptor::SOCKET, 0);
+      std::move(sockpair->first), arc_proxy::FileDescriptor::SOCKET_STREAM, 0);
 
   base::RunLoop run_loop;
   server()->Fstat(

@@ -4,6 +4,8 @@
 
 #include "arc/vm/vsock_proxy/vsock_stream.h"
 
+#include <sys/socket.h>
+
 #include <tuple>
 #include <utility>
 
@@ -17,7 +19,8 @@ namespace arc {
 namespace {
 
 TEST(VSockStreamTest, ReadWrite) {
-  auto sockpair = CreateSocketPair();
+  // Use a blocking socket pair instead of a vsock for testing.
+  auto sockpair = CreateSocketPair(SOCK_STREAM);
   ASSERT_TRUE(sockpair.has_value());
   base::ScopedFD fd1;
   base::ScopedFD fd2;

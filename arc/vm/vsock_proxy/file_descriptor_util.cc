@@ -49,10 +49,10 @@ base::Optional<std::pair<base::ScopedFD, base::ScopedFD>> CreatePipe() {
       std::make_pair(base::ScopedFD(fds[0]), base::ScopedFD(fds[1])));
 }
 
-base::Optional<std::pair<base::ScopedFD, base::ScopedFD>> CreateSocketPair() {
+base::Optional<std::pair<base::ScopedFD, base::ScopedFD>> CreateSocketPair(
+    int type) {
   int fds[2];
-  if (socketpair(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC | SOCK_NONBLOCK,
-                 0 /* protocol */, fds) == -1) {
+  if (socketpair(AF_UNIX, type | SOCK_CLOEXEC, 0 /* protocol */, fds) == -1) {
     PLOG(ERROR) << "Failed to create socketpair";
     return base::nullopt;
   }
@@ -134,6 +134,16 @@ std::pair<int, base::ScopedFD> ConnectUnixDomainSocket(
 
   LOG(INFO) << "Connected to " << path.value();
   return std::make_pair(0, std::move(fd));
+}
+
+int GetSocketType(int fd) {
+  int type = 0;
+  socklen_t length = sizeof(type);
+  if (getsockopt(fd, SOL_SOCKET, SO_TYPE, &type, &length) == -1) {
+    PLOG(ERROR) << "getsockopt failed";
+    return -1;
+  }
+  return type;
 }
 
 }  // namespace arc

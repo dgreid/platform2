@@ -52,11 +52,13 @@ message Close {
 // Represents a file descriptor to be transferred.
 message FileDescriptor {
   enum Type {
-    SOCKET = 0;
+    SOCKET_STREAM = 0;
     FIFO_READ = 1;
     FIFO_WRITE = 2;
     REGULAR_FILE = 3;
     DMABUF = 4;
+    SOCKET_DGRAM = 5;
+    SOCKET_SEQPACKET = 6;
     // TODO(b/123432308): Support more file descriptor types.
   }
   Type type = 1;

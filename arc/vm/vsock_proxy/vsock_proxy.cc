@@ -6,6 +6,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -30,7 +31,9 @@ std::unique_ptr<StreamBase> CreateStream(
     arc_proxy::FileDescriptor::Type fd_type,
     base::OnceClosure error_handler) {
   switch (fd_type) {
-    case arc_proxy::FileDescriptor::SOCKET:
+    case arc_proxy::FileDescriptor::SOCKET_STREAM:
+    case arc_proxy::FileDescriptor::SOCKET_DGRAM:
+    case arc_proxy::FileDescriptor::SOCKET_SEQPACKET:
       return std::make_unique<SocketStream>(std::move(fd), true,
                                             std::move(error_handler));
     case arc_proxy::FileDescriptor::FIFO_READ:
@@ -240,8 +243,22 @@ bool VSockProxy::OnData(arc_proxy::Data* data) {
         std::tie(local_fd, remote_fd) = std::move(*created);
         break;
       }
-      case arc_proxy::FileDescriptor::SOCKET: {
-        auto created = CreateSocketPair();
+      case arc_proxy::FileDescriptor::SOCKET_STREAM: {
+        auto created = CreateSocketPair(SOCK_STREAM | SOCK_NONBLOCK);
+        if (!created)
+          return false;
+        std::tie(local_fd, remote_fd) = std::move(*created);
+        break;
+      }
+      case arc_proxy::FileDescriptor::SOCKET_DGRAM: {
+        auto created = CreateSocketPair(SOCK_DGRAM | SOCK_NONBLOCK);
+        if (!created)
+          return false;
+        std::tie(local_fd, remote_fd) = std::move(*created);
+        break;
+      }
+      case arc_proxy::FileDescriptor::SOCKET_SEQPACKET: {
+        auto created = CreateSocketPair(SOCK_SEQPACKET | SOCK_NONBLOCK);
         if (!created)
           return false;
         std::tie(local_fd, remote_fd) = std::move(*created);
@@ -284,7 +301,7 @@ bool VSockProxy::OnConnectRequest(arc_proxy::ConnectRequest* request) {
   response->set_error_code(result.first);
   if (result.first == 0) {
     response->set_handle(RegisterFileDescriptor(
-        std::move(result.second), arc_proxy::FileDescriptor::SOCKET,
+        std::move(result.second), arc_proxy::FileDescriptor::SOCKET_STREAM,
         0 /* generate handle */));
   }
   return vsock_.Write(reply);
@@ -457,7 +474,21 @@ bool VSockProxy::ConvertDataToVSockMessage(std::string blob,
           return false;
       }
     } else if (S_ISSOCK(st.st_mode)) {
-      transferred_fd->set_type(arc_proxy::FileDescriptor::SOCKET);
+      const int type = GetSocketType(fd.get());
+      switch (type) {
+        case SOCK_STREAM:
+          transferred_fd->set_type(arc_proxy::FileDescriptor::SOCKET_STREAM);
+          break;
+        case SOCK_DGRAM:
+          transferred_fd->set_type(arc_proxy::FileDescriptor::SOCKET_DGRAM);
+          break;
+        case SOCK_SEQPACKET:
+          transferred_fd->set_type(arc_proxy::FileDescriptor::SOCKET_SEQPACKET);
+          break;
+        default:
+          LOG(ERROR) << "Unexpected socket type: " << type;
+          return false;
+      }
     } else if (S_ISREG(st.st_mode)) {
       transferred_fd->set_type(arc_proxy::FileDescriptor::REGULAR_FILE);
     } else if (!delegate_->ConvertFileDescriptorToProto(fd.get(),

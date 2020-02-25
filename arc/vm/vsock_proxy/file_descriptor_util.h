@@ -23,7 +23,8 @@ base::Optional<std::pair<base::ScopedFD, base::ScopedFD>> CreatePipe();
 
 // Creates a pair of socketpair file desciprotrs, and returns it.
 // Returns nullopt if failed.
-base::Optional<std::pair<base::ScopedFD, base::ScopedFD>> CreateSocketPair();
+base::Optional<std::pair<base::ScopedFD, base::ScopedFD>> CreateSocketPair(
+    int type);
 
 // Creates a socket at |path|, and starts listening.
 base::ScopedFD CreateUnixDomainSocket(const base::FilePath& path);
@@ -37,6 +38,9 @@ base::ScopedFD AcceptSocket(int raw_fd);
 // Note: in C++17, the return type should be std::variant<int, base::ScopedFD>.
 std::pair<int, base::ScopedFD> ConnectUnixDomainSocket(
     const base::FilePath& path);
+
+// Returns the type of the socket.
+int GetSocketType(int fd);
 
 }  // namespace arc
 
