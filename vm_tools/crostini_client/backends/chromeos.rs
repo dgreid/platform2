@@ -763,7 +763,7 @@ impl ChromeOS {
     ) -> Result<Option<String>, Box<dyn Error>> {
         let mut request = ResizeDiskImageRequest::new();
         request.cryptohome_id = user_id_hash.to_owned();
-        request.disk_path = vm_name.to_owned();
+        request.vm_name = vm_name.to_owned();
         request.disk_size = size;
 
         let response: ResizeDiskImageResponse = self.sync_protobus(

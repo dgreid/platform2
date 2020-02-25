@@ -2611,7 +2611,7 @@ std::unique_ptr<dbus::Response> Service::ResizeDiskImage(
 
   base::FilePath disk_path;
   StorageLocation location;
-  if (!CheckVmExists(request.disk_path(), request.cryptohome_id(), &disk_path,
+  if (!CheckVmExists(request.vm_name(), request.cryptohome_id(), &disk_path,
                      &location)) {
     response.set_status(DISK_STATUS_DOES_NOT_EXIST);
     response.set_failure_reason("Resize image doesn't exist");
@@ -2626,7 +2626,7 @@ std::unique_ptr<dbus::Response> Service::ResizeDiskImage(
   }
 
   auto op = VmResizeOperation::Create(
-      VmId(request.cryptohome_id(), request.disk_path()), disk_path, size,
+      VmId(request.cryptohome_id(), request.vm_name()), disk_path, size,
       base::Bind(&Service::ResizeDisk, weak_ptr_factory_.GetWeakPtr()),
       base::Bind(&Service::ProcessResize, weak_ptr_factory_.GetWeakPtr()));
 
