@@ -138,6 +138,10 @@ scoped_refptr<dbus::Bus> SetUpDBus(void) {
   scoped_refptr<dbus::Bus> dbus(new dbus::Bus(options));
   CHECK(dbus);
   CHECK(dbus->Connect()) << "Failed to connect to D-Bus";
+  CHECK(dbus->RequestOwnershipAndBlock(
+      anomaly_detector::kAnomalyEventServiceName,
+      dbus::Bus::ServiceOwnershipOptions::REQUIRE_PRIMARY))
+      << "Failed to take ownership of the anomaly event service name";
   return dbus;
 }
 
