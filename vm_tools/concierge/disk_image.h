@@ -271,19 +271,20 @@ class PluginVmImportOperation : public DiskImageOperation {
 
 class VmResizeOperation : public DiskImageOperation {
  public:
+  using ResizeCallback = base::Callback<void(const std::string& owner_id,
+                                             const std::string& vm_name,
+                                             StorageLocation location,
+                                             uint64_t target_size,
+                                             DiskImageStatus* status,
+                                             std::string* failure_reason)>;
+
   static std::unique_ptr<VmResizeOperation> Create(
       const VmId vm_id,
+      StorageLocation location,
       const base::FilePath disk_path,
       uint64_t disk_size,
-      base::Callback<void(const std::string&,
-                          const std::string&,
-                          uint64_t,
-                          DiskImageStatus*,
-                          std::string*)> start_resize_cb,
-      base::Callback<void(const std::string&,
-                          const std::string&,
-                          DiskImageStatus*,
-                          std::string*)> process_resize_cb);
+      ResizeCallback start_resize_cb,
+      ResizeCallback process_resize_cb);
 
  protected:
   bool ExecuteIo(uint64_t io_limit) override;
@@ -291,19 +292,17 @@ class VmResizeOperation : public DiskImageOperation {
 
  private:
   VmResizeOperation(const VmId vm_id,
+                    StorageLocation location,
                     const base::FilePath disk_path,
                     uint64_t size,
-                    base::Callback<void(const std::string&,
-                                        const std::string&,
-                                        DiskImageStatus*,
-                                        std::string*)> process_resize_cb);
+                    ResizeCallback process_resize_cb);
 
-  base::Callback<void(
-      const std::string&, const std::string&, DiskImageStatus*, std::string*)>
-      process_resize_cb_;
+  ResizeCallback process_resize_cb_;
 
   // VM owner and name.
   const VmId vm_id_;
+
+  StorageLocation location_;
 
   base::FilePath disk_path_;
 

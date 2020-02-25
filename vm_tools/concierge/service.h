@@ -203,6 +203,7 @@ class Service final {
   // |vm_name|.
   void ResizeDisk(const std::string& owner_id,
                   const std::string& vm_name,
+                  StorageLocation location,
                   uint64_t new_size,
                   DiskImageStatus* status,
                   std::string* failure_reason);
@@ -211,6 +212,8 @@ class Service final {
   // error message.
   void ProcessResize(const std::string& owner_id,
                      const std::string& vm_name,
+                     StorageLocation location,
+                     uint64_t target_size,
                      DiskImageStatus* status,
                      std::string* failure_reason);
 

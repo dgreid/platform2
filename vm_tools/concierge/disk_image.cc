@@ -765,23 +765,19 @@ void PluginVmImportOperation::Finalize() {
 
 std::unique_ptr<VmResizeOperation> VmResizeOperation::Create(
     const VmId vm_id,
+    StorageLocation location,
     const base::FilePath disk_path,
     uint64_t disk_size,
-    base::Callback<void(const std::string&,
-                        const std::string&,
-                        uint64_t,
-                        DiskImageStatus*,
-                        std::string*)> start_resize_cb,
-    base::Callback<void(
-        const std::string&, const std::string&, DiskImageStatus*, std::string*)>
-        process_resize_cb) {
-  auto op = base::WrapUnique(new VmResizeOperation(
-      std::move(vm_id), std::move(disk_path), std::move(disk_size),
-      std::move(process_resize_cb)));
+    ResizeCallback start_resize_cb,
+    ResizeCallback process_resize_cb) {
   DiskImageStatus status = DiskImageStatus::DISK_STATUS_UNKNOWN;
   std::string failure_reason;
-  start_resize_cb.Run(vm_id.owner_id(), vm_id.name(), disk_size, &status,
-                      &failure_reason);
+  start_resize_cb.Run(vm_id.owner_id(), vm_id.name(), location, disk_size,
+                      &status, &failure_reason);
+
+  auto op = base::WrapUnique(new VmResizeOperation(
+      std::move(vm_id), std::move(location), std::move(disk_path),
+      std::move(disk_size), std::move(process_resize_cb)));
 
   op->set_status(status);
   op->set_failure_reason(failure_reason);
@@ -789,23 +785,22 @@ std::unique_ptr<VmResizeOperation> VmResizeOperation::Create(
   return op;
 }
 
-VmResizeOperation::VmResizeOperation(
-    const VmId vm_id,
-    const base::FilePath disk_path,
-    uint64_t disk_size,
-    base::Callback<void(
-        const std::string&, const std::string&, DiskImageStatus*, std::string*)>
-        process_resize_cb)
+VmResizeOperation::VmResizeOperation(const VmId vm_id,
+                                     StorageLocation location,
+                                     const base::FilePath disk_path,
+                                     uint64_t disk_size,
+                                     ResizeCallback process_resize_cb)
     : process_resize_cb_(std::move(process_resize_cb)),
       vm_id_(std::move(vm_id)),
+      location_(std::move(location)),
       disk_path_(std::move(disk_path)),
       target_size_(std::move(disk_size)) {}
 
 bool VmResizeOperation::ExecuteIo(uint64_t io_limit) {
   DiskImageStatus status = DiskImageStatus::DISK_STATUS_UNKNOWN;
   std::string failure_reason;
-  process_resize_cb_.Run(vm_id_.owner_id(), vm_id_.name(), &status,
-                         &failure_reason);
+  process_resize_cb_.Run(vm_id_.owner_id(), vm_id_.name(), location_,
+                         target_size_, &status, &failure_reason);
 
   set_status(status);
   set_failure_reason(failure_reason);

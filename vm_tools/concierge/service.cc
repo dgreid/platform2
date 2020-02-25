@@ -456,6 +456,15 @@ bool IsDiskUserChosenSize(std::string disk_path) {
          0;
 }
 
+// Mark a disk with an xattr indicating its size has been chosen by the user.
+bool SetUserChosenSizeAttr(const base::ScopedFD& fd) {
+  // The xattr value doesn't matter, only its existence.
+  // Store something human-readable for debugging.
+  constexpr char val[] = "1";
+  return fsetxattr(fd.get(), kDiskImageUserChosenSizeXattr, val, sizeof(val),
+                   XATTR_CREATE) == 0;
+}
+
 bool GetPluginDirectory(const base::FilePath& prefix,
                         const string& extension,
                         const string& vm_id,
@@ -2370,11 +2379,7 @@ std::unique_ptr<dbus::Response> Service::CreateDiskImage(
     if (request.disk_size() != 0) {
       LOG(INFO)
           << "Disk size specified in request; creating user-chosen-size image";
-      // The xattr value doesn't matter, only its existence.
-      // Store something human-readable for debugging.
-      constexpr char val[] = "1";
-      if (fsetxattr(fd.get(), kDiskImageUserChosenSizeXattr, val, sizeof(val),
-                    XATTR_CREATE) != 0) {
+      if (!SetUserChosenSizeAttr(fd)) {
         PLOG(ERROR) << "Failed to set user_chosen_size xattr";
         unlink(disk_path.value().c_str());
         response.set_status(DISK_STATUS_FAILED);
@@ -2591,8 +2596,8 @@ std::unique_ptr<dbus::Response> Service::ResizeDiskImage(
   }
 
   auto op = VmResizeOperation::Create(
-      VmId(request.cryptohome_id(), request.vm_name()), disk_path, size,
-      base::Bind(&Service::ResizeDisk, weak_ptr_factory_.GetWeakPtr()),
+      VmId(request.cryptohome_id(), request.vm_name()), location, disk_path,
+      size, base::Bind(&Service::ResizeDisk, weak_ptr_factory_.GetWeakPtr()),
       base::Bind(&Service::ProcessResize, weak_ptr_factory_.GetWeakPtr()));
 
   response.set_status(op->status());
@@ -2613,6 +2618,7 @@ std::unique_ptr<dbus::Response> Service::ResizeDiskImage(
 
 void Service::ResizeDisk(const std::string& owner_id,
                          const std::string& vm_name,
+                         StorageLocation location,
                          uint64_t new_size,
                          DiskImageStatus* status,
                          std::string* failure_reason) {
@@ -2629,6 +2635,8 @@ void Service::ResizeDisk(const std::string& owner_id,
 
 void Service::ProcessResize(const std::string& owner_id,
                             const std::string& vm_name,
+                            StorageLocation location,
+                            uint64_t target_size,
                             DiskImageStatus* status,
                             std::string* failure_reason) {
   auto iter = FindVm(owner_id, vm_name);
@@ -2640,6 +2648,32 @@ void Service::ProcessResize(const std::string& owner_id,
   }
 
   *status = iter->second->GetDiskResizeStatus(failure_reason);
+
+  if (*status == DISK_STATUS_RESIZED) {
+    base::FilePath disk_path;
+    if (!GetDiskPathFromName(vm_name, owner_id, location,
+                             false, /* create_parent_dir */
+                             &disk_path)) {
+      LOG(ERROR) << "Failed to get disk path after resize";
+      *status = DISK_STATUS_FAILED;
+      return;
+    }
+
+    base::ScopedFD fd(
+        open(disk_path.value().c_str(), O_CREAT | O_NONBLOCK | O_WRONLY, 0600));
+    if (!fd.is_valid()) {
+      PLOG(ERROR) << "Failed to open disk image";
+      *status = DISK_STATUS_FAILED;
+      return;
+    }
+
+    // This disk now has a user-chosen size by virtue of being resized.
+    if (!SetUserChosenSizeAttr(fd)) {
+      LOG(ERROR) << "Failed to set user-chosen size xattr";
+      *status = DISK_STATUS_FAILED;
+      return;
+    }
+  }
 }
 
 std::unique_ptr<dbus::Response> Service::ExportDiskImage(
