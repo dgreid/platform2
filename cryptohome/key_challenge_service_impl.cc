@@ -12,6 +12,7 @@
 #include <base/bind.h>
 #include <base/logging.h>
 #include <base/optional.h>
+#include <base/time/time.h>
 #include <brillo/errors/error.h>
 #include <dbus/bus.h>
 #include <google/protobuf/message_lite.h>
@@ -19,6 +20,11 @@
 namespace cryptohome {
 
 namespace {
+
+// This is currently equal to the timeout used by the Chrome when making
+// MountEx/CheckKeyEx calls to cryptohomed. (These timeouts are not technically
+// required to be equal, but it's good from the UX perspective).
+constexpr base::TimeDelta kDbusCallTimeout = base::TimeDelta::FromMinutes(2);
 
 // Used for holding OnceCallback when multiple callback function needs it, but
 // only one of them will run. Note: This is not thread safe.
@@ -141,7 +147,8 @@ void KeyChallengeServiceImpl::ChallengeKey(
   dbus_proxy_.ChallengeKeyAsync(
       SerializeProto(account_id), SerializeProto(key_challenge_request),
       base::Bind(&OnDBusChallengeKeySuccess, callback_holder),
-      base::Bind(&OnDBusChallengeKeyFailure, callback_holder));
+      base::Bind(&OnDBusChallengeKeyFailure, callback_holder),
+      /*timeout_ms=*/kDbusCallTimeout.InMilliseconds());
 }
 
 }  // namespace cryptohome
