@@ -203,26 +203,44 @@ main() {
   metrics_client Platform.DiskUsage.NumUserHomeDirectories \
                 "${NUMBER_OF_USERS}" 1 50 50
 
-  WEEKLY_USERS_ACTIVE="$(cryptohome --action=dump_last_activity |
-      awk 'BEGIN {count = 0} $2 <= 7 {++count} END {print count}')"
-  metrics_client -s Login.UsersActiveWeekly "${WEEKLY_USERS_ACTIVE}"
+  local last_activity
+  if ! last_activity="$(cryptohome --action=dump_last_activity)" ; then
+    logger -t "chromeos-cleanup-logs" -p warning \
+        "cryptohome dump_last_activity failed!"
 
-  if [ "${NUMBER_OF_USERS}" -gt 0 ] ; then
-    metrics_client -s Login.UsersActiveWeekly.Percent \
-                  "$((WEEKLY_USERS_ACTIVE * 100 / NUMBER_OF_USERS))"
-  else
     metrics_client -s Login.UsersActiveWeekly.Percent 0
-  fi
+  else
+    USERS_ACTIVE_DAILY="$(echo "${last_activity}" |
+        awk 'BEGIN {count = 0} $2 <= 1 {++count} END {print count}')"
+    metrics_client -s Login.UsersActiveDaily "${USERS_ACTIVE_DAILY}"
 
-  # Report days since the least frequently used account signed in.
-  # It is reported every time to measure effect of autodeletion feature.
-  DAYS_SINCE_LFU_ACCOUNT_SIGNIN="$(cryptohome --action=dump_last_activity |
-      awk 'BEGIN {max = 0} $2 > max {max = $2} END {print max}')"
+    USERS_ACTIVE_WEEKLY="$(echo "${last_activity}" |
+        awk 'BEGIN {count = 0} $2 <= 7 {++count} END {print count}')"
+    metrics_client -s Login.UsersActiveWeekly "${USERS_ACTIVE_WEEKLY}"
 
-  # Check if there are any users.
-  if [ "${DAYS_SINCE_LFU_ACCOUNT_SIGNIN}" != "" ]; then
-    metrics_client Login.LeastUsedAccountDays \
-                  "${DAYS_SINCE_LFU_ACCOUNT_SIGNIN}" 1 90 90
+    USERS_ACTIVE_28DAYS="$(echo "${last_activity}" |
+        awk 'BEGIN {count = 0} $2 <= 28 {++count} END {print count}')"
+    metrics_client -s Login.UsersActive28Days "${USERS_ACTIVE_28DAYS}"
+
+    if [ "${NUMBER_OF_USERS}" -gt 0 ] ; then
+      metrics_client -s Login.UsersActiveWeekly.Percent \
+                    "$((WEEKLY_USERS_ACTIVE * 100 / NUMBER_OF_USERS))"
+    else
+      # Note that this metric is also reported if dump_last_activity failed.
+      # See above.
+      metrics_client -s Login.UsersActiveWeekly.Percent 0
+    fi
+
+    # Report days since the least frequently used account signed in.
+    # It is reported every time to measure effect of autodeletion feature.
+    DAYS_SINCE_LFU_ACCOUNT_SIGNIN="$(echo "${last_activity}" |
+        awk 'BEGIN {max = 0} $2 > max {max = $2} END {print max}')"
+
+    # Check if there are any users.
+    if [ "${DAYS_SINCE_LFU_ACCOUNT_SIGNIN}" != "" ]; then
+      metrics_client Login.LeastUsedAccountDays \
+                    "${DAYS_SINCE_LFU_ACCOUNT_SIGNIN}" 1 90 90
+    fi
   fi
 
   # Report additional metrics if we are low on free space.
