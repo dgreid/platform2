@@ -776,7 +776,7 @@ TEST_F(Camera3ModuleFixture, RequiredFormats) {
             ss << (ss.str().empty() ? "" : ", ") << it.Width() << "x"
                << it.Height();
           }
-          return ss.str().c_str();
+          return ss.str();
         };
     if (hw_level == ANDROID_INFO_SUPPORTED_HARDWARE_LEVEL_FULL ||
         hw_level == ANDROID_INFO_SUPPORTED_HARDWARE_LEVEL_LIMITED) {
@@ -887,7 +887,7 @@ static void ExpectKeyAvailable(camera_metadata_t* characteristics,
               ss << "unknown(" << it << ")";
           }
         }
-        return ss.str().c_str();
+        return ss.str();
       };
       ASSERT_EQ(0, find_camera_metadata_ro_entry(characteristics, key, &entry))
           << "Key " << get_camera_metadata_tag_name(key)
