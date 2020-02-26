@@ -41,7 +41,8 @@ constexpr char kBatteryI2cAddress[] = "0x16";
 const std::map<std::string, std::string> kModelToPort = {
   {"sona", "2"},
   {"careena", "0"},
-  {"dratini", "5"}};
+  {"dratini", "5"},
+  {"dorp", "0"}};
 const std::map<std::string, std::string> kMetricNameToOffset = {
   {"temperature_smart", "0x08"},
   {"manufacture_date_smart", "0x1b"}};
