@@ -564,7 +564,7 @@
 		"altSyscall": "android",
 		"cgroupsPath": "/session_manager_containers",
 		"cpu": {
-			"realtimeRuntime": 100000,
+			"realtimeRuntime": 200000,
 			"realtimePeriod": 1000000
 		},
 		"skipSecurebits": [
