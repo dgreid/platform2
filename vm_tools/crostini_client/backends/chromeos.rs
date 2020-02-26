@@ -12,6 +12,8 @@ use std::os::unix::fs::OpenOptionsExt;
 use std::os::unix::io::IntoRawFd;
 use std::path::{Component, Path, PathBuf};
 use std::process::Command;
+use std::thread::sleep;
+use std::time::Duration;
 
 use dbus::{BusType, Connection, ConnectionItem, Message, OwnedFd};
 use protobuf::Message as ProtoMessage;
@@ -20,6 +22,7 @@ use backends::{Backend, ContainerSource, DiskInfo, DiskOpType, VmDiskImageType, 
 use lsb_release::{LsbRelease, ReleaseChannel};
 use proto::system_api::cicerone_service::{self, *};
 use proto::system_api::concierge_service::*;
+use proto::system_api::dlcservice::*;
 use proto::system_api::seneschal_service::*;
 use proto::system_api::vm_plugin_dispatcher;
 use proto::system_api::vm_plugin_dispatcher::VmErrorCode;
@@ -138,6 +141,13 @@ const LOCK_TO_SINGLE_USER_SERVICE_PATH: &str = "/org/chromium/LockToSingleUser";
 const LOCK_TO_SINGLE_USER_SERVICE_NAME: &str = "org.chromium.LockToSingleUser";
 const NOTIFY_VM_STARTING_METHOD: &str = "NotifyVmStarting";
 
+// DLC service dbus-constants.h
+const DLC_SERVICE_INTERFACE: &str = "org.chromium.DlcServiceInterface";
+const DLC_SERVICE_PATH: &str = "/org/chromium/DlcService";
+const DLC_SERVICE_NAME: &str = "org.chromium.DlcService";
+const DLC_INSTALL_METHOD: &str = "Install";
+const DLC_GET_STATE_METHOD: &str = "GetState";
+
 enum ChromeOSError {
     BadChromeFeatureStatus,
     BadConciergeStatus,
@@ -153,6 +163,7 @@ enum ChromeOSError {
     FailedCreateContainer(CreateLxdContainerResponse_Status, String),
     FailedCreateContainerSignal(LxdContainerCreatedSignal_Status, String),
     FailedDetachUsb(String),
+    FailedDlcInstall(String, String),
     FailedGetOpenPath(PathBuf),
     FailedGetVmInfo,
     FailedListDiskImages(String),
@@ -196,6 +207,11 @@ impl fmt::Display for ChromeOSError {
             FailedComponentUpdater(name) => {
                 write!(f, "component updater could not load component `{}`", name)
             }
+            FailedDlcInstall(name, reason) => write!(
+                f,
+                "DLC service failed to install module `{}`: {}",
+                name, reason
+            ),
             FailedCreateContainer(s, reason) => {
                 write!(f, "failed to create container: `{:?}`: {}", s, reason)
             }
@@ -349,6 +365,72 @@ impl ChromeOS {
         }
     }
 
+    fn get_dlc_state(&mut self, name: &str) -> Result<DlcState_State, Box<dyn Error>> {
+        let method = Message::new_method_call(
+            DLC_SERVICE_NAME,
+            DLC_SERVICE_PATH,
+            DLC_SERVICE_INTERFACE,
+            DLC_GET_STATE_METHOD,
+        )?
+        .append1(name);
+
+        let message = self
+            .connection
+            .send_with_reply_and_block(method, DEFAULT_TIMEOUT_MS)
+            .map_err(|e| FailedDlcInstall(name.to_owned(), e.to_string()))?;
+
+        let response: DlcState = dbus_message_to_proto(&message)
+            .map_err(|e| FailedDlcInstall(name.to_owned(), e.to_string()))?;
+
+        Ok(response.get_state())
+    }
+
+    fn init_dlc_install(&mut self, name: &str) -> Result<(), Box<dyn Error>> {
+        let mut request = DlcModuleList::new();
+        let module = request.dlc_module_infos.push_default();
+        module.dlc_id = name.to_owned();
+
+        let method = Message::new_method_call(
+            DLC_SERVICE_NAME,
+            DLC_SERVICE_PATH,
+            DLC_SERVICE_INTERFACE,
+            DLC_INSTALL_METHOD,
+        )?
+        .append1(request.write_to_bytes()?);
+
+        self.connection
+            .send_with_reply_and_block(method, DEFAULT_TIMEOUT_MS)
+            .map_err(|e| FailedDlcInstall(name.to_owned(), e.to_string()))?;
+
+        Ok(())
+    }
+
+    fn poll_dlc_install(&mut self, name: &str) -> Result<(), Box<dyn Error>> {
+        // Unfortunately DLC service does not provide a synchronous method to install package,
+        // and, if package is already installed, OnInstallStatus signal might be issued before
+        // replying to "Install" method call, which does not carry any indication whether the
+        // operation in progress or not. So polling it is...
+        while self.get_dlc_state(name)? == DlcState_State::INSTALLING {
+            sleep(Duration::from_secs(5));
+        }
+        if self.get_dlc_state(name)? != DlcState_State::INSTALLED {
+            return Err(FailedDlcInstall(
+                name.to_owned(),
+                "Failed to install Plugin VM DLC".to_string(),
+            )
+            .into());
+        }
+        Ok(())
+    }
+
+    fn install_dlc(&mut self, name: &str) -> Result<(), Box<dyn Error>> {
+        if self.get_dlc_state(name)? != DlcState_State::INSTALLED {
+            self.init_dlc_install(name)?;
+            self.poll_dlc_install(name)?;
+        }
+        Ok(())
+    }
+
     fn is_chrome_feature_enabled(
         &mut self,
         user_id_hash: &str,
@@ -431,8 +513,10 @@ impl ChromeOS {
     }
 
     /// Request debugd to start vmplugin_dispatcher.
-    fn start_vm_plugin_dispather(&mut self, user_id_hash: &str) -> Result<(), Box<dyn Error>> {
-        // TODO(dtor): download the component before trying to start it.
+    fn start_vm_plugin_dispatcher(&mut self, user_id_hash: &str) -> Result<(), Box<dyn Error>> {
+        // Download and install pita component. If this fails we won't be able to start
+        // the dispatcher service below.
+        self.install_dlc("pita")?;
 
         let method = Message::new_method_call(
             DEBUGD_SERVICE_NAME,
@@ -455,7 +539,7 @@ impl ChromeOS {
     fn start_vm_infrastructure(&mut self, user_id_hash: &str) -> Result<(), Box<dyn Error>> {
         if self.is_plugin_vm_enabled(user_id_hash)? {
             // Starting the dispatcher will also start concierge.
-            self.start_vm_plugin_dispather(user_id_hash)
+            self.start_vm_plugin_dispatcher(user_id_hash)
         } else if self.is_crostini_enabled(user_id_hash)? {
             self.start_concierge()
         } else {

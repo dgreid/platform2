@@ -26,17 +26,20 @@ fn main() {
     };
     let concierge_dir = proto_root.join("dbus/vm_concierge");
     let cicerone_dir = proto_root.join("dbus/vm_cicerone");
+    let dlcservice_dir = proto_root.join("dbus/dlcservice");
     let seneschal_dir = proto_root.join("dbus/seneschal");
     let vmplugin_dispatcher_dir = proto_root.join("dbus/vm_plugin_dispatcher");
     let input_files = [
         concierge_dir.join("concierge_service.proto"),
         cicerone_dir.join("cicerone_service.proto"),
+        dlcservice_dir.join("dlcservice.proto"),
         seneschal_dir.join("seneschal_service.proto"),
         vmplugin_dispatcher_dir.join("vm_plugin_dispatcher.proto"),
     ];
     let include_dirs = [
         concierge_dir,
         cicerone_dir,
+        dlcservice_dir,
         seneschal_dir,
         vmplugin_dispatcher_dir,
     ];
