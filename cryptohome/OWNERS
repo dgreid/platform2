@@ -8,7 +8,5 @@ zuan@chromium.org
 per-file *homedirs*=oka@chromium.org
 
 # Files related to mount/unmount operations, including out-of-process mounts.
-per-file mount_constants*=jorgelo@chromium.org
-per-file mount_helper*=jorgelo@chromium.org
-per-file mount_utils*=jorgelo@chromium.org
+per-file mount*=jorgelo@chromium.org
 per-file out_of_process*=jorgelo@chromium.org
