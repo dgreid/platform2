@@ -186,6 +186,10 @@ grpc::Status ContainerListenerImpl::UpdateApplicationList(
         }
       }
     }
+    // Set the extensions.
+    for (const auto& extension : app_in.extensions()) {
+      app_out->add_extensions(extension);
+    }
   }
   base::WaitableEvent event(base::WaitableEvent::ResetPolicy::AUTOMATIC,
                             base::WaitableEvent::InitialState::NOT_SIGNALED);

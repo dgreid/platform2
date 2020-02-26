@@ -173,6 +173,7 @@ void ValidUpdateApplicationListCallShouldProduceDBusMessageGeneric(
   EXPECT_FALSE(dbus_app.startup_notify());
   EXPECT_EQ(dbus_app.keywords().values_size(), 0);
   EXPECT_EQ(dbus_app.package_id(), "");
+  EXPECT_EQ(dbus_app.extensions_size(), 0);
 }
 
 TEST(ContainerListenerImplTest,
@@ -255,6 +256,10 @@ MakeComplexUpdateApplicationListRequest() {
           "mime:" + base::IntToString(app_num * 1000 + mime_type));
     }
     *application->mutable_keywords() = MakeLocaleStrings("keyword", app_num);
+    for (int extension = 0; extension < 5; ++extension) {
+      application->add_extensions(
+          "extension:" + base::IntToString(app_num * 1000 + extension));
+    }
   }
   return request;
 }
@@ -334,6 +339,9 @@ void CompareInputApplicationToOutputApp(
   CompareLocaleString(expected.name(), actual.name());
   CompareLocaleString(expected.comment(), actual.comment());
   CompareLocaleStrings(expected.keywords(), actual.keywords());
+
+  EXPECT_THAT(actual.extensions(),
+              UnorderedElementsAreArray(expected.extensions()));
 }
 
 // Ensures that all the entries in expected match the entries in actual. Allows

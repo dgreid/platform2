@@ -29,6 +29,9 @@ message ContainerShutdownInfo {
 
 // Corresponds to a .desktop file from the Desktop Entry Spec:
 // https://www.freedesktop.org/wiki/Specifications/desktop-entry-spec/
+// with some additional parameters to support broader compatibility.
+// This message is replicated in system_api/dbus/vm_applications/apps.proto,
+// and the two definitions should be kept in sync.
 message Application {
   // A "localestring". Entries with a provided locale should set the |locale|
   // field to the value inside the [] and default entries should leave it empty.
@@ -69,6 +72,9 @@ message Application {
   // If set, the package_id of the installed package that owns this .desktop
   // file. If not set, the .desktop file is not owned by an installed package.
   string package_id = 8;
+
+  // Similar to |mime_types| for applications that do not support mime types.
+  repeated string extensions = 11;
 }
 
 // Request protobuf for notifying the host of our list of installed
