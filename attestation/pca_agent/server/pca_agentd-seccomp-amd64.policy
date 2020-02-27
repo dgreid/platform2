@@ -16,7 +16,8 @@ clock_gettime: 1
 gettimeofday: 1
 time: 1
 
-socket: arg0 == AF_UNIX
+socket: arg0 == AF_UNIX || arg0 == AF_INET || arg0 == AF_INET6 || \
+        arg0 == AF_NETLINK && arg2 == 0
 socketpair: 1
 connect: 1
 getsockname: 1
