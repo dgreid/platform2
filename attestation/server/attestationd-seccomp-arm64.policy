@@ -64,6 +64,8 @@ mmap: 1
 munmap: 1
 mprotect: 1
 madvise: 1
+mlock: 1
+munlock: 1
 
 clone: 1
 setpriority: 1
