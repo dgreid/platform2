@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2018 Intel Corporation.
+ * Copyright (C) 2017-2020 Intel Corporation.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -85,7 +85,6 @@ public:
     virtual status_t postRun() = 0;
     virtual bool needPolling() = 0;
     virtual std::shared_ptr<cros::V4L2VideoNode> getNode() const { return mNode; }
-    virtual const char *name() { return mNode->Name().c_str(); }
 
 protected:
     std::shared_ptr<DeviceMessage> mMsg; /*!Set in prepareRun and should be valid until

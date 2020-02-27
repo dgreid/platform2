@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2017 Intel Corporation
+ * Copyright (C) 2014-2020 Intel Corporation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,9 +28,8 @@ const char *metaId2String(const metadata_value_t array[], int size, int value)
             return array[i].name;
     }
 
-    std::string out("id not found ");
-    out = out + std::to_string(value);
-    return out.c_str();
+    LOGE("Failed to find id: %d", value);
+    return "id not found";
 }
 
 } /* namespace intel */
