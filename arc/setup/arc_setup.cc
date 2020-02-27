@@ -1962,8 +1962,8 @@ void ArcSetup::RestoreContextOnPreChroot(const base::FilePath& rootfs) {
         "var/run/chrome",
         "var/run/cras"};
 
-    // var/run/arc/adb only exists on P, skip it otherwise.
-    if (GetSdkVersion() == AndroidSdkVersion::ANDROID_P)
+    // var/run/arc/adb only exists on P or above, skip it otherwise.
+    if (GetSdkVersion() >= AndroidSdkVersion::ANDROID_P)
       directories.push_back("var/run/arc/adb");
 
     // Transform |kDirectories| because the mount points are visible only in
@@ -2052,7 +2052,7 @@ void ArcSetup::OnSetup() {
   SetUpMountPointForDebugFilesystem(is_dev_mode);
   SetUpMountPointsForMedia();
   SetUpMountPointForAdbd();
-  if (GetSdkVersion() == AndroidSdkVersion::ANDROID_P)
+  if (GetSdkVersion() >= AndroidSdkVersion::ANDROID_P)
     SetUpMountPointForAdbdUnixSocket();
   CleanUpStaleMountPoints();
   RestoreContext();
