@@ -174,7 +174,7 @@ user’s device, a DLC is updated at the same time when a device is updated.
 [dlcservice]: https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/dlcservice
 [Create a DLC module]: #Create-a-DLC-module
 [Write platform code to request DLC module]: #Write-platform-code-to-request-DLC-module
-[Install a DLC module for dev/test]: #Install-a-DLC-module-for-dev/test
+[Install a DLC module for dev/test]: #install-a-dlc-module-for-dev_test
 [Write tests for a DLC module]: #Write-tests-for-a-DLC-module
 [dlc.eclass]: https://chromium.googlesource.com/chromiumos/overlays/chromiumos-overlay/+/master/eclass/dlc.eclass
 [system_api]: https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/system_api
