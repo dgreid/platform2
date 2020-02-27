@@ -8,6 +8,7 @@
 #include <libsmbclient.h>
 #include <sys/types.h>
 
+#include <atomic>
 #include <memory>
 #include <ostream>
 #include <string>
@@ -20,6 +21,7 @@
 #include <base/synchronization/lock.h>
 #include <base/threading/thread.h>
 #include <base/time/time.h>
+#include <base/threading/thread_task_runner_handle.h>
 #include <gtest/gtest_prod.h>
 
 #include "smbfs/filesystem.h"
@@ -30,6 +32,20 @@ namespace smbfs {
 
 class SmbFilesystem : public Filesystem {
  public:
+  // Delegate functions will always be called on the SmbFilesystem's constructor
+  // thread. Any callback parameters must be invoked on the caller thread (read:
+  // constructor thread).
+  class Delegate {
+   public:
+    using RequestCredentialsCallback =
+        base::OnceCallback<void(std::unique_ptr<SmbCredential> credentials)>;
+
+    // Request username/password auth credentials for the share. Invoke
+    // |callback| with the requested credentials, or with nullptr if no
+    // credentials are provided (eg. if the user closes the request dialog).
+    virtual void RequestCredentials(RequestCredentialsCallback callback) = 0;
+  };
+
   struct Options {
     Options();
     ~Options();
@@ -43,6 +59,7 @@ class SmbFilesystem : public Filesystem {
     gid_t gid = 0;
     std::unique_ptr<SmbCredential> credentials;
     bool allow_ntlm = false;
+    bool use_kerberos = false;
   };
 
   enum class ConnectError {
@@ -53,7 +70,7 @@ class SmbFilesystem : public Filesystem {
     kUnknownError,
   };
 
-  explicit SmbFilesystem(Options options);
+  SmbFilesystem(Delegate* delegate, Options options);
   ~SmbFilesystem() override;
 
   base::WeakPtr<SmbFilesystem> GetWeakPtr();
@@ -136,11 +153,17 @@ class SmbFilesystem : public Filesystem {
 
  protected:
   // Protected constructor for unit tests.
-  explicit SmbFilesystem(const std::string& share_path);
+  SmbFilesystem(Delegate* delegate, const std::string& share_path);
 
  private:
   FRIEND_TEST(SmbFilesystemTest, MakeStatModeBits);
   FRIEND_TEST(SmbFilesystemTest, MakeStatModeBitsFromDOSAttributes);
+  FRIEND_TEST(SmbFilesystemTest, MaybeUpdateCredentials_NoRequest);
+  FRIEND_TEST(SmbFilesystemTest, MaybeUpdateCredentials_RequestOnEPERM);
+  FRIEND_TEST(SmbFilesystemTest, MaybeUpdateCredentials_RequestOnEACCES);
+  FRIEND_TEST(SmbFilesystemTest, MaybeUpdateCredentials_NoDelegate);
+  FRIEND_TEST(SmbFilesystemTest, MaybeUpdateCredentials_OnlyOneRequest);
+  FRIEND_TEST(SmbFilesystemTest, MaybeUpdateCredentials_IgnoreEmptyResponse);
 
   // Cache stat information when listing directories to reduce unnecessary
   // network requests.
@@ -236,6 +259,17 @@ class SmbFilesystem : public Filesystem {
   // does not exist.
   SMBCFILE* LookupOpenFile(uint64_t handle) const;
 
+  // Request credentials, if |error| is an auth failure, and the share has not
+  // previously connected successfully.
+  void MaybeUpdateCredentials(int error);
+
+  // Request authentication credentials. Will do nothing is a request is
+  // currently in progress.
+  void RequestCredentialUpdate();
+
+  // Callback handler for Delegate::RequestCredentials().
+  void OnRequestCredentialsDone(std::unique_ptr<SmbCredential> credentials);
+
   // Callback function for obtaining authentication credentials. Set by calling
   // smbc_setFunctionAuthDataWithContext() and called from libsmbclient.
   static void GetUserAuth(SMBCCTX* context,
@@ -258,21 +292,34 @@ class SmbFilesystem : public Filesystem {
   // false on a miss.
   bool GetCachedInodeStat(ino_t inode, struct stat* out_stat);
 
+  Delegate* const delegate_ = nullptr;
   const std::string share_path_;
   const uid_t uid_ = 0;
   const gid_t gid_ = 0;
-  const std::unique_ptr<SmbCredential> credentials_;
+  const bool use_kerberos_ = false;
   base::Thread samba_thread_;
   InodeMap inode_map_{FUSE_ROOT_ID};
+
+  // Origin/constructor thread task runner.
+  scoped_refptr<base::SingleThreadTaskRunner> main_task_runner_ =
+      base::ThreadTaskRunnerHandle::Get();
 
   std::unordered_map<uint64_t, SMBCFILE*> open_files_;
   uint64_t open_files_seq_ = 1;
 
   mutable base::Lock lock_;
   std::string resolved_share_path_ = share_path_;
+  std::unique_ptr<SmbCredential> credentials_;
 
   // Cache stat information during ReadDir() to speed up subsequent access.
   base::HashingMRUCache<ino_t, StatCacheItem> stat_cache_;
+
+  // Whether a successful connection to the SMB server has been made. Used to
+  // determine whether or not to request auth credentials.
+  // std::atomic<> load/store by default have acquire/release memory ordering.
+  std::atomic<bool> connected_{false};
+  // Flag to ensure only one credential request is active at a time.
+  bool requesting_credentials_ = false;
 
   SMBCCTX* context_ = nullptr;
   smbc_close_fn smbc_close_ctx_ = nullptr;

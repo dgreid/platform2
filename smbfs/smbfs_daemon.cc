@@ -13,6 +13,7 @@
 #include <base/bind.h>
 #include <base/files/file_util.h>
 #include <base/logging.h>
+#include <base/no_destructor.h>
 #include <base/threading/thread_task_runner_handle.h>
 #include <brillo/message_loops/message_loop.h>
 #include <brillo/daemons/dbus_daemon.h>
@@ -49,6 +50,21 @@ bool CreateDirectoryAndLog(const base::FilePath& path) {
   return success;
 }
 
+// SmbFilesystem delegate that does nothing.
+class NopSmbFilesystemDelegate : public SmbFilesystem::Delegate {
+ public:
+  NopSmbFilesystemDelegate() = default;
+  ~NopSmbFilesystemDelegate() = default;
+
+ private:
+  // SmbFilesystem::Delegate overrides.:
+  void RequestCredentials(RequestCredentialsCallback callback) override {
+    // Respond with no null credentials, equivalent to the user canceling the
+    // request dialog.
+    std::move(callback).Run(nullptr);
+  }
+};
+
 }  // namespace
 
 SmbFsDaemon::SmbFsDaemon(fuse_chan* chan, const Options& options)
@@ -74,13 +90,14 @@ int SmbFsDaemon::OnInit() {
   }
 
   if (!share_path_.empty()) {
+    static base::NoDestructor<NopSmbFilesystemDelegate> dummy_delegate;
     SmbFilesystem::Options options;
     options.share_path = share_path_;
     options.uid = uid_;
     options.gid = gid_;
     options.allow_ntlm = true;
-    std::unique_ptr<SmbFilesystem> fs =
-        std::make_unique<SmbFilesystem>(std::move(options));
+    std::unique_ptr<SmbFilesystem> fs = std::make_unique<SmbFilesystem>(
+        dummy_delegate.get(), std::move(options));
     SmbFilesystem::ConnectError error = fs->EnsureConnected();
     if (error != SmbFilesystem::ConnectError::kOk) {
       LOG(ERROR) << "Unable to connect to SMB filesystem: " << error;

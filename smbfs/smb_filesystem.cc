@@ -68,13 +68,17 @@ SmbFilesystem::Options::Options(Options&&) = default;
 
 SmbFilesystem::Options& SmbFilesystem::Options::operator=(Options&&) = default;
 
-SmbFilesystem::SmbFilesystem(Options options)
-    : share_path_(options.share_path),
+SmbFilesystem::SmbFilesystem(Delegate* delegate, Options options)
+    : delegate_(delegate),
+      share_path_(options.share_path),
       uid_(options.uid),
       gid_(options.gid),
-      credentials_(std::move(options.credentials)),
+      use_kerberos_(options.use_kerberos),
       samba_thread_(kSambaThreadName),
+      credentials_(std::move(options.credentials)),
       stat_cache_(kStatCacheSize) {
+  DCHECK(delegate_);
+
   // Ensure files are not owned by root.
   CHECK_GT(uid_, 0);
   CHECK_GT(gid_, 0);
@@ -92,9 +96,7 @@ SmbFilesystem::SmbFilesystem(Options options)
   // prevent fallback to anonymous auth if authentication fails.
   smbc_setOptionFallbackAfterKerberos(context_, options.allow_ntlm);
   LOG_IF(WARNING, !options.allow_ntlm) << "NTLM protocol is disabled";
-  if (credentials_) {
-    smbc_setFunctionAuthDataWithContext(context_, &SmbFilesystem::GetUserAuth);
-  }
+  smbc_setFunctionAuthDataWithContext(context_, &SmbFilesystem::GetUserAuth);
 
   smbc_setLogCallback(context_, nullptr, &SambaLog);
   int vlog_level = logging::GetVlogVerbosity();
@@ -124,10 +126,13 @@ SmbFilesystem::SmbFilesystem(Options options)
   CHECK(samba_thread_.Start());
 }
 
-SmbFilesystem::SmbFilesystem(const std::string& share_path)
-    : share_path_(share_path),
+SmbFilesystem::SmbFilesystem(Delegate* delegate, const std::string& share_path)
+    : delegate_(delegate),
+      share_path_(share_path),
       samba_thread_(kSambaThreadName),
-      stat_cache_(kStatCacheSize) {}
+      stat_cache_(kStatCacheSize) {
+  DCHECK(delegate_);
+}
 
 SmbFilesystem::~SmbFilesystem() {
   if (context_) {
@@ -172,6 +177,7 @@ SmbFilesystem::ConnectError SmbFilesystem::EnsureConnected() {
   }
 
   smbc_closedir_ctx_(context_, dir);
+  connected_ = true;
   return ConnectError::kOk;
 }
 
@@ -310,6 +316,49 @@ SMBCFILE* SmbFilesystem::LookupOpenFile(uint64_t handle) const {
   return it->second;
 }
 
+void SmbFilesystem::MaybeUpdateCredentials(int error) {
+  if (use_kerberos_) {
+    // If Kerberos is being used, it is assumed a valid user/workgroup has
+    // already been provided, and password is always ignored.
+    return;
+  } else if (connected_) {
+    // If a connection has already been made successfully, assume the
+    // existing credentials are correct.
+    return;
+  }
+
+  if (error == EPERM || error == EACCES) {
+    // Delegate calls must always be made on the constructor thread.
+    main_task_runner_->PostTask(
+        FROM_HERE, base::BindOnce(&SmbFilesystem::RequestCredentialUpdate,
+                                  base::Unretained(this)));
+  }
+}
+
+void SmbFilesystem::RequestCredentialUpdate() {
+  DCHECK(main_task_runner_->BelongsToCurrentThread());
+
+  if (requesting_credentials_) {
+    // Do nothing if a credential request is already in progress.
+    return;
+  }
+
+  requesting_credentials_ = true;
+  delegate_->RequestCredentials(
+      base::Bind(&SmbFilesystem::OnRequestCredentialsDone, GetWeakPtr()));
+}
+
+void SmbFilesystem::OnRequestCredentialsDone(
+    std::unique_ptr<SmbCredential> credentials) {
+  requesting_credentials_ = false;
+  if (!credentials) {
+    return;
+  }
+
+  base::AutoLock l(lock_);
+  credentials_ = std::move(credentials);
+}
+
 // static
 void SmbFilesystem::GetUserAuth(SMBCCTX* context,
                                 const char* server,
@@ -323,7 +372,11 @@ void SmbFilesystem::GetUserAuth(SMBCCTX* context,
   SmbFilesystem* fs =
       static_cast<SmbFilesystem*>(smbc_getOptionUserData(context));
   DCHECK(fs);
-  DCHECK(fs->credentials_);
+
+  base::AutoLock l(fs->lock_);
+  if (!fs->credentials_) {
+    return;
+  }
 
   CopyCredential(fs->credentials_->workgroup, workgroup, workgroup_len);
   CopyCredential(fs->credentials_->username, username, username_len);
@@ -451,7 +504,11 @@ void SmbFilesystem::GetAttrInternal(std::unique_ptr<AttrRequest> request,
   if (!GetCachedInodeStat(inode, &smb_stat)) {
     int error = smbc_stat_ctx_(context_, share_file_path.c_str(), &smb_stat);
     if (error < 0) {
-      request->ReplyError(errno);
+      int error = errno;
+      if (inode == FUSE_ROOT_ID) {
+        MaybeUpdateCredentials(error);
+      }
+      request->ReplyError(error);
       return;
     }
   }
@@ -463,6 +520,7 @@ void SmbFilesystem::GetAttrInternal(std::unique_ptr<AttrRequest> request,
     return;
   }
 
+  connected_ = true;
   struct stat reply_stat = MakeStat(inode, smb_stat);
   request->ReplyAttr(reply_stat, kAttrTimeoutSeconds);
 }

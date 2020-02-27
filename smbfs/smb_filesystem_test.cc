@@ -7,22 +7,47 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
+#include <utility>
+
+#include <base/message_loop/message_loop.h>
+#include <base/run_loop.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+
+#include "smbfs/smb_credential.h"
 
 namespace smbfs {
 namespace {
 
+using ::testing::_;
+
 constexpr char kSharePath[] = "smb://server/share";
+constexpr char kUsername[] = "my-username";
+
+class MockDelegate : public SmbFilesystem::Delegate {
+ public:
+  MOCK_METHOD(void,
+              RequestCredentials,
+              (RequestCredentialsCallback),
+              (override));
+};
 
 class TestSmbFilesystem : public SmbFilesystem {
  public:
-  TestSmbFilesystem() : SmbFilesystem(kSharePath) {}
+  TestSmbFilesystem() : SmbFilesystem(&delegate_, kSharePath) {}
+
+  MockDelegate& delegate() { return delegate_; }
+
+ private:
+  MockDelegate delegate_;
 };
 
 }  // namespace
 
-class SmbFilesystemTest : public testing::Test {};
+class SmbFilesystemTest : public testing::Test {
+ protected:
+  base::MessageLoopForIO message_loop_;
+};
 
 TEST_F(SmbFilesystemTest, SetResolvedAddress) {
   TestSmbFilesystem fs;
@@ -110,6 +135,86 @@ TEST_F(SmbFilesystemTest, MakeStatModeBitsFromDOSAttributes) {
   dos_attrs = SMBC_DOS_MODE_READONLY | SMBC_DOS_MODE_DIRECTORY;
   out_mode = fs.MakeStatModeBitsFromDOSAttributes(dos_attrs);
   EXPECT_TRUE(out_mode & (S_IFDIR | S_IWUSR));
+}
+
+TEST_F(SmbFilesystemTest, MaybeUpdateCredentials_NoRequest) {
+  TestSmbFilesystem fs;
+
+  EXPECT_CALL(fs.delegate(), RequestCredentials(_)).Times(0);
+  fs.MaybeUpdateCredentials(EBUSY);
+  base::RunLoop().RunUntilIdle();
+}
+
+TEST_F(SmbFilesystemTest, MaybeUpdateCredentials_RequestOnEPERM) {
+  TestSmbFilesystem fs;
+
+  EXPECT_FALSE(fs.credentials_);
+
+  base::RunLoop run_loop;
+  EXPECT_CALL(fs.delegate(), RequestCredentials(_))
+      .WillOnce([&](MockDelegate::RequestCredentialsCallback callback) {
+        std::move(callback).Run(std::make_unique<SmbCredential>(
+            "" /* workgroup */, kUsername, nullptr));
+        run_loop.Quit();
+      });
+  fs.MaybeUpdateCredentials(EPERM);
+  run_loop.Run();
+
+  EXPECT_TRUE(fs.credentials_);
+  EXPECT_EQ(fs.credentials_->username, kUsername);
+}
+
+TEST_F(SmbFilesystemTest, MaybeUpdateCredentials_RequestOnEACCES) {
+  TestSmbFilesystem fs;
+
+  EXPECT_FALSE(fs.credentials_);
+
+  base::RunLoop run_loop;
+  EXPECT_CALL(fs.delegate(), RequestCredentials(_))
+      .WillOnce([&](MockDelegate::RequestCredentialsCallback callback) {
+        std::move(callback).Run(std::make_unique<SmbCredential>(
+            "" /* workgroup */, kUsername, nullptr));
+        run_loop.Quit();
+      });
+  fs.MaybeUpdateCredentials(EACCES);
+  run_loop.Run();
+
+  EXPECT_TRUE(fs.credentials_);
+  EXPECT_EQ(fs.credentials_->username, kUsername);
+}
+
+TEST_F(SmbFilesystemTest, MaybeUpdateCredentials_NoDelegate) {
+  TestSmbFilesystem fs;
+
+  fs.MaybeUpdateCredentials(EPERM);
+  base::RunLoop().RunUntilIdle();
+}
+
+TEST_F(SmbFilesystemTest, MaybeUpdateCredentials_OnlyOneRequest) {
+  TestSmbFilesystem fs;
+
+  EXPECT_CALL(fs.delegate(), RequestCredentials(_)).Times(1);
+  fs.MaybeUpdateCredentials(EACCES);
+  fs.MaybeUpdateCredentials(EACCES);
+  base::RunLoop().RunUntilIdle();
+}
+
+TEST_F(SmbFilesystemTest, MaybeUpdateCredentials_IgnoreEmptyResponse) {
+  TestSmbFilesystem fs;
+
+  fs.credentials_ =
+      std::make_unique<SmbCredential>("" /* workgroup */, kUsername, nullptr);
+
+  base::RunLoop run_loop;
+  EXPECT_CALL(fs.delegate(), RequestCredentials(_))
+      .WillOnce([&](MockDelegate::RequestCredentialsCallback callback) {
+        std::move(callback).Run(nullptr);
+        run_loop.Quit();
+      });
+  fs.MaybeUpdateCredentials(EACCES);
+  run_loop.Run();
+
+  EXPECT_TRUE(fs.credentials_);
 }
 
 }  // namespace smbfs

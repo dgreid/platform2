@@ -31,7 +31,8 @@ struct Options;
 // a mojom::SmbFsBootstrap implementation), synchronising with Kerberos,
 // owning/running the FUSE session, and owning the Mojo interfaces to the
 // browser.
-class MojoSession : public SmbFsBootstrapImpl::Delegate {
+class MojoSession : public SmbFsBootstrapImpl::Delegate,
+                    public SmbFilesystem::Delegate {
  public:
   MojoSession(scoped_refptr<dbus::Bus> bus,
               const base::FilePath& temp_dir,
@@ -46,6 +47,13 @@ class MojoSession : public SmbFsBootstrapImpl::Delegate {
   // SmbFsBootstrapImpl::Delegate overrides.
   void SetupKerberos(mojom::KerberosConfigPtr kerberos_config,
                      base::OnceCallback<void(bool success)> callback) override;
+
+  // SmbFilesystem::Delegate overrides.
+  void RequestCredentials(RequestCredentialsCallback callback) override;
+
+  // Callback for mojom::SmbFsDelegate::RequestCredentials().
+  void OnRequestCredentialsDone(RequestCredentialsCallback callback,
+                                mojom::CredentialsPtr credentials);
 
   // Returns the full path to the given kerberos configuration file.
   base::FilePath KerberosConfFilePath(const std::string& file_name);

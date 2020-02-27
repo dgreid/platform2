@@ -36,15 +36,26 @@ const char kUsername[] = "my-username";
 const char kPassword[] = "my-super-secret-password";
 const char kKerberosGuid[] = "1234-5678-my-guid";
 
+class MockSmbFilesystemDelegate : public SmbFilesystem::Delegate {
+ public:
+  MOCK_METHOD(void,
+              RequestCredentials,
+              (RequestCredentialsCallback),
+              (override));
+};
+
 class MockSmbFilesystem : public SmbFilesystem {
  public:
-  MockSmbFilesystem() : SmbFilesystem(kSharePath) {}
+  MockSmbFilesystem() : SmbFilesystem(&delegate_, kSharePath) {}
 
   MOCK_METHOD(ConnectError, EnsureConnected, (), (override));
   MOCK_METHOD(void,
               SetResolvedAddress,
               (const std::vector<uint8_t>&),
               (override));
+
+ private:
+  MockSmbFilesystemDelegate delegate_;
 };
 
 class MockBootstrapDelegate : public SmbFsBootstrapImpl::Delegate {
@@ -60,6 +71,11 @@ class MockSmbFsDelegate : public mojom::SmbFsDelegate {
  public:
   explicit MockSmbFsDelegate(mojom::SmbFsDelegateRequest request)
       : binding_(this, std::move(request)) {}
+
+  MOCK_METHOD(void,
+              RequestCredentials,
+              (const RequestCredentialsCallback&),
+              (override));
 
  private:
   mojo::Binding<mojom::SmbFsDelegate> binding_;

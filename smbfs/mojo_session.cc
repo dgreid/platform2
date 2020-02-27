@@ -106,7 +106,8 @@ std::unique_ptr<SmbFilesystem> MojoSession::CreateSmbFilesystem(
     SmbFilesystem::Options options) {
   options.uid = uid_;
   options.gid = gid_;
-  return std::make_unique<SmbFilesystem>(std::move(options));
+  options.use_kerberos = kerberos_sync_.get();
+  return std::make_unique<SmbFilesystem>(this, std::move(options));
 }
 
 void MojoSession::OnBootstrapComplete(std::unique_ptr<SmbFilesystem> fs,
@@ -139,6 +140,28 @@ void MojoSession::DoShutdown() {
   }
 
   std::move(shutdown_callback_).Run();
+}
+
+void MojoSession::RequestCredentials(RequestCredentialsCallback callback) {
+  DCHECK(smbfs_delegate_);
+  smbfs_delegate_->RequestCredentials(
+      base::Bind(&MojoSession::OnRequestCredentialsDone, base::Unretained(this),
+                 base::Passed(&callback)));
+}
+
+void MojoSession::OnRequestCredentialsDone(RequestCredentialsCallback callback,
+                                           mojom::CredentialsPtr credentials) {
+  if (!credentials) {
+    std::move(callback).Run(nullptr);
+    return;
+  }
+
+  std::unique_ptr<SmbCredential> smb_cred = std::make_unique<SmbCredential>(
+      credentials->workgroup, credentials->username, nullptr);
+  if (credentials->password) {
+    smb_cred->password = std::move(credentials->password.value());
+  }
+  std::move(callback).Run(std::move(smb_cred));
 }
 
 }  // namespace smbfs
