@@ -20,6 +20,7 @@ class MockTpmCache : public TpmCache {
 
   MOCK_METHOD(
       TPM_RC, GetSaltingKeyPublicArea, (TPMT_PUBLIC* public_area), (override));
+  MOCK_METHOD(TPM_ALG_ID, GetBestSupportedKeyType, (), (override));
 
  private:
   DISALLOW_COPY_AND_ASSIGN(MockTpmCache);
