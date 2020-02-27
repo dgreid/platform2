@@ -1,0 +1,4 @@
+type cros_ippusb_manager, domain, chromeos_domain;
+permissive cros_ippusb_manager;
+
+from_minijail_preload(cros_ippusb_manager, cros_ippusb_manager_exec);

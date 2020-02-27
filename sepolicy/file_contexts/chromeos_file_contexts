@@ -65,6 +65,7 @@ include(sepolicy/file_contexts/sysfs_contexts)
 /usr/bin/esif_ufd               u:object_r:cros_esif_ufd_exec:s0
 /usr/bin/find                   u:object_r:cros_system_file:s0
 /usr/bin/ionice                 u:object_r:cros_ionice_exec:s0
+/usr/bin/ippusb_manager         u:object_r:cros_ippusb_manager_exec:s0
 /usr/bin/logger                 u:object_r:cros_logger_exec:s0
 /usr/bin/memd                   u:object_r:cros_memd_exec:s0
 /usr/bin/metrics_client         u:object_r:cros_metrics_client_exec:s0
