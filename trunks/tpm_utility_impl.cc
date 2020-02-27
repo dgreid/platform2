@@ -2041,14 +2041,6 @@ TPM_RC TpmUtilityImpl::SetKnownOwnerPassword(
 
 TPM_RC TpmUtilityImpl::CreateStorageRootKeys(
     const std::string& owner_password) {
-  TPM_RC result = TPM_RC_SUCCESS;
-  std::unique_ptr<TpmState> tpm_state(factory_.GetTpmState());
-  result = tpm_state->Initialize();
-  if (result) {
-    LOG(ERROR) << __func__ << ": Failed to initialize tpm_state: "
-               << GetErrorString(result);
-    return result;
-  }
   Tpm* tpm = factory_.GetTpm();
   TPML_PCR_SELECTION creation_pcrs;
   creation_pcrs.count = 0;
@@ -2065,7 +2057,7 @@ TPM_RC TpmUtilityImpl::CreateStorageRootKeys(
       factory_.GetPasswordAuthorization(owner_password);
 
   bool exists = false;
-  result = DoesPersistentKeyExist(kStorageRootKey, &exists);
+  TPM_RC result = DoesPersistentKeyExist(kStorageRootKey, &exists);
   if (result) {
     return result;
   }
@@ -2074,20 +2066,9 @@ TPM_RC TpmUtilityImpl::CreateStorageRootKeys(
     return TPM_RC_SUCCESS;
   }
 
-  // Decide the SRK key type, the priority is
-  // 1. ECC
-  // 2. RSA
-  TPM_ALG_ID key_type;
-  std::string key_type_str;
-  if (tpm_state->IsECCSupported()) {
-    key_type = TPM_ALG_ECC;
-    key_type_str = "ECC";
-  } else if (tpm_state->IsRSASupported()) {
-    key_type = TPM_ALG_RSA;
-    key_type_str = "RSA";
-  } else {
-    LOG(ERROR) << __func__ << ": Error creating salting key, "
-                              "neither ECC nor SRK is supported.";
+  TPM_ALG_ID key_type = factory_.GetTpmCache()->GetBestSupportedKeyType();
+  if (key_type != TPM_ALG_ECC && key_type != TPM_ALG_RSA) {
+    LOG(ERROR) << __func__ << ": Failed to get the best supported key type.";
     return TPM_RC_FAILURE;
   }
 
@@ -2114,6 +2095,7 @@ TPM_RC TpmUtilityImpl::CreateStorageRootKeys(
   }
   ScopedKeyHandle tpm_key(factory_, object_handle);
 
+  const std::string key_type_str = key_type == TPM_ALG_ECC ? "ECC" : "RSA";
   LOG(INFO) << __func__ << ": Created " << key_type_str << " SRK.";
 
   // This will make the key persistent.
@@ -2146,26 +2128,9 @@ TPM_RC TpmUtilityImpl::CreateSaltingKey(const std::string& owner_password) {
     return result;
   }
 
-  std::unique_ptr<TpmState> tpm_state(factory_.GetTpmState());
-  result = tpm_state->Initialize();
-  if (result) {
-    LOG(ERROR) << __func__ << ": Error refreshing TPM states: "
-               << GetErrorString(result);
-    return result;
-  }
-
-  // Decides salting key type. ECC is preferred to RSA.
-  TPM_ALG_ID key_type;
-  std::string key_type_str;
-  if (tpm_state->IsECCSupported()) {
-    key_type = TPM_ALG_ECC;
-    key_type_str = "ECC";
-  } else if (tpm_state->IsRSASupported()) {
-    key_type = TPM_ALG_RSA;
-    key_type_str = "RSA";
-  } else {
-    LOG(ERROR) << __func__ << ": Error creating salting key, "
-                              "neither ECC nor SRK is supported.";
+  TPM_ALG_ID key_type = factory_.GetTpmCache()->GetBestSupportedKeyType();
+  if (key_type != TPM_ALG_ECC && key_type != TPM_ALG_RSA) {
+    LOG(ERROR) << __func__ << ": Failed to get the best supported key type.";
     return TPM_RC_FAILURE;
   }
 
@@ -2203,6 +2168,8 @@ TPM_RC TpmUtilityImpl::CreateSaltingKey(const std::string& owner_password) {
                << ": Error creating salting key: " << GetErrorString(result);
     return result;
   }
+
+  const std::string key_type_str = key_type == TPM_ALG_ECC ? "ECC" : "RSA";
   LOG(INFO) << __func__ << ": Created " << key_type_str << " salting key.";
 
   TPM2B_NAME key_name;

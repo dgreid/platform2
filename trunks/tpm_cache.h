@@ -23,6 +23,12 @@ class TRUNKS_EXPORT TpmCache {
   // is untouched if there's an error.
   virtual TPM_RC GetSaltingKeyPublicArea(TPMT_PUBLIC* public_area) = 0;
 
+  // Returns the best supported key type for SRK and salting key, and it can
+  // only be TPM_ALG_ECC or TPM_ALG_RSA. ECC is preferred to RSA. If the cache
+  // doesn't exist, gets the info from TPM and caches it. In case neither ECC
+  // nor RSA is supported, or there is an error, returns TPM_ALG_ERROR.
+  virtual TPM_ALG_ID GetBestSupportedKeyType() = 0;
+
  private:
   DISALLOW_COPY_AND_ASSIGN(TpmCache);
 };
