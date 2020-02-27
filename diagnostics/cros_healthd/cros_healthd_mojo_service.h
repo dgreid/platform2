@@ -15,6 +15,7 @@
 #include <mojo/public/cpp/bindings/binding_set.h>
 
 #include "diagnostics/cros_healthd/cros_healthd_routine_service.h"
+#include "diagnostics/cros_healthd/utils/backlight_utils.h"
 #include "diagnostics/cros_healthd/utils/battery_utils.h"
 #include "diagnostics/cros_healthd/utils/vpd_utils.h"
 #include "mojo/cros_healthd.mojom.h"
@@ -32,10 +33,12 @@ class CrosHealthdMojoService final
   using ProbeCategoryEnum = chromeos::cros_healthd::mojom::ProbeCategoryEnum;
   using RunRoutineResponse = chromeos::cros_healthd::mojom::RunRoutineResponse;
 
+  // |backlight_fetcher| - BacklightFetcher implementation.
   // |battery_fetcher| - BatteryFetcher implementation.
   // |cached_vpd_fetcher| - CachedVpdFetcher implementation.
   // |routine_service| - CrosHealthdRoutineService implementation.
-  CrosHealthdMojoService(BatteryFetcher* battery_fetcher,
+  CrosHealthdMojoService(BacklightFetcher* backlight_fetcher,
+                         BatteryFetcher* battery_fetcher,
                          CachedVpdFetcher* cached_vpd_fetcher,
                          CrosHealthdRoutineService* routine_service);
   ~CrosHealthdMojoService() override;
@@ -84,6 +87,8 @@ class CrosHealthdMojoService final
   mojo::BindingSet<chromeos::cros_healthd::mojom::CrosHealthdDiagnosticsService>
       diagnostics_binding_set_;
 
+  // Unowned. The backlight fetcher should outlive this instance.
+  BacklightFetcher* backlight_fetcher_;
   // Unowned. The battery fetcher should outlive this instance.
   BatteryFetcher* battery_fetcher_;
   // Unowned. The cached VPD fetcher should outlive this instance.

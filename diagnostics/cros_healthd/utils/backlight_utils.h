@@ -1,0 +1,35 @@
+// Copyright 2020 The Chromium OS Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#ifndef DIAGNOSTICS_CROS_HEALTHD_UTILS_BACKLIGHT_UTILS_H_
+#define DIAGNOSTICS_CROS_HEALTHD_UTILS_BACKLIGHT_UTILS_H_
+
+#include <vector>
+
+#include <base/files/file_path.h>
+#include <base/macros.h>
+#include <chromeos/chromeos-config/libcros_config/cros_config_interface.h>
+
+#include "mojo/cros_healthd_probe.mojom.h"
+
+namespace diagnostics {
+
+class BacklightFetcher final {
+ public:
+  explicit BacklightFetcher(brillo::CrosConfigInterface* cros_config);
+  ~BacklightFetcher();
+
+  std::vector<chromeos::cros_healthd::mojom::BacklightInfoPtr>
+  FetchBacklightInfo(const base::FilePath& root_dir);
+
+ private:
+  // Unowned pointer that should outlive this instance.
+  brillo::CrosConfigInterface* cros_config_;
+
+  DISALLOW_COPY_AND_ASSIGN(BacklightFetcher);
+};
+
+}  // namespace diagnostics
+
+#endif  // DIAGNOSTICS_CROS_HEALTHD_UTILS_BACKLIGHT_UTILS_H_

@@ -37,6 +37,8 @@ constexpr std::pair<const char*,
         {"timezone",
          chromeos::cros_healthd::mojom::ProbeCategoryEnum::kTimezone},
         {"memory", chromeos::cros_healthd::mojom::ProbeCategoryEnum::kMemory},
+        {"backlight",
+         chromeos::cros_healthd::mojom::ProbeCategoryEnum::kBacklight},
 };
 
 std::string GetArchitectureString(CpuArchitectureEnum architecture) {
@@ -133,6 +135,16 @@ void DisplayMemoryInfo(
          memory->available_memory_kib, memory->page_faults_since_last_boot);
 }
 
+void DisplayBacklightInfo(
+    const std::vector<chromeos::cros_healthd::mojom::BacklightInfoPtr>&
+        backlights) {
+  printf("path,max_brightness,brightness\n");
+  for (const auto& backlight : backlights) {
+    printf("%s,%u,%u\n", backlight->path.c_str(), backlight->max_brightness,
+           backlight->brightness);
+  }
+}
+
 // Displays the retrieved telemetry information to the console.
 void DisplayTelemetryInfo(
     const chromeos::cros_healthd::mojom::TelemetryInfoPtr& info) {
@@ -159,6 +171,10 @@ void DisplayTelemetryInfo(
   const auto& memory = info->memory_info;
   if (!memory.is_null())
     DisplayMemoryInfo(memory);
+
+  const auto& backlights = info->backlight_info;
+  if (backlights)
+    DisplayBacklightInfo(backlights.value());
 }
 
 // Create a stringified list of the category names for use in help.

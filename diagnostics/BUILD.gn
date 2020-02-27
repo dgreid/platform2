@@ -95,6 +95,7 @@ source_set("libcros_healthd_utils") {
   libs = [ "tzif_parser" ]
   all_dependent_configs = [ ":libcros_healthd_utils_pkg_deps" ]
   sources = [
+    "cros_healthd/utils/backlight_utils.cc",
     "cros_healthd/utils/battery_utils.cc",
     "cros_healthd/utils/cpu_utils.cc",
     "cros_healthd/utils/disk_utils.cc",
@@ -307,6 +308,7 @@ if (use.test) {
       "//diagnostics/common:libcommon_test_utils",
     ]
     sources = [
+      "cros_healthd/utils/backlight_utils_test.cc",
       "cros_healthd/utils/battery_utils_test.cc",
       "cros_healthd/utils/cpu_utils_test.cc",
       "cros_healthd/utils/memory_utils_test.cc",

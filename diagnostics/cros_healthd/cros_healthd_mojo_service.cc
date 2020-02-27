@@ -23,12 +23,15 @@ namespace diagnostics {
 namespace mojo_ipc = ::chromeos::cros_healthd::mojom;
 
 CrosHealthdMojoService::CrosHealthdMojoService(
+    BacklightFetcher* backlight_fetcher,
     BatteryFetcher* battery_fetcher,
     CachedVpdFetcher* cached_vpd_fetcher,
     CrosHealthdRoutineService* routine_service)
-    : battery_fetcher_(battery_fetcher),
+    : backlight_fetcher_(backlight_fetcher),
+      battery_fetcher_(battery_fetcher),
       cached_vpd_fetcher_(cached_vpd_fetcher),
       routine_service_(routine_service) {
+  DCHECK(backlight_fetcher_);
   DCHECK(battery_fetcher_);
   DCHECK(cached_vpd_fetcher_);
   DCHECK(routine_service_);
@@ -132,6 +135,11 @@ void CrosHealthdMojoService::ProbeTelemetryInfo(
       }
       case ProbeCategoryEnum::kMemory: {
         telemetry_info.memory_info = FetchMemoryInfo(base::FilePath("/"));
+        break;
+      }
+      case ProbeCategoryEnum::kBacklight: {
+        telemetry_info.backlight_info =
+            backlight_fetcher_->FetchBacklightInfo(base::FilePath("/"));
         break;
       }
     }
