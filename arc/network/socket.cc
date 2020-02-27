@@ -6,11 +6,9 @@
 
 #include <arpa/inet.h>
 #include <errno.h>
-#include <linux/vm_sockets.h>
 #include <net/if.h>
 #include <string.h>
 #include <sys/ioctl.h>
-#include <sys/un.h>
 #include <unistd.h>
 
 #include <utility>
@@ -18,55 +16,14 @@
 #include <base/logging.h>
 #include <base/memory/ptr_util.h>
 
+#include "arc/network/net_util.h"
+
 namespace arc_networkd {
 namespace {
 
 bool WouldBlock() {
   return errno == EAGAIN || errno == EWOULDBLOCK;
 }
-
-std::ostream& operator<<(std::ostream& stream, const struct sockaddr& addr) {
-  stream << "{family: " << addr.sa_family;
-  switch (addr.sa_family) {
-    case AF_INET: {
-      struct sockaddr_in* in = (struct sockaddr_in*)&addr;
-      char buf[INET_ADDRSTRLEN] = {0};
-      inet_ntop(AF_INET, &in->sin_addr, buf, sizeof(buf));
-      stream << ", port: " << ntohs(in->sin_port) << ", addr: " << buf;
-      break;
-    }
-    case AF_INET6: {
-      struct sockaddr_in6* in = (struct sockaddr_in6*)&addr;
-      char buf[INET6_ADDRSTRLEN] = {0};
-      inet_ntop(AF_INET6, &in->sin6_addr, buf, sizeof(buf));
-      stream << ", port: " << ntohs(in->sin6_port) << ", addr: " << buf;
-      break;
-    }
-    case AF_UNIX: {
-      struct sockaddr_un* in = (struct sockaddr_un*)&addr;
-      size_t addrlen = sizeof(*in);
-      if (addrlen == sizeof(sa_family_t)) {
-        stream << ", (unnamed)";
-      } else if (in->sun_path[0] == '\0') {
-        stream << ", path: @";
-        stream.write(&in->sun_path[1], addrlen - sizeof(sa_family_t) - 1);
-      } else {
-        stream << ", path: " << std::string(in->sun_path);
-      }
-      break;
-    }
-    case AF_VSOCK: {
-      struct sockaddr_vm* in = (struct sockaddr_vm*)&addr;
-      stream << ", port: " << in->svm_port << ", cid: " << in->svm_cid;
-      break;
-    }
-    default:
-      stream << ", (unknown)";
-  }
-  stream << "}";
-  return stream;
-}
-
 }  // namespace
 
 Socket::Socket(int family, int type) : fd_(socket(family, type, 0)) {

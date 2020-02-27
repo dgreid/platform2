@@ -167,4 +167,132 @@ TEST(Ipv4, BroadcastAddr) {
   }
 }
 
+TEST(PrettyPrint, SocketAddrIn) {
+  struct sockaddr_in ipv4_sockaddr = {};
+  std::ostringstream stream;
+
+  stream << ipv4_sockaddr;
+  EXPECT_EQ("{family: AF_INET, port: 0, addr: 0.0.0.0}", stream.str());
+
+  ipv4_sockaddr.sin_family = AF_INET;
+  ipv4_sockaddr.sin_port = htons(1234);
+  ipv4_sockaddr.sin_addr.s_addr = Ipv4Addr(100, 115, 92, 10);
+  std::string expected_output =
+      "{family: AF_INET, port: 1234, addr: 100.115.92.10}";
+
+  stream.str("");
+  stream << ipv4_sockaddr;
+  EXPECT_EQ(expected_output, stream.str());
+
+  stream.str("");
+  stream << (const struct sockaddr&)ipv4_sockaddr;
+  EXPECT_EQ(expected_output, stream.str());
+
+  struct sockaddr_storage sockaddr_storage = {};
+  memcpy(&sockaddr_storage, &ipv4_sockaddr, sizeof(ipv4_sockaddr));
+
+  stream.str("");
+  stream << sockaddr_storage;
+  EXPECT_EQ(expected_output, stream.str());
+}
+
+TEST(PrettyPrint, SocketAddrIn6) {
+  struct sockaddr_in6 ipv6_sockaddr = {};
+  std::ostringstream stream;
+
+  stream << ipv6_sockaddr;
+  EXPECT_EQ("{family: AF_INET6, port: 0, addr: ::}", stream.str());
+
+  ipv6_sockaddr.sin6_family = AF_INET6;
+  ipv6_sockaddr.sin6_port = htons(2345);
+  unsigned char addr[16] = {0x20, 0x01, 0xd,  0xb1, 0,    0,    0,    0,
+                            0xab, 0xcd, 0x12, 0x34, 0x56, 0x78, 0xfe, 0xaa};
+  memcpy(ipv6_sockaddr.sin6_addr.s6_addr, addr, sizeof(addr));
+  std::string expected_output =
+      "{family: AF_INET6, port: 2345, addr: 2001:db1::abcd:1234:5678:feaa}";
+
+  stream.str("");
+  stream << ipv6_sockaddr;
+  EXPECT_EQ(expected_output, stream.str());
+
+  stream.str("");
+  stream << (const struct sockaddr&)ipv6_sockaddr;
+  EXPECT_EQ(expected_output, stream.str());
+
+  struct sockaddr_storage sockaddr_storage = {};
+  memcpy(&sockaddr_storage, &ipv6_sockaddr, sizeof(ipv6_sockaddr));
+
+  stream.str("");
+  stream << sockaddr_storage;
+  EXPECT_EQ(expected_output, stream.str());
+}
+
+TEST(PrettyPrint, SocketAddrVsock) {
+  struct sockaddr_vm vm_sockaddr = {};
+  std::ostringstream stream;
+
+  stream << vm_sockaddr;
+  EXPECT_EQ("{family: AF_VSOCK, port: 0, cid: 0}", stream.str());
+
+  vm_sockaddr.svm_family = AF_VSOCK;
+  vm_sockaddr.svm_port = 5555;
+  vm_sockaddr.svm_cid = 4;
+  std::string expected_output = "{family: AF_VSOCK, port: 5555, cid: 4}";
+
+  stream.str("");
+  stream << vm_sockaddr;
+  EXPECT_EQ(expected_output, stream.str());
+
+  stream.str("");
+  stream << (const struct sockaddr&)vm_sockaddr;
+  EXPECT_EQ(expected_output, stream.str());
+
+  struct sockaddr_storage sockaddr_storage = {};
+  memcpy(&sockaddr_storage, &vm_sockaddr, sizeof(vm_sockaddr));
+
+  stream.str("");
+  stream << sockaddr_storage;
+  EXPECT_EQ(expected_output, stream.str());
+}
+
+TEST(PrettyPrint, SocketAddrUnix) {
+  struct sockaddr_un unix_sockaddr = {};
+  std::ostringstream stream;
+
+  stream << unix_sockaddr;
+  EXPECT_EQ("{family: AF_UNIX, path: @}", stream.str());
+
+  // Fill |sun_path| with an invalid non-null-terminated c string.
+  std::string bogus_output = "{family: AF_UNIX, path: ";
+  for (size_t i = 0; i < sizeof(unix_sockaddr.sun_path); i++) {
+    unix_sockaddr.sun_path[i] = 'a';
+    bogus_output += 'a';
+  }
+  bogus_output += '}';
+  stream.str("");
+  stream << unix_sockaddr;
+  EXPECT_EQ(bogus_output, stream.str());
+
+  memset(&unix_sockaddr, 0, sizeof(unix_sockaddr));
+  unix_sockaddr.sun_family = AF_UNIX;
+  std::string sun_path = "/run/arc/adb";
+  memcpy(&unix_sockaddr.sun_path, sun_path.c_str(), strlen(sun_path.c_str()));
+  std::string expected_output = "{family: AF_UNIX, path: /run/arc/adb}";
+
+  stream.str("");
+  stream << unix_sockaddr;
+  EXPECT_EQ(expected_output, stream.str());
+
+  stream.str("");
+  stream << (const struct sockaddr&)unix_sockaddr;
+  EXPECT_EQ(expected_output, stream.str());
+
+  struct sockaddr_storage sockaddr_storage = {};
+  memcpy(&sockaddr_storage, &unix_sockaddr, sizeof(unix_sockaddr));
+
+  stream.str("");
+  stream << sockaddr_storage;
+  EXPECT_EQ(expected_output, stream.str());
+}
+
 }  // namespace arc_networkd

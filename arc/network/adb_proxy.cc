@@ -81,12 +81,15 @@ void AdbProxy::OnParentProcessExit() {
 }
 
 void AdbProxy::OnFileCanReadWithoutBlocking() {
-  if (auto conn = src_->Accept()) {
-    if (auto dst = Connect()) {
-      LOG(INFO) << "Connection established: " << *conn << " <-> " << *dst;
+  struct sockaddr_storage client_src = {};
+  socklen_t sockaddr_len = sizeof(client_src);
+  if (auto client_conn =
+          src_->Accept((struct sockaddr*)&client_src, &sockaddr_len)) {
+    LOG(INFO) << "new adb connection from " << client_src;
+    if (auto adbd_conn = Connect()) {
       auto fwd = std::make_unique<SocketForwarder>(
-          base::StringPrintf("adbp%d-%d", conn->fd(), dst->fd()),
-          std::move(conn), std::move(dst));
+          base::StringPrintf("adbp%d-%d", client_conn->fd(), adbd_conn->fd()),
+          std::move(client_conn), std::move(adbd_conn));
       fwd->Start();
       fwd_.emplace_back(std::move(fwd));
     }
@@ -109,13 +112,12 @@ std::unique_ptr<Socket> AdbProxy::Connect() const {
       snprintf(addr_un.sun_path, sizeof(addr_un.sun_path), "%s",
                kUnixConnectAddr);
       auto dst = std::make_unique<Socket>(AF_UNIX, SOCK_STREAM);
-      if (dst->Connect((const struct sockaddr*)&addr_un, sizeof(addr_un)))
+      if (dst->Connect((const struct sockaddr*)&addr_un, sizeof(addr_un))) {
+        LOG(INFO) << "Established adbd connection to " << addr_un;
         return dst;
-      LOG(WARNING) << "Failed to connect to UNIX domain socket: "
-                   << kUnixConnectAddr;
+      }
       // We need to be able to fallback on TCP while doing UNIX domain socket
       // migration to prevent unwanted failures.
-      LOG(INFO) << "Fallback to TCP";
       FALLTHROUGH;
     }
     case GuestMessage::ARC_LEGACY: {
@@ -124,9 +126,10 @@ std::unique_ptr<Socket> AdbProxy::Connect() const {
       addr_in.sin_port = htons(kTcpConnectPort);
       addr_in.sin_addr.s_addr = kTcpAddr;
       auto dst = std::make_unique<Socket>(AF_INET, SOCK_STREAM);
-      return dst->Connect((const struct sockaddr*)&addr_in, sizeof(addr_in))
-                 ? std::move(dst)
-                 : nullptr;
+      if (!dst->Connect((const struct sockaddr*)&addr_in, sizeof(addr_in)))
+        return nullptr;
+      LOG(INFO) << "Established adbd connection to " << addr_in;
+      return dst;
     }
     case GuestMessage::ARC_VM: {
       struct sockaddr_vm addr_vm = {0};
@@ -134,9 +137,10 @@ std::unique_ptr<Socket> AdbProxy::Connect() const {
       addr_vm.svm_port = kVsockPort;
       addr_vm.svm_cid = arcvm_vsock_cid_;
       auto dst = std::make_unique<Socket>(AF_VSOCK, SOCK_STREAM);
-      return dst->Connect((const struct sockaddr*)&addr_vm, sizeof(addr_vm))
-                 ? std::move(dst)
-                 : nullptr;
+      if (!dst->Connect((const struct sockaddr*)&addr_vm, sizeof(addr_vm)))
+        return nullptr;
+      LOG(INFO) << "Established adbd connection to " << addr_vm;
+      return dst;
     }
     default:
       LOG(DFATAL) << "Unexpected connect - no ARC guest";
@@ -172,17 +176,17 @@ void AdbProxy::OnGuestMessage(const GuestMessage& msg) {
     addr.sin_port = htons(kTcpListenPort);
     addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
     if (!src_->Bind((const struct sockaddr*)&addr, sizeof(addr))) {
-      LOG(ERROR) << "Cannot bind source socket";
+      LOG(ERROR) << "Cannot bind source socket to " << addr;
       return;
     }
 
     if (!src_->Listen(kMaxConn)) {
-      LOG(ERROR) << "Cannot listen on source socket";
+      LOG(ERROR) << "Cannot listen on " << addr;
       return;
     }
 
     // Run the accept loop.
-    LOG(INFO) << "Accepting connections...";
+    LOG(INFO) << "Accepting connections on " << addr;
     src_watcher_ = base::FileDescriptorWatcher::WatchReadable(
         src_->fd(), base::BindRepeating(&AdbProxy::OnFileCanReadWithoutBlocking,
                                         base::Unretained(this)));

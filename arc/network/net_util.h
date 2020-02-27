@@ -5,13 +5,16 @@
 #include <arpa/inet.h>
 #include <ifaddrs.h>
 #include <linux/in6.h>
+#include <linux/vm_sockets.h>
 #include <netinet/icmp6.h>
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #include <netinet/ip6.h>
 #include <netinet/udp.h>
 #include <stdint.h>
+#include <sys/socket.h>
 #include <sys/types.h>
+#include <sys/un.h>
 
 #include <string>
 
@@ -81,6 +84,13 @@ bool GenerateRandomIPv6Prefix(struct in6_addr* prefix, int len);
 
 std::ostream& operator<<(std::ostream& stream, const struct in_addr& addr);
 std::ostream& operator<<(std::ostream& stream, const struct in6_addr& addr);
+std::ostream& operator<<(std::ostream& stream, const struct sockaddr& addr);
+std::ostream& operator<<(std::ostream& stream,
+                         const struct sockaddr_storage& addr);
+std::ostream& operator<<(std::ostream& stream, const struct sockaddr_in& addr);
+std::ostream& operator<<(std::ostream& stream, const struct sockaddr_in6& addr);
+std::ostream& operator<<(std::ostream& stream, const struct sockaddr_un& addr);
+std::ostream& operator<<(std::ostream& stream, const struct sockaddr_vm& addr);
 
 // Fold 32-bit into 16 bits.
 uint16_t FoldChecksum(uint32_t sum);

@@ -98,6 +98,57 @@ std::ostream& operator<<(std::ostream& stream, const struct in6_addr& addr) {
   return stream;
 }
 
+std::ostream& operator<<(std::ostream& stream, const struct sockaddr& addr) {
+  switch (addr.sa_family) {
+    case AF_INET:
+      return stream << (const struct sockaddr_in&)addr;
+    case AF_INET6:
+      return stream << (const struct sockaddr_in6&)addr;
+    case AF_UNIX:
+      return stream << (const struct sockaddr_un&)addr;
+    case AF_VSOCK:
+      return stream << (const struct sockaddr_vm&)addr;
+    default:
+      return stream << "{family: " << addr.sa_family << ", (unknown)}";
+  }
+}
+
+std::ostream& operator<<(std::ostream& stream,
+                         const struct sockaddr_storage& addr) {
+  return stream << (const struct sockaddr&)addr;
+}
+
+std::ostream& operator<<(std::ostream& stream, const struct sockaddr_in& addr) {
+  char buf[INET_ADDRSTRLEN] = {0};
+  inet_ntop(AF_INET, &addr.sin_addr, buf, sizeof(buf));
+  return stream << "{family: AF_INET, port: " << ntohs(addr.sin_port)
+                << ", addr: " << buf << "}";
+}
+
+std::ostream& operator<<(std::ostream& stream,
+                         const struct sockaddr_in6& addr) {
+  char buf[INET6_ADDRSTRLEN] = {0};
+  inet_ntop(AF_INET6, &addr.sin6_addr, buf, sizeof(buf));
+  return stream << "{family: AF_INET6, port: " << ntohs(addr.sin6_port)
+                << ", addr: " << buf << "}";
+}
+
+std::ostream& operator<<(std::ostream& stream, const struct sockaddr_un& addr) {
+  const size_t sun_path_length = sizeof(addr) - sizeof(sa_family_t);
+  // Add room for one extra char to ensure |buf| is a null terminated string
+  char buf[sun_path_length + 1] = {0};
+  memcpy(buf, addr.sun_path, sun_path_length);
+  if (buf[0] == '\0') {
+    buf[0] = '@';
+  }
+  return stream << "{family: AF_UNIX, path: " << buf << "}";
+}
+
+std::ostream& operator<<(std::ostream& stream, const struct sockaddr_vm& addr) {
+  return stream << "{family: AF_VSOCK, port: " << addr.svm_port
+                << ", cid: " << addr.svm_cid << "}";
+}
+
 uint16_t FoldChecksum(uint32_t sum) {
   while (sum >> 16)
     sum = (sum & 0xffff) + (sum >> 16);
