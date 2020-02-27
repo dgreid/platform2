@@ -489,7 +489,7 @@ TEST_F(TpmManagerServiceTest, TakeOwnershipFailure) {
 
 TEST_F(TpmManagerServiceTest, TakeOwnershipNoTpm) {
   EXPECT_CALL(mock_tpm_status_, IsTpmEnabled()).WillRepeatedly(Return(false));
-  EXPECT_CALL(mock_tpm_status_, CheckAndNotifyIfTpmOwned(_)).Times(0);
+  EXPECT_CALL(mock_tpm_initializer_, InitializeTpm()).Times(0);
   auto callback = [](TpmManagerServiceTestBase* self,
                      const TakeOwnershipReply& reply) {
     EXPECT_EQ(STATUS_NOT_AVAILABLE, reply.status());
