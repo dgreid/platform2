@@ -5,6 +5,7 @@
 #include "arc/vm/vsock_proxy/socket_stream.h"
 
 #include <errno.h>
+#include <fcntl.h>
 #include <unistd.h>
 
 #include <string>
@@ -24,7 +25,13 @@ SocketStream::SocketStream(base::ScopedFD fd,
                            base::OnceClosure error_handler)
     : fd_(std::move(fd)),
       can_send_fds_(can_send_fds),
-      error_handler_(std::move(error_handler)) {}
+      error_handler_(std::move(error_handler)) {
+  // Set non-blocking.
+  int flags = fcntl(fd_.get(), F_GETFL);
+  PCHECK(flags != -1);
+  flags = fcntl(fd_.get(), F_SETFL, flags | O_NONBLOCK);
+  PCHECK(flags != -1);
+}
 
 SocketStream::~SocketStream() = default;
 

@@ -84,10 +84,11 @@ TEST_F(SocketStreamTest, ReadEOF) {
 }
 
 TEST_F(SocketStreamTest, ReadError) {
-  // Pass invalid FD.
+  // Pass a non-socket FD.
+  base::ScopedFD fd(HANDLE_EINTR(open("/dev/null", O_RDONLY)));
   auto read_result =
-      SocketStream(base::ScopedFD(), true, base::BindOnce([]() {})).Read();
-  EXPECT_EQ(EBADF, read_result.error_code);
+      SocketStream(std::move(fd), true, base::BindOnce([]() {})).Read();
+  EXPECT_EQ(ENOTSOCK, read_result.error_code);
 }
 
 TEST_F(SocketStreamTest, Write) {
@@ -178,9 +179,9 @@ TEST_F(SocketStreamTest, WriteError) {
   bool error_handler_was_run = false;
   base::OnceClosure error_handler =
       base::BindOnce([](bool* run) { *run = true; }, &error_handler_was_run);
-  // Write to an invalid FD.
-  SocketStream(base::ScopedFD(), true, std::move(error_handler))
-      .Write(kData, {});
+  // Write to a non-socket FD.
+  base::ScopedFD fd(HANDLE_EINTR(open("/dev/null", O_RDONLY)));
+  SocketStream(std::move(fd), true, std::move(error_handler)).Write(kData, {});
   EXPECT_TRUE(error_handler_was_run);
 }
 
@@ -232,8 +233,9 @@ TEST_F(PipeStreamTest, ReadEOF) {
 }
 
 TEST_F(PipeStreamTest, ReadError) {
-  // Pass invalid FD.
-  auto read_result = SocketStream(base::ScopedFD(), false,
+  // Pass an unreadable FD.
+  base::ScopedFD fd(HANDLE_EINTR(open("/dev/null", O_WRONLY)));
+  auto read_result = SocketStream(std::move(fd), false,
                                   base::BindOnce([]() { ADD_FAILURE(); }))
                          .Read();
   EXPECT_EQ(EBADF, read_result.error_code);
