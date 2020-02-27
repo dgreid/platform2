@@ -114,6 +114,12 @@ void enter_vfs_namespace() {
     LOG(FATAL) << "minijail_mount_with_data(\"/sys\") failed";
   }
 
+  // Mount /run/chromeos-config/v1 to access chromeos-config.
+  if (minijail_bind(j.get(), "/run/chromeos-config/v1",
+                    "/run/chromeos-config/v1", 0)) {
+    LOG(FATAL) << "minijail_bind(\"/run/chromeos-config/v1\") failed";
+  }
+
   if (USE_TPM) {
     // For TPM 1.2 only: Enable utilities that communicate with TPM via tcsd -
     // mount directory containing tcsd socket.
