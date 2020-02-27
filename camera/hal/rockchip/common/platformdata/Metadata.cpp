@@ -28,9 +28,8 @@ const char *metaId2String(const metadata_value_t array[], int size, int value)
             return array[i].name;
     }
 
-    std::string out("id not found ");
-    out = out + std::to_string(value);
-    return out.c_str();
+    LOGE("Failed to find id: %d", value);
+    return "id not found";
 }
 } NAMESPACE_DECLARATION_END
 
