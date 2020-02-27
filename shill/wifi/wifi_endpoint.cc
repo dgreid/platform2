@@ -327,14 +327,14 @@ WiFiEndpointRefPtr WiFiEndpoint::MakeEndpoint(
 string WiFiEndpoint::ParseMode(const string& mode_string) {
   if (mode_string == WPASupplicant::kNetworkModeInfrastructure) {
     return kModeManaged;
-  } else if (mode_string == WPASupplicant::kNetworkModeAdHoc) {
-    SLOG(nullptr, 2) << "Shill does not support ad-hoc mode.";
-    return "";
-  } else if (mode_string == WPASupplicant::kNetworkModeAccessPoint) {
-    NOTREACHED() << "Shill does not support AP mode at this time.";
+  } else if (mode_string == WPASupplicant::kNetworkModeAdHoc ||
+             mode_string == WPASupplicant::kNetworkModeAccessPoint ||
+             mode_string == WPASupplicant::kNetworkModeP2P ||
+             mode_string == WPASupplicant::kNetworkModeMesh) {
+    SLOG(nullptr, 2) << "Shill does not support mode: " << mode_string;
     return "";
   } else {
-    NOTREACHED() << "Unknown WiFi endpoint mode!";
+    LOG(ERROR) << "Unknown WiFi endpoint mode: " << mode_string;
     return "";
   }
 }

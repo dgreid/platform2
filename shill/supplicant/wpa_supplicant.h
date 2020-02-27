@@ -94,6 +94,8 @@ class WPASupplicant {
   static const char kNetworkModeInfrastructure[];
   static const char kNetworkModeAdHoc[];
   static const char kNetworkModeAccessPoint[];
+  static const char kNetworkModeMesh[];
+  static const char kNetworkModeP2P[];
   static const char kNetworkPropertyBgscan[];
   static const char kNetworkPropertyCaPath[];
   static const char kNetworkPropertyDisableVHT[];
