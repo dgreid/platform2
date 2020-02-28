@@ -1229,6 +1229,9 @@ INSTANTIATE_TEST_CASE_P(
             EcEventReason::kNonWilcoCharger,
             base::make_optional<MojoEvent>(MojoEvent::kNonWilcoCharger)),
         std::make_tuple(
+            EcEventReason::kLowPowerCharger,
+            base::make_optional<MojoEvent>(MojoEvent::kLowPowerCharger)),
+        std::make_tuple(
             EcEventReason::kBatteryAuth,
             base::make_optional<MojoEvent>(MojoEvent::kBatteryAuth)),
         std::make_tuple(

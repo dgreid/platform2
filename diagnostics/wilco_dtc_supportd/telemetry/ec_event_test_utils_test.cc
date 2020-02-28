@@ -52,6 +52,8 @@ INSTANTIATE_TEST_CASE_P(
     testing::Values(
         std::make_tuple(EcEventReason::kNonWilcoCharger,
                         kEcEventNonWilcoCharger),
+        std::make_tuple(EcEventReason::kLowPowerCharger,
+                        kEcEventLowPowerCharger),
         std::make_tuple(EcEventReason::kBatteryAuth, kEcEventBatteryAuth),
         std::make_tuple(EcEventReason::kDockDisplay, kEcEventDockDisplay),
         std::make_tuple(EcEventReason::kDockThunderbolt,

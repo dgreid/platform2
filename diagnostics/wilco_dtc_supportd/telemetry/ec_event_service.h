@@ -51,6 +51,9 @@ class EcEventService {
       // When |SystemNotifySubType| is "AC_ADAPTER" and
       // |AcAdapterFlags::Cause::NON_WILCO_CHARGER| is true.
       kNonWilcoCharger,
+      // When |SystemNotifySubType| is "AC_ADAPTER" and
+      // |AcAdapterFlags::Cause::LOW_POWER_CHARGER| is true.
+      kLowPowerCharger,
       // When |SystemNotifySubType| is "BATTERY" and
       // |BatteryFlags::Cause::BATTERY_AUTH| is true.
       kBatteryAuth,
@@ -92,6 +95,8 @@ class EcEventService {
       enum Cause : uint16_t {
         // Barrel charger is incompatible and performance will be restricted.
         NON_WILCO_CHARGER = 1 << 0,
+        // Attached charger does not supply enough power.
+        LOW_POWER_CHARGER = 1 << 3,
       };
       uint16_t reserved0;
       Cause cause;

@@ -590,6 +590,9 @@ void Core::OnEcEvent(const EcEvent& ec_event) {
     case EcEventReason::kNonWilcoCharger:
       SendMojoEcEventToBrowser(MojoEvent::kNonWilcoCharger);
       break;
+    case EcEventReason::kLowPowerCharger:
+      SendMojoEcEventToBrowser(MojoEvent::kLowPowerCharger);
+      break;
     case EcEventReason::kBatteryAuth:
       SendMojoEcEventToBrowser(MojoEvent::kBatteryAuth);
       break;

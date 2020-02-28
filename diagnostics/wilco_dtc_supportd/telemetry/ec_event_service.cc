@@ -138,6 +138,9 @@ EcEventService::EcEvent::Reason EcEventService::EcEvent::GetReason() const {
       if (flags.ac_adapter.cause & AcAdapterFlags::Cause::NON_WILCO_CHARGER) {
         return Reason::kNonWilcoCharger;
       }
+      if (flags.ac_adapter.cause & AcAdapterFlags::Cause::LOW_POWER_CHARGER) {
+        return Reason::kLowPowerCharger;
+      }
       break;
     case SystemNotifySubType::BATTERY:
       if (flags.battery.cause & BatteryFlags::Cause::BATTERY_AUTH) {

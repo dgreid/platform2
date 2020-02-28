@@ -19,6 +19,8 @@ const auto kSystemNotifyType = static_cast<EcEvent::Type>(0x0012);
 // Valid payloads of |EcEvent::Type::SYSTEM_NOTIFY| type
 const uint16_t kEcEventPayloadNonWilcoCharger[] = {0x0000, 0x0000, 0x0001,
                                                    0x0000, 0x0000, 0x0000};
+const uint16_t kEcEventPayloadLowPowerCharger[] = {0x0000, 0x0000, 0x0008,
+                                                   0x0000, 0x0000, 0x0000};
 const uint16_t kEcEventPayloadBatteryAuth[] = {0x0003, 0x0000, 0x0001,
                                                0x0000, 0x0000, 0x0000};
 const uint16_t kEcEventPayloadDockDisplay[] = {0x0008, 0x0200, 0x0000, 0x0000};
@@ -42,6 +44,8 @@ const uint16_t kEcEventPayloadNonWilcoChargerBadSubType[] = {
 // Valid EcEvents
 const EcEvent kEcEventNonWilcoCharger =
     EcEvent(6, kSystemNotifyType, kEcEventPayloadNonWilcoCharger);
+const EcEvent kEcEventLowPowerCharger =
+    EcEvent(6, kSystemNotifyType, kEcEventPayloadLowPowerCharger);
 const EcEvent kEcEventBatteryAuth =
     EcEvent(6, kSystemNotifyType, kEcEventPayloadBatteryAuth);
 const EcEvent kEcEventDockDisplay =
@@ -84,6 +88,8 @@ EcEvent GetEcEventWithReason(EcEvent::Reason reason) {
   switch (reason) {
     case EcEvent::Reason::kNonWilcoCharger:
       return kEcEventNonWilcoCharger;
+    case EcEvent::Reason::kLowPowerCharger:
+      return kEcEventLowPowerCharger;
     case EcEvent::Reason::kBatteryAuth:
       return kEcEventBatteryAuth;
     case EcEvent::Reason::kDockDisplay:

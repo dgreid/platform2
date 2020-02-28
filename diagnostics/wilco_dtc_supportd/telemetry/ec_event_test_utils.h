@@ -14,6 +14,7 @@ namespace diagnostics {
 
 // Valid EcEvents
 extern const EcEventService::EcEvent kEcEventNonWilcoCharger;
+extern const EcEventService::EcEvent kEcEventLowPowerCharger;
 extern const EcEventService::EcEvent kEcEventBatteryAuth;
 extern const EcEventService::EcEvent kEcEventDockDisplay;
 extern const EcEventService::EcEvent kEcEventDockThunderbolt;
