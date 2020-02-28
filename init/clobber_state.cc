@@ -253,6 +253,16 @@ bool IsDeviceEnrolled() {
          enrollment_check_value == 1;
 }
 
+bool CreateEncryptedRebootVault() {
+  brillo::ProcessImpl create_erv;
+  create_erv.AddArg("/usr/sbin/encrypted-reboot-vault");
+  create_erv.AddArg("--action=create");
+  if (create_erv.Run() != 0)
+    return false;
+
+  return true;
+}
+
 }  // namespace
 
 // static
@@ -1212,8 +1222,9 @@ int ClobberState::Run() {
   // collect crashes if sensitive files should not be preserved.
   if (!user_triggered_powerwash &&
       (preserve_dev_mode_crash_reports || IsDeviceEnrolled())) {
+    if (CreateEncryptedRebootVault())
+      CollectClobberCrashReports();
     ReplayLogsIntoClobber();
-    CollectClobberCrashReports();
   }
 
   // Destroy less sensitive data.
