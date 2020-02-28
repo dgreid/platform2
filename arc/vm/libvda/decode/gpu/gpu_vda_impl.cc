@@ -17,7 +17,6 @@
 #include <base/memory/ref_counted.h>
 #include <base/single_thread_task_runner.h>
 #include <base/synchronization/waitable_event.h>
-#include <base/threading/thread_checker.h>
 #include <chromeos/dbus/service_constants.h>
 #include <dbus/bus.h>
 #include <dbus/message.h>
@@ -189,8 +188,9 @@ class GpuVdaContext : public VdaContext, arc::mojom::VideoDecodeClient {
   void FlushOnIpcThread();
 
   scoped_refptr<base::SingleThreadTaskRunner> ipc_task_runner_;
-  THREAD_CHECKER(ipc_thread_checker_);
-
+  // TODO(alexlau): Use THREAD_CHECKER macro after libchrome uprev
+  // (crbug.com/909719).
+  base::ThreadChecker ipc_thread_checker_;
   arc::mojom::VideoDecodeAcceleratorPtr vda_ptr_;
   mojo::Binding<arc::mojom::VideoDecodeClient> binding_;
 

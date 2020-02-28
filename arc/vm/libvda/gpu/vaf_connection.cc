@@ -21,7 +21,6 @@
 #include <base/single_thread_task_runner.h>
 #include <base/synchronization/lock.h>
 #include <base/synchronization/waitable_event.h>
-#include <base/threading/thread_checker.h>
 #include <chromeos/dbus/service_constants.h>
 #include <dbus/bus.h>
 #include <dbus/message.h>
@@ -69,7 +68,9 @@ static VafConnection* connection = nullptr;
 }  // namespace
 
 VafConnection::VafConnection() : ipc_thread_("VafConnectionIpcThread") {
-  DETACH_FROM_THREAD(ipc_thread_checker_);
+  // TODO(alexlau): Use DETACH_FROM_THREAD macro after libchrome uprev
+  // (crbug.com/909719).
+  ipc_thread_checker_.DetachFromThread();
 
   mojo::core::Init();
   CHECK(ipc_thread_.StartWithOptions(
@@ -104,7 +105,9 @@ void VafConnection::InitializeOnIpcThread(bool* init_success) {
   // Since ipc_thread_checker_ binds to whichever thread it's created on, check
   // that we're on the correct thread first using BelongsToCurrentThread.
   DCHECK(ipc_thread_.task_runner()->BelongsToCurrentThread());
-  DCHECK_CALLED_ON_VALID_THREAD(ipc_thread_checker_);
+  // TODO(alexlau): Use DCHECK_CALLED_ON_VALID_THREAD macro after libchrome
+  // uprev (crbug.com/909719).
+  DCHECK(ipc_thread_checker_.CalledOnValidThread());
 
   dbus::Bus::Options opts;
   opts.bus_type = dbus::Bus::SYSTEM;

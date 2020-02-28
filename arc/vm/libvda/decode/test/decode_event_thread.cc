@@ -79,8 +79,12 @@ void DecodeEventThread::StartWatching() {
   // Since thread_checker_ binds to whichever thread it's created on, check
   // that we're on the correct thread first using BelongsToCurrentThread.
   DCHECK(thread_.task_runner()->BelongsToCurrentThread());
-  DETACH_FROM_THREAD(thread_checker_);
-  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
+  // TODO(alexlau): Use DETACH_FROM_THREAD macro after libchrome uprev
+  // (crbug.com/909719).
+  thread_checker_.DetachFromThread();
+  // TODO(alexlau): Use DCHECK_CALLED_ON_VALID_THREAD macro after libchrome
+  // uprev (crbug.com/909719).
+  DCHECK(thread_checker_.CalledOnValidThread());
 
   event_pipe_fd_controller_ = base::FileDescriptorWatcher::WatchReadable(
       session_->event_pipe_fd,
