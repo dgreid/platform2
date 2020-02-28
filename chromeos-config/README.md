@@ -397,8 +397,14 @@ In the tables below,
 ### cros-healthd
 | Attribute | Type   | RegEx     | Required | Oneof Group | Build-only | Description |
 | --------- | ------ | --------- | -------- | ----------- | ---------- | ----------- |
+| backlight | [backlight](#backlight) |  | False |  | False |  |
 | battery | [battery](#battery) |  | False |  | False |  |
 | cached-vpd | [cached-vpd](#cached_vpd) |  | False |  | False |  |
+
+### backlight
+| Attribute | Type   | RegEx     | Required | Oneof Group | Build-only | Description |
+| --------- | ------ | --------- | -------- | ----------- | ---------- | ----------- |
+| has-backlight | boolean |  | False |  | False |  |
 
 ### battery
 | Attribute | Type   | RegEx     | Required | Oneof Group | Build-only | Description |
