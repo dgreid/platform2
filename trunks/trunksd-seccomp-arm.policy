@@ -56,6 +56,8 @@ brk: 1
 mmap2: 1
 munmap: 1
 madvise: 1
+mlock: 1
+munlock: 1
 
 # Allow thread creation.
 mprotect: 1
