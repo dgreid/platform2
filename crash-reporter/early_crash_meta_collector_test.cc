@@ -29,11 +29,14 @@ class EarlyCrashMetaCollectorTest : public testing::Test {
     src_dir_ = scoped_temp_dir_.GetPath().Append("crash_src");
     CreateDirectory(dest_dir_);
     CreateDirectory(src_dir_);
-    collector_.set_crash_directory_for_test(dest_dir_);
-    collector_.source_directory_ = src_dir_;
   }
 
  protected:
+  void SetUpTestDirectories() {
+    collector_.source_directories_ = {src_dir_};
+    collector_.set_crash_directory_for_test(dest_dir_);
+  }
+
   void ExpectConsent() {
     collector_.Initialize([]() { return true; }, false);
   }
@@ -53,13 +56,43 @@ class EarlyCrashMetaCollectorTest : public testing::Test {
     EXPECT_FALSE(base::PathExists(src_dir_));
   }
 
+  void CheckPreserveAcrossClobberPaths() {
+    EXPECT_EQ(collector_.source_directories_.size(), 1);
+    EXPECT_EQ(collector_.source_directories_[0],
+              base::FilePath(paths::kSystemRunCrashDirectory));
+    EXPECT_EQ(collector_.system_crash_path_,
+              base::FilePath(paths::kEncryptedRebootVaultCrashDirectory));
+  }
+
+  void CheckRegularCollectorPaths() {
+    EXPECT_EQ(collector_.source_directories_.size(), 2);
+    EXPECT_EQ(collector_.source_directories_[0],
+              base::FilePath(paths::kSystemRunCrashDirectory));
+    EXPECT_EQ(collector_.source_directories_[1],
+              base::FilePath(paths::kEncryptedRebootVaultCrashDirectory));
+
+    EXPECT_EQ(collector_.system_crash_path_,
+              base::FilePath(paths::kSystemCrashDirectory));
+  }
+
   base::ScopedTempDir scoped_temp_dir_;
   base::FilePath dest_dir_, src_dir_;
   EarlyCrashMetaCollector collector_;
 };
 
+TEST_F(EarlyCrashMetaCollectorTest, PreserveAcrossClobberPathsTest) {
+  ExpectPreserveAcrossClobber();
+  CheckPreserveAcrossClobberPaths();
+}
+
+TEST_F(EarlyCrashMetaCollectorTest, CheckRegularCollectorPathsTest) {
+  ExpectConsent();
+  CheckRegularCollectorPaths();
+}
+
 TEST_F(EarlyCrashMetaCollectorTest, CollectOk) {
   ExpectConsent();
+  SetUpTestDirectories();
 
   ExpectCrashReportsParsed();
 
@@ -72,6 +105,7 @@ TEST_F(EarlyCrashMetaCollectorTest, CollectOk) {
 
 TEST_F(EarlyCrashMetaCollectorTest, NoConsent) {
   ExpectConsentNotFound();
+  SetUpTestDirectories();
 
   ExpectCrashReportsParsed();
 

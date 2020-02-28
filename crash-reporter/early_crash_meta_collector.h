@@ -29,7 +29,7 @@ class EarlyCrashMetaCollector : public CrashCollector {
 
  private:
   bool early_;
-  base::FilePath source_directory_;
+  std::vector<base::FilePath> source_directories_;
   friend class EarlyCrashMetaCollectorTest;
 
   DISALLOW_COPY_AND_ASSIGN(EarlyCrashMetaCollector);

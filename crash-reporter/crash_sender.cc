@@ -120,12 +120,6 @@ int RunChildMain(int argc, char* argv[]) {
     crash_directories.push_back(base::FilePath(flags.crash_directory));
   }
 
-  // Add the stateful partition's crash directory: the crashes and logs stored
-  // here usually are indicative of the state of the machine during the last
-  // clobber.
-  crash_directories.push_back(
-      paths::Get(paths::kStatefulClobberCrashDirectory));
-
   std::vector<util::MetaFile> reports_to_send;
 
   base::File lock_file(sender.AcquireLockFileOrDie());

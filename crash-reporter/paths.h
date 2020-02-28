@@ -27,9 +27,10 @@ constexpr char kCrashReporterStateDirectory[] = "/var/lib/crash_reporter";
 // Directory where system crashes are saved.
 constexpr char kSystemCrashDirectory[] = "/var/spool/crash";
 
-// Directory to keep persist early crash failures.
-constexpr char kStatefulClobberCrashDirectory[] =
-    "/mnt/stateful_partition/unencrypted/preserve/crash";
+// Ephemeral directory to persist crashes in absence of /var/spool. Any crashes
+// stored here will be lost on power loss/reboot.
+constexpr char kEncryptedRebootVaultCrashDirectory[] =
+    "/mnt/stateful_partition/reboot_vault/crash";
 
 // Directory where system configuration files are located.
 constexpr char kEtcDirectory[] = "/etc";
