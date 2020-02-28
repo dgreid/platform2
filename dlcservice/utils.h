@@ -12,6 +12,7 @@
 #include <base/callback.h>
 #include <base/files/file_path.h>
 #include <base/files/file_util.h>
+#include <dbus/dlcservice/dbus-constants.h>
 #include <dlcservice/proto_bindings/dlcservice.pb.h>
 #include <libimageloader/manifest.h>
 
@@ -83,32 +84,39 @@ bool CopyAndResizeFile(const base::FilePath& from,
                        int64_t size);
 
 // Returns the path to a DLC module image given the |id| and |package|.
-base::FilePath GetDlcImagePath(const base::FilePath& dlc_module_root_path,
-                               const std::string& id,
-                               const std::string& package,
-                               BootSlot::Slot current_slot);
+base::FilePath GetImagePath(const base::FilePath& dlc_module_root_path,
+                            const std::string& id,
+                            const std::string& package,
+                            BootSlot::Slot current_slot);
 
-bool GetDlcManifest(const base::FilePath& dlc_manifest_path,
-                    const std::string& id,
-                    const std::string& package,
-                    imageloader::Manifest* manifest_out);
+bool GetManifest(const base::FilePath& dlc_manifest_path,
+                 const std::string& id,
+                 const std::string& package,
+                 imageloader::Manifest* manifest_out);
 
 // Returns the directory inside a DLC module which is mounted at
 // |dlc_mount_point|.
-base::FilePath GetDlcRootInModulePath(const base::FilePath& dlc_mount_point);
+base::FilePath GetRoot(const base::FilePath& mount_point);
 
 // Scans a directory and returns all its subdirectory names in a list.
 std::set<std::string> ScanDirectory(const base::FilePath& dir);
 
-// Converts a |DlcRootMap| into a |DlcModuleList| based on filtering logic where
-// a return value of true indicates insertion into |DlcModuleList|.
-dlcservice::DlcModuleList ToDlcModuleList(
-    const DlcRootMap& dlcs, std::function<bool(DlcId, DlcRoot)> filter);
+// TODO(kimjae): Create generic templated conversion class.
 
-// Converts a |DlcModuleList| into a |DlcRootMap| based on filtering logic where
-// a return value of true indicates insertion into |DlcRootMap|.
-DlcRootMap ToDlcRootMap(const dlcservice::DlcModuleList& dlc_module_list,
-                        std::function<bool(dlcservice::DlcModuleInfo)> filter);
+// Converts a |DlcMap| into a |DlcModuleList|.
+DlcModuleList ToDlcModuleList(const DlcMap& dlcs);
+
+// Converts a |DlcSet| into a |DlcModuleList|.
+DlcModuleList ToDlcModuleList(const DlcSet& dlcs);
+
+// Converts a |DlcModuleList| into a |DlcMap|.
+DlcMap ToDlcMap(const dlcservice::DlcModuleList& dlc_module_list);
+
+// Converts a |DlcModuleList| into a |DlcSet|.
+DlcSet ToDlcSet(const dlcservice::DlcModuleList& dlc_module_list);
+
+// Returns a new |DlcMap| filtered with states that match |state|.
+DlcMap FilterState(const DlcMap& dlcs, const DlcState::State& state);
 
 dlcservice::InstallStatus CreateInstallStatus(
     const dlcservice::Status& status,

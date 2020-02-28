@@ -37,6 +37,7 @@ constexpr uid_t kRootUid = 0;
 constexpr uid_t kChronosUid = 1000;
 constexpr char kChronosUser[] = "chronos";
 constexpr char kChronosGroup[] = "chronos";
+constexpr int64_t kPollingInterval = 5;
 
 void EnterMinijail() {
   ScopedMinijail jail(minijail_new());
@@ -81,8 +82,54 @@ class DlcServiceUtil : public brillo::Daemon {
     return true;
   }
 
+  void Poll() {
+    bool done = true;
+    vector<dlcservice::DlcId> complete, installing;
+    for (const auto& dlc_module : dlc_module_list_.dlc_module_infos()) {
+      const auto& id = dlc_module.dlc_id();
+      brillo::ErrorPtr err;
+      dlcservice::DlcState dlc_state;
+      if (!dlc_service_proxy_->GetState(id, &dlc_state, &err)) {
+        LOG(ERROR) << "Failed to get state of DLC: " << id;
+        QuitWithExitCode(EX_SOFTWARE);
+        return;
+      }
+      switch (dlc_state.state()) {
+        case dlcservice::DlcState::NOT_INSTALLED:
+          LOG(ERROR) << "Failed to install: " << id;
+          QuitWithExitCode(EX_SOFTWARE);
+          return;
+        case dlcservice::DlcState::INSTALLING:
+          // If any DLC(s) still installing, keep polling.
+          installing.push_back(id);
+          done = false;
+          break;
+        case dlcservice::DlcState::INSTALLED:
+          complete.push_back(id);
+          break;
+        default:
+          NOTREACHED();
+      }
+    }
+    if (done) {
+      LOG(INFO) << "Install successful!: '" << dlc_module_list_str_ << "'.";
+      Quit();
+      return;
+    }
+    LOG(INFO) << "Complete=" << base::JoinString(complete, ", ");
+    LOG(INFO) << "Installing=" << base::JoinString(installing, ", ");
+    LOG(INFO) << "Polling again...\n";
+    brillo::MessageLoop::current()->PostDelayedTask(
+        FROM_HERE,
+        base::Bind(&DlcServiceUtil::Poll, weak_ptr_factory_.GetWeakPtr()),
+        base::TimeDelta::FromSeconds(kPollingInterval));
+  }
+
   int OnEventLoopStarted() override {
     DEFINE_bool(install, false, "Install a given list of DLC modules.");
+    DEFINE_bool(poll, false,
+                "Will poll insted of listening for signals, only usable with "
+                "--install.");
     DEFINE_bool(uninstall, false, "Uninstall a given list of DLC modules.");
     DEFINE_bool(list, false, "List all installed DLC modules.");
     DEFINE_bool(oneline, false, "Print short module DLC module information.");
@@ -96,6 +143,12 @@ class DlcServiceUtil : public brillo::Daemon {
     if (std::count(exclusive_flags.begin(), exclusive_flags.end(), true) != 1) {
       LOG(ERROR) << "Only one of --install, --uninstall, --list must be set.";
       return EX_SOFTWARE;
+    }
+    if (FLAGS_poll) {
+      if (!FLAGS_install) {
+        LOG(ERROR) << "The --install flag must be set to use --poll.";
+        return EX_SOFTWARE;
+      }
     }
 
     int error = EX_OK;
@@ -118,15 +171,23 @@ class DlcServiceUtil : public brillo::Daemon {
 
     // Called with "--install".
     if (FLAGS_install) {
-      // Set up callbacks
-      dlc_service_proxy_->RegisterOnInstallStatusSignalHandler(
-          base::Bind(&DlcServiceUtil::OnInstallStatus,
-                     weak_ptr_factory_.GetWeakPtr()),
-          base::Bind(&DlcServiceUtil::OnInstallStatusConnect,
-                     weak_ptr_factory_.GetWeakPtr()));
-      if (Install()) {
-        // Don't |Quit()| as we will need to wait for signal of install.
-        return EX_OK;
+      // Check |Install()| by polling.
+      if (FLAGS_poll) {
+        if (Install()) {
+          Poll();
+          return EX_OK;
+        }
+      } else {
+        // Check |Install()| by listening to signal.
+        dlc_service_proxy_->RegisterOnInstallStatusSignalHandler(
+            base::Bind(&DlcServiceUtil::OnInstallStatus,
+                       weak_ptr_factory_.GetWeakPtr()),
+            base::Bind(&DlcServiceUtil::OnInstallStatusConnect,
+                       weak_ptr_factory_.GetWeakPtr()));
+        if (Install()) {
+          // Don't |Quit()| as we will need to wait for signal of install.
+          return EX_OK;
+        }
       }
     }
 
@@ -261,8 +322,8 @@ class DlcServiceUtil : public brillo::Daemon {
     string package = *(packages.begin());
 
     imageloader::Manifest manifest;
-    if (!dlcservice::GetDlcManifest(manifest_root, dlc_info.dlc_id(), package,
-                                    &manifest)) {
+    if (!dlcservice::GetManifest(manifest_root, dlc_info.dlc_id(), package,
+                                 &manifest)) {
       LOG(ERROR) << "Failed to get DLC module manifest.";
       return false;
     }

@@ -30,6 +30,18 @@ namespace dlcservice {
 namespace {
 // Timeout in ms for DBus method calls into imageloader.
 constexpr int kImageLoaderTimeoutMs = 5000;
+
+void LogOrSetError(const string& err_code_in,
+                   const string& err_msg_in,
+                   string* err_code_out,
+                   string* err_msg_out) {
+  if (err_code_out)
+    *err_code_out = err_code_in;
+  if (err_msg_out)
+    *err_msg_out = err_msg_in;
+  if (!err_code_out && !err_msg_out)
+    LOG(ERROR) << err_code_in << "|" << err_msg_in;
+}
 }  // namespace
 
 const char kDlcMetadataActiveValue[] = "1";
@@ -52,148 +64,231 @@ class DlcManager::DlcManagerImpl {
       LOG(FATAL) << "Can not get current boot slot.";
 
     // Initialize supported DLC modules.
-    supported_ = ScanDirectory(manifest_dir_);
+    for (const auto& id : ScanDirectory(manifest_dir_))
+      supported_dlcs_[id] = DlcInfo(DlcState::NOT_INSTALLED);
   }
   ~DlcManagerImpl() = default;
 
-  bool IsInstalling() { return !installing_.empty(); }
-
-  std::set<DlcId> GetSupported() { return supported_; }
-
-  DlcRootMap GetInstalled() {
-    RefreshInstalled();
-    return installed_;
+  bool IsBusy() {
+    return std::any_of(std::begin(supported_dlcs_), std::end(supported_dlcs_),
+                       [](const decltype(supported_dlcs_)::value_type& pr) {
+                         return pr.second.state.state() == DlcState::INSTALLING;
+                       });
   }
 
-  void PreloadDlcModuleImages() { RefreshPreloaded(); }
+  bool IsSupported(const DlcId& id) {
+    return supported_dlcs_.find(id) != supported_dlcs_.end();
+  }
 
-  void LoadDlcModuleImages() { RefreshInstalled(); }
+  DlcMap GetInstalled() {
+    return FilterState(supported_dlcs_, DlcState::INSTALLED);
+  }
 
-  bool InitInstall(const DlcRootMap& requested_install,
-                   string* err_code,
-                   string* err_msg) {
-    CHECK(installing_.empty());
-    RefreshInstalled();
-    installing_ = requested_install;
+  const DlcMap& GetSupported() { return supported_dlcs_; }
 
-    for (const auto& dlc : installing_) {
-      const string& id = dlc.first;
-      string throwaway_err_code, throwaway_err_msg;
-      // If already installed, pick up the root.
-      if (installed_.find(id) != installed_.end()) {
-        installing_[id] = installed_[id];
+  // Loads the preloadable DLC(s) from |preloaded_content_dir_| by scanning the
+  // preloaded DLC(s) and verifying the validity to be preloaded before doing
+  // so.
+  // Note: Keep each preload separate to keep isolation.
+  void PreloadImages() {
+    string err_code, err_msg;
+    // Load all preloaded DLC modules into |content_dir_| one by one.
+    for (auto id : ScanDirectory(preloaded_content_dir_)) {
+      if (!IsSupported(id)) {
+        LOG(ERROR) << "Can't preload an unsupported DLC: " << id;
+        continue;
+      }
+
+      if (!IsPreloadAllowed(id)) {
+        LOG(ERROR) << "Preloading is not allowed for DLC: " << id;
+        continue;
+      }
+
+      DlcSet s = {id};
+      if (!InitInstall(s, &err_code, &err_msg)) {
+        LOG(ERROR) << "Preloading failed to create DLC: " << id;
+        continue;
+      }
+
+      if (!PreloadCopier(id)) {
+        LOG(ERROR) << "Please check for previous errors, something went wrong "
+                   << "during preloading DLC: " << id;
+        CancelInstall(kErrorInternal, &err_code, &err_msg);
+        continue;
+      }
+
+      // TODO(crbug.com/1059445): Validate before finishing the install.
+
+      // When the copying is successful, go ahead and finish installation.
+      if (!FinishInstall(&err_code, &err_msg)) {
+        LOG(ERROR) << "Failed to finish installing preloaded DLC (" << id
+                   << ") because: " << err_code << "|" << err_msg;
+        continue;
+      }
+
+      // Delete the preloaded DLC only after both copies into A and B succeed as
+      // well as mounting the currently active slot image.
+      FilePath image_preloaded_path = JoinPaths(
+          preloaded_content_dir_, id, GetPackage(id), kDlcImageFileName);
+      if (!base::DeleteFile(image_preloaded_path.DirName().DirName(), true)) {
+        PLOG(ERROR) << "Failed to delete preloaded DLC: " << id;
+        continue;
+      }
+    }
+  }
+
+  // Sets the initial state when dlcservice is starting up with DLC(s) on disk.
+  void LoadImages() {
+    // Hard refresh from cache directory.
+    for (const auto& id : ScanDirectory(content_dir_)) {
+      if (!IsSupported(id)) {
+        LOG(ERROR) << "Found unsupported DLC that is installed: " << id;
+        Delete(id);
+        continue;
+      }
+      string err_code, err_msg;
+      // Create the metadata directory if it doesn't exist.
+      if (!CreateMetadata(id, &err_code, &err_msg))
+        LOG(WARNING) << "Failed to create metadata DLC (" << id
+                     << "): " << err_code << "|" << err_msg;
+
+      // Validate images are in a good state.
+      if (!ValidateImageFiles(id, &err_code, &err_msg)) {
+        LOG(ERROR) << "Failed to validate DLC (" << id << "): " << err_code
+                   << "|" << err_msg;
+        Delete(id, err_code);
+      }
+
+      // If |root| exists set it, else try mounting.
+      string mount;
+      DlcRoot root = GetInfo(id).root;
+      if (base::PathExists(base::FilePath(root))) {
+        SetInstalled(id, root);
+      } else if (Mount(id, &mount, &err_code, &err_msg)) {
+        SetInstalled(id, GetRoot(FilePath(mount)).value());
       } else {
-        if (!Create(id, err_code, err_msg)) {
-          CancelInstall(&throwaway_err_code, &throwaway_err_msg);
+        LOG(ERROR) << "Failed to mount DLC (" << id << "): " << err_code << "|"
+                   << err_msg;
+        Delete(id, err_code);
+      }
+    }
+  }
+
+  bool GetState(const DlcId& id,
+                DlcState* state,
+                string* err_code,
+                string* err_msg) {
+    if (!IsSupported(id)) {
+      LogOrSetError(kErrorInvalidDlc,
+                    "Trying to get state of unsupported DLC: " + id, err_code,
+                    err_msg);
+      return false;
+    }
+    *state = GetInfo(id).state;
+    return true;
+  }
+
+  bool InitInstall(const DlcSet& ids, string* err_code, string* err_msg) {
+    CHECK(!IsBusy());
+    // Check earlier if any requested DLC(s) are unsupported.
+    for (const auto& id : ids) {
+      if (!IsSupported(id)) {
+        LogOrSetError(kErrorInvalidDlc,
+                      "Trying to install an unsupported DLC: " + id, err_code,
+                      err_msg);
+        return false;
+      }
+    }
+    for (const auto& id : ids) {
+      string local_err_code, local_err_msg;
+      switch (GetInfo(id).state.state()) {
+        case DlcState::NOT_INSTALLED: {
+          if (!Create(id, err_code, err_msg)) {
+            CancelInstall(*err_code, &local_err_code, &local_err_msg);
+            return false;
+          }
+          break;
+        }
+        case DlcState::INSTALLING: {
+          CancelInstall(kErrorInternal, &local_err_code, &local_err_msg);
           return false;
         }
+        case DlcState::INSTALLED:
+          break;
+        default:
+          NOTREACHED();
       }
       // Failure to set the metadata flags should not fail the install.
-      if (!SetActive(id, &throwaway_err_code, &throwaway_err_msg)) {
-        LOG(WARNING) << throwaway_err_msg;
+      if (!SetActive(id, &local_err_code, &local_err_msg)) {
+        LOG(WARNING) << "Failed to set active DLC (" << id
+                     << "): " << local_err_code << "|" << local_err_msg;
       }
     }
     return true;
   }
 
-  DlcRootMap GetInstalling() {
-    DlcRootMap required_installing;
-    for (const auto& dlc : installing_)
-      if (dlc.second.empty())
-        required_installing[dlc.first];
-    return required_installing;
+  DlcMap GetInstalling() {
+    // NOTE: Do not refresh before returning as it's an internal state clearer
+    // from what |InitInstall()| setup.
+    return FilterState(supported_dlcs_, DlcState::INSTALLING);
   }
 
-  bool FinishInstall(DlcRootMap* installed, string* err_code, string* err_msg) {
-    *installed = installing_;
-
-    ScopedCleanups<base::Callback<void()>> scoped_cleanups;
-
-    for (const auto& dlc : installing_) {
-      const string& id = dlc.first;
-      auto cleanup = base::Bind(
-          [](Callback<bool()> unmounter, Callback<bool()> deleter,
-             string* err_code, string* err_msg) {
-            if (!unmounter.Run())
-              LOG(ERROR) << *err_code << ":" << *err_msg;
-            if (!deleter.Run())
-              LOG(ERROR) << *err_code << ":" << *err_msg;
-          },
-          base::Bind(&DlcManagerImpl::Unmount, base::Unretained(this), id,
-                     err_code, err_msg),
-          base::Bind(&DlcManagerImpl::Delete, base::Unretained(this), id,
-                     err_code, err_msg),
-          err_code, err_msg);
-      scoped_cleanups.Insert(cleanup);
-    }
-    scoped_cleanups.Insert(
-        base::Bind(&DlcManagerImpl::ClearInstalling, base::Unretained(this)));
-
-    for (auto& dlc : installing_) {
-      const string &id = dlc.first, root = dlc.second;
-      if (!root.empty())
+  bool FinishInstall(string* err_code, string* err_msg) {
+    for (const auto& pr : supported_dlcs_) {
+      const DlcId& id = pr.first;
+      if (!IsInstalling(id))
         continue;
       string mount_point;
       if (!Mount(id, &mount_point, err_code, err_msg))
-        return false;
-      dlc.second = GetDlcRootInModulePath(FilePath(mount_point)).value();
+        Delete(id, *err_code);
+      else
+        SetInstalled(id, GetRoot(FilePath(mount_point)).value());
     }
-
-    scoped_cleanups.Cancel();
-
-    for (const auto& dlc : installing_) {
-      const string &id = dlc.first, root = dlc.second;
-      installed_[id] = installed->operator[](id) = root;
-    }
-
-    ClearInstalling();
     return true;
   }
 
-  bool CancelInstall(string* err_code, string* err_msg) {
+  bool CancelInstall(const string& set_err_code,
+                     string* err_code,
+                     string* err_msg) {
     bool ret = true;
-    if (installing_.empty()) {
-      LOG(WARNING) << "No install started to being with, nothing to cancel.";
-      return ret;
-    }
-    for (const auto& dlc : installing_) {
-      const string &id = dlc.first, root = dlc.second;
-      if (!root.empty())
+    for (const auto& pr : supported_dlcs_) {
+      const DlcId& id = pr.first;
+      if (!IsInstalling(id))
         continue;
-      if (!Delete(id, err_code, err_msg)) {
-        LOG(ERROR) << *err_msg;
+      if (!Delete(id, set_err_code, err_code, err_msg))
         ret = false;
-      }
     }
-    ClearInstalling();
     return ret;
   }
 
   // Deletes all directories related to the given DLC |id|. If |err_code| or
   // |err_msg| are passed in, they will be set. Otherwise error will be logged.
-  bool Delete(const string& id,
+  bool Delete(const DlcId& id,
+              const string& set_err_code = kErrorNone,
               string* err_code = nullptr,
               string* err_msg = nullptr) {
+    if (IsInstalled(id)) {
+      string local_err_code, local_err_msg;
+      if (!Unmount(id, &local_err_code, &local_err_msg)) {
+        LogOrSetError(local_err_code, local_err_msg, err_code, err_msg);
+        return false;
+      }
+    }
     vector<string> undeleted_paths;
     for (const auto& path :
          {JoinPaths(content_dir_, id), JoinPaths(metadata_dir_, id)}) {
       if (!base::DeleteFile(path, true))
         undeleted_paths.push_back(path.value());
     }
-    installed_.erase(id);
     bool ret = undeleted_paths.empty();
     if (!ret) {
-      string local_err_code = kErrorInternal;
-      string local_err_msg =
+      LogOrSetError(
+          kErrorInternal,
           base::StringPrintf("DLC directories (%s) could not be deleted.",
-                             base::JoinString(undeleted_paths, ",").c_str());
-      if (err_code)
-        *err_code = std::move(local_err_code);
-      if (err_msg)
-        *err_msg = std::move(local_err_msg);
-      if (!err_code && !err_msg)
-        LOG(ERROR) << local_err_code << "|" << local_err_msg;
+                             base::JoinString(undeleted_paths, ",").c_str()),
+          err_code, err_msg);
     }
+    SetNotInstalled(id, set_err_code);
     return ret;
   }
 
@@ -202,7 +297,7 @@ class DlcManager::DlcManagerImpl {
              string* err_code,
              string* err_msg) {
     if (!image_loader_proxy_->LoadDlcImage(
-            id, GetDlcPackage(id),
+            id, GetPackage(id),
             current_boot_slot_ == BootSlot::Slot::A ? imageloader::kSlotNameA
                                                     : imageloader::kSlotNameB,
             mount_point, nullptr, kImageLoaderTimeoutMs)) {
@@ -220,7 +315,7 @@ class DlcManager::DlcManagerImpl {
 
   bool Unmount(const string& id, string* err_code, string* err_msg) {
     bool success = false;
-    if (!image_loader_proxy_->UnloadDlcImage(id, GetDlcPackage(id), &success,
+    if (!image_loader_proxy_->UnloadDlcImage(id, GetPackage(id), &success,
                                              nullptr, kImageLoaderTimeoutMs)) {
       *err_code = kErrorInternal;
       *err_msg = "Imageloader is unavailable.";
@@ -235,18 +330,43 @@ class DlcManager::DlcManagerImpl {
   }
 
  private:
-  string GetDlcPackage(const string& id) {
-    return *(ScanDirectory(JoinPaths(manifest_dir_, id)).begin());
+  bool IsInstalling(const DlcId& id) {
+    return GetInfo(id).state.state() == DlcState::INSTALLING;
   }
 
-  void ClearInstalling() { installing_.clear(); }
+  bool IsInstalled(const DlcId& id) {
+    return GetInfo(id).state.state() == DlcState::INSTALLED;
+  }
+
+  void SetInstalling(const DlcId& id) {
+    supported_dlcs_[id] = DlcInfo(DlcState::INSTALLING);
+  }
+
+  void SetInstalled(const DlcId& id, const DlcRoot& root) {
+    supported_dlcs_[id] = DlcInfo(DlcState::INSTALLED, root);
+  }
+
+  void SetNotInstalled(const DlcId& id, const string& err_code) {
+    supported_dlcs_[id] = DlcInfo(DlcState::NOT_INSTALLED, "", err_code);
+  }
+
+  DlcInfo GetInfo(const DlcId& id) { return supported_dlcs_[id]; }
+
+  string GetPackage(const DlcId& id) {
+    const auto& packages = ScanDirectory(JoinPaths(manifest_dir_, id));
+    if (packages.empty())
+      LOG(FATAL) << "No package exists for DLC: " << id;
+    if (packages.size() > 1)
+      LOG(WARNING) << "Taking the first alphabetical package among many for "
+                   << "DLC: " << id;
+    return *packages.begin();
+  }
 
   // Returns true if the DLC module has a boolean true for 'preload-allowed'
   // attribute in the manifest for the given |id| and |package|.
-  bool IsDlcPreloadAllowed(const base::FilePath& dlc_manifest_path,
-                           const std::string& id) {
+  bool IsPreloadAllowed(const std::string& id) {
     imageloader::Manifest manifest;
-    if (!GetDlcManifest(dlc_manifest_path, id, GetDlcPackage(id), &manifest)) {
+    if (!GetManifest(manifest_dir_, id, GetPackage(id), &manifest)) {
       // Failing to read the manifest will be considered a preloading blocker.
       return false;
     }
@@ -271,10 +391,8 @@ class DlcManager::DlcManagerImpl {
 
   bool SetActive(const string& id, string* err_code, string* err_msg) {
     // Create the metadata directory if it doesn't exist.
-    if (!CreateMetadata(id, err_code, err_msg)) {
-      LOG(ERROR) << err_msg;
+    if (!CreateMetadata(id, err_code, err_msg))
       return false;
-    }
     auto active_metadata_path =
         JoinPaths(metadata_dir_, id, kDlcMetadataFilePingActive);
     if (!WriteToFile(active_metadata_path, kDlcMetadataActiveValue)) {
@@ -313,13 +431,13 @@ class DlcManager::DlcManagerImpl {
     CHECK(err_code);
     CHECK(err_msg);
 
-    if (supported_.find(id) == supported_.end()) {
+    if (!IsSupported(id)) {
       *err_code = kErrorInvalidDlc;
       *err_msg = "The DLC (" + id + ") provided is not supported.";
       return false;
     }
 
-    const string& package = GetDlcPackage(id);
+    const string& package = GetPackage(id);
     FilePath content_path_local = JoinPaths(content_dir_, id);
 
     if (base::PathExists(content_path_local)) {
@@ -336,7 +454,7 @@ class DlcManager::DlcManagerImpl {
     // it will likely fail for modules >= 2 GiB in size.
     // https://crbug.com/904539
     imageloader::Manifest manifest;
-    if (!dlcservice::GetDlcManifest(manifest_dir_, id, package, &manifest)) {
+    if (!GetManifest(manifest_dir_, id, package, &manifest)) {
       *err_code = kErrorInternal;
       *err_msg = "Failed to create DLC (" + id + ") manifest.";
       return false;
@@ -351,7 +469,7 @@ class DlcManager::DlcManagerImpl {
 
     // Creates image A.
     FilePath image_a_path =
-        GetDlcImagePath(content_dir_, id, package, BootSlot::Slot::A);
+        GetImagePath(content_dir_, id, package, BootSlot::Slot::A);
     if (!CreateFile(image_a_path, image_size)) {
       *err_code = kErrorAllocation;
       *err_msg = "Failed to create slot A DLC (" + id + ") image file.";
@@ -360,13 +478,14 @@ class DlcManager::DlcManagerImpl {
 
     // Creates image B.
     FilePath image_b_path =
-        GetDlcImagePath(content_dir_, id, package, BootSlot::Slot::B);
+        GetImagePath(content_dir_, id, package, BootSlot::Slot::B);
     if (!CreateFile(image_b_path, image_size)) {
       *err_code = kErrorAllocation;
       *err_msg = "Failed to create slot B DLC (" + id + ") image file.";
       return false;
     }
 
+    SetInstalling(id);
     return true;
   }
 
@@ -378,14 +497,14 @@ class DlcManager::DlcManagerImpl {
   //    -> Failure to do so only logs error.
   bool ValidateImageFiles(const string& id, string* err_code, string* err_msg) {
     string mount_point;
-    const string& package = GetDlcPackage(id);
-    FilePath inactive_img_path = GetDlcImagePath(
+    const string& package = GetPackage(id);
+    FilePath inactive_img_path = GetImagePath(
         content_dir_, id, package,
         current_boot_slot_ == BootSlot::Slot::A ? BootSlot::Slot::B
                                                 : BootSlot::Slot::A);
 
     imageloader::Manifest manifest;
-    if (!dlcservice::GetDlcManifest(manifest_dir_, id, package, &manifest)) {
+    if (!GetManifest(manifest_dir_, id, package, &manifest)) {
       return false;
     }
     int64_t max_allowed_img_size = manifest.preallocated_size();
@@ -419,7 +538,7 @@ class DlcManager::DlcManagerImpl {
     // [2]
     int64_t inactive_img_size;
     if (!base::GetFileSize(inactive_img_path, &inactive_img_size)) {
-      LOG(ERROR) << "Failed to get DLC (" << id << ") size.";
+      LOG(ERROR) << "Failed to get size for DLC: " << id;
     } else {
       // When |inactive_img_size| is less than the size permitted in the
       // manifest, this means that we rebooted into an update.
@@ -428,8 +547,9 @@ class DlcManager::DlcManagerImpl {
         // reverts.
         if (!ResizeFile(inactive_img_path, max_allowed_img_size)) {
           LOG(ERROR)
-              << "Failed to increase inactive image, update_engine may "
-                 "face problems in updating when stateful is full later.";
+              << "Failed to increase inactive image, update_engine may face "
+              << "problems in updating when stateful is full later for DLC: "
+              << id;
         }
       }
     }
@@ -437,21 +557,21 @@ class DlcManager::DlcManagerImpl {
     return true;
   }
 
-  // Helper used by |RefreshPreload()| to load in (copy + cleanup) preloadable
+  // Helper used by |Preload()| to load in (copy + cleanup) preloadable
   // files for the given DLC ID.
-  bool RefreshPreloadedCopier(const string& id) {
-    const string& package = GetDlcPackage(id);
+  bool PreloadCopier(const string& id) {
+    const string& package = GetPackage(id);
     FilePath image_preloaded_path =
         JoinPaths(preloaded_content_dir_, id, package, kDlcImageFileName);
     FilePath image_a_path =
-        GetDlcImagePath(content_dir_, id, package, BootSlot::Slot::A);
+        GetImagePath(content_dir_, id, package, BootSlot::Slot::A);
     FilePath image_b_path =
-        GetDlcImagePath(content_dir_, id, package, BootSlot::Slot::B);
+        GetImagePath(content_dir_, id, package, BootSlot::Slot::B);
 
     // Check the size of file to copy is valid.
     imageloader::Manifest manifest;
-    if (!dlcservice::GetDlcManifest(manifest_dir_, id, package, &manifest)) {
-      LOG(ERROR) << "Failed to get DLC (" << id << " module manifest.";
+    if (!GetManifest(manifest_dir_, id, package, &manifest)) {
+      LOG(ERROR) << "Failed to get manifest for preloaded DLC: " << id;
       return false;
     }
     int64_t max_allowed_image_size = manifest.preallocated_size();
@@ -459,7 +579,7 @@ class DlcManager::DlcManagerImpl {
     {
       int64_t image_preloaded_size;
       if (!base::GetFileSize(image_preloaded_path, &image_preloaded_size)) {
-        LOG(ERROR) << "Failed to get preloaded DLC (" << id << ") size.";
+        LOG(ERROR) << "Failed to get size for preloaded DLC: " << id;
         return false;
       }
       if (image_preloaded_size > max_allowed_image_size) {
@@ -489,96 +609,11 @@ class DlcManager::DlcManagerImpl {
     // operation can be a move.
     if (!CopyAndResizeFile(image_preloaded_path, image_boot_path,
                            max_allowed_image_size)) {
-      LOG(ERROR) << "Failed to preload DLC (" << id << ") into boot slot.";
+      LOG(ERROR) << "Failed to preload into boot slot for DLC: " << id;
       return false;
     }
 
     return true;
-  }
-
-  // Loads the preloadable DLC(s) from |preloaded_content_dir_| by scanning the
-  // preloaded DLC(s) and verifying the validity to be preloaded before doing
-  // so.
-  void RefreshPreloaded() {
-    string err_code, err_msg;
-    // Load all preloaded DLC modules into |content_dir_| one by one.
-    for (auto id : ScanDirectory(preloaded_content_dir_)) {
-      if (!IsDlcPreloadAllowed(manifest_dir_, id)) {
-        LOG(ERROR) << "Preloading for DLC (" << id << ") is not allowed.";
-        continue;
-      }
-
-      DlcRootMap dlc_root_map = {{id, ""}};
-      if (!InitInstall(dlc_root_map, &err_code, &err_msg)) {
-        LOG(ERROR) << "Failed to create DLC (" << id << ") for preloading.";
-        continue;
-      }
-
-      if (!RefreshPreloadedCopier(id)) {
-        LOG(ERROR) << "Something went wrong during preloading DLC (" << id
-                   << "), please check for previous errors.";
-        CancelInstall(&err_code, &err_msg);
-        continue;
-      }
-
-      // When the copying is successful, go ahead and finish installation.
-      if (!FinishInstall(&dlc_root_map, &err_code, &err_msg)) {
-        LOG(ERROR) << "Failed to |FinishInstall()| preloaded DLC (" << id
-                   << ") "
-                   << "because: " << err_code << "|" << err_msg;
-        continue;
-      }
-
-      // Delete the preloaded DLC only after both copies into A and B succeed as
-      // well as mounting.
-      FilePath image_preloaded_path = JoinPaths(
-          preloaded_content_dir_, id, GetDlcPackage(id), kDlcImageFileName);
-      if (!base::DeleteFile(image_preloaded_path.DirName().DirName(), true)) {
-        LOG(ERROR) << "Failed to delete preloaded DLC (" << id << ").";
-        continue;
-      }
-    }
-  }
-
-  // A refresh mechanism that keeps installed DLC(s), |installed_|, in check.
-  // Provides correction to DLC(s) that may have been altered by non-internal
-  // actions.
-  void RefreshInstalled() {
-    decltype(installed_) verified_installed;
-
-    // Recheck installed DLC modules.
-    for (auto id : ScanDirectory(content_dir_)) {
-      if (supported_.find(id) == supported_.end()) {
-        LOG(ERROR) << "Found unsupported DLC (" << id
-                   << ") installed, will delete.";
-        Delete(id);
-        continue;
-      }
-      string err_code, err_msg;
-      DlcRoot root = installed_[id];
-      // Create the metadata directory if it doesn't exist.
-      if (!CreateMetadata(id, &err_code, &err_msg))
-        LOG(WARNING) << err_code << "|" << err_msg;
-      // Validate images are in a good state.
-      if (!ValidateImageFiles(id, &err_code, &err_msg)) {
-        LOG(ERROR) << "Failed to validate DLC (" << id
-                   << ") during refresh: " << err_code << "|" << err_msg;
-        Delete(id);
-      }
-      // If |root| exists set it, else try mounting.
-      string mount;
-      if (base::PathExists(base::FilePath(root))) {
-        verified_installed[id] = root;
-      } else if (Mount(id, &mount, &err_code, &err_msg)) {
-        verified_installed[id] =
-            GetDlcRootInModulePath(FilePath(mount)).value();
-      } else {
-        LOG(ERROR) << "Failed to mount DLC (" << id
-                   << ") during refresh: " << err_code << "|" << err_msg;
-        Delete(id);
-      }
-    }
-    installed_ = std::move(verified_installed);
   }
 
   org::chromium::ImageLoaderInterfaceProxyInterface* image_loader_proxy_;
@@ -590,10 +625,7 @@ class DlcManager::DlcManagerImpl {
 
   BootSlot::Slot current_boot_slot_;
 
-  string installing_omaha_url_;
-  DlcRootMap installing_;
-  DlcRootMap installed_;
-  std::set<DlcId> supported_;
+  DlcMap supported_dlcs_;
 };
 
 DlcManager::DlcManager() {
@@ -602,18 +634,31 @@ DlcManager::DlcManager() {
 
 DlcManager::~DlcManager() = default;
 
-bool DlcManager::IsInstalling() {
-  return impl_->IsInstalling();
+bool DlcManager::IsBusy() {
+  return impl_->IsBusy();
 }
 
 DlcModuleList DlcManager::GetInstalled() {
-  return ToDlcModuleList(impl_->GetInstalled(),
-                         [](DlcId, DlcRoot) { return true; });
+  return ToDlcModuleList(impl_->GetInstalled());
+}
+
+DlcModuleList DlcManager::GetSupported() {
+  return ToDlcModuleList(impl_->GetSupported());
 }
 
 void DlcManager::LoadDlcModuleImages() {
-  impl_->PreloadDlcModuleImages();
-  impl_->LoadDlcModuleImages();
+  impl_->PreloadImages();
+  impl_->LoadImages();
+}
+
+bool DlcManager::GetState(const DlcId& id,
+                          DlcState* state,
+                          string* err_code,
+                          string* err_msg) {
+  CHECK(err_code);
+  CHECK(err_msg);
+
+  return impl_->GetState(id, state, err_code, err_msg);
 }
 
 bool DlcManager::InitInstall(const DlcModuleList& dlc_module_list,
@@ -621,22 +666,19 @@ bool DlcManager::InitInstall(const DlcModuleList& dlc_module_list,
                              string* err_msg) {
   CHECK(err_code);
   CHECK(err_msg);
-  DlcRootMap dlc_root_map =
-      ToDlcRootMap(dlc_module_list, [](DlcModuleInfo) { return true; });
 
-  if (dlc_root_map.empty()) {
+  DlcSet s = ToDlcSet(dlc_module_list);
+  if (s.empty()) {
     *err_code = kErrorInvalidDlc;
     *err_msg = "Must provide at lease one DLC to install.";
     return false;
   }
 
-  return impl_->InitInstall(dlc_root_map, err_code, err_msg);
+  return impl_->InitInstall(s, err_code, err_msg);
 }
 
 DlcModuleList DlcManager::GetMissingInstalls() {
-  // Only return the DLC(s) that aren't already installed.
-  return ToDlcModuleList(impl_->GetInstalling(),
-                         [](DlcId, DlcRoot root) { return root.empty(); });
+  return ToDlcModuleList(impl_->GetInstalling());
 }
 
 bool DlcManager::FinishInstall(DlcModuleList* dlc_module_list,
@@ -646,44 +688,33 @@ bool DlcManager::FinishInstall(DlcModuleList* dlc_module_list,
   CHECK(err_code);
   CHECK(err_msg);
 
-  DlcRootMap dlc_root_map;
-  if (!impl_->FinishInstall(&dlc_root_map, err_code, err_msg))
+  if (!impl_->FinishInstall(err_code, err_msg))
     return false;
 
-  *dlc_module_list = ToDlcModuleList(dlc_root_map, [](DlcId id, DlcRoot root) {
-    CHECK(!id.empty());
-    CHECK(!root.empty());
-    return true;
-  });
+  *dlc_module_list = ToDlcModuleList(impl_->GetSupported());
   return true;
 }
 
-bool DlcManager::CancelInstall(std::string* err_code, std::string* err_msg) {
-  return impl_->CancelInstall(err_code, err_msg);
+bool DlcManager::CancelInstall(const std::string& set_err_code,
+                               std::string* err_code,
+                               std::string* err_msg) {
+  return impl_->CancelInstall(set_err_code, err_code, err_msg);
 }
 
 bool DlcManager::Delete(const string& id,
+                        const string& set_err_code,
                         std::string* err_code,
                         std::string* err_msg) {
   CHECK(err_code);
   CHECK(err_msg);
 
-  auto supported_dlcs = impl_->GetSupported();
-  if (supported_dlcs.find(id) == supported_dlcs.end()) {
+  if (!impl_->IsSupported(id)) {
     *err_code = kErrorInvalidDlc;
-    *err_msg = "Trying to delete DLC (" + id + ") which isn't supported.";
+    *err_msg = "Trying to delete unsupported DLC: " + id;
     return false;
   }
-  auto installed_dlcs = impl_->GetInstalled();
-  if (installed_dlcs.find(id) == installed_dlcs.end()) {
-    LOG(WARNING) << "Uninstalling DLC (" << id << ") that's not installed.";
-    return true;
-  }
-  if (!impl_->Unmount(id, err_code, err_msg))
-    return false;
-  if (!impl_->Delete(id, err_code, err_msg))
-    return false;
-  return true;
+
+  return impl_->Delete(id, set_err_code, err_code, err_msg);
 }
 
 }  // namespace dlcservice

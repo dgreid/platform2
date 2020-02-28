@@ -48,6 +48,9 @@ class DlcService {
   bool Install(const DlcModuleList& dlc_module_list_in, brillo::ErrorPtr* err);
   bool Uninstall(const std::string& id_in, brillo::ErrorPtr* err);
   bool GetInstalled(DlcModuleList* dlc_module_list_out, brillo::ErrorPtr* err);
+  bool GetState(const std::string& id_in,
+                DlcState* dlc_state_out,
+                brillo::ErrorPtr* err);
 
   // Adds a new observer to report install result status changes.
   void AddObserver(Observer* observer);
@@ -56,8 +59,9 @@ class DlcService {
       const update_engine::StatusResult& status_result);
 
  private:
-  // Sends a signal indicating failure to install and cleans up prepped DLC(s).
-  void SendFailedSignalAndCleanup();
+  // Sends a signal indicating failure to install and cleans up prepped DLC(s)
+  // with persisting passed in error.
+  void SendFailedSignalAndCleanup(const std::string& set_err_code);
 
   // Handles necessary actions prior to update_engine's install completion, but
   // when update_engine's install is complete it will return true.
