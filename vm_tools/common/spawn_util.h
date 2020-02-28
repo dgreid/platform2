@@ -58,10 +58,13 @@ struct __attribute__((packed)) ChildErrorInfo {
 // working directory. Redirects child's stdio to |stdio_fd|, discards io for
 // fds specified as -1.
 // Returns true on successful execution, false otherwise.
+// On success, the forked process's process ID is stored in |spawned_pid| if
+// it is non-null.
 bool Spawn(std::vector<std::string> argv,
            std::map<std::string, std::string> env,
            const std::string& working_dir,
-           int stdio_fd[3]);
+           int stdio_fd[3],
+           pid_t* spawned_pid = nullptr);
 
 // Performs various setup steps in the child process after calling fork() but
 // before calling exec(). |error_fd| should be a valid file descriptor for a

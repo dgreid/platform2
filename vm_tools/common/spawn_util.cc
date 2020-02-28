@@ -61,7 +61,8 @@ int ResetSignalHandlers() {
 bool Spawn(std::vector<std::string> argv,
            std::map<std::string, std::string> env,
            const std::string& working_dir,
-           int stdio_fd[3]) {
+           int stdio_fd[3],
+           pid_t* spawned_pid) {
   CHECK(!argv.empty());
 
   // Build the argv.
@@ -142,6 +143,9 @@ bool Spawn(std::vector<std::string> argv,
   } else {
     CHECK_EQ(ret, 0);
     retval = true;
+    if (spawned_pid) {
+      *spawned_pid = pid;
+    }
   }
   close(info_fds[0]);
   // Restore the signal mask.
