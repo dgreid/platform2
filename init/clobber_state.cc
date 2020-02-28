@@ -56,6 +56,10 @@ constexpr char kStatefulClobberLogPath[] = "unencrypted/clobber.log";
 // clobber is disabled in developer mode.
 constexpr char kDisableClobberCrashCollectionPath[] =
     "/run/disable-clobber-crash-collection";
+// The presence of this file indicates that the kernel supports ext4 directory
+// level encryption.
+constexpr char kExt4DircryptoSupportedPath[] =
+    "/sys/fs/ext4/features/encryption";
 
 constexpr char kUbiRootDisk[] = "/dev/mtd0";
 constexpr char kUbiDevicePrefix[] = "/dev/ubi";
@@ -968,6 +972,9 @@ int ClobberState::CreateStatefulFileSystem() {
     mkfs.AddArg(wipe_info_.stateful_device.value());
   } else {
     mkfs.AddArg("/sbin/mkfs.ext4");
+    // Check if encryption is supported. If yes, enable the flag during mkfs.
+    if (base::PathExists(base::FilePath(kExt4DircryptoSupportedPath)))
+      mkfs.AddStringOption("-O", "encrypt");
     mkfs.AddArg(wipe_info_.stateful_device.value());
     // TODO(wad) tune2fs.
   }
