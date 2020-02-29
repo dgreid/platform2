@@ -37,7 +37,6 @@
 #include <base/logging.h>
 #include <base/posix/eintr_wrapper.h>
 #include <base/posix/safe_strerror.h>
-#include <base/process/launch.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_util.h>
 #include <base/strings/stringprintf.h>
@@ -736,14 +735,18 @@ grpc::Status ServiceImpl::GetResizeBounds(
     grpc::ServerContext* ctx,
     const EmptyMessage* request,
     vm_tools::GetResizeBoundsResponse* response) {
-  std::string btrfs_out;
-  if (!base::GetAppOutput(
+  Init::ProcessLaunchInfo launch_info;
+  if (!init_->Spawn(
           {"btrfs", "inspect-internal", "min-dev-size", "/mnt/stateful"},
-          &btrfs_out)) {
-    LOG(ERROR) << "btrfs inspect-internal min-dev-size failed: " << btrfs_out;
+          kLxdEnv, false /*respawn*/, false /*use_console*/,
+          true /*wait_for_exit*/, &launch_info)) {
+    LOG(ERROR) << "btrfs inspect-internal min-dev-size failed: "
+               << launch_info.output;
     return grpc::Status(grpc::INTERNAL,
                         "btrfs inspect-internal min-dev-size failed");
   }
+
+  std::string& btrfs_out = launch_info.output;
 
   // btrfs inspect-internal min-dev-size returns a string like:
   // "9701425152 bytes (9.04GiB)"
