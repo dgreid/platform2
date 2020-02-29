@@ -38,7 +38,7 @@ std::unique_ptr<ScopedMountNamespace> ScopedMountNamespace::CreateForPid(
 
 // static
 std::unique_ptr<ScopedMountNamespace> ScopedMountNamespace::CreateFromPath(
-    base::FilePath ns_path) {
+    const base::FilePath& ns_path) {
   base::ScopedFD original_mount_namespace_fd(
       HANDLE_EINTR(open(kCurrentMountNamespacePath, O_RDONLY)));
   if (!original_mount_namespace_fd.is_valid()) {
