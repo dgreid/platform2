@@ -791,9 +791,6 @@ uint64_t TerminaVm::GetMinDiskSize() {
     return 0;
   }
 
-  LOG(INFO) << "maitred GetResizeBounds minimum_size = "
-            << response.minimum_size();
-
   return response.minimum_size();
 }
 

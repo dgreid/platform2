@@ -765,8 +765,6 @@ grpc::Status ServiceImpl::GetResizeBounds(
     return grpc::Status(grpc::INTERNAL, "failed to parse btrfs output");
   }
 
-  LOG(INFO) << "stateful minimum size: " << min_size;
-
   response->set_minimum_size(min_size);
   return grpc::Status::OK;
 }
