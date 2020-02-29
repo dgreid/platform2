@@ -1673,6 +1673,19 @@ cmd_meminfo() (
   fi
 )
 
+USAGE_sync=''
+HELP_sync='
+  Run the sync command
+'
+cmd_sync() (
+  if [ $# -eq 0 ]; then
+    sync
+  else
+    help "unknown option: $*"
+    return 1
+  fi
+)
+
 USAGE_uptime=''
 HELP_uptime='
   Display uptime/load info
