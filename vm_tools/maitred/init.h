@@ -49,6 +49,15 @@ class Init final {
     // is SIGNALED, then this will hold the signal number that killed the
     // process.  Otherwise this value is undefined.
     int32_t code = 0;
+
+    // Output from the process's stdout handle.
+    // Only filled when spawned with |wait_for_exit| = true and |use_console| =
+    // false.
+    std::string output;
+
+    // If the spawned process potentially produced more than the maximum allowed
+    // output, |output_truncated| will be set to true.
+    bool output_truncated;
   };
 
   // Creates a new instance of this class and performs various bits of early

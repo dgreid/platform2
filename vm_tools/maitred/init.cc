@@ -87,6 +87,9 @@ constexpr base::TimeDelta kShutdownTimeout = base::TimeDelta::FromSeconds(10);
 constexpr base::TimeDelta kTremplinShutdownTimeout =
     base::TimeDelta::FromSeconds(2);
 
+// Maximum number of bytes to capture from a single spawned process.
+constexpr size_t kMaxOutputCaptureSize = 65536;
+
 // Mounts that must be created on boot.
 constexpr struct {
   const char* source;
@@ -803,11 +806,64 @@ void Init::Worker::Start() {
   PCHECK(console_fd_.is_valid()) << "Failed to open /dev/console";
 }
 
+static void SignalSpawnComplete(int semfd) {
+  if (semfd != -1) {
+    uint64_t done = 1;
+    ssize_t count = write(semfd, &done, sizeof(done));
+    DCHECK_EQ(count, sizeof(done));
+  }
+}
+
+// Read up to |max_size| bytes from |fd| into |contents|.
+// Returns true on success and false on error (including truncation).
+static bool ReadFDToStringWithMaxSize(int fd,
+                                      std::string* contents,
+                                      size_t max_size) {
+  DCHECK(contents);
+
+  bool success = true;
+  size_t buf_used = 0;
+  std::string buf;
+  buf.resize(max_size);
+
+  // Keep reading output until read() returns EOF or an error
+  // or we run out of space in the buffer.
+  while (buf_used < max_size) {
+    ssize_t num_bytes = read(fd, &buf[buf_used], max_size - buf_used);
+    if (num_bytes <= 0) {
+      success = false;
+      break;
+    }
+
+    buf_used += num_bytes;
+  }
+
+  contents->swap(buf);
+  contents->resize(buf_used);
+
+  return success;
+}
+
 void Init::Worker::Spawn(struct ChildInfo info,
                          int semfd,
                          ProcessLaunchInfo* launch_info) {
   DCHECK_GT(info.argv.size(), 0);
   DCHECK(launch_info);
+
+  bool capture_output = info.wait_for_exit && !info.use_console;
+
+  int pipe_fds[2] = {-1, -1};
+  if (capture_output) {
+    if (pipe(pipe_fds) != 0) {
+      PLOG(ERROR) << "Failed to create pipe";
+      launch_info->status = ProcessStatus::FAILED;
+      SignalSpawnComplete(semfd);
+      return;
+    }
+  }
+
+  base::ScopedFD output_read_fd(pipe_fds[0]);
+  base::ScopedFD output_write_fd(pipe_fds[1]);
 
   // Block all signals before forking to prevent signals from arriving in the
   // child.
@@ -822,14 +878,28 @@ void Init::Worker::Spawn(struct ChildInfo info,
     }
   }
 
+  if (capture_output) {
+    stdio_fds[STDOUT_FILENO] = output_write_fd.get();
+  }
+
   pid_t pid = -1;
   bool spawned = vm_tools::Spawn(info.argv, info.env, "" /* working_dir */,
                                  stdio_fds, &pid);
+
+  if (capture_output) {
+    // Close the writable end of the pipe in the parent.
+    output_write_fd.reset();
+  }
 
   if (!spawned) {
     LOG(ERROR) << "Failed to spawn child process";
     launch_info->status = ProcessStatus::FAILED;
   } else if (info.wait_for_exit) {
+    if (capture_output) {
+      launch_info->output_truncated = !ReadFDToStringWithMaxSize(
+          output_read_fd.get(), &launch_info->output, kMaxOutputCaptureSize);
+    }
+
     int status = 0;
     pid_t child = waitpid(pid, &status, 0);
     DCHECK_EQ(child, pid);
@@ -853,11 +923,7 @@ void Init::Worker::Spawn(struct ChildInfo info,
     launch_info->status = ProcessStatus::LAUNCHED;
   }
 
-  if (semfd != -1) {
-    uint64_t done = 1;
-    ssize_t count = write(semfd, &done, sizeof(done));
-    DCHECK_EQ(count, sizeof(done));
-  }
+  SignalSpawnComplete(semfd);
 
   // Restore the signal mask.
   sigprocmask(SIG_SETMASK, &omask, nullptr);
