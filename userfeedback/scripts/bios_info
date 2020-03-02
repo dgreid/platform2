@@ -64,7 +64,7 @@ ro bios version      | $(crossystem ro_fwid)
 Boot switch status:
   Recovery button: $(swstate 'recoverysw_boot' 'released' 'pressed')
   Developer mode:  $(swstate 'devsw_boot' 'not enabled' 'selected')
-  RO firmware:     $(swstate 'wpsw_boot' 'writeable' 'protected')
+  RO firmware:     $(swstate 'wpsw_cur' 'writeable' 'protected')
 Boot reason $(bootreason)
 Boot firmware: $(crossystem 'mainfw_act')
 Active EC code: $(crossystem 'ecfw_act')
