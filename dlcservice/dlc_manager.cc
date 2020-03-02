@@ -33,10 +33,6 @@ namespace {
 constexpr int kImageLoaderTimeoutMs = 5000;
 }  // namespace
 
-const char kDlcMetadataActiveValue[] = "1";
-// Keep kDlcMetadataFilePingActive in sync with update_engine's.
-const char kDlcMetadataFilePingActive[] = "active";
-
 class DlcManager::DlcManagerImpl {
  public:
   DlcManagerImpl() {
@@ -45,7 +41,6 @@ class DlcManager::DlcManagerImpl {
     manifest_dir_ = system_state->manifest_dir();
     preloaded_content_dir_ = system_state->preloaded_content_dir();
     content_dir_ = system_state->content_dir();
-    metadata_dir_ = system_state->metadata_dir();
 
     string boot_disk_name;
     if (!system_state->boot_slot().GetCurrentSlot(&boot_disk_name,
@@ -115,8 +110,12 @@ class DlcManager::DlcManagerImpl {
         }
       }
       // Failure to set the metadata flags should not fail the install.
-      if (!SetActive(id, &tmp_err))
-        LOG(WARNING) << Error::ToString(tmp_err);
+      if (!SystemState::Get()->update_engine()->SetDlcActiveValue(true, id,
+                                                                  &tmp_err)) {
+        LOG(WARNING) << "Update Engine failed to set DLC to active:" << id
+                     << (tmp_err ? Error::ToString(tmp_err)
+                                 : "Missing error from update engine proxy.");
+      }
     }
     return true;
   }
@@ -176,10 +175,16 @@ class DlcManager::DlcManagerImpl {
   // Deletes all directories related to the given DLC |id|.
   bool Delete(const string& id, ErrorPtr* err) {
     vector<string> undeleted_paths;
-    for (const auto& path :
-         {JoinPaths(content_dir_, id), JoinPaths(metadata_dir_, id)}) {
+    for (const auto& path : {JoinPaths(content_dir_, id)}) {
       if (!base::DeleteFile(path, true))
         undeleted_paths.push_back(path.value());
+      // Failure to set DLC to inactive should not fail uninstall.
+      ErrorPtr tmp_err;
+      if (!SystemState::Get()->update_engine()->SetDlcActiveValue(false, id,
+                                                                  &tmp_err))
+        LOG(WARNING) << "Failed to set DLC(" << id << ") to inactive."
+                     << (tmp_err ? Error::ToString(tmp_err)
+                                 : "Missing error from update engine proxy.");
     }
     installed_.erase(id);
     bool ret = undeleted_paths.empty();
@@ -243,39 +248,6 @@ class DlcManager::DlcManagerImpl {
       return false;
     }
     return manifest.preload_allowed();
-  }
-
-  bool CreateMetadata(const std::string& id, ErrorPtr* err) {
-    // Create the DLC ID metadata directory with correct permissions if it
-    // doesn't exist.
-    FilePath metadata_path_local = JoinPaths(metadata_dir_, id);
-    if (!base::PathExists(metadata_path_local)) {
-      if (!CreateDir(metadata_path_local)) {
-        *err = Error::Create(
-            kErrorInternal,
-            base::StringPrintf(
-                "Failed to create the DLC metadata directory for DLC=%s",
-                id.c_str()));
-        return false;
-      }
-    }
-    return true;
-  }
-
-  bool SetActive(const string& id, ErrorPtr* err) {
-    // Create the metadata directory if it doesn't exist.
-    if (!CreateMetadata(id, err))
-      return false;
-    auto active_metadata_path =
-        JoinPaths(metadata_dir_, id, kDlcMetadataFilePingActive);
-    if (!WriteToFile(active_metadata_path, kDlcMetadataActiveValue)) {
-      *err = Error::Create(
-          kErrorInternal,
-          base::StringPrintf("Failed to write into active metadata file: %s",
-                             active_metadata_path.value().c_str()));
-      return false;
-    }
-    return true;
   }
 
   // Create the DLC |id| and |package| directories if they don't exist.
@@ -558,9 +530,6 @@ class DlcManager::DlcManagerImpl {
         continue;
       }
       auto info = installed_[id];
-      // Create the metadata directory if it doesn't exist.
-      if (!CreateMetadata(id, &tmp_err))
-        LOG(WARNING) << Error::ToString(tmp_err);
       if (!ValidateImageFiles(id, &tmp_err)) {
         LOG(ERROR) << "Failed to validate during refresh for DLC=" << id << ", "
                    << Error::ToString(tmp_err);
@@ -592,7 +561,6 @@ class DlcManager::DlcManagerImpl {
   FilePath manifest_dir_;
   FilePath preloaded_content_dir_;
   FilePath content_dir_;
-  FilePath metadata_dir_;
 
   BootSlot::Slot current_boot_slot_;
 

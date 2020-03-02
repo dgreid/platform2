@@ -36,7 +36,6 @@ class SystemState {
       const base::FilePath& manifest_dir,
       const base::FilePath& preloaded_content_dir,
       const base::FilePath& content_dir,
-      const base::FilePath& metadata_dir,
       bool for_test = false);
 
   // Gets the pointer to the current |SystemState|.
@@ -49,7 +48,6 @@ class SystemState {
   const base::FilePath& manifest_dir() const;
   const base::FilePath& preloaded_content_dir() const;
   const base::FilePath& content_dir() const;
-  const base::FilePath& metadata_dir() const;
 
  protected:
   SystemState(
@@ -60,8 +58,7 @@ class SystemState {
       std::unique_ptr<BootSlot> boot_slot,
       const base::FilePath& manifest_dir,
       const base::FilePath& preloaded_content_dir,
-      const base::FilePath& content_dir,
-      const base::FilePath& metadata_dir);
+      const base::FilePath& content_dir);
 
  private:
   std::unique_ptr<org::chromium::ImageLoaderInterfaceProxyInterface>
@@ -72,7 +69,6 @@ class SystemState {
   base::FilePath manifest_dir_;
   base::FilePath preloaded_content_dir_;
   base::FilePath content_dir_;
-  base::FilePath metadata_dir_;
 
   static std::unique_ptr<SystemState> g_instance_;
   DISALLOW_COPY_AND_ASSIGN(SystemState);
