@@ -28,6 +28,7 @@ class Platform;
 class VaultKeyset {
  public:
   VaultKeyset();
+  VaultKeyset(VaultKeyset&&);
   virtual ~VaultKeyset();
 
   // Does not take ownership of platform and crypto. The objects pointed to by

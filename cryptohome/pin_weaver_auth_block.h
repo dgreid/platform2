@@ -15,18 +15,24 @@ namespace cryptohome {
 
 class PinWeaverAuthBlock : public AuthBlock {
  public:
-  explicit PinWeaverAuthBlock(LECredentialManager* le_manager);
+  explicit PinWeaverAuthBlock(LECredentialManager* le_manager,
+                              TpmInit* tpm_init);
+
+  bool Create(const AuthInput& user_input,
+              AuthBlockState* state,
+              KeyBlobs* key_blobs,
+              CryptoError* error) override;
 
   bool Derive(const AuthInput& auth_input,
               const AuthBlockState& state,
               KeyBlobs* key_blobs,
               CryptoError* error) override;
+
  private:
   // Handler for Low Entropy credentials.
-  // TODO(kerrnel): This is a pointer for now because the object is owned by
-  // Crypto class, but later this should be a singleton that's owned by the
-  // AuthBlock.
   LECredentialManager* le_manager_;
+
+  TpmInit* tpm_init_;
 
   DISALLOW_COPY_AND_ASSIGN(PinWeaverAuthBlock);
 };

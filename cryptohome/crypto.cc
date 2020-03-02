@@ -31,6 +31,7 @@ extern "C" {
 #include "cryptohome/cryptohome_common.h"
 #include "cryptohome/cryptohome_metrics.h"
 #include "cryptohome/cryptolib.h"
+#include "cryptohome/key_objects.h"
 #include "cryptohome/le_credential_manager_impl.h"
 #include "cryptohome/libscrypt_compat.h"
 #include "cryptohome/libscrypt_compat_auth_block.h"
@@ -58,26 +59,6 @@ const int64_t kSystemSaltMaxSize = (1 << 20);  // 1 MB
 
 // File permissions of salt file (modulo umask).
 const mode_t kSaltFilePermissions = 0644;
-
-// String used as vector in HMAC operation to derive vkk_seed from High Entropy
-// secret.
-// TODO(kerrnel): Delete this duplicate definition once EncryptLECredential is
-// re-factored.
-const char kHESecretHmacData[] = "vkk_seed";
-
-// A default delay schedule to be used for LE Credentials.
-// The format for a delay schedule entry is as follows:
-//
-// (number_of_incorrect_attempts, delay before_next_attempt)
-//
-// The default schedule is for the first 5 incorrect attempts to have no delay,
-// and no further attempts allowed.
-const struct {
-  uint32_t attempts;
-  uint32_t delay;
-} kDefaultDelaySchedule[] = {
-  { 5, UINT32_MAX }
-};
 
 // This generates the reset secret for PinWeaver credentials. Doing it per
 // secret is confusing and difficult to maintain. It's necessary so that
@@ -477,7 +458,7 @@ bool Crypto::DecryptVaultKeyset(const SerializedVaultKeyset& serialized,
   unsigned int flags = serialized.flags();
 
   if (flags & SerializedVaultKeyset::LE_CREDENTIAL) {
-    PinWeaverAuthBlock pin_weaver_auth(le_manager_.get());
+    PinWeaverAuthBlock pin_weaver_auth(le_manager_.get(), tpm_init_);
 
     AuthInput auth_input = { vault_key };
     AuthBlockState auth_state = { serialized };
@@ -517,8 +498,8 @@ bool Crypto::DecryptVaultKeyset(const SerializedVaultKeyset& serialized,
       should_try_tpm = true;
     }
 
-    AuthInput auth_input = { vault_key };
-    AuthBlockState auth_state = { serialized };
+    AuthInput auth_input = {vault_key};
+    AuthBlockState auth_state = {serialized};
     KeyBlobs vkk_data;
     LibScryptCompatAuthBlock auth_block;
     if (auth_block.Derive(auth_input, auth_state, &vkk_data, error)) {
@@ -809,94 +790,6 @@ bool Crypto::EncryptScrypt(const VaultKeyset& vault_keyset,
   return true;
 }
 
-bool Crypto::EncryptLECredential(const VaultKeyset& vault_keyset,
-                                 const SecureBlob& key,
-                                 const SecureBlob& salt,
-                                 const std::string& obfuscated_username,
-                                 const SecureBlob& reset_secret,
-                                 KeyBlobs* out_blobs,
-                                 SerializedVaultKeyset* serialized) const {
-  if (!use_tpm_ || !tpm_)
-    return false;
-  if (!le_manager_) {
-    LOG(ERROR) << "Attempt to encrypt Low Entropy Credential on platform that "
-                  "doesn't support LECredential";
-    return false;
-  }
-
-  EnsureTpm(false);
-
-  SecureBlob le_secret(kDefaultAesKeySize);
-  SecureBlob kdf_skey(kDefaultAesKeySize);
-  SecureBlob le_iv(kAesBlockSize);
-  if (!CryptoLib::DeriveSecretsScrypt(key, salt,
-                                      {&le_secret, &kdf_skey, &le_iv})) {
-    return false;
-  }
-
-  // Create a randomly generated high entropy secret, derive VKKSeed from it,
-  // and use that to generate a VKK. The HE secret will be stored in the
-  // LECredentialManager, along with the LE secret (which is |key| here).
-  SecureBlob he_secret;
-  if (!tpm_->GetRandomDataSecureBlob(kDefaultAesKeySize, &he_secret)) {
-    LOG(ERROR) << "Failed to obtain a VKK Seed for LE Credential";
-    return false;
-  }
-
-  // Derive the VKK_seed by performing an HMAC on he_secret.
-  SecureBlob vkk_seed = CryptoLib::HmacSha256(
-      he_secret, brillo::BlobFromString(kHESecretHmacData));
-
-  // Generate and store random new IVs for file-encryption keys and
-  // chaps key encryption.
-  const auto fek_iv = CryptoLib::CreateSecureRandomBlob(kAesBlockSize);
-  const auto chaps_iv = CryptoLib::CreateSecureRandomBlob(kAesBlockSize);
-
-  serialized->set_le_fek_iv(fek_iv.data(), fek_iv.size());
-  serialized->set_le_chaps_iv(chaps_iv.data(), chaps_iv.size());
-
-  SecureBlob vkk_key = CryptoLib::HmacSha256(kdf_skey, vkk_seed);
-
-  out_blobs->vkk_key = vkk_key;
-  out_blobs->vkk_iv = fek_iv;
-  out_blobs->chaps_iv = chaps_iv;
-  out_blobs->auth_iv = le_iv;
-
-  // Once we are able to correctly set up the VaultKeyset encryption,
-  // store the LE and HE credential in the LECredentialManager.
-
-  // Use the default delay schedule for now.
-  std::map<uint32_t, uint32_t> delay_sched;
-  for (const auto& entry : kDefaultDelaySchedule) {
-    delay_sched[entry.attempts] = entry.delay;
-  }
-
-  ValidPcrCriteria valid_pcr_criteria;
-  if (!GetValidPCRValues(obfuscated_username, &valid_pcr_criteria)) {
-    return false;
-  }
-
-  uint64_t label;
-  int ret =
-      le_manager_->InsertCredential(le_secret, he_secret, reset_secret,
-                                    delay_sched, valid_pcr_criteria, &label);
-  if (ret == LE_CRED_SUCCESS) {
-    serialized->set_flags(SerializedVaultKeyset::LE_CREDENTIAL);
-    serialized->set_le_label(label);
-    serialized->mutable_key_data()->mutable_policy()->set_auth_locked(false);
-    return true;
-  }
-
-  if (ret == LE_CRED_ERROR_NO_FREE_LABEL) {
-    LOG(ERROR)
-        << "InsertLECredential failed: No free label available in hash tree.";
-  } else if (ret == LE_CRED_ERROR_HASH_TREE) {
-    LOG(ERROR) << "InsertLECredential failed: hash tree error.";
-  }
-
-  return false;
-}
-
 bool Crypto::EncryptChallengeCredential(
     const VaultKeyset& vault_keyset,
     const SecureBlob& key,
@@ -964,21 +857,35 @@ bool Crypto::EncryptVaultKeyset(const VaultKeyset& vault_keyset,
     serialized->set_reset_salt(reset_salt.data(), reset_salt.size());
 
     KeyBlobs blobs;
-    if (!EncryptLECredential(vault_keyset, vault_key, vault_key_salt,
-                             obfuscated_username, reset_secret, &blobs,
-                             serialized)) {
-      // TODO(crbug.com/794010): add ReportCryptohomeError
+    PinWeaverAuthBlock pin_weaver_auth(le_manager_.get(), tpm_init_);
+
+    AuthInput user_input = {vault_key, /*is_pcr_extended=*/base::nullopt,
+                            vault_key_salt, obfuscated_username, reset_secret};
+    AuthBlockState auth_state = {SerializedVaultKeyset()};
+    KeyBlobs vkk_data;
+    CryptoError error;
+
+    // TODO(kerrnel): When switching to a factory method, report the error
+    // object.
+    if (!pin_weaver_auth.Create(user_input, &auth_state, &vkk_data, &error)) {
+      LOG(ERROR) << "Failed to create pinweaver credential: " << error;
       return false;
     }
 
-    if (!GenerateAndWrapKeys(vault_keyset, vault_key, vault_key_salt, blobs,
+    serialized->set_le_fek_iv(auth_state.vault_keyset.value().le_fek_iv());
+    serialized->set_le_chaps_iv(auth_state.vault_keyset.value().le_chaps_iv());
+    serialized->set_flags(auth_state.vault_keyset.value().flags());
+    serialized->set_le_label(auth_state.vault_keyset.value().le_label());
+    serialized->mutable_key_data()->mutable_policy()->set_auth_locked(false);
+
+    if (!GenerateAndWrapKeys(vault_keyset, vault_key, vault_key_salt, vkk_data,
                              /*store_reset_seed=*/false, serialized)) {
       LOG(ERROR) << "Failed to generate unwrapped keys";
       return false;
     }
 
-    if (!EncryptAuthorizationData(serialized, blobs.vkk_key.value(),
-                                  blobs.auth_iv.value())) {
+    if (!EncryptAuthorizationData(serialized, vkk_data.vkk_key.value(),
+                                  vkk_data.auth_iv.value())) {
       return false;
     }
   } else if (vault_keyset.IsSignatureChallengeProtected()) {
@@ -1210,47 +1117,6 @@ bool Crypto::is_cryptohome_key_loaded() const {
     return false;
   }
   return tpm_init_->HasCryptohomeKey();
-}
-
-bool Crypto::GetValidPCRValues(
-    const std::string& obfuscated_username,
-    ValidPcrCriteria* valid_pcr_criteria) const {
-  std::string default_pcr_str = std::string(kDefaultPcrValue, 32);
-
-  // The digest used for validation of PCR values by pinweaver is sha256 of
-  // the current PCR value of index 4.
-  // Step 1 - calculate expected values of PCR4 initially
-  // (kDefaultPcrValue = 0) and after user logins
-  // (sha256(initial_value | user_specific_digest)).
-  // Step 2 - calculate digest of those values, to support multi-PCR case,
-  // where all those expected values for all PCRs are sha256'ed together.
-  std::string default_digest = crypto::SHA256HashString(default_pcr_str);
-
-  // The second valid digest is the one obtained from the future value of
-  // PCR4, after it's extended by |obfuscated_username|. Compute the value of
-  // PCR4 after it will be extended first, which is
-  // sha256(default_value + sha256(extend_text)).
-  std::string extended_arc_pcr_value = crypto::SHA256HashString(
-      default_pcr_str + crypto::SHA256HashString(obfuscated_username));
-
-  // The second valid digest used by pinweaver for validation will be
-  // sha256 of the extended value of pcr4.
-  std::string extended_digest =
-      crypto::SHA256HashString(extended_arc_pcr_value);
-
-  ValidPcrValue default_pcr_value;
-  memset(default_pcr_value.bitmask, 0, 2);
-  default_pcr_value.bitmask[kTpmSingleUserPCR / 8] = 1u << kTpmSingleUserPCR;
-  default_pcr_value.digest = default_digest;
-  valid_pcr_criteria->push_back(default_pcr_value);
-
-  ValidPcrValue extended_pcr_value;
-  memset(extended_pcr_value.bitmask, 0, 2);
-  extended_pcr_value.bitmask[kTpmSingleUserPCR / 8] = 1u << kTpmSingleUserPCR;
-  extended_pcr_value.digest = extended_digest;
-  valid_pcr_criteria->push_back(extended_pcr_value);
-
-  return true;
 }
 
 bool Crypto::CanUnsealWithUserAuth() const {

@@ -13,6 +13,7 @@
 
 #include "cryptohome/crypto.h"
 #include "cryptohome/crypto_error.h"
+#include "cryptohome/cryptolib.h"
 #include "cryptohome/libscrypt_compat_auth_block.h"
 #include "cryptohome/mock_le_credential_backend.h"
 #include "cryptohome/mock_le_credential_manager.h"
@@ -28,6 +29,72 @@ using ::testing::NiceMock;
 using ::testing::Return;
 
 namespace cryptohome {
+
+TEST(PinWeaverAuthBlockTest, CreateTest) {
+  // Set up inputs to the test.
+  brillo::SecureBlob vault_key(20, 'C');
+  brillo::SecureBlob salt(PKCS5_SALT_LEN, 'A');
+  std::string obfuscated_username = "OBFUSCATED_USERNAME";
+  brillo::SecureBlob reset_secret(32, 'S');
+
+  // Set up the mock expectations.
+  brillo::SecureBlob le_secret(kDefaultAesKeySize);
+  brillo::SecureBlob unused;
+  EXPECT_TRUE(CryptoLib::DeriveSecretsScrypt(vault_key, salt,
+                                             {&le_secret, &unused, &unused}));
+
+  NiceMock<MockTpmInit> tpm_init;
+  NiceMock<MockLECredentialManager> le_cred_manager;
+  ON_CALL(le_cred_manager, InsertCredential(_, _, _, _, _, _))
+      .WillByDefault(Return(LE_CRED_SUCCESS));
+  EXPECT_CALL(le_cred_manager, InsertCredential(le_secret, _, _, _, _, _))
+      .Times(Exactly(1));
+
+  // Call the Create() method.
+  AuthInput user_input = {vault_key,
+                          /*locked_to_single_user=*/base::nullopt,
+                          salt,
+                          obfuscated_username,
+                          reset_secret};
+  AuthBlockState auth_state = {SerializedVaultKeyset()};
+  KeyBlobs vkk_data;
+  CryptoError error;
+
+  PinWeaverAuthBlock auth_block(&le_cred_manager, &tpm_init);
+  EXPECT_TRUE(auth_block.Create(user_input, &auth_state, &vkk_data, &error));
+
+  // Copy the SerializedVaultKeyset back out.
+  SerializedVaultKeyset serialized = auth_state.vault_keyset.value();
+
+  // Check the outputs.
+  EXPECT_EQ(SerializedVaultKeyset::LE_CREDENTIAL, serialized.flags());
+}
+
+TEST(PinWeaverAuthBlockTest, CreateFailTest) {
+  brillo::SecureBlob vault_key(20, 'C');
+  brillo::SecureBlob salt(PKCS5_SALT_LEN, 'A');
+  std::string obfuscated_username = "OBFUSCATED_USERNAME";
+  brillo::SecureBlob reset_secret(32, 'S');
+
+  // Now test that the method fails if the le_cred_manager fails.
+  NiceMock<MockTpmInit> tpm_init_fail;
+  NiceMock<MockLECredentialManager> le_cred_manager_fail;
+  ON_CALL(le_cred_manager_fail, InsertCredential(_, _, _, _, _, _))
+      .WillByDefault(Return(LE_CRED_ERROR_HASH_TREE));
+
+  PinWeaverAuthBlock auth_block_fail(&le_cred_manager_fail, &tpm_init_fail);
+  // Call the Create() method.
+  AuthInput user_input = {vault_key,
+                          /*locked_to_single_user=*/base::nullopt,
+                          salt,
+                          obfuscated_username,
+                          reset_secret};
+  AuthBlockState auth_state = {SerializedVaultKeyset()};
+  KeyBlobs vkk_data;
+  CryptoError error;
+  EXPECT_FALSE(
+      auth_block_fail.Create(user_input, &auth_state, &vkk_data, &error));
+}
 
 TEST(PinWeaverAuthBlockTest, DeriveTest) {
   brillo::SecureBlob vault_key(20, 'C');
@@ -46,7 +113,9 @@ TEST(PinWeaverAuthBlockTest, DeriveTest) {
   EXPECT_CALL(le_cred_manager, CheckCredential(_, le_secret, _, _))
       .Times(Exactly(1));
 
-  PinWeaverAuthBlock auth_block(&le_cred_manager);
+  NiceMock<MockTpm> tpm;
+  NiceMock<MockTpmInit> tpm_init;
+  PinWeaverAuthBlock auth_block(&le_cred_manager, &tpm_init);
 
   // Construct the vault keyset.
   SerializedVaultKeyset serialized;
@@ -91,7 +160,9 @@ TEST(PinWeaverAuthBlockTest, CheckCredentialFailureTest) {
   EXPECT_CALL(le_cred_manager, CheckCredential(_, le_secret, _, _))
       .Times(Exactly(1));
 
-  PinWeaverAuthBlock auth_block(&le_cred_manager);
+  NiceMock<MockTpm> tpm;
+  NiceMock<MockTpmInit> tpm_init;
+  PinWeaverAuthBlock auth_block(&le_cred_manager, &tpm_init);
 
   // Construct the vault keyset.
   SerializedVaultKeyset serialized;

@@ -28,6 +28,10 @@ VaultKeyset::VaultKeyset()
       legacy_index_(-1) {
 }
 
+VaultKeyset::VaultKeyset(VaultKeyset&& vault_keyset) {
+  FromVaultKeyset(vault_keyset);
+}
+
 VaultKeyset::~VaultKeyset() {
 }
 
@@ -56,6 +60,17 @@ void VaultKeyset::FromVaultKeyset(const VaultKeyset& vault_keyset) {
 
   fnek_salt_.resize(vault_keyset.fnek_salt_.size());
   memcpy(fnek_salt_.data(), vault_keyset.fnek_salt_.data(), fnek_salt_.size());
+
+  chaps_key_.resize(vault_keyset.chaps_key_.size());
+  memcpy(chaps_key_.data(), vault_keyset.chaps_key_.data(), chaps_key_.size());
+
+  reset_seed_.resize(vault_keyset.reset_seed_.size());
+  memcpy(reset_seed_.data(), vault_keyset.reset_seed_.data(),
+         reset_seed_.size());
+
+  reset_secret_.resize(vault_keyset.reset_secret_.size());
+  memcpy(reset_secret_.data(), vault_keyset.reset_secret_.data(),
+         reset_secret_.size());
 }
 
 void VaultKeyset::FromKeys(const VaultKeysetKeys& keys) {

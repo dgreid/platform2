@@ -25,7 +25,6 @@
 
 #include "cryptohome/crypto_error.h"
 #include "cryptohome/cryptolib.h"
-#include "cryptohome/key_objects.h"
 #include "cryptohome/le_credential_manager.h"
 #include "cryptohome/tpm.h"
 #include "cryptohome/tpm_init.h"
@@ -34,6 +33,7 @@
 
 namespace cryptohome {
 
+struct KeyBlobs;
 class VaultKeyset;
 
 extern const char kSystemSaltFile[];
@@ -265,14 +265,6 @@ class Crypto {
                      const brillo::SecureBlob& key,
                      SerializedVaultKeyset* serialized) const;
 
-  bool EncryptLECredential(const VaultKeyset& vault_keyset,
-                           const brillo::SecureBlob& key,
-                           const brillo::SecureBlob& salt,
-                           const std::string& obfuscated_username,
-                           const brillo::SecureBlob& reset_secret,
-                           KeyBlobs* out_blobs,
-                           SerializedVaultKeyset* serialized) const;
-
   bool EncryptChallengeCredential(const VaultKeyset& vault_keyset,
                                   const brillo::SecureBlob& key,
                                   const std::string& obfuscated_username,
@@ -321,13 +313,6 @@ class Crypto {
                                 const brillo::SecureBlob& vkk_iv) const;
 
   bool IsTPMPubkeyHash(const std::string& hash, CryptoError* error) const;
-
-  // Computes the PCR digest for default state as well as the future digest
-  // obtained if PCR for ARC++ would be extended with |obfuscated_username|
-  // value. Populates the results in |valid_pcr_criteria| where each pair
-  // represents the bitmask of used PCR indexes and the expected digest.
-  bool GetValidPCRValues(const std::string& obfuscated_username,
-                         ValidPcrCriteria* valid_pcr_criteria) const;
 
   // Returns the tpm_key data taken from |serialized|, specifically if the
   // keyset is PCR_BOUND and |locked_to_single_user| the data is taken from

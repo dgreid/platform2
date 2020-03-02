@@ -5,10 +5,13 @@
 #ifndef CRYPTOHOME_KEY_OBJECTS_H_
 #define CRYPTOHOME_KEY_OBJECTS_H_
 
-#include "cryptohome/cryptolib.h"
+#include <string>
 
 #include <base/optional.h>
 #include <brillo/secure_blob.h>
+
+#include "cryptohome/cryptolib.h"
+#include "cryptohome/vault_keyset.h"
 
 namespace cryptohome {
 
@@ -17,6 +20,12 @@ struct AuthInput {
   base::Optional<brillo::SecureBlob> user_input;
   // Whether or not the PCR is extended, this is usually false.
   base::Optional<bool> locked_to_single_user;
+  // If a salt is to be used during credential generation.
+  base::Optional<brillo::SecureBlob> salt;
+  // The obfuscated username.
+  base::Optional<std::string> obfuscated_username;
+  // A generated reset secret to unlock a rate limited credential.
+  base::Optional<brillo::SecureBlob> reset_secret;
 };
 
 // This struct is populated by the various authentication methods, with the

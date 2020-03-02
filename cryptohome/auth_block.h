@@ -24,6 +24,17 @@ class AuthBlock {
  public:
   virtual ~AuthBlock() = default;
 
+  // This is implemented by concrete auth methods to create a fresh key from
+  // user input. The key will then be used to wrap the keyset.
+  virtual bool Create(const AuthInput& user_input,
+                      AuthBlockState* state,
+                      KeyBlobs* key_blobs,
+                      CryptoError* error) {
+    // TODO(kerrnel): Once all AuthBlocks have a Create() method, make this pure
+    // virtual.
+    return false;
+  }
+
   // This is implemented by concrete auth methods to map the user secret
   // input into a key. This method should successfully authenticate the user.
   virtual bool Derive(const AuthInput& auth_input,
