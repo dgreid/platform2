@@ -4,7 +4,6 @@
 
 import("//common-mk/generate-dbus-proxies.gni")
 import("//common-mk/pkg_config.gni")
-import("//common-mk/proto_library.gni")
 
 group("all") {
   deps = [
@@ -19,7 +18,6 @@ group("all") {
     ":libsystem_stub",
     ":libutil",
     ":memory_suspend_test",
-    ":power_manager_protos",
     ":power_supply_info",
     ":powerd",
     ":powerd_dbus_suspend",
@@ -77,14 +75,6 @@ pkg_config("target_defaults") {
 
 pkg_config("libutil_dependent_config") {
   pkg_deps = [ "libmetrics-${libbase_ver}" ]
-}
-
-proto_library("power_manager_protos") {
-  proto_in_dir = "."
-  proto_out_dir = "include/power_manager/proto_bindings"
-  sources = [
-    "${proto_in_dir}/config.proto",
-  ]
 }
 
 static_library("libutil") {
