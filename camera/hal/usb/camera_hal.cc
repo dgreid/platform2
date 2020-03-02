@@ -274,7 +274,9 @@ int CameraHal::Init() {
 
   if (!cros_config_.Init() ||
       !cros_config_.GetString("/", "name", &model_name_)) {
-    return -ENODEV;
+    LOGF(ERROR) << "Failed to initialize CrOS device config";
+    // TODO(b/150578054): Return -ENODEV once the issue is fixed. For now, let's
+    // ignore such error and leave |model_name_| empty if it fails.
   }
 
   return 0;
