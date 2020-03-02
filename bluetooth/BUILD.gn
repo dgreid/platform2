@@ -3,11 +3,9 @@
 # found in the LICENSE file.
 
 import("//common-mk/pkg_config.gni")
-import("//common-mk/proto_library.gni")
 
 group("all") {
   deps = [
-    ":bluetooth-protos",
     ":btdispatch",
     ":libcommon",
     ":libdispatcher",
@@ -34,14 +32,6 @@ pkg_config("target_defaults") {
   } else {
     pkg_deps += [ "protobuf-lite" ]
   }
-}
-
-proto_library("bluetooth-protos") {
-  proto_in_dir = "proto"
-  proto_out_dir = "include/bluetooth/proto_bindings"
-  sources = [
-    "${proto_in_dir}/config.proto",
-  ]
 }
 
 static_library("libcommon") {
