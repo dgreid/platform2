@@ -1085,7 +1085,7 @@ bool Platform::ReportFilesystemDetails(const FilePath &filesystem,
 }
 
 bool Platform::FirmwareWriteProtected() {
-  return VbGetSystemPropertyInt("wpsw_boot") != 0;
+  return VbGetSystemPropertyInt("wpsw_cur") != 0;
 }
 
 bool Platform::SyncFileOrDirectory(const FilePath& path,
