@@ -239,6 +239,11 @@ bool CrosConfig::InitInternal(const int sku_id,
 bool CrosConfig::GetString(const std::string& path,
                            const std::string& property,
                            std::string* val_out) {
+  if (path.empty() || path[0] != '/') {
+    CROS_CONFIG_LOG(ERROR) << "Path parameter must begin with \"/\".";
+    return false;
+  }
+
   if (!cros_config_) {
     // Using ConfigFS (typical case).
     auto filepath = base::FilePath(kConfigFSBasePath);
