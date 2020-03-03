@@ -27,6 +27,11 @@ using std::vector;
 
 namespace dlcservice {
 
+namespace {
+// Timeout in ms for DBus method calls into imageloader.
+constexpr int kImageLoaderTimeoutMs = 5000;
+}  // namespace
+
 const char kDlcMetadataActiveValue[] = "1";
 // Keep kDlcMetadataFilePingActive in sync with update_engine's.
 const char kDlcMetadataFilePingActive[] = "active";
@@ -200,7 +205,7 @@ class DlcManager::DlcManagerImpl {
             id, GetDlcPackage(id),
             current_boot_slot_ == BootSlot::Slot::A ? imageloader::kSlotNameA
                                                     : imageloader::kSlotNameB,
-            mount_point, nullptr)) {
+            mount_point, nullptr, kImageLoaderTimeoutMs)) {
       *err_code = kErrorInternal;
       *err_msg = "Imageloader is unavailable.";
       return false;
@@ -216,7 +221,7 @@ class DlcManager::DlcManagerImpl {
   bool Unmount(const string& id, string* err_code, string* err_msg) {
     bool success = false;
     if (!image_loader_proxy_->UnloadDlcImage(id, GetDlcPackage(id), &success,
-                                             nullptr)) {
+                                             nullptr, kImageLoaderTimeoutMs)) {
       *err_code = kErrorInternal;
       *err_msg = "Imageloader is unavailable.";
       return false;
