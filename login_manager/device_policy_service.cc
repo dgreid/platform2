@@ -473,8 +473,10 @@ void DevicePolicyService::PersistPolicy(const PolicyNamespace& ns,
 }
 
 bool DevicePolicyService::MayUpdateSystemSettings() {
-  // Check if device ownership is established.
-  if (!key()->IsPopulated()) {
+  // Check if device ownership is established or if device is enrolled to Active
+  // Directory (Chromad).
+  if (!key()->IsPopulated() &&
+      GetEnterpriseMode() != InstallAttributesReader::kDeviceModeEnterpriseAD) {
     return false;
   }
 
@@ -533,11 +535,9 @@ bool DevicePolicyService::UpdateSystemSettings(const Completion& completion) {
   // Check if device is enrolled. The flag for enrolled device is written to VPD
   // but will never get deleted. Existence of the flag is one of the triggers
   // for FRE check during OOBE.
-  // Cast value to C string and back to remove trailing zero.
-  const std::string mode(install_attributes_reader_
-                             ->GetAttribute(InstallAttributesReader::kAttrMode)
-                             .c_str());
+  const std::string& mode = GetEnterpriseMode();
   if (mode != InstallAttributesReader::kDeviceModeEnterprise &&
+      mode != InstallAttributesReader::kDeviceModeEnterpriseAD &&
       mode != InstallAttributesReader::kDeviceModeConsumer) {
     // Probably the first sign in, install attributes file is not created yet.
     if (!completion.is_null())
@@ -545,7 +545,8 @@ bool DevicePolicyService::UpdateSystemSettings(const Completion& completion) {
 
     return true;
   }
-  bool is_enrolled = (mode == InstallAttributesReader::kDeviceModeEnterprise);
+  bool is_enrolled = (mode == InstallAttributesReader::kDeviceModeEnterprise ||
+                      mode == InstallAttributesReader::kDeviceModeEnterpriseAD);
 
   // It's impossible for block_devmode to be true and the device to not be
   // enrolled. If we end up in this situation, log the error and don't update
@@ -564,10 +565,15 @@ bool DevicePolicyService::UpdateSystemSettings(const Completion& completion) {
   updates.push_back(std::make_pair(Crossystem::kCheckEnrollment,
                                    std::to_string(is_enrolled)));
 
-  // Note that VPD update errors will be ignored if the device is not enrolled.
+  // Note that VPD update errors will be ignored if the device is not enrolled
+  // or if device is enrolled to Active Directory (Chromad).
+  // TODO(crbug.com/1060640): Revisit ignoring VPD update errors for Chromad
+  // after better solution is found.
+  bool ignore_errors =
+      !is_enrolled || mode == InstallAttributesReader::kDeviceModeEnterpriseAD;
   return vpd_process_->RunInBackground(
       updates, false,
-      base::Bind(&HandleVpdUpdateCompletion, !is_enrolled, completion));
+      base::Bind(&HandleVpdUpdateCompletion, ignore_errors, completion));
 }
 
 void DevicePolicyService::ClearForcedReEnrollmentFlags(
@@ -662,6 +668,11 @@ std::string DevicePolicyService::GetDeviceId() {
     return std::string();
   }
   return policy_data.device_id();
+}
+
+const std::string& DevicePolicyService::GetEnterpriseMode() {
+  return install_attributes_reader_->GetAttribute(
+      InstallAttributesReader::kAttrMode);
 }
 
 bool DevicePolicyService::IsChromeStoreResilientForTesting() {

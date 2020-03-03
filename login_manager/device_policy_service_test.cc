@@ -758,6 +758,43 @@ TEST_F(DevicePolicyServiceTest, CheckEnrolledDevice) {
   PersistPolicy(&service);
 }
 
+// Ensure device enrolled to Active Directory gets VPD updated.
+// A MockDevicePolicyService object is used.
+TEST_F(DevicePolicyServiceTest, CheckADEnrolledDevice) {
+  MockNssUtil nss;
+  InitService(&nss, true);
+
+  MockPolicyKey key;
+  MockPolicyStore* store = new MockPolicyStore();
+  MockDevicePolicyService service(&key);
+  service.SetStoreForTesting(MakeChromePolicyNamespace(),
+                             std::unique_ptr<MockPolicyStore>(store));
+
+  service.set_crossystem(&crossystem_);
+  service.set_vpd_process(&vpd_process_);
+  service.set_install_attributes_reader(&install_attributes_reader_);
+  crossystem_.VbSetSystemPropertyString(Crossystem::kMainfwType, "normal");
+
+  auto proto = std::make_unique<em::ChromeDeviceSettingsProto>();
+  proto->mutable_system_settings()->set_block_devmode(false);
+  SetSettings(&service, std::move(proto));
+  SetPolicyKey(&service, &key);
+
+  EXPECT_CALL(key, IsPopulated()).WillRepeatedly(Return(false));
+  EXPECT_CALL(*store, Persist()).WillRepeatedly(Return(true));
+  SetDataInInstallAttributes("enterprise_ad");
+
+  VpdProcess::KeyValuePairs updates{
+      {Crossystem::kBlockDevmode, "0"},
+      {Crossystem::kCheckEnrollment, "1"},
+  };
+  EXPECT_CALL(vpd_process_, RunInBackground(updates, false, _))
+      .Times(1)
+      .WillOnce(Return(true));
+
+  PersistPolicy(&service);
+}
+
 // Check enrolled device that fails at VPD update.
 TEST_F(DevicePolicyServiceTest, CheckFailUpdateVPD) {
   MockNssUtil nss;

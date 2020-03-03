@@ -190,6 +190,9 @@ class DevicePolicyService : public PolicyService {
   // Returns the device_id from PolicyData.
   std::string GetDeviceId();
 
+  // Returns enterprise mode from |install_attributes_reader_|.
+  const std::string& GetEnterpriseMode();
+
   // Returns whether the store is resilent. To be used for testing only.
   bool IsChromeStoreResilientForTesting();
 
