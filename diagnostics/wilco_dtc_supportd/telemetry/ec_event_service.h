@@ -96,7 +96,7 @@ class EcEventService {
         // Barrel charger is incompatible and performance will be restricted.
         NON_WILCO_CHARGER = 1 << 0,
         // Attached charger does not supply enough power.
-        LOW_POWER_CHARGER = 1 << 3,
+        LOW_POWER_CHARGER = 1 << 1,
       };
       uint16_t reserved0;
       Cause cause;

@@ -19,7 +19,7 @@ const auto kSystemNotifyType = static_cast<EcEvent::Type>(0x0012);
 // Valid payloads of |EcEvent::Type::SYSTEM_NOTIFY| type
 const uint16_t kEcEventPayloadNonWilcoCharger[] = {0x0000, 0x0000, 0x0001,
                                                    0x0000, 0x0000, 0x0000};
-const uint16_t kEcEventPayloadLowPowerCharger[] = {0x0000, 0x0000, 0x0008,
+const uint16_t kEcEventPayloadLowPowerCharger[] = {0x0000, 0x0000, 0x0002,
                                                    0x0000, 0x0000, 0x0000};
 const uint16_t kEcEventPayloadBatteryAuth[] = {0x0003, 0x0000, 0x0001,
                                                0x0000, 0x0000, 0x0000};
