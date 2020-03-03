@@ -85,6 +85,8 @@ Please follow these steps to enable Dark Resume on a new device.
 *   Make sure [power_WakeSources] Autotest test passes on the device.
 *   [power_WakeSources] might not test all the wake sources. Please make sure to
     test missing wake sources manually.
+*   Add `disable-dark-resume` to the board's `model.yaml`
+    ([example](https://crrev.com/c/1989434)).
 
 ## Debugging Dark Resume
 
