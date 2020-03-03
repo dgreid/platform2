@@ -63,6 +63,8 @@ _IUSE = [
     'fuzzer',
     'hammerd_api',
     'hwid_override',
+    'ipu6',
+    'ipu6se',
     'iwlwifi_dump',
     'kvm_guest',
     'kvm_host',
