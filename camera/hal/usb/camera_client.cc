@@ -341,9 +341,11 @@ void CameraClient::SetUpStreams(int num_buffers,
     if (stream->stream_type == CAMERA3_STREAM_OUTPUT ||
         stream->stream_type == CAMERA3_STREAM_BIDIRECTIONAL) {
       stream->usage |= GRALLOC_USAGE_SW_WRITE_OFTEN |
-                       GRALLOC_USAGE_HW_CAMERA_READ |
                        GRALLOC_USAGE_HW_CAMERA_WRITE;
     }
+    if (stream->stream_type == CAMERA3_STREAM_INPUT ||
+        stream->stream_type == CAMERA3_STREAM_BIDIRECTIONAL)
+      stream->usage |= GRALLOC_USAGE_SW_READ_OFTEN;
     stream->max_buffers = num_buffers;
   }
 }
