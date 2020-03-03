@@ -13,6 +13,7 @@
 
 #include <vector>
 
+#include <base/files/file.h>
 #include <base/files/file_util.h>
 #include <base/files/scoped_file.h>
 #include <base/rand_util.h>
@@ -174,6 +175,16 @@ base::ScopedFD CreateClientUnixDomainSocket(const base::FilePath& socket_path) {
     return base::ScopedFD();
   }
 
+  // TODO(crbug.com/1053569): Remove these lines once the issue is solved.
+  base::File::Info info;
+  if (!base::GetFileInfo(socket_path, &info)) {
+    LOGF(WARNING) << "Failed to get socket info";
+  } else {
+    LOGF(INFO) << "Connect the camera socket successfully. Socket info:"
+               << " creation_time: " << info.creation_time
+               << " last_accessed: " << info.last_accessed
+               << " last_modified: " << info.last_modified;
+  }
   return fd;
 }
 
