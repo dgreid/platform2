@@ -85,8 +85,6 @@ getrandom: 1
 sendmmsg: 1
 
 # Used by the http transfer.
-access: 1
-alarm: 1
 bind: 1
 
 # These calls are attempted but apparently not necessary; return EPERM.
