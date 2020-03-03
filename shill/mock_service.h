@@ -46,11 +46,11 @@ class MockService : public Service {
   MOCK_METHOD(void, SetFailure, (ConnectFailure), (override));
   MOCK_METHOD(ConnectFailure, failure, (), (const, override));
   MOCK_METHOD(RpcIdentifier, GetDeviceRpcId, (Error*), (const, override));
-  MOCK_METHOD(RpcIdentifier,
+  MOCK_METHOD(const RpcIdentifier&,
               GetInnerDeviceRpcIdentifier,
               (),
               (const, override));
-  MOCK_METHOD(RpcIdentifier, GetRpcIdentifier, (), (const, override));
+  MOCK_METHOD(const RpcIdentifier&, GetRpcIdentifier, (), (const, override));
   MOCK_METHOD(bool, IsAlwaysOnVpn, (const std::string&), (const, override));
   MOCK_METHOD(std::string, GetStorageIdentifier, (), (const, override));
   MOCK_METHOD(std::string,
@@ -109,6 +109,8 @@ class MockService : public Service {
 
  private:
   ConnectionRefPtr mock_connection_;
+  RpcIdentifier id_;
+  RpcIdentifier null_id_;
   DISALLOW_COPY_AND_ASSIGN(MockService);
 };
 

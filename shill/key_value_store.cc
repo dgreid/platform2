@@ -234,17 +234,16 @@ const RpcIdentifier& KeyValueStore::GetRpcIdentifier(const string& name) const {
   CHECK(it != properties_.end() &&
         it->second.IsTypeCompatible<dbus::ObjectPath>())
       << "for rpc identifier property " << name;
-  return it->second.Get<dbus::ObjectPath>().value();
+  return it->second.Get<dbus::ObjectPath>();
 }
 
-RpcIdentifiers KeyValueStore::GetRpcIdentifiers(const string& name) const {
+const RpcIdentifiers& KeyValueStore::GetRpcIdentifiers(
+    const string& name) const {
   const auto it(properties_.find(name));
   CHECK(it != properties_.end() &&
         it->second.IsTypeCompatible<vector<dbus::ObjectPath>>())
       << "for rpc identifier property " << name;
-  RpcIdentifiers ids = KeyValueStore::ConvertPathsToRpcIdentifiers(
-      it->second.Get<vector<dbus::ObjectPath>>());
-  return ids;
+  return it->second.Get<vector<dbus::ObjectPath>>();
 }
 
 const string& KeyValueStore::GetString(const string& name) const {
@@ -480,16 +479,6 @@ KeyValueStore KeyValueStore::ConvertFromVariantDictionary(
     }
   }
   return out_store;
-}
-
-// static.
-RpcIdentifiers KeyValueStore::ConvertPathsToRpcIdentifiers(
-    const vector<dbus::ObjectPath>& paths) {
-  RpcIdentifiers rpc_identifiers;
-  for (const auto& path : paths) {
-    rpc_identifiers.push_back(path.value());
-  }
-  return rpc_identifiers;
 }
 
 }  // namespace shill

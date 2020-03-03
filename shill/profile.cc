@@ -50,8 +50,8 @@ Profile::Profile(Manager* manager,
   // kOfflineModeProperty: Registered in DefaultProfile
   // kPortalURLProperty: Registered in DefaultProfile
 
-  HelpRegisterConstDerivedStrings(kServicesProperty,
-                                  &Profile::EnumerateAvailableServices);
+  HelpRegisterConstDerivedRpcIdentifiers(kServicesProperty,
+                                         &Profile::EnumerateAvailableServices);
   HelpRegisterConstDerivedStrings(kEntriesProperty, &Profile::EnumerateEntries);
 
   if (name.user.empty()) {
@@ -146,9 +146,10 @@ string Profile::GetFriendlyName() const {
   return (name_.user.empty() ? "" : name_.user + "/") + name_.identifier;
 }
 
-RpcIdentifier Profile::GetRpcIdentifier() const {
+const RpcIdentifier& Profile::GetRpcIdentifier() const {
+  static RpcIdentifier null_identifier;
   if (!adaptor_) {
-    return RpcIdentifier();
+    return null_identifier;
   }
   return adaptor_->GetRpcIdentifier();
 }
@@ -352,9 +353,8 @@ RpcIdentifiers Profile::EnumerateAvailableServices(Error* error) {
   // We should return the Manager's service list if this is the active profile.
   if (manager_->IsActiveProfile(this)) {
     return manager_->EnumerateAvailableServices(error);
-  } else {
-    return RpcIdentifiers();
   }
+  return RpcIdentifiers();
 }
 
 vector<string> Profile::EnumerateEntries(Error* /*error*/) {
@@ -379,6 +379,13 @@ bool Profile::UpdateWiFiProvider(const WiFiProvider& wifi_provider) {
   return false;
 }
 #endif  // DISABLE_WIFI
+
+void Profile::HelpRegisterConstDerivedRpcIdentifiers(
+    const string& name, RpcIdentifiers (Profile::*get)(Error* error)) {
+  store_.RegisterDerivedRpcIdentifiers(
+      name, RpcIdentifiersAccessor(new CustomAccessor<Profile, RpcIdentifiers>(
+                this, get, nullptr)));
+}
 
 void Profile::HelpRegisterConstDerivedStrings(const string& name,
                                               Strings (Profile::*get)(Error*)) {

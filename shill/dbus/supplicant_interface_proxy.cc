@@ -52,7 +52,7 @@ SupplicantInterfaceProxy::SupplicantInterfaceProxy(
     const RpcIdentifier& object_path,
     SupplicantEventDelegateInterface* delegate)
     : interface_proxy_(new fi::w1::wpa_supplicant1::InterfaceProxy(
-          bus, WPASupplicant::kDBusAddr, dbus::ObjectPath(object_path))),
+          bus, WPASupplicant::kDBusAddr, object_path)),
       delegate_(delegate) {
   // Register properites.
   properties_.reset(
@@ -133,7 +133,7 @@ bool SupplicantInterfaceProxy::AddNetwork(const KeyValueStore& args,
                << error->GetMessage();
     return false;
   }
-  *network = path.value();
+  *network = path;
   return true;
 }
 
@@ -185,11 +185,10 @@ bool SupplicantInterfaceProxy::NetworkReply(const RpcIdentifier& network,
                                             const string& field,
                                             const string& value) {
   SLOG(&interface_proxy_->GetObjectPath(), 2)
-      << __func__ << " network: " << network << " field: " << field
+      << __func__ << " network: " << network.value() << " field: " << field
       << " value: " << value;
   brillo::ErrorPtr error;
-  if (!interface_proxy_->NetworkReply(dbus::ObjectPath(network), field, value,
-                                      &error)) {
+  if (!interface_proxy_->NetworkReply(network, field, value, &error)) {
     LOG(ERROR) << "Failed to network reply: " << error->GetCode() << " "
                << error->GetMessage();
     return false;
@@ -242,9 +241,10 @@ bool SupplicantInterfaceProxy::RemoveAllNetworks() {
 }
 
 bool SupplicantInterfaceProxy::RemoveNetwork(const RpcIdentifier& network) {
-  SLOG(&interface_proxy_->GetObjectPath(), 2) << __func__ << ": " << network;
+  SLOG(&interface_proxy_->GetObjectPath(), 2)
+      << __func__ << ": " << network.value();
   brillo::ErrorPtr error;
-  if (!interface_proxy_->RemoveNetwork(dbus::ObjectPath(network), &error)) {
+  if (!interface_proxy_->RemoveNetwork(network, &error)) {
     LOG(ERROR) << "Failed to remove network: " << error->GetCode() << " "
                << error->GetMessage();
     // RemoveNetwork can fail with three different errors.
@@ -278,9 +278,10 @@ bool SupplicantInterfaceProxy::Scan(const KeyValueStore& args) {
 }
 
 bool SupplicantInterfaceProxy::SelectNetwork(const RpcIdentifier& network) {
-  SLOG(&interface_proxy_->GetObjectPath(), 2) << __func__ << ": " << network;
+  SLOG(&interface_proxy_->GetObjectPath(), 2)
+      << __func__ << ": " << network.value();
   brillo::ErrorPtr error;
-  if (!interface_proxy_->SelectNetwork(dbus::ObjectPath(network), &error)) {
+  if (!interface_proxy_->SelectNetwork(network, &error)) {
     LOG(ERROR) << "Failed to select network: " << error->GetCode() << " "
                << error->GetMessage();
     return false;
@@ -426,7 +427,7 @@ void SupplicantInterfaceProxy::BSSAdded(
     const dbus::ObjectPath& BSS, const brillo::VariantDictionary& properties) {
   SLOG(&interface_proxy_->GetObjectPath(), 2) << __func__;
   KeyValueStore store = KeyValueStore::ConvertFromVariantDictionary(properties);
-  delegate_->BSSAdded(BSS.value(), store);
+  delegate_->BSSAdded(BSS, store);
 }
 
 void SupplicantInterfaceProxy::Certification(
@@ -445,7 +446,7 @@ void SupplicantInterfaceProxy::EAP(const string& status,
 
 void SupplicantInterfaceProxy::BSSRemoved(const dbus::ObjectPath& BSS) {
   SLOG(&interface_proxy_->GetObjectPath(), 2) << __func__;
-  delegate_->BSSRemoved(BSS.value());
+  delegate_->BSSRemoved(BSS);
 }
 
 void SupplicantInterfaceProxy::NetworkAdded(

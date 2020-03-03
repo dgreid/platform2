@@ -24,7 +24,7 @@ class DeviceMockAdaptor : public DeviceAdaptorInterface {
 
   DeviceMockAdaptor();
   ~DeviceMockAdaptor() override;
-  RpcIdentifier GetRpcIdentifier() const override;
+  const RpcIdentifier& GetRpcIdentifier() const override;
 
   MOCK_METHOD(void, EmitBoolChanged, (const std::string&, bool), (override));
   MOCK_METHOD(void,
@@ -77,7 +77,7 @@ class IPConfigMockAdaptor : public IPConfigAdaptorInterface {
 
   IPConfigMockAdaptor();
   ~IPConfigMockAdaptor() override;
-  RpcIdentifier GetRpcIdentifier() const override;
+  const RpcIdentifier& GetRpcIdentifier() const override;
 
   MOCK_METHOD(void, EmitBoolChanged, (const std::string&, bool), (override));
   MOCK_METHOD(void,
@@ -105,7 +105,7 @@ class ManagerMockAdaptor : public ManagerAdaptorInterface {
 
   ManagerMockAdaptor();
   ~ManagerMockAdaptor() override;
-  RpcIdentifier GetRpcIdentifier() const override;
+  const RpcIdentifier& GetRpcIdentifier() const override;
 
   MOCK_METHOD(void,
               RegisterAsync,
@@ -145,7 +145,7 @@ class ProfileMockAdaptor : public ProfileAdaptorInterface {
 
   ProfileMockAdaptor();
   ~ProfileMockAdaptor() override;
-  RpcIdentifier GetRpcIdentifier() const override;
+  const RpcIdentifier& GetRpcIdentifier() const override;
 
   MOCK_METHOD(void, EmitBoolChanged, (const std::string&, bool), (override));
   MOCK_METHOD(void,
@@ -171,8 +171,8 @@ class RpcTaskMockAdaptor : public RpcTaskAdaptorInterface {
   RpcTaskMockAdaptor();
   ~RpcTaskMockAdaptor() override;
 
-  RpcIdentifier GetRpcIdentifier() const override;
-  RpcIdentifier GetRpcConnectionIdentifier() const override;
+  const RpcIdentifier& GetRpcIdentifier() const override;
+  const RpcIdentifier& GetRpcConnectionIdentifier() const override;
 
  private:
   const RpcIdentifier rpc_id_;
@@ -186,7 +186,7 @@ class ServiceMockAdaptor : public ServiceAdaptorInterface {
 
   ServiceMockAdaptor();
   ~ServiceMockAdaptor() override;
-  RpcIdentifier GetRpcIdentifier() const override;
+  const RpcIdentifier& GetRpcIdentifier() const override;
 
   MOCK_METHOD(void, EmitBoolChanged, (const std::string&, bool), (override));
   MOCK_METHOD(void,

@@ -24,7 +24,7 @@ ModemSimpleProxy::ModemSimpleProxy(const scoped_refptr<dbus::Bus>& bus,
                                    const RpcIdentifier& path,
                                    const string& service)
     : proxy_(new org::freedesktop::ModemManager1::Modem::SimpleProxy(
-          bus, service, dbus::ObjectPath(path))) {}
+          bus, service, path)) {}
 
 ModemSimpleProxy::~ModemSimpleProxy() = default;
 
@@ -47,7 +47,7 @@ void ModemSimpleProxy::Disconnect(const RpcIdentifier& bearer,
                                   Error* error,
                                   const ResultCallback& callback,
                                   int timeout) {
-  SLOG(&proxy_->GetObjectPath(), 2) << __func__ << ": " << bearer;
+  SLOG(&proxy_->GetObjectPath(), 2) << __func__ << ": " << bearer.value();
   proxy_->DisconnectAsync(dbus::ObjectPath(bearer),
                           base::Bind(&ModemSimpleProxy::OnDisconnectSuccess,
                                      weak_factory_.GetWeakPtr(), callback),
@@ -70,7 +70,7 @@ void ModemSimpleProxy::GetStatus(Error* error,
 void ModemSimpleProxy::OnConnectSuccess(const RpcIdentifierCallback& callback,
                                         const dbus::ObjectPath& path) {
   SLOG(&proxy_->GetObjectPath(), 2) << __func__ << ": " << path.value();
-  callback.Run(path.value(), Error());
+  callback.Run(path, Error());
 }
 
 void ModemSimpleProxy::OnConnectFailure(const RpcIdentifierCallback& callback,
@@ -78,7 +78,7 @@ void ModemSimpleProxy::OnConnectFailure(const RpcIdentifierCallback& callback,
   SLOG(&proxy_->GetObjectPath(), 2) << __func__;
   Error error;
   CellularError::FromMM1ChromeosDBusError(dbus_error, &error);
-  callback.Run("", error);
+  callback.Run(RpcIdentifier(""), error);
 }
 
 void ModemSimpleProxy::OnDisconnectSuccess(const ResultCallback& callback) {

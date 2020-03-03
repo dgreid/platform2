@@ -255,7 +255,7 @@ class Cellular : public Device,
 
   // getters
   const std::string& dbus_service() const { return dbus_service_; }
-  RpcIdentifier dbus_path() const { return RpcIdentifier(dbus_path_); }
+  const RpcIdentifier& dbus_path() const { return dbus_path_; }
   const Stringmap& home_provider() const { return home_provider_; }
   const std::string& carrier() const { return carrier_; }
   bool scanning_supported() const { return scanning_supported_; }
@@ -485,7 +485,10 @@ class Cellular : public Device,
   // All DBus Properties exposed by the Cellular device.
   // Properties common to GSM and CDMA modems.
   const std::string dbus_service_;  // org.*.ModemManager*
-  const std::string dbus_path_;     // ModemManager.Modem
+  const RpcIdentifier dbus_path_;   // ModemManager.Modem
+  // Used because we currently expose |dbus_path| as a string property.
+  const std::string dbus_path_str_;
+
   Stringmap home_provider_;
 
   bool scanning_supported_;

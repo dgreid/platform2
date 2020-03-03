@@ -58,7 +58,7 @@ namespace shill {
 namespace Logging {
 static auto kModuleLogScope = ScopeLogger::kCellular;
 static string ObjectID(Cellular* c) {
-  return c->GetRpcIdentifier();
+  return c->GetRpcIdentifier().value();
 }
 }  // namespace Logging
 
@@ -125,6 +125,7 @@ Cellular::Cellular(ModemInfo* modem_info,
           new MobileOperatorInfo(modem_info->dispatcher(), "ServingOperator")),
       dbus_service_(service),
       dbus_path_(path),
+      dbus_path_str_(path.value()),
       scanning_supported_(false),
       scanning_(false),
       polling_location_(false),
@@ -1201,7 +1202,7 @@ void Cellular::RegisterProperties() {
   // These properties do not have setters, and events are not generated when
   // they are changed.
   store->RegisterConstString(kDBusServiceProperty, &dbus_service_);
-  store->RegisterConstString(kDBusObjectProperty, &dbus_path_);
+  store->RegisterConstString(kDBusObjectProperty, &dbus_path_str_);
 
   store->RegisterUint16(kScanIntervalProperty, &scan_interval_);
 

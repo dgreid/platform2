@@ -68,7 +68,7 @@ void ModemManager1::Disconnect() {
 void ModemManager1::AddModem1(const RpcIdentifier& path,
                               const InterfaceToProperties& properties) {
   if (ModemExists(path)) {
-    LOG(INFO) << "Modem " << path << " already exists.";
+    LOG(INFO) << "Modem " << path.value() << " already exists.";
     return;
   }
 
@@ -96,7 +96,7 @@ void ModemManager1::OnInterfacesAddedSignal(
 
 void ModemManager1::OnInterfacesRemovedSignal(
     const RpcIdentifier& object_path, const vector<string>& interfaces) {
-  LOG(INFO) << "MM1:  Removing interfaces from " << object_path;
+  LOG(INFO) << "MM1:  Removing interfaces from " << object_path.value();
   if (base::ContainsValue(interfaces, MM_DBUS_INTERFACE_MODEM)) {
     RemoveModem(object_path);
   } else {

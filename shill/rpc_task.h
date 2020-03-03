@@ -51,8 +51,8 @@ class RpcTask {
   // Generates environment variable strings for a child process to
   // communicate back to us over RPC.
   virtual std::map<std::string, std::string> GetEnvironment() const;
-  RpcIdentifier GetRpcIdentifier() const;
-  RpcIdentifier GetRpcConnectionIdentifier() const;
+  const RpcIdentifier& GetRpcIdentifier() const;
+  const RpcIdentifier& GetRpcConnectionIdentifier() const;
 
  private:
   RpcTaskDelegate* delegate_;

@@ -40,7 +40,7 @@ SupplicantNetworkProxy::PropertySet::PropertySet(
 SupplicantNetworkProxy::SupplicantNetworkProxy(
     const scoped_refptr<dbus::Bus>& bus, const RpcIdentifier& object_path)
     : network_proxy_(new fi::w1::wpa_supplicant1::NetworkProxy(
-          bus, WPASupplicant::kDBusAddr, dbus::ObjectPath(object_path))) {
+          bus, WPASupplicant::kDBusAddr, object_path)) {
   // Register properties.
   properties_.reset(
       new PropertySet(network_proxy_->GetObjectProxy(), kInterfaceName,

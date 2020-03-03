@@ -76,7 +76,7 @@ namespace shill {
 
 namespace {
 
-constexpr char kTestBearerPath[] = "/org/freedesktop/ModemManager1/Bearer/0";
+RpcIdentifier kTestBearerPath("/org/freedesktop/ModemManager1/Bearer/0");
 
 }  // namespace
 
@@ -236,14 +236,14 @@ class CellularTest : public testing::TestWithParam<Cellular::Type> {
                          const RpcIdentifierCallback& callback,
                          int timeout) {
     EXPECT_EQ(Service::kStateAssociating, device_->service_->state());
-    callback.Run("", Error(Error::kNotOnHomeNetwork));
+    callback.Run(RpcIdentifier(), Error(Error::kNotOnHomeNetwork));
   }
   void InvokeConnectFailNoService(const KeyValueStore& props,
                                   Error* error,
                                   const RpcIdentifierCallback& callback,
                                   int timeout) {
     device_->service_ = nullptr;
-    callback.Run("", Error(Error::kNotOnHomeNetwork));
+    callback.Run(RpcIdentifier(), Error(Error::kNotOnHomeNetwork));
   }
   void InvokeConnectSuccessNoService(const KeyValueStore& props,
                                      Error* error,

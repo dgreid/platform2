@@ -325,7 +325,7 @@ class CellularCapability3gppTest : public testing::TestWithParam<string> {
         const RpcIdentifier& path, const std::string& /*service*/) override {
       std::unique_ptr<MockDBusPropertiesProxy> properties_proxy =
           std::move(test_->properties_proxy_);
-      if (path.find(kActiveBearerPathPrefix) != std::string::npos) {
+      if (path.value().find(kActiveBearerPathPrefix) != std::string::npos) {
         EXPECT_CALL(*properties_proxy, GetAll(MM_DBUS_INTERFACE_BEARER))
             .Times(AnyNumber())
             .WillRepeatedly(Return(active_bearer_properties_));

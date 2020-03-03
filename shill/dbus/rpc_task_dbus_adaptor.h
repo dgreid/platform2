@@ -33,8 +33,8 @@ class RpcTaskDBusAdaptor : public org::chromium::flimflam::TaskAdaptor,
   ~RpcTaskDBusAdaptor() override;
 
   // Implementation of RpcTaskAdaptorInterface.
-  RpcIdentifier GetRpcIdentifier() const override;
-  RpcIdentifier GetRpcConnectionIdentifier() const override;
+  const RpcIdentifier& GetRpcIdentifier() const override;
+  const RpcIdentifier& GetRpcConnectionIdentifier() const override;
 
   // Implementation of TaskAdaptor
   bool getsec(brillo::ErrorPtr* error,
@@ -46,7 +46,7 @@ class RpcTaskDBusAdaptor : public org::chromium::flimflam::TaskAdaptor,
 
  private:
   RpcTask* task_;
-  const std::string connection_name_;
+  const RpcIdentifier connection_name_;
 
   DISALLOW_COPY_AND_ASSIGN(RpcTaskDBusAdaptor);
 };

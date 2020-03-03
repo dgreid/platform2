@@ -186,7 +186,7 @@ class Device : public base::RefCounted<Device> {
   // connection.  Returns true if portal detection was started.
   mockable bool RequestPortalDetection();
 
-  RpcIdentifier GetRpcIdentifier() const;
+  const RpcIdentifier& GetRpcIdentifier() const;
   virtual std::string GetStorageIdentifier() const;
 
   // Returns a list of Geolocation objects. Each object is multiple

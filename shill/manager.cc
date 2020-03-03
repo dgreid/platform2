@@ -417,9 +417,7 @@ void Manager::InitializeProfiles() {
   }
 }
 
-void Manager::CreateProfile(const string& name,
-                            RpcIdentifier* path,
-                            Error* error) {
+void Manager::CreateProfile(const string& name, string* path, Error* error) {
   SLOG(this, 2) << __func__ << " " << name;
   Profile::Identifier ident;
   if (!Profile::ParseIdentifier(name, &ident)) {
@@ -453,7 +451,7 @@ void Manager::CreateProfile(const string& name,
     return;
   }
 
-  *path = profile->GetRpcIdentifier();
+  *path = profile->GetRpcIdentifier().value();
 }
 
 bool Manager::HasProfile(const Profile::Identifier& ident) {
@@ -466,7 +464,7 @@ bool Manager::HasProfile(const Profile::Identifier& ident) {
 }
 
 void Manager::PushProfileInternal(const Profile::Identifier& ident,
-                                  RpcIdentifier* path,
+                                  string* path,
                                   Error* error) {
   if (HasProfile(ident)) {
     Error::PopulateAndLog(FROM_HERE, error, Error::kAlreadyExists,
@@ -531,16 +529,14 @@ void Manager::PushProfileInternal(const Profile::Identifier& ident,
     provider_mapping.second->CreateServicesFromProfile(profile);
   }
 
-  *path = profile->GetRpcIdentifier();
+  *path = profile->GetRpcIdentifier().value();
   SortServices();
   OnProfilesChanged();
   LOG(INFO) << __func__ << " finished; " << profiles_.size()
             << " profile(s) now present.";
 }
 
-void Manager::PushProfile(const string& name,
-                          RpcIdentifier* path,
-                          Error* error) {
+void Manager::PushProfile(const string& name, string* path, Error* error) {
   SLOG(this, 2) << __func__ << " " << name;
   Profile::Identifier ident;
   if (!Profile::ParseIdentifier(name, &ident)) {
@@ -553,7 +549,7 @@ void Manager::PushProfile(const string& name,
 
 void Manager::InsertUserProfile(const string& name,
                                 const string& user_hash,
-                                RpcIdentifier* path,
+                                string* path,
                                 Error* error) {
   SLOG(this, 2) << __func__ << " " << name;
   Profile::Identifier ident;
@@ -613,8 +609,8 @@ void Manager::PopProfileInternal() {
 void Manager::OnProfilesChanged() {
   Error unused_error;
 
-  adaptor_->EmitStringsChanged(kProfilesProperty,
-                               EnumerateProfiles(&unused_error));
+  adaptor_->EmitRpcIdentifierArrayChanged(kProfilesProperty,
+                                          EnumerateProfiles(&unused_error));
   Profile::SaveUserProfileList(user_profile_list_path_, profiles_);
 }
 
@@ -1025,9 +1021,9 @@ bool Manager::MoveServiceToProfile(const ServiceRefPtr& to_move,
 }
 
 ProfileRefPtr Manager::LookupProfileByRpcIdentifier(
-    const RpcIdentifier& profile_rpcid) {
+    const string& profile_rpcid) {
   for (const auto& profile : profiles_) {
-    if (profile_rpcid == profile->GetRpcIdentifier()) {
+    if (profile_rpcid == profile->GetRpcIdentifier().value()) {
       return profile;
     }
   }
@@ -1035,7 +1031,7 @@ ProfileRefPtr Manager::LookupProfileByRpcIdentifier(
 }
 
 void Manager::SetProfileForService(const ServiceRefPtr& to_set,
-                                   const RpcIdentifier& profile_rpcid,
+                                   const string& profile_rpcid,
                                    Error* error) {
   ProfileRefPtr profile = LookupProfileByRpcIdentifier(profile_rpcid);
   if (!profile) {
@@ -1297,7 +1293,7 @@ RpcIdentifiers Manager::EnumerateDevices(Error* /*error*/) {
   }
   // Enumerate devices that are internal to the services, such as PPPoE devices.
   for (const auto& service : services_) {
-    if (!service->GetInnerDeviceRpcIdentifier().empty()) {
+    if (!service->GetInnerDeviceRpcIdentifier().value().empty()) {
       device_rpc_ids.push_back(service->GetInnerDeviceRpcIdentifier());
     }
   }
@@ -2267,7 +2263,7 @@ ServiceRefPtr Manager::ConfigureService(const KeyValueStore& args,
   ProfileRefPtr profile = ActiveProfile();
   bool profile_specified = args.ContainsString(kProfileProperty);
   if (profile_specified) {
-    RpcIdentifier profile_rpcid(args.GetString(kProfileProperty));
+    string profile_rpcid(args.GetString(kProfileProperty));
     profile = LookupProfileByRpcIdentifier(profile_rpcid);
     if (!profile) {
       Error::PopulateAndLog(FROM_HERE, error, Error::kInvalidArguments,
@@ -2330,10 +2326,9 @@ ServiceRefPtr Manager::ConfigureService(const KeyValueStore& args,
 }
 
 // called via RPC (e.g., from ManagerDBusAdaptor)
-ServiceRefPtr Manager::ConfigureServiceForProfile(
-    const RpcIdentifier& profile_rpcid,
-    const KeyValueStore& args,
-    Error* error) {
+ServiceRefPtr Manager::ConfigureServiceForProfile(const string& profile_rpcid,
+                                                  const KeyValueStore& args,
+                                                  Error* error) {
   if (!args.ContainsString(kTypeProperty)) {
     Error::PopulateAndLog(FROM_HERE, error, Error::kInvalidArguments,
                           kErrorTypeRequired);

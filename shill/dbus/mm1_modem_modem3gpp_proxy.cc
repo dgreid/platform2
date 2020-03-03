@@ -24,7 +24,7 @@ ModemModem3gppProxy::ModemModem3gppProxy(const scoped_refptr<dbus::Bus>& bus,
                                          const RpcIdentifier& path,
                                          const string& service)
     : proxy_(new org::freedesktop::ModemManager1::Modem::Modem3gppProxy(
-          bus, service, dbus::ObjectPath(path))) {}
+          bus, service, path)) {}
 
 ModemModem3gppProxy::~ModemModem3gppProxy() = default;
 

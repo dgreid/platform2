@@ -27,7 +27,7 @@ class ServiceUnderTest : public Service {
   explicit ServiceUnderTest(Manager* manager);
   ~ServiceUnderTest() override;
 
-  RpcIdentifier GetRpcIdentifier() const override;
+  const RpcIdentifier& GetRpcIdentifier() const override;
   RpcIdentifier GetDeviceRpcId(Error* error) const override;
   std::string GetStorageIdentifier() const override;
 

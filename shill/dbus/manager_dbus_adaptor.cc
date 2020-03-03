@@ -27,7 +27,7 @@ namespace shill {
 namespace Logging {
 static auto kModuleLogScope = ScopeLogger::kDBus;
 static string ObjectID(ManagerDBusAdaptor* m) {
-  return m->GetRpcIdentifier();
+  return m->GetRpcIdentifier().value();
 }
 }  // namespace Logging
 
@@ -84,18 +84,13 @@ void ManagerDBusAdaptor::EmitStringsChanged(const string& name,
 void ManagerDBusAdaptor::EmitRpcIdentifierChanged(const string& name,
                                                   const RpcIdentifier& value) {
   SLOG(this, 2) << __func__ << ": " << name;
-  SendPropertyChangedSignal(name, brillo::Any(dbus::ObjectPath(value)));
+  SendPropertyChangedSignal(name, brillo::Any(value));
 }
 
 void ManagerDBusAdaptor::EmitRpcIdentifierArrayChanged(
     const string& name, const RpcIdentifiers& value) {
   SLOG(this, 2) << __func__ << ": " << name;
-  vector<dbus::ObjectPath> paths;
-  for (const auto& element : value) {
-    paths.push_back(dbus::ObjectPath(element));
-  }
-
-  SendPropertyChangedSignal(name, brillo::Any(paths));
+  SendPropertyChangedSignal(name, brillo::Any(value));
 }
 
 bool ManagerDBusAdaptor::GetProperties(brillo::ErrorPtr* error,
@@ -250,7 +245,7 @@ bool ManagerDBusAdaptor::GetService(brillo::ErrorPtr* error,
   if (e.ToChromeosError(error)) {
     return false;
   }
-  *service_path = dbus::ObjectPath(service->GetRpcIdentifier());
+  *service_path = service->GetRpcIdentifier();
   return true;
 }
 
@@ -265,7 +260,7 @@ bool ManagerDBusAdaptor::ConfigureService(brillo::ErrorPtr* error,
   if (configure_error.ToChromeosError(error)) {
     return false;
   }
-  *service_path = dbus::ObjectPath(service->GetRpcIdentifier());
+  *service_path = service->GetRpcIdentifier();
   return true;
 }
 
@@ -284,7 +279,7 @@ bool ManagerDBusAdaptor::ConfigureServiceForProfile(
     return false;
   }
   CHECK(service);
-  *service_path = dbus::ObjectPath(service->GetRpcIdentifier());
+  *service_path = service->GetRpcIdentifier();
   return true;
 }
 
@@ -302,7 +297,7 @@ bool ManagerDBusAdaptor::FindMatchingService(
     return false;
   }
 
-  *service_path = dbus::ObjectPath(service->GetRpcIdentifier());
+  *service_path = service->GetRpcIdentifier();
   return true;
 }
 

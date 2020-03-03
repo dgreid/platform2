@@ -34,7 +34,7 @@ namespace shill {
 namespace Logging {
 static auto kModuleLogScope = ScopeLogger::kVPN;
 static string ObjectID(OpenVPNManagementServer* o) {
-  return o->GetServiceRpcIdentifier();
+  return o->GetServiceRpcIdentifier().value();
 }
 }  // namespace Logging
 
@@ -151,7 +151,7 @@ void OpenVPNManagementServer::Restart() {
   SendSignal("SIGUSR1");
 }
 
-RpcIdentifier OpenVPNManagementServer::GetServiceRpcIdentifier() {
+const RpcIdentifier& OpenVPNManagementServer::GetServiceRpcIdentifier() {
   return driver_->GetServiceRpcIdentifier();
 }
 

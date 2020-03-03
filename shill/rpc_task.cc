@@ -40,18 +40,19 @@ void RpcTask::Notify(const string& reason, const map<string, string>& dict) {
 
 map<string, string> RpcTask::GetEnvironment() const {
   map<string, string> env;
-  env.emplace(kRpcTaskServiceVariable, adaptor_->GetRpcConnectionIdentifier());
-  env.emplace(kRpcTaskPathVariable, adaptor_->GetRpcIdentifier());
+  env.emplace(kRpcTaskServiceVariable,
+              adaptor_->GetRpcConnectionIdentifier().value());
+  env.emplace(kRpcTaskPathVariable, adaptor_->GetRpcIdentifier().value());
   return env;
 }
 
 // TODO(quiche): remove after moving OpenVPNDriver over to ExternalTask.
-RpcIdentifier RpcTask::GetRpcIdentifier() const {
+const RpcIdentifier& RpcTask::GetRpcIdentifier() const {
   return adaptor_->GetRpcIdentifier();
 }
 
 // TODO(quiche): remove after moving OpenVPNDriver over to ExternalTask.
-RpcIdentifier RpcTask::GetRpcConnectionIdentifier() const {
+const RpcIdentifier& RpcTask::GetRpcConnectionIdentifier() const {
   return adaptor_->GetRpcConnectionIdentifier();
 }
 

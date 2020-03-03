@@ -32,7 +32,7 @@ class DeviceDBusAdaptor : public org::chromium::flimflam::DeviceAdaptor,
   ~DeviceDBusAdaptor() override;
 
   // Implementation of DeviceAdaptorInterface.
-  RpcIdentifier GetRpcIdentifier() const override;
+  const RpcIdentifier& GetRpcIdentifier() const override;
   void EmitBoolChanged(const std::string& name, bool value) override;
   void EmitUintChanged(const std::string& name, uint32_t value) override;
   void EmitUint16Changed(const std::string& name, uint16_t value) override;

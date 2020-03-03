@@ -16,7 +16,7 @@ namespace shill {
 namespace Logging {
 static auto kModuleLogScope = ScopeLogger::kDBus;
 static string ObjectID(RpcTaskDBusAdaptor* r) {
-  return r->GetRpcIdentifier();
+  return r->GetRpcIdentifier().value();
 }
 }  // namespace Logging
 
@@ -28,7 +28,7 @@ RpcTaskDBusAdaptor::RpcTaskDBusAdaptor(const scoped_refptr<dbus::Bus>& bus,
     : org::chromium::flimflam::TaskAdaptor(this),
       DBusAdaptor(bus, kPath + task->UniqueName()),
       task_(task),
-      connection_name_(bus->GetConnectionName()) {
+      connection_name_(RpcIdentifier(bus->GetConnectionName())) {
   // Register DBus object.
   RegisterWithDBusObject(dbus_object());
   dbus_object()->RegisterAndBlock();
@@ -39,12 +39,12 @@ RpcTaskDBusAdaptor::~RpcTaskDBusAdaptor() {
   task_ = nullptr;
 }
 
-RpcIdentifier RpcTaskDBusAdaptor::GetRpcIdentifier() const {
-  return RpcIdentifier(dbus_path().value());
+const RpcIdentifier& RpcTaskDBusAdaptor::GetRpcIdentifier() const {
+  return dbus_path();
 }
 
-RpcIdentifier RpcTaskDBusAdaptor::GetRpcConnectionIdentifier() const {
-  return RpcIdentifier(connection_name_);
+const RpcIdentifier& RpcTaskDBusAdaptor::GetRpcConnectionIdentifier() const {
+  return connection_name_;
 }
 
 bool RpcTaskDBusAdaptor::getsec(brillo::ErrorPtr* /*error*/,

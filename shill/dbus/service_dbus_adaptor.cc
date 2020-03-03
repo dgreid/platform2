@@ -25,7 +25,8 @@ namespace shill {
 namespace Logging {
 static auto kModuleLogScope = ScopeLogger::kDBus;
 static string ObjectID(ServiceDBusAdaptor* s) {
-  return s->GetRpcIdentifier() + " (" + s->service()->unique_name() + ")";
+  return s->GetRpcIdentifier().value() + " (" + s->service()->unique_name() +
+         ")";
 }
 }  // namespace Logging
 
@@ -81,7 +82,7 @@ void ServiceDBusAdaptor::EmitIntChanged(const string& name, int value) {
 void ServiceDBusAdaptor::EmitRpcIdentifierChanged(const string& name,
                                                   const RpcIdentifier& value) {
   SLOG(this, 2) << __func__ << ": " << name;
-  SendPropertyChangedSignal(name, brillo::Any(dbus::ObjectPath(value)));
+  SendPropertyChangedSignal(name, brillo::Any(value));
 }
 
 void ServiceDBusAdaptor::EmitStringChanged(const string& name,

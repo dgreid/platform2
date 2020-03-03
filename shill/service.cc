@@ -64,7 +64,7 @@ const char kServiceSortTechnology[] = "Technology";
 namespace Logging {
 static auto kModuleLogScope = ScopeLogger::kService;
 static string ObjectID(const Service* s) {
-  return s->GetRpcIdentifier();
+  return s->GetRpcIdentifier().value();
 }
 }  // namespace Logging
 
@@ -579,7 +579,7 @@ void Service::SetFailureSilent(ConnectFailure failure) {
   failed_time_ = time(nullptr);
 }
 
-RpcIdentifier Service::GetRpcIdentifier() const {
+const RpcIdentifier& Service::GetRpcIdentifier() const {
   return adaptor_->GetRpcIdentifier();
 }
 
@@ -1303,7 +1303,7 @@ RpcIdentifier Service::GetIPConfigRpcIdentifier(Error* error) const {
 
   RpcIdentifier id = connection_->ipconfig_rpc_identifier();
 
-  if (id.empty()) {
+  if (id.value().empty()) {
     // Do not return an empty IPConfig.
     error->Populate(Error::kNotFound);
     return control_interface()->NullRpcIdentifier();
@@ -1642,17 +1642,17 @@ bool Service::SetPriority(const int32_t& priority, Error* error) {
   return true;
 }
 
-RpcIdentifier Service::GetProfileRpcId(Error* error) {
+string Service::GetProfileRpcId(Error* error) {
   if (!profile_) {
     // This happens in some unit tests where profile_ is not set.
     error->Populate(Error::kNotFound);
-    return RpcIdentifier();
+    return RpcIdentifier().value();
   }
-  return profile_->GetRpcIdentifier();
+  return profile_->GetRpcIdentifier().value();
 }
 
-bool Service::SetProfileRpcId(const RpcIdentifier& profile, Error* error) {
-  if (profile_ && profile_->GetRpcIdentifier() == profile) {
+bool Service::SetProfileRpcId(const string& profile, Error* error) {
+  if (profile_ && profile_->GetRpcIdentifier().value() == profile) {
     return false;
   }
   ProfileConstRefPtr old_profile = profile_;

@@ -746,7 +746,7 @@ TEST_F(OpenVPNDriverTest, InitOptions) {
   EXPECT_EQ(vector<string>{"client"}, options[0]);
   ExpectInFlags(options, "remote", kHost);
   ExpectInFlags(options, vector<string>{"setenv", kRpcTaskPathVariable,
-                                        RpcTaskMockAdaptor::kRpcId});
+                                        RpcTaskMockAdaptor::kRpcId.value()});
   ExpectInFlags(options, "dev", kInterfaceName);
   ExpectInFlags(options, "group", "openvpn");
   EXPECT_EQ(kInterfaceName, driver_->tunnel_interface_);

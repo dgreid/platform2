@@ -23,8 +23,8 @@ namespace mm1 {
 SimProxy::SimProxy(const scoped_refptr<dbus::Bus>& bus,
                    const RpcIdentifier& path,
                    const string& service)
-    : proxy_(new org::freedesktop::ModemManager1::SimProxy(
-          bus, service, dbus::ObjectPath(path))) {}
+    : proxy_(
+          new org::freedesktop::ModemManager1::SimProxy(bus, service, path)) {}
 
 SimProxy::~SimProxy() = default;
 

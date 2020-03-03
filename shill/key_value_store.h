@@ -77,7 +77,7 @@ class KeyValueStore {
   const std::vector<double>& GetDoubles(const std::string& name) const;
   const KeyValueStore& GetKeyValueStore(const std::string& name) const;
   const RpcIdentifier& GetRpcIdentifier(const std::string& name) const;
-  RpcIdentifiers GetRpcIdentifiers(const std::string& name) const;
+  const RpcIdentifiers& GetRpcIdentifiers(const std::string& name) const;
   const std::string& GetString(const std::string& name) const;
   const std::map<std::string, std::string>& GetStringmap(
       const std::string& name) const;
@@ -137,9 +137,6 @@ class KeyValueStore {
       const KeyValueStore& in_store);
   static KeyValueStore ConvertFromVariantDictionary(
       const brillo::VariantDictionary& in_dict);
-
-  static RpcIdentifiers ConvertPathsToRpcIdentifiers(
-      const std::vector<dbus::ObjectPath>& paths);
 
  private:
   brillo::VariantDictionary properties_;

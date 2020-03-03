@@ -26,7 +26,7 @@ ModemLocationProxy::ModemLocationProxy(const scoped_refptr<dbus::Bus>& bus,
                                        const RpcIdentifier& path,
                                        const string& service)
     : proxy_(new org::freedesktop::ModemManager1::Modem::LocationProxy(
-          bus, service, dbus::ObjectPath(path))) {}
+          bus, service, path)) {}
 
 ModemLocationProxy::~ModemLocationProxy() = default;
 

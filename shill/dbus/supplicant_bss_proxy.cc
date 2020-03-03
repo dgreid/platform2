@@ -28,7 +28,7 @@ SupplicantBSSProxy::SupplicantBSSProxy(const scoped_refptr<dbus::Bus>& bus,
                                        const RpcIdentifier& object_path,
                                        WiFiEndpoint* wifi_endpoint)
     : bss_proxy_(new fi::w1::wpa_supplicant1::BSSProxy(
-          bus, WPASupplicant::kDBusAddr, dbus::ObjectPath(object_path))),
+          bus, WPASupplicant::kDBusAddr, object_path)),
       wifi_endpoint_(wifi_endpoint) {
   // Register signal handler.
   bss_proxy_->RegisterPropertiesChangedSignalHandler(

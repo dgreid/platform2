@@ -18,7 +18,7 @@ namespace shill {
 namespace Logging {
 static auto kModuleLogScope = ScopeLogger::kDBus;
 static string ObjectID(DeviceDBusAdaptor* d) {
-  return d->GetRpcIdentifier() + " (" + d->device()->UniqueName() + ")";
+  return d->GetRpcIdentifier().value() + " (" + d->device()->UniqueName() + ")";
 }
 }  // namespace Logging
 
@@ -40,8 +40,8 @@ DeviceDBusAdaptor::~DeviceDBusAdaptor() {
   device_ = nullptr;
 }
 
-RpcIdentifier DeviceDBusAdaptor::GetRpcIdentifier() const {
-  return RpcIdentifier(dbus_path().value());
+const RpcIdentifier& DeviceDBusAdaptor::GetRpcIdentifier() const {
+  return dbus_path();
 }
 
 void DeviceDBusAdaptor::EmitBoolChanged(const string& name, bool value) {
@@ -99,7 +99,7 @@ void DeviceDBusAdaptor::EmitKeyValueStoreChanged(const string& name,
 void DeviceDBusAdaptor::EmitRpcIdentifierChanged(const std::string& name,
                                                  const RpcIdentifier& value) {
   SLOG(this, 2) << __func__ << ": " << name;
-  SendPropertyChangedSignal(name, brillo::Any(dbus::ObjectPath(value)));
+  SendPropertyChangedSignal(name, brillo::Any(value));
 }
 
 void DeviceDBusAdaptor::EmitRpcIdentifierArrayChanged(

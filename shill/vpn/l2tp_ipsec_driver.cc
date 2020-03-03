@@ -59,7 +59,7 @@ namespace shill {
 namespace Logging {
 static auto kModuleLogScope = ScopeLogger::kVPN;
 static string ObjectID(L2TPIPSecDriver* l) {
-  return l->GetServiceRpcIdentifier();
+  return l->GetServiceRpcIdentifier().value();
 }
 }  // namespace Logging
 
@@ -145,9 +145,10 @@ L2TPIPSecDriver::~L2TPIPSecDriver() {
   IdleService();
 }
 
-RpcIdentifier L2TPIPSecDriver::GetServiceRpcIdentifier() {
+const RpcIdentifier& L2TPIPSecDriver::GetServiceRpcIdentifier() {
+  static RpcIdentifier null_identifier("(l2tp_ipsec_driver)");
   if (service() == nullptr)
-    return RpcIdentifier("(l2tp_ipsec_driver)");
+    return null_identifier;
   return service()->GetRpcIdentifier();
 }
 

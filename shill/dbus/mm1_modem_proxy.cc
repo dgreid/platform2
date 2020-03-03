@@ -25,8 +25,8 @@ namespace mm1 {
 ModemProxy::ModemProxy(const scoped_refptr<dbus::Bus>& bus,
                        const RpcIdentifier& path,
                        const string& service)
-    : proxy_(new org::freedesktop::ModemManager1::ModemProxy(
-          bus, service, dbus::ObjectPath(path))) {
+    : proxy_(
+          new org::freedesktop::ModemManager1::ModemProxy(bus, service, path)) {
   // Register signal handlers.
   proxy_->RegisterStateChangedSignalHandler(
       base::Bind(&ModemProxy::StateChanged, weak_factory_.GetWeakPtr()),
@@ -68,9 +68,9 @@ void ModemProxy::DeleteBearer(const RpcIdentifier& bearer,
                               Error* error,
                               const ResultCallback& callback,
                               int timeout) {
-  SLOG(&proxy_->GetObjectPath(), 2) << __func__ << ": " << bearer;
+  SLOG(&proxy_->GetObjectPath(), 2) << __func__ << ": " << bearer.value();
   proxy_->DeleteBearerAsync(
-      dbus::ObjectPath(bearer),
+      bearer,
       base::Bind(&ModemProxy::OnOperationSuccess, weak_factory_.GetWeakPtr(),
                  callback, __func__),
       base::Bind(&ModemProxy::OnOperationFailure, weak_factory_.GetWeakPtr(),
@@ -187,7 +187,7 @@ void ModemProxy::StateChanged(int32_t old, int32_t _new, uint32_t reason) {
 void ModemProxy::OnCreateBearerSuccess(const RpcIdentifierCallback& callback,
                                        const dbus::ObjectPath& path) {
   SLOG(&proxy_->GetObjectPath(), 2) << __func__ << ": " << path.value();
-  callback.Run(path.value(), Error());
+  callback.Run(path, Error());
 }
 
 void ModemProxy::OnCreateBearerFailure(const RpcIdentifierCallback& callback,
@@ -195,7 +195,7 @@ void ModemProxy::OnCreateBearerFailure(const RpcIdentifierCallback& callback,
   SLOG(&proxy_->GetObjectPath(), 2) << __func__;
   Error error;
   CellularError::FromMM1ChromeosDBusError(dbus_error, &error);
-  callback.Run("", error);
+  callback.Run(RpcIdentifier(""), error);
 }
 
 void ModemProxy::OnCommandSuccess(const StringCallback& callback,

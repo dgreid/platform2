@@ -26,7 +26,7 @@ class MockProfile : public Profile {
   MOCK_METHOD(bool, ConfigureService, (const ServiceRefPtr&), (override));
   MOCK_METHOD(bool, ConfigureDevice, (const DeviceRefPtr&), (override));
   MOCK_METHOD(void, DeleteEntry, (const std::string&, Error*), (override));
-  MOCK_METHOD(RpcIdentifier, GetRpcIdentifier, (), (const, override));
+  MOCK_METHOD(const RpcIdentifier&, GetRpcIdentifier, (), (const, override));
   MOCK_METHOD(bool, UpdateService, (const ServiceRefPtr&), (override));
   MOCK_METHOD(bool, UpdateDevice, (const DeviceRefPtr&), (override));
 #if !defined(DISABLE_WIFI)
@@ -38,6 +38,7 @@ class MockProfile : public Profile {
   MOCK_METHOD(bool, IsDefault, (), (const, override));
 
  private:
+  RpcIdentifier rpcid_;
   DISALLOW_COPY_AND_ASSIGN(MockProfile);
 };
 

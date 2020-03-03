@@ -49,9 +49,6 @@ class AccessorInterface {
 using BoolAccessor = std::unique_ptr<AccessorInterface<bool>>;
 using Int16Accessor = std::unique_ptr<AccessorInterface<int16_t>>;
 using Int32Accessor = std::unique_ptr<AccessorInterface<int32_t>>;
-// As mentioned in data_types.h, this is a separate typedef from
-// StringAccessor despite having the same underlying type because RpcIdentifier
-// may be serialized differently.
 using RpcIdentifierAccessor = std::unique_ptr<AccessorInterface<RpcIdentifier>>;
 using RpcIdentifiersAccessor =
     std::unique_ptr<AccessorInterface<RpcIdentifiers>>;

@@ -712,8 +712,7 @@ TEST_F(KeyValueStoreTest, ConvertToVariantDictionary) {
   EXPECT_EQ(kByteArraysValue,
             dict[kByteArraysKey].Get<vector<vector<uint8_t>>>());
   EXPECT_EQ(kInt16Value, dict[kInt16Key].Get<int16_t>());
-  EXPECT_EQ(kRpcIdentifierValue,
-            dict[kRpcIdentifierKey].Get<dbus::ObjectPath>().value());
+  EXPECT_EQ(kRpcIdentifierValue, dict[kRpcIdentifierKey].Get<RpcIdentifier>());
   EXPECT_EQ(kUint16Value, dict[kUint16Key].Get<uint16_t>());
   EXPECT_EQ(kInt64Value, dict[kInt64Key].Get<int64_t>());
   EXPECT_EQ(kInt64sValue, dict[kInt64sKey].Get<vector<int64_t>>());
@@ -746,7 +745,7 @@ TEST_F(KeyValueStoreTest, ConvertFromVariantDictionary) {
   dict[kInt64sKey] = brillo::Any(kInt64sValue);
   dict[kDoubleKey] = brillo::Any(kDoubleValue);
   dict[kDoublesKey] = brillo::Any(kDoublesValue);
-  dict[kRpcIdentifierKey] = brillo::Any(dbus::ObjectPath(kRpcIdentifierValue));
+  dict[kRpcIdentifierKey] = brillo::Any(kRpcIdentifierValue);
   dict[kUint16Key] = brillo::Any(kUint16Value);
   dict[kUint8sKey] = brillo::Any(kUint8sValue);
   dict[kUint32sKey] = brillo::Any(kUint32sValue);
@@ -799,18 +798,6 @@ TEST_F(KeyValueStoreTest, ConvertFromVariantDictionary) {
   KeyValueStore nested_store;
   nested_store.SetInt(kNestedInt32Key, kNestedInt32Value);
   EXPECT_EQ(nested_store, store.GetKeyValueStore(kKeyValueStoreKey));
-}
-
-TEST_F(KeyValueStoreTest, ConvertPathsToRpcIdentifiers) {
-  const RpcIdentifier kRpcIdentifier1("/test1");
-  const RpcIdentifier kRpcIdentifier2("/test2");
-  vector<dbus::ObjectPath> paths = {dbus::ObjectPath(kRpcIdentifier1),
-                                    dbus::ObjectPath(kRpcIdentifier2)};
-  vector<RpcIdentifier> actual_rpc_identifiers =
-      KeyValueStore::ConvertPathsToRpcIdentifiers(paths);
-  vector<RpcIdentifier> expected_rpc_identifiers = {kRpcIdentifier1,
-                                                    kRpcIdentifier2};
-  EXPECT_EQ(expected_rpc_identifiers, actual_rpc_identifiers);
 }
 
 }  // namespace shill

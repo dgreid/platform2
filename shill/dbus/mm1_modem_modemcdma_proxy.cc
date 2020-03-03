@@ -24,7 +24,7 @@ ModemModemCdmaProxy::ModemModemCdmaProxy(const scoped_refptr<dbus::Bus>& bus,
                                          const RpcIdentifier& path,
                                          const string& service)
     : proxy_(new org::freedesktop::ModemManager1::Modem::ModemCdmaProxy(
-          bus, service, dbus::ObjectPath(path))) {
+          bus, service, path)) {
   // Register signal handlers.
   proxy_->RegisterActivationStateChangedSignalHandler(
       base::Bind(&ModemModemCdmaProxy::ActivationStateChanged,

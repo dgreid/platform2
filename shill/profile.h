@@ -65,7 +65,7 @@ class Profile : public base::RefCounted<Profile> {
 
   virtual std::string GetFriendlyName() const;
 
-  virtual RpcIdentifier GetRpcIdentifier() const;
+  virtual const RpcIdentifier& GetRpcIdentifier() const;
 
   PropertyStore* mutable_store() { return &store_; }
   const PropertyStore& store() const { return store_; }
@@ -207,6 +207,8 @@ class Profile : public base::RefCounted<Profile> {
 
   static bool IsValidIdentifierToken(const std::string& token);
 
+  void HelpRegisterConstDerivedRpcIdentifiers(
+      const std::string& name, RpcIdentifiers (Profile::*get)(Error* error));
   void HelpRegisterConstDerivedStrings(const std::string& name,
                                        Strings (Profile::*get)(Error* error));
 

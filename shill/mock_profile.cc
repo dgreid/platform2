@@ -11,12 +11,16 @@
 
 #include "shill/refptr_types.h"
 
+using testing::ReturnRef;
+
 namespace shill {
 
 MockProfile::MockProfile(Manager* manager) : MockProfile(manager, "mock") {}
 
 MockProfile::MockProfile(Manager* manager, const std::string& identifier)
-    : Profile(manager, Identifier(identifier), base::FilePath(), false) {}
+    : Profile(manager, Identifier(identifier), base::FilePath(), false) {
+  ON_CALL(*this, GetRpcIdentifier()).WillByDefault(ReturnRef(rpcid_));
+}
 
 MockProfile::~MockProfile() = default;
 

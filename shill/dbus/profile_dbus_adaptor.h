@@ -35,9 +35,7 @@ class ProfileDBusAdaptor : public org::chromium::flimflam::ProfileAdaptor,
   ~ProfileDBusAdaptor() override;
 
   // Implementation of ProfileAdaptorInterface.
-  RpcIdentifier GetRpcIdentifier() const override {
-    return dbus_path().value();
-  }
+  const RpcIdentifier& GetRpcIdentifier() const override { return dbus_path(); }
   void EmitBoolChanged(const std::string& name, bool value) override;
   void EmitUintChanged(const std::string& name, uint32_t value) override;
   void EmitIntChanged(const std::string& name, int value) override;

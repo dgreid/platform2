@@ -60,7 +60,7 @@ void ModemManager::RecordAddedModem(std::unique_ptr<Modem> modem) {
 }
 
 void ModemManager::RemoveModem(const RpcIdentifier& path) {
-  LOG(INFO) << "Remove modem: " << path;
+  LOG(INFO) << "Remove modem: " << path.value();
   CHECK(service_connected_);
   modems_.erase(path);
 }

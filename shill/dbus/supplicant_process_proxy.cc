@@ -110,24 +110,23 @@ bool SupplicantProcessProxy::CreateInterface(const KeyValueStore& args,
                << error->GetMessage();
     return false;
   }
-  *rpc_identifier = path.value();
+  *rpc_identifier = path;
   return true;
 }
 
 bool SupplicantProcessProxy::RemoveInterface(
     const RpcIdentifier& rpc_identifier) {
   SLOG(&supplicant_proxy_->GetObjectPath(), 2)
-      << __func__ << ": " << rpc_identifier;
+      << __func__ << ": " << rpc_identifier.value();
   if (!service_available_) {
     LOG(ERROR) << "Supplicant process not present";
     return false;
   }
 
   brillo::ErrorPtr error;
-  if (!supplicant_proxy_->RemoveInterface(dbus::ObjectPath(rpc_identifier),
-                                          &error)) {
-    LOG(FATAL) << "Failed to remove interface " << rpc_identifier << ": "
-               << error->GetCode() << " " << error->GetMessage();
+  if (!supplicant_proxy_->RemoveInterface(rpc_identifier, &error)) {
+    LOG(FATAL) << "Failed to remove interface " << rpc_identifier.value()
+               << ": " << error->GetCode() << " " << error->GetMessage();
     return false;  // Make the compiler happy.
   }
   return true;
@@ -148,7 +147,7 @@ bool SupplicantProcessProxy::GetInterface(const std::string& ifname,
                << error->GetCode() << " " << error->GetMessage();
     return false;
   }
-  *rpc_identifier = path.value();
+  *rpc_identifier = path;
   return rpc_identifier;
 }
 
