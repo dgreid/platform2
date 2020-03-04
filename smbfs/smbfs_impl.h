@@ -6,6 +6,7 @@
 #define SMBFS_SMBFS_IMPL_H_
 
 #include <base/macros.h>
+#include <base/memory/weak_ptr.h>
 #include <mojo/public/cpp/bindings/binding.h>
 
 #include "smbfs/mojom/smbfs.mojom.h"
@@ -18,14 +19,12 @@ class SmbFilesystem;
 // control to the browser.
 class SmbFsImpl : public mojom::SmbFs {
  public:
-  explicit SmbFsImpl(SmbFilesystem* fs,
-                     mojom::SmbFsDelegatePtr delegate,
+  explicit SmbFsImpl(base::WeakPtr<SmbFilesystem> fs,
                      mojom::SmbFsRequest request);
   ~SmbFsImpl() override;
 
  private:
-  SmbFilesystem* const fs_;
-  mojom::SmbFsDelegatePtr delegate_;
+  base::WeakPtr<SmbFilesystem> fs_;
   mojo::Binding<mojom::SmbFs> binding_;
 
   DISALLOW_IMPLICIT_CONSTRUCTORS(SmbFsImpl);

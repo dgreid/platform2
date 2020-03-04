@@ -39,7 +39,9 @@ class SmbFsBootstrapImpl : public mojom::SmbFsBootstrap {
           SmbFilesystem::Options)>;
 
   using BootstrapCompleteCallback =
-      base::OnceCallback<void(std::unique_ptr<SmbFilesystem> fs)>;
+      base::OnceCallback<void(std::unique_ptr<SmbFilesystem> fs,
+                              mojom::SmbFsRequest smbfs_request,
+                              mojom::SmbFsDelegatePtr delegate_ptr)>;
 
   SmbFsBootstrapImpl(mojom::SmbFsBootstrapRequest request,
                      SmbFilesystemFactory smb_filesystem_factory,

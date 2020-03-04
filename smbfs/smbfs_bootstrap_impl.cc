@@ -12,7 +12,6 @@
 
 #include "smbfs/smb_credential.h"
 #include "smbfs/smb_filesystem.h"
-#include "smbfs/smbfs_impl.h"
 
 namespace smbfs {
 namespace {
@@ -128,16 +127,16 @@ void SmbFsBootstrapImpl::OnCredentialsSetup(
   }
 
   mojom::SmbFsPtr smbfs_ptr;
-  fs->SetSmbFsImpl(std::make_unique<SmbFsImpl>(
-      fs.get(), std::move(smbfs_delegate), mojo::MakeRequest(&smbfs_ptr)));
-  std::move(completion_callback_).Run(std::move(fs));
+  std::move(completion_callback_)
+      .Run(std::move(fs), mojo::MakeRequest(&smbfs_ptr),
+           std::move(smbfs_delegate));
 
   callback.Run(mojom::MountError::kOk, std::move(smbfs_ptr));
 }
 
 void SmbFsBootstrapImpl::OnMojoConnectionError() {
   if (completion_callback_) {
-    std::move(completion_callback_).Run(nullptr);
+    std::move(completion_callback_).Run(nullptr, nullptr, nullptr);
   }
 }
 

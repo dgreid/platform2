@@ -12,6 +12,7 @@
 
 #include <base/bind.h>
 #include <base/files/file_util.h>
+#include <base/logging.h>
 #include <base/threading/thread_task_runner_handle.h>
 #include <brillo/message_loops/message_loop.h>
 #include <brillo/daemons/dbus_daemon.h>
@@ -20,15 +21,10 @@
 #include <mojo/public/cpp/platform/platform_channel.h>
 #include <mojo/public/cpp/system/invitation.h>
 
-#include "smbfs/authpolicy_client.h"
 #include "smbfs/dbus-proxies.h"
 #include "smbfs/fuse_session.h"
-#include "smbfs/kerberos_artifact_synchronizer.h"
-#include "smbfs/kerberos_client.h"
-#include "smbfs/smb_credential.h"
 #include "smbfs/smb_filesystem.h"
 #include "smbfs/smbfs.h"
-#include "smbfs/smbfs_impl.h"
 #include "smbfs/test_filesystem.h"
 
 namespace smbfs {
@@ -36,10 +32,6 @@ namespace {
 
 constexpr char kSmbConfDir[] = ".smb";
 constexpr char kSmbConfFile[] = "smb.conf";
-constexpr char kKerberosConfDir[] = ".krb";
-constexpr char kKrb5ConfFile[] = "krb5.conf";
-constexpr char kCCacheFile[] = "ccache";
-constexpr char kKrbTraceFile[] = "krb_trace.txt";
 
 constexpr char kSmbConfData[] = R"(
 [global]
@@ -120,25 +112,13 @@ int SmbFsDaemon::OnEventLoopStarted() {
     NOTREACHED();
   }
 
-  if (!StartFuseSession(std::move(fs))) {
+  session_ = std::make_unique<FuseSession>(std::move(fs), chan_);
+  chan_ = nullptr;
+  if (!session_->Start(base::BindOnce(&Daemon::Quit, base::Unretained(this)))) {
     return EX_SOFTWARE;
   }
 
   return EX_OK;
-}
-
-bool SmbFsDaemon::StartFuseSession(std::unique_ptr<Filesystem> fs) {
-  DCHECK(!session_);
-  DCHECK(chan_);
-
-  session_ = std::make_unique<FuseSession>(std::move(fs), chan_);
-  chan_ = nullptr;
-  return session_->Start(base::BindOnce(&Daemon::Quit, base::Unretained(this)));
-}
-
-base::FilePath SmbFsDaemon::KerberosConfFilePath(const std::string& file_name) {
-  DCHECK(temp_dir_.IsValid());
-  return temp_dir_.GetPath().Append(kKerberosConfDir).Append(file_name);
 }
 
 bool SmbFsDaemon::SetupSmbConf() {
@@ -147,20 +127,10 @@ bool SmbFsDaemon::SetupSmbConf() {
   CHECK(temp_dir_.CreateUniqueTempDir());
   PCHECK(setenv("HOME", temp_dir_.GetPath().value().c_str(),
                 1 /* overwrite */) == 0);
-  PCHECK(setenv("KRB5_CONFIG",
-                KerberosConfFilePath(kKrb5ConfFile).value().c_str(),
-                1 /* overwrite */) == 0);
-  PCHECK(setenv("KRB5CCNAME", KerberosConfFilePath(kCCacheFile).value().c_str(),
-                1 /* overwrite */) == 0);
-  PCHECK(setenv("KRB5_TRACE",
-                KerberosConfFilePath(kKrbTraceFile).value().c_str(),
-                1 /* overwrite */) == 0);
   LOG(INFO) << "Storing SMB configuration files in: "
             << temp_dir_.GetPath().value();
 
-  bool success =
-      CreateDirectoryAndLog(temp_dir_.GetPath().Append(kSmbConfDir)) &&
-      CreateDirectoryAndLog(temp_dir_.GetPath().Append(kKerberosConfDir));
+  bool success = CreateDirectoryAndLog(temp_dir_.GetPath().Append(kSmbConfDir));
   if (!success) {
     return false;
   }
@@ -195,56 +165,19 @@ bool SmbFsDaemon::InitMojo() {
 
   mojo::IncomingInvitation invitation =
       mojo::IncomingInvitation::Accept(channel.TakeLocalEndpoint());
-  bootstrap_impl_ = std::make_unique<SmbFsBootstrapImpl>(
+  mojo_session_ = std::make_unique<MojoSession>(
+      bus_, temp_dir_.GetPath(), chan_,
       mojom::SmbFsBootstrapRequest(
           invitation.ExtractMessagePipe(mojom::kBootstrapPipeName)),
-      base::BindRepeating(&SmbFsDaemon::CreateSmbFilesystem,
-                          base::Unretained(this)),
-      this);
-  bootstrap_impl_->Start(base::BindOnce(&SmbFsDaemon::OnBootstrapComplete,
-                                        base::Unretained(this)));
+      uid_, gid_,
+      base::BindOnce(&SmbFsDaemon::OnSessionShutdown, base::Unretained(this)));
 
   return true;
 }
 
-void SmbFsDaemon::OnBootstrapComplete(std::unique_ptr<SmbFilesystem> fs) {
-  if (!fs) {
-    LOG(ERROR) << "Connection error during Mojo bootstrap. Exiting.";
-    QuitWithExitCode(EX_SOFTWARE);
-    return;
-  }
-
-  CHECK(StartFuseSession(std::move(fs)));
-}
-
-void SmbFsDaemon::SetupKerberos(
-    mojom::KerberosConfigPtr kerberos_config,
-    base::OnceCallback<void(bool success)> callback) {
-  DCHECK(!kerberos_sync_);
-  DCHECK(kerberos_config);
-
-  std::unique_ptr<KerberosArtifactClientInterface> client;
-  switch (kerberos_config->source) {
-    case mojom::KerberosConfig::Source::kActiveDirectory:
-      client = std::make_unique<AuthPolicyClient>(bus_);
-      break;
-    case mojom::KerberosConfig::Source::kKerberos:
-      client = std::make_unique<KerberosClient>(bus_);
-      break;
-  }
-
-  DCHECK(client);
-  kerberos_sync_ = std::make_unique<KerberosArtifactSynchronizer>(
-      KerberosConfFilePath(kKrb5ConfFile), KerberosConfFilePath(kCCacheFile),
-      kerberos_config->identity, std::move(client));
-  kerberos_sync_->SetupKerberos(std::move(callback));
-}
-
-std::unique_ptr<SmbFilesystem> SmbFsDaemon::CreateSmbFilesystem(
-    SmbFilesystem::Options options) {
-  options.uid = uid_;
-  options.gid = gid_;
-  return std::make_unique<SmbFilesystem>(std::move(options));
+void SmbFsDaemon::OnSessionShutdown() {
+  LOG(INFO) << "Mojo session shut down. Exiting.";
+  QuitWithExitCode(EX_SOFTWARE);
 }
 
 }  // namespace smbfs

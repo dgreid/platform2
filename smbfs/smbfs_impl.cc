@@ -10,12 +10,9 @@
 
 namespace smbfs {
 
-SmbFsImpl::SmbFsImpl(SmbFilesystem* fs,
-                     mojom::SmbFsDelegatePtr delegate,
+SmbFsImpl::SmbFsImpl(base::WeakPtr<SmbFilesystem> fs,
                      mojom::SmbFsRequest request)
-    : fs_(fs),
-      delegate_(std::move(delegate)),
-      binding_(this, std::move(request)) {
+    : fs_(fs), binding_(this, std::move(request)) {
   DCHECK(fs_);
 }
 

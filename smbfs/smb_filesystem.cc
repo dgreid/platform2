@@ -15,7 +15,6 @@
 #include <base/strings/string_piece.h>
 #include <base/strings/string_util.h>
 
-#include "smbfs/smbfs_impl.h"
 #include "smbfs/util.h"
 
 namespace smbfs {
@@ -139,6 +138,10 @@ SmbFilesystem::~SmbFilesystem() {
   }
 }
 
+base::WeakPtr<SmbFilesystem> SmbFilesystem::GetWeakPtr() {
+  return weak_factory_.GetWeakPtr();
+}
+
 SmbFilesystem::ConnectError SmbFilesystem::EnsureConnected() {
   SMBCFILE* dir = smbc_opendir_ctx_(context_, resolved_share_path_.c_str());
   if (!dir) {
@@ -170,10 +173,6 @@ SmbFilesystem::ConnectError SmbFilesystem::EnsureConnected() {
 
   smbc_closedir_ctx_(context_, dir);
   return ConnectError::kOk;
-}
-
-void SmbFilesystem::SetSmbFsImpl(std::unique_ptr<SmbFsImpl> impl) {
-  smbfs_impl_ = std::move(impl);
 }
 
 void SmbFilesystem::SetResolvedAddress(const std::vector<uint8_t>& ip_address) {

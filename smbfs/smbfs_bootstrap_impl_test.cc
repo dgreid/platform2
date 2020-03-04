@@ -20,12 +20,14 @@
 #include <libpasswordprovider/password.h>
 
 #include "smbfs/smb_filesystem.h"
+#include "smbfs/smbfs_impl.h"
 
 namespace smbfs {
 namespace {
 
 using ::testing::_;
 using ::testing::Return;
+using ::testing::Unused;
 using ::testing::WithArg;
 
 const char kSharePath[] = "smb://server/share";
@@ -113,7 +115,9 @@ TEST_F(TestSmbFsBootstrapImpl, GuestAuth) {
                                    &mock_delegate_);
   bool bootstrap_done = false;
   boostrap_impl.Start(base::BindLambdaForTesting(
-      [&bootstrap_done](std::unique_ptr<SmbFilesystem> fs) {
+      [&bootstrap_done](std::unique_ptr<SmbFilesystem> fs,
+                        mojom::SmbFsRequest smbfs_request,
+                        mojom::SmbFsDelegatePtr delegate_ptr) {
         EXPECT_TRUE(fs);
         bootstrap_done = true;
       }));
@@ -159,7 +163,9 @@ TEST_F(TestSmbFsBootstrapImpl, UsernamePasswordAuth) {
                                    &mock_delegate_);
   bool bootstrap_done = false;
   boostrap_impl.Start(base::BindLambdaForTesting(
-      [&bootstrap_done](std::unique_ptr<SmbFilesystem> fs) {
+      [&bootstrap_done](std::unique_ptr<SmbFilesystem> fs,
+                        mojom::SmbFsRequest smbfs_request,
+                        mojom::SmbFsDelegatePtr delegate_ptr) {
         EXPECT_TRUE(fs);
         bootstrap_done = true;
       }));
@@ -214,7 +220,9 @@ TEST_F(TestSmbFsBootstrapImpl, KerberosAuth) {
       });
   bool bootstrap_done = false;
   boostrap_impl.Start(base::BindLambdaForTesting(
-      [&bootstrap_done](std::unique_ptr<SmbFilesystem> fs) {
+      [&bootstrap_done](std::unique_ptr<SmbFilesystem> fs,
+                        mojom::SmbFsRequest smbfs_request,
+                        mojom::SmbFsDelegatePtr delegate_ptr) {
         EXPECT_TRUE(fs);
         bootstrap_done = true;
       }));
@@ -263,7 +271,9 @@ TEST_F(TestSmbFsBootstrapImpl, SkipConnect) {
 
   bool bootstrap_done = false;
   boostrap_impl.Start(base::BindLambdaForTesting(
-      [&bootstrap_done](std::unique_ptr<SmbFilesystem> fs) {
+      [&bootstrap_done](std::unique_ptr<SmbFilesystem> fs,
+                        mojom::SmbFsRequest smbfs_request,
+                        mojom::SmbFsDelegatePtr delegate_ptr) {
         EXPECT_TRUE(fs);
         bootstrap_done = true;
       }));
@@ -299,7 +309,9 @@ TEST_F(TestSmbFsBootstrapImpl, Disconnect) {
 
   base::RunLoop run_loop;
   boostrap_impl.Start(base::BindLambdaForTesting(
-      [&run_loop](std::unique_ptr<SmbFilesystem> fs) {
+      [&run_loop](std::unique_ptr<SmbFilesystem> fs,
+                  mojom::SmbFsRequest smbfs_request,
+                  mojom::SmbFsDelegatePtr delegate_ptr) {
         EXPECT_FALSE(fs);
         run_loop.Quit();
       }));
@@ -319,8 +331,9 @@ TEST_F(TestSmbFsBootstrapImpl, InvalidPath) {
   SmbFsBootstrapImpl boostrap_impl(mojo::MakeRequest(&boostrap_ptr), fs_factory,
                                    &mock_delegate_);
 
-  boostrap_impl.Start(
-      base::BindOnce([](std::unique_ptr<SmbFilesystem> fs) { FAIL(); }));
+  boostrap_impl.Start(base::BindOnce(
+      [](std::unique_ptr<SmbFilesystem> fs, mojom::SmbFsRequest smbfs_request,
+         mojom::SmbFsDelegatePtr delegate_ptr) { FAIL(); }));
 
   mojom::MountOptionsPtr mount_options = mojom::MountOptions::New();
   mount_options->share_path = "bad-path";
@@ -353,8 +366,9 @@ TEST_F(TestSmbFsBootstrapImpl, KerberosSetupFailure) {
                    base::OnceCallback<void(bool success)> callback) {
         std::move(callback).Run(false);
       });
-  boostrap_impl.Start(
-      base::BindOnce([](std::unique_ptr<SmbFilesystem> fs) { FAIL(); }));
+  boostrap_impl.Start(base::BindOnce(
+      [](std::unique_ptr<SmbFilesystem> fs, mojom::SmbFsRequest smbfs_request,
+         mojom::SmbFsDelegatePtr delegate_ptr) { FAIL(); }));
 
   mojom::MountOptionsPtr mount_options = mojom::MountOptions::New();
   mount_options->share_path = kSharePath;
@@ -391,8 +405,9 @@ TEST_F(TestSmbFsBootstrapImpl, ConnectionAuthFailure) {
   SmbFsBootstrapImpl boostrap_impl(mojo::MakeRequest(&boostrap_ptr), fs_factory,
                                    &mock_delegate_);
 
-  boostrap_impl.Start(
-      base::BindOnce([](std::unique_ptr<SmbFilesystem> fs) { FAIL(); }));
+  boostrap_impl.Start(base::BindOnce(
+      [](std::unique_ptr<SmbFilesystem> fs, mojom::SmbFsRequest smbfs_request,
+         mojom::SmbFsDelegatePtr delegate_ptr) { FAIL(); }));
 
   mojom::MountOptionsPtr mount_options = mojom::MountOptions::New();
   mount_options->share_path = kSharePath;
@@ -425,8 +440,9 @@ TEST_F(TestSmbFsBootstrapImpl, UnsupportedProtocolSmb1) {
   SmbFsBootstrapImpl boostrap_impl(mojo::MakeRequest(&boostrap_ptr), fs_factory,
                                    &mock_delegate_);
 
-  boostrap_impl.Start(
-      base::BindOnce([](std::unique_ptr<SmbFilesystem> fs) { FAIL(); }));
+  boostrap_impl.Start(base::BindOnce(
+      [](std::unique_ptr<SmbFilesystem> fs, mojom::SmbFsRequest smbfs_request,
+         mojom::SmbFsDelegatePtr delegate_ptr) { FAIL(); }));
 
   mojom::MountOptionsPtr mount_options = mojom::MountOptions::New();
   mount_options->share_path = kSharePath;

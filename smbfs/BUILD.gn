@@ -50,6 +50,8 @@ static_library("libsmbfs") {
     "kerberos_artifact_synchronizer.h",
     "kerberos_client.cc",
     "kerberos_client.h",
+    "mojo_session.cc",
+    "mojo_session.h",
     "request.cc",
     "request.h",
     "smb_filesystem.cc",

@@ -11,26 +11,21 @@
 #include <memory>
 #include <string>
 
-#include <base/callback.h>
 #include <base/files/file_path.h>
 #include <base/files/scoped_temp_dir.h>
 #include <base/macros.h>
 #include <brillo/daemons/dbus_daemon.h>
 #include <mojo/core/embedder/scoped_ipc_support.h>
-#include <mojo/public/cpp/bindings/binding.h>
 
-#include "smbfs/smbfs_bootstrap_impl.h"
+#include "smbfs/mojo_session.h"
 
 namespace smbfs {
 
 class Filesystem;
 class FuseSession;
-class KerberosArtifactSynchronizer;
 struct Options;
-struct SmbCredential;
 
-class SmbFsDaemon : public brillo::DBusDaemon,
-                    public SmbFsBootstrapImpl::Delegate {
+class SmbFsDaemon : public brillo::DBusDaemon {
  public:
   SmbFsDaemon(fuse_chan* chan, const Options& options);
   ~SmbFsDaemon() override;
@@ -40,10 +35,6 @@ class SmbFsDaemon : public brillo::DBusDaemon,
   int OnInit() override;
   int OnEventLoopStarted() override;
 
-  // SmbFsBootstrapImpl::Delegate overrides.
-  void SetupKerberos(mojom::KerberosConfigPtr kerberos_config,
-                     base::OnceCallback<void(bool success)> callback) override;
-
  private:
   // Starts the fuse session using the filesystem |fs|. Returns true if the
   // session is successfully started.
@@ -52,18 +43,11 @@ class SmbFsDaemon : public brillo::DBusDaemon,
   // Set up libsmbclient configuration files.
   bool SetupSmbConf();
 
-  // Returns the full path to the given kerberos configuration file.
-  base::FilePath KerberosConfFilePath(const std::string& file_name);
-
   // Initialise Mojo IPC system.
   bool InitMojo();
 
-  // Callback for SmbFsBootstrapImpl::Start().
-  void OnBootstrapComplete(std::unique_ptr<SmbFilesystem> fs);
-
-  // Factory function for creating an SmbFilesystem.
-  std::unique_ptr<SmbFilesystem> CreateSmbFilesystem(
-      SmbFilesystem::Options options);
+  // Callback for MojoSession shutdown.
+  void OnSessionShutdown();
 
   fuse_chan* chan_;
   const bool use_test_fs_;
@@ -74,10 +58,9 @@ class SmbFsDaemon : public brillo::DBusDaemon,
   std::unique_ptr<FuseSession> session_;
   std::unique_ptr<Filesystem> fs_;
   base::ScopedTempDir temp_dir_;
-  std::unique_ptr<KerberosArtifactSynchronizer> kerberos_sync_;
 
   std::unique_ptr<mojo::core::ScopedIPCSupport> ipc_support_;
-  std::unique_ptr<SmbFsBootstrapImpl> bootstrap_impl_;
+  std::unique_ptr<MojoSession> mojo_session_;
 
   DISALLOW_COPY_AND_ASSIGN(SmbFsDaemon);
 };
