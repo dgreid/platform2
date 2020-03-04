@@ -181,6 +181,9 @@ int main(int argc, char* argv[]) {
   // Set an RTC alarm to wake up the system.
   if (FLAGS_wakeup_timeout > 0) {
     std::string alarm_string = "+" + base::NumberToString(FLAGS_wakeup_timeout);
+    // Write 0 first to clear any existing RTC alarm.
+    CHECK(power_manager::util::WriteFileFully(base::FilePath(kRtcWakeAlarmPath),
+                                              "0", 1));
     CHECK(power_manager::util::WriteFileFully(base::FilePath(kRtcWakeAlarmPath),
                                               alarm_string.c_str(),
                                               alarm_string.length()));
