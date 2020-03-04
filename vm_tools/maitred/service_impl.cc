@@ -526,6 +526,27 @@ grpc::Status ServiceImpl::Mount(grpc::ServerContext* ctx,
   return grpc::Status::OK;
 }
 
+grpc::Status ServiceImpl::ResetIPv6(grpc::ServerContext* ctx,
+                                    const vm_tools::EmptyMessage* request,
+                                    vm_tools::EmptyMessage* response) {
+  LOG(INFO) << "Received ResetIPv6 request";
+  string error;
+  if (!SetSysctl(base::StringPrintf("/proc/sys/net/ipv6/conf/%s/disable_ipv6",
+                                    kInterfaceName)
+                     .c_str(),
+                 "1", &error)) {
+    return grpc::Status(grpc::INTERNAL, error + ", cannot disable ipv6");
+  }
+  if (!SetSysctl(base::StringPrintf("/proc/sys/net/ipv6/conf/%s/disable_ipv6",
+                                    kInterfaceName)
+                     .c_str(),
+                 "0", &error)) {
+    return grpc::Status(grpc::INTERNAL, error + ", cannot enable ipv6");
+  }
+
+  return grpc::Status::OK;
+}
+
 grpc::Status ServiceImpl::StartTermina(grpc::ServerContext* ctx,
                                        const StartTerminaRequest* request,
                                        StartTerminaResponse* response) {

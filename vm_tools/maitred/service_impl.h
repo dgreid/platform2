@@ -50,6 +50,10 @@ class ServiceImpl final : public vm_tools::Maitred::Service {
                        const vm_tools::Mount9PRequest* request,
                        vm_tools::MountResponse* response) override;
 
+  grpc::Status ResetIPv6(grpc::ServerContext* ctx,
+                         const vm_tools::EmptyMessage* request,
+                         vm_tools::EmptyMessage* response) override;
+
   grpc::Status StartTermina(grpc::ServerContext* ctx,
                             const vm_tools::StartTerminaRequest* request,
                             vm_tools::StartTerminaResponse* response) override;

@@ -166,6 +166,9 @@ class Service final {
   void OnResolvConfigChanged(std::vector<std::string> nameservers,
                              std::vector<std::string> search_domains);
 
+  // Handles Default service changes from shill.
+  void OnDefaultNetworkServiceChanged();
+
   // Helper for starting termina VMs, e.g. starting lxd.
   bool StartTermina(TerminaVm* vm,
                     std::string* failure_reason,

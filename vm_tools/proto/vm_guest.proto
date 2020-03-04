@@ -226,6 +226,9 @@ service Maitred {
   // Set up networking inside the VM so that it can access the internet.
   rpc ConfigureNetwork(NetworkConfigRequest) returns (EmptyMessage);
 
+  // Reset IPv6 in VM and restart SLAAC process to acquire a new configuration.
+  rpc ResetIPv6(EmptyMessage) returns (EmptyMessage);
+
   // Initiate a shut-down of the VM.
   rpc Shutdown(EmptyMessage) returns (EmptyMessage);
 

@@ -106,6 +106,9 @@ void ShillClient::OnManagerPropertyChange(const std::string& property_name,
                  weak_factory_.GetWeakPtr()),
       base::Bind(&ShillClient::OnServicePropertyChangeRegistration,
                  weak_factory_.GetWeakPtr()));
+  if (!default_service_changed_callback_.is_null()) {
+    default_service_changed_callback_.Run();
+  }
 }
 
 void ShillClient::OnServicePropertyChangeRegistration(
@@ -218,6 +221,11 @@ void ShillClient::RegisterResolvConfigChangedHandler(
   config_changed_callback_ = std::move(callback);
   CHECK(!config_changed_callback_.is_null());
   config_changed_callback_.Run(nameservers_, search_domains_);
+}
+
+void ShillClient::RegisterDefaultServiceChangedHandler(
+    base::Callback<void()> callback) {
+  default_service_changed_callback_ = std::move(callback);
 }
 
 }  // namespace concierge

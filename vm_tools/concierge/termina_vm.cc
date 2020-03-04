@@ -532,6 +532,27 @@ bool TerminaVm::SetResolvConfig(const std::vector<string>& nameservers,
   return true;
 }
 
+void TerminaVm::HostNetworkChanged() {
+  LOG(INFO) << "Reseting IPv6 for VM " << vsock_cid_;
+
+  vm_tools::EmptyMessage request;
+  vm_tools::EmptyMessage response;
+
+  grpc::ClientContext ctx;
+  ctx.set_deadline(gpr_time_add(
+      gpr_now(GPR_CLOCK_MONOTONIC),
+      gpr_time_from_seconds(kDefaultTimeoutSeconds, GPR_TIMESPAN)));
+
+  // Reset IPv6 stack in the VM. This will force SLAAC on the new network.
+  grpc::Status status = stub_->ResetIPv6(&ctx, request, &response);
+  if (!status.ok()) {
+    LOG(WARNING) << "Failed to reset IPv6 for VM " << vsock_cid_ << ": "
+                 << status.error_message();
+  }
+
+  // TODO(http://crbug/1058730): Existing sockets should also be shut down.
+}
+
 bool TerminaVm::SetTime(string* failure_reason) {
   DCHECK(failure_reason);
 

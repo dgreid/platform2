@@ -117,6 +117,10 @@ class TerminaVm final : public VmInterface {
   bool SetResolvConfig(const std::vector<std::string>& nameservers,
                        const std::vector<std::string>& search_domains) override;
 
+  // Reset IPv6 stack in the VM if needed. This is triggered during a default
+  // network change. Return true if successful.
+  void HostNetworkChanged() override;
+
   // Set the guest time to the current time as given by gettimeofday.
   bool SetTime(std::string* failure_reason) override;
 
