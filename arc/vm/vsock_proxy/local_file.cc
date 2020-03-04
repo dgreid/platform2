@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "arc/vm/vsock_proxy/socket_stream.h"
+#include "arc/vm/vsock_proxy/local_file.h"
 
 #include <errno.h>
 #include <fcntl.h>
@@ -20,22 +20,16 @@
 
 namespace arc {
 
-SocketStream::SocketStream(base::ScopedFD fd,
-                           bool can_send_fds,
-                           base::OnceClosure error_handler)
+LocalFile::LocalFile(base::ScopedFD fd,
+                     bool can_send_fds,
+                     base::OnceClosure error_handler)
     : fd_(std::move(fd)),
       can_send_fds_(can_send_fds),
-      error_handler_(std::move(error_handler)) {
-  // Set non-blocking.
-  int flags = fcntl(fd_.get(), F_GETFL);
-  PCHECK(flags != -1);
-  flags = fcntl(fd_.get(), F_SETFL, flags | O_NONBLOCK);
-  PCHECK(flags != -1);
-}
+      error_handler_(std::move(error_handler)) {}
 
-SocketStream::~SocketStream() = default;
+LocalFile::~LocalFile() = default;
 
-StreamBase::ReadResult SocketStream::Read() {
+LocalFile::ReadResult LocalFile::Read() {
   char buf[4096];
   std::vector<base::ScopedFD> fds;
   ssize_t size =
@@ -50,26 +44,42 @@ StreamBase::ReadResult SocketStream::Read() {
   return {0 /* succeed */, std::string(buf, size), std::move(fds)};
 }
 
-bool SocketStream::Write(std::string blob, std::vector<base::ScopedFD> fds) {
+bool LocalFile::Write(std::string blob, std::vector<base::ScopedFD> fds) {
   pending_write_.emplace_back(Data{std::move(blob), std::move(fds)});
   if (!writable_watcher_)  // TrySendMsg will be called later if watching.
     TrySendMsg();
   return true;
 }
 
-bool SocketStream::Pread(uint64_t count,
-                         uint64_t offset,
-                         arc_proxy::PreadResponse* response) {
-  LOG(ERROR) << "Pread for socket file descriptor is unsupported.";
-  return false;
+bool LocalFile::Pread(uint64_t count,
+                      uint64_t offset,
+                      arc_proxy::PreadResponse* response) {
+  std::string buffer;
+  buffer.resize(count);
+  int result = HANDLE_EINTR(pread(fd_.get(), &buffer[0], count, offset));
+  if (result < 0) {
+    response->set_error_code(errno);
+  } else {
+    buffer.resize(result);
+    response->set_error_code(0);
+    *response->mutable_blob() = std::move(buffer);
+  }
+  return true;
 }
 
-bool SocketStream::Fstat(arc_proxy::FstatResponse* response) {
-  LOG(ERROR) << "Fstat for socket file descriptor is unsupported.";
-  return false;
+bool LocalFile::Fstat(arc_proxy::FstatResponse* response) {
+  struct stat st;
+  int result = fstat(fd_.get(), &st);
+  if (result < 0) {
+    response->set_error_code(errno);
+  } else {
+    response->set_error_code(0);
+    response->set_size(st.st_size);
+  }
+  return true;
 }
 
-void SocketStream::TrySendMsg() {
+void LocalFile::TrySendMsg() {
   DCHECK(!pending_write_.empty());
   for (; !pending_write_.empty(); pending_write_.pop_front()) {
     const auto& data = pending_write_.front();
@@ -92,7 +102,7 @@ void SocketStream::TrySendMsg() {
         // Will retry later.
         if (!writable_watcher_) {
           writable_watcher_ = base::FileDescriptorWatcher::WatchWritable(
-              fd_.get(), base::BindRepeating(&SocketStream::TrySendMsg,
+              fd_.get(), base::BindRepeating(&LocalFile::TrySendMsg,
                                              weak_factory_.GetWeakPtr()));
         }
         return;

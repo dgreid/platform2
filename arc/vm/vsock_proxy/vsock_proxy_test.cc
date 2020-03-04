@@ -446,24 +446,6 @@ TEST_F(VSockProxyTest, Fstat) {
   run_loop.Run();
 }
 
-TEST_F(VSockProxyTest, Fstat_Unsupported) {
-  auto sockpair = CreateSocketPair(SOCK_STREAM | SOCK_NONBLOCK);
-  ASSERT_TRUE(sockpair.has_value());
-  ASSERT_TRUE(sockpair->first.is_valid());
-  const int64_t handle = client()->RegisterFileDescriptor(
-      std::move(sockpair->first), arc_proxy::FileDescriptor::SOCKET_STREAM, 0);
-
-  base::RunLoop run_loop;
-  server()->Fstat(
-      handle, base::BindOnce(
-                  [](base::RunLoop* run_loop, int error_code, int64_t size) {
-                    run_loop->Quit();
-                    EXPECT_EQ(EOPNOTSUPP, error_code);
-                  },
-                  &run_loop));
-  run_loop.Run();
-}
-
 TEST_F(VSockProxyTest, Fstat_UnknownHandle) {
   constexpr int64_t kUnknownHandle = 100;
   base::RunLoop run_loop;

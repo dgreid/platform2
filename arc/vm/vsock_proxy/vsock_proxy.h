@@ -26,7 +26,7 @@ class FilePath;
 
 namespace arc {
 
-class StreamBase;
+class LocalFile;
 class ProxyFileSystem;
 
 // Proxies between local file descriptors and given VSOCK socket by Message
@@ -60,8 +60,7 @@ class VSockProxy {
   ~VSockProxy();
 
   // Registers the |fd| whose type is |fd_type| to watch.
-  // Internally, this creates Stream object to read/write Message protocol
-  // buffer.
+  // Internally, this creates an object to read/write Message protocol buffer.
   // If |handle| is the value corresponding to the file descriptor on
   // messages on VSOCK. If 0 is set, this internally generates the handle.
   // Returns handle or 0 on error.
@@ -143,13 +142,13 @@ class VSockProxy {
   VSockStream vsock_;
   std::unique_ptr<base::FileDescriptorWatcher::Controller> vsock_controller_;
 
-  // Map from a |handle| (see message.proto for details) to a stream
+  // Map from a |handle| (see message.proto for details) to a file
   // instance wrapping the file descriptor and its watcher.
   // Erasing the entry from this map should close the file descriptor
-  // automatically, because file descriptor is owned by stream.
+  // automatically, because file descriptor is owned by |file|.
   struct FileDescriptorInfo {
-    // Stream instane to read/write Message.
-    std::unique_ptr<StreamBase> stream;
+    // File instance to read/write Message.
+    std::unique_ptr<LocalFile> file;
 
     // Controller of FileDescriptorWatcher. Destroying this will
     // stop watching.

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "arc/vm/vsock_proxy/socket_stream.h"
+#include "arc/vm/vsock_proxy/local_file.h"
 
 #include <errno.h>
 #include <fcntl.h>
@@ -23,6 +23,7 @@
 #include <base/message_loop/message_loop.h>
 #include <base/optional.h>
 #include <base/posix/eintr_wrapper.h>
+#include <base/files/scoped_temp_dir.h>
 #include <base/posix/unix_domain_socket.h>
 #include <base/run_loop.h>
 #include <base/strings/string_piece.h>
@@ -33,7 +34,70 @@
 namespace arc {
 namespace {
 
-// Tests SocketStream with a socket.
+TEST(LocalFileTest, Pread) {
+  base::ScopedTempDir temp_dir;
+  ASSERT_TRUE(temp_dir.CreateUniqueTempDir());
+  const base::FilePath file_path = temp_dir.GetPath().Append("test_file.txt");
+  constexpr char kFileContent[] = "abcdefghijklmnopqrstuvwxyz";
+  // Trim trailing '\0'.
+  ASSERT_EQ(sizeof(kFileContent) - 1,
+            base::WriteFile(file_path, kFileContent, sizeof(kFileContent) - 1));
+
+  base::ScopedFD fd(HANDLE_EINTR(open(file_path.value().c_str(), O_RDONLY)));
+  ASSERT_TRUE(fd.is_valid());
+
+  LocalFile stream(std::move(fd), false,
+                   base::BindOnce([]() { ADD_FAILURE(); }));
+  arc_proxy::PreadResponse response;
+  ASSERT_TRUE(stream.Pread(10, 10, &response));
+  EXPECT_EQ(0, response.error_code());
+  EXPECT_EQ("klmnopqrst", response.blob());
+
+  // Test for EOF. Result |blob| should contain only the available bytes.
+  ASSERT_TRUE(stream.Pread(10, 20, &response));
+  EXPECT_EQ(0, response.error_code());
+  EXPECT_EQ("uvwxyz", response.blob());
+}
+
+TEST(LocalFileTest, PreadError) {
+  // Use -1 (invalid file descriptor) to let pread(2) return error in Pread().
+  LocalFile stream{base::ScopedFD(), false,
+                   base::BindOnce([]() { ADD_FAILURE(); })};
+  arc_proxy::PreadResponse response;
+  ASSERT_TRUE(stream.Pread(10, 10, &response));
+  EXPECT_EQ(EBADF, response.error_code());
+}
+
+TEST(LocalFileTest, Fstat) {
+  base::ScopedTempDir temp_dir;
+  ASSERT_TRUE(temp_dir.CreateUniqueTempDir());
+  const base::FilePath file_path = temp_dir.GetPath().Append("test_file.txt");
+  constexpr char kFileContent[] = "abcdefghijklmnopqrstuvwxyz";
+  // Trim trailing '\0'.
+  ASSERT_EQ(sizeof(kFileContent) - 1,
+            base::WriteFile(file_path, kFileContent, sizeof(kFileContent) - 1));
+
+  base::ScopedFD fd(HANDLE_EINTR(open(file_path.value().c_str(), O_RDONLY)));
+  ASSERT_TRUE(fd.is_valid());
+
+  LocalFile stream(std::move(fd), false,
+                   base::BindOnce([]() { ADD_FAILURE(); }));
+  arc_proxy::FstatResponse response;
+  ASSERT_TRUE(stream.Fstat(&response));
+  EXPECT_EQ(0, response.error_code());
+  EXPECT_EQ(26, response.size());
+}
+
+TEST(LocalFileTest, FstatError) {
+  // Use -1 (invalid file descriptor) to let pread(2) return error in Pread().
+  LocalFile stream{base::ScopedFD(), false,
+                   base::BindOnce([]() { ADD_FAILURE(); })};
+  arc_proxy::FstatResponse response;
+  ASSERT_TRUE(stream.Fstat(&response));
+  EXPECT_EQ(EBADF, response.error_code());
+}
+
+// Tests LocalFile with a socket.
 class SocketStreamTest : public testing::Test {
  public:
   SocketStreamTest() = default;
@@ -43,14 +107,14 @@ class SocketStreamTest : public testing::Test {
     auto sockets = CreateSocketPair(SOCK_STREAM | SOCK_NONBLOCK);
     ASSERT_TRUE(sockets.has_value());
     stream_ =
-        std::make_unique<SocketStream>(std::move(sockets.value().first), true,
-                                       base::BindOnce([]() { ADD_FAILURE(); }));
+        std::make_unique<LocalFile>(std::move(sockets.value().first), true,
+                                    base::BindOnce([]() { ADD_FAILURE(); }));
     socket_ = std::move(sockets.value().second);
   }
 
  protected:
-  std::unique_ptr<SocketStream> stream_;  // Paired with socket_.
-  base::ScopedFD socket_;                 // Paired with stream_.
+  std::unique_ptr<LocalFile> stream_;  // Paired with socket_.
+  base::ScopedFD socket_;              // Paired with stream_.
 
  private:
   base::MessageLoopForIO message_loop_;
@@ -87,7 +151,7 @@ TEST_F(SocketStreamTest, ReadError) {
   // Pass a non-socket FD.
   base::ScopedFD fd(HANDLE_EINTR(open("/dev/null", O_RDONLY)));
   auto read_result =
-      SocketStream(std::move(fd), true, base::BindOnce([]() {})).Read();
+      LocalFile(std::move(fd), true, base::BindOnce([]() {})).Read();
   EXPECT_EQ(ENOTSOCK, read_result.error_code);
 }
 
@@ -181,11 +245,11 @@ TEST_F(SocketStreamTest, WriteError) {
       base::BindOnce([](bool* run) { *run = true; }, &error_handler_was_run);
   // Write to a non-socket FD.
   base::ScopedFD fd(HANDLE_EINTR(open("/dev/null", O_RDONLY)));
-  SocketStream(std::move(fd), true, std::move(error_handler)).Write(kData, {});
+  LocalFile(std::move(fd), true, std::move(error_handler)).Write(kData, {});
   EXPECT_TRUE(error_handler_was_run);
 }
 
-// Tests SocketStream with a pipe.
+// Tests LocalFile with a pipe.
 class PipeStreamTest : public testing::Test {
  public:
   PipeStreamTest() = default;
@@ -212,8 +276,8 @@ TEST_F(PipeStreamTest, Read) {
   constexpr char kData[] = "abcdefghijklmnopqrstuvwxyz";
   ASSERT_TRUE(base::WriteFileDescriptor(write_fd_.get(), kData, sizeof(kData)));
 
-  auto read_result = SocketStream(std::move(read_fd_), false,
-                                  base::BindOnce([]() { ADD_FAILURE(); }))
+  auto read_result = LocalFile(std::move(read_fd_), false,
+                               base::BindOnce([]() { ADD_FAILURE(); }))
                          .Read();
   EXPECT_EQ(0, read_result.error_code);
   EXPECT_EQ(base::StringPiece(kData, sizeof(kData)), read_result.blob);
@@ -224,8 +288,8 @@ TEST_F(PipeStreamTest, ReadEOF) {
   // Close the write end immediately.
   write_fd_.reset();
 
-  auto read_result = SocketStream(std::move(read_fd_), false,
-                                  base::BindOnce([]() { ADD_FAILURE(); }))
+  auto read_result = LocalFile(std::move(read_fd_), false,
+                               base::BindOnce([]() { ADD_FAILURE(); }))
                          .Read();
   EXPECT_EQ(0, read_result.error_code);
   EXPECT_TRUE(read_result.blob.empty());
@@ -235,16 +299,16 @@ TEST_F(PipeStreamTest, ReadEOF) {
 TEST_F(PipeStreamTest, ReadError) {
   // Pass an unreadable FD.
   base::ScopedFD fd(HANDLE_EINTR(open("/dev/null", O_WRONLY)));
-  auto read_result = SocketStream(std::move(fd), false,
-                                  base::BindOnce([]() { ADD_FAILURE(); }))
-                         .Read();
+  auto read_result =
+      LocalFile(std::move(fd), false, base::BindOnce([]() { ADD_FAILURE(); }))
+          .Read();
   EXPECT_EQ(EBADF, read_result.error_code);
 }
 
 TEST_F(PipeStreamTest, Write) {
   constexpr char kData[] = "abcdefghijklmnopqrstuvwxyz";
-  ASSERT_TRUE(SocketStream(std::move(write_fd_), false,
-                           base::BindOnce([]() { ADD_FAILURE(); }))
+  ASSERT_TRUE(LocalFile(std::move(write_fd_), false,
+                        base::BindOnce([]() { ADD_FAILURE(); }))
                   .Write(std::string(kData, sizeof(kData)), {}));
 
   std::string read_data;
@@ -264,9 +328,8 @@ TEST_F(PipeStreamTest, WriteFD) {
   bool error_handler_was_run = false;
   base::OnceClosure error_handler =
       base::BindOnce([](bool* run) { *run = true; }, &error_handler_was_run);
-  EXPECT_TRUE(
-      SocketStream(std::move(write_fd_), false, std::move(error_handler))
-          .Write(std::string(kData, sizeof(kData)), std::move(fds)));
+  EXPECT_TRUE(LocalFile(std::move(write_fd_), false, std::move(error_handler))
+                  .Write(std::string(kData, sizeof(kData)), std::move(fds)));
   EXPECT_TRUE(error_handler_was_run);
 }
 
@@ -274,8 +337,8 @@ TEST_F(PipeStreamTest, PendingWrite) {
   const int pipe_size = HANDLE_EINTR(fcntl(write_fd_.get(), F_GETPIPE_SZ));
   ASSERT_NE(-1, pipe_size);
 
-  SocketStream stream(std::move(write_fd_), false,
-                      base::BindOnce([]() { ADD_FAILURE(); }));
+  LocalFile stream(std::move(write_fd_), false,
+                   base::BindOnce([]() { ADD_FAILURE(); }));
 
   const std::string data1(pipe_size, 'a');
   const std::string data2(pipe_size, 'b');

@@ -20,28 +20,39 @@
 #include <base/logging.h>
 
 #include "arc/vm/vsock_proxy/file_descriptor_util.h"
-#include "arc/vm/vsock_proxy/file_stream.h"
-#include "arc/vm/vsock_proxy/socket_stream.h"
+#include "arc/vm/vsock_proxy/local_file.h"
 
 namespace arc {
 namespace {
 
-std::unique_ptr<StreamBase> CreateStream(
-    base::ScopedFD fd,
-    arc_proxy::FileDescriptor::Type fd_type,
-    base::OnceClosure error_handler) {
+std::unique_ptr<LocalFile> CreateFile(base::ScopedFD fd,
+                                      arc_proxy::FileDescriptor::Type fd_type,
+                                      base::OnceClosure error_handler) {
   switch (fd_type) {
     case arc_proxy::FileDescriptor::SOCKET_STREAM:
     case arc_proxy::FileDescriptor::SOCKET_DGRAM:
-    case arc_proxy::FileDescriptor::SOCKET_SEQPACKET:
-      return std::make_unique<SocketStream>(std::move(fd), true,
-                                            std::move(error_handler));
+    case arc_proxy::FileDescriptor::SOCKET_SEQPACKET: {
+      // Set non-blocking.
+      int flags = fcntl(fd.get(), F_GETFL);
+      PCHECK(flags != -1);
+      flags = fcntl(fd.get(), F_SETFL, flags | O_NONBLOCK);
+      PCHECK(flags != -1);
+      return std::make_unique<LocalFile>(std::move(fd), true,
+                                         std::move(error_handler));
+    }
     case arc_proxy::FileDescriptor::FIFO_READ:
-    case arc_proxy::FileDescriptor::FIFO_WRITE:
-      return std::make_unique<SocketStream>(std::move(fd), false,
-                                            std::move(error_handler));
+    case arc_proxy::FileDescriptor::FIFO_WRITE: {
+      // Set non-blocking.
+      int flags = fcntl(fd.get(), F_GETFL);
+      PCHECK(flags != -1);
+      flags = fcntl(fd.get(), F_SETFL, flags | O_NONBLOCK);
+      PCHECK(flags != -1);
+      return std::make_unique<LocalFile>(std::move(fd), false,
+                                         std::move(error_handler));
+    }
     case arc_proxy::FileDescriptor::REGULAR_FILE:
-      return std::make_unique<FileStream>(std::move(fd));
+      return std::make_unique<LocalFile>(std::move(fd), false,
+                                         std::move(error_handler));
     case arc_proxy::FileDescriptor::DMABUF:
       return nullptr;
     default:
@@ -86,10 +97,9 @@ int64_t VSockProxy::RegisterFileDescriptor(
       handle = next_handle_--;
   }
 
-  auto stream =
-      CreateStream(std::move(fd), fd_type,
-                   base::BindOnce(&VSockProxy::HandleLocalFileError,
-                                  weak_factory_.GetWeakPtr(), handle));
+  auto file = CreateFile(std::move(fd), fd_type,
+                         base::BindOnce(&VSockProxy::HandleLocalFileError,
+                                        weak_factory_.GetWeakPtr(), handle));
   std::unique_ptr<base::FileDescriptorWatcher::Controller> controller;
   if (fd_type != arc_proxy::FileDescriptor::REGULAR_FILE &&
       fd_type != arc_proxy::FileDescriptor::DMABUF) {
@@ -98,7 +108,7 @@ int64_t VSockProxy::RegisterFileDescriptor(
                                     weak_factory_.GetWeakPtr(), handle));
   }
   fd_map_.emplace(handle,
-                  FileDescriptorInfo{std::move(stream), std::move(controller)});
+                  FileDescriptorInfo{std::move(file), std::move(controller)});
   return handle;
 }
 
@@ -280,10 +290,8 @@ bool VSockProxy::OnData(arc_proxy::Data* data) {
     transferred_fds.emplace_back(std::move(remote_fd));
   }
 
-  // TODO(hashimoto): Redesign stream interface for better write error handling.
-  // SocketStream::Write() doesn't return error as it's async.
-  if (!it->second.stream->Write(std::move(*data->mutable_blob()),
-                                std::move(transferred_fds)))
+  if (!it->second.file->Write(std::move(*data->mutable_blob()),
+                              std::move(transferred_fds)))
     HandleLocalFileError(data->handle());
   return true;
 }
@@ -339,8 +347,7 @@ void VSockProxy::OnPreadRequestInternal(arc_proxy::PreadRequest* request,
     return;
   }
 
-  if (!it->second.stream->Pread(request->count(), request->offset(),
-                                response)) {
+  if (!it->second.file->Pread(request->count(), request->offset(), response)) {
     response->set_error_code(EINVAL);
     return;
   }
@@ -379,7 +386,7 @@ void VSockProxy::OnFstatRequestInternal(arc_proxy::FstatRequest* request,
     return;
   }
 
-  if (!it->second.stream->Fstat(response)) {
+  if (!it->second.file->Fstat(response)) {
     // According to man, it seems like stat family needs to be supported for
     // all file descriptor types, so there's no good errno is defined to reject
     // the request. Thus, use EOPNOTSUPP, meaning the fstat is not supported.
@@ -408,7 +415,7 @@ void VSockProxy::OnLocalFileDesciptorReadReady(int64_t handle) {
     return;
   }
 
-  auto read_result = it->second.stream->Read();
+  auto read_result = it->second.file->Read();
   arc_proxy::VSockMessage message;
   if (read_result.error_code != 0) {
     LOG(ERROR) << "Failed to read from file descriptor. handle=" << handle;

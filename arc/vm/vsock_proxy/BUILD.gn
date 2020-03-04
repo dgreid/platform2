@@ -33,11 +33,10 @@ proto_library("message") {
 static_library("vsock_proxy_lib") {
   sources = [
     "file_descriptor_util.cc",
-    "file_stream.cc",
     "fuse_mount.cc",
+    "local_file.cc",
     "proxy_file_system.cc",
     "server_proxy.cc",
-    "socket_stream.cc",
     "vsock_proxy.cc",
     "vsock_stream.cc",
   ]
@@ -63,9 +62,8 @@ if (use.test) {
   executable("vsock_proxy_test") {
     sources = [
       "file_descriptor_util_test.cc",
-      "file_stream_test.cc",
+      "local_file_test.cc",
       "proxy_file_system_test.cc",
-      "socket_stream_test.cc",
       "vsock_proxy_test.cc",
       "vsock_stream_test.cc",
     ]
