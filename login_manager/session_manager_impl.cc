@@ -559,7 +559,11 @@ void SessionManagerImpl::Finalize() {
     if (kv.second)
       kv.second->policy_service->PersistAllPolicy();
   }
-  device_local_account_manager_->PersistAllPolicy();
+
+  // Before persisting policies check if `device_local_account_manager_` was
+  // initialized. Note that if `Initialize()` fails it won't be initialized.
+  if (device_local_account_manager_)
+    device_local_account_manager_->PersistAllPolicy();
 
   // We want to stop all running containers and VMs.  Containers and VMs are
   // per-session and cannot persist across sessions.
@@ -1034,11 +1038,9 @@ bool SessionManagerImpl::StartTPMFirmwareUpdate(
 
   // For remotely managed devices, make sure the requested update mode matches
   // the admin-configured one in device policy.
-  // Cast value to C string and back to remove trailing zero.
-  const std::string mode(install_attributes_reader_
-                             ->GetAttribute(InstallAttributesReader::kAttrMode)
-                             .c_str());
-  if (mode == InstallAttributesReader::kDeviceModeEnterprise) {
+  if (install_attributes_reader_->GetAttribute(
+          InstallAttributesReader::kAttrMode) ==
+      InstallAttributesReader::kDeviceModeEnterprise) {
     const enterprise_management::TPMFirmwareUpdateSettingsProto& settings =
         device_policy_->GetSettings().tpm_firmware_update_settings();
     std::set<std::string> allowed_modes;
@@ -1619,9 +1621,9 @@ SessionManagerImpl::CreateUserSession(const std::string& username,
 
 brillo::ErrorPtr SessionManagerImpl::VerifyUnsignedPolicyStore() {
   // Unsigned policy store D-Bus call is allowed only in enterprise_ad mode.
-  const std::string& mode = install_attributes_reader_->GetAttribute(
-      InstallAttributesReader::kAttrMode);
-  if (mode != InstallAttributesReader::kDeviceModeEnterpriseAD) {
+  if (install_attributes_reader_->GetAttribute(
+          InstallAttributesReader::kAttrMode) !=
+      InstallAttributesReader::kDeviceModeEnterpriseAD) {
     return CREATE_ERROR_AND_LOG(dbus_error::kPolicySignatureRequired,
                                 "Device mode doesn't permit unsigned policy.");
   }
