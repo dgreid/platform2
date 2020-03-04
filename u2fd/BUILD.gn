@@ -172,6 +172,7 @@ if (use.test) {
     sources = [
       "allowlisting_util_test.cc",
       "u2f_msg_handler_test.cc",
+      "webauthn_handler_test.cc",
     ]
     deps = [
       ":libu2fd",

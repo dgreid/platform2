@@ -8,6 +8,7 @@
 #include <functional>
 #include <memory>
 #include <queue>
+#include <vector>
 
 #include <brillo/dbus/dbus_method_response.h>
 
@@ -35,6 +36,11 @@ struct GetAssertionSession {
   uint64_t session_id;
   GetAssertionRequest request_;
   std::unique_ptr<GetAssertionMethodResponse> response_;
+};
+
+enum class PresenceRequirement {
+  kPowerButton,  // Requires a power button press as indication of presence.
+  kFingerprint,  // Requires the GPIO line from fingerprint MCU to be active.
 };
 
 // Implementation of the WebAuthn DBus API.
@@ -67,14 +73,35 @@ class WebAuthnHandler {
   HasCredentialsResponse HasCredentials(const HasCredentialsRequest& request);
 
  private:
+  friend class WebAuthnHandlerTest;
+
   bool Initialized();
+
+  // Proceeds to cr50 for the current MakeCredential request, and responds to
+  // the request with authenticator data.
+  // Called directly if the request is user-presence only.
+  // Called on user verification success if the request is user-verification.
+  void DoMakeCredential(struct MakeCredentialSession session,
+                        PresenceRequirement presence_requirement);
+
+  // Runs a U2F_GENERATE command to create a new key handle, and stores the key
+  // handle in |credential_id| and the public key in |credential_public_key|.
+  // The flag in the U2F_GENERATE command is set according to
+  // |presence_requirement|.
+  // |rp_id_hash| must be exactly 32 bytes.
+  MakeCredentialResponse::MakeCredentialStatus DoU2fGenerate(
+      const std::vector<uint8_t>& rp_id_hash,
+      PresenceRequirement presence_requirement,
+      std::vector<uint8_t>* credential_id,
+      std::vector<uint8_t>* credential_public_key);
+
+  // Prompts the user for presence through |request_presence_| and calls |fn|
+  // repeatedly until success or timeout.
+  void CallAndWaitForPresence(std::function<uint32_t()> fn, uint32_t* status);
 
   TpmVendorCommandProxy* tpm_proxy_;
   UserState* user_state_;
   std::function<void()> request_presence_;
-
-  struct MakeCredentialSession make_credential_session_;
-  struct GetAssertionSession get_assertion_session_;
 };
 
 }  // namespace u2f
