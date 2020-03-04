@@ -19,10 +19,13 @@
 
 namespace patchpanel {
 
-// ADB gets confused if we listen on 5555 and thinks there is an emulator
-// running, which in turn ends up confusing our integration test libraries
-// because multiple devices show up.
-constexpr uint16_t kAdbProxyTcpListenPort = 5550;
+// Running the proxy on port 5555 will cause ADBD to see it as an Android
+// emulator rather than an attached device. This means, whenever host ADBD
+// server runs a device named "emulator-5554" will show up.
+// Connections to ARC via ADB (including by Tast) should now be done by
+// starting ADB server (e.g. 'adb devices') instead of
+// 'adb connect 127.0.0.1:5555' to avoid seeing multiple devices.
+constexpr uint16_t kAdbProxyTcpListenPort = 5555;
 
 // Subprocess for proxying ADB traffic.
 class AdbProxy : public brillo::Daemon {

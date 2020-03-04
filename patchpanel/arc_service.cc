@@ -23,6 +23,7 @@
 #include <brillo/key_value_store.h>
 #include <chromeos/constants/vm_tools.h>
 
+#include "patchpanel/adb_proxy.h"
 #include "patchpanel/datapath.h"
 #include "patchpanel/mac_address_generator.h"
 #include "patchpanel/manager.h"
@@ -196,6 +197,7 @@ std::unique_ptr<Device> MakeArcDevice(AddressManager* addr_mgr,
   Device::Options opts{
       .fwd_multicast = false,
       .ipv6_enabled = false,
+      .adb_allowed = false,
   };
 
   return std::make_unique<Device>(kArcIfname, kArcBridge, kArcIfname,
@@ -445,6 +447,8 @@ void ArcService::AddDevice(const std::string& ifname) {
       // once IPv6 is enabled on cellular networks in Shill.
       .ipv6_enabled =
           (itype == InterfaceType::ETHERNET || itype == InterfaceType::WIFI),
+      .adb_allowed =
+          (itype == InterfaceType::ETHERNET || itype == InterfaceType::WIFI),
   };
 
   auto config = AcquireConfig(ifname);
@@ -501,6 +505,11 @@ void ArcService::AddDevice(const std::string& ifname) {
     return;
   }
 
+  if (device->options().adb_allowed &&
+      !datapath_->AddAdbPortAccessRule(ifname)) {
+    LOG(ERROR) << "Failed to add ADB port access rule";
+  }
+
   forwarder_->StartForwarding(device->phys_ifname(), device->host_ifname(),
                               device->options().ipv6_enabled,
                               device->options().fwd_multicast);
@@ -533,6 +542,8 @@ void ArcService::RemoveDevice(const std::string& ifname) {
   datapath_->RemoveInboundIPv4DNAT(
       device->phys_ifname(), IPv4AddressToString(config.guest_ipv4_addr()));
   datapath_->RemoveBridge(device->host_ifname());
+  if (device->options().adb_allowed)
+    datapath_->DeleteAdbPortAccessRule(ifname);
 
   ReleaseConfig(ifname, it->second->release_config());
   devices_.erase(it);

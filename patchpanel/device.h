@@ -86,6 +86,7 @@ class Device {
   struct Options {
     bool fwd_multicast;
     bool ipv6_enabled;
+    bool adb_allowed;
   };
 
   // |phys_ifname| corresponds either to the physical interface provided by

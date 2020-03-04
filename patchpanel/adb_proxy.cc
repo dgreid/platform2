@@ -159,7 +159,7 @@ void AdbProxy::OnGuestMessage(const GuestMessage& msg) {
   // On ARC up, start accepting connections.
   if (msg.event() == GuestMessage::START) {
     src_ = std::make_unique<Socket>(AF_INET, SOCK_STREAM | SOCK_NONBLOCK);
-    // Need to set this to reuse the port on localhost.
+    // Need to set this to reuse the port.
     int on = 1;
     if (setsockopt(src_->fd(), SOL_SOCKET, SO_REUSEADDR, &on, sizeof(int)) <
         0) {
@@ -169,7 +169,7 @@ void AdbProxy::OnGuestMessage(const GuestMessage& msg) {
     struct sockaddr_in addr = {0};
     addr.sin_family = AF_INET;
     addr.sin_port = htons(kAdbProxyTcpListenPort);
-    addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    addr.sin_addr.s_addr = htonl(INADDR_ANY);
     if (!src_->Bind((const struct sockaddr*)&addr, sizeof(addr))) {
       LOG(ERROR) << "Cannot bind source socket to " << addr;
       return;
