@@ -523,42 +523,6 @@ TEST_F(L2TPIPSecDriverTest, SpawnL2TPIPSecVPN) {
   static const char kHost[] = "192.168.2.254";
   SetArg(kProviderHostProperty, kHost);
 
-  EXPECT_CALL(manager_, GetJailVpnClients())
-      .Times(2)
-      .WillRepeatedly(Return(false));
-
-  // TODO(quiche): Instead of setting expectations based on what
-  // ExternalTask will call, mock out ExternalTask. Non-trivial,
-  // though, because ExternalTask is constructed during the
-  // call to driver_->Connect.
-  EXPECT_CALL(process_manager_, StartProcess(_, _, _, _, _, _))
-      .WillOnce(Return(-1))
-      .WillOnce(Return(1));
-
-  EXPECT_FALSE(driver_->SpawnL2TPIPSecVPN(&error));
-  EXPECT_FALSE(driver_->external_task_);
-  EXPECT_TRUE(driver_->SpawnL2TPIPSecVPN(&error));
-  EXPECT_NE(nullptr, driver_->external_task_);
-}
-
-TEST_F(L2TPIPSecDriverTest, SpawnL2TPIPSecVPNInMinijail) {
-  Error error;
-  // Fail without sufficient arguments.
-  EXPECT_FALSE(driver_->SpawnL2TPIPSecVPN(&error));
-  EXPECT_TRUE(error.IsFailure());
-
-  // Provide the required arguments.
-  static const char kHost[] = "192.168.2.254";
-  SetArg(kProviderHostProperty, kHost);
-
-  EXPECT_CALL(manager_, GetJailVpnClients())
-      .Times(2)
-      .WillRepeatedly(Return(true));
-
-  // TODO(mortonm): Instead of setting expectations based on what
-  // ExternalTask will call, mock out ExternalTask. Non-trivial,
-  // though, because ExternalTask is constructed during the
-  // call to driver_->Connect.
   EXPECT_CALL(process_manager_,
               StartProcessInMinijail(_, _, _, _, _, _, _, _, true, _))
       .WillOnce(Return(-1))
@@ -575,13 +539,8 @@ TEST_F(L2TPIPSecDriverTest, Connect) {
   static const char kHost[] = "192.168.2.254";
   SetArg(kProviderHostProperty, kHost);
 
-  EXPECT_CALL(manager_, GetJailVpnClients()).WillOnce(Return(false));
-
-  // TODO(quiche): Instead of setting expectations based on what
-  // ExternalTask will call, mock out ExternalTask. Non-trivial,
-  // though, because ExternalTask is constructed during the
-  // call to driver_->Connect.
-  EXPECT_CALL(process_manager_, StartProcess(_, _, _, _, _, _))
+  EXPECT_CALL(process_manager_,
+              StartProcessInMinijail(_, _, _, _, _, _, _, _, true, _))
       .WillOnce(Return(1));
 
   Error error;

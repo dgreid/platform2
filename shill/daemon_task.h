@@ -56,7 +56,6 @@ class DaemonTask {
     std::string portal_list;
     std::string prepend_dns_servers;
     bool use_portal_list;
-    bool jail_vpn_clients;
   };
 
   DaemonTask(const Settings& settings, Config* config);

@@ -45,7 +45,6 @@ if [ ! -f /home/chronos/.oobe_completed ]; then
   ARGS="${ARGS} --portal-list="
 fi
 
-ARGS="${ARGS} --jail-vpn-clients"
 # Run shill as shill user/group in a minijail:
 #   -G so shill programs can inherit supplementary groups.
 #   -n to run shill with no_new_privs.

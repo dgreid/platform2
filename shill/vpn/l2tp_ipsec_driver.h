@@ -63,7 +63,6 @@ class L2TPIPSecDriver : public VPNDriver, public RpcTaskDelegate {
   FRIEND_TEST(L2TPIPSecDriverTest, NotifyDisconnected);
   FRIEND_TEST(L2TPIPSecDriverTest, OnL2TPIPSecVPNDied);
   FRIEND_TEST(L2TPIPSecDriverTest, SpawnL2TPIPSecVPN);
-  FRIEND_TEST(L2TPIPSecDriverTest, SpawnL2TPIPSecVPNInMinijail);
 
   static const char kL2TPIPSecVPNPath[];
   static const Property kProperties[];

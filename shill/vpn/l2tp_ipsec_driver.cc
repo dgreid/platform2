@@ -238,25 +238,17 @@ bool L2TPIPSecDriver::SpawnL2TPIPSecVPN(Error* error) {
   LOG(INFO) << "L2TP/IPSec VPN process options: "
             << base::JoinString(options, " ");
 
-  if (manager()->GetJailVpnClients()) {
-    uint64_t capmask = CAP_TO_MASK(CAP_NET_ADMIN) | CAP_TO_MASK(CAP_NET_RAW) |
-                       CAP_TO_MASK(CAP_NET_BIND_SERVICE) |
-                       CAP_TO_MASK(CAP_SETUID) | CAP_TO_MASK(CAP_SETGID) |
-                       CAP_TO_MASK(CAP_KILL);
-    if (external_task_local->StartInMinijail(FilePath(kL2TPIPSecVPNPath),
-                                             &options, "shill", "shill",
-                                             capmask, true, true, error)) {
-      external_task_ = std::move(external_task_local);
-      return true;
-    }
-  } else {
-    if (external_task_local->Start(FilePath(kL2TPIPSecVPNPath), options,
-                                   environment, true, error)) {
-      external_task_ = std::move(external_task_local);
-      return true;
-    }
+  uint64_t capmask = CAP_TO_MASK(CAP_NET_ADMIN) | CAP_TO_MASK(CAP_NET_RAW) |
+                     CAP_TO_MASK(CAP_NET_BIND_SERVICE) |
+                     CAP_TO_MASK(CAP_SETUID) | CAP_TO_MASK(CAP_SETGID) |
+                     CAP_TO_MASK(CAP_KILL);
+  if (!external_task_local->StartInMinijail(FilePath(kL2TPIPSecVPNPath),
+                                            &options, "shill", "shill", capmask,
+                                            true, true, error)) {
+    return false;
   }
-  return false;
+  external_task_ = std::move(external_task_local);
+  return true;
 }
 
 bool L2TPIPSecDriver::InitOptions(vector<string>* options, Error* error) {

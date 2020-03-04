@@ -71,8 +71,7 @@ class Manager : public base::SupportsWeakPtr<Manager> {
         : offline_mode(false),
           arp_gateway(true),
           connection_id_salt(0),
-          minimum_mtu(IPConfig::kUndefinedMTU),
-          jail_vpn_clients(false) {}
+          minimum_mtu(IPConfig::kUndefinedMTU) {}
     bool offline_mode;
     std::string check_portal_list;
     std::string portal_http_url;
@@ -97,8 +96,6 @@ class Manager : public base::SupportsWeakPtr<Manager> {
     int connection_id_salt;
     // The minimum MTU value that will be respected in DHCP responses.
     int minimum_mtu;
-    // Whether to run third party VPN client programs in a minijail.
-    bool jail_vpn_clients;
     // Name of Android VPN package that should be enforced for user traffic.
     // Empty string if the lockdown feature is not enabled.
     std::string always_on_vpn_package;
@@ -397,11 +394,6 @@ class Manager : public base::SupportsWeakPtr<Manager> {
 
   virtual int GetMinimumMTU() const { return props_.minimum_mtu; }
   virtual void SetMinimumMTU(const int mtu) { props_.minimum_mtu = mtu; }
-
-  virtual bool GetJailVpnClients() const { return props_.jail_vpn_clients; }
-  virtual void SetJailVpnClients(bool jail_vpn_clients) {
-    props_.jail_vpn_clients = jail_vpn_clients;
-  }
 
   virtual void UpdateEnabledTechnologies();
   virtual void UpdateUninitializedTechnologies();

@@ -117,7 +117,6 @@ class MockManager : public Manager {
               (const std::string&),
               (const, override));
   MOCK_METHOD(int, GetMinimumMTU, (), (const, override));
-  MOCK_METHOD(bool, GetJailVpnClients, (), (const, override));
   MOCK_METHOD(bool,
               ShouldAcceptHostnameFrom,
               (const std::string&),

@@ -54,8 +54,6 @@ const char kMinimumMTU[] = "minimum-mtu";
 // Accept hostname from the DHCP server for the specified devices.
 // eg. eth0 or eth*
 const char kAcceptHostnameFrom[] = "accept-hostname-from";
-// Flag that causes shill to run third party VPN client programs in a minijail.
-const char kJailVpnClients[] = "jail-vpn-clients";
 #ifndef DISABLE_DHCPV6
 // List of devices to enable DHCPv6.
 const char kDhcpv6EnabledDevices[] = "dhcpv6-enabled-devices";
@@ -96,9 +94,7 @@ const char kHelpMessage[] =
     "    Enable DHCPv6 for devices named device1 and device2\n"
 #endif  // DISABLE_DHCPV6
     "  --minimum-mtu=mtu\n"
-    "    Set the minimum value to respect as the MTU from DHCP responses.\n"
-    "  --jail-vpn-clients\n"
-    "    Spawn third party VPN client programs in a minijail.\n";
+    "    Set the minimum value to respect as the MTU from DHCP responses.\n";
 }  // namespace switches
 
 const char kLoggerCommand[] = "/usr/bin/logger";
@@ -218,12 +214,6 @@ int main(int argc, char** argv) {
   if (cl->HasSwitch(switches::kAcceptHostnameFrom)) {
     settings.accept_hostname_from =
         cl->GetSwitchValueASCII(switches::kAcceptHostnameFrom);
-  }
-
-  if (cl->HasSwitch(switches::kJailVpnClients)) {
-    settings.jail_vpn_clients = true;
-  } else {
-    settings.jail_vpn_clients = false;
   }
 
 #ifndef DISABLE_DHCPV6

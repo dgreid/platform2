@@ -322,27 +322,17 @@ bool OpenVPNDriver::SpawnOpenVPN() {
       {"OPENSSL_CHROMIUM_GENERATE_METRICS", "1"},
   };
 
-  if (manager()->GetJailVpnClients()) {
-    uint64_t capmask = CAP_TO_MASK(CAP_NET_ADMIN) | CAP_TO_MASK(CAP_NET_RAW) |
-                       CAP_TO_MASK(CAP_SETUID) | CAP_TO_MASK(CAP_SETGID);
-    openvpn_pid = process_manager()->StartProcessInMinijail(
-        FROM_HERE, base::FilePath(kOpenVPNPath), args, kEnv, "shill", "shill",
-        capmask, true, true,
-        base::Bind(&OpenVPNDriver::OnOpenVPNDied, base::Unretained(this)));
-    if (openvpn_pid == -1) {
-      LOG(ERROR) << "Minijail couldn't run our child process";
-      return false;
-    }
-  } else {
-    openvpn_pid = process_manager()->StartProcess(
-        FROM_HERE, FilePath(kOpenVPNPath), args, kEnv,
-        false,  // Do not terminate with parent.
-        base::Bind(&OpenVPNDriver::OnOpenVPNDied, base::Unretained(this)));
-    if (openvpn_pid < 0) {
-      LOG(ERROR) << "Unable to spawn: " << kOpenVPNPath;
-      return false;
-    }
+  uint64_t capmask = CAP_TO_MASK(CAP_NET_ADMIN) | CAP_TO_MASK(CAP_NET_RAW) |
+                     CAP_TO_MASK(CAP_SETUID) | CAP_TO_MASK(CAP_SETGID);
+  openvpn_pid = process_manager()->StartProcessInMinijail(
+      FROM_HERE, base::FilePath(kOpenVPNPath), args, kEnv, "shill", "shill",
+      capmask, true, true,
+      base::Bind(&OpenVPNDriver::OnOpenVPNDied, base::Unretained(this)));
+  if (openvpn_pid == -1) {
+    LOG(ERROR) << "Minijail couldn't run our child process";
+    return false;
   }
+
   pid_ = openvpn_pid;
   return true;
 }

@@ -71,7 +71,6 @@ void DaemonTask::ApplySettings() {
   }
   manager_->SetAcceptHostnameFrom(settings_.accept_hostname_from);
   manager_->SetDHCPv6EnabledDevices(settings_.dhcpv6_enabled_devices);
-  manager_->SetJailVpnClients(settings_.jail_vpn_clients);
 }
 
 bool DaemonTask::Quit(const base::Closure& completion_callback) {

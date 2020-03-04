@@ -1106,10 +1106,9 @@ TEST_F(OpenVPNDriverTest, ClaimInterface) {
   SetArg(kProviderHostProperty, kHost);
   EXPECT_CALL(*management_server_, Start(_, _)).WillOnce(Return(true));
   EXPECT_CALL(manager_, IsConnected()).WillOnce(Return(false));
-  EXPECT_CALL(manager_, GetJailVpnClients()).WillOnce(Return(false));
   EXPECT_CALL(process_manager_,
-              StartProcess(_, _, _, _, false /* Don't exit with parent */, _))
-      .WillOnce(Return(true));
+              StartProcessInMinijail(_, _, _, _, _, _, _, _, true, _))
+      .WillOnce(Return(10101));
   EXPECT_TRUE(driver_->ClaimInterface(kInterfaceName, kInterfaceIndex));
   ASSERT_NE(nullptr, driver_->device_);
   EXPECT_TRUE(IsObservingDefaultServiceChanges());
@@ -1185,37 +1184,6 @@ TEST_F(OpenVPNDriverTest, SpawnOpenVPN) {
       .Times(2)
       .WillRepeatedly(Return(true));
   EXPECT_CALL(manager_, IsConnected()).Times(2).WillRepeatedly(Return(false));
-
-  EXPECT_CALL(manager_, GetJailVpnClients())
-      .Times(2)
-      .WillRepeatedly(Return(false));
-
-  const int kPID = 234678;
-  EXPECT_CALL(process_manager_, StartProcess(_, _, _, _, _, _))
-      .WillOnce(Return(-1))
-      .WillOnce(Return(kPID));
-  EXPECT_FALSE(driver_->SpawnOpenVPN());
-  EXPECT_TRUE(driver_->SpawnOpenVPN());
-  EXPECT_EQ(kPID, driver_->pid_);
-}
-
-TEST_F(OpenVPNDriverTest, SpawnOpenVPNInMinijail) {
-  SetupLSBRelease();
-
-  EXPECT_FALSE(driver_->SpawnOpenVPN());
-
-  static const char kHost[] = "192.168.2.254";
-  SetArg(kProviderHostProperty, kHost);
-  driver_->tunnel_interface_ = "tun0";
-  driver_->rpc_task_.reset(new RpcTask(&control_, this));
-  EXPECT_CALL(*management_server_, Start(_, _))
-      .Times(2)
-      .WillRepeatedly(Return(true));
-  EXPECT_CALL(manager_, IsConnected()).Times(2).WillRepeatedly(Return(false));
-
-  EXPECT_CALL(manager_, GetJailVpnClients())
-      .Times(2)
-      .WillRepeatedly(Return(true));
 
   const int kPID = 234678;
   EXPECT_CALL(process_manager_,
