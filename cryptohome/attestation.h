@@ -36,6 +36,13 @@ class Platform;
 class Tpm;
 class TpmInit;
 
+// Generic result codes for Attestation methods.
+enum class AttestationResult {
+  kSuccess,
+  kFailure,
+  kInvalidPcr0Value,
+};
+
 // This class performs tasks which enable attestation enrollment.  These tasks
 // include creating an AIK and recording all information about the AIK and EK
 // that an attestation server will need to issue credentials for this system.
@@ -638,9 +645,8 @@ class Attestation : public base::PlatformThread::Delegate,
   scoped_refptr<dbus::Bus> bus_;
 
   // Serializes and encrypts an attestation database.
-  bool
-  EncryptDatabase(const AttestationDatabase& db,
-                  std::string* serial_encrypted_db);
+  AttestationResult EncryptDatabase(const AttestationDatabase& db,
+                                    std::string* serial_encrypted_db);
 
   // Decrypts and parses an attestation database.
   bool DecryptDatabase(const std::string& serial_encrypted_db,
@@ -653,10 +659,10 @@ class Attestation : public base::PlatformThread::Delegate,
   bool LoadDatabase(std::string* serial_encrypted_db);
 
   // Persists any changes made to database_pb_.
-  bool PersistDatabaseChanges();
+  AttestationResult PersistDatabaseChanges();
 
   // Persists a specific database. Useful for unit tests to set state.
-  bool PersistDatabase(const AttestationDatabase& db);
+  AttestationResult PersistDatabase(const AttestationDatabase& db);
 
   // Ensures permissions of the database file are correct.
   void CheckDatabasePermissions();
@@ -672,10 +678,14 @@ class Attestation : public base::PlatformThread::Delegate,
   Tpm::TpmRetryAction ComputeEnterpriseEnrollmentIdInternal(
       brillo::SecureBlob* enterprise_enrollment_id);
 
-  // Creates a new identity and returns its index, or -1 if it could not be
-  // created.
-  int CreateIdentity(const int identity_features,
-                     const brillo::SecureBlob& ek_public_key);
+  // Creates a new identity. If |new_index| is not nullptr, the index of the new
+  // identity will be stored in |new_index|.
+  //
+  // The output value in |new_index| shouldn't be used if the return value isn't
+  // kSuccess.
+  AttestationResult CreateIdentity(const int identity_features,
+                                   const brillo::SecureBlob& ek_public_key,
+                                   int* new_index);
 
   // Verifies an endorsement credential against known Chrome OS issuers. If
   // |is_cros_core| is true, checks that the EK is endorsed for that
@@ -722,7 +732,7 @@ class Attestation : public base::PlatformThread::Delegate,
 
   // Copies the deprecated identity-related data into the first identity.
   // Returns whether data were migrated or not.
-  bool MigrateIdentityData();
+  AttestationResult MigrateIdentityData();
 
   // Clears the memory of the database protobuf.
   void ClearDatabase();
@@ -845,9 +855,9 @@ class Attestation : public base::PlatformThread::Delegate,
   void ExtendPCR1IfClear();
 
   // Quote the given PCR and fill the result in the Quote object
-  bool CreatePCRQuote(uint32_t pcr_index,
-                      const brillo::SecureBlob& identity_key_blob,
-                      Quote* output);
+  AttestationResult CreatePCRQuote(uint32_t pcr_index,
+                                   const brillo::SecureBlob& identity_key_blob,
+                                   Quote* output);
 
   // Creates a PCA URL for the given |pca_type| and |request_type|.
   std::string GetPCAURL(PCAType pca_type, PCARequestType request_type) const;
@@ -886,14 +896,6 @@ class Attestation : public base::PlatformThread::Delegate,
   void set_tpm_init(TpmInit* value) { tpm_init_ = value; }
 
   friend class AttestationBaseTest;
-  FRIEND_TEST(AttestationBaseTest, MigrateAttestationDatabase);
-  FRIEND_TEST(AttestationBaseTest,
-              MigrateAttestationDatabaseWithCorruptedFields);
-  FRIEND_TEST(AttestationBaseTest,
-              MigrateAttestationDatabaseAllEndorsementCredentials);
-  FRIEND_TEST(AttestationTest, IsAttestationPreparedForOnePca);
-  FRIEND_TEST(AttestationEnrollmentIdTest,
-              ComputeEnterpriseEnrollmentIdHasDelegate);
 
   DISALLOW_COPY_AND_ASSIGN(Attestation);
 };

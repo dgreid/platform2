@@ -588,15 +588,15 @@ bool Tpm2Impl::MakeIdentity(SecureBlob* identity_public_key_der,
   return false;
 }
 
-bool Tpm2Impl::QuotePCR(uint32_t pcr_index,
-                        bool check_pcr_value,
-                        const SecureBlob& identity_key_blob,
-                        const SecureBlob& external_data,
-                        Blob* pcr_value,
-                        SecureBlob* quoted_data,
-                        SecureBlob* quote) {
+Tpm::QuotePcrResult Tpm2Impl::QuotePCR(uint32_t pcr_index,
+                                       bool check_pcr_value,
+                                       const SecureBlob& identity_key_blob,
+                                       const SecureBlob& external_data,
+                                       Blob* pcr_value,
+                                       SecureBlob* quoted_data,
+                                       SecureBlob* quote) {
   LOG(ERROR) << __func__ << ": Not implemented.";
-  return false;
+  return Tpm::QuotePcrResult::kFailure;
 }
 
 bool Tpm2Impl::SealToPCR0(const brillo::SecureBlob& value,

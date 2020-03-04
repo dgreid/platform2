@@ -127,13 +127,13 @@ class Tpm2Impl : public Tpm {
                     brillo::SecureBlob* endorsement_credential,
                     brillo::SecureBlob* platform_credential,
                     brillo::SecureBlob* conformance_credential) override;
-  bool QuotePCR(uint32_t pcr_index,
-                bool check_pcr_value,
-                const brillo::SecureBlob& identity_key_blob,
-                const brillo::SecureBlob& external_data,
-                brillo::Blob* pcr_value,
-                brillo::SecureBlob* quoted_data,
-                brillo::SecureBlob* quote) override;
+  QuotePcrResult QuotePCR(uint32_t pcr_index,
+                          bool check_pcr_value,
+                          const brillo::SecureBlob& identity_key_blob,
+                          const brillo::SecureBlob& external_data,
+                          brillo::Blob* pcr_value,
+                          brillo::SecureBlob* quoted_data,
+                          brillo::SecureBlob* quote) override;
   bool SealToPCR0(const brillo::SecureBlob& value,
                   brillo::SecureBlob* sealed_value) override;
   bool Unseal(const brillo::SecureBlob& sealed_value,

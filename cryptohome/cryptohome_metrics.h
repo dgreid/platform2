@@ -237,6 +237,15 @@ enum class OOPMountCleanupResult {
   kMaxValue = kFailedToKill
 };
 
+// List of generic results of attestation-related operations. These entries
+// should not be renumbered and numeric values should never be reused.
+enum class AttestationOpsStatus {
+  kSuccess = 0,
+  kFailure = 1,
+  kInvalidPcr0Value = 2,
+  kMaxValue,
+};
+
 // Just to make sure I count correctly.
 static_assert(static_cast<int>(DeprecatedApiEvent::kMaxValue) == 8,
               "DeprecatedApiEvent Enum miscounted");
@@ -258,6 +267,12 @@ constexpr char kLEActionBackend[] = ".Backend";
 constexpr char kLEActionSaveToDisk[] = ".SaveToDisk";
 constexpr char kLEActionBackendGetLog[] = ".BackendGetLog";
 constexpr char kLEActionBackendReplayLog[] = ".BackendReplayLog";
+
+// Attestation-related operations. Those are suffixes of the histogram
+// kAttestationStatusHistogramPrefix defined in the .cc file.
+constexpr char kAttestationDecryptDatabase[] = "DecryptDatabase";
+constexpr char kAttestationMigrateDatabase[] = "MigrateDatabase";
+constexpr char kAttestationPrepareForEnrollment[] = "PrepareForEnrollment";
 
 // Initializes cryptohome metrics. If this is not called, all calls to Report*
 // will have no effect.
@@ -416,6 +431,12 @@ void ReportOOPMountOperationResult(OOPMountOperationResult result);
 
 // Reports the result of an out-of-process cleanup operation.
 void ReportOOPMountCleanupResult(OOPMountCleanupResult result);
+
+// Reports the result of attestation-related operations. |operation| should be
+// one of the suffixes of the histogram kAttestationStatusHistogramPrefix listed
+// above.
+void ReportAttestationOpsStatus(
+    const std::string& operation, AttestationOpsStatus status);
 
 // Initialization helper.
 class ScopedMetricsInitializer {

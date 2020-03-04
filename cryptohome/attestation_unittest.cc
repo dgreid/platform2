@@ -28,6 +28,7 @@
 #include "cryptohome/mock_platform.h"
 #include "cryptohome/mock_tpm.h"
 #include "cryptohome/mock_tpm_init.h"
+#include "cryptohome/tpm.h"
 
 #include "attestation.pb.h"  // NOLINT(build/include)
 
@@ -387,6 +388,11 @@ class AttestationBaseTest : public testing::Test {
     return attestation_.database_pb_;
   }
 
+  // Writes |db| into the attestation database.
+  void PersistDatabase(const AttestationDatabase& db) {
+    attestation_.PersistDatabase(db);
+  }
+
   // Verify Privacy CA-related data, including the default CA's identity
   // credential.
   void VerifyPCAData(const AttestationDatabase& db,
@@ -525,7 +531,8 @@ TEST_F(AttestationBaseTest, PrepareForEnrollmentBadInitialPCR0State) {
 }
 
 TEST_F(AttestationBaseTest, CreateIdentityQuotePCR0Error) {
-  EXPECT_CALL(tpm_, QuotePCR(0, _, _, _, _, _, _)).WillOnce(Return(false));
+  EXPECT_CALL(tpm_, QuotePCR(0, _, _, _, _, _, _))
+      .WillOnce(Return(Tpm::QuotePcrResult::kFailure));
 
   attestation_.PrepareForEnrollment();
 
@@ -668,7 +675,7 @@ TEST_F(AttestationBaseTest, MigrateAttestationDatabase) {
   db.mutable_pcr0_quote()->set_quote("pcr0_quote");
   db.mutable_pcr1_quote()->set_quote("pcr1_quote");
   // Persist that older database.
-  attestation_.PersistDatabase(db);
+  PersistDatabase(db);
 
   // Simulate second login.
   Initialize();
@@ -740,7 +747,7 @@ TEST_F(AttestationBaseTest, MigrateAttestationDatabaseWithCorruptedFields) {
   // Note that we are missing a PCR0 quote.
   db.mutable_pcr1_quote()->set_quote("pcr1_quote");
   // Persist that older database.
-  attestation_.PersistDatabase(db);
+  PersistDatabase(db);
 
   // Simulate second login.
   Initialize();
@@ -810,7 +817,7 @@ TEST_F(AttestationBaseTest,
   db.mutable_pcr0_quote()->set_quote("pcr0_quote");
   db.mutable_pcr1_quote()->set_quote("pcr1_quote");
   // Persist that older database.
-  attestation_.PersistDatabase(db);
+  PersistDatabase(db);
 
   // Simulate second login.
   Initialize();
@@ -837,6 +844,29 @@ TEST_F(AttestationBaseTest,
 
   // Attestation is prepared.
   EXPECT_TRUE(attestation_.IsPreparedForEnrollment());
+}
+
+TEST_F(AttestationBaseTest, MigrateIdentityDataBadPcr0Value) {
+  // Simulate first boot.
+  attestation_.PrepareForEnrollment();
+
+  // Simulate an older database.
+  AttestationDatabase db = GetPersistentDatabase();
+  db.clear_identities();
+  db.mutable_identity_binding()->set_identity_binding("identity_binding");
+  db.mutable_identity_binding()->set_identity_public_key("identity_public_key");
+  db.mutable_identity_key()->set_identity_credential("identity_cred");
+  // Persist that older database.
+  PersistDatabase(db);
+
+  // Simulate second boot.
+  EXPECT_CALL(tpm_, QuotePCR(0, _, _, _, _, _, _))
+      .WillOnce(Return(Tpm::QuotePcrResult::kInvalidPcrValue));
+  Initialize();
+  db = GetPersistentDatabase();
+
+  // Old data isn't migrated into db.identities().
+  EXPECT_EQ(0, db.identities().size());
 }
 
 TEST_F(AttestationBaseTest, CertChainWithNoIntermediateCA) {
@@ -1105,7 +1135,7 @@ TEST_P(AttestationTest, IsAttestationPreparedForOnePca) {
   (*db.mutable_credentials()
       ->mutable_encrypted_endorsement_credentials())[pca_type_] =
       default_encrypted_endorsement_credential;
-  attestation_.PersistDatabase(db);
+  PersistDatabase(db);
 
   // Attestation is prepared.
   EXPECT_TRUE(attestation_.IsPreparedForEnrollment());

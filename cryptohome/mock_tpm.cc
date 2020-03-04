@@ -35,7 +35,7 @@ MockTpm::MockTpm() {
   ON_CALL(*this, ActivateIdentity(_, _, _, _, _, _))
       .WillByDefault(Return(true));
   ON_CALL(*this, QuotePCR(_, _, _, _, _, _, _))
-      .WillByDefault(Return(true));
+      .WillByDefault(Return(Tpm::QuotePcrResult::kSuccess));
   ON_CALL(*this, SealToPCR0(_, _))
       .WillByDefault(Return(true));
   ON_CALL(*this, Unseal(_, _))

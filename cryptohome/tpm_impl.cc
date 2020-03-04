@@ -2160,26 +2160,26 @@ bool TpmImpl::MakeIdentity(SecureBlob* identity_public_key_der,
   return true;
 }
 
-bool TpmImpl::QuotePCR(uint32_t pcr_index,
-                       bool check_pcr_value,
-                       const SecureBlob& identity_key_blob,
-                       const SecureBlob& external_data,
-                       Blob* pcr_value,
-                       SecureBlob* quoted_data,
-                       SecureBlob* quote) {
+Tpm::QuotePcrResult TpmImpl::QuotePCR(uint32_t pcr_index,
+                                      bool check_pcr_value,
+                                      const SecureBlob& identity_key_blob,
+                                      const SecureBlob& external_data,
+                                      Blob* pcr_value,
+                                      SecureBlob* quoted_data,
+                                      SecureBlob* quote) {
   CHECK(pcr_value && quoted_data && quote);
   ScopedTssContext context_handle;
   TSS_HTPM tpm_handle;
   if (!ConnectContextAsUser(context_handle.ptr(), &tpm_handle)) {
     LOG(ERROR) << "QuotePCR: Failed to connect to the TPM.";
-    return false;
+    return Tpm::QuotePcrResult::kFailure;
   }
   // Load the Storage Root Key.
   TSS_RESULT result;
   ScopedTssKey srk_handle(context_handle);
   if (!LoadSrk(context_handle, srk_handle.ptr(), &result)) {
     TPM_LOG(INFO, result) << "QuotePCR: Failed to load SRK.";
-    return false;
+    return Tpm::QuotePcrResult::kFailure;
   }
   // Load the AIK (which is wrapped by the SRK).
   ScopedTssKey identity_key(context_handle);
@@ -2191,7 +2191,7 @@ bool TpmImpl::QuotePCR(uint32_t pcr_index,
       identity_key.ptr());
   if (TPM_ERROR(result)) {
     TPM_LOG(ERROR, result) << "QuotePCR: Failed to load AIK.";
-    return false;
+    return Tpm::QuotePcrResult::kFailure;
   }
 
   // Create a PCRS object and select the index.
@@ -2200,12 +2200,12 @@ bool TpmImpl::QuotePCR(uint32_t pcr_index,
                                      TSS_PCRS_STRUCT_INFO, pcrs.ptr());
   if (TPM_ERROR(result)) {
     TPM_LOG(ERROR, result) << "QuotePCR: Failed to create PCRS object.";
-    return false;
+    return Tpm::QuotePcrResult::kFailure;
   }
   result = Tspi_PcrComposite_SelectPcrIndex(pcrs, pcr_index);
   if (TPM_ERROR(result)) {
     TPM_LOG(ERROR, result) << "QuotePCR: Failed to select PCR.";
-    return false;
+    return Tpm::QuotePcrResult::kFailure;
   }
   // Generate the quote.
   TSS_VALIDATION validation;
@@ -2215,7 +2215,7 @@ bool TpmImpl::QuotePCR(uint32_t pcr_index,
   result = Tspi_TPM_Quote(tpm_handle, identity_key, pcrs, &validation);
   if (TPM_ERROR(result)) {
     TPM_LOG(ERROR, result) << "QuotePCR: Failed to generate quote.";
-    return false;
+    return Tpm::QuotePcrResult::kFailure;
   }
   ScopedTssMemory scoped_quoted_data(context_handle, validation.rgbData);
   ScopedTssMemory scoped_quote(context_handle, validation.rgbValidationData);
@@ -2227,14 +2227,14 @@ bool TpmImpl::QuotePCR(uint32_t pcr_index,
                                          pcr_value_buffer.ptr());
   if (TPM_ERROR(result)) {
     TPM_LOG(ERROR, result) << "QuotePCR: Failed to get PCR value.";
-    return false;
+    return Tpm::QuotePcrResult::kFailure;
   }
   pcr_value->assign(&pcr_value_buffer.value()[0],
                     &pcr_value_buffer.value()[pcr_value_length]);
 
   if (pcr_index == 0 && check_pcr_value && !IsValidPcr0Value(*pcr_value)) {
     LOG(ERROR) << "QuotePCR: Bad PCR0 state.";
-    return false;
+    return Tpm::QuotePcrResult::kInvalidPcrValue;
   }
 
   // Get the data that was quoted.
@@ -2244,7 +2244,7 @@ bool TpmImpl::QuotePCR(uint32_t pcr_index,
   quote->assign(
       &validation.rgbValidationData[0],
       &validation.rgbValidationData[validation.ulValidationDataLength]);
-  return true;
+  return Tpm::QuotePcrResult::kSuccess;
 }
 
 bool TpmImpl::SealToPCR0(const brillo::SecureBlob& value,

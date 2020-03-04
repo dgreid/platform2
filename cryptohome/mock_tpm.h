@@ -110,7 +110,7 @@ class MockTpm : public Tpm {
                brillo::SecureBlob*,
                brillo::SecureBlob*),
               (override));
-  MOCK_METHOD(bool,
+  MOCK_METHOD(Tpm::QuotePcrResult,
               QuotePCR,
               (uint32_t,
                bool,

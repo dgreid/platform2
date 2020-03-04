@@ -118,6 +118,8 @@ const TimerHistogramParams kTimerHistogramParams[cryptohome::kNumTimerTypes] = {
 constexpr char kCryptohomeDeprecatedApiHistogramName[] =
     "Cryptohome.DeprecatedApiCalled";
 
+constexpr char kAttestationStatusHistogramPrefix[] = "Hwsec.Attestation.Status";
+
 MetricsLibraryInterface* g_metrics = NULL;
 chromeos_metrics::TimerReporter* g_timers[cryptohome::kNumTimerTypes] = {NULL};
 
@@ -532,4 +534,18 @@ void ReportOOPMountCleanupResult(OOPMountCleanupResult result) {
                            static_cast<int>(result),
                            static_cast<int>(max_event));
 }
+
+void ReportAttestationOpsStatus(
+    const std::string& operation, AttestationOpsStatus status) {
+  if (!g_metrics) {
+    return;
+  }
+
+  const std::string histogram =
+      std::string(kAttestationStatusHistogramPrefix) + "." + operation;
+  g_metrics->SendEnumToUMA(histogram,
+                           static_cast<int>(status),
+                           static_cast<int>(AttestationOpsStatus::kMaxValue));
+}
+
 }  // namespace cryptohome

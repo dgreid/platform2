@@ -114,6 +114,13 @@ class Tpm {
     Owner,
   };
 
+  // Results of PCR quoting.
+  enum class QuotePcrResult {
+    kSuccess,
+    kFailure,
+    kInvalidPcrValue,
+  };
+
   struct TpmStatusInfo {
     uint32_t last_tpm_error = 0;
     bool can_connect = false;
@@ -478,14 +485,15 @@ class Tpm {
   //                 structure), this can make verifying the quote easier.
   //   quote - The generated quote.
   //
-  // Returns true on success.
-  virtual bool QuotePCR(uint32_t pcr_index,
-                        bool check_pcr_value,
-                        const brillo::SecureBlob& identity_key_blob,
-                        const brillo::SecureBlob& external_data,
-                        brillo::Blob* pcr_value,
-                        brillo::SecureBlob* quoted_data,
-                        brillo::SecureBlob* quote) = 0;
+  // Returns kSuccess on success, kInvalidPcrValue on a bad PCR value if
+  // |check_pcr_value| is set, and kFailure for other errors.
+  virtual QuotePcrResult QuotePCR(uint32_t pcr_index,
+                                  bool check_pcr_value,
+                                  const brillo::SecureBlob& identity_key_blob,
+                                  const brillo::SecureBlob& external_data,
+                                  brillo::Blob* pcr_value,
+                                  brillo::SecureBlob* quoted_data,
+                                  brillo::SecureBlob* quote) = 0;
 
   // Seals a secret to PCR0 with the SRK.
   //

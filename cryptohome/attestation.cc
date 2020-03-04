@@ -465,7 +465,7 @@ void Attestation::Initialize(Tpm* tpm,
       return;
     }
     if (MigrateAttestationDatabase()) {
-      if (!PersistDatabaseChanges()) {
+      if (PersistDatabaseChanges() != AttestationResult::kSuccess) {
         LOG(WARNING) << "Attestation: Failed to persist database changes.";
       }
     }
@@ -550,14 +550,17 @@ void Attestation::PrepareForEnrollment() {
   // If the PCR0 state is bad, don't bother to get EKpub, create AIK, or
   // do other preparation below to avoid unnecessary overheads.
   if (!tpm_->IsCurrentPCR0ValueValid()) {
-    // TODO(b/138324811): add metrics report
     LOG(ERROR) << "Attestation: Bad PCR0 state.";
+    ReportAttestationOpsStatus(kAttestationPrepareForEnrollment,
+                               AttestationOpsStatus::kInvalidPcr0Value);
     return;
   }
 
   SecureBlob ek_public_key;
   if (tpm_->GetEndorsementPublicKey(&ek_public_key) != Tpm::kTpmRetryNone) {
     LOG(ERROR) << "Attestation: Failed to get EK public key.";
+    ReportAttestationOpsStatus(kAttestationPrepareForEnrollment,
+                               AttestationOpsStatus::kFailure);
     return;
   }
 
@@ -572,7 +575,15 @@ void Attestation::PrepareForEnrollment() {
 
   // Create a new AIK and PCR quotes for the first identity with default
   // identity features.
-  if (CreateIdentity(default_identity_features_, ek_public_key) < 0) {
+  AttestationResult result = CreateIdentity(default_identity_features_,
+                                            ek_public_key,
+                                            nullptr /* unused new_index */);
+  if (result != AttestationResult::kSuccess) {
+    AttestationOpsStatus status =
+        result == AttestationResult::kInvalidPcr0Value ?
+        AttestationOpsStatus::kInvalidPcr0Value :
+        AttestationOpsStatus::kFailure;
+    ReportAttestationOpsStatus(kAttestationPrepareForEnrollment, status);
     return;
   }
 
@@ -589,6 +600,8 @@ void Attestation::PrepareForEnrollment() {
                    ->mutable_encrypted_endorsement_credentials())[pca_type])) {
       LOG(ERROR) << "Attestation: Failed to encrypt EK cert for "
                  << GetPCAName(pca_type) << ".";
+      ReportAttestationOpsStatus(kAttestationPrepareForEnrollment,
+                                 AttestationOpsStatus::kFailure);
       return;
     }
   }
@@ -603,6 +616,8 @@ void Attestation::PrepareForEnrollment() {
                             Tpm::kDefaultDelegateLabel, &delegate_blob,
                             &delegate_secret)) {
     LOG(ERROR) << "Attestation: Failed to create delegate.";
+    ReportAttestationOpsStatus(kAttestationPrepareForEnrollment,
+                               AttestationOpsStatus::kFailure);
     return;
   }
 
@@ -612,14 +627,23 @@ void Attestation::PrepareForEnrollment() {
   delegate_pb->set_has_reset_lock_permissions(true);
   delegate_pb->set_can_read_internal_pub(true);
 
-  if (!PersistDatabaseChanges())
+  result = PersistDatabaseChanges();
+  if (result != AttestationResult::kSuccess) {
+    AttestationOpsStatus status =
+        result == AttestationResult::kInvalidPcr0Value ?
+        AttestationOpsStatus::kInvalidPcr0Value :
+        AttestationOpsStatus::kFailure;
+    ReportAttestationOpsStatus(kAttestationPrepareForEnrollment, status);
     return;
+  }
 
   tpm_init_->RemoveTpmOwnerDependency(
       TpmPersistentState::TpmOwnerDependency::kAttestation);
   base::TimeDelta delta = (base::TimeTicks::Now() - start);
   LOG(INFO) << "Attestation: Prepared successfully (" << delta.InMilliseconds()
             << "ms).";
+  ReportAttestationOpsStatus(kAttestationPrepareForEnrollment,
+                             AttestationOpsStatus::kSuccess);
 }
 
 int Attestation::CreateIdentity(int identity_features) {
@@ -630,11 +654,15 @@ int Attestation::CreateIdentity(int identity_features) {
   if (GetTpmEndorsementPublicKey(&ek_public_key) != Tpm::kTpmRetryNone) {
     return -1;
   }
-  return CreateIdentity(identity_features, ek_public_key);
+
+  int new_index;
+  AttestationResult result =
+      CreateIdentity(identity_features, ek_public_key, &new_index);
+  return result == AttestationResult::kSuccess ? new_index : -1;
 }
 
-int Attestation::CreateIdentity(int identity_features,
-                                const SecureBlob& ek_public_key) {
+AttestationResult Attestation::CreateIdentity(
+    int identity_features, const SecureBlob& ek_public_key, int* new_index) {
   // The identity we're creating will have the next index in identities.
   const int identity = database_pb_.identities().size();
   LOG(INFO) << "Attestation: Creating identity " << identity << " with "
@@ -660,7 +688,7 @@ int Attestation::CreateIdentity(int identity_features,
                           &conformance_credential)) {
     LOG(ERROR) << "Attestation: Failed to make AIK for identity " << identity
                << ".";
-    return -1;
+    return AttestationResult::kFailure;
   }
 
   // This only needs to be done once when we haven't stored credentials yet.
@@ -707,11 +735,12 @@ int Attestation::CreateIdentity(int identity_features,
   // Quote PCR0 and PCR1
   for (int i = 0; i <= 1; i++) {
     Quote quote_pb;
-    if (!CreatePCRQuote(i, identity_key_blob, &quote_pb)) {
+    AttestationResult result = CreatePCRQuote(i, identity_key_blob, &quote_pb);
+    if (result != AttestationResult::kSuccess) {
       // Note that if in the future we regularly uses multiple AIK
       // (i.e. identity key), then we'll need to print error messages here to
       // indicate which one of the identity key failed the PCR quote process.
-      return -1;
+      return result;
     }
 
     // PCR1 quote needs to have the source hint
@@ -723,12 +752,15 @@ int Attestation::CreateIdentity(int identity_features,
     if (!in.second) {
       LOG(ERROR) << "Attestation: Failed to store PCR" << i << " quote for "
                  << "identity " << identity << ".";
-      return -1;
+      return AttestationResult::kFailure;
     }
   }
 
   // Return the index of the newly created identity.
-  return database_pb_.identities().size() - 1;
+  if (new_index) {
+    *new_index = database_pb_.identities().size() - 1;
+  }
+  return AttestationResult::kSuccess;
 }
 
 int Attestation::GetIdentitiesCount() const {
@@ -1032,7 +1064,7 @@ bool Attestation::Enroll(PCAType pca_type,
   // Set the credential obtained when activating the identity with the response.
   identity_certificate->set_identity_credential(aik_credential.to_string());
 
-  if (!PersistDatabaseChanges()) {
+  if (PersistDatabaseChanges() != AttestationResult::kSuccess) {
     LOG(ERROR) << __func__ << ": Failed to persist database changes.";
     return false;
   }
@@ -1463,7 +1495,7 @@ bool Attestation::DeleteKeysByPrefix(bool is_user_specific,
   while (next_keep_index < device_keys->size()) {
     device_keys->RemoveLast();
   }
-  return PersistDatabaseChanges();
+  return PersistDatabaseChanges() == AttestationResult::kSuccess;
 }
 
 bool Attestation::GetEKInfo(std::string* ek_info) {
@@ -1523,33 +1555,32 @@ bool Attestation::IsPCR0VerifiedMode() {
   return current_pcr_value == expected_pcr_value;
 }
 
-bool Attestation::EncryptDatabase(const AttestationDatabase& db,
-                                  std::string* serial_encrypted_db) {
+AttestationResult Attestation::EncryptDatabase(
+    const AttestationDatabase& db, std::string* serial_encrypted_db) {
   CHECK(crypto_);
   std::string serial_string;
   if (!db.SerializeToString(&serial_string)) {
     LOG(ERROR) << "Failed to serialize db.";
-    return false;
+    return AttestationResult::kFailure;
   }
   SecureBlob serial_data(serial_string.begin(), serial_string.end());
   if (database_key_.empty() || sealed_database_key_.empty()) {
-    if (!tpm_->IsCurrentPCR0ValueValid()) {
-      // TODO(b/138324811): add metrics report
-      LOG(ERROR) << "Bad PCR0 state. Abort generating attestation DB key.";
-      return false;
-    }
-
     if (!crypto_->CreateSealedKey(&database_key_, &sealed_database_key_)) {
       LOG(ERROR) << "Failed to generate attestation DB key.";
-      return false;
+      return AttestationResult::kFailure;
+    }
+
+    if (!tpm_->IsCurrentPCR0ValueValid()) {
+      LOG(ERROR) << "Bad PCR0 state. Abort encrypting attestation DB.";
+      return AttestationResult::kInvalidPcr0Value;
     }
   }
   if (!crypto_->EncryptData(serial_data, database_key_, sealed_database_key_,
                             serial_encrypted_db)) {
     LOG(ERROR) << "Attestation: Failed to encrypt database.";
-    return false;
+    return AttestationResult::kFailure;
   }
-  return true;
+  return AttestationResult::kSuccess;
 }
 
 bool Attestation::DecryptDatabase(const std::string& serial_encrypted_db,
@@ -1562,14 +1593,22 @@ bool Attestation::DecryptDatabase(const std::string& serial_encrypted_db,
     // Unseal failure doesn't increase DA counter, so check the PCR0 value
     // afterward to save a TPM call in the success case.
     if (!tpm_->IsCurrentPCR0ValueValid()) {
-      // TODO(b/138324811): add metrics report
       LOG(ERROR) << "Unseal failed due to a bad PCR0 state.";
+      ReportAttestationOpsStatus(kAttestationDecryptDatabase,
+                                 AttestationOpsStatus::kInvalidPcr0Value);
+    } else if (IsTPMReady()) {
+      // UnsealKey() is expected to fail if TPM is just cleared, in which case
+      // don't make a noise in UMA.
+      ReportAttestationOpsStatus(kAttestationDecryptDatabase,
+                                 AttestationOpsStatus::kFailure);
     }
     return false;
   }
   SecureBlob serial_blob;
   if (!crypto_->DecryptData(serial_encrypted_db, database_key_, &serial_blob)) {
     LOG(ERROR) << "Attestation: Failed to decrypt database with Tpm.";
+    ReportAttestationOpsStatus(kAttestationDecryptDatabase,
+                               AttestationOpsStatus::kFailure);
     return false;
   }
   std::string serial_string = serial_blob.to_string();
@@ -1581,9 +1620,14 @@ bool Attestation::DecryptDatabase(const std::string& serial_encrypted_db,
         !db->ParseFromArray(serial_string.data(),
                             serial_string.length() - kLegacyJunkSize)) {
       LOG(ERROR) << "Failed to parse database.";
+      ReportAttestationOpsStatus(kAttestationDecryptDatabase,
+                                 AttestationOpsStatus::kFailure);
       return false;
     }
   }
+
+  ReportAttestationOpsStatus(kAttestationDecryptDatabase,
+                             AttestationOpsStatus::kSuccess);
   return true;
 }
 
@@ -1611,21 +1655,22 @@ bool Attestation::LoadDatabase(std::string* serial_encrypted_db) {
   return true;
 }
 
-bool Attestation::PersistDatabaseChanges() {
+AttestationResult Attestation::PersistDatabaseChanges() {
   return PersistDatabase(database_pb_);
 }
 
-bool Attestation::PersistDatabase(const AttestationDatabase& db) {
+AttestationResult Attestation::PersistDatabase(const AttestationDatabase& db) {
   std::string serial_encrypted_db;
-  if (!EncryptDatabase(db, &serial_encrypted_db)) {
+  AttestationResult result = EncryptDatabase(db, &serial_encrypted_db);
+  if (result != AttestationResult::kSuccess) {
     LOG(ERROR) << "Attestation: Failed to encrypt db.";
-    return false;
+    return result;
   }
   if (!StoreDatabase(serial_encrypted_db)) {
     LOG(ERROR) << "Attestation: Failed to store db.";
-    return false;
+    return AttestationResult::kFailure;
   }
-  return true;
+  return AttestationResult::kSuccess;
 }
 
 void Attestation::CheckDatabasePermissions() {
@@ -1905,12 +1950,7 @@ bool Attestation::VerifySignature(const SecureBlob& public_key,
   return true;
 }
 
-bool Attestation::MigrateIdentityData() {
-  if (database_pb_.identities().size() > 0) {
-    // We already migrated identity data.
-    return false;
-  }
-
+AttestationResult Attestation::MigrateIdentityData() {
   // The identity we're creating will have the next index in identities.
   LOG(INFO) << "Attestation: Migrating existing identity into identity "
             << database_pb_.identities().size() << ".";
@@ -1921,7 +1961,7 @@ bool Attestation::MigrateIdentityData() {
         database_pb_.identity_binding());
   } else {
     LOG(ERROR) << "Attestation: Identity Key Binding not found, not migrating.";
-    return false;
+    return AttestationResult::kFailure;
   }
 
   if (database_pb_.has_identity_key()) {
@@ -1933,7 +1973,7 @@ bool Attestation::MigrateIdentityData() {
     // when there's an error.
   } else {
     LOG(ERROR) << "Attestation: Identity Key not found, not migrating.";
-    return false;
+    return AttestationResult::kFailure;
   }
 
   for (int i = 0; i <= 1; i++) {
@@ -1946,7 +1986,9 @@ bool Attestation::MigrateIdentityData() {
       // Attempt to generate the missing PCR quote.
       SecureBlob identity_key_blob(
         identity_data.identity_key().identity_key_blob());
-      if (CreatePCRQuote(i, identity_key_blob, &quote_pb)) {
+      AttestationResult result =
+          CreatePCRQuote(i, identity_key_blob, &quote_pb);
+      if (result == AttestationResult::kSuccess) {
         if (i == 1) {
           quote_pb.set_pcr_source_hint(platform_->GetHardwareID());
         }
@@ -1955,7 +1997,7 @@ bool Attestation::MigrateIdentityData() {
       } else {
         LOG(ERROR) << "Attestation: Failed to regenerate missing PCR"
                    << i << " quote during migration.";
-        return false;
+        return result;
       }
     }
 
@@ -1964,7 +2006,7 @@ bool Attestation::MigrateIdentityData() {
         QuoteMap::value_type(i, quote_pb));
     if (!in.second) {
       LOG(ERROR) << "Attestation: Could not migrate existing identity.";
-      return false;
+      return AttestationResult::kFailure;
     }
   }
 
@@ -1983,7 +2025,7 @@ bool Attestation::MigrateIdentityData() {
       kDefaultPCA, identity_certificate));
     if (!in.second) {
       LOG(ERROR) << "Attestation: Could not migrate existing identity.";
-      return false;
+      return AttestationResult::kFailure;
     }
   }
   if (database_pb_.identity_key().has_enrollment_id()) {
@@ -1997,7 +2039,7 @@ bool Attestation::MigrateIdentityData() {
     database_pb_.mutable_identities()->Add();
   new_identity_data->CopyFrom(identity_data);
 
-  return true;
+  return AttestationResult::kSuccess;
 }
 
 void Attestation::ClearDatabase() {
@@ -2168,7 +2210,7 @@ bool Attestation::AddDeviceKey(const std::string& key_name,
   }
   if (!found)
     *database_pb_.add_device_keys() = key;
-  return PersistDatabaseChanges();
+  return PersistDatabaseChanges() == AttestationResult::kSuccess;
 }
 
 bool Attestation::RemoveDeviceKey(const std::string& key_name) {
@@ -2185,7 +2227,7 @@ bool Attestation::RemoveDeviceKey(const std::string& key_name) {
     }
   }
   if (found) {
-    if (!PersistDatabaseChanges()) {
+    if (PersistDatabaseChanges() != AttestationResult::kSuccess) {
       LOG(WARNING) << __func__ << ": Failed to persist key deletion.";
       return false;
     }
@@ -2656,8 +2698,31 @@ bool Attestation::MigrateAttestationDatabase() {
     }
   }
 
-  // Migrate identity data if needed.
-  migrated |= MigrateIdentityData();
+  if (database_pb_.identities().size() > 0) {
+    // We already migrated identity data.
+    if (migrated) {
+      ReportAttestationOpsStatus(kAttestationMigrateDatabase,
+                                 AttestationOpsStatus::kSuccess);
+    }
+    return migrated;
+  }
+
+  AttestationResult result = MigrateIdentityData();
+  migrated |= (result == AttestationResult::kSuccess);
+
+  AttestationOpsStatus status;
+  switch (result) {
+    case AttestationResult::kSuccess:
+      status = AttestationOpsStatus::kSuccess;
+      break;
+    case AttestationResult::kFailure:
+      status = AttestationOpsStatus::kFailure;
+      break;
+    case AttestationResult::kInvalidPcr0Value:
+      status = AttestationOpsStatus::kInvalidPcr0Value;
+      break;
+  }
+  ReportAttestationOpsStatus(kAttestationMigrateDatabase, status);
 
   return migrated;
 }
@@ -2698,7 +2763,7 @@ void Attestation::FinalizeEndorsementData() {
   credentials->clear_endorsement_public_key();
   ClearString(credentials->mutable_endorsement_credential());
   credentials->clear_endorsement_credential();
-  if (!PersistDatabaseChanges()) {
+  if (PersistDatabaseChanges() != AttestationResult::kSuccess) {
     LOG(ERROR) << "Attestation: Failed to persist database changes.";
   }
 }
@@ -2789,7 +2854,7 @@ void Attestation::ExtendPCR1IfClear() {
   }
 }
 
-bool Attestation::CreatePCRQuote(
+AttestationResult Attestation::CreatePCRQuote(
     uint32_t pcr_index,
     const SecureBlob& identity_key_blob,
     Quote* output) {
@@ -2799,24 +2864,28 @@ bool Attestation::CreatePCRQuote(
   SecureBlob quoted_data;
   SecureBlob quote;
 
-  if (!tpm_->QuotePCR(pcr_index,
-                      pcr_index == 0,
-                      identity_key_blob,
-                      external_data,
-                      &quoted_pcr_value,
-                      &quoted_data,
-                      &quote)) {
-    // TODO(b/138324811): add metrics report for the case of bad PCR0 value.
+  const bool should_check_pcr_value = pcr_index == 0;
+  Tpm::QuotePcrResult result = tpm_->QuotePCR(pcr_index,
+                                              should_check_pcr_value,
+                                              identity_key_blob,
+                                              external_data,
+                                              &quoted_pcr_value,
+                                              &quoted_data,
+                                              &quote);
+  if (result != Tpm::QuotePcrResult::kSuccess) {
     LOG(ERROR) << "Attestation: Failed to generate PCR" << pcr_index
                << " quote.";
-    return false;
+    return (result == Tpm::QuotePcrResult::kInvalidPcrValue &&
+            should_check_pcr_value) ?
+        AttestationResult::kInvalidPcr0Value :
+        AttestationResult::kFailure;
   }
 
   output->set_quote(quote.data(), quote.size());
   output->set_quoted_data(quoted_data.data(), quoted_data.size());
   output->set_quoted_pcr_value(BlobToString(quoted_pcr_value));
 
-  return true;
+  return AttestationResult::kSuccess;
 }
 
 bool Attestation::SendPCARequestAndBlock(PCAType pca_type,
