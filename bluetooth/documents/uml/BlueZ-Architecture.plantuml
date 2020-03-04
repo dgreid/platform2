@@ -6,12 +6,12 @@ title "Chrome OS Bluetooth architecture"
 
 package "Chrome" as chrome {
     package cras {
-            object a2dp
-
             object hfp
     }
     object system /' UI etc... '/
     object webBluetooth
+
+    webBluetooth -down-> system
 }
 
 package "ARC++" as arc {
@@ -54,7 +54,8 @@ package "BlueZ" as bluezuser {
             object gap
             object battery
             object scanparam
-
+            
+            object a2dp
             object avrcp
 
             hogp -down-> scanparam
@@ -68,6 +69,7 @@ package "BlueZ" as bluezuser {
         org.BlueZ.Device1 -down-> device
         org.BlueZ.Gatt -down-> gatt
         org.BlueZ.Media -down-> avrcp
+        org.BlueZ.Media -down->a2dp
         org.BlueZ.LEAdvertisement -down-> advertising
         org.BlueZ.Input1 -down-> input
 
@@ -129,6 +131,7 @@ system -down-> org.BlueZ.Adapter1
 system -down-> org.BlueZ.Device1
 system -down-> org.BlueZ.Agent
 system -down-> org.BlueZ.Battery1
+system -down-> BTPROTO_RFCOMM
 
 /' Cras dependencies '/
 cras -down-> org.BlueZ.Media
