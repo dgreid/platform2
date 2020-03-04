@@ -17,6 +17,7 @@
 #include <gtest/gtest.h>
 #include <mojo/core/embedder/embedder.h>
 #include <mojo/public/cpp/system/platform_handle.h>
+#include <libpasswordprovider/password.h>
 
 #include "smbfs/smb_filesystem.h"
 
@@ -71,21 +72,16 @@ class MockSmbFsDelegate : public mojom::SmbFsDelegate {
   mojo::Binding<mojom::SmbFsDelegate> binding_;
 };
 
-mojom::PasswordPtr MakePasswordOption(const std::string& password) {
-  mojom::PasswordPtr password_option = mojom::Password::New();
-  password_option->length = password.size();
-
+std::unique_ptr<password_provider::Password> MakePassword(
+    const std::string& password) {
   int fds[2];
   CHECK(base::CreateLocalNonBlockingPipe(fds));
   base::ScopedFD read_fd(fds[0]);
   base::ScopedFD write_fd(fds[1]);
-
-  EXPECT_TRUE(base::WriteFileDescriptor(write_fd.get(), password.c_str(),
-                                        password.size()));
-  password_option->fd =
-      mojo::WrapPlatformHandle(mojo::PlatformHandle(std::move(read_fd)));
-
-  return password_option;
+  CHECK(base::WriteFileDescriptor(write_fd.get(), password.data(),
+                                  password.size()));
+  return password_provider::Password::CreateFromFileDescriptor(read_fd.get(),
+                                                               password.size());
 }
 
 class TestSmbFsBootstrapImpl : public testing::Test {
@@ -181,7 +177,7 @@ TEST_F(TestSmbFsBootstrapImpl, UsernamePasswordAuth) {
   mount_options->share_path = kSharePath;
   mount_options->workgroup = kWorkgroup;
   mount_options->username = kUsername;
-  mount_options->password = MakePasswordOption(kPassword);
+  mount_options->password = MakePassword(kPassword);
   mount_options->allow_ntlm = true;
 
   base::RunLoop run_loop;
@@ -237,7 +233,7 @@ TEST_F(TestSmbFsBootstrapImpl, KerberosAuth) {
   mount_options->kerberos_config = mojom::KerberosConfig::New(
       mojom::KerberosConfig::Source::kKerberos, kKerberosGuid);
   // These two options will be ignored when Kerberos is being used.
-  mount_options->password = MakePasswordOption(kPassword);
+  mount_options->password = MakePassword(kPassword);
   mount_options->resolved_host =
       mojom::IPAddress::New(std::vector<uint8_t>({1, 2, 3, 4}));
 

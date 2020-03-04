@@ -30,13 +30,6 @@ mojom::MountError ConnectErrorToMountError(SmbFilesystem::ConnectError error) {
   }
 }
 
-std::unique_ptr<password_provider::Password> MakePasswordFromMojoHandle(
-    mojo::ScopedHandle handle, int32_t length) {
-  base::ScopedFD fd = mojo::UnwrapPlatformHandle(std::move(handle)).TakeFD();
-  return password_provider::Password::CreateFromFileDescriptor(fd.get(),
-                                                               length);
-}
-
 }  // namespace
 
 SmbFsBootstrapImpl::SmbFsBootstrapImpl(mojom::SmbFsBootstrapRequest request,
@@ -72,8 +65,7 @@ void SmbFsBootstrapImpl::MountShare(mojom::MountOptionsPtr options,
   }
 
   if (options->password) {
-    credential->password = MakePasswordFromMojoHandle(
-        std::move(options->password->fd), options->password->length);
+    credential->password = std::move(options->password.value());
   }
 
   OnCredentialsSetup(std::move(options), std::move(smbfs_delegate), callback,

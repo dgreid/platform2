@@ -1,0 +1,19 @@
+{
+  "c++": {
+    "smbfs.mojom.Password": {
+      "hashable": false,
+      "typename": "std::unique_ptr<password_provider::Password>",
+      "traits_headers": [
+        "smbfs/mojom/password_mojom_traits.h"
+      ],
+      "copyable_pass_by_value": false,
+      "force_serialize": false,
+      "move_only": true,
+      "nullable_is_same_type": false,
+      "non_copyable_non_movable": false,
+      "public_headers": [
+        "libpasswordprovider/password.h"
+      ]
+    }
+  }
+}
