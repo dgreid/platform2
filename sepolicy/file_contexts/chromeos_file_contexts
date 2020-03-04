@@ -218,6 +218,7 @@ include(sepolicy/file_contexts/sysfs_contexts)
 /opt/google/containers/android/rootfs/android-data/cache                   u:object_r:cache_file:s0
 /opt/google/containers/android/rootfs/android-data/data                    u:object_r:system_data_file:s0
 /opt/google/containers/android/rootfs/android-data/data/dalvik-cache(/.*)? u:object_r:dalvikcache_data_file:s0
+/opt/google/easy_unlock/easy_unlock u:object_r:cros_easy_unlock_exec:s0
 
 # /etc
 /etc(/.*)?                      u:object_r:cros_conf_file:s0
