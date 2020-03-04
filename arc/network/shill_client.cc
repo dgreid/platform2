@@ -12,14 +12,6 @@
 #include <chromeos/dbus/service_constants.h>
 
 namespace arc_networkd {
-namespace {
-
-// HACK: See b/148416701.
-bool IgnoreDevice(const std::string& name) {
-  return base::StartsWith(name, "peer", base::CompareCase::INSENSITIVE_ASCII);
-}
-
-}  // namespace
 
 ShillClient::ShillClient(const scoped_refptr<dbus::Bus>& bus) : bus_(bus) {
   manager_proxy_.reset(new org::chromium::flimflam::ManagerProxy(bus_));
@@ -197,8 +189,6 @@ void ShillClient::UpdateDevices(const brillo::Any& property_value) {
     std::string device = path.value();
     // Strip "/device/" prefix.
     device = device.substr(device.find_last_of('/') + 1);
-    if (IgnoreDevice(device))
-      continue;
 
     new_devices.emplace(device);
     if (devices_.find(device) == devices_.end())

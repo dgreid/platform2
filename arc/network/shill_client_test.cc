@@ -85,17 +85,6 @@ TEST_F(ShillClientTest, VerifyDevicesPrefixStripped) {
   EXPECT_EQ(default_ifname_, "eth0");
 }
 
-TEST_F(ShillClientTest, VerifyIgnoreableDevices) {
-  std::vector<dbus::ObjectPath> devices = {
-      dbus::ObjectPath("/device/eth0"), dbus::ObjectPath("/device/peer_eth0")};
-  auto value = brillo::Any(devices);
-  client_->NotifyManagerPropertyChange(shill::kDevicesProperty, value);
-  EXPECT_EQ(added_.size(), 1);
-  EXPECT_EQ(*added_.begin(), "eth0");
-  // Implies the default callback was run;
-  EXPECT_EQ(default_ifname_, "eth0");
-}
-
 TEST_F(ShillClientTest,
        DefaultInterfaceChangedHandlerCalledOnNewDefaultInterface) {
   client_->SetFakeDefaultInterface("eth0");
