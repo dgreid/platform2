@@ -72,14 +72,17 @@ variables should be set:
      the future (allow downloading selectively a set of packages within one
      DLC). When multiple packages are supported, each package should have a
      unique name among all packages in a DLC module.
-*    `DLC_ARTIFACT_DIR` - The path to the directory which contains all the
-     content to be packed into the DLC image. See the ebuild example below for
-     more details about it.
+*    `DLC_ENABLED` - (Optional) When set to "false", `$(dlc_get_path)` will
+     point to `/` and everything will be installed into the rootfs instead of
+     the DLC path. This allows the use of the same ebuild file to create a DLC
+     under special conditions(i.e. Make a package a DLC for certain boards or
+     install in rootfs for others).
 
 Within the build file, the implementation should include at least the
 `src_install` function. Within `src_install`, all the DLC content should be
-copied to `${DLC_ARTIFACT_DIR}`. Do **NOT** use ebuild functions (`doins`,
-`dobin`, etc.) to install anything unless you know what you are doing.
+installed using the special path prefix `$(dlc_get_path)`. This means, that
+before installing any DLC files, you have add the prefix `$(dlc_get_path)` to
+`into, insinto` and `exeinto`. See example below.
 
 Here is an example of a DLC ebuild (ebuild name:
 `chromeos-base/demo-dlc-1.0.0.ebuild`):
@@ -105,20 +108,37 @@ DLC_VERSION="${PV}"
 DLC_PREALLOC_BLOCKS="1024"
 DLC_ID="demo-dlc"
 DLC_PACKAGE="demo-dlc-package"
-DLC_ARTIFACT_DIR="${T}/artifacts"
 
 src_install() {
-  # Create ${DLC_ARTIFACT_DIR} if it does not exist.
-  mkdir -p ${DLC_ARTIFACT_DIR}
+  #Install files to rootfs
+  instinto /
+  echo "Hello World rootfs!" | newins - one_file_rootfs.txt
 
-  # Copy DLC content to ${DLC_ARTIFACT_DIR} if it is not already there.
-  echo "Hello World!" >> ${DLC_ARTIFACT_DIR}/one_file_dlc.txt
+  #Install files to DLC.
+  # Setup DLC paths.
+  into "$(dlc_get_path)/"
+  insinto "$(dlc_get_path)/opt/demo_dlc/"
+  exeinto "$(dlc_get_path)/opt/demo_dlc/"
 
-  # Install DLC to the build directory.
+  # Create a DLC file in /opt/demo_dlc/.
+  echo "Hello World DLC!" | newins - one_file_dlc.txt
+
+  dosym one_file_dlc "$(dlc_get_path)/one_file_dlc.txt"
+
+  fperms -R a+w "$(dlc_get_path)/opt/demo_dlc/"
+  dosym one_file_dlc "$(dlc_get_path)/opt/demo_dlc/one_file_dlc.txt
+
+  # Build DLC.
   dlc_src_install
 }
 ```
 
+To avoid generating large tarballs with all the DLC build files, a configuration
+file should be added under
+src/third_party/chromiumos-overlay/chromeos/config/env/\[name of ebuild\]. This
+reduces the build time and disk space used by the build.
+
+See the example: [dummy-dlc config]
 ## Write platform code to request DLC module
 
 A DLC module is downloaded (from the Internet) and installed at runtime by
@@ -142,7 +162,8 @@ Installing a Chrome OS DLC module on a device is similar to installing a Chrome
 OS package:
 
 *   Build the DLC module: `emerge-${BOARD} chromeos-base/demo-dlc`
-*   Copy the DLC module to device: `cros deploy ${IP} chromeos-base/demo-dlc`
+*   Build DLC image and copy the DLC module to device:
+`cros deploy ${IP} chromeos-base/demo-dlc`
 
 ## Write tests for a DLC module
 
@@ -181,3 +202,4 @@ user’s device, a DLC is updated at the same time when a device is updated.
 [imageloader_impl.cc]: https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/imageloader/imageloader_impl.cc
 [tast]: go/tast
 [tast-deps]: go/tast-deps
+[dummy-dlc config]: https://chromium.googlesource.com/chromiumos/overlays/chromiumos-overlay/+/refs/heads/master/chromeos/config/env/chromeos-base/dummy-dlc
