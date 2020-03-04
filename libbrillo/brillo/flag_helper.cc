@@ -86,6 +86,22 @@ const char* Int32Flag::GetType() const {
   return "int";
 }
 
+UInt32Flag::UInt32Flag(const char* name,
+                       uint32_t* value,
+                       const char* default_value,
+                       const char* help,
+                       bool visible)
+    : Flag(name, default_value, help, visible), value_(value) {
+}
+
+bool UInt32Flag::SetValue(const std::string& value) {
+  return base::StringToUint(value, value_);
+}
+
+const char* UInt32Flag::GetType() const {
+  return "uint32";
+}
+
 Int64Flag::Int64Flag(const char* name,
                      int64_t* value,
                      const char* default_value,
