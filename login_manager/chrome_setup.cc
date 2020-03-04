@@ -394,6 +394,9 @@ void AddSystemFlags(ChromiumCommandBuilder* builder) {
   // Some platforms have SMT enabled by default.
   if (builder->UseFlagIsSet("scheduler_configuration_performance"))
     builder->AddArg("--scheduler-configuration-default=performance");
+
+  if (builder->UseFlagIsSet("enable_neural_palm_detection_filter"))
+    builder->AddFeatureEnableOverride("EnableNeuralPalmDetectionFilter");
 }
 
 // Adds UI-related flags to the command line.
