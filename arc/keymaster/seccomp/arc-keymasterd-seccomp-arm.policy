@@ -28,6 +28,8 @@ socket: arg0 == AF_UNIX
 getsockname: 1
 connect: 1
 fcntl64: 1
+exit: 1
+exit_group: 1
 poll: 1
 sendmsg: 1
 recvmsg: 1
