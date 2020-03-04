@@ -566,19 +566,56 @@ bool ArcService::ContainerImpl::OnStartDevice(Device* device) {
             << " bridge: " << config.host_ifname()
             << " guest_iface: " << config.guest_ifname() << " pid: " << pid_;
 
-  std::string veth_ifname = datapath_->AddVirtualBridgedInterface(
-      device->ifname(), MacAddressToString(config.guest_mac_addr()),
-      config.host_ifname());
-  if (veth_ifname.empty()) {
-    LOG(ERROR) << "Failed to create virtual interface for container";
-    return false;
+  // Set up the virtual pair inside the container namespace.
+  const std::string veth_ifname = ArcVethHostName(config.guest_ifname());
+  {
+    ScopedNS ns(pid_);
+    if (!ns.IsValid() && pid_ != kTestPID) {
+      LOG(ERROR)
+          << "Cannot create virtual link -- invalid container namespace?";
+      return false;
+    }
+
+    if (!datapath_->AddVirtualInterfacePair(veth_ifname,
+                                            config.guest_ifname())) {
+      LOG(ERROR) << "Failed to create virtual interface pair for "
+                 << device->ifname();
+      return false;
+    }
+
+    if (!datapath_->ConfigureInterface(
+            config.guest_ifname(), config.guest_mac_addr(),
+            config.guest_ipv4_addr(), 30, true /* link up */,
+            device->options().fwd_multicast)) {
+      LOG(ERROR) << "Failed to configure interface " << config.guest_ifname();
+      datapath_->RemoveInterface(config.guest_ifname());
+      return false;
+    }
   }
 
-  if (!datapath_->AddInterfaceToContainer(
-          pid_, veth_ifname, config.guest_ifname(), config.guest_ipv4_addr(),
-          30, device->options().fwd_multicast)) {
-    LOG(ERROR) << "Failed to create container interface.";
+  // Now pull the host end out into the root namespace and add it to the bridge.
+  if (datapath_->runner().RestoreDefaultNamespace(veth_ifname, pid_) != 0) {
+    LOG(ERROR) << "Failed to prepare interface " << veth_ifname;
+    {
+      ScopedNS ns(pid_);
+      if (ns.IsValid()) {
+        datapath_->RemoveInterface(config.guest_ifname());
+      } else {
+        LOG(ERROR) << "Failed to re-enter container namespace."
+                   << " Subsequent attempts to restart " << device->ifname()
+                   << " may not succeed.";
+      }
+    }
+    return false;
+  }
+  if (!datapath_->ToggleInterface(veth_ifname, true /*up*/)) {
+    LOG(ERROR) << "Failed to bring up interface " << veth_ifname;
     datapath_->RemoveInterface(veth_ifname);
+    return false;
+  }
+  if (!datapath_->AddToBridge(config.host_ifname(), veth_ifname)) {
+    datapath_->RemoveInterface(veth_ifname);
+    LOG(ERROR) << "Failed to bridge interface " << veth_ifname;
     return false;
   }
 
@@ -594,7 +631,7 @@ bool ArcService::ContainerImpl::OnStartDevice(Device* device) {
 
   // Signal the container that the network device is ready.
   if (device->IsAndroid()) {
-    datapath_->runner().WriteSentinelToContainer(base::IntToString(pid_));
+    datapath_->runner().WriteSentinelToContainer(pid_);
   }
 
   dev_mgr_->StartForwarding(*device);

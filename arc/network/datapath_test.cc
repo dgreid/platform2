@@ -42,14 +42,9 @@ class MockProcessRunner : public MinijailedProcessRunner {
   MockProcessRunner() = default;
   ~MockProcessRunner() = default;
 
-  MOCK_METHOD6(AddInterfaceToContainer,
-               int(const std::string& host_ifname,
-                   const std::string& con_ifname,
-                   uint32_t con_ipv4_addr,
-                   uint32_t con_ipv4_prefix_len,
-                   bool enable_multicast,
-                   const std::string& con_pid));
-  MOCK_METHOD1(WriteSentinelToContainer, int(const std::string& con_pid));
+  MOCK_METHOD2(RestoreDefaultNamespace,
+               int(const std::string& ifname, pid_t pid));
+  MOCK_METHOD1(WriteSentinelToContainer, int(pid_t pid));
   MOCK_METHOD3(brctl,
                int(const std::string& cmd,
                    const std::vector<std::string>& argv,
@@ -153,26 +148,44 @@ TEST(DatapathTest, AddBridge) {
   datapath.AddBridge("br", Ipv4Addr(1, 1, 1, 1), 30);
 }
 
-TEST(DatapathTest, AddVirtualBridgedInterface) {
+TEST(DatapathTest, AddVirtualInterfacePair) {
   MockProcessRunner runner;
-  // RemoveInterface is run first
-  EXPECT_CALL(runner, ip(StrEq("link"), StrEq("delete"),
-                         ElementsAre("veth_foo"), false));
   EXPECT_CALL(runner, ip(StrEq("link"), StrEq("add"),
                          ElementsAre("veth_foo", "type", "veth", "peer", "name",
                                      "peer_foo"),
                          true));
+  Datapath datapath(&runner);
+  EXPECT_TRUE(datapath.AddVirtualInterfacePair("veth_foo", "peer_foo"));
+}
+
+TEST(DatapathTest, ToggleInterface) {
+  MockProcessRunner runner;
+  EXPECT_CALL(runner,
+              ip(StrEq("link"), StrEq("set"), ElementsAre("foo", "up"), true));
   EXPECT_CALL(runner, ip(StrEq("link"), StrEq("set"),
-                         ElementsAre("veth_foo", "up"), true));
+                         ElementsAre("bar", "down"), true));
+  Datapath datapath(&runner);
+  EXPECT_TRUE(datapath.ToggleInterface("foo", true));
+  EXPECT_TRUE(datapath.ToggleInterface("bar", false));
+}
+
+TEST(DatapathTest, ConfigureInterface) {
+  MockProcessRunner runner;
   EXPECT_CALL(
       runner,
-      ip(StrEq("link"), StrEq("set"),
-         ElementsAre("dev", "peer_foo", "addr", "00:11:22", "down"), true));
-  EXPECT_CALL(runner,
-              brctl(StrEq("addif"), ElementsAre("brfoo", "veth_foo"), true));
+      ip(StrEq("addr"), StrEq("add"),
+         ElementsAre("1.1.1.1/30", "brd", "1.1.1.3", "dev", "foo"), true))
+      .WillOnce(Return(0));
+  EXPECT_CALL(runner, ip(StrEq("link"), StrEq("set"),
+                         ElementsAre("dev", "foo", "up", "addr",
+                                     "02:02:02:02:02:02", "multicast", "on"),
+                         true))
+      .WillOnce(Return(0));
+
   Datapath datapath(&runner);
-  EXPECT_EQ(datapath.AddVirtualBridgedInterface("foo", "00:11:22", "brfoo"),
-            "peer_foo");
+  MacAddress mac_addr = {2, 2, 2, 2, 2, 2};
+  EXPECT_TRUE(datapath.ConfigureInterface("foo", mac_addr, Ipv4Addr(1, 1, 1, 1),
+                                          30, true, true));
 }
 
 TEST(DatapathTest, RemoveInterface) {
@@ -194,18 +207,6 @@ TEST(DatapathTest, RemoveBridge) {
   EXPECT_CALL(runner, brctl(StrEq("delbr"), ElementsAre("br"), true));
   Datapath datapath(&runner);
   datapath.RemoveBridge("br");
-}
-
-TEST(DatapathTest, AddInterfaceToContainer) {
-  MockProcessRunner runner;
-  EXPECT_CALL(runner, ip(StrEq("link"), StrEq("set"),
-                         ElementsAre("src", "netns", "123"), true));
-  EXPECT_CALL(runner, AddInterfaceToContainer(StrEq("src"), StrEq("dst"),
-                                              Ipv4Addr(1, 1, 1, 1), 30, true,
-                                              StrEq("123")));
-  Datapath datapath(&runner);
-  datapath.AddInterfaceToContainer(123, "src", "dst", Ipv4Addr(1, 1, 1, 1), 30,
-                                   true);
 }
 
 TEST(DatapathTest, AddLegacyIPv4DNAT) {

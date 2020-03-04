@@ -31,23 +31,12 @@ class FakeProcessRunner : public MinijailedProcessRunner {
     return 0;
   }
 
-  int AddInterfaceToContainer(const std::string& host_ifname,
-                              const std::string& con_ifname,
-                              uint32_t con_ipv4,
-                              uint32_t con_prefix_len,
-                              bool enable_multicast,
-                              const std::string& con_pid) override {
-    add_host_ifname_ = host_ifname;
-    add_con_ifname_ = con_ifname;
-    add_con_ipv4_ = con_ipv4;
-    add_con_prefix_len_ = con_prefix_len;
-    add_enable_multicast_ = enable_multicast;
-    add_con_pid_ = con_pid;
+  int RestoreDefaultNamespace(const std::string& ifname, pid_t pid) override {
     return 0;
   }
 
-  int WriteSentinelToContainer(const std::string& con_pid) override {
-    wr_con_pid_ = con_pid;
+  int WriteSentinelToContainer(pid_t pid) override {
+    wr_con_pid_ = pid;
     return 0;
   }
 
@@ -83,9 +72,7 @@ class FakeProcessRunner : public MinijailedProcessRunner {
     EXPECT_EQ(con_pid, add_con_pid_);
   }
 
-  void VerifyWriteSentinel(const std::string& con_pid) {
-    EXPECT_EQ(con_pid, wr_con_pid_);
-  }
+  void VerifyWriteSentinel(pid_t pid) { EXPECT_EQ(pid, wr_con_pid_); }
 
   void SetRunOverride(
       base::Callback<int(const std::vector<std::string>&)> callback) {
@@ -103,7 +90,7 @@ class FakeProcessRunner : public MinijailedProcessRunner {
   uint32_t add_con_prefix_len_;
   bool add_enable_multicast_;
   std::string add_con_pid_;
-  std::string wr_con_pid_;
+  pid_t wr_con_pid_;
 
   DISALLOW_COPY_AND_ASSIGN(FakeProcessRunner);
 };

@@ -25,19 +25,13 @@ class MinijailedProcessRunner {
   explicit MinijailedProcessRunner(brillo::Minijail* mj = nullptr);
   virtual ~MinijailedProcessRunner() = default;
 
-  // Moves interface |host_ifname| into the container designated by |con_pid|
-  // as interface |con_ifname| and assigns it's |con_ipv4_addr|. This method
-  // does NOT bring up the interface.
-  virtual int AddInterfaceToContainer(const std::string& host_ifname,
-                                      const std::string& con_ifname,
-                                      uint32_t con_ipv4_addr,
-                                      uint32_t con_ipv4_prefix_len,
-                                      bool enable_multicast,
-                                      const std::string& con_pid);
+  // Moves interface |ifname| back into the default namespace
+  // |pid| identifies the pid of the current namespace.
+  virtual int RestoreDefaultNamespace(const std::string& ifname, pid_t pid);
 
   // Writes out a file that the ARC boot process uses to discover when
   // the host networking is ready.
-  virtual int WriteSentinelToContainer(const std::string& con_pid);
+  virtual int WriteSentinelToContainer(pid_t con_pid);
 
   // Runs brctl.
   virtual int brctl(const std::string& cmd,

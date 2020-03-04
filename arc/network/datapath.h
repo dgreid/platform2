@@ -66,20 +66,23 @@ class Datapath {
   // When specified, |ipv4_addr| is always singlar dotted-form (a.b.c.d)
   // IPv4 address (not a CIDR representation).
 
-  // Creates a virtual interface and adds one side to bridge |br_ifname| and
-  // returns the name of the other side.
-  virtual std::string AddVirtualBridgedInterface(const std::string& ifname,
-                                                 const std::string& mac_addr,
-                                                 const std::string& br_ifname);
+  // Creates a virtual interface pair.
+  virtual bool AddVirtualInterfacePair(const std::string& veth_ifname,
+                                       const std::string& peer_ifname);
+
+  // Sets the link status.
+  virtual bool ToggleInterface(const std::string& ifname, bool up);
+
+  // Sets the configuration of an interface.
+  virtual bool ConfigureInterface(const std::string& ifname,
+                                  const MacAddress& mac_addr,
+                                  uint32_t ipv4_addr,
+                                  uint32_t ipv4_prefix_len,
+                                  bool up,
+                                  bool enable_multicast);
+
   virtual void RemoveInterface(const std::string& ifname);
 
-  // Inject an interace into the ARC++ container namespace.
-  virtual bool AddInterfaceToContainer(int ns,
-                                       const std::string& src_ifname,
-                                       const std::string& dst_ifname,
-                                       uint32_t dst_ipv4_addr,
-                                       uint32_t dst_ipv4_prefix_len,
-                                       bool fwd_multicast);
   // Create (or flush and delete) pre-routing rules supporting legacy (ARC N)
   // single networking DNAT configuration.
   virtual bool AddLegacyIPv4DNAT(const std::string& ipv4_addr);

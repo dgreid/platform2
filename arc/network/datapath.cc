@@ -205,56 +205,46 @@ void Datapath::RemoveTAP(const std::string& ifname) {
   process_runner_->ip("tuntap", "del", {ifname, "mode", "tap"});
 }
 
-std::string Datapath::AddVirtualBridgedInterface(const std::string& ifname,
-                                                 const std::string& mac_addr,
-                                                 const std::string& br_ifname) {
-  const std::string veth = ArcVethHostName(ifname);
-  const std::string peer = ArcVethPeerName(ifname);
+bool Datapath::AddVirtualInterfacePair(const std::string& veth_ifname,
+                                       const std::string& peer_ifname) {
+  return process_runner_->ip(
+             "link", "add",
+             {veth_ifname, "type", "veth", "peer", "name", peer_ifname}) == 0;
+}
 
-  RemoveInterface(veth);
-  if (process_runner_->ip("link", "add",
-                          {veth, "type", "veth", "peer", "name", peer}) != 0) {
-    return "";
-  }
+bool Datapath::ToggleInterface(const std::string& ifname, bool up) {
+  const std::string link = up ? "up" : "down";
+  return process_runner_->ip("link", "set", {ifname, link}) == 0;
+}
 
-  if (process_runner_->ip("link", "set", {veth, "up"}) != 0) {
-    RemoveInterface(veth);
-    RemoveInterface(peer);
-    return "";
-  }
-
-  if (process_runner_->ip("link", "set",
-                          {"dev", peer, "addr", mac_addr, "down"}) != 0) {
-    RemoveInterface(veth);
-    RemoveInterface(peer);
-    return "";
-  }
-
-  if (!AddToBridge(br_ifname, veth)) {
-    RemoveInterface(veth);
-    RemoveInterface(peer);
-    return "";
-  }
-
-  return peer;
+bool Datapath::ConfigureInterface(const std::string& ifname,
+                                  const MacAddress& mac_addr,
+                                  uint32_t ipv4_addr,
+                                  uint32_t ipv4_prefix_len,
+                                  bool up,
+                                  bool enable_multicast) {
+  const std::string link = up ? "up" : "down";
+  const std::string multicast = enable_multicast ? "on" : "off";
+  return (process_runner_->ip(
+              "addr", "add",
+              {IPv4AddressToCidrString(ipv4_addr, ipv4_prefix_len), "brd",
+               IPv4AddressToString(
+                   Ipv4BroadcastAddr(ipv4_addr, ipv4_prefix_len)),
+               "dev", ifname}) == 0) &&
+         (process_runner_->ip("link", "set",
+                              {
+                                  "dev",
+                                  ifname,
+                                  link,
+                                  "addr",
+                                  MacAddressToString(mac_addr),
+                                  "multicast",
+                                  multicast,
+                              }) == 0);
 }
 
 void Datapath::RemoveInterface(const std::string& ifname) {
   process_runner_->ip("link", "delete", {ifname}, false /*log_failures*/);
-}
-
-bool Datapath::AddInterfaceToContainer(int ns,
-                                       const std::string& src_ifname,
-                                       const std::string& dst_ifname,
-                                       uint32_t dst_ipv4_addr,
-                                       uint32_t dst_ipv4_prefix_len,
-                                       bool fwd_multicast) {
-  const std::string pid = base::IntToString(ns);
-  return (process_runner_->ip("link", "set", {src_ifname, "netns", pid}) ==
-          0) &&
-         (process_runner_->AddInterfaceToContainer(
-              src_ifname, dst_ifname, dst_ipv4_addr, dst_ipv4_prefix_len,
-              fwd_multicast, pid) == 0);
 }
 
 bool Datapath::AddLegacyIPv4DNAT(const std::string& ipv4_addr) {

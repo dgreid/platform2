@@ -50,56 +50,15 @@ MATCHER_P2(IsProcessArgs, program, args, "") {
   return arg[index] == nullptr;
 }
 
-TEST_F(MinijailProcessRunnerTest, AddInterfaceToContainer) {
-  const std::vector<std::string> args_ip1 = {
-      "-t", "12345", "-n", "--", "/bin/ip", "link", "set", "foo", "name", "bar",
+TEST_F(MinijailProcessRunnerTest, RestoreDefaultNamespace) {
+  const std::vector<std::string> args = {
+      "-t", "12345", "-n", "--", "/bin/ip", "link", "set", "foo", "netns", "1",
   };
-  const std::vector<std::string> args_ip2 = {
-      "-t",  "12345",      "-n",  "--",      "/bin/ip", "addr",
-      "add", "1.1.1.1/30", "brd", "1.1.1.3", "dev",     "bar",
-  };
-  const std::vector<std::string> args_ip3 = {
-      "-t", "12345", "-n", "--", "/bin/ip", "link", "set", "bar", "up",
-  };
-  const std::vector<std::string> args_ip4 = {
-      "-t",  "12345", "-n",  "--",        "/bin/ip", "link",
-      "set", "dev",   "bar", "multicast", "on",
-  };
-  EXPECT_CALL(mj_, New()).Times(4);
+  EXPECT_CALL(mj_, New());
   EXPECT_CALL(mj_, DropRoot(_, _, _)).Times(0);
-  EXPECT_CALL(mj_, RunSyncAndDestroy(
-                       _, IsProcessArgs("/usr/bin/nsenter", args_ip1), _));
-  EXPECT_CALL(mj_, RunSyncAndDestroy(
-                       _, IsProcessArgs("/usr/bin/nsenter", args_ip2), _));
-  EXPECT_CALL(mj_, RunSyncAndDestroy(
-                       _, IsProcessArgs("/usr/bin/nsenter", args_ip3), _));
-  EXPECT_CALL(mj_, RunSyncAndDestroy(
-                       _, IsProcessArgs("/usr/bin/nsenter", args_ip4), _));
-  runner_.AddInterfaceToContainer("foo", "bar", Ipv4Addr(1, 1, 1, 1), 30, true,
-                                  "12345");
-}
-
-TEST_F(MinijailProcessRunnerTest, AddInterfaceToContainerNoMulticast) {
-  const std::vector<std::string> args_ip1 = {
-      "-t", "12345", "-n", "--", "/bin/ip", "link", "set", "foo", "name", "bar",
-  };
-  const std::vector<std::string> args_ip2 = {
-      "-t",  "12345",      "-n",  "--",      "/bin/ip", "addr",
-      "add", "1.1.1.1/30", "brd", "1.1.1.3", "dev",     "bar",
-  };
-  const std::vector<std::string> args_ip3 = {
-      "-t", "12345", "-n", "--", "/bin/ip", "link", "set", "bar", "up",
-  };
-  EXPECT_CALL(mj_, New()).Times(3);
-  EXPECT_CALL(mj_, DropRoot(_, _, _)).Times(0);
-  EXPECT_CALL(mj_, RunSyncAndDestroy(
-                       _, IsProcessArgs("/usr/bin/nsenter", args_ip1), _));
-  EXPECT_CALL(mj_, RunSyncAndDestroy(
-                       _, IsProcessArgs("/usr/bin/nsenter", args_ip2), _));
-  EXPECT_CALL(mj_, RunSyncAndDestroy(
-                       _, IsProcessArgs("/usr/bin/nsenter", args_ip3), _));
-  runner_.AddInterfaceToContainer("foo", "bar", Ipv4Addr(1, 1, 1, 1), 30, false,
-                                  "12345");
+  EXPECT_CALL(mj_,
+              RunSyncAndDestroy(_, IsProcessArgs("/usr/bin/nsenter", args), _));
+  runner_.RestoreDefaultNamespace("foo", 12345);
 }
 
 TEST_F(MinijailProcessRunnerTest, WriteSentinelToContainer) {
@@ -116,7 +75,7 @@ TEST_F(MinijailProcessRunnerTest, WriteSentinelToContainer) {
   EXPECT_CALL(mj_, DropRoot(_, _, _)).Times(0);
   EXPECT_CALL(mj_,
               RunSyncAndDestroy(_, IsProcessArgs("/usr/bin/nsenter", args), _));
-  runner_.WriteSentinelToContainer("12345");
+  runner_.WriteSentinelToContainer(12345);
 }
 
 TEST_F(MinijailProcessRunnerTest, modprobe_all) {

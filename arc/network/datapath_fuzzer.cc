@@ -34,15 +34,6 @@ class RandomProcessRunner : public MinijailedProcessRunner {
     return data_provider_->ConsumeBool();
   }
 
-  int AddInterfaceToContainer(const std::string& host_ifname,
-                              const std::string& con_ifname,
-                              uint32_t con_ipv4_addr,
-                              uint32_t con_prefix_len,
-                              bool enable_multicast,
-                              const std::string& con_pid) override {
-    return data_provider_->ConsumeBool();
-  }
-
  private:
   FuzzedDataProvider* data_provider_;
 
@@ -83,8 +74,10 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     datapath.RemoveBridge(ifname);
     datapath.AddInboundIPv4DNAT(ifname, addr_str);
     datapath.RemoveInboundIPv4DNAT(ifname, addr_str);
-    datapath.AddVirtualBridgedInterface(ifname, MacAddressToString(mac),
-                                        bridge);
+    datapath.AddVirtualInterfacePair(ifname, bridge);
+    datapath.ToggleInterface(ifname, provider.ConsumeBool());
+    datapath.ConfigureInterface(ifname, mac, addr, prefix_len,
+                                provider.ConsumeBool(), provider.ConsumeBool());
     datapath.RemoveInterface(ifname);
     datapath.AddTAP(ifname, &mac, subnet_addr.get(), "");
     datapath.RemoveTAP(ifname);

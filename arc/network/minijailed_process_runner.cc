@@ -7,6 +7,7 @@
 #include <linux/capability.h>
 
 #include <base/logging.h>
+#include <base/strings/string_number_conversions.h>
 #include <base/strings/string_util.h>
 #include <brillo/process.h>
 
@@ -98,48 +99,16 @@ int MinijailedProcessRunner::Run(const std::vector<std::string>& argv,
   return RunSyncDestroy(argv, mj_, jail, log_failures);
 }
 
-int MinijailedProcessRunner::AddInterfaceToContainer(
-    const std::string& host_ifname,
-    const std::string& con_ifname,
-    uint32_t con_ipv4_addr,
-    uint32_t con_ipv4_prefix_len,
-    bool enable_multicast,
-    const std::string& con_pid) {
-  int rc = RunSync({kNsEnterPath, "-t", con_pid, "-n", "--", kIpPath, "link",
-                    "set", host_ifname, "name", con_ifname},
-                   mj_, true);
-  if (rc != 0)
-    return rc;
-
-  rc = RunSync(
-      {kNsEnterPath, "-t", con_pid, "-n", "--", kIpPath, "addr", "add",
-       IPv4AddressToCidrString(con_ipv4_addr, con_ipv4_prefix_len), "brd",
-       IPv4AddressToString(
-           Ipv4BroadcastAddr(con_ipv4_addr, con_ipv4_prefix_len)),
-       "dev", con_ifname},
-      mj_, true);
-
-  if (rc != 0)
-    return rc;
-
-  rc = RunSync({kNsEnterPath, "-t", con_pid, "-n", "--", kIpPath, "link", "set",
-                con_ifname, "up"},
-               mj_, true);
-  if (rc != 0)
-    return rc;
-
-  if (enable_multicast)
-    rc = RunSync({kNsEnterPath, "-t", con_pid, "-n", "--", kIpPath, "link",
-                  "set", "dev", con_ifname, "multicast", "on"},
+int MinijailedProcessRunner::RestoreDefaultNamespace(const std::string& ifname,
+                                                     pid_t pid) {
+  return RunSync({kNsEnterPath, "-t", base::IntToString(pid), "-n", "--",
+                  kIpPath, "link", "set", ifname, "netns", "1"},
                  mj_, true);
-
-  return rc;
 }
 
-int MinijailedProcessRunner::WriteSentinelToContainer(
-    const std::string& con_pid) {
-  return RunSync({kNsEnterPath, "-t", con_pid, "--mount", "--pid", "--",
-                  kTouchPath, kSentinelFile},
+int MinijailedProcessRunner::WriteSentinelToContainer(pid_t pid) {
+  return RunSync({kNsEnterPath, "-t", base::IntToString(pid), "--mount",
+                  "--pid", "--", kTouchPath, kSentinelFile},
                  mj_, true);
 }
 
