@@ -9,6 +9,7 @@ enum PipelineOutputType {
   OUTPUT_PRESENCE_PERCEPTION = 3;
   OUTPUT_OCCUPANCY_TRIGGER = 4;
   OUTPUT_APPEARANCES = 5;
+  OUTPUT_SMART_FRAMING = 6;
 }
 
 message PipelineOutput {
@@ -23,6 +24,7 @@ enum PerceptionInterfaceType {
   INTERFACE_PRESENCE_PERCEPTION = 3;
   INTERFACE_OCCUPANCY_TRIGGER = 4;
   INTERFACE_APPEARANCES = 5;
+  INTERFACE_ONE_TOUCH_AUTOZOOM = 6;
 }
 
 message PerceptionInterface {

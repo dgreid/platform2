@@ -179,6 +179,36 @@ OutputManager::OutputManager(
       }
       continue;
     }
+
+    // One touch Autozoom interface setup.
+    if (interface.interface_type() ==
+        PerceptionInterfaceType::INTERFACE_ONE_TOUCH_AUTOZOOM) {
+      (*interfaces_ptr)->one_touch_autozoom_handler_request =
+          mojo::MakeRequest(&one_touch_autozoom_handler_ptr_);
+      one_touch_autozoom_handler_ptr_.set_connection_error_handler(
+          base::Bind(&OnConnectionClosedOrError,
+          "ONE_TOUCH_AUTOZOOM"));
+
+      // One touch Autozoom outputs setup.
+      for (const PipelineOutput& output : interface.output()) {
+        if (output.output_type() ==
+            PipelineOutputType::OUTPUT_SMART_FRAMING) {
+          SerializedSuccessStatus serialized_status =
+              rtanalytics->SetPipelineOutputHandler(
+                  configuration_name, output.stream_name(),
+                  std::bind(&OutputManager::HandleSmartFraming,
+                            this, std::placeholders::_1));
+          SuccessStatus status = Serialized<SuccessStatus>(
+              serialized_status).Deserialize();
+          if (!status.success()) {
+            LOG(ERROR) << "Failed to set output handler for "
+                       << configuration_name << " with output "
+                       << output.stream_name();
+          }
+        }
+      }
+      continue;
+    }
   }
 }
 
@@ -269,6 +299,22 @@ void OutputManager::HandleAppearances(
   }
 
   appearances_handler_ptr_->OnAppearances(bytes);
+}
+
+void OutputManager::HandleSmartFraming(
+    const std::vector<uint8_t>& bytes) {
+  if (!one_touch_autozoom_handler_ptr_.is_bound()) {
+    LOG(WARNING)
+        << "Got smart framing proto but handler ptr is not bound.";
+    return;
+  }
+
+  if (one_touch_autozoom_handler_ptr_.get() == nullptr) {
+    LOG(ERROR) << "Handler ptr is null.";
+    return;
+  }
+
+  one_touch_autozoom_handler_ptr_->OnSmartFraming(bytes);
 }
 
 }  // namespace mri

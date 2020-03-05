@@ -40,6 +40,8 @@ class OutputManager {
 
   void HandleAppearances(const std::vector<uint8_t>& bytes);
 
+  void HandleSmartFraming(const std::vector<uint8_t>& bytes);
+
  private:
   chromeos::media_perception::mojom::FramePerceptionHandlerPtr
       frame_perception_handler_ptr_;
@@ -55,6 +57,9 @@ class OutputManager {
 
   chromeos::media_perception::mojom::AppearancesHandlerPtr
       appearances_handler_ptr_;
+
+  chromeos::media_perception::mojom::OneTouchAutozoomHandlerPtr
+      one_touch_autozoom_handler_ptr_;
 };
 
 }  // namespace mri

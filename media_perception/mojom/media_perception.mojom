@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 //
-// Next MinVersion: 2
+// Next MinVersion: 3
 
 module chromeos.media_perception.mojom;
 
@@ -13,6 +13,7 @@ import "mojom/hotword_detection.mojom";
 import "mojom/occupancy_trigger.mojom";
 import "mojom/pipeline.mojom";
 import "mojom/presence_perception.mojom";
+import "mojom/one_touch_autozoom.mojom";
 
 struct SuccessStatus {
   // Whether or not the action succeeded.
@@ -27,6 +28,7 @@ struct PerceptionInterfaces {
   PresencePerceptionHandler&? presence_perception_handler_request@2;
   OccupancyTriggerHandler&? occupancy_trigger_handler_request@3;
   [MinVersion=1] AppearancesHandler&? appearances_handler_request@4;
+  [MinVersion=2] OneTouchAutozoomHandler&? one_touch_autozoom_handler_request@5;
 };
 
 interface MediaPerception {

@@ -27,7 +27,7 @@ class FramePerceptionHandlerImpl :
   FramePerceptionHandlerImpl(
       chromeos::media_perception::mojom::FramePerceptionHandlerRequest
       request) : binding_(this, std::move(request)) {
-    LOG(INFO) << "Binding is bound: " << binding_.is_bound();
+    EXPECT_TRUE(binding_.is_bound());
   }
 
   void OnFramePerception(
@@ -48,7 +48,7 @@ class HotwordDetectionHandlerImpl :
   HotwordDetectionHandlerImpl(
       chromeos::media_perception::mojom::HotwordDetectionHandlerRequest
       request) : binding_(this, std::move(request)) {
-    LOG(INFO) << "Binding is bound: " << binding_.is_bound();
+    EXPECT_TRUE(binding_.is_bound());
   }
 
   void OnHotwordDetection(
@@ -69,7 +69,7 @@ class PresencePerceptionHandlerImpl :
   PresencePerceptionHandlerImpl(
       chromeos::media_perception::mojom::PresencePerceptionHandlerRequest
       request) : binding_(this, std::move(request)) {
-    LOG(INFO) << "Binding is bound: " << binding_.is_bound();
+    EXPECT_TRUE(binding_.is_bound());
   }
 
   void OnPresencePerception(
@@ -90,7 +90,7 @@ class OccupancyTriggerHandlerImpl :
   OccupancyTriggerHandlerImpl(
       chromeos::media_perception::mojom::OccupancyTriggerHandlerRequest
       request) : binding_(this, std::move(request)) {
-    LOG(INFO) << "Binding is bound: " << binding_.is_bound();
+    EXPECT_TRUE(binding_.is_bound());
   }
 
   void OnOccupancyTrigger(
@@ -111,7 +111,7 @@ class AppearancesHandlerImpl :
   AppearancesHandlerImpl(
       chromeos::media_perception::mojom::AppearancesHandlerRequest
       request) : binding_(this, std::move(request)) {
-    LOG(INFO) << "Binding is bound: " << binding_.is_bound();
+    EXPECT_TRUE(binding_.is_bound());
   }
 
   void OnAppearances(
@@ -122,6 +122,26 @@ class AppearancesHandlerImpl :
   std::vector<uint8_t> appearances_;
 
   mojo::Binding<chromeos::media_perception::mojom::AppearancesHandler>
+      binding_;
+};
+
+class OneTouchAutozoomHandlerImpl :
+  public chromeos::media_perception::mojom::OneTouchAutozoomHandler {
+ public:
+  OneTouchAutozoomHandlerImpl(
+      chromeos::media_perception::mojom::OneTouchAutozoomHandlerRequest
+      request) : binding_(this, std::move(request)) {
+    EXPECT_TRUE(binding_.is_bound());
+  }
+
+  void OnSmartFraming(
+      const std::vector<uint8_t> & smart_framing) override {
+    smart_framing_ = smart_framing;
+  }
+
+  std::vector<uint8_t> smart_framing_;
+
+  mojo::Binding<chromeos::media_perception::mojom::OneTouchAutozoomHandler>
       binding_;
 };
 
@@ -321,6 +341,48 @@ TEST_F(OutputManagerTest, AppearancesOutputManagerTest) {
         << "Bytes and Output Appearances Vector differ at index "<< i;
   }
 }
+
+TEST_F(OutputManagerTest, OneTouchAutozoomOutputManagerTest) {
+  PerceptionInterfaces perception_interfaces;
+  PerceptionInterface* interface = perception_interfaces.add_interface();
+  interface->set_interface_type(
+      PerceptionInterfaceType::INTERFACE_ONE_TOUCH_AUTOZOOM);
+  PipelineOutput* output = interface->add_output();
+  output->set_output_type(
+      PipelineOutputType::OUTPUT_SMART_FRAMING);
+  output->set_stream_name("fake_stream_name");
+
+  chromeos::media_perception::mojom::PerceptionInterfacesPtr interfaces_ptr =
+      chromeos::media_perception::mojom::PerceptionInterfaces::New();
+
+  OutputManager output_manager(
+      "fake_one_touch_autozoom_configuration",
+      rtanalytics_,
+      perception_interfaces,
+      &interfaces_ptr);
+
+  EXPECT_TRUE(interfaces_ptr->one_touch_autozoom_handler_request.is_pending());
+  EXPECT_EQ(fake_rtanalytics_->GetMostRecentOutputStreamName(),
+            "fake_stream_name");
+
+  OneTouchAutozoomHandlerImpl one_touch_autozoom_handler_impl(
+      std::move(interfaces_ptr->one_touch_autozoom_handler_request));
+  base::RunLoop().RunUntilIdle();
+
+  std::vector<uint8_t> bytes {0, 1, 2, 3, 1, 2, 3, 2, 1};
+
+  output_manager.HandleSmartFraming(bytes);
+  base::RunLoop().RunUntilIdle();
+
+  ASSERT_EQ(one_touch_autozoom_handler_impl.smart_framing_.size(), bytes.size())
+      << "Vectors are of unequal length.";
+
+  for (int i = 0; i < bytes.size(); ++i) {
+    EXPECT_EQ(one_touch_autozoom_handler_impl.smart_framing_[i], bytes[i])
+        << "Bytes and Output Appearances Vector differ at index "<< i;
+  }
+}
+
 
 }  // namespace
 }  // namespace mri
