@@ -62,3 +62,7 @@ rt_sigreturn: 1
 gettid: 1
 nanosleep: 1
 gettimeofday: 1
+clock_gettime: 1
+madvise: 1
+mlock: 1
+munlock: 1

@@ -65,3 +65,6 @@ restart_syscall: 1
 exit: 1
 exit_group: 1
 rt_sigreturn: 1
+madvise: 1
+mlock: 1
+munlock: 1
