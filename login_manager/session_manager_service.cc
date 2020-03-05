@@ -342,9 +342,6 @@ bool SessionManagerService::HandleExit(const siginfo_t& status) {
   android_container_->RequestJobExit(ArcContainerStopReason::BROWSER_SHUTDOWN);
   android_container_->EnsureJobExit(SessionManagerImpl::kContainerTimeout);
 
-  // Stop any running VMs.
-  MaybeStopAllVms();
-
   // Do nothing if already shutting down.
   if (shutting_down_)
     return true;
@@ -520,6 +517,9 @@ void SessionManagerService::SetExitAndScheduleShutdown(ExitCode code) {
     exit_type = LoginMetrics::SessionExitType::LOGIN_CRASH_LOOP;
   }
   login_metrics_->SendSessionExitType(exit_type);
+
+  // Stop the VMs from this session as their data will no longer be accessible.
+  MaybeStopAllVms();
 
   shutting_down_ = true;
   exit_code_ = code;
