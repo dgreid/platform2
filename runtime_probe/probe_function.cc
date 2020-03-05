@@ -12,6 +12,7 @@
 #include <vector>
 
 #include <base/files/file_util.h>
+#include <base/json/json_reader.h>
 #include <base/json/json_writer.h>
 #include <base/values.h>
 #include <chromeos/dbus/service_constants.h>
@@ -177,6 +178,14 @@ bool ProbeFunction::InvokeHelper(std::string* result) const {
     return false;
   }
   return true;
+}
+
+std::unique_ptr<base::Value> ProbeFunction::InvokeHelperToJSON() const {
+  std::string raw_output;
+  if (!InvokeHelper(&raw_output)) {
+    return nullptr;
+  }
+  return base::JSONReader::Read(raw_output);
 }
 
 int ProbeFunction::EvalInHelper(std::string* output) const {

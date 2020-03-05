@@ -8,7 +8,6 @@
 
 #include <base/files/file_enumerator.h>
 #include <base/files/file_util.h>
-#include <base/json/json_reader.h>
 #include <base/json/json_writer.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/optional.h>
@@ -116,14 +115,13 @@ int32_t StorageFunction::GetStorageLogicalBlockSize(
 
 StorageFunction::DataType StorageFunction::Eval() const {
   DataType result{};
-  std::string json_output;
-  if (!InvokeHelper(&json_output)) {
+  auto json_output = InvokeHelperToJSON();
+  if (!json_output) {
     LOG(ERROR)
         << "Failed to invoke helper to retrieve cached storage information.";
     return result;
   }
-  const auto storage_results =
-      base::ListValue::From(base::JSONReader::Read(json_output));
+  const auto storage_results = base::ListValue::From(std::move(json_output));
 
   for (int i = 0; i < storage_results->GetSize(); i++) {
     base::DictionaryValue* storage_res;

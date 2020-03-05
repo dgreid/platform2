@@ -6,7 +6,6 @@
 
 #include <utility>
 
-#include <base/json/json_reader.h>
 #include <base/json/json_writer.h>
 
 #include "runtime_probe/utils/file_utils.h"
@@ -18,12 +17,12 @@ using base::Value;
 
 VPDCached::DataType VPDCached::Eval() const {
   DataType result;
-  std::string json_output;
-  if (!InvokeHelper(&json_output)) {
+  auto json_output = InvokeHelperToJSON();
+  if (!json_output) {
     LOG(ERROR) << "Failed to invoke helper to retrieve cached vpd information.";
     return result;
   }
-  auto vpd_results = base::ListValue::From(base::JSONReader::Read(json_output));
+  auto vpd_results = base::ListValue::From(std::move(json_output));
 
   for (int i = 0; i < vpd_results->GetSize(); i++) {
     base::DictionaryValue* vpd_res;

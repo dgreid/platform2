@@ -11,7 +11,6 @@
 #include <base/files/file_enumerator.h>
 #include <base/files/file_path.h>
 #include <base/files/file_util.h>
-#include <base/json/json_reader.h>
 #include <base/json/json_writer.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/values.h>
@@ -23,13 +22,12 @@ namespace runtime_probe {
 
 GenericBattery::DataType GenericBattery::Eval() const {
   DataType result{};
-  std::string json_output;
-  if (!InvokeHelper(&json_output)) {
+  auto json_output = InvokeHelperToJSON();
+  if (!json_output) {
     LOG(ERROR) << "Failed to invoke helper to retrieve battery sysfs results.";
     return result;
   }
-  auto battery_results =
-      base::ListValue::From(base::JSONReader::Read(json_output));
+  auto battery_results = base::ListValue::From(std::move(json_output));
 
   for (int i = 0; i < battery_results->GetSize(); ++i) {
     base::DictionaryValue* battery_res;

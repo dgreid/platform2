@@ -7,7 +7,6 @@
 #include <utility>
 
 #include <base/files/file_util.h>
-#include <base/json/json_reader.h>
 #include <base/json/json_writer.h>
 #include <base/values.h>
 #include <brillo/dbus/dbus_connection.h>
@@ -85,15 +84,14 @@ std::vector<brillo::VariantDictionary> NetworkFunction::GetDevicesProps(
 
 NetworkFunction::DataType NetworkFunction::Eval() const {
   DataType result{};
-  std::string json_output;
-  if (!InvokeHelper(&json_output)) {
+  auto json_output = InvokeHelperToJSON();
+  if (!json_output) {
     LOG(ERROR)
         << "Failed to invoke helper to retrieve cached network information.";
     return result;
   }
 
-  const auto network_results =
-      base::ListValue::From(base::JSONReader::Read(json_output));
+  const auto network_results = base::ListValue::From(std::move(json_output));
 
   if (!network_results) {
     LOG(ERROR) << "Failed to parse output from " << GetFunctionName()
