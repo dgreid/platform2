@@ -125,8 +125,10 @@ bool HomeDirs::Init(Platform* platform, Crypto* crypto,
   timestamp_cache_ = cache;
 
   LoadDevicePolicy();
-  if (!platform_->DirectoryExists(shadow_root_))
+  if (!platform_->DirectoryExists(shadow_root_)) {
     platform_->CreateDirectory(shadow_root_);
+    platform_->RestoreSELinuxContexts(shadow_root_, true);
+  }
   return GetSystemSalt(NULL);
 }
 

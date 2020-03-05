@@ -21,11 +21,5 @@ int main(int argc, char** argv) {
     LOG(ERROR) << "Cannot initialize home dirs.";
     return 1;
   }
-  constexpr char kShadowDir[] = "/home/.shadow";
-  if (!platform.RestoreSELinuxContexts(base::FilePath(kShadowDir), true)) {
-    LOG(ERROR) << "Failed to restore file contexts";
-    return 1;
-  }
-
   return 0;
 }
