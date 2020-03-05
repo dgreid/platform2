@@ -80,6 +80,15 @@ class BRILLO_PRIVATE SecureAllocator : public std::allocator<T> {
     // Check if n can be theoretically allocated.
     CHECK_LT(n, max_size());
 
+    // std::allocator is expected to throw a std::bad_alloc on failing to
+    // allocate the memory correctly. Instead of returning a nullptr, which
+    // confuses the standard template library, use CHECK(false) to crash on
+    // the failure path.
+    base::ScopedClosureRunner fail_on_allocation_error(base::Bind([]() {
+      PLOG(ERROR) << "Failed to allocate secure memory";
+      CHECK(false);
+    }));
+
     // Check if n = 0: there's nothing to allocate;
     if (n == 0)
       return nullptr;
@@ -95,15 +104,8 @@ class BRILLO_PRIVATE SecureAllocator : public std::allocator<T> {
       return nullptr;
 
     // Lock buffer into physical memory.
-    if (mlock(buffer, buffer_size)) {
-      munmap(buffer, buffer_size);
+    if (mlock(buffer, buffer_size))
       return nullptr;
-    }
-
-    // Deallocate buffer on the return path if any operation fails.
-    base::ScopedClosureRunner buffer_cleanup_closure_runner(
-        base::Bind(&SecureAllocator<T>::deallocate, base::Unretained(this),
-                   buffer, buffer_size));
 
     // Mark memory as non dumpable in a core dump.
     if (madvise(buffer, buffer_size, MADV_DONTDUMP))
@@ -132,7 +134,7 @@ class BRILLO_PRIVATE SecureAllocator : public std::allocator<T> {
     if (madvise(buffer, buffer_size, MADV_WIPEONFORK))
       return nullptr;
 
-    ignore_result(buffer_cleanup_closure_runner.Release());
+    ignore_result(fail_on_allocation_error.Release());
 
     // Allocation was successful.
     return buffer;
