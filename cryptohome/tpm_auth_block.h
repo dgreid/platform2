@@ -22,7 +22,7 @@ namespace cryptohome {
 
 class TpmAuthBlock : public AuthBlock {
  public:
-  TpmAuthBlock(bool is_pcr_extended, Tpm* tpm, TpmInit* tpm_init);
+  TpmAuthBlock(Tpm* tpm, TpmInit* tpm_init);
 
   bool Derive(const AuthInput& user_input,
               const AuthBlockState& state,
@@ -60,7 +60,6 @@ class TpmAuthBlock : public AuthBlock {
                             brillo::SecureBlob* vkk_iv,
                             brillo::SecureBlob* vkk_key) const;
 
-  bool is_pcr_extended_;
   Tpm* tpm_;
   TpmInit* tpm_init_;
 

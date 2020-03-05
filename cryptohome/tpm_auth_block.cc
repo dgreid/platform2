@@ -52,8 +52,8 @@ bool TpmErrorIsRetriable(Tpm::TpmRetryAction retry_action) {
 
 }  // namespace
 
-TpmAuthBlock::TpmAuthBlock(bool is_pcr_extended, Tpm* tpm, TpmInit* tpm_init)
-    : is_pcr_extended_(is_pcr_extended), tpm_(tpm), tpm_init_(tpm_init) {
+TpmAuthBlock::TpmAuthBlock(Tpm* tpm, TpmInit* tpm_init)
+    : tpm_(tpm), tpm_init_(tpm_init) {
   CHECK(tpm != nullptr);
   CHECK(tpm_init_ != nullptr);
 }
@@ -110,9 +110,10 @@ bool TpmAuthBlock::Derive(const AuthInput& user_input,
   key_out_data->vkk_iv = brillo::SecureBlob(kAesBlockSize);
   key_out_data->vkk_key = brillo::SecureBlob(kDefaultAesKeySize);
 
+  bool is_pcr_extended = user_input.is_pcr_extended.value_or(false);
   brillo::SecureBlob salt(serialized.salt().begin(), serialized.salt().end());
   brillo::SecureBlob tpm_key =
-      GetTpmKeyFromSerialized(serialized, is_pcr_extended_);
+      GetTpmKeyFromSerialized(serialized, is_pcr_extended);
   bool is_pcr_bound = serialized.flags() & SerializedVaultKeyset::PCR_BOUND;
   if (is_pcr_bound) {
     if (!DecryptTpmBoundToPcr(user_input.user_input.value(), tpm_key, salt,

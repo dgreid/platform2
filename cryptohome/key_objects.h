@@ -15,6 +15,8 @@ namespace cryptohome {
 struct AuthInput {
   // The user input, such as password.
   base::Optional<brillo::SecureBlob> user_input;
+  // Whether or not the PCR is extended, this is usually false.
+  base::Optional<bool> is_pcr_extended;
 };
 
 // This struct is populated by the various authentication methods, with the

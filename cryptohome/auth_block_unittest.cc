@@ -126,7 +126,7 @@ TEST(TPMAuthBlockTest, DecryptBoundToPcrTest) {
       .Times(Exactly(1));
 
   CryptoError error = CryptoError::CE_NONE;
-  TpmAuthBlock tpm_auth_block(/*is_pcr_extended=*/false, &tpm, &tpm_init);
+  TpmAuthBlock tpm_auth_block(&tpm, &tpm_init);
   EXPECT_TRUE(tpm_auth_block.DecryptTpmBoundToPcr(vault_key, tpm_key, salt,
                                                   &error, &vkk_iv, &vkk_key));
   EXPECT_EQ(CryptoError::CE_NONE, error);
@@ -154,7 +154,7 @@ TEST(TPMAuthBlockTest, DecryptNotBoundToPcrTest) {
   EXPECT_CALL(tpm, DecryptBlob(_, tpm_key, aes_key, _, _)).Times(Exactly(1));
 
   CryptoError error = CryptoError::CE_NONE;
-  TpmAuthBlock tpm_auth_block(/*is_pcr_extended=*/false, &tpm, &tpm_init);
+  TpmAuthBlock tpm_auth_block(&tpm, &tpm_init);
   EXPECT_TRUE(tpm_auth_block.DecryptTpmNotBoundToPcr(
       serialized, vault_key, tpm_key, salt, &error, &vkk_iv, &vkk_key));
   EXPECT_EQ(CryptoError::CE_NONE, error);
@@ -178,10 +178,13 @@ TEST(TpmAuthBlockTest, DeriveTest) {
   NiceMock<MockTpmInit> tpm_init;
   EXPECT_CALL(tpm, UnsealWithAuthorization(_, _, _, _, _)).Times(Exactly(1));
 
-  TpmAuthBlock auth_block(/*is_pcr_extended=*/false, &tpm, &tpm_init);
+  TpmAuthBlock auth_block(&tpm, &tpm_init);
 
   KeyBlobs key_out_data;
-  AuthInput user_input = {key};
+  AuthInput user_input;
+  user_input.user_input = key;
+  user_input.is_pcr_extended = false;
+
   AuthBlockState auth_state = {
       base::make_optional<SerializedVaultKeyset>(std::move(serialized))};
   CryptoError error;

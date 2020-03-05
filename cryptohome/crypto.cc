@@ -475,9 +475,12 @@ bool Crypto::DecryptVaultKeyset(const SerializedVaultKeyset& serialized,
 
   if (flags & SerializedVaultKeyset::TPM_WRAPPED) {
     KeyBlobs vkk_data;
-    AuthInput user_input = { vault_key };
+    AuthInput user_input;
+    user_input.user_input = vault_key;
+    user_input.is_pcr_extended = is_pcr_extended;
+
     AuthBlockState auth_state = { serialized };
-    TpmAuthBlock tpm_auth(is_pcr_extended, tpm_, tpm_init_);
+    TpmAuthBlock tpm_auth(tpm_, tpm_init_);
     if (!tpm_auth.Derive(user_input, auth_state, &vkk_data, error)) {
       return false;
     }
