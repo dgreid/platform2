@@ -28,6 +28,9 @@ class FakeShillClient : public ShillClient {
   explicit FakeShillClient(scoped_refptr<dbus::Bus> bus) : ShillClient(bus) {}
 
   std::string GetDefaultInterface() override { return fake_default_ifname_; }
+  const std::string& default_interface() const override {
+    return fake_default_ifname_;
+  }
 
   void SetFakeDefaultInterface(const std::string& ifname) {
     fake_default_ifname_ = ifname;

@@ -117,7 +117,9 @@ class ArcService {
   // Encapsulates all ARC VM-specific logic.
   class VmImpl : public Impl {
    public:
-    VmImpl(DeviceManagerBase* dev_mgr, Datapath* datapath);
+    VmImpl(ShillClient* shill_client,
+           DeviceManagerBase* dev_mgr,
+           Datapath* datapath);
     ~VmImpl() = default;
 
     GuestMessage::GuestType guest() const override;
@@ -133,6 +135,7 @@ class ArcService {
 
    private:
     uint32_t cid_;
+    const ShillClient* const shill_client_;
     DeviceManagerBase* dev_mgr_;
     Datapath* datapath_;
     std::string tap_;

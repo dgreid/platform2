@@ -54,9 +54,6 @@ class DeviceManagerBase {
                                           const DeviceHandler& handler) = 0;
   virtual void RegisterDeviceRemovedHandler(GuestMessage::GuestType guest,
                                             const DeviceHandler& handler) = 0;
-  virtual void RegisterDefaultInterfaceChangedHandler(
-      GuestMessage::GuestType guest,
-      const ShillClient::DefaultInterfaceChangeHandler& handler) = 0;
   virtual void UnregisterAllGuestHandlers(GuestMessage::GuestType guest) = 0;
 
   // Invoked when a guest starts or stops.
@@ -71,8 +68,6 @@ class DeviceManagerBase {
 
   virtual Device* FindByHostInterface(const std::string& ifname) const = 0;
   virtual Device* FindByGuestInterface(const std::string& ifname) const = 0;
-
-  virtual const std::string& DefaultInterface() const = 0;
 
   virtual bool Add(const std::string& name) = 0;
   virtual bool AddWithContext(const std::string& name,
@@ -109,9 +104,6 @@ class DeviceManager : public DeviceManagerBase {
                                   const DeviceHandler& handler) override;
   void RegisterDeviceRemovedHandler(GuestMessage::GuestType guest,
                                     const DeviceHandler& handler) override;
-  void RegisterDefaultInterfaceChangedHandler(
-      GuestMessage::GuestType guest,
-      const ShillClient::DefaultInterfaceChangeHandler& handler) override;
   void UnregisterAllGuestHandlers(GuestMessage::GuestType guest) override;
 
   // Invoked when a guest starts or stops.
@@ -126,8 +118,6 @@ class DeviceManager : public DeviceManagerBase {
 
   Device* FindByHostInterface(const std::string& ifname) const override;
   Device* FindByGuestInterface(const std::string& ifname) const override;
-
-  const std::string& DefaultInterface() const override;
 
   // Returns a new fully configured device.
   // Note this is public mainly for testing and should not be called directly.
@@ -168,8 +158,6 @@ class DeviceManager : public DeviceManagerBase {
   // |devices_|.
   std::map<GuestMessage::GuestType, DeviceHandler> add_handlers_;
   std::map<GuestMessage::GuestType, DeviceHandler> rm_handlers_;
-  std::map<GuestMessage::GuestType, ShillClient::DefaultInterfaceChangeHandler>
-      default_iface_handlers_;
 
   // Connected devices keyed by the interface name.
   // The legacy device is mapped to the Android interface name.
@@ -177,8 +165,6 @@ class DeviceManager : public DeviceManagerBase {
 
   Datapath* datapath_;
   TrafficForwarder* forwarder_;
-
-  std::string default_ifname_;
 
   base::WeakPtrFactory<DeviceManager> weak_factory_{this};
   DISALLOW_COPY_AND_ASSIGN(DeviceManager);

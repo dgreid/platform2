@@ -49,9 +49,6 @@ class MockDeviceManager : public DeviceManagerBase {
                void(GuestMessage::GuestType, const DeviceHandler&));
   MOCK_METHOD2(RegisterDeviceRemovedHandler,
                void(GuestMessage::GuestType, const DeviceHandler&));
-  MOCK_METHOD2(RegisterDefaultInterfaceChangedHandler,
-               void(GuestMessage::GuestType,
-                    const ShillClient::DefaultInterfaceChangeHandler&));
   MOCK_METHOD2(RegisterDeviceIPv6AddressFoundHandler,
                void(GuestMessage::GuestType, const DeviceHandler&));
   MOCK_METHOD1(UnregisterAllGuestHandlers, void(GuestMessage::GuestType));
@@ -61,7 +58,6 @@ class MockDeviceManager : public DeviceManagerBase {
   MOCK_CONST_METHOD1(Exists, bool(const std::string& name));
   MOCK_CONST_METHOD1(FindByHostInterface, Device*(const std::string& ifname));
   MOCK_CONST_METHOD1(FindByGuestInterface, Device*(const std::string& ifname));
-  MOCK_CONST_METHOD0(DefaultInterface, const std::string&());
   MOCK_METHOD1(Add, bool(const std::string&));
   MOCK_METHOD2(AddWithContext,
                bool(const std::string&, std::unique_ptr<Device::Context>));
@@ -111,7 +107,6 @@ class ArcServiceTest : public testing::Test {
   std::unique_ptr<ArcService> NewService() {
     EXPECT_CALL(dev_mgr_, RegisterDeviceAddedHandler(_, _));
     EXPECT_CALL(dev_mgr_, RegisterDeviceRemovedHandler(_, _));
-    EXPECT_CALL(dev_mgr_, RegisterDefaultInterfaceChangedHandler(_, _));
     EXPECT_CALL(dev_mgr_, UnregisterAllGuestHandlers(_));
     EXPECT_CALL(dev_mgr_, addr_mgr()).WillRepeatedly(Return(&addr_mgr_));
 
@@ -295,14 +290,14 @@ class VmImplTest : public testing::Test {
     runner_ = std::make_unique<FakeProcessRunner>();
     runner_->Capture(false);
     datapath_ = std::make_unique<MockDatapath>(runner_.get());
+    shill_client_ = helper_.FakeClient();
+    shill_client_->SetFakeDefaultInterface("eth0");
     EXPECT_CALL(dev_mgr_, addr_mgr()).WillRepeatedly(Return(&addr_mgr_));
-    static const std::string eth0 = "eth0";
-    EXPECT_CALL(dev_mgr_, DefaultInterface()).WillRepeatedly(ReturnRef(eth0));
   }
 
   std::unique_ptr<ArcService::VmImpl> Impl(bool start = true) {
-    auto impl =
-        std::make_unique<ArcService::VmImpl>(&dev_mgr_, datapath_.get());
+    auto impl = std::make_unique<ArcService::VmImpl>(
+        shill_client_.get(), &dev_mgr_, datapath_.get());
     if (start) {
       impl->Start(kTestCID);
     }
@@ -314,6 +309,8 @@ class VmImplTest : public testing::Test {
   MockDeviceManager dev_mgr_;
   std::unique_ptr<MockDatapath> datapath_;
   std::unique_ptr<FakeProcessRunner> runner_;
+  std::unique_ptr<FakeShillClient> shill_client_;
+  FakeShillClientHelper helper_;
 };
 
 TEST_F(VmImplTest, Start) {

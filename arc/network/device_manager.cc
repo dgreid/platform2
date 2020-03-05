@@ -54,8 +54,6 @@ DeviceManager::DeviceManager(ShillClient* shill_client,
   DCHECK(datapath_);
   DCHECK(forwarder_);
 
-  shill_client_->RegisterDefaultInterfaceChangedHandler(base::Bind(
-      &DeviceManager::OnDefaultInterfaceChanged, weak_factory_.GetWeakPtr()));
   shill_client_->RegisterDevicesChangedHandler(
       base::Bind(&DeviceManager::OnDevicesChanged, weak_factory_.GetWeakPtr()));
   shill_client_->ScanDevices(
@@ -100,16 +98,9 @@ void DeviceManager::RegisterDeviceRemovedHandler(GuestMessage::GuestType guest,
   rm_handlers_[guest] = handler;
 }
 
-void DeviceManager::RegisterDefaultInterfaceChangedHandler(
-    GuestMessage::GuestType guest,
-    const ShillClient::DefaultInterfaceChangeHandler& handler) {
-  default_iface_handlers_[guest] = handler;
-}
-
 void DeviceManager::UnregisterAllGuestHandlers(GuestMessage::GuestType guest) {
   add_handlers_.erase(guest);
   rm_handlers_.erase(guest);
-  default_iface_handlers_.erase(guest);
 }
 
 void DeviceManager::ProcessDevices(const DeviceHandler& handler) {
@@ -200,10 +191,6 @@ bool DeviceManager::Exists(const std::string& name) const {
   return devices_.find(name) != devices_.end();
 }
 
-const std::string& DeviceManager::DefaultInterface() const {
-  return default_ifname_;
-}
-
 std::unique_ptr<Device> DeviceManager::MakeDevice(
     const std::string& ifname) const {
   DCHECK(!ifname.empty());
@@ -247,28 +234,6 @@ std::unique_ptr<Device> DeviceManager::MakeDevice(
 
   return std::make_unique<Device>(ifname, std::move(config), opts,
                                   GuestMessage::ARC);
-}
-
-void DeviceManager::OnDefaultInterfaceChanged(const std::string& new_ifname,
-                                              const std::string& prev_ifname) {
-  if (new_ifname == default_ifname_)
-    return;
-
-  for (const auto& d : devices_) {
-    if (d.second->UsesDefaultInterface())
-      StopForwarding(*d.second, prev_ifname);
-  }
-
-  default_ifname_ = new_ifname;
-
-  for (const auto& d : devices_) {
-    if (d.second->UsesDefaultInterface())
-      StartForwarding(*d.second, new_ifname);
-  }
-
-  for (const auto& h : default_iface_handlers_) {
-    h.second.Run(new_ifname, prev_ifname);
-  }
 }
 
 void DeviceManager::StartForwarding(const Device& device,

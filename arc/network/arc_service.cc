@@ -171,9 +171,9 @@ ArcService::ArcService(ShillClient* shill_client,
   dev_mgr_->RegisterDeviceRemovedHandler(
       GuestMessage::ARC,
       base::Bind(&ArcService::OnDeviceRemoved, base::Unretained(this)));
-  dev_mgr_->RegisterDefaultInterfaceChangedHandler(
-      GuestMessage::ARC, base::Bind(&ArcService::OnDefaultInterfaceChanged,
-                                    base::Unretained(this)));
+
+  shill_client_->RegisterDefaultInterfaceChangedHandler(base::Bind(
+      &ArcService::OnDefaultInterfaceChanged, weak_factory_.GetWeakPtr()));
 }
 
 ArcService::~ArcService() {
@@ -199,7 +199,7 @@ bool ArcService::Start(uint32_t id) {
 
   const auto guest = ArcGuest();
   if (guest == GuestMessage::ARC_VM)
-    impl_ = std::make_unique<VmImpl>(dev_mgr_, datapath_);
+    impl_ = std::make_unique<VmImpl>(shill_client_, dev_mgr_, datapath_);
   else
     impl_ = std::make_unique<ContainerImpl>(dev_mgr_, datapath_, guest);
 
@@ -602,17 +602,17 @@ void ArcService::ContainerImpl::LinkMsgHandler(const shill::RTNLMessage& msg) {
     return;
   }
   LOG(INFO) << ifname << " is now up";
-
-  if (device->UsesDefaultInterface()) {
-    OnDefaultInterfaceChanged(dev_mgr_->DefaultInterface(), "" /*previous*/);
-    return;
-  }
 }
 
 // VM specific functions
 
-ArcService::VmImpl::VmImpl(DeviceManagerBase* dev_mgr, Datapath* datapath)
-    : cid_(kInvalidCID), dev_mgr_(dev_mgr), datapath_(datapath) {}
+ArcService::VmImpl::VmImpl(ShillClient* shill_client,
+                           DeviceManagerBase* dev_mgr,
+                           Datapath* datapath)
+    : cid_(kInvalidCID),
+      shill_client_(shill_client),
+      dev_mgr_(dev_mgr),
+      datapath_(datapath) {}
 
 GuestMessage::GuestType ArcService::VmImpl::guest() const {
   return GuestMessage::ARC_VM;
@@ -728,7 +728,8 @@ bool ArcService::VmImpl::OnStartDevice(Device* device) {
   ctx->Start();
   // TODO(garrick): Remove this once ARCVM supports ad hoc interface
   // configurations; but for now ARCVM needs to be treated like ARC++ N.
-  OnDefaultInterfaceChanged(dev_mgr_->DefaultInterface(), "" /*previous*/);
+  OnDefaultInterfaceChanged(shill_client_->default_interface(),
+                            "" /*previous*/);
   return true;
 }
 
@@ -752,7 +753,8 @@ void ArcService::VmImpl::OnStopDevice(Device* device) {
 
   // TODO(garrick): Remove this once ARCVM supports ad hoc interface
   // configurations; but for now ARCVM needs to be treated like ARC++ N.
-  OnDefaultInterfaceChanged("" /*new_ifname*/, dev_mgr_->DefaultInterface());
+  OnDefaultInterfaceChanged("" /*new_ifname*/,
+                            shill_client_->default_interface());
   datapath_->RemoveInterface(ctx->TAP());
   ctx->Stop();
 }
