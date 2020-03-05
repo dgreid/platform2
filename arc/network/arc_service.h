@@ -10,8 +10,6 @@
 #include <string>
 
 #include <base/memory/weak_ptr.h>
-#include <shill/net/rtnl_handler.h>
-#include <shill/net/rtnl_listener.h>
 
 #include "arc/network/datapath.h"
 #include "arc/network/device.h"
@@ -33,10 +31,6 @@ class ArcService {
     void Stop();
     bool IsStarted() const;
 
-    bool IsLinkUp() const override;
-    // Returns true if the internal state changed.
-    bool SetLinkUp(bool link_up);
-
     // For ARCVM only.
     const std::string& TAP() const;
     void SetTAP(const std::string& tap);
@@ -44,8 +38,6 @@ class ArcService {
    private:
     // Indicates the device was started.
     bool started_;
-    // Indicates Android has brought up the interface.
-    bool link_up_;
     // For ARCVM, the name of the bound TAP device.
     std::string tap_;
   };
@@ -96,19 +88,10 @@ class ArcService {
                                    const std::string& prev_ifname) override;
 
    private:
-    // Handles RT netlink messages in the container net namespace and if it
-    // determines the link status has changed, toggles the device services
-    // accordingly.
-    void LinkMsgHandler(const shill::RTNLMessage& msg);
-
     uint32_t pid_;
     DeviceManagerBase* dev_mgr_;
     Datapath* datapath_;
     GuestMessage::GuestType guest_;
-
-    // These are installed in the ARC net namespace.
-    std::unique_ptr<shill::RTNLHandler> rtnl_handler_;
-    std::unique_ptr<shill::RTNLListener> link_listener_;
 
     base::WeakPtrFactory<ContainerImpl> weak_factory_{this};
     DISALLOW_COPY_AND_ASSIGN(ContainerImpl);

@@ -80,9 +80,7 @@ bool Device::UsesDefaultInterface() const {
   return options_.use_default_interface;
 }
 
-void Device::OnGuestStart(GuestMessage::GuestType guest) {
-  host_link_up_ = false;
-}
+void Device::OnGuestStart(GuestMessage::GuestType guest) {}
 
 void Device::OnGuestStop(GuestMessage::GuestType guest) {}
 

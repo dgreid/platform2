@@ -19,7 +19,6 @@
 #include <base/strings/stringprintf.h>
 #include <brillo/key_value_store.h>
 #include <chromeos/constants/vm_tools.h>
-#include <shill/net/rtnl_message.h>
 
 #include "arc/network/datapath.h"
 #include "arc/network/mac_address_generator.h"
@@ -41,19 +40,6 @@ constexpr char kArcIfname[] = "arc0";
 constexpr char kArcBridge[] = "arcbr0";
 constexpr char kArcVmIfname[] = "arc1";
 constexpr char kArcVmBridge[] = "arc_br1";
-
-// This wrapper is required since the base class is a singleton that hides its
-// constructor. It is necessary here because the message loop thread has to be
-// reassociated to the container's network namespace; and since the container
-// can be repeatedly created and destroyed, the handler must be as well.
-class RTNetlinkHandler : public shill::RTNLHandler {
- public:
-  RTNetlinkHandler() = default;
-  ~RTNetlinkHandler() = default;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(RTNetlinkHandler);
-};
 
 void OneTimeSetup(const Datapath& datapath) {
   static bool done = false;
@@ -358,23 +344,10 @@ void ArcService::Context::Start() {
 
 void ArcService::Context::Stop() {
   started_ = false;
-  link_up_ = false;
 }
 
 bool ArcService::Context::IsStarted() const {
   return started_;
-}
-
-bool ArcService::Context::IsLinkUp() const {
-  return link_up_;
-}
-
-bool ArcService::Context::SetLinkUp(bool link_up) {
-  if (link_up == link_up_)
-    return false;
-
-  link_up_ = link_up;
-  return true;
 }
 
 const std::string& ArcService::Context::TAP() const {
@@ -414,27 +387,6 @@ bool ArcService::ContainerImpl::Start(uint32_t pid) {
   }
   pid_ = pid;
 
-  // Start listening for RTNetlink messages in the container's net namespace
-  // to be notified whenever it brings up an interface.
-  if (pid_ != kTestPID) {
-    ScopedNS ns(pid_);
-    if (ns.IsValid()) {
-      rtnl_handler_ = std::make_unique<RTNetlinkHandler>();
-      rtnl_handler_->Start(RTMGRP_LINK);
-      link_listener_ = std::make_unique<shill::RTNLListener>(
-          shill::RTNLHandler::kRequestLink,
-          Bind(&ArcService::ContainerImpl::LinkMsgHandler,
-               weak_factory_.GetWeakPtr()),
-          rtnl_handler_.get());
-    } else {
-      // This is bad - it means we won't ever be able to tell when the container
-      // brings up an interface.
-      LOG(ERROR)
-          << "Cannot start netlink listener - invalid container namespace?";
-      return false;
-    }
-  }
-
   Device::Options opts{
       .fwd_multicast = false,
       .ipv6_enabled = false,
@@ -466,12 +418,6 @@ bool ArcService::ContainerImpl::Start(uint32_t pid) {
 void ArcService::ContainerImpl::Stop(uint32_t /*pid*/) {
   if (!IsStarted())
     return;
-
-  if (pid_ != kTestPID) {
-    rtnl_handler_->RemoveListener(link_listener_.get());
-    link_listener_.reset();
-    rtnl_handler_.reset();
-  }
 
   // Per crbug/1008686 this device cannot be deleted and then re-added.
   // So instead of removing the bridge, bring it down and mark it. This will
@@ -572,37 +518,6 @@ void ArcService::ContainerImpl::OnStopDevice(Device* device) {
 
 void ArcService::ContainerImpl::OnDefaultInterfaceChanged(
     const std::string& new_ifname, const std::string& prev_ifname) {}
-
-void ArcService::ContainerImpl::LinkMsgHandler(const shill::RTNLMessage& msg) {
-  if (!msg.HasAttribute(IFLA_IFNAME)) {
-    LOG(ERROR) << "Link event message does not have IFLA_IFNAME";
-    return;
-  }
-  bool link_up = msg.link_status().flags & IFF_UP;
-  shill::ByteString b(msg.GetAttribute(IFLA_IFNAME));
-  std::string ifname(reinterpret_cast<const char*>(
-      b.GetSubstring(0, IFNAMSIZ).GetConstData()));
-
-  auto* device = dev_mgr_->FindByGuestInterface(ifname);
-  if (!device)
-    return;
-
-  Context* ctx = dynamic_cast<Context*>(device->context());
-  if (!ctx) {
-    LOG(DFATAL) << "Context missing";
-    return;
-  }
-
-  // If the link status is unchanged, there is nothing to do.
-  if (!ctx->SetLinkUp(link_up))
-    return;
-
-  if (!link_up) {
-    LOG(INFO) << ifname << " is now down";
-    return;
-  }
-  LOG(INFO) << ifname << " is now up";
-}
 
 // VM specific functions
 

@@ -36,7 +36,6 @@ class Device {
   class Context {
    public:
     virtual ~Context() = default;
-    virtual bool IsLinkUp() const = 0;
 
    protected:
     Context() = default;
