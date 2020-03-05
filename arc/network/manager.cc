@@ -238,8 +238,9 @@ void Manager::InitialSetup() {
   device_mgr_ = std::make_unique<DeviceManager>(shill_client_.get(), &addr_mgr_,
                                                 datapath_.get(), forwarder);
 
-  arc_svc_ = std::make_unique<ArcService>(shill_client_.get(),
-                                          device_mgr_.get(), datapath_.get());
+  arc_svc_ =
+      std::make_unique<ArcService>(shill_client_.get(), device_mgr_.get(),
+                                   datapath_.get(), &addr_mgr_, forwarder);
   cros_svc_ = std::make_unique<CrostiniService>(shill_client_.get(), &addr_mgr_,
                                                 datapath_.get(), forwarder);
 

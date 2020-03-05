@@ -78,8 +78,6 @@ class DeviceManagerBase {
                                const std::string& ifname) = 0;
   virtual void StopForwarding(const Device& device,
                               const std::string& ifname) = 0;
-
-  virtual AddressManager* addr_mgr() const = 0;
 };
 
 // Convenience class for managing the collection of host devices and their
@@ -133,8 +131,6 @@ class DeviceManager : public DeviceManagerBase {
   void StartForwarding(const Device& device,
                        const std::string& ifname) override;
   void StopForwarding(const Device& device, const std::string& ifname) override;
-
-  AddressManager* addr_mgr() const override;
 
  private:
   // Callback from ShillClient, invoked whenever the default network

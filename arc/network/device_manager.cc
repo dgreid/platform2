@@ -259,8 +259,4 @@ void DeviceManager::OnDevicesChanged(const std::set<std::string>& added,
     Add(name);
 }
 
-AddressManager* DeviceManager::addr_mgr() const {
-  return addr_mgr_;
-}
-
 }  // namespace arc_networkd

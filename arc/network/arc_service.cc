@@ -145,8 +145,14 @@ std::unique_ptr<Device::Config> MakeArcConfig(AddressManager* addr_mgr,
 
 ArcService::ArcService(ShillClient* shill_client,
                        DeviceManagerBase* dev_mgr,
-                       Datapath* datapath)
-    : shill_client_(shill_client), dev_mgr_(dev_mgr), datapath_(datapath) {
+                       Datapath* datapath,
+                       AddressManager* addr_mgr,
+                       TrafficForwarder* forwarder)
+    : shill_client_(shill_client),
+      dev_mgr_(dev_mgr),
+      datapath_(datapath),
+      addr_mgr_(addr_mgr),
+      forwarder_(forwarder) {
   DCHECK(shill_client_);
   DCHECK(dev_mgr_);
   DCHECK(datapath_);
@@ -185,9 +191,11 @@ bool ArcService::Start(uint32_t id) {
 
   const auto guest = ArcGuest();
   if (guest == GuestMessage::ARC_VM)
-    impl_ = std::make_unique<VmImpl>(shill_client_, dev_mgr_, datapath_);
+    impl_ = std::make_unique<VmImpl>(shill_client_, datapath_, addr_mgr_,
+                                     forwarder_);
   else
-    impl_ = std::make_unique<ContainerImpl>(dev_mgr_, datapath_, guest);
+    impl_ = std::make_unique<ContainerImpl>(datapath_, addr_mgr_, forwarder_,
+                                            guest);
 
   if (!impl_->Start(id)) {
     impl_.reset();
@@ -360,10 +368,15 @@ void ArcService::Context::SetTAP(const std::string& tap) {
 
 // ARC++ specific functions.
 
-ArcService::ContainerImpl::ContainerImpl(DeviceManagerBase* dev_mgr,
-                                         Datapath* datapath,
+ArcService::ContainerImpl::ContainerImpl(Datapath* datapath,
+                                         AddressManager* addr_mgr,
+                                         TrafficForwarder* forwarder,
                                          GuestMessage::GuestType guest)
-    : pid_(kInvalidPID), dev_mgr_(dev_mgr), datapath_(datapath), guest_(guest) {
+    : pid_(kInvalidPID),
+      datapath_(datapath),
+      addr_mgr_(addr_mgr),
+      forwarder_(forwarder),
+      guest_(guest) {
   OneTimeSetup(*datapath_);
 }
 
@@ -394,7 +407,7 @@ bool ArcService::ContainerImpl::Start(uint32_t pid) {
       .is_android = true,
       .is_sticky = true,
   };
-  auto config = MakeArcConfig(dev_mgr_->addr_mgr(), false /*is_arcvm*/);
+  auto config = MakeArcConfig(addr_mgr_, false /*is_arcvm*/);
 
   // Create the bridge.
   // Per crbug/1008686 this device cannot be deleted and then re-added.
@@ -501,7 +514,12 @@ bool ArcService::ContainerImpl::OnStartDevice(Device* device) {
     return false;
   }
 
-  dev_mgr_->StartForwarding(*device, device->ifname());
+  if (device != arc_device_.get())
+    forwarder_->StartForwarding(
+        device->ifname(), device->config().host_ifname(),
+        device->config().guest_ipv4_addr(), device->options().ipv6_enabled,
+        device->options().fwd_multicast);
+
   return true;
 }
 
@@ -512,7 +530,11 @@ void ArcService::ContainerImpl::OnStopDevice(Device* device) {
             << " bridge: " << config.host_ifname()
             << " guest_iface: " << config.guest_ifname() << " pid: " << pid_;
 
-  dev_mgr_->StopForwarding(*device, device->ifname());
+  if (device != arc_device_.get())
+    forwarder_->StopForwarding(device->ifname(), device->config().host_ifname(),
+                               device->options().ipv6_enabled,
+                               device->options().fwd_multicast);
+
   datapath_->RemoveInterface(ArcVethHostName(device->ifname()));
 }
 
@@ -522,12 +544,14 @@ void ArcService::ContainerImpl::OnDefaultInterfaceChanged(
 // VM specific functions
 
 ArcService::VmImpl::VmImpl(ShillClient* shill_client,
-                           DeviceManagerBase* dev_mgr,
-                           Datapath* datapath)
+                           Datapath* datapath,
+                           AddressManager* addr_mgr,
+                           TrafficForwarder* forwarder)
     : cid_(kInvalidCID),
       shill_client_(shill_client),
-      dev_mgr_(dev_mgr),
-      datapath_(datapath) {}
+      datapath_(datapath),
+      addr_mgr_(addr_mgr),
+      forwarder_(forwarder) {}
 
 GuestMessage::GuestType ArcService::VmImpl::guest() const {
   return GuestMessage::ARC_VM;
@@ -556,7 +580,7 @@ bool ArcService::VmImpl::Start(uint32_t cid) {
       .is_android = true,
       .is_sticky = true,
   };
-  auto config = MakeArcConfig(dev_mgr_->addr_mgr(), true /*is_arcvm*/);
+  auto config = MakeArcConfig(addr_mgr_, true /*is_arcvm*/);
 
   // Create the bridge.
   if (!datapath_->AddBridge(kArcVmBridge, config->host_ipv4_addr(), 30)) {
@@ -679,14 +703,18 @@ void ArcService::VmImpl::OnDefaultInterfaceChanged(
   if (!IsStarted())
     return;
 
-  dev_mgr_->StopForwarding(*arc_device_.get(), prev_ifname);
+  forwarder_->StopForwarding(prev_ifname, kArcVmBridge, true /*ipv6*/,
+                             true /*multicast*/);
+
   // TODO(garrick): Remove this once ARCVM supports ad hoc interface
   // configurations; but for now ARCVM needs to be treated like ARC++ N.
   datapath_->RemoveLegacyIPv4InboundDNAT();
 
   // If a new default interface was given, then re-enable with that.
   if (!new_ifname.empty()) {
-    dev_mgr_->StartForwarding(*arc_device_.get(), new_ifname);
+    forwarder_->StartForwarding(new_ifname, kArcVmBridge,
+                                arc_device_->config().guest_ipv4_addr(),
+                                true /*ipv6*/, true /*multicast*/);
     datapath_->AddLegacyIPv4InboundDNAT(new_ifname);
   }
 }

@@ -71,8 +71,9 @@ class ArcService {
   // Encapsulates all ARC++ container-specific logic.
   class ContainerImpl : public Impl {
    public:
-    ContainerImpl(DeviceManagerBase* dev_mgr,
-                  Datapath* datapath,
+    ContainerImpl(Datapath* datapath,
+                  AddressManager* addr_mgr,
+                  TrafficForwarder* forwarder,
                   GuestMessage::GuestType guest);
     ~ContainerImpl() = default;
 
@@ -89,8 +90,9 @@ class ArcService {
 
    private:
     uint32_t pid_;
-    DeviceManagerBase* dev_mgr_;
     Datapath* datapath_;
+    AddressManager* addr_mgr_;
+    TrafficForwarder* forwarder_;
     GuestMessage::GuestType guest_;
 
     base::WeakPtrFactory<ContainerImpl> weak_factory_{this};
@@ -101,8 +103,9 @@ class ArcService {
   class VmImpl : public Impl {
    public:
     VmImpl(ShillClient* shill_client,
-           DeviceManagerBase* dev_mgr,
-           Datapath* datapath);
+           Datapath* datapath,
+           AddressManager* addr_mgr,
+           TrafficForwarder* forwarder);
     ~VmImpl() = default;
 
     GuestMessage::GuestType guest() const override;
@@ -119,8 +122,9 @@ class ArcService {
    private:
     uint32_t cid_;
     const ShillClient* const shill_client_;
-    DeviceManagerBase* dev_mgr_;
     Datapath* datapath_;
+    AddressManager* addr_mgr_;
+    TrafficForwarder* forwarder_;
     std::string tap_;
 
     DISALLOW_COPY_AND_ASSIGN(VmImpl);
@@ -129,7 +133,9 @@ class ArcService {
   // All pointers are required and cannot be null, and are owned by the caller.
   ArcService(ShillClient* shill_client,
              DeviceManagerBase* dev_mgr,
-             Datapath* datapath);
+             Datapath* datapath,
+             AddressManager* addr_mgr,
+             TrafficForwarder* forwarder);
   ~ArcService();
 
   bool Start(uint32_t id);
@@ -152,6 +158,8 @@ class ArcService {
   ShillClient* shill_client_;
   DeviceManagerBase* dev_mgr_;
   Datapath* datapath_;
+  AddressManager* addr_mgr_;
+  TrafficForwarder* forwarder_;
   std::unique_ptr<Impl> impl_;
 
   base::WeakPtrFactory<ArcService> weak_factory_{this};

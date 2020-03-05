@@ -67,6 +67,25 @@ class MockDeviceManager : public DeviceManagerBase {
   MOCK_CONST_METHOD0(addr_mgr, AddressManager*());
 };
 
+class MockTrafficForwarder : public TrafficForwarder {
+ public:
+  MockTrafficForwarder() = default;
+  ~MockTrafficForwarder() = default;
+
+  MOCK_METHOD5(StartForwarding,
+               void(const std::string& ifname_physical,
+                    const std::string& ifname_virtual,
+                    uint32_t ipv4_addr_virtual,
+                    bool ipv6,
+                    bool multicast));
+
+  MOCK_METHOD4(StopForwarding,
+               void(const std::string& ifname_physical,
+                    const std::string& ifname_virtual,
+                    bool ipv6,
+                    bool multicast));
+};
+
 std::unique_ptr<Device> MakeDevice(const std::string& name,
                                    const std::string& host,
                                    const std::string& guest,
@@ -112,13 +131,15 @@ class ArcServiceTest : public testing::Test {
 
     arc_networkd::test::guest = GuestMessage::ARC;
     return std::make_unique<ArcService>(shill_client_.get(), &dev_mgr_,
-                                        datapath_.get());
+                                        datapath_.get(), &addr_mgr_,
+                                        &forwarder_);
   }
 
   FakeShillClientHelper shill_helper_;
   std::unique_ptr<ShillClient> shill_client_;
   AddressManager addr_mgr_;
   MockDeviceManager dev_mgr_;
+  MockTrafficForwarder forwarder_;
   std::unique_ptr<MockDatapath> datapath_;
   std::unique_ptr<FakeProcessRunner> runner_;
 };
@@ -167,7 +188,7 @@ class ContainerImplTest : public testing::Test {
 
   std::unique_ptr<ArcService::ContainerImpl> Impl(bool start = true) {
     auto impl = std::make_unique<ArcService::ContainerImpl>(
-        &dev_mgr_, datapath_.get(), GuestMessage::ARC);
+        datapath_.get(), &addr_mgr_, &forwarder_, GuestMessage::ARC);
     if (start) {
       // Set expectations for tests that want it started already.
       EXPECT_CALL(*datapath_, AddBridge(StrEq("arcbr0"), kArcHostIP, 30))
@@ -193,6 +214,7 @@ class ContainerImplTest : public testing::Test {
   MockDeviceManager dev_mgr_;
   std::unique_ptr<MockDatapath> datapath_;
   std::unique_ptr<FakeProcessRunner> runner_;
+  MockTrafficForwarder forwarder_;
 };
 
 TEST_F(ContainerImplTest, Start) {
@@ -208,7 +230,7 @@ TEST_F(ContainerImplTest, Start) {
       .WillOnce(Return(true));
   EXPECT_CALL(*datapath_, AddToBridge(StrEq("arcbr0"), StrEq("veth_arc0")))
       .WillOnce(Return(true));
-  EXPECT_CALL(dev_mgr_, StartForwarding(_, _));
+  EXPECT_CALL(forwarder_, StartForwarding(_, _, _, _, _)).Times(0);
   Impl(false)->Start(kTestPID);
 }
 
@@ -250,6 +272,8 @@ TEST_F(ContainerImplTest, OnStartDevice) {
       .WillOnce(Return(true));
   EXPECT_CALL(*datapath_, AddToBridge(StrEq("arc_eth0"), StrEq("veth_eth0")))
       .WillOnce(Return(true));
+  EXPECT_CALL(forwarder_, StartForwarding(StrEq("eth0"), StrEq("arc_eth0"),
+                                          Ipv4Addr(100, 115, 92, 10), _, _));
   auto dev = MakeDevice("eth0", "arc_eth0", "eth0");
   ASSERT_TRUE(dev);
   Impl()->OnStartDevice(dev.get());
@@ -259,14 +283,15 @@ TEST_F(ContainerImplTest, Stop) {
   EXPECT_CALL(*datapath_,
               MaskInterfaceFlags(StrEq("arcbr0"), IFF_DEBUG, IFF_UP));
   EXPECT_CALL(*datapath_, RemoveInterface(StrEq("veth_arc0")));
-  EXPECT_CALL(dev_mgr_, StopForwarding(_, _));
+  EXPECT_CALL(forwarder_, StopForwarding(_, _, _, _)).Times(0);
 
   Impl()->Stop(kTestPID);
 }
 
 TEST_F(ContainerImplTest, OnStopDevice) {
   EXPECT_CALL(*datapath_, RemoveInterface(StrEq("veth_eth0")));
-  EXPECT_CALL(dev_mgr_, StopForwarding(_, _));
+  EXPECT_CALL(forwarder_,
+              StopForwarding(StrEq("eth0"), StrEq("arc_eth0"), _, _));
 
   auto dev = MakeDevice("eth0", "arc_eth0", "eth0");
   ASSERT_TRUE(dev);
@@ -297,7 +322,7 @@ class VmImplTest : public testing::Test {
 
   std::unique_ptr<ArcService::VmImpl> Impl(bool start = true) {
     auto impl = std::make_unique<ArcService::VmImpl>(
-        shill_client_.get(), &dev_mgr_, datapath_.get());
+        shill_client_.get(), datapath_.get(), &addr_mgr_, &forwarder_);
     if (start) {
       impl->Start(kTestCID);
     }
@@ -311,6 +336,7 @@ class VmImplTest : public testing::Test {
   std::unique_ptr<FakeProcessRunner> runner_;
   std::unique_ptr<FakeShillClient> shill_client_;
   FakeShillClientHelper helper_;
+  MockTrafficForwarder forwarder_;
 };
 
 TEST_F(VmImplTest, Start) {
@@ -326,9 +352,11 @@ TEST_F(VmImplTest, Start) {
   EXPECT_CALL(*datapath_, AddToBridge(StrEq("arc_br1"), StrEq("vmtap0")))
       .WillOnce(Return(true));
   // OnDefaultInterfaceChanged
-  EXPECT_CALL(dev_mgr_, StopForwarding(_, StrEq("")));
+  EXPECT_CALL(forwarder_,
+              StopForwarding(StrEq(""), StrEq("arc_br1"), true, true));
   EXPECT_CALL(*datapath_, RemoveLegacyIPv4InboundDNAT());
-  EXPECT_CALL(dev_mgr_, StartForwarding(_, StrEq("eth0")));
+  EXPECT_CALL(forwarder_, StartForwarding(StrEq("eth0"), StrEq("arc_br1"),
+                                          kArcVmGuestIP, true, true));
   EXPECT_CALL(*datapath_, AddLegacyIPv4InboundDNAT(StrEq("eth0")));
 
   Impl(false)->Start(kTestCID);
@@ -348,8 +376,10 @@ TEST_F(VmImplTest, Stop) {
   EXPECT_CALL(*datapath_, AddToBridge(StrEq("arc_br1"), StrEq("vmtap0")))
       .WillOnce(Return(true));
   // OnDefaultInterfaceChanged
-  EXPECT_CALL(dev_mgr_, StopForwarding(_, StrEq("")));
-  EXPECT_CALL(dev_mgr_, StartForwarding(_, StrEq("eth0")));
+  EXPECT_CALL(forwarder_,
+              StopForwarding(StrEq(""), StrEq("arc_br1"), true, true));
+  EXPECT_CALL(forwarder_, StartForwarding(StrEq("eth0"), StrEq("arc_br1"),
+                                          kArcVmGuestIP, true, true));
   EXPECT_CALL(*datapath_, AddLegacyIPv4InboundDNAT(StrEq("eth0")));
 
   // Stop
@@ -360,7 +390,8 @@ TEST_F(VmImplTest, Stop) {
   // OnDefaultInterfaceChanged
   EXPECT_CALL(*datapath_, RemoveLegacyIPv4InboundDNAT())
       .Times(2);  // +1 for Start
-  EXPECT_CALL(dev_mgr_, StopForwarding(_, StrEq("eth0")));
+  EXPECT_CALL(forwarder_,
+              StopForwarding(StrEq("eth0"), StrEq("arc_br1"), true, true));
   Impl()->Stop(kTestCID);
 }
 
