@@ -6,6 +6,7 @@
 #include "hardware_verifier/cli.h"
 
 #include <iostream>
+#include <sstream>
 #include <string>
 
 #include <base/files/file_path.h>
@@ -26,8 +27,9 @@ namespace hardware_verifier {
 
 namespace {
 
-bool OutputInTextFormat(std::ostream* output_stream,
-                        HwVerificationReport hw_verification_report) {
+base::Optional<std::string> OutputInTextFormat(
+    HwVerificationReport hw_verification_report) {
+  std::stringstream ss;
   const auto generic_device_info = hw_verification_report.generic_device_info();
   hw_verification_report.clear_generic_device_info();
 
@@ -41,21 +43,24 @@ bool OutputInTextFormat(std::ostream* output_stream,
   if (!convert_status.ok()) {
     LOG(ERROR) << "Failed to output the qualification report in JSON: "
                << convert_status.ToString() << ".";
-    return false;
+    return base::nullopt;
   }
-  *output_stream << "[Component Qualification Status]\n" << json_output_data;
+  ss << "[Component Qualification Status]\n" << json_output_data;
 
   // Output the generic device info in prototxt format.
-  *output_stream << "\n[Generic Device Info]\n";
-  google::protobuf::io::OstreamOutputStream ostream_output_stream{
-      output_stream};
-  if (!google::protobuf::TextFormat::Print(generic_device_info,
-                                           &ostream_output_stream)) {
-    LOG(ERROR)
-        << "Failed to output the generic device info in prototxt format.";
-    return false;
+  ss << "\n[Generic Device Info]\n";
+  {
+    // Enclose google::protobuf::io::OstreamOutputStream in another nested
+    // scope so that its data will be flushed while being destroyed.
+    google::protobuf::io::OstreamOutputStream ostream_output_stream{&ss};
+    if (!google::protobuf::TextFormat::Print(generic_device_info,
+                                             &ostream_output_stream)) {
+      LOG(ERROR)
+          << "Failed to output the generic device info in prototxt format.";
+      return base::nullopt;
+    }
   }
-  return true;
+  return ss.str();
 }
 
 }  // namespace
@@ -109,15 +114,25 @@ CLIVerificationResult CLI::Run(const std::string& probe_result_file,
 
   LOG(INFO) << "Output the report.";
   switch (output_format) {
-    case CLIOutputFormat::kProtoBin:
-      if (!hw_verification_report.SerializeToOstream(output_stream_)) {
+    case CLIOutputFormat::kProtoBin: {
+      std::string s;
+      if (!hw_verification_report.SerializeToString(&s)) {
         return CLIVerificationResult::kUnknownError;
       }
+      LOG(INFO) << "Output the report in protobuf binary format, " << s.size()
+                << "bytes.";
+      *output_stream_ << s;
       break;
-    case CLIOutputFormat::kText:
-      if (!OutputInTextFormat(output_stream_, hw_verification_report)) {
+    }
+    case CLIOutputFormat::kText: {
+      auto output_data = OutputInTextFormat(hw_verification_report);
+      if (!output_data.has_value()) {
         return CLIVerificationResult::kUnknownError;
       }
+      LOG(INFO) << "Output the report in text format:";
+      LOG(INFO) << output_data.value();
+      *output_stream_ << output_data.value();
+    }
   }
 
   return (hw_verification_report.is_compliant() ? CLIVerificationResult::kPass
