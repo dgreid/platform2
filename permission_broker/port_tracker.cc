@@ -527,7 +527,7 @@ bool PortTracker::HasActiveRules() {
   return !lifeline_fds_.empty();
 }
 
-bool PortTracker::RevokePortRule(const PortRuleKey& key) {
+bool PortTracker::RevokePortRule(const PortRuleKey key) {
   if (port_rules_.find(key) == port_rules_.end()) {
     LOG(ERROR) << "No port rule found for " << key;
     return false;

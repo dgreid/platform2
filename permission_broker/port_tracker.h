@@ -113,7 +113,10 @@ class PortTracker {
 
   bool AddPortRule(const PortRule& rule, int dbus_fd);
   bool ValidatePortRule(const PortRule& rule);
-  bool RevokePortRule(const PortRuleKey& key);
+
+  // Revoke port rule keyed by |key|. Create a copy of |key| to prevent
+  // accidentally deleting |key| through |lifeline_fds_| or |port_rules_|.
+  bool RevokePortRule(const PortRuleKey key);
 
   // epoll(7) helper functions.
   virtual bool InitializeEpollOnce();
