@@ -355,7 +355,7 @@ grpc::Status ServiceImpl::ConnectChunnel(
       base::StringPrintf("vsock:%u:%u", VMADDR_CID_HOST,
                          request->chunneld_port()),
       "--local",
-      base::StringPrintf("127.0.0.1:%u", request->target_tcp4_port())};
+      base::StringPrintf("localhost:%u", request->target_tcp4_port())};
 
   // Discard child's process stdio,
   int stdio_fd[] = {-1, -1, -1};
