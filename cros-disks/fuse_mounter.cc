@@ -284,8 +284,13 @@ FUSEMounter::FUSEMounter(const std::string& filesystem_type,
       accessible_paths_(accessible_paths),
       permit_network_access_(permit_network_access) {}
 
-void FUSEMounter::AddGroup(const base::StringPiece group) {
-  supplementary_groups_.emplace_back(group);
+bool FUSEMounter::AddGroup(const std::string& group) {
+  gid_t gid;
+  if (!platform_->GetGroupId(group, &gid))
+    return false;
+
+  supplementary_groups_.emplace_back(gid);
+  return true;
 }
 
 std::unique_ptr<MountPoint> FUSEMounter::Mount(
@@ -317,24 +322,7 @@ std::unique_ptr<MountPoint> FUSEMounter::Mount(
 
   mount_process->SetUserId(mount_user_id);
   mount_process->SetGroupId(mount_group_id);
-
-  // Convert supplementary groups to GIDs.
-  if (!supplementary_groups_.empty()) {
-    std::vector<gid_t> supplementary_gids;
-
-    for (const std::string& group : supplementary_groups_) {
-      gid_t gid;
-      if (!platform_->GetGroupId(group, &gid)) {
-        LOG(ERROR) << "Cannot resolve group " << quote(group);
-        *error = MOUNT_ERROR_INTERNAL;
-        return nullptr;
-      }
-
-      supplementary_gids.push_back(gid);
-    }
-
-    mount_process->SetSupplementaryGroupIds(supplementary_gids);
-  }
+  mount_process->SetSupplementaryGroupIds(supplementary_groups_);
 
   if (!platform_->PathExists(mount_program_path_)) {
     LOG(ERROR) << "Cannot find mount program " << quote(mount_program_path_);

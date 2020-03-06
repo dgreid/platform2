@@ -118,7 +118,8 @@ std::unique_ptr<MountPoint> RarManager::DoMount(
       FUSEHelper::kFilesGroup);
 
   // To access Play Files.
-  mounter.AddGroup("android-everybody");
+  if (!mounter.AddGroup("android-everybody"))
+    LOG(INFO) << "Group 'android-everybody' does not exist";
 
   return mounter.Mount(source_path, mount_path, {}, error);
 }

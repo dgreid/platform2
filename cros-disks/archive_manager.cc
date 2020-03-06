@@ -451,7 +451,8 @@ MountErrorType ArchiveManager::MountAVFSPath(const std::string& base_path,
       false /* permit_network_access */, kAVFSMountGroup);
 
   // To access Play Files.
-  mounter.AddGroup("android-everybody");
+  if (!mounter.AddGroup("android-everybody"))
+    LOG(INFO) << "Group 'android-everybody' does not exist";
 
   MountErrorType mount_error = MOUNT_ERROR_UNKNOWN;
   std::unique_ptr<MountPoint> mount_point =

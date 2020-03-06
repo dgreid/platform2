@@ -46,7 +46,8 @@ class FUSEMounter : public MounterCompat {
               const std::string& mount_group = {});
 
   // Adds a supplementary group to run the FUSE mount program with.
-  void AddGroup(base::StringPiece group);
+  // Returns whether the given group exists.
+  [[nodiscard]] bool AddGroup(const std::string& group);
 
   // MounterCompat overrides.
   std::unique_ptr<MountPoint> Mount(const std::string& source,
@@ -84,7 +85,7 @@ class FUSEMounter : public MounterCompat {
   const bool permit_network_access_;
 
   // Supplementary groups to run the FUSE mount program with.
-  std::vector<std::string> supplementary_groups_;
+  std::vector<gid_t> supplementary_groups_;
 
  private:
   DISALLOW_COPY_AND_ASSIGN(FUSEMounter);
