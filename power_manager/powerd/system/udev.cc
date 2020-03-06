@@ -175,7 +175,7 @@ void Udev::RemoveTaggedDeviceObserver(UdevTaggedDeviceObserver* observer) {
 std::vector<TaggedDevice> Udev::GetTaggedDevices() {
   std::vector<TaggedDevice> devices;
   devices.reserve(tagged_devices_.size());
-  for (const std::pair<std::string, TaggedDevice>& pair : tagged_devices_)
+  for (const std::pair<std::string, TaggedDevice> pair : tagged_devices_)
     devices.push_back(pair.second);
   return devices;
 }
