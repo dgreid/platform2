@@ -149,6 +149,8 @@ const std::vector<Log> kCommandLogs {
     "done"},
   {kFile, "eventlog", "/var/log/eventlog.txt"},
   {kCommand, "font_info", "/usr/share/userfeedback/scripts/font_info"},
+  {kCommand, "framebuffer", "cat /sys/kernel/debug/dri/?/framebuffer",
+    SandboxedProcess::kDefaultUser, kDebugfsGroup},
   {kFile, "fwupd_state", "/var/lib/fwupd/state.json"},
   {kCommand, "sensor_info", "/usr/share/userfeedback/scripts/sensor_info"},
   {kFile, "hammerd", "/var/log/hammerd.log"},
