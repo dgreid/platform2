@@ -273,10 +273,12 @@ FUSEMounter::FUSEMounter(const std::string& filesystem_type,
                          const std::string& seccomp_policy,
                          const std::vector<BindPath>& accessible_paths,
                          bool permit_network_access,
-                         const std::string& mount_group)
+                         const std::string& mount_group,
+                         Metrics* metrics)
     : MounterCompat(filesystem_type, mount_options),
       platform_(platform),
       process_reaper_(process_reaper),
+      metrics_(metrics),
       mount_program_path_(mount_program_path),
       mount_user_(mount_user),
       mount_group_(mount_group),
@@ -402,16 +404,21 @@ std::unique_ptr<MountPoint> FUSEMounter::Mount(
       base::StringPrintf("/dev/fd/%d", fuse_file.GetPlatformFile()));
 
   std::vector<std::string> output;
-  int return_code = mount_process->Run(&output);
+  const int return_code = mount_process->Run(&output);
+
+  if (metrics_)
+    metrics_->RecordFuseMounterErrorCode(mount_program_path_, return_code);
+
   if (return_code != 0) {
-    LOG(ERROR) << "FUSE mount program failed with return code " << return_code;
     if (!output.empty()) {
-      LOG(ERROR) << "FUSE mount program outputted " << output.size()
-                 << " lines:";
+      LOG(ERROR) << "FUSE mount program " << quote(mount_program_path_)
+                 << " outputted " << output.size() << " lines:";
       for (const std::string& line : output) {
         LOG(ERROR) << line;
       }
     }
+    LOG(ERROR) << "FUSE mount program " << quote(mount_program_path_)
+               << " returned error code " << return_code;
     *error = MOUNT_ERROR_MOUNT_PROGRAM_FAILED;
     return nullptr;
   }

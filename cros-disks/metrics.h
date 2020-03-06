@@ -30,6 +30,10 @@ class Metrics {
   // Records the type of device media that cros-disks is trying to mount.
   void RecordDeviceMediaType(DeviceMediaType device_media_type);
 
+  // Records the error code returned by a FUSE mounter program.
+  void RecordFuseMounterErrorCode(const std::string& mounter_path,
+                                  int error_code);
+
  private:
   enum ArchiveType {
     kArchiveUnknown = 0,

@@ -115,7 +115,7 @@ std::unique_ptr<MountPoint> RarManager::DoMount(
       "rarfs", options, platform(), process_reaper(), "/usr/bin/rar2fs",
       "fuse-rar2fs", "/usr/share/policy/rar2fs-seccomp.policy",
       GetBindPaths(source_path), false /* permit_network_access */,
-      FUSEHelper::kFilesGroup);
+      FUSEHelper::kFilesGroup, metrics());
 
   // To access Play Files.
   if (!mounter.AddGroup("android-everybody"))

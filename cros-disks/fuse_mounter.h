@@ -14,6 +14,7 @@
 #include <base/files/file.h>
 #include <base/strings/string_piece.h>
 
+#include "cros-disks/metrics.h"
 #include "cros-disks/mounter.h"
 
 namespace brillo {
@@ -43,7 +44,8 @@ class FUSEMounter : public MounterCompat {
               const std::string& seccomp_policy,
               const std::vector<BindPath>& accessible_paths,
               bool permit_network_access,
-              const std::string& mount_group = {});
+              const std::string& mount_group = {},
+              Metrics* metrics = nullptr);
 
   // Adds a supplementary group to run the FUSE mount program with.
   // Returns whether the given group exists.
@@ -64,6 +66,9 @@ class FUSEMounter : public MounterCompat {
 
   // An object to monitor FUSE daemons.
   brillo::ProcessReaper* const process_reaper_;
+
+  // An object that collects UMA metrics.
+  Metrics* const metrics_;
 
   // Path of the FUSE mount program.
   const std::string mount_program_path_;
