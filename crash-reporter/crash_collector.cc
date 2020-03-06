@@ -62,6 +62,9 @@ const char kEarlyCrashKey[] = "is_early_boot";
 // Key of the lsb-release entry containing the OS version.
 const char kLsbOsVersionKey[] = "CHROMEOS_RELEASE_VERSION";
 
+// Key of the lsb-release entry containing the OS milestone.
+const char kLsbOsMilestoneKey[] = "CHROMEOS_RELEASE_CHROME_MILESTONE";
+
 // Key of the lsb-release entry containing the OS description.
 const char kLsbOsDescriptionKey[] = "CHROMEOS_RELEASE_DESCRIPTION";
 
@@ -1150,6 +1153,10 @@ std::string CrashCollector::GetOsVersion() const {
   return GetLsbReleaseValue(kLsbOsVersionKey);
 }
 
+std::string CrashCollector::GetOsMilestone() const {
+  return GetLsbReleaseValue(kLsbOsMilestoneKey);
+}
+
 std::string CrashCollector::GetOsDescription() const {
   return GetLsbReleaseValue(kLsbOsDescriptionKey);
 }
@@ -1206,12 +1213,10 @@ void CrashCollector::FinishCrash(const FilePath& meta_path,
   }
 
   const FilePath payload_path = meta_path.DirName().Append(payload_name);
+
   const std::string version = GetOsVersion();
+  const std::string milestone = GetOsMilestone();
   const std::string description = GetOsDescription();
-  const std::string kernel_name = GetKernelName();
-  const std::string kernel_version = GetKernelVersion();
-  base::Time now = test_clock_ ? test_clock_->Now() : base::Time::Now();
-  int64_t now_millis = (now - base::Time::UnixEpoch()).InMilliseconds();
   base::Time os_timestamp = util::GetOsTimestamp();
   std::string os_timestamp_str;
   if (!os_timestamp.is_null()) {
@@ -1219,20 +1224,35 @@ void CrashCollector::FinishCrash(const FilePath& meta_path,
         StringPrintf("os_millis=%" PRId64 "\n",
                      (os_timestamp - base::Time::UnixEpoch()).InMilliseconds());
   }
-  std::string meta_data = StringPrintf(
-      "%supload_var_reportTimeMillis=%" PRId64
-      "\n"
+
+  std::string lsb_release_info = StringPrintf(
       "upload_var_lsb-release=%s\n"
-      "upload_var_osName=%s\n"
-      "upload_var_osVersion=%s\n"
-      "exec_name=%s\n"
       "ver=%s\n"
-      "payload=%s\n"
-      "%s"
-      "done=1\n",
-      extra_metadata_.c_str(), now_millis, description.c_str(),
-      kernel_name.c_str(), kernel_version.c_str(), exec_name.c_str(),
-      version.c_str(), payload_name.c_str(), os_timestamp_str.c_str());
+      "upload_var_cros_milestone=%s\n"
+      "%s",
+      description.c_str(), version.c_str(), milestone.c_str(),
+      os_timestamp_str.c_str());
+
+  const std::string kernel_name = GetKernelName();
+  const std::string kernel_version = GetKernelVersion();
+  std::string kernel_info = StringPrintf(
+      "upload_var_osName=%s\n"
+      "upload_var_osVersion=%s\n",
+      kernel_name.c_str(), kernel_version.c_str());
+
+  std::string version_info = lsb_release_info + kernel_info;
+
+  base::Time now = test_clock_ ? test_clock_->Now() : base::Time::Now();
+  int64_t now_millis = (now - base::Time::UnixEpoch()).InMilliseconds();
+  std::string meta_data =
+      StringPrintf("%supload_var_reportTimeMillis=%" PRId64
+                   "\n"
+                   "exec_name=%s\n"
+                   "%s"
+                   "payload=%s\n"
+                   "done=1\n",
+                   extra_metadata_.c_str(), now_millis, exec_name.c_str(),
+                   version_info.c_str(), payload_name.c_str());
   // We must use WriteNewFile instead of base::WriteFile as we
   // do not want to write with root access to a symlink that an attacker
   // might have created.

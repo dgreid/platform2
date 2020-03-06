@@ -833,6 +833,7 @@ TEST_F(CrashCollectorTest, MetaData) {
       "CHROMEOS_RELEASE_BOARD=lumpy\n"
       "CHROMEOS_RELEASE_VERSION=6727.0.2015_01_26_0853\n"
       "CHROMEOS_RELEASE_NAME=Chromium OS\n"
+      "CHROMEOS_RELEASE_CHROME_MILESTONE=82\n"
       "CHROMEOS_RELEASE_DESCRIPTION=6727.0.2015_01_26_0853 (Test Build - foo)";
   ASSERT_TRUE(test_util::CreateFile(lsb_release, kLsbContents));
   base::Time os_time = base::Time::Now() - base::TimeDelta::FromDays(123);
@@ -860,17 +861,18 @@ TEST_F(CrashCollectorTest, MetaData) {
       "foo=bar\n"
       "upload_var_reportTimeMillis=%" PRId64
       "\n"
-      "upload_var_lsb-release=6727.0.2015_01_26_0853 (Test Build - foo)\n"
-      "upload_var_osName=%s\n"
-      "upload_var_osVersion=%s\n"
       "exec_name=kernel\n"
+      "upload_var_lsb-release=6727.0.2015_01_26_0853 (Test Build - foo)\n"
       "ver=6727.0.2015_01_26_0853\n"
-      "payload=%s\n"
+      "upload_var_cros_milestone=82\n"
       "os_millis=%" PRId64
       "\n"
+      "upload_var_osName=%s\n"
+      "upload_var_osVersion=%s\n"
+      "payload=%s\n"
       "done=1\n",
-      kFakeNow, kKernelName, kKernelVersion, kPayloadName,
-      (os_time - base::Time::UnixEpoch()).InMilliseconds());
+      kFakeNow, (os_time - base::Time::UnixEpoch()).InMilliseconds(),
+      kKernelName, kKernelVersion, kPayloadName);
   EXPECT_EQ(expected_meta, contents);
   EXPECT_EQ(collector_.get_bytes_written(), expected_meta.size());
 }

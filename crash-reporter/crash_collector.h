@@ -357,6 +357,9 @@ class CrashCollector {
   // Returns the OS version written to the metadata file.
   virtual std::string GetOsVersion() const;
 
+  // Returns the OS milestone written to the metadata file.
+  virtual std::string GetOsMilestone() const;
+
   // Returns the OS description written to the metadata file.
   virtual std::string GetOsDescription() const;
 
