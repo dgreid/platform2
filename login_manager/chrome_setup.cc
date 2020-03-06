@@ -168,8 +168,6 @@ void AddArcFlags(ChromiumCommandBuilder* builder,
 
   if (builder->UseFlagIsSet("arc_adb_sideloading"))
     builder->AddFeatureEnableOverride("ArcAdbSideloading");
-  if (builder->UseFlagIsSet("arc_oobe_optin_no_skip"))
-    builder->AddArg("--enable-arc-oobe-optin-no-skip");
   if (builder->UseFlagIsSet("arc_transition_m_to_n"))
     builder->AddArg("--arc-transition-migration-required");
   if (builder->UseFlagIsSet("arc_force_2x_scaling"))
