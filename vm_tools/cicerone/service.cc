@@ -416,6 +416,13 @@ void Service::OnSignalReadable() {
   }
 }
 
+void Service::OnDefaultNetworkServiceChanged() {
+  for (auto& vm_entry : vms_) {
+    auto& vm = vm_entry.second;
+    vm->HostNetworkChanged();
+  }
+}
+
 void Service::ConnectTremplin(uint32_t cid,
                               bool* result,
                               base::WaitableEvent* event) {
@@ -1385,6 +1392,12 @@ bool Service::Init(
     LOG(ERROR) << "Failed to take ownership of " << kVmCiceroneServiceName;
     return false;
   }
+
+  // Set up the D-Bus client for shill.
+  shill_client_ = std::make_unique<ShillClient>(bus_);
+  shill_client_->RegisterDefaultServiceChangedHandler(
+      base::Bind(&Service::OnDefaultNetworkServiceChanged,
+                 weak_ptr_factory_.GetWeakPtr()));
 
   // Get the D-Bus proxy for communicating with the crostini registry in Chrome
   // and for the URL handler service.

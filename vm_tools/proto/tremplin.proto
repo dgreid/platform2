@@ -740,6 +740,13 @@ message CancelUpgradeContainerResponse {
   string failure_reason = 2;
 }
 
+// Request to inform tremplin that the host network has changed, invalidating
+// any connected sockets that were using it.
+message HostNetworkChangedRequest {}
+
+// The response to the host network changing.
+message HostNetworkChangedResponse {}
+
 // Tremplin service methods.
 service Tremplin {
   rpc CreateContainer(CreateContainerRequest) returns (CreateContainerResponse);
@@ -761,6 +768,8 @@ service Tremplin {
       returns (UpgradeContainerResponse);
   rpc CancelUpgradeContainer(CancelUpgradeContainerRequest)
       returns (CancelUpgradeContainerResponse);
+  rpc HostNetworkChanged(HostNetworkChangedRequest)
+      returns (HostNetworkChangedResponse);
 
   // If adding more rpc's, please update ContainerListenerFuzzerSingleAction as
   // well.

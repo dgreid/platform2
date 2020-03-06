@@ -33,6 +33,7 @@
 #include "vm_tools/cicerone/container.h"
 #include "vm_tools/cicerone/container_listener_impl.h"
 #include "vm_tools/cicerone/crash_listener_impl.h"
+#include "vm_tools/cicerone/shill_client.h"
 #include "vm_tools/cicerone/tremplin_listener_impl.h"
 #include "vm_tools/cicerone/virtual_machine.h"
 
@@ -470,6 +471,9 @@ class Service final {
 
   void OnSignalReadable();
 
+  // Handles default service changes from shill.
+  void OnDefaultNetworkServiceChanged();
+
   // Send all listening ports to chunneld.
   void SendListeningPorts();
 
@@ -481,6 +485,9 @@ class Service final {
   // File descriptor for SIGTERM/SIGCHLD event.
   base::ScopedFD signal_fd_;
   std::unique_ptr<base::FileDescriptorWatcher::Controller> watcher_;
+
+  // The shill D-Bus client.
+  std::unique_ptr<ShillClient> shill_client_;
 
   // Key for VMs in the map, which is the owner ID and VM name as a pair.
   using VmKey = std::pair<std::string, std::string>;

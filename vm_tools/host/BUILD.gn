@@ -183,6 +183,7 @@ static_library("libcicerone") {
     "../cicerone/container_listener_impl.cc",
     "../cicerone/crash_listener_impl.cc",
     "../cicerone/service.cc",
+    "../cicerone/shill_client.cc",
     "../cicerone/tremplin_listener_impl.cc",
     "../cicerone/virtual_machine.cc",
   ]
@@ -190,6 +191,7 @@ static_library("libcicerone") {
   libs = [ "grpc" ]
   all_dependent_pkg_deps = [
     "grpc++",
+    "libshill-client",
     "protobuf",
     "system_api",
     "vm_protos",

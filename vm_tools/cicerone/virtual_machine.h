@@ -297,6 +297,9 @@ class VirtualMachine {
   CancelUpgradeContainerStatus CancelUpgradeContainer(Container* container,
                                                       std::string* out_error);
 
+  // Informs the VM that the host network has changed.
+  void HostNetworkChanged();
+
   // Gets a list of all the active container names in this VM.
   std::vector<std::string> GetContainerNames();
 

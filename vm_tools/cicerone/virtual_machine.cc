@@ -843,5 +843,26 @@ VirtualMachine::CancelUpgradeContainer(Container* container,
   }
 }
 
+void VirtualMachine::HostNetworkChanged() {
+  if (!tremplin_stub_) {
+    return;
+  }
+
+  vm_tools::tremplin::HostNetworkChangedRequest request;
+  vm_tools::tremplin::HostNetworkChangedResponse response;
+
+  grpc::ClientContext ctx;
+  ctx.set_deadline(gpr_time_add(
+      gpr_now(GPR_CLOCK_MONOTONIC),
+      gpr_time_from_seconds(kDefaultTimeoutSeconds, GPR_TIMESPAN)));
+
+  grpc::Status status =
+      tremplin_stub_->HostNetworkChanged(&ctx, request, &response);
+  if (!status.ok()) {
+    LOG(ERROR) << "HostNetworkChanged RPC failed: " << status.error_message();
+    return;
+  }
+}
+
 }  // namespace cicerone
 }  // namespace vm_tools
