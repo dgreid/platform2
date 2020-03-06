@@ -87,8 +87,6 @@ std::unique_ptr<password_provider::Password> MakePassword(
 class TestSmbFsBootstrapImpl : public testing::Test {
  public:
   void SetUp() override {
-    mojo::core::Init();
-
     mock_smbfs_delegate_ = std::make_unique<MockSmbFsDelegate>(
         mojo::MakeRequest(&smbfs_delegate_ptr_));
   }
