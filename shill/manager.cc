@@ -520,7 +520,7 @@ void Manager::PushProfileInternal(const Profile::Identifier& ident,
 
     // Offer each registered Service the opportunity to join this new Profile.
     if (profile->ConfigureService(service)) {
-      LOG(INFO) << "(Re-)configured service " << service->unique_name()
+      LOG(INFO) << "(Re-)configured service " << service->log_name()
                 << " from new profile.";
     }
   }
@@ -585,21 +585,21 @@ void Manager::PopProfileInternal() {
     }
 
     if ((*it)->profile().get() != active_profile.get()) {
-      LOG(INFO) << "Skipping unload of service " << (*it)->unique_name()
+      LOG(INFO) << "Skipping unload of service " << (*it)->log_name()
                 << ": wasn't using this profile.";
       ++it;
       continue;
     }
 
     if (MatchProfileWithService(*it)) {
-      LOG(INFO) << "Skipping unload of service " << (*it)->unique_name()
+      LOG(INFO) << "Skipping unload of service " << (*it)->log_name()
                 << ": re-configured from another profile.";
       ++it;
       continue;
     }
 
     if (!UnloadService(&it)) {
-      LOG(INFO) << "Service " << (*it)->unique_name()
+      LOG(INFO) << "Service " << (*it)->log_name()
                 << " not completely unloaded.";
       ++it;
       continue;
@@ -800,7 +800,7 @@ void Manager::ReleaseDevice(const string& claimer_name,
 }
 
 void Manager::RemoveService(const ServiceRefPtr& service) {
-  LOG(INFO) << __func__ << " for service " << service->unique_name();
+  LOG(INFO) << __func__ << " for service " << service->log_name();
   if (!IsServiceEphemeral(service)) {
     service->profile()->AbandonService(service);
     if (MatchProfileWithService(service)) {
@@ -1022,7 +1022,7 @@ bool Manager::IsActiveProfile(const ProfileRefPtr& profile) const {
 bool Manager::MoveServiceToProfile(const ServiceRefPtr& to_move,
                                    const ProfileRefPtr& destination) {
   const ProfileRefPtr from = to_move->profile();
-  SLOG(this, 2) << "Moving service " << to_move->unique_name() << " to profile "
+  SLOG(this, 2) << "Moving service " << to_move->log_name() << " to profile "
                 << destination->GetFriendlyName() << " from "
                 << from->GetFriendlyName();
   return destination->AdoptService(to_move) && from->AbandonService(to_move);
@@ -1352,20 +1352,20 @@ string Manager::GetProhibitedTechnologies(Error* error) {
 
 bool Manager::HasService(const ServiceRefPtr& service) {
   for (const auto& manager_service : services_) {
-    if (manager_service->unique_name() == service->unique_name())
+    if (manager_service->serial_number() == service->serial_number())
       return true;
   }
   return false;
 }
 
 void Manager::RegisterService(const ServiceRefPtr& to_manage) {
-  SLOG(this, 2) << "Registering service " << to_manage->unique_name();
+  SLOG(this, 2) << "Registering service " << to_manage->log_name();
 
   MatchProfileWithService(to_manage);
 
   // Now add to OUR list.
   for (const auto& service : services_) {
-    CHECK(to_manage->unique_name() != service->unique_name());
+    CHECK(to_manage->serial_number() != service->serial_number());
   }
   services_.push_back(to_manage);
   SortServices();
@@ -1373,9 +1373,9 @@ void Manager::RegisterService(const ServiceRefPtr& to_manage) {
 
 void Manager::DeregisterService(const ServiceRefPtr& to_forget) {
   for (auto it = services_.begin(); it != services_.end(); ++it) {
-    if (to_forget->unique_name() == (*it)->unique_name()) {
+    if (to_forget->serial_number() == (*it)->serial_number()) {
       DLOG_IF(FATAL, (*it)->connection())
-          << "Service " << (*it)->unique_name()
+          << "Service " << (*it)->log_name()
           << " still has a connection (in call to " << __func__ << ")";
       (*it)->Unload();
       (*it)->SetProfile(nullptr);
@@ -1407,7 +1407,8 @@ bool Manager::UnloadService(vector<ServiceRefPtr>::iterator* service_iterator) {
 void Manager::UpdateService(const ServiceRefPtr& to_update) {
   CHECK(to_update);
   bool is_interesting_state_change = false;
-  const auto& state_it = watched_service_states_.find(to_update->unique_name());
+  const auto& state_it =
+      watched_service_states_.find(to_update->serial_number());
   if (state_it != watched_service_states_.end()) {
     is_interesting_state_change = (to_update->state() != state_it->second);
   } else {
@@ -1419,8 +1420,9 @@ void Manager::UpdateService(const ServiceRefPtr& to_update) {
     failure_message = StringPrintf(
         " failure: %s", Service::ConnectFailureToString(to_update->failure()));
   }
+  // Note: this log is parsed by logprocessor.
   string log_message = StringPrintf(
-      "Service %s updated; state: %s%s", to_update->unique_name().c_str(),
+      "Service %s updated; state: %s%s", to_update->log_name().c_str(),
       Service::ConnectStateToString(to_update->state()),
       failure_message.c_str());
   if (is_interesting_state_change) {
@@ -1570,9 +1572,8 @@ void Manager::UpdateDefaultServices(const ServiceRefPtr& logical_service,
     last_default_physical_service_connected_ = physical_service_connected;
 
     if (physical_service) {
-      LOG(INFO) << "Default physical service: "
-                << physical_service->unique_name() << " ("
-                << (physical_service->connection() ? "" : "not ")
+      LOG(INFO) << "Default physical service: " << physical_service->log_name()
+                << " (" << (physical_service->connection() ? "" : "not ")
                 << "connected)";
     } else {
       LOG(INFO) << "Default physical service: NONE";
@@ -1676,14 +1677,6 @@ vector<DeviceRefPtr> Manager::FilterByTechnology(Technology tech) const {
       found.push_back(device);
   }
   return found;
-}
-
-ServiceRefPtr Manager::FindService(const string& name) {
-  for (const auto& service : services_) {
-    if (name == service->unique_name())
-      return service;
-  }
-  return nullptr;
 }
 
 void Manager::HelpRegisterConstDerivedRpcIdentifier(
@@ -1900,7 +1893,7 @@ void Manager::AutoConnect() {
       } else {
         compare_reason = "last";
       }
-      SLOG(this, 4) << "Service " << service->unique_name()
+      SLOG(this, 4) << "Service " << service->log_name()
                     << " Profile: " << service->profile()->GetFriendlyName()
                     << " IsConnected: " << service->IsConnected()
                     << " IsConnecting: " << service->IsConnecting()
@@ -2002,7 +1995,7 @@ void Manager::ConnectToBestServicesTask() {
       } else {
         compare_reason = "last";
       }
-      SLOG(this, 4) << "Service " << service->unique_name()
+      SLOG(this, 4) << "Service " << service->log_name()
                     << " Profile: " << service->profile()->GetFriendlyName()
                     << " IsConnected: " << service->IsConnected()
                     << " IsConnecting: " << service->IsConnecting()
@@ -2038,10 +2031,10 @@ void Manager::CreateConnectivityReport(Error* /*error*/) {
       if (device->IsConnectedToService(service)) {
         if (device->StartConnectivityTest()) {
           SLOG(this, 3) << "Started connectivity test for service "
-                        << service->unique_name();
+                        << service->log_name();
         } else {
           SLOG(this, 3) << "Failed to start connectivity test for service "
-                        << service->unique_name()
+                        << service->log_name()
                         << " device not reporting IsConnected.";
         }
         break;
@@ -2161,7 +2154,7 @@ RpcIdentifiers Manager::EnumerateWatchedServices(Error* /*error*/) {
   for (const auto& service : services_) {
     if (service->IsVisible() && service->IsActive(nullptr)) {
       service_rpc_ids.push_back(service->GetRpcIdentifier());
-      watched_service_states_[service->unique_name()] = service->state();
+      watched_service_states_[service->serial_number()] = service->state();
     }
   }
   return service_rpc_ids;
@@ -2288,18 +2281,18 @@ ServiceRefPtr Manager::ConfigureService(const KeyValueStore& args,
 
   // First pull in any stored configuration associated with the service.
   if (service->profile() == profile) {
-    SLOG(this, 2) << __func__ << ": service " << service->unique_name()
+    SLOG(this, 2) << __func__ << ": service " << service->log_name()
                   << " is already a member of profile "
                   << profile->GetFriendlyName()
                   << " so a load is not necessary.";
   } else if (profile->LoadService(service)) {
     SLOG(this, 2) << __func__ << ": applied stored information from profile "
                   << profile->GetFriendlyName() << " into service "
-                  << service->unique_name();
+                  << service->log_name();
   } else {
     SLOG(this, 2) << __func__ << ": no previous information in profile "
                   << profile->GetFriendlyName() << " exists for service "
-                  << service->unique_name();
+                  << service->log_name();
   }
 
   // Overlay this with the passed-in configuration parameters.

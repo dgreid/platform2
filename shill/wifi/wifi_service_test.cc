@@ -383,6 +383,18 @@ TEST_F(WiFiServiceTest, StorageId) {
   EXPECT_NE(id.find(string(kModeManaged), mac_pos), string::npos);
 }
 
+TEST_F(WiFiServiceTest, LogName) {
+  Service::SetNextSerialNumberForTesting(0);
+  WiFiServiceRefPtr wifi_service = MakeSimpleService(kSecurityNone);
+  EXPECT_EQ("wifi_none_0", wifi_service->log_name());
+  wifi_service = MakeSimpleService(kSecurityWep);
+  EXPECT_EQ("wifi_wep_1", wifi_service->log_name());
+  wifi_service = MakeSimpleService(kSecurityPsk);
+  EXPECT_EQ("wifi_psk_2", wifi_service->log_name());
+  wifi_service = MakeSimpleService(kSecurity8021x);
+  EXPECT_EQ("wifi_802_1x_3", wifi_service->log_name());
+}
+
 // Make sure the passphrase is registered as a write only property
 // by reading and comparing all string properties returned on the store.
 TEST_F(WiFiServiceTest, PassphraseWriteOnly) {

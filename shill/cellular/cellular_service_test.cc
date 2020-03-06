@@ -42,16 +42,12 @@ class CellularServiceTest : public testing::Test {
  public:
   CellularServiceTest()
       : modem_info_(nullptr, &dispatcher_, nullptr, nullptr),
-        device_(new MockCellular(&modem_info_,
-                                 "usb0",
-                                 kAddress,
-                                 3,
-                                 Cellular::kTypeCdma,
-                                 "",
-                                 RpcIdentifier(""))),
-        service_(new CellularService(modem_info_.manager(), device_)),
-        adaptor_(nullptr) {}
-
+        adaptor_(nullptr) {
+    Service::SetNextSerialNumberForTesting(0);
+    device_ = new MockCellular(&modem_info_, "usb0", kAddress, 3,
+                               Cellular::kTypeCdma, "", RpcIdentifier(""));
+    service_ = new CellularService(modem_info_.manager(), device_);
+  }
   ~CellularServiceTest() override { adaptor_ = nullptr; }
 
   void SetUp() override {
@@ -83,6 +79,16 @@ TEST_F(CellularServiceTest, SetNetworkTechnology) {
   service_->SetNetworkTechnology(kNetworkTechnologyUmts);
   EXPECT_EQ(kNetworkTechnologyUmts, service_->network_technology());
   service_->SetNetworkTechnology(kNetworkTechnologyUmts);
+}
+
+TEST_F(CellularServiceTest, LogName) {
+  EXPECT_EQ("cellular_0", service_->log_name());
+  service_->SetNetworkTechnology(kNetworkTechnologyUmts);
+  EXPECT_EQ("cellular_UMTS_0", service_->log_name());
+  service_->SetNetworkTechnology(kNetworkTechnologyGsm);
+  EXPECT_EQ("cellular_GSM_0", service_->log_name());
+  service_->SetNetworkTechnology(kNetworkTechnologyLte);
+  EXPECT_EQ("cellular_LTE_0", service_->log_name());
 }
 
 TEST_F(CellularServiceTest, SetRoamingState) {

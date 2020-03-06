@@ -35,7 +35,7 @@ std::string EphemeralProfile::GetFriendlyName() const {
 }
 
 bool EphemeralProfile::AdoptService(const ServiceRefPtr& service) {
-  SLOG(this, 2) << "Adding service " << service->unique_name()
+  SLOG(this, 2) << "Adding service " << service->log_name()
                 << " to ephemeral profile.";
   service->SetProfile(this);
   return true;
@@ -44,7 +44,7 @@ bool EphemeralProfile::AdoptService(const ServiceRefPtr& service) {
 bool EphemeralProfile::AbandonService(const ServiceRefPtr& service) {
   if (service->profile() == this)
     service->SetProfile(nullptr);
-  SLOG(this, 2) << "Removing service " << service->unique_name()
+  SLOG(this, 2) << "Removing service " << service->log_name()
                 << " from ephemeral profile.";
   return true;
 }

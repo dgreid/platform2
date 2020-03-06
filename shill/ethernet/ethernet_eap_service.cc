@@ -6,6 +6,7 @@
 
 #include <string>
 
+#include <base/strings/string_number_conversions.h>
 #include <base/strings/stringprintf.h>
 
 #include "shill/eap_credentials.h"
@@ -19,6 +20,7 @@ namespace shill {
 
 EthernetEapService::EthernetEapService(Manager* manager)
     : Service(manager, Technology::kEthernetEap) {
+  set_log_name("etherneteap_" + base::NumberToString(serial_number()));
   SetEapCredentials(new EapCredentials());
   set_friendly_name("Ethernet EAP Parameters");
 }

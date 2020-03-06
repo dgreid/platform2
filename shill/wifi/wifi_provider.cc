@@ -288,7 +288,7 @@ void WiFiProvider::Stop() {
     WiFiServiceRefPtr service = services_.back();
     ForgetService(service);
     SLOG(this, 3) << "WiFiProvider deregistering service "
-                  << service->unique_name();
+                  << service->log_name();
     manager_->DeregisterService(service);
   }
   service_by_endpoint_.clear();
@@ -451,7 +451,7 @@ void WiFiProvider::OnEndpointAdded(const WiFiEndpointConstRefPtr& endpoint) {
   service_by_endpoint_[endpoint.get()] = service;
 
   SLOG(this, 1) << "Assigned endpoint " << endpoint->bssid_string()
-                << " to service " << service->unique_name() << ".";
+                << " to service " << service->log_name() << ".";
 
   manager_->UpdateService(service);
 }
@@ -467,7 +467,7 @@ WiFiServiceRefPtr WiFiProvider::OnEndpointRemoved(
   CHECK(service) << "Can't find Service for Endpoint "
                  << "(with BSSID " << endpoint->bssid_string() << ").";
   SLOG(this, 1) << "Removing endpoint " << endpoint->bssid_string()
-                << " from Service " << service->unique_name();
+                << " from Service " << service->log_name();
   service->RemoveEndpoint(endpoint);
   service_by_endpoint_.erase(endpoint.get());
 

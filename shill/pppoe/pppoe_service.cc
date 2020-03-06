@@ -10,6 +10,7 @@
 
 #include <base/callback.h>
 #include <base/logging.h>
+#include <base/strings/string_number_conversions.h>
 #include <chromeos/dbus/service_constants.h>
 
 #include "shill/control_interface.h"
@@ -46,6 +47,7 @@ PPPoEService::PPPoEService(Manager* manager, base::WeakPtr<Ethernet> ethernet)
       max_failure_(kDefaultMaxFailure),
       authenticating_(false),
       weak_ptr_factory_(this) {
+  set_log_name("ppoe_" + base::NumberToString(serial_number()));
   PropertyStore* store = this->mutable_store();
   store->RegisterString(kPPPoEUsernameProperty, &username_);
   store->RegisterString(kPPPoEPasswordProperty, &password_);
@@ -68,7 +70,7 @@ void PPPoEService::OnConnect(Error* error) {
     Error::PopulateAndLog(
         FROM_HERE, error, Error::kOperationFailed,
         StringPrintf("PPPoE Service %s does not have Ethernet link.",
-                     unique_name().c_str()));
+                     log_name().c_str()));
     return;
   }
 
@@ -89,9 +91,9 @@ void PPPoEService::OnConnect(Error* error) {
                            weak_ptr_factory_.GetWeakPtr(), options,
                            ethernet()->link_name(), callback, error);
   if (pppd_ == nullptr) {
-    Error::PopulateAndLog(FROM_HERE, error, Error::kInternalError,
-                          StringPrintf("PPPoE service %s can't start pppd.",
-                                       unique_name().c_str()));
+    Error::PopulateAndLog(
+        FROM_HERE, error, Error::kInternalError,
+        StringPrintf("PPPoE service %s can't start pppd.", log_name().c_str()));
     return;
   }
 

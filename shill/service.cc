@@ -64,7 +64,7 @@ const char kServiceSortTechnology[] = "Technology";
 namespace Logging {
 static auto kModuleLogScope = ScopeLogger::kService;
 static string ObjectID(const Service* s) {
-  return s->GetRpcIdentifier().value();
+  return s->log_name();
 }
 }  // namespace Logging
 
@@ -153,8 +153,6 @@ Service::Service(Manager* manager, Technology technology)
       store_(PropertyStore::PropertyChangeCallback(base::Bind(
           &Service::OnPropertyChanged, weak_ptr_factory_.GetWeakPtr()))),
       serial_number_(next_serial_number_++),
-      unique_name_(base::NumberToString(serial_number_)),
-      friendly_name_(unique_name_),
       adaptor_(manager->control_interface()->CreateServiceAdaptor(this)),
       manager_(manager),
       connection_id_(0),
@@ -162,6 +160,10 @@ Service::Service(Manager* manager, Technology technology)
       link_monitor_disabled_(false),
       managed_credentials_(false),
       unreliable_(false) {
+  // Provide a default name.
+  friendly_name_ = "service_" + base::NumberToString(serial_number_);
+  log_name_ = friendly_name_;
+
   HelpRegisterDerivedBool(kAutoConnectProperty, &Service::GetAutoConnect,
                           &Service::SetAutoConnectFull,
                           &Service::ClearAutoConnect);
@@ -254,28 +256,28 @@ Service::Service(Manager* manager, Technology technology)
 
   dhcp_properties_->InitPropertyStore(&store_);
 
-  SLOG(this, 1) << technology << " service " << unique_name_ << " constructed.";
+  SLOG(this, 1) << technology << " service " << serial_number_
+                << " constructed.";
 }
 
 Service::~Service() {
   metrics()->DeregisterService(*this);
-  SLOG(this, 1) << "Service " << unique_name_ << " destroyed.";
+  SLOG(this, 1) << "Service " << serial_number_ << " destroyed.";
 }
 
 void Service::AutoConnect() {
   const char* reason = nullptr;
   if (IsAutoConnectable(&reason)) {
     Error error;
-    LOG(INFO) << "Auto-connecting to service " << unique_name_;
+    LOG(INFO) << "Auto-connecting to " << log_name();
     ThrottleFutureAutoConnects();
     Connect(&error, __func__);
   } else {
     if (reason == kAutoConnConnected || reason == kAutoConnBusy) {
-      SLOG(this, 1) << "Suppressed autoconnect to service " << unique_name_
-                    << " "
+      SLOG(this, 1) << "Suppressed autoconnect to " << log_name() << " "
                     << "(" << reason << ")";
     } else {
-      LOG(INFO) << "Suppressed autoconnect to service " << unique_name_ << " "
+      LOG(INFO) << "Suppressed autoconnect to " << log_name() << " "
                 << "(" << reason << ")";
     }
   }
@@ -288,7 +290,7 @@ void Service::Connect(Error* error, const char* reason) {
         FROM_HERE, error, Error::kOperationFailed,
         base::StringPrintf(
             "Connect attempted but %s Service %s is not connectable: %s",
-            technology().GetName().c_str(), unique_name().c_str(), reason));
+            technology().GetName().c_str(), log_name().c_str(), reason));
     return;
   }
 
@@ -297,14 +299,14 @@ void Service::Connect(Error* error, const char* reason) {
         FROM_HERE, error, Error::kAlreadyConnected,
         base::StringPrintf(
             "Connect attempted but %s Service %s is already connected: %s",
-            technology().GetName().c_str(), unique_name().c_str(), reason));
+            technology().GetName().c_str(), log_name().c_str(), reason));
     return;
   } else if (IsConnecting()) {
     Error::PopulateAndLog(
         FROM_HERE, error, Error::kInProgress,
         base::StringPrintf(
             "Connect attempted but %s Service %s already connecting: %s",
-            technology().GetName().c_str(), unique_name().c_str(), reason));
+            technology().GetName().c_str(), log_name().c_str(), reason));
     return;
   } else if (IsDisconnecting()) {
     // SetState will re-trigger a connection after this disconnection has
@@ -322,7 +324,8 @@ void Service::Connect(Error* error, const char* reason) {
   // Clear any failure state from a previous connect attempt.
   if (IsInFailState())
     SetState(kStateIdle);
-  LOG(INFO) << "Connecting to " << technology() << " Service " << unique_name()
+  // Note: this log is parsed by logprocessor.
+  LOG(INFO) << "Connecting to " << technology() << " Service " << log_name()
             << ": " << reason;
   // Perform connection logic defined by children. This logic will
   // drive the state from kStateIdle.
@@ -336,19 +339,18 @@ void Service::Disconnect(Error* error, const char* reason) {
         FROM_HERE, error, Error::kNotConnected,
         base::StringPrintf(
             "Disconnect attempted but %s Service %s is not active: %s",
-            technology().GetName().c_str(), unique_name().c_str(), reason));
+            technology().GetName().c_str(), log_name().c_str(), reason));
     return;
   }
 
   if (!IsDisconnectable(error)) {
-    LOG(WARNING) << "Disconnect attempted but " << technology() << " Service "
-                 << unique_name() << " is not Disconnectable"
+    LOG(WARNING) << "Disconnect attempted but " << log_name()
+                 << " is not Disconnectable"
                  << ": " << reason;
     return;
   }
 
-  LOG(INFO) << "Disconnecting from " << technology() << " Service "
-            << unique_name() << ": " << reason;
+  LOG(INFO) << "Disconnecting from " << log_name() << ": " << reason;
   SetState(kStateDisconnecting);
   // Perform connection logic defined by children. This logic will
   // drive the state to kStateIdle.
@@ -403,9 +405,8 @@ void Service::CompleteCellularActivation(Error* error) {
 }
 
 std::string Service::GetWiFiPassphrase(Error* error) {
-  Error::PopulateAndLog(
-      FROM_HERE, error, Error::kNotSupported,
-      "Service doesn't support WiFi passphrase retrieval.");
+  Error::PopulateAndLog(FROM_HERE, error, Error::kNotSupported,
+                        "Service doesn't support WiFi passphrase retrieval.");
   return std::string();
 }
 
@@ -467,7 +468,8 @@ void Service::SetState(ConnectState state) {
     return;
   }
 
-  LOG(INFO) << "Service " << unique_name_ << ": state "
+  // Note: this log is parsed by logprocessor.
+  LOG(INFO) << "Service " << log_name() << ": state "
             << ConnectStateToString(state_) << " -> "
             << ConnectStateToString(state);
 
@@ -539,7 +541,7 @@ void Service::ReEnableAutoConnectTask() {
 
 void Service::ThrottleFutureAutoConnects() {
   if (auto_connect_cooldown_milliseconds_ > 0) {
-    LOG(INFO) << "Throttling future autoconnects to service " << unique_name_
+    LOG(INFO) << "Throttling future autoconnects to " << log_name()
               << ". Next autoconnect in " << auto_connect_cooldown_milliseconds_
               << " milliseconds.";
     reenable_auto_connect_task_.Reset(Bind(&Service::ReEnableAutoConnectTask,
@@ -577,6 +579,10 @@ void Service::SetFailureSilent(ConnectFailure failure) {
   SaveFailure();
   UpdateErrorProperty();
   failed_time_ = time(nullptr);
+}
+
+std::string Service::GetDBusObjectPathIdentifer() const {
+  return base::NumberToString(serial_number());
 }
 
 const RpcIdentifier& Service::GetRpcIdentifier() const {
@@ -667,7 +673,7 @@ bool Service::Unload() {
     mutable_eap()->Reset();
   }
   ClearEAPCertification();
-#endif          // DISABLE_WIFI || DISABLE_WIRED_8021X
+#endif  // DISABLE_WIFI || DISABLE_WIRED_8021X
   if (IsActive(nullptr)) {
     Error error;  // Ignored.
     Disconnect(&error, __func__);
@@ -1245,7 +1251,7 @@ void Service::set_profile(const ProfileRefPtr& p) {
 }
 
 void Service::SetProfile(const ProfileRefPtr& p) {
-  SLOG(this, 2) << "SetProfile from "
+  SLOG(this, 2) << "SetProfile for " << log_name() << " from "
                 << (profile_ ? profile_->GetFriendlyName() : "(none)") << " to "
                 << (p ? p->GetFriendlyName() : "(none)") << ".";
   if (profile_ == p) {
@@ -1503,6 +1509,11 @@ void Service::SaveString(StoreInterface* storage,
   storage->SetString(id, key, value);
 }
 
+// static
+void Service::SetNextSerialNumberForTesting(unsigned int next_serial_number) {
+  next_serial_number_ = next_serial_number;
+}
+
 map<RpcIdentifier, string> Service::GetLoadableProfileEntries() {
   return manager_->GetLoadableProfileEntriesForService(this);
 }
@@ -1544,7 +1555,7 @@ bool Service::GetAutoConnect(Error* /*error*/) {
 }
 
 bool Service::SetAutoConnectFull(const bool& connect, Error* /*error*/) {
-  LOG(INFO) << "Service " << unique_name() << ": AutoConnect=" << auto_connect()
+  LOG(INFO) << "Service " << log_name() << ": AutoConnect=" << auto_connect()
             << "->" << connect;
   if (!retain_auto_connect_) {
     RetainAutoConnect();
@@ -1627,7 +1638,7 @@ bool Service::SetNameProperty(const string& name, Error* error) {
     Error::PopulateAndLog(
         FROM_HERE, error, Error::kInvalidArguments,
         base::StringPrintf("Service %s Name property cannot be modified.",
-                           unique_name_.c_str()));
+                           log_name_.c_str()));
     return false;
   }
   return false;

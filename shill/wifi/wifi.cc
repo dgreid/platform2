@@ -398,16 +398,13 @@ void WiFi::ConnectTo(WiFiService* service, Error* error) {
   if (pending_service_ && pending_service_ == service) {
     Error::PopulateAndLog(
         FROM_HERE, error, Error::kInProgress,
-        StringPrintf(
-            "%s: ignoring ConnectTo service %s, which is already pending",
-            link_name().c_str(), service->unique_name().c_str()));
+        StringPrintf("%s: ignoring ConnectTo %s, which is already pending",
+                     link_name().c_str(), service->log_name().c_str()));
     return;
   }
 
   if (pending_service_ && pending_service_ != service) {
-    LOG(INFO) << "Connecting to service. " << LogSSID(service->unique_name())
-              << ", "
-              << "bssid: " << service->bssid() << ", "
+    LOG(INFO) << "Connecting to: " << service->log_name()
               << "mode: " << service->mode() << ", "
               << "key management: " << service->key_management() << ", "
               << "physical mode: " << service->physical_mode() << ", "
@@ -464,12 +461,11 @@ void WiFi::ConnectTo(WiFiService* service, Error* error) {
 }
 
 void WiFi::DisconnectFromIfActive(WiFiService* service) {
-  SLOG(this, 2) << __func__ << " service " << service->unique_name();
+  SLOG(this, 2) << __func__ << " service " << service->log_name();
 
   if (service != current_service_ && service != pending_service_) {
     if (!service->IsActive(nullptr)) {
-      SLOG(this, 2) << "In " << __func__ << "():  service "
-                    << service->unique_name()
+      SLOG(this, 2) << "In " << __func__ << "(): " << service->log_name()
                     << " is not active, no need to initiate disconnect";
       return;
     }
@@ -479,14 +475,14 @@ void WiFi::DisconnectFromIfActive(WiFiService* service) {
 }
 
 void WiFi::DisconnectFrom(WiFiService* service) {
-  SLOG(this, 2) << __func__ << " service " << service->unique_name();
+  SLOG(this, 2) << __func__ << " service " << service->log_name();
 
   if (service != current_service_ && service != pending_service_) {
     // TODO(quiche): Once we have asynchronous reply support, we should
     // generate a D-Bus error here. (crbug.com/206812)
     LOG(WARNING) << "In " << __func__ << "(): "
-                 << " ignoring request to disconnect from service "
-                 << service->unique_name()
+                 << " ignoring request to disconnect from: "
+                 << service->log_name()
                  << " which is neither current nor pending";
     return;
   }
@@ -495,9 +491,8 @@ void WiFi::DisconnectFrom(WiFiService* service) {
     // TODO(quiche): Once we have asynchronous reply support, we should
     // generate a D-Bus error here. (crbug.com/206812)
     LOG(WARNING) << "In " << __func__ << "(): "
-                 << " ignoring request to disconnect from service "
-                 << service->unique_name()
-                 << " which is not the pending service.";
+                 << " ignoring request to disconnect from: "
+                 << service->log_name() << " which is not the pending service.";
     return;
   }
 
@@ -505,9 +500,8 @@ void WiFi::DisconnectFrom(WiFiService* service) {
     // TODO(quiche): Once we have asynchronous reply support, we should
     // generate a D-Bus error here. (crbug.com/206812)
     LOG(WARNING) << "In " << __func__ << "(): "
-                 << " ignoring request to disconnect from service "
-                 << service->unique_name()
-                 << " which is not the current service.";
+                 << " ignoring request to disconnect from: "
+                 << service->log_name() << " which is not the current service.";
     return;
   }
 
@@ -555,7 +549,7 @@ void WiFi::DisconnectFrom(WiFiService* service) {
     } else {
       SLOG(this, 5) << __func__ << " skipping DropConnection, "
                     << "selected_service is "
-                    << (selected_service() ? selected_service()->unique_name()
+                    << (selected_service() ? selected_service()->log_name()
                                            : "(null)");
     }
     current_service_ = nullptr;
@@ -888,8 +882,8 @@ void WiFi::HandleDisconnect() {
   }
 
   SLOG(this, 2) << "WiFi " << link_name() << " disconnected from "
-                << " (or failed to connect to) service "
-                << affected_service->unique_name();
+                << " (or failed to connect to) "
+                << affected_service->log_name();
 
   if (affected_service == current_service_.get() && pending_service_.get()) {
     // Current service disconnected intentionally for network switching,
@@ -912,11 +906,11 @@ void WiFi::HandleDisconnect() {
     if (error.type() == Error::kNotFound) {
       SLOG(this, 2) << "WiFi " << link_name() << " disconnected from "
                     << " (or failed to connect to) service "
-                    << affected_service->unique_name() << ", "
+                    << affected_service->log_name() << ", "
                     << "but could not find supplicant network to disable.";
     } else {
-      LOG(FATAL) << "DisableNetwork failed on " << link_name() << "for service "
-                 << affected_service->unique_name() << ".";
+      LOG(FATAL) << "DisableNetwork failed on " << link_name()
+                 << "for: " << affected_service->log_name() << ".";
     }
   }
 
@@ -942,8 +936,9 @@ void WiFi::HandleDisconnect() {
     //
     // Log this fact, to help us debug (in case our assumptions are
     // wrong).
-    SLOG(this, 2) << "WiFi " << link_name() << " pending connection to service "
-                  << pending_service_->unique_name() << " after disconnect";
+    SLOG(this, 2) << "WiFi " << link_name()
+                  << " pending connection to: " << pending_service_->log_name()
+                  << " after disconnect";
   }
 
   // If we disconnect, initially scan at a faster frequency, to make sure
@@ -952,7 +947,7 @@ void WiFi::HandleDisconnect() {
 }
 
 void WiFi::ServiceDisconnected(WiFiServiceRefPtr affected_service) {
-  SLOG(this, 2) << __func__ << " service " << affected_service->unique_name();
+  SLOG(this, 2) << __func__ << " service " << affected_service->log_name();
 
   // Check if service was explicitly disconnected due to failure or
   // is explicitly disconnected by user.
@@ -1096,7 +1091,7 @@ void WiFi::HandleRoam(const RpcIdentifier& new_bss) {
     SLOG(this, 2) << "WiFi " << link_name() << " new current Endpoint "
                   << endpoint->bssid_string()
                   << " is not part of pending service "
-                  << pending_service_->unique_name();
+                  << pending_service_->log_name();
 
     // Sanity check: if we didn't roam onto |pending_service_|, we
     // should still be on |current_service_|.
@@ -1104,9 +1099,9 @@ void WiFi::HandleRoam(const RpcIdentifier& new_bss) {
       LOG(WARNING) << "WiFi " << link_name() << " new current Endpoint "
                    << endpoint->bssid_string()
                    << " is neither part of pending service "
-                   << pending_service_->unique_name()
+                   << pending_service_->log_name()
                    << " nor part of current service "
-                   << (current_service_ ? current_service_->unique_name()
+                   << (current_service_ ? current_service_->log_name()
                                         : "(nullptr)");
       // wpa_supplicant has no knowledge of the pending_service_ at this point.
       // Disconnect the pending_service_, so that it can be connectable again.
@@ -1138,7 +1133,7 @@ void WiFi::HandleRoam(const RpcIdentifier& new_bss) {
                  << endpoint->bssid_string()
                  << (current_service_.get()
                          ? StringPrintf(" is not part of current service %s",
-                                        current_service_->unique_name().c_str())
+                                        current_service_->log_name().c_str())
                          : " with no current service");
     // We didn't expect to be here, but let's cope as well as we
     // can. Update |current_service_| to keep it in sync with
@@ -1169,7 +1164,7 @@ RpcIdentifier WiFi::FindNetworkRpcidForService(const WiFiService* service,
   if (rpcid_it == rpcid_by_service_.end()) {
     const string error_message = StringPrintf(
         "WiFi %s cannot find supplicant network rpcid for service %s",
-        link_name().c_str(), service->unique_name().c_str());
+        link_name().c_str(), service->log_name().c_str());
     // There are contexts where this is not an error, such as when a service
     // is clearing whatever cached credentials may not exist.
     SLOG(this, 2) << error_message;
@@ -1193,7 +1188,7 @@ bool WiFi::DisableNetworkForService(const WiFiService* service, Error* error) {
     const string error_message = StringPrintf(
         "WiFi %s cannot disable network for service %s: "
         "DBus operation failed for rpcid %s.",
-        link_name().c_str(), service->unique_name().c_str(),
+        link_name().c_str(), service->log_name().c_str(),
         rpcid.value().c_str());
     Error::PopulateAndLog(FROM_HERE, error, Error::kOperationFailed,
                           error_message);
@@ -1226,7 +1221,7 @@ bool WiFi::RemoveNetworkForService(const WiFiService* service, Error* error) {
     const string error_message = StringPrintf(
         "WiFi %s cannot remove network for service %s: "
         "DBus operation failed for rpcid %s.",
-        link_name().c_str(), service->unique_name().c_str(),
+        link_name().c_str(), service->log_name().c_str(),
         rpcid.value().c_str());
     Error::PopulateAndLog(FROM_HERE, error, Error::kOperationFailed,
                           error_message);
@@ -1508,7 +1503,7 @@ void WiFi::BSSRemovedTask(const RpcIdentifier& path) {
                             (service->IsConnecting() || service->IsConnected());
 
   if (disconnect_service) {
-    LOG(INFO) << "Disconnecting from service " << service->unique_name()
+    LOG(INFO) << "Disconnecting from: " << service->log_name()
               << ": BSSRemoved";
     DisconnectFrom(service.get());
   }
@@ -2006,8 +2001,7 @@ bool WiFi::ShouldUseArpGateway() const {
 }
 
 void WiFi::DisassociateFromService(const WiFiServiceRefPtr& service) {
-  SLOG(this, 2) << "In " << __func__
-                << " for service: " << service->unique_name();
+  SLOG(this, 2) << "In " << __func__ << " for service: " << service->log_name();
   DisconnectFromIfActive(service.get());
   if (service == selected_service()) {
     DropConnection();
@@ -2343,11 +2337,11 @@ void WiFi::ScanTimerHandler() {
     }
     if (current_service_) {
       SLOG(this, 5) << "Skipping scan: current_service_ is service "
-                    << current_service_->unique_name();
+                    << current_service_->log_name();
     }
     if (pending_service_) {
       SLOG(this, 5) << "Skipping scan: pending_service_ is service"
-                    << pending_service_->unique_name();
+                    << pending_service_->log_name();
     }
   }
   StartScanTimer();
@@ -2368,7 +2362,7 @@ void WiFi::StopPendingTimer() {
 
 void WiFi::SetPendingService(const WiFiServiceRefPtr& service) {
   SLOG(this, 2) << "WiFi " << link_name() << " setting pending service to "
-                << (service ? service->unique_name() : "NULL");
+                << (service ? service->log_name() : "<none>");
   if (service) {
     SetScanState(kScanConnecting, scan_method_, __func__);
     service->SetState(Service::kStateAssociating);

@@ -8,6 +8,8 @@
 #include <string>
 #include <utility>
 
+#include <base/strings/string_number_conversions.h>
+
 #include "shill/error.h"
 #include "shill/logging.h"
 #include "shill/service.h"
@@ -25,8 +27,7 @@ namespace shill {
 namespace Logging {
 static auto kModuleLogScope = ScopeLogger::kDBus;
 static string ObjectID(ServiceDBusAdaptor* s) {
-  return s->GetRpcIdentifier().value() + " (" + s->service()->unique_name() +
-         ")";
+  return s->GetRpcIdentifier().value() + " (" + s->service()->log_name() + ")";
 }
 }  // namespace Logging
 
@@ -36,7 +37,7 @@ const char ServiceDBusAdaptor::kPath[] = "/service/";
 ServiceDBusAdaptor::ServiceDBusAdaptor(const scoped_refptr<dbus::Bus>& bus,
                                        Service* service)
     : org::chromium::flimflam::ServiceAdaptor(this),
-      DBusAdaptor(bus, kPath + service->unique_name()),
+      DBusAdaptor(bus, kPath + service->GetDBusObjectPathIdentifer()),
       service_(service) {
   // Register DBus object.
   RegisterWithDBusObject(dbus_object());

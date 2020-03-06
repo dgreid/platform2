@@ -11,6 +11,7 @@
 
 #include <string>
 
+#include <base/strings/string_number_conversions.h>
 #include <base/strings/stringprintf.h>
 #include <chromeos/dbus/service_constants.h>
 
@@ -49,6 +50,7 @@ EthernetService::EthernetService(Manager* manager,
 EthernetService::~EthernetService() {}
 
 void EthernetService::SetUp() {
+  set_log_name("ethernet_" + base::NumberToString(serial_number()));
   SetConnectable(true);
   SetAutoConnect(true);
   set_friendly_name("Ethernet");

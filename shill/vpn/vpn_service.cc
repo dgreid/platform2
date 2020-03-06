@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <utility>
 
+#include <base/strings/string_number_conversions.h>
 #include <base/strings/stringprintf.h>
 #include <chromeos/dbus/service_constants.h>
 
@@ -30,6 +31,13 @@ const char VPNService::kAutoConnVPNAlreadyActive[] = "vpn already active";
 
 VPNService::VPNService(Manager* manager, std::unique_ptr<VPNDriver> driver)
     : Service(manager, Technology::kVPN), driver_(std::move(driver)) {
+  if (driver_) {
+    set_log_name("vpn_" + driver_->GetProviderType() + "_" +
+                 base::NumberToString(serial_number()));
+  } else {
+    // |driver| may be null in tests.
+    set_log_name("vpn_" + base::NumberToString(serial_number()));
+  }
   SetConnectable(true);
   set_save_credentials(false);
   mutable_store()->RegisterDerivedString(
@@ -184,8 +192,7 @@ bool VPNService::SetNameProperty(const string& name, Error* error) {
   if (name == friendly_name()) {
     return false;
   }
-  LOG(INFO) << "Renaming service " << unique_name() << ": " << friendly_name()
-            << " -> " << name;
+  LOG(INFO) << "SetNameProperty called for: " << log_name();
 
   KeyValueStore* args = driver_->args();
   args->Set<string>(kNameProperty, name);

@@ -276,9 +276,6 @@ TEST_F(ProfileTest, EntryEnumeration) {
   EXPECT_CALL(*service2, GetStorageIdentifier())
       .WillRepeatedly(Return(service2_storage_name));
 
-  string service1_name(service1->unique_name());
-  string service2_name(service2->unique_name());
-
   ASSERT_TRUE(profile_->AdoptService(service1));
   ASSERT_TRUE(profile_->AdoptService(service2));
 

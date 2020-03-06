@@ -39,11 +39,15 @@ class VPNServiceTest : public testing::Test {
  public:
   VPNServiceTest()
       : interface_name_("test-interface"),
-        driver_(new MockVPNDriver()),
         manager_(&control_, nullptr, &metrics_),
-        device_info_(&manager_),
-        connection_(new NiceMock<MockConnection>(&device_info_)),
-        service_(new VPNService(&manager_, base::WrapUnique(driver_))) {}
+        device_info_(&manager_) {
+    Service::SetNextSerialNumberForTesting(0);
+    driver_ = new MockVPNDriver();
+    EXPECT_CALL(*driver_, GetProviderType())
+        .WillRepeatedly(Return(kProviderL2tpIpsec));
+    connection_ = new NiceMock<MockConnection>(&device_info_);
+    service_ = new VPNService(&manager_, base::WrapUnique(driver_));
+  }
 
   ~VPNServiceTest() override = default;
 
@@ -110,6 +114,10 @@ class VPNServiceTest : public testing::Test {
   scoped_refptr<NiceMock<MockConnection>> connection_;
   VPNServiceRefPtr service_;
 };
+
+TEST_F(VPNServiceTest, LogName) {
+  EXPECT_EQ("vpn_l2tpipsec_0", service_->log_name());
+}
 
 TEST_F(VPNServiceTest, Connect) {
   EXPECT_TRUE(service_->connectable());

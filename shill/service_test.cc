@@ -1321,12 +1321,12 @@ TEST_F(ServiceTest, SetCheckPortal) {
 }
 
 TEST_F(ServiceTest, SetFriendlyName) {
-  EXPECT_EQ(service_->unique_name_, service_->friendly_name_);
+  std::string default_friendly_name = service_->friendly_name_;
   ServiceMockAdaptor* adaptor = GetAdaptor();
 
   EXPECT_CALL(*adaptor, EmitStringChanged(_, _)).Times(0);
-  service_->SetFriendlyName(service_->unique_name_);
-  EXPECT_EQ(service_->unique_name_, service_->friendly_name_);
+  service_->SetFriendlyName(default_friendly_name);
+  EXPECT_EQ(default_friendly_name, service_->friendly_name_);
 
   EXPECT_CALL(*adaptor, EmitStringChanged(kNameProperty, "Test Name 1"));
   service_->SetFriendlyName("Test Name 1");
@@ -1886,7 +1886,6 @@ TEST_F(ServiceTest, ClearAutoConnect) {
 
 TEST_F(ServiceTest, UniqueAttributes) {
   EXPECT_NE(service_->serial_number_, service2_->serial_number_);
-  EXPECT_NE(service_->unique_name(), service2_->unique_name());
 }
 
 TEST_F(ServiceTest, PropertyChanges) {
@@ -1989,9 +1988,6 @@ TEST_F(ServiceTest, ClearExplicitlyDisconnected) {
 }
 
 TEST_F(ServiceTest, Compare) {
-  // Construct our Services so that the string comparison of
-  // unique_name_ differs from the numerical comparison of
-  // serial_number_.
   vector<scoped_refptr<MockService>> mock_services;
   for (size_t i = 0; i < 11; ++i) {
     mock_services.push_back(new NiceMock<MockService>(&mock_manager_));

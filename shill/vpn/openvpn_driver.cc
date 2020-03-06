@@ -1082,7 +1082,7 @@ void OpenVPNDriver::OnDefaultServiceChanged(
     return;
 
   SLOG(this, 2) << __func__ << "("
-                << (physical_service ? physical_service->unique_name() : "-")
+                << (physical_service ? physical_service->log_name() : "-")
                 << ")";
 
   if (!device_)

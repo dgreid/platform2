@@ -27,13 +27,14 @@ namespace shill {
 class EthernetServiceTest : public PropertyStoreTest {
  public:
   EthernetServiceTest()
-      : mock_manager_(control_interface(), dispatcher(), metrics()),
-        ethernet_(new NiceMock<MockEthernet>(
-            &mock_manager_, "ethernet", fake_mac, 0)),
-        service_(new EthernetService(
-            &mock_manager_,
-            EthernetService::Properties(
-                ethernet_->weak_ptr_factory_.GetWeakPtr()))) {}
+      : mock_manager_(control_interface(), dispatcher(), metrics()) {
+    Service::SetNextSerialNumberForTesting(0);
+    ethernet_ =
+        new NiceMock<MockEthernet>(&mock_manager_, "ethernet", fake_mac, 0);
+    service_ = new EthernetService(
+        &mock_manager_,
+        EthernetService::Properties(ethernet_->weak_ptr_factory_.GetWeakPtr()));
+  }
   ~EthernetServiceTest() override {}
 
  protected:
@@ -56,6 +57,10 @@ class EthernetServiceTest : public PropertyStoreTest {
 
 // static
 const char EthernetServiceTest::fake_mac[] = "AaBBcCDDeeFF";
+
+TEST_F(EthernetServiceTest, LogName) {
+  EXPECT_EQ("ethernet_0", service_->log_name());
+}
 
 TEST_F(EthernetServiceTest, AutoConnect) {
   EXPECT_TRUE(service_->IsAutoConnectByDefault());

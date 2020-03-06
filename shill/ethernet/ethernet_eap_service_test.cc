@@ -23,9 +23,10 @@ namespace shill {
 
 class EthernetEapServiceTest : public testing::Test {
  public:
-  EthernetEapServiceTest()
-      : manager_(&control_, &dispatcher_, &metrics_),
-        service_(new EthernetEapService(&manager_)) {}
+  EthernetEapServiceTest() : manager_(&control_, &dispatcher_, &metrics_) {
+    Service::SetNextSerialNumberForTesting(0);
+    service_ = new EthernetEapService(&manager_);
+  }
   ~EthernetEapServiceTest() override = default;
 
  protected:
@@ -47,6 +48,10 @@ TEST_F(EthernetEapServiceTest, MethodOverrides) {
   EXPECT_EQ(Technology::kEthernetEap, service_->technology());
   EXPECT_TRUE(service_->Is8021x());
   EXPECT_FALSE(service_->IsVisible());
+}
+
+TEST_F(EthernetEapServiceTest, LogName) {
+  EXPECT_EQ("etherneteap_0", service_->log_name());
 }
 
 TEST_F(EthernetEapServiceTest, OnEapCredentialsChanged) {

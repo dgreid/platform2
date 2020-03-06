@@ -438,6 +438,14 @@ class ManagerTest : public PropertyStoreTest {
     return manager()->technology_order_;
   }
 
+  bool HasService(const Manager& manager, const string& id) {
+    for (const auto& service : manager.services_) {
+      if (id == service->GetDBusObjectPathIdentifer())
+        return true;
+    }
+    return false;
+  }
+
   std::unique_ptr<MockPowerManager> power_manager_;
   vector<scoped_refptr<MockDevice>> mock_devices_;
   std::unique_ptr<MockDeviceInfo> device_info_;
@@ -619,8 +627,8 @@ TEST_F(ManagerTest, ServiceRegistration) {
   MockServiceRefPtr mock_service(new NiceMock<MockService>(&manager));
   MockServiceRefPtr mock_service2(new NiceMock<MockService>(&manager));
 
-  RpcIdentifier service1_rpcid(mock_service->unique_name());
-  RpcIdentifier service2_rpcid(mock_service2->unique_name());
+  RpcIdentifier service1_rpcid(mock_service->GetDBusObjectPathIdentifer());
+  RpcIdentifier service2_rpcid(mock_service2->GetDBusObjectPathIdentifer());
 
   EXPECT_CALL(*mock_service, GetRpcIdentifier())
       .WillRepeatedly(ReturnRef(service1_rpcid));
@@ -640,8 +648,8 @@ TEST_F(ManagerTest, ServiceRegistration) {
   EXPECT_TRUE(base::ContainsKey(ids, mock_service->GetRpcIdentifier()));
   EXPECT_TRUE(base::ContainsKey(ids, mock_service2->GetRpcIdentifier()));
 
-  EXPECT_NE(nullptr, manager.FindService(service1_rpcid.value()));
-  EXPECT_NE(nullptr, manager.FindService(service2_rpcid.value()));
+  EXPECT_TRUE(HasService(manager, service1_rpcid.value()));
+  EXPECT_TRUE(HasService(manager, service2_rpcid.value()));
 
   manager.set_power_manager(power_manager_.release());
   manager.Stop();
@@ -680,7 +688,7 @@ TEST_F(ManagerTest, RegisterUnknownService) {
   }  // Force destruction of service1.
   MockServiceRefPtr mock_service2(new NiceMock<MockService>(&manager));
   EXPECT_CALL(*mock_service2, GetStorageIdentifier())
-      .WillRepeatedly(Return(mock_service2->unique_name()));
+      .WillRepeatedly(Return(mock_service2->GetDBusObjectPathIdentifer()));
   manager.RegisterService(mock_service2);
   EXPECT_NE(mock_service2->profile(), profile);
 
@@ -2569,8 +2577,8 @@ TEST_F(ManagerTest, UpdateServiceConnectedPersistAutoConnect) {
 TEST_F(ManagerTest, UpdateServiceLogging) {
   ScopedMockLog log;
   MockServiceRefPtr mock_service(new NiceMock<MockService>(manager()));
-  string updated_message = base::StringPrintf(
-      "Service %s updated;", mock_service->unique_name().c_str());
+  string updated_message = base::StringPrintf("Service %s updated;",
+                                              mock_service->log_name().c_str());
 
   // An idle service should only be logged as unconnected.
   {

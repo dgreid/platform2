@@ -567,7 +567,7 @@ std::string ThirdPartyVpnDriver::GetProviderType() const {
 void ThirdPartyVpnDriver::TriggerReconnect(const ServiceRefPtr& new_service) {
   StartConnectTimeout(kConnectTimeoutSeconds);
   SLOG(this, 2) << __func__ << " - requesting reconnection via "
-                << new_service->unique_name();
+                << new_service->log_name();
   if (link_down_) {
     adaptor_interface_->EmitPlatformMessage(
         static_cast<uint32_t>(PlatformMessage::kLinkUp));

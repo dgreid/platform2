@@ -164,7 +164,6 @@ class Manager : public base::SupportsWeakPtr<Manager> {
 
   std::vector<DeviceRefPtr> FilterByTechnology(Technology tech) const;
 
-  ServiceRefPtr FindService(const std::string& name);
   RpcIdentifiers EnumerateAvailableServices(Error* error);
 
   // Return the complete list of services, including those that are not visible.
@@ -826,8 +825,8 @@ class Manager : public base::SupportsWeakPtr<Manager> {
   // Stores the state of the highest ranked connected service.
   std::string connection_state_;
 
-  // Stores the most recent state of all watched services.
-  std::map<std::string, Service::ConnectState> watched_service_states_;
+  // Stores the most recent state of all watched services by serial number.
+  std::map<unsigned int, Service::ConnectState> watched_service_states_;
 
   // Device claimer is a remote application/service that claim/release devices
   // from/to shill. To reduce complexity, only allow one device claimer at a

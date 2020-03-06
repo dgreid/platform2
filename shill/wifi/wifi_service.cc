@@ -41,7 +41,7 @@ namespace shill {
 namespace Logging {
 static auto kModuleLogScope = ScopeLogger::kService;
 static string ObjectID(const WiFiService* w) {
-  return w->GetRpcIdentifier().value();
+  return w->log_name();
 }
 }  // namespace Logging
 
@@ -84,6 +84,9 @@ WiFiService::WiFiService(Manager* manager,
       expecting_disconnect_(false),
       certificate_file_(new CertificateFile()),
       provider_(provider) {
+  set_log_name("wifi_" + security_ + "_" +
+               base::NumberToString(serial_number()));
+
   PropertyStore* store = this->mutable_store();
   store->RegisterConstString(kModeProperty, &mode_);
   HelpRegisterWriteOnlyDerivedString(kPassphraseProperty,
@@ -155,10 +158,10 @@ WiFiService::WiFiService(Manager* manager,
 
   InitializeCustomMetrics();
 
-  // Log the |unique_name| to |friendly_name| mapping for debugging purposes.
+  // Log the |log_name| to |friendly_name| mapping for debugging purposes.
   // The latter will be tagged for scrubbing.
-  SLOG(this, 1) << "Constructed WiFi service " << unique_name()
-                << " name: " << WiFi::LogSSID(friendly_name());
+  SLOG(this, 1) << "Constructed WiFi service " << log_name() << ": "
+                << WiFi::LogSSID(friendly_name());
 }
 
 WiFiService::~WiFiService() = default;
@@ -315,12 +318,12 @@ string WiFiService::GetLoadableStorageIdentifier(
     const StoreInterface& storage) const {
   set<string> groups = storage.GetGroupsWithProperties(GetStorageProperties());
   if (groups.empty()) {
-    LOG(WARNING) << "Configuration for service " << unique_name()
+    LOG(WARNING) << "Configuration for service " << log_name()
                  << " is not available in the persistent store";
     return "";
   }
   if (groups.size() > 1) {
-    LOG(WARNING) << "More than one configuration for service " << unique_name()
+    LOG(WARNING) << "More than one configuration for service " << log_name()
                  << " is available; choosing the first.";
   }
   return *groups.begin();
@@ -435,7 +438,7 @@ void WiFiService::ResetSuspectedCredentialFailures() {
 }
 
 void WiFiService::InitializeCustomMetrics() const {
-  SLOG(Metrics, this, 2) << __func__ << " for " << unique_name();
+  SLOG(Metrics, this, 2) << __func__ << " for " << log_name();
   string histogram = metrics()->GetFullMetricName(
       Metrics::kMetricTimeToJoinMillisecondsSuffix, technology());
   metrics()->AddServiceStateTransitionTimer(
@@ -541,8 +544,8 @@ void WiFiService::OnConnect(Error* error) {
     // found.
     wifi = ChooseDevice();
     if (!wifi) {
-      LOG(ERROR) << "Can't connect. Service " << unique_name()
-                 << " cannot find a WiFi device.";
+      LOG(ERROR) << "Can't connect to: " << log_name()
+                 << ": Cannot find a WiFi device.";
       Error::PopulateAndLog(FROM_HERE, error, Error::kOperationFailed,
                             Error::GetDefaultMessage(Error::kOperationFailed));
       return;
@@ -550,9 +553,9 @@ void WiFiService::OnConnect(Error* error) {
   }
 
   if (wifi->IsCurrentService(this)) {
-    LOG(WARNING) << "Can't connect.  Service " << unique_name()
-                 << " is the current service (but, in " << GetStateString()
-                 << " state, not connected).";
+    LOG(WARNING) << "Can't connect to: " << log_name()
+                 << ": IsCurrentService, but not connected. State: "
+                 << GetStateString();
     Error::PopulateAndLog(FROM_HERE, error, Error::kInProgress,
                           Error::GetDefaultMessage(Error::kInProgress));
     return;
@@ -648,7 +651,7 @@ bool WiFiService::IsDisconnectable(Error* error) const {
   if (!wifi_) {
     CHECK(!IsConnected())
         << "WiFi device does not exist. Cannot disconnect service "
-        << unique_name();
+        << log_name();
     // If we are connecting to a hidden service, but have not yet found
     // any endpoints, we could end up with a disconnect request without
     // a wifi_ reference.
@@ -656,7 +659,7 @@ bool WiFiService::IsDisconnectable(Error* error) const {
         FROM_HERE, error, Error::kOperationFailed,
         base::StringPrintf(
             "WiFi endpoints do not (yet) exist. Cannot disconnect service %s",
-            unique_name().c_str()));
+            log_name().c_str()));
     return false;
   }
   return wifi_->IsPendingService(this) || wifi_->IsCurrentService(this);
@@ -725,15 +728,13 @@ void WiFiService::UpdateFromEndpoints() {
           frequency_ != representative_endpoint->frequency())) ||
         abs(representative_endpoint->signal_strength() - raw_signal_strength_) >
             10) {
-      LOG(INFO) << "Rep ep updated for " << unique_name() << ". "
-                << WiFi::LogSSID(representative_endpoint->ssid_string()) << ", "
-                << "bssid: " << representative_endpoint->bssid_string() << ", "
+      LOG(INFO) << "Rep endpoint updated for " << log_name() << ". "
                 << "sig: " << representative_endpoint->signal_strength() << ", "
                 << "sec: " << representative_endpoint->security_mode() << ", "
                 << "freq: " << representative_endpoint->frequency();
     }
   } else if (IsConnected() || IsConnecting()) {
-    LOG(WARNING) << "Service " << unique_name()
+    LOG(WARNING) << "Service " << log_name()
                  << " will disconnect due to no remaining endpoints.";
   }
 

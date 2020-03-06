@@ -45,9 +45,10 @@ class PPPoEServiceTest : public testing::Test {
       : manager_(&control_interface_, &dispatcher_, &metrics_),
         ethernet_(new NiceMock<MockEthernet>(
             &manager_, "ethernet", "aabbccddeeff", 0)),
-        device_info_(&manager_),
-        service_(new PPPoEService(&manager_,
-                                  ethernet_->weak_ptr_factory_.GetWeakPtr())) {
+        device_info_(&manager_) {
+    Service::SetNextSerialNumberForTesting(0);
+    service_ =
+        new PPPoEService(&manager_, ethernet_->weak_ptr_factory_.GetWeakPtr());
     manager_.set_mock_device_info(&device_info_);
     service_->process_manager_ = &process_manager_;
   }
@@ -93,6 +94,10 @@ class PPPoEServiceTest : public testing::Test {
 
 MATCHER_P(LinkNamed, name, "") {
   return arg->link_name() == name;
+}
+
+TEST_F(PPPoEServiceTest, LogName) {
+  EXPECT_EQ("ppoe_0", service_->log_name());
 }
 
 TEST_F(PPPoEServiceTest, AuthenticationFailure) {

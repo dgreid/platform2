@@ -699,7 +699,7 @@ void Cellular::DestroyService() {
   SLOG(this, 2) << __func__;
   DropConnection();
   if (service_) {
-    LOG(INFO) << "Deregistering cellular service " << service_->unique_name()
+    LOG(INFO) << "Deregistering cellular service " << service_->log_name()
               << " for device " << link_name();
     manager()->DeregisterService(service_);
     service_ = nullptr;

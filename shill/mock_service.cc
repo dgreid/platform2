@@ -7,6 +7,7 @@
 #include <string>
 
 #include <base/memory/ref_counted.h>
+#include <base/strings/string_number_conversions.h>
 #include <gmock/gmock.h>
 
 #include "shill/refptr_types.h"
@@ -20,7 +21,8 @@ using testing::ReturnRef;
 namespace shill {
 
 MockService::MockService(Manager* manager)
-    : Service(manager, Technology::kUnknown), id_(unique_name()) {
+    : Service(manager, Technology::kUnknown),
+      id_(base::NumberToString(serial_number())) {
   EXPECT_CALL(*this, GetRpcIdentifier()).WillRepeatedly(ReturnRef(id_));
   EXPECT_CALL(*this, GetStorageIdentifier())
       .WillRepeatedly(Return(id_.value()));

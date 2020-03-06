@@ -169,8 +169,8 @@ class Service : public base::RefCounted<Service> {
   // Disconnect this Service via Disconnect(). Marks the Service as having
   // failed with |failure|.
   mockable void DisconnectWithFailure(ConnectFailure failure,
-                                     Error* error,
-                                     const char* reason);
+                                      Error* error,
+                                      const char* reason);
   // Connect to this service via Connect(). This function indicates that the
   // connection attempt is user-initiated.
   mockable void UserInitiatedConnect(const char* reason, Error* error);
@@ -202,7 +202,7 @@ class Service : public base::RefCounted<Service> {
   // Set portal detection failure phase and status (reason). This function
   // is called when portal detection failed for the Service.
   mockable void SetPortalDetectionFailure(const std::string& phase,
-                                         const std::string& status);
+                                          const std::string& status);
 
   // State utility functions
   static bool IsConnectedState(ConnectState state);
@@ -235,10 +235,13 @@ class Service : public base::RefCounted<Service> {
   // Avoids showing a failure mole in the UI.
   mockable void SetFailureSilent(ConnectFailure failure);
 
-  // Returns a string that is guaranteed to uniquely identify this Service
-  // instance.
-  const std::string& unique_name() const { return unique_name_; }
+  unsigned int serial_number() const { return serial_number_; }
+  const std::string& log_name() const { return log_name_; }
 
+  // Returns |serial_number_| as a string for constructing a dbus object path.
+  std::string GetDBusObjectPathIdentifer() const;
+
+  // Returns the RpcIdentifier for the ServiceAdaptorInterface.
   mockable const RpcIdentifier& GetRpcIdentifier() const;
 
   // Returns the unique persistent storage identifier for the service.
@@ -530,6 +533,8 @@ class Service : public base::RefCounted<Service> {
                          bool crypted,
                          bool save);
 
+  static void SetNextSerialNumberForTesting(unsigned int next_serial_number);
+
   // Called via RPC to get a dict containing profile-to-entry_name mappings
   // of all the profile entires which contain configuration applicable to
   // this service.
@@ -637,6 +642,8 @@ class Service : public base::RefCounted<Service> {
   ControlInterface* control_interface() const;
   Metrics* metrics() const;
   Manager* manager() const { return manager_; }
+
+  void set_log_name(const std::string& log_name) { log_name_ = log_name; }
 
   // Save the service's auto_connect value, without affecting its auto_connect
   // property itself. (cf. EnableAndRetainAutoConnect)
@@ -878,14 +885,16 @@ class Service : public base::RefCounted<Service> {
   PropertyStore store_;
   std::set<std::string> parameters_ignored_for_configure_;
 
+  // A unique identifier for the service.
   unsigned int serial_number_;
-  std::string unique_name_;  // MUST be unique amongst service instances
 
-  // Service's friendly name is presented through the UI. By default it's the
-  // same as |unique_name_| but normally Service subclasses override
-  // it. WARNING: Don't log the friendly name at the default logging level due
-  // to PII concerns.
+  // Service's user friendly name, mapped to the Service Object kNameProperty.
+  // Use |log_name_| for logging to avoid logging PII.
   std::string friendly_name_;
+
+  // Name used for logging. It includes |unique_id|, the service type, and other
+  // non PII identifiers.
+  std::string log_name_;
 
   // List of subject names reported by remote entity during TLS setup.
   std::vector<std::string> remote_certification_;

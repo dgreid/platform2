@@ -106,7 +106,7 @@ EthernetServiceRefPtr EthernetProvider::FindEthernetServiceForService(
     ServiceRefPtr service) const {
   CHECK(service);
   for (const auto& s : services_) {
-    if (s->unique_name() == service->unique_name()) {
+    if (s->serial_number() == service->serial_number()) {
       return s;
     }
   }

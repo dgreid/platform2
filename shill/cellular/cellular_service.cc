@@ -7,6 +7,7 @@
 #include <string>
 
 #include <base/stl_util.h>
+#include <base/strings/string_number_conversions.h>
 #include <base/strings/stringprintf.h>
 #include <chromeos/dbus/service_constants.h>
 
@@ -23,7 +24,7 @@ namespace shill {
 namespace Logging {
 static auto kModuleLogScope = ScopeLogger::kCellular;
 static string ObjectID(CellularService* c) {
-  return c->GetRpcIdentifier().value();
+  return c->log_name();
 }
 }  // namespace Logging
 
@@ -70,6 +71,10 @@ CellularService::CellularService(Manager* manager, const CellularRefPtr& device)
       cellular_(device),
       is_auto_connecting_(false),
       out_of_credits_(false) {
+  // Note: This will change once SetNetworkTechnology() is called, but the
+  // serial number remains unchanged so correlating log lines will be easy.
+  set_log_name("cellular_" + base::NumberToString(serial_number()));
+
   SetConnectable(true);
   PropertyStore* store = this->mutable_store();
   HelpRegisterDerivedString(kActivationTypeProperty,
@@ -408,12 +413,12 @@ string CellularService::GetLoadableStorageIdentifier(
   }
 
   if (groups.empty()) {
-    LOG(WARNING) << "Configuration for service " << unique_name()
+    LOG(WARNING) << "Configuration for service " << log_name()
                  << " is not available in the persistent store";
     return std::string();
   }
   if (groups.size() > 1) {
-    LOG(WARNING) << "More than one configuration for service " << unique_name()
+    LOG(WARNING) << "More than one configuration for service " << log_name()
                  << " is available; choosing the first.";
   }
   return *groups.begin();
@@ -486,6 +491,8 @@ void CellularService::SetNetworkTechnology(const string& technology) {
     return;
   }
   network_technology_ = technology;
+  set_log_name("cellular_" + network_technology_ + "_" +
+               base::NumberToString(serial_number()));
   adaptor()->EmitStringChanged(kNetworkTechnologyProperty, technology);
 }
 
