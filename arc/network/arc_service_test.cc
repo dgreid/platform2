@@ -45,10 +45,9 @@ class MockTrafficForwarder : public TrafficForwarder {
   MockTrafficForwarder() = default;
   ~MockTrafficForwarder() = default;
 
-  MOCK_METHOD5(StartForwarding,
+  MOCK_METHOD4(StartForwarding,
                void(const std::string& ifname_physical,
                     const std::string& ifname_virtual,
-                    uint32_t ipv4_addr_virtual,
                     bool ipv6,
                     bool multicast));
 
@@ -225,7 +224,7 @@ TEST_F(ContainerImplTest, Start) {
       .WillOnce(Return(true));
   EXPECT_CALL(*datapath_, AddToBridge(StrEq("arcbr0"), StrEq("veth_arc0")))
       .WillOnce(Return(true));
-  EXPECT_CALL(forwarder_, StartForwarding(_, _, _, _, _)).Times(0);
+  EXPECT_CALL(forwarder_, StartForwarding(_, _, _, _)).Times(0);
   Impl(false)->Start(kTestPID);
 }
 
@@ -267,8 +266,8 @@ TEST_F(ContainerImplTest, OnStartDevice) {
       .WillOnce(Return(true));
   EXPECT_CALL(*datapath_, AddToBridge(StrEq("arc_eth0"), StrEq("veth_eth0")))
       .WillOnce(Return(true));
-  EXPECT_CALL(forwarder_, StartForwarding(StrEq("eth0"), StrEq("arc_eth0"),
-                                          Ipv4Addr(100, 115, 92, 10), _, _));
+  EXPECT_CALL(forwarder_,
+              StartForwarding(StrEq("eth0"), StrEq("arc_eth0"), _, _));
   auto dev = MakeDevice("eth0", "arc_eth0", "eth0");
   ASSERT_TRUE(dev);
   Impl()->OnStartDevice(dev.get());
@@ -348,8 +347,8 @@ TEST_F(VmImplTest, Start) {
   EXPECT_CALL(forwarder_,
               StopForwarding(StrEq(""), StrEq("arc_br1"), true, true));
   EXPECT_CALL(*datapath_, RemoveLegacyIPv4InboundDNAT());
-  EXPECT_CALL(forwarder_, StartForwarding(StrEq("eth0"), StrEq("arc_br1"),
-                                          kArcVmGuestIP, true, true));
+  EXPECT_CALL(forwarder_,
+              StartForwarding(StrEq("eth0"), StrEq("arc_br1"), true, true));
   EXPECT_CALL(*datapath_, AddLegacyIPv4InboundDNAT(StrEq("eth0")));
 
   Impl(false)->Start(kTestCID);
@@ -371,8 +370,8 @@ TEST_F(VmImplTest, Stop) {
   // OnDefaultInterfaceChanged
   EXPECT_CALL(forwarder_,
               StopForwarding(StrEq(""), StrEq("arc_br1"), true, true));
-  EXPECT_CALL(forwarder_, StartForwarding(StrEq("eth0"), StrEq("arc_br1"),
-                                          kArcVmGuestIP, true, true));
+  EXPECT_CALL(forwarder_,
+              StartForwarding(StrEq("eth0"), StrEq("arc_br1"), true, true));
   EXPECT_CALL(*datapath_, AddLegacyIPv4InboundDNAT(StrEq("eth0")));
 
   // Stop

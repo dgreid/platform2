@@ -655,7 +655,6 @@ void Manager::SendGuestMessage(const GuestMessage& msg) {
 
 void Manager::StartForwarding(const std::string& ifname_physical,
                               const std::string& ifname_virtual,
-                              uint32_t ipv4_addr_virtual,
                               bool ipv6,
                               bool multicast) {
   if (ifname_physical.empty())
@@ -664,7 +663,6 @@ void Manager::StartForwarding(const std::string& ifname_physical,
   IpHelperMessage ipm;
   DeviceMessage* msg = ipm.mutable_device_message();
   msg->set_dev_ifname(ifname_physical);
-  msg->set_guest_ip4addr(ipv4_addr_virtual);
   msg->set_br_ifname(ifname_virtual);
 
   if (ipv6) {

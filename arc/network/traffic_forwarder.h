@@ -17,7 +17,6 @@ class TrafficForwarder {
 
   virtual void StartForwarding(const std::string& ifname_physical,
                                const std::string& ifname_virtual,
-                               uint32_t ipv4_addr_virtual,
                                bool ipv6,
                                bool multicast) = 0;
 

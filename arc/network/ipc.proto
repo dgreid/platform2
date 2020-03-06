@@ -19,8 +19,7 @@ message DeviceMessage {
   required string dev_ifname = 1;
   optional string br_ifname = 2;
   optional bool teardown = 3;  // value is ignored
-  optional uint32 guest_ip4addr = 4;
-  optional string guest_ip6addr = 5;
+  optional string guest_ip6addr = 4;
 }
 
 message GuestMessage {

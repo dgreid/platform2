@@ -62,7 +62,7 @@ bool CrostiniService::Start(uint64_t vm_id, bool is_termina, int subnet_index) {
 
   LOG(INFO) << "Crostini network service started for {id: " << vm_id << "}";
   StartForwarding(shill_client_->default_interface(),
-                  tap->config().host_ifname(), tap->config().guest_ipv4_addr());
+                  tap->config().host_ifname());
   taps_.emplace(key, std::move(tap));
   return true;
 }
@@ -160,16 +160,15 @@ void CrostiniService::OnDefaultInterfaceChanged(
   for (const auto& t : taps_) {
     const auto& config = t.second->config();
     StopForwarding(prev_ifname, config.host_ifname());
-    StartForwarding(new_ifname, config.host_ifname(), config.guest_ipv4_addr());
+    StartForwarding(new_ifname, config.host_ifname());
   }
 }
 
 void CrostiniService::StartForwarding(const std::string& phys_ifname,
-                                      const std::string& virt_ifname,
-                                      uint32_t ipv4_addr) {
+                                      const std::string& virt_ifname) {
   if (!phys_ifname.empty())
-    forwarder_->StartForwarding(phys_ifname, virt_ifname, ipv4_addr,
-                                true /*ipv6*/, true /*multicast*/);
+    forwarder_->StartForwarding(phys_ifname, virt_ifname, true /*ipv6*/,
+                                true /*multicast*/);
 }
 
 void CrostiniService::StopForwarding(const std::string& phys_ifname,

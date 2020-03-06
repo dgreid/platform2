@@ -549,8 +549,7 @@ bool ArcService::ContainerImpl::OnStartDevice(Device* device) {
   if (device != arc_device_.get())
     forwarder_->StartForwarding(
         device->ifname(), device->config().host_ifname(),
-        device->config().guest_ipv4_addr(), device->options().ipv6_enabled,
-        device->options().fwd_multicast);
+        device->options().ipv6_enabled, device->options().fwd_multicast);
 
   return true;
 }
@@ -730,9 +729,8 @@ void ArcService::VmImpl::OnDefaultInterfaceChanged(
   // If a new default interface was given, then re-enable with that.
   if (!new_ifname.empty()) {
     datapath_->AddLegacyIPv4InboundDNAT(new_ifname);
-    forwarder_->StartForwarding(new_ifname, kArcVmBridge,
-                                arc_device_->config().guest_ipv4_addr(),
-                                true /*ipv6*/, true /*multicast*/);
+    forwarder_->StartForwarding(new_ifname, kArcVmBridge, true /*ipv6*/,
+                                true /*multicast*/);
   }
 }
 
