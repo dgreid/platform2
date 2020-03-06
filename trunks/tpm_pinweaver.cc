@@ -119,7 +119,7 @@ TPM_RC Serialize_pw_insert_leaf_t(
 
   if (protocol_version > 0) {
     x = 0;
-    for (const ValidPcrValue value : valid_pcr_criteria.valid_pcr_values()) {
+    for (const ValidPcrValue& value : valid_pcr_criteria.valid_pcr_values()) {
       data.valid_pcr_criteria[x].bitmask[0] = value.bitmask()[0];
       data.valid_pcr_criteria[x].bitmask[1] = value.bitmask()[1];
       if (value.digest().size() > sizeof(data.valid_pcr_criteria[0].digest))
