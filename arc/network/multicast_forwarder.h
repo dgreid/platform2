@@ -10,6 +10,7 @@
 
 #include <map>
 #include <memory>
+#include <set>
 #include <string>
 #include <utility>
 
@@ -47,10 +48,7 @@ class MulticastForwarder {
   // |int_ifname| and the external LAN interface |lan_ifname|.  This
   // only forwards traffic on multicast address |mcast_addr_| or
   // |mcast_addr6_| and UDP port |port|.
-  //
-  // On IPv4, |guest_addr|, if != INADDR_ANY, will be used to rewrite
-  // mDNS A records to use the IP address from |lan_ifname|.
-  bool AddGuest(const std::string& int_ifname, uint32_t guest_addr);
+  bool AddGuest(const std::string& int_ifname);
 
   // Stop forwarding multicast packets between |int_ifname| and
   // |lan_ifname_|.
@@ -108,11 +106,9 @@ class MulticastForwarder {
   std::map<std::pair<sa_family_t, std::string>, std::unique_ptr<Socket>>
       int_sockets_;
 
-  // A map of internal file descriptors (guest facing sockets) to its guest
+  // A set of internal file descriptors (guest facing sockets) to its guest
   // IP address.
-  // We don't care about guest IP address on IPv6 as we are not translating
-  // anything, so in_addr for |int_ipvs6_| will always be empty.
-  std::map<std::pair<sa_family_t, int>, struct in_addr> int_ips_;
+  std::set<std::pair<sa_family_t, int>> int_fds_;
 
  private:
   void OnFileCanReadWithoutBlocking(int fd, sa_family_t sa_family);

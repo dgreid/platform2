@@ -226,8 +226,7 @@ base::ScopedFD MulticastForwarder::Bind(sa_family_t sa_family,
   return fd;
 }
 
-bool MulticastForwarder::AddGuest(const std::string& int_ifname,
-                                  uint32_t guest_addr) {
+bool MulticastForwarder::AddGuest(const std::string& int_ifname) {
   if (int_sockets_.find(std::make_pair(AF_INET, int_ifname)) !=
           int_sockets_.end() ||
       int_sockets_.find(std::make_pair(AF_INET6, int_ifname)) !=
@@ -242,9 +241,7 @@ bool MulticastForwarder::AddGuest(const std::string& int_ifname,
   // Set up IPv4 multicast forwarder.
   base::ScopedFD int_fd4(Bind(AF_INET, int_ifname));
   if (int_fd4.is_valid()) {
-    struct in_addr guest_ip4 = {0};
-    guest_ip4.s_addr = guest_addr;
-    int_ips_.emplace(std::make_pair(AF_INET, int_fd4.get()), guest_ip4);
+    int_fds_.emplace(std::make_pair(AF_INET, int_fd4.get()));
 
     std::unique_ptr<Socket> int_socket4 = std::make_unique<Socket>(
         std::move(int_fd4), AF_INET,
@@ -265,7 +262,7 @@ bool MulticastForwarder::AddGuest(const std::string& int_ifname,
   // Set up IPv6 multicast forwarder.
   base::ScopedFD int_fd6(Bind(AF_INET6, int_ifname));
   if (int_fd6.is_valid()) {
-    int_ips_.emplace(std::make_pair(AF_INET6, int_fd6.get()), in_addr{});
+    int_fds_.emplace(std::make_pair(AF_INET6, int_fd6.get()));
 
     std::unique_ptr<Socket> int_socket6 = std::make_unique<Socket>(
         std::move(int_fd6), AF_INET6,
@@ -289,7 +286,7 @@ bool MulticastForwarder::AddGuest(const std::string& int_ifname,
 void MulticastForwarder::RemoveGuest(const std::string& int_ifname) {
   const auto& socket4 = int_sockets_.find(std::make_pair(AF_INET, int_ifname));
   if (socket4 != int_sockets_.end()) {
-    int_ips_.erase(std::make_pair(AF_INET, socket4->second->fd.get()));
+    int_fds_.erase(std::make_pair(AF_INET, socket4->second->fd.get()));
     int_sockets_.erase(socket4);
   } else {
     LOG(WARNING) << "IPv4 forwarding is not started between " << lan_ifname_
@@ -298,7 +295,7 @@ void MulticastForwarder::RemoveGuest(const std::string& int_ifname) {
 
   const auto& socket6 = int_sockets_.find(std::make_pair(AF_INET6, int_ifname));
   if (socket6 != int_sockets_.end()) {
-    int_ips_.erase(std::make_pair(AF_INET6, socket6->second->fd.get()));
+    int_fds_.erase(std::make_pair(AF_INET6, socket6->second->fd.get()));
     int_sockets_.erase(socket6);
   } else {
     LOG(WARNING) << "IPv6 forwarding is not started between " << lan_ifname_
@@ -355,8 +352,8 @@ void MulticastForwarder::OnFileCanReadWithoutBlocking(int fd,
     return;
   }
 
-  const auto& int_ip = int_ips_.find(std::make_pair(sa_family, fd));
-  if (int_ip == int_ips_.end() || lan_socket == lan_socket_.end())
+  const auto& int_fd = int_fds_.find(std::make_pair(sa_family, fd));
+  if (int_fd == int_fds_.end() || lan_socket == lan_socket_.end())
     return;
 
   // Forward egress traffic from one guest to all other guests.
@@ -378,7 +375,9 @@ void MulticastForwarder::OnFileCanReadWithoutBlocking(int fd,
       // either direction.
       return;
     }
-    TranslateMdnsIp(lan_ip, int_ip->second, data, len);
+    TranslateMdnsIp(
+        lan_ip, reinterpret_cast<const struct sockaddr_in*>(fromaddr)->sin_addr,
+        data, len);
   }
 
   // Forward egress traffic from one guest to outside network.
@@ -553,7 +552,6 @@ void MulticastProxy::OnDeviceMessage(const DeviceMessage& msg) {
     LOG(DFATAL) << "Received DeviceMessage w/ empty dev_ifname";
     return;
   }
-  uint32_t guest_ip = msg.guest_ip4addr();
 
   auto mdns_fwd = mdns_fwds_.find(dev_ifname);
   auto ssdp_fwd = ssdp_fwds_.find(dev_ifname);
@@ -570,7 +568,7 @@ void MulticastProxy::OnDeviceMessage(const DeviceMessage& msg) {
 
     LOG(INFO) << "Starting mDNS forwarding between " << dev_ifname << " and "
               << msg.br_ifname();
-    if (!mdns_fwd->second->AddGuest(msg.br_ifname(), guest_ip)) {
+    if (!mdns_fwd->second->AddGuest(msg.br_ifname())) {
       LOG(WARNING) << "mDNS forwarder could not be started on " << dev_ifname;
     }
 
@@ -583,7 +581,7 @@ void MulticastProxy::OnDeviceMessage(const DeviceMessage& msg) {
 
     LOG(INFO) << "Starting SSDP forwarding between " << dev_ifname << " and "
               << msg.br_ifname();
-    if (!ssdp_fwd->second->AddGuest(msg.br_ifname(), htonl(INADDR_ANY))) {
+    if (!ssdp_fwd->second->AddGuest(msg.br_ifname())) {
       LOG(WARNING) << "SSDP forwarder could not be started on " << dev_ifname;
     }
 
