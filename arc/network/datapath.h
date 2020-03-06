@@ -114,18 +114,6 @@ class Datapath {
   virtual void RemoveIPv6Forwarding(const std::string& ifname1,
                                     const std::string& ifname2);
 
-  // Methods supporting the legacy IPv6 hacks for ARC.
-  virtual bool AddIPv6GatewayRoutes(const std::string& ifname,
-                                    const std::string& ipv6_addr,
-                                    const std::string& ipv6_router,
-                                    int ipv6_prefix_len,
-                                    int routing_table);
-  virtual void RemoveIPv6GatewayRoutes(const std::string& ifname,
-                                       const std::string& ipv6_addr,
-                                       const std::string& ipv6_router,
-                                       int ipv6_prefix_len,
-                                       int routing_table);
-
   virtual bool AddIPv6HostRoute(const std::string& ifname,
                                 const std::string& ipv6_addr,
                                 int ipv6_prefix_len);

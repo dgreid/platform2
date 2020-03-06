@@ -383,44 +383,6 @@ bool Datapath::MaskInterfaceFlags(const std::string& ifname,
   return true;
 }
 
-bool Datapath::AddIPv6GatewayRoutes(const std::string& ifname,
-                                    const std::string& ipv6_addr,
-                                    const std::string& ipv6_router,
-                                    int ipv6_prefix_len,
-                                    int routing_table) {
-  std::string ipv6_addr_cidr =
-      ipv6_addr + "/" + std::to_string(ipv6_prefix_len);
-
-  process_runner_->ip6("addr", "add", {ipv6_addr_cidr, "dev", ifname});
-
-  process_runner_->ip6(
-      "route", "add",
-      {ipv6_router, "dev", ifname, "table", std::to_string(routing_table)});
-
-  process_runner_->ip6("route", "add",
-                       {"default", "via", ipv6_router, "dev", ifname, "table",
-                        std::to_string(routing_table)});
-  return true;
-}
-
-void Datapath::RemoveIPv6GatewayRoutes(const std::string& ifname,
-                                       const std::string& ipv6_addr,
-                                       const std::string& ipv6_router,
-                                       int ipv6_prefix_len,
-                                       int routing_table) {
-  std::string ipv6_addr_cidr =
-      ipv6_addr + "/" + std::to_string(ipv6_prefix_len);
-
-  process_runner_->ip6("route", "del",
-                       {"default", "via", ipv6_router, "dev", ifname, "table",
-                        std::to_string(routing_table)});
-  process_runner_->ip6(
-      "route", "del",
-      {ipv6_router, "dev", ifname, "table", std::to_string(routing_table)});
-  process_runner_->ip6("addr", "del", {ipv6_addr_cidr, "dev", ifname},
-                       false /*log_failures*/);
-}
-
 bool Datapath::AddIPv6HostRoute(const std::string& ifname,
                                 const std::string& ipv6_addr,
                                 int ipv6_prefix_len) {
