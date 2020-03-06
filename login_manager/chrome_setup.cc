@@ -397,6 +397,9 @@ void AddSystemFlags(ChromiumCommandBuilder* builder) {
 
   if (builder->UseFlagIsSet("enable_neural_palm_detection_filter"))
     builder->AddFeatureEnableOverride("EnableNeuralPalmDetectionFilter");
+
+  if (builder->UseFlagIsSet("enable_heuristic_palm_detection_filter"))
+    builder->AddFeatureEnableOverride("EnableHeuristicPalmDetectionFilter");
 }
 
 // Adds UI-related flags to the command line.
