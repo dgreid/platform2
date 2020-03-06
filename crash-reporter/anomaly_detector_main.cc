@@ -147,6 +147,7 @@ scoped_refptr<dbus::Bus> SetUpDBus(void) {
 
 // Callback to run crash-reporter.
 void RunCrashReporter(const std::string& flag, const std::string& input) {
+  LOG(INFO) << "anomaly_detector invoking crash_reporter with " << flag;
   brillo::ProcessImpl cmd;
   cmd.AddArg("/sbin/crash_reporter");
   cmd.AddArg(flag);
