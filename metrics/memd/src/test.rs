@@ -25,9 +25,13 @@ use Dbus;
 use FileWatcher;
 use Paths;
 use Result;
+use Sample;
+use SampleQueue;
+use SampleType;
 use Sampler;
 use Timer;
 use PAGE_SIZE;
+use SAMPLE_QUEUE_LENGTH;
 use VMSTAT_VALUES_COUNT;
 
 // Different levels of emulated available RAM in MB.
@@ -748,8 +752,13 @@ pub fn setup_test_environment(paths: &Paths) {
         .expect("cannot initialize available");
     print_to_path!(&paths.runnables, "0.16 0.18 0.22 4/981 8504")
         .expect("cannot initialize runnables");
-    print_to_path!(&paths.low_mem_margin, "{} {}", LOW_MEM_MARGIN, LOW_MEM_MARGIN * 2)
-        .expect("cannot initialize low_mem_margin");
+    print_to_path!(
+        &paths.low_mem_margin,
+        "{} {}",
+        LOW_MEM_MARGIN,
+        LOW_MEM_MARGIN * 2
+    )
+    .expect("cannot initialize low_mem_margin");
 
     print_to_path!(sys_vm.join("min_filelist_kbytes"), "100000\n")
         .expect("cannot initialize min_filelist_kbytes");
@@ -790,6 +799,25 @@ pub fn read_loadavg() {
         .seek(std::io::SeekFrom::Start(0))
         .expect("cannot seek");
     assert_eq!(get_runnables(&temp_file).unwrap(), 33);
+}
+
+pub fn queue_loop() {
+    let mut sq = SampleQueue::new();
+    let mut file = OpenOptions::new()
+        .write(true)
+        .create_new(false)
+        .open("/dev/null")
+        .unwrap();
+    let mut s: Sample = Default::default();
+    // We'll compare this uptime against the start_time of 0 in |output_from_time|, to ensure that
+    // we don't stop looping in the array due to uptime.
+    s.uptime = 1;
+    s.sample_type = SampleType::EnterLowMem;
+
+    sq.samples = [s; SAMPLE_QUEUE_LENGTH];
+    sq.head = 30;
+    sq.count = 30;
+    sq.output_from_time(&mut file, /*start_time=*/ 0).unwrap();
 }
 
 pub fn read_vmstat(paths: &Paths) {

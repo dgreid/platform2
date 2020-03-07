@@ -215,12 +215,13 @@ fn read_int(path: &Path) -> Result<u32> {
     let mut file = File::open(path)?;
     let mut content = String::new();
     file.read_to_string(&mut content)?;
-    Ok(content.trim()
-       .split_whitespace()
-       .into_iter()
-       .next()
-       .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "empty file"))?
-       .parse::<u32>()?)
+    Ok(content
+        .trim()
+        .split_whitespace()
+        .into_iter()
+        .next()
+        .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "empty file"))?
+        .parse::<u32>()?)
 }
 
 // The Timer trait allows us to mock time for testing.
@@ -484,10 +485,11 @@ impl SampleQueue {
         // Subtract 1 because head points to the next free slot.
         assert!(
             modulo(self.ihead() - 1 - i, SAMPLE_QUEUE_LENGTH) <= self.count,
-            "bad queue index: i {}, head {}, count {}",
+            "bad queue index: i {}, head {}, count {}, queue len {}",
             i,
             self.head,
-            self.count
+            self.count,
+            SAMPLE_QUEUE_LENGTH
         );
         &self.samples[i as usize]
     }
@@ -513,7 +515,7 @@ impl SampleQueue {
                 sample.uptime, start_index
             );
             start_index = modulo(start_index as isize - 1, SAMPLE_QUEUE_LENGTH);
-            if start_index == self.head {
+            if modulo(self.ihead() - 1 - start_index as isize, SAMPLE_QUEUE_LENGTH) > self.count {
                 warn!("too many events in requested interval");
                 break;
             }
@@ -1452,6 +1454,13 @@ fn read_vmstat_test() {
     let testing_dir_option = make_testing_dir();
     let paths = get_paths(testing_dir_option);
     test::read_vmstat(&paths);
+}
+
+/// Regression test for https://crbug.com/1058463. Ensures that output_from_time doesn't read
+/// samples outside of the valid range.
+#[test]
+fn queue_loop_test() {
+    test::queue_loop();
 }
 
 fn get_paths(root: Option<TempDir>) -> Paths {
