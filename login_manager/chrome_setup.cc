@@ -422,6 +422,8 @@ void AddUiFlags(ChromiumCommandBuilder* builder,
   if (builder->UseFlagIsSet("touch_centric_device")) {
     // Tapping the power button should turn the screen off in laptop mode.
     builder->AddArg("--force-tablet-power-button");
+    // Show touch centric OOBE screens during the first user run in laptop mode.
+    builder->AddArg("--oobe-force-tablet-first-run");
   }
 
   if (builder->UseFlagIsSet("rialto")) {
