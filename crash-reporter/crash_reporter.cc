@@ -385,6 +385,9 @@ int main(int argc, char* argv[]) {
   DEFINE_string(mount_device, "",
                 "Device that failed to mount. Used with --mount_failure and "
                 "--umount_failure");
+  DEFINE_bool(ephemeral_collect, false,
+              "Move crash reports to more persistent storage if available "
+              "(tmpfs -> reboot vault) or (tmpfs/reboot vault -> encstateful)");
   DEFINE_bool(crash_test, false, "Crash test");
   DEFINE_bool(early, false,
               "Modifies crash-reporter to work during early boot");
@@ -551,6 +554,12 @@ int main(int argc, char* argv[]) {
   if (FLAGS_boot_collect) {
     return BootCollect(&kernel_collector, &ec_collector, &bert_collector,
                        &unclean_shutdown_collector, &ephemeral_crash_collector);
+  }
+
+  // Attempt to persist crashes into more persistent storage.
+  if (FLAGS_ephemeral_collect) {
+    ephemeral_crash_collector.Collect();
+    return 0;
   }
 
   if (FLAGS_mount_failure || FLAGS_umount_failure) {
