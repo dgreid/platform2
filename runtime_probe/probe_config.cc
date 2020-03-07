@@ -51,7 +51,7 @@ std::unique_ptr<base::DictionaryValue> ProbeConfig::Eval(
     const std::vector<std::string>& category) const {
   std::unique_ptr<base::DictionaryValue> result{new base::DictionaryValue};
 
-  for (const auto c : category) {
+  for (const auto& c : category) {
     auto it = category_.find(c);
     if (it == category_.end()) {
       LOG(ERROR) << "Category " << c << " is not defined";
