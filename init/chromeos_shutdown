@@ -177,6 +177,10 @@ if [ "$?" -ne 0 ]; then
   # Collect information about active mount namespaces and if there are bind
   # mounts open inside these namespaces into the (enc)stateful partition.
   collect_shutdown_umount_failure_logs
+  crash_reporter --early --log_to_stderr --umount_failure \
+    --mount_device="stateful"
+  crash_reporter --early --log_to_stderr --preserve_across_clobber \
+    --ephemeral_collect
   mv /run/mount_encrypted/umount-encrypted.log /mnt/stateful_partition/
   mv /run/shutdown_umount_failure.log /mnt/stateful_partition/
 else
