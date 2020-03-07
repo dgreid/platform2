@@ -42,11 +42,11 @@ The dump collected might be referred to as `bertdump`.
     `/sys/firmware/acpi/tables/data/BERT`.
 *   During boot, if a BERT report exists, read them and create a report.
 
-## early_crash_meta_collector
+## ephemeral_crash_collector
 
-This is a meta-collector: it collects already collected crashes into persistent
-storage. This is useful for handling crash reports in situations where we may
-not have access to persistent storage (eg. early boot).
+This is a meta crash collector: it collects already collected ephemeral crashes
+into persistent storage. This is useful for handling crash reports in
+situations where we may not have access to persistent storage (eg. early boot).
 
 ## ec_collector
 

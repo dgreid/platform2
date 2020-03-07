@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "crash-reporter/early_crash_meta_collector.h"
+#include "crash-reporter/ephemeral_crash_collector.h"
 
 #include <base/files/file_enumerator.h>
 #include <base/files/file_util.h>
@@ -13,12 +13,12 @@
 #include "crash-reporter/paths.h"
 #include "crash-reporter/util.h"
 
-EarlyCrashMetaCollector::EarlyCrashMetaCollector()
-    : CrashCollector("early_crash_meta_collector"),
+EphemeralCrashCollector::EphemeralCrashCollector()
+    : CrashCollector("ephemeral_crash_collector"),
       early_(false),
       source_directories_({base::FilePath(paths::kSystemRunCrashDirectory)}) {}
 
-void EarlyCrashMetaCollector::Initialize(
+void EphemeralCrashCollector::Initialize(
     IsFeedbackAllowedFunction is_feedback_allowed_function,
     bool preserve_across_clobber) {
   // For preserving crash reports across clobbers, the consent file may not be
@@ -36,7 +36,7 @@ void EarlyCrashMetaCollector::Initialize(
   CrashCollector::Initialize(is_feedback_allowed_function, false /* early */);
 }
 
-bool EarlyCrashMetaCollector::Collect() {
+bool EphemeralCrashCollector::Collect() {
   if (is_feedback_allowed_function_()) {
     for (auto& dir : source_directories_) {
       base::FileEnumerator source_directory_enumerator(

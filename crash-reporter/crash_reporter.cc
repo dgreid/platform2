@@ -23,8 +23,8 @@
 #include "crash-reporter/chrome_collector.h"
 #include "crash-reporter/constants.h"
 #include "crash-reporter/crash_reporter_failure_collector.h"
-#include "crash-reporter/early_crash_meta_collector.h"
 #include "crash-reporter/ec_collector.h"
+#include "crash-reporter/ephemeral_crash_collector.h"
 #include "crash-reporter/generic_failure_collector.h"
 #include "crash-reporter/kernel_collector.h"
 #include "crash-reporter/kernel_warning_collector.h"
@@ -115,7 +115,7 @@ int BootCollect(KernelCollector* kernel_collector,
                 ECCollector* ec_collector,
                 BERTCollector* bert_collector,
                 UncleanShutdownCollector* unclean_shutdown_collector,
-                EarlyCrashMetaCollector* early_crash_meta_collector) {
+                EphemeralCrashCollector* ephemeral_crash_collector) {
   bool was_kernel_crash = false;
   bool was_unclean_shutdown = false;
   LOG(INFO) << "Running boot collector";
@@ -153,8 +153,8 @@ int BootCollect(KernelCollector* kernel_collector,
   // previous boot.
   unclean_shutdown_collector->SaveVersionData();
 
-  // Collect early boot crashes.
-  early_crash_meta_collector->Collect();
+  // Collect ephemeral crashes.
+  ephemeral_crash_collector->Collect();
 
   // Presence of this files unblocks powerd from performing lid-closed action
   // (crbug.com/988831).
@@ -461,9 +461,9 @@ int main(int argc, char* argv[]) {
   // Now that we've processed the command line, sandbox ourselves.
   EnterSandbox(FLAGS_init || FLAGS_clean_shutdown, FLAGS_log_to_stderr);
 
-  EarlyCrashMetaCollector early_crash_meta_collector;
-  early_crash_meta_collector.Initialize(IsFeedbackAllowed,
-                                        FLAGS_preserve_across_clobber);
+  EphemeralCrashCollector ephemeral_crash_collector;
+  ephemeral_crash_collector.Initialize(IsFeedbackAllowed,
+                                       FLAGS_preserve_across_clobber);
 
   MountFailureCollector mount_failure_collector(
       MountFailureCollector::ValidateStorageDeviceType(FLAGS_mount_device));
@@ -550,8 +550,7 @@ int main(int argc, char* argv[]) {
 
   if (FLAGS_boot_collect) {
     return BootCollect(&kernel_collector, &ec_collector, &bert_collector,
-                       &unclean_shutdown_collector,
-                       &early_crash_meta_collector);
+                       &unclean_shutdown_collector, &ephemeral_crash_collector);
   }
 
   if (FLAGS_mount_failure || FLAGS_umount_failure) {

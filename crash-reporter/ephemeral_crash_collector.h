@@ -7,19 +7,22 @@
 // was not available from ephemeral storage (like /run) to the encrypted
 // stateful partition, so that they persist across reboot.
 
-#ifndef CRASH_REPORTER_EARLY_CRASH_META_COLLECTOR_H_
-#define CRASH_REPORTER_EARLY_CRASH_META_COLLECTOR_H_
+#ifndef CRASH_REPORTER_EPHEMERAL_CRASH_COLLECTOR_H_
+#define CRASH_REPORTER_EPHEMERAL_CRASH_COLLECTOR_H_
+
+#include <vector>
 
 #include <base/files/file_path.h>
 
 #include "crash-reporter/crash_collector.h"
 
-// Early user collector is more of a meta-collector: we use this to persist
-// collected crashes into the encrypted stateful partition.
-class EarlyCrashMetaCollector : public CrashCollector {
+// The ephemeral crash collector persists already collected crashes into the
+// either the encrypted stateful partition or (in its absence) the encrypted
+// reboot vault.
+class EphemeralCrashCollector : public CrashCollector {
  public:
-  EarlyCrashMetaCollector();
-  ~EarlyCrashMetaCollector() override = default;
+  EphemeralCrashCollector();
+  ~EphemeralCrashCollector() override = default;
 
   void Initialize(IsFeedbackAllowedFunction is_feedback_allowed_function,
                   bool preserve_across_clobber);
@@ -30,9 +33,9 @@ class EarlyCrashMetaCollector : public CrashCollector {
  private:
   bool early_;
   std::vector<base::FilePath> source_directories_;
-  friend class EarlyCrashMetaCollectorTest;
+  friend class EphemeralCrashCollectorTest;
 
-  DISALLOW_COPY_AND_ASSIGN(EarlyCrashMetaCollector);
+  DISALLOW_COPY_AND_ASSIGN(EphemeralCrashCollector);
 };
 
-#endif  // CRASH_REPORTER_EARLY_CRASH_META_COLLECTOR_H_
+#endif  // CRASH_REPORTER_EPHEMERAL_CRASH_COLLECTOR_H_

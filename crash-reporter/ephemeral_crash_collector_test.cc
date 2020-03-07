@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "crash-reporter/early_crash_meta_collector.h"
+#include "crash-reporter/ephemeral_crash_collector.h"
 
 #include <base/files/file_util.h>
 #include <base/files/scoped_temp_dir.h>
@@ -21,7 +21,7 @@ constexpr char kTestCrashFileContents[] = "Not a real crash.";
 
 }  // namespace
 
-class EarlyCrashMetaCollectorTest : public testing::Test {
+class EphemeralCrashCollectorTest : public testing::Test {
  private:
   void SetUp() override {
     ASSERT_TRUE(scoped_temp_dir_.CreateUniqueTempDir());
@@ -77,20 +77,20 @@ class EarlyCrashMetaCollectorTest : public testing::Test {
 
   base::ScopedTempDir scoped_temp_dir_;
   base::FilePath dest_dir_, src_dir_;
-  EarlyCrashMetaCollector collector_;
+  EphemeralCrashCollector collector_;
 };
 
-TEST_F(EarlyCrashMetaCollectorTest, PreserveAcrossClobberPathsTest) {
+TEST_F(EphemeralCrashCollectorTest, PreserveAcrossClobberPathsTest) {
   ExpectPreserveAcrossClobber();
   CheckPreserveAcrossClobberPaths();
 }
 
-TEST_F(EarlyCrashMetaCollectorTest, CheckRegularCollectorPathsTest) {
+TEST_F(EphemeralCrashCollectorTest, CheckRegularCollectorPathsTest) {
   ExpectConsent();
   CheckRegularCollectorPaths();
 }
 
-TEST_F(EarlyCrashMetaCollectorTest, CollectOk) {
+TEST_F(EphemeralCrashCollectorTest, CollectOk) {
   ExpectConsent();
   SetUpTestDirectories();
 
@@ -103,7 +103,7 @@ TEST_F(EarlyCrashMetaCollectorTest, CollectOk) {
   EXPECT_STREQ(content.c_str(), kTestCrashFileContents);
 }
 
-TEST_F(EarlyCrashMetaCollectorTest, NoConsent) {
+TEST_F(EphemeralCrashCollectorTest, NoConsent) {
   ExpectConsentNotFound();
   SetUpTestDirectories();
 
