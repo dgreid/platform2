@@ -323,7 +323,7 @@ bool DHCPv4Config::ParseConfiguration(const KeyValueStore& configuration,
   properties->address_family = IPAddress::kFamilyIPv4;
   string classless_static_routes;
   bool default_gateway_parse_error = false;
-  for (const auto it : configuration.properties()) {
+  for (const auto& it : configuration.properties()) {
     const string& key = it.first;
     const brillo::Any& value = it.second;
     SLOG(nullptr, 2) << "Processing key: " << key;

@@ -1240,7 +1240,7 @@ void WiFi::PendingScanResultsHandler() {
   SLOG(this, 2) << __func__ << " with " << pending_scan_results_->results.size()
                 << " results and is_complete set to "
                 << pending_scan_results_->is_complete;
-  for (const auto result : pending_scan_results_->results) {
+  for (const auto& result : pending_scan_results_->results) {
     if (result.is_removal) {
       BSSRemovedTask(result.path);
     } else {
