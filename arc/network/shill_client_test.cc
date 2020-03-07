@@ -58,7 +58,7 @@ TEST_F(ShillClientTest, DevicesChangedHandlerCalledOnDevicesPropertyChange) {
   client_->NotifyManagerPropertyChange(shill::kDevicesProperty, value);
   EXPECT_EQ(added_.size(), devices.size());
   EXPECT_EQ(removed_.size(), 0);
-  for (const auto d : devices) {
+  for (const auto& d : devices) {
     EXPECT_NE(added_.find(d.value()), added_.end());
   }
   // Implies the default callback was run;
