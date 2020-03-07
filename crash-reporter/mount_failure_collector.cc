@@ -17,6 +17,28 @@ namespace {
 const char kEncryptedStatefulDeviceLabel[] = "encstateful";
 const char kStatefulDeviceLabel[] = "stateful";
 const char kInvalidDeviceLabel[] = "invalid";
+
+std::vector<std::string> ConstructLoggingCommands(StorageDeviceType device_type,
+                                                  bool is_mount_failure) {
+  std::vector<std::string> cmds;
+  if (is_mount_failure) {
+    // Common logging for mount failure cases:
+    // - dumpe2fs.
+    // - dmesg for current run.
+    // - ramoops, if any.
+    cmds = {"dumpe2fs_" +
+                MountFailureCollector::StorageDeviceTypeToString(device_type),
+            "kernel-warning", "console-ramoops"};
+
+    // For encrypted stateful mount failure, add logs from mount-encrypted.
+    if (device_type == StorageDeviceType::kEncryptedStateful)
+      cmds.push_back("mount-encrypted");
+  } else {
+    cmds = {"shutdown_umount_failure_state", "umount-encrypted"};
+  }
+  return cmds;
+}
+
 }  // namespace
 
 MountFailureCollector::MountFailureCollector(StorageDeviceType device_type)
@@ -54,7 +76,7 @@ void MountFailureCollector::Initialize(
   CrashCollector::Initialize(is_feedback_allowed_function, early);
 }
 
-bool MountFailureCollector::Collect() {
+bool MountFailureCollector::Collect(bool is_mount_failure) {
   if (!is_feedback_allowed_function_()) {
     LOG(INFO) << "Not collecting clobber report; no user consent";
     return true;
@@ -66,8 +88,11 @@ bool MountFailureCollector::Collect() {
   }
 
   std::string device_label = StorageDeviceTypeToString(device_type_);
-  std::string exec_name = "mount_failure_" + device_label;
+  std::string exec_name = (is_mount_failure ? "mount" : "umount");
+  exec_name += "_failure_" + device_label;
   std::string dump_basename = FormatDumpBasename(exec_name, time(nullptr), 0);
+
+  auto logging_cmds = ConstructLoggingCommands(device_type_, is_mount_failure);
 
   base::FilePath crash_directory;
   if (!GetCreatedCrashDirectoryByEuid(kRootUid, &crash_directory, nullptr)) {
@@ -77,22 +102,12 @@ bool MountFailureCollector::Collect() {
   // Use exec name as the crash signature.
   AddCrashMetaData("sig", exec_name);
 
-  // Common logging for mount failure cases:
-  // - dumpe2fs (for the respective block dev).
-  // - dmesg for current run.
-  // - ramoops, if any.
-  std::vector<std::string> cmds = {"dumpe2fs_" + device_label, "kernel-warning",
-                                   "console-ramoops"};
-
-  // For encrypted stateful mount failure, add logs from mount-encrypted.
-  if (device_type_ == StorageDeviceType::kEncryptedStateful)
-    cmds.push_back("mount-encrypted");
-
   base::FilePath log_path = GetCrashPath(crash_directory, dump_basename, "log");
   base::FilePath meta_path =
       GetCrashPath(crash_directory, dump_basename, "meta");
 
-  bool result = GetMultipleLogContents(log_config_path_, cmds, log_path);
+  bool result =
+      GetMultipleLogContents(log_config_path_, logging_cmds, log_path);
   if (result) {
     FinishCrash(meta_path, exec_name, log_path.BaseName().value());
   }

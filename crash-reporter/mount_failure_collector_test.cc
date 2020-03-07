@@ -23,7 +23,9 @@ const char kLogConfigFileContents[] =
     "dumpe2fs_encstateful=echo encstateful\n"
     "kernel-warning=echo dmesg\n"
     "console-ramoops=echo ramoops\n"
-    "mount-encrypted=echo mount-encrypted";
+    "mount-encrypted=echo mount-encrypted\n"
+    "shutdown_umount_failure_state=echo umount_failure_state\n"
+    "umount-encrypted=echo umount-encrypted-logs";
 
 void Initialize(MountFailureCollector* collector,
                 base::ScopedTempDir* scoped_tmp_dir) {
@@ -48,7 +50,7 @@ TEST(MountFailureCollectorTest, TestStatefulMountFailure) {
 
   Initialize(&collector, &tmp_dir);
 
-  EXPECT_TRUE(collector.Collect());
+  EXPECT_TRUE(collector.Collect(true /* is_mount_failure */));
 
   // Check report collection.
   EXPECT_TRUE(test_util::DirectoryHasFileWithPattern(
@@ -69,7 +71,7 @@ TEST(MountFailureCollectorTest, TestEncryptedStatefulMountFailure) {
 
   Initialize(&collector, &tmp_dir);
 
-  EXPECT_TRUE(collector.Collect());
+  EXPECT_TRUE(collector.Collect(true /* is_mount_failure */));
 
   // Check report collection.
   EXPECT_TRUE(test_util::DirectoryHasFileWithPattern(
@@ -80,4 +82,25 @@ TEST(MountFailureCollectorTest, TestEncryptedStatefulMountFailure) {
   // Check report contents.
   EXPECT_TRUE(base::ReadFileToString(report_path, &report_contents));
   EXPECT_EQ("encstateful\ndmesg\nramoops\nmount-encrypted\n", report_contents);
+}
+
+TEST(MountFailureCollectorTest, TestUmountFailure) {
+  MountFailureCollector collector(StorageDeviceType::kStateful);
+  base::ScopedTempDir tmp_dir;
+  base::FilePath report_path;
+  std::string report_contents;
+
+  Initialize(&collector, &tmp_dir);
+
+  EXPECT_TRUE(collector.Collect(false /* is_mount_failure */));
+
+  // Check report collection.
+  EXPECT_TRUE(test_util::DirectoryHasFileWithPattern(
+      tmp_dir.GetPath(), "umount_failure_stateful.*.meta", NULL));
+  EXPECT_TRUE(test_util::DirectoryHasFileWithPattern(
+      tmp_dir.GetPath(), "umount_failure_stateful.*.log", &report_path));
+
+  // Check report contents.
+  EXPECT_TRUE(base::ReadFileToString(report_path, &report_contents));
+  EXPECT_EQ("umount_failure_state\numount-encrypted-logs\n", report_contents);
 }
