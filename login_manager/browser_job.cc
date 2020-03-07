@@ -77,7 +77,7 @@ void MergeSwitches(std::vector<std::string>* args,
                    bool keep_existing) {
   std::string values;
   auto head = args->begin();
-  for (const auto arg : *args) {
+  for (const auto& arg : *args) {
     bool match = base::StartsWith(arg, prefix, base::CompareCase::SENSITIVE);
     if (match) {
       if (!values.empty())
