@@ -457,6 +457,13 @@ mount --make-shared /home/root
 do_mount_var_and_home_chronos || cleanup_mounts "var and home"
 remember_mount "${ENCRYPTED_STATEFUL_MNT}"
 
+# Setup the encrypted reboot vault once the encrypted stateful partition
+# is available. If unlocking the encrypted reboot vault failed (due to power
+# loss/reboot/invalid vault), attempt to recreate the encrypted reboot vault.
+if ! encrypted-reboot-vault --action=unlock; then
+  encrypted-reboot-vault --action=create
+fi
+
 force_clean_file_attrs /var
 force_clean_file_attrs /home/chronos
 
