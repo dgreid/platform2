@@ -6,6 +6,7 @@
 
 #include <linux/rtnetlink.h>
 #include <net/if.h>
+#include <sys/ioctl.h>
 
 #include <utility>
 #include <vector>
@@ -40,6 +41,8 @@ constexpr char kArcIfname[] = "arc0";
 constexpr char kArcBridge[] = "arcbr0";
 constexpr char kArcVmIfname[] = "arc1";
 constexpr char kArcVmBridge[] = "arc_br1";
+constexpr std::array<const char*, 2> kEthernetInterfacePrefixes{{"eth", "usb"}};
+constexpr std::array<const char*, 2> kWifiInterfacePrefixes{{"wlan", "mlan"}};
 
 void OneTimeSetup(const Datapath& datapath) {
   static bool done = false;
@@ -108,6 +111,54 @@ GuestMessage::GuestType ArcGuest() {
   return IsArcVm() ? GuestMessage::ARC_VM : GuestMessage::ARC;
 }
 
+bool IsEthernetInterface(const std::string& ifname) {
+  for (const auto& prefix : kEthernetInterfacePrefixes) {
+    if (base::StartsWith(ifname, prefix,
+                         base::CompareCase::INSENSITIVE_ASCII)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool IsWifiInterface(const std::string& ifname) {
+  for (const auto& prefix : kWifiInterfacePrefixes) {
+    if (base::StartsWith(ifname, prefix,
+                         base::CompareCase::INSENSITIVE_ASCII)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool IsMulticastInterface(const std::string& ifname) {
+  if (ifname.empty()) {
+    return false;
+  }
+
+  int fd = socket(AF_INET, SOCK_DGRAM, 0);
+  if (fd < 0) {
+    // If IPv4 fails, try to open a socket using IPv6.
+    fd = socket(AF_INET6, SOCK_DGRAM, 0);
+    if (fd < 0) {
+      LOG(ERROR) << "Unable to create socket";
+      return false;
+    }
+  }
+
+  struct ifreq ifr;
+  memset(&ifr, 0, sizeof(ifr));
+  strncpy(ifr.ifr_name, ifname.c_str(), IFNAMSIZ);
+  if (ioctl(fd, SIOCGIFFLAGS, &ifr) < 0) {
+    PLOG(ERROR) << "SIOCGIFFLAGS failed for " << ifname;
+    close(fd);
+    return false;
+  }
+
+  close(fd);
+  return (ifr.ifr_flags & IFF_MULTICAST);
+}
+
 // Returns the configuration for the ARC management interface used for VPN
 // forwarding, ADB-over-TCP and single-networked ARCVM.
 std::unique_ptr<Device::Config> MakeArcConfig(AddressManager* addr_mgr,
@@ -144,39 +195,25 @@ std::unique_ptr<Device::Config> MakeArcConfig(AddressManager* addr_mgr,
 }  // namespace
 
 ArcService::ArcService(ShillClient* shill_client,
-                       DeviceManagerBase* dev_mgr,
                        Datapath* datapath,
                        AddressManager* addr_mgr,
                        TrafficForwarder* forwarder)
     : shill_client_(shill_client),
-      dev_mgr_(dev_mgr),
       datapath_(datapath),
       addr_mgr_(addr_mgr),
       forwarder_(forwarder) {
-  DCHECK(shill_client_);
-  DCHECK(dev_mgr_);
-  DCHECK(datapath_);
-
-  dev_mgr_->RegisterDeviceAddedHandler(
-      GuestMessage::ARC,
-      base::Bind(&ArcService::OnDeviceAdded, base::Unretained(this)));
-  dev_mgr_->RegisterDeviceRemovedHandler(
-      GuestMessage::ARC,
-      base::Bind(&ArcService::OnDeviceRemoved, base::Unretained(this)));
-
+  shill_client_->RegisterDevicesChangedHandler(
+      base::Bind(&ArcService::OnDevicesChanged, weak_factory_.GetWeakPtr()));
+  shill_client_->ScanDevices(
+      base::Bind(&ArcService::OnDevicesChanged, weak_factory_.GetWeakPtr()));
   shill_client_->RegisterDefaultInterfaceChangedHandler(base::Bind(
       &ArcService::OnDefaultInterfaceChanged, weak_factory_.GetWeakPtr()));
 }
 
 ArcService::~ArcService() {
   if (impl_) {
-    // Stop the service.
     Stop(impl_->id());
-    // Delete all the bridges and veth pairs.
-    dev_mgr_->ProcessDevices(
-        base::Bind(&ArcService::OnDeviceRemoved, weak_factory_.GetWeakPtr()));
   }
-  dev_mgr_->UnregisterAllGuestHandlers(GuestMessage::ARC);
 }
 
 bool ArcService::Start(uint32_t id) {
@@ -202,30 +239,94 @@ bool ArcService::Start(uint32_t id) {
     return false;
   }
 
-  // Start known host devices, any new ones will be setup in the process.
-  dev_mgr_->ProcessDevices(
-      base::Bind(&ArcService::StartDevice, weak_factory_.GetWeakPtr()));
+  // Start already known Shill <-> ARC mapped devices.
+  for (const auto& d : devices_)
+    StartDevice(d.second.get());
 
-  dev_mgr_->OnGuestStart(guest);
   return true;
 }
 
 void ArcService::Stop(uint32_t id) {
-  if (!impl_)
-    return;
+  // Stop Shill <-> ARC mapped devices.
+  for (const auto& d : devices_)
+    StopDevice(d.second.get());
 
-  dev_mgr_->OnGuestStop(impl_->guest());
-
-  // Stop known host devices. Note that this does not teardown any existing
-  // devices.
-  dev_mgr_->ProcessDevices(
-      base::Bind(&ArcService::StopDevice, weak_factory_.GetWeakPtr()));
-
-  impl_->Stop(id);
-  impl_.reset();
+  if (impl_) {
+    impl_->Stop(id);
+    impl_.reset();
+  }
 }
 
-void ArcService::OnDeviceAdded(Device* device) {
+void ArcService::OnDevicesChanged(const std::set<std::string>& added,
+                                  const std::set<std::string>& removed) {
+  for (const std::string& name : removed)
+    RemoveDevice(name);
+
+  for (const std::string& name : added)
+    AddDevice(name);
+}
+
+void ArcService::AddDevice(const std::string& ifname) {
+  if (ifname.empty())
+    return;
+
+  if (devices_.find(ifname) != devices_.end()) {
+    LOG(DFATAL) << "Attemping to add already tracked device: " << ifname;
+    return;
+  }
+
+  Device::Options opts{
+      .fwd_multicast = IsMulticastInterface(ifname),
+      // TODO(crbug/726815) Also enable |ipv6_enabled| for cellular networks
+      // once IPv6 is enabled on cellular networks in shill.
+      .ipv6_enabled = IsEthernetInterface(ifname) || IsWifiInterface(ifname),
+      .use_default_interface = false,
+      .is_android = false,
+      .is_sticky = false,
+  };
+  std::string host_ifname = base::StringPrintf("arc_%s", ifname.c_str());
+  auto ipv4_subnet =
+      addr_mgr_->AllocateIPv4Subnet(AddressManager::Guest::ARC_NET);
+  if (!ipv4_subnet) {
+    LOG(ERROR) << "Subnet already in use or unavailable. Cannot make device: "
+               << ifname;
+    return;
+  }
+  auto host_ipv4_addr = ipv4_subnet->AllocateAtOffset(0);
+  if (!host_ipv4_addr) {
+    LOG(ERROR)
+        << "Bridge address already in use or unavailable. Cannot make device: "
+        << ifname;
+    return;
+  }
+  auto guest_ipv4_addr = ipv4_subnet->AllocateAtOffset(1);
+  if (!guest_ipv4_addr) {
+    LOG(ERROR)
+        << "ARC address already in use or unavailable. Cannot make device: "
+        << ifname;
+    return;
+  }
+
+  auto config = std::make_unique<Device::Config>(
+      host_ifname, ifname, addr_mgr_->GenerateMacAddress(),
+      std::move(ipv4_subnet), std::move(host_ipv4_addr),
+      std::move(guest_ipv4_addr));
+
+  auto device = std::make_unique<Device>(ifname, std::move(config), opts,
+                                         GuestMessage::ARC);
+
+  StartDevice(device.get());
+  devices_.emplace(ifname, std::move(device));
+}
+
+void ArcService::StartDevice(Device* device) {
+  if (!impl_ || !impl_->IsStarted())
+    return;
+
+  // For now, only start devices for ARC++.
+  if (impl_->guest() != GuestMessage::ARC)
+    return;
+
   const auto& config = device->config();
 
   LOG(INFO) << "Adding device " << device->ifname()
@@ -246,44 +347,36 @@ void ArcService::OnDeviceAdded(Device* device) {
                << device->ifname();
 
   if (!datapath_->AddOutboundIPv4(config.host_ifname()))
-    LOG(ERROR) << "Failed to configure egress traffic rules";
-
-  device->set_context(std::make_unique<Context>());
-
-  StartDevice(device);
-}
-
-void ArcService::StartDevice(Device* device) {
-  // This can happen if OnDeviceAdded is invoked when the container is down.
-  if (!impl_ || !impl_->IsStarted())
-    return;
-
-  // For now, only start devices for ARC++.
-  if (impl_->guest() != GuestMessage::ARC)
-    return;
-
-  // If there is no context, then this is a new device and it needs to run
-  // through the full setup process.
-  Context* ctx = dynamic_cast<Context*>(device->context());
-  if (!ctx)
-    return OnDeviceAdded(device);
-
-  if (ctx->IsStarted()) {
-    LOG(ERROR) << "Attempt to restart device " << device->ifname();
-    return;
-  }
+    LOG(ERROR) << "Failed to configure egress traffic rules for "
+               << device->ifname();
 
   if (!impl_->OnStartDevice(device)) {
     LOG(ERROR) << "Failed to start device " << device->ifname();
+  }
+}
+
+void ArcService::RemoveDevice(const std::string& ifname) {
+  const auto it = devices_.find(ifname);
+  if (it == devices_.end()) {
+    LOG(WARNING) << "Unknown device: " << ifname;
     return;
   }
 
-  ctx->Start();
+  // If the container is down, this call does nothing.
+  StopDevice(it->second.get());
+
+  devices_.erase(it);
 }
 
-void ArcService::OnDeviceRemoved(Device* device) {
-  // If the container is down, this call does nothing.
-  StopDevice(device);
+void ArcService::StopDevice(Device* device) {
+  if (!impl_ || !impl_->IsStarted())
+    return;
+
+  // For now, devices are only started for ARC++.
+  if (impl_->guest() != GuestMessage::ARC)
+    return;
+
+  impl_->OnStopDevice(device);
 
   const auto& config = device->config();
 
@@ -296,34 +389,6 @@ void ArcService::OnDeviceRemoved(Device* device) {
       device->ifname(), IPv4AddressToString(config.guest_ipv4_addr()));
 
   datapath_->RemoveBridge(config.host_ifname());
-
-  device->set_context(nullptr);
-}
-
-void ArcService::StopDevice(Device* device) {
-  // This can happen if the device if OnDeviceRemoved is invoked when the
-  // container is down.
-  if (!impl_ || !impl_->IsStarted())
-    return;
-
-  // For now, devices are only started for ARC++.
-  if (impl_->guest() != GuestMessage::ARC)
-    return;
-
-  Context* ctx = dynamic_cast<Context*>(device->context());
-  if (!ctx) {
-    LOG(ERROR) << "Attempt to stop removed device " << device->ifname();
-    return;
-  }
-
-  if (!ctx->IsStarted()) {
-    LOG(ERROR) << "Attempt to re-stop device " << device->ifname();
-    return;
-  }
-
-  impl_->OnStopDevice(device);
-
-  ctx->Stop();
 }
 
 void ArcService::OnDefaultInterfaceChanged(const std::string& new_ifname,
@@ -712,10 +777,10 @@ void ArcService::VmImpl::OnDefaultInterfaceChanged(
 
   // If a new default interface was given, then re-enable with that.
   if (!new_ifname.empty()) {
+    datapath_->AddLegacyIPv4InboundDNAT(new_ifname);
     forwarder_->StartForwarding(new_ifname, kArcVmBridge,
                                 arc_device_->config().guest_ipv4_addr(),
                                 true /*ipv6*/, true /*multicast*/);
-    datapath_->AddLegacyIPv4InboundDNAT(new_ifname);
   }
 }
 

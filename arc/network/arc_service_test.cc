@@ -14,7 +14,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "arc/network/device_manager.h"
+#include "arc/network/address_manager.h"
 #include "arc/network/fake_process_runner.h"
 #include "arc/network/fake_shill_client.h"
 #include "arc/network/mock_datapath.h"
@@ -40,33 +40,6 @@ static AddressManager addr_mgr({
     AddressManager::Guest::ARC_NET,
 });
 
-class MockDeviceManager : public DeviceManagerBase {
- public:
-  MockDeviceManager() = default;
-  ~MockDeviceManager() = default;
-
-  MOCK_METHOD2(RegisterDeviceAddedHandler,
-               void(GuestMessage::GuestType, const DeviceHandler&));
-  MOCK_METHOD2(RegisterDeviceRemovedHandler,
-               void(GuestMessage::GuestType, const DeviceHandler&));
-  MOCK_METHOD2(RegisterDeviceIPv6AddressFoundHandler,
-               void(GuestMessage::GuestType, const DeviceHandler&));
-  MOCK_METHOD1(UnregisterAllGuestHandlers, void(GuestMessage::GuestType));
-  MOCK_METHOD1(OnGuestStart, void(GuestMessage::GuestType));
-  MOCK_METHOD1(OnGuestStop, void(GuestMessage::GuestType));
-  MOCK_METHOD1(ProcessDevices, void(const DeviceHandler&));
-  MOCK_CONST_METHOD1(Exists, bool(const std::string& name));
-  MOCK_CONST_METHOD1(FindByHostInterface, Device*(const std::string& ifname));
-  MOCK_CONST_METHOD1(FindByGuestInterface, Device*(const std::string& ifname));
-  MOCK_METHOD1(Add, bool(const std::string&));
-  MOCK_METHOD2(AddWithContext,
-               bool(const std::string&, std::unique_ptr<Device::Context>));
-  MOCK_METHOD1(Remove, bool(const std::string&));
-  MOCK_METHOD2(StartForwarding, void(const Device&, const std::string&));
-  MOCK_METHOD2(StopForwarding, void(const Device&, const std::string&));
-  MOCK_CONST_METHOD0(addr_mgr, AddressManager*());
-};
-
 class MockTrafficForwarder : public TrafficForwarder {
  public:
   MockTrafficForwarder() = default;
@@ -84,6 +57,22 @@ class MockTrafficForwarder : public TrafficForwarder {
                     const std::string& ifname_virtual,
                     bool ipv6,
                     bool multicast));
+};
+
+class MockImpl : public ArcService::Impl {
+ public:
+  MockImpl() = default;
+  ~MockImpl() = default;
+
+  MOCK_CONST_METHOD0(guest, GuestMessage::GuestType());
+  MOCK_CONST_METHOD0(id, uint32_t());
+  MOCK_METHOD1(Start, bool(uint32_t));
+  MOCK_METHOD1(Stop, void(uint32_t));
+  MOCK_CONST_METHOD1(IsStarted, bool(uint32_t*));
+  MOCK_METHOD1(OnStartDevice, bool(Device*));
+  MOCK_METHOD1(OnStopDevice, void(Device*));
+  MOCK_METHOD2(OnDefaultInterfaceChanged,
+               void(const std::string&, const std::string&));
 };
 
 std::unique_ptr<Device> MakeDevice(const std::string& name,
@@ -124,27 +113,20 @@ class ArcServiceTest : public testing::Test {
   }
 
   std::unique_ptr<ArcService> NewService() {
-    EXPECT_CALL(dev_mgr_, RegisterDeviceAddedHandler(_, _));
-    EXPECT_CALL(dev_mgr_, RegisterDeviceRemovedHandler(_, _));
-    EXPECT_CALL(dev_mgr_, UnregisterAllGuestHandlers(_));
-    EXPECT_CALL(dev_mgr_, addr_mgr()).WillRepeatedly(Return(&addr_mgr_));
-
     arc_networkd::test::guest = GuestMessage::ARC;
-    return std::make_unique<ArcService>(shill_client_.get(), &dev_mgr_,
-                                        datapath_.get(), &addr_mgr_,
-                                        &forwarder_);
+    return std::make_unique<ArcService>(shill_client_.get(), datapath_.get(),
+                                        &addr_mgr_, &forwarder_);
   }
 
   FakeShillClientHelper shill_helper_;
   std::unique_ptr<ShillClient> shill_client_;
   AddressManager addr_mgr_;
-  MockDeviceManager dev_mgr_;
   MockTrafficForwarder forwarder_;
   std::unique_ptr<MockDatapath> datapath_;
   std::unique_ptr<FakeProcessRunner> runner_;
 };
 
-TEST_F(ArcServiceTest, VerifyOnDeviceAddedDatapath) {
+TEST_F(ArcServiceTest, StartDevice) {
   EXPECT_CALL(*datapath_,
               AddBridge(StrEq("arc_eth0"), Ipv4Addr(100, 115, 92, 9), 30))
       .WillOnce(Return(true));
@@ -154,17 +136,35 @@ TEST_F(ArcServiceTest, VerifyOnDeviceAddedDatapath) {
   EXPECT_CALL(*datapath_, AddOutboundIPv4(StrEq("arc_eth0")))
       .WillOnce(Return(true));
 
-  auto dev = MakeDevice("eth0", "arc_eth0", "eth0");
-  ASSERT_TRUE(dev);
-  NewService()->OnDeviceAdded(dev.get());
+  auto svc = NewService();
+  auto impl = std::make_unique<MockImpl>();
+  auto* mock_impl = impl.get();
+  svc->impl_ = std::move(impl);
+
+  EXPECT_CALL(*mock_impl, guest()).WillRepeatedly(Return(GuestMessage::ARC));
+  EXPECT_CALL(*mock_impl, IsStarted(_)).WillRepeatedly(Return(true));
+  EXPECT_CALL(*mock_impl, OnStartDevice(_)).WillOnce(Return(true));
+  svc->AddDevice("eth0");
+  EXPECT_TRUE(svc->devices_.find("eth0") != svc->devices_.end());
 }
 
-TEST_F(ArcServiceTest, VerifyOnDeviceRemovedDatapath) {
+TEST_F(ArcServiceTest, StopDevice) {
+  EXPECT_CALL(*datapath_, RemoveOutboundIPv4(StrEq("arc_eth0")));
+  EXPECT_CALL(*datapath_,
+              RemoveInboundIPv4DNAT(StrEq("eth0"), StrEq("100.115.92.10")));
   EXPECT_CALL(*datapath_, RemoveBridge(StrEq("arc_eth0")));
 
-  auto dev = MakeDevice("eth0", "arc_eth0", "eth0");
-  ASSERT_TRUE(dev);
-  NewService()->OnDeviceRemoved(dev.get());
+  auto svc = NewService();
+  auto impl = std::make_unique<MockImpl>();
+  auto* mock_impl = impl.get();
+  svc->impl_ = std::move(impl);
+
+  EXPECT_CALL(*mock_impl, guest()).WillRepeatedly(Return(GuestMessage::ARC));
+  EXPECT_CALL(*mock_impl, IsStarted(_)).WillRepeatedly(Return(true));
+  EXPECT_CALL(*mock_impl, OnStopDevice(_));
+  svc->AddDevice("eth0");
+  svc->RemoveDevice("eth0");
+  EXPECT_TRUE(svc->devices_.find("eth0") == svc->devices_.end());
 }
 
 // ContainerImpl
@@ -183,7 +183,6 @@ class ContainerImplTest : public testing::Test {
     runner_ = std::make_unique<FakeProcessRunner>();
     runner_->Capture(false);
     datapath_ = std::make_unique<MockDatapath>(runner_.get());
-    EXPECT_CALL(dev_mgr_, addr_mgr()).WillRepeatedly(Return(&addr_mgr_));
   }
 
   std::unique_ptr<ArcService::ContainerImpl> Impl(bool start = true) {
@@ -203,7 +202,6 @@ class ContainerImplTest : public testing::Test {
           .WillOnce(Return(true));
       EXPECT_CALL(*datapath_, AddToBridge(StrEq("arcbr0"), StrEq("veth_arc0")))
           .WillOnce(Return(true));
-      EXPECT_CALL(dev_mgr_, StartForwarding(_, _)).Times(AnyNumber());
 
       impl->Start(kTestPID);
     }
@@ -211,7 +209,6 @@ class ContainerImplTest : public testing::Test {
   }
 
   AddressManager addr_mgr_;
-  MockDeviceManager dev_mgr_;
   std::unique_ptr<MockDatapath> datapath_;
   std::unique_ptr<FakeProcessRunner> runner_;
   MockTrafficForwarder forwarder_;
@@ -317,7 +314,6 @@ class VmImplTest : public testing::Test {
     datapath_ = std::make_unique<MockDatapath>(runner_.get());
     shill_client_ = helper_.FakeClient();
     shill_client_->SetFakeDefaultInterface("eth0");
-    EXPECT_CALL(dev_mgr_, addr_mgr()).WillRepeatedly(Return(&addr_mgr_));
   }
 
   std::unique_ptr<ArcService::VmImpl> Impl(bool start = true) {
@@ -331,7 +327,6 @@ class VmImplTest : public testing::Test {
   }
 
   AddressManager addr_mgr_;
-  MockDeviceManager dev_mgr_;
   std::unique_ptr<MockDatapath> datapath_;
   std::unique_ptr<FakeProcessRunner> runner_;
   std::unique_ptr<FakeShillClient> shill_client_;

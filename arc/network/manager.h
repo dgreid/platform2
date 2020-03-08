@@ -20,10 +20,10 @@
 #include "arc/network/address_manager.h"
 #include "arc/network/arc_service.h"
 #include "arc/network/crostini_service.h"
-#include "arc/network/device_manager.h"
 #include "arc/network/helper_process.h"
 #include "arc/network/shill_client.h"
 #include "arc/network/socket.h"
+#include "arc/network/traffic_forwarder.h"
 
 namespace arc_networkd {
 
@@ -135,7 +135,6 @@ class Manager final : public brillo::DBusDaemon, private TrafficForwarder {
   std::unique_ptr<HelperProcess> nd_proxy_;
 
   AddressManager addr_mgr_;
-  std::unique_ptr<DeviceManager> device_mgr_;
 
   // |cached_feature_enabled| stores the cached result of if a feature should be
   // enabled.

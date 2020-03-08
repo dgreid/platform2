@@ -235,12 +235,9 @@ void Manager::InitialSetup() {
 
   shill_client_ = std::make_unique<ShillClient>(bus_);
   auto* const forwarder = static_cast<TrafficForwarder*>(this);
-  device_mgr_ = std::make_unique<DeviceManager>(shill_client_.get(), &addr_mgr_,
-                                                datapath_.get(), forwarder);
 
-  arc_svc_ =
-      std::make_unique<ArcService>(shill_client_.get(), device_mgr_.get(),
-                                   datapath_.get(), &addr_mgr_, forwarder);
+  arc_svc_ = std::make_unique<ArcService>(shill_client_.get(), datapath_.get(),
+                                          &addr_mgr_, forwarder);
   cros_svc_ = std::make_unique<CrostiniService>(shill_client_.get(), &addr_mgr_,
                                                 datapath_.get(), forwarder);
 
@@ -248,13 +245,9 @@ void Manager::InitialSetup() {
 }
 
 void Manager::OnShutdown(int* exit_code) {
-  if (!device_mgr_)
-    return;
-
   LOG(INFO) << "Shutting down and cleaning up";
   cros_svc_.reset();
   arc_svc_.reset();
-  device_mgr_.reset();
 
   // Restore original local port range.
   // TODO(garrick): The original history behind this tweak is gone. Some
@@ -459,11 +452,10 @@ std::unique_ptr<dbus::Response> Manager::OnArcVmStartup(
     dev->set_ipv4_addr(config.guest_ipv4_addr());
   };
 
+  // TODO(garrick): Update to return all devices instead once ARCVM supports
+  // multi-networking.
   if (auto* arc = arc_svc_->ArcDevice())
     build_resp(&response, arc);
-
-  device_mgr_->ProcessDevices(
-      base::Bind(build_resp, base::Unretained(&response)));
 
   writer.AppendProtoAsArrayOfBytes(response);
   return dbus_response;

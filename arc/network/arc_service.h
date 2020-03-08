@@ -7,15 +7,18 @@
 
 #include <map>
 #include <memory>
+#include <set>
 #include <string>
 
 #include <base/memory/weak_ptr.h>
+#include <gtest/gtest_prod.h>  // for FRIEND_TEST
 
+#include "arc/network/address_manager.h"
 #include "arc/network/datapath.h"
 #include "arc/network/device.h"
-#include "arc/network/device_manager.h"
 #include "arc/network/ipc.pb.h"
 #include "arc/network/shill_client.h"
+#include "arc/network/traffic_forwarder.h"
 
 namespace arc_networkd {
 
@@ -132,7 +135,6 @@ class ArcService {
 
   // All pointers are required and cannot be null, and are owned by the caller.
   ArcService(ShillClient* shill_client,
-             DeviceManagerBase* dev_mgr,
              Datapath* datapath,
              AddressManager* addr_mgr,
              TrafficForwarder* forwarder);
@@ -141,26 +143,46 @@ class ArcService {
   bool Start(uint32_t id);
   void Stop(uint32_t id);
 
-  void OnDeviceAdded(Device* device);
-  void OnDeviceRemoved(Device* device);
-  void OnDefaultInterfaceChanged(const std::string& new_ifname,
-                                 const std::string& prev_ifname);
-
+  // Returns the ARC management interface.
   Device* ArcDevice() const;
 
  private:
+  // Callback from ShillClient, invoked whenever the device list changes.
+  // |devices_| will contain all devices currently connected to shill
+  // (e.g. "eth0", "wlan0", etc).
+  void OnDevicesChanged(const std::set<std::string>& added,
+                        const std::set<std::string>& removed);
+
+  // Callback from ShillClient, invoked whenever the default network
+  // interface changes or goes away.
+  void OnDefaultInterfaceChanged(const std::string& new_ifname,
+                                 const std::string& prev_ifname);
+
+  // Build and configure an ARC device for the interface |name| provided by
+  // Shill. The new device will be added to |devices_|. If an implementation is
+  // already running, the device will be started.
+  void AddDevice(const std::string& ifname);
+
+  // Deletes the ARC device; if an implementation is running, the device will be
+  // stopped first.
+  void RemoveDevice(const std::string& ifname);
+
+  // Starts a device by setting up the bridge and configuring some NAT rules,
+  // then invoking the implementation-specific start routine.
   void StartDevice(Device* device);
+
+  // Stops and cleans up any virtual interfaces and associated datapath.
   void StopDevice(Device* device);
 
-  // Returns true if the device should be processed by the service.
-  bool AllowDevice(Device* device) const;
-
   ShillClient* shill_client_;
-  DeviceManagerBase* dev_mgr_;
   Datapath* datapath_;
   AddressManager* addr_mgr_;
   TrafficForwarder* forwarder_;
   std::unique_ptr<Impl> impl_;
+  std::map<std::string, std::unique_ptr<Device>> devices_;
+
+  FRIEND_TEST(ArcServiceTest, StartDevice);
+  FRIEND_TEST(ArcServiceTest, StopDevice);
 
   base::WeakPtrFactory<ArcService> weak_factory_{this};
   DISALLOW_COPY_AND_ASSIGN(ArcService);

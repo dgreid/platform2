@@ -14,8 +14,8 @@
 #include "arc/network/address_manager.h"
 #include "arc/network/datapath.h"
 #include "arc/network/device.h"
-#include "arc/network/device_manager.h"
 #include "arc/network/shill_client.h"
+#include "arc/network/traffic_forwarder.h"
 
 namespace arc_networkd {
 
