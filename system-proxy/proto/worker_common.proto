@@ -1,0 +1,45 @@
+syntax = "proto2";
+
+option optimize_for = LITE_RUNTIME;
+
+package system_proxy;
+
+message Credentials {
+  optional string username = 1;
+  optional string password = 2;
+}
+
+message SocketAddress {
+  // A listening ipv4 address for the local proxy server, serialized in
+  // network-byte-order.
+  optional uint32 addr = 1;
+  // This value should fit in a uint16_t.
+  optional uint32 port = 2;
+}
+
+message LogRequest {
+  optional string message = 1;
+}
+
+message ProxyResolutionRequest {
+  optional string url = 1;
+}
+
+message ProxyResolutionReply {
+  optional string proxy_url = 1;
+}
+
+message WorkerRequest {
+  oneof params {
+    LogRequest log_request = 1;
+    ProxyResolutionRequest proxy_resolution_request = 2;
+  }
+}
+
+message WorkerConfigs {
+  oneof params {
+    Credentials credentials = 1;
+    // The local proxy listening address.
+    SocketAddress listening_address = 2;
+  }
+}

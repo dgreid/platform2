@@ -4,6 +4,7 @@
 
 import("//common-mk/generate-dbus-adaptors.gni")
 import("//common-mk/pkg_config.gni")
+import("//common-mk/proto_library.gni")
 
 group("all") {
   deps = [
@@ -11,6 +12,7 @@ group("all") {
     ":libsystemproxy",
     ":system_proxy",
     ":system_proxy_worker",
+    ":worker-protos",
   ]
   if (use.test) {
     deps += [ ":system-proxy_test" ]
@@ -27,17 +29,27 @@ generate_dbus_adaptors("dbus_code_generator") {
   ]
 }
 
+# Worker configs protos.
+proto_library("worker-protos") {
+  proto_in_dir = "proto"
+  proto_out_dir = "include/bindings"
+  sources = [
+    "${proto_in_dir}/worker_common.proto",
+  ]
+}
+
 pkg_config("target_defaults") {
   pkg_deps = [
     "dbus-1",
     "libbrillo-${libbase_ver}",
     "libchrome-${libbase_ver}",
+    "libminijail",
 
     # system_api depends on protobuf (or protobuf-lite). It must
     # appear before protobuf or the linker flags won't be in the right
     # order.
-    "system_api",
     "protobuf-lite",
+    "system_api",
   ]
 }
 
@@ -45,11 +57,14 @@ pkg_config("target_defaults") {
 static_library("libsystemproxy") {
   configs += [ ":target_defaults" ]
   sources = [
+    "protobuf_util.cc",
+    "sandboxed_worker.cc",
     "system_proxy_adaptor.cc",
     "system_proxy_daemon.cc",
   ]
   deps = [
     ":dbus_code_generator",
+    ":worker-protos",
   ]
 }
 
@@ -77,7 +92,6 @@ if (use.test) {
     pkg_deps = [
       "libchrome-${libbase_ver}",
       "libchrome-test-${libbase_ver}",
-      "libminijail",
     ]
   }
   executable("system-proxy_test") {

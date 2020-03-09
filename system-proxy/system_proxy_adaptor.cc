@@ -9,11 +9,14 @@
 
 #include <base/location.h>
 #include <brillo/dbus/dbus_object.h>
+#include <brillo/message_loops/message_loop.h>
 
 #include "system_proxy/proto_bindings/system_proxy_service.pb.h"
+#include "system-proxy/sandboxed_worker.h"
 
 namespace system_proxy {
 namespace {
+
 // Serializes |proto| to a vector of bytes.
 std::vector<uint8_t> SerializeProto(
     const google::protobuf::MessageLite& proto) {
@@ -39,7 +42,8 @@ std::string DeserializeProto(const base::Location& from_here,
 SystemProxyAdaptor::SystemProxyAdaptor(
     std::unique_ptr<brillo::dbus_utils::DBusObject> dbus_object)
     : org::chromium::SystemProxyAdaptor(this),
-      dbus_object_(std::move(dbus_object)) {}
+      dbus_object_(std::move(dbus_object)),
+      weak_ptr_factory_(this) {}
 
 SystemProxyAdaptor::~SystemProxyAdaptor() = default;
 
@@ -53,19 +57,99 @@ void SystemProxyAdaptor::RegisterAsync(
 std::vector<uint8_t> SystemProxyAdaptor::SetSystemTrafficCredentials(
     const std::vector<uint8_t>& request_blob) {
   LOG(INFO) << "Received set credentials request.";
+
   SetSystemTrafficCredentialsRequest request;
   const std::string error_message =
       DeserializeProto(FROM_HERE, &request, request_blob);
+
   SetSystemTrafficCredentialsResponse response;
-  if (!error_message.empty())
+  if (!error_message.empty()) {
     response.set_error_message(error_message);
+    return SerializeProto(response);
+  }
+
+  if (!request.has_system_services_username() ||
+      !request.has_system_services_password()) {
+    response.set_error_message("No credentials specified");
+    return SerializeProto(response);
+  }
+
+  if (!system_services_worker_) {
+    system_services_worker_ = CreateWorker();
+    StartWorker(system_services_worker_.get());
+  }
+
+  brillo::MessageLoop::current()->PostTask(
+      FROM_HERE,
+      base::Bind(&SystemProxyAdaptor::SetCredentialsTask,
+                 weak_ptr_factory_.GetWeakPtr(), system_services_worker_.get(),
+                 request.system_services_username(),
+                 request.system_services_password()));
+
   return SerializeProto(response);
 }
 
 std::vector<uint8_t> SystemProxyAdaptor::ShutDown() {
   LOG(INFO) << "Received shutdown request.";
+
+  std::string error_message;
+  if (system_services_worker_ && system_services_worker_->IsRunning()) {
+    if (!system_services_worker_->Stop())
+      error_message =
+          "Failure to terminate worker process for system services traffic.";
+  }
+
+  if (arc_worker_ && arc_worker_->IsRunning()) {
+    if (!arc_worker_->Stop())
+      error_message += "Failure to terminate worker process for arc traffic.";
+  }
+
   ShutDownResponse response;
+  if (!error_message.empty())
+    response.set_error_message(error_message);
+
+  brillo::MessageLoop::current()->PostTask(
+      FROM_HERE, base::Bind(&SystemProxyAdaptor::ShutDownTask,
+                            weak_ptr_factory_.GetWeakPtr()));
+
   return SerializeProto(response);
+}
+
+std::unique_ptr<SandboxedWorker> SystemProxyAdaptor::CreateWorker() {
+  return std::make_unique<SandboxedWorker>();
+}
+
+void SystemProxyAdaptor::SetCredentialsTask(SandboxedWorker* worker,
+                                            const std::string& username,
+                                            const std::string& password) {
+  DCHECK(worker);
+  // TODO(acostinas,chromium/1042626) Forward the credentials to the worker
+  // process.
+}
+
+void SystemProxyAdaptor::ShutDownTask() {
+  brillo::MessageLoop::current()->BreakLoop();
+}
+
+void SystemProxyAdaptor::StartWorker(SandboxedWorker* worker) {
+  DCHECK(worker);
+  worker->Start();
+  if (!worker->IsRunning()) {
+    LOG(ERROR) << "Failed to start worker process";
+    return;
+  }
+  ConnectNamespace(worker);
+}
+
+void SystemProxyAdaptor::ConnectNamespace(SandboxedWorker* worker) {
+  // TODO(acostinas,b/147712924) Call the datapath service to setup routing and
+  // create a veth pair for the network namespace.
+}
+
+void SystemProxyAdaptor::OnConnectNamespace(
+    SandboxedWorker* worker, const patchpanel::IPv4Subnet& ipv4_subnet) {
+  // TODO(acostinas,chromium/1042626) Forward the ipv4 subnet to the worker
+  // process.
 }
 
 }  // namespace system_proxy

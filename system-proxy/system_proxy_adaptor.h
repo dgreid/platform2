@@ -5,9 +5,12 @@
 #define SYSTEM_PROXY_SYSTEM_PROXY_ADAPTOR_H_
 
 #include <memory>
+#include <string>
 #include <vector>
 
+#include <base/memory/weak_ptr.h>
 #include <brillo/dbus/async_event_sequencer.h>
+#include <patchpanel/proto_bindings/patchpanel_service.pb.h>
 
 #include "system_proxy/org.chromium.SystemProxy.h"
 
@@ -19,6 +22,9 @@ class DBusObject;
 }  // namespace brillo
 
 namespace system_proxy {
+
+class SandboxedWorker;
+
 // Implementation of the SystemProxy D-Bus interface.
 class SystemProxyAdaptor : public org::chromium::SystemProxyAdaptor,
                            public org::chromium::SystemProxyInterface {
@@ -27,7 +33,7 @@ class SystemProxyAdaptor : public org::chromium::SystemProxyAdaptor,
       std::unique_ptr<brillo::dbus_utils::DBusObject> dbus_object);
   SystemProxyAdaptor(const SystemProxyAdaptor&) = delete;
   SystemProxyAdaptor& operator=(const SystemProxyAdaptor&) = delete;
-  ~SystemProxyAdaptor();
+  virtual ~SystemProxyAdaptor();
 
   // Registers the D-Bus object and interfaces.
   void RegisterAsync(
@@ -39,8 +45,31 @@ class SystemProxyAdaptor : public org::chromium::SystemProxyAdaptor,
       const std::vector<uint8_t>& request_blob) override;
   std::vector<uint8_t> ShutDown() override;
 
+ protected:
+  virtual std::unique_ptr<SandboxedWorker> CreateWorker();
+
  private:
+  void SetCredentialsTask(SandboxedWorker* worker,
+                          const std::string& username,
+                          const std::string& password);
+
+  void ShutDownTask();
+
+  void StartWorker(SandboxedWorker* worker);
+
+  void ConnectNamespace(SandboxedWorker* worker);
+
+  void OnConnectNamespace(SandboxedWorker* worker,
+                          const patchpanel::IPv4Subnet& ipv4_subnet);
+
+  // Worker that authenticates and forwards to a remote web proxy traffic
+  // coming form Chrome OS system services.
+  std::unique_ptr<SandboxedWorker> system_services_worker_;
+  // Worker that authenticates and forwards to a remote web proxy traffic
+  // coming form ARC++ apps.
+  std::unique_ptr<SandboxedWorker> arc_worker_;
   std::unique_ptr<brillo::dbus_utils::DBusObject> dbus_object_;
+  base::WeakPtrFactory<SystemProxyAdaptor> weak_ptr_factory_;
 };
 
 }  // namespace system_proxy
