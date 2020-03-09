@@ -7,6 +7,7 @@
 #ifndef CAMERA_COMMON_CAMERA_MOJO_CHANNEL_MANAGER_IMPL_H_
 #define CAMERA_COMMON_CAMERA_MOJO_CHANNEL_MANAGER_IMPL_H_
 
+#include <memory>
 #include <string>
 
 #include <base/no_destructor.h>
@@ -15,6 +16,7 @@
 #include <mojo/core/embedder/scoped_ipc_support.h>
 
 #include "cros-camera/camera_mojo_channel_manager.h"
+#include "cros-camera/future.h"
 #include "mojo/cros_camera_service.mojom.h"
 
 namespace cros {
@@ -34,13 +36,13 @@ class CameraMojoChannelManagerImpl final : public CameraMojoChannelManager {
   // Creates a new MjpegDecodeAccelerator.
   // This API uses CameraHalDispatcher to pass |request| to another process to
   // create Mojo channel.
-  void CreateMjpegDecodeAccelerator(
+  bool CreateMjpegDecodeAccelerator(
       mojom::MjpegDecodeAcceleratorRequest request) final;
 
   // Creates a new JpegEncodeAccelerator.
   // This API uses CameraHalDispatcher to pass |request| to another process to
   // create Mojo channel.
-  void CreateJpegEncodeAccelerator(
+  bool CreateJpegEncodeAccelerator(
       mojom::JpegEncodeAcceleratorRequest request) final;
 
   // Create a new CameraAlgorithmOpsPtr.
@@ -68,10 +70,12 @@ class CameraMojoChannelManagerImpl final : public CameraMojoChannelManager {
   void RegisterServerOnIpcThread(mojom::CameraHalServerPtr hal_ptr);
 
   void CreateMjpegDecodeAcceleratorOnIpcThread(
-      mojom::MjpegDecodeAcceleratorRequest request);
+      mojom::MjpegDecodeAcceleratorRequest request,
+      base::Callback<void(bool)> callback);
 
   void CreateJpegEncodeAcceleratorOnIpcThread(
-      mojom::JpegEncodeAcceleratorRequest request);
+      mojom::JpegEncodeAcceleratorRequest request,
+      base::Callback<void(bool)> callback);
 
   static void TearDownMojoEnv();
 
@@ -83,6 +87,9 @@ class CameraMojoChannelManagerImpl final : public CameraMojoChannelManager {
   // The Mojo channel to CameraHalDispatcher in Chrome. All the Mojo
   // communication to |dispatcher_| happens on |ipc_thread_|.
   static mojom::CameraHalDispatcherPtr dispatcher_;
+
+  // Used to cancel pending futures when error occurs.
+  std::unique_ptr<cros::CancellationRelay> cancellation_relay_;
 
   // A mutex to guard static variable.
   static base::NoDestructor<base::Lock> static_lock_;

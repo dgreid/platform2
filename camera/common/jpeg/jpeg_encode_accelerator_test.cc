@@ -29,6 +29,10 @@ class JpegEncodeTestEnvironment;
 JpegEncodeTestEnvironment* g_env;
 
 namespace {
+
+const size_t kInitializeRetryLimit = 5;
+const unsigned int kInitRetrySleepIntervalUs = 1000000;
+
 // Download test image URI.
 const char* kDownloadTestImageURI1 =
     "https://storage.googleapis.com/chromiumos-test-assets-public/jpeg_test/"
@@ -79,6 +83,8 @@ class JpegEncodeAcceleratorTest : public ::testing::Test {
   void SetUp() {}
   void TearDown() {}
 
+  bool StartJea();
+
   void ParseInputFileString(const char* yuv_filename,
                             int* width,
                             int* height,
@@ -119,6 +125,18 @@ class JpegEncodeTestEnvironment : public ::testing::Environment {
   const char* yuv_filename2_;
   bool save_to_file_;
 };
+
+bool JpegEncodeAcceleratorTest::StartJea() {
+  size_t retry_count = 0;
+  while (retry_count < kInitializeRetryLimit) {
+    if (jpeg_encoder_->Start()) {
+      return true;
+    }
+    usleep(kInitRetrySleepIntervalUs);
+    retry_count++;
+  }
+  return false;
+}
 
 void JpegEncodeAcceleratorTest::ParseInputFileString(const char* yuv_filename,
                                                      int* width,
@@ -292,18 +310,18 @@ void JpegEncodeAcceleratorTest::EncodeTest(Frame* frame) {
 }
 
 TEST_F(JpegEncodeAcceleratorTest, InitTest) {
-  ASSERT_EQ(jpeg_encoder_->Start(), true);
+  ASSERT_EQ(StartJea(), true);
 }
 
 TEST_F(JpegEncodeAcceleratorTest, EncodeTest) {
-  ASSERT_EQ(jpeg_encoder_->Start(), true);
+  ASSERT_EQ(StartJea(), true);
   LoadFrame(g_env->yuv_filename1_, &jpeg_frame1_);
   PrepareMemory(&jpeg_frame1_);
   EncodeTest(&jpeg_frame1_);
 }
 
 TEST_F(JpegEncodeAcceleratorTest, EncodeTestFor2Resolutions) {
-  ASSERT_EQ(jpeg_encoder_->Start(), true);
+  ASSERT_EQ(StartJea(), true);
   LoadFrame(g_env->yuv_filename1_, &jpeg_frame1_);
   LoadFrame(g_env->yuv_filename2_, &jpeg_frame2_);
   PrepareMemory(&jpeg_frame1_);
@@ -315,7 +333,7 @@ TEST_F(JpegEncodeAcceleratorTest, EncodeTestFor2Resolutions) {
 TEST_F(JpegEncodeAcceleratorTest, Encode60Images) {
   LoadFrame(g_env->yuv_filename1_, &jpeg_frame1_);
   PrepareMemory(&jpeg_frame1_);
-  ASSERT_EQ(jpeg_encoder_->Start(), true);
+  ASSERT_EQ(StartJea(), true);
   for (int i = 0; i < 60; i++) {
     EncodeTest(&jpeg_frame1_);
   }
@@ -324,7 +342,7 @@ TEST_F(JpegEncodeAcceleratorTest, Encode60Images) {
 TEST_F(JpegEncodeAcceleratorTest, Encode1000Images) {
   LoadFrame(g_env->yuv_filename1_, &jpeg_frame1_);
   PrepareMemory(&jpeg_frame1_);
-  ASSERT_EQ(jpeg_encoder_->Start(), true);
+  ASSERT_EQ(StartJea(), true);
   for (int i = 0; i < 1000; i++) {
     EncodeTest(&jpeg_frame1_);
   }

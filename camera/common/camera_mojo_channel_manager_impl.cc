@@ -6,7 +6,6 @@
 
 #include "common/camera_mojo_channel_manager_impl.h"
 
-#include <memory>
 #include <string>
 #include <utility>
 
@@ -37,6 +36,9 @@ CameraMojoChannelManager::CreateInstance() {
 
 CameraMojoChannelManagerImpl::CameraMojoChannelManagerImpl() {
   VLOGF_ENTER();
+
+  cancellation_relay_ = std::make_unique<CancellationRelay>();
+
   bool success = InitializeMojoEnv();
   CHECK(success);
 }
@@ -70,22 +72,36 @@ void CameraMojoChannelManagerImpl::RegisterServer(
                  base::Unretained(this), base::Passed(std::move(hal_ptr))));
 }
 
-void CameraMojoChannelManagerImpl::CreateMjpegDecodeAccelerator(
+bool CameraMojoChannelManagerImpl::CreateMjpegDecodeAccelerator(
     mojom::MjpegDecodeAcceleratorRequest request) {
+  auto is_success = Future<bool>::Create(cancellation_relay_.get());
+
   ipc_thread_->task_runner()->PostTask(
       FROM_HERE,
       base::Bind(&CameraMojoChannelManagerImpl::
                      CreateMjpegDecodeAcceleratorOnIpcThread,
-                 base::Unretained(this), base::Passed(std::move(request))));
+                 base::Unretained(this), base::Passed(std::move(request)),
+                 GetFutureCallback(is_success)));
+  if (!is_success->Wait()) {
+    return false;
+  }
+  return is_success->Get();
 }
 
-void CameraMojoChannelManagerImpl::CreateJpegEncodeAccelerator(
+bool CameraMojoChannelManagerImpl::CreateJpegEncodeAccelerator(
     mojom::JpegEncodeAcceleratorRequest request) {
+  auto is_success = Future<bool>::Create(cancellation_relay_.get());
+
   ipc_thread_->task_runner()->PostTask(
       FROM_HERE,
       base::Bind(
           &CameraMojoChannelManagerImpl::CreateJpegEncodeAcceleratorOnIpcThread,
-          base::Unretained(this), base::Passed(std::move(request))));
+          base::Unretained(this), base::Passed(std::move(request)),
+          GetFutureCallback(is_success)));
+  if (!is_success->Wait()) {
+    return false;
+  }
+  return is_success->Get();
 }
 
 mojom::CameraAlgorithmOpsPtr
@@ -217,23 +233,31 @@ void CameraMojoChannelManagerImpl::RegisterServerOnIpcThread(
 }
 
 void CameraMojoChannelManagerImpl::CreateMjpegDecodeAcceleratorOnIpcThread(
-    mojom::MjpegDecodeAcceleratorRequest request) {
+    mojom::MjpegDecodeAcceleratorRequest request,
+    base::Callback<void(bool)> callback) {
   DCHECK(ipc_thread_->task_runner()->BelongsToCurrentThread());
 
   EnsureDispatcherConnectedOnIpcThread();
-  if (dispatcher_.is_bound()) {
-    dispatcher_->GetMjpegDecodeAccelerator(std::move(request));
+  if (!dispatcher_.is_bound()) {
+    callback.Run(false);
+    return;
   }
+  dispatcher_->GetMjpegDecodeAccelerator(std::move(request));
+  callback.Run(true);
 }
 
 void CameraMojoChannelManagerImpl::CreateJpegEncodeAcceleratorOnIpcThread(
-    mojom::JpegEncodeAcceleratorRequest request) {
+    mojom::JpegEncodeAcceleratorRequest request,
+    base::Callback<void(bool)> callback) {
   DCHECK(ipc_thread_->task_runner()->BelongsToCurrentThread());
 
   EnsureDispatcherConnectedOnIpcThread();
-  if (dispatcher_.is_bound()) {
-    dispatcher_->GetJpegEncodeAccelerator(std::move(request));
+  if (!dispatcher_.is_bound()) {
+    callback.Run(false);
+    return;
   }
+  dispatcher_->GetJpegEncodeAccelerator(std::move(request));
+  callback.Run(true);
 }
 
 // static

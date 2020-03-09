@@ -100,7 +100,12 @@ void JpegEncodeAcceleratorImpl::InitializeOnIpcThread(
 
   auto request = mojo::MakeRequest(&jea_ptr_);
 
-  mojo_channel_manager_->CreateJpegEncodeAccelerator(std::move(request));
+  if (!mojo_channel_manager_->CreateJpegEncodeAccelerator(std::move(request))) {
+    callback.Run(false);
+    DestroyOnIpcThread();
+    return;
+  }
+
   jea_ptr_.set_connection_error_handler(
       base::Bind(&JpegEncodeAcceleratorImpl::OnJpegEncodeAcceleratorError,
                  base::Unretained(this)));

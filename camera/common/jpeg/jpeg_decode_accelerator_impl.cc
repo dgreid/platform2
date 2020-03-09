@@ -127,7 +127,12 @@ void JpegDecodeAcceleratorImpl::InitializeOnIpcThread(
 
   auto request = mojo::MakeRequest(&jda_ptr_);
 
-  mojo_channel_manager_->CreateMjpegDecodeAccelerator(std::move(request));
+  if (!mojo_channel_manager_->CreateMjpegDecodeAccelerator(
+          std::move(request))) {
+    callback.Run(false);
+    DestroyOnIpcThread();
+    return;
+  }
   jda_ptr_.set_connection_error_handler(
       base::Bind(&JpegDecodeAcceleratorImpl::OnJpegDecodeAcceleratorError,
                  base::Unretained(this)));

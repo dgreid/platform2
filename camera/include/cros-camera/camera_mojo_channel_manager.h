@@ -46,11 +46,11 @@ class CROS_CAMERA_EXPORT CameraMojoChannelManager {
   virtual void RegisterServer(mojom::CameraHalServerPtr hal_ptr) = 0;
 
   // Creates a new MjpegDecodeAccelerator.
-  virtual void CreateMjpegDecodeAccelerator(
+  virtual bool CreateMjpegDecodeAccelerator(
       mojom::MjpegDecodeAcceleratorRequest request) = 0;
 
   // Creates a new JpegEncodeAccelerator.
-  virtual void CreateJpegEncodeAccelerator(
+  virtual bool CreateJpegEncodeAccelerator(
       mojom::JpegEncodeAcceleratorRequest request) = 0;
 
   // Create a new CameraAlgorithmOpsPtr.
