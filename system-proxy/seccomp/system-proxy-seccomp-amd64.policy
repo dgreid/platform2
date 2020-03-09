@@ -67,3 +67,4 @@ setpgid: 1
 wait4: 1
 futex: 1
 tgkill: 1
+kill: arg1 == SIGTERM
