@@ -12,6 +12,7 @@
 #include <vector>
 
 #include <base/bind.h>
+#include <base/bind_helpers.h>
 #include <base/strings/string_util.h>
 #include <gtest/gtest.h>
 
@@ -256,8 +257,7 @@ TEST(Subnet, Cleanup) {
 // range.
 TEST(PluginSubnet, OutOfBounds) {
   Subnet subnet(kPluginBaseAddress, kPluginSubnetPrefixLength,
-                // TODO(crbug.com/909719): replace with base::DoNothing;
-                base::Bind([]() {}));
+                base::DoNothing());
 
   EXPECT_FALSE(subnet.Allocate(htonl(ntohl(kPluginBaseAddress) - 1)));
   EXPECT_FALSE(subnet.Allocate(kPluginBaseAddress));
@@ -270,8 +270,7 @@ TEST(PluginSubnet, OutOfBounds) {
 // Tests that the subnet rejects attempts to allocate the same address twice.
 TEST(PluginSubnet, DuplicateAddress) {
   Subnet subnet(kPluginBaseAddress, kPluginSubnetPrefixLength,
-                // TODO(crbug.com/909719): replace with base::DoNothing;
-                base::Bind([]() {}));
+                base::DoNothing());
 
   auto addr = subnet.Allocate(AddOffset(kPluginBaseAddress, 1));
   EXPECT_TRUE(addr);
@@ -281,8 +280,7 @@ TEST(PluginSubnet, DuplicateAddress) {
 // Tests that the subnet allows allocating all addresses in the subnet's range.
 TEST(PluginSubnet, Allocate) {
   Subnet subnet(kPluginBaseAddress, kPluginSubnetPrefixLength,
-                // TODO(crbug.com/909719): replace with base::DoNothing;
-                base::Bind([]() {}));
+                base::DoNothing());
 
   std::vector<std::unique_ptr<SubnetAddress>> addrs;
   addrs.reserve(subnet.AvailableCount());
@@ -299,8 +297,7 @@ TEST(PluginSubnet, Allocate) {
 // using an offset.
 TEST(PluginSubnet, AllocateAtOffset) {
   Subnet subnet(kPluginBaseAddress, kPluginSubnetPrefixLength,
-                // TODO(crbug.com/909719): replace with base::DoNothing;
-                base::Bind([]() {}));
+                base::DoNothing());
 
   std::vector<std::unique_ptr<SubnetAddress>> addrs;
   addrs.reserve(subnet.AvailableCount());
@@ -316,8 +313,7 @@ TEST(PluginSubnet, AllocateAtOffset) {
 // Tests that the subnet frees addresses when they are destroyed.
 TEST(PluginSubnet, Free) {
   Subnet subnet(kPluginBaseAddress, kPluginSubnetPrefixLength,
-                // TODO(crbug.com/909719): replace with base::DoNothing;
-                base::Bind([]() {}));
+                base::DoNothing());
 
   {
     auto addr = subnet.Allocate(AddOffset(kPluginBaseAddress, 1));

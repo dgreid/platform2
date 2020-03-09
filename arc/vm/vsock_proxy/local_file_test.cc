@@ -16,6 +16,7 @@
 #include <vector>
 
 #include <base/bind.h>
+#include <base/bind_helpers.h>
 #include <base/files/file_descriptor_watcher_posix.h>
 #include <base/files/file_util.h>
 #include <base/files/scoped_file.h>
@@ -150,8 +151,7 @@ TEST_F(SocketStreamTest, ReadEOF) {
 TEST_F(SocketStreamTest, ReadError) {
   // Pass a non-socket FD.
   base::ScopedFD fd(HANDLE_EINTR(open("/dev/null", O_RDONLY)));
-  auto read_result =
-      LocalFile(std::move(fd), true, base::BindOnce([]() {})).Read();
+  auto read_result = LocalFile(std::move(fd), true, base::DoNothing()).Read();
   EXPECT_EQ(ENOTSOCK, read_result.error_code);
 }
 
