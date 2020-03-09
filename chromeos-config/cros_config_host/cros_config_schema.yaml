@@ -141,6 +141,29 @@ typeDefs:
         minimum: 0x0
         maximum: 0xFF
     additionalProperties: false
+  wifi-geo-offsets: &wifi-geo-offsets
+    description: "Offsets which are applied to WiFi power limits depending on the
+      current regulatory domain. Offsets in units of 0.125 dBm. The sum of a geo
+      offset and any power limit to which it applies cannot exceed 255.
+      When the current regulatory domain is unknown or has yet to be determined,
+      the base transmit power limits are used without any geo offsets applied.
+      'geo-offsets-fcc' is used for regulatory domains which follow FCC guidelines,
+      'geo-offsets-eu' is used for regulatory domains which follow ETSI guidelines, and
+      'geo-offsets-rest-of-world' is used for regulatory domains which don't follow
+      FCC or ETSI guidelines."
+    type: object
+    properties:
+      offset-2g:
+        description: "Value to be added to the 2.4GHz WiFi band. (0.125 dBm)"
+        type: integer
+        minimum: 0x0
+        maximum: 0xFF
+      offset-5g:
+        description: "Value to be added to all 5GHz WiFi bands. (0.125 dBm)"
+        type: integer
+        minimum: 0x0
+        maximum: 0xFF
+    additionalProperties: false
 type: object
 properties:
   chromeos:
@@ -276,6 +299,9 @@ properties:
                 - properties:
                     tablet-mode-power-table-rtw: *rtw-wifi-transmit-power-chain
                     non-tablet-mode-power-table-rtw: *rtw-wifi-transmit-power-chain
+                    geo-offsets-fcc: *wifi-geo-offsets
+                    geo-offsets-eu: *wifi-geo-offsets
+                    geo-offsets-rest-of-world: *wifi-geo-offsets
                   additionalProperties: false
             brand-code:
               description: Brand code of the model (also called RLZ code).
