@@ -66,6 +66,7 @@ class AttestationFlowData {
   // Statuses of this attestation flow.
   AttestationFlowAction action() const { return action_; }
   void set_action(AttestationFlowAction action) { action_ = action; }
+  AttestationStatus status() const { return status_; }
   void set_status(AttestationStatus status) { status_ = status; }
   std::string result_request() const { return result_request_; }
   void emplace_result_request(std::string&& result_request) {
