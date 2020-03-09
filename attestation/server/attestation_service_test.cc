@@ -2546,6 +2546,31 @@ TEST_P(AttestationServiceTest, GetCertificateSuccessNoop) {
   Run();
 }
 
+TEST_P(AttestationServiceTest, GetCertificateSuccessForced) {
+  SetUpIdentity(identity_);
+  SetUpIdentityCertificate(identity_, aca_type_);
+  auto callback = [](const base::Closure& quit_closure,
+                     const GetCertificateReply& reply) {
+    EXPECT_EQ(reply.status(), STATUS_SUCCESS);
+    EXPECT_TRUE(reply.has_certificate());
+    quit_closure.Run();
+  };
+  GetCertificateRequest request;
+  request.set_aca_type(aca_type_);
+  request.set_certificate_profile(ENTERPRISE_MACHINE_CERTIFICATE);
+  request.set_username("user");
+  request.set_request_origin("origin");
+  request.set_key_label("label");
+  request.set_forced(true);
+  // We shouldn't even check the key store.
+  EXPECT_CALL(mock_key_store_, Read("user", "label", _)).Times(0);
+
+  EXPECT_CALL(fake_pca_agent_proxy_, GetCertificateAsync(_, _, _, _)).Times(1);
+
+  service_->GetCertificate(request, base::Bind(callback, QuitClosure()));
+  Run();
+}
+
 TEST_P(AttestationServiceTest, GetCertificateFailureNoIdentity) {
   auto callback = [](const base::Closure& quit_closure,
                      const GetCertificateReply& reply) {
