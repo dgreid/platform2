@@ -41,6 +41,7 @@ proto_library("worker-protos") {
 pkg_config("target_defaults") {
   pkg_deps = [
     "dbus-1",
+    "libarcnetwork-util",
     "libbrillo-${libbase_ver}",
     "libchrome-${libbase_ver}",
     "libminijail",
@@ -68,15 +69,26 @@ static_library("libsystemproxy") {
   ]
 }
 
+# System-proxy worker library (shared between executables and tests).
+static_library("libsystemproxyworker") {
+  configs += [ ":target_defaults" ]
+  sources = [
+    "protobuf_util.cc",
+    "server_proxy.cc",
+  ]
+  deps = [
+    ":worker-protos",
+  ]
+}
+
 executable("system_proxy_worker") {
   configs += [ ":target_defaults" ]
   all_dependent_pkg_deps = [ "libcurl" ]
   sources = [
-    "protobuf_util.cc",
-    "server_proxy.cc",
     "system_proxy_worker.cc",
   ]
   deps = [
+    ":libsystemproxyworker",
     ":worker-protos",
   ]
 }
@@ -106,11 +118,13 @@ if (use.test) {
       ":target_defaults",
     ]
     sources = [
+      "server_proxy_test.cc",
       "system_proxy_adaptor_test.cc",
     ]
     defines = [ "UNIT_TEST" ]
     deps = [
       ":libsystemproxy",
+      ":libsystemproxyworker",
       "//common-mk/testrunner:testrunner",
     ]
   }
