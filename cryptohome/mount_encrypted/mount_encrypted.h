@@ -23,15 +23,4 @@ enum result_code {
   RESULT_FAIL_FATAL = 1,
 };
 
-// TODO(crbug.com/909719): remove when uprev is done.
-#if BASE_VER < 576279
-// Simplify logging of base::FilePath. Note that this has appeared in upstream
-// chromium base/ already and can be removed once it has propagated to Chrome
-// OS' base copy.
-static inline std::ostream& operator<<(std::ostream& out,
-                                       const base::FilePath& file_path) {
-  return out << file_path.value();
-}
-#endif  // BASE_VER < 576279
-
 #endif  // CRYPTOHOME_MOUNT_ENCRYPTED_MOUNT_ENCRYPTED_H_
