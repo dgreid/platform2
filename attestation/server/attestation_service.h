@@ -699,6 +699,11 @@ class AttestationService : public AttestationInterface {
   // |AttestationFlowAction| into |data| accordingly.
   void StartCertificateTask(const std::shared_ptr<AttestationFlowData>& data);
 
+  // Posts |StartCertificateTask| if necessary, i.e., |data| indicates it is
+  // certification flow instead of just enrollment.
+  void PostStartCertificateTaskOrReturn(
+      const std::shared_ptr<AttestationFlowData>& data);
+
   // Finishes the certificate request  with the response stored in |data|; also,
   // specifies the next |AttestationFlowAction| into |data| accordingly.
   void FinishCertificateTask(const std::shared_ptr<AttestationFlowData>& data);

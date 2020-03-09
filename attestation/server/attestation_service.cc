@@ -2551,16 +2551,9 @@ void AttestationService::OnEnrollAction(
       DCHECK(false) << "Not implemented";
       return;
     case AttestationFlowAction::kNoop:
-      if (!data->shall_get_certificate()) {
-        data->ReturnStatus();
-        return;
-      }
+      PostStartCertificateTaskOrReturn(data);
+      return;
   }
-  base::Closure task = base::Bind(&AttestationService::StartCertificateTask,
-                                  base::Unretained(this), data);
-  base::Closure reply = base::Bind(&AttestationService::OnGetCertificateAction,
-                                   GetWeakPtr(), data);
-  worker_thread_->task_runner()->PostTaskAndReply(FROM_HERE, task, reply);
 }
 
 void AttestationService::OnGetCertificateAction(
@@ -2644,6 +2637,19 @@ void AttestationService::FinishEnrollTaskV2(
     data->set_action(AttestationFlowAction::kNoop);
     enrollment_statuses_[data->aca_type()] = EnrollmentStatus::kEnrolled;
   }
+}
+
+void AttestationService::PostStartCertificateTaskOrReturn(
+    const std::shared_ptr<AttestationFlowData>& data) {
+  if (!data->shall_get_certificate()) {
+    data->ReturnStatus();
+    return;
+  }
+  base::Closure task = base::Bind(&AttestationService::StartCertificateTask,
+                                  base::Unretained(this), data);
+  base::Closure reply = base::Bind(&AttestationService::OnGetCertificateAction,
+                                   GetWeakPtr(), data);
+  worker_thread_->task_runner()->PostTaskAndReply(FROM_HERE, task, reply);
 }
 
 void AttestationService::StartCertificateTask(
