@@ -163,6 +163,7 @@ namespace switches {
                                    "needs_dircrypto_migration",
                                    "get_enrollment_id",
                                    "get_supported_key_policies",
+                                   "get_account_disk_usage",
                                    "lock_to_single_user_mount_until_reboot",
                                    "get_rsu_device_id",
                                    "check_health",
@@ -241,6 +242,7 @@ namespace switches {
     ACTION_NEEDS_DIRCRYPTO_MIGRATION,
     ACTION_GET_ENROLLMENT_ID,
     ACTION_GET_SUPPORTED_KEY_POLICIES,
+    ACTION_GET_ACCOUNT_DISK_USAGE,
     ACTION_LOCK_TO_SINGLE_USER_MOUNT_UNTIL_REBOOT,
     ACTION_GET_RSU_DEVICE_ID,
     ACTION_CHECK_HEALTH,
@@ -3121,6 +3123,35 @@ int main(int argc, char **argv) {
       return 1;
     }
     printf("GetSupportedKeyPolicies success.\n");
+  } else if (!strcmp(
+      switches::kActions[switches::ACTION_GET_ACCOUNT_DISK_USAGE],
+      action.c_str())) {
+    cryptohome::AccountIdentifier id;
+    if (!BuildAccountId(cl, &id))
+      return 1;
+
+    brillo::glib::ScopedArray id_ary(GArrayFromProtoBuf(id));
+    brillo::glib::ScopedError error;
+    GArray* out_reply = NULL;
+    if (!org_chromium_CryptohomeInterface_get_account_disk_usage(
+            proxy.gproxy(), id_ary.get(), &out_reply,
+            &brillo::Resetter(&error).lvalue())) {
+      printf("GetAccountDiskUsage call failed: %s", error->message);
+      return 1;
+    }
+    cryptohome::BaseReply reply;
+    ParseBaseReply(out_reply, &reply, true /* print_reply */);
+    if (reply.has_error()) {
+      printf("GetAccountDiskUsage failed with %d.\n", reply.error());
+      return reply.error();
+    }
+    if (!reply.HasExtension(cryptohome::GetAccountDiskUsageReply::reply)) {
+      printf("GetAccountDiskUsageReply missing.\n");
+      return 1;
+    }
+    auto ext = reply.GetExtension(cryptohome::GetAccountDiskUsageReply::reply);
+    printf("Account Disk Usage in bytes: %" PRId64 "\n", ext.size());
+    return 0;
   } else if (!strcmp(
       switches::kActions[
           switches::ACTION_LOCK_TO_SINGLE_USER_MOUNT_UNTIL_REBOOT],
