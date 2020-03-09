@@ -355,14 +355,14 @@ bool GetDiskPathFromName(
           GetFilePathFromName(cryptohome_id, vm_name, storage_location,
                               kQcowImageExtension, create_parent_dir);
       if (!qcow2_path) {
-        LOG(ERROR) << "Failed to get get qcow2 path";
+        LOG(ERROR) << "Failed to get qcow2 path";
         return false;
       }
       const auto raw_path =
           GetFilePathFromName(cryptohome_id, vm_name, storage_location,
                               kRawImageExtension, create_parent_dir);
       if (!raw_path) {
-        LOG(ERROR) << "Failed to get get raw path";
+        LOG(ERROR) << "Failed to get raw path";
         return false;
       }
 
@@ -402,7 +402,7 @@ bool GetDiskPathFromName(
           GetFilePathFromName(cryptohome_id, vm_name, storage_location,
                               kPluginVmImageExtension, create_parent_dir);
       if (!plugin_path) {
-        LOG(ERROR) << "failed to get get plugin path";
+        LOG(ERROR) << "failed to get plugin path";
         return false;
       }
       *path_out = *plugin_path;
