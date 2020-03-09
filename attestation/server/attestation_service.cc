@@ -2676,7 +2676,7 @@ void AttestationService::StartCertificateTask(
   CertifiedKey key;
   if (!data->forced_get_certificate() &&
       FindKeyByLabel(data->username(), data->key_label(), &key)) {
-    data->emplace_certificate(CreatePEMCertificateChain(key));
+    data->set_certificate(CreatePEMCertificateChain(key));
     data->set_action(AttestationFlowAction::kNoop);
     return;
   }
@@ -2709,7 +2709,7 @@ void AttestationService::FinishCertificateTask(
     data->set_action(AttestationFlowAction::kAbort);
     return;
   }
-  data->emplace_certificate(std::move(*(reply->mutable_certificate())));
+  data->set_certificate(std::move(*(reply->mutable_certificate())));
   data->set_action(AttestationFlowAction::kNoop);
 }
 

@@ -77,7 +77,7 @@ class AttestationFlowData {
     result_response_ = result_response;
   }
   const std::string& certificate() const { return certificate_; }
-  void emplace_certificate(std::string&& certificate) {
+  void set_certificate(std::string certificate) {
     certificate_ = std::move(certificate);
   }
 
