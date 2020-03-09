@@ -190,6 +190,7 @@ source_set("server_library") {
     "server/attestation_service.cc",
     "server/database_impl.cc",
     "server/dbus_service.cc",
+    "server/enrollment_queue.cc",
     "server/pkcs11_key_store.cc",
   ]
   all_dependent_configs = [ ":server_library_config" ]
@@ -322,6 +323,7 @@ if (use.test) {
       "server/attestation_service_test.cc",
       "server/database_impl_test.cc",
       "server/dbus_service_test.cc",
+      "server/enrollment_queue_test.cc",
       "server/mock_database.cc",
       "server/mock_key_store.cc",
       "server/pkcs11_key_store_test.cc",
