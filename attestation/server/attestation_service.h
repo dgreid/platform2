@@ -683,6 +683,9 @@ class AttestationService : public AttestationInterface {
   // |AttestationFlowAction| into |data| accordingly.
   void StartEnrollTask(const std::shared_ptr<AttestationFlowData>& data);
 
+  // Posts |StartEnrollTask|, along with its reply task |OnEnrollAction|.
+  void PostStartEnrollTask(const std::shared_ptr<AttestationFlowData>& data);
+
   // Finishes the enroll request  with the response stored in |data|; also,
   // specifies the next |AttestationFlowAction| into |data| accordingly. Named
   // with suffix "V2" because the legacy |FinishEnrollTask| exists; function

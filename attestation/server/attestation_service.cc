@@ -2496,14 +2496,18 @@ void AttestationService::FinishEnrollTask(
   }
 }
 
-void AttestationService::Enroll(const EnrollRequest& request,
-                                const EnrollCallback& callback) {
-  auto data = std::make_shared<AttestationFlowData>(request, callback);
+void AttestationService::PostStartEnrollTask(
+    const std::shared_ptr<AttestationFlowData>& data) {
   base::Closure task = base::Bind(&AttestationService::StartEnrollTask,
                                   base::Unretained(this), data);
   base::Closure reply =
       base::Bind(&AttestationService::OnEnrollAction, GetWeakPtr(), data);
   worker_thread_->task_runner()->PostTaskAndReply(FROM_HERE, task, reply);
+}
+
+void AttestationService::Enroll(const EnrollRequest& request,
+                                const EnrollCallback& callback) {
+  PostStartEnrollTask(std::make_shared<AttestationFlowData>(request, callback));
 }
 
 void AttestationService::SendEnrollRequest(
@@ -2844,12 +2848,7 @@ void AttestationService::FinishCertificateRequestTask(
 void AttestationService::GetCertificate(
     const GetCertificateRequest& request,
     const GetCertificateCallback& callback) {
-  auto data = std::make_shared<AttestationFlowData>(request, callback);
-  base::Closure task = base::Bind(&AttestationService::StartEnrollTask,
-                                  base::Unretained(this), data);
-  base::Closure reply =
-      base::Bind(&AttestationService::OnEnrollAction, GetWeakPtr(), data);
-  worker_thread_->task_runner()->PostTaskAndReply(FROM_HERE, task, reply);
+  PostStartEnrollTask(std::make_shared<AttestationFlowData>(request, callback));
 }
 
 void AttestationService::SendGetCertificateRequest(
