@@ -18,7 +18,6 @@
 #include "trunks/mock_policy_session.h"
 #include "trunks/mock_session_manager.h"
 #include "trunks/mock_tpm.h"
-#include "trunks/mock_tpm_cache.h"
 #include "trunks/mock_tpm_state.h"
 #include "trunks/mock_tpm_utility.h"
 #include "trunks/policy_session.h"
@@ -757,8 +756,6 @@ class BlobParserForwarder : public BlobParser {
 TrunksFactoryForTest::TrunksFactoryForTest()
     : default_tpm_(new NiceMock<MockTpm>()),
       tpm_(default_tpm_.get()),
-      default_tpm_cache_(new NiceMock<MockTpmCache>()),
-      tpm_cache_(default_tpm_cache_.get()),
       default_tpm_state_(new NiceMock<MockTpmState>()),
       tpm_state_(default_tpm_state_.get()),
       default_tpm_utility_(new NiceMock<MockTpmUtility>()),
@@ -781,10 +778,6 @@ TrunksFactoryForTest::~TrunksFactoryForTest() {}
 
 Tpm* TrunksFactoryForTest::GetTpm() const {
   return tpm_;
-}
-
-TpmCache* TrunksFactoryForTest::GetTpmCache() const {
-  return tpm_cache_;
 }
 
 std::unique_ptr<TpmState> TrunksFactoryForTest::GetTpmState() const {

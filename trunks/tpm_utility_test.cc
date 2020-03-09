@@ -2621,33 +2621,8 @@ TEST_F(TpmUtilityTest, SetKnownPasswordFailure) {
   EXPECT_EQ(TPM_RC_FAILURE, SetKnownOwnerPassword("password"));
 }
 
-TEST_F(TpmUtilityTest, RootKeysRsaSuccess) {
-  EXPECT_CALL(mock_tpm_state_, IsECCSupported()).WillOnce(Return(false));
-  EXPECT_CALL(mock_tpm_state_, IsRSASupported()).WillOnce(Return(true));
-  TPM2B_PUBLIC public_area;
-  EXPECT_CALL(mock_tpm_, CreatePrimarySyncShort(_, _, _, _, _, _, _, _, _, _))
-      .WillRepeatedly(
-          DoAll(SaveArg<1>(&public_area), Return(TPM_RC_SUCCESS)));
+TEST_F(TpmUtilityTest, RootKeysSuccess) {
   EXPECT_EQ(TPM_RC_SUCCESS, CreateStorageRootKeys("password"));
-  EXPECT_EQ(TPM_ALG_RSA, public_area.public_area.type);
-}
-
-TEST_F(TpmUtilityTest, RootKeysEccSuccess) {
-  EXPECT_CALL(mock_tpm_state_, IsECCSupported()).WillOnce(Return(true));
-  TPM2B_PUBLIC public_area;
-  EXPECT_CALL(mock_tpm_, CreatePrimarySyncShort(_, _, _, _, _, _, _, _, _, _))
-      .WillRepeatedly(
-          DoAll(SaveArg<1>(&public_area), Return(TPM_RC_SUCCESS)));
-  EXPECT_EQ(TPM_RC_SUCCESS, CreateStorageRootKeys("password"));
-  EXPECT_EQ(TPM_ALG_ECC, public_area.public_area.type);
-}
-
-TEST_F(TpmUtilityTest, RootKeysTypeUnsupported) {
-  EXPECT_CALL(mock_tpm_state_, IsECCSupported()).WillOnce(Return(false));
-  EXPECT_CALL(mock_tpm_state_, IsRSASupported()).WillOnce(Return(false));
-  EXPECT_CALL(mock_tpm_, CreatePrimarySyncShort(_, _, _, _, _, _, _, _, _, _))
-      .Times(0);
-  EXPECT_EQ(TPM_RC_FAILURE, CreateStorageRootKeys("password"));
 }
 
 TEST_F(TpmUtilityTest, RootKeysHandleConsistency) {
@@ -2677,32 +2652,12 @@ TEST_F(TpmUtilityTest, RootKeysAlreadyExist) {
   EXPECT_EQ(TPM_RC_SUCCESS, CreateStorageRootKeys("password"));
 }
 
-TEST_F(TpmUtilityTest, SaltingKeyRsaSuccess) {
+TEST_F(TpmUtilityTest, SaltingKeySuccess) {
   TPM2B_PUBLIC public_area;
-  EXPECT_CALL(mock_tpm_state_, IsECCSupported()).WillOnce(Return(false));
-  EXPECT_CALL(mock_tpm_state_, IsRSASupported()).WillOnce(Return(true));
   EXPECT_CALL(mock_tpm_, CreateSyncShort(_, _, _, _, _, _, _, _, _, _))
       .WillOnce(DoAll(SaveArg<2>(&public_area), Return(TPM_RC_SUCCESS)));
   EXPECT_EQ(TPM_RC_SUCCESS, CreateSaltingKey("password"));
-  EXPECT_EQ(TPM_ALG_RSA, public_area.public_area.type);
   EXPECT_EQ(TPM_ALG_SHA256, public_area.public_area.name_alg);
-}
-
-TEST_F(TpmUtilityTest, SaltingKeyEccSuccess) {
-  TPM2B_PUBLIC public_area;
-  EXPECT_CALL(mock_tpm_state_, IsECCSupported()).WillOnce(Return(true));
-  EXPECT_CALL(mock_tpm_, CreateSyncShort(_, _, _, _, _, _, _, _, _, _))
-      .WillOnce(DoAll(SaveArg<2>(&public_area), Return(TPM_RC_SUCCESS)));
-  EXPECT_EQ(TPM_RC_SUCCESS, CreateSaltingKey("password"));
-  EXPECT_EQ(TPM_ALG_ECC, public_area.public_area.type);
-}
-
-TEST_F(TpmUtilityTest, SaltingKeyTypeUnsupported) {
-  EXPECT_CALL(mock_tpm_state_, IsECCSupported()).WillOnce(Return(false));
-  EXPECT_CALL(mock_tpm_state_, IsRSASupported()).WillOnce(Return(false));
-  EXPECT_CALL(mock_tpm_, CreateSyncShort(_, _, _, _, _, _, _, _, _, _))
-      .Times(0);
-  EXPECT_EQ(TPM_RC_FAILURE, CreateSaltingKey("password"));
 }
 
 TEST_F(TpmUtilityTest, SaltingKeyConsistency) {

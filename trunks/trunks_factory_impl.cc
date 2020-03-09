@@ -14,8 +14,6 @@
 #include "trunks/password_authorization_delegate.h"
 #include "trunks/policy_session_impl.h"
 #include "trunks/session_manager_impl.h"
-#include "trunks/tpm_cache.h"
-#include "trunks/tpm_cache_impl.h"
 #include "trunks/tpm_generated.h"
 #include "trunks/tpm_state_impl.h"
 #include "trunks/tpm_utility_impl.h"
@@ -140,7 +138,6 @@ bool TrunksFactoryImpl::Initialize() {
     return true;
   }
   tpm_.reset(new Tpm(transceiver_.get()));
-  tpm_cache_ = std::make_unique<TpmCacheImpl>(tpm_.get());
   if (!IsDefaultTransceiverUsed()) {
     initialized_ = true;
   } else {
@@ -155,10 +152,6 @@ bool TrunksFactoryImpl::Initialize() {
 
 Tpm* TrunksFactoryImpl::GetTpm() const {
   return tpm_.get();
-}
-
-TpmCache* TrunksFactoryImpl::GetTpmCache() const {
-  return tpm_cache_.get();
 }
 
 std::unique_ptr<TpmState> TrunksFactoryImpl::GetTpmState() const {

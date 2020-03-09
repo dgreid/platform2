@@ -58,8 +58,7 @@ const std::string kEKTemplateAuthPolicy(
   "\x83\x71\x97\x67\x44\x84\xB3\xF8\x1A\x90\xCC\x8D\x46\xA5\xD7\x24"
   "\xFD\x52\xD7\x6E\x06\x52\x0B\x64\xF2\xA1\xDA\x1B\x33\x14\x69\xAA");
 
-// Salt used exclusively for the Remote Server Unlock process due to the privacy
-// reasons.
+// Salt used exclusively for the Remote Server Unlock process due to the privacy reasons.
 const char kRsuSalt[] = "Wu8oGt0uu0H8uSGxfo75uSDrGcRk2BXh";
 
 // Returns a serialized representation of the unmodified handle. This is useful
@@ -2086,9 +2085,9 @@ TPM_RC TpmUtilityImpl::CreateStorageRootKeys(
     key_type = TPM_ALG_RSA;
     key_type_str = "RSA";
   } else {
-    LOG(ERROR) << __func__ << ": Error creating salting key, "
-                              "neither ECC nor SRK is supported.";
-    return TPM_RC_FAILURE;
+    LOG(INFO) << __func__
+              << ": Skip SRK generation because RSA and ECC are not supported.";
+    return TPM_RC_SUCCESS;
   }
 
   TPMT_PUBLIC public_area = CreateDefaultPublicArea(key_type);
@@ -2141,35 +2140,12 @@ TPM_RC TpmUtilityImpl::CreateSaltingKey(const std::string& owner_password) {
   std::string parent_name;
   result = GetKeyName(kStorageRootKey, &parent_name);
   if (result != TPM_RC_SUCCESS) {
-    LOG(ERROR) << __func__ << ": Error getting Key name for SRK: "
+    LOG(ERROR) << __func__ << ": Error getting Key name for RSA-SRK: "
                << GetErrorString(result);
     return result;
   }
-
-  std::unique_ptr<TpmState> tpm_state(factory_.GetTpmState());
-  result = tpm_state->Initialize();
-  if (result) {
-    LOG(ERROR) << __func__ << ": Error refreshing TPM states: "
-               << GetErrorString(result);
-    return result;
-  }
-
-  // Decides salting key type. ECC is preferred to RSA.
-  TPM_ALG_ID key_type;
-  std::string key_type_str;
-  if (tpm_state->IsECCSupported()) {
-    key_type = TPM_ALG_ECC;
-    key_type_str = "ECC";
-  } else if (tpm_state->IsRSASupported()) {
-    key_type = TPM_ALG_RSA;
-    key_type_str = "RSA";
-  } else {
-    LOG(ERROR) << __func__ << ": Error creating salting key, "
-                              "neither ECC nor SRK is supported.";
-    return TPM_RC_FAILURE;
-  }
-
-  TPMT_PUBLIC public_area = CreateDefaultPublicArea(key_type);
+  TPMT_PUBLIC public_area = CreateDefaultPublicArea(TPM_ALG_RSA);
+  public_area.name_alg = TPM_ALG_SHA256;
   public_area.object_attributes |=
       kSensitiveDataOrigin | kUserWithAuth | kNoDA | kDecrypt;
   TPML_PCR_SELECTION creation_pcrs;
@@ -2203,8 +2179,6 @@ TPM_RC TpmUtilityImpl::CreateSaltingKey(const std::string& owner_password) {
                << ": Error creating salting key: " << GetErrorString(result);
     return result;
   }
-  LOG(INFO) << __func__ << ": Created " << key_type_str << " salting key.";
-
   TPM2B_NAME key_name;
   key_name.size = 0;
   TPM_HANDLE key_handle;
@@ -2216,7 +2190,6 @@ TPM_RC TpmUtilityImpl::CreateSaltingKey(const std::string& owner_password) {
                << ": Error loading salting key: " << GetErrorString(result);
     return result;
   }
-
   ScopedKeyHandle key(factory_, key_handle);
   std::unique_ptr<AuthorizationDelegate> owner_delegate =
       factory_.GetPasswordAuthorization(owner_password);

@@ -9,16 +9,12 @@
 
 #include <string>
 
-#include <brillo/secure_blob.h>
 #include <gtest/gtest_prod.h>
 
 #include "trunks/tpm_generated.h"
 #include "trunks/trunks_factory.h"
 
 namespace trunks {
-
-// ECC key size in bytes of the NIST_P-256 curve.
-constexpr size_t kEccKeySize = 32;
 
 // This class is used to keep track of a TPM session. Each instance of this
 // class is used to account for one instance of a TPM session. Currently
@@ -39,22 +35,15 @@ class TRUNKS_EXPORT SessionManagerImpl : public SessionManager {
                       HmacAuthorizationDelegate* delegate) override;
 
  private:
-  // Generates a session secret and stores it in |salt|. Also computes its
-  // corresponding string |encrypted_salt|, which will be sent to the TPM when
-  // starting a new session. TPM can recover the session secret from
-  // |encrypted_salt| using its internal private key. The pointers |salt| and
-  // |encrypted_salt| must be non-null. Returns TPM_RC_SUCCESS on
-  // success or other values on an error.
-  //
-  // This is a wrapper function. It calls either GenerateRsaSessionSalt() or
-  // GenerateEccSessionSalt(), depending on the salting key type.
-  TPM_RC GenerateSessionSalt(
-      brillo::SecureBlob* salt, std::string* encrypted_salt);
+  // This function is used to encrypt a plaintext salt |salt|, using RSA
+  // public encrypt with the SaltingKey PKCS1_OAEP padding. It follows the
+  // specification defined in TPM2.0 Part 1 Architecture, Appendix B.10.2.
+  // The encrypted salt is stored in the out parameter |encrypted_salt|.
+  TPM_RC EncryptSalt(const std::string& salt, std::string* encrypted_salt);
 
   // This factory is only set in the constructor and is used to instantiate
   // The TPM class to forward commands to the TPM chip.
   const TrunksFactory& factory_;
-
   // This handle keeps track of the TPM session. It is issued by the TPM,
   // and is only modified when a new TPM session is started using
   // StartBoundSession or StartUnboundSession. We use this to keep track of

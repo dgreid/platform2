@@ -14,7 +14,6 @@
 #include <base/time/time.h>
 
 #include "trunks/command_transceiver.h"
-#include "trunks/tpm_cache.h"
 #include "trunks/trunks_export.h"
 
 namespace trunks {
@@ -42,8 +41,6 @@ class TRUNKS_EXPORT TrunksFactoryImpl : public TrunksFactory {
 
   // TrunksFactory methods.
   Tpm* GetTpm() const override;
-  TpmCache* GetTpmCache() const override;
-
   std::unique_ptr<TpmState> GetTpmState() const override;
   std::unique_ptr<TpmUtility> GetTpmUtility() const override;
   std::unique_ptr<AuthorizationDelegate> GetPasswordAuthorization(
@@ -69,7 +66,6 @@ class TRUNKS_EXPORT TrunksFactoryImpl : public TrunksFactory {
 
   std::unique_ptr<CommandTransceiver> default_transceiver_;
   std::unique_ptr<PostProcessingTransceiver> transceiver_;
-  std::unique_ptr<TpmCache> tpm_cache_;
   std::unique_ptr<Tpm> tpm_;
   bool initialized_ = false;
 
