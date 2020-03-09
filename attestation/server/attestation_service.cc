@@ -2894,7 +2894,9 @@ void AttestationService::HandlePcaAgentGetCertificateRequestError(
   LOG(ERROR) << __func__
              << ": Error sending certificate request to |pca_agent|";
   data->set_status(STATUS_UNEXPECTED_DEVICE_ERROR);
-  data->ReturnStatus();
+  data->set_action(AttestationFlowAction::kAbort);
+  OnGetCertificateAction(data);
+  return;
 }
 
 void AttestationService::HandlePcaAgentGetCertificateReply(
@@ -2902,7 +2904,8 @@ void AttestationService::HandlePcaAgentGetCertificateReply(
     const pca_agent::GetCertificateReply& pca_reply) {
   if (pca_reply.status() != STATUS_SUCCESS) {
     data->set_status(pca_reply.status());
-    data->ReturnStatus();
+    data->set_action(AttestationFlowAction::kAbort);
+    OnGetCertificateAction(data);
     return;
   }
   data->set_result_response(pca_reply.response());
