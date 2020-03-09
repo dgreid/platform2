@@ -492,7 +492,11 @@ properties:
             name:
               type: string
               pattern: "^[_a-zA-Z0-9]{3,}"
-              description: Unique name for the given model.
+              description: Google code name for the given model. While it is OK to use this string
+                for human-display purposes (such as in a debug log or help dialog), or for a
+                searchable-key in metrics collection, it is not recommended to use this property
+                for creating model-specific behaviors. In this case, add a property to the schema
+                which describes your behavior and use that instead.
             power:
               description: WARNING -- This config contains unvalidated settings, which is not a
                 correct usage pattern, but this will be used in the interim until a longer term
