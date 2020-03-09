@@ -116,11 +116,15 @@ bool InstallAttributes::Init(TpmInit* tpm_init) {
       ClearData();
       // Don't flag invalid here - Chrome verifies that install attributes
       // aren't invalid before locking them as part of enterprise enrollment.
+      LOG(INFO) << "Init() TPM is not ready and not owned, while install "
+        << "attributes are missing or invalid.";
       status_ = Status::kTpmNotOwned;
       return false;
     }
 
     // Cases that don't look like a cleared TPM get flagged invalid.
+    LOG(INFO) << "Init() TPM is not cleared, but install attributes are "
+      << "missing or invalid.";
     status_ = Status::kInvalid;
     return false;
   }
