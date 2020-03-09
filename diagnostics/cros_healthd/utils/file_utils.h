@@ -23,11 +23,7 @@ bool ReadAndTrimString(const base::FilePath& directory,
 template <typename T>
 bool ReadInteger(const base::FilePath& directory,
                  const std::string& filename,
-#if BASE_VER < 576279
-                 bool (*StringToInteger)(const base::StringPiece&, T*),
-#else
                  bool (*StringToInteger)(base::StringPiece, T*),
-#endif  // BASE_VER < 576279
                  T* out) {
   std::string buffer;
   if (!ReadAndTrimString(directory, filename, &buffer))

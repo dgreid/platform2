@@ -53,11 +53,7 @@ bool DpslThreadContextImpl::BelongsToCurrentThread() {
 void DpslThreadContextImpl::RunEventLoop() {
   CHECK(sequence_checker_.CalledOnValidSequence())
       << "Called from wrong thread";
-#if BASE_VER < 576279
-  CHECK(!message_loop_->is_running())
-#else
   CHECK(!base::RunLoop::IsRunningOnCurrentThread())
-#endif
       << "Called from already running message loop";
 
   CHECK(!current_run_loop_);
