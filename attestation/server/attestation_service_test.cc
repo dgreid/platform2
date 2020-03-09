@@ -34,6 +34,7 @@ extern "C" {
 #include "attestation/server/mock_key_store.h"
 
 using testing::_;
+using testing::AtMost;
 using testing::DoAll;
 using testing::Invoke;
 using testing::NiceMock;
@@ -2437,12 +2438,54 @@ TEST_P(AttestationServiceTest, EnrollSuccessForced) {
   Run();
 }
 
+TEST_P(AttestationServiceTest, EnrollSuccessQueued) {
+  SetUpIdentity(identity_);
+  SetUpIdentityCertificate(identity_, aca_type_);
+  (*mock_database_.GetMutableProtobuf()
+        ->mutable_credentials()
+        ->mutable_encrypted_endorsement_credentials())[aca_type_]
+      .set_wrapped_key("wrapped_key");
+
+  // Offset by 1; for enrollment request the request under process doesn't
+  // count.
+  int request_count = service_->kEnrollmentRequestLimit + 1;
+  auto callback = [](int* count, const base::Closure& quit_closure,
+                     const EnrollReply& reply) {
+    EXPECT_EQ(reply.status(), STATUS_SUCCESS);
+    *count -= 1;
+    if (*count == 0) {
+      quit_closure.Run();
+    }
+  };
+
+  auto failure_callback = [](const EnrollReply& reply) {
+    EXPECT_EQ(reply.status(), STATUS_UNEXPECTED_DEVICE_ERROR);
+  };
+
+  fake_pca_agent_proxy_.SetEnrollCallbackDelay(
+      base::TimeDelta::FromMilliseconds(50));
+  EXPECT_CALL(fake_pca_agent_proxy_, EnrollAsync(_, _, _, _)).Times(1);
+
+  EnrollRequest request;
+  request.set_aca_type(aca_type_);
+  request.set_forced(true);
+  for (int i = 0; i < request_count; ++i) {
+    service_->Enroll(request,
+                     base::Bind(callback, &request_count, QuitClosure()));
+  }
+  // Reaching the limit, this request should get error.
+  service_->Enroll(request, base::Bind(failure_callback));
+  Run();
+  ASSERT_EQ(request_count, 0);
+}
+
 TEST_P(AttestationServiceTest, EnrollFailureNoIdentity) {
   auto callback = [](const base::Closure& quit_closure,
                      const EnrollReply& reply) {
     EXPECT_EQ(reply.status(), STATUS_UNEXPECTED_DEVICE_ERROR);
     quit_closure.Run();
   };
+  EXPECT_CALL(fake_pca_agent_proxy_, EnrollAsync(_, _, _, _)).Times(0);
   EnrollRequest request;
   request.set_aca_type(aca_type_);
   service_->Enroll(request, base::Bind(callback, QuitClosure()));
@@ -2480,6 +2523,48 @@ TEST_P(AttestationServiceTest, EnrollFailureBadPcaAgentResponse) {
   request.set_aca_type(aca_type_);
   service_->Enroll(request, base::Bind(callback, QuitClosure()));
   Run();
+}
+
+TEST_P(AttestationServiceTest, EnrollFailureQueued) {
+  SetUpIdentity(identity_);
+  SetUpIdentityCertificate(identity_, aca_type_);
+  (*mock_database_.GetMutableProtobuf()
+        ->mutable_credentials()
+        ->mutable_encrypted_endorsement_credentials())[aca_type_]
+      .set_wrapped_key("wrapped_key");
+
+  // Offset by 1; for enrollment request the request under process doesn't
+  // count.
+  int request_count = service_->kEnrollmentRequestLimit + 1;
+  auto callback = [](int* count, const base::Closure& quit_closure,
+                     const EnrollReply& reply) {
+    EXPECT_EQ(reply.status(), STATUS_INVALID_PARAMETER);
+    *count -= 1;
+    if (*count == 0) {
+      quit_closure.Run();
+    }
+  };
+
+  auto failure_callback = [](const EnrollReply& reply) {
+    EXPECT_EQ(reply.status(), STATUS_UNEXPECTED_DEVICE_ERROR);
+  };
+
+  fake_pca_agent_proxy_.SetBadEnrollStatus(STATUS_INVALID_PARAMETER);
+  fake_pca_agent_proxy_.SetEnrollCallbackDelay(
+      base::TimeDelta::FromMilliseconds(50));
+  EXPECT_CALL(fake_pca_agent_proxy_, EnrollAsync(_, _, _, _)).Times(1);
+
+  EnrollRequest request;
+  request.set_aca_type(aca_type_);
+  request.set_forced(true);
+  for (int i = 0; i < request_count; ++i) {
+    service_->Enroll(request,
+                     base::Bind(callback, &request_count, QuitClosure()));
+  }
+  // Reaching the limit, this request should get error.
+  service_->Enroll(request, base::Bind(failure_callback));
+  Run();
+  ASSERT_EQ(request_count, 0);
 }
 
 TEST_P(AttestationServiceTest, EnrollFailureBadPcaServerResponse) {

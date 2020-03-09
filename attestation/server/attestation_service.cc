@@ -2544,15 +2544,32 @@ void AttestationService::OnEnrollAction(
       return;
     case AttestationFlowAction::kAbort:
       data->ReturnStatus();
+      for (const auto& alias : enrollment_queue_.PopAll(data->aca_type())) {
+        alias->set_status(data->status());
+        alias->ReturnStatus();
+      }
       return;
     case AttestationFlowAction::kProcessRequest:
       SendEnrollRequest(data);
       return;
     case AttestationFlowAction::kEnqueue:
-      DCHECK(false) << "Not implemented";
+      // If in the dbus calling thread the status has changed, re-posts the
+      // task.
+      if (enrollment_statuses_[data->aca_type()] !=
+          EnrollmentStatus::kInProgress) {
+        PostStartEnrollTask(data);
+      } else {
+        if (!enrollment_queue_.Push(data)) {
+          data->set_status(STATUS_UNEXPECTED_DEVICE_ERROR);
+          data->ReturnStatus();
+        }
+      }
       return;
     case AttestationFlowAction::kNoop:
       PostStartCertificateTaskOrReturn(data);
+      for (const auto& alias : enrollment_queue_.PopAll(data->aca_type())) {
+        PostStartCertificateTaskOrReturn(alias);
+      }
       return;
   }
 }

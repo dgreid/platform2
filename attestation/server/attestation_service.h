@@ -31,6 +31,7 @@
 #include "attestation/server/attestation_flow.h"
 #include "attestation/server/database.h"
 #include "attestation/server/database_impl.h"
+#include "attestation/server/enrollment_queue.h"
 #include "attestation/server/key_store.h"
 #include "attestation/server/pkcs11_key_store.h"
 #include "tpm_manager/client/tpm_nvram_dbus_proxy.h"
@@ -68,6 +69,9 @@ class AttestationService : public AttestationInterface {
 
   // The index of the first identity.
   static constexpr int kFirstIdentity = 0;
+
+  // The request limit for enrollment queue.
+  constexpr static size_t kEnrollmentRequestLimit = 50;
 
   // If abe_data is not an empty blob, its contents will be
   // used to enable attestation-based enterprise enrollment.
@@ -772,6 +776,9 @@ class AttestationService : public AttestationInterface {
   // atomic variables to prevent data race  and make sure the side effect is
   // propagated to other threads immediately.
   std::atomic<EnrollmentStatus> enrollment_statuses_[ACAType_ARRAYSIZE]{};
+
+  // Used to store the requests during enrollment.
+  EnrollmentQueue enrollment_queue_{kEnrollmentRequestLimit};
 
   // All work is done in the background. This serves to serialize requests and
   // allow synchronous implementation of complex methods. This is intentionally
