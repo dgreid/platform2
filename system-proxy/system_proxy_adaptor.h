@@ -10,6 +10,7 @@
 
 #include <base/memory/weak_ptr.h>
 #include <brillo/dbus/async_event_sequencer.h>
+#include <gtest/gtest_prod.h>  // for FRIEND_TEST
 #include <patchpanel/proto_bindings/patchpanel_service.pb.h>
 
 #include "system_proxy/org.chromium.SystemProxy.h"
@@ -49,6 +50,10 @@ class SystemProxyAdaptor : public org::chromium::SystemProxyAdaptor,
   virtual std::unique_ptr<SandboxedWorker> CreateWorker();
 
  private:
+  friend class SystemProxyAdaptorTest;
+  FRIEND_TEST(SystemProxyAdaptorTest, SetSystemTrafficCredentials);
+  FRIEND_TEST(SystemProxyAdaptorTest, ShutDown);
+
   void SetCredentialsTask(SandboxedWorker* worker,
                           const std::string& username,
                           const std::string& password);

@@ -84,6 +84,31 @@ void SandboxedWorker::Start() {
                           base::Unretained(this)));
 }
 
+void SandboxedWorker::SetUsernameAndPassword(const std::string& username,
+                                             const std::string& password) {
+  Credentials credentials;
+  credentials.set_username(username);
+  credentials.set_password(password);
+  WorkerConfigs configs;
+  *configs.mutable_credentials() = credentials;
+  if (!WriteProtobuf(stdin_pipe_.get(), configs)) {
+    LOG(ERROR) << "Failed to set credentials for worker " << pid_;
+  }
+}
+
+void SandboxedWorker::SetListeningAddress(uint32_t addr, int port) {
+  SocketAddress address;
+  address.set_addr(addr);
+  address.set_port(port);
+  WorkerConfigs configs;
+  *configs.mutable_listening_address() = address;
+
+  if (!WriteProtobuf(stdin_pipe_.get(), configs)) {
+    LOG(ERROR) << "Failed to set local proy address for worker " +
+                      std::to_string(pid_);
+  }
+}
+
 bool SandboxedWorker::Stop() {
   if (is_being_terminated_)
     return true;

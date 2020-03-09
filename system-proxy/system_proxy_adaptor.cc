@@ -17,6 +17,8 @@
 namespace system_proxy {
 namespace {
 
+constexpr int kProxyPort = 3128;
+
 // Serializes |proto| to a vector of bytes.
 std::vector<uint8_t> SerializeProto(
     const google::protobuf::MessageLite& proto) {
@@ -123,8 +125,7 @@ void SystemProxyAdaptor::SetCredentialsTask(SandboxedWorker* worker,
                                             const std::string& username,
                                             const std::string& password) {
   DCHECK(worker);
-  // TODO(acostinas,chromium/1042626) Forward the credentials to the worker
-  // process.
+  worker->SetUsernameAndPassword(username, password);
 }
 
 void SystemProxyAdaptor::ShutDownTask() {
@@ -148,8 +149,7 @@ void SystemProxyAdaptor::ConnectNamespace(SandboxedWorker* worker) {
 
 void SystemProxyAdaptor::OnConnectNamespace(
     SandboxedWorker* worker, const patchpanel::IPv4Subnet& ipv4_subnet) {
-  // TODO(acostinas,chromium/1042626) Forward the ipv4 subnet to the worker
-  // process.
+  worker->SetListeningAddress(ipv4_subnet.base_addr(), kProxyPort);
 }
 
 }  // namespace system_proxy

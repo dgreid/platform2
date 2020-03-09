@@ -13,7 +13,6 @@
 #include <base/files/file_descriptor_watcher_posix.h>
 #include <base/files/scoped_file.h>
 #include <chromeos/scoped_minijail.h>
-#include <patchpanel/proto_bindings/patchpanel_service.pb.h>
 
 namespace system_proxy {
 
@@ -26,6 +25,12 @@ class SandboxedWorker {
 
   // Starts a sandboxed worker with pipes.
   virtual void Start();
+  // Sends the username and password to the worker via communication pipes.
+  void SetUsernameAndPassword(const std::string& username,
+                              const std::string& password);
+  // Sends the listening address and port to the worker via communication
+  // pipes.
+  void SetListeningAddress(uint32_t addr, int port);
 
   // Terminates the child process by sending a SIGTERM signal.
   virtual bool Stop();
@@ -35,6 +40,9 @@ class SandboxedWorker {
   pid_t pid() { return pid_; }
 
  private:
+  friend class SystemProxyAdaptorTest;
+  FRIEND_TEST(SystemProxyAdaptorTest, SetSystemTrafficCredentials);
+
   void OnMessageReceived();
   void OnErrorReceived();
 

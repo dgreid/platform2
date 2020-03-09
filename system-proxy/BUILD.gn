@@ -72,7 +72,12 @@ executable("system_proxy_worker") {
   configs += [ ":target_defaults" ]
   all_dependent_pkg_deps = [ "libcurl" ]
   sources = [
+    "protobuf_util.cc",
+    "server_proxy.cc",
     "system_proxy_worker.cc",
+  ]
+  deps = [
+    ":worker-protos",
   ]
 }
 
@@ -100,7 +105,9 @@ if (use.test) {
       ":system-proxy_test_config",
       ":target_defaults",
     ]
-    sources = []
+    sources = [
+      "system_proxy_adaptor_test.cc",
+    ]
     defines = [ "UNIT_TEST" ]
     deps = [
       ":libsystemproxy",

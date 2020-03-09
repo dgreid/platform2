@@ -2,12 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <base/logging.h>
-#include <brillo/syslog_logging.h>
+#include <iostream>
+#include <string>
 
-int main(int /* argc */, char* /* argv */[]) {
-  brillo::OpenLog("system_proxy_worker", true /* log_pid */);
-  brillo::InitLog(brillo::kLogToSyslog | brillo::kLogToStderrIfTty);
+#include <base/files/file_descriptor_watcher_posix.h>
+#include <base/message_loop/message_loop.h>
+#include <base/run_loop.h>
+#include <brillo/message_loops/base_message_loop.h>
 
+#include "system-proxy/server_proxy.h"
+
+int main(int argc, char* argv[]) {
+  base::MessageLoopForIO message_loop;
+  base::FileDescriptorWatcher watcher(&message_loop);
+  base::RunLoop run_loop;
+
+  system_proxy::ServerProxy server(run_loop.QuitClosure());
+  server.Init();
+  run_loop.Run();
   return 0;
 }
