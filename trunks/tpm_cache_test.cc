@@ -6,11 +6,9 @@
 #include <gtest/gtest.h>
 
 #include "trunks/mock_tpm.h"
-#include "trunks/mock_tpm_state.h"
 #include "trunks/tpm_cache_impl.h"
 #include "trunks/tpm_generated.h"
 #include "trunks/tpm_utility.h"
-#include "trunks/trunks_factory_for_test.h"
 
 using testing::_;
 using testing::DoAll;
@@ -23,16 +21,11 @@ namespace trunks {
 // A test fixture for TpmCache tests.
 class TpmCacheTest : public testing::Test {
  public:
-  TpmCacheTest() : tpm_cache_impl_(factory_) {
-    factory_.set_tpm(&mock_tpm_);
-    factory_.set_tpm_state(&mock_tpm_state_);
-  }
+  TpmCacheTest() : tpm_cache_impl_(&mock_tpm_) {}
   ~TpmCacheTest() override = default;
 
  protected:
   NiceMock<MockTpm> mock_tpm_;
-  NiceMock<MockTpmState> mock_tpm_state_;
-  TrunksFactoryForTest factory_;
   TpmCacheImpl tpm_cache_impl_;
 };
 
@@ -75,33 +68,6 @@ TEST_F(TpmCacheTest, GetSaltingKeyPublicAreaTpmError) {
 
   TPMT_PUBLIC pub_area;
   EXPECT_EQ(tpm_cache_impl_.GetSaltingKeyPublicArea(&pub_area), TPM_RC_FAILURE);
-}
-
-TEST_F(TpmCacheTest, GetBestSupportedKeyTypeEcc) {
-  EXPECT_CALL(mock_tpm_state_, IsECCSupported()).WillOnce(Return(true));
-  EXPECT_CALL(mock_tpm_state_, IsRSASupported()).Times(0);
-
-  // Call twice. First call gets the info from TPM, and second call returns from
-  // cache.
-  EXPECT_EQ(tpm_cache_impl_.GetBestSupportedKeyType(), TPM_ALG_ECC);
-  EXPECT_EQ(tpm_cache_impl_.GetBestSupportedKeyType(), TPM_ALG_ECC);
-}
-
-TEST_F(TpmCacheTest, GetBestSupportedKeyTypeRsa) {
-  EXPECT_CALL(mock_tpm_state_, IsECCSupported()).WillOnce(Return(false));
-  EXPECT_CALL(mock_tpm_state_, IsRSASupported()).WillOnce(Return(true));
-  EXPECT_EQ(tpm_cache_impl_.GetBestSupportedKeyType(), TPM_ALG_RSA);
-}
-
-TEST_F(TpmCacheTest, GetBestSupportedKeyTypeTpmError) {
-  EXPECT_CALL(mock_tpm_state_, Initialize()).WillOnce(Return(TPM_RC_FAILURE));
-  EXPECT_EQ(tpm_cache_impl_.GetBestSupportedKeyType(), TPM_ALG_ERROR);
-}
-
-TEST_F(TpmCacheTest, GetBestSupportedKeyTypeNotFound) {
-  EXPECT_CALL(mock_tpm_state_, IsECCSupported()).WillOnce(Return(false));
-  EXPECT_CALL(mock_tpm_state_, IsRSASupported()).WillOnce(Return(false));
-  EXPECT_EQ(tpm_cache_impl_.GetBestSupportedKeyType(), TPM_ALG_ERROR);
 }
 
 }  // namespace trunks

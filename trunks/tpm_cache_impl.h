@@ -12,29 +12,22 @@
 
 #include "trunks/tpm_generated.h"
 #include "trunks/trunks_export.h"
-#include "trunks/trunks_factory.h"
 
 namespace trunks {
 
 // Implementation of the interface TpmCache.
 class TRUNKS_EXPORT TpmCacheImpl : public TpmCache {
  public:
-  explicit TpmCacheImpl(const TrunksFactory& factory);
+  explicit TpmCacheImpl(Tpm* const tpm);
   ~TpmCacheImpl() override = default;
 
   TPM_RC GetSaltingKeyPublicArea(TPMT_PUBLIC* public_area) override;
-
-  TPM_ALG_ID GetBestSupportedKeyType() override;
 
  private:
   // Salting key public area cache.
   base::Optional<TPMT_PUBLIC> salting_key_pub_area_;
 
-  // Cache of the best SRK and salting key type. If the optional value exists,
-  // it can only be TPM_ALG_ECC or TPM_ALG_RSA.
-  base::Optional<TPM_ALG_ID> best_key_type_;
-
-  const TrunksFactory& factory_;
+  Tpm* const tpm_;
 
   DISALLOW_COPY_AND_ASSIGN(TpmCacheImpl);
 };

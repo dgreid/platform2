@@ -17,7 +17,6 @@
 #include "trunks/mock_hmac_session.h"
 #include "trunks/mock_policy_session.h"
 #include "trunks/mock_tpm.h"
-#include "trunks/mock_tpm_cache.h"
 #include "trunks/mock_tpm_state.h"
 #include "trunks/tpm_constants.h"
 #include "trunks/tpm_utility_impl.h"
@@ -62,7 +61,6 @@ class TpmUtilityTest : public testing::Test {
     factory_.set_blob_parser(&mock_blob_parser_);
     factory_.set_tpm_state(&mock_tpm_state_);
     factory_.set_tpm(&mock_tpm_);
-    factory_.set_tpm_cache(&mock_tpm_cache_);
     factory_.set_hmac_session(&mock_hmac_session_);
     factory_.set_trial_session(&mock_trial_session_);
     ON_CALL(mock_tpm_, NV_ReadPublicSync(_, _, _, _, _))
@@ -186,7 +184,6 @@ class TpmUtilityTest : public testing::Test {
   NiceMock<MockBlobParser> mock_blob_parser_;
   NiceMock<MockTpmState> mock_tpm_state_;
   NiceMock<MockTpm> mock_tpm_;
-  NiceMock<MockTpmCache> mock_tpm_cache_;
   NiceMock<MockAuthorizationDelegate> mock_authorization_delegate_;
   NiceMock<MockHmacSession> mock_hmac_session_;
   NiceMock<MockPolicySession> mock_trial_session_;
@@ -2625,8 +2622,8 @@ TEST_F(TpmUtilityTest, SetKnownPasswordFailure) {
 }
 
 TEST_F(TpmUtilityTest, RootKeysRsaSuccess) {
-  EXPECT_CALL(mock_tpm_cache_, GetBestSupportedKeyType())
-      .WillOnce(Return(TPM_ALG_RSA));
+  EXPECT_CALL(mock_tpm_state_, IsECCSupported()).WillOnce(Return(false));
+  EXPECT_CALL(mock_tpm_state_, IsRSASupported()).WillOnce(Return(true));
   TPM2B_PUBLIC public_area;
   EXPECT_CALL(mock_tpm_, CreatePrimarySyncShort(_, _, _, _, _, _, _, _, _, _))
       .WillRepeatedly(
@@ -2636,8 +2633,7 @@ TEST_F(TpmUtilityTest, RootKeysRsaSuccess) {
 }
 
 TEST_F(TpmUtilityTest, RootKeysEccSuccess) {
-  EXPECT_CALL(mock_tpm_cache_, GetBestSupportedKeyType())
-      .WillOnce(Return(TPM_ALG_ECC));
+  EXPECT_CALL(mock_tpm_state_, IsECCSupported()).WillOnce(Return(true));
   TPM2B_PUBLIC public_area;
   EXPECT_CALL(mock_tpm_, CreatePrimarySyncShort(_, _, _, _, _, _, _, _, _, _))
       .WillRepeatedly(
@@ -2647,8 +2643,8 @@ TEST_F(TpmUtilityTest, RootKeysEccSuccess) {
 }
 
 TEST_F(TpmUtilityTest, RootKeysTypeUnsupported) {
-  EXPECT_CALL(mock_tpm_cache_, GetBestSupportedKeyType())
-      .WillOnce(Return(TPM_ALG_ERROR));
+  EXPECT_CALL(mock_tpm_state_, IsECCSupported()).WillOnce(Return(false));
+  EXPECT_CALL(mock_tpm_state_, IsRSASupported()).WillOnce(Return(false));
   EXPECT_CALL(mock_tpm_, CreatePrimarySyncShort(_, _, _, _, _, _, _, _, _, _))
       .Times(0);
   EXPECT_EQ(TPM_RC_FAILURE, CreateStorageRootKeys("password"));
@@ -2682,9 +2678,9 @@ TEST_F(TpmUtilityTest, RootKeysAlreadyExist) {
 }
 
 TEST_F(TpmUtilityTest, SaltingKeyRsaSuccess) {
-  EXPECT_CALL(mock_tpm_cache_, GetBestSupportedKeyType())
-      .WillOnce(Return(TPM_ALG_RSA));
   TPM2B_PUBLIC public_area;
+  EXPECT_CALL(mock_tpm_state_, IsECCSupported()).WillOnce(Return(false));
+  EXPECT_CALL(mock_tpm_state_, IsRSASupported()).WillOnce(Return(true));
   EXPECT_CALL(mock_tpm_, CreateSyncShort(_, _, _, _, _, _, _, _, _, _))
       .WillOnce(DoAll(SaveArg<2>(&public_area), Return(TPM_RC_SUCCESS)));
   EXPECT_EQ(TPM_RC_SUCCESS, CreateSaltingKey("password"));
@@ -2693,9 +2689,8 @@ TEST_F(TpmUtilityTest, SaltingKeyRsaSuccess) {
 }
 
 TEST_F(TpmUtilityTest, SaltingKeyEccSuccess) {
-  EXPECT_CALL(mock_tpm_cache_, GetBestSupportedKeyType())
-      .WillOnce(Return(TPM_ALG_ECC));
   TPM2B_PUBLIC public_area;
+  EXPECT_CALL(mock_tpm_state_, IsECCSupported()).WillOnce(Return(true));
   EXPECT_CALL(mock_tpm_, CreateSyncShort(_, _, _, _, _, _, _, _, _, _))
       .WillOnce(DoAll(SaveArg<2>(&public_area), Return(TPM_RC_SUCCESS)));
   EXPECT_EQ(TPM_RC_SUCCESS, CreateSaltingKey("password"));
@@ -2703,8 +2698,8 @@ TEST_F(TpmUtilityTest, SaltingKeyEccSuccess) {
 }
 
 TEST_F(TpmUtilityTest, SaltingKeyTypeUnsupported) {
-  EXPECT_CALL(mock_tpm_cache_, GetBestSupportedKeyType())
-      .WillOnce(Return(TPM_ALG_ERROR));
+  EXPECT_CALL(mock_tpm_state_, IsECCSupported()).WillOnce(Return(false));
+  EXPECT_CALL(mock_tpm_state_, IsRSASupported()).WillOnce(Return(false));
   EXPECT_CALL(mock_tpm_, CreateSyncShort(_, _, _, _, _, _, _, _, _, _))
       .Times(0);
   EXPECT_EQ(TPM_RC_FAILURE, CreateSaltingKey("password"));

@@ -4,18 +4,14 @@
 
 #include "trunks/tpm_cache_impl.h"
 
-#include <memory>
-
 #include <base/logging.h>
 
 #include "trunks/tpm_generated.h"
-#include "trunks/tpm_state.h"
 #include "trunks/tpm_utility.h"
-#include "trunks/trunks_factory.h"
 
 namespace trunks {
 
-TpmCacheImpl::TpmCacheImpl(const TrunksFactory& factory): factory_(factory) {}
+TpmCacheImpl::TpmCacheImpl(Tpm* const tpm): tpm_(tpm) {}
 
 TPM_RC TpmCacheImpl::GetSaltingKeyPublicArea(TPMT_PUBLIC* public_area) {
   // sanity check
@@ -33,7 +29,7 @@ TPM_RC TpmCacheImpl::GetSaltingKeyPublicArea(TPMT_PUBLIC* public_area) {
   TPM2B_NAME unused_out_name;
   TPM2B_NAME unused_qualified_name;
   TPM2B_PUBLIC public_data;
-  TPM_RC result = factory_.GetTpm()->ReadPublicSync(
+  TPM_RC result = tpm_->ReadPublicSync(
       kSaltingKey,
       "" /* object_handle_name, not used */,
       &public_data,
@@ -47,27 +43,6 @@ TPM_RC TpmCacheImpl::GetSaltingKeyPublicArea(TPMT_PUBLIC* public_area) {
   }
 
   return result;
-}
-
-TPM_ALG_ID TpmCacheImpl::GetBestSupportedKeyType() {
-  if (best_key_type_) {
-    return *best_key_type_;
-  }
-
-  std::unique_ptr<TpmState> tpm_state = factory_.GetTpmState();
-  if (tpm_state->Initialize() != TPM_RC_SUCCESS) {
-    LOG(ERROR) << __func__ << ": Failed to refresh tpm state.";
-    return TPM_ALG_ERROR;
-  }
-
-  // The if-else order below matters because ECC is preferable to RSA.
-  if (tpm_state->IsECCSupported()) {
-    best_key_type_ = TPM_ALG_ECC;
-  } else if (tpm_state->IsRSASupported()) {
-    best_key_type_ = TPM_ALG_RSA;
-  }
-
-  return best_key_type_ ? *best_key_type_ : TPM_ALG_ERROR;
 }
 
 }  // namespace trunks
