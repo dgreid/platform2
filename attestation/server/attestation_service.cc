@@ -2585,18 +2585,51 @@ void AttestationService::OnGetCertificateAction(
       data->set_status(STATUS_NOT_SUPPORTED);
       data->ReturnStatus();
       return;
-    case AttestationFlowAction::kAbort:
-      data->ReturnStatus();
-      return;
     case AttestationFlowAction::kProcessRequest:
       SendGetCertificateRequest(data);
       return;
     case AttestationFlowAction::kEnqueue:
-      DCHECK(false) << "Not implemented";
+      // If no alias found, re-posts the task. Sadly the task will check the key
+      // store again. The good news is, this case should be rare in practice.
+      if (!certificate_queue_.HasAnyAlias(data)) {
+        // Despite of the callee name, it always posts the task here since we
+        // shall get certificate.
+        PostStartCertificateTaskOrReturn(data);
+      } else {
+        // TODO(b/149723745): UMA for respective failure cases.
+        CertificateQueue::PushResult result = certificate_queue_.Push(data);
+        if (result != CertificateQueue::PushResult::kSuccess) {
+          data->set_status(STATUS_UNEXPECTED_DEVICE_ERROR);
+          data->ReturnStatus();
+        }
+      }
       return;
+    case AttestationFlowAction::kAbort:
     case AttestationFlowAction::kNoop:
-      data->ReturnCertificate();
+      ReturnForAllCertificateRequestAliases(data);
       return;
+  }
+}
+
+void AttestationService::ReturnForAllCertificateRequestAliases(
+    const std::shared_ptr<AttestationFlowData>& data) {
+  if (data->status() == STATUS_SUCCESS) {
+    data->ReturnCertificate();
+    std::string certificate = data->certificate();
+    for (const auto& alias : certificate_queue_.PopAllAliases(data)) {
+      if (data != alias) {
+        alias->set_certificate(data->certificate());
+        alias->ReturnCertificate();
+      }
+    }
+  } else {
+    data->ReturnStatus();
+    for (const auto& alias : certificate_queue_.PopAllAliases(data)) {
+      if (data != alias) {
+        alias->set_status(data->status());
+        alias->ReturnStatus();
+      }
+    }
   }
 }
 
@@ -2673,6 +2706,12 @@ void AttestationService::PostStartCertificateTaskOrReturn(
 void AttestationService::StartCertificateTask(
     const std::shared_ptr<AttestationFlowData>& data) {
   DCHECK(data->shall_get_certificate());
+
+  if (certificate_queue_.HasAnyAlias(data)) {
+    data->set_action(AttestationFlowAction::kEnqueue);
+    return;
+  }
+
   CertifiedKey key;
   if (!data->forced_get_certificate() &&
       FindKeyByLabel(data->username(), data->key_label(), &key)) {
@@ -2692,6 +2731,16 @@ void AttestationService::StartCertificateTask(
   }
   data->emplace_result_request(std::move(*(reply->mutable_pca_request())));
   data->set_action(AttestationFlowAction::kProcessRequest);
+  // Different from the way we handle enrollment, enqueues |data| right here so
+  // we can check the existence of aliases to tell if the certification in
+  // progress.
+  CertificateQueue::PushResult push_result = certificate_queue_.Push(data);
+  // the certificate queue is in a broken state since we already ensure
+  // |HasAnyAlias| to be |false|; crashes |attestationd| to bring it back to
+  // initial state in any case.
+  CHECK_EQ(push_result, CertificateQueue::PushResult::kSuccess)
+      << "Unexpected error during pushing the first alias to certificate "
+         "queue.";
 }
 
 void AttestationService::FinishCertificateTask(

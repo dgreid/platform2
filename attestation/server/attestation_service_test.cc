@@ -2794,6 +2794,89 @@ TEST_P(AttestationServiceTest, EnrollFailureQueued) {
   ASSERT_EQ(request_count, 0);
 }
 
+TEST_P(AttestationServiceTest, GetCertificateSuccessQueued) {
+  SetUpIdentity(identity_);
+  SetUpIdentityCertificate(identity_, aca_type_);
+
+  int request_count = service_->kCertificateRequestAliasLimit;
+  auto callback = [](int* count, const base::Closure& quit_closure,
+                     const GetCertificateReply& reply) {
+    EXPECT_EQ(reply.status(), STATUS_SUCCESS);
+    *count -= 1;
+    if (*count == 0) {
+      quit_closure.Run();
+    }
+  };
+  auto failure_callback = [](const GetCertificateReply& reply) {
+    EXPECT_EQ(reply.status(), STATUS_UNEXPECTED_DEVICE_ERROR);
+  };
+
+  GetCertificateRequest request;
+  request.set_aca_type(aca_type_);
+  request.set_certificate_profile(ENTERPRISE_MACHINE_CERTIFICATE);
+  request.set_username("user");
+  request.set_request_origin("origin");
+  request.set_key_label("label");
+  request.set_forced(true);
+  // We shouldn't even check the key store.
+  EXPECT_CALL(mock_key_store_, Read("user", "label", _)).Times(0);
+
+  fake_pca_agent_proxy_.SetGetCertificateCallbackDelay(
+      base::TimeDelta::FromMilliseconds(125));
+  EXPECT_CALL(fake_pca_agent_proxy_, GetCertificateAsync(_, _, _, _)).Times(1);
+
+  for (int i = 0; i < request_count; ++i) {
+    service_->GetCertificate(
+        request, base::Bind(callback, &request_count, QuitClosure()));
+  }
+  // This should due to alias contention.
+  service_->GetCertificate(request, base::Bind(failure_callback));
+  Run();
+  ASSERT_EQ(request_count, 0);
+}
+
+TEST_P(AttestationServiceTest, GetCertificateFailureQueued) {
+  SetUpIdentity(identity_);
+  SetUpIdentityCertificate(identity_, aca_type_);
+
+  int request_count = service_->kCertificateRequestAliasLimit;
+  auto callback = [](int* count, const base::Closure& quit_closure,
+                     const GetCertificateReply& reply) {
+    EXPECT_EQ(reply.status(), STATUS_NOT_AVAILABLE);
+    *count -= 1;
+    if (*count == 0) {
+      quit_closure.Run();
+    }
+  };
+  auto failure_callback = [](const GetCertificateReply& reply) {
+    EXPECT_EQ(reply.status(), STATUS_UNEXPECTED_DEVICE_ERROR);
+  };
+
+  GetCertificateRequest request;
+  request.set_aca_type(aca_type_);
+  request.set_certificate_profile(ENTERPRISE_MACHINE_CERTIFICATE);
+  request.set_username("user");
+  request.set_request_origin("origin");
+  request.set_key_label("label");
+  request.set_forced(true);
+  // We shouldn't even check the key store.
+  EXPECT_CALL(mock_key_store_, Read("user", "label", _)).Times(0);
+
+  fake_pca_agent_proxy_.SetBadGetCertificateStatus(STATUS_NOT_AVAILABLE);
+  fake_pca_agent_proxy_.SetGetCertificateCallbackDelay(
+      base::TimeDelta::FromMilliseconds(125));
+  EXPECT_CALL(fake_pca_agent_proxy_, GetCertificateAsync(_, _, _, _)).Times(1);
+
+  for (int i = 0; i < request_count; ++i) {
+    service_->GetCertificate(
+        request, base::Bind(callback, &request_count, QuitClosure()));
+  }
+  // This should due to alias contention.
+  service_->GetCertificate(request, base::Bind(failure_callback));
+  Run();
+  ASSERT_EQ(request_count, 0);
+}
+
 #endif
 
 INSTANTIATE_TEST_CASE_P(

@@ -29,6 +29,7 @@
 #include "attestation/common/tpm_utility_factory.h"
 #include "attestation/pca_agent/dbus-proxies.h"
 #include "attestation/server/attestation_flow.h"
+#include "attestation/server/certificate_queue.h"
 #include "attestation/server/database.h"
 #include "attestation/server/database_impl.h"
 #include "attestation/server/enrollment_queue.h"
@@ -72,6 +73,9 @@ class AttestationService : public AttestationInterface {
 
   // The request limit for enrollment queue.
   constexpr static size_t kEnrollmentRequestLimit = 50;
+
+  // The alias limit for certification queue.
+  const size_t kCertificateRequestAliasLimit = 5;
 
   // If abe_data is not an empty blob, its contents will be
   // used to enable attestation-based enterprise enrollment.
@@ -712,6 +716,13 @@ class AttestationService : public AttestationInterface {
   // specifies the next |AttestationFlowAction| into |data| accordingly.
   void FinishCertificateTask(const std::shared_ptr<AttestationFlowData>& data);
 
+  // If the status of |data| is success, it will call |data|s
+  // |ReturnCertificate|, otherwise it will call |ReturnStatus|. Removes all
+  // aliases of |data| from |certificate_queue_| and invokes the same method on
+  // them (|ReturnCertificate| or |ReturnStatus|).
+  void ReturnForAllCertificateRequestAliases(
+      const std::shared_ptr<AttestationFlowData>& data);
+
   // Compute the enterprise DEN for attestation-based enrollment.
   std::string ComputeEnterpriseEnrollmentNonce();
 
@@ -779,6 +790,11 @@ class AttestationService : public AttestationInterface {
 
   // Used to store the requests during enrollment.
   EnrollmentQueue enrollment_queue_{kEnrollmentRequestLimit};
+
+  // The certificate queue that is used to store the |AttestationFlowData|
+  // aliases during certification.
+  SynchronizedCertificateQueue certificate_queue_{
+      kCertificateRequestAliasLimit};
 
   // All work is done in the background. This serves to serialize requests and
   // allow synchronous implementation of complex methods. This is intentionally
