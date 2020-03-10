@@ -7,6 +7,9 @@
 
 import argparse
 import sys
+import os
+
+from config.api import config_bundle_pb2
 
 def ParseArgs(argv):
   """Parse the available arguments.
@@ -42,6 +45,18 @@ def ParseArgs(argv):
       type=str,
       help='Output file that will be generated')
   return parser.parse_args(argv)
+
+
+def ReadConfig(path):
+  """Reads a binary proto from a file.
+
+    Args:
+        path: Path to the binary proto.
+    """
+  config = config_bundle_pb2.ConfigBundle()
+  with open(path, 'rb') as f:
+    config.ParseFromString(f.read())
+  return config
 
 
 def Main(files_root,
