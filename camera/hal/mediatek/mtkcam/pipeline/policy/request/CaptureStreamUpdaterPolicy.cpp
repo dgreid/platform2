@@ -175,7 +175,7 @@ static auto createStreamInfoLocked_Thumbnail_YUV(
       return OK;
     }
     MSize jpegSize = pCfgJpegYUV->getImgSize();
-    MY_LOGW(
+    MY_LOGI(
         "Select thumbnail size from MTK_JPEG_AVAILABLE_THUMBNAIL_SIZES, "
         "sersorID:%d, JpegSize size: w x h: %dx%d",
         sensorID, jpegSize.w, jpegSize.h);

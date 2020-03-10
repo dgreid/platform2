@@ -70,7 +70,7 @@ class V4L2DriverWorker {
   std::thread m_workerThread;
   std::atomic<bool> m_workerThreadAlive;
   std::mutex m_workerMutex;
-  std::atomic<int> m_status;
+  bool m_worker_status;
 };      // class V4L2DriverWorker
 };      // namespace v4l2
 #endif  // CAMERA_HAL_MEDIATEK_MTKCAM_INCLUDE_MTKCAM_V4L2_V4L2DRIVERWORKER_H_

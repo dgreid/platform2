@@ -88,10 +88,12 @@ V4L2HwEventWorker::~V4L2HwEventWorker() {
 }
 
 int V4L2HwEventWorker::start() {
+  m_worker_status = true;
   return V4L2DriverWorker::start();
 }
 
 int V4L2HwEventWorker::stop() {
+  m_worker_status = false;
   if (m_pEventPipe.get()) {
     m_pEventPipe->stop();
   }
@@ -119,10 +121,15 @@ void V4L2HwEventWorker::job() {
 
   int err = m_pEventPipe->wait(m_listenedSignal);
   if (err != 0) {
-    CAM_LOGE("wait signal(%d) [-] failed with code=%#x", m_listenedSignal, err);
+    if (m_worker_status)
+      CAM_LOGD("wait signal(%d) [-] failed with code=%#x", m_listenedSignal,
+               err);
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
     return;
   }
+
+  if (!m_worker_status)
+    return;
 
   v4l2::P1Event evt;
   evt.event = static_cast<int32_t>(m_listenedSignal);

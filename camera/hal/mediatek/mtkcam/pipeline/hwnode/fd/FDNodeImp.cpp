@@ -789,7 +789,7 @@ FdNodeImp::onDequeRequest(std::shared_ptr<NSCam::v3::IPipelineFrame>* rpFrame) {
 
   //
   if (mExitPending) {
-    MY_LOGW("[exitPending] mRequestQueue.size:%zu", mRequestQueue.size());
+    MY_LOGI("[exitPending] mRequestQueue.size:%zu", mRequestQueue.size());
     return DEAD_OBJECT;
   }
   //

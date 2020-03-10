@@ -50,10 +50,12 @@ void V4L2P13ACallback::ack() {
 }
 
 void V4L2P13ACallback::validate() {
+  m_worker_status = true;
   m_pHal3A->send3ACtrl(E3ACtrl_IPC_P1_NotifyCbEnable, 1, 0);  // enable by arg1
 }
 
 void V4L2P13ACallback::invalidate() {
+  m_worker_status = false;
   m_pHal3A->send3ACtrl(E3ACtrl_IPC_P1_NotifyCbEnable, 0, 0);  // disable by arg1
 }
 
@@ -75,7 +77,8 @@ void V4L2P13ACallback::job() {
   CAM_LOGD_IF(m_logLevel >= 3, "ipc_dequeue [-]");
 
   if (CC_UNLIKELY(result != 0)) {
-    CAM_LOGW("ipc_dequeue returns fail(%d)", result);
+    if (m_worker_status)
+      CAM_LOGW("ipc_dequeue returns fail(%d)", result);
     std::this_thread::yield();
     return;
   }

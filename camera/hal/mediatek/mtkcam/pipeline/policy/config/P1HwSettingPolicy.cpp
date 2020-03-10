@@ -97,7 +97,7 @@ makePolicy_Configuration_P1HwSetting_Default() {
         }
       }
       if (maxYuvStreamSize.w == 0 || maxYuvStreamSize.h == 0) {
-        MY_LOGW(
+        MY_LOGI(
             "all yuv size is larger than max rrzo size, set default rrzo to "
             "1280x720");
         maxYuvStreamSize.w = 1280;

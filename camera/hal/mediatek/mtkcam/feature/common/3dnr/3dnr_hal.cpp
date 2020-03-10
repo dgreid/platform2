@@ -1165,14 +1165,14 @@ Hal3dnr::do3dnrFlow_v2(const NR3DHALParam& nr3dHalParam) {
   NR3DParam Nr3dParam;  // default off
 
   if (savedFrameInfo(nr3dHalParam) != MTRUE) {
-    MY_LOGW("3DNR off: savedFrameInfo failed");
+    MY_LOGW_IF(mLogLevel >= 1, "3DNR off: savedFrameInfo failed");
     // set NR3D off
     ret = MFALSE;
     goto configNR3DOnOff;
   }
 
   if (handle3DNROnOffPolicy(nr3dHalParam) != MTRUE) {
-    MY_LOGW("3DNR off: handle3DNROnOffPolicy failed");
+    MY_LOGW_IF(mLogLevel >= 1, "3DNR off: handle3DNROnOffPolicy failed");
     // set NR3D off
     ret = MFALSE;
     goto configNR3DOnOff;

@@ -4133,9 +4133,9 @@ P1NodeImp::hardwareOps_start() {
 #if MTKCAM_HAVE_SANDBOX_SUPPORT
   {
     /* wait until a buffer enqueued, and stream on tuning pipe */
-    CAM_LOGE("V4L2TuningPipeMgr: wait until enqued [+]");
+    CAM_LOGD("V4L2TuningPipeMgr: wait until enqued [+]");
     mpV4L2TuningPipe->waitUntilEnqued();
-    CAM_LOGE("V4L2TuningPipeMgr: wait until enqued [-]");
+    CAM_LOGD("V4L2TuningPipeMgr: wait until enqued [-]");
     mpV4L2TuningPipe->startPipe();
   }
 #endif
@@ -5551,7 +5551,7 @@ P1NodeImp::hardwareOps_deque(QBufInfo* deqBuf) {
       if (getActive()) {
         MY_LOGE("DRV-deque fail");
       } else {
-        MY_LOGW("DRV-deque fail - after stop");
+        MY_LOGI("DRV-deque fail - after stop");
         P1_TRACE_C_END(SLG_I);  // "P1:DRV-deque"
         return OK;
       }
@@ -6311,23 +6311,6 @@ MERROR P1NodeImp::startCamIO(QInitParam halCamIOinitParam,
       MY_LOGI("mpCamIO->configPipe ---");
       P1_TRACE_C_END(SLG_S);  // "P1:DRV-configPipe"
       mLogInfo.setMemo(LogInfo::CP_OP_START_DRV_CFG_END);
-      P1_TRACE_S_BEGIN(SLG_S, "P1:DRV-GetBinInfo");
-      if (mpCamIO->sendCommand(
-              ENPipeCmd_GET_BIN_INFO, (MINTPTR) & (binInfoSize->w),
-              (MINTPTR) & (binInfoSize->h), (MINTPTR) nullptr)) {
-        P1_TRACE_C_END(SLG_S);  // "P1:DRV-GetBinInfo"
-        if (binInfoSize->w < mSensorParams.size.w ||
-            binInfoSize->h < mSensorParams.size.h) {
-          mIsBinEn = true;
-        }
-        setCurrentBinSize(*binInfoSize);
-#if MTKCAM_HAVE_SANDBOX_SUPPORT
-        ipcDynamicInfo.bin_size = *binInfoSize;  // update bin size
-        ipcDynamicInfo.hbin_size = *binInfoSize;
-#endif
-      } else {
-        P1_TRACE_C_END(SLG_S);  // "P1:DRV-GetBinInfo"
-      }
       //
       {
         MBOOL notSupportProc = MFALSE;
@@ -6386,23 +6369,6 @@ MERROR P1NodeImp::startCamIO(QInitParam halCamIOinitParam,
         //
         mRawDefType = newDefType;
         mRawOption = newOption;
-      }
-      //
-      if (mpRegisterNotify != nullptr) {
-        MBOOL ret = MFALSE;
-        P1_TRACE_S_BEGIN(SLG_S, "P1:DRV-SetRrzCbfp");
-        ret = mpCamIO->sendCommand(ENPipeCmd_SET_RRZ_CBFP,
-                                   (MINTPTR)(mpRegisterNotify->getNotifyCrop()),
-                                   (MINTPTR)NULL, (MINTPTR)NULL);
-        P1_TRACE_C_END(SLG_S);  // "P1:DRV-SetRrzCbfp"
-        if (!ret) {
-          MY_LOGI("sendCmd ENPipeCmd_SET_RRZ_CBFP return (%d)", ret);
-#if USING_DRV_SET_RRZ_CBFP_EXP_SKIP
-          MY_LOGI("sendCmd ENPipeCmd_SET_RRZ_CBFP return 0 , go-on");
-#else
-          return BAD_VALUE;
-#endif
-        }
       }
     }
   }

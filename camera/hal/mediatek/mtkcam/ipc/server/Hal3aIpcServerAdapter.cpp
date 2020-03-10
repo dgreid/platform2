@@ -572,6 +572,7 @@ MINT32 Hal3aIpcServerAdapter::getSensorParam(void* addr, int dataSize) {
     return -1;
   }
 
+  static int sensor_param_status = 0;
   int sensor_index = hal3a_server_parsing_sensor_idx(addr);
   if (sensor_index < 0)
     return -1;
@@ -580,6 +581,7 @@ MINT32 Hal3aIpcServerAdapter::getSensorParam(void* addr, int dataSize) {
 
   switch (params->e3ACtrl) {
     case E3ACtrl_IPC_AE_GetSensorParamEnable:
+      sensor_param_status = params->arg1.enabled;
       if (!mpHal3A[sensor_index]->send3ACtrl(params->e3ACtrl,
                                              params->arg1.enabled, 0)) {
         IPC_LOGE("%s Result from GetSensorParamEnable is Failed", __func__);
@@ -592,6 +594,9 @@ MINT32 Hal3aIpcServerAdapter::getSensorParam(void* addr, int dataSize) {
       if (!mpHal3A[sensor_index]->send3ACtrl(
               params->e3ACtrl, reinterpret_cast<MINTPTR>(&params->arg1),
               params->arg2.timeoutMs)) {
+        if (sensor_param_status == 0) {
+          return 0;
+        }
         IPC_LOGE("%s Result from GetSensorParam is Failed", __func__);
         return -1;
       }
@@ -630,6 +635,7 @@ MINT32 Hal3aIpcServerAdapter::notifyCallBack(void* addr, int dataSize) {
     return -1;
   }
 
+  static int callback_status = 0;
   int sensor_index = hal3a_server_parsing_sensor_idx(addr);
   if (sensor_index < 0)
     return -1;
@@ -639,6 +645,7 @@ MINT32 Hal3aIpcServerAdapter::notifyCallBack(void* addr, int dataSize) {
   switch (params->e3ACtrl) {
     case E3ACtrl_IPC_P1_NotifyCbEnable:
       // hal3a no return value
+      callback_status = params->arg1.enabled;
       mpHal3A[sensor_index]->send3ACtrl(params->e3ACtrl, params->arg1.enabled,
                                         0);
       LOG1("E3ACtrl_IPC_P1_NotifyCbEnable enabled:%d", params->arg1.enabled);
@@ -686,8 +693,11 @@ MINT32 Hal3aIpcServerAdapter::notifyCallBack(void* addr, int dataSize) {
       }
 
       if (!params->callback_ret) {
-        IPC_LOGE("%s Result from P1 NotifyCb is Failed", __func__);
-        return -1;
+        if (callback_status) {
+          IPC_LOGE("%s Result from P1 NotifyCb is Failed", __func__);
+          return -1;
+        } else
+          return 0;
       }
       LOG1("E3ACtrl_IPC_P1_NotifyCb ack:%d", params->arg1.enabled);
       break;
@@ -714,6 +724,7 @@ MINT32 Hal3aIpcServerAdapter::tuningPipe(void* addr, int dataSize) {
     return -1;
   }
 
+  static int tuning_req_status = 0;
   int sensor_index = hal3a_server_parsing_sensor_idx(addr);
   if (sensor_index < 0)
     return -1;
@@ -723,11 +734,18 @@ MINT32 Hal3aIpcServerAdapter::tuningPipe(void* addr, int dataSize) {
   switch (params->e3ACtrl) {
     case E3ACtrl_IPC_P1_WaitTuningReq:
       // P1nodeImp just use magicnum and response so now no handle bufVa
+      if (IPC_IspTuningMgr_T::cmdTERMINATED == params->arg1.cmd)
+        tuning_req_status = 0;
+      else if (IPC_IspTuningMgr_T::cmdREVIVE == params->arg1.cmd)
+        tuning_req_status = 1;
       if (!mpHal3A[sensor_index]->send3ACtrl(
               params->e3ACtrl, params->arg1.cmd,
               reinterpret_cast<MUINTPTR>(&params->arg2.ipcIspTuningMgr))) {
-        IPC_LOGE("%s Result from P1 WaitTuningReq is Failed", __func__);
-        return -1;
+        if (tuning_req_status) {
+          IPC_LOGE("%s Result from P1 WaitTuningReq is Failed", __func__);
+          return -1;
+        } else
+          return 0;
       }
       LOG1("E3ACtrl_IPC_P1_WaitTuningReq arg1.cmd: %d", params->arg1.cmd);
       LOG1("E3ACtrl_IPC_P1_WaitTuningReq arg2.ipcIspTuningMgr.magicnum: %d",

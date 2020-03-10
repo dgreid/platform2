@@ -1500,7 +1500,7 @@ HalSensorList::buildStaticInfo(Info const& rInfo, IMetadata* pMetadata) const {
     }
     // AF
     if (rInfo.getDeviceId() == 0) {
-      MY_LOGE("main_sensor.minFocusDistance: %f, update AF modes & regions",
+      MY_LOGD("main_sensor.minFocusDistance: %f, update AF modes & regions",
               sensor_info.wf_sensor.minFocusDistance);
       if (sensor_info.wf_sensor.minFocusDistance == 0) {  // fixed focus
         // MTK_LENS_INFO_MINIMUM_FOCUS_DISTANCE

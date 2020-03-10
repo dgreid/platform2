@@ -62,6 +62,7 @@ class VISIBILITY_PUBLIC V4L2SensorWorker
   int m_logLevel;
   std::shared_ptr<IHalSensor> m_pHalSensor;
   std::shared_ptr<IHal3A> m_pHal3A;
+  bool m_worker_status;
 };
 
 };  // namespace v4l2

@@ -60,7 +60,7 @@ inline bool tryGetMetadata(IMetadata const* pMetadata, MUINT32 tag, T* pVal) {
   } else {
 #define var(v) #v
 #define type(t) #t
-    MY_LOGW("no metadata %s in %s", var(tag), type(pMetadata));
+    MY_LOGI("no metadata %s in %s", var(tag), type(pMetadata));
 #undef type
 #undef var
   }
@@ -183,9 +183,8 @@ SwnrPluginProviderImp::negotiate(Selection* sel) {
     tryGetMetadata<MINT32>(pIMetadata_Hal, MTK_P1NODE_PROCESSOR_MAGICNUM,
                            &magic);
 
-    MINT64 scenario;
+    MINT64 scenario = 0;
     MINT32 threshold_swnr, threshold_mnr;
-    tryGetMetadata<MINT64>(pIMetadata_Hal, MTK_PLUGIN_MODE, &scenario);
     queryNrThreshold(scenario, &threshold_mnr, &threshold_swnr);
 
     threshold = threshold_mnr;
@@ -330,7 +329,7 @@ void SwnrPluginProviderImp::uninit() {
 
   // Make sure mThread is finish
   {
-    MY_LOGE("Uninit make sure mThread finish+");
+    MY_LOGD("Uninit make sure mThread finish+");
     mThread.join();
     MY_LOGD("Uninit make sure mThread finish-");
   }
@@ -349,7 +348,7 @@ bool SwnrPluginProviderImp::onDequeRequest() {
     MY_LOGD("NR onDequeRequest waiting done");
   }
   if (mbRequestExit) {
-    MY_LOGW("[flush] mvFutures.size:%zu", mvFutures.size());
+    MY_LOGD("[flush] mvFutures.size:%zu", mvFutures.size());
     return false;
   }
   FUNCTION_OUT;
@@ -481,7 +480,7 @@ int32_t SwnrPluginProviderImp::doSwnr(RequestPtr const pRequest) {
       if (pOMetadata_Hal != nullptr) {
         mpSwnr->getDebugInfo(pOMetadata_Hal);
       } else {
-        MY_LOGW("no hal metadata for dumping debug info");
+        MY_LOGD("no hal metadata for dumping debug info");
       }
     }
     MY_LOGD("SWNR processing -");

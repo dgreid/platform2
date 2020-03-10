@@ -248,7 +248,7 @@ status_t V4L2EventPipe::notifyPollEvent(PollEventMessage* poll_msg) {
   /* check poll status */
   if (poll_msg->id == POLL_EVENT_ID_EVENT) {
     if (poll_msg->data.activeDevices->empty()) {
-      LOGE("@%s: devices flushed", __FUNCTION__);
+      LOGI("@%s: devices flushed", __FUNCTION__);
       return OK;
     }
 

@@ -159,9 +159,14 @@ status_t MtkMediaController::findMediaEntityById(
   int ret = 0;
   CLEAR(mediaEntityDesc);
   mediaEntityDesc->id = index;
-  ret = xioctl(MEDIA_IOC_ENUM_ENTITIES, mediaEntityDesc);
+
+  ret = SysCall::ioctl(mFd, MEDIA_IOC_ENUM_ENTITIES, mediaEntityDesc);
   if (ret < 0) {
-    LOGD("Enumerating entities done %s", strerror(errno));
+    if (errno == EINVAL && mEntityDesciptors.size() != 0)
+      // ending up when no more entities left
+      LOGD("Enumerating entities done %s", strerror(errno));
+    else
+      LOGW("Request enumerate entity failed: %s", strerror(errno));
     return UNKNOWN_ERROR;
   }
   return NO_ERROR;

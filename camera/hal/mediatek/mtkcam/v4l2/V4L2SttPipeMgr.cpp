@@ -407,6 +407,7 @@ int V4L2SttPipeMgr::start() {
     return -EPIPE;
   }
 
+  m_worker_status = true;
   m_pSttPipe->start();
 
   /* enable meta2 dequing thread if necessary*/
@@ -430,6 +431,8 @@ int V4L2SttPipeMgr::stop() {
     CAM_LOGE("cannot stop V4L2SttPipeMgr since the state is not valid");
     return -EPIPE;
   }
+
+  m_worker_status = false;
 
   if (m_pSttPipe2) {
     m_pSttPipe2->stop();
@@ -499,7 +502,7 @@ int V4L2SttPipeMgr::enqueIImageBufferToDrv(IImageBuffer* pImage) {
 }
 
 void V4L2SttPipeMgr::job() {
-  constexpr const size_t TIMEOUTMS = 100;
+  constexpr const size_t TIMEOUTMS = 200;
 
   /*
    * The job of V4L2SttPipeMgr is:
@@ -568,7 +571,7 @@ void V4L2SttPipeMgr::job() {
 }
 
 void V4L2SttPipeMgr::job2() {
-  constexpr const size_t TIMEOUTMS = 100;
+  constexpr const size_t TIMEOUTMS = 200;
 
   mtk_p1_metabuf_meta2* pBuffer2 = nullptr;
   SttBufInfo info;
@@ -638,7 +641,8 @@ int V4L2SttPipeMgr::dequeFromDrv(BUF_TYPE** ppBuffer,
   /* deque */
   MBOOL ret = pSttPipe->deque(ports, &q_buf_info, timeoutms);
   if (!ret) {  // deque failed
-    CAM_LOGW("sttpipe returned failed");
+    if (m_worker_status)
+      CAM_LOGW("sttpipe returned failed");
     return -ENOENT;
   }
   CAM_LOGD("dequeue OK, q_buf_info.mvOut size=%zu", q_buf_info.mvOut.size());

@@ -65,6 +65,7 @@ class VISIBILITY_PUBLIC V4L2P13ACallback
   IHal3ACb* m_pNotifier;
   int m_logLevel;
   std::shared_ptr<IHal3A> m_pHal3A;
+  bool m_worker_status;
 };
 
 };      // namespace v4l2

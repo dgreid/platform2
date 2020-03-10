@@ -83,7 +83,7 @@ class DurationProfile {
  protected:
   virtual bool print_overtime(int64_t duration) const {
     if (duration > mnsWarning) {
-      CAM_LOGW("[%s] duration(%" PRId64 ") > (%" PRId64 ")", msSubjectName,
+      CAM_LOGI("[%s] duration(%" PRId64 ") > (%" PRId64 ")", msSubjectName,
                duration, mnsWarning);
       return true;
     }

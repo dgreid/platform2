@@ -630,7 +630,7 @@ status_t V4L2PipeBase::notifyPollEvent(PollEventMessage* poll_msg) {
 
     if (poll_msg->data.activeDevices->size() !=
         poll_msg->data.polledDevices->size()) {
-      PIPE_BASE_LOGW("%zu inactive nodes for request %u, retry poll",
+      PIPE_BASE_LOGI("%zu inactive nodes for request %u, retry poll",
                      poll_msg->data.inactiveDevices->size(),
                      poll_msg->data.reqId);
 

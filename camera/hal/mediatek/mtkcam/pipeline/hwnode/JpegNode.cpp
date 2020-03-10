@@ -1311,7 +1311,7 @@ JpegNodeImp::onProcessFrame(
         MY_LOGE("encode main jpeg fail!");
         mpEncodeFrame->mbSuccess = MFALSE;
       } else {
-        MY_LOGE("encode main jpeg success, out size is %u", outSize);
+        MY_LOGI("encode main jpeg success, out size is %u", outSize);
         params.pDst->setBitstreamSize(outSize);
         mpEncodeFrame->mbSuccess = MTRUE;
       }
@@ -1846,7 +1846,7 @@ JpegNodeImp::updateStdExifParam(MBOOL const& rNeedExifRotate,
   if (rpHalMeta) {
     MINT32 iccIdx = -1;
     if (!tryGetMetadata<MINT32>(rpHalMeta, MTK_ISP_COLOR_SPACE, &iccIdx)) {
-      MY_LOGW("no tag: MTK_ISP_COLOR_SPACE");
+      MY_LOGI("no tag: MTK_ISP_COLOR_SPACE");
     } else {
       if (iccIdx == MTK_ISP_COLOR_SPACE_SRGB) {
         (*rStdParams).u4ICCIdx = EXIF_ICC_PROFILE_SRGB;
@@ -1878,7 +1878,7 @@ JpegNodeImp::updateStdExifParam_3A(IMetadata const& rMeta,
   do {                                            \
     type val = -1;                                \
     if (!tryGetMetadata<type>(meta, tag, &val)) { \
-      MY_LOGW("no tag: %s", #tag);                \
+      MY_LOGI("no tag: %s", #tag);                \
     }                                             \
     param = val;                                  \
   } while (0)

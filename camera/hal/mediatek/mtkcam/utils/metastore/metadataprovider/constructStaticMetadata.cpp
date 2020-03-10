@@ -165,7 +165,7 @@ status_t MetadataProvider::constructStaticMetadata(
       entryC.push_back(MTK_LENS_FACING_BACK, Type2Type<MUINT8>());
       mtkMetadata->update(MTK_SENSOR_INFO_FACING, entryC);
 
-      MY_LOGE("sensor %d update orientation %d", mInfo.getDeviceId(),
+      MY_LOGD("sensor %d update orientation %d", mInfo.getDeviceId(),
               sensor_info.wf_sensor.orientation);
     } else if (mInfo.getDeviceId() == 1) {
       mtkMetadata->remove(MTK_SENSOR_INFO_ORIENTATION);
@@ -183,13 +183,13 @@ status_t MetadataProvider::constructStaticMetadata(
       entryC.push_back(MTK_LENS_FACING_FRONT, Type2Type<MUINT8>());
       mtkMetadata->update(MTK_SENSOR_INFO_FACING, entryC);
 
-      MY_LOGE("sensor %d update orientation %d", mInfo.getDeviceId(),
+      MY_LOGD("sensor %d update orientation %d", mInfo.getDeviceId(),
               sensor_info.uf_sensor.orientation);
     }
     // AF
     if (mInfo.getDeviceId() == 0) {
       if (sensor_info.wf_sensor.minFocusDistance == 0) {  // fixed focus, update
-        MY_LOGE("main.minFocusDistance: %f, remove AF regions in availableKeys",
+        MY_LOGD("main.minFocusDistance: %f, remove AF regions in availableKeys",
                 sensor_info.wf_sensor.minFocusDistance);
         // MTK_CONTROL_AF_REGIONS
         auto availRequestEntry =

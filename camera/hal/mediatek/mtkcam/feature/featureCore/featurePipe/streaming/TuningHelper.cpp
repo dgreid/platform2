@@ -90,13 +90,6 @@ TuningHelper::process3A_P2A_Raw2Yuv(const Input& in,
     return MFALSE;
   }
 
-  if (halOut == NULL || appOut == NULL) {
-    MY_LOGW(
-        "Can not get Output Metadata from varmap! halI/O(%p/%p), "
-        "appI/O(%p/%p). Continue setIsp.",
-        in.mSensorInput.mHalIn, halOut, in.mSensorInput.mAppIn, appOut);
-  }
-
   {
     P2_CAM_TRACE_BEGIN(TRACE_ADVANCED, "TH(p2a.r2y)::copyInMeta");
     NS3Av3::MetaSet_T inMetaSet;

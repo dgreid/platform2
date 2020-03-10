@@ -57,11 +57,13 @@ V4L2SensorWorker::V4L2SensorWorker(uint32_t sensorIdx)
 V4L2SensorWorker::~V4L2SensorWorker() {}
 
 void V4L2SensorWorker::validate() {
+  m_worker_status = true;
   m_pHal3A->send3ACtrl(E3ACtrl_IPC_AE_GetSensorParamEnable, 1,
                        0);  // enable by arg1
 }
 
 void V4L2SensorWorker::invalidate() {
+  m_worker_status = false;
   m_pHal3A->send3ACtrl(E3ACtrl_IPC_AE_GetSensorParamEnable, 0,
                        0);  // disable by arg1
 }
@@ -82,7 +84,7 @@ void V4L2SensorWorker::job() {
   CAM_LOGD_IF(m_logLevel >= 3, "ipc_dequeue [+]");
   int result = ipc_dequeue(&s, 1000);
   CAM_LOGD_IF(m_logLevel >= 3, "ipc_dequeue [-]");
-  if (CC_LIKELY(result == 0)) {
+  if (CC_LIKELY(result == 0) && m_worker_status) {
     // configure sensor
     m_pHalSensor->sendCommand(
         s.sensorDev, s.cmd, reinterpret_cast<MUINTPTR>(&s.p1.field),

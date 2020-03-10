@@ -248,7 +248,8 @@ auto RequestSettingPolicyMediator_Default::evaluateRequest(
         for (int i = 0; i < topologyOut.pNodesNeed->needP1Node.size(); i++) {
           uint32_t P1Dma = 0;
           if (topologyOut.pNodesNeed->needP1Node[i] == true) {
-            P1Dma = NSCam::v3::pipeline::policy::P1_IMGO;
+            P1Dma = NSCam::v3::pipeline::policy::P1_IMGO |
+                    NSCam::v3::pipeline::policy::P1_LCSO;
           }
           needP1Dma.push_back(P1Dma);
         }

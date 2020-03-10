@@ -866,7 +866,7 @@ PipelineContext::PipelineContextImpl::beginFlush() {
     if (pLastFrame != nullptr) {
       kick(pLastFrame);
     } else {
-      MY_LOGW("cannot promote LastFrame");
+      MY_LOGI("cannot promote LastFrame");
     }
   }
   //

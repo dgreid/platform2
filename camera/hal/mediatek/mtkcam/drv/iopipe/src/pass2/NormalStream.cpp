@@ -751,7 +751,7 @@ NormalStream::init(char const* szCallerName,
       output_num = 1;
     }
     if (config.mOutStreams.size() < output_num) {
-      LOGW(
+      LOGD(
           "init with %d configs for %d outputs, mismatched stream tag and "
           "output counts",
           config.mOutStreams.size(), output_num);
@@ -1437,18 +1437,20 @@ NormalStream::enque(QParams* pParams) {
         }
       }
     }
-    //----
-    std::shared_ptr<V4L2StreamNode> node_vipi;
-    status = validNode(NSImageio::NSIspio::EPortIndex_VIPI, &node_vipi);
-    if (status == NO_ERROR) {
-      if (node_vipi->isPrepared())
-        node_vipi->start();
+    //--Start Node VIPI for 3DNR--
+    if (mStreamTag == NSCam::v4l2::ENormalStreamTag_3DNR) {
+        std::shared_ptr<V4L2StreamNode> node_vipi;
+        status = validNode(NSImageio::NSIspio::EPortIndex_VIPI, &node_vipi);
+        if (status == NO_ERROR && node_vipi->isPrepared())
+            node_vipi->start();
     }
-    std::shared_ptr<V4L2StreamNode> node_img3o;
-    status = validNode(NSImageio::NSIspio::EPortIndex_IMG3O, &node_img3o);
-    if (status == NO_ERROR) {
-      if (node_img3o->isPrepared())
-        node_img3o->start();
+    //--Start Node IMG3O for 3DNR or Capture output via IMG3O --
+    if ((mStreamTag == NSCam::v4l2::ENormalStreamTag_3DNR) ||
+    (mStreamTag == NSCam::v4l2::ENormalStreamTag_Cap_S && img3o_enqued)) {
+        std::shared_ptr<V4L2StreamNode> node_img3o;
+        status = validNode(NSImageio::NSIspio::EPortIndex_IMG3O, &node_img3o);
+        if (status == NO_ERROR && node_img3o->isPrepared())
+            node_img3o->start();
     }
     //----
     if (mFirstFrame)

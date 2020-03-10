@@ -187,7 +187,7 @@ bool V4L2LensMgr::openLensDriver() {
   auto i2c_idx = 1 << (1 + m_sensorIdx);  // sensor idx 0 --> i2c idx is 2
   int r = getSubDevice(i2c_idx, &m_fd_sdev);
   if (r != 0) {
-    CAM_LOGW("cannot find lens driver, errcode=%d", r);
+    CAM_LOGD("cannot find lens driver, errcode=%d", r);
     return false;
   }
   return true;
@@ -233,7 +233,7 @@ int V4L2LensMgr::getSubDevice(size_t i2c_idx, int* p_r_sdev_fd) {
     if (dev_fd < 0) {
       /* if retry times is greater than V4L2LENSMGR_MAX_MDEV_NUM, stop trying */
       if (num_media_devices > V4L2LENSMGR_MAX_MDEV_NUM) {
-        CAM_LOGW("no media device anymore (at mdev %d)", num_media_devices - 1);
+        CAM_LOGD("no media device anymore (at mdev %d)", num_media_devices - 1);
         return -ENOENT;
       }
       /* if open failed, try to open the next one */

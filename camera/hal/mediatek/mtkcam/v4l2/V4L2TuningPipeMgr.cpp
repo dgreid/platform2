@@ -136,6 +136,7 @@ V4L2TuningPipeMgr::~V4L2TuningPipeMgr() {
 
 void V4L2TuningPipeMgr::terminate() {
   CAM_LOGD_IF(m_logLevel, "manually terminate [+]");
+  m_worker_status = false;
   // tells IHal3A it's time to stop
   m_pHal3A->send3ACtrl(E3ACtrl_IPC_P1_WaitTuningReq,
                        IPC_IspTuningMgr_T::cmdTERMINATED, 0);
@@ -146,6 +147,7 @@ void V4L2TuningPipeMgr::terminate() {
 void V4L2TuningPipeMgr::revive() {
   CAM_LOGD_IF(m_logLevel, "manually revive [+]");
   // tells IHal3A restart IPCTuningMgr
+  m_worker_status = true;
   m_pHal3A->send3ACtrl(E3ACtrl_IPC_P1_WaitTuningReq,
                        IPC_IspTuningMgr_T::cmdREVIVE, 0);
   CAM_LOGD_IF(m_logLevel, "manually revive [-]");
@@ -308,7 +310,8 @@ void V4L2TuningPipeMgr::job() {
                                        reinterpret_cast<MINTPTR>(&p));
     CAM_LOGD_IF(m_logLevel, "wait IHal3A's response [-]");
     if (result != MTRUE) {
-      CAM_LOGW("IHal3A wait response fail, may be disconnected.");
+      if (m_worker_status)
+        CAM_LOGW("IHal3A wait response fail, may be disconnected.");
       std::this_thread::yield();
       return;
     }
@@ -385,7 +388,7 @@ void V4L2TuningPipeMgr::job() {
   } else if (IPC_IspTuningMgr_T::cmdTERMINATED == cmd) {
     // the server has been terminated.
   } else {
-    CAM_LOGW("unsupported command");
+    CAM_LOGW("unsupported command %d", cmd);
   }
 }
 

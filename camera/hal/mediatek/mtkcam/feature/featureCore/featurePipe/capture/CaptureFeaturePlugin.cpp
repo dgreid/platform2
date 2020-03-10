@@ -55,7 +55,7 @@ PluginBufferHandle::PluginBufferHandle(
 
 PluginBufferHandle::~PluginBufferHandle() {
   if (mpImageBuffer != nullptr) {
-    MY_LOGW("did NOT release plugin buffer:%d", mBufferId);
+    MY_LOGI("did NOT release plugin buffer:%d", mBufferId);
     release();
   }
 }
@@ -106,7 +106,7 @@ PluginMetadataHandle::PluginMetadataHandle(
 
 PluginMetadataHandle::~PluginMetadataHandle() {
   if (mpMetadata != NULL) {
-    MY_LOGW("did NOT release plugin metadata:%d", mMetaId);
+    MY_LOGI("did NOT release plugin metadata:%d", mMetaId);
     release();
   }
 }

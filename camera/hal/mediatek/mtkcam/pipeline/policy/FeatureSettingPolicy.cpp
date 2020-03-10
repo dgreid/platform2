@@ -1697,7 +1697,7 @@ auto NSCam::v3::pipeline::policy::featuresetting::FeatureSettingPolicy::
     // Capture+streaming feature combination policy
     // TODO(MTK): implement for customized streaming feature setting evaluate
     // with capture behavior
-    MY_LOGE(
+    MY_LOGI(
         "not yet implement for stream feature setting evaluate with capture "
         "behavior");
   } else {
@@ -1897,9 +1897,9 @@ auto NSCam::v3::pipeline::policy::featuresetting::FeatureSettingPolicy::
                  MTK_HDR_FEATURE_SESSION_PARAM_HDR_MODE, &hdrModeInt)) {
     appHdrMode = static_cast<HDRMode>((MUINT8)hdrModeInt);
     mVhdrInfo.curAppHdrMode = appHdrMode;
-    MY_LOGW("first config vhdr(%hhu)", mVhdrInfo.curAppHdrMode);
+    MY_LOGI("first config vhdr(%hhu)", mVhdrInfo.curAppHdrMode);
   } else {
-    MY_LOGW("Get appConfig sessionParams appHdrMode fail ");
+    MY_LOGI("Get appConfig sessionParams appHdrMode fail ");
   }
   mVhdrInfo.bFirstConfig = MFALSE;
 
@@ -1945,7 +1945,7 @@ auto NSCam::v3::pipeline::policy::featuresetting::FeatureSettingPolicy::
   } else {
     out->StreamingParams.vhdrMode = SENSOR_VHDR_MODE_NONE;
     mVhdrInfo.cfgVhdrMode = SENSOR_VHDR_MODE_NONE;
-    MY_LOGW(
+    MY_LOGI(
         "Can not get supported vhdr mode from MetaProvider!! (maybe FO not "
         "set?), set vhdrMode to none");
   }

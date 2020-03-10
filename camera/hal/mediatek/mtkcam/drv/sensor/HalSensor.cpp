@@ -459,7 +459,7 @@ MBOOL HalSensor::configure(MUINT const uCountOfParam,
       pSensorDynamicInfo->PDAFInfo = CAM_TG_NONE;
 
   mScenarioId = pConfigParam->scenarioId;
-  CAM_LOGE("pConfigParam->scenarioId %d", pConfigParam->scenarioId);
+  CAM_LOGD("pConfigParam->scenarioId %d", pConfigParam->scenarioId);
 
   switch (mScenarioId) {
     case SENSOR_SCENARIO_ID_NORMAL_CAPTURE:
@@ -627,7 +627,7 @@ MINT HalSensor::sendCommand(MUINT indexDual,
           CAM_LOGE("[%s] set max framerate fail %d", __FUNCTION__,
                    control.value);
         }
-        CAM_LOGE("set max framerate %d, mFramerate %d control.value %d",
+        CAM_LOGD("set max framerate %d, mFramerate %d control.value %d",
                  *(MUINT32*)arg2, mFramerate, control.value);
       } else {
         CAM_LOGE("%s(0x%x) wrong input params", __FUNCTION__, cmd);
@@ -731,22 +731,22 @@ MINT HalSensor::sendCommand(MUINT indexDual,
       break;
 
     case SENSOR_CMD_GET_SENSOR_ROLLING_SHUTTER:
-      if ((reinterpret_cast<MINT64*>(arg1) != NULL) &&
-          (arg1_size == sizeof(MINT64))) {
+      if ((reinterpret_cast<MINT32*>(arg1) != NULL) &&
+          (arg1_size == sizeof(MINT32))) {
         SENSOR_WINSIZE_INFO_STRUCT* cropInfo;
         cropInfo =
             HalSensorList::singleton()->getWinSizeInfo(sensorIdx, mScenarioId);
         if (!cropInfo) {
-          *reinterpret_cast<MINT64*>(arg1) = 0;
+          *reinterpret_cast<MINT32*>(arg1) = 0;
           CAM_LOGE("Null cropInfo");
         } else if (m_pixClk != 0) {
           MINT64 tg_size = cropInfo->h2_tg_size;
-          *reinterpret_cast<MINT64*>(arg1) =
+          *reinterpret_cast<MINT32*>(arg1) =
               ((m_linelength * tg_size * 1000000000) / m_pixClk);
-          CAM_LOGD("arg1:%lld", *reinterpret_cast<MINT64*>(arg1));
+          CAM_LOGD("arg1:%d", *reinterpret_cast<MINT32*>(arg1));
           ret = MTRUE;
         } else {
-          *reinterpret_cast<MINT64*>(arg1) = 0;
+          *reinterpret_cast<MINT32*>(arg1) = 0;
           CAM_LOGE("Wrong pixel clock");
         }
       } else {
@@ -760,6 +760,7 @@ MINT HalSensor::sendCommand(MUINT indexDual,
     case SENSOR_CMD_GET_DEFAULT_FRAME_RATE_BY_SCENARIO:
     case SENSOR_CMD_GET_SENSOR_PDAF_CAPACITY:
     case SENSOR_CMD_GET_VERTICAL_BLANKING:
+    case SENSOR_CMD_SET_FLICKER_FRAME_RATE:
       CAM_LOGD("TODO sendCommand(0x%x)", cmd);
       ret = MFALSE;
       break;

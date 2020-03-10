@@ -120,7 +120,6 @@ class VISIBILITY_PUBLIC V4L2TuningPipeMgr : public V4L2DriverWorker {
   std::atomic<uint32_t> m_enqCount;
   std::mutex m_enqMutex;
   std::condition_variable m_enqCond;
-
   /* hold life cycle of buffers from driver */
   std::vector<std::shared_ptr<IImageBuffer> > m_driverBuffers;
 };

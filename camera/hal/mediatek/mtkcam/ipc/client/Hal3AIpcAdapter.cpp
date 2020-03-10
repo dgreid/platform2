@@ -190,7 +190,7 @@ bool Hal3AIpcAdapter::doInit(MINT32 const i4SensorIdx, const char* strUser) {
 }
 
 void Hal3AIpcAdapter::doUninit() {
-  CAM_LOGW("%s", __FUNCTION__);
+  CAM_LOGD("%s", __FUNCTION__);
 
   int ret = sendRequest(IPC_HAL3A_DEINIT, &mMemInit);
   if (ret == false) {
@@ -319,23 +319,23 @@ MINT32 Hal3AIpcAdapter::config(const ConfigInfo_T& rConfigInfo) {
 
   /* pre-check for un-released shared fd */
   for (const auto& n : mSttIPCHandles) {
-    LOGW("@@@ pre-check un-released fd: stt");
+    LOGD("pre-check un-released fd: stt");
     mCommon.deregisterBuffer(n.second);
   }
   for (const auto& n : mStt2IPCHandles) {
-    LOGW("@@@ pre-check un-released fd: stt2");
+    LOGD("pre-check un-released fd: stt2");
     mCommon.deregisterBuffer(n.second);
   }
   for (const auto& n : mP2TuningBufHandles) {
-    LOGW("@@@ pre-check un-released fd: p2 tuning");
+    LOGD("pre-check un-released fd: p2 tuning");
     mCommon.deregisterBuffer(n.second);
   }
   for (const auto& n : mP1TuningBufHandles) {
-    LOGW("@@@ pre-check un-released fd: p1 tuning");
+    LOGD("pre-check un-released fd: p1 tuning");
     mCommon.deregisterBuffer(n.second);
   }
   for (const auto& n : mLceIPCHandles) {
-    LOGW("@@@ pre-check un-released fd: lce");
+    LOGD("pre-check un-released fd: lce");
     mCommon.deregisterBuffer(n.second);
   }
 
@@ -348,7 +348,7 @@ MINT32 Hal3AIpcAdapter::config(const ConfigInfo_T& rConfigInfo) {
   mLceIPCHandles.clear();
 
   if (m_pLsc2ImgBuf) {
-    LOGW("@@@ pre-check un-released LSC_P2_CPU");
+    LOGD("pre-check un-released LSC_P2_CPU");
     m_pLsc2ImgBuf->unlockBuf("LSC_P2_CPU");
     m_pLsc2ImgBuf = nullptr;
   }

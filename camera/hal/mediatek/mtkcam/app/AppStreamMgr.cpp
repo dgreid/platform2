@@ -1028,7 +1028,7 @@ NSCam::v3::Imp::AppStreamMgr::performCallback(CallbackParcel const& cbParcel) {
     // to debug
     {
       if (cbParcel.shutter->timestamp < mTimestamp) {
-        MY_LOGE(" #(%d), now shutter:%" PRId64 " last shutter:%" PRId64,
+        MY_LOGI(" #(%d), now shutter:%" PRId64 " last shutter:%" PRId64,
                 frame_number, cbParcel.shutter->timestamp, mTimestamp);
       }
       mAvgTimestampDuration += cbParcel.shutter->timestamp - mTimestamp;
