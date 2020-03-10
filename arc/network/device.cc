@@ -37,13 +37,8 @@ Device::Config::Config(const std::string& host_ifname,
 
 Device::Device(const std::string& ifname,
                std::unique_ptr<Device::Config> config,
-               const Device::Options& options,
-               GuestMessage::GuestType guest)
-    : ifname_(ifname),
-      config_(std::move(config)),
-      options_(options),
-      guest_(guest),
-      host_link_up_(false) {
+               const Device::Options& options)
+    : ifname_(ifname), config_(std::move(config)), options_(options) {
   DCHECK(config_);
 }
 
@@ -60,29 +55,17 @@ const Device::Options& Device::options() const {
   return options_;
 }
 
-void Device::set_context(std::unique_ptr<Device::Context> ctx) {
-  ctx_ = std::move(ctx);
+void Device::set_tap_ifname(const std::string& tap_ifname) {
+  tap_ = tap_ifname;
 }
 
-Device::Context* Device::context() {
-  return ctx_.get();
-}
-
-bool Device::IsAndroid() const {
-  return options_.is_android;
-}
-
-bool Device::IsArc() const {
-  return guest_ == GuestMessage::ARC;
+const std::string& Device::tap_ifname() const {
+  return tap_;
 }
 
 bool Device::UsesDefaultInterface() const {
   return options_.use_default_interface;
 }
-
-void Device::OnGuestStart(GuestMessage::GuestType guest) {}
-
-void Device::OnGuestStop(GuestMessage::GuestType guest) {}
 
 std::ostream& operator<<(std::ostream& stream, const Device& device) {
   stream << "{ ifname: " << device.ifname_

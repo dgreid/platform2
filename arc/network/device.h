@@ -31,19 +31,6 @@ namespace arc_networkd {
 // source for configuration events.
 class Device {
  public:
-  using DeviceHandler = base::Callback<void(Device*)>;
-
-  class Context {
-   public:
-    virtual ~Context() = default;
-
-   protected:
-    Context() = default;
-
-   private:
-    DISALLOW_COPY_AND_ASSIGN(Context);
-  };
-
   class Config {
    public:
     Config(const std::string& host_ifname,
@@ -111,38 +98,21 @@ class Device {
     // N should not loop back into itself but for Termina this should flow over
     // the VPN.
     bool use_default_interface;
-
-    // Indicates this is a special device used for Android. In single-networked
-    // guests (like ARC N) it is the only bridge into the container; in
-    // multi-networked guests it is used (only) to support VPNs and ADB over
-    // TCP.
-    bool is_android;
-
-    // Indicates this device is managed directly by a guest service and should
-    // not be mutated in response to shill updates.
-    bool is_sticky;
   };
 
   Device(const std::string& ifname,
          std::unique_ptr<Config> config,
-         const Options& options,
-         GuestMessage::GuestType guest);
+         const Options& options);
   ~Device() = default;
 
   const std::string& ifname() const;
   Config& config() const;
   const Options& options() const;
 
-  void set_context(std::unique_ptr<Context> ctx);
-  Context* context();
-
-  bool IsAndroid() const;
-  bool IsArc() const;
+  void set_tap_ifname(const std::string& tap);
+  const std::string& tap_ifname() const;
 
   bool UsesDefaultInterface() const;
-
-  void OnGuestStart(GuestMessage::GuestType guest);
-  void OnGuestStop(GuestMessage::GuestType guest);
 
   friend std::ostream& operator<<(std::ostream& stream, const Device& device);
 
@@ -150,16 +120,11 @@ class Device {
   const std::string ifname_;
   std::unique_ptr<Config> config_;
   const Options options_;
-  GuestMessage::GuestType guest_;
-  std::unique_ptr<Context> ctx_;
-
-  // Indicates if the host-side interface is up. Guest-size interfaces
-  // may be tracked in the guest-specific context.
-  bool host_link_up_;
-
-  base::WeakPtrFactory<Device> weak_factory_{this};
+  std::string tap_;
 
   FRIEND_TEST(DeviceTest, DisableLegacyAndroidDeviceSendsTwoMessages);
+
+  base::WeakPtrFactory<Device> weak_factory_{this};
   DISALLOW_COPY_AND_ASSIGN(Device);
 };
 

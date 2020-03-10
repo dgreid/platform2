@@ -281,8 +281,6 @@ void ArcService::AddDevice(const std::string& ifname) {
       // once IPv6 is enabled on cellular networks in shill.
       .ipv6_enabled = IsEthernetInterface(ifname) || IsWifiInterface(ifname),
       .use_default_interface = false,
-      .is_android = false,
-      .is_sticky = false,
   };
   std::string host_ifname = base::StringPrintf("arc_%s", ifname.c_str());
   auto ipv4_subnet =
@@ -312,8 +310,7 @@ void ArcService::AddDevice(const std::string& ifname) {
       std::move(ipv4_subnet), std::move(host_ipv4_addr),
       std::move(guest_ipv4_addr));
 
-  auto device = std::make_unique<Device>(ifname, std::move(config), opts,
-                                         GuestMessage::ARC);
+  auto device = std::make_unique<Device>(ifname, std::move(config), opts);
 
   StartDevice(device.get());
   devices_.emplace(ifname, std::move(device));
@@ -404,33 +401,6 @@ Device* ArcService::ArcDevice() const {
   return impl_->ArcDevice();
 }
 
-// Context
-
-ArcService::Context::Context() : Device::Context() {
-  Stop();
-}
-
-void ArcService::Context::Start() {
-  Stop();
-  started_ = true;
-}
-
-void ArcService::Context::Stop() {
-  started_ = false;
-}
-
-bool ArcService::Context::IsStarted() const {
-  return started_;
-}
-
-const std::string& ArcService::Context::TAP() const {
-  return tap_;
-}
-
-void ArcService::Context::SetTAP(const std::string& tap) {
-  tap_ = tap;
-}
-
 // ARC++ specific functions.
 
 ArcService::ContainerImpl::ContainerImpl(Datapath* datapath,
@@ -469,8 +439,6 @@ bool ArcService::ContainerImpl::Start(uint32_t pid) {
       .fwd_multicast = false,
       .ipv6_enabled = false,
       .use_default_interface = false,
-      .is_android = true,
-      .is_sticky = true,
   };
   auto config = MakeArcConfig(addr_mgr_, false /*is_arcvm*/);
 
@@ -484,8 +452,7 @@ bool ArcService::ContainerImpl::Start(uint32_t pid) {
     return false;
   }
 
-  arc_device_ = std::make_unique<Device>(kArcIfname, std::move(config), opts,
-                                         GuestMessage::ARC);
+  arc_device_ = std::make_unique<Device>(kArcIfname, std::move(config), opts);
 
   OnStartDevice(arc_device_.get());
 
@@ -642,8 +609,6 @@ bool ArcService::VmImpl::Start(uint32_t cid) {
       .fwd_multicast = true,
       .ipv6_enabled = true,
       .use_default_interface = true,
-      .is_android = true,
-      .is_sticky = true,
   };
   auto config = MakeArcConfig(addr_mgr_, true /*is_arcvm*/);
 
@@ -661,9 +626,7 @@ bool ArcService::VmImpl::Start(uint32_t cid) {
   if (!datapath_->AddOutboundIPv4(kArcVmBridge))
     LOG(ERROR) << "Failed to configure egress traffic rules";
 
-  arc_device_ = std::make_unique<Device>(kArcVmIfname, std::move(config), opts,
-                                         GuestMessage::ARC_VM);
-  arc_device_->set_context(std::make_unique<Context>());
+  arc_device_ = std::make_unique<Device>(kArcVmIfname, std::move(config), opts);
 
   OnStartDevice(arc_device_.get());
 
@@ -706,12 +669,6 @@ bool ArcService::VmImpl::OnStartDevice(Device* device) {
             << " bridge: " << config.host_ifname()
             << " guest_iface: " << config.guest_ifname() << " cid: " << cid_;
 
-  Context* ctx = dynamic_cast<Context*>(device->context());
-  if (!ctx) {
-    LOG(ERROR) << "Context missing";
-    return false;
-  }
-
   // Since the interface will be added to the bridge, no address configuration
   // should be provided here.
   std::string tap =
@@ -728,12 +685,12 @@ bool ArcService::VmImpl::OnStartDevice(Device* device) {
     return false;
   }
 
-  ctx->SetTAP(tap);
-  ctx->Start();
   // TODO(garrick): Remove this once ARCVM supports ad hoc interface
   // configurations; but for now ARCVM needs to be treated like ARC++ N.
   OnDefaultInterfaceChanged(shill_client_->default_interface(),
                             "" /*previous*/);
+
+  device->set_tap_ifname(tap);
   return true;
 }
 
@@ -749,18 +706,13 @@ void ArcService::VmImpl::OnStopDevice(Device* device) {
             << " bridge: " << config.host_ifname()
             << " guest_iface: " << config.guest_ifname() << " cid: " << cid_;
 
-  Context* ctx = dynamic_cast<Context*>(device->context());
-  if (!ctx) {
-    LOG(ERROR) << "Context missing";
-    return;
-  }
-
   // TODO(garrick): Remove this once ARCVM supports ad hoc interface
   // configurations; but for now ARCVM needs to be treated like ARC++ N.
   OnDefaultInterfaceChanged("" /*new_ifname*/,
                             shill_client_->default_interface());
-  datapath_->RemoveInterface(ctx->TAP());
-  ctx->Stop();
+
+  datapath_->RemoveInterface(device->tap_ifname());
+  device->set_tap_ifname("");
 }
 
 void ArcService::VmImpl::OnDefaultInterfaceChanged(

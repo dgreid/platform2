@@ -442,13 +442,13 @@ std::unique_ptr<dbus::Response> Manager::OnArcVmStartup(
 
   // Populate the response with the known devices.
   auto build_resp = [](patchpanel::ArcVmStartupResponse* resp, Device* device) {
-    auto* ctx = dynamic_cast<ArcService::Context*>(device->context());
-    if (!ctx || ctx->TAP().empty())
+    const auto& tap = device->tap_ifname();
+    if (tap.empty())
       return;
 
     const auto& config = device->config();
     auto* dev = resp->add_devices();
-    dev->set_ifname(ctx->TAP());
+    dev->set_ifname(tap);
     dev->set_ipv4_addr(config.guest_ipv4_addr());
   };
 

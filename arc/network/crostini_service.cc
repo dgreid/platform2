@@ -150,12 +150,9 @@ std::unique_ptr<Device> CrostiniService::AddTAP(bool is_termina,
       .fwd_multicast = true,
       .ipv6_enabled = true,
       .use_default_interface = true,
-      .is_android = false,
-      .is_sticky = true,
   };
 
-  return std::make_unique<Device>(tap, std::move(config), opts,
-                                  GuestMessage::TERMINA_VM);
+  return std::make_unique<Device>(tap, std::move(config), opts);
 }
 
 void CrostiniService::OnDefaultInterfaceChanged(

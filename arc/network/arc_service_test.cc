@@ -82,15 +82,13 @@ std::unique_ptr<Device> MakeDevice(const std::string& name,
   Device::Options opt{
       .use_default_interface = is_arcvm,
   };
-  auto subnet = addr_mgr.AllocateIPv4Subnet(
-      opt.is_android ? AddressManager::Guest::ARC
-                     : AddressManager::Guest::ARC_NET);
+  auto subnet = addr_mgr.AllocateIPv4Subnet(AddressManager::Guest::ARC_NET);
   auto addr0 = subnet->AllocateAtOffset(0);
   auto addr1 = subnet->AllocateAtOffset(1);
   auto cfg = std::make_unique<Device::Config>(
       host, guest, addr_mgr.GenerateMacAddress(), std::move(subnet),
       std::move(addr0), std::move(addr1));
-  return std::make_unique<Device>(name, std::move(cfg), opt, GuestMessage::ARC);
+  return std::make_unique<Device>(name, std::move(cfg), opt);
 }
 
 }  // namespace

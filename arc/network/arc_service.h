@@ -24,27 +24,6 @@ namespace arc_networkd {
 
 class ArcService {
  public:
-  class Context : public Device::Context {
-   public:
-    Context();
-    ~Context() = default;
-
-    // Tracks the lifetime of the ARC++ container.
-    void Start();
-    void Stop();
-    bool IsStarted() const;
-
-    // For ARCVM only.
-    const std::string& TAP() const;
-    void SetTAP(const std::string& tap);
-
-   private:
-    // Indicates the device was started.
-    bool started_;
-    // For ARCVM, the name of the bound TAP device.
-    std::string tap_;
-  };
-
   class Impl {
    public:
     virtual ~Impl() = default;
@@ -128,7 +107,6 @@ class ArcService {
     Datapath* datapath_;
     AddressManager* addr_mgr_;
     TrafficForwarder* forwarder_;
-    std::string tap_;
 
     DISALLOW_COPY_AND_ASSIGN(VmImpl);
   };
