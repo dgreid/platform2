@@ -12,18 +12,13 @@ import functools
 import json
 import os
 import subprocess
-import sys
 import tempfile
-
-# pylint: disable=wrong-import-position
-this_dir = os.path.dirname(__file__)
-sys.path.insert(0, this_dir)
 import configfs
-sys.path.pop(0)
-# pylint: enable=wrong-import-position
 
 from chromite.lib import cros_test_lib
 from chromite.lib import osutils
+
+this_dir = os.path.dirname(__file__)
 
 
 def TestConfigs(*args):

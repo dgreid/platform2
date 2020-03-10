@@ -8,14 +8,7 @@
 
 from __future__ import print_function
 
-import os
-import sys
-
-# pylint: disable=wrong-import-position
-this_dir = os.path.dirname(__file__)
-sys.path.insert(0, this_dir)
 import libcros_schema
-sys.path.pop(0)
 
 from chromite.lib import cros_test_lib
 

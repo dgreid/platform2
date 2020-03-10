@@ -11,21 +11,18 @@ from __future__ import print_function
 import json
 import os
 import re
-import sys
 
 import jsonschema  # pylint: disable=import-error
 from six.moves import zip_longest
 import yaml  # pylint: disable=import-error
 
-# pylint: disable=wrong-import-position
-this_dir = os.path.dirname(__file__)
-sys.path.insert(0, this_dir)
 import cros_config_schema
 import libcros_schema
-sys.path.pop(0)
 
 from chromite.lib import cros_test_lib
 from chromite.lib import osutils
+
+this_dir = os.path.dirname(__file__)
 
 BASIC_CONFIG = """
 reef-9042-fw: &reef-9042-fw

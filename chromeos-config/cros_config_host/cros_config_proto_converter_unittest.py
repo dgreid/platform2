@@ -6,14 +6,7 @@
 
 # pylint: disable=module-missing-docstring,class-missing-docstring
 
-import os
-import sys
-
-# pylint: disable=wrong-import-position
-this_dir = os.path.dirname(__file__)
-sys.path.insert(0, this_dir)
 import cros_config_proto_converter
-sys.path.pop(0)
 
 from chromite.lib import cros_test_lib
 

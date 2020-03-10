@@ -9,14 +9,11 @@
 from __future__ import print_function
 
 import os
-import sys
 import unittest
 
-# pylint: disable=wrong-import-position
-this_dir = os.path.dirname(__file__)
-sys.path.insert(0, this_dir)
 import libcros_config_host_json
-sys.path.pop(0)
+
+this_dir = os.path.dirname(__file__)
 
 
 class CrosConfigHostJsonTests(unittest.TestCase):

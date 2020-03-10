@@ -18,13 +18,9 @@ import os
 import sys
 import unittest
 
-# pylint: disable=wrong-import-position
-this_dir = os.path.dirname(__file__)
-sys.path.insert(0, this_dir)
 from libcros_config_host import CrosConfig
 from libcros_config_host_base import BaseFile, SymlinkedFile, FirmwareInfo
 from libcros_config_host_base import FirmwareImage, DeviceSignerInfo
-sys.path.pop(0)
 
 YAML_FILE = '../libcros_config/test.yaml'
 MODELS = sorted(['some', 'another', 'whitelabel'])

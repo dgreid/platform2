@@ -4,3 +4,8 @@
 # found in the LICENSE file.
 
 """Library providing access to the master configuration from the host"""
+
+import sys
+import os
+
+sys.path.insert(0, os.path.dirname(__file__))
