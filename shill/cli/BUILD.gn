@@ -1,0 +1,60 @@
+# Copyright 2020 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//common-mk/pkg_config.gni")
+
+group("all") {
+  deps = [
+    ":shillcli",
+  ]
+  if (use.test) {
+    deps += [ ":shillcli_test" ]
+  }
+}
+
+pkg_config("target_defaults") {
+  pkg_deps = [
+    "libbrillo",
+    "libchrome-${libbase_ver}",
+    "libshill-client",
+    "system_api",
+  ]
+}
+
+static_library("libshillcli") {
+  configs += [ ":target_defaults" ]
+  all_dependent_configs = [ ":target_defaults" ]
+  sources = [
+    "command.cc",
+  ]
+}
+
+executable("shillcli") {
+  sources = [
+    "main.cc",
+  ]
+  deps = [
+    ":libshillcli",
+  ]
+}
+
+if (use.test) {
+  pkg_config("test_config") {
+    pkg_deps = [ "libchrome-test-${libbase_ver}" ]
+  }
+
+  executable("shillcli_test") {
+    sources = [
+      "command_test.cc",
+    ]
+    configs += [
+      "//common-mk:test",
+      ":test_config",
+    ]
+    deps = [
+      ":libshillcli",
+      "//common-mk/testrunner",
+    ]
+  }
+}
