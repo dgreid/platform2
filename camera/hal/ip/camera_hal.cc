@@ -113,7 +113,7 @@ void CameraHal::InitOnIpcThread(scoped_refptr<Future<int>> return_val) {
 
   mojo::PlatformChannel channel;
   brillo::dbus_utils::FileDescriptor handle(
-      channel.TakeRemoteEndpoint().TakePlatformHandle().TakeFD().release());
+      channel.TakeRemoteEndpoint().TakePlatformHandle().TakeFD());
 
   if (!proxy.BootstrapMojoConnection(handle, nullptr)) {
     LOGF(ERROR) << "Failed to send handle over DBus";
