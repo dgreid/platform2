@@ -6,15 +6,20 @@
 
 #include <errno.h>
 
+#include "common/libcamera_connector/camera_service_connector_impl.h"
 #include "cros-camera/camera_service_connector.h"
+#include "cros-camera/future.h"
 
 int cros_cam_init() {
-  // TODO(b/151047930): Implement the function.
-  return -EACCES;
+  auto* connector = cros::CameraServiceConnector::GetInstance();
+  auto future = cros::Future<int>::Create(nullptr);
+  connector->Init(cros::GetFutureCallback(future));
+  return future->Get();
 }
 
 void cros_cam_exit() {
-  // TODO(b/151047930): Implement the function.
+  auto* connector = cros::CameraServiceConnector::GetInstance();
+  connector->Exit();
 }
 
 int cros_cam_get_cam_info(cros_cam_get_cam_info_cb_t callback, void* context) {

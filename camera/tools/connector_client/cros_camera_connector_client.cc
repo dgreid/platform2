@@ -4,9 +4,15 @@
  * found in the LICENSE file.
  */
 
+#include <unistd.h>
+
 #include "cros-camera/camera_service_connector.h"
 
 int main() {
-  cros_cam_init();
+  int res = cros_cam_init();
+  if (res != 0) {
+    return res;
+  }
+  cros_cam_exit();
   return 0;
 }

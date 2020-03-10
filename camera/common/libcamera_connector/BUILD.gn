@@ -10,8 +10,19 @@ group("all") {
 
 shared_library("libcamera_connector") {
   sources = [
+    "//camera/common/ipc_util.cc",
+    "//camera/common/libcamera_connector/camera_client.cc",
     "//camera/common/libcamera_connector/camera_service_connector.cc",
+    "//camera/common/libcamera_connector/camera_service_connector_impl.cc",
   ]
   output_name = "libcamera_connector"
   configs += [ "//camera/build:cros_camera_common" ]
+  deps = [
+    "//camera/common/libcamera_ipc:libcamera_ipc",
+    "//camera/common/libcamera_ipc:libcamera_ipc_mojom",
+  ]
+  pkg_deps = [
+    "libcamera_common",
+    "libmojo-${libbase_ver}",
+  ]
 }
