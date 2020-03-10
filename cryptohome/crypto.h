@@ -55,13 +55,13 @@ class Crypto {
   //   encrypted_keyset - The blob containing the encrypted keyset
   //   vault_key - The passkey used to decrypt the keyset
   //   crypt_flags (OUT) - Whether the keyset was wrapped by the TPM or scrypt
-  //   is_pcr_extended - Whether the device has transitioned into user-specific
-  //                     modality by extending PCR4 with a user-specific value.
+  //   locked_to_single_user - Whether the device has transitioned into
+  //   user-specific modality by extending PCR4 with a user-specific value.
   //   error (OUT) - The specific error code on failure
   //   vault_keyset (OUT) - The decrypted vault keyset on success
   virtual bool DecryptVaultKeyset(const SerializedVaultKeyset& serialized,
                                   const brillo::SecureBlob& vault_key,
-                                  bool is_pcr_extended,
+                                  bool locked_to_single_user,
                                   unsigned int* crypt_flags, CryptoError* error,
                                   VaultKeyset* vault_keyset) const;
 
@@ -305,7 +305,7 @@ class Crypto {
   // Returns true on success, and false on failure.
   bool DecryptTPM(const SerializedVaultKeyset& serialized,
                   const brillo::SecureBlob& key,
-                  bool is_pcr_extended,
+                  bool locked_to_single_user,
                   CryptoError* error,
                   KeyBlobs* key_out_data) const;
 
@@ -362,11 +362,11 @@ class Crypto {
                          ValidPcrCriteria* valid_pcr_criteria) const;
 
   // Returns the tpm_key data taken from |serialized|, specifically if the
-  // keyset is PCR_BOUND and |is_pcr_extended| the data is taken from
+  // keyset is PCR_BOUND and |locked_to_single_user| the data is taken from
   // extended_tpm_key. Otherwise the data from tpm_key is used.
   brillo::SecureBlob GetTpmKeyFromSerialized(
       const SerializedVaultKeyset& serialized,
-      bool is_pcr_extended) const;
+      bool locked_to_single_user) const;
 
   // Decrypt the |vault_key| that is not bound to PCR, returning the |vkk_iv|
   // and |vkk_key|.

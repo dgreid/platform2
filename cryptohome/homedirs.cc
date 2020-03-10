@@ -489,9 +489,9 @@ bool HomeDirs::GetValidKeyset(const Credentials& creds,
     if (creds.key_data().label().empty() &&
         (vk->serialized().flags() & SerializedVaultKeyset::LE_CREDENTIAL))
       continue;
-    bool is_pcr_extended =
+    bool locked_to_single_user =
         platform_->FileExists(base::FilePath(kLockedToSingleUserFile));
-    if (vk->Decrypt(passkey, is_pcr_extended, &last_crypto_error)) {
+    if (vk->Decrypt(passkey, locked_to_single_user, &last_crypto_error)) {
       if (key_index)
         *key_index = index;
       return true;

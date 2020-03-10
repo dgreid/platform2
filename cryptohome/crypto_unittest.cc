@@ -222,7 +222,7 @@ TEST_F(CryptoTest, DecryptionTest) {
   unsigned int crypt_flags = 0;
   CryptoError crypto_error = CryptoError::CE_NONE;
   ASSERT_TRUE(crypto.DecryptVaultKeyset(serialized, key,
-                                        false /* is_pcr_extended */,
+                                        false /* locked_to_single_user */,
                                         &crypt_flags, &crypto_error,
                                         &new_keyset));
 
@@ -356,7 +356,7 @@ TEST_F(CryptoTest, TpmStepTest) {
   EXPECT_CALL(tpm, DeclareTpmFirmwareStable());
 
   ASSERT_TRUE(crypto.DecryptVaultKeyset(serialized, key,
-                                        false /* is_pcr_extended */,
+                                        false /* locked_to_single_user */,
                                         &crypt_flags, &crypto_error,
                                         &new_keyset));
 
@@ -440,7 +440,7 @@ TEST_F(CryptoTest, Tpm1_2_StepTest) {
   EXPECT_CALL(tpm, DeclareTpmFirmwareStable());
 
   ASSERT_TRUE(crypto.DecryptVaultKeyset(serialized, key,
-                                        false /* is_pcr_extended */,
+                                        false /* locked_to_single_user */,
                                         &crypt_flags, &crypto_error,
                                         &new_keyset));
 
@@ -519,7 +519,7 @@ TEST_F(CryptoTest, TpmDecryptFailureTest) {
       .Times(0);
 
   ASSERT_FALSE(crypto.DecryptVaultKeyset(serialized, key,
-                                         false /* is_pcr_extended */,
+                                         false /* locked_to_single_user */,
                                          &crypt_flags, &crypto_error,
                                          &new_keyset));
   ASSERT_NE(CryptoError::CE_NONE, crypto_error);
@@ -556,7 +556,7 @@ TEST_F(CryptoTest, ScryptStepTest) {
   unsigned int crypt_flags = 0;
   CryptoError crypto_error = CryptoError::CE_NONE;
   ASSERT_TRUE(crypto.DecryptVaultKeyset(serialized, key,
-                                        false /* is_pcr_extended */,
+                                        false /* locked_to_single_user */,
                                         &crypt_flags, &crypto_error,
                                         &new_keyset));
 
@@ -625,7 +625,7 @@ TEST_F(CryptoTest, TpmScryptStepTest) {
                       Return(Tpm::kTpmRetryNone)));
 
   ASSERT_TRUE(crypto.DecryptVaultKeyset(serialized, key,
-                                        false /* is_pcr_extended */,
+                                        false /* locked_to_single_user */,
                                         &crypt_flags, &crypto_error,
                                         &new_keyset));
 

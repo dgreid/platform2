@@ -424,7 +424,7 @@ bool Crypto::NeedsPcrBinding(const uint64_t& label) const {
 
 bool Crypto::DecryptVaultKeyset(const SerializedVaultKeyset& serialized,
                                 const SecureBlob& vault_key,
-                                bool is_pcr_extended,
+                                bool locked_to_single_user,
                                 unsigned int* crypt_flags, CryptoError* error,
                                 VaultKeyset* vault_keyset) const {
   if (crypt_flags)
@@ -477,7 +477,7 @@ bool Crypto::DecryptVaultKeyset(const SerializedVaultKeyset& serialized,
     KeyBlobs vkk_data;
     AuthInput user_input;
     user_input.user_input = vault_key;
-    user_input.is_pcr_extended = is_pcr_extended;
+    user_input.locked_to_single_user = locked_to_single_user;
 
     AuthBlockState auth_state = { serialized };
     TpmAuthBlock tpm_auth(tpm_, tpm_init_);

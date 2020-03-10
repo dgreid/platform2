@@ -1570,7 +1570,7 @@ class KeysetManagementTest : public HomeDirsTest {
   }
 
   virtual bool VkDecrypt0(const brillo::SecureBlob& key,
-                          bool is_pcr_extended,
+                          bool locked_to_single_user,
                           CryptoError* crypto_error) {
     return memcmp(key.data(), keys_[0].data(), key.size()) == 0;
   }

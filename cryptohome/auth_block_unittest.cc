@@ -183,7 +183,7 @@ TEST(TpmAuthBlockTest, DeriveTest) {
   KeyBlobs key_out_data;
   AuthInput user_input;
   user_input.user_input = key;
-  user_input.is_pcr_extended = false;
+  user_input.locked_to_single_user = false;
 
   AuthBlockState auth_state = {
       base::make_optional<SerializedVaultKeyset>(std::move(serialized))};

@@ -110,10 +110,11 @@ bool TpmAuthBlock::Derive(const AuthInput& user_input,
   key_out_data->vkk_iv = brillo::SecureBlob(kAesBlockSize);
   key_out_data->vkk_key = brillo::SecureBlob(kDefaultAesKeySize);
 
-  bool is_pcr_extended = user_input.is_pcr_extended.value_or(false);
+  bool locked_to_single_user =
+      user_input.locked_to_single_user.value_or(false);
   brillo::SecureBlob salt(serialized.salt().begin(), serialized.salt().end());
   brillo::SecureBlob tpm_key =
-      GetTpmKeyFromSerialized(serialized, is_pcr_extended);
+      GetTpmKeyFromSerialized(serialized, locked_to_single_user);
   bool is_pcr_bound = serialized.flags() & SerializedVaultKeyset::PCR_BOUND;
   if (is_pcr_bound) {
     if (!DecryptTpmBoundToPcr(user_input.user_input.value(), tpm_key, salt,
@@ -174,9 +175,10 @@ bool TpmAuthBlock::IsTPMPubkeyHash(const std::string& hash,
 }
 
 brillo::SecureBlob TpmAuthBlock::GetTpmKeyFromSerialized(
-    const SerializedVaultKeyset& serialized, bool is_pcr_extended) const {
+    const SerializedVaultKeyset& serialized,
+    bool locked_to_single_user) const {
   bool is_pcr_bound = serialized.flags() & SerializedVaultKeyset::PCR_BOUND;
-  auto tpm_key_data = (is_pcr_bound && is_pcr_extended)
+  auto tpm_key_data = (is_pcr_bound && locked_to_single_user)
                           ? serialized.extended_tpm_key()
                           : serialized.tpm_key();
   return brillo::SecureBlob(tpm_key_data);

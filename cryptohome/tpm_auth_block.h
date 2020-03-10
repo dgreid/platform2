@@ -36,10 +36,11 @@ class TpmAuthBlock : public AuthBlock {
                        CryptoError* error) const;
 
   // Returns the tpm_key data taken from |serialized|, specifically if the
-  // keyset is PCR_BOUND and |is_pcr_extended| the data is taken from
+  // keyset is PCR_BOUND and |locked_to_single_user| the data is taken from
   // extended_tpm_key. Otherwise the data from tpm_key is used.
   brillo::SecureBlob GetTpmKeyFromSerialized(
-      const SerializedVaultKeyset& serialized, bool is_pcr_extended) const;
+      const SerializedVaultKeyset& serialized,
+      bool locked_to_single_user) const;
 
   // Decrypt the |vault_key| that is not bound to PCR, returning the |vkk_iv|
   // and |vkk_key|.

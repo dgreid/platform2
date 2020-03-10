@@ -158,7 +158,7 @@ TEST_F(VaultKeysetTest, LoadSaveTest) {
   VaultKeyset new_keyset;
   new_keyset.Initialize(&platform, &crypto);
   EXPECT_TRUE(new_keyset.Load(FilePath("foo")));
-  EXPECT_TRUE(new_keyset.Decrypt(key, false /* is_pcr_extended */,
+  EXPECT_TRUE(new_keyset.Decrypt(key, false /* locked_to_single_user */,
                                  nullptr /* crypto_error */));
 }
 
