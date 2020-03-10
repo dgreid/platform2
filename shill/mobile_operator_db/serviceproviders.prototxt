@@ -9354,6 +9354,21 @@ mno {
 
 mno {
   data {
+    uuid : "d1d4554d-62be-462c-a1c7-412208572b56"
+    country : "nl"
+    localized_name {
+      name : "T-Mobile Internet"
+    }
+    mccmnc : "20416"
+    mccmnc : "20420"
+    mobile_apn {
+      apn : "smartsites.t-mobile"
+    }
+  }
+}
+
+mno {
+  data {
     uuid : "6864e27a-d529-4297-9273-17649eb21262"
     country : "nl"
     localized_name {
