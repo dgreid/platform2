@@ -2,4 +2,4 @@ type cros_hwclock, chromeos_domain, domain;
 
 permissive cros_hwclock;
 
-domain_auto_trans(cros_periodic_scheduler, cros_hwclock_exec, cros_hwclock);
+cros_cron(cros_hwclock, cros_hwclock_exec);

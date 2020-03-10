@@ -8,7 +8,8 @@ exec_coreutils(cros_chromeos_cleanup_logs);
 use_init_fd(cros_chromeos_cleanup_logs);
 log_writer(cros_chromeos_cleanup_logs);
 
-domain_auto_trans({ cros_init cros_init_scripts cros_periodic_scheduler cros_ssh_session }, cros_chromeos_cleanup_logs_exec, cros_chromeos_cleanup_logs);
+domain_auto_trans({ cros_init cros_init_scripts cros_ssh_session }, cros_chromeos_cleanup_logs_exec, cros_chromeos_cleanup_logs);
+cros_cron(cros_chromeos_cleanup_logs, cros_chromeos_cleanup_logs_exec);
 allow cros_chromeos_cleanup_logs { cros_init cros_init_scripts cros_sshd frecon }:fd use;
 
 cros_dbus_client(cros_chromeos_cleanup_logs);

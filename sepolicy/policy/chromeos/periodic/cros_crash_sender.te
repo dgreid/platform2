@@ -2,7 +2,7 @@ type cros_crash_sender, chromeos_domain, domain;
 
 permissive cros_crash_sender;
 
-domain_auto_trans(cros_periodic_scheduler, cros_crash_sender_exec, cros_crash_sender);
+cros_cron(cros_crash_sender, cros_crash_sender_exec);
 
 log_writer(cros_crash_sender);
 

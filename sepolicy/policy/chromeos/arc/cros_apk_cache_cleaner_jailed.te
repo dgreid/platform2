@@ -2,4 +2,4 @@ type cros_apk_cache_cleaner_jailed, chromeos_domain, domain;
 
 permissive cros_apk_cache_cleaner_jailed;
 
-domain_auto_trans(cros_periodic_scheduler, cros_apk_cache_cleaner_jailed_exec, cros_apk_cache_cleaner_jailed);
+cros_cron(cros_apk_cache_cleaner_jailed, cros_apk_cache_cleaner_jailed_exec);
