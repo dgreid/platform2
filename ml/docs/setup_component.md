@@ -26,7 +26,6 @@ You need to have:
 The above steps are **not** covered in this document. For more instructions
 read: [go/ml-abc](http://go/ml-abc)
 
-
 ## Omaha
 
 Omaha is the server that holds the Chrome Components and handles the creating
@@ -35,14 +34,12 @@ release.
 
 Using Omaha is a required step in this process.
 
-
 ## What you can expect
 
 This process can be summarised as:
 1. One CL to create the key material
 2. One CL to add the component to Omaha Server
 3. Some manual steps in the Omaha Server UI
-
 
 ## Request access to Omaha
 
@@ -57,7 +54,6 @@ mess up the Component and therefore the feature in a matter of a few clicks.
 Once you have the mdb group, write to omaha-support@ and request access, along
 with the appropriate introdution of your team and feature to them.
 
-
 ## Upload files to a remote storage
 
 Whatever remote storage solution you choose, it must be versioned.
@@ -65,10 +61,11 @@ Whatever remote storage solution you choose, it must be versioned.
 We strongly recommend you use the following conventions. The rest of this page
 assumes that and if you change it you'll have to make appropriate changes.
 
-* Use path: `/<some_path>/<feature_name>/VERSION/files.zip`
-* For VERSION use `YYYY.MM.DD.v`. For example `2020.02.18.3`.
-* Put all files inside a zip file and name it `files.zip`
-
+*   Use path: `/<some_path>/<feature_name>/VERSION/files.zip`
+*   For VERSION use `YYYYMMDD.v`. For example `20200218.3`, if using
+    `YYYY.MM.DD.v` like `2020.02.18.3`, Omaha will canonicalize it to
+    `2020.2.18.3`.
+*   Put all files inside a zip file and name it `files.zip`
 
 ## Add a new Component
 
@@ -90,6 +87,11 @@ pay attention to the following.
 
 For reference, see this example CL: [cl/282662189](http://cl/282662189).
 
+### Upload a new version to an existing Component
+
+To upload a new version, you just need to upload the new files to
+`/<some_path>/<feature_name>/NEW_VERSION/files.zip`, see [Upload files to a
+remote storage], Omaha will create a new version automatically.
 
 ## Check that the Component is setup correctly
 
@@ -104,7 +106,6 @@ nothing for you to do here.
 Navigate to http://omaharelease/. You should see your componnent listed there.
 Click on the component name and check that you have at least one entry under
 "Active File Groups".
-
 
 ## Use Omaha to manage the release of the Component
 
@@ -159,7 +160,6 @@ Note: If a client comes up in more than one cohort, only the highest cohort in
 the list will be applied to it. So be careful. The widest cohort needs to go
 at the bottom.
 
-
 ## FAQs
 
 Q. How many components can I create on Omaha?
@@ -171,5 +171,6 @@ device requests. See [this documentation][version-control-oob].
 
 
 [add-component-doc]: https://g3doc.corp.google.com/company/teams/chrome/component_updater.md#adding-new-components
-[omaha-protocol]:https://github.com/google/omaha/blob/master/doc/ServerProtocolV3.md
-[version-control-oob]:https://docs.google.com/document/d/11erwhc0Ppul4SPXE7DtvW9wz-0CQmKK4b9dFTloByos
+[omaha-protocol]: https://github.com/google/omaha/blob/master/doc/ServerProtocolV3.md
+[version-control-oob]: https://docs.google.com/document/d/11erwhc0Ppul4SPXE7DtvW9wz-0CQmKK4b9dFTloByos
+[Upload files to a remote storage]: #Upload-files-to-a-remote-storage
