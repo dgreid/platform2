@@ -20,12 +20,12 @@ executable("libjea_test") {
     "cros-camera-android-headers",
     "libcamera_common",
     "libcamera_exif",
-    "libcamera_ipc",
     "libyuv",
   ]
   deps = [
     "//camera/common:libcamera_jpeg",
     "//camera/common/jpeg:libjea",
     "//camera/common/libcamera_ipc",
+    "//camera/common/libcamera_ipc:libcamera_ipc_mojom",
   ]
 }

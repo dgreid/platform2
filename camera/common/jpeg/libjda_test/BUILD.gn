@@ -18,10 +18,13 @@ executable("libjda_test") {
   ]
   libs = [ "jpeg" ]
   pkg_deps = [
+    "cros-camera-android-headers",
     "libcamera_common",
-    "libcamera_ipc",
-    "libjda",
-    "libmojo-${libbase_ver}",
     "libyuv",
+  ]
+  deps = [
+    "//camera/common/jpeg/libjda",
+    "//camera/common/libcamera_ipc",
+    "//camera/common/libcamera_ipc:libcamera_ipc_mojom",
   ]
 }

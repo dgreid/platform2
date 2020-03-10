@@ -28,5 +28,6 @@ static_library("libjda") {
   deps = [
     "//camera/common:libcamera_metrics",
     "//camera/common/libcamera_ipc",
+    "//camera/common/libcbm",
   ]
 }
