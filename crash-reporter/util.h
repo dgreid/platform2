@@ -77,8 +77,12 @@ bool GetCachedKeyValueDefault(const base::FilePath& base_name,
                               std::string* value);
 
 // Gets the user crash directories via D-Bus using |session_manager_proxy|.
-// Returns true on success. The original contents of |directories| will be lost.
+// Returns true on success.
 bool GetUserCrashDirectories(
+    org::chromium::SessionManagerInterfaceProxyInterface* session_manager_proxy,
+    std::vector<base::FilePath>* directories);
+
+bool GetDaemonStoreCrashDirectories(
     org::chromium::SessionManagerInterfaceProxyInterface* session_manager_proxy,
     std::vector<base::FilePath>* directories);
 

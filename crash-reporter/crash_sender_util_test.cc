@@ -1210,9 +1210,12 @@ TEST_F(CrashSenderUtilTest, GetUserCrashDirectories) {
                 std::make_unique<test_util::AdvancingClock>(), options);
   ASSERT_TRUE(sender.Init());
 
-  EXPECT_THAT(sender.GetUserCrashDirectories(),
-              UnorderedElementsAre(paths::Get("/home/user/hash1/crash"),
-                                   paths::Get("/home/user/hash2/crash")));
+  EXPECT_THAT(
+      sender.GetUserCrashDirectories(),
+      UnorderedElementsAre(paths::Get("/home/user/hash1/crash"),
+                           paths::Get("/home/user/hash2/crash"),
+                           paths::Get("/run/daemon-store/crash/hash1"),
+                           paths::Get("/run/daemon-store/crash/hash2")));
 }
 
 class CreateCrashFormDataTest : public CrashSenderUtilTest {

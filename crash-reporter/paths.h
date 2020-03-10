@@ -48,6 +48,13 @@ constexpr char kEtcDirectory[] = "/etc";
 // the user (purposefully).
 constexpr char kFallbackUserCrashDirectory[] = "/home/chronos/crash";
 
+// The paths /home/root/<hash>/crash are bind mounted to
+// /run/daemon-store/crash/<hash> by cryptohomed. We prefer to use this path
+// because it requires fewer privileges to access and it provides a way to
+// expose the crash spool directory to a daemon without exposing the whole
+// daemon-store.
+constexpr char kCryptohomeCrashDirectory[] = "/run/daemon-store/crash";
+
 // File whose existence indicates this is a developer image.
 constexpr char kLeaveCoreFile[] = "/root/.leave_core";
 

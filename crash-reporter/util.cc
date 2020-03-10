@@ -225,8 +225,6 @@ bool GetCachedKeyValueDefault(const base::FilePath& base_name,
 bool GetUserCrashDirectories(
     org::chromium::SessionManagerInterfaceProxyInterface* session_manager_proxy,
     std::vector<base::FilePath>* directories) {
-  directories->clear();
-
   brillo::ErrorPtr error;
   std::map<std::string, std::string> sessions;
   session_manager_proxy->RetrieveActiveSessions(&sessions, &error);
@@ -242,6 +240,30 @@ bool GetUserCrashDirectories(
     directories->push_back(
         paths::Get(brillo::cryptohome::home::GetHashedUserPath(iter.second)
                        .Append("crash")
+                       .value()));
+  }
+
+  return true;
+}
+
+bool GetDaemonStoreCrashDirectories(
+    org::chromium::SessionManagerInterfaceProxyInterface* session_manager_proxy,
+    std::vector<base::FilePath>* directories) {
+  brillo::ErrorPtr error;
+  std::map<std::string, std::string> sessions;
+  session_manager_proxy->RetrieveActiveSessions(&sessions, &error);
+
+  if (error) {
+    LOG(ERROR) << "Error calling D-Bus proxy call to interface "
+               << "'" << session_manager_proxy->GetObjectPath().value()
+               << "': " << error->GetMessage();
+    return false;
+  }
+
+  for (const auto& iter : sessions) {
+    directories->push_back(
+        paths::Get(base::FilePath(paths::kCryptohomeCrashDirectory)
+                       .Append(iter.second)
                        .value()));
   }
 

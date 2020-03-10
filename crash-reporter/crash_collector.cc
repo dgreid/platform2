@@ -69,6 +69,11 @@ const char kLsbOsDescriptionKey[] = "CHROMEOS_RELEASE_DESCRIPTION";
 // Directory mode of the user crash spool directory.
 // This is SGID so that files created in it are also accessible to the group.
 const mode_t kUserCrashPathMode = 02770;
+
+// Directory mode of the non-chronos cryptohome spool directory.  This has the
+// sticky bit set to prevent different crash collectors from messing with each
+// others files.
+const mode_t kDaemonStoreCrashPathMode = 03770;
 #endif
 
 // Directory mode of the system crash spool directory.
@@ -83,9 +88,6 @@ constexpr mode_t kSystemRunStateDirectoryMode = 0755;
 constexpr mode_t kCrashReporterStateDirectoryMode = 0700;
 
 constexpr gid_t kRootGroup = 0;
-#if !USE_KVM_GUEST
-constexpr char kCrashUserGroupName[] = "crash-user-access";
-#endif
 
 // Directory mode of /run/metrics/external/crash-reporter. Anyone in "metrics"
 // group can read/write, and not readable by any other user.
@@ -714,14 +716,20 @@ FilePath CrashCollector::GetCrashPath(const FilePath& crash_directory,
       StringPrintf("%s.%s", basename.c_str(), extension.c_str()));
 }
 
-bool CrashCollector::GetUserCrashDirectories(
-    std::vector<FilePath>* directories) {
+bool CrashCollector::GetUserCrashDirectories(std::vector<FilePath>* directories,
+                                             bool use_non_chronos_cryptohome) {
   SetUpDBus();
-  return util::GetUserCrashDirectories(session_manager_proxy_.get(),
-                                       directories);
+  if (use_non_chronos_cryptohome) {
+    return util::GetDaemonStoreCrashDirectories(session_manager_proxy_.get(),
+                                                directories);
+  } else {
+    return util::GetUserCrashDirectories(session_manager_proxy_.get(),
+                                         directories);
+  }
 }
 
-FilePath CrashCollector::GetUserCrashDirectory() {
+FilePath CrashCollector::GetUserCrashDirectory(
+    bool use_non_chronos_cryptohome) {
   FilePath user_directory = FilePath(paths::kFallbackUserCrashDirectory);
   // When testing, store crashes in the fallback crash directory; otherwise,
   // the test framework can't get to them after logging the user out.
@@ -732,7 +740,8 @@ FilePath CrashCollector::GetUserCrashDirectory() {
   // Ask the session manager for the active ones, then just run with the
   // first result we get back.
   std::vector<FilePath> directories;
-  if (!GetUserCrashDirectories(&directories) || directories.empty()) {
+  if (!GetUserCrashDirectories(&directories, use_non_chronos_cryptohome) ||
+      directories.empty()) {
     LOG(ERROR) << "Could not get user crash directories, using default.";
     return user_directory;
   }
@@ -744,6 +753,7 @@ FilePath CrashCollector::GetUserCrashDirectory() {
 base::Optional<FilePath> CrashCollector::GetCrashDirectoryInfo(
     uid_t process_euid,
     uid_t default_user_id,
+    bool use_non_chronos_cryptohome,
     mode_t* mode,
     uid_t* directory_owner,
     gid_t* directory_group) {
@@ -753,13 +763,24 @@ base::Optional<FilePath> CrashCollector::GetCrashDirectoryInfo(
 #if !USE_KVM_GUEST
   if (process_euid == default_user_id ||
       crash_directory_selection_method_ == kAlwaysUseUserCrashDirectory) {
-    *mode = kUserCrashPathMode;
-    *directory_owner = default_user_id;
-    if (!brillo::userdb::GetGroupInfo(kCrashUserGroupName, directory_group)) {
-      PLOG(ERROR) << "Couldn't look up group " << kCrashUserGroupName;
+    if (use_non_chronos_cryptohome) {
+      *mode = kDaemonStoreCrashPathMode;
+      if (!brillo::userdb::GetGroupInfo(constants::kCrashName,
+                                        directory_owner)) {
+        PLOG(ERROR) << "Couldn't look up user " << constants::kCrashName;
+        return base::nullopt;
+      }
+    } else {
+      *mode = kUserCrashPathMode;
+      *directory_owner = default_user_id;
+    }
+    if (!brillo::userdb::GetGroupInfo(constants::kCrashUserGroupName,
+                                      directory_group)) {
+      PLOG(ERROR) << "Couldn't look up group "
+                  << constants::kCrashUserGroupName;
       return base::nullopt;
     }
-    return GetUserCrashDirectory();
+    return GetUserCrashDirectory(use_non_chronos_cryptohome);
   }
 #endif  // !USE_KVM_GUEST
   *mode = kSystemCrashDirectoryMode;
@@ -772,9 +793,11 @@ base::Optional<FilePath> CrashCollector::GetCrashDirectoryInfo(
   return system_crash_path_;
 }
 
-bool CrashCollector::GetCreatedCrashDirectoryByEuid(uid_t euid,
-                                                    FilePath* crash_directory,
-                                                    bool* out_of_capacity) {
+bool CrashCollector::GetCreatedCrashDirectoryByEuid(
+    uid_t euid,
+    FilePath* crash_directory,
+    bool* out_of_capacity,
+    bool use_non_chronos_cryptohome) {
   if (out_of_capacity)
     *out_of_capacity = false;
 
@@ -801,9 +824,9 @@ bool CrashCollector::GetCreatedCrashDirectoryByEuid(uid_t euid,
   mode_t directory_mode;
   uid_t directory_owner;
   gid_t directory_group;
-  base::Optional<base::FilePath> maybe_path =
-      GetCrashDirectoryInfo(euid, default_user_id, &directory_mode,
-                            &directory_owner, &directory_group);
+  base::Optional<base::FilePath> maybe_path = GetCrashDirectoryInfo(
+      euid, default_user_id, use_non_chronos_cryptohome, &directory_mode,
+      &directory_owner, &directory_group);
   if (!maybe_path) {
     return false;
   }

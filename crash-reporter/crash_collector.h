@@ -261,23 +261,28 @@ class CrashCollector {
   void StripEmailAddresses(std::string* contents);
   void StripSerialNumbers(std::string* contents);
 
-  bool GetUserCrashDirectories(std::vector<base::FilePath>* directories);
-  base::FilePath GetUserCrashDirectory();
-  base::Optional<base::FilePath> GetCrashDirectoryInfo(uid_t process_euid,
-                                                       uid_t default_user_id,
-                                                       mode_t* mode,
-                                                       uid_t* directory_owner,
-                                                       gid_t* directory_group);
+  bool GetUserCrashDirectories(std::vector<base::FilePath>* directories,
+                               bool use_non_chronos_cryptohome);
+  base::FilePath GetUserCrashDirectory(bool use_non_chronos_cryptohome);
+  base::Optional<base::FilePath> GetCrashDirectoryInfo(
+      uid_t process_euid,
+      uid_t default_user_id,
+      bool use_non_chronos_cryptohome,
+      mode_t* mode,
+      uid_t* directory_owner,
+      gid_t* directory_group);
 
-  // Determines the crash directory for given euid, and creates the
-  // directory if necessary with appropriate permissions.  If
-  // |out_of_capacity| is not nullptr, it is set to indicate if the call
-  // failed due to not having capacity in the crash directory. Returns
-  // true whether or not directory needed to be created, false on any
-  // failure.  If the crash directory is at capacity, returns false.
+  // Determines the crash directory for given euid, and creates the directory if
+  // necessary with appropriate permissions.  If |out_of_capacity| is not
+  // nullptr, it is set to indicate if the call failed due to not having
+  // capacity in the crash directory. Returns true whether or not directory
+  // needed to be created, false on any failure.  If the crash directory is at
+  // capacity, returns false.  If |use_non_chronos_cryptohome| is set, use the
+  // new crash directory under /run/daemon-store/crash/<user-hash>.
   bool GetCreatedCrashDirectoryByEuid(uid_t euid,
                                       base::FilePath* crash_file_path,
-                                      bool* out_of_capacity);
+                                      bool* out_of_capacity,
+                                      bool use_non_chronos_cryptohome = false);
 
   // Create a directory using the specified mode/user/group, and make sure it
   // is actually a directory with the specified permissions.

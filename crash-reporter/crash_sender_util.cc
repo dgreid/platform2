@@ -818,6 +818,8 @@ std::vector<base::FilePath> Sender::GetUserCrashDirectories() {
 
   std::vector<base::FilePath> directories;
   util::GetUserCrashDirectories(session_manager_proxy_.get(), &directories);
+  util::GetDaemonStoreCrashDirectories(session_manager_proxy_.get(),
+                                       &directories);
 
   return directories;
 }

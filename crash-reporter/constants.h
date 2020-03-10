@@ -7,7 +7,12 @@
 
 namespace constants {
 
+constexpr char kCrashName[] = "crash";
 constexpr char kCrashGroupName[] = "crash-access";
+
+#if !USE_KVM_GUEST
+constexpr char kCrashUserGroupName[] = "crash-user-access";
+#endif
 
 const char kUploadVarPrefix[] = "upload_var_";
 const char kUploadTextPrefix[] = "upload_text_";
