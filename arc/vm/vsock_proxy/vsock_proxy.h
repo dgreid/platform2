@@ -18,7 +18,6 @@
 #include <base/memory/weak_ptr.h>
 
 #include "arc/vm/vsock_proxy/message.pb.h"
-#include "arc/vm/vsock_proxy/message_stream.h"
 
 namespace base {
 class FilePath;
@@ -47,20 +46,27 @@ class VSockProxy {
     // Returns the type of this proxy.
     virtual Type GetType() const = 0;
 
+    // Returns the file descriptor to watch for incoming messages.
+    virtual int GetPollFd() = 0;
+
     // Creates a proxied file descriptor for the given handle.
     // Accessing the returned FD results in calling Pread() and Fstat().
     virtual base::ScopedFD CreateProxiedRegularFile(int64_t handle) = 0;
 
-    // Override these methods to provide non-common FD handling.
-    virtual bool ConvertFileDescriptorToProto(
-        int fd, arc_proxy::FileDescriptor* proto) = 0;
-    virtual base::ScopedFD ConvertProtoToFileDescriptor(
-        const arc_proxy::FileDescriptor& proto) = 0;
+    // Sends the message to the proxy process on the other side and returns true
+    // on success.
+    virtual bool SendMessage(const arc_proxy::VSockMessage& message,
+                             const std::vector<base::ScopedFD>& fds) = 0;
+
+    // Receives a message from the proxy process on the other side and returns
+    // true on success.
+    virtual bool ReceiveMessage(arc_proxy::VSockMessage* message,
+                                std::vector<base::ScopedFD>* fds) = 0;
 
     // Called when the vsock proxy has stopped.
     virtual void OnStopped() = 0;
   };
-  VSockProxy(Delegate* delegate, base::ScopedFD vsock);
+  explicit VSockProxy(Delegate* delegate);
   ~VSockProxy();
 
   // Registers the |fd| whose type is |fd_type| to watch.
@@ -104,7 +110,8 @@ class VSockProxy {
   void OnVSockReadReady();
 
   // Handles a message sent from the other side's proxy.
-  bool HandleMessage(arc_proxy::VSockMessage* message);
+  bool HandleMessage(arc_proxy::VSockMessage* message,
+                     std::vector<base::ScopedFD>* received_fds);
 
   // Stops this proxy.
   void Stop();
@@ -113,7 +120,7 @@ class VSockProxy {
   // TODO(crbug.com/842960): Use pass-by-value when protobuf is upreved enough
   // to support rvalues. (At least, 3.5, or maybe 3.6).
   bool OnClose(arc_proxy::Close* close);
-  bool OnData(arc_proxy::Data* data);
+  bool OnData(arc_proxy::Data* data, std::vector<base::ScopedFD>* received_fds);
   bool OnDataInternal(arc_proxy::Data* data);
   bool OnConnectRequest(arc_proxy::ConnectRequest* request);
   bool OnConnectResponse(arc_proxy::ConnectResponse* response);
@@ -134,7 +141,8 @@ class VSockProxy {
   // Converts the given data to outgoing VSockMessage.
   bool ConvertDataToVSockMessage(std::string blob,
                                  std::vector<base::ScopedFD> fds,
-                                 arc_proxy::VSockMessage* message);
+                                 arc_proxy::VSockMessage* message,
+                                 std::vector<base::ScopedFD>* fds_to_send);
 
   // Handles an error on a local file.
   void HandleLocalFileError(int64_t handle);
@@ -143,7 +151,6 @@ class VSockProxy {
   int64_t GenerateCookie();
 
   Delegate* delegate_;
-  MessageStream message_stream_;
   std::unique_ptr<base::FileDescriptorWatcher::Controller> message_watcher_;
 
   // Map from a |handle| (see message.proto for details) to a file

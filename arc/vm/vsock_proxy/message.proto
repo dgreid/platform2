@@ -56,7 +56,7 @@ message FileDescriptor {
     FIFO_READ = 1;
     FIFO_WRITE = 2;
     REGULAR_FILE = 3;
-    DMABUF = 4;
+    TRANSPORTABLE = 4;  // FDs transportable via virtio-wl.
     SOCKET_DGRAM = 5;
     SOCKET_SEQPACKET = 6;
     // TODO(b/123432308): Support more file descriptor types.

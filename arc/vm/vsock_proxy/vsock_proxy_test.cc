@@ -29,35 +29,39 @@
 
 #include "arc/vm/vsock_proxy/file_descriptor_util.h"
 #include "arc/vm/vsock_proxy/message.pb.h"
+#include "arc/vm/vsock_proxy/message_stream.h"
 
 namespace arc {
 namespace {
 
 class TestDelegate : public VSockProxy::Delegate {
  public:
-  explicit TestDelegate(VSockProxy::Type type) : type_(type) {}
+  TestDelegate(VSockProxy::Type type, base::ScopedFD fd)
+      : type_(type), stream_(std::make_unique<MessageStream>(std::move(fd))) {}
   ~TestDelegate() override = default;
 
   bool is_stopped() const { return is_stopped_; }
 
+  void ResetStream() { stream_.reset(); }
+
   VSockProxy::Type GetType() const override { return type_; }
+  int GetPollFd() override { return stream_->Get(); }
   base::ScopedFD CreateProxiedRegularFile(int64_t handle) override {
     return {};
   }
-  bool ConvertFileDescriptorToProto(int fd,
-                                    arc_proxy::FileDescriptor* proto) override {
-    NOTREACHED();
-    return false;
+  bool SendMessage(const arc_proxy::VSockMessage& message,
+                   const std::vector<base::ScopedFD>& fds) override {
+    return stream_->Write(message);
   }
-  base::ScopedFD ConvertProtoToFileDescriptor(
-      const arc_proxy::FileDescriptor& proto) override {
-    NOTREACHED();
-    return {};
+  bool ReceiveMessage(arc_proxy::VSockMessage* message,
+                      std::vector<base::ScopedFD>* fds) override {
+    return stream_->Read(message);
   }
   void OnStopped() override { is_stopped_ = true; }
 
  private:
   const VSockProxy::Type type_;
+  std::unique_ptr<MessageStream> stream_;
   bool is_stopped_ = false;
 };
 
@@ -70,10 +74,14 @@ class VSockProxyTest : public testing::Test {
     // Use a blocking socket pair instead of VSOCK for testing.
     auto vsock_pair = CreateSocketPair(SOCK_STREAM);
     ASSERT_TRUE(vsock_pair.has_value());
-    server_ = std::make_unique<VSockProxy>(&server_delegate_,
-                                           std::move(vsock_pair->first));
-    client_ = std::make_unique<VSockProxy>(&client_delegate_,
-                                           std::move(vsock_pair->second));
+
+    server_delegate_ = std::make_unique<TestDelegate>(
+        VSockProxy::Type::SERVER, std::move(vsock_pair->first));
+    client_delegate_ = std::make_unique<TestDelegate>(
+        VSockProxy::Type::CLIENT, std::move(vsock_pair->second));
+
+    server_ = std::make_unique<VSockProxy>(server_delegate_.get());
+    client_ = std::make_unique<VSockProxy>(client_delegate_.get());
 
     // Register initial socket pairs.
     auto server_socket_pair = CreateSocketPair(SOCK_STREAM | SOCK_NONBLOCK);
@@ -95,15 +103,15 @@ class VSockProxyTest : public testing::Test {
   void TearDown() override {
     client_fd_.reset();
     server_fd_.reset();
-    client_ = nullptr;
-    server_ = nullptr;
+    ResetClient();
+    ResetServer();
   }
 
   VSockProxy* server() { return server_.get(); }
   VSockProxy* client() { return client_.get(); }
 
-  TestDelegate& server_delegate() { return server_delegate_; }
-  TestDelegate& client_delegate() { return client_delegate_; }
+  TestDelegate& server_delegate() { return *server_delegate_; }
+  TestDelegate& client_delegate() { return *client_delegate_; }
 
   int server_fd() const { return server_fd_.get(); }
   int client_fd() const { return client_fd_.get(); }
@@ -111,15 +119,21 @@ class VSockProxyTest : public testing::Test {
   void ResetServerFD() { server_fd_.reset(); }
   void ResetClientFD() { client_fd_.reset(); }
 
-  void ResetServer() { server_.reset(); }
-  void ResetClient() { client_.reset(); }
+  void ResetServer() {
+    server_.reset();
+    server_delegate_->ResetStream();
+  }
+  void ResetClient() {
+    client_.reset();
+    client_delegate_->ResetStream();
+  }
 
  private:
   base::MessageLoopForIO message_loop_;
   base::FileDescriptorWatcher watcher_{&message_loop_};
 
-  TestDelegate server_delegate_{VSockProxy::Type::SERVER};
-  TestDelegate client_delegate_{VSockProxy::Type::CLIENT};
+  std::unique_ptr<TestDelegate> server_delegate_;
+  std::unique_ptr<TestDelegate> client_delegate_;
 
   std::unique_ptr<VSockProxy> server_;
   std::unique_ptr<VSockProxy> client_;

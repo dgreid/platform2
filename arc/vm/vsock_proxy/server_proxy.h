@@ -6,10 +6,12 @@
 #define ARC_VM_VSOCK_PROXY_SERVER_PROXY_H_
 
 #include <memory>
+#include <vector>
 
 #include <base/macros.h>
 #include <base/memory/ref_counted.h>
 
+#include "arc/vm/vsock_proxy/message_stream.h"
 #include "arc/vm/vsock_proxy/proxy_file_system.h"
 #include "arc/vm/vsock_proxy/vsock_proxy.h"
 
@@ -33,11 +35,12 @@ class ServerProxy : public VSockProxy::Delegate,
 
   // VSockProxy::Delegate overrides:
   VSockProxy::Type GetType() const override { return VSockProxy::Type::SERVER; }
+  int GetPollFd() override { return message_stream_->Get(); }
   base::ScopedFD CreateProxiedRegularFile(int64_t handle) override;
-  bool ConvertFileDescriptorToProto(int fd,
-                                    arc_proxy::FileDescriptor* proto) override;
-  base::ScopedFD ConvertProtoToFileDescriptor(
-      const arc_proxy::FileDescriptor& proto) override;
+  bool SendMessage(const arc_proxy::VSockMessage& message,
+                   const std::vector<base::ScopedFD>& fds) override;
+  bool ReceiveMessage(arc_proxy::VSockMessage* message,
+                      std::vector<base::ScopedFD>* fds) override;
   void OnStopped() override;
 
   // ProxyFileSystem::Delegate overrides:
@@ -58,6 +61,7 @@ class ServerProxy : public VSockProxy::Delegate,
   std::unique_ptr<base::FileDescriptorWatcher::Controller>
       virtwl_socket_watcher_;
   base::ScopedFD virtwl_context_;
+  std::unique_ptr<MessageStream> message_stream_;
   std::unique_ptr<VSockProxy> vsock_proxy_;
 
   DISALLOW_COPY_AND_ASSIGN(ServerProxy);

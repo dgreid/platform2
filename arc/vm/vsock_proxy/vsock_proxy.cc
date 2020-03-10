@@ -53,7 +53,7 @@ std::unique_ptr<LocalFile> CreateFile(base::ScopedFD fd,
     case arc_proxy::FileDescriptor::REGULAR_FILE:
       return std::make_unique<LocalFile>(std::move(fd), false,
                                          std::move(error_handler));
-    case arc_proxy::FileDescriptor::DMABUF:
+    case arc_proxy::FileDescriptor::TRANSPORTABLE:
       return nullptr;
     default:
       LOG(ERROR) << "Unknown FileDescriptor::Type: " << fd_type;
@@ -63,16 +63,15 @@ std::unique_ptr<LocalFile> CreateFile(base::ScopedFD fd,
 
 }  // namespace
 
-VSockProxy::VSockProxy(Delegate* delegate, base::ScopedFD vsock)
+VSockProxy::VSockProxy(Delegate* delegate)
     : delegate_(delegate),
-      message_stream_(std::move(vsock)),
       next_handle_(delegate_->GetType() == Type::SERVER ? 1 : -1),
       next_cookie_(delegate_->GetType() == Type::SERVER ? 1 : -1) {
   // Note: this needs to be initialized after weak_factory_, which is
   // declared after message_watcher_ in order to destroy it first.
   message_watcher_ = base::FileDescriptorWatcher::WatchReadable(
-      message_stream_.Get(), base::BindRepeating(&VSockProxy::OnVSockReadReady,
-                                                 weak_factory_.GetWeakPtr()));
+      delegate_->GetPollFd(), base::BindRepeating(&VSockProxy::OnVSockReadReady,
+                                                  weak_factory_.GetWeakPtr()));
 }
 
 VSockProxy::~VSockProxy() {
@@ -102,7 +101,7 @@ int64_t VSockProxy::RegisterFileDescriptor(
                                         weak_factory_.GetWeakPtr(), handle));
   std::unique_ptr<base::FileDescriptorWatcher::Controller> controller;
   if (fd_type != arc_proxy::FileDescriptor::REGULAR_FILE &&
-      fd_type != arc_proxy::FileDescriptor::DMABUF) {
+      fd_type != arc_proxy::FileDescriptor::TRANSPORTABLE) {
     controller = base::FileDescriptorWatcher::WatchReadable(
         raw_fd, base::BindRepeating(&VSockProxy::OnLocalFileDesciptorReadReady,
                                     weak_factory_.GetWeakPtr(), handle));
@@ -120,7 +119,7 @@ void VSockProxy::Connect(const base::FilePath& path, ConnectCallback callback) {
   request->set_cookie(cookie);
   request->set_path(path.value());
   pending_connect_.emplace(cookie, std::move(callback));
-  if (!message_stream_.Write(message))
+  if (!delegate_->SendMessage(message, {}))
     Stop();
 }
 
@@ -137,7 +136,7 @@ void VSockProxy::Pread(int64_t handle,
   request->set_count(count);
   request->set_offset(offset);
   pending_pread_.emplace(cookie, std::move(callback));
-  if (!message_stream_.Write(message))
+  if (!delegate_->SendMessage(message, {}))
     Stop();
 }
 
@@ -149,29 +148,32 @@ void VSockProxy::Fstat(int64_t handle, FstatCallback callback) {
   request->set_cookie(cookie);
   request->set_handle(handle);
   pending_fstat_.emplace(cookie, std::move(callback));
-  if (!message_stream_.Write(message))
+  if (!delegate_->SendMessage(message, {}))
     Stop();
 }
 
 void VSockProxy::Close(int64_t handle) {
   arc_proxy::VSockMessage message;
   message.mutable_close()->set_handle(handle);
-  if (!message_stream_.Write(message))
+  if (!delegate_->SendMessage(message, {}))
     Stop();
 }
 
 void VSockProxy::OnVSockReadReady() {
   arc_proxy::VSockMessage message;
-  if (!message_stream_.Read(&message) || !HandleMessage(&message))
+  std::vector<base::ScopedFD> fds;
+  if (!delegate_->ReceiveMessage(&message, &fds) ||
+      !HandleMessage(&message, &fds))
     Stop();
 }
 
-bool VSockProxy::HandleMessage(arc_proxy::VSockMessage* message) {
+bool VSockProxy::HandleMessage(arc_proxy::VSockMessage* message,
+                               std::vector<base::ScopedFD>* received_fds) {
   switch (message->command_case()) {
     case arc_proxy::VSockMessage::kClose:
       return OnClose(message->mutable_close());
     case arc_proxy::VSockMessage::kData:
-      return OnData(message->mutable_data());
+      return OnData(message->mutable_data(), received_fds);
     case arc_proxy::VSockMessage::kConnectRequest:
       return OnConnectRequest(message->mutable_connect_request());
     case arc_proxy::VSockMessage::kConnectResponse:
@@ -225,7 +227,8 @@ bool VSockProxy::OnClose(arc_proxy::Close* close) {
   return true;
 }
 
-bool VSockProxy::OnData(arc_proxy::Data* data) {
+bool VSockProxy::OnData(arc_proxy::Data* data,
+                        std::vector<base::ScopedFD>* received_fds) {
   auto it = fd_map_.find(data->handle());
   if (it == fd_map_.end()) {
     // The file was already closed.
@@ -233,6 +236,7 @@ bool VSockProxy::OnData(arc_proxy::Data* data) {
   }
 
   // First, create file descriptors for the received message.
+  size_t received_fd_index = 0;
   std::vector<base::ScopedFD> transferred_fds;
   transferred_fds.reserve(data->transferred_fd().size());
   for (const auto& transferred_fd : data->transferred_fd()) {
@@ -260,6 +264,15 @@ bool VSockProxy::OnData(arc_proxy::Data* data) {
           return false;
         break;
       }
+      case arc_proxy::FileDescriptor::TRANSPORTABLE: {
+        if (received_fd_index >= received_fds->size()) {
+          LOG(ERROR) << "Type in proto is TRANSPORTABLE but no FD remaining.";
+          return false;
+        }
+        remote_fd = std::move((*received_fds)[received_fd_index]);
+        ++received_fd_index;
+        break;
+      }
       case arc_proxy::FileDescriptor::SOCKET_STREAM: {
         auto created = CreateSocketPair(SOCK_STREAM | SOCK_NONBLOCK);
         if (!created)
@@ -281,11 +294,9 @@ bool VSockProxy::OnData(arc_proxy::Data* data) {
         std::tie(local_fd, remote_fd) = std::move(*created);
         break;
       }
-      default: {
-        remote_fd = delegate_->ConvertProtoToFileDescriptor(transferred_fd);
-        if (!remote_fd.is_valid())
-          return false;
-      }
+      default:
+        LOG(ERROR) << "Invalid type value: " << transferred_fd.type();
+        return false;
     }
 
     // |local_fd| is set iff the descriptor's read readiness needs to be
@@ -295,6 +306,13 @@ bool VSockProxy::OnData(arc_proxy::Data* data) {
                              transferred_fd.handle());
     }
     transferred_fds.emplace_back(std::move(remote_fd));
+  }
+
+  // All received FDs must be consumed.
+  if (received_fd_index != received_fds->size()) {
+    LOG(ERROR) << "Received FDs not consumed." << received_fd_index << " "
+               << received_fds->size();
+    return false;
   }
 
   if (!it->second.file->Write(std::move(*data->mutable_blob()),
@@ -319,7 +337,7 @@ bool VSockProxy::OnConnectRequest(arc_proxy::ConnectRequest* request) {
         std::move(result.second), arc_proxy::FileDescriptor::SOCKET_STREAM,
         0 /* generate handle */));
   }
-  return message_stream_.Write(reply);
+  return delegate_->SendMessage(reply, {});
 }
 
 bool VSockProxy::OnConnectResponse(arc_proxy::ConnectResponse* response) {
@@ -342,7 +360,7 @@ bool VSockProxy::OnPreadRequest(arc_proxy::PreadRequest* request) {
 
   OnPreadRequestInternal(request, response);
 
-  return message_stream_.Write(reply);
+  return delegate_->SendMessage(reply, {});
 }
 
 void VSockProxy::OnPreadRequestInternal(arc_proxy::PreadRequest* request,
@@ -381,7 +399,7 @@ bool VSockProxy::OnFstatRequest(arc_proxy::FstatRequest* request) {
 
   OnFstatRequestInternal(request, response);
 
-  return message_stream_.Write(reply);
+  return delegate_->SendMessage(reply, {});
 }
 
 void VSockProxy::OnFstatRequestInternal(arc_proxy::FstatRequest* request,
@@ -424,6 +442,7 @@ void VSockProxy::OnLocalFileDesciptorReadReady(int64_t handle) {
 
   auto read_result = it->second.file->Read();
   arc_proxy::VSockMessage message;
+  std::vector<base::ScopedFD> fds_to_send;
   if (read_result.error_code != 0) {
     LOG(ERROR) << "Failed to read from file descriptor. handle=" << handle;
     // Notify the other side to close.
@@ -432,7 +451,8 @@ void VSockProxy::OnLocalFileDesciptorReadReady(int64_t handle) {
     // Read empty message, i.e. reached EOF.
     message.mutable_close();
   } else if (!ConvertDataToVSockMessage(std::move(read_result.blob),
-                                        std::move(read_result.fds), &message)) {
+                                        std::move(read_result.fds), &message,
+                                        &fds_to_send)) {
     // Failed to convert read result into proto.
     message.Clear();
     message.mutable_close();
@@ -449,13 +469,15 @@ void VSockProxy::OnLocalFileDesciptorReadReady(int64_t handle) {
     DCHECK(message.has_data());
     message.mutable_data()->set_handle(handle);
   }
-  if (!message_stream_.Write(message))
+  if (!delegate_->SendMessage(message, fds_to_send))
     Stop();
 }
 
-bool VSockProxy::ConvertDataToVSockMessage(std::string blob,
-                                           std::vector<base::ScopedFD> fds,
-                                           arc_proxy::VSockMessage* message) {
+bool VSockProxy::ConvertDataToVSockMessage(
+    std::string blob,
+    std::vector<base::ScopedFD> fds,
+    arc_proxy::VSockMessage* message,
+    std::vector<base::ScopedFD>* fds_to_send) {
   DCHECK(!blob.empty() || !fds.empty());
 
   // Build returning message.
@@ -505,12 +527,15 @@ bool VSockProxy::ConvertDataToVSockMessage(std::string blob,
       }
     } else if (S_ISREG(st.st_mode)) {
       transferred_fd->set_type(arc_proxy::FileDescriptor::REGULAR_FILE);
-    } else if (!delegate_->ConvertFileDescriptorToProto(fd.get(),
-                                                        transferred_fd)) {
-      return false;
+    } else {
+      // Just send it over virtio-wl.
+      transferred_fd->set_type(arc_proxy::FileDescriptor::TRANSPORTABLE);
+      fds_to_send->push_back(std::move(fd));
     }
-    transferred_fd->set_handle(RegisterFileDescriptor(
-        std::move(fd), transferred_fd->type(), 0 /* generate handle */));
+    if (transferred_fd->type() != arc_proxy::FileDescriptor::TRANSPORTABLE) {
+      transferred_fd->set_handle(RegisterFileDescriptor(
+          std::move(fd), transferred_fd->type(), 0 /* generate handle */));
+    }
   }
   return true;
 }

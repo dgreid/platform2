@@ -185,7 +185,8 @@ bool ServerProxy::Initialize() {
 
   vsock.reset();
   LOG(INFO) << "Initial socket connection comes";
-  vsock_proxy_ = std::make_unique<VSockProxy>(this, std::move(accepted));
+  message_stream_ = std::make_unique<MessageStream>(std::move(accepted));
+  vsock_proxy_ = std::make_unique<VSockProxy>(this);
   LOG(INFO) << "ServerProxy has started to work.";
   return true;
 }
@@ -195,35 +196,41 @@ base::ScopedFD ServerProxy::CreateProxiedRegularFile(int64_t handle) {
   return proxy_file_system_.RegisterHandle(handle);
 }
 
-bool ServerProxy::ConvertFileDescriptorToProto(
-    int fd, arc_proxy::FileDescriptor* proto) {
-  LOG(ERROR) << "Unsupported FD type.";
-  return false;
+bool ServerProxy::SendMessage(const arc_proxy::VSockMessage& message,
+                              const std::vector<base::ScopedFD>& fds) {
+  if (!fds.empty()) {
+    LOG(ERROR) << "It's not allowed to send FDs from host to guest.";
+    return false;
+  }
+  return message_stream_->Write(message);
 }
 
-base::ScopedFD ServerProxy::ConvertProtoToFileDescriptor(
-    const arc_proxy::FileDescriptor& proto) {
-  switch (proto.type()) {
-    case arc_proxy::FileDescriptor::DMABUF: {
-      char dummy_data = 0;
-      std::vector<base::ScopedFD> fds;
-      ssize_t size =
-          Recvmsg(virtwl_context_.get(), &dummy_data, sizeof(dummy_data), &fds);
-      if (size != sizeof(dummy_data)) {
-        PLOG(ERROR) << "Failed to receive a message";
-        return {};
+bool ServerProxy::ReceiveMessage(arc_proxy::VSockMessage* message,
+                                 std::vector<base::ScopedFD>* fds) {
+  if (!message_stream_->Read(message))
+    return false;
+  if (message->has_data()) {
+    for (const auto& fd : message->data().transferred_fd()) {
+      // Receive FD via virtwl if type == TRANSPORTABLE.
+      if (fd.type() == arc_proxy::FileDescriptor::TRANSPORTABLE) {
+        char dummy_data = 0;
+        std::vector<base::ScopedFD> transported_fds;
+        ssize_t size = Recvmsg(virtwl_context_.get(), &dummy_data,
+                               sizeof(dummy_data), &transported_fds);
+        if (size != sizeof(dummy_data)) {
+          PLOG(ERROR) << "Failed to receive a message";
+          return false;
+        }
+        if (transported_fds.size() != 1) {
+          LOG(ERROR) << "Wrong FD size: " << transported_fds.size();
+          return false;
+        }
+        vsock_proxy_->Close(fd.handle());  // Close the FD owned by guest.
+        fds->push_back(std::move(transported_fds[0]));
       }
-      if (fds.size() != 1) {
-        LOG(ERROR) << "Wrong FD size: " << fds.size();
-        return {};
-      }
-      vsock_proxy_->Close(proto.handle());  // Close the FD owned by guest.
-      return std::move(fds[0]);
     }
-    default:
-      LOG(ERROR) << "Unsupported FD type: " << proto.type();
-      return {};
   }
+  return true;
 }
 
 void ServerProxy::OnStopped() {
