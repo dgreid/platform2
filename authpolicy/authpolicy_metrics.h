@@ -62,6 +62,15 @@ enum ErrorMetricType {
   ERROR_OF_COUNT,
 };
 
+// Enum metric for encryption types used during user authentication or domain
+// join. Keep in sync with kEncryptionMetricParams!
+enum EncryptionMetricType {
+  ENC_TYPES_OF_AUTHENTICATE_USER,  // Encryption types used to authenticate
+                                   // user.
+  ENC_TYPES_OF_JOIN_AD_DOMAIN,     // Encryption types used to join AD domain.
+  ENC_METRIC_COUNT,                // Total number of encryption metrics.
+};
+
 class AuthPolicyMetrics;
 
 // Simpler wrapper around |chromeos_metrics::TimerReporter| that starts the
@@ -95,6 +104,11 @@ class AuthPolicyMetrics {
   // Report an |ErrorType| return value from a D-Bus query or a scheduled
   // operation.
   virtual void ReportError(ErrorMetricType metric_type, ErrorType error);
+
+  // Report the |KerberosEncryptionTypes| used during user authentication or
+  // domain join.
+  virtual void ReportEncryptionType(EncryptionMetricType metric_type,
+                                    KerberosEncryptionTypes encryption_types);
 
  private:
   MetricsLibrary metrics_;

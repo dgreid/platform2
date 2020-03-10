@@ -270,6 +270,9 @@ std::string GetEncryptionTypesString(KerberosEncryptionTypes encryption_types) {
       return kEncTypesAES;
     case ENC_TYPES_LEGACY:
       return kEncTypesRC4;
+    case ENC_TYPES_COUNT:
+      NOTREACHED() << "Not a valid encryption type and will default to strong.";
+      return kEncTypesAES;
   }
 }
 

@@ -62,15 +62,15 @@ constexpr HistogramParams kMetricHistogramParams[METRIC_COUNT] = {
     {METRIC_DOWNLOAD_GPO_COUNT, "NumGposToDownload", 1, 1000, 50},
 };
 
-// Error metric name plus a parameter to make sure array indices match enum
+// Enum metric name plus a parameter to make sure array indices match enum
 // values, see HistogramParams.
-struct ErrorMetricParams {
+struct EnumMetricParams {
   int enum_value;
   const char* metric_name;
 };
 
 // Keep in sync with ErrorMetricType!
-constexpr ErrorMetricParams kErrorMetricParams[ERROR_OF_COUNT] = {
+constexpr EnumMetricParams kErrorMetricParams[ERROR_OF_COUNT] = {
     {ERROR_OF_AUTHENTICATE_USER, "ErrorTypeOfAuthenticateUser"},
     {ERROR_OF_GET_USER_STATUS, "ErrorTypeOfGetUserStatus"},
     {ERROR_OF_GET_USER_KERBEROS_FILES, "ErrorTypeOfGetUserKerberosFiles"},
@@ -80,6 +80,13 @@ constexpr ErrorMetricParams kErrorMetricParams[ERROR_OF_COUNT] = {
     {ERROR_OF_AUTO_TGT_RENEWAL, "ErrorTypeOfAutoTgtRenewal"},
     {ERROR_OF_AUTO_MACHINE_PASSWORD_CHANGE,
      "ErrorTypeOfAutoMachinePasswordChange"},
+};
+
+// Keep in sync with EncryptionMetricType!
+constexpr EnumMetricParams kEncryptionMetricParams[ENC_METRIC_COUNT] = {
+    {ENC_TYPES_OF_AUTHENTICATE_USER,
+     "KerberosEncryptionTypes.AuthenticateUser"},
+    {ENC_TYPES_OF_JOIN_AD_DOMAIN, "KerberosEncryptionTypes.JoinADDomain"},
 };
 
 }  // namespace
@@ -118,12 +125,17 @@ void CheckArrayOrder<HistogramParams, kTimerHistogramParams, TIMER_COUNT>() {}
 template <>
 void CheckArrayOrder<HistogramParams, kMetricHistogramParams, METRIC_COUNT>() {}
 template <>
-void CheckArrayOrder<ErrorMetricParams, kErrorMetricParams, ERROR_OF_COUNT>() {}
+void CheckArrayOrder<EnumMetricParams, kErrorMetricParams, ERROR_OF_COUNT>() {}
+template <>
+void CheckArrayOrder<EnumMetricParams,
+                     kEncryptionMetricParams,
+                     ENC_METRIC_COUNT>() {}
 
 AuthPolicyMetrics::AuthPolicyMetrics() {
   CheckArrayOrder<HistogramParams, kTimerHistogramParams, 0>();
   CheckArrayOrder<HistogramParams, kMetricHistogramParams, 0>();
-  CheckArrayOrder<ErrorMetricParams, kErrorMetricParams, 0>();
+  CheckArrayOrder<EnumMetricParams, kErrorMetricParams, 0>();
+  CheckArrayOrder<EnumMetricParams, kEncryptionMetricParams, 0>();
 
   chromeos_metrics::TimerReporter::set_metrics_lib(&metrics_);
 }
@@ -147,6 +159,15 @@ void AuthPolicyMetrics::ReportError(ErrorMetricType metric_type,
   metrics_.SendEnumToUMA(
       MakeFullName(kErrorMetricParams[metric_type].metric_name),
       static_cast<int>(error), static_cast<int>(ERROR_COUNT));
+}
+
+void AuthPolicyMetrics::ReportEncryptionType(
+    EncryptionMetricType metric_type,
+    KerberosEncryptionTypes encryption_types) {
+  DCHECK(metric_type >= 0 && metric_type < ENC_METRIC_COUNT);
+  metrics_.SendEnumToUMA(
+      MakeFullName(kEncryptionMetricParams[metric_type].metric_name),
+      static_cast<int>(encryption_types), static_cast<int>(ENC_TYPES_COUNT));
 }
 
 }  // namespace authpolicy

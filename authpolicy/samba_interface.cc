@@ -385,6 +385,9 @@ const char* GetEncryptionTypesString(KerberosEncryptionTypes encryption_types) {
       return kEncTypesStrong;
     case ENC_TYPES_LEGACY:
       return kEncTypesLegacy;
+    case ENC_TYPES_COUNT:
+      NOTREACHED() << "Not a valid encryption type and will default to strong.";
+      return kEncTypesStrong;
   }
   CHECK(false);
 }
@@ -711,6 +714,13 @@ ErrorType SambaInterface::AuthenticateUserInternal(
 
   // Backup state on user's Cryptohome.
   MaybeBackupUserAuthState();
+
+  // Collecting metrics with the encryption types used during this successful
+  // login. This value has been set through the DeviceKerberosEncryptionTypes
+  // policy.
+  metrics_->ReportEncryptionType(ENC_TYPES_OF_AUTHENTICATE_USER,
+                                 encryption_types_);
+
   return ERROR_NONE;
 }
 
@@ -924,6 +934,13 @@ ErrorType SambaInterface::JoinMachine(
   // Only if everything worked out, keep the config.
   if (joined_domain)
     *joined_domain = join_realm;
+
+  // Collecting metrics with the encryption types used during this successful
+  // enrollment. This value has been set through the advanced settings of the
+  // domain join screen.
+  metrics_->ReportEncryptionType(ENC_TYPES_OF_JOIN_AD_DOMAIN,
+                                 encryption_types_);
+
   return ERROR_NONE;
 }
 
