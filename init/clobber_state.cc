@@ -12,7 +12,6 @@
 #include <sys/stat.h>
 #include <sys/sysmacros.h>
 #include <sys/types.h>
-#include <termios.h>
 #include <unistd.h>
 
 #include <algorithm>
@@ -65,6 +64,8 @@ const char* const kEarlyBootLogPaths[] = {
     // Fetch dmesg and log into /run.
     kDmesgLogPath,
 };
+
+constexpr base::TimeDelta kMinClobberDuration = base::TimeDelta::FromMinutes(5);
 
 // |strip_partition| attempts to remove the partition number from the result.
 base::FilePath GetRootDevice(bool strip_partition) {
@@ -160,21 +161,6 @@ bool GetBlockCount(const base::FilePath& device_path,
     }
   }
   return false;
-}
-
-bool MakeTTYRaw(const base::File& tty) {
-  struct termios terminal_properties;
-  if (tcgetattr(tty.GetPlatformFile(), &terminal_properties) != 0) {
-    PLOG(WARNING) << "Getting properties of output TTY failed";
-    return false;
-  }
-
-  cfmakeraw(&terminal_properties);
-  if (tcsetattr(tty.GetPlatformFile(), TCSANOW, &terminal_properties) != 0) {
-    PLOG(WARNING) << "Setting properties of output TTY failed";
-    return false;
-  }
-  return true;
 }
 
 void AppendFileToLog(const base::FilePath& file) {
@@ -657,7 +643,7 @@ bool ClobberState::WipeMTDDevice(
 
 // static
 bool ClobberState::WipeBlockDevice(const base::FilePath& device_path,
-                                   const base::File& progress_tty,
+                                   ClobberUi* ui,
                                    bool fast) {
   const int write_block_size = 4 * 1024 * 1024;
   int64_t to_write = 0;
@@ -693,23 +679,9 @@ bool ClobberState::WipeBlockDevice(const base::FilePath& device_path,
   }
 
   // Don't display progress in fast mode since it runs so quickly.
-  bool display_progress =
-      !fast && base::PathExists(base::FilePath("/usr/bin/pv"));
-  brillo::ProcessImpl pv;
+  bool display_progress = !fast;
   if (display_progress) {
-    pv.AddArg("/usr/bin/pv");
-    pv.AddArg("--timer");
-    pv.AddArg("--progress");
-    pv.AddArg("--eta");
-    pv.AddStringOption("--size", base::Int64ToString(to_write));
-    // Track bytes written to the file descriptor for the device to wipe.
-    pv.AddStringOption(
-        "--watchfd",
-        base::StringPrintf("%d:%d", getpid(), device.GetPlatformFile()));
-    pv.BindFd(progress_tty.GetPlatformFile(), STDERR_FILENO);
-
-    if (!pv.Start()) {
-      LOG(WARNING) << "Starting pv failed";
+    if (!ui->StartWipeUi(to_write)) {
       display_progress = false;
     }
   }
@@ -726,18 +698,15 @@ bool ClobberState::WipeBlockDevice(const base::FilePath& device_path,
       return false;
     }
     total_written += bytes_written;
+    if (display_progress) {
+      ui->UpdateWipeProgress(total_written);
+    }
   }
   LOG(INFO) << "Successfully wrote " << total_written << " bytes to "
             << device_path.value();
 
-  // Close the device so that pv will stop.
-  device.Close();
-
   if (display_progress) {
-    int ret = pv.Wait();
-    if (ret != 0) {
-      LOG(WARNING) << "pv failed with code " << ret;
-    }
+    ui->StopWipeUi();
   }
 
   return true;
@@ -844,30 +813,14 @@ void ClobberState::EnsureKernelIsBootable(const base::FilePath root_disk,
 }
 
 ClobberState::ClobberState(const Arguments& args,
-                           std::unique_ptr<CrosSystem> cros_system)
+                           std::unique_ptr<CrosSystem> cros_system,
+                           std::unique_ptr<ClobberUi> ui)
     : args_(args),
       cros_system_(std::move(cros_system)),
+      ui_(std::move(ui)),
       stateful_(kStatefulPath),
       dev_("/dev"),
-      sys_("/sys") {
-  base::FilePath terminal_path;
-  if (base::PathExists(base::FilePath("/sbin/frecon"))) {
-    terminal_path = base::FilePath("/run/frecon/vt0");
-  } else {
-    terminal_path = base::FilePath("/dev/tty1");
-  }
-  terminal_ =
-      base::File(terminal_path, base::File::FLAG_OPEN | base::File::FLAG_WRITE);
-
-  if (!terminal_.IsValid()) {
-    PLOG(WARNING) << "Could not open terminal " << terminal_path.value()
-                  << " falling back to /dev/null";
-    terminal_ = base::File(base::FilePath("/dev/null"),
-                           base::File::FLAG_OPEN | base::File::FLAG_WRITE);
-  }
-
-  MakeTTYRaw(terminal_);
-}
+      sys_("/sys") {}
 
 std::vector<base::FilePath> ClobberState::GetPreservedFilesList(
     bool preserve_sensitive_files) {
@@ -1374,20 +1327,19 @@ bool ClobberState::WipeKeysets() {
 }
 
 void ClobberState::ForceDelay() {
-  int64_t elapsed_seconds =
-      (base::TimeTicks::Now() - wipe_start_time_).InSeconds();
-  LOG(INFO) << "Clobber has already run for " << elapsed_seconds << " seconds";
-  if (elapsed_seconds >= 300) {
+  base::TimeDelta elapsed = base::TimeTicks::Now() - wipe_start_time_;
+  LOG(INFO) << "Clobber has already run for " << elapsed.InSeconds()
+            << " seconds";
+  base::TimeDelta remaining = kMinClobberDuration - elapsed;
+  if (remaining <= base::TimeDelta::FromSeconds(0)) {
     LOG(INFO) << "Skipping forced delay";
     return;
   }
-
-  int delay = 300 - elapsed_seconds;
-  LOG(INFO) << "Forcing a delay of " << delay << " seconds";
-  for (int i = delay; i >= 0; i--) {
-    std::string count = base::StringPrintf("%2d:%02d\r", i / 60, i % 60);
-    terminal_.WriteAtCurrentPos(count.c_str(), count.size());
-    sleep(1);
+  LOG(INFO) << "Forcing a delay of " << remaining.InSeconds() << " seconds";
+  if (!ui_->ShowCountdownTimer(remaining)) {
+    // If showing the timer failed, we still want to make sure that we don't
+    // run for less than |kMinClobberDuration|.
+    base::PlatformThread::Sleep(remaining);
   }
 }
 
@@ -1407,7 +1359,7 @@ bool ClobberState::WipeDevice(const base::FilePath& device_path) {
   if (wipe_info_.is_mtd_flash) {
     return WipeMTDDevice(device_path, partitions_);
   } else {
-    return WipeBlockDevice(device_path, terminal_, args_.fast_wipe);
+    return WipeBlockDevice(device_path, ui_.get(), args_.fast_wipe);
   }
 }
 

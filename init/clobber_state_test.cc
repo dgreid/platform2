@@ -44,6 +44,11 @@ bool WriteFile(const base::FilePath& path, const std::string& contents) {
          base::WriteFile(path, contents.c_str(), contents.length()) ==
              contents.length();
 }
+
+base::File DevNull() {
+  return base::File(base::FilePath("/dev/null"),
+                    base::File::FLAG_OPEN | base::File::FLAG_WRITE);
+}
 }  // namespace
 
 TEST(ParseArgv, EmptyArgs) {
@@ -518,7 +523,8 @@ class MarkDeveloperModeTest : public ::testing::Test {
   MarkDeveloperModeTest()
       : cros_system_(new CrosSystemFake()),
         clobber_(ClobberState::Arguments(),
-                 std::unique_ptr<CrosSystem>(cros_system_)) {}
+                 std::unique_ptr<CrosSystem>(cros_system_),
+                 std::make_unique<ClobberUi>(DevNull())) {}
 
   void SetUp() override {
     ASSERT_TRUE(temp_dir_.CreateUniqueTempDir());
@@ -563,7 +569,8 @@ class GetPreservedFilesListTest : public ::testing::Test {
   GetPreservedFilesListTest()
       : cros_system_(new CrosSystemFake()),
         clobber_(ClobberState::Arguments(),
-                 std::unique_ptr<CrosSystem>(cros_system_)) {}
+                 std::unique_ptr<CrosSystem>(cros_system_),
+                 std::make_unique<ClobberUi>(DevNull())) {}
 
   void SetUp() override {
     ASSERT_TRUE(temp_dir_.CreateUniqueTempDir());
@@ -756,8 +763,9 @@ TEST_F(GetPreservedFilesListTest, UserTriggeredPowerwash) {
 class ClobberStateMock : public ClobberState {
  public:
   ClobberStateMock(const Arguments& args,
-                   std::unique_ptr<CrosSystem> cros_system)
-      : ClobberState(args, std::move(cros_system)),
+                   std::unique_ptr<CrosSystem> cros_system,
+                   std::unique_ptr<ClobberUi> ui)
+      : ClobberState(args, std::move(cros_system), std::move(ui)),
         secure_erase_supported_(false) {}
 
   void SetStatResultForPath(const base::FilePath& path, const struct stat& st) {
@@ -793,7 +801,8 @@ class IsRotationalTest : public ::testing::Test {
  protected:
   IsRotationalTest()
       : clobber_(ClobberState::Arguments(),
-                 std::make_unique<CrosSystemFake>()) {}
+                 std::make_unique<CrosSystemFake>(),
+                 std::make_unique<ClobberUi>(DevNull())) {}
 
   void SetUp() override {
     ASSERT_TRUE(fake_dev_.CreateUniqueTempDir());
@@ -941,7 +950,8 @@ class AttemptSwitchToFastWipeTest : public ::testing::Test {
  protected:
   AttemptSwitchToFastWipeTest()
       : clobber_(ClobberState::Arguments(),
-                 std::make_unique<CrosSystemFake>()) {}
+                 std::make_unique<CrosSystemFake>(),
+                 std::make_unique<ClobberUi>(DevNull())) {}
 
   void SetUp() override {
     ASSERT_TRUE(temp_dir_.CreateUniqueTempDir());
@@ -1130,7 +1140,8 @@ class ShredRotationalStatefulFilesTest : public ::testing::Test {
  protected:
   ShredRotationalStatefulFilesTest()
       : clobber_(ClobberState::Arguments(),
-                 std::make_unique<CrosSystemFake>()) {}
+                 std::make_unique<CrosSystemFake>(),
+                 std::make_unique<ClobberUi>(DevNull())) {}
 
   void SetUp() override {
     ASSERT_TRUE(temp_dir_.CreateUniqueTempDir());
@@ -1215,7 +1226,8 @@ class WipeKeysetsTest : public ::testing::Test {
  protected:
   WipeKeysetsTest()
       : clobber_(ClobberState::Arguments(),
-                 std::make_unique<CrosSystemFake>()) {}
+                 std::make_unique<CrosSystemFake>(),
+                 std::make_unique<ClobberUi>(DevNull())) {}
 
   void SetUp() override {
     ASSERT_TRUE(temp_dir_.CreateUniqueTempDir());
@@ -1384,22 +1396,16 @@ TEST_F(GetDevicesToWipeTest, SDA) {
 TEST(WipeBlockDevice, Nonexistent) {
   base::ScopedTempDir temp_dir;
   ASSERT_TRUE(temp_dir.CreateUniqueTempDir());
-  base::FilePath tty_path = temp_dir.GetPath().Append("tty");
-  base::File tty(tty_path, base::File::FLAG_CREATE | base::File::FLAG_WRITE);
-  ASSERT_TRUE(tty.IsValid());
-
   base::FilePath file_system_path = temp_dir.GetPath().Append("fs");
-  EXPECT_FALSE(ClobberState::WipeBlockDevice(file_system_path, tty, false));
-  EXPECT_FALSE(ClobberState::WipeBlockDevice(file_system_path, tty, true));
+  ClobberUi ui(DevNull());
+
+  EXPECT_FALSE(ClobberState::WipeBlockDevice(file_system_path, &ui, false));
+  EXPECT_FALSE(ClobberState::WipeBlockDevice(file_system_path, &ui, true));
 }
 
 TEST(WipeBlockDevice, Fast) {
   base::ScopedTempDir temp_dir;
   ASSERT_TRUE(temp_dir.CreateUniqueTempDir());
-  base::FilePath tty_path = temp_dir.GetPath().Append("tty");
-  base::File tty(tty_path, base::File::FLAG_CREATE | base::File::FLAG_WRITE);
-  ASSERT_TRUE(tty.IsValid());
-
   base::FilePath device_path = temp_dir.GetPath().Append("device");
   base::File device(device_path,
                     base::File::FLAG_CREATE | base::File::FLAG_WRITE);
@@ -1419,7 +1425,8 @@ TEST(WipeBlockDevice, Fast) {
   }
   device.Close();
 
-  EXPECT_TRUE(ClobberState::WipeBlockDevice(device_path, tty, true));
+  ClobberUi ui(DevNull());
+  EXPECT_TRUE(ClobberState::WipeBlockDevice(device_path, &ui, true));
 
   device =
       base::File(device_path, base::File::FLAG_OPEN | base::File::FLAG_READ);
@@ -1445,9 +1452,6 @@ TEST(WipeBlockDevice, Fast) {
 TEST(WipeBlockDevice, Slow) {
   base::ScopedTempDir temp_dir;
   ASSERT_TRUE(temp_dir.CreateUniqueTempDir());
-  base::FilePath tty_path = temp_dir.GetPath().Append("tty");
-  base::File tty(tty_path, base::File::FLAG_CREATE | base::File::FLAG_WRITE);
-
   base::FilePath file_system_path = temp_dir.GetPath().Append("fs");
   base::File file_system(file_system_path,
                          base::File::FLAG_CREATE | base::File::FLAG_WRITE);
@@ -1473,7 +1477,8 @@ TEST(WipeBlockDevice, Slow) {
   mkfs.AddArg(file_system_path.value());
   EXPECT_EQ(mkfs.Run(), 0);
 
-  EXPECT_TRUE(ClobberState::WipeBlockDevice(file_system_path, tty, false));
+  ClobberUi ui(DevNull());
+  EXPECT_TRUE(ClobberState::WipeBlockDevice(file_system_path, &ui, false));
 
   file_system = base::File(file_system_path,
                            base::File::FLAG_OPEN | base::File::FLAG_READ);

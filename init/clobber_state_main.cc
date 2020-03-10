@@ -8,9 +8,35 @@
 
 #include <memory>
 
+#include <base/files/file.h>
+#include <base/files/file_util.h>
 #include <base/logging.h>
 
 #include "init/crossystem_impl.h"
+
+namespace {
+
+base::File OpenTerminal() {
+  base::FilePath terminal_path;
+  if (base::PathExists(base::FilePath("/sbin/frecon"))) {
+    terminal_path = base::FilePath("/run/frecon/vt0");
+  } else {
+    terminal_path = base::FilePath("/dev/tty1");
+  }
+  base::File terminal =
+      base::File(terminal_path, base::File::FLAG_OPEN | base::File::FLAG_WRITE);
+
+  if (!terminal.IsValid()) {
+    PLOG(WARNING) << "Could not open terminal " << terminal_path.value()
+                  << " falling back to /dev/null";
+    terminal = base::File(base::FilePath("/dev/null"),
+                          base::File::FLAG_OPEN | base::File::FLAG_WRITE);
+  }
+
+  return terminal;
+}
+
+}  // namespace
 
 int main(int argc, char* argv[]) {
   logging::LoggingSettings settings;
@@ -28,6 +54,7 @@ int main(int argc, char* argv[]) {
   }
 
   ClobberState::Arguments args = ClobberState::ParseArgv(argc, argv);
-  ClobberState clobber(args, std::make_unique<CrosSystemImpl>());
+  ClobberState clobber(args, std::make_unique<CrosSystemImpl>(),
+                       std::make_unique<ClobberUi>(OpenTerminal()));
   return clobber.Run();
 }

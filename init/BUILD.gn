@@ -49,6 +49,7 @@ executable("clobber-state") {
   sources = [
     "clobber_state.cc",
     "clobber_state_main.cc",
+    "clobber_ui.cc",
   ]
   deps = [
     ":libcrossystem",
@@ -125,6 +126,8 @@ if (use.test) {
     sources = [
       "clobber_state.cc",
       "clobber_state_test.cc",
+      "clobber_ui.cc",
+      "clobber_ui_test.cc",
     ]
     deps = [
       ":libcrossystem",

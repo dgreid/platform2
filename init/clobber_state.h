@@ -15,6 +15,7 @@
 #include <base/files/file_path.h>
 #include <base/time/time.h>
 
+#include "init/clobber_ui.h"
 #include "init/crossystem.h"
 
 class ClobberState {
@@ -90,15 +91,14 @@ class ClobberState {
   static bool WipeMTDDevice(const base::FilePath& device_path,
                             const PartitionNumbers& partitions);
 
-  // Wipe |device_path|, writing a progress indicator to |progress_tty|.
-  // |progress_tty| must be a valid base::File.
+  // Wipe |device_path|, showing a progress UI using |ui|.
   //
   // If |fast| is true, wipe |device_path| using a less-thorough but much faster
   // wipe. Not all blocks are guaranteed to be overwritten, so this should be
   // reserved for situations when there is no concern of data leakage.
   // A progress indicator will not be displayed if |fast| mode is enabled.
   static bool WipeBlockDevice(const base::FilePath& device_path,
-                              const base::File& progress_tty,
+                              ClobberUi* ui,
                               bool fast);
 
   // Removes the following keys from the VPD. Do not do this for a safe wipe.
@@ -134,7 +134,9 @@ class ClobberState {
   static void EnsureKernelIsBootable(const base::FilePath root_disk,
                                      int kernel_partition);
 
-  ClobberState(const Arguments& args, std::unique_ptr<CrosSystem> cros_system);
+  ClobberState(const Arguments& args,
+               std::unique_ptr<CrosSystem> cros_system,
+               std::unique_ptr<ClobberUi> ui);
 
   // Run the clobber state routine.
   int Run();
@@ -157,9 +159,8 @@ class ClobberState {
   // devices.
   bool WipeKeysets();
 
-  // Forces a 5 minute delay, writing progress to the TTY at |terminal_|.
-  // This is used to prevent developer mode transitions from happening too
-  // quickly.
+  // Forces a delay, writing progress to the TTY.  This is used to prevent
+  // developer mode transitions from happening too quickly.
   virtual void ForceDelay();
 
   // Returns vector of files to be preserved. All FilePaths are relative to
@@ -209,6 +210,7 @@ class ClobberState {
 
   Arguments args_;
   std::unique_ptr<CrosSystem> cros_system_;
+  std::unique_ptr<ClobberUi> ui_;
   base::FilePath stateful_;
   base::FilePath dev_;
   base::FilePath sys_;
@@ -216,9 +218,6 @@ class ClobberState {
   base::FilePath root_disk_;
   DeviceWipeInfo wipe_info_;
   base::TimeTicks wipe_start_time_;
-
-  // File for writing progress to TTY.
-  base::File terminal_;
 };
 
 #endif  // INIT_CLOBBER_STATE_H_
