@@ -152,20 +152,20 @@ bool CopyAndResizeFile(const base::FilePath& from,
   return ResizeFile(to, size) && SetFilePermissions(to, kDlcFilePerms);
 }
 
-FilePath GetImagePath(const FilePath& dlc_module_root_path,
-                      const string& id,
-                      const string& package,
-                      BootSlot::Slot slot) {
+FilePath GetDlcImagePath(const FilePath& dlc_module_root_path,
+                         const string& id,
+                         const string& package,
+                         BootSlot::Slot slot) {
   return JoinPaths(dlc_module_root_path, id, package)
       .Append(slot == BootSlot::Slot::A ? kDlcDirAName : kDlcDirBName)
       .Append(kDlcImageFileName);
 }
 
 // Extract details about a DLC module from its manifest file.
-bool GetManifest(const FilePath& dlc_manifest_path,
-                 const string& id,
-                 const string& package,
-                 imageloader::Manifest* manifest_out) {
+bool GetDlcManifest(const FilePath& dlc_manifest_path,
+                    const string& id,
+                    const string& package,
+                    imageloader::Manifest* manifest_out) {
   string dlc_json_str;
   FilePath dlc_manifest_file =
       JoinPaths(dlc_manifest_path, id, package, kManifestName);
@@ -184,8 +184,8 @@ bool GetManifest(const FilePath& dlc_manifest_path,
   return true;
 }
 
-FilePath GetRoot(const FilePath& mount_point) {
-  return JoinPaths(mount_point, kRootDirectoryInsideDlcModule);
+FilePath GetDlcRootInModulePath(const FilePath& dlc_mount_point) {
+  return JoinPaths(dlc_mount_point, kRootDirectoryInsideDlcModule);
 }
 
 set<string> ScanDirectory(const FilePath& dir) {
@@ -199,46 +199,27 @@ set<string> ScanDirectory(const FilePath& dir) {
   return result;
 }
 
-DlcModuleList ToDlcModuleList(const DlcMap& dlcs) {
+DlcModuleList ToDlcModuleList(const DlcRootMap& dlcs,
+                              std::function<bool(DlcId, DlcRoot)> filter) {
   DlcModuleList dlc_module_list;
-  auto f = [&dlc_module_list](const pair<DlcId, DlcInfo>& pr) {
-    DlcModuleInfo* dlc_module_info = dlc_module_list.add_dlc_module_infos();
-    dlc_module_info->set_dlc_id(pr.first);
-    dlc_module_info->set_dlc_root(pr.second.root);
+  auto f = [&dlc_module_list, filter](const pair<DlcId, DlcRoot>& pr) {
+    if (filter(pr.first, pr.second)) {
+      DlcModuleInfo* dlc_module_info = dlc_module_list.add_dlc_module_infos();
+      dlc_module_info->set_dlc_id(pr.first);
+      dlc_module_info->set_dlc_root(pr.second);
+    }
   };
   for_each(begin(dlcs), end(dlcs), f);
   return dlc_module_list;
 }
 
-DlcModuleList ToDlcModuleList(const DlcSet& dlcs) {
-  DlcModuleList dlc_module_list;
-  auto f = [&dlc_module_list](const DlcId& id) {
-    auto* info = dlc_module_list.add_dlc_module_infos();
-    info->set_dlc_id(id);
-  };
-  for_each(begin(dlcs), end(dlcs), f);
-  return dlc_module_list;
-}
-
-DlcMap ToDlcMap(const DlcModuleList& dlc_module_list) {
-  DlcMap m;
-  for (const DlcModuleInfo& dlc : dlc_module_list.dlc_module_infos())
-    m.emplace(dlc.dlc_id(), DlcInfo(DlcState::NOT_INSTALLED, dlc.dlc_root()));
-  return m;
-}
-
-DlcSet ToDlcSet(const DlcModuleList& dlc_module_list) {
-  DlcSet s;
-  for (const DlcModuleInfo& dlc : dlc_module_list.dlc_module_infos())
-    s.insert(dlc.dlc_id());
-  return s;
-}
-
-DlcMap FilterState(const DlcMap& dlcs, const DlcState::State& state) {
-  DlcMap m;
-  for (const auto& pr : dlcs)
-    if (pr.second.state.state() == state)
-      m.emplace(pr);
+DlcRootMap ToDlcRootMap(const DlcModuleList& dlc_module_list,
+                        std::function<bool(DlcModuleInfo)> filter) {
+  DlcRootMap m;
+  for (const DlcModuleInfo& dlc_module : dlc_module_list.dlc_module_infos()) {
+    if (filter(dlc_module))
+      m.emplace(dlc_module.dlc_id(), dlc_module.dlc_root());
+  }
   return m;
 }
 

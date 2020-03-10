@@ -34,24 +34,13 @@ class DlcManager {
   // Returns true when an install is currently running.
   // If the desire is to |Initnstall()| again, then |FinishInstall()| or
   // |CancelInstall()| should be called before |InitInstall()|'ing again.
-  bool IsBusy();
+  bool IsInstalling();
 
   // Returns the list of fully installed + mounted DLC(s).
   DlcModuleList GetInstalled();
 
-  // Returns the entire list of supported DLC(s).
-  DlcModuleList GetSupported();
-
   // Loads installed DLC module images.
   void LoadDlcModuleImages();
-
-  // DLC Polling Flow
-
-  // Returns true and sets |state| if the DLC is supported.
-  bool GetState(const DlcId& id,
-                DlcState* state,
-                std::string* err_code,
-                std::string* err_msg);
 
   // DLC Installation Flow
 
@@ -101,16 +90,11 @@ class DlcManager {
   // which case the errors will reflect the causes and provide insight in ways
   // dlcservice can be put into a valid state again.
   // Args:
-  //   set_err_code: The error code to set the DLC state when the install is
-  //                 cancelled. Only DLC(s) transitioning from |INSTALLING| will
-  //                 be set with this error code.
   //   err_code: The error code that should be checked when returned false.
   //   err_msg: The error message that should be checked when returned false.
   // Return:
   //   True on success, otherwise false.
-  bool CancelInstall(const std::string& set_err_code,
-                     std::string* err_code,
-                     std::string* err_msg);
+  bool CancelInstall(std::string* err_code, std::string* err_msg);
 
   // DLC Deletion Flow
 
@@ -118,7 +102,6 @@ class DlcManager {
   // To delete the DLC this can be invoked, no prior step is required.
   // Args:
   //   id: The DLC ID that is to be uninstalled.
-  //   set_err_code: The error code to set the DLC ID state to.
   //   err_code: The error code that should be checked when returned false.
   //   err_msg: The error message that should be checked when returned false.
   // Return:
@@ -126,8 +109,7 @@ class DlcManager {
   //   otherwise false. Deleting a valid DLC that's not installed is considered
   //   successfully uninstalled, however uninstalling a DLC that's not supported
   //   is a failure.
-  bool Delete(const DlcId& id,
-              const std::string& set_err_code,
+  bool Delete(const std::string& id,
               std::string* err_code,
               std::string* err_msg);
 

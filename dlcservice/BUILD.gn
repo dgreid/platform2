@@ -79,7 +79,6 @@ static_library("libdlcservice") {
     "dlc_manager.cc",
     "dlc_service.cc",
     "system_state.cc",
-    "types.cc",
   ]
   deps = [
     ":dlcservice_adaptors",

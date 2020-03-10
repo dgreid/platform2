@@ -14,7 +14,7 @@
     <arg name="dlc_module_list" type="ay" direction="in">
       <tp:docstring>
         A serialized protobuf (DlcModuleList,
-        platform2/system_api/dbus/dlcservice/dlcservice.proto) of a list of
+        src/platform2/system_api/dbus/dlcservice/dlcservice.proto) of a list of
         DLC modules to install.
       </tp:docstring>
       <annotation name="org.chromium.DBus.Argument.ProtobufClass"
@@ -38,37 +38,18 @@
     <arg name="dlc_module_list" type="ay" direction="out">
       <tp:docstring>
         A serialized protobuf (DlcModuleList,
-        platform2/system_api/dbus/dlcservice/dlcservice.proto) of a list of
+        src/platform2/system_api/dbus/dlcservice/dlcservice.proto) of a list of
         installed DLC modules.
       </tp:docstring>
       <annotation name="org.chromium.DBus.Argument.ProtobufClass"
                   value="dlcservice::DlcModuleList"/>
     </arg>
   </method>
-  <method name="GetState">
-    <tp:docstring>
-      Returns the state of a DLC.
-    </tp:docstring>
-    <arg name="id" type="s" direction="in">
-      <tp:docstring>
-        ID of the DLC module.
-      </tp:docstring>
-    </arg>
-    <arg name="state" type="ay" direction="out">
-      <tp:docstring>
-        A serialized protobuf (DlcState,
-        platform2/system_api/dbus/dlcservice/dlcservice.proto) indicating
-        the state of a DLC.
-      </tp:docstring>
-      <annotation name="org.chromium.DBus.Argument.ProtobufClass"
-                  value="dlcservice::DlcState"/>
-    </arg>
-  </method>
   <signal name="OnInstallStatus">
     <arg name="install_status" type="ay" >
       <tp:docstring>
         A serialized protobuf (InstallStatus,
-        platform2/system_api/dbus/dlcservice/dlcservice.proto) of install
+        src/platform2/system_api/dbus/dlcservice/dlcservice.proto) of install
         operation status.
       </tp:docstring>
       <annotation name="org.chromium.DBus.Argument.ProtobufClass"

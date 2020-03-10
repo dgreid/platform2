@@ -33,12 +33,6 @@ bool DBusService::GetInstalled(brillo::ErrorPtr* err,
   return dlc_service_->GetInstalled(dlc_module_list_out, err);
 }
 
-bool DBusService::GetState(brillo::ErrorPtr* err,
-                           const string& id_in,
-                           DlcState* dlc_state_out) {
-  return dlc_service_->GetState(id_in, dlc_state_out, err);
-}
-
 DBusAdaptor::DBusAdaptor(unique_ptr<DBusService> dbus_service)
     : org::chromium::DlcServiceInterfaceAdaptor(dbus_service.get()),
       dbus_service_(std::move(dbus_service)) {}

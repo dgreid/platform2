@@ -43,7 +43,7 @@ void LogAndSetError(brillo::ErrorPtr* err,
   if (err)
     *err = brillo::Error::Create(FROM_HERE, brillo::errors::dbus::kDomain, code,
                                  msg);
-  LOG(ERROR) << code << "|" << msg;
+  LOG(ERROR) << msg;
 }
 
 }  // namespace
@@ -77,7 +77,7 @@ void DlcService::LoadDlcModuleImages() {
 bool DlcService::Install(const DlcModuleList& dlc_module_list_in,
                          brillo::ErrorPtr* err) {
   // If an install is already in progress, dlcservice is busy.
-  if (dlc_manager_->IsBusy()) {
+  if (dlc_manager_->IsInstalling()) {
     LogAndSetError(err, kErrorBusy, "Another install is already in progress.");
     return false;
   }
@@ -118,6 +118,7 @@ bool DlcService::Install(const DlcModuleList& dlc_module_list_in,
   // Check if there is nothing to install.
   if (unique_dlc_module_list_to_install.dlc_module_infos_size() == 0) {
     DlcModuleList dlc_module_list;
+    dlc_manager_->FinishInstall(&dlc_module_list, &err_code, &err_msg);
     InstallStatus install_status =
         CreateInstallStatus(Status::COMPLETED, kErrorNone, dlc_module_list, 1.);
     SendOnInstallStatusSignal(install_status);
@@ -140,8 +141,8 @@ bool DlcService::Install(const DlcModuleList& dlc_module_list_in,
     // dlcservice must cancel the install by communicating to dlc_manager who
     // manages the DLC(s), as update_engine won't be able to install the
     // initialized DLC(s) for installation.
-    if (!dlc_manager_->CancelInstall(kErrorBusy, &err_code, &err_msg))
-      LogAndSetError(nullptr, err_code, err_msg);
+    if (!dlc_manager_->CancelInstall(&err_code, &err_msg))
+      LOG(ERROR) << err_code << ":" << err_msg;
     return false;
   }
 
@@ -150,11 +151,6 @@ bool DlcService::Install(const DlcModuleList& dlc_module_list_in,
 }
 
 bool DlcService::Uninstall(const string& id_in, brillo::ErrorPtr* err) {
-  if (dlc_manager_->IsBusy()) {
-    LogAndSetError(err, kErrorBusy, "Install is in progress.");
-    return false;
-  }
-
   Operation update_engine_op;
   if (!GetUpdateEngineStatus(&update_engine_op)) {
     LogAndSetError(err, kErrorInternal,
@@ -166,12 +162,18 @@ bool DlcService::Uninstall(const string& id_in, brillo::ErrorPtr* err) {
     case update_engine::UPDATED_NEED_REBOOT:
       break;
     default:
-      LogAndSetError(err, kErrorBusy, "Update is in progress.");
+      LogAndSetError(err, kErrorBusy, "Install or update is in progress.");
       return false;
   }
 
+  // This is a weird case meaning update_engine was restarted and requires
+  // cleanup of DLC(s) that were previously being thought to have been being
+  // installed.
+  if (dlc_manager_->IsInstalling())
+    SendFailedSignalAndCleanup();
+
   string err_code, err_msg;
-  if (!dlc_manager_->Delete(id_in, kErrorNone, &err_code, &err_msg)) {
+  if (!dlc_manager_->Delete(id_in, &err_code, &err_msg)) {
     LogAndSetError(err, err_code, err_msg);
     return false;
   }
@@ -184,23 +186,12 @@ bool DlcService::GetInstalled(DlcModuleList* dlc_module_list_out,
   return true;
 }
 
-bool DlcService::GetState(const string& id_in,
-                          DlcState* dlc_state_out,
-                          brillo::ErrorPtr* err) {
+void DlcService::SendFailedSignalAndCleanup() {
+  SendOnInstallStatusSignal(
+      CreateInstallStatus(Status::FAILED, kErrorInternal, {}, 0.));
   string err_code, err_msg;
-  if (!dlc_manager_->GetState(id_in, dlc_state_out, &err_code, &err_msg)) {
-    LogAndSetError(err, err_code, err_msg);
-    return false;
-  }
-  return true;
-}
-
-void DlcService::SendFailedSignalAndCleanup(const string& set_err_code) {
-  string err_code, err_msg;
-  if (!dlc_manager_->CancelInstall(set_err_code, &err_code, &err_msg))
+  if (!dlc_manager_->CancelInstall(&err_code, &err_msg))
     LogAndSetError(nullptr, err_code, err_msg);
-  SendOnInstallStatusSignal(CreateInstallStatus(
-      Status::FAILED, set_err_code, dlc_manager_->GetSupported(), 0.));
 }
 
 void DlcService::PeriodicInstallCheck() {
@@ -211,7 +202,7 @@ void DlcService::PeriodicInstallCheck() {
 
   scheduled_period_ue_check_id_ = MessageLoop::kTaskIdNull;
 
-  if (!dlc_manager_->IsBusy()) {
+  if (!dlc_manager_->IsInstalling()) {
     LOG(ERROR) << "Should not have to check update_engine status while not "
                   "performing an install.";
     return;
@@ -221,14 +212,14 @@ void DlcService::PeriodicInstallCheck() {
   if (!GetUpdateEngineStatus(&update_engine_op)) {
     LOG(ERROR)
         << "Failed to get the status of update_engine, it is most likely down.";
-    SendFailedSignalAndCleanup(kErrorInternal);
+    SendFailedSignalAndCleanup();
     return;
   }
   switch (update_engine_op) {
     case update_engine::UPDATED_NEED_REBOOT:
       LOG(ERROR) << "Thought to be installing DLC(s), but update_engine is not "
                     "installing and actually performed an update.";
-      SendFailedSignalAndCleanup(kErrorNeedReboot);
+      SendFailedSignalAndCleanup();
       break;
     case update_engine::IDLE:
       if (scheduled_period_ue_check_retry_) {
@@ -236,7 +227,7 @@ void DlcService::PeriodicInstallCheck() {
         SchedulePeriodicInstallCheck(false);
         return;
       }
-      SendFailedSignalAndCleanup(kErrorInternal);
+      SendFailedSignalAndCleanup();
       break;
     default:
       SchedulePeriodicInstallCheck(true);
@@ -264,7 +255,7 @@ void DlcService::SchedulePeriodicInstallCheck(bool retry) {
 
 bool DlcService::HandleStatusResult(const StatusResult& status_result) {
   // If we are not installing any DLC(s), no need to even handle status result.
-  if (!dlc_manager_->IsBusy())
+  if (!dlc_manager_->IsInstalling())
     return false;
 
   // When a signal is received from update_engine, it is more efficient to
@@ -283,7 +274,7 @@ bool DlcService::HandleStatusResult(const StatusResult& status_result) {
   if (!status_result.is_install()) {
     LOG(ERROR) << "Signal from update_engine indicates that it's not for an "
                   "install, but dlcservice was waiting for an install.";
-    SendFailedSignalAndCleanup(kErrorInternal);
+    SendFailedSignalAndCleanup();
     return false;
   }
 
@@ -294,7 +285,7 @@ bool DlcService::HandleStatusResult(const StatusResult& status_result) {
       return true;
     case Operation::REPORTING_ERROR_EVENT:
       LOG(ERROR) << "Signal from update_engine indicates reporting failure.";
-      SendFailedSignalAndCleanup(kErrorInternal);
+      SendFailedSignalAndCleanup();
       return false;
     // Only when update_engine's |Operation::DOWNLOADING| should dlcservice send
     // a signal out for |InstallStatus| for |Status::RUNNING|. Majority of the
@@ -303,8 +294,7 @@ bool DlcService::HandleStatusResult(const StatusResult& status_result) {
     // will happen.
     case Operation::DOWNLOADING:
       SendOnInstallStatusSignal(CreateInstallStatus(
-          Status::RUNNING, kErrorNone, dlc_manager_->GetSupported(),
-          status_result.progress()));
+          Status::RUNNING, kErrorNone, {}, status_result.progress()));
       FALLTHROUGH;
     default:
       SchedulePeriodicInstallCheck(true);

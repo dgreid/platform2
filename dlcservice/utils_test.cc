@@ -152,24 +152,24 @@ TEST(UtilsTest, JoinPathsTest) {
       "/tmp/dlc/id/package");
 }
 
-TEST(UtilsTest, GetModuleImagePathA) {
-  EXPECT_EQ(GetImagePath(base::FilePath(kDlcRootPath), kDlcId, kDlcPackage,
-                         BootSlot::Slot::A)
+TEST(UtilsTest, GetDlcModuleImagePathA) {
+  EXPECT_EQ(GetDlcImagePath(base::FilePath(kDlcRootPath), kDlcId, kDlcPackage,
+                            BootSlot::Slot::A)
                 .value(),
             "/tmp/dlc/id/package/dlc_a/dlc.img");
 }
 
-TEST(UtilsTest, GetModuleImagePathB) {
-  EXPECT_EQ(GetImagePath(base::FilePath(kDlcRootPath), kDlcId, kDlcPackage,
-                         BootSlot::Slot::B)
+TEST(UtilsTest, GetDlcModuleImagePathB) {
+  EXPECT_EQ(GetDlcImagePath(base::FilePath(kDlcRootPath), kDlcId, kDlcPackage,
+                            BootSlot::Slot::B)
                 .value(),
             "/tmp/dlc/id/package/dlc_b/dlc.img");
 }
 
-TEST(UtilsTest, GetRoot) {
+TEST(UtilsTest, GetDlcRootInModulePath) {
   base::FilePath path("foo-path");
   base::FilePath expected_path("foo-path/root");
-  EXPECT_EQ(GetRoot(path), expected_path);
+  EXPECT_EQ(GetDlcRootInModulePath(path), expected_path);
 }
 
 TEST(UtilsTest, ScopedCleanupsTest) {
