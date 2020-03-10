@@ -73,7 +73,9 @@ static_library("libsystemproxy") {
 static_library("libsystemproxyworker") {
   configs += [ ":target_defaults" ]
   sources = [
+    "curl_socket.cc",
     "protobuf_util.cc",
+    "proxy_connect_job.cc",
     "server_proxy.cc",
   ]
   deps = [
@@ -117,7 +119,9 @@ if (use.test) {
       ":system-proxy_test_config",
       ":target_defaults",
     ]
+    all_dependent_pkg_deps = [ "libcurl" ]
     sources = [
+      "proxy_connect_job_test.cc",
       "server_proxy_test.cc",
       "system_proxy_adaptor_test.cc",
     ]
