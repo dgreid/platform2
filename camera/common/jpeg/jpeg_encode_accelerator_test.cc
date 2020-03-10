@@ -292,18 +292,18 @@ void JpegEncodeAcceleratorTest::EncodeTest(Frame* frame) {
 }
 
 TEST_F(JpegEncodeAcceleratorTest, InitTest) {
-  EXPECT_EQ(jpeg_encoder_->Start(), true);
+  ASSERT_EQ(jpeg_encoder_->Start(), true);
 }
 
 TEST_F(JpegEncodeAcceleratorTest, EncodeTest) {
-  EXPECT_EQ(jpeg_encoder_->Start(), true);
+  ASSERT_EQ(jpeg_encoder_->Start(), true);
   LoadFrame(g_env->yuv_filename1_, &jpeg_frame1_);
   PrepareMemory(&jpeg_frame1_);
   EncodeTest(&jpeg_frame1_);
 }
 
 TEST_F(JpegEncodeAcceleratorTest, EncodeTestFor2Resolutions) {
-  EXPECT_EQ(jpeg_encoder_->Start(), true);
+  ASSERT_EQ(jpeg_encoder_->Start(), true);
   LoadFrame(g_env->yuv_filename1_, &jpeg_frame1_);
   LoadFrame(g_env->yuv_filename2_, &jpeg_frame2_);
   PrepareMemory(&jpeg_frame1_);
@@ -315,7 +315,7 @@ TEST_F(JpegEncodeAcceleratorTest, EncodeTestFor2Resolutions) {
 TEST_F(JpegEncodeAcceleratorTest, Encode60Images) {
   LoadFrame(g_env->yuv_filename1_, &jpeg_frame1_);
   PrepareMemory(&jpeg_frame1_);
-  EXPECT_EQ(jpeg_encoder_->Start(), true);
+  ASSERT_EQ(jpeg_encoder_->Start(), true);
   for (int i = 0; i < 60; i++) {
     EncodeTest(&jpeg_frame1_);
   }
@@ -324,7 +324,7 @@ TEST_F(JpegEncodeAcceleratorTest, Encode60Images) {
 TEST_F(JpegEncodeAcceleratorTest, Encode1000Images) {
   LoadFrame(g_env->yuv_filename1_, &jpeg_frame1_);
   PrepareMemory(&jpeg_frame1_);
-  EXPECT_EQ(jpeg_encoder_->Start(), true);
+  ASSERT_EQ(jpeg_encoder_->Start(), true);
   for (int i = 0; i < 1000; i++) {
     EncodeTest(&jpeg_frame1_);
   }
