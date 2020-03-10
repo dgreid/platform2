@@ -158,11 +158,11 @@ void CameraHal::OnConnectionError() {
 
   {
     base::AutoLock l(camera_map_lock_);
-    while (!detector_ids_.empty()) {
-      int32_t detector_id = detector_ids_.begin()->first;
+    while (!ip_to_id_.empty()) {
+      const std::string ip = ip_to_id_.begin()->first;
 
       base::AutoUnlock u(camera_map_lock_);
-      OnDeviceDisconnected(detector_id);
+      OnDeviceDisconnected(ip);
     }
   }
 
@@ -171,15 +171,15 @@ void CameraHal::OnConnectionError() {
   LOGF(FATAL) << "Lost connection to IP peripheral server";
 }
 
-void CameraHal::OnDeviceConnected(int32_t id,
+void CameraHal::OnDeviceConnected(const std::string& ip,
                                   mojom::IpCameraDevicePtr device_ptr,
                                   mojom::IpCameraStreamPtr default_stream) {
-  int camera_id = -1;
+  int id = -1;
   {
     base::AutoLock l(camera_map_lock_);
-    camera_id = next_camera_id_;
+    id = next_camera_id_;
 
-    auto device = std::make_unique<CameraDevice>(camera_id);
+    auto device = std::make_unique<CameraDevice>(id);
     if (device->Init(std::move(device_ptr), default_stream->format,
                      default_stream->width, default_stream->height,
                      default_stream->fps)) {
@@ -188,44 +188,45 @@ void CameraHal::OnDeviceConnected(int32_t id,
     }
 
     next_camera_id_++;
-    detector_ids_[id] = camera_id;
-    cameras_[camera_id] = std::move(device);
+    ip_to_id_[ip] = id;
+    cameras_[id] = std::move(device);
   }
 
   callbacks_set_.Wait();
-  callbacks_->camera_device_status_change(callbacks_, camera_id,
+  callbacks_->camera_device_status_change(callbacks_, id,
                                           CAMERA_DEVICE_STATUS_PRESENT);
 }
 
-void CameraHal::OnDeviceDisconnected(int32_t id) {
+void CameraHal::OnDeviceDisconnected(const std::string& ip) {
   callbacks_set_.Wait();
 
-  int hal_id = -1;
+  int id = -1;
   {
     base::AutoLock l(camera_map_lock_);
-    if (detector_ids_.find(id) == detector_ids_.end()) {
-      LOGF(ERROR) << "Camera detector id " << id << " is invalid";
+    auto ip_mapping = ip_to_id_.find(ip);
+    if (ip_mapping == ip_to_id_.end()) {
+      LOGF(ERROR) << "Camera ip " << ip << " is invalid";
       return;
     }
-    hal_id = detector_ids_[id];
+    id = ip_mapping->second;
 
-    if (cameras_.find(hal_id) == cameras_.end()) {
-      LOGF(ERROR) << "Camera id " << hal_id << " is invalid";
+    if (cameras_.find(id) == cameras_.end()) {
+      LOGF(ERROR) << "Camera id " << id << " is invalid";
       return;
     }
   }
 
-  callbacks_->camera_device_status_change(callbacks_, hal_id,
+  callbacks_->camera_device_status_change(callbacks_, id,
                                           CAMERA_DEVICE_STATUS_NOT_PRESENT);
 
   {
     base::AutoLock l(camera_map_lock_);
-    if (cameras_[hal_id]->IsOpen()) {
-      cameras_[hal_id]->Close();
+    if (cameras_[id]->IsOpen()) {
+      cameras_[id]->Close();
     }
 
-    detector_ids_.erase(id);
-    cameras_.erase(hal_id);
+    ip_to_id_.erase(ip);
+    cameras_.erase(id);
   }
 }
 

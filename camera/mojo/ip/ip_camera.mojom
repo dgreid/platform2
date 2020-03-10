@@ -32,9 +32,9 @@ interface IpCameraDevice {
 };
 
 interface IpCameraConnectionListener {
-  OnDeviceConnected(int32 id, IpCameraDevice device,
+  OnDeviceConnected(string ip, IpCameraDevice device,
                     IpCameraStream default_stream);
-  OnDeviceDisconnected(int32 id);
+  OnDeviceDisconnected(string ip);
 };
 
 interface IpCameraDetector {

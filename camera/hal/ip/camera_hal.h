@@ -41,10 +41,10 @@ class CameraHal : public mojom::IpCameraConnectionListener {
 
  private:
   // IpCameraConnectionListener interface
-  void OnDeviceConnected(int32_t id,
+  void OnDeviceConnected(const std::string& ip,
                          mojom::IpCameraDevicePtr device_ptr,
                          mojom::IpCameraStreamPtr default_stream) override;
-  void OnDeviceDisconnected(int32_t id) override;
+  void OnDeviceDisconnected(const std::string& ip) override;
 
   void InitOnIpcThread(scoped_refptr<Future<int>> return_val);
   void DestroyOnIpcThread(scoped_refptr<Future<void>> return_val);
@@ -58,8 +58,8 @@ class CameraHal : public mojom::IpCameraConnectionListener {
 
   // The maps, as well as |next_camera_id_| are protected by this lock
   base::Lock camera_map_lock_;
-  // Maps from detector id to HAL id
-  std::map<int32_t, int> detector_ids_;
+  // Maps from IP to HAL camera id
+  std::map<const std::string, int> ip_to_id_;
   std::map<int, std::unique_ptr<CameraDevice>> cameras_;
   int next_camera_id_;
 
