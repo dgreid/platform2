@@ -86,6 +86,7 @@ size_t ImageProcessor::GetConvertedSize(const FrameBuffer& frame) {
       return frame.GetStride(FrameBuffer::YPLANE) * frame.GetHeight() +
              frame.GetStride(FrameBuffer::UPLANE) * frame.GetHeight() / 2;
     case V4L2_PIX_FMT_RGBX32:
+    case V4L2_PIX_FMT_RGB24:
       return frame.GetStride() * frame.GetHeight();
     default:
       LOGF(ERROR) << "Pixel format " << FormatToString(frame.GetFourcc())
@@ -279,6 +280,67 @@ int ImageProcessor::ConvertFormat(const FrameBuffer& in_frame,
                     << FormatToString(out_frame->GetFourcc())
                     << " is unsupported for MJPEG source format.";
         return -EINVAL;
+    }
+  } else if (in_frame.GetFourcc() == V4L2_PIX_FMT_RGB24) {
+    switch (out_frame->GetFourcc()) {
+      case V4L2_PIX_FMT_YUV420:     // YU12
+      case V4L2_PIX_FMT_YUV420M:    // YM12, multiple planes YU12
+      case V4L2_PIX_FMT_YVU420:     // YV12
+      case V4L2_PIX_FMT_YVU420M: {  // YM21, multiple planes YV12
+        int res =
+            libyuv::RGB24ToI420(in_frame.GetData(), in_frame.GetStride(),
+                                out_frame->GetData(FrameBuffer::YPLANE),
+                                out_frame->GetStride(FrameBuffer::YPLANE),
+                                out_frame->GetData(FrameBuffer::UPLANE),
+                                out_frame->GetStride(FrameBuffer::UPLANE),
+                                out_frame->GetData(FrameBuffer::VPLANE),
+                                out_frame->GetStride(FrameBuffer::VPLANE),
+                                out_frame->GetWidth(), out_frame->GetHeight());
+        LOGF_IF(ERROR, res) << "RGB24ToI420() returns " << res;
+        return res ? -EINVAL : 0;
+      }
+      case V4L2_PIX_FMT_NV12:     // NV12
+      case V4L2_PIX_FMT_NV12M: {  // NM12
+        if (!SharedFrameBuffer::Reallocate(
+                in_frame.GetWidth(), in_frame.GetHeight(), V4L2_PIX_FMT_YUV420,
+                &temp_i420_buffer_)) {
+          return -EINVAL;
+        }
+        // TODO(b/151201659): Currently we convert RGB24 to I420 and then
+        // convert I420 to NV12. We should find a way to convert it directly
+        // if the performance is not acceptable.
+        int res = libyuv::RGB24ToI420(
+            in_frame.GetData(), in_frame.GetStride(),
+            temp_i420_buffer_->GetData(FrameBuffer::YPLANE),
+            temp_i420_buffer_->GetStride(FrameBuffer::YPLANE),
+            temp_i420_buffer_->GetData(FrameBuffer::UPLANE),
+            temp_i420_buffer_->GetStride(FrameBuffer::UPLANE),
+            temp_i420_buffer_->GetData(FrameBuffer::VPLANE),
+            temp_i420_buffer_->GetStride(FrameBuffer::VPLANE),
+            temp_i420_buffer_->GetWidth(), temp_i420_buffer_->GetHeight());
+        if (res != 0) {
+          LOGF(ERROR) << "RGB24ToNV12() returns " << res;
+          return -EINVAL;
+        }
+        res = libyuv::I420ToNV12(
+            temp_i420_buffer_->GetData(FrameBuffer::YPLANE),
+            temp_i420_buffer_->GetStride(FrameBuffer::YPLANE),
+            temp_i420_buffer_->GetData(FrameBuffer::UPLANE),
+            temp_i420_buffer_->GetStride(FrameBuffer::UPLANE),
+            temp_i420_buffer_->GetData(FrameBuffer::VPLANE),
+            temp_i420_buffer_->GetStride(FrameBuffer::VPLANE),
+            out_frame->GetData(FrameBuffer::YPLANE),
+            out_frame->GetStride(FrameBuffer::YPLANE),
+            out_frame->GetData(FrameBuffer::UPLANE),
+            out_frame->GetStride(FrameBuffer::UPLANE), out_frame->GetWidth(),
+            out_frame->GetHeight());
+        LOGF_IF(ERROR, res) << "RGB24ToNV12() returns " << res;
+        return res ? -EINVAL : 0;
+      }
+      default: {
+        LOGF(ERROR) << "Not implemented: RGB24 -> " << out_frame->GetFourcc();
+        return -EINVAL;
+      }
     }
   } else {
     LOGF(ERROR) << "Convert format doesn't support source format "

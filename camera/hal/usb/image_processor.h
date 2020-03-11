@@ -56,6 +56,11 @@ class ImageProcessor {
   // |height|, and |buffer_size| of |out_frame|. The function will fill
   // |data_size| and |fourcc| of |out_frame|.
   int Crop(const FrameBuffer& in_frame, FrameBuffer* out_frame);
+
+ private:
+  // Temporary I420 buffer that is used when there is no direct way to convert
+  // format F to format F' and need two-steps conversion (F -> I420 -> F').
+  std::unique_ptr<SharedFrameBuffer> temp_i420_buffer_;
 };
 
 }  // namespace cros

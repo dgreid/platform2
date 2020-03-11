@@ -58,38 +58,6 @@ static Size CalculateCropSize(const Size& in_size, const Size& out_size) {
   return crop_size;
 }
 
-static bool ReallocateSharedFrameBuffer(
-    uint32_t width,
-    uint32_t height,
-    uint32_t fourcc,
-    std::unique_ptr<SharedFrameBuffer>* frame) {
-  if (!(*frame)) {
-    *frame = std::make_unique<SharedFrameBuffer>(0);
-  }
-  (*frame)->SetFourcc(fourcc);
-  (*frame)->SetWidth(width);
-  (*frame)->SetHeight(height);
-  size_t data_size = ImageProcessor::GetConvertedSize(**frame);
-  if (data_size == 0 || (*frame)->SetDataSize(data_size)) {
-    LOG(ERROR) << "Set data size failed: " << width << "x" << height << " "
-               << FormatToString(fourcc) << ", " << data_size;
-    return false;
-  }
-  return true;
-}
-
-static bool ReallocateGrallocFrameBuffer(
-    uint32_t width,
-    uint32_t height,
-    uint32_t fourcc,
-    std::unique_ptr<GrallocFrameBuffer>* frame) {
-  if (!(*frame) || (*frame)->GetWidth() != width ||
-      (*frame)->GetHeight() != height || (*frame)->GetFourcc() != fourcc) {
-    *frame = std::make_unique<GrallocFrameBuffer>(width, height, fourcc);
-  }
-  return true;
-}
-
 static bool ValidateThumbnailSize(
     const android::CameraMetadata& static_metadata, int width, int height) {
   auto entry = static_metadata.find(ANDROID_JPEG_AVAILABLE_THUMBNAIL_SIZES);
@@ -211,8 +179,9 @@ int CachedFrame::Convert(
   if (nv12_frame_index < out_frames.size()) {
     nv12_frame = out_frames[nv12_frame_index].get();
   } else {
-    if (!ReallocateGrallocFrameBuffer(in_frame.GetWidth(), in_frame.GetHeight(),
-                                      V4L2_PIX_FMT_NV12, &temp_nv12_frame_)) {
+    if (!GrallocFrameBuffer::Reallocate(in_frame.GetWidth(),
+                                        in_frame.GetHeight(), V4L2_PIX_FMT_NV12,
+                                        &temp_nv12_frame_)) {
       return -EINVAL;
     }
     nv12_frame = temp_nv12_frame_.get();
@@ -272,17 +241,18 @@ int CachedFrame::ConvertFromNV12(
   if (!(in_size == out_size)) {
     // Crop to the same aspect ratio of output size. Also converts format to
     // I420 since libyuv doesn't support NV12 scaling.
-    if (!ReallocateSharedFrameBuffer(crop_size.width, crop_size.height,
-                                     V4L2_PIX_FMT_YUV420, &temp_i420_frame_)) {
+    if (!SharedFrameBuffer::Reallocate(crop_size.width, crop_size.height,
+                                       V4L2_PIX_FMT_YUV420,
+                                       &temp_i420_frame_)) {
       return -EINVAL;
     }
     int ret = image_processor_->Crop(in_frame, temp_i420_frame_.get());
     if (ret)
       return ret;
     // Scale to the output size.
-    if (!ReallocateSharedFrameBuffer(out_frame->GetWidth(),
-                                     out_frame->GetHeight(),
-                                     V4L2_PIX_FMT_YUV420, &temp_i420_frame2_)) {
+    if (!SharedFrameBuffer::Reallocate(
+            out_frame->GetWidth(), out_frame->GetHeight(), V4L2_PIX_FMT_YUV420,
+            &temp_i420_frame2_)) {
       return -EINVAL;
     }
     ret = image_processor_->Scale(*temp_i420_frame_, temp_i420_frame2_.get());
@@ -295,7 +265,7 @@ int CachedFrame::ConvertFromNV12(
   if (out_frame->GetFourcc() == V4L2_PIX_FMT_JPEG) {
     if (src_frame->GetFourcc() != V4L2_PIX_FMT_NV12 &&
         src_frame->GetFourcc() != V4L2_PIX_FMT_NV12M) {
-      if (!ReallocateGrallocFrameBuffer(
+      if (!GrallocFrameBuffer::Reallocate(
               out_frame->GetWidth(), out_frame->GetHeight(), V4L2_PIX_FMT_NV12,
               &temp_nv12_frame2_)) {
         return -EINVAL;
@@ -335,8 +305,8 @@ int CachedFrame::DecodeToNV12(const FrameBuffer& in_frame,
     LOG(ERROR) << "Failed to map frame";
     return -EINVAL;
   }
-  if (!ReallocateSharedFrameBuffer(in_frame.GetWidth(), in_frame.GetHeight(),
-                                   V4L2_PIX_FMT_YUV420, &temp_i420_frame_)) {
+  if (!SharedFrameBuffer::Reallocate(in_frame.GetWidth(), in_frame.GetHeight(),
+                                     V4L2_PIX_FMT_YUV420, &temp_i420_frame_)) {
     return -EINVAL;
   }
   base::ElapsedTimer timer;
@@ -424,8 +394,8 @@ int CachedFrame::CropRotateScale(int rotate_degree, FrameBuffer* frame) {
     cropped_width++;
   }
   int cropped_height = frame->GetHeight();
-  if (!ReallocateSharedFrameBuffer(cropped_height, cropped_width,
-                                   V4L2_PIX_FMT_YUV420, &temp_i420_frame2_)) {
+  if (!SharedFrameBuffer::Reallocate(cropped_height, cropped_width,
+                                     V4L2_PIX_FMT_YUV420, &temp_i420_frame2_)) {
     return -EINVAL;
   }
 
@@ -447,8 +417,8 @@ int CachedFrame::CropRotateScale(int rotate_degree, FrameBuffer* frame) {
   //                           |                   |
   //                           ---------------------
   //
-  if (!ReallocateSharedFrameBuffer(frame->GetWidth(), frame->GetHeight(),
-                                   V4L2_PIX_FMT_YUV420, &temp_i420_frame_)) {
+  if (!SharedFrameBuffer::Reallocate(frame->GetWidth(), frame->GetHeight(),
+                                     V4L2_PIX_FMT_YUV420, &temp_i420_frame_)) {
     return -EINVAL;
   }
   ret = image_processor_->Scale(*temp_i420_frame2_, temp_i420_frame_.get());
@@ -509,7 +479,7 @@ int CachedFrame::CompressNV12(const android::CameraMetadata& static_metadata,
       if (in_frame.GetFourcc() == V4L2_PIX_FMT_YUV420) {
         i420_data = in_frame.GetData();
       } else {
-        if (!ReallocateSharedFrameBuffer(
+        if (!SharedFrameBuffer::Reallocate(
                 in_frame.GetWidth(), in_frame.GetHeight(), V4L2_PIX_FMT_YUV420,
                 &temp_i420_frame_)) {
           LOGF(ERROR) << "Failed to allocate shared memory buffer";

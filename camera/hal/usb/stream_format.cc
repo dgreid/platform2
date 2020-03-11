@@ -29,11 +29,13 @@ std::vector<uint32_t> GetSupportedFourCCs(bool prefer_mjpeg) {
     return {
         V4L2_PIX_FMT_MJPEG,
         V4L2_PIX_FMT_YUYV,
+        V4L2_PIX_FMT_RGB24,
     };
   }
   return {
       V4L2_PIX_FMT_YUYV,
       V4L2_PIX_FMT_MJPEG,
+      V4L2_PIX_FMT_RGB24,
   };
 }
 

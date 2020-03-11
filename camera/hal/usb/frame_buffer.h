@@ -80,6 +80,11 @@ class FrameBuffer {
 // SharedFrameBuffer is used for the buffer from base::SharedMemory.
 class SharedFrameBuffer : public FrameBuffer {
  public:
+  static bool Reallocate(uint32_t width,
+                         uint32_t height,
+                         uint32_t fourcc,
+                         std::unique_ptr<SharedFrameBuffer>* frame);
+
   explicit SharedFrameBuffer(int buffer_size);
   ~SharedFrameBuffer() override;
 
@@ -131,6 +136,11 @@ class V4L2FrameBuffer : public FrameBuffer {
 // GrallocFrameBuffer uses CameraBufferManager to manage the buffer.
 class GrallocFrameBuffer : public FrameBuffer {
  public:
+  static bool Reallocate(uint32_t width,
+                         uint32_t height,
+                         uint32_t fourcc,
+                         std::unique_ptr<GrallocFrameBuffer>* frame);
+
   // Wraps external buffer from upper framework. Fill |width_| and |height_|
   // according to the parameters.
   GrallocFrameBuffer(buffer_handle_t buffer, uint32_t width, uint32_t height);

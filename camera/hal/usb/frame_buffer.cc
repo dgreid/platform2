@@ -56,6 +56,26 @@ int FrameBuffer::SetDataSize(size_t data_size) {
   return 0;
 }
 
+// static
+bool SharedFrameBuffer::Reallocate(uint32_t width,
+                                   uint32_t height,
+                                   uint32_t fourcc,
+                                   std::unique_ptr<SharedFrameBuffer>* frame) {
+  if (!(*frame)) {
+    *frame = std::make_unique<SharedFrameBuffer>(0);
+  }
+  (*frame)->SetFourcc(fourcc);
+  (*frame)->SetWidth(width);
+  (*frame)->SetHeight(height);
+  size_t data_size = ImageProcessor::GetConvertedSize(**frame);
+  if (data_size == 0 || (*frame)->SetDataSize(data_size) != 0) {
+    LOG(ERROR) << "Set data size failed: " << width << "x" << height << " "
+               << FormatToString(fourcc) << ", " << data_size;
+    return false;
+  }
+  return true;
+}
+
 SharedFrameBuffer::SharedFrameBuffer(int buffer_size) {
   shm_buffer_.reset(new base::SharedMemory);
   shm_buffer_->CreateAndMapAnonymous(buffer_size);
@@ -170,6 +190,9 @@ int V4L2FrameBuffer::Map() {
   if (is_mapped_)
     return 0;
 
+  // TODO(b/141517606): We should tweak the mapping implementation to:
+  //   1. Mapped with PROT_READ | PROT_WRITE (Due to: crbug.com/178582)
+  //   2. Support non-zero offset
   void* addr = mmap(NULL, buffer_size_, PROT_READ, MAP_SHARED, fd_.get(), 0);
   if (addr == MAP_FAILED) {
     PLOGF(ERROR) << "mmap() failed";
@@ -177,6 +200,15 @@ int V4L2FrameBuffer::Map() {
   }
   data_[0] = static_cast<uint8_t*>(addr);
   is_mapped_ = true;
+  switch (fourcc_) {
+    case V4L2_PIX_FMT_RGB24:
+      stride_[0] = width_ * 3;
+      break;
+    default:
+      LOGF(ERROR) << "The strides for pixel format " << FormatToString(fourcc_)
+                  << " are not given.";
+      break;
+  }
   return 0;
 }
 
@@ -191,6 +223,19 @@ int V4L2FrameBuffer::Unmap() {
   }
   is_mapped_ = false;
   return 0;
+}
+
+// static
+bool GrallocFrameBuffer::Reallocate(
+    uint32_t width,
+    uint32_t height,
+    uint32_t fourcc,
+    std::unique_ptr<GrallocFrameBuffer>* frame) {
+  if (!(*frame) || (*frame)->GetWidth() != width ||
+      (*frame)->GetHeight() != height || (*frame)->GetFourcc() != fourcc) {
+    *frame = std::make_unique<GrallocFrameBuffer>(width, height, fourcc);
+  }
+  return true;
 }
 
 GrallocFrameBuffer::GrallocFrameBuffer(buffer_handle_t buffer,
