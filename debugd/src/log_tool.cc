@@ -220,7 +220,7 @@ const std::vector<Log> kCommandLogs {
   {kFile, "nvmap_iovmm", "/sys/kernel/debug/nvmap/iovmm/allocations",
     SandboxedProcess::kDefaultUser, kDebugfsGroup},
   {kCommand, "oemdata", "/usr/share/cros/oemdata.sh", kRoot, kRoot},
-  {kFile, "pagetypeinfo", "/proc/pagetypeinfo"},
+  {kFile, "pagetypeinfo", "/proc/pagetypeinfo", kRoot},
   {kFile, "platform_identity_name",
     "/run/chromeos-config/v1/identity/platform-name"},
   {kFile, "platform_identity_model", "/run/chromeos-config/v1/name"},
