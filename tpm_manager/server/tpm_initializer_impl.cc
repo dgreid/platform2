@@ -14,6 +14,7 @@
 #include <libhwsec/overalls/overalls_api.h>
 #include <tpm_manager-client/tpm_manager/dbus-constants.h>
 #include <trousers/scoped_tss_type.h>
+#include <trousers/trousers.h>
 #include <trousers/tss.h>
 
 #include "tpm_manager/server/local_data_store.h"

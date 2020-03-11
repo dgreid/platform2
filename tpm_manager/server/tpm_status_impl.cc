@@ -10,8 +10,8 @@
 #include <base/logging.h>
 #include <base/optional.h>
 #include <tpm_manager/server/tpm_util.h>
+#include <trousers/trousers.h>
 #include <trousers/tss.h>
-#include <trousers/trousers.h>  // NOLINT(build/include_alpha)
 
 namespace {
 

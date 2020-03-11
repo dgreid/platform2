@@ -11,7 +11,6 @@
 #include <base/macros.h>
 #include <tpm_manager/proto_bindings/tpm_manager.pb.h>
 #include <trousers/tss.h>
-#include <trousers/trousers.h>  // NOLINT(build/include_alpha)
 
 #include "tpm_manager/common/typedefs.h"
 #include "tpm_manager/server/openssl_crypto_util_impl.h"

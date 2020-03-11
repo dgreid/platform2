@@ -13,7 +13,6 @@
 #include <base/macros.h>
 #include <base/optional.h>
 #include <trousers/tss.h>
-#include <trousers/trousers.h>  // NOLINT(build/include_alpha)
 
 #include <tpm_manager/server/tpm_connection.h>
 #include "tpm_manager/common/typedefs.h"
