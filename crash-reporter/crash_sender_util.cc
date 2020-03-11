@@ -1056,6 +1056,9 @@ bool Sender::RequestToSendCrash(const CrashDetails& details) {
       // data since extracting the data stream from the FormData is a
       // potentially destructive operation.
       form_data = CreateCrashFormData(details, &product_name);
+      if (!form_data) {
+        return false;
+      }
       response = brillo::http::PostFormDataAndBlock(
           allow_dev_sending_ ? kReportUploadStagingUrl : kReportUploadProdUrl,
           std::move(form_data), {} /* headers */, transport, &upload_error);
