@@ -18,6 +18,7 @@
 #include <gtest/gtest.h>
 
 #include "crash-reporter/test_util.h"
+#include "crash-reporter/vm_support.h"
 
 using base::FilePath;
 using brillo::FindLog;
@@ -255,28 +256,37 @@ TEST_F(UserCollectorTest, ShouldDumpUserConsentProductionImage) {
 TEST_F(UserCollectorTest, HandleCrashWithoutConsent) {
   s_metrics = false;
   collector_.HandleCrash("20:10:1000:1000:ignored", "foobar");
-  EXPECT_TRUE(FindLog("Received crash notification for foobar[20] sig 10"));
+  if (!VmSupport::Get()) {
+    EXPECT_TRUE(FindLog("Received crash notification for foobar[20] sig 10"));
+  }
 }
 
 TEST_F(UserCollectorTest, HandleNonChromeCrashWithConsent) {
   s_metrics = true;
   collector_.HandleCrash("5:2:1000:1000:ignored", "chromeos-wm");
-  EXPECT_TRUE(FindLog("Received crash notification for chromeos-wm[5] sig 2"));
+  if (!VmSupport::Get()) {
+    EXPECT_TRUE(
+        FindLog("Received crash notification for chromeos-wm[5] sig 2"));
+  }
 }
 
 TEST_F(UserCollectorTest, HandleChromeCrashWithConsent) {
   s_metrics = true;
   collector_.HandleCrash("5:2:1000:1000:ignored", "chrome");
-  EXPECT_TRUE(FindLog("Received crash notification for chrome[5] sig 2"));
-  EXPECT_TRUE(FindLog(kChromeIgnoreMsg));
+  if (!VmSupport::Get()) {
+    EXPECT_TRUE(FindLog("Received crash notification for chrome[5] sig 2"));
+    EXPECT_TRUE(FindLog(kChromeIgnoreMsg));
+  }
 }
 
 TEST_F(UserCollectorTest, HandleSuppliedChromeCrashWithConsent) {
   s_metrics = true;
   collector_.HandleCrash("0:2:1000:1000:chrome", nullptr);
-  EXPECT_TRUE(
-      FindLog("Received crash notification for supplied_chrome[0] sig 2"));
-  EXPECT_TRUE(FindLog(kChromeIgnoreMsg));
+  if (!VmSupport::Get()) {
+    EXPECT_TRUE(
+        FindLog("Received crash notification for supplied_chrome[0] sig 2"));
+    EXPECT_TRUE(FindLog(kChromeIgnoreMsg));
+  }
 }
 
 TEST_F(UserCollectorTest, GetProcessPath) {

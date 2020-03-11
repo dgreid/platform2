@@ -35,8 +35,7 @@ void VmSupportProper::AddMetadata(UserCollector* collector) {
 }
 
 void VmSupportProper::FinishCrash(const base::FilePath& crash_meta_path) {
-  LOG(INFO) << "A program crashed in the VM and was logged at: "
-            << crash_meta_path.value();
+  LOG(INFO) << "A program crashed in the VM";
   // TODO(hollingum): implement me.
 }
 

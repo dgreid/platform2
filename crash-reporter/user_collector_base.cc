@@ -133,7 +133,12 @@ bool UserCollectorBase::HandleCrash(const std::string& crash_attributes,
       "Received crash notification for %s[%d] sig %d, user %u group %u",
       exec.c_str(), pid, signal, supplied_ruid, supplied_rgid);
 
-  LogCrash(message, reason);
+  // TODO(crbug.com/1053847) The executable name is sensitive user data inside
+  // the VM, so don't log this message. Eventually we will move the VM logs
+  // inside the cryptohome and this will be unnecessary.
+  if (!VmSupport::Get()) {
+    LogCrash(message, reason);
+  }
 
   if (dump) {
     AccounceUserCrash();
@@ -332,7 +337,13 @@ UserCollectorBase::ErrorType UserCollectorBase::ConvertAndEnqueueCrash(
     base::FilePath target;
     if (!NormalizeFilePath(minidump_path, &target))
       target = minidump_path;
-    LOG(INFO) << "Stored minidump to " << target.value();
+
+    // TODO(crbug.com/1053847) The executable name is sensitive user data inside
+    // the VM, so don't log this message. Eventually we will move the VM logs
+    // inside the cryptohome and this will be unnecessary.
+    if (!VmSupport::Get()) {
+      LOG(INFO) << "Stored minidump to " << target.value();
+    }
   }
 
   base::TimeDelta start_time;
