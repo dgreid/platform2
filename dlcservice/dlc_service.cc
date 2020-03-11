@@ -186,6 +186,16 @@ bool DlcService::GetInstalled(DlcModuleList* dlc_module_list_out,
   return true;
 }
 
+bool DlcService::GetState(const std::string& id_in,
+                          DlcState* dlc_state,
+                          brillo::ErrorPtr* err) {
+  string err_code, err_msg;
+  if (dlc_manager_->GetState(id_in, dlc_state, &err_code, &err_msg))
+    return true;
+  LogAndSetError(err, err_code, err_msg);
+  return false;
+}
+
 void DlcService::SendFailedSignalAndCleanup() {
   SendOnInstallStatusSignal(
       CreateInstallStatus(Status::FAILED, kErrorInternal, {}, 0.));

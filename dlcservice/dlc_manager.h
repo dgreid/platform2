@@ -39,6 +39,12 @@ class DlcManager {
   // Returns the list of fully installed + mounted DLC(s).
   DlcModuleList GetInstalled();
 
+  // Returns true and sets |state| if the DLC is supported.
+  bool GetState(const DlcId& id,
+                DlcState* state,
+                std::string* err_code,
+                std::string* err_msg);
+
   // Loads installed DLC module images.
   void LoadDlcModuleImages();
 

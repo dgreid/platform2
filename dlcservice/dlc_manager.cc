@@ -55,13 +55,28 @@ class DlcManager::DlcManagerImpl {
   }
   ~DlcManagerImpl() = default;
 
-  bool IsInstalling() { return !installing_.empty(); }
+  bool IsSupported(const DlcId& id) {
+    return supported_.find(id) != supported_.end();
+  }
 
-  DlcSet GetSupported() { return supported_; }
+  bool IsInstalling() { return !installing_.empty(); }
 
   DlcMap GetInstalled() {
     RefreshInstalled();
     return installed_;
+  }
+
+  bool GetState(const DlcId& id, DlcState* state) {
+    // TODO(crbug.com/1059124): Implement state logic storing and error code
+    // propagation.
+    RefreshInstalled();
+    if (installed_.find(id) != installed_.end())
+      state->set_state(DlcState::INSTALLED);
+    else if (installing_.find(id) != installing_.end())
+      state->set_state(DlcState::INSTALLING);
+    else
+      state->set_state(DlcState::NOT_INSTALLED);
+    return true;
   }
 
   void PreloadDlcModuleImages() { RefreshPreloaded(); }
@@ -315,7 +330,7 @@ class DlcManager::DlcManagerImpl {
     CHECK(err_code);
     CHECK(err_msg);
 
-    if (supported_.find(id) == supported_.end()) {
+    if (!IsSupported(id)) {
       *err_code = kErrorInvalidDlc;
       *err_msg = "The DLC (" + id + ") provided is not supported.";
       return false;
@@ -550,7 +565,7 @@ class DlcManager::DlcManagerImpl {
 
     // Recheck installed DLC modules.
     for (auto id : ScanDirectory(content_dir_)) {
-      if (supported_.find(id) == supported_.end()) {
+      if (!IsSupported(id)) {
         LOG(ERROR) << "Found unsupported DLC (" << id
                    << ") installed, will delete.";
         Delete(id);
@@ -567,9 +582,14 @@ class DlcManager::DlcManagerImpl {
                    << ") during refresh: " << err_code << "|" << err_msg;
         Delete(id);
       }
-      // If the root exists set it, else try mounting.
+      // - If the root is empty and is currently installing then skip.
+      // - If the root exists set it and continue.
+      // - Try mounting, if mounted set it and continue.
+      // - Remove the DLC if none of the previous checks are met.
       string mount;
-      if (base::PathExists(base::FilePath(info.root))) {
+      if (info.root.empty() && installing_.find(id) != installing_.end()) {
+        continue;
+      } else if (base::PathExists(base::FilePath(info.root))) {
         verified_installed[id] = info;
       } else if (Mount(id, &mount, &err_code, &err_msg)) {
         verified_installed[id] = DlcInfo(GetDlcRoot(FilePath(mount)).value());
@@ -610,6 +630,22 @@ bool DlcManager::IsInstalling() {
 DlcModuleList DlcManager::GetInstalled() {
   return ToDlcModuleList(impl_->GetInstalled(),
                          [](DlcId, DlcInfo) { return true; });
+}
+
+bool DlcManager::GetState(const DlcId& id,
+                          DlcState* state,
+                          std::string* err_code,
+                          std::string* err_msg) {
+  CHECK(err_code);
+  CHECK(err_msg);
+
+  if (!impl_->IsSupported(id)) {
+    *err_code = kErrorInvalidDlc;
+    *err_msg = "Can not get state of unsupported DLC: " + id;
+    return false;
+  }
+
+  return impl_->GetState(id, state);
 }
 
 void DlcManager::LoadDlcModuleImages() {
@@ -669,8 +705,7 @@ bool DlcManager::Delete(const string& id,
   CHECK(err_code);
   CHECK(err_msg);
 
-  auto supported_dlcs = impl_->GetSupported();
-  if (supported_dlcs.find(id) == supported_dlcs.end()) {
+  if (!impl_->IsSupported(id)) {
     *err_code = kErrorInvalidDlc;
     *err_msg = "Trying to delete DLC (" + id + ") which isn't supported.";
     return false;
