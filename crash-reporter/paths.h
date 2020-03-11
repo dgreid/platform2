@@ -32,6 +32,9 @@ constexpr char kSystemCrashDirectory[] = "/var/spool/crash";
 constexpr char kEncryptedRebootVaultCrashDirectory[] =
     "/mnt/stateful_partition/reboot_vault/crash";
 
+// Path to indicate OOBE completion.
+constexpr char kOobeCompletePath[] = "/home/chronos/.oobe_completed";
+
 // Directory where system configuration files are located.
 constexpr char kEtcDirectory[] = "/etc";
 

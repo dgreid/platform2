@@ -29,6 +29,13 @@ void EphemeralCrashCollector::Initialize(
         base::FilePath(paths::kEncryptedRebootVaultCrashDirectory);
     is_feedback_allowed_function = []() { return true; };
   } else {
+    // In case of powerwash, there is a chance that the powerwash was a result
+    // of failure to mount the partition: in such situations, we may have crash
+    // reports in the reboot vault to collect. Allow the meta collector to
+    // collect such reports into /var/spool. Once OOBE is complete, depending
+    // on user consent, either throw away these reports or send them.
+    if (!base::PathExists(paths::Get(paths::kOobeCompletePath)))
+      is_feedback_allowed_function = []() { return true; };
     source_directories_.push_back(
         base::FilePath(paths::kEncryptedRebootVaultCrashDirectory));
   }
