@@ -4,7 +4,6 @@
 
 #include "dlcservice/dlc_manager.h"
 
-#include <set>
 #include <utility>
 #include <vector>
 
@@ -58,9 +57,9 @@ class DlcManager::DlcManagerImpl {
 
   bool IsInstalling() { return !installing_.empty(); }
 
-  std::set<DlcId> GetSupported() { return supported_; }
+  DlcSet GetSupported() { return supported_; }
 
-  DlcRootMap GetInstalled() {
+  DlcMap GetInstalled() {
     RefreshInstalled();
     return installed_;
   }
@@ -69,7 +68,7 @@ class DlcManager::DlcManagerImpl {
 
   void LoadDlcModuleImages() { RefreshInstalled(); }
 
-  bool InitInstall(const DlcRootMap& requested_install,
+  bool InitInstall(const DlcMap& requested_install,
                    string* err_code,
                    string* err_msg) {
     CHECK(installing_.empty());
@@ -96,21 +95,21 @@ class DlcManager::DlcManagerImpl {
     return true;
   }
 
-  DlcRootMap GetInstalling() {
-    DlcRootMap required_installing;
+  DlcMap GetInstalling() {
+    DlcMap required_installing;
     for (const auto& dlc : installing_)
-      if (dlc.second.empty())
+      if (dlc.second.root.empty())
         required_installing[dlc.first];
     return required_installing;
   }
 
-  bool FinishInstall(DlcRootMap* installed, string* err_code, string* err_msg) {
+  bool FinishInstall(DlcMap* installed, string* err_code, string* err_msg) {
     *installed = installing_;
 
     ScopedCleanups<base::Callback<void()>> scoped_cleanups;
 
     for (const auto& dlc : installing_) {
-      const string& id = dlc.first;
+      const auto& id = dlc.first;
       auto cleanup = base::Bind(
           [](Callback<bool()> unmounter, Callback<bool()> deleter,
              string* err_code, string* err_msg) {
@@ -130,20 +129,22 @@ class DlcManager::DlcManagerImpl {
         base::Bind(&DlcManagerImpl::ClearInstalling, base::Unretained(this)));
 
     for (auto& dlc : installing_) {
-      const string &id = dlc.first, root = dlc.second;
-      if (!root.empty())
+      const auto& id = dlc.first;
+      const auto& info = dlc.second;
+      if (!info.root.empty())
         continue;
       string mount_point;
       if (!Mount(id, &mount_point, err_code, err_msg))
         return false;
-      dlc.second = GetDlcRootInModulePath(FilePath(mount_point)).value();
+      dlc.second = DlcInfo(GetDlcRoot(FilePath(mount_point)).value());
     }
 
     scoped_cleanups.Cancel();
 
     for (const auto& dlc : installing_) {
-      const string &id = dlc.first, root = dlc.second;
-      installed_[id] = installed->operator[](id) = root;
+      const auto& id = dlc.first;
+      const auto& info = dlc.second;
+      installed_[id] = (*installed)[id] = info;
     }
 
     ClearInstalling();
@@ -157,8 +158,9 @@ class DlcManager::DlcManagerImpl {
       return ret;
     }
     for (const auto& dlc : installing_) {
-      const string &id = dlc.first, root = dlc.second;
-      if (!root.empty())
+      const auto& id = dlc.first;
+      const auto& info = dlc.second;
+      if (!info.root.empty())
         continue;
       if (!Delete(id, err_code, err_msg)) {
         LOG(ERROR) << *err_msg;
@@ -378,7 +380,7 @@ class DlcManager::DlcManagerImpl {
   //    -> Failure to do so only logs error.
   bool ValidateImageFiles(const string& id, string* err_code, string* err_msg) {
     string mount_point;
-    const string& package = GetDlcPackage(id);
+    const auto& package = GetDlcPackage(id);
     FilePath inactive_img_path = GetDlcImagePath(
         content_dir_, id, package,
         current_boot_slot_ == BootSlot::Slot::A ? BootSlot::Slot::B
@@ -440,7 +442,7 @@ class DlcManager::DlcManagerImpl {
   // Helper used by |RefreshPreload()| to load in (copy + cleanup) preloadable
   // files for the given DLC ID.
   bool RefreshPreloadedCopier(const string& id) {
-    const string& package = GetDlcPackage(id);
+    const auto& package = GetDlcPackage(id);
     FilePath image_preloaded_path =
         JoinPaths(preloaded_content_dir_, id, package, kDlcImageFileName);
     FilePath image_a_path =
@@ -508,8 +510,8 @@ class DlcManager::DlcManagerImpl {
         continue;
       }
 
-      DlcRootMap dlc_root_map = {{id, ""}};
-      if (!InitInstall(dlc_root_map, &err_code, &err_msg)) {
+      DlcMap dlc_map = {{id, DlcInfo()}};
+      if (!InitInstall(dlc_map, &err_code, &err_msg)) {
         LOG(ERROR) << "Failed to create DLC (" << id << ") for preloading.";
         continue;
       }
@@ -522,7 +524,7 @@ class DlcManager::DlcManagerImpl {
       }
 
       // When the copying is successful, go ahead and finish installation.
-      if (!FinishInstall(&dlc_root_map, &err_code, &err_msg)) {
+      if (!FinishInstall(&dlc_map, &err_code, &err_msg)) {
         LOG(ERROR) << "Failed to |FinishInstall()| preloaded DLC (" << id
                    << ") "
                    << "because: " << err_code << "|" << err_msg;
@@ -531,7 +533,7 @@ class DlcManager::DlcManagerImpl {
 
       // Delete the preloaded DLC only after both copies into A and B succeed as
       // well as mounting.
-      FilePath image_preloaded_path = JoinPaths(
+      auto image_preloaded_path = JoinPaths(
           preloaded_content_dir_, id, GetDlcPackage(id), kDlcImageFileName);
       if (!base::DeleteFile(image_preloaded_path.DirName().DirName(), true)) {
         LOG(ERROR) << "Failed to delete preloaded DLC (" << id << ").";
@@ -555,7 +557,7 @@ class DlcManager::DlcManagerImpl {
         continue;
       }
       string err_code, err_msg;
-      DlcRoot root = installed_[id];
+      auto info = installed_[id];
       // Create the metadata directory if it doesn't exist.
       if (!CreateMetadata(id, &err_code, &err_msg))
         LOG(WARNING) << err_code << "|" << err_msg;
@@ -565,13 +567,12 @@ class DlcManager::DlcManagerImpl {
                    << ") during refresh: " << err_code << "|" << err_msg;
         Delete(id);
       }
-      // If |root| exists set it, else try mounting.
+      // If the root exists set it, else try mounting.
       string mount;
-      if (base::PathExists(base::FilePath(root))) {
-        verified_installed[id] = root;
+      if (base::PathExists(base::FilePath(info.root))) {
+        verified_installed[id] = info;
       } else if (Mount(id, &mount, &err_code, &err_msg)) {
-        verified_installed[id] =
-            GetDlcRootInModulePath(FilePath(mount)).value();
+        verified_installed[id] = DlcInfo(GetDlcRoot(FilePath(mount)).value());
       } else {
         LOG(ERROR) << "Failed to mount DLC (" << id
                    << ") during refresh: " << err_code << "|" << err_msg;
@@ -591,9 +592,9 @@ class DlcManager::DlcManagerImpl {
   BootSlot::Slot current_boot_slot_;
 
   string installing_omaha_url_;
-  DlcRootMap installing_;
-  DlcRootMap installed_;
-  std::set<DlcId> supported_;
+  DlcMap installing_;
+  DlcMap installed_;
+  DlcSet supported_;
 };
 
 DlcManager::DlcManager() {
@@ -608,7 +609,7 @@ bool DlcManager::IsInstalling() {
 
 DlcModuleList DlcManager::GetInstalled() {
   return ToDlcModuleList(impl_->GetInstalled(),
-                         [](DlcId, DlcRoot) { return true; });
+                         [](DlcId, DlcInfo) { return true; });
 }
 
 void DlcManager::LoadDlcModuleImages() {
@@ -621,22 +622,22 @@ bool DlcManager::InitInstall(const DlcModuleList& dlc_module_list,
                              string* err_msg) {
   CHECK(err_code);
   CHECK(err_msg);
-  DlcRootMap dlc_root_map =
-      ToDlcRootMap(dlc_module_list, [](DlcModuleInfo) { return true; });
+  DlcMap dlc_map =
+      ToDlcMap(dlc_module_list, [](DlcModuleInfo) { return true; });
 
-  if (dlc_root_map.empty()) {
+  if (dlc_map.empty()) {
     *err_code = kErrorInvalidDlc;
     *err_msg = "Must provide at lease one DLC to install.";
     return false;
   }
 
-  return impl_->InitInstall(dlc_root_map, err_code, err_msg);
+  return impl_->InitInstall(dlc_map, err_code, err_msg);
 }
 
 DlcModuleList DlcManager::GetMissingInstalls() {
   // Only return the DLC(s) that aren't already installed.
   return ToDlcModuleList(impl_->GetInstalling(),
-                         [](DlcId, DlcRoot root) { return root.empty(); });
+                         [](DlcId, DlcInfo info) { return info.root.empty(); });
 }
 
 bool DlcManager::FinishInstall(DlcModuleList* dlc_module_list,
@@ -646,13 +647,13 @@ bool DlcManager::FinishInstall(DlcModuleList* dlc_module_list,
   CHECK(err_code);
   CHECK(err_msg);
 
-  DlcRootMap dlc_root_map;
-  if (!impl_->FinishInstall(&dlc_root_map, err_code, err_msg))
+  DlcMap dlc_map;
+  if (!impl_->FinishInstall(&dlc_map, err_code, err_msg))
     return false;
 
-  *dlc_module_list = ToDlcModuleList(dlc_root_map, [](DlcId id, DlcRoot root) {
+  *dlc_module_list = ToDlcModuleList(dlc_map, [](DlcId id, DlcInfo info) {
     CHECK(!id.empty());
-    CHECK(!root.empty());
+    CHECK(!info.root.empty());
     return true;
   });
   return true;

@@ -6,16 +6,25 @@
 #define DLCSERVICE_TYPES_H_
 
 #include <map>
+#include <set>
 #include <string>
 
 namespace dlcservice {
 
 // |DlcId| is the ID of the DLC.
 using DlcId = std::string;
+
 // |DlcRoot| is the root within the mount point of the DLC.
 using DlcRoot = std::string;
-// |DlcRootMap| holds the mapping from |DlcId| to |DlcRoot|.
-using DlcRootMap = std::map<DlcId, DlcRoot>;
+
+// |DlcInfo| holds information related to a DLC.
+struct DlcInfo {
+  explicit DlcInfo(DlcRoot root = "");
+  DlcRoot root;
+};
+
+using DlcMap = std::map<DlcId, DlcInfo>;
+using DlcSet = std::set<DlcId>;
 
 }  // namespace dlcservice
 

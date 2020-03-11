@@ -95,20 +95,20 @@ bool GetDlcManifest(const base::FilePath& dlc_manifest_path,
 
 // Returns the directory inside a DLC module which is mounted at
 // |dlc_mount_point|.
-base::FilePath GetDlcRootInModulePath(const base::FilePath& dlc_mount_point);
+base::FilePath GetDlcRoot(const base::FilePath& dlc_mount_point);
 
 // Scans a directory and returns all its subdirectory names in a list.
 std::set<std::string> ScanDirectory(const base::FilePath& dir);
 
-// Converts a |DlcRootMap| into a |DlcModuleList| based on filtering logic where
+// Converts a |DlcMap| into a |DlcModuleList| based on filtering logic where
 // a return value of true indicates insertion into |DlcModuleList|.
 dlcservice::DlcModuleList ToDlcModuleList(
-    const DlcRootMap& dlcs, std::function<bool(DlcId, DlcRoot)> filter);
+    const DlcMap& dlcs, std::function<bool(DlcId, DlcInfo)> filter);
 
-// Converts a |DlcModuleList| into a |DlcRootMap| based on filtering logic where
-// a return value of true indicates insertion into |DlcRootMap|.
-DlcRootMap ToDlcRootMap(const dlcservice::DlcModuleList& dlc_module_list,
-                        std::function<bool(dlcservice::DlcModuleInfo)> filter);
+// Converts a |DlcModuleList| into a |DlcMap| based on filtering logic where
+// a return value of true indicates insertion into |DlcMap|.
+DlcMap ToDlcMap(const dlcservice::DlcModuleList& dlc_module_list,
+                std::function<bool(dlcservice::DlcModuleInfo)> filter);
 
 dlcservice::InstallStatus CreateInstallStatus(
     const dlcservice::Status& status,

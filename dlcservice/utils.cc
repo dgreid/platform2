@@ -184,7 +184,7 @@ bool GetDlcManifest(const FilePath& dlc_manifest_path,
   return true;
 }
 
-FilePath GetDlcRootInModulePath(const FilePath& dlc_mount_point) {
+FilePath GetDlcRoot(const FilePath& dlc_mount_point) {
   return JoinPaths(dlc_mount_point, kRootDirectoryInsideDlcModule);
 }
 
@@ -199,26 +199,26 @@ set<string> ScanDirectory(const FilePath& dir) {
   return result;
 }
 
-DlcModuleList ToDlcModuleList(const DlcRootMap& dlcs,
-                              std::function<bool(DlcId, DlcRoot)> filter) {
+DlcModuleList ToDlcModuleList(const DlcMap& dlcs,
+                              std::function<bool(DlcId, DlcInfo)> filter) {
   DlcModuleList dlc_module_list;
-  auto f = [&dlc_module_list, filter](const pair<DlcId, DlcRoot>& pr) {
+  auto f = [&dlc_module_list, filter](const pair<DlcId, DlcInfo>& pr) {
     if (filter(pr.first, pr.second)) {
       DlcModuleInfo* dlc_module_info = dlc_module_list.add_dlc_module_infos();
       dlc_module_info->set_dlc_id(pr.first);
-      dlc_module_info->set_dlc_root(pr.second);
+      dlc_module_info->set_dlc_root(pr.second.root);
     }
   };
   for_each(begin(dlcs), end(dlcs), f);
   return dlc_module_list;
 }
 
-DlcRootMap ToDlcRootMap(const DlcModuleList& dlc_module_list,
-                        std::function<bool(DlcModuleInfo)> filter) {
-  DlcRootMap m;
+DlcMap ToDlcMap(const DlcModuleList& dlc_module_list,
+                std::function<bool(DlcModuleInfo)> filter) {
+  DlcMap m;
   for (const DlcModuleInfo& dlc_module : dlc_module_list.dlc_module_infos()) {
     if (filter(dlc_module))
-      m.emplace(dlc_module.dlc_id(), dlc_module.dlc_root());
+      m.emplace(dlc_module.dlc_id(), DlcInfo{dlc_module.dlc_root()});
   }
   return m;
 }

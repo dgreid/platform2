@@ -166,10 +166,10 @@ TEST(UtilsTest, GetDlcModuleImagePathB) {
             "/tmp/dlc/id/package/dlc_b/dlc.img");
 }
 
-TEST(UtilsTest, GetDlcRootInModulePath) {
+TEST(UtilsTest, GetDlcRoot) {
   base::FilePath path("foo-path");
   base::FilePath expected_path("foo-path/root");
-  EXPECT_EQ(GetDlcRootInModulePath(path), expected_path);
+  EXPECT_EQ(GetDlcRoot(path), expected_path);
 }
 
 TEST(UtilsTest, ScopedCleanupsTest) {
