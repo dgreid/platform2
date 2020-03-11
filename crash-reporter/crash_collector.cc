@@ -50,6 +50,7 @@ namespace {
 const char kCollectChromeFile[] =
     "/mnt/stateful_partition/etc/collect_chrome_crashes";
 const char kDefaultLogConfig[] = "/etc/crash_reporter_logs.conf";
+const char kDefaultLogFile[] = "/var/log/messages";
 const char kDefaultUserName[] = "chronos";
 const char kShellPath[] = "/bin/sh";
 const char kUploadVarPrefix[] = "upload_var_";
@@ -322,6 +323,7 @@ CrashCollector::CrashCollector(
       system_crash_path_(paths::kSystemCrashDirectory),
       crash_reporter_state_path_(paths::kCrashReporterStateDirectory),
       log_config_path_(kDefaultLogConfig),
+      default_logfile_path_(kDefaultLogFile),
       max_log_size_(kMaxLogSize),
       crash_sending_mode_(crash_sending_mode),
       crash_directory_selection_method_(crash_directory_selection_method),
@@ -973,8 +975,6 @@ bool CrashCollector::GetMultipleLogContents(
   std::string collated_log_contents;
   for (auto exec_name : exec_names) {
     std::string command;
-    if (!store.GetString(exec_name, &command))
-      continue;
 
     FilePath raw_output_file;
     if (!base::CreateTemporaryFile(&raw_output_file)) {
@@ -982,9 +982,19 @@ bool CrashCollector::GetMultipleLogContents(
       continue;
     }
 
+    // True iff we're using the default logging mechanism. (i.e. grepping
+    // /var/log/messages for exec_name)
+    bool default_log = false;
     brillo::ProcessImpl diag_process;
-    diag_process.AddArg(kShellPath);
-    diag_process.AddStringOption("-c", command);
+    if (store.GetString(exec_name, &command)) {
+      diag_process.AddArg(kShellPath);
+      diag_process.AddStringOption("-c", command);
+    } else {
+      default_log = true;
+      diag_process.AddArg("/usr/bin/tail");
+      diag_process.AddIntOption("-n", 50);
+      diag_process.AddArg(default_logfile_path_.value());
+    }
     diag_process.RedirectOutput(raw_output_file.value());
 
     const int result = diag_process.Run();
@@ -993,6 +1003,27 @@ bool CrashCollector::GetMultipleLogContents(
     const bool fully_read = base::ReadFileToStringWithMaxSize(
         raw_output_file, &log_contents, max_log_size_);
     base::DeleteFile(raw_output_file, false);
+
+    if (default_log) {
+      // Filter for log lines matching exec_name.
+      // We don't use grep and a shell command to avoid any possibility
+      // of shell injection from malicious exec_name.
+      std::vector<std::string> contents_vec = base::SplitString(
+          log_contents, "\n", base::KEEP_WHITESPACE, base::SPLIT_WANT_ALL);
+      contents_vec.erase(
+          std::remove_if(contents_vec.begin(), contents_vec.end(),
+                         [&exec_name](const std::string& s) {
+                           return s.find(exec_name) == std::string::npos;
+                         }),
+          contents_vec.end());
+
+      if (!contents_vec.empty()) {
+        contents_vec.insert(contents_vec.begin(),
+                            "===default /var/log/messages===");
+        contents_vec.push_back("EOF\n");
+      }
+      log_contents = base::JoinString(contents_vec, "\n");
+    }
 
     if (!fully_read) {
       if (log_contents.empty()) {
@@ -1009,7 +1040,8 @@ bool CrashCollector::GetMultipleLogContents(
     // If the registered command failed, we include any (partial) output it
     // might have produced to improve crash reports.  But make a note of the
     // failure.
-    if (result != 0) {
+    // Don't do this for the default log action, though, because it'd be spammy.
+    if (result != 0 && !default_log) {
       const std::string warning = StringPrintf(
           "\nLog command \"%s\" exited with %i\n", command.c_str(), result);
       log_contents.append(warning);
