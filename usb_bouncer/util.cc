@@ -461,6 +461,22 @@ base::FilePath GetUserDBDir() {
   return UserDir;
 }
 
+bool IsGuestSession() {
+  // Usb_bouncer is called by udev even during early boot. If D-Bus is
+  // inaccessible, it is early boot and a guest hasn't logged in.
+  if (!base::PathExists(base::FilePath(kDBusPath))) {
+    return false;
+  }
+
+  scoped_refptr<dbus::Bus> bus;
+  auto session_manager_proxy = SetUpDBus(bus);
+
+  bool is_guest = false;
+  brillo::ErrorPtr error;
+  session_manager_proxy->IsGuestSessionActive(&is_guest, &error);
+  return is_guest;
+}
+
 bool IsLockscreenShown() {
   // Usb_bouncer is called by udev even during early boot. If D-Bus is
   // inaccessible, it is early boot and the lock-screen isn't shown.

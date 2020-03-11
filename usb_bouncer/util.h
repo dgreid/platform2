@@ -89,6 +89,9 @@ void UMALogDeviceAttached(MetricsLibrary* metrics,
 // multi-login case, the primary user's daemon-store is used.
 base::FilePath GetUserDBDir();
 
+// Returns true if a guest session is active.
+bool IsGuestSession();
+
 // Returns true if the lock screen is being shown. On a D-Bus failure true is
 // returned because that is the safer failure state. This may result in some
 // devices not being added to a user's allow-list, but that is safer than a

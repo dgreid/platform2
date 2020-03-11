@@ -48,14 +48,19 @@ bool EntryManager::CreateDefaultGlobalDB() {
 }
 
 EntryManager::EntryManager()
-    : EntryManager(
-          "/", GetUserDBDir(), IsLockscreenShown(), GetRuleFromDevPath) {}
+    : EntryManager("/",
+                   GetUserDBDir(),
+                   IsLockscreenShown(),
+                   IsGuestSession(),
+                   GetRuleFromDevPath) {}
 
 EntryManager::EntryManager(const std::string& root_dir,
                            const base::FilePath& user_db_dir,
                            bool user_db_read_only,
+                           bool is_guest_session,
                            DevpathToRuleCallback rule_from_devpath)
     : user_db_read_only_(user_db_read_only),
+      is_guest_session_(is_guest_session),
       root_dir_(root_dir),
       rule_from_devpath_(rule_from_devpath),
       global_db_(root_dir_.Append(kDefaultGlobalDir)) {
@@ -203,6 +208,11 @@ bool EntryManager::HandleUdev(UdevAction action, const std::string& devpath) {
 }
 
 bool EntryManager::HandleUserLogin() {
+  if (is_guest_session_) {
+    // Ignore guest sessions.
+    return true;
+  }
+
   if (!user_db_.Valid()) {
     LOG(ERROR) << "Unable to access user db.";
     return false;

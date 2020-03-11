@@ -37,6 +37,8 @@ class EntryManagerTestUtil {
 
   void SetUserDBReadOnly(bool user_db_read_only);
 
+  void SetIsGuestSession(bool is_guest_session);
+
   void ExpireEntry(bool expect_user,
                    const std::string& devpath,
                    const std::string& rule);

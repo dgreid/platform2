@@ -95,6 +95,10 @@ void EntryManagerTestUtil::SetUserDBReadOnly(bool user_db_read_only) {
   entry_manager_->user_db_read_only_ = user_db_read_only;
 }
 
+void EntryManagerTestUtil::SetIsGuestSession(bool is_guest_session) {
+  entry_manager_->is_guest_session_ = is_guest_session;
+}
+
 void EntryManagerTestUtil::ExpireEntry(bool expect_user,
                                        const std::string& devpath,
                                        const std::string& rule) {
@@ -157,14 +161,15 @@ void EntryManagerTestUtil::RecreateEntryManager(
   // release the file lock.
   entry_manager_.reset();
   // std::make_unique was not used because a private constructor was needed.
-  entry_manager_.reset(new EntryManager(
-      temp_dir_.value(), userdb_dir, false /*user_db_read_only*/,
-      [](const std::string& devpath) -> std::string {
-        if (devpath.empty()) {
-          return "";
-        }
-        return kDefaultRule;
-      }));
+  entry_manager_.reset(
+      new EntryManager(temp_dir_.value(), userdb_dir,
+                       false /*user_db_read_only*/, false /*is_guest_session*/,
+                       [](const std::string& devpath) -> std::string {
+                         if (devpath.empty()) {
+                           return "";
+                         }
+                         return kDefaultRule;
+                       }));
   CHECK(entry_manager_->global_db_.Valid());
 }
 

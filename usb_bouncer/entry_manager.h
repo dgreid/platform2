@@ -76,6 +76,7 @@ class EntryManager {
   EntryManager(const std::string& root_dir,
                const base::FilePath& user_db_dir,
                bool user_db_read_only,
+               bool is_guest_session,
                DevpathToRuleCallback rule_from_devpath);
 
   // Removes expired entries from the trash of the global DB. If |global_only|
@@ -91,6 +92,9 @@ class EntryManager {
 
   // Represents whether the lock screen is being shown.
   bool user_db_read_only_;
+
+  // Represents whether a guest session is active.
+  bool is_guest_session_;
 
   // Prepended to all the paths to enable testing.
   base::FilePath root_dir_;

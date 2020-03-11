@@ -196,4 +196,11 @@ TEST_F(EntryManagerTest, HandleUserLogin_UserPresent) {
   EXPECT_TRUE(util_.UserDBContainsEntry(kDefaultRule));
 }
 
+TEST_F(EntryManagerTest, HandleUserLogin_Guest) {
+  util_.RefreshDB(false /*include_user_db*/, true /*new_db*/);
+  util_.SetIsGuestSession(true);
+
+  EXPECT_TRUE(util_.Get()->HandleUserLogin());
+}
+
 }  // namespace usb_bouncer
