@@ -86,6 +86,9 @@ constexpr mode_t kSystemRunStateDirectoryMode = 0755;
 constexpr mode_t kCrashReporterStateDirectoryMode = 0700;
 
 constexpr gid_t kRootGroup = 0;
+#if !USE_KVM_GUEST
+constexpr char kCrashUserGroupName[] = "crash-user-access";
+#endif
 
 // Directory mode of /run/metrics/external/crash-reporter. Anyone in "metrics"
 // group can read/write, and not readable by any other user.
@@ -755,10 +758,8 @@ base::Optional<FilePath> CrashCollector::GetCrashDirectoryInfo(
       crash_directory_selection_method_ == kAlwaysUseUserCrashDirectory) {
     *mode = kUserCrashPathMode;
     *directory_owner = default_user_id;
-    if (!brillo::userdb::GetGroupInfo(constants::kCrashUserGroupName,
-                                      directory_group)) {
-      PLOG(ERROR) << "Couldn't look up group "
-                  << constants::kCrashUserGroupName;
+    if (!brillo::userdb::GetGroupInfo(kCrashUserGroupName, directory_group)) {
+      PLOG(ERROR) << "Couldn't look up group " << kCrashUserGroupName;
       return base::nullopt;
     }
     return GetUserCrashDirectory();
