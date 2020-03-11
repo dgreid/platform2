@@ -7,6 +7,7 @@
 # pylint: disable=module-missing-docstring,class-missing-docstring
 
 import os
+import subprocess
 
 import cros_config_proto_converter
 
@@ -35,15 +36,27 @@ class ParseArgsTests(cros_test_lib.TestCase):
     self.assertEqual(args.output, 'output')
 
 
-class ReadConfigTest(cros_test_lib.TestCase):
+class MainTest(cros_test_lib.TempDirTestCase):
 
-  def testProgramConfig(self):
-    self.assertIsNotNone(
-        cros_config_proto_converter.ReadConfig(PROGRAM_CONFIG_FILE))
+  def testFullTransform(self):
+    output_file = os.path.join(self.tempdir, 'output')
+    cros_config_proto_converter.Main(project_config=PROJECT_CONFIG_FILE,
+                                     output=output_file,
+                                     program_config=None,
+                                     files_root=None,)
 
-  def testProjectConfig(self):
-    self.assertIsNotNone(
-        cros_config_proto_converter.ReadConfig(PROJECT_CONFIG_FILE))
+    expected_file = os.path.join(THIS_DIR, 'test_data/fake_project.json')
+    changed = subprocess.run(
+        ['diff', expected_file, output_file]).returncode != 0
+
+    regen_cmd = ('To regenerate the expected output, run:\n'
+                 '\tpython3 -m cros_config_host.cros_config_proto_converter '
+                 '-c %s '
+                 '-o %s ' % (PROJECT_CONFIG_FILE, expected_file))
+
+    if changed:
+      print(regen_cmd)
+      self.fail('Fake project transform does not match')
 
 
 if __name__ == '__main__':

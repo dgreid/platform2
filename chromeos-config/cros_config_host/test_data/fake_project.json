@@ -1,0 +1,13 @@
+{
+  "chromeos": {
+    "configs": [
+      {
+        "identity": {
+          "platform-name": "Fake",
+          "sku-id": 2147483647,
+          "smbios-name-match": "Fake"
+        }
+      }
+    ]
+  }
+}
