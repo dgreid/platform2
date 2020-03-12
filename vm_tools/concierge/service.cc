@@ -723,11 +723,7 @@ std::unique_ptr<Service> Service::Create(base::Closure quit_closure) {
 }
 
 Service::Service(base::Closure quit_closure)
-    : network_address_manager_({
-          arc_networkd::AddressManager::Guest::VM_PLUGIN,
-          arc_networkd::AddressManager::Guest::VM_PLUGIN_EXT,
-      }),
-      next_seneschal_server_port_(kFirstSeneschalServerPort),
+    : next_seneschal_server_port_(kFirstSeneschalServerPort),
       quit_closure_(std::move(quit_closure)),
 #ifdef __arm__
       resync_vm_clocks_on_resume_(true),
@@ -736,11 +732,6 @@ Service::Service(base::Closure quit_closure)
 #endif
       host_kernel_version_(GetKernelVersion()),
       weak_ptr_factory_(this) {
-  plugin_subnet_ = network_address_manager_.AllocateIPv4Subnet(
-      arc_networkd::AddressManager::Guest::VM_PLUGIN);
-
-  // The first address is the gateway and cannot be used by VMs.
-  plugin_gateway_ = plugin_subnet_->AllocateAtOffset(0);
 }
 
 Service::~Service() {

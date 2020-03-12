@@ -14,9 +14,6 @@
 #include <utility>
 #include <vector>
 
-#include <arc/network/address_manager.h>
-#include <arc/network/mac_address_generator.h>
-#include <arc/network/subnet.h>
 #include <base/callback.h>
 #include <base/files/file_descriptor_watcher_posix.h>
 #include <base/files/scoped_file.h>
@@ -230,8 +227,6 @@ class Service final {
                              ListVmDisksResponse* response);
 
   // Resource allocators for VMs.
-  arc_networkd::MacAddressGenerator mac_address_generator_;
-  arc_networkd::AddressManager network_address_manager_;
   VsockCidPool vsock_cid_pool_;
 
   // Current DNS resolution config.
@@ -251,10 +246,6 @@ class Service final {
 
   // The port number to assign to the next shared directory server.
   uint32_t next_seneschal_server_port_;
-
-  // The subnet for plugin VMs.
-  std::unique_ptr<arc_networkd::Subnet> plugin_subnet_;
-  std::unique_ptr<arc_networkd::SubnetAddress> plugin_gateway_;
 
   // Active VMs keyed by VmId which is (owner_id, vm_name).
   VmMap vms_;
