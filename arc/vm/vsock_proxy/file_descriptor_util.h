@@ -7,6 +7,7 @@
 
 #include <string>
 #include <utility>
+#include <vector>
 
 #include <base/optional.h>
 #include <base/files/scoped_file.h>
@@ -41,6 +42,20 @@ std::pair<int, base::ScopedFD> ConnectUnixDomainSocket(
 
 // Returns the type of the socket.
 int GetSocketType(int fd);
+
+// Calls sendmsg and returns the number of bytes sent on success.
+// On error, returns -1 and sets errno appropriately.
+ssize_t Sendmsg(int fd,
+                const void* buf,
+                size_t length,
+                const std::vector<base::ScopedFD>& fds);
+
+// Calls recvmsg and returns the number of bytes received on success.
+// On error, returns -1 and sets errno appropriately.
+ssize_t Recvmsg(int fd,
+                void* buf,
+                size_t length,
+                std::vector<base::ScopedFD>* fds);
 
 }  // namespace arc
 

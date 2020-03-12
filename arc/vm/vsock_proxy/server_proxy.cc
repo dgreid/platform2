@@ -206,8 +206,8 @@ base::ScopedFD ServerProxy::ConvertProtoToFileDescriptor(
     case arc_proxy::FileDescriptor::DMABUF: {
       char dummy_data = 0;
       std::vector<base::ScopedFD> fds;
-      ssize_t size = base::UnixDomainSocket::RecvMsg(
-          virtwl_context_.get(), &dummy_data, sizeof(dummy_data), &fds);
+      ssize_t size =
+          Recvmsg(virtwl_context_.get(), &dummy_data, sizeof(dummy_data), &fds);
       if (size != sizeof(dummy_data)) {
         PLOG(ERROR) << "Failed to receive a message";
         return {};

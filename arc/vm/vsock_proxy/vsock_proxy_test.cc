@@ -138,7 +138,7 @@ void WaitUntilReadable(int fd) {
 // Exercises if simple data tranferring from |write_fd| to |read_fd| works.
 void TestDataTransfer(int write_fd, int read_fd) {
   constexpr char kData[] = "abcdefg";
-  if (!base::UnixDomainSocket::SendMsg(write_fd, kData, sizeof(kData), {})) {
+  if (Sendmsg(write_fd, kData, sizeof(kData), {}) != sizeof(kData)) {
     ADD_FAILURE() << "Failed to send message.";
     return;
   }
@@ -146,8 +146,7 @@ void TestDataTransfer(int write_fd, int read_fd) {
   WaitUntilReadable(read_fd);
   char buf[256];
   std::vector<base::ScopedFD> fds;
-  ssize_t size =
-      base::UnixDomainSocket::RecvMsg(read_fd, buf, sizeof(buf), &fds);
+  ssize_t size = Recvmsg(read_fd, buf, sizeof(buf), &fds);
   EXPECT_EQ(size, sizeof(kData));
   EXPECT_STREQ(buf, kData);
   EXPECT_TRUE(fds.empty());
@@ -157,7 +156,7 @@ void TestDataTransfer(int write_fd, int read_fd) {
 void ExpectSocketEof(int fd) {
   char buf[256];
   std::vector<base::ScopedFD> fds;
-  ssize_t size = base::UnixDomainSocket::RecvMsg(fd, buf, sizeof(buf), &fds);
+  ssize_t size = Recvmsg(fd, buf, sizeof(buf), &fds);
   EXPECT_EQ(size, 0);
   EXPECT_TRUE(fds.empty());
 }
@@ -226,20 +225,18 @@ TEST_F(VSockProxyTest, PassStreamSocketFromServer) {
   auto sockpair = CreateSocketPair(SOCK_STREAM | SOCK_NONBLOCK);
   ASSERT_TRUE(sockpair.has_value());
   constexpr char kData[] = "testdata";
-  if (!base::UnixDomainSocket::SendMsg(server_fd(), kData, sizeof(kData),
-                                       {sockpair->second.get()})) {
-    ADD_FAILURE() << "Failed to send message.";
-    return;
+  {
+    std::vector<base::ScopedFD> fds;
+    fds.push_back(std::move(sockpair->second));
+    ASSERT_EQ(Sendmsg(server_fd(), kData, sizeof(kData), fds), sizeof(kData));
   }
-  sockpair->second.reset();
 
   base::ScopedFD received_fd;
   {
     WaitUntilReadable(client_fd());
     char buf[256];
     std::vector<base::ScopedFD> fds;
-    ssize_t size =
-        base::UnixDomainSocket::RecvMsg(client_fd(), buf, sizeof(buf), &fds);
+    ssize_t size = Recvmsg(client_fd(), buf, sizeof(buf), &fds);
     EXPECT_EQ(sizeof(kData), size);
     EXPECT_STREQ(kData, buf);
     EXPECT_EQ(1, fds.size());
@@ -254,20 +251,18 @@ TEST_F(VSockProxyTest, PassStreamSocketSocketFromClient) {
   auto sockpair = CreateSocketPair(SOCK_STREAM | SOCK_NONBLOCK);
   ASSERT_TRUE(sockpair.has_value());
   constexpr char kData[] = "testdata";
-  if (!base::UnixDomainSocket::SendMsg(client_fd(), kData, sizeof(kData),
-                                       {sockpair->second.get()})) {
-    ADD_FAILURE() << "Failed to send message.";
-    return;
+  {
+    std::vector<base::ScopedFD> fds;
+    fds.push_back(std::move(sockpair->second));
+    ASSERT_EQ(Sendmsg(client_fd(), kData, sizeof(kData), fds), sizeof(kData));
   }
-  sockpair->second.reset();
 
   base::ScopedFD received_fd;
   {
     WaitUntilReadable(server_fd());
     char buf[256];
     std::vector<base::ScopedFD> fds;
-    ssize_t size =
-        base::UnixDomainSocket::RecvMsg(server_fd(), buf, sizeof(buf), &fds);
+    ssize_t size = Recvmsg(server_fd(), buf, sizeof(buf), &fds);
     EXPECT_EQ(sizeof(kData), size);
     EXPECT_STREQ(kData, buf);
     EXPECT_EQ(1, fds.size());
@@ -282,20 +277,18 @@ TEST_F(VSockProxyTest, PassDgramSocketFromServer) {
   auto sockpair = CreateSocketPair(SOCK_DGRAM | SOCK_NONBLOCK);
   ASSERT_TRUE(sockpair.has_value());
   constexpr char kData[] = "testdata";
-  if (!base::UnixDomainSocket::SendMsg(server_fd(), kData, sizeof(kData),
-                                       {sockpair->second.get()})) {
-    ADD_FAILURE() << "Failed to send message.";
-    return;
+  {
+    std::vector<base::ScopedFD> fds;
+    fds.push_back(std::move(sockpair->second));
+    ASSERT_EQ(Sendmsg(server_fd(), kData, sizeof(kData), fds), sizeof(kData));
   }
-  sockpair->second.reset();
 
   base::ScopedFD received_fd;
   {
     WaitUntilReadable(client_fd());
     char buf[256];
     std::vector<base::ScopedFD> fds;
-    ssize_t size =
-        base::UnixDomainSocket::RecvMsg(client_fd(), buf, sizeof(buf), &fds);
+    ssize_t size = Recvmsg(client_fd(), buf, sizeof(buf), &fds);
     EXPECT_EQ(sizeof(kData), size);
     EXPECT_STREQ(kData, buf);
     EXPECT_EQ(1, fds.size());
@@ -310,20 +303,18 @@ TEST_F(VSockProxyTest, PassSeqpacketSocketFromServer) {
   auto sockpair = CreateSocketPair(SOCK_SEQPACKET | SOCK_NONBLOCK);
   ASSERT_TRUE(sockpair.has_value());
   constexpr char kData[] = "testdata";
-  if (!base::UnixDomainSocket::SendMsg(server_fd(), kData, sizeof(kData),
-                                       {sockpair->second.get()})) {
-    ADD_FAILURE() << "Failed to send message.";
-    return;
+  {
+    std::vector<base::ScopedFD> fds;
+    fds.push_back(std::move(sockpair->second));
+    ASSERT_EQ(Sendmsg(server_fd(), kData, sizeof(kData), fds), sizeof(kData));
   }
-  sockpair->second.reset();
 
   base::ScopedFD received_fd;
   {
     WaitUntilReadable(client_fd());
     char buf[256];
     std::vector<base::ScopedFD> fds;
-    ssize_t size =
-        base::UnixDomainSocket::RecvMsg(client_fd(), buf, sizeof(buf), &fds);
+    ssize_t size = Recvmsg(client_fd(), buf, sizeof(buf), &fds);
     EXPECT_EQ(sizeof(kData), size);
     EXPECT_STREQ(kData, buf);
     EXPECT_EQ(1, fds.size());

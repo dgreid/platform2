@@ -13,7 +13,6 @@
 #include <base/files/scoped_file.h>
 #include <base/files/scoped_temp_dir.h>
 #include <base/macros.h>
-#include <base/posix/unix_domain_socket.h>
 #include <gtest/gtest.h>
 
 namespace arc {
@@ -49,13 +48,13 @@ TEST_F(FileDescriptorUtilSocketTest, UnixDomainSocket) {
   // Now |accepted| and |connected| should be connected each other.
   // Try to exchange some messages to make sure.
   constexpr char kTestData[] = "test_data";
-  ASSERT_TRUE(base::UnixDomainSocket::SendMsg(accepted.get(), kTestData,
-                                              sizeof(kTestData), {}));
+  ASSERT_EQ(Sendmsg(accepted.get(), kTestData, sizeof(kTestData), {}),
+            sizeof(kTestData));
 
   std::vector<base::ScopedFD> fds;
   char buf[256];
-  ASSERT_EQ(sizeof(kTestData), base::UnixDomainSocket::RecvMsg(
-                                   connected.get(), buf, sizeof(buf), &fds));
+  ASSERT_EQ(sizeof(kTestData),
+            Recvmsg(connected.get(), buf, sizeof(buf), &fds));
   EXPECT_STREQ("test_data", buf);
 }
 

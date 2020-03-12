@@ -25,7 +25,6 @@
 #include <base/optional.h>
 #include <base/posix/eintr_wrapper.h>
 #include <base/files/scoped_temp_dir.h>
-#include <base/posix/unix_domain_socket.h>
 #include <base/run_loop.h>
 #include <base/strings/string_piece.h>
 #include <gtest/gtest.h>
@@ -129,8 +128,9 @@ TEST_F(SocketStreamTest, Read) {
   ASSERT_TRUE(attached_fd.is_valid());
 
   constexpr char kData[] = "abcdefghijklmnopqrstuvwxyz";
-  ASSERT_TRUE(base::UnixDomainSocket::SendMsg(
-      socket_.get(), kData, sizeof(kData), {attached_fd.get()}));
+  std::vector<base::ScopedFD> fds;
+  fds.push_back(std::move(attached_fd));
+  ASSERT_EQ(Sendmsg(socket_.get(), kData, sizeof(kData), fds), sizeof(kData));
 
   auto read_result = stream_->Read();
   EXPECT_EQ(0, read_result.error_code);
@@ -170,8 +170,7 @@ TEST_F(SocketStreamTest, Write) {
   read_data.resize(sizeof(kData));
   std::vector<base::ScopedFD> fds;
   ASSERT_EQ(sizeof(kData),
-            base::UnixDomainSocket::RecvMsg(socket_.get(), &read_data[0],
-                                            sizeof(kData), &fds));
+            Recvmsg(socket_.get(), &read_data[0], sizeof(kData), &fds));
   EXPECT_EQ(1, fds.size());
 }
 
@@ -199,14 +198,12 @@ TEST_F(SocketStreamTest, PendingWrite) {
   read_data.resize(sndbuf_value);
   std::vector<base::ScopedFD> fds;
   ASSERT_EQ(data1.size(),
-            base::UnixDomainSocket::RecvMsg(socket_.get(), &read_data[0],
-                                            read_data.size(), &fds));
+            Recvmsg(socket_.get(), &read_data[0], read_data.size(), &fds));
   read_data.resize(data1.size());
   EXPECT_EQ(data1, read_data);
 
   // data2 is still pending.
-  ASSERT_EQ(-1, base::UnixDomainSocket::RecvMsg(socket_.get(), &read_data[0],
-                                                read_data.size(), &fds));
+  ASSERT_EQ(-1, Recvmsg(socket_.get(), &read_data[0], read_data.size(), &fds));
   ASSERT_EQ(EAGAIN, errno);
 
   // Now the socket's buffer is empty. Let the stream write data2 to the socket.
@@ -215,14 +212,12 @@ TEST_F(SocketStreamTest, PendingWrite) {
   // Read data2 from the other socket.
   read_data.resize(sndbuf_value);
   ASSERT_EQ(data2.size(),
-            base::UnixDomainSocket::RecvMsg(socket_.get(), &read_data[0],
-                                            read_data.size(), &fds));
+            Recvmsg(socket_.get(), &read_data[0], read_data.size(), &fds));
   read_data.resize(data2.size());
   EXPECT_EQ(data2, read_data);
 
   // data3 is still pending.
-  ASSERT_EQ(-1, base::UnixDomainSocket::RecvMsg(socket_.get(), &read_data[0],
-                                                read_data.size(), &fds));
+  ASSERT_EQ(-1, Recvmsg(socket_.get(), &read_data[0], read_data.size(), &fds));
   ASSERT_EQ(EAGAIN, errno);
 
   // Let the stream write data3 to the socket.
@@ -231,8 +226,7 @@ TEST_F(SocketStreamTest, PendingWrite) {
   // Read data3 from the other socket.
   read_data.resize(sndbuf_value);
   ASSERT_EQ(data3.size(),
-            base::UnixDomainSocket::RecvMsg(socket_.get(), &read_data[0],
-                                            read_data.size(), &fds));
+            Recvmsg(socket_.get(), &read_data[0], read_data.size(), &fds));
   read_data.resize(data3.size());
   EXPECT_EQ(data3, read_data);
   EXPECT_EQ(1, fds.size());

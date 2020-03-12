@@ -16,7 +16,8 @@
 #include <base/files/file_util.h>
 #include <base/logging.h>
 #include <base/posix/eintr_wrapper.h>
-#include <base/posix/unix_domain_socket.h>
+
+#include "arc/vm/vsock_proxy/file_descriptor_util.h"
 
 namespace arc {
 
@@ -32,10 +33,9 @@ LocalFile::~LocalFile() = default;
 LocalFile::ReadResult LocalFile::Read() {
   char buf[4096];
   std::vector<base::ScopedFD> fds;
-  ssize_t size =
-      can_send_fds_
-          ? base::UnixDomainSocket::RecvMsg(fd_.get(), buf, sizeof(buf), &fds)
-          : HANDLE_EINTR(read(fd_.get(), buf, sizeof(buf)));
+  ssize_t size = can_send_fds_
+                     ? Recvmsg(fd_.get(), buf, sizeof(buf), &fds)
+                     : HANDLE_EINTR(read(fd_.get(), buf, sizeof(buf)));
   if (size == -1) {
     int error_code = errno;
     PLOG(ERROR) << "Failed to read";
@@ -89,13 +89,8 @@ void LocalFile::TrySendMsg() {
       result = base::WriteFileDescriptor(fd_.get(), data.blob.data(),
                                          data.blob.size());
     } else {
-      std::vector<int> raw_fds;
-      raw_fds.reserve(data.fds.size());
-      for (const auto& fd : data.fds)
-        raw_fds.push_back(fd.get());
-
-      result = base::UnixDomainSocket::SendMsg(fd_.get(), data.blob.data(),
-                                               data.blob.size(), raw_fds);
+      result = Sendmsg(fd_.get(), data.blob.data(), data.blob.size(),
+                       data.fds) == data.blob.size();
     }
     if (!result) {
       if (errno == EAGAIN) {
