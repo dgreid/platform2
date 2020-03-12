@@ -45,6 +45,7 @@ class VPNProvider : public ProviderInterface {
 
   // Offers an unclaimed interface to VPN services.  Returns true if this
   // device has been accepted by a service.
+  // TODO(crbug.com/1026648) Remove this and VPNDriver::ClaimInterface.
   virtual bool OnDeviceInfoAvailable(const std::string& link_name,
                                      int interface_index,
                                      Technology technology);

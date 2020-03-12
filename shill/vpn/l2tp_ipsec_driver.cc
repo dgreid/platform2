@@ -154,8 +154,6 @@ const RpcIdentifier& L2TPIPSecDriver::GetServiceRpcIdentifier() {
 
 bool L2TPIPSecDriver::ClaimInterface(const string& link_name,
                                      int interface_index) {
-  // TODO(petkov): crbug.com/212446.
-  NOTIMPLEMENTED();
   return false;
 }
 
