@@ -736,18 +736,16 @@ TEST_F(DlcServiceTest, OnStatusUpdateAdvancedSignalTest) {
   EXPECT_CALL(*mock_image_loader_proxy_ptr_, LoadDlcImage(_, _, _, _, _, _))
       .WillOnce(DoAll(SetArgPointee<3>(mount_path_.value()), Return(true)))
       .WillOnce(DoAll(SetArgPointee<3>(""), Return(true)));
-  EXPECT_CALL(*mock_image_loader_proxy_ptr_, UnloadDlcImage(_, _, _, _, _))
-      .Times(2);
 
   StatusResult status_result;
   status_result.set_current_operation(Operation::IDLE);
   status_result.set_is_install(true);
   dlc_service_->OnStatusUpdateAdvancedSignal(status_result);
 
-  for (const string& id : ids) {
-    EXPECT_FALSE(base::PathExists(JoinPaths(content_path_, id)));
-    CheckDlcState(id, DlcState::NOT_INSTALLED);
-  }
+  EXPECT_TRUE(base::PathExists(JoinPaths(content_path_, kSecondDlc)));
+  CheckDlcState(kSecondDlc, DlcState::INSTALLED);
+  EXPECT_FALSE(base::PathExists(JoinPaths(content_path_, kThirdDlc)));
+  CheckDlcState(kThirdDlc, DlcState::NOT_INSTALLED);
 }
 
 TEST_F(DlcServiceTest, ReportingFailureCleanupTest) {
@@ -976,14 +974,14 @@ TEST_F(
 
     EXPECT_CALL(*mock_image_loader_proxy_ptr_, LoadDlcImage(_, _, _, _, _, _))
         .WillOnce(Return(false));
-    EXPECT_CALL(*mock_image_loader_proxy_ptr_, UnloadDlcImage(_, _, _, _, _))
-        .WillOnce(Return(true));
     StatusResult status_result;
     status_result.set_is_install(true);
     status_result.set_current_operation(Operation::IDLE);
     dlc_service_->OnStatusUpdateAdvancedSignal(status_result);
-    for (const auto& id : ids)
+    for (const auto& id : ids) {
+      EXPECT_FALSE(base::PathExists(JoinPaths(content_path_, id)));
       CheckDlcState(id, DlcState::NOT_INSTALLED);
+    }
   }
 }
 
@@ -1002,8 +1000,10 @@ TEST_F(DlcServiceTest, PeriodCheckUpdateEngineInstallSignalRaceChecker) {
       &loop_, base::TimeDelta::FromSeconds(DlcService::kUECheckTimeout * 5),
       base::Bind([]() { return false; }));
 
-  for (const string& id : ids)
+  for (const string& id : ids) {
     EXPECT_FALSE(base::PathExists(JoinPaths(content_path_, id)));
+    CheckDlcState(id, DlcState::NOT_INSTALLED);
+  }
 }
 
 TEST_F(DlcServiceTest, StrongerInstalledDlcRefresh) {

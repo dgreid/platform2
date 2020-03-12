@@ -120,50 +120,28 @@ class DlcManager::DlcManagerImpl {
 
   bool FinishInstall(DlcMap* installed, string* err_code, string* err_msg) {
     *installed = installing_;
-
-    ScopedCleanups<base::Callback<void()>> scoped_cleanups;
-
-    for (const auto& dlc : installing_) {
-      const auto& id = dlc.first;
-      auto cleanup = base::Bind(
-          [](Callback<bool()> unmounter, Callback<bool()> deleter,
-             string* err_code, string* err_msg) {
-            if (!unmounter.Run())
-              LOG(ERROR) << *err_code << ":" << *err_msg;
-            if (!deleter.Run())
-              LOG(ERROR) << *err_code << ":" << *err_msg;
-          },
-          base::Bind(&DlcManagerImpl::Unmount, base::Unretained(this), id,
-                     err_code, err_msg),
-          base::Bind(&DlcManagerImpl::Delete, base::Unretained(this), id,
-                     err_code, err_msg),
-          err_code, err_msg);
-      scoped_cleanups.Insert(cleanup);
-    }
-    scoped_cleanups.Insert(
-        base::Bind(&DlcManagerImpl::ClearInstalling, base::Unretained(this)));
-
-    for (auto& dlc : installing_) {
-      const auto& id = dlc.first;
-      const auto& info = dlc.second;
+    ClearInstalling();
+    bool ret = true;
+    for (auto& pr : *installed) {
+      const auto& id = pr.first;
+      const auto& info = pr.second;
       if (!info.root.empty())
         continue;
-      string mount_point;
-      if (!Mount(id, &mount_point, err_code, err_msg))
-        return false;
-      dlc.second = DlcInfo(GetDlcRoot(FilePath(mount_point)).value());
+      string mount;
+      if (!Mount(id, &mount, err_code, err_msg)) {
+        LOG(INFO) << "Tried but failed to mount DLC=" << id
+                  << ", ErrorCode=" << *err_code << ", ErrorMsg=" << *err_msg;
+        Delete(id);
+        ret = false;
+        continue;
+      }
+      installed_[id] = pr.second = DlcInfo(GetDlcRoot(FilePath(mount)).value());
     }
-
-    scoped_cleanups.Cancel();
-
-    for (const auto& dlc : installing_) {
-      const auto& id = dlc.first;
-      const auto& info = dlc.second;
-      installed_[id] = (*installed)[id] = info;
+    if (!ret) {
+      *err_code = kErrorInternal;
+      *err_msg = "Not all DLC(s) successfully mounted.";
     }
-
-    ClearInstalling();
-    return true;
+    return ret;
   }
 
   bool CancelInstall(string* err_code, string* err_msg) {
@@ -689,7 +667,6 @@ bool DlcManager::FinishInstall(DlcModuleList* dlc_module_list,
 
   *dlc_module_list = ToDlcModuleList(dlc_map, [](DlcId id, DlcInfo info) {
     CHECK(!id.empty());
-    CHECK(!info.root.empty());
     return true;
   });
   return true;
