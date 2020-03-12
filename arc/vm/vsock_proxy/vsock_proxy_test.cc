@@ -55,7 +55,7 @@ class TestDelegate : public VSockProxy::Delegate {
   }
   bool ReceiveMessage(arc_proxy::VSockMessage* message,
                       std::vector<base::ScopedFD>* fds) override {
-    return stream_->Read(message);
+    return stream_->Read(message, fds);
   }
   void OnStopped() override { is_stopped_ = true; }
 

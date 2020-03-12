@@ -4,6 +4,7 @@
 
 #include "arc/vm/vsock_proxy/server_proxy.h"
 
+#include <poll.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -163,29 +164,54 @@ bool ServerProxy::Initialize() {
   if (!vsock.is_valid())
     return false;
 
-  LOG(INFO) << "Start observing VSOCK";
-  auto accepted = AcceptSocket(vsock.get());
-  if (!accepted.is_valid())
-    return false;
-
   // Initialize virtwl context.
   virtwl_socket_ = SetupVirtwlSocket();
   if (!virtwl_socket_.is_valid()) {
     LOG(ERROR) << "Failed to set up virtwl socket.";
     return false;
   }
-  // Accept virtwl connection asynchronously to avoid blocking the
-  // initialization in case the guest proxy is old (i.e. no connection coming).
-  // TODO(hashimoto): Do this synchronously for proper error handling after the
-  // guest proxy code gets updated.
-  virtwl_socket_watcher_ = base::FileDescriptorWatcher::WatchReadable(
-      virtwl_socket_.get(),
-      base::BindRepeating(&ServerProxy::AcceptVirtwlConnection,
-                          base::Unretained(this)));
+
+  // Wait for vsock connection and virtwl connection from the guest.
+  // If virtwl connection comes before vsock, that means the guest is running
+  // new code which doesn't use vsock.
+  LOG(INFO) << "Waiting for a guest connection...";
+  struct pollfd fds[] = {
+      {.fd = vsock.get(), .events = POLLIN},
+      {.fd = virtwl_socket_.get(), .events = POLLIN},
+  };
+  if (HANDLE_EINTR(poll(fds, arraysize(fds), -1)) == -1) {
+    PLOG(ERROR) << "poll() failed";
+    return false;
+  }
+  guest_is_using_vsock_ = fds[0].revents & POLLIN;
+  LOG(INFO) << "Guest is using vsock: "
+            << (guest_is_using_vsock_ ? "true" : "false");
+
+  LOG(INFO) << "Accepting guest virtwl connection...";
+  virtwl_context_ = AcceptSocket(virtwl_socket_.get());
+  if (!virtwl_context_.is_valid()) {
+    LOG(ERROR) << "Failed to accept virtwl connection";
+    return false;
+  }
+
+  if (guest_is_using_vsock_) {
+    // The guest code is old and still using vsock.
+    // Use vsock to receive messages from guest.
+    // TODO(hashimoto): Remove vsock support.
+    LOG(INFO) << "Accepting guest vsock connection...";
+    auto accepted = AcceptSocket(vsock.get());
+    if (!accepted.is_valid())
+      return false;
+    message_stream_ = std::make_unique<MessageStream>(std::move(accepted));
+  } else {
+    // Use virtwl to receive messages from guest.
+    LOG(INFO) << "Using virtwl to receive messages.";
+    message_stream_ =
+        std::make_unique<MessageStream>(std::move(virtwl_context_));
+  }
 
   vsock.reset();
   LOG(INFO) << "Initial socket connection comes";
-  message_stream_ = std::make_unique<MessageStream>(std::move(accepted));
   vsock_proxy_ = std::make_unique<VSockProxy>(this);
   LOG(INFO) << "ServerProxy has started to work.";
   return true;
@@ -207,30 +233,34 @@ bool ServerProxy::SendMessage(const arc_proxy::VSockMessage& message,
 
 bool ServerProxy::ReceiveMessage(arc_proxy::VSockMessage* message,
                                  std::vector<base::ScopedFD>* fds) {
-  if (!message_stream_->Read(message))
-    return false;
-  if (message->has_data()) {
-    for (const auto& fd : message->data().transferred_fd()) {
-      // Receive FD via virtwl if type == TRANSPORTABLE.
-      if (fd.type() == arc_proxy::FileDescriptor::TRANSPORTABLE) {
-        char dummy_data = 0;
-        std::vector<base::ScopedFD> transported_fds;
-        ssize_t size = Recvmsg(virtwl_context_.get(), &dummy_data,
-                               sizeof(dummy_data), &transported_fds);
-        if (size != sizeof(dummy_data)) {
-          PLOG(ERROR) << "Failed to receive a message";
-          return false;
+  if (guest_is_using_vsock_) {
+    if (!message_stream_->Read(message, nullptr))
+      return false;
+    if (message->has_data()) {
+      for (const auto& fd : message->data().transferred_fd()) {
+        // Receive FD via virtwl if type == TRANSPORTABLE.
+        if (fd.type() == arc_proxy::FileDescriptor::TRANSPORTABLE) {
+          char dummy_data = 0;
+          std::vector<base::ScopedFD> transported_fds;
+          ssize_t size = Recvmsg(virtwl_context_.get(), &dummy_data,
+                                 sizeof(dummy_data), &transported_fds);
+          if (size != sizeof(dummy_data)) {
+            PLOG(ERROR) << "Failed to receive a message";
+            return false;
+          }
+          if (transported_fds.size() != 1) {
+            LOG(ERROR) << "Wrong FD size: " << transported_fds.size();
+            return false;
+          }
+          vsock_proxy_->Close(fd.handle());  // Close the FD owned by guest.
+          fds->push_back(std::move(transported_fds[0]));
         }
-        if (transported_fds.size() != 1) {
-          LOG(ERROR) << "Wrong FD size: " << transported_fds.size();
-          return false;
-        }
-        vsock_proxy_->Close(fd.handle());  // Close the FD owned by guest.
-        fds->push_back(std::move(transported_fds[0]));
       }
     }
+    return true;
+  } else {
+    return message_stream_->Read(message, fds);
   }
-  return true;
 }
 
 void ServerProxy::OnStopped() {
@@ -250,13 +280,6 @@ void ServerProxy::Close(int64_t handle) {
 
 void ServerProxy::Fstat(int64_t handle, FstatCallback callback) {
   vsock_proxy_->Fstat(handle, std::move(callback));
-}
-
-void ServerProxy::AcceptVirtwlConnection() {
-  virtwl_socket_watcher_.reset();
-  virtwl_context_ = AcceptSocket(virtwl_socket_.get());
-  LOG_IF(ERROR, !virtwl_context_.is_valid())
-      << "Failed to accept virtwl connection";
 }
 
 }  // namespace arc

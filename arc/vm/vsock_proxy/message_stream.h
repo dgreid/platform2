@@ -25,8 +25,8 @@ class MessageStream {
   int Get() const { return fd_.get(); }
 
   // Reads the message from the socket. Returns true and stores the read
-  // message into |message| on success. Otherwise false.
-  bool Read(arc_proxy::VSockMessage* message);
+  // message and FDs into |message| and |fds| on success. Otherwise false.
+  bool Read(arc_proxy::VSockMessage* message, std::vector<base::ScopedFD>* fds);
 
   // Writes the serialized |message| to the socket.
   // Returns true iff the whole message is written.

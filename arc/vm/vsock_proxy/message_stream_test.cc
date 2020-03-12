@@ -35,7 +35,7 @@ TEST(MessageStreamTest, ReadWrite) {
   }
 
   arc_proxy::VSockMessage read_message;
-  ASSERT_TRUE(MessageStream(std::move(fd2)).Read(&read_message));
+  ASSERT_TRUE(MessageStream(std::move(fd2)).Read(&read_message, nullptr));
   EXPECT_EQ(message.data().handle(), read_message.data().handle());
   EXPECT_EQ(message.data().blob(), read_message.data().blob());
 }

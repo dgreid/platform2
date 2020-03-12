@@ -10,20 +10,52 @@
 #include <base/files/file_util.h>
 #include <base/logging.h>
 
+#include "arc/vm/vsock_proxy/file_descriptor_util.h"
+
 namespace arc {
+
+namespace {
+
+// Receives data and FDs from the given socket FD and returns true when the
+// buffer is filled successfully.
+bool ReceiveData(int fd,
+                 char* buf,
+                 size_t size,
+                 std::vector<base::ScopedFD>* fds) {
+  while (size > 0) {
+    ssize_t result =
+        fds ? Recvmsg(fd, buf, size, fds) : HANDLE_EINTR(read(fd, buf, size));
+    if (result <= 0) {
+      if (result == 0)
+        LOG(ERROR) << "Unexpected EOF while receiving data.";
+      else
+        PLOG(ERROR) << "Failed to receive data.";
+      return false;
+    }
+    fds = nullptr;  // No need to receive FDs again.
+    buf += result;
+    size -= result;
+  }
+  return true;
+}
+
+}  // namespace
 
 MessageStream::MessageStream(base::ScopedFD fd) : fd_(std::move(fd)) {}
 
 MessageStream::~MessageStream() = default;
 
-bool MessageStream::Read(arc_proxy::VSockMessage* message) {
+bool MessageStream::Read(arc_proxy::VSockMessage* message,
+                         std::vector<base::ScopedFD>* fds) {
+  // Receive FDs and the message size.
   uint64_t size = 0;
-  if (!base::ReadFromFD(fd_.get(), reinterpret_cast<char*>(&size),
-                        sizeof(size))) {
-    PLOG(ERROR) << "Failed to read message size";
+  if (!ReceiveData(fd_.get(), reinterpret_cast<char*>(&size), sizeof(size),
+                   fds)) {
+    LOG(ERROR) << "Failed to receive message size.";
     return false;
   }
 
+  // Read and parse the message.
   buf_.resize(size);
   if (!base::ReadFromFD(fd_.get(), buf_.data(), buf_.size())) {
     PLOG(ERROR) << "Failed to read a proto";
