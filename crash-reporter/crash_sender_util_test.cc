@@ -1501,7 +1501,7 @@ TEST_F(CrashSenderUtilTest, SendCrashes) {
   EXPECT_TRUE(row->FindKey("upload_time"));
   EXPECT_EQ("123", row->FindKey("upload_id")->GetString());
   EXPECT_EQ("foo", row->FindKey("local_id")->GetString());
-  EXPECT_EQ("1000000", row->FindKey("capture_time")->GetString());
+  EXPECT_EQ("1000", row->FindKey("capture_time")->GetString());
   EXPECT_EQ(3, row->FindKey("state")->GetInt());
   EXPECT_EQ("exec_foo", row->FindKey("source")->GetString());
 
@@ -1511,7 +1511,7 @@ TEST_F(CrashSenderUtilTest, SendCrashes) {
   EXPECT_TRUE(row->FindKey("upload_time"));
   EXPECT_EQ("456", row->FindKey("upload_id")->GetString());
   EXPECT_EQ("bar", row->FindKey("local_id")->GetString());
-  EXPECT_EQ("2000000", row->FindKey("capture_time")->GetString());
+  EXPECT_EQ("2000", row->FindKey("capture_time")->GetString());
   EXPECT_EQ(3, row->FindKey("state")->GetInt());
   EXPECT_EQ("REDACTED", row->FindKey("source")->GetString());
 

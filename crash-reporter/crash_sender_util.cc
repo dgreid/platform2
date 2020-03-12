@@ -57,7 +57,7 @@ constexpr char kUploadTextPrefix[] = "upload_text_";
 constexpr char kUploadFilePrefix[] = "upload_file_";
 constexpr char kOsTimestamp[] = "os_millis";
 
-// Keys used in uploads.log file.
+// Keys used in uploads.log file. (All timestamps are measured in seconds.)
 constexpr char kJsonLogKeyUploadId[] = "upload_id";
 constexpr char kJsonLogKeyUploadTime[] = "upload_time";
 constexpr char kJsonLogKeyLocalId[] = "local_id";
@@ -66,7 +66,7 @@ constexpr char kJsonLogKeyState[] = "state";
 constexpr char kJsonLogKeySource[] = "source";
 
 // Keys used in CrashDetails::metadata.
-constexpr char kMetadataKeyCaptureTime[] = "upload_var_reportTimeMillis";
+constexpr char kMetadataKeyCaptureTimeMillis[] = "upload_var_reportTimeMillis";
 constexpr char kMetadataKeySource[] = "exec_name";
 
 // Values used for kJsonLogKeySource.
@@ -980,9 +980,16 @@ std::unique_ptr<base::Value> Sender::CreateJsonEntity(
   root_dict->SetKey(kJsonLogKeyUploadId, base::Value(report_id));
   root_dict->SetKey(kJsonLogKeyLocalId, base::Value(product_name));
 
+  // The |capture_timestamp| should be converted from milliseconds to seconds.
   std::string capture_timestamp;
-  if (details.metadata.GetString(kMetadataKeyCaptureTime, &capture_timestamp))
-    root_dict->SetKey(kJsonLogKeyCaptureTime, base::Value(capture_timestamp));
+  int64_t capture_timestamp_millis;
+  if (details.metadata.GetString(kMetadataKeyCaptureTimeMillis,
+                                 &capture_timestamp) &&
+      base::StringToInt64(capture_timestamp, &capture_timestamp_millis)) {
+    root_dict->SetKey(
+        kJsonLogKeyCaptureTime,
+        base::Value(std::to_string(capture_timestamp_millis / 1000)));
+  }
 
   // The state value is always same as
   // UploadList::UploadInfo::State::Uploaded.
