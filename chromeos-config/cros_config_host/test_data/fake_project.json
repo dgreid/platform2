@@ -2,6 +2,16 @@
   "chromeos": {
     "configs": [
       {
+        "arc": {
+          "build-properties": {
+            "device": "fake_cheets",
+            "first-api-level": "28",
+            "marketing-name": "Fake ChromeOS Device Brandname",
+            "metrics-tag": "FAKE-REF-DESIGN",
+            "oem": "FAKE-OEM",
+            "product": "FAKE-REF-DESIGN"
+          }
+        },
         "identity": {
           "platform-name": "Fake",
           "sku-id": 2147483647,

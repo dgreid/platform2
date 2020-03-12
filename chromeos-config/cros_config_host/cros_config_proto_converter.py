@@ -8,10 +8,23 @@
 import argparse
 import json
 import sys
-import os
+
+from collections import namedtuple
 
 from config.api import config_bundle_pb2
+from config.api import device_brand_pb2
 from config.api.software import brand_config_pb2
+
+Config = namedtuple('Config',
+                    ['program',
+                     'hw_design',
+                     'odm',
+                     'hw_design_config',
+                     'device_brand',
+                     'oem',
+                     'sw_config',
+                     'brand_config',
+                     'build_target'])
 
 
 def ParseArgs(argv):
@@ -55,41 +68,87 @@ def _Set(field, target, target_name):
     target[target_name] = field
 
 
-def TransformBuildConfigs(source_configs):
-  """Transforms BuildConfig into target platform JSON schema.
+def _BuildArc(config):
+  if config.build_target.arc:
+    return {
+        'build-properties': {
+            'device': config.build_target.arc.device,
+            'first-api-level': config.build_target.arc.first_api_level,
+            'marketing-name': config.device_brand.brand_name,
+            'oem': config.oem.name if config.oem else None,
+            'metrics-tag': config.hw_design.name,
+            'product': config.hw_design.name,
+        }
+    }
+
+def _BuildIdentity(hw_scan_config, brand_scan_config=None):
+  identity = {}
+  _Set(hw_scan_config.firmware_sku, identity, 'sku-id')
+  _Set(hw_scan_config.smbios_name_match, identity, 'smbios-name-match')
+  # Platform name is a redundant relic of mosys
+  _Set(hw_scan_config.smbios_name_match, identity, 'platform-name')
+  # ARM architecture
+  _Set(hw_scan_config.device_tree_compatible_match, identity,
+       'device-tree-compatible-match')
+
+  if brand_scan_config:
+    _Set(brand_scan_config.whitelabel_tag, identity, 'whitelabel-tag')
+
+  return identity
+
+
+def _Lookup(id, id_map):
+  return id_map[id.value] if id else None
+
+
+def _TransformBuildConfigs(config):
+  partners = dict([(x.id.value, x) for x in config.partners.value])
+  programs = dict([(x.id.value, x) for x in config.programs.value])
+  build_targets = dict([(x.id.value, x) for x in config.build_targets])
+  sw_configs = dict([(x.id.value, x) for x in config.software_configs])
+  brand_configs = dict([(x.brand_id.value, x) for x in config.brand_configs])
+
+  results = []
+  for hw_design in config.designs.value:
+    device_brands = filter(lambda x: x.design_id.value == hw_design.id.value,
+                           config.device_brands.value)
+    if not device_brands:
+      device_brands = [device_brand_pb2.DeviceBrand()]
+
+    for device_brand in device_brands:
+      for hw_design_config in hw_design.configs:
+        config = Config(
+            program=_Lookup(hw_design.program_id, programs),
+            hw_design=hw_design,
+            odm=_Lookup(hw_design.odm_id, partners),
+            hw_design_config=hw_design_config,
+            device_brand=device_brand,
+            oem=_Lookup(device_brand.oem_id, partners),
+            sw_config=_Lookup(hw_design_config.software_config_id, sw_configs),
+            brand_config=_Lookup(device_brand.id, brand_configs),
+            build_target=_Lookup(hw_design.build_target_id, build_targets))
+        results.append(_TransformBuildConfig(config))
+
+  return results
+
+
+def _TransformBuildConfig(config):
+  """Transforms Config instance into target platform JSON schema.
 
   Args:
-      source: list of build_config_pb2.BuildConfig source payloads
+      config: Config namedtuple
   Returns:
-    list of config payloads defined in cros_config_schema.yaml
+    Unique config payload based on the platform JSON schema.
   """
-  results = []
-  for source in source_configs:
-    for sw_config in source.software_configs:
-      scan_config = sw_config.scan_config
-      hw_identity = {}
-      _Set(scan_config.firmware_sku, hw_identity, 'sku-id')
-      _Set(scan_config.smbios_name_match, hw_identity, 'smbios-name-match')
-      # Platform name is a redundant relic of mosys
-      _Set(scan_config.smbios_name_match, hw_identity, 'platform-name')
-      # ARM architecture
-      _Set(scan_config.device_tree_compatible_match, hw_identity,
-           'device-tree-compatible-match')
+  result = {
+      'identity': _BuildIdentity(
+          config.sw_config.scan_config,
+          config.brand_config.scan_config),
+  }
 
-      brand_configs = source.brand_configs
+  _Set(_BuildArc(config), result, 'arc')
 
-      if not brand_configs:
-        brand_configs = [brand_config_pb2.BrandConfig()]
-
-      for brand_config in brand_configs:
-        identity = hw_identity.copy()
-        _Set(brand_config.scan_config.whitelabel_tag, identity,
-             'whitelabel-tag')
-
-        result = {'identity': identity}
-
-        results.append(result)
-  return results
+  return result
 
 
 def WriteOutput(configs, output=None):
@@ -114,7 +173,7 @@ def WriteOutput(configs, output=None):
     print(json_output)
 
 
-def ReadConfig(path):
+def _ReadConfig(path):
   """Reads a binary proto from a file.
 
     Args:
@@ -124,6 +183,14 @@ def ReadConfig(path):
   with open(path, 'rb') as f:
     config.ParseFromString(f.read())
   return config
+
+
+def _MergeConfigs(configs):
+  result = config_bundle_pb2.ConfigBundle()
+  for config in configs:
+    result.MergeFrom(config)
+
+  return result
 
 
 def Main(files_root,
@@ -139,10 +206,11 @@ def Main(files_root,
     output: Output file that will be generated by the transform.
   """
   WriteOutput(
-      TransformBuildConfigs(
-          ReadConfig(project_config).build_configs),
-      output
-  )
+      _TransformBuildConfigs(
+          _MergeConfigs(
+              [_ReadConfig(project_config),
+               _ReadConfig(program_config)]),),
+      output)
 
 
 def main(argv=None):

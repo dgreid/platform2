@@ -41,8 +41,8 @@ class MainTest(cros_test_lib.TempDirTestCase):
   def testFullTransform(self):
     output_file = os.path.join(self.tempdir, 'output')
     cros_config_proto_converter.Main(project_config=PROJECT_CONFIG_FILE,
+                                     program_config=PROGRAM_CONFIG_FILE,
                                      output=output_file,
-                                     program_config=None,
                                      files_root=None,)
 
     expected_file = os.path.join(THIS_DIR, 'test_data/fake_project.json')
@@ -52,7 +52,9 @@ class MainTest(cros_test_lib.TempDirTestCase):
     regen_cmd = ('To regenerate the expected output, run:\n'
                  '\tpython3 -m cros_config_host.cros_config_proto_converter '
                  '-c %s '
-                 '-o %s ' % (PROJECT_CONFIG_FILE, expected_file))
+                 '-p %s '
+                 '-o %s ' % (
+                     PROJECT_CONFIG_FILE, PROGRAM_CONFIG_FILE, expected_file))
 
     if changed:
       print(regen_cmd)
