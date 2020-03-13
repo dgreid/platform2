@@ -14,11 +14,12 @@
 
 #include <base/files/scoped_file.h>
 #include <base/macros.h>
+#include <brillo/brillo_export.h>
 
 namespace arc_networkd {
 
 // Wrapper around various syscalls used for socket communications.
-class Socket {
+class BRILLO_EXPORT Socket {
  public:
   Socket(int family, int type);
   explicit Socket(base::ScopedFD fd);

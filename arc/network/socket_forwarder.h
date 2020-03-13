@@ -15,13 +15,14 @@
 #include <base/macros.h>
 #include <base/memory/weak_ptr.h>
 #include <base/threading/simple_thread.h>
+#include <brillo/brillo_export.h>
 
 #include "arc/network/socket.h"
 
 namespace arc_networkd {
 // Forwards data between a pair of sockets.
 // This is a simple implementation as a thread main function.
-class SocketForwarder : public base::SimpleThread {
+class BRILLO_EXPORT SocketForwarder : public base::SimpleThread {
  public:
   SocketForwarder(const std::string& name,
                   std::unique_ptr<Socket> sock0,

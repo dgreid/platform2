@@ -54,6 +54,7 @@ util_sources = [
   "mac_address_generator.cc",
   "net_util.cc",
   "socket.cc",
+  "socket_forwarder.cc",
   "subnet.cc",
   "subnet_pool.cc",
 ]
@@ -88,7 +89,6 @@ static_library("libarcnetwork") {
     "ndproxy.cc",
     "scoped_ns.cc",
     "shill_client.cc",
-    "socket_forwarder.cc",
   ]
   sources += util_sources
   deps = [
