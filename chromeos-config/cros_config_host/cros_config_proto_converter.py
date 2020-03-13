@@ -13,7 +13,6 @@ from collections import namedtuple
 
 from config.api import config_bundle_pb2
 from config.api import device_brand_pb2
-from config.api.software import brand_config_pb2
 
 Config = namedtuple('Config',
                     ['program',
@@ -81,6 +80,44 @@ def _BuildArc(config):
         }
     }
 
+
+def _File(source, destination):
+  return {
+      "destination": destination,
+      "source": source
+  }
+
+
+def _BuildAudio(config):
+  alsa_path = '/usr/share/alsa/ucm'
+  cras_path = '/etc/cras'
+  project_name = config.hw_design.name
+  # File that matches the cardname when installed and points to HiFi.conf
+  # TODO(shapiroc): Plumb the defaults in chromeos-bsp files structure
+  card_name_file = "audio-defaults/card-name-file.conf"
+  if not config.sw_config.audio_config:
+    return {}
+  audio = config.sw_config.audio_config
+  card = audio.card_name
+  files = []
+  if audio.ucm_file:
+    files.append(_File(audio.ucm_file, "%s/%s/HiFi.conf" % (alsa_path, card)))
+    files.append(_File(
+        card_name_file, "%s/%s/%s.conf" % (alsa_path, card, card)))
+  if audio.card_config_file:
+    files.append(_File(
+        audio.card_config_file, "%s/%s/%s" % (cras_path, project_name, card)))
+  if audio.dsp_file:
+    files.append(
+        _File(audio.ucm_file, "%s/%s/dsp.ini" % (cras_path, project_name)))
+  return {
+      "main": {
+          "cras-config-dir": project_name,
+          "files": files,
+      }
+  }
+
+
 def _BuildIdentity(hw_scan_config, brand_scan_config=None):
   identity = {}
   _Set(hw_scan_config.firmware_sku, identity, 'sku-id')
@@ -147,6 +184,7 @@ def _TransformBuildConfig(config):
   }
 
   _Set(_BuildArc(config), result, 'arc')
+  _Set(_BuildAudio(config), result, 'audio')
 
   return result
 

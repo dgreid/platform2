@@ -12,6 +12,29 @@
             "product": "FAKE-REF-DESIGN"
           }
         },
+        "audio": {
+          "main": {
+            "cras-config-dir": "FAKE-REF-DESIGN",
+            "files": [
+              {
+                "destination": "/usr/share/alsa/ucm/fakeaudiocard/HiFi.conf",
+                "source": "audio/fakeaudiocard/HiFi.conf"
+              },
+              {
+                "destination": "/usr/share/alsa/ucm/fakeaudiocard/fakeaudiocard.conf",
+                "source": "audio-defaults/card-name-file.conf"
+              },
+              {
+                "destination": "/etc/cras/FAKE-REF-DESIGN/fakeaudiocard",
+                "source": "audio/fakeaudiocard/fakeaudiocard"
+              },
+              {
+                "destination": "/etc/cras/FAKE-REF-DESIGN/dsp.ini",
+                "source": "audio/fakeaudiocard/HiFi.conf"
+              }
+            ]
+          }
+        },
         "identity": {
           "platform-name": "Fake",
           "sku-id": 2147483647,
