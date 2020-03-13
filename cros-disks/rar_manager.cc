@@ -102,11 +102,15 @@ std::unique_ptr<MountPoint> RarManager::DoMount(
 
   // Prepare FUSE mount options.
   MountOptions options;
-  // FUSE umask option in octal 0222 == r-x r-x r-x
+  options.WhitelistOptionPrefix("locale=");
   options.WhitelistOptionPrefix("umask=");
-  options.Initialize({"umask=0222", MountOptions::kOptionReadOnly}, true,
-                     base::IntToString(files_uid),
-                     base::IntToString(files_gid));
+  options.Initialize(
+      {
+          "locale=en_US.UTF8",
+          "umask=0222",  // umask in octal: 0222 == r-x r-x r-x
+          MountOptions::kOptionReadOnly,
+      },
+      true, base::IntToString(files_uid), base::IntToString(files_gid));
 
   *applied_options = options;
 
