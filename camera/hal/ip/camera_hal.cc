@@ -172,6 +172,7 @@ void CameraHal::OnConnectionError() {
 }
 
 void CameraHal::OnDeviceConnected(const std::string& ip,
+                                  const std::string& name,
                                   mojom::IpCameraDevicePtr device_ptr,
                                   mojom::IpCameraStreamPtr default_stream) {
   int id = -1;
@@ -180,7 +181,7 @@ void CameraHal::OnDeviceConnected(const std::string& ip,
     id = next_camera_id_;
 
     auto device = std::make_unique<CameraDevice>(id);
-    if (device->Init(std::move(device_ptr), default_stream->format,
+    if (device->Init(std::move(device_ptr), ip, name, default_stream->format,
                      default_stream->width, default_stream->height,
                      default_stream->fps)) {
       LOGF(ERROR) << "Error creating camera device";

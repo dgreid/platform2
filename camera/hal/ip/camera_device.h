@@ -7,6 +7,7 @@
 #define CAMERA_HAL_IP_CAMERA_DEVICE_H_
 
 #include <memory>
+#include <string>
 
 #include <base/memory/read_only_shared_memory_region.h>
 #include <base/threading/thread.h>
@@ -30,6 +31,8 @@ class CameraDevice : public mojom::IpCameraFrameListener {
   ~CameraDevice();
 
   int Init(mojom::IpCameraDevicePtr ip_device,
+           const std::string& ip,
+           const std::string& name,
            mojom::PixelFormat format,
            int32_t width,
            int32_t height,

@@ -7,6 +7,7 @@
 #define CAMERA_HAL_IP_METADATA_HANDLER_H_
 
 #include <base/macros.h>
+#include <string>
 
 #include <camera/camera_metadata.h>
 
@@ -18,7 +19,9 @@ class MetadataHandler {
   ~MetadataHandler();
 
   // The caller is responsible for freeing the memory returned
-  static android::CameraMetadata CreateStaticMetadata(int format,
+  static android::CameraMetadata CreateStaticMetadata(const std::string& ip,
+                                                      const std::string& name,
+                                                      int format,
                                                       int width,
                                                       int height,
                                                       double fps);

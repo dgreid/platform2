@@ -42,6 +42,7 @@ class CameraHal : public mojom::IpCameraConnectionListener {
  private:
   // IpCameraConnectionListener interface
   void OnDeviceConnected(const std::string& ip,
+                         const std::string& name,
                          mojom::IpCameraDevicePtr device_ptr,
                          mojom::IpCameraStreamPtr default_stream) override;
   void OnDeviceDisconnected(const std::string& ip) override;

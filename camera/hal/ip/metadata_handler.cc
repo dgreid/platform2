@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "hal/ip/metadata_handler.h"
+#include "hal/usb/vendor_tag.h"
 
 namespace cros {
 
@@ -13,10 +14,13 @@ MetadataHandler::MetadataHandler() {}
 
 MetadataHandler::~MetadataHandler() {}
 
-android::CameraMetadata MetadataHandler::CreateStaticMetadata(int format,
-                                                              int width,
-                                                              int height,
-                                                              double fps) {
+android::CameraMetadata MetadataHandler::CreateStaticMetadata(
+    const std::string& ip,
+    const std::string& name,
+    int format,
+    int width,
+    int height,
+    double fps) {
   android::CameraMetadata metadata;
 
   std::vector<int32_t> characteristic_keys = {
@@ -66,6 +70,9 @@ android::CameraMetadata MetadataHandler::CreateStaticMetadata(int format,
   const uint8_t request_pipeline_max_depth = 4;
   metadata.update(ANDROID_REQUEST_PIPELINE_MAX_DEPTH,
                   &request_pipeline_max_depth, 1);
+
+  metadata.update(kVendorTagDevicePath, ip);
+  metadata.update(kVendorTagModelName, name);
 
   return metadata;
 }

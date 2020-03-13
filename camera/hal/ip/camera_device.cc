@@ -123,6 +123,8 @@ CameraDevice::CameraDevice(int id)
 }
 
 int CameraDevice::Init(mojom::IpCameraDevicePtr ip_device,
+                       const std::string& ip,
+                       const std::string& name,
                        mojom::PixelFormat format,
                        int32_t width,
                        int32_t height,
@@ -146,8 +148,8 @@ int CameraDevice::Init(mojom::IpCameraDevicePtr ip_device,
       return -EINVAL;
   }
 
-  static_metadata_ =
-      MetadataHandler::CreateStaticMetadata(format_, width_, height_, fps);
+  static_metadata_ = MetadataHandler::CreateStaticMetadata(
+      ip, name, format_, width_, height_, fps);
 
   if (jpeg_) {
     if (!jpeg_thread_.StartWithOptions(
