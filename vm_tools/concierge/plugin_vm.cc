@@ -34,12 +34,13 @@ namespace concierge {
 namespace {
 
 // Path to the plugin binaries and other assets.
-constexpr char kPluginBinDir[] = "/opt/pita";
-constexpr char kDlcPluginBinDir[] =
-    "/run/imageloader/pita/package/root/opt/pita";
+constexpr char kPluginDir[] = "/opt/pita";
+constexpr char kPluginDlcDir[] = "/run/imageloader/pita/package/root/opt/pita";
 
 // Name of the plugin VM binary.
-constexpr char kPluginBinName[] = "pvm";
+constexpr char kPluginBin[] = "pvm";
+// Name of the sub-directory containing plugin's seccomp policy.
+constexpr char kPluginPolicyDir[] = "policy";
 
 // Name of the runtime directory inside the jail.
 constexpr char kRuntimeDir[] = "/run/pvm";
@@ -604,6 +605,11 @@ PluginVm::PluginVm(VmId id,
 bool PluginVm::Start(uint32_t cpus,
                      std::vector<string> params,
                      base::FilePath stateful_dir) {
+  if (!pvm::helper::IsDlcVm()) {
+    LOG(ERROR) << "PluginVM DLC is not installed.";
+    return false;
+  }
+
   // Get the network interface.
   patchpanel::Device network_device;
   if (!network_client_->NotifyPluginVmStartup(id_hash_, subnet_index_,
@@ -622,8 +628,9 @@ bool PluginVm::Start(uint32_t cpus,
     return false;
   }
 
-  auto bin_dir = pvm::helper::IsDlcVm() ? kDlcPluginBinDir : kPluginBinDir;
-  auto plugin_bin_path = base::FilePath(bin_dir).Append(kPluginBinName);
+  auto plugin_bin_path = base::FilePath(kPluginDlcDir).Append(kPluginBin);
+  auto plugin_policy_dir =
+      base::FilePath(kPluginDlcDir).Append(kPluginPolicyDir);
   // Build up the process arguments.
   // clang-format off
   std::vector<string> args = {
@@ -631,6 +638,7 @@ bool PluginVm::Start(uint32_t cpus,
     "--cpus",                   std::to_string(cpus),
     "--tap-fd",                 std::to_string(tap_fd.get()),
     "--plugin",                 plugin_bin_path.value(),
+    "--seccomp-policy-dir",     plugin_policy_dir.value(),
     "--plugin-gid-map-file",    plugin_bin_path
                                     .AddExtension("gid_maps")
                                     .value(),
@@ -640,7 +648,7 @@ bool PluginVm::Start(uint32_t cpus,
   // These are bind mounts with parts may change (i.e. they are either VM
   // or config specific).
   std::vector<string> bind_mounts = {
-      base::StringPrintf("%s:%s:false", bin_dir, kPluginBinDir),
+      base::StringPrintf("%s:%s:false", kPluginDlcDir, kPluginDir),
       // This is directory where the VM image resides.
       base::StringPrintf("%s:%s:true", stateful_dir.value().c_str(),
                          kStatefulDir),
@@ -659,8 +667,8 @@ bool PluginVm::Start(uint32_t cpus,
   // TODO(kimjae): This is a temporary hack to have relative files to be found
   // even when started from DLC paths. Clean this up once a cleaner solution can
   // be leveraged.
-  if (pvm::helper::IsDlcVm())
-    bind_mounts.push_back(base::StringPrintf("%s:%s:false", bin_dir, bin_dir));
+  bind_mounts.push_back(
+      base::StringPrintf("%s:%s:false", kPluginDlcDir, kPluginDlcDir));
 
   // Put everything into the brillo::ProcessImpl.
   for (auto& arg : args) {

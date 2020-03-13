@@ -29,19 +29,15 @@ namespace {
 
 constexpr char kDlcPath[] = "/run/imageloader/pita/package/root";
 
-constexpr char kVmHelperCommand[] = "/opt/pita/pvm_helper";
-
-constexpr char kVmHelperDlcCommand[] =
-    "/run/imageloader/pita/package/root/opt/pita/pvm_helper";
-
-constexpr char kVmHelperPolicyPath[] = "/usr/share/policy/pvm_helper.policy";
+constexpr char kVmHelperCommand[] = "opt/pita/pvm_helper";
+constexpr char kVmHelperPolicyPath[] = "opt/pita/policy/pvm_helper.policy";
 
 constexpr char kDispatcherSocketPath[] = "/run/pvm/vmplugin_dispatcher.socket";
 
 // Minimal set of devices needed by the helpers.
 constexpr const char* kDeviceNames[] = {"full", "null", "urandom", "zero"};
 
-ScopedMinijail SetupSandbox(const std::string& policy_file) {
+ScopedMinijail SetupSandbox(const base::FilePath& policy_file) {
   ScopedMinijail jail(minijail_new());
   if (!jail) {
     LOG(ERROR) << "Unable to create minijail";
@@ -63,7 +59,7 @@ ScopedMinijail SetupSandbox(const std::string& policy_file) {
 
   // Use a seccomp filter.
   minijail_log_seccomp_filter_failures(jail.get());
-  minijail_parse_seccomp_filters(jail.get(), policy_file.c_str());
+  minijail_parse_seccomp_filters(jail.get(), policy_file.value().c_str());
   minijail_use_seccomp_filter(jail.get());
 
   // We will manage this process's lifetime.
@@ -124,12 +120,13 @@ bool ExecutePvmHelper(const std::string& owner_id,
                       std::vector<std::string> params,
                       std::string* stdout_str = nullptr,
                       std::string* stderr_str = nullptr) {
-  ScopedMinijail jail = SetupSandbox(kVmHelperPolicyPath);
+  const base::FilePath path_prefix(kDlcPath);
+  ScopedMinijail jail = SetupSandbox(path_prefix.Append(kVmHelperPolicyPath));
   if (!jail)
     return false;
 
   std::vector<std::string> args;
-  args.emplace_back(IsDlcVm() ? kVmHelperDlcCommand : kVmHelperCommand);
+  args.emplace_back(path_prefix.Append(kVmHelperCommand).value());
   for (auto& param : params)
     args.emplace_back(std::move(param));
   args.emplace_back("--socket-path");
