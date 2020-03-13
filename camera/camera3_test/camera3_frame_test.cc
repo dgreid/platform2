@@ -314,7 +314,7 @@ Camera3FrameFixture::ScopedImage Camera3FrameFixture::ConvertToImageAndRotate(
 Camera3FrameFixture::ScopedImage Camera3FrameFixture::GenerateColorBarsPattern(
     uint32_t width,
     uint32_t height,
-    const std::vector<std::tuple<uint8_t, uint8_t, uint8_t>>&
+    const std::vector<std::tuple<uint8_t, uint8_t, uint8_t, float>>&
         color_bars_pattern,
     int32_t color_bars_pattern_mode,
     uint32_t sensor_pixel_array_width,
@@ -329,7 +329,6 @@ Camera3FrameFixture::ScopedImage Camera3FrameFixture::GenerateColorBarsPattern(
                                    sensor_pixel_array_height,
                                    ImageFormat::IMAGE_FORMAT_ARGB));
   uint8_t* pdata = argb_image->planes[0].addr;
-  int color_bar_width = sensor_pixel_array_width / color_bars_pattern.size();
   int color_bar_height = sensor_pixel_array_height / 128 * 128;
   if (color_bar_height == 0) {
     color_bar_height = sensor_pixel_array_height;
@@ -338,15 +337,24 @@ Camera3FrameFixture::ScopedImage Camera3FrameFixture::GenerateColorBarsPattern(
     float gray_factor =
         static_cast<float>(color_bar_height - (h % color_bar_height)) /
         color_bar_height;
+    int index = 0;
     for (size_t w = 0; w < sensor_pixel_array_width; w++) {
-      int index = (w / color_bar_width) % color_bars_pattern.size();
+      if (index + 1 < color_bars_pattern.size() &&
+          w > sensor_pixel_array_width *
+                  std::get<3>(color_bars_pattern[index + 1])) {
+        index++;
+      }
       auto get_fade_color = [&](uint8_t base_color) {
         if (color_bars_pattern_mode ==
             ANDROID_SENSOR_TEST_PATTERN_MODE_COLOR_BARS) {
           return base_color;
         }
         uint8_t color = base_color * gray_factor;
-        if ((w / (color_bar_width / 2)) % 2) {
+        const int start = std::get<3>(color_bars_pattern[index]);
+        const int end = (index + 1 == color_bars_pattern.size())
+                            ? 1.0f
+                            : std::get<3>(color_bars_pattern[index + 1]);
+        if (w > (start + end) / 2 * sensor_pixel_array_width) {
           color = (color & 0xF0) | (color >> 4);
         }
         return color;

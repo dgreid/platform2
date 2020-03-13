@@ -24,56 +24,67 @@ class Camera3FrameFixture : public Camera3StreamFixture {
         color_bars_test_patterns_(
             {{
                  // Android standard
-                 // Color map:   R   , G   , B
-                 std::make_tuple(0xFF, 0xFF, 0xFF),  // White
-                 std::make_tuple(0xFF, 0xFF, 0x00),  // Yellow
-                 std::make_tuple(0x00, 0xFF, 0xFF),  // Cyan
-                 std::make_tuple(0x00, 0xFF, 0x00),  // Green
-                 std::make_tuple(0xFF, 0x00, 0xFF),  // Magenta
-                 std::make_tuple(0xFF, 0x00, 0x00),  // Red
-                 std::make_tuple(0x00, 0x00, 0xFF),  // Blue
-                 std::make_tuple(0x00, 0x00, 0x00),  // Black
+                 // Color map:   R   , G   , B   , Start position
+                 {0xFF, 0xFF, 0xFF, 0.0f},      // White
+                 {0xFF, 0xFF, 0x00, 1.0f / 8},  // Yellow
+                 {0x00, 0xFF, 0xFF, 2.0f / 8},  // Cyan
+                 {0x00, 0xFF, 0x00, 3.0f / 8},  // Green
+                 {0xFF, 0x00, 0xFF, 4.0f / 8},  // Magenta
+                 {0xFF, 0x00, 0x00, 5.0f / 8},  // Red
+                 {0x00, 0x00, 0xFF, 6.0f / 8},  // Blue
+                 {0x00, 0x00, 0x00, 7.0f / 8},  // Black
              },
              {
                  // Ov02a10 color bars
-                 std::make_tuple(0x00, 0x00, 0xFF),
-                 std::make_tuple(0x00, 0xFF, 0x00),
-                 std::make_tuple(0xFF, 0x00, 0x00),
-                 std::make_tuple(0xC1, 0x8D, 0x07),
-                 std::make_tuple(0x00, 0xFF, 0xFF),
-                 std::make_tuple(0xFF, 0x00, 0xFF),
-                 std::make_tuple(0xFF, 0xFF, 0x00),
-                 std::make_tuple(0xFF, 0xFF, 0xFF),
+                 {0x00, 0x00, 0xFF, 0.0f},
+                 {0x00, 0xFF, 0x00, 1.0f / 8},
+                 {0xFF, 0x00, 0x00, 2.0f / 8},
+                 {0xC1, 0x8D, 0x07, 3.0f / 8},
+                 {0x00, 0xFF, 0xFF, 4.0f / 8},
+                 {0xFF, 0x00, 0xFF, 5.0f / 8},
+                 {0xFF, 0xFF, 0x00, 6.0f / 8},
+                 {0xFF, 0xFF, 0xFF, 7.0f / 8},
              },
              {
                  // OV5670 color bars
-                 std::make_tuple(0xFF, 0xFF, 0xFF),
-                 std::make_tuple(0xC8, 0xC8, 0xC8),
-                 std::make_tuple(0x96, 0x96, 0x96),
-                 std::make_tuple(0x64, 0x64, 0x64),
-                 std::make_tuple(0x32, 0x32, 0x32),
-                 std::make_tuple(0x00, 0x00, 0x00),
-                 std::make_tuple(0xFF, 0x00, 0x00),
-                 std::make_tuple(0xFF, 0x32, 0x00),
-                 std::make_tuple(0xFF, 0x00, 0xE6),
-                 std::make_tuple(0x00, 0xFF, 0x00),
-                 std::make_tuple(0x00, 0xFF, 0x00),
-                 std::make_tuple(0x00, 0xFF, 0x00),
-                 std::make_tuple(0x00, 0x00, 0xFF),
-                 std::make_tuple(0xD2, 0x00, 0xFF),
-                 std::make_tuple(0x00, 0xA0, 0xFF),
-                 std::make_tuple(0xFF, 0xFF, 0xFF),
+                 {0xFF, 0xFF, 0xFF, 0.0f},
+                 {0xC8, 0xC8, 0xC8, 1.0f / 16},
+                 {0x96, 0x96, 0x96, 2.0f / 16},
+                 {0x64, 0x64, 0x64, 3.0f / 16},
+                 {0x32, 0x32, 0x32, 4.0f / 16},
+                 {0x00, 0x00, 0x00, 5.0f / 16},
+                 {0xFF, 0x00, 0x00, 6.0f / 16},
+                 {0xFF, 0x32, 0x00, 7.0f / 16},
+                 {0xFF, 0x00, 0xE6, 8.0f / 16},
+                 {0x00, 0xFF, 0x00, 9.0f / 16},
+                 {0x00, 0xFF, 0x00, 10.0f / 16},
+                 {0x00, 0xFF, 0x00, 11.0f / 16},
+                 {0x00, 0x00, 0xFF, 12.0f / 16},
+                 {0xD2, 0x00, 0xFF, 13.0f / 16},
+                 {0x00, 0xA0, 0xFF, 14.0f / 16},
+                 {0xFF, 0xFF, 0xFF, 15.0f / 16},
+             },
+             {
+                 // OV5695 color bars
+                 {0xFF, 0xFF, 0xFF, 0.0f},     // White
+                 {0xFF, 0xFF, 0x00, 0.1146f},  // Yellow
+                 {0x00, 0xFF, 0xFF, 0.2379f},  // Cyan
+                 {0x00, 0xFF, 0x00, 0.3612f},  // Green
+                 {0xFF, 0x00, 0xFF, 0.4845f},  // Magenta
+                 {0xFF, 0x00, 0x00, 0.6078f},  // Red
+                 {0x00, 0x00, 0xFF, 0.7311f},  // Blue
+                 {0x00, 0x00, 0x00, 0.8544f},  // Black
              },
              {
                  // IMX258 color bars
-                 std::make_tuple(0xFF, 0xFF, 0xFF),  // White
-                 std::make_tuple(0x00, 0xFF, 0xFF),  // Cyan
-                 std::make_tuple(0xFF, 0xFF, 0x00),  // Yellow
-                 std::make_tuple(0x00, 0xFF, 0x00),  // Green
-                 std::make_tuple(0xFF, 0x00, 0xFF),  // Magenta
-                 std::make_tuple(0x00, 0x00, 0xFF),  // Blue
-                 std::make_tuple(0xFF, 0x00, 0x00),  // Red
-                 std::make_tuple(0x00, 0x00, 0x00),  // Black
+                 {0xFF, 0xFF, 0xFF, 0.0f},      // White
+                 {0x00, 0xFF, 0xFF, 1.0f / 8},  // Cyan
+                 {0xFF, 0xFF, 0x00, 2.0f / 8},  // Yellow
+                 {0x00, 0xFF, 0x00, 3.0f / 8},  // Green
+                 {0xFF, 0x00, 0xFF, 4.0f / 8},  // Magenta
+                 {0x00, 0x00, 0xFF, 5.0f / 8},  // Blue
+                 {0xFF, 0x00, 0x00, 6.0f / 8},  // Red
+                 {0x00, 0x00, 0x00, 7.0f / 8},  // Black
              }}),
         supported_color_bars_test_pattern_modes_(
             {ANDROID_SENSOR_TEST_PATTERN_MODE_COLOR_BARS_FADE_TO_GRAY,
@@ -142,7 +153,7 @@ class Camera3FrameFixture : public Camera3StreamFixture {
   ScopedImage GenerateColorBarsPattern(
       uint32_t width,
       uint32_t height,
-      const std::vector<std::tuple<uint8_t, uint8_t, uint8_t>>&
+      const std::vector<std::tuple<uint8_t, uint8_t, uint8_t, float>>&
           color_bars_pattern,
       int32_t color_bars_pattern_mode,
       uint32_t sensor_pixel_array_width,
@@ -160,7 +171,7 @@ class Camera3FrameFixture : public Camera3StreamFixture {
   // images are very similar, it usually returns a score no less than 0.8.
   double ComputeSsim(const Image& buffer_a, const Image& buffer_b);
 
-  std::vector<std::vector<std::tuple<uint8_t, uint8_t, uint8_t>>>
+  std::vector<std::vector<std::tuple<uint8_t, uint8_t, uint8_t, float>>>
       color_bars_test_patterns_;
 
  private:
