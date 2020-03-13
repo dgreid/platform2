@@ -80,6 +80,61 @@ def _BuildArc(config):
         }
     }
 
+def _FwBcsPath(payload):
+  if payload:
+    return "bcs://%s.%d.%d.0.tbz2" % (
+        payload.firmware_image_name,
+        payload.version.major,
+        payload.version.minor)
+
+
+def _FwBuildTarget(payload):
+  if payload:
+    return payload.build_target_name
+
+def _BuildFirmware(config):
+  if not config.sw_config.firmware:
+    return {
+        "no-firmware": True,
+    }
+  fw = config.sw_config.firmware
+  main_ro = fw.main_ro_payload
+  main_rw = fw.main_rw_payload
+  ec_ro = fw.ec_ro_payload
+  pd_ro = fw.pd_ro_payload
+
+  result = {
+      "bcs-overlay": config.build_target.overlay_name,
+      "build-targets": {
+          "coreboot": _FwBuildTarget(main_rw),
+          "depthcharge": _FwBuildTarget(main_ro),
+          "ec": _FwBuildTarget(ec_ro),
+          # Convert to list from proto iterator for string lists
+          "ec_extras": list(fw.ec_extras),
+          "libpayload": _FwBuildTarget(pd_ro),
+      },
+      # TODO(shapiroc): Resolve this with jettrink@ (where it's sourced)
+      # I think this is wrong here based on previous discussions.
+      # "firmware-config": 0,
+      "image-name": main_ro.firmware_image_name,
+  }
+  _Set(_FwBcsPath(fw.main_ro_payload), result, "main-ro-image")
+  _Set(_FwBcsPath(fw.main_rw_payload), result, "main-rw-image")
+  _Set(_FwBcsPath(fw.ec_ro_payload), result, "ec-ro-image")
+  _Set(_FwBcsPath(fw.pd_ro_payload), result, "pd-ro-image")
+
+  return result
+
+
+def _BuildFwSigning(config):
+  if not config.sw_config.firmware:
+    return {}
+  # TODO(shapiroc): Source signing config from separate private repo
+  return {
+      "key-id": "DEFAULT",
+      "signature-id": config.hw_design.name,
+  }
+
 
 def _File(source, destination):
   return {
@@ -185,6 +240,9 @@ def _TransformBuildConfig(config):
 
   _Set(_BuildArc(config), result, 'arc')
   _Set(_BuildAudio(config), result, 'audio')
+  _Set(config.device_brand.brand_code, result, 'brand-code')
+  _Set(_BuildFirmware(config), result, 'firmware')
+  _Set(_BuildFwSigning(config), result, 'firmware-signing')
 
   return result
 

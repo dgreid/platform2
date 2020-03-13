@@ -35,6 +35,29 @@
             ]
           }
         },
+        "brand-code": "AAAA",
+        "firmware": {
+          "bcs-overlay": "fake",
+          "build-targets": {
+            "coreboot": "Fake",
+            "depthcharge": "Fake",
+            "ec": "Fake_EC",
+            "ec_extras": [
+              "fake-ec-extra1",
+              "fake-ec-extra2"
+            ],
+            "libpayload": "Fake_PD"
+          },
+          "ec-ro-image": "bcs://Fake_EC.11111.2.0.tbz2",
+          "image-name": "Fake",
+          "main-ro-image": "bcs://Fake.11111.0.0.tbz2",
+          "main-rw-image": "bcs://Fake.11111.0.0.tbz2",
+          "pd-ro-image": "bcs://Fake_PD.11111.0.0.tbz2"
+        },
+        "firmware-signing": {
+          "key-id": "DEFAULT",
+          "signature-id": "FAKE-REF-DESIGN"
+        },
         "identity": {
           "platform-name": "Fake",
           "sku-id": 2147483647,
