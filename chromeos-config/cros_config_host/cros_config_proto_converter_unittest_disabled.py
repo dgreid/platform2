@@ -42,8 +42,7 @@ class MainTest(cros_test_lib.TempDirTestCase):
     output_file = os.path.join(self.tempdir, 'output')
     cros_config_proto_converter.Main(project_config=PROJECT_CONFIG_FILE,
                                      program_config=PROGRAM_CONFIG_FILE,
-                                     output=output_file,
-                                     files_root=None,)
+                                     output=output_file,)
 
     expected_file = os.path.join(THIS_DIR, 'test_data/fake_project.json')
     changed = subprocess.run(

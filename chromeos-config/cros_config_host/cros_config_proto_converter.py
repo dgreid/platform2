@@ -40,11 +40,6 @@ def ParseArgs(argv):
   parser = argparse.ArgumentParser(
       description='Converts source proto config into platform JSON config.')
   parser.add_argument(
-      '-f',
-      '--files_root',
-      type=str,
-      help='Path to root of all local paths referenced in the config')
-  parser.add_argument(
       '-c',
       '--project_config',
       type=str,
@@ -80,9 +75,10 @@ def _BuildArc(config):
         }
     }
 
+
 def _FwBcsPath(payload):
   if payload:
-    return "bcs://%s.%d.%d.0.tbz2" % (
+    return 'bcs://%s.%d.%d.0.tbz2' % (
         payload.firmware_image_name,
         payload.version.major,
         payload.version.minor)
@@ -92,10 +88,11 @@ def _FwBuildTarget(payload):
   if payload:
     return payload.build_target_name
 
+
 def _BuildFirmware(config):
   if not config.sw_config.firmware:
     return {
-        "no-firmware": True,
+        'no-firmware': True,
     }
   fw = config.sw_config.firmware
   main_ro = fw.main_ro_payload
@@ -104,24 +101,24 @@ def _BuildFirmware(config):
   pd_ro = fw.pd_ro_payload
 
   result = {
-      "bcs-overlay": config.build_target.overlay_name,
-      "build-targets": {
-          "coreboot": _FwBuildTarget(main_rw),
-          "depthcharge": _FwBuildTarget(main_ro),
-          "ec": _FwBuildTarget(ec_ro),
+      'bcs-overlay': config.build_target.overlay_name,
+      'build-targets': {
+          'coreboot': _FwBuildTarget(main_rw),
+          'depthcharge': _FwBuildTarget(main_ro),
+          'ec': _FwBuildTarget(ec_ro),
           # Convert to list from proto iterator for string lists
-          "ec_extras": list(fw.ec_extras),
-          "libpayload": _FwBuildTarget(pd_ro),
+          'ec_extras': list(fw.ec_extras),
+          'libpayload': _FwBuildTarget(pd_ro),
       },
       # TODO(shapiroc): Resolve this with jettrink@ (where it's sourced)
       # I think this is wrong here based on previous discussions.
-      # "firmware-config": 0,
-      "image-name": main_ro.firmware_image_name,
+      # 'firmware-config': 0,
+      'image-name': main_ro.firmware_image_name,
   }
-  _Set(_FwBcsPath(fw.main_ro_payload), result, "main-ro-image")
-  _Set(_FwBcsPath(fw.main_rw_payload), result, "main-rw-image")
-  _Set(_FwBcsPath(fw.ec_ro_payload), result, "ec-ro-image")
-  _Set(_FwBcsPath(fw.pd_ro_payload), result, "pd-ro-image")
+  _Set(_FwBcsPath(fw.main_ro_payload), result, 'main-ro-image')
+  _Set(_FwBcsPath(fw.main_rw_payload), result, 'main-rw-image')
+  _Set(_FwBcsPath(fw.ec_ro_payload), result, 'ec-ro-image')
+  _Set(_FwBcsPath(fw.pd_ro_payload), result, 'pd-ro-image')
 
   return result
 
@@ -131,15 +128,15 @@ def _BuildFwSigning(config):
     return {}
   # TODO(shapiroc): Source signing config from separate private repo
   return {
-      "key-id": "DEFAULT",
-      "signature-id": config.hw_design.name,
+      'key-id': 'DEFAULT',
+      'signature-id': config.hw_design.name,
   }
 
 
 def _File(source, destination):
   return {
-      "destination": destination,
-      "source": source
+      'destination': destination,
+      'source': source
   }
 
 
@@ -149,26 +146,26 @@ def _BuildAudio(config):
   project_name = config.hw_design.name
   # File that matches the cardname when installed and points to HiFi.conf
   # TODO(shapiroc): Plumb the defaults in chromeos-bsp files structure
-  card_name_file = "audio-defaults/card-name-file.conf"
+  card_name_file = 'audio-defaults/card-name-file.conf'
   if not config.sw_config.audio_config:
     return {}
   audio = config.sw_config.audio_config
   card = audio.card_name
   files = []
   if audio.ucm_file:
-    files.append(_File(audio.ucm_file, "%s/%s/HiFi.conf" % (alsa_path, card)))
+    files.append(_File(audio.ucm_file, '%s/%s/HiFi.conf' % (alsa_path, card)))
     files.append(_File(
-        card_name_file, "%s/%s/%s.conf" % (alsa_path, card, card)))
+        card_name_file, '%s/%s/%s.conf' % (alsa_path, card, card)))
   if audio.card_config_file:
     files.append(_File(
-        audio.card_config_file, "%s/%s/%s" % (cras_path, project_name, card)))
+        audio.card_config_file, '%s/%s/%s' % (cras_path, project_name, card)))
   if audio.dsp_file:
     files.append(
-        _File(audio.ucm_file, "%s/%s/dsp.ini" % (cras_path, project_name)))
+        _File(audio.ucm_file, '%s/%s/dsp.ini' % (cras_path, project_name)))
   return {
-      "main": {
-          "cras-config-dir": project_name,
-          "files": files,
+      'main': {
+          'cras-config-dir': project_name,
+          'files': files,
       }
   }
 
@@ -189,8 +186,8 @@ def _BuildIdentity(hw_scan_config, brand_scan_config=None):
   return identity
 
 
-def _Lookup(id, id_map):
-  return id_map[id.value] if id else None
+def _Lookup(id_value, id_map):
+  return id_map[id_value.value] if id_value else None
 
 
 def _TransformBuildConfigs(config):
@@ -202,8 +199,8 @@ def _TransformBuildConfigs(config):
 
   results = []
   for hw_design in config.designs.value:
-    device_brands = filter(lambda x: x.design_id.value == hw_design.id.value,
-                           config.device_brands.value)
+    device_brands = (x for x in config.device_brands.value
+                     if x.design_id.value == hw_design.id.value)
     if not device_brands:
       device_brands = [device_brand_pb2.DeviceBrand()]
 
@@ -228,7 +225,8 @@ def _TransformBuildConfig(config):
   """Transforms Config instance into target platform JSON schema.
 
   Args:
-      config: Config namedtuple
+    config: Config namedtuple
+
   Returns:
     Unique config payload based on the platform JSON schema.
   """
@@ -250,13 +248,13 @@ def _TransformBuildConfig(config):
 def WriteOutput(configs, output=None):
   """Writes a list of configs to platform JSON format.
 
-    Args:
-        configs: List of config dicts defined in cros_config_schema.yaml
-        output: Target file output (if None, prints to stdout)
-    """
-  json_output = json.dumps({
-      'chromeos': {
-          'configs': configs
+  Args:
+    configs: List of config dicts defined in cros_config_schema.yaml
+    output: Target file output (if None, prints to stdout)
+  """
+  json_output = json.dumps(
+      {'chromeos': {
+          'configs': configs,
       }},
       sort_keys=True,
       indent=2,
@@ -272,9 +270,9 @@ def WriteOutput(configs, output=None):
 def _ReadConfig(path):
   """Reads a binary proto from a file.
 
-    Args:
-        path: Path to the binary proto.
-    """
+  Args:
+    path: Path to the binary proto.
+  """
   config = config_bundle_pb2.ConfigBundle()
   with open(path, 'rb') as f:
     config.ParseFromString(f.read())
@@ -289,14 +287,12 @@ def _MergeConfigs(configs):
   return result
 
 
-def Main(files_root,
-         project_config,
+def Main(project_config,
          program_config,
          output):
   """Transforms source proto config into platform JSON.
 
   Args:
-    files_root: Root path to all files referenced in config.
     project_config: Source project config.
     program_config: Source program config.
     output: Output file that will be generated by the transform.
@@ -318,7 +314,7 @@ def main(argv=None):
   if argv is None:
     argv = sys.argv[1:]
   opts = ParseArgs(argv)
-  Main(opts.files_root, opts.project_config, opts.program_config, opts.output)
+  Main(opts.project_config, opts.program_config, opts.output)
 
 
 if __name__ == '__main__':
