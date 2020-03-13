@@ -103,7 +103,7 @@ class DlcManager {
   //   True if the DLC with the ID passed in is successfully uninstalled,
   //   otherwise false. Deleting a valid DLC that's not installed is considered
   //   successfully uninstalled, however uninstalling a DLC that's not supported
-  //   is a failure.
+  //   is a failure. Uninstalling a DLC that is installing is also a failure.
   bool Delete(const std::string& id, brillo::ErrorPtr* err);
 
  private:

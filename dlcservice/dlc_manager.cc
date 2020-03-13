@@ -61,6 +61,17 @@ class DlcManager::DlcManagerImpl {
     return supported_.find(id) != supported_.end();
   }
 
+  bool IsInstalled(const DlcId& id) {
+    RefreshInstalled();
+    return installed_.find(id) != installed_.end();
+  }
+
+  bool IsInstalling(const DlcId& id) {
+    // TODO(kimjae): For simplicity, consider even installed DLC(s) subset of
+    // installing.
+    return installing_.find(id) != installing_.end();
+  }
+
   bool IsInstalling() { return !installing_.empty(); }
 
   DlcMap GetInstalled() {
@@ -162,8 +173,7 @@ class DlcManager::DlcManagerImpl {
     return ret;
   }
 
-  // Deletes all directories related to the given DLC |id|. If |err_code| or
-  // |err_msg| are passed in, they will be set. Otherwise error will be logged.
+  // Deletes all directories related to the given DLC |id|.
   bool Delete(const string& id, ErrorPtr* err) {
     vector<string> undeleted_paths;
     for (const auto& path :
@@ -673,16 +683,18 @@ bool DlcManager::Delete(const string& id, ErrorPtr* err) {
         base::StringPrintf("Trying to delete unsupported DLC=%s", id.c_str()));
     return false;
   }
-  auto installed_dlcs = impl_->GetInstalled();
-  if (installed_dlcs.find(id) == installed_dlcs.end()) {
-    LOG(WARNING) << "Uninstalling DLC (" << id << ") that's not installed.";
+  if (impl_->IsInstalling(id)) {
+    *err = Error::Create(
+        kErrorBusy,
+        base::StringPrintf("Trying to delete a currently installing DLC=%s",
+                           id.c_str()));
+    return false;
+  }
+  if (!impl_->IsInstalled(id)) {
+    LOG(WARNING) << "Trying to uninstall not installed DLC=" << id;
     return true;
   }
-  if (!impl_->Unmount(id, err))
-    return false;
-  if (!impl_->Delete(id, err))
-    return false;
-  return true;
+  return impl_->Unmount(id, err) && impl_->Delete(id, err);
 }
 
 }  // namespace dlcservice

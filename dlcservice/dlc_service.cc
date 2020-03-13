@@ -144,30 +144,26 @@ bool DlcService::Install(const DlcModuleList& dlc_module_list_in,
   return true;
 }
 
-bool DlcService::Uninstall(const string& id_in, ErrorPtr* err) {
-  Operation update_engine_op;
-  if (!GetUpdateEngineStatus(&update_engine_op)) {
-    *err = Error::Create(kErrorInternal,
-                         "Failed to get the status of Update Engine");
-    LOG(ERROR) << Error::ToString(*err);
-    return false;
-  }
-  switch (update_engine_op) {
-    case update_engine::IDLE:
-    case update_engine::UPDATED_NEED_REBOOT:
-      break;
-    default:
-      *err = Error::Create(kErrorBusy, "Install or update is in progress.");
+bool DlcService::Uninstall(const string& id_in, brillo::ErrorPtr* err) {
+  // Check that an update isn't in progress.
+  if (!dlc_manager_->IsInstalling()) {
+    Operation op;
+    if (!GetUpdateEngineStatus(&op)) {
+      *err = Error::Create(kErrorInternal,
+                           "Failed to get the status of Update Engine");
       LOG(ERROR) << Error::ToString(*err);
       return false;
+    }
+    switch (op) {
+      case update_engine::IDLE:
+      case update_engine::UPDATED_NEED_REBOOT:
+        break;
+      default:
+        *err = Error::Create(kErrorBusy, "Install or update is in progress.");
+        LOG(ERROR) << Error::ToString(*err);
+        return false;
+    }
   }
-
-  // This is a weird case meaning update_engine was restarted and requires
-  // cleanup of DLC(s) that were previously being thought to have been being
-  // installed.
-  if (dlc_manager_->IsInstalling())
-    SendFailedSignalAndCleanup();
-
   bool ret = dlc_manager_->Delete(id_in, err);
   if (!ret)
     LOG(ERROR) << Error::ToString(*err);

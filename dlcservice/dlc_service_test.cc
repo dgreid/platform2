@@ -12,6 +12,7 @@
 #include <base/run_loop.h>
 #include <brillo/message_loops/base_message_loop.h>
 #include <brillo/message_loops/message_loop_utils.h>
+#include <dbus/dlcservice/dbus-constants.h>
 #include <dlcservice/proto_bindings/dlcservice.pb.h>
 #include <update_engine/proto_bindings/update_engine.pb.h>
 #include <gmock/gmock.h>
@@ -454,6 +455,44 @@ TEST_F(DlcServiceTest, UninstallUpdatedNeedRebootSuccessTest) {
   EXPECT_FALSE(base::PathExists(JoinPaths(content_path_, kFirstDlc)));
   EXPECT_FALSE(base::PathExists(JoinPaths(metadata_path_, kFirstDlc)));
   CheckDlcState(kFirstDlc, DlcState::NOT_INSTALLED);
+}
+
+TEST_F(DlcServiceTest, UninstallInstallingFails) {
+  const string omaha_url_default = "";
+  DlcModuleList dlc_module_list =
+      CreateDlcModuleList({kSecondDlc}, omaha_url_default);
+
+  EXPECT_CALL(*mock_update_engine_proxy_ptr_, GetStatusAdvanced(_, _, _))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*mock_update_engine_proxy_ptr_,
+              AttemptInstall(ProtoHasUrl(omaha_url_default), _, _))
+      .WillOnce(Return(true));
+
+  EXPECT_TRUE(dlc_service_->Install(dlc_module_list, err_ptr_));
+  CheckDlcState(kSecondDlc, DlcState::INSTALLING);
+
+  EXPECT_FALSE(dlc_service_->Uninstall(kSecondDlc, err_ptr_));
+  EXPECT_EQ(err_->GetCode(), kErrorBusy);
+}
+
+TEST_F(DlcServiceTest, UninstallInstallingButInstalledFails) {
+  const string omaha_url_default = "";
+  DlcModuleList dlc_module_list =
+      CreateDlcModuleList({kFirstDlc, kSecondDlc}, omaha_url_default);
+
+  EXPECT_CALL(*mock_update_engine_proxy_ptr_, GetStatusAdvanced(_, _, _))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*mock_update_engine_proxy_ptr_,
+              AttemptInstall(ProtoHasUrl(omaha_url_default), _, _))
+      .WillOnce(Return(true));
+
+  EXPECT_TRUE(dlc_service_->Install(dlc_module_list, err_ptr_));
+  CheckDlcState(kFirstDlc, DlcState::INSTALLED);
+  CheckDlcState(kSecondDlc, DlcState::INSTALLING);
+
+  EXPECT_FALSE(dlc_service_->Uninstall(kFirstDlc, err_ptr_));
+  CheckDlcState(kFirstDlc, DlcState::INSTALLED);
+  EXPECT_EQ(err_->GetCode(), kErrorBusy);
 }
 
 TEST_F(DlcServiceTest, InstallEmptyDlcModuleListTest) {
