@@ -11,12 +11,10 @@ import argparse
 import collections
 import copy
 import json
-import math
 import os
 import re
 import sys
 
-import jinja2  # pylint: disable=import-error
 import six
 import yaml  # pylint: disable=import-error
 
@@ -39,10 +37,7 @@ BRAND_ELEMENTS = ['brand-code', 'firmware-signing', 'wallpaper',
 EXTERNAL_STYLUS = 'external'
 TEMPLATE_PATTERN = re.compile('{{([^}]*)}}')
 
-EC_OUTPUT_NAME = 'ec_config'
 MOSYS_OUTPUT_NAME = 'config.c'
-TEMPLATE_DIR = 'templates'
-TEMPLATE_SUFFIX = '.jinja2'
 
 
 def MergeDictionaries(primary, overlay):
@@ -387,103 +382,6 @@ const struct config_map *cros_config_get_config_map(int *num_entries) {
   return file_format % (',\n'.join(structs), len(structs))
 
 
-def GenerateEcCBindings(config, schema_yaml):
-  """Generates EC C struct bindings
-
-  Generates .h and .c file containing C struct bindings that can be used by ec.
-
-  Args:
-    config: Config (transformed) that is the transform basis.
-    schema_yaml: Cros_config_schema in yaml format.
-  """
-
-  json_config = json.loads(config)
-  device_properties = collections.defaultdict(dict)
-  # Store the number of bits required for a hwprop's value.
-  hwprop_values_count = collections.defaultdict(int)
-  # Store a list of the elements for every enum. This
-  # will be used in the ec_config.h auto-generation code.
-  enum_to_elements_map = collections.defaultdict(list)
-  hwprop_set = set()
-  for config in json_config[CHROMEOS][CONFIGS]:
-    firmware = config['firmware']
-
-    if 'build-targets' not in firmware:
-      # Do not consider it an error if a config explicitly specifies no
-      # firmware.
-      if 'no-firmware' not in firmware:
-        print("WARNING: config missing 'firmware.build-targets', skipping",
-              file=sys.stderr)
-    elif 'ec' not in firmware['build-targets']:
-      print("WARNING: config missing 'firmware.build-targets.ec', skipping",
-            file=sys.stderr)
-    elif 'identity' not in config:
-      print("WARNING: config missing 'identity', skipping",
-            file=sys.stderr)
-    elif 'sku-id' not in config['identity']:
-      print("WARNING: config missing 'identity.sku-id', skipping",
-            file=sys.stderr)
-    else:
-      sku = config['identity']['sku-id']
-      ec_build_target = firmware['build-targets']['ec'].upper()
-
-      # Default hwprop value will be false.
-      hwprop_values = collections.defaultdict(bool)
-
-      hwprops = config.get('hardware-properties', None)
-      if hwprops:
-        # |hwprop| is a user specified property of the hardware, for example
-        # 'is-lid-convertible', which means that the device can rotate 360.
-        for hwprop, value in hwprops.items():
-          # Convert the name of the hwprop to a valid C identifier.
-          clean_hwprop = hwprop.replace('-', '_')
-          hwprop_set.add(clean_hwprop)
-          if isinstance(value, bool):
-            hwprop_values_count[clean_hwprop] = 1
-            hwprop_values[clean_hwprop] = value
-          elif isinstance(value, six.string_types):
-            # Calculate the number of bits by taking the log_2 of the number
-            # of possible enumerations. Use math.ceil to round up.
-            # For example, if an enum has 7 possible values (elements, we will
-            # need 3 bits to represent all the values.
-            # log_2(7) ~= 2.807 -> round up to 3.
-            element_to_int_map = _GetElementToIntMap(schema_yaml, hwprop)
-            if value not in element_to_int_map:
-              raise ValidationError('Not a valid enum value: %s' % value)
-            enum_to_elements_map[clean_hwprop] = element_to_int_map
-            element_count = len(element_to_int_map)
-            hwprop_values_count[clean_hwprop] = int(
-                math.ceil(math.log(element_count)))
-            hwprop_values[clean_hwprop] = element_to_int_map[value]
-
-      # Duplicate skus take the last value in the config file.
-      device_properties[ec_build_target][sku] = hwprop_values
-
-  hwprops = list(hwprop_set)
-  hwprops.sort()
-  for ec_build_target in device_properties:
-    # Order struct definitions by sku.
-    device_properties[ec_build_target] = \
-        sorted(device_properties[ec_build_target].items())
-
-  loader = jinja2.FileSystemLoader(os.path.join(this_dir, TEMPLATE_DIR))
-  env = jinja2.Environment(loader=loader, keep_trailing_newline=True)
-
-  h_template_path = EC_OUTPUT_NAME + '.h' + TEMPLATE_SUFFIX
-  h_template = env.get_template(h_template_path)
-
-  c_template_path = EC_OUTPUT_NAME + '.c' + TEMPLATE_SUFFIX
-  c_template = env.get_template(c_template_path)
-
-  h_output = h_template.render(
-      hwprops=hwprops,
-      hwprop_values_count=hwprop_values_count,
-      enum_to_elements_map=enum_to_elements_map)
-  c_output = c_template.render(
-      device_properties=device_properties, hwprops=hwprops)
-  return (h_output, c_output)
-
-
 def _GetElementToIntMap(schema_yaml, hwprop):
   """Returns a mapping of an enum's elements to a distinct integer.
 
@@ -807,14 +705,6 @@ def Main(schema,
     as output_stream:
       # Using print function adds proper trailing newline.
       print(GenerateMosysCBindings(full_json_transform), file=output_stream)
-    h_output, c_output = GenerateEcCBindings(
-        full_json_transform, schema_yaml=yaml.load(schema_contents))
-    with open(os.path.join(gen_c_output_dir, EC_OUTPUT_NAME + '.h'), 'w') \
-    as output_stream:
-      output_stream.write(h_output)
-    with open(os.path.join(gen_c_output_dir, EC_OUTPUT_NAME + '.c'), 'w') \
-    as output_stream:
-      output_stream.write(c_output)
   if configfs_output:
     configfs.GenerateConfigFSData(json.loads(json_transform), configfs_output)
 

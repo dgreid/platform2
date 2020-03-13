@@ -20,7 +20,6 @@ import cros_config_schema
 import libcros_schema
 
 from chromite.lib import cros_test_lib
-from chromite.lib import osutils
 
 this_dir = os.path.dirname(__file__)
 
@@ -561,120 +560,6 @@ class MainTests(cros_test_lib.TempDirTestCase):
                  'libcros_config/test_merge_overlay.yaml')
     expected_file = os.path.join(this_dir, '../libcros_config/test_merge.json')
     self.assertFileEqual(expected_file, output, regen_cmd)
-
-  def testEcCodegenManyBoards(self):
-    input_json = """
-      {
-        "chromeos": {
-          "configs": [
-            {
-              "firmware": {
-                "build-targets": {
-                  "ec": "Another"
-                }
-              },
-              "hardware-properties": {
-                "is-lid-convertible": false,
-                "has-base-accelerometer": true,
-                "has-lid-accelerometer": true
-              },
-              "identity": {
-                "sku-id": 40
-              }
-            },
-            {
-              "firmware": {
-                "build-targets": {
-                  "ec": "Some"
-                }
-              },
-              "hardware-properties": {
-                "is-lid-convertible": false,
-                "has-base-accelerometer": true,
-                "has-lid-accelerometer": true,
-                "stylus-category": "external"
-              },
-              "identity": {
-                "sku-id": 9
-              }
-            },
-            {
-              "firmware": {
-                "build-targets": {
-                  "ec": "Some"
-                }
-              },
-              "hardware-properties": {
-                "is-lid-convertible": true,
-                "has-lid-accelerometer": true
-              },
-              "identity": {
-                "sku-id": 99
-              }
-            }
-          ]
-        }
-      }
-    """
-    h_expected_path = os.path.join(this_dir, '../libcros_config/ec_test_many.h')
-    c_expected_path = os.path.join(this_dir, '../libcros_config/ec_test_many.c')
-    h_expected = osutils.ReadFile(h_expected_path)
-    c_expected = osutils.ReadFile(c_expected_path)
-
-    h_actual, c_actual = cros_config_schema.GenerateEcCBindings(
-        input_json, self._GetSchemaYaml())
-    self.assertMultilineStringEqual(h_expected, h_actual)
-    self.assertMultilineStringEqual(c_expected, c_actual)
-
-  def testEcCodegenWithOneBoard(self):
-    input_json_path = os.path.join(this_dir,
-                                   '../libcros_config/test_build.json')
-    input_json = osutils.ReadFile(input_json_path)
-
-    h_expected_path = os.path.join(this_dir, '../libcros_config/ec_test_one.h')
-    c_expected_path = os.path.join(this_dir, '../libcros_config/ec_test_one.c')
-    h_expected = osutils.ReadFile(h_expected_path)
-    c_expected = osutils.ReadFile(c_expected_path)
-
-    h_actual, c_actual = cros_config_schema.GenerateEcCBindings(
-        input_json, self._GetSchemaYaml())
-    self.assertMultilineStringEqual(h_expected, h_actual)
-    self.assertMultilineStringEqual(c_expected, c_actual)
-
-  def testEcCodegenWithNoBoards(self):
-    input_json = """
-    {
-      "chromeos": {
-        "configs": []
-      }
-    }
-    """
-    h_expected_path = os.path.join(this_dir, '../libcros_config/ec_test_none.h')
-    c_expected_path = os.path.join(this_dir, '../libcros_config/ec_test_none.c')
-    h_expected = osutils.ReadFile(h_expected_path)
-    c_expected = osutils.ReadFile(c_expected_path)
-
-    h_actual, c_actual = cros_config_schema.GenerateEcCBindings(
-        input_json, self._GetSchemaYaml())
-    self.assertMultilineStringEqual(h_expected, h_actual)
-    self.assertMultilineStringEqual(c_expected, c_actual)
-
-  def testEcCodegenMain(self):
-    output = os.path.join(self.tempdir, 'output')
-    cros_config_schema.Main(
-        None,
-        os.path.join(this_dir, '../libcros_config/test.yaml'),
-        output,
-        gen_c_output_dir=self.tempdir)
-
-    h_expected = os.path.join(this_dir, '../libcros_config/ec_test_one.h')
-    c_expected = os.path.join(this_dir, '../libcros_config/ec_test_one.c')
-
-    h_actual = os.path.join(self.tempdir, 'ec_config.h')
-    c_actual = os.path.join(self.tempdir, 'ec_config.c')
-
-    self.assertFileEqual(h_expected, h_actual)
-    self.assertFileEqual(c_expected, c_actual)
 
 
 if __name__ == '__main__':
