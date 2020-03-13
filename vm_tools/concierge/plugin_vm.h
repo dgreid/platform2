@@ -15,12 +15,10 @@
 #include <utility>
 #include <vector>
 
-#include <arc/network/client.h>
 #include <arc/network/subnet.h>
 #include <base/files/file_descriptor_watcher_posix.h>
 #include <base/files/file_path.h>
 #include <base/files/scoped_file.h>
-#include <base/files/scoped_temp_dir.h>
 #include <base/logging.h>
 #include <base/macros.h>
 #include <brillo/process.h>
@@ -30,12 +28,12 @@
 #include "vm_tools/common/vm_id.h"
 #include "vm_tools/concierge/plugin_vm_usb.h"
 #include "vm_tools/concierge/seneschal_server_proxy.h"
-#include "vm_tools/concierge/vm_interface.h"
+#include "vm_tools/concierge/vm_base_impl.h"
 
 namespace vm_tools {
 namespace concierge {
 
-class PluginVm final : public VmInterface {
+class PluginVm final : public VmBaseImpl {
  public:
   static std::unique_ptr<PluginVm> Create(
       const VmId id,
@@ -131,15 +129,6 @@ class PluginVm final : public VmInterface {
   // Individual directories, such as /etc, are mounted plugin jail.
   base::ScopedTempDir root_dir_;
 
-  // Runtime directory for the crosvm instance. It is shared with dispatcher
-  // and mounted as /run/pvm in plugin jail.
-  base::ScopedTempDir runtime_dir_;
-
-  // Handle to the VM process.
-  brillo::ProcessImpl process_;
-
-  // Network configuration service.
-  std::unique_ptr<patchpanel::Client> network_client_;
   // The subnet assigned to the VM.
   std::unique_ptr<arc_networkd::Subnet> subnet_;
   // The requested subnet index.

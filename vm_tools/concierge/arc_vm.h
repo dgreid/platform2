@@ -12,17 +12,13 @@
 #include <string>
 #include <vector>
 
-#include <arc/network/client.h>
 #include <arc/network/mac_address_generator.h>
-#include <arc/network/subnet.h>
 #include <base/files/file_path.h>
-#include <base/files/scoped_temp_dir.h>
 #include <base/macros.h>
-#include <brillo/process.h>
 #include <vm_concierge/proto_bindings/concierge_service.pb.h>
 
 #include "vm_tools/concierge/seneschal_server_proxy.h"
-#include "vm_tools/concierge/vm_interface.h"
+#include "vm_tools/concierge/vm_base_impl.h"
 #include "vm_tools/concierge/vsock_cid_pool.h"
 
 namespace vm_tools {
@@ -37,7 +33,7 @@ struct ArcVmFeatures {
 };
 
 // Represents a single instance of a running termina VM.
-class ArcVm final : public VmInterface {
+class ArcVm final : public VmBaseImpl {
  public:
   // Describes a disk image to be mounted inside the VM.
   struct Disk {
@@ -146,20 +142,11 @@ class ArcVm final : public VmInterface {
 
   std::vector<patchpanel::Device> network_devices_;
 
-  // DBus client for the networking service.
-  std::unique_ptr<patchpanel::Client> network_client_;
-
   // Proxy to the server providing shared directory access for this VM.
   std::unique_ptr<SeneschalServerProxy> seneschal_server_proxy_;
 
-  // Runtime directory for this VM.
-  base::ScopedTempDir runtime_dir_;
-
   // Flags passed to vmc start.
   ArcVmFeatures features_;
-
-  // Handle to the VM process.
-  brillo::ProcessImpl process_;
 
   DISALLOW_COPY_AND_ASSIGN(ArcVm);
 };

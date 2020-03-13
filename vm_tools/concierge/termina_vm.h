@@ -13,11 +13,9 @@
 #include <string>
 #include <vector>
 
-#include <arc/network/client.h>
 #include <arc/network/mac_address_generator.h>
 #include <arc/network/subnet.h>
 #include <base/files/file_path.h>
-#include <base/files/scoped_temp_dir.h>
 #include <base/macros.h>
 #include <base/time/time.h>
 #include <brillo/process.h>
@@ -26,7 +24,7 @@
 #include <vm_protos/proto_bindings/vm_guest.grpc.pb.h>
 
 #include "vm_tools/concierge/seneschal_server_proxy.h"
-#include "vm_tools/concierge/vm_interface.h"
+#include "vm_tools/concierge/vm_base_impl.h"
 #include "vm_tools/concierge/vsock_cid_pool.h"
 
 namespace vm_tools {
@@ -44,7 +42,7 @@ struct VmFeatures {
 };
 
 // Represents a single instance of a running termina VM.
-class TerminaVm final : public VmInterface {
+class TerminaVm final : public VmBaseImpl {
  public:
   // Type of a disk image.
   enum class DiskImageType {
@@ -268,20 +266,11 @@ class TerminaVm final : public VmInterface {
   // Termina network device.
   patchpanel::Device network_device_;
 
-  // DBus client for the networking service.
-  std::unique_ptr<patchpanel::Client> network_client_;
-
   // Proxy to the server providing shared directory access for this VM.
   std::unique_ptr<SeneschalServerProxy> seneschal_server_proxy_;
 
-  // Runtime directory for this VM.
-  base::ScopedTempDir runtime_dir_;
-
   // Flags passed to vmc start.
   VmFeatures features_;
-
-  // Handle to the VM process.
-  brillo::ProcessImpl process_;
 
   // Stub for making RPC requests to the maitre'd process inside the VM.
   std::unique_ptr<vm_tools::Maitred::Stub> stub_;

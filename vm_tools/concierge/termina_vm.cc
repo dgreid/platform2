@@ -85,8 +85,8 @@ TerminaVm::TerminaVm(
     std::string stateful_device,
     uint64_t stateful_size,
     VmFeatures features)
-    : vsock_cid_(vsock_cid),
-      network_client_(std::move(network_client)),
+    : VmBaseImpl(std::move(network_client)),
+      vsock_cid_(vsock_cid),
       seneschal_server_proxy_(std::move(seneschal_server_proxy)),
       features_(features),
       rootfs_device_(rootfs_device),
@@ -109,7 +109,8 @@ TerminaVm::TerminaVm(
     std::string stateful_device,
     uint64_t stateful_size,
     VmFeatures features)
-    : subnet_(std::move(subnet)),
+    : VmBaseImpl(nullptr),
+      subnet_(std::move(subnet)),
       vsock_cid_(vsock_cid),
       seneschal_server_proxy_(std::move(seneschal_server_proxy)),
       features_(features),
@@ -599,18 +600,8 @@ bool TerminaVm::GetVmEnterpriseReportingInfo(
 
 // static
 bool TerminaVm::SetVmCpuRestriction(CpuRestrictionState cpu_restriction_state) {
-  // TODO(sonnyrao): Adjust |cpu_shares|.
-  int cpu_shares = 1024;
-  switch (cpu_restriction_state) {
-    case CPU_RESTRICTION_FOREGROUND:
-      break;
-    case CPU_RESTRICTION_BACKGROUND:
-      cpu_shares = 64;
-      break;
-    default:
-      NOTREACHED();
-  }
-  return UpdateCpuShares(base::FilePath(kTerminaCpuCgroup), cpu_shares);
+  return VmBaseImpl::SetVmCpuRestriction(cpu_restriction_state,
+                                         kTerminaCpuCgroup);
 }
 
 // Extract the disk index of a virtio-blk device name.

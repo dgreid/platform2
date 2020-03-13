@@ -218,18 +218,8 @@ base::ScopedFD PluginVm::CreateUnixSocket(const base::FilePath& path,
 
 // static
 bool PluginVm::SetVmCpuRestriction(CpuRestrictionState cpu_restriction_state) {
-  // TODO(sonnyrao): Adjust |cpu_shares|.
-  int cpu_shares = 1024;
-  switch (cpu_restriction_state) {
-    case CPU_RESTRICTION_FOREGROUND:
-      break;
-    case CPU_RESTRICTION_BACKGROUND:
-      cpu_shares = 64;
-      break;
-    default:
-      NOTREACHED();
-  }
-  return UpdateCpuShares(base::FilePath(kPluginVmCpuCgroup), cpu_shares);
+  return VmBaseImpl::SetVmCpuRestriction(cpu_restriction_state,
+                                         kPluginVmCpuCgroup);
 }
 
 bool PluginVm::CreateUsbListeningSocket() {
@@ -590,9 +580,9 @@ PluginVm::PluginVm(VmId id,
                    base::FilePath iso_dir,
                    base::FilePath root_dir,
                    base::FilePath runtime_dir)
-    : id_(std::move(id)),
+    : VmBaseImpl(std::move(network_client)),
+      id_(std::move(id)),
       iso_dir_(std::move(iso_dir)),
-      network_client_(std::move(network_client)),
       subnet_index_(subnet_index),
       seneschal_server_proxy_(std::move(seneschal_server_proxy)),
       vmplugin_service_proxy_(vmplugin_service_proxy),

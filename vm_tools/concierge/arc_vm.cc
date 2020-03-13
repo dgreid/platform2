@@ -112,8 +112,8 @@ ArcVm::ArcVm(int32_t vsock_cid,
              std::unique_ptr<SeneschalServerProxy> seneschal_server_proxy,
              base::FilePath runtime_dir,
              ArcVmFeatures features)
-    : vsock_cid_(vsock_cid),
-      network_client_(std::move(network_client)),
+    : VmBaseImpl(std::move(network_client)),
+      vsock_cid_(vsock_cid),
       seneschal_server_proxy_(std::move(seneschal_server_proxy)),
       features_(features) {
   CHECK(base::DirectoryExists(runtime_dir));
@@ -354,17 +354,8 @@ void ArcVm::HandleSuspendDone() {
 
 // static
 bool ArcVm::SetVmCpuRestriction(CpuRestrictionState cpu_restriction_state) {
-  int cpu_shares = 1024;
-  switch (cpu_restriction_state) {
-    case CPU_RESTRICTION_FOREGROUND:
-      break;
-    case CPU_RESTRICTION_BACKGROUND:
-      cpu_shares = 64;
-      break;
-    default:
-      NOTREACHED();
-  }
-  return UpdateCpuShares(base::FilePath(kArcvmCpuCgroup), cpu_shares);
+  return VmBaseImpl::SetVmCpuRestriction(cpu_restriction_state,
+                                         kArcvmCpuCgroup);
 }
 
 uint32_t ArcVm::IPv4Address() const {

@@ -992,51 +992,40 @@ void Service::HandleSigterm() {
   base::ThreadTaskRunnerHandle::Get()->PostTask(FROM_HERE, quit_closure_);
 }
 
-std::unique_ptr<dbus::Response> Service::StartVm(
-    dbus::MethodCall* method_call) {
+template <class StartXXRequest>
+std::tuple<bool, StartXXRequest, StartVmResponse> Service::StartVmHelper(
+    dbus::MethodCall* method_call,
+    dbus::MessageReader* reader,
+    dbus::MessageWriter* writer) {
   DCHECK(sequence_checker_.CalledOnValidSequence());
-  LOG(INFO) << "Received StartVm request";
 
-  std::unique_ptr<dbus::Response> dbus_response(
-      dbus::Response::FromMethodCall(method_call));
-
-  dbus::MessageReader reader(method_call);
-  dbus::MessageWriter writer(dbus_response.get());
-
-  StartVmRequest request;
+  StartXXRequest request;
   StartVmResponse response;
   // We change to a success status later if necessary.
   response.set_status(VM_STATUS_FAILURE);
 
-  if (!reader.PopArrayOfBytesAsProto(&request)) {
+  if (!reader->PopArrayOfBytesAsProto(&request)) {
     LOG(ERROR) << "Unable to parse StartVmRequest from message";
     response.set_failure_reason("Unable to parse protobuf");
-    writer.AppendProtoAsArrayOfBytes(response);
-    return dbus_response;
+    writer->AppendProtoAsArrayOfBytes(response);
+    return {false, request, response};
   }
 
   // Check the CPU count.
-  if (request.cpus() > base::SysInfo::NumberOfProcessors()) {
+  if (request.cpus() == 0 ||
+      request.cpus() > base::SysInfo::NumberOfProcessors()) {
     LOG(ERROR) << "Invalid number of CPUs: " << request.cpus();
     response.set_failure_reason("Invalid CPU count");
-    writer.AppendProtoAsArrayOfBytes(response);
-    return dbus_response;
+    writer->AppendProtoAsArrayOfBytes(response);
+    return {false, request, response};
   }
 
   // Make sure the VM has a name.
   if (request.name().empty()) {
     LOG(ERROR) << "Ignoring request with empty name";
     response.set_failure_reason("Missing VM name");
-    writer.AppendProtoAsArrayOfBytes(response);
-    return dbus_response;
-  }
-
-  // Make sure we have our signal connected if starting a Termina VM.
-  if (request.start_termina() && !is_tremplin_started_signal_connected_) {
-    LOG(ERROR) << "Can't start Termina VM without TremplinStartedSignal";
-    response.set_failure_reason("TremplinStartedSignal not connected");
-    writer.AppendProtoAsArrayOfBytes(response);
-    return dbus_response;
+    writer->AppendProtoAsArrayOfBytes(response);
+    return {false, request, response};
   }
 
   auto iter = FindVm(request.owner_id(), request.name());
@@ -1066,6 +1055,35 @@ std::unique_ptr<dbus::Response> Service::StartVm(
     }
     response.set_success(true);
 
+    writer->AppendProtoAsArrayOfBytes(response);
+    return {false, request, response};
+  }
+
+  return {true, request, response};
+}
+
+std::unique_ptr<dbus::Response> Service::StartVm(
+    dbus::MethodCall* method_call) {
+  LOG(INFO) << "Received StartVm request";
+
+  bool success;
+  std::unique_ptr<dbus::Response> dbus_response(
+      dbus::Response::FromMethodCall(method_call));
+  dbus::MessageReader reader(method_call);
+  dbus::MessageWriter writer(dbus_response.get());
+  StartVmRequest request;
+  StartVmResponse response;
+  std::tie(success, request, response) =
+      StartVmHelper<StartVmRequest>(method_call, &reader, &writer);
+
+  if (!success) {
+    return dbus_response;
+  }
+
+  // Make sure we have our signal connected if starting a Termina VM.
+  if (request.start_termina() && !is_tremplin_started_signal_connected_) {
+    LOG(ERROR) << "Can't start Termina VM without TremplinStartedSignal";
+    response.set_failure_reason("TremplinStartedSignal not connected");
     writer.AppendProtoAsArrayOfBytes(response);
     return dbus_response;
   }
@@ -1429,72 +1447,19 @@ std::unique_ptr<dbus::Response> Service::StartVm(
 
 std::unique_ptr<dbus::Response> Service::StartPluginVm(
     dbus::MethodCall* method_call) {
-  DCHECK(sequence_checker_.CalledOnValidSequence());
   LOG(INFO) << "Received StartPluginVm request";
 
+  bool success;
   std::unique_ptr<dbus::Response> dbus_response(
       dbus::Response::FromMethodCall(method_call));
-
   dbus::MessageReader reader(method_call);
   dbus::MessageWriter writer(dbus_response.get());
-
   StartPluginVmRequest request;
   StartVmResponse response;
-  // We change to a success status later if necessary.
-  response.set_status(VM_STATUS_FAILURE);
+  std::tie(success, request, response) =
+      StartVmHelper<StartPluginVmRequest>(method_call, &reader, &writer);
 
-  if (!reader.PopArrayOfBytesAsProto(&request)) {
-    LOG(ERROR) << "Unable to parse StartPluginVmRequest from message";
-    response.set_failure_reason("Unable to parse protobuf");
-    writer.AppendProtoAsArrayOfBytes(response);
-    return dbus_response;
-  }
-
-  // Make sure the VM has a name.
-  if (request.name().empty()) {
-    LOG(ERROR) << "Ignoring request with empty name";
-    response.set_failure_reason("Missing VM name");
-    writer.AppendProtoAsArrayOfBytes(response);
-    return dbus_response;
-  }
-
-  auto iter = FindVm(request.owner_id(), request.name());
-  if (iter != vms_.end()) {
-    LOG(INFO) << "VM with requested name is already running";
-
-    VmInterface::Info vm = iter->second->GetInfo();
-
-    VmInfo* vm_info = response.mutable_vm_info();
-    vm_info->set_ipv4_address(vm.ipv4_address);
-    vm_info->set_pid(vm.pid);
-    vm_info->set_cid(vm.cid);
-    vm_info->set_seneschal_server_handle(vm.seneschal_server_handle);
-    switch (vm.status) {
-      case VmInterface::Status::STARTING: {
-        response.set_status(VM_STATUS_STARTING);
-        break;
-      }
-      case VmInterface::Status::RUNNING: {
-        response.set_status(VM_STATUS_RUNNING);
-        break;
-      }
-      default: {
-        response.set_status(VM_STATUS_UNKNOWN);
-        break;
-      }
-    }
-    response.set_success(true);
-
-    writer.AppendProtoAsArrayOfBytes(response);
-    return dbus_response;
-  }
-
-  // Check the CPU count.
-  if (request.cpus() == 0 ||
-      request.cpus() > base::SysInfo::NumberOfProcessors()) {
-    LOG(ERROR) << "Invalid number of CPUs: " << request.cpus();
-    response.set_failure_reason("Invalid CPU count");
-    writer.AppendProtoAsArrayOfBytes(response);
+  if (!success) {
     return dbus_response;
   }
 
@@ -1657,63 +1622,18 @@ std::unique_ptr<dbus::Response> Service::StartPluginVm(
 
 std::unique_ptr<dbus::Response> Service::StartArcVm(
     dbus::MethodCall* method_call) {
-  DCHECK(sequence_checker_.CalledOnValidSequence());
   LOG(INFO) << "Received StartArcVm request";
-
+  bool success;
   std::unique_ptr<dbus::Response> dbus_response(
       dbus::Response::FromMethodCall(method_call));
-
   dbus::MessageReader reader(method_call);
   dbus::MessageWriter writer(dbus_response.get());
-
   StartArcVmRequest request;
   StartVmResponse response;
-  // We change to a success status later if necessary.
-  response.set_status(VM_STATUS_FAILURE);
+  std::tie(success, request, response) =
+      StartVmHelper<StartArcVmRequest>(method_call, &reader, &writer);
 
-  if (!reader.PopArrayOfBytesAsProto(&request)) {
-    LOG(ERROR) << "Unable to parse StartArcVmRequest from message";
-    response.set_failure_reason("Unable to parse protobuf");
-    writer.AppendProtoAsArrayOfBytes(response);
-    return dbus_response;
-  }
-
-  // Check the CPU count.
-  if (request.cpus() == 0 ||
-      request.cpus() > base::SysInfo::NumberOfProcessors()) {
-    LOG(ERROR) << "Invalid number of CPUs: " << request.cpus();
-    response.set_failure_reason("Invalid CPU count");
-    writer.AppendProtoAsArrayOfBytes(response);
-    return dbus_response;
-  }
-
-  // Make sure the VM has a name.
-  if (request.name().empty()) {
-    LOG(ERROR) << "Ignoring request with empty name";
-    response.set_failure_reason("Missing VM name");
-    writer.AppendProtoAsArrayOfBytes(response);
-    return dbus_response;
-  }
-
-  auto iter = FindVm(request.owner_id(), request.name());
-  if (iter != vms_.end()) {
-    LOG(INFO) << "VM with requested name is already running";
-
-    VmInterface::Info vm = iter->second->GetInfo();
-
-    VmInfo* vm_info = response.mutable_vm_info();
-    vm_info->set_ipv4_address(vm.ipv4_address);
-    vm_info->set_pid(vm.pid);
-    vm_info->set_cid(vm.cid);
-    vm_info->set_seneschal_server_handle(vm.seneschal_server_handle);
-    if (vm.status == VmInterface::Status::RUNNING) {
-      response.set_status(VM_STATUS_RUNNING);
-    } else {
-      response.set_status(VM_STATUS_UNKNOWN);
-    }
-    response.set_success(true);
-
-    writer.AppendProtoAsArrayOfBytes(response);
+  if (!success) {
     return dbus_response;
   }
 

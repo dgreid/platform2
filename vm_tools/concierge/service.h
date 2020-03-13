@@ -11,6 +11,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -63,6 +64,13 @@ class Service final {
 
   // Handles a SIGTERM.
   void HandleSigterm();
+
+  // Helper function that is used by StartVm, StartPluginVm and StartArcVm
+  template <class StartXXRequest>
+  std::tuple<bool, StartXXRequest, StartVmResponse> StartVmHelper(
+      dbus::MethodCall* method_call,
+      dbus::MessageReader* reader,
+      dbus::MessageWriter* writer);
 
   // Handles a request to start a VM.  |method_call| must have a StartVmRequest
   // protobuf serialized as an array of bytes.
