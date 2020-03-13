@@ -39,6 +39,8 @@ ExitStatus ConvertCLIVerificationResultToExitStatus(
   switch (verification_result) {
     case CLIVerificationResult::kPass:
       return ExitStatus::kSuccess;
+    case CLIVerificationResult::kFail:
+      return ExitStatus::kVerifiedFail;
     case CLIVerificationResult::kInvalidHwVerificationSpecFile:
     case CLIVerificationResult::kInvalidProbeResultFile:
       return ExitStatus::kInvalidArgument;
