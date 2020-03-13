@@ -84,6 +84,7 @@ static_library("libarcnetwork") {
     "message_dispatcher.cc",
     "minijailed_process_runner.cc",
     "multicast_forwarder.cc",
+    "multicast_proxy.cc",
     "ndproxy.cc",
     "scoped_ns.cc",
     "shill_client.cc",

@@ -17,10 +17,7 @@
 #include <base/files/file_descriptor_watcher_posix.h>
 #include <base/files/scoped_file.h>
 #include <base/macros.h>
-#include <brillo/daemons/daemon.h>
 
-#include "arc/network/broadcast_forwarder.h"
-#include "arc/network/message_dispatcher.h"
 #include "arc/network/net_util.h"
 
 namespace arc_networkd {
@@ -114,31 +111,6 @@ class MulticastForwarder {
   void OnFileCanReadWithoutBlocking(int fd, sa_family_t sa_family);
 
   DISALLOW_COPY_AND_ASSIGN(MulticastForwarder);
-};
-
-// MulticastProxy manages multiple MulticastForwarder instances to forward
-// multicast for multiple physical interfaces.
-class MulticastProxy : public brillo::Daemon {
- public:
-  explicit MulticastProxy(base::ScopedFD control_fd);
-  virtual ~MulticastProxy() = default;
-
- protected:
-  int OnInit() override;
-
-  void OnParentProcessExit();
-  void OnDeviceMessage(const DeviceMessage& msg);
-
- private:
-  void Reset();
-
-  MessageDispatcher msg_dispatcher_;
-  std::map<std::string, std::unique_ptr<MulticastForwarder>> mdns_fwds_;
-  std::map<std::string, std::unique_ptr<MulticastForwarder>> ssdp_fwds_;
-  std::map<std::string, std::unique_ptr<BroadcastForwarder>> bcast_fwds_;
-
-  base::WeakPtrFactory<MulticastProxy> weak_factory_{this};
-  DISALLOW_COPY_AND_ASSIGN(MulticastProxy);
 };
 
 }  // namespace arc_networkd

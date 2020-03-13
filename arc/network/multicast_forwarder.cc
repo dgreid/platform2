@@ -11,7 +11,6 @@
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <sys/types.h>
-#include <sysexits.h>
 
 #include <utility>
 
@@ -21,7 +20,6 @@
 
 #include "arc/network/dns/dns_protocol.h"
 #include "arc/network/dns/dns_response.h"
-#include "arc/network/minijailed_process_runner.h"
 #include "arc/network/net_util.h"
 #include "arc/network/socket.h"
 
@@ -511,130 +509,6 @@ void MulticastForwarder::TranslateMdnsIp(const struct in_addr& lan_ip,
         memcpy(&data[ip_offset], &lan_ip.s_addr, ipv4_addr_len);
       }
     }
-  }
-}
-
-MulticastProxy::MulticastProxy(base::ScopedFD control_fd)
-    : msg_dispatcher_(std::move(control_fd)) {
-  msg_dispatcher_.RegisterFailureHandler(base::Bind(
-      &MulticastProxy::OnParentProcessExit, weak_factory_.GetWeakPtr()));
-
-  msg_dispatcher_.RegisterDeviceMessageHandler(
-      base::Bind(&MulticastProxy::OnDeviceMessage, weak_factory_.GetWeakPtr()));
-}
-
-int MulticastProxy::OnInit() {
-  // Prevent the main process from sending us any signals.
-  if (setsid() < 0) {
-    PLOG(ERROR) << "Failed to created a new session with setsid; exiting";
-    return EX_OSERR;
-  }
-
-  EnterChildProcessJail();
-  return Daemon::OnInit();
-}
-
-void MulticastProxy::Reset() {
-  mdns_fwds_.clear();
-  ssdp_fwds_.clear();
-  bcast_fwds_.clear();
-}
-
-void MulticastProxy::OnParentProcessExit() {
-  LOG(ERROR) << "Quitting because the parent process died";
-  Reset();
-  Quit();
-}
-
-void MulticastProxy::OnDeviceMessage(const DeviceMessage& msg) {
-  const std::string& dev_ifname = msg.dev_ifname();
-  if (dev_ifname.empty()) {
-    LOG(DFATAL) << "Received DeviceMessage w/ empty dev_ifname";
-    return;
-  }
-
-  auto mdns_fwd = mdns_fwds_.find(dev_ifname);
-  auto ssdp_fwd = ssdp_fwds_.find(dev_ifname);
-  auto bcast_fwd = bcast_fwds_.find(dev_ifname);
-
-  if (!msg.has_teardown()) {
-    // Start multicast forwarders.
-    if (mdns_fwd == mdns_fwds_.end()) {
-      LOG(INFO) << "Enabling mDNS forwarding for device " << dev_ifname;
-      auto fwd = std::make_unique<MulticastForwarder>(
-          dev_ifname, kMdnsMcastAddress, kMdnsMcastAddress6, kMdnsPort);
-      mdns_fwd = mdns_fwds_.emplace(dev_ifname, std::move(fwd)).first;
-    }
-
-    LOG(INFO) << "Starting mDNS forwarding between " << dev_ifname << " and "
-              << msg.br_ifname();
-    if (!mdns_fwd->second->AddGuest(msg.br_ifname())) {
-      LOG(WARNING) << "mDNS forwarder could not be started on " << dev_ifname;
-    }
-
-    if (ssdp_fwd == ssdp_fwds_.end()) {
-      LOG(INFO) << "Enabling SSDP forwarding for device " << dev_ifname;
-      auto fwd = std::make_unique<MulticastForwarder>(
-          dev_ifname, kSsdpMcastAddress, kSsdpMcastAddress6, kSsdpPort);
-      ssdp_fwd = ssdp_fwds_.emplace(dev_ifname, std::move(fwd)).first;
-    }
-
-    LOG(INFO) << "Starting SSDP forwarding between " << dev_ifname << " and "
-              << msg.br_ifname();
-    if (!ssdp_fwd->second->AddGuest(msg.br_ifname())) {
-      LOG(WARNING) << "SSDP forwarder could not be started on " << dev_ifname;
-    }
-
-    if (bcast_fwd == bcast_fwds_.end()) {
-      LOG(INFO) << "Enabling broadcast forwarding for device " << dev_ifname;
-      auto fwd = std::make_unique<BroadcastForwarder>(dev_ifname);
-      bcast_fwd = bcast_fwds_.emplace(dev_ifname, std::move(fwd)).first;
-    }
-
-    LOG(INFO) << "Starting broadcast forwarding between " << dev_ifname
-              << " and " << msg.br_ifname();
-    if (!bcast_fwd->second->AddGuest(msg.br_ifname())) {
-      LOG(WARNING) << "SSDP forwarder could not be started on " << dev_ifname;
-    }
-
-    return;
-  }
-
-  if (msg.has_br_ifname()) {
-    // A bridge interface is removed.
-    if (mdns_fwd != mdns_fwds_.end()) {
-      LOG(INFO) << "Disabling mDNS forwarding between " << dev_ifname << " and "
-                << msg.br_ifname();
-      mdns_fwd->second->RemoveGuest(msg.br_ifname());
-    }
-    if (ssdp_fwd != ssdp_fwds_.end()) {
-      LOG(INFO) << "Disabling SSDP forwarding between " << dev_ifname << " and "
-                << msg.br_ifname();
-      ssdp_fwd->second->RemoveGuest(msg.br_ifname());
-    }
-    if (bcast_fwd != bcast_fwds_.end()) {
-      LOG(INFO) << "Disabling broadcast forwarding between " << dev_ifname
-                << " and " << msg.br_ifname();
-      bcast_fwd->second->RemoveGuest(msg.br_ifname());
-    }
-    return;
-  }
-
-  // A physical interface is removed.
-  if (mdns_fwd != mdns_fwds_.end()) {
-    LOG(INFO) << "Disabling mDNS forwarding for physical interface "
-              << dev_ifname;
-    mdns_fwds_.erase(mdns_fwd);
-  }
-  if (ssdp_fwd != ssdp_fwds_.end()) {
-    LOG(INFO) << "Disabling SSDP forwarding for physical interface "
-              << dev_ifname;
-    ssdp_fwds_.erase(ssdp_fwd);
-  }
-  if (bcast_fwd != bcast_fwds_.end()) {
-    LOG(INFO) << "Disabling broadcast forwarding for physical interface "
-              << dev_ifname;
-    bcast_fwds_.erase(bcast_fwd);
   }
 }
 

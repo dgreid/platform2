@@ -16,7 +16,7 @@
 #include "arc/network/adb_proxy.h"
 #include "arc/network/helper_process.h"
 #include "arc/network/manager.h"
-#include "arc/network/multicast_forwarder.h"
+#include "arc/network/multicast_proxy.h"
 #include "arc/network/ndproxy.h"
 #include "arc/network/socket.h"
 
