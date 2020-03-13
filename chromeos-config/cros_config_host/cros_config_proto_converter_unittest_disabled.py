@@ -27,12 +27,12 @@ PROJECT_CONFIG_FILE = os.path.join(THIS_DIR, PROJECT_PATH, CONFIG_BINARY_PATH)
 class ParseArgsTests(cros_test_lib.TestCase):
 
   def testParseArgs(self):
-    argv = ['-f', 'files-root', '-c', 'project-config',
-            '-p', 'program-config', '-o', 'output', ]
+    argv = ['-c', 'config1', 'config2',
+            '-p', 'program_config',
+            '-o', 'output', ]
     args = cros_config_proto_converter.ParseArgs(argv)
-    self.assertEqual(args.files_root, 'files-root')
-    self.assertEqual(args.project_config, 'project-config')
-    self.assertEqual(args.program_config, 'program-config')
+    self.assertEqual(args.project_configs, ['config1', 'config2',])
+    self.assertEqual(args.program_config, 'program_config')
     self.assertEqual(args.output, 'output')
 
 
@@ -40,7 +40,7 @@ class MainTest(cros_test_lib.TempDirTestCase):
 
   def testFullTransform(self):
     output_file = os.path.join(self.tempdir, 'output')
-    cros_config_proto_converter.Main(project_config=PROJECT_CONFIG_FILE,
+    cros_config_proto_converter.Main(project_configs=[PROJECT_CONFIG_FILE],
                                      program_config=PROGRAM_CONFIG_FILE,
                                      output=output_file,)
 
