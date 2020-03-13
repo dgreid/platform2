@@ -6,6 +6,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <sys/stat.h>
 #include <unistd.h>
 
 #include <string>
@@ -13,7 +14,6 @@
 #include <vector>
 
 #include <base/bind.h>
-#include <base/files/file_util.h>
 #include <base/logging.h>
 #include <base/posix/eintr_wrapper.h>
 
@@ -82,30 +82,31 @@ bool LocalFile::Fstat(arc_proxy::FstatResponse* response) {
 void LocalFile::TrySendMsg() {
   DCHECK(!pending_write_.empty());
   for (; !pending_write_.empty(); pending_write_.pop_front()) {
-    const auto& data = pending_write_.front();
+    auto& data = pending_write_.front();
 
-    bool result = false;
-    if (data.fds.empty()) {
-      result = base::WriteFileDescriptor(fd_.get(), data.blob.data(),
-                                         data.blob.size());
-    } else {
-      result = Sendmsg(fd_.get(), data.blob.data(), data.blob.size(),
-                       data.fds) == data.blob.size();
-    }
-    if (!result) {
-      if (errno == EAGAIN) {
-        // Will retry later.
-        if (!writable_watcher_) {
-          writable_watcher_ = base::FileDescriptorWatcher::WatchWritable(
-              fd_.get(), base::BindRepeating(&LocalFile::TrySendMsg,
-                                             weak_factory_.GetWeakPtr()));
+    while (data.blob_offset < data.blob.size()) {
+      const char* data_ptr = data.blob.data() + data.blob_offset;
+      const size_t data_size = data.blob.size() - data.blob_offset;
+      const ssize_t result =
+          data.fds.empty() ? HANDLE_EINTR(write(fd_.get(), data_ptr, data_size))
+                           : Sendmsg(fd_.get(), data_ptr, data_size, data.fds);
+      if (result == -1) {
+        if (errno == EAGAIN) {
+          // Will retry later.
+          if (!writable_watcher_) {
+            writable_watcher_ = base::FileDescriptorWatcher::WatchWritable(
+                fd_.get(), base::BindRepeating(&LocalFile::TrySendMsg,
+                                               weak_factory_.GetWeakPtr()));
+          }
+          return;
         }
+        PLOG(ERROR) << "Failed to write";
+        writable_watcher_.reset();
+        std::move(error_handler_).Run();  // May result in deleting this object.
         return;
       }
-      PLOG(ERROR) << "Failed to write";
-      writable_watcher_.reset();
-      std::move(error_handler_).Run();  // May result in deleting this object.
-      return;
+      data.fds.clear();  // To avoid sending FDs twice.
+      data.blob_offset += result;
     }
   }
   // No pending data left. Stop watching.

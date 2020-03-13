@@ -97,7 +97,7 @@ TEST(LocalFileTest, FstatError) {
   EXPECT_EQ(EBADF, response.error_code());
 }
 
-// Tests LocalFile with a socket.
+// Tests LocalFile with a stream socket.
 class SocketStreamTest : public testing::Test {
  public:
   SocketStreamTest() = default;
@@ -180,56 +180,41 @@ TEST_F(SocketStreamTest, PendingWrite) {
   ASSERT_EQ(
       0, getsockopt(socket_.get(), SOL_SOCKET, SO_SNDBUF, &sndbuf_value, &len));
 
-  const std::string data1(sndbuf_value, 'a');
-  const std::string data2(sndbuf_value, 'b');
-  const std::string data3(1, 'c');
+  // To verify that LocalFile can handle partial write.
+  const size_t kDataSize = sndbuf_value * 2 / 3;
+  constexpr int kNumData = 4;
 
-  std::vector<base::ScopedFD> attached_fds;
-  attached_fds.emplace_back(HANDLE_EINTR(open("/dev/null", O_RDONLY)));
-  ASSERT_TRUE(attached_fds.back().is_valid());
+  // Write data to the stream.
+  std::string sent_data;
+  for (int i = 0; i < kNumData; ++i) {
+    const std::string data(kDataSize, 'a' + i);
+    std::vector<base::ScopedFD> attached_fds;
+    attached_fds.emplace_back(HANDLE_EINTR(open("/dev/null", O_RDONLY)));
+    ASSERT_TRUE(attached_fds.back().is_valid());
+    ASSERT_TRUE(stream_->Write(data, std::move(attached_fds)));
+    sent_data += data;
+  }
 
-  // Write data1, data2, and data3 (with a FD) to the stream.
-  ASSERT_TRUE(stream_->Write(data1, {}));
-  ASSERT_TRUE(stream_->Write(data2, {}));
-  ASSERT_TRUE(stream_->Write(data3, std::move(attached_fds)));
-
-  // Read data1 from the other socket.
+  // Read data from the stream.
   std::string read_data;
-  read_data.resize(sndbuf_value);
-  std::vector<base::ScopedFD> fds;
-  ASSERT_EQ(data1.size(),
-            Recvmsg(socket_.get(), &read_data[0], read_data.size(), &fds));
-  read_data.resize(data1.size());
-  EXPECT_EQ(data1, read_data);
+  std::vector<base::ScopedFD> read_fds;
+  while (read_data.size() < sent_data.size()) {
+    base::RunLoop().RunUntilIdle();  // To perform pending write.
 
-  // data2 is still pending.
-  ASSERT_EQ(-1, Recvmsg(socket_.get(), &read_data[0], read_data.size(), &fds));
-  ASSERT_EQ(EAGAIN, errno);
+    constexpr size_t kBufSize = 4096;
+    std::string buf;
+    std::vector<base::ScopedFD> fds;
+    buf.resize(kBufSize);
+    const ssize_t result = Recvmsg(socket_.get(), &buf[0], buf.size(), &fds);
+    ASSERT_GT(result, 0);
+    buf.resize(result);
+    read_data += buf;
+    for (auto& fd : fds)
+      read_fds.push_back(std::move(fd));
+  }
 
-  // Now the socket's buffer is empty. Let the stream write data2 to the socket.
-  base::RunLoop().RunUntilIdle();
-
-  // Read data2 from the other socket.
-  read_data.resize(sndbuf_value);
-  ASSERT_EQ(data2.size(),
-            Recvmsg(socket_.get(), &read_data[0], read_data.size(), &fds));
-  read_data.resize(data2.size());
-  EXPECT_EQ(data2, read_data);
-
-  // data3 is still pending.
-  ASSERT_EQ(-1, Recvmsg(socket_.get(), &read_data[0], read_data.size(), &fds));
-  ASSERT_EQ(EAGAIN, errno);
-
-  // Let the stream write data3 to the socket.
-  base::RunLoop().RunUntilIdle();
-
-  // Read data3 from the other socket.
-  read_data.resize(sndbuf_value);
-  ASSERT_EQ(data3.size(),
-            Recvmsg(socket_.get(), &read_data[0], read_data.size(), &fds));
-  read_data.resize(data3.size());
-  EXPECT_EQ(data3, read_data);
-  EXPECT_EQ(1, fds.size());
+  EXPECT_EQ(sent_data, read_data);
+  EXPECT_EQ(kNumData, read_fds.size());
 }
 
 TEST_F(SocketStreamTest, WriteError) {
@@ -241,6 +226,70 @@ TEST_F(SocketStreamTest, WriteError) {
   base::ScopedFD fd(HANDLE_EINTR(open("/dev/null", O_RDONLY)));
   LocalFile(std::move(fd), true, std::move(error_handler)).Write(kData, {});
   EXPECT_TRUE(error_handler_was_run);
+}
+
+// Tests LocalFile with a seqpacket socket.
+class SocketSeqpacketTest : public testing::Test {
+ public:
+  SocketSeqpacketTest() = default;
+  ~SocketSeqpacketTest() override = default;
+
+  void SetUp() override {
+    auto sockets = CreateSocketPair(SOCK_SEQPACKET | SOCK_NONBLOCK);
+    ASSERT_TRUE(sockets.has_value());
+    seqpacket_ =
+        std::make_unique<LocalFile>(std::move(sockets.value().first), true,
+                                    base::BindOnce([]() { ADD_FAILURE(); }));
+    socket_ = std::move(sockets.value().second);
+  }
+
+ protected:
+  std::unique_ptr<LocalFile> seqpacket_;  // Paired with socket_.
+  base::ScopedFD socket_;                 // Paired with seqpacket_.
+
+ private:
+  base::MessageLoopForIO message_loop_;
+  base::FileDescriptorWatcher watcher_{&message_loop_};
+
+  DISALLOW_COPY_AND_ASSIGN(SocketSeqpacketTest);
+};
+
+TEST_F(SocketSeqpacketTest, PendingWrite) {
+  int sndbuf_value = 0;
+  socklen_t len = sizeof(sndbuf_value);
+  ASSERT_EQ(
+      0, getsockopt(socket_.get(), SOL_SOCKET, SO_SNDBUF, &sndbuf_value, &len));
+
+  // To verify that SOCK_SEQPACKET never performs partial write.
+  const size_t kDataSize = sndbuf_value * 2 / 3;
+  constexpr int kNumData = 4;
+
+  // Write data to the socket.
+  std::string sent_data;
+  for (int i = 0; i < kNumData; ++i) {
+    const std::string data(kDataSize, 'a' + i);
+    std::vector<base::ScopedFD> attached_fds;
+    attached_fds.emplace_back(HANDLE_EINTR(open("/dev/null", O_RDONLY)));
+    ASSERT_TRUE(attached_fds.back().is_valid());
+    ASSERT_TRUE(seqpacket_->Write(data, std::move(attached_fds)));
+    sent_data += data;
+  }
+
+  // Read data from the socket.
+  std::string read_data;
+  for (int i = 0; i < kNumData; ++i) {
+    base::RunLoop().RunUntilIdle();  // To perform pending write.
+
+    std::string buf;
+    std::vector<base::ScopedFD> fds;
+    buf.resize(sndbuf_value);
+    const ssize_t result = Recvmsg(socket_.get(), &buf[0], buf.size(), &fds);
+    EXPECT_EQ(kDataSize, result);  // SOCK_SEQPACKET keeps the packet size.
+    buf.resize(result);
+    EXPECT_EQ(1, fds.size());
+    read_data += buf;
+  }
+  EXPECT_EQ(sent_data, read_data);
 }
 
 // Tests LocalFile with a pipe.
