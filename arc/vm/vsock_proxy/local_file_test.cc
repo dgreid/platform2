@@ -34,6 +34,24 @@
 namespace arc {
 namespace {
 
+TEST(LocalFileTest, ReadErrorIoctl) {
+  // Pass a /dev/null FD which doesn't support iotctl(FIONREAD).
+  base::ScopedFD fd(HANDLE_EINTR(open("/dev/null", O_RDONLY)));
+  auto read_result = LocalFile(std::move(fd), true, base::DoNothing()).Read();
+  EXPECT_EQ(ENOTTY, read_result.error_code);
+}
+
+TEST(LocalFileTest, ReadErrorRecvmsg) {
+  auto pipes = CreatePipe();
+  ASSERT_TRUE(pipes.has_value());
+  // Put some data.
+  ASSERT_TRUE(base::WriteFileDescriptor(pipes->second.get(), "a", 1));
+  // Pipe doesn't support recvmsg, but can_send_fds==true is specified.
+  auto read_result =
+      LocalFile(std::move(pipes->first), true, base::DoNothing()).Read();
+  EXPECT_EQ(ENOTSOCK, read_result.error_code);
+}
+
 TEST(LocalFileTest, Pread) {
   base::ScopedTempDir temp_dir;
   ASSERT_TRUE(temp_dir.CreateUniqueTempDir());
@@ -146,13 +164,6 @@ TEST_F(SocketStreamTest, ReadEOF) {
   EXPECT_EQ(0, read_result.error_code);
   EXPECT_TRUE(read_result.blob.empty());
   EXPECT_TRUE(read_result.fds.empty());
-}
-
-TEST_F(SocketStreamTest, ReadError) {
-  // Pass a non-socket FD.
-  base::ScopedFD fd(HANDLE_EINTR(open("/dev/null", O_RDONLY)));
-  auto read_result = LocalFile(std::move(fd), true, base::DoNothing()).Read();
-  EXPECT_EQ(ENOTSOCK, read_result.error_code);
 }
 
 TEST_F(SocketStreamTest, Write) {
@@ -337,15 +348,6 @@ TEST_F(PipeStreamTest, ReadEOF) {
   EXPECT_EQ(0, read_result.error_code);
   EXPECT_TRUE(read_result.blob.empty());
   EXPECT_TRUE(read_result.fds.empty());
-}
-
-TEST_F(PipeStreamTest, ReadError) {
-  // Pass an unreadable FD.
-  base::ScopedFD fd(HANDLE_EINTR(open("/dev/null", O_WRONLY)));
-  auto read_result =
-      LocalFile(std::move(fd), false, base::BindOnce([]() { ADD_FAILURE(); }))
-          .Read();
-  EXPECT_EQ(EBADF, read_result.error_code);
 }
 
 TEST_F(PipeStreamTest, Write) {

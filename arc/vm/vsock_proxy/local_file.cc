@@ -6,6 +6,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <sys/ioctl.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
@@ -31,17 +32,33 @@ LocalFile::LocalFile(base::ScopedFD fd,
 LocalFile::~LocalFile() = default;
 
 LocalFile::ReadResult LocalFile::Read() {
-  char buf[4096];
+  // Get the amont of readable data (for pipes or stream sockets) or the size of
+  // the next datagram (for datagram sockets).
+  int buffer_size = 0;
+  if (HANDLE_EINTR(ioctl(fd_.get(), FIONREAD, &buffer_size)) < 0) {
+    int error_code = errno;
+    PLOG(ERROR) << "ioctl(FIONREAD) failed";
+    return {error_code, std::string(), {}};
+  }
+
+  // Caller is responsible to call this function only when FD is readable.
+  // FD is readable && buffer_size==0 means it reached EOF.
+  if (buffer_size == 0)
+    return {0, std::string(), {}};
+
+  // Read data.
+  std::string buf(buffer_size, 0);
   std::vector<base::ScopedFD> fds;
   ssize_t size = can_send_fds_
-                     ? Recvmsg(fd_.get(), buf, sizeof(buf), &fds)
-                     : HANDLE_EINTR(read(fd_.get(), buf, sizeof(buf)));
+                     ? Recvmsg(fd_.get(), &buf[0], buf.size(), &fds)
+                     : HANDLE_EINTR(read(fd_.get(), &buf[0], buf.size()));
   if (size == -1) {
     int error_code = errno;
     PLOG(ERROR) << "Failed to read";
     return {error_code, std::string(), {}};
   }
-  return {0 /* succeed */, std::string(buf, size), std::move(fds)};
+  buf.resize(size);
+  return {0 /* succeed */, std::move(buf), std::move(fds)};
 }
 
 bool LocalFile::Write(std::string blob, std::vector<base::ScopedFD> fds) {
