@@ -182,6 +182,14 @@ fi
 . /etc/cpufreq.conf
 
 if [ -z "${CPUFREQ_GOVERNOR}" ]; then
+  if dump_power_status | grep -q 'line_power_connected 1'; then
+    CPUFREQ_GOVERNOR="${CPUFREQ_GOVERNOR_ON_AC}"
+  else
+    CPUFREQ_GOVERNOR="${CPUFREQ_GOVERNOR_OFF_AC}"
+  fi
+fi
+
+if [ -z "${CPUFREQ_GOVERNOR}" ]; then
   exit 0
 fi
 
