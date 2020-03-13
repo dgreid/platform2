@@ -25,6 +25,7 @@
 #include "dlcservice/dlc_service.h"
 #include "dlcservice/utils.h"
 
+using brillo::ErrorPtr;
 using std::move;
 using std::string;
 using std::vector;
@@ -226,14 +227,17 @@ class DlcServiceTest : public testing::Test {
                             bool fail = false) {
     DlcState state;
     if (fail) {
-      EXPECT_FALSE(dlc_service_->GetState(id_in, &state, nullptr));
+      EXPECT_FALSE(dlc_service_->GetState(id_in, &state, err_ptr_));
       return;
     }
-    EXPECT_TRUE(dlc_service_->GetState(id_in, &state, nullptr));
+    EXPECT_TRUE(dlc_service_->GetState(id_in, &state, err_ptr_));
     EXPECT_EQ(state_in, state.state());
   }
 
  protected:
+  ErrorPtr err_;
+  ErrorPtr* err_ptr_{&err_};
+
   base::MessageLoopForIO base_loop_;
   brillo::BaseMessageLoop loop_{&base_loop_};
 
@@ -341,7 +345,7 @@ TEST_F(DlcServiceSkipLoadTest, PreloadAllowedDlcTest) {
   dlc_service_->LoadDlcModuleImages();
 
   DlcModuleList dlc_module_list;
-  EXPECT_TRUE(dlc_service_->GetInstalled(&dlc_module_list, nullptr));
+  EXPECT_TRUE(dlc_service_->GetInstalled(&dlc_module_list, err_ptr_));
   EXPECT_EQ(dlc_module_list.dlc_module_infos_size(), 1);
 
   DlcModuleInfo dlc_module = dlc_module_list.dlc_module_infos(0);
@@ -358,14 +362,14 @@ TEST_F(DlcServiceSkipLoadTest, PreloadNotAllowedDlcTest) {
   dlc_service_->LoadDlcModuleImages();
 
   DlcModuleList dlc_module_list;
-  EXPECT_TRUE(dlc_service_->GetInstalled(&dlc_module_list, nullptr));
+  EXPECT_TRUE(dlc_service_->GetInstalled(&dlc_module_list, err_ptr_));
   EXPECT_EQ(dlc_module_list.dlc_module_infos_size(), 0);
   CheckDlcState(kFirstDlc, DlcState::NOT_INSTALLED);
 }
 
 TEST_F(DlcServiceTest, GetInstalledTest) {
   DlcModuleList dlc_module_list;
-  EXPECT_TRUE(dlc_service_->GetInstalled(&dlc_module_list, nullptr));
+  EXPECT_TRUE(dlc_service_->GetInstalled(&dlc_module_list, err_ptr_));
   EXPECT_EQ(dlc_module_list.dlc_module_infos_size(), 1);
 
   DlcModuleInfo dlc_module = dlc_module_list.dlc_module_infos(0);
@@ -380,7 +384,7 @@ TEST_F(DlcServiceTest, UninstallTest) {
   EXPECT_CALL(*mock_image_loader_proxy_ptr_, UnloadDlcImage(_, _, _, _, _))
       .WillOnce(DoAll(SetArgPointee<2>(true), Return(true)));
 
-  EXPECT_TRUE(dlc_service_->Uninstall(kFirstDlc, nullptr));
+  EXPECT_TRUE(dlc_service_->Uninstall(kFirstDlc, err_ptr_));
   EXPECT_FALSE(base::PathExists(JoinPaths(content_path_, kFirstDlc)));
   EXPECT_FALSE(base::PathExists(JoinPaths(metadata_path_, kFirstDlc)));
   CheckDlcState(kFirstDlc, DlcState::NOT_INSTALLED);
@@ -389,7 +393,7 @@ TEST_F(DlcServiceTest, UninstallTest) {
 TEST_F(DlcServiceTest, UninstallNotInstalledIsValidTest) {
   EXPECT_CALL(*mock_update_engine_proxy_ptr_, GetStatusAdvanced(_, _, _))
       .WillOnce(Return(true));
-  EXPECT_TRUE(dlc_service_->Uninstall(kSecondDlc, nullptr));
+  EXPECT_TRUE(dlc_service_->Uninstall(kSecondDlc, err_ptr_));
   CheckDlcState(kSecondDlc, DlcState::NOT_INSTALLED);
 }
 
@@ -397,7 +401,7 @@ TEST_F(DlcServiceTest, UninstallInvalidDlcTest) {
   const auto& id = "invalid-dlc-id";
   EXPECT_CALL(*mock_update_engine_proxy_ptr_, GetStatusAdvanced(_, _, _))
       .WillOnce(Return(true));
-  EXPECT_FALSE(dlc_service_->Uninstall(id, nullptr));
+  EXPECT_FALSE(dlc_service_->Uninstall(id, err_ptr_));
   CheckDlcState(id, DlcState::NOT_INSTALLED, /*fail=*/true);
 }
 
@@ -407,7 +411,7 @@ TEST_F(DlcServiceTest, UninstallUnmountFailureTest) {
   EXPECT_CALL(*mock_image_loader_proxy_ptr_, UnloadDlcImage(_, _, _, _, _))
       .WillOnce(DoAll(SetArgPointee<2>(false), Return(true)));
 
-  EXPECT_FALSE(dlc_service_->Uninstall(kFirstDlc, nullptr));
+  EXPECT_FALSE(dlc_service_->Uninstall(kFirstDlc, err_ptr_));
   EXPECT_TRUE(base::PathExists(JoinPaths(content_path_, kFirstDlc)));
   EXPECT_TRUE(base::PathExists(JoinPaths(metadata_path_, kFirstDlc)));
   CheckDlcState(kFirstDlc, DlcState::INSTALLED);
@@ -420,7 +424,7 @@ TEST_F(DlcServiceTest, UninstallImageLoaderFailureTest) {
       .WillOnce(Return(false));
 
   // |ImageLoader| not available.
-  EXPECT_FALSE(dlc_service_->Uninstall(kFirstDlc, nullptr));
+  EXPECT_FALSE(dlc_service_->Uninstall(kFirstDlc, err_ptr_));
   EXPECT_TRUE(base::PathExists(JoinPaths(content_path_, kFirstDlc)));
   EXPECT_TRUE(base::PathExists(JoinPaths(metadata_path_, kFirstDlc)));
   CheckDlcState(kFirstDlc, DlcState::INSTALLED);
@@ -432,7 +436,7 @@ TEST_F(DlcServiceTest, UninstallUpdateEngineBusyFailureTest) {
   EXPECT_CALL(*mock_update_engine_proxy_ptr_, GetStatusAdvanced(_, _, _))
       .WillOnce(DoAll(SetArgPointee<0>(status_result), Return(true)));
 
-  EXPECT_FALSE(dlc_service_->Uninstall(kFirstDlc, nullptr));
+  EXPECT_FALSE(dlc_service_->Uninstall(kFirstDlc, err_ptr_));
   EXPECT_TRUE(base::PathExists(JoinPaths(content_path_, kFirstDlc)));
   EXPECT_TRUE(base::PathExists(JoinPaths(metadata_path_, kFirstDlc)));
   CheckDlcState(kFirstDlc, DlcState::INSTALLED);
@@ -446,7 +450,7 @@ TEST_F(DlcServiceTest, UninstallUpdatedNeedRebootSuccessTest) {
   EXPECT_CALL(*mock_image_loader_proxy_ptr_, UnloadDlcImage(_, _, _, _, _))
       .WillOnce(DoAll(SetArgPointee<2>(true), Return(true)));
 
-  EXPECT_TRUE(dlc_service_->Uninstall(kFirstDlc, nullptr));
+  EXPECT_TRUE(dlc_service_->Uninstall(kFirstDlc, err_ptr_));
   EXPECT_FALSE(base::PathExists(JoinPaths(content_path_, kFirstDlc)));
   EXPECT_FALSE(base::PathExists(JoinPaths(metadata_path_, kFirstDlc)));
   CheckDlcState(kFirstDlc, DlcState::NOT_INSTALLED);
@@ -455,14 +459,14 @@ TEST_F(DlcServiceTest, UninstallUpdatedNeedRebootSuccessTest) {
 TEST_F(DlcServiceTest, InstallEmptyDlcModuleListTest) {
   EXPECT_CALL(*mock_update_engine_proxy_ptr_, GetStatusAdvanced(_, _, _))
       .WillOnce(Return(true));
-  EXPECT_FALSE(dlc_service_->Install({}, nullptr));
+  EXPECT_FALSE(dlc_service_->Install({}, err_ptr_));
 }
 
 TEST_F(DlcServiceTest, InstallInvalidDlcTest) {
   const auto& id = "bad-dlc-id";
   EXPECT_CALL(*mock_update_engine_proxy_ptr_, GetStatusAdvanced(_, _, _))
       .WillOnce(Return(true));
-  EXPECT_FALSE(dlc_service_->Install(CreateDlcModuleList({id}), nullptr));
+  EXPECT_FALSE(dlc_service_->Install(CreateDlcModuleList({id}), err_ptr_));
   CheckDlcState(id, DlcState::NOT_INSTALLED, /*fail=*/true);
 }
 
@@ -478,7 +482,7 @@ TEST_F(DlcServiceTest, InstallTest) {
               AttemptInstall(ProtoHasUrl(omaha_url_default), _, _))
       .WillOnce(Return(true));
 
-  EXPECT_TRUE(dlc_service_->Install(dlc_module_list, nullptr));
+  EXPECT_TRUE(dlc_service_->Install(dlc_module_list, err_ptr_));
   CheckDlcState(kSecondDlc, DlcState::INSTALLING);
 
   constexpr int expected_permissions = 0755;
@@ -519,7 +523,7 @@ TEST_F(DlcServiceTest, InstallAlreadyInstalledValid) {
       JoinPaths(metadata_path_, kFirstDlc, kDlcMetadataFilePingActive);
   // Set Active to 0 and check if the value is set to 1.
   EXPECT_TRUE(base::WriteFile(metadata_path_active_first_dlc, "0", 1));
-  EXPECT_TRUE(dlc_service_->Install(dlc_module_list, nullptr));
+  EXPECT_TRUE(dlc_service_->Install(dlc_module_list, err_ptr_));
   EXPECT_TRUE(base::PathExists(JoinPaths(content_path_, kFirstDlc)));
   EXPECT_TRUE(base::PathExists(JoinPaths(metadata_path_, kFirstDlc)));
   std::string active_value;
@@ -541,7 +545,7 @@ TEST_F(DlcServiceTest, InstallDuplicatesSucceeds) {
               AttemptInstall(ProtoHasUrl(omaha_url_default), _, _))
       .WillOnce(Return(true));
 
-  EXPECT_TRUE(dlc_service_->Install(dlc_module_list, nullptr));
+  EXPECT_TRUE(dlc_service_->Install(dlc_module_list, err_ptr_));
 
   for (const auto& id : {kFirstDlc, kSecondDlc})
     for (const auto& path :
@@ -563,7 +567,7 @@ TEST_F(DlcServiceTest, InstallAlreadyInstalledAndDuplicatesSucceeds) {
               AttemptInstall(ProtoHasUrl(omaha_url_default), _, _))
       .WillOnce(Return(true));
 
-  EXPECT_TRUE(dlc_service_->Install(dlc_module_list, nullptr));
+  EXPECT_TRUE(dlc_service_->Install(dlc_module_list, err_ptr_));
 
   for (const auto& id : {kFirstDlc, kSecondDlc})
     for (const auto& path :
@@ -586,8 +590,8 @@ TEST_F(DlcServiceTest, InstallUpdateEngineDownThenBackUpTest) {
               AttemptInstall(ProtoHasUrl(omaha_url_default), _, _))
       .WillOnce(Return(true));
 
-  EXPECT_FALSE(dlc_service_->Install(dlc_module_list, nullptr));
-  EXPECT_TRUE(dlc_service_->Install(dlc_module_list, nullptr));
+  EXPECT_FALSE(dlc_service_->Install(dlc_module_list, err_ptr_));
+  EXPECT_TRUE(dlc_service_->Install(dlc_module_list, err_ptr_));
   CheckDlcState(kFirstDlc, DlcState::INSTALLED);
   CheckDlcState(kSecondDlc, DlcState::INSTALLING);
 }
@@ -607,8 +611,8 @@ TEST_F(DlcServiceTest, InstallUpdateEngineBusyThenFreeTest) {
               AttemptInstall(ProtoHasUrl(omaha_url_default), _, _))
       .WillOnce(Return(true));
 
-  EXPECT_FALSE(dlc_service_->Install(dlc_module_list, nullptr));
-  EXPECT_TRUE(dlc_service_->Install(dlc_module_list, nullptr));
+  EXPECT_FALSE(dlc_service_->Install(dlc_module_list, err_ptr_));
+  EXPECT_TRUE(dlc_service_->Install(dlc_module_list, err_ptr_));
   CheckDlcState(kFirstDlc, DlcState::INSTALLED);
   CheckDlcState(kSecondDlc, DlcState::INSTALLING);
 }
@@ -625,7 +629,7 @@ TEST_F(DlcServiceTest, InstallFailureCleansUp) {
               AttemptInstall(ProtoHasUrl(omaha_url_default), _, _))
       .WillOnce(Return(false));
 
-  EXPECT_FALSE(dlc_service_->Install(dlc_module_list, nullptr));
+  EXPECT_FALSE(dlc_service_->Install(dlc_module_list, err_ptr_));
 
   EXPECT_FALSE(base::PathExists(JoinPaths(content_path_, kSecondDlc)));
   EXPECT_FALSE(base::PathExists(JoinPaths(content_path_, kThirdDlc)));
@@ -646,7 +650,7 @@ TEST_F(DlcServiceTest, InstallUrlTest) {
   EXPECT_CALL(*mock_update_engine_proxy_ptr_, AttemptInstall(_, _, _))
       .WillOnce(Return(true));
 
-  dlc_service_->Install(dlc_module_list, nullptr);
+  dlc_service_->Install(dlc_module_list, err_ptr_);
   CheckDlcState(kSecondDlc, DlcState::INSTALLING);
 }
 
@@ -659,7 +663,7 @@ TEST_F(DlcServiceTest, OnStatusUpdateAdvancedSignalDlcRootTest) {
   EXPECT_CALL(*mock_update_engine_proxy_ptr_, AttemptInstall(_, _, _))
       .WillOnce(Return(true));
 
-  EXPECT_TRUE(dlc_service_->Install(dlc_module_list, nullptr));
+  EXPECT_TRUE(dlc_service_->Install(dlc_module_list, err_ptr_));
 
   EXPECT_CALL(*mock_image_loader_proxy_ptr_, LoadDlcImage(_, _, _, _, _, _))
       .WillRepeatedly(
@@ -681,7 +685,7 @@ TEST_F(DlcServiceTest, OnStatusUpdateAdvancedSignalDlcRootTest) {
   }
 
   DlcModuleList dlc_module_list_after;
-  EXPECT_TRUE(dlc_service_->GetInstalled(&dlc_module_list_after, nullptr));
+  EXPECT_TRUE(dlc_service_->GetInstalled(&dlc_module_list_after, err_ptr_));
   EXPECT_EQ(dlc_module_list_after.dlc_module_infos_size(), 3);
 
   for (const DlcModuleInfo& dlc_module :
@@ -698,7 +702,7 @@ TEST_F(DlcServiceTest, OnStatusUpdateAdvancedSignalNoRemountTest) {
   EXPECT_CALL(*mock_update_engine_proxy_ptr_, AttemptInstall(_, _, _))
       .WillOnce(Return(true));
 
-  EXPECT_TRUE(dlc_service_->Install(dlc_module_list, nullptr));
+  EXPECT_TRUE(dlc_service_->Install(dlc_module_list, err_ptr_));
 
   EXPECT_CALL(*mock_image_loader_proxy_ptr_, LoadDlcImage(_, _, _, _, _, _))
       .WillOnce(DoAll(SetArgPointee<3>(mount_path_.value()), Return(true)));
@@ -726,7 +730,7 @@ TEST_F(DlcServiceTest, OnStatusUpdateAdvancedSignalTest) {
   EXPECT_CALL(*mock_update_engine_proxy_ptr_, AttemptInstall(_, _, _))
       .WillOnce(Return(true));
 
-  EXPECT_TRUE(dlc_service_->Install(dlc_module_list, nullptr));
+  EXPECT_TRUE(dlc_service_->Install(dlc_module_list, err_ptr_));
 
   for (const string& id : ids) {
     EXPECT_TRUE(base::PathExists(JoinPaths(content_path_, id)));
@@ -757,7 +761,7 @@ TEST_F(DlcServiceTest, ReportingFailureCleanupTest) {
   EXPECT_CALL(*mock_update_engine_proxy_ptr_, AttemptInstall(_, _, _))
       .WillOnce(Return(true));
 
-  EXPECT_TRUE(dlc_service_->Install(dlc_module_list, nullptr));
+  EXPECT_TRUE(dlc_service_->Install(dlc_module_list, err_ptr_));
 
   for (const string& id : ids) {
     EXPECT_TRUE(base::PathExists(JoinPaths(content_path_, id)));
@@ -793,7 +797,7 @@ TEST_F(DlcServiceTest, ReportingFailureSignalTest) {
   EXPECT_CALL(*mock_update_engine_proxy_ptr_, AttemptInstall(_, _, _))
       .WillOnce(Return(true));
 
-  EXPECT_TRUE(dlc_service_->Install(dlc_module_list, nullptr));
+  EXPECT_TRUE(dlc_service_->Install(dlc_module_list, err_ptr_));
 
   for (const auto& id : ids) {
     EXPECT_TRUE(base::PathExists(JoinPaths(content_path_, id)));
@@ -829,7 +833,7 @@ TEST_F(DlcServiceTest, ProbableUpdateEngineRestartCleanupTest) {
   EXPECT_CALL(*mock_update_engine_proxy_ptr_, AttemptInstall(_, _, _))
       .WillOnce(Return(true));
 
-  EXPECT_TRUE(dlc_service_->Install(dlc_module_list, nullptr));
+  EXPECT_TRUE(dlc_service_->Install(dlc_module_list, err_ptr_));
 
   for (const string& id : ids) {
     EXPECT_TRUE(base::PathExists(JoinPaths(content_path_, id)));
@@ -858,7 +862,7 @@ TEST_F(DlcServiceTest, UpdateEngineFailSafeTest) {
   EXPECT_CALL(*mock_update_engine_proxy_ptr_, AttemptInstall(_, _, _))
       .WillOnce(Return(true));
 
-  EXPECT_TRUE(dlc_service_->Install(dlc_module_list, nullptr));
+  EXPECT_TRUE(dlc_service_->Install(dlc_module_list, err_ptr_));
 
   for (const string& id : ids) {
     EXPECT_TRUE(base::PathExists(JoinPaths(content_path_, id)));
@@ -885,7 +889,7 @@ TEST_F(DlcServiceTest, UpdateEngineFailAfterSignalsSafeTest) {
   EXPECT_CALL(*mock_update_engine_proxy_ptr_, AttemptInstall(_, _, _))
       .WillOnce(Return(true));
 
-  EXPECT_TRUE(dlc_service_->Install(dlc_module_list, nullptr));
+  EXPECT_TRUE(dlc_service_->Install(dlc_module_list, err_ptr_));
 
   for (const string& id : ids) {
     EXPECT_TRUE(base::PathExists(JoinPaths(content_path_, id)));
@@ -920,7 +924,7 @@ TEST_F(DlcServiceTest, OnStatusUpdateAdvancedSignalDownloadProgressTest) {
   EXPECT_CALL(*mock_update_engine_proxy_ptr_, AttemptInstall(_, _, _))
       .WillOnce(Return(true));
 
-  EXPECT_TRUE(dlc_service_->Install(dlc_module_list, nullptr));
+  EXPECT_TRUE(dlc_service_->Install(dlc_module_list, err_ptr_));
 
   for (const auto& id : ids)
     CheckDlcState(id, DlcState::INSTALLING);
@@ -968,7 +972,7 @@ TEST_F(
   for (int i = 0; i < 5; i++) {
     EXPECT_CALL(*mock_update_engine_proxy_ptr_, AttemptInstall(_, _, _))
         .WillOnce(Return(true));
-    EXPECT_TRUE(dlc_service_->Install(dlc_module_list, nullptr));
+    EXPECT_TRUE(dlc_service_->Install(dlc_module_list, err_ptr_));
     for (const auto& id : ids)
       CheckDlcState(id, DlcState::INSTALLING);
 
@@ -994,7 +998,7 @@ TEST_F(DlcServiceTest, PeriodCheckUpdateEngineInstallSignalRaceChecker) {
   EXPECT_CALL(*mock_update_engine_proxy_ptr_, AttemptInstall(_, _, _))
       .WillOnce(Return(true));
 
-  EXPECT_TRUE(dlc_service_->Install(dlc_module_list, nullptr));
+  EXPECT_TRUE(dlc_service_->Install(dlc_module_list, err_ptr_));
 
   MessageLoopRunUntil(
       &loop_, base::TimeDelta::FromSeconds(DlcService::kUECheckTimeout * 5),
@@ -1012,7 +1016,7 @@ TEST_F(DlcServiceTest, StrongerInstalledDlcRefresh) {
   base::FilePath root_path;
   {
     DlcModuleList dlc_module_list;
-    EXPECT_TRUE(dlc_service_->GetInstalled(&dlc_module_list, nullptr));
+    EXPECT_TRUE(dlc_service_->GetInstalled(&dlc_module_list, err_ptr_));
     EXPECT_EQ(dlc_module_list.dlc_module_infos_size(), 1);
     const auto& dlc_info = dlc_module_list.dlc_module_infos(0);
     EXPECT_EQ(dlc_info.dlc_id(), kFirstDlc);
@@ -1026,7 +1030,7 @@ TEST_F(DlcServiceTest, StrongerInstalledDlcRefresh) {
   EXPECT_TRUE(base::DeleteFile(root_path, true));
   {
     DlcModuleList dlc_module_list;
-    EXPECT_TRUE(dlc_service_->GetInstalled(&dlc_module_list, nullptr));
+    EXPECT_TRUE(dlc_service_->GetInstalled(&dlc_module_list, err_ptr_));
     EXPECT_EQ(dlc_module_list.dlc_module_infos_size(), 0);
     EXPECT_FALSE(base::PathExists(root_path));
   }
@@ -1038,7 +1042,7 @@ TEST_F(DlcServiceTest, StrongerInstalledDlcRefresh) {
   EXPECT_TRUE(base::CreateDirectory(root_path));
   {
     DlcModuleList dlc_module_list;
-    EXPECT_TRUE(dlc_service_->GetInstalled(&dlc_module_list, nullptr));
+    EXPECT_TRUE(dlc_service_->GetInstalled(&dlc_module_list, err_ptr_));
     EXPECT_EQ(dlc_module_list.dlc_module_infos_size(), 1);
     const auto& dlc_info = dlc_module_list.dlc_module_infos(0);
     EXPECT_EQ(dlc_info.dlc_id(), kFirstDlc);
@@ -1067,7 +1071,7 @@ TEST_F(DlcServiceTest, MimicUpdateRebootWherePreallocatedSizeIncreasedTest) {
   EXPECT_EQ(new_inactive_img_size, GetFileSize(inactive_img_path));
 
   DlcModuleList dlc_module_list;
-  EXPECT_TRUE(dlc_service_->GetInstalled(&dlc_module_list, nullptr));
+  EXPECT_TRUE(dlc_service_->GetInstalled(&dlc_module_list, err_ptr_));
 
   EXPECT_EQ(inactive_img_size, GetFileSize(inactive_img_path));
 }

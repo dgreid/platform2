@@ -40,10 +40,7 @@ class DlcManager {
   DlcModuleList GetInstalled();
 
   // Returns true and sets |state| if the DLC is supported.
-  bool GetState(const DlcId& id,
-                DlcState* state,
-                std::string* err_code,
-                std::string* err_msg);
+  bool GetState(const DlcId& id, DlcState* state, brillo::ErrorPtr* err);
 
   // Loads installed DLC module images.
   void LoadDlcModuleImages();
@@ -56,13 +53,10 @@ class DlcManager {
   // install DLC(s) and other files that require creation are handled.
   // Args:
   //   dlc_module_list: All the DLC(s) that want to be installed.
-  //   err_code: The error code that should be checked when returned false.
-  //   err_msg: The error message that should be checked when returned false.
+  //   err: The error that's set when returned false.
   // Return:
   //   True on success, otherwise false.
-  bool InitInstall(const DlcModuleList& dlc_module_list,
-                   std::string* err_code,
-                   std::string* err_msg);
+  bool InitInstall(const DlcModuleList& dlc_module_list, brillo::ErrorPtr* err);
 
   // Install Step 2:
   // To get the actual list of DLC(s) to pass into update_engine.
@@ -82,13 +76,10 @@ class DlcManager {
   // Args:
   //   dlc_module_list: Will contain all the DLC(s) and their root mount points
   //                    when returned true, otherwise unmodified.
-  //   err_code: The error code that should be checked when returned false.
-  //   err_msg: The error message that should be checked when returned false.
+  //   err: The error that's set when returned false.
   // Return:
   //   True on success, otherwise false.
-  bool FinishInstall(DlcModuleList* dlc_module_list,
-                     std::string* err_code,
-                     std::string* err_msg);
+  bool FinishInstall(DlcModuleList* dlc_module_list, brillo::ErrorPtr* err);
 
   // Install Step 3b:
   // If for any reason, the init'ed DLC(s) should not follow through with
@@ -96,11 +87,10 @@ class DlcManager {
   // which case the errors will reflect the causes and provide insight in ways
   // dlcservice can be put into a valid state again.
   // Args:
-  //   err_code: The error code that should be checked when returned false.
-  //   err_msg: The error message that should be checked when returned false.
+  //   err: The error that's set when returned false.
   // Return:
   //   True on success, otherwise false.
-  bool CancelInstall(std::string* err_code, std::string* err_msg);
+  bool CancelInstall(brillo::ErrorPtr* err);
 
   // DLC Deletion Flow
 
@@ -108,16 +98,13 @@ class DlcManager {
   // To delete the DLC this can be invoked, no prior step is required.
   // Args:
   //   id: The DLC ID that is to be uninstalled.
-  //   err_code: The error code that should be checked when returned false.
-  //   err_msg: The error message that should be checked when returned false.
+  //   err: The error that's set when returned false.
   // Return:
   //   True if the DLC with the ID passed in is successfully uninstalled,
   //   otherwise false. Deleting a valid DLC that's not installed is considered
   //   successfully uninstalled, however uninstalling a DLC that's not supported
   //   is a failure.
-  bool Delete(const std::string& id,
-              std::string* err_code,
-              std::string* err_msg);
+  bool Delete(const std::string& id, brillo::ErrorPtr* err);
 
  private:
   class DlcManagerImpl;

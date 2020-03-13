@@ -78,6 +78,7 @@ static_library("libdlcservice") {
     "dbus_adaptors/dbus_adaptor.cc",
     "dlc_manager.cc",
     "dlc_service.cc",
+    "error.cc",
     "system_state.cc",
     "types.cc",
   ]

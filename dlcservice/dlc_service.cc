@@ -13,16 +13,17 @@
 #include <base/files/file_util.h>
 #include <base/files/scoped_temp_dir.h>
 #include <brillo/errors/error.h>
-#include <brillo/errors/error_codes.h>
 #include <chromeos/dbus/service_constants.h>
 #include <dbus/dlcservice/dbus-constants.h>
 
+#include "dlcservice/error.h"
 #include "dlcservice/utils.h"
 
 using base::Callback;
 using base::File;
 using base::FilePath;
 using base::ScopedTempDir;
+using brillo::ErrorPtr;
 using brillo::MessageLoop;
 using std::pair;
 using std::string;
@@ -32,21 +33,6 @@ using update_engine::Operation;
 using update_engine::StatusResult;
 
 namespace dlcservice {
-
-namespace {
-
-// Sets the D-Bus error object with error code and error message after which
-// logs the error message will also be logged.
-void LogAndSetError(brillo::ErrorPtr* err,
-                    const string& code,
-                    const string& msg) {
-  if (err)
-    *err = brillo::Error::Create(FROM_HERE, brillo::errors::dbus::kDomain, code,
-                                 msg);
-  LOG(ERROR) << msg;
-}
-
-}  // namespace
 
 DlcService::DlcService()
     : scheduled_period_ue_check_id_(MessageLoop::kTaskIdNull),
@@ -75,36 +61,40 @@ void DlcService::LoadDlcModuleImages() {
 }
 
 bool DlcService::Install(const DlcModuleList& dlc_module_list_in,
-                         brillo::ErrorPtr* err) {
+                         ErrorPtr* err) {
   // If an install is already in progress, dlcservice is busy.
   if (dlc_manager_->IsInstalling()) {
-    LogAndSetError(err, kErrorBusy, "Another install is already in progress.");
+    *err = Error::Create(kErrorBusy, "Another install is already in progress.");
+    LOG(ERROR) << Error::ToString(*err);
     return false;
   }
 
   // Check what state update_engine is in.
   Operation update_engine_op;
   if (!GetUpdateEngineStatus(&update_engine_op)) {
-    LogAndSetError(err, kErrorInternal,
-                   "Failed to get the status of Update Engine.");
+    *err = Error::Create(kErrorInternal,
+                         "Failed to get the status of Update Engine.");
+    LOG(ERROR) << Error::ToString(*err);
     return false;
   }
   switch (update_engine_op) {
     case update_engine::UPDATED_NEED_REBOOT:
-      LogAndSetError(err, kErrorNeedReboot,
-                     "Update Engine applied update, device needs a reboot.");
+      *err =
+          Error::Create(kErrorNeedReboot,
+                        "Update Engine applied update, device needs a reboot.");
+      LOG(ERROR) << Error::ToString(*err);
       return false;
     case update_engine::IDLE:
       break;
     default:
-      LogAndSetError(err, kErrorBusy,
-                     "Update Engine is performing operations.");
+      *err =
+          Error::Create(kErrorBusy, "Update Engine is performing operations.");
+      LOG(ERROR) << Error::ToString(*err);
       return false;
   }
 
-  string err_code, err_msg;
-  if (!dlc_manager_->InitInstall(dlc_module_list_in, &err_code, &err_msg)) {
-    LogAndSetError(err, err_code, err_msg);
+  if (!dlc_manager_->InitInstall(dlc_module_list_in, err)) {
+    LOG(ERROR) << Error::ToString(*err);
     return false;
   }
 
@@ -118,7 +108,9 @@ bool DlcService::Install(const DlcModuleList& dlc_module_list_in,
   // Check if there is nothing to install.
   if (unique_dlc_module_list_to_install.dlc_module_infos_size() == 0) {
     DlcModuleList dlc_module_list;
-    dlc_manager_->FinishInstall(&dlc_module_list, &err_code, &err_msg);
+    ErrorPtr tmp_err;
+    if (!dlc_manager_->FinishInstall(&dlc_module_list, &tmp_err))
+      LOG(ERROR) << Error::ToString(tmp_err);
     InstallStatus install_status =
         CreateInstallStatus(Status::COMPLETED, kErrorNone, dlc_module_list, 1.);
     SendOnInstallStatusSignal(install_status);
@@ -136,13 +128,15 @@ bool DlcService::Install(const DlcModuleList& dlc_module_list_in,
     // above, but just return |kErrorBusy| because the next time around if an
     // update has been applied and is in a reboot needed state, it will indicate
     // correctly then).
-    LogAndSetError(err, kErrorBusy,
-                   "Update Engine failed to schedule install operations.");
+    *err = Error::Create(
+        kErrorBusy, "Update Engine failed to schedule install operations.");
+    LOG(ERROR) << Error::ToString(*err);
     // dlcservice must cancel the install by communicating to dlc_manager who
     // manages the DLC(s), as update_engine won't be able to install the
     // initialized DLC(s) for installation.
-    if (!dlc_manager_->CancelInstall(&err_code, &err_msg))
-      LOG(ERROR) << err_code << ":" << err_msg;
+    ErrorPtr tmp_err;
+    if (!dlc_manager_->CancelInstall(&tmp_err))
+      LOG(ERROR) << Error::ToString(tmp_err);
     return false;
   }
 
@@ -150,11 +144,12 @@ bool DlcService::Install(const DlcModuleList& dlc_module_list_in,
   return true;
 }
 
-bool DlcService::Uninstall(const string& id_in, brillo::ErrorPtr* err) {
+bool DlcService::Uninstall(const string& id_in, ErrorPtr* err) {
   Operation update_engine_op;
   if (!GetUpdateEngineStatus(&update_engine_op)) {
-    LogAndSetError(err, kErrorInternal,
-                   "Failed to get the status of Update Engine");
+    *err = Error::Create(kErrorInternal,
+                         "Failed to get the status of Update Engine");
+    LOG(ERROR) << Error::ToString(*err);
     return false;
   }
   switch (update_engine_op) {
@@ -162,7 +157,8 @@ bool DlcService::Uninstall(const string& id_in, brillo::ErrorPtr* err) {
     case update_engine::UPDATED_NEED_REBOOT:
       break;
     default:
-      LogAndSetError(err, kErrorBusy, "Install or update is in progress.");
+      *err = Error::Create(kErrorBusy, "Install or update is in progress.");
+      LOG(ERROR) << Error::ToString(*err);
       return false;
   }
 
@@ -172,36 +168,33 @@ bool DlcService::Uninstall(const string& id_in, brillo::ErrorPtr* err) {
   if (dlc_manager_->IsInstalling())
     SendFailedSignalAndCleanup();
 
-  string err_code, err_msg;
-  if (!dlc_manager_->Delete(id_in, &err_code, &err_msg)) {
-    LogAndSetError(err, err_code, err_msg);
-    return false;
-  }
-  return true;
+  bool ret = dlc_manager_->Delete(id_in, err);
+  if (!ret)
+    LOG(ERROR) << Error::ToString(*err);
+  return ret;
 }
 
 bool DlcService::GetInstalled(DlcModuleList* dlc_module_list_out,
-                              brillo::ErrorPtr* err) {
+                              ErrorPtr* err) {
   *dlc_module_list_out = dlc_manager_->GetInstalled();
   return true;
 }
 
 bool DlcService::GetState(const std::string& id_in,
                           DlcState* dlc_state,
-                          brillo::ErrorPtr* err) {
-  string err_code, err_msg;
-  if (dlc_manager_->GetState(id_in, dlc_state, &err_code, &err_msg))
-    return true;
-  LogAndSetError(err, err_code, err_msg);
-  return false;
+                          ErrorPtr* err) {
+  bool ret = dlc_manager_->GetState(id_in, dlc_state, err);
+  if (!ret)
+    LOG(ERROR) << Error::ToString(*err);
+  return ret;
 }
 
 void DlcService::SendFailedSignalAndCleanup() {
   SendOnInstallStatusSignal(
       CreateInstallStatus(Status::FAILED, kErrorInternal, {}, 0.));
-  string err_code, err_msg;
-  if (!dlc_manager_->CancelInstall(&err_code, &err_msg))
-    LogAndSetError(nullptr, err_code, err_msg);
+  ErrorPtr tmp_err;
+  if (!dlc_manager_->CancelInstall(&tmp_err))
+    LOG(ERROR) << Error::ToString(tmp_err);
 }
 
 void DlcService::PeriodicInstallCheck() {
@@ -337,10 +330,10 @@ void DlcService::OnStatusUpdateAdvancedSignal(
   if (!HandleStatusResult(status_result))
     return;
 
-  string err_code, err_msg;
+  ErrorPtr tmp_err;
   DlcModuleList dlc_module_list;
-  if (!dlc_manager_->FinishInstall(&dlc_module_list, &err_code, &err_msg)) {
-    LogAndSetError(nullptr, err_code, err_msg);
+  if (!dlc_manager_->FinishInstall(&dlc_module_list, &tmp_err)) {
+    LOG(ERROR) << Error::ToString(tmp_err);
     InstallStatus install_status = CreateInstallStatus(
         Status::FAILED, kErrorInternal, dlc_module_list, 0.);
     SendOnInstallStatusSignal(install_status);
