@@ -97,7 +97,7 @@ std::unique_ptr<Device> CrostiniService::AddTAP(bool is_termina,
                                                 int subnet_index) {
   auto ipv4_subnet = addr_mgr_->AllocateIPv4Subnet(
       is_termina ? AddressManager::Guest::VM_TERMINA
-                 : AddressManager::Guest::VM_PLUGIN_EXT,
+                 : AddressManager::Guest::VM_PLUGIN,
       subnet_index);
   if (!ipv4_subnet) {
     LOG(ERROR) << "Subnet already in use or unavailable.";

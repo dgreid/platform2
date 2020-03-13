@@ -19,8 +19,7 @@ namespace {
 // | 4       (/30) | ARCVM      | Currently a hard-coded reservation           |
 // | 8-20    (/30) | ARC        | Used to expose multiple host networks to ARC |
 // | 24-124  (/30) | Termina VM | Used by Crostini                             |
-// | 128-140 (/28) | Plugin VM  | Used by Crostini                             |
-// | 144-188       | Reserved   |                                              |
+// | 128-188       | Reserved   |                                              |
 // | 192-252 (/28) | Containers | Used by Crostini                             |
 // +---------------+------------+----------------------------------------------+
 //
@@ -50,10 +49,6 @@ AddressManager::AddressManager(
         subnets = 26;
         break;
       case Guest::VM_PLUGIN:
-        base_addr = Ipv4Addr(100, 115, 92, 128);
-        prefix_length = 28;
-        break;
-      case Guest::VM_PLUGIN_EXT:
         base_addr = Ipv4Addr(100, 115, 93, 0);
         prefix_length = 29;
         subnets = 32;
@@ -74,7 +69,7 @@ MacAddress AddressManager::GenerateMacAddress() {
 
 std::unique_ptr<Subnet> AddressManager::AllocateIPv4Subnet(
     AddressManager::Guest guest, uint32_t index) {
-  if (index > 0 && guest != AddressManager::Guest::VM_PLUGIN_EXT) {
+  if (index > 0 && guest != AddressManager::Guest::VM_PLUGIN) {
     LOG(ERROR) << "Subnet indexing not supported for guest";
     return nullptr;
   }

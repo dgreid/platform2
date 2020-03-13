@@ -61,7 +61,7 @@ Manager::Manager(std::unique_ptr<HelperProcess> adb_proxy,
           AddressManager::Guest::CONTAINER,
           AddressManager::Guest::VM_ARC,
           AddressManager::Guest::VM_TERMINA,
-          AddressManager::Guest::VM_PLUGIN_EXT,
+          AddressManager::Guest::VM_PLUGIN,
       }) {
   runner_ = std::make_unique<MinijailedProcessRunner>();
   datapath_ = std::make_unique<Datapath>(runner_.get());

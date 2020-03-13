@@ -28,7 +28,6 @@ class BRILLO_EXPORT AddressManager {
     VM_ARC,
     VM_TERMINA,
     VM_PLUGIN,
-    VM_PLUGIN_EXT,
     CONTAINER,
   };
 
