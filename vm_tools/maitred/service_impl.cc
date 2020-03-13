@@ -665,6 +665,14 @@ grpc::Status ServiceImpl::StartTermina(grpc::ServerContext* ctx,
     LOG(WARNING) << "ndproxyd did not launch";
   }
 
+  if (!init_->Spawn({"mcastd", "eth0", "lxdbr0"}, kLxdEnv, true /*respawn*/,
+                    true /*use_console*/, false /*wait_for_exit*/,
+                    &launch_info)) {
+    LOG(WARNING) << "failed to spawn mcastd";
+  } else if (launch_info.status != Init::ProcessStatus::LAUNCHED) {
+    LOG(WARNING) << "mcastd did not launch";
+  }
+
   return grpc::Status::OK;
 }
 
