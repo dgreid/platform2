@@ -16,10 +16,10 @@
 namespace hardware_verifier {
 
 // Total time to finish execution (initialization + probing + verification).
-const char kMetricTimeToFinish[] = "HardwareVerifier.TimeToFinish";
+const char kMetricTimeToFinish[] = "ChromeOS.HardwareVerifier.TimeToFinish";
 
 // Total time to finish probing.
-const char kMetricTimeToProbe[] = "HardwareVerifier.TimeToProbe";
+const char kMetricTimeToProbe[] = "ChromeOS.HardwareVerifier.TimeToProbe";
 
 class Metrics {
  public:
