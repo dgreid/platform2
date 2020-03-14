@@ -22,7 +22,7 @@
               },
               {
                 "destination": "/usr/share/alsa/ucm/fakeaudiocard/fakeaudiocard.conf",
-                "source": "audio-defaults/card-name-file.conf"
+                "source": "audio/fakeaudiocard/fakeaudiocard.conf"
               },
               {
                 "destination": "/etc/cras/fake-ref-design/fakeaudiocard",

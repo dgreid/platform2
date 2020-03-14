@@ -161,9 +161,6 @@ def _BuildAudio(config):
   alsa_path = '/usr/share/alsa/ucm'
   cras_path = '/etc/cras'
   project_name = config.hw_design.name.lower()
-  # File that matches the cardname when installed and points to HiFi.conf
-  # TODO(shapiroc): Plumb the defaults in chromeos-bsp files structure
-  card_name_file = 'audio-defaults/card-name-file.conf'
   if not config.sw_config.audio_config:
     return {}
   audio = config.sw_config.audio_config
@@ -171,8 +168,9 @@ def _BuildAudio(config):
   files = []
   if audio.ucm_file:
     files.append(_File(audio.ucm_file, '%s/%s/HiFi.conf' % (alsa_path, card)))
+  if audio.ucm_master_file:
     files.append(_File(
-        card_name_file, '%s/%s/%s.conf' % (alsa_path, card, card)))
+        audio.ucm_master_file, '%s/%s/%s.conf' % (alsa_path, card, card)))
   if audio.card_config_file:
     files.append(_File(
         audio.card_config_file, '%s/%s/%s' % (cras_path, project_name, card)))
