@@ -270,6 +270,7 @@ def _TransformBuildConfig(config):
       'identity': _BuildIdentity(
           config.sw_config.scan_config,
           config.brand_config.scan_config),
+      'name': config.hw_design.name.lower(),
   }
 
   _Set(_BuildArc(config), result, 'arc')
