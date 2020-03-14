@@ -11,13 +11,21 @@ import subprocess
 
 import cros_config_proto_converter
 
+
 from chromite.lib import cros_test_lib
 from config.test import fake_config
+
 
 THIS_DIR = os.path.dirname(__file__)
 
 PROGRAM_CONFIG_FILE = fake_config.FAKE_PROGRAM_CONFIG
 PROJECT_CONFIG_FILE = fake_config.FAKE_PROJECT_CONFIG
+
+
+def fakeConfig():
+  return cros_config_proto_converter._MergeConfigs([
+      cros_config_proto_converter._ReadConfig(PROGRAM_CONFIG_FILE),
+      cros_config_proto_converter._ReadConfig(PROJECT_CONFIG_FILE)])
 
 
 class ParseArgsTests(cros_test_lib.TestCase):
@@ -54,6 +62,31 @@ class MainTest(cros_test_lib.TempDirTestCase):
     if changed:
       print(regen_cmd)
       self.fail('Fake project transform does not match')
+
+
+class TransformBuildConfigsTest(cros_test_lib.TempDirTestCase):
+
+  def testMissingLookups(self):
+    config = fakeConfig()
+    config.ClearField('build_targets')
+
+    with self.assertRaisesRegex(Exception, 'Failed to lookup BuildTarget'):
+      cros_config_proto_converter._TransformBuildConfigs(config)
+
+  def testEmptyDeviceBrand(self):
+    config = fakeConfig()
+    config.ClearField('device_brands')
+
+    self.assertIsNotNone(
+        cros_config_proto_converter._TransformBuildConfigs(config))
+
+  def testMissingSwConfig(self):
+    config = fakeConfig()
+    config.designs.value[0].configs[0].ClearField('software_config_id')
+
+    with self.assertRaisesRegex(Exception, 'Software config is required'):
+      cros_config_proto_converter._TransformBuildConfigs(config)
+
 
 
 if __name__ == '__main__':

@@ -7,12 +7,14 @@
 
 import argparse
 import json
+import pprint
 import sys
 
 from collections import namedtuple
 
 from config.api import config_bundle_pb2
 from config.api import device_brand_pb2
+from config.api.software import brand_config_pb2
 
 Config = namedtuple('Config',
                     ['program',
@@ -188,7 +190,17 @@ def _BuildIdentity(hw_scan_config, brand_scan_config=None):
 
 
 def _Lookup(id_value, id_map):
-  return id_map[id_value.value] if id_value else None
+  if id_value and id_value.value:
+    key = id_value.value
+    if key in id_map:
+      return id_map[id_value.value]
+    error = 'Failed to lookup %s with value: %s' % (
+        id_value.__class__.__name__.replace('Id', ''), key)
+    print(error)
+    print('Check the config contents provided:')
+    pp = pprint.PrettyPrinter(indent=4)
+    pp.pprint(id_map)
+    raise Exception(error)
 
 
 def _TransformBuildConfigs(config):
@@ -200,24 +212,38 @@ def _TransformBuildConfigs(config):
 
   results = []
   for hw_design in config.designs.value:
-    device_brands = (x for x in config.device_brands.value
-                     if x.design_id.value == hw_design.id.value)
+    device_brands = None
+    if config.device_brands.value:
+      device_brands = [x for x in config.device_brands.value
+                       if x.design_id.value == hw_design.id.value]
     if not device_brands:
       device_brands = [device_brand_pb2.DeviceBrand()]
 
     for device_brand in device_brands:
+      # Brand config can be empty since platform JSON config allows it
+      brand_config = brand_config_pb2.BrandConfig()
+      if device_brand.id and device_brand.id.value in brand_configs:
+        brand_config = brand_configs[device_brand.id.value]
+
       for hw_design_config in hw_design.configs:
-        config = Config(
-            program=_Lookup(hw_design.program_id, programs),
-            hw_design=hw_design,
-            odm=_Lookup(hw_design.odm_id, partners),
-            hw_design_config=hw_design_config,
-            device_brand=device_brand,
-            oem=_Lookup(device_brand.oem_id, partners),
-            sw_config=_Lookup(hw_design_config.software_config_id, sw_configs),
-            brand_config=_Lookup(device_brand.id, brand_configs),
-            build_target=_Lookup(hw_design.build_target_id, build_targets))
-        results.append(_TransformBuildConfig(config))
+        sw_config = _Lookup(hw_design_config.software_config_id, sw_configs)
+        if not sw_config:
+          design_id = hw_design_config.id.value
+          raise Exception('Software config is required for: %s' % design_id)
+
+        results.append(
+            _TransformBuildConfig(Config(
+                program=_Lookup(hw_design.program_id, programs),
+                hw_design=hw_design,
+                odm=_Lookup(hw_design.odm_id, partners),
+                hw_design_config=hw_design_config,
+                device_brand=device_brand,
+                oem=_Lookup(device_brand.oem_id, partners),
+                sw_config=sw_config,
+                brand_config=brand_config,
+                build_target=_Lookup(hw_design.build_target_id, build_targets))
+            )
+        )
 
   return results
 
