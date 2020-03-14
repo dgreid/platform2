@@ -97,7 +97,7 @@ This CL will have changes to the [ML Service ebuild], which installs the
 model(s) into rootfs.
 The ebuild is located at
 `/chromiumos/overlays/chromiumos-overlay/chromeos-base/ml/ml-9999.ebuild`.
-Simply add your models in the `system_models` variable: they are installed in the
+Simply add your models in the `MODELS` variable: they are installed in the
 `src_install()` function in the same file.
 The install location in the ChromeOS system is `/opt/google/chrome/ml_models`.
 
