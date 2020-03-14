@@ -41,7 +41,7 @@
           "sensor-location": "keyboard-bottom-left"
         },
         "firmware": {
-          "bcs-overlay": "fake",
+          "bcs-overlay": "overlay-fake-private",
           "build-targets": {
             "coreboot": "fake",
             "depthcharge": "fake",
