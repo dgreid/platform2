@@ -94,7 +94,7 @@ def _BuildFingerprint(hw_topology):
 
 
 def _FwBcsPath(payload):
-  if payload:
+  if payload and payload.firmware_image_name:
     return 'bcs://%s.%d.%d.0.tbz2' % (
         payload.firmware_image_name,
         payload.version.major,
@@ -117,20 +117,17 @@ def _BuildFirmware(config):
   ec_ro = fw.ec_ro_payload
   pd_ro = fw.pd_ro_payload
 
+  build_targets = {}
+  _Set(_FwBuildTarget(main_rw), build_targets, 'coreboot')
+  _Set(_FwBuildTarget(main_ro), build_targets, 'depthcharge')
+  _Set(_FwBuildTarget(ec_ro), build_targets, 'ec')
+  _Set(list(fw.ec_extras), build_targets, 'ec_extras')
+  _Set(_FwBuildTarget(pd_ro), build_targets, 'libpayload')
+
   result = {
       'bcs-overlay': config.build_target.overlay_name,
-      'build-targets': {
-          'coreboot': _FwBuildTarget(main_rw),
-          'depthcharge': _FwBuildTarget(main_ro),
-          'ec': _FwBuildTarget(ec_ro),
-          # Convert to list from proto iterator for string lists
-          'ec_extras': list(fw.ec_extras),
-          'libpayload': _FwBuildTarget(pd_ro),
-      },
-      # TODO(shapiroc): Resolve this with jettrink@ (where it's sourced)
-      # I think this is wrong here based on previous discussions.
-      # 'firmware-config': 0,
-      'image-name': main_ro.firmware_image_name,
+      'build-targets': build_targets,
+      'image-name': main_ro.firmware_image_name.lower(),
   }
   _Set(_FwBcsPath(fw.main_ro_payload), result, 'main-ro-image')
   _Set(_FwBcsPath(fw.main_rw_payload), result, 'main-rw-image')

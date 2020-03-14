@@ -43,17 +43,17 @@
         "firmware": {
           "bcs-overlay": "fake",
           "build-targets": {
-            "coreboot": "Fake",
-            "depthcharge": "Fake",
-            "ec": "Fake_EC",
+            "coreboot": "fake",
+            "depthcharge": "fake",
+            "ec": "fake",
             "ec_extras": [
               "fake-ec-extra1",
               "fake-ec-extra2"
             ],
-            "libpayload": "Fake_PD"
+            "libpayload": "fake"
           },
           "ec-ro-image": "bcs://Fake_EC.11111.2.0.tbz2",
-          "image-name": "Fake",
+          "image-name": "fake",
           "main-ro-image": "bcs://Fake.11111.0.0.tbz2",
           "main-rw-image": "bcs://Fake.11111.0.0.tbz2",
           "pd-ro-image": "bcs://Fake_PD.11111.0.0.tbz2"
