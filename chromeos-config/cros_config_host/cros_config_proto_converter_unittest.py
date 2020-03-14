@@ -88,6 +88,5 @@ class TransformBuildConfigsTest(cros_test_lib.TempDirTestCase):
       cros_config_proto_converter._TransformBuildConfigs(config)
 
 
-
 if __name__ == '__main__':
   cros_test_lib.main(module=__name__)

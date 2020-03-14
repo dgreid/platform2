@@ -7,14 +7,14 @@
             "device": "fake_cheets",
             "first-api-level": "28",
             "marketing-name": "Fake ChromeOS Device Brandname",
-            "metrics-tag": "FAKE-REF-DESIGN",
+            "metrics-tag": "fake-ref-design",
             "oem": "FAKE-OEM",
-            "product": "FAKE-REF-DESIGN"
+            "product": "fake-ref-design"
           }
         },
         "audio": {
           "main": {
-            "cras-config-dir": "FAKE-REF-DESIGN",
+            "cras-config-dir": "fake-ref-design",
             "files": [
               {
                 "destination": "/usr/share/alsa/ucm/fakeaudiocard/HiFi.conf",
@@ -25,17 +25,21 @@
                 "source": "audio-defaults/card-name-file.conf"
               },
               {
-                "destination": "/etc/cras/FAKE-REF-DESIGN/fakeaudiocard",
+                "destination": "/etc/cras/fake-ref-design/fakeaudiocard",
                 "source": "audio/fakeaudiocard/fakeaudiocard"
               },
               {
-                "destination": "/etc/cras/FAKE-REF-DESIGN/dsp.ini",
+                "destination": "/etc/cras/fake-ref-design/dsp.ini",
                 "source": "audio/fakeaudiocard/HiFi.conf"
               }
             ]
           }
         },
         "brand-code": "AAAA",
+        "fingerprint": {
+          "board": "fake-fingerprint-board",
+          "sensor-location": "keyboard-bottom-left"
+        },
         "firmware": {
           "bcs-overlay": "fake",
           "build-targets": {
@@ -56,7 +60,7 @@
         },
         "firmware-signing": {
           "key-id": "DEFAULT",
-          "signature-id": "FAKE-REF-DESIGN"
+          "signature-id": "fake-ref-design"
         },
         "identity": {
           "platform-name": "Fake",

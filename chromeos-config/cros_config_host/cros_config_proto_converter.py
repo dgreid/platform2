@@ -67,16 +67,30 @@ def _Set(field, target, target_name):
 
 def _BuildArc(config):
   if config.build_target.arc:
-    return {
-        'build-properties': {
-            'device': config.build_target.arc.device,
-            'first-api-level': config.build_target.arc.first_api_level,
-            'marketing-name': config.device_brand.brand_name,
-            'oem': config.oem.name if config.oem else None,
-            'metrics-tag': config.hw_design.name,
-            'product': config.hw_design.name,
-        }
+    build_properties = {
+        'device': config.build_target.arc.device,
+        'first-api-level': config.build_target.arc.first_api_level,
+        'marketing-name': config.device_brand.brand_name,
+        'metrics-tag': config.hw_design.name.lower(),
+        'product': config.hw_design.name.lower(),
     }
+    if config.oem:
+      build_properties['oem'] = config.oem.name
+  return {
+      'build-properties': build_properties
+  }
+
+
+def _BuildFingerprint(hw_topology):
+  if hw_topology and hw_topology.fingerprint:
+    fp = hw_topology.fingerprint.hardware_feature.fingerprint
+    location = fp.Location.DESCRIPTOR.values_by_number[fp.location].name
+    result = {
+        'sensor-location': location.lower().replace('_', '-'),
+    }
+    if fp.board:
+      result['board'] = fp.board
+    return result
 
 
 def _FwBcsPath(payload):
@@ -132,7 +146,7 @@ def _BuildFwSigning(config):
   # TODO(shapiroc): Source signing config from separate private repo
   return {
       'key-id': 'DEFAULT',
-      'signature-id': config.hw_design.name,
+      'signature-id': config.hw_design.name.lower(),
   }
 
 
@@ -146,7 +160,7 @@ def _File(source, destination):
 def _BuildAudio(config):
   alsa_path = '/usr/share/alsa/ucm'
   cras_path = '/etc/cras'
-  project_name = config.hw_design.name
+  project_name = config.hw_design.name.lower()
   # File that matches the cardname when installed and points to HiFi.conf
   # TODO(shapiroc): Plumb the defaults in chromeos-bsp files structure
   card_name_file = 'audio-defaults/card-name-file.conf'
@@ -268,6 +282,8 @@ def _TransformBuildConfig(config):
   _Set(config.device_brand.brand_code, result, 'brand-code')
   _Set(_BuildFirmware(config), result, 'firmware')
   _Set(_BuildFwSigning(config), result, 'firmware-signing')
+  _Set(_BuildFingerprint(
+      config.hw_design_config.hardware_topology), result, 'fingerprint')
 
   return result
 
