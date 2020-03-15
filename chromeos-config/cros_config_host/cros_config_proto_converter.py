@@ -118,11 +118,17 @@ def _BuildFirmware(config):
   pd_ro = fw.pd_ro_payload
 
   build_targets = {}
-  _Set(_FwBuildTarget(main_rw), build_targets, 'coreboot')
   _Set(_FwBuildTarget(main_ro), build_targets, 'depthcharge')
+  # Default to RO build target if no RW set
+  _Set(_FwBuildTarget(main_rw) or _FwBuildTarget(main_ro),
+       build_targets,
+       'coreboot')
   _Set(_FwBuildTarget(ec_ro), build_targets, 'ec')
   _Set(list(fw.ec_extras), build_targets, 'ec_extras')
-  _Set(_FwBuildTarget(pd_ro), build_targets, 'libpayload')
+  # Default to EC build target if no PD set
+  _Set(_FwBuildTarget(pd_ro) or _FwBuildTarget(ec_ro),
+       build_targets,
+       'libpayload')
 
   result = {
       'bcs-overlay': config.build_target.overlay_name,
