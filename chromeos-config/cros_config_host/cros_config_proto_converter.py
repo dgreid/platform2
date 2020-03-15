@@ -219,7 +219,7 @@ def _TransformBuildConfigs(config):
   sw_configs = dict([(x.id.value, x) for x in config.software_configs])
   brand_configs = dict([(x.brand_id.value, x) for x in config.brand_configs])
 
-  results = []
+  results = {}
   for hw_design in config.designs.value:
     device_brands = None
     if config.device_brands.value:
@@ -240,21 +240,27 @@ def _TransformBuildConfigs(config):
           design_id = hw_design_config.id.value
           raise Exception('Software config is required for: %s' % design_id)
 
-        results.append(
-            _TransformBuildConfig(Config(
-                program=_Lookup(hw_design.program_id, programs),
-                hw_design=hw_design,
-                odm=_Lookup(hw_design.odm_id, partners),
-                hw_design_config=hw_design_config,
-                device_brand=device_brand,
-                oem=_Lookup(device_brand.oem_id, partners),
-                sw_config=sw_config,
-                brand_config=brand_config,
-                build_target=_Lookup(hw_design.build_target_id, build_targets))
-            )
+        transformed_config = _TransformBuildConfig(Config(
+            program=_Lookup(hw_design.program_id, programs),
+            hw_design=hw_design,
+            odm=_Lookup(hw_design.odm_id, partners),
+            hw_design_config=hw_design_config,
+            device_brand=device_brand,
+            oem=_Lookup(device_brand.oem_id, partners),
+            sw_config=sw_config,
+            brand_config=brand_config,
+            build_target=_Lookup(hw_design.build_target_id, build_targets))
         )
 
-  return results
+        config_json = json.dumps(transformed_config,
+                                 sort_keys=True,
+                                 indent=2,
+                                 separators=(',', ': '))
+
+        if config_json not in results:
+          results[config_json] = transformed_config
+
+  return list(results.values())
 
 
 def _TransformBuildConfig(config):

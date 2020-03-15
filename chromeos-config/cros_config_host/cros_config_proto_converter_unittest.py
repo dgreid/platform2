@@ -87,6 +87,22 @@ class TransformBuildConfigsTest(cros_test_lib.TempDirTestCase):
     with self.assertRaisesRegex(Exception, 'Software config is required'):
       cros_config_proto_converter._TransformBuildConfigs(config)
 
+  def testUniqueConfigsOnly(self):
+    config = fakeConfig()
+    duplicate_config = cros_config_proto_converter._MergeConfigs(
+        [config, fakeConfig()])
+
+    self.assertNotEqual(len(config.designs.value),
+                        len(duplicate_config.designs.value))
+
+    config_size = len(
+        cros_config_proto_converter._TransformBuildConfigs(config))
+    duplicate_config_size = len(
+        cros_config_proto_converter._TransformBuildConfigs(
+            duplicate_config))
+
+    self.assertEqual(config_size, duplicate_config_size)
+
 
 if __name__ == '__main__':
   cros_test_lib.main(module=__name__)
