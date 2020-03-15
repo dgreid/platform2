@@ -964,47 +964,6 @@ TEST_F(CrashCollectorTest, GetLogContents) {
   EXPECT_EQ("hello world\n", contents);
 }
 
-TEST_F(CrashCollectorTest, GetLogContentsDefault) {
-  FilePath config_file = test_dir_.Append("crash_config");
-  const char kConfigContents[] =
-      "foobar=echo hello there | \\\n  sed -e \"s/there/world/\"";
-  ASSERT_TRUE(test_util::CreateFile(config_file, kConfigContents));
-
-  FilePath messages_file = test_dir_.Append("messages");
-  FilePath output_file = test_dir_.Append("crash_log.txt");
-  const char kMessagesContents[] =
-      "a b crasher\n"
-      "non-matching \n"
-      "crashera sdfsdfasd\n"
-      "\n"
-      "cr\n"
-      "asher\n";
-  ASSERT_TRUE(test_util::CreateFile(messages_file, kMessagesContents));
-
-  base::DeleteFile(FilePath(output_file), false);
-
-  collector_.set_default_logfile_path(messages_file.value());
-
-  EXPECT_FALSE(collector_.GetLogContents(config_file, "barfoo", output_file));
-  EXPECT_FALSE(base::PathExists(output_file));
-  EXPECT_EQ(collector_.get_bytes_written(), 0);
-  base::DeleteFile(FilePath(output_file), false);
-
-  EXPECT_TRUE(collector_.GetLogContents(config_file, "crasher", output_file));
-  EXPECT_TRUE(base::PathExists(output_file));
-
-  EXPECT_GT(collector_.get_bytes_written(), 0);
-  std::string contents;
-  EXPECT_TRUE(base::ReadFileToString(output_file, &contents));
-  EXPECT_EQ(contents,
-            "===default /var/log/messages===\n"
-            "a b crasher\n"
-            "crashera sdfsdfasd\n"
-            "EOF\n");
-
-  collector_.set_default_logfile_path("/var/log/messages");
-}
-
 TEST_F(CrashCollectorTest, GetMultipleLogContents) {
   FilePath config_file = test_dir_.Append("crash_config");
   FilePath output_file = test_dir_.Append("crash_log");

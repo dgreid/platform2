@@ -105,11 +105,6 @@ class CrashCollector {
     log_config_path_ = base::FilePath(path);
   }
 
-  // For testing, set the default log file path instead of kDefaultLogFile.
-  void set_default_logfile_path(const std::string& path) {
-    default_logfile_path_ = base::FilePath(path);
-  }
-
   // For testing, set the clock to use to get the report timestamp.
   void set_test_clock(std::unique_ptr<base::Clock> test_clock) {
     test_clock_ = std::move(test_clock);
@@ -183,7 +178,6 @@ class CrashCollector {
   FRIEND_TEST(CrashCollectorTest, GetCrashDirectoryInfo);
   FRIEND_TEST(CrashCollectorTest, GetCrashPath);
   FRIEND_TEST(CrashCollectorTest, GetLogContents);
-  FRIEND_TEST(CrashCollectorTest, GetLogContentsDefault);
   FRIEND_TEST(CrashCollectorTest, GetMultipleLogContents);
   FRIEND_TEST(CrashCollectorTest, GetProcessTree);
   FRIEND_TEST(CrashCollectorTest, GetUptime);
@@ -394,7 +388,6 @@ class CrashCollector {
   base::FilePath system_crash_path_;
   base::FilePath crash_reporter_state_path_;
   base::FilePath log_config_path_;
-  base::FilePath default_logfile_path_;
   size_t max_log_size_;
   std::unique_ptr<base::Clock> test_clock_;
   std::string test_kernel_name_;
