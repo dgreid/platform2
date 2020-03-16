@@ -87,7 +87,7 @@ class ArcServiceTest : public testing::Test {
   std::unique_ptr<ArcService> NewService() {
     arc_networkd::test::guest = GuestMessage::ARC;
     return std::make_unique<ArcService>(shill_client_.get(), datapath_.get(),
-                                        addr_mgr_.get(), &forwarder_);
+                                        addr_mgr_.get(), &forwarder_, false);
   }
 
   FakeShillClientHelper shill_helper_;
@@ -295,9 +295,11 @@ class VmImplTest : public testing::Test {
     addr_mgr_ = std::make_unique<AddressManager>();
   }
 
-  std::unique_ptr<ArcService::VmImpl> Impl(bool start = true) {
+  std::unique_ptr<ArcService::VmImpl> Impl(bool start = true,
+                                           bool multinet = false) {
     auto impl = std::make_unique<ArcService::VmImpl>(
-        shill_client_.get(), datapath_.get(), addr_mgr_.get(), &forwarder_);
+        shill_client_.get(), datapath_.get(), addr_mgr_.get(), &forwarder_,
+        multinet);
     if (start) {
       impl->Start(kTestCID);
     }

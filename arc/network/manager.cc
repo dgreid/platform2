@@ -34,6 +34,10 @@ constexpr char kNDProxyFeatureName[] = "ARC NDProxy";
 constexpr int kNDProxyMinAndroidSdkVersion = 28;  // P
 constexpr int kNDProxyMinChromeMilestone = 80;
 
+constexpr char kArcVmMultinetFeatureName[] = "ARCVM Multinet";
+constexpr int kArcVmMultinetMinAndroidSdkVersion = 29;  // R DEV
+constexpr int kArcVmMultinetMinChromeMilestone = 99;    // DISABLED
+
 // Passes |method_call| to |handler| and passes the response to
 // |response_sender|. If |handler| returns nullptr, an empty response is
 // created and sent.
@@ -215,8 +219,8 @@ void Manager::InitialSetup() {
   }
   // Kernel proxy_ndp is only needed for legacy IPv6 configuration
   if (!ShouldEnableFeature(kNDProxyMinAndroidSdkVersion,
-                           kNDProxyMinChromeMilestone,
-                           std::vector<std::string>(), kNDProxyFeatureName) &&
+                           kNDProxyMinChromeMilestone, {},
+                           kNDProxyFeatureName) &&
       runner.sysctl_w("net.ipv6.conf.all.proxy_ndp", "1") != 0) {
     LOG(ERROR) << "Failed to update net.ipv6.conf.all.proxy_ndp."
                << " IPv6 functionality may be broken.";
@@ -228,8 +232,11 @@ void Manager::InitialSetup() {
   shill_client_ = std::make_unique<ShillClient>(bus_);
   auto* const forwarder = static_cast<TrafficForwarder*>(this);
 
-  arc_svc_ = std::make_unique<ArcService>(shill_client_.get(), datapath_.get(),
-                                          &addr_mgr_, forwarder);
+  arc_svc_ = std::make_unique<ArcService>(
+      shill_client_.get(), datapath_.get(), &addr_mgr_, forwarder,
+      ShouldEnableFeature(kArcVmMultinetMinAndroidSdkVersion,
+                          kArcVmMultinetMinChromeMilestone, {},
+                          kArcVmMultinetFeatureName));
   cros_svc_ = std::make_unique<CrostiniService>(shill_client_.get(), &addr_mgr_,
                                                 datapath_.get(), forwarder);
 

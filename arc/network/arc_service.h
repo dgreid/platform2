@@ -87,7 +87,8 @@ class ArcService {
     VmImpl(ShillClient* shill_client,
            Datapath* datapath,
            AddressManager* addr_mgr,
-           TrafficForwarder* forwarder);
+           TrafficForwarder* forwarder,
+           bool enable_multinet);
     ~VmImpl() = default;
 
     GuestMessage::GuestType guest() const override;
@@ -102,11 +103,16 @@ class ArcService {
                                    const std::string& prev_ifname) override;
 
    private:
+    // TODO(garrick): Remove once ARCVM P is gone.
+    bool OnStartArcPDevice();
+    void OnStopArcPDevice();
+
     uint32_t cid_;
     const ShillClient* const shill_client_;
     Datapath* datapath_;
     AddressManager* addr_mgr_;
     TrafficForwarder* forwarder_;
+    bool enable_multinet_;
 
     DISALLOW_COPY_AND_ASSIGN(VmImpl);
   };
@@ -115,7 +121,8 @@ class ArcService {
   ArcService(ShillClient* shill_client,
              Datapath* datapath,
              AddressManager* addr_mgr,
-             TrafficForwarder* forwarder);
+             TrafficForwarder* forwarder,
+             bool enable_arcvm_multinet);
   ~ArcService();
 
   bool Start(uint32_t id);
@@ -156,6 +163,7 @@ class ArcService {
   Datapath* datapath_;
   AddressManager* addr_mgr_;
   TrafficForwarder* forwarder_;
+  bool enable_arcvm_multinet_;
   std::unique_ptr<Impl> impl_;
   std::map<std::string, std::unique_ptr<Device>> devices_;
 

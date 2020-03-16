@@ -197,11 +197,13 @@ std::unique_ptr<Device::Config> MakeArcConfig(AddressManager* addr_mgr,
 ArcService::ArcService(ShillClient* shill_client,
                        Datapath* datapath,
                        AddressManager* addr_mgr,
-                       TrafficForwarder* forwarder)
+                       TrafficForwarder* forwarder,
+                       bool enable_arcvm_multinet)
     : shill_client_(shill_client),
       datapath_(datapath),
       addr_mgr_(addr_mgr),
-      forwarder_(forwarder) {
+      forwarder_(forwarder),
+      enable_arcvm_multinet_(enable_arcvm_multinet) {
   shill_client_->RegisterDevicesChangedHandler(
       base::Bind(&ArcService::OnDevicesChanged, weak_factory_.GetWeakPtr()));
   shill_client_->ScanDevices(
@@ -229,7 +231,7 @@ bool ArcService::Start(uint32_t id) {
   const auto guest = ArcGuest();
   if (guest == GuestMessage::ARC_VM)
     impl_ = std::make_unique<VmImpl>(shill_client_, datapath_, addr_mgr_,
-                                     forwarder_);
+                                     forwarder_, enable_arcvm_multinet_);
   else
     impl_ = std::make_unique<ContainerImpl>(datapath_, addr_mgr_, forwarder_,
                                             guest);
@@ -581,12 +583,14 @@ void ArcService::ContainerImpl::OnDefaultInterfaceChanged(
 ArcService::VmImpl::VmImpl(ShillClient* shill_client,
                            Datapath* datapath,
                            AddressManager* addr_mgr,
-                           TrafficForwarder* forwarder)
+                           TrafficForwarder* forwarder,
+                           bool enable_multinet)
     : cid_(kInvalidCID),
       shill_client_(shill_client),
       datapath_(datapath),
       addr_mgr_(addr_mgr),
-      forwarder_(forwarder) {}
+      forwarder_(forwarder),
+      enable_multinet_(enable_multinet) {}
 
 GuestMessage::GuestType ArcService::VmImpl::guest() const {
   return GuestMessage::ARC_VM;
@@ -621,14 +625,6 @@ bool ArcService::VmImpl::Start(uint32_t cid) {
     return false;
   }
 
-  // Setup the iptables.
-  if (!datapath_->AddLegacyIPv4DNAT(
-          IPv4AddressToString(config->guest_ipv4_addr())))
-    LOG(ERROR) << "Failed to configure ARC traffic rules";
-
-  if (!datapath_->AddOutboundIPv4(kArcVmBridge))
-    LOG(ERROR) << "Failed to configure egress traffic rules";
-
   arc_device_ = std::make_unique<Device>(kArcVmIfname, std::move(config), opts);
 
   OnStartDevice(arc_device_.get());
@@ -643,8 +639,6 @@ void ArcService::VmImpl::Stop(uint32_t cid) {
     return;
   }
 
-  datapath_->RemoveOutboundIPv4(kArcVmBridge);
-  datapath_->RemoveLegacyIPv4DNAT();
   OnStopDevice(arc_device_.get());
   datapath_->RemoveBridge(kArcVmBridge);
   arc_device_.reset();
@@ -661,10 +655,9 @@ bool ArcService::VmImpl::IsStarted(uint32_t* cid) const {
 }
 
 bool ArcService::VmImpl::OnStartDevice(Device* device) {
-  // TODO(garrick): Remove this once ARCVM supports ad hoc interface
-  // configurations.
-  if (!device->UsesDefaultInterface())
-    return false;
+  // TODO(garrick): Remove once ARCVM P is gone.
+  if (device == arc_device_.get() && !enable_multinet_)
+    return OnStartArcPDevice();
 
   const auto& config = device->config();
 
@@ -688,20 +681,56 @@ bool ArcService::VmImpl::OnStartDevice(Device* device) {
     return false;
   }
 
-  // TODO(garrick): Remove this once ARCVM supports ad hoc interface
-  // configurations; but for now ARCVM needs to be treated like ARC++ N.
+  device->set_tap_ifname(tap);
+
+  if (device != arc_device_.get())
+    forwarder_->StartForwarding(
+        device->ifname(), device->config().host_ifname(),
+        device->options().ipv6_enabled, device->options().fwd_multicast);
+
+  return true;
+}
+
+bool ArcService::VmImpl::OnStartArcPDevice() {
+  LOG(INFO) << "Starting device " << kArcVmIfname << " bridge: " << kArcVmBridge
+            << " guest_iface: " << kArcVmIfname << " cid: " << cid_;
+
+  // Since the interface will be added to the bridge, no address configuration
+  // should be provided here.
+  std::string tap =
+      datapath_->AddTAP("" /* auto-generate name */, nullptr /* no mac addr */,
+                        nullptr /* no ipv4 subnet */, vm_tools::kCrosVmUser);
+  if (tap.empty()) {
+    LOG(ERROR) << "Failed to create TAP device for VM";
+    return false;
+  }
+
+  if (!datapath_->AddToBridge(kArcVmBridge, tap)) {
+    LOG(ERROR) << "Failed to bridge TAP device " << tap;
+    datapath_->RemoveInterface(tap);
+    return false;
+  }
+
+  arc_device_->set_tap_ifname(tap);
+
+  // Setup the iptables.
+  if (!datapath_->AddLegacyIPv4DNAT(
+          IPv4AddressToString(arc_device_->config().guest_ipv4_addr())))
+    LOG(ERROR) << "Failed to configure ARC traffic rules";
+
+  if (!datapath_->AddOutboundIPv4(kArcVmBridge))
+    LOG(ERROR) << "Failed to configure egress traffic rules";
+
   OnDefaultInterfaceChanged(shill_client_->default_interface(),
                             "" /*previous*/);
 
-  device->set_tap_ifname(tap);
   return true;
 }
 
 void ArcService::VmImpl::OnStopDevice(Device* device) {
-  // TODO(garrick): Remove this once ARCVM supports ad hoc interface
-  // configurations.
-  if (!device->UsesDefaultInterface())
-    return;
+  // TODO(garrick): Remove once ARCVM P is gone.
+  if (device == arc_device_.get() && !enable_multinet_)
+    return OnStopArcPDevice();
 
   const auto& config = device->config();
 
@@ -709,25 +738,37 @@ void ArcService::VmImpl::OnStopDevice(Device* device) {
             << " bridge: " << config.host_ifname()
             << " guest_iface: " << config.guest_ifname() << " cid: " << cid_;
 
-  // TODO(garrick): Remove this once ARCVM supports ad hoc interface
-  // configurations; but for now ARCVM needs to be treated like ARC++ N.
-  OnDefaultInterfaceChanged("" /*new_ifname*/,
-                            shill_client_->default_interface());
+  if (device != arc_device_.get())
+    forwarder_->StopForwarding(device->ifname(), device->config().host_ifname(),
+                               device->options().ipv6_enabled,
+                               device->options().fwd_multicast);
 
   datapath_->RemoveInterface(device->tap_ifname());
   device->set_tap_ifname("");
 }
 
+void ArcService::VmImpl::OnStopArcPDevice() {
+  LOG(INFO) << "Stopping " << kArcVmIfname << " bridge: " << kArcVmBridge
+            << " guest_iface: " << kArcVmIfname << " cid: " << cid_;
+
+  datapath_->RemoveOutboundIPv4(kArcVmBridge);
+  datapath_->RemoveLegacyIPv4DNAT();
+
+  OnDefaultInterfaceChanged("" /*new_ifname*/,
+                            shill_client_->default_interface());
+
+  datapath_->RemoveInterface(arc_device_->tap_ifname());
+  arc_device_->set_tap_ifname("");
+}
+
 void ArcService::VmImpl::OnDefaultInterfaceChanged(
     const std::string& new_ifname, const std::string& prev_ifname) {
-  if (!IsStarted())
+  if (!IsStarted() || enable_multinet_)
     return;
 
   forwarder_->StopForwarding(prev_ifname, kArcVmBridge, true /*ipv6*/,
                              true /*multicast*/);
 
-  // TODO(garrick): Remove this once ARCVM supports ad hoc interface
-  // configurations; but for now ARCVM needs to be treated like ARC++ N.
   datapath_->RemoveLegacyIPv4InboundDNAT();
 
   // If a new default interface was given, then re-enable with that.
