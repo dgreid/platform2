@@ -82,7 +82,7 @@ def _BuildArc(config):
 
 
 def _BuildFingerprint(hw_topology):
-  if hw_topology and hw_topology.fingerprint:
+  if hw_topology.fingerprint:
     fp = hw_topology.fingerprint.hardware_feature.fingerprint
     location = fp.Location.DESCRIPTOR.values_by_number[fp.location].name
     result = {
@@ -205,7 +205,7 @@ def _BuildIdentity(hw_scan_config, brand_scan_config=None):
 
 
 def _Lookup(id_value, id_map):
-  if id_value and id_value.value:
+  if id_value.value:
     key = id_value.value
     if key in id_map:
       return id_map[id_value.value]
@@ -227,17 +227,16 @@ def _TransformBuildConfigs(config):
 
   results = {}
   for hw_design in config.designs.value:
-    device_brands = None
     if config.device_brands.value:
       device_brands = [x for x in config.device_brands.value
                        if x.design_id.value == hw_design.id.value]
-    if not device_brands:
+    else:
       device_brands = [device_brand_pb2.DeviceBrand()]
 
     for device_brand in device_brands:
       # Brand config can be empty since platform JSON config allows it
       brand_config = brand_config_pb2.BrandConfig()
-      if device_brand.id and device_brand.id.value in brand_configs:
+      if device_brand.id.value in brand_configs:
         brand_config = brand_configs[device_brand.id.value]
 
       for hw_design_config in hw_design.configs:
@@ -255,8 +254,7 @@ def _TransformBuildConfigs(config):
             oem=_Lookup(device_brand.oem_id, partners),
             sw_config=sw_config,
             brand_config=brand_config,
-            build_target=_Lookup(hw_design.build_target_id, build_targets))
-        )
+            build_target=_Lookup(hw_design.build_target_id, build_targets)))
 
         config_json = json.dumps(transformed_config,
                                  sort_keys=True,
