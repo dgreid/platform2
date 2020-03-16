@@ -105,6 +105,53 @@ base::Optional<int64_t> IioChannelImpl::Convert(const uint8_t* src) const {
   return value;
 }
 
+base::Optional<double> IioChannelImpl::ReadDoubleAttribute(
+    const std::string& name) const {
+  double val = 0;
+  int error = iio_channel_attr_read_double(channel_, name.c_str(), &val);
+  if (error) {
+    LOG(WARNING) << "Attempting to read attribute " << name
+                 << " failed: " << error;
+    return base::nullopt;
+  }
+  return val;
+}
+
+bool IioChannelImpl::WriteStringAttribute(const std::string& name,
+                                          const std::string& value) {
+  int error = iio_channel_attr_write_raw(
+      channel_, name.size() > 0 ? name.c_str() : nullptr, value.data(),
+      value.size());
+  if (error) {
+    LOG(WARNING) << "Attempting to write attribute " << name
+                 << " failed: " << error;
+    return false;
+  }
+  return true;
+}
+
+bool IioChannelImpl::WriteNumberAttribute(const std::string& name,
+                                          int64_t value) {
+  int error = iio_channel_attr_write_longlong(channel_, name.c_str(), value);
+  if (error) {
+    LOG(WARNING) << "Attempting to write attribute " << name
+                 << " failed: " << error;
+    return false;
+  }
+  return true;
+}
+
+bool IioChannelImpl::WriteDoubleAttribute(const std::string& name,
+                                          double value) {
+  int error = iio_channel_attr_write_double(channel_, name.c_str(), value);
+  if (error) {
+    LOG(WARNING) << "Attempting to write attribute " << name
+                 << " failed: " << error;
+    return false;
+  }
+  return true;
+}
+
 base::Optional<uint64_t> IioChannelImpl::Length() const {
   const iio_data_format* format = iio_channel_get_data_format(channel_);
   if (!format) {

@@ -32,19 +32,22 @@ class LIBMEMS_EXPORT FakeIioChannel : public IioChannel {
 
   base::Optional<std::string> ReadStringAttribute(
       const std::string& name) const override;
-
   base::Optional<int64_t> ReadNumberAttribute(
       const std::string& name) const override;
+  base::Optional<double> ReadDoubleAttribute(
+      const std::string& name) const override;
 
-  void WriteStringAttribute(const std::string& name,
-                            const std::string& value);
-  void WriteNumberAttribute(const std::string& name, int64_t value);
+  bool WriteStringAttribute(const std::string& name,
+                            const std::string& value) override;
+  bool WriteNumberAttribute(const std::string& name, int64_t value) override;
+  bool WriteDoubleAttribute(const std::string& name, double value) override;
 
  private:
   std::string id_;
   bool enabled_;
-  std::map<std::string, int64_t> numeric_attributes_;
   std::map<std::string, std::string> text_attributes_;
+  std::map<std::string, int64_t> numeric_attributes_;
+  std::map<std::string, double> double_attributes_;
 };
 
 class FakeIioContext;
@@ -98,8 +101,8 @@ class LIBMEMS_EXPORT FakeIioDevice : public IioDevice {
   FakeIioContext* context_;
   std::string name_;
   int id_;
-  std::map<std::string, int64_t> numeric_attributes_;
   std::map<std::string, std::string> text_attributes_;
+  std::map<std::string, int64_t> numeric_attributes_;
   std::map<std::string, double> double_attributes_;
   IioDevice* trigger_;
   std::map<std::string, IioChannel*> channels_;

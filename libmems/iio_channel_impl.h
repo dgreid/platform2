@@ -32,6 +32,13 @@ class LIBMEMS_EXPORT IioChannelImpl : public IioChannel {
       const std::string& name) const override;
   base::Optional<int64_t> ReadNumberAttribute(
       const std::string& name) const override;
+  base::Optional<double> ReadDoubleAttribute(
+      const std::string& name) const override;
+
+  bool WriteStringAttribute(const std::string& name,
+                            const std::string& value) override;
+  bool WriteNumberAttribute(const std::string& name, int64_t value) override;
+  bool WriteDoubleAttribute(const std::string& name, double value) override;
 
   base::Optional<int64_t> Convert(const uint8_t* src) const;
   base::Optional<uint64_t> Length() const;

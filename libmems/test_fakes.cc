@@ -36,14 +36,25 @@ base::Optional<int64_t> FakeIioChannel::ReadNumberAttribute(
     const std::string& name) const {
   return FakeReadAttributes<>(name, numeric_attributes_);
 }
-
-void FakeIioChannel::WriteStringAttribute(const std::string& name,
-                                         const std::string& value) {
-  text_attributes_[name] = value;
+base::Optional<double> FakeIioChannel::ReadDoubleAttribute(
+    const std::string& name) const {
+  return FakeReadAttributes<>(name, double_attributes_);
 }
-void FakeIioChannel::WriteNumberAttribute(const std::string& name,
-                                         int64_t value) {
+
+bool FakeIioChannel::WriteStringAttribute(const std::string& name,
+                                          const std::string& value) {
+  text_attributes_[name] = value;
+  return true;
+}
+bool FakeIioChannel::WriteNumberAttribute(const std::string& name,
+                                          int64_t value) {
   numeric_attributes_[name] = value;
+  return true;
+}
+bool FakeIioChannel::WriteDoubleAttribute(const std::string& name,
+                                          double value) {
+  double_attributes_[name] = value;
+  return true;
 }
 
 FakeIioDevice::FakeIioDevice(FakeIioContext* ctx,
