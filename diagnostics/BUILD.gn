@@ -9,9 +9,9 @@ group("all") {
   deps = [
     ":cros_healthd",
     ":cros_healthd_helper",
-    ":diag",
     ":telem",
     ":wilco_dtc_supportd",
+    "//diagnostics/diag:diag",
     "//diagnostics/routines:floating-point-accuracy",
     "//diagnostics/routines:smartctl-check",
     "//diagnostics/routines:urandom",
@@ -204,25 +204,6 @@ executable("cros_healthd_helper") {
   configs += [ ":cros_healthd_helper_pkg_deps" ]
   sources = [
     "cros_healthd/utils/cros_healthd_helper.cc",
-  ]
-}
-
-# The diag tool executable.
-pkg_config("diag_pkg_deps") {
-  pkg_deps = [
-    "libbrillo",
-    "libchrome-${libbase_ver}",
-  ]
-}
-
-executable("diag") {
-  deps = [
-    ":libcros_healthd_mojo_adapter",
-    "//diagnostics/common:libcommon",
-  ]
-  configs += [ ":diag_pkg_deps" ]
-  sources = [
-    "diag/main.cc",
   ]
 }
 

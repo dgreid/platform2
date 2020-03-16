@@ -1,0 +1,44 @@
+# Copyright 2020 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//common-mk/pkg_config.gni")
+
+# Library that provides helpers for the diag tool.
+pkg_config("libdiag_pkg_deps") {
+  pkg_deps = [
+    "libbrillo",
+    "libchrome-${libbase_ver}",
+  ]
+}
+
+source_set("libdiag") {
+  deps = [
+    "//diagnostics:diagnostics_mojo_bindings",
+    "//diagnostics:libcros_healthd_mojo_adapter",
+    "//diagnostics/common:libcommon",
+  ]
+  all_dependent_configs = [ ":libdiag_pkg_deps" ]
+  sources = [
+    "diag_actions.cc",
+  ]
+}
+
+# The diag tool executable.
+pkg_config("diag_pkg_deps") {
+  pkg_deps = [
+    "libbrillo",
+    "libchrome-${libbase_ver}",
+  ]
+}
+
+executable("diag") {
+  deps = [
+    ":libdiag",
+    "//diagnostics:diagnostics_mojo_bindings",
+  ]
+  configs += [ ":diag_pkg_deps" ]
+  sources = [
+    "main.cc",
+  ]
+}
