@@ -15,11 +15,15 @@ class TrafficForwarder {
  public:
   virtual ~TrafficForwarder() = default;
 
+  // Start forwarding between a pair of physical and virtual (guest-facing)
+  // interfaces.
   virtual void StartForwarding(const std::string& ifname_physical,
                                const std::string& ifname_virtual,
                                bool ipv6,
                                bool multicast) = 0;
 
+  // Stop forwarding between a interface pair. If |ifname_virtual| is empty,
+  // stop all forwarding from/to |ifname_physical| instead.
   virtual void StopForwarding(const std::string& ifname_physical,
                               const std::string& ifname_virtual,
                               bool ipv6,

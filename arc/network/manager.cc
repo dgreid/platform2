@@ -657,7 +657,7 @@ void Manager::StartForwarding(const std::string& ifname_physical,
                               const std::string& ifname_virtual,
                               bool ipv6,
                               bool multicast) {
-  if (ifname_physical.empty())
+  if (ifname_physical.empty() || ifname_virtual.empty())
     return;
 
   IpHelperMessage ipm;
@@ -702,18 +702,28 @@ void Manager::StopForwarding(const std::string& ifname_physical,
   DeviceMessage* msg = ipm.mutable_device_message();
   msg->set_dev_ifname(ifname_physical);
   msg->set_teardown(true);
+  if (!ifname_virtual.empty()) {
+    msg->set_br_ifname(ifname_virtual);
+  }
 
   if (ipv6) {
-    LOG(INFO) << "Stopping IPv6 forwarding from " << ifname_physical << " to "
-              << ifname_virtual;
-
-    datapath_->RemoveIPv6Forwarding(ifname_physical, ifname_virtual);
+    if (ifname_virtual.empty()) {
+      LOG(INFO) << "Stopping IPv6 forwarding on " << ifname_physical;
+    } else {
+      LOG(INFO) << "Stopping IPv6 forwarding from " << ifname_physical << " to "
+                << ifname_virtual;
+      datapath_->RemoveIPv6Forwarding(ifname_physical, ifname_virtual);
+    }
     nd_proxy_->SendMessage(ipm);
   }
 
   if (multicast) {
-    LOG(INFO) << "Stopping multicast forwarding from " << ifname_physical
-              << " to " << ifname_virtual;
+    if (ifname_virtual.empty()) {
+      LOG(INFO) << "Stopping multicast forwarding on " << ifname_physical;
+    } else {
+      LOG(INFO) << "Stopping multicast forwarding from " << ifname_physical
+                << " to " << ifname_virtual;
+    }
     mcast_proxy_->SendMessage(ipm);
   }
 }

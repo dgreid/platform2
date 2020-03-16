@@ -78,13 +78,12 @@ class NDProxy {
 
   // To proxy between upstream interface and guest OS interface (eth0-arc_eth0)
   // Outbound RS, inbound RA, and bidirectional NS/NA will be proxied.
-  bool AddRouterInterfacePair(const std::string& ifname_physical,
-                              const std::string& ifname_guest);
+  bool AddInterfacePair(const std::string& ifname_physical,
+                        const std::string& ifname_guest);
 
-  // To proxy between two different guest OS interface (arc_eth0-vmtap0)
-  // Only NS/NA will be proxied (bidirectionally).
-  bool AddPeeringInterfacePair(const std::string& ifname1,
-                               const std::string& ifname2);
+  // Remove a proxy interface pair.
+  bool RemoveInterfacePair(const std::string& ifname_physical,
+                           const std::string& ifname_guest);
 
   // Remove all proxy interface pair with ifindex.
   bool RemoveInterface(const std::string& ifname);
@@ -110,9 +109,6 @@ class NDProxy {
   virtual bool GetNeighborMac(const in6_addr& ipv6_addr, MacAddress* mac_addr);
 
   interface_mapping* MapForType(uint8_t type);
-  bool AddInterfacePairInternal(const std::string& ifname1,
-                                const std::string& ifname2,
-                                bool proxy_rs_ra);
   bool IsGuestInterface(int ifindex);
 
   // Socket used to communicate with kernel through ioctl. No real packet data

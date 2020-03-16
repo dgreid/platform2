@@ -62,7 +62,7 @@ int main(int argc, char* argv[]) {
   // interface. This can take a few seconds, so retry if necessary.
   bool added_interfaces = false;
   for (int i = 0; i < 10; i++) {
-    if (proxy.AddRouterInterfacePair(args[0], args[1])) {
+    if (proxy.AddInterfacePair(args[0], args[1])) {
       added_interfaces = true;
       break;
     }

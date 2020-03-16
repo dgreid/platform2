@@ -457,20 +457,6 @@ void NDProxy::RegisterOnGuestIpDiscoveryHandler(
   guest_discovery_handler_ = handler;
 }
 
-bool NDProxy::AddRouterInterfacePair(const std::string& ifname_physical,
-                                     const std::string& ifname_guest) {
-  LOG(INFO) << "Adding interface pair between physical: " << ifname_physical
-            << ", guest: " << ifname_guest;
-  return AddInterfacePairInternal(ifname_physical, ifname_guest, true);
-}
-
-bool NDProxy::AddPeeringInterfacePair(const std::string& ifname1,
-                                      const std::string& ifname2) {
-  LOG(INFO) << "Adding peering interface pair between " << ifname1 << " and "
-            << ifname2;
-  return AddInterfacePairInternal(ifname1, ifname2, false);
-}
-
 NDProxy::interface_mapping* NDProxy::MapForType(uint8_t type) {
   switch (type) {
     case ND_ROUTER_SOLICIT:
@@ -488,49 +474,80 @@ NDProxy::interface_mapping* NDProxy::MapForType(uint8_t type) {
   }
 }
 
-bool NDProxy::AddInterfacePairInternal(const std::string& ifname1,
-                                       const std::string& ifname2,
-                                       bool proxy_rs_ra) {
-  int ifindex1 = if_nametoindex(ifname1.c_str());
-  if (ifindex1 == 0) {
-    PLOG(ERROR) << "Get interface index failed on " << ifname1;
+bool NDProxy::AddInterfacePair(const std::string& ifname_physical,
+                               const std::string& ifname_guest) {
+  LOG(INFO) << "Adding interface pair between physical: " << ifname_physical
+            << ", guest: " << ifname_guest;
+  int ifid_physical = if_nametoindex(ifname_physical.c_str());
+  if (ifid_physical == 0) {
+    PLOG(ERROR) << "Get interface index failed on " << ifname_physical;
     return false;
   }
-  int ifindex2 = if_nametoindex(ifname2.c_str());
-  if (ifindex2 == 0) {
-    PLOG(ERROR) << "Get interface index failed on " << ifname2;
+  int ifid_guest = if_nametoindex(ifname_guest.c_str());
+  if (ifid_guest == 0) {
+    PLOG(ERROR) << "Get interface index failed on " << ifname_guest;
     return false;
   }
-  if (ifindex1 == ifindex2) {
+  if (ifid_physical == ifid_guest) {
     LOG(ERROR) << "Rejected attempt to forward between same interface "
-               << ifname1 << " and " << ifname2;
+               << ifname_physical << " and " << ifname_guest;
     return false;
   }
-  if (proxy_rs_ra) {
-    if_map_rs_[ifindex2].insert(ifindex1);
-    if_map_ra_[ifindex1].insert(ifindex2);
+  if_map_rs_[ifid_guest].insert(ifid_physical);
+  if_map_ra_[ifid_physical].insert(ifid_guest);
+  if_map_ns_na_[ifid_physical].insert(ifid_guest);
+  if_map_ns_na_[ifid_guest].insert(ifid_physical);
+  for (int ifid_other_guest : if_map_ra_[ifid_physical]) {
+    if (ifid_other_guest != ifid_guest) {
+      if_map_ns_na_[ifid_other_guest].insert(ifid_guest);
+      if_map_ns_na_[ifid_guest].insert(ifid_other_guest);
+    }
   }
-  if_map_ns_na_[ifindex1].insert(ifindex2);
-  if_map_ns_na_[ifindex2].insert(ifindex1);
+  return true;
+}
+
+bool NDProxy::RemoveInterfacePair(const std::string& ifname_physical,
+                                  const std::string& ifname_guest) {
+  LOG(INFO) << "Removing interface pair between physical: " << ifname_physical
+            << ", guest: " << ifname_guest;
+  int ifid_physical = if_nametoindex(ifname_physical.c_str());
+  if (ifid_physical == 0) {
+    PLOG(ERROR) << "Get interface index failed on " << ifname_physical;
+    return false;
+  }
+  int ifid_guest = if_nametoindex(ifname_guest.c_str());
+  if (ifid_guest == 0) {
+    PLOG(ERROR) << "Get interface index failed on " << ifname_guest;
+    return false;
+  }
+  if (ifid_physical == ifid_guest) {
+    LOG(ERROR) << "Rejected attempt to forward between same interface "
+               << ifname_physical << " and " << ifname_guest;
+    return false;
+  }
+  if_map_rs_.erase(ifid_guest);
+  if_map_ra_[ifid_physical].erase(ifid_guest);
+  if_map_ns_na_.erase(ifid_guest);
+  if_map_ns_na_[ifid_physical].erase(ifid_guest);
+  for (int ifid_other_guest : if_map_ra_[ifid_physical]) {
+    if_map_ns_na_[ifid_other_guest].erase(ifid_guest);
+  }
   return true;
 }
 
 bool NDProxy::RemoveInterface(const std::string& ifname) {
-  LOG(INFO) << "Removing interface " << ifname;
+  LOG(INFO) << "Removing physical interface " << ifname;
   int ifindex = if_nametoindex(ifname.c_str());
   if (ifindex == 0) {
     PLOG(ERROR) << "Get interface index failed on " << ifname;
     return false;
   }
-  if_map_rs_.erase(ifindex);
-  for (auto& kv : if_map_rs_)
-    kv.second.erase(ifindex);
+  for (int ifid_guest : if_map_ra_[ifindex]) {
+    if_map_rs_.erase(ifid_guest);
+    if_map_ns_na_.erase(ifid_guest);
+  }
   if_map_ra_.erase(ifindex);
-  for (auto& kv : if_map_ra_)
-    kv.second.erase(ifindex);
   if_map_ns_na_.erase(ifindex);
-  for (auto& kv : if_map_ns_na_)
-    kv.second.erase(ifindex);
   return true;
 }
 
@@ -598,9 +615,13 @@ void NDProxyDaemon::OnDeviceMessage(const DeviceMessage& msg) {
   LOG_IF(DFATAL, dev_ifname.empty())
       << "Received DeviceMessage w/ empty dev_ifname";
   if (msg.has_teardown()) {
-    proxy_.RemoveInterface(dev_ifname);
+    if (msg.has_br_ifname()) {
+      proxy_.RemoveInterfacePair(dev_ifname, msg.br_ifname());
+    } else {
+      proxy_.RemoveInterface(dev_ifname);
+    }
   } else if (msg.has_br_ifname()) {
-    proxy_.AddRouterInterfacePair(dev_ifname, msg.br_ifname());
+    proxy_.AddInterfacePair(dev_ifname, msg.br_ifname());
   }
 }
 
