@@ -214,7 +214,8 @@ bool DiagActions::ActionGetRoutines() {
   return true;
 }
 
-bool DiagActions::ActionRunBatteryCapacityRoutine(int low_mah, int high_mah) {
+bool DiagActions::ActionRunBatteryCapacityRoutine(uint32_t low_mah,
+                                                  uint32_t high_mah) {
   diagnostics::CrosHealthdMojoAdapter adapter;
   auto response = adapter.RunBatteryCapacityRoutine(low_mah, high_mah);
   CHECK(response) << "No RunRoutineResponse received.";
@@ -222,7 +223,7 @@ bool DiagActions::ActionRunBatteryCapacityRoutine(int low_mah, int high_mah) {
 }
 
 bool DiagActions::ActionRunBatteryHealthRoutine(
-    int maximum_cycle_count, int percent_battery_wear_allowed) {
+    uint32_t maximum_cycle_count, uint32_t percent_battery_wear_allowed) {
   diagnostics::CrosHealthdMojoAdapter adapter;
   auto response = adapter.RunBatteryHealthRoutine(maximum_cycle_count,
                                                   percent_battery_wear_allowed);
@@ -230,7 +231,7 @@ bool DiagActions::ActionRunBatteryHealthRoutine(
   return RunRoutineAndProcessResult(response->id, &adapter);
 }
 
-bool DiagActions::ActionRunUrandomRoutine(int length_seconds) {
+bool DiagActions::ActionRunUrandomRoutine(uint32_t length_seconds) {
   diagnostics::CrosHealthdMojoAdapter adapter;
   auto response = adapter.RunUrandomRoutine(length_seconds);
   CHECK(response) << "No RunRoutineResponse received.";

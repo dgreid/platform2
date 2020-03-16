@@ -31,9 +31,9 @@ class DiagActions final {
   // ran, and was removed.
   bool ActionRunAcPowerRoutine(bool is_connected,
                                const std::string& power_type);
-  bool ActionRunBatteryCapacityRoutine(int low_mah, int high_mah);
-  bool ActionRunBatteryHealthRoutine(int maximum_cycle_count,
-                                     int percent_battery_wear_allowed);
+  bool ActionRunBatteryCapacityRoutine(uint32_t low_mah, uint32_t high_mah);
+  bool ActionRunBatteryHealthRoutine(uint32_t maximum_cycle_count,
+                                     uint32_t percent_battery_wear_allowed);
   bool ActionRunCpuCacheRoutine(const base::TimeDelta& exec_duration);
   bool ActionRunCpuStressRoutine(const base::TimeDelta& exec_duration);
   bool ActionRunFloatingPointAccuracyRoutine(
@@ -41,7 +41,7 @@ class DiagActions final {
   bool ActionRunNvmeSelfTestRoutine(bool is_long);
   bool ActionRunNvmeWearLevelRoutine(uint32_t wear_level_threshold);
   bool ActionRunSmartctlCheckRoutine();
-  bool ActionRunUrandomRoutine(int length_seconds);
+  bool ActionRunUrandomRoutine(uint32_t length_seconds);
 
  private:
   DISALLOW_COPY_AND_ASSIGN(DiagActions);

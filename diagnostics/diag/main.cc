@@ -49,24 +49,26 @@ int main(int argc, char** argv) {
   DEFINE_string(routine, "",
                 "Diagnostic routine to run. For a list of available routines, "
                 "run 'diag --action=get_routines'.");
-  DEFINE_int32(low_mah, 1000, "Lower bound for the battery routine, in mAh.");
-  DEFINE_int32(high_mah, 10000, "Upper bound for the battery routine, in mAh.");
-  DEFINE_int32(
+  DEFINE_uint32(low_mah, 1000, "Lower bound for the battery routine, in mAh.");
+  DEFINE_uint32(high_mah, 10000,
+                "Upper bound for the battery routine, in mAh.");
+  DEFINE_uint32(
       maximum_cycle_count, 0,
       "Maximum cycle count allowed for the battery_sysfs routine to pass.");
-  DEFINE_int32(percent_battery_wear_allowed, 100,
-               "Maximum percent battery wear allowed for the battery_sysfs "
-               "routine to pass.");
-  DEFINE_int32(length_seconds, 10, "Number of seconds to run the routine for.");
+  DEFINE_uint32(percent_battery_wear_allowed, 100,
+                "Maximum percent battery wear allowed for the battery_sysfs "
+                "routine to pass.");
+  DEFINE_uint32(length_seconds, 10,
+                "Number of seconds to run the routine for.");
   DEFINE_bool(ac_power_is_connected, true,
               "Whether or not the AC power routine expects the power supply to "
               "be connected.");
   DEFINE_string(
       expected_power_type, "",
       "Optional type of power supply expected for the AC power routine.");
-  DEFINE_int32(wear_level_threshold, 50,
-               "Threshold number in percentage which routine examines "
-               "wear level of NVMe against.");
+  DEFINE_uint32(wear_level_threshold, 50,
+                "Threshold number in percentage which routine examines "
+                "wear level of NVMe against.");
   DEFINE_bool(nvme_self_test_long, false,
               "Long-time period self-test of NVMe would be performed with "
               "this flag being set.");
