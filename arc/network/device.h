@@ -33,18 +33,14 @@ class Device {
  public:
   class Config {
    public:
-    Config(const std::string& host_ifname,
-           const std::string& guest_ifname,
-           const MacAddress& guest_mac_addr,
+    Config(const MacAddress& mac_addr,
            std::unique_ptr<Subnet> ipv4_subnet,
            std::unique_ptr<SubnetAddress> host_ipv4_addr,
            std::unique_ptr<SubnetAddress> guest_ipv4_addr,
            std::unique_ptr<Subnet> lxd_ipv4_subnet = nullptr);
     ~Config() = default;
 
-    std::string host_ifname() const { return host_ifname_; }
-    std::string guest_ifname() const { return guest_ifname_; }
-    MacAddress guest_mac_addr() const { return guest_mac_addr_; }
+    MacAddress mac_addr() const { return mac_addr_; }
     uint32_t host_ipv4_addr() const { return host_ipv4_addr_->Address(); }
     uint32_t guest_ipv4_addr() const { return guest_ipv4_addr_->Address(); }
 
@@ -64,14 +60,8 @@ class Device {
     friend std::ostream& operator<<(std::ostream& stream, const Device& device);
 
    private:
-    // The name of the interface created on the CrOS side. This should always
-    // be defined.
-    std::string host_ifname_;
-    // If applicable, the name of the device interface exposed in the guest. For
-    // example, for ARC P, this name will match the physical device name.
-    std::string guest_ifname_;
     // A random MAC address assigned to the device.
-    MacAddress guest_mac_addr_;
+    MacAddress mac_addr_;
     // The IPV4 subnet allocated for this device.
     std::unique_ptr<Subnet> ipv4_subnet_;
     // The address allocated from |ipv4_subnet| for use by the CrOS-side
@@ -100,12 +90,21 @@ class Device {
     bool use_default_interface;
   };
 
-  Device(const std::string& ifname,
+  // |phys_ifname| corresponds either to the physical interface provided by
+  // shill or a placeholder for a guest-specific control interface (e.g. arc0).
+  // |host_ifname| identifies the name of the virtual (bridge) interface.
+  // |guest_ifname|, if specified, identifies the name of the interface used
+  // inside the guest.
+  Device(const std::string& phys_ifname,
+         const std::string& host_ifname,
+         const std::string& guest_ifname,
          std::unique_ptr<Config> config,
          const Options& options);
   ~Device() = default;
 
-  const std::string& ifname() const;
+  const std::string& phys_ifname() const { return phys_ifname_; }
+  const std::string& host_ifname() const { return host_ifname_; }
+  const std::string& guest_ifname() const { return guest_ifname_; }
   Config& config() const;
   const Options& options() const;
 
@@ -117,7 +116,9 @@ class Device {
   friend std::ostream& operator<<(std::ostream& stream, const Device& device);
 
  private:
-  const std::string ifname_;
+  std::string phys_ifname_;
+  std::string host_ifname_;
+  std::string guest_ifname_;
   std::unique_ptr<Config> config_;
   const Options options_;
   std::string tap_;

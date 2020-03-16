@@ -82,10 +82,11 @@ bool CrostiniService::Start(uint64_t vm_id, bool is_termina, int subnet_index) {
   }
 
   LOG(INFO) << "Crostini network service started for {id: " << vm_id << "}";
-  StartForwarding(shill_client_->default_interface(),
-                  tap->config().host_ifname());
+  StartForwarding(shill_client_->default_interface(), tap->host_ifname());
+
   if (adb_sideloading_enabled_)
-    StartAdbPortForwarding(tap->ifname());
+    StartAdbPortForwarding(tap->phys_ifname());
+
   taps_.emplace(key, std::move(tap));
   return true;
 }
@@ -98,8 +99,7 @@ void CrostiniService::Stop(uint64_t vm_id, bool is_termina) {
     return;
   }
 
-  const auto* dev = it->second.get();
-  const auto& ifname = dev->config().host_ifname();
+  const auto& ifname = it->second->host_ifname();
   StopForwarding(shill_client_->default_interface(), ifname);
   if (adb_sideloading_enabled_)
     StopAdbPortForwarding(ifname);
@@ -168,7 +168,7 @@ std::unique_ptr<Device> CrostiniService::AddTAP(bool is_termina,
   }
 
   auto config = std::make_unique<Device::Config>(
-      tap, "", mac_addr, std::move(ipv4_subnet), std::move(host_ipv4_addr),
+      mac_addr, std::move(ipv4_subnet), std::move(host_ipv4_addr),
       std::move(guest_ipv4_addr), std::move(lxd_subnet));
 
   Device::Options opts{
@@ -177,15 +177,14 @@ std::unique_ptr<Device> CrostiniService::AddTAP(bool is_termina,
       .use_default_interface = true,
   };
 
-  return std::make_unique<Device>(tap, std::move(config), opts);
+  return std::make_unique<Device>(tap, tap, "", std::move(config), opts);
 }
 
 void CrostiniService::OnDefaultInterfaceChanged(
     const std::string& new_ifname, const std::string& prev_ifname) {
   for (const auto& t : taps_) {
-    const auto& config = t.second->config();
-    StopForwarding(prev_ifname, config.host_ifname());
-    StartForwarding(new_ifname, config.host_ifname());
+    StopForwarding(prev_ifname, t.second->host_ifname());
+    StartForwarding(new_ifname, t.second->host_ifname());
   }
 }
 
@@ -301,7 +300,7 @@ void CrostiniService::CheckAdbSideloadingStatus() {
   // If ADB sideloading is enabled, start ADB forwarding on all configured
   // Crostini's TAP interfaces.
   for (const auto& tap : taps_) {
-    StartAdbPortForwarding(tap.second->ifname());
+    StartAdbPortForwarding(tap.second->phys_ifname());
   }
 }
 

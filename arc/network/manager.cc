@@ -445,10 +445,9 @@ std::unique_ptr<dbus::Response> Manager::OnArcVmStartup(
     if (tap.empty())
       return;
 
-    const auto& config = device->config();
     auto* dev = resp->add_devices();
     dev->set_ifname(tap);
-    dev->set_ipv4_addr(config.guest_ipv4_addr());
+    dev->set_ipv4_addr(device->config().guest_ipv4_addr());
   };
 
   // TODO(garrick): Update to return all devices instead once ARCVM supports
@@ -518,10 +517,9 @@ std::unique_ptr<dbus::Response> Manager::OnTerminaVmStartup(
     return dbus_response;
   }
 
-  const auto& config = tap->config();
   auto* dev = response.mutable_device();
-  dev->set_ifname(config.host_ifname());
-  const auto* subnet = config.ipv4_subnet();
+  dev->set_ifname(tap->host_ifname());
+  const auto* subnet = tap->config().ipv4_subnet();
   if (!subnet) {
     LOG(DFATAL) << "Missing required subnet for {cid: " << cid << "}";
     writer.AppendProtoAsArrayOfBytes(response);
@@ -530,7 +528,7 @@ std::unique_ptr<dbus::Response> Manager::OnTerminaVmStartup(
   auto* resp_subnet = dev->mutable_ipv4_subnet();
   resp_subnet->set_base_addr(subnet->BaseAddress());
   resp_subnet->set_prefix_len(subnet->PrefixLength());
-  subnet = config.lxd_ipv4_subnet();
+  subnet = tap->config().lxd_ipv4_subnet();
   if (!subnet) {
     LOG(DFATAL) << "Missing required lxd subnet for {cid: " << cid << "}";
     writer.AppendProtoAsArrayOfBytes(response);
@@ -602,10 +600,9 @@ std::unique_ptr<dbus::Response> Manager::OnPluginVmStartup(
     return dbus_response;
   }
 
-  const auto& config = tap->config();
   auto* dev = response.mutable_device();
-  dev->set_ifname(config.host_ifname());
-  const auto* subnet = config.ipv4_subnet();
+  dev->set_ifname(tap->host_ifname());
+  const auto* subnet = tap->config().ipv4_subnet();
   if (!subnet) {
     LOG(DFATAL) << "Missing required subnet for {cid: " << vm_id << "}";
     writer.AppendProtoAsArrayOfBytes(response);

@@ -20,30 +20,28 @@
 
 namespace arc_networkd {
 
-Device::Config::Config(const std::string& host_ifname,
-                       const std::string& guest_ifname,
-                       const MacAddress& guest_mac_addr,
+Device::Config::Config(const MacAddress& mac_addr,
                        std::unique_ptr<Subnet> ipv4_subnet,
                        std::unique_ptr<SubnetAddress> host_ipv4_addr,
                        std::unique_ptr<SubnetAddress> guest_ipv4_addr,
                        std::unique_ptr<Subnet> lxd_ipv4_subnet)
-    : host_ifname_(host_ifname),
-      guest_ifname_(guest_ifname),
-      guest_mac_addr_(guest_mac_addr),
+    : mac_addr_(mac_addr),
       ipv4_subnet_(std::move(ipv4_subnet)),
       host_ipv4_addr_(std::move(host_ipv4_addr)),
       guest_ipv4_addr_(std::move(guest_ipv4_addr)),
       lxd_ipv4_subnet_(std::move(lxd_ipv4_subnet)) {}
 
-Device::Device(const std::string& ifname,
+Device::Device(const std::string& phys_ifname,
+               const std::string& host_ifname,
+               const std::string& guest_ifname,
                std::unique_ptr<Device::Config> config,
                const Device::Options& options)
-    : ifname_(ifname), config_(std::move(config)), options_(options) {
+    : phys_ifname_(phys_ifname),
+      host_ifname_(host_ifname),
+      guest_ifname_(guest_ifname),
+      config_(std::move(config)),
+      options_(options) {
   DCHECK(config_);
-}
-
-const std::string& Device::ifname() const {
-  return ifname_;
 }
 
 Device::Config& Device::config() const {
@@ -68,15 +66,13 @@ bool Device::UsesDefaultInterface() const {
 }
 
 std::ostream& operator<<(std::ostream& stream, const Device& device) {
-  stream << "{ ifname: " << device.ifname_
-         << ", bridge_ifname: " << device.config_->host_ifname()
-         << ", bridge_ipv4_addr: "
+  stream << "{ ifname: " << device.phys_ifname_
+         << ", bridge_ifname: " << device.host_ifname_ << ", bridge_ipv4_addr: "
          << device.config_->host_ipv4_addr_->ToCidrString()
-         << ", guest_ifname: " << device.config_->guest_ifname()
-         << ", guest_ipv4_addr: "
+         << ", guest_ifname: " << device.guest_ifname_ << ", guest_ipv4_addr: "
          << device.config_->guest_ipv4_addr_->ToCidrString()
          << ", guest_mac_addr: "
-         << MacAddressToString(device.config_->guest_mac_addr())
+         << MacAddressToString(device.config_->mac_addr())
          << ", fwd_multicast: " << device.options_.fwd_multicast
          << ", ipv6_enabled: " << device.options_.ipv6_enabled << '}';
   return stream;

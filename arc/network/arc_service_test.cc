@@ -187,9 +187,9 @@ class ContainerImplTest : public testing::Test {
     auto addr0 = subnet->AllocateAtOffset(0);
     auto addr1 = subnet->AllocateAtOffset(1);
     auto cfg = std::make_unique<Device::Config>(
-        host, guest, addr_mgr_->GenerateMacAddress(), std::move(subnet),
-        std::move(addr0), std::move(addr1));
-    return std::make_unique<Device>(name, std::move(cfg), opt);
+        addr_mgr_->GenerateMacAddress(), std::move(subnet), std::move(addr0),
+        std::move(addr1));
+    return std::make_unique<Device>(name, host, guest, std::move(cfg), opt);
   }
 
   std::unique_ptr<AddressManager> addr_mgr_;
