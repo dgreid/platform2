@@ -80,8 +80,8 @@ bool Configuration::Configure() {
 
 bool Configuration::CopyLightCalibrationFromVpd() {
   std::vector<LightVpdCalibrationEntry> calib_attributes = {
-      {"als_cal_intercept", "in_illuminance_calibbias"},
-      {"als_cal_slope", "in_illuminance_calibscale"},
+      {"als_cal_intercept", "calibbias"},
+      {"als_cal_slope", "calibscale"},
   };
 
   for (auto& calib_attribute : calib_attributes) {
@@ -98,7 +98,13 @@ bool Configuration::CopyLightCalibrationFromVpd() {
                  << " has invalid value " << attrib_value.value();
       continue;
     }
-    if (!sensor_->WriteDoubleAttribute(calib_attribute.iio_name, value))
+    auto chn = sensor_->GetChannel("illuminance");
+    if (!chn) {
+      LOG(ERROR) << "No channel illuminance";
+      return false;
+    }
+    LOG(INFO) << "iio: " << calib_attribute.iio_name;
+    if (!chn->WriteDoubleAttribute(calib_attribute.iio_name, value))
       LOG(ERROR) << "failed to set calibration value "
                  << calib_attribute.iio_name;
   }
@@ -107,9 +113,9 @@ bool Configuration::CopyLightCalibrationFromVpd() {
    * RGB sensors may need per channel calibration.
    */
   std::vector<LightColorCalibrationEntry> calib_color_entries = {
-      {"in_illuminance_red_calibscale", base::nullopt },
-      {"in_illuminance_green_calibscale", base::nullopt },
-      {"in_illuminance_blue_calibscale", base::nullopt },
+      {"illuminance_red", base::nullopt},
+      {"illuminance_green", base::nullopt},
+      {"illuminance_blue", base::nullopt},
   };
   auto attrib_value = delegate_->ReadVpdValue("als_cal_slope_color");
 
@@ -139,11 +145,14 @@ bool Configuration::CopyLightCalibrationFromVpd() {
            continue;
         }
         LOG(ERROR) << "writing " << *color_entry.value;
-        if (!sensor_->WriteDoubleAttribute(color_entry.iio_name,
-                                           *color_entry.value))
-            LOG(WARNING) << "failed to to set calibration value "
-                         << color_entry.iio_name
-                         << " to " << *color_entry.value;
+        auto chn = sensor_->GetChannel(color_entry.iio_name);
+        if (!chn) {
+          LOG(ERROR) << "No channel " << color_entry.iio_name;
+          return false;
+        }
+        if (!chn->WriteDoubleAttribute("calibscale", *color_entry.value))
+          LOG(WARNING) << "failed to to set calibration value "
+                       << color_entry.iio_name << " to " << *color_entry.value;
       }
     } else {
       LOG(ERROR) << "VPD_entry als_cal_slope_color is malformed : "
@@ -188,6 +197,8 @@ bool Configuration::CopyImuCalibationFromVpd(int max_value,
         "in_%s_%s_%s_calib%s", kind.c_str(), calib_attribute.name.c_str(),
         location.c_str(), calib_attribute.calib.c_str());
     auto attrib_value = delegate_->ReadVpdValue(attrib_name.c_str());
+    LOG(INFO) << attrib_name
+              << " attrib_value: " << attrib_value.value_or("nan");
     if (!attrib_value.has_value()) {
       if (calib_attribute.missing_is_error)
         LOG(ERROR) << "VPD missing calibration value " << attrib_name;
@@ -214,17 +225,25 @@ bool Configuration::CopyImuCalibationFromVpd(int max_value,
   for (const auto& calib_attribute : calib_attributes) {
     if (!calib_attribute.value)
       continue;
-    auto attrib_name = base::StringPrintf("in_%s_%s", kind.c_str(),
-                                          calib_attribute.name.c_str());
+    auto chn_id =
+        base::StringPrintf("%s_%s", kind.c_str(), calib_attribute.name.c_str());
 
     if (!is_single_sensor)
-      attrib_name =
-          base::StringPrintf("%s_%s", attrib_name.c_str(), location.c_str());
-    attrib_name = base::StringPrintf("%s_calib%s", attrib_name.c_str(),
-                                     calib_attribute.calib.c_str());
+      chn_id = base::StringPrintf("%s_%s", chn_id.c_str(), location.c_str());
 
-    if (!sensor_->WriteNumberAttribute(attrib_name, *calib_attribute.value))
+    auto chn = sensor_->GetChannel(chn_id);
+    if (!chn) {
+      LOG(ERROR) << "No channel with id " << chn_id;
+      return false;
+    }
+    auto attrib_name =
+        base::StringPrintf("calib%s", calib_attribute.calib.c_str());
+    if (!chn->WriteNumberAttribute(attrib_name, *calib_attribute.value)) {
       LOG(ERROR) << "failed to set calibration value " << attrib_name;
+      return false;
+    }
+    LOG(INFO) << attrib_name << ": "
+              << chn->ReadNumberAttribute(attrib_name).value_or(-88888);
   }
 
   LOG(INFO) << "VPD calibration complete";

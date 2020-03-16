@@ -26,14 +26,15 @@ SensorTestBase::SensorTestBase(const char* name, int id, SensorKind kind)
       mock_delegate_(new FakeDelegate),
       mock_device_(
           std::make_unique<FakeIioDevice>(mock_context_.get(), name, id)),
-      mock_trigger1_(
-          std::make_unique<FakeIioDevice>(mock_context_.get(),
-                                          "sysfstrig0", 1)),
+      mock_calib_channel_(
+          std::make_unique<FakeIioChannel>("calibration", false)),
+      mock_trigger1_(std::make_unique<FakeIioDevice>(
+          mock_context_.get(), "sysfstrig0", 1)),
       mock_sysfs_trigger_(std::make_unique<FakeSysfsTrigger>(
           mock_context_.get(), mock_trigger1_.get())),
       sensor_kind_(kind) {
   mock_context_->AddDevice(mock_device_.get());
-  mock_device_->AddChannel(new FakeIioChannel("calibration", false));
+  mock_device_->AddChannel(mock_calib_channel_.get());
   mock_context_->AddTrigger(mock_sysfs_trigger_.get());
 }
 
@@ -46,11 +47,20 @@ void SensorTestBase::SetSingleSensor(const char* location) {
     channels_.push_back(std::make_unique<FakeIioChannel>("accel_z", false));
 
     channels_.push_back(std::make_unique<FakeIioChannel>("timestamp", true));
+  } else if (sensor_kind_ == SensorKind::GYROSCOPE) {
+    channels_.push_back(std::make_unique<FakeIioChannel>("anglvel_x", false));
+    channels_.push_back(std::make_unique<FakeIioChannel>("anglvel_y", false));
+    channels_.push_back(std::make_unique<FakeIioChannel>("anglvel_z", false));
+
+    channels_.push_back(std::make_unique<FakeIioChannel>("timestamp", true));
+  } else if (sensor_kind_ == SensorKind::LIGHT) {
+    channels_.push_back(std::make_unique<FakeIioChannel>("illuminance", false));
+
+    channels_.push_back(std::make_unique<FakeIioChannel>("timestamp", true));
   }
 
-  for (const auto& channel : channels_) {
+  for (const auto& channel : channels_)
     mock_device_->AddChannel(channel.get());
-  }
 }
 
 void SensorTestBase::SetSharedSensor() {
@@ -67,11 +77,44 @@ void SensorTestBase::SetSharedSensor() {
     channels_.push_back(std::make_unique<FakeIioChannel>("accel_z_lid", false));
 
     channels_.push_back(std::make_unique<FakeIioChannel>("timestamp", true));
+  } else if (sensor_kind_ == SensorKind::GYROSCOPE) {
+    channels_.push_back(
+        std::make_unique<FakeIioChannel>("anglvel_x_base", false));
+    channels_.push_back(
+        std::make_unique<FakeIioChannel>("anglvel_y_base", false));
+    channels_.push_back(
+        std::make_unique<FakeIioChannel>("anglvel_z_base", false));
+
+    channels_.push_back(
+        std::make_unique<FakeIioChannel>("anglvel_x_lid", false));
+    channels_.push_back(
+        std::make_unique<FakeIioChannel>("anglvel_y_lid", false));
+    channels_.push_back(
+        std::make_unique<FakeIioChannel>("anglvel_z_lid", false));
+
+    channels_.push_back(std::make_unique<FakeIioChannel>("timestamp", true));
   }
 
-  for (const auto& channel : channels_) {
+  for (const auto& channel : channels_)
     mock_device_->AddChannel(channel.get());
-  }
+}
+
+void SensorTestBase::SetColorLightSensor() {
+  if (sensor_kind_ != SensorKind::LIGHT)
+    return;
+
+  channels_.push_back(std::make_unique<FakeIioChannel>("illuminance", false));
+  channels_.push_back(
+      std::make_unique<FakeIioChannel>("illuminance_red", false));
+  channels_.push_back(
+      std::make_unique<FakeIioChannel>("illuminance_green", false));
+  channels_.push_back(
+      std::make_unique<FakeIioChannel>("illuminance_blue", false));
+
+  channels_.push_back(std::make_unique<FakeIioChannel>("timestamp", true));
+
+  for (const auto& channel : channels_)
+    mock_device_->AddChannel(channel.get());
 }
 
 void SensorTestBase::ConfigureVpd(

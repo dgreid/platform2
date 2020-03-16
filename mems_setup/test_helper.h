@@ -48,6 +48,7 @@ class SensorTestBase : public ::testing::Test {
   std::unique_ptr<libmems::fakes::FakeIioContext> mock_context_;
   std::unique_ptr<mems_setup::fakes::FakeDelegate> mock_delegate_;
   std::unique_ptr<libmems::fakes::FakeIioDevice> mock_device_;
+  std::unique_ptr<libmems::fakes::FakeIioChannel> mock_calib_channel_;
 
   std::unique_ptr<libmems::fakes::FakeIioDevice> mock_trigger1_;
   std::unique_ptr<FakeSysfsTrigger> mock_sysfs_trigger_;
@@ -60,6 +61,7 @@ class SensorTestBase : public ::testing::Test {
 
   void SetSingleSensor(const char* location);
   void SetSharedSensor();
+  void SetColorLightSensor();
 
   void ConfigureVpd(
       std::initializer_list<std::pair<const char*, const char*>> values);

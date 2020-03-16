@@ -38,15 +38,18 @@ TEST_F(GyroscopeTest, MissingVpd) {
 
   EXPECT_TRUE(GetConfiguration()->Configure());
 
-  EXPECT_TRUE(
-      mock_device_->ReadNumberAttribute("in_anglvel_x_calibbias").has_value());
-  EXPECT_EQ(
-      100,
-      mock_device_->ReadNumberAttribute("in_anglvel_x_calibbias").value_or(0));
-  EXPECT_FALSE(
-      mock_device_->ReadNumberAttribute("in_anglvel_y_calibbias").has_value());
-  EXPECT_FALSE(
-      mock_device_->ReadNumberAttribute("in_anglvel_z_calibbias").has_value());
+  EXPECT_TRUE(mock_device_->GetChannel("anglvel_x")
+                  ->ReadNumberAttribute("calibbias")
+                  .has_value());
+  EXPECT_EQ(100, mock_device_->GetChannel("anglvel_x")
+                     ->ReadNumberAttribute("calibbias")
+                     .value());
+  EXPECT_FALSE(mock_device_->GetChannel("anglvel_y")
+                   ->ReadNumberAttribute("calibbias")
+                   .has_value());
+  EXPECT_FALSE(mock_device_->GetChannel("anglvel_z")
+                   ->ReadNumberAttribute("calibbias")
+                   .has_value());
 }
 
 TEST_F(GyroscopeTest, NotNumericVpd) {
@@ -56,14 +59,18 @@ TEST_F(GyroscopeTest, NotNumericVpd) {
 
   EXPECT_TRUE(GetConfiguration()->Configure());
 
-  EXPECT_FALSE(
-      mock_device_->ReadNumberAttribute("in_anglvel_x_calibbias").has_value());
-  EXPECT_TRUE(
-      mock_device_->ReadNumberAttribute("in_anglvel_y_calibbias").has_value());
-  EXPECT_EQ(
-      104, mock_device_->ReadNumberAttribute("in_anglvel_y_calibbias").value());
-  EXPECT_FALSE(
-      mock_device_->ReadNumberAttribute("in_anglvel_z_calibbias").has_value());
+  EXPECT_FALSE(mock_device_->GetChannel("anglvel_x")
+                   ->ReadNumberAttribute("calibbias")
+                   .has_value());
+  EXPECT_TRUE(mock_device_->GetChannel("anglvel_y")
+                  ->ReadNumberAttribute("calibbias")
+                  .has_value());
+  EXPECT_EQ(104, mock_device_->GetChannel("anglvel_y")
+                     ->ReadNumberAttribute("calibbias")
+                     .value());
+  EXPECT_FALSE(mock_device_->GetChannel("anglvel_z")
+                   ->ReadNumberAttribute("calibbias")
+                   .has_value());
 }
 
 TEST_F(GyroscopeTest, VpdOutOfRange) {
@@ -74,12 +81,15 @@ TEST_F(GyroscopeTest, VpdOutOfRange) {
 
   EXPECT_TRUE(GetConfiguration()->Configure());
 
-  EXPECT_FALSE(
-      mock_device_->ReadNumberAttribute("in_anglvel_x_calibbias").has_value());
-  EXPECT_FALSE(
-      mock_device_->ReadNumberAttribute("in_anglvel_y_calibbias").has_value());
-  EXPECT_FALSE(
-      mock_device_->ReadNumberAttribute("in_anglvel_z_calibbias").has_value());
+  EXPECT_FALSE(mock_device_->GetChannel("anglvel_x")
+                   ->ReadNumberAttribute("calibbias")
+                   .has_value());
+  EXPECT_FALSE(mock_device_->GetChannel("anglvel_y")
+                   ->ReadNumberAttribute("calibbias")
+                   .has_value());
+  EXPECT_FALSE(mock_device_->GetChannel("anglvel_z")
+                   ->ReadNumberAttribute("calibbias")
+                   .has_value());
 }
 
 TEST_F(GyroscopeTest, NotLoadingTriggerModule) {
@@ -94,6 +104,7 @@ TEST_F(GyroscopeTest, NotLoadingTriggerModule) {
 }
 
 TEST_F(GyroscopeTest, MultipleSensorDevice) {
+  SetSharedSensor();
   ConfigureVpd({{"in_anglvel_x_base_calibbias", "50"},
                 {"in_anglvel_y_base_calibbias", "104"},
                 {"in_anglvel_z_base_calibbias", "85"},
@@ -101,22 +112,37 @@ TEST_F(GyroscopeTest, MultipleSensorDevice) {
 
   EXPECT_TRUE(GetConfiguration()->Configure());
 
-  EXPECT_EQ(
-      50,
-      mock_device_->ReadNumberAttribute("in_anglvel_x_base_calibbias").value());
-  EXPECT_EQ(
-      104,
-      mock_device_->ReadNumberAttribute("in_anglvel_y_base_calibbias").value());
-  EXPECT_EQ(
-      85,
-      mock_device_->ReadNumberAttribute("in_anglvel_z_base_calibbias").value());
+  EXPECT_TRUE(mock_device_->GetChannel("anglvel_x_base")
+                  ->ReadNumberAttribute("calibbias")
+                  .has_value());
+  EXPECT_TRUE(mock_device_->GetChannel("anglvel_y_base")
+                  ->ReadNumberAttribute("calibbias")
+                  .has_value());
+  EXPECT_TRUE(mock_device_->GetChannel("anglvel_z_base")
+                  ->ReadNumberAttribute("calibbias")
+                  .has_value());
 
-  EXPECT_FALSE(mock_device_->ReadNumberAttribute("in_anglvel_x_lid_calibbias")
+  EXPECT_EQ(50, mock_device_->GetChannel("anglvel_x_base")
+                    ->ReadNumberAttribute("calibbias")
+                    .value());
+  EXPECT_EQ(104, mock_device_->GetChannel("anglvel_y_base")
+                     ->ReadNumberAttribute("calibbias")
+                     .value());
+  EXPECT_EQ(85, mock_device_->GetChannel("anglvel_z_base")
+                    ->ReadNumberAttribute("calibbias")
+                    .value());
+
+  EXPECT_FALSE(mock_device_->GetChannel("anglvel_x_lid")
+                   ->ReadNumberAttribute("calibbias")
                    .has_value());
-  EXPECT_EQ(
-      27,
-      mock_device_->ReadNumberAttribute("in_anglvel_y_lid_calibbias").value());
-  EXPECT_FALSE(mock_device_->ReadNumberAttribute("in_anglvel_z_lid_calibbias")
+  EXPECT_TRUE(mock_device_->GetChannel("anglvel_y_lid")
+                  ->ReadNumberAttribute("calibbias")
+                  .has_value());
+  EXPECT_EQ(27, mock_device_->GetChannel("anglvel_y_lid")
+                    ->ReadNumberAttribute("calibbias")
+                    .value());
+  EXPECT_FALSE(mock_device_->GetChannel("anglvel_z_lid")
+                   ->ReadNumberAttribute("calibbias")
                    .has_value());
 }
 
