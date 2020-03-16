@@ -48,3 +48,6 @@ clone: 1
 set_robust_list: 1
 newfstatat: 1
 setpriority: 1
+mlock: 1
+munlock: 1
+madvise: 1
