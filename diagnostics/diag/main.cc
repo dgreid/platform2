@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <iostream>
 #include <iterator>
+#include <limits>
 #include <map>
 #include <string>
 
@@ -57,6 +58,9 @@ int main(int argc, char** argv) {
   DEFINE_string(routine, "",
                 "Diagnostic routine to run. For a list of available routines, "
                 "run 'diag --action=get_routines'.");
+  DEFINE_uint32(force_cancel_at_percent, std::numeric_limits<uint32_t>::max(),
+                "If specified, will attempt to cancel the routine when its "
+                "progress exceeds the flag's value.\nValid range: [0, 100]");
   DEFINE_uint32(low_mah, 1000, "Lower bound for the battery routine, in mAh.");
   DEFINE_uint32(high_mah, 10000,
                 "Upper bound for the battery routine, in mAh.");
@@ -110,6 +114,9 @@ int main(int argc, char** argv) {
       std::cout << "Unknown routine: " << FLAGS_routine << std::endl;
       return EXIT_FAILURE;
     }
+
+    if (FLAGS_force_cancel_at_percent != std::numeric_limits<uint32_t>::max())
+      actions.ForceCancelAtPercent(FLAGS_force_cancel_at_percent);
 
     bool routine_result;
     switch (itr->second) {

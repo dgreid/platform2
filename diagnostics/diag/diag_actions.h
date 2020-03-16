@@ -52,6 +52,11 @@ class DiagActions final {
   bool ActionRunSmartctlCheckRoutine();
   bool ActionRunUrandomRoutine(uint32_t length_seconds);
 
+  // Cancels the next routine run, when that routine reports a progress percent
+  // greater than or equal to |percent|. Should be called before running the
+  // routine to be cancelled.
+  void ForceCancelAtPercent(uint32_t percent);
+
  private:
   // Helper function to determine when a routine has finished. Also does any
   // necessary cleanup.
@@ -74,6 +79,11 @@ class DiagActions final {
   CrosHealthdMojoAdapter adapter_;
   // ID of the routine being run.
   int32_t id_ = chromeos::cros_healthd::mojom::kFailedToStartId;
+
+  // If |force_cancel_| is true, the next routine run will be cancelled when its
+  // progress is greater than or equal to |cancellation_percent_|.
+  bool force_cancel_ = false;
+  uint32_t cancellation_percent_ = 0;
 
   // Polling interval.
   const base::TimeDelta kPollingInterval;

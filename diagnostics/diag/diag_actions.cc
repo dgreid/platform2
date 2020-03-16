@@ -184,6 +184,12 @@ bool DiagActions::ActionRunUrandomRoutine(uint32_t length_seconds) {
   return PollRoutineAndProcessResult();
 }
 
+void DiagActions::ForceCancelAtPercent(uint32_t percent) {
+  CHECK_LE(percent, 100) << "Percent must be <= 100.";
+  force_cancel_ = true;
+  cancellation_percent_ = percent;
+}
+
 bool DiagActions::PollRoutineAndProcessResult() {
   mojo_ipc::RoutineUpdatePtr response;
   const base::TimeTicks start_time = base::TimeTicks::Now();
@@ -196,6 +202,14 @@ bool DiagActions::PollRoutineAndProcessResult() {
         id_, mojo_ipc::DiagnosticRoutineCommandEnum::kGetStatus,
         true /* include_output */);
     std::cout << "Progress: " << response->progress_percent << std::endl;
+
+    if (force_cancel_ && !response.is_null() &&
+        response->progress_percent >= cancellation_percent_) {
+      response = adapter_.GetRoutineUpdate(
+          id_, mojo_ipc::DiagnosticRoutineCommandEnum::kCancel,
+          true /* include_output */);
+      force_cancel_ = false;
+    }
 
     base::PlatformThread::Sleep(kPollingInterval);
   } while (
