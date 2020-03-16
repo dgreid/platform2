@@ -50,7 +50,7 @@ HammerUpdater::HammerUpdater(const std::string& ec_image,
                              const std::string& touchpad_product_id,
                              const std::string& touchpad_fw_ver,
                              uint16_t vendor_id, uint16_t product_id,
-                             int bus, const std::string& port, bool at_boot,
+                             const std::string& path, bool at_boot,
                              UpdateCondition update_condition)
     : HammerUpdater(
         ec_image,
@@ -60,7 +60,7 @@ HammerUpdater::HammerUpdater(const std::string& ec_image,
         at_boot,
         update_condition,
         std::make_unique<FirmwareUpdater>(
-            std::make_unique<UsbEndpoint>(vendor_id, product_id, bus, port)),
+            std::make_unique<UsbEndpoint>(vendor_id, product_id, path)),
         std::make_unique<PairManager>(),
         std::make_unique<DBusWrapper>(),
         std::make_unique<MetricsLibrary>()) {}

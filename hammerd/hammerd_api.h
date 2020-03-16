@@ -45,8 +45,7 @@ BRILLO_EXPORT int kX25519PublicValueLen = X25519_PUBLIC_VALUE_LEN;
 
 // Expose FirmwareUpdater class.
 BRILLO_EXPORT FirmwareUpdater* FirmwareUpdater_New(
-    uint16_t vendor_id, uint16_t product_id, int bus,
-    const char* port);
+    uint16_t vendor_id, uint16_t product_id, const char* path);
 BRILLO_EXPORT bool FirmwareUpdater_LoadEcImage(
     FirmwareUpdater* updater, const ByteString* ec_image);
 BRILLO_EXPORT bool FirmwareUpdater_LoadTouchpadImage(

@@ -22,8 +22,7 @@ def main(argv):
     sys.exit('Test takes no args!')
   updater = hammerd_api.FirmwareUpdater(common.BASE_VENDOR_ID,
                                         common.BASE_PRODUCT_ID,
-                                        common.BASE_BUS,
-                                        common.BASE_PORT)
+                                        common.BASE_USB_PATH)
   # Load EC image.
   with open(common.RB_INITIAL, 'rb') as f:
     ec_image = f.read()

@@ -26,18 +26,17 @@ constexpr int kError = -1;
 constexpr unsigned int kTimeoutMs = 1000;  // Default timeout value.
 }  // namespace
 
-const base::FilePath GetUsbSysfsPath(uint16_t bus, const std::string& port) {
-  return base::FilePath(base::StringPrintf("/sys/bus/usb/devices/%d-%s",
-                                           bus, port.c_str()));
+const base::FilePath GetUsbSysfsPath(const std::string& path) {
+  return base::FilePath(base::StringPrintf("/sys/bus/usb/devices/%s",
+                                           path.c_str()));
 }
 
-static bool GetUsbDevicePath(uint16_t bus, const std::string& port,
-                             base::FilePath* out) {
+static bool GetUsbDevicePath(const std::string& path, base::FilePath* out) {
   // Find the line in the uevent that starts with "DEVNAME=", and replace it
   // with "/dev/".
   const std::string devname_prefix = "DEVNAME=";
   const base::FilePath uevent_path =
-      GetUsbSysfsPath(bus, port).Append("uevent");
+      GetUsbSysfsPath(path).Append("uevent");
   std::string content;
   if (!base::ReadFileToString(uevent_path, &content)) {
     LOG(ERROR) << "Failed to read uevent.";
@@ -71,8 +70,8 @@ static bool CheckFileIntValue(const base::FilePath& path, int value) {
 }
 
 UsbEndpoint::UsbEndpoint(uint16_t vendor_id, uint16_t product_id,
-                         uint16_t bus, std::string port)
-    : vendor_id_(vendor_id), product_id_(product_id), bus_(bus), port_(port),
+                         std::string path)
+    : vendor_id_(vendor_id), product_id_(product_id), path_(path),
       fd_(-1), iface_num_(-1), ep_num_(-1), chunk_len_(-1) {}
 
 UsbEndpoint::~UsbEndpoint() {
@@ -80,7 +79,7 @@ UsbEndpoint::~UsbEndpoint() {
 }
 
 bool UsbEndpoint::UsbSysfsExists() {
-  const base::FilePath usb_path = GetUsbSysfsPath(bus_, port_);
+  const base::FilePath usb_path = GetUsbSysfsPath(path_);
   return base::DirectoryExists(usb_path);
 }
 
@@ -98,7 +97,7 @@ UsbConnectStatus UsbEndpoint::Connect() {
     LOG(ERROR) << "USB sysfs does not exist.";
     return UsbConnectStatus::kUsbPathEmpty;
   }
-  const base::FilePath usb_path = GetUsbSysfsPath(bus_, port_);
+  const base::FilePath usb_path = GetUsbSysfsPath(path_);
   int vendor_id, product_id;
   if (!ReadFileToInt(usb_path.Append("idVendor"), &vendor_id) ||
       !ReadFileToInt(usb_path.Append("idProduct"), &product_id)) {
@@ -126,7 +125,7 @@ UsbConnectStatus UsbEndpoint::Connect() {
   base::FileEnumerator iface_paths(
       usb_path, false,
       base::FileEnumerator::FileType::DIRECTORIES,
-      base::StringPrintf("%d-%s:*", bus_, port_.c_str()));
+      base::StringPrintf("%s:*", path_.c_str()));
   for (base::FilePath iface_path = iface_paths.Next();
        !iface_path.empty();
        iface_path = iface_paths.Next()) {
@@ -168,7 +167,7 @@ UsbConnectStatus UsbEndpoint::Connect() {
 
   // Open the usbfs file, and claim the interface.
   base::FilePath usbfs_path;
-  if (!GetUsbDevicePath(bus_, port_, &usbfs_path)) {
+  if (!GetUsbDevicePath(path_, &usbfs_path)) {
     return UsbConnectStatus::kUnknownError;
   }
   fd_ = open(usbfs_path.value().c_str(), O_RDWR | O_CLOEXEC);

@@ -57,8 +57,7 @@ def GetHammerdArguments():
       'TOUCHPAD_IMAGE_PATH',
       'VENDOR_ID',
       'PRODUCT_ID',
-      'USB_BUS',
-      'USB_PORT']
+      'USB_PATH']
 
   ret = {}
   with open(ARGUMENT_FILE_PATH, 'r') as f:
@@ -83,7 +82,7 @@ def main():
   hammerd_args = GetHammerdArguments()
   updater = hammerd_api.FirmwareUpdater(
       int(hammerd_args['VENDOR_ID']), int(hammerd_args['PRODUCT_ID']),
-      int(hammerd_args['USB_BUS']), int(hammerd_args['USB_PORT']))
+      hammerd_args['USB_PATH'])
   with open(hammerd_args['EC_IMAGE_PATH'], 'rb') as f:
     ec_image = f.read()
   updater.LoadEcImage(ec_image)

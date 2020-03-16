@@ -73,8 +73,7 @@ class HammerUpdater {
                 const std::string& touchpad_fw_ver,
                 uint16_t vendor_id,
                 uint16_t product_id,
-                int bus,
-                const std::string& port,
+                const std::string& path,
                 bool at_boot,
                 UpdateCondition update_condition);
   virtual ~HammerUpdater() = default;

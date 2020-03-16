@@ -20,7 +20,7 @@ IMAGE_DIR = os.path.join(ROOT_DIR, 'images')
 BASE_TABLE = {
     'poppy': 'hammer',
     'soraka': 'staff',
-    'nocturne': 'whiskers'
+    'nocturne': 'whiskers',
 }
 
 board_name_cmd = 'grep CHROMEOS_RELEASE_BOARD /etc/lsb-release | cut -d = -f 2'
@@ -31,20 +31,17 @@ BASE_NAME = BASE_TABLE[BOARD_NAME.rstrip()]
 if BASE_NAME == 'staff':
   BASE_VENDOR_ID = 0x18d1
   BASE_PRODUCT_ID = 0x502b
-  BASE_BUS = 1
-  BASE_PORT = '2'
+  BASE_USB_PATH = '1-2'
   BASE_CONN_GPIO = 'PP3300_DX_BASE'
 elif BASE_NAME == 'whiskers':
   BASE_VENDOR_ID = 0x18d1
   BASE_PRODUCT_ID = 0x5030
-  BASE_BUS = 1
-  BASE_PORT = '7'
+  BASE_USB_PATH = '1-7'
   BASE_CONN_GPIO = 'BASE_PWR_EN'
 elif BASE_NAME == 'hammer':
   BASE_VENDOR_ID = 0x18d1
   BASE_PRODUCT_ID = 0x5022
-  BASE_BUS = 1
-  BASE_PORT = '3'
+  BASE_USB_PATH = '1-3'
   BASE_CONN_GPIO = 'PP3300_DX_BASE'
 else:
   print('Error: unknown board: %s' % BASE_NAME)

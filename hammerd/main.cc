@@ -7,6 +7,7 @@
 #include <stdlib.h>
 
 #include <iostream>
+#include <regex>
 #include <string>
 
 #include <base/files/file_path.h>
@@ -38,6 +39,11 @@ enum class ExitStatus {
 };
 }  // namespace
 
+static bool check_usb_path(const std::string& path) {
+  std::regex pattern("[1-9][0-9]*-(?:[1-9][0-9]*\\.)*[1-9][0-9]*");
+  return std::regex_match(path, pattern);
+}
+
 int main(int argc, const char* argv[]) {
   // hammerd should be triggered by upstart job.
   // The default value of arguments are stored in `/etc/init/hammerd.conf`, and
@@ -48,8 +54,10 @@ int main(int argc, const char* argv[]) {
   //                   to be computed by init script.
   DEFINE_int32(vendor_id, -1, "USB vendor ID of the device");
   DEFINE_int32(product_id, -1, "USB product ID of the device");
-  DEFINE_int32(usb_bus, -1, "USB bus to search");
-  DEFINE_string(usb_port, "", "USB port to search");
+  DEFINE_string(usb_path, "",
+                "A string of combined USB bus and port.\n"
+                "    Format: '<bus>-<port>'\n"
+                "    e.g. '1-1.1' implies USB bus is 1 and port is 1.1");
   DEFINE_int32(autosuspend_delay_ms, -1, "USB autosuspend delay time (ms)");
   DEFINE_bool(at_boot, false,
               "Invoke process at boot time. "
@@ -78,10 +86,14 @@ int main(int argc, const char* argv[]) {
     return static_cast<int>(ExitStatus::kSuccess);
   }
 
-  if (FLAGS_vendor_id < 0 || FLAGS_product_id < 0 ||
-      FLAGS_usb_bus < 0 || FLAGS_usb_port.empty()) {
+  if (FLAGS_vendor_id < 0 || FLAGS_product_id < 0 || FLAGS_usb_path.empty()) {
     LOG(ERROR) << "Must specify USB vendor/product ID and bus/port number.";
     return static_cast<int>(ExitStatus::kNeedUsbInfo);
+  }
+
+  if (!check_usb_path(FLAGS_usb_path)) {
+      LOG(ERROR) << "--usb_path should follow the format: '<bus>-<port>'.";
+      return static_cast<int>(ExitStatus::kNeedUsbInfo);
   }
 
   if (FLAGS_get_console_log) {
@@ -90,8 +102,7 @@ int main(int argc, const char* argv[]) {
       std::make_unique<hammerd::FirmwareUpdater>(
           std::make_unique<hammerd::UsbEndpoint>(FLAGS_vendor_id,
                                                  FLAGS_product_id,
-                                                 FLAGS_usb_bus,
-                                                 FLAGS_usb_port));
+                                                 FLAGS_usb_path));
     hammerd::UsbConnectStatus connect_status = fw_updater->TryConnectUsb();
     if (connect_status != hammerd::UsbConnectStatus::kSuccess) {
       LOG(ERROR) << "Failed to connect USB.";
@@ -149,8 +160,7 @@ int main(int argc, const char* argv[]) {
   base::MessageLoop message_loop;
   hammerd::HammerUpdater updater(
       ec_image, touchpad_image, touchpad_product_id, touchpad_fw_ver,
-      FLAGS_vendor_id, FLAGS_product_id,
-      FLAGS_usb_bus, FLAGS_usb_port, FLAGS_at_boot,
+      FLAGS_vendor_id, FLAGS_product_id, FLAGS_usb_path, FLAGS_at_boot,
       update_condition);
 
   updater.SetInjectEntropyFlag(FLAGS_force_inject_entropy);
@@ -161,7 +171,7 @@ int main(int argc, const char* argv[]) {
     LOG(INFO) << "Enable USB autosuspend with delay "
               << FLAGS_autosuspend_delay_ms << " ms.";
     base::FilePath base_path =
-        hammerd::GetUsbSysfsPath(FLAGS_usb_bus, FLAGS_usb_port);
+        hammerd::GetUsbSysfsPath(FLAGS_usb_path);
     constexpr char kPowerLevelPath[] = "power/control";
     constexpr char kAutosuspendDelayMsPath[] = "power/autosuspend_delay_ms";
     constexpr char kPowerLevel[] = "auto";
