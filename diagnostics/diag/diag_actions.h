@@ -11,6 +11,8 @@
 #include <base/macros.h>
 #include <base/time/time.h>
 
+#include "diagnostics/cros_healthd_mojo_adapter/cros_healthd_mojo_adapter.h"
+
 namespace diagnostics {
 
 // This class is responsible for providing the actions corresponding to the
@@ -44,6 +46,9 @@ class DiagActions final {
   bool ActionRunUrandomRoutine(uint32_t length_seconds);
 
  private:
+  // Used to send mojo requests to cros_healthd.
+  CrosHealthdMojoAdapter adapter_;
+
   DISALLOW_COPY_AND_ASSIGN(DiagActions);
 };
 
