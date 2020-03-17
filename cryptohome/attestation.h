@@ -185,6 +185,18 @@ class Attestation : public base::PlatformThread::Delegate,
   virtual bool Enroll(PCAType pca_type,
                       const brillo::SecureBlob& pca_response);
 
+  // Performs the complete enrollment process if necessary.  On success,
+  // IsEnrolled() will return true and GetIdentityCertificate(kFirstIdentity,
+  // |pca_type|) will return a non null value.
+  //
+  // Parameters
+  //   pca_type - Specifies which Privacy CA created the response.
+  //   forced - Ignores the current enrollment status and always starts over the
+  //   enrollment process.
+  //
+  // Returns true on success.
+  virtual bool EnrollEx(PCAType pca_type, bool forced);
+
   // Creates an attestation certificate request to be sent to the Privacy CA.
   // The request is a serialized AttestationCertificateRequest protobuf. The
   // certificate request process generates and certifies a key in the TPM and

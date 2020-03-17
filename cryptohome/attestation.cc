@@ -759,6 +759,28 @@ void Attestation::PrepareForEnrollmentAsync() {
   base::PlatformThread::Create(0, this, &thread_);
 }
 
+bool Attestation::EnrollEx(PCAType pca_type, bool forced) {
+  if (IsEnrolledWith(pca_type) && !forced) {
+    return true;
+  }
+  SecureBlob request;
+  if (!CreateEnrollRequest(pca_type, &request)) {
+    LOG(ERROR) << __func__ << ": Failed to create enroll request.";
+    return false;
+  }
+  SecureBlob reply;
+  if (!SendPCARequestWithProxyAndBlock(pca_type, PCARequestType::kEnroll,
+                                       request, &reply)) {
+    LOG(ERROR) << __func__ << ": Failed to send PCA request.";
+    return false;
+  }
+  if (!Enroll(pca_type, reply)) {
+    LOG(ERROR) << __func__ << ": Failed to finish enrollment.";
+    return false;
+  }
+  return true;
+}
+
 bool Attestation::Verify(bool is_cros_core) {
   if (!IsTPMReady())
     return false;
