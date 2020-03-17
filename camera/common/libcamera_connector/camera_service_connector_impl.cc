@@ -11,7 +11,6 @@
 
 #include <base/no_destructor.h>
 #include <base/sequence_checker.h>
-#include <base/synchronization/waitable_event.h>
 #include <mojo/core/embedder/embedder.h>
 #include <mojo/core/embedder/scoped_ipc_support.h>
 #include <mojo/public/cpp/bindings/binding.h>
@@ -62,6 +61,11 @@ void CameraServiceConnector::Exit() {
 
   ipc_support_ = nullptr;
   ipc_thread_.Stop();
+}
+
+int CameraServiceConnector::GetCameraInfo(cros_cam_get_cam_info_cb_t callback,
+                                          void* context) {
+  return camera_client_->SetCameraInfoCallback(callback, context);
 }
 
 void CameraServiceConnector::RegisterClient(

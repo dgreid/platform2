@@ -23,8 +23,8 @@ void cros_cam_exit() {
 }
 
 int cros_cam_get_cam_info(cros_cam_get_cam_info_cb_t callback, void* context) {
-  // TODO(b/151047930): Implement the function.
-  return -ENODEV;
+  auto* connector = cros::CameraServiceConnector::GetInstance();
+  return connector->GetCameraInfo(callback, context);
 }
 
 int cros_cam_start_capture(cros_cam_device_t id,

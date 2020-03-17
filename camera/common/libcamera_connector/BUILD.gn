@@ -22,7 +22,9 @@ shared_library("libcamera_connector") {
     "//camera/common/libcamera_ipc:libcamera_ipc_mojom",
   ]
   pkg_deps = [
+    "cros-camera-android-headers",
     "libcamera_common",
+    "libcbm",
     "libmojo-${libbase_ver}",
   ]
 }

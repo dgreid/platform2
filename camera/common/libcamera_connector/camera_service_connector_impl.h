@@ -11,12 +11,12 @@
 
 #include <base/bind.h>
 #include <base/sequence_checker.h>
-#include <base/synchronization/waitable_event.h>
 #include <base/threading/thread.h>
 #include <base/time/time.h>
 #include <mojo/public/cpp/bindings/binding.h>
 
 #include "common/libcamera_connector/camera_client.h"
+#include "cros-camera/camera_service_connector.h"
 #include "mojo/cros_camera_service.mojom.h"
 
 namespace cros {
@@ -33,6 +33,12 @@ class CameraServiceConnector {
 
   // Terminates camera HAL client, all connections and threads.
   void Exit();
+
+  // Sets the callback for camera info changes and fires |callback| with the
+  // info of the cameras currently present.
+  // TODO(b/151047930): Subscribe to hotplug events once external camera support
+  // is added.
+  int GetCameraInfo(cros_cam_get_cam_info_cb_t callback, void* context);
 
  private:
   using ConnectDispatcherCallback = base::OnceCallback<void()>;

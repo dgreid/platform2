@@ -134,8 +134,8 @@ CROS_CAMERA_EXPORT void cros_cam_exit();
 
 //
 // Get information about cameras and subscribe for hotplug notifications
-//   Callback may be called synchronously (in the same thread) once to fill
-//   initial list of cameras.
+//   Callback will be called synchronously (in the same thread) N times (where N
+//   is the number of cameras present) to fill the initial list of cameras.
 //   Hotplug notifications are async and callback uses own thread
 //   There is possible to start capture from callback
 //
