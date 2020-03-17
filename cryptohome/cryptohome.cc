@@ -136,6 +136,7 @@ namespace switches {
                                    "tpm_attestation_enroll",
                                    "tpm_attestation_start_cert_request",
                                    "tpm_attestation_finish_cert_request",
+                                   "tpm_attestation_get_certificate",
                                    "tpm_attestation_key_status",
                                    "tpm_attestation_register_key",
                                    "tpm_attestation_enterprise_challenge",
@@ -212,6 +213,7 @@ namespace switches {
     ACTION_TPM_ATTESTATION_ENROLL,
     ACTION_TPM_ATTESTATION_START_CERTREQ,
     ACTION_TPM_ATTESTATION_FINISH_CERTREQ,
+    ACTION_TPM_ATTESTATION_GET_CERTIFICATE,
     ACTION_TPM_ATTESTATION_KEY_STATUS,
     ACTION_TPM_ATTESTATION_REGISTER_KEY,
     ACTION_TPM_ATTESTATION_ENTERPRISE_CHALLENGE,
@@ -274,6 +276,7 @@ namespace switches {
   static const char kIgnoreCache[] = "ignore_cache";
   static const char kRestoreKeyInHexSwitch[] = "restore_key_in_hex";
   static const char kMassRemoveExemptLabelsSwitch[] = "exempt_key_labels";
+  static const char kEnrollSwitch[] = "enroll";
 }  // namespace switches
 
 #define DBUS_METHOD(method_name) \
@@ -2323,6 +2326,61 @@ int main(int argc, char **argv) {
       return 1;
     }
     base::WriteFile(GetOutputFile(cl), cert_data.data(), cert_data.length());
+  } else if (!strcmp(switches::kActions
+                         [switches::ACTION_TPM_ATTESTATION_GET_CERTIFICATE],
+                     action.c_str())) {
+    brillo::glib::ScopedError error;
+    cryptohome::CertificateProfile profile;
+    const std::string account_id =
+        cl->GetSwitchValueASCII(switches::kUserSwitch);
+    const std::string key_name =
+        cl->GetSwitchValueASCII(switches::kAttrNameSwitch);
+    const bool forced = cl->HasSwitch(switches::kForceSwitch);
+    const bool shall_trigger_enrollment =
+        cl->HasSwitch(switches::kEnrollSwitch);
+
+    gboolean success = FALSE;
+    std::string cert;
+    if (!GetProfile(cl, &profile)) {
+      return 1;
+    }
+    if (!cl->HasSwitch(switches::kAsyncSwitch)) {
+      brillo::glib::ScopedArray data;
+      if (!org_chromium_CryptohomeInterface_tpm_attestation_get_certificate_ex(
+              proxy.gproxy(), profile, account_id.c_str(),
+              /*request_origin=*/"", pca_type,
+              /*key_type=*/1, key_name.c_str(), forced,
+              shall_trigger_enrollment, &brillo::Resetter(&data).lvalue(),
+              &success, &brillo::Resetter(&error).lvalue())) {
+        printf("TpmAttestationCreateCertRequest call failed: %s.\n",
+               error->message);
+        return 1;
+      }
+      cert = std::string(static_cast<char*>(data->data), data->len);
+    } else {
+      ClientLoop client_loop;
+      client_loop.Initialize(&proxy);
+      gint async_id = -1;
+      if (!org_chromium_CryptohomeInterface_async_tpm_attestation_get_certificate_ex(  // NOLINT
+              proxy.gproxy(), profile, account_id.c_str(),
+              /*request_origin=*/"", pca_type,
+              /*key_type=*/1, key_name.c_str(), forced,
+              shall_trigger_enrollment, &async_id,
+              &brillo::Resetter(&error).lvalue())) {
+        printf("AsyncTpmAttestationCreateCertRequest call failed: %s.\n",
+               error->message);
+        return 1;
+      } else {
+        client_loop.Run(async_id);
+        success = client_loop.get_return_status();
+        cert = client_loop.get_return_data();
+      }
+    }
+    if (!success) {
+      printf("Attestation certificate request failed.\n");
+      return 1;
+    }
+    base::WriteFile(GetOutputFile(cl), cert.data(), cert.length());
   } else if (!strcmp(
       switches::kActions[switches::ACTION_TPM_ATTESTATION_KEY_STATUS],
       action.c_str())) {
