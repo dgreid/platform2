@@ -46,8 +46,14 @@ class DiagActions final {
   bool ActionRunUrandomRoutine(uint32_t length_seconds);
 
  private:
+  // Helper function to determine when a routine has finished. Also removes the
+  // routine corresponding to |id_|.
+  bool RunRoutineAndProcessResult();
+
   // Used to send mojo requests to cros_healthd.
   CrosHealthdMojoAdapter adapter_;
+  // ID of the routine being run.
+  int32_t id_ = chromeos::cros_healthd::mojom::kFailedToStartId;
 
   DISALLOW_COPY_AND_ASSIGN(DiagActions);
 };

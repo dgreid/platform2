@@ -91,10 +91,114 @@ std::string GetSwitchFromRoutine(mojo_ipc::DiagnosticRoutineEnum routine) {
   return routine_itr->second;
 }
 
-bool RunRoutineAndProcessResult(int32_t id,
-                                diagnostics::CrosHealthdMojoAdapter* adapter) {
-  auto response = adapter->GetRoutineUpdate(
-      id, mojo_ipc::DiagnosticRoutineCommandEnum::kGetStatus,
+}  // namespace
+
+DiagActions::DiagActions() = default;
+
+DiagActions::~DiagActions() = default;
+
+bool DiagActions::ActionGetRoutines() {
+  auto reply = adapter_.GetAvailableRoutines();
+  for (auto routine : reply) {
+    std::cout << "Available routine: " << GetSwitchFromRoutine(routine)
+              << std::endl;
+  }
+
+  return true;
+}
+
+bool DiagActions::ActionRunAcPowerRoutine(bool is_connected,
+                                          const std::string& power_type) {
+  chromeos::cros_healthd::mojom::AcPowerStatusEnum expected_status =
+      is_connected
+          ? chromeos::cros_healthd::mojom::AcPowerStatusEnum::kConnected
+          : chromeos::cros_healthd::mojom::AcPowerStatusEnum::kDisconnected;
+  const base::Optional<std::string> optional_power_type =
+      (power_type == "") ? base::nullopt
+                         : base::Optional<std::string>{power_type};
+  auto response =
+      adapter_.RunAcPowerRoutine(expected_status, optional_power_type);
+  CHECK(response) << "No RunRoutineResponse received.";
+  id_ = response->id;
+  return RunRoutineAndProcessResult();
+}
+
+bool DiagActions::ActionRunBatteryCapacityRoutine(uint32_t low_mah,
+                                                  uint32_t high_mah) {
+  auto response = adapter_.RunBatteryCapacityRoutine(low_mah, high_mah);
+  CHECK(response) << "No RunRoutineResponse received.";
+  id_ = response->id;
+  return RunRoutineAndProcessResult();
+}
+
+bool DiagActions::ActionRunBatteryHealthRoutine(
+    uint32_t maximum_cycle_count, uint32_t percent_battery_wear_allowed) {
+  auto response = adapter_.RunBatteryHealthRoutine(
+      maximum_cycle_count, percent_battery_wear_allowed);
+  CHECK(response) << "No RunRoutineResponse received.";
+  id_ = response->id;
+  return RunRoutineAndProcessResult();
+}
+
+bool DiagActions::ActionRunCpuCacheRoutine(
+    const base::TimeDelta& exec_duration) {
+  auto response = adapter_.RunCpuCacheRoutine(exec_duration);
+  CHECK(response) << "No RunRoutineResponse received.";
+  id_ = response->id;
+  return RunRoutineAndProcessResult();
+}
+
+bool DiagActions::ActionRunCpuStressRoutine(
+    const base::TimeDelta& exec_duration) {
+  auto response = adapter_.RunCpuStressRoutine(exec_duration);
+  CHECK(response) << "No RunRoutineResponse received.";
+  id_ = response->id;
+  return RunRoutineAndProcessResult();
+}
+
+bool DiagActions::ActionRunFloatingPointAccuracyRoutine(
+    const base::TimeDelta& exec_duration) {
+  auto response = adapter_.RunFloatingPointAccuracyRoutine(exec_duration);
+  CHECK(response) << "No RunRoutineResponse received.";
+  id_ = response->id;
+  return RunRoutineAndProcessResult();
+}
+
+bool DiagActions::ActionRunNvmeSelfTestRoutine(bool is_long) {
+  chromeos::cros_healthd::mojom::NvmeSelfTestTypeEnum type =
+      is_long
+          ? chromeos::cros_healthd::mojom::NvmeSelfTestTypeEnum::kLongSelfTest
+          : chromeos::cros_healthd::mojom::NvmeSelfTestTypeEnum::kShortSelfTest;
+  auto response = adapter_.RunNvmeSelfTestRoutine(type);
+  CHECK(response) << "No RunRoutineResponse received.";
+  id_ = response->id;
+  return RunRoutineAndProcessResult();
+}
+
+bool DiagActions::ActionRunNvmeWearLevelRoutine(uint32_t wear_level_threshold) {
+  auto response = adapter_.RunNvmeWearLevelRoutine(wear_level_threshold);
+  CHECK(response) << "No RunRoutineResponse received.";
+  id_ = response->id;
+  return RunRoutineAndProcessResult();
+}
+
+bool DiagActions::ActionRunSmartctlCheckRoutine() {
+  auto response = adapter_.RunSmartctlCheckRoutine();
+  CHECK(response) << "No RunRoutineResponse received.";
+  id_ = response->id;
+  return RunRoutineAndProcessResult();
+}
+
+bool DiagActions::ActionRunUrandomRoutine(uint32_t length_seconds) {
+  auto response = adapter_.RunUrandomRoutine(length_seconds);
+  CHECK(response) << "No RunRoutineResponse received.";
+  id_ = response->id;
+  return RunRoutineAndProcessResult();
+}
+
+bool DiagActions::RunRoutineAndProcessResult() {
+  auto response = adapter_.GetRoutineUpdate(
+      id_, mojo_ipc::DiagnosticRoutineCommandEnum::kGetStatus,
       true /* include_output */);
 
   const base::TimeTicks start_time = base::TimeTicks::Now();
@@ -107,8 +211,8 @@ bool RunRoutineAndProcessResult(int32_t id,
     base::PlatformThread::Sleep(kRoutinePollIntervalTimeDelta);
     std::cout << "Progress: " << response->progress_percent << std::endl;
 
-    response = adapter->GetRoutineUpdate(
-        id, mojo_ipc::DiagnosticRoutineCommandEnum::kGetStatus,
+    response = adapter_.GetRoutineUpdate(
+        id_, mojo_ipc::DiagnosticRoutineCommandEnum::kGetStatus,
         true /* include_output */);
   }
 
@@ -139,10 +243,10 @@ bool RunRoutineAndProcessResult(int32_t id,
     std::string dummy;
     std::getline(std::cin, dummy);
 
-    response = adapter->GetRoutineUpdate(
-        id, mojo_ipc::DiagnosticRoutineCommandEnum::kContinue,
+    response = adapter_.GetRoutineUpdate(
+        id_, mojo_ipc::DiagnosticRoutineCommandEnum::kContinue,
         false /* include_output */);
-    return RunRoutineAndProcessResult(id, adapter);
+    return RunRoutineAndProcessResult();
   }
 
   // Noninteractive routines without a status of kRunning must have terminated
@@ -182,8 +286,8 @@ bool RunRoutineAndProcessResult(int32_t id,
             << std::endl;
 
   if (status != mojo_ipc::DiagnosticRoutineStatusEnum::kFailedToStart) {
-    response = adapter->GetRoutineUpdate(
-        id, mojo_ipc::DiagnosticRoutineCommandEnum::kRemove,
+    response = adapter_.GetRoutineUpdate(
+        id_, mojo_ipc::DiagnosticRoutineCommandEnum::kRemove,
         false /* include_output */);
 
     if (response.is_null() ||
@@ -196,100 +300,6 @@ bool RunRoutineAndProcessResult(int32_t id,
   }
 
   return true;
-}
-
-}  // namespace
-
-DiagActions::DiagActions() = default;
-DiagActions::~DiagActions() = default;
-
-bool DiagActions::ActionGetRoutines() {
-  auto reply = adapter_.GetAvailableRoutines();
-  for (auto routine : reply) {
-    std::cout << "Available routine: " << GetSwitchFromRoutine(routine)
-              << std::endl;
-  }
-
-  return true;
-}
-
-bool DiagActions::ActionRunAcPowerRoutine(bool is_connected,
-                                          const std::string& power_type) {
-  chromeos::cros_healthd::mojom::AcPowerStatusEnum expected_status =
-      is_connected
-          ? chromeos::cros_healthd::mojom::AcPowerStatusEnum::kConnected
-          : chromeos::cros_healthd::mojom::AcPowerStatusEnum::kDisconnected;
-  const base::Optional<std::string> optional_power_type =
-      (power_type == "") ? base::nullopt
-                         : base::Optional<std::string>{power_type};
-  auto response =
-      adapter_.RunAcPowerRoutine(expected_status, optional_power_type);
-  CHECK(response) << "No RunRoutineResponse received.";
-  return RunRoutineAndProcessResult(response->id, &adapter_);
-}
-
-bool DiagActions::ActionRunBatteryCapacityRoutine(uint32_t low_mah,
-                                                  uint32_t high_mah) {
-  auto response = adapter_.RunBatteryCapacityRoutine(low_mah, high_mah);
-  CHECK(response) << "No RunRoutineResponse received.";
-  return RunRoutineAndProcessResult(response->id, &adapter_);
-}
-
-bool DiagActions::ActionRunBatteryHealthRoutine(
-    uint32_t maximum_cycle_count, uint32_t percent_battery_wear_allowed) {
-  auto response = adapter_.RunBatteryHealthRoutine(
-      maximum_cycle_count, percent_battery_wear_allowed);
-  CHECK(response) << "No RunRoutineResponse received.";
-  return RunRoutineAndProcessResult(response->id, &adapter_);
-}
-
-bool DiagActions::ActionRunCpuCacheRoutine(
-    const base::TimeDelta& exec_duration) {
-  auto response = adapter_.RunCpuCacheRoutine(exec_duration);
-  CHECK(response) << "No RunRoutineResponse received.";
-  return RunRoutineAndProcessResult(response->id, &adapter_);
-}
-
-bool DiagActions::ActionRunCpuStressRoutine(
-    const base::TimeDelta& exec_duration) {
-  auto response = adapter_.RunCpuStressRoutine(exec_duration);
-  CHECK(response) << "No RunRoutineResponse received.";
-  return RunRoutineAndProcessResult(response->id, &adapter_);
-}
-
-bool DiagActions::ActionRunFloatingPointAccuracyRoutine(
-    const base::TimeDelta& exec_duration) {
-  auto response = adapter_.RunFloatingPointAccuracyRoutine(exec_duration);
-  CHECK(response) << "No RunRoutineResponse received.";
-  return RunRoutineAndProcessResult(response->id, &adapter_);
-}
-
-bool DiagActions::ActionRunNvmeSelfTestRoutine(bool is_long) {
-  chromeos::cros_healthd::mojom::NvmeSelfTestTypeEnum type =
-      is_long
-          ? chromeos::cros_healthd::mojom::NvmeSelfTestTypeEnum::kLongSelfTest
-          : chromeos::cros_healthd::mojom::NvmeSelfTestTypeEnum::kShortSelfTest;
-  auto response = adapter_.RunNvmeSelfTestRoutine(type);
-  CHECK(response) << "No RunRoutineResponse received.";
-  return RunRoutineAndProcessResult(response->id, &adapter_);
-}
-
-bool DiagActions::ActionRunNvmeWearLevelRoutine(uint32_t wear_level_threshold) {
-  auto response = adapter_.RunNvmeWearLevelRoutine(wear_level_threshold);
-  CHECK(response) << "No RunRoutineResponse received.";
-  return RunRoutineAndProcessResult(response->id, &adapter_);
-}
-
-bool DiagActions::ActionRunSmartctlCheckRoutine() {
-  auto response = adapter_.RunSmartctlCheckRoutine();
-  CHECK(response) << "No RunRoutineResponse received.";
-  return RunRoutineAndProcessResult(response->id, &adapter_);
-}
-
-bool DiagActions::ActionRunUrandomRoutine(uint32_t length_seconds) {
-  auto response = adapter_.RunUrandomRoutine(length_seconds);
-  CHECK(response) << "No RunRoutineResponse received.";
-  return RunRoutineAndProcessResult(response->id, &adapter_);
 }
 
 }  // namespace diagnostics
