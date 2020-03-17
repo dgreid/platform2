@@ -52,6 +52,19 @@ gboolean ServiceDistributed::ConvertIntegerToVAType(gint type,
   }
 }
 
+// A helper function which maps an integer to a valid KeyType.
+gboolean ServiceDistributed::ConvertIntegerToKeyType(
+    gint type,
+    attestation::KeyType* key_type,
+    GError** error) {
+  if (type < attestation::KeyType_MIN || type > attestation::KeyType_MAX) {
+    ReportUnsupportedKeyType(error, type);
+    return FALSE;
+  }
+  *key_type = static_cast<attestation::KeyType>(type);
+  return TRUE;
+}
+
 // A helper function which maps an integer to a valid CertificateProfile.
 attestation::CertificateProfile ServiceDistributed::GetProfile(
     int profile_value) {
@@ -134,6 +147,12 @@ void ServiceDistributed::ReportUnsupportedVAType(GError** error, int type) {
   VLOG(1) << "VA type is not supported: " << type;
   g_set_error(error, DBUS_GERROR, DBUS_GERROR_NOT_SUPPORTED,
               "Requested VA type is not supported");
+}
+
+void ServiceDistributed::ReportUnsupportedKeyType(GError** error, int type) {
+  VLOG(1) << "Key type is not supported: " << type;
+  g_set_error(error, DBUS_GERROR, DBUS_GERROR_NOT_SUPPORTED,
+              "Requested Key type is not supported");
 }
 
 template <typename MethodType>
@@ -1178,7 +1197,43 @@ gboolean ServiceDistributed::TpmAttestationGetCertificateEx(
     GArray** OUT_certificate,
     gboolean* OUT_success,
     GError** error) {
-  return FALSE;
+  VLOG(1) << __func__;
+  attestation::ACAType aca_type;
+  if (!ConvertIntegerToACAType(pca_type, &aca_type, error)) {
+    return FALSE;
+  }
+  attestation::KeyType typed_key_type;
+  if (!ConvertIntegerToKeyType(key_type, &typed_key_type, error)) {
+    return FALSE;
+  }
+  attestation::GetCertificateRequest request;
+  request.set_certificate_profile(GetProfile(certificate_profile));
+  request.set_username(username);
+  request.set_request_origin(request_origin);
+  request.set_aca_type(aca_type);
+  request.set_key_type(typed_key_type);
+  request.set_key_label(key_name);
+  request.set_forced(forced);
+  request.set_shall_trigger_enrollment(shall_trigger_enrollment);
+  attestation::GetCertificateReply reply;
+  auto method = base::Bind(&AttestationInterface::GetCertificate,
+                           base::Unretained(attestation_interface_), request);
+  // We must set the GArray now because if we return without setting it,
+  // dbus-glib loops forever.
+  *OUT_certificate =
+      g_array_new(false, false, sizeof(brillo::SecureBlob::value_type));
+  if (!SendRequestAndWait(method, &reply)) {
+    ReportSendFailure(error);
+    return FALSE;
+  }
+  VLOG_IF(1, reply.status() != AttestationStatus::STATUS_SUCCESS)
+      << "Attestation daemon returned status " << reply.status();
+  *OUT_success = (reply.status() == AttestationStatus::STATUS_SUCCESS);
+  if (*OUT_success) {
+    g_array_append_vals(*OUT_certificate, reply.certificate().data(),
+                        reply.certificate().size());
+  }
+  return TRUE;
 }
 
 gboolean ServiceDistributed::AsyncTpmAttestationGetCertificateEx(
@@ -1192,7 +1247,38 @@ gboolean ServiceDistributed::AsyncTpmAttestationGetCertificateEx(
     gboolean shall_trigger_enrollment,
     gint* OUT_async_id,
     GError** error) {
-  return FALSE;
+  VLOG(1) << __func__;
+  attestation::ACAType aca_type;
+  if (!ConvertIntegerToACAType(pca_type, &aca_type, error)) {
+    return FALSE;
+  }
+  attestation::KeyType typed_key_type;
+  if (!ConvertIntegerToKeyType(key_type, &typed_key_type, error)) {
+    return FALSE;
+  }
+  *OUT_async_id = NextSequence();
+  LogAsyncIdInfo(*OUT_async_id, __func__, base::Time::Now());
+  attestation::GetCertificateRequest request;
+  request.set_certificate_profile(GetProfile(certificate_profile));
+  request.set_username(username);
+  request.set_request_origin(request_origin);
+  request.set_aca_type(aca_type);
+  request.set_key_type(typed_key_type);
+  request.set_key_label(key_name);
+  request.set_forced(forced);
+  request.set_shall_trigger_enrollment(shall_trigger_enrollment);
+  auto callback = base::Bind(
+      &ServiceDistributed::ProcessDataReply<attestation::GetCertificateReply>,
+      GetWeakPtr(), &attestation::GetCertificateReply::certificate,
+      *OUT_async_id);
+  auto method =
+      base::Bind(&AttestationInterface::GetCertificate,
+                 base::Unretained(attestation_interface_), request, callback);
+  if (!Post(method)) {
+    ReportSendFailure(error);
+    return FALSE;
+  }
+  return TRUE;
 }
 
 void ServiceDistributed::ConnectOwnershipTakenSignal() {

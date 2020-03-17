@@ -242,6 +242,10 @@ class ServiceDistributed : public Service {
   static gboolean ConvertIntegerToVAType(gint type,
                                          attestation::VAType* va_type,
                                          GError** error);
+  // A helper function which maps an integer to a valid KeyType.
+  static gboolean ConvertIntegerToKeyType(gint type,
+                                          attestation::KeyType* va_type,
+                                          GError** error);
   // Helper methods that fill GError where an error
   // is returned directly from the original handler.
   static void ReportErrorFromStatus(GError** error,
@@ -249,6 +253,7 @@ class ServiceDistributed : public Service {
   static void ReportSendFailure(GError** error);
   static void ReportUnsupportedACAType(GError** error, int type);
   static void ReportUnsupportedVAType(GError** error, int type);
+  static void ReportUnsupportedKeyType(GError** error, int type);
 
   // Callback called after receiving the ownership taken signal from tpm_manager
   // The arg |proxy| is required by dbus_g_proxy_connect_signal but unused here.
