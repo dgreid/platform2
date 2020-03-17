@@ -3801,10 +3801,9 @@ P1NodeImp::hardwareOps_start() {
     return err;
   }
 #endif
-  std::shared_ptr<IImageBuffer> pEISOBuf = NULL;
   MSize sensorSize = mSensorParams.size;
   MSize rrzoSize = mvStreamImg[STREAM_IMG_OUT_RESIZE]->getImgSize();
-  err = lmvInit(&pEISOBuf, sensorSize, rrzoSize);
+  err = lmvInit(sensorSize, rrzoSize);
   if (err != OK) {
     MY_LOGE("lmvInit fail");
     return err;
@@ -3832,7 +3831,7 @@ P1NodeImp::hardwareOps_start() {
   std::vector<PortInfo> vPortInfo;
   vPortInfo.clear();
   vPortInfo.reserve(P1_OUTPUT_PORT_TOTAL);
-  addConfigPort(&vPortInfo, pEISOBuf, &resizer_fmt);
+  addConfigPort(&vPortInfo, &resizer_fmt);
   //
   IHalSensor::ConfigParam sensorCfg;
   ::memset(&sensorCfg, 0, sizeof(IHalSensor::ConfigParam));
@@ -3848,7 +3847,9 @@ P1NodeImp::hardwareOps_start() {
   *pSizeProc = MSize(0, 0);
   *pSizePure = MSize(0, 0);
 
-  err = startCamIO(halCamIOinitParam, &binInfoSize, rawSize, &pipe_tag);
+  std::map<int, std::vector<std::shared_ptr<IImageBuffer>>> buffers;
+  err =
+      startCamIO(halCamIOinitParam, &binInfoSize, rawSize, &pipe_tag, &buffers);
   if (err != OK) {
     MY_LOGE("startCamIO fail");
     return err;
@@ -3888,7 +3889,7 @@ P1NodeImp::hardwareOps_start() {
     P1_TIMING_CHECK("P1:LMV-config", 20, TC_W);
     P1_TRACE_S_BEGIN(SLG_S, "P1:LMV-config");
     MY_LOGD("mpConnectLMV->config");
-    mpConnectLMV->config();
+    mpConnectLMV->config(buffers[PORT_EISO.index]);
     P1_TRACE_C_END(SLG_S);  // "P1:LMV-config"
   }
 
@@ -6167,7 +6168,6 @@ MVOID P1NodeImp::v4l2DeviceStart() {
 #endif
 
 MVOID P1NodeImp::addConfigPort(std::vector<PortInfo>* vPortInfo,
-                               std::shared_ptr<IImageBuffer> const& pEISOBuf,
                                EImageFormat* resizer_fmt) {
   if (mvStreamImg[STREAM_IMG_OUT_FULL] != nullptr) {
     MINT fmt = mvStreamImg[STREAM_IMG_OUT_FULL]->getImgFormat();
@@ -6249,11 +6249,9 @@ MVOID P1NodeImp::addConfigPort(std::vector<PortInfo>* vPortInfo,
     mConfigPort |= CONFIG_PORT_RSSO;
     mConfigPortNum++;
   }
-  if (mEnableEISO && pEISOBuf != NULL) {
-    PortInfo OutPort(PORT_EISO, (EImageFormat)pEISOBuf->getImgFormat(),
-                     pEISOBuf->getImgSize(),
-                     MRect(MPoint(0, 0), pEISOBuf->getImgSize()),
-                     pEISOBuf->getBufStridesInBytes(0),
+  if (mEnableEISO) {
+    PortInfo OutPort(PORT_EISO, eImgFmt_BLOB, MSize(LMVO_MEMORY_SIZE, 1),
+                     MRect(LMVO_MEMORY_SIZE, 1), LMVO_MEMORY_SIZE,
                      0,  // pPortCfg->mStrideInByte[1],
                      0,  // pPortCfg->mStrideInByte[2],
                      0,  // pureraw
@@ -6266,10 +6264,12 @@ MVOID P1NodeImp::addConfigPort(std::vector<PortInfo>* vPortInfo,
   }
 }
 
-MERROR P1NodeImp::startCamIO(QInitParam halCamIOinitParam,
-                             MSize* binInfoSize,
-                             MSize rawSize[2],
-                             PipeTag* pipe_tag) {
+MERROR P1NodeImp::startCamIO(
+    QInitParam halCamIOinitParam,
+    MSize* binInfoSize,
+    MSize rawSize[2],
+    PipeTag* pipe_tag,
+    std::map<int, std::vector<std::shared_ptr<IImageBuffer>>>* buffers) {
   {
     MERROR err = OK;
     P1_TIMING_CHECK("P1:DRV-init", 20, TC_W);
@@ -6293,7 +6293,10 @@ MERROR P1NodeImp::startCamIO(QInitParam halCamIOinitParam,
   MSize* pSizePure = &rawSize_l[1];  // 1 = EPipe_PURE_RAW
   *pSizeProc = MSize(0, 0);
   *pSizePure = MSize(0, 0);
-
+  if (mConfigPort & CONFIG_PORT_EISO) {
+    buffers->emplace(PORT_EISO.index,
+                     std::vector<std::shared_ptr<IImageBuffer>>{});
+  }
 #if MTKCAM_HAVE_SANDBOX_SUPPORT
   IIPCHalSensor::DynamicInfo ipcDynamicInfo;
 #endif
@@ -6302,7 +6305,7 @@ MERROR P1NodeImp::startCamIO(QInitParam halCamIOinitParam,
     mLogInfo.setMemo(LogInfo::CP_OP_START_DRV_CFG_BGN);
     P1_TRACE_S_BEGIN(SLG_S, "P1:DRV-configPipe");
     MY_LOGI("mpCamIO->configPipe +++");
-    if (!mpCamIO->configPipe(halCamIOinitParam /*, mBurstNum*/)) {
+    if (!mpCamIO->configPipe(halCamIOinitParam, buffers)) {
       MY_LOGE("mpCamIO->configPipe fail");
       P1_TRACE_C_END(SLG_S);  // "P1:DRV-configPipe"
       mLogInfo.setMemo(LogInfo::CP_OP_START_DRV_CFG_END);
@@ -6452,9 +6455,7 @@ QInitParam P1NodeImp::prepareQInitParam(
   return halCamIOinitParam;
 }
 
-MERROR P1NodeImp::lmvInit(std::shared_ptr<IImageBuffer>* pEISOBuf,
-                          MSize sensorSize,
-                          MSize rrzoSize) {
+MERROR P1NodeImp::lmvInit(MSize sensorSize, MSize rrzoSize) {
   if (mEnableEISO) {
     P1_TIMING_CHECK("P1:LMV-init", 20, TC_W);
     P1_TRACE_S_BEGIN(SLG_S, "P1:LMV-init");
@@ -6462,8 +6463,7 @@ MERROR P1NodeImp::lmvInit(std::shared_ptr<IImageBuffer>* pEISOBuf,
       MINT32 mode = EIS::EisInfo::getMode(mPackedEisInfo);
       MINT32 factor = EIS::EisInfo::getFactor(mPackedEisInfo);
       MY_LOGD("mpConnectLMV->init+");
-      if (MFALSE ==
-          mpConnectLMV->init(pEISOBuf, mode, factor, sensorSize, rrzoSize)) {
+      if (MFALSE == mpConnectLMV->init(mode, factor, sensorSize, rrzoSize)) {
         MY_LOGE("ConnectLMV create fail");
         return BAD_VALUE;
       }

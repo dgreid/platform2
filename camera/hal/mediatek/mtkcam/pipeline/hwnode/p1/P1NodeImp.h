@@ -696,18 +696,17 @@ class P1NodeImp : public BaseNode,
   MVOID v4l2DeviceStart();
 #endif
   MVOID addConfigPort(std::vector<PortInfo>* vPortInfo,
-                      std::shared_ptr<IImageBuffer> const& pEISOBuf,
                       EImageFormat* resizer_fmt);
-  MERROR lmvInit(std::shared_ptr<IImageBuffer>* pEISOBuf,
-                 MSize sensorSize,
-                 MSize rrzoSize);
+  MERROR lmvInit(MSize sensorSize, MSize rrzoSize);
   QInitParam prepareQInitParam(IHalSensor::ConfigParam* sensorCfg,
                                NS3Av3::AEInitExpoSetting_T initExpoSetting,
                                std::vector<PortInfo> vPortInfo);
-  MERROR startCamIO(QInitParam halCamIOinitParam,
-                    MSize* binInfoSize,
-                    MSize rawSize[2],
-                    PipeTag* pipe_tag);
+  MERROR startCamIO(
+      QInitParam halCamIOinitParam,
+      MSize* binInfoSize,
+      MSize rawSize[2],
+      PipeTag* pipe_tag,
+      std::map<int, std::vector<std::shared_ptr<IImageBuffer>>>* buffers);
   MVOID generateCtrlQueue(std::vector<NS3Av3::MetaSet_T*>* rQue,
                           P1QueJob* rJob);
 

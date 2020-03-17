@@ -59,15 +59,14 @@ class VISIBILITY_PUBLIC P1ConnectLMV {
 
   MINT32 getOpenId(void);
 
-  MBOOL init(std::shared_ptr<IImageBuffer>* rEISOBuf,
-             MUINT32 eisMode,
+  MBOOL init(MUINT32 eisMode,
              const MUINT32 eisFactor,
              MSize sensorSize,
              MSize rrzoSize);
 
   MBOOL uninit(void);
 
-  MVOID config(void);
+  MVOID config(std::vector<std::shared_ptr<IImageBuffer>> buffers);
 
   MVOID enableSensor(void);
 

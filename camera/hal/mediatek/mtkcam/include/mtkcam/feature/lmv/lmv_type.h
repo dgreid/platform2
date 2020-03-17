@@ -27,6 +27,9 @@
 #include <mtkcam/drv/IHalSensor.h>
 
 #include <mtkcam/feature/lmv/lmv_ext.h>
+#include <mtkcam/utils/imgbuf/IImageBuffer.h>
+
+#include <vector>
 
 /*********************************************************************
  * Define Value
@@ -114,6 +117,7 @@ typedef struct LMV_HAL_CONFIG {
   MUINT32 p1ImgW;      // use in pass1
   MUINT32 p1ImgH;      // use in pass1
   LMV_STATISTIC_T lmvData;
+  std::vector<std::shared_ptr<NSCam::IImageBuffer> > lmvBuffers;
 
   //
   LMV_HAL_CONFIG() : sensorType(0), p1ImgW(0), p1ImgH(0) {

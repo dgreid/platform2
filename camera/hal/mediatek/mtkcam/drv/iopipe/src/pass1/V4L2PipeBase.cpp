@@ -496,13 +496,9 @@ MBOOL V4L2PipeBase::configPipe(
       return MFALSE;
     }
 
-    if (map_vbuffers) {
-      auto it = map_vbuffers->find(port_index);
-      if (it == map_vbuffers->end()) {
-        PIPE_BASE_LOGE(
-            "there is a mismatch between dma port and given query buffer");
-        return MFALSE;
-      }
+    std::map<int, std::vector<std::shared_ptr<IImageBuffer>>>::iterator it;
+    if (map_vbuffers &&
+        ((it = map_vbuffers->find(port_index)) != map_vbuffers->end())) {
       status = sp_node->setFormatAnGetdBuffers(&img_param, &(it->second));
     } else {
       status = sp_node->setBufFormat(&img_param);

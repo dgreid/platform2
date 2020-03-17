@@ -130,21 +130,6 @@ MINT32 LMVHalImp::Init(const MUINT32 eisFactor,
   CAM_LOGD("TG(%d), mEisPlusCropRatio(%u)", mSensorDynamicInfo.TgInfo,
            mEisPlusCropRatio);
 
-  DP_TRACE_BEGIN("CreateMultiMemBuf");
-  CreateMultiMemBuf(LMVO_MEMORY_SIZE, (LMVO_BUFFER_NUM + 1), m_pLMVOMainBuffer,
-                    m_pLMVOSliceBuffer);
-  if (!m_pLMVOSliceBuffer[0]->getBufVA(0)) {
-    CAM_LOGE("LMVO slice buf create ImageBuffer fail!");
-    return LMV_RETURN_MEMORY_ERROR;
-  }
-  {
-    std::lock_guard<std::mutex> _l(mLMVOBufferListLock);
-    for (int index = 0; index < LMVO_BUFFER_NUM; index++) {
-      mLMVOBufferList.push(m_pLMVOSliceBuffer[index]);
-    }
-  }
-  DP_TRACE_END();
-
   std::atomic_fetch_add_explicit(&mUsers, 1, std::memory_order_release);
 
   return LMV_RETURN_NO_ERROR;
@@ -202,8 +187,10 @@ MINT32 LMVHalImp::Uninit() {
 
     m_pHalSensorList = nullptr;
 
-    DestroyMultiMemBuf((LMVO_BUFFER_NUM + 1), m_pLMVOMainBuffer,
-                       m_pLMVOSliceBuffer);
+    for (int index = 0; index < m_pLMVOSliceBuffer.size(); index++) {
+      m_pLMVOSliceBuffer[index]->unlockBuf(LMV_HAL_NAME);
+      m_pLMVOSliceBuffer[index] = nullptr;
+    }
 
     mLmvInput_W = 0;
     mLmvInput_H = 0;
@@ -241,72 +228,6 @@ MINT32 LMVHalImp::Uninit() {
   return LMV_RETURN_NO_ERROR;
 }
 
-MINT32 LMVHalImp::CreateMultiMemBuf(
-    MUINT32 memSize,
-    MUINT32 num,
-    std::shared_ptr<IImageBuffer> const& /*spMainImageBuf*/,
-    std::shared_ptr<IImageBuffer> spImageBuf[MAX_LMV_MEMORY_SIZE]) {
-  MINT32 err = LMV_RETURN_NO_ERROR;
-
-  if (num >= MAX_LMV_MEMORY_SIZE) {
-    CAM_LOGE("num of image buffer is larger than MAX_LMV_MEMORY_SIZE(%d)",
-             MAX_LMV_MEMORY_SIZE);
-    return LMV_RETURN_MEMORY_ERROR;
-  }
-
-  for (MUINT32 index = 0; index < num; index++) {
-    MUINT32 totalSize = memSize * 1;
-    CAM_LOGD("totalSize:%d, memSize:%d, num:%d", totalSize, memSize, index);
-
-    NSCam::IImageBufferAllocator::ImgParam imgParam(totalSize, 0);
-
-    std::shared_ptr<NSCam::IImageBufferHeap> pHeap =
-        NSCam::IGbmImageBufferHeap::create(LMV_HAL_NAME, imgParam);
-    if (pHeap == NULL) {
-      CAM_LOGE("image buffer heap create fail");
-      return LMV_RETURN_MEMORY_ERROR;
-    }
-
-    MUINT const usage =
-        (GRALLOC_USAGE_SW_READ_OFTEN |
-         GRALLOC_USAGE_SW_WRITE_OFTEN |  // ISP3 is software-write
-         GRALLOC_USAGE_HW_CAMERA_READ | GRALLOC_USAGE_HW_CAMERA_WRITE);
-    std::shared_ptr<NSCam::IImageBuffer> imgBuf = pHeap->createImageBuffer();
-    if (imgBuf == NULL) {
-      CAM_LOGE("mainImage buffer create fail");
-      return LMV_RETURN_MEMORY_ERROR;
-    }
-    if (!(imgBuf->lockBuf(LMV_HAL_NAME, usage))) {
-      CAM_LOGE("image buffer lock fail");
-      return LMV_RETURN_MEMORY_ERROR;
-    }
-    MUINTPTR const iVAddr = pHeap->getBufVA(0);
-    MUINTPTR const iPAddr = pHeap->getBufPA(0);
-    MINT32 const iHeapId = pHeap->getHeapID();
-
-    CAM_LOGD(
-        "IIonImageBufferHeap iVAddr:%p, iPAddr:%p, iHeapId:%d. spMainImageBuf "
-        "iVAddr:%p, iPAddr:%p",
-        (void*)iVAddr, (void*)iPAddr, iHeapId, (void*)imgBuf->getBufVA(0),
-        (void*)imgBuf->getBufPA(0));
-    spImageBuf[index] = imgBuf;
-  }
-  return err;
-}
-
-MINT32 LMVHalImp::DestroyMultiMemBuf(
-    MUINT32 num,
-    std::shared_ptr<IImageBuffer> const& /*spMainImageBuf*/,
-    std::shared_ptr<IImageBuffer> spImageBuf[MAX_LMV_MEMORY_SIZE]) {
-  MINT32 err = LMV_RETURN_NO_ERROR;
-  for (MUINT32 index = 0; index < num; index++) {
-    spImageBuf[index]->unlockBuf(LMV_HAL_NAME);
-    spImageBuf[index] = NULL;
-  }
-
-  return err;
-}
-
 MINT32 LMVHalImp::GetSensorInfo() {
   CAM_LOGD("mSensorIdx(%u)", mSensorIdx);
 
@@ -338,6 +259,19 @@ MINT32 LMVHalImp::ConfigLMV(const LMV_HAL_CONFIG_DATA& aLmvConfig) {
   MINT32 err = LMV_RETURN_NO_ERROR;
 
   static EIS_SET_ENV_INFO_STRUCT eisAlgoInitData;
+
+  MUINT const usage =
+      (GRALLOC_USAGE_SW_READ_OFTEN | GRALLOC_USAGE_SW_WRITE_OFTEN |
+       GRALLOC_USAGE_HW_CAMERA_READ | GRALLOC_USAGE_HW_CAMERA_WRITE);
+
+  m_pLMVOSliceBuffer = aLmvConfig.lmvBuffers;
+  {
+    std::lock_guard<std::mutex> _l(mLMVOBufferListLock);
+    for (int index = 0; index < m_pLMVOSliceBuffer.size(); index++) {
+      m_pLMVOSliceBuffer[index]->lockBuf(LMV_HAL_NAME, usage);
+      mLMVOBufferList.push(m_pLMVOSliceBuffer[index]);
+    }
+  }
 
   LMV_SENSOR_ENUM sensorType;
   switch (aLmvConfig.sensorType) {
@@ -772,9 +706,8 @@ MINT32 LMVHalImp::GetBufLMV(std::shared_ptr<IImageBuffer>* spBuf) {
     //  if( UNLIKELY(mDebugDump >= 1) )
     { CAM_LOGD("GetBufLMV : %zu", mLMVOBufferList.size()); }
   } else {
-    *spBuf = m_pLMVOSliceBuffer[LMVO_BUFFER_NUM];
-
     CAM_LOGW("GetBufEis empty!!");
+    return LMV_RETURN_EISO_MISS;
   }
   return LMV_RETURN_NO_ERROR;
 }

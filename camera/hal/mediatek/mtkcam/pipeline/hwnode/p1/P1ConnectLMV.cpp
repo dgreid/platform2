@@ -60,8 +60,7 @@ P1ConnectLMV::getOpenId(void) {
  *
  ******************************************************************************/
 MBOOL
-P1ConnectLMV::init(std::shared_ptr<IImageBuffer>* rEISOBuf,
-                   MUINT32 eisMode,
+P1ConnectLMV::init(MUINT32 eisMode,
                    const MUINT32 eisFactor,
                    MSize sensorSize,
                    MSize rrzoSize) {
@@ -88,12 +87,6 @@ P1ConnectLMV::init(std::shared_ptr<IImageBuffer>* rEISOBuf,
 
   P1_TRACE_C_END(SLG_S);  // "P1Connect:LMV-init"
 
-  // [TODO] get pEISOBuf from EIS
-  mpLMV->GetBufLMV(rEISOBuf);
-  if (rEISOBuf == NULL) {
-    MY_LOGE("LMVHal::GetBufLMV fail");
-    return MFALSE;
-  }
   return MTRUE;
 }
 
@@ -117,12 +110,13 @@ P1ConnectLMV::uninit(void) {
  *
  ******************************************************************************/
 MVOID
-P1ConnectLMV::config(void) {
+P1ConnectLMV::config(std::vector<std::shared_ptr<IImageBuffer>> buffers) {
   MY_LOGD("config+");
 
   std::lock_guard<std::mutex> autoLock(mLock);
   if ((mpLMV != NULL) && (mpLMV->GetLMVSupportInfo(mOpenId))) {
     P1_TRACE_S_BEGIN(SLG_S, "P1Connect:LMV-ConfigLMV");
+    mConfigData.lmvBuffers = buffers;
     mpLMV->ConfigLMV(mConfigData);
     P1_TRACE_C_END(SLG_S);  // "P1Connect:LMV-ConfigLMV"
   }

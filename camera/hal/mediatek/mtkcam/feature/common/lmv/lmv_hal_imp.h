@@ -199,32 +199,6 @@ class LMVHalImp : public LMVHal {
   MVOID DumpStatistic(const EIS_STATISTIC_STRUCT& aLmvStat);
 
   /**
-   *@brief Create IMem buffer
-   *@param[in,out] memSize : memory size, will align to L1 cache
-   *@param[in] bufCnt : how many buffer
-   *@param[in,out] bufInfo : IMem object
-   *@return
-   *-LMV_RETURN_NO_ERROR indicates success, otherwise indicates fail
-   */
-  MINT32 CreateMultiMemBuf(
-      MUINT32 memSize,
-      MUINT32 num,
-      std::shared_ptr<IImageBuffer> const& /*spMainImageBuf*/,
-      std::shared_ptr<IImageBuffer> spImageBuf[MAX_LMV_MEMORY_SIZE]);
-
-  /**
-   *@brief Destroy IMem buffer
-   *@param[in] bufCnt : how many buffer
-   *@param[in,out] bufInfo : IMem object
-   *@return
-   *-LMV_RETURN_NO_ERROR indicates success, otherwise indicates fail
-   */
-  MINT32 DestroyMultiMemBuf(
-      MUINT32 num,
-      std::shared_ptr<IImageBuffer> const& /*spMainImageBuf*/,
-      std::shared_ptr<IImageBuffer> spImageBuf[MAX_LMV_MEMORY_SIZE]);
-
-  /**
    *@brief Prepare LMV pass1 result
    *@param[in] cmvX : LMV result
    *@param[in] cmvY : LMV result
@@ -297,7 +271,7 @@ class LMVHalImp : public LMVHal {
  private:
   std::shared_ptr<IImageBuffer> m_pLmvDbgBuf = NULL;
   std::shared_ptr<IImageBuffer> m_pLMVOMainBuffer = NULL;
-  std::shared_ptr<IImageBuffer> m_pLMVOSliceBuffer[MAX_LMV_MEMORY_SIZE];
+  std::vector<std::shared_ptr<IImageBuffer>> m_pLMVOSliceBuffer;
   vecSPIImageBuffer mLMVOBufferList;
 
  private:
