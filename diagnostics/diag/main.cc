@@ -11,6 +11,7 @@
 #include <base/at_exit.h>
 #include <base/logging.h>
 #include <base/message_loop/message_loop.h>
+#include <base/time/time.h>
 #include <brillo/flag_helper.h>
 
 #include "diagnostics/diag/diag_actions.h"
@@ -19,6 +20,13 @@
 namespace mojo_ipc = ::chromeos::cros_healthd::mojom;
 
 namespace {
+
+// Poll interval while waiting for a routine to finish.
+constexpr base::TimeDelta kRoutinePollIntervalTimeDelta =
+    base::TimeDelta::FromMilliseconds(100);
+// Maximum time we're willing to wait for a routine to finish.
+constexpr base::TimeDelta kMaximumRoutineExecutionTimeDelta =
+    base::TimeDelta::FromSeconds(600);
 
 const struct {
   const char* switch_name;
@@ -86,7 +94,8 @@ int main(int argc, char** argv) {
     return EXIT_FAILURE;
   }
 
-  diagnostics::DiagActions actions;
+  diagnostics::DiagActions actions{kRoutinePollIntervalTimeDelta,
+                                   kMaximumRoutineExecutionTimeDelta};
 
   if (FLAGS_action == "get_routines")
     return actions.ActionGetRoutines() ? EXIT_SUCCESS : EXIT_FAILURE;

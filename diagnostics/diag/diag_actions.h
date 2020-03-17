@@ -20,7 +20,11 @@ namespace diagnostics {
 // routine at a time.
 class DiagActions final {
  public:
-  DiagActions();
+  // The two TimeDelta inputs are used to configure this instance's polling
+  // behavior - the time between polls, and the maximum time before giving up on
+  // a running routine.
+  DiagActions(base::TimeDelta polling_interval,
+              base::TimeDelta maximum_execution_time);
   ~DiagActions();
 
   // Print a list of routines available on the platform. Returns true iff all
@@ -54,6 +58,11 @@ class DiagActions final {
   CrosHealthdMojoAdapter adapter_;
   // ID of the routine being run.
   int32_t id_ = chromeos::cros_healthd::mojom::kFailedToStartId;
+
+  // Polling interval.
+  const base::TimeDelta kPollingInterval;
+  // Maximum time we're willing to wait for a routine to finish.
+  const base::TimeDelta kMaximumExecutionTime;
 
   DISALLOW_COPY_AND_ASSIGN(DiagActions);
 };

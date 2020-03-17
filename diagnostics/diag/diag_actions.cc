@@ -25,12 +25,6 @@ namespace diagnostics {
 namespace mojo_ipc = ::chromeos::cros_healthd::mojom;
 
 namespace {
-// Poll interval while waiting for a routine to finish.
-constexpr base::TimeDelta kRoutinePollIntervalTimeDelta =
-    base::TimeDelta::FromMilliseconds(100);
-// Maximum time we're willing to wait for a routine to finish.
-constexpr base::TimeDelta kMaximumRoutineExecutionTimeDelta =
-    base::TimeDelta::FromSeconds(600);
 
 const struct {
   const char* switch_name;
@@ -93,7 +87,10 @@ std::string GetSwitchFromRoutine(mojo_ipc::DiagnosticRoutineEnum routine) {
 
 }  // namespace
 
-DiagActions::DiagActions() = default;
+DiagActions::DiagActions(base::TimeDelta polling_interval,
+                         base::TimeDelta maximum_execution_time)
+    : kPollingInterval(polling_interval),
+      kMaximumExecutionTime(maximum_execution_time) {}
 
 DiagActions::~DiagActions() = default;
 
@@ -206,9 +203,8 @@ bool DiagActions::RunRoutineAndProcessResult() {
          response->routine_update_union->is_noninteractive_update() &&
          response->routine_update_union->get_noninteractive_update()->status ==
              mojo_ipc::DiagnosticRoutineStatusEnum::kRunning &&
-         base::TimeTicks::Now() <
-             start_time + kMaximumRoutineExecutionTimeDelta) {
-    base::PlatformThread::Sleep(kRoutinePollIntervalTimeDelta);
+         base::TimeTicks::Now() < start_time + kMaximumExecutionTime) {
+    base::PlatformThread::Sleep(kPollingInterval);
     std::cout << "Progress: " << response->progress_percent << std::endl;
 
     response = adapter_.GetRoutineUpdate(
