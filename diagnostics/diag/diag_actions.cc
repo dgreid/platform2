@@ -117,7 +117,7 @@ bool DiagActions::ActionRunAcPowerRoutine(bool is_connected,
       adapter_.RunAcPowerRoutine(expected_status, optional_power_type);
   CHECK(response) << "No RunRoutineResponse received.";
   id_ = response->id;
-  return RunRoutineAndProcessResult();
+  return PollRoutineAndProcessResult();
 }
 
 bool DiagActions::ActionRunBatteryCapacityRoutine(uint32_t low_mah,
@@ -125,7 +125,7 @@ bool DiagActions::ActionRunBatteryCapacityRoutine(uint32_t low_mah,
   auto response = adapter_.RunBatteryCapacityRoutine(low_mah, high_mah);
   CHECK(response) << "No RunRoutineResponse received.";
   id_ = response->id;
-  return RunRoutineAndProcessResult();
+  return PollRoutineAndProcessResult();
 }
 
 bool DiagActions::ActionRunBatteryHealthRoutine(
@@ -134,7 +134,7 @@ bool DiagActions::ActionRunBatteryHealthRoutine(
       maximum_cycle_count, percent_battery_wear_allowed);
   CHECK(response) << "No RunRoutineResponse received.";
   id_ = response->id;
-  return RunRoutineAndProcessResult();
+  return PollRoutineAndProcessResult();
 }
 
 bool DiagActions::ActionRunCpuCacheRoutine(
@@ -142,7 +142,7 @@ bool DiagActions::ActionRunCpuCacheRoutine(
   auto response = adapter_.RunCpuCacheRoutine(exec_duration);
   CHECK(response) << "No RunRoutineResponse received.";
   id_ = response->id;
-  return RunRoutineAndProcessResult();
+  return PollRoutineAndProcessResult();
 }
 
 bool DiagActions::ActionRunCpuStressRoutine(
@@ -150,7 +150,7 @@ bool DiagActions::ActionRunCpuStressRoutine(
   auto response = adapter_.RunCpuStressRoutine(exec_duration);
   CHECK(response) << "No RunRoutineResponse received.";
   id_ = response->id;
-  return RunRoutineAndProcessResult();
+  return PollRoutineAndProcessResult();
 }
 
 bool DiagActions::ActionRunFloatingPointAccuracyRoutine(
@@ -158,7 +158,7 @@ bool DiagActions::ActionRunFloatingPointAccuracyRoutine(
   auto response = adapter_.RunFloatingPointAccuracyRoutine(exec_duration);
   CHECK(response) << "No RunRoutineResponse received.";
   id_ = response->id;
-  return RunRoutineAndProcessResult();
+  return PollRoutineAndProcessResult();
 }
 
 bool DiagActions::ActionRunNvmeSelfTestRoutine(bool is_long) {
@@ -169,84 +169,64 @@ bool DiagActions::ActionRunNvmeSelfTestRoutine(bool is_long) {
   auto response = adapter_.RunNvmeSelfTestRoutine(type);
   CHECK(response) << "No RunRoutineResponse received.";
   id_ = response->id;
-  return RunRoutineAndProcessResult();
+  return PollRoutineAndProcessResult();
 }
 
 bool DiagActions::ActionRunNvmeWearLevelRoutine(uint32_t wear_level_threshold) {
   auto response = adapter_.RunNvmeWearLevelRoutine(wear_level_threshold);
   CHECK(response) << "No RunRoutineResponse received.";
   id_ = response->id;
-  return RunRoutineAndProcessResult();
+  return PollRoutineAndProcessResult();
 }
 
 bool DiagActions::ActionRunSmartctlCheckRoutine() {
   auto response = adapter_.RunSmartctlCheckRoutine();
   CHECK(response) << "No RunRoutineResponse received.";
   id_ = response->id;
-  return RunRoutineAndProcessResult();
+  return PollRoutineAndProcessResult();
 }
 
 bool DiagActions::ActionRunUrandomRoutine(uint32_t length_seconds) {
   auto response = adapter_.RunUrandomRoutine(length_seconds);
   CHECK(response) << "No RunRoutineResponse received.";
   id_ = response->id;
-  return RunRoutineAndProcessResult();
+  return PollRoutineAndProcessResult();
 }
 
-bool DiagActions::RunRoutineAndProcessResult() {
-  auto response = adapter_.GetRoutineUpdate(
-      id_, mojo_ipc::DiagnosticRoutineCommandEnum::kGetStatus,
-      true /* include_output */);
-
+bool DiagActions::PollRoutineAndProcessResult() {
+  mojo_ipc::RoutineUpdatePtr response;
   const base::TimeTicks start_time = base::TimeTicks::Now();
-  while (!response.is_null() &&
-         response->routine_update_union->is_noninteractive_update() &&
-         response->routine_update_union->get_noninteractive_update()->status ==
-             mojo_ipc::DiagnosticRoutineStatusEnum::kRunning &&
-         base::TimeTicks::Now() < start_time + kMaximumExecutionTime) {
-    base::PlatformThread::Sleep(kPollingInterval);
-    std::cout << "Progress: " << response->progress_percent << std::endl;
 
+  do {
+    // Poll the routine until it's either interactive and requires user input,
+    // or it's noninteractive but no longer running.
+    // TODO(crbug/1062436): change base::TimeTicks::Now() to a TickClock.
     response = adapter_.GetRoutineUpdate(
         id_, mojo_ipc::DiagnosticRoutineCommandEnum::kGetStatus,
         true /* include_output */);
-  }
+    std::cout << "Progress: " << response->progress_percent << std::endl;
+
+    base::PlatformThread::Sleep(kPollingInterval);
+  } while (
+      !response.is_null() &&
+      response->routine_update_union->is_noninteractive_update() &&
+      response->routine_update_union->get_noninteractive_update()->status ==
+          mojo_ipc::DiagnosticRoutineStatusEnum::kRunning &&
+      base::TimeTicks::Now() < start_time + kMaximumExecutionTime);
 
   if (response.is_null()) {
     std::cout << "No GetRoutineUpdateResponse received." << std::endl;
     return false;
   }
 
-  // Interactive updates require us to print out instructions to the user on the
-  // console. Once the user responds by pressing the ENTER key, we need to send
-  // a continue command to the routine and restart waiting for results.
   if (response->routine_update_union->is_interactive_update()) {
-    bool user_message_found = false;
-    mojo_ipc::DiagnosticRoutineUserMessageEnum user_message =
-        response->routine_update_union->get_interactive_update()->user_message;
-    for (const auto& item : kDiagnosticRoutineReadableUserMessages) {
-      if (item.user_message_enum == user_message) {
-        user_message_found = true;
-        std::cout << item.readable_user_message << std::endl
-                  << "Press ENTER to continue." << std::endl;
-        break;
-      }
-    }
-    LOG_IF(FATAL, !user_message_found)
-        << "No readable message found for DiagnosticRoutineUserMessageEnum: "
-        << user_message;
-
-    std::string dummy;
-    std::getline(std::cin, dummy);
-
-    response = adapter_.GetRoutineUpdate(
-        id_, mojo_ipc::DiagnosticRoutineCommandEnum::kContinue,
-        false /* include_output */);
-    return RunRoutineAndProcessResult();
+    return ProcessInteractiveResultAndContinue(
+        std::move(response->routine_update_union->get_interactive_update()));
   }
 
   // Noninteractive routines without a status of kRunning must have terminated
   // in some form. Print the update to the console to let the user know.
+  std::cout << "Progress: " << response->progress_percent << std::endl;
   if (response->output.is_valid()) {
     auto shared_memory = diagnostics::GetReadOnlySharedMemoryFromMojoHandle(
         std::move(response->output));
@@ -262,10 +242,53 @@ bool DiagActions::RunRoutineAndProcessResult() {
     }
   }
 
-  std::cout << "Progress: " << response->progress_percent << std::endl;
+  return ProcessNonInteractiveResultAndEnd(
+      std::move(response->routine_update_union->get_noninteractive_update()));
+}
+
+bool DiagActions::ProcessInteractiveResultAndContinue(
+    mojo_ipc::InteractiveRoutineUpdatePtr interactive_result) {
+  // Interactive updates require us to print out instructions to the user on the
+  // console. Once the user responds by pressing the ENTER key, we need to send
+  // a continue command to the routine and restart waiting for results.
+  bool user_message_found = false;
+  mojo_ipc::DiagnosticRoutineUserMessageEnum user_message =
+      interactive_result->user_message;
+  for (const auto& item : kDiagnosticRoutineReadableUserMessages) {
+    if (item.user_message_enum == user_message) {
+      user_message_found = true;
+      std::cout << item.readable_user_message << std::endl
+                << "Press ENTER to continue." << std::endl;
+      break;
+    }
+  }
+
+  if (!user_message_found) {
+    LOG(ERROR) << "No human-readable string for user message: "
+               << static_cast<int>(user_message);
+    RemoveRoutine();
+    return false;
+  }
+
+  std::string dummy;
+  std::getline(std::cin, dummy);
+
+  auto response = adapter_.GetRoutineUpdate(
+      id_, mojo_ipc::DiagnosticRoutineCommandEnum::kContinue,
+      false /* include_output */);
+  return PollRoutineAndProcessResult();
+}
+
+bool DiagActions::ProcessNonInteractiveResultAndEnd(
+    mojo_ipc::NonInteractiveRoutineUpdatePtr noninteractive_result) {
   bool status_found = false;
-  mojo_ipc::DiagnosticRoutineStatusEnum status =
-      response->routine_update_union->get_noninteractive_update()->status;
+  mojo_ipc::DiagnosticRoutineStatusEnum status = noninteractive_result->status;
+
+  // Clean up the routine if necessary - if the routine never started, then we
+  // don't need to remove it.
+  if (status != mojo_ipc::DiagnosticRoutineStatusEnum::kFailedToStart)
+    RemoveRoutine();
+
   for (const auto& item : kDiagnosticRoutineReadableStatuses) {
     if (item.status == status) {
       status_found = true;
@@ -273,29 +296,34 @@ bool DiagActions::RunRoutineAndProcessResult() {
       break;
     }
   }
-  LOG_IF(FATAL, !status_found)
-      << "Invalid readable status lookup with status: " << status;
 
-  std::cout << "Status message: "
-            << response->routine_update_union->get_noninteractive_update()
-                   ->status_message
-            << std::endl;
-
-  if (status != mojo_ipc::DiagnosticRoutineStatusEnum::kFailedToStart) {
-    response = adapter_.GetRoutineUpdate(
-        id_, mojo_ipc::DiagnosticRoutineCommandEnum::kRemove,
-        false /* include_output */);
-
-    if (response.is_null() ||
-        !response->routine_update_union->is_noninteractive_update() ||
-        response->routine_update_union->get_noninteractive_update()->status !=
-            mojo_ipc::DiagnosticRoutineStatusEnum::kRemoved) {
-      std::cout << "Failed to remove routine." << std::endl;
-      return false;
-    }
+  if (!status_found) {
+    LOG(ERROR) << "No human-readable string for status: "
+               << static_cast<int>(status);
+    return false;
   }
 
+  std::cout << "Status message: " << noninteractive_result->status_message
+            << std::endl;
+
   return true;
+}
+
+void DiagActions::RemoveRoutine() {
+  auto response = adapter_.GetRoutineUpdate(
+      id_, mojo_ipc::DiagnosticRoutineCommandEnum::kRemove,
+      false /* include_output */);
+
+  // Reset |id_|, because it's no longer valid after the routine has been
+  // removed.
+  id_ = mojo_ipc::kFailedToStartId;
+
+  if (response.is_null() ||
+      !response->routine_update_union->is_noninteractive_update() ||
+      response->routine_update_union->get_noninteractive_update()->status !=
+          mojo_ipc::DiagnosticRoutineStatusEnum::kRemoved) {
+    LOG(ERROR) << "Failed to remove routine: " << id_;
+  }
 }
 
 }  // namespace diagnostics

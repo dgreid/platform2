@@ -50,9 +50,22 @@ class DiagActions final {
   bool ActionRunUrandomRoutine(uint32_t length_seconds);
 
  private:
-  // Helper function to determine when a routine has finished. Also removes the
+  // Helper function to determine when a routine has finished. Also does any
+  // necessary cleanup.
+  bool PollRoutineAndProcessResult();
+  // Displays the user message from |interactive_result|, then blocks for user
+  // input. After receiving input, resets the polling time and continues to
+  // poll.
+  bool ProcessInteractiveResultAndContinue(
+      chromeos::cros_healthd::mojom::InteractiveRoutineUpdatePtr
+          interactive_result);
+  // Displays information from a noninteractive routine update and removes the
   // routine corresponding to |id_|.
-  bool RunRoutineAndProcessResult();
+  bool ProcessNonInteractiveResultAndEnd(
+      chromeos::cros_healthd::mojom::NonInteractiveRoutineUpdatePtr
+          noninteractive_result);
+  // Attempts to remove the routine corresponding to |id_|.
+  void RemoveRoutine();
 
   // Used to send mojo requests to cros_healthd.
   CrosHealthdMojoAdapter adapter_;
