@@ -43,6 +43,7 @@ constexpr char kArcVmIfname[] = "arc1";
 constexpr char kArcVmBridge[] = "arc_br1";
 constexpr std::array<const char*, 2> kEthernetInterfacePrefixes{{"eth", "usb"}};
 constexpr std::array<const char*, 2> kWifiInterfacePrefixes{{"wlan", "mlan"}};
+constexpr std::array<const char*, 2> kCellInterfacePrefixes{{"wwan", "rmnet"}};
 
 void OneTimeSetup(const Datapath& datapath) {
   static bool done = false;
@@ -111,24 +112,26 @@ GuestMessage::GuestType ArcGuest() {
   return IsArcVm() ? GuestMessage::ARC_VM : GuestMessage::ARC;
 }
 
-bool IsEthernetInterface(const std::string& ifname) {
+ArcService::InterfaceType InterfaceTypeFor(const std::string& ifname) {
   for (const auto& prefix : kEthernetInterfacePrefixes) {
     if (base::StartsWith(ifname, prefix,
                          base::CompareCase::INSENSITIVE_ASCII)) {
-      return true;
+      return ArcService::InterfaceType::ETHERNET;
     }
   }
-  return false;
-}
-
-bool IsWifiInterface(const std::string& ifname) {
   for (const auto& prefix : kWifiInterfacePrefixes) {
     if (base::StartsWith(ifname, prefix,
                          base::CompareCase::INSENSITIVE_ASCII)) {
-      return true;
+      return ArcService::InterfaceType::WIFI;
     }
   }
-  return false;
+  for (const auto& prefix : kCellInterfacePrefixes) {
+    if (base::StartsWith(ifname, prefix,
+                         base::CompareCase::INSENSITIVE_ASCII)) {
+      return ArcService::InterfaceType::CELL;
+    }
+  }
+  return ArcService::InterfaceType::UNKNOWN;
 }
 
 bool IsMulticastInterface(const std::string& ifname) {
@@ -196,6 +199,7 @@ ArcService::ArcService(ShillClient* shill_client,
       addr_mgr_(addr_mgr),
       forwarder_(forwarder),
       enable_arcvm_multinet_(enable_arcvm_multinet) {
+  AllocateAddressConfigs();
   shill_client_->RegisterDevicesChangedHandler(
       base::Bind(&ArcService::OnDevicesChanged, weak_factory_.GetWeakPtr()));
   shill_client_->ScanDevices(
@@ -210,6 +214,86 @@ ArcService::~ArcService() {
   }
 }
 
+void ArcService::AllocateAddressConfigs() {
+  configs_.clear();
+  // The first usable subnet is the "other" ARC device subnet.
+  // TODO(garrick): This can be removed and ARC_NET will be widened once ARCVM
+  // switches over to use .0/30.
+  AddressManager::Guest alloc =
+      IsArcVm() ? AddressManager::Guest::ARC : AddressManager::Guest::VM_ARC;
+  // Allocate 2 subnets each for Ethernet and WiFi and 1 for LTE WAN interfaces.
+  for (const auto itype :
+       {InterfaceType::ETHERNET, InterfaceType::ETHERNET, InterfaceType::WIFI,
+        InterfaceType::WIFI, InterfaceType::CELL}) {
+    auto ipv4_subnet = addr_mgr_->AllocateIPv4Subnet(alloc);
+    if (!ipv4_subnet) {
+      LOG(ERROR) << "Subnet already in use or unavailable";
+      continue;
+    }
+    // For here out, use the same slices.
+    alloc = AddressManager::Guest::ARC_NET;
+    auto host_ipv4_addr = ipv4_subnet->AllocateAtOffset(0);
+    if (!host_ipv4_addr) {
+      LOG(ERROR) << "Bridge address already in use or unavailable";
+      continue;
+    }
+    auto guest_ipv4_addr = ipv4_subnet->AllocateAtOffset(1);
+    if (!guest_ipv4_addr) {
+      LOG(ERROR) << "ARC address already in use or unavailable";
+      continue;
+    }
+
+    configs_[itype].emplace_back(std::make_unique<Device::Config>(
+        addr_mgr_->GenerateMacAddress(), std::move(ipv4_subnet),
+        std::move(host_ipv4_addr), std::move(guest_ipv4_addr)));
+  }
+}
+
+void ArcService::ReallocateAddressConfigs() {
+  std::vector<std::string> existing_devices;
+  for (const auto& d : devices_) {
+    existing_devices.emplace_back(d.first);
+  }
+  for (const auto& d : existing_devices) {
+    RemoveDevice(d);
+  }
+  AllocateAddressConfigs();
+  for (const auto& d : existing_devices) {
+    AddDevice(d);
+  }
+}
+
+std::unique_ptr<Device::Config> ArcService::AcquireConfig(
+    const std::string& ifname) {
+  auto itype = InterfaceTypeFor(ifname);
+  if (itype == InterfaceType::UNKNOWN) {
+    LOG(ERROR) << "Unsupported interface: " << ifname;
+    return nullptr;
+  }
+
+  auto& configs = configs_[itype];
+  if (configs.empty()) {
+    LOG(ERROR) << "No more addresses available. Cannot make device for "
+               << ifname;
+    return nullptr;
+  }
+  std::unique_ptr<Device::Config> config;
+  config = std::move(configs.front());
+  configs.pop_front();
+  return config;
+}
+
+void ArcService::ReleaseConfig(const std::string& ifname,
+                               std::unique_ptr<Device::Config> config) {
+  auto itype = InterfaceTypeFor(ifname);
+  if (itype == InterfaceType::UNKNOWN) {
+    LOG(ERROR) << "Unsupported interface: " << ifname;
+    return;
+  }
+
+  configs_[itype].push_front(std::move(config));
+}
+
 bool ArcService::Start(uint32_t id) {
   if (impl_) {
     uint32_t prev_id;
@@ -219,6 +303,8 @@ bool ArcService::Start(uint32_t id) {
       Stop(prev_id);
     }
   }
+
+  ReallocateAddressConfigs();
 
   const auto guest = ArcGuest();
   if (guest == GuestMessage::ARC_VM)
@@ -269,40 +355,23 @@ void ArcService::AddDevice(const std::string& ifname) {
     return;
   }
 
+  auto itype = InterfaceTypeFor(ifname);
   Device::Options opts{
       .fwd_multicast = IsMulticastInterface(ifname),
       // TODO(crbug/726815) Also enable |ipv6_enabled| for cellular networks
       // once IPv6 is enabled on cellular networks in shill.
-      .ipv6_enabled = IsEthernetInterface(ifname) || IsWifiInterface(ifname),
+      .ipv6_enabled =
+          (itype == InterfaceType::ETHERNET || itype == InterfaceType::WIFI),
       .use_default_interface = false,
   };
+
+  auto config = AcquireConfig(ifname);
+  if (!config) {
+    LOG(ERROR) << "Cannot add device for " << ifname;
+    return;
+  }
+
   std::string host_ifname = base::StringPrintf("arc_%s", ifname.c_str());
-  auto ipv4_subnet =
-      addr_mgr_->AllocateIPv4Subnet(AddressManager::Guest::ARC_NET);
-  if (!ipv4_subnet) {
-    LOG(ERROR) << "Subnet already in use or unavailable. Cannot make device: "
-               << ifname;
-    return;
-  }
-  auto host_ipv4_addr = ipv4_subnet->AllocateAtOffset(0);
-  if (!host_ipv4_addr) {
-    LOG(ERROR)
-        << "Bridge address already in use or unavailable. Cannot make device: "
-        << ifname;
-    return;
-  }
-  auto guest_ipv4_addr = ipv4_subnet->AllocateAtOffset(1);
-  if (!guest_ipv4_addr) {
-    LOG(ERROR)
-        << "ARC address already in use or unavailable. Cannot make device: "
-        << ifname;
-    return;
-  }
-
-  auto config = std::make_unique<Device::Config>(
-      addr_mgr_->GenerateMacAddress(), std::move(ipv4_subnet),
-      std::move(host_ipv4_addr), std::move(guest_ipv4_addr));
-
   auto device = std::make_unique<Device>(ifname, host_ifname, ifname,
                                          std::move(config), opts);
 
@@ -356,6 +425,7 @@ void ArcService::RemoveDevice(const std::string& ifname) {
   // If the container is down, this call does nothing.
   StopDevice(it->second.get());
 
+  ReleaseConfig(ifname, it->second->release_config());
   devices_.erase(it);
 }
 

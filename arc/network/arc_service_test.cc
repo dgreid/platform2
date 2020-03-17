@@ -34,6 +34,12 @@ constexpr uint32_t kArcHostIP = Ipv4Addr(100, 115, 92, 1);
 constexpr uint32_t kArcGuestIP = Ipv4Addr(100, 115, 92, 2);
 constexpr uint32_t kArcVmHostIP = Ipv4Addr(100, 115, 92, 5);
 constexpr uint32_t kArcVmGuestIP = Ipv4Addr(100, 115, 92, 6);
+constexpr uint32_t kFirstArcEthHostIP = kArcVmHostIP;
+constexpr uint32_t kFirstArcEthGuestIP = kArcVmGuestIP;
+constexpr uint32_t kSecondEthHostIP = Ipv4Addr(100, 115, 92, 9);
+constexpr uint32_t kFirstWifiHostIP = Ipv4Addr(100, 115, 92, 13);
+constexpr uint32_t kSecondWifiHostIP = Ipv4Addr(100, 115, 92, 17);
+constexpr uint32_t kFirstCellHostIP = Ipv4Addr(100, 115, 92, 21);
 
 class MockTrafficForwarder : public TrafficForwarder {
  public:
@@ -99,11 +105,11 @@ class ArcServiceTest : public testing::Test {
 };
 
 TEST_F(ArcServiceTest, StartDevice) {
-  EXPECT_CALL(*datapath_,
-              AddBridge(StrEq("arc_eth0"), Ipv4Addr(100, 115, 92, 9), 30))
+  EXPECT_CALL(*datapath_, AddBridge(StrEq("arc_eth0"), kFirstArcEthHostIP, 30))
       .WillOnce(Return(true));
   EXPECT_CALL(*datapath_,
-              AddInboundIPv4DNAT(StrEq("eth0"), StrEq("100.115.92.10")))
+              AddInboundIPv4DNAT(StrEq("eth0"),
+                                 IPv4AddressToString(kFirstArcEthGuestIP)))
       .WillOnce(Return(true));
   EXPECT_CALL(*datapath_, AddOutboundIPv4(StrEq("arc_eth0")))
       .WillOnce(Return(true));
@@ -123,7 +129,8 @@ TEST_F(ArcServiceTest, StartDevice) {
 TEST_F(ArcServiceTest, StopDevice) {
   EXPECT_CALL(*datapath_, RemoveOutboundIPv4(StrEq("arc_eth0")));
   EXPECT_CALL(*datapath_,
-              RemoveInboundIPv4DNAT(StrEq("eth0"), StrEq("100.115.92.10")));
+              RemoveInboundIPv4DNAT(StrEq("eth0"),
+                                    IPv4AddressToString(kFirstArcEthGuestIP)));
   EXPECT_CALL(*datapath_, RemoveBridge(StrEq("arc_eth0")));
 
   auto svc = NewService();
@@ -139,6 +146,60 @@ TEST_F(ArcServiceTest, StopDevice) {
   EXPECT_TRUE(svc->devices_.find("eth0") == svc->devices_.end());
 }
 
+TEST_F(ArcServiceTest, VerifyAddrConfigs) {
+  EXPECT_CALL(*datapath_, AddBridge(StrEq("arc_eth0"), kFirstArcEthHostIP, 30))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*datapath_, AddBridge(StrEq("arc_eth1"), kSecondEthHostIP, 30))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*datapath_, AddBridge(StrEq("arc_wlan0"), kFirstWifiHostIP, 30))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*datapath_, AddBridge(StrEq("arc_wlan1"), kSecondWifiHostIP, 30))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*datapath_, AddBridge(StrEq("arc_wwan0"), kFirstCellHostIP, 30))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*datapath_, AddInboundIPv4DNAT(_, _))
+      .WillRepeatedly(Return(true));
+  EXPECT_CALL(*datapath_, AddOutboundIPv4(_)).WillRepeatedly(Return(true));
+
+  auto svc = NewService();
+  auto impl = std::make_unique<MockImpl>();
+  auto* mock_impl = impl.get();
+  svc->impl_ = std::move(impl);
+
+  EXPECT_CALL(*mock_impl, guest()).WillRepeatedly(Return(GuestMessage::ARC));
+  EXPECT_CALL(*mock_impl, IsStarted(_)).WillRepeatedly(Return(true));
+  EXPECT_CALL(*mock_impl, OnStartDevice(_)).WillRepeatedly(Return(true));
+  svc->AddDevice("eth0");
+  svc->AddDevice("eth1");
+  svc->AddDevice("wlan0");
+  svc->AddDevice("wlan1");
+  svc->AddDevice("wwan0");
+}
+
+TEST_F(ArcServiceTest, VerifyAddrOrder) {
+  EXPECT_CALL(*datapath_, AddBridge(StrEq("arc_eth0"), kFirstArcEthHostIP, 30))
+      .Times(2)
+      .WillRepeatedly(Return(true));
+  EXPECT_CALL(*datapath_, AddBridge(StrEq("arc_wlan0"), kFirstWifiHostIP, 30))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*datapath_, AddInboundIPv4DNAT(_, _))
+      .WillRepeatedly(Return(true));
+  EXPECT_CALL(*datapath_, AddOutboundIPv4(_)).WillRepeatedly(Return(true));
+
+  auto svc = NewService();
+  auto impl = std::make_unique<MockImpl>();
+  auto* mock_impl = impl.get();
+  svc->impl_ = std::move(impl);
+
+  EXPECT_CALL(*mock_impl, guest()).WillRepeatedly(Return(GuestMessage::ARC));
+  EXPECT_CALL(*mock_impl, IsStarted(_)).WillRepeatedly(Return(true));
+  EXPECT_CALL(*mock_impl, OnStartDevice(_)).WillRepeatedly(Return(true));
+  svc->AddDevice("wlan0");
+  svc->AddDevice("eth0");
+  svc->RemoveDevice("eth0");
+  svc->AddDevice("eth0");
+}
+
 // ContainerImpl
 
 class ContainerImplTest : public testing::Test {
@@ -147,6 +208,7 @@ class ContainerImplTest : public testing::Test {
 
  protected:
   void SetUp() override {
+    addr_mgr_ = std::make_unique<AddressManager>();
     runner_ = std::make_unique<FakeProcessRunner>();
     runner_->Capture(false);
     datapath_ = std::make_unique<MockDatapath>(runner_.get());
@@ -287,6 +349,7 @@ class VmImplTest : public testing::Test {
 
  protected:
   void SetUp() override {
+    addr_mgr_ = std::make_unique<AddressManager>();
     runner_ = std::make_unique<FakeProcessRunner>();
     runner_->Capture(false);
     datapath_ = std::make_unique<MockDatapath>(runner_.get());

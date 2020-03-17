@@ -49,6 +49,10 @@ Device::Config& Device::config() const {
   return *config_.get();
 }
 
+std::unique_ptr<Device::Config> Device::release_config() {
+  return std::move(config_);
+}
+
 const Device::Options& Device::options() const {
   return options_;
 }

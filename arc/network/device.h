@@ -106,6 +106,7 @@ class Device {
   const std::string& host_ifname() const { return host_ifname_; }
   const std::string& guest_ifname() const { return guest_ifname_; }
   Config& config() const;
+  std::unique_ptr<Config> release_config();
   const Options& options() const;
 
   void set_tap_ifname(const std::string& tap);

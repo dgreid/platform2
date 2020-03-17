@@ -5,6 +5,7 @@
 #ifndef ARC_NETWORK_ARC_SERVICE_H_
 #define ARC_NETWORK_ARC_SERVICE_H_
 
+#include <deque>
 #include <map>
 #include <memory>
 #include <set>
@@ -117,6 +118,13 @@ class ArcService {
     DISALLOW_COPY_AND_ASSIGN(VmImpl);
   };
 
+  enum class InterfaceType {
+    UNKNOWN,
+    ETHERNET,
+    WIFI,
+    CELL,
+  };
+
   // All pointers are required and cannot be null, and are owned by the caller.
   ArcService(ShillClient* shill_client,
              Datapath* datapath,
@@ -159,16 +167,36 @@ class ArcService {
   // Stops and cleans up any virtual interfaces and associated datapath.
   void StopDevice(Device* device);
 
+  // Creates device configurations for all available IPv4 subnets which will be
+  // assigned to devices as they are added.
+  void AllocateAddressConfigs();
+
+  // This function will temporarily remove existing devices, reallocate
+  // address configurations and re-add existing devices. This is necessary to
+  // properly handle the IPv4 addressing binding difference between ARC++ and
+  // ARCVM.
+  void ReallocateAddressConfigs();
+
+  // Reserve a configuration for an interface.
+  std::unique_ptr<Device::Config> AcquireConfig(const std::string& ifname);
+
+  // Returns a configuration to the pool.
+  void ReleaseConfig(const std::string& ifname,
+                     std::unique_ptr<Device::Config> config);
+
   ShillClient* shill_client_;
   Datapath* datapath_;
   AddressManager* addr_mgr_;
   TrafficForwarder* forwarder_;
   bool enable_arcvm_multinet_;
   std::unique_ptr<Impl> impl_;
+  std::map<InterfaceType, std::deque<std::unique_ptr<Device::Config>>> configs_;
   std::map<std::string, std::unique_ptr<Device>> devices_;
 
   FRIEND_TEST(ArcServiceTest, StartDevice);
   FRIEND_TEST(ArcServiceTest, StopDevice);
+  FRIEND_TEST(ArcServiceTest, VerifyAddrConfigs);
+  FRIEND_TEST(ArcServiceTest, VerifyAddrOrder);
 
   base::WeakPtrFactory<ArcService> weak_factory_{this};
   DISALLOW_COPY_AND_ASSIGN(ArcService);
