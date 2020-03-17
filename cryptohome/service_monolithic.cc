@@ -765,7 +765,19 @@ gboolean ServiceMonolithic::TpmAttestationGetCertificateEx(
     GArray** OUT_certificate,
     gboolean* OUT_success,
     GError** error) {
-  return FALSE;
+  // We must set the GArray now because if we return without setting it,
+  // dbus-glib loops forever.
+  *OUT_certificate =
+      g_array_new(false, false, sizeof(brillo::SecureBlob::value_type));
+  brillo::SecureBlob cert_blob;
+  *OUT_success = attestation_->GetCertificate(
+      GetProfile(certificate_profile), username, request_origin,
+      GetPCAType(pca_type), key_name, forced, shall_trigger_enrollment,
+      &cert_blob);
+  if (*OUT_success) {
+    g_array_append_vals(*OUT_certificate, cert_blob.data(), cert_blob.size());
+  }
+  return TRUE;
 }
 
 gboolean ServiceMonolithic::AsyncTpmAttestationGetCertificateEx(
