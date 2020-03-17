@@ -2648,13 +2648,14 @@ TEST_F(UserDataAuthTestThreaded,
 }
 
 TEST_F(UserDataAuthTestThreaded, CheckAutoCleanupCallback) {
+  constexpr int kTimesFreeDiskSpaceCalled = 3;
   // Checks that DoAutoCleanup() is called periodically.
   // Service will schedule periodic clean-ups.
   SetupMount("some-user-to-clean-up");
 
   // These are shared between threads, so guard by the lock.
   int free_disk_space_count = 0;
-  base::Time current_time;
+  base::Time current_time = base::Time::UnixEpoch();
   base::Lock lock;
 
   // Used to signal that the test is done.
@@ -2664,22 +2665,21 @@ TEST_F(UserDataAuthTestThreaded, CheckAutoCleanupCallback) {
   // These will be invoked from the mount thread.
   EXPECT_CALL(homedirs_, FreeDiskSpace())
       .Times(AtLeast(3))
-      .WillRepeatedly(
-          Invoke([&lock, &current_time, &free_disk_space_count, &done] {
-            // The time will move forward enough to trigger the next call every
-            // time it's called.
-            base::AutoLock scoped_lock(lock);
-            current_time +=
-                base::TimeDelta::FromMilliseconds(kAutoCleanupPeriodMS + 1000);
-            free_disk_space_count++;
-            if (free_disk_space_count == 3) {
-              done.Signal();
-            }
-          }));
+      .WillRepeatedly(Invoke([&lock, &free_disk_space_count, &done] {
+        // The time will move forward enough to trigger the next call every
+        // time it's called.
+        base::AutoLock scoped_lock(lock);
+        free_disk_space_count++;
+        if (free_disk_space_count == kTimesFreeDiskSpaceCalled) {
+          done.Signal();
+        }
+      }));
 
   EXPECT_CALL(platform_, GetCurrentTime())
       .WillRepeatedly(Invoke([&lock, &current_time]() {
         base::AutoLock scoped_lock(lock);
+        current_time +=
+            base::TimeDelta::FromMilliseconds(kAutoCleanupPeriodMS / 5 + 1000);
         return current_time;
       }));
   const int period_ms = 1;
@@ -2705,8 +2705,19 @@ TEST_F(UserDataAuthTestThreaded, CheckAutoCleanupCallback) {
   // back to 1 minute, so we will not have any race condition.
   userdataauth_->set_low_disk_notification_period_ms(
       kLowDiskNotificationPeriodMS);
+
   // Wait for the change to take effect.
   base::PlatformThread::Sleep(base::TimeDelta::FromMilliseconds(period_ms * 5));
+
+  // Check that not too much or too little "time" elapsed.
+  EXPECT_LT(current_time,
+            base::Time::UnixEpoch() +
+                base::TimeDelta::FromMilliseconds(
+                    kAutoCleanupPeriodMS * kTimesFreeDiskSpaceCalled * 2));
+  EXPECT_GT(current_time,
+            base::Time::UnixEpoch() +
+                base::TimeDelta::FromMilliseconds(kAutoCleanupPeriodMS *
+                                                  kTimesFreeDiskSpaceCalled));
 
   // Cleanup invokable lambdas so they don't capture this test variables
   // anymore. If this is not done then the periodic callbacks might call
