@@ -213,33 +213,6 @@ bool DiagActions::ActionGetRoutines() {
   return true;
 }
 
-bool DiagActions::ActionRunBatteryCapacityRoutine(uint32_t low_mah,
-                                                  uint32_t high_mah) {
-  auto response = adapter_.RunBatteryCapacityRoutine(low_mah, high_mah);
-  CHECK(response) << "No RunRoutineResponse received.";
-  return RunRoutineAndProcessResult(response->id, &adapter_);
-}
-
-bool DiagActions::ActionRunBatteryHealthRoutine(
-    uint32_t maximum_cycle_count, uint32_t percent_battery_wear_allowed) {
-  auto response = adapter_.RunBatteryHealthRoutine(
-      maximum_cycle_count, percent_battery_wear_allowed);
-  CHECK(response) << "No RunRoutineResponse received.";
-  return RunRoutineAndProcessResult(response->id, &adapter_);
-}
-
-bool DiagActions::ActionRunUrandomRoutine(uint32_t length_seconds) {
-  auto response = adapter_.RunUrandomRoutine(length_seconds);
-  CHECK(response) << "No RunRoutineResponse received.";
-  return RunRoutineAndProcessResult(response->id, &adapter_);
-}
-
-bool DiagActions::ActionRunSmartctlCheckRoutine() {
-  auto response = adapter_.RunSmartctlCheckRoutine();
-  CHECK(response) << "No RunRoutineResponse received.";
-  return RunRoutineAndProcessResult(response->id, &adapter_);
-}
-
 bool DiagActions::ActionRunAcPowerRoutine(bool is_connected,
                                           const std::string& power_type) {
   chromeos::cros_healthd::mojom::AcPowerStatusEnum expected_status =
@@ -251,6 +224,21 @@ bool DiagActions::ActionRunAcPowerRoutine(bool is_connected,
                          : base::Optional<std::string>{power_type};
   auto response =
       adapter_.RunAcPowerRoutine(expected_status, optional_power_type);
+  CHECK(response) << "No RunRoutineResponse received.";
+  return RunRoutineAndProcessResult(response->id, &adapter_);
+}
+
+bool DiagActions::ActionRunBatteryCapacityRoutine(uint32_t low_mah,
+                                                  uint32_t high_mah) {
+  auto response = adapter_.RunBatteryCapacityRoutine(low_mah, high_mah);
+  CHECK(response) << "No RunRoutineResponse received.";
+  return RunRoutineAndProcessResult(response->id, &adapter_);
+}
+
+bool DiagActions::ActionRunBatteryHealthRoutine(
+    uint32_t maximum_cycle_count, uint32_t percent_battery_wear_allowed) {
+  auto response = adapter_.RunBatteryHealthRoutine(
+      maximum_cycle_count, percent_battery_wear_allowed);
   CHECK(response) << "No RunRoutineResponse received.";
   return RunRoutineAndProcessResult(response->id, &adapter_);
 }
@@ -276,18 +264,30 @@ bool DiagActions::ActionRunFloatingPointAccuracyRoutine(
   return RunRoutineAndProcessResult(response->id, &adapter_);
 }
 
-bool DiagActions::ActionRunNvmeWearLevelRoutine(uint32_t wear_level_threshold) {
-  auto response = adapter_.RunNvmeWearLevelRoutine(wear_level_threshold);
-  CHECK(response) << "No RunRoutineResponse received.";
-  return RunRoutineAndProcessResult(response->id, &adapter_);
-}
-
 bool DiagActions::ActionRunNvmeSelfTestRoutine(bool is_long) {
   chromeos::cros_healthd::mojom::NvmeSelfTestTypeEnum type =
       is_long
           ? chromeos::cros_healthd::mojom::NvmeSelfTestTypeEnum::kLongSelfTest
           : chromeos::cros_healthd::mojom::NvmeSelfTestTypeEnum::kShortSelfTest;
   auto response = adapter_.RunNvmeSelfTestRoutine(type);
+  CHECK(response) << "No RunRoutineResponse received.";
+  return RunRoutineAndProcessResult(response->id, &adapter_);
+}
+
+bool DiagActions::ActionRunNvmeWearLevelRoutine(uint32_t wear_level_threshold) {
+  auto response = adapter_.RunNvmeWearLevelRoutine(wear_level_threshold);
+  CHECK(response) << "No RunRoutineResponse received.";
+  return RunRoutineAndProcessResult(response->id, &adapter_);
+}
+
+bool DiagActions::ActionRunSmartctlCheckRoutine() {
+  auto response = adapter_.RunSmartctlCheckRoutine();
+  CHECK(response) << "No RunRoutineResponse received.";
+  return RunRoutineAndProcessResult(response->id, &adapter_);
+}
+
+bool DiagActions::ActionRunUrandomRoutine(uint32_t length_seconds) {
+  auto response = adapter_.RunUrandomRoutine(length_seconds);
   CHECK(response) << "No RunRoutineResponse received.";
   return RunRoutineAndProcessResult(response->id, &adapter_);
 }
