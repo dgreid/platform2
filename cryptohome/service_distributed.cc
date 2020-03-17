@@ -1118,14 +1118,52 @@ gboolean ServiceDistributed::TpmAttestationEnrollEx(gint pca_type,
                                                     gboolean forced,
                                                     gboolean* OUT_success,
                                                     GError** error) {
-  return FALSE;
+  VLOG(1) << __func__;
+  attestation::ACAType aca_type;
+  if (!ConvertIntegerToACAType(pca_type, &aca_type, error)) {
+    return FALSE;
+  }
+  attestation::EnrollRequest request;
+  request.set_aca_type(aca_type);
+  request.set_forced(forced);
+  attestation::EnrollReply reply;
+  auto method = base::Bind(&AttestationInterface::Enroll,
+                           base::Unretained(attestation_interface_), request);
+  if (!SendRequestAndWait(method, &reply)) {
+    ReportSendFailure(error);
+    return FALSE;
+  }
+  VLOG_IF(1, reply.status() != AttestationStatus::STATUS_SUCCESS)
+      << "Attestation daemon returned status " << reply.status();
+  *OUT_success = (reply.status() == AttestationStatus::STATUS_SUCCESS);
+  return TRUE;
 }
 
 gboolean ServiceDistributed::AsyncTpmAttestationEnrollEx(gint pca_type,
                                                          gboolean forced,
                                                          gint* OUT_async_id,
                                                          GError** error) {
-  return FALSE;
+  VLOG(1) << __func__;
+  attestation::ACAType aca_type;
+  if (!ConvertIntegerToACAType(pca_type, &aca_type, error)) {
+    return FALSE;
+  }
+  *OUT_async_id = NextSequence();
+  LogAsyncIdInfo(*OUT_async_id, __func__, base::Time::Now());
+  attestation::EnrollRequest request;
+  request.set_aca_type(aca_type);
+  request.set_forced(forced);
+  auto callback = base::Bind(
+      &ServiceDistributed::ProcessStatusReply<attestation::EnrollReply>,
+      GetWeakPtr(), *OUT_async_id);
+  auto method =
+      base::Bind(&AttestationInterface::Enroll,
+                 base::Unretained(attestation_interface_), request, callback);
+  if (!Post(method)) {
+    ReportSendFailure(error);
+    return FALSE;
+  }
+  return TRUE;
 }
 
 gboolean ServiceDistributed::TpmAttestationGetCertificateEx(
