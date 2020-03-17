@@ -1009,6 +1009,9 @@ void Service::OwnershipCallback(bool status, bool took_ownership) {
   if (took_ownership) {
     ReportTimerStop(kTpmTakeOwnershipTimer);
 
+    // Since ownership is already taken, we are not currently taking ownership.
+    tpm_init_->SetTpmBeingOwned(false);
+
     // Let the |tpm_| object know about the ownership status
     if (tpm_) {
       tpm_->HandleOwnershipTakenEvent();

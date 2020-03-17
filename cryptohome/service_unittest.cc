@@ -543,6 +543,10 @@ TEST_F(ServiceTestNotInitialized, UploadAlertsCallback) {
 
 TEST_F(ServiceTest, NoDeadlocksInInitializeTpmComplete) {
   char user[] = "chromeos-user";
+
+  // OwnershipCallback needs tpm_init_.
+  service_.set_tpm_init(&tpm_init_);
+
   SetupMount(user);
 
   // Put a task on mount_thread_ that starts before InitializeTpmComplete

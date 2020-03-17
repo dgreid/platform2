@@ -729,6 +729,9 @@ void UserDataAuth::OwnershipCallback(bool status, bool took_ownership) {
   ownership_callback_has_run_ = true;
 
   if (took_ownership) {
+    // Since ownership is already taken, we are not currently taking ownership.
+    tpm_init_->SetTpmBeingOwned(false);
+
     // Let the |tpm_| object know as well.
     PostTaskToOriginThread(
         FROM_HERE, base::BindOnce(
