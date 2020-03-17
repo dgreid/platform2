@@ -133,6 +133,35 @@ class FinishCertRequestTask : public AttestationTask {
   DISALLOW_COPY_AND_ASSIGN(FinishCertRequestTask);
 };
 
+// An asynchronous task for Attestation::GetCertificate().
+class GetCertificateTask : public AttestationTask {
+ public:
+  GetCertificateTask(AttestationTaskObserver* observer,
+                     Attestation* attestation,
+                     CertificateProfile profile,
+                     const std::string& username,
+                     const std::string& origin,
+                     Attestation::PCAType pca_type,
+                     const std::string& key_name,
+                     bool forced,
+                     bool shall_trigger_enrollment,
+                     int sequence_id);
+  virtual ~GetCertificateTask() = default;
+
+  virtual void Run();
+
+ private:
+  CertificateProfile profile_;
+  const std::string username_;
+  const std::string origin_;
+  Attestation::PCAType pca_type_;
+  const std::string key_name_;
+  bool forced_;
+  bool shall_trigger_enrollment_;
+
+  DISALLOW_COPY_AND_ASSIGN(GetCertificateTask);
+};
+
 // An asynchronous task for Attestation::Sign*Challenge().
 class SignChallengeTask : public AttestationTask {
  public:

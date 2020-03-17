@@ -791,7 +791,16 @@ gboolean ServiceMonolithic::AsyncTpmAttestationGetCertificateEx(
     gboolean shall_trigger_enrollment,
     gint* OUT_async_id,
     GError** error) {
-  return FALSE;
+  AttestationTaskObserver* observer =
+      new MountTaskObserverBridge(NULL, &event_source_);
+  scoped_refptr<GetCertificateTask> task = new GetCertificateTask(
+      observer, attestation_, GetProfile(certificate_profile), username,
+      request_origin, GetPCAType(pca_type), key_name, forced,
+      shall_trigger_enrollment, NextSequence());
+  *OUT_async_id = task->sequence_id();
+  LogAsyncIdInfo(*OUT_async_id, __func__, base::Time::Now());
+  PostTask(FROM_HERE, base::Bind(&GetCertificateTask::Run, task.get()));
+  return TRUE;
 }
 
 void ServiceMonolithic::ConnectOwnershipTakenSignal() {

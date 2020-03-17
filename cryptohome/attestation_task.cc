@@ -147,6 +147,38 @@ void FinishCertRequestTask::Run() {
   Notify();
 }
 
+GetCertificateTask::GetCertificateTask(AttestationTaskObserver* observer,
+                                       Attestation* attestation,
+                                       CertificateProfile profile,
+                                       const std::string& username,
+                                       const std::string& origin,
+                                       Attestation::PCAType pca_type,
+                                       const std::string& key_name,
+                                       bool forced,
+                                       bool shall_trigger_enrollment,
+                                       int sequence_id)
+    : AttestationTask(observer, attestation, sequence_id),
+      profile_(profile),
+      username_(username),
+      origin_(origin),
+      pca_type_(pca_type),
+      key_name_(key_name),
+      forced_(forced),
+      shall_trigger_enrollment_(shall_trigger_enrollment) {}
+
+void GetCertificateTask::Run() {
+  result()->set_return_status(FALSE);
+  if (attestation_) {
+    SecureBlob cert;
+    bool status = attestation_->GetCertificate(
+        profile_, username_, origin_, pca_type_, key_name_, forced_,
+        shall_trigger_enrollment_, &cert);
+    result()->set_return_status(status);
+    result()->set_return_data(cert);
+  }
+  Notify();
+}
+
 SignChallengeTask::SignChallengeTask(AttestationTaskObserver* observer,
                                      Attestation* attestation,
                                      bool is_user_specific,
