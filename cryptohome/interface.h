@@ -180,6 +180,17 @@ gboolean cryptohome_async_tpm_attestation_enroll(Cryptohome* self,
                                                  GArray* pca_response,
                                                  gint* OUT_async_id,
                                                  GError** error);
+gboolean cryptohome_tpm_attestation_enroll_ex(Cryptohome* self,
+                                              gint pca_type,
+                                              gboolean forced,
+                                              gboolean* OUT_success,
+                                              GError** error);
+gboolean cryptohome_async_tpm_attestation_enroll_ex(Cryptohome* self,
+                                                    gint pca_type,
+                                                    gboolean forced,
+                                                    GArray* pca_response,
+                                                    gint* OUT_async_id,
+                                                    GError** error);
 gboolean cryptohome_tpm_attestation_create_cert_request(
     Cryptohome* self,
     gint pca_type,
@@ -211,6 +222,31 @@ gboolean cryptohome_async_tpm_attestation_finish_cert_request(
     gboolean is_user_specific,
     gchar* username,
     gchar* key_name,
+    gint* OUT_async_id,
+    GError** error);
+gboolean cryptohome_tpm_attestation_get_certificate_ex(
+    Cryptohome* self,
+    gint certificate_profile,
+    gchar* username,
+    gchar* request_origin,
+    gint pca_type,
+    gint key_type,
+    gchar* key_name,
+    gboolean forced,
+    gboolean shall_trigger_enrollment,
+    GArray** OUT_certificate,
+    gboolean* OUT_success,
+    GError** error);
+gboolean cryptohome_async_tpm_attestation_get_certificate_ex(
+    Cryptohome* self,
+    gint certificate_profile,
+    gchar* username,
+    gchar* request_origin,
+    gint pca_type,
+    gint key_type,
+    gchar* key_name,
+    gboolean forced,
+    gboolean shall_trigger_enrollment,
     gint* OUT_async_id,
     GError** error);
 gboolean cryptohome_tpm_is_attestation_enrolled(Cryptohome* self,

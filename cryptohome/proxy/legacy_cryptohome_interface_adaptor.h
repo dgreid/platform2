@@ -242,6 +242,14 @@ class LegacyCryptohomeInterfaceAdaptor
       std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<int32_t>> response,
       int32_t in_pca_type,
       const std::vector<uint8_t>& in_pca_response) override;
+  void TpmAttestationEnrollEx(
+      std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<bool>> response,
+      int32_t in_pca_type,
+      bool in_forced) override;
+  void AsyncTpmAttestationEnrollEx(
+      std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<int32_t>> response,
+      int32_t in_pca_type,
+      bool in_forced) override;
   void TpmAttestationCreateCertRequest(
       std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
           std::vector<uint8_t>>> response,
@@ -269,6 +277,28 @@ class LegacyCryptohomeInterfaceAdaptor
       bool in_is_user_specific,
       const std::string& in_username,
       const std::string& in_key_name) override;
+  void TpmAttestationGetCertificateEx(
+      std::unique_ptr<
+          brillo::dbus_utils::DBusMethodResponse<std::vector<uint8_t>, bool>>
+          response,
+      int32_t in_certificate_profile,
+      const std::string& in_username,
+      const std::string& in_request_origin,
+      int32_t in_pca_type,
+      int32_t in_key_type,
+      const std::string& in_key_name,
+      bool in_forced,
+      bool in_shall_trigger_enrollment) override;
+  void AsyncTpmAttestationGetCertificateEx(
+      std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<int32_t>> response,
+      int32_t in_certificate_profile,
+      const std::string& in_username,
+      const std::string& in_request_origin,
+      int32_t in_pca_type,
+      int32_t in_key_type,
+      const std::string& in_key_name,
+      bool in_forced,
+      bool in_shall_trigger_enrollment) override;
   void TpmIsAttestationEnrolled(
       std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<bool>> response)
       override;

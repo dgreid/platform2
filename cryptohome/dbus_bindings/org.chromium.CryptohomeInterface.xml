@@ -418,6 +418,20 @@
       <arg type="ay" name="pca_response" direction="in" />
       <arg type="i" name="async_id" direction="out" />
     </method>
+    <method name="TpmAttestationEnrollEx">
+      <annotation name="org.chromium.DBus.Method.Kind"
+                  value="async"/>
+      <arg type="i" name="pca_type" direction="in" />
+      <arg type="b" name="forced" direction="in" />
+      <arg type="b" name="success" direction="out" />
+    </method>
+    <method name="AsyncTpmAttestationEnrollEx">
+      <annotation name="org.chromium.DBus.Method.Kind"
+                  value="async"/>
+      <arg type="i" name="pca_type" direction="in" />
+      <arg type="b" name="forced" direction="in" />
+      <arg type="i" name="async_id" direction="out" />
+    </method>
     <method name="TpmAttestationCreateCertRequest">
       <annotation name="org.chromium.DBus.Method.Kind"
                   value="async"/>
@@ -453,6 +467,33 @@
       <arg type="b" name="is_user_specific" direction="in" />
       <arg type="s" name="username" direction="in" />
       <arg type="s" name="key_name" direction="in" />
+      <arg type="i" name="async_id" direction="out" />
+    </method>
+    <method name="TpmAttestationGetCertificateEx">
+      <annotation name="org.chromium.DBus.Method.Kind"
+                  value="async"/>
+      <arg type="i" name="certificate_profile" direction="in" />
+      <arg type="s" name="username" direction="in" />
+      <arg type="s" name="request_origin" direction="in" />
+      <arg type="i" name="pca_type" direction="in" />
+      <arg type="i" name="key_type" direction="in" />
+      <arg type="s" name="key_name" direction="in" />
+      <arg type="b" name="forced" direction="in" />
+      <arg type="b" name="shall_trigger_enrollment" direction="in" />
+      <arg type="ay" name="certificate" direction="out" />
+      <arg type="b" name="success" direction="out" />
+    </method>
+    <method name="AsyncTpmAttestationGetCertificateEx">
+      <annotation name="org.chromium.DBus.Method.Kind"
+                  value="async"/>
+      <arg type="i" name="certificate_profile" direction="in" />
+      <arg type="s" name="username" direction="in" />
+      <arg type="s" name="request_origin" direction="in" />
+      <arg type="i" name="pca_type" direction="in" />
+      <arg type="i" name="key_type" direction="in" />
+      <arg type="s" name="key_name" direction="in" />
+      <arg type="b" name="forced" direction="in" />
+      <arg type="b" name="shall_trigger_enrollment" direction="in" />
       <arg type="i" name="async_id" direction="out" />
     </method>
     <method name="TpmIsAttestationEnrolled">

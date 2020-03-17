@@ -59,6 +59,14 @@ class ServiceMonolithic : public Service {
                                      GArray* pca_response,
                                      gint* OUT_async_id,
                                      GError** error) override;
+  gboolean TpmAttestationEnrollEx(gint pca_type,
+                                  gboolean forced,
+                                  gboolean* OUT_success,
+                                  GError** error) override;
+  gboolean AsyncTpmAttestationEnrollEx(gint pca_type,
+                                       gboolean forced,
+                                       gint* OUT_async_id,
+                                       GError** error) override;
   gboolean TpmAttestationCreateCertRequest(
       gint pca_type,
       gint certificate_profile,
@@ -85,6 +93,28 @@ class ServiceMonolithic : public Service {
       gboolean is_user_specific,
       gchar* username,
       gchar* key_name,
+      gint* OUT_async_id,
+      GError** error) override;
+  gboolean TpmAttestationGetCertificateEx(gint certificate_profile,
+                                          gchar* username,
+                                          gchar* request_origin,
+                                          gint pca_type,
+                                          gint key_type,
+                                          gchar* key_name,
+                                          gboolean forced,
+                                          gboolean shall_trigger_enrollment,
+                                          GArray** OUT_certificate,
+                                          gboolean* OUT_success,
+                                          GError** error) override;
+  gboolean AsyncTpmAttestationGetCertificateEx(
+      gint certificate_profile,
+      gchar* username,
+      gchar* request_origin,
+      gint pca_type,
+      gint key_type,
+      gchar* key_name,
+      gboolean forced,
+      gboolean shall_trigger_enrollment,
       gint* OUT_async_id,
       GError** error) override;
   gboolean TpmIsAttestationEnrolled(gboolean* OUT_is_enrolled,

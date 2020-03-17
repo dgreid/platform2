@@ -1114,6 +1114,49 @@ gboolean ServiceDistributed::TpmAttestationGetEnrollmentId(
   return TRUE;
 }
 
+gboolean ServiceDistributed::TpmAttestationEnrollEx(gint pca_type,
+                                                    gboolean forced,
+                                                    gboolean* OUT_success,
+                                                    GError** error) {
+  return FALSE;
+}
+
+gboolean ServiceDistributed::AsyncTpmAttestationEnrollEx(gint pca_type,
+                                                         gboolean forced,
+                                                         gint* OUT_async_id,
+                                                         GError** error) {
+  return FALSE;
+}
+
+gboolean ServiceDistributed::TpmAttestationGetCertificateEx(
+    gint certificate_profile,
+    gchar* username,
+    gchar* request_origin,
+    gint pca_type,
+    gint key_type,
+    gchar* key_name,
+    gboolean forced,
+    gboolean shall_trigger_enrollment,
+    GArray** OUT_certificate,
+    gboolean* OUT_success,
+    GError** error) {
+  return FALSE;
+}
+
+gboolean ServiceDistributed::AsyncTpmAttestationGetCertificateEx(
+    gint certificate_profile,
+    gchar* username,
+    gchar* request_origin,
+    gint pca_type,
+    gint key_type,
+    gchar* key_name,
+    gboolean forced,
+    gboolean shall_trigger_enrollment,
+    gint* OUT_async_id,
+    GError** error) {
+  return FALSE;
+}
+
 void ServiceDistributed::ConnectOwnershipTakenSignal() {
   brillo::dbus::BusConnection connection =
       brillo::dbus::GetSystemBusConnection();

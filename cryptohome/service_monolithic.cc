@@ -717,6 +717,49 @@ gboolean ServiceMonolithic::TpmAttestationGetEnrollmentId(
   return TRUE;
 }
 
+gboolean ServiceMonolithic::TpmAttestationEnrollEx(gint pca_type,
+                                                   gboolean forced,
+                                                   gboolean* OUT_success,
+                                                   GError** error) {
+  return FALSE;
+}
+
+gboolean ServiceMonolithic::AsyncTpmAttestationEnrollEx(gint pca_type,
+                                                        gboolean forced,
+                                                        gint* OUT_async_id,
+                                                        GError** error) {
+  return FALSE;
+}
+
+gboolean ServiceMonolithic::TpmAttestationGetCertificateEx(
+    gint certificate_profile,
+    gchar* username,
+    gchar* request_origin,
+    gint pca_type,
+    gint key_type,
+    gchar* key_name,
+    gboolean forced,
+    gboolean shall_trigger_enrollment,
+    GArray** OUT_certificate,
+    gboolean* OUT_success,
+    GError** error) {
+  return FALSE;
+}
+
+gboolean ServiceMonolithic::AsyncTpmAttestationGetCertificateEx(
+    gint certificate_profile,
+    gchar* username,
+    gchar* request_origin,
+    gint pca_type,
+    gint key_type,
+    gchar* key_name,
+    gboolean forced,
+    gboolean shall_trigger_enrollment,
+    gint* OUT_async_id,
+    GError** error) {
+  return FALSE;
+}
+
 void ServiceMonolithic::ConnectOwnershipTakenSignal() {
   // Not supported by ServiceMonolithic, either because tpm_managerd doesn't
   // exist or cryptohomed doesn't talk to tpm_managerd.

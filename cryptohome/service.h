@@ -461,6 +461,14 @@ class Service : public brillo::dbus::AbstractDbusService,
                                              GArray* pca_response,
                                              gint* OUT_async_id,
                                              GError** error) = 0;
+  virtual gboolean TpmAttestationEnrollEx(gint pca_type,
+                                          gboolean forced,
+                                          gboolean* OUT_success,
+                                          GError** error) = 0;
+  virtual gboolean AsyncTpmAttestationEnrollEx(gint pca_type,
+                                               gboolean forced,
+                                               gint* OUT_async_id,
+                                               GError** error) = 0;
   virtual gboolean TpmAttestationCreateCertRequest(
       gint pca_type,
       gint certificate_profile,
@@ -487,6 +495,29 @@ class Service : public brillo::dbus::AbstractDbusService,
       gboolean is_user_specific,
       gchar* username,
       gchar* key_name,
+      gint* OUT_async_id,
+      GError** error) = 0;
+  virtual gboolean TpmAttestationGetCertificateEx(
+      gint certificate_profile,
+      gchar* username,
+      gchar* request_origin,
+      gint pca_type,
+      gint key_type,
+      gchar* key_name,
+      gboolean forced,
+      gboolean shall_trigger_enrollment,
+      GArray** OUT_certificate,
+      gboolean* OUT_success,
+      GError** error) = 0;
+  virtual gboolean AsyncTpmAttestationGetCertificateEx(
+      gint certificate_profile,
+      gchar* username,
+      gchar* request_origin,
+      gint pca_type,
+      gint key_type,
+      gchar* key_name,
+      gboolean forced,
+      gboolean shall_trigger_enrollment,
       gint* OUT_async_id,
       GError** error) = 0;
   virtual gboolean TpmIsAttestationEnrolled(gboolean* OUT_is_enrolled,

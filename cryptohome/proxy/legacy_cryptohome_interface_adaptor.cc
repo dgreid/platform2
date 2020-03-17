@@ -1167,6 +1167,47 @@ void LegacyCryptohomeInterfaceAdaptor::AsyncTpmAttestationFinishCertRequest(
   response->Return(async_id);
 }
 
+void LegacyCryptohomeInterfaceAdaptor::TpmAttestationEnrollEx(
+    std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<bool>> response,
+    int32_t in_pca_type,
+    bool in_forced) {
+  DCHECK(false) << "Not implemented.";
+}
+
+void LegacyCryptohomeInterfaceAdaptor::AsyncTpmAttestationEnrollEx(
+    std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<int32_t>> response,
+    int32_t in_pca_type,
+    bool in_forced) {
+  DCHECK(false) << "Not implemented.";
+}
+
+void LegacyCryptohomeInterfaceAdaptor::TpmAttestationGetCertificateEx(
+    std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<std::vector<uint8_t>,
+                                                           bool>> response,
+    int32_t in_certificate_profile,
+    const std::string& in_username,
+    const std::string& in_request_origin,
+    int32_t in_pca_type,
+    int32_t in_key_type,
+    const std::string& in_key_name,
+    bool in_forced,
+    bool in_shall_trigger_enrollment) {
+  DCHECK(false) << "Not implemented.";
+}
+
+void LegacyCryptohomeInterfaceAdaptor::AsyncTpmAttestationGetCertificateEx(
+    std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<int32_t>> response,
+    int32_t in_certificate_profile,
+    const std::string& in_username,
+    const std::string& in_request_origin,
+    int32_t in_pca_type,
+    int32_t in_key_type,
+    const std::string& in_key_name,
+    bool in_forced,
+    bool in_shall_trigger_enrollment) {
+  DCHECK(false) << "Not implemented.";
+}
+
 void LegacyCryptohomeInterfaceAdaptor::TpmIsAttestationEnrolled(
     std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<bool>> response) {
   std::shared_ptr<SharedDBusMethodResponse<bool>> response_shared(
