@@ -9,6 +9,7 @@
 #include <string>
 
 #include <base/macros.h>
+#include <base/optional.h>
 #include <base/time/time.h>
 
 #include "diagnostics/cros_healthd_mojo_adapter/cros_healthd_mojo_adapter.h"
@@ -35,8 +36,9 @@ class DiagActions final {
   // details on the individual routines. Returns true iff the routine completed.
   // Note that this does not mean the routine succeeded, only that it started,
   // ran, and was removed.
-  bool ActionRunAcPowerRoutine(bool is_connected,
-                               const std::string& power_type);
+  bool ActionRunAcPowerRoutine(
+      chromeos::cros_healthd::mojom::AcPowerStatusEnum expected_status,
+      const base::Optional<std::string>& expected_power_type);
   bool ActionRunBatteryCapacityRoutine(uint32_t low_mah, uint32_t high_mah);
   bool ActionRunBatteryHealthRoutine(uint32_t maximum_cycle_count,
                                      uint32_t percent_battery_wear_allowed);
@@ -44,7 +46,8 @@ class DiagActions final {
   bool ActionRunCpuStressRoutine(const base::TimeDelta& exec_duration);
   bool ActionRunFloatingPointAccuracyRoutine(
       const base::TimeDelta& exec_duration);
-  bool ActionRunNvmeSelfTestRoutine(bool is_long);
+  bool ActionRunNvmeSelfTestRoutine(
+      chromeos::cros_healthd::mojom::NvmeSelfTestTypeEnum nvme_self_test_type);
   bool ActionRunNvmeWearLevelRoutine(uint32_t wear_level_threshold);
   bool ActionRunSmartctlCheckRoutine();
   bool ActionRunUrandomRoutine(uint32_t length_seconds);

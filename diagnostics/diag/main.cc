@@ -129,7 +129,12 @@ int main(int argc, char** argv) {
         break;
       case mojo_ipc::DiagnosticRoutineEnum::kAcPower:
         routine_result = actions.ActionRunAcPowerRoutine(
-            FLAGS_ac_power_is_connected, FLAGS_expected_power_type);
+            FLAGS_ac_power_is_connected
+                ? mojo_ipc::AcPowerStatusEnum::kConnected
+                : mojo_ipc::AcPowerStatusEnum::kDisconnected,
+            (FLAGS_expected_power_type == "")
+                ? base::nullopt
+                : base::Optional<std::string>{FLAGS_expected_power_type});
         break;
       case mojo_ipc::DiagnosticRoutineEnum::kCpuCache:
         routine_result = actions.ActionRunCpuCacheRoutine(
@@ -148,8 +153,10 @@ int main(int argc, char** argv) {
             actions.ActionRunNvmeWearLevelRoutine(FLAGS_wear_level_threshold);
         break;
       case mojo_ipc::DiagnosticRoutineEnum::kNvmeSelfTest:
-        routine_result =
-            actions.ActionRunNvmeSelfTestRoutine(FLAGS_nvme_self_test_long);
+        routine_result = actions.ActionRunNvmeSelfTestRoutine(
+            FLAGS_nvme_self_test_long
+                ? mojo_ipc::NvmeSelfTestTypeEnum::kLongSelfTest
+                : mojo_ipc::NvmeSelfTestTypeEnum::kShortSelfTest);
         break;
       default:
         std::cout << "Unsupported routine: " << FLAGS_routine << std::endl;

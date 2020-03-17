@@ -104,17 +104,11 @@ bool DiagActions::ActionGetRoutines() {
   return true;
 }
 
-bool DiagActions::ActionRunAcPowerRoutine(bool is_connected,
-                                          const std::string& power_type) {
-  chromeos::cros_healthd::mojom::AcPowerStatusEnum expected_status =
-      is_connected
-          ? chromeos::cros_healthd::mojom::AcPowerStatusEnum::kConnected
-          : chromeos::cros_healthd::mojom::AcPowerStatusEnum::kDisconnected;
-  const base::Optional<std::string> optional_power_type =
-      (power_type == "") ? base::nullopt
-                         : base::Optional<std::string>{power_type};
+bool DiagActions::ActionRunAcPowerRoutine(
+    mojo_ipc::AcPowerStatusEnum expected_status,
+    const base::Optional<std::string>& expected_power_type) {
   auto response =
-      adapter_.RunAcPowerRoutine(expected_status, optional_power_type);
+      adapter_.RunAcPowerRoutine(expected_status, expected_power_type);
   CHECK(response) << "No RunRoutineResponse received.";
   id_ = response->id;
   return PollRoutineAndProcessResult();
@@ -161,12 +155,9 @@ bool DiagActions::ActionRunFloatingPointAccuracyRoutine(
   return PollRoutineAndProcessResult();
 }
 
-bool DiagActions::ActionRunNvmeSelfTestRoutine(bool is_long) {
-  chromeos::cros_healthd::mojom::NvmeSelfTestTypeEnum type =
-      is_long
-          ? chromeos::cros_healthd::mojom::NvmeSelfTestTypeEnum::kLongSelfTest
-          : chromeos::cros_healthd::mojom::NvmeSelfTestTypeEnum::kShortSelfTest;
-  auto response = adapter_.RunNvmeSelfTestRoutine(type);
+bool DiagActions::ActionRunNvmeSelfTestRoutine(
+    mojo_ipc::NvmeSelfTestTypeEnum nvme_self_test_type) {
+  auto response = adapter_.RunNvmeSelfTestRoutine(nvme_self_test_type);
   CHECK(response) << "No RunRoutineResponse received.";
   id_ = response->id;
   return PollRoutineAndProcessResult();
