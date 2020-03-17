@@ -383,8 +383,7 @@ void TerminaVmTest::SetUp() {
   ASSERT_TRUE(stub);
 
   // Allocate resources for the VM.
-  network_address_manager_.reset(new arc_networkd::AddressManager(
-      {arc_networkd::AddressManager::Guest::VM_TERMINA}));
+  network_address_manager_.reset(new arc_networkd::AddressManager());
   uint32_t vsock_cid = vsock_cid_pool_.Allocate();
   std::unique_ptr<arc_networkd::Subnet> subnet =
       network_address_manager_->AllocateIPv4Subnet(

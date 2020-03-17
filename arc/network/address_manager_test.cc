@@ -17,18 +17,6 @@
 
 namespace arc_networkd {
 
-TEST(AddressManager, OnlyAllocateFromKnownGuests) {
-  AddressManager mgr({AddressManager::Guest::ARC,
-                      AddressManager::Guest::VM_TERMINA,
-                      AddressManager::Guest::CONTAINER});
-  EXPECT_TRUE(mgr.AllocateIPv4Subnet(AddressManager::Guest::ARC));
-  EXPECT_TRUE(mgr.AllocateIPv4Subnet(AddressManager::Guest::VM_TERMINA));
-  EXPECT_TRUE(mgr.AllocateIPv4Subnet(AddressManager::Guest::CONTAINER));
-  EXPECT_FALSE(mgr.AllocateIPv4Subnet(AddressManager::Guest::VM_ARC));
-  EXPECT_FALSE(mgr.AllocateIPv4Subnet(AddressManager::Guest::ARC_NET));
-  EXPECT_FALSE(mgr.AllocateIPv4Subnet(AddressManager::Guest::VM_PLUGIN));
-}
-
 TEST(AddressManager, BaseAddresses) {
   std::map<AddressManager::Guest, size_t> addrs = {
       {AddressManager::Guest::ARC, Ipv4Addr(100, 115, 92, 0)},
@@ -38,14 +26,7 @@ TEST(AddressManager, BaseAddresses) {
       {AddressManager::Guest::VM_PLUGIN, Ipv4Addr(100, 115, 93, 0)},
       {AddressManager::Guest::CONTAINER, Ipv4Addr(100, 115, 92, 192)},
   };
-  AddressManager mgr({
-      AddressManager::Guest::ARC,
-      AddressManager::Guest::VM_ARC,
-      AddressManager::Guest::ARC_NET,
-      AddressManager::Guest::VM_TERMINA,
-      AddressManager::Guest::VM_PLUGIN,
-      AddressManager::Guest::CONTAINER,
-  });
+  AddressManager mgr;
   for (const auto a : addrs) {
     auto subnet = mgr.AllocateIPv4Subnet(a.first);
     ASSERT_TRUE(subnet != nullptr);
@@ -64,14 +45,7 @@ TEST(AddressManager, AddressesPerSubnet) {
       {AddressManager::Guest::VM_PLUGIN, 6},
       {AddressManager::Guest::CONTAINER, 14},
   };
-  AddressManager mgr({
-      AddressManager::Guest::ARC,
-      AddressManager::Guest::VM_ARC,
-      AddressManager::Guest::ARC_NET,
-      AddressManager::Guest::VM_TERMINA,
-      AddressManager::Guest::VM_PLUGIN,
-      AddressManager::Guest::CONTAINER,
-  });
+  AddressManager mgr;
   for (const auto a : addrs) {
     auto subnet = mgr.AllocateIPv4Subnet(a.first);
     ASSERT_TRUE(subnet != nullptr);
@@ -88,14 +62,7 @@ TEST(AddressManager, SubnetsPerPool) {
       {AddressManager::Guest::VM_PLUGIN, 32},
       {AddressManager::Guest::CONTAINER, 4},
   };
-  AddressManager mgr({
-      AddressManager::Guest::ARC,
-      AddressManager::Guest::VM_ARC,
-      AddressManager::Guest::ARC_NET,
-      AddressManager::Guest::VM_TERMINA,
-      AddressManager::Guest::VM_PLUGIN,
-      AddressManager::Guest::CONTAINER,
-  });
+  AddressManager mgr;
   for (const auto a : addrs) {
     std::vector<std::unique_ptr<Subnet>> subnets;
     for (size_t i = 0; i < a.second; ++i) {
@@ -109,14 +76,7 @@ TEST(AddressManager, SubnetsPerPool) {
 }
 
 TEST(AddressManager, SubnetIndexing) {
-  AddressManager mgr({
-      AddressManager::Guest::ARC,
-      AddressManager::Guest::VM_ARC,
-      AddressManager::Guest::ARC_NET,
-      AddressManager::Guest::VM_TERMINA,
-      AddressManager::Guest::VM_PLUGIN,
-      AddressManager::Guest::CONTAINER,
-  });
+  AddressManager mgr;
   EXPECT_FALSE(mgr.AllocateIPv4Subnet(AddressManager::Guest::ARC, 1));
   EXPECT_FALSE(mgr.AllocateIPv4Subnet(AddressManager::Guest::VM_ARC, 1));
   EXPECT_FALSE(mgr.AllocateIPv4Subnet(AddressManager::Guest::ARC_NET, 1));

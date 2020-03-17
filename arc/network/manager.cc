@@ -54,15 +54,7 @@ Manager::Manager(std::unique_ptr<HelperProcess> adb_proxy,
                  std::unique_ptr<HelperProcess> nd_proxy)
     : adb_proxy_(std::move(adb_proxy)),
       mcast_proxy_(std::move(mcast_proxy)),
-      nd_proxy_(std::move(nd_proxy)),
-      addr_mgr_({
-          AddressManager::Guest::ARC,
-          AddressManager::Guest::ARC_NET,
-          AddressManager::Guest::CONTAINER,
-          AddressManager::Guest::VM_ARC,
-          AddressManager::Guest::VM_TERMINA,
-          AddressManager::Guest::VM_PLUGIN,
-      }) {
+      nd_proxy_(std::move(nd_proxy)) {
   runner_ = std::make_unique<MinijailedProcessRunner>();
   datapath_ = std::make_unique<Datapath>(runner_.get());
 }

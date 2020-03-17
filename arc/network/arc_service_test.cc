@@ -35,11 +35,6 @@ constexpr uint32_t kArcGuestIP = Ipv4Addr(100, 115, 92, 2);
 constexpr uint32_t kArcVmHostIP = Ipv4Addr(100, 115, 92, 5);
 constexpr uint32_t kArcVmGuestIP = Ipv4Addr(100, 115, 92, 6);
 
-static AddressManager addr_mgr({
-    AddressManager::Guest::ARC,
-    AddressManager::Guest::ARC_NET,
-});
-
 class MockTrafficForwarder : public TrafficForwarder {
  public:
   MockTrafficForwarder() = default;
@@ -74,32 +69,11 @@ class MockImpl : public ArcService::Impl {
                void(const std::string&, const std::string&));
 };
 
-std::unique_ptr<Device> MakeDevice(const std::string& name,
-                                   const std::string& host,
-                                   const std::string& guest,
-                                   bool is_arcvm = false) {
-  Device::Options opt{
-      .use_default_interface = is_arcvm,
-  };
-  auto subnet = addr_mgr.AllocateIPv4Subnet(AddressManager::Guest::ARC_NET);
-  auto addr0 = subnet->AllocateAtOffset(0);
-  auto addr1 = subnet->AllocateAtOffset(1);
-  auto cfg = std::make_unique<Device::Config>(
-      host, guest, addr_mgr.GenerateMacAddress(), std::move(subnet),
-      std::move(addr0), std::move(addr1));
-  return std::make_unique<Device>(name, std::move(cfg), opt);
-}
-
 }  // namespace
 
 class ArcServiceTest : public testing::Test {
  public:
-  ArcServiceTest()
-      : testing::Test(),
-        addr_mgr_({
-            AddressManager::Guest::ARC,
-            AddressManager::Guest::ARC_NET,
-        }) {}
+  ArcServiceTest() : testing::Test() {}
 
  protected:
   void SetUp() override {
@@ -107,17 +81,18 @@ class ArcServiceTest : public testing::Test {
     runner_->Capture(false);
     datapath_ = std::make_unique<MockDatapath>(runner_.get());
     shill_client_ = shill_helper_.Client();
+    addr_mgr_ = std::make_unique<AddressManager>();
   }
 
   std::unique_ptr<ArcService> NewService() {
     arc_networkd::test::guest = GuestMessage::ARC;
     return std::make_unique<ArcService>(shill_client_.get(), datapath_.get(),
-                                        &addr_mgr_, &forwarder_);
+                                        addr_mgr_.get(), &forwarder_);
   }
 
   FakeShillClientHelper shill_helper_;
   std::unique_ptr<ShillClient> shill_client_;
-  AddressManager addr_mgr_;
+  std::unique_ptr<AddressManager> addr_mgr_;
   MockTrafficForwarder forwarder_;
   std::unique_ptr<MockDatapath> datapath_;
   std::unique_ptr<FakeProcessRunner> runner_;
@@ -168,23 +143,19 @@ TEST_F(ArcServiceTest, StopDevice) {
 
 class ContainerImplTest : public testing::Test {
  public:
-  ContainerImplTest()
-      : testing::Test(),
-        addr_mgr_({
-            AddressManager::Guest::ARC,
-            AddressManager::Guest::ARC_NET,
-        }) {}
+  ContainerImplTest() : testing::Test() {}
 
  protected:
   void SetUp() override {
     runner_ = std::make_unique<FakeProcessRunner>();
     runner_->Capture(false);
     datapath_ = std::make_unique<MockDatapath>(runner_.get());
+    addr_mgr_ = std::make_unique<AddressManager>();
   }
 
   std::unique_ptr<ArcService::ContainerImpl> Impl(bool start = true) {
     auto impl = std::make_unique<ArcService::ContainerImpl>(
-        datapath_.get(), &addr_mgr_, &forwarder_, GuestMessage::ARC);
+        datapath_.get(), addr_mgr_.get(), &forwarder_, GuestMessage::ARC);
     if (start) {
       // Set expectations for tests that want it started already.
       EXPECT_CALL(*datapath_, AddBridge(StrEq("arcbr0"), kArcHostIP, 30))
@@ -205,7 +176,23 @@ class ContainerImplTest : public testing::Test {
     return impl;
   }
 
-  AddressManager addr_mgr_;
+  std::unique_ptr<Device> MakeDevice(const std::string& name,
+                                     const std::string& host,
+                                     const std::string& guest,
+                                     bool is_arcvm = false) {
+    Device::Options opt{
+        .use_default_interface = is_arcvm,
+    };
+    auto subnet = addr_mgr_->AllocateIPv4Subnet(AddressManager::Guest::ARC_NET);
+    auto addr0 = subnet->AllocateAtOffset(0);
+    auto addr1 = subnet->AllocateAtOffset(1);
+    auto cfg = std::make_unique<Device::Config>(
+        host, guest, addr_mgr_->GenerateMacAddress(), std::move(subnet),
+        std::move(addr0), std::move(addr1));
+    return std::make_unique<Device>(name, std::move(cfg), opt);
+  }
+
+  std::unique_ptr<AddressManager> addr_mgr_;
   std::unique_ptr<MockDatapath> datapath_;
   std::unique_ptr<FakeProcessRunner> runner_;
   MockTrafficForwarder forwarder_;
@@ -296,13 +283,7 @@ TEST_F(ContainerImplTest, OnStopDevice) {
 
 class VmImplTest : public testing::Test {
  public:
-  VmImplTest()
-      : testing::Test(),
-        addr_mgr_({
-            AddressManager::Guest::ARC,
-            AddressManager::Guest::ARC_NET,
-            AddressManager::Guest::VM_ARC,
-        }) {}
+  VmImplTest() : testing::Test() {}
 
  protected:
   void SetUp() override {
@@ -311,11 +292,12 @@ class VmImplTest : public testing::Test {
     datapath_ = std::make_unique<MockDatapath>(runner_.get());
     shill_client_ = helper_.FakeClient();
     shill_client_->SetFakeDefaultInterface("eth0");
+    addr_mgr_ = std::make_unique<AddressManager>();
   }
 
   std::unique_ptr<ArcService::VmImpl> Impl(bool start = true) {
     auto impl = std::make_unique<ArcService::VmImpl>(
-        shill_client_.get(), datapath_.get(), &addr_mgr_, &forwarder_);
+        shill_client_.get(), datapath_.get(), addr_mgr_.get(), &forwarder_);
     if (start) {
       impl->Start(kTestCID);
     }
@@ -323,7 +305,7 @@ class VmImplTest : public testing::Test {
     return impl;
   }
 
-  AddressManager addr_mgr_;
+  std::unique_ptr<AddressManager> addr_mgr_;
   std::unique_ptr<MockDatapath> datapath_;
   std::unique_ptr<FakeProcessRunner> runner_;
   std::unique_ptr<FakeShillClient> shill_client_;

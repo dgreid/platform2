@@ -31,7 +31,7 @@ class BRILLO_EXPORT AddressManager {
     CONTAINER,
   };
 
-  AddressManager(std::initializer_list<Guest> guests);
+  AddressManager();
   virtual ~AddressManager() = default;
 
   // Generates a MAC address guaranteed to be unique for the lifetime of this

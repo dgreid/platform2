@@ -27,9 +27,9 @@ namespace {
 
 }  // namespace
 
-AddressManager::AddressManager(
-    std::initializer_list<AddressManager::Guest> guests) {
-  for (auto g : guests) {
+AddressManager::AddressManager() {
+  for (auto g : {Guest::ARC, Guest::ARC_NET, Guest::VM_ARC, Guest::VM_TERMINA,
+                 Guest::VM_PLUGIN, Guest::CONTAINER}) {
     uint32_t base_addr;
     uint32_t prefix_length = 30;
     uint32_t subnets = 1;
