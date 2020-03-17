@@ -133,6 +133,7 @@ namespace switches {
                                    "tpm_attestation_more_status",
                                    "tpm_attestation_start_enroll",
                                    "tpm_attestation_finish_enroll",
+                                   "tpm_attestation_enroll",
                                    "tpm_attestation_start_cert_request",
                                    "tpm_attestation_finish_cert_request",
                                    "tpm_attestation_key_status",
@@ -208,6 +209,7 @@ namespace switches {
     ACTION_TPM_ATTESTATION_MORE_STATUS,
     ACTION_TPM_ATTESTATION_START_ENROLL,
     ACTION_TPM_ATTESTATION_FINISH_ENROLL,
+    ACTION_TPM_ATTESTATION_ENROLL,
     ACTION_TPM_ATTESTATION_START_CERTREQ,
     ACTION_TPM_ATTESTATION_FINISH_CERTREQ,
     ACTION_TPM_ATTESTATION_KEY_STATUS,
@@ -2137,6 +2139,39 @@ int main(int argc, char **argv) {
               proxy.gproxy(), pca_type, data.get(),
               &async_id, &brillo::Resetter(&error).lvalue())) {
         printf("AsyncTpmAttestationEnroll call failed: %s.\n", error->message);
+        return 1;
+      } else {
+        client_loop.Run(async_id);
+        success = client_loop.get_return_status();
+      }
+    }
+    if (!success) {
+      printf("Attestation enrollment failed.\n");
+      return 1;
+    }
+  } else if (!strcmp(
+                 switches::kActions[switches::ACTION_TPM_ATTESTATION_ENROLL],
+                 action.c_str())) {
+    brillo::glib::ScopedError error;
+    gboolean success = FALSE;
+    const bool forced = cl->HasSwitch(switches::kForceSwitch);
+    if (!cl->HasSwitch(switches::kAsyncSwitch)) {
+      brillo::glib::ScopedArray data;
+      if (!org_chromium_CryptohomeInterface_tpm_attestation_enroll_ex(
+              proxy.gproxy(), pca_type, forced, &success,
+              &brillo::Resetter(&error).lvalue())) {
+        printf("TpmAttestationEnrollEx call failed: %s.\n", error->message);
+        return 1;
+      }
+    } else {
+      ClientLoop client_loop;
+      client_loop.Initialize(&proxy);
+      gint async_id = -1;
+      if (!org_chromium_CryptohomeInterface_async_tpm_attestation_enroll_ex(
+              proxy.gproxy(), pca_type, forced, &async_id,
+              &brillo::Resetter(&error).lvalue())) {
+        printf("AsyncTpmAttestationEnrollEx call failed: %s.\n",
+               error->message);
         return 1;
       } else {
         client_loop.Run(async_id);
