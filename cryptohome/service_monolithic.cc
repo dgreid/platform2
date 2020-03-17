@@ -733,7 +733,10 @@ gboolean ServiceMonolithic::TpmAttestationEnrollEx(gint pca_type,
                                                    gboolean forced,
                                                    gboolean* OUT_success,
                                                    GError** error) {
-  return FALSE;
+  *OUT_success =
+      attestation_->EnrollEx(GetPCAType(pca_type), forced) ? TRUE : FALSE;
+
+  return TRUE;
 }
 
 gboolean ServiceMonolithic::AsyncTpmAttestationEnrollEx(gint pca_type,
