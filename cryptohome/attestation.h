@@ -252,6 +252,39 @@ class Attestation : public base::PlatformThread::Delegate,
                                  const std::string& key_name,
                                  brillo::SecureBlob* certificate_chain);
 
+  // Creates an attestation certificate request and sends it to the Privacy CA.
+  // Then, finishes the certificate request process by checking the sanity of
+  // the response and persisting the result certificate in the key store or
+  // attestation database. If |forced| is set to |false| and the certificate
+  // with |key_name| already exists, just returns the found certificate. The
+  // certification doesn't trigger enrollment process unless
+  // |shall_trigger_enrollment| is set to |true|.
+  //
+  // Parameters
+  //   profile - Specifies the type of certificate to be requested.
+  //   username - The user requesting the certificate.
+  //   origin - Some certificate requests require information about the origin
+  //   pca_type - Specifies to which Privacy CA the request will be sent.
+  //            of the request.  If no origin is needed, this can be empty.
+  //   key_name - A name for the key.
+  //   forced - If set to |true|, regardless of existence of certificate, always
+  //   goes through the certification process.
+  //   shall_trigger_enrollment - If set to |true|, the certification triggers
+  //                              the enrollment process first, if not enrolled
+  //                              yet.
+  //   certificate_chain - The PCA issued certificate chain in PEM format.  By
+  //                       convention the certified key certificate is listed
+  //                       first followed by intermediate CA certificate(s).
+  //                       The PCA root certificate is not included.
+  virtual bool GetCertificate(CertificateProfile profile,
+                              const std::string& username,
+                              const std::string& origin,
+                              PCAType pca_type,
+                              const std::string& key_name,
+                              bool forced,
+                              bool shall_trigger_enrollment,
+                              brillo::SecureBlob* certificate_chain);
+
   // Gets the PCA issued certificate chain for an existing certified key.
   // Returns true on success.
   //

@@ -1172,6 +1172,44 @@ bool Attestation::FinishCertRequest(const SecureBlob& pca_response,
   return CreatePEMCertificateChain(certified_key_pb, certificate_chain);
 }
 
+bool Attestation::GetCertificate(CertificateProfile profile,
+                                 const std::string& username,
+                                 const std::string& origin,
+                                 PCAType pca_type,
+                                 const std::string& key_name,
+                                 bool forced,
+                                 bool shall_trigger_enrollment,
+                                 brillo::SecureBlob* certificate_chain) {
+  if (shall_trigger_enrollment && !IsEnrolledWith(pca_type)) {
+    if (!EnrollEx(pca_type, /*forced=*/false)) {
+      LOG(ERROR) << __func__ << ": Failed to enroll.";
+      return false;
+    }
+  }
+  const bool is_user_specific = !username.empty();
+  if (!forced && GetCertificateChain(is_user_specific, username, key_name,
+                                     certificate_chain)) {
+    return true;
+  }
+  SecureBlob pca_request;
+  if (!CreateCertRequest(pca_type, profile, username, origin, &pca_request)) {
+    LOG(ERROR) << __func__ << ": Failed to create cert request.";
+    return false;
+  }
+  SecureBlob reply;
+  if (!SendPCARequestWithProxyAndBlock(
+          pca_type, PCARequestType::kGetCertificate, pca_request, &reply)) {
+    LOG(ERROR) << __func__ << ": Failed to send cert request.";
+    return false;
+  }
+  if (!FinishCertRequest(reply, is_user_specific, username, key_name,
+                         certificate_chain)) {
+    LOG(ERROR) << __func__ << ": Failed to finish cert request.";
+    return false;
+  }
+  return true;
+}
+
 bool Attestation::GetCertificateChain(bool is_user_specific,
                                       const std::string& username,
                                       const std::string& key_name,
