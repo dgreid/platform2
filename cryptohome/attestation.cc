@@ -20,6 +20,7 @@
 #include <base/strings/stringprintf.h>
 #include <base/time/time.h>
 #include <brillo/data_encoding.h>
+#include <brillo/http/http_proxy.h>
 #include <brillo/http/http_utils.h>
 #include <brillo/mime_utils.h>
 #include <brillo/secure_blob.h>
@@ -2827,6 +2828,49 @@ bool Attestation::SendPCARequestWithTransportAndBlock(
   SecureBlob tmp(response_data.begin(), response_data.end());
   reply->swap(tmp);
   return true;
+}
+
+bool Attestation::InitializeDBus() {
+  if (!bus_.get()) {
+    dbus::Bus::Options options;
+    options.bus_type = dbus::Bus::SYSTEM;
+    bus_ = base::MakeRefCounted<dbus::Bus>(options);
+  }
+  return bus_.get() != nullptr;
+}
+
+bool Attestation::SendPCARequestWithProxyAndBlock(
+    PCAType pca_type,
+    PCARequestType request_type,
+    const brillo::SecureBlob& request,
+    brillo::SecureBlob* reply) {
+  if (!InitializeDBus()) {
+    LOG(WARNING)
+        << __func__
+        << ": Cannot initialize dbus connection to get proxy information.";
+    return SendPCARequestAndBlock(pca_type, request_type, request, reply);
+  }
+  const std::string pca_server_url = GetPCAURL(pca_type, request_type);
+
+  std::vector<std::string> proxy_servers;
+  // |GetChromeProxyServers| promises to give a non-empty list, no matter if the
+  // dbus call succeeds. Thus, logs the warning and continue.
+  if (!brillo::http::GetChromeProxyServers(bus_, pca_server_url,
+                                           &proxy_servers)) {
+    LOG(WARNING) << __func__ << ": Failed to get proxy server list.";
+  }
+
+  for (const std::string& proxy_server : proxy_servers) {
+    if (SendPCARequestWithTransportAndBlock(
+            pca_server_url,
+            brillo::http::Transport::CreateDefaultWithProxy(proxy_server),
+            request, reply)) {
+      return true;
+    }
+  }
+  LOG(ERROR) << __func__
+             << ": Failed to send pca request with all proxy servers.";
+  return false;
 }
 
 std::string Attestation::GetPCAURL(PCAType pca_type,

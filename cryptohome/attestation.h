@@ -19,6 +19,7 @@
 #include <brillo/http/http_transport.h>
 #include <brillo/secure_blob.h>
 #include <crypto/scoped_openssl_types.h>
+#include <dbus/bus.h>
 #include <google/protobuf/map.h>
 #include <openssl/evp.h>
 
@@ -621,6 +622,9 @@ class Attestation : public base::PlatformThread::Delegate,
   int default_identity_features_ =
       cryptohome::IDENTITY_FEATURE_ENTERPRISE_ENROLLMENT_ID;
 
+  // Used to retrieve proxy servers from Chrome.
+  scoped_refptr<dbus::Bus> bus_;
+
   // Serializes and encrypts an attestation database.
   bool
   EncryptDatabase(const AttestationDatabase& db,
@@ -855,6 +859,16 @@ class Attestation : public base::PlatformThread::Delegate,
       std::shared_ptr<brillo::http::Transport> transport,
       const brillo::SecureBlob& request,
       brillo::SecureBlob* reply);
+
+  // Sends a |request| to a Privacy CA with proxy servers and waits for the
+  // |reply|. This is a blocking call. Returns true on success.
+  bool SendPCARequestWithProxyAndBlock(PCAType pca_type,
+                                       PCARequestType request_type,
+                                       const brillo::SecureBlob& request,
+                                       brillo::SecureBlob* reply);
+
+  // Initializes dbus in order to get proxy information from Chrome.
+  bool InitializeDBus();
 
   // Injects a TpmInit object to be used for RemoveTpmOwnerDependency
   void set_tpm_init(TpmInit* value) { tpm_init_ = value; }
