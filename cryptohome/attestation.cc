@@ -2804,12 +2804,19 @@ bool Attestation::SendPCARequestAndBlock(PCAType pca_type,
   if (!transport) {
     transport = brillo::http::Transport::CreateDefault();
   }
+  return SendPCARequestWithTransportAndBlock(
+      GetPCAURL(pca_type, request_type), std::move(transport), request, reply);
+}
+
+bool Attestation::SendPCARequestWithTransportAndBlock(
+    const std::string& pca_server_url,
+    std::shared_ptr<brillo::http::Transport> transport,
+    const brillo::SecureBlob& request,
+    brillo::SecureBlob* reply) {
+  DCHECK(transport.get());
   std::unique_ptr<brillo::http::Response> response = PostBinaryAndBlock(
-      GetPCAURL(pca_type, request_type),
-      request.data(),
-      request.size(),
-      brillo::mime::application::kOctet_stream,
-      {},  // headers
+      pca_server_url, request.data(), request.size(),
+      brillo::mime::application::kOctet_stream, {},  // headers
       transport,
       NULL);  // error
   if (!response->IsSuccessful()) {

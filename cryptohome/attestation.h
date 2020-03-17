@@ -846,6 +846,16 @@ class Attestation : public base::PlatformThread::Delegate,
   void ComputeEnterpriseEnrollmentNonce(
       brillo::SecureBlob* enterprise_enrollment_nonce);
 
+  // Sends a |request| to a Privacy CA with |transport| and waits for the
+  // |reply|. This is a blocking call. Returns true on success. Though we
+  // already provide the server URL, it is still specialized for pca request
+  // because of the way it processes the PCA request.
+  bool SendPCARequestWithTransportAndBlock(
+      const std::string& pca_server_url,
+      std::shared_ptr<brillo::http::Transport> transport,
+      const brillo::SecureBlob& request,
+      brillo::SecureBlob* reply);
+
   // Injects a TpmInit object to be used for RemoveTpmOwnerDependency
   void set_tpm_init(TpmInit* value) { tpm_init_ = value; }
 
