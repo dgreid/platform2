@@ -743,7 +743,14 @@ gboolean ServiceMonolithic::AsyncTpmAttestationEnrollEx(gint pca_type,
                                                         gboolean forced,
                                                         gint* OUT_async_id,
                                                         GError** error) {
-  return FALSE;
+  AttestationTaskObserver* observer =
+      new MountTaskObserverBridge(NULL, &event_source_);
+  scoped_refptr<EnrollExTask> task = new EnrollExTask(
+      observer, attestation_, GetPCAType(pca_type), forced, NextSequence());
+  *OUT_async_id = task->sequence_id();
+  LogAsyncIdInfo(*OUT_async_id, __func__, base::Time::Now());
+  PostTask(FROM_HERE, base::Bind(&EnrollExTask::Run, task.get()));
+  return TRUE;
 }
 
 gboolean ServiceMonolithic::TpmAttestationGetCertificateEx(

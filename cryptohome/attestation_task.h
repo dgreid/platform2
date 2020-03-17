@@ -68,6 +68,25 @@ class EnrollTask : public AttestationTask {
   DISALLOW_COPY_AND_ASSIGN(EnrollTask);
 };
 
+// An asynchronous task for Attestation::EnrollEx().
+class EnrollExTask : public AttestationTask {
+ public:
+  EnrollExTask(AttestationTaskObserver* observer,
+               Attestation* attestation,
+               Attestation::PCAType pca_type,
+               bool forced,
+               int sequence_id);
+  virtual ~EnrollExTask() = default;
+
+  virtual void Run();
+
+ private:
+  Attestation::PCAType pca_type_;
+  bool forced_;
+
+  DISALLOW_COPY_AND_ASSIGN(EnrollExTask);
+};
+
 // An asynchronous task for Attestation::CreateCertRequest().
 class CreateCertRequestTask : public AttestationTask {
  public:

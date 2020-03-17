@@ -67,6 +67,24 @@ void EnrollTask::Run() {
   Notify();
 }
 
+EnrollExTask::EnrollExTask(AttestationTaskObserver* observer,
+                           Attestation* attestation,
+                           Attestation::PCAType pca_type,
+                           bool forced,
+                           int sequence_id)
+    : AttestationTask(observer, attestation, sequence_id),
+      pca_type_(pca_type),
+      forced_(forced) {}
+
+void EnrollExTask::Run() {
+  result()->set_return_status(FALSE);
+  if (attestation_) {
+    bool status = attestation_->EnrollEx(pca_type_, forced_);
+    result()->set_return_status(status);
+  }
+  Notify();
+}
+
 CreateCertRequestTask::CreateCertRequestTask(AttestationTaskObserver* observer,
                                              Attestation* attestation,
                                              Attestation::PCAType pca_type,
