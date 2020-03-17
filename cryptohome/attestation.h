@@ -93,6 +93,9 @@ class Attestation : public base::PlatformThread::Delegate,
   // Returns true if an AIK certificate exist for one of the Privacy CAs.
   virtual bool IsEnrolled();
 
+    // Returns true if an AIK certificate exist for |pca_type|.
+  virtual bool IsEnrolledWith(PCAType pca_type);
+
   // Returns an iterator pointing to the identity certificate for the given
   // |identity| and given Privacy CA.
   virtual IdentityCertificateMap::iterator FindIdentityCertificate(

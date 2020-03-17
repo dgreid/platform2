@@ -500,6 +500,11 @@ bool Attestation::IsEnrolled() {
          HasIdentityCertificate(kFirstIdentity, kTestPCA);
 }
 
+bool Attestation::IsEnrolledWith(PCAType pca_type) {
+  base::AutoLock lock(lock_);
+  return HasIdentityCertificate(kFirstIdentity, pca_type);
+}
+
 Attestation::IdentityCertificateMap::iterator
 Attestation::FindIdentityCertificate(int identity, PCAType pca_type) {
   auto end = database_pb_.mutable_identity_certificates()->end();

@@ -1114,6 +1114,7 @@ TEST_P(AttestationTest, IsAttestationPreparedForOnePca) {
 TEST_P(AttestationTest, FirstIdentityNotEnrolled) {
   ASSERT_FALSE(attestation_.HasIdentityCertificate(
                          Attestation::kFirstIdentity, pca_type_));
+  ASSERT_FALSE(attestation_.IsEnrolledWith(pca_type_));
 }
 
 TEST_P(AttestationTest, NullTpm) {
