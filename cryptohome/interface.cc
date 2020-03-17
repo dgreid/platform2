@@ -294,7 +294,6 @@ gboolean cryptohome_tpm_attestation_enroll_ex(Cryptohome* self,
 gboolean cryptohome_async_tpm_attestation_enroll_ex(Cryptohome* self,
                                                     gint pca_type,
                                                     gboolean forced,
-                                                    GArray* pca_response,
                                                     gint* OUT_async_id,
                                                     GError** error) {
   CRYPTOHOME_WRAP_METHOD(AsyncTpmAttestationEnrollEx, pca_type, forced,
