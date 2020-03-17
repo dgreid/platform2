@@ -38,7 +38,6 @@ shared_library("libcros_config") {
     "libcros_config/identity_x86.cc",
   ]
   configs += [ ":target_defaults" ]
-  libs = [ "fdt" ]
 }
 
 executable("cros_config") {
