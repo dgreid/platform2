@@ -206,6 +206,10 @@ TEST_F(CrashCommonUtilTest, IsOfficialImage) {
 }
 
 TEST_F(CrashCommonUtilTest, HasMockConsent) {
+  ASSERT_TRUE(test_util::CreateFile(paths::Get("/etc/lsb-release"),
+                                    "CHROMEOS_RELEASE_TRACK=testimage-channel\n"
+                                    "CHROMEOS_RELEASE_DESCRIPTION=12985.0.0 "
+                                    "(Official Build) dev-channel asuka test"));
   EXPECT_FALSE(HasMockConsent());
   ASSERT_TRUE(test_util::CreateFile(
       paths::GetAt(paths::kSystemRunStateDirectory, paths::kMockConsent), ""));

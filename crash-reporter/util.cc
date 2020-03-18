@@ -59,18 +59,25 @@ bool IsDeveloperImage() {
   return base::PathExists(paths::Get(paths::kLeaveCoreFile));
 }
 
-bool IsTestImage() {
-  // If we're testing crash reporter itself, we don't want to special-case
-  // for test images.
-  if (IsCrashTestInProgress())
-    return false;
-
+// Determines if this is a test image, IGNORING IsCrashTestInProgress.
+// Use sparingly, and only if you're really sure you want to have different
+// behavior during crash tests than on real devices.
+bool IsReallyTestImage() {
   std::string channel;
   if (!GetCachedKeyValueDefault(base::FilePath(paths::kLsbRelease),
                                 "CHROMEOS_RELEASE_TRACK", &channel)) {
     return false;
   }
   return base::StartsWith(channel, "test", base::CompareCase::SENSITIVE);
+}
+
+bool IsTestImage() {
+  // If we're testing crash reporter itself, we don't want to special-case
+  // for test images.
+  if (IsCrashTestInProgress())
+    return false;
+
+  return IsReallyTestImage();
 }
 
 bool IsOfficialImage() {
@@ -85,7 +92,9 @@ bool IsOfficialImage() {
 
 bool HasMockConsent() {
   // Don't bypass user consent on real Chromebooks; this is for testing.
-  if (IsOfficialImage()) {
+  // We can't use IsTestImage because that's always false if a crash test is in
+  // progress.
+  if (!IsReallyTestImage()) {
     return false;
   }
   return base::PathExists(
