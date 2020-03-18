@@ -33,6 +33,7 @@ class ServerProxy : public VSockProxy::Delegate,
 
   // VSockProxy::Delegate overrides:
   VSockProxy::Type GetType() const override { return VSockProxy::Type::SERVER; }
+  base::ScopedFD CreateProxiedRegularFile(int64_t handle) override;
   bool ConvertFileDescriptorToProto(int fd,
                                     arc_proxy::FileDescriptor* proto) override;
   base::ScopedFD ConvertProtoToFileDescriptor(

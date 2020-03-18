@@ -253,6 +253,13 @@ bool VSockProxy::OnData(arc_proxy::Data* data) {
         std::tie(local_fd, remote_fd) = std::move(*created);
         break;
       }
+      case arc_proxy::FileDescriptor::REGULAR_FILE: {
+        remote_fd =
+            delegate_->CreateProxiedRegularFile(transferred_fd.handle());
+        if (!remote_fd.is_valid())
+          return false;
+        break;
+      }
       case arc_proxy::FileDescriptor::SOCKET_STREAM: {
         auto created = CreateSocketPair(SOCK_STREAM | SOCK_NONBLOCK);
         if (!created)

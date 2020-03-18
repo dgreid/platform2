@@ -47,6 +47,10 @@ class VSockProxy {
     // Returns the type of this proxy.
     virtual Type GetType() const = 0;
 
+    // Creates a proxied file descriptor for the given handle.
+    // Accessing the returned FD results in calling Pread() and Fstat().
+    virtual base::ScopedFD CreateProxiedRegularFile(int64_t handle) = 0;
+
     // Override these methods to provide non-common FD handling.
     virtual bool ConvertFileDescriptorToProto(
         int fd, arc_proxy::FileDescriptor* proto) = 0;

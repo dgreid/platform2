@@ -190,6 +190,11 @@ bool ServerProxy::Initialize() {
   return true;
 }
 
+base::ScopedFD ServerProxy::CreateProxiedRegularFile(int64_t handle) {
+  // Create a file descriptor which is handled by |proxy_file_system_|.
+  return proxy_file_system_.RegisterHandle(handle);
+}
+
 bool ServerProxy::ConvertFileDescriptorToProto(
     int fd, arc_proxy::FileDescriptor* proto) {
   LOG(ERROR) << "Unsupported FD type.";
@@ -199,10 +204,6 @@ bool ServerProxy::ConvertFileDescriptorToProto(
 base::ScopedFD ServerProxy::ConvertProtoToFileDescriptor(
     const arc_proxy::FileDescriptor& proto) {
   switch (proto.type()) {
-    case arc_proxy::FileDescriptor::REGULAR_FILE: {
-      // Create a file descriptor which is handled by |proxy_file_system_|.
-      return proxy_file_system_.RegisterHandle(proto.handle());
-    }
     case arc_proxy::FileDescriptor::DMABUF: {
       char dummy_data = 0;
       std::vector<base::ScopedFD> fds;

@@ -41,6 +41,9 @@ class TestDelegate : public VSockProxy::Delegate {
   bool is_stopped() const { return is_stopped_; }
 
   VSockProxy::Type GetType() const override { return type_; }
+  base::ScopedFD CreateProxiedRegularFile(int64_t handle) override {
+    return {};
+  }
   bool ConvertFileDescriptorToProto(int fd,
                                     arc_proxy::FileDescriptor* proto) override {
     NOTREACHED();
