@@ -42,14 +42,14 @@ constexpr uint32_t Ipv4Addr(uint8_t b0, uint8_t b1, uint8_t b2, uint8_t b3) {
 }
 
 // TODO(hugobenichi): eventually import these values from
-// platform2/arc/network.
-// Port forwarding can only forwards to IPv4 addresses within the subnet used
-// for static IPv4 assignement to guest OSs and app platforms.
-constexpr const char* kGuestSubnetCidr = "100.115.92.0/24";
+// platform2/arc/network/address_manager.cc
+// Port forwarding can only forward to IPv4 addresses within the IPv4 prefix
+// used for static IPv4 subnet assignment to guest OSs and App platforms.
+constexpr const char* kGuestSubnetCidr = "100.115.92.0/23";
 constexpr const struct in_addr kGuestBaseAddr = {.s_addr =
                                                      Ipv4Addr(100, 115, 92, 0)};
 constexpr const struct in_addr kGuestNetmask = {.s_addr =
-                                                    Ipv4Addr(255, 255, 255, 0)};
+                                                    Ipv4Addr(255, 255, 254, 0)};
 
 // ARC address known by Crostini for ADB sideloading.
 constexpr const char kArcAddr[] = "100.115.92.2";

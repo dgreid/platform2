@@ -69,6 +69,7 @@ class PortTrackerTest : public testing::Test {
 
   std::string arc_addr = "100.115.92.2";
   std::string crosvm_addr = "100.115.92.6";
+  std::string pluginvm_addr = "100.115.93.10";
   std::string non_guest_addr = "192.168.1.128";
   std::string ipv4_any = "0.0.0.0";
 
@@ -317,10 +318,18 @@ TEST_F(PortTrackerTest, StartPortForwarding_BaseSuccessCase) {
 
   EXPECT_CALL(port_tracker_, AddLifelineFd(dbus_fd)).WillOnce(Return(6));
   ASSERT_TRUE(port_tracker_.StartUdpPortForwarding(
-      tcp_port, "eth0", crosvm_addr, tcp_port, dbus_fd));
+      udp_port, "eth0", crosvm_addr, udp_port, dbus_fd));
+
+  EXPECT_CALL(port_tracker_, AddLifelineFd(dbus_fd)).WillOnce(Return(7));
+  ASSERT_TRUE(port_tracker_.StartTcpPortForwarding(
+      tcp_port, "wlan0", pluginvm_addr, tcp_port, dbus_fd));
+
+  EXPECT_CALL(port_tracker_, AddLifelineFd(dbus_fd)).WillOnce(Return(8));
+  ASSERT_TRUE(port_tracker_.StartUdpPortForwarding(
+      udp_port, "wlan0", pluginvm_addr, udp_port, dbus_fd));
 
   ASSERT_TRUE(port_tracker_.HasActiveRules());
-  ASSERT_EQ(4, mock_firewall_.CountActiveCommands());
+  ASSERT_EQ(8, mock_firewall_.CountActiveCommands());
 }
 
 TEST_F(PortTrackerTest, StartAdbPortForwarding_BaseSuccessCase) {
