@@ -1014,15 +1014,17 @@ cmd_chaps_debug() (
 USAGE_route='[-4] [-6]'
 HELP_route='
   Display the routing tables.
-  Default is to show IPv4 [-4] rather than IPv6 [-6] routes.
+  -4: Only show IPv4 routes.
+  -6: Only show IPv6 routes.
 '
 cmd_route() (
   local option="dict:string:variant:"
+  local ipver=''
 
   while [ $# -gt 0 ]; do
     case $1 in
-    -4) option="${option}v6,boolean:false," ;;
-    -6) option="${option}v6,boolean:true," ;;
+    -4) ipver=4;;
+    -6) ipver=6;;
     *)
       help "unknown option: $1"
       return 1
@@ -1030,7 +1032,15 @@ cmd_route() (
     shift
   done
 
-  debugd GetRoutes "${option%,}"
+  if [ "${ipver:-4}" = "4" ]; then
+    debugd GetRoutes "${option},v6,boolean:false"
+  fi
+  if [ -z "${ipver}" ]; then
+    echo
+  fi
+  if [ "${ipver:-6}" = "6" ]; then
+    debugd GetRoutes "${option},v6,boolean:true"
+  fi
 )
 
 USAGE_tracepath='[-4] [-6] [-n] <destination>[/port]'
