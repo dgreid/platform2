@@ -286,6 +286,7 @@ class Crypto {
                            const brillo::SecureBlob& key,
                            const brillo::SecureBlob& salt,
                            const std::string& obfuscated_username,
+                           const brillo::SecureBlob& reset_secret,
                            KeyBlobs* out_blobs,
                            SerializedVaultKeyset* serialized) const;
 

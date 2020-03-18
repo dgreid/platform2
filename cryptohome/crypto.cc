@@ -125,6 +125,40 @@ HashDescription GetHashDescription(Tpm* tpm) {
   }
 }
 
+// This generates the reset secret for PinWeaver credentials. Doing it per
+// secret is confusing and difficult to maintain. It's necessary so that
+// different credentials can all maintain  the same reset secret (i.e. the
+// password resets the PIN), without storing said secret in the clear. In the
+// USS key hierarchy, only one reset secret will exist.
+bool GenerateResetSecret(const VaultKeyset& vault_keyset,
+                         brillo::SecureBlob* reset_secret,
+                         brillo::SecureBlob* reset_salt) {
+  DCHECK(reset_secret);
+  DCHECK(reset_salt);
+
+  // For new users, a reset seed is stored in the VaultKeyset, which is derived
+  // into the reset secret.
+  if (!vault_keyset.reset_seed().empty()) {
+    SecureBlob local_reset_seed(vault_keyset.reset_seed().begin(),
+                                vault_keyset.reset_seed().end());
+    *reset_salt = CryptoLib::CreateSecureRandomBlob(kAesBlockSize);
+    *reset_secret = CryptoLib::HmacSha256(*reset_salt, local_reset_seed);
+    return true;
+  }
+
+  // When a user credential is being migrated (such as the password), the reset
+  // secret needs to remain the same to unlock the PIN. In this case, the reset
+  // secret is passed through the vault keyset.
+  if (!vault_keyset.reset_secret().empty()) {
+    reset_secret->assign(vault_keyset.reset_secret().begin(),
+                         vault_keyset.reset_secret().end());
+    return true;
+  }
+  LOG(ERROR) << "The VaultKeyset doesn't have a reset seed, so we can't"
+                " set up an LE credential.";
+  return false;
+}
+
 }  // namespace
 
 // File name of the system salt file.
@@ -778,6 +812,7 @@ bool Crypto::EncryptLECredential(const VaultKeyset& vault_keyset,
                                  const SecureBlob& key,
                                  const SecureBlob& salt,
                                  const std::string& obfuscated_username,
+                                 const SecureBlob& reset_secret,
                                  KeyBlobs* out_blobs,
                                  SerializedVaultKeyset* serialized) const {
   if (!use_tpm_ || !tpm_)
@@ -830,23 +865,6 @@ bool Crypto::EncryptLECredential(const VaultKeyset& vault_keyset,
   std::map<uint32_t, uint32_t> delay_sched;
   for (const auto& entry : kDefaultDelaySchedule) {
     delay_sched[entry.attempts] = entry.delay;
-  }
-
-  // Generate a unique reset secret for this credential.
-  SecureBlob reset_secret;
-
-  if (!vault_keyset.reset_seed().empty()) {
-    SecureBlob local_reset_seed(vault_keyset.reset_seed().begin(),
-                                vault_keyset.reset_seed().end());
-    const auto reset_salt = CryptoLib::CreateSecureRandomBlob(kAesBlockSize);
-    serialized->set_reset_salt(reset_salt.data(), reset_salt.size());
-    reset_secret = CryptoLib::HmacSha256(reset_salt, local_reset_seed);
-  } else if (!vault_keyset.reset_secret().empty()) {
-    reset_secret = vault_keyset.reset_secret();
-  } else {
-    LOG(ERROR) << "The VaultKeyset doesn't have a reset seed, so we can't"
-      " set up an LE credential.";
-    return false;
   }
 
   ValidPcrCriteria valid_pcr_criteria;
@@ -965,9 +983,18 @@ bool Crypto::EncryptVaultKeyset(const VaultKeyset& vault_keyset,
                                 const std::string& obfuscated_username,
                                 SerializedVaultKeyset* serialized) const {
   if (vault_keyset.IsLECredential()) {
+    SecureBlob reset_secret;
+    SecureBlob reset_salt;
+    if (!GenerateResetSecret(vault_keyset, &reset_secret, &reset_salt)) {
+      return false;
+    }
+
+    serialized->set_reset_salt(reset_salt.data(), reset_salt.size());
+
     KeyBlobs blobs;
     if (!EncryptLECredential(vault_keyset, vault_key, vault_key_salt,
-                             obfuscated_username, &blobs, serialized)) {
+                             obfuscated_username, reset_secret, &blobs,
+                             serialized)) {
       // TODO(crbug.com/794010): add ReportCryptohomeError
       return false;
     }
