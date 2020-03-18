@@ -194,6 +194,11 @@ class TpmUtilityV1 : public TpmUtilityCommon {
                               const std::string& request,
                               std::string* identity_binding);
 
+  // Initializes |context_handle_| if not yet. |consumer_name| refers to the
+  // consumer of |context_handle_| after initialization; usually it is the
+  // function name of the caller.
+  bool InitializeContextHandle(const std::string& consumer_name);
+
   // Long-live TSS context in order reduce the overhead of context connection.
   trousers::ScopedTssContext context_handle_;
   TSS_HTPM tpm_handle_{0};

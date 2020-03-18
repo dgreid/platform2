@@ -99,9 +99,9 @@ bool TpmUtilityV1::Initialize() {
     LOG(ERROR) << __func__ << ": Cannot initialize TpmUtilityCommon.";
     return false;
   }
-  if (!ConnectContextAsUser(&context_handle_, &tpm_handle_)) {
-    LOG(ERROR) << __func__ << ": Failed to connect to the TPM.";
-    return false;
+  if (!InitializeContextHandle(__func__)) {
+    LOG(WARNING) << __func__
+                 << ": Failed to connect to the TPM during initialization.";
   }
   if (!IsTpmReady()) {
     LOG(WARNING) << __func__ << ": TPM is not owned; attestation services will "
@@ -188,6 +188,9 @@ bool TpmUtilityV1::CreateCertifiedKey(KeyType key_type,
                                       std::string* key_info,
                                       std::string* proof) {
   CHECK(key_blob && public_key && public_key_tpm_format && key_info && proof);
+  if (!InitializeContextHandle(__func__)) {
+    return false;
+  }
   if (!SetupSrk()) {
     LOG(ERROR) << "SRK is not ready.";
     return false;
@@ -286,11 +289,13 @@ bool TpmUtilityV1::CreateCertifiedKey(KeyType key_type,
 bool TpmUtilityV1::SealToPCR0(const std::string& data,
                               std::string* sealed_data) {
   CHECK(sealed_data);
+  if (!InitializeContextHandle(__func__)) {
+    return false;
+  }
   if (!SetupSrk()) {
     LOG(ERROR) << "SRK is not ready.";
     return false;
   }
-
   // Create a PCRS object which holds the value of PCR0.
   ScopedTssPcrs pcrs_handle(context_handle_);
   TSS_RESULT result;
@@ -510,6 +515,9 @@ bool TpmUtilityV1::Unbind(const std::string& key_blob,
                           const std::string& bound_data,
                           std::string* data) {
   CHECK(data);
+  if (!InitializeContextHandle(__func__)) {
+    return false;
+  }
   if (!SetupSrk()) {
     LOG(ERROR) << "SRK is not ready.";
     return false;
@@ -550,6 +558,9 @@ bool TpmUtilityV1::Sign(const std::string& key_blob,
                         const std::string& data_to_sign,
                         std::string* signature) {
   CHECK(signature);
+  if (!InitializeContextHandle(__func__)) {
+    return false;
+  }
   if (!SetupSrk()) {
     LOG(ERROR) << "SRK is not ready.";
     return false;
@@ -592,6 +603,9 @@ bool TpmUtilityV1::QuotePCR(uint32_t pcr_index,
                             std::string* quoted_pcr_value,
                             std::string* quoted_data,
                             std::string* quote) {
+  if (!InitializeContextHandle(__func__)) {
+    return false;
+  }
   // Load the Storage Root Key.
   TSS_RESULT result;
   if (!SetupSrk()) {
@@ -682,6 +696,9 @@ bool TpmUtilityV1::IsQuoteForPCR(const std::string& quoted_pcr_value,
 }
 
 bool TpmUtilityV1::ReadPCR(uint32_t pcr_index, std::string* pcr_value) {
+  if (!InitializeContextHandle(__func__)) {
+    return false;
+  }
   UINT32 pcr_len = 0;
   ScopedTssMemory pcr_value_buffer(context_handle_);
   TSS_RESULT result = Tspi_TPM_PcrRead(tpm_handle_, pcr_index, &pcr_len,
@@ -940,6 +957,9 @@ bool TpmUtilityV1::SetupSrk() {
   }
   if (srk_handle_) {
     return true;
+  }
+  if (!InitializeContextHandle(__func__)) {
+    return false;
   }
   srk_handle_.reset(context_handle_, 0);
   if (!LoadSrk(context_handle_, &srk_handle_)) {
@@ -1380,6 +1400,17 @@ bool TpmUtilityV1::MakeIdentity(std::string* identity_public_key_der,
 bool TpmUtilityV1::GetRsuDeviceId(std::string* rsu_device_id) {
   LOG(ERROR) << __func__ << ": Not implemented.";
   return false;
+}
+
+bool TpmUtilityV1::InitializeContextHandle(const std::string& consumer_name) {
+  if (!static_cast<TSS_HCONTEXT>(context_handle_) || !tpm_handle_) {
+    context_handle_.reset();
+    if (!ConnectContextAsUser(&context_handle_, &tpm_handle_)) {
+      LOG(ERROR) << __func__ << ": Failed to connect to the TPM.";
+      return false;
+    }
+  }
+  return true;
 }
 
 }  // namespace attestation
