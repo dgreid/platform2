@@ -34,7 +34,6 @@ const BASE_COMMANDS: &[&str] = &[
     "memory_test",
     "modem",
     "network_diag",
-    "newblue",
     "p2p_update",
     "ping",
     "rlz",

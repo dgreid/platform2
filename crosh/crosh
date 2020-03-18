@@ -639,62 +639,6 @@ cmd_cras() (
   esac
 )
 
-USAGE_newblue='< status | enable | disable >'
-HELP_newblue='Set the preference of enabling/disabling the use of Newblue
-Bluetooth stack. In order for the preference to take effect, please login as
-the owner account and go to chrome://flags to enable the "Newblue" flag and
-reboot the device.
-'
-cmd_newblue() (
-  if [ $# -gt 1 ]; then
-    help "unexpected number of argument"
-    return 1
-  fi
-
-  local enabled reply
-
-  case "$1" in
-    status|"")
-      reply="$(dbus-send --system --type=method_call --print-reply \
-          --dest=org.bluez /org/bluez \
-          org.chromium.BluetoothExperimental.GetNewblueEnabled 2>&1)"
-
-      if [ $? -ne 0 ]; then
-        echo "ERROR: querying newblue status failed"
-        echo "${reply}"
-        return 1
-      fi
-
-      # reply will look like this
-      # method return time=xxx sender:yyy ... reply_serial=z string "enabled"
-      # use sed to extract part between the quotes
-      echo "${reply}" | sed -n -E '$s/.*string "(.*)"/\1/p'
-      return
-      ;;
-    enable)
-      enabled="true"
-      ;;
-    disable)
-      enabled="false"
-      ;;
-    *)
-      help "unknown option $1"
-      return 1
-      ;;
-  esac
-
-  reply="$(dbus-send --system --print-reply --type=method_call \
-      --dest=org.bluez /org/bluez \
-      org.chromium.BluetoothExperimental.SetNewblueEnabled \
-      "boolean:${enabled}" 2>&1)"
-
-  if [ $? -ne 0 ]; then
-    echo "ERROR: setting newblue status failed"
-    echo "${reply}"
-    return 1
-  fi
-)
-
 # Set the help string so crosh can discover us automatically.
 HELP_ff_debug=''
 EXEC_ff_debug='/usr/bin/ff_debug'
