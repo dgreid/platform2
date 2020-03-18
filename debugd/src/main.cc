@@ -9,6 +9,7 @@
 #include <base/command_line.h>
 #include <base/logging.h>
 #include <brillo/daemons/dbus_daemon.h>
+#include <brillo/flag_helper.h>
 #include <brillo/syslog_logging.h>
 #include <chromeos/dbus/service_constants.h>
 #include <chromeos/libminijail.h>
@@ -153,8 +154,13 @@ class Daemon : public brillo::DBusServiceDaemon {
 }  // namespace
 
 int main(int argc, char* argv[]) {
-  base::CommandLine::Init(argc, argv);
+  brillo::FlagHelper::Init(argc, argv, "CrOS debug daemon");
   brillo::InitLog(brillo::kLogToSyslog | brillo::kLogToStderrIfTty);
+  if (argc != 1) {
+    LOG(ERROR) << "debugd takes no arguments";
+    return 1;
+  }
+
   enter_vfs_namespace();
   Daemon().Run();
   return 0;
