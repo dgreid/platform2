@@ -4,7 +4,15 @@
 # found in the LICENSE file.
 
 user=root
-owner_id="$(cryptohome --action=status | jq -r '.mounts[0].owner')"
+owner_id="$(dbus-send \
+  --system \
+  --dest=org.chromium.SessionManager \
+  --print-reply \
+  --type=method_call \
+  /org/chromium/SessionManager \
+  org.chromium.SessionManagerInterface.RetrievePrimarySession \
+  | awk 'NR==3' \
+  | cut -d "\"" -f2)"
 if [ -z "${owner_id}" ]; then
   echo "$0: Could not connect, cannot get owner_id" >&2
   exit 1
