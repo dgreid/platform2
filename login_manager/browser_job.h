@@ -22,6 +22,8 @@
 #include <base/optional.h>
 #include <base/time/time.h>
 
+#include "login_manager/chrome_setup.h"
+
 namespace login_manager {
 
 class FileChecker;
@@ -98,6 +100,9 @@ class BrowserJob : public BrowserJobInterface {
   struct Config {
     bool isolate_guest_session;
     bool isolate_regular_session;
+    // If the board we are on needs a particular Chrome crash handler, it is
+    // indicated here.
+    BoardCrashHandler crash_handler = kChooseRandomly;
     // Put the browser process tree in the specified non-root mount namespace.
     base::Optional<base::FilePath> chrome_mount_ns_path;
   };
@@ -145,6 +150,10 @@ class BrowserJob : public BrowserJobInterface {
   // system boots. Not passed when Chrome is restarted after signout.
   static const char kFirstExecAfterBootFlag[];
 
+  // Flags to select a Chrome crash handler.
+  static const char kForceCrashpadFlag[];
+  static const char kForceBreakpadFlag[];
+
   // DeviceStartUpFlags policy and user flags are set as |extra_arguments_|.
   // After kUseExtraArgsRuns in kRestartWindowSeconds, drop |extra_arguments_|
   // in the restarted job in the hope that the startup crash stops.
@@ -156,6 +165,9 @@ class BrowserJob : public BrowserJobInterface {
   static const time_t kRestartWindowSeconds;
 
  private:
+  // Select which crash handler we want Chrome to use: crashpad or breakpad.
+  void SetChromeCrashHandler(std::vector<std::string>* args) const;
+
   // Arguments to pass to exec.
   std::vector<std::string> arguments_;
 

@@ -384,11 +384,6 @@ void AddSystemFlags(ChromiumCommandBuilder* builder) {
     builder->AddArg("--register-max-dark-suspend-delay");
   }
 
-  // Breakpad doesn't work on some platforms, specifically kukui. Force
-  // crashpad on those platforms.
-  if (builder->UseFlagIsSet("force_crashpad"))
-    builder->AddArg("--enable-crashpad");
-
   // Some platforms have SMT enabled by default.
   if (builder->UseFlagIsSet("scheduler_configuration_performance"))
     builder->AddArg("--scheduler-configuration-default=performance");
@@ -739,14 +734,33 @@ void SetUpAllowAmbientEQFlag(ChromiumCommandBuilder* builder,
   builder->AddFeatureEnableOverride("AllowAmbientEQ");
 }
 
+void SelectCrashHandler(ChromiumCommandBuilder* builder,
+                        BoardCrashHandler* crash_handler_out) {
+  const bool has_force_crashpad = builder->UseFlagIsSet("force_crashpad");
+  const bool has_force_breakpad = builder->UseFlagIsSet("force_breakpad");
+  if (has_force_crashpad) {
+    if (has_force_breakpad) {
+      // Warn the foolish humans who got the USE flags wrong.
+      LOG(ERROR) << "Both force_crashpad and force_breakpad USE flags present";
+    }
+    *crash_handler_out = kAlwaysUseCrashpad;
+  } else if (has_force_breakpad) {
+    *crash_handler_out = kAlwaysUseBreakpad;
+  } else {
+    *crash_handler_out = kChooseRandomly;
+  }
+}
+
 void PerformChromeSetup(brillo::CrosConfigInterface* cros_config,
                         bool* is_developer_end_user_out,
                         std::map<std::string, std::string>* env_vars_out,
                         std::vector<std::string>* args_out,
-                        uid_t* uid_out) {
+                        uid_t* uid_out,
+                        BoardCrashHandler* crash_handler_out) {
   DCHECK(env_vars_out);
   DCHECK(args_out);
   DCHECK(uid_out);
+  DCHECK(crash_handler_out);
 
   ChromiumCommandBuilder builder;
   std::set<std::string> disallowed_prefixes;
@@ -765,6 +779,7 @@ void PerformChromeSetup(brillo::CrosConfigInterface* cros_config,
   AddPluginVmFlags(&builder);
   AddEnterpriseFlags(&builder);
   AddVmodulePatterns(&builder);
+  SelectCrashHandler(&builder, crash_handler_out);
 
   // Apply any modifications requested by the developer.
   if (builder.is_developer_end_user()) {

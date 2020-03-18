@@ -59,6 +59,17 @@ extern const char kAllowAmbientEQField[];
 // AllowAmbientEQ feature to enable on Chrome.
 extern const char kAllowAmbientEQFeature[];
 
+// Does this board require us to use a particular crash handler for Chrome?
+enum BoardCrashHandler {
+  // Breakpad doesn't work on this board, always use crashpad.
+  kAlwaysUseCrashpad,
+  // Crashpad doesn't work on this board, always use breakpad.
+  kAlwaysUseBreakpad,
+  // Both crash handlers work, so do the experiment where we select the
+  // crash handler randomly.
+  kChooseRandomly
+};
+
 // Initializes a ChromiumCommandBuilder and performs additional Chrome-specific
 // setup. Returns environment variables that the caller should export for Chrome
 // and arguments that it should pass to the Chrome binary, along with the UID
@@ -75,7 +86,8 @@ void PerformChromeSetup(brillo::CrosConfigInterface* cros_config,
                         bool* is_developer_end_user_out,
                         std::map<std::string, std::string>* env_vars_out,
                         std::vector<std::string>* args_out,
-                        uid_t* uid_out);
+                        uid_t* uid_out,
+                        BoardCrashHandler* crash_handler_out);
 
 // Add flags to specify the wallpaper to use. This is called by
 // PerformChromeSetup and only present in the header for testing.
@@ -129,6 +141,14 @@ void SetUpArcBuildPropertiesFlag(chromeos::ui::ChromiumCommandBuilder* builder,
 // |cros_config|. Do not add flag is allow-ambient-eq is set to 0 or not set.
 void SetUpAllowAmbientEQFlag(chromeos::ui::ChromiumCommandBuilder* builder,
                              brillo::CrosConfigInterface* cros_config);
+
+// Determine which Chrome crash handler this board wants to use. We pass this
+// information to BrowserJob instead of just setting the command line flags
+// because some boards are running an experiment where they switch between
+// crashpad and breakpad on each Chrome restart, and because some tast tests
+// opt out of the experiment and force a particular crash handler.
+void SelectCrashHandler(chromeos::ui::ChromiumCommandBuilder* builder,
+                        BoardCrashHandler* crash_handler_out);
 
 }  // namespace login_manager
 

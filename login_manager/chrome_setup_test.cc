@@ -7,6 +7,10 @@
 #include <set>
 
 #include <base/bind.h>
+#include <base/files/file.h>
+#include <base/files/file_path.h>
+#include <base/files/file_util.h>
+#include <base/files/scoped_temp_dir.h>
 #include <base/json/json_writer.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_split.h>
@@ -14,6 +18,7 @@
 #include <base/values.h>
 #include <chromeos-config/libcros_config/fake_cros_config.h>
 #include <chromeos/ui/chromium_command_builder.h>
+#include <chromeos/ui/util.h>
 #include <gtest/gtest.h>
 
 using chromeos::ui::ChromiumCommandBuilder;
@@ -236,4 +241,57 @@ TEST_F(ChromeSetupTest, TestAllowAmbientEQ) {
   ASSERT_EQ(login_manager::kAllowAmbientEQFeature, GetFlag(argv, kFeatureFlag));
 }
 
+void InitWithUseFlag(std::string flag,
+                     base::ScopedTempDir* temp_dir,
+                     ChromiumCommandBuilder* builder) {
+  ASSERT_TRUE(temp_dir->CreateUniqueTempDir());
+  base::FilePath test_dir = temp_dir->GetPath();
+  builder->set_base_path_for_testing(test_dir);
+  base::FilePath use_flags_path = chromeos::ui::util::GetReparentedPath(
+      ChromiumCommandBuilder::kUseFlagsPath, test_dir);
+  base::File::Error error;
+  CHECK(base::CreateDirectoryAndGetError(use_flags_path.DirName(), &error))
+      << error;
+  flag += "\n";
+  if (base::WriteFile(use_flags_path, flag.c_str(), flag.length()) !=
+      flag.length()) {
+    PLOG(FATAL) << "Could not write to " << use_flags_path.value() << ": ";
+  }
+
+  // Need a lsb-release file or Init will fail.
+  base::FilePath lsb_path = chromeos::ui::util::GetReparentedPath(
+      ChromiumCommandBuilder::kLsbReleasePath, test_dir);
+  CHECK(base::CreateDirectoryAndGetError(lsb_path.DirName(), &error)) << error;
+  if (base::WriteFile(lsb_path, "", 0) != 0) {
+    PLOG(FATAL) << "Could not write to " << lsb_path.value() << ": ";
+  }
+  CHECK(builder->Init());
+}
+
+TEST(TestSelectCrashHandler, Crashpad) {
+  base::ScopedTempDir temp_dir;
+  ChromiumCommandBuilder builder;
+  InitWithUseFlag("force_crashpad", &temp_dir, &builder);
+  BoardCrashHandler crash_handler = kChooseRandomly;
+  SelectCrashHandler(&builder, &crash_handler);
+  EXPECT_EQ(crash_handler, kAlwaysUseCrashpad);
+}
+
+TEST(TestSelectCrashHandler, Breakpad) {
+  base::ScopedTempDir temp_dir;
+  ChromiumCommandBuilder builder;
+  InitWithUseFlag("force_breakpad", &temp_dir, &builder);
+  BoardCrashHandler crash_handler = kChooseRandomly;
+  SelectCrashHandler(&builder, &crash_handler);
+  EXPECT_EQ(crash_handler, kAlwaysUseBreakpad);
+}
+
+TEST(TestSelectCrashHandler, ChooseRandomly) {
+  base::ScopedTempDir temp_dir;
+  ChromiumCommandBuilder builder;
+  InitWithUseFlag("other_use_flag", &temp_dir, &builder);
+  BoardCrashHandler crash_handler = kAlwaysUseCrashpad;
+  SelectCrashHandler(&builder, &crash_handler);
+  EXPECT_EQ(crash_handler, kChooseRandomly);
+}
 }  // namespace login_manager

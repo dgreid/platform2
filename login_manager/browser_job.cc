@@ -17,6 +17,7 @@
 #include <utility>
 
 #include <base/logging.h>
+#include <base/rand_util.h>
 #include <base/stl_util.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_util.h>
@@ -35,6 +36,8 @@ const char BrowserJobInterface::kLoginProfileFlag[] = "--login-profile=";
 const char BrowserJobInterface::kCrashLoopBeforeFlag[] = "--crash-loop-before=";
 
 const char BrowserJob::kFirstExecAfterBootFlag[] = "--first-exec-after-boot";
+const char BrowserJob::kForceCrashpadFlag[] = "--enable-crashpad";
+const char BrowserJob::kForceBreakpadFlag[] = "--no-enable-crashpad";
 
 const int BrowserJob::kUseExtraArgsRuns = 3;
 static_assert(BrowserJob::kUseExtraArgsRuns > 1,
@@ -301,6 +304,10 @@ std::vector<std::string> BrowserJob::ExportArgv() const {
                      extra_one_time_arguments_.end());
   }
 
+  // Must be done after extra_arguments_ is inserted; extra_arguments_ may
+  // override our normal choices.
+  SetChromeCrashHandler(&to_return);
+
   // Chrome doesn't support repeated switches in most cases. Merge switches
   // containing comma-separated values that may be supplied via multiple sources
   // (e.g. chrome_setup.cc, chrome://flags, Telemetry).
@@ -343,6 +350,67 @@ bool BrowserJob::ShouldDropExtraArgumentsAndEnvironmentVariables() const {
   return (start_time_with_extra_args != 0 &&
           system_->time(nullptr) - start_time_with_extra_args <
               kRestartWindowSeconds);
+}
+
+void BrowserJob::SetChromeCrashHandler(std::vector<std::string>* args) const {
+  // We allow tast tests and developers to pass in a fake flag (not actually
+  // recognized by Chrome) "--no-enable-crashpad" to force breakpad. If the
+  // tast test or dev passes in "--no-enable-crashpad" or "--enable-crashpad",
+  // don't override it since they may be testing a fix that doesn't match the
+  // USE flags.
+  //
+  // Otherwise, if the USE flag force_crashpad is present, pass
+  // "--enabled-crashpad". If the USE flag force_breakpad is present, pass
+  // "--no-enable-crashpad" for consistency.
+  //
+  // If none of the above, set up an experiment where we pass --enable-crashpad
+  // 10% of the time. We want to see if crashpad is getting about the same
+  // number of crashes as breakpad.
+  //
+  // This is done inside BrowserJob instead of in chrome_setup.cc because tast
+  // tests change this setting on each test, and because if we are in the
+  // experiment, we want to reselect a crash handler on each restart.
+  bool has_force_breakpad = false;
+  bool has_force_crashpad = false;
+  for (const std::string& arg : *args) {
+    if (arg == kForceCrashpadFlag) {
+      has_force_crashpad = true;
+    } else if (arg == kForceBreakpadFlag) {
+      has_force_breakpad = true;
+    }
+  }
+
+  if (has_force_crashpad || has_force_breakpad) {
+    if (has_force_crashpad && has_force_breakpad) {
+      // Will force crashpad; print warning so that the silly humans know about
+      // the problem.
+      LOG(ERROR) << "Both " << kForceCrashpadFlag << " and "
+                 << kForceBreakpadFlag << " set.";
+    }
+    // Let tast tests and chrome_dev.conf override USE flags.
+    return;
+  }
+
+  if (config_.crash_handler == kAlwaysUseCrashpad) {
+    args->emplace_back(kForceCrashpadFlag);
+    return;
+  }
+
+  if (config_.crash_handler == kAlwaysUseBreakpad) {
+    args->emplace_back(kForceBreakpadFlag);
+    return;
+  }
+
+  if (config_.crash_handler != kChooseRandomly) {
+    LOG(ERROR) << "Unknown crash_handler "
+               << static_cast<int>(config_.crash_handler);
+  }
+
+  if (base::RandInt(0, 9) == 0) {
+    args->emplace_back(kForceCrashpadFlag);
+  } else {
+    args->emplace_back(kForceBreakpadFlag);
+  }
 }
 
 }  // namespace login_manager

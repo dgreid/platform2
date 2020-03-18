@@ -172,8 +172,10 @@ int main(int argc, char* argv[]) {
   map<string, string> env_var_map;
   vector<string> args, env_vars;
   uid_t uid = 0;
+  login_manager::BoardCrashHandler crash_handler =
+      login_manager::kChooseRandomly;
   PerformChromeSetup(cros_config.get(), &is_developer_end_user, &env_var_map,
-                     &args, &uid);
+                     &args, &uid, &crash_handler);
   command.insert(command.end(), args.begin(), args.end());
   for (const auto& it : env_var_map)
     env_vars.push_back(it.first + "=" + it.second);
@@ -227,6 +229,7 @@ int main(int argc, char* argv[]) {
 
   // Job configuration.
   BrowserJob::Config config;
+  config.crash_handler = crash_handler;
   base::Optional<base::FilePath> ns_path;
   // TODO(crbug.com/188605, crbug.com/216789): Extend user session isolation and
   // make it stricter.
