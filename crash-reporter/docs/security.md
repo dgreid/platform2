@@ -59,6 +59,43 @@ So we should be able to change all of these from `root:root` to a new dedicated
 account like `crash:crash`, as well as using that account for dropping privs.
 This is tracked in https://crbug.com/441427.
 
+## Cryptohome Protected Crash Reports
+
+Some crash report are considered to be especially likely to contain sensitive
+user information and are stored in the cryptohome. Right now these are stored in
+`/home/user/<user_hash>/crash`, but `/home/user/<user_hash>` is only traversable
+by user `chronos` and group `chronos-access`. This means that anything writing
+into that spool directory currently must also acquire permission to read large
+parts of the user data stored in the cryptohome, which limits our ability to
+have lower privilege processes record crashes here.
+
+Worse, it creates a potential privilege escalation vector because `crash_sender`
+may end up processing reports with a higher privilege level then is required to
+write to the directory. This means a lower privileged process could set up the
+spool directory in an unexpected way to trick `crash_sender` by e.g. creating
+symlinks, or modifying it at the same time as `crash_sender` is accessing
+it. This has been a source of many historical vulnerabilities.
+
+Fortunately, we now have another set of paths that form part of the cryptohome,
+mounted under `/home/root/<user_hash>`. Directories under this path are created
+there by `cryptohomed` and bind mounted to `/var/daemon-store/*/<user_hash>`,
+which can be traversed to by any process. Therefore, we can create a new `crash`
+sub-directory owned by `crash:crash-user-access` and processes that need to
+produce encrypted crash reports can be given access to only this path by making
+them members of `crash-user-access`. `crash_sender` will also be able to access
+this directory while having strictly less privilege then any process that
+creates crash reports. The new `/home/root/<user_hash>/crash` directory should
+eventually replace the `/home/user/<user_hash>/crash` directory entirely.
+
+This leaves some residual risk that one crash reporting process will compromise
+another via this shared directory. Crash reporters interact with it in two
+ways. Once by reading the filenames to determine if the directory is full, which
+is unlikely to be exploitable by writing things to the directory, and later by
+writing out files into the directory. This could be exploited by tricking the
+process into writing to a symlink, but most (possibly all) writes to spool
+directories open files using O_CREAT|O_EXCL to ensure they only write to newly
+created ordinary files.
+
 ## Historical Vulnerabilities
 
 Here we cover some vulnerabilities that were found in crash-reporter.

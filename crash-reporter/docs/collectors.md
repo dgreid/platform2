@@ -232,6 +232,18 @@ otherwise unceremoniously killed.
     Any output from them will automatically be attached to the crash report as
     a `.log` file.
 
+## vm_collector
+
+Used to process crash reports generated inside VMs. This is mostly a wrapper
+around writing the right collection of files to the right directory, as most
+useful crash information has to be gathered inside the VM, but it has
+responsibility for gathering any VM logs stored on the host.
+
+This collector writes to the new `/home/root/<user_hash>/crash` spool directory,
+as the daemons that interact directly with VMs to get crash information
+intentionally don't have the permissions required to access either of the
+existing spool directories.
+
 # Anomaly Detectors
 
 The [anomaly_detector] service is spawned early during boot via

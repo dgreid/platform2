@@ -240,6 +240,10 @@ be discarded.
     in and so it will be encrypted.
     If the crashed process was running as any other user, we enqueue the crash
     in `/var/spool/crash`.
+*   In the future, encrypted crash reports will go to
+    `/home/root/<user_hash>/crash/`. This directory is still part of the
+    cryptohome, but can be accessed without running as chronos. This will allow
+    both creating and uploading crash reports with lower privileges.
 *   The name of the crash is used to determine if we should gather additional
     diagnostic information.
     The file `/etc/crash_reporter.conf` contains a list of executables and shell
@@ -263,6 +267,25 @@ be discarded.
     That daemon generates and emits user metrics to Chrome.
 *   These crash reports are sent by a crash sending agent also used by kernel
     crash collector.
+
+## Termina virtual machine crashes
+
+*   Chrome OS has over time grown a number of virtual machines, including
+    Termina, a VM for running Linux applications the Chrome OS won't support
+    natively. The user space crash handling described above won't catch any
+    crashes here.
+*   Inside Termina we gather information about crashes using the normal
+    user space crash flow described above.
+*   Once the crash information is gathered inside Termina, instead of writing it
+    to a spool directory for the crash sender, it gets sent out of Termina to a
+    daemon (cicerone) running on the host.
+*   This daemon then invokes a VM collector on the host and passes it the
+    information from Termina, which writes out the crash report.
+*   Cicerone has intentionally limited privileges due to its interaction with
+    untrusted VMs, which means it (and any process it invokes) can't write
+    directly to the regular spool directories. Instead we write the crash report
+    to `/home/root/<user_hash>/crash/` which only requires being a member of the
+    group `crash-user-access`.
 
 ## Kernel crashes
 
@@ -300,8 +323,9 @@ be discarded.
 
 ## Crash sending agent
 
-*   Runs hourly and checks `/var/log/crash` and `/home/chronos/user/logs/crash`
-    for reports, sends those, and removes them if successfully sent.
+*   Runs hourly and checks `/var/spool/crash`, `/home/chronos/user/crash`, and
+    `/home/root/<user_hash>/crash` for reports, sends those, and removes them if
+    successfully sent.
 *   Rate limits to 32 crash diagnostics uploads in 24 hours across entire
     system.
 *   We rely upon Google crash server to collect user space crash diagnostics for
