@@ -46,9 +46,16 @@ base::Time Volume::Time::ToBaseTime() const {
   exploded.minute = (time >> 5) & 0x3f;
   exploded.second = (time & 0x1f) * 2;
 
-  base::Time time;
-  CHECK(base::Time::FromLocalExploded(exploded, &time));
-  return time;
+  base::Time base_time;
+  if (!base::Time::FromLocalExploded(exploded, &base_time)) {
+    // In some cases, probably on DST switching timing, FromLocalExploded
+    // may fail. In such a failure case, FromLocalExploded will return
+    // base::Time(0) as its result, so this function still use it
+    // with logging for the further investigation.
+    LOG(ERROR) << "Time::FromLocalExploded failed with date: " << date
+               << ", time: " << time;
+  }
+  return base_time;
 }
 
 Volume::FileReader::FileReader(Volume* volume,
