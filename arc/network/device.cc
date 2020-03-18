@@ -65,10 +65,6 @@ const std::string& Device::tap_ifname() const {
   return tap_;
 }
 
-bool Device::UsesDefaultInterface() const {
-  return options_.use_default_interface;
-}
-
 std::ostream& operator<<(std::ostream& stream, const Device& device) {
   stream << "{ ifname: " << device.phys_ifname_
          << ", bridge_ifname: " << device.host_ifname_ << ", bridge_ipv4_addr: "

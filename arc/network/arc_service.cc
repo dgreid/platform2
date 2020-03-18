@@ -362,7 +362,6 @@ void ArcService::AddDevice(const std::string& ifname) {
       // once IPv6 is enabled on cellular networks in shill.
       .ipv6_enabled =
           (itype == InterfaceType::ETHERNET || itype == InterfaceType::WIFI),
-      .use_default_interface = false,
   };
 
   auto config = AcquireConfig(ifname);
@@ -502,7 +501,6 @@ bool ArcService::ContainerImpl::Start(uint32_t pid) {
   Device::Options opts{
       .fwd_multicast = false,
       .ipv6_enabled = false,
-      .use_default_interface = false,
   };
   auto config = MakeArcConfig(addr_mgr_, AddressManager::Guest::ARC);
 
@@ -677,7 +675,6 @@ bool ArcService::VmImpl::Start(uint32_t cid) {
   Device::Options opts{
       .fwd_multicast = true,
       .ipv6_enabled = true,
-      .use_default_interface = true,
   };
   auto config = MakeArcConfig(addr_mgr_, AddressManager::Guest::VM_ARC);
 

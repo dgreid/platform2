@@ -81,13 +81,6 @@ class Device {
   struct Options {
     bool fwd_multicast;
     bool ipv6_enabled;
-
-    // Indicates this device must track shill's default interface.
-    // TODO(garrick): Further qualify if this interface is a physical interface
-    // or an ARC VPN to match the distinction shill is making; specifically, ARC
-    // N should not loop back into itself but for Termina this should flow over
-    // the VPN.
-    bool use_default_interface;
   };
 
   // |phys_ifname| corresponds either to the physical interface provided by
@@ -111,8 +104,6 @@ class Device {
 
   void set_tap_ifname(const std::string& tap);
   const std::string& tap_ifname() const;
-
-  bool UsesDefaultInterface() const;
 
   friend std::ostream& operator<<(std::ostream& stream, const Device& device);
 

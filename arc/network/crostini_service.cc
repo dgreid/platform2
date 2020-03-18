@@ -174,7 +174,6 @@ std::unique_ptr<Device> CrostiniService::AddTAP(bool is_termina,
   Device::Options opts{
       .fwd_multicast = true,
       .ipv6_enabled = true,
-      .use_default_interface = true,
   };
 
   return std::make_unique<Device>(tap, tap, "", std::move(config), opts);

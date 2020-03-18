@@ -242,9 +242,7 @@ class ContainerImplTest : public testing::Test {
                                      const std::string& host,
                                      const std::string& guest,
                                      bool is_arcvm = false) {
-    Device::Options opt{
-        .use_default_interface = is_arcvm,
-    };
+    Device::Options opt{};
     auto subnet = addr_mgr_->AllocateIPv4Subnet(AddressManager::Guest::ARC_NET);
     auto addr0 = subnet->AllocateAtOffset(0);
     auto addr1 = subnet->AllocateAtOffset(1);
