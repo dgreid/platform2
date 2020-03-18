@@ -73,6 +73,8 @@ class SmbFilesystem : public Filesystem {
   }
 
   // Filesystem overrides.
+  void StatFs(std::unique_ptr<StatFsRequest> request,
+              fuse_ino_t inode) override;
   void Lookup(std::unique_ptr<EntryRequest> request,
               fuse_ino_t parent_inode,
               const std::string& name) override;
@@ -137,6 +139,7 @@ class SmbFilesystem : public Filesystem {
 
  private:
   // Filesystem implementations that execute on |samba_thread_|.
+  void StatFsInternal(std::unique_ptr<StatFsRequest> request, fuse_ino_t inode);
   void LookupInternal(std::unique_ptr<EntryRequest> request,
                       fuse_ino_t parent_inode,
                       const std::string& name);
@@ -257,6 +260,7 @@ class SmbFilesystem : public Filesystem {
   smbc_rename_fn smbc_rename_ctx_ = nullptr;
   smbc_rmdir_fn smbc_rmdir_ctx_ = nullptr;
   smbc_stat_fn smbc_stat_ctx_ = nullptr;
+  smbc_statvfs_fn smbc_statvfs_ctx_ = nullptr;
   smbc_telldir_fn smbc_telldir_ctx_ = nullptr;
   smbc_unlink_fn smbc_unlink_ctx_ = nullptr;
   smbc_write_fn smbc_write_ctx_ = nullptr;

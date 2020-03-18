@@ -110,6 +110,7 @@ SmbFilesystem::SmbFilesystem(Options options)
   smbc_rename_ctx_ = smbc_getFunctionRename(context_);
   smbc_rmdir_ctx_ = smbc_getFunctionRmdir(context_);
   smbc_stat_ctx_ = smbc_getFunctionStat(context_);
+  smbc_statvfs_ctx_ = smbc_getFunctionStatVFS(context_);
   smbc_telldir_ctx_ = smbc_getFunctionTelldir(context_);
   smbc_unlink_ctx_ = smbc_getFunctionUnlink(context_);
   smbc_write_ctx_ = smbc_getFunctionWrite(context_);
@@ -275,6 +276,42 @@ void SmbFilesystem::GetUserAuth(SMBCCTX* context,
   if (fs->credentials_->password) {
     CopyPassword(*fs->credentials_->password, password, password_len);
   }
+}
+
+void SmbFilesystem::StatFs(std::unique_ptr<StatFsRequest> request,
+                           fuse_ino_t inode) {
+  samba_thread_.task_runner()->PostTask(
+      FROM_HERE,
+      base::BindOnce(&SmbFilesystem::StatFsInternal, base::Unretained(this),
+                     std::move(request), inode));
+}
+
+void SmbFilesystem::StatFsInternal(std::unique_ptr<StatFsRequest> request,
+                                   fuse_ino_t inode) {
+  if (request->IsInterrupted()) {
+    return;
+  }
+
+  std::string share_file_path = ShareFilePathFromInode(inode);
+  struct statvfs smb_statvfs = {0};
+  // libsmbclient's statvfs() takes a non-const char* as path, hence the
+  // address-of-first-element pattern/hack.
+  int error = smbc_statvfs_ctx_(context_, &share_file_path[0], &smb_statvfs);
+  if (error < 0) {
+    request->ReplyError(errno);
+    return;
+  }
+
+  if ((smb_statvfs.f_flag & SMBC_VFS_FEATURE_NO_UNIXCIFS) &&
+      smb_statvfs.f_frsize) {
+    // If the server does not support the UNIX CIFS extensions, libsmbclient
+    // incorrectly fills out the value of f_frsize. Instead of providing the
+    // size in bytes, it provides it as a multiple of f_bsize. See the
+    // implementation of SMBC_fstatvfs_ctx() in the Samba source tree for
+    // details.
+    smb_statvfs.f_frsize *= smb_statvfs.f_bsize;
+  }
+  request->ReplyStatFs(smb_statvfs);
 }
 
 void SmbFilesystem::Lookup(std::unique_ptr<EntryRequest> request,

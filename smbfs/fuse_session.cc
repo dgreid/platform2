@@ -36,6 +36,10 @@ class FuseSession::Impl {
     static_cast<Impl*>(userdata)->Destroy();
   }
 
+  static void FuseStatFs(fuse_req_t request, fuse_ino_t inode) {
+    static_cast<Impl*>(fuse_req_userdata(request))->StatFs(request, inode);
+  }
+
   static void FuseLookup(fuse_req_t request,
                          fuse_ino_t parent_inode,
                          const char* name) {
@@ -165,6 +169,11 @@ class FuseSession::Impl {
   void Destroy() {
     VLOG(1) << "FuseSession::Destroy";
     session_->RequestStop();
+  }
+
+  void StatFs(fuse_req_t request, fuse_ino_t inode) {
+    VLOG(1) << "FuseSession::StatFs inode: " << inode;
+    fs_->StatFs(std::make_unique<StatFsRequest>(request), inode);
   }
 
   void Lookup(fuse_req_t request, fuse_ino_t parent_inode, const char* name) {
@@ -338,6 +347,7 @@ bool FuseSession::Start(base::OnceClosure stop_callback) {
 
   fuse_lowlevel_ops ops = {0};
   ops.destroy = &Impl::FuseDestroy;
+  ops.statfs = &Impl::FuseStatFs;
   ops.lookup = &Impl::FuseLookup;
   ops.forget = &Impl::FuseForget;
   ops.getattr = &Impl::FuseGetAttr;

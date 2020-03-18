@@ -12,6 +12,11 @@ Filesystem::Filesystem() = default;
 
 Filesystem::~Filesystem() = default;
 
+void Filesystem::StatFs(std::unique_ptr<StatFsRequest> request,
+                        fuse_ino_t inode) {
+  request->ReplyError(ENOSYS);
+}
+
 void Filesystem::Lookup(std::unique_ptr<EntryRequest> request,
                         fuse_ino_t parent_inode,
                         const std::string& name) {

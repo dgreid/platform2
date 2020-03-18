@@ -44,6 +44,13 @@ void SimpleRequest::ReplyOk() {
   replied_ = true;
 }
 
+void StatFsRequest::ReplyStatFs(const struct statvfs& st) {
+  DCHECK(!replied_);
+
+  fuse_reply_statfs(req_, &st);
+  replied_ = true;
+}
+
 void AttrRequest::ReplyAttr(const struct stat& attr, double attr_timeout) {
   DCHECK(!replied_);
 

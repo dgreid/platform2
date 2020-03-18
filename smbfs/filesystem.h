@@ -23,6 +23,7 @@ class Filesystem {
  public:
   virtual ~Filesystem();
 
+  virtual void StatFs(std::unique_ptr<StatFsRequest> request, fuse_ino_t inode);
   virtual void Lookup(std::unique_ptr<EntryRequest> request,
                       fuse_ino_t parent_inode,
                       const std::string& name);

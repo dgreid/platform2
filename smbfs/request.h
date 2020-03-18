@@ -43,6 +43,13 @@ class SimpleRequest : public internal::BaseRequest {
   void ReplyOk();
 };
 
+// State of fuse requests that can be responded to with a statfs response.
+class StatFsRequest : public internal::BaseRequest {
+ public:
+  explicit StatFsRequest(fuse_req_t req) : internal::BaseRequest(req) {}
+  void ReplyStatFs(const struct statvfs& st);
+};
+
 // State of fuse requests that can be responded to with an attributes response.
 class AttrRequest : public internal::BaseRequest {
  public:
