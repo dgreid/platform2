@@ -1,0 +1,30 @@
+// Copyright 2020 The Chromium OS Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#ifndef DEBUGD_SRC_IPADDRS_TOOL_H_
+#define DEBUGD_SRC_IPADDRS_TOOL_H_
+
+#include <string>
+#include <vector>
+
+#include <base/macros.h>
+#include <brillo/variant_dictionary.h>
+
+namespace debugd {
+
+class IpAddrsTool {
+ public:
+  IpAddrsTool() = default;
+  ~IpAddrsTool() = default;
+
+  std::vector<std::string> GetIpAddresses(
+      const brillo::VariantDictionary& options);
+
+ private:
+  DISALLOW_COPY_AND_ASSIGN(IpAddrsTool);
+};
+
+}  // namespace debugd
+
+#endif  // DEBUGD_SRC_IPADDRS_TOOL_H_

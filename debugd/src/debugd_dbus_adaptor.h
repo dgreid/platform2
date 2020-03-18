@@ -31,6 +31,7 @@
 #include "debugd/src/dev_features_tool.h"
 #include "debugd/src/example_tool.h"
 #include "debugd/src/icmp_tool.h"
+#include "debugd/src/ipaddrs_tool.h"
 #include "debugd/src/log_tool.h"
 #include "debugd/src/memory_tool.h"
 #include "debugd/src/netif_tool.h"
@@ -84,6 +85,8 @@ class DebugdDBusAdaptor : public org::chromium::debugdAdaptor,
   void SystraceStart(const std::string& categories) override;
   void SystraceStop(const base::ScopedFD& outfd) override;
   std::string SystraceStatus() override;
+  std::vector<std::string> GetIpAddresses(
+      const brillo::VariantDictionary& options) override;
   std::vector<std::string> GetRoutes(
       const brillo::VariantDictionary& options) override;
   std::string GetNetworkStatus() override;
@@ -228,6 +231,7 @@ class DebugdDBusAdaptor : public org::chromium::debugdAdaptor,
       dev_features_tool_wrapper_;
   std::unique_ptr<ExampleTool> example_tool_;
   std::unique_ptr<ICMPTool> icmp_tool_;
+  std::unique_ptr<IpAddrsTool> ipaddrs_tool_;
   std::unique_ptr<LogTool> log_tool_;
   std::unique_ptr<MemtesterTool> memory_tool_;
   std::unique_ptr<NetifTool> netif_tool_;

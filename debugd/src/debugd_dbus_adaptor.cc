@@ -47,6 +47,7 @@ DebugdDBusAdaptor::DebugdDBusAdaptor(scoped_refptr<dbus::Bus> bus)
       std::make_unique<RestrictedToolWrapper<DevFeaturesTool>>(bus);
   example_tool_ = std::make_unique<ExampleTool>();
   icmp_tool_ = std::make_unique<ICMPTool>();
+  ipaddrs_tool_ = std::make_unique<IpAddrsTool>();
   log_tool_ = std::make_unique<LogTool>(bus);
   memory_tool_ = std::make_unique<MemtesterTool>();
   netif_tool_ = std::make_unique<NetifTool>();
@@ -140,6 +141,11 @@ void DebugdDBusAdaptor::SystraceStop(const base::ScopedFD& outfd) {
 
 std::string DebugdDBusAdaptor::SystraceStatus() {
   return systrace_tool_->Status();
+}
+
+std::vector<std::string> DebugdDBusAdaptor::GetIpAddresses(
+    const brillo::VariantDictionary& options) {
+  return ipaddrs_tool_->GetIpAddresses(options);
 }
 
 std::vector<std::string> DebugdDBusAdaptor::GetRoutes(

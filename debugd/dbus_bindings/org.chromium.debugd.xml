@@ -126,6 +126,23 @@
       </arg>
       <annotation name="org.chromium.DBus.Method.Kind" value="normal"/>
     </method>
+    <method name="GetIpAddresses">
+      <tp:docstring>
+        Returns the IP addresses.
+      </tp:docstring>
+      <arg name="options" type="a{sv}" direction="in">
+        <tp:docstring>
+          Options:
+            v6 (bool): True for IPv6.
+        </tp:docstring>
+      </arg>
+      <arg name="result" type="as" direction="out">
+        <tp:docstring>
+          The list of address output.
+        </tp:docstring>
+      </arg>
+      <annotation name="org.chromium.DBus.Method.Kind" value="simple"/>
+    </method>
     <method name="GetRoutes">
       <tp:docstring>
         Returns the routing table.

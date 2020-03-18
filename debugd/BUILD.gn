@@ -90,6 +90,7 @@ static_library("libdebugd") {
     "src/example_tool.cc",
     "src/helper_utils.cc",
     "src/icmp_tool.cc",
+    "src/ipaddrs_tool.cc",
     "src/log_tool.cc",
     "src/memory_tool.cc",
     "src/netif_tool.cc",
