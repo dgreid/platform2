@@ -67,6 +67,10 @@ rotate_file() {
     # Avoid creating an empty file if it does not exist to begin with
     return
   fi
+  if [ ! -s "${file}" ]; then
+    # Avoid creating an empty file if it's already empty.
+    return
+  fi
   local basename="${file%%.*}"
   local extension="${file#*.}"
   if [ "${basename}" = "${extension}" ]; then
