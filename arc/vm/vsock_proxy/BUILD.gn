@@ -35,10 +35,10 @@ static_library("vsock_proxy_lib") {
     "file_descriptor_util.cc",
     "fuse_mount.cc",
     "local_file.cc",
+    "message_stream.cc",
     "proxy_file_system.cc",
     "server_proxy.cc",
     "vsock_proxy.cc",
-    "vsock_stream.cc",
   ]
   configs += [ ":target_defaults" ]
   pkg_deps = [ "fuse" ]
@@ -63,9 +63,9 @@ if (use.test) {
     sources = [
       "file_descriptor_util_test.cc",
       "local_file_test.cc",
+      "message_stream_test.cc",
       "proxy_file_system_test.cc",
       "vsock_proxy_test.cc",
-      "vsock_stream_test.cc",
     ]
     configs += [
       "//common-mk:test",

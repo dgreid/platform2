@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "arc/vm/vsock_proxy/vsock_stream.h"
+#include "arc/vm/vsock_proxy/message_stream.h"
 
 #include <sys/socket.h>
 
@@ -18,7 +18,7 @@
 namespace arc {
 namespace {
 
-TEST(VSockStreamTest, ReadWrite) {
+TEST(MessageStreamTest, ReadWrite) {
   // Use a blocking socket pair instead of a vsock for testing.
   auto sockpair = CreateSocketPair(SOCK_STREAM);
   ASSERT_TRUE(sockpair.has_value());
@@ -30,12 +30,12 @@ TEST(VSockStreamTest, ReadWrite) {
   message.mutable_data()->set_handle(10);
   message.mutable_data()->set_blob("abcde");
   {
-    VSockStream stream(std::move(fd1));
+    MessageStream stream(std::move(fd1));
     ASSERT_TRUE(stream.Write(message));
   }
 
   arc_proxy::VSockMessage read_message;
-  ASSERT_TRUE(VSockStream(std::move(fd2)).Read(&read_message));
+  ASSERT_TRUE(MessageStream(std::move(fd2)).Read(&read_message));
   EXPECT_EQ(message.data().handle(), read_message.data().handle());
   EXPECT_EQ(message.data().blob(), read_message.data().blob());
 }

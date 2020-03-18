@@ -65,14 +65,14 @@ std::unique_ptr<LocalFile> CreateFile(base::ScopedFD fd,
 
 VSockProxy::VSockProxy(Delegate* delegate, base::ScopedFD vsock)
     : delegate_(delegate),
-      vsock_(std::move(vsock)),
+      message_stream_(std::move(vsock)),
       next_handle_(delegate_->GetType() == Type::SERVER ? 1 : -1),
       next_cookie_(delegate_->GetType() == Type::SERVER ? 1 : -1) {
-  // Note: this needs to be initialized after mWeakFactory, which is
-  // declared after mVSockController in order to destroy it first.
-  vsock_controller_ = base::FileDescriptorWatcher::WatchReadable(
-      vsock_.Get(), base::BindRepeating(&VSockProxy::OnVSockReadReady,
-                                        weak_factory_.GetWeakPtr()));
+  // Note: this needs to be initialized after weak_factory_, which is
+  // declared after message_watcher_ in order to destroy it first.
+  message_watcher_ = base::FileDescriptorWatcher::WatchReadable(
+      message_stream_.Get(), base::BindRepeating(&VSockProxy::OnVSockReadReady,
+                                                 weak_factory_.GetWeakPtr()));
 }
 
 VSockProxy::~VSockProxy() {
@@ -120,7 +120,7 @@ void VSockProxy::Connect(const base::FilePath& path, ConnectCallback callback) {
   request->set_cookie(cookie);
   request->set_path(path.value());
   pending_connect_.emplace(cookie, std::move(callback));
-  if (!vsock_.Write(message))
+  if (!message_stream_.Write(message))
     Stop();
 }
 
@@ -137,7 +137,7 @@ void VSockProxy::Pread(int64_t handle,
   request->set_count(count);
   request->set_offset(offset);
   pending_pread_.emplace(cookie, std::move(callback));
-  if (!vsock_.Write(message))
+  if (!message_stream_.Write(message))
     Stop();
 }
 
@@ -149,20 +149,20 @@ void VSockProxy::Fstat(int64_t handle, FstatCallback callback) {
   request->set_cookie(cookie);
   request->set_handle(handle);
   pending_fstat_.emplace(cookie, std::move(callback));
-  if (!vsock_.Write(message))
+  if (!message_stream_.Write(message))
     Stop();
 }
 
 void VSockProxy::Close(int64_t handle) {
   arc_proxy::VSockMessage message;
   message.mutable_close()->set_handle(handle);
-  if (!vsock_.Write(message))
+  if (!message_stream_.Write(message))
     Stop();
 }
 
 void VSockProxy::OnVSockReadReady() {
   arc_proxy::VSockMessage message;
-  if (!vsock_.Read(&message) || !HandleMessage(&message))
+  if (!message_stream_.Read(&message) || !HandleMessage(&message))
     Stop();
 }
 
@@ -191,7 +191,7 @@ bool VSockProxy::HandleMessage(arc_proxy::VSockMessage* message) {
 }
 
 void VSockProxy::Stop() {
-  if (!vsock_controller_)  // Do nothing if already stopped.
+  if (!message_watcher_)  // Do nothing if already stopped.
     return;
 
   // Run all pending callbacks.
@@ -209,8 +209,8 @@ void VSockProxy::Stop() {
   }
   // Clear registered file descriptors.
   fd_map_.clear();
-  // Stop watching the vsock.
-  vsock_controller_.reset();
+  // Stop watching the message stream.
+  message_watcher_.reset();
 
   delegate_->OnStopped();
 }
@@ -312,7 +312,7 @@ bool VSockProxy::OnConnectRequest(arc_proxy::ConnectRequest* request) {
         std::move(result.second), arc_proxy::FileDescriptor::SOCKET_STREAM,
         0 /* generate handle */));
   }
-  return vsock_.Write(reply);
+  return message_stream_.Write(reply);
 }
 
 bool VSockProxy::OnConnectResponse(arc_proxy::ConnectResponse* response) {
@@ -335,7 +335,7 @@ bool VSockProxy::OnPreadRequest(arc_proxy::PreadRequest* request) {
 
   OnPreadRequestInternal(request, response);
 
-  return vsock_.Write(reply);
+  return message_stream_.Write(reply);
 }
 
 void VSockProxy::OnPreadRequestInternal(arc_proxy::PreadRequest* request,
@@ -374,7 +374,7 @@ bool VSockProxy::OnFstatRequest(arc_proxy::FstatRequest* request) {
 
   OnFstatRequestInternal(request, response);
 
-  return vsock_.Write(reply);
+  return message_stream_.Write(reply);
 }
 
 void VSockProxy::OnFstatRequestInternal(arc_proxy::FstatRequest* request,
@@ -442,7 +442,7 @@ void VSockProxy::OnLocalFileDesciptorReadReady(int64_t handle) {
     DCHECK(message.has_data());
     message.mutable_data()->set_handle(handle);
   }
-  if (!vsock_.Write(message))
+  if (!message_stream_.Write(message))
     Stop();
 }
 

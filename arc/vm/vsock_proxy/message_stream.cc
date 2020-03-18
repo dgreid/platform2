@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "arc/vm/vsock_proxy/vsock_stream.h"
+#include "arc/vm/vsock_proxy/message_stream.h"
 
 #include <string>
 #include <utility>
@@ -12,21 +12,20 @@
 
 namespace arc {
 
-VSockStream::VSockStream(base::ScopedFD vsock_fd)
-    : vsock_fd_(std::move(vsock_fd)) {}
+MessageStream::MessageStream(base::ScopedFD fd) : fd_(std::move(fd)) {}
 
-VSockStream::~VSockStream() = default;
+MessageStream::~MessageStream() = default;
 
-bool VSockStream::Read(arc_proxy::VSockMessage* message) {
+bool MessageStream::Read(arc_proxy::VSockMessage* message) {
   uint64_t size = 0;
-  if (!base::ReadFromFD(vsock_fd_.get(), reinterpret_cast<char*>(&size),
+  if (!base::ReadFromFD(fd_.get(), reinterpret_cast<char*>(&size),
                         sizeof(size))) {
     PLOG(ERROR) << "Failed to read message size";
     return false;
   }
 
   buf_.resize(size);
-  if (!base::ReadFromFD(vsock_fd_.get(), buf_.data(), buf_.size())) {
+  if (!base::ReadFromFD(fd_.get(), buf_.data(), buf_.size())) {
     PLOG(ERROR) << "Failed to read a proto";
     return false;
   }
@@ -38,7 +37,7 @@ bool VSockStream::Read(arc_proxy::VSockMessage* message) {
   return true;
 }
 
-bool VSockStream::Write(const arc_proxy::VSockMessage& message) {
+bool MessageStream::Write(const arc_proxy::VSockMessage& message) {
   const uint64_t size = message.ByteSize();
   buf_.resize(sizeof(size) + size);
 
@@ -53,7 +52,7 @@ bool VSockStream::Write(const arc_proxy::VSockMessage& message) {
     return false;
   }
 
-  if (!base::WriteFileDescriptor(vsock_fd_.get(), buf_.data(), buf_.size())) {
+  if (!base::WriteFileDescriptor(fd_.get(), buf_.data(), buf_.size())) {
     PLOG(ERROR) << "Failed to write proto";
     return false;
   }

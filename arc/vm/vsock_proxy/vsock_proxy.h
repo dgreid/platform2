@@ -18,7 +18,7 @@
 #include <base/memory/weak_ptr.h>
 
 #include "arc/vm/vsock_proxy/message.pb.h"
-#include "arc/vm/vsock_proxy/vsock_stream.h"
+#include "arc/vm/vsock_proxy/message_stream.h"
 
 namespace base {
 class FilePath;
@@ -139,8 +139,8 @@ class VSockProxy {
   int64_t GenerateCookie();
 
   Delegate* delegate_;
-  VSockStream vsock_;
-  std::unique_ptr<base::FileDescriptorWatcher::Controller> vsock_controller_;
+  MessageStream message_stream_;
+  std::unique_ptr<base::FileDescriptorWatcher::Controller> message_watcher_;
 
   // Map from a |handle| (see message.proto for details) to a file
   // instance wrapping the file descriptor and its watcher.

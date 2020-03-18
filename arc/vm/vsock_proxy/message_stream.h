@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ARC_VM_VSOCK_PROXY_VSOCK_STREAM_H_
-#define ARC_VM_VSOCK_PROXY_VSOCK_STREAM_H_
+#ifndef ARC_VM_VSOCK_PROXY_MESSAGE_STREAM_H_
+#define ARC_VM_VSOCK_PROXY_MESSAGE_STREAM_H_
 
 #include <vector>
 
@@ -15,14 +15,14 @@
 
 namespace arc {
 
-// Wrapper of VSOCK socket. Supports reading and writing protocol buffer.
-class VSockStream {
+// MessageStream exchanges messages with the other proxy process.
+class MessageStream {
  public:
-  explicit VSockStream(base::ScopedFD vsock_fd);
-  ~VSockStream();
+  explicit MessageStream(base::ScopedFD fd);
+  ~MessageStream();
 
   // Returns the raw file descriptor.
-  int Get() const { return vsock_fd_.get(); }
+  int Get() const { return fd_.get(); }
 
   // Reads the message from the socket. Returns true and stores the read
   // message into |message| on success. Otherwise false.
@@ -33,12 +33,12 @@ class VSockStream {
   bool Write(const arc_proxy::VSockMessage& message);
 
  private:
-  base::ScopedFD vsock_fd_;
+  base::ScopedFD fd_;
   std::vector<char> buf_;
 
-  DISALLOW_COPY_AND_ASSIGN(VSockStream);
+  DISALLOW_COPY_AND_ASSIGN(MessageStream);
 };
 
 }  // namespace arc
 
-#endif  // ARC_VM_VSOCK_PROXY_VSOCK_STREAM_H_
+#endif  // ARC_VM_VSOCK_PROXY_MESSAGE_STREAM_H_
