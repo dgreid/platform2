@@ -4,14 +4,10 @@
 //
 #include "common/camera_gpu_algorithm.h"
 
-#include <map>
-#include <memory>
 #include <utility>
 
 #include <base/bind.h>
 #include <base/logging.h>
-#include <base/memory/shared_memory.h>
-#include <base/unguessable_token.h>
 
 #include "cros-camera/common.h"
 #include "cros-camera/export.h"
@@ -72,8 +68,9 @@ void CameraGPUAlgorithm::Request(uint32_t req_id,
                                  int32_t buffer_handle) {
   thread_.task_runner()->PostTask(
       FROM_HERE,
-      base::Bind(&CameraGPUAlgorithm::RequestOnThread, base::Unretained(this),
-                 req_id, req_header, size, buffer_handle));
+      base::BindOnce(
+          &CameraGPUAlgorithm::RequestOnThread, base::Unretained(this), req_id,
+          std::vector<uint8_t>(req_header, req_header + size), buffer_handle));
 }
 
 void CameraGPUAlgorithm::DeregisterBuffers(const int32_t buffer_handles[],
@@ -104,11 +101,11 @@ void CameraGPUAlgorithm::InitializeOnThread() {
 }
 
 void CameraGPUAlgorithm::RequestOnThread(uint32_t req_id,
-                                         const uint8_t req_header[],
-                                         uint32_t size,
+                                         std::vector<uint8_t> req_header,
                                          int32_t buffer_handle) {
   VLOGF_ENTER();
-  auto* header = reinterpret_cast<const CameraGPUAlgoCmdHeader*>(req_header);
+  auto* header =
+      reinterpret_cast<const CameraGPUAlgoCmdHeader*>(req_header.data());
   auto callback = [&](uint32_t status) {
     (*callback_ops_->return_callback)(callback_ops_, req_id, status,
                                       buffer_handle);
@@ -118,7 +115,7 @@ void CameraGPUAlgorithm::RequestOnThread(uint32_t req_id,
     callback(EAGAIN);
     return;
   }
-  if (size < sizeof(CameraGPUAlgoCmdHeader)) {
+  if (req_header.size() < sizeof(CameraGPUAlgoCmdHeader)) {
     LOGF(ERROR) << "Invalid command header";
     callback(EINVAL);
     return;

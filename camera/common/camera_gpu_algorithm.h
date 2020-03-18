@@ -9,6 +9,7 @@
 
 #include <map>
 #include <memory>
+#include <vector>
 
 #include <base/memory/shared_memory.h>
 #include <base/synchronization/lock.h>
@@ -41,8 +42,7 @@ class CameraGPUAlgorithm {
   void InitializeOnThread();
 
   void RequestOnThread(uint32_t req_id,
-                       const uint8_t req_header[],
-                       uint32_t size,
+                       std::vector<uint8_t> req_header,
                        int32_t buffer_handle);
 
   base::Thread thread_;
