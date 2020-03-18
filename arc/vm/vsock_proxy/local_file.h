@@ -36,7 +36,7 @@ class LocalFile {
   ~LocalFile();
 
   // Reads the message from the file descriptor.
-  // Returns a struct of error_code, where it is 0 on succeess or errno, blob
+  // Returns a struct of error_code, where it is 0 on success or errno, blob
   // and attached fds if available.
   struct ReadResult {
     int error_code;
