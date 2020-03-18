@@ -83,18 +83,26 @@ SubprocRoutine::SubprocRoutine(const base::CommandLine& command_line,
                                uint32_t predicted_duration_in_seconds)
     : SubprocRoutine(std::make_unique<DiagProcessAdapterImpl>(),
                      std::make_unique<base::DefaultTickClock>(),
-                     command_line,
+                     std::list<base::CommandLine>{command_line},
                      predicted_duration_in_seconds) {}
+
+SubprocRoutine::SubprocRoutine(
+    const std::list<base::CommandLine>& command_lines,
+    uint32_t total_predicted_duration_in_seconds)
+    : SubprocRoutine(std::make_unique<DiagProcessAdapterImpl>(),
+                     std::make_unique<base::DefaultTickClock>(),
+                     command_lines,
+                     total_predicted_duration_in_seconds) {}
 
 SubprocRoutine::SubprocRoutine(
     std::unique_ptr<DiagProcessAdapter> process_adapter,
     std::unique_ptr<base::TickClock> tick_clock,
-    const base::CommandLine& command_line,
+    const std::list<base::CommandLine>& command_lines,
     uint32_t predicted_duration_in_seconds)
     : subproc_status_(kSubprocStatusReady),
       process_adapter_(std::move(process_adapter)),
       tick_clock_(std::move(tick_clock)),
-      command_line_(command_line),
+      command_lines_(std::move(command_lines)),
       predicted_duration_in_seconds_(predicted_duration_in_seconds) {}
 
 SubprocRoutine::~SubprocRoutine() {
@@ -142,17 +150,26 @@ mojo_ipc::DiagnosticRoutineStatusEnum SubprocRoutine::GetStatus() {
 }
 
 void SubprocRoutine::StartProcess() {
-  DCHECK_EQ(subproc_status_, kSubprocStatusReady);
-  subproc_status_ = kSubprocStatusRunning;
-  VLOG(1) << "Starting command " << base::JoinString(command_line_.argv(), " ");
+  DCHECK_EQ(command_lines_.empty(), false);
+  DCHECK(subproc_status_ == kSubprocStatusReady ||
+         subproc_status_ == kSubprocStatusRunning);
+  if (subproc_status_ == kSubprocStatusReady) {
+    // Keep track of when we began the routine, in case we need to predict
+    // progress.
+    start_ticks_ = tick_clock_->NowTicks();
+    subproc_status_ = kSubprocStatusRunning;
+  }
 
-  if (!process_adapter_->StartProcess(command_line_.argv(), &handle_)) {
+  // Multiple executables will be run in sequence and one at a time.
+  auto command_line = command_lines_.front();
+  command_lines_.pop_front();
+
+  VLOG(1) << "Starting command " << base::JoinString(command_line.argv(), " ");
+
+  if (!process_adapter_->StartProcess(command_line.argv(), &handle_)) {
     subproc_status_ = kSubprocStatusLaunchFailed;
     LOG(ERROR) << kSubprocRoutineFailedToLaunchProcessMessage;
   }
-  // Keep track of when we began the routine, in case we need to predict
-  // progress.
-  start_ticks_ = tick_clock_->NowTicks();
 }
 
 void SubprocRoutine::KillProcess(bool from_dtor) {
@@ -200,7 +217,10 @@ void SubprocRoutine::CheckActiveProcessStatus() {
       if (subproc_status_ == kSubprocStatusCancelling) {
         subproc_status_ = kSubprocStatusCancelled;
       } else {
-        subproc_status_ = kSubprocStatusCompleteSuccess;
+        if (command_lines_.size())
+          StartProcess();
+        else
+          subproc_status_ = kSubprocStatusCompleteSuccess;
       }
       break;
     case base::TERMINATION_STATUS_ABNORMAL_TERMINATION:

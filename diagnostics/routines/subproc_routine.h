@@ -6,6 +6,7 @@
 #define DIAGNOSTICS_ROUTINES_SUBPROC_ROUTINE_H_
 
 #include <cstdint>
+#include <list>
 #include <memory>
 #include <string>
 
@@ -53,15 +54,20 @@ class SubprocRoutine final : public DiagnosticRoutine {
     kSubprocStatusRunning,
   };
 
+  // Constructor to run a single executable.
   SubprocRoutine(const base::CommandLine& command_line,
                  uint32_t predicted_duration_in_seconds);
+  // Constructor to run multiple executables.
+  SubprocRoutine(const std::list<base::CommandLine>& command_lines,
+                 uint32_t total_predicted_duration_in_seconds);
+  // Constructor only for facilitating the unit test.
   SubprocRoutine(std::unique_ptr<DiagProcessAdapter> process_adapter,
                  std::unique_ptr<base::TickClock> tick_clock,
-                 const base::CommandLine& command_line,
+                 const std::list<base::CommandLine>& command_lines,
                  uint32_t predicted_duration_in_seconds);
+  ~SubprocRoutine() override;
 
   // DiagnosticRoutine overrides:
-  ~SubprocRoutine() override;
   void Start() override;
   void Resume() override;
   void Cancel() override;
@@ -95,9 +101,9 @@ class SubprocRoutine final : public DiagnosticRoutine {
   // purpose of facilitating Unit tests.
   std::unique_ptr<base::TickClock> tick_clock_;
 
-  // |command_line_| is the process which runs to test the diagnostic in
-  // question.
-  base::CommandLine command_line_;
+  // |command_lines_| is a list of processes which run to test the diagnostic
+  // in question.
+  std::list<base::CommandLine> command_lines_;
 
   // |predicted_duration_in_seconds_| is used to calculate progress percentage
   // when it is non-zero.

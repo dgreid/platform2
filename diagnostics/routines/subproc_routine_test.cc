@@ -5,6 +5,7 @@
 #include "diagnostics/routines/subproc_routine.h"
 
 #include <cstdint>
+#include <list>
 #include <utility>
 #include <vector>
 
@@ -77,7 +78,28 @@ class SubprocRoutineTest : public Test {
     auto command_line = base::CommandLine({"/dev/null"});
 
     routine_ = std::make_unique<SubprocRoutine>(
-        std::move(mock_adapter_ptr), std::move(tick_clock_ptr), command_line,
+        std::move(mock_adapter_ptr), std::move(tick_clock_ptr),
+        std::list<base::CommandLine>{command_line},
+        predicted_duration_in_seconds);
+  }
+
+  void CreateRoutineWithMultipleCmds(
+      uint32_t predicted_duration_in_seconds = 10) {
+    auto mock_adapter_ptr =
+        std::make_unique<StrictMock<MockDiagProcessAdapter>>();
+    mock_adapter_ = mock_adapter_ptr.get();
+    auto tick_clock_ptr = std::make_unique<base::SimpleTestTickClock>();
+    tick_clock_ = tick_clock_ptr.get();
+
+    // We never actually run subprocesses in this unit test, because this module
+    // is not actually responsible for process invocation, and we trust the
+    // DiagProcessAdapter to do things appropriately.
+    auto command_line = base::CommandLine({"/dev/null"});
+    auto command_line1 = base::CommandLine({"/dev/zero"});
+
+    routine_ = std::make_unique<SubprocRoutine>(
+        std::move(mock_adapter_ptr), std::move(tick_clock_ptr),
+        std::list<base::CommandLine>{command_line, command_line1},
         predicted_duration_in_seconds);
   }
 
@@ -120,6 +142,29 @@ TEST_F(SubprocRoutineTest, InvokeSubprocWithSuccess) {
                                  mojo_ipc::RoutineUpdateUnion::New()};
   routine()->PopulateStatusUpdate(&update, false);
 
+  CheckRoutineUpdate(100, kSubprocRoutineSucceededMessage,
+                     mojo_ipc::DiagnosticRoutineStatusEnum::kPassed, update);
+}
+
+TEST_F(SubprocRoutineTest, InvokeSubprocWithMultipleCmdsWithSuccess) {
+  CreateRoutineWithMultipleCmds();
+  EXPECT_CALL(*mock_adapter(), StartProcess(_, _))
+      .Times(2)
+      .WillRepeatedly(DoAll(SetArgPointee<1>(base::GetCurrentProcessHandle()),
+                            Return(true)));
+  EXPECT_CALL(*mock_adapter(), GetStatus(_))
+      .Times(2)
+      .WillRepeatedly(Return(base::TERMINATION_STATUS_NORMAL_TERMINATION));
+
+  routine()->Start();
+
+  mojo_ipc::RoutineUpdate update{0, mojo::ScopedHandle(),
+                                 mojo_ipc::RoutineUpdateUnion::New()};
+  tick_clock()->Advance(base::TimeDelta::FromSeconds(5));
+  routine()->PopulateStatusUpdate(&update, false);
+  CheckRoutineUpdate(50, kSubprocRoutineProcessRunningMessage,
+                     mojo_ipc::DiagnosticRoutineStatusEnum::kRunning, update);
+  routine()->PopulateStatusUpdate(&update, false);
   CheckRoutineUpdate(100, kSubprocRoutineSucceededMessage,
                      mojo_ipc::DiagnosticRoutineStatusEnum::kPassed, update);
 }
