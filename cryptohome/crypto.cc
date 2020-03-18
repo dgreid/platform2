@@ -682,23 +682,6 @@ bool Crypto::EncryptTPMNotBoundToPcr(const VaultKeyset& vault_keyset,
     return false;
   }
 
-  // If a reset seed is present, encrypt and store it, else clear the field.
-  if (vault_keyset.reset_seed().size() != 0) {
-    const auto reset_iv = CryptoLib::CreateSecureRandomBlob(kAesBlockSize);
-    SecureBlob wrapped_reset_seed;
-    if (!CryptoLib::AesEncrypt(vault_keyset.reset_seed(), vkk_key, reset_iv,
-                               &wrapped_reset_seed)) {
-      LOG(ERROR) << "AES encryption of Reset seed failed.";
-      return false;
-    }
-    serialized->set_wrapped_reset_seed(wrapped_reset_seed.data(),
-                                       wrapped_reset_seed.size());
-    serialized->set_reset_iv(reset_iv.data(), reset_iv.size());
-  } else {
-    serialized->clear_wrapped_reset_seed();
-    serialized->clear_reset_iv();
-  }
-
   // Allow this to fail.  It is not absolutely necessary; it allows us to
   // detect a TPM clear.  If this fails due to a transient issue, then on next
   // successful login, the vault keyset will be re-saved anyway.
