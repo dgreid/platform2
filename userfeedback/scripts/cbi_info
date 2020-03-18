@@ -41,6 +41,8 @@ main() {
   get_cbi 3
   get_cbi 4
   get_cbi 5
+  get_cbi 6
+  get_cbi 7
 }
 
 main "$@"
