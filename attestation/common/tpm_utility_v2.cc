@@ -1059,7 +1059,7 @@ bool TpmUtilityV2::IsQuoteForPCR(const std::string& /* quoted_pcr_value */,
   return true;
 }
 
-bool TpmUtilityV2::ReadPCR(uint32_t pcr_index, std::string* pcr_value) const {
+bool TpmUtilityV2::ReadPCR(uint32_t pcr_index, std::string* pcr_value) {
   TPM_RC result = trunks_utility_->ReadPCR(pcr_index, pcr_value);
   if (result != TPM_RC_SUCCESS) {
     LOG(ERROR) << __func__ << ": Failed to read PCR " << pcr_index << ": "

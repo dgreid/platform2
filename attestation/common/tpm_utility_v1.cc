@@ -681,7 +681,7 @@ bool TpmUtilityV1::IsQuoteForPCR(const std::string& quoted_pcr_value,
   return true;
 }
 
-bool TpmUtilityV1::ReadPCR(uint32_t pcr_index, std::string* pcr_value) const {
+bool TpmUtilityV1::ReadPCR(uint32_t pcr_index, std::string* pcr_value) {
   UINT32 pcr_len = 0;
   ScopedTssMemory pcr_value_buffer(context_handle_);
   TSS_RESULT result = Tspi_TPM_PcrRead(tpm_handle_, pcr_index, &pcr_len,

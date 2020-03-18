@@ -131,7 +131,7 @@ class TpmUtility {
 
   // Reads a PCR specified by |pcr_index|. On success returns true and
   // populates |_pcr_value|.
-  virtual bool ReadPCR(uint32_t pcr_index, std::string* pcr_value) const = 0;
+  virtual bool ReadPCR(uint32_t pcr_index, std::string* pcr_value) = 0;
 
   // Gets the data size for the NV data at |nv_index| and stores it into
   // |nv_size| if successful. Returns true for success, false otherwise.
