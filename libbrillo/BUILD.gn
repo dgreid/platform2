@@ -81,7 +81,6 @@ libbrillo_sublibs = [
       "brillo/process.cc",
       "brillo/process_information.cc",
       "brillo/process_reaper.cc",
-      "brillo/scoped_mount_namespace.cc",
       "brillo/scoped_umask.cc",
       "brillo/secure_blob.cc",
       "brillo/strings/string_utils.cc",
@@ -184,6 +183,7 @@ libbrillo_sublibs = [
     sources = [
       "brillo/namespaces/mount_namespace.cc",
       "brillo/namespaces/platform.cc",
+      "brillo/scoped_mount_namespace.cc",
     ]
   },
 
