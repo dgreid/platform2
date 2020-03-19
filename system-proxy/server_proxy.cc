@@ -63,9 +63,22 @@ void ServerProxy::Init() {
 
 void ServerProxy::ResolveProxy(const std::string& target_url,
                                OnProxyResolvedCallback callback) {
-  // TODO(acostinas, crbug.com/1042626) Ask Chrome to resolve proxy for
-  // |target_url|.
-  std::move(callback).Run({brillo::http::kDirectProxy});
+  auto it = pending_proxy_resolution_requests_.find(target_url);
+  if (it != pending_proxy_resolution_requests_.end()) {
+    it->second.push_back(std::move(callback));
+    return;
+  }
+  ProxyResolutionRequest proxy_request;
+  proxy_request.set_target_url(target_url);
+  WorkerRequest request;
+  *request.mutable_proxy_resolution_request() = proxy_request;
+  if (!WriteProtobuf(GetStdoutPipe(), request)) {
+    LOG(ERROR) << "Failed to send proxy resolution request for url: "
+               << target_url;
+    std::move(callback).Run({brillo::http::kDirectProxy});
+    return;
+  }
+  pending_proxy_resolution_requests_[target_url].push_back(std::move(callback));
 }
 
 void ServerProxy::HandleStdinReadable() {
@@ -92,6 +105,15 @@ void ServerProxy::HandleStdinReadable() {
     listening_port_ = config.listening_address().port();
     CreateListeningSocket();
   }
+
+  if (config.has_proxy_resolution_reply()) {
+    std::list<std::string> proxies;
+    const ProxyResolutionReply& reply = config.proxy_resolution_reply();
+    for (auto const& proxy : reply.proxy_servers())
+      proxies.push_back(proxy);
+
+    OnProxyResolved(reply.target_url(), proxies);
+  }
 }
 
 bool ServerProxy::HandleSignal(const struct signalfd_siginfo& siginfo) {
@@ -102,6 +124,10 @@ bool ServerProxy::HandleSignal(const struct signalfd_siginfo& siginfo) {
 
 int ServerProxy::GetStdinPipe() {
   return STDIN_FILENO;
+}
+
+int ServerProxy::GetStdoutPipe() {
+  return STDOUT_FILENO;
 }
 
 void ServerProxy::CreateListeningSocket() {
@@ -140,7 +166,6 @@ void ServerProxy::OnConnectionAccept() {
     if (connect_job->Start())
       pending_connect_jobs_[connect_job.get()] = std::move(connect_job);
   }
-
   // Cleanup any defunct forwarders.
   // TODO(acostinas, chromium:1064536) Monitor the client and server sockets
   // and remove the corresponding SocketForwarder when a socket closes.
@@ -148,6 +173,15 @@ void ServerProxy::OnConnectionAccept() {
     if (!(*it)->IsRunning() && (*it)->HasBeenStarted())
       it = forwarders_.erase(it);
   }
+}
+
+void ServerProxy::OnProxyResolved(const std::string& target_url,
+                                  const std::list<std::string>& proxy_servers) {
+  auto callbacks = std::move(pending_proxy_resolution_requests_[target_url]);
+  pending_proxy_resolution_requests_.erase(target_url);
+
+  for (auto& callback : callbacks)
+    std::move(callback).Run(proxy_servers);
 }
 
 void ServerProxy::OnConnectionSetupFinished(

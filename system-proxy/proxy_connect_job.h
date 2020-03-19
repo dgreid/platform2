@@ -59,6 +59,7 @@ class ProxyConnectJob {
   friend class ServerProxyTest;
   friend class ProxyConnectJobTest;
   FRIEND_TEST(ServerProxyTest, HandlePendingJobs);
+  FRIEND_TEST(ServerProxyTest, HandleConnectRequest);
   FRIEND_TEST(ProxyConnectJobTest, SuccessfulConnection);
   FRIEND_TEST(ProxyConnectJobTest, BadHttpRequestWrongMethod);
   FRIEND_TEST(ProxyConnectJobTest, BadHttpRequestNoEmptyLine);

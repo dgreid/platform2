@@ -52,6 +52,7 @@ class ServerProxy {
 
  protected:
   virtual int GetStdinPipe();
+  virtual int GetStdoutPipe();
 
  private:
   friend class ServerProxyTest;
@@ -59,6 +60,7 @@ class ServerProxy {
   FRIEND_TEST(ServerProxyTest, FetchListeningAddress);
   FRIEND_TEST(ServerProxyTest, HandleConnectRequest);
   FRIEND_TEST(ServerProxyTest, HandlePendingJobs);
+  FRIEND_TEST(ServerProxyTest, SetupConnection);
 
   void HandleStdinReadable();
   bool HandleSignal(const struct signalfd_siginfo& siginfo);
@@ -74,6 +76,12 @@ class ServerProxy {
       std::unique_ptr<arc_networkd::SocketForwarder> fwd,
       ProxyConnectJob* connect_job);
 
+  // Called when the proxy resolution result for |target_url| is received via
+  // the standard input (see |ResolveProxy| method). |proxy_servers| will always
+  // contain at least one entry, the direct proxy.
+  void OnProxyResolved(const std::string& target_url,
+                       const std::list<std::string>& proxy_servers);
+
   // The proxy listening address in network-byte order.
   uint32_t listening_addr_ = 0;
   int listening_port_;
@@ -82,6 +90,7 @@ class ServerProxy {
   // compatible with libcurl's CURLOPT_USERPWD: both user name and password URL
   // encoded and separated by colon.
   std::string credentials_;
+
   std::unique_ptr<arc_networkd::Socket> listening_fd_;
 
   // List of SocketForwarders that corresponds to the TCP tunnel between the
@@ -92,6 +101,12 @@ class ServerProxy {
 
   std::map<ProxyConnectJob*, std::unique_ptr<ProxyConnectJob>>
       pending_connect_jobs_;
+
+  // Collection of ongoing proxy resolution requests. The key represents the
+  // target url to be resolved and it's mapped to a list of callbaks to pending
+  // connect jobs that are connecting to the same target url.
+  std::map<std::string, std::list<OnProxyResolvedCallback>>
+      pending_proxy_resolution_requests_;
 
   base::OnceClosure quit_closure_;
   std::unique_ptr<base::FileDescriptorWatcher::Controller> stdin_watcher_;

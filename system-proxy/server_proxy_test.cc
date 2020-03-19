@@ -35,6 +35,7 @@ constexpr char kUsernameEncoded[] = "proxy%3Auser";
 constexpr char kPassword[] = "proxy password";
 constexpr char kPasswordEncoded[] = "proxy%20password";
 constexpr int kTestPort = 3128;
+constexpr char kFakeProxyAddress[] = "http://127.0.0.1";
 
 }  // namespace
 
@@ -50,6 +51,7 @@ class MockServerProxy : public ServerProxy {
   ~MockServerProxy() override = default;
 
   MOCK_METHOD(int, GetStdinPipe, (), (override));
+  MOCK_METHOD(int, GetStdoutPipe, (), (override));
 };
 
 class MockProxyConnectJob : public ProxyConnectJob {
@@ -81,21 +83,33 @@ class ServerProxyTest : public ::testing::Test {
   ~ServerProxyTest() override {}
 
  protected:
+  // Redirects the standard streams of the worker so that the tests can write
+  // data in the worker's stdin input and read data from the worker's stdout
+  // output.
   void RedirectStdPipes() {
     int fds[2];
     CHECK(base::CreateLocalNonBlockingPipe(fds));
-    read_scoped_fd_.reset(fds[0]);
-    write_scoped_fd_.reset(fds[1]);
-    EXPECT_CALL(*server_proxy_, GetStdinPipe())
-        .WillRepeatedly(Return(read_scoped_fd_.get()));
+    stdin_read_fd_.reset(fds[0]);
+    stdin_write_fd_.reset(fds[1]);
+    CHECK(base::CreateLocalNonBlockingPipe(fds));
+    stdout_read_fd_.reset(fds[0]);
+    stdout_write_fd_.reset(fds[1]);
 
+    ON_CALL(*server_proxy_, GetStdinPipe())
+        .WillByDefault(Return(stdin_read_fd_.get()));
+    // Don't redirect all the calls to |stdout_write_fd_| or the test result
+    // will not be printed in the console. Instead, when wanting to read the
+    // standard output, set the expectation to once return |stdout_write_fd_|.
+    ON_CALL(*server_proxy_, GetStdoutPipe())
+        .WillByDefault(Return(STDOUT_FILENO));
     server_proxy_->Init();
   }
   // SystemProxyAdaptor instance that creates fake worker processes.
   std::unique_ptr<MockServerProxy> server_proxy_;
   base::MessageLoopForIO loop_;
   brillo::BaseMessageLoop brillo_loop_{&loop_};
-  base::ScopedFD read_scoped_fd_, write_scoped_fd_;
+  base::ScopedFD stdin_read_fd_, stdin_write_fd_, stdout_read_fd_,
+      stdout_write_fd_;
 };
 
 TEST_F(ServerProxyTest, FetchCredentials) {
@@ -106,7 +120,7 @@ TEST_F(ServerProxyTest, FetchCredentials) {
   *configs.mutable_credentials() = credentials;
   RedirectStdPipes();
 
-  EXPECT_TRUE(WriteProtobuf(write_scoped_fd_.get(), configs));
+  EXPECT_TRUE(WriteProtobuf(stdin_write_fd_.get(), configs));
 
   brillo_loop_.RunOnce(false);
 
@@ -121,23 +135,29 @@ TEST_F(ServerProxyTest, FetchListeningAddress) {
   address.set_port(kTestPort);
   WorkerConfigs configs;
   *configs.mutable_listening_address() = address;
-  RedirectStdPipes();
   // Redirect the worker stdin and stdout pipes.
-
-  EXPECT_TRUE(WriteProtobuf(write_scoped_fd_.get(), configs));
+  RedirectStdPipes();
+  // Send the config to the worker's stdin input.
+  EXPECT_TRUE(WriteProtobuf(stdin_write_fd_.get(), configs));
   brillo_loop_.RunOnce(false);
 
   EXPECT_EQ(server_proxy_->listening_addr_, INADDR_ANY);
   EXPECT_EQ(server_proxy_->listening_port_, kTestPort);
 }
 
+// Tests that ServerProxy handles the basic flow of a connect request:
+// - server accepts a connection a creates a job for it until the connection is
+// finished;
+// - the connect request from the client socket is read and parsed;
+// - proxy resolution request is correctly handled by the job and ServerProxy;
+// - client is sent an HTTP error code in case of failure;
+// - the failed connection job is removed from the queue.
 TEST_F(ServerProxyTest, HandleConnectRequest) {
   server_proxy_->listening_addr_ = htonl(INADDR_LOOPBACK);
   server_proxy_->listening_port_ = kTestPort;
   // Redirect the worker stdin and stdout pipes.
   RedirectStdPipes();
   server_proxy_->CreateListeningSocket();
-
   CHECK_NE(-1, server_proxy_->listening_fd_->fd());
   brillo_loop_.RunOnce(false);
 
@@ -153,6 +173,43 @@ TEST_F(ServerProxyTest, HandleConnectRequest) {
   brillo_loop_.RunOnce(false);
 
   EXPECT_EQ(1, server_proxy_->pending_connect_jobs_.size());
+  const std::string_view http_req =
+      "CONNECT www.example.server.com:443 HTTP/1.1\r\n\r\n";
+  client_socket->SendTo(http_req.data(), http_req.size());
+
+  EXPECT_CALL(*server_proxy_, GetStdoutPipe())
+      .WillOnce(Return(stdout_write_fd_.get()));
+  brillo_loop_.RunOnce(false);
+  WorkerRequest request;
+  // Read the request from the worker's stdout output.
+  ASSERT_TRUE(ReadProtobuf(stdout_read_fd_.get(), &request));
+  ASSERT_TRUE(request.has_proxy_resolution_request());
+
+  EXPECT_EQ("http://www.example.server.com:443",
+            request.proxy_resolution_request().target_url());
+
+  EXPECT_EQ(1, server_proxy_->pending_proxy_resolution_requests_.size());
+
+  // Write reply with a fake proxy to the worker's standard input.
+  ProxyResolutionReply reply;
+  reply.set_target_url(request.proxy_resolution_request().target_url());
+  reply.add_proxy_servers(kFakeProxyAddress);
+  WorkerConfigs configs;
+  *configs.mutable_proxy_resolution_reply() = reply;
+
+  ASSERT_TRUE(WriteProtobuf(stdin_write_fd_.get(), configs));
+  brillo_loop_.RunOnce(false);
+
+  // Verify that the correct HTTP error code is sent to the client. Because
+  // curl_perform will fail, this will be reported as an internal server error.
+  const std::string expected_http_reply =
+      "HTTP/1.1 500 Internal Server Error - Origin: local proxy\r\n\r\n";
+  std::vector<char> buf(expected_http_reply.size());
+  ASSERT_TRUE(base::ReadFromFD(client_socket->fd(), buf.data(), buf.size()));
+  buf.push_back('\0');
+  const std::string actual_http_reply(buf.data());
+  EXPECT_EQ(expected_http_reply, actual_http_reply);
+  EXPECT_EQ(0, server_proxy_->pending_connect_jobs_.size());
 }
 
 // Tests the |OnConnectionSetupFinished| callback is handled correctly in case

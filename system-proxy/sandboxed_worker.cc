@@ -15,9 +15,12 @@
 #include <base/callback_helpers.h>
 #include <base/files/file_util.h>
 #include <base/strings/string_util.h>
+#include <brillo/http/http_transport.h>
+#include <google/protobuf/repeated_field.h>
 
 #include "bindings/worker_common.pb.h"
 #include "system-proxy/protobuf_util.h"
+#include "system-proxy/system_proxy_adaptor.h"
 
 namespace {
 constexpr char kSystemProxyWorkerBin[] = "/usr/sbin/system_proxy_worker";
@@ -26,12 +29,14 @@ constexpr char kSeccompFilterPath[] =
 constexpr int kMaxWorkerMessageSize = 2048;
 // Size of the buffer array used to read data from the worker's stderr.
 constexpr int kWorkerBufferSize = 1024;
-
+constexpr char kPrefixDirect[] = "direct://";
+constexpr char kPrefixHttp[] = "http://";
 }  // namespace
 
 namespace system_proxy {
 
-SandboxedWorker::SandboxedWorker() : jail_(minijail_new()) {}
+SandboxedWorker::SandboxedWorker(base::WeakPtr<SystemProxyAdaptor> adaptor)
+    : jail_(minijail_new()), adaptor_(adaptor) {}
 
 void SandboxedWorker::Start() {
   DCHECK(!IsRunning()) << "Worker is already running.";
@@ -104,8 +109,7 @@ void SandboxedWorker::SetListeningAddress(uint32_t addr, int port) {
   *configs.mutable_listening_address() = address;
 
   if (!WriteProtobuf(stdin_pipe_.get(), configs)) {
-    LOG(ERROR) << "Failed to set local proy address for worker " +
-                      std::to_string(pid_);
+    LOG(ERROR) << "Failed to set local proy address for worker " << pid_;
   }
 }
 
@@ -141,6 +145,20 @@ void SandboxedWorker::OnMessageReceived() {
   }
   if (request.has_log_request()) {
     LOG(INFO) << "[worker: " << pid_ << "]" << request.log_request().message();
+  }
+
+  if (request.has_proxy_resolution_request()) {
+    const ProxyResolutionRequest& proxy_request =
+        request.proxy_resolution_request();
+
+    // This callback will always be called with at least one proxy entry. Even
+    // if the dbus call itself fails, the proxy server list will contain the
+    // direct proxy.
+    adaptor_->GetChromeProxyServersAsync(
+        proxy_request.target_url(),
+        base::BindRepeating(&SandboxedWorker::OnProxyResolved,
+                            weak_ptr_factory_.GetWeakPtr(),
+                            proxy_request.target_url()));
   }
 }
 
@@ -182,6 +200,31 @@ void SandboxedWorker::OnErrorReceived() {
   }
 
   LOG(ERROR) << worker_msg << message;
+}
+
+void SandboxedWorker::OnProxyResolved(
+    const std::string& target_url,
+    bool success,
+    const std::vector<std::string>& proxy_servers) {
+  ProxyResolutionReply reply;
+  reply.set_target_url(target_url);
+
+  // Only http and direct proxies are supported at the moment.
+  for (const auto& proxy : proxy_servers) {
+    if (base::StartsWith(proxy, kPrefixHttp,
+                         base::CompareCase::INSENSITIVE_ASCII) ||
+        base::StartsWith(proxy, kPrefixDirect,
+                         base::CompareCase::INSENSITIVE_ASCII)) {
+      reply.add_proxy_servers(proxy);
+    }
+  }
+
+  WorkerConfigs configs;
+  *configs.mutable_proxy_resolution_reply() = reply;
+
+  if (!WriteProtobuf(stdin_pipe_.get(), configs)) {
+    LOG(ERROR) << "Failed to send proxy resolution reply to worker" << pid_;
+  }
 }
 
 }  // namespace system_proxy

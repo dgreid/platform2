@@ -22,11 +22,16 @@ message LogRequest {
 }
 
 message ProxyResolutionRequest {
-  optional string url = 1;
+  optional string target_url = 1;
 }
 
 message ProxyResolutionReply {
-  optional string proxy_url = 1;
+  optional string target_url = 1;
+  // An ordered list of proxy servers, at least one in size, with the last
+  // element always being the direct option. The format of the strings is
+  // scheme://host:port with the last element being "direct://". The only
+  // schemes supported at the moment are "http" and "direct".
+  repeated string proxy_servers = 2;
 }
 
 message WorkerRequest {
@@ -41,5 +46,6 @@ message WorkerConfigs {
     Credentials credentials = 1;
     // The local proxy listening address.
     SocketAddress listening_address = 2;
+    ProxyResolutionReply proxy_resolution_reply = 3;
   }
 }

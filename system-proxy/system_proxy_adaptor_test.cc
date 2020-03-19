@@ -13,6 +13,7 @@
 #include <base/callback_helpers.h>
 #include <base/files/file_util.h>
 #include <base/files/scoped_file.h>
+#include <base/memory/weak_ptr.h>
 #include <base/message_loop/message_loop.h>
 #include <brillo/dbus/async_event_sequencer.h>
 #include <brillo/dbus/dbus_object.h>
@@ -34,7 +35,8 @@ const char kPassword[] = "proxy_password";
 
 class FakeSandboxedWorker : public SandboxedWorker {
  public:
-  FakeSandboxedWorker() = default;
+  explicit FakeSandboxedWorker(base::WeakPtr<SystemProxyAdaptor> adaptor)
+      : SandboxedWorker(adaptor) {}
   FakeSandboxedWorker(const FakeSandboxedWorker&) = delete;
   FakeSandboxedWorker& operator=(const FakeSandboxedWorker&) = delete;
   ~FakeSandboxedWorker() override = default;
@@ -51,15 +53,19 @@ class FakeSystemProxyAdaptor : public SystemProxyAdaptor {
  public:
   FakeSystemProxyAdaptor(
       std::unique_ptr<brillo::dbus_utils::DBusObject> dbus_object)
-      : SystemProxyAdaptor(std::move(dbus_object)) {}
+      : SystemProxyAdaptor(std::move(dbus_object)), weak_ptr_factory_(this) {}
   FakeSystemProxyAdaptor(const FakeSystemProxyAdaptor&) = delete;
   FakeSystemProxyAdaptor& operator=(const FakeSystemProxyAdaptor&) = delete;
   ~FakeSystemProxyAdaptor() override = default;
 
  protected:
   std::unique_ptr<SandboxedWorker> CreateWorker() override {
-    return std::make_unique<FakeSandboxedWorker>();
+    return std::make_unique<FakeSandboxedWorker>(
+        weak_ptr_factory_.GetWeakPtr());
   }
+
+ private:
+  base::WeakPtrFactory<FakeSystemProxyAdaptor> weak_ptr_factory_;
 };
 
 class SystemProxyAdaptorTest : public ::testing::Test {

@@ -10,6 +10,7 @@
 
 #include <base/memory/weak_ptr.h>
 #include <brillo/dbus/async_event_sequencer.h>
+#include <brillo/http/http_proxy.h>
 #include <gtest/gtest_prod.h>  // for FRIEND_TEST
 #include <patchpanel/proto_bindings/patchpanel_service.pb.h>
 
@@ -46,6 +47,10 @@ class SystemProxyAdaptor : public org::chromium::SystemProxyAdaptor,
       const std::vector<uint8_t>& request_blob) override;
   std::vector<uint8_t> ShutDown() override;
 
+  void GetChromeProxyServersAsync(
+      const std::string& target_url,
+      const brillo::http::GetChromeProxyServersCallback& callback);
+
  protected:
   virtual std::unique_ptr<SandboxedWorker> CreateWorker();
 
@@ -66,6 +71,9 @@ class SystemProxyAdaptor : public org::chromium::SystemProxyAdaptor,
 
   void OnConnectNamespace(SandboxedWorker* worker,
                           const patchpanel::IPv4Subnet& ipv4_subnet);
+
+  // The callback of |GetChromeProxyServersAsync|.
+  void OnGetProxyServers(bool success, const std::vector<std::string>& servers);
 
   // Worker that authenticates and forwards to a remote web proxy traffic
   // coming form Chrome OS system services.

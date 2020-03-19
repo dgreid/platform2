@@ -5,20 +5,25 @@
 #define SYSTEM_PROXY_SANDBOXED_WORKER_H_
 
 #include <array>
+#include <map>
 #include <memory>
 #include <string>
+#include <vector>
 
 #include <gtest/gtest_prod.h>  // for FRIEND_TEST
 
 #include <base/files/file_descriptor_watcher_posix.h>
 #include <base/files/scoped_file.h>
+#include <base/memory/weak_ptr.h>
 #include <chromeos/scoped_minijail.h>
 
 namespace system_proxy {
 
+class SystemProxyAdaptor;
+
 class SandboxedWorker {
  public:
-  SandboxedWorker();
+  explicit SandboxedWorker(base::WeakPtr<SystemProxyAdaptor> adaptor);
   SandboxedWorker(const SandboxedWorker&) = delete;
   SandboxedWorker& operator=(const SandboxedWorker&) = delete;
   virtual ~SandboxedWorker() = default;
@@ -45,6 +50,12 @@ class SandboxedWorker {
 
   void OnMessageReceived();
   void OnErrorReceived();
+  // Called when a proxy resolver job is resolved. |proxy_servers| is the
+  // ordered list of proxies returned by Chrome. In case of failure it will be
+  // the direct proxy.
+  void OnProxyResolved(const std::string& target_url,
+                       bool success,
+                       const std::vector<std::string>& proxy_servers);
 
   bool is_being_terminated_ = false;
   ScopedMinijail jail_;
@@ -55,7 +66,10 @@ class SandboxedWorker {
   std::unique_ptr<base::FileDescriptorWatcher::Controller> stdout_watcher_;
   std::unique_ptr<base::FileDescriptorWatcher::Controller> stderr_watcher_;
 
+  // The adaptor that owns this worker.
+  base::WeakPtr<SystemProxyAdaptor> adaptor_;
   pid_t pid_;
+  base::WeakPtrFactory<SandboxedWorker> weak_ptr_factory_{this};
 };
 
 }  // namespace system_proxy

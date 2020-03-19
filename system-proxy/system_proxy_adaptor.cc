@@ -117,8 +117,16 @@ std::vector<uint8_t> SystemProxyAdaptor::ShutDown() {
   return SerializeProto(response);
 }
 
+void SystemProxyAdaptor::GetChromeProxyServersAsync(
+    const std::string& target_url,
+    const brillo::http::GetChromeProxyServersCallback& callback) {
+  brillo::http::GetChromeProxyServersAsync(
+      dbus_object_->GetBus(), target_url,
+      move(callback));
+}
+
 std::unique_ptr<SandboxedWorker> SystemProxyAdaptor::CreateWorker() {
-  return std::make_unique<SandboxedWorker>();
+  return std::make_unique<SandboxedWorker>(weak_ptr_factory_.GetWeakPtr());
 }
 
 void SystemProxyAdaptor::SetCredentialsTask(SandboxedWorker* worker,
