@@ -18,7 +18,7 @@ class WiFiIEsFuzz {
   static void Run(const uint8_t* data, size_t size) {
     std::vector<uint8_t> ies(data, data + size);
     KeyValueStore properties;
-    properties.SetUint8s(WPASupplicant::kBSSPropertyIEs, ies);
+    properties.Set(WPASupplicant::kBSSPropertyIEs, ies);
 
     Metrics::WiFiNetworkPhyMode phy_mode;
     WiFiEndpoint::VendorInformation vendor_information;
