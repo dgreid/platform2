@@ -85,15 +85,6 @@ void enter_vfs_namespace() {
   if (minijail_bind(j.get(), "/run/shill", "/run/shill", 0))
     LOG(FATAL) << "minijail_bind(\"/run/shill\") failed";
 
-  // TODO(kanso): Drop this mount once log_tool.cc no longer cats bugreport
-  // directly (used by Android N and older).
-  // Mount /run/arc/bugreport to be able to collect ARC bug reports.
-  // In case we start before ARC, make sure the path exists.
-  mkdir("/run/arc", 0755);
-  mkdir("/run/arc/bugreport", 0755);
-  if (minijail_bind(j.get(), "/run/arc/bugreport", "/run/arc/bugreport", 0))
-    LOG(FATAL) << "minijail_bind(\"/run/arc/bugreport\") failed";
-
   // Mount /run/containers to be able to collect container stats.
   mkdir("/run/containers", 0755);
   if (minijail_bind(j.get(), "/run/containers", "/run/containers", 0))
