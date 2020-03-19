@@ -35,15 +35,6 @@ constexpr char kReadOnlyPrefsDir[] = "/usr/share/power_manager";
 // stored.
 constexpr char kBoardSpecificPrefsSubdir[] = "board_specific";
 
-// Subdirectory within the read-only prefs dir where model-specific prefs are
-// stored.
-constexpr char kModelSpecificPrefsSubdir[] = "model_specific";
-
-// Path and key name in CrosConfig database to look up model-specific pref
-// subdirectory.
-constexpr char kModelSubdirConfigPath[] = "/";
-constexpr char kModelSubdirConfigKey[] = "powerd-prefs";
-
 // Minimum time between batches of prefs being written to disk, in
 // milliseconds.
 const int kDefaultWriteIntervalMs = 1000;
@@ -85,20 +76,7 @@ PrefsSourceInterfaceVector Prefs::GetDefaultSources() {
 
   auto config = std::make_unique<brillo::CrosConfig>();
   if (config->Init()) {
-    // Prior to the introduction of CrosConfigPrefsSource, power prefs were
-    // stored in a model-specific subdirectory named by a CrosConfig prop; we
-    // need to preserve that behavior until we migrate these existing props.
-    std::string model_subdir;
-    bool has_model_subdir = config->GetString(
-        kModelSubdirConfigPath, kModelSubdirConfigKey, &model_subdir);
-
     sources.emplace_back(new CrosConfigPrefsSource(std::move(config)));
-
-    if (has_model_subdir) {
-      sources.emplace_back(
-          new FilePrefsStore(read_only_path.Append(kModelSpecificPrefsSubdir)
-                                 .Append(model_subdir)));
-    }
   }
 
   sources.emplace_back(
