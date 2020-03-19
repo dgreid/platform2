@@ -129,4 +129,24 @@ bool UnlinkKey(key_serial_t key) {
   return true;
 }
 
+bool UnlinkKeyByDescriptor(const brillo::SecureBlob& key_descriptor) {
+  key_serial_t keyring = keyctl_search(
+    KEY_SPEC_SESSION_KEYRING, "keyring", kKeyringName, 0);
+  if (keyring == kInvalidKeySerial) {
+    PLOG(ERROR) << "keyctl_search failed";
+    return kInvalidKeySerial;
+  }
+
+  std::string key_name = kKeyNamePrefix + base::ToLowerASCII(
+    base::HexEncode(key_descriptor.data(), key_descriptor.size()));
+
+  key_serial_t key = keyctl_search(keyring, "logon", key_name.c_str(), 0);
+  if (key == kInvalidKeySerial) {
+    PLOG(ERROR) << "keyctl_search failed";
+    return kInvalidKeySerial;
+  }
+
+  return UnlinkKey(key);
+}
+
 }  // namespace dircrypto
