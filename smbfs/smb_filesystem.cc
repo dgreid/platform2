@@ -11,6 +11,7 @@
 #include <base/callback_helpers.h>
 #include <base/logging.h>
 #include <base/posix/safe_strerror.h>
+#include <base/strings/string_number_conversions.h>
 #include <base/strings/string_piece.h>
 #include <base/strings/string_util.h>
 
@@ -27,6 +28,10 @@ constexpr char kUrlPrefix[] = "smb://";
 constexpr double kAttrTimeoutSeconds = 5.0;
 constexpr mode_t kAllowedFileTypes = S_IFREG | S_IFDIR;
 constexpr mode_t kFileModeMask = kAllowedFileTypes | 0770;
+
+// Cache stat information for the latest 1024 directory entries retrieved.
+constexpr int kStatCacheSize = 1024;
+constexpr double kStatCacheTimeoutSeconds = kAttrTimeoutSeconds;
 
 void SambaLog(void* private_ptr, int level, const char* msg) {
   VLOG(level) << "libsmbclient: " << msg;
@@ -69,7 +74,8 @@ SmbFilesystem::SmbFilesystem(Options options)
       uid_(options.uid),
       gid_(options.gid),
       credentials_(std::move(options.credentials)),
-      samba_thread_(kSambaThreadName) {
+      samba_thread_(kSambaThreadName),
+      stat_cache_(kStatCacheSize) {
   // Ensure files are not owned by root.
   CHECK_GT(uid_, 0);
   CHECK_GT(gid_, 0);
@@ -107,6 +113,7 @@ SmbFilesystem::SmbFilesystem(Options options)
   smbc_opendir_ctx_ = smbc_getFunctionOpendir(context_);
   smbc_read_ctx_ = smbc_getFunctionRead(context_);
   smbc_readdir_ctx_ = smbc_getFunctionReaddir(context_);
+  smbc_readdirplus_ctx_ = smbc_getFunctionReaddirPlus(context_);
   smbc_rename_ctx_ = smbc_getFunctionRename(context_);
   smbc_rmdir_ctx_ = smbc_getFunctionRmdir(context_);
   smbc_stat_ctx_ = smbc_getFunctionStat(context_);
@@ -119,7 +126,9 @@ SmbFilesystem::SmbFilesystem(Options options)
 }
 
 SmbFilesystem::SmbFilesystem(const std::string& share_path)
-    : share_path_(share_path), samba_thread_(kSambaThreadName) {}
+    : share_path_(share_path),
+      samba_thread_(kSambaThreadName),
+      stat_cache_(kStatCacheSize) {}
 
 SmbFilesystem::~SmbFilesystem() {
   if (context_) {
@@ -203,6 +212,25 @@ struct stat SmbFilesystem::MakeStat(ino_t inode,
   stat.st_ctim = in_stat.st_ctim;
   stat.st_mtim = in_stat.st_mtim;
   return stat;
+}
+
+mode_t SmbFilesystem::MakeStatModeBitsFromDOSAttributes(uint16_t attrs) const {
+  mode_t mode = 0;
+
+  if (attrs & SMBC_DOS_MODE_DIRECTORY) {
+    mode = S_IFDIR;
+  } else {
+    mode = S_IFREG;
+  }
+
+  // All files and directories are read / write unless read only.
+  if (attrs & SMBC_DOS_MODE_READONLY) {
+    mode |= S_IRUSR;
+  } else {
+    mode |= S_IRUSR | S_IWUSR;
+  }
+
+  return MakeStatModeBits(mode);
 }
 
 mode_t SmbFilesystem::MakeStatModeBits(mode_t in_mode) const {
@@ -364,21 +392,24 @@ void SmbFilesystem::LookupInternal(std::unique_ptr<EntryRequest> request,
   const base::FilePath file_path = parent_path.Append(name);
   const std::string share_file_path = MakeShareFilePath(file_path);
 
+  ino_t inode = inode_map_.IncInodeRef(file_path);
   struct stat smb_stat = {0};
-  int error = smbc_stat_ctx_(context_, share_file_path.c_str(), &smb_stat);
-  if (error < 0) {
-    request->ReplyError(errno);
-    return;
-  } else if (!IsAllowedFileMode(smb_stat.st_mode)) {
-    VLOG(1) << "Disallowed file mode " << smb_stat.st_mode << " for path "
-            << share_file_path;
-    request->ReplyError(EACCES);
-    return;
+  if (!GetCachedInodeStat(inode, &smb_stat)) {
+    int error = smbc_stat_ctx_(context_, share_file_path.c_str(), &smb_stat);
+    if (error < 0) {
+      request->ReplyError(errno);
+      inode_map_.Forget(inode, 1);
+      return;
+    } else if (!IsAllowedFileMode(smb_stat.st_mode)) {
+      VLOG(1) << "Disallowed file mode " << smb_stat.st_mode << " for path "
+              << share_file_path;
+      request->ReplyError(EACCES);
+      inode_map_.Forget(inode, 1);
+      return;
+    }
   }
 
-  ino_t inode = inode_map_.IncInodeRef(file_path);
   struct stat entry_stat = MakeStat(inode, smb_stat);
-
   fuse_entry_param entry = {0};
   entry.ino = inode;
   entry.generation = 1;
@@ -395,7 +426,10 @@ void SmbFilesystem::Forget(fuse_ino_t inode, uint64_t count) {
 }
 
 void SmbFilesystem::ForgetInternal(fuse_ino_t inode, uint64_t count) {
-  inode_map_.Forget(inode, count);
+  if (inode_map_.Forget(inode, count)) {
+    // The inode was removed, invalidate any cached stat information.
+    EraseCachedInodeStat(inode);
+  }
 }
 
 void SmbFilesystem::GetAttr(std::unique_ptr<AttrRequest> request,
@@ -412,13 +446,18 @@ void SmbFilesystem::GetAttrInternal(std::unique_ptr<AttrRequest> request,
     return;
   }
 
-  const std::string share_file_path = ShareFilePathFromInode(inode);
   struct stat smb_stat = {0};
-  int error = smbc_stat_ctx_(context_, share_file_path.c_str(), &smb_stat);
-  if (error < 0) {
-    request->ReplyError(errno);
-    return;
-  } else if (!IsAllowedFileMode(smb_stat.st_mode)) {
+  const std::string share_file_path = ShareFilePathFromInode(inode);
+
+  if (!GetCachedInodeStat(inode, &smb_stat)) {
+    int error = smbc_stat_ctx_(context_, share_file_path.c_str(), &smb_stat);
+    if (error < 0) {
+      request->ReplyError(errno);
+      return;
+    }
+  }
+
+  if (!IsAllowedFileMode(smb_stat.st_mode)) {
     VLOG(1) << "Disallowed file mode " << smb_stat.st_mode << " for path "
             << share_file_path;
     request->ReplyError(EACCES);
@@ -514,6 +553,10 @@ void SmbFilesystem::SetAttrInternal(std::unique_ptr<AttrRequest> request,
     return;
   }
   reply_stat.st_size = attr.st_size;
+
+  // Modifying the file size invalidates any cached inode we have.
+  EraseCachedInodeStat(inode);
+
   request->ReplyAttr(reply_stat, kAttrTimeoutSeconds);
 }
 
@@ -697,6 +740,9 @@ void SmbFilesystem::WriteInternal(std::unique_ptr<WriteRequest> request,
     request->ReplyError(err);
     return;
   }
+
+  // Modifying the file invalidates any cached inode we have.
+  EraseCachedInodeStat(inode);
 
   request->ReplyWrite(bytes_written);
 }
@@ -884,14 +930,17 @@ void SmbFilesystem::ReadDirInternal(std::unique_ptr<DirentryRequest> request,
   while (true) {
     // Explicitly set |errno| to 0 to detect EOF vs. error cases.
     errno = 0;
-    const smbc_dirent* dirent = smbc_readdir_ctx_(context_, dir);
-    if (!dirent) {
+    // TODO(crbug.com/1054711): When smbc_readdirplus2 is available we can
+    // retrieve a struct stat along with libsmb_file_info.
+    const struct libsmb_file_info* dirent_info =
+        smbc_readdirplus_ctx_(context_, dir);
+    if (!dirent_info) {
       if (!errno) {
         // EOF.
         break;
       }
       int err = errno;
-      VPLOG(1) << "smbc_readdir on path " << dir_path.value() << " failed";
+      VPLOG(1) << "smbc_readdirplus on path " << dir_path.value() << " failed";
       request->ReplyError(err);
       return;
     }
@@ -903,31 +952,37 @@ void SmbFilesystem::ReadDirInternal(std::unique_ptr<DirentryRequest> request,
       return;
     }
 
-    base::StringPiece filename(dirent->name);
+    base::StringPiece filename(dirent_info->name);
     if (filename == "." || filename == "..") {
       // Ignore . and .. since FUSE already takes care of these.
       continue;
     }
     CHECK(!filename.empty());
     CHECK_EQ(filename.find("/"), base::StringPiece::npos);
-    mode_t mode;
-    if (dirent->smbc_type == SMBC_FILE) {
-      mode = S_IFREG;
-    } else if (dirent->smbc_type == SMBC_DIR) {
-      mode = S_IFDIR;
-    } else {
-      VLOG(1) << "Ignoring directory entry of unsupported type: "
-              << dirent->smbc_type;
-      continue;
-    }
+
+    struct stat inode_stat = {0};
+    // TODO(crbug.com/1054711): The mapping of DOS attributes to a mode_t can
+    // be removed when struct stat is available from smbc_readdirplus2.
+    inode_stat.st_mode = MakeStatModeBitsFromDOSAttributes(dirent_info->attrs);
 
     const base::FilePath entry_path = dir_path.Append(filename);
     ino_t entry_inode = inode_map_.IncInodeRef(entry_path);
-    if (!request->AddEntry(filename, entry_inode, mode, next_offset)) {
+    if (!request->AddEntry(filename, entry_inode, inode_stat.st_mode,
+                           next_offset)) {
       // Response buffer full.
       inode_map_.Forget(entry_inode, 1);
       break;
     }
+
+    // Synthesize a struct stat that can be cached and returned from
+    // GetAttrInternal().
+    inode_stat.st_atim = dirent_info->atime_ts;
+    inode_stat.st_ctim = dirent_info->ctime_ts;
+    inode_stat.st_mtim = dirent_info->mtime_ts;
+    inode_stat.st_size = dirent_info->size;
+
+    inode_stat = MakeStat(entry_inode, inode_stat);
+    AddCachedInodeStat(inode_stat);
   }
 
   request->ReplyDone();
@@ -1057,6 +1112,42 @@ std::ostream& operator<<(std::ostream& out, SmbFilesystem::ConnectError error) {
       NOTREACHED();
       return out << "INVALID_ERROR";
   }
+}
+
+void SmbFilesystem::AddCachedInodeStat(const struct stat& inode_stat) {
+  DCHECK(inode_stat.st_ino);
+
+  StatCacheItem item;
+
+  item.inode_stat = inode_stat;
+  item.expires_at = base::Time::Now() +
+                    base::TimeDelta::FromSecondsD(kStatCacheTimeoutSeconds);
+
+  stat_cache_.Put(inode_stat.st_ino, item);
+}
+
+void SmbFilesystem::EraseCachedInodeStat(ino_t inode) {
+  auto iter = stat_cache_.Peek(inode);
+  if (iter != stat_cache_.end()) {
+    stat_cache_.Erase(iter);
+  }
+}
+
+bool SmbFilesystem::GetCachedInodeStat(ino_t inode, struct stat* out_stat) {
+  DCHECK(out_stat);
+  auto iter = stat_cache_.Get(inode);
+  if (iter == stat_cache_.end()) {
+    return false;
+  }
+
+  StatCacheItem item = iter->second;
+  if (item.expires_at < base::Time::Now()) {
+    stat_cache_.Erase(iter);
+    return false;
+  }
+
+  *out_stat = item.inode_stat;
+  return true;
 }
 
 }  // namespace smbfs

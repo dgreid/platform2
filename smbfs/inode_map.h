@@ -36,8 +36,8 @@ class InodeMap {
 
   // Forget |forget_count| reference to |inode|. If the refcount falls to 0,
   // remove the inode. |forget_count| cannot be greater than the current
-  // refcount of |inode|.
-  void Forget(ino_t inode, uint64_t forget_count);
+  // refcount of |inode|. Returns true if the inode was removed.
+  bool Forget(ino_t inode, uint64_t forget_count);
 
  private:
   struct Entry;

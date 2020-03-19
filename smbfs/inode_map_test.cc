@@ -67,30 +67,34 @@ TEST(InodeMapTest, TestForget) {
   map.IncInodeRef(base::FilePath(kFilePath1));
   EXPECT_EQ(base::FilePath(kFilePath1), map.GetPath(inode1));
 
-  // Create inode with refcount of 3.
+  // Create inode with refcount of 2.
   ino_t inode2 = map.IncInodeRef(base::FilePath(kFilePath2));
   map.IncInodeRef(base::FilePath(kFilePath2));
   EXPECT_EQ(base::FilePath(kFilePath2), map.GetPath(inode2));
 
-  map.Forget(inode1, 2);
+  bool removed = map.Forget(inode1, 2);
   EXPECT_EQ(base::FilePath(kFilePath1), map.GetPath(inode1));
+  EXPECT_FALSE(removed);
 
-  map.Forget(inode1, 1);
+  removed = map.Forget(inode1, 1);
   EXPECT_EQ(base::FilePath(), map.GetPath(inode1));
+  EXPECT_TRUE(removed);
 
   // Previous Forget() calls shouldn't affect |inode2|.
   EXPECT_EQ(base::FilePath(kFilePath2), map.GetPath(inode2));
 
-  map.Forget(inode2, 2);
+  removed = map.Forget(inode2, 2);
   EXPECT_EQ(base::FilePath(), map.GetPath(inode2));
+  EXPECT_TRUE(removed);
 }
 
 TEST(InodeMapTest, TestForgetRoot) {
   InodeMap map(kRootInode);
 
   // Forgetting the root inode should do nothing.
-  map.Forget(kRootInode, 1);
+  bool removed = map.Forget(kRootInode, 1);
   EXPECT_EQ(base::FilePath("/"), map.GetPath(kRootInode));
+  EXPECT_FALSE(removed);
 }
 
 TEST(InodeMapTest, TestForgetTooMany) {

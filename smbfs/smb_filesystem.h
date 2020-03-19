@@ -14,9 +14,11 @@
 #include <unordered_map>
 #include <vector>
 
+#include <base/containers/mru_cache.h>
 #include <base/macros.h>
 #include <base/synchronization/lock.h>
 #include <base/threading/thread.h>
+#include <base/time/time.h>
 #include <gtest/gtest_prod.h>
 
 #include "smbfs/filesystem.h"
@@ -140,6 +142,14 @@ class SmbFilesystem : public Filesystem {
 
  private:
   FRIEND_TEST(SmbFilesystemTest, MakeStatModeBits);
+  FRIEND_TEST(SmbFilesystemTest, MakeStatModeBitsFromDOSAttributes);
+
+  // Cache stat information when listing directories to reduce unnecessary
+  // network requests.
+  struct StatCacheItem {
+    struct stat inode_stat;
+    base::Time expires_at;
+  };
 
   // Filesystem implementations that execute on |samba_thread_|.
   void StatFsInternal(std::unique_ptr<StatFsRequest> request, fuse_ino_t inode);
@@ -206,6 +216,9 @@ class SmbFilesystem : public Filesystem {
   // Clear / propagate permission bits appropriately (crbug.com/1063715).
   mode_t MakeStatModeBits(mode_t in_mode) const;
 
+  // Constructs mode (type and permission) bits for stat from DOS attributes.
+  mode_t MakeStatModeBitsFromDOSAttributes(uint16_t attrs) const;
+
   // Constructs a share file path suitable for passing to libsmbclient from the
   // given absolute file path.
   std::string MakeShareFilePath(const base::FilePath& path) const;
@@ -237,6 +250,16 @@ class SmbFilesystem : public Filesystem {
                           char* password,
                           int password_len);
 
+  // Cache a stat structure. |inode_stat.st_ino| is used as the key.
+  void AddCachedInodeStat(const struct stat& inode_stat);
+
+  // Remove the cached stat structure for |inode|.
+  void EraseCachedInodeStat(ino_t inode);
+
+  // Lookup the cached stat structure for |inode|. Returns true on cache hit or
+  // false on a miss.
+  bool GetCachedInodeStat(ino_t inode, struct stat* out_stat);
+
   const std::string share_path_;
   const uid_t uid_ = 0;
   const gid_t gid_ = 0;
@@ -252,6 +275,9 @@ class SmbFilesystem : public Filesystem {
   mutable base::Lock lock_;
   std::string resolved_share_path_ = share_path_;
 
+  // Cache stat information during ReadDir() to speed up subsequent access.
+  base::HashingMRUCache<ino_t, StatCacheItem> stat_cache_;
+
   SMBCCTX* context_ = nullptr;
   smbc_close_fn smbc_close_ctx_ = nullptr;
   smbc_closedir_fn smbc_closedir_ctx_ = nullptr;
@@ -263,6 +289,9 @@ class SmbFilesystem : public Filesystem {
   smbc_opendir_fn smbc_opendir_ctx_ = nullptr;
   smbc_read_fn smbc_read_ctx_ = nullptr;
   smbc_readdir_fn smbc_readdir_ctx_ = nullptr;
+  // TODO(crbug.com/1054711): This should be swapped out for
+  // smbc_readdirplus2_fn when Samba is updated to 4.12.
+  smbc_readdirplus_fn smbc_readdirplus_ctx_ = nullptr;
   smbc_rename_fn smbc_rename_ctx_ = nullptr;
   smbc_rmdir_fn smbc_rmdir_ctx_ = nullptr;
   smbc_stat_fn smbc_stat_ctx_ = nullptr;

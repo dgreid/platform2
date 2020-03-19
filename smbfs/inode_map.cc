@@ -67,10 +67,10 @@ base::FilePath InodeMap::GetPath(ino_t inode) const {
   return it->second->path;
 }
 
-void InodeMap::Forget(ino_t inode, uint64_t forget_count) {
+bool InodeMap::Forget(ino_t inode, uint64_t forget_count) {
   if (inode == root_inode_) {
     // Ignore the root inode.
-    return;
+    return false;
   }
 
   const auto it = inodes_.find(inode);
@@ -80,11 +80,12 @@ void InodeMap::Forget(ino_t inode, uint64_t forget_count) {
   CHECK_GE(entry->refcount, forget_count);
   entry->refcount -= forget_count;
   if (entry->refcount > 0) {
-    return;
+    return false;
   }
   size_t removed = files_.erase(entry->path.value());
   DCHECK_EQ(removed, 1);
   inodes_.erase(it);
+  return true;
 }
 
 }  // namespace smbfs
