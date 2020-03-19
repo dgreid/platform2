@@ -60,7 +60,6 @@ chromeos:
             firmware-signing:
               key-id: '{{$key-id}}'
               signature-id: '{{$name}}'
-            powerd-prefs: 'reef'
             test-label: 'reef'
 """
 
@@ -260,21 +259,21 @@ chromeos:
           $whitelabel-tag: ''
           $brand-code: 'DEFAULT_BRAND_CODE'
           $stylus-category: 'none'
-          $powerd-prefs: 'DEFAULT_POWERD_PREFS'
+          $test-label: 'DEFAULT_TEST_LABEL'
         - $key-id: 'WL1'
           $wallpaper: 'WL1_WALLPAPER'
           $regulatory-label: 'WL1_LABEL'
           $whitelabel-tag: 'WL1_TAG'
           $brand-code: 'WL1_BRAND_CODE'
           $stylus-category: 'none'
-          $powerd-prefs: 'WL1_POWERD_PREFS'
+          $test-label: 'WL1_TEST_LABEL'
         - $key-id: 'WL2'
           $wallpaper: 'WL2_WALLPAPER'
           $regulatory-label: 'WL2_LABEL'
           $whitelabel-tag: 'WL2_TAG'
           $brand-code: 'WL2_BRAND_CODE'
           $stylus-category: 'external'
-          $powerd-prefs: 'WL2_POWERD_PREFS'
+          $test-label: 'WL2_TEST_LABEL'
       skus:
         - config:
             identity:
@@ -290,7 +289,7 @@ chromeos:
 
 INVALID_WHITELABEL_CONFIG = """
             # THIS WILL CAUSE THE FAILURE
-            powerd-prefs: '{{$powerd-prefs}}'
+            test-label: '{{$test-label}}'
 """
 
 
