@@ -90,6 +90,31 @@ class MetadataUpdater {
   bool ok_;
 };
 
+// Checks if a fps range can be filled into aeAvailableTargetFpsRanges given a
+// list of supported formats.
+// Android metadata only reports min frame duration for each format/resolution.
+// CTS assumes a fps range is supported if the min frame duration (1/max_fps)
+// covers the range. Thus we need to check if the USB camera actually supports
+// some fps in the range.
+bool IsFpsRangeSupported(const cros::SupportedFormats& supported_formats,
+                         int32_t fps_range_min,
+                         int32_t fps_range_max) {
+  for (const auto& format : supported_formats) {
+    const int32_t max_fps = static_cast<int32_t>(*std::max_element(
+        format.frame_rates.begin(), format.frame_rates.end()));
+    if (max_fps >= fps_range_max) {
+      const bool has_fps_in_range = std::any_of(
+          format.frame_rates.begin(), format.frame_rates.end(), [&](float x) {
+            const int32_t fps = static_cast<int32_t>(x);
+            return fps_range_min <= fps && fps <= fps_range_max;
+          });
+      if (!has_fps_in_range)
+        return false;
+    }
+  }
+  return true;
+}
+
 }  // namespace
 
 namespace cros {
@@ -431,10 +456,13 @@ int MetadataHandler::FillMetadataFromSupportedFormats(
     }
   } else {
     for (auto fps : supported_fps) {
-      available_fps_ranges.push_back(kMinFps);
-      available_fps_ranges.push_back(fps);
+      if (IsFpsRangeSupported(supported_formats, kMinFps, fps)) {
+        available_fps_ranges.push_back(kMinFps);
+        available_fps_ranges.push_back(fps);
+      }
 
-      if (support_constant_framerate) {
+      if (support_constant_framerate &&
+          IsFpsRangeSupported(supported_formats, fps, fps)) {
         available_fps_ranges.push_back(fps);
         available_fps_ranges.push_back(fps);
       }
