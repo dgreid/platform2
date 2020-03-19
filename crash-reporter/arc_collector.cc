@@ -134,8 +134,7 @@ bool ArcCollector::HandleJavaCrash(const std::string& crash_type,
   if (!CreateReportForJavaCrash(crash_type, build_property, map, exception_info,
                                 log, &out_of_capacity)) {
     if (!out_of_capacity) {
-      const std::string basename = FormatDumpBasename(exec, time(nullptr), 0);
-      EnqueueCollectionErrorLog(kErrorSystemIssue, exec, basename);
+      EnqueueCollectionErrorLog(kErrorSystemIssue);
     }
     return false;
   }

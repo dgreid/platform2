@@ -1430,38 +1430,48 @@ bool CrashCollector::ParseProcessTicksFromStat(base::StringPiece stat,
          base::StringToUint64(fields[kStartTimePos], ticks);
 }
 
-void CrashCollector::EnqueueCollectionErrorLog(ErrorType error_type,
-                                               const std::string& exec,
-                                               const std::string& basename) {
-  FilePath crash_path;
+void CrashCollector::EnqueueCollectionErrorLog(ErrorType error_type) {
   LOG(INFO) << "Writing conversion problems as separate crash report.";
+
+  const std::string exec = "crash_reporter_failure";
+  const std::string basename =
+      FormatDumpBasename(exec, time(nullptr), getpid());
+
+  // Get rid of the existing metadata, since we're now writing info about
+  // errors *pertaining to collection* rather than the original program.
+  extra_metadata_.clear();
+  AddCrashMetaUploadData(kCollectorNameKey, exec);
+
+  FilePath crash_path;
   if (!GetCreatedCrashDirectoryByEuid(0, &crash_path, nullptr)) {
     LOG(ERROR) << "Could not even get log directory; out of space?";
     return;
   }
   AddCrashMetaData("sig", kCollectionErrorSignature);
   AddCrashMetaData("error_type", GetErrorTypeSignature(error_type));
-  std::string error_log = brillo::GetLog();
-  FilePath diag_log_path = GetCrashPath(crash_path, basename, "diaglog");
-  if (GetLogContents(FilePath(log_config_path_), kCollectionErrorSignature,
-                     diag_log_path)) {
-    // We load the contents of diag_log into memory and append it to
-    // the error log.  We cannot just append to files because we need
-    // to always create new files to prevent attack.
-    std::string diag_log_contents;
-    base::ReadFileToString(diag_log_path, &diag_log_contents);
-    error_log.append(diag_log_contents);
-    base::DeleteFile(diag_log_path, false);
-  }
   FilePath log_path = GetCrashPath(crash_path, basename, "log");
-  FilePath meta_path = GetCrashPath(crash_path, basename, "meta");
+
+  std::string error_log = brillo::GetLog();
   // We must use WriteNewFile instead of base::WriteFile as we do
   // not want to write with root access to a symlink that an attacker
   // might have created.
   if (WriteNewFile(log_path, error_log.data(), error_log.length()) < 0) {
-    PLOG(ERROR) << "Error writing new file " << log_path.value();
+    LOG(ERROR) << "Error writing new file " << log_path.value();
     return;
   }
+
+  // If we fail to get this log, still try to proceed (the other log could be
+  // useful on its own).
+  FilePath ps_log_path = GetCrashPath(crash_path, basename, "pslog");
+  if (GetLogContents(FilePath(log_config_path_), kCollectionErrorSignature,
+                     ps_log_path)) {
+    AddCrashMetaUploadFile("pslog", ps_log_path.BaseName().value());
+  } else {
+    LOG(ERROR) << "Failed getting collection error log contents for "
+               << kCollectionErrorSignature;
+  }
+
+  FilePath meta_path = GetCrashPath(crash_path, basename, "meta");
   FinishCrash(meta_path, exec, log_path.BaseName().value());
 }
 

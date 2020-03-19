@@ -420,9 +420,9 @@ class CrashCollector {
   // be dependent on a C++ library that might change.
   static unsigned HashString(base::StringPiece input);
 
-  void EnqueueCollectionErrorLog(ErrorType error_type,
-                                 const std::string& exec,
-                                 const std::string& basename);
+  // Record information about a crash collector failure in a new crash report.
+  // Clears metadata for existing report.
+  void EnqueueCollectionErrorLog(ErrorType error_type);
 
   // Logs a |message| detailing a crash, along with the |reason| for which the
   // collector handled or ignored it.

@@ -152,9 +152,7 @@ bool UserCollectorBase::HandleCrash(const std::string& crash_attributes,
                                  crash_time, &out_of_capacity);
       if (error_type != kErrorNone) {
         if (!out_of_capacity) {
-          const std::string basename =
-              FormatDumpBasename(exec, time(nullptr), pid);
-          EnqueueCollectionErrorLog(error_type, exec, basename);
+          EnqueueCollectionErrorLog(error_type);
         }
         return false;
       }
