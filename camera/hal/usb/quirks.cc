@@ -26,12 +26,6 @@ const QuirksMap& GetQuirksMap() {
       {{"0bda", "5646"}, kQuirkReportLeastFpsRanges},
       // Liteon AR CCD 8BA842N2A (b/147397859)
       {{"0bda", "5647"}, kQuirkReportLeastFpsRanges},
-      // Liteon 5M AF 6BA502N2B (b/151786363)
-      {{"0bda", "5649"}, kQuirkReportLeastFpsRanges},
-      // Liteon 7BA502T2 (b/151786363)
-      {{"0bda", "565d"}, kQuirkReportLeastFpsRanges},
-      // Chicony CKFJ811 (b/151050517)
-      {{"04f2", "b6b5"}, kQuirkReportLeastFpsRanges},
       // Logitech Tap HDMI Capture (b/146590270)
       {{"046d", "0876"}, kQuirkRestartOnTimeout},
       // IPEVO Ziggi-HD Plus
