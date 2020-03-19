@@ -674,14 +674,6 @@ bool Crypto::EncryptTPMNotBoundToPcr(const VaultKeyset& vault_keyset,
     return false;
   }
 
-  SecureBlob cipher_text;
-  SecureBlob wrapped_chaps_key;
-  SecureBlob vkk_key = CryptoLib::HmacSha256(kdf_skey, local_blob);
-  if (!GenerateEncryptedRawKeyset(vault_keyset, vkk_key, vkk_iv,
-                                  vkk_iv, &cipher_text, &wrapped_chaps_key)) {
-    return false;
-  }
-
   // Allow this to fail.  It is not absolutely necessary; it allows us to
   // detect a TPM clear.  If this fails due to a transient issue, then on next
   // successful login, the vault keyset will be re-saved anyway.
@@ -697,13 +689,8 @@ bool Crypto::EncryptTPMNotBoundToPcr(const VaultKeyset& vault_keyset,
                         | SerializedVaultKeyset::TPM_WRAPPED
                         | SerializedVaultKeyset::SCRYPT_DERIVED);
   serialized->set_tpm_key(tpm_key.data(), tpm_key.size());
-  serialized->set_wrapped_keyset(cipher_text.data(), cipher_text.size());
-  if (vault_keyset.chaps_key().size() == CRYPTOHOME_CHAPS_KEY_LENGTH) {
-    serialized->set_wrapped_chaps_key(wrapped_chaps_key.data(),
-                                      wrapped_chaps_key.size());
-  } else {
-    serialized->clear_wrapped_chaps_key();
-  }
+
+  SecureBlob vkk_key = CryptoLib::HmacSha256(kdf_skey, local_blob);
 
   // Pass back the vkk_key and vkk_iv so the generic secret wrapping can use it.
   out_blobs->vkk_key = vkk_key;
@@ -1008,9 +995,8 @@ bool Crypto::EncryptVaultKeyset(const VaultKeyset& vault_keyset,
       encrypt_tpm_success = EncryptTPM(vault_keyset, vault_key, vault_key_salt,
                                        obfuscated_username, &blobs, serialized);
     } else {
-      encrypt_tpm_success = EncryptTPMNotBoundToPcr(vault_keyset, vault_key,
-                                                    vault_key_salt, &blobs,
-                                                    serialized);
+      encrypt_tpm_success = EncryptTPMNotBoundToPcr(
+          vault_keyset, vault_key, vault_key_salt, &blobs, serialized);
     }
     if (!encrypt_tpm_success) {
       LOG(ERROR) << "Encrypt using TPM failed";
