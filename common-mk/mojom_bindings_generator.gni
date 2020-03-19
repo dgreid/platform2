@@ -201,6 +201,14 @@ template("generate_mojom_bindings_gen") {
       ":${mojo_parse_action_name}",
       ":${mojo_templates_action_name}",
     ]
+    if (defined(invoker.typemaps)) {
+      foreach(typemap, invoker.typemaps) {
+        args += [
+          "--typemap",
+          typemap,
+        ]
+      }
+    }
   }
 }
 
