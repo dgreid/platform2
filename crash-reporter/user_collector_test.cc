@@ -104,6 +104,8 @@ TEST_F(UserCollectorTest, EnableOK) {
 }
 
 TEST_F(UserCollectorTest, EnableNoPatternFileAccess) {
+  // Confirm we don't have junk left over from other tests.
+  ASSERT_FALSE(base::PathExists(base::FilePath("/does_not_exist")));
   collector_.set_core_pattern_file("/does_not_exist");
   ASSERT_FALSE(collector_.Enable(false));
   EXPECT_TRUE(FindLog("Enabling user crash handling"));
@@ -111,6 +113,8 @@ TEST_F(UserCollectorTest, EnableNoPatternFileAccess) {
 }
 
 TEST_F(UserCollectorTest, EnableNoPipeLimitFileAccess) {
+  // Confirm we don't have junk left over from other tests.
+  ASSERT_FALSE(base::PathExists(base::FilePath("/does_not_exist")));
   collector_.set_core_pipe_limit_file("/does_not_exist");
   ASSERT_FALSE(collector_.Enable(false));
   // Core pattern should not be written if we cannot access the pipe limit
