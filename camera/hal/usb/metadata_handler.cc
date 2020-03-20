@@ -1057,8 +1057,14 @@ int MetadataHandler::FillDefaultVideoRecordSettings(
   // android.control
   update_request(ANDROID_CONTROL_CAPTURE_INTENT,
                  ANDROID_CONTROL_CAPTURE_INTENT_VIDEO_RECORD);
-  update_request(ANDROID_CONTROL_AE_TARGET_FPS_RANGE,
-                 std::vector<int32_t>{max_supported_fps_, max_supported_fps_});
+  if (device_info_.constant_framerate_unsupported) {
+    update_request(ANDROID_CONTROL_AE_TARGET_FPS_RANGE,
+                   std::vector<int32_t>{kMinFps, max_supported_fps_});
+  } else {
+    update_request(
+        ANDROID_CONTROL_AE_TARGET_FPS_RANGE,
+        std::vector<int32_t>{max_supported_fps_, max_supported_fps_});
+  }
 
   update_request(ANDROID_CONTROL_MODE, ANDROID_CONTROL_MODE_AUTO);
   return 0;
@@ -1071,8 +1077,14 @@ int MetadataHandler::FillDefaultVideoSnapshotSettings(
   // android.control
   update_request(ANDROID_CONTROL_CAPTURE_INTENT,
                  ANDROID_CONTROL_CAPTURE_INTENT_VIDEO_SNAPSHOT);
-  update_request(ANDROID_CONTROL_AE_TARGET_FPS_RANGE,
-                 std::vector<int32_t>{max_supported_fps_, max_supported_fps_});
+  if (device_info_.constant_framerate_unsupported) {
+    update_request(ANDROID_CONTROL_AE_TARGET_FPS_RANGE,
+                   std::vector<int32_t>{kMinFps, max_supported_fps_});
+  } else {
+    update_request(
+        ANDROID_CONTROL_AE_TARGET_FPS_RANGE,
+        std::vector<int32_t>{max_supported_fps_, max_supported_fps_});
+  }
 
   update_request(ANDROID_CONTROL_MODE, ANDROID_CONTROL_MODE_AUTO);
   return 0;
