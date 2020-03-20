@@ -16,6 +16,7 @@
 
 #define LOG_TAG "MtkCam/MetadataProvider.constructStatic"
 //
+
 #include <algorithm>
 #include <camera_custom_logicaldevice.h>
 #include <custom_metadata/custom_metadata_tag.h>
@@ -33,6 +34,8 @@
 #include <property_lib.h>
 #include <string>
 #include <vector>
+
+#include "mojo/cros_camera_enum.mojom.h"
 
 using NSCam::Type2Type;
 using NSMetadataProvider::MetadataProvider;
@@ -517,7 +520,9 @@ void MetadataProvider::updateData(IMetadata* rMetadata) {
   // update sensor sync timestamp Type
   {
     IMetadata::IEntry timestampEntry(MTK_SENSOR_SYNC_TIMESTAMP);
-    timestampEntry.push_back(1, Type2Type<MINT32>());
+    timestampEntry.push_back(
+        static_cast<int32_t>(cros::mojom::CameraSensorSyncTimestamp::NONE),
+        Type2Type<MINT32>());
     rMetadata->update(MTK_SENSOR_SYNC_TIMESTAMP, timestampEntry);
     for (size_t i = 0; i < timestampEntry.count(); i += 4) {
       MY_LOGI("MTK_SENSOR_SYNC_TIMESTAMP i:%d,value:%d", i,

@@ -20,4 +20,5 @@ module cros.mojom;
 enum CameraSensorSyncTimestamp {
   BACKWARD = 0,
   NEAREST = 1,
+  NONE = 2,
 };

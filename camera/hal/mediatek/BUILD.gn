@@ -2,8 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//common-mk/mojom_bindings_generator.gni")
+
 group("all") {
   deps = [
+    ":libcamera_hal_mojom",
     "//camera/hal/mediatek/mtkcam/3rdparty:libmtkcam_3rdparty",
     "//camera/hal/mediatek/mtkcam/app:libcam3_app",
     "//camera/hal/mediatek/mtkcam/custom:libcameracustom",
@@ -49,4 +52,11 @@ group("all") {
     "//camera/hal/mediatek/mtkcam/v4l2:libmtkcam_v4l2drvmgr",
     "//camera/hal/mediatek/mtklibv4l2:libmtk_mc_libv4l2",
   ]
+}
+
+generate_mojom_bindings("libcamera_hal_mojom") {
+  sources = [
+    "//camera/mojo/cros_camera_enum.mojom",
+  ]
+  mojo_root = "//camera"
 }
