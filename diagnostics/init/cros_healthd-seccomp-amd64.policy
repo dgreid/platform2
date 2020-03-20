@@ -74,3 +74,4 @@ sched_setaffinity: 1
 sched_yield: 1
 sysinfo: 1
 nanosleep: 1
+kill: arg1 == SIGKILL || arg1 == SIGTERM
