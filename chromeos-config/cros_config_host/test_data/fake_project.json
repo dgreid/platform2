@@ -67,7 +67,11 @@
           "sku-id": 2147483647,
           "smbios-name-match": "Fake"
         },
-        "name": "fake-ref-design"
+        "name": "fake-ref-design",
+        "power": {
+          "battery-poll-interval-initial-ms": "1000",
+          "disable-dark-resume": "0"
+        }
       }
     ]
   }

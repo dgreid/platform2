@@ -295,6 +295,11 @@ def _TransformBuildConfig(config):
   _Set(_BuildFwSigning(config), result, 'firmware-signing')
   _Set(_BuildFingerprint(
       config.hw_design_config.hardware_topology), result, 'fingerprint')
+  power_prefs = config.sw_config.power_config.preferences
+  power_prefs_map = dict(
+      (x.replace('_', '-'),
+       power_prefs[x]) for x in power_prefs)
+  _Set(power_prefs_map, result, 'power')
 
   return result
 
