@@ -545,6 +545,9 @@ class WiFi : public Device, public SupplicantEventDelegateInterface {
   // |all_scan_frequencies_|.
   void OnNewWiphy(const Nl80211Message& nl80211_message);
 
+  // Requests regulatory information via NL80211_CMD_GET_REG.
+  void GetRegulatory();
+
   void OnTriggerPassiveScanResponse(const Nl80211Message& netlink_message);
 
   void SetScanState(ScanState new_state,
@@ -594,9 +597,15 @@ class WiFi : public Device, public SupplicantEventDelegateInterface {
   // started.
   void OnScanStarted(const Nl80211Message& scan_trigger_msg);
 
-  // Logs Wifi regulatory domain metrics when regulatory domain change nl80211
-  // messages are received.
+  // Handles NL80211_CMD_GET_REG.
+  void OnGetReg(const Nl80211Message& nl80211_message);
+
+  // Handles regulatory domain changes (NL80211_CMD_WIPHY_REG_CHANGE and
+  // NL80211_CMD_REG_CHANGE).
   void OnRegChange(const Nl80211Message& nl80211_message);
+
+  // Handles country change metric.
+  void HandleCountryChange(std::string country_code);
 
   // Helper function for setting supplicant_interface_proxy_ pointer.
   void SetSupplicantInterfaceProxy(

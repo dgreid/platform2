@@ -206,7 +206,7 @@ class SHILL_EXPORT GetRegMessage : public Nl80211Message {
   static const uint8_t kCommand;
   static const char kCommandString[];
 
-  GetRegMessage() : Nl80211Message(kCommand, kCommandString) {}
+  GetRegMessage();
 
  private:
   DISALLOW_COPY_AND_ASSIGN(GetRegMessage);

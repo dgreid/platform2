@@ -1168,9 +1168,7 @@ class WiFiObjectTest : public ::testing::TestWithParam<string> {
 
   void SetWiFiEnabled(bool enabled) { wifi_->enabled_ = enabled; }
 
-  void OnRegChange(const WiphyRegChangeMessage& msg) {
-    wifi_->OnRegChange(msg);
-  }
+  void OnGetReg(const Nl80211Message& msg) { wifi_->OnGetReg(msg); }
 
   MOCK_METHOD(void, SuspendCallback, (const Error&));
 
@@ -4233,12 +4231,12 @@ TEST_F(WiFiMainTest, RemoveNetlinkHandler) {
   EXPECT_CALL(netlink_manager_, RemoveBroadcastHandler(_)).Times(1);
 }
 
-TEST_F(WiFiMainTest, OnRegChange) {
-  WiphyRegChangeMessage msg;
+TEST_F(WiFiMainTest, OnGetReg) {
+  GetRegMessage msg;
   msg.attributes()->CreateStringAttribute(NL80211_ATTR_REG_ALPHA2, "alpha2");
-  msg.attributes()->CreateU32Attribute(NL80211_ATTR_REG_INITIATOR, "initiator");
-  msg.attributes()->SetU32AttributeValue(NL80211_ATTR_REG_INITIATOR,
-                                         NL80211_REGDOM_SET_BY_DRIVER);
+  msg.attributes()->CreateU8Attribute(NL80211_ATTR_DFS_REGION, "dfs-region");
+  msg.attributes()->SetU8AttributeValue(NL80211_ATTR_DFS_REGION,
+                                        NL80211_DFS_UNSET);
 
   // First Regulatory Domain enum enrty.
   msg.attributes()->SetStringAttributeValue(NL80211_ATTR_REG_ALPHA2, "00");
@@ -4246,33 +4244,33 @@ TEST_F(WiFiMainTest, OnRegChange) {
               SendEnumToUMA(Metrics::kMetricRegulatoryDomain,
                             Metrics::RegulatoryDomain::kRegDom00, _))
       .Times(1);
-  OnRegChange(msg);
+  OnGetReg(msg);
   // Last Regulatory Domain enum entry. Zimbabwe = 674.
   msg.attributes()->SetStringAttributeValue(NL80211_ATTR_REG_ALPHA2, "ZW");
   EXPECT_CALL(*metrics(),
               SendEnumToUMA(Metrics::kMetricRegulatoryDomain, 674, _))
       .Times(1);
-  OnRegChange(msg);
+  OnGetReg(msg);
   // Second call with same country code should not trigger SendEnumToUMA() call.
-  OnRegChange(msg);
+  OnGetReg(msg);
   // Lower case valid country code. United States = 540.
   msg.attributes()->SetStringAttributeValue(NL80211_ATTR_REG_ALPHA2, "us");
   EXPECT_CALL(*metrics(),
               SendEnumToUMA(Metrics::kMetricRegulatoryDomain, 540, _))
       .Times(1);
-  OnRegChange(msg);
+  OnGetReg(msg);
   // Invalid country code.
   msg.attributes()->SetStringAttributeValue(NL80211_ATTR_REG_ALPHA2, "err");
   EXPECT_CALL(*metrics(),
               SendEnumToUMA(Metrics::kMetricRegulatoryDomain,
                             Metrics::RegulatoryDomain::kCountryCodeInvalid, _))
       .Times(1);
-  OnRegChange(msg);
+  OnGetReg(msg);
   // Message with no alpha2 attribute.
   WiphyRegChangeMessage no_alpha2;
   EXPECT_CALL(*metrics(), SendEnumToUMA(Metrics::kMetricRegulatoryDomain, _, _))
       .Times(0);
-  OnRegChange(no_alpha2);
+  OnGetReg(no_alpha2);
 }
 
 }  // namespace shill

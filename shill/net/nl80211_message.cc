@@ -237,6 +237,12 @@ const char FrameTxStatusMessage::kCommandString[] =
 const uint8_t GetRegMessage::kCommand = NL80211_CMD_GET_REG;
 const char GetRegMessage::kCommandString[] = "NL80211_CMD_GET_REG";
 
+GetRegMessage::GetRegMessage() : Nl80211Message(kCommand, kCommandString) {
+  attributes()->CreateAttribute(
+      NL80211_ATTR_WIPHY, Bind(&NetlinkAttribute::NewNl80211AttributeFromId,
+                               NetlinkMessage::MessageContext()));
+}
+
 const uint8_t GetStationMessage::kCommand = NL80211_CMD_GET_STATION;
 const char GetStationMessage::kCommandString[] = "NL80211_CMD_GET_STATION";
 

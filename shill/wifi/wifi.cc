@@ -1362,47 +1362,74 @@ void WiFi::OnScanStarted(const Nl80211Message& scan_trigger_msg) {
   wake_on_wifi_->OnScanStarted(is_active_scan);
 }
 
-void WiFi::OnRegChange(const Nl80211Message& nl80211_message) {
-  // Variable to keep track of current regulatory domain to reduce noise in
-  // reported metrics. Only report metric when regulatory domain changes.
-  static int current_reg_dom_val = -1;
-  if (nl80211_message.command() != WiphyRegChangeMessage::kCommand &&
-      nl80211_message.command() != RegChangeMessage::kCommand) {
-    SLOG(this, 3) << __func__ << ": "
-                  << "Not a NL80211_CMD_WIPHY_REG_CHANGE message";
+void WiFi::OnGetReg(const Nl80211Message& nl80211_message) {
+  if (nl80211_message.command() != GetRegMessage::kCommand) {
+    LOG(ERROR) << __func__
+               << ": unexpected command: " << nl80211_message.command_string();
     return;
   }
 
-  // Ignore regulatory domain changes initiated by user.
-  uint32_t initiator;
-  if (!nl80211_message.const_attributes()->GetU32AttributeValue(
-          NL80211_ATTR_REG_INITIATOR, &initiator)) {
-    SLOG(this, 3) << "NL80211_CMD_WIPHY_REG_CHANGE had no "
-                  << "NL80211_ATTR_REG_INITIATOR";
-    return;
-  }
-  if (initiator == NL80211_REGDOM_SET_BY_USER) {
-    SLOG(this, 7) << "Ignoring regulatory domain change initiated by user.";
-    return;
-  }
-
-  // Parse NL80211_CMD_WIPHY_REG_CHANGE frame and extract reg. domain value.
+  // Extract country code.
   std::string country_code;
   if (!nl80211_message.const_attributes()->GetStringAttributeValue(
           NL80211_ATTR_REG_ALPHA2, &country_code)) {
-    SLOG(this, 3) << "NL80211_CMD_WIPHY_REG_CHANGE had no "
-                  << "NL80211_ATTR_REG_ALPHA2";
-    return;  // If no alpha2 value present, don't log metric.
+    SLOG(this, 3) << "Regulatory message had no NL80211_ATTR_REG_ALPHA2";
+    return;  // If no alpha2 value present, ignore it.
   }
+
+  HandleCountryChange(country_code);
+
+  uint8_t dfs_region;
+  if (!nl80211_message.const_attributes()->GetU8AttributeValue(
+          NL80211_ATTR_DFS_REGION, &dfs_region)) {
+    SLOG(this, 3) << "Regulatory message has no DFS region";
+    return;
+  }
+
+  SLOG(this, 1) << "DFS region: " << dfs_region;
+}
+
+void WiFi::OnRegChange(const Nl80211Message& nl80211_message) {
+  if (nl80211_message.command() != WiphyRegChangeMessage::kCommand &&
+      nl80211_message.command() != RegChangeMessage::kCommand) {
+    LOG(ERROR) << __func__
+               << ": unexpected command: " << nl80211_message.command_string();
+    return;
+  }
+
+  // Ignore regulatory domain CHANGE events initiated by user.
+  uint32_t initiator;
+  if (!nl80211_message.const_attributes()->GetU32AttributeValue(
+          NL80211_ATTR_REG_INITIATOR, &initiator)) {
+    SLOG(this, 3) << "No NL80211_ATTR_REG_INITIATOR in command "
+                  << nl80211_message.command_string();
+    return;
+  }
+  if (initiator == NL80211_REGDOM_SET_BY_USER) {
+    SLOG(this, 3) << "Ignoring regulatory domain change initiated by user.";
+    return;
+  }
+
+  // CHANGE events don't have all the useful attributes (e.g.,
+  // NL80211_ATTR_DFS_REGION); request the full info now.
+  GetRegulatory();
+}
+
+void WiFi::HandleCountryChange(std::string country_code) {
+  // Variable to keep track of current regulatory domain to reduce noise in
+  // reported "change" events.
+  static int current_reg_dom_val = -1;
 
   // Get Regulatory Domain value from received country code.
   int reg_dom_val = Metrics::GetRegulatoryDomainValue(country_code);
   if (reg_dom_val == Metrics::RegulatoryDomain::kCountryCodeInvalid) {
-    SLOG(this, 3) << "NL80211_CMD_WIPHY_REG_CHANGE had unsupported "
-                  << "NL80211_ATTR_REG_ALPHA2 attribute: " << country_code;
+    LOG(ERROR) << "Unsupported NL80211_ATTR_REG_ALPHA2 attribute: "
+               << country_code;
   } else {
-    SLOG(this, 7) << "Regulatory domain change message received with alpha2 val"
-                  << ": " << std::to_string(reg_dom_val);
+    SLOG(this, 3) << StringPrintf(
+        "Regulatory domain change message received with alpha2 %s (metric val: "
+        "%d)",
+        country_code.c_str(), reg_dom_val);
   }
 
   // Only send to UMA when regulatory domain changes to reduce noise in metrics.
@@ -2650,6 +2677,9 @@ void WiFi::OnNewWiphy(const Nl80211Message& nl80211_message) {
     wake_on_wifi_->OnWiphyIndexReceived(wiphy_index_);
   }
 
+  // Requires wiphy_index_.
+  GetRegulatory();
+
   // This checks NL80211_ATTR_FEATURE_FLAGS.
   ParseFeatureFlags(nl80211_message);
 
@@ -2698,6 +2728,19 @@ void WiFi::OnNewWiphy(const Nl80211Message& nl80211_message) {
       }
     }
   }
+}
+
+void WiFi::GetRegulatory() {
+  GetRegMessage reg_msg;
+  if (wiphy_index_ != kDefaultWiphyIndex) {
+    reg_msg.attributes()->SetU32AttributeValue(NL80211_ATTR_WIPHY,
+                                               wiphy_index_);
+  }
+  netlink_manager_->SendNl80211Message(
+      &reg_msg,
+      Bind(&WiFi::OnGetReg, weak_ptr_factory_while_started_.GetWeakPtr()),
+      Bind(&NetlinkManager::OnAckDoNothing),
+      Bind(&NetlinkManager::OnNetlinkMessageError));
 }
 
 void WiFi::OnTriggerPassiveScanResponse(const Nl80211Message& netlink_message) {
