@@ -111,7 +111,9 @@ std::string GetModelId(const DeviceInfo& info) {
 }  // namespace
 
 CameraHal::CameraHal()
-    : task_runner_(nullptr), udev_watcher_(this, "video4linux") {
+    : task_runner_(nullptr),
+      udev_watcher_(this, "video4linux"),
+      cros_device_config_(CrosDeviceConfig::Get()) {
   thread_checker_.DetachFromThread();
 }
 
@@ -274,7 +276,6 @@ int CameraHal::Init() {
 
   next_external_camera_id_ = num_builtin_cameras_;
 
-  cros_device_config_ = CrosDeviceConfig::Get();
   if (!cros_device_config_.is_initialized) {
     LOGF(ERROR) << "Failed to initialize CrOS device config";
     // TODO(b/150578054): Return -ENODEV once the issue is fixed. For now, let's
