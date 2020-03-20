@@ -104,8 +104,7 @@ int main(int argc, char* argv[]) {
 
   logging::SetMinLogLevel(log_level);
 
-  std::unique_ptr<hardware_verifier::Observer> observer;
-
+  auto observer = hardware_verifier::Observer::GetInstance();
   if (FLAGS_send_to_uma) {
     observer->SetMetricsLibrary(std::make_unique<MetricsLibrary>());
   }
@@ -113,9 +112,8 @@ int main(int argc, char* argv[]) {
   // TODO(yhong): Add the D-Bus service mode.
 
   hardware_verifier::CLI cli;
-  const auto cli_result =
-      cli.Run(FLAGS_probe_result_file, FLAGS_hw_verification_spec_file,
-              output_format, observer.get());
+  const auto cli_result = cli.Run(
+      FLAGS_probe_result_file, FLAGS_hw_verification_spec_file, output_format);
 
   const auto exit_status = ConvertCLIVerificationResultToExitStatus(cli_result);
 

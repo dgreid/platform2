@@ -10,6 +10,8 @@
 #include <memory>
 #include <string>
 
+#include <base/macros.h>
+#include <base/no_destructor.h>
 #include <base/time/time.h>
 #include <metrics/metrics_library.h>
 
@@ -31,8 +33,7 @@ const int kTimerBuckets_ = 50;
 // Observe and potentially logs the behavior of hardware_verifier.
 class Observer {
  public:
-  Observer() = default;
-  ~Observer() = default;
+  static Observer* GetInstance();
 
   void StartTimer(const std::string& timer_name);
   void StopTimer(const std::string& timer_name);
@@ -40,8 +41,14 @@ class Observer {
   void SetMetricsLibrary(std::unique_ptr<MetricsLibraryInterface> metrics);
 
  private:
+  friend class base::NoDestructor<Observer>;
+
+  Observer() = default;
+
   std::map<std::string, base::TimeTicks> timers_;
   std::unique_ptr<MetricsLibraryInterface> metrics_;
+
+  DISALLOW_COPY_AND_ASSIGN(Observer);
 };
 
 }  // namespace hardware_verifier

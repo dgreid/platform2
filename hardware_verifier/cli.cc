@@ -73,10 +73,11 @@ CLI::CLI()
 
 CLIVerificationResult CLI::Run(const std::string& probe_result_file,
                                const std::string& hw_verification_spec_file,
-                               const CLIOutputFormat output_format,
-                               Observer* observer) {
+                               const CLIOutputFormat output_format) {
   LOG(INFO) << "Get the probe result.";
   base::Optional<runtime_probe::ProbeResult> probe_result;
+  auto observer = Observer::GetInstance();
+
   if (probe_result_file.empty()) {
     observer->StartTimer(hardware_verifier::kMetricTimeToProbe);
     probe_result = pr_getter_->GetFromRuntimeProbe();

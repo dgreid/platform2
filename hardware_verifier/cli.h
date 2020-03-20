@@ -13,7 +13,6 @@
 #include <base/macros.h>
 
 #include "hardware_verifier/hw_verification_spec_getter.h"
-#include "hardware_verifier/observer.h"
 #include "hardware_verifier/probe_result_getter.h"
 #include "hardware_verifier/verifier.h"
 
@@ -64,14 +63,12 @@ class CLI {
   //     verification payload.  If the string is empty, it reads the default
   //     verification payload file in the rootfs.
   // @param output_format: The format of the output data.
-  // @param observer: An observer to record critical events.
   //
   // @return Execution result, can be either the verification result or the
   //     failure code.
   CLIVerificationResult Run(const std::string& probe_result_file,
                             const std::string& hw_verification_spec_file,
-                            const CLIOutputFormat output_format,
-                            Observer* observer);
+                            const CLIOutputFormat output_format);
 
  private:
   friend class CLITest;

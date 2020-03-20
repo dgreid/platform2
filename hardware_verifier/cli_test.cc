@@ -28,8 +28,9 @@ class CLITest : public testing::Test {
     vp_getter_ = new FakeHwVerificationSpecGetter();
     verifier_ = new FakeVerifier();
     output_stream_.reset(new std::ostringstream());
-    observer = new Observer();
-    observer->SetMetricsLibrary(std::make_unique<MetricsLibraryMock>());
+
+    Observer::GetInstance()->SetMetricsLibrary(
+        std::make_unique<MetricsLibraryMock>());
 
     cli_ = std::make_unique<CLI>();
     cli_->pr_getter_.reset(pr_getter_);
@@ -50,48 +51,46 @@ class CLITest : public testing::Test {
   FakeHwVerificationSpecGetter* vp_getter_;
   FakeVerifier* verifier_;
   std::unique_ptr<std::ostringstream> output_stream_;
-
-  Observer* observer;
 };
 
 TEST_F(CLITest, TestBasicFlow) {
-  EXPECT_EQ(cli_->Run("", "", CLIOutputFormat::kProtoBin, observer),
+  EXPECT_EQ(cli_->Run("", "", CLIOutputFormat::kProtoBin),
             CLIVerificationResult::kPass);
 }
 
 TEST_F(CLITest, TestHandleWaysToGetProbeResults) {
   pr_getter_->set_runtime_probe_fail();
-  EXPECT_EQ(cli_->Run("", "", CLIOutputFormat::kProtoBin, observer),
+  EXPECT_EQ(cli_->Run("", "", CLIOutputFormat::kProtoBin),
             CLIVerificationResult::kProbeFail);
 
   pr_getter_->set_file_probe_results({{"path", runtime_probe::ProbeResult()}});
-  EXPECT_EQ(cli_->Run("path", "", CLIOutputFormat::kProtoBin, observer),
+  EXPECT_EQ(cli_->Run("path", "", CLIOutputFormat::kProtoBin),
             CLIVerificationResult::kPass);
-  EXPECT_EQ(cli_->Run("path2", "", CLIOutputFormat::kProtoBin, observer),
+  EXPECT_EQ(cli_->Run("path2", "", CLIOutputFormat::kProtoBin),
             CLIVerificationResult::kInvalidProbeResultFile);
 }
 
 TEST_F(CLITest, TestHandleWaysToGetHwVerificationSpec) {
   vp_getter_->SetDefaultInvalid();
-  EXPECT_EQ(cli_->Run("", "", CLIOutputFormat::kProtoBin, observer),
+  EXPECT_EQ(cli_->Run("", "", CLIOutputFormat::kProtoBin),
             CLIVerificationResult::kInvalidHwVerificationSpecFile);
 
   vp_getter_->set_files({{"path", HwVerificationSpec()}});
-  EXPECT_EQ(cli_->Run("", "path", CLIOutputFormat::kProtoBin, observer),
+  EXPECT_EQ(cli_->Run("", "path", CLIOutputFormat::kProtoBin),
             CLIVerificationResult::kPass);
-  EXPECT_EQ(cli_->Run("", "path2", CLIOutputFormat::kProtoBin, observer),
+  EXPECT_EQ(cli_->Run("", "path2", CLIOutputFormat::kProtoBin),
             CLIVerificationResult::kInvalidHwVerificationSpecFile);
 }
 
 TEST_F(CLITest, TestVerifyFail) {
   verifier_->SetVerifyFail();
-  EXPECT_EQ(cli_->Run("", "", CLIOutputFormat::kProtoBin, observer),
+  EXPECT_EQ(cli_->Run("", "", CLIOutputFormat::kProtoBin),
             CLIVerificationResult::kProbeResultHwVerificationSpecMisalignment);
 
   HwVerificationReport vr;
   vr.set_is_compliant(false);
   verifier_->SetVerifySuccess(vr);
-  EXPECT_EQ(cli_->Run("", "", CLIOutputFormat::kProtoBin, observer),
+  EXPECT_EQ(cli_->Run("", "", CLIOutputFormat::kProtoBin),
             CLIVerificationResult::kFail);
 }
 
@@ -100,7 +99,7 @@ TEST_F(CLITest, TestOutput) {
   vr.set_is_compliant(true);
 
   verifier_->SetVerifySuccess(vr);
-  EXPECT_EQ(cli_->Run("", "", CLIOutputFormat::kProtoBin, observer),
+  EXPECT_EQ(cli_->Run("", "", CLIOutputFormat::kProtoBin),
             CLIVerificationResult::kPass);
   HwVerificationReport result;
   EXPECT_TRUE(result.ParseFromString(output_stream_->str()));
@@ -108,7 +107,7 @@ TEST_F(CLITest, TestOutput) {
 
   // For human readable format, only check if there's something printed.
   *output_stream_ = std::ostringstream();
-  EXPECT_EQ(cli_->Run("", "", CLIOutputFormat::kText, observer),
+  EXPECT_EQ(cli_->Run("", "", CLIOutputFormat::kText),
             CLIVerificationResult::kPass);
   EXPECT_FALSE(output_stream_->str().empty());
 }

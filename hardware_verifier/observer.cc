@@ -8,12 +8,18 @@
 #include <utility>
 
 #include <base/logging.h>
+#include <base/no_destructor.h>
 #include <base/time/time.h>
 #include <metrics/metrics_library.h>
 
 #include "hardware_verifier/observer.h"
 
 namespace hardware_verifier {
+
+Observer* Observer::GetInstance() {
+  static base::NoDestructor<Observer> instance;
+  return instance.get();
+}
 
 void Observer::StartTimer(const std::string& timer_name) {
   VLOG(1) << "Start timer |" << timer_name << "|";
