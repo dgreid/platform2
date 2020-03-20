@@ -17,17 +17,13 @@ namespace shill {
 // further that it is the specified command.
 MATCHER_P2(IsNl80211Command, nl80211_message_type, command, "") {
   if (!arg) {
-    LOG(INFO) << "Null message";
     return false;
   }
   if (arg->message_type() != nl80211_message_type) {
-    LOG(INFO) << "Not an nl80211 message";
     return false;
   }
   const Nl80211Message* msg = static_cast<const Nl80211Message*>(arg);
   if (msg->command() != command) {
-    LOG(INFO) << "Not a message of type " << command << " (it's a "
-              << +msg->command() << ")";
     return false;
   }
   return true;
@@ -37,24 +33,20 @@ MATCHER_P2(IsNl80211Command, nl80211_message_type, command, "") {
 // wake on WiFi functionality of the NIC.
 MATCHER(IsDisableWakeOnWiFiMsg, "") {
   if (!arg) {
-    LOG(INFO) << "Null message";
     return false;
   }
   const Nl80211Message* msg = static_cast<const Nl80211Message*>(arg);
   if (msg->command() != NL80211_CMD_SET_WOWLAN) {
-    LOG(INFO) << "Not a NL80211_CMD_SET_WOWLAN message";
     return false;
   }
   uint32_t wiphy;
   if (!msg->const_attributes()->GetU32AttributeValue(NL80211_ATTR_WIPHY,
                                                      &wiphy)) {
-    LOG(INFO) << "Wiphy index not set";
     return false;
   }
   AttributeListConstRefPtr triggers;
   if (msg->const_attributes()->ConstGetNestedAttributeList(
           NL80211_ATTR_WOWLAN_TRIGGERS, &triggers)) {
-    LOG(INFO) << "Message contains NL80211_ATTR_WOWLAN_TRIGGERS";
     return false;
   }
   return true;
@@ -64,28 +56,23 @@ MATCHER(IsDisableWakeOnWiFiMsg, "") {
 // contains exactly one SSID along with the requisite empty one.
 MATCHER_P(HasHiddenSSID, nl80211_message_type, "") {
   if (!arg) {
-    LOG(INFO) << "Null message";
     return false;
   }
   if (arg->message_type() != nl80211_message_type) {
-    LOG(INFO) << "Not an nl80211 message";
     return false;
   }
   const Nl80211Message* msg = reinterpret_cast<const Nl80211Message*>(arg);
   if (msg->command() != NL80211_CMD_TRIGGER_SCAN) {
-    LOG(INFO) << "Not a NL80211_CMD_TRIGGER_SCAN message";
     return false;
   }
   AttributeListConstRefPtr ssids;
   if (!msg->const_attributes()->ConstGetNestedAttributeList(
           NL80211_ATTR_SCAN_SSIDS, &ssids)) {
-    LOG(INFO) << "No SSID list in message";
     return false;
   }
   ByteString ssid;
   AttributeIdIterator ssid_iter(*ssids);
   if (!ssids->GetRawAttributeValue(ssid_iter.GetId(), &ssid)) {
-    LOG(INFO) << "SSID list contains no (hidden) SSIDs";
     return false;
   }
 
@@ -95,13 +82,11 @@ MATCHER_P(HasHiddenSSID, nl80211_message_type, "") {
   // broadcast probe request for all non-hidden APs as well.
   ByteString empty_ssid;
   if (ssid_iter.AtEnd()) {
-    LOG(INFO) << "SSID list doesn't contain an empty SSIDs (but should)";
     return false;
   }
   ssid_iter.Advance();
   if (!ssids->GetRawAttributeValue(ssid_iter.GetId(), &empty_ssid) ||
       !empty_ssid.IsEmpty()) {
-    LOG(INFO) << "SSID list doesn't contain an empty SSID (but should)";
     return false;
   }
 
@@ -112,16 +97,13 @@ MATCHER_P(HasHiddenSSID, nl80211_message_type, "") {
 // contains no SSIDs.
 MATCHER_P(HasNoHiddenSSID, nl80211_message_type, "") {
   if (!arg) {
-    LOG(INFO) << "Null message";
     return false;
   }
   if (arg->message_type() != nl80211_message_type) {
-    LOG(INFO) << "Not an nl80211 message";
     return false;
   }
   const Nl80211Message* msg = reinterpret_cast<const Nl80211Message*>(arg);
   if (msg->command() != NL80211_CMD_TRIGGER_SCAN) {
-    LOG(INFO) << "Not a NL80211_CMD_TRIGGER_SCAN message";
     return false;
   }
   AttributeListConstRefPtr ssids;
@@ -134,7 +116,6 @@ MATCHER_P(HasNoHiddenSSID, nl80211_message_type, "") {
     return true;
   }
 
-  LOG(INFO) << "SSID list contains at least one (hidden) SSID";
   return false;
 }
 
