@@ -1,0 +1,155 @@
+powerd_prefs_default: &powerd_prefs_default
+  description: For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/
+  type: string
+
+powerd_prefs: &powerd_prefs
+  low_battery_shutdown_time_s:
+    <<: *powerd_prefs_default
+    default: "180"
+  low_battery_shutdown_percent: *powerd_prefs_default
+  plugged_dim_ms:
+    <<: *powerd_prefs_default
+    default: "420000"
+  plugged_off_ms:
+    <<: *powerd_prefs_default
+    default: "450000"
+  plugged_suspend_ms:
+    <<: *powerd_prefs_default
+    default: "510000"
+  unplugged_dim_ms:
+    <<: *powerd_prefs_default
+    default: "300000"
+  unplugged_off_ms:
+    <<: *powerd_prefs_default
+    default: "330000"
+  unplugged_suspend_ms:
+    <<: *powerd_prefs_default
+    default: "390000"
+  disable_idle_suspend: *powerd_prefs_default
+  factory_mode: *powerd_prefs_default
+  use_lid:
+    <<: *powerd_prefs_default
+    default: "1"
+  detect_hover: *powerd_prefs_default
+  retry_suspend_ms:
+    <<: *powerd_prefs_default
+    default: "10000"
+  retry_suspend_attempts:
+    <<: *powerd_prefs_default
+    default: "10"
+  min_visible_backlight_level: *powerd_prefs_default
+  instant_transitions_below_min_level:
+    <<: *powerd_prefs_default
+    default: "0"
+  avoid_suspend_when_headphone_jack_plugged:
+    <<: *powerd_prefs_default
+    default: "0"
+  wakeup_input_device_names: *powerd_prefs_default
+  power_supply_full_factor:
+    <<: *powerd_prefs_default
+    default: "0.97"
+  internal_backlight_max_nits: *powerd_prefs_default
+  internal_backlight_als_steps:
+    <<: *powerd_prefs_default
+    default: "80.0 63.0 -1 400 100.0 80.0 100 -1"
+  internal_backlight_no_als_ac_brightness:
+    <<: *powerd_prefs_default
+    default: "80.0"
+  internal_backlight_no_als_battery_brightness:
+    <<: *powerd_prefs_default
+    default: "63.0"
+  keyboard_backlight_als_steps:
+    <<: *powerd_prefs_default
+    default: "40.0 -1 20 0.0 15 -1"
+  keyboard_backlight_user_steps:
+    <<: *powerd_prefs_default
+    default: "0.0 10.0 20.0 40.0 60.0 100.0"
+  keyboard_backlight_no_als_brightness:
+    <<: *powerd_prefs_default
+    default: "40.0"
+  keyboard_backlight_keep_on_ms:
+    <<: *powerd_prefs_default
+    default: "30000"
+  keyboard_backlight_keep_on_during_video_ms:
+    <<: *powerd_prefs_default
+    default: "3000"
+  keyboard_backlight_turn_on_for_user_activity:
+    <<: *powerd_prefs_default
+    default: "1"
+  als_smoothing_constant:
+    <<: *powerd_prefs_default
+    default: "1.0"
+  require_usb_input_device_to_suspend:
+    <<: *powerd_prefs_default
+    default: "0"
+  battery_poll_interval_ms:
+    <<: *powerd_prefs_default
+    default: "30000"
+  battery_poll_interval_initial_ms:
+    <<: *powerd_prefs_default
+    default: "1000"
+  battery_stabilized_after_startup_ms:
+    <<: *powerd_prefs_default
+    default: "5000"
+  battery_stabilized_after_line_power_connected_ms:
+    <<: *powerd_prefs_default
+    default: "5000"
+  battery_stabilized_after_line_power_disconnected_ms:
+    <<: *powerd_prefs_default
+    default: "5000"
+  battery_stabilized_after_resume_ms:
+    <<: *powerd_prefs_default
+    default: "5000"
+  multiple_batteries:
+    <<: *powerd_prefs_default
+    default: "1"
+  max_current_samples:
+    <<: *powerd_prefs_default
+    default: "5"
+  max_charge_samples:
+    <<: *powerd_prefs_default
+    default: "5"
+  usb_min_ac_watts:
+    <<: *powerd_prefs_default
+    default: "20.0"
+  charging_ports: *powerd_prefs_default
+  turn_off_screen_timeout_ms:
+    <<: *powerd_prefs_default
+    default: "3000"
+  disable_dark_resume:
+    <<: *powerd_prefs_default
+    default: "1"
+  shutdown_from_suspend_sec:
+    <<: *powerd_prefs_default
+    default: "259200"
+  dark_resume_devices: *powerd_prefs_default
+  dark_resume_sources: *powerd_prefs_default
+  ignore_external_policy:
+    <<: *powerd_prefs_default
+    default: "0"
+  num_sessions_on_current_charge: *powerd_prefs_default
+  has_ambient_light_sensor: *powerd_prefs_default
+  has_charge_controller: *powerd_prefs_default
+  has_keyboard_backlight: *powerd_prefs_default
+  external_display_only: *powerd_prefs_default
+  legacy_power_button: *powerd_prefs_default
+  mosys_eventlog: *powerd_prefs_default
+  use_cras: *powerd_prefs_default
+  tpm_counter_suspend_threshold:
+    <<: *powerd_prefs_default
+    default: "0"
+  tpm_status_interval_sec:
+    <<: *powerd_prefs_default
+    default: "3600"
+  suspend_to_idle: *powerd_prefs_default
+  set_wifi_transmit_power_for_tablet_mode: *powerd_prefs_default
+  set_wifi_transmit_power_for_proximity: *powerd_prefs_default
+  set_cellular_transmit_power_for_tablet_mode: *powerd_prefs_default
+  set_cellular_transmit_power_for_proximity: *powerd_prefs_default
+  set_cellular_transmit_power_dpr_gpio: *powerd_prefs_default
+  enable_console_during_suspend: *powerd_prefs_default
+  max_dark_suspend_delay_timeout_ms: *powerd_prefs_default
+  suspend_mode:
+    <<: *powerd_prefs_default
+    default: "deep"
+  wake_on_dp: *powerd_prefs_default

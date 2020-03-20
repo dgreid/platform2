@@ -15,8 +15,11 @@ setup(
     author_email='sjg@chromium.org',
     url='README.md',
     packages=['cros_config_host'],
-    package_data={'cros_config_host':
-                  ['cros_config_schema.yaml', 'cros_config_test_schema.yaml']},
+    package_data={'cros_config_host': [
+        'cros_config_schema.yaml',
+        'power_manager_prefs_schema.yaml',
+        'cros_config_test_schema.yaml',
+    ]},
     entry_points={
         'console_scripts': [
             'cros_config_host = cros_config_host.cros_config_host:main',
