@@ -2733,16 +2733,17 @@ void Service::GetChallengeCredentialsPcrRestrictions(
     std::vector<std::map<uint32_t, Blob>>* pcr_restrictions) {
   {
     std::map<uint32_t, Blob> pcrs_1;
-    for (const auto& pcr : crypto_->GetPcrMap(obfuscated_username,
-                                              false /* use_extended_pcr */)) {
+    for (const auto& pcr :
+         tpm_->GetPcrMap(obfuscated_username, false /* use_extended_pcr */)) {
       pcrs_1[pcr.first] = BlobFromString(pcr.second);
     }
     pcr_restrictions->push_back(pcrs_1);
   }
+
   {
     std::map<uint32_t, Blob> pcrs_2;
     for (const auto& pcr :
-         crypto_->GetPcrMap(obfuscated_username, true /* use_extended_pcr */)) {
+         tpm_->GetPcrMap(obfuscated_username, true /* use_extended_pcr */)) {
       pcrs_2[pcr.first] = BlobFromString(pcr.second);
     }
     pcr_restrictions->push_back(pcrs_2);

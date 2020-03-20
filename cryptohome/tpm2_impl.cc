@@ -1752,4 +1752,21 @@ bool Tpm2Impl::DelegateCanResetDACounter() {
   return true;
 }
 
+std::map<uint32_t, std::string> Tpm2Impl::GetPcrMap(
+    const std::string& obfuscated_username, bool use_extended_pcr) const {
+  std::map<uint32_t, std::string> pcr_map;
+  if (use_extended_pcr) {
+    brillo::SecureBlob starting_value(SHA256_DIGEST_LENGTH, 0);
+    brillo::SecureBlob digest_value =
+        CryptoLib::Sha256(brillo::SecureBlob::Combine(
+            starting_value,
+            CryptoLib::Sha256(brillo::SecureBlob(obfuscated_username))));
+    pcr_map[kTpmSingleUserPCR] = digest_value.to_string();
+  } else {
+    pcr_map[kTpmSingleUserPCR] = std::string(SHA256_DIGEST_LENGTH, 0);
+  }
+
+  return pcr_map;
+}
+
 }  // namespace cryptohome

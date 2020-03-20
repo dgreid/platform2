@@ -176,10 +176,6 @@ class Crypto {
   // Returns whether the provided label needs valid PCR criteria attached.
   bool NeedsPcrBinding(const uint64_t& label) const;
 
-  // Returns the map with expected PCR values for the user.
-  std::map<uint32_t, std::string> GetPcrMap(
-      const std::string& obfuscated_username, bool use_extended_pcr) const;
-
   // Returns whether TPM unseal operations with direct authorization are allowed
   // on this device. Some devices cannot reset the dictionary attack counter.
   // And if unseal is performed with wrong authorization value, the counter

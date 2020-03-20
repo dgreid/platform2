@@ -265,6 +265,36 @@ class Tpm2Test : public testing::Test {
   trunks::TrunksFactoryForTest factory_;
 };
 
+TEST_F(Tpm2Test, GetPcrMapNotExtended) {
+  std::string obfuscated_username = "OBFUSCATED_USER";
+  std::map<uint32_t, std::string> result =
+      tpm_->GetPcrMap(obfuscated_username, /*use_extended_pcr=*/false);
+
+  EXPECT_EQ(1, result.size());
+  const std::string& result_str = result[kTpmSingleUserPCR];
+
+  std::string expected_result(SHA256_DIGEST_LENGTH, 0);
+  EXPECT_EQ(expected_result, result_str);
+}
+
+TEST_F(Tpm2Test, GetPcrMapExtended) {
+  std::string obfuscated_username = "OBFUSCATED_USER";
+  std::map<uint32_t, std::string> result =
+      tpm_->GetPcrMap(obfuscated_username, /*use_extended_pcr=*/true);
+
+  EXPECT_EQ(1, result.size());
+  const std::string& result_str = result[kTpmSingleUserPCR];
+
+  // Pre-calculated expected result.
+  unsigned char expected_result_bytes[] = {
+      0x2D, 0x5B, 0x86, 0xF2, 0xBE, 0xEE, 0xD1, 0xB7, 0x40, 0xC7, 0xCD,
+      0xE3, 0x88, 0x25, 0xA6, 0xEE, 0xE3, 0x98, 0x69, 0xA4, 0x99, 0x4D,
+      0x88, 0x09, 0x85, 0x6E, 0x0E, 0x11, 0x7A, 0x4E, 0xFD, 0x91};
+  std::string expected_result(reinterpret_cast<char*>(expected_result_bytes),
+                              sizeof(expected_result_bytes) / sizeof(uint8_t));
+  EXPECT_EQ(expected_result, result_str);
+}
+
 TEST_F(Tpm2Test, GetOwnerPassword) {
   brillo::SecureBlob owner_password;
   EXPECT_TRUE(tpm_->GetOwnerPassword(&owner_password));

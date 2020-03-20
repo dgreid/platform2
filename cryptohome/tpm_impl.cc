@@ -3505,4 +3505,19 @@ bool TpmImpl::IsCurrentPCR0ValueValid() {
   return true;
 }
 
+std::map<uint32_t, std::string> TpmImpl::GetPcrMap(
+    const std::string& obfuscated_username, bool use_extended_pcr) const {
+  std::map<uint32_t, std::string> pcr_map;
+  if (use_extended_pcr) {
+    SecureBlob starting_value(SHA_DIGEST_LENGTH, 0);
+    SecureBlob digest_value = CryptoLib::Sha1(SecureBlob::Combine(
+        starting_value, CryptoLib::Sha1(SecureBlob(obfuscated_username))));
+    pcr_map[kTpmSingleUserPCR] = digest_value.to_string();
+  } else {
+    pcr_map[kTpmSingleUserPCR] = std::string(SHA_DIGEST_LENGTH, 0);
+  }
+
+  return pcr_map;
+}
+
 }  // namespace cryptohome

@@ -192,6 +192,10 @@ class TpmImpl : public Tpm {
                        bool has_reset_lock_permissions) override;
   base::Optional<bool> IsDelegateBoundToPcr() override;
   bool DelegateCanResetDACounter() override;
+  // Returns the map with expected PCR values for the user.
+  std::map<uint32_t, std::string> GetPcrMap(
+      const std::string& obfuscated_username,
+      bool use_extended_pcr) const override;
 
   bool CreatePolicyWithRandomPassword(TSS_HCONTEXT context_handle,
                                       TSS_FLAG policy_type,

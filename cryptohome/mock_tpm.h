@@ -241,6 +241,10 @@ class MockTpm : public Tpm {
   MOCK_METHOD2(SetDelegateData, void(const std::string&, bool));
   MOCK_METHOD0(IsDelegateBoundToPcr, base::Optional<bool>());
   MOCK_METHOD0(DelegateCanResetDACounter, bool());
+  MOCK_METHOD((std::map<uint32_t, std::string>),
+              GetPcrMap,
+              (const std::string&, bool),
+              (const override));
 
  private:
   TpmRetryAction XorDecrypt(TpmKeyHandle _key,

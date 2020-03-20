@@ -812,6 +812,13 @@ class Tpm {
   // permissions.
   virtual bool DelegateCanResetDACounter() = 0;
 
+  // Returns the map with expected PCR values for the user.
+  // TODO(crbug.com/1065907): The username and use_extended_pcr params do not
+  // belong in the tpm class layer, and long term should be refactored out. See
+  // bug.
+  virtual std::map<uint32_t, std::string> GetPcrMap(
+      const std::string& obfuscated_username, bool use_extended_pcr) const = 0;
+
  private:
   static Tpm* singleton_;
   static base::Lock singleton_lock_;

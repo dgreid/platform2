@@ -235,6 +235,9 @@ class Tpm2Impl : public Tpm {
                        bool has_reset_lock_permissions) override;
   base::Optional<bool> IsDelegateBoundToPcr() override;
   bool DelegateCanResetDACounter() override;
+  std::map<uint32_t, std::string> GetPcrMap(
+      const std::string& obfuscated_username,
+      bool use_extended_pcr) const override;
 
  private:
   // This method given a Tpm generated public area, returns the DER encoded

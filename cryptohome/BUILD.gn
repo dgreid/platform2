@@ -523,6 +523,7 @@ if (use.test) {
       libs += [ "hwsec_test" ]
       sources += [
         "tpm1_static_utils_unittest.cc",
+        "tpm1_test.cc",
         "tpm_new_impl_test.cc",
       ]
     }

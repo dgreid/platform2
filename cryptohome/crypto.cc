@@ -99,32 +99,6 @@ const struct {
   { 5, UINT32_MAX }
 };
 
-typedef SecureBlob HashFunction(const brillo::SecureBlob& data);
-
-struct HashDescription {
-  SecureBlob GetPcrAfterExtendingUsername(const SecureBlob& user_name) {
-    if (!size) {
-      return SecureBlob();
-    }
-    SecureBlob starting_value(size, 0);
-    return func(SecureBlob::Combine(starting_value, func(user_name)));
-  }
-
-  size_t size;
-  HashFunction* func;
-};
-
-HashDescription GetHashDescription(Tpm* tpm) {
-  switch (tpm->GetVersion()) {
-    case Tpm::TPM_1_2:
-      return { SHA_DIGEST_LENGTH, &CryptoLib::Sha1 };
-    case Tpm::TPM_2_0:
-      return { SHA256_DIGEST_LENGTH, &CryptoLib::Sha256 };
-    default:
-      return { 0, nullptr };
-  }
-}
-
 // This generates the reset secret for PinWeaver credentials. Doing it per
 // secret is confusing and difficult to maintain. It's necessary so that
 // different credentials can all maintain  the same reset secret (i.e. the
@@ -630,9 +604,9 @@ bool Crypto::EncryptTPM(const VaultKeyset& vault_keyset,
   SecureBlob tpm_key;
   SecureBlob extended_tpm_key;
   std::map<uint32_t, std::string> default_pcr_map =
-      GetPcrMap(obfuscated_username, false /* use_extended_pcr */);
+      tpm_->GetPcrMap(obfuscated_username, false /* use_extended_pcr */);
   std::map<uint32_t, std::string> extended_pcr_map =
-      GetPcrMap(obfuscated_username, true /* use_extended_pcr */);
+      tpm_->GetPcrMap(obfuscated_username, true /* use_extended_pcr */);
 
   // Encrypt the VKK using the TPM and the user's passkey. The output is two
   // encrypted blobs, sealed to PCR in |tpm_key| and |extended_tpm_key|,
@@ -1275,20 +1249,6 @@ bool Crypto::GetValidPCRValues(
   valid_pcr_criteria->push_back(extended_pcr_value);
 
   return true;
-}
-
-std::map<uint32_t, std::string> Crypto::GetPcrMap(
-    const std::string& obfuscated_username,
-    bool use_extended_pcr) const {
-  std::map<uint32_t, std::string> pcr_map;
-  if (use_extended_pcr) {
-    pcr_map[kTpmSingleUserPCR] =
-        GetHashDescription(tpm_).GetPcrAfterExtendingUsername(
-            SecureBlob(obfuscated_username)).to_string();
-  } else {
-    pcr_map[kTpmSingleUserPCR] = std::string(GetHashDescription(tpm_).size, 0);
-  }
-  return pcr_map;
 }
 
 bool Crypto::CanUnsealWithUserAuth() const {
