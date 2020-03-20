@@ -26,12 +26,33 @@
 
 namespace camera3_test {
 
+#define IGNORE_HARDWARE_LEVEL INT32_MAX
+
 static camera_module_t* g_cam_module = NULL;
 
 // TODO(shik): Objects with static storage duration are forbidden unless they
 // are trivially destructible. CameraThread is trivially not trivially
 // destructible.
 static cros::CameraThread g_module_thread("Camera3 Test Module Thread");
+
+bool isHardwareLevelSupported(int32_t actual_level, int32_t required_level) {
+  constexpr int32_t kSortedLevels[] = {
+      ANDROID_INFO_SUPPORTED_HARDWARE_LEVEL_LEGACY,
+      ANDROID_INFO_SUPPORTED_HARDWARE_LEVEL_EXTERNAL,
+      ANDROID_INFO_SUPPORTED_HARDWARE_LEVEL_LIMITED,
+      ANDROID_INFO_SUPPORTED_HARDWARE_LEVEL_FULL,
+      ANDROID_INFO_SUPPORTED_HARDWARE_LEVEL_3,
+  };
+
+  for (int32_t level : kSortedLevels) {
+    if (level == required_level) {
+      return true;
+    } else if (level == actual_level) {
+      return false;
+    }
+  }
+  return false;
+}
 
 std::vector<std::tuple<int, int32_t, int32_t, float>> ParseRecordingParams() {
   // This parameter would be generated and passed by the camera_HAL3 autotest.
@@ -838,14 +859,14 @@ static void ExpectKeyAvailable(camera_metadata_t* characteristics,
   int32_t actual_hw_level = entry.data.i32[0];
 
   // For LIMITED-level targeted keys, rely on capability check, not level
-  if (actual_hw_level >= hw_level &&
+  if (isHardwareLevelSupported(actual_hw_level, hw_level) &&
       hw_level != ANDROID_INFO_SUPPORTED_HARDWARE_LEVEL_LIMITED) {
     ASSERT_EQ(0, find_camera_metadata_ro_entry(characteristics, key, &entry))
         << "Key " << get_camera_metadata_tag_name(key)
         << " must be in characteristics for this hardware level ";
   } else if (AreAllCapabilitiesSupported(characteristics, capabilities)) {
     if (!(hw_level == ANDROID_INFO_SUPPORTED_HARDWARE_LEVEL_LIMITED &&
-          actual_hw_level < hw_level)) {
+          !isHardwareLevelSupported(actual_hw_level, hw_level))) {
       // Don't enforce LIMITED-starting keys on LEGACY level, even if cap is
       // defined
       std::stringstream ss;
@@ -894,6 +915,16 @@ static void ExpectKeyAvailable(camera_metadata_t* characteristics,
           << " must be in characteristics for capabilities "
           << PrintCapabilities();
     }
+  } else {
+    if (actual_hw_level == ANDROID_INFO_SUPPORTED_HARDWARE_LEVEL_LEGACY &&
+        hw_level != IGNORE_HARDWARE_LEVEL) {
+      auto result = find_camera_metadata_ro_entry(characteristics, key, &entry);
+      if (result == 0)
+        LOGF(WARNING)
+            << "Key " << get_camera_metadata_tag_name(key)
+            << " is not required for LEGACY devices but still appears";
+    }
+    // OK: Key may or may not be present.
   }
 }
 
@@ -907,7 +938,6 @@ static void ExpectKeyAvailable(camera_metadata_t* c,
 TEST_F(Camera3ModuleFixture, StaticKeysTest) {
 // Reference:
 // camera2/cts/ExtendedCameraCharacteristicsTest.java#testKeys
-#define IGNORE_HARDWARE_LEVEL INT32_MAX
 #define IGNORE_CAPABILITY -1
   for (int cam_id = 0; cam_id < cam_module_.GetNumberOfCameras(); cam_id++) {
     camera_info info;

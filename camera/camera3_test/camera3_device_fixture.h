@@ -174,8 +174,8 @@ class Camera3Device::StaticInfo {
   // Whether or not the hardware level reported is at least full
   bool IsHardwareLevelAtLeastFull() const;
 
-  // Whether or not the hardware level reported is at least limited
-  bool IsHardwareLevelAtLeastLimited() const;
+  // Whether or not the hardware level reported is at least external
+  bool IsHardwareLevelAtLeastExternal() const;
 
   // Determine whether the current device supports a capability or not
   bool IsCapabilitySupported(uint8_t capability) const;

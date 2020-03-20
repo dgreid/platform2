@@ -168,20 +168,15 @@ uint8_t Camera3Device::StaticInfo::GetHardwareLevel() const {
 }
 
 bool Camera3Device::StaticInfo::IsHardwareLevelAtLeast(int32_t level) const {
-  int32_t dev_level = GetHardwareLevel();
-  if (dev_level == ANDROID_INFO_SUPPORTED_HARDWARE_LEVEL_LEGACY) {
-    return dev_level == level;
-  }
-  // Level is not LEGACY, can use numerical sort
-  return dev_level >= level;
+  return isHardwareLevelSupported(GetHardwareLevel(), level);
 }
 
 bool Camera3Device::StaticInfo::IsHardwareLevelAtLeastFull() const {
   return IsHardwareLevelAtLeast(ANDROID_INFO_SUPPORTED_HARDWARE_LEVEL_FULL);
 }
 
-bool Camera3Device::StaticInfo::IsHardwareLevelAtLeastLimited() const {
-  return IsHardwareLevelAtLeast(ANDROID_INFO_SUPPORTED_HARDWARE_LEVEL_LIMITED);
+bool Camera3Device::StaticInfo::IsHardwareLevelAtLeastExternal() const {
+  return IsHardwareLevelAtLeast(ANDROID_INFO_SUPPORTED_HARDWARE_LEVEL_EXTERNAL);
 }
 
 bool Camera3Device::StaticInfo::IsCapabilitySupported(

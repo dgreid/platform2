@@ -232,8 +232,8 @@ void Camera3DeviceImpl::InitializeOnThread(Camera3Module* cam_module,
   camera_info cam_info;
   ASSERT_EQ(0, cam_module->GetCameraInfo(cam_id_, &cam_info));
   static_info_.reset(new Camera3Device::StaticInfo(cam_info));
-  ASSERT_TRUE(static_info_->IsHardwareLevelAtLeastLimited())
-      << "The device must support at least LIMITED hardware level";
+  ASSERT_TRUE(static_info_->IsHardwareLevelAtLeastExternal())
+      << "The device must support at least EXTERNAL hardware level";
 
   // Initialize camera device
   Camera3DeviceImpl::notify = Camera3DeviceImpl::NotifyForwarder;

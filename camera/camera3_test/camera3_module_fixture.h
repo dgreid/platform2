@@ -30,6 +30,10 @@ enum {
   STREAM_CONFIG_MIN_DURATION_INDEX = STREAM_CONFIG_DIRECTION_INDEX
 };
 
+// Returns true if the |actual_level| is equal to or beyond the
+// |required_level|.
+bool isHardwareLevelSupported(int actual_level, int required_level);
+
 // Get recording parameter list of camera id, width, height and frame rate
 std::vector<std::tuple<int, int32_t, int32_t, float>> ParseRecordingParams();
 
