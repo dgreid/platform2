@@ -286,12 +286,11 @@ int MetadataHandler::FillDefaultMetadata(
 int MetadataHandler::FillMetadataFromSupportedFormats(
     const SupportedFormats& supported_formats,
     const DeviceInfo& device_info,
-    const CrosDeviceConfig& cros_device_config,
     android::CameraMetadata* static_metadata,
     android::CameraMetadata* request_metadata) {
   bool is_external = device_info.lens_facing == ANDROID_LENS_FACING_EXTERNAL;
   bool is_builtin = !is_external;
-  bool is_v1_builtin = is_builtin && cros_device_config.is_v1_device;
+  bool is_v1_builtin = device_info.quirks & kQuirkV1Device;
 
   if (supported_formats.empty()) {
     return -EINVAL;
@@ -491,7 +490,6 @@ int MetadataHandler::FillMetadataFromSupportedFormats(
 // static
 int MetadataHandler::FillMetadataFromDeviceInfo(
     const DeviceInfo& device_info,
-    const CrosDeviceConfig& cros_device_config,
     android::CameraMetadata* static_metadata,
     android::CameraMetadata* request_metadata) {
   MetadataUpdater update_static(static_metadata);
@@ -499,7 +497,7 @@ int MetadataHandler::FillMetadataFromDeviceInfo(
 
   bool is_external = device_info.lens_facing == ANDROID_LENS_FACING_EXTERNAL;
   bool is_builtin = !is_external;
-  bool is_v1_builtin = is_builtin && cros_device_config.is_v1_device;
+  bool is_v1_builtin = device_info.quirks & kQuirkV1Device;
   bool is_v3_builtin = is_builtin && !is_v1_builtin;
 
   std::vector<int32_t> available_request_keys = {

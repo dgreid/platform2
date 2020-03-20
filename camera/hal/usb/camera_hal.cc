@@ -27,7 +27,6 @@ namespace cros {
 namespace {
 
 bool FillMetadata(const DeviceInfo& device_info,
-                  const CrosDeviceConfig& cros_device_config,
                   android::CameraMetadata* static_metadata,
                   android::CameraMetadata* request_metadata) {
   if (MetadataHandler::FillDefaultMetadata(static_metadata, request_metadata) !=
@@ -35,9 +34,8 @@ bool FillMetadata(const DeviceInfo& device_info,
     return false;
   }
 
-  if (MetadataHandler::FillMetadataFromDeviceInfo(
-          device_info, cros_device_config, static_metadata, request_metadata) !=
-      0) {
+  if (MetadataHandler::FillMetadataFromDeviceInfo(device_info, static_metadata,
+                                                  request_metadata) != 0) {
     return false;
   }
 
@@ -46,8 +44,8 @@ bool FillMetadata(const DeviceInfo& device_info,
   SupportedFormats qualified_formats =
       GetQualifiedFormats(supported_formats, device_info.quirks);
   if (MetadataHandler::FillMetadataFromSupportedFormats(
-          qualified_formats, device_info, cros_device_config, static_metadata,
-          request_metadata) != 0) {
+          qualified_formats, device_info, static_metadata, request_metadata) !=
+      0) {
     return false;
   }
 
@@ -407,6 +405,12 @@ void CameraHal::OnDeviceAdded(ScopedUdevDevicePtr dev) {
     info.quirks |= GetQuirks(vid, pid);
   }
 
+  // Mark the camera as v1 if it is a built-in camera and the CrOS device is
+  // marked as a v1 device.
+  if (info_ptr != nullptr && cros_device_config_.is_v1_device) {
+    info.quirks |= kQuirkV1Device;
+  }
+
   if (info_ptr == nullptr) {
     info.lens_facing = ANDROID_LENS_FACING_EXTERNAL;
 
@@ -426,8 +430,7 @@ void CameraHal::OnDeviceAdded(ScopedUdevDevicePtr dev) {
   }
 
   android::CameraMetadata static_metadata, request_template;
-  if (!FillMetadata(info, cros_device_config_, &static_metadata,
-                    &request_template)) {
+  if (!FillMetadata(info, &static_metadata, &request_template)) {
     if (info.lens_facing == ANDROID_LENS_FACING_EXTERNAL) {
       LOGF(ERROR) << "FillMetadata failed, the new external "
                      "camera would be ignored";

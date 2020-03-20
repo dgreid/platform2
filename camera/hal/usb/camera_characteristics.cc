@@ -59,6 +59,7 @@ uint32_t ParseQuirks(const std::string& value) {
       {"monocle", kQuirkMonocle},
       {"prefer_mjpeg", kQuirkPreferMjpeg},
       {"report_least_fps_ranges", kQuirkReportLeastFpsRanges},
+      {"v1device", kQuirkV1Device},
   };
   std::vector<std::string> names = base::SplitString(
       value, ",", base::TRIM_WHITESPACE, base::SPLIT_WANT_ALL);
