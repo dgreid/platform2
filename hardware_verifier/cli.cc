@@ -19,7 +19,7 @@
 
 #include "hardware_verifier/hardware_verifier.pb.h"
 #include "hardware_verifier/hw_verification_spec_getter_impl.h"
-#include "hardware_verifier/metrics.h"
+#include "hardware_verifier/observer.h"
 #include "hardware_verifier/probe_result_getter_impl.h"
 #include "hardware_verifier/verifier_impl.h"
 
@@ -74,13 +74,13 @@ CLI::CLI()
 CLIVerificationResult CLI::Run(const std::string& probe_result_file,
                                const std::string& hw_verification_spec_file,
                                const CLIOutputFormat output_format,
-                               Metrics* metrics) {
+                               Observer* observer) {
   LOG(INFO) << "Get the probe result.";
   base::Optional<runtime_probe::ProbeResult> probe_result;
   if (probe_result_file.empty()) {
-    metrics->StartTimer(hardware_verifier::kMetricTimeToProbe);
+    observer->StartTimer(hardware_verifier::kMetricTimeToProbe);
     probe_result = pr_getter_->GetFromRuntimeProbe();
-    metrics->StopTimer(hardware_verifier::kMetricTimeToProbe);
+    observer->StopTimer(hardware_verifier::kMetricTimeToProbe);
 
     if (!probe_result) {
       return CLIVerificationResult::kProbeFail;

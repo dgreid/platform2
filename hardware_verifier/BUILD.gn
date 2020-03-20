@@ -40,7 +40,7 @@ static_library("libhardware_verifier") {
   sources = [
     "cli.cc",
     "hw_verification_spec_getter_impl.cc",
-    "metrics.cc",
+    "observer.cc",
     "probe_result_getter_impl.cc",
     "verifier_impl.cc",
   ]

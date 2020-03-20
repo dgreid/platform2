@@ -5,21 +5,22 @@
 
 #include <memory>
 #include <string>
+#include <utility>
 
 #include <base/logging.h>
 #include <base/time/time.h>
 #include <metrics/metrics_library.h>
 
-#include "hardware_verifier/metrics.h"
+#include "hardware_verifier/observer.h"
 
 namespace hardware_verifier {
 
-void Metrics::StartTimer(const std::string& timer_name) {
+void Observer::StartTimer(const std::string& timer_name) {
   VLOG(1) << "Start timer |" << timer_name << "|";
   timers_[timer_name] = base::TimeTicks::Now();
 }
 
-void Metrics::StopTimer(const std::string& timer_name) {
+void Observer::StopTimer(const std::string& timer_name) {
   auto it = timers_.find(timer_name);
 
   DCHECK(it != timers_.end());
@@ -32,15 +33,15 @@ void Metrics::StopTimer(const std::string& timer_name) {
   VLOG(1) << "Stop timer |" << timer_name << "|, time elapsed: " << duration_ms
           << "ms.\n";
 
-  SendTimerSample(timer_name, duration_ms);
+  if (metrics_) {
+    metrics_->SendToUMA(timer_name, duration_ms, kTimerMinMs_, kTimerMaxMs_,
+                        kTimerBuckets_);
+  }
 }
 
-UMAMetrics::UMAMetrics()
-    : metrics_library_(std::make_unique<MetricsLibrary>()) {}
-
-void UMAMetrics::SendTimerSample(const std::string& timer_name, int sample_ms) {
-  metrics_library_->SendToUMA(timer_name, sample_ms, kTimerMinMs_, kTimerMaxMs_,
-                              kTimerBuckets_);
+void Observer::SetMetricsLibrary(
+    std::unique_ptr<MetricsLibraryInterface> metrics) {
+  metrics_ = std::move(metrics);
 }
 
 }  // namespace hardware_verifier
