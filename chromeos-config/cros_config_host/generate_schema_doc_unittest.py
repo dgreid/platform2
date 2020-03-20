@@ -44,7 +44,7 @@ class SchemaTests(unittest.TestCase):
             output_lines,
             readme_schema_lines,
             'Schema does not match README.\n'
-            'Please run: python -m cros_config_host.generate_schema_doc '
+            'Please run: python3 -m cros_config_host.generate_schema_doc '
             '-o README.md')
 
     os.remove(output)

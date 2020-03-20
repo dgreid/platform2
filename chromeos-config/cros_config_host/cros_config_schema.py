@@ -448,10 +448,9 @@ def GetValidSchemaProperties(
   Args:
     schema: Source schema that contains the properties.
   """
-  with open(schema, 'r') as schema_stream:
-    schema_yaml = yaml.load(schema_stream.read())
+  schema_yaml = ReadSchema(schema)
   root_path = 'properties/chromeos/properties/configs/items/properties'
-  schema_node = schema_yaml
+  schema_node = yaml.load(schema_yaml)
   for element in root_path.split('/'):
     schema_node = schema_node[element]
 
@@ -646,6 +645,19 @@ def MergeConfigs(configs):
   return libcros_schema.FormatJson(result_json)
 
 
+def ReadSchema(schema=None):
+  """Reads the schema file and evaluates all import statements.
+
+  Args:
+    schema: Schema file used to verify the config.
+
+  Returns:
+    Schema contents with imports evaluated.
+  """
+  if not schema:
+    schema = os.path.join(this_dir, 'cros_config_schema.yaml')
+  return libcros_schema.ApplyImports(schema)
+
 def Main(schema,
          config,
          output,
@@ -670,9 +682,6 @@ def Main(schema,
     configfs_output: Output path to generated SquashFS for ConfigFS.
     configs: List of source config files that will be transformed/verified.
   """
-  if not schema:
-    schema = os.path.join(this_dir, 'cros_config_schema.yaml')
-
   # TODO(shapiroc): Remove this once we no longer need backwards compatibility
   # for single config parameters.
   if config:
@@ -681,19 +690,18 @@ def Main(schema,
   full_json_transform = MergeConfigs(configs)
   json_transform = full_json_transform
 
-  with open(schema, 'r') as schema_stream:
-    schema_contents = schema_stream.read()
-    libcros_schema.ValidateConfigSchema(schema_contents, json_transform)
-    ValidateConfig(json_transform)
-    schema_attrs = libcros_schema.GetSchemaPropertyAttrs(
-        yaml.load(schema_contents))
+  schema_contents = ReadSchema(schema)
+  libcros_schema.ValidateConfigSchema(schema_contents, json_transform)
+  ValidateConfig(json_transform)
+  schema_attrs = libcros_schema.GetSchemaPropertyAttrs(
+      yaml.load(schema_contents))
 
-    if filter_build_details:
-      build_only_elements = []
-      for path in schema_attrs:
-        if schema_attrs[path].build_only_element:
-          build_only_elements.append(path)
-      json_transform = FilterBuildElements(json_transform, build_only_elements)
+  if filter_build_details:
+    build_only_elements = []
+    for path in schema_attrs:
+      if schema_attrs[path].build_only_element:
+        build_only_elements.append(path)
+    json_transform = FilterBuildElements(json_transform, build_only_elements)
   if output:
     with open(output, 'w') as output_stream:
       # Using print function adds proper trailing newline.

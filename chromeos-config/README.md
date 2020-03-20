@@ -313,7 +313,7 @@ In the tables below,
 | modem | [modem](#modem) |  | False |  | False |  |
 | name | string | ```^[_a-zA-Z0-9]{3,}``` | True |  | False | Google code name for the given model. While it is OK to use this string for human-display purposes (such as in a debug log or help dialog), or for a searchable-key in metrics collection, it is not recommended to use this property for creating model-specific behaviors. In this case, add a property to the schema which describes your behavior and use that instead. |
 | oem-id | string | ```[0-9]+``` | False |  | False | Some projects store SKU ID, OEM ID and Board Revision in an EEPROM and only SKU ID can be updated in the factory and RMA flow but others should be pre-flashed in the chip level. In this case, we would like to validate whether oem-id here from the updated SKU ID matches the one in the EEPROM so we can prevent this device from being updated to another OEM's devices.  |
-| power | [power](#power) |  | False |  | False | WARNING -- This config contains unvalidated settings, which is not a correct usage pattern, but this will be used in the interim until a longer term solution can be put in place where the overall schema can be single sourced (for the YAML and C++ that uses it); likely though some type of code generation. SUMMARY -- Contains power_manager device settings. Power manager will first check for a property in this config, else it will revert to the file based settings mechanism. This provides more flexibility in sharing power settings across different devices that share the same build overlay. Any property can be overridden from - src/platform2/power_manager/default_prefs or src/platform2/power_manager/optional_prefs For details about each setting property, see - src/platform2/power_manager/common/power_constants.h For examples on setting these properties (including multiline examples), see the power config example in libcros_config/test.yaml |
+| power | [power](#power) |  | False |  | False | Defines settings that control power management functions. This mostly defines power_manager preferences, but but there are a few other power related settings included. For details about each power_manager preference, see - src/platform2/power_manager/common/power_constants.h/cc For examples on setting these properties (including multiline examples), see the power config example in libcros_config/test.yaml |
 | regulatory-label | string |  | False |  | False | Base name of the directory containing the regulatory label files to show on this device. |
 | test-label | string |  | False |  | False | Test alias (model) label that will be applied in Autotest and reported for test results. |
 | thermal | [thermal](#thermal) |  | False |  | False |  |
@@ -519,9 +519,76 @@ In the tables below,
 ### power
 | Attribute | Type   | RegEx     | Required | Oneof Group | Build-only | Description |
 | --------- | ------ | --------- | -------- | ----------- | ---------- | ----------- |
-| [ANY] | N/A | N/A | N/A | N/A | N/A | This type allows additional properties not governed by the schema. See the type description for details on these additional properties.|
 | allow-ambient-eq | string | ```^[01]$``` | False |  | False | Enable (1) or disable (0) Ambient EQ. |
+| als-smoothing-constant | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
+| avoid-suspend-when-headphone-jack-plugged | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
+| battery-poll-interval-initial-ms | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
+| battery-poll-interval-ms | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
+| battery-stabilized-after-line-power-connected-ms | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
+| battery-stabilized-after-line-power-disconnected-ms | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
+| battery-stabilized-after-resume-ms | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
+| battery-stabilized-after-startup-ms | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
+| charging-ports | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
+| dark-resume-devices | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
+| dark-resume-sources | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
+| detect-hover | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
+| disable-dark-resume | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
+| disable-idle-suspend | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
+| enable-console-during-suspend | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
+| external-display-only | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
+| factory-mode | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
+| has-ambient-light-sensor | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
+| has-charge-controller | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
+| has-keyboard-backlight | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
+| ignore-external-policy | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
+| instant-transitions-below-min-level | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
+| internal-backlight-als-steps | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
+| internal-backlight-max-nits | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
+| internal-backlight-no-als-ac-brightness | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
+| internal-backlight-no-als-battery-brightness | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
+| keyboard-backlight-als-steps | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
+| keyboard-backlight-keep-on-during-video-ms | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
+| keyboard-backlight-keep-on-ms | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
+| keyboard-backlight-no-als-brightness | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
+| keyboard-backlight-turn-on-for-user-activity | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
+| keyboard-backlight-user-steps | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
+| legacy-power-button | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
+| low-battery-shutdown-percent | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
+| low-battery-shutdown-time-s | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
+| max-charge-samples | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
+| max-current-samples | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
+| max-dark-suspend-delay-timeout-ms | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
+| min-visible-backlight-level | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
+| mosys-eventlog | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
+| multiple-batteries | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
+| num-sessions-on-current-charge | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
+| plugged-dim-ms | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
+| plugged-off-ms | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
+| plugged-suspend-ms | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
+| power-supply-full-factor | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
+| require-usb-input-device-to-suspend | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
+| retry-suspend-attempts | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
+| retry-suspend-ms | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
+| set-cellular-transmit-power-dpr-gpio | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
+| set-cellular-transmit-power-for-proximity | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
+| set-cellular-transmit-power-for-tablet-mode | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
+| set-wifi-transmit-power-for-proximity | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
+| set-wifi-transmit-power-for-tablet-mode | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
+| shutdown-from-suspend-sec | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
+| suspend-mode | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
+| suspend-to-idle | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
 | touchpad-wakeup | string | ```^[01]$``` | False |  | False | Enable (1) or disable (0) wake from touchpad. |
+| tpm-counter-suspend-threshold | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
+| tpm-status-interval-sec | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
+| turn-off-screen-timeout-ms | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
+| unplugged-dim-ms | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
+| unplugged-off-ms | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
+| unplugged-suspend-ms | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
+| usb-min-ac-watts | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
+| use-cras | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
+| use-lid | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
+| wake-on-dp | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
+| wakeup-input-device-names | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
 
 ### thermal
 | Attribute | Type   | RegEx     | Required | Oneof Group | Build-only | Description |

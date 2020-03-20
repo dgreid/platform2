@@ -15,6 +15,8 @@ import sys
 
 import yaml  # pylint: disable=import-error
 
+import libcros_schema
+
 
 def ParseArgs(argv):
   """Parse the available arguments.
@@ -160,55 +162,54 @@ def Main(schema, output):
     schema: Schema file.
     output: Output file.
   """
-  with open(schema, 'r') as schema_stream:
-    schema_yaml = yaml.load(schema_stream.read())
-    ref_types = {}
-    for type_def in schema_yaml.get('typeDefs', []):
-      ref_types['#/typeDefs/%s' % type_def] = schema_yaml['typeDefs'][type_def]
+  schema_yaml = yaml.load(libcros_schema.ApplyImports(schema))
+  ref_types = {}
+  for type_def in schema_yaml.get('typeDefs', []):
+    ref_types['#/typeDefs/%s' % type_def] = schema_yaml['typeDefs'][type_def]
 
-    type_def_outputs = []
-    type_def_outputs.append('[](begin_definitions)')
-    type_def_outputs.append('')
-    PopulateTypeDef(
-        'model',
-        schema_yaml['properties']['chromeos']['properties']['configs']['items'],
-        ref_types, type_def_outputs)
-    type_def_outputs.append('')
-    type_def_outputs.append('[](end_definitions)')
-    type_def_outputs.append('')
+  type_def_outputs = []
+  type_def_outputs.append('[](begin_definitions)')
+  type_def_outputs.append('')
+  PopulateTypeDef(
+      'model',
+      schema_yaml['properties']['chromeos']['properties']['configs']['items'],
+      ref_types, type_def_outputs)
+  type_def_outputs.append('')
+  type_def_outputs.append('[](end_definitions)')
+  type_def_outputs.append('')
 
-    if output:
-      pre_lines = []
-      post_lines = []
+  if output:
+    pre_lines = []
+    post_lines = []
 
-      if os.path.isfile(output):
-        with open(output) as output_stream:
-          output_lines = output_stream.readlines()
-          pre_section = True
-          post_section = False
-          for line in output_lines:
-            if 'begin_definitions' in line:
-              pre_section = False
+    if os.path.isfile(output):
+      with open(output) as output_stream:
+        output_lines = output_stream.readlines()
+        pre_section = True
+        post_section = False
+        for line in output_lines:
+          if 'begin_definitions' in line:
+            pre_section = False
 
-            if pre_section:
-              pre_lines.append(line)
+          if pre_section:
+            pre_lines.append(line)
 
-            if post_section:
-              post_lines.append(line)
+          if post_section:
+            post_lines.append(line)
 
-            if 'end_definitions' in line:
-              post_section = True
+          if 'end_definitions' in line:
+            post_section = True
 
-      with open(output, 'w') as output_stream:
-        if pre_lines:
-          output_stream.writelines(pre_lines)
+    with open(output, 'w') as output_stream:
+      if pre_lines:
+        output_stream.writelines(pre_lines)
 
-        output_stream.write('\n'.join(type_def_outputs))
+      output_stream.write('\n'.join(type_def_outputs))
 
-        if post_lines:
-          output_stream.writelines(post_lines)
-    else:
-      print('\n'.join(type_def_outputs))
+      if post_lines:
+        output_stream.writelines(post_lines)
+  else:
+    print('\n'.join(type_def_outputs))
 
 
 if __name__ == '__main__':

@@ -1,6 +1,9 @@
 # Copyright 2016 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+imports:
+- "power_manager_prefs_schema.yaml"
+
 "$schema": http://json-schema.org/draft-04/schema#
 typeDefs:
   bcs-file-name: &bcs_file_name
@@ -497,23 +500,16 @@ properties:
                 for creating model-specific behaviors. In this case, add a property to the schema
                 which describes your behavior and use that instead.
             power:
-              description: WARNING -- This config contains unvalidated settings, which is not a
-                correct usage pattern, but this will be used in the interim until a longer term
-                solution can be put in place where the overall schema can be single sourced
-                (for the YAML and C++ that uses it); likely though some type of code generation.
-                SUMMARY -- Contains power_manager device settings.
-                Power manager will first check for a property in this config, else it will revert
-                to the file based settings mechanism.
-                This provides more flexibility in sharing power settings across different devices
-                that share the same build overlay.
-                Any property can be overridden from - src/platform2/power_manager/default_prefs or
-                src/platform2/power_manager/optional_prefs
-                For details about each setting property, see -
-                src/platform2/power_manager/common/power_constants.h
+              description: Defines settings that control power management functions.
+                This mostly defines power_manager preferences, but but there are a few
+                other power related settings included.
+                For details about each power_manager preference, see -
+                src/platform2/power_manager/common/power_constants.h/cc
                 For examples on setting these properties (including multiline examples), see
                 the power config example in libcros_config/test.yaml
               type: object
               properties:
+                <<: *powerd_prefs
                 allow-ambient-eq:
                   description: Enable (1) or disable (0) Ambient EQ.
                   type: string
@@ -522,7 +518,7 @@ properties:
                   description: Enable (1) or disable (0) wake from touchpad.
                   type: string
                   pattern: "^[01]$"
-              additionalProperties: true
+              additionalProperties: false
             test-label:
               description: Test alias (model) label that will be applied in Autotest and
                 reported for test results.

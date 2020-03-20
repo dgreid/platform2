@@ -212,9 +212,7 @@ chromeos:
 class ValidateConfigSchemaTests(cros_test_lib.TestCase):
 
   def setUp(self):
-    with open(os.path.join(this_dir,
-                           'cros_config_schema.yaml')) as schema_stream:
-      self._schema = schema_stream.read()
+    self._schema = cros_config_schema.ReadSchema()
 
   def testBasicSchemaValidation(self):
     libcros_schema.ValidateConfigSchema(
