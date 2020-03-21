@@ -88,6 +88,20 @@ class UserCollectorTest : public ::testing::Test {
                              base::SPLIT_WANT_ALL);
   }
 
+  // Verify that the root directory is not writable. Several tests depend on
+  // this fact, and are failing in ways that might be explained by having a
+  // writable root directory.
+  // Not using base::PathIsWritable because that doesn't actually check if the
+  // user can write to a path :-/ See 'man 2 access'.
+  static bool IsRootDirectoryWritable() {
+    base::FilePath temp_file_path;
+    if (!CreateTemporaryFileInDir(base::FilePath("/"), &temp_file_path)) {
+      return false;
+    }
+    base::DeleteFile(temp_file_path, false);
+    return true;
+  }
+
   UserCollectorMock collector_;
   pid_t pid_;
   FilePath test_dir_;
@@ -104,8 +118,12 @@ TEST_F(UserCollectorTest, EnableOK) {
 }
 
 TEST_F(UserCollectorTest, EnableNoPatternFileAccess) {
+  // Sanity checking:
   // Confirm we don't have junk left over from other tests.
   ASSERT_FALSE(base::PathExists(base::FilePath("/does_not_exist")));
+  // We've seen strange problems that might be explained by having / writable.
+  ASSERT_FALSE(IsRootDirectoryWritable());
+
   collector_.set_core_pattern_file("/does_not_exist");
   ASSERT_FALSE(collector_.Enable(false));
   EXPECT_TRUE(FindLog("Enabling user crash handling"));
@@ -113,8 +131,12 @@ TEST_F(UserCollectorTest, EnableNoPatternFileAccess) {
 }
 
 TEST_F(UserCollectorTest, EnableNoPipeLimitFileAccess) {
+  // Sanity checking:
   // Confirm we don't have junk left over from other tests.
   ASSERT_FALSE(base::PathExists(base::FilePath("/does_not_exist")));
+  // We've seen strange problems that might be explained by having / writable.
+  ASSERT_FALSE(IsRootDirectoryWritable());
+
   collector_.set_core_pipe_limit_file("/does_not_exist");
   ASSERT_FALSE(collector_.Enable(false));
   // Core pattern should not be written if we cannot access the pipe limit
@@ -131,6 +153,12 @@ TEST_F(UserCollectorTest, DisableOK) {
 }
 
 TEST_F(UserCollectorTest, DisableNoFileAccess) {
+  // Sanity checking:
+  // Confirm we don't have junk left over from other tests.
+  ASSERT_FALSE(base::PathExists(base::FilePath("/does_not_exist")));
+  // We've seen strange problems that might be explained by having / writable.
+  ASSERT_FALSE(IsRootDirectoryWritable());
+
   collector_.set_core_pattern_file("/does_not_exist");
   ASSERT_FALSE(collector_.Disable());
   EXPECT_TRUE(FindLog("Disabling user crash handling"));
