@@ -30,7 +30,7 @@ constexpr char kAndroidVendor[] =
     "/opt/google/containers/arc-art/mountpoints/vendor";
 constexpr char kLibLogStderrName[] = "liblog_stderr.so";
 
-// Variables defined in Android <nyc-mr1-arc>/art/build/Android.common_build.mk
+// Variables defined in Android <pi-arc>/art/build/art.go
 constexpr uint32_t kArtBaseAddressMaxDelta = 0x1000000;
 constexpr uint32_t kArtBaseAddressMinDelta = -0x1000000;
 
@@ -319,10 +319,6 @@ bool ArtContainer::PatchImage(const std::string& isa, uint64_t offset_seed) {
     case AndroidSdkVersion::UNKNOWN:
       LOG(ERROR) << "Unknown Android sdk version.";
       return false;
-    case AndroidSdkVersion::ANDROID_N_MR1:
-      output_arg = "--output-image-file=/data/dalvik-cache/" + isa +
-                   "/system@framework@boot.art";
-      break;
     // For Android P, use --output-image-directory.
     default:
       output_arg = "--output-image-directory=/data/dalvik-cache/" + isa;

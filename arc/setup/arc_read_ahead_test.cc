@@ -60,13 +60,7 @@ TEST(ArcReadAhead, TestEmulateArcUreadahead) {
 
   auto result = EmulateArcUreadahead(temp_directory.GetPath(),
                                      base::TimeDelta::FromSeconds(5),
-                                     AndroidSdkVersion::ANDROID_N_MR1);
-  EXPECT_EQ(5, result.first);
-  EXPECT_EQ(31 /* == 0b11111 */, result.second);
-
-  result = EmulateArcUreadahead(temp_directory.GetPath(),
-                                base::TimeDelta::FromSeconds(5),
-                                AndroidSdkVersion::ANDROID_P);
+                                     AndroidSdkVersion::ANDROID_P);
   EXPECT_EQ(4, result.first);
   EXPECT_EQ(27 /* == 0b11011 */, result.second);
 }

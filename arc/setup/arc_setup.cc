@@ -251,8 +251,6 @@ ArcSdkVersionUpgradeType GetUpgradeType(AndroidSdkVersion system_sdk_version,
     return ArcSdkVersionUpgradeType::NO_UPGRADE;
   }
   if (data_sdk_version == AndroidSdkVersion::ANDROID_M) {
-    if (system_sdk_version == AndroidSdkVersion::ANDROID_N_MR1)
-      return ArcSdkVersionUpgradeType::M_TO_N;
     if (system_sdk_version == AndroidSdkVersion::ANDROID_P)
       return ArcSdkVersionUpgradeType::M_TO_P;
   }
@@ -1648,10 +1646,6 @@ std::string ArcSetup::GetSerialNumber() {
 }
 
 void ArcSetup::DeleteUnusedCacheDirectory() {
-  if (GetSdkVersion() == AndroidSdkVersion::ANDROID_M ||
-      GetSdkVersion() == AndroidSdkVersion::ANDROID_N_MR1) {
-    return;
-  }
   // /home/.../android-data/cache is bind-mounted to /cache on N in
   // MountSharedAndroidDirectories, but it is no longer bind-mounted on P.
   EXIT_IF(
@@ -1675,12 +1669,6 @@ void ArcSetup::MountSharedAndroidDirectories() {
                               shared_data_directory));
   }
 
-  if (GetSdkVersion() == AndroidSdkVersion::ANDROID_N_MR1 &&
-      !base::PathExists(shared_cache_directory)) {
-    EXIT_IF(!InstallDirectory(0700, kHostRootUid, kHostRootGid,
-                              shared_cache_directory));
-  }
-
   // First, make the original data directory a mount point and also make it
   // executable. This has to be done *before* passing the directory into
   // the shared mount point because the new flags won't be propagated if the
@@ -1688,10 +1676,6 @@ void ArcSetup::MountSharedAndroidDirectories() {
   EXIT_IF(!arc_mounter_->BindMount(data_directory, data_directory));
   EXIT_IF(
       !arc_mounter_->Remount(data_directory, MS_NOSUID | MS_NODEV, "seclabel"));
-
-  // Then, bind-mount /cache to the shared mount point on N.
-  if (GetSdkVersion() == AndroidSdkVersion::ANDROID_N_MR1)
-    EXIT_IF(!arc_mounter_->BindMount(cache_directory, shared_cache_directory));
 
   // Finally, bind-mount /data to the shared mount point.
   EXIT_IF(!arc_mounter_->Mount(data_directory.value(), shared_data_directory,
@@ -2223,13 +2207,6 @@ void ArcSetup::OnUpdateRestoreconLast() {
       arc_paths_->android_mutable_source.Append("data")};
 
   switch (GetSdkVersion()) {
-    case AndroidSdkVersion::ANDROID_N_MR1:
-      context_files.push_back(
-          arc_paths_->android_rootfs_directory.Append("file_contexts.bin"));
-      // Unlike P, N uses a dedicated partition for /cache.
-      target_directories.push_back(
-          arc_paths_->android_mutable_source.Append("cache"));
-      break;
     case AndroidSdkVersion::ANDROID_P:
     case AndroidSdkVersion::ANDROID_Q:
     case AndroidSdkVersion::ANDROID_MASTER:
@@ -2240,6 +2217,7 @@ void ArcSetup::OnUpdateRestoreconLast() {
           arc_paths_->android_rootfs_directory.Append("vendor_file_contexts"));
       break;
     case AndroidSdkVersion::ANDROID_M:
+    case AndroidSdkVersion::ANDROID_N_MR1:
     case AndroidSdkVersion::UNKNOWN:
       NOTREACHED();
   }
