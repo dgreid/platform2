@@ -17,6 +17,7 @@
 #include "diagnostics/cros_healthd/cros_healthd_routine_service.h"
 #include "diagnostics/cros_healthd/utils/backlight_utils.h"
 #include "diagnostics/cros_healthd/utils/battery_utils.h"
+#include "diagnostics/cros_healthd/utils/fan_utils.h"
 #include "diagnostics/cros_healthd/utils/vpd_utils.h"
 #include "mojo/cros_healthd.mojom.h"
 
@@ -36,10 +37,12 @@ class CrosHealthdMojoService final
   // |backlight_fetcher| - BacklightFetcher implementation.
   // |battery_fetcher| - BatteryFetcher implementation.
   // |cached_vpd_fetcher| - CachedVpdFetcher implementation.
+  // |fan_fetcher| - FanFetcher implementation.
   // |routine_service| - CrosHealthdRoutineService implementation.
   CrosHealthdMojoService(BacklightFetcher* backlight_fetcher,
                          BatteryFetcher* battery_fetcher,
                          CachedVpdFetcher* cached_vpd_fetcher,
+                         FanFetcher* fan_fetcher,
                          CrosHealthdRoutineService* routine_service);
   ~CrosHealthdMojoService() override;
 
@@ -120,6 +123,8 @@ class CrosHealthdMojoService final
   BatteryFetcher* battery_fetcher_;
   // Unowned. The cached VPD fetcher should outlive this instance.
   CachedVpdFetcher* cached_vpd_fetcher_;
+  // Unowned. The fan fetcher should outlive this instance.
+  FanFetcher* fan_fetcher_;
   // Unowned. The routine service should outlive this instance.
   CrosHealthdRoutineService* const routine_service_;
 

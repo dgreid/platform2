@@ -39,6 +39,7 @@ constexpr std::pair<const char*,
         {"memory", chromeos::cros_healthd::mojom::ProbeCategoryEnum::kMemory},
         {"backlight",
          chromeos::cros_healthd::mojom::ProbeCategoryEnum::kBacklight},
+        {"fan", chromeos::cros_healthd::mojom::ProbeCategoryEnum::kFan},
 };
 
 std::string GetArchitectureString(CpuArchitectureEnum architecture) {
@@ -113,6 +114,14 @@ void DisplayCpuInfo(
   }
 }
 
+void DisplayFanInfo(
+    const std::vector<chromeos::cros_healthd::mojom::FanInfoPtr>& fans) {
+  printf("speed_rpm\n");
+  for (const auto& fan : fans) {
+    printf("%u\n", fan->speed_rpm);
+  }
+}
+
 void DisplayTimezoneInfo(
     const chromeos::cros_healthd::mojom::TimezoneInfoPtr& timezone) {
   DCHECK(!timezone.is_null());
@@ -175,6 +184,10 @@ void DisplayTelemetryInfo(
   const auto& backlights = info->backlight_info;
   if (backlights)
     DisplayBacklightInfo(backlights.value());
+
+  const auto& fans = info->fan_info;
+  if (fans)
+    DisplayFanInfo(fans.value());
 }
 
 // Create a stringified list of the category names for use in help.

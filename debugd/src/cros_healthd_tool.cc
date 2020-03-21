@@ -24,7 +24,6 @@ namespace {
 constexpr char kErrorPath[] = "org.chromium.debugd.CrosHealthdToolError";
 constexpr char kSandboxDirPath[] = "/usr/share/policy/";
 constexpr char kRunAs[] = "healthd_ec";
-constexpr char kCrosHealthdSeccompPolicy[] = "ectool_i2cread-seccomp.policy";
 // The ectool i2cread command below follows the format:
 // ectool i2cread [NUM_BITS] [PORT] [BATTERY_I2C_ADDRESS (addr8)] [OFFSET]
 // Note that [NUM_BITS] can either be 8 or 16.
@@ -46,15 +45,22 @@ const std::map<std::string, std::string> kModelToPort = {
 const std::map<std::string, std::string> kMetricNameToOffset = {
   {"temperature_smart", "0x08"},
   {"manufacture_date_smart", "0x1b"}};
+// The ectool command used to collect fan speed in RPM.
+constexpr char kGetFanRpmCommand[] = "pwmgetfanrpm";
+
+// Returns the ectool policy file corresponding to the provided
+// |ectool_command|.
+std::string GetEctoolPolicyFile(const std::string& ectool_command) {
+  return base::StringPrintf("ectool_%s-seccomp.policy", ectool_command.c_str());
+}
 
 // Runs ectool with the provided |ectool_args| in a sandboxed process. Returns
 // true on success.
 bool RunEctoolWithArgs(brillo::ErrorPtr* error,
+                       const base::FilePath& seccomp_policy_path,
                        const std::vector<std::string> ectool_args,
                        std::string* output) {
-  const auto ectool_seccomp_path =
-      base::FilePath{kSandboxDirPath}.Append(kCrosHealthdSeccompPolicy);
-  if (!base::PathExists(ectool_seccomp_path)) {
+  if (!base::PathExists(seccomp_policy_path)) {
     DEBUGD_ADD_ERROR(error, kErrorPath,
                      "Sandbox info is missing for this architecture.");
     return false;
@@ -69,7 +75,7 @@ bool RunEctoolWithArgs(brillo::ErrorPtr* error,
 
   ProcessWithOutput process;
   process.SandboxAs(kRunAs, kRunAs);
-  process.SetSeccompFilterPolicyFile(ectool_seccomp_path.MaybeAsASCII());
+  process.SetSeccompFilterPolicyFile(seccomp_policy_path.MaybeAsASCII());
   process.InheritUsergroups();
   if (!process.Init(parsed_args)) {
     DEBUGD_ADD_ERROR(error, kErrorPath, "Process initialization failure.");
@@ -93,6 +99,18 @@ bool RunEctoolWithArgs(brillo::ErrorPtr* error,
 }
 
 }  // namespace
+
+bool CrosHealthdTool::CollectFanSpeed(brillo::ErrorPtr* error,
+                                      std::string* output) {
+  const auto seccomp_policy_path =
+      base::FilePath(kSandboxDirPath)
+          .Append(GetEctoolPolicyFile(kGetFanRpmCommand));
+  std::vector<std::string> ectool_args = {kGetFanRpmCommand};
+  if (!RunEctoolWithArgs(error, seccomp_policy_path, ectool_args, output))
+    return false;
+
+  return true;
+}
 
 // Note that this is a short-term solution to retrieving battery metrics.
 // A long term solution is being discussed at: crbug.com/1047277.
@@ -129,7 +147,10 @@ bool CrosHealthdTool::CollectSmartBatteryMetric(brillo::ErrorPtr* error,
   const std::string offset = metric_name_it->second;
   std::vector<std::string> ectool_args = {
       kI2cReadCommand, kNumBits, port_number, kBatteryI2cAddress, offset};
-  if (!RunEctoolWithArgs(error, ectool_args, output))
+  const auto seccomp_policy_path =
+      base::FilePath(kSandboxDirPath)
+          .Append(GetEctoolPolicyFile(kI2cReadCommand));
+  if (!RunEctoolWithArgs(error, seccomp_policy_path, ectool_args, output))
     return false;
 
   return true;

@@ -52,12 +52,14 @@ CrosHealthd::CrosHealthd()
 
   cached_vpd_fetcher_ = std::make_unique<CachedVpdFetcher>(cros_config_.get());
 
+  fan_fetcher_ = std::make_unique<FanFetcher>(debugd_proxy_.get());
+
   routine_service_ = std::make_unique<CrosHealthdRoutineServiceImpl>(
       debugd_adapter_.get(), &routine_factory_impl_);
 
   mojo_service_ = std::make_unique<CrosHealthdMojoService>(
       backlight_fetcher_.get(), battery_fetcher_.get(),
-      cached_vpd_fetcher_.get(), routine_service_.get());
+      cached_vpd_fetcher_.get(), fan_fetcher_.get(), routine_service_.get());
 
   binding_set_.set_connection_error_handler(
       base::Bind(&CrosHealthd::OnDisconnect, base::Unretained(this)));

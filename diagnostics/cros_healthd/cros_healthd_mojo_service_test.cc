@@ -25,6 +25,7 @@
 #include "diagnostics/cros_healthd/cros_healthd_routine_service.h"
 #include "diagnostics/cros_healthd/utils/backlight_utils.h"
 #include "diagnostics/cros_healthd/utils/battery_utils.h"
+#include "diagnostics/cros_healthd/utils/fan_utils.h"
 #include "diagnostics/cros_healthd/utils/vpd_utils.h"
 #include "mojo/cros_healthd.mojom.h"
 
@@ -140,9 +141,10 @@ class CrosHealthdMojoServiceTest : public testing::Test {
         fake_cros_config_.get());
     cached_vpd_fetcher_ =
         std::make_unique<CachedVpdFetcher>(fake_cros_config_.get());
+    fan_fetcher_ = std::make_unique<FanFetcher>(mock_debugd_proxy_.get());
     service_ = std::make_unique<CrosHealthdMojoService>(
         backlight_fetcher_.get(), battery_fetcher_.get(),
-        cached_vpd_fetcher_.get(), &routine_service_);
+        cached_vpd_fetcher_.get(), fan_fetcher_.get(), &routine_service_);
   }
 
   CrosHealthdMojoService* service() { return service_.get(); }
@@ -160,6 +162,7 @@ class CrosHealthdMojoServiceTest : public testing::Test {
   std::unique_ptr<BacklightFetcher> backlight_fetcher_;
   std::unique_ptr<BatteryFetcher> battery_fetcher_;
   std::unique_ptr<CachedVpdFetcher> cached_vpd_fetcher_;
+  std::unique_ptr<FanFetcher> fan_fetcher_;
   std::unique_ptr<CrosHealthdMojoService> service_;
 };
 
