@@ -10,13 +10,16 @@
 #include <list>
 #include <map>
 #include <memory>
+#include <set>
 #include <string>
 #include <vector>
 
 #include <base/bind.h>
+#include <base/synchronization/lock.h>
 #include <base/threading/thread.h>
 #include <mojo/public/cpp/bindings/binding.h>
 
+#include "common/libcamera_connector/camera_client_ops.h"
 #include "common/libcamera_connector/types.h"
 #include "cros-camera/camera_service_connector.h"
 #include "mojo/cros_camera_service.mojom.h"
@@ -45,10 +48,23 @@ class CameraClient final : public mojom::CameraHalClient {
   // info of the cameras currently present.
   int SetCameraInfoCallback(cros_cam_get_cam_info_cb_t callback, void* context);
 
+  // ______________________________ DeviceOps () WIP
+
+  // Starts capturing with the given parameters. Blocks until the device is
+  // opened.
+  int StartCapture(cros_cam_device_t id,
+                   const cros_cam_format_info_t* format,
+                   cros_cam_capture_cb_t callback,
+                   void* context);
+
+  // Stops capturing immediately. Blocks until the camera device is closed.
+  void StopCapture(cros_cam_device_t id);
+
  private:
   struct CameraInfo {
     std::string name;
     std::vector<cros_cam_format_info_t> format_info;
+    int32_t jpeg_max_size;
   };
 
   // Registers the client at camera HAL dispatcher.
@@ -67,6 +83,16 @@ class CameraClient final : public mojom::CameraHalClient {
 
   void SendCameraInfo();
 
+  void OnDeviceOpsReceived(mojom::Camera3DeviceOpsRequest request);
+
+  void OpenDeviceOnThread(mojom::Camera3DeviceOpsRequest request);
+
+  void OnOpenedDevice(int32_t result);
+
+  void OnClosedDevice(int32_t result);
+
+  bool IsDeviceActive(cros_cam_device_t device);
+
   base::Thread ipc_thread_;
 
   mojom::CameraModulePtr camera_module_;
@@ -82,6 +108,24 @@ class CameraClient final : public mojom::CameraHalClient {
   std::list<int32_t> camera_id_list_;
   std::list<int32_t>::iterator camera_id_iter_;
   std::map<int32_t, CameraInfo> camera_info_map_;
+  std::set<cros_cam_device_t> active_devices_;
+
+  CameraClientOps client_ops_;
+  IntOnceCallback start_callback_;
+  IntOnceCallback stop_callback_;
+  // |capture_started_| indicates the state of capture (started/stopped) of
+  // CameraClient and is used to ensure that StartCapture() and StopCapture()
+  // are mutually-exclusive and we don't stop before the return of a capture
+  // callback call.
+  // TODO(b/151047930): Revamp the synchronization mechanism to support
+  // multi-device streaming.
+  bool capture_started_;
+  base::Lock capture_started_lock_;
+
+  int32_t request_camera_id_;
+  cros_cam_format_info_t request_format_;
+  cros_cam_capture_cb_t request_callback_;
+  void* request_context_;
 };
 
 }  // namespace cros

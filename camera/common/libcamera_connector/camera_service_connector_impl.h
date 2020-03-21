@@ -40,6 +40,16 @@ class CameraServiceConnector {
   // is added.
   int GetCameraInfo(cros_cam_get_cam_info_cb_t callback, void* context);
 
+  // Starts capturing with the given parameters.
+  int StartCapture(cros_cam_device_t id,
+                   const cros_cam_format_info_t* format,
+                   cros_cam_capture_cb_t callback,
+                   void* context);
+
+  // Stops capturing. Waits for the ongoing capture callback if there is any
+  // underway.
+  void StopCapture(cros_cam_device_t id);
+
  private:
   using ConnectDispatcherCallback = base::OnceCallback<void()>;
 

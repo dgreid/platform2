@@ -68,6 +68,18 @@ int CameraServiceConnector::GetCameraInfo(cros_cam_get_cam_info_cb_t callback,
   return camera_client_->SetCameraInfoCallback(callback, context);
 }
 
+int CameraServiceConnector::StartCapture(cros_cam_device_t id,
+                                         const cros_cam_format_info_t* format,
+                                         cros_cam_capture_cb_t callback,
+                                         void* context) {
+  LOGF(INFO) << "StartCapture";
+  return camera_client_->StartCapture(id, format, callback, context);
+}
+
+void CameraServiceConnector::StopCapture(cros_cam_device_t id) {
+  camera_client_->StopCapture(id);
+}
+
 void CameraServiceConnector::RegisterClient(
     mojom::CameraHalClientPtr camera_hal_client) {
   VLOGF_ENTER();

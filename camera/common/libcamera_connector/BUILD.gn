@@ -12,8 +12,12 @@ shared_library("libcamera_connector") {
   sources = [
     "//camera/common/ipc_util.cc",
     "//camera/common/libcamera_connector/camera_client.cc",
+    "//camera/common/libcamera_connector/camera_client_ops.cc",
+    "//camera/common/libcamera_connector/camera_metadata_utils.cc",
     "//camera/common/libcamera_connector/camera_service_connector.cc",
     "//camera/common/libcamera_connector/camera_service_connector_impl.cc",
+    "//camera/common/libcamera_connector/stream_buffer_manager.cc",
+    "//camera/common/libcamera_connector/supported_formats.cc",
   ]
   output_name = "libcamera_connector"
   configs += [ "//camera/build:cros_camera_common" ]
@@ -24,7 +28,9 @@ shared_library("libcamera_connector") {
   pkg_deps = [
     "cros-camera-android-headers",
     "libcamera_common",
+    "libcamera_metadata",
     "libdrm",
     "libmojo-${libbase_ver}",
+    "libsync",
   ]
 }

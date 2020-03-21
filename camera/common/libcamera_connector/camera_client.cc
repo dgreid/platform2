@@ -6,48 +6,24 @@
 
 #include "common/libcamera_connector/camera_client.h"
 
+#include <algorithm>
 #include <cmath>
 #include <utility>
 
 #include <base/bind.h>
-#include <base/containers/span.h>
+#include <base/files/file_util.h>
+#include <base/files/scoped_file.h>
+#include <base/posix/safe_strerror.h>
 #include <drm_fourcc.h>
-#include <hardware/gralloc.h>
 
+#include "common/libcamera_connector/camera_metadata_utils.h"
+#include "common/libcamera_connector/supported_formats.h"
 #include "common/libcamera_connector/types.h"
 #include "cros-camera/camera_service_connector.h"
 #include "cros-camera/common.h"
+#include "cros-camera/future.h"
 
 namespace {
-
-constexpr std::pair<int, uint32_t> kSupportedFormats[] = {
-    {HAL_PIXEL_FORMAT_BLOB, DRM_FORMAT_R8}};
-
-uint32_t ResolveDrmFormat(int hal_pixel_format) {
-  for (const auto& format_pair : kSupportedFormats) {
-    if (format_pair.first == hal_pixel_format) {
-      return format_pair.second;
-    }
-  }
-  return 0;
-}
-
-template <typename T>
-base::span<T> GetMetadataEntryAsSpan(
-    const cros::mojom::CameraMetadataPtr& camera_metadata,
-    cros::mojom::CameraMetadataTag tag) {
-  CHECK(!camera_metadata.is_null());
-  auto& entries = camera_metadata->entries;
-  CHECK(entries.has_value());
-  for (auto& entry : *entries) {
-    if (entry->tag == tag) {
-      auto& data = entry->data;
-      CHECK_EQ(data.size() % sizeof(T), 0u);
-      return {reinterpret_cast<T*>(data.data()), data.size() / sizeof(T)};
-    }
-  }
-  return {};
-}
 
 std::string GetCameraName(const cros::mojom::CameraInfoPtr& info) {
   switch (info->facing) {
@@ -69,7 +45,8 @@ namespace cros {
 CameraClient::CameraClient()
     : ipc_thread_("CamClient"),
       camera_hal_client_(this),
-      cam_info_callback_(nullptr) {}
+      cam_info_callback_(nullptr),
+      capture_started_(false) {}
 
 void CameraClient::Init(RegisterClientCallback register_client_callback,
                         IntOnceCallback init_callback) {
@@ -80,6 +57,7 @@ void CameraClient::Init(RegisterClientCallback register_client_callback,
     std::move(init_callback).Run(-ENODEV);
     return;
   }
+  std::set<cros_cam_device_t> active_devices_;
   init_callback_ = std::move(init_callback);
   ipc_thread_.task_runner()->PostTask(
       FROM_HERE,
@@ -89,6 +67,19 @@ void CameraClient::Init(RegisterClientCallback register_client_callback,
 
 void CameraClient::Exit() {
   VLOGF_ENTER();
+  {
+    base::AutoLock l(capture_started_lock_);
+    if (capture_started_) {
+      auto future = cros::Future<int>::Create(nullptr);
+      stop_callback_ = cros::GetFutureCallback(future);
+      client_ops_.StopCapture(
+          base::Bind(&CameraClient::OnClosedDevice, base::Unretained(this)));
+      if (future->Get() != 0) {
+        LOGF(ERROR) << "Failed to close device";
+      }
+    }
+  }
+
   ipc_thread_.task_runner()->PostTask(
       FROM_HERE,
       base::BindOnce(&CameraClient::CloseOnThread, base::Unretained(this)));
@@ -114,6 +105,69 @@ int CameraClient::SetCameraInfoCallback(cros_cam_get_cam_info_cb_t callback,
 
   SendCameraInfo();
   return 0;
+}
+
+int CameraClient::StartCapture(cros_cam_device_t id,
+                               const cros_cam_format_info_t* format,
+                               cros_cam_capture_cb_t callback,
+                               void* context) {
+  VLOGF_ENTER();
+  if (!IsDeviceActive(id)) {
+    LOGF(ERROR) << "Cannot start capture on an inactive device";
+    return -ENODEV;
+  }
+
+  LOGF(INFO) << "Starting capture";
+
+  // TODO(b/151047930): Check whether this format info is actually supported.
+  request_camera_id_ = *reinterpret_cast<int32_t*>(id);
+  request_format_ = *format;
+  request_callback_ = callback;
+  request_context_ = context;
+
+  // TODO(b/151047930): Support other formats.
+  CHECK_EQ(request_format_.fourcc, DRM_FORMAT_R8);
+
+  auto future = cros::Future<int>::Create(nullptr);
+  start_callback_ = cros::GetFutureCallback(future);
+  base::AutoLock l(capture_started_lock_);
+  if (capture_started_) {
+    LOGF(WARNING) << "Capture already started";
+    return -EINVAL;
+  }
+
+  client_ops_.Init(base::BindOnce(&CameraClient::OnDeviceOpsReceived,
+                                  base::Unretained(this)));
+
+  return future->Get();
+}
+
+void CameraClient::StopCapture(cros_cam_device_t id) {
+  VLOGF_ENTER();
+  if (!IsDeviceActive(id)) {
+    LOGF(ERROR) << "Cannot stop capture on an inactive device";
+    return;
+  }
+
+  LOGF(INFO) << "Stopping capture";
+
+  int32_t camera_id = *reinterpret_cast<int32_t*>(id);
+  // TODO(lnishan): Support multi-device streaming.
+  CHECK_EQ(request_camera_id_, camera_id);
+
+  base::AutoLock l(capture_started_lock_);
+  if (!capture_started_) {
+    LOGF(WARNING) << "Capture already stopped";
+    return;
+  }
+
+  auto future = cros::Future<int>::Create(nullptr);
+  stop_callback_ = cros::GetFutureCallback(future);
+  client_ops_.StopCapture(
+      base::Bind(&CameraClient::OnClosedDevice, base::Unretained(this)));
+  if (future->Get() != 0) {
+    LOGF(ERROR) << "Failed to close device";
+  }
 }
 
 void CameraClient::RegisterClient(
@@ -150,6 +204,7 @@ void CameraClient::OnGotNumberOfCameras(int32_t num_builtin_cameras) {
 
   for (int32_t i = 0; i < num_builtin_cameras_; ++i) {
     camera_id_list_.push_back(i);
+    active_devices_.insert(&camera_id_list_.back());
   }
   if (num_builtin_cameras_ == 0) {
     std::move(init_callback_).Run(0);
@@ -174,7 +229,8 @@ void CameraClient::OnGotCameraInfo(int32_t result, mojom::CameraInfoPtr info) {
 
   int32_t camera_id = *camera_id_iter_;
   if (result != 0) {
-    LOGF(ERROR) << "Failed to get camera info of " << camera_id;
+    LOGF(ERROR) << "Failed to get camera info of " << camera_id << ": "
+                << base::safe_strerror(-result);
     std::move(init_callback_).Run(-ENODEV);
     return;
   }
@@ -202,6 +258,10 @@ void CameraClient::OnGotCameraInfo(int32_t result, mojom::CameraInfoPtr info) {
         .fps = static_cast<unsigned>(round(1e9 / min_frame_durations[i + 3]))};
     format_info.push_back(std::move(info));
   }
+
+  camera_info.jpeg_max_size = GetMetadataEntryAsSpan<int32_t>(
+      info->static_camera_characteristics,
+      mojom::CameraMetadataTag::ANDROID_JPEG_MAX_SIZE)[0];
 
   ++camera_id_iter_;
   if (camera_id_iter_ == camera_id_list_.end()) {
@@ -235,6 +295,59 @@ void CameraClient::SendCameraInfo() {
       break;
     }
   }
+}
+
+void CameraClient::OnDeviceOpsReceived(
+    mojom::Camera3DeviceOpsRequest device_ops_request) {
+  VLOGF_ENTER();
+  ipc_thread_.task_runner()->PostTask(
+      FROM_HERE,
+      base::BindOnce(&CameraClient::OpenDeviceOnThread, base::Unretained(this),
+                     std::move(device_ops_request)));
+}
+
+void CameraClient::OpenDeviceOnThread(
+    mojom::Camera3DeviceOpsRequest device_ops_request) {
+  VLOGF_ENTER();
+  DCHECK(ipc_thread_.task_runner()->BelongsToCurrentThread());
+
+  camera_module_->OpenDevice(
+      request_camera_id_, std::move(device_ops_request),
+      base::Bind(&CameraClient::OnOpenedDevice, base::Unretained(this)));
+}
+
+void CameraClient::OnOpenedDevice(int32_t result) {
+  if (result != 0) {
+    LOGF(ERROR) << "Failed to open camera " << request_camera_id_;
+  } else {
+    LOGF(INFO) << "Camera opened successfully";
+    client_ops_.StartCapture(
+        request_camera_id_, &request_format_, request_callback_,
+        request_context_, camera_info_map_[request_camera_id_].jpeg_max_size);
+    // Caller should hold the |capture_started_lock_| until the device is
+    // opened.
+    CHECK(!capture_started_lock_.Try());
+    capture_started_ = true;
+  }
+  std::move(start_callback_).Run(result);
+}
+
+void CameraClient::OnClosedDevice(int32_t result) {
+  if (result != 0) {
+    LOGF(ERROR) << "Failed to close camera " << request_camera_id_;
+  } else {
+    LOGF(INFO) << "Camera closed successfully";
+  }
+  // Caller should hold the |capture_started_lock_| until the device is closed.
+  CHECK(!capture_started_lock_.Try());
+  // Capture is marked stopped regardless of the result. When an error takes
+  // place, we don't want to close or use the camera again.
+  capture_started_ = false;
+  std::move(stop_callback_).Run(result);
+}
+
+bool CameraClient::IsDeviceActive(cros_cam_device_t device) {
+  return active_devices_.find(device) != active_devices_.end();
 }
 
 }  // namespace cros

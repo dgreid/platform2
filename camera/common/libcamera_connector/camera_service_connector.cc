@@ -31,10 +31,11 @@ int cros_cam_start_capture(cros_cam_device_t id,
                            const cros_cam_format_info_t* format,
                            cros_cam_capture_cb_t callback,
                            void* context) {
-  // TODO(b/151047930): Implement the function.
-  return -ENODEV;
+  auto* connector = cros::CameraServiceConnector::GetInstance();
+  return connector->StartCapture(id, format, callback, context);
 }
 
 void cros_cam_stop_capture(cros_cam_device_t id) {
-  // TODO(b/151047930): Implement the function.
+  auto* connector = cros::CameraServiceConnector::GetInstance();
+  connector->StopCapture(id);
 }

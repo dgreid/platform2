@@ -16,5 +16,6 @@ executable("cros_camera_connector_client") {
   pkg_deps = [
     "libbrillo",
     "libcamera_connector",
+    "libdrm",
   ]
 }
