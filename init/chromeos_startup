@@ -91,11 +91,10 @@ sanity_check_clock() {
   fi
 }
 
-# Mount debugfs as bootstat depends on /sys/kernel/debug
 mount -n -t debugfs -o nodev,noexec,nosuid,mode=0750,uid=0,gid=debugfs-access \
   debugfs /sys/kernel/debug
 
-# bootstat writes timings to both tmpfs and debugfs.
+# bootstat writes timings to tmpfs.
 bootstat pre-startup
 
 # Some startup functions are split into a separate library which may be
@@ -592,7 +591,9 @@ mount --make-shared -n -t tmpfs -o nodev,noexec,nosuid media /media
 # relabel need only be started if SELinux policy updates.
 if [ -f /sys/fs/selinux/enforce ]; then
   restorecon -R -D /var
-  restorecon -R /sys
+  # Restoring file contexts for sysfs. tracefs is excluded from this invocation
+  # and delayed in a separate job to improve boot time.
+  restorecon -R /sys -e /sys/kernel/debug/tracing
   # We cannot do recursive for .shadow since userdata is encrypted (including
   # file names) before user logs-in. Restoring context for it may mislabel files
   # if encrypted filename happens to match something.
