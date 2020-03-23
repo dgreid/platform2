@@ -4,6 +4,9 @@
 
 #include "smbfs/smb_filesystem.h"
 
+#include <sys/stat.h>
+#include <sys/types.h>
+
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
@@ -17,7 +20,11 @@ class TestSmbFilesystem : public SmbFilesystem {
   TestSmbFilesystem() : SmbFilesystem(kSharePath) {}
 };
 
-TEST(SmbFilesystem, SetResolvedAddress) {
+}  // namespace
+
+class SmbFilesystemTest : public testing::Test {};
+
+TEST_F(SmbFilesystemTest, SetResolvedAddress) {
   TestSmbFilesystem fs;
 
   // Initial value is share path.
@@ -37,5 +44,28 @@ TEST(SmbFilesystem, SetResolvedAddress) {
   EXPECT_EQ(kSharePath, fs.resolved_share_path());
 }
 
-}  // namespace
+TEST_F(SmbFilesystemTest, MakeStatModeBits) {
+  TestSmbFilesystem fs;
+
+  // Check: "Other" permission bits are cleared.
+  mode_t in_mode = S_IRWXO;
+  mode_t out_mode = fs.MakeStatModeBits(in_mode);
+  EXPECT_EQ(0, out_mode);
+
+  // Check: Directories have user execute bit set.
+  in_mode = S_IFDIR;
+  out_mode = fs.MakeStatModeBits(in_mode);
+  EXPECT_TRUE(out_mode & S_IXUSR);
+
+  // Check: Files do not have user execute bit set.
+  in_mode = S_IFREG;
+  out_mode = fs.MakeStatModeBits(in_mode);
+  EXPECT_FALSE(out_mode & S_IXUSR);
+
+  // Check: Group bits equal user bits.
+  in_mode = S_IRUSR | S_IWUSR;
+  out_mode = fs.MakeStatModeBits(in_mode);
+  EXPECT_EQ(S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP, out_mode);
+}
+
 }  // namespace smbfs

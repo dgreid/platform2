@@ -17,6 +17,7 @@
 #include <base/macros.h>
 #include <base/synchronization/lock.h>
 #include <base/threading/thread.h>
+#include <gtest/gtest_prod.h>
 
 #include "smbfs/filesystem.h"
 #include "smbfs/inode_map.h"
@@ -138,6 +139,8 @@ class SmbFilesystem : public Filesystem {
   explicit SmbFilesystem(const std::string& share_path);
 
  private:
+  FRIEND_TEST(SmbFilesystemTest, MakeStatModeBits);
+
   // Filesystem implementations that execute on |samba_thread_|.
   void StatFsInternal(std::unique_ptr<StatFsRequest> request, fuse_ino_t inode);
   void LookupInternal(std::unique_ptr<EntryRequest> request,
@@ -199,6 +202,9 @@ class SmbFilesystem : public Filesystem {
 
   // Constructs a sanitised stat struct for sending as a response.
   struct stat MakeStat(ino_t inode, const struct stat& in_stat) const;
+
+  // Clear / propagate permission bits appropriately (crbug.com/1063715).
+  mode_t MakeStatModeBits(mode_t in_mode) const;
 
   // Constructs a share file path suitable for passing to libsmbclient from the
   // given absolute file path.

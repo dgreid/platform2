@@ -194,7 +194,7 @@ struct stat SmbFilesystem::MakeStat(ino_t inode,
                                     const struct stat& in_stat) const {
   struct stat stat = {0};
   stat.st_ino = inode;
-  stat.st_mode = in_stat.st_mode & kFileModeMask;
+  stat.st_mode = MakeStatModeBits(in_stat.st_mode);
   stat.st_uid = uid_;
   stat.st_gid = gid_;
   stat.st_nlink = 1;
@@ -203,6 +203,34 @@ struct stat SmbFilesystem::MakeStat(ino_t inode,
   stat.st_ctim = in_stat.st_ctim;
   stat.st_mtim = in_stat.st_mtim;
   return stat;
+}
+
+mode_t SmbFilesystem::MakeStatModeBits(mode_t in_mode) const {
+  mode_t mode = in_mode;
+
+  // Clear any "other" permission bits.
+  mode &= kFileModeMask;
+
+  // If the entry is a directory, it must have the execute bit set.
+  if (in_mode & S_IFDIR) {
+    mode |= S_IXUSR;
+  } else {
+    mode &= ~S_IXUSR;
+  }
+
+  // Propagate user bits to group bits.
+  mode &= ~S_IRWXG;
+  if (mode & S_IRUSR) {
+    mode |= S_IRGRP;
+  }
+  if (mode & S_IWUSR) {
+    mode |= S_IWGRP;
+  }
+  if (mode & S_IXUSR) {
+    mode |= S_IXGRP;
+  }
+
+  return mode;
 }
 
 std::string SmbFilesystem::MakeShareFilePath(const base::FilePath& path) const {
@@ -570,7 +598,9 @@ void SmbFilesystem::CreateInternal(std::unique_ptr<CreateRequest> request,
   entry.ino = inode;
   entry.generation = 1;
   entry.attr = entry_stat;
-  entry.attr_timeout = kAttrTimeoutSeconds;
+  // Force readers to see coherent user / group permission bits by not caching
+  // stat structure.
+  entry.attr_timeout = 0;
   entry.entry_timeout = kAttrTimeoutSeconds;
   request->ReplyCreate(entry, handle);
 }
@@ -972,7 +1002,9 @@ void SmbFilesystem::MkDirInternal(std::unique_ptr<EntryRequest> request,
   entry.ino = inode;
   entry.generation = 1;
   entry.attr = entry_stat;
-  entry.attr_timeout = kAttrTimeoutSeconds;
+  // Force readers to see coherent user / group permission bits by not caching
+  // stat structure.
+  entry.attr_timeout = 0;
   entry.entry_timeout = kAttrTimeoutSeconds;
   request->ReplyEntry(entry);
 }
