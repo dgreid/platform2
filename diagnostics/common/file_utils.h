@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef DIAGNOSTICS_CROS_HEALTHD_UTILS_FILE_UTILS_H_
-#define DIAGNOSTICS_CROS_HEALTHD_UTILS_FILE_UTILS_H_
+#ifndef DIAGNOSTICS_COMMON_FILE_UTILS_H_
+#define DIAGNOSTICS_COMMON_FILE_UTILS_H_
 
 #include <string>
 
@@ -34,4 +34,4 @@ bool ReadInteger(const base::FilePath& directory,
 
 }  // namespace diagnostics
 
-#endif  // DIAGNOSTICS_CROS_HEALTHD_UTILS_FILE_UTILS_H_
+#endif  // DIAGNOSTICS_COMMON_FILE_UTILS_H_

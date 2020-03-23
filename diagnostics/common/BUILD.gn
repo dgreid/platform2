@@ -17,6 +17,7 @@ pkg_config("libcommon_pkg_deps") {
 source_set("libcommon") {
   public_configs = [ ":libcommon_pkg_deps" ]
   sources = [
+    "file_utils.cc",
     "mojo_utils.cc",
     "system/debugd_adapter_impl.cc",
   ]

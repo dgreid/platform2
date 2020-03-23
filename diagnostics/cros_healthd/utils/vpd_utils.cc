@@ -8,7 +8,7 @@
 
 #include <base/logging.h>
 
-#include "diagnostics/cros_healthd/utils/file_utils.h"
+#include "diagnostics/common/file_utils.h"
 
 namespace diagnostics {
 

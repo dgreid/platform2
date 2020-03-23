@@ -92,6 +92,7 @@ pkg_config("libcros_healthd_utils_pkg_deps") {
 source_set("libcros_healthd_utils") {
   deps = [
     ":diagnostics_mojo_bindings",
+    "//diagnostics/common:libcommon",
   ]
   libs = [ "tzif_parser" ]
   all_dependent_configs = [ ":libcros_healthd_utils_pkg_deps" ]
@@ -100,7 +101,6 @@ source_set("libcros_healthd_utils") {
     "cros_healthd/utils/battery_utils.cc",
     "cros_healthd/utils/cpu_utils.cc",
     "cros_healthd/utils/disk_utils.cc",
-    "cros_healthd/utils/file_utils.cc",
     "cros_healthd/utils/memory_utils.cc",
     "cros_healthd/utils/timezone_utils.cc",
     "cros_healthd/utils/vpd_utils.cc",
