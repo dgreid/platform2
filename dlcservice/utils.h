@@ -110,6 +110,11 @@ dlcservice::DlcModuleList ToDlcModuleList(
 DlcMap ToDlcMap(const dlcservice::DlcModuleList& dlc_module_list,
                 std::function<bool(dlcservice::DlcModuleInfo)> filter);
 
+// Converts a |DlcModuleList| into a |DlcSet| based on filtering logic where
+// a return value of true indicates insertion into |DlcSet|.
+DlcSet ToDlcSet(const dlcservice::DlcModuleList& dlc_module_list,
+                std::function<bool(dlcservice::DlcModuleInfo)> filter);
+
 dlcservice::InstallStatus CreateInstallStatus(
     const dlcservice::Status& status,
     const std::string& error_code,

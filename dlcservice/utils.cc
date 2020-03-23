@@ -218,9 +218,20 @@ DlcMap ToDlcMap(const DlcModuleList& dlc_module_list,
   DlcMap m;
   for (const DlcModuleInfo& dlc_module : dlc_module_list.dlc_module_infos()) {
     if (filter(dlc_module))
-      m.emplace(dlc_module.dlc_id(), DlcInfo{dlc_module.dlc_root()});
+      m.emplace(dlc_module.dlc_id(),
+                DlcInfo{DlcState::NOT_INSTALLED, dlc_module.dlc_root()});
   }
   return m;
+}
+
+DlcSet ToDlcSet(const dlcservice::DlcModuleList& dlc_module_list,
+                std::function<bool(dlcservice::DlcModuleInfo)> filter) {
+  DlcSet s;
+  for (const DlcModuleInfo& dlc_module : dlc_module_list.dlc_module_infos()) {
+    if (filter(dlc_module))
+      s.insert(dlc_module.dlc_id());
+  }
+  return s;
 }
 
 dlcservice::InstallStatus CreateInstallStatus(

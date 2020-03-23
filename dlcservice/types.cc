@@ -6,8 +6,9 @@
 
 namespace dlcservice {
 
-DlcInfo::DlcInfo(std::string root_in) {
+DlcInfo::DlcInfo(DlcState::State state_in, DlcRoot root_in) {
   root = root_in;
+  state.set_state(state_in);
 }
 
 }  // namespace dlcservice

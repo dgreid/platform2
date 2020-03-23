@@ -9,6 +9,8 @@
 #include <set>
 #include <string>
 
+#include <dlcservice/proto_bindings/dlcservice.pb.h>
+
 namespace dlcservice {
 
 // |DlcId| is the ID of the DLC.
@@ -19,7 +21,9 @@ using DlcRoot = std::string;
 
 // |DlcInfo| holds information related to a DLC.
 struct DlcInfo {
-  explicit DlcInfo(DlcRoot root = "");
+  explicit DlcInfo(DlcState::State state_in = DlcState::NOT_INSTALLED,
+                   DlcRoot root_in = "");
+  DlcState state;
   DlcRoot root;
 };
 

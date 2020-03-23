@@ -108,11 +108,8 @@ bool DlcService::Install(const DlcModuleList& dlc_module_list_in,
   // Check if there is nothing to install.
   if (unique_dlc_module_list_to_install.dlc_module_infos_size() == 0) {
     DlcModuleList dlc_module_list;
-    ErrorPtr tmp_err;
-    if (!dlc_manager_->FinishInstall(&dlc_module_list, &tmp_err))
-      LOG(ERROR) << Error::ToString(tmp_err);
-    InstallStatus install_status =
-        CreateInstallStatus(Status::COMPLETED, kErrorNone, dlc_module_list, 1.);
+    InstallStatus install_status = CreateInstallStatus(
+        Status::COMPLETED, kErrorNone, dlc_manager_->GetSupported(), 1.);
     SendOnInstallStatusSignal(install_status);
     return true;
   }
@@ -186,11 +183,11 @@ bool DlcService::GetState(const std::string& id_in,
 }
 
 void DlcService::SendFailedSignalAndCleanup() {
-  SendOnInstallStatusSignal(
-      CreateInstallStatus(Status::FAILED, kErrorInternal, {}, 0.));
   ErrorPtr tmp_err;
   if (!dlc_manager_->CancelInstall(&tmp_err))
     LOG(ERROR) << Error::ToString(tmp_err);
+  SendOnInstallStatusSignal(CreateInstallStatus(
+      Status::FAILED, kErrorInternal, dlc_manager_->GetSupported(), 0.));
 }
 
 void DlcService::PeriodicInstallCheck() {
@@ -293,7 +290,8 @@ bool DlcService::HandleStatusResult(const StatusResult& status_result) {
     // will happen.
     case Operation::DOWNLOADING:
       SendOnInstallStatusSignal(CreateInstallStatus(
-          Status::RUNNING, kErrorNone, {}, status_result.progress()));
+          Status::RUNNING, kErrorNone, dlc_manager_->GetSupported(),
+          status_result.progress()));
       FALLTHROUGH;
     default:
       SchedulePeriodicInstallCheck(true);
@@ -327,17 +325,16 @@ void DlcService::OnStatusUpdateAdvancedSignal(
     return;
 
   ErrorPtr tmp_err;
-  DlcModuleList dlc_module_list;
-  if (!dlc_manager_->FinishInstall(&dlc_module_list, &tmp_err)) {
+  if (!dlc_manager_->FinishInstall(&tmp_err)) {
     LOG(ERROR) << Error::ToString(tmp_err);
     InstallStatus install_status = CreateInstallStatus(
-        Status::FAILED, kErrorInternal, dlc_module_list, 0.);
+        Status::FAILED, kErrorInternal, dlc_manager_->GetSupported(), 0.);
     SendOnInstallStatusSignal(install_status);
     return;
   }
 
-  InstallStatus install_status =
-      CreateInstallStatus(Status::COMPLETED, kErrorNone, dlc_module_list, 1.);
+  InstallStatus install_status = CreateInstallStatus(
+      Status::COMPLETED, kErrorNone, dlc_manager_->GetSupported(), 1.);
   SendOnInstallStatusSignal(install_status);
 }
 

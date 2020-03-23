@@ -47,8 +47,9 @@ class DlcManager::DlcManagerImpl {
                                                   &current_boot_slot_))
       LOG(FATAL) << "Can not get current boot slot.";
 
-    // Initialize supported DLC modules.
-    supported_ = ScanDirectory(manifest_dir_);
+    // Initialize supported DLC(s).
+    for (const auto& id : ScanDirectory(manifest_dir_))
+      supported_[id];
   }
   ~DlcManagerImpl() = default;
 
@@ -56,58 +57,146 @@ class DlcManager::DlcManagerImpl {
     return supported_.find(id) != supported_.end();
   }
 
-  bool IsInstalled(const DlcId& id) {
-    RefreshInstalled();
-    return installed_.find(id) != installed_.end();
+  bool IsInstalling() {
+    for (const auto& pr : supported_)
+      if (pr.second.state.state() == DlcState::INSTALLING)
+        return true;
+    return false;
   }
 
-  bool IsInstalling(const DlcId& id) {
-    // TODO(kimjae): For simplicity, consider even installed DLC(s) subset of
-    // installing.
-    return installing_.find(id) != installing_.end();
+  DlcMap GetSupported() { return supported_; }
+
+  DlcInfo GetInfo(const DlcId& id) {
+    DCHECK(IsSupported(id));
+    return supported_[id];
   }
 
-  bool IsInstalling() { return !installing_.empty(); }
+  // Loads the preloadable DLC(s) from |preloaded_content_dir_| by scanning the
+  // preloaded DLC(s) and verifying the validity to be preloaded before doing
+  // so.
+  void PreloadDlcModuleImages() {
+    // Load all preloaded DLC(s) into |content_dir_| one by one.
+    for (auto id : ScanDirectory(preloaded_content_dir_)) {
+      if (!IsSupported(id)) {
+        LOG(ERROR) << "Preloading is not allowed for unsupported DLC=" << id;
+        continue;
+      }
+      if (!IsDlcPreloadAllowed(manifest_dir_, id)) {
+        LOG(ERROR) << "Preloading is not allowed for DLC=" << id;
+        continue;
+      }
 
-  DlcMap GetInstalled() {
-    RefreshInstalled();
-    return installed_;
+      ErrorPtr tmp_err;
+      // Deleting DLC(s) that might already be installed as preloading DLC(s)
+      // take precedence in order to allow stale DLC(s) in cache to be cleared.
+      // Loading should be run prior to preloading, to enforce this strict
+      // precedence.
+      // TODO(crbug.com/1059445): Verify before deleting that image to preload
+      // has the correct hash.
+      if (!Delete(id, &tmp_err)) {
+        PLOG(ERROR) << "Failed to delete prior to preloading DLC=" << id << ", "
+                    << Error::ToString(tmp_err);
+        continue;
+      }
+
+      DlcSet dlc_set = {id};
+      if (!InitInstall(dlc_set, &tmp_err)) {
+        LOG(ERROR) << "Failed to create preloaded DLC=" << id << ", "
+                   << Error::ToString(tmp_err);
+        continue;
+      }
+
+      if (!PreloadedCopier(id)) {
+        LOG(ERROR) << "Something went wrong during preloading DLC (" << id
+                   << "), please check for previous errors.";
+        if (!CancelInstall(&tmp_err))
+          LOG(WARNING) << Error::ToString(tmp_err);
+        continue;
+      }
+
+      // When the copying is successful, go ahead and finish installation.
+      if (!FinishInstall(&tmp_err)) {
+        LOG(ERROR) << "Failed to finish installation for preloaded DLC=" << id
+                   << ", " << Error::ToString(tmp_err);
+        continue;
+      }
+
+      // Delete the preloaded DLC only after both copies into A and B succeed as
+      // well as mounting.
+      auto image_preloaded_path = JoinPaths(
+          preloaded_content_dir_, id, GetDlcPackage(id), kDlcImageFileName);
+      if (!base::DeleteFile(image_preloaded_path.DirName().DirName(), true)) {
+        LOG(ERROR) << "Failed to delete image after preloading DLC=" << id;
+        continue;
+      }
+    }
   }
 
-  bool GetState(const DlcId& id, DlcState* state) {
-    // TODO(crbug.com/1059124): Implement state logic storing and error code
-    // propagation.
-    RefreshInstalled();
-    if (installed_.find(id) != installed_.end())
-      state->set_state(DlcState::INSTALLED);
-    else if (installing_.find(id) != installing_.end())
-      state->set_state(DlcState::INSTALLING);
-    else
-      state->set_state(DlcState::NOT_INSTALLED);
-    return true;
+  // Check installed DLC(s) at startup.
+  void LoadDlcModuleImages() {
+    for (auto id : ScanDirectory(content_dir_)) {
+      ErrorPtr tmp_err;
+      if (!IsSupported(id)) {
+        LOG(ERROR)
+            << "Deleting during startup an installed but unsupported DLC="
+            << id;
+        if (!Delete(id, &tmp_err))
+          PLOG(ERROR) << "Failed during startup: " << Error::ToString(tmp_err);
+        continue;
+      }
+      if (!ValidateImageFiles(id, &tmp_err)) {
+        LOG(ERROR) << "Failed to validate during startup for DLC=" << id << ", "
+                   << Error::ToString(tmp_err);
+        if (!Delete(id, &tmp_err))
+          PLOG(ERROR) << "Failed during startup: " << Error::ToString(tmp_err);
+        continue;
+      }
+      // - If the root is empty and is currently installing then skip.
+      // - If the root exists set it and continue.
+      // - Try mounting, if mounted set it and continue.
+      // - Remove the DLC if none of the previous checks are met.
+      string mount;
+      if (Mount(id, &mount, &tmp_err)) {
+        SetInstalled(id, GetDlcRoot(FilePath(mount)).value());
+      } else {
+        LOG(ERROR) << "Failed to mount during startup for DLC=" << id << ", "
+                   << Error::ToString(tmp_err);
+        Delete(id, &tmp_err);
+      }
+    }
   }
 
-  void PreloadDlcModuleImages() { RefreshPreloaded(); }
-
-  void LoadDlcModuleImages() { RefreshInstalled(); }
-
-  bool InitInstall(const DlcMap& requested_install, ErrorPtr* err) {
-    CHECK(installing_.empty());
-    RefreshInstalled();
-    installing_ = requested_install;
+  bool InitInstall(const DlcSet& requested_install, ErrorPtr* err) {
+    DCHECK(!IsInstalling());
 
     ErrorPtr tmp_err;
-    for (const auto& dlc : installing_) {
-      const string& id = dlc.first;
-      // If already installed, pick up the root.
-      if (installed_.find(id) != installed_.end()) {
-        installing_[id] = installed_[id];
-      } else {
-        if (!Create(id, err)) {
-          if (!CancelInstall(&tmp_err))
-            LOG(ERROR) << "Failed during init: " << Error::ToString(tmp_err);
-          return false;
+    for (const auto& id : requested_install) {
+      if (!IsSupported(id)) {
+        *err = Error::Create(
+            kErrorInvalidDlc,
+            base::StringPrintf("Trying to install unsupported DLC=%s",
+                               id.c_str()));
+        if (!CancelInstall(&tmp_err))
+          LOG(ERROR) << "Failed during install initialization: "
+                     << Error::ToString(tmp_err);
+        return false;
+      }
+      switch (GetInfo(id).state.state()) {
+        case DlcState::NOT_INSTALLED: {
+          if (!Create(id, err)) {
+            if (!CancelInstall(&tmp_err))
+              LOG(ERROR) << "Failed during install initialization: "
+                         << Error::ToString(tmp_err);
+            return false;
+          }
+          break;
         }
+        case DlcState::INSTALLED:
+          break;
+        case DlcState::INSTALLING:
+        default:
+          NOTREACHED();
+          return false;
       }
       // Failure to set the metadata flags should not fail the install.
       if (!SystemState::Get()->update_engine()->SetDlcActiveValue(true, id,
@@ -120,37 +209,29 @@ class DlcManager::DlcManagerImpl {
     return true;
   }
 
-  DlcMap GetInstalling() {
-    DlcMap required_installing;
-    for (const auto& dlc : installing_)
-      if (dlc.second.root.empty())
-        required_installing[dlc.first];
-    return required_installing;
-  }
-
-  bool FinishInstall(DlcMap* installed, ErrorPtr* err) {
-    *installed = installing_;
-    ClearInstalling();
+  bool FinishInstall(ErrorPtr* err) {
     bool ret = true;
-    for (auto& pr : *installed) {
+    for (const auto& pr : supported_) {
       const auto& id = pr.first;
       const auto& info = pr.second;
-      if (!info.root.empty())
+      if (info.state.state() != DlcState::INSTALLING)
         continue;
       string mount;
-      if (!Mount(id, &mount, err)) {
-        ErrorPtr tmp_err;
+      ErrorPtr tmp_err;
+      if (!Mount(id, &mount, &tmp_err)) {
+        LOG(ERROR) << "Failed during install finalization: "
+                   << Error::ToString(tmp_err);
         if (!Delete(id, &tmp_err))
-          LOG(ERROR) << "Failed during finishing: " << Error::ToString(tmp_err);
+          LOG(ERROR) << "Failed during install finalization: "
+                     << Error::ToString(tmp_err);
         ret = false;
         continue;
       }
-      installed_[id] = pr.second = DlcInfo(GetDlcRoot(FilePath(mount)).value());
+      SetInstalled(id, GetDlcRoot(FilePath(mount)).value());
     }
-    if (!ret) {
+    if (!ret)
       *err =
           Error::Create(kErrorInternal, "Not all DLC(s) successfully mounted.");
-    }
     return ret;
   }
 
@@ -160,15 +241,24 @@ class DlcManager::DlcManagerImpl {
       LOG(WARNING) << "No install started to being with, nothing to cancel.";
       return ret;
     }
-    for (const auto& dlc : installing_) {
-      const auto& id = dlc.first;
-      const auto& info = dlc.second;
-      if (!info.root.empty())
+    for (const auto& pr : supported_) {
+      const auto& id = pr.first;
+      const auto& info = pr.second;
+      if (info.state.state() != DlcState::INSTALLING)
         continue;
-      if (!Delete(id, err))
+      // Consider as not installed even if delete fails below, correct errors
+      // will be propagated later and should not block on further installs.
+      SetNotInstalled(id);
+      ErrorPtr tmp_err;
+      if (!Delete(id, &tmp_err)) {
+        PLOG(ERROR) << "Failed during install cancellation: "
+                    << Error::ToString(tmp_err);
         ret = false;
+      }
     }
-    ClearInstalling();
+    if (!ret)
+      *err = Error::Create(kErrorInternal,
+                           "Not all installing DLC(s) successfully cancelled.");
     return ret;
   }
 
@@ -176,8 +266,10 @@ class DlcManager::DlcManagerImpl {
   bool Delete(const string& id, ErrorPtr* err) {
     vector<string> undeleted_paths;
     for (const auto& path : {JoinPaths(content_dir_, id)}) {
-      if (!base::DeleteFile(path, true))
+      if (!base::DeleteFile(path, true)) {
+        PLOG(ERROR) << "Failed to delete path=" << path;
         undeleted_paths.push_back(path.value());
+      }
       // Failure to set DLC to inactive should not fail uninstall.
       ErrorPtr tmp_err;
       if (!SystemState::Get()->update_engine()->SetDlcActiveValue(false, id,
@@ -186,7 +278,6 @@ class DlcManager::DlcManagerImpl {
                      << (tmp_err ? Error::ToString(tmp_err)
                                  : "Missing error from update engine proxy.");
     }
-    installed_.erase(id);
     bool ret = undeleted_paths.empty();
     if (!ret) {
       *err = Error::Create(
@@ -194,6 +285,7 @@ class DlcManager::DlcManagerImpl {
           base::StringPrintf("DLC directories (%s) could not be deleted.",
                              base::JoinString(undeleted_paths, ",").c_str()));
     }
+    SetNotInstalled(id);
     return ret;
   }
 
@@ -232,11 +324,24 @@ class DlcManager::DlcManagerImpl {
   }
 
  private:
-  string GetDlcPackage(const string& id) {
+  string GetDlcPackage(const DlcId& id) {
     return *(ScanDirectory(JoinPaths(manifest_dir_, id)).begin());
   }
 
-  void ClearInstalling() { installing_.clear(); }
+  void SetNotInstalled(const DlcId& id) {
+    DCHECK(IsSupported(id));
+    supported_[id] = DlcInfo(DlcState::NOT_INSTALLED);
+  }
+
+  void SetInstalling(const DlcId& id) {
+    DCHECK(IsSupported(id));
+    supported_[id] = DlcInfo(DlcState::INSTALLING);
+  }
+
+  void SetInstalled(const DlcId& id, const DlcRoot& root) {
+    DCHECK(IsSupported(id));
+    supported_[id] = DlcInfo(DlcState::INSTALLED, root);
+  }
 
   // Returns true if the DLC module has a boolean true for 'preload-allowed'
   // attribute in the manifest for the given |id| and |package|.
@@ -338,6 +443,7 @@ class DlcManager::DlcManagerImpl {
       return false;
     }
 
+    SetInstalling(id);
     return true;
   }
 
@@ -368,8 +474,8 @@ class DlcManager::DlcManagerImpl {
       if (!CreateDlcPackagePath(id, package, err))
         return false;
       if (!CreateFile(inactive_img_path, max_allowed_img_size)) {
-        // Don't make this error |kErrorAllocation|, this is during a refresh
-        // and should be considered and internal problem of keeping DLC(s) in a
+        // Don't make this error |kErrorAllocation|, this is during startup and
+        // should be considered and internal problem of keeping DLC(s) in a
         // completely valid state.
         *err = Error::Create(
             kErrorInternal,
@@ -410,9 +516,8 @@ class DlcManager::DlcManagerImpl {
     return true;
   }
 
-  // Helper used by |RefreshPreload()| to load in (copy + cleanup) preloadable
-  // files for the given DLC ID.
-  bool RefreshPreloadedCopier(const string& id) {
+  // Helper used to load in (copy + cleanup) preloadable files for the |id|.
+  bool PreloadedCopier(const string& id) {
     const auto& package = GetDlcPackage(id);
     FilePath image_preloaded_path =
         JoinPaths(preloaded_content_dir_, id, package, kDlcImageFileName);
@@ -457,6 +562,7 @@ class DlcManager::DlcManagerImpl {
         break;
       default:
         NOTREACHED();
+        return false;
     }
     // TODO(kimjae): when preloaded images are place into unencrypted, this
     // operation can be a move.
@@ -469,93 +575,6 @@ class DlcManager::DlcManagerImpl {
     return true;
   }
 
-  // Loads the preloadable DLC(s) from |preloaded_content_dir_| by scanning the
-  // preloaded DLC(s) and verifying the validity to be preloaded before doing
-  // so.
-  void RefreshPreloaded() {
-    // Load all preloaded DLC modules into |content_dir_| one by one.
-    for (auto id : ScanDirectory(preloaded_content_dir_)) {
-      if (!IsDlcPreloadAllowed(manifest_dir_, id)) {
-        LOG(ERROR) << "Preloading is not allowed for DLC=" << id;
-        continue;
-      }
-
-      ErrorPtr tmp_err;
-      DlcMap dlc_map = {{id, DlcInfo()}};
-      if (!InitInstall(dlc_map, &tmp_err)) {
-        LOG(ERROR) << "Failed to create preloaded DLC=" << id << ", "
-                   << Error::ToString(tmp_err);
-        continue;
-      }
-
-      if (!RefreshPreloadedCopier(id)) {
-        LOG(ERROR) << "Something went wrong during preloading DLC (" << id
-                   << "), please check for previous errors.";
-        if (!CancelInstall(&tmp_err))
-          LOG(WARNING) << Error::ToString(tmp_err);
-        continue;
-      }
-
-      // When the copying is successful, go ahead and finish installation.
-      if (!FinishInstall(&dlc_map, &tmp_err)) {
-        LOG(ERROR) << "Failed to finish installation for preloaded DLC=" << id
-                   << ", " << Error::ToString(tmp_err);
-        continue;
-      }
-
-      // Delete the preloaded DLC only after both copies into A and B succeed as
-      // well as mounting.
-      auto image_preloaded_path = JoinPaths(
-          preloaded_content_dir_, id, GetDlcPackage(id), kDlcImageFileName);
-      if (!base::DeleteFile(image_preloaded_path.DirName().DirName(), true)) {
-        LOG(ERROR) << "Failed to delete image after preloading DLC=" << id;
-        continue;
-      }
-    }
-  }
-
-  // A refresh mechanism that keeps installed DLC(s), |installed_|, in check.
-  // Provides correction to DLC(s) that may have been altered by non-internal
-  // actions.
-  void RefreshInstalled() {
-    decltype(installed_) verified_installed;
-
-    // Recheck installed DLC modules.
-    for (auto id : ScanDirectory(content_dir_)) {
-      ErrorPtr tmp_err;
-      if (!IsSupported(id)) {
-        LOG(ERROR) << "Deleting an installed but unsupported DLC=" << id;
-        if (!Delete(id, &tmp_err))
-          LOG(ERROR) << "Failed during refresh: " << Error::ToString(tmp_err);
-        continue;
-      }
-      auto info = installed_[id];
-      if (!ValidateImageFiles(id, &tmp_err)) {
-        LOG(ERROR) << "Failed to validate during refresh for DLC=" << id << ", "
-                   << Error::ToString(tmp_err);
-        if (!Delete(id, &tmp_err))
-          LOG(ERROR) << Error::ToString(tmp_err);
-      }
-      // - If the root is empty and is currently installing then skip.
-      // - If the root exists set it and continue.
-      // - Try mounting, if mounted set it and continue.
-      // - Remove the DLC if none of the previous checks are met.
-      string mount;
-      if (info.root.empty() && installing_.find(id) != installing_.end()) {
-        continue;
-      } else if (base::PathExists(base::FilePath(info.root))) {
-        verified_installed[id] = info;
-      } else if (Mount(id, &mount, &tmp_err)) {
-        verified_installed[id] = DlcInfo(GetDlcRoot(FilePath(mount)).value());
-      } else {
-        LOG(ERROR) << "Failed to mount during refresh for DLC=" << id << ", "
-                   << Error::ToString(tmp_err);
-        Delete(id, &tmp_err);
-      }
-    }
-    installed_ = std::move(verified_installed);
-  }
-
   org::chromium::ImageLoaderInterfaceProxyInterface* image_loader_proxy_;
 
   FilePath manifest_dir_;
@@ -564,10 +583,7 @@ class DlcManager::DlcManagerImpl {
 
   BootSlot::Slot current_boot_slot_;
 
-  string installing_omaha_url_;
-  DlcMap installing_;
-  DlcMap installed_;
-  DlcSet supported_;
+  DlcMap supported_;
 };
 
 DlcManager::DlcManager() {
@@ -581,11 +597,18 @@ bool DlcManager::IsInstalling() {
 }
 
 DlcModuleList DlcManager::GetInstalled() {
-  return ToDlcModuleList(impl_->GetInstalled(),
+  return ToDlcModuleList(impl_->GetSupported(), [](DlcId, DlcInfo info) {
+    return info.state.state() == DlcState::INSTALLED;
+  });
+}
+
+DlcModuleList DlcManager::GetSupported() {
+  return ToDlcModuleList(impl_->GetSupported(),
                          [](DlcId, DlcInfo) { return true; });
 }
 
 bool DlcManager::GetState(const DlcId& id, DlcState* state, ErrorPtr* err) {
+  DCHECK(state);
   DCHECK(err);
   if (!impl_->IsSupported(id)) {
     *err = Error::Create(
@@ -595,48 +618,40 @@ bool DlcManager::GetState(const DlcId& id, DlcState* state, ErrorPtr* err) {
     return false;
   }
 
-  return impl_->GetState(id, state);
+  *state = impl_->GetInfo(id).state;
+  return true;
 }
 
 void DlcManager::LoadDlcModuleImages() {
-  impl_->PreloadDlcModuleImages();
   impl_->LoadDlcModuleImages();
+  impl_->PreloadDlcModuleImages();
 }
 
 bool DlcManager::InitInstall(const DlcModuleList& dlc_module_list,
                              ErrorPtr* err) {
   DCHECK(err);
-  DlcMap dlc_map =
-      ToDlcMap(dlc_module_list, [](DlcModuleInfo) { return true; });
+  const auto dlc_set =
+      ToDlcSet(dlc_module_list, [](DlcModuleInfo) { return true; });
 
-  if (dlc_map.empty()) {
+  if (dlc_set.empty()) {
     *err = Error::Create(kErrorInvalidDlc,
                          "Must provide at least one DLC to install.");
     return false;
   }
 
-  return impl_->InitInstall(dlc_map, err);
+  return impl_->InitInstall(dlc_set, err);
 }
 
 DlcModuleList DlcManager::GetMissingInstalls() {
   // Only return the DLC(s) that aren't already installed.
-  return ToDlcModuleList(impl_->GetInstalling(),
-                         [](DlcId, DlcInfo info) { return info.root.empty(); });
+  return ToDlcModuleList(impl_->GetSupported(), [](DlcId, DlcInfo info) {
+    return info.state.state() == DlcState::INSTALLING;
+  });
 }
 
-bool DlcManager::FinishInstall(DlcModuleList* dlc_module_list, ErrorPtr* err) {
-  DCHECK(dlc_module_list);
+bool DlcManager::FinishInstall(ErrorPtr* err) {
   DCHECK(err);
-
-  DlcMap dlc_map;
-  if (!impl_->FinishInstall(&dlc_map, err))
-    return false;
-
-  *dlc_module_list = ToDlcModuleList(dlc_map, [](DlcId id, DlcInfo info) {
-    CHECK(!id.empty());
-    return true;
-  });
-  return true;
+  return impl_->FinishInstall(err);
 }
 
 bool DlcManager::CancelInstall(ErrorPtr* err) {
@@ -651,18 +666,22 @@ bool DlcManager::Delete(const string& id, ErrorPtr* err) {
         base::StringPrintf("Trying to delete unsupported DLC=%s", id.c_str()));
     return false;
   }
-  if (impl_->IsInstalling(id)) {
-    *err = Error::Create(
-        kErrorBusy,
-        base::StringPrintf("Trying to delete a currently installing DLC=%s",
-                           id.c_str()));
-    return false;
+  switch (impl_->GetInfo(id).state.state()) {
+    case DlcState::NOT_INSTALLED:
+      LOG(WARNING) << "Trying to uninstall not installed DLC=" << id;
+      return true;
+    case DlcState::INSTALLING:
+      *err = Error::Create(
+          kErrorBusy,
+          base::StringPrintf("Trying to delete a currently installing DLC=%s",
+                             id.c_str()));
+      return false;
+    case DlcState::INSTALLED:
+      return impl_->Unmount(id, err) && impl_->Delete(id, err);
+    default:
+      NOTREACHED();
+      return false;
   }
-  if (!impl_->IsInstalled(id)) {
-    LOG(WARNING) << "Trying to uninstall not installed DLC=" << id;
-    return true;
-  }
-  return impl_->Unmount(id, err) && impl_->Delete(id, err);
 }
 
 }  // namespace dlcservice

@@ -30,6 +30,9 @@ class DlcManager {
   // Returns the list of fully installed + mounted DLC(s).
   DlcModuleList GetInstalled();
 
+  // Returns the list of all supported DLC(s).
+  DlcModuleList GetSupported();
+
   // Returns true and sets |state| if the DLC is supported.
   bool GetState(const DlcId& id, DlcState* state, brillo::ErrorPtr* err);
 
@@ -70,7 +73,7 @@ class DlcManager {
   //   err: The error that's set when returned false.
   // Return:
   //   True on success, otherwise false.
-  bool FinishInstall(DlcModuleList* dlc_module_list, brillo::ErrorPtr* err);
+  bool FinishInstall(brillo::ErrorPtr* err);
 
   // Install Step 3b:
   // If for any reason, the init'ed DLC(s) should not follow through with
