@@ -766,6 +766,8 @@ Properties	string ArcVpn.TunnelChrome [writeonly]
 
 		string OpenVPN.CompLZO [writeonly]
 
+			Deprecated, do not use. Use OpenVPN.Compress instead.
+
 			(VPN services of type OpenVPN only) If non-empty,
 			enable fast LZO compression.  See the
 			"--comp-lzo" option in the OpenVPN documentation.
@@ -774,12 +776,27 @@ Properties	string ArcVpn.TunnelChrome [writeonly]
 
 		string OpenVPN.CompNoAdapt [writeonly]
 
+			Deprecated, do not use.
+
 			(VPN services of type OpenVPN only) If non-empty,
 			don't use adaptive compression when fast LZO
 			is enabled compression.  See the "--comp-noadapt"
 			option in the OpenVPN documentation.  The current
 			value of this property is readable in the "Provider"
 			property of this service.
+
+		string OpenVPN.Compress [writeonly]
+
+			(VPN services of type OpenVPN only) If non-empty,
+			specifies the algorithm to be used for compression.
+			Possible values for --compress option are:
+			   "" (Compression framing only)
+			   "lz4"
+			   "lz4-v2"
+			   "lzo"
+			See the "--compress" option in the OpenVPN
+			documentation. The current value of this property is
+			readable in the "Provider" property of this service.
 
 		array{string} OpenVPN.ExtraCertPEM [writeonly]
 

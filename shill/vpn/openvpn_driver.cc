@@ -102,6 +102,7 @@ const VPNDriver::Property OpenVPNDriver::kProperties[] = {
     {kOpenVPNClientCertIdProperty, Property::kCredential},
     {kOpenVPNCompLZOProperty, 0},
     {kOpenVPNCompNoAdaptProperty, 0},
+    {kOpenVPNCompressProperty, 0},
     {kOpenVPNExtraHostsProperty, Property::kArray},
     {kOpenVPNIgnoreDefaultRouteProperty, 0},
     {kOpenVPNKeyDirectionProperty, 0},
@@ -705,6 +706,7 @@ void OpenVPNDriver::InitOptions(vector<vector<string>>* options, Error* error) {
   AppendValueOption(kOpenVPNAuthRetryProperty, "auth-retry", options);
   AppendFlag(kOpenVPNCompLZOProperty, "comp-lzo", options);
   AppendFlag(kOpenVPNCompNoAdaptProperty, "comp-noadapt", options);
+  AppendValueOption(kOpenVPNCompressProperty, "compress", options);
   AppendFlag(kOpenVPNPushPeerInfoProperty, "push-peer-info", options);
   AppendValueOption(kOpenVPNRenegSecProperty, "reneg-sec", options);
   AppendValueOption(kOpenVPNShaperProperty, "shaper", options);
