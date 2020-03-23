@@ -24,7 +24,12 @@ class SchedulerConfigurationUtils {
  public:
   // |base_path| is normally /sys but can be adjusted for testing.
   explicit SchedulerConfigurationUtils(const base::FilePath& base_path)
-      : base_path_{base_path}, fd_map_{}, offline_cpus_{}, online_cpus_{} {}
+      : base_path_{base_path},
+        fd_map_{},
+        offline_cpus_{},
+        online_cpus_{},
+        cpusets_fds_{},
+        online_cpus_fd_{} {}
 
   ~SchedulerConfigurationUtils() = default;
 
@@ -41,6 +46,9 @@ class SchedulerConfigurationUtils {
   // file descriptor. This also stores the vector of offline and offline CPUs,
   // to avoid it being re-calculated later.
   bool GetControlFDs();
+
+  // Open the file descriptors to the cpuset files before sandboxing.
+  bool GetCPUSetFDs();
 
  private:
   enum class DisableSiblingsResult {
@@ -79,6 +87,9 @@ class SchedulerConfigurationUtils {
   bool GetFDsFromControlFile(const base::FilePath& path,
                              std::vector<std::string>* cpu_nums);
 
+  // This updates all cpuset files for Chrome OS's cgroups.
+  bool UpdateAllCPUSets();
+
   // Returns a the path to the sibling thread file for the purpose of unit
   // testing.
   base::FilePath GetSiblingPath(const std::string& cpu_num);
@@ -91,6 +102,10 @@ class SchedulerConfigurationUtils {
   std::vector<std::string> offline_cpus_;
   // A vector of online CPUs.
   std::vector<std::string> online_cpus_;
+  // The FDs of the cpuset control files to update.
+  std::vector<base::ScopedFD> cpusets_fds_;
+  // The file containing the online CPU range.
+  base::ScopedFD online_cpus_fd_;
 
   FRIEND_TEST_ALL_PREFIXES(SchedulerConfigurationHelperTest, WriteFlag);
   FRIEND_TEST_ALL_PREFIXES(SchedulerConfigurationHelperTest, ParseCPUs);

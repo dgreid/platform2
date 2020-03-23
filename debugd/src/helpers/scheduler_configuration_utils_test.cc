@@ -16,9 +16,20 @@
 
 namespace debugd {
 
+namespace {
+
+constexpr char kChromeCPUSubsetSubpath[] = "fs/cgroup/cpuset/chrome/cpus";
+constexpr char kChronosContainerCPUSubsetSubpath[] =
+    "fs/cgroup/cpuset/chronos_containers/cpus";
+constexpr char kSessionManagerCPUSubsetSubpath[] =
+    "fs/cgroup/cpuset/session_manager_containers/cpus";
+
+}  // namespace
+
 class SchedulerConfigurationHelperTest : public testing::Test {
  public:
-  void CreateSysInterface(const base::FilePath& cpu_root_dir) {
+  void CreateSysInterface(const base::FilePath& cpu_root_dir,
+                          const base::FilePath& base_sys_path) {
     // Set up a fake tempdir mimicking a performance mode CPU.
     ASSERT_TRUE(base::CreateDirectory(cpu_root_dir));
 
@@ -27,8 +38,8 @@ class SchedulerConfigurationHelperTest : public testing::Test {
       base::FilePath cpu_subroot = cpu_root_dir.Append("cpu" + cpu_num);
       ASSERT_TRUE(base::CreateDirectory(cpu_subroot));
       std::string flag = "1";
-      ASSERT_TRUE(base::WriteFile(cpu_subroot.Append("online"), flag.c_str(),
-                                  flag.size()));
+      ASSERT_EQ(flag.size(), base::WriteFile(cpu_subroot.Append("online"),
+                                             flag.c_str(), flag.size()));
 
       // Establish odd CPUs as virtual siblings.
       base::FilePath topology = cpu_subroot.Append("topology");
@@ -39,20 +50,39 @@ class SchedulerConfigurationHelperTest : public testing::Test {
       } else if (cpu_num == "2" || cpu_num == "3") {
         topology_str = "2-3";
       }
-      ASSERT_TRUE(base::WriteFile(topology.Append("thread_siblings_list"),
-                                  topology_str.c_str(), topology_str.size()));
+      ASSERT_EQ(topology_str.size(),
+                base::WriteFile(topology.Append("thread_siblings_list"),
+                                topology_str.c_str(), topology_str.size()));
     }
 
     // Establish the control files.
     base::FilePath online_cpus_file = cpu_root_dir.Append("online");
     const std::string online_cpus = "0-3";
-    ASSERT_TRUE(base::WriteFile(online_cpus_file, online_cpus.c_str(),
-                                online_cpus.size()));
+    ASSERT_EQ(online_cpus.size(),
+              base::WriteFile(online_cpus_file, online_cpus.c_str(),
+                              online_cpus.size()));
 
     // Establish the offline CPUs.
     base::FilePath offline_cpus_file = cpu_root_dir.Append("offline");
     const char terminator = 0xa;
-    ASSERT_TRUE(base::WriteFile(offline_cpus_file, &terminator, 1));
+    ASSERT_EQ(1, base::WriteFile(offline_cpus_file, &terminator, 1));
+
+    // Setup the cpu set files.
+    base::FilePath chrome_cpuset =
+        base_sys_path.Append(kChromeCPUSubsetSubpath);
+    base::FilePath chronos_cpuset =
+        base_sys_path.Append(kChronosContainerCPUSubsetSubpath);
+    base::FilePath session_manager_cpuset =
+        base_sys_path.Append(kSessionManagerCPUSubsetSubpath);
+
+    for (const auto& cpuset :
+         {chrome_cpuset, chronos_cpuset, session_manager_cpuset}) {
+      ASSERT_TRUE(base::CreateDirectory(cpuset.DirName()));
+      // Sets the range to A to make sure the debugd code updates it.
+      std::string range = "A";
+      ASSERT_EQ(range.size(),
+                base::WriteFile(cpuset, range.data(), range.size()));
+    }
   }
 
   void CheckPerformanceMode(const base::FilePath& cpu_root_dir) {
@@ -148,11 +178,12 @@ TEST_F(SchedulerConfigurationHelperTest, TestSchedulers) {
 
   const base::FilePath cpu_root_dir =
       temp_dir.GetPath().Append("devices").Append("system").Append("cpu");
-  CreateSysInterface(cpu_root_dir);
+  CreateSysInterface(cpu_root_dir, temp_dir.GetPath());
 
   size_t num_cpus_disabled = 0;
   debugd::SchedulerConfigurationUtils utils(temp_dir.GetPath());
   ASSERT_TRUE(utils.GetControlFDs());
+  ASSERT_TRUE(utils.GetCPUSetFDs());
   ASSERT_TRUE(utils.EnablePerformanceConfiguration(&num_cpus_disabled));
   ASSERT_EQ(0U, num_cpus_disabled);
 
@@ -161,6 +192,7 @@ TEST_F(SchedulerConfigurationHelperTest, TestSchedulers) {
   // Now enable conservative mode.
   SchedulerConfigurationUtils utils2(temp_dir.GetPath());
   ASSERT_TRUE(utils2.GetControlFDs());
+  ASSERT_TRUE(utils2.GetCPUSetFDs());
   ASSERT_TRUE(utils2.EnableConservativeConfiguration(&num_cpus_disabled));
   ASSERT_EQ(2U, num_cpus_disabled);
 
@@ -172,18 +204,38 @@ TEST_F(SchedulerConfigurationHelperTest, TestSchedulers) {
   base::FilePath offline_cpus_file = cpu_root_dir.Append("offline");
   std::string online_now = "0,2";
   std::string offline_now = "1,3";
-  ASSERT_TRUE(
+  ASSERT_EQ(
+      online_now.size(),
       base::WriteFile(online_cpus_file, online_now.c_str(), online_now.size()));
-  ASSERT_TRUE(base::WriteFile(offline_cpus_file, offline_now.c_str(),
-                              offline_now.size()));
+  ASSERT_EQ(offline_now.size(),
+            base::WriteFile(offline_cpus_file, offline_now.c_str(),
+                            offline_now.size()));
 
   // Re-enable performance and test.
   SchedulerConfigurationUtils utils3(temp_dir.GetPath());
   ASSERT_TRUE(utils3.GetControlFDs());
+  ASSERT_TRUE(utils3.GetCPUSetFDs());
   ASSERT_TRUE(utils3.EnablePerformanceConfiguration(&num_cpus_disabled));
   ASSERT_EQ(0U, num_cpus_disabled);
 
   CheckPerformanceMode(cpu_root_dir);
+
+  // Check the cpuset file. Because this unit test is crudely mocking the
+  // behavior of the CPU control files, the cpuset file ends out of date. But
+  // that's OK: it needs to have a valid range and not EINVAL.
+  base::FilePath chrome_cpuset =
+      temp_dir.GetPath().Append(kChromeCPUSubsetSubpath);
+  base::FilePath chronos_cpuset =
+      temp_dir.GetPath().Append(kChronosContainerCPUSubsetSubpath);
+  base::FilePath session_manager_cpuset =
+      temp_dir.GetPath().Append(kSessionManagerCPUSubsetSubpath);
+
+  for (const auto& cpuset :
+       {chrome_cpuset, chronos_cpuset, session_manager_cpuset}) {
+    std::string cpuset_contents;
+    ASSERT_TRUE(base::ReadFileToString(cpuset, &cpuset_contents));
+    EXPECT_EQ("0,2", cpuset_contents);
+  }
 }
 
 }  // namespace debugd

@@ -77,6 +77,11 @@ int main(int argc, char* argv[]) {
     return 1;
   }
 
+  if (!utils.GetCPUSetFDs()) {
+    LOG(ERROR) << "Failed to open cpuset files.";
+    return 1;
+  }
+
   EnterSandbox();
 
   int status = 1;

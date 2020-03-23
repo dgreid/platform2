@@ -23,12 +23,20 @@ namespace debugd {
 
 namespace {
 
-constexpr char kLineTerminator = 0xa;
-constexpr char kCPUSubpath[] = "devices/system/cpu";
 constexpr char kCPUOfflineSubath[] = "devices/system/cpu/offline";
 constexpr char kCPUOnlineSubpath[] = "devices/system/cpu/online";
+constexpr char kCPUSubpath[] = "devices/system/cpu";
+constexpr char kChromeCPUSubsetSubpath[] = "fs/cgroup/cpuset/chrome/cpus";
+constexpr char kChronosContainerCPUSubsetSubpath[] =
+    "fs/cgroup/cpuset/chronos_containers/cpus";
 constexpr char kDisableCPUFlag[] = "0";
 constexpr char kEnableCPUFlag[] = "1";
+constexpr char kLineTerminator = 0xa;
+// This allows for a range output of 0,1,2,...,255 which is a lot of cores for
+// Chromebooks.
+constexpr size_t kMaxCoresSupported = 512;
+constexpr char kSessionManagerCPUSubsetSubpath[] =
+    "fs/cgroup/cpuset/session_manager_containers/cpus";
 constexpr base::TimeDelta kWriteRetryDelay =
     base::TimeDelta::FromMilliseconds(100);
 
@@ -73,8 +81,9 @@ bool SchedulerConfigurationUtils::ParseCPUNumbers(
       return false;
     }
 
-    if (cpu_end <= cpu_start)
+    if (cpu_end <= cpu_start) {
       return false;
+    }
 
     for (unsigned i = cpu_start; i <= cpu_end; i++) {
       result->push_back(base::UintToString(i));
@@ -134,7 +143,7 @@ bool SchedulerConfigurationUtils::EnablePerformanceConfiguration(
   if (!result)
     LOG(ERROR) << "Failed to enable CPU(s): " << failed_cpus;
 
-  return result;
+  return result && UpdateAllCPUSets();
 }
 
 base::FilePath SchedulerConfigurationUtils::GetSiblingPath(
@@ -190,7 +199,7 @@ bool SchedulerConfigurationUtils::EnableConservativeConfiguration(
     }
   }
 
-  return status;
+  return status && UpdateAllCPUSets();
 }
 
 bool SchedulerConfigurationUtils::GetFDsFromControlFile(
@@ -239,6 +248,66 @@ bool SchedulerConfigurationUtils::GetControlFDs() {
                                &online_cpus_) &&
          GetFDsFromControlFile(base_path_.Append(kCPUOfflineSubath),
                                &offline_cpus_);
+}
+
+bool SchedulerConfigurationUtils::GetCPUSetFDs() {
+  std::vector<const base::FilePath> cpu_sets;
+  cpu_sets.push_back(base_path_.Append(kChromeCPUSubsetSubpath));
+  cpu_sets.push_back(base_path_.Append(kChronosContainerCPUSubsetSubpath));
+  cpu_sets.push_back(base_path_.Append(kSessionManagerCPUSubsetSubpath));
+
+  for (const auto& path : cpu_sets) {
+    base::ScopedFD fd(
+        HANDLE_EINTR(open(path.value().c_str(), O_RDWR | O_CLOEXEC)));
+    if (fd.get() < 0) {
+      PLOG(WARNING) << "Failed to open: " << path.value();
+    } else {
+      cpusets_fds_.push_back(std::move(fd));
+    }
+  }
+
+  base::FilePath online_cpus_path = base_path_.Append(kCPUOnlineSubpath);
+  base::ScopedFD online_cpus_fd(HANDLE_EINTR(
+      open(online_cpus_path.value().c_str(), O_RDONLY | O_CLOEXEC)));
+  if (online_cpus_fd.get() < 0) {
+    PLOG(ERROR) << "Failed to open: " << online_cpus_path.value();
+    return false;
+  }
+  online_cpus_fd_ = std::move(online_cpus_fd);
+
+  return true;
+}
+
+bool SchedulerConfigurationUtils::UpdateAllCPUSets() {
+  if (online_cpus_fd_.get() < 0) {
+    LOG(ERROR) << "Online CPUs fd is invalid.";
+    return false;
+  }
+
+  char online_cpus[kMaxCoresSupported];
+  size_t bytes_read = HANDLE_EINTR(
+      read(online_cpus_fd_.get(), online_cpus, sizeof(online_cpus)));
+  if (bytes_read < 0) {
+    PLOG(ERROR) << "Failed to read online CPU range";
+    return false;
+  }
+
+  std::string online_cpus_str(online_cpus, bytes_read);
+  std::vector<std::string> unused_nums;
+  if (!ParseCPUNumbers(online_cpus_str, &unused_nums)) {
+    LOG(ERROR) << "Failed to parse CPU range, failed sanity check: "
+               << online_cpus_str;
+    return false;
+  }
+
+  for (const auto& scoped_fd : cpusets_fds_) {
+    if (!base::WriteFileDescriptor(scoped_fd.get(), online_cpus_str.data(),
+                                   online_cpus_str.size())) {
+      PLOG(WARNING) << "Failed to update a cpuset file";
+    }
+  }
+
+  return true;
 }
 
 }  // namespace debugd
