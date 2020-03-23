@@ -7,8 +7,10 @@
 namespace power_manager {
 namespace system {
 
-BacklightStub::BacklightStub(int64_t max_level, int64_t current_level)
-    : max_level_(max_level), current_level_(current_level) {}
+BacklightStub::BacklightStub(int64_t max_level,
+                             int64_t current_level,
+                             BrightnessScale scale)
+    : max_level_(max_level), current_level_(current_level), scale_(scale) {}
 
 BacklightStub::~BacklightStub() {}
 
@@ -53,11 +55,16 @@ bool BacklightStub::SetBrightnessLevel(int64_t level,
 }
 
 BacklightInterface::BrightnessScale BacklightStub::GetBrightnessScale() {
-  return BrightnessScale::kUnknown;
+  return scale_;
 }
 
 bool BacklightStub::TransitionInProgress() const {
   return transition_in_progress_;
+}
+
+void BacklightStub::SetBrightnessScale(
+    BacklightInterface::BrightnessScale scale) {
+  scale_ = scale;
 }
 
 }  // namespace system

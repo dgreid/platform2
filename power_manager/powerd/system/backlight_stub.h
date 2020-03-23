@@ -20,7 +20,9 @@ namespace system {
 // Stub implementation of BacklightInterface for testing.
 class BacklightStub : public BacklightInterface {
  public:
-  BacklightStub(int64_t max_level, int64_t current_level);
+  BacklightStub(int64_t max_level,
+                int64_t current_level,
+                BrightnessScale scale);
   ~BacklightStub() override;
 
   void set_clock(Clock* clock) { clock_ = clock; }
@@ -51,6 +53,8 @@ class BacklightStub : public BacklightInterface {
   BrightnessScale GetBrightnessScale() override;
   bool TransitionInProgress() const override;
 
+  void SetBrightnessScale(BacklightInterface::BrightnessScale scale);
+
  private:
   base::ObserverList<BacklightObserver> observers_;
 
@@ -78,6 +82,9 @@ class BacklightStub : public BacklightInterface {
 
   // Last time at which SetBrightnessLevel() was called with a new level.
   base::TimeTicks last_set_brightness_level_time_;
+
+  // Return value for GetBrightnessScale()
+  BrightnessScale scale_ = BrightnessScale::kUnknown;
 
   DISALLOW_COPY_AND_ASSIGN(BacklightStub);
 };

@@ -39,7 +39,9 @@ class KeyboardBacklightControllerTest : public ::testing::Test {
         turn_on_for_user_activity_pref_(0),
         keep_on_ms_pref_(0),
         keep_on_during_video_ms_pref_(0),
-        backlight_(max_backlight_level_, initial_backlight_level_),
+        backlight_(max_backlight_level_,
+                   initial_backlight_level_,
+                   system::BacklightInterface::BrightnessScale::kUnknown),
         light_sensor_(initial_als_lux_),
         test_api_(&controller_) {
     test_api_.clock()->set_current_time_for_testing(

@@ -39,7 +39,9 @@ const int kAlsSamplesToTriggerAdjustment = 2;
 class InternalBacklightControllerTest : public ::testing::Test {
  public:
   InternalBacklightControllerTest()
-      : backlight_(max_backlight_level_, initial_backlight_level_),
+      : backlight_(max_backlight_level_,
+                   initial_backlight_level_,
+                   system::BacklightInterface::BrightnessScale::kUnknown),
         light_sensor_(initial_als_lux_) {}
 
  protected:
@@ -88,6 +90,10 @@ class InternalBacklightControllerTest : public ::testing::Test {
     double percent = -1.0;
     EXPECT_TRUE(controller_->GetBrightnessPercent(&percent));
     return percent;
+  }
+
+  void SetBrightnessScale(system::BacklightInterface::BrightnessScale scale) {
+    backlight_.SetBrightnessScale(scale);
   }
 
   // Max and initial brightness levels for |backlight_|.
@@ -374,6 +380,25 @@ TEST_F(InternalBacklightControllerTest, NonLinearMapping) {
   EXPECT_EQ(0, PercentToLevel(0.0));
   EXPECT_LT(PercentToLevel(50.0), max_backlight_level_ / 2);
   EXPECT_EQ(max_backlight_level_, PercentToLevel(100.0));
+}
+
+TEST_F(InternalBacklightControllerTest, TestBrightnessScale) {
+  // Test that |level_to_percent_exponent_| is selected correctly based
+  // on BrightnessScale.
+  max_backlight_level_ = 4095;
+  SetBrightnessScale(system::BacklightInterface::BrightnessScale::kLinear);
+  Init(PowerSource::BATTERY);
+  EXPECT_EQ(1713, PercentToLevel(66.6));
+  SetBrightnessScale(system::BacklightInterface::BrightnessScale::kNonLinear);
+  Init(PowerSource::BATTERY);
+  EXPECT_EQ(2646, PercentToLevel(66.6));
+  SetBrightnessScale(system::BacklightInterface::BrightnessScale::kUnknown);
+  Init(PowerSource::BATTERY);
+  EXPECT_EQ(1713, PercentToLevel(66.6));
+  max_backlight_level_ =
+      InternalBacklightController::kMinLevelsForNonLinearMapping - 1;
+  Init(PowerSource::BATTERY);
+  EXPECT_EQ(64, PercentToLevel(66.6));
 }
 
 TEST_F(InternalBacklightControllerTest, AmbientLightTransitions) {

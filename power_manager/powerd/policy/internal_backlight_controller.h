@@ -50,6 +50,10 @@ class InternalBacklightController : public BacklightController,
   // lowest brightness step before the screen is turned off.
   static const double kMinVisiblePercent;
 
+  // Minimum number of brightness levels needed before we use a non-linear
+  // mapping between levels and percents.
+  static const double kMinLevelsForNonLinearMapping;
+
   // Minimum brightness, as a fraction of the maximum level in the range [0.0,
   // 1.0], that is used as the bottom step before turning the backlight off
   // entirely.  This is arbitrarily chosen but seems to be a reasonable

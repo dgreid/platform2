@@ -70,10 +70,11 @@ class Converter {
  public:
   Converter(int64_t current_level,
             int64_t max_level,
+            power_manager::system::BacklightInterface::BrightnessScale scale,
             int64_t lux,
             bool keyboard,
             bool force_battery)
-      : backlight_(max_level, current_level) {
+      : backlight_(max_level, current_level, scale) {
     CHECK(prefs_.Init(Prefs::GetDefaultStore(), Prefs::GetDefaultSources()));
 
     bool has_als = false;
@@ -266,7 +267,8 @@ int main(int argc, char* argv[]) {
 
   const int64_t current_level = backlight.GetCurrentBrightnessLevel();
   Converter converter(current_level, backlight.GetMaxBrightnessLevel(),
-                      FLAGS_lux, FLAGS_keyboard, FLAGS_force_battery);
+                      backlight.GetBrightnessScale(), FLAGS_lux, FLAGS_keyboard,
+                      FLAGS_force_battery);
 
   // Print brightness.
   if (FLAGS_get_brightness)

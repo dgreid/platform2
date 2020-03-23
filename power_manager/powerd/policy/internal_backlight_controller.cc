@@ -45,10 +45,6 @@ const double kDimmedBrightnessFraction = 0.1;
 // just use 1.0 to give us a linear scale.
 const double kDefaultLevelToPercentExponent = 0.5;
 
-// Minimum number of brightness levels needed before we use a non-linear mapping
-// between levels and percents.
-const double kMinLevelsForNonLinearMapping = 100;
-
 // Returns the animation duration for |transition|.
 base::TimeDelta TransitionToTimeDelta(
     BacklightController::Transition transition) {
@@ -130,6 +126,7 @@ double GetInitialBrightnessPercent(PrefsInterface* prefs,
 const int64_t InternalBacklightController::kMaxBrightnessSteps = 16;
 const double InternalBacklightController::kMinVisiblePercent =
     kMaxPercent / kMaxBrightnessSteps;
+const double InternalBacklightController::kMinLevelsForNonLinearMapping = 100;
 const double InternalBacklightController::kDefaultMinVisibleBrightnessFraction =
     0.0065;
 const int InternalBacklightController::kAmbientLightSensorTimeoutSec = 10;

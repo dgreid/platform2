@@ -61,8 +61,10 @@ class DaemonTest : public ::testing::Test, public DaemonDelegate {
             new system::AmbientLightSensorManagerStub()),
         passed_display_watcher_(new system::DisplayWatcherStub()),
         passed_display_power_setter_(new system::DisplayPowerSetterStub()),
-        passed_internal_backlight_(new system::BacklightStub(100, 100)),
-        passed_keyboard_backlight_(new system::BacklightStub(100, 100)),
+        passed_internal_backlight_(new system::BacklightStub(
+            100, 100, system::BacklightInterface::BrightnessScale::kUnknown)),
+        passed_keyboard_backlight_(new system::BacklightStub(
+            100, 100, system::BacklightInterface::BrightnessScale::kUnknown)),
         passed_external_backlight_controller_(
             new policy::BacklightControllerStub()),
         passed_internal_backlight_controller_(
