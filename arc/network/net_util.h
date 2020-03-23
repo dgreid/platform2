@@ -18,6 +18,8 @@
 
 #include <string>
 
+#include <brillo/brillo_export.h>
+
 #include "arc/network/mac_address_generator.h"
 
 #ifndef ARC_NETWORK_NET_UTIL_H_
@@ -26,87 +28,100 @@
 namespace arc_networkd {
 
 // Reverses the byte order of the argument.
-constexpr uint32_t Byteswap32(uint32_t x) {
+BRILLO_EXPORT constexpr uint32_t Byteswap32(uint32_t x) {
   return (x >> 24) | (x << 24) | ((x >> 8) & 0xff00) | ((x << 8) & 0xff0000);
 }
 
 // Reverses the byte order of the argument.
-constexpr uint16_t Byteswap16(uint16_t x) {
+BRILLO_EXPORT constexpr uint16_t Byteswap16(uint16_t x) {
   return (x >> 8) | (x << 8);
 }
 
 // Constexpr version of ntohl().
-constexpr uint32_t Ntohl(uint32_t x) {
+BRILLO_EXPORT constexpr uint32_t Ntohl(uint32_t x) {
   return Byteswap32(x);
 }
 
 // Constexpr version of htonl().
-constexpr uint32_t Htonl(uint32_t x) {
+BRILLO_EXPORT constexpr uint32_t Htonl(uint32_t x) {
   return Byteswap32(x);
 }
 
 // Constexpr version of ntohs().
-constexpr uint16_t Ntohs(uint16_t x) {
+BRILLO_EXPORT constexpr uint16_t Ntohs(uint16_t x) {
   return Byteswap16(x);
 }
 
 // Constexpr version of htons().
-constexpr uint16_t Htons(uint16_t x) {
+BRILLO_EXPORT constexpr uint16_t Htons(uint16_t x) {
   return Byteswap16(x);
 }
 
 // Returns the network-byte order int32 representation of the IPv4 address given
 // byte per byte, most significant bytes first.
-constexpr uint32_t Ipv4Addr(uint8_t b0, uint8_t b1, uint8_t b2, uint8_t b3) {
+BRILLO_EXPORT constexpr uint32_t Ipv4Addr(uint8_t b0,
+                                          uint8_t b1,
+                                          uint8_t b2,
+                                          uint8_t b3) {
   return (b3 << 24) | (b2 << 16) | (b1 << 8) | b0;
 }
 
 // Returns the netmask in network byte order given a prefixl length.
-uint32_t Ipv4Netmask(uint32_t prefix_len);
+BRILLO_EXPORT uint32_t Ipv4Netmask(uint32_t prefix_len);
 
 // Returns the broadcast address in network byte order for the subnet provided.
-uint32_t Ipv4BroadcastAddr(uint32_t base, uint32_t prefix_len);
+BRILLO_EXPORT uint32_t Ipv4BroadcastAddr(uint32_t base, uint32_t prefix_len);
 
 // Returns the literal representation of the IPv4 address given in network byte
 // order.
-std::string IPv4AddressToString(uint32_t addr);
+BRILLO_EXPORT std::string IPv4AddressToString(uint32_t addr);
 
 // Returns the CIDR representation of an IPv4 address given in network byte
 // order.
-std::string IPv4AddressToCidrString(uint32_t addr, uint32_t prefix_length);
+BRILLO_EXPORT std::string IPv4AddressToCidrString(uint32_t addr,
+                                                  uint32_t prefix_length);
 
 // Returns a string representation of MAC address given.
-std::string MacAddressToString(const MacAddress& addr);
+BRILLO_EXPORT std::string MacAddressToString(const MacAddress& addr);
 
-bool FindFirstIPv6Address(const std::string& ifname, struct in6_addr* address);
+BRILLO_EXPORT bool FindFirstIPv6Address(const std::string& ifname,
+                                        struct in6_addr* address);
 
-bool GenerateRandomIPv6Prefix(struct in6_addr* prefix, int len);
+BRILLO_EXPORT bool GenerateRandomIPv6Prefix(struct in6_addr* prefix, int len);
 
-std::ostream& operator<<(std::ostream& stream, const struct in_addr& addr);
-std::ostream& operator<<(std::ostream& stream, const struct in6_addr& addr);
-std::ostream& operator<<(std::ostream& stream, const struct sockaddr& addr);
-std::ostream& operator<<(std::ostream& stream,
-                         const struct sockaddr_storage& addr);
-std::ostream& operator<<(std::ostream& stream, const struct sockaddr_in& addr);
-std::ostream& operator<<(std::ostream& stream, const struct sockaddr_in6& addr);
-std::ostream& operator<<(std::ostream& stream, const struct sockaddr_un& addr);
-std::ostream& operator<<(std::ostream& stream, const struct sockaddr_vm& addr);
+BRILLO_EXPORT std::ostream& operator<<(std::ostream& stream,
+                                       const struct in_addr& addr);
+BRILLO_EXPORT std::ostream& operator<<(std::ostream& stream,
+                                       const struct in6_addr& addr);
+BRILLO_EXPORT std::ostream& operator<<(std::ostream& stream,
+                                       const struct sockaddr& addr);
+BRILLO_EXPORT std::ostream& operator<<(std::ostream& stream,
+                                       const struct sockaddr_storage& addr);
+BRILLO_EXPORT std::ostream& operator<<(std::ostream& stream,
+                                       const struct sockaddr_in& addr);
+BRILLO_EXPORT std::ostream& operator<<(std::ostream& stream,
+                                       const struct sockaddr_in6& addr);
+BRILLO_EXPORT std::ostream& operator<<(std::ostream& stream,
+                                       const struct sockaddr_un& addr);
+BRILLO_EXPORT std::ostream& operator<<(std::ostream& stream,
+                                       const struct sockaddr_vm& addr);
 
 // Fold 32-bit into 16 bits.
-uint16_t FoldChecksum(uint32_t sum);
+BRILLO_EXPORT uint16_t FoldChecksum(uint32_t sum);
 
 // RFC 1071: We are doing calculation directly in network order.
 // Note this algorithm works regardless of the endianness of the host.
-uint32_t NetChecksum(const void* data, ssize_t len);
+BRILLO_EXPORT uint32_t NetChecksum(const void* data, ssize_t len);
 
-uint16_t Ipv4Checksum(const iphdr* ip);
+BRILLO_EXPORT uint16_t Ipv4Checksum(const iphdr* ip);
 
 // UDPv4 checksum along with IPv4 pseudo-header is defined in RFC 793,
 // Section 3.1.
-uint16_t Udpv4Checksum(const iphdr* ip, const udphdr* udp);
+BRILLO_EXPORT uint16_t Udpv4Checksum(const iphdr* ip, const udphdr* udp);
 
 // ICMPv6 checksum is defined in RFC 8200 Section 8.1
-uint16_t Icmpv6Checksum(const ip6_hdr* ip6, const icmp6_hdr* icmp6);
+BRILLO_EXPORT uint16_t Icmpv6Checksum(const ip6_hdr* ip6,
+                                      const icmp6_hdr* icmp6);
 
 }  // namespace arc_networkd
 

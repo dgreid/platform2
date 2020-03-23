@@ -48,7 +48,8 @@ class BRILLO_EXPORT Socket {
   DISALLOW_COPY_AND_ASSIGN(Socket);
 };
 
-std::ostream& operator<<(std::ostream& stream, const Socket& socket);
+BRILLO_EXPORT std::ostream& operator<<(std::ostream& stream,
+                                       const Socket& socket);
 
 }  // namespace arc_networkd
 
