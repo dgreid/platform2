@@ -8,7 +8,6 @@ import("//common-mk/pkg_config.gni")
 group("all") {
   deps = [
     ":cros_healthd",
-    ":cros_healthd_helper",
     ":telem",
     ":wilco_dtc_supportd",
     "//diagnostics/diag:diag",
@@ -188,22 +187,6 @@ executable("cros_healthd") {
   ]
   sources = [
     "cros_healthd/main.cc",
-  ]
-}
-
-# The cros_healthd_helper executable.
-pkg_config("cros_healthd_helper_pkg_deps") {
-  pkg_deps = [
-    "libbrillo",
-    "libchrome-${libbase_ver}",
-    "re2",
-  ]
-}
-
-executable("cros_healthd_helper") {
-  configs += [ ":cros_healthd_helper_pkg_deps" ]
-  sources = [
-    "cros_healthd/utils/cros_healthd_helper.cc",
   ]
 }
 

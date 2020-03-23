@@ -1182,7 +1182,7 @@
       </arg>
       <arg name="output" type="s" direction="out">
         <tp:docstring>
-          Output of the ectool command parsed by cros_healthd_helper.
+          Output of the ectool i2cread command.
         </tp:docstring>
       </arg>
       <annotation name="org.chromium.DBus.Method.Kind" value="normal"/>

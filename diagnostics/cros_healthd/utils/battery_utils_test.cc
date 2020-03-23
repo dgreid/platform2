@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <cstdint>
 #include <map>
 #include <memory>
 #include <utility>
@@ -60,10 +61,14 @@ constexpr double kBatteryChargeFull = 4.3;
 constexpr double kBatteryChargeFullDesign = 3.92;
 constexpr char kBatteryModelName[] = "TEST_MODEL_NAME";
 constexpr double kBatteryChargeNow = 5.17;
-constexpr char kSmartBatteryManufactureDate[] = "87615";
-constexpr char kConvertedSmartBatteryManufactureDate[] = "2151-01-31";
-constexpr char kBatteryTemperatureSmartChars[] = "981329";
-constexpr int kBatteryTemperatureSmart = 981329;
+constexpr char kSmartBatteryManufactureDateResponse[] =
+    "Read from I2C port 2 at 0xb offset 0x1b = 0x4d06";
+constexpr char kSmartBatteryManufactureDate[] = "2018-08-06";
+constexpr char kSmartBatteryTemperatureResponse[] =
+    "Read from I2C port 2 at 0xb offset 0x8 = 0xbae";
+constexpr uint64_t kSmartBatteryTemperature = 2990;
+constexpr char kInvalidRegexSmartMetricResponse[] =
+    "this does not match the regex";
 constexpr double kBatteryCurrentNow = 6.45;
 constexpr char kBatteryTechnology[] = "Battery technology.";
 constexpr char kBatteryStatus[] = "Discharging";
@@ -156,14 +161,14 @@ TEST_F(BatteryUtilsTest, FetchBatteryInfo) {
       *mock_debugd_proxy(),
       CollectSmartBatteryMetric("manufacture_date_smart", _, _, kDebugdTimeOut))
       .WillOnce(DoAll(WithArg<1>(Invoke([](std::string* result) {
-                        *result = kSmartBatteryManufactureDate;
+                        *result = kSmartBatteryManufactureDateResponse;
                       })),
                       Return(true)));
   EXPECT_CALL(
       *mock_debugd_proxy(),
       CollectSmartBatteryMetric("temperature_smart", _, _, kDebugdTimeOut))
       .WillOnce(DoAll(WithArg<1>(Invoke([](std::string* result) {
-                        *result = kBatteryTemperatureSmartChars;
+                        *result = kSmartBatteryTemperatureResponse;
                       })),
                       Return(true)));
 
@@ -182,9 +187,9 @@ TEST_F(BatteryUtilsTest, FetchBatteryInfo) {
   EXPECT_EQ(kBatteryCurrentNow, battery->current_now);
   EXPECT_EQ(kBatteryTechnology, battery->technology);
   EXPECT_EQ(kBatteryStatus, battery->status);
-  EXPECT_EQ(kConvertedSmartBatteryManufactureDate,
+  EXPECT_EQ(kSmartBatteryManufactureDate,
             battery->smart_battery_info->manufacture_date);
-  EXPECT_EQ(kBatteryTemperatureSmart, battery->smart_battery_info->temperature);
+  EXPECT_EQ(kSmartBatteryTemperature, battery->smart_battery_info->temperature);
 }
 
 // Test that we handle a malformed power_manager D-Bus response.
@@ -248,6 +253,45 @@ TEST_F(BatteryUtilsTest, SmartMetricRetrievalFailure) {
                         *error = brillo::Error::Create(FROM_HERE, "", "", "");
                       })),
                       Return(false)));
+
+  auto battery = battery_fetcher()->FetchBatteryInfo();
+  ASSERT_TRUE(battery);
+
+  EXPECT_EQ("0000-00-00", battery->smart_battery_info->manufacture_date);
+  EXPECT_EQ(0, battery->smart_battery_info->temperature);
+}
+
+// Test that we handle failing to match the regex to the debugd responses.
+TEST_F(BatteryUtilsTest, SmartMetricRegexFailure) {
+  power_manager::PowerSupplyProperties power_supply_proto;
+  power_supply_proto.set_battery_state(kBatteryStateFull);
+
+  // Set the mock power manager response.
+  EXPECT_CALL(*mock_power_manager_proxy(),
+              CallMethodAndBlock(_, kPowerManagerDBusTimeout.InMilliseconds()))
+      .WillOnce([&power_supply_proto](dbus::MethodCall*, int) {
+        std::unique_ptr<dbus::Response> power_manager_response =
+            dbus::Response::CreateEmpty();
+        dbus::MessageWriter power_manager_writer(power_manager_response.get());
+        power_manager_writer.AppendProtoAsArrayOfBytes(power_supply_proto);
+        return power_manager_response;
+      });
+
+  // Set the mock Debugd Adapter responses.
+  EXPECT_CALL(
+      *mock_debugd_proxy(),
+      CollectSmartBatteryMetric("manufacture_date_smart", _, _, kDebugdTimeOut))
+      .WillOnce(DoAll(WithArg<1>(Invoke([](std::string* result) {
+                        *result = kInvalidRegexSmartMetricResponse;
+                      })),
+                      Return(true)));
+  EXPECT_CALL(
+      *mock_debugd_proxy(),
+      CollectSmartBatteryMetric("temperature_smart", _, _, kDebugdTimeOut))
+      .WillOnce(DoAll(WithArg<1>(Invoke([](std::string* result) {
+                        *result = kInvalidRegexSmartMetricResponse;
+                      })),
+                      Return(true)));
 
   auto battery = battery_fetcher()->FetchBatteryInfo();
   ASSERT_TRUE(battery);

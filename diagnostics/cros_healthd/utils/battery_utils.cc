@@ -5,6 +5,7 @@
 #include "diagnostics/cros_healthd/utils/battery_utils.h"
 
 #include <algorithm>
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <utility>
@@ -60,7 +61,7 @@ constexpr int kDebugdDBusTimeout = 10 * 1000;
 
 // Converts a Smart Battery manufacture date from the ((year - 1980) * 512 +
 // month * 32 + day) format to yyyy-mm-dd format.
-std::string ConvertSmartBatteryManufactureDate(int64_t manufacture_date) {
+std::string ConvertSmartBatteryManufactureDate(uint32_t manufacture_date) {
   int remainder = manufacture_date;
   int day = remainder % 32;
   remainder /= 32;
@@ -149,25 +150,26 @@ bool BatteryFetcher::GetBatteryInfoFromPowerdResponse(dbus::Response* response,
 }
 
 void BatteryFetcher::GetSmartBatteryInfo(SmartBatteryInfo* smart_info) {
-  int64_t manufacture_date;
-  auto convert_string_to_int =
-      base::BindOnce([](const base::StringPiece& input, int64_t* output) {
-        return base::StringToInt64(input, output);
+  uint32_t manufacture_date;
+  auto convert_hex_string_to_uint32 =
+      base::BindOnce([](const base::StringPiece& input, uint32_t* output) {
+        return base::HexStringToUInt(input, output);
       });
   smart_info->manufacture_date =
-      GetSmartBatteryMetric<int64_t>(kManufactureDateSmart,
-                                     std::move(convert_string_to_int),
-                                     &manufacture_date)
+      GetSmartBatteryMetric(kManufactureDateSmart,
+                            std::move(convert_hex_string_to_uint32),
+                            &manufacture_date)
           ? ConvertSmartBatteryManufactureDate(manufacture_date)
           : "0000-00-00";
   uint64_t temperature;
-  auto convert_string_to_uint =
+  auto convert_hex_string_to_uint64 =
       base::BindOnce([](const base::StringPiece& input, uint64_t* output) {
-        return base::StringToUint64(input, output);
+        return base::HexStringToUInt64(input, output);
       });
   smart_info->temperature =
-      GetSmartBatteryMetric<uint64_t>(
-          kTemperatureSmart, std::move(convert_string_to_uint), &temperature)
+      GetSmartBatteryMetric(kTemperatureSmart,
+                            std::move(convert_hex_string_to_uint64),
+                            &temperature)
           ? temperature
           : 0;
 }
@@ -188,8 +190,17 @@ bool BatteryFetcher::GetSmartBatteryMetric(
     return false;
   }
 
-  std::move(convert_string_to_num).Run(debugd_result, metric_value);
-  return true;
+  // Parse the output from debugd to obtain the battery metric.
+  constexpr auto kRegexPattern =
+      R"(^Read from I2C port [\d]+ at .* offset .* = (.+)$)";
+  std::string reg_value;
+  if (!RE2::PartialMatch(base::CollapseWhitespaceASCII(debugd_result, true),
+                         kRegexPattern, &reg_value)) {
+    LOG(ERROR) << "Failed to match debugd output to regex.";
+    return false;
+  }
+
+  return std::move(convert_string_to_num).Run(reg_value, metric_value);
 }
 
 bool BatteryFetcher::HasBattery() {
