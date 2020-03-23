@@ -330,10 +330,6 @@ bool Pkcs11KeyStore::Register(bool is_user_specific,
     }
   }
 
-  // Close all sessions in an attempt to trigger other modules to find the new
-  // objects.
-  C_CloseAllSessions(slot);
-
   return true;
 }
 
