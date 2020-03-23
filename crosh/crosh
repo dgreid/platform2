@@ -593,50 +593,108 @@ cmd_bt_console() (
   "${EXEC_bt_console}" "${1:+--agent=$1}"
 )
 
-USAGE_cras='[ enable <flag> | disable <flag> ]'
-HELP_cras='Set flags inside CRAS(CrOS Audio Server). Note that all flag
-changes made through this command do not persist after reboot.
-Available flags:
- - wbs: Turn on this flag to make CRAS try to use wideband speech mode in
-    Bluetooth HFP, if both the Bluetooth controller and peripheral supports
-    this feature.
+USAGE_cras='[ enable <flag> | disable <flag> | telephony <event> [arg] ]'
+HELP_cras='
+  Interact with CRAS(CrOS Audio Server) to set flags or trigger events.
+
+  Subcommands:
+    enable/disable <flag>:
+      Enable or disable feature flag inside CRAS.
+      Available flags:
+      - wbs: Turn on this flag to make CRAS try to use wideband speech mode in
+        Bluetooth HFP, if both the Bluetooth controller and peripheral supports
+        this feature.
+
+      Notice: The flag changes made through this command do not persist after
+      reboot.
+
+    telephony <event> [args...]:
+      Trigger a telephony event pass to CRAS in Bluetooth HFP.
+
+      Available events:
+      - IncomingCall <PhoneNumber>: Make a call from external line.
+      Ex: $ cras IncomingCall 12345678
+      - AnswerCall: Answer the call.
+      - TerminateCall: Terminate the call.
 '
 cmd_cras() (
-  if [ $# -lt 1 ]; then
-    help "unexpected number of argument"
+  if [ $# -eq 0 ]; then
+    help "no subcommand specified"
     return 1
   fi
 
-  local enabled
-
-  case "$1" in
-  enable)
-    enabled="true"
-    ;;
-  disable)
-    enabled="false"
-    ;;
+  local subcommand="$1"
+  case "${subcommand}" in
+  enable|disable|telephony) ;;
   *)
-    help "Unknown option $1"
+    help "unknown subcommand ${subcommand}"
     return 1
     ;;
   esac
+  shift
 
-  if [ $# -ne 2 ]; then
-    help "specify flag to set"
-    return 1
+  if [ "${subcommand}" = "enable" ] || [ "${subcommand}" = "disable" ]; then
+    if [ $# -ne 1 ]; then
+      help "missing or invalid arguments for enable/disable to set flag"
+      return 1
+    fi
+    local enabled
+    case "${subcommand}" in
+    enable)
+      enabled="true"
+      ;;
+    disable)
+      enabled="false"
+      ;;
+    esac
+    case "$1" in
+    wbs)
+      dbus-send --system --type=method_call --print-reply \
+          --dest=org.chromium.cras /org/chromium/cras \
+          org.chromium.cras.Control.SetWbsEnabled "boolean:${enabled}"
+      return
+      ;;
+    *)
+      help "unknown flag $1"
+      return 1
+      ;;
+    esac
   fi
-  case "$2" in
-  wbs)
-    dbus-send --system --type=method_call --print-reply \
-        --dest=org.chromium.cras /org/chromium/cras \
-        org.chromium.cras.Control.SetWbsEnabled "boolean:${enabled}"
-    ;;
-  *)
-    help "Unkown flag $2"
-    return 1
-    ;;
-  esac
+
+  if [ "${subcommand}" = "telephony" ]; then
+    if [ $# -eq 0 ]; then
+      help "missing event"
+      return 1
+    fi
+
+    local event="$1"; shift
+    case "${event}" in
+    IncomingCall)
+      if [ $# -ne 1 ]; then
+        help "missing or invalid arguments for ${subcommand} ${event}"
+        return 1
+      fi
+      dbus-send --system --print-reply --type=method_call \
+          --dest=org.chromium.cras /org/chromium/cras/telephony \
+          org.chromium.cras.Telephony.IncomingCall "string:$1"
+      return
+      ;;
+    AnswerCall|TerminateCall)
+      if [ $# -ne 0 ]; then
+        help "invalid arguments for ${subcommand} ${event}"
+        return 1
+      fi
+      dbus-send --system --print-reply --type=method_call \
+          --dest=org.chromium.cras /org/chromium/cras/telephony \
+          "org.chromium.cras.Telephony.${event}"
+      return
+      ;;
+    *)
+      help "unknown event ${event}"
+      return 1
+      ;;
+    esac
+  fi
 )
 
 # Set the help string so crosh can discover us automatically.
