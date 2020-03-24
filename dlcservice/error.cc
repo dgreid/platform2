@@ -19,6 +19,7 @@ brillo::ErrorPtr Error::Create(const std::string& code,
 // static
 std::string Error::ToString(const brillo::ErrorPtr& err) {
   // TODO(crbug.com/999284): No inner error support, err->GetInnerError().
+  DCHECK(err);
   return base::StringPrintf("Error Code=%s, Error Message=%s",
                             err->GetCode().c_str(), err->GetMessage().c_str());
 }
