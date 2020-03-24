@@ -110,6 +110,5 @@ bool KernelWarningCollector::Collect(WarningType type) {
 
   FinishCrash(meta_path, exec_name, kernel_crash_path.BaseName().value());
 
-  LOG(INFO) << "Stored kernel warning into " << kernel_crash_path.value();
   return true;
 }

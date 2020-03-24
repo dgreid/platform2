@@ -1235,6 +1235,8 @@ void CrashCollector::FinishCrash(const FilePath& meta_path,
 
   const FilePath payload_path = meta_path.DirName().Append(payload_name);
 
+  LOG(INFO) << "Finishing crash. Meta file: " << meta_path.value();
+
   const std::string version = GetOsVersion();
   const std::string milestone = GetOsMilestone();
   const std::string description = GetOsDescription();

@@ -49,6 +49,8 @@ bool EarlyCrashMetaCollector::Collect() {
 
       base::FilePath destination_path =
           destination_directory.Append(source_path.BaseName());
+      LOG(INFO) << "Copying early crash to: " << destination_path.value();
+
       if (!base::Move(source_path, destination_path)) {
         PLOG(WARNING) << "Unable to copy " << source_path.value();
         continue;
