@@ -21,9 +21,9 @@ struct FreeCurlEasyhandle {
 
 typedef std::unique_ptr<CURL, FreeCurlEasyhandle> ScopedCurlEasyhandle;
 
-// CurlSocket wraps a socket opened by curl in an arc_networkd::Socket object
+// CurlSocket wraps a socket opened by curl in an patchpanel::Socket object
 // with an owned CURL handle.
-class CurlSocket : public arc_networkd::Socket {
+class CurlSocket : public patchpanel::Socket {
  public:
   CurlSocket(base::ScopedFD fd, ScopedCurlEasyhandle curl_easyhandle);
   CurlSocket(const CurlSocket&) = delete;

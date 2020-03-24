@@ -92,6 +92,7 @@ copies.
 | [mtpd](./mtpd/) | Daemon for handling Media Transfer Protocol (MTP) with devices (e.g. phones) |
 | [oobe_config](./oobe_config/) | Utilities for saving and restoring OOBE config state |
 | [p2p](./p2p/) | Service for sharing files between CrOS devices (e.g. updates) |
+| [patchpanel](./patchpanel/) | Platform networking daemons |
 | [permission_broker](./permission_broker/) ||
 | [policy_proto](./policy_proto/) | Build file to compile policy proto file |
 | [policy_utils](./policy_utils/) | Tools and related library to set or override device policies |

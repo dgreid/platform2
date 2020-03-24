@@ -131,7 +131,7 @@ int ServerProxy::GetStdoutPipe() {
 }
 
 void ServerProxy::CreateListeningSocket() {
-  listening_fd_ = std::make_unique<arc_networkd::Socket>(
+  listening_fd_ = std::make_unique<patchpanel::Socket>(
       AF_INET, SOCK_STREAM | SOCK_NONBLOCK);
 
   struct sockaddr_in addr = {0};
@@ -185,7 +185,7 @@ void ServerProxy::OnProxyResolved(const std::string& target_url,
 }
 
 void ServerProxy::OnConnectionSetupFinished(
-    std::unique_ptr<arc_networkd::SocketForwarder> fwd,
+    std::unique_ptr<patchpanel::SocketForwarder> fwd,
     ProxyConnectJob* connect_job) {
   if (fwd) {
     // The connection was set up successfully.

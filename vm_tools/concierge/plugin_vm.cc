@@ -60,9 +60,9 @@ constexpr char kPluginVmCpuCgroup[] = "/sys/fs/cgroup/cpu/vms/plugin";
 // Offset in a subnet of the client/guest.
 constexpr size_t kGuestAddressOffset = 1;
 
-std::unique_ptr<arc_networkd::Subnet> MakeSubnet(
+std::unique_ptr<patchpanel::Subnet> MakeSubnet(
     const patchpanel::IPv4Subnet& subnet) {
-  return std::make_unique<arc_networkd::Subnet>(
+  return std::make_unique<patchpanel::Subnet>(
       subnet.base_addr(), subnet.prefix_len(), base::DoNothing());
 }
 
@@ -99,7 +99,7 @@ PluginVm::~PluginVm() {
 }
 
 bool PluginVm::StopVm() {
-  // Notify arc-networkd that the VM is down.
+  // Notify arc-patchpanel that the VM is down.
   // This should run before the process existence check below since we still
   // want to release the network resources on crash.
   // Note the client will only be null during testing.
@@ -137,7 +137,7 @@ bool PluginVm::StopVm() {
 }
 
 bool PluginVm::Shutdown() {
-  // Notify arc-networkd that the VM is down.
+  // Notify arc-patchpanel that the VM is down.
   // This should run before the process existence check below since we still
   // want to release the network resources on crash.
   // Note the client will only be null during testing.
@@ -611,7 +611,7 @@ bool PluginVm::Start(uint32_t cpus,
   }
 
   // Get the network interface.
-  patchpanel::Device network_device;
+  patchpanel::NetworkDevice network_device;
   if (!network_client_->NotifyPluginVmStartup(id_hash_, subnet_index_,
                                               &network_device)) {
     LOG(ERROR) << "No network devices available";

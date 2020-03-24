@@ -130,7 +130,7 @@ class PluginVm final : public VmBaseImpl {
   base::ScopedTempDir root_dir_;
 
   // The subnet assigned to the VM.
-  std::unique_ptr<arc_networkd::Subnet> subnet_;
+  std::unique_ptr<patchpanel::Subnet> subnet_;
   // The requested subnet index.
   const int subnet_index_;
 

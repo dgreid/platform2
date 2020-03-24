@@ -46,10 +46,10 @@ class ProxyConnectJobTest : public ::testing::Test {
               socketpair(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC,
                          0 /* protocol */, fds));
     cros_client_socket_ =
-        std::make_unique<arc_networkd::Socket>(base::ScopedFD(fds[1]));
+        std::make_unique<patchpanel::Socket>(base::ScopedFD(fds[1]));
 
     connect_job_ = std::make_unique<ProxyConnectJob>(
-        std::make_unique<arc_networkd::Socket>(base::ScopedFD(fds[0])), "",
+        std::make_unique<patchpanel::Socket>(base::ScopedFD(fds[0])), "",
         base::BindOnce(&ProxyConnectJobTest::ResolveProxy,
                        base::Unretained(this)),
         base::BindOnce(&ProxyConnectJobTest::OnConnectionSetupFinished,
@@ -65,7 +65,7 @@ class ProxyConnectJobTest : public ::testing::Test {
   }
 
   void OnConnectionSetupFinished(
-      std::unique_ptr<arc_networkd::SocketForwarder> fwd,
+      std::unique_ptr<patchpanel::SocketForwarder> fwd,
       ProxyConnectJob* connect_job) {
     ASSERT_EQ(connect_job, connect_job_.get());
   }
@@ -73,7 +73,7 @@ class ProxyConnectJobTest : public ::testing::Test {
   std::unique_ptr<ProxyConnectJob> connect_job_;
   base::MessageLoopForIO loop_;
   brillo::BaseMessageLoop brillo_loop_{&loop_};
-  std::unique_ptr<arc_networkd::Socket> cros_client_socket_;
+  std::unique_ptr<patchpanel::Socket> cros_client_socket_;
 };
 
 TEST_F(ProxyConnectJobTest, SuccessfulConnection) {

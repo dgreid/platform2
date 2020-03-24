@@ -31,7 +31,7 @@
 // By C++'s argument-dependent lookup rules, operators defined in a
 // different namespace are not visible. We need the using directive to make
 // the overload available this namespace.
-using arc_networkd::operator<<;
+using patchpanel::operator<<;
 
 namespace {
 // There's no RFC recomandation for the max size of http request headers but
@@ -92,7 +92,7 @@ std::string GetUrlFromHttpHeader(const std::vector<char>& raw_request) {
 namespace system_proxy {
 
 ProxyConnectJob::ProxyConnectJob(
-    std::unique_ptr<arc_networkd::Socket> socket,
+    std::unique_ptr<patchpanel::Socket> socket,
     const std::string& credentials,
     ResolveProxyCallback resolve_proxy_callback,
     OnConnectionSetupFinishedCallback setup_finished_callback)
@@ -247,7 +247,7 @@ void ProxyConnectJob::DoCurlServerConnection(const std::string& proxy_url) {
   client_socket_->SendTo(server_connect_reply.data(),
                          server_connect_reply.size());
 
-  auto fwd = std::make_unique<arc_networkd::SocketForwarder>(
+  auto fwd = std::make_unique<patchpanel::SocketForwarder>(
       base::StringPrintf("%d-%d", client_socket_->fd(), server_conn->fd()),
       std::move(client_socket_), std::move(server_conn));
   // Start forwarding data between sockets.

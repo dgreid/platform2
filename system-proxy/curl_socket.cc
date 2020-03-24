@@ -10,7 +10,7 @@
 namespace system_proxy {
 
 CurlSocket::CurlSocket(base::ScopedFD fd, ScopedCurlEasyhandle curl_easyhandle)
-    : arc_networkd::Socket(std::move(fd)),
+    : patchpanel::Socket(std::move(fd)),
       curl_easyhandle_(std::move(curl_easyhandle)) {}
 
 CurlSocket::~CurlSocket() {

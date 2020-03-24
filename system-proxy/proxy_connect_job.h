@@ -14,10 +14,10 @@
 #include <base/files/file_descriptor_watcher_posix.h>
 #include <gtest/gtest_prod.h>  // for FRIEND_TEST
 
-namespace arc_networkd {
+namespace patchpanel {
 class SocketForwarder;
 class Socket;
-}  // namespace arc_networkd
+}  // namespace patchpanel
 
 namespace system_proxy {
 // ProxyConnectJob asynchronously sets up a connection to a remote target on
@@ -30,7 +30,7 @@ namespace system_proxy {
 class ProxyConnectJob {
  public:
   using OnConnectionSetupFinishedCallback = base::OnceCallback<void(
-      std::unique_ptr<arc_networkd::SocketForwarder>, ProxyConnectJob*)>;
+      std::unique_ptr<patchpanel::SocketForwarder>, ProxyConnectJob*)>;
 
   // Will be invoked by ProxyConnectJob to resolve the proxy for |target_url_|.
   // The passed |callback| is expected to be called with the list of proxy
@@ -39,7 +39,7 @@ class ProxyConnectJob {
       const std::string& url,
       base::OnceCallback<void(const std::list<std::string>&)> callback)>;
 
-  ProxyConnectJob(std::unique_ptr<arc_networkd::Socket> socket,
+  ProxyConnectJob(std::unique_ptr<patchpanel::Socket> socket,
                   const std::string& credentials,
                   ResolveProxyCallback resolve_proxy_callback,
                   OnConnectionSetupFinishedCallback setup_finished_callback);
@@ -83,7 +83,7 @@ class ProxyConnectJob {
   std::list<std::string> proxy_servers_;
   ResolveProxyCallback resolve_proxy_callback_;
   OnConnectionSetupFinishedCallback setup_finished_callback_;
-  std::unique_ptr<arc_networkd::Socket> client_socket_;
+  std::unique_ptr<patchpanel::Socket> client_socket_;
   std::unique_ptr<base::FileDescriptorWatcher::Controller> read_watcher_;
 };
 }  // namespace system_proxy

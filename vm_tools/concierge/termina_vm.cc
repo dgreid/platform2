@@ -68,9 +68,9 @@ constexpr char kTerminaCpuCgroup[] = "/sys/fs/cgroup/cpu/vms/termina";
 // operations.
 constexpr int kInvalidDiskIndex = -1;
 
-std::unique_ptr<arc_networkd::Subnet> MakeSubnet(
+std::unique_ptr<patchpanel::Subnet> MakeSubnet(
     const patchpanel::IPv4Subnet& subnet) {
-  return std::make_unique<arc_networkd::Subnet>(
+  return std::make_unique<patchpanel::Subnet>(
       subnet.base_addr(), subnet.prefix_len(), base::DoNothing());
 }
 
@@ -103,7 +103,7 @@ TerminaVm::TerminaVm(
 
 // For testing.
 TerminaVm::TerminaVm(
-    std::unique_ptr<arc_networkd::Subnet> subnet,
+    std::unique_ptr<patchpanel::Subnet> subnet,
     uint32_t vsock_cid,
     std::unique_ptr<SeneschalServerProxy> seneschal_server_proxy,
     base::FilePath runtime_dir,
@@ -277,7 +277,7 @@ bool TerminaVm::Start(base::FilePath kernel,
 }
 
 bool TerminaVm::Shutdown() {
-  // Notify arc-networkd that the VM is down.
+  // Notify arc-patchpanel that the VM is down.
   // This should run before the process existence check below since we still
   // want to release the network resources on crash.
   // Note the client will only be null during testing.
@@ -855,7 +855,7 @@ void TerminaVm::set_stub_for_testing(
 }
 
 std::unique_ptr<TerminaVm> TerminaVm::CreateForTesting(
-    std::unique_ptr<arc_networkd::Subnet> subnet,
+    std::unique_ptr<patchpanel::Subnet> subnet,
     uint32_t vsock_cid,
     base::FilePath runtime_dir,
     base::FilePath log_path,

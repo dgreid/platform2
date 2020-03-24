@@ -35,7 +35,7 @@ constexpr int32_t kVnetHeaderSize = 12;
 
 }  // namespace
 
-base::ScopedFD BuildTapDevice(const arc_networkd::MacAddress& mac_addr,
+base::ScopedFD BuildTapDevice(const patchpanel::MacAddress& mac_addr,
                               uint32_t ipv4_addr,
                               uint32_t ipv4_netmask,
                               bool vnet_hdr) {

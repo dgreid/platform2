@@ -137,8 +137,8 @@ class TerminaVmTest : public ::testing::Test {
   base::ScopedTempDir temp_dir_;
 
   // Resource allocators for the VM.
-  std::unique_ptr<arc_networkd::AddressManager> network_address_manager_;
-  arc_networkd::MacAddressGenerator mac_address_generator_;
+  std::unique_ptr<patchpanel::AddressManager> network_address_manager_;
+  patchpanel::MacAddressGenerator mac_address_generator_;
   VsockCidPool vsock_cid_pool_;
 
   // Addresses assigned to the VM.
@@ -383,11 +383,11 @@ void TerminaVmTest::SetUp() {
   ASSERT_TRUE(stub);
 
   // Allocate resources for the VM.
-  network_address_manager_.reset(new arc_networkd::AddressManager());
+  network_address_manager_.reset(new patchpanel::AddressManager());
   uint32_t vsock_cid = vsock_cid_pool_.Allocate();
-  std::unique_ptr<arc_networkd::Subnet> subnet =
+  std::unique_ptr<patchpanel::Subnet> subnet =
       network_address_manager_->AllocateIPv4Subnet(
-          arc_networkd::AddressManager::Guest::VM_TERMINA);
+          patchpanel::AddressManager::Guest::VM_TERMINA);
 
   ASSERT_TRUE(subnet);
 

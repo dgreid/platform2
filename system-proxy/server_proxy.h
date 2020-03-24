@@ -17,10 +17,10 @@
 #include <brillo/asynchronous_signal_handler.h>
 #include <gtest/gtest_prod.h>  // for FRIEND_TEST
 
-namespace arc_networkd {
+namespace patchpanel {
 class Socket;
 class SocketForwarder;
-}  // namespace arc_networkd
+}  // namespace patchpanel
 
 namespace system_proxy {
 
@@ -73,7 +73,7 @@ class ServerProxy {
   // corresponds to the tunnel between the client and the server that has
   // started to forward data. In case of failure, |fwd| is empty.
   void OnConnectionSetupFinished(
-      std::unique_ptr<arc_networkd::SocketForwarder> fwd,
+      std::unique_ptr<patchpanel::SocketForwarder> fwd,
       ProxyConnectJob* connect_job);
 
   // Called when the proxy resolution result for |target_url| is received via
@@ -91,13 +91,13 @@ class ServerProxy {
   // encoded and separated by colon.
   std::string credentials_;
 
-  std::unique_ptr<arc_networkd::Socket> listening_fd_;
+  std::unique_ptr<patchpanel::Socket> listening_fd_;
 
   // List of SocketForwarders that corresponds to the TCP tunnel between the
   // local client and the remote  proxy, forwarding data between the TCP
   // connection initiated by the local client to the local proxy and the TCP
   // connection initiated by the local proxy to the remote proxy.
-  std::list<std::unique_ptr<arc_networkd::SocketForwarder>> forwarders_;
+  std::list<std::unique_ptr<patchpanel::SocketForwarder>> forwarders_;
 
   std::map<ProxyConnectJob*, std::unique_ptr<ProxyConnectJob>>
       pending_connect_jobs_;

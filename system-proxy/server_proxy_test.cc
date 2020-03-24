@@ -55,7 +55,7 @@ class MockServerProxy : public ServerProxy {
 
 class MockProxyConnectJob : public ProxyConnectJob {
  public:
-  MockProxyConnectJob(std::unique_ptr<arc_networkd::Socket> socket,
+  MockProxyConnectJob(std::unique_ptr<patchpanel::Socket> socket,
                       const std::string& credentials,
                       ResolveProxyCallback resolve_proxy_callback,
                       OnConnectionSetupFinishedCallback setup_finished_callback)
@@ -166,7 +166,7 @@ TEST_F(ServerProxyTest, HandleConnectRequest) {
   ipv4addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 
   auto client_socket =
-      std::make_unique<arc_networkd::Socket>(AF_INET, SOCK_STREAM);
+      std::make_unique<patchpanel::Socket>(AF_INET, SOCK_STREAM);
   EXPECT_TRUE(client_socket->Connect((const struct sockaddr*)&ipv4addr,
                                      sizeof(ipv4addr)));
   brillo_loop_.RunOnce(false);
@@ -220,7 +220,7 @@ TEST_F(ServerProxyTest, HandlePendingJobs) {
   // Create |connection_count| connections.
   for (int i = 0; i < connection_count; ++i) {
     auto client_socket =
-        std::make_unique<arc_networkd::Socket>(AF_INET, SOCK_STREAM);
+        std::make_unique<patchpanel::Socket>(AF_INET, SOCK_STREAM);
     auto mock_connect_job = std::make_unique<MockProxyConnectJob>(
         std::move(client_socket), "" /* credentials */,
         base::BindOnce([](const std::string& target_url,
@@ -243,10 +243,10 @@ TEST_F(ServerProxyTest, HandlePendingJobs) {
 
   // Resolve |success_count| successful connections.
   for (int i = 0; i < success_count; ++i) {
-    auto fwd = std::make_unique<arc_networkd::SocketForwarder>(
+    auto fwd = std::make_unique<patchpanel::SocketForwarder>(
         "" /* thread name */,
-        std::make_unique<arc_networkd::Socket>(AF_INET, SOCK_STREAM),
-        std::make_unique<arc_networkd::Socket>(AF_INET, SOCK_STREAM));
+        std::make_unique<patchpanel::Socket>(AF_INET, SOCK_STREAM),
+        std::make_unique<patchpanel::Socket>(AF_INET, SOCK_STREAM));
     fwd->Start();
     auto job_iter = server_proxy_->pending_connect_jobs_.begin();
     std::move(job_iter->second->setup_finished_callback_)

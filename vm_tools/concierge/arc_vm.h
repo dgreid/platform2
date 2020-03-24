@@ -142,7 +142,7 @@ class ArcVm final : public VmBaseImpl {
   // Virtual socket context id to be used when communicating with this VM.
   uint32_t vsock_cid_;
 
-  std::vector<patchpanel::Device> network_devices_;
+  std::vector<patchpanel::NetworkDevice> network_devices_;
 
   // Proxy to the server providing shared directory access for this VM.
   std::unique_ptr<SeneschalServerProxy> seneschal_server_proxy_;

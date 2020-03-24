@@ -18,7 +18,7 @@ namespace concierge {
 
 // Builds and configures a tap device.  If the returned ScopedFD is valid then
 // the device has been properly configured.
-base::ScopedFD BuildTapDevice(const arc_networkd::MacAddress& mac_addr,
+base::ScopedFD BuildTapDevice(const patchpanel::MacAddress& mac_addr,
                               uint32_t ipv4_addr,
                               uint32_t ipv4_netmask,
                               bool vnet_hdr);

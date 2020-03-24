@@ -296,7 +296,7 @@ bool ArcVm::Start(base::FilePath kernel,
 }
 
 bool ArcVm::Shutdown() {
-  // Notify arc-networkd that ARCVM is down.
+  // Notify arc-patchpanel that ARCVM is down.
   // This should run before the process existence check below since we still
   // want to release the network resources on crash.
   if (!network_client_->NotifyArcVmShutdown(vsock_cid_)) {

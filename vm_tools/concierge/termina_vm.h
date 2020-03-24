@@ -204,7 +204,7 @@ class TerminaVm final : public VmBaseImpl {
   static bool SetVmCpuRestriction(CpuRestrictionState cpu_restriction_state);
 
   static std::unique_ptr<TerminaVm> CreateForTesting(
-      std::unique_ptr<arc_networkd::Subnet> subnet,
+      std::unique_ptr<patchpanel::Subnet> subnet,
       uint32_t vsock_cid,
       base::FilePath runtime_dir,
       base::FilePath log_path,
@@ -226,7 +226,7 @@ class TerminaVm final : public VmBaseImpl {
             VmFeatures features);
 
   // Constructor for testing only.
-  TerminaVm(std::unique_ptr<arc_networkd::Subnet> subnet,
+  TerminaVm(std::unique_ptr<patchpanel::Subnet> subnet,
             uint32_t vsock_cid,
             std::unique_ptr<SeneschalServerProxy> seneschal_server_proxy,
             base::FilePath runtime_dir,
@@ -263,16 +263,16 @@ class TerminaVm final : public VmBaseImpl {
   void set_stub_for_testing(std::unique_ptr<vm_tools::Maitred::Stub> stub);
 
   // The /30 subnet assigned to the VM.
-  std::unique_ptr<arc_networkd::Subnet> subnet_;
+  std::unique_ptr<patchpanel::Subnet> subnet_;
 
   // An optional /28 container subnet.
-  std::unique_ptr<arc_networkd::Subnet> container_subnet_;
+  std::unique_ptr<patchpanel::Subnet> container_subnet_;
 
   // Virtual socket context id to be used when communicating with this VM.
   uint32_t vsock_cid_;
 
   // Termina network device.
-  patchpanel::Device network_device_;
+  patchpanel::NetworkDevice network_device_;
 
   // Proxy to the server providing shared directory access for this VM.
   std::unique_ptr<SeneschalServerProxy> seneschal_server_proxy_;
