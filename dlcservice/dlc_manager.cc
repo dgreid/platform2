@@ -155,9 +155,9 @@ class DlcManager::DlcManagerImpl {
       // - If the root exists set it and continue.
       // - Try mounting, if mounted set it and continue.
       // - Remove the DLC if none of the previous checks are met.
-      string mount;
-      if (Mount(id, &mount, &tmp_err)) {
-        SetInstalled(id, GetDlcRoot(FilePath(mount)).value());
+      string mount_point;
+      if (Mount(id, &mount_point, &tmp_err)) {
+        SetInstalled(id, GetDlcRoot(FilePath(mount_point)).value());
       } else {
         LOG(ERROR) << "Failed to mount during startup for DLC=" << id << ", "
                    << Error::ToString(tmp_err);
@@ -182,7 +182,7 @@ class DlcManager::DlcManagerImpl {
         return false;
       }
       switch (GetInfo(id).state.state()) {
-        case DlcState::NOT_INSTALLED: {
+        case DlcState::NOT_INSTALLED:
           if (!Create(id, err)) {
             if (!CancelInstall(&tmp_err))
               LOG(ERROR) << "Failed during install initialization: "
@@ -190,8 +190,8 @@ class DlcManager::DlcManagerImpl {
             return false;
           }
           break;
-        }
         case DlcState::INSTALLED:
+          TryMount(id);
           break;
         case DlcState::INSTALLING:
         default:
@@ -216,9 +216,9 @@ class DlcManager::DlcManagerImpl {
       const auto& info = pr.second;
       if (info.state.state() != DlcState::INSTALLING)
         continue;
-      string mount;
+      string mount_point;
       ErrorPtr tmp_err;
-      if (!Mount(id, &mount, &tmp_err)) {
+      if (!Mount(id, &mount_point, &tmp_err)) {
         LOG(ERROR) << "Failed during install finalization: "
                    << Error::ToString(tmp_err);
         if (!Delete(id, &tmp_err))
@@ -227,7 +227,7 @@ class DlcManager::DlcManagerImpl {
         ret = false;
         continue;
       }
-      SetInstalled(id, GetDlcRoot(FilePath(mount)).value());
+      SetInstalled(id, GetDlcRoot(FilePath(mount_point)).value());
     }
     if (!ret)
       *err =
@@ -573,6 +573,20 @@ class DlcManager::DlcManagerImpl {
     }
 
     return true;
+  }
+
+  void TryMount(const DlcId& id) {
+    const auto info = GetInfo(id);
+    if (!base::PathExists(base::FilePath(info.root))) {
+      string mount_point;
+      ErrorPtr tmp_err;
+      if (Mount(id, &mount_point, &tmp_err))
+        SetInstalled(id, GetDlcRoot(FilePath(mount_point)).value());
+      else
+        LOG(ERROR) << "DLC thought to have been installed, but maybe is in a "
+                   << "bad state. DLC=" << id << ", "
+                   << Error::ToString(tmp_err);
+    }
   }
 
   org::chromium::ImageLoaderInterfaceProxyInterface* image_loader_proxy_;

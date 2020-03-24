@@ -809,6 +809,27 @@ TEST_F(DlcServiceTest, InstallUrlTest) {
   CheckDlcState(kSecondDlc, DlcState::INSTALLING);
 }
 
+TEST_F(DlcServiceTest, InstallAlreadyInstalledThatGotUnmountedTest) {
+  CheckDlcState(kFirstDlc, DlcState::INSTALLED);
+  const auto mount_path_root = JoinPaths(mount_path_, "root");
+  EXPECT_TRUE(base::PathExists(mount_path_root));
+  EXPECT_TRUE(base::DeleteFile(mount_path_root, true));
+
+  DlcModuleList dlc_module_list = CreateDlcModuleList({kFirstDlc}, "");
+
+  EXPECT_CALL(*mock_update_engine_proxy_ptr_, GetStatusAdvanced(_, _, _))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*mock_image_loader_proxy_ptr_, LoadDlcImage(_, _, _, _, _, _))
+      .WillRepeatedly(
+          DoAll(SetArgPointee<3>(mount_path_.value()), Return(true)));
+  EXPECT_CALL(*mock_update_engine_proxy_ptr_,
+              SetDlcActiveValue(true, kFirstDlc, _, _))
+      .WillOnce(Return(true));
+
+  dlc_service_->Install(dlc_module_list, err_ptr_);
+  CheckDlcState(kFirstDlc, DlcState::INSTALLED);
+}
+
 TEST_F(DlcServiceTest, OnStatusUpdateAdvancedSignalDlcRootTest) {
   const vector<DlcId> ids = {kSecondDlc, kThirdDlc};
   DlcModuleList dlc_module_list = CreateDlcModuleList(ids);
