@@ -166,7 +166,6 @@ class Connection : public base::RefCounted<Connection> {
   Technology technology_;
   std::vector<std::string> dns_servers_;
   std::vector<std::string> dns_domain_search_;
-  std::vector<std::string> excluded_ips_cidr_;
   std::string dns_domain_name_;
   RpcIdentifier ipconfig_rpc_identifier_;
 

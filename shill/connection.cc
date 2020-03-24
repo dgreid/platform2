@@ -93,8 +93,6 @@ Connection::~Connection() {
 
 bool Connection::SetupExcludedRoutes(const IPConfig::Properties& properties,
                                      const IPAddress& gateway) {
-  excluded_ips_cidr_ = properties.exclusion_list;
-
   // If this connection has its own dedicated routing table, exclusion
   // is as simple as adding an RTN_THROW entry for each item on the list.
   // Traffic that matches the RTN_THROW entry will cause the kernel to
@@ -104,7 +102,7 @@ bool Connection::SetupExcludedRoutes(const IPConfig::Properties& properties,
                    .SetScope(RT_SCOPE_LINK)
                    .SetTable(table_id_)
                    .SetType(RTN_THROW);
-  for (const auto& excluded_ip : excluded_ips_cidr_) {
+  for (const auto& excluded_ip : properties.exclusion_list) {
     if (!entry.dst.SetAddressAndPrefixFromString(excluded_ip) ||
         !entry.dst.IsValid() ||
         !routing_table_->AddRoute(interface_index_, entry)) {
