@@ -95,6 +95,10 @@ MATCHER_P3(IsValidOifRule, family, priority, oif, "") {
          arg.oif_name == oif;
 }
 
+MATCHER_P3(IsValidDstRule, family, priority, dst, "") {
+  return arg.family == family && arg.priority == priority && arg.dst == dst;
+}
+
 MATCHER_P(IsLinkRouteTo, dst, "") {
   return dst.HasSameAddressAs(arg.dst) &&
          arg.dst.prefix() ==
@@ -209,6 +213,7 @@ class ConnectionTest : public Test {
     properties_.routes = routes;
     UpdateProperties();
 
+    included_route_dsts_.clear();
     // Add expectations for the added routes.
     auto address_family = properties_.address_family;
     for (const auto& route : routes) {
@@ -227,6 +232,7 @@ class ConnectionTest : public Test {
                                              source_address, gateway_address)
                        .SetMetric(connection_->priority_)
                        .SetTable(connection_->table_id_)));
+      included_route_dsts_.push_back(destination_address);
     }
   }
 
@@ -269,17 +275,15 @@ class ConnectionTest : public Test {
                   IsValidRoutingRule(IPAddress::kFamilyIPv6, priority - 1)))
           .WillOnce(Return(true));
 
-      EXPECT_CALL(
-          routing_table_,
-          AddRule(device->interface_index(),
-                  IsValidRoutingRule(IPAddress::kFamilyIPv4,
-                                     RoutingTable::kRulePriorityMain - 1)))
+      EXPECT_CALL(routing_table_,
+                  AddRule(device->interface_index(),
+                          IsValidRoutingRule(IPAddress::kFamilyIPv4,
+                                             Connection::kCatchallPriority)))
           .WillOnce(Return(true));
-      EXPECT_CALL(
-          routing_table_,
-          AddRule(device->interface_index(),
-                  IsValidRoutingRule(IPAddress::kFamilyIPv6,
-                                     RoutingTable::kRulePriorityMain - 1)))
+      EXPECT_CALL(routing_table_,
+                  AddRule(device->interface_index(),
+                          IsValidRoutingRule(IPAddress::kFamilyIPv6,
+                                             Connection::kCatchallPriority)))
           .WillOnce(Return(true));
     }
 
@@ -288,6 +292,13 @@ class ConnectionTest : public Test {
       EXPECT_CALL(routing_table_,
                   AddRule(device->interface_index(),
                           IsValidRoutingRule(address.family(), priority)))
+          .WillOnce(Return(true));
+    }
+    for (const auto& dst : included_route_dsts_) {
+      EXPECT_CALL(routing_table_,
+                  AddRule(device->interface_index(),
+                          IsValidDstRule(dst.family(),
+                                         Connection::kDstRulePriority, dst)))
           .WillOnce(Return(true));
     }
     // Physical interfaces will have both iif and oif rules to send to the
@@ -338,6 +349,7 @@ class ConnectionTest : public Test {
   IPAddress gateway_address_;
   IPAddress default_address_;
   IPAddress local_ipv6_address_;
+  std::vector<IPAddress> included_route_dsts_;
   StrictMock<MockResolver> resolver_;
   StrictMock<MockRoutingTable> routing_table_;
   StrictMock<MockRTNLHandler> rtnl_handler_;

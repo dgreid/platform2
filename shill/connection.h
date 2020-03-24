@@ -27,13 +27,18 @@ class RTNLHandler;
 class Resolver;
 class RoutingTable;
 
-// The Conneciton maintains the implemented state of an IPConfig, e.g,
+// The Connection maintains the implemented state of an IPConfig, e.g,
 // the IP address, routing table and DNS table entries.
 class Connection : public base::RefCounted<Connection> {
  public:
   // The routing rule priority used for the default service, whether physical or
   // VPN.
   static const uint32_t kDefaultPriority;
+  // Priority for rules corresponding to IPConfig::Properties::routes.
+  static const uint32_t kDstRulePriority;
+  // Priority for the rule sending any remaining traffic to the default physical
+  // interface.
+  static const uint32_t kCatchallPriority;
   // The lowest priority value that is still valid.
   static const uint32_t kLeastPriority;
   // Space between the priorities of services. The Nth highest priority service
@@ -113,7 +118,7 @@ class Connection : public base::RefCounted<Connection> {
   virtual const IPAddress& local() const { return local_; }
   virtual const IPAddress& gateway() const { return gateway_; }
   virtual Technology technology() const { return technology_; }
-  void set_allowed_addrs(std::vector<IPAddress> addresses);
+  void set_allowed_srcs(std::vector<IPAddress> addresses);
   virtual const std::string& tethering() const { return tethering_; }
   void set_tethering(const std::string& tethering) { tethering_ = tethering; }
 
@@ -177,14 +182,13 @@ class Connection : public base::RefCounted<Connection> {
   // True if this device should have rules sending traffic whose src address
   // matches one of the interface's addresses to the per-device table.
   bool use_if_addrs_;
-  // If |allowed_uids_|, |allowed_iifs_|, and/or |allowed_addrs_| is set, IP
-  // policy rules will be created so that only traffic from the whitelisted
-  // UIDs, input interfaces, and/or source IP addresses can use this connection,
-  // with the exception of the interface's own IP addresses, which can always
-  // use a connection when it corresponds to a physical interface.
+  // |allowed_{uids,iifs,dsts,srcs}_| allow for this connection to serve more
+  // traffic than it would by default.
+  // TODO(crbug.com/1022028) Replace this with a RoutingPolicy.
   std::vector<uint32_t> allowed_uids_;
   std::vector<std::string> allowed_iifs_;
-  std::vector<IPAddress> allowed_addrs_;
+  std::vector<IPAddress> allowed_srcs_;
+  std::vector<IPAddress> allowed_dsts_;
   std::vector<uint32_t> blackholed_uids_;
 
   // Do not reconfigure the IP addresses, subnet mask, broadcast, etc.

@@ -39,13 +39,18 @@ static string ObjectID(Connection* c) {
 
 // static
 const uint32_t Connection::kDefaultPriority = 10;
-// static
-//
+// Allowed dsts rules are added right before the catchall rule. In this way,
+// existing traffic from a different interface will not be "stolen" by these
+// rules and sent out of the wrong interface, but the routes added to
+// |table_id| will not be ignored.
+const uint32_t Connection::kDstRulePriority =
+    RoutingTable::kRulePriorityMain - 2;
+const uint32_t Connection::kCatchallPriority =
+    RoutingTable::kRulePriorityMain - 1;
 // UINT_MAX is also a valid priority, but we reserve this as a sentinel
 // value, as in RoutingTable::GetDefaultRouteInternal.
 const uint32_t Connection::kLeastPriority =
     std::numeric_limits<uint32_t>::max() - 1;
-// static
 const uint32_t Connection::kPriorityStep = 10;
 
 Connection::Connection(int interface_index,
@@ -94,6 +99,7 @@ Connection::~Connection() {
 bool Connection::SetupIncludedRoutes(const IPConfig::Properties& properties) {
   bool ret = true;
 
+  allowed_dsts_.clear();
   IPAddress::Family address_family = properties.address_family;
   for (const auto& route : properties.routes) {
     SLOG(this, 2) << "Installing route:"
@@ -121,6 +127,17 @@ bool Connection::SetupIncludedRoutes(const IPConfig::Properties& properties) {
                 .SetMetric(priority_)
                 .SetTable(table_id_))) {
       ret = false;
+    }
+    // While we have added routes to this Device's routing table, if there are
+    // not appropriate routing policy rules to send traffic to that routing
+    // table, these routes will essentially be ignored. VPNs have particular
+    // routing policy that is set by its VPNDriver, which ensures that the VPN's
+    // routing table is always used when appropriate. This is necessary for
+    // physical technologies because their routing policy is inherently more
+    // conservative and its table might not be used even when it contains a
+    // prefix route for the destination of the traffic.
+    if (technology_.IsPrimaryConnectivityTechnology()) {
+      allowed_dsts_.push_back(destination_address);
     }
   }
   return ret;
@@ -240,14 +257,16 @@ void Connection::UpdateFromIPConfig(const IPConfigRefPtr& config) {
         interface_index_, IPAddress::kFamilyIPv6, 0, blackhole_table_id_);
   }
 
-  UpdateRoutingPolicy();
-
-  SetupIncludedRoutes(config->properties());
-
   if (properties.blackhole_ipv6) {
     routing_table_->CreateBlackholeRoute(interface_index_,
                                          IPAddress::kFamilyIPv6, 0, table_id_);
   }
+
+  if (!SetupIncludedRoutes(properties)) {
+    LOG(WARNING) << "Failed to set up additional routes";
+  }
+
+  UpdateRoutingPolicy();
 
   // Save a copy of the last non-null DNS config.
   if (!config->properties().dns_servers.empty()) {
@@ -321,7 +340,7 @@ void Connection::UpdateRoutingPolicy() {
     auto catch_all_rule =
         RoutingPolicyEntry::CreateFromSrc(IPAddress(IPAddress::kFamilyIPv4))
             .SetTable(table_id_)
-            .SetPriority(RoutingTable::kRulePriorityMain - 1);
+            .SetPriority(kCatchallPriority);
     routing_table_->AddRule(interface_index_, catch_all_rule);
     routing_table_->AddRule(interface_index_, catch_all_rule.FlipFamily());
   }
@@ -347,10 +366,17 @@ void Connection::AllowTrafficThrough(uint32_t table_id,
     routing_table_->AddRule(interface_index_, entry.FlipFamily());
   }
 
-  for (const auto& source_address : allowed_addrs_) {
+  for (const auto& source_address : allowed_srcs_) {
     routing_table_->AddRule(interface_index_,
                             RoutingPolicyEntry::CreateFromSrc(source_address)
                                 .SetPriority(base_priority)
+                                .SetTable(table_id));
+  }
+
+  for (const auto& dst_address : allowed_dsts_) {
+    routing_table_->AddRule(interface_index_,
+                            RoutingPolicyEntry::CreateFromDst(dst_address)
+                                .SetPriority(kDstRulePriority)
                                 .SetTable(table_id));
   }
 
@@ -459,8 +485,8 @@ string Connection::GetSubnetName() const {
       "%s/%d", local().GetNetworkPart().ToString().c_str(), local().prefix());
 }
 
-void Connection::set_allowed_addrs(std::vector<IPAddress> addresses) {
-  allowed_addrs_ = std::move(addresses);
+void Connection::set_allowed_srcs(std::vector<IPAddress> addresses) {
+  allowed_srcs_ = std::move(addresses);
 }
 
 bool Connection::FixGatewayReachability(const IPAddress& local,
