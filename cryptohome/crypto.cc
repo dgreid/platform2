@@ -427,7 +427,9 @@ bool Crypto::DecryptChallengeCredential(const SerializedVaultKeyset& serialized,
 }
 
 bool Crypto::NeedsPcrBinding(const uint64_t& label) const {
-    return le_manager_->NeedsPcrBinding(label);
+  DCHECK(le_manager_)
+      << "le_manage_ doesn't exist when calling NeedsPcrBinding()";
+  return le_manager_->NeedsPcrBinding(label);
 }
 
 bool Crypto::DecryptVaultKeyset(const SerializedVaultKeyset& serialized,
@@ -791,8 +793,11 @@ bool Crypto::EncryptLECredential(const VaultKeyset& vault_keyset,
                                  SerializedVaultKeyset* serialized) const {
   if (!use_tpm_ || !tpm_)
     return false;
-  if (!le_manager_)
+  if (!le_manager_) {
+    LOG(ERROR) << "Attempt to encrypt Low Entropy Credential on platform that "
+                  "doesn't support LECredential";
     return false;
+  }
 
   EnsureTpm(false);
 
@@ -1157,6 +1162,8 @@ bool Crypto::ResetLECredential(const SerializedVaultKeyset& serialized_reset,
 
   // Bail immediately if we don't have a valid LECredentialManager.
   if (!le_manager_) {
+    LOG(ERROR) << "Attempting to Reset LECredential on a platform that doesn't "
+                  "support LECredential";
     PopulateError(error, CryptoError::CE_LE_NOT_SUPPORTED);
     return false;
   }
@@ -1185,6 +1192,8 @@ bool Crypto::ResetLECredential(const SerializedVaultKeyset& serialized_reset,
 
 int Crypto::GetWrongAuthAttempts(
     const SerializedVaultKeyset& le_serialized) const {
+  DCHECK(le_manager_)
+      << "le_manage_ doesn't exist when calling GetWrongAuthAttempts()";
   return le_manager_->GetWrongAuthAttempts(le_serialized.le_label());
 }
 
