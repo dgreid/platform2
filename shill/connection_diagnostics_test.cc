@@ -42,6 +42,7 @@ using testing::ByMove;
 using testing::NiceMock;
 using testing::Return;
 using testing::ReturnRef;
+using testing::ReturnRefOfCopy;
 using testing::SetArgPointee;
 using testing::Test;
 
@@ -642,14 +643,12 @@ class ConnectionDiagnosticsTest : public Test {
                      ConnectionDiagnostics::kPhaseStart,
                      is_success ? ConnectionDiagnostics::kResultSuccess
                                 : ConnectionDiagnostics::kResultFailure);
-    const char* bad_addresses[] = {"110.2.3", "1.5"};
-    const vector<string> bad_dns_servers(bad_addresses, bad_addresses + 2);
     if (!is_success &&
         expected_issue == ConnectionDiagnostics::kIssueDNSServersInvalid) {
       // If the DNS server addresses are invalid, we will not even attempt to
       // start any ICMP sessions.
       EXPECT_CALL(*connection_, dns_servers())
-          .WillRepeatedly(ReturnRef(bad_dns_servers));
+          .WillRepeatedly(ReturnRefOfCopy(vector<string>{"110.2.3", "1.5"}));
     } else {
       // We are either instrumenting the success case (started pinging all
       // DNS servers successfully) or the failure case where we fail to start
