@@ -3,7 +3,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-'''Verify that RW can't update RO on locked fw'''
+"""Verify that RW can't update RO on locked fw"""
 
 from __future__ import print_function
 
@@ -19,7 +19,7 @@ import hammerd_api
 
 
 def main(argv):
-  if len(argv) > 0:
+  if argv:
     sys.exit('Test takes no args!')
   updater = hammerd_api.FirmwareUpdater(common.BASE_VENDOR_ID,
                                         common.BASE_PRODUCT_ID,

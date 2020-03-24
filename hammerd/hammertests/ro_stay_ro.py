@@ -3,7 +3,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-'''Verify RO can remain in RO'''
+"""Verify RO can remain in RO"""
 
 from __future__ import print_function
 
@@ -15,7 +15,7 @@ import hammerd_api
 
 
 def main(argv):
-  if len(argv) > 0:
+  if argv:
     sys.exit('Test takes no args!')
   updater = hammerd_api.FirmwareUpdater(common.BASE_VENDOR_ID,
                                         common.BASE_PRODUCT_ID,
@@ -52,7 +52,7 @@ def main(argv):
   # Need to SendFirstPdu again after sendig cmd because
   # CurrentSection reads from results of SendFirstPdu by checking the
   # writable offset. Non Zero writable offset means RO is running
-  assert updater.SendFirstPdu() == True, 'Error sending first PDU'
+  assert updater.SendFirstPdu() is True, 'Error sending first PDU'
   updater.SendDone()
   print('Current section after StayInRO cmd: %s' % updater.CurrentSection())
   assert updater.CurrentSection() == 0, 'Running section should be 0 (RO)'

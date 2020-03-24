@@ -3,13 +3,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-'''Verify pairing between base and lid
+"""Verify pairing between base and lid
 
-   During pairing, the base computes it's public key from base_private key
-   and authenticator is derived from shared secret. For the lid to verify the
-   challenge, it needs to check whether base_public corresponds to one of
-   the previously seen bases, and that the returned authenticator matches.
-'''
+During pairing, the base computes it's public key from base_private key
+and authenticator is derived from shared secret. For the lid to verify the
+challenge, it needs to check whether base_public corresponds to one of
+the previously seen bases, and that the returned authenticator matches.
+"""
 
 from __future__ import print_function
 import ctypes
@@ -26,7 +26,7 @@ PUBLIC_KEY_SIZE = 32
 # Before this test, please flash staff.bin using servo
 
 def main(argv):
-  if len(argv) > 0:
+  if argv:
     sys.exit('Test takes no args!')
   updater = hammerd_api.FirmwareUpdater(common.BASE_VENDOR_ID,
                                         common.BASE_PRODUCT_ID,
@@ -52,7 +52,7 @@ def main(argv):
   challenge_status = pair_manager.PairChallenge(updater.object,
                                                 public_key_first)
   print('Challenge status: %d' % challenge_status)
-  #assert challenge_status == 9, 'Need to inject the entropy'
+  # assert challenge_status == 9, 'Need to inject the entropy'
 
   for iteratn in range(INJECTION_RUNS):
     print('Jumping back to RO to inject entropy. Iteratn: %d' % (iteratn + 1))
@@ -65,7 +65,7 @@ def main(argv):
     # Wait for RO to run, else SendFirstPdu() picks up RW
     time.sleep(1)
     # Verify that we're in RO
-    assert updater.SendFirstPdu() == True, 'Error sending first PDU'
+    assert updater.SendFirstPdu() is True, 'Error sending first PDU'
     updater.SendDone()
     assert updater.CurrentSection() == 0, 'Not in RO: Cannot inject entropy'
 
@@ -85,7 +85,7 @@ def main(argv):
     print('PDU Response: %s' % updater.GetFirstResponsePdu().contents)
 
     # Check that RW is running
-    assert updater.SendFirstPdu() == True, 'Error sending first PDU'
+    assert updater.SendFirstPdu() is True, 'Error sending first PDU'
     updater.SendDone()
     print('Current running section after jumping to RW: %s'
           % updater.CurrentSection())

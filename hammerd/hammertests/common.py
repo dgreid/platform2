@@ -84,7 +84,7 @@ RB_HIGHER = os.path.join(IMAGE_DIR, '%s.dev.rb9' % BASE_NAME)
 # Common function.
 def connect_usb(updater):
   updater.TryConnectUsb()
-  assert updater.SendFirstPdu() == True, 'Error sending first PDU'
+  assert updater.SendFirstPdu() is True, 'Error sending first PDU'
   updater.SendDone()
 
 

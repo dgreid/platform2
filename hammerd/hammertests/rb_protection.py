@@ -3,7 +3,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-'''Verify rollback update possible & flashing with lower rb version fails'''
+"""Verify rollback update possible & flashing with lower rb version fails"""
 
 from __future__ import print_function
 
@@ -18,7 +18,7 @@ import hammerd_api
 # servo again.
 
 def main(argv):
-  if len(argv) > 0:
+  if argv:
     sys.exit('Test takes no args!')
   updater = hammerd_api.FirmwareUpdater(common.BASE_VENDOR_ID,
                                         common.BASE_PRODUCT_ID,
@@ -110,7 +110,8 @@ def restore_valid_rb(updater, image, image_desc):
 
 def get_wp_status(updater):
   pdu_resp = updater.GetFirstResponsePdu().contents
-  wp_status = (pdu_resp.flash_protection & common.EC_FLASH_PROTECT_GPIO_ASSERTED) > 0
+  wp_status = (pdu_resp.flash_protection &
+               common.EC_FLASH_PROTECT_GPIO_ASSERTED) > 0
   return wp_status
 
 

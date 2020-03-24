@@ -3,7 +3,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-'''Verify RO only boots valid RW and not corrupt/ dev signed RW'''
+"""Verify RO only boots valid RW and not corrupt/ dev signed RW"""
 
 from __future__ import print_function
 
@@ -16,7 +16,7 @@ import hammerd_api
 
 # Before this test, please flash MP-signed locked image (staff.bin)
 def main(argv):
-  if len(argv) > 0:
+  if argv:
     sys.exit('Test takes no args!')
   updater = hammerd_api.FirmwareUpdater(common.BASE_VENDOR_ID,
                                         common.BASE_PRODUCT_ID,

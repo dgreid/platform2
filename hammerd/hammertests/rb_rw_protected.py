@@ -3,10 +3,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-'''Verify flash protection
+"""Verify flash protection
 
 RO must not allow to boot RW with either ROLLBACK or RW unprotected
-'''
+"""
 
 from __future__ import print_function
 
@@ -40,7 +40,7 @@ FLASH_PROTECT_NORB = (common.EC_FLASH_PROTECT_RO_AT_BOOT |
                       common.EC_FLASH_PROTECT_RW_NOW)
 
 def main(argv):
-  if len(argv) > 0:
+  if argv:
     sys.exit('Test takes no args!')
   updater = hammerd_api.FirmwareUpdater(common.BASE_VENDOR_ID,
                                         common.BASE_PRODUCT_ID,

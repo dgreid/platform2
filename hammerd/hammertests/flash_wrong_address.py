@@ -3,7 +3,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-'''Verify that RO cannot flash to wrong address.'''
+"""Verify that RO cannot flash to wrong address."""
 
 from __future__ import print_function
 
@@ -31,7 +31,7 @@ WRONG_ADDR_LIST = [WRONG_ADDR_RO_OFFSET, WRONG_ADDR_KEY_RO, WRONG_ADDR_RO_FRID,
                    WRONG_ADDR_RW_OFFSET]
 
 def main(argv):
-  if len(argv) > 0:
+  if argv:
     sys.exit('Test takes no args!')
   updater = hammerd_api.FirmwareUpdater(common.BASE_VENDOR_ID,
                                         common.BASE_PRODUCT_ID,
@@ -49,7 +49,7 @@ def main(argv):
   print('RO: %s' % updater.GetSectionVersion(hammerd_api.SectionName.RO))
   print('RW: %s' % updater.GetSectionVersion(hammerd_api.SectionName.RW))
   print('Is RW locked?:  %s' % updater.IsSectionLocked(1))
-  assert updater.IsSectionLocked(1), "RW should be locked"
+  assert updater.IsSectionLocked(1) is True, 'RW should be locked'
 
   updater.SendSubcommand(hammerd_api.UpdateExtraCommand.ImmediateReset)
   updater.CloseUsb()
@@ -57,7 +57,7 @@ def main(argv):
   updater.TryConnectUsb()
   updater.SendSubcommand(hammerd_api.UpdateExtraCommand.StayInRO)
   time.sleep(1)
-  assert updater.SendFirstPdu() == True, 'Error sending first PDU'
+  assert updater.SendFirstPdu() is True, 'Error sending first PDU'
   updater.SendDone()
 
   print('Current section after StayInRO cmd: %s' % updater.CurrentSection())
@@ -69,9 +69,9 @@ def main(argv):
 
   # Uncommenting these line will make the test fail (RO will be able to write to
   # WRONG_ADDR_RW_OFFSET)
-  #common.connect_usb(updater)
-  #unlock_rw(updater)
-  #updater.CloseUsb()
+  # common.connect_usb(updater)
+  # unlock_rw(updater)
+  # updater.CloseUsb()
 
   # Then test that RO can't update anything
   flash_invalid_address(updater, False)
@@ -91,17 +91,17 @@ def flash_invalid_address(updater, rw):
       updater.CloseUsb()
       time.sleep(0.5)
       updater.TryConnectUsb()
-      assert updater.SendFirstPdu() == True, "Error sending first PDU"
+      assert updater.SendFirstPdu() is True, 'Error sending first PDU'
       updater.SendDone()
 
       print('Current section: %s' % updater.CurrentSection())
       if rw:
-        assert updater.CurrentSection() == 1, "Running section should be 1 (RW)"
+        assert updater.CurrentSection() == 1, 'Running section should be 1 (RW)'
       else:
-        assert updater.CurrentSection() == 0, "Running section should be 0 (RO)"
+        assert updater.CurrentSection() == 0, 'Running section should be 0 (RO)'
 
       wr = updater.TransferTouchpadFirmware(int(address, 0), 4096)
-      assert wr == 0, "Should not be able to write to wrong address!"
+      assert wr == 0, 'Should not be able to write to wrong address!'
       updater.SendSubcommand(hammerd_api.UpdateExtraCommand.ImmediateReset)
       updater.CloseUsb()
       time.sleep(0.5)
@@ -111,7 +111,7 @@ def init_transfer(updater):
   with open(common.TP, 'rb') as f:
     ec_image = f.read()
   updater.LoadTouchpadImage(ec_image)
-  assert updater.SendFirstPdu() == True, 'Error sending first PDU'
+  assert updater.SendFirstPdu() is True, 'Error sending first PDU'
   updater.SendDone()
   unlock_rw(updater)
   common.sim_disconnect_connect(updater)

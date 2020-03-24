@@ -70,7 +70,7 @@ def GetHammerdArguments():
 
   missing_args = set(REQUIRED_ARGUMENTS) - set(ret.keys())
   if missing_args:
-    raise ValueError('Missing arguments: %s', ','.join(missing_args))
+    raise ValueError('Missing arguments: %s' % (','.join(missing_args)))
   return ret
 
 
@@ -96,7 +96,7 @@ def main():
   wp_all = pdu_resp.flash_protection == FLASH_PROTECT_ALL
   touchpad_info = hammerd_api.TouchpadInfo()
   updater.SendSubcommandReceiveResponse(
-      hammerd_api.UpdateExtraCommand.TouchpadInfo, "",
+      hammerd_api.UpdateExtraCommand.TouchpadInfo, '',
       ctypes.pointer(touchpad_info), ctypes.sizeof(touchpad_info))
 
   # Do a pairing challenge, which will check that entropy has been injected

@@ -3,7 +3,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-'''Verify that RO cannot flash to wrong address'''
+"""Verify that RO cannot flash to wrong address"""
 
 from __future__ import print_function
 
@@ -26,11 +26,11 @@ RIGHT_ADDRR_RW_OFFSET = '0x0000c000'
 WRONG_ADDR_LIST = [WRONG_ADDRR_RW_FWID,
                    WRONG_ADDRR_SIG_RW,
                    WRONG_ADDRR_RW_RBVER]
-#WRONG_ADDR_LIST = [WRONG_ADDRR_KEY_RO, WRONG_ADDRR_RO_FRID]
+# WRONG_ADDR_LIST = [WRONG_ADDRR_KEY_RO, WRONG_ADDRR_RO_FRID]
 
 
 def main(argv):
-  if len(argv) > 0:
+  if argv:
     sys.exit('Test takes no args!')
   updater = hammerd_api.FirmwareUpdater(common.BASE_VENDOR_ID,
                                         common.BASE_PRODUCT_ID,
@@ -55,7 +55,7 @@ def main(argv):
   updater.TryConnectUsb()
   updater.SendSubcommand(hammerd_api.UpdateExtraCommand.StayInRO)
   time.sleep(1)
-  assert updater.SendFirstPdu() == True, 'Error sending first PDU'
+  assert updater.SendFirstPdu() is True, 'Error sending first PDU'
   updater.SendDone()
 
   print('Current section after StayInRO cmd: %s' % updater.CurrentSection())
@@ -75,7 +75,7 @@ def flash_invalid_image(updater):
     unlock_rw(updater)
     wr = updater.TransferTouchpadFirmware(int(address, 0), 1)
     assert wr == 1, 'Cannot write to flash: Is DUT image unlocked?'
-    assert updater.SendFirstPdu() == True, 'Error sending first PDU'
+    assert updater.SendFirstPdu() is True, 'Error sending first PDU'
     updater.SendDone()
     print('Current section: %s' % updater.CurrentSection())
     assert updater.CurrentSection() == 0, 'Running section should be 0 (RO)'
@@ -95,7 +95,7 @@ def restore_valid_rw(updater, image):
   time.sleep(0.5)
   # Jump to RW resets the base. Need to reconnect
   common.connect_usb(updater)
-  assert updater.SendFirstPdu() == True, 'Error sending first PDU'
+  assert updater.SendFirstPdu() is True, 'Error sending first PDU'
   updater.SendDone()
   print('Current section after valid RW: %s' % updater.CurrentSection())
   assert updater.CurrentSection() == 1, 'Running section should be 1 (RW)'
@@ -116,7 +116,7 @@ def transfer_rw(updater, image):
 
 def init_tp_transfer(updater):
   updater.LoadTouchpadImage('\x00')
-  assert updater.SendFirstPdu() == True, 'Error sending first PDU'
+  assert updater.SendFirstPdu() is True, 'Error sending first PDU'
   updater.SendDone()
   unlock_rw(updater)
 
