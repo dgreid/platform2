@@ -21,7 +21,7 @@ GbmBoMap::GbmBoMap(ScopedGbmDevicePtr device, ScopedGbmBoPtr bo, uint32_t x,
                    uint32_t y, uint32_t width, uint32_t height)
     : device_(std::move(device)), bo_(std::move(bo)), width_(width),
       height_(height) {
-  buffer_ = gbm_bo_map(
+  buffer_ = gbm_bo_map2(
       bo_.get(), x, y, width, height, GBM_BO_TRANSFER_READ, &stride_,
       &map_data_, 0);
   PCHECK(buffer_ != MAP_FAILED) << "gbm_bo_map failed";
