@@ -85,6 +85,7 @@ using ::testing::Ref;
 using ::testing::Return;
 using ::testing::ReturnNull;
 using ::testing::ReturnRef;
+using ::testing::ReturnRefOfCopy;
 using ::testing::SaveArg;
 using ::testing::StrEq;
 using ::testing::StrictMock;
@@ -242,7 +243,8 @@ class ManagerTest : public PropertyStoreTest {
   scoped_refptr<MockProfile> AddNamedMockProfileToManager(
       Manager* manager, const RpcIdentifier& name) {
     scoped_refptr<MockProfile> profile(new MockProfile(manager, ""));
-    EXPECT_CALL(*profile, GetRpcIdentifier()).WillRepeatedly(ReturnRef(name));
+    EXPECT_CALL(*profile, GetRpcIdentifier())
+        .WillRepeatedly(ReturnRefOfCopy(name));
     EXPECT_CALL(*profile, UpdateDevice(_)).WillRepeatedly(Return(false));
     AdoptProfile(manager, profile);
     return profile;
