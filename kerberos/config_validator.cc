@@ -56,6 +56,45 @@ constexpr char kSectionCapaths[] = "capaths";
 const char* const kSectionWhitelist[] = {kSectionLibdefaults, kSectionRealms,
                                          kSectionDomainRealm, kSectionCapaths};
 
+// List of encryption types fields allowed inside [libdefaults] section.
+const char* const kEnctypesFields[] = {
+    "default_tgs_enctypes",
+    "default_tkt_enctypes",
+    "permitted_enctypes",
+};
+
+// List of weak encryption types. |DEFAULT| value is also listed because it
+// includes both weak and strong types.
+const char* const kWeakEnctypes[] = {
+    "DEFAULT",
+    "des",
+    "des3",
+    "rc4",
+    "des-cbc-crc",
+    "des-cbc-md4",
+    "des-cbc-md5",
+    "des-cbc-raw",
+    "des-hmac-sha1",
+    "des3-cbc-raw",
+    "des3-cbc-sha1",
+    "des3-hmac-sha1",
+    "des3-cbc-sha1-kd",
+    "arcfour-hmac",
+    "rc4-hmac",
+    "arcfour-hmac-md5",
+    "arcfour-hmac-exp",
+    "rc4-hmac-exp",
+    "arcfour-hmac-md5-exp",
+};
+
+// List of strong encryption types. |DEFAULT| value is also listed because it
+// includes both weak and strong types.
+const char* const kStrongEnctypes[] = {
+    "DEFAULT",    "aes",     "aes256-cts-hmac-sha1-96",
+    "aes256-cts", "AES-256", "aes128-cts-hmac-sha1-96",
+    "aes128-cts", "AES-128",
+};
+
 ConfigErrorInfo MakeErrorInfo(ConfigErrorCode code, int line_index) {
   ConfigErrorInfo error_info;
   error_info.set_code(code);
@@ -71,9 +110,43 @@ ConfigValidator::ConfigValidator()
       realms_whitelist_(std::begin(kRealmsWhitelist),
                         std::end(kRealmsWhitelist)),
       section_whitelist_(std::begin(kSectionWhitelist),
-                         std::end(kSectionWhitelist)) {}
+                         std::end(kSectionWhitelist)),
+      enctypes_fields_(std::begin(kEnctypesFields), std::end(kEnctypesFields)),
+      weak_enctypes_(std::begin(kWeakEnctypes), std::end(kWeakEnctypes)),
+      strong_enctypes_(std::begin(kStrongEnctypes), std::end(kStrongEnctypes)) {
+}
 
 ConfigErrorInfo ConfigValidator::Validate(const std::string& krb5conf) const {
+  KerberosEncryptionTypes encryption_types;
+  return ParseConfig(krb5conf, &encryption_types);
+}
+
+// Parses |krb5conf| similarly to |Validate(krb5conf)|, but assumes that the
+// input has already been validated.
+KerberosEncryptionTypes ConfigValidator::GetEncryptionTypes(
+    const std::string& krb5conf) const {
+  KerberosEncryptionTypes encryption_types;
+  ParseConfig(krb5conf, &encryption_types);
+  return encryption_types;
+}
+
+// Validates the config and gets encryption types from it. Finds the enctypes
+// fields and maps the union of the enctypes into one of the buckets of
+// interest: 'All', 'Strong' or 'Legacy'. If an enctypes field is missing, the
+// default value for this field ('All') will be used.
+ConfigErrorInfo ConfigValidator::ParseConfig(
+    const std::string& krb5conf,
+    KerberosEncryptionTypes* encryption_types) const {
+  // Variables used to keep track of encryption fields and types on |krc5conf|.
+  std::unordered_set<std::string> listed_enctypes_fields;
+  bool has_weak_enctype = false;
+  bool has_strong_enctype = false;
+
+  // Initializes |encryption_types| with the default values in our feature. It
+  // should be replaced at the end of this method, but this is here to handle
+  // unexpected cases.
+  *encryption_types = KerberosEncryptionTypes::kStrong;
+
   // Keep empty lines, they're necessary to get the line numbers right.
   // Note: The MIT krb5 parser does not count \r as newline.
   const std::vector<std::string> lines = base::SplitString(
@@ -174,13 +247,13 @@ ConfigErrorInfo ConfigValidator::Validate(const std::string& krb5conf) const {
     if (parts.size() < 2)
       return MakeErrorInfo(CONFIG_ERROR_RELATION_SYNTAX, line_index);
 
+    const std::string& value = parts.at(1);
     if (parts.size() == 2) {
       // Check for a '{' to start a group. The '{' could also be on the next
       // line. If there's anything except whitespace after '{', it counts as
       // value, not as a group.
       // Note: If there is more than one '=', it cannot be the start of a group,
       // e.g. key==\n{.
-      const std::string& value = parts.at(1);
       if (value.empty()) {
         expect_opening_curly_brace = true;
         continue;
@@ -194,6 +267,31 @@ ConfigErrorInfo ConfigValidator::Validate(const std::string& krb5conf) const {
     // Check whether we support the key.
     if (!IsKeySupported(key, current_section, group_level))
       return MakeErrorInfo(CONFIG_ERROR_KEY_NOT_SUPPORTED, line_index);
+
+    // If |key| is a enctypes field in the [libdefaults] section.
+    if (current_section == kSectionLibdefaults && group_level <= 1 &&
+        base::ContainsKey(enctypes_fields_, key.c_str())) {
+      listed_enctypes_fields.insert(key);
+
+      // Note: encryption types can be delimited by comma or whitespace.
+      const std::vector<std::string> enctypes = base::SplitString(
+          value, ", ", base::TRIM_WHITESPACE, base::SPLIT_WANT_NONEMPTY);
+
+      for (const std::string& type : enctypes) {
+        has_weak_enctype |= base::ContainsKey(weak_enctypes_, type.c_str());
+        has_strong_enctype |= base::ContainsKey(strong_enctypes_, type.c_str());
+      }
+    }
+  }
+
+  // Note: if an enctypes field is missing, the default value is 'All'.
+  if (listed_enctypes_fields.size() < enctypes_fields_.size() ||
+      (has_weak_enctype && has_strong_enctype)) {
+    *encryption_types = KerberosEncryptionTypes::kAll;
+  } else if (has_strong_enctype) {
+    *encryption_types = KerberosEncryptionTypes::kStrong;
+  } else {
+    *encryption_types = KerberosEncryptionTypes::kLegacy;
   }
 
   ConfigErrorInfo error_info;

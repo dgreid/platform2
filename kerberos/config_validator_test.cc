@@ -10,9 +10,49 @@
 #include <base/logging.h>
 #include <gtest/gtest.h>
 
+#include "kerberos/kerberos_metrics.h"
 #include "kerberos/proto_bindings/kerberos_service.pb.h"
 
 namespace kerberos {
+namespace {
+constexpr char kCompleteKrb5Conf[] = R"(
+# Comment
+; Another comment
+
+[libdefaults]
+  clockskew = 123
+  default_tkt_enctypes = aes256-cts-hmac-sha1-96 aes128-cts-hmac-sha1-96
+  default_tgs_enctypes = aes256-cts-hmac-sha1-96 aes128-cts-hmac-sha1-96
+  permitted_enctypes = aes256-cts-hmac-sha1-96 aes128-cts-hmac-sha1-96
+  renew_lifetime* = 7d
+  ticket_lifetime* = 1d
+  A.EXAMPLE.COM = {
+    clockskew = 300
+  }
+  B.EXAMPLE.COM =
+  {
+    ; Tests = whether { can be on new line
+    clockskew = 500
+  }
+
+[realms]
+  kdc = 5.6.7.8
+  EXAMPLE.COM = {
+    kdc = 1.2.3.4
+    admin_server = kdc.example.com
+    auth_to_local = RULE:[2:$1](johndoe)s/^.*$/guest/
+    auth_to_local_names = {
+      hans = jack
+      joerg = jerk
+    }
+  }*
+
+[domain_realm]*
+  any.thing = IS.ACCEPTED.HERE
+
+[capaths]
+    here = AS.WELL)";
+}  // namespace
 
 std::ostream& operator<<(std::ostream& os, ConfigErrorCode code) {
   switch (code) {
@@ -72,43 +112,7 @@ class ConfigValidatorTest : public ::testing::Test {
 };
 
 TEST_F(ConfigValidatorTest, ValidConfig) {
-  constexpr char kKrb5Conf[] = R"(
-# Comment
-; Another comment
-
-[libdefaults]
-  clockskew = 123
-  permitted_enctypes = only the good ones
-  renew_lifetime* = 7d
-  ticket_lifetime* = 1d
-  A.EXAMPLE.COM = {
-    clockskew = 300
-  }
-  B.EXAMPLE.COM =
-  {
-    ; Tests = whether { can be on new line
-    clockskew = 500
-  }
-
-[realms]
-  kdc = 5.6.7.8
-  EXAMPLE.COM = {
-    kdc = 1.2.3.4
-    admin_server = kdc.example.com
-    auth_to_local = RULE:[2:$1](johndoe)s/^.*$/guest/
-    auth_to_local_names = {
-      hans = jack
-      joerg = jerk
-    }
-  }*
-
-[domain_realm]*
-  any.thing = IS.ACCEPTED.HERE
-
-[capaths]
-    here = AS.WELL)";
-
-  ExpectNoError(kKrb5Conf);
+  ExpectNoError(kCompleteKrb5Conf);
 }
 
 TEST_F(ConfigValidatorTest, Empty) {
@@ -280,6 +284,104 @@ TEST_F(ConfigValidatorTest, FuzzerRegressionTests) {
 
   // Double == is always a relation, cannot be the start of a group.
   ExpectError("[capaths]\nkey==\n{", CONFIG_ERROR_RELATION_SYNTAX, 2);
+}
+
+// |GetEncryptionTypes| with a complete config to be parsed.
+TEST_F(ConfigValidatorTest, GetEncryptionTypesCompleteConfig) {
+  EXPECT_EQ(KerberosEncryptionTypes::kStrong,
+            config_validator_.GetEncryptionTypes(kCompleteKrb5Conf));
+}
+
+// |GetEncryptionTypes| with all encryption types allowed.
+TEST_F(ConfigValidatorTest, GetEncryptionTypesAll) {
+  constexpr char kKrb5Conf[] = R"(
+[libdefaults]
+  default_tkt_enctypes = aes256-cts-hmac-sha1-96 arcfour-hmac-md5-exp
+  default_tgs_enctypes = aes256-cts-hmac-sha1-96 arcfour-hmac-md5-exp
+  permitted_enctypes = aes256-cts-hmac-sha1-96 arcfour-hmac-md5-exp)";
+
+  EXPECT_EQ(KerberosEncryptionTypes::kAll,
+            config_validator_.GetEncryptionTypes(kKrb5Conf));
+}
+
+// |GetEncryptionTypes| with only strong encryption types allowed.
+TEST_F(ConfigValidatorTest, GetEncryptionTypesStrong) {
+  constexpr char kKrb5Conf[] = R"(
+[libdefaults]
+  default_tkt_enctypes = aes256-cts-hmac-sha1-96 aes128-cts-hmac-sha1-96
+  default_tgs_enctypes = aes256-cts-hmac-sha1-96 aes128-cts-hmac-sha1-96
+  permitted_enctypes = aes256-cts-hmac-sha1-96 aes128-cts-hmac-sha1-96)";
+
+  EXPECT_EQ(KerberosEncryptionTypes::kStrong,
+            config_validator_.GetEncryptionTypes(kKrb5Conf));
+}
+
+// |GetEncryptionTypes| with only legacy encryption types allowed.
+TEST_F(ConfigValidatorTest, GetEncryptionTypesLegacy) {
+  constexpr char kKrb5Conf[] = R"(
+[libdefaults]
+  default_tkt_enctypes = arcfour-hmac-md5-exp des3-cbc-raw
+  default_tgs_enctypes = arcfour-hmac-md5-exp des3-cbc-raw
+  permitted_enctypes = arcfour-hmac-md5-exp des3-cbc-raw)";
+
+  EXPECT_EQ(KerberosEncryptionTypes::kLegacy,
+            config_validator_.GetEncryptionTypes(kKrb5Conf));
+}
+
+// |GetEncryptionTypes| with enctypes fields missing.
+TEST_F(ConfigValidatorTest, GetEncryptionTypesMissingFields) {
+  // Empty config allows all encryption types.
+  EXPECT_EQ(KerberosEncryptionTypes::kAll,
+            config_validator_.GetEncryptionTypes(""));
+
+  constexpr char kKrb5Conf1[] = R"(
+[libdefaults]
+  default_tkt_enctypes = aes256-cts-hmac-sha1-96 aes128-cts-hmac-sha1-96
+  default_tgs_enctypes = aes256-cts-hmac-sha1-96 aes128-cts-hmac-sha1-96)";
+
+  EXPECT_EQ(KerberosEncryptionTypes::kAll,
+            config_validator_.GetEncryptionTypes(kKrb5Conf1));
+
+  constexpr char kKrb5Conf2[] = R"(
+[libdefaults]
+  default_tkt_enctypes = aes256-cts-hmac-sha1-96 aes128-cts-hmac-sha1-96
+  permitted_enctypes = aes256-cts-hmac-sha1-96 aes128-cts-hmac-sha1-96)";
+
+  EXPECT_EQ(KerberosEncryptionTypes::kAll,
+            config_validator_.GetEncryptionTypes(kKrb5Conf2));
+
+  constexpr char kKrb5Conf3[] = R"(
+[libdefaults]
+  default_tgs_enctypes = aes256-cts-hmac-sha1-96 aes128-cts-hmac-sha1-96
+  permitted_enctypes =aes256-cts-hmac-sha1-96 aes128-cts-hmac-sha1-96)";
+
+  EXPECT_EQ(KerberosEncryptionTypes::kAll,
+            config_validator_.GetEncryptionTypes(kKrb5Conf3));
+}
+
+// |GetEncryptionTypes| with |DEFAULT| enctypes assigned.
+TEST_F(ConfigValidatorTest, GetEncryptionTypesDefaultValues) {
+  constexpr char kKrb5Conf[] = R"(
+[libdefaults]
+  default_tkt_enctypes = DEFAULT
+  default_tgs_enctypes = DEFAULT
+  permitted_enctypes = DEFAULT)";
+
+  // |DEFAULT| value allows all encryption types.
+  EXPECT_EQ(KerberosEncryptionTypes::kAll,
+            config_validator_.GetEncryptionTypes(kKrb5Conf));
+}
+
+// |GetEncryptionTypes| with comma separated encryption types list.
+TEST_F(ConfigValidatorTest, GetEncryptionTypesCommaSeparated) {
+  constexpr char kKrb5Conf[] = R"(
+[libdefaults]
+  default_tkt_enctypes = aes256-cts-hmac-sha1-96, arcfour-hmac-md5-exp
+  default_tgs_enctypes = aes256-cts-hmac-sha1-96, arcfour-hmac-md5-exp
+  permitted_enctypes = aes256-cts-hmac-sha1-96,arcfour-hmac-md5-exp)";
+
+  EXPECT_EQ(KerberosEncryptionTypes::kAll,
+            config_validator_.GetEncryptionTypes(kKrb5Conf));
 }
 
 }  // namespace kerberos

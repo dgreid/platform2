@@ -16,6 +16,7 @@
 #include <base/macros.h>
 
 #include "bindings/kerberos_containers.pb.h"
+#include "kerberos/config_validator.h"
 #include "kerberos/krb5_interface.h"
 #include "kerberos/proto_bindings/kerberos_service.pb.h"
 #include "kerberos/tgt_renewal_scheduler.h"
@@ -245,6 +246,9 @@ class AccountManager : public TgtRenewalScheduler::Delegate {
 
   // For collecting UMA stats. Not owned.
   KerberosMetrics* metrics_;
+
+  // For retrieving encryption types from config and send to UMA stats.
+  ConfigValidator config_validator_;
 
   ErrorType last_renew_tgt_error_for_testing_ = ERROR_NONE;
 

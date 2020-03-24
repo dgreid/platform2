@@ -21,6 +21,15 @@ class Clock;
 
 namespace kerberos {
 
+// These values are persisted to logs. Entries should not be renumbered and
+// numeric values should never be reused.
+enum class KerberosEncryptionTypes {
+  kAll = 0,
+  kStrong = 1,
+  kLegacy = 2,
+  kCount = 3,
+};
+
 // Submits UMA metrics. Some methods are virtual for tests.
 class KerberosMetrics {
  public:
@@ -41,6 +50,9 @@ class KerberosMetrics {
 
   // Sends |code| to the UMA stat for Kerberos.ValidateConfigErrorCode.
   virtual void ReportValidateConfigErrorCode(ConfigErrorCode code);
+
+  // Send |types| to UMA stat for Kerberos.EncryptionTypesAcquireKerberosTgt.
+  virtual void ReportKerberosEncryptionTypes(KerberosEncryptionTypes types);
 
   // Returns true if at least a day has passed since the last time this method
   // returned true.

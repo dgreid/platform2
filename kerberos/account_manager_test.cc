@@ -38,7 +38,19 @@ constexpr char kPassword[] = "i<3k3R8e5Oz";
 constexpr char kPassword2[] = "ih4zf00d";
 constexpr char kKrb5Conf[] = R"(
   [libdefaults]
-    default_realm = REALM.COM)";
+    forwardable = true)";
+constexpr char kStrongKrb5Conf[] = R"(
+  [libdefaults]
+    forwardable = true
+    default_tkt_enctypes = aes256-cts-hmac-sha1-96
+    default_tgs_enctypes = aes256-cts-hmac-sha1-96
+    permitted_enctypes = aes256-cts-hmac-sha1-96)";
+constexpr char kLegacyKrb5Conf[] = R"(
+  [libdefaults]
+    forwardable = true
+    default_tkt_enctypes = arcfour-hmac
+    default_tgs_enctypes = arcfour-hmac
+    permitted_enctypes = arcfour-hmac)";
 
 constexpr Krb5Interface::TgtStatus kValidTgt(3600, 3600);
 constexpr Krb5Interface::TgtStatus kExpiredTgt(0, 0);
@@ -65,6 +77,10 @@ class MockMetrics : public KerberosMetrics {
   MOCK_METHOD(void,
               ReportDailyUsageStats,
               (int, int, int, int, int),
+              (override));
+  MOCK_METHOD(void,
+              ReportKerberosEncryptionTypes,
+              (KerberosEncryptionTypes),
               (override));
 
  private:
@@ -134,7 +150,12 @@ class AccountManagerTest : public ::testing::Test {
   ErrorType AddAccount() { return manager_->AddAccount(kUser, kUnmanaged); }
 
   // Sets some default Kerberos configuration.
-  ErrorType SetConfig() { return manager_->SetConfig(kUser, kKrb5Conf); }
+  ErrorType SetConfig() { return SetConfig(kKrb5Conf); }
+
+  // Sets Kerberos configuration.
+  ErrorType SetConfig(const std::string& config) {
+    return manager_->SetConfig(kUser, config);
+  }
 
   // Acquire Kerberos ticket with default credentials and settings.
   ErrorType AcquireTgt() {
@@ -592,6 +613,65 @@ TEST_F(AccountManagerTest, AcquireTgtIgnoresPassedPasswordOnUsesLoginPassword) {
                                  kUseLoginPassword));
 }
 
+// AcquireTgt() records all encryption types UMA stats on success.
+TEST_F(AccountManagerTest, AcquireTgtEnctypesMetricsAll) {
+  ignore_result(AddAccount());
+  ignore_result(SetConfig());
+
+  // The expected encryption type should be reported through |metric_|.
+  EXPECT_CALL(*metrics_,
+              ReportKerberosEncryptionTypes(KerberosEncryptionTypes::kAll));
+
+  EXPECT_EQ(ERROR_NONE, AcquireTgt());
+}
+
+// AcquireTgt() records strong encryption types UMA stats on success.
+TEST_F(AccountManagerTest, AcquireTgtEnctypesMetricsStrong) {
+  ignore_result(AddAccount());
+  ignore_result(SetConfig(kStrongKrb5Conf));
+
+  // The expected encryption type should be reported through |metric_|.
+  EXPECT_CALL(*metrics_,
+              ReportKerberosEncryptionTypes(KerberosEncryptionTypes::kStrong));
+
+  EXPECT_EQ(ERROR_NONE, AcquireTgt());
+}
+
+// AcquireTgt() records legacy encryption types UMA stats on success.
+TEST_F(AccountManagerTest, AcquireTgtEnctypesMetricsLegacy) {
+  ignore_result(AddAccount());
+  ignore_result(SetConfig(kLegacyKrb5Conf));
+
+  // The expected encryption type should be reported through |metric_|.
+  EXPECT_CALL(*metrics_,
+              ReportKerberosEncryptionTypes(KerberosEncryptionTypes::kLegacy));
+
+  EXPECT_EQ(ERROR_NONE, AcquireTgt());
+}
+
+// AcquireTgt() doesn't record encryption types UMA stats on failure.
+TEST_F(AccountManagerTest, AcquireTgtEnctypesMetricsFailure) {
+  ignore_result(AddAccount());
+  ignore_result(SetConfig());
+
+  // No encryption type should be reported through |metric_|.
+  EXPECT_CALL(*metrics_, ReportKerberosEncryptionTypes(_)).Times(0);
+
+  krb5_->set_acquire_tgt_error(ERROR_UNKNOWN);
+  EXPECT_EQ(ERROR_UNKNOWN, AcquireTgt());
+}
+
+// AcquireTgt() doesn't record encryption types UMA stats if no config is
+// available.
+TEST_F(AccountManagerTest, AcquireTgtEnctypesMetricsNoConfig) {
+  ignore_result(AddAccount());
+
+  // No encryption type should be reported through |metric_|.
+  EXPECT_CALL(*metrics_, ReportKerberosEncryptionTypes(_)).Times(0);
+
+  EXPECT_EQ(ERROR_NONE, AcquireTgt());
+}
+
 // RemoveAccount() removes the credential cache file.
 TEST_F(AccountManagerTest, RemoveAccountRemovesCC) {
   ignore_result(AddAccount());
@@ -676,7 +756,7 @@ TEST_F(AccountManagerTest, ListAccountsIgnoresFailures) {
 
 // GetKerberosFiles returns empty KerberosFiles if there is no credential cache,
 // even if there is a config.
-TEST_F(AccountManagerTest, GetKerberosFilesSucceesWithoutCC) {
+TEST_F(AccountManagerTest, GetKerberosFilesSucceedsWithoutCC) {
   ignore_result(AddAccount());
   ignore_result(SetConfig());
 
@@ -688,7 +768,7 @@ TEST_F(AccountManagerTest, GetKerberosFilesSucceesWithoutCC) {
 
 // GetKerberosFiles returns the expected KerberosFiles if there is a credential
 // cache.
-TEST_F(AccountManagerTest, GetKerberosFilesSucceesWithCC) {
+TEST_F(AccountManagerTest, GetKerberosFilesSucceedsWithCC) {
   ignore_result(AddAccount());
   ignore_result(SetConfig());
   ignore_result(AcquireTgt());

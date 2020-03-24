@@ -24,6 +24,10 @@ constexpr char kResult[] = "Result.";
 // Stat for the result of a ValidateConfig call.
 constexpr char kValidateConfigErrorCode[] = "ValidateConfigErrorCode";
 
+// Stat for the encryption types used on Kerberos TGT creation.
+constexpr char kEncryptionTypesAcquireKerberosTgt[] =
+    "EncryptionTypesAcquireKerberosTgt";
+
 // Stat for counting user types, see |UserType|.
 constexpr char kDailyActiveUsers[] = "DailyActiveUsers";
 
@@ -87,6 +91,13 @@ void KerberosMetrics::ReportValidateConfigErrorCode(ConfigErrorCode code) {
   metrics_lib_.SendEnumToUMA(kerberos_ + kValidateConfigErrorCode,
                              static_cast<int>(code),
                              static_cast<int>(CONFIG_ERROR_COUNT));
+}
+
+void KerberosMetrics::ReportKerberosEncryptionTypes(
+    KerberosEncryptionTypes types) {
+  metrics_lib_.SendEnumToUMA(kerberos_ + kEncryptionTypesAcquireKerberosTgt,
+                             static_cast<int>(types),
+                             static_cast<int>(KerberosEncryptionTypes::kCount));
 }
 
 bool KerberosMetrics::ShouldReportDailyUsageStats() {
