@@ -2463,7 +2463,7 @@ TEST_P(AttestationServiceTest, EnrollSuccessQueued) {
   };
 
   fake_pca_agent_proxy_.SetEnrollCallbackDelay(
-      base::TimeDelta::FromMilliseconds(50));
+      base::TimeDelta::FromMilliseconds(125));
   EXPECT_CALL(fake_pca_agent_proxy_, EnrollAsync(_, _, _, _)).Times(1);
 
   EnrollRequest request;
@@ -2551,7 +2551,7 @@ TEST_P(AttestationServiceTest, EnrollFailureQueued) {
 
   fake_pca_agent_proxy_.SetBadEnrollStatus(STATUS_INVALID_PARAMETER);
   fake_pca_agent_proxy_.SetEnrollCallbackDelay(
-      base::TimeDelta::FromMilliseconds(50));
+      base::TimeDelta::FromMilliseconds(125));
   EXPECT_CALL(fake_pca_agent_proxy_, EnrollAsync(_, _, _, _)).Times(1);
 
   EnrollRequest request;
