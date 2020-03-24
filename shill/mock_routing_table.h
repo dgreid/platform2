@@ -29,10 +29,6 @@ class MockRoutingTable : public RoutingTable {
               (int, const IPAddress&, uint32_t, uint32_t),
               (override));
   MOCK_METHOD(bool,
-              ConfigureRoutes,
-              (int, const IPConfigRefPtr&, uint32_t, uint32_t),
-              (override));
-  MOCK_METHOD(bool,
               CreateBlackholeRoute,
               (int, IPAddress::Family, uint32_t, uint32_t),
               (override));

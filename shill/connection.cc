@@ -91,6 +91,41 @@ Connection::~Connection() {
   }
 }
 
+bool Connection::SetupIncludedRoutes(const IPConfig::Properties& properties) {
+  bool ret = true;
+
+  IPAddress::Family address_family = properties.address_family;
+  for (const auto& route : properties.routes) {
+    SLOG(this, 2) << "Installing route:"
+                  << " Destination: " << route.host
+                  << " Prefix: " << route.prefix
+                  << " Gateway: " << route.gateway;
+    IPAddress destination_address(address_family);
+    IPAddress source_address(address_family);  // Left as default.
+    IPAddress gateway_address(address_family);
+    if (!destination_address.SetAddressFromString(route.host)) {
+      LOG(ERROR) << "Failed to parse host " << route.host;
+      ret = false;
+      continue;
+    }
+    if (!gateway_address.SetAddressFromString(route.gateway)) {
+      LOG(ERROR) << "Failed to parse gateway " << route.gateway;
+      ret = false;
+      continue;
+    }
+    destination_address.set_prefix(route.prefix);
+    if (!routing_table_->AddRoute(
+            interface_index_,
+            RoutingTableEntry::Create(destination_address, source_address,
+                                      gateway_address)
+                .SetMetric(priority_)
+                .SetTable(table_id_))) {
+      ret = false;
+    }
+  }
+  return ret;
+}
+
 bool Connection::SetupExcludedRoutes(const IPConfig::Properties& properties,
                                      const IPAddress& gateway) {
   // If this connection has its own dedicated routing table, exclusion
@@ -207,9 +242,7 @@ void Connection::UpdateFromIPConfig(const IPConfigRefPtr& config) {
 
   UpdateRoutingPolicy();
 
-  // Install any explicitly configured routes at the default priority.
-  routing_table_->ConfigureRoutes(interface_index_, config, kDefaultPriority,
-                                  table_id_);
+  SetupIncludedRoutes(config->properties());
 
   if (properties.blackhole_ipv6) {
     routing_table_->CreateBlackholeRoute(interface_index_,

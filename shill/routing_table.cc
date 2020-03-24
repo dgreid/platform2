@@ -28,7 +28,6 @@
 #include <base/stl_util.h>
 #include <base/strings/stringprintf.h>
 
-#include "shill/ipconfig.h"
 #include "shill/logging.h"
 #include "shill/net/byte_string.h"
 #include "shill/net/rtnl_handler.h"
@@ -359,45 +358,6 @@ bool RoutingTable::SetDefaultRoute(int interface_index,
                                             gateway_address)
                       .SetMetric(metric)
                       .SetTable(table_id));
-}
-
-bool RoutingTable::ConfigureRoutes(int interface_index,
-                                   const IPConfigRefPtr& ipconfig,
-                                   uint32_t metric,
-                                   uint32_t table_id) {
-  bool ret = true;
-
-  IPAddress::Family address_family = ipconfig->properties().address_family;
-  const vector<IPConfig::Route>& routes = ipconfig->properties().routes;
-
-  for (const auto& route : routes) {
-    SLOG(this, 3) << "Installing route:"
-                  << " Destination: " << route.host
-                  << " Prefix: " << route.prefix
-                  << " Gateway: " << route.gateway;
-    IPAddress destination_address(address_family);
-    IPAddress source_address(address_family);  // Left as default.
-    IPAddress gateway_address(address_family);
-    if (!destination_address.SetAddressFromString(route.host)) {
-      LOG(ERROR) << "Failed to parse host " << route.host;
-      ret = false;
-      continue;
-    }
-    if (!gateway_address.SetAddressFromString(route.gateway)) {
-      LOG(ERROR) << "Failed to parse gateway " << route.gateway;
-      ret = false;
-      continue;
-    }
-    destination_address.set_prefix(route.prefix);
-    if (!AddRoute(interface_index,
-                  RoutingTableEntry::Create(destination_address, source_address,
-                                            gateway_address)
-                      .SetMetric(metric)
-                      .SetTable(table_id))) {
-      ret = false;
-    }
-  }
-  return ret;
 }
 
 void RoutingTable::FlushRoutes(int interface_index) {

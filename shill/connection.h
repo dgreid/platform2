@@ -134,6 +134,11 @@ class Connection : public base::RefCounted<Connection> {
   bool FixGatewayReachability(const IPAddress& local,
                               IPAddress* peer,
                               IPAddress* gateway);
+  // Allow for the routes specified in |properties.routes| to be served by this
+  // connection.
+  bool SetupIncludedRoutes(const IPConfig::Properties& properties);
+  // Ensure the destination subnets specified in |properties.exclusion_list|
+  // will not be served by this connection.
   bool SetupExcludedRoutes(const IPConfig::Properties& properties,
                            const IPAddress& gateway);
   void SetMTU(int32_t mtu);

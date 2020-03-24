@@ -18,7 +18,6 @@
 #include <gtest/gtest.h>
 
 #include "shill/event_dispatcher.h"
-#include "shill/ipconfig.h"
 #include "shill/logging.h"
 #include "shill/mock_control.h"
 #include "shill/net/byte_string.h"
@@ -573,69 +572,6 @@ TEST_F(RoutingTableTest, IPv6StatelessAutoconfiguration) {
 
   tables = GetRoutingTables();
   EXPECT_EQ(1, tables->size());
-}
-
-TEST_F(RoutingTableTest, ConfigureRoutes) {
-  MockControl control;
-  IPConfigRefPtr ipconfig(new IPConfig(&control, kTestDeviceName0));
-  IPConfig::Properties properties;
-  properties.address_family = IPAddress::kFamilyIPv4;
-  vector<IPConfig::Route>& routes = properties.routes;
-  ipconfig->UpdateProperties(properties, true);
-
-  const int kMetric = 10;
-  EXPECT_TRUE(routing_table_->ConfigureRoutes(
-      kTestDeviceIndex0, ipconfig, kMetric,
-      RoutingTable::GetInterfaceTableId(kTestDeviceIndex0)));
-
-  IPConfig::Route route;
-  route.host = kTestRemoteNetwork4;
-  route.prefix = kTestRemotePrefix4;
-  route.gateway = kTestGatewayAddress4;
-  routes.push_back(route);
-  ipconfig->UpdateProperties(properties, true);
-
-  IPAddress destination_address(IPAddress::kFamilyIPv4);
-  IPAddress source_address(IPAddress::kFamilyIPv4);
-  IPAddress gateway_address(IPAddress::kFamilyIPv4);
-  ASSERT_TRUE(destination_address.SetAddressFromString(kTestRemoteNetwork4));
-  destination_address.set_prefix(kTestRemotePrefix4);
-  ASSERT_TRUE(gateway_address.SetAddressFromString(kTestGatewayAddress4));
-
-  auto entry =
-      RoutingTableEntry::Create(destination_address, source_address,
-                                gateway_address)
-          .SetMetric(kMetric)
-          .SetTable(RoutingTable::GetInterfaceTableId(kTestDeviceIndex0));
-
-  EXPECT_CALL(
-      rtnl_handler_,
-      DoSendMessage(IsRoutingPacket(RTNLMessage::kModeAdd, kTestDeviceIndex0,
-                                    entry, NLM_F_CREATE | NLM_F_EXCL),
-                    _));
-  EXPECT_TRUE(routing_table_->ConfigureRoutes(
-      kTestDeviceIndex0, ipconfig, kMetric,
-      RoutingTable::GetInterfaceTableId(kTestDeviceIndex0)));
-
-  routes.clear();
-  route.gateway = "xxx";  // Invalid gateway entry -- should be skipped
-  routes.push_back(route);
-  route.host = "xxx";  // Invalid host entry -- should be skipped
-  route.gateway = kTestGatewayAddress4;
-  routes.push_back(route);
-  route.host = kTestRemoteNetwork4;
-  routes.push_back(route);
-  ipconfig->UpdateProperties(properties, true);
-
-  EXPECT_CALL(
-      rtnl_handler_,
-      DoSendMessage(IsRoutingPacket(RTNLMessage::kModeAdd, kTestDeviceIndex0,
-                                    entry, NLM_F_CREATE | NLM_F_EXCL),
-                    _))
-      .Times(1);
-  EXPECT_FALSE(routing_table_->ConfigureRoutes(
-      kTestDeviceIndex0, ipconfig, kMetric,
-      RoutingTable::GetInterfaceTableId(kTestDeviceIndex0)));
 }
 
 MATCHER_P2(IsRoutingQuery, destination, index, "") {

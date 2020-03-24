@@ -86,13 +86,6 @@ class RoutingTable {
                                uint32_t metric,
                                uint32_t table_id);
 
-  // Configure routing table entries from the "routes" portion of |ipconfig|.
-  // Returns true if all routes were installed successfully, false otherwise.
-  virtual bool ConfigureRoutes(int interface_index,
-                               const IPConfigRefPtr& ipconfig,
-                               uint32_t metric,
-                               uint32_t table_id);
-
   // Create a blackhole route for a given IP family.  Returns true
   // on successfully sending the route request, false otherwise.
   virtual bool CreateBlackholeRoute(int interface_index,

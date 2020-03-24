@@ -240,7 +240,6 @@ class IPConfig : public base::RefCounted<IPConfig> {
   FRIEND_TEST(IPConfigTest, TimeToLeaseExpiry_Success);
   FRIEND_TEST(ResolverTest, Empty);
   FRIEND_TEST(ResolverTest, NonEmpty);
-  FRIEND_TEST(RoutingTableTest, ConfigureRoutes);
   FRIEND_TEST(RoutingTableTest, RouteAddDelete);
   FRIEND_TEST(StaticIPParametersTest, IPConfigRefreshed);
 
