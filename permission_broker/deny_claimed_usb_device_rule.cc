@@ -156,16 +156,23 @@ Rule::Result DenyClaimedUsbDeviceRule::ProcessUsbDevice(udev_device* device) {
     const char* child_type = udev_device_get_devtype(child.get());
     if (!child_type || strcmp(child_type, "usb_interface") != 0) {
       // If this is not a usb_interface node then something is wrong, fail safe.
+      LOG(WARNING) << "Found a child with unexpected type: "
+                   << (child_type ? child_type : "(null)");
       return DENY;
     }
 
     const char* driver = udev_device_get_driver(child.get());
     if (driver) {
+      LOG(INFO) << "Found claimed interface with driver: " << driver;
       found_claimed_interface = true;
     } else {
       found_unclaimed_interface = true;
     }
-    found_adb_interface |= IsInterfaceAdb(child.get());
+
+    if (IsInterfaceAdb(child.get())) {
+      LOG(INFO) << "Found ADB interface.";
+      found_adb_interface = true;
+    }
   }
 
   if (found_claimed_interface) {
