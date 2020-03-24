@@ -478,7 +478,7 @@ In the tables below,
 | --------- | ------ | --------- | -------- | ----------- | ---------- | ----------- |
 | key-id | string |  | True |  | True | Key ID from the signer key set that is used to sign the given firmware image. |
 | sig-id-in-customization-id | boolean |  | False |  | True | Indicates that this model cannot be decoded by the mapping table. Instead the model is stored in the VPD (Vital Product Data) region in the customization_id property. This allows us to determine the model to use in the factory during the finalization stage. Note that if the VPD is wiped then the model will be lost. This may mean that the device will revert back to a generic model, or may not work. It is not possible in general to test whether the model in the VPD is correct at run-time. We simply assume that it is. The advantage of using this property is that no hardware changes are needed to change one model into another. For example we can create 20 different whitelabel boards, all with the same hardware, just by changing the customization_id that is written into SPI flash. |
-| signature-id | string |  | True |  | True | ID used to generate keys/keyblocks in the firmware signing output.  This is also the value provided to mosys platform signature for the updater4.sh script. |
+| signature-id | string |  | True |  | True | ID used to generate keys/keyblocks in the firmware signing output. |
 
 ### hardware-properties
 | Attribute | Type   | RegEx     | Required | Oneof Group | Build-only | Description |

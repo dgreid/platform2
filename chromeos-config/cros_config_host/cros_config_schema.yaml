@@ -401,8 +401,7 @@ properties:
                   type: string
                 signature-id:
                   description: ID used to generate keys/keyblocks in the firmware
-                    signing output.  This is also the value provided to mosys platform
-                    signature for the updater4.sh script.
+                    signing output.
                   type: string
                 sig-id-in-customization-id:
                   description: Indicates that this model cannot be decoded by the mapping table.
