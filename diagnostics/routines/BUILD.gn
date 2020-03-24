@@ -88,6 +88,8 @@ source_set("libdiag_routine") {
   sources = [
     "ac_power/ac_power.cc",
     "battery/battery.cc",
+    "battery_discharge/battery_discharge.cc",
+    "battery_discharge/battery_discharge_constants.cc",
     "battery_sysfs/battery_sysfs.cc",
     "cpu_cache/cpu_cache.cc",
     "cpu_stress/cpu_stress.cc",
@@ -147,6 +149,7 @@ if (use.test) {
     sources = [
       "ac_power/ac_power_test.cc",
       "battery/battery_test.cc",
+      "battery_discharge/battery_discharge_test.cc",
       "battery_sysfs/battery_sysfs_test.cc",
       "nvme_self_test/nvme_self_test_test.cc",
       "nvme_wear_level/nvme_wear_level_test.cc",
