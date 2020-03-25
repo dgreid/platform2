@@ -32,9 +32,11 @@ constexpr char kChronosContainerCPUSubsetSubpath[] =
 constexpr char kDisableCPUFlag[] = "0";
 constexpr char kEnableCPUFlag[] = "1";
 constexpr char kLineTerminator = 0xa;
-// This allows for a range output of 0,1,2,...,255 which is a lot of cores for
-// Chromebooks.
-constexpr size_t kMaxCoresSupported = 512;
+// The maximum size of /sys file to read out on the online CPUs.
+// The file is generally 0,2 or 0-3, but this prepares for the future by
+// allowing up to 256 cores, and assuming the kernel might enumerate each core
+// explicitly (0,1,...,255).
+constexpr size_t kMaxCoreBufferSize = 1024;
 constexpr char kSessionManagerCPUSubsetSubpath[] =
     "fs/cgroup/cpuset/session_manager_containers/cpus";
 constexpr base::TimeDelta kWriteRetryDelay =
@@ -284,7 +286,7 @@ bool SchedulerConfigurationUtils::UpdateAllCPUSets() {
     return false;
   }
 
-  char online_cpus[kMaxCoresSupported];
+  char online_cpus[kMaxCoreBufferSize];
   size_t bytes_read = HANDLE_EINTR(
       read(online_cpus_fd_.get(), online_cpus, sizeof(online_cpus)));
   if (bytes_read < 0) {
