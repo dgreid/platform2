@@ -258,7 +258,8 @@ status_t IPU3CameraHw::checkStreamRotation(const std::vector<camera3_stream_t*> 
 
 static bool compFun(camera3_stream_t* s1, camera3_stream_t* s2)
 {
-    return streamSizeGE(s1, s2);
+    // Use streamSizeGT since compare function requires strictly weak order.
+    return streamSizeGT(s1, s2);
 }
 
 // 1.sort the steams by resolution from big to small.
@@ -276,13 +277,6 @@ void IPU3CameraHw::sortActiveStreams(std::vector<camera3_stream_t*> &activeStrea
         (activeStreams[0]->format == HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED) ||
         (activeStreams[1]->format == HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED)) {
             return;
-    }
-
-    for (size_t i = 2; i < activeStreams.size(); i++) {
-        if (activeStreams[i]->format == HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED) {
-            std::swap(activeStreams[1], activeStreams[i]);
-            break;
-        }
     }
 }
 
