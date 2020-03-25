@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// UserCollectorBase implements common functionality shared by user collectors.
+// (e.g. user_collector, arc_collector).
+
 #ifndef CRASH_REPORTER_USER_COLLECTOR_BASE_H_
 #define CRASH_REPORTER_USER_COLLECTOR_BASE_H_
 
@@ -13,7 +16,6 @@
 
 #include "crash-reporter/crash_collector.h"
 
-// Common functionality shared by user collectors.
 class UserCollectorBase : public CrashCollector {
  public:
   UserCollectorBase(

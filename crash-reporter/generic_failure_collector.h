@@ -2,6 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// The generic failure collector collects issues that anomaly_detector catches
+// that manifest as a single line logged to a log file.
+// The flow looks like this:
+// 1. One of the parsers in anomaly_detector flag an issue
+// 2. anomaly_detector invokes crash_reporter with an appropriate flag
+// 3. crash_reporter invokes a GenericFailureCollector instance
+
 #ifndef CRASH_REPORTER_GENERIC_FAILURE_COLLECTOR_H_
 #define CRASH_REPORTER_GENERIC_FAILURE_COLLECTOR_H_
 

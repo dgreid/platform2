@@ -2,6 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// The BERT collector collects error reports from the Boot Error Record Table
+// (as defined in the ACPI spec).
+// These are exposed in /sys/firmware/acpi/tables (see path definitions in
+// bert_collector.cc for details), and are useful for debugging firmware
+// crashes.
+
 #ifndef CRASH_REPORTER_BERT_COLLECTOR_H_
 #define CRASH_REPORTER_BERT_COLLECTOR_H_
 

@@ -2,6 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// UserCollector handles program crashes in userspace. When the kernel detects
+// a crashing program, it invokes this collector via
+// /proc/sys/kernel/core_pattern.
+// This handler ignores chrome crashes (letting chrome_collector handle them
+// when it is directly invoked).
+// It's currently configured to ignore arc crashes as well, but the logic for
+// that lives in crash_reporter.cc, which constructs a
+// UserCollector::FilterOutFunction and passes it in to the user collector's
+// constructor.
+
 #ifndef CRASH_REPORTER_USER_COLLECTOR_H_
 #define CRASH_REPORTER_USER_COLLECTOR_H_
 

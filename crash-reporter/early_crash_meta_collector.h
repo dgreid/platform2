@@ -2,6 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// The early crash meta collector doesn't collect crashes in the sense that many
+// others do. Instead, it moves crashes that happened when the full filesystem
+// was not available from ephemeral storage (like /run) to the encrypted
+// stateful partition, so that they persist across reboot.
+
 #ifndef CRASH_REPORTER_EARLY_CRASH_META_COLLECTOR_H_
 #define CRASH_REPORTER_EARLY_CRASH_META_COLLECTOR_H_
 

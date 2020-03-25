@@ -2,6 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// The unclean shutdown collector runs on boot (invoked by crash-boot-collect)
+// and checks for the existence of a file
+// (/var/lib/crash_reporter/pending_clean_shutdown). If it exists, the machine
+// was not shut down properly and we increment an UMA metric.
+//
+// In the normal shutdown flow, the system deletes that file, so its presence in
+// early boot indicates that the shutdown was abnormal in some way. This could
+// be as simple as the battery dying, which is why we only count occurrences of
+// this event rather than collecting logs.
+
 #ifndef CRASH_REPORTER_UNCLEAN_SHUTDOWN_COLLECTOR_H_
 #define CRASH_REPORTER_UNCLEAN_SHUTDOWN_COLLECTOR_H_
 

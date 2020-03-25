@@ -2,6 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// The SELinux violation collector gathers information about SELinux audit
+// events. Anomaly detector invokes it when it sees a matching line in the
+// journal.
+
 #ifndef CRASH_REPORTER_SELINUX_VIOLATION_COLLECTOR_H_
 #define CRASH_REPORTER_SELINUX_VIOLATION_COLLECTOR_H_
 

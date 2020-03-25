@@ -2,6 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// The kernel collector reports kernel panics or other kernel-level issues that
+// caused machine reboot, like EFI crashes and BIOS crashes.
+// The kernel collector runs on boot, via the crash-boot-collect service.
+
 #ifndef CRASH_REPORTER_KERNEL_COLLECTOR_H_
 #define CRASH_REPORTER_KERNEL_COLLECTOR_H_
 

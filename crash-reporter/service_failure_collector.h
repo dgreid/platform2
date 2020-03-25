@@ -2,6 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// The service failure collector gathers information about upstart services that
+// exit with a non-zero status.
+// Anomaly detector monitors the system journal for log lines that indicate
+// non-zero exit and invokes this collector when it sees them.
+
 #ifndef CRASH_REPORTER_SERVICE_FAILURE_COLLECTOR_H_
 #define CRASH_REPORTER_SERVICE_FAILURE_COLLECTOR_H_
 

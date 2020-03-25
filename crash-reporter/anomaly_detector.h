@@ -2,6 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// anomaly_detector examines the system journal (using journalctl) and looks for
+// messages matching particular patterns. When it finds one, it invokes
+// crash_reporter appropriately to report the issue.
+//
+// This file (and the associated .cc file) contains logic to parse journal
+// entries and determine whether to invoke crash_reporter (or how to invoke it).
+// The logic to read the journal and execute crash_reporter live in
+// anomaly_detector_main.cc.
+
 #ifndef CRASH_REPORTER_ANOMALY_DETECTOR_H_
 #define CRASH_REPORTER_ANOMALY_DETECTOR_H_
 

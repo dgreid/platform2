@@ -2,6 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// The ARC collector reports crashes that happen in the ARC++ container (android
+// on chrome os).
+// If a process crashes (not just exits abnormally), the kernel invokes
+// crash_reporter via /proc/sys/kernel/core_pattern, which in turn calls the ARC
+// collector if the crash happened in that container namespace.
+
 #ifndef CRASH_REPORTER_ARC_COLLECTOR_H_
 #define CRASH_REPORTER_ARC_COLLECTOR_H_
 

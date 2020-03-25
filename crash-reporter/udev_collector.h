@@ -2,6 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// The udev collector grabs coredumps from hardware devices.
+//
+// For the most part, this only collects information on developer images (since
+// device coredumps could include information we don't want to upload).
+// However, it does grab wifi chip dumps and put them in a /var/log to be
+// uploaded with feedback reports, but does NOT upload them with crash reports.
+//
+// The udev collector is invoked automatically by the udev rules in
+// 99-crash-reporter.rules when certain classes of devices have errors.
+
 #ifndef CRASH_REPORTER_UDEV_COLLECTOR_H_
 #define CRASH_REPORTER_UDEV_COLLECTOR_H_
 

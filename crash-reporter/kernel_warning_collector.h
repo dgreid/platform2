@@ -2,6 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// The kernel warning collector gathers logs from kernel warnings.
+// Anomaly detector runs the kernel warning collector when it detects strings
+// matching the expected warning pattern in /var/log/messages.
+
 #ifndef CRASH_REPORTER_KERNEL_WARNING_COLLECTOR_H_
 #define CRASH_REPORTER_KERNEL_WARNING_COLLECTOR_H_
 

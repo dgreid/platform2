@@ -2,6 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// The crash collector is a base class for all collectors to use. It implements
+// common functionality, such as writing out .meta files.
+// It is not a collector in and of itself.
+
 #ifndef CRASH_REPORTER_CRASH_COLLECTOR_H_
 #define CRASH_REPORTER_CRASH_COLLECTOR_H_
 
