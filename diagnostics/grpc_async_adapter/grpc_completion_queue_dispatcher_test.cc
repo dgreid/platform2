@@ -20,6 +20,8 @@
 #include <grpcpp/grpcpp.h>
 #include <gtest/gtest.h>
 
+#include "diagnostics/grpc_async_adapter/time_util.h"
+
 namespace diagnostics {
 
 namespace {
@@ -109,12 +111,6 @@ void ObjectDestroyedTesterAdapter(
     std::unique_ptr<ObjectDestroyedTester> object_destroyed_tester,
     bool ok) {
   tag_available_called_tester->Callback(ok);
-}
-
-gpr_timespec GprTimespecWithDeltaFromNow(base::TimeDelta delta) {
-  return gpr_time_add(
-      gpr_now(GPR_CLOCK_MONOTONIC),
-      gpr_time_from_millis(delta.InMilliseconds(), GPR_TIMESPAN));
 }
 
 }  // namespace

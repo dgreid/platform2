@@ -22,6 +22,7 @@ source_set("libgrpc_async_adapter") {
     "async_grpc_server.cc",
     "grpc_completion_queue_dispatcher.cc",
     "rpc_state.cc",
+    "time_util.cc",
   ]
 }
 

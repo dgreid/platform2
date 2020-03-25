@@ -27,6 +27,12 @@ std::shared_ptr<grpc::Channel> AsyncGrpcClientBase::CreateGrpcChannel(
   grpc::ChannelArguments arguments;
   arguments.SetMaxSendMessageSize(kMaxGrpcMessageSize);
   arguments.SetMaxReceiveMessageSize(kMaxGrpcMessageSize);
+  arguments.SetInt(GRPC_ARG_MIN_RECONNECT_BACKOFF_MS,
+                   kMinGrpcReconnectBackoffTime.InMilliseconds());
+  arguments.SetInt(GRPC_ARG_INITIAL_RECONNECT_BACKOFF_MS,
+                   kInitialGrpcReconnectBackoffTime.InMilliseconds());
+  arguments.SetInt(GRPC_ARG_MAX_RECONNECT_BACKOFF_MS,
+                   kMaxGrpcReconnectBackoffTime.InMilliseconds());
   return grpc::CreateCustomChannel(
       target_uri, grpc::InsecureChannelCredentials(), arguments);
 }

@@ -8,4 +8,13 @@ namespace diagnostics {
 
 const int kMaxGrpcMessageSize = 4 * 1024 * 1024;
 
+const base::TimeDelta kMinGrpcReconnectBackoffTime =
+    base::TimeDelta::FromMilliseconds(100);
+const base::TimeDelta kInitialGrpcReconnectBackoffTime =
+    base::TimeDelta::FromMilliseconds(100);
+const base::TimeDelta kMaxGrpcReconnectBackoffTime =
+    base::TimeDelta::FromSeconds(5);
+
+const base::TimeDelta kRpcDeadline = base::TimeDelta::FromMinutes(1);
+
 }  // namespace diagnostics

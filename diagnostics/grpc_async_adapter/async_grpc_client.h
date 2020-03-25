@@ -16,10 +16,13 @@
 #include <base/macros.h>
 #include <base/memory/ref_counted.h>
 #include <base/sequenced_task_runner.h>
+#include <base/time/time.h>
 #include <grpcpp/grpcpp.h>
 #include <grpcpp/support/async_unary_call.h>
 
+#include "diagnostics/grpc_async_adapter/async_grpc_constants.h"
 #include "diagnostics/grpc_async_adapter/grpc_completion_queue_dispatcher.h"
+#include "diagnostics/grpc_async_adapter/time_util.h"
 
 namespace diagnostics {
 namespace internal {
@@ -106,7 +109,7 @@ class AsyncGrpcClient final : public internal::AsyncGrpcClientBase {
                const RequestType& request,
                ReplyCallback<ResponseType> on_reply_callback) {
     std::unique_ptr<RpcState<ResponseType>> rpc_state =
-        std::make_unique<RpcState<ResponseType>>();
+        std::make_unique<RpcState<ResponseType>>(rpc_deadline_);
     RpcState<ResponseType>* rpc_state_unowned = rpc_state.get();
 
     std::unique_ptr<grpc::ClientAsyncResponseReader<ResponseType>> rpc =
@@ -124,10 +127,20 @@ class AsyncGrpcClient final : public internal::AsyncGrpcClientBase {
                 rpc_state_unowned->tag());
   }
 
+  // Sets the request deadline for future requests made with this client.
+  void SetRpcDeadlineForTesting(base::TimeDelta rpc_deadline) {
+    rpc_deadline_ = rpc_deadline;
+  }
+
  private:
   // Holds memory for the response and the grpc Status.
   template <typename ResponseType>
   struct RpcState {
+    explicit RpcState(base::TimeDelta rpc_deadline) {
+      context.set_deadline(GprTimespecWithDeltaFromNow(rpc_deadline));
+      context.set_wait_for_ready(true);
+    }
+
     const void* tag() const { return this; }
     void* tag() { return this; }
 
@@ -154,6 +167,7 @@ class AsyncGrpcClient final : public internal::AsyncGrpcClientBase {
     on_reply_callback.Run(std::move(rpc_state->response));
   }
 
+  base::TimeDelta rpc_deadline_ = kRpcDeadline;
   std::unique_ptr<typename ServiceType::Stub> stub_;
 
   DISALLOW_COPY_AND_ASSIGN(AsyncGrpcClient);

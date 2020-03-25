@@ -580,4 +580,61 @@ TEST_F(AsyncGrpcClientServerTest, RpcServerRestarted) {
   }
 }
 
+// Send a request to a stopped server. The request should not fail immediately,
+// it should wait for the rpc deadline to pass.
+TEST_F(AsyncGrpcClientServerTest, RpcServerStopped) {
+  ShutDownServer();
+
+  client_->SetRpcDeadlineForTesting(base::TimeDelta::FromMilliseconds(50));
+
+  base::TimeTicks start = base::TimeTicks::Now();
+
+  RpcReply<test_rpcs::EchoIntRpcResponse> rpc_reply;
+  test_rpcs::EchoIntRpcRequest request;
+  request.set_int_to_echo(1);
+  client_->CallRpc(&test_rpcs::ExampleService::Stub::AsyncEchoIntRpc, request,
+                   rpc_reply.MakeWriter());
+
+  rpc_reply.Wait();
+  EXPECT_TRUE(rpc_reply.IsError());
+
+  base::TimeDelta duration = base::TimeTicks::Now() - start;
+
+  EXPECT_GT(duration.InMilliseconds(), 40);  // Forgiving time comparison.
+}
+
+// Send a request to a server that starts after the request is made. The client
+// should only send the request after the connection has been established.
+TEST_F(AsyncGrpcClientServerTest, RpcServerStartedAfter) {
+  ShutDownServer();
+
+  RpcReply<test_rpcs::EchoIntRpcResponse> rpc_reply;
+  test_rpcs::EchoIntRpcRequest request;
+  request.set_int_to_echo(1);
+  client_->CallRpc(&test_rpcs::ExampleService::Stub::AsyncEchoIntRpc, request,
+                   rpc_reply.MakeWriter());
+
+  base::TimeTicks start = base::TimeTicks::Now();
+
+  StartServer();
+
+  pending_echo_int_rpcs_.WaitUntilPendingRpcCount(1);
+  auto pending_rpc = pending_echo_int_rpcs_.GetOldestPendingRpc();
+  EXPECT_EQ(1, pending_rpc->request->int_to_echo());
+
+  auto response = std::make_unique<test_rpcs::EchoIntRpcResponse>();
+  response->set_echoed_int(2);
+  pending_rpc->handler_done_callback.Run(std::move(response));
+
+  rpc_reply.Wait();
+  EXPECT_FALSE(rpc_reply.IsError());
+  EXPECT_EQ(2, rpc_reply.response().echoed_int());
+
+  base::TimeDelta duration = base::TimeTicks::Now() - start;
+
+  // Check the reduced initial reconnect time. Forgiving time comparison.
+  EXPECT_LT(duration.InMilliseconds(),
+            5 * kInitialGrpcReconnectBackoffTime.InMilliseconds());
+}
+
 }  // namespace diagnostics
