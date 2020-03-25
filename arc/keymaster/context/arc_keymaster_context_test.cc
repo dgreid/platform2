@@ -4,6 +4,7 @@
 
 #include "arc/keymaster/context/arc_keymaster_context.h"
 
+#include <algorithm>
 #include <array>
 #include <utility>
 #include <vector>
@@ -13,6 +14,8 @@
 #include <chaps/chaps_proxy_mock.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+#include <keymaster/android_keymaster.h>
+#include "keymaster/android_keymaster_messages.h"
 #include <keymaster/authorization_set.h>
 #include <keymaster/keymaster_tags.h>
 #include <keymaster/UniquePtr.h>
@@ -20,6 +23,7 @@
 #include "arc/keymaster/context/context_adaptor.h"
 #include "arc/keymaster/context/openssl_utils.h"
 #include "arc/keymaster/key_data.pb.h"
+#include "keymaster/android_keymaster_utils.h"
 
 using ::testing::_;
 using ::testing::DoAll;
@@ -31,6 +35,11 @@ namespace keymaster {
 namespace context {
 
 namespace {
+
+constexpr size_t kKeymasterOperationTableSize = 16;
+
+constexpr uint32_t kOsVersion = 9;
+constexpr uint32_t kOsPatchlevel = 20200205;
 
 // Arbitrary non-zero id.
 constexpr uint64_t kSessionId = 42;
@@ -185,6 +194,27 @@ const brillo::Blob kValidMaterial = {
   return ::testing::AssertionSuccess();
 }
 
+keymaster_error_t generateTestKey(
+    ::keymaster::AndroidKeymaster* keymaster,
+    ::keymaster::KeymasterKeyBlob* generated_key) {
+  ::keymaster::GenerateKeyRequest request;
+  ::keymaster::AuthorizationSetBuilder();
+  request.key_description =
+      ::keymaster::AuthorizationSetBuilder()
+          .AesEncryptionKey(128)
+          .Padding(KM_PAD_NONE)
+          .Authorization(::keymaster::TAG_NO_AUTH_REQUIRED)
+          .build();
+  ::keymaster::GenerateKeyResponse response;
+  keymaster->GenerateKey(request, &response);
+  generated_key->Reset(response.key_blob.key_material_size);
+  std::copy(
+      response.key_blob.key_material,
+      response.key_blob.key_material + response.key_blob.key_material_size,
+      generated_key->writable_data());
+  return response.error;
+}
+
 }  // anonymous namespace
 
 // Expose interesting private members of ArcKeymasterContext for tests.
@@ -222,14 +252,15 @@ class ContextTestPeer {
 class ArcKeymasterContextTest : public ::testing::Test {
  protected:
   ArcKeymasterContextTest()
-      : context_(scoped_refptr<::dbus::Bus>()),
+      : context_(new ArcKeymasterContext(scoped_refptr<::dbus::Bus>())),
+        keymaster_(context_, kKeymasterOperationTableSize),
         key_material_(kBlob1.data(), kBlob1.size()),
         valid_key_blob_(kValidKeyBlob1.data(), kValidKeyBlob1.size()),
         invalid_key_blob_(kBlob2.data(), kBlob2.size()) {}
 
   void SetUp() override {
-    ContextTestPeer::context_adaptor(&context_).set_slot_for_tests(1);
-    ContextTestPeer::context_adaptor(&context_).set_encryption_key(
+    ContextTestPeer::context_adaptor(context_).set_slot_for_tests(1);
+    ContextTestPeer::context_adaptor(context_).set_encryption_key(
         kEncryptionKey);
     // All values pushed into authorization sets below are arbitrary.
     hidden_.push_back(::keymaster::TAG_APPLICATION_ID, kBlob1.data(),
@@ -243,7 +274,9 @@ class ArcKeymasterContextTest : public ::testing::Test {
     sw_enforced_.push_back(::keymaster::TAG_NO_AUTH_REQUIRED);
   }
 
-  ArcKeymasterContext context_;
+  // Owned by |keymaster_|.
+  ArcKeymasterContext* context_;
+  ::keymaster::AndroidKeymaster keymaster_;
   const ::keymaster::KeymasterKeyBlob key_material_;
   const ::keymaster::KeymasterKeyBlob valid_key_blob_;
   // This blob is invalid because it is not long enough.
@@ -262,8 +295,8 @@ TEST_F(ArcKeymasterContextTest, CreateKeyBlob) {
   ::keymaster::AuthorizationSet hw_enforced;
   ::keymaster::AuthorizationSet sw_enforced;
   keymaster_error_t error =
-      context_.CreateKeyBlob(description, KM_ORIGIN_GENERATED, key_material,
-                             &blob, &hw_enforced, &sw_enforced);
+      context_->CreateKeyBlob(description, KM_ORIGIN_GENERATED, key_material,
+                              &blob, &hw_enforced, &sw_enforced);
 
   // Verify operation succeeds.
   ASSERT_EQ(KM_ERROR_OK, error);
@@ -275,7 +308,7 @@ TEST_F(ArcKeymasterContextTest, ParseKeyBlob) {
                                      kValidKeyBlob1.size());
   ::keymaster::AuthorizationSet additional;
   ::keymaster::UniquePtr<::keymaster::Key> key;
-  keymaster_error_t error = context_.ParseKeyBlob(blob, additional, &key);
+  keymaster_error_t error = context_->ParseKeyBlob(blob, additional, &key);
 
   // Verify operation succeeds.
   ASSERT_EQ(KM_ERROR_OK, error);
@@ -291,8 +324,8 @@ TEST_F(ArcKeymasterContextTest, CreateThenParseKeyBlob) {
   ::keymaster::AuthorizationSet hw_enforced;
   ::keymaster::AuthorizationSet sw_enforced;
   keymaster_error_t error =
-      context_.CreateKeyBlob(description, KM_ORIGIN_GENERATED, key_material,
-                             &blob, &hw_enforced, &sw_enforced);
+      context_->CreateKeyBlob(description, KM_ORIGIN_GENERATED, key_material,
+                              &blob, &hw_enforced, &sw_enforced);
 
   // Verify creation succeeds.
   ASSERT_EQ(KM_ERROR_OK, error);
@@ -300,7 +333,7 @@ TEST_F(ArcKeymasterContextTest, CreateThenParseKeyBlob) {
   // Parse the created blob.
   ::keymaster::AuthorizationSet additional;
   ::keymaster::UniquePtr<::keymaster::Key> key;
-  error = context_.ParseKeyBlob(blob, additional, &key);
+  error = context_->ParseKeyBlob(blob, additional, &key);
 
   // Verify parsing succeeds and |key| contains the right |key_material|.
   ASSERT_EQ(KM_ERROR_OK, error);
@@ -311,7 +344,7 @@ TEST_F(ArcKeymasterContextTest, SerializeKeyDataBlob) {
   // Serialize.
   ::keymaster::KeymasterKeyBlob key_blob;
   keymaster_error_t error = ContextTestPeer::SerializeKeyDataBlob(
-      context_, key_material_, hidden_, hw_enforced_, sw_enforced_, &key_blob);
+      *context_, key_material_, hidden_, hw_enforced_, sw_enforced_, &key_blob);
 
   // Verify operation succeeds and blob is at least the size of IV and tag.
   ASSERT_EQ(KM_ERROR_OK, error);
@@ -328,7 +361,7 @@ TEST_F(ArcKeymasterContextTest, DeserializeKeyDataBlob) {
   ::keymaster::AuthorizationSet out_hw_enforced;
   ::keymaster::AuthorizationSet out_sw_enforced;
   keymaster_error_t error = ContextTestPeer::DeserializeKeyDataBlob(
-      context_, key_blob, hidden_, &out_key_material, &out_hw_enforced,
+      *context_, key_blob, hidden_, &out_key_material, &out_hw_enforced,
       &out_sw_enforced);
 
   // Verify operation succeeded.
@@ -339,7 +372,7 @@ TEST_F(ArcKeymasterContextTest, SerializeThenDeserialize) {
   // Serialize.
   ::keymaster::KeymasterKeyBlob key_blob;
   keymaster_error_t error = ContextTestPeer::SerializeKeyDataBlob(
-      context_, key_material_, hidden_, hw_enforced_, sw_enforced_, &key_blob);
+      *context_, key_material_, hidden_, hw_enforced_, sw_enforced_, &key_blob);
   ASSERT_EQ(KM_ERROR_OK, error);
 
   // Deserialize.
@@ -347,7 +380,7 @@ TEST_F(ArcKeymasterContextTest, SerializeThenDeserialize) {
   ::keymaster::AuthorizationSet out_hw_enforced;
   ::keymaster::AuthorizationSet out_sw_enforced;
   error = ContextTestPeer::DeserializeKeyDataBlob(
-      context_, key_blob, hidden_, &out_key_material, &out_hw_enforced,
+      *context_, key_blob, hidden_, &out_key_material, &out_hw_enforced,
       &out_sw_enforced);
   ASSERT_EQ(KM_ERROR_OK, error);
 
@@ -357,11 +390,88 @@ TEST_F(ArcKeymasterContextTest, SerializeThenDeserialize) {
   EXPECT_TRUE(AuthorizationSetEquals(sw_enforced_, out_sw_enforced));
 }
 
+TEST_F(ArcKeymasterContextTest, UpgradeKeyBlob) {
+  // Prepare a key generated at an arbitrary system version.
+  context_->SetSystemVersion(kOsVersion, kOsPatchlevel);
+  ::keymaster::KeymasterKeyBlob generated_key;
+  keymaster_error_t error = generateTestKey(&keymaster_, &generated_key);
+  ASSERT_EQ(error, KM_ERROR_OK);
+
+  // Verify the old blob can't be used after a system upgrade.
+  context_->SetSystemVersion(kOsVersion, kOsPatchlevel + 1);
+  ::keymaster::GetKeyCharacteristicsRequest characteristicsRequest1;
+  characteristicsRequest1.SetKeyMaterial(generated_key);
+  ::keymaster::GetKeyCharacteristicsResponse characteristicsResponse1;
+  keymaster_.GetKeyCharacteristics(characteristicsRequest1,
+                                   &characteristicsResponse1);
+  ASSERT_EQ(characteristicsResponse1.error, KM_ERROR_KEY_REQUIRES_UPGRADE);
+
+  // Upgrade the key blob.
+  ::keymaster::KeymasterKeyBlob key_blob(generated_key);
+  ::keymaster::KeymasterKeyBlob upgraded_key_blob;
+  ::keymaster::AuthorizationSet upgrade_params;
+  error =
+      context_->UpgradeKeyBlob(key_blob, upgrade_params, &upgraded_key_blob);
+  ASSERT_EQ(error, KM_ERROR_OK);
+
+  // Verify the blob can be used without errors once upgraded.
+  ::keymaster::GetKeyCharacteristicsRequest characteristicsRequest2;
+  characteristicsRequest2.SetKeyMaterial(upgraded_key_blob);
+  ::keymaster::GetKeyCharacteristicsResponse characteristicsResponse2;
+  keymaster_.GetKeyCharacteristics(characteristicsRequest2,
+                                   &characteristicsResponse2);
+  ASSERT_EQ(characteristicsResponse2.error, KM_ERROR_OK);
+}
+
+TEST_F(ArcKeymasterContextTest, UpgradeKeyBlobAlreadyUpToDate) {
+  // Prepare a key generated at an arbitrary system version.
+  context_->SetSystemVersion(kOsVersion, kOsPatchlevel);
+  ::keymaster::KeymasterKeyBlob generated_key;
+  keymaster_error_t error = generateTestKey(&keymaster_, &generated_key);
+  ASSERT_EQ(error, KM_ERROR_OK);
+
+  // Verify upgrading the blob does nothing (returns an empty blob).
+  ::keymaster::KeymasterKeyBlob key_blob(generated_key);
+  ::keymaster::KeymasterKeyBlob upgraded_key_blob;
+  ::keymaster::AuthorizationSet upgrade_params;
+  error =
+      context_->UpgradeKeyBlob(key_blob, upgrade_params, &upgraded_key_blob);
+  ASSERT_EQ(error, KM_ERROR_OK);
+  ASSERT_EQ(upgraded_key_blob.key_material_size, 0);
+}
+
+TEST_F(ArcKeymasterContextTest, UpgradeKeyBlobLowerVersionError) {
+  // Prepare a key generated at an arbitrary system version.
+  context_->SetSystemVersion(kOsVersion, kOsPatchlevel);
+  ::keymaster::KeymasterKeyBlob generated_key;
+  keymaster_error_t error = generateTestKey(&keymaster_, &generated_key);
+  ASSERT_EQ(error, KM_ERROR_OK);
+
+  // Downgrade the system to a previous version.
+  context_->SetSystemVersion(kOsVersion, kOsPatchlevel - 1);
+
+  // Verify the old blob becomes invalid.
+  ::keymaster::GetKeyCharacteristicsRequest characteristicsRequest1;
+  characteristicsRequest1.SetKeyMaterial(generated_key);
+  ::keymaster::GetKeyCharacteristicsResponse characteristicsResponse1;
+  keymaster_.GetKeyCharacteristics(characteristicsRequest1,
+                                   &characteristicsResponse1);
+  EXPECT_EQ(characteristicsResponse1.error, KM_ERROR_INVALID_KEY_BLOB);
+
+  // Verify the blob cannot be upgraded.
+  ::keymaster::KeymasterKeyBlob key_blob(generated_key);
+  ::keymaster::KeymasterKeyBlob upgraded_key_blob;
+  ::keymaster::AuthorizationSet upgrade_params;
+  error =
+      context_->UpgradeKeyBlob(key_blob, upgrade_params, &upgraded_key_blob);
+  ASSERT_EQ(error, KM_ERROR_INVALID_ARGUMENT);
+}
+
 TEST_F(ArcKeymasterContextTest, WrongHiddenSet) {
   // Serialize.
   ::keymaster::KeymasterKeyBlob key_blob;
   keymaster_error_t error = ContextTestPeer::SerializeKeyDataBlob(
-      context_, key_material_, hidden_, hw_enforced_, sw_enforced_, &key_blob);
+      *context_, key_material_, hidden_, hw_enforced_, sw_enforced_, &key_blob);
   ASSERT_EQ(KM_ERROR_OK, error);
 
   // Deserialize the same key_blob with a different hidden authorization set.
@@ -370,7 +480,7 @@ TEST_F(ArcKeymasterContextTest, WrongHiddenSet) {
   ::keymaster::AuthorizationSet out_hw_enforced;
   ::keymaster::AuthorizationSet out_sw_enforced;
   error = ContextTestPeer::DeserializeKeyDataBlob(
-      context_, key_blob, other_hidden, &out_key_material, &out_hw_enforced,
+      *context_, key_blob, other_hidden, &out_key_material, &out_hw_enforced,
       &out_sw_enforced);
 
   // Verify operation fails.
@@ -386,7 +496,7 @@ TEST_F(ArcKeymasterContextTest, DeserializeKeyDataBlob_ShortInputError) {
   ::keymaster::AuthorizationSet out_hw_enforced;
   ::keymaster::AuthorizationSet out_sw_enforced;
   keymaster_error_t error = ContextTestPeer::DeserializeKeyDataBlob(
-      context_, key_blob, hidden_, &out_key_material, &out_hw_enforced,
+      *context_, key_blob, hidden_, &out_key_material, &out_hw_enforced,
       &out_sw_enforced);
 
   // Verify operation fails.
@@ -405,7 +515,7 @@ TEST_F(ArcKeymasterContextTest, DeserializeKeyDataBlob_InvalidSignatureError) {
   ::keymaster::AuthorizationSet out_hw_enforced;
   ::keymaster::AuthorizationSet out_sw_enforced;
   keymaster_error_t error = ContextTestPeer::DeserializeKeyDataBlob(
-      context_, key_blob, hidden_, &out_key_material, &out_hw_enforced,
+      *context_, key_blob, hidden_, &out_key_material, &out_hw_enforced,
       &out_sw_enforced);
 
   // Verify operation fails.
@@ -425,7 +535,7 @@ TEST_F(ArcKeymasterContextTest,
   ::keymaster::AuthorizationSet out_hw_enforced;
   ::keymaster::AuthorizationSet out_sw_enforced;
   keymaster_error_t error = ContextTestPeer::DeserializeKeyDataBlob(
-      context_, key_blob, hidden_, &out_key_material, &out_hw_enforced,
+      *context_, key_blob, hidden_, &out_key_material, &out_hw_enforced,
       &out_sw_enforced);
 
   // Verify results.
@@ -435,7 +545,7 @@ TEST_F(ArcKeymasterContextTest,
 TEST_F(ArcKeymasterContextTest, SerializeKeyDataBlob_NullOutputParameterError) {
   // Verify serialize returns error if the output parameter is null.
   keymaster_error_t error = ContextTestPeer::SerializeKeyDataBlob(
-      context_, key_material_, hidden_, hw_enforced_, sw_enforced_,
+      *context_, key_material_, hidden_, hw_enforced_, sw_enforced_,
       /* key_blob */ nullptr);
   ASSERT_EQ(KM_ERROR_OUTPUT_PARAMETER_NULL, error);
 }
@@ -448,24 +558,24 @@ TEST_F(ArcKeymasterContextTest,
   ::keymaster::AuthorizationSet out_sw_enforced;
 
   keymaster_error_t error = ContextTestPeer::DeserializeKeyDataBlob(
-      context_, valid_key_blob_, hidden_, /* key_material */ nullptr,
+      *context_, valid_key_blob_, hidden_, /* key_material */ nullptr,
       &out_hw_enforced, &out_sw_enforced);
   ASSERT_EQ(KM_ERROR_OUTPUT_PARAMETER_NULL, error);
 
   error = ContextTestPeer::DeserializeKeyDataBlob(
-      context_, valid_key_blob_, hidden_, &out_key_material,
+      *context_, valid_key_blob_, hidden_, &out_key_material,
       /* hw_enforced */ nullptr, &out_sw_enforced);
   ASSERT_EQ(KM_ERROR_OUTPUT_PARAMETER_NULL, error);
 
   error = ContextTestPeer::DeserializeKeyDataBlob(
-      context_, valid_key_blob_, hidden_, &out_key_material, &out_hw_enforced,
+      *context_, valid_key_blob_, hidden_, &out_key_material, &out_hw_enforced,
       /* sw_enforced */ nullptr);
   ASSERT_EQ(KM_ERROR_OUTPUT_PARAMETER_NULL, error);
 }
 
 TEST_F(ArcKeymasterContextTest, SerializeKeyDataBlob_EncryptionKeyError) {
   // Clear the cached encryption key.
-  ContextTestPeer::context_adaptor(&context_).set_encryption_key(base::nullopt);
+  ContextTestPeer::context_adaptor(context_).set_encryption_key(base::nullopt);
   // Make sure an existing key won't be found in chaps.
   ::testing::StrictMock<::chaps::ChapsProxyMock> chaps_mock(
       /* is_initialized */ true);
@@ -481,7 +591,7 @@ TEST_F(ArcKeymasterContextTest, SerializeKeyDataBlob_EncryptionKeyError) {
   // Serialize.
   ::keymaster::KeymasterKeyBlob key_blob;
   keymaster_error_t error = ContextTestPeer::SerializeKeyDataBlob(
-      context_, key_material_, hidden_, hw_enforced_, sw_enforced_, &key_blob);
+      *context_, key_material_, hidden_, hw_enforced_, sw_enforced_, &key_blob);
 
   // Verify it errors.
   ASSERT_EQ(KM_ERROR_UNKNOWN_ERROR, error);
@@ -507,7 +617,7 @@ TEST_F(ArcKeymasterContextTest, DeserializeKeyDataBlob_InvalidKeyDataError) {
   ::keymaster::AuthorizationSet out_hw_enforced;
   ::keymaster::AuthorizationSet out_sw_enforced;
   keymaster_error_t error = ContextTestPeer::DeserializeKeyDataBlob(
-      context_, key_blob, hidden_, &out_key_material, &out_hw_enforced,
+      *context_, key_blob, hidden_, &out_key_material, &out_hw_enforced,
       &out_sw_enforced);
   ASSERT_EQ(KM_ERROR_INVALID_KEY_BLOB, error);
 }

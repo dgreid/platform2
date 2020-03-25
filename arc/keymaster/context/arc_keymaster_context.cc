@@ -55,6 +55,31 @@ brillo::Blob SerializeAuthorizationSetToBlob(
   return blob;
 }
 
+bool UpgradeIntegerTag(keymaster_tag_t tag,
+                       uint32_t value,
+                       ::keymaster::AuthorizationSet* authorization_set,
+                       bool* authorization_set_did_change) {
+  *authorization_set_did_change = false;
+  int tag_index = authorization_set->find(tag);
+  if (tag_index == -1) {
+    keymaster_key_param_t key_param;
+    key_param.tag = tag;
+    key_param.integer = value;
+    authorization_set->push_back(key_param);
+    *authorization_set_did_change = true;
+    return true;
+  }
+
+  if (authorization_set->params[tag_index].integer > value)
+    return false;
+
+  if (authorization_set->params[tag_index].integer != value) {
+    authorization_set->params[tag_index].integer = value;
+    *authorization_set_did_change = true;
+  }
+  return true;
+}
+
 KeyData PackToArcKeyData(const ::keymaster::KeymasterKeyBlob& key_material,
                          const ::keymaster::AuthorizationSet& hw_enforced,
                          const ::keymaster::AuthorizationSet& sw_enforced) {
@@ -153,6 +178,44 @@ keymaster_error_t ArcKeymasterContext::ParseKeyBlob(
   auto factory = GetKeyFactory(algorithm);
   return factory->LoadKey(move(key_material), additional_params,
                           move(hw_enforced), move(sw_enforced), key);
+}
+
+keymaster_error_t ArcKeymasterContext::UpgradeKeyBlob(
+    const ::keymaster::KeymasterKeyBlob& key_blob,
+    const ::keymaster::AuthorizationSet& upgrade_params,
+    ::keymaster::KeymasterKeyBlob* upgraded_key) const {
+  // Deserialize |key_blob| so it can be upgraded.
+  ::keymaster::AuthorizationSet hidden;
+  keymaster_error_t error = BuildHiddenAuthorizations(
+      upgrade_params, &hidden, ::keymaster::softwareRootOfTrust);
+  if (error != KM_ERROR_OK)
+    return error;
+
+  ::keymaster::AuthorizationSet hw_enforced;
+  ::keymaster::AuthorizationSet sw_enforced;
+  ::keymaster::KeymasterKeyBlob key_material;
+  error = DeserializeBlob(key_blob, hidden, &key_material, &hw_enforced,
+                          &sw_enforced);
+  if (error != KM_ERROR_OK)
+    return error;
+
+  // Try to upgrade system version and patchlevel, return if upgrade fails.
+  bool os_version_did_change = false;
+  bool patchlevel_did_change = false;
+  if (!UpgradeIntegerTag(::keymaster::TAG_OS_VERSION, os_version_, &sw_enforced,
+                         &os_version_did_change) ||
+      !UpgradeIntegerTag(::keymaster::TAG_OS_PATCHLEVEL, os_patchlevel_,
+                         &sw_enforced, &patchlevel_did_change)) {
+    return KM_ERROR_INVALID_ARGUMENT;
+  }
+
+  // Do nothing if blob is already up to date.
+  if (!os_version_did_change && !patchlevel_did_change)
+    return KM_ERROR_OK;
+
+  // Serialize the new blob into |upgraded_key|.
+  return SerializeKeyDataBlob(key_material, hidden, hw_enforced, sw_enforced,
+                              upgraded_key);
 }
 
 keymaster_error_t ArcKeymasterContext::DeserializeBlob(

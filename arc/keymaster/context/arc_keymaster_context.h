@@ -45,6 +45,10 @@ class ArcKeymasterContext : public ::keymaster::PureSoftKeymasterContext {
       const ::keymaster::KeymasterKeyBlob& key_blob,
       const ::keymaster::AuthorizationSet& additional_params,
       ::keymaster::UniquePtr<::keymaster::Key>* key) const override;
+  keymaster_error_t UpgradeKeyBlob(
+      const ::keymaster::KeymasterKeyBlob& key_to_upgrade,
+      const ::keymaster::AuthorizationSet& upgrade_params,
+      ::keymaster::KeymasterKeyBlob* upgraded_key) const override;
 
  private:
   // Deserialize the given |key_blob| into |key_material| and auth sets.
