@@ -877,6 +877,7 @@ void Daemon::InitDBus() {
        &Daemon::HandleGetBacklightsForcedOffMethod},
       {kHasAmbientColorDeviceMethod,
        &Daemon::HandleHasAmbientColorDeviceMethod},
+      {kChangeWifiRegDomainMethod, &Daemon::HandleChangeWifiRegDomainMethod},
   };
   for (const auto& it : kDaemonMethods) {
     dbus_wrapper_->ExportMethod(
@@ -1206,6 +1207,36 @@ std::unique_ptr<dbus::Response> Daemon::HandleHasAmbientColorDeviceMethod(
 
   dbus::MessageWriter(response.get()).AppendBool(has_color_device);
   return response;
+}
+
+std::unique_ptr<dbus::Response> Daemon::HandleChangeWifiRegDomainMethod(
+    dbus::MethodCall* method_call) {
+  int32_t arg = 0;
+  dbus::MessageReader reader(method_call);
+  WifiRegDomain domain = WifiRegDomain::NONE;
+  if (!reader.PopInt32(&arg)) {
+    LOG(ERROR) << "Unable to read " << kChangeWifiRegDomainMethod << " args";
+    return CreateInvalidArgsError(method_call, "Expected Int32");
+  }
+  switch (static_cast<WifiRegDomainDbus>(arg)) {
+    case WIFI_REG_DOMAIN_FCC:
+      domain = WifiRegDomain::FCC;
+      break;
+    case WIFI_REG_DOMAIN_EU:
+      domain = WifiRegDomain::EU;
+      break;
+    case WIFI_REG_DOMAIN_REST_OF_WORLD:
+      domain = WifiRegDomain::REST_OF_WORLD;
+      break;
+    case WIFI_REG_DOMAIN_NONE:
+      break;
+    default:
+      LOG(WARNING) << "Got unknown WiFi regulatory domain " << arg;
+  }
+
+  LOG(INFO) << "Received request to change reg domain to \""
+            << WifiRegDomainToString(domain) << "\"";
+  return nullptr;
 }
 
 void Daemon::OnSessionStateChange(const std::string& state_str) {

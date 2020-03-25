@@ -8,6 +8,7 @@
 
 #include <base/bind.h>
 #include <chromeos/dbus/service_constants.h>
+#include <linux/nl80211.h>
 
 #include "shill/control_interface.h"
 #include "shill/logging.h"
@@ -37,7 +38,8 @@ PowerManager::PowerManager(ControlInterface* control_interface)
       in_dark_resume_(false),
       current_suspend_id_(0),
       current_dark_suspend_id_(0),
-      suspend_duration_us_(0) {}
+      suspend_duration_us_(0),
+      wifi_reg_domain_is_set(false) {}
 
 PowerManager::~PowerManager() = default;
 
@@ -98,6 +100,35 @@ bool PowerManager::ReportDarkSuspendReadiness() {
 
 bool PowerManager::RecordDarkResumeWakeReason(const std::string& wake_reason) {
   return power_manager_proxy_->RecordDarkResumeWakeReason(wake_reason);
+}
+
+bool PowerManager::ChangeRegDomain(nl80211_dfs_regions domain) {
+  auto new_domain = power_manager::WIFI_REG_DOMAIN_NONE;
+  switch (domain) {
+    case NL80211_DFS_FCC:
+      new_domain = power_manager::WIFI_REG_DOMAIN_FCC;
+      break;
+    case NL80211_DFS_ETSI:
+      new_domain = power_manager::WIFI_REG_DOMAIN_EU;
+      break;
+    case NL80211_DFS_JP:
+      new_domain = power_manager::WIFI_REG_DOMAIN_REST_OF_WORLD;
+      break;
+    case NL80211_DFS_UNSET:
+      new_domain = power_manager::WIFI_REG_DOMAIN_NONE;
+      break;
+    default:
+      LOG(WARNING) << "Unrecognized WiFi reg domain: "
+                   << std::to_string(domain);
+      return false;
+  }
+  wifi_reg_domain_is_set = true;
+
+  if (new_domain != wifi_reg_domain_) {
+    wifi_reg_domain_ = new_domain;
+    return power_manager_proxy_->ChangeRegDomain(wifi_reg_domain_);
+  }
+  return false;
 }
 
 void PowerManager::OnSuspendImminent(int suspend_id) {
@@ -182,6 +213,9 @@ void PowerManager::OnPowerManagerAppeared() {
           suspend_delay_, kDarkSuspendDelayDescription,
           &dark_suspend_delay_id_))
     dark_suspend_delay_registered_ = true;
+  if (wifi_reg_domain_is_set) {
+    power_manager_proxy_->ChangeRegDomain(wifi_reg_domain_);
+  }
 }
 
 void PowerManager::OnPowerManagerVanished() {

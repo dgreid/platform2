@@ -8,6 +8,7 @@
 #include <string>
 
 #include <base/time/time.h>
+#include <chromeos/dbus/service_constants.h>
 
 namespace shill {
 
@@ -58,6 +59,8 @@ class PowerManagerProxyInterface {
   // Calls the power manager's RecordDarkResumeWakeReason method to record the
   // wake reason for the current dark resume. Returns true on success.
   virtual bool RecordDarkResumeWakeReason(const std::string& wake_reason) = 0;
+
+  virtual bool ChangeRegDomain(power_manager::WifiRegDomainDbus domain) = 0;
 };
 
 // PowerManager signal delegate to be associated with the proxy.

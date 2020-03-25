@@ -5,6 +5,7 @@
 #include "shill/dbus/power_manager_proxy.h"
 
 #include <base/bind.h>
+#include <chromeos/dbus/service_constants.h>
 #include <google/protobuf/message_lite.h>
 
 #include "power_manager/proto_bindings/suspend.pb.h"
@@ -149,6 +150,26 @@ bool PowerManagerProxy::RecordDarkResumeWakeReason(const string& wake_reason) {
   if (!proxy_->RecordDarkResumeWakeReason(serialized_proto, &error)) {
     LOG(ERROR) << "Failed tp record dark resume wake reason: "
                << error->GetCode() << " " << error->GetMessage();
+    return false;
+  }
+  return true;
+}
+
+bool PowerManagerProxy::ChangeRegDomain(
+    power_manager::WifiRegDomainDbus domain) {
+  LOG(INFO) << __func__;
+
+  if (!service_available_) {
+    LOG(ERROR) << "PowerManager service not available";
+    return false;
+  }
+  brillo::ErrorPtr error;
+
+  proxy_->ChangeWifiRegDomain(domain, &error);
+
+  if (error) {
+    LOG(ERROR) << "Failed to change reg domain: " << error->GetCode() << " "
+               << error->GetMessage();
     return false;
   }
   return true;

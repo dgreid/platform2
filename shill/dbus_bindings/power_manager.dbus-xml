@@ -33,6 +33,9 @@
     <method name="RecordDarkResumeWakeReason">
       <arg name="serialized_proto" direction="in" type="ay"/>
     </method>
+    <method name="ChangeWifiRegDomain">
+      <arg name="domain" direction="in" type="i"/>
+    </method>
     <signal name="DarkSuspendImminent">
       <arg name="serialized_proto" type="ay"/>
     </signal>

@@ -16,6 +16,7 @@
 #include <vector>
 
 #include <base/compiler_specific.h>
+#include <chromeos/dbus/service_constants.h>
 #include <power_manager/dbus-proxies.h>
 
 #include "shill/power_manager_proxy_interface.h"
@@ -47,6 +48,7 @@ class PowerManagerProxy : public PowerManagerProxyInterface {
   bool UnregisterDarkSuspendDelay(int delay_id) override;
   bool ReportDarkSuspendReadiness(int delay_id, int suspend_id) override;
   bool RecordDarkResumeWakeReason(const std::string& wake_reason) override;
+  bool ChangeRegDomain(power_manager::WifiRegDomainDbus domain) override;
 
  private:
   // Signal handlers.

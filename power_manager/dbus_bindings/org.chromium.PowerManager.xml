@@ -22,6 +22,13 @@
       <arg name="reason" direction="in" type="i" />
       <arg name="description" direction="in" type="s" />
     </method>
+    <method name="ChangeWifiRegDomain">
+      <tp:docstring>
+        The |domain| arg is a power_manager::WifiRegDomainDbus value.
+        Change the WiFi regdomain.
+      </tp:docstring>
+      <arg name="domain" direction="in" type="i" />
+    </method>
     <method name="RequestSuspend">
       <tp:docstring>
         The |external_wakeup_count| arg is optional, and it will call two

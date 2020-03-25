@@ -368,6 +368,13 @@ enum class ShutdownReason {
   OTHER_REQUEST_TO_POWERD = 7,
 };
 
+enum class WifiRegDomain {
+  FCC,
+  EU,
+  REST_OF_WORLD,
+  NONE,
+};
+
 // Returns human-readable descriptions of enum values.
 std::string PowerSourceToString(PowerSource source);
 std::string LidStateToString(LidState state);
@@ -377,6 +384,7 @@ std::string SessionStateToString(SessionState state);
 std::string DisplayModeToString(DisplayMode mode);
 std::string ButtonStateToString(ButtonState state);
 std::string ShutdownReasonToString(ShutdownReason reason);
+std::string WifiRegDomainToString(WifiRegDomain domain);
 
 }  // namespace power_manager
 

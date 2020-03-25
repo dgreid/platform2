@@ -29,6 +29,7 @@ class MockPowerManager : public PowerManager {
                const PowerManager::DarkSuspendImminentCallback&),
               (override));
   MOCK_METHOD(void, Stop, (), (override));
+  MOCK_METHOD(bool, ChangeRegDomain, (nl80211_dfs_regions), (override));
 
  private:
   DISALLOW_COPY_AND_ASSIGN(MockPowerManager);

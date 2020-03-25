@@ -43,6 +43,7 @@
 #include "shill/mock_log.h"
 #include "shill/mock_manager.h"
 #include "shill/mock_metrics.h"
+#include "shill/mock_power_manager.h"
 #include "shill/mock_profile.h"
 #include "shill/mock_store.h"
 #include "shill/net/ieee80211.h"
@@ -546,6 +547,7 @@ class WiFiObjectTest : public ::testing::TestWithParam<string> {
   explicit WiFiObjectTest(std::unique_ptr<EventDispatcher> dispatcher)
       : event_dispatcher_(std::move(dispatcher)),
         manager_(&control_interface_, event_dispatcher_.get(), &metrics_),
+        power_manager_(new MockPowerManager(control_interface())),
         device_info_(&manager_),
         wifi_(new WiFi(&manager_,
                        kDeviceName,
@@ -614,6 +616,8 @@ class WiFiObjectTest : public ::testing::TestWithParam<string> {
     wifi_->time_ = &time_;
     wifi_->netlink_manager_ = &netlink_manager_;
     wifi_->adaptor_.reset(adaptor_);  // Transfers ownership.
+
+    manager_.set_power_manager(power_manager_);  // Transfers ownership.
 
     // The following is only useful when a real |ScanSession| is used; it is
     // ignored by |MockScanSession|.
@@ -1112,6 +1116,8 @@ class WiFiObjectTest : public ::testing::TestWithParam<string> {
 
   MockManager* manager() { return &manager_; }
 
+  MockPowerManager* power_manager() { return power_manager_; }
+
   MockDeviceInfo* device_info() { return &device_info_; }
 
   MockDHCPProvider* dhcp_provider() { return &dhcp_provider_; }
@@ -1183,6 +1189,7 @@ class WiFiObjectTest : public ::testing::TestWithParam<string> {
   MockControl control_interface_;
   MockMetrics metrics_;
   MockManager manager_;
+  MockPowerManager* power_manager_;  // Owned by |manager_|.
   MockDeviceInfo device_info_;
   WiFiRefPtr wifi_;
   NiceMock<MockWiFiProvider> wifi_provider_;
@@ -4236,8 +4243,6 @@ TEST_F(WiFiMainTest, OnGetReg) {
   GetRegMessage msg;
   msg.attributes()->CreateStringAttribute(NL80211_ATTR_REG_ALPHA2, "alpha2");
   msg.attributes()->CreateU8Attribute(NL80211_ATTR_DFS_REGION, "dfs-region");
-  msg.attributes()->SetU8AttributeValue(NL80211_ATTR_DFS_REGION,
-                                        NL80211_DFS_UNSET);
 
   // First Regulatory Domain enum enrty.
   msg.attributes()->SetStringAttributeValue(NL80211_ATTR_REG_ALPHA2, "00");
@@ -4245,12 +4250,18 @@ TEST_F(WiFiMainTest, OnGetReg) {
               SendEnumToUMA(Metrics::kMetricRegulatoryDomain,
                             Metrics::RegulatoryDomain::kRegDom00, _))
       .Times(1);
+  // Should call ChangeRegDomain with region UNSET when no dfs_region present.
+  EXPECT_CALL(*power_manager(), ChangeRegDomain(NL80211_DFS_UNSET)).Times(1);
   OnGetReg(msg);
   // Last Regulatory Domain enum entry. Zimbabwe = 674.
   msg.attributes()->SetStringAttributeValue(NL80211_ATTR_REG_ALPHA2, "ZW");
   EXPECT_CALL(*metrics(),
               SendEnumToUMA(Metrics::kMetricRegulatoryDomain, 674, _))
       .Times(1);
+  msg.attributes()->SetU8AttributeValue(NL80211_ATTR_DFS_REGION,
+                                        NL80211_DFS_FCC);
+  // Subsequent calls should all call ChangeRegDomain() with the current region.
+  EXPECT_CALL(*power_manager(), ChangeRegDomain(NL80211_DFS_FCC)).Times(4);
   OnGetReg(msg);
   // Second call with same country code should not trigger SendEnumToUMA() call.
   OnGetReg(msg);
@@ -4272,6 +4283,15 @@ TEST_F(WiFiMainTest, OnGetReg) {
   EXPECT_CALL(*metrics(), SendEnumToUMA(Metrics::kMetricRegulatoryDomain, _, _))
       .Times(0);
   OnGetReg(no_alpha2);
+  msg.attributes()->SetU8AttributeValue(NL80211_ATTR_DFS_REGION,
+                                        NL80211_DFS_ETSI);
+  EXPECT_CALL(*power_manager(), ChangeRegDomain(NL80211_DFS_ETSI)).Times(2);
+  OnGetReg(msg);
+  OnGetReg(msg);
+  EXPECT_CALL(*power_manager(), ChangeRegDomain(NL80211_DFS_JP)).Times(1);
+  msg.attributes()->SetU8AttributeValue(NL80211_ATTR_DFS_REGION,
+                                        NL80211_DFS_JP);
+  OnGetReg(msg);
 }
 
 }  // namespace shill

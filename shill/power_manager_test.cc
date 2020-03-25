@@ -150,6 +150,12 @@ class PowerManagerTest : public Test {
         .WillOnce(Return(return_value));
   }
 
+  void AddProxyExpectationForChangeRegDomain(
+      power_manager::WifiRegDomainDbus domain, bool return_value) {
+    EXPECT_CALL(*power_manager_proxy_, ChangeRegDomain(domain))
+        .WillOnce(Return(return_value));
+  }
+
   void RegisterSuspendDelays() {
     AddProxyExpectationForRegisterSuspendDelay(kDelayId, true);
     AddProxyExpectationForRegisterDarkSuspendDelay(kDelayId, true);
@@ -444,6 +450,10 @@ TEST_F(PowerManagerTest, OnPowerManagerReappeared) {
   // Check that we re-register suspend delay on powerd restart.
   AddProxyExpectationForRegisterSuspendDelay(kDelayId2, true);
   AddProxyExpectationForRegisterDarkSuspendDelay(kDelayId2, true);
+  // Check that we resend current reg domain on powerd restart.
+  power_manager_.ChangeRegDomain(NL80211_DFS_FCC);
+  AddProxyExpectationForChangeRegDomain(power_manager::WIFI_REG_DOMAIN_FCC,
+                                        true);
   OnPowerManagerVanished();
   OnPowerManagerAppeared();
   Mock::VerifyAndClearExpectations(power_manager_proxy_);
@@ -495,4 +505,29 @@ TEST_F(PowerManagerTest, PowerManagerReappearedInSuspend) {
   OnSuspendImminent(kSuspendId2);
 }
 
+TEST_F(PowerManagerTest, OnChangeRegDomain) {
+  // Revert to default reg domain for this test.
+  power_manager_.ChangeRegDomain(NL80211_DFS_UNSET);
+  // Multiple calls to ChangeRegDomain with the same dfs region should only
+  // trigger a single proxy call.
+  AddProxyExpectationForChangeRegDomain(power_manager::WIFI_REG_DOMAIN_FCC,
+                                        true);
+  power_manager_.ChangeRegDomain(NL80211_DFS_FCC);
+  power_manager_.ChangeRegDomain(NL80211_DFS_FCC);
+
+  AddProxyExpectationForChangeRegDomain(power_manager::WIFI_REG_DOMAIN_EU,
+                                        true);
+  power_manager_.ChangeRegDomain(NL80211_DFS_ETSI);
+  power_manager_.ChangeRegDomain(NL80211_DFS_ETSI);
+
+  AddProxyExpectationForChangeRegDomain(
+      power_manager::WIFI_REG_DOMAIN_REST_OF_WORLD, true);
+  power_manager_.ChangeRegDomain(NL80211_DFS_JP);
+  power_manager_.ChangeRegDomain(NL80211_DFS_JP);
+
+  AddProxyExpectationForChangeRegDomain(power_manager::WIFI_REG_DOMAIN_NONE,
+                                        true);
+  power_manager_.ChangeRegDomain(NL80211_DFS_UNSET);
+  power_manager_.ChangeRegDomain(NL80211_DFS_UNSET);
+}
 }  // namespace shill

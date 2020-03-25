@@ -227,4 +227,19 @@ std::string ShutdownReasonToString(ShutdownReason reason) {
   return "unknown";
 }
 
+std::string WifiRegDomainToString(WifiRegDomain domain) {
+  switch (domain) {
+    case WifiRegDomain::FCC:
+      return "FCC";
+    case WifiRegDomain::EU:
+      return "EU";
+    case WifiRegDomain::REST_OF_WORLD:
+      return "Rest-of-World";
+    case WifiRegDomain::NONE:
+      return "None";
+  }
+  NOTREACHED() << "Unhandled WiFi reg domain " << static_cast<int>(domain);
+  return "unknown";
+}
+
 }  // namespace power_manager

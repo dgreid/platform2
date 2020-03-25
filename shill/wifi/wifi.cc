@@ -6,6 +6,7 @@
 
 #include <inttypes.h>
 #include <linux/if.h>  // Needs definitions from netinet/ether.h
+#include <linux/nl80211.h>
 #include <netinet/ether.h>
 #include <stdio.h>
 #include <string.h>
@@ -1371,17 +1372,20 @@ void WiFi::OnGetReg(const Nl80211Message& nl80211_message) {
     SLOG(this, 3) << "Regulatory message had no NL80211_ATTR_REG_ALPHA2";
     return;  // If no alpha2 value present, ignore it.
   }
-
   HandleCountryChange(country_code);
 
-  uint8_t dfs_region;
+  uint8_t region;
   if (!nl80211_message.const_attributes()->GetU8AttributeValue(
-          NL80211_ATTR_DFS_REGION, &dfs_region)) {
-    SLOG(this, 3) << "Regulatory message has no DFS region";
-    return;
+          NL80211_ATTR_DFS_REGION, &region)) {
+    SLOG(this, 1) << "Regulatory message has no DFS region, using: "
+                  << NL80211_DFS_UNSET;
+    region = NL80211_DFS_UNSET;
+  } else {
+    SLOG(this, 1) << "DFS region: " << region;
   }
 
-  SLOG(this, 1) << "DFS region: " << dfs_region;
+  manager()->power_manager()->ChangeRegDomain(
+      static_cast<nl80211_dfs_regions>(region));
 }
 
 void WiFi::OnRegChange(const Nl80211Message& nl80211_message) {

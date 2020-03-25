@@ -14,6 +14,7 @@
 
 #include <base/callback.h>
 #include <base/cancelable_callback.h>
+#include <linux/nl80211.h>
 
 #include "shill/power_manager_proxy_interface.h"
 
@@ -76,6 +77,8 @@ class PowerManager : public PowerManagerProxyDelegate {
 
   // Record the wake reason for the current dark resume.
   bool RecordDarkResumeWakeReason(const std::string& wake_reason);
+
+  virtual bool ChangeRegDomain(nl80211_dfs_regions domain);
 
   // Methods inherited from PowerManagerProxyDelegate.
   void OnSuspendImminent(int suspend_id) override;
@@ -144,6 +147,9 @@ class PowerManager : public PowerManagerProxyDelegate {
   // Set to time spent in suspended state during the last suspend in
   // OnSuspendDone() and reset to 0 by OnSuspendImminent()
   int64_t suspend_duration_us_;
+
+  power_manager::WifiRegDomainDbus wifi_reg_domain_;
+  bool wifi_reg_domain_is_set;
 
   DISALLOW_COPY_AND_ASSIGN(PowerManager);
 };
