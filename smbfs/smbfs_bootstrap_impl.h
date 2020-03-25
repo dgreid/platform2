@@ -37,16 +37,18 @@ class SmbFsBootstrapImpl : public mojom::SmbFsBootstrap {
         std::unique_ptr<SmbCredential> credential,
         bool allow_ntlm) = 0;
 
-    // Starts the fuse session using the filesystem |fs|. Returns true if the
-    // session is successfully started.
-    virtual bool StartFuseSession(std::unique_ptr<Filesystem> fs) = 0;
-
     // Mojo connection error handler.
     virtual void OnBootstrapConnectionError() = 0;
   };
 
+  using BootstrapCompleteCallback =
+      base::OnceCallback<void(std::unique_ptr<SmbFilesystem> fs)>;
+
   SmbFsBootstrapImpl(mojom::SmbFsBootstrapRequest request, Delegate* delegate);
   ~SmbFsBootstrapImpl() override;
+
+  // Start the bootstrap process and run |callback| when successfully completed.
+  void Start(BootstrapCompleteCallback callback);
 
  private:
   // mojom::SmbFsBootstrap overrides.
@@ -67,6 +69,7 @@ class SmbFsBootstrapImpl : public mojom::SmbFsBootstrap {
   base::OnceClosure disconnect_callback_;
 
   Delegate* const delegate_;
+  BootstrapCompleteCallback completion_callback_;
 
   DISALLOW_COPY_AND_ASSIGN(SmbFsBootstrapImpl);
 };

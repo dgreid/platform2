@@ -42,9 +42,20 @@ SmbFsBootstrapImpl::SmbFsBootstrapImpl(mojom::SmbFsBootstrapRequest request,
 
 SmbFsBootstrapImpl::~SmbFsBootstrapImpl() = default;
 
+void SmbFsBootstrapImpl::Start(BootstrapCompleteCallback callback) {
+  DCHECK(!completion_callback_);
+  completion_callback_ = std::move(callback);
+}
+
 void SmbFsBootstrapImpl::MountShare(mojom::MountOptionsPtr options,
                                     mojom::SmbFsDelegatePtr smbfs_delegate,
                                     const MountShareCallback& callback) {
+  if (!completion_callback_) {
+    LOG(ERROR) << "Mojo bootstrap not active";
+    callback.Run(mojom::MountError::kUnknown, nullptr);
+    return;
+  }
+
   if (options->share_path.find("smb://") != 0) {
     // TODO(amistry): More extensive URL validation.
     LOG(ERROR) << "Invalid share path: " << options->share_path;
@@ -111,11 +122,7 @@ void SmbFsBootstrapImpl::OnCredentialsSetup(
   mojom::SmbFsPtr smbfs_ptr;
   fs->SetSmbFsImpl(std::make_unique<SmbFsImpl>(
       fs.get(), std::move(smbfs_delegate), mojo::MakeRequest(&smbfs_ptr)));
-
-  if (!delegate_->StartFuseSession(std::move(fs))) {
-    callback.Run(mojom::MountError::kUnknown, nullptr);
-    return;
-  }
+  std::move(completion_callback_).Run(std::move(fs));
 
   callback.Run(mojom::MountError::kOk, std::move(smbfs_ptr));
 }

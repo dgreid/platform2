@@ -199,6 +199,13 @@ bool SmbFsDaemon::InitMojo() {
       mojom::SmbFsBootstrapRequest(
           invitation.ExtractMessagePipe(mojom::kBootstrapPipeName)),
       this);
+  bootstrap_impl_->Start(base::BindOnce(
+      [](SmbFsDaemon* daemon, std::unique_ptr<SmbFilesystem> fs) {
+        // Trivial adapter lambda due to argument type (Filesystem instead of
+        // SmbFilesystem).
+        CHECK(daemon->StartFuseSession(std::move(fs)));
+      },
+      this));
 
   return true;
 }

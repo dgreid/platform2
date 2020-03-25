@@ -47,10 +47,13 @@ class SmbFsDaemon : public brillo::DBusDaemon,
       const std::string& share_path,
       std::unique_ptr<SmbCredential> credential,
       bool allow_ntlm) override;
-  bool StartFuseSession(std::unique_ptr<Filesystem> fs) override;
   void OnBootstrapConnectionError() override;
 
  private:
+  // Starts the fuse session using the filesystem |fs|. Returns true if the
+  // session is successfully started.
+  bool StartFuseSession(std::unique_ptr<Filesystem> fs);
+
   // Set up libsmbclient configuration files.
   bool SetupSmbConf();
 
