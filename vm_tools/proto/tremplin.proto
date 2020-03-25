@@ -14,6 +14,57 @@ option go_package = "tremplin_proto";
 // go code makes it difficult to have imports.
 message EmptyMessage {}
 
+message StartLxdRequest {}
+
+message StartLxdResponse {
+  enum Status {
+    // The status of creating the container is unknown.
+    UNKNOWN = 0;
+
+    // LXD is starting.
+    STARTING = 1;
+
+    // LXD is already running.
+    ALREADY_RUNNING = 2;
+
+    // Could not launch LXD.
+    FAILED = 3;
+  }
+
+  // LXD launch status
+  Status status = 1;
+
+  // The failure_reason if LXD could not be started.
+  string failure_reason = 2;
+}
+
+// Sent by tremplin to update the host on the start progress of starting LXD.
+message StartLxdProgress {
+  enum Status {
+    // The status of creating the container is unknown.
+    UNKNOWN = 0;
+
+    // LXD is starting.
+    STARTING = 1;
+
+    // Something went wrong, Tremplin is trying to recover LXD.
+    // This is still an in-progress status.
+    RECOVERING = 2;
+
+    // LXD is now running.
+    STARTED = 3;
+
+    // Could not launch LXD.
+    FAILED = 4;
+  }
+
+  // LXD launch status
+  Status status = 1;
+
+  // The failure_reason if LXD could not be started.
+  string failure_reason = 2;
+}
+
 message CreateContainerRequest {
   // Name of the container to start within the VM.
   string container_name = 1;
@@ -749,6 +800,7 @@ message HostNetworkChangedResponse {}
 
 // Tremplin service methods.
 service Tremplin {
+  rpc StartLxd(StartLxdRequest) returns (StartLxdResponse);
   rpc CreateContainer(CreateContainerRequest) returns (CreateContainerResponse);
   rpc DeleteContainer(DeleteContainerRequest) returns (DeleteContainerResponse);
   rpc StartContainer(StartContainerRequest) returns (StartContainerResponse);
@@ -778,6 +830,7 @@ service Tremplin {
 // Service that is notified of events from tremplin.
 service TremplinListener {
   rpc TremplinReady(TremplinStartupInfo) returns (EmptyMessage);
+  rpc UpdateStartLxdStatus(StartLxdProgress) returns (EmptyMessage);
   rpc UpdateCreateStatus(ContainerCreationProgress) returns (EmptyMessage);
   rpc UpdateDeletionStatus(ContainerDeletionProgress) returns (EmptyMessage);
   rpc UpdateStartStatus(ContainerStartProgress) returns (EmptyMessage);
