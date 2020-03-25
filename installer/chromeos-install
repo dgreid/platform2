@@ -452,7 +452,12 @@ wipe_stateful() {
     init_ubi_volume "${PARTITION_NUM_STATE}" "$(cat "${sysfs_name}")"
     ;;
   *)
-    loop_offset_setup "${DST}" "${START_STATEFUL}" "${DST_BLKSIZE}"
+    if [ -b "${DST}" ]; then
+      DEV=$(make_partition_dev "${DST}" "${PARTITION_NUM_STATE}")
+    else
+      loop_offset_setup "${DST}" "${START_STATEFUL}" "${DST_BLKSIZE}"
+      DEV="${LOOP_DEV}"
+    fi
     ;;
   esac
 
@@ -471,7 +476,7 @@ wipe_stateful() {
   # We always make any ext* stateful partitions ext4.
   case "${stateful_fs_format}" in
   ext[234])
-    mkfs.ext4 -F -b 4096 -L "H-STATE" "$@" "${LOOP_DEV}" \
+    mkfs.ext4 -F -b 4096 -L "H-STATE" "$@" "${DEV}" \
       ${num_4k_sectors}
     ;;
   ubifs)
@@ -485,7 +490,9 @@ wipe_stateful() {
     # Need to synchronize before releasing loop device, otherwise calling
     # loop_offset_cleanup may return "device busy" error.
     sync
-    loop_offset_cleanup
+    if [ ! -b "${DST}" ]; then
+      loop_offset_cleanup
+    fi
     ;;
   esac
 
