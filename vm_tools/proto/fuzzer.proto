@@ -102,6 +102,8 @@ message ContainerListenerFuzzerSingleAction {
   int32 tremplin_host_network_changed_status = 40;
   vm_tools.tremplin.HostNetworkChangedResponse
       tremplin_host_network_changed_response = 41;
+  int32 tremplin_start_lxd_status = 43;
+  vm_tools.tremplin.StartLxdResponse tremplin_start_lxd_response = 44;
 }
 
 // A list of fuzzer actions. This is the actual input to the fuzzer.

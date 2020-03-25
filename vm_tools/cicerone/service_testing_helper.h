@@ -69,6 +69,7 @@ class ServiceTestingHelper {
     kConnectChunnel,
     kUpgradeContainer,
     kCancelUpgradeContainer,
+    kStartLxd,
 
     kNumDbusCalls
   };

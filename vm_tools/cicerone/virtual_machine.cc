@@ -844,6 +844,40 @@ VirtualMachine::CancelUpgradeContainer(Container* container,
   }
 }
 
+VirtualMachine::StartLxdStatus VirtualMachine::StartLxd(
+    std::string* out_error) {
+  DCHECK(out_error);
+  vm_tools::tremplin::StartLxdRequest request;
+  vm_tools::tremplin::StartLxdResponse response;
+
+  grpc::ClientContext ctx;
+  ctx.set_deadline(gpr_time_add(
+      gpr_now(GPR_CLOCK_MONOTONIC),
+      gpr_time_from_seconds(kDefaultTimeoutSeconds, GPR_TIMESPAN)));
+
+  grpc::Status status = tremplin_stub_->StartLxd(&ctx, request, &response);
+  if (!status.ok()) {
+    LOG(ERROR) << "StartLxd RPC failed: " << status.error_message() << " "
+               << status.error_code();
+    out_error->assign(status.error_message());
+    return VirtualMachine::StartLxdStatus::FAILED;
+  }
+  out_error->assign(response.failure_reason());
+  switch (response.status()) {
+    case tremplin::StartLxdResponse::UNKNOWN:
+      return VirtualMachine::StartLxdStatus::UNKNOWN;
+    case tremplin::StartLxdResponse::STARTING:
+      return VirtualMachine::StartLxdStatus::STARTING;
+    case tremplin::StartLxdResponse::ALREADY_RUNNING:
+      return VirtualMachine::StartLxdStatus::ALREADY_RUNNING;
+    case tremplin::StartLxdResponse::FAILED:
+      return VirtualMachine::StartLxdStatus::FAILED;
+    default:
+      LOG(ERROR) << "Received unrecognised StartLxdStatus";
+      return VirtualMachine::StartLxdStatus::UNKNOWN;
+  }
+}
+
 void VirtualMachine::HostNetworkChanged() {
   if (!tremplin_stub_) {
     return;

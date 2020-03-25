@@ -1330,6 +1330,7 @@ bool Service::Init(
       {kConfigureForArcSideloadMethod, &Service::ConfigureForArcSideload},
       {kUpgradeContainerMethod, &Service::UpgradeContainer},
       {kCancelUpgradeContainerMethod, &Service::CancelUpgradeContainer},
+      {kStartLxdMethod, &Service::StartLxd},
   };
 
   for (const auto& iter : kServiceMethods) {
@@ -2982,6 +2983,49 @@ std::unique_ptr<dbus::Response> Service::CancelUpgradeContainer(
           static_cast<int>(status))) {
     response.set_status(
         static_cast<CancelUpgradeContainerResponse::Status>(status));
+  }
+  response.set_failure_reason(error_msg);
+  writer.AppendProtoAsArrayOfBytes(response);
+  return dbus_response;
+}
+
+std::unique_ptr<dbus::Response> Service::StartLxd(
+    dbus::MethodCall* method_call) {
+  DCHECK(sequence_checker_.CalledOnValidSequence());
+  LOG(INFO) << "Received StartLxd request";
+  std::unique_ptr<dbus::Response> dbus_response(
+      dbus::Response::FromMethodCall(method_call));
+
+  dbus::MessageReader reader(method_call);
+  dbus::MessageWriter writer(dbus_response.get());
+
+  StartLxdRequest request;
+  StartLxdResponse response;
+  if (!reader.PopArrayOfBytesAsProto(&request)) {
+    LOG(ERROR) << "Unable to parse StartLxdRequest from message";
+    response.set_status(StartLxdResponse::FAILED);
+    response.set_failure_reason(
+        "unable to parse StartLxdResponse from message");
+    writer.AppendProtoAsArrayOfBytes(response);
+    return dbus_response;
+  }
+
+  VirtualMachine* vm = FindVm(request.owner_id(), request.vm_name());
+  if (!vm) {
+    LOG(ERROR) << "Requested VM does not exist:" << request.vm_name();
+    response.set_status(StartLxdResponse::FAILED);
+    response.set_failure_reason(base::StringPrintf(
+        "requested VM does not exist: %s", request.vm_name().c_str()));
+    writer.AppendProtoAsArrayOfBytes(response);
+    return dbus_response;
+  }
+
+  std::string error_msg;
+  VirtualMachine::StartLxdStatus status = vm->StartLxd(&error_msg);
+
+  response.set_status(StartLxdResponse::UNKNOWN);
+  if (StartLxdResponse::Status_IsValid(static_cast<int>(status))) {
+    response.set_status(static_cast<StartLxdResponse::Status>(status));
   }
   response.set_failure_reason(error_msg);
   writer.AppendProtoAsArrayOfBytes(response);

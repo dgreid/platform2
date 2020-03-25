@@ -131,6 +131,10 @@ std::unique_ptr<vm_tools::tremplin::MockTremplinStub> CreateMockTremplinStub(
       .WillOnce(DoAll(
           SetArgPointee<2>(action.tremplin_cancel_import_container_response()),
           Return(ToStatus(action.tremplin_cancel_import_container_status()))));
+  EXPECT_CALL(*mock_tremplin_stub, StartLxd(_, _, _))
+      .Times(AnyNumber())
+      .WillOnce(DoAll(SetArgPointee<2>(action.tremplin_start_lxd_response()),
+                      Return(ToStatus(action.tremplin_start_lxd_status()))));
 
   return mock_tremplin_stub;
 }

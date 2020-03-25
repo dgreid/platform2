@@ -116,6 +116,13 @@ class VirtualMachine {
     FAILED,
   };
 
+  enum class StartLxdStatus {
+    UNKNOWN,
+    STARTING,
+    ALREADY_RUNNING,
+    FAILED,
+  };
+
   // Info about the LXD container.
   struct LxdContainerInfo {
     // The IPv4 address of the container in network byte order.
@@ -298,6 +305,9 @@ class VirtualMachine {
   // Cancels a running container OS upgrade.
   CancelUpgradeContainerStatus CancelUpgradeContainer(Container* container,
                                                       std::string* out_error);
+
+  // Tells Tremplin to start LXD.
+  StartLxdStatus StartLxd(std::string* out_error);
 
   // Informs the VM that the host network has changed.
   void HostNetworkChanged();
