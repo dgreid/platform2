@@ -77,6 +77,14 @@ class SubprocRoutine final : public DiagnosticRoutine {
   chromeos::cros_healthd::mojom::DiagnosticRoutineStatusEnum GetStatus()
       override;
 
+  // Registers a callback that will execute before processes start. The routine
+  // will stop and set status to failure if this callback returns false.
+  // This function should be called only once.
+  void RegisterPreStartCallback(base::OnceCallback<bool()> callback);
+  // Registers a callback that will execute after process is finished.
+  // This function should be called only once.
+  void RegisterPostStopCallback(base::OnceClosure callback);
+
  private:
   // Functions to manipulate the child process.
   void StartProcess();
@@ -90,6 +98,12 @@ class SubprocRoutine final : public DiagnosticRoutine {
   // SubprocRoutine object's state machine. Essentially, this variable stores
   // which state we are in.
   SubprocStatus subproc_status_;
+
+  // |pre_start_callback_| can be registered via RegisterPreStartCallback()
+  base::OnceCallback<bool()> pre_start_callback_;
+
+  // |post_stop_callback_| can be registered via RegisterPostStopCallback()
+  base::OnceClosure post_stop_callback_;
 
   // |process_adapter_| is a dependency that is injected at object creation time
   // which enables swapping out process control functionality for the main

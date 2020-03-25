@@ -39,6 +39,12 @@ void CheckRoutineUpdate(uint32_t progress_percent,
                              status_message);
 }
 
+class MockCallback {
+ public:
+  MOCK_METHOD(bool, PreStart, ());
+  MOCK_METHOD(void, PostStop, ());
+};
+
 class MockDiagProcessAdapter : public DiagProcessAdapter {
  public:
   MOCK_METHOD(base::TerminationStatus,
@@ -103,6 +109,14 @@ class SubprocRoutineTest : public Test {
         predicted_duration_in_seconds);
   }
 
+  void RegisterPreStartCallback(base::OnceCallback<bool()> callback) {
+    routine_->RegisterPreStartCallback(std::move(callback));
+  }
+
+  void RegisterPostStopCallback(base::OnceClosure callback) {
+    routine_->RegisterPostStopCallback(std::move(callback));
+  }
+
   void RunRoutineWithTerminationStatus(base::TerminationStatus status) {
     EXPECT_CALL(*mock_adapter(), StartProcess(_, _))
         .WillOnce(DoAll(SetArgPointee<1>(base::GetCurrentProcessHandle()),
@@ -148,6 +162,98 @@ TEST_F(SubprocRoutineTest, InvokeSubprocWithSuccess) {
 
 TEST_F(SubprocRoutineTest, InvokeSubprocWithMultipleCmdsWithSuccess) {
   CreateRoutineWithMultipleCmds();
+  EXPECT_CALL(*mock_adapter(), StartProcess(_, _))
+      .Times(2)
+      .WillRepeatedly(DoAll(SetArgPointee<1>(base::GetCurrentProcessHandle()),
+                            Return(true)));
+  EXPECT_CALL(*mock_adapter(), GetStatus(_))
+      .Times(2)
+      .WillRepeatedly(Return(base::TERMINATION_STATUS_NORMAL_TERMINATION));
+
+  routine()->Start();
+
+  mojo_ipc::RoutineUpdate update{0, mojo::ScopedHandle(),
+                                 mojo_ipc::RoutineUpdateUnion::New()};
+  tick_clock()->Advance(base::TimeDelta::FromSeconds(5));
+  routine()->PopulateStatusUpdate(&update, false);
+  CheckRoutineUpdate(50, kSubprocRoutineProcessRunningMessage,
+                     mojo_ipc::DiagnosticRoutineStatusEnum::kRunning, update);
+  routine()->PopulateStatusUpdate(&update, false);
+  CheckRoutineUpdate(100, kSubprocRoutineSucceededMessage,
+                     mojo_ipc::DiagnosticRoutineStatusEnum::kPassed, update);
+}
+
+TEST_F(SubprocRoutineTest, InvokeSubprocWithPreStartCallbackSuccess) {
+  CreateRoutine();
+  StrictMock<MockCallback>* mock_callback = new StrictMock<MockCallback>();
+  EXPECT_CALL(*mock_callback, PreStart()).WillOnce(Return(true));
+  RegisterPreStartCallback(
+      base::BindOnce(&MockCallback::PreStart, base::Owned(mock_callback)));
+  EXPECT_CALL(*mock_adapter(), StartProcess(_, _))
+      .WillOnce(DoAll(SetArgPointee<1>(base::GetCurrentProcessHandle()),
+                      Return(true)));
+  EXPECT_CALL(*mock_adapter(), GetStatus(_))
+      .WillOnce(Return(base::TERMINATION_STATUS_NORMAL_TERMINATION));
+
+  routine()->Start();
+
+  mojo_ipc::RoutineUpdate update{0, mojo::ScopedHandle(),
+                                 mojo_ipc::RoutineUpdateUnion::New()};
+  routine()->PopulateStatusUpdate(&update, false);
+  CheckRoutineUpdate(100, kSubprocRoutineSucceededMessage,
+                     mojo_ipc::DiagnosticRoutineStatusEnum::kPassed, update);
+}
+
+TEST_F(SubprocRoutineTest, InvokeSubprocWithPreStartCallbackFailure) {
+  CreateRoutine();
+  StrictMock<MockCallback>* mock_callback = new StrictMock<MockCallback>();
+  EXPECT_CALL(*mock_callback, PreStart()).WillOnce(Return(false));
+  base::OnceCallback<bool()> cb =
+      base::Bind(&MockCallback::PreStart, base::Owned(mock_callback));
+  RegisterPreStartCallback(std::move(cb));
+
+  routine()->Start();
+
+  EXPECT_EQ(routine()->GetStatus(),
+            mojo_ipc::DiagnosticRoutineStatusEnum::kFailedToStart);
+}
+
+TEST_F(SubprocRoutineTest, InvokeSubprocWithPostStopCallback) {
+  CreateRoutine();
+  StrictMock<MockCallback>* mock_callback = new StrictMock<MockCallback>();
+  EXPECT_CALL(*mock_callback, PostStop());
+  RegisterPostStopCallback(
+      base::BindOnce(&MockCallback::PostStop, base::Owned(mock_callback)));
+  EXPECT_CALL(*mock_adapter(), StartProcess(_, _))
+      .WillOnce(DoAll(SetArgPointee<1>(base::GetCurrentProcessHandle()),
+                      Return(true)));
+  EXPECT_CALL(*mock_adapter(), GetStatus(_))
+      .WillOnce(Return(base::TERMINATION_STATUS_NORMAL_TERMINATION));
+
+  routine()->Start();
+
+  mojo_ipc::RoutineUpdate update{0, mojo::ScopedHandle(),
+                                 mojo_ipc::RoutineUpdateUnion::New()};
+  routine()->PopulateStatusUpdate(&update, false);
+  CheckRoutineUpdate(100, kSubprocRoutineSucceededMessage,
+                     mojo_ipc::DiagnosticRoutineStatusEnum::kPassed, update);
+  DestroyRoutine();
+}
+
+TEST_F(SubprocRoutineTest, InvokeSubprocWithPostStopCallbackWithoutStart) {
+  CreateRoutine();
+  StrictMock<MockCallback>* mock_callback = new StrictMock<MockCallback>();
+  EXPECT_CALL(*mock_callback, PostStop());
+  RegisterPostStopCallback(
+      base::BindOnce(&MockCallback::PostStop, base::Owned(mock_callback)));
+}
+
+TEST_F(SubprocRoutineTest, InvokeSubprocWithMultipleCmdsAndPreStartCallback) {
+  CreateRoutineWithMultipleCmds();
+  StrictMock<MockCallback>* mock_callback = new StrictMock<MockCallback>();
+  EXPECT_CALL(*mock_callback, PreStart()).WillOnce(Return(true));
+  RegisterPreStartCallback(
+      base::BindOnce(&MockCallback::PreStart, base::Owned(mock_callback)));
   EXPECT_CALL(*mock_adapter(), StartProcess(_, _))
       .Times(2)
       .WillRepeatedly(DoAll(SetArgPointee<1>(base::GetCurrentProcessHandle()),

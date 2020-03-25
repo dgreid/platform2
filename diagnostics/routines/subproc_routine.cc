@@ -109,11 +109,22 @@ SubprocRoutine::~SubprocRoutine() {
   // If the routine is still running, make sure to stop it so we aren't left
   // with a zombie process.
   KillProcess(true /*from_dtor*/);
+  if (!post_stop_callback_.is_null())
+    std::move(post_stop_callback_).Run();
 }
 
 void SubprocRoutine::Start() {
   DCHECK_EQ(handle_, base::kNullProcessHandle);
 
+  bool pre_start_callback_result = true;
+  if (!pre_start_callback_.is_null())
+    pre_start_callback_result = std::move(pre_start_callback_).Run();
+
+  if (!pre_start_callback_result) {
+    subproc_status_ = kSubprocStatusLaunchFailed;
+    LOG(ERROR) << kSubprocRoutineFailedToLaunchProcessMessage;
+    return;
+  }
   StartProcess();
 }
 
@@ -147,6 +158,17 @@ void SubprocRoutine::PopulateStatusUpdate(mojo_ipc::RoutineUpdate* response,
 mojo_ipc::DiagnosticRoutineStatusEnum SubprocRoutine::GetStatus() {
   CheckProcessStatus();
   return GetDiagnosticRoutineStatusFromSubprocRoutineStatus(subproc_status_);
+}
+
+void SubprocRoutine::RegisterPreStartCallback(
+    base::OnceCallback<bool()> callback) {
+  DCHECK(pre_start_callback_.is_null());
+  pre_start_callback_ = std::move(callback);
+}
+
+void SubprocRoutine::RegisterPostStopCallback(base::OnceClosure callback) {
+  DCHECK(post_stop_callback_.is_null());
+  post_stop_callback_ = std::move(callback);
 }
 
 void SubprocRoutine::StartProcess() {
