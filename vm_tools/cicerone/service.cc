@@ -925,6 +925,14 @@ void Service::ContainerUpgradeProgress(
   event->Signal();
 }
 
+void Service::StartLxdProgress(const uint32_t cid,
+                               StartLxdProgressSignal* progress_signal,
+                               bool* result,
+                               base::WaitableEvent* event) {
+  *result = SendMessage(kStartLxdProgressSignal, cid, progress_signal);
+  event->Signal();
+}
+
 void Service::PendingUpdateApplicationListCalls(
     const std::string& container_token,
     const uint32_t cid,

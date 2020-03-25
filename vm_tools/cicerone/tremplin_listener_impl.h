@@ -79,6 +79,11 @@ class TremplinListenerImpl final
       const vm_tools::tremplin::UpgradeContainerProgress* request,
       vm_tools::tremplin::EmptyMessage* response) override;
 
+  grpc::Status UpdateStartLxdStatus(
+      grpc::ServerContext* ctx,
+      const vm_tools::tremplin::StartLxdProgress* request,
+      vm_tools::tremplin::EmptyMessage* response) override;
+
  private:
   uint32_t ExtractCidFromPeerAddress(grpc::ServerContext* ctx);
 

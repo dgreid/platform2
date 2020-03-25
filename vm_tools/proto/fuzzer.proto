@@ -18,8 +18,8 @@ import "vm_crash.proto";
 // This is used for fuzz testing; we get some fuzzed examples of this message
 // and then call the correct rpc handler based on which of the oneof is set.
 message ContainerListenerFuzzerSingleAction {
-  // Next id: 43
-  // Skip [100-108]
+  // Next id: 45
+  // Skip [100-109]
   oneof input {
     // Calls to the ContainerListener service.
     ContainerStartupInfo container_startup_info = 1;
@@ -50,6 +50,7 @@ message ContainerListenerFuzzerSingleAction {
         106;
     vm_tools.tremplin.UpgradeContainerProgress upgrade_container_progress = 107;
     vm_tools.tremplin.ListeningPortInfo update_listening_ports = 108;
+    vm_tools.tremplin.StartLxdProgress start_lxd_progress = 109;
   }
 
   // Claim all gRPC messages come from this address (overrides

@@ -318,6 +318,12 @@ DEFINE_PROTO_FUZZER(
             &context, &action.update_listening_ports(), &tremplin_response);
         break;
 
+      case vm_tools::container::ContainerListenerFuzzerSingleAction::
+          kStartLxdProgress:
+        tremplin_listener->UpdateStartLxdStatus(
+            &context, &action.start_lxd_progress(), &tremplin_response);
+        break;
+
       default:
         NOTREACHED();
     }

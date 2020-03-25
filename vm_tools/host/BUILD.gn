@@ -304,6 +304,7 @@ if (use.test) {
   executable("cicerone_test") {
     sources = [
       "../cicerone/container_listener_impl_test.cc",
+      "../cicerone/tremplin_listener_impl_test.cc",
       "../cicerone/virtual_machine_test.cc",
     ]
     configs += [

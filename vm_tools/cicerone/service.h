@@ -219,6 +219,15 @@ class Service final {
                                 bool* result,
                                 base::WaitableEvent* event);
 
+  // Sends a D-Bus signal to inform listeners of progress or completion of
+  // starting lxd. It will use |cid| to resolve the request to a VM.
+  // |progress_signal| should have all related fields set. |result| is set to
+  // true on success, false otherwise. Signals |event| when done.
+  void StartLxdProgress(const uint32_t cid,
+                        StartLxdProgressSignal* progress_signal,
+                        bool* result,
+                        base::WaitableEvent* event);
+
   void PendingUpdateApplicationListCalls(const std::string& container_token,
                                          const uint32_t cid,
                                          const uint32_t count,
