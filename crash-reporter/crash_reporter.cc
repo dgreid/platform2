@@ -117,6 +117,7 @@ int BootCollect(KernelCollector* kernel_collector,
                 EarlyCrashMetaCollector* early_crash_meta_collector) {
   bool was_kernel_crash = false;
   bool was_unclean_shutdown = false;
+  LOG(INFO) << "Running boot collector";
 
   /* TODO(drinkcat): Distinguish between EC crash and unclean shutdown. */
   ec_collector->Collect();
