@@ -141,7 +141,7 @@ base::Optional<CK_OBJECT_HANDLE> ChapsClient::FindKey(
   std::string mutable_label(label);
 
   // Assemble a search template.
-  CK_OBJECT_CLASS object_class = CKO_DATA;
+  CK_OBJECT_CLASS object_class = CKO_SECRET_KEY;
   CK_BBOOL true_value = CK_TRUE;
   CK_BBOOL false_value = CK_FALSE;
   CK_ATTRIBUTE attributes[] = {
@@ -167,6 +167,7 @@ base::Optional<CK_OBJECT_HANDLE> ChapsClient::FindKey(
       return base::nullopt;
     }
 
+    count = 0;
     rv = C_FindObjects(*session_handle(), handles, arraysize(handles), &count);
     if (CKR_SESSION_HANDLE_INVALID == rv) {
       session_.reset();
@@ -219,7 +220,7 @@ base::Optional<CK_OBJECT_HANDLE> ChapsClient::GenerateEncryptionKey() {
   std::string mutable_application_id(kApplicationID);
   std::string mutable_label(kEncryptKeyLabel);
 
-  CK_OBJECT_CLASS object_class = CKO_DATA;
+  CK_OBJECT_CLASS object_class = CKO_SECRET_KEY;
   CK_ULONG key_length = 32;
   CK_BBOOL true_value = CK_TRUE;
   CK_BBOOL false_value = CK_FALSE;
