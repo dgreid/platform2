@@ -313,6 +313,18 @@ class TRUNKS_EXPORT TpmUtility {
                                   AuthorizationDelegate* delegate,
                                   TPM_HANDLE* key_handle) = 0;
 
+  // This methods loads the public part of an external ECC key to TPM. Key is
+  // is of type |key_type|. Algorithm scheme and hash algorithm are passed via
+  // |scheme| and |hash_alg|.
+  virtual TPM_RC LoadECPublicKey(AsymmetricKeyUsage key_type,
+                                 TPM_ECC_CURVE curve_id,
+                                 TPM_ALG_ID scheme,
+                                 TPM_ALG_ID hash_alg,
+                                 const std::string& x,
+                                 const std::string& y,
+                                 AuthorizationDelegate* delegate,
+                                 TPM_HANDLE* key_handle) = 0;
+
   // This function sets |name| to the name of the object referenced by
   // |handle|. This function only works on Transient and Permanent objects.
   virtual TPM_RC GetKeyName(TPM_HANDLE handle, std::string* name) = 0;

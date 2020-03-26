@@ -1795,6 +1795,59 @@ TEST_F(TpmUtilityTest, LoadKeyParserFail) {
       utility_.LoadKey(key_blob, &mock_authorization_delegate_, &key_handle));
 }
 
+TEST_F(TpmUtilityTest, LoadECPublicKey) {
+  const TPM_HANDLE kKeyHandle = TPM_RH_FIRST;
+  // Two sample EC points
+  const std::string x_hex =
+      "C892FCCAC397FC9C50490756AB189C18742F60855FF241D2D21A84F322EB5237";
+  std::vector<uint8_t> x_vec;
+  base::HexStringToBytes(x_hex, &x_vec);
+  std::string x(x_vec.begin(), x_vec.end());
+
+  const std::string y_hex =
+      "6586EEBDB86E937B5598304C16BE51DB581BD150432AA35A8F1C0FE83C8B1E7B";
+  std::vector<uint8_t> y_vec;
+  base::HexStringToBytes(y_hex, &y_vec);
+  std::string y(y_vec.begin(), y_vec.end());
+
+  TPM2B_SENSITIVE in_private_arg;
+  memset(&in_private_arg, 0, sizeof(TPM2B_SENSITIVE));
+  TPM2B_PUBLIC in_public_arg;
+  memset(&in_public_arg, 0, sizeof(TPM2B_PUBLIC));
+  TPMI_RH_HIERARCHY hierarchy_arg = 0;
+  TPM_HANDLE loaded_handle = 0;
+
+  EXPECT_CALL(mock_tpm_,
+              LoadExternalSync(_, _, _, _, _, &mock_authorization_delegate_))
+      .WillOnce(DoAll(SaveArg<0>(&in_private_arg), SaveArg<1>(&in_public_arg),
+                      SaveArg<2>(&hierarchy_arg), SetArgPointee<3>(kKeyHandle),
+                      Return(TPM_RC_SUCCESS)));
+
+  EXPECT_EQ(TPM_RC_SUCCESS,
+            utility_.LoadECPublicKey(
+              TpmUtility::AsymmetricKeyUsage::kDecryptKey,
+              TPM_ECC_NIST_P256,
+              TPM_ALG_ECDSA,  /* default scheme, TPM_ALG_ECDSA */
+              TPM_ALG_SHA256,  /* default hash alg, TPM_ALG_SHA256 */
+              x,
+              y,
+              &mock_authorization_delegate_,
+              &loaded_handle));
+
+  testing::Mock::VerifyAndClearExpectations(&mock_tpm_);
+  EXPECT_EQ(0, in_private_arg.size);
+  EXPECT_EQ(kFixedTPM | kFixedParent,
+            in_public_arg.public_area.object_attributes);
+  EXPECT_EQ(TPM_ALG_ECDSA,  /* default algorithm */
+            in_public_arg.public_area.parameters.ecc_detail.scheme.scheme);
+  EXPECT_EQ(TPM_ALG_SHA256, in_public_arg.public_area.parameters
+                            .ecc_detail.kdf.scheme);
+  EXPECT_EQ(TPM_ECC_NIST_P256,
+    in_public_arg.public_area.parameters.ecc_detail.curve_id);
+  EXPECT_EQ(TPM_RH_NULL, hierarchy_arg);
+  EXPECT_EQ(kKeyHandle, loaded_handle);
+}
+
 TEST_F(TpmUtilityTest, LoadRSAPublicKey) {
   const TPM_HANDLE kKeyHandle = TPM_RH_FIRST;
   const std::string kModulus(128, '\1');

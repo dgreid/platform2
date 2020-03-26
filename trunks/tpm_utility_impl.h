@@ -129,6 +129,14 @@ class TRUNKS_EXPORT TpmUtilityImpl : public TpmUtility {
                           uint32_t public_exponent,
                           AuthorizationDelegate* delegate,
                           TPM_HANDLE* key_handle) override;
+  TPM_RC LoadECPublicKey(AsymmetricKeyUsage key_type,
+                         TPM_ECC_CURVE curve_id,
+                         TPM_ALG_ID scheme,
+                         TPM_ALG_ID hash_alg,
+                         const std::string& x,
+                         const std::string& y,
+                         AuthorizationDelegate* delegate,
+                         TPM_HANDLE* key_handle) override;
   TPM_RC GetKeyName(TPM_HANDLE handle, std::string* name) override;
   TPM_RC GetKeyPublicArea(TPM_HANDLE handle, TPMT_PUBLIC* public_data) override;
   TPM_RC SealData(const std::string& data_to_seal,

@@ -130,7 +130,15 @@ class MockTpmUtility : public TpmUtility {
                       uint32_t,
                       AuthorizationDelegate*,
                       TPM_HANDLE*));
-
+  MOCK_METHOD8(LoadECPublicKey,
+               TPM_RC(AsymmetricKeyUsage,
+                      TPM_ECC_CURVE,
+                      TPM_ALG_ID,
+                      TPM_ALG_ID,
+                      const std::string&,
+                      const std::string&,
+                      AuthorizationDelegate*,
+                      TPM_HANDLE*));
   MOCK_METHOD2(GetKeyName, TPM_RC(TPM_HANDLE, std::string*));
   MOCK_METHOD2(GetKeyPublicArea, TPM_RC(TPM_HANDLE, TPMT_PUBLIC*));
   MOCK_METHOD5(SealData,

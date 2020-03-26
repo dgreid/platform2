@@ -1240,6 +1240,49 @@ TPM_RC TpmUtilityImpl::LoadRSAPublicKey(AsymmetricKeyUsage key_type,
   return TPM_RC_SUCCESS;
 }
 
+TPM_RC TpmUtilityImpl::LoadECPublicKey(AsymmetricKeyUsage key_type,
+                                       TPM_ECC_CURVE curve_id,
+                                       TPM_ALG_ID scheme,
+                                       TPM_ALG_ID hash_alg,
+                                       const std::string& x,
+                                       const std::string& y,
+                                       AuthorizationDelegate* delegate,
+                                       TPM_HANDLE* key_handle) {
+  TPM_RC result;
+  if (delegate == nullptr) {
+    result = SAPI_RC_INVALID_SESSIONS;
+    LOG(ERROR) << __func__
+               << ": This method needs a valid authorization delegate: "
+               << GetErrorString(result);
+    return result;
+  }
+
+  // Create public area.
+  TPMT_PUBLIC public_area = CreateDefaultPublicArea(TPM_ALG_ECC);
+  public_area.parameters.ecc_detail.curve_id = curve_id;
+  public_area.parameters.ecc_detail.kdf.scheme = hash_alg;
+  public_area.parameters.ecc_detail.scheme.scheme = scheme;
+  public_area.unique.ecc.x = Make_TPM2B_ECC_PARAMETER(x);
+  public_area.unique.ecc.y = Make_TPM2B_ECC_PARAMETER(y);
+  const TPM2B_PUBLIC public_data = Make_TPM2B_PUBLIC(public_area);
+
+  // Empty sensitive area.
+  TPM2B_SENSITIVE private_data;
+  private_data.size = 0;
+  const TPMI_RH_HIERARCHY hierachy = TPM_RH_NULL;
+  TPM2B_NAME name;
+
+  // Load the key to tpm.
+  result = factory_.GetTpm()->LoadExternalSync(
+      private_data, public_data, hierachy, key_handle, &name, delegate);
+  if (result != TPM_RC_SUCCESS) {
+    LOG(ERROR) << __func__
+               << ": Error Loading external key: " << GetErrorString(result);
+    return result;
+  }
+  return TPM_RC_SUCCESS;
+}
+
 TPM_RC TpmUtilityImpl::GetKeyName(TPM_HANDLE handle, std::string* name) {
   CHECK(name);
   TPM_RC result;

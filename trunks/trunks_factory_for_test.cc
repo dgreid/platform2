@@ -313,6 +313,18 @@ class TpmUtilityForwarder : public TpmUtility {
                                      public_exponent, delegate, key_handle);
   }
 
+  TPM_RC LoadECPublicKey(AsymmetricKeyUsage key_type,
+                         TPM_ECC_CURVE curve_id,
+                         TPM_ALG_ID scheme,
+                         TPM_ALG_ID hash_alg,
+                         const std::string& x,
+                         const std::string& y,
+                         AuthorizationDelegate* delegate,
+                         TPM_HANDLE* key_handle) override {
+    return target_->LoadECPublicKey(key_type, curve_id, scheme, hash_alg,
+                                    x, y, delegate, key_handle);
+}
+
   TPM_RC GetKeyName(TPM_HANDLE handle, std::string* name) override {
     return target_->GetKeyName(handle, name);
   }
