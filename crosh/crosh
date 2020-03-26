@@ -1267,10 +1267,26 @@ p2p_check_enabled() {
 USAGE_rollback=''
 HELP_rollback='
   Attempt to rollback to the previous update cached on your system. Only
-  available on non-stable channels and non-enterprise enrolled devices. Please
-  note that this will powerwash your device.
+  available on non-stable channels and non-enterprise enrolled devices.
+
+  Please note that this will powerwash your device.
 '
 cmd_rollback() (
+  if [ $# -ne 0 ]; then
+    help "too many arguments"
+    return 1
+  fi
+
+  echo "NB: This will powerwash your device!"
+  shell_read "Are you sure you want to rollback to the previous version? [y/N] "
+  case "${REPLY}" in
+  [yY]) ;;
+  *)
+    echo "Not attempting rollback."
+    return
+    ;;
+  esac
+
   if /usr/bin/update_engine_client --rollback; then
     echo "Rollback attempt succeeded -- after a couple minutes you will" \
          "get an update available and you should reboot to complete rollback."
