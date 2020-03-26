@@ -133,6 +133,15 @@ void CrosHealthdRoutineServiceImpl::RunDiskReadRoutine(
       id, status);
 }
 
+void CrosHealthdRoutineServiceImpl::RunPrimeSearchRoutine(
+    const base::TimeDelta& exec_duration,
+    uint64_t max_num,
+    int32_t* id,
+    mojo_ipc::DiagnosticRoutineStatusEnum* status) {
+  RunRoutine(routine_factory_->MakePrimeSearchRoutine(exec_duration, max_num),
+             id, status);
+}
+
 void CrosHealthdRoutineServiceImpl::GetRoutineUpdate(
     int32_t uuid,
     mojo_ipc::DiagnosticRoutineCommandEnum command,

@@ -13,6 +13,7 @@
 #include "diagnostics/routines/floating_point/floating_point_accuracy.h"
 #include "diagnostics/routines/nvme_self_test/nvme_self_test.h"
 #include "diagnostics/routines/nvme_wear_level/nvme_wear_level.h"
+#include "diagnostics/routines/prime_search/prime_search.h"
 #include "diagnostics/routines/smartctl_check/smartctl_check.h"
 #include "diagnostics/routines/urandom/urandom.h"
 
@@ -98,6 +99,12 @@ CrosHealthdRoutineFactoryImpl::MakeDiskReadRoutine(
     const base::TimeDelta& exec_duration,
     uint32_t file_size_mb) {
   return CreateDiskReadRoutine(type, exec_duration, file_size_mb);
+}
+
+std::unique_ptr<DiagnosticRoutine>
+CrosHealthdRoutineFactoryImpl::MakePrimeSearchRoutine(
+    const base::TimeDelta& exec_duration, uint64_t max_num) {
+  return CreatePrimeSearchRoutine(exec_duration, max_num);
 }
 
 }  // namespace diagnostics

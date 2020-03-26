@@ -53,6 +53,8 @@ class DiagActions final {
   bool ActionRunNvmeSelfTestRoutine(
       chromeos::cros_healthd::mojom::NvmeSelfTestTypeEnum nvme_self_test_type);
   bool ActionRunNvmeWearLevelRoutine(uint32_t wear_level_threshold);
+  bool ActionRunPrimeSearchRoutine(const base::TimeDelta& exec_duration,
+                                   uint64_t max_num);
   bool ActionRunSmartctlCheckRoutine();
   bool ActionRunUrandomRoutine(uint32_t length_seconds);
 

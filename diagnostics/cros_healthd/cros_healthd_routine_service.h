@@ -9,6 +9,7 @@
 #include <vector>
 
 #include <base/optional.h>
+#include <base/time/time.h>
 
 #include "mojo/cros_healthd.mojom.h"
 
@@ -84,6 +85,11 @@ class CrosHealthdRoutineService {
       chromeos::cros_healthd::mojom::DiskReadRoutineTypeEnum type,
       const base::TimeDelta& exec_duration,
       uint32_t file_size_mb,
+      int32_t* id,
+      MojomCrosHealthdDiagnosticRoutineStatusEnum* status) = 0;
+  virtual void RunPrimeSearchRoutine(
+      const base::TimeDelta& exec_duration,
+      uint64_t max_num,
       int32_t* id,
       MojomCrosHealthdDiagnosticRoutineStatusEnum* status) = 0;
 

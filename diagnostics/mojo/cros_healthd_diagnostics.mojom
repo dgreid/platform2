@@ -27,6 +27,7 @@ enum DiagnosticRoutineEnum {
   kNvmeWearLevel = 8,
   kNvmeSelfTest = 9,
   kDiskRead = 10,
+  kPrimeSearch = 11,
 };
 
 // Enumeration of the possible DiskRead routine's command type

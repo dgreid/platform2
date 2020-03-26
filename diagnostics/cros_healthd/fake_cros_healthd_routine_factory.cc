@@ -264,4 +264,10 @@ FakeCrosHealthdRoutineFactory::MakeDiskReadRoutine(
   return std::move(next_routine_);
 }
 
+std::unique_ptr<DiagnosticRoutine>
+FakeCrosHealthdRoutineFactory::MakePrimeSearchRoutine(
+    const base::TimeDelta& exec_duration, uint64_t max_num) {
+  return std::move(next_routine_);
+}
+
 }  // namespace diagnostics

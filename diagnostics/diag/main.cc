@@ -44,7 +44,8 @@ const struct {
      mojo_ipc::DiagnosticRoutineEnum::kFloatingPointAccuracy},
     {"nvme_wear_level", mojo_ipc::DiagnosticRoutineEnum::kNvmeWearLevel},
     {"nvme_self_test", mojo_ipc::DiagnosticRoutineEnum::kNvmeSelfTest},
-    {"disk_read", mojo_ipc::DiagnosticRoutineEnum::kDiskRead}};
+    {"disk_read", mojo_ipc::DiagnosticRoutineEnum::kDiskRead},
+    {"prime_search", mojo_ipc::DiagnosticRoutineEnum::kPrimeSearch}};
 
 }  // namespace
 
@@ -90,6 +91,9 @@ int main(int argc, char** argv) {
   DEFINE_string(disk_read_routine_type, "linear",
                 "Disk read routine type for the disk_read routine. Options are:"
                 "\n\tlinear - linear read.\n\trandom - random read.");
+  DEFINE_uint64(max_num, 1000000,
+                "max. prime number to search for in "
+                "prime-search routine. Max. is 1000000");
   brillo::FlagHelper::Init(argc, argv, "diag - Device diagnostic tool.");
 
   logging::InitLogging(logging::LoggingSettings());
@@ -185,6 +189,10 @@ int main(int argc, char** argv) {
         routine_result = actions.ActionRunDiskReadRoutine(
             type, base::TimeDelta::FromSeconds(FLAGS_length_seconds),
             FLAGS_file_size_mb);
+        break;
+      case mojo_ipc::DiagnosticRoutineEnum::kPrimeSearch:
+        routine_result = actions.ActionRunPrimeSearchRoutine(
+            base::TimeDelta::FromSeconds(FLAGS_length_seconds), FLAGS_max_num);
         break;
       default:
         std::cout << "Unsupported routine: " << FLAGS_routine << std::endl;

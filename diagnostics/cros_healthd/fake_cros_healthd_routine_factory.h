@@ -73,6 +73,8 @@ class FakeCrosHealthdRoutineFactory final : public CrosHealthdRoutineFactory {
       chromeos::cros_healthd::mojom::DiskReadRoutineTypeEnum type,
       const base::TimeDelta& exec_duration,
       uint32_t file_size_mb) override;
+  std::unique_ptr<DiagnosticRoutine> MakePrimeSearchRoutine(
+      const base::TimeDelta& exec_duration, uint64_t max_num) override;
 
  private:
   // The routine that will be returned by any calls to MakeSomeRoutine.

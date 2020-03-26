@@ -224,6 +224,17 @@ MakeRunNvmeLongSelfTestRoutineRequest() {
   return request;
 }
 
+std::unique_ptr<grpc_api::RunRoutineRequest>
+MakeRunPrimeSearchRoutineRequest() {
+  constexpr int kLengthSeconds = 10;
+  constexpr int kMaxNum = 1000000;
+  auto request = std::make_unique<grpc_api::RunRoutineRequest>();
+  request->set_routine(grpc_api::ROUTINE_PRIME_SEARCH);
+  request->mutable_prime_search_params()->set_length_seconds(kLengthSeconds);
+  request->mutable_prime_search_params()->set_max_num(kMaxNum);
+  return request;
+}
+
 MATCHER_P(GrpcDumpsEquivalentWithInternal, expected, "") {
   if (arg.size() != expected.get().size())
     return false;
@@ -641,6 +652,15 @@ TEST_F(GrpcServiceTest, RunFloatingPointAccuracyRoutine) {
   EXPECT_THAT(*response, ProtobufEquals(*expected_response))
       << "Actual response: {" << response->ShortDebugString() << "}";
 }
+// Test that we can request that the prime search routine be run.
+TEST_F(GrpcServiceTest, RunPrimeSearchRoutine) {
+  std::unique_ptr<grpc_api::RunRoutineResponse> response;
+  ExecuteRunRoutine(MakeRunPrimeSearchRoutineRequest(), &response,
+                    true /* is_valid_request */);
+  auto expected_response = MakeRunRoutineResponse();
+  EXPECT_THAT(*response, ProtobufEquals(*expected_response))
+      << "Actual response: {" << response->ShortDebugString() << "}";
+}
 
 // Test that we can request that the nvme_wear_level routine be run.
 TEST_F(GrpcServiceTest, RunNvmeWearLevelRoutine) {
@@ -751,6 +771,17 @@ TEST_F(GrpcServiceTest, RunDiskRandomReadRoutineNoParameters) {
   std::unique_ptr<grpc_api::RunRoutineResponse> response;
   auto request = std::make_unique<grpc_api::RunRoutineRequest>();
   request->set_routine(grpc_api::ROUTINE_DISK_RANDOM_READ);
+  ExecuteRunRoutine(std::move(request), &response,
+                    false /* is_valid_request */);
+  EXPECT_EQ(response->uuid(), 0);
+  EXPECT_EQ(response->status(), grpc_api::ROUTINE_STATUS_INVALID_FIELD);
+}
+
+// Test that a prime search routine with no parameters will fail.
+TEST_F(GrpcServiceTest, RunPrimeSearchRoutineNoParameters) {
+  std::unique_ptr<grpc_api::RunRoutineResponse> response;
+  auto request = std::make_unique<grpc_api::RunRoutineRequest>();
+  request->set_routine(grpc_api::ROUTINE_PRIME_SEARCH);
   ExecuteRunRoutine(std::move(request), &response,
                     false /* is_valid_request */);
   EXPECT_EQ(response->uuid(), 0);

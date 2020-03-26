@@ -41,7 +41,8 @@ const struct {
      mojo_ipc::DiagnosticRoutineEnum::kFloatingPointAccuracy},
     {"nvme_wear_level", mojo_ipc::DiagnosticRoutineEnum::kNvmeWearLevel},
     {"nvme_self_test", mojo_ipc::DiagnosticRoutineEnum::kNvmeSelfTest},
-    {"disk_read", mojo_ipc::DiagnosticRoutineEnum::kDiskRead}};
+    {"disk_read", mojo_ipc::DiagnosticRoutineEnum::kDiskRead},
+    {"prime_search", mojo_ipc::DiagnosticRoutineEnum::kPrimeSearch}};
 
 const struct {
   const char* readable_status;
@@ -179,6 +180,14 @@ bool DiagActions::ActionRunNvmeWearLevelRoutine(uint32_t wear_level_threshold) {
   auto response = adapter_.RunNvmeWearLevelRoutine(wear_level_threshold);
   CHECK(response) << "No RunRoutineResponse received.";
   id_ = response->id;
+  return PollRoutineAndProcessResult();
+}
+
+bool DiagActions::ActionRunPrimeSearchRoutine(
+    const base::TimeDelta& exec_duration, uint64_t max_num) {
+  auto response = adapter_.RunPrimeSearchRoutine(exec_duration, max_num);
+  id_ = response->id;
+  CHECK(response) << "No RunRoutineResponse received.";
   return PollRoutineAndProcessResult();
 }
 

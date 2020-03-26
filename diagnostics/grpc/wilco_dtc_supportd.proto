@@ -306,6 +306,7 @@ enum DiagnosticRoutine {
   ROUTINE_NVME_LONG_SELF_TEST = 10;
   ROUTINE_DISK_LINEAR_READ = 11;
   ROUTINE_DISK_RANDOM_READ = 12;
+  ROUTINE_PRIME_SEARCH = 13;
 }
 
 // Enumeration of each of the possible statuses for a diagnostics routine.
@@ -363,6 +364,7 @@ message RunRoutineRequest {
     NvmeLongSelfTestRoutineParameters nvme_long_self_test_params = 10;
     DiskLinearReadRoutineParameters disk_linear_read_params = 11;
     DiskRandomReadRoutineParameters disk_random_read_params = 12;
+    PrimeSearchRoutineParameters prime_search_params = 13;
   }
 }
 
@@ -435,6 +437,14 @@ message DiskRandomReadRoutineParameters {
   uint32 length_seconds = 1;
   // Size of the test file in MB.
   uint32 file_size_mb = 2;
+}
+
+// Parameters for the prime_search diagnostics routine.
+message PrimeSearchRoutineParameters {
+  // Length of time, in seconds, to run the prime search routine for.
+  uint32 length_seconds = 1;
+  // Upper limit to search primes number for.
+  uint64 max_num = 2;
 }
 
 // Return value of the RunRoutine RPC.

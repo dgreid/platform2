@@ -44,6 +44,14 @@ pkg_config("floating-point-accuracy_pkg_deps") {
   ]
 }
 
+# The prime_search tool executable.
+pkg_config("prime_search_pkg_deps") {
+  pkg_deps = [
+    "libbrillo",
+    "libchrome-${libbase_ver}",
+  ]
+}
+
 executable("floating-point-accuracy") {
   configs += [ ":floating-point-accuracy_pkg_deps" ]
   cflags_cc = [
@@ -52,6 +60,14 @@ executable("floating-point-accuracy") {
   ]
   sources = [
     "floating_point/main.cc",
+  ]
+}
+
+executable("prime-search") {
+  configs += [ ":prime_search_pkg_deps" ]
+  sources = [
+    "prime_search/main.cc",
+    "prime_search/prime_number_search.cc",
   ]
 }
 
@@ -80,6 +96,7 @@ source_set("libdiag_routine") {
     "floating_point/floating_point_accuracy.cc",
     "nvme_self_test/nvme_self_test.cc",
     "nvme_wear_level/nvme_wear_level.cc",
+    "prime_search/prime_search.cc",
     "smartctl_check/smartctl_check.cc",
     "subproc_routine.cc",
     "urandom/urandom.cc",
@@ -133,6 +150,8 @@ if (use.test) {
       "battery_sysfs/battery_sysfs_test.cc",
       "nvme_self_test/nvme_self_test_test.cc",
       "nvme_wear_level/nvme_wear_level_test.cc",
+      "prime_search/prime_number_search.cc",
+      "prime_search/prime_number_search_test.cc",
       "smartctl_check/smartctl_check_utils.cc",
       "smartctl_check/smartctl_check_utils_test.cc",
       "subproc_routine_test.cc",

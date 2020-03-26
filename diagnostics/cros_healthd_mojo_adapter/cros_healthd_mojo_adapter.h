@@ -74,6 +74,10 @@ class CrosHealthdMojoAdapter final {
       const base::TimeDelta& exec_duration,
       uint32_t file_size_mb);
 
+  // Runs the prime search routine.
+  chromeos::cros_healthd::mojom::RunRoutineResponsePtr RunPrimeSearchRoutine(
+      const base::TimeDelta& exec_duration, uint64_t max_num);
+
   // Returns which routines are available on the platform.
   std::vector<chromeos::cros_healthd::mojom::DiagnosticRoutineEnum>
   GetAvailableRoutines();

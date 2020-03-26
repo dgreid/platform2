@@ -77,7 +77,8 @@ TEST_F(CrosHealthdRoutineServiceImplTest, GetAvailableRoutines) {
       mojo_ipc::DiagnosticRoutineEnum::kFloatingPointAccuracy,
       mojo_ipc::DiagnosticRoutineEnum::kNvmeWearLevel,
       mojo_ipc::DiagnosticRoutineEnum::kNvmeSelfTest,
-      mojo_ipc::DiagnosticRoutineEnum::kDiskRead};
+      mojo_ipc::DiagnosticRoutineEnum::kDiskRead,
+      mojo_ipc::DiagnosticRoutineEnum::kPrimeSearch};
   auto reply = service()->GetAvailableRoutines();
   EXPECT_EQ(reply, kAvailableRoutines);
 }
@@ -250,6 +251,22 @@ TEST_F(CrosHealthdRoutineServiceImplTest, RunDiskReadRoutine) {
   service()->RunDiskReadRoutine(
       /*type*/ mojo_ipc::DiskReadRoutineTypeEnum::kLinearRead,
       /*exec_duration=*/exec_duration, /*file_size_mb=*/1024, &response.id,
+      &response.status);
+  EXPECT_EQ(response.id, 1);
+  EXPECT_EQ(response.status, kExpectedStatus);
+}
+
+// Test that the prime search routine can be run.
+TEST_F(CrosHealthdRoutineServiceImplTest, RunPrimeSearchRoutine) {
+  constexpr mojo_ipc::DiagnosticRoutineStatusEnum kExpectedStatus =
+      mojo_ipc::DiagnosticRoutineStatusEnum::kWaiting;
+  routine_factory()->SetNonInteractiveStatus(
+      kExpectedStatus, /*status_message=*/"", /*progress_percent=*/50,
+      /*output=*/"");
+  mojo_ipc::RunRoutineResponse response;
+  base::TimeDelta exec_duration = base::TimeDelta::FromSeconds(10);
+  service()->RunPrimeSearchRoutine(
+      /*exec_duration=*/exec_duration, /*max_num=*/1000000, &response.id,
       &response.status);
   EXPECT_EQ(response.id, 1);
   EXPECT_EQ(response.status, kExpectedStatus);

@@ -75,6 +75,10 @@ class FakeDiagnosticsService final
       uint32_t length_seconds,
       uint32_t file_size_mb,
       const RunDiskReadRoutineCallback& callback) override;
+  void RunPrimeSearchRoutine(
+      uint32_t length_seconds,
+      uint64_t max_num,
+      const RunPrimeSearchRoutineCallback& callback) override;
 
   // Overrides the default behavior of GetCrosHealthdDiagnosticsService to test
   // situations where mojo methods were called prior to wilco_dtc_supportd's

@@ -128,6 +128,9 @@ bool GetGrpcRoutineEnumFromMojoRoutineEnum(
       grpc_enum_out->push_back(grpc_api::ROUTINE_DISK_LINEAR_READ);
       grpc_enum_out->push_back(grpc_api::ROUTINE_DISK_RANDOM_READ);
       return true;
+    case chromeos::cros_healthd::mojom::DiagnosticRoutineEnum::kPrimeSearch:
+      grpc_enum_out->push_back(grpc_api::ROUTINE_PRIME_SEARCH);
+      return true;
     default:
       LOG(ERROR) << "Unknown mojo routine: " << static_cast<int>(mojo_enum);
       return false;
@@ -357,6 +360,15 @@ void RoutineService::RunRoutine(const grpc_api::RunRoutineRequest& request,
           mojo_ipc::DiskReadRoutineTypeEnum::kRandomRead,
           request.disk_random_read_params().length_seconds(),
           request.disk_random_read_params().file_size_mb(),
+          base::Bind(&RoutineService::ForwardRunRoutineResponse,
+                     weak_ptr_factory_.GetWeakPtr(), callback_key));
+      break;
+    case grpc_api::ROUTINE_PRIME_SEARCH:
+      DCHECK_EQ(request.parameters_case(),
+                grpc_api::RunRoutineRequest::kPrimeSearchParams);
+      service_ptr_->RunPrimeSearchRoutine(
+          request.prime_search_params().length_seconds(),
+          request.prime_search_params().max_num(),
           base::Bind(&RoutineService::ForwardRunRoutineResponse,
                      weak_ptr_factory_.GetWeakPtr(), callback_key));
       break;

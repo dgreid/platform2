@@ -86,6 +86,10 @@ class CrosHealthdMojoService final
       uint32_t length_seconds,
       uint32_t file_size_mb,
       const RunDiskReadRoutineCallback& callback) override;
+  void RunPrimeSearchRoutine(
+      uint32_t length_seconds,
+      uint64_t max_num,
+      const RunPrimeSearchRoutineCallback& callback) override;
 
   // chromeos::cros_healthd::mojom::CrosHealthdProbeService overrides:
   void ProbeTelemetryInfo(const std::vector<ProbeCategoryEnum>& categories,

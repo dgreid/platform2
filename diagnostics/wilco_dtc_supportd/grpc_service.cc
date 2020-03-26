@@ -594,6 +594,16 @@ void GrpcService::RunRoutine(
         return;
       }
       break;
+    case grpc_api::ROUTINE_PRIME_SEARCH:
+      if (!request->has_prime_search_params()) {
+        LOG(ERROR) << "RunRoutineRequest with routine type PRIME_SEARCH "
+                      "has no prime_search parameters.";
+        ForwardRunRoutineResponse(callback, 0 /* uuid */,
+                                  grpc_api::ROUTINE_STATUS_INVALID_FIELD,
+                                  grpc_api::ROUTINE_SERVICE_STATUS_OK);
+        return;
+      }
+      break;
     default:
       LOG(ERROR) << "RunRoutineRequest routine type invalid or unset.";
       ForwardRunRoutineResponse(callback, 0 /* uuid */,

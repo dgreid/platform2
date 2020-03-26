@@ -10,6 +10,7 @@
 #include <string>
 
 #include <base/optional.h>
+#include <base/time/time.h>
 
 #include "diagnostics/common/system/debugd_adapter_impl.h"
 #include "diagnostics/routines/diag_routine.h"
@@ -70,6 +71,10 @@ class CrosHealthdRoutineFactory {
       chromeos::cros_healthd::mojom::DiskReadRoutineTypeEnum type,
       const base::TimeDelta& exec_duration,
       uint32_t file_size_mb) = 0;
+  // Constructs a new instance of the prime search routine. See
+  // diagnostics/routines/prime_search for details on the routine itself.
+  virtual std::unique_ptr<DiagnosticRoutine> MakePrimeSearchRoutine(
+      const base::TimeDelta& exec_duration, uint64_t max_num) = 0;
 };
 
 }  // namespace diagnostics

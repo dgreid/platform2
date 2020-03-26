@@ -102,6 +102,11 @@ class MockCrosHealthdRoutineService : public CrosHealthdRoutineService {
                     uint32_t file_size_mb,
                     int32_t* id,
                     mojo_ipc::DiagnosticRoutineStatusEnum* status));
+  MOCK_METHOD4(RunPrimeSearchRoutine,
+               void(const base::TimeDelta& exec_duration,
+                    uint64_t max_num,
+                    int32_t* id,
+                    mojo_ipc::DiagnosticRoutineStatusEnum* status));
   MOCK_METHOD4(GetRoutineUpdate,
                void(int32_t uuid,
                     mojo_ipc::DiagnosticRoutineCommandEnum command,
@@ -408,6 +413,29 @@ TEST_F(CrosHealthdMojoServiceTest, RequestDiskReadRoutine) {
   EXPECT_EQ(response->status, kExpectedStatus);
 }
 
+// Test that we can request the prime-search routine.
+TEST_F(CrosHealthdMojoServiceTest, RequestPrimeSearchRoutine) {
+  constexpr auto kExecDuration = base::TimeDelta::FromSeconds(8);
+  constexpr uint32_t kMaxNum = 10020;
+  EXPECT_CALL(*routine_service(), RunPrimeSearchRoutine(kExecDuration, kMaxNum,
+                                                        NotNull(), NotNull()))
+      .WillOnce(WithArgs<2, 3>(Invoke(
+          [](int32_t* id, mojo_ipc::DiagnosticRoutineStatusEnum* status) {
+            *id = kExpectedId;
+            *status = kExpectedStatus;
+          })));
+
+  mojo_ipc::RunRoutineResponsePtr response;
+  service()->RunPrimeSearchRoutine(
+      kExecDuration.InSeconds(), kMaxNum,
+      base::Bind(&SaveMojoResponse<mojo_ipc::RunRoutineResponsePtr>,
+                 &response));
+
+  ASSERT_TRUE(!response.is_null());
+  EXPECT_EQ(response->id, kExpectedId);
+  EXPECT_EQ(response->status, kExpectedStatus);
+}
+
 // Test an update request.
 TEST_F(CrosHealthdMojoServiceTest, RequestRoutineUpdate) {
   constexpr int kId = 3;
@@ -440,6 +468,7 @@ TEST_F(CrosHealthdMojoServiceTest, RequestAvailableRoutines) {
       mojo_ipc::DiagnosticRoutineEnum::kNvmeWearLevel,
       mojo_ipc::DiagnosticRoutineEnum::kNvmeSelfTest,
       mojo_ipc::DiagnosticRoutineEnum::kDiskRead,
+      mojo_ipc::DiagnosticRoutineEnum::kPrimeSearch,
   };
 
   EXPECT_CALL(*routine_service(), GetAvailableRoutines())

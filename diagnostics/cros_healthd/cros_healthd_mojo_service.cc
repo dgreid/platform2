@@ -11,6 +11,7 @@
 #include <base/files/scoped_file.h>
 #include <base/logging.h>
 #include <base/optional.h>
+#include <base/time/time.h>
 #include <dbus/cros_healthd/dbus-constants.h>
 #include <mojo/public/cpp/bindings/interface_request.h>
 
@@ -159,6 +160,18 @@ void CrosHealthdMojoService::RunDiskReadRoutine(
   base::TimeDelta exec_duration = base::TimeDelta::FromSeconds(length_seconds);
   routine_service_->RunDiskReadRoutine(type, exec_duration, file_size_mb,
                                        &response.id, &response.status);
+  callback.Run(response.Clone());
+}
+
+void CrosHealthdMojoService::RunPrimeSearchRoutine(
+    uint32_t length_seconds,
+    uint64_t max_num,
+    const RunPrimeSearchRoutineCallback& callback) {
+  RunRoutineResponse response;
+  base::TimeDelta exec_duration = base::TimeDelta::FromSeconds(length_seconds);
+
+  routine_service_->RunPrimeSearchRoutine(exec_duration, max_num, &response.id,
+                                          &response.status);
   callback.Run(response.Clone());
 }
 

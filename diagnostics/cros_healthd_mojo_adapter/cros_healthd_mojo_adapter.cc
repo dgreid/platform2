@@ -302,6 +302,24 @@ CrosHealthdMojoAdapter::RunDiskReadRoutine(
   return response;
 }
 
+chromeos::cros_healthd::mojom::RunRoutineResponsePtr
+CrosHealthdMojoAdapter::RunPrimeSearchRoutine(
+    const base::TimeDelta& exec_duration, uint64_t max_num) {
+  if (!cros_healthd_service_factory_.is_bound())
+    Connect();
+
+  chromeos::cros_healthd::mojom::RunRoutineResponsePtr response;
+  base::RunLoop run_loop;
+  cros_healthd_diagnostics_service_->RunPrimeSearchRoutine(
+      exec_duration.InSeconds(), max_num,
+      base::Bind(&OnMojoResponseReceived<
+                     chromeos::cros_healthd::mojom::RunRoutineResponsePtr>,
+                 &response, run_loop.QuitClosure()));
+  run_loop.Run();
+
+  return response;
+}
+
 std::vector<chromeos::cros_healthd::mojom::DiagnosticRoutineEnum>
 CrosHealthdMojoAdapter::GetAvailableRoutines() {
   if (!cros_healthd_service_factory_.is_bound())
