@@ -25,7 +25,7 @@ def main(argv):
     sys.exit('Test takes no args!')
   iterations = 10
   output_to_stdout = ' 2>&1 | tee '
-  python_prefix = 'python '
+  python_prefix = 'python2 '
   test_list = ['verify_pairing',
                'ro_stay_ro',
                'flash_wrong_address',
