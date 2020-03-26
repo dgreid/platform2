@@ -56,7 +56,6 @@ class MockBootstrapDelegate : public SmbFsBootstrapImpl::Delegate {
               CreateSmbFilesystem,
               (const std::string&, std::unique_ptr<SmbCredential>, bool),
               (override));
-  MOCK_METHOD(void, OnBootstrapConnectionError, (), (override));
 };
 
 class MockSmbFsDelegate : public mojom::SmbFsDelegate {
@@ -287,8 +286,11 @@ TEST_F(TestSmbFsBootstrapImpl, Disconnect) {
                                    &mock_delegate_);
 
   base::RunLoop run_loop;
-  EXPECT_CALL(mock_delegate_, OnBootstrapConnectionError())
-      .WillOnce([&run_loop]() { run_loop.Quit(); });
+  boostrap_impl.Start(base::BindLambdaForTesting(
+      [&run_loop](std::unique_ptr<SmbFilesystem> fs) {
+        EXPECT_FALSE(fs);
+        run_loop.Quit();
+      }));
 
   boostrap_ptr.reset();
   run_loop.Run();

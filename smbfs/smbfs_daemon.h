@@ -47,7 +47,6 @@ class SmbFsDaemon : public brillo::DBusDaemon,
       const std::string& share_path,
       std::unique_ptr<SmbCredential> credential,
       bool allow_ntlm) override;
-  void OnBootstrapConnectionError() override;
 
  private:
   // Starts the fuse session using the filesystem |fs|. Returns true if the
@@ -62,6 +61,9 @@ class SmbFsDaemon : public brillo::DBusDaemon,
 
   // Initialise Mojo IPC system.
   bool InitMojo();
+
+  // Callback for SmbFsBootstrapImpl::Start().
+  void OnBootstrapComplete(std::unique_ptr<SmbFilesystem> fs);
 
   fuse_chan* chan_;
   const bool use_test_fs_;

@@ -199,25 +199,20 @@ bool SmbFsDaemon::InitMojo() {
       mojom::SmbFsBootstrapRequest(
           invitation.ExtractMessagePipe(mojom::kBootstrapPipeName)),
       this);
-  bootstrap_impl_->Start(base::BindOnce(
-      [](SmbFsDaemon* daemon, std::unique_ptr<SmbFilesystem> fs) {
-        // Trivial adapter lambda due to argument type (Filesystem instead of
-        // SmbFilesystem).
-        CHECK(daemon->StartFuseSession(std::move(fs)));
-      },
-      this));
+  bootstrap_impl_->Start(base::BindOnce(&SmbFsDaemon::OnBootstrapComplete,
+                                        base::Unretained(this)));
 
   return true;
 }
 
-void SmbFsDaemon::OnBootstrapConnectionError() {
-  if (session_) {
-    // Do nothing because the session is running.
+void SmbFsDaemon::OnBootstrapComplete(std::unique_ptr<SmbFilesystem> fs) {
+  if (!fs) {
+    LOG(ERROR) << "Connection error during Mojo bootstrap. Exiting.";
+    QuitWithExitCode(EX_SOFTWARE);
     return;
   }
 
-  LOG(ERROR) << "Connection error during Mojo bootstrap. Exiting.";
-  QuitWithExitCode(EX_SOFTWARE);
+  CHECK(StartFuseSession(std::move(fs)));
 }
 
 void SmbFsDaemon::SetupKerberos(

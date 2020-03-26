@@ -36,9 +36,6 @@ class SmbFsBootstrapImpl : public mojom::SmbFsBootstrap {
         const std::string& share_path,
         std::unique_ptr<SmbCredential> credential,
         bool allow_ntlm) = 0;
-
-    // Mojo connection error handler.
-    virtual void OnBootstrapConnectionError() = 0;
   };
 
   using BootstrapCompleteCallback =
@@ -47,7 +44,10 @@ class SmbFsBootstrapImpl : public mojom::SmbFsBootstrap {
   SmbFsBootstrapImpl(mojom::SmbFsBootstrapRequest request, Delegate* delegate);
   ~SmbFsBootstrapImpl() override;
 
-  // Start the bootstrap process and run |callback| when successfully completed.
+  // Start the bootstrap process and run |callback| when finished or the Mojo
+  // channel is disconnected. If the bootstrap process completed successfully,
+  // |callback| will be called with a valid SmbFilesystem object. If the Mojo
+  // channel is disconnected, |callback| will be run with nullptr.
   void Start(BootstrapCompleteCallback callback);
 
  private:
@@ -64,6 +64,9 @@ class SmbFsBootstrapImpl : public mojom::SmbFsBootstrap {
                           std::unique_ptr<SmbCredential> credential,
                           bool use_kerberos,
                           bool setup_success);
+
+  // Mojo connection error handler.
+  void OnMojoConnectionError();
 
   mojo::Binding<mojom::SmbFsBootstrap> binding_;
   base::OnceClosure disconnect_callback_;

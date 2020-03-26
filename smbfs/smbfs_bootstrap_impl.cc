@@ -37,7 +37,7 @@ SmbFsBootstrapImpl::SmbFsBootstrapImpl(mojom::SmbFsBootstrapRequest request,
     : binding_(this, std::move(request)), delegate_(delegate) {
   DCHECK(delegate_);
   binding_.set_connection_error_handler(base::Bind(
-      &Delegate::OnBootstrapConnectionError, base::Unretained(delegate)));
+      &SmbFsBootstrapImpl::OnMojoConnectionError, base::Unretained(this)));
 }
 
 SmbFsBootstrapImpl::~SmbFsBootstrapImpl() = default;
@@ -125,6 +125,12 @@ void SmbFsBootstrapImpl::OnCredentialsSetup(
   std::move(completion_callback_).Run(std::move(fs));
 
   callback.Run(mojom::MountError::kOk, std::move(smbfs_ptr));
+}
+
+void SmbFsBootstrapImpl::OnMojoConnectionError() {
+  if (completion_callback_) {
+    std::move(completion_callback_).Run(nullptr);
+  }
 }
 
 }  // namespace smbfs
