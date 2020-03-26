@@ -8,3 +8,9 @@ mount_var_and_home_chronos() {
   mount -n --bind /mnt/stateful_partition/var /var || return 1
   mount -n --bind /mnt/stateful_partition/home/chronos /home/chronos
 }
+
+# Unmount bind mounts for /var and /home/chronos.
+umount_var_and_home_chronos() {
+  umount -n /var /home/chronos
+}
+
