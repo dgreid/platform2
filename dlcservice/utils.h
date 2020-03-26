@@ -103,17 +103,20 @@ std::set<std::string> ScanDirectory(const base::FilePath& dir);
 // Converts a |DlcMap| into a |DlcModuleList| based on filtering logic where
 // a return value of true indicates insertion into |DlcModuleList|.
 dlcservice::DlcModuleList ToDlcModuleList(
-    const DlcMap& dlcs, std::function<bool(DlcId, DlcInfo)> filter);
+    const DlcMap& dlcs,
+    const std::function<bool(const DlcId&, const DlcInfo&)>& filter);
 
 // Converts a |DlcModuleList| into a |DlcMap| based on filtering logic where
 // a return value of true indicates insertion into |DlcMap|.
-DlcMap ToDlcMap(const dlcservice::DlcModuleList& dlc_module_list,
-                std::function<bool(dlcservice::DlcModuleInfo)> filter);
+DlcMap ToDlcMap(
+    const dlcservice::DlcModuleList& dlc_module_list,
+    const std::function<bool(const dlcservice::DlcModuleInfo&)>& filter);
 
 // Converts a |DlcModuleList| into a |DlcSet| based on filtering logic where
 // a return value of true indicates insertion into |DlcSet|.
-DlcSet ToDlcSet(const dlcservice::DlcModuleList& dlc_module_list,
-                std::function<bool(dlcservice::DlcModuleInfo)> filter);
+DlcSet ToDlcSet(
+    const dlcservice::DlcModuleList& dlc_module_list,
+    const std::function<bool(const dlcservice::DlcModuleInfo&)>& filter);
 
 dlcservice::InstallStatus CreateInstallStatus(
     const dlcservice::Status& status,

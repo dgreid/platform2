@@ -19,11 +19,9 @@
 #include "dlcservice/utils.h"
 
 using base::Callback;
-using base::File;
 using base::FilePath;
 using brillo::ErrorPtr;
 using std::string;
-using std::unique_ptr;
 using std::vector;
 
 namespace dlcservice {
@@ -76,7 +74,7 @@ class DlcManager::DlcManagerImpl {
   // so.
   void PreloadDlcModuleImages() {
     // Load all preloaded DLC(s) into |content_dir_| one by one.
-    for (auto id : ScanDirectory(preloaded_content_dir_)) {
+    for (const auto& id : ScanDirectory(preloaded_content_dir_)) {
       if (!IsSupported(id)) {
         LOG(ERROR) << "Preloading is not allowed for unsupported DLC=" << id;
         continue;
@@ -134,7 +132,7 @@ class DlcManager::DlcManagerImpl {
 
   // Check installed DLC(s) at startup.
   void LoadDlcModuleImages() {
-    for (auto id : ScanDirectory(content_dir_)) {
+    for (const auto& id : ScanDirectory(content_dir_)) {
       ErrorPtr tmp_err;
       if (!IsSupported(id)) {
         LOG(ERROR)
@@ -611,14 +609,15 @@ bool DlcManager::IsInstalling() {
 }
 
 DlcModuleList DlcManager::GetInstalled() {
-  return ToDlcModuleList(impl_->GetSupported(), [](DlcId, DlcInfo info) {
-    return info.state.state() == DlcState::INSTALLED;
-  });
+  return ToDlcModuleList(impl_->GetSupported(),
+                         [](const DlcId&, const DlcInfo& info) {
+                           return info.state.state() == DlcState::INSTALLED;
+                         });
 }
 
 DlcModuleList DlcManager::GetSupported() {
   return ToDlcModuleList(impl_->GetSupported(),
-                         [](DlcId, DlcInfo) { return true; });
+                         [](const DlcId&, const DlcInfo&) { return true; });
 }
 
 bool DlcManager::GetState(const DlcId& id, DlcState* state, ErrorPtr* err) {
@@ -645,7 +644,7 @@ bool DlcManager::InitInstall(const DlcModuleList& dlc_module_list,
                              ErrorPtr* err) {
   DCHECK(err);
   const auto dlc_set =
-      ToDlcSet(dlc_module_list, [](DlcModuleInfo) { return true; });
+      ToDlcSet(dlc_module_list, [](const DlcModuleInfo&) { return true; });
 
   if (dlc_set.empty()) {
     *err = Error::Create(kErrorInvalidDlc,
@@ -658,9 +657,10 @@ bool DlcManager::InitInstall(const DlcModuleList& dlc_module_list,
 
 DlcModuleList DlcManager::GetMissingInstalls() {
   // Only return the DLC(s) that aren't already installed.
-  return ToDlcModuleList(impl_->GetSupported(), [](DlcId, DlcInfo info) {
-    return info.state.state() == DlcState::INSTALLING;
-  });
+  return ToDlcModuleList(impl_->GetSupported(),
+                         [](const DlcId&, const DlcInfo& info) {
+                           return info.state.state() == DlcState::INSTALLING;
+                         });
 }
 
 bool DlcManager::FinishInstall(ErrorPtr* err) {

@@ -21,8 +21,8 @@ using DlcRoot = std::string;
 
 // |DlcInfo| holds information related to a DLC.
 struct DlcInfo {
-  explicit DlcInfo(DlcState::State state_in = DlcState::NOT_INSTALLED,
-                   DlcRoot root_in = "");
+  explicit DlcInfo(const DlcState::State& state_in = DlcState::NOT_INSTALLED,
+                   const DlcRoot& root_in = "");
   DlcState state;
   DlcRoot root;
 };

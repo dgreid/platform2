@@ -199,8 +199,9 @@ set<string> ScanDirectory(const FilePath& dir) {
   return result;
 }
 
-DlcModuleList ToDlcModuleList(const DlcMap& dlcs,
-                              std::function<bool(DlcId, DlcInfo)> filter) {
+DlcModuleList ToDlcModuleList(
+    const DlcMap& dlcs,
+    const std::function<bool(const DlcId&, const DlcInfo&)>& filter) {
   DlcModuleList dlc_module_list;
   auto f = [&dlc_module_list, filter](const pair<DlcId, DlcInfo>& pr) {
     if (filter(pr.first, pr.second)) {
@@ -214,7 +215,7 @@ DlcModuleList ToDlcModuleList(const DlcMap& dlcs,
 }
 
 DlcMap ToDlcMap(const DlcModuleList& dlc_module_list,
-                std::function<bool(DlcModuleInfo)> filter) {
+                const std::function<bool(const DlcModuleInfo&)>& filter) {
   DlcMap m;
   for (const DlcModuleInfo& dlc_module : dlc_module_list.dlc_module_infos()) {
     if (filter(dlc_module))
@@ -225,7 +226,7 @@ DlcMap ToDlcMap(const DlcModuleList& dlc_module_list,
 }
 
 DlcSet ToDlcSet(const dlcservice::DlcModuleList& dlc_module_list,
-                std::function<bool(dlcservice::DlcModuleInfo)> filter) {
+                const std::function<bool(const DlcModuleInfo&)>& filter) {
   DlcSet s;
   for (const DlcModuleInfo& dlc_module : dlc_module_list.dlc_module_infos()) {
     if (filter(dlc_module))

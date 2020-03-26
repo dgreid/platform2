@@ -20,15 +20,9 @@
 #include "dlcservice/utils.h"
 
 using base::Callback;
-using base::File;
-using base::FilePath;
-using base::ScopedTempDir;
 using brillo::ErrorPtr;
 using brillo::MessageLoop;
-using std::pair;
 using std::string;
-using std::unique_ptr;
-using std::vector;
 using update_engine::Operation;
 using update_engine::StatusResult;
 
