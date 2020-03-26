@@ -177,6 +177,8 @@ MINT32 FDVT_OpenDriverWithUserCount(MUINT32 learning_type) {
 
   if (g_UserCount == 0) {
     MY_LOGI("FDVT_Init, HW FD Open CLK");
+    g_fdvt_ctx.node.bufs[0] = g_fdvt_ctx.node.bufs[1] = nullptr;
+    g_fdvt_ctx.node.fd = g_fdvt_ctx.req_fd = g_fdvt_ctx.media_ctrl_fd = -1;
     int ret = open_fdvt_media_entities();
     if (S_Detection_OK != ret) {
       MY_LOGE("FDVT_IOCTL_OpenDriver failed");
@@ -192,20 +194,38 @@ MINT32 FDVT_OpenDriverWithUserCount(MUINT32 learning_type) {
 }
 
 void FDVT_Close_Driver() {
-  stream_off(g_fdvt_ctx.node.fd, V4L2_BUF_TYPE_META_CAPTURE);
-  stream_off(g_fdvt_ctx.node.fd, V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE);
+  if (g_fdvt_ctx.node.fd > 0) {
+    stream_off(g_fdvt_ctx.node.fd, V4L2_BUF_TYPE_META_CAPTURE);
+    stream_off(g_fdvt_ctx.node.fd, V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE);
+  }
 
-  unmmap_buffer(g_fdvt_ctx.node.bufs[1], g_fdvt_ctx.node.bufs_mapped_cnt[1],
-                V4L2_MEMORY_MMAP);
-
-  request_buffers(g_fdvt_ctx.node.fd, V4L2_BUF_TYPE_META_CAPTURE, 0,
+  if (g_fdvt_ctx.node.bufs[1] != nullptr) {
+    unmmap_buffer(g_fdvt_ctx.node.bufs[1], g_fdvt_ctx.node.bufs_mapped_cnt[1],
                   V4L2_MEMORY_MMAP);
-  request_buffers(g_fdvt_ctx.node.fd, V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE, 0,
-                  V4L2_MEMORY_DMABUF);
+    g_fdvt_ctx.node.bufs[1] = nullptr;
+  }
 
-  close_device(&g_fdvt_ctx.node.fd);
-  close_device(&g_fdvt_ctx.req_fd);
-  close_device(&g_fdvt_ctx.media_ctrl_fd);
+  if (g_fdvt_ctx.node.fd > 0) {
+    request_buffers(g_fdvt_ctx.node.fd, V4L2_BUF_TYPE_META_CAPTURE, 0,
+                    V4L2_MEMORY_MMAP);
+    request_buffers(g_fdvt_ctx.node.fd, V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE, 0,
+                    V4L2_MEMORY_DMABUF);
+  }
+
+  if (g_fdvt_ctx.node.fd > 0) {
+    close_device(&g_fdvt_ctx.node.fd);
+    g_fdvt_ctx.node.fd = -1;
+  }
+
+  if (g_fdvt_ctx.req_fd > 0) {
+    close_device(&g_fdvt_ctx.req_fd);
+    g_fdvt_ctx.req_fd = -1;
+  }
+
+  if (g_fdvt_ctx.media_ctrl_fd > 0) {
+    close_device(&g_fdvt_ctx.media_ctrl_fd);
+    g_fdvt_ctx.media_ctrl_fd = -1;
+  }
 
   g_IsFirstEnque = true;
 }
@@ -570,7 +590,8 @@ static void unmmap_buffer(struct buffer* buffers,
   }
 
   for (int i = 0; i < n_buffers; ++i) {
-    MY_LOGD("munmap %d", i);
+    MY_LOGD("munmap %d va %p length %zu", i, buffers[i].start,
+            buffers[i].length);
     if (-1 == munmap(buffers[i].start, buffers[i].length)) {
       MY_LOGE("munmap failed(%d), start(%p), length(%zu)", i, buffers[i].start,
               buffers[i].length);
@@ -664,7 +685,7 @@ static int query_map_buffer(int fd,
     if (mem_type != V4L2_MEMORY_DMABUF) {
       buffers[i].start =
           mmap(NULL, buf_len, PROT_READ | PROT_WRITE, MAP_SHARED, fd, offset);
-      MY_LOGD("Has mapped buffer %d: %llx", i, (uint64_t)buffers[i].start);
+      MY_LOGD("Has mapped buffer %d: %p", i, buffers[i].start);
       if (buffers[i].start == MAP_FAILED) {
         MY_LOGE("Error!! Failed to map buffer %d", i);
       }
