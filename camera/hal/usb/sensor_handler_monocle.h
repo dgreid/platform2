@@ -45,10 +45,6 @@ class SensorHandlerMonocle : public SensorHandler {
   // Clock rate used in camera sensor. The unit is HZ.
   static constexpr int64_t kPixelClock_ = 144'000'000;
 
-  // The sensor registers to export exposure time.
-  static constexpr uint32_t kExposureTimeRegisters_[] = {0x3500, 0x3501,
-                                                         0x3502};
-
   // Exposure time parameters.
   static constexpr uint32_t kExposureTimeFractionBits_ = 4;
 

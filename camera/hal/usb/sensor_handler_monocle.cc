@@ -13,6 +13,9 @@
 #include "cros-camera/common.h"
 #include "hal/usb/quirks.h"
 
+// The sensor registers to export exposure time.
+static constexpr uint32_t kExposureTimeRegisters[] = {0x3500, 0x3501, 0x3502};
+
 namespace cros {
 
 SensorHandlerMonocle::SensorHandlerMonocle(
@@ -88,7 +91,7 @@ int64_t SensorHandlerMonocle::GetExposureTime(const Size& resolution) {
     return 16'600'000;
   }
   uint64_t line_count = 0;
-  for (const auto& addr : kExposureTimeRegisters_) {
+  for (const auto& addr : kExposureTimeRegisters) {
     uint16_t value;
     rts_read_sensor_reg(handle_, addr, &value);
     line_count = (line_count << 8) | value;
