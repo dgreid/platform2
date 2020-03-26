@@ -240,7 +240,16 @@ def _TransformBuildConfigs(config):
         brand_config = brand_configs[device_brand.id.value]
 
       for hw_design_config in hw_design.configs:
-        sw_config = _Lookup(hw_design_config.software_config_id, sw_configs)
+        design_config_id = hw_design_config.id.value
+        sw_config_matches = [x for x in sw_configs.values()
+                             if x.design_config_id.value == design_config_id]
+        # TODO(shapiroc): Just iterate over sw configs after migrating
+        # off of software_config_id
+        if len(sw_config_matches) == 1:
+          sw_config = sw_config_matches[0]
+        else:
+          sw_config = _Lookup(hw_design_config.software_config_id, sw_configs)
+
         if not sw_config:
           design_id = hw_design_config.id.value
           raise Exception('Software config is required for: %s' % design_id)
@@ -278,7 +287,7 @@ def _TransformBuildConfig(config):
   """
   result = {
       'identity': _BuildIdentity(
-          config.sw_config.scan_config,
+          config.sw_config.id_scan_config or config.sw_config.scan_config,
           config.brand_config.scan_config),
       'name': config.hw_design.name.lower(),
   }

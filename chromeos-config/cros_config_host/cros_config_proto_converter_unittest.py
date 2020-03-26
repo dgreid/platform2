@@ -83,6 +83,7 @@ class TransformBuildConfigsTest(cros_test_lib.TempDirTestCase):
   def testMissingSwConfig(self):
     config = fakeConfig()
     config.designs.value[0].configs[0].ClearField('software_config_id')
+    config.ClearField('software_configs')
 
     with self.assertRaisesRegex(Exception, 'Software config is required'):
       cros_config_proto_converter._TransformBuildConfigs(config)
