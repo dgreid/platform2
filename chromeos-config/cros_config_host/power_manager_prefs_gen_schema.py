@@ -56,15 +56,16 @@ powerd_prefs: &powerd_prefs"""]
         r'const char .*Pref.. =[ |\n] *"(.*)";', defs_content, re.MULTILINE)
     for pref in prefs:
       default_pref_path = os.path.join(PREF_DEFAULTS_DIR, pref)
+      pref_name = pref.replace('_', '-')
       if os.path.exists(default_pref_path):
-        result_lines.append('  %s:' % pref)
+        result_lines.append('  %s:' % pref_name)
         result_lines.append('    <<: *powerd_prefs_default')
         with open(default_pref_path, 'r') as default_stream:
           default = default_stream.read()
           result_lines.append(
               '    default: "%s"' % default.strip().replace('\n', ' '))
       else:
-        result_lines.append('  %s: *powerd_prefs_default' % pref)
+        result_lines.append('  %s: *powerd_prefs_default' % pref_name)
 
 
   full_result = '\n'.join(result_lines)
