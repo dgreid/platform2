@@ -6,7 +6,10 @@
 mount_var_and_home_chronos() {
   mkdir -p /mnt/stateful_partition/var || return 1
   mount -n --bind /mnt/stateful_partition/var /var || return 1
-  mount -n --bind /mnt/stateful_partition/home/chronos /home/chronos
+  if ! mount -n --bind /mnt/stateful_partition/home/chronos /home/chronos; then
+    umount -n /var
+    return 1
+  fi
 }
 
 # Unmount bind mounts for /var and /home/chronos.
