@@ -29,6 +29,7 @@
 #include <vm_applications/proto_bindings/apps.pb.h>
 #include <vm_cicerone/proto_bindings/cicerone_service.pb.h>
 #include <vm_concierge/proto_bindings/concierge_service.pb.h>
+#include <chromeos/dbus/service_constants.h>
 
 #include "vm_tools/cicerone/container.h"
 #include "vm_tools/cicerone/container_listener_impl.h"
@@ -318,6 +319,32 @@ class Service final {
                                       std::string* name_out);
 
  private:
+  // Sends a D-Bus signal to inform listeners on update for the progress or
+  // completion of the message specified by |method_name|. It will use |cid| to
+  // resolve the request to a VM. |progress_signal| should have all related
+  // fields set. Signals |event| when done.
+  template <typename T>
+  bool SendMessage(const std::string& method_name,
+                   const uint32_t cid,
+                   T* progress_signal) {
+    DCHECK(sequence_checker_.CalledOnValidSequence());
+    CHECK(progress_signal);
+    VirtualMachine* vm;
+    std::string owner_id;
+    std::string vm_name;
+
+    if (!GetVirtualMachineForCidOrToken(cid, "", &vm, &owner_id, &vm_name)) {
+      return false;
+    }
+
+    dbus::Signal signal(kVmCiceroneInterface, method_name);
+    progress_signal->set_vm_name(std::move(vm_name));
+    progress_signal->set_owner_id(std::move(owner_id));
+    dbus::MessageWriter(&signal).AppendProtoAsArrayOfBytes(*progress_signal);
+    exported_object_->SendSignal(&signal);
+    return true;
+  }
+
   explicit Service(base::Closure quit_closure, scoped_refptr<dbus::Bus> bus);
 
   // Initializes the service by exporting our DBus methods, taking ownership of

@@ -901,27 +901,8 @@ void Service::ContainerExportProgress(
     ExportLxdContainerProgressSignal* progress_signal,
     bool* result,
     base::WaitableEvent* event) {
-  DCHECK(sequence_checker_.CalledOnValidSequence());
-  CHECK(progress_signal);
-  CHECK(result);
-  CHECK(event);
-  *result = false;
-  VirtualMachine* vm;
-  std::string owner_id;
-  std::string vm_name;
-
-  if (!GetVirtualMachineForCidOrToken(cid, "", &vm, &owner_id, &vm_name)) {
-    event->Signal();
-    return;
-  }
-
-  // Send the D-Bus signal out updating progress/completion for the export.
-  dbus::Signal signal(kVmCiceroneInterface, kExportLxdContainerProgressSignal);
-  progress_signal->set_vm_name(vm_name);
-  progress_signal->set_owner_id(owner_id);
-  dbus::MessageWriter(&signal).AppendProtoAsArrayOfBytes(*progress_signal);
-  exported_object_->SendSignal(&signal);
-  *result = true;
+  *result =
+      SendMessage(kExportLxdContainerProgressSignal, cid, progress_signal);
   event->Signal();
 }
 
@@ -930,27 +911,8 @@ void Service::ContainerImportProgress(
     ImportLxdContainerProgressSignal* progress_signal,
     bool* result,
     base::WaitableEvent* event) {
-  DCHECK(sequence_checker_.CalledOnValidSequence());
-  CHECK(progress_signal);
-  CHECK(result);
-  CHECK(event);
-  *result = false;
-  VirtualMachine* vm;
-  std::string owner_id;
-  std::string vm_name;
-
-  if (!GetVirtualMachineForCidOrToken(cid, "", &vm, &owner_id, &vm_name)) {
-    event->Signal();
-    return;
-  }
-
-  // Send the D-Bus signal out updating progress/completion for the import.
-  dbus::Signal signal(kVmCiceroneInterface, kImportLxdContainerProgressSignal);
-  progress_signal->set_vm_name(vm_name);
-  progress_signal->set_owner_id(owner_id);
-  dbus::MessageWriter(&signal).AppendProtoAsArrayOfBytes(*progress_signal);
-  exported_object_->SendSignal(&signal);
-  *result = true;
+  *result =
+      SendMessage(kImportLxdContainerProgressSignal, cid, progress_signal);
   event->Signal();
 }
 
@@ -959,27 +921,7 @@ void Service::ContainerUpgradeProgress(
     UpgradeContainerProgressSignal* progress_signal,
     bool* result,
     base::WaitableEvent* event) {
-  DCHECK(sequence_checker_.CalledOnValidSequence());
-  CHECK(progress_signal);
-  CHECK(result);
-  CHECK(event);
-  *result = false;
-  VirtualMachine* vm;
-  std::string owner_id;
-  std::string vm_name;
-
-  if (!GetVirtualMachineForCidOrToken(cid, "", &vm, &owner_id, &vm_name)) {
-    event->Signal();
-    return;
-  }
-
-  // Send the D-Bus signal out updating progress/completion for the import.
-  dbus::Signal signal(kVmCiceroneInterface, kUpgradeContainerProgressSignal);
-  progress_signal->set_vm_name(vm_name);
-  progress_signal->set_owner_id(owner_id);
-  dbus::MessageWriter(&signal).AppendProtoAsArrayOfBytes(*progress_signal);
-  exported_object_->SendSignal(&signal);
-  *result = true;
+  *result = SendMessage(kUpgradeContainerProgressSignal, cid, progress_signal);
   event->Signal();
 }
 
