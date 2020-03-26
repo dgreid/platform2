@@ -70,6 +70,11 @@ class FakeDiagnosticsService final
   void RunNvmeSelfTestRoutine(
       chromeos::cros_healthd::mojom::NvmeSelfTestTypeEnum nvme_self_test_type,
       const RunNvmeSelfTestRoutineCallback& callback) override;
+  void RunDiskReadRoutine(
+      chromeos::cros_healthd::mojom::DiskReadRoutineTypeEnum type,
+      uint32_t length_seconds,
+      uint32_t file_size_mb,
+      const RunDiskReadRoutineCallback& callback) override;
 
   // Overrides the default behavior of GetCrosHealthdDiagnosticsService to test
   // situations where mojo methods were called prior to wilco_dtc_supportd's

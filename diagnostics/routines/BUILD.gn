@@ -76,6 +76,7 @@ source_set("libdiag_routine") {
     "cpu_cache/cpu_cache.cc",
     "cpu_stress/cpu_stress.cc",
     "diag_process_adapter_impl.cc",
+    "disk_read/disk_read.cc",
     "floating_point/floating_point_accuracy.cc",
     "nvme_self_test/nvme_self_test.cc",
     "nvme_wear_level/nvme_wear_level.cc",

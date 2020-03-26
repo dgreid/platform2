@@ -46,6 +46,10 @@ class CrosHealthdRoutineFactoryImpl final : public CrosHealthdRoutineFactory {
       DebugdAdapter* debugd_adapter,
       chromeos::cros_healthd::mojom::NvmeSelfTestTypeEnum nvme_self_test_type)
       override;
+  std::unique_ptr<DiagnosticRoutine> MakeDiskReadRoutine(
+      chromeos::cros_healthd::mojom::DiskReadRoutineTypeEnum type,
+      const base::TimeDelta& exec_duration,
+      uint32_t file_size_mb) override;
 
  private:
   DISALLOW_COPY_AND_ASSIGN(CrosHealthdRoutineFactoryImpl);

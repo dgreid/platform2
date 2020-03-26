@@ -80,6 +80,13 @@ class CrosHealthdRoutineService {
       MojomCrosHealthdNvmeSelfTestTypeEnum nvme_self_test_type,
       int32_t* id,
       MojomCrosHealthdDiagnosticRoutineStatusEnum* status) = 0;
+  virtual void RunDiskReadRoutine(
+      chromeos::cros_healthd::mojom::DiskReadRoutineTypeEnum type,
+      const base::TimeDelta& exec_duration,
+      uint32_t file_size_mb,
+      int32_t* id,
+      MojomCrosHealthdDiagnosticRoutineStatusEnum* status) = 0;
+
   virtual void GetRoutineUpdate(
       int32_t id,
       MojomCrosHealthdDiagnosticRoutineCommandEnum command,

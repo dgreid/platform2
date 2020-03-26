@@ -574,6 +574,26 @@ void GrpcService::RunRoutine(
         return;
       }
       break;
+    case grpc_api::ROUTINE_DISK_LINEAR_READ:
+      if (!request->has_disk_linear_read_params()) {
+        LOG(ERROR) << "RunRoutineRequest with routine type LINEAR_READ "
+                      "has no linear_read parameters.";
+        ForwardRunRoutineResponse(callback, 0 /* uuid */,
+                                  grpc_api::ROUTINE_STATUS_INVALID_FIELD,
+                                  grpc_api::ROUTINE_SERVICE_STATUS_OK);
+        return;
+      }
+      break;
+    case grpc_api::ROUTINE_DISK_RANDOM_READ:
+      if (!request->has_disk_random_read_params()) {
+        LOG(ERROR) << "RunRoutineRequest with routine type RANDOM_READ "
+                      "has no random_read parameters.";
+        ForwardRunRoutineResponse(callback, 0 /* uuid */,
+                                  grpc_api::ROUTINE_STATUS_INVALID_FIELD,
+                                  grpc_api::ROUTINE_SERVICE_STATUS_OK);
+        return;
+      }
+      break;
     default:
       LOG(ERROR) << "RunRoutineRequest routine type invalid or unset.";
       ForwardRunRoutineResponse(callback, 0 /* uuid */,

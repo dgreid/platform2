@@ -150,6 +150,18 @@ void CrosHealthdMojoService::RunNvmeSelfTestRoutine(
   callback.Run(response.Clone());
 }
 
+void CrosHealthdMojoService::RunDiskReadRoutine(
+    mojo_ipc::DiskReadRoutineTypeEnum type,
+    uint32_t length_seconds,
+    uint32_t file_size_mb,
+    const RunDiskReadRoutineCallback& callback) {
+  RunRoutineResponse response;
+  base::TimeDelta exec_duration = base::TimeDelta::FromSeconds(length_seconds);
+  routine_service_->RunDiskReadRoutine(type, exec_duration, file_size_mb,
+                                       &response.id, &response.status);
+  callback.Run(response.Clone());
+}
+
 void CrosHealthdMojoService::ProbeTelemetryInfo(
     const std::vector<ProbeCategoryEnum>& categories,
     const ProbeTelemetryInfoCallback& callback) {

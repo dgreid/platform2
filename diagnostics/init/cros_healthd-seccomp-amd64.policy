@@ -75,3 +75,24 @@ sched_yield: 1
 sysinfo: 1
 nanosleep: 1
 kill: arg1 == SIGKILL || arg1 == SIGTERM
+rmdir: 1
+alarm: 1
+chdir: 1
+fsync: 1
+mkdir: 1
+shmdt: 1
+clock_gettime: 1
+openat: 1
+shmctl: 1
+shmget: 1
+shmat: 1
+madvise: 1
+fallocate: 1
+fadvise64: 1
+getpriority: 1
+setpriority: 1
+getrusage: 1
+pwrite64: 1
+setsid: 1
+statfs: 1
+pipe: 1

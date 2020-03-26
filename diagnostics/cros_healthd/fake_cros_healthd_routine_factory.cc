@@ -256,4 +256,12 @@ FakeCrosHealthdRoutineFactory::MakeNvmeSelfTestRoutine(
   return std::move(next_routine_);
 }
 
+std::unique_ptr<DiagnosticRoutine>
+FakeCrosHealthdRoutineFactory::MakeDiskReadRoutine(
+    mojo_ipc::DiskReadRoutineTypeEnum type,
+    const base::TimeDelta& exec_duration,
+    uint32_t file_size_mb) {
+  return std::move(next_routine_);
+}
+
 }  // namespace diagnostics

@@ -9,6 +9,7 @@
 #include "diagnostics/routines/battery_sysfs/battery_sysfs.h"
 #include "diagnostics/routines/cpu_cache/cpu_cache.h"
 #include "diagnostics/routines/cpu_stress/cpu_stress.h"
+#include "diagnostics/routines/disk_read/disk_read.h"
 #include "diagnostics/routines/floating_point/floating_point_accuracy.h"
 #include "diagnostics/routines/nvme_self_test/nvme_self_test.h"
 #include "diagnostics/routines/nvme_wear_level/nvme_wear_level.h"
@@ -89,6 +90,14 @@ CrosHealthdRoutineFactoryImpl::MakeNvmeSelfTestRoutine(
           : NvmeSelfTestRoutine::kRunLongSelfTest;
 
   return std::make_unique<NvmeSelfTestRoutine>(debugd_adapter, type);
+}
+
+std::unique_ptr<DiagnosticRoutine>
+CrosHealthdRoutineFactoryImpl::MakeDiskReadRoutine(
+    chromeos::cros_healthd::mojom::DiskReadRoutineTypeEnum type,
+    const base::TimeDelta& exec_duration,
+    uint32_t file_size_mb) {
+  return CreateDiskReadRoutine(type, exec_duration, file_size_mb);
 }
 
 }  // namespace diagnostics

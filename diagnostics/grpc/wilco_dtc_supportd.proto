@@ -304,6 +304,8 @@ enum DiagnosticRoutine {
   ROUTINE_NVME_WEAR_LEVEL = 8;
   ROUTINE_NVME_SHORT_SELF_TEST = 9;
   ROUTINE_NVME_LONG_SELF_TEST = 10;
+  ROUTINE_DISK_LINEAR_READ = 11;
+  ROUTINE_DISK_RANDOM_READ = 12;
 }
 
 // Enumeration of each of the possible statuses for a diagnostics routine.
@@ -359,6 +361,8 @@ message RunRoutineRequest {
     NvmeWearLevelRoutineParameters nvme_wear_level_params = 8;
     NvmeShortSelfTestRoutineParameters nvme_short_self_test_params = 9;
     NvmeLongSelfTestRoutineParameters nvme_long_self_test_params = 10;
+    DiskLinearReadRoutineParameters disk_linear_read_params = 11;
+    DiskRandomReadRoutineParameters disk_random_read_params = 12;
   }
 }
 
@@ -391,7 +395,7 @@ message UrandomRoutineParameters {
 // Parameters for the smartctl_check diagnostics routine.
 message SmartctlCheckRoutineParameters {}
 
-// Parameters for the cpu cache/stress diagnostics routine
+// Parameters for the cpu cache/stress diagnostics routine.
 message CpuRoutineParameters {
   // Length of time to run the CPU cache/stress diagnostics in seconds.
   // Note here, the length of running time should be at least five minutes for
@@ -416,6 +420,22 @@ message NvmeShortSelfTestRoutineParameters {}
 
 // Parameters for nvme_long_self-test diagnostic routine.
 message NvmeLongSelfTestRoutineParameters {}
+
+// Parameters for the disk_read's linear read diagnostics routine.
+message DiskLinearReadRoutineParameters {
+  // Length of time, in seconds, to run the linear read routine for.
+  uint32 length_seconds = 1;
+  // Size of the test file in MB.
+  uint32 file_size_mb = 2;
+}
+
+// Parameters for the disk_read's random read diagnostics routine.
+message DiskRandomReadRoutineParameters {
+  // Length of time, in seconds, to run the random read routine for.
+  uint32 length_seconds = 1;
+  // Size of the test file in MB.
+  uint32 file_size_mb = 2;
+}
 
 // Return value of the RunRoutine RPC.
 message RunRoutineResponse {

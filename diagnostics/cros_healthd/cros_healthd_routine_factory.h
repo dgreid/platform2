@@ -64,6 +64,12 @@ class CrosHealthdRoutineFactory {
       DebugdAdapter* debugd_adapter,
       chromeos::cros_healthd::mojom::NvmeSelfTestTypeEnum
           nvme_self_test_type) = 0;
+  // Constructs a new instance of the disk read routine. See
+  // diagnostics/routines/disk_read for details on the routine itself.
+  virtual std::unique_ptr<DiagnosticRoutine> MakeDiskReadRoutine(
+      chromeos::cros_healthd::mojom::DiskReadRoutineTypeEnum type,
+      const base::TimeDelta& exec_duration,
+      uint32_t file_size_mb) = 0;
 };
 
 }  // namespace diagnostics

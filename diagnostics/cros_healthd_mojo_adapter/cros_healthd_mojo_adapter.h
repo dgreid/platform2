@@ -68,6 +68,12 @@ class CrosHealthdMojoAdapter final {
   chromeos::cros_healthd::mojom::RunRoutineResponsePtr RunNvmeSelfTestRoutine(
       chromeos::cros_healthd::mojom::NvmeSelfTestTypeEnum nvme_self_test_type);
 
+  // Runs the disk read routine.
+  chromeos::cros_healthd::mojom::RunRoutineResponsePtr RunDiskReadRoutine(
+      chromeos::cros_healthd::mojom::DiskReadRoutineTypeEnum type,
+      const base::TimeDelta& exec_duration,
+      uint32_t file_size_mb);
+
   // Returns which routines are available on the platform.
   std::vector<chromeos::cros_healthd::mojom::DiagnosticRoutineEnum>
   GetAvailableRoutines();

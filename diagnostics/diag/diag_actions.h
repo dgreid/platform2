@@ -43,6 +43,10 @@ class DiagActions final {
   bool ActionRunBatteryHealthRoutine(uint32_t maximum_cycle_count,
                                      uint32_t percent_battery_wear_allowed);
   bool ActionRunCpuCacheRoutine(const base::TimeDelta& exec_duration);
+  bool ActionRunDiskReadRoutine(
+      chromeos::cros_healthd::mojom::DiskReadRoutineTypeEnum type,
+      const base::TimeDelta& exec_duration,
+      uint32_t file_size_mb);
   bool ActionRunCpuStressRoutine(const base::TimeDelta& exec_duration);
   bool ActionRunFloatingPointAccuracyRoutine(
       const base::TimeDelta& exec_duration);

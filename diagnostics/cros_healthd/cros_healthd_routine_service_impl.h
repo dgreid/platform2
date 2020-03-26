@@ -73,6 +73,12 @@ class CrosHealthdRoutineServiceImpl final : public CrosHealthdRoutineService {
       MojomCrosHealthdNvmeSelfTestTypeEnum nvme_self_test_type,
       int32_t* id,
       MojomCrosHealthdDiagnosticRoutineStatusEnum* status) override;
+  void RunDiskReadRoutine(
+      chromeos::cros_healthd::mojom::DiskReadRoutineTypeEnum type,
+      const base::TimeDelta& exec_duration,
+      uint32_t file_size_mb,
+      int32_t* id,
+      MojomCrosHealthdDiagnosticRoutineStatusEnum* status) override;
   void GetRoutineUpdate(
       int32_t id,
       MojomCrosHealthdDiagnosticRoutineCommandEnum command,
@@ -106,7 +112,8 @@ class CrosHealthdRoutineServiceImpl final : public CrosHealthdRoutineService {
           chromeos::cros_healthd::mojom::DiagnosticRoutineEnum::
               kFloatingPointAccuracy,
           chromeos::cros_healthd::mojom::DiagnosticRoutineEnum::kNvmeWearLevel,
-          chromeos::cros_healthd::mojom::DiagnosticRoutineEnum::kNvmeSelfTest};
+          chromeos::cros_healthd::mojom::DiagnosticRoutineEnum::kNvmeSelfTest,
+          chromeos::cros_healthd::mojom::DiagnosticRoutineEnum::kDiskRead};
   // Responsible for making async calls to debugd. Unowned pointer that should
   // outlive this instance.
   DebugdAdapter* debugd_adapter_ = nullptr;

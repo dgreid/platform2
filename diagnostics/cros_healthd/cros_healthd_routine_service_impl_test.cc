@@ -76,7 +76,8 @@ TEST_F(CrosHealthdRoutineServiceImplTest, GetAvailableRoutines) {
       mojo_ipc::DiagnosticRoutineEnum::kCpuStress,
       mojo_ipc::DiagnosticRoutineEnum::kFloatingPointAccuracy,
       mojo_ipc::DiagnosticRoutineEnum::kNvmeWearLevel,
-      mojo_ipc::DiagnosticRoutineEnum::kNvmeSelfTest};
+      mojo_ipc::DiagnosticRoutineEnum::kNvmeSelfTest,
+      mojo_ipc::DiagnosticRoutineEnum::kDiskRead};
   auto reply = service()->GetAvailableRoutines();
   EXPECT_EQ(reply, kAvailableRoutines);
 }
@@ -233,6 +234,23 @@ TEST_F(CrosHealthdRoutineServiceImplTest, RunNvmeSelfTestRoutine) {
   service()->RunNvmeSelfTestRoutine(
       /*nvme_self_test_type=*/mojo_ipc::NvmeSelfTestTypeEnum::kShortSelfTest,
       &response.id, &response.status);
+  EXPECT_EQ(response.id, 1);
+  EXPECT_EQ(response.status, kExpectedStatus);
+}
+
+// Test that the disk read routine can be run.
+TEST_F(CrosHealthdRoutineServiceImplTest, RunDiskReadRoutine) {
+  constexpr mojo_ipc::DiagnosticRoutineStatusEnum kExpectedStatus =
+      mojo_ipc::DiagnosticRoutineStatusEnum::kWaiting;
+  routine_factory()->SetNonInteractiveStatus(
+      kExpectedStatus, /*status_message=*/"", /*progress_percent=*/50,
+      /*output=*/"");
+  mojo_ipc::RunRoutineResponse response;
+  base::TimeDelta exec_duration = base::TimeDelta::FromSeconds(10);
+  service()->RunDiskReadRoutine(
+      /*type*/ mojo_ipc::DiskReadRoutineTypeEnum::kLinearRead,
+      /*exec_duration=*/exec_duration, /*file_size_mb=*/1024, &response.id,
+      &response.status);
   EXPECT_EQ(response.id, 1);
   EXPECT_EQ(response.status, kExpectedStatus);
 }

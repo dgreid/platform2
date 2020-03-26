@@ -40,7 +40,8 @@ const struct {
     {"floating_point_accuracy",
      mojo_ipc::DiagnosticRoutineEnum::kFloatingPointAccuracy},
     {"nvme_wear_level", mojo_ipc::DiagnosticRoutineEnum::kNvmeWearLevel},
-    {"nvme_self_test", mojo_ipc::DiagnosticRoutineEnum::kNvmeSelfTest}};
+    {"nvme_self_test", mojo_ipc::DiagnosticRoutineEnum::kNvmeSelfTest},
+    {"disk_read", mojo_ipc::DiagnosticRoutineEnum::kDiskRead}};
 
 const struct {
   const char* readable_status;
@@ -144,6 +145,17 @@ bool DiagActions::ActionRunCpuStressRoutine(
   auto response = adapter_.RunCpuStressRoutine(exec_duration);
   CHECK(response) << "No RunRoutineResponse received.";
   id_ = response->id;
+  return PollRoutineAndProcessResult();
+}
+
+bool DiagActions::ActionRunDiskReadRoutine(
+    mojo_ipc::DiskReadRoutineTypeEnum type,
+    const base::TimeDelta& exec_duration,
+    uint32_t file_size_mb) {
+  auto response =
+      adapter_.RunDiskReadRoutine(type, exec_duration, file_size_mb);
+  id_ = response->id;
+  CHECK(response) << "No RunRoutineResponse received.";
   return PollRoutineAndProcessResult();
 }
 

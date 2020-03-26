@@ -14,6 +14,7 @@
 #include "mojo/cros_healthd_diagnostics.mojom.h"
 
 namespace diagnostics {
+namespace mojo_ipc = ::chromeos::cros_healthd::mojom;
 
 namespace {
 
@@ -122,6 +123,10 @@ bool GetGrpcRoutineEnumFromMojoRoutineEnum(
     case chromeos::cros_healthd::mojom::DiagnosticRoutineEnum::kNvmeSelfTest:
       grpc_enum_out->push_back(grpc_api::ROUTINE_NVME_SHORT_SELF_TEST);
       grpc_enum_out->push_back(grpc_api::ROUTINE_NVME_LONG_SELF_TEST);
+      return true;
+    case chromeos::cros_healthd::mojom::DiagnosticRoutineEnum::kDiskRead:
+      grpc_enum_out->push_back(grpc_api::ROUTINE_DISK_LINEAR_READ);
+      grpc_enum_out->push_back(grpc_api::ROUTINE_DISK_RANDOM_READ);
       return true;
     default:
       LOG(ERROR) << "Unknown mojo routine: " << static_cast<int>(mojo_enum);
@@ -332,6 +337,26 @@ void RoutineService::RunRoutine(const grpc_api::RunRoutineRequest& request,
                 grpc_api::RunRoutineRequest::kNvmeLongSelfTestParams);
       service_ptr_->RunNvmeSelfTestRoutine(
           chromeos::cros_healthd::mojom::NvmeSelfTestTypeEnum::kLongSelfTest,
+          base::Bind(&RoutineService::ForwardRunRoutineResponse,
+                     weak_ptr_factory_.GetWeakPtr(), callback_key));
+      break;
+    case grpc_api::ROUTINE_DISK_LINEAR_READ:
+      DCHECK_EQ(request.parameters_case(),
+                grpc_api::RunRoutineRequest::kDiskLinearReadParams);
+      service_ptr_->RunDiskReadRoutine(
+          mojo_ipc::DiskReadRoutineTypeEnum::kLinearRead,
+          request.disk_linear_read_params().length_seconds(),
+          request.disk_linear_read_params().file_size_mb(),
+          base::Bind(&RoutineService::ForwardRunRoutineResponse,
+                     weak_ptr_factory_.GetWeakPtr(), callback_key));
+      break;
+    case grpc_api::ROUTINE_DISK_RANDOM_READ:
+      DCHECK_EQ(request.parameters_case(),
+                grpc_api::RunRoutineRequest::kDiskRandomReadParams);
+      service_ptr_->RunDiskReadRoutine(
+          mojo_ipc::DiskReadRoutineTypeEnum::kRandomRead,
+          request.disk_random_read_params().length_seconds(),
+          request.disk_random_read_params().file_size_mb(),
           base::Bind(&RoutineService::ForwardRunRoutineResponse,
                      weak_ptr_factory_.GetWeakPtr(), callback_key));
       break;

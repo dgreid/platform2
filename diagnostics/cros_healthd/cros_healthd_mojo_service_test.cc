@@ -96,6 +96,12 @@ class MockCrosHealthdRoutineService : public CrosHealthdRoutineService {
                void(mojo_ipc::NvmeSelfTestTypeEnum nvme_self_test_type,
                     int32_t* id,
                     mojo_ipc::DiagnosticRoutineStatusEnum* status));
+  MOCK_METHOD5(RunDiskReadRoutine,
+               void(mojo_ipc::DiskReadRoutineTypeEnum type,
+                    const base::TimeDelta& exec_duration,
+                    uint32_t file_size_mb,
+                    int32_t* id,
+                    mojo_ipc::DiagnosticRoutineStatusEnum* status));
   MOCK_METHOD4(GetRoutineUpdate,
                void(int32_t uuid,
                     mojo_ipc::DiagnosticRoutineCommandEnum command,
@@ -376,6 +382,32 @@ TEST_F(CrosHealthdMojoServiceTest, RequestNvmeSelfTestRoutine) {
   EXPECT_EQ(response->status, kExpectedStatus);
 }
 
+// Test that we can request the disk-read routine.
+TEST_F(CrosHealthdMojoServiceTest, RequestDiskReadRoutine) {
+  constexpr mojo_ipc::DiskReadRoutineTypeEnum kType =
+      mojo_ipc::DiskReadRoutineTypeEnum::kLinearRead;
+  constexpr auto kExecDuration = base::TimeDelta::FromSeconds(8);
+  constexpr uint32_t kFileSizeMb = 2048;
+  EXPECT_CALL(*routine_service(),
+              RunDiskReadRoutine(kType, kExecDuration, kFileSizeMb, NotNull(),
+                                 NotNull()))
+      .WillOnce(WithArgs<3, 4>(Invoke(
+          [](int32_t* id, mojo_ipc::DiagnosticRoutineStatusEnum* status) {
+            *id = kExpectedId;
+            *status = kExpectedStatus;
+          })));
+
+  mojo_ipc::RunRoutineResponsePtr response;
+  service()->RunDiskReadRoutine(
+      kType, kExecDuration.InSeconds(), kFileSizeMb,
+      base::Bind(&SaveMojoResponse<mojo_ipc::RunRoutineResponsePtr>,
+                 &response));
+
+  ASSERT_TRUE(!response.is_null());
+  EXPECT_EQ(response->id, kExpectedId);
+  EXPECT_EQ(response->status, kExpectedStatus);
+}
+
 // Test an update request.
 TEST_F(CrosHealthdMojoServiceTest, RequestRoutineUpdate) {
   constexpr int kId = 3;
@@ -407,6 +439,7 @@ TEST_F(CrosHealthdMojoServiceTest, RequestAvailableRoutines) {
       mojo_ipc::DiagnosticRoutineEnum::kFloatingPointAccuracy,
       mojo_ipc::DiagnosticRoutineEnum::kNvmeWearLevel,
       mojo_ipc::DiagnosticRoutineEnum::kNvmeSelfTest,
+      mojo_ipc::DiagnosticRoutineEnum::kDiskRead,
   };
 
   EXPECT_CALL(*routine_service(), GetAvailableRoutines())

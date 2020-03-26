@@ -674,12 +674,36 @@ TEST_F(GrpcServiceTest, RunNvmeSelfTestShortRoutine) {
       << "Actual response: {" << response->ShortDebugString() << "}";
 }
 
+// Test that linear read routine can be run.
+TEST_F(GrpcServiceTest, RunDiskLinearReadRoutine) {
+  std::unique_ptr<grpc_api::RunRoutineResponse> response;
+  auto request = std::make_unique<grpc_api::RunRoutineRequest>();
+  request->set_routine(grpc_api::ROUTINE_DISK_LINEAR_READ);
+  request->mutable_disk_linear_read_params()->set_length_seconds(10);
+  request->mutable_disk_linear_read_params()->set_file_size_mb(1024);
+  ExecuteRunRoutine(std::move(request), &response, true /* is_valid_request */);
+  auto expected_response = MakeRunRoutineResponse();
+  EXPECT_THAT(*response, ProtobufEquals(*expected_response))
+      << "Actual response: {" << response->ShortDebugString() << "}";
+}
+
 // Test that a nvme_self_test routine for short time with no parameters will
 // fail.
 TEST_F(GrpcServiceTest, RunNvmeSelfTestShortRoutineNoParameters) {
   std::unique_ptr<grpc_api::RunRoutineResponse> response;
   auto request = std::make_unique<grpc_api::RunRoutineRequest>();
   request->set_routine(grpc_api::ROUTINE_NVME_SHORT_SELF_TEST);
+  ExecuteRunRoutine(std::move(request), &response,
+                    false /* is_valid_request */);
+  EXPECT_EQ(response->uuid(), 0);
+  EXPECT_EQ(response->status(), grpc_api::ROUTINE_STATUS_INVALID_FIELD);
+}
+
+// Test that a linear read routine with no parameters will fail.
+TEST_F(GrpcServiceTest, RunDiskLinearReadRoutineNoParameters) {
+  std::unique_ptr<grpc_api::RunRoutineResponse> response;
+  auto request = std::make_unique<grpc_api::RunRoutineRequest>();
+  request->set_routine(grpc_api::ROUTINE_DISK_LINEAR_READ);
   ExecuteRunRoutine(std::move(request), &response,
                     false /* is_valid_request */);
   EXPECT_EQ(response->uuid(), 0);
@@ -697,12 +721,36 @@ TEST_F(GrpcServiceTest, RunNvmeSelfTestLongRoutine) {
       << "Actual response: {" << response->ShortDebugString() << "}";
 }
 
+// Test that random read routine can be run.
+TEST_F(GrpcServiceTest, RunDiskRandomReadRoutine) {
+  std::unique_ptr<grpc_api::RunRoutineResponse> response;
+  auto request = std::make_unique<grpc_api::RunRoutineRequest>();
+  request->set_routine(grpc_api::ROUTINE_DISK_RANDOM_READ);
+  request->mutable_disk_random_read_params()->set_length_seconds(10);
+  request->mutable_disk_random_read_params()->set_file_size_mb(1024);
+  ExecuteRunRoutine(std::move(request), &response, true /* is_valid_request */);
+  auto expected_response = MakeRunRoutineResponse();
+  EXPECT_THAT(*response, ProtobufEquals(*expected_response))
+      << "Actual response: {" << response->ShortDebugString() << "}";
+}
+
 // Test that a nvme_self_test routine for extended time with no parameters will
 // fail.
 TEST_F(GrpcServiceTest, RunNvmeSelfTestLongRoutineNoParameters) {
   std::unique_ptr<grpc_api::RunRoutineResponse> response;
   auto request = std::make_unique<grpc_api::RunRoutineRequest>();
   request->set_routine(grpc_api::ROUTINE_NVME_LONG_SELF_TEST);
+  ExecuteRunRoutine(std::move(request), &response,
+                    false /* is_valid_request */);
+  EXPECT_EQ(response->uuid(), 0);
+  EXPECT_EQ(response->status(), grpc_api::ROUTINE_STATUS_INVALID_FIELD);
+}
+
+// Test that a random read routine with no parameters will fail.
+TEST_F(GrpcServiceTest, RunDiskRandomReadRoutineNoParameters) {
+  std::unique_ptr<grpc_api::RunRoutineResponse> response;
+  auto request = std::make_unique<grpc_api::RunRoutineRequest>();
+  request->set_routine(grpc_api::ROUTINE_DISK_RANDOM_READ);
   ExecuteRunRoutine(std::move(request), &response,
                     false /* is_valid_request */);
   EXPECT_EQ(response->uuid(), 0);

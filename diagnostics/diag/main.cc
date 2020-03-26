@@ -43,7 +43,8 @@ const struct {
     {"floating_point_accuracy",
      mojo_ipc::DiagnosticRoutineEnum::kFloatingPointAccuracy},
     {"nvme_wear_level", mojo_ipc::DiagnosticRoutineEnum::kNvmeWearLevel},
-    {"nvme_self_test", mojo_ipc::DiagnosticRoutineEnum::kNvmeSelfTest}};
+    {"nvme_self_test", mojo_ipc::DiagnosticRoutineEnum::kNvmeSelfTest},
+    {"disk_read", mojo_ipc::DiagnosticRoutineEnum::kDiskRead}};
 
 }  // namespace
 
@@ -84,6 +85,11 @@ int main(int argc, char** argv) {
   DEFINE_bool(nvme_self_test_long, false,
               "Long-time period self-test of NVMe would be performed with "
               "this flag being set.");
+  DEFINE_int32(file_size_mb, 1024,
+               "Size (MB) of the test file for disk_read routine to pass.");
+  DEFINE_string(disk_read_routine_type, "linear",
+                "Disk read routine type for the disk_read routine. Options are:"
+                "\n\tlinear - linear read.\n\trandom - random read.");
   brillo::FlagHelper::Init(argc, argv, "diag - Device diagnostic tool.");
 
   logging::InitLogging(logging::LoggingSettings());
@@ -164,6 +170,21 @@ int main(int argc, char** argv) {
             FLAGS_nvme_self_test_long
                 ? mojo_ipc::NvmeSelfTestTypeEnum::kLongSelfTest
                 : mojo_ipc::NvmeSelfTestTypeEnum::kShortSelfTest);
+        break;
+      case mojo_ipc::DiagnosticRoutineEnum::kDiskRead:
+        mojo_ipc::DiskReadRoutineTypeEnum type;
+        if (FLAGS_disk_read_routine_type == "linear") {
+          type = mojo_ipc::DiskReadRoutineTypeEnum::kLinearRead;
+        } else if (FLAGS_disk_read_routine_type == "random") {
+          type = mojo_ipc::DiskReadRoutineTypeEnum::kRandomRead;
+        } else {
+          std::cout << "Unknown disk_read_routine_type: "
+                    << FLAGS_disk_read_routine_type << std::endl;
+          return EXIT_FAILURE;
+        }
+        routine_result = actions.ActionRunDiskReadRoutine(
+            type, base::TimeDelta::FromSeconds(FLAGS_length_seconds),
+            FLAGS_file_size_mb);
         break;
       default:
         std::cout << "Unsupported routine: " << FLAGS_routine << std::endl;

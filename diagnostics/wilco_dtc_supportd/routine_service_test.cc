@@ -104,6 +104,22 @@ grpc_api::RunRoutineRequest MakeNvmeSelfTestLongRoutineRequest() {
   return request;
 }
 
+grpc_api::RunRoutineRequest MakeDiskLinearReadRoutineRequest() {
+  grpc_api::RunRoutineRequest request;
+  request.set_routine(grpc_api::ROUTINE_DISK_LINEAR_READ);
+  request.mutable_disk_linear_read_params()->set_length_seconds(10);
+  request.mutable_disk_linear_read_params()->set_file_size_mb(1024);
+  return request;
+}
+
+grpc_api::RunRoutineRequest MakeDiskRandomReadRoutineRequest() {
+  grpc_api::RunRoutineRequest request;
+  request.set_routine(grpc_api::ROUTINE_DISK_RANDOM_READ);
+  request.mutable_disk_random_read_params()->set_length_seconds(10);
+  request.mutable_disk_random_read_params()->set_file_size_mb(1024);
+  return request;
+}
+
 void SaveGetAvailableRoutinesResponse(
     base::Closure callback,
     grpc_api::GetAvailableRoutinesResponse* response,
@@ -204,7 +220,8 @@ TEST_F(RoutineServiceTest, GetAvailableRoutines) {
        mojo_ipc::DiagnosticRoutineEnum::kCpuStress,
        mojo_ipc::DiagnosticRoutineEnum::kFloatingPointAccuracy,
        mojo_ipc::DiagnosticRoutineEnum::kNvmeWearLevel,
-       mojo_ipc::DiagnosticRoutineEnum::kNvmeSelfTest});
+       mojo_ipc::DiagnosticRoutineEnum::kNvmeSelfTest,
+       mojo_ipc::DiagnosticRoutineEnum::kDiskRead});
 
   const auto reply = ExecuteGetAvailableRoutines();
   EXPECT_THAT(reply.routines(),
@@ -215,7 +232,9 @@ TEST_F(RoutineServiceTest, GetAvailableRoutines) {
                    grpc_api::ROUTINE_FLOATING_POINT_ACCURACY,
                    grpc_api::ROUTINE_NVME_WEAR_LEVEL,
                    grpc_api::ROUTINE_NVME_SHORT_SELF_TEST,
-                   grpc_api::ROUTINE_NVME_LONG_SELF_TEST}));
+                   grpc_api::ROUTINE_NVME_LONG_SELF_TEST,
+                   grpc_api::ROUTINE_DISK_LINEAR_READ,
+                   grpc_api::ROUTINE_DISK_RANDOM_READ}));
   EXPECT_EQ(reply.service_status(), grpc_api::ROUTINE_SERVICE_STATUS_OK);
 }
 
@@ -407,7 +426,8 @@ TEST_F(RoutineServiceTest, RecoverFromNoServiceRequest) {
        mojo_ipc::DiagnosticRoutineEnum::kCpuStress,
        mojo_ipc::DiagnosticRoutineEnum::kFloatingPointAccuracy,
        mojo_ipc::DiagnosticRoutineEnum::kNvmeWearLevel,
-       mojo_ipc::DiagnosticRoutineEnum::kNvmeSelfTest});
+       mojo_ipc::DiagnosticRoutineEnum::kNvmeSelfTest,
+       mojo_ipc::DiagnosticRoutineEnum::kDiskRead});
 
   const auto reply = ExecuteGetAvailableRoutines();
   EXPECT_THAT(reply.routines(),
@@ -418,7 +438,9 @@ TEST_F(RoutineServiceTest, RecoverFromNoServiceRequest) {
                    grpc_api::ROUTINE_FLOATING_POINT_ACCURACY,
                    grpc_api::ROUTINE_NVME_WEAR_LEVEL,
                    grpc_api::ROUTINE_NVME_SHORT_SELF_TEST,
-                   grpc_api::ROUTINE_NVME_LONG_SELF_TEST}));
+                   grpc_api::ROUTINE_NVME_LONG_SELF_TEST,
+                   grpc_api::ROUTINE_DISK_LINEAR_READ,
+                   grpc_api::ROUTINE_DISK_RANDOM_READ}));
   EXPECT_EQ(reply.service_status(), grpc_api::ROUTINE_SERVICE_STATUS_OK);
 }
 
@@ -477,7 +499,8 @@ TEST_F(RoutineServiceTest, RecoverFromDroppedConnection) {
        mojo_ipc::DiagnosticRoutineEnum::kCpuStress,
        mojo_ipc::DiagnosticRoutineEnum::kFloatingPointAccuracy,
        mojo_ipc::DiagnosticRoutineEnum::kNvmeWearLevel,
-       mojo_ipc::DiagnosticRoutineEnum::kNvmeSelfTest});
+       mojo_ipc::DiagnosticRoutineEnum::kNvmeSelfTest,
+       mojo_ipc::DiagnosticRoutineEnum::kDiskRead});
 
   const auto reply = ExecuteGetAvailableRoutines();
   EXPECT_THAT(reply.routines(),
@@ -488,8 +511,9 @@ TEST_F(RoutineServiceTest, RecoverFromDroppedConnection) {
                    grpc_api::ROUTINE_FLOATING_POINT_ACCURACY,
                    grpc_api::ROUTINE_NVME_WEAR_LEVEL,
                    grpc_api::ROUTINE_NVME_SHORT_SELF_TEST,
-                   grpc_api::ROUTINE_NVME_LONG_SELF_TEST}));
-
+                   grpc_api::ROUTINE_NVME_LONG_SELF_TEST,
+                   grpc_api::ROUTINE_DISK_LINEAR_READ,
+                   grpc_api::ROUTINE_DISK_RANDOM_READ}));
   EXPECT_EQ(reply.service_status(), grpc_api::ROUTINE_SERVICE_STATUS_OK);
 
   // Reset the connection, make cros_healthd unresponsive, and check to see that
@@ -730,7 +754,9 @@ INSTANTIATE_TEST_CASE_P(
                     MakeFloatingPointAccuracyRoutineRequest(),
                     MakeNvmeWearLevelRoutineRequest(),
                     MakeNvmeSelfTestShortRoutineRequest(),
-                    MakeNvmeSelfTestLongRoutineRequest()));
+                    MakeNvmeSelfTestLongRoutineRequest(),
+                    MakeDiskLinearReadRoutineRequest(),
+                    MakeDiskRandomReadRoutineRequest()));
 
 }  // namespace
 

@@ -282,6 +282,26 @@ CrosHealthdMojoAdapter::RunNvmeSelfTestRoutine(
   return response;
 }
 
+chromeos::cros_healthd::mojom::RunRoutineResponsePtr
+CrosHealthdMojoAdapter::RunDiskReadRoutine(
+    chromeos::cros_healthd::mojom::DiskReadRoutineTypeEnum type,
+    const base::TimeDelta& exec_duration,
+    uint32_t file_size_mb) {
+  if (!cros_healthd_service_factory_.is_bound())
+    Connect();
+
+  chromeos::cros_healthd::mojom::RunRoutineResponsePtr response;
+  base::RunLoop run_loop;
+  cros_healthd_diagnostics_service_->RunDiskReadRoutine(
+      type, exec_duration.InSeconds(), file_size_mb,
+      base::Bind(&OnMojoResponseReceived<
+                     chromeos::cros_healthd::mojom::RunRoutineResponsePtr>,
+                 &response, run_loop.QuitClosure()));
+  run_loop.Run();
+
+  return response;
+}
+
 std::vector<chromeos::cros_healthd::mojom::DiagnosticRoutineEnum>
 CrosHealthdMojoAdapter::GetAvailableRoutines() {
   if (!cros_healthd_service_factory_.is_bound())

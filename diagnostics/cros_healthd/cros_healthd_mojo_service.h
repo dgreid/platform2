@@ -81,6 +81,11 @@ class CrosHealthdMojoService final
   void RunNvmeSelfTestRoutine(
       chromeos::cros_healthd::mojom::NvmeSelfTestTypeEnum nvme_self_test_type,
       const RunNvmeSelfTestRoutineCallback& callback) override;
+  void RunDiskReadRoutine(
+      chromeos::cros_healthd::mojom::DiskReadRoutineTypeEnum type,
+      uint32_t length_seconds,
+      uint32_t file_size_mb,
+      const RunDiskReadRoutineCallback& callback) override;
 
   // chromeos::cros_healthd::mojom::CrosHealthdProbeService overrides:
   void ProbeTelemetryInfo(const std::vector<ProbeCategoryEnum>& categories,

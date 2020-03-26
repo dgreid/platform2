@@ -122,6 +122,17 @@ void CrosHealthdRoutineServiceImpl::RunNvmeSelfTestRoutine(
              id, status);
 }
 
+void CrosHealthdRoutineServiceImpl::RunDiskReadRoutine(
+    mojo_ipc::DiskReadRoutineTypeEnum type,
+    const base::TimeDelta& exec_duration,
+    uint32_t file_size_mb,
+    int32_t* id,
+    mojo_ipc::DiagnosticRoutineStatusEnum* status) {
+  RunRoutine(
+      routine_factory_->MakeDiskReadRoutine(type, exec_duration, file_size_mb),
+      id, status);
+}
+
 void CrosHealthdRoutineServiceImpl::GetRoutineUpdate(
     int32_t uuid,
     mojo_ipc::DiagnosticRoutineCommandEnum command,
