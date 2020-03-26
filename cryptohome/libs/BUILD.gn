@@ -149,6 +149,7 @@ static_library("libcrosplatform") {
     "../cryptohome_metrics.cc",
     "../cryptolib.cc",
     "../dircrypto_util.cc",
+    "../libscrypt_compat.cc",
     "../platform.cc",
   ]
   libs = [

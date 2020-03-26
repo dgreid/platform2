@@ -29,6 +29,7 @@
 #include <gtest/gtest.h>
 
 #include "cryptohome/crypto.h"
+#include "cryptohome/cryptolib.h"
 #include "cryptohome/mock_crypto.h"
 #include "cryptohome/mock_platform.h"
 #include "cryptohome/mock_tpm.h"
@@ -200,8 +201,8 @@ void TestUser::GenerateCredentials(bool force_ecryptfs) {
   NiceMock<MockPlatform> platform;
   Crypto crypto(&platform);
   crypto.set_use_tpm(false);
-  crypto.set_scrypt_max_encrypt_time_for_testing(0.001);
   crypto.set_disable_logging_for_testing(/*disable=*/true);
+  CryptoLib::SetScryptTestingParams();
   UserOldestActivityTimestampCache timestamp_cache;
 
   scoped_refptr<Mount> mount = new Mount();

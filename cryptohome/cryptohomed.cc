@@ -21,6 +21,7 @@
 #include <openssl/evp.h>
 
 #include "cryptohome/cryptohome_metrics.h"
+#include "cryptohome/cryptolib.h"
 #include "cryptohome/platform.h"
 #include "cryptohome/userdataauth.h"
 
@@ -80,6 +81,9 @@ int main(int argc, char** argv) {
 
   // Initialize cryptohome metrics
   cryptohome::ScopedMetricsInitializer metrics_initializer;
+
+  // Make sure scrypt parameters are correct.
+  cryptohome::CryptoLib::AssertProductionScryptParams();
 
   if (use_new_dbus_interface) {
 #if USE_CRYPTOHOME_USERDATAAUTH_INTERFACE

@@ -120,7 +120,6 @@ Crypto::Crypto(Platform* platform)
       tpm_(NULL),
       platform_(platform),
       tpm_init_(NULL),
-      scrypt_max_encrypt_time_(kScryptMaxEncryptTime),
       disable_logging_for_tests_(false) {}
 
 Crypto::~Crypto() {
@@ -682,18 +681,16 @@ bool Crypto::EncryptScrypt(const VaultKeyset& vault_keyset,
   // it is redundant.
   SecureBlob hash = CryptoLib::Sha1(blob);
   SecureBlob local_blob = SecureBlob::Combine(blob, hash);
-  SecureBlob cipher_text(local_blob.size() + kScryptHeaderLength);
+  SecureBlob cipher_text;
 
-  if (!CryptoLib::EncryptScryptBlobInternal(
-          local_blob, key, scrypt_max_encrypt_time_, &cipher_text)) {
+  if (!CryptoLib::EncryptScryptBlob(local_blob, key, &cipher_text)) {
     LOG(ERROR) << "Scrypt encrypt of keyset blob failed.";
     return false;
   }
 
   SecureBlob wrapped_chaps_key;
-  if (!CryptoLib::EncryptScryptBlobInternal(vault_keyset.chaps_key(), key,
-                                            scrypt_max_encrypt_time_,
-                                            &wrapped_chaps_key)) {
+  if (!CryptoLib::EncryptScryptBlob(vault_keyset.chaps_key(), key,
+                                    &wrapped_chaps_key)) {
     LOG(ERROR) << "Scrypt encrypt of chaps key failed.";
     return false;
   }
@@ -711,9 +708,8 @@ bool Crypto::EncryptScrypt(const VaultKeyset& vault_keyset,
   // If there is a reset seed, encrypt and store it.
   if (vault_keyset.reset_seed().size() != 0) {
     SecureBlob wrapped_reset_seed;
-    if (!CryptoLib::EncryptScryptBlobInternal(vault_keyset.reset_seed(), key,
-                                              scrypt_max_encrypt_time_,
-                                              &wrapped_reset_seed)) {
+    if (!CryptoLib::EncryptScryptBlob(vault_keyset.reset_seed(), key,
+                                      &wrapped_reset_seed)) {
       LOG(ERROR) << "Scrypt encrypt of reset seed failed.";
       return false;
     }

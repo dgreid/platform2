@@ -27,6 +27,7 @@ extern "C" {
 #include <scrypt/scryptenc.h>
 }
 
+#include "cryptohome/libscrypt_compat.h"
 #include "cryptohome/platform.h"
 
 using brillo::SecureBlob;
@@ -157,8 +158,8 @@ constexpr int kTpmDecryptMaxRetries = 2;
 constexpr unsigned int kDefaultPassBlobSize = 256;
 
 // Scrypt creates a header in the cipher text that we need to account for in
-// buffer sizing.
-constexpr unsigned int kScryptHeaderLength = 128;
+// buffer sizing. This accounts for both the header and the HMAC.
+constexpr unsigned int kScryptMetadataSize = 128;
 
 // An upper bound on the amount of memory that we allow Scrypt to use when
 // performing key strengthening (32MB).  A large size is okay since we only use
@@ -169,6 +170,16 @@ const unsigned int kScryptMaxMem = 32 * 1024 * 1024;
 // An upper bound on the amount of time we allow Scrypt to use when performing
 // key strenthening (1/3s) for encryption.
 constexpr double kScryptMaxEncryptTime = 0.333;
+
+// These are the params to use for production code.
+constexpr ScryptParameters kDefaultScryptParams;
+
+// scrypt, with the default params, is too slow for unit testing so here are
+// some fast parameters only for test code.
+constexpr ScryptParameters kTestScryptParams = {1024, 8, 1};
+
+// static
+ScryptParameters CryptoLib::gScryptParams = kDefaultScryptParams;
 
 void CryptoLib::GetSecureRandom(unsigned char* buf, size_t length) {
   // OpenSSL takes a signed integer.  On the off chance that the user requests
@@ -1063,22 +1074,15 @@ bool CryptoLib::DeriveSecretsSCrypt(
     const brillo::SecureBlob& passkey,
     const brillo::SecureBlob& salt,
     std::vector<brillo::SecureBlob*> gen_secrets) {
-  // Scrypt parameters for deriving key material from UserPasskey.
-  // N = kUPScryptWorkFactor
-  // r = kUPScryptBlockSize
-  // p = kUPScryptParallelFactor
-  const uint64_t kUPScryptWorkFactor = (1 << 14);
-  const uint32_t kUPScryptBlockSize = 8;
-  const uint32_t kUPScryptParallelFactor = 1;
-
   size_t total_len = 0;
   for (auto& secret : gen_secrets) {
     total_len += secret->size();
   }
 
   SecureBlob generated(total_len);
-  if (SCrypt(passkey, salt, kUPScryptWorkFactor, kUPScryptBlockSize,
-             kUPScryptParallelFactor, &generated)) {
+  if (SCrypt(passkey, salt, kDefaultScryptParams.n_factor,
+             kDefaultScryptParams.r_factor, kDefaultScryptParams.p_factor,
+             &generated)) {
     LOG(ERROR) << "Failed to derive scrypt keys from passkey.";
     return false;
   }
@@ -1114,25 +1118,24 @@ int CryptoLib::SCrypt(const brillo::SecureBlob& passkey,
 bool CryptoLib::EncryptScryptBlob(const brillo::SecureBlob& blob,
                                   const brillo::SecureBlob& key_source,
                                   brillo::SecureBlob* wrapped_blob) {
-  return EncryptScryptBlobInternal(blob, key_source, kScryptMaxEncryptTime,
-                                   wrapped_blob);
-}
+  wrapped_blob->resize(blob.size() + kScryptMetadataSize);
 
-// static
-bool CryptoLib::EncryptScryptBlobInternal(const brillo::SecureBlob& blob,
-                                          const brillo::SecureBlob& key_source,
-                                          const double max_encrypt_time,
-                                          brillo::SecureBlob* wrapped_blob) {
-  wrapped_blob->resize(blob.size() + kScryptHeaderLength);
-
-  int scrypt_rc;
-  scrypt_rc = scryptenc_buf(blob.data(), blob.size(), wrapped_blob->data(),
-                            key_source.data(), key_source.size(), kScryptMaxMem,
-                            100.0, max_encrypt_time);
-  if (scrypt_rc) {
-    LOG(ERROR) << "Blob Scrypt encryption returned error code: " << scrypt_rc;
+  brillo::SecureBlob salt =
+      CryptoLib::CreateSecureRandomBlob(kLibScryptSaltSize);
+  brillo::SecureBlob derived_key(kLibScryptDerivedKeySize, '0');
+  // TODO(kerrnel): switch this to OpenSSL once the 1.1.1 uprev is complete.
+  if (SCrypt(key_source, salt, gScryptParams.n_factor, gScryptParams.r_factor,
+             gScryptParams.p_factor, &derived_key) != 0) {
+    LOG(ERROR) << "Failed to derive key with crypto_scrypt.";
     return false;
   }
+
+  if (!LibScryptCompat::Encrypt(derived_key, salt, blob, gScryptParams,
+                                wrapped_blob)) {
+    LOG(ERROR) << "Failed to generate encrypted data.";
+    return false;
+  }
+
   return true;
 }
 
@@ -1155,14 +1158,27 @@ bool CryptoLib::DecryptScryptBlob(const brillo::SecureBlob& wrapped_blob,
     return false;
   }
   // Check if the plaintext is the right length.
-  if ((wrapped_blob.size() < kScryptHeaderLength) ||
-      (out_len != (wrapped_blob.size() - kScryptHeaderLength))) {
+  if ((wrapped_blob.size() < kScryptMetadataSize) ||
+      (out_len != (wrapped_blob.size() - kScryptMetadataSize))) {
     LOG(ERROR) << "Blob Scrypt decryption output was the wrong length";
     PopulateError(error, CryptoError::CE_SCRYPT_CRYPTO);
     return false;
   }
   blob->resize(out_len);
   return true;
+}
+
+// static
+void CryptoLib::AssertProductionScryptParams() {
+  // Always perform the check just in case.
+  CHECK_EQ(kDefaultScryptParams.n_factor, gScryptParams.n_factor);
+  CHECK_EQ(kDefaultScryptParams.r_factor, gScryptParams.r_factor);
+  CHECK_EQ(kDefaultScryptParams.p_factor, gScryptParams.p_factor);
+}
+
+// static
+void CryptoLib::SetScryptTestingParams() {
+  CryptoLib::gScryptParams = kTestScryptParams;
 }
 
 }  // namespace cryptohome

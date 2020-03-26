@@ -31,10 +31,26 @@ extern const unsigned int kAesGcm256KeySize;
 extern const unsigned int kDefaultAesKeySize;
 extern const unsigned int kDefaultLegacyPasswordRounds;
 extern const unsigned int kDefaultPassBlobSize;
-extern const unsigned int kScryptHeaderLength;
+extern const unsigned int kScryptMetadataSize;
 extern const unsigned int kScryptMaxMem;
 extern const double kScryptMaxEncryptTime;
 extern const int kTpmDecryptMaxRetries;
+
+// A struct wrapping the scrypt parameters, with the default production
+// parameters set.
+struct ScryptParameters {
+  // N is the work factor. Scrypt stores N sequential hash results in RAM,
+  // randomizes their order, and XORs them.
+  int n_factor = 16384;
+  // The r factor iterates the hash function 2r times, so that memory and CPU
+  // consumption grow with r.
+  uint32_t r_factor = 8;
+  // P is the parallelization factor.
+  uint32_t p_factor = 1;
+};
+
+extern const ScryptParameters kDefaultScryptParams;
+extern const ScryptParameters kTestScryptParams;
 
 class CryptoLib {
  public:
@@ -288,11 +304,6 @@ class CryptoLib {
                                 const brillo::SecureBlob& key_source,
                                 brillo::SecureBlob* wrapped_blob);
 
-  static bool EncryptScryptBlobInternal(const brillo::SecureBlob& blob,
-                                        const brillo::SecureBlob& key_source,
-                                        const double max_encrypt_time,
-                                        brillo::SecureBlob* wrapped_blob);
-
   // Companion decryption function for EncryptScryptBlob().
   // This decrypts the data blobs which were encrypted using
   // EncryptScryptBlob().
@@ -303,6 +314,15 @@ class CryptoLib {
                                 const brillo::SecureBlob& key,
                                 brillo::SecureBlob* blob,
                                 CryptoError* error);
+
+  // This verifies that the default scrypt params are used in production.
+  static void AssertProductionScryptParams();
+
+  // This updates the global static scrypt testing parameters.
+  static void SetScryptTestingParams();
+
+  // Global static override-able for testing.
+  static ScryptParameters gScryptParams;
 };
 
 }  // namespace cryptohome

@@ -223,10 +223,6 @@ class Crypto {
     return platform_;
   }
 
-  void set_scrypt_max_encrypt_time_for_testing(double max_time) {
-    scrypt_max_encrypt_time_ = max_time;
-  }
-
   void set_disable_logging_for_testing(bool disable) {
     disable_logging_for_tests_ = disable;
   }
@@ -375,8 +371,6 @@ class Crypto {
 
   // The TpmInit object used to reload Cryptohome key
   TpmInit* tpm_init_;
-
-  double scrypt_max_encrypt_time_;
 
   // Handler for Low Entropy credentials.
   std::unique_ptr<LECredentialManager> le_manager_;
