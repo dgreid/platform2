@@ -3,6 +3,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+# Some startup functions are split into a separate library which may be
+# different for different targets (e.g., regular Chrome OS vs. embedded).
+. /usr/share/cros/startup_utils.sh
+
 # Shutdown is best-effort. We don't want to die on errors.
 set +e
 
@@ -147,26 +151,15 @@ umount -n /var/run /var/lock
 # regular images, but not always true on factory images.  To handle both, we
 # should unmount /mnt/stateful_partition only if the others successfully
 # unmounted, otherwise system may fail to log.  See crbug.com/835557.
-rc=0
-if [ -e /dev/mapper/encstateful ]; then
-  # Give mount-encrypted umount 10 times to retry, otherwise
-  # it will fail with 'device is busy' because lazy umount does not finish
-  # clearing all reference points yet. Check crosbug.com/p/21345.
-  for i in 1 2 3 4 5 6 7 8 9 10; do
-    mount-encrypted umount
-    rc="$?"
-    if [ ${rc} -eq 0 ]; then
-      break
-    fi
-    sleep 0.1
-  done
+umount_var_and_home_chronos
+rc="$?"
+
+# Check if /home is mounted before attempting to umount().
+if mountpoint -q /home; then
   umount -n /home
-  # Merge the exit status with the earlier mount-encrypted call.
   : "$(( rc |= $? ))"
-else
-  umount -n /var /home
-  rc="$?"
 fi
+
 # Unmount /mnt/stateful_partition only if the previous unmounts succeeded.
 if [ "${rc}" -eq 0 ]; then
   umount -n /mnt/stateful_partition

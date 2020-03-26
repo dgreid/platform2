@@ -11,13 +11,21 @@
 # in UNDO_MOUNTS are unmounted in reverse order.
 UNDO_MOUNTS=
 
+# ENCRYPTED_STATEFUL_MNT stores the path to the initial mount point for the
+# encrypted stateful partition.
+ENCRYPTED_STATEFUL_MNT="/mnt/stateful_partition/encrypted"
+
 # Unmounts the incomplete mount setup during the failure path. Failure to
 # set up mounts in this script result in the entire stateful partition getting
 # wiped using clobber-state.
 cleanup_mounts() {
   # On failure unmount all saved mount points and repair stateful
   for mount_point in ${UNDO_MOUNTS}; do
-    umount -n "${mount_point}"
+    if [ "${mount_point}" = "${ENCRYPTED_STATEFUL_MNT}" ]; then
+      do_umount_var_and_home_chronos
+    else
+      umount -n "${mount_point}"
+    fi
   done
   # Leave /mnt/stateful_partition mounted for clobber-state to handle.
   chromeos-boot-alert self_repair
@@ -152,6 +160,7 @@ dev_is_debug_build() { false; }
 # do_* are wrapper functions that may be redefined in developer mode or test
 # images. Find more implementation in {dev,test,factory}_utils.sh.
 do_mount_var_and_home_chronos() { mount_var_and_home_chronos; }
+do_umount_var_and_home_chronos() { umount_var_and_home_chronos; }
 
 if [ "${CROS_DEBUG}" -eq 1 ]; then
   . /usr/share/cros/dev_utils.sh
@@ -445,9 +454,8 @@ mount_or_fail --bind /mnt/stateful_partition/home /home
 mount_or_fail --bind /home/root /home/root
 mount --make-shared /home/root
 
-remember_mount /var
-remember_mount /home/chronos
 do_mount_var_and_home_chronos || cleanup_mounts "var and home"
+remember_mount "${ENCRYPTED_STATEFUL_MNT}"
 
 force_clean_file_attrs /var
 force_clean_file_attrs /home/chronos
@@ -528,7 +536,9 @@ rm -rf /var/run /var/lock || \
     cleanup_mounts "failed to delete /var/run and /var/lock"
 mkdir -m 0755 /var/run /var/lock
 mount -o bind /run /var/run
+remember_mount /var/run
 mount -o bind /run/lock /var/lock
+remember_mount /var/lock
 
 # Create daemon store folders.
 # See https://chromium.googlesource.com/chromiumos/docs/+/master/sandboxing.md#securely-mounting-cryptohome-daemon-store-folders.
