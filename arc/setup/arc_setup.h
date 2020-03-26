@@ -67,7 +67,6 @@ enum class Mode {
   ONETIME_STOP,
 
   PRE_CHROOT,
-  READ_AHEAD,
   REMOVE_DATA,
   MOUNT_SDCARD,
   UNMOUNT_SDCARD,
@@ -143,9 +142,6 @@ class ArcSetup {
 
   // Detects and applies per-board hardware configurations.
   void ApplyPerBoardConfigurations();
-
-  // Starts ureadahead-trace if the pack file doesn't exist.
-  void MaybeStartUreadaheadInTracingMode();
 
   // Sets up shared tmpfs to share mount points for external storage.
   void SetUpSharedTmpfsForExternalStorage();
@@ -353,9 +349,6 @@ class ArcSetup {
 
   // Called when arc-setup is called with --mode=pre-chroot.
   void OnPreChroot();
-
-  // Called when arc-setup is called with --mode=read-ahead.
-  void OnReadAhead();
 
   // Called when arc-setup is called with --mode=remove-data.
   void OnRemoveData();

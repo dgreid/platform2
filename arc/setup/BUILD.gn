@@ -53,7 +53,6 @@ config("target_defaults") {
 
 static_library("libarc_setup") {
   sources = [
-    "arc_read_ahead.cc",
     "arc_setup.cc",
     "arc_setup_metrics.cc",
     "arc_setup_util.cc",
@@ -156,7 +155,6 @@ if (use.test) {
   }
   executable("arc-setup_testrunner") {
     sources = [
-      "arc_read_ahead_test.cc",
       "arc_setup_metrics_test.cc",
       "arc_setup_test.cc",
       "arc_setup_util_test.cc",

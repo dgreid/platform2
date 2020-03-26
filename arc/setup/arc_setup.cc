@@ -49,7 +49,6 @@
 #include <metrics/bootstat.h>
 #include <metrics/metrics_library.h>
 
-#include "arc/setup/arc_read_ahead.h"
 #include "arc/setup/art_container.h"
 
 #define EXIT_IF(f)                            \
@@ -171,8 +170,6 @@ constexpr gid_t kLogGid = AID_LOG + kShiftGid;
 constexpr gid_t kSdcardRwGid = AID_SDCARD_RW + kShiftGid;
 constexpr gid_t kEverybodyGid = AID_EVERYBODY + kShiftGid;
 
-// The maximum time arc::EmulateArcUreadahead() can spend.
-constexpr base::TimeDelta kReadAheadTimeout = base::TimeDelta::FromSeconds(7);
 // The maximum time to wait for /data/media setup.
 constexpr base::TimeDelta kInstalldTimeout = base::TimeDelta::FromSeconds(60);
 
@@ -812,22 +809,6 @@ void ArcSetup::ApplyPerBoardConfigurations() {
   // environment issues.
   EXIT_IF(!LaunchAndWait(
       {board_hardware_features.value(), platform_xml_file.value()}));
-}
-
-void ArcSetup::MaybeStartUreadaheadInTracingMode() {
-  if (config_.GetBoolOrDie("DISABLE_UREADAHEAD")) {
-    LOG(INFO) << "arc-ureadahead-trace is disabled.";
-    return;
-  }
-
-  const base::FilePath readahead_pack_file(
-      "/var/lib/ureadahead/opt.google.containers.android.rootfs.root.pack");
-  if (!base::PathExists(readahead_pack_file)) {
-    // We should continue to launch the container even if arc-ureadahead-trace
-    // fails to start (b/31680524).
-    IGNORE_ERRORS(
-        LaunchAndWait({"/sbin/initctl", "start", "arc-ureadahead-trace"}));
-  }
 }
 
 void ArcSetup::SetUpSdcard() {
@@ -2105,7 +2086,6 @@ void ArcSetup::OnBootContinue() {
   // data to the container. Demo apps are setup only for demo sessions.
   MountSharedAndroidDirectories();
 
-  MaybeStartUreadaheadInTracingMode();
   MaybeStartAdbdProxy(is_dev_mode, is_inside_vm, serialnumber);
 
   // Asks the container to continue boot.
@@ -2169,11 +2149,6 @@ void ArcSetup::OnPreChroot() {
   BindMountInContainerNamespaceOnPreChroot(rootfs, binary_translation_type);
   RestoreContextOnPreChroot(rootfs);
   CreateDevColdbootDoneOnPreChroot(rootfs);
-}
-
-void ArcSetup::OnReadAhead() {
-  EmulateArcUreadahead(arc_paths_->android_rootfs_directory, kReadAheadTimeout,
-                       GetSdkVersion());
 }
 
 void ArcSetup::OnRemoveData() {
@@ -2264,9 +2239,6 @@ void ArcSetup::Run() {
       break;
     case Mode::PRE_CHROOT:
       OnPreChroot();
-      break;
-    case Mode::READ_AHEAD:
-      OnReadAhead();
       break;
     case Mode::REMOVE_DATA:
       OnRemoveData();
