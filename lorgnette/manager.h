@@ -11,11 +11,11 @@
 
 #include <base/callback.h>
 #include <base/files/scoped_file.h>
-#include <base/macros.h>
 #include <brillo/variant_dictionary.h>
 #include <brillo/errors/error.h>
-#include <gtest/gtest_prod.h>  // for FRIEND_TEST
 #include <metrics/metrics_library.h>
+
+#include <sane/sane.h>
 
 #include "lorgnette/dbus_adaptors/org.chromium.lorgnette.Manager.h"
 #include "lorgnette/sane_client.h"
@@ -58,10 +58,6 @@ class Manager : public org::chromium::lorgnette::ManagerAdaptor,
  private:
   friend class ManagerTest;
 
-  FRIEND_TEST(ManagerTest, RunScanImageProcessSuccess);
-  FRIEND_TEST(ManagerTest, RunScanImageProcessCaptureFailure);
-  FRIEND_TEST(ManagerTest, RunScanImageProcessConvertFailure);
-
   enum BooleanMetric {
     kBooleanMetricFailure = 0,
     kBooleanMetricSuccess = 1,
@@ -75,20 +71,11 @@ class Manager : public org::chromium::lorgnette::ManagerAdaptor,
   static const char kMetricScanResult[];
   static const char kMetricConverterResult[];
 
-  // Starts a scan on |device_name|, outputting PNG image data to |out_fd|.
-  // Uses the |pipe_fd_input| and |pipe_fd_output| to transport image data
-  // from |scan_process| to |convert_process|.  Uses information from
-  // |scan_properties| to set the arguments to the |scan_process|.  Runs both
-  // |scan_process| and |convert_process|.  Returns true if |pipe_fds| were
-  // consumed, false otherwise.
-  void RunScanImageProcess(const std::string& device_name,
-                           int out_fd,
-                           base::ScopedFD* pipe_fd_input,
-                           base::ScopedFD* pipe_fd_output,
-                           const brillo::VariantDictionary& scan_properties,
-                           brillo::Process* scan_process,
-                           brillo::Process* convert_process,
-                           brillo::ErrorPtr* error);
+  static bool ExtractScanOptions(
+      brillo::ErrorPtr* error,
+      const brillo::VariantDictionary& scan_properties,
+      uint32_t* resolution_out,
+      std::string* mode_out);
 
   // Converts the formatted output of "scanimage" to a map of attribute-data
   // mappings suitable for returning to a caller to the ListScanners DBus

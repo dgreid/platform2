@@ -6,294 +6,175 @@
 
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
-#include <base/stl_util.h>
-#include <base/strings/string_number_conversions.h>
-#include <base/strings/string_util.h>
-#include <base/strings/stringprintf.h>
+#include <base/files/file.h>
+#include <base/files/file_path.h>
+#include <base/files/file_util.h>
+#include <base/files/scoped_file.h>
+#include <base/files/scoped_temp_dir.h>
+#include <brillo/process.h>
 #include <brillo/variant_dictionary.h>
-#include <brillo/process_mock.h>
 #include <chromeos/dbus/service_constants.h>
 #include <gtest/gtest.h>
 #include <metrics/metrics_library_mock.h>
 #include <sane/sane.h>
 
-#include "lorgnette/sane_client_impl.h"
-
 #include "lorgnette/sane_client_fake.h"
+#include "lorgnette/sane_client_impl.h"
 
 using base::ScopedFD;
 using brillo::VariantDictionary;
-using std::string;
-using testing::_;
-using testing::InSequence;
-using testing::Return;
 
 namespace lorgnette {
 
 class ManagerTest : public testing::Test {
- public:
+ protected:
   ManagerTest()
-      : input_scoped_fd_(kInputPipeFd),
-        output_scoped_fd_(kOutputPipeFd),
-        sane_client_(new SaneClientFake()),
+      : sane_client_(new SaneClientFake()),
         manager_(base::Callback<void()>(),
                  std::unique_ptr<SaneClient>(sane_client_)),
         metrics_library_(new MetricsLibraryMock) {
     manager_.metrics_library_.reset(metrics_library_);
   }
 
-  virtual void TearDown() {
-    // The fds that we have handed to these ScopedFD are not real, so we
-    // must prevent our scoped fds from calling close() on them.
-    int fd = input_scoped_fd_.release();
-    CHECK(fd == kInvalidFd || fd == kInputPipeFd);
-    fd = output_scoped_fd_.release();
-    CHECK(fd == kInvalidFd || fd == kOutputPipeFd);
+  void SetUp() override {
+    ASSERT_TRUE(temp_dir_.CreateUniqueTempDir());
+    output_path_ = temp_dir_.GetPath().Append("scan_data.png");
   }
 
- protected:
-  static const char kDeviceName[];
-  static const char kMode[];
-  static const int kInvalidFd;
-  static const int kInputPipeFd;
-  static const int kOutputFd;
-  static const int kOutputPipeFd;
-  static const int kResolution;
-
-  void RunScanImageProcess(const string& device_name,
-                           int out_fd,
-                           base::ScopedFD* input_scoped_fd,
-                           base::ScopedFD* output_scoped_fd,
-                           const VariantDictionary& scan_properties,
-                           brillo::Process* scan_process,
-                           brillo::Process* convert_process,
-                           brillo::ErrorPtr* error) {
-    manager_.RunScanImageProcess(device_name,
-                                 out_fd,
-                                 input_scoped_fd,
-                                 output_scoped_fd,
-                                 scan_properties,
-                                 scan_process,
-                                 convert_process,
-                                 error);
+  void ExpectScanSuccess() {
+    EXPECT_CALL(*metrics_library_, SendEnumToUMA(Manager::kMetricScanResult,
+                                                 Manager::kBooleanMetricSuccess,
+                                                 Manager::kBooleanMetricMax));
   }
 
-  static void ExpectStartScan(const char* mode,
-                              int resolution,
-                              brillo::ProcessMock* scan_process,
-                              brillo::ProcessMock* convert_process) {
-    EXPECT_CALL(*scan_process, AddArg(GetScanImagePath()));
-    EXPECT_CALL(*scan_process, AddArg("-d"));
-    EXPECT_CALL(*scan_process, AddArg(kDeviceName));
-    if (mode) {
-      EXPECT_CALL(*scan_process, AddArg("--mode"));
-      EXPECT_CALL(*scan_process, AddArg(mode));
-    }
-    if (resolution) {
-      const string kResolutionString(base::NumberToString(resolution));
-      EXPECT_CALL(*scan_process, AddArg("--resolution"));
-      EXPECT_CALL(*scan_process, AddArg(kResolutionString));
-    }
-    EXPECT_CALL(*scan_process, BindFd(kOutputPipeFd, STDOUT_FILENO));
-    EXPECT_CALL(*convert_process, AddArg(GetScanConverterPath()));
-    EXPECT_CALL(*convert_process, BindFd(kInputPipeFd, STDIN_FILENO));
-    EXPECT_CALL(*convert_process, BindFd(kOutputFd, STDOUT_FILENO));
-    EXPECT_CALL(*convert_process, Start());
-    EXPECT_CALL(*scan_process, Start());
+  void ExpectScanFailure() {
+    EXPECT_CALL(*metrics_library_, SendEnumToUMA(Manager::kMetricScanResult,
+                                                 Manager::kBooleanMetricFailure,
+                                                 Manager::kBooleanMetricMax));
   }
 
-  static std::string GetScanConverterPath() {
-    return Manager::kScanConverterPath;
-  }
-  static std::string GetScanImagePath() { return Manager::kScanImagePath; }
-  static std::string GetScanImageFromattedDeviceListCmd() {
-    return Manager::kScanImageFormattedDeviceListCmd;
+  void ExpectConverterSuccess() {
+    EXPECT_CALL(*metrics_library_,
+                SendEnumToUMA(Manager::kMetricConverterResult,
+                              Manager::kBooleanMetricSuccess,
+                              Manager::kBooleanMetricMax));
   }
 
-  ScopedFD input_scoped_fd_;
-  ScopedFD output_scoped_fd_;
+  bool CompareImages(const std::string& path_a, const std::string& path_b) {
+    brillo::ProcessImpl diff;
+    diff.AddArg("/usr/bin/perceptualdiff");
+    diff.AddArg("-verbose");
+    diff.AddIntOption("-threshold", 1);
+    diff.AddArg(path_a);
+    diff.AddArg(path_b);
+    return diff.Run() == 0;
+  }
+
   SaneClientFake* sane_client_;
   Manager manager_;
   MetricsLibraryMock* metrics_library_;  // Owned by manager_.
+  base::ScopedTempDir temp_dir_;
+  base::FilePath output_path_;
 };
 
-// kInvalidFd must equal to base::internal::ScopedFDCloseTraits::InvalidValue().
-const int ManagerTest::kInvalidFd = -1;
-const int ManagerTest::kInputPipeFd = 123;
-const int ManagerTest::kOutputFd = 456;
-const int ManagerTest::kOutputPipeFd = 789;
-const char ManagerTest::kDeviceName[] = "scanner";
-const int ManagerTest::kResolution = 300;
-const char ManagerTest::kMode[] = "Color";
+TEST_F(ManagerTest, ScanBlackAndWhiteSuccess) {
+  std::string contents;
+  ASSERT_TRUE(base::ReadFileToString(base::FilePath("./test_images/bw.pnm"),
+                                     &contents));
+  std::vector<uint8_t> image_data(contents.begin(), contents.end());
+  std::unique_ptr<SaneDeviceFake> device = std::make_unique<SaneDeviceFake>();
+  device->SetScanData(image_data);
+  sane_client_->SetDeviceForName("TestDevice", std::move(device));
 
-MATCHER_P(IsDbusErrorStartingWith, message, "") {
-  return arg != nullptr &&
-         arg->GetDomain() == brillo::errors::dbus::kDomain &&
-         arg->GetCode() == kManagerServiceError &&
-         base::StartsWith(arg->GetMessage(), message,
-                          base::CompareCase::INSENSITIVE_ASCII);
+  base::File scan(output_path_,
+                  base::File::FLAG_CREATE | base::File::FLAG_WRITE);
+  ASSERT_TRUE(scan.IsValid());
+  base::ScopedFD scan_fd(scan.TakePlatformFile());
+
+  ExpectScanSuccess();
+  ExpectConverterSuccess();
+  EXPECT_TRUE(manager_.ScanImage(nullptr, "TestDevice", scan_fd,
+                                 brillo::VariantDictionary()));
+  EXPECT_TRUE(CompareImages("./test_images/bw.png", output_path_.value()));
 }
 
-TEST_F(ManagerTest, RunScanImageProcessSuccess) {
-  VariantDictionary props{
-      {"Mode", string{kMode}},
-      {"Resolution", uint32_t{kResolution}}
-  };
-  brillo::ProcessMock scan_process;
-  brillo::ProcessMock convert_process;
-  InSequence seq;
-  ExpectStartScan(kMode,
-                  kResolution,
-                  &scan_process,
-                  &convert_process);
-  EXPECT_CALL(scan_process, Wait()).WillOnce(Return(0));
-  EXPECT_CALL(*metrics_library_,
-              SendEnumToUMA(Manager::kMetricScanResult,
-                            Manager::kBooleanMetricSuccess,
-                            Manager::kBooleanMetricMax));
-  EXPECT_CALL(convert_process, Wait()).WillOnce(Return(0));
-  EXPECT_CALL(*metrics_library_,
-              SendEnumToUMA(Manager::kMetricConverterResult,
-                            Manager::kBooleanMetricSuccess,
-                            Manager::kBooleanMetricMax));
-  brillo::ErrorPtr error;
-  RunScanImageProcess(kDeviceName,
-                      kOutputFd,
-                      &input_scoped_fd_,
-                      &output_scoped_fd_,
-                      props,
-                      &scan_process,
-                      &convert_process,
-                      &error);
-  EXPECT_EQ(kInvalidFd, input_scoped_fd_.get());
-  EXPECT_EQ(kInvalidFd, output_scoped_fd_.get());
-  EXPECT_EQ(nullptr, error.get());
+TEST_F(ManagerTest, ScanColorSuccess) {
+  std::string contents;
+  ASSERT_TRUE(base::ReadFileToString(base::FilePath("./test_images/color.pnm"),
+                                     &contents));
+  std::vector<uint8_t> image_data(contents.begin(), contents.end());
+  std::unique_ptr<SaneDeviceFake> device = std::make_unique<SaneDeviceFake>();
+  device->SetScanData(image_data);
+  sane_client_->SetDeviceForName("TestDevice", std::move(device));
+
+  base::File scan(output_path_,
+                  base::File::FLAG_CREATE | base::File::FLAG_WRITE);
+  ASSERT_TRUE(scan.IsValid());
+  base::ScopedFD scan_fd(scan.TakePlatformFile());
+
+  ExpectScanSuccess();
+  ExpectConverterSuccess();
+  EXPECT_TRUE(manager_.ScanImage(nullptr, "TestDevice", scan_fd,
+                                 brillo::VariantDictionary()));
+  EXPECT_TRUE(CompareImages("./test_images/color.png", output_path_.value()));
 }
 
-TEST_F(ManagerTest, RunScanImageProcessInvalidArgument) {
-  const char kInvalidArgument[] = "InvalidArgument";
-  VariantDictionary props{{kInvalidArgument, ""}};
-  brillo::ProcessMock scan_process;
-  brillo::ProcessMock convert_process;
-  // For "scanimage", "-d", "<device name>".
-  EXPECT_CALL(scan_process, AddArg(_)).Times(3);
-  EXPECT_CALL(convert_process, AddArg(_)).Times(0);
-  EXPECT_CALL(convert_process, Start()).Times(0);
-  EXPECT_CALL(scan_process, Start()).Times(0);
-  brillo::ErrorPtr error;
-  RunScanImageProcess("", 0, nullptr, nullptr, props, &scan_process,
-                      &convert_process, &error);
+TEST_F(ManagerTest, ScanFailNoDevice) {
+  std::string contents;
+  ASSERT_TRUE(base::ReadFileToString(base::FilePath("./test_images/color.pnm"),
+                                     &contents));
+  std::vector<uint8_t> image_data(contents.begin(), contents.end());
 
-  // Expect that the pipe fds have not been released.
-  EXPECT_EQ(kInputPipeFd, input_scoped_fd_.get());
-  EXPECT_EQ(kOutputPipeFd, output_scoped_fd_.get());
+  base::File scan(output_path_,
+                  base::File::FLAG_CREATE | base::File::FLAG_WRITE);
+  ASSERT_TRUE(scan.IsValid());
+  base::ScopedFD scan_fd(scan.TakePlatformFile());
 
-  EXPECT_THAT(error, IsDbusErrorStartingWith(
-      base::StringPrintf("Invalid scan parameter %s", kInvalidArgument)));
+  EXPECT_FALSE(manager_.ScanImage(nullptr, "TestDevice", scan_fd,
+                                  brillo::VariantDictionary()));
 }
 
-TEST_F(ManagerTest, RunScanImageInvalidModeArgument) {
-  const char kBadMode[] = "Raytrace";
-  VariantDictionary props{{"Mode", string{kBadMode}}};
-  brillo::ProcessMock scan_process;
-  brillo::ProcessMock convert_process;
-  // For "scanimage", "-d", "<device name>".
-  EXPECT_CALL(scan_process, AddArg(_)).Times(3);
-  EXPECT_CALL(convert_process, AddArg(_)).Times(0);
-  EXPECT_CALL(convert_process, Start()).Times(0);
-  EXPECT_CALL(scan_process, Start()).Times(0);
-  brillo::ErrorPtr error;
-  RunScanImageProcess(kDeviceName,
-                      kOutputFd,
-                      &input_scoped_fd_,
-                      &output_scoped_fd_,
-                      props,
-                      &scan_process,
-                      &convert_process,
-                      &error);
+TEST_F(ManagerTest, ScanFailToStart) {
+  std::string contents;
+  ASSERT_TRUE(base::ReadFileToString(base::FilePath("./test_images/color.pnm"),
+                                     &contents));
+  std::vector<uint8_t> image_data(contents.begin(), contents.end());
+  std::unique_ptr<SaneDeviceFake> device = std::make_unique<SaneDeviceFake>();
+  device->SetScanData(image_data);
+  device->SetStartScanResult(false);
+  sane_client_->SetDeviceForName("TestDevice", std::move(device));
 
-  // Expect that the pipe fds have not been released.
-  EXPECT_EQ(kInputPipeFd, input_scoped_fd_.get());
-  EXPECT_EQ(kOutputPipeFd, output_scoped_fd_.get());
+  base::File scan(output_path_,
+                  base::File::FLAG_CREATE | base::File::FLAG_WRITE);
+  ASSERT_TRUE(scan.IsValid());
+  base::ScopedFD scan_fd(scan.TakePlatformFile());
 
-  EXPECT_THAT(error, IsDbusErrorStartingWith(
-      base::StringPrintf("Invalid mode parameter %s", kBadMode)));
+  ExpectScanFailure();
+  EXPECT_FALSE(manager_.ScanImage(nullptr, "TestDevice", scan_fd,
+                                  brillo::VariantDictionary()));
 }
 
-TEST_F(ManagerTest, RunScanImageProcessCaptureFailure) {
-  VariantDictionary props{
-      {"Mode", string{kMode}},
-      {"Resolution", uint32_t{kResolution}}
-  };
-  brillo::ProcessMock scan_process;
-  brillo::ProcessMock convert_process;
-  InSequence seq;
-  ExpectStartScan(kMode,
-                  kResolution,
-                  &scan_process,
-                  &convert_process);
-  const int kErrorResult = 999;
-  EXPECT_CALL(scan_process, Wait()).WillOnce(Return(kErrorResult));
-  EXPECT_CALL(*metrics_library_,
-              SendEnumToUMA(Manager::kMetricScanResult,
-                            Manager::kBooleanMetricFailure,
-                            Manager::kBooleanMetricMax));
-  EXPECT_CALL(convert_process, Kill(SIGKILL, 1));
-  EXPECT_CALL(convert_process, Wait()).Times(0);
-  brillo::ErrorPtr error;
-  RunScanImageProcess(kDeviceName,
-                      kOutputFd,
-                      &input_scoped_fd_,
-                      &output_scoped_fd_,
-                      props,
-                      &scan_process,
-                      &convert_process,
-                      &error);
-  EXPECT_EQ(kInvalidFd, input_scoped_fd_.get());
-  EXPECT_EQ(kInvalidFd, output_scoped_fd_.get());
-  EXPECT_THAT(error, IsDbusErrorStartingWith(
-      base::StringPrintf("Scan process exited with result %d", kErrorResult)));
-}
+TEST_F(ManagerTest, ScanFailToRead) {
+  std::string contents;
+  ASSERT_TRUE(base::ReadFileToString(base::FilePath("./test_images/color.pnm"),
+                                     &contents));
+  std::vector<uint8_t> image_data(contents.begin(), contents.end());
+  std::unique_ptr<SaneDeviceFake> device = std::make_unique<SaneDeviceFake>();
+  device->SetScanData(image_data);
+  device->SetReadScanDataResult(false);
+  sane_client_->SetDeviceForName("TestDevice", std::move(device));
 
-TEST_F(ManagerTest, RunScanImageProcessConvertFailure) {
-  VariantDictionary props{
-      {"Mode", string{kMode}},
-      {"Resolution", uint32_t{kResolution}}
-  };
-  brillo::ProcessMock scan_process;
-  brillo::ProcessMock convert_process;
-  InSequence seq;
-  ExpectStartScan(kMode,
-                  kResolution,
-                  &scan_process,
-                  &convert_process);
-  EXPECT_CALL(scan_process, Wait()).WillOnce(Return(0));
-  EXPECT_CALL(*metrics_library_,
-              SendEnumToUMA(Manager::kMetricScanResult,
-                            Manager::kBooleanMetricSuccess,
-                            Manager::kBooleanMetricMax));
-  const int kErrorResult = 111;
-  EXPECT_CALL(convert_process, Wait()).WillOnce(Return(kErrorResult));
-  EXPECT_CALL(*metrics_library_,
-              SendEnumToUMA(Manager::kMetricConverterResult,
-                            Manager::kBooleanMetricFailure,
-                            Manager::kBooleanMetricMax));
-  brillo::ErrorPtr error;
-  RunScanImageProcess(kDeviceName,
-                      kOutputFd,
-                      &input_scoped_fd_,
-                      &output_scoped_fd_,
-                      props,
-                      &scan_process,
-                      &convert_process,
-                      &error);
-  EXPECT_EQ(kInvalidFd, input_scoped_fd_.get());
-  EXPECT_EQ(kInvalidFd, output_scoped_fd_.get());
-  EXPECT_THAT(error, IsDbusErrorStartingWith(
-      base::StringPrintf("Image converter process failed with result %d",
-                         kErrorResult)));
+  base::File scan(output_path_,
+                  base::File::FLAG_CREATE | base::File::FLAG_WRITE);
+  ASSERT_TRUE(scan.IsValid());
+  base::ScopedFD scan_fd(scan.TakePlatformFile());
+
+  ExpectScanFailure();
+  EXPECT_FALSE(manager_.ScanImage(nullptr, "TestDevice", scan_fd,
+                                  brillo::VariantDictionary()));
 }
 
 class SaneClientTest : public testing::Test {

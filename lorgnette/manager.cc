@@ -6,20 +6,16 @@
 
 #include <signal.h>
 #include <stdint.h>
-#include <unistd.h>
 
 #include <utility>
 #include <vector>
 
 #include <base/callback_helpers.h>
-#include <base/files/file_path.h>
-#include <base/files/file_util.h>
+#include <base/files/file.h>
 #include <base/logging.h>
 #include <base/strings/string_number_conversions.h>
-#include <base/strings/stringprintf.h>
 #include <brillo/process.h>
 #include <brillo/type_name_undecorate.h>
-#include <brillo/variant_dictionary.h>
 #include <chromeos/dbus/service_constants.h>
 
 #include "lorgnette/daemon.h"
@@ -27,17 +23,12 @@
 #include "lorgnette/firewall_manager.h"
 #include "lorgnette/sane_client.h"
 
-using base::ScopedFD;
-using base::StringPrintf;
-using std::map;
 using std::string;
-using std::vector;
 
 namespace lorgnette {
 
 // static
 const char Manager::kScanConverterPath[] = "/usr/bin/pnm2png";
-const char Manager::kScanImagePath[] = "/usr/bin/scanimage";
 const int Manager::kTimeoutAfterKillSeconds = 1;
 const char Manager::kMetricScanResult[] = "DocumentScan.ScanResult";
 const char Manager::kMetricConverterResult[] = "DocumentScan.ConverterResult";
@@ -101,6 +92,22 @@ bool Manager::ScanImage(brillo::ErrorPtr* error,
     return false;
   }
 
+  std::unique_ptr<SaneDevice> device =
+      sane_client_->ConnectToDevice(error, device_name);
+  if (!device)
+    return false;
+
+  uint32_t resolution = 0;
+  string scan_mode;
+  if (!ExtractScanOptions(error, scan_properties, &resolution, &scan_mode))
+    return false;
+
+  if (resolution != 0 && !device->SetScanResolution(error, resolution))
+    return false;
+
+  if (scan_mode != "" && !device->SetScanMode(error, scan_mode))
+    return false;
+
   int pipe_fds[2];
   if (pipe(pipe_fds) != 0) {
     brillo::Error::AddTo(error, FROM_HERE,
@@ -110,111 +117,128 @@ bool Manager::ScanImage(brillo::ErrorPtr* error,
     return false;
   }
 
-  ScopedFD pipe_fd_input(pipe_fds[0]);
-  ScopedFD pipe_fd_output(pipe_fds[1]);
-  brillo::ProcessImpl scan_process;
+  base::ScopedFD pipe_out(pipe_fds[0]);
+  base::File pipe_in(pipe_fds[1]);
+
   brillo::ProcessImpl convert_process;
+  convert_process.AddArg(kScanConverterPath);
+  convert_process.BindFd(pipe_out.release(), STDIN_FILENO);
+  convert_process.BindFd(dup(outfd.get()), STDOUT_FILENO);
+  if (!convert_process.Start()) {
+    brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
+                         kManagerServiceError,
+                         "Unable to start converter process");
+    return false;
+  }
+  // Explicitly kill and reap the converter if we exit early, since we may fail
+  // to successfully reap the process as we exit this scope.
+  base::ScopedClosureRunner kill_convert_process(base::BindOnce(
+      [](brillo::ProcessImpl* proc) {
+        proc->Kill(SIGKILL, kTimeoutAfterKillSeconds);
+      },
+      &convert_process));
 
-  // Duplicate |outfd| since we need a file descriptor that the brillo::Process
-  // can close after binding to the child.
-  RunScanImageProcess(device_name,
-                      dup(outfd.get()),
-                      &pipe_fd_input,
-                      &pipe_fd_output,
-                      scan_properties,
-                      &scan_process,
-                      &convert_process,
-                      error);
-  activity_callback_.Run();
-  return true;
-}
+  // Automatically report a scan failure if we exit early. This will be
+  // cancelled once scanning has succeeded.
+  base::ScopedClosureRunner report_scan_failure(base::BindOnce(
+      [](MetricsLibraryInterface* metrics_library) {
+        metrics_library->SendEnumToUMA(kMetricScanResult, kBooleanMetricFailure,
+                                       kBooleanMetricMax);
+      },
+      metrics_library_.get()));
 
-// static
-void Manager::RunScanImageProcess(
-    const string& device_name,
-    int out_fd,
-    ScopedFD* pipe_fd_input,
-    ScopedFD* pipe_fd_output,
-    const brillo::VariantDictionary& scan_properties,
-    brillo::Process* scan_process,
-    brillo::Process* convert_process,
-    brillo::ErrorPtr* error) {
-  scan_process->AddArg(kScanImagePath);
-  scan_process->AddArg("-d");
-  scan_process->AddArg(device_name);
+  if (!device->StartScan(error))
+    return false;
 
-  for (const auto& property : scan_properties) {
-    const string& property_name = property.first;
-    const auto& property_value = property.second;
-    if (property_name == kScanPropertyMode &&
-        property_value.IsTypeCompatible<string>()) {
-      string mode = property_value.Get<string>();
-      if (mode != kScanPropertyModeColor &&
-          mode != kScanPropertyModeGray &&
-          mode != kScanPropertyModeLineart) {
-        brillo::Error::AddToPrintf(error, FROM_HERE,
-                                     brillo::errors::dbus::kDomain,
-                                     kManagerServiceError,
-                                     "Invalid mode parameter %s",
-                                     mode.c_str());
-        return;
-      }
-      scan_process->AddArg("--mode");
-      scan_process->AddArg(mode);
-    } else if (property_name == kScanPropertyResolution &&
-               property_value.IsTypeCompatible<uint32_t>()) {
-      scan_process->AddArg("--resolution");
-      scan_process->AddArg(
-          base::NumberToString(property_value.Get<unsigned int>()));
-    } else {
+  const int buffer_length = 4 * 1024;
+  std::vector<uint8_t> image_buffer(buffer_length, '\0');
+  size_t read = 0;
+
+  bool result = device->ReadScanData(error, image_buffer.data(),
+                                     image_buffer.size(), &read);
+  while (result && read > 0) {
+    int ret = pipe_in.WriteAtCurrentPos(
+        reinterpret_cast<char*>(image_buffer.data()), read);
+    if (ret < 0) {
       brillo::Error::AddToPrintf(
-          error, FROM_HERE,
-          brillo::errors::dbus::kDomain, kManagerServiceError,
-          "Invalid scan parameter %s of type %s",
-          property_name.c_str(),
-          property_value.GetUndecoratedTypeName().c_str());
-      return;
+          error, FROM_HERE, brillo::errors::dbus::kDomain, kManagerServiceError,
+          "Failed to write image data to pipe: %d", errno);
+      return false;
     }
+    result = device->ReadScanData(error, image_buffer.data(),
+                                  image_buffer.size(), &read);
   }
-  scan_process->BindFd(pipe_fd_output->release(), STDOUT_FILENO);
 
-  convert_process->AddArg(kScanConverterPath);
-  convert_process->BindFd(pipe_fd_input->release(), STDIN_FILENO);
-  convert_process->BindFd(out_fd, STDOUT_FILENO);
-
-  convert_process->Start();
-  scan_process->Start();
-
-  int scan_result = scan_process->Wait();
+  (void)report_scan_failure.Release();
   metrics_library_->SendEnumToUMA(
-      kMetricScanResult,
-      scan_result == 0 ? kBooleanMetricSuccess : kBooleanMetricFailure,
+      kMetricScanResult, result ? kBooleanMetricSuccess : kBooleanMetricFailure,
       kBooleanMetricMax);
-  if (scan_result != 0) {
-    brillo::Error::AddToPrintf(error, FROM_HERE,
-                                 brillo::errors::dbus::kDomain,
-                                 kManagerServiceError,
-                                 "Scan process exited with result %d",
-                                 scan_result);
-    // Explicitly kill and reap the converter since we may fail to successfully
-    // reap the processes as it exits this scope.
-    convert_process->Kill(SIGKILL, kTimeoutAfterKillSeconds);
-    return;
+  if (!result) {
+    brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
+                         kManagerServiceError, "Scanning image failed.");
+    return false;
   }
 
-  int converter_result = convert_process->Wait();
+  // Clear the ScopedClosureRunner since we're about to wait for the convert
+  // process to terminate.
+  (void)kill_convert_process.Release();
+  pipe_in.Close();
+  int converter_result = convert_process.Wait();
   metrics_library_->SendEnumToUMA(
       kMetricConverterResult,
-      converter_result == 0 ?  kBooleanMetricSuccess : kBooleanMetricFailure,
+      converter_result == 0 ? kBooleanMetricSuccess : kBooleanMetricFailure,
       kBooleanMetricMax);
   if (converter_result != 0) {
     brillo::Error::AddToPrintf(
         error, FROM_HERE, brillo::errors::dbus::kDomain, kManagerServiceError,
         "Image converter process failed with result %d", converter_result);
-    return;
+    return false;
   }
 
   LOG(INFO) << __func__ << ": completed image scan and conversion.";
+
+  if (!activity_callback_.is_null())
+    activity_callback_.Run();
+  return true;
+}
+
+// static
+bool Manager::ExtractScanOptions(
+    brillo::ErrorPtr* error,
+    const brillo::VariantDictionary& scan_properties,
+    uint32_t* resolution_out,
+    string* mode_out) {
+  uint32_t resolution;
+  string mode;
+  for (const auto& property : scan_properties) {
+    const string& property_name = property.first;
+    const auto& property_value = property.second;
+    if (property_name == kScanPropertyMode &&
+        property_value.IsTypeCompatible<string>()) {
+      mode = property_value.Get<string>();
+      if (mode != kScanPropertyModeColor && mode != kScanPropertyModeGray &&
+          mode != kScanPropertyModeLineart) {
+        brillo::Error::AddToPrintf(
+            error, FROM_HERE, brillo::errors::dbus::kDomain,
+            kManagerServiceError, "Invalid mode parameter %s", mode.c_str());
+        return false;
+      }
+    } else if (property_name == kScanPropertyResolution &&
+               property_value.IsTypeCompatible<uint32_t>()) {
+      resolution = property_value.Get<unsigned int>();
+    } else {
+      brillo::Error::AddToPrintf(
+          error, FROM_HERE, brillo::errors::dbus::kDomain, kManagerServiceError,
+          "Invalid scan parameter %s of type %s", property_name.c_str(),
+          property_value.GetUndecoratedTypeName().c_str());
+      return false;
+    }
+  }
+  if (resolution_out)
+    *resolution_out = resolution;
+  if (mode_out)
+    *mode_out = mode;
+  return true;
 }
 
 }  // namespace lorgnette

@@ -18,6 +18,8 @@
 
 namespace lorgnette {
 
+class SaneDeviceFake;
+
 class SaneClientFake : public SaneClient {
  public:
   bool ListDevices(brillo::ErrorPtr* error,
@@ -32,9 +34,12 @@ class SaneClientFake : public SaneClient {
                  const std::string& type);
   void RemoveDevice(const std::string& name);
 
+  void SetDeviceForName(const std::string& device_name,
+                        std::unique_ptr<SaneDeviceFake> device);
+
  private:
   base::Lock lock_;
-
+  std::map<std::string, std::unique_ptr<SaneDeviceFake>> devices_;
   bool list_devices_result_;
   Manager::ScannerInfo scanners_;
 };

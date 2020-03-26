@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <map>
+#include <utility>
 
 #include <chromeos/dbus/service_constants.h>
 
@@ -25,7 +26,12 @@ bool SaneClientFake::ListDevices(brillo::ErrorPtr* error,
 
 std::unique_ptr<SaneDevice> SaneClientFake::ConnectToDevice(
     brillo::ErrorPtr* error, const std::string& device_name) {
-  return std::make_unique<SaneDeviceFake>();
+  if (devices_.count(device_name) > 0) {
+    auto ptr = std::move(devices_[device_name]);
+    devices_.erase(device_name);
+    return ptr;
+  }
+  return nullptr;
 }
 
 void SaneClientFake::SetListDevicesResult(bool value) {
@@ -48,8 +54,15 @@ void SaneClientFake::RemoveDevice(const std::string& name) {
   scanners_.erase(name);
 }
 
+void SaneClientFake::SetDeviceForName(const std::string& device_name,
+                                      std::unique_ptr<SaneDeviceFake> device) {
+  devices_.emplace(device_name, std::move(device));
+}
+
 SaneDeviceFake::SaneDeviceFake()
-    : start_scan_result_(true), read_scan_data_result_(true) {}
+    : start_scan_result_(true),
+      read_scan_data_result_(true),
+      scan_running_(false) {}
 
 SaneDeviceFake::~SaneDeviceFake() {}
 
@@ -83,13 +96,17 @@ bool SaneDeviceFake::ReadScanData(brillo::ErrorPtr*,
   if (!read_scan_data_result_)
     return false;
 
+  if (scan_data_offset_ >= scan_data_.size()) {
+    scan_running_ = false;
+    *read_out = 0;
+    return true;
+  }
+
   size_t to_copy = std::min(count, scan_data_.size() - scan_data_offset_);
   memcpy(buf, scan_data_.data() + scan_data_offset_, to_copy);
   *read_out = to_copy;
 
   scan_data_offset_ += to_copy;
-  if (scan_data_offset_ >= scan_data_.size())
-    scan_running_ = false;
   return true;
 }
 
