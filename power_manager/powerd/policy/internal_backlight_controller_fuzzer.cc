@@ -48,7 +48,9 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 
   power_manager::FakePrefs prefs;
   power_manager::system::AmbientLightSensorStub light_sensor(initial_lux);
-  power_manager::system::BacklightStub backlight(kLevelMax, initial_level);
+  power_manager::system::BacklightStub backlight(
+      kLevelMax, initial_level,
+      power_manager::system::BacklightInterface::BrightnessScale::kUnknown);
   power_manager::system::DBusWrapperStub dbus_wrapper;
   power_manager::system::DisplayPowerSetterStub display_power_setter;
 
