@@ -8,12 +8,13 @@
 #include <stdint.h>
 #include <unistd.h>
 
+#include <utility>
 #include <vector>
 
+#include <base/callback_helpers.h>
 #include <base/files/file_path.h>
 #include <base/files/file_util.h>
 #include <base/logging.h>
-#include <base/strings/string_split.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/stringprintf.h>
 #include <brillo/process.h>
@@ -24,6 +25,7 @@
 #include "lorgnette/daemon.h"
 #include "lorgnette/epson_probe.h"
 #include "lorgnette/firewall_manager.h"
+#include "lorgnette/sane_client.h"
 
 using base::ScopedFD;
 using base::StringPrintf;
@@ -35,17 +37,17 @@ namespace lorgnette {
 
 // static
 const char Manager::kScanConverterPath[] = "/usr/bin/pnm2png";
-const char Manager::kScanImageFormattedDeviceListCmd[] =
-    "--formatted-device-list=%d%%%v%%%m%%%t%n";
 const char Manager::kScanImagePath[] = "/usr/bin/scanimage";
 const int Manager::kTimeoutAfterKillSeconds = 1;
 const char Manager::kMetricScanResult[] = "DocumentScan.ScanResult";
 const char Manager::kMetricConverterResult[] = "DocumentScan.ConverterResult";
 
-Manager::Manager(base::Callback<void()> activity_callback)
+Manager::Manager(base::Callback<void()> activity_callback,
+                 std::unique_ptr<SaneClient> sane_client)
     : org::chromium::lorgnette::ManagerAdaptor(this),
       activity_callback_(activity_callback),
-      metrics_library_(new MetricsLibrary) {}
+      metrics_library_(new MetricsLibrary),
+      sane_client_(std::move(sane_client)) {}
 
 Manager::~Manager() {}
 
@@ -66,38 +68,26 @@ void Manager::RegisterAsync(
 
 bool Manager::ListScanners(brillo::ErrorPtr* error,
                            Manager::ScannerInfo* scanner_list) {
-  base::FilePath output_path;
-  FILE* output_file_handle;
-  output_file_handle = base::CreateAndOpenTemporaryFile(&output_path);
-  if (!output_file_handle) {
-    brillo::Error::AddTo(error, FROM_HERE,
-                           brillo::errors::dbus::kDomain,
-                           kManagerServiceError,
-                           "Unable to create temporary file.");
+  if (!sane_client_) {
+    brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
+                         kManagerServiceError, "No connection to SANE");
     return false;
   }
 
-  brillo::ProcessImpl process;
   firewall_manager_->RequestScannerPortAccess();
-  RunListScannersProcess(fileno(output_file_handle), &process);
-  fclose(output_file_handle);
-  string scanner_output_string;
-  bool read_status = base::ReadFileToString(output_path,
-                                            &scanner_output_string);
-  const bool recursive_delete = false;
-  base::DeleteFile(output_path, recursive_delete);
-  if (!read_status) {
-    brillo::Error::AddTo(error, FROM_HERE,
-                           brillo::errors::dbus::kDomain,
-                           kManagerServiceError,
-                           "Unable to read scanner list output file");
+  base::ScopedClosureRunner release_ports(
+      base::BindOnce([](FirewallManager* fm) { fm->ReleaseAllPortsAccess(); },
+                     firewall_manager_.get()));
+
+  ScannerInfo scanners;
+  if (!sane_client_->ListDevices(error, &scanners)) {
     return false;
   }
   activity_callback_.Run();
-  *scanner_list = ScannerInfoFromString(scanner_output_string);
-  epson_probe::ProbeForScanners(firewall_manager_.get(), scanner_list);
 
-  firewall_manager_->ReleaseAllPortsAccess();
+  epson_probe::ProbeForScanners(firewall_manager_.get(), &scanners);
+
+  *scanner_list = scanners;
   return true;
 }
 
@@ -105,6 +95,12 @@ bool Manager::ScanImage(brillo::ErrorPtr* error,
                         const string& device_name,
                         const base::ScopedFD& outfd,
                         const brillo::VariantDictionary& scan_properties) {
+  if (!sane_client_) {
+    brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
+                         kManagerServiceError, "No connection to SANE");
+    return false;
+  }
+
   int pipe_fds[2];
   if (pipe(pipe_fds) != 0) {
     brillo::Error::AddTo(error, FROM_HERE,
@@ -131,14 +127,6 @@ bool Manager::ScanImage(brillo::ErrorPtr* error,
                       error);
   activity_callback_.Run();
   return true;
-}
-
-// static
-void Manager::RunListScannersProcess(int fd, brillo::Process* process) {
-  process->AddArg(kScanImagePath);
-  process->AddArg(kScanImageFormattedDeviceListCmd);
-  process->BindFd(fd, STDOUT_FILENO);
-  process->Run();
 }
 
 // static
@@ -227,31 +215,6 @@ void Manager::RunScanImageProcess(
   }
 
   LOG(INFO) << __func__ << ": completed image scan and conversion.";
-}
-
-// static
-Manager::ScannerInfo Manager::ScannerInfoFromString(
-    const string& scanner_info_string) {
-  vector<string> scanner_output_lines =
-      base::SplitString(scanner_info_string, "\n", base::KEEP_WHITESPACE,
-                        base::SPLIT_WANT_ALL);
-
-  ScannerInfo scanners;
-  for (const auto& line : scanner_output_lines) {
-    vector<string> scanner_info_parts =
-        base::SplitString(line, "%", base::KEEP_WHITESPACE,
-                          base::SPLIT_WANT_ALL);
-    if (scanner_info_parts.size() != 4) {
-      continue;
-    }
-    map<string, string> scanner_info;
-    scanner_info[kScannerPropertyManufacturer] = scanner_info_parts[1];
-    scanner_info[kScannerPropertyModel] = scanner_info_parts[2];
-    scanner_info[kScannerPropertyType] = scanner_info_parts[3];
-    scanners[scanner_info_parts[0]] = scanner_info;
-  }
-
-  return scanners;
 }
 
 }  // namespace lorgnette

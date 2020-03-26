@@ -4,6 +4,7 @@
 
 #include "lorgnette/manager.h"
 
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -20,6 +21,8 @@
 
 #include "lorgnette/sane_client_impl.h"
 
+#include "lorgnette/sane_client_fake.h"
+
 using base::ScopedFD;
 using brillo::VariantDictionary;
 using std::string;
@@ -32,10 +35,12 @@ namespace lorgnette {
 class ManagerTest : public testing::Test {
  public:
   ManagerTest()
-     : input_scoped_fd_(kInputPipeFd),
-       output_scoped_fd_(kOutputPipeFd),
-       manager_(base::Callback<void()>()),
-       metrics_library_(new MetricsLibraryMock) {
+      : input_scoped_fd_(kInputPipeFd),
+        output_scoped_fd_(kOutputPipeFd),
+        sane_client_(new SaneClientFake()),
+        manager_(base::Callback<void()>(),
+                 std::unique_ptr<SaneClient>(sane_client_)),
+        metrics_library_(new MetricsLibraryMock) {
     manager_.metrics_library_.reset(metrics_library_);
   }
 
@@ -56,10 +61,6 @@ class ManagerTest : public testing::Test {
   static const int kOutputFd;
   static const int kOutputPipeFd;
   static const int kResolution;
-
-  static void RunListScannersProcess(int fd, brillo::Process* process) {
-    Manager::RunListScannersProcess(fd, process);
-  }
 
   void RunScanImageProcess(const string& device_name,
                            int out_fd,
@@ -103,11 +104,6 @@ class ManagerTest : public testing::Test {
     EXPECT_CALL(*scan_process, Start());
   }
 
-  static Manager::ScannerInfo ScannerInfoFromString(
-      const std::string& scanner_info_string) {
-    return Manager::ScannerInfoFromString(scanner_info_string);
-  }
-
   static std::string GetScanConverterPath() {
     return Manager::kScanConverterPath;
   }
@@ -118,6 +114,7 @@ class ManagerTest : public testing::Test {
 
   ScopedFD input_scoped_fd_;
   ScopedFD output_scoped_fd_;
+  SaneClientFake* sane_client_;
   Manager manager_;
   MetricsLibraryMock* metrics_library_;  // Owned by manager_.
 };
@@ -137,17 +134,6 @@ MATCHER_P(IsDbusErrorStartingWith, message, "") {
          arg->GetCode() == kManagerServiceError &&
          base::StartsWith(arg->GetMessage(), message,
                           base::CompareCase::INSENSITIVE_ASCII);
-}
-
-TEST_F(ManagerTest, RunListScannersProcess) {
-  brillo::ProcessMock process;
-  const int kFd = 123;
-  InSequence seq;
-  EXPECT_CALL(process, AddArg(GetScanImagePath()));
-  EXPECT_CALL(process, AddArg(GetScanImageFromattedDeviceListCmd()));
-  EXPECT_CALL(process, BindFd(kFd, STDOUT_FILENO));
-  EXPECT_CALL(process, Run());
-  RunListScannersProcess(kFd, &process);
 }
 
 TEST_F(ManagerTest, RunScanImageProcessSuccess) {
@@ -308,43 +294,6 @@ TEST_F(ManagerTest, RunScanImageProcessConvertFailure) {
   EXPECT_THAT(error, IsDbusErrorStartingWith(
       base::StringPrintf("Image converter process failed with result %d",
                          kErrorResult)));
-}
-
-TEST_F(ManagerTest, ScannerInfoFromString) {
-  EXPECT_TRUE(ScannerInfoFromString("").empty());
-  EXPECT_TRUE(ScannerInfoFromString("one").empty());
-  EXPECT_TRUE(ScannerInfoFromString("one%two").empty());
-  EXPECT_TRUE(ScannerInfoFromString("one%two%three").empty());
-  const char kDevice0[] = "device0";
-  const char kDevice1[] = "device1";
-  const char kManufacturer0[] = "rayban";
-  const char kManufacturer1[] = "oakley";
-  const char kModel0[] = "model0";
-  const char kModel1[] = "model1";
-  const char kType0[] = "type0";
-  const char kType1[] = "type1";
-  const string kInputString(base::StringPrintf(
-      "one\n"
-      "%s%%%s%%%s%%%s\n"
-      "one%%two\n"
-      "%s%%%s%%%s%%%s\n"
-      "one%%two%%three\n"
-      "one%%two%%three%%four%%five\n",
-      kDevice0, kManufacturer0, kModel0, kType0,
-      kDevice1, kManufacturer1, kModel1, kType1));
-  Manager::ScannerInfo scan_info = ScannerInfoFromString(kInputString);
-  EXPECT_EQ(2, scan_info.size());
-  EXPECT_TRUE(base::ContainsKey(scan_info, kDevice0));
-  EXPECT_EQ(3, scan_info[kDevice0].size());
-  EXPECT_STREQ(kManufacturer0, scan_info[kDevice0]["Manufacturer"].c_str());
-  EXPECT_STREQ(kModel0, scan_info[kDevice0]["Model"].c_str());
-  EXPECT_STREQ(kType0, scan_info[kDevice0]["Type"].c_str());
-
-  EXPECT_TRUE(base::ContainsKey(scan_info, kDevice1));
-  EXPECT_EQ(3, scan_info[kDevice1].size());
-  EXPECT_STREQ(kManufacturer1, scan_info[kDevice1]["Manufacturer"].c_str());
-  EXPECT_STREQ(kModel1, scan_info[kDevice1]["Model"].c_str());
-  EXPECT_STREQ(kType1, scan_info[kDevice1]["Type"].c_str());
 }
 
 class SaneClientTest : public testing::Test {

@@ -20,7 +20,7 @@ namespace lorgnette {
 
 class SaneClientImpl : public SaneClient {
  public:
-  static std::unique_ptr<SaneClientImpl> Create(brillo::ErrorPtr* error);
+  static std::unique_ptr<SaneClientImpl> Create();
   ~SaneClientImpl();
 
   bool ListDevices(brillo::ErrorPtr* error,

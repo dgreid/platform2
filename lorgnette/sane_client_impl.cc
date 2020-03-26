@@ -6,18 +6,17 @@
 
 #include <map>
 
+#include <base/logging.h>
 #include <chromeos/dbus/service_constants.h>
 #include <sane/saneopts.h>
 
 namespace lorgnette {
 
 // static
-std::unique_ptr<SaneClientImpl> SaneClientImpl::Create(
-    brillo::ErrorPtr* error) {
+std::unique_ptr<SaneClientImpl> SaneClientImpl::Create() {
   SANE_Status status = sane_init(nullptr, nullptr);
   if (status != SANE_STATUS_GOOD) {
-    brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
-                         kManagerServiceError, "Unable to initialize SANE");
+    LOG(ERROR) << "Unable to initialize SANE";
     return nullptr;
   }
 

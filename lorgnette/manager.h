@@ -18,6 +18,7 @@
 #include <metrics/metrics_library.h>
 
 #include "lorgnette/dbus_adaptors/org.chromium.lorgnette.Manager.h"
+#include "lorgnette/sane_client.h"
 
 namespace brillo {
 class Process;
@@ -38,7 +39,8 @@ class Manager : public org::chromium::lorgnette::ManagerAdaptor,
  public:
   typedef std::map<std::string, std::map<std::string, std::string>> ScannerInfo;
 
-  explicit Manager(base::Callback<void()> activity_callback);
+  Manager(base::Callback<void()> activity_callback,
+          std::unique_ptr<SaneClient> sane_client);
   virtual ~Manager();
 
   void RegisterAsync(
@@ -73,10 +75,6 @@ class Manager : public org::chromium::lorgnette::ManagerAdaptor,
   static const char kMetricScanResult[];
   static const char kMetricConverterResult[];
 
-  // Sets arguments to scan listing |process|, and runs it, returning its
-  // output to |fd|.
-  static void RunListScannersProcess(int fd, brillo::Process* process);
-
   // Starts a scan on |device_name|, outputting PNG image data to |out_fd|.
   // Uses the |pipe_fd_input| and |pipe_fd_output| to transport image data
   // from |scan_process| to |convert_process|.  Uses information from
@@ -104,6 +102,9 @@ class Manager : public org::chromium::lorgnette::ManagerAdaptor,
 
   // Manages port access for receiving replies from network scanners.
   std::unique_ptr<FirewallManager> firewall_manager_;
+
+  // Manages connection to SANE for listing and connecting to scanners.
+  std::unique_ptr<SaneClient> sane_client_;
 
   DISALLOW_COPY_AND_ASSIGN(Manager);
 };

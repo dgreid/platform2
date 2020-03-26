@@ -13,6 +13,8 @@
 #include <base/run_loop.h>
 #include <chromeos/dbus/service_constants.h>
 
+#include "lorgnette/sane_client_impl.h"
+
 using std::string;
 
 namespace lorgnette {
@@ -41,8 +43,9 @@ int Daemon::OnInit() {
 
 void Daemon::RegisterDBusObjectsAsync(
     brillo::dbus_utils::AsyncEventSequencer* sequencer) {
-  manager_.reset(new Manager(base::Bind(&Daemon::PostponeShutdown,
-                                        base::Unretained(this))));
+  manager_.reset(
+      new Manager(base::Bind(&Daemon::PostponeShutdown, base::Unretained(this)),
+                  SaneClientImpl::Create()));
   manager_->RegisterAsync(object_manager_.get(), sequencer);
 }
 
