@@ -245,7 +245,10 @@ TEST_F(TpmManagerServiceTest_NoPreinit, NoPreInitialize) {
 
 // This item checks if the prompt reset right after taking ownership does reset
 // the periodic reset timer. For more information, see the comments inlined.
-TEST_F(TpmManagerServiceTest_Preinit, DictionaryAttackResetTimerReset) {
+//
+// TODO(b/152485752): Finds out non-flaky version to test it and re-enable it.
+TEST_F(TpmManagerServiceTest_Preinit,
+       DISABLED_DictionaryAttackResetTimerReset) {
   EXPECT_CALL(mock_tpm_status_, CheckAndNotifyIfTpmOwned(_))
       .WillRepeatedly(
           DoAll(SetArgPointee<0>(TpmStatus::kTpmOwned), Return(true)));
