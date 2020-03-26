@@ -69,10 +69,29 @@ class ResourceManager : public CommandTransceiver {
  private:
   struct MessageInfo {
     bool has_sessions = false;
-    TPM_CC code = 0;  // For a response message this is the TPM_RC code.
+
+    // For a command message, this is the command code; for a response message,
+    // this is the TPM_RC code.
+    TPM_CC code = 0;
+
+    // List of handles in the command/response header. May contain both object
+    // handles and non-auth session handles.
     std::vector<TPM_HANDLE> handles;
-    std::vector<TPM_HANDLE> session_handles;
+
+    // List of session handles in the authorization structures, if any. This is
+    // used in commands but not responses.
+    std::vector<TPM_HANDLE> auth_session_handles;
+
+    // List of session handles, including those non-auth session handles in
+    // |handles| and |auth_session_handles|, if any. This is used in commands
+    // but not responses.
+    std::vector<TPM_HANDLE> all_session_handles;
+
+    // List of boolean values, each indicating if the corresponding session
+    // handle in |auth_session_handles| will remain active when the command
+    // completes.
     std::vector<bool> session_continued;
+
     std::string parameter_data;
   };
 

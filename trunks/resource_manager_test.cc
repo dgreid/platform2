@@ -480,7 +480,7 @@ TEST_F(ResourceManagerTest, DiscontinuedSession) {
   EXPECT_EQ(response, actual_response);
 }
 
-TEST_F(ResourceManagerTest, LoadSessionBeforeUse) {
+TEST_F(ResourceManagerTest, LoadAuthSessionBeforeUse) {
   StartSession(kArbitrarySessionHandle);
   EvictSession();
   std::string command =
@@ -492,6 +492,21 @@ TEST_F(ResourceManagerTest, LoadSessionBeforeUse) {
       CreateResponse(TPM_RC_SUCCESS, kNoHandles,
                      CreateResponseAuthorization(true),  // continue_session
                      kNoParameters);
+  EXPECT_CALL(transceiver_, SendCommandAndWait(command))
+      .WillOnce(Return(response));
+  EXPECT_CALL(tpm_, ContextLoadSync(_, _, _)).WillOnce(Return(TPM_RC_SUCCESS));
+  std::string actual_response = resource_manager_.SendCommandAndWait(command);
+  EXPECT_EQ(response, actual_response);
+}
+
+TEST_F(ResourceManagerTest, LoadNonAuthSessionBeforeUse) {
+  StartSession(kArbitrarySessionHandle);
+  EvictSession();
+  std::string command = CreateCommand(
+      TPM_CC_PolicyPCR, {kArbitrarySessionHandle},
+      kNoAuthorization, kNoParameters);
+  std::string response = CreateResponse(
+      TPM_RC_SUCCESS, kNoHandles, kNoAuthorization, kNoParameters);
   EXPECT_CALL(transceiver_, SendCommandAndWait(command))
       .WillOnce(Return(response));
   EXPECT_CALL(tpm_, ContextLoadSync(_, _, _)).WillOnce(Return(TPM_RC_SUCCESS));
@@ -544,7 +559,7 @@ TEST_F(ResourceManagerTest, EvictWhenObjectInUse) {
   EXPECT_EQ(success_response, actual_response);
 }
 
-TEST_F(ResourceManagerTest, EvictWhenSessionInUse) {
+TEST_F(ResourceManagerTest, EvictWhenAuthSessionInUse) {
   StartSession(kArbitrarySessionHandle);
   StartSession(kArbitrarySessionHandle + 1);
   std::string command =
@@ -560,6 +575,26 @@ TEST_F(ResourceManagerTest, EvictWhenSessionInUse) {
   EXPECT_CALL(transceiver_, SendCommandAndWait(_))
       .WillOnce(Return(error_response))
       .WillRepeatedly(Return(response));
+  EXPECT_CALL(tpm_, ContextSaveSync(kArbitrarySessionHandle + 1, _, _, _))
+      .WillOnce(Return(TPM_RC_SUCCESS));
+  std::string actual_response = resource_manager_.SendCommandAndWait(command);
+  EXPECT_EQ(response, actual_response);
+}
+
+TEST_F(ResourceManagerTest, EvictWhenNonAuthSessionInUse) {
+  StartSession(kArbitrarySessionHandle);
+  StartSession(kArbitrarySessionHandle + 1);
+  std::string command = CreateCommand(
+      TPM_CC_PolicyPCR, {kArbitrarySessionHandle},
+      kNoAuthorization, kNoParameters);
+  std::string response = CreateResponse(
+      TPM_RC_SUCCESS, kNoHandles, kNoAuthorization, kNoParameters);
+  std::string error_response = CreateErrorResponse(TPM_RC_SESSION_MEMORY);
+  EXPECT_CALL(transceiver_, SendCommandAndWait(_))
+      .WillOnce(Return(error_response))
+      .WillRepeatedly(Return(response));
+  // kArbitrarySessionHandle would be evicted instead if RM doesn't treat the
+  // non-auth session handle as a session handle in ParseCommand().
   EXPECT_CALL(tpm_, ContextSaveSync(kArbitrarySessionHandle + 1, _, _, _))
       .WillOnce(Return(TPM_RC_SUCCESS));
   std::string actual_response = resource_manager_.SendCommandAndWait(command);
@@ -631,6 +666,48 @@ TEST_F(ResourceManagerTest, EvictMostStaleSession) {
                                                true),  // continue_session
                     kNoParameters);
   EXPECT_CALL(tpm_, ContextLoadSync(_, _, _)).WillOnce(Return(TPM_RC_SUCCESS));
+  std::string actual_response = resource_manager_.SendCommandAndWait(command);
+  EXPECT_EQ(response, actual_response);
+}
+
+TEST_F(ResourceManagerTest, FlushWhenAuthSessionInUse) {
+  StartSession(kArbitrarySessionHandle);
+  StartSession(kArbitrarySessionHandle + 1);
+  std::string command =
+      CreateCommand(TPM_CC_Startup, kNoHandles,
+                    CreateCommandAuthorization(kArbitrarySessionHandle,
+                                               true),  // continue_session
+                    kNoParameters);
+  std::string response =
+      CreateResponse(TPM_RC_SUCCESS, kNoHandles,
+                     CreateResponseAuthorization(true),  // continue_session
+                     kNoParameters);
+  std::string error_response = CreateErrorResponse(TPM_RC_SESSION_HANDLES);
+  EXPECT_CALL(transceiver_, SendCommandAndWait(_))
+      .WillOnce(Return(error_response))
+      .WillRepeatedly(Return(response));
+  EXPECT_CALL(tpm_, FlushContextSync(kArbitrarySessionHandle + 1, _))
+      .WillOnce(Return(TPM_RC_SUCCESS));
+  std::string actual_response = resource_manager_.SendCommandAndWait(command);
+  EXPECT_EQ(response, actual_response);
+}
+
+TEST_F(ResourceManagerTest, FlushWhenNonAuthSessionInUse) {
+  StartSession(kArbitrarySessionHandle);
+  StartSession(kArbitrarySessionHandle + 1);
+  std::string command = CreateCommand(
+      TPM_CC_PolicyPCR, {kArbitrarySessionHandle},
+      kNoAuthorization, kNoParameters);
+  std::string response = CreateResponse(
+      TPM_RC_SUCCESS, kNoHandles, kNoAuthorization, kNoParameters);
+  std::string error_response = CreateErrorResponse(TPM_RC_SESSION_HANDLES);
+  EXPECT_CALL(transceiver_, SendCommandAndWait(_))
+      .WillOnce(Return(error_response))
+      .WillRepeatedly(Return(response));
+  // kArbitrarySessionHandle would be flushed instead if RM doesn't treat the
+  // non-auth session handle as a session handle in ParseCommand().
+  EXPECT_CALL(tpm_, FlushContextSync(kArbitrarySessionHandle + 1, _))
+      .WillOnce(Return(TPM_RC_SUCCESS));
   std::string actual_response = resource_manager_.SendCommandAndWait(command);
   EXPECT_EQ(response, actual_response);
 }

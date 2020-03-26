@@ -141,7 +141,7 @@ std::string ResourceManager::SendCommandAndWait(const std::string& command) {
   }
   std::string updated_command = ReplaceHandles(command, updated_handles);
   // Make sure all the required sessions are loaded.
-  for (auto handle : command_info.session_handles) {
+  for (auto handle : command_info.all_session_handles) {
     result = EnsureSessionIsLoaded(command_info, handle);
     if (result != TPM_RC_SUCCESS) {
       return CreateErrorResponse(result);
@@ -182,14 +182,14 @@ std::string ResourceManager::SendCommandAndWait(const std::string& command) {
   }
   if (response_info.code == TPM_RC_SUCCESS) {
     if (response_info.session_continued.size() !=
-        command_info.session_handles.size()) {
+        command_info.auth_session_handles.size()) {
       LOG(WARNING) << "Session count mismatch!";
     }
     // Cleanup any sessions that were not continued.
-    for (size_t i = 0; i < command_info.session_handles.size(); ++i) {
+    for (size_t i = 0; i < command_info.auth_session_handles.size(); ++i) {
       if (i < response_info.session_continued.size() &&
           !response_info.session_continued[i]) {
-        CleanupFlushedHandle(command_info.session_handles[i]);
+        CleanupFlushedHandle(command_info.auth_session_handles[i]);
       }
     }
     // On a successful context save we need to cache the context data in case it
@@ -340,7 +340,8 @@ void ResourceManager::EvictObjects(const MessageInfo& command_info) {
 
 void ResourceManager::EvictSession(const MessageInfo& command_info) {
   TPM_HANDLE session_to_evict;
-  if (!ChooseSessionToEvict(command_info.session_handles, &session_to_evict)) {
+  if (!ChooseSessionToEvict(command_info.all_session_handles,
+                            &session_to_evict)) {
     return;
   }
   HandleInfo& info = session_handles_[session_to_evict];
@@ -456,7 +457,8 @@ bool ResourceManager::FixWarnings(const MessageInfo& command_info,
 void ResourceManager::FlushSession(const MessageInfo& command_info) {
   TPM_HANDLE session_to_flush;
   LOG(WARNING) << "Resource manager needs to flush a session.";
-  if (!ChooseSessionToEvict(command_info.session_handles, &session_to_flush)) {
+  if (!ChooseSessionToEvict(command_info.all_session_handles,
+                            &session_to_flush)) {
     return;
   }
   TPM_RC result =
@@ -560,6 +562,12 @@ TPM_RC ResourceManager::ParseCommand(const std::string& command,
   if (number_of_handles != command_info->handles.size()) {
     return MakeError(TPM_RC_SIZE, FROM_HERE);
   }
+  for (const auto handle : command_info->handles) {
+    if (IsSessionHandle(handle)) {
+      command_info->all_session_handles.push_back(handle);
+    }
+  }
+
   if (command_info->has_sessions) {
     // Sessions exist, so we're expecting a valid authorization size value.
     UINT32 authorization_size = 0;
@@ -599,7 +607,8 @@ TPM_RC ResourceManager::ParseCommand(const std::string& command,
       if (result != TPM_RC_SUCCESS) {
         return MakeError(result, FROM_HERE);
       }
-      command_info->session_handles.push_back(handle);
+      command_info->auth_session_handles.push_back(handle);
+      command_info->all_session_handles.push_back(handle);
       command_info->session_continued.push_back((attributes & 1) == 1);
     }
   } else {
