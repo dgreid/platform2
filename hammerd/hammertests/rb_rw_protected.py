@@ -55,16 +55,20 @@ def main(argv):
   print('PDU Response: %s' % updater.GetFirstResponsePdu().contents)
   print('Current running section: %s' % updater.CurrentSection())
 
-  assert get_flash_protection(updater) == FLASH_PROTECT_INIT, \
-  'Initial WP status error'
+  protect = get_flash_protection(updater)
+  print('Protection: %04x == %04x?' % (protect, FLASH_PROTECT_INIT))
+  assert protect == FLASH_PROTECT_INIT, 'Initial WP status error'
   unlock_rw(updater)
-  common.sim_disconnect_connect(updater)
+  reset(updater)
+  updater.CloseUsb()
+  time.sleep(0.5)
   # Catch it right after reset: RW is still unlocked and can be updated.
   common.connect_usb(updater)
   print('PDU Response: %s' % updater.GetFirstResponsePdu().contents)
   print('Current running section: %s' % updater.CurrentSection())
-  assert get_flash_protection(updater) == FLASH_PROTECT_NORW, \
-  'WP status after Unlock RW'
+  protect = get_flash_protection(updater)
+  print('Protection: %04x == %04x?' % (protect, FLASH_PROTECT_NORW))
+  assert protect == FLASH_PROTECT_NORW, 'WP status after Unlock RW'
   updater.CloseUsb()
   time.sleep(2)
   # By now, hammer will have jumped to RW and locked the flash again
@@ -73,7 +77,9 @@ def main(argv):
   'WP status after jump RW'
 
   updater.SendSubcommand(hammerd_api.UpdateExtraCommand.UnlockRollback)
-  common.sim_disconnect_connect(updater)
+  reset(updater)
+  updater.CloseUsb()
+  time.sleep(0.5)
   common.connect_usb(updater)
   print('PDU Response: %s' % updater.GetFirstResponsePdu().contents)
   print('Current running section: %s' % updater.CurrentSection())
@@ -91,6 +97,8 @@ def get_flash_protection(updater):
   pdu_resp = updater.GetFirstResponsePdu().contents
   return pdu_resp.flash_protection
 
+def reset(updater):
+  updater.SendSubcommand(hammerd_api.UpdateExtraCommand.ImmediateReset)
 
 def unlock_rw(updater):
   # Check if RW is locked and unlock if needed
