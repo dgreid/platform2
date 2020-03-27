@@ -101,8 +101,40 @@ class DlcManager {
   bool Delete(const std::string& id, brillo::ErrorPtr* err);
 
  private:
-  class DlcManagerImpl;
-  std::unique_ptr<DlcManagerImpl> impl_;
+  bool IsSupported(const DlcId& id);
+  DlcInfo GetInfo(const DlcId& id);
+  void PreloadDlcModuleImages();
+  void LoadDlcModuleImagesInternal();
+  bool InitInstallInternal(const DlcSet& requested_install,
+                           brillo::ErrorPtr* err);
+  bool DeleteInternal(const std::string& id, brillo::ErrorPtr* err);
+  bool Mount(const std::string& id,
+             std::string* mount_point,
+             brillo::ErrorPtr* err);
+  bool Unmount(const std::string& id, brillo::ErrorPtr* err);
+  std::string GetDlcPackage(const DlcId& id);
+  void SetNotInstalled(const DlcId& id);
+  void SetInstalling(const DlcId& id);
+  void SetInstalled(const DlcId& id, const DlcRoot& root);
+  bool IsDlcPreloadAllowed(const base::FilePath& dlc_manifest_path,
+                           const std::string& id);
+  bool CreateDlcPackagePath(const std::string& id,
+                            const std::string& package,
+                            brillo::ErrorPtr* err);
+  bool Create(const std::string& id, brillo::ErrorPtr* err);
+  bool ValidateImageFiles(const std::string& id, brillo::ErrorPtr* err);
+  bool PreloadedCopier(const std::string& id);
+  void TryMount(const DlcId& id);
+
+  org::chromium::ImageLoaderInterfaceProxyInterface* image_loader_proxy_;
+
+  base::FilePath manifest_dir_;
+  base::FilePath preloaded_content_dir_;
+  base::FilePath content_dir_;
+
+  BootSlot::Slot current_boot_slot_;
+
+  DlcMap supported_;
 
   DISALLOW_COPY_AND_ASSIGN(DlcManager);
 };
