@@ -124,6 +124,10 @@ class Manager : public base::SupportsWeakPtr<Manager> {
   virtual void Stop();
   bool running() const { return running_; }
 
+  // Requests for Services to be resorted; this method returns immediately
+  // without actually performing the sorting.
+  void SortServices();
+
   virtual const ProfileRefPtr& ActiveProfile() const;
   bool IsActiveProfile(const ProfileRefPtr& profile) const;
   bool MoveServiceToProfile(const ServiceRefPtr& to_move,
@@ -653,7 +657,6 @@ class Manager : public base::SupportsWeakPtr<Manager> {
   void PopProfileInternal();
   void OnProfilesChanged();
 
-  void SortServices();
   void SortServicesTask();
   void DeviceStatusCheckTask();
   void ConnectionStatusCheck();

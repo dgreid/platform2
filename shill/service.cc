@@ -1268,9 +1268,19 @@ void Service::OnPropertyChanged(const string& property) {
   }
 #endif  // DISABLE_WIFI || DISABLE_WIRED_8021X
   SaveToProfile();
-  if ((property == kCheckPortalProperty || property == kProxyConfigProperty) &&
-      IsConnected()) {
+  if (!IsConnected()) {
+    return;
+  }
+
+  if (property == kCheckPortalProperty || property == kProxyConfigProperty) {
     manager_->RecheckPortalOnService(this);
+  } else if (property == kPriorityProperty ||
+             property == kManagedCredentialsProperty) {
+    // These properties affect the sorting order of Services. Note that this is
+    // only necessary if there are multiple connected Services that would be
+    // sorted differently by this change, so we can avoid doing this for
+    // unconnected Services.
+    manager_->SortServices();
   }
 }
 
