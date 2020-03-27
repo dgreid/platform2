@@ -206,9 +206,20 @@ class DlcServiceTest : public testing::Test {
   void SetUp() override {
     SetUpDlcWithSlots(content_path_, kFirstDlc, kPackage);
     ConstructDlcService();
+    dlc_service_->LoadDlcModuleImages();
+
     EXPECT_CALL(*mock_image_loader_proxy_ptr_, LoadDlcImage(_, _, _, _, _, _))
         .WillOnce(DoAll(SetArgPointee<3>(mount_path_.value()), Return(true)));
-    dlc_service_->LoadDlcModuleImages();
+    EXPECT_CALL(*mock_update_engine_proxy_ptr_, GetStatusAdvanced(_, _, _))
+        .WillOnce(Return(true));
+    EXPECT_CALL(*mock_update_engine_proxy_ptr_,
+                SetDlcActiveValue(true, kFirstDlc, _, _))
+        .WillOnce(Return(true));
+    EXPECT_TRUE(
+        dlc_service_->Install(CreateDlcModuleList({kFirstDlc}, ""), err_ptr_));
+    CheckDlcState(kFirstDlc, DlcState::INSTALLED);
+    EXPECT_EQ(dlc_service_test_observer_->GetInstallStatus().status(),
+              Status::COMPLETED);
   }
 
   void SetMountPath(const string& mount_path_expected) {
@@ -274,64 +285,6 @@ class DlcServiceSkipConstructionTest : public DlcServiceTest {
   void SetUp() override {}
 };
 
-TEST_F(DlcServiceSkipLoadTest, StartUpMountSuccessTest) {
-  SetUpDlcWithSlots(content_path_, kFirstDlc, kPackage);
-  EXPECT_CALL(*mock_image_loader_proxy_ptr_, LoadDlcImage(_, _, _, _, _, _))
-      .WillOnce(DoAll(SetArgPointee<3>(mount_path_.value()), Return(true)));
-
-  dlc_service_->LoadDlcModuleImages();
-
-  // Startup successfully to mount.
-  EXPECT_TRUE(base::PathExists(JoinPaths(content_path_, kFirstDlc)));
-  CheckDlcState(kFirstDlc, DlcState::INSTALLED);
-}
-
-TEST_F(DlcServiceSkipLoadTest, StartUpMountFailureTest) {
-  SetUpDlcWithSlots(content_path_, kFirstDlc, kPackage);
-  EXPECT_CALL(*mock_image_loader_proxy_ptr_, LoadDlcImage(_, _, _, _, _, _))
-      .WillOnce(DoAll(SetArgPointee<3>(""), Return(true)));
-  EXPECT_CALL(*mock_update_engine_proxy_ptr_,
-              SetDlcActiveValue(false, kFirstDlc, _, _))
-      .WillOnce(Return(true));
-
-  dlc_service_->LoadDlcModuleImages();
-
-  // Startup with failure to mount.
-  EXPECT_FALSE(base::PathExists(JoinPaths(content_path_, kFirstDlc)));
-  CheckDlcState(kFirstDlc, DlcState::NOT_INSTALLED);
-}
-
-TEST_F(DlcServiceSkipLoadTest, StartUpImageLoaderFailureTest) {
-  SetUpDlcWithSlots(content_path_, kFirstDlc, kPackage);
-  EXPECT_CALL(*mock_image_loader_proxy_ptr_, LoadDlcImage(_, _, _, _, _, _))
-      .WillOnce(Return(false));
-  EXPECT_CALL(*mock_update_engine_proxy_ptr_,
-              SetDlcActiveValue(false, kFirstDlc, _, _))
-      .WillOnce(Return(true));
-
-  dlc_service_->LoadDlcModuleImages();
-
-  // Startup with image_loader failure.
-  EXPECT_FALSE(base::PathExists(JoinPaths(content_path_, kFirstDlc)));
-  CheckDlcState(kFirstDlc, DlcState::NOT_INSTALLED);
-}
-
-TEST_F(DlcServiceSkipLoadTest, StartUpInactiveImageDoesntExistTest) {
-  SetUpDlcWithSlots(content_path_, kFirstDlc, kPackage);
-  EXPECT_CALL(*mock_image_loader_proxy_ptr_, LoadDlcImage(_, _, _, _, _, _))
-      .WillOnce(DoAll(SetArgPointee<3>(mount_path_.value()), Return(true)));
-
-  base::FilePath inactive_image_path =
-      GetDlcImagePath(content_path_, kFirstDlc, kPackage,
-                      current_slot_ == BootSlot::Slot::A ? BootSlot::Slot::B
-                                                         : BootSlot::Slot::A);
-  base::DeleteFile(inactive_image_path, false);
-  dlc_service_->LoadDlcModuleImages();
-
-  EXPECT_TRUE(base::PathExists(JoinPaths(content_path_, kFirstDlc)));
-  CheckDlcState(kFirstDlc, DlcState::INSTALLED);
-}
-
 TEST_F(DlcServiceSkipLoadTest, PreloadAllowedDlcTest) {
   SetUpDlcPreloadAllowed(kFirstDlc, kPackage);
   SetUpDlcWithoutSlots(preloaded_content_path_, kFirstDlc, kPackage);
@@ -361,12 +314,10 @@ TEST_F(DlcServiceSkipLoadTest, PreloadAllowedWithBadPreinstalledDlcTest) {
   SetUpDlcPreloadAllowed(kFirstDlc, kPackage);
   SetUpDlcWithoutSlots(preloaded_content_path_, kFirstDlc, kPackage);
   EXPECT_CALL(*mock_image_loader_proxy_ptr_, LoadDlcImage(_, _, _, _, _, _))
-      .WillOnce(Return(false))
       .WillOnce(DoAll(SetArgPointee<3>(mount_path_.value()), Return(true)));
   EXPECT_CALL(*mock_update_engine_proxy_ptr_,
               SetDlcActiveValue(false, kFirstDlc, _, _))
-      .Times(2)
-      .WillRepeatedly(Return(true));
+      .WillOnce(Return(true));
   EXPECT_CALL(*mock_update_engine_proxy_ptr_,
               SetDlcActiveValue(true, kFirstDlc, _, _))
       .WillOnce(Return(true));
@@ -394,9 +345,8 @@ TEST_F(DlcServiceSkipLoadTest, PreloadNotAllowedDlcTest) {
   CheckDlcState(kFirstDlc, DlcState::NOT_INSTALLED);
 }
 
-TEST_F(DlcServiceSkipLoadTest,
-       MimicUpdateRebootWherePreallocatedSizeIncreasedTest) {
-  SetUpDlcWithSlots(content_path_, kFirstDlc, kPackage);
+TEST_F(DlcServiceTest,
+       MimicUpdateRebootInstallWherePreallocatedSizeIncreasedTest) {
   // Check A and B images.
   for (const auto& slot : {kDlcDirAName, kDlcDirBName})
     EXPECT_TRUE(base::PathExists(JoinPaths(content_path_, kFirstDlc, kPackage,
@@ -416,10 +366,15 @@ TEST_F(DlcServiceSkipLoadTest,
   ResizeImageFile(inactive_img_path, new_inactive_img_size);
   EXPECT_EQ(new_inactive_img_size, GetFileSize(inactive_img_path));
 
-  EXPECT_CALL(*mock_image_loader_proxy_ptr_, LoadDlcImage(_, _, _, _, _, _))
-      .WillOnce(DoAll(SetArgPointee<3>(mount_path_.value()), Return(true)));
-
-  dlc_service_->LoadDlcModuleImages();
+  CheckDlcState(kFirstDlc, DlcState::INSTALLED);
+  EXPECT_CALL(*mock_update_engine_proxy_ptr_, GetStatusAdvanced(_, _, _))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*mock_update_engine_proxy_ptr_,
+              SetDlcActiveValue(true, kFirstDlc, _, _))
+      .WillOnce(Return(true));
+  DlcModuleList dlc_module_list = CreateDlcModuleList({kFirstDlc}, "");
+  EXPECT_TRUE(dlc_service_->Install(dlc_module_list, err_ptr_));
+  CheckDlcState(kFirstDlc, DlcState::INSTALLED);
 
   EXPECT_EQ(inactive_img_size, GetFileSize(inactive_img_path));
 }
@@ -453,6 +408,9 @@ TEST_F(DlcServiceTest, UninstallTest) {
 TEST_F(DlcServiceTest, UninstallNotInstalledIsValidTest) {
   EXPECT_CALL(*mock_update_engine_proxy_ptr_, GetStatusAdvanced(_, _, _))
       .WillOnce(Return(true));
+  EXPECT_CALL(*mock_update_engine_proxy_ptr_,
+              SetDlcActiveValue(false, kSecondDlc, _, _))
+      .WillOnce(Return(false));
   EXPECT_TRUE(dlc_service_->Uninstall(kSecondDlc, err_ptr_));
   CheckDlcState(kSecondDlc, DlcState::NOT_INSTALLED);
 }

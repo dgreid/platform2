@@ -122,9 +122,10 @@ class DlcManager {
                             const std::string& package,
                             brillo::ErrorPtr* err);
   bool Create(const std::string& id, brillo::ErrorPtr* err);
-  bool ValidateImageFiles(const std::string& id, brillo::ErrorPtr* err);
+  bool ValidateInactiveImage(const std::string& id);
   bool PreloadedCopier(const std::string& id);
-  void TryMount(const DlcId& id);
+  bool TryMount(const DlcId& id);
+  bool IsActiveImagePresent(const DlcId& id);
 
   org::chromium::ImageLoaderInterfaceProxyInterface* image_loader_proxy_;
 

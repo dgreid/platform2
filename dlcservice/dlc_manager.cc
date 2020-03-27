@@ -127,39 +127,6 @@ void DlcManager::PreloadDlcModuleImages() {
   }
 }
 
-// Check installed DLC(s) at startup.
-void DlcManager::LoadDlcModuleImagesInternal() {
-  for (const auto& id : ScanDirectory(content_dir_)) {
-    ErrorPtr tmp_err;
-    if (!IsSupported(id)) {
-      LOG(ERROR) << "Deleting during startup an installed but unsupported DLC="
-                 << id;
-      if (!DeleteInternal(id, &tmp_err))
-        PLOG(ERROR) << "Failed during startup: " << Error::ToString(tmp_err);
-      continue;
-    }
-    if (!ValidateImageFiles(id, &tmp_err)) {
-      LOG(ERROR) << "Failed to validate during startup for DLC=" << id << ", "
-                 << Error::ToString(tmp_err);
-      if (!DeleteInternal(id, &tmp_err))
-        PLOG(ERROR) << "Failed during startup: " << Error::ToString(tmp_err);
-      continue;
-    }
-    // - If the root is empty and is currently installing then skip.
-    // - If the root exists set it and continue.
-    // - Try mounting, if mounted set it and continue.
-    // - Remove the DLC if none of the previous checks are met.
-    string mount_point;
-    if (Mount(id, &mount_point, &tmp_err)) {
-      SetInstalled(id, GetDlcRoot(FilePath(mount_point)).value());
-    } else {
-      LOG(ERROR) << "Failed to mount during startup for DLC=" << id << ", "
-                 << Error::ToString(tmp_err);
-      DeleteInternal(id, &tmp_err);
-    }
-  }
-}
-
 bool DlcManager::InitInstallInternal(const DlcSet& requested_install,
                                      ErrorPtr* err) {
   DCHECK(!IsInstalling());
@@ -178,6 +145,16 @@ bool DlcManager::InitInstallInternal(const DlcSet& requested_install,
     }
     switch (GetInfo(id).state.state()) {
       case DlcState::NOT_INSTALLED:
+        if (IsActiveImagePresent(id)) {
+          if (ValidateInactiveImage(id) && TryMount(id))
+            break;
+          if (!DeleteInternal(id, err)) {
+            if (!CancelInstall(&tmp_err))
+              LOG(ERROR) << "Failed during install initialization: "
+                         << Error::ToString(tmp_err);
+            return false;
+          }
+        }
         if (!Create(id, err)) {
           if (!CancelInstall(&tmp_err))
             LOG(ERROR) << "Failed during install initialization: "
@@ -186,7 +163,10 @@ bool DlcManager::InitInstallInternal(const DlcSet& requested_install,
         }
         break;
       case DlcState::INSTALLED:
-        TryMount(id);
+        if (!ValidateInactiveImage(id))
+          LOG(ERROR) << "Bad inactive image for DLC=" << id;
+        if (!TryMount(id))
+          LOG(ERROR) << "Failed to mount installed DLC=" << id;
         break;
       case DlcState::INSTALLING:
       default:
@@ -376,26 +356,19 @@ bool DlcManager::CreateDlcPackagePath(const string& id,
 }
 
 bool DlcManager::Create(const string& id, ErrorPtr* err) {
-  if (!IsSupported(id)) {
-    *err = Error::Create(
-        kErrorInvalidDlc,
-        base::StringPrintf("Cannot create unsupported DLC=%s", id.c_str()));
-    return false;
+  // Create content directories.
+  const auto& package = GetDlcPackage(id);
+  const auto& content_id_path = JoinPaths(content_dir_, id);
+  for (const auto& path :
+       {content_id_path, JoinPaths(content_id_path, package)}) {
+    if (!CreateDir(path)) {
+      *err = Error::Create(
+          kErrorInternal,
+          base::StringPrintf("Failed to create directory %s for DLC=%s",
+                             path.value().c_str(), id.c_str()));
+      return false;
+    }
   }
-
-  const string& package = GetDlcPackage(id);
-  FilePath content_path_local = JoinPaths(content_dir_, id);
-
-  if (base::PathExists(content_path_local)) {
-    *err =
-        Error::Create(kErrorInternal,
-                      base::StringPrintf(
-                          "Cannot create already existing DLC=%s", id.c_str()));
-    return false;
-  }
-
-  if (!CreateDlcPackagePath(id, package, err))
-    return false;
 
   imageloader::Manifest manifest;
   if (!dlcservice::GetDlcManifest(manifest_dir_, id, package, &manifest)) {
@@ -404,7 +377,8 @@ bool DlcManager::Create(const string& id, ErrorPtr* err) {
         base::StringPrintf("Cannot read the manifest for DLC=%s", id.c_str()));
     return false;
   }
-  int64_t image_size = manifest.preallocated_size();
+
+  const int64_t image_size = manifest.preallocated_size();
   if (image_size <= 0) {
     *err = Error::Create(
         kErrorInternal, base::StringPrintf("Preallocated size=%" PRId64
@@ -440,40 +414,30 @@ bool DlcManager::Create(const string& id, ErrorPtr* err) {
 }
 
 // Validate that:
-//  - [1] Inactive image for a |dlc_id| exists and create it if missing.
-//    -> Failure to do so returns false.
-//  - [2] Active and inactive images both are the same size and try fixing for
-//        certain scenarios after update only.
-//    -> Failure to do so only logs error.
-bool DlcManager::ValidateImageFiles(const string& id, ErrorPtr* err) {
+//  - If inactive image for DLC is missing, try creating it.
+//  - If inactive image size is less than size in manifest, increase it.
+bool DlcManager::ValidateInactiveImage(const string& id) {
   string mount_point;
   const auto& package = GetDlcPackage(id);
-  FilePath inactive_img_path = GetDlcImagePath(
+  FilePath inactive_image_path = GetDlcImagePath(
       content_dir_, id, package,
       current_boot_slot_ == BootSlot::Slot::A ? BootSlot::Slot::B
                                               : BootSlot::Slot::A);
 
   imageloader::Manifest manifest;
-  if (!dlcservice::GetDlcManifest(manifest_dir_, id, package, &manifest)) {
+  if (!GetDlcManifest(manifest_dir_, id, package, &manifest)) {
+    LOG(ERROR) << "Failed to get manifest for DLC=" << id;
     return false;
   }
-  int64_t max_allowed_img_size = manifest.preallocated_size();
+  int64_t max_image_size = manifest.preallocated_size();
 
-  // [1]
-  if (!base::PathExists(inactive_img_path)) {
-    LOG(WARNING) << "The DLC image " << inactive_img_path.value()
+  if (!base::PathExists(inactive_image_path)) {
+    LOG(WARNING) << "The DLC image " << inactive_image_path.value()
                  << " does not exist.";
-    if (!CreateDlcPackagePath(id, package, err))
-      return false;
-    if (!CreateFile(inactive_img_path, max_allowed_img_size)) {
-      // Don't make this error |kErrorAllocation|, this is during startup and
-      // should be considered and internal problem of keeping DLC(s) in a
-      // completely valid state.
-      *err = Error::Create(
-          kErrorInternal,
-          base::StringPrintf("Failed to create inactive image (%s) during "
-                             "validation for DLC=%s",
-                             inactive_img_path.value().c_str(), id.c_str()));
+    if (!CreateFile(inactive_image_path, max_image_size)) {
+      LOG(ERROR) << "Failed to create inactive image "
+                 << inactive_image_path.value()
+                 << " during validation for DLC=" << id;
       return false;
     }
   }
@@ -487,23 +451,22 @@ bool DlcManager::ValidateImageFiles(const string& id, ErrorPtr* err) {
   //    than just always keeping active and inactive image sizes the same.
   //
   //  - Update applied and rebooted -> Try fixing up inactive image.
-  // [2]
-  int64_t inactive_img_size;
-  if (!base::GetFileSize(inactive_img_path, &inactive_img_size)) {
-    LOG(ERROR) << "Failed to get DLC (" << id << ") size.";
+  int64_t inactive_image_size;
+  if (!base::GetFileSize(inactive_image_path, &inactive_image_size)) {
+    LOG(ERROR) << "Failed to get inactive image size DLC=" << id;
   } else {
-    // When |inactive_img_size| is less than the size permitted in the
+    // When |inactive_image_size| is less than the size permitted in the
     // manifest, this means that we rebooted into an update.
-    if (inactive_img_size < max_allowed_img_size) {
+    if (inactive_image_size < max_image_size) {
       // Only increasing size, the inactive DLC is still usable in case of
       // reverts.
-      if (!ResizeFile(inactive_img_path, max_allowed_img_size)) {
+      if (!ResizeFile(inactive_image_path, max_image_size)) {
         LOG(ERROR) << "Failed to increase inactive image, update_engine may "
                       "face problems in updating when stateful is full later.";
+        return false;
       }
     }
   }
-
   return true;
 }
 
@@ -523,7 +486,7 @@ bool DlcManager::PreloadedCopier(const string& id) {
     LOG(ERROR) << "Failed to get manifest for DLC=" << id;
     return false;
   }
-  int64_t max_allowed_image_size = manifest.preallocated_size();
+  int64_t max_image_size = manifest.preallocated_size();
   // Scope the |image_preloaded| file so it always closes before deleting.
   {
     int64_t image_preloaded_size;
@@ -531,10 +494,10 @@ bool DlcManager::PreloadedCopier(const string& id) {
       LOG(ERROR) << "Failed to get preloaded DLC (" << id << ") size.";
       return false;
     }
-    if (image_preloaded_size > max_allowed_image_size) {
+    if (image_preloaded_size > max_image_size) {
       LOG(ERROR) << "Preloaded DLC (" << id << ") is (" << image_preloaded_size
-                 << ") larger than the preallocated size ("
-                 << max_allowed_image_size << ") in manifest.";
+                 << ") larger than the preallocated size (" << max_image_size
+                 << ") in manifest.";
       return false;
     }
   }
@@ -557,25 +520,34 @@ bool DlcManager::PreloadedCopier(const string& id) {
   // TODO(kimjae): when preloaded images are place into unencrypted, this
   // operation can be a move.
   if (!CopyAndResizeFile(image_preloaded_path, image_boot_path,
-                         max_allowed_image_size)) {
+                         max_image_size)) {
     LOG(ERROR) << "Failed to preload DLC (" << id << ") into boot slot.";
     return false;
   }
-
   return true;
 }
 
-void DlcManager::TryMount(const DlcId& id) {
+bool DlcManager::TryMount(const DlcId& id) {
   const auto info = GetInfo(id);
-  if (!base::PathExists(base::FilePath(info.root))) {
-    string mount_point;
-    ErrorPtr tmp_err;
-    if (Mount(id, &mount_point, &tmp_err))
-      SetInstalled(id, GetDlcRoot(FilePath(mount_point)).value());
-    else
-      LOG(ERROR) << "DLC thought to have been installed, but maybe is in a "
-                 << "bad state. DLC=" << id << ", " << Error::ToString(tmp_err);
+  if (base::PathExists(FilePath(info.root))) {
+    LOG(INFO) << "Skipping mount as already mounted at " << info.root;
+    return true;
   }
+
+  string mount_point;
+  ErrorPtr tmp_err;
+  if (!Mount(id, &mount_point, &tmp_err)) {
+    LOG(ERROR) << "DLC thought to have been installed, but maybe is in a "
+               << "bad state. DLC=" << id << ", " << Error::ToString(tmp_err);
+    return false;
+  }
+  SetInstalled(id, GetDlcRoot(FilePath(mount_point)).value());
+  return true;
+}
+
+bool DlcManager::IsActiveImagePresent(const DlcId& id) {
+  return base::PathExists(
+      GetDlcImagePath(content_dir_, id, GetDlcPackage(id), current_boot_slot_));
 }
 
 DlcModuleList DlcManager::GetInstalled() {
@@ -606,7 +578,6 @@ bool DlcManager::GetState(const DlcId& id, DlcState* state, ErrorPtr* err) {
 }
 
 void DlcManager::LoadDlcModuleImages() {
-  LoadDlcModuleImagesInternal();
   PreloadDlcModuleImages();
 }
 
@@ -643,7 +614,7 @@ bool DlcManager::Delete(const string& id, ErrorPtr* err) {
   switch (GetInfo(id).state.state()) {
     case DlcState::NOT_INSTALLED:
       LOG(WARNING) << "Trying to uninstall not installed DLC=" << id;
-      return true;
+      return DeleteInternal(id, err);
     case DlcState::INSTALLING:
       *err = Error::Create(
           kErrorBusy,
