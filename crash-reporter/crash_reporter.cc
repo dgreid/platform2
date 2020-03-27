@@ -172,6 +172,7 @@ int HandleUserCrash(UserCollector* user_collector,
   // Make it possible to test what happens when we crash while
   // handling a crash.
   if (crash_test) {
+    LOG(ERROR) << "crash_test requested";
     *(volatile char*)0 = 0;
     return 0;
   }

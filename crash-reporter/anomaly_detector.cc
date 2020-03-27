@@ -186,6 +186,7 @@ MaybeCrashReport KernelParser::ParseLogEntry(const std::string& line) {
   }
 
   if (line.find(crash_report_rlimit) != std::string::npos) {
+    LOG(INFO) << "crash_reporter crashed!";
     // Rate limit reporting crash_reporter failures to prevent crash loops.
     if (crash_reporter_last_crashed_.is_null() ||
         (base::TimeTicks::Now() - crash_reporter_last_crashed_) >
