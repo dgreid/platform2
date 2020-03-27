@@ -37,6 +37,15 @@
 #include "viewporter-client-protocol.h"
 #include "xdg-shell-unstable-v6-client-protocol.h"
 
+#define errno_assert(rv)                                          \
+  {                                                               \
+    int macro_private_assert_value = (rv);                        \
+    if (!macro_private_assert_value) {                            \
+      fprintf(stderr, "Unexpected error: %s\n", strerror(errno)); \
+      assert(false);                                              \
+    }                                                             \
+  }
+
 // Check that required macro definitions exist.
 #ifndef XWAYLAND_PATH
 #error XWAYLAND_PATH must be defined
@@ -239,7 +248,7 @@ struct sl_mmap* sl_mmap_create(int fd,
   map->buffer_resource = NULL;
   map->addr =
       mmap(NULL, size + offset0, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-  assert(map->addr != MAP_FAILED);
+  errno_assert(map->addr != MAP_FAILED);
 
   return map;
 }
@@ -2182,8 +2191,7 @@ int sl_begin_data_source_send(struct sl_context* ctx,
 
   flags = fcntl(fd, F_GETFL, 0);
   rv = fcntl(fd, F_SETFL, flags | O_NONBLOCK);
-  assert(!rv);
-  UNUSED(rv);
+  errno_assert(!rv);
 
   ctx->selection_data_source_send_fd = fd;
   free(reply);
@@ -2809,7 +2817,7 @@ static void sl_send_data(struct sl_context* ctx, xcb_atom_t data_type) {
       int p[2];
 
       rv = pipe2(p, O_CLOEXEC | O_NONBLOCK);
-      assert(!rv);
+      errno_assert(!rv);
 
       fd_to_receive = p[0];
       fd_to_wayland = p[1];
@@ -3152,7 +3160,7 @@ static void sl_sd_notify(const char* state) {
   assert(socket_name);
 
   fd = socket(AF_UNIX, SOCK_DGRAM | SOCK_CLOEXEC, 0);
-  assert(fd >= 0);
+  errno_assert(fd >= 0);
 
   memset(&addr, 0, sizeof(addr));
   addr.sun_family = AF_UNIX;
@@ -3170,8 +3178,7 @@ static void sl_sd_notify(const char* state) {
   msghdr.msg_iovlen = 1;
 
   rv = sendmsg(fd, &msghdr, MSG_NOSIGNAL);
-  assert(rv != -1);
-  UNUSED(rv);
+  errno_assert(rv != -1);
 }
 
 static int sl_handle_sigchld(int signal_number, void* data) {
@@ -3303,7 +3310,7 @@ static int sl_handle_display_ready_event(int fd, uint32_t mask, void* data) {
                       (int)(XCURSOR_SIZE_BASE * ctx->scale + 0.5)));
 
   pid = fork();
-  assert(pid >= 0);
+  errno_assert(pid >= 0);
   if (pid == 0) {
     sl_execvp(ctx->runprog[0], ctx->runprog, -1);
     _exit(EXIT_FAILURE);
@@ -3372,8 +3379,7 @@ static int sl_handle_virtwl_ctx_event(int fd, uint32_t mask, void* data) {
   }
 
   bytes = sendmsg(ctx->virtwl_socket_fd, &msg, MSG_NOSIGNAL);
-  assert(bytes == ioctl_recv->len);
-  UNUSED(bytes);
+  errno_assert(bytes == ioctl_recv->len);
 
   while (fd_count--)
     close(ioctl_recv->fds[fd_count]);
@@ -3405,10 +3411,7 @@ static int sl_handle_virtwl_socket_event(int fd, uint32_t mask, void* data) {
   msg.msg_controllen = sizeof(fd_buffer);
 
   bytes = recvmsg(ctx->virtwl_socket_fd, &msg, 0);
-  if (bytes < 0) {
-    fprintf(stderr, "Failed to get message from virtwl: %s\n", strerror(errno));
-  }
-  assert(bytes > 0);
+  errno_assert(bytes > 0);
 
   // If there were any FDs recv'd by recvmsg, there will be some data in the
   // msg_control buffer. To get the FDs out we iterate all cmsghdr's within and
@@ -3436,11 +3439,7 @@ static int sl_handle_virtwl_socket_event(int fd, uint32_t mask, void* data) {
   // structure which we now pass along to the kernel.
   ioctl_send->len = bytes;
   rv = ioctl(ctx->virtwl_ctx_fd, VIRTWL_IOCTL_SEND, ioctl_send);
-  if (!rv) {
-    fprintf(stderr, "Failed to send message to virtwl: %s\n", strerror(errno));
-  }
-  assert(!rv);
-  UNUSED(rv);
+  errno_assert(!rv);
 
   while (fd_count--)
     close(ioctl_send->fds[fd_count]);
@@ -3764,7 +3763,7 @@ int main(int argc, char** argv) {
 
     lock_fd = open(lock_addr, O_CREAT | O_CLOEXEC,
                    (S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP));
-    assert(lock_fd >= 0);
+    errno_assert(lock_fd >= 0);
 
     rv = flock(lock_fd, LOCK_EX | LOCK_NB);
     if (rv < 0) {
@@ -3780,25 +3779,25 @@ int main(int argc, char** argv) {
       if (sock_stat.st_mode & (S_IWUSR | S_IWGRP))
         unlink(addr.sun_path);
     } else {
-      assert(errno == ENOENT);
+      errno_assert(errno == ENOENT);
     }
 
     sock_fd = socket(PF_LOCAL, SOCK_STREAM, 0);
-    assert(sock_fd >= 0);
+    errno_assert(sock_fd >= 0);
 
     rv = bind(sock_fd, (struct sockaddr*)&addr,
               offsetof(struct sockaddr_un, sun_path) + strlen(addr.sun_path));
-    assert(rv >= 0);
+    errno_assert(rv >= 0);
 
     rv = listen(sock_fd, 128);
-    assert(rv >= 0);
+    errno_assert(rv >= 0);
 
     // Spawn optional child process before we notify systemd that we're ready
     // to accept connections. WAYLAND_DISPLAY will be set but any attempt to
     // connect to this socket at this time will fail.
     if (ctx.runprog && ctx.runprog[0]) {
       pid = fork();
-      assert(pid != -1);
+      errno_assert(pid != -1);
       if (pid == 0) {
         setenv("WAYLAND_DISPLAY", socket_name, 1);
         sl_execvp(ctx.runprog[0], ctx.runprog, -1);
@@ -3815,7 +3814,7 @@ int main(int argc, char** argv) {
     sigemptyset(&sa.sa_mask);
     sa.sa_flags = SA_RESTART;
     rv = sigaction(SIGCHLD, &sa, NULL);
-    assert(rv >= 0);
+    errno_assert(rv >= 0);
 
     do {
       struct ucred ucred;
@@ -3832,7 +3831,7 @@ int main(int argc, char** argv) {
       rv = getsockopt(client_fd, SOL_SOCKET, SO_PEERCRED, &ucred, &length);
 
       pid = fork();
-      assert(pid != -1);
+      errno_assert(pid != -1);
       if (pid == 0) {
         char* client_fd_str;
         char* peer_pid_str;
@@ -3962,7 +3961,7 @@ int main(int argc, char** argv) {
 
       // Connection to virtwl channel.
       rv = socketpair(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0, vws);
-      assert(!rv);
+      errno_assert(!rv);
 
       ctx.virtwl_socket_fd = vws[0];
       virtwl_display_fd = vws[1];
@@ -4082,7 +4081,7 @@ int main(int argc, char** argv) {
   if (ctx.runprog || ctx.xwayland) {
     // Wayland connection from client.
     rv = socketpair(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0, sv);
-    assert(!rv);
+    errno_assert(!rv);
 
     client_fd = sv[0];
   }
@@ -4198,7 +4197,7 @@ int main(int argc, char** argv) {
 
       // Xwayland display ready socket.
       rv = socketpair(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0, ds);
-      assert(!rv);
+      errno_assert(!rv);
 
       ctx.display_ready_event_source =
           wl_event_loop_add_fd(event_loop, ds[0], WL_EVENT_READABLE,
@@ -4206,12 +4205,12 @@ int main(int argc, char** argv) {
 
       // X connection to Xwayland.
       rv = socketpair(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0, wm);
-      assert(!rv);
+      errno_assert(!rv);
 
       ctx.wm_fd = wm[0];
 
       pid = fork();
-      assert(pid != -1);
+      errno_assert(pid != -1);
       if (pid == 0) {
         char* display_fd_str;
         char* wm_fd_str;
@@ -4279,7 +4278,7 @@ int main(int argc, char** argv) {
       ctx.xwayland_pid = pid;
     } else {
       pid = fork();
-      assert(pid != -1);
+      errno_assert(pid != -1);
       if (pid == 0) {
         sl_execvp(ctx.runprog[0], ctx.runprog, sv[1]);
         _exit(EXIT_FAILURE);
