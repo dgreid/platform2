@@ -117,7 +117,7 @@ TEST_F(EncryptedFsTest, OldStateful) {
 TEST_F(EncryptedFsTest, LoopdevTeardown) {
   // BlkSize == 0 --> Teardown loopdev
   EXPECT_CALL(platform_, GetBlkSize(_, _))
-      .WillOnce(DoAll(SetArgPointee<1>(40920000), Return(true)));
+      .WillOnce(DoAll(SetArgPointee<1>(0), Return(true)));
 
   // Expect setup to fail.
   EXPECT_EQ(encrypted_fs_->Setup(secret_, false), RESULT_FAIL_FATAL);

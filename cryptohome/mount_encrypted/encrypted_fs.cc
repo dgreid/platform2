@@ -360,7 +360,7 @@ result_code EncryptedFs::Setup(const brillo::SecureBlob& encryption_key,
 
   // Get size as seen by block device.
   uint64_t blkdev_size;
-  if (!platform_->GetBlkSize(lodev_path, &blkdev_size) &&
+  if (!platform_->GetBlkSize(lodev_path, &blkdev_size) ||
       blkdev_size < kExt4BlockSize) {
     LOG(ERROR) << "Failed to read device size";
     TeardownByStage(TeardownStage::kTeardownLoopDevice, true);
