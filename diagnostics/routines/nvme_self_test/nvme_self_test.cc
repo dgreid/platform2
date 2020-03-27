@@ -129,10 +129,9 @@ void NvmeSelfTestRoutine::UpdateStatus(
 
 void NvmeSelfTestRoutine::PopulateStatusUpdate(
     mojo_ipc::RoutineUpdate* response, bool include_output) {
-  // Request progress info if routine is running with the percentage
-  // between 1-99. 0 means self-test not started yet by NVMe controller.
+  // Request progress info if routine is running with the percentage below 100.
   if (status_ == mojo_ipc::DiagnosticRoutineStatusEnum::kRunning &&
-      percent_ > 0 && percent_ < 100) {
+      percent_ < 100) {
     auto result_callback =
         base::Bind(&NvmeSelfTestRoutine::OnDebugdResultCallback,
                    weak_ptr_routine_.GetWeakPtr());
@@ -183,9 +182,7 @@ void NvmeSelfTestRoutine::OnDebugdNvmeSelfTestStartCallback(
                  /*percent=*/100, kNvmeSelfTestRoutineStartError);
     return;
   }
-  // Set percent with 1 to tell routine the controller started self-test
-  // successfully.
-  UpdateStatus(mojo_ipc::DiagnosticRoutineStatusEnum::kRunning, /*percent=*/1,
+  UpdateStatus(mojo_ipc::DiagnosticRoutineStatusEnum::kRunning, /*percent=*/0,
                kNvmeSelfTestRoutineStarted);
 }
 

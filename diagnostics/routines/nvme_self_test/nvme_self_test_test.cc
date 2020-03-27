@@ -357,10 +357,10 @@ TEST_F(NvmeSelfTestRoutineTest, LongSelfTestPass) {
             mojo_ipc::DiagnosticRoutineStatusEnum::kRunning);
 
   // Progress(byte-0): Bits 3:0, 2 means long-time test is in progress.
-  // Percent(byte-1): 0x1e for 30%
-  const uint8_t kLongSelfTestRunning[] = {0x2, 0x1e, 0x0, 0x0, 0x0, 0x0,
-                                          0x0, 0x0,  0x0, 0x0, 0x0, 0x0,
-                                          0x0, 0x0,  0x0, 0x0};
+  // Percent(byte-1): 0x0 for 0%
+  const uint8_t kLongSelfTestRunning[] = {0x2, 0x0, 0x0, 0x0, 0x0, 0x0,
+                                          0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+                                          0x0, 0x0, 0x0, 0x0};
   std::string nvme_encoded_output;
   base::Base64Encode(std::string(std::begin(kLongSelfTestRunning),
                                  std::end(kLongSelfTestRunning)),
