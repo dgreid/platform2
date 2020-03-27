@@ -265,7 +265,8 @@ void NDProxy::ReadAndProcessOneFrame(int fd) {
       IsGuestInterface(dst_addr.sll_ifindex) &&
       !guest_discovery_handler_.is_null()) {
     nd_neighbor_advert* na = reinterpret_cast<nd_neighbor_advert*>(icmp6);
-    if ((na->nd_na_target.s6_addr[0] & 0xe0) == 0x20) {  // Global Unicast
+    if (((na->nd_na_target.s6_addr[0] & 0xe0) == 0x20)        // Global Unicast
+        || ((na->nd_na_target.s6_addr[0] & 0xfe) == 0xfc)) {  // Unique Local
       char ifname[IFNAMSIZ];
       if_indextoname(dst_addr.sll_ifindex, ifname);
       char ipv6_addr_str[INET6_ADDRSTRLEN];
