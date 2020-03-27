@@ -136,7 +136,15 @@ constexpr char kDefaultClaimerName[] = "";
 const char* const kUserTrafficUsernames[] = {
     "chronos",  // Traffic originating from chrome and nacl applications
     "debugd",   // crosh terminal
-    "cups"      // native printing using the cups daemon
+    "cups",     // native printing using the cups daemon
+
+    // While tlsdate is not user traffic, time sync should be attempted over
+    // VPN. It is OK to send tlsdate traffic over VPN because it will also try
+    // to sync time immediately after boot on the sign-in screen when no VPN can
+    // be active.
+    // TODO(https://crbug.com/1065378): Find a way for tlsdate to try both with
+    // and without VPN explicitly.
+    "tlsdate"  // tlsdate daemon (secure time sync)
 };
 
 }  // namespace
