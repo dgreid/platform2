@@ -11,7 +11,7 @@
 #       Output directory.
 #   proto_lib_dirs (optional)
 #       Directories to search for protos a proto file depends on.
-#       proto_in_dir and "${sysroot}/usr/share/proto" are added by default.
+#       proto_in_dir and "${sysroot}/usr/share/proto" are always included.
 #   sources
 #       The proto file paths.
 #   configs (optional)
@@ -196,6 +196,12 @@ template("proto_library") {
 #       The proto file paths.
 #   gen_grpc (optional)
 #       If true, generates Go GRPC.
+#   import_mapping (optional)
+#       List of mapping to convert imports in .proto file to go package names.
+#       The format is "foo/bar.proto=quux/shme".
+#   proto_lib_dirs (optional)
+#       Directories to search for protos a proto file depends on.
+#       proto_in_dir and "${sysroot}/usr/share/proto" are added by default.
 template("goproto_library") {
   action(target_name) {
     forward_variables_from(invoker,
@@ -212,17 +218,48 @@ template("goproto_library") {
 
     # Build protoc command line to run.
     script = "//common-mk/file_generator_wrapper.py"
-    if (defined(invoker.gen_grpc) && invoker.gen_grpc) {
-      go_out_prefix = "plugins=grpc:"
-    } else {
-      go_out_prefix = ""
-    }
-    args = [
-      "protoc",
-      "--proto_path",
+    proto_lib_dirs = [
       proto_in_dir,
-      "--proto_path",
       "${sysroot}/usr/share/proto",
+    ]
+
+    if (defined(invoker.proto_lib_dirs)) {
+      proto_lib_dirs += rebase_path(invoker.proto_lib_dirs)
+    }
+
+    go_plugin_parameters = []
+
+    if (defined(invoker.gen_grpc) && invoker.gen_grpc) {
+      go_plugin_parameters += [ "plugins=grpc" ]
+    }
+
+    if (defined(invoker.import_mapping)) {
+      foreach(x, invoker.import_mapping) {
+        go_plugin_parameters += [ "M" + x ]
+      }
+    }
+
+    # TODO(clarkchung): Use string_join instead. (Need uprev gn)
+    go_out_prefix = ""
+    if (go_plugin_parameters != []) {
+      prefix = ""
+      foreach(x, go_plugin_parameters) {
+        go_out_prefix += prefix + x
+        prefix = ","
+      }
+      go_out_prefix += ":"
+    }
+
+    args = [ "protoc" ]
+
+    foreach(x, proto_lib_dirs) {
+      args += [
+        "--proto_path",
+        x,
+      ]
+    }
+
+    args += [
       "--go_out",
       "${go_out_prefix}${root_gen_dir}/${proto_out_dir}",
     ]
