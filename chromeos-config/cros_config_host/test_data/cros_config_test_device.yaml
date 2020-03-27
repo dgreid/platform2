@@ -16,14 +16,12 @@ chromeos:
     - device-name: "nautilus"
       command-groups:
         - *mosys_base_cmds
-        - *mosys_unibuild_cmds
         - *mosys_nautilus_cmds
         - *cros_config_unibuild_cmds
 
     - device-name: "nautiluslte"
       command-groups:
         - *mosys_base_cmds
-        - *mosys_unibuild_cmds
         - *mosys_nautilus_cmds
         - *cros_config_unibuild_cmds
         - *cros_config_lte_cmds

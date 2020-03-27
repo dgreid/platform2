@@ -3,11 +3,6 @@ mosys-base: &mosys_base_cmds
   args:
     - "platform name"
 
-mosys-unibuild: &mosys_unibuild_cmds
-  name: "mosys"
-  args:
-    - "platform vendor"
-
 mosys-non-unibuild: &mosys_non_unibuild_cmds
   name: "mosys"
   args:

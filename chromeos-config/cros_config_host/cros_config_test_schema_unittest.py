@@ -116,11 +116,11 @@ class MainTests(cros_test_lib.TempDirTestCase):
 
     device = json_obj.chromeos.devices[0]
     self.assertEqual('nautilus', device.device_name)
-    self.assertEqual(4, len(device.command_groups))
+    self.assertEqual(3, len(device.command_groups))
 
     device = json_obj.chromeos.devices[1]
     self.assertEqual('nautiluslte', device.device_name)
-    self.assertEqual(5, len(device.command_groups))
+    self.assertEqual(4, len(device.command_groups))
 
   def testMainImportFilterNautilus(self):
     output = os.path.join(self.tempdir, 'output.json')
@@ -135,7 +135,7 @@ class MainTests(cros_test_lib.TempDirTestCase):
 
     device = json_obj.chromeos.devices[0]
     self.assertEqual('nautilus', device.device_name)
-    self.assertEqual(4, len(device.command_groups))
+    self.assertEqual(3, len(device.command_groups))
 
   def testMainImportFilterNautilusLte(self):
     output = os.path.join(self.tempdir, 'output.json')
@@ -150,7 +150,7 @@ class MainTests(cros_test_lib.TempDirTestCase):
 
     device = json_obj.chromeos.devices[0]
     self.assertEqual('nautiluslte', device.device_name)
-    self.assertEqual(5, len(device.command_groups))
+    self.assertEqual(4, len(device.command_groups))
 
 
 if __name__ == '__main__':
