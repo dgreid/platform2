@@ -11,6 +11,7 @@
 
 #include <base/bind.h>
 #include <base/containers/span.h>
+#include <drm_fourcc.h>
 #include <hardware/gralloc.h>
 
 #include "common/libcamera_connector/types.h"
@@ -18,6 +19,18 @@
 #include "cros-camera/common.h"
 
 namespace {
+
+constexpr std::pair<int, uint32_t> kSupportedFormats[] = {
+    {HAL_PIXEL_FORMAT_BLOB, DRM_FORMAT_R8}};
+
+uint32_t ResolveDrmFormat(int hal_pixel_format) {
+  for (const auto& format_pair : kSupportedFormats) {
+    if (format_pair.first == hal_pixel_format) {
+      return format_pair.second;
+    }
+  }
+  return 0;
+}
 
 template <typename T>
 base::span<T> GetMetadataEntryAsSpan(
@@ -172,15 +185,14 @@ void CameraClient::OnGotCameraInfo(int32_t result, mojom::CameraInfoPtr info) {
   camera_info.name = GetCameraName(info);
 
   auto& format_info = camera_info_map_[camera_id].format_info;
-  auto* buffer_manager = cros::CameraBufferManager::GetInstance();
   auto min_frame_durations = GetMetadataEntryAsSpan<int64_t>(
       info->static_camera_characteristics,
       mojom::CameraMetadataTag::ANDROID_SCALER_AVAILABLE_MIN_FRAME_DURATIONS);
   for (size_t i = 0; i < min_frame_durations.size(); i += 4) {
-    uint32_t drm_format = buffer_manager->ResolveDrmFormat(
-        min_frame_durations[i + 0],
-        GRALLOC_USAGE_SW_READ_OFTEN | GRALLOC_USAGE_SW_WRITE_OFTEN);
+    uint32_t drm_format = ResolveDrmFormat(min_frame_durations[i + 0]);
     if (drm_format == 0) {  // Failed to resolve to a format
+      LOGF(WARNING) << "Failed to resolve to a DRM format for "
+                    << min_frame_durations[i + 0];
       continue;
     }
     cros_cam_format_info_t info = {
