@@ -1143,8 +1143,17 @@ int ClobberState::Run() {
   // Make sure the stateful partition has been unmounted.
   LOG(INFO) << "Unmounting stateful partition";
   ret = umount(stateful_.value().c_str());
-  if (ret)
-    PLOG(ERROR) << "Unable to unmount " << stateful_.value();
+  if (ret) {
+    // Disambiguate failures from busy or already unmounted stateful partition
+    // from other generic failures.
+    if (errno == EBUSY) {
+      PLOG(ERROR) << "Failed to unmount busy stateful partition";
+    } else if (errno != EINVAL) {
+      PLOG(ERROR) << "Unable to unmount " << stateful_.value();
+    } else {
+      PLOG(INFO) << "Stateful partition already unmounted";
+    }
+  }
 
   // Destroy user data: wipe the stateful partition.
   if (!WipeDevice(wipe_info_.stateful_device)) {
