@@ -33,6 +33,15 @@ using brillo::SecureBlob;
 
 namespace {
 
+// An upper bound on the amount of time we allow Scrypt to use when performing
+// key strenthening (100s) for decryption.  This number can be high because in
+// practice, it doesn't mean much.  It simply needs to be large enough that we
+// can guarantee that the key derived during encryption can always be derived at
+// decryption time, so the typical time is usually close to 1/3s.  However,
+// because sometimes other processes may interfere, we need it to be large
+// enough to allow the same calculation to be made amidst other heavy use.
+const double kScryptMaxDecryptTime = 100.0;
+
 template <class T, class U>
 T Sha1Helper(const U& data) {
   SHA_CTX sha_context;
@@ -146,6 +155,20 @@ constexpr int kTpmDecryptMaxRetries = 2;
 // same size as the modulus of cryptohome key, since we need to be able to
 // decrypt it.
 constexpr unsigned int kDefaultPassBlobSize = 256;
+
+// Scrypt creates a header in the cipher text that we need to account for in
+// buffer sizing.
+constexpr unsigned int kScryptHeaderLength = 128;
+
+// An upper bound on the amount of memory that we allow Scrypt to use when
+// performing key strengthening (32MB).  A large size is okay since we only use
+// Scrypt during the login process, before the user is logged in.  This memory
+// is managed (and freed) by the scrypt library.
+const unsigned int kScryptMaxMem = 32 * 1024 * 1024;
+
+// An upper bound on the amount of time we allow Scrypt to use when performing
+// key strenthening (1/3s) for encryption.
+constexpr double kScryptMaxEncryptTime = 0.333;
 
 void CryptoLib::GetSecureRandom(unsigned char* buf, size_t length) {
   // OpenSSL takes a signed integer.  On the off chance that the user requests
@@ -1076,6 +1099,61 @@ int CryptoLib::SCrypt(const brillo::SecureBlob& passkey,
   malloc_trim(0);
 
   return rc;
+}
+
+// static
+bool CryptoLib::EncryptScryptBlob(const brillo::SecureBlob& blob,
+                                  const brillo::SecureBlob& key_source,
+                                  brillo::SecureBlob* wrapped_blob) {
+  return EncryptScryptBlobInternal(blob, key_source, kScryptMaxEncryptTime,
+                                   wrapped_blob);
+}
+
+// static
+bool CryptoLib::EncryptScryptBlobInternal(const brillo::SecureBlob& blob,
+                                          const brillo::SecureBlob& key_source,
+                                          const double max_encrypt_time,
+                                          brillo::SecureBlob* wrapped_blob) {
+  wrapped_blob->resize(blob.size() + kScryptHeaderLength);
+
+  int scrypt_rc;
+  scrypt_rc = scryptenc_buf(blob.data(), blob.size(), wrapped_blob->data(),
+                            key_source.data(), key_source.size(), kScryptMaxMem,
+                            100.0, max_encrypt_time);
+  if (scrypt_rc) {
+    LOG(ERROR) << "Blob Scrypt encryption returned error code: " << scrypt_rc;
+    return false;
+  }
+  return true;
+}
+
+// static
+bool CryptoLib::DecryptScryptBlob(const brillo::SecureBlob& wrapped_blob,
+                                  const brillo::SecureBlob& key,
+                                  brillo::SecureBlob* blob,
+                                  CryptoError* error) {
+  DCHECK(blob->size() >= wrapped_blob.size());
+
+  int scrypt_rc;
+  size_t out_len = 0;
+
+  scrypt_rc = scryptdec_buf(wrapped_blob.data(), wrapped_blob.size(),
+                            blob->data(), &out_len, key.data(), key.size(),
+                            kScryptMaxMem, 100.0, kScryptMaxDecryptTime);
+  if (scrypt_rc) {
+    LOG(ERROR) << "Blob Scrypt decryption returned error code: " << scrypt_rc;
+    PopulateError(error, CryptoError::CE_SCRYPT_CRYPTO);
+    return false;
+  }
+  // Check if the plaintext is the right length.
+  if ((wrapped_blob.size() < kScryptHeaderLength) ||
+      (out_len != (wrapped_blob.size() - kScryptHeaderLength))) {
+    LOG(ERROR) << "Blob Scrypt decryption output was the wrong length";
+    PopulateError(error, CryptoError::CE_SCRYPT_CRYPTO);
+    return false;
+  }
+  blob->resize(out_len);
+  return true;
 }
 
 }  // namespace cryptohome

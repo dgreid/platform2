@@ -261,19 +261,6 @@ class Crypto {
                                KeyBlobs* out_blobs,
                                SerializedVaultKeyset* serialized) const;
 
-  // Encrypt a provided blob using Scrypt encryption.
-  //
-  // This is a helper function used by EncryptScrypt() to encrypt various
-  // data blobs. The parameters are as follows:
-  // - blob: Data blob to be encrypted.
-  // - key_source: User passphrase key used for encryption.
-  // - wrapped_blob: Pointer to blob where encrypted data is stored.
-  //
-  // Returns true on success, and false on failure.
-  bool EncryptScryptBlob(const brillo::SecureBlob& blob,
-                         const brillo::SecureBlob& key_source,
-                         brillo::SecureBlob* wrapped_blob) const;
-
   bool EncryptScrypt(const VaultKeyset& vault_keyset,
                      const brillo::SecureBlob& key,
                      SerializedVaultKeyset* serialized) const;
@@ -317,17 +304,6 @@ class Crypto {
   bool UnwrapVaultKeyset(const SerializedVaultKeyset& serialized,
                          const KeyBlobs& vkk_data,
                          VaultKeyset* keyset,
-                         CryptoError* error) const;
-
-  // Companion decryption function for Crypto::EncryptScryptBlob()
-  // This is a helper function used by DecryptScrypt() to decrypt
-  // the data blobs which were encrypted using EncryptScryptBlob().
-  //
-  // Returns true on success. On failure, false is returned, and
-  // |error| is set with the appropriate error code.
-  bool DecryptScryptBlob(const brillo::SecureBlob& wrapped_blob,
-                         const brillo::SecureBlob& key,
-                         brillo::SecureBlob* blob,
                          CryptoError* error) const;
 
   bool DecryptScrypt(const SerializedVaultKeyset& serialized,

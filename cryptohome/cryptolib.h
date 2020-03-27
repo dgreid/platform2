@@ -16,6 +16,8 @@
 #include <base/macros.h>
 #include <brillo/secure_blob.h>
 
+#include "cryptohome/crypto_error.h"
+
 #include "attestation.pb.h"  // NOLINT(build/include)
 
 namespace cryptohome {
@@ -29,6 +31,9 @@ extern const unsigned int kAesGcm256KeySize;
 extern const unsigned int kDefaultAesKeySize;
 extern const unsigned int kDefaultLegacyPasswordRounds;
 extern const unsigned int kDefaultPassBlobSize;
+extern const unsigned int kScryptHeaderLength;
+extern const unsigned int kScryptMaxMem;
+extern const double kScryptMaxEncryptTime;
 extern const int kTpmDecryptMaxRetries;
 
 class CryptoLib {
@@ -267,6 +272,36 @@ class CryptoLib {
                     int block_size,
                     int parallel_factor,
                     brillo::SecureBlob* result);
+
+  // Encrypt a provided blob using libscrypt, which sets up a header, derives
+  // the keys, encrypts, and HMACs.
+  //
+  // The parameters are as follows:
+  // - blob: Data blob to be encrypted.
+  // - key_source: User passphrase key used for encryption.
+  // - max_encrypt_time: A max encryption time which can specified.
+  // - wrapped_blob: Pointer to blob where encrypted data is stored.
+  //
+  // Returns true on success, and false on failure.
+  static bool EncryptScryptBlob(const brillo::SecureBlob& blob,
+                                const brillo::SecureBlob& key_source,
+                                brillo::SecureBlob* wrapped_blob);
+
+  static bool EncryptScryptBlobInternal(const brillo::SecureBlob& blob,
+                                        const brillo::SecureBlob& key_source,
+                                        const double max_encrypt_time,
+                                        brillo::SecureBlob* wrapped_blob);
+
+  // Companion decryption function for EncryptScryptBlob().
+  // This decrypts the data blobs which were encrypted using
+  // EncryptScryptBlob().
+  //
+  // Returns true on success. On failure, false is returned, and
+  // |error| is set with the appropriate error code.
+  static bool DecryptScryptBlob(const brillo::SecureBlob& wrapped_blob,
+                                const brillo::SecureBlob& key,
+                                brillo::SecureBlob* blob,
+                                CryptoError* error);
 };
 
 }  // namespace cryptohome

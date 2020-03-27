@@ -50,29 +50,6 @@ namespace {
 // state.
 const char kSignInHashTreeDir[] = "/home/.shadow/low_entropy_creds";
 
-// An upper bound on the amount of memory that we allow Scrypt to use when
-// performing key strengthening (32MB).  A large size is okay since we only use
-// Scrypt during the login process, before the user is logged in.  This memory
-// is managed (and freed) by the scrypt library.
-const unsigned int kScryptMaxMem = 32 * 1024 * 1024;
-
-// An upper bound on the amount of time we allow Scrypt to use when performing
-// key strenthening (1/3s) for encryption.
-const double kScryptMaxEncryptTime = 0.333;
-
-// An upper bound on the amount of time we allow Scrypt to use when performing
-// key strenthening (100s) for decryption.  This number can be high because in
-// practice, it doesn't mean much.  It simply needs to be large enough that we
-// can guarantee that the key derived during encryption can always be derived at
-// decryption time, so the typical time is usually close to 1/3s.  However,
-// because sometimes other processes may interfere, we need it to be large
-// enough to allow the same calculation to be made amidst other heavy use.
-const double kScryptMaxDecryptTime = 100.0;
-
-// Scrypt creates a header in the cipher text that we need to account for in
-// buffer sizing.
-const unsigned int kScryptHeaderLength = 128;
-
 // Maximum size of the salt file.
 const int64_t kSystemSaltMaxSize = (1 << 20);  // 1 MB
 
@@ -339,39 +316,13 @@ bool Crypto::UnwrapVaultKeyset(const SerializedVaultKeyset& serialized,
   return true;
 }
 
-bool Crypto::DecryptScryptBlob(const SecureBlob& wrapped_blob,
-                               const SecureBlob& key,
-                               SecureBlob* blob,
-                               CryptoError* error) const {
-  int scrypt_rc;
-  size_t out_len = 0;
-
-  scrypt_rc = scryptdec_buf(wrapped_blob.data(), wrapped_blob.size(),
-                            blob->data(), &out_len, key.data(), key.size(),
-                            kScryptMaxMem, 100.0, kScryptMaxDecryptTime);
-  if (scrypt_rc) {
-    LOG(ERROR) << "Blob Scrypt decryption returned error code: " << scrypt_rc;
-    PopulateError(error, CryptoError::CE_SCRYPT_CRYPTO);
-    return false;
-  }
-  // Check if the plaintext is the right length.
-  if ((wrapped_blob.size() < kScryptHeaderLength) ||
-      (out_len != (wrapped_blob.size() - kScryptHeaderLength))) {
-    LOG(ERROR) << "Blob Scrypt decryption output was the wrong length";
-    PopulateError(error, CryptoError::CE_SCRYPT_CRYPTO);
-    return false;
-  }
-  blob->resize(out_len);
-  return true;
-}
-
 bool Crypto::DecryptScrypt(const SerializedVaultKeyset& serialized,
                            const SecureBlob& key,
                            CryptoError* error,
                            VaultKeyset* keyset) const {
   SecureBlob blob = SecureBlob(serialized.wrapped_keyset());
   SecureBlob decrypted(blob.size());
-  if (!DecryptScryptBlob(blob, key, &decrypted, error)) {
+  if (!CryptoLib::DecryptScryptBlob(blob, key, &decrypted, error)) {
     LOG(ERROR) << "Wrapped keyset Scrypt decrypt failed.";
     return false;
   }
@@ -382,7 +333,8 @@ bool Crypto::DecryptScrypt(const SerializedVaultKeyset& serialized,
     SecureBlob wrapped_chaps_key = SecureBlob(serialized.wrapped_chaps_key());
     chaps_key.resize(wrapped_chaps_key.size());
     // Perform a Scrypt operation on wrapped chaps key.
-    if (!DecryptScryptBlob(wrapped_chaps_key, key, &chaps_key, error)) {
+    if (!CryptoLib::DecryptScryptBlob(wrapped_chaps_key, key, &chaps_key,
+                                      error)) {
       LOG(ERROR) << "Chaps key scrypt decrypt failed.";
       return false;
     }
@@ -394,7 +346,8 @@ bool Crypto::DecryptScrypt(const SerializedVaultKeyset& serialized,
     SecureBlob wrapped_reset_seed = SecureBlob(serialized.wrapped_reset_seed());
     reset_seed.resize(wrapped_reset_seed.size());
     // Perform a Scrypt operation on wrapped reset seed.
-    if (!DecryptScryptBlob(wrapped_reset_seed, key, &reset_seed, error)) {
+    if (!CryptoLib::DecryptScryptBlob(wrapped_reset_seed, key, &reset_seed,
+                                      error)) {
       LOG(ERROR) << "Reset seed scrypt decrypt failed.";
       return false;
     }
@@ -711,21 +664,6 @@ bool Crypto::EncryptTPMNotBoundToPcr(const VaultKeyset& vault_keyset,
   return true;
 }
 
-bool Crypto::EncryptScryptBlob(const SecureBlob& blob,
-                               const SecureBlob& key_source,
-                               SecureBlob* wrapped_blob) const {
-  int scrypt_rc;
-  wrapped_blob->resize(blob.size() + kScryptHeaderLength);
-  scrypt_rc = scryptenc_buf(blob.data(), blob.size(), wrapped_blob->data(),
-                            key_source.data(), key_source.size(), kScryptMaxMem,
-                            100.0, scrypt_max_encrypt_time_);
-  if (scrypt_rc) {
-    LOG(ERROR) << "Blob Scrypt encryption returned error code: " << scrypt_rc;
-    return false;
-  }
-  return true;
-}
-
 bool Crypto::EncryptScrypt(const VaultKeyset& vault_keyset,
                            const SecureBlob& key,
                            SerializedVaultKeyset* serialized) const {
@@ -746,13 +684,16 @@ bool Crypto::EncryptScrypt(const VaultKeyset& vault_keyset,
   SecureBlob local_blob = SecureBlob::Combine(blob, hash);
   SecureBlob cipher_text(local_blob.size() + kScryptHeaderLength);
 
-  if (!EncryptScryptBlob(local_blob, key, &cipher_text)) {
+  if (!CryptoLib::EncryptScryptBlobInternal(
+          local_blob, key, scrypt_max_encrypt_time_, &cipher_text)) {
     LOG(ERROR) << "Scrypt encrypt of keyset blob failed.";
     return false;
   }
 
   SecureBlob wrapped_chaps_key;
-  if (!EncryptScryptBlob(vault_keyset.chaps_key(), key, &wrapped_chaps_key)) {
+  if (!CryptoLib::EncryptScryptBlobInternal(vault_keyset.chaps_key(), key,
+                                            scrypt_max_encrypt_time_,
+                                            &wrapped_chaps_key)) {
     LOG(ERROR) << "Scrypt encrypt of chaps key failed.";
     return false;
   }
@@ -770,8 +711,9 @@ bool Crypto::EncryptScrypt(const VaultKeyset& vault_keyset,
   // If there is a reset seed, encrypt and store it.
   if (vault_keyset.reset_seed().size() != 0) {
     SecureBlob wrapped_reset_seed;
-    if (!EncryptScryptBlob(vault_keyset.reset_seed(), key,
-                           &wrapped_reset_seed)) {
+    if (!CryptoLib::EncryptScryptBlobInternal(vault_keyset.reset_seed(), key,
+                                              scrypt_max_encrypt_time_,
+                                              &wrapped_reset_seed)) {
       LOG(ERROR) << "Scrypt encrypt of reset seed failed.";
       return false;
     }
