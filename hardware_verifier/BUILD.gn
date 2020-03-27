@@ -32,20 +32,10 @@ pkg_config("target_defaults") {
   ]
 }
 
-proto_library("hardware_verifier-protos") {
-  configs = [ ":target_defaults" ]
-  proto_in_dir = "./"
-  proto_out_dir = "include/hardware_verifier"
-  proto_lib_dirs = [ "${sysroot}/usr/include/chromeos/dbus/runtime_probe" ]
-  sources = [
-    "${proto_in_dir}/hardware_verifier.proto",
-  ]
-}
-
 static_library("libhardware_verifier") {
   configs += [ ":target_defaults" ]
   deps = [
-    ":hardware_verifier-protos",
+    "//hardware_verifier/proto:hardware_verifier-protos",
   ]
   sources = [
     "cli.cc",
@@ -70,7 +60,7 @@ if (use.test) {
   static_library("libhardware_verifier_test") {
     configs += [ ":target_defaults" ]
     deps = [
-      ":hardware_verifier-protos",
+      "//hardware_verifier/proto:hardware_verifier-protos",
     ]
     sources = [
       "hw_verification_spec_getter_fake.cc",
