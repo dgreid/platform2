@@ -78,6 +78,11 @@ class CrosHealthdMojoAdapter final {
   chromeos::cros_healthd::mojom::RunRoutineResponsePtr RunPrimeSearchRoutine(
       base::TimeDelta exec_duration, uint64_t max_num);
 
+  // Runs the battery discharge routine.
+  chromeos::cros_healthd::mojom::RunRoutineResponsePtr
+  RunBatteryDischargeRoutine(base::TimeDelta exec_duration,
+                             uint32_t maximum_discharge_percent_allowed);
+
   // Returns which routines are available on the platform.
   std::vector<chromeos::cros_healthd::mojom::DiagnosticRoutineEnum>
   GetAvailableRoutines();

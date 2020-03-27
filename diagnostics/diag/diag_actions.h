@@ -40,6 +40,9 @@ class DiagActions final {
       chromeos::cros_healthd::mojom::AcPowerStatusEnum expected_status,
       const base::Optional<std::string>& expected_power_type);
   bool ActionRunBatteryCapacityRoutine(uint32_t low_mah, uint32_t high_mah);
+  bool ActionRunBatteryDischargeRoutine(
+      base::TimeDelta exec_duration,
+      uint32_t maximum_discharge_percent_allowed);
   bool ActionRunBatteryHealthRoutine(uint32_t maximum_cycle_count,
                                      uint32_t percent_battery_wear_allowed);
   bool ActionRunCpuCacheRoutine(base::TimeDelta exec_duration);
