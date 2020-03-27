@@ -142,6 +142,16 @@ void CrosHealthdRoutineServiceImpl::RunPrimeSearchRoutine(
              id, status);
 }
 
+void CrosHealthdRoutineServiceImpl::RunBatteryDischargeRoutine(
+    base::TimeDelta exec_duration,
+    uint32_t maximum_discharge_percent_allowed,
+    int32_t* id,
+    MojomCrosHealthdDiagnosticRoutineStatusEnum* status) {
+  RunRoutine(routine_factory_->MakeBatteryDischargeRoutine(
+                 exec_duration, maximum_discharge_percent_allowed),
+             id, status);
+}
+
 void CrosHealthdRoutineServiceImpl::GetRoutineUpdate(
     int32_t uuid,
     mojo_ipc::DiagnosticRoutineCommandEnum command,

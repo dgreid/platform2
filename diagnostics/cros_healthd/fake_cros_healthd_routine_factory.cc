@@ -270,4 +270,10 @@ FakeCrosHealthdRoutineFactory::MakePrimeSearchRoutine(
   return std::move(next_routine_);
 }
 
+std::unique_ptr<DiagnosticRoutine>
+FakeCrosHealthdRoutineFactory::MakeBatteryDischargeRoutine(
+    base::TimeDelta exec_duration, uint32_t maximum_discharge_percent_allowed) {
+  return std::move(next_routine_);
+}
+
 }  // namespace diagnostics

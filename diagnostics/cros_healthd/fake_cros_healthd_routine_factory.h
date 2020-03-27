@@ -75,6 +75,9 @@ class FakeCrosHealthdRoutineFactory final : public CrosHealthdRoutineFactory {
       uint32_t file_size_mb) override;
   std::unique_ptr<DiagnosticRoutine> MakePrimeSearchRoutine(
       base::TimeDelta exec_duration, uint64_t max_num) override;
+  std::unique_ptr<DiagnosticRoutine> MakeBatteryDischargeRoutine(
+      base::TimeDelta exec_duration,
+      uint32_t maximum_discharge_percent_allowed) override;
 
  private:
   // The routine that will be returned by any calls to MakeSomeRoutine.

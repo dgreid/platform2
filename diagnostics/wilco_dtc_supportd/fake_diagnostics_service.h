@@ -79,6 +79,10 @@ class FakeDiagnosticsService final
       uint32_t length_seconds,
       uint64_t max_num,
       const RunPrimeSearchRoutineCallback& callback) override;
+  void RunBatteryDischargeRoutine(
+      uint32_t length_seconds,
+      uint32_t maximum_discharge_percent_allowed,
+      const RunBatteryDischargeRoutineCallback& callback) override;
 
   // Overrides the default behavior of GetCrosHealthdDiagnosticsService to test
   // situations where mojo methods were called prior to wilco_dtc_supportd's

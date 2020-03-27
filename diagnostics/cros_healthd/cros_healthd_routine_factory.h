@@ -75,6 +75,11 @@ class CrosHealthdRoutineFactory {
   // diagnostics/routines/prime_search for details on the routine itself.
   virtual std::unique_ptr<DiagnosticRoutine> MakePrimeSearchRoutine(
       base::TimeDelta exec_duration, uint64_t max_num) = 0;
+  // Constructs a new instance of the battery discharge routine. See
+  // diagnostics/routines/battery_discharge for details on the routine itself.
+  virtual std::unique_ptr<DiagnosticRoutine> MakeBatteryDischargeRoutine(
+      base::TimeDelta exec_duration,
+      uint32_t maximum_discharge_percent_allowed) = 0;
 };
 
 }  // namespace diagnostics

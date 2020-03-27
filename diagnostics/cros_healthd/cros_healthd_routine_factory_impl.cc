@@ -6,6 +6,7 @@
 
 #include "diagnostics/routines/ac_power/ac_power.h"
 #include "diagnostics/routines/battery/battery.h"
+#include "diagnostics/routines/battery_discharge/battery_discharge.h"
 #include "diagnostics/routines/battery_sysfs/battery_sysfs.h"
 #include "diagnostics/routines/cpu_cache/cpu_cache.h"
 #include "diagnostics/routines/cpu_stress/cpu_stress.h"
@@ -105,6 +106,13 @@ std::unique_ptr<DiagnosticRoutine>
 CrosHealthdRoutineFactoryImpl::MakePrimeSearchRoutine(
     base::TimeDelta exec_duration, uint64_t max_num) {
   return CreatePrimeSearchRoutine(exec_duration, max_num);
+}
+
+std::unique_ptr<DiagnosticRoutine>
+CrosHealthdRoutineFactoryImpl::MakeBatteryDischargeRoutine(
+    base::TimeDelta exec_duration, uint32_t maximum_discharge_percent_allowed) {
+  return std::make_unique<BatteryDischargeRoutine>(
+      exec_duration, maximum_discharge_percent_allowed);
 }
 
 }  // namespace diagnostics

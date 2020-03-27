@@ -78,7 +78,8 @@ TEST_F(CrosHealthdRoutineServiceImplTest, GetAvailableRoutines) {
       mojo_ipc::DiagnosticRoutineEnum::kNvmeWearLevel,
       mojo_ipc::DiagnosticRoutineEnum::kNvmeSelfTest,
       mojo_ipc::DiagnosticRoutineEnum::kDiskRead,
-      mojo_ipc::DiagnosticRoutineEnum::kPrimeSearch};
+      mojo_ipc::DiagnosticRoutineEnum::kPrimeSearch,
+      mojo_ipc::DiagnosticRoutineEnum::kBatteryDischarge};
   auto reply = service()->GetAvailableRoutines();
   EXPECT_EQ(reply, kAvailableRoutines);
 }
@@ -268,6 +269,22 @@ TEST_F(CrosHealthdRoutineServiceImplTest, RunPrimeSearchRoutine) {
   service()->RunPrimeSearchRoutine(
       /*exec_duration=*/exec_duration, /*max_num=*/1000000, &response.id,
       &response.status);
+  EXPECT_EQ(response.id, 1);
+  EXPECT_EQ(response.status, kExpectedStatus);
+}
+
+// Test that the battery discharge routine can be run.
+TEST_F(CrosHealthdRoutineServiceImplTest, RunBatteryDischargeRoutine) {
+  constexpr mojo_ipc::DiagnosticRoutineStatusEnum kExpectedStatus =
+      mojo_ipc::DiagnosticRoutineStatusEnum::kWaiting;
+  // TODO(crbug/1065463): Treat this as an interactive routine.
+  routine_factory()->SetNonInteractiveStatus(
+      kExpectedStatus, /*status_message=*/"", /*progress_percent=*/50,
+      /*output=*/"");
+  mojo_ipc::RunRoutineResponse response;
+  service()->RunBatteryDischargeRoutine(
+      /*exec_duration=*/base::TimeDelta::FromSeconds(23),
+      /*maximum_discharge_percent_allowed=*/78, &response.id, &response.status);
   EXPECT_EQ(response.id, 1);
   EXPECT_EQ(response.status, kExpectedStatus);
 }

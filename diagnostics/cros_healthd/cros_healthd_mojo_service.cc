@@ -175,6 +175,17 @@ void CrosHealthdMojoService::RunPrimeSearchRoutine(
   callback.Run(response.Clone());
 }
 
+void CrosHealthdMojoService::RunBatteryDischargeRoutine(
+    uint32_t length_seconds,
+    uint32_t maximum_discharge_percent_allowed,
+    const RunBatteryDischargeRoutineCallback& callback) {
+  RunRoutineResponse response;
+  routine_service_->RunBatteryDischargeRoutine(
+      base::TimeDelta::FromSeconds(length_seconds),
+      maximum_discharge_percent_allowed, &response.id, &response.status);
+  callback.Run(response.Clone());
+}
+
 void CrosHealthdMojoService::ProbeTelemetryInfo(
     const std::vector<ProbeCategoryEnum>& categories,
     const ProbeTelemetryInfoCallback& callback) {

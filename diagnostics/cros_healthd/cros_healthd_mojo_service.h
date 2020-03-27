@@ -90,6 +90,10 @@ class CrosHealthdMojoService final
       uint32_t length_seconds,
       uint64_t max_num,
       const RunPrimeSearchRoutineCallback& callback) override;
+  void RunBatteryDischargeRoutine(
+      uint32_t length_seconds,
+      uint32_t maximum_discharge_percent_allowed,
+      const RunBatteryDischargeRoutineCallback& callback) override;
 
   // chromeos::cros_healthd::mojom::CrosHealthdProbeService overrides:
   void ProbeTelemetryInfo(const std::vector<ProbeCategoryEnum>& categories,

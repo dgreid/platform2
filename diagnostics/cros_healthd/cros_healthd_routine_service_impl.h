@@ -84,6 +84,11 @@ class CrosHealthdRoutineServiceImpl final : public CrosHealthdRoutineService {
       uint64_t max_num,
       int32_t* id,
       MojomCrosHealthdDiagnosticRoutineStatusEnum* status) override;
+  void RunBatteryDischargeRoutine(
+      base::TimeDelta exec_duration,
+      uint32_t maximum_discharge_percent_allowed,
+      int32_t* id,
+      MojomCrosHealthdDiagnosticRoutineStatusEnum* status) override;
   void GetRoutineUpdate(
       int32_t id,
       MojomCrosHealthdDiagnosticRoutineCommandEnum command,
@@ -119,7 +124,9 @@ class CrosHealthdRoutineServiceImpl final : public CrosHealthdRoutineService {
           chromeos::cros_healthd::mojom::DiagnosticRoutineEnum::kNvmeWearLevel,
           chromeos::cros_healthd::mojom::DiagnosticRoutineEnum::kNvmeSelfTest,
           chromeos::cros_healthd::mojom::DiagnosticRoutineEnum::kDiskRead,
-          chromeos::cros_healthd::mojom::DiagnosticRoutineEnum::kPrimeSearch};
+          chromeos::cros_healthd::mojom::DiagnosticRoutineEnum::kPrimeSearch,
+          chromeos::cros_healthd::mojom::DiagnosticRoutineEnum::
+              kBatteryDischarge};
   // Responsible for making async calls to debugd. Unowned pointer that should
   // outlive this instance.
   DebugdAdapter* debugd_adapter_ = nullptr;
