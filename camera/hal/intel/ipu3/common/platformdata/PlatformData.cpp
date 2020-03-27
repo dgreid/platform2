@@ -848,6 +848,7 @@ CameraHWInfo::CameraHWInfo() :
     mSupportExtendedMakernote = false;
     mSupportFullColorRange = true;
     mSupportIPUAcceleration = false;
+    mPropertyRead = false;
 
     // -1 means mPreviewHALFormat is not set
     mPreviewHALFormat = -1;
@@ -858,8 +859,7 @@ CameraHWInfo::CameraHWInfo() :
 status_t CameraHWInfo::init(const std::string &mediaDevicePath)
 {
     mMediaControllerPathName = mediaDevicePath;
-    readProperty();
-
+    tryReadProperty();
     return initDriverList();
 }
 
@@ -893,8 +893,11 @@ status_t CameraHWInfo::initDriverList()
     return ret;
 }
 
-status_t CameraHWInfo::readProperty()
+status_t CameraHWInfo::tryReadProperty()
 {
+    if (mPropertyRead)
+      return OK;
+
     std::string cameraPropertyPath = std::string(CAMERA_CACHE_DIR) + std::string(CAMERA_PROPERTY_FILE);
     std::fstream props(cameraPropertyPath.c_str(), std::ios::in);
 
@@ -902,6 +905,7 @@ status_t CameraHWInfo::readProperty()
         LOGW("Failed to load camera property file.");
         return UNKNOWN_ERROR;
     }
+    mPropertyRead = true;
 
     const std::string kManufacturer = "ro.product.manufacturer";
     const std::string kModel = "ro.product.model";
@@ -1293,6 +1297,16 @@ status_t CameraHWInfo::initDriverListHelper(unsigned major, unsigned minor, Sens
     }
 
     return OK;
+}
+
+const char* CameraHWInfo::productName(void) {
+  tryReadProperty();
+  return mProductName.c_str();
+}
+
+const char* CameraHWInfo::manufacturerName(void) {
+  tryReadProperty();
+  return mManufacturerName.c_str();
 }
 
 } /* namespace intel */

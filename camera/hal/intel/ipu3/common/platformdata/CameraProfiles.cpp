@@ -2151,8 +2151,8 @@ void CameraProfiles::dumpCommonSection()
 {
     LOGD("@%s", __FUNCTION__);
     LOGD("element name: boardName, element value = %s", mCameraCommon->mBoardName.c_str());
-    LOGD("element name: productName, element value = %s", mCameraCommon->mProductName.c_str());
-    LOGD("element name: manufacturerName, element value = %s", mCameraCommon->mManufacturerName.c_str());
+    LOGD("element name: productName, element value = %s", mCameraCommon->productName());
+    LOGD("element name: manufacturerName, element value = %s", mCameraCommon->manufacturerName());
     LOGD("element name: mSupportDualVideo, element value = %d", mCameraCommon-> mSupportDualVideo);
     LOGD("element name: supportExtendedMakernote, element value = %d", mCameraCommon->mSupportExtendedMakernote);
 }
