@@ -35,6 +35,9 @@ void AppendToVector(const std::vector<uint8_t>& from, std::vector<uint8_t>* to);
 template <>
 void AppendToVector(const std::string& from, std::vector<uint8_t>* to);
 
+// Utility function to transform a string to a vector.
+std::vector<uint8_t> ToVector(const std::string& str);
+
 // Utility function to copy bytes from a vector to an object. This is the
 // inverse of AppendToVector.
 template <typename VectorAllocator, typename ToType>

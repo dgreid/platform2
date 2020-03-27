@@ -37,6 +37,12 @@ void AppendSubstringToVector(const std::string& from,
   to->insert(to->end(), from.begin() + start, from.begin() + start + length);
 }
 
+std::vector<uint8_t> ToVector(const std::string& str) {
+  std::vector<uint8_t> vect;
+  util::AppendToVector(str, &vect);
+  return vect;
+}
+
 base::Optional<std::vector<uint8_t>> SignatureToDerBytes(const uint8_t* r,
                                                          const uint8_t* s) {
   crypto::ScopedBIGNUM sig_r(BN_new()), sig_s(BN_new());

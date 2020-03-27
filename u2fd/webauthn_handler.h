@@ -84,6 +84,13 @@ class WebAuthnHandler {
   void DoMakeCredential(struct MakeCredentialSession session,
                         PresenceRequirement presence_requirement);
 
+  // Proceeds to cr50 for the current GetAssertion request, and responds to
+  // the request with assertions.
+  // Called directly if the request is user-presence only.
+  // Called on user verification success if the request is user-verification.
+  void DoGetAssertion(struct GetAssertionSession session,
+                      PresenceRequirement presence_requirement);
+
   // Runs a U2F_GENERATE command to create a new key handle, and stores the key
   // handle in |credential_id| and the public key in |credential_public_key|.
   // The flag in the U2F_GENERATE command is set according to
@@ -94,6 +101,23 @@ class WebAuthnHandler {
       PresenceRequirement presence_requirement,
       std::vector<uint8_t>* credential_id,
       std::vector<uint8_t>* credential_public_key);
+
+  // Runs a U2F_SIGN command to check that credential_id is valid, and if so,
+  // sign |hash_to_sign| and store the signature in |signature|.
+  // The flag in the U2F_SIGN command is set according to
+  // |presence_requirement|.
+  // |rp_id_hash| must be exactly 32 bytes.
+  GetAssertionResponse::GetAssertionStatus DoU2fSign(
+      const std::vector<uint8_t>& rp_id_hash,
+      const std::vector<uint8_t>& hash_to_sign,
+      const std::vector<uint8_t>& credential_id,
+      PresenceRequirement presence_requirement,
+      std::vector<uint8_t>* signature);
+
+  // Runs a U2F_SIGN command with "check only" flag to check whether
+  // |credential_id| is a key handle owned by this device tied to |rp_id_hash|.
+  bool DoU2fSignCheckOnly(const std::vector<uint8_t>& rp_id_hash,
+                          const std::vector<uint8_t>& credential_id);
 
   // Prompts the user for presence through |request_presence_| and calls |fn|
   // repeatedly until success or timeout.

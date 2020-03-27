@@ -33,12 +33,17 @@ constexpr int kMaxRetries =
     kVerificationTimeoutMs * 1000 / kVerificationRetryDelayUs;
 constexpr uint32_t kCr50StatusSuccess = 0;
 constexpr uint32_t kCr50StatusNotAllowed = 0x507;
+constexpr uint32_t kCr50StatusPasswordRequired = 0x50a;
 
 // Dummy User State.
 constexpr char kUserSecret[65] = {[0 ... 63] = 'E', '\0'};
 // Dummy RP id.
 constexpr char kRpId[] = "example.com";
 const std::vector<uint8_t> kRpIdHash = util::Sha256(std::string(kRpId));
+// Dummy key handle (credential ID).
+const std::vector<uint8_t> kKeyHandle(U2F_FIXED_KH_SIZE, 0xab);
+// Dummy hash to sign.
+const std::vector<uint8_t> kHashToSign(U2F_P256_SIZE, 0xcd);
 
 const std::string ExpectedU2fGenerateRequestRegex() {
   // See U2F_GENERATE_REQ in //platform/ec/include/u2f.h
@@ -49,12 +54,51 @@ const std::string ExpectedU2fGenerateRequestRegex() {
   return request_regex;
 }
 
+// Only used to test DoU2fSign, where the hash to sign can be determined.
+const std::string ExpectedDeterministicU2fSignRequestRegex() {
+  // See U2F_SIGN_REQ in //platform/ec/include/u2f.h
+  static const std::string request_regex =
+      base::HexEncode(kRpIdHash.data(), kRpIdHash.size()) +  // AppId
+      std::string("(EE){32}") +                              // User Secret
+      std::string("(AB){64}") +                              // Key handle
+      std::string("(CD){32}") +                              // Hash to sign
+      std::string("03");                                     // U2F_AUTH_ENFORCE
+  return request_regex;
+}
+
+const std::string ExpectedU2fSignRequestRegex() {
+  // See U2F_SIGN_REQ in //platform/ec/include/u2f.h
+  static const std::string request_regex =
+      base::HexEncode(kRpIdHash.data(), kRpIdHash.size()) +  // AppId
+      std::string("(EE){32}") +                              // User Secret
+      std::string("(AB){64}") +                              // Key handle
+      // Hash_to_sign depends on signature counter which isn't deterministic
+      std::string("[A-F0-9]{64}") +  // Hash to sign
+      std::string("03");             // U2F_AUTH_ENFORCE
+  return request_regex;
+}
+
+const std::string ExpectedU2fSignCheckOnlyRequestRegex() {
+  // See U2F_SIGN_REQ in //platform/ec/include/u2f.h
+  static const std::string request_regex =
+      base::HexEncode(kRpIdHash.data(), kRpIdHash.size()) +  // AppId
+      std::string("(EE){32}") +                              // User Secret
+      std::string("(AB){64}") +                              // Key handle
+      std::string("(00){32}") +  // Hash to sign (empty)
+      std::string("07");         // U2F_AUTH_CHECK_ONLY
+  return request_regex;
+}
+
 // Dummy cr50 U2F_GENERATE_RESP.
 const U2F_GENERATE_RESP kU2fGenerateResponse = {
     .pubKey = {.pointFormat = 0xAB,
                .x = {[0 ... 31] = 0xAB},
                .y = {[0 ... 31] = 0xAB}},
     .keyHandle = {[0 ... 63] = 0xFD}};
+
+// Dummy cr50 U2F_SIGN_RESP.
+const U2F_SIGN_RESP kU2fSignResponse = {.sig_r = {[0 ... 31] = 0x12},
+                                        .sig_s = {[0 ... 31] = 0x34}};
 
 // AuthenticatorData field sizes, in bytes.
 constexpr int kRpIdHashBytes = 32;
@@ -95,9 +139,12 @@ class WebAuthnHandlerTest : public ::testing::Test {
                          [this]() { presence_requested_count_++; });
   }
 
-  void ExpectGetUserSecret() {
+  void ExpectGetUserSecret() { ExpectGetUserSecretForTimes(1); }
+
+  void ExpectGetUserSecretForTimes(int times) {
     EXPECT_CALL(mock_user_state_, GetUserSecret())
-        .WillOnce(Return(ArrayToSecureBlob(kUserSecret)));
+        .Times(times)
+        .WillRepeatedly(Return(ArrayToSecureBlob(kUserSecret)));
   }
 
   void ExpectGetUserSecretFails() {
@@ -117,6 +164,15 @@ class WebAuthnHandlerTest : public ::testing::Test {
       std::vector<uint8_t>* credential_pubkey) {
     return handler_->DoU2fGenerate(kRpIdHash, presence_requirement,
                                    credential_id, credential_pubkey);
+  }
+
+  GetAssertionResponse::GetAssertionStatus DoU2fSign(
+      const std::vector<uint8_t>& hash_to_sign,
+      const std::vector<uint8_t>& credential_id,
+      PresenceRequirement presence_requirement,
+      std::vector<uint8_t>* signature) {
+    return handler_->DoU2fSign(kRpIdHash, hash_to_sign, credential_id,
+                               presence_requirement, signature);
   }
 
   std::vector<uint8_t> MakeAuthenticatorData(
@@ -211,31 +267,79 @@ TEST_F(WebAuthnHandlerTest, DoU2fGeneratePresenceSuccess) {
   presence_requested_expected_ = 1;
 }
 
+TEST_F(WebAuthnHandlerTest, DoU2fSignNoSecret) {
+  ExpectGetUserSecretFails();
+  std::vector<uint8_t> signature;
+  EXPECT_EQ(DoU2fSign(kHashToSign, kKeyHandle,
+                      PresenceRequirement::kPowerButton, &signature),
+            GetAssertionResponse::INTERNAL_ERROR);
+}
+
+TEST_F(WebAuthnHandlerTest, DoU2fSignPresenceNoPresence) {
+  ExpectGetUserSecret();
+  EXPECT_CALL(
+      mock_tpm_proxy_,
+      SendU2fSign(
+          StructMatchesRegex(ExpectedDeterministicU2fSignRequestRegex()), _))
+      .WillRepeatedly(Return(kCr50StatusNotAllowed));
+  std::vector<uint8_t> signature;
+  EXPECT_EQ(DoU2fSign(kHashToSign, kKeyHandle,
+                      PresenceRequirement::kPowerButton, &signature),
+            MakeCredentialResponse::VERIFICATION_FAILED);
+  presence_requested_expected_ = kMaxRetries;
+}
+
+TEST_F(WebAuthnHandlerTest, DoU2fSignPresenceSuccess) {
+  ExpectGetUserSecret();
+  EXPECT_CALL(
+      mock_tpm_proxy_,
+      SendU2fSign(
+          StructMatchesRegex(ExpectedDeterministicU2fSignRequestRegex()), _))
+      .WillOnce(Return(kCr50StatusNotAllowed))
+      .WillOnce(DoAll(SetArgPointee<1>(kU2fSignResponse),
+                      Return(kCr50StatusSuccess)));
+  std::vector<uint8_t> signature;
+  EXPECT_EQ(DoU2fSign(kHashToSign, kKeyHandle,
+                      PresenceRequirement::kPowerButton, &signature),
+            MakeCredentialResponse::SUCCESS);
+  EXPECT_EQ(signature, util::SignatureToDerBytes(kU2fSignResponse.sig_r,
+                                                 kU2fSignResponse.sig_s));
+  presence_requested_expected_ = 1;
+}
+
 TEST_F(WebAuthnHandlerTest, MakeCredentialUninitialized) {
   // Use an uninitialized WebAuthnHandler object.
   handler_.reset(new WebAuthnHandler());
   auto mock_method_response =
       std::make_unique<hwsec::MockDBusMethodResponse<MakeCredentialResponse>>();
-  mock_method_response->set_return_callback(
-      base::Bind([](const MakeCredentialResponse& resp) {
+  bool called = false;
+  mock_method_response->set_return_callback(base::Bind(
+      [](bool* called_ptr, const MakeCredentialResponse& resp) {
         EXPECT_EQ(resp.status(), MakeCredentialResponse::INTERNAL_ERROR);
-      }));
+        *called_ptr = true;
+      },
+      &called));
 
   MakeCredentialRequest request;
   handler_->MakeCredential(std::move(mock_method_response), request);
+  ASSERT_TRUE(called);
 }
 
 TEST_F(WebAuthnHandlerTest, MakeCredentialEmptyRpId) {
   auto mock_method_response =
       std::make_unique<hwsec::MockDBusMethodResponse<MakeCredentialResponse>>();
-  mock_method_response->set_return_callback(
-      base::Bind([](const MakeCredentialResponse& resp) {
+  bool called = false;
+  mock_method_response->set_return_callback(base::Bind(
+      [](bool* called_ptr, const MakeCredentialResponse& resp) {
         EXPECT_EQ(resp.status(), MakeCredentialResponse::INVALID_REQUEST);
-      }));
+        *called_ptr = true;
+      },
+      &called));
 
   MakeCredentialRequest request;
   request.set_verification_type(VerificationType::VERIFICATION_USER_PRESENCE);
   handler_->MakeCredential(std::move(mock_method_response), request);
+  ASSERT_TRUE(called);
 }
 
 TEST_F(WebAuthnHandlerTest, MakeCredentialNoSecret) {
@@ -246,12 +350,16 @@ TEST_F(WebAuthnHandlerTest, MakeCredentialNoSecret) {
   ExpectGetUserSecretFails();
   auto mock_method_response =
       std::make_unique<hwsec::MockDBusMethodResponse<MakeCredentialResponse>>();
-  mock_method_response->set_return_callback(
-      base::Bind([](const MakeCredentialResponse& resp) {
+  bool called = false;
+  mock_method_response->set_return_callback(base::Bind(
+      [](bool* called_ptr, const MakeCredentialResponse& resp) {
         EXPECT_EQ(resp.status(), MakeCredentialResponse::INTERNAL_ERROR);
-      }));
+        *called_ptr = true;
+      },
+      &called));
 
   handler_->MakeCredential(std::move(mock_method_response), request);
+  ASSERT_TRUE(called);
 }
 
 TEST_F(WebAuthnHandlerTest, MakeCredentialPresenceNoPresence) {
@@ -267,13 +375,17 @@ TEST_F(WebAuthnHandlerTest, MakeCredentialPresenceNoPresence) {
 
   auto mock_method_response =
       std::make_unique<hwsec::MockDBusMethodResponse<MakeCredentialResponse>>();
-  mock_method_response->set_return_callback(
-      base::Bind([](const MakeCredentialResponse& resp) {
+  bool called = false;
+  mock_method_response->set_return_callback(base::Bind(
+      [](bool* called_ptr, const MakeCredentialResponse& resp) {
         EXPECT_EQ(resp.status(), MakeCredentialResponse::VERIFICATION_FAILED);
-      }));
+        *called_ptr = true;
+      },
+      &called));
 
   handler_->MakeCredential(std::move(mock_method_response), request);
   presence_requested_expected_ = kMaxRetries;
+  ASSERT_TRUE(called);
 }
 
 TEST_F(WebAuthnHandlerTest, MakeCredentialPresenceSuccess) {
@@ -314,8 +426,9 @@ TEST_F(WebAuthnHandlerTest, MakeCredentialPresenceSuccess) {
 
   auto mock_method_response =
       std::make_unique<hwsec::MockDBusMethodResponse<MakeCredentialResponse>>();
+  bool called = false;
   mock_method_response->set_return_callback(base::Bind(
-      [](const std::string& expected_authenticator_data,
+      [](bool* called_ptr, const std::string& expected_authenticator_data,
          const MakeCredentialResponse& resp) {
         EXPECT_EQ(resp.status(), MakeCredentialResponse::SUCCESS);
         EXPECT_THAT(base::HexEncode(resp.authenticator_data().data(),
@@ -323,11 +436,237 @@ TEST_F(WebAuthnHandlerTest, MakeCredentialPresenceSuccess) {
                     MatchesRegex(expected_authenticator_data));
         EXPECT_EQ(resp.attestation_format(), "none");
         EXPECT_EQ(resp.attestation_statement(), "\xa0");
+        *called_ptr = true;
       },
-      expected_authenticator_data_regex));
+      &called, expected_authenticator_data_regex));
 
   handler_->MakeCredential(std::move(mock_method_response), request);
   presence_requested_expected_ = 1;
+  ASSERT_TRUE(called);
+}
+
+TEST_F(WebAuthnHandlerTest, GetAssertionUninitialized) {
+  // Use an uninitialized WebAuthnHandler object.
+  handler_.reset(new WebAuthnHandler());
+  auto mock_method_response =
+      std::make_unique<hwsec::MockDBusMethodResponse<GetAssertionResponse>>();
+  bool called = false;
+  mock_method_response->set_return_callback(base::Bind(
+      [](bool* called_ptr, const GetAssertionResponse& resp) {
+        EXPECT_EQ(resp.status(), GetAssertionResponse::INTERNAL_ERROR);
+        *called_ptr = true;
+      },
+      &called));
+
+  GetAssertionRequest request;
+  handler_->GetAssertion(std::move(mock_method_response), request);
+  ASSERT_TRUE(called);
+}
+
+TEST_F(WebAuthnHandlerTest, GetAssertionEmptyRpId) {
+  auto mock_method_response =
+      std::make_unique<hwsec::MockDBusMethodResponse<GetAssertionResponse>>();
+  bool called = false;
+  mock_method_response->set_return_callback(base::Bind(
+      [](bool* called_ptr, const GetAssertionResponse& resp) {
+        EXPECT_EQ(resp.status(), GetAssertionResponse::INVALID_REQUEST);
+        *called_ptr = true;
+      },
+      &called));
+
+  GetAssertionRequest request;
+  request.set_client_data_hash(std::string(SHA256_DIGEST_LENGTH, 0xcd));
+  request.set_verification_type(VerificationType::VERIFICATION_USER_PRESENCE);
+  handler_->GetAssertion(std::move(mock_method_response), request);
+  ASSERT_TRUE(called);
+}
+
+TEST_F(WebAuthnHandlerTest, GetAssertionWrongClientDataHashLength) {
+  auto mock_method_response =
+      std::make_unique<hwsec::MockDBusMethodResponse<GetAssertionResponse>>();
+  bool called = false;
+  mock_method_response->set_return_callback(base::Bind(
+      [](bool* called_ptr, const GetAssertionResponse& resp) {
+        EXPECT_EQ(resp.status(), GetAssertionResponse::INVALID_REQUEST);
+        *called_ptr = true;
+      },
+      &called));
+
+  GetAssertionRequest request;
+  request.set_rp_id(kRpId);
+  request.set_client_data_hash(std::string(SHA256_DIGEST_LENGTH - 1, 0xcd));
+  request.set_verification_type(VerificationType::VERIFICATION_USER_PRESENCE);
+  handler_->GetAssertion(std::move(mock_method_response), request);
+  ASSERT_TRUE(called);
+}
+
+TEST_F(WebAuthnHandlerTest, GetAssertionNoSecret) {
+  GetAssertionRequest request;
+  request.set_rp_id(kRpId);
+  request.set_client_data_hash(std::string(SHA256_DIGEST_LENGTH, 0xcd));
+  request.add_allowed_credential_id(std::string(U2F_FIXED_KH_SIZE, 0xab));
+  request.set_verification_type(VerificationType::VERIFICATION_USER_PRESENCE);
+
+  ExpectGetUserSecretFails();
+  // Since we don't have user secret, we won't even pass DoU2fSignCheckOnly, and
+  // the TPM won't receive any command.
+  auto mock_method_response =
+      std::make_unique<hwsec::MockDBusMethodResponse<GetAssertionResponse>>();
+  bool called = false;
+  mock_method_response->set_return_callback(base::Bind(
+      [](bool* called_ptr, const GetAssertionResponse& resp) {
+        EXPECT_EQ(resp.status(), GetAssertionResponse::INVALID_REQUEST);
+        *called_ptr = true;
+      },
+      &called));
+
+  handler_->GetAssertion(std::move(mock_method_response), request);
+  ASSERT_TRUE(called);
+}
+
+TEST_F(WebAuthnHandlerTest, GetAssertionInvalidKeyHandle) {
+  GetAssertionRequest request;
+  request.set_rp_id(kRpId);
+  request.set_client_data_hash(std::string(SHA256_DIGEST_LENGTH, 0xcd));
+  request.add_allowed_credential_id(std::string(U2F_FIXED_KH_SIZE, 0xab));
+  request.set_verification_type(VerificationType::VERIFICATION_USER_PRESENCE);
+
+  // We will only get user secret once because DoU2fSignCheckOnly will fail and
+  // we won't DoU2fSign.
+  ExpectGetUserSecret();
+
+  EXPECT_CALL(
+      mock_tpm_proxy_,
+      SendU2fSign(StructMatchesRegex(ExpectedU2fSignCheckOnlyRequestRegex()),
+                  _))
+      .WillOnce(Return(kCr50StatusPasswordRequired));
+
+  auto mock_method_response =
+      std::make_unique<hwsec::MockDBusMethodResponse<GetAssertionResponse>>();
+  bool called = false;
+  mock_method_response->set_return_callback(base::Bind(
+      [](bool* called_ptr, const GetAssertionResponse& resp) {
+        EXPECT_EQ(resp.status(), GetAssertionResponse::INVALID_REQUEST);
+        *called_ptr = true;
+      },
+      &called));
+
+  handler_->GetAssertion(std::move(mock_method_response), request);
+  ASSERT_TRUE(called);
+}
+
+TEST_F(WebAuthnHandlerTest, GetAssertionPresenceNoPresence) {
+  GetAssertionRequest request;
+  request.set_rp_id(kRpId);
+  request.set_client_data_hash(std::string(SHA256_DIGEST_LENGTH, 0xcd));
+  request.add_allowed_credential_id(std::string(U2F_FIXED_KH_SIZE, 0xab));
+  request.set_verification_type(VerificationType::VERIFICATION_USER_PRESENCE);
+
+  ExpectGetUserSecretForTimes(2);
+
+  EXPECT_CALL(
+      mock_tpm_proxy_,
+      SendU2fSign(StructMatchesRegex(ExpectedU2fSignCheckOnlyRequestRegex()),
+                  _))
+      .WillOnce(Return(kCr50StatusSuccess));
+  EXPECT_CALL(mock_tpm_proxy_,
+              SendU2fSign(StructMatchesRegex(ExpectedU2fSignRequestRegex()), _))
+      .WillRepeatedly(Return(kCr50StatusNotAllowed));
+
+  auto mock_method_response =
+      std::make_unique<hwsec::MockDBusMethodResponse<GetAssertionResponse>>();
+  bool called = false;
+  mock_method_response->set_return_callback(base::Bind(
+      [](bool* called_ptr, const GetAssertionResponse& resp) {
+        EXPECT_EQ(resp.status(), GetAssertionResponse::VERIFICATION_FAILED);
+        *called_ptr = true;
+      },
+      &called));
+
+  handler_->GetAssertion(std::move(mock_method_response), request);
+  presence_requested_expected_ = kMaxRetries;
+  ASSERT_TRUE(called);
+}
+
+TEST_F(WebAuthnHandlerTest, GetAssertionPresenceSuccess) {
+  GetAssertionRequest request;
+  request.set_rp_id(kRpId);
+  request.set_client_data_hash(std::string(SHA256_DIGEST_LENGTH, 0xcd));
+  request.add_allowed_credential_id(std::string(U2F_FIXED_KH_SIZE, 0xab));
+  request.set_verification_type(VerificationType::VERIFICATION_USER_PRESENCE);
+
+  ExpectGetUserSecretForTimes(2);
+
+  EXPECT_CALL(
+      mock_tpm_proxy_,
+      SendU2fSign(StructMatchesRegex(ExpectedU2fSignCheckOnlyRequestRegex()),
+                  _))
+      .WillOnce(Return(kCr50StatusSuccess));
+  EXPECT_CALL(mock_tpm_proxy_,
+              SendU2fSign(StructMatchesRegex(ExpectedU2fSignRequestRegex()), _))
+      .WillOnce(Return(kCr50StatusNotAllowed))
+      .WillOnce(DoAll(SetArgPointee<1>(kU2fSignResponse),
+                      Return(kCr50StatusSuccess)));
+
+  auto mock_method_response =
+      std::make_unique<hwsec::MockDBusMethodResponse<GetAssertionResponse>>();
+  bool called = false;
+  mock_method_response->set_return_callback(base::Bind(
+      [](bool* called_ptr, const GetAssertionResponse& resp) {
+        EXPECT_EQ(resp.status(), GetAssertionResponse::SUCCESS);
+        ASSERT_EQ(resp.assertion_size(), 1);
+        auto assertion = resp.assertion(0);
+        EXPECT_EQ(assertion.credential_id(),
+                  std::string(U2F_FIXED_KH_SIZE, 0xab));
+        EXPECT_THAT(
+            base::HexEncode(assertion.authenticator_data().data(),
+                            assertion.authenticator_data().size()),
+            MatchesRegex(base::HexEncode(kRpIdHash.data(),
+                                         kRpIdHash.size()) +  // RP ID hash
+                         std::string("01"           // Flag: user present
+                                     "(..){4}")));  // Signature counter
+        EXPECT_EQ(util::ToVector(assertion.signature()),
+                  util::SignatureToDerBytes(kU2fSignResponse.sig_r,
+                                            kU2fSignResponse.sig_s));
+        *called_ptr = true;
+      },
+      &called));
+
+  handler_->GetAssertion(std::move(mock_method_response), request);
+  presence_requested_expected_ = 1;
+  ASSERT_TRUE(called);
+}
+
+TEST_F(WebAuthnHandlerTest, HasCredentialsNoMatch) {
+  HasCredentialsRequest request;
+  request.set_rp_id(kRpId);
+  request.add_credential_id(std::string(U2F_FIXED_KH_SIZE, 0xab));
+
+  ExpectGetUserSecret();
+  EXPECT_CALL(
+      mock_tpm_proxy_,
+      SendU2fSign(StructMatchesRegex(ExpectedU2fSignCheckOnlyRequestRegex()),
+                  _))
+      .WillOnce(Return(kCr50StatusPasswordRequired));
+
+  auto resp = handler_->HasCredentials(request);
+  EXPECT_EQ(resp.credential_id_size(), 0);
+}
+
+TEST_F(WebAuthnHandlerTest, HasCredentialsOneMatch) {
+  HasCredentialsRequest request;
+  request.set_rp_id(kRpId);
+  request.add_credential_id(std::string(U2F_FIXED_KH_SIZE, 0xab));
+
+  ExpectGetUserSecret();
+  EXPECT_CALL(
+      mock_tpm_proxy_,
+      SendU2fSign(StructMatchesRegex(ExpectedU2fSignCheckOnlyRequestRegex()),
+                  _))
+      .WillOnce(Return(kCr50StatusSuccess));
+
+  auto resp = handler_->HasCredentials(request);
+  EXPECT_EQ(resp.credential_id_size(), 1);
 }
 
 TEST_F(WebAuthnHandlerTest, MakeAuthenticatorDataWithAttestedCredData) {

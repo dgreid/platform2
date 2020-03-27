@@ -293,13 +293,178 @@ MakeCredentialResponse::MakeCredentialStatus WebAuthnHandler::DoU2fGenerate(
 void WebAuthnHandler::GetAssertion(
     std::unique_ptr<GetAssertionMethodResponse> method_response,
     const GetAssertionRequest& request) {
-  // TODO(louiscollard): Implement.
+  GetAssertionResponse response;
+
+  if (!Initialized()) {
+    response.set_status(GetAssertionResponse::INTERNAL_ERROR);
+    method_response->Return(response);
+    return;
+  }
+
+  if (request.rp_id().empty() ||
+      request.client_data_hash().size() != SHA256_DIGEST_LENGTH) {
+    response.set_status(GetAssertionResponse::INVALID_REQUEST);
+    method_response->Return(response);
+    return;
+  }
+
+  if (request.verification_type() !=
+      VerificationType::VERIFICATION_USER_PRESENCE) {
+    // TODO(yichengli): Add support for VERIFICATION_USER_VERIFICATION
+    response.set_status(GetAssertionResponse::VERIFICATION_FAILED);
+    method_response->Return(response);
+    return;
+  }
+
+  // TODO(louiscollard): Support multiple credentials.
+  // TODO(louiscollard): Support resident credentials.
+  if (request.allowed_credential_id().size() != 1 ||
+      request.allowed_credential_id().Get(0).size() != U2F_FIXED_KH_SIZE) {
+    response.set_status(GetAssertionResponse::INVALID_REQUEST);
+    method_response->Return(response);
+    return;
+  }
+
+  // If credential_id is not recognized, don't even start auth flow.
+  std::vector<uint8_t> rp_id_hash = util::Sha256(request.rp_id());
+  if (!DoU2fSignCheckOnly(
+          rp_id_hash, util::ToVector(request.allowed_credential_id().Get(0)))) {
+    // TODO(yichengli): Do we want to return a separate INVALID_KH value here?
+    response.set_status(GetAssertionResponse::INVALID_REQUEST);
+    method_response->Return(response);
+    return;
+  }
+
+  struct GetAssertionSession session = {
+      static_cast<uint64_t>(base::Time::Now().ToTimeT()), request,
+      std::move(method_response)};
+  DoGetAssertion(std::move(session), PresenceRequirement::kPowerButton);
+}
+
+// If already seeing failure, then no need to get user secret. This means
+// in the fingerprint case, this signal should ideally come from UI instead of
+// biod because only UI knows about retry.
+void WebAuthnHandler::DoGetAssertion(struct GetAssertionSession session,
+                                     PresenceRequirement presence_requirement) {
+  GetAssertionResponse response;
+  const std::vector<uint8_t> rp_id_hash =
+      util::Sha256(session.request_.rp_id());
+  std::vector<uint8_t> authenticator_data = MakeAuthenticatorData(
+      rp_id_hash, std::vector<uint8_t>(), std::vector<uint8_t>(),
+      session.request_.verification_type() ==
+          VerificationType::VERIFICATION_USER_VERIFICATION,
+      false);
+  std::vector<uint8_t> data_to_sign(authenticator_data);
+  util::AppendToVector(session.request_.client_data_hash(), &data_to_sign);
+  std::vector<uint8_t> hash_to_sign = util::Sha256(data_to_sign);
+
+  std::vector<uint8_t> signature;
+  GetAssertionResponse::GetAssertionStatus sign_status =
+      DoU2fSign(rp_id_hash, hash_to_sign,
+                util::ToVector(session.request_.allowed_credential_id().Get(0)),
+                presence_requirement, &signature);
+  response.set_status(sign_status);
+  if (sign_status == GetAssertionResponse::SUCCESS) {
+    auto* assertion = response.add_assertion();
+    assertion->set_credential_id(
+        session.request_.allowed_credential_id().Get(0));
+    AppendToString(authenticator_data, assertion->mutable_authenticator_data());
+    AppendToString(signature, assertion->mutable_signature());
+  }
+
+  session.response_->Return(response);
+}
+
+GetAssertionResponse::GetAssertionStatus WebAuthnHandler::DoU2fSign(
+    const std::vector<uint8_t>& rp_id_hash,
+    const std::vector<uint8_t>& hash_to_sign,
+    const std::vector<uint8_t>& credential_id,
+    PresenceRequirement presence_requirement,
+    std::vector<uint8_t>* signature) {
+  DCHECK(rp_id_hash.size() == SHA256_DIGEST_LENGTH);
+  base::Optional<brillo::SecureBlob> user_secret = user_state_->GetUserSecret();
+  if (!user_secret.has_value()) {
+    return GetAssertionResponse::INTERNAL_ERROR;
+  }
+
+  if (presence_requirement != PresenceRequirement::kPowerButton) {
+    // TODO(yichengli): Add support for requiring fingerprint GPIO active.
+    return GetAssertionResponse::INTERNAL_ERROR;
+  }
+
+  U2F_SIGN_REQ sign_req = {
+      .flags = U2F_AUTH_ENFORCE  // Require user presence, consume.
+  };
+  util::VectorToObject(rp_id_hash, sign_req.appId);
+  util::VectorToObject(*user_secret, sign_req.userSecret);
+  util::VectorToObject(credential_id, sign_req.keyHandle);
+  util::VectorToObject(hash_to_sign, sign_req.hash);
+
+  U2F_SIGN_RESP sign_resp = {};
+
+  uint32_t sign_status = -1;
+  base::AutoLock(tpm_proxy_->GetLock());
+  CallAndWaitForPresence(
+      [this, &sign_req, &sign_resp]() {
+        return tpm_proxy_->SendU2fSign(sign_req, &sign_resp);
+      },
+      &sign_status);
+  brillo::SecureMemset(&sign_req.userSecret, 0, sizeof(sign_req.userSecret));
+
+  if (sign_status == 0) {
+    base::Optional<std::vector<uint8_t>> opt_signature =
+        util::SignatureToDerBytes(sign_resp.sig_r, sign_resp.sig_s);
+    if (!opt_signature.has_value()) {
+      return GetAssertionResponse::INTERNAL_ERROR;
+    }
+    *signature = *opt_signature;
+    return GetAssertionResponse::SUCCESS;
+  }
+
+  return GetAssertionResponse::VERIFICATION_FAILED;
 }
 
 HasCredentialsResponse WebAuthnHandler::HasCredentials(
     const HasCredentialsRequest& request) {
-  // TODO(louiscollard): Implement.
-  return HasCredentialsResponse();
+  HasCredentialsResponse response;
+
+  if (!Initialized() || request.rp_id().empty() ||
+      request.credential_id().empty()) {
+    // TODO(louiscollard): Return status to indicate INTERNAL_ERROR or
+    // INVALID_REQUEST.
+    return response;
+  }
+
+  std::vector<uint8_t> rp_id_hash = util::Sha256(request.rp_id());
+  for (const auto& credential_id : request.credential_id()) {
+    if (DoU2fSignCheckOnly(rp_id_hash, util::ToVector(credential_id))) {
+      *response.add_credential_id() = credential_id;
+    }
+  }
+
+  return response;
+}
+
+bool WebAuthnHandler::DoU2fSignCheckOnly(
+    const std::vector<uint8_t>& rp_id_hash,
+    const std::vector<uint8_t>& credential_id) {
+  base::Optional<brillo::SecureBlob> user_secret = user_state_->GetUserSecret();
+  if (!user_secret.has_value()) {
+    return false;
+  }
+
+  U2F_SIGN_REQ sign_req = {.flags = U2F_AUTH_CHECK_ONLY};
+  util::VectorToObject(rp_id_hash, sign_req.appId);
+  util::VectorToObject(*user_secret, sign_req.userSecret);
+  util::VectorToObject(credential_id, sign_req.keyHandle);
+
+  U2F_SIGN_RESP sign_resp;
+  base::AutoLock(tpm_proxy_->GetLock());
+  uint32_t sign_status = tpm_proxy_->SendU2fSign(sign_req, &sign_resp);
+  brillo::SecureMemset(&sign_req.userSecret, 0, sizeof(sign_req.userSecret));
+
+  // Return status of 0 indicates the credential is valid.
+  return sign_status == 0;
 }
 
 }  // namespace u2f
