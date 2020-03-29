@@ -44,10 +44,13 @@ class SystemState {
   // Getters for states that |SystemState| holds.
   org::chromium::ImageLoaderInterfaceProxyInterface* image_loader() const;
   org::chromium::UpdateEngineInterfaceProxyInterface* update_engine() const;
-  const BootSlot& boot_slot() const;
   const base::FilePath& manifest_dir() const;
   const base::FilePath& preloaded_content_dir() const;
   const base::FilePath& content_dir() const;
+
+  // Getting active and inactive boot slots easily.
+  BootSlot::Slot active_boot_slot() const;
+  BootSlot::Slot inactive_boot_slot() const;
 
  protected:
   SystemState(
@@ -65,10 +68,10 @@ class SystemState {
       image_loader_proxy_;
   std::unique_ptr<org::chromium::UpdateEngineInterfaceProxyInterface>
       update_engine_proxy_;
-  std::unique_ptr<BootSlot> boot_slot_;
   base::FilePath manifest_dir_;
   base::FilePath preloaded_content_dir_;
   base::FilePath content_dir_;
+  BootSlot::Slot active_boot_slot_;
 
   static std::unique_ptr<SystemState> g_instance_;
   DISALLOW_COPY_AND_ASSIGN(SystemState);

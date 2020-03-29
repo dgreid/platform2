@@ -5,6 +5,7 @@
 #include "dlcservice/system_state.h"
 
 #include <limits.h>
+#include <string>
 #include <utility>
 
 #include <base/files/file_util.h>
@@ -28,10 +29,13 @@ SystemState::SystemState(
     const base::FilePath& content_dir)
     : image_loader_proxy_(std::move(image_loader_proxy)),
       update_engine_proxy_(std::move(update_engine_proxy)),
-      boot_slot_(std::move(boot_slot)),
       manifest_dir_(manifest_dir),
       preloaded_content_dir_(preloaded_content_dir),
-      content_dir_(content_dir) {}
+      content_dir_(content_dir) {
+  std::string boot_disk_name;
+  PCHECK(boot_slot->GetCurrentSlot(&boot_disk_name, &active_boot_slot_))
+      << "Can not get current boot slot.";
+}
 
 // static
 void SystemState::Initialize(
@@ -67,8 +71,13 @@ org::chromium::UpdateEngineInterfaceProxyInterface* SystemState::update_engine()
   return update_engine_proxy_.get();
 }
 
-const BootSlot& SystemState::boot_slot() const {
-  return *boot_slot_;
+BootSlot::Slot SystemState::active_boot_slot() const {
+  return active_boot_slot_;
+}
+
+BootSlot::Slot SystemState::inactive_boot_slot() const {
+  return active_boot_slot_ == BootSlot::Slot::A ? BootSlot::Slot::B
+                                                : BootSlot::Slot::A;
 }
 
 const base::FilePath& SystemState::manifest_dir() const {

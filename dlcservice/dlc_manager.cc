@@ -38,11 +38,6 @@ DlcManager::DlcManager() {
   preloaded_content_dir_ = system_state->preloaded_content_dir();
   content_dir_ = system_state->content_dir();
 
-  string boot_disk_name;
-  if (!system_state->boot_slot().GetCurrentSlot(&boot_disk_name,
-                                                &current_boot_slot_))
-    LOG(FATAL) << "Can not get current boot slot.";
-
   // Initialize supported DLC(s).
   for (const auto& id : ScanDirectory(manifest_dir_))
     supported_[id];
@@ -267,8 +262,9 @@ bool DlcManager::DeleteInternal(const string& id, ErrorPtr* err) {
 bool DlcManager::Mount(const string& id, string* mount_point, ErrorPtr* err) {
   if (!image_loader_proxy_->LoadDlcImage(
           id, GetDlcPackage(id),
-          current_boot_slot_ == BootSlot::Slot::A ? imageloader::kSlotNameA
-                                                  : imageloader::kSlotNameB,
+          SystemState::Get()->active_boot_slot() == BootSlot::Slot::A
+              ? imageloader::kSlotNameA
+              : imageloader::kSlotNameB,
           mount_point, nullptr, kImageLoaderTimeoutMs)) {
     *err = Error::Create(kErrorInternal,
                          "Imageloader is unavailable for LoadDlcImage().");
@@ -420,9 +416,7 @@ bool DlcManager::ValidateInactiveImage(const string& id) {
   string mount_point;
   const auto& package = GetDlcPackage(id);
   FilePath inactive_image_path = GetDlcImagePath(
-      content_dir_, id, package,
-      current_boot_slot_ == BootSlot::Slot::A ? BootSlot::Slot::B
-                                              : BootSlot::Slot::A);
+      content_dir_, id, package, SystemState::Get()->inactive_boot_slot());
 
   imageloader::Manifest manifest;
   if (!GetDlcManifest(manifest_dir_, id, package, &manifest)) {
@@ -502,9 +496,9 @@ bool DlcManager::PreloadedCopier(const string& id) {
     }
   }
 
-  // Based on |current_boot_slot_|, copy the preloadable image.
+  // Based on the current boot slot, copy the preloadable image.
   FilePath image_boot_path, image_non_boot_path;
-  switch (current_boot_slot_) {
+  switch (SystemState::Get()->active_boot_slot()) {
     case BootSlot::Slot::A:
       image_boot_path = image_a_path;
       image_non_boot_path = image_b_path;
@@ -547,7 +541,8 @@ bool DlcManager::TryMount(const DlcId& id) {
 
 bool DlcManager::IsActiveImagePresent(const DlcId& id) {
   return base::PathExists(
-      GetDlcImagePath(content_dir_, id, GetDlcPackage(id), current_boot_slot_));
+      GetDlcImagePath(content_dir_, id, GetDlcPackage(id),
+                      SystemState::Get()->active_boot_slot()));
 }
 
 DlcModuleList DlcManager::GetInstalled() {
