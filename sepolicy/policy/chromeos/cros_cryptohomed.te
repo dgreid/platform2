@@ -24,4 +24,3 @@ dev_only(
 auditallow domain cros_home_shadow_uid_root:dir create;
 auditallow domain cros_home_shadow_uid_user:dir create;
 )
-

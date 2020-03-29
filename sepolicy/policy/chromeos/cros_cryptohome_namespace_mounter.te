@@ -1,0 +1,18 @@
+type cros_cryptohome_namespace_mounter, chromeos_domain, domain;
+
+permissive cros_cryptohome_namespace_mounter;
+
+domain_auto_trans(cros_cryptohomed, cros_cryptohome_namespace_mounter_exec, cros_cryptohome_namespace_mounter);
+
+log_writer(cros_cryptohome_namespace_mounter);
+
+filetrans_pattern(cros_cryptohome_namespace_mounter, cros_home, cros_home_shadow, dir, ".shadow");
+filetrans_pattern(cros_cryptohome_namespace_mounter, cros_home_shadow, cros_home_shadow_low_entropy_creds, dir, "low_entropy_creds");
+filetrans_pattern(cros_cryptohome_namespace_mounter, cros_home_shadow, cros_home_shadow_uid, dir);
+filetrans_pattern(cros_cryptohome_namespace_mounter, cros_home_shadow_uid, cros_home_shadow_uid_root, dir, "root");
+filetrans_pattern(cros_cryptohome_namespace_mounter, cros_home_shadow_uid, cros_home_shadow_uid_user, dir, "user");
+filetrans_pattern(cros_cryptohome_namespace_mounter, cros_home_shadow_uid_user, cros_downloads_file, dir, "Downloads");
+filetrans_pattern(cros_cryptohome_namespace_mounter, cros_home_shadow_uid_user, cros_downloads_file, dir, "MyFiles");
+filetrans_pattern(cros_cryptohome_namespace_mounter, cros_home_shadow_uid_root, cros_home_shadow_uid_root_chaps, dir, "chaps");
+filetrans_pattern(cros_cryptohome_namespace_mounter, cros_home_shadow_uid_root, cros_home_shadow_uid_root_usb_bouncer, dir, "usb_bouncer");
+filetrans_pattern(cros_cryptohome_namespace_mounter, cros_home_shadow_uid_root, cros_home_shadow_uid_root_authpolicyd, dir, "authpolicyd");
