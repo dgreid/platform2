@@ -68,8 +68,8 @@ constexpr char kTerminaCpuCgroup[] = "/sys/fs/cgroup/cpu/vms/termina";
 // operations.
 constexpr int kInvalidDiskIndex = -1;
 
-std::unique_ptr<arc_networkd::Subnet>
-MakeSubnet(const patchpanel::IPv4Subnet& subnet) {
+std::unique_ptr<arc_networkd::Subnet> MakeSubnet(
+    const patchpanel::IPv4Subnet& subnet) {
   return std::make_unique<arc_networkd::Subnet>(
       subnet.base_addr(), subnet.prefix_len(), base::DoNothing());
 }
@@ -81,6 +81,7 @@ TerminaVm::TerminaVm(
     std::unique_ptr<patchpanel::Client> network_client,
     std::unique_ptr<SeneschalServerProxy> seneschal_server_proxy,
     base::FilePath runtime_dir,
+    base::FilePath log_path,
     std::string rootfs_device,
     std::string stateful_device,
     uint64_t stateful_size,
@@ -92,7 +93,8 @@ TerminaVm::TerminaVm(
       rootfs_device_(rootfs_device),
       stateful_device_(stateful_device),
       stateful_size_(stateful_size),
-      stateful_resize_type_(DiskResizeType::NONE) {
+      stateful_resize_type_(DiskResizeType::NONE),
+      log_path_(std::move(log_path)) {
   CHECK(base::DirectoryExists(runtime_dir));
 
   // Take ownership of the runtime directory.
@@ -105,6 +107,7 @@ TerminaVm::TerminaVm(
     uint32_t vsock_cid,
     std::unique_ptr<SeneschalServerProxy> seneschal_server_proxy,
     base::FilePath runtime_dir,
+    base::FilePath log_path,
     std::string rootfs_device,
     std::string stateful_device,
     uint64_t stateful_size,
@@ -117,7 +120,8 @@ TerminaVm::TerminaVm(
       rootfs_device_(rootfs_device),
       stateful_device_(stateful_device),
       stateful_size_(stateful_size),
-      stateful_resize_type_(DiskResizeType::NONE) {
+      stateful_resize_type_(DiskResizeType::NONE),
+      log_path_(std::move(log_path)) {
   CHECK(subnet_);
   CHECK(base::DirectoryExists(runtime_dir));
 
@@ -138,13 +142,14 @@ std::unique_ptr<TerminaVm> TerminaVm::Create(
     std::unique_ptr<patchpanel::Client> network_client,
     std::unique_ptr<SeneschalServerProxy> seneschal_server_proxy,
     base::FilePath runtime_dir,
+    base::FilePath log_path,
     std::string rootfs_device,
     std::string stateful_device,
     uint64_t stateful_size,
     VmFeatures features) {
   auto vm = base::WrapUnique(new TerminaVm(
       vsock_cid, std::move(network_client), std::move(seneschal_server_proxy),
-      std::move(runtime_dir), std::move(rootfs_device),
+      std::move(runtime_dir), std::move(log_path), std::move(rootfs_device),
       std::move(stateful_device), std::move(stateful_size), features));
 
   if (!vm->Start(std::move(kernel), std::move(rootfs), cpus,
@@ -159,14 +164,20 @@ std::string TerminaVm::GetVmSocketPath() const {
   return runtime_dir_.GetPath().Append(kCrosvmSocket).value();
 }
 
+std::string TerminaVm::GetCrosVmSerial() const {
+  if (log_path_.empty()) {
+    return "type=syslog,num=1";
+  }
+  return "type=file,num=1,path=" + log_path_.value();
+}
+
 bool TerminaVm::Start(base::FilePath kernel,
                       base::FilePath rootfs,
                       int32_t cpus,
                       std::vector<TerminaVm::Disk> disks) {
   // Get the network interface.
   patchpanel::IPv4Subnet container_subnet;
-  if (!network_client_->NotifyTerminaVmStartup(vsock_cid_,
-                                               &network_device_,
+  if (!network_client_->NotifyTerminaVmStartup(vsock_cid_, &network_device_,
                                                &container_subnet)) {
     LOG(ERROR) << "No network devices available";
     return false;
@@ -175,9 +186,8 @@ bool TerminaVm::Start(base::FilePath kernel,
   container_subnet_ = MakeSubnet(container_subnet);
 
   // Open the tap device.
-  base::ScopedFD tap_fd =
-      OpenTapDevice(network_device_.ifname(), true /*vnet_hdr*/,
-                    nullptr /*ifname_out*/);
+  base::ScopedFD tap_fd = OpenTapDevice(
+      network_device_.ifname(), true /*vnet_hdr*/, nullptr /*ifname_out*/);
   if (!tap_fd.is_valid()) {
     LOG(ERROR) << "Unable to open and configure TAP device "
                << network_device_.ifname();
@@ -194,7 +204,7 @@ bool TerminaVm::Start(base::FilePath kernel,
       "--cid",          std::to_string(vsock_cid_),
       "--socket",       GetVmSocketPath(),
       "--wayland-sock", kWaylandSocket,
-      "--serial",       "type=syslog,num=1",
+      "--serial",       GetCrosVmSerial(),
       "--syslog-tag",   base::StringPrintf("VM(%u)", vsock_cid_),
       "--params",      "snd_intel8x0.inside_vm=1 snd_intel8x0.ac97_clock=48000",
   };
@@ -848,6 +858,7 @@ std::unique_ptr<TerminaVm> TerminaVm::CreateForTesting(
     std::unique_ptr<arc_networkd::Subnet> subnet,
     uint32_t vsock_cid,
     base::FilePath runtime_dir,
+    base::FilePath log_path,
     std::string rootfs_device,
     std::string stateful_device,
     uint64_t stateful_size,
@@ -860,7 +871,7 @@ std::unique_ptr<TerminaVm> TerminaVm::CreateForTesting(
   };
   auto vm = base::WrapUnique(new TerminaVm(
       std::move(subnet), vsock_cid, nullptr, std::move(runtime_dir),
-      std::move(rootfs_device), std::move(stateful_device),
+      std::move(log_path), std::move(rootfs_device), std::move(stateful_device),
       std::move(stateful_size), features));
   vm->set_kernel_version_for_testing(kernel_version);
   vm->set_stub_for_testing(std::move(stub));

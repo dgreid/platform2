@@ -38,6 +38,7 @@
 #include <base/files/file_enumerator.h>
 #include <base/files/file_path.h>
 #include <base/files/file_util.h>
+#include <base/format_macros.h>
 #include <base/guid.h>
 #include <base/location.h>
 #include <base/logging.h>
@@ -106,6 +107,9 @@ constexpr base::TimeDelta kVmStartupTimeout = base::TimeDelta::FromSeconds(30);
 
 // crosvm directory name.
 constexpr char kCrosvmDir[] = "crosvm";
+
+// crosvm log directory name.
+constexpr char kCrosvmLogDir[] = "crosvm/log";
 
 // Plugin VM directory name.
 constexpr char kPluginVmDir[] = "pvm";
@@ -608,6 +612,36 @@ KernelVersionAndMajorRevision GetKernelVersion() {
   result = base::StringToInt(versions[1], &major_revision);
   DCHECK(result);
   return std::make_pair(version, major_revision);
+}
+
+base::FilePath GetVmLogPath(const std::string& owner_id,
+                            const std::string& vm_name,
+                            bool log_to_cryptohome = false) {
+  if (!log_to_cryptohome) {
+    return base::FilePath();
+  }
+  std::string encoded_vm_name;
+  base::Base64UrlEncode(vm_name, base::Base64UrlEncodePolicy::OMIT_PADDING,
+                        &encoded_vm_name);
+
+  base::FilePath path =
+      base::FilePath(kCryptohomeRoot)
+          .Append(owner_id)
+          .Append(kCrosvmLogDir)
+          .Append(base::StringPrintf(
+              "%s-%s-%" PRId64 ".log", kCrosvmDir, encoded_vm_name.c_str(),
+              base::Time::Now().ToDeltaSinceWindowsEpoch().InMicroseconds()));
+
+  base::FilePath parent_dir = path.DirName();
+  if (!base::DirectoryExists(parent_dir)) {
+    base::File::Error dir_error;
+    if (!base::CreateDirectoryAndGetError(parent_dir, &dir_error)) {
+      LOG(ERROR) << "Failed to create crosvm/log directory in /home/root: "
+                 << base::File::ErrorToString(dir_error);
+      return base::FilePath();
+    }
+  }
+  return path;
 }
 
 }  // namespace
@@ -1273,6 +1307,8 @@ std::unique_ptr<dbus::Response> Service::StartVm(
     return dbus_response;
   }
 
+  base::FilePath log_path = GetVmLogPath(request.owner_id(), request.name());
+
   // Allocate resources for the VM.
   uint32_t vsock_cid = vsock_cid_pool_.Allocate();
   if (vsock_cid == 0) {
@@ -1329,7 +1365,7 @@ std::unique_ptr<dbus::Response> Service::StartVm(
   auto vm = TerminaVm::Create(
       std::move(kernel), std::move(rootfs), cpus, std::move(disks), vsock_cid,
       std::move(network_client), std::move(server_proxy),
-      std::move(runtime_dir), std::move(rootfs_device),
+      std::move(runtime_dir), std::move(log_path), std::move(rootfs_device),
       std::move(stateful_device), std::move(stateful_size), features);
   if (!vm) {
     LOG(ERROR) << "Unable to start VM";

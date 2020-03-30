@@ -19,7 +19,8 @@ namespace syslog {
 // and then forwarding them to the host syslog daemon.
 class Forwarder final : public LogCollector::Service {
  public:
-  explicit Forwarder(base::ScopedFD destination);
+  explicit Forwarder(base::ScopedFD destination,
+                     bool is_socket_destination = true);
   ~Forwarder() override = default;
 
   // vm_tools::LogCollector::Service overrides.
@@ -37,6 +38,7 @@ class Forwarder final : public LogCollector::Service {
                            bool is_kernel);
 
   base::ScopedFD destination_;
+  const bool is_socket_destination_;
 
   DISALLOW_COPY_AND_ASSIGN(Forwarder);
 };

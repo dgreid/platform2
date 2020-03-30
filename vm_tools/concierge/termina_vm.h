@@ -82,6 +82,7 @@ class TerminaVm final : public VmBaseImpl {
       std::unique_ptr<patchpanel::Client> network_client,
       std::unique_ptr<SeneschalServerProxy> seneschal_server_proxy,
       base::FilePath runtime_dir,
+      base::FilePath log_path,
       std::string rootfs_device,
       std::string stateful_device,
       uint64_t stateful_size,
@@ -206,6 +207,7 @@ class TerminaVm final : public VmBaseImpl {
       std::unique_ptr<arc_networkd::Subnet> subnet,
       uint32_t vsock_cid,
       base::FilePath runtime_dir,
+      base::FilePath log_path,
       std::string rootfs_device,
       std::string stateful_device,
       uint64_t stateful_size,
@@ -217,6 +219,7 @@ class TerminaVm final : public VmBaseImpl {
             std::unique_ptr<patchpanel::Client> network_client,
             std::unique_ptr<SeneschalServerProxy> seneschal_server_proxy,
             base::FilePath runtime_dir,
+            base::FilePath log_path,
             std::string rootfs_device,
             std::string stateful_device,
             uint64_t stateful_size,
@@ -227,6 +230,7 @@ class TerminaVm final : public VmBaseImpl {
             uint32_t vsock_cid,
             std::unique_ptr<SeneschalServerProxy> seneschal_server_proxy,
             base::FilePath runtime_dir,
+            base::FilePath log_path,
             std::string rootfs_device,
             std::string stateful_device,
             uint64_t stateful_size,
@@ -235,6 +239,10 @@ class TerminaVm final : public VmBaseImpl {
   void HandleSuspendDone() override;
   // Returns the path to the VM control socket.
   std::string GetVmSocketPath() const;
+
+  // Returns the string value of the 'serial' arg passed to crosvm.
+  // If |log_path_| is empty, syslog will be used.
+  std::string GetCrosVmSerial() const;
 
   // Starts the VM with the given kernel and root file system.
   bool Start(base::FilePath kernel,
@@ -302,6 +310,8 @@ class TerminaVm final : public VmBaseImpl {
   // if no resize is currently in progress).
   vm_tools::concierge::DiskImageStatus last_stateful_resize_status_ =
       DiskImageStatus::DISK_STATUS_RESIZED;
+
+  base::FilePath log_path_;
 
   DISALLOW_COPY_AND_ASSIGN(TerminaVm);
 };
