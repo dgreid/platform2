@@ -52,6 +52,8 @@ static_library("libsmbfs") {
     "kerberos_client.h",
     "mojo_session.cc",
     "mojo_session.h",
+    "recursive_delete_operation.cc",
+    "recursive_delete_operation.h",
     "request.cc",
     "request.h",
     "samba_interface.h",
@@ -88,6 +90,7 @@ generate_dbus_proxies("dbus_bindings") {
 
 source_set("mojo_bindings_traits") {
   sources = [
+    "mojom/file_path_mojom_traits.h",
     "mojom/password_mojom_traits.h",
   ]
 }
@@ -95,6 +98,7 @@ source_set("mojo_bindings_traits") {
 generate_mojom_bindings("mojo_bindings") {
   mojo_root = "${platform2_root}"
   sources = [
+    "mojom/file_path.mojom",
     "mojom/ip_address.mojom",
     "mojom/smbfs.mojom",
   ]
@@ -136,6 +140,7 @@ if (use.test) {
       "fake_kerberos_artifact_client.h",
       "inode_map_test.cc",
       "kerberos_artifact_synchronizer_test.cc",
+      "recursive_delete_operation_test.cc",
       "samba_interface_impl_test.cc",
       "smb_filesystem_test.cc",
       "smbfs_bootstrap_impl_test.cc",

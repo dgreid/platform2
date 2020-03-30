@@ -15,7 +15,9 @@
 #include <unordered_map>
 #include <vector>
 
+#include <base/callback.h>
 #include <base/containers/mru_cache.h>
+#include <base/files/file_path.h>
 #include <base/macros.h>
 #include <base/memory/weak_ptr.h>
 #include <base/synchronization/lock.h>
@@ -26,6 +28,7 @@
 
 #include "smbfs/filesystem.h"
 #include "smbfs/inode_map.h"
+#include "smbfs/recursive_delete_operation.h"
 #include "smbfs/smb_credential.h"
 
 namespace smbfs {
@@ -153,6 +156,15 @@ class SmbFilesystem : public Filesystem {
              fuse_ino_t parent_inode,
              const std::string& name) override;
 
+  // mojom::SmbFs helpers.
+  //
+  // Recursively deletes |path| and all of its contents if it is a directory.
+  // |path| is an absolute path from the root of the share (ie. it does not
+  // include the smb://host portion). |callback| is called with the outcome of
+  // the operation.
+  void DeleteRecursively(const base::FilePath& path,
+                         RecursiveDeleteOperation::CompletionCallback callback);
+
  protected:
   // Protected constructor for unit tests.
   SmbFilesystem(Delegate* delegate, const std::string& share_path);
@@ -235,6 +247,16 @@ class SmbFilesystem : public Filesystem {
                      fuse_ino_t parent_inode,
                      const std::string& name);
 
+  // mojom::SmbFs helpers that execute on |samba_thread_|.
+  void DeleteRecursivelyInternal(
+      const base::FilePath& path,
+      RecursiveDeleteOperation::CompletionCallback callback);
+
+  // Called on completion of the recursive delete.
+  void OnDeleteRecursivelyDone(
+      RecursiveDeleteOperation::CompletionCallback callback,
+      mojom::DeleteRecursivelyError error);
+
   // Constructs a sanitised stat struct for sending as a response.
   struct stat MakeStat(ino_t inode, const struct stat& in_stat) const;
 
@@ -311,6 +333,10 @@ class SmbFilesystem : public Filesystem {
   std::atomic<bool> connected_{false};
   // Flag to ensure only one credential request is active at a time.
   bool requesting_credentials_ = false;
+
+  // At most one outstanding recursive delete operation can be in flight. This
+  // object must live entirely on |samba_thread_|.
+  std::unique_ptr<RecursiveDeleteOperation> recursive_delete_operation_;
 
   base::WeakPtrFactory<SmbFilesystem> weak_factory_{this};
 

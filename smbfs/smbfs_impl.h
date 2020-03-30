@@ -5,6 +5,8 @@
 #ifndef SMBFS_SMBFS_IMPL_H_
 #define SMBFS_SMBFS_IMPL_H_
 
+#include <string>
+
 #include <base/files/file_path.h>
 #include <base/macros.h>
 #include <base/memory/weak_ptr.h>
@@ -28,6 +30,8 @@ class SmbFsImpl : public mojom::SmbFs {
  private:
   // mojom::SmbFs overrides.
   void RemoveSavedCredentials(RemoveSavedCredentialsCallback callback) override;
+  void DeleteRecursively(const base::FilePath& path,
+                         DeleteRecursivelyCallback callback) override;
 
   base::WeakPtr<SmbFilesystem> fs_;
   mojo::Binding<mojom::SmbFs> binding_;

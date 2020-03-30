@@ -1095,6 +1095,44 @@ void SmbFilesystem::RmDirinternal(std::unique_ptr<SimpleRequest> request,
   request->ReplyOk();
 }
 
+void SmbFilesystem::DeleteRecursively(
+    const base::FilePath& path,
+    RecursiveDeleteOperation::CompletionCallback callback) {
+  samba_thread_.task_runner()->PostTask(
+      FROM_HERE,
+      base::BindOnce(&SmbFilesystem::DeleteRecursivelyInternal,
+                     base::Unretained(this), path, std::move(callback)));
+}
+
+void SmbFilesystem::DeleteRecursivelyInternal(
+    const base::FilePath& path,
+    RecursiveDeleteOperation::CompletionCallback callback) {
+  if (recursive_delete_operation_) {
+    VLOG(1)
+        << "Can't start a recursive delete operation whilst one is in progress";
+    main_task_runner_->PostTask(
+        FROM_HERE,
+        base::BindOnce(std::move(callback),
+                       mojom::DeleteRecursivelyError::kOperationInProgress));
+    return;
+  }
+
+  recursive_delete_operation_.reset(new RecursiveDeleteOperation(
+      samba_impl_.get(), MakeShareFilePath(base::FilePath("/")), path,
+      base::BindOnce(&SmbFilesystem::OnDeleteRecursivelyDone,
+                     base::Unretained(this), std::move(callback))));
+  recursive_delete_operation_->Start();
+}
+
+void SmbFilesystem::OnDeleteRecursivelyDone(
+    RecursiveDeleteOperation::CompletionCallback callback,
+    mojom::DeleteRecursivelyError error) {
+  CHECK(recursive_delete_operation_);
+  recursive_delete_operation_.reset();
+  main_task_runner_->PostTask(FROM_HERE,
+                              base::BindOnce(std::move(callback), error));
+}
+
 std::ostream& operator<<(std::ostream& out, SmbFilesystem::ConnectError error) {
   switch (error) {
     case SmbFilesystem::ConnectError::kOk:

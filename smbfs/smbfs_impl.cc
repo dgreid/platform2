@@ -2,10 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "smbfs/smb_filesystem.h"
 #include "smbfs/smbfs_impl.h"
 
 #include <utility>
 
+#include <base/bind.h>
+#include <base/files/file_path.h>
 #include <base/files/file_util.h>
 #include <base/logging.h>
 
@@ -32,6 +35,14 @@ void SmbFsImpl::RemoveSavedCredentials(
   bool success = base::DeleteFile(password_file_path_, false /* recursive */);
   LOG_IF(WARNING, !success) << "Unable to erase credential file";
   std::move(callback).Run(success);
+}
+
+void SmbFsImpl::DeleteRecursively(const base::FilePath& path,
+                                  DeleteRecursivelyCallback callback) {
+  CHECK(path.IsAbsolute());
+  CHECK(!path.ReferencesParent());
+
+  fs_->DeleteRecursively(path, std::move(callback));
 }
 
 }  // namespace smbfs
