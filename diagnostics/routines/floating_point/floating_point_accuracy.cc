@@ -20,7 +20,7 @@ constexpr char kFloatingPointAccuracyTestExePath[] =
 }  // namespace
 
 std::unique_ptr<DiagnosticRoutine> CreateFloatingPointAccuracyRoutine(
-    const base::TimeDelta& exec_duration) {
+    base::TimeDelta exec_duration) {
   std::string duration_value = std::to_string(exec_duration.InSeconds());
   return std::make_unique<SubprocRoutine>(
       base::CommandLine(std::vector<std::string>{

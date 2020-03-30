@@ -18,7 +18,7 @@ constexpr char kCpuRoutineExePath[] = "/usr/bin/stressapptest";
 }  // namespace
 
 std::unique_ptr<DiagnosticRoutine> CreateCpuStressRoutine(
-    const base::TimeDelta& exec_duration) {
+    base::TimeDelta exec_duration) {
   uint32_t duration_in_seconds = exec_duration.InSeconds();
   std::vector<std::string> cmd{kCpuRoutineExePath, "-W", "-s",
                                std::to_string(duration_in_seconds)};

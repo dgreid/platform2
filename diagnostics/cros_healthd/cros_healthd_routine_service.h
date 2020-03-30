@@ -62,15 +62,15 @@ class CrosHealthdRoutineService {
       int32_t* id,
       MojomCrosHealthdDiagnosticRoutineStatusEnum* status) = 0;
   virtual void RunCpuCacheRoutine(
-      const base::TimeDelta& exec_duration,
+      base::TimeDelta exec_duration,
       int32_t* id,
       MojomCrosHealthdDiagnosticRoutineStatusEnum* status) = 0;
   virtual void RunCpuStressRoutine(
-      const base::TimeDelta& exec_duration,
+      base::TimeDelta exec_duration,
       int32_t* id,
       MojomCrosHealthdDiagnosticRoutineStatusEnum* status) = 0;
   virtual void RunFloatingPointAccuracyRoutine(
-      const base::TimeDelta& exec_duration,
+      base::TimeDelta exec_duration,
       int32_t* id,
       MojomCrosHealthdDiagnosticRoutineStatusEnum* status) = 0;
   virtual void RunNvmeWearLevelRoutine(
@@ -83,12 +83,12 @@ class CrosHealthdRoutineService {
       MojomCrosHealthdDiagnosticRoutineStatusEnum* status) = 0;
   virtual void RunDiskReadRoutine(
       chromeos::cros_healthd::mojom::DiskReadRoutineTypeEnum type,
-      const base::TimeDelta& exec_duration,
+      base::TimeDelta exec_duration,
       uint32_t file_size_mb,
       int32_t* id,
       MojomCrosHealthdDiagnosticRoutineStatusEnum* status) = 0;
   virtual void RunPrimeSearchRoutine(
-      const base::TimeDelta& exec_duration,
+      base::TimeDelta exec_duration,
       uint64_t max_num,
       int32_t* id,
       MojomCrosHealthdDiagnosticRoutineStatusEnum* status) = 0;

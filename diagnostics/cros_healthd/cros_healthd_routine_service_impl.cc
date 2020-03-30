@@ -83,21 +83,21 @@ void CrosHealthdRoutineServiceImpl::RunAcPowerRoutine(
 }
 
 void CrosHealthdRoutineServiceImpl::RunCpuCacheRoutine(
-    const base::TimeDelta& exec_duration,
+    base::TimeDelta exec_duration,
     int32_t* id,
     mojo_ipc::DiagnosticRoutineStatusEnum* status) {
   RunRoutine(routine_factory_->MakeCpuCacheRoutine(exec_duration), id, status);
 }
 
 void CrosHealthdRoutineServiceImpl::RunCpuStressRoutine(
-    const base::TimeDelta& exec_duration,
+    base::TimeDelta exec_duration,
     int32_t* id,
     mojo_ipc::DiagnosticRoutineStatusEnum* status) {
   RunRoutine(routine_factory_->MakeCpuStressRoutine(exec_duration), id, status);
 }
 
 void CrosHealthdRoutineServiceImpl::RunFloatingPointAccuracyRoutine(
-    const base::TimeDelta& exec_duration,
+    base::TimeDelta exec_duration,
     int32_t* id,
     mojo_ipc::DiagnosticRoutineStatusEnum* status) {
   RunRoutine(routine_factory_->MakeFloatingPointAccuracyRoutine(exec_duration),
@@ -124,7 +124,7 @@ void CrosHealthdRoutineServiceImpl::RunNvmeSelfTestRoutine(
 
 void CrosHealthdRoutineServiceImpl::RunDiskReadRoutine(
     mojo_ipc::DiskReadRoutineTypeEnum type,
-    const base::TimeDelta& exec_duration,
+    base::TimeDelta exec_duration,
     uint32_t file_size_mb,
     int32_t* id,
     mojo_ipc::DiagnosticRoutineStatusEnum* status) {
@@ -134,7 +134,7 @@ void CrosHealthdRoutineServiceImpl::RunDiskReadRoutine(
 }
 
 void CrosHealthdRoutineServiceImpl::RunPrimeSearchRoutine(
-    const base::TimeDelta& exec_duration,
+    base::TimeDelta exec_duration,
     uint64_t max_num,
     int32_t* id,
     mojo_ipc::DiagnosticRoutineStatusEnum* status) {

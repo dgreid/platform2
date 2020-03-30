@@ -225,19 +225,19 @@ FakeCrosHealthdRoutineFactory::MakeAcPowerRoutine(
 
 std::unique_ptr<DiagnosticRoutine>
 FakeCrosHealthdRoutineFactory::MakeCpuCacheRoutine(
-    const base::TimeDelta& exec_duration) {
+    base::TimeDelta exec_duration) {
   return std::move(next_routine_);
 }
 
 std::unique_ptr<DiagnosticRoutine>
 FakeCrosHealthdRoutineFactory::MakeCpuStressRoutine(
-    const base::TimeDelta& exec_duration) {
+    base::TimeDelta exec_duration) {
   return std::move(next_routine_);
 }
 
 std::unique_ptr<DiagnosticRoutine>
 FakeCrosHealthdRoutineFactory::MakeFloatingPointAccuracyRoutine(
-    const base::TimeDelta& exec_duration) {
+    base::TimeDelta exec_duration) {
   return std::move(next_routine_);
 }
 
@@ -259,14 +259,14 @@ FakeCrosHealthdRoutineFactory::MakeNvmeSelfTestRoutine(
 std::unique_ptr<DiagnosticRoutine>
 FakeCrosHealthdRoutineFactory::MakeDiskReadRoutine(
     mojo_ipc::DiskReadRoutineTypeEnum type,
-    const base::TimeDelta& exec_duration,
+    base::TimeDelta exec_duration,
     uint32_t file_size_mb) {
   return std::move(next_routine_);
 }
 
 std::unique_ptr<DiagnosticRoutine>
 FakeCrosHealthdRoutineFactory::MakePrimeSearchRoutine(
-    const base::TimeDelta& exec_duration, uint64_t max_num) {
+    base::TimeDelta exec_duration, uint64_t max_num) {
   return std::move(next_routine_);
 }
 

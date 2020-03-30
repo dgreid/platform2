@@ -12,7 +12,7 @@
 namespace diagnostics {
 
 std::unique_ptr<DiagnosticRoutine> CreateFloatingPointAccuracyRoutine(
-    const base::TimeDelta& exec_duration);
+    base::TimeDelta exec_duration);
 
 }  // namespace diagnostics
 

@@ -46,15 +46,15 @@ class CrosHealthdRoutineFactory {
   // Constructs a new instance of the CPU cache routine. See
   // diagnostics/routines/cpu_cache for details on the routine itself.
   virtual std::unique_ptr<DiagnosticRoutine> MakeCpuCacheRoutine(
-      const base::TimeDelta& exec_duration) = 0;
+      base::TimeDelta exec_duration) = 0;
   // Constructs a new instance of the CPU stress routine. See
   // diagnostics/routines/cpu_stress for details on the routine itself.
   virtual std::unique_ptr<DiagnosticRoutine> MakeCpuStressRoutine(
-      const base::TimeDelta& exec_duration) = 0;
+      base::TimeDelta exec_duration) = 0;
   // Constructs a new instance of the floating point accuracy routine. See
   // diagnostics/routines/floating_point for details on the routine itself.
   virtual std::unique_ptr<DiagnosticRoutine> MakeFloatingPointAccuracyRoutine(
-      const base::TimeDelta& exec_duration) = 0;
+      base::TimeDelta exec_duration) = 0;
   // Constructs a new instance of the nvme_wear_level routine. See
   // diagnostics/routines/nvme_wear_level for details on the routine itself.
   virtual std::unique_ptr<DiagnosticRoutine> MakeNvmeWearLevelRoutine(
@@ -69,12 +69,12 @@ class CrosHealthdRoutineFactory {
   // diagnostics/routines/disk_read for details on the routine itself.
   virtual std::unique_ptr<DiagnosticRoutine> MakeDiskReadRoutine(
       chromeos::cros_healthd::mojom::DiskReadRoutineTypeEnum type,
-      const base::TimeDelta& exec_duration,
+      base::TimeDelta exec_duration,
       uint32_t file_size_mb) = 0;
   // Constructs a new instance of the prime search routine. See
   // diagnostics/routines/prime_search for details on the routine itself.
   virtual std::unique_ptr<DiagnosticRoutine> MakePrimeSearchRoutine(
-      const base::TimeDelta& exec_duration, uint64_t max_num) = 0;
+      base::TimeDelta exec_duration, uint64_t max_num) = 0;
 };
 
 }  // namespace diagnostics

@@ -133,16 +133,14 @@ bool DiagActions::ActionRunBatteryHealthRoutine(
   return PollRoutineAndProcessResult();
 }
 
-bool DiagActions::ActionRunCpuCacheRoutine(
-    const base::TimeDelta& exec_duration) {
+bool DiagActions::ActionRunCpuCacheRoutine(base::TimeDelta exec_duration) {
   auto response = adapter_.RunCpuCacheRoutine(exec_duration);
   CHECK(response) << "No RunRoutineResponse received.";
   id_ = response->id;
   return PollRoutineAndProcessResult();
 }
 
-bool DiagActions::ActionRunCpuStressRoutine(
-    const base::TimeDelta& exec_duration) {
+bool DiagActions::ActionRunCpuStressRoutine(base::TimeDelta exec_duration) {
   auto response = adapter_.RunCpuStressRoutine(exec_duration);
   CHECK(response) << "No RunRoutineResponse received.";
   id_ = response->id;
@@ -151,7 +149,7 @@ bool DiagActions::ActionRunCpuStressRoutine(
 
 bool DiagActions::ActionRunDiskReadRoutine(
     mojo_ipc::DiskReadRoutineTypeEnum type,
-    const base::TimeDelta& exec_duration,
+    base::TimeDelta exec_duration,
     uint32_t file_size_mb) {
   auto response =
       adapter_.RunDiskReadRoutine(type, exec_duration, file_size_mb);
@@ -161,7 +159,7 @@ bool DiagActions::ActionRunDiskReadRoutine(
 }
 
 bool DiagActions::ActionRunFloatingPointAccuracyRoutine(
-    const base::TimeDelta& exec_duration) {
+    base::TimeDelta exec_duration) {
   auto response = adapter_.RunFloatingPointAccuracyRoutine(exec_duration);
   CHECK(response) << "No RunRoutineResponse received.";
   id_ = response->id;
@@ -183,8 +181,8 @@ bool DiagActions::ActionRunNvmeWearLevelRoutine(uint32_t wear_level_threshold) {
   return PollRoutineAndProcessResult();
 }
 
-bool DiagActions::ActionRunPrimeSearchRoutine(
-    const base::TimeDelta& exec_duration, uint64_t max_num) {
+bool DiagActions::ActionRunPrimeSearchRoutine(base::TimeDelta exec_duration,
+                                              uint64_t max_num) {
   auto response = adapter_.RunPrimeSearchRoutine(exec_duration, max_num);
   id_ = response->id;
   CHECK(response) << "No RunRoutineResponse received.";

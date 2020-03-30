@@ -77,15 +77,15 @@ class MockCrosHealthdRoutineService : public CrosHealthdRoutineService {
                     int32_t* id,
                     mojo_ipc::DiagnosticRoutineStatusEnum* status));
   MOCK_METHOD3(RunCpuCacheRoutine,
-               void(const base::TimeDelta& exec_duration,
+               void(base::TimeDelta exec_duration,
                     int32_t* id,
                     mojo_ipc::DiagnosticRoutineStatusEnum* status));
   MOCK_METHOD3(RunCpuStressRoutine,
-               void(const base::TimeDelta& exec_duration,
+               void(base::TimeDelta exec_duration,
                     int32_t* id,
                     mojo_ipc::DiagnosticRoutineStatusEnum* status));
   MOCK_METHOD3(RunFloatingPointAccuracyRoutine,
-               void(const base::TimeDelta& exec_duration,
+               void(base::TimeDelta exec_duration,
                     int32_t* id,
                     mojo_ipc::DiagnosticRoutineStatusEnum* status));
   MOCK_METHOD3(RunNvmeWearLevelRoutine,
@@ -98,12 +98,12 @@ class MockCrosHealthdRoutineService : public CrosHealthdRoutineService {
                     mojo_ipc::DiagnosticRoutineStatusEnum* status));
   MOCK_METHOD5(RunDiskReadRoutine,
                void(mojo_ipc::DiskReadRoutineTypeEnum type,
-                    const base::TimeDelta& exec_duration,
+                    base::TimeDelta exec_duration,
                     uint32_t file_size_mb,
                     int32_t* id,
                     mojo_ipc::DiagnosticRoutineStatusEnum* status));
   MOCK_METHOD4(RunPrimeSearchRoutine,
-               void(const base::TimeDelta& exec_duration,
+               void(base::TimeDelta exec_duration,
                     uint64_t max_num,
                     int32_t* id,
                     mojo_ipc::DiagnosticRoutineStatusEnum* status));

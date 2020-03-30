@@ -13,7 +13,7 @@
 namespace diagnostics {
 
 std::unique_ptr<DiagnosticRoutine> CreateCpuStressRoutine(
-    const base::TimeDelta& exec_duration);
+    base::TimeDelta exec_duration);
 
 }  // namespace diagnostics
 

@@ -54,19 +54,19 @@ CrosHealthdRoutineFactoryImpl::MakeAcPowerRoutine(
 
 std::unique_ptr<DiagnosticRoutine>
 CrosHealthdRoutineFactoryImpl::MakeCpuCacheRoutine(
-    const base::TimeDelta& exec_duration) {
+    base::TimeDelta exec_duration) {
   return CreateCpuCacheRoutine(exec_duration);
 }
 
 std::unique_ptr<DiagnosticRoutine>
 CrosHealthdRoutineFactoryImpl::MakeCpuStressRoutine(
-    const base::TimeDelta& exec_duration) {
+    base::TimeDelta exec_duration) {
   return CreateCpuStressRoutine(exec_duration);
 }
 
 std::unique_ptr<DiagnosticRoutine>
 CrosHealthdRoutineFactoryImpl::MakeFloatingPointAccuracyRoutine(
-    const base::TimeDelta& exec_duration) {
+    base::TimeDelta exec_duration) {
   return CreateFloatingPointAccuracyRoutine(exec_duration);
 }
 
@@ -96,14 +96,14 @@ CrosHealthdRoutineFactoryImpl::MakeNvmeSelfTestRoutine(
 std::unique_ptr<DiagnosticRoutine>
 CrosHealthdRoutineFactoryImpl::MakeDiskReadRoutine(
     chromeos::cros_healthd::mojom::DiskReadRoutineTypeEnum type,
-    const base::TimeDelta& exec_duration,
+    base::TimeDelta exec_duration,
     uint32_t file_size_mb) {
   return CreateDiskReadRoutine(type, exec_duration, file_size_mb);
 }
 
 std::unique_ptr<DiagnosticRoutine>
 CrosHealthdRoutineFactoryImpl::MakePrimeSearchRoutine(
-    const base::TimeDelta& exec_duration, uint64_t max_num) {
+    base::TimeDelta exec_duration, uint64_t max_num) {
   return CreatePrimeSearchRoutine(exec_duration, max_num);
 }
 

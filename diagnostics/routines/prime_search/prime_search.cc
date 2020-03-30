@@ -20,7 +20,7 @@ constexpr char kPrimeSearchExePath[] = "/usr/libexec/diagnostics/prime-search";
 }  // namespace
 
 std::unique_ptr<DiagnosticRoutine> CreatePrimeSearchRoutine(
-    const base::TimeDelta& exec_duration, uint64_t max_num) {
+    base::TimeDelta exec_duration, uint64_t max_num) {
   return std::make_unique<SubprocRoutine>(
       base::CommandLine(std::vector<std::string>{
           kPrimeSearchExePath,

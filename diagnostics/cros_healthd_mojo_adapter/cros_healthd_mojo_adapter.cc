@@ -194,8 +194,7 @@ CrosHealthdMojoAdapter::RunAcPowerRoutine(
 }
 
 chromeos::cros_healthd::mojom::RunRoutineResponsePtr
-CrosHealthdMojoAdapter::RunCpuCacheRoutine(
-    const base::TimeDelta& exec_duration) {
+CrosHealthdMojoAdapter::RunCpuCacheRoutine(base::TimeDelta exec_duration) {
   if (!cros_healthd_service_factory_.is_bound())
     Connect();
 
@@ -212,8 +211,7 @@ CrosHealthdMojoAdapter::RunCpuCacheRoutine(
 }
 
 chromeos::cros_healthd::mojom::RunRoutineResponsePtr
-CrosHealthdMojoAdapter::RunCpuStressRoutine(
-    const base::TimeDelta& exec_duration) {
+CrosHealthdMojoAdapter::RunCpuStressRoutine(base::TimeDelta exec_duration) {
   if (!cros_healthd_service_factory_.is_bound())
     Connect();
 
@@ -231,7 +229,7 @@ CrosHealthdMojoAdapter::RunCpuStressRoutine(
 
 chromeos::cros_healthd::mojom::RunRoutineResponsePtr
 CrosHealthdMojoAdapter::RunFloatingPointAccuracyRoutine(
-    const base::TimeDelta& exec_duration) {
+    base::TimeDelta exec_duration) {
   if (!cros_healthd_service_factory_.is_bound())
     Connect();
 
@@ -285,7 +283,7 @@ CrosHealthdMojoAdapter::RunNvmeSelfTestRoutine(
 chromeos::cros_healthd::mojom::RunRoutineResponsePtr
 CrosHealthdMojoAdapter::RunDiskReadRoutine(
     chromeos::cros_healthd::mojom::DiskReadRoutineTypeEnum type,
-    const base::TimeDelta& exec_duration,
+    base::TimeDelta exec_duration,
     uint32_t file_size_mb) {
   if (!cros_healthd_service_factory_.is_bound())
     Connect();
@@ -303,8 +301,8 @@ CrosHealthdMojoAdapter::RunDiskReadRoutine(
 }
 
 chromeos::cros_healthd::mojom::RunRoutineResponsePtr
-CrosHealthdMojoAdapter::RunPrimeSearchRoutine(
-    const base::TimeDelta& exec_duration, uint64_t max_num) {
+CrosHealthdMojoAdapter::RunPrimeSearchRoutine(base::TimeDelta exec_duration,
+                                              uint64_t max_num) {
   if (!cros_healthd_service_factory_.is_bound())
     Connect();
 

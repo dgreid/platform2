@@ -12,7 +12,7 @@
 namespace diagnostics {
 
 std::unique_ptr<DiagnosticRoutine> CreatePrimeSearchRoutine(
-    const base::TimeDelta& exec_duration, uint64_t max_num);
+    base::TimeDelta exec_duration, uint64_t max_num);
 
 }  // namespace diagnostics
 

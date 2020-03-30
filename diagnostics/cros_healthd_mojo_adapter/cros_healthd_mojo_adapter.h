@@ -54,11 +54,11 @@ class CrosHealthdMojoAdapter final {
 
   // Runs the CPU cache routine.
   chromeos::cros_healthd::mojom::RunRoutineResponsePtr RunCpuCacheRoutine(
-      const base::TimeDelta& exec_duration);
+      base::TimeDelta exec_duration);
 
   // Runs the CPU stress routine.
   chromeos::cros_healthd::mojom::RunRoutineResponsePtr RunCpuStressRoutine(
-      const base::TimeDelta& exec_duration);
+      base::TimeDelta exec_duration);
 
   // Runs the NvmeWearLevel routine.
   chromeos::cros_healthd::mojom::RunRoutineResponsePtr RunNvmeWearLevelRoutine(
@@ -71,12 +71,12 @@ class CrosHealthdMojoAdapter final {
   // Runs the disk read routine.
   chromeos::cros_healthd::mojom::RunRoutineResponsePtr RunDiskReadRoutine(
       chromeos::cros_healthd::mojom::DiskReadRoutineTypeEnum type,
-      const base::TimeDelta& exec_duration,
+      base::TimeDelta exec_duration,
       uint32_t file_size_mb);
 
   // Runs the prime search routine.
   chromeos::cros_healthd::mojom::RunRoutineResponsePtr RunPrimeSearchRoutine(
-      const base::TimeDelta& exec_duration, uint64_t max_num);
+      base::TimeDelta exec_duration, uint64_t max_num);
 
   // Returns which routines are available on the platform.
   std::vector<chromeos::cros_healthd::mojom::DiagnosticRoutineEnum>
@@ -90,7 +90,7 @@ class CrosHealthdMojoAdapter final {
 
   // Runs the floating-point-accuracy routine.
   chromeos::cros_healthd::mojom::RunRoutineResponsePtr
-  RunFloatingPointAccuracyRoutine(const base::TimeDelta& exec_duration);
+  RunFloatingPointAccuracyRoutine(base::TimeDelta exec_duration);
 
  private:
   // Establishes a mojo connection with cros_healthd.

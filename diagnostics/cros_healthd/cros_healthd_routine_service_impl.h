@@ -54,15 +54,15 @@ class CrosHealthdRoutineServiceImpl final : public CrosHealthdRoutineService {
       int32_t* id,
       MojomCrosHealthdDiagnosticRoutineStatusEnum* status) override;
   void RunCpuCacheRoutine(
-      const base::TimeDelta& exec_duration,
+      base::TimeDelta exec_duration,
       int32_t* id,
       MojomCrosHealthdDiagnosticRoutineStatusEnum* status) override;
   void RunCpuStressRoutine(
-      const base::TimeDelta& exec_duration,
+      base::TimeDelta exec_duration,
       int32_t* id,
       MojomCrosHealthdDiagnosticRoutineStatusEnum* status) override;
   void RunFloatingPointAccuracyRoutine(
-      const base::TimeDelta& exec_duration,
+      base::TimeDelta exec_duration,
       int32_t* id,
       MojomCrosHealthdDiagnosticRoutineStatusEnum* status) override;
   void RunNvmeWearLevelRoutine(
@@ -75,12 +75,12 @@ class CrosHealthdRoutineServiceImpl final : public CrosHealthdRoutineService {
       MojomCrosHealthdDiagnosticRoutineStatusEnum* status) override;
   void RunDiskReadRoutine(
       chromeos::cros_healthd::mojom::DiskReadRoutineTypeEnum type,
-      const base::TimeDelta& exec_duration,
+      base::TimeDelta exec_duration,
       uint32_t file_size_mb,
       int32_t* id,
       MojomCrosHealthdDiagnosticRoutineStatusEnum* status) override;
   void RunPrimeSearchRoutine(
-      const base::TimeDelta& exec_duration,
+      base::TimeDelta exec_duration,
       uint64_t max_num,
       int32_t* id,
       MojomCrosHealthdDiagnosticRoutineStatusEnum* status) override;

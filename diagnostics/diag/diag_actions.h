@@ -42,18 +42,17 @@ class DiagActions final {
   bool ActionRunBatteryCapacityRoutine(uint32_t low_mah, uint32_t high_mah);
   bool ActionRunBatteryHealthRoutine(uint32_t maximum_cycle_count,
                                      uint32_t percent_battery_wear_allowed);
-  bool ActionRunCpuCacheRoutine(const base::TimeDelta& exec_duration);
+  bool ActionRunCpuCacheRoutine(base::TimeDelta exec_duration);
   bool ActionRunDiskReadRoutine(
       chromeos::cros_healthd::mojom::DiskReadRoutineTypeEnum type,
-      const base::TimeDelta& exec_duration,
+      base::TimeDelta exec_duration,
       uint32_t file_size_mb);
-  bool ActionRunCpuStressRoutine(const base::TimeDelta& exec_duration);
-  bool ActionRunFloatingPointAccuracyRoutine(
-      const base::TimeDelta& exec_duration);
+  bool ActionRunCpuStressRoutine(base::TimeDelta exec_duration);
+  bool ActionRunFloatingPointAccuracyRoutine(base::TimeDelta exec_duration);
   bool ActionRunNvmeSelfTestRoutine(
       chromeos::cros_healthd::mojom::NvmeSelfTestTypeEnum nvme_self_test_type);
   bool ActionRunNvmeWearLevelRoutine(uint32_t wear_level_threshold);
-  bool ActionRunPrimeSearchRoutine(const base::TimeDelta& exec_duration,
+  bool ActionRunPrimeSearchRoutine(base::TimeDelta exec_duration,
                                    uint64_t max_num);
   bool ActionRunSmartctlCheckRoutine();
   bool ActionRunUrandomRoutine(uint32_t length_seconds);

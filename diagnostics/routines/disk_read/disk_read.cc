@@ -32,7 +32,7 @@ namespace diagnostics {
 
 std::unique_ptr<DiagnosticRoutine> CreateDiskReadRoutine(
     chromeos::cros_healthd::mojom::DiskReadRoutineTypeEnum type,
-    const base::TimeDelta& exec_duration,
+    base::TimeDelta exec_duration,
     uint32_t file_size_mb) {
   std::vector<std::string> prepare_cmd{
       kFioExePath,
