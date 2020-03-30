@@ -15,6 +15,7 @@
 #include <utility>
 
 #include <base/bind.h>
+#include "base/files/scoped_file.h"
 #include <base/logging.h>
 #include <base/message_loop/message_loop.h>
 #include <base/strings/string_number_conversions.h>
@@ -25,6 +26,7 @@
 #include <brillo/minijail/minijail.h>
 
 #include "arc/network/ipc.pb.h"
+#include "arc/network/routing_service.h"
 
 namespace arc_networkd {
 namespace {
@@ -186,6 +188,7 @@ void Manager::InitialSetup() {
       {patchpanel::kTerminaVmShutdownMethod, &Manager::OnTerminaVmShutdown},
       {patchpanel::kPluginVmStartupMethod, &Manager::OnPluginVmStartup},
       {patchpanel::kPluginVmShutdownMethod, &Manager::OnPluginVmShutdown},
+      {patchpanel::kSetVpnIntentMethod, &Manager::OnSetVpnIntent},
   };
 
   for (const auto& kv : kServiceMethods) {
@@ -225,6 +228,8 @@ void Manager::InitialSetup() {
     LOG(ERROR) << "Failed to update net.ipv6.conf.all.proxy_ndp."
                << " IPv6 functionality may be broken.";
   }
+
+  routing_svc_ = std::make_unique<RoutingService>();
 
   nd_proxy_->RegisterDeviceMessageHandler(base::Bind(
       &Manager::OnDeviceMessageFromNDProxy, weak_factory_.GetWeakPtr()));
@@ -631,6 +636,34 @@ std::unique_ptr<dbus::Response> Manager::OnPluginVmShutdown(
 
   StopCrosVm(request.id(), GuestMessage::PLUGIN_VM);
 
+  writer.AppendProtoAsArrayOfBytes(response);
+  return dbus_response;
+}
+
+std::unique_ptr<dbus::Response> Manager::OnSetVpnIntent(
+    dbus::MethodCall* method_call) {
+  std::unique_ptr<dbus::Response> dbus_response(
+      dbus::Response::FromMethodCall(method_call));
+
+  dbus::MessageReader reader(method_call);
+  dbus::MessageWriter writer(dbus_response.get());
+
+  patchpanel::SetVpnIntentRequest request;
+  patchpanel::SetVpnIntentResponse response;
+
+  bool success = reader.PopArrayOfBytesAsProto(&request);
+  if (!success) {
+    LOG(ERROR) << "Unable to parse SetVpnIntentRequest";
+    // Do not return yet to make sure we close the received fd.
+  }
+
+  base::ScopedFD client_socket;
+  reader.PopFileDescriptor(&client_socket);
+
+  if (success)
+    success = routing_svc_->SetVpnFwmark(client_socket.get(), request.policy());
+
+  response.set_success(success);
   writer.AppendProtoAsArrayOfBytes(response);
   return dbus_response;
 }

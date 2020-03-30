@@ -16,6 +16,8 @@
 
 namespace patchpanel {
 
+// Simple wrapper around patchpanel DBus API. All public functions are
+// blocking DBus calls to patchpaneld.
 class BRILLO_EXPORT Client {
  public:
   static std::unique_ptr<Client> New();
@@ -40,9 +42,25 @@ class BRILLO_EXPORT Client {
                              patchpanel::Device* device);
   bool NotifyPluginVmShutdown(uint64_t vm_id);
 
+  // Reset the VPN routing intent mark on a socket to the default policy for
+  // the current uid. This is in general incorrect to call this method for
+  // a socket that is already connected.
+  bool DefaultVpnRouting(int socket);
+
+  // Mark a socket to be always routed through a VPN if there is one.
+  // Must be called before the socket is connected.
+  bool RouteOnVpn(int socket);
+
+  // Mark a socket to be always routed through the physical network.
+  // Must be called before the socket is connected.
+  bool BypassVpn(int socket);
+
  private:
   scoped_refptr<dbus::Bus> bus_;
   dbus::ObjectProxy* proxy_ = nullptr;  // owned by bus_
+
+  bool SendSetVpnIntentRequest(int socket,
+                               SetVpnIntentRequest::VpnRoutingPolicy policy);
 
   DISALLOW_COPY_AND_ASSIGN(Client);
 };

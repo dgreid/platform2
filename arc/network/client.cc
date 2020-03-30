@@ -294,4 +294,52 @@ bool Client::NotifyPluginVmShutdown(uint64_t vm_id) {
   return true;
 }
 
+bool Client::DefaultVpnRouting(int socket) {
+  return SendSetVpnIntentRequest(socket, SetVpnIntentRequest::DEFAULT_ROUTING);
+}
+
+bool Client::RouteOnVpn(int socket) {
+  return SendSetVpnIntentRequest(socket, SetVpnIntentRequest::ROUTE_ON_VPN);
+}
+
+bool Client::BypassVpn(int socket) {
+  return SendSetVpnIntentRequest(socket, SetVpnIntentRequest::BYPASS_VPN);
+}
+
+bool Client::SendSetVpnIntentRequest(
+    int socket, SetVpnIntentRequest::VpnRoutingPolicy policy) {
+  dbus::MethodCall method_call(kPatchPanelInterface, kSetVpnIntentMethod);
+  dbus::MessageWriter writer(&method_call);
+
+  SetVpnIntentRequest request;
+  SetVpnIntentResponse response;
+  request.set_policy(policy);
+
+  if (!writer.AppendProtoAsArrayOfBytes(request)) {
+    LOG(ERROR) << "Failed to encode SetVpnIntentRequest proto";
+    return false;
+  }
+  writer.AppendFileDescriptor(socket);
+
+  std::unique_ptr<dbus::Response> dbus_response = proxy_->CallMethodAndBlock(
+      &method_call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT);
+  if (!dbus_response) {
+    LOG(ERROR)
+        << "Failed to send SetVpnIntentRequest message to patchpanel service";
+    return false;
+  }
+
+  dbus::MessageReader reader(dbus_response.get());
+  if (!reader.PopArrayOfBytesAsProto(&response)) {
+    LOG(ERROR) << "Failed to parse SetVpnIntentResponse proto";
+    return false;
+  }
+
+  if (!response.success()) {
+    LOG(ERROR) << "SetVpnIntentRequest failed";
+    return false;
+  }
+  return true;
+}
+
 }  // namespace patchpanel

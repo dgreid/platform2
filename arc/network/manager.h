@@ -21,6 +21,7 @@
 #include "arc/network/arc_service.h"
 #include "arc/network/crostini_service.h"
 #include "arc/network/helper_process.h"
+#include "arc/network/routing_service.h"
 #include "arc/network/shill_client.h"
 #include "arc/network/socket.h"
 #include "arc/network/traffic_forwarder.h"
@@ -113,12 +114,16 @@ class Manager final : public brillo::DBusDaemon, private TrafficForwarder {
   std::unique_ptr<dbus::Response> OnPluginVmShutdown(
       dbus::MethodCall* method_call);
 
+  // Handles DBus requests for setting a VPN intent fwmark on a socket.
+  std::unique_ptr<dbus::Response> OnSetVpnIntent(dbus::MethodCall* method_call);
+
   // Dispatch |msg| to child processes.
   void SendGuestMessage(const GuestMessage& msg);
 
   friend std::ostream& operator<<(std::ostream& stream, const Manager& manager);
 
   std::unique_ptr<ShillClient> shill_client_;
+  std::unique_ptr<RoutingService> routing_svc_;
 
   // Guest services.
   std::unique_ptr<ArcService> arc_svc_;
