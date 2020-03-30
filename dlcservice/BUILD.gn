@@ -76,11 +76,11 @@ static_library("libdlcservice") {
     "boot/boot_slot.cc",
     "daemon.cc",
     "dbus_adaptors/dbus_adaptor.cc",
+    "dlc.cc",
     "dlc_manager.cc",
     "dlc_service.cc",
     "error.cc",
     "system_state.cc",
-    "types.cc",
   ]
   deps = [
     ":dlcservice_adaptors",

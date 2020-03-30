@@ -22,7 +22,6 @@ namespace dlcservice {
 
 extern char kDlcDirAName[];
 extern char kDlcDirBName[];
-extern char kDlcPreloadAllowedName[];
 
 // Important DLC file names.
 extern char kDlcImageFileName[];
@@ -34,6 +33,9 @@ extern char kRootDirectoryInsideDlcModule[];
 // Permissions for DLC files and directories.
 extern const int kDlcFilePerms;
 extern const int kDlcDirectoryPerms;
+
+// Timeout in ms for DBus method calls into imageloader.
+extern const int kImageLoaderTimeoutMs;
 
 template <typename BindedCallback>
 class ScopedCleanups {
@@ -93,10 +95,6 @@ bool GetDlcManifest(const base::FilePath& dlc_manifest_path,
                     const std::string& package,
                     imageloader::Manifest* manifest_out);
 
-// Returns the directory inside a DLC module which is mounted at
-// |dlc_mount_point|.
-base::FilePath GetDlcRoot(const base::FilePath& dlc_mount_point);
-
 // Scans a directory and returns all its subdirectory names in a list.
 std::set<std::string> ScanDirectory(const base::FilePath& dir);
 
@@ -104,13 +102,7 @@ std::set<std::string> ScanDirectory(const base::FilePath& dir);
 // a return value of true indicates insertion into |DlcModuleList|.
 dlcservice::DlcModuleList ToDlcModuleList(
     const DlcMap& dlcs,
-    const std::function<bool(const DlcId&, const DlcInfo&)>& filter);
-
-// Converts a |DlcModuleList| into a |DlcMap| based on filtering logic where
-// a return value of true indicates insertion into |DlcMap|.
-DlcMap ToDlcMap(
-    const dlcservice::DlcModuleList& dlc_module_list,
-    const std::function<bool(const dlcservice::DlcModuleInfo&)>& filter);
+    const std::function<bool(const DlcId&, const DlcBase&)>& filter);
 
 // Converts a |DlcModuleList| into a |DlcSet| based on filtering logic where
 // a return value of true indicates insertion into |DlcSet|.

@@ -51,7 +51,7 @@ DlcService::~DlcService() {
 }
 
 void DlcService::LoadDlcModuleImages() {
-  dlc_manager_->LoadDlcModuleImages();
+  dlc_manager_->PreloadDlcModuleImages();
 }
 
 bool DlcService::Install(const DlcModuleList& dlc_module_list_in,

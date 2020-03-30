@@ -19,15 +19,8 @@ using DlcId = std::string;
 // |DlcRoot| is the root within the mount point of the DLC.
 using DlcRoot = std::string;
 
-// |DlcInfo| holds information related to a DLC.
-struct DlcInfo {
-  explicit DlcInfo(const DlcState::State& state_in = DlcState::NOT_INSTALLED,
-                   const DlcRoot& root_in = "");
-  DlcState state;
-  DlcRoot root;
-};
-
-using DlcMap = std::map<DlcId, DlcInfo>;
+class DlcBase;
+using DlcMap = std::map<DlcId, DlcBase>;
 using DlcSet = std::set<DlcId>;
 
 }  // namespace dlcservice

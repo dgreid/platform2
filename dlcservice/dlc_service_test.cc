@@ -273,21 +273,17 @@ class DlcServiceTest : public testing::Test {
   DISALLOW_COPY_AND_ASSIGN(DlcServiceTest);
 };
 
-class DlcServiceSkipLoadTest : public DlcServiceTest {
- public:
-  // Need this to skip calling |LoadDlcModuleImages()|.
-  void SetUp() override { ConstructDlcService(); }
-};
-
 class DlcServiceSkipConstructionTest : public DlcServiceTest {
  public:
   // Need this to skip construction of |DlcService|.
   void SetUp() override {}
 };
 
-TEST_F(DlcServiceSkipLoadTest, PreloadAllowedDlcTest) {
+TEST_F(DlcServiceSkipConstructionTest, PreloadAllowedDlcTest) {
   SetUpDlcPreloadAllowed(kFirstDlc, kPackage);
   SetUpDlcWithoutSlots(preloaded_content_path_, kFirstDlc, kPackage);
+  ConstructDlcService();
+
   EXPECT_CALL(*mock_image_loader_proxy_ptr_, LoadDlcImage(_, _, _, _, _, _))
       .WillOnce(DoAll(SetArgPointee<3>(mount_path_.value()), Return(true)));
   EXPECT_CALL(*mock_update_engine_proxy_ptr_,
@@ -309,10 +305,12 @@ TEST_F(DlcServiceSkipLoadTest, PreloadAllowedDlcTest) {
   CheckDlcState(kFirstDlc, DlcState::INSTALLED);
 }
 
-TEST_F(DlcServiceSkipLoadTest, PreloadAllowedWithBadPreinstalledDlcTest) {
+TEST_F(DlcServiceSkipConstructionTest,
+       PreloadAllowedWithBadPreinstalledDlcTest) {
   SetUpDlcWithSlots(content_path_, kFirstDlc, kPackage);
   SetUpDlcPreloadAllowed(kFirstDlc, kPackage);
   SetUpDlcWithoutSlots(preloaded_content_path_, kFirstDlc, kPackage);
+  ConstructDlcService();
   EXPECT_CALL(*mock_image_loader_proxy_ptr_, LoadDlcImage(_, _, _, _, _, _))
       .WillOnce(DoAll(SetArgPointee<3>(mount_path_.value()), Return(true)));
   EXPECT_CALL(*mock_update_engine_proxy_ptr_,
@@ -334,8 +332,9 @@ TEST_F(DlcServiceSkipLoadTest, PreloadAllowedWithBadPreinstalledDlcTest) {
   CheckDlcState(kFirstDlc, DlcState::INSTALLED);
 }
 
-TEST_F(DlcServiceSkipLoadTest, PreloadNotAllowedDlcTest) {
+TEST_F(DlcServiceSkipConstructionTest, PreloadNotAllowedDlcTest) {
   SetUpDlcWithoutSlots(preloaded_content_path_, kFirstDlc, kPackage);
+  ConstructDlcService();
 
   dlc_service_->LoadDlcModuleImages();
 

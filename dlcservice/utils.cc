@@ -16,6 +16,7 @@
 #include <base/logging.h>
 #include <brillo/file_utils.h>
 
+#include "dlcservice/dlc.h"
 #include "dlcservice/dlc_service.h"
 
 using base::FilePath;
@@ -39,7 +40,6 @@ bool SetFilePermissions(const base::FilePath& path, int perms) {
 
 char kDlcDirAName[] = "dlc_a";
 char kDlcDirBName[] = "dlc_b";
-char kDlcPreloadAllowedName[] = "preload_allowed";
 
 char kDlcImageFileName[] = "dlc.img";
 char kManifestName[] = "imageloader.json";
@@ -48,6 +48,8 @@ char kRootDirectoryInsideDlcModule[] = "root";
 
 const int kDlcFilePerms = 0644;
 const int kDlcDirectoryPerms = 0755;
+
+const int kImageLoaderTimeoutMs = 5000;
 
 bool WriteToFile(const FilePath& path, const string& data) {
   base::ScopedFD fd(
@@ -115,8 +117,8 @@ bool ResizeFile(const base::FilePath& path, int64_t size) {
 bool CreateDir(const base::FilePath& path) {
   base::File::Error file_err;
   if (!base::CreateDirectoryAndGetError(path, &file_err)) {
-    LOG(ERROR) << "Failed to create directory '" << path.value()
-               << "': " << base::File::ErrorToString(file_err);
+    PLOG(ERROR) << "Failed to create directory '" << path.value()
+                << "': " << base::File::ErrorToString(file_err);
     return false;
   }
   return SetFilePermissions(path, kDlcDirectoryPerms);
@@ -184,10 +186,6 @@ bool GetDlcManifest(const FilePath& dlc_manifest_path,
   return true;
 }
 
-FilePath GetDlcRoot(const FilePath& dlc_mount_point) {
-  return JoinPaths(dlc_mount_point, kRootDirectoryInsideDlcModule);
-}
-
 set<string> ScanDirectory(const FilePath& dir) {
   set<string> result;
   base::FileEnumerator file_enumerator(dir, false,
@@ -201,28 +199,18 @@ set<string> ScanDirectory(const FilePath& dir) {
 
 DlcModuleList ToDlcModuleList(
     const DlcMap& dlcs,
-    const std::function<bool(const DlcId&, const DlcInfo&)>& filter) {
+    const std::function<bool(const DlcId&, const DlcBase&)>& filter) {
   DlcModuleList dlc_module_list;
-  auto f = [&dlc_module_list, filter](const pair<DlcId, DlcInfo>& pr) {
+  auto f = [&dlc_module_list,
+            filter](const pair<const DlcId&, const DlcBase&>& pr) {
     if (filter(pr.first, pr.second)) {
       DlcModuleInfo* dlc_module_info = dlc_module_list.add_dlc_module_infos();
       dlc_module_info->set_dlc_id(pr.first);
-      dlc_module_info->set_dlc_root(pr.second.root);
+      dlc_module_info->set_dlc_root(pr.second.GetRoot().value());
     }
   };
   for_each(begin(dlcs), end(dlcs), f);
   return dlc_module_list;
-}
-
-DlcMap ToDlcMap(const DlcModuleList& dlc_module_list,
-                const std::function<bool(const DlcModuleInfo&)>& filter) {
-  DlcMap m;
-  for (const DlcModuleInfo& dlc_module : dlc_module_list.dlc_module_infos()) {
-    if (filter(dlc_module))
-      m.emplace(dlc_module.dlc_id(),
-                DlcInfo{DlcState::NOT_INSTALLED, dlc_module.dlc_root()});
-  }
-  return m;
 }
 
 DlcSet ToDlcSet(const dlcservice::DlcModuleList& dlc_module_list,

@@ -5,14 +5,12 @@
 #ifndef DLCSERVICE_DLC_MANAGER_H_
 #define DLCSERVICE_DLC_MANAGER_H_
 
-#include <memory>
 #include <string>
 
-#include <base/files/file_path.h>
+#include <base/macros.h>
+#include <brillo/errors/error.h>
 #include <dlcservice/proto_bindings/dlcservice.pb.h>
-#include <imageloader/dbus-proxies.h>
 
-#include "dlcservice/boot/boot_slot.h"
 #include "dlcservice/types.h"
 
 namespace dlcservice {
@@ -20,7 +18,7 @@ namespace dlcservice {
 class DlcManager {
  public:
   DlcManager();
-  ~DlcManager();
+  virtual ~DlcManager();
 
   // Returns true when an install is currently running.
   // If the desire is to |Initnstall()| again, then |FinishInstall()| or
@@ -36,8 +34,9 @@ class DlcManager {
   // Returns true and sets |state| if the DLC is supported.
   bool GetState(const DlcId& id, DlcState* state, brillo::ErrorPtr* err);
 
+  // TODO(ahassani): Fix comment
   // Loads installed DLC module images.
-  void LoadDlcModuleImages();
+  void PreloadDlcModuleImages();
 
   // DLC Installation Flow
 
@@ -98,42 +97,10 @@ class DlcManager {
   //   otherwise false. Deleting a valid DLC that's not installed is considered
   //   successfully uninstalled, however uninstalling a DLC that's not supported
   //   is a failure. Uninstalling a DLC that is installing is also a failure.
-  bool Delete(const std::string& id, brillo::ErrorPtr* err);
+  bool Delete(const DlcId& id, brillo::ErrorPtr* err);
 
  private:
   bool IsSupported(const DlcId& id);
-  DlcInfo GetInfo(const DlcId& id);
-  void PreloadDlcModuleImages();
-  void LoadDlcModuleImagesInternal();
-  bool InitInstallInternal(const DlcSet& requested_install,
-                           brillo::ErrorPtr* err);
-  bool DeleteInternal(const std::string& id, brillo::ErrorPtr* err);
-  bool Mount(const std::string& id,
-             std::string* mount_point,
-             brillo::ErrorPtr* err);
-  bool Unmount(const std::string& id, brillo::ErrorPtr* err);
-  std::string GetDlcPackage(const DlcId& id);
-  void SetNotInstalled(const DlcId& id);
-  void SetInstalling(const DlcId& id);
-  void SetInstalled(const DlcId& id, const DlcRoot& root);
-  bool IsDlcPreloadAllowed(const base::FilePath& dlc_manifest_path,
-                           const std::string& id);
-  bool CreateDlcPackagePath(const std::string& id,
-                            const std::string& package,
-                            brillo::ErrorPtr* err);
-  bool Create(const std::string& id, brillo::ErrorPtr* err);
-  bool ValidateInactiveImage(const std::string& id);
-  bool PreloadedCopier(const std::string& id);
-  bool TryMount(const DlcId& id);
-  bool IsActiveImagePresent(const DlcId& id);
-
-  org::chromium::ImageLoaderInterfaceProxyInterface* image_loader_proxy_;
-
-  base::FilePath manifest_dir_;
-  base::FilePath preloaded_content_dir_;
-  base::FilePath content_dir_;
-
-  BootSlot::Slot current_boot_slot_;
 
   DlcMap supported_;
 
