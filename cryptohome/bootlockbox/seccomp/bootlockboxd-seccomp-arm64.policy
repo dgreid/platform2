@@ -56,7 +56,6 @@ prlimit64: arg2 == 0 && arg3 != 0
 clone: 1
 getresgid: 1
 sysinfo: 1
-gettimeofday: 1
 clock_gettime: 1
 getrandom: 1
 madvise: 1
