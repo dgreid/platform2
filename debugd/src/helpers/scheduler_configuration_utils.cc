@@ -303,10 +303,9 @@ bool SchedulerConfigurationUtils::UpdateAllCPUSets() {
   }
 
   for (const auto& scoped_fd : cpusets_fds_) {
-    if (!base::WriteFileDescriptor(scoped_fd.get(), online_cpus_str.data(),
-                                   online_cpus_str.size())) {
-      PLOG(WARNING) << "Failed to update a cpuset file";
-    }
+    // This is a best effort, so if it fails, continue on.
+    base::WriteFileDescriptor(scoped_fd.get(), online_cpus_str.data(),
+                                   online_cpus_str.size());
   }
 
   return true;
