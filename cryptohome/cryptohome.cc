@@ -425,6 +425,8 @@ bool GetProfile(const base::CommandLine* cl,
     *profile = cryptohome::CAST_CERTIFICATE;
   } else if (profile_str == "gfsc") {
     *profile = cryptohome::GFSC_CERTIFICATE;
+  } else if (profile_str == "jetstream") {
+    *profile = cryptohome::JETSTREAM_CERTIFICATE;
   } else {
     printf("Unknown certificate profile: %s.\n", profile_str.c_str());
     return false;
