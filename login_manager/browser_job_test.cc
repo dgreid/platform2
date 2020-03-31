@@ -18,6 +18,7 @@
 #include <base/command_line.h>
 #include <base/logging.h>
 #include <base/optional.h>
+#include <base/stl_util.h>
 #include <base/strings/string_util.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -99,8 +100,8 @@ const char BrowserJobTest::kHash[] = "fake_hash";
 const char BrowserJobTest::kChromeMountNamespacePath[] = "mnt_chrome";
 
 void BrowserJobTest::SetUp() {
-  argv_ =
-      std::vector<std::string>(kArgv, kArgv + arraysize(BrowserJobTest::kArgv));
+  argv_ = std::vector<std::string>(kArgv,
+                                   kArgv + base::size(BrowserJobTest::kArgv));
   expected_argv_ = argv_;
   // ExportArgv always adds --enable-crashpad or --no-enable-crashpad. It adds
   // --enable-crashpad since the config has kAlwaysUseCrashpad.
@@ -377,9 +378,7 @@ TEST_F(BrowserJobTest, StartStopMultiSessionTest) {
 }
 
 TEST_F(BrowserJobTest, StartStopSessionFromLoginTest) {
-  const char* kArgvWithLoginFlag[] = {"zero", "one", "two", "--login-manager"};
-  std::vector<std::string> argv(
-      kArgvWithLoginFlag, kArgvWithLoginFlag + arraysize(kArgvWithLoginFlag));
+  std::vector<std::string> argv = {"zero", "one", "two", "--login-manager"};
   std::vector<std::string> expected_argv(argv);
   expected_argv.emplace(expected_argv.begin(), BrowserJob::kForceCrashpadFlag);
   BrowserJob job(
@@ -404,8 +403,7 @@ TEST_F(BrowserJobTest, StartStopSessionFromLoginTest) {
 }
 
 TEST_F(BrowserJobTest, SetArguments) {
-  const char* kNewArgs[] = {"--ichi", "--ni dfs", "--san"};
-  std::vector<std::string> new_args(kNewArgs, kNewArgs + arraysize(kNewArgs));
+  std::vector<std::string> new_args = {"--ichi", "--ni dfs", "--san"};
   job_->SetArguments(new_args);
 
   std::vector<std::string> expected_args(new_args);
@@ -413,7 +411,7 @@ TEST_F(BrowserJobTest, SetArguments) {
   std::vector<std::string> job_args = job_->ExportArgv();
   ASSERT_EQ(expected_args.size(), job_args.size());
   EXPECT_EQ(kArgv[0], job_args[0]);
-  for (size_t i = 1; i < arraysize(kNewArgs); ++i) {
+  for (size_t i = 1; i < new_args.size(); ++i) {
     EXPECT_EQ(expected_args[i], job_args[i]);
   }
 
@@ -423,9 +421,7 @@ TEST_F(BrowserJobTest, SetArguments) {
 }
 
 TEST_F(BrowserJobTest, SetExtraArguments) {
-  const char* kExtraArgs[] = {"--ichi", "--ni", "--san"};
-  std::vector<std::string> extra_args(kExtraArgs,
-                                      kExtraArgs + arraysize(kExtraArgs));
+  std::vector<std::string> extra_args = {"--ichi", "--ni", "--san"};
   job_->SetExtraArguments(extra_args);
 
   std::vector<std::string> job_args = job_->ExportArgv();
@@ -435,15 +431,13 @@ TEST_F(BrowserJobTest, SetExtraArguments) {
 }
 
 TEST_F(BrowserJobTest, ExportArgv) {
-  std::vector<std::string> argv(kArgv, kArgv + arraysize(kArgv));
+  std::vector<std::string> argv(kArgv, kArgv + base::size(kArgv));
   BrowserJob job(
       argv, env_, &checker_, &metrics_, &utils_,
       BrowserJob::Config{false, false, kAlwaysUseCrashpad, base::nullopt},
       std::make_unique<login_manager::Subprocess>(1, &utils_));
 
-  const char* kExtraArgs[] = {"--ichi", "--ni", "--san"};
-  std::vector<std::string> extra_args(kExtraArgs,
-                                      kExtraArgs + arraysize(kExtraArgs));
+  std::vector<std::string> extra_args = {"--ichi", "--ni", "--san"};
   argv.insert(argv.end(), extra_args.begin(), extra_args.end());
   job.SetExtraArguments(extra_args);
   std::vector<std::string> expected_argv(argv);
@@ -452,7 +446,7 @@ TEST_F(BrowserJobTest, ExportArgv) {
 }
 
 TEST_F(BrowserJobTest, SetExtraEnvironmentVariables) {
-  std::vector<std::string> argv(kArgv, kArgv + arraysize(kArgv));
+  std::vector<std::string> argv(kArgv, kArgv + base::size(kArgv));
   BrowserJob job(
       argv, {"A=a"}, &checker_, &metrics_, &utils_,
       BrowserJob::Config{false, false, kAlwaysUseCrashpad, base::nullopt},
@@ -474,12 +468,8 @@ TEST_F(BrowserJobTest, CombineVModuleArgs) {
     const char* kVmodule2 = "--vmodule=file3=3,file4=4,file5=5";
     const char* kVmodule3 = "--vmodule=file6=6";
 
-    const char* kMultipleVmoduleArgs[] = {kArg1,     kVmodule1, kArg2, kArg3,
-                                          kVmodule2, kVmodule3, kArg4};
-
-    std::vector<std::string> argv(
-        kMultipleVmoduleArgs,
-        kMultipleVmoduleArgs + arraysize(kMultipleVmoduleArgs));
+    std::vector<std::string> argv = {kArg1,     kVmodule1, kArg2, kArg3,
+                                     kVmodule2, kVmodule3, kArg4};
     BrowserJob job(
         argv, env_, &checker_, &metrics_, &utils_,
         BrowserJob::Config{false, false, kAlwaysUseCrashpad, base::nullopt},
@@ -497,10 +487,7 @@ TEST_F(BrowserJobTest, CombineVModuleArgs) {
     // A testcase with 1 --vmodule flag.
     const char* kVmodule = "--vmodule=my_file=1";
 
-    const char* kArgsPlusVmodule[] = {kArg1, kVmodule, kArg2, kArg3, kArg4};
-
-    std::vector<std::string> argv(
-        kArgsPlusVmodule, kArgsPlusVmodule + arraysize(kArgsPlusVmodule));
+    std::vector<std::string> argv = {kArg1, kVmodule, kArg2, kArg3, kArg4};
     BrowserJob job(
         argv, env_, &checker_, &metrics_, &utils_,
         BrowserJob::Config{false, false, kAlwaysUseCrashpad, base::nullopt},
@@ -513,9 +500,7 @@ TEST_F(BrowserJobTest, CombineVModuleArgs) {
 
   {
     // A testcase with no --vmodule flag.
-    const char* kNoVmoduleArgs[] = {kArg1, kArg2, kArg3, kArg4};
-    std::vector<std::string> argv(kNoVmoduleArgs,
-                                  kNoVmoduleArgs + arraysize(kNoVmoduleArgs));
+    std::vector<std::string> argv = {kArg1, kArg2, kArg3, kArg4};
 
     BrowserJob job(
         argv, env_, &checker_, &metrics_, &utils_,
@@ -592,7 +577,7 @@ TEST_F(BrowserJobTest, CombineFeatureArgs) {
 }
 
 TEST_F(BrowserJobTest, AlwaysUseBreakpad) {
-  const std::vector<std::string> argv(kArgv, kArgv + arraysize(kArgv));
+  const std::vector<std::string> argv(kArgv, kArgv + base::size(kArgv));
   BrowserJob job(
       argv, {}, &checker_, &metrics_, &utils_,
       BrowserJob::Config{false, false, kAlwaysUseBreakpad, base::nullopt},
@@ -604,7 +589,7 @@ TEST_F(BrowserJobTest, AlwaysUseBreakpad) {
 }
 
 TEST_F(BrowserJobTest, ChooseCrashHandlerRandomly) {
-  const std::vector<std::string> argv(kArgv, kArgv + arraysize(kArgv));
+  const std::vector<std::string> argv(kArgv, kArgv + base::size(kArgv));
   BrowserJob job(
       argv, {}, &checker_, &metrics_, &utils_,
       BrowserJob::Config{false, false, kChooseRandomly, base::nullopt},
@@ -635,7 +620,7 @@ TEST_F(BrowserJobTest, ChooseCrashHandlerRandomly) {
 }
 
 TEST_F(BrowserJobTest, ExtraArgsOverrideBoardCrashHandler) {
-  const std::vector<std::string> argv(kArgv, kArgv + arraysize(kArgv));
+  const std::vector<std::string> argv(kArgv, kArgv + base::size(kArgv));
   struct Test {
     const char* extra_arg;
     BoardCrashHandler board_crash_handler;

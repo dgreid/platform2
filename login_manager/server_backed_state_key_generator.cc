@@ -6,6 +6,7 @@
 
 #include <base/bind.h>
 #include <base/bind_helpers.h>
+#include <base/stl_util.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_split.h>
 #include <base/strings/string_util.h>
@@ -106,7 +107,7 @@ bool ServerBackedStateKeyGenerator::InitMachineInfo(
     const std::map<std::string, std::string>& params) {
   machine_info_available_ = true;
 
-  for (size_t i = 0; i < arraysize(kMachineInfoSerialNumberKeys); i++) {
+  for (size_t i = 0; i < base::size(kMachineInfoSerialNumberKeys); i++) {
     std::string candidate =
         GetMapValue(params, kMachineInfoSerialNumberKeys[i]);
     if (!candidate.empty()) {
