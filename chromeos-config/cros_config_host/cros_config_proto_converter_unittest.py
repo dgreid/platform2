@@ -68,10 +68,25 @@ class TransformBuildConfigsTest(cros_test_lib.TempDirTestCase):
 
   def testMissingLookups(self):
     config = fakeConfig()
+    config.ClearField('programs')
+
+    with self.assertRaisesRegex(Exception, 'Failed to lookup Program'):
+      cros_config_proto_converter._TransformBuildConfigs(config)
+
+  def testMissingBuildTarget(self):
+    config = fakeConfig()
     config.ClearField('build_targets')
 
-    with self.assertRaisesRegex(Exception, 'Failed to lookup BuildTarget'):
+    with self.assertRaisesRegex(Exception, 'Single build_target required'):
       cros_config_proto_converter._TransformBuildConfigs(config)
+
+  def testMultipleBuildTarget(self):
+    config = fakeConfig()
+    duplicate_config = cros_config_proto_converter._MergeConfigs(
+      [config, fakeConfig()])
+
+    with self.assertRaisesRegex(Exception, 'Single build_target required'):
+      cros_config_proto_converter._TransformBuildConfigs(duplicate_config)
 
   def testEmptyDeviceBrand(self):
     config = fakeConfig()
@@ -89,6 +104,8 @@ class TransformBuildConfigsTest(cros_test_lib.TempDirTestCase):
 
   def testUniqueConfigsOnly(self):
     config = fakeConfig()
+    # Get past multiple build_targets check first
+    config.ClearField('build_targets')
     duplicate_config = cros_config_proto_converter._MergeConfigs(
         [config, fakeConfig()])
 

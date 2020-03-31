@@ -221,9 +221,14 @@ def _Lookup(id_value, id_map):
 def _TransformBuildConfigs(config):
   partners = dict([(x.id.value, x) for x in config.partners.value])
   programs = dict([(x.id.value, x) for x in config.programs.value])
-  build_targets = dict([(x.id.value, x) for x in config.build_targets])
   sw_configs = list(config.software_configs)
   brand_configs = dict([(x.brand_id.value, x) for x in config.brand_configs])
+
+  if len(config.build_targets) != 1:
+    # Artifact of sharing the config_bundle for analysis and transforms.
+    # Integrated analysis of multiple programs/projects it the only time
+    # having multiple build targets would be valid.
+    raise Exception('Single build_target required for transform')
 
   results = {}
   for hw_design in config.designs.value:
@@ -259,7 +264,7 @@ def _TransformBuildConfigs(config):
             oem=_Lookup(device_brand.oem_id, partners),
             sw_config=sw_config,
             brand_config=brand_config,
-            build_target=_Lookup(hw_design.build_target_id, build_targets)))
+            build_target=config.build_targets[0]))
 
         config_json = json.dumps(transformed_config,
                                  sort_keys=True,
