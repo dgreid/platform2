@@ -23,7 +23,6 @@ setup(
     entry_points={
         'console_scripts': [
             'cros_config_host = cros_config_host.cros_config_host:main',
-            'cros_config_proto_converter = cros_config_host.cros_config_proto_converter:main',
             'cros_config_schema = cros_config_host.cros_config_schema:main',
             'cros_config_test_schema = \
                 cros_config_host.cros_config_test_schema:main',
