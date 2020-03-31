@@ -127,7 +127,7 @@ bool SetExpectedFileSize(const FilePath& filename, size_t size) {
   if (fd == -1)
     return false;
 
-  string decimal_size = base::UintToString(size);
+  string decimal_size = base::NumberToString(size);
   if (fsetxattr(fd, "user.cros-p2p-filesize", decimal_size.c_str(),
                 decimal_size.size(), 0) != 0) {
     close(fd);

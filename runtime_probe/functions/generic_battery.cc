@@ -81,7 +81,7 @@ int GenericBattery::EvalInHelper(std::string* output) const {
         VLOG(1) << "Can't extract index from " << battery_path.value();
       } else {
         // The extracted index starts from 0. Shift it to start from 1.
-        dict_value.SetString("index", base::IntToString(battery_index + 1));
+        dict_value.SetString("index", base::NumberToString(battery_index + 1));
       }
 
       result.Append(dict_value.CreateDeepCopy());

@@ -176,8 +176,8 @@ void Manager::RunScanImageProcess(
     } else if (property_name == kScanPropertyResolution &&
                property_value.IsTypeCompatible<uint32_t>()) {
       scan_process->AddArg("--resolution");
-      scan_process->AddArg(base::UintToString(
-          property_value.Get<unsigned int>()));
+      scan_process->AddArg(
+          base::NumberToString(property_value.Get<unsigned int>()));
     } else {
       brillo::Error::AddToPrintf(
           error, FROM_HERE,

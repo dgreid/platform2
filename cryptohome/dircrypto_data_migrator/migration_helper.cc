@@ -201,7 +201,7 @@ class MigrationHelper::WorkerPool {
 
     for (size_t i = 0; i < job_threads_.size(); ++i) {
       job_threads_[i] = std::make_unique<base::Thread>(
-          "MigrationHelper worker #" + base::IntToString(i));
+          "MigrationHelper worker #" + base::NumberToString(i));
       base::Thread::Options options;
       options.message_loop_type = base::MessageLoop::TYPE_IO;
       if (!job_threads_[i]->StartWithOptions(options)) {

@@ -496,7 +496,7 @@ bool ObjectStoreImpl::WriteBlob(const string& key, const string& value) {
 }
 
 bool ObjectStoreImpl::WriteInt(const string& key, int value) {
-  return WriteBlob(key, base::IntToString(value));
+  return WriteBlob(key, base::NumberToString(value));
 }
 
 ObjectStoreImpl::BlobType ObjectStoreImpl::GetBlobType(int blob_id) {

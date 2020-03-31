@@ -216,8 +216,8 @@ void IAPFirmwareUpdater::ReadFirmware(std::string filename) {
 bool IAPFirmwareUpdater::EnterBootloader() {
   // Bootloader (IAP mode) can be entered by first asserting the BOOT pin
   // then toggle the reset pin.
-  const std::string bootGPIO = base::IntToString(config.bootGPIO);
-  const std::string resetGPIO = base::IntToString(config.resetGPIO);
+  const std::string bootGPIO = base::NumberToString(config.bootGPIO);
+  const std::string resetGPIO = base::NumberToString(config.resetGPIO);
 
   CHECK(WriteToFile(GPIO_SYS "export", bootGPIO));
   CHECK(WriteToFile(GPIO_SYS "export", resetGPIO));
@@ -241,8 +241,8 @@ bool IAPFirmwareUpdater::EnterBootloader() {
 }
 
 void IAPFirmwareUpdater::LeaveBootLoader() {
-  const std::string bootGPIO = base::IntToString(config.bootGPIO);
-  const std::string resetGPIO = base::IntToString(config.resetGPIO);
+  const std::string bootGPIO = base::NumberToString(config.bootGPIO);
+  const std::string resetGPIO = base::NumberToString(config.resetGPIO);
 
   CHECK(WriteToFile(GPIO_SYS "export", bootGPIO));
   CHECK(WriteToFile(GPIO_SYS "export", resetGPIO));

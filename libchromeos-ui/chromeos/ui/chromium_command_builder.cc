@@ -178,7 +178,8 @@ bool ChromiumCommandBuilder::SetUpChromium() {
     return false;
 
   AddEnvVar("LSB_RELEASE", lsb_data_);
-  AddEnvVar("LSB_RELEASE_TIME", base::IntToString(lsb_release_time_.ToTimeT()));
+  AddEnvVar("LSB_RELEASE_TIME",
+            base::NumberToString(lsb_release_time_.ToTimeT()));
 
   // By default, libdbus treats all warnings as fatal errors. That's too strict.
   AddEnvVar("DBUS_FATAL_WARNINGS", "0");

@@ -1399,17 +1399,17 @@ bool Service::Init(
   if (unix_socket_path_for_testing.has_value()) {
     container_listener_addresses = {
         "unix:" + unix_socket_path_for_testing.value()
-                      .Append(base::IntToString(vm_tools::kGarconPort))
+                      .Append(base::NumberToString(vm_tools::kGarconPort))
                       .value()};
     tremplin_listener_address = {
         "unix:" +
         unix_socket_path_for_testing.value()
-            .Append(base::IntToString(vm_tools::kTremplinListenerPort))
+            .Append(base::NumberToString(vm_tools::kTremplinListenerPort))
             .value()};
-    crash_listener_address = {
-        "unix:" + unix_socket_path_for_testing.value()
-                      .Append(base::IntToString(vm_tools::kCrashListenerPort))
-                      .value()};
+    crash_listener_address = {"unix:" + unix_socket_path_for_testing.value()
+                                            .Append(base::NumberToString(
+                                                vm_tools::kCrashListenerPort))
+                                            .value()};
   }
 
   if (run_grpc_) {
@@ -2051,7 +2051,7 @@ std::unique_ptr<dbus::Response> Service::UninstallPackageOwningFile(
     default:
       response.set_status(UninstallPackageOwningFileResponse::FAILED);
       response.set_failure_reason("Unknown return status " +
-                                  base::IntToString(status));
+                                  base::NumberToString(status));
       break;
   }
 

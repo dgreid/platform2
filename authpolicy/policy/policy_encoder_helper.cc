@@ -218,7 +218,7 @@ void EncodeStringListPolicy(const char* policy_name,
   // Get and check all values. Do this in advance to prevent partial writes.
   std::vector<std::string> string_values;
   for (int index = 0; /* empty */; ++index) {
-    std::string index_str = base::IntToString(index + 1);
+    std::string index_str = base::NumberToString(index + 1);
     const base::Value* value = get_policy_value.Run(index_str);
     if (!value)
       break;

@@ -249,13 +249,13 @@ TEST_F(InputWatcherTest, PowerButton) {
       std::string(InputWatcher::kPowerButtonToSkip) + "0");
   skipped_power_button->set_is_power_button(true);
   int kSkippedPowerButtonEventNum = 0;
-  AddDevice("event" + base::IntToString(kSkippedPowerButtonEventNum),
+  AddDevice("event" + base::NumberToString(kSkippedPowerButtonEventNum),
             skipped_power_button, kLegacyPowerButtonSysfsFile.value());
 
   linked_ptr<EventDeviceStub> power_button(new EventDeviceStub);
   power_button->set_is_power_button(true);
   int kNormalPowerButtonEventNum = 1;
-  AddDevice("event" + base::IntToString(kNormalPowerButtonEventNum),
+  AddDevice("event" + base::NumberToString(kNormalPowerButtonEventNum),
             power_button, kNormalPowerButtonSysfsFile.value());
   Init();
 
@@ -302,7 +302,7 @@ TEST_F(InputWatcherTest, LidSwitch) {
   lid_switch->set_initial_lid_state(LidState::CLOSED);
   lid_switch->set_phys_path(std::string(InputWatcher::kAcpiLidDevice) + "0");
   int kLidSwitchEventNum = 0;
-  AddDevice("event" + base::IntToString(kLidSwitchEventNum), lid_switch,
+  AddDevice("event" + base::NumberToString(kLidSwitchEventNum), lid_switch,
             kAcpiLidSysfsFile.value());
 
   // Before any events have been received, check that the initially-read state
@@ -358,7 +358,7 @@ TEST_F(InputWatcherTest, TabletModeSwitch) {
   tablet_mode_switch->set_initial_tablet_mode(TabletMode::ON);
   tablet_mode_switch->set_phys_path("GOOG0007:00");
   int kTabletModeSwitchEventNum = 0;
-  AddDevice("event" + base::IntToString(kTabletModeSwitchEventNum),
+  AddDevice("event" + base::NumberToString(kTabletModeSwitchEventNum),
             tablet_mode_switch, kTabletModeSysfsFile.value());
 
   // Before any events have been received, check that the initially-read mode is
@@ -393,7 +393,7 @@ TEST_F(InputWatcherTest, HoverMultitouch) {
   touchpad->set_has_left_button(true);
   touchpad->set_phys_path("i2c-ELAN0001:00");
   int kTouchPadEventNum = 0;
-  AddDevice("event" + base::IntToString(kTouchPadEventNum), touchpad,
+  AddDevice("event" + base::NumberToString(kTouchPadEventNum), touchpad,
             kTouchpadSysfsFile.value());
 
   linked_ptr<EventDeviceStub> touchscreen(new EventDeviceStub);
@@ -405,7 +405,7 @@ TEST_F(InputWatcherTest, HoverMultitouch) {
   touchscreen->set_has_left_button(false);
   touchscreen->set_phys_path("i2c-ELAN0001:01");
   int kTouchScreenEventNum = 1;
-  AddDevice("event" + base::IntToString(kTouchScreenEventNum), touchscreen,
+  AddDevice("event" + base::NumberToString(kTouchScreenEventNum), touchscreen,
             kTouchscreenSysfsFile.value());
 
   detect_hover_pref_ = 1;

@@ -88,7 +88,7 @@ bool SchedulerConfigurationUtils::ParseCPUNumbers(
     }
 
     for (unsigned i = cpu_start; i <= cpu_end; i++) {
-      result->push_back(base::UintToString(i));
+      result->push_back(base::NumberToString(i));
     }
   }
 

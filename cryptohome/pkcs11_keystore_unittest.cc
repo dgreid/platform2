@@ -554,7 +554,7 @@ TEST_F(KeyStoreTest, DeleteByPrefix) {
   const int kNumKeys = 110;  // Pkcs11KeyStore max is 100 for FindObjects.
   key_store.Write(true, kDefaultUser, "other1", SecureBlob("test"));
   for (int i = 0; i < kNumKeys; ++i) {
-    std::string key_name = std::string("prefix") + base::IntToString(i);
+    std::string key_name = std::string("prefix") + base::NumberToString(i);
     key_store.Write(true, kDefaultUser, key_name, SecureBlob(key_name));
   }
   ASSERT_TRUE(key_store.Write(true, kDefaultUser, "other2",
@@ -563,7 +563,7 @@ TEST_F(KeyStoreTest, DeleteByPrefix) {
   EXPECT_TRUE(key_store.Read(true, kDefaultUser, "other1", &blob));
   EXPECT_TRUE(key_store.Read(true, kDefaultUser, "other2", &blob));
   for (int i = 0; i < kNumKeys; ++i) {
-    std::string key_name = std::string("prefix") + base::IntToString(i);
+    std::string key_name = std::string("prefix") + base::NumberToString(i);
     EXPECT_FALSE(key_store.Read(true, kDefaultUser, key_name, &blob));
   }
 }

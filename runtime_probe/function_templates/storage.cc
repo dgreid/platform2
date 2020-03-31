@@ -156,9 +156,9 @@ int StorageFunction::EvalInHelper(std::string* output) const {
       node_res.SetString("sectors", "-1");
       node_res.SetString("size", "-1");
     } else {
-      node_res.SetString("sectors", base::Int64ToString(sector_count.value()));
-      node_res.SetString("size", base::Int64ToString(sector_count.value() *
-                                                     logical_block_size));
+      node_res.SetString("sectors", base::NumberToString(sector_count.value()));
+      node_res.SetString("size", base::NumberToString(sector_count.value() *
+                                                      logical_block_size));
     }
 
     result.Append(node_res.CreateDeepCopy());

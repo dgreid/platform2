@@ -312,7 +312,7 @@ base::ScopedFD ProxyFileSystem::RegisterHandle(int64_t handle) {
 
   // Currently read-only file descriptor is only supported.
   return base::ScopedFD(HANDLE_EINTR(
-      open(mount_path_.Append(base::Int64ToString(handle)).value().c_str(),
+      open(mount_path_.Append(base::NumberToString(handle)).value().c_str(),
            O_RDONLY | O_CLOEXEC)));
 }
 

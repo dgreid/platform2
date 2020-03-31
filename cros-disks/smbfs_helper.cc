@@ -86,8 +86,8 @@ std::unique_ptr<FUSEMounter> SmbfsHelper::CreateMounter(
 
   MountOptions mount_options;
   mount_options.EnforceOption(kMojoIdOptionPrefix + mojo_id);
-  mount_options.Initialize(options, true, base::IntToString(files_uid),
-                           base::IntToString(files_gid));
+  mount_options.Initialize(options, true, base::NumberToString(files_uid),
+                           base::NumberToString(files_gid));
 
   // Bind DBus communication socket into the sandbox.
   std::vector<FUSEMounter::BindPath> paths = {

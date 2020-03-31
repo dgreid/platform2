@@ -204,7 +204,7 @@ void ServerBackedStateKeyGenerator::ComputeKeys(
           crypto::SHA256HashString(group_code_key_) +
               crypto::SHA256HashString(disk_serial_number_) +
               crypto::SHA256HashString(machine_serial_number_) +
-              crypto::SHA256HashString(base::Int64ToString(quantized_time)),
+              crypto::SHA256HashString(base::NumberToString(quantized_time)),
           state_keys->back().data(), state_keys->back().size());
       quantized_time += quantum_size;
     }

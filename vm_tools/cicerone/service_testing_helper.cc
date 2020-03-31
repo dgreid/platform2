@@ -232,14 +232,14 @@ void ServiceTestingHelper::CallDBusOnDBusThread(
 
 std::string ServiceTestingHelper::GetContainerListenerTargetAddress() const {
   return "unix:" + get_service_socket_path()
-                       .Append(base::IntToString(vm_tools::kGarconPort))
+                       .Append(base::NumberToString(vm_tools::kGarconPort))
                        .value();
 }
 
 std::string ServiceTestingHelper::GetTremplinListenerTargetAddress() const {
   return "unix:" +
          get_service_socket_path()
-             .Append(base::IntToString(vm_tools::kTremplinListenerPort))
+             .Append(base::NumberToString(vm_tools::kTremplinListenerPort))
              .value();
 }
 

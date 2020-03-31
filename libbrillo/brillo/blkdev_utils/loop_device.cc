@@ -72,7 +72,8 @@ int GetDeviceNumber(const base::FilePath& sys_block_loopdev_path) {
   std::vector<std::string> device_ids = base::SplitString(
       device_string, ":", base::TRIM_WHITESPACE, base::SPLIT_WANT_NONEMPTY);
 
-  if (device_ids.size() != 2 || device_ids[0] != base::IntToString(LOOP_MAJOR))
+  if (device_ids.size() != 2 ||
+      device_ids[0] != base::NumberToString(LOOP_MAJOR))
     return -1;
 
   base::StringToInt(device_ids[1], &device_number);

@@ -141,8 +141,8 @@ std::unique_ptr<FUSEMounter> SshfsHelper::CreateMounter(
   mount_options.WhitelistOptionPrefix(kOptionUserKnownHostsFile);
   mount_options.WhitelistOptionPrefix(kOptionHostName);
   mount_options.WhitelistOptionPrefix(kOptionPort);
-  mount_options.Initialize(opts, true, base::IntToString(files_uid),
-                           base::IntToString(files_gid));
+  mount_options.Initialize(opts, true, base::NumberToString(files_uid),
+                           base::NumberToString(files_gid));
 
   return std::make_unique<SshfsMounter>(
       type(), mount_options, platform(), process_reaper(),

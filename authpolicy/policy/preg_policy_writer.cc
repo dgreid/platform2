@@ -152,7 +152,7 @@ void PRegPolicyWriter::AppendStringList(const char* policy_name,
   CHECK(values.size() <= kMaxUInt32 - 1);
   for (int n = 0; n < static_cast<int>(values.size()); ++n) {
     CHECK(values[n].size() <= (kMaxUInt32 - 2) / 2);
-    StartEntry(key, base::UintToString(n + 1), kRegSz,
+    StartEntry(key, base::NumberToString(n + 1), kRegSz,
                static_cast<uint32_t>(values[n].size()) * 2 + 2);
     AppendNullTerminatedString(values[n]);
     EndEntry();

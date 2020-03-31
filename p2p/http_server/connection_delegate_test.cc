@@ -446,7 +446,8 @@ TEST_F(ConnectionDelegateTest, GetExistentFile) {
   EXPECT_EQ(200, resp.http_code_);
   EXPECT_EQ(content, resp.content_);
   EXPECT_EQ("application/octet-stream", resp.headers_["Content-Type"]);
-  EXPECT_EQ(base::IntToString(content.size()), resp.headers_["Content-Length"]);
+  EXPECT_EQ(base::NumberToString(content.size()),
+            resp.headers_["Content-Length"]);
 }
 
 TEST_F(ConnectionDelegateTest, PostExistentFile) {
@@ -482,7 +483,8 @@ TEST_F(ConnectionDelegateTest, PostExistentFile) {
   ASSERT_EQ(200, resp.http_code_);
   EXPECT_EQ(content, resp.content_);
   EXPECT_EQ("application/octet-stream", resp.headers_["Content-Type"]);
-  EXPECT_EQ(base::IntToString(content.size()), resp.headers_["Content-Length"]);
+  EXPECT_EQ(base::NumberToString(content.size()),
+            resp.headers_["Content-Length"]);
 }
 
 TEST_F(ConnectionDelegateTest, GetEmptyFile) {

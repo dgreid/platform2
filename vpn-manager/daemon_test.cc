@@ -17,7 +17,7 @@
 #include "vpn-manager/daemon.h"
 
 using ::base::FilePath;
-using ::base::IntToString;
+using ::base::NumberToString;
 using ::brillo::Process;
 using ::brillo::ProcessImpl;
 using ::brillo::ProcessMock;
@@ -97,14 +97,14 @@ TEST_F(DaemonTest, FindProcess) {
   pid_t pid = real_process_->pid();
   KillRealProcess();
 
-  WritePidFile(IntToString(pid));
+  WritePidFile(NumberToString(pid));
   EXPECT_FALSE(daemon_->FindProcess());
   EXPECT_EQ(nullptr, GetProcess());
 
   MakeRealProcess();
   pid = real_process_->pid();
 
-  WritePidFile(IntToString(pid));
+  WritePidFile(NumberToString(pid));
   EXPECT_TRUE(daemon_->FindProcess());
   EXPECT_TRUE(GetProcess());
   EXPECT_EQ(pid, GetProcess()->pid());

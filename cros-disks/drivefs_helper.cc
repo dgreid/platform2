@@ -179,8 +179,8 @@ std::unique_ptr<FUSEMounter> DrivefsHelper::CreateMounter(
   if (!my_files_path.empty()) {
     mount_options.EnforceOption(kMyFilesOptionPrefix + my_files_path.value());
   }
-  mount_options.Initialize(options, true, base::IntToString(files_uid),
-                           base::IntToString(files_gid));
+  mount_options.Initialize(options, true, base::NumberToString(files_uid),
+                           base::NumberToString(files_gid));
 
   // TODO(crbug.com/859802): Make seccomp mandatory when testing done.
   std::string seccomp =

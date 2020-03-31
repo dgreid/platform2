@@ -130,7 +130,7 @@ base::Optional<FirmwareFileInfo::Compression> ToFirmwareFileInfoCompression(
     default:
       std::string name = Compression_Name(compression);
       if (name.empty())
-        name = base::IntToString(compression);
+        name = base::NumberToString(compression);
       LOG(ERROR) << "Unsupported compression: " << name;
       return base::nullopt;
   }

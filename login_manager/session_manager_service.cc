@@ -609,7 +609,7 @@ void SessionManagerService::WriteAbortedBrowserPidFile() {
     return;
   }
 
-  std::string pid_string = base::IntToString(browser_->CurrentPid());
+  std::string pid_string = base::NumberToString(browser_->CurrentPid());
   if (!base::WriteFileDescriptor(aborted_browser_pid_fd.get(),
                                  pid_string.c_str(), pid_string.size())) {
     PLOG(ERROR) << "Failed to write " << aborted_browser_pid_path_.value();

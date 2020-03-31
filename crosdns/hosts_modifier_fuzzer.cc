@@ -45,12 +45,13 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     bool useValidIpRange = data_provider.ConsumeBool();
     if (useValidIpRange) {
       ip = kValidIpPrefix;
-      ip.append(base::IntToString(data_provider.ConsumeIntegral<uint8_t>()));
+      ip.append(base::NumberToString(data_provider.ConsumeIntegral<uint8_t>()));
     } else {
-      ip = base::IntToString(data_provider.ConsumeIntegral<uint8_t>()) + "." +
-           base::IntToString(data_provider.ConsumeIntegral<uint8_t>()) + "." +
-           base::IntToString(data_provider.ConsumeIntegral<uint8_t>()) + "." +
-           base::IntToString(data_provider.ConsumeIntegral<uint8_t>());
+      ip =
+          base::NumberToString(data_provider.ConsumeIntegral<uint8_t>()) + "." +
+          base::NumberToString(data_provider.ConsumeIntegral<uint8_t>()) + "." +
+          base::NumberToString(data_provider.ConsumeIntegral<uint8_t>()) + "." +
+          base::NumberToString(data_provider.ConsumeIntegral<uint8_t>());
     }
   } else {
     // We will want up to 3 strings, so take a random length of 1/3 the total

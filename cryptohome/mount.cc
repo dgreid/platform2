@@ -1154,8 +1154,8 @@ FilePath Mount::GetUserLegacyKeyFileForUser(
     const std::string& obfuscated_username, int index) const {
   DCHECK(index < kKeyFileMax && index >= 0);
   return shadow_root_.Append(obfuscated_username)
-                     .Append(kKeyFile)
-                     .AddExtension(base::IntToString(index));
+      .Append(kKeyFile)
+      .AddExtension(base::NumberToString(index));
 }
 
 // This is the new planned format for keyfile storage.

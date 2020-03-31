@@ -197,11 +197,11 @@ vm_tools::container::Application::LocalizedString MakeLocalizedString(
 
     if ((value % 5) != 0) {
       locale->set_value(field_name +
-                        ":value:" + base::IntToString(seed * 1000 + value));
+                        ":value:" + base::NumberToString(seed * 1000 + value));
     }
     if ((value % 4) != 0) {
-      locale->set_locale(field_name +
-                         ":locale:" + base::IntToString(seed * 1000 + value));
+      locale->set_locale(
+          field_name + ":locale:" + base::NumberToString(seed * 1000 + value));
     }
   }
 
@@ -217,12 +217,12 @@ vm_tools::container::Application::LocaleStrings MakeLocaleStrings(
 
     for (int sub_value = 0; sub_value < value; ++sub_value) {
       locale->add_value(
-          field_name +
-          ":value:" + base::IntToString(seed * 1000 + value * 10 + sub_value));
+          field_name + ":value:" +
+          base::NumberToString(seed * 1000 + value * 10 + sub_value));
     }
     if ((value % 4) != 0) {
-      locale->set_locale(field_name +
-                         ":locale:" + base::IntToString(seed * 1000 + value));
+      locale->set_locale(
+          field_name + ":locale:" + base::NumberToString(seed * 1000 + value));
     }
   }
 
@@ -240,12 +240,13 @@ MakeComplexUpdateApplicationListRequest() {
     vm_tools::container::Application* application = request.add_application();
 
     // Non-repeated fields:
-    application->set_desktop_file_id("desktop:" + base::IntToString(app_num));
+    application->set_desktop_file_id("desktop:" +
+                                     base::NumberToString(app_num));
     application->set_no_display((app_num % 2) == 0);
     application->set_startup_wm_class("startup_wm_class:" +
-                                      base::IntToString(app_num));
+                                      base::NumberToString(app_num));
     application->set_startup_notify((app_num % 3) == 0);
-    application->set_package_id("package_id:" + base::IntToString(app_num));
+    application->set_package_id("package_id:" + base::NumberToString(app_num));
 
     // Repeated fields:
     *application->mutable_name() = MakeLocalizedString("name", app_num);
@@ -253,12 +254,12 @@ MakeComplexUpdateApplicationListRequest() {
         MakeLocalizedString("comment", 10 - app_num);
     for (int mime_type = 0; mime_type < 5; ++mime_type) {
       application->add_mime_types(
-          "mime:" + base::IntToString(app_num * 1000 + mime_type));
+          "mime:" + base::NumberToString(app_num * 1000 + mime_type));
     }
     *application->mutable_keywords() = MakeLocaleStrings("keyword", app_num);
     for (int extension = 0; extension < 5; ++extension) {
       application->add_extensions(
-          "extension:" + base::IntToString(app_num * 1000 + extension));
+          "extension:" + base::NumberToString(app_num * 1000 + extension));
     }
   }
   return request;

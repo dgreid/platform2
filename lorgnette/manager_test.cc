@@ -87,7 +87,7 @@ class ManagerTest : public testing::Test {
       EXPECT_CALL(*scan_process, AddArg(mode));
     }
     if (resolution) {
-      const string kResolutionString(base::IntToString(resolution));
+      const string kResolutionString(base::NumberToString(resolution));
       EXPECT_CALL(*scan_process, AddArg("--resolution"));
       EXPECT_CALL(*scan_process, AddArg(kResolutionString));
     }

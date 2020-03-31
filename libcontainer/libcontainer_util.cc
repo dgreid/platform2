@@ -150,7 +150,7 @@ bool ExecveCallbackHelper(base::FilePath filename,
       }
     }
 
-    std::string pid_str = base::IntToString(container_pid);
+    std::string pid_str = base::NumberToString(container_pid);
     std::vector<const char*> argv;
     argv.reserve(args.size() + 1);
     for (const auto& arg : args) {

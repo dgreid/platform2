@@ -83,7 +83,7 @@ bool GetProcessMemoryUsageFromFile(MemoryUsage* memory_usage,
 bool GetProcessMemoryUsage(MemoryUsage* memory_usage) {
   const base::FilePath status_file_path =
       base::FilePath("/proc")
-          .Append(base::IntToString(base::Process::Current().Pid()))
+          .Append(base::NumberToString(base::Process::Current().Pid()))
           .Append("status");
   return GetProcessMemoryUsageFromFile(memory_usage, status_file_path);
 }

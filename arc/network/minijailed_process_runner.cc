@@ -101,13 +101,13 @@ int MinijailedProcessRunner::Run(const std::vector<std::string>& argv,
 
 int MinijailedProcessRunner::RestoreDefaultNamespace(const std::string& ifname,
                                                      pid_t pid) {
-  return RunSync({kNsEnterPath, "-t", base::IntToString(pid), "-n", "--",
+  return RunSync({kNsEnterPath, "-t", base::NumberToString(pid), "-n", "--",
                   kIpPath, "link", "set", ifname, "netns", "1"},
                  mj_, true);
 }
 
 int MinijailedProcessRunner::WriteSentinelToContainer(pid_t pid) {
-  return RunSync({kNsEnterPath, "-t", base::IntToString(pid), "--mount",
+  return RunSync({kNsEnterPath, "-t", base::NumberToString(pid), "--mount",
                   "--pid", "--", kTouchPath, kSentinelFile},
                  mj_, true);
 }

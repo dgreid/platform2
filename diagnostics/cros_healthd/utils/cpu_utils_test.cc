@@ -43,10 +43,10 @@ TEST(CpuUtils, TestFetchCpuInfo) {
       root_dir.Append(kRelativeCpuinfoPath), kFakeCpuinfoContents));
   ASSERT_TRUE(WriteFileAndCreateParentDirs(
       root_dir.Append(kFirstRelativeCpuinfoMaxFreqPath),
-      base::UintToString(kFirstFakeMaxClockSpeed)));
+      base::NumberToString(kFirstFakeMaxClockSpeed)));
   ASSERT_TRUE(WriteFileAndCreateParentDirs(
       root_dir.Append(kSecondRelativeCpuinfoMaxFreqPath),
-      base::UintToString(kSecondFakeMaxClockSpeed)));
+      base::NumberToString(kSecondFakeMaxClockSpeed)));
   auto cpu_info = FetchCpuInfo(root_dir);
   EXPECT_EQ(cpu_info.size(), 2);
   EXPECT_EQ(cpu_info[0]->model_name, kFirstFakeModelName);

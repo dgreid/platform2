@@ -79,7 +79,7 @@ bool WriteCgroupFile(const base::FilePath& cgroup_path,
 bool WriteCgroupFileInt(const base::FilePath& cgroup_path,
                         base::StringPiece name,
                         const int value) {
-  return WriteCgroupFile(cgroup_path, name, base::IntToString(value));
+  return WriteCgroupFile(cgroup_path, name, base::NumberToString(value));
 }
 
 bool CopyCgroupParent(const base::FilePath& cgroup_path,

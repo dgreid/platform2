@@ -281,7 +281,7 @@ TEST(UploadSingleCrash, CreatesLargeFilesCorrectly) {
   long_string.reserve(kSize);
   int i = 0;
   while (long_string.size() < kSize) {
-    long_string += base::IntToString(i);
+    long_string += base::NumberToString(i);
     i++;
   }
   files.emplace_back("long.log", CreateFileWithContents(long_string));

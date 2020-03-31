@@ -59,7 +59,7 @@ class PolicyEncoderTestBase : public ::testing::Test {
                         const std::vector<std::string>& value) {
     auto value_dict = std::make_unique<RegistryDict>();
     for (int n = 0; n < static_cast<int>(value.size()); ++n) {
-      value_dict->SetValue(base::IntToString(n + 1),
+      value_dict->SetValue(base::NumberToString(n + 1),
                            std::make_unique<base::Value>(value[n]));
     }
     std::unique_ptr<RegistryDict> root_dict;

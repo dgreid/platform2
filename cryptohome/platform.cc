@@ -1218,7 +1218,7 @@ base::FilePath Platform::AttachLoop(const base::FilePath& path) {
       PLOG(ERROR) << "ioctl(LOOP_CTL_GET_FREE)";
       return base::FilePath();
     }
-    loopback = kLoopPrefix + base::IntToString(num);
+    loopback = kLoopPrefix + base::NumberToString(num);
     base::ScopedFD loop_fd(HANDLE_EINTR(open(loopback.c_str(),
                                              O_RDWR | O_NOFOLLOW | O_CLOEXEC)));
     if (!loop_fd.is_valid()) {

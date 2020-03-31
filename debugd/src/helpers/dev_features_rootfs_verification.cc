@@ -76,9 +76,8 @@ bool RemoveRootfsVerification() {
   std::string error;
   int result = debugd::ProcessWithOutput::RunProcessFromHelper(
       "/usr/share/vboot/bin/make_dev_ssd.sh",
-      {"--remove_rootfs_verification",
-       "--partitions",
-       base::IntToString(partition)},
+      {"--remove_rootfs_verification", "--partitions",
+       base::NumberToString(partition)},
       nullptr,  // stdin.
       nullptr,  // stdout.
       &error);  // stderr.

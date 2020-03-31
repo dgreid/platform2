@@ -1203,7 +1203,7 @@ std::unique_ptr<dbus::Response> Service::StartVm(
     }
 
     base::FilePath fd_path = base::FilePath(kProcFileDescriptorsPath)
-                                 .Append(base::IntToString(raw_fd));
+                                 .Append(base::NumberToString(raw_fd));
     disks.push_back(TerminaVm::Disk{
         .path = std::move(fd_path),
         .writable = true,

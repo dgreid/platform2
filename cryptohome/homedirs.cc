@@ -1072,10 +1072,9 @@ bool HomeDirs::MoveKeyset(const std::string& obfuscated, int src, int dst) {
 
 FilePath HomeDirs::GetVaultKeysetPath(const std::string& obfuscated,
                                       int index) const {
-  return shadow_root_
-    .Append(obfuscated)
-    .Append(kKeyFile)
-    .AddExtension(base::IntToString(index));
+  return shadow_root_.Append(obfuscated)
+      .Append(kKeyFile)
+      .AddExtension(base::NumberToString(index));
 }
 
 void HomeDirs::RemoveNonOwnerCryptohomesCallback(const FilePath& user_dir) {

@@ -756,7 +756,7 @@ class InstallTransaction : public PackageKitTransaction {
       return;
     observer_->OnInstallCompletion(
         command_uuid_, kPackageKitExitCodeSuccess == exit_code,
-        "Exit Code: " + base::IntToString(exit_code));
+        "Exit Code: " + base::NumberToString(exit_code));
     observer_ = nullptr;
   }
 
@@ -911,7 +911,7 @@ class UninstallPackagesTransaction : public PackageKitTransaction {
       LOG(ERROR) << "Uninstall transaction failed with code: " << exit_code;
       observer_->OnUninstallCompletion(
           false, "Uninstall transaction failed with code: " +
-                     base::IntToString(exit_code));
+                     base::NumberToString(exit_code));
     }
     observer_ = nullptr;
   }

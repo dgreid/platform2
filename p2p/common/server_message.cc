@@ -57,11 +57,11 @@ string ToString(const P2PServerMessage& message) {
     P2PServerRequestResult req_res;
     if (!ParseP2PServerRequestResult(message.value, &req_res)) {
       return res + "InvalidRequestResult[" +
-             base::Int64ToString(message.value) + "]}";
+             base::NumberToString(message.value) + "]}";
     }
     return res + ToString(req_res) + "}";
   }
-  return res + base::Int64ToString(message.value) + "}";
+  return res + base::NumberToString(message.value) + "}";
 }
 
 std::string ToString(P2PServerMessageType message_type) {

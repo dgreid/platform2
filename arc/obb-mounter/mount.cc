@@ -59,8 +59,8 @@ bool MountObb(const std::string& obb_file,
   pid_t owner_uid = kRootUid + kUidNamespaceOffset;
   owner_gid += kGidNamespaceOffset;
   // Run mount-obb.
-  std::string owner_uid_string = base::IntToString(owner_uid);
-  std::string owner_gid_string = base::IntToString(owner_gid);
+  std::string owner_uid_string = base::NumberToString(owner_uid);
+  std::string owner_gid_string = base::NumberToString(owner_gid);
   pid_t pid = fork();
   if (pid == -1) {
     PLOG(ERROR) << "fork failed";

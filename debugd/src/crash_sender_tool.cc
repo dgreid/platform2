@@ -42,8 +42,8 @@ bool CrashSenderTool::UploadSingleCrash(
   // *It is a privacy violation* if these files are visible to non-root
   // processes or are written unencrypted to disk!
   base::FilePath crash_directory("/tmp/crash");
-  crash_directory =
-      crash_directory.AddExtension(base::IntToString(next_crash_directory_id_));
+  crash_directory = crash_directory.AddExtension(
+      base::NumberToString(next_crash_directory_id_));
   next_crash_directory_id_++;
 
   // We need to be sure to clean up the tmp directory to avoid leaking
@@ -115,7 +115,7 @@ bool CrashSenderTool::UploadSingleCrash(
 
   base::FilePath munged_crash_directory("/proc/self/fd");
   munged_crash_directory = munged_crash_directory.Append(
-      base::IntToString(crash_directory_fd.get()));
+      base::NumberToString(crash_directory_fd.get()));
 
   const bool ignore_hold_off_time = true;  // We already flushed all the files.
   RunCrashSender(ignore_hold_off_time, munged_crash_directory);

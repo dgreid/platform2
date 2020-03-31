@@ -77,7 +77,7 @@ std::vector<std::string> RouteTool::GetRoutes(
           table_map.find(table_id) == table_map.end()) {
         table_map[table_id] = true;
         RunOneIPCommand(&cmd_result, {ip_version, "route", "show", "table",
-                                      base::IntToString(table_id)});
+                                      base::NumberToString(table_id)});
         full_result.push_back("");
         full_result.insert(full_result.end(), cmd_result.begin(),
                            cmd_result.end());

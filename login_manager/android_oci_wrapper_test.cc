@@ -58,7 +58,7 @@ class AndroidOciWrapperTest : public ::testing::Test {
         base::FilePath(ContainerManagerInterface::kContainerRunPath)
             .Append(AndroidOciWrapper::kContainerId)
             .Append(AndroidOciWrapper::kContainerPidName);
-    std::string container_pid_str = base::IntToString(container_pid_) + "\n";
+    std::string container_pid_str = base::NumberToString(container_pid_) + "\n";
     EXPECT_CALL(system_utils_, ReadFileToString(run_path, _))
         .WillOnce(DoAll(SetArgPointee<1>(container_pid_str), Return(true)));
 

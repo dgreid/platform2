@@ -926,7 +926,7 @@ TEST_F(MigrationHelperTest, AllJobThreadsFailing) {
   // Create more files than the job threads.
   for (int i = 0; i < kNumJobThreads * 2; ++i) {
     ASSERT_TRUE(real_platform.TouchFileDurable(
-        from_dir_.GetPath().AppendASCII(base::IntToString(i))));
+        from_dir_.GetPath().AppendASCII(base::NumberToString(i))));
   }
   // All job threads will stop processing jobs because of errors. Also, set
   // errno to avoid confusing base::File::OSErrorToFileError(). crbug.com/731809
@@ -1183,13 +1183,14 @@ TEST_P(MigrationHelperJobListTest, ProcessJobs) {
   constexpr int kNumFilesPerDirectory = 10;
   for (int i = 0; i < kNumDirectories; ++i) {
     SCOPED_TRACE(i);
-    FilePath dir = from_dir_.GetPath().AppendASCII(base::IntToString(i));
+    FilePath dir = from_dir_.GetPath().AppendASCII(base::NumberToString(i));
     ASSERT_TRUE(platform.CreateDirectory(dir));
     for (int j = 0 ; j < kNumFilesPerDirectory; ++j) {
       SCOPED_TRACE(j);
-      const std::string data = base::IntToString(i * kNumFilesPerDirectory + j);
+      const std::string data =
+          base::NumberToString(i * kNumFilesPerDirectory + j);
       ASSERT_EQ(data.size(),
-                base::WriteFile(dir.AppendASCII(base::IntToString(j)),
+                base::WriteFile(dir.AppendASCII(base::NumberToString(j)),
                                 data.data(), data.size()));
     }
   }
@@ -1201,14 +1202,14 @@ TEST_P(MigrationHelperJobListTest, ProcessJobs) {
   // The files and directories are moved.
   for (int i = 0; i < kNumDirectories; ++i) {
     SCOPED_TRACE(i);
-    FilePath dir = to_dir_.GetPath().AppendASCII(base::IntToString(i));
+    FilePath dir = to_dir_.GetPath().AppendASCII(base::NumberToString(i));
     EXPECT_TRUE(platform.DirectoryExists(dir));
     for (int j = 0 ; j < kNumFilesPerDirectory; ++j) {
       SCOPED_TRACE(j);
       std::string data;
-      EXPECT_TRUE(base::ReadFileToString(dir.AppendASCII(base::IntToString(j)),
-                                         &data));
-      EXPECT_EQ(base::IntToString(i * kNumFilesPerDirectory + j), data);
+      EXPECT_TRUE(base::ReadFileToString(
+          dir.AppendASCII(base::NumberToString(j)), &data));
+      EXPECT_EQ(base::NumberToString(i * kNumFilesPerDirectory + j), data);
     }
   }
   EXPECT_TRUE(base::IsDirectoryEmpty(from_dir_.GetPath()));

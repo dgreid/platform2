@@ -584,7 +584,7 @@ MATCHER_P(WEPSecurityArgsKeyIndex, index, "") {
   uint32_t index_u32 = index;
   return arg.template Contains<string>(WPASupplicant::kPropertyAuthAlg) &&
          arg.template Contains<vector<uint8_t>>(WPASupplicant::kPropertyWEPKey +
-                                                base::IntToString(index)) &&
+                                                base::NumberToString(index)) &&
          arg.template Contains<uint32_t>(
              WPASupplicant::kPropertyWEPTxKeyIndex) &&
          (arg.template Get<uint32_t>(WPASupplicant::kPropertyWEPTxKeyIndex) ==
