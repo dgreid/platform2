@@ -10,6 +10,7 @@
 #include <base/files/file_path.h>
 #include <base/files/file_util.h>
 #include <base/files/scoped_file.h>
+#include <base/stl_util.h>
 #include <base/strings/string_util.h>
 #include <base/strings/utf_string_conversions.h>
 
@@ -52,7 +53,7 @@ const char kExpectOuUserPrincipal[] = "expect_ou@REALM.EXAMPLE.COM";
 const char kExpectedOuCreatecomputer[] =
     "ou=leaf,ou=\\ a\\\"b\\ ,ou=\\#123,ou=root,dc=REALM,dc=EXAMPLE,dc=COM";
 const char* kExpectedOuParts[] = {"leaf", " a\"b ", "#123", "root"};
-constexpr size_t kExpectedOuPartsSize = arraysize(kExpectedOuParts);
+constexpr size_t kExpectedOuPartsSize = base::size(kExpectedOuParts);
 
 const char kDisplayName[] = "John Doe";
 const char kGivenName[] = "John";

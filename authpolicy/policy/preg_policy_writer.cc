@@ -7,6 +7,7 @@
 #include <limits>
 
 #include <base/files/file_util.h>
+#include <base/stl_util.h>
 #include <base/strings/string16.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/stringprintf.h>
@@ -47,7 +48,7 @@ PRegPolicyWriter::PRegPolicyWriter(const std::string& mandatory_key,
 PRegPolicyWriter::PRegPolicyWriter() {
   buffer_.append(
       preg_parser::kPRegFileHeader,
-      preg_parser::kPRegFileHeader + arraysize(preg_parser::kPRegFileHeader));
+      preg_parser::kPRegFileHeader + base::size(preg_parser::kPRegFileHeader));
 }
 
 PRegPolicyWriter::~PRegPolicyWriter() {

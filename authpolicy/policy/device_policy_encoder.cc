@@ -8,10 +8,11 @@
 #include <memory>
 #include <utility>
 
-#include <base/json/json_reader.h>
 #include <base/bind.h>
 #include <base/bind_helpers.h>
 #include <base/callback.h>
+#include <base/json/json_reader.h>
+#include <base/stl_util.h>
 #include <base/strings/string_number_conversions.h>
 #include <components/policy/core/common/registry_dict.h>
 #include <dbus/shill/dbus-constants.h>
@@ -38,7 +39,7 @@ constexpr std::pair<const char*, int> kConnectionTypes[] = {
         shill::kTypeCellular,
         em::AutoUpdateSettingsProto_ConnectionType_CONNECTION_TYPE_CELLULAR)};
 
-constexpr size_t kConnectionTypesSize = arraysize(kConnectionTypes);
+constexpr size_t kConnectionTypesSize = base::size(kConnectionTypes);
 
 // Integer range for DeviceLoginScreenScreenMagnifierType policy.
 const int kScreenMagnifierTypeRangeMin = 0;
@@ -55,7 +56,7 @@ bool DecodeConnectionType(const std::string& value,
                           em::AutoUpdateSettingsProto_ConnectionType* type) {
   DCHECK(type);
 
-  for (size_t n = 0; n < arraysize(kConnectionTypes); ++n) {
+  for (size_t n = 0; n < base::size(kConnectionTypes); ++n) {
     if (value.compare(kConnectionTypes[n].first) == 0) {
       int int_type = kConnectionTypes[n].second;
       DCHECK(em::AutoUpdateSettingsProto_ConnectionType_IsValid(int_type));
