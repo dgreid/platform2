@@ -12,9 +12,10 @@
 #include <base/bind.h>
 #include <base/files/file_util.h>
 #include <base/files/important_file_writer.h>
-#include <base/strings/string_split.h>
-#include <base/strings/string_number_conversions.h>
 #include <base/logging.h>
+#include <base/stl_util.h>
+#include <base/strings/string_number_conversions.h>
+#include <base/strings/string_split.h>
 #include <chromeos/dbus/service_constants.h>
 #include <dbus/object_proxy.h>
 
@@ -72,7 +73,7 @@ void DispatcherDebugManager::Init() {
 
 void DispatcherDebugManager::RegisterProperties() {
   std::vector<uint8_t> prop_values;
-  int expected_num_of_props = arraysize(kDebugProperties);
+  int expected_num_of_props = base::size(kDebugProperties);
 
   if (!ParseConfigFile(expected_num_of_props, &prop_values))
     prop_values.assign(expected_num_of_props, kDefaultVerbosityLevel);
@@ -143,7 +144,7 @@ bool DispatcherDebugManager::HandleSetLevels(brillo::ErrorPtr* error,
 
   uint8_t property_levels[] = {dispatcher_level, newblue_level, bluez_level,
                                kernel_level};
-  for (int i = 0; i < arraysize(kDebugProperties); i++) {
+  for (int i = 0; i < base::size(kDebugProperties); i++) {
     debug_interface_
         ->EnsureExportedPropertyRegistered<uint8_t>(kDebugProperties[i])
         ->SetValue(property_levels[i]);

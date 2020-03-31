@@ -11,6 +11,7 @@
 #include <base/bind.h>
 #include <base/message_loop/message_loop.h>
 #include <base/run_loop.h>
+#include <base/stl_util.h>
 #include <gtest/gtest.h>
 
 #include "bluetooth/newblued/mock_libnewblue.h"
@@ -199,14 +200,14 @@ TEST_F(NewblueTest, StartDiscovery) {
       6, static_cast<uint8_t>(EirType::NAME_SHORT), 'a', 'l', 'i', 'c', 'e'};
   inquiry_response_callback(inquiry_response_callback_data, &addr1,
                             &resolved_addr1, -101, HCI_ADV_TYPE_SCAN_RSP, &eir1,
-                            arraysize(eir1));
+                            base::size(eir1));
   struct bt_addr addr2 = {.addr = {0x02, 0x03, 0x04, 0x05, 0x06, 0x07},
                           .type = BT_ADDR_TYPE_LE_PUBLIC};
   uint8_t eir2[] = {
       5, static_cast<uint8_t>(EirType::NAME_SHORT), 'b', 'o', 'b', '\0'};
   inquiry_response_callback(inquiry_response_callback_data, &addr2,
                             /* resolved_address */ nullptr, -102,
-                            HCI_ADV_TYPE_ADV_IND, &eir2, arraysize(eir2));
+                            HCI_ADV_TYPE_ADV_IND, &eir2, base::size(eir2));
   base::RunLoop().RunUntilIdle();
 
   EXPECT_EQ(2, discovered_devices_.size());
@@ -215,7 +216,7 @@ TEST_F(NewblueTest, StartDiscovery) {
   EXPECT_EQ(BT_ADDR_TYPE_LE_RANDOM, discovered_devices_[0].address_type);
   EXPECT_EQ(-101, discovered_devices_[0].rssi);
   EXPECT_EQ(HCI_ADV_TYPE_SCAN_RSP, discovered_devices_[0].reply_type);
-  EXPECT_EQ(std::vector<uint8_t>(eir1, eir1 + arraysize(eir1)),
+  EXPECT_EQ(std::vector<uint8_t>(eir1, eir1 + base::size(eir1)),
             discovered_devices_[0].eir);
 
   EXPECT_EQ("07:06:05:04:03:02", discovered_devices_[1].address);
@@ -224,7 +225,7 @@ TEST_F(NewblueTest, StartDiscovery) {
   EXPECT_EQ(BT_ADDR_TYPE_LE_PUBLIC, discovered_devices_[1].address_type);
   EXPECT_EQ(-102, discovered_devices_[1].rssi);
   EXPECT_EQ(HCI_ADV_TYPE_ADV_IND, discovered_devices_[1].reply_type);
-  EXPECT_EQ(std::vector<uint8_t>(eir2, eir2 + arraysize(eir2)),
+  EXPECT_EQ(std::vector<uint8_t>(eir2, eir2 + base::size(eir2)),
             discovered_devices_[1].eir);
 
   EXPECT_CALL(*libnewblue_, HciDiscoverLeStop(kDiscoveryHandle))
@@ -233,7 +234,7 @@ TEST_F(NewblueTest, StartDiscovery) {
   // Any inquiry response after StopDiscovery should be ignored.
   inquiry_response_callback(inquiry_response_callback_data, &addr1,
                             /* resolved_address */ nullptr, -101,
-                            HCI_ADV_TYPE_SCAN_RSP, &eir1, arraysize(eir1));
+                            HCI_ADV_TYPE_SCAN_RSP, &eir1, base::size(eir1));
   base::RunLoop().RunUntilIdle();
   // Check that discovered_devices_ is still the same.
   EXPECT_EQ(2, discovered_devices_.size());
@@ -267,7 +268,7 @@ TEST_F(NewblueTest, PairStateChanged) {
       6, static_cast<uint8_t>(EirType::NAME_SHORT), 'a', 'l', 'i', 'c', 'e'};
   inquiry_response_callback(inquiry_response_callback_data, &addr1,
                             /* resolved_address */ nullptr, -101,
-                            HCI_ADV_TYPE_SCAN_RSP, &eir1, arraysize(eir1));
+                            HCI_ADV_TYPE_SCAN_RSP, &eir1, base::size(eir1));
   base::RunLoop().RunUntilIdle();
 
   EXPECT_EQ(1, discovered_devices_.size());
@@ -357,7 +358,7 @@ TEST_F(NewblueTest, Pair) {
 
   inquiry_response_callback(inquiry_response_callback_data, &addr,
                             /* resolved_address */ nullptr, -101,
-                            HCI_ADV_TYPE_SCAN_RSP, &eir, arraysize(eir));
+                            HCI_ADV_TYPE_SCAN_RSP, &eir, base::size(eir));
   base::RunLoop().RunUntilIdle();
 
   EXPECT_EQ(1, discovered_devices_.size());
@@ -405,7 +406,7 @@ TEST_F(NewblueTest, CancelPairing) {
 
   inquiry_response_callback(inquiry_response_callback_data, &addr,
                             /* resolved_address */ nullptr, -101,
-                            HCI_ADV_TYPE_SCAN_RSP, &eir, arraysize(eir));
+                            HCI_ADV_TYPE_SCAN_RSP, &eir, base::size(eir));
   base::RunLoop().RunUntilIdle();
 
   EXPECT_EQ(1, discovered_devices_.size());

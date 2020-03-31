@@ -8,6 +8,7 @@
 #include <string>
 #include <vector>
 
+#include <base/stl_util.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <newblue/gatt.h>
@@ -507,7 +508,7 @@ TEST(UtilTest, ParseEirNormal) {
       std::vector<uint8_t>({0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
                             0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F}));
 
-  ParseEir(&device_info, std::vector<uint8_t>(eir, eir + arraysize(eir)));
+  ParseEir(&device_info, std::vector<uint8_t>(eir, eir + base::size(eir)));
 
   EXPECT_EQ(std::vector<uint8_t>({0xAA}), device_info.flags);
   EXPECT_THAT(device_info.service_uuids,
@@ -536,7 +537,7 @@ TEST(UtilTest, ParseEirNormal) {
       7, static_cast<uint8_t>(EirType::SVC_DATA32), 0x1E, 0x18, 0x00, 0x00,
       0x66, 0x55};
 
-  ParseEir(&device_info, std::vector<uint8_t>(eir2, eir2 + arraysize(eir2)));
+  ParseEir(&device_info, std::vector<uint8_t>(eir2, eir2 + base::size(eir2)));
 
   EXPECT_FALSE(device_info.flags.empty());
   EXPECT_THAT(device_info.service_uuids,
@@ -581,7 +582,7 @@ TEST(UtilTest, ParseEirAbnormal) {
   Uuid battery_service_uuid16(std::vector<uint8_t>({0x18, 0x0F}));
   Uuid blood_pressure_uuid16(std::vector<uint8_t>({0x18, 0x10}));
 
-  ParseEir(&device_info, std::vector<uint8_t>(eir, eir + arraysize(eir)));
+  ParseEir(&device_info, std::vector<uint8_t>(eir, eir + base::size(eir)));
 
   // Non-ascii characters are replaced with spaces.
   EXPECT_FALSE(device_info.flags.empty());
