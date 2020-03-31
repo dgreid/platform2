@@ -5,6 +5,7 @@
 #include "chaps/object_policy_key.h"
 
 #include <base/macros.h>
+#include <base/stl_util.h>
 
 namespace chaps {
 
@@ -23,7 +24,7 @@ static const AttributePolicy kKeyPolicies[] = {
 };
 
 ObjectPolicyKey::ObjectPolicyKey() {
-  AddPolicies(kKeyPolicies, arraysize(kKeyPolicies));
+  AddPolicies(kKeyPolicies, base::size(kKeyPolicies));
 }
 
 ObjectPolicyKey::~ObjectPolicyKey() {}
@@ -31,7 +32,7 @@ ObjectPolicyKey::~ObjectPolicyKey() {}
 void ObjectPolicyKey::SetDefaultAttributes() {
   ObjectPolicyCommon::SetDefaultAttributes();
   CK_ATTRIBUTE_TYPE empty[] = {CKA_ID, CKA_START_DATE, CKA_END_DATE};
-  for (size_t i = 0; i < arraysize(empty); ++i) {
+  for (size_t i = 0; i < base::size(empty); ++i) {
     if (!object_->IsAttributePresent(empty[i]))
       object_->SetAttributeString(empty[i], "");
   }

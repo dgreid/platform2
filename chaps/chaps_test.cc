@@ -11,6 +11,7 @@
 #include <string>
 #include <vector>
 
+#include <base/stl_util.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
@@ -239,7 +240,7 @@ TEST(TestSlotInfo, SlotInfoOK) {
   memset(&info, 0, sizeof(info));
   EXPECT_EQ(CKR_OK, C_GetSlotInfo(1, &info));
   uint8_t spaces[64];
-  memset(spaces, ' ', arraysize(spaces));
+  memset(spaces, ' ', base::size(spaces));
   EXPECT_EQ(0, memcmp(spaces, info.slotDescription, 64));
   EXPECT_EQ(0, memcmp(spaces, info.manufacturerID, 32));
   EXPECT_EQ(1, info.flags);
@@ -303,7 +304,7 @@ TEST(TestTokenInfo, TokenInfoOK) {
   memset(&info, 0, sizeof(info));
   EXPECT_EQ(CKR_OK, C_GetTokenInfo(1, &info));
   uint8_t spaces[64];
-  memset(spaces, ' ', arraysize(spaces));
+  memset(spaces, ' ', base::size(spaces));
   EXPECT_EQ(0, memcmp(spaces, info.label, 32));
   EXPECT_EQ(0, memcmp(spaces, info.manufacturerID, 32));
   EXPECT_EQ(0, memcmp(spaces, info.model, 16));

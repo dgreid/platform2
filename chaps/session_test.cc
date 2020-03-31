@@ -10,6 +10,7 @@
 
 #include <base/bind.h>
 #include <base/logging.h>
+#include <base/stl_util.h>
 #include <crypto/libcrypto-compat.h>
 #include <crypto/scoped_openssl_types.h>
 #include <gmock/gmock.h>
@@ -165,8 +166,8 @@ class TestSession : public ::testing::Test {
     int pubh = 0, privh = 0;
     ASSERT_EQ(CKR_OK,
               session_->GenerateKeyPair(CKM_RSA_PKCS_KEY_PAIR_GEN, "", pub_attr,
-                                        arraysize(pub_attr), priv_attr,
-                                        arraysize(priv_attr), &pubh, &privh));
+                                        base::size(pub_attr), priv_attr,
+                                        base::size(priv_attr), &pubh, &privh));
     ASSERT_TRUE(session_->GetObject(pubh, pub));
     ASSERT_TRUE(session_->GetObject(privh, priv));
   }
@@ -206,8 +207,8 @@ class TestSession : public ::testing::Test {
     int pubh = 0, privh = 0;
     ASSERT_EQ(CKR_OK,
               session_->GenerateKeyPair(CKM_EC_KEY_PAIR_GEN, "", pub_attr,
-                                        arraysize(pub_attr), priv_attr,
-                                        arraysize(priv_attr), &pubh, &privh));
+                                        base::size(pub_attr), priv_attr,
+                                        base::size(priv_attr), &pubh, &privh));
     ASSERT_TRUE(session_->GetObject(pubh, pub));
     ASSERT_TRUE(session_->GetObject(privh, priv));
   }
@@ -358,7 +359,7 @@ TEST_F(TestSession, Objects) {
   int handle = 0;
   int invalid_handle = -1;
   // Create a new object.
-  ASSERT_EQ(CKR_OK, session_->CreateObject(attr, arraysize(attr), &handle));
+  ASSERT_EQ(CKR_OK, session_->CreateObject(attr, base::size(attr), &handle));
   EXPECT_GT(handle, 0);
   const Object* o;
   // Get the new object from the new handle.
@@ -367,9 +368,9 @@ TEST_F(TestSession, Objects) {
   // Copy an object (try invalid and valid handles).
   EXPECT_EQ(
       CKR_OBJECT_HANDLE_INVALID,
-      session_->CopyObject(attr, arraysize(attr), invalid_handle, &handle2));
+      session_->CopyObject(attr, base::size(attr), invalid_handle, &handle2));
   ASSERT_EQ(CKR_OK,
-            session_->CopyObject(attr, arraysize(attr), handle, &handle2));
+            session_->CopyObject(attr, base::size(attr), handle, &handle2));
   // Ensure handles are unique.
   EXPECT_TRUE(handle != handle2);
   EXPECT_TRUE(session_->GetObject(handle2, &o));
@@ -379,9 +380,9 @@ TEST_F(TestSession, Objects) {
   EXPECT_EQ(CKR_OPERATION_NOT_INITIALIZED, session_->FindObjects(1, &v));
   EXPECT_EQ(CKR_OPERATION_NOT_INITIALIZED, session_->FindObjectsFinal());
   // Find the objects we've created (there should be 2).
-  EXPECT_EQ(CKR_OK, session_->FindObjectsInit(attr, arraysize(attr)));
+  EXPECT_EQ(CKR_OK, session_->FindObjectsInit(attr, base::size(attr)));
   EXPECT_EQ(CKR_OPERATION_ACTIVE,
-            session_->FindObjectsInit(attr, arraysize(attr)));
+            session_->FindObjectsInit(attr, base::size(attr)));
   // Test multi-step finds by only allowing 1 result at a time.
   EXPECT_EQ(CKR_OK, session_->FindObjects(1, &v));
   EXPECT_EQ(1, v.size());
@@ -815,20 +816,20 @@ TEST_F(TestSession, BadRSAGenerate) {
   // CKA_PUBLIC_EXPONENT too large.
   EXPECT_EQ(CKR_FUNCTION_FAILED,
             session_->GenerateKeyPair(CKM_RSA_PKCS_KEY_PAIR_GEN, "", pub_attr,
-                                      arraysize(pub_attr), priv_attr,
-                                      arraysize(priv_attr), &pub, &priv));
+                                      base::size(pub_attr), priv_attr,
+                                      base::size(priv_attr), &pub, &priv));
   pub_attr[1].ulValueLen = 3;
   size = 20000;
   // CKA_MODULUS_BITS too large.
   EXPECT_EQ(CKR_KEY_SIZE_RANGE,
             session_->GenerateKeyPair(CKM_RSA_PKCS_KEY_PAIR_GEN, "", pub_attr,
-                                      arraysize(pub_attr), priv_attr,
-                                      arraysize(priv_attr), &pub, &priv));
+                                      base::size(pub_attr), priv_attr,
+                                      base::size(priv_attr), &pub, &priv));
   // CKA_MODULUS_BITS missing.
   EXPECT_EQ(
       CKR_TEMPLATE_INCOMPLETE,
       session_->GenerateKeyPair(CKM_RSA_PKCS_KEY_PAIR_GEN, "", pub_attr, 2,
-                                priv_attr, arraysize(priv_attr), &pub, &priv));
+                                priv_attr, base::size(priv_attr), &pub, &priv));
 }
 
 // Test that invalid attributes for key generation are handled correctly.
@@ -914,8 +915,8 @@ TEST_F(TestSessionWithRealObject, GenerateRSAWithTPM) {
   int pubh = 0, privh = 0;
   ASSERT_EQ(CKR_OK,
             session_->GenerateKeyPair(CKM_RSA_PKCS_KEY_PAIR_GEN, "", pub_attr,
-                                      arraysize(pub_attr), priv_attr,
-                                      arraysize(priv_attr), &pubh, &privh));
+                                      base::size(pub_attr), priv_attr,
+                                      base::size(priv_attr), &pubh, &privh));
   // There are a few sensitive attributes that MUST not exist.
   const Object* object = NULL;
   ASSERT_TRUE(session_->GetObject(privh, &object));
@@ -958,8 +959,8 @@ TEST_F(TestSessionWithRealObject, GenerateRSAWithTPMInconsistentToken) {
   int pubh = 0, privh = 0;
   ASSERT_EQ(CKR_OK,
             session_->GenerateKeyPair(CKM_RSA_PKCS_KEY_PAIR_GEN, "", pub_attr,
-                                      arraysize(pub_attr), priv_attr,
-                                      arraysize(priv_attr), &pubh, &privh));
+                                      base::size(pub_attr), priv_attr,
+                                      base::size(priv_attr), &pubh, &privh));
   const Object* public_object = NULL;
   const Object* private_object = NULL;
   ASSERT_TRUE(session_->GetObject(pubh, &public_object));
@@ -993,8 +994,8 @@ TEST_F(TestSessionWithRealObject, GenerateRSAWithNoTPM) {
   int pubh = 0, privh = 0;
   ASSERT_EQ(CKR_OK,
             session_->GenerateKeyPair(CKM_RSA_PKCS_KEY_PAIR_GEN, "", pub_attr,
-                                      arraysize(pub_attr), priv_attr,
-                                      arraysize(priv_attr), &pubh, &privh));
+                                      base::size(pub_attr), priv_attr,
+                                      base::size(priv_attr), &pubh, &privh));
   // For a software key, the sensitive attributes should exist.
   const Object* object = NULL;
   ASSERT_TRUE(session_->GetObject(privh, &object));
@@ -1036,8 +1037,8 @@ TEST_F(TestSessionWithRealObject, GenerateRSAWithForceSoftware) {
   int pubh = 0, privh = 0;
   ASSERT_EQ(CKR_OK,
             session_->GenerateKeyPair(CKM_RSA_PKCS_KEY_PAIR_GEN, "", pub_attr,
-                                      arraysize(pub_attr), priv_attr,
-                                      arraysize(priv_attr), &pubh, &privh));
+                                      base::size(pub_attr), priv_attr,
+                                      base::size(priv_attr), &pubh, &privh));
   // For a software key, the sensitive attributes should exist.
   const Object* object = NULL;
   ASSERT_TRUE(session_->GetObject(privh, &object));
@@ -1134,8 +1135,8 @@ TEST_F(TestSessionWithRealObject, GenerateECCWithForceSoftware) {
                               {kForceSoftwareAttribute, &yes, sizeof(yes)}};
   int pubh = 0, privh = 0;
   ASSERT_EQ(CKR_OK, session_->GenerateKeyPair(
-                        CKM_EC_KEY_PAIR_GEN, "", pub_attr, arraysize(pub_attr),
-                        priv_attr, arraysize(priv_attr), &pubh, &privh));
+                        CKM_EC_KEY_PAIR_GEN, "", pub_attr, base::size(pub_attr),
+                        priv_attr, base::size(priv_attr), &pubh, &privh));
   ASSERT_TRUE(session_->GetObject(privh, &priv));
 
   // For a software key, the sensitive attributes should exist.
@@ -1230,7 +1231,7 @@ TEST_F(TestSessionWithRealObject, ImportRSAWithTPM) {
   int handle = 0;
   ASSERT_EQ(CKR_OK,
             session_->CreateObject(private_attributes,
-                                   arraysize(private_attributes), &handle));
+                                   base::size(private_attributes), &handle));
   // There are a few sensitive attributes that MUST be removed.
   const Object* object = NULL;
   ASSERT_TRUE(session_->GetObject(handle, &object));
@@ -1309,7 +1310,7 @@ TEST_F(TestSessionWithRealObject, ImportRSAWithNoTPM) {
   int handle = 0;
   ASSERT_EQ(CKR_OK,
             session_->CreateObject(private_attributes,
-                                   arraysize(private_attributes), &handle));
+                                   base::size(private_attributes), &handle));
   // For a software key, the sensitive attributes should still exist.
   const Object* object = NULL;
   ASSERT_TRUE(session_->GetObject(handle, &object));
@@ -1392,7 +1393,7 @@ TEST_F(TestSessionWithRealObject, ImportRSAWithForceSoftware) {
   int handle = 0;
   ASSERT_EQ(CKR_OK,
             session_->CreateObject(private_attributes,
-                                   arraysize(private_attributes), &handle));
+                                   base::size(private_attributes), &handle));
   // For a software key, the sensitive attributes should still exist.
   const Object* object = NULL;
   ASSERT_TRUE(session_->GetObject(handle, &object));
@@ -1450,7 +1451,7 @@ TEST_F(TestSessionWithRealObject, ImportECCWithTPM) {
   int handle = 0;
   ASSERT_EQ(CKR_OK,
             session_->CreateObject(private_attributes,
-                                   arraysize(private_attributes), &handle));
+                                   base::size(private_attributes), &handle));
 
   // There are a few sensitive attributes that MUST be removed.
   const Object* object = NULL;
@@ -1500,7 +1501,7 @@ TEST_F(TestSessionWithRealObject, ImportECCWithNoTPM) {
   int handle = 0;
   ASSERT_EQ(CKR_OK,
             session_->CreateObject(private_attributes,
-                                   arraysize(private_attributes), &handle));
+                                   base::size(private_attributes), &handle));
 
   // For a software key, the sensitive attributes should still exist.
   const Object* object = NULL;
@@ -1552,7 +1553,7 @@ TEST_F(TestSessionWithRealObject, ImportECCWithForceSoftware) {
   int handle = 0;
   ASSERT_EQ(CKR_OK,
             session_->CreateObject(private_attributes,
-                                   arraysize(private_attributes), &handle));
+                                   base::size(private_attributes), &handle));
 
   // For a software key, the sensitive attributes should still exist.
   const Object* object = NULL;
@@ -1580,7 +1581,7 @@ TEST_F(TestSession, CreateObjectsNoPrivate) {
   CK_OBJECT_CLASS oc = CKO_SECRET_KEY;
   CK_ATTRIBUTE attr[] = {{CKA_CLASS, &oc, sizeof(oc)}};
   EXPECT_EQ(CKR_WOULD_BLOCK_FOR_PRIVATE_OBJECTS,
-            session_->CreateObject(attr, arraysize(attr), &handle));
+            session_->CreateObject(attr, base::size(attr), &handle));
 
   CK_ATTRIBUTE key_attr[] = {{CKA_TOKEN, &yes, sizeof(yes)},
                              {CKA_SIGN, &yes, sizeof(yes)},
@@ -1611,7 +1612,7 @@ TEST_F(TestSession, FindObjectsNoPrivate) {
   CK_OBJECT_CLASS oc = CKO_PRIVATE_KEY;
   CK_ATTRIBUTE attr[] = {{CKA_CLASS, &oc, sizeof(oc)}};
   EXPECT_EQ(CKR_WOULD_BLOCK_FOR_PRIVATE_OBJECTS,
-            session_->FindObjectsInit(attr, arraysize(attr)));
+            session_->FindObjectsInit(attr, base::size(attr)));
 }
 
 TEST_F(TestSession, DestroyObjectsNoPrivate) {
@@ -1622,7 +1623,7 @@ TEST_F(TestSession, DestroyObjectsNoPrivate) {
 
   CK_OBJECT_CLASS oc = CKO_SECRET_KEY;
   CK_ATTRIBUTE attr[] = {{CKA_CLASS, &oc, sizeof(oc)}};
-  ASSERT_EQ(CKR_OK, session_->CreateObject(attr, arraysize(attr), &handle));
+  ASSERT_EQ(CKR_OK, session_->CreateObject(attr, base::size(attr), &handle));
   EXPECT_EQ(CKR_WOULD_BLOCK_FOR_PRIVATE_OBJECTS,
             session_->DestroyObject(handle));
 }

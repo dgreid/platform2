@@ -66,7 +66,7 @@ const struct {
 // Get the algorithm ID for DigestInfo structure
 inline std::string GetDigestAlgorithmEncoding(DigestAlgorithm alg) {
   size_t alg_index = static_cast<size_t>(alg);
-  if (alg_index >= arraysize(kDigestAlgorithmEncoding)) {
+  if (alg_index >= base::size(kDigestAlgorithmEncoding)) {
     return std::string();
   }
   return std::string(kDigestAlgorithmEncoding[alg_index].encoding,

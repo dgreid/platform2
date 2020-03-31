@@ -5,6 +5,7 @@
 #include "chaps/tpm2_utility_impl.h"
 
 #include <base/logging.h>
+#include <base/stl_util.h>
 #include <base/strings/string_number_conversions.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -89,13 +90,13 @@ class TPM2UtilityTest : public testing::Test {
     std::vector<uint8_t> bytes;
 
     CHECK(base::HexStringToBytes(kValidECPointX, &bytes));
-    CHECK_EQ(bytes.size(), arraysize(kValidECPointX) / 2);
+    CHECK_EQ(bytes.size(), base::size(kValidECPointX) / 2);
     public_area.unique.ecc.x.size = bytes.size();
     memcpy(public_area.unique.ecc.x.buffer, bytes.data(), bytes.size());
 
     bytes.clear();
     CHECK(base::HexStringToBytes(kValidECPointY, &bytes));
-    CHECK_EQ(bytes.size(), arraysize(kValidECPointY) / 2);
+    CHECK_EQ(bytes.size(), base::size(kValidECPointY) / 2);
     public_area.unique.ecc.y.size = bytes.size();
     memcpy(public_area.unique.ecc.y.buffer, bytes.data(), bytes.size());
 

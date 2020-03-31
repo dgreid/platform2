@@ -10,6 +10,7 @@
 
 #include <base/bind.h>
 #include <base/callback.h>
+#include <base/stl_util.h>
 #include <base/strings/stringprintf.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -250,9 +251,9 @@ TEST_F(TestSlotManager, QueryInfo) {
   slot_manager_->GetTokenInfo(ic_, 0, &token_info);
   EXPECT_EQ(NULL, memchr(&token_info, 0xEE, sizeof(token_info)));
   string expected_label(kTokenLabel);
-  expected_label.resize(arraysize(token_info.label), ' ');
+  expected_label.resize(base::size(token_info.label), ' ');
   string actual_label(reinterpret_cast<char*>(token_info.label),
-                      arraysize(token_info.label));
+                      base::size(token_info.label));
   EXPECT_EQ(expected_label, actual_label);
   const MechanismMap* mechanisms = slot_manager_->GetMechanismInfo(ic_, 0);
   ASSERT_TRUE(mechanisms != NULL);

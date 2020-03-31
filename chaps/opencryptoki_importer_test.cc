@@ -13,6 +13,7 @@
 
 #include <base/files/scoped_temp_dir.h>
 #include <base/logging.h>
+#include <base/stl_util.h>
 #include <base/strings/stringprintf.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -105,13 +106,13 @@ void RunCommand(string command) {
 bool MockUnbind(int key, const string& input, string* output) {
   map<string, string> transforms;
   string encrypted = Bytes2String(kSampleMasterKeyEncrypted,
-                                  arraysize(kSampleMasterKeyEncrypted));
+                                  base::size(kSampleMasterKeyEncrypted));
   string decrypted =
-      Bytes2String(kSampleMasterKey, arraysize(kSampleMasterKey));
+      Bytes2String(kSampleMasterKey, base::size(kSampleMasterKey));
   transforms[encrypted] = decrypted;
   encrypted = Bytes2String(kSampleAuthDataEncrypted,
-                           arraysize(kSampleAuthDataEncrypted));
-  decrypted = Bytes2String(kSampleAuthData, arraysize(kSampleAuthData));
+                           base::size(kSampleAuthDataEncrypted));
+  decrypted = Bytes2String(kSampleAuthData, base::size(kSampleAuthData));
   transforms[encrypted] = decrypted;
 
   map<string, string>::iterator iter = transforms.find(input);

@@ -6,6 +6,7 @@
 
 #include <base/logging.h>
 #include <base/macros.h>
+#include <base/stl_util.h>
 
 #include "chaps/chaps.h"
 #include "chaps/chaps_utility.h"
@@ -44,7 +45,7 @@ static const AttributePolicy kPrivateKeyPolicies[] = {
 };
 
 ObjectPolicyPrivateKey::ObjectPolicyPrivateKey() {
-  AddPolicies(kPrivateKeyPolicies, arraysize(kPrivateKeyPolicies));
+  AddPolicies(kPrivateKeyPolicies, base::size(kPrivateKeyPolicies));
 }
 
 ObjectPolicyPrivateKey::~ObjectPolicyPrivateKey() {}

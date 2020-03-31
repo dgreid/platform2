@@ -8,6 +8,7 @@
 
 #include <base/logging.h>
 #include <base/macros.h>
+#include <base/stl_util.h>
 
 #include "chaps/chaps_utility.h"
 #include "chaps/object.h"
@@ -31,7 +32,7 @@ static const AttributePolicy kCommonPolicies[] = {
     {CKA_LABEL, false, {false, false, false}, false}};
 
 ObjectPolicyCommon::ObjectPolicyCommon() : object_(NULL) {
-  AddPolicies(kCommonPolicies, arraysize(kCommonPolicies));
+  AddPolicies(kCommonPolicies, base::size(kCommonPolicies));
 }
 
 ObjectPolicyCommon::~ObjectPolicyCommon() {}
