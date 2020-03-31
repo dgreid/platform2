@@ -38,6 +38,7 @@ using ::testing::Contains;
 using ::testing::ElementsAre;
 using ::testing::HasSubstr;
 using ::testing::InSequence;
+using ::testing::IsSupersetOf;
 using ::testing::Mock;
 using ::testing::Not;
 using ::testing::Return;
@@ -227,18 +228,18 @@ TEST_F(BrowserJobTest, ShouldNotStopTest) {
   EXPECT_FALSE(job_->ShouldStop());
 }
 
-TEST_F(BrowserJobTest, ShouldDropExtraArgumentsAndEnvironmentVariablesTest) {
+TEST_F(BrowserJobTest, ShouldDropExtraArgumentsTest) {
   EXPECT_CALL(utils_, time(nullptr))
       .WillRepeatedly(Return(BrowserJob::kRestartWindowSeconds));
 
   // Simulate restart kUseExtraArgsRuns - 1 times and no dropping.
   for (int i = 0; i < BrowserJob::kUseExtraArgsRuns - 1; ++i)
     job_->RecordTime();
-  EXPECT_FALSE(job_->ShouldDropExtraArgumentsAndEnvironmentVariables());
+  EXPECT_FALSE(job_->ShouldDropExtraArguments());
 
-  // One more restart and extra args and env vars should be dropped.
+  // One more restart and extra args should be dropped.
   job_->RecordTime();
-  EXPECT_TRUE(job_->ShouldDropExtraArgumentsAndEnvironmentVariables());
+  EXPECT_TRUE(job_->ShouldDropExtraArguments());
 }
 
 TEST_F(BrowserJobTest, ShouldAddCrashLoopArgBeforeStopping) {
@@ -430,6 +431,58 @@ TEST_F(BrowserJobTest, SetExtraArguments) {
   EXPECT_THAT(job_args, Contains(BrowserJob::kForceCrashpadFlag));
 }
 
+TEST_F(BrowserJobTest, SetTestArguments) {
+  const char* kTestArgs[] = {"--test", "--it", "--all"};
+  std::vector<std::string> test_args(kTestArgs,
+                                     kTestArgs + base::size(kTestArgs));
+  job_->SetTestArguments(test_args);
+
+  std::vector<std::string> job_args = job_->ExportArgv();
+  ExpectArgsToContainAll(job_args, argv_);
+  ExpectArgsToContainAll(job_args, test_args);
+  EXPECT_THAT(job_args, Contains(BrowserJob::kForceCrashpadFlag));
+}
+
+TEST_F(BrowserJobTest, SetTestArgumentsAndSetExtraArgumentsDontConflict) {
+  const char* kTestArgs[] = {"--test", "--it", "--all"};
+  std::vector<std::string> test_args(kTestArgs,
+                                     kTestArgs + base::size(kTestArgs));
+  job_->SetTestArguments(test_args);
+
+  const char* kExtraArgs[] = {"--ichi", "--ni", "--san"};
+  std::vector<std::string> extra_args(kExtraArgs,
+                                      kExtraArgs + base::size(kExtraArgs));
+  job_->SetExtraArguments(extra_args);
+
+  std::vector<std::string> job_args = job_->ExportArgv();
+  ExpectArgsToContainAll(job_args, argv_);
+  ExpectArgsToContainAll(job_args, test_args);
+  ExpectArgsToContainAll(job_args, extra_args);
+  EXPECT_THAT(job_args, Contains(BrowserJob::kForceCrashpadFlag));
+
+  const char* kNewTestArgs[] = {"--debugging=sucks", "--testing=rocks"};
+  std::vector<std::string> new_test_args(
+      kNewTestArgs, kNewTestArgs + base::size(kNewTestArgs));
+  job_->SetTestArguments(new_test_args);
+  job_args = job_->ExportArgv();
+  ExpectArgsToContainAll(job_args, argv_);
+  ExpectArgsToContainAll(job_args, new_test_args);
+  ExpectArgsToContainAll(job_args, extra_args);
+  EXPECT_THAT(job_args, Contains(BrowserJob::kForceCrashpadFlag));
+  EXPECT_THAT(job_args, Not(IsSupersetOf(test_args)));
+
+  const char* kNewExtraArgs[] = {"--uno", "--dos"};
+  std::vector<std::string> new_extra_args(
+      kNewExtraArgs, kNewExtraArgs + base::size(kNewExtraArgs));
+  job_->SetExtraArguments(new_extra_args);
+  job_args = job_->ExportArgv();
+  ExpectArgsToContainAll(job_args, argv_);
+  ExpectArgsToContainAll(job_args, new_test_args);
+  ExpectArgsToContainAll(job_args, new_extra_args);
+  EXPECT_THAT(job_args, Contains(BrowserJob::kForceCrashpadFlag));
+  EXPECT_THAT(job_args, Not(IsSupersetOf(extra_args)));
+}
+
 TEST_F(BrowserJobTest, ExportArgv) {
   std::vector<std::string> argv(kArgv, kArgv + base::size(kArgv));
   BrowserJob job(
@@ -445,13 +498,13 @@ TEST_F(BrowserJobTest, ExportArgv) {
   EXPECT_EQ(expected_argv, job.ExportArgv());
 }
 
-TEST_F(BrowserJobTest, SetExtraEnvironmentVariables) {
+TEST_F(BrowserJobTest, SetAdditionalEnvironmentVariables) {
   std::vector<std::string> argv(kArgv, kArgv + base::size(kArgv));
   BrowserJob job(
       argv, {"A=a"}, &checker_, &metrics_, &utils_,
       BrowserJob::Config{false, false, kAlwaysUseCrashpad, base::nullopt},
       std::make_unique<login_manager::Subprocess>(1, &utils_));
-  job.SetExtraEnvironmentVariables({"B=b", "C="});
+  job.SetAdditionalEnvironmentVariables({"B=b", "C="});
   EXPECT_EQ((std::vector<std::string>{"A=a", "B=b", "C="}),
             job.ExportEnvironmentVariables());
 }

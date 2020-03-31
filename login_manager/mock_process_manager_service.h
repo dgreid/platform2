@@ -24,11 +24,18 @@ class MockProcessManagerService : public ProcessManagerServiceInterface {
   MOCK_METHOD(void, RunBrowser, (), (override));
   MOCK_METHOD(void, AbortBrowser, (int, const std::string&), (override));
   MOCK_METHOD(void,
-              RestartBrowserWithArgs,
-              (const std::vector<std::string>&,
-               bool,
-               const std::vector<std::string>&),
+              SetBrowserTestArgs,
+              (const std::vector<std::string>&),
               (override));
+  MOCK_METHOD(void,
+              SetBrowserArgs,
+              (const std::vector<std::string>&),
+              (override));
+  MOCK_METHOD(void,
+              SetBrowserAdditionalEnvironmentalVariables,
+              (const std::vector<std::string>& env_vars),
+              (override));
+  MOCK_METHOD(void, RestartBrowser, (), (override));
   MOCK_METHOD(void,
               SetBrowserSessionForUser,
               (const std::string&, const std::string&),

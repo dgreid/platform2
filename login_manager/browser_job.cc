@@ -276,9 +276,13 @@ void BrowserJob::SetExtraArguments(const std::vector<std::string>& arguments) {
   extra_arguments_ = arguments;
 }
 
-void BrowserJob::SetExtraEnvironmentVariables(
+void BrowserJob::SetTestArguments(const std::vector<std::string>& arguments) {
+  test_arguments_ = arguments;
+}
+
+void BrowserJob::SetAdditionalEnvironmentVariables(
     const std::vector<std::string>& env_vars) {
-  extra_environment_variables_ = env_vars;
+  additional_environment_variables_ = env_vars;
 }
 
 void BrowserJob::ClearPid() {
@@ -290,7 +294,7 @@ std::vector<std::string> BrowserJob::ExportArgv() const {
   to_return.insert(to_return.end(), login_arguments_.begin(),
                    login_arguments_.end());
 
-  if (ShouldDropExtraArgumentsAndEnvironmentVariables()) {
+  if (ShouldDropExtraArguments()) {
     LOG(WARNING) << "Dropping extra arguments and setting safe-mode switch due "
                     "to crashy browser.";
     to_return.emplace_back(kSafeModeFlag);
@@ -304,7 +308,10 @@ std::vector<std::string> BrowserJob::ExportArgv() const {
                      extra_one_time_arguments_.end());
   }
 
-  // Must be done after extra_arguments_ is inserted; extra_arguments_ may
+  to_return.insert(to_return.end(), test_arguments_.begin(),
+                   test_arguments_.end());
+
+  // Must be done after test_arguments_ is inserted; test_arguments_ may
   // override our normal choices.
   SetChromeCrashHandler(&to_return);
 
@@ -335,14 +342,12 @@ std::vector<std::string> BrowserJob::ExportArgv() const {
 
 std::vector<std::string> BrowserJob::ExportEnvironmentVariables() const {
   std::vector<std::string> vars = environment_variables_;
-  if (!ShouldDropExtraArgumentsAndEnvironmentVariables()) {
-    vars.insert(vars.end(), extra_environment_variables_.begin(),
-                extra_environment_variables_.end());
-  }
+  vars.insert(vars.end(), additional_environment_variables_.begin(),
+              additional_environment_variables_.end());
   return vars;
 }
 
-bool BrowserJob::ShouldDropExtraArgumentsAndEnvironmentVariables() const {
+bool BrowserJob::ShouldDropExtraArguments() const {
   // Check start_time_with_extra_args != 0 so that test cases such as
   // SetExtraArguments and ExportArgv pass without mocking time().
   const time_t start_time_with_extra_args =

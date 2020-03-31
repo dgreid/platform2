@@ -513,12 +513,12 @@ class SessionManagerImplTest : public ::testing::Test,
       });
 
       switch (play_store_auto_update_) {
-        case StartArcMiniContainerRequest_PlayStoreAutoUpdate_AUTO_UPDATE_DEFAULT:
+        case StartArcMiniContainerRequest::AUTO_UPDATE_DEFAULT:
           break;
-        case StartArcMiniContainerRequest_PlayStoreAutoUpdate_AUTO_UPDATE_ON:
+        case StartArcMiniContainerRequest::AUTO_UPDATE_ON:
           result.emplace_back("PLAY_STORE_AUTO_UPDATE=1");
           break;
-        case StartArcMiniContainerRequest_PlayStoreAutoUpdate_AUTO_UPDATE_OFF:
+        case StartArcMiniContainerRequest::AUTO_UPDATE_OFF:
           result.emplace_back("PLAY_STORE_AUTO_UPDATE=0");
           break;
         default:
@@ -1032,16 +1032,18 @@ TEST_F(SessionManagerImplTest, EnableChromeTesting) {
   const size_t random_suffix_len = strlen("XXXXXX");
   ASSERT_LT(random_suffix_len, temp_dir.value().size()) << temp_dir.value();
 
-  // Check that RestartBrowserWithArgs() is called with a randomly chosen
+  // Check that SetBrowserTestArgs() is called with a randomly chosen
   // --testing-channel path name.
   const string expected_testing_path_prefix =
       temp_dir.value().substr(0, temp_dir.value().size() - random_suffix_len);
   EXPECT_CALL(manager_,
-              RestartBrowserWithArgs(
-                  ElementsAre(args[0], args[1],
-                              HasSubstr(expected_testing_path_prefix)),
-                  true, ElementsAre(kEnvVars[0], kEnvVars[1])))
+              SetBrowserTestArgs(ElementsAre(
+                  args[0], args[1], HasSubstr(expected_testing_path_prefix))))
       .Times(1);
+  EXPECT_CALL(manager_, SetBrowserAdditionalEnvironmentalVariables(
+                            ElementsAre(kEnvVars[0], kEnvVars[1])))
+      .Times(1);
+  EXPECT_CALL(manager_, RestartBrowser()).Times(1);
 
   {
     brillo::ErrorPtr error;
@@ -1070,11 +1072,13 @@ TEST_F(SessionManagerImplTest, EnableChromeTesting) {
   args[0] = "--dummy";
   args[1] = "--repeat-arg";
   EXPECT_CALL(manager_,
-              RestartBrowserWithArgs(
-                  ElementsAre(args[0], args[1],
-                              HasSubstr(expected_testing_path_prefix)),
-                  true, ElementsAre(kEnvVars[0], kEnvVars[1])))
+              SetBrowserTestArgs(ElementsAre(
+                  args[0], args[1], HasSubstr(expected_testing_path_prefix))))
       .Times(1);
+  EXPECT_CALL(manager_, SetBrowserAdditionalEnvironmentalVariables(
+                            ElementsAre(kEnvVars[0], kEnvVars[1])))
+      .Times(1);
+  EXPECT_CALL(manager_, RestartBrowser()).Times(1);
 
   {
     brillo::ErrorPtr error;
@@ -1831,9 +1835,8 @@ TEST_F(SessionManagerImplTest, RestartJobSuccess) {
   };
 
   EXPECT_CALL(manager_, IsBrowser(getpid())).WillRepeatedly(Return(true));
-  EXPECT_CALL(manager_,
-              RestartBrowserWithArgs(ElementsAreArray(kArgv), false, IsEmpty()))
-      .Times(1);
+  EXPECT_CALL(manager_, SetBrowserArgs(ElementsAreArray(kArgv))).Times(1);
+  EXPECT_CALL(manager_, RestartBrowser()).Times(1);
   ExpectGuestSession();
 
   brillo::ErrorPtr error;
@@ -2377,10 +2380,9 @@ INSTANTIATE_TEST_CASE_P(
     ,
     SessionManagerPackagesCacheTest,
     ::testing::Combine(
-        ::testing::Values(
-            UpgradeArcContainerRequest_PackageCacheMode_DEFAULT,
-            UpgradeArcContainerRequest_PackageCacheMode_COPY_ON_INIT,
-            UpgradeArcContainerRequest_PackageCacheMode_SKIP_SETUP_COPY_ON_INIT),
+        ::testing::Values(UpgradeArcContainerRequest::DEFAULT,
+                          UpgradeArcContainerRequest::COPY_ON_INIT,
+                          UpgradeArcContainerRequest::SKIP_SETUP_COPY_ON_INIT),
         ::testing::Bool()));
 
 TEST_P(SessionManagerPlayStoreAutoUpdateTest, PlayStoreAutoUpdate) {

@@ -61,14 +61,23 @@ class BrowserJobInterface : public ChildJobInterface {
   // Called when the session is ended.
   virtual void StopSession() = 0;
 
-  // Sets command line arguments for the job from string vector.
+  // Sets command line arguments for the job from string vector. This overwrites
+  // the arguments passed to BrowserJob's constructor.
   virtual void SetArguments(const std::vector<std::string>& arguments) = 0;
 
-  // Sets extra command line arguments for the job from a string vector.
+  // Sets extra command line arguments for the job from a string vector. These
+  // are in addition to the arguments from BrowserJob's constructor (or
+  // SetArguments()).
   virtual void SetExtraArguments(const std::vector<std::string>& arguments) = 0;
 
-  // Sets extra environment variables for the job.
-  virtual void SetExtraEnvironmentVariables(
+  // Sets command line arguments for integration tests. These are in addition to
+  // the arguments from BrowserJob's constructor / SetArguments() and the
+  // arguments from SetExtraArguments,
+  virtual void SetTestArguments(const std::vector<std::string>& arguments) = 0;
+
+  // Sets additional environment variables for the job. These are in addition to
+  // the environmental variables set in BrowserJob's constructor.
+  virtual void SetAdditionalEnvironmentVariables(
       const std::vector<std::string>& env_vars) = 0;
 
   // Throw away the pid of the currently-tracked browser job.
@@ -131,7 +140,8 @@ class BrowserJob : public BrowserJobInterface {
   const std::string GetName() const override;
   void SetArguments(const std::vector<std::string>& arguments) override;
   void SetExtraArguments(const std::vector<std::string>& arguments) override;
-  void SetExtraEnvironmentVariables(
+  void SetTestArguments(const std::vector<std::string>& arguments) override;
+  void SetAdditionalEnvironmentVariables(
       const std::vector<std::string>& env_vars) override;
   void ClearPid() override;
 
@@ -142,9 +152,8 @@ class BrowserJob : public BrowserJobInterface {
   std::vector<std::string> ExportArgv() const;
   std::vector<std::string> ExportEnvironmentVariables() const;
 
-  // Whether to drop extra arguments and environment variables when starting the
-  // job.
-  bool ShouldDropExtraArgumentsAndEnvironmentVariables() const;
+  // Whether to drop the "extra" arguments when starting the job.
+  bool ShouldDropExtraArguments() const;
 
   // Flag passed to Chrome the first time Chrome is started after the
   // system boots. Not passed when Chrome is restarted after signout.
@@ -183,9 +192,12 @@ class BrowserJob : public BrowserJobInterface {
   // Extra one time arguments.
   std::vector<std::string> extra_one_time_arguments_;
 
-  // Extra environment variables to set when running the browser.
+  // Integration test arguments to pass to exec.
+  std::vector<std::string> test_arguments_;
+
+  // Additional environment variables to set when running the browser.
   // Values are of the form "NAME=VALUE".
-  std::vector<std::string> extra_environment_variables_;
+  std::vector<std::string> additional_environment_variables_;
 
   // Wrapper for checking the flag file used to tell us to stop managing
   // the browser job. Externally owned.

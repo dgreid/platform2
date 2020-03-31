@@ -290,21 +290,28 @@ void SessionManagerService::AbortBrowser(int signal,
   browser_->WaitAndAbort(GetKillTimeout());
 }
 
-void SessionManagerService::RestartBrowserWithArgs(
-    const std::vector<std::string>& args,
-    bool args_are_extra,
+void SessionManagerService::SetBrowserTestArgs(
+    const std::vector<std::string>& args) {
+  browser_->SetTestArguments(args);
+}
+
+void SessionManagerService::SetBrowserArgs(
+    const std::vector<std::string>& args) {
+  browser_->SetArguments(args);
+}
+
+void SessionManagerService::SetBrowserAdditionalEnvironmentalVariables(
     const std::vector<std::string>& env_vars) {
+  browser_->SetAdditionalEnvironmentVariables(env_vars);
+}
+
+void SessionManagerService::RestartBrowser() {
   // Waiting for Chrome to shutdown takes too much time.
   // We're killing it immediately hoping that data Chrome uses before
   // logging in is not corrupted.
   // TODO(avayvod): Remove RestartJob when crosbug.com/6924 is fixed.
   if (browser_->CurrentPid() > 0)
     browser_->KillEverything(SIGKILL, "Restarting browser on-demand.");
-  if (args_are_extra)
-    browser_->SetExtraArguments(args);
-  else
-    browser_->SetArguments(args);
-  browser_->SetExtraEnvironmentVariables(env_vars);
   // The browser will be restarted in HandleExit().
 }
 

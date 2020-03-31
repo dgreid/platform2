@@ -147,10 +147,11 @@ class SessionManagerService
   void ScheduleShutdown() override;
   void RunBrowser() override;
   void AbortBrowser(int signal, const std::string& message) override;
-  void RestartBrowserWithArgs(
-      const std::vector<std::string>& args,
-      bool args_are_extra,
+  void SetBrowserTestArgs(const std::vector<std::string>& args) override;
+  void SetBrowserArgs(const std::vector<std::string>& args) override;
+  void SetBrowserAdditionalEnvironmentalVariables(
       const std::vector<std::string>& env_vars) override;
+  void RestartBrowser() override;
   void SetBrowserSessionForUser(const std::string& account_id,
                                 const std::string& userhash) override;
   void SetFlagsForUser(const std::string& account_id,

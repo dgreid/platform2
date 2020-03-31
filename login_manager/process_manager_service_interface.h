@@ -29,12 +29,25 @@ class ProcessManagerServiceInterface {
   // crash dumping machinery.
   virtual void AbortBrowser(int signal, const std::string& message) = 0;
 
-  // Kill the browser. Provide |args| and |env_vars| to be used when it's
-  // restarted.
-  virtual void RestartBrowserWithArgs(
-      const std::vector<std::string>& args,
-      bool args_are_extra,
+  // Whenever the browser is restarted, add |args| to its command line in
+  // addition to the normal arguments. Effects last until this function is
+  // called again.
+  virtual void SetBrowserTestArgs(const std::vector<std::string>& args) = 0;
+
+  // Whenever the browser is restarted, use |args| as its command line. This
+  // overwrites the normal arguments (such as the ones from PerformChromeSetup).
+  // Effects last until this function is called again.
+  virtual void SetBrowserArgs(const std::vector<std::string>& args) = 0;
+
+  // Whenever the browser is restarted, add |env_vars| to its environmental
+  // variables in addition to the normal environmental variables. Each string
+  // in |env_vars| should be the form "NAME=VALUE". Effects last until this
+  // function is called again.
+  virtual void SetBrowserAdditionalEnvironmentalVariables(
       const std::vector<std::string>& env_vars) = 0;
+
+  // Kill and restart the browser.
+  virtual void RestartBrowser() = 0;
 
   // Set bookkeeping for the browser process to indicate that a session
   // has been started for the given user.

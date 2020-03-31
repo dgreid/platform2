@@ -577,8 +577,8 @@ void SessionManagerImpl::EmitAshInitialized() {
 bool SessionManagerImpl::EnableChromeTesting(
     brillo::ErrorPtr* error,
     bool in_force_relaunch,
-    const std::vector<std::string>& in_extra_arguments,
-    const std::vector<std::string>& in_extra_environment_variables,
+    const std::vector<std::string>& in_test_arguments,
+    const std::vector<std::string>& in_test_environment_variables,
     std::string* out_filepath) {
   // Check to see if we already have Chrome testing enabled.
   bool already_enabled = !chrome_testing_path_.empty();
@@ -597,13 +597,15 @@ bool SessionManagerImpl::EnableChromeTesting(
     // Delete testing channel file if it already exists.
     system_->RemoveFile(chrome_testing_path_);
 
-    // Add testing channel argument to extra arguments.
+    // Add testing channel argument to arguments.
     std::string testing_argument = kTestingChannelFlag;
     testing_argument.append(chrome_testing_path_.value());
-    std::vector<std::string> extra_args = in_extra_arguments;
-    extra_args.push_back(testing_argument);
-    manager_->RestartBrowserWithArgs(extra_args, true /* args_are_extra */,
-                                     in_extra_environment_variables);
+    std::vector<std::string> test_args = in_test_arguments;
+    test_args.push_back(testing_argument);
+    manager_->SetBrowserTestArgs(test_args);
+    manager_->SetBrowserAdditionalEnvironmentalVariables(
+        in_test_environment_variables);
+    manager_->RestartBrowser();
   }
   *out_filepath = chrome_testing_path_.value();
   return true;
@@ -945,8 +947,8 @@ bool SessionManagerImpl::RestartJob(brillo::ErrorPtr* error,
     return false;
   }
 
-  manager_->RestartBrowserWithArgs(in_argv, false /* args_are_extra */,
-                                   {} /* env_vars */);
+  manager_->SetBrowserArgs(in_argv);
+  manager_->RestartBrowser();
   return true;
 }
 
