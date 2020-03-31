@@ -961,10 +961,8 @@ bool CryptoUtilityImpl::GetCertificateIssuerName(
     return false;
   }
   char issuer_buf[100];  // A longer CN will truncate.
-  X509_NAME_get_text_by_NID(X509_get_issuer_name(x509.get()),
-                            NID_commonName,
-                            issuer_buf,
-                            arraysize(issuer_buf));
+  X509_NAME_get_text_by_NID(X509_get_issuer_name(x509.get()), NID_commonName,
+                            issuer_buf, base::size(issuer_buf));
   issuer_name->assign(issuer_buf);
   return true;
 }

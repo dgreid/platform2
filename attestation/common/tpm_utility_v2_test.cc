@@ -4,6 +4,7 @@
 
 #include <vector>
 
+#include <base/stl_util.h>
 #include <base/strings/string_number_conversions.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -129,14 +130,14 @@ class TpmUtilityTest : public testing::Test {
     trunks::TPMT_PUBLIC public_area = {};
     std::vector<uint8_t> point_tmp_buffer;
     CHECK(base::HexStringToBytes(kValidECPointX, &point_tmp_buffer));
-    CHECK_EQ(point_tmp_buffer.size(), arraysize(kValidECPointX) / 2);
+    CHECK_EQ(point_tmp_buffer.size(), base::size(kValidECPointX) / 2);
     public_area.unique.ecc.x.size = point_tmp_buffer.size();
     memcpy(public_area.unique.ecc.x.buffer, point_tmp_buffer.data(),
            point_tmp_buffer.size());
 
     point_tmp_buffer.clear();
     CHECK(base::HexStringToBytes(kValidECPointY, &point_tmp_buffer));
-    CHECK_EQ(point_tmp_buffer.size(), arraysize(kValidECPointY) / 2);
+    CHECK_EQ(point_tmp_buffer.size(), base::size(kValidECPointY) / 2);
     public_area.unique.ecc.y.size = point_tmp_buffer.size();
     memcpy(public_area.unique.ecc.y.buffer, point_tmp_buffer.data(),
            point_tmp_buffer.size());

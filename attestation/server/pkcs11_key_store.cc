@@ -152,7 +152,7 @@ bool Pkcs11KeyStore::Write(const std::string& username,
       {CKA_PRIVATE, &true_value, sizeof(true_value)},
       {CKA_MODIFIABLE, &false_value, sizeof(false_value)}};
   CK_OBJECT_HANDLE key_handle = CK_INVALID_HANDLE;
-  if (C_CreateObject(session.handle(), attributes, arraysize(attributes),
+  if (C_CreateObject(session.handle(), attributes, base::size(attributes),
                      &key_handle) != CKR_OK) {
     LOG(ERROR) << "Pkcs11KeyStore: Failed to write key data: " << key_name;
     return false;
@@ -271,12 +271,12 @@ bool Pkcs11KeyStore::Register(const std::string& username,
       {CKA_ID, base::data(id), id.size()},
       {CKA_LABEL, base::data(mutable_label), mutable_label.size()},
       {CKA_MODULUS_BITS, &modulus_bits, sizeof(modulus_bits)},
-      {CKA_PUBLIC_EXPONENT, public_exponent, arraysize(public_exponent)},
+      {CKA_PUBLIC_EXPONENT, public_exponent, base::size(public_exponent)},
       {CKA_MODULUS, base::data(modulus), modulus.size()}};
 
   CK_OBJECT_HANDLE object_handle = CK_INVALID_HANDLE;
   if (C_CreateObject(session.handle(), public_key_attributes,
-                     arraysize(public_key_attributes),
+                     base::size(public_key_attributes),
                      &object_handle) != CKR_OK) {
     LOG(ERROR) << "Pkcs11KeyStore: Failed to create public key object.";
     return false;
@@ -299,13 +299,13 @@ bool Pkcs11KeyStore::Register(const std::string& username,
       {CKA_KEY_TYPE, &p11_key_type, sizeof(p11_key_type)},
       {CKA_ID, base::data(id), id.size()},
       {CKA_LABEL, base::data(mutable_label), mutable_label.size()},
-      {CKA_PUBLIC_EXPONENT, public_exponent, arraysize(public_exponent)},
+      {CKA_PUBLIC_EXPONENT, public_exponent, base::size(public_exponent)},
       {CKA_MODULUS, base::data(modulus), modulus.size()},
       {kKeyBlobAttribute, base::data(mutable_private_key_blob),
        mutable_private_key_blob.size()}};
 
   if (C_CreateObject(session.handle(), private_key_attributes,
-                     arraysize(private_key_attributes),
+                     base::size(private_key_attributes),
                      &object_handle) != CKR_OK) {
     LOG(ERROR) << "Pkcs11KeyStore: Failed to create private key object.";
     return false;
@@ -338,7 +338,7 @@ bool Pkcs11KeyStore::Register(const std::string& username,
          mutable_certificate.size()}};
 
     if (C_CreateObject(session.handle(), certificate_attributes,
-                       arraysize(certificate_attributes),
+                       base::size(certificate_attributes),
                        &object_handle) != CKR_OK) {
       LOG(ERROR) << "Pkcs11KeyStore: Failed to create certificate object.";
       return false;
@@ -390,7 +390,7 @@ bool Pkcs11KeyStore::RegisterCertificate(const std::string& username,
        mutable_certificate.size()}};
   CK_OBJECT_HANDLE object_handle = CK_INVALID_HANDLE;
   if (C_CreateObject(session.handle(), certificate_attributes,
-                     arraysize(certificate_attributes),
+                     base::size(certificate_attributes),
                      &object_handle) != CKR_OK) {
     LOG(ERROR) << "Pkcs11KeyStore: Failed to create certificate object.";
     return false;
@@ -417,7 +417,7 @@ CK_OBJECT_HANDLE Pkcs11KeyStore::FindObject(CK_SESSION_HANDLE session_handle,
       {CKA_MODIFIABLE, &false_value, sizeof(false_value)}};
   CK_OBJECT_HANDLE key_handle = CK_INVALID_HANDLE;
   CK_ULONG count = 0;
-  if ((C_FindObjectsInit(session_handle, attributes, arraysize(attributes)) !=
+  if ((C_FindObjectsInit(session_handle, attributes, base::size(attributes)) !=
        CKR_OK) ||
       (C_FindObjects(session_handle, &key_handle, 1, &count) != CKR_OK) ||
       (C_FindObjectsFinal(session_handle) != CKR_OK)) {
@@ -488,7 +488,7 @@ bool Pkcs11KeyStore::EnumObjects(
   const CK_ULONG kMaxHandles = 100;  // Arbitrary.
   CK_OBJECT_HANDLE handles[kMaxHandles];
   CK_ULONG count = 0;
-  if ((C_FindObjectsInit(session_handle, attributes, arraysize(attributes)) !=
+  if ((C_FindObjectsInit(session_handle, attributes, base::size(attributes)) !=
        CKR_OK) ||
       (C_FindObjects(session_handle, handles, kMaxHandles, &count) != CKR_OK)) {
     LOG(ERROR) << "Key search failed.";
@@ -606,7 +606,7 @@ bool Pkcs11KeyStore::DoesCertificateExist(CK_SESSION_HANDLE session_handle,
        mutable_certificate.size()}};
   CK_OBJECT_HANDLE object_handle = CK_INVALID_HANDLE;
   CK_ULONG count = 0;
-  if ((C_FindObjectsInit(session_handle, attributes, arraysize(attributes)) !=
+  if ((C_FindObjectsInit(session_handle, attributes, base::size(attributes)) !=
        CKR_OK) ||
       (C_FindObjects(session_handle, &object_handle, 1, &count) != CKR_OK) ||
       (C_FindObjectsFinal(session_handle) != CKR_OK)) {

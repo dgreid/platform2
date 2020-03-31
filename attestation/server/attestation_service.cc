@@ -15,6 +15,7 @@
 #include <base/bind.h>
 #include <base/callback.h>
 #include <base/sha1.h>
+#include <base/stl_util.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/stringprintf.h>
 #include <brillo/cryptohome.h>
@@ -289,7 +290,7 @@ std::string GetDescriptionForMode(const char* mode) {
 std::string GetHardwareID() {
   char buffer[VB_MAX_STRING_PROPERTY];
   const char* property =
-      VbGetSystemPropertyString("hwid", buffer, arraysize(buffer));
+      VbGetSystemPropertyString("hwid", buffer, base::size(buffer));
   if (property != nullptr) {
     return std::string(property);
   }
@@ -305,9 +306,8 @@ bool GetAuthorityPublicKey(
     std::string* public_key_hex) {
   const CertificateAuthority* const kKnownCA =
       is_cros_core ? kKnownCrosCoreEndorsementCA : kKnownEndorsementCA;
-  const int kNumIssuers =
-      is_cros_core ? arraysize(kKnownCrosCoreEndorsementCA) :
-                     arraysize(kKnownEndorsementCA);
+  const int kNumIssuers = is_cros_core ? base::size(kKnownCrosCoreEndorsementCA)
+                                       : base::size(kKnownEndorsementCA);
   for (int i = 0; i < kNumIssuers; ++i) {
     if (issuer_name == kKnownCA[i].issuer) {
       public_key_hex->assign(kKnownCA[i].modulus);
@@ -499,7 +499,7 @@ void AttestationService::InitializeTask() {
     crypto_utility_ = default_crypto_utility_.get();
   }
 #if USE_TPM2
-  for (int i = 0; i < arraysize(kNvramIndexData); ++i) {
+  for (int i = 0; i < base::size(kNvramIndexData); ++i) {
     nvram_quote_type_to_index_data_[kNvramIndexData[i].quote_type] = i;
   }
 #endif
@@ -1282,7 +1282,7 @@ bool AttestationService::CreateCertificateRequestInternal(
     // Copy NVRAM quotes to include in an enrollment certificate from the
     // identity if possible.
     std::set<NVRAMQuoteType> not_in_identity;
-    for (int i = 0; i < arraysize(kNvramQuoteTypeForEnrollmentCertificate);
+    for (int i = 0; i < base::size(kNvramQuoteTypeForEnrollmentCertificate);
          ++i) {
       const auto quote_type = kNvramQuoteTypeForEnrollmentCertificate[i];
       const auto found = identity_data.nvram_quotes().find(quote_type);
@@ -1294,7 +1294,7 @@ bool AttestationService::CreateCertificateRequestInternal(
     }
     // Data that is supposed to be in the identiy but is missing won't be
     // quoted now, as we want to drive everything from the identity.
-    for (int i = 0; i < arraysize(kNvramQuoteTypeInIdentityData); ++i) {
+    for (int i = 0; i < base::size(kNvramQuoteTypeInIdentityData); ++i) {
       const auto quote_type = kNvramQuoteTypeInIdentityData[i];
       if (not_in_identity.erase(quote_type)) {
         LOG(WARNING) << "Could not find "
@@ -1773,7 +1773,7 @@ int AttestationService::CreateIdentity(int identity_features) {
   // we can certify them. This is an almost identical process to the PCR
   // quotes above.
 
-  for (int i = 0; i < arraysize(kNvramQuoteTypeInIdentityData); ++i) {
+  for (int i = 0; i < base::size(kNvramQuoteTypeInIdentityData); ++i) {
     if (!InsertCertifiedNvramData(kNvramQuoteTypeInIdentityData[i],
                                   false /* must_be_present */,
                                   &new_identity_pb)) {
@@ -1920,12 +1920,12 @@ bool AttestationService::EncryptDataForAttestationCA(
     case DEFAULT_ACA:
       key = kDefaultACAPublicKey;
       key_id = std::string(kDefaultACAPublicKeyID,
-                        arraysize(kDefaultACAPublicKeyID) - 1);
+                           base::size(kDefaultACAPublicKeyID) - 1);
       break;
     case TEST_ACA:
       key = kTestACAPublicKey;
-      key_id = std::string(kTestACAPublicKeyID,
-                        arraysize(kTestACAPublicKeyID) - 1);
+      key_id =
+          std::string(kTestACAPublicKeyID, base::size(kTestACAPublicKeyID) - 1);
       break;
     default:
       NOTREACHED();
@@ -2183,7 +2183,7 @@ bool AttestationService::VerifyPCR0Quote(
   }
 
   // Check if the PCR0 value represents a known mode.
-  for (size_t i = 0; i < arraysize(kKnownBootModes); ++i) {
+  for (size_t i = 0; i < base::size(kKnownBootModes); ++i) {
     std::string pcr_value = GetPCRValueForMode(kKnownBootModes[i]);
     if (pcr0_quote.quoted_pcr_value() == pcr_value) {
       LOG(INFO) << "PCR0: " << GetDescriptionForMode(kKnownBootModes[i]);
@@ -2979,12 +2979,12 @@ const char *AttestationService::GetEnterpriseEncryptionHexKey(VAType va_type)
 
 std::string AttestationService::GetEnterpriseEncryptionPublicKeyID(
     VAType va_type) const {
-  return std::string(va_type == TEST_VA ?
-      kTestEnterpriseEncryptionPublicKeyID :
-      kDefaultEnterpriseEncryptionPublicKeyID,
-      arraysize(va_type == TEST_VA ?
-          kTestEnterpriseEncryptionPublicKeyID :
-          kDefaultEnterpriseEncryptionPublicKeyID) - 1);
+  return std::string(
+      va_type == TEST_VA ? kTestEnterpriseEncryptionPublicKeyID
+                         : kDefaultEnterpriseEncryptionPublicKeyID,
+      base::size(va_type == TEST_VA ? kTestEnterpriseEncryptionPublicKeyID
+                                    : kDefaultEnterpriseEncryptionPublicKeyID) -
+          1);
 }
 
 bool AttestationService::ValidateEnterpriseChallenge(

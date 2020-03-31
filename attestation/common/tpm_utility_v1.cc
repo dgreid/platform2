@@ -486,12 +486,12 @@ bool TpmUtilityV1::GetEndorsementCertificate(KeyType key_type,
     return false;
   }
   if (memcmp(kStoredCertHeader, &nvram_value[kStoredCertHeaderOffset],
-             arraysize(kStoredCertHeader)) != 0) {
+             base::size(kStoredCertHeader)) != 0) {
     LOG(ERROR) << "Malformed EK certificate: Bad PCCLIENT_STORED_CERT.";
     return false;
   }
   if (memcmp(kFullCertHeader, &nvram_value[kFullCertHeaderOffset],
-             arraysize(kFullCertHeader)) != 0) {
+             base::size(kFullCertHeader)) != 0) {
     LOG(ERROR) << "Malformed EK certificate: Bad PCCLIENT_FULL_CERT.";
     return false;
   }
@@ -505,7 +505,7 @@ bool TpmUtilityV1::GetEndorsementCertificate(KeyType key_type,
   }
   // The X.509 certificate follows the header bytes.
   size_t full_cert_end =
-      kTotalHeaderBytes + full_cert_size - arraysize(kFullCertHeader);
+      kTotalHeaderBytes + full_cert_size - base::size(kFullCertHeader);
   certificate->assign(nvram_value.begin() + kTotalHeaderBytes,
                       nvram_value.begin() + full_cert_end);
   return true;
@@ -1309,7 +1309,7 @@ bool TpmUtilityV1::MakeIdentity(std::string* identity_public_key_der,
   }
   result = Tspi_SetAttribData(pca_public_key_object, TSS_TSPATTRIB_RSAKEY_INFO,
                               TSS_TSPATTRIB_KEYINFO_RSA_MODULUS,
-                              arraysize(modulus_buffer), modulus_buffer);
+                              base::size(modulus_buffer), modulus_buffer);
   if (TPM_ERROR(result)) {
     TPM_LOG(ERROR, result)
         << "MakeIdentity: Cannot set modulus to PCA public key.";
