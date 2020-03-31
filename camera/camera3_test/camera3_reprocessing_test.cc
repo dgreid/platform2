@@ -6,6 +6,8 @@
 #include <sstream>
 #include <vector>
 
+#include <base/stl_util.h>
+
 #include <libyuv.h>
 #include "camera3_test/camera3_exif_validator.h"
 #include "camera3_test/camera3_frame_fixture.h"
@@ -391,7 +393,7 @@ void Camera3ReprocessingTest::DoReprocessingCapture(
         exif_test_data.thumbnail_resolution.Height()};
     EXPECT_EQ(0,
               UpdateMetadata(ANDROID_JPEG_THUMBNAIL_SIZE, thumbnail_resolution,
-                             arraysize(thumbnail_resolution), in_metadata));
+                             base::size(thumbnail_resolution), in_metadata));
     EXPECT_EQ(0, UpdateMetadata(ANDROID_JPEG_ORIENTATION,
                                 &exif_test_data.orientation, 1, in_metadata));
     EXPECT_EQ(0, UpdateMetadata(ANDROID_JPEG_QUALITY,

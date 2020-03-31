@@ -332,7 +332,7 @@ static void InitPerfLog() {
     camera_info info;
     ASSERT_EQ(0, camera_module.GetCameraInfo(i, &info));
     ASSERT_LE(0, info.facing);
-    ASSERT_LT(info.facing, arraysize(facing_names));
+    ASSERT_LT(info.facing, base::size(facing_names));
     name_map[i] = facing_names[info.facing];
   }
   camera3_test::Camera3PerfLog::GetInstance()->SetCameraNameMap(name_map);
@@ -1286,9 +1286,9 @@ static int GetCmdLineTestCameraFacing(const base::CommandLine& cmd_line) {
     return -ENOENT;
   int idx = std::distance(
       facing_names,
-      std::find(facing_names, facing_names + arraysize(facing_names),
+      std::find(facing_names, facing_names + base::size(facing_names),
                 facing_name));
-  if (idx == arraysize(facing_names)) {
+  if (idx == base::size(facing_names)) {
     ADD_FAILURE() << "Invalid facing name: " << facing_name;
     return -EINVAL;
   }

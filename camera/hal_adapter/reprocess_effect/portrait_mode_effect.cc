@@ -24,6 +24,7 @@
 #include <base/memory/shared_memory.h>
 #include <base/numerics/safe_conversions.h>
 #include <base/process/launch.h>
+#include <base/stl_util.h>
 #include <base/values.h>
 #include <libyuv.h>
 #include <libyuv/convert_argb.h>
@@ -83,8 +84,8 @@ int32_t PortraitModeEffect::SetVendorTags(uint32_t request_vendor_tag_start,
                                           uint32_t request_vendor_tag_count,
                                           uint32_t result_vendor_tag_start,
                                           uint32_t result_vendor_tag_count) {
-  if (request_vendor_tag_count != arraysize(kRequestVendorTag) ||
-      result_vendor_tag_count != arraysize(kResultVendorTag)) {
+  if (request_vendor_tag_count != base::size(kRequestVendorTag) ||
+      result_vendor_tag_count != base::size(kResultVendorTag)) {
     return -EINVAL;
   }
   enable_vendor_tag_ = request_vendor_tag_start;

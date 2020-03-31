@@ -6,6 +6,8 @@
 
 #include <algorithm>
 
+#include <base/stl_util.h>
+
 namespace camera3_test {
 
 void Camera3StillCaptureFixture::SetUp() {
@@ -136,7 +138,7 @@ TEST_P(Camera3SimpleStillCaptureTest, JpegExifTest) {
   struct timespec timeout;
   clock_gettime(CLOCK_REALTIME, &timeout);
   timeout.tv_sec += ARRAY_SIZE(exif_test_data);  // 1 second per capture
-  for (size_t i = 0; i < arraysize(exif_test_data); i++) {
+  for (size_t i = 0; i < base::size(exif_test_data); i++) {
     ASSERT_EQ(0, WaitStillCaptureResult(cam_id_, timeout))
         << "Waiting for still capture result timeout";
   }
