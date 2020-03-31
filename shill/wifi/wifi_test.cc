@@ -16,6 +16,7 @@
 
 #include <base/files/file_util.h>
 #include <base/memory/ref_counted.h>
+#include <base/stl_util.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_split.h>
 #include <base/strings/string_util.h>
@@ -3494,7 +3495,7 @@ TEST_F(WiFiMainTest, GetGeolocationObjects) {
   vector<GeolocationInfo> objects;
   EXPECT_EQ(objects.size(), 0);
 
-  for (size_t i = 0; i < arraysize(bsses); ++i) {
+  for (size_t i = 0; i < base::size(bsses); ++i) {
     ReportBSS(bsses[i].bsspath, bsses[i].ssid, bsses[i].bssid,
               bsses[i].signal_strength, bsses[i].frequency, bsses[i].mode);
     objects = wifi()->GetGeolocationObjects();
@@ -3875,7 +3876,7 @@ TEST_F(WiFiMainTest, OnNewWiphy) {
   EXPECT_CALL(*wake_on_wifi_, OnWiphyIndexReceived(kNewWiphyNlMsg_WiphyIndex));
   GetAllScanFrequencies()->clear();
   OnNewWiphy(new_wiphy_message);
-  EXPECT_EQ(arraysize(kNewWiphyNlMsg_UniqueFrequencies),
+  EXPECT_EQ(base::size(kNewWiphyNlMsg_UniqueFrequencies),
             GetAllScanFrequencies()->size());
   for (uint16_t freq : kNewWiphyNlMsg_UniqueFrequencies) {
     EXPECT_TRUE(GetAllScanFrequencies()->find(freq) !=

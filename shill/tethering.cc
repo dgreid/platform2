@@ -5,6 +5,7 @@
 #include "shill/tethering.h"
 
 #include <base/macros.h>
+#include <base/stl_util.h>
 
 using std::set;
 using std::vector;
@@ -20,10 +21,10 @@ const uint8_t Tethering::kLocallyAdministratedMacBit = 0x02;
 // static
 bool Tethering::IsAndroidBSSID(const vector<uint8_t>& bssid) {
   vector<uint8_t> truncated_bssid = bssid;
-  truncated_bssid.resize(arraysize(kAndroidBSSIDPrefix));
+  truncated_bssid.resize(base::size(kAndroidBSSIDPrefix));
   return truncated_bssid ==
          vector<uint8_t>(kAndroidBSSIDPrefix,
-                         kAndroidBSSIDPrefix + arraysize(kAndroidBSSIDPrefix));
+                         kAndroidBSSIDPrefix + base::size(kAndroidBSSIDPrefix));
 }
 
 // static

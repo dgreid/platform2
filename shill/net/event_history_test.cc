@@ -4,6 +4,7 @@
 
 #include "shill/net/event_history.h"
 
+#include <base/stl_util.h>
 #include <gtest/gtest.h>
 
 #include <memory>
@@ -228,14 +229,14 @@ TEST_F(EventHistoryTest, ConvertTimestampsToStrings) {
   const Timestamp kValues[] = {
       GetTimestamp(123, 123, "2012-12-09T12:41:22.123456+0100"),
       GetTimestamp(234, 234, "2012-12-31T23:59:59.012345+0100")};
-  for (size_t i = 0; i < arraysize(kValues); ++i) {
+  for (size_t i = 0; i < base::size(kValues); ++i) {
     RecordEvent(kValues[i]);
   }
 
   vector<string> strings = ExtractWallClockToStrings();
-  EXPECT_GT(arraysize(kValues), 0);
-  ASSERT_EQ(arraysize(kValues), strings.size());
-  for (size_t i = 0; i < arraysize(kValues); i++) {
+  EXPECT_GT(base::size(kValues), 0);
+  ASSERT_EQ(base::size(kValues), strings.size());
+  for (size_t i = 0; i < base::size(kValues); i++) {
     EXPECT_EQ(kValues[i].wall_clock, strings[i]);
   }
 }

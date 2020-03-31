@@ -9,6 +9,7 @@
 #include <net/if_arp.h>
 #include <netinet/in.h>
 
+#include <base/stl_util.h>
 #include <gtest/gtest.h>
 
 #include "shill/mock_log.h"
@@ -110,9 +111,9 @@ void ArpClientTest::SetupValidPacket(ArpPacket* packet) {
   IPAddress remote_ip(IPAddress::kFamilyIPv4);
   EXPECT_TRUE(remote_ip.SetAddressFromString(kRemoteIPAddress));
   packet->set_remote_ip_address(remote_ip);
-  ByteString local_mac(kLocalMacAddress, arraysize(kLocalMacAddress));
+  ByteString local_mac(kLocalMacAddress, base::size(kLocalMacAddress));
   packet->set_local_mac_address(local_mac);
-  ByteString remote_mac(kRemoteMacAddress, arraysize(kRemoteMacAddress));
+  ByteString remote_mac(kRemoteMacAddress, base::size(kRemoteMacAddress));
   packet->set_remote_mac_address(remote_mac);
 }
 
@@ -246,7 +247,7 @@ TEST_F(ArpClientTest, Receive) {
     EXPECT_TRUE(reply.remote_ip_address().Equals(packet.remote_ip_address()));
     EXPECT_TRUE(reply.remote_mac_address().Equals(packet.remote_mac_address()));
     EXPECT_TRUE(
-        sender.Equals(ByteString(kSenderBytes, arraysize(kSenderBytes))));
+        sender.Equals(ByteString(kSenderBytes, base::size(kSenderBytes))));
   }
 }
 
@@ -287,10 +288,10 @@ TEST_F(ArpClientTest, Transmit) {
   // If the destination MAC address is unset, it should be sent to the
   // broadcast MAC address.
   static const uint8_t kZeroBytes[] = {0, 0, 0, 0, 0, 0};
-  packet.set_remote_mac_address(ByteString(kZeroBytes, arraysize(kZeroBytes)));
+  packet.set_remote_mac_address(ByteString(kZeroBytes, base::size(kZeroBytes)));
   ASSERT_TRUE(packet.FormatRequest(&packet_bytes));
   static const uint8_t kBroadcastBytes[] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
-  ByteString broadcast_mac(kBroadcastBytes, arraysize(kBroadcastBytes));
+  ByteString broadcast_mac(kBroadcastBytes, base::size(kBroadcastBytes));
   EXPECT_CALL(*sockets_, SendTo(kSocketFD, IsByteData(packet_bytes),
                                 packet_bytes.GetLength(), 0,
                                 IsLinkAddress(kInterfaceIndex, broadcast_mac),

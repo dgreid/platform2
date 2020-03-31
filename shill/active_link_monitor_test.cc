@@ -9,6 +9,7 @@
 #include <string>
 
 #include <base/bind.h>
+#include <base/stl_util.h>
 #include <gtest/gtest.h>
 
 #include "shill/logging.h"
@@ -120,9 +121,9 @@ class ActiveLinkMonitorTest : public Test {
         client_test_helper_(client_),
         gateway_ip_(IPAddress::kFamilyIPv4),
         local_ip_(IPAddress::kFamilyIPv4),
-        gateway_mac_(kRemoteMacAddress, arraysize(kRemoteMacAddress)),
-        local_mac_(kLocalMacAddress, arraysize(kLocalMacAddress)),
-        zero_mac_(arraysize(kLocalMacAddress)),
+        gateway_mac_(kRemoteMacAddress, base::size(kRemoteMacAddress)),
+        local_mac_(kLocalMacAddress, base::size(kLocalMacAddress)),
+        zero_mac_(base::size(kLocalMacAddress)),
         link_scope_logging_was_enabled_(false),
         interface_name_(kInterfaceName),
         monitor_(connection_,
@@ -553,8 +554,8 @@ TEST_F(ActiveLinkMonitorTest, Average) {
   const size_t filter_depth = GetMaxResponseSampleFilterDepth();
   EXPECT_CALL(metrics_,
               SendToUMA(HasSubstr("LinkMonitorResponseTimeSample"), _, _, _, _))
-      .Times(arraysize(kSamples));
-  ASSERT_GT(arraysize(kSamples), filter_depth);
+      .Times(base::size(kSamples));
+  ASSERT_GT(base::size(kSamples), filter_depth);
   StartMonitor();
   size_t i = 0;
   int sum = 0;
@@ -565,7 +566,7 @@ TEST_F(ActiveLinkMonitorTest, Average) {
     EXPECT_EQ(sum / (i + 1), monitor_.GetResponseTimeMilliseconds());
     SendNextRequest();
   }
-  for (; i < arraysize(kSamples); ++i) {
+  for (; i < base::size(kSamples); ++i) {
     AdvanceTime(kSamples[i]);
     ReceiveReplyAndRestartMonitorCycle();
     sum = (sum + kSamples[i]) * filter_depth / (filter_depth + 1);
@@ -615,11 +616,11 @@ TEST_F(ActiveLinkMonitorTest, ImpulseResponse) {
 
 TEST_F(ActiveLinkMonitorTest, HardwareAddressToString) {
   const uint8_t address0[] = {0, 1, 2, 3, 4, 5};
-  EXPECT_EQ("00:01:02:03:04:05",
-            HardwareAddressToString(ByteString(address0, arraysize(address0))));
+  EXPECT_EQ("00:01:02:03:04:05", HardwareAddressToString(ByteString(
+                                     address0, base::size(address0))));
   const uint8_t address1[] = {0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd};
-  EXPECT_EQ("88:99:aa:bb:cc:dd",
-            HardwareAddressToString(ByteString(address1, arraysize(address1))));
+  EXPECT_EQ("88:99:aa:bb:cc:dd", HardwareAddressToString(ByteString(
+                                     address1, base::size(address1))));
 }
 
 }  // namespace shill

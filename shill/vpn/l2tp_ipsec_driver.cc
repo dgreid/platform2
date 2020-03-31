@@ -28,6 +28,7 @@
 
 #include <base/bind.h>
 #include <base/files/file_util.h>
+#include <base/stl_util.h>
 #include <base/strings/string_util.h>
 #include <base/strings/stringprintf.h>
 #include <chromeos/dbus/service_constants.h>
@@ -136,7 +137,7 @@ const VPNDriver::Property L2TPIPSecDriver::kProperties[] = {
 
 L2TPIPSecDriver::L2TPIPSecDriver(Manager* manager,
                                  ProcessManager* process_manager)
-    : VPNDriver(manager, process_manager, kProperties, arraysize(kProperties)),
+    : VPNDriver(manager, process_manager, kProperties, base::size(kProperties)),
       ppp_device_factory_(PPPDeviceFactory::GetInstance()),
       certificate_file_(new CertificateFile()),
       weak_ptr_factory_(this) {}

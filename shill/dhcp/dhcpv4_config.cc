@@ -7,6 +7,7 @@
 #include <arpa/inet.h>
 
 #include <base/files/file_util.h>
+#include <base/stl_util.h>
 #include <base/strings/string_split.h>
 #include <base/strings/stringprintf.h>
 #include <chromeos/dbus/service_constants.h>
@@ -243,7 +244,7 @@ vector<string> DHCPv4Config::GetFlags() {
 // static
 string DHCPv4Config::GetIPv4AddressString(unsigned int address) {
   char str[INET_ADDRSTRLEN];
-  if (inet_ntop(AF_INET, &address, str, arraysize(str))) {
+  if (inet_ntop(AF_INET, &address, str, base::size(str))) {
     return str;
   }
   LOG(ERROR) << "Unable to convert IPv4 address to string: " << address;

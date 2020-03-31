@@ -9,6 +9,7 @@
 #include <vector>
 
 #include <base/macros.h>
+#include <base/stl_util.h>
 #include <gtest/gtest.h>
 
 #include "shill/net/byte_string.h"
@@ -549,22 +550,22 @@ INSTANTIATE_TEST_CASE_P(
     ComparisonTest,
     IPAddressIPv4ComparisonTest,
     testing::Combine(
-        testing::Range<size_t>(0, arraysize(kIPv4OrderedAddresses) - 1),
-        testing::Range<size_t>(0, arraysize(kIPv4OrderedAddresses) - 1)));
+        testing::Range<size_t>(0, base::size(kIPv4OrderedAddresses) - 1),
+        testing::Range<size_t>(0, base::size(kIPv4OrderedAddresses) - 1)));
 
 INSTANTIATE_TEST_CASE_P(
     ComparisonTest,
     IPAddressIPv6ComparisonTest,
     testing::Combine(
-        testing::Range<size_t>(0, arraysize(kIPv6OrderedAddresses) - 1),
-        testing::Range<size_t>(0, arraysize(kIPv6OrderedAddresses) - 1)));
+        testing::Range<size_t>(0, base::size(kIPv6OrderedAddresses) - 1),
+        testing::Range<size_t>(0, base::size(kIPv6OrderedAddresses) - 1)));
 
 INSTANTIATE_TEST_CASE_P(
     ComparisonTest,
     IPAddressCrossComparisonTest,
     testing::Combine(
-        testing::Range<size_t>(0, arraysize(kIPv4OrderedAddresses) - 1),
-        testing::Range<size_t>(0, arraysize(kIPv6OrderedAddresses) - 1)));
+        testing::Range<size_t>(0, base::size(kIPv4OrderedAddresses) - 1),
+        testing::Range<size_t>(0, base::size(kIPv6OrderedAddresses) - 1)));
 
 TEST(IPAddressMoveTest, MoveConstructor) {
   const IPAddress const_address(kV4String1);

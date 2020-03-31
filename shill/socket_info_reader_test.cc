@@ -6,6 +6,7 @@
 
 #include <base/files/file_util.h>
 #include <base/files/scoped_temp_dir.h>
+#include <base/stl_util.h>
 #include <base/strings/stringprintf.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -175,18 +176,18 @@ TEST_F(SocketInfoReaderTest, AppendSocketInfo) {
                       StringToIPv6Address(kIPv6AddressPattern1), 1020, 0, 0,
                       SocketInfo::kTimerStateNoTimerPending);
 
-  CreateSocketInfoFile(kIPv4SocketInfoLines, arraysize(kIPv4SocketInfoLines),
+  CreateSocketInfoFile(kIPv4SocketInfoLines, base::size(kIPv4SocketInfoLines),
                        temp_dir.GetPath(), &file_path);
   EXPECT_TRUE(reader_.AppendSocketInfo(file_path, &info_list));
-  EXPECT_EQ(arraysize(kIPv4SocketInfoLines) - 1, info_list.size());
+  EXPECT_EQ(base::size(kIPv4SocketInfoLines) - 1, info_list.size());
   ExpectSocketInfoEqual(v4_info1, info_list[0]);
   ExpectSocketInfoEqual(v4_info2, info_list[1]);
 
-  CreateSocketInfoFile(kIPv6SocketInfoLines, arraysize(kIPv6SocketInfoLines),
+  CreateSocketInfoFile(kIPv6SocketInfoLines, base::size(kIPv6SocketInfoLines),
                        temp_dir.GetPath(), &file_path);
   EXPECT_TRUE(reader_.AppendSocketInfo(file_path, &info_list));
   EXPECT_EQ(
-      arraysize(kIPv4SocketInfoLines) + arraysize(kIPv6SocketInfoLines) - 2,
+      base::size(kIPv4SocketInfoLines) + base::size(kIPv6SocketInfoLines) - 2,
       info_list.size());
   ExpectSocketInfoEqual(v4_info1, info_list[0]);
   ExpectSocketInfoEqual(v4_info2, info_list[1]);

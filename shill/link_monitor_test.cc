@@ -5,6 +5,7 @@
 #include "shill/link_monitor.h"
 
 #include <base/bind.h>
+#include <base/stl_util.h>
 #include <gtest/gtest.h>
 
 #include "shill/logging.h"
@@ -159,7 +160,7 @@ TEST_F(LinkMonitorTest, Start) {
 }
 
 TEST_F(LinkMonitorTest, OnAfterResume) {
-  ByteString gateway_mac(kGatewayMacAddress, arraysize(kGatewayMacAddress));
+  ByteString gateway_mac(kGatewayMacAddress, base::size(kGatewayMacAddress));
   const bool kGatewayUnicastArpSupport = true;
   SetGatewayMacAddress(gateway_mac);
   // Verify gateway settings persist when link monitor is restarted, and
@@ -209,7 +210,7 @@ TEST_F(LinkMonitorTest, OnActiveLinkMonitorFailure) {
 }
 
 TEST_F(LinkMonitorTest, OnActiveLinkMonitorSuccess) {
-  ByteString gateway_mac(kGatewayMacAddress, arraysize(kGatewayMacAddress));
+  ByteString gateway_mac(kGatewayMacAddress, base::size(kGatewayMacAddress));
   EXPECT_CALL(*active_link_monitor_, gateway_mac_address())
       .WillRepeatedly(ReturnRef(gateway_mac));
 

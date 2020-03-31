@@ -8,6 +8,7 @@
 
 #include <base/files/file_util.h>
 #include <base/files/scoped_temp_dir.h>
+#include <base/stl_util.h>
 #include <base/strings/stringprintf.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -111,11 +112,11 @@ TEST_F(ConnectionInfoReaderTest, LoadConnectionInfo) {
 
   // Loading a non-empty file should succeed.
   CreateConnectionInfoFile(kConnectionInfoLines,
-                           arraysize(kConnectionInfoLines), temp_dir.GetPath(),
+                           base::size(kConnectionInfoLines), temp_dir.GetPath(),
                            &info_file);
   EXPECT_CALL(reader_, GetConnectionInfoFilePath()).WillOnce(Return(info_file));
   EXPECT_TRUE(reader_.LoadConnectionInfo(&info_list));
-  EXPECT_EQ(arraysize(kConnectionInfoLines), info_list.size());
+  EXPECT_EQ(base::size(kConnectionInfoLines), info_list.size());
 
   ExpectConnectionInfoEqual(
       ConnectionInfo(IPPROTO_UDP, 30, true, StringToIPv4Address("192.168.1.1"),

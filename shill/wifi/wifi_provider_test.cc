@@ -326,7 +326,7 @@ class WiFiProviderTest : public testing::Test {
       LOG(ERROR) << "NULL |strings|.";
       return;
     }
-    for (size_t i = 0; i < arraysize(kStrings); ++i) {
+    for (size_t i = 0; i < base::size(kStrings); ++i) {
       (*strings).push_back(kStrings[i]);
     }
   }
@@ -342,7 +342,7 @@ class WiFiProviderTest : public testing::Test {
       LOG(ERROR) << "NULL |frequencies|.";
       return;
     }
-    for (size_t i = 0; i < arraysize(kConnectFreq); ++i) {
+    for (size_t i = 0; i < base::size(kConnectFreq); ++i) {
       (*frequencies)[kConnectFreq[i].freq] = kConnectFreq[i].count;
     }
   }

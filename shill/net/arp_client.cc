@@ -10,6 +10,8 @@
 #include <netinet/in.h>
 #include <string.h>
 
+#include <base/stl_util.h>
+
 #include "shill/logging.h"
 #include "shill/net/arp_packet.h"
 #include "shill/net/byte_string.h"
@@ -73,7 +75,7 @@ bool ArpClient::CreateSocket(uint16_t arp_opcode) {
 
   sock_fprog pf;
   pf.filter = const_cast<sock_filter*>(arp_filter);
-  pf.len = arraysize(arp_filter);
+  pf.len = base::size(arp_filter);
   if (sockets_->AttachFilter(socket_, &pf) != 0) {
     PLOG(ERROR) << "Could not attach packet filter";
     return false;

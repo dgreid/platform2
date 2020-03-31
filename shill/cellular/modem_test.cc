@@ -8,6 +8,7 @@
 #include <net/if.h>
 #include <sys/ioctl.h>
 
+#include <base/stl_util.h>
 #include <base/strings/string_util.h>
 #include <base/strings/stringprintf.h>
 #include <gmock/gmock.h>
@@ -70,7 +71,7 @@ void ModemTest::SetUp() {
   EXPECT_EQ(kService, modem_->service_);
   EXPECT_EQ(kPath, modem_->path_);
   ReplaceSingletons();
-  expected_address_ = ByteString(kAddress, arraysize(kAddress));
+  expected_address_ = ByteString(kAddress, base::size(kAddress));
 
   EXPECT_CALL(rtnl_handler_, GetInterfaceIndex(kLinkName))
       .WillRepeatedly(Return(kTestInterfaceIndex));

@@ -8,6 +8,7 @@
 
 #include <string>
 
+#include <base/stl_util.h>
 #include <gtest/gtest.h>
 
 #include "shill/logging.h"
@@ -97,9 +98,9 @@ class PassiveLinkMonitorTest : public Test {
   void ReceiveArpPacket(uint16_t operation) {
     client_test_helper_.GeneratePacket(
         operation, IPAddress(kLocalIPAddress),
-        ByteString(kLocalMacAddress, arraysize(kLocalMacAddress)),
+        ByteString(kLocalMacAddress, base::size(kLocalMacAddress)),
         IPAddress(kRemoteIPAddress),
-        ByteString(kRemoteMacAddress, arraysize(kRemoteMacAddress)));
+        ByteString(kRemoteMacAddress, base::size(kRemoteMacAddress)));
     link_monitor_.ReceiveRequest(0);
   }
 

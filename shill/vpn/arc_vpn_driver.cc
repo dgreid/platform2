@@ -9,6 +9,7 @@
 
 #include <utility>
 
+#include <base/stl_util.h>
 #include <base/strings/string_split.h>
 #include <chromeos/dbus/service_constants.h>
 
@@ -44,8 +45,8 @@ const VPNDriver::Property ArcVpnDriver::kProperties[] = {
     {kArcVpnTunnelChromeProperty, 0}};
 
 ArcVpnDriver::ArcVpnDriver(Manager* manager, ProcessManager* process_manager)
-    : VPNDriver(manager, process_manager, kProperties, arraysize(kProperties)) {
-}
+    : VPNDriver(
+          manager, process_manager, kProperties, base::size(kProperties)) {}
 
 ArcVpnDriver::~ArcVpnDriver() {
   Cleanup();

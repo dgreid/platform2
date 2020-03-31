@@ -7,6 +7,7 @@
 #include <memory>
 
 #include <base/files/scoped_temp_dir.h>
+#include <base/stl_util.h>
 #include <ModemManager/ModemManager.h>
 
 #include "shill/cellular/cellular_capability.h"
@@ -65,7 +66,7 @@ void Modem1Test::SetUp() {
   EXPECT_EQ(kService, modem_->service_);
   EXPECT_EQ(kPath, modem_->path_);
   ReplaceSingletons();
-  expected_address_ = ByteString(kAddress, arraysize(kAddress));
+  expected_address_ = ByteString(kAddress, base::size(kAddress));
 
   EXPECT_CALL(rtnl_handler_, GetInterfaceIndex(kLinkName))
       .WillRepeatedly(Return(kTestInterfaceIndex));

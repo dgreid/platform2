@@ -8,6 +8,7 @@
 #include <string>
 
 #include <base/macros.h>
+#include <base/stl_util.h>
 #include <chromeos/dbus/service_constants.h>
 
 #include "shill/key_value_store.h"
@@ -116,7 +117,7 @@ bool DhcpProperties::GetValueForProperty(const string& name,
 
 void DhcpProperties::ClearMappedStringProperty(const size_t& index,
                                                Error* error) {
-  CHECK(index < arraysize(kPropertyNames));
+  CHECK(index < base::size(kPropertyNames));
   if (properties_.Contains<string>(kPropertyNames[index])) {
     properties_.Remove(kPropertyNames[index]);
   } else {
@@ -126,7 +127,7 @@ void DhcpProperties::ClearMappedStringProperty(const size_t& index,
 
 string DhcpProperties::GetMappedStringProperty(const size_t& index,
                                                Error* error) {
-  CHECK(index < arraysize(kPropertyNames));
+  CHECK(index < base::size(kPropertyNames));
   if (properties_.Contains<string>(kPropertyNames[index])) {
     return properties_.Get<string>(kPropertyNames[index]);
   }
@@ -137,7 +138,7 @@ string DhcpProperties::GetMappedStringProperty(const size_t& index,
 bool DhcpProperties::SetMappedStringProperty(const size_t& index,
                                              const string& value,
                                              Error* error) {
-  CHECK(index < arraysize(kPropertyNames));
+  CHECK(index < base::size(kPropertyNames));
   if (properties_.Contains<string>(kPropertyNames[index]) &&
       properties_.Get<string>(kPropertyNames[index]) == value) {
     return false;

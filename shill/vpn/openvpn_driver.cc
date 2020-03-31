@@ -9,6 +9,7 @@
 #include <limits>
 
 #include <base/files/file_util.h>
+#include <base/stl_util.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_split.h>
 #include <base/strings/string_util.h>
@@ -154,7 +155,7 @@ const int OpenVPNDriver::kReconnectOfflineTimeoutSeconds = 2 * 60;
 const int OpenVPNDriver::kReconnectTLSErrorTimeoutSeconds = 20;
 
 OpenVPNDriver::OpenVPNDriver(Manager* manager, ProcessManager* process_manager)
-    : VPNDriver(manager, process_manager, kProperties, arraysize(kProperties)),
+    : VPNDriver(manager, process_manager, kProperties, base::size(kProperties)),
       management_server_(new OpenVPNManagementServer(this)),
       certificate_file_(new CertificateFile()),
       extra_certificates_file_(new CertificateFile()),

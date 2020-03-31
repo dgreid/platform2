@@ -12,6 +12,7 @@
 
 #include <base/files/file_descriptor_watcher_posix.h>
 #include <base/message_loop/message_loop.h>
+#include <base/stl_util.h>
 #include <base/strings/stringprintf.h>
 #include <chromeos/dbus/service_constants.h>
 #include <gmock/gmock.h>
@@ -2268,7 +2269,7 @@ TEST_F(WakeOnWiFiTestWithMockDispatcher, ParseWakeOnSSIDResults) {
   ASSERT_TRUE(triggers->ConstGetNestedAttributeList(
       NL80211_WOWLAN_TRIG_NET_DETECT_RESULTS, &results_list));
   WiFi::FreqSet freqs = ParseWakeOnSSIDResults(results_list);
-  EXPECT_EQ(arraysize(kSSID1FreqMatches), freqs.size());
+  EXPECT_EQ(base::size(kSSID1FreqMatches), freqs.size());
   for (uint32_t freq : kSSID1FreqMatches) {
     EXPECT_TRUE(freqs.find(freq) != freqs.end());
   }
@@ -2982,7 +2983,7 @@ TEST_F(WakeOnWiFiTestWithDispatcher,
   const int kTimeSeconds[] = {10, 20, 30};
   CHECK_EQ(static_cast<const unsigned int>(
                WakeOnWiFi::kMaxDarkResumesPerPeriodShort),
-           arraysize(kTimeSeconds));
+           base::size(kTimeSeconds));
   vector<ByteString> whitelist;
 
   // This test assumes that throttling takes place when 3 dark resumes have
@@ -3036,7 +3037,7 @@ TEST_F(WakeOnWiFiTestWithDispatcher,
   const int kTimeSeconds[] = {10, 70, 130, 190, 250, 310, 370, 430, 490, 550};
   CHECK_EQ(
       static_cast<const unsigned int>(WakeOnWiFi::kMaxDarkResumesPerPeriodLong),
-      arraysize(kTimeSeconds));
+      base::size(kTimeSeconds));
   vector<ByteString> whitelist;
 
   // This test assumes that throttling takes place when 3 dark resumes have been
@@ -3359,7 +3360,7 @@ TEST_F(WakeOnWiFiTestWithMockDispatcher, OnWakeupReasonReceived_SSID) {
                          WakeOnWiFi::kWakeReasonStringSSID));
   OnWakeupReasonReceived(msg);
   EXPECT_EQ(WakeOnWiFi::kWakeTriggerSSID, GetLastWakeReason());
-  EXPECT_EQ(arraysize(kSSID1FreqMatches), GetLastSSIDMatchFreqs().size());
+  EXPECT_EQ(base::size(kSSID1FreqMatches), GetLastSSIDMatchFreqs().size());
   for (uint32_t freq : kSSID1FreqMatches) {
     EXPECT_TRUE(GetLastSSIDMatchFreqs().find(freq) !=
                 GetLastSSIDMatchFreqs().end());
