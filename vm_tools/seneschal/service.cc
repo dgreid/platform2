@@ -33,6 +33,7 @@
 #include <base/files/scoped_file.h>
 #include <base/location.h>
 #include <base/logging.h>
+#include <base/stl_util.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_piece.h>
 #include <base/strings/string_split.h>
@@ -608,7 +609,7 @@ std::unique_ptr<dbus::Response> Service::StartServer(
   }
 
   // Add android-everybody for access to android files.
-  minijail_set_supplementary_gids(jail.get(), arraysize(kSupplementaryGroups),
+  minijail_set_supplementary_gids(jail.get(), base::size(kSupplementaryGroups),
                                   kSupplementaryGroups);
   // We want this process to share namespaces with its parent.
   minijail_change_uid(jail.get(), kChronosUid);

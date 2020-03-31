@@ -33,14 +33,15 @@
 #include <base/logging.h>
 #include <base/macros.h>
 #include <base/posix/eintr_wrapper.h>
+#include <base/stl_util.h>
 #include <base/strings/string_split.h>
 #include <base/strings/stringprintf.h>
 #include <brillo/asynchronous_signal_handler.h>
 #include <brillo/flag_helper.h>
 #include <brillo/message_loops/base_message_loop.h>
 #include <brillo/syslog_logging.h>
-#include <vm_protos/proto_bindings/vsh.pb.h>
 #include <chromeos/constants/vm_tools.h>
+#include <vm_protos/proto_bindings/vsh.pb.h>
 
 #include "vm_tools/vsh/utils.h"
 #include "vm_tools/vsh/vsh_forwarder.h"
@@ -156,7 +157,7 @@ int main(int argc, char** argv) {
   struct pollfd pollfds[] = {
       {signal_fd.get(), POLLIN, 0}, {sock_fd.get(), POLLIN, 0},
   };
-  const int num_pollfds = arraysize(pollfds);
+  const int num_pollfds = base::size(pollfds);
 
   while (true) {
     if (poll(pollfds, num_pollfds, -1) < 0) {

@@ -17,6 +17,7 @@
 #include <base/message_loop/message_loop.h>
 #include <base/posix/eintr_wrapper.h>
 #include <base/run_loop.h>
+#include <base/stl_util.h>
 
 #include "vm_tools/syslog/collector.h"
 
@@ -84,7 +85,7 @@ bool LogToKmsg(logging::LogSeverity severity,
     count += iov.iov_len;
   }
 
-  ssize_t ret = HANDLE_EINTR(writev(g_kmsg_fd, iovs, arraysize(iovs)));
+  ssize_t ret = HANDLE_EINTR(writev(g_kmsg_fd, iovs, base::size(iovs)));
 
   // Even if the write wasn't successful, we can't log anything here because
   // this _is_ the logging function.  Just return whether the write succeeded.

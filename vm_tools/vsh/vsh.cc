@@ -17,10 +17,12 @@
 #include <base/at_exit.h>
 #include <base/files/scoped_file.h>
 #include <base/posix/eintr_wrapper.h>
+#include <base/stl_util.h>
 #include <base/strings/string_split.h>
 #include <brillo/flag_helper.h>
 #include <brillo/message_loops/base_message_loop.h>
 #include <brillo/syslog_logging.h>
+#include <chromeos/constants/vm_tools.h>
 #include <chromeos/dbus/service_constants.h>
 #include <dbus/bus.h>
 #include <dbus/message.h>
@@ -28,7 +30,6 @@
 #include <dbus/object_proxy.h>
 #include <vm_cicerone/proto_bindings/cicerone_service.pb.h>
 #include <vm_concierge/proto_bindings/concierge_service.pb.h>
-#include <chromeos/constants/vm_tools.h>
 
 #include "vm_tools/vsh/scoped_termios.h"
 #include "vm_tools/vsh/utils.h"
@@ -202,7 +203,7 @@ bool ListenForVshd(dbus::ObjectProxy* cicerone_proxy,
   struct pollfd pollfds[] = {
       {listen_fd.get(), POLLIN, 0},
   };
-  const int num_pollfds = arraysize(pollfds);
+  const int num_pollfds = base::size(pollfds);
 
   if (HANDLE_EINTR(poll(pollfds, num_pollfds, 5000)) < 0) {
     PLOG(ERROR) << "Failed to poll";
