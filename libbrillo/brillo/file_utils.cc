@@ -16,6 +16,7 @@
 #include <base/logging.h>
 #include <base/posix/eintr_wrapper.h>
 #include <base/rand_util.h>
+#include <base/stl_util.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/stringprintf.h>
 #include <base/time/time.h>
@@ -140,7 +141,7 @@ bool TouchFileInternal(const base::FilePath& path,
 std::string GetRandomSuffix() {
   const int kBufferSize = 6;
   unsigned char buffer[kBufferSize];
-  base::RandBytes(buffer, arraysize(buffer));
+  base::RandBytes(buffer, base::size(buffer));
   std::string suffix;
   for (int i = 0; i < kBufferSize; ++i) {
     int random_value = buffer[i] % (2 * 26 + 10);

@@ -6,6 +6,7 @@
 
 #include <base/files/file_util.h>
 #include <base/rand_util.h>
+#include <base/stl_util.h>
 #include <base/strings/string_number_conversions.h>
 #include <brillo/files/file_util.h>
 #include <brillo/files/safe_fd.h>
@@ -42,8 +43,8 @@ std::ostream& operator<<(std::ostream& os, const brillo::SafeFD::Error err) {
 std::string GetRandomSuffix() {
   const int kBufferSize = 6;
   unsigned char buffer[kBufferSize];
-  base::RandBytes(buffer, arraysize(buffer));
-  return base::HexEncode(buffer, arraysize(buffer));
+  base::RandBytes(buffer, base::size(buffer));
+  return base::HexEncode(buffer, base::size(buffer));
 }
 
 void FileTest::SetUpTestCase() {
