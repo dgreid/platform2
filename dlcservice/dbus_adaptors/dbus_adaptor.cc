@@ -12,12 +12,27 @@
 #include <chromeos/dbus/service_constants.h>
 #include <dbus/dlcservice/dbus-constants.h>
 
+#include "dlcservice/dlc.h"
 #include "dlcservice/utils.h"
 
 using std::string;
 using std::unique_ptr;
 
 namespace dlcservice {
+
+namespace {
+// Converts a |DlcModuleList| into a |DlcSet| based on filtering logic where
+// a return value of true indicates insertion into |DlcSet|.
+DlcSet ToDlcSet(const dlcservice::DlcModuleList& dlc_module_list,
+                const std::function<bool(const DlcModuleInfo&)>& filter) {
+  DlcSet s;
+  for (const DlcModuleInfo& dlc_module : dlc_module_list.dlc_module_infos()) {
+    if (filter(dlc_module))
+      s.insert(dlc_module.dlc_id());
+  }
+  return s;
+}
+};  // namespace
 
 DBusService::DBusService(DlcService* dlc_service) : dlc_service_(dlc_service) {}
 
@@ -35,7 +50,13 @@ bool DBusService::Uninstall(brillo::ErrorPtr* err, const string& id_in) {
 
 bool DBusService::GetInstalled(brillo::ErrorPtr* err,
                                DlcModuleList* dlc_module_list_out) {
-  return dlc_service_->GetInstalled(dlc_module_list_out, err);
+  DlcSet ids = dlc_service_->GetInstalled();
+  for (const auto& id : ids) {
+    auto* dlc_info = dlc_module_list_out->add_dlc_module_infos();
+    dlc_info->set_dlc_id(id);
+    dlc_info->set_dlc_root(dlc_service_->GetDlc(id).GetRoot().value());
+  }
+  return true;
 }
 
 bool DBusService::GetState(brillo::ErrorPtr* err,

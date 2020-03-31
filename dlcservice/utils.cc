@@ -197,43 +197,14 @@ set<string> ScanDirectory(const FilePath& dir) {
   return result;
 }
 
-DlcModuleList ToDlcModuleList(
-    const DlcMap& dlcs,
-    const std::function<bool(const DlcId&, const DlcBase&)>& filter) {
-  DlcModuleList dlc_module_list;
-  auto f = [&dlc_module_list,
-            filter](const pair<const DlcId&, const DlcBase&>& pr) {
-    if (filter(pr.first, pr.second)) {
-      DlcModuleInfo* dlc_module_info = dlc_module_list.add_dlc_module_infos();
-      dlc_module_info->set_dlc_id(pr.first);
-      dlc_module_info->set_dlc_root(pr.second.GetRoot().value());
-    }
-  };
-  for_each(begin(dlcs), end(dlcs), f);
-  return dlc_module_list;
-}
-
-DlcSet ToDlcSet(const dlcservice::DlcModuleList& dlc_module_list,
-                const std::function<bool(const DlcModuleInfo&)>& filter) {
+DlcSet ToDlcSet(const DlcMap& dlcs,
+                const std::function<bool(const DlcBase&)>& filter) {
   DlcSet s;
-  for (const DlcModuleInfo& dlc_module : dlc_module_list.dlc_module_infos()) {
-    if (filter(dlc_module))
-      s.insert(dlc_module.dlc_id());
+  for (const auto& pair : dlcs) {
+    if (filter(pair.second))
+      s.insert(pair.first);
   }
   return s;
-}
-
-dlcservice::InstallStatus CreateInstallStatus(
-    const dlcservice::Status& status,
-    const std::string& error_code,
-    const dlcservice::DlcModuleList& dlc_module_list,
-    double progress) {
-  InstallStatus install_status;
-  install_status.set_status(status);
-  install_status.set_error_code(error_code);
-  install_status.mutable_dlc_module_list()->CopyFrom(dlc_module_list);
-  install_status.set_progress(progress);
-  return install_status;
 }
 
 }  // namespace dlcservice

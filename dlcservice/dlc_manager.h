@@ -11,7 +11,7 @@
 #include <brillo/errors/error.h>
 #include <dlcservice/proto_bindings/dlcservice.pb.h>
 
-#include "dlcservice/types.h"
+#include "dlcservice/dlc.h"
 
 namespace dlcservice {
 
@@ -20,16 +20,20 @@ class DlcManager {
   DlcManager();
   virtual ~DlcManager();
 
+  // Returns a reference to a DLC object given a DLC ID. We assume the ID is
+  // valid.
+  const DlcBase& GetDlc(const DlcId& id);
+
   // Returns true when an install is currently running.
   // If the desire is to |Initnstall()| again, then |FinishInstall()| or
   // |CancelInstall()| should be called before |InitInstall()|'ing again.
   bool IsInstalling();
 
   // Returns the list of fully installed + mounted DLC(s).
-  DlcModuleList GetInstalled();
+  DlcSet GetInstalled();
 
   // Returns the list of all supported DLC(s).
-  DlcModuleList GetSupported();
+  DlcSet GetSupported();
 
   // Returns true and sets |state| if the DLC is supported.
   bool GetState(const DlcId& id, DlcState* state, brillo::ErrorPtr* err);
@@ -59,7 +63,7 @@ class DlcManager {
   //   none
   // Return:
   //   Will return all the DLC(s) that update_engine needs to download/install.
-  DlcModuleList GetMissingInstalls();
+  DlcSet GetMissingInstalls();
 
   // Install Step 3a:
   // Once the missing DLC(s) are installed or there were no missing DLC(s), this

@@ -16,6 +16,7 @@
 #include <chromeos/dbus/service_constants.h>
 #include <dbus/dlcservice/dbus-constants.h>
 
+#include "dlcservice/dlc.h"
 #include "dlcservice/error.h"
 #include "dlcservice/utils.h"
 
@@ -52,6 +53,10 @@ DlcService::~DlcService() {
 
 void DlcService::LoadDlcModuleImages() {
   dlc_manager_->PreloadDlcModuleImages();
+}
+
+const DlcBase& DlcService::GetDlc(const DlcId& id) {
+  return dlc_manager_->GetDlc(id);
 }
 
 bool DlcService::Install(const DlcSet& dlcs,
@@ -94,23 +99,21 @@ bool DlcService::Install(const DlcSet& dlcs,
   }
 
   // This is the unique DLC(s) that actually need to be installed.
-  DlcModuleList unique_dlc_module_list_to_install =
-      dlc_manager_->GetMissingInstalls();
-  // Copy over the Omaha URL.
-  unique_dlc_module_list_to_install.set_omaha_url(omaha_url);
-
+  DlcSet unique_dlcs_to_install = dlc_manager_->GetMissingInstalls();
   // Check if there is nothing to install.
-  if (unique_dlc_module_list_to_install.dlc_module_infos_size() == 0) {
-    DlcModuleList dlc_module_list;
-    InstallStatus install_status = CreateInstallStatus(
-        Status::COMPLETED, kErrorNone, dlc_manager_->GetSupported(), 1.);
-    SendOnInstallStatusSignal(install_status);
+  if (unique_dlcs_to_install.size() == 0) {
+    SendOnInstallStatusSignal(Status::COMPLETED, kErrorNone,
+                              dlc_manager_->GetSupported(), 1.);
     return true;
   }
 
-  // Invokes update_engine to install the DLC module.
-  if (!update_engine_proxy_->AttemptInstall(unique_dlc_module_list_to_install,
-                                            nullptr)) {
+  DlcModuleList dlc_list;
+  dlc_list.set_omaha_url(omaha_url);
+  for (const auto& id : unique_dlcs_to_install) {
+    dlc_list.add_dlc_module_infos()->set_dlc_id(id);
+  }
+  // Invokes update_engine to install the DLC.
+  if (!update_engine_proxy_->AttemptInstall(dlc_list, nullptr)) {
     // TODO(kimjae): need update engine to propagate correct error message by
     // passing in |ErrorPtr| and being set within update engine, current default
     // is to indicate that update engine is updating because there is no way an
@@ -161,10 +164,8 @@ bool DlcService::Uninstall(const string& id_in, brillo::ErrorPtr* err) {
   return ret;
 }
 
-bool DlcService::GetInstalled(DlcModuleList* dlc_module_list_out,
-                              ErrorPtr* err) {
-  *dlc_module_list_out = dlc_manager_->GetInstalled();
-  return true;
+DlcSet DlcService::GetInstalled() {
+  return dlc_manager_->GetInstalled();
 }
 
 bool DlcService::GetState(const std::string& id_in,
@@ -180,8 +181,8 @@ void DlcService::SendFailedSignalAndCleanup() {
   ErrorPtr tmp_err;
   if (!dlc_manager_->CancelInstall(&tmp_err))
     LOG(ERROR) << Error::ToString(tmp_err);
-  SendOnInstallStatusSignal(CreateInstallStatus(
-      Status::FAILED, kErrorInternal, dlc_manager_->GetSupported(), 0.));
+  SendOnInstallStatusSignal(Status::FAILED, kErrorInternal,
+                            dlc_manager_->GetSupported(), 0.);
 }
 
 void DlcService::PeriodicInstallCheck() {
@@ -283,9 +284,9 @@ bool DlcService::HandleStatusResult(const StatusResult& status_result) {
     // means that only a single growth from 0.0 to 1.0 for progress reporting
     // will happen.
     case Operation::DOWNLOADING:
-      SendOnInstallStatusSignal(CreateInstallStatus(
-          Status::RUNNING, kErrorNone, dlc_manager_->GetSupported(),
-          status_result.progress()));
+      SendOnInstallStatusSignal(Status::RUNNING, kErrorNone,
+                                dlc_manager_->GetSupported(),
+                                status_result.progress());
       FALLTHROUGH;
     default:
       SchedulePeriodicInstallCheck(true);
@@ -306,8 +307,21 @@ void DlcService::AddObserver(DlcService::Observer* observer) {
   observers_.push_back(observer);
 }
 
-void DlcService::SendOnInstallStatusSignal(
-    const InstallStatus& install_status) {
+void DlcService::SendOnInstallStatusSignal(const dlcservice::Status& status,
+                                           const std::string& error_code,
+                                           const DlcSet& ids,
+                                           double progress) {
+  InstallStatus install_status;
+  install_status.set_status(status);
+  install_status.set_error_code(error_code);
+  DlcModuleList* dlc_list = install_status.mutable_dlc_module_list();
+  for (const auto& id : ids) {
+    const auto& dlc = dlc_manager_->GetDlc(id);
+    dlc_list->add_dlc_module_infos()->set_dlc_id(id);
+    dlc_list->add_dlc_module_infos()->set_dlc_root(dlc.GetRoot().value());
+  }
+  install_status.set_progress(progress);
+
   for (const auto& observer : observers_) {
     observer->SendInstallStatus(install_status);
   }
@@ -321,15 +335,13 @@ void DlcService::OnStatusUpdateAdvancedSignal(
   ErrorPtr tmp_err;
   if (!dlc_manager_->FinishInstall(&tmp_err)) {
     LOG(ERROR) << Error::ToString(tmp_err);
-    InstallStatus install_status = CreateInstallStatus(
-        Status::FAILED, kErrorInternal, dlc_manager_->GetSupported(), 0.);
-    SendOnInstallStatusSignal(install_status);
+    SendOnInstallStatusSignal(Status::FAILED, kErrorInternal,
+                              dlc_manager_->GetSupported(), 0.);
     return;
   }
 
-  InstallStatus install_status = CreateInstallStatus(
-      Status::COMPLETED, kErrorNone, dlc_manager_->GetSupported(), 1.);
-  SendOnInstallStatusSignal(install_status);
+  SendOnInstallStatusSignal(Status::COMPLETED, kErrorNone,
+                            dlc_manager_->GetSupported(), 1.);
 }
 
 void DlcService::OnStatusUpdateAdvancedSignalConnected(

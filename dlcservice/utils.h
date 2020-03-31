@@ -12,11 +12,10 @@
 #include <base/callback.h>
 #include <base/files/file_path.h>
 #include <base/files/file_util.h>
-#include <dlcservice/proto_bindings/dlcservice.pb.h>
 #include <libimageloader/manifest.h>
 
 #include "dlcservice/boot/boot_slot.h"
-#include "dlcservice/types.h"
+#include "dlcservice/dlc.h"
 
 namespace dlcservice {
 
@@ -98,23 +97,8 @@ bool GetDlcManifest(const base::FilePath& dlc_manifest_path,
 // Scans a directory and returns all its subdirectory names in a list.
 std::set<std::string> ScanDirectory(const base::FilePath& dir);
 
-// Converts a |DlcMap| into a |DlcModuleList| based on filtering logic where
-// a return value of true indicates insertion into |DlcModuleList|.
-dlcservice::DlcModuleList ToDlcModuleList(
-    const DlcMap& dlcs,
-    const std::function<bool(const DlcId&, const DlcBase&)>& filter);
-
-// Converts a |DlcModuleList| into a |DlcSet| based on filtering logic where
-// a return value of true indicates insertion into |DlcSet|.
-DlcSet ToDlcSet(
-    const dlcservice::DlcModuleList& dlc_module_list,
-    const std::function<bool(const dlcservice::DlcModuleInfo&)>& filter);
-
-dlcservice::InstallStatus CreateInstallStatus(
-    const dlcservice::Status& status,
-    const std::string& error_code,
-    const dlcservice::DlcModuleList& dlc_module_list,
-    double progress);
+DlcSet ToDlcSet(const DlcMap& dlcs,
+                const std::function<bool(const DlcBase&)>& filter);
 
 }  // namespace dlcservice
 

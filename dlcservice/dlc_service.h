@@ -18,9 +18,9 @@
 #include <update_engine/proto_bindings/update_engine.pb.h>
 #include <update_engine/dbus-proxies.h>
 
+#include "dlcservice/dlc.h"
 #include "dlcservice/dlc_manager.h"
 #include "dlcservice/system_state.h"
-#include "dlcservice/types.h"
 
 namespace dlcservice {
 
@@ -49,7 +49,9 @@ class DlcService {
                const std::string& omaha_url,
                brillo::ErrorPtr* err);
   bool Uninstall(const std::string& id_in, brillo::ErrorPtr* err);
-  bool GetInstalled(DlcModuleList* dlc_module_list_out, brillo::ErrorPtr* err);
+  DlcSet GetInstalled();
+  const DlcBase& GetDlc(const DlcId& id);
+
   bool GetState(const std::string& id_in,
                 DlcState* dlc_state_out,
                 brillo::ErrorPtr* err);
@@ -81,7 +83,10 @@ class DlcService {
   bool GetUpdateEngineStatus(update_engine::Operation* operation);
 
   // Send |OnInstallStatus| D-Bus signal.
-  void SendOnInstallStatusSignal(const InstallStatus& install_status);
+  void SendOnInstallStatusSignal(const dlcservice::Status& status,
+                                 const std::string& error_code,
+                                 const DlcSet& ids,
+                                 double progress);
 
   // Called on being connected to update_engine's |StatusUpdate| signal.
   void OnStatusUpdateAdvancedSignalConnected(const std::string& interface_name,

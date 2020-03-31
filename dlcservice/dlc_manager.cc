@@ -46,6 +46,12 @@ bool DlcManager::IsInstalling() {
       [](const auto& pair) { return pair.second.IsInstalling(); });
 }
 
+const DlcBase& DlcManager::GetDlc(const DlcId& id) {
+  const auto& iter = supported_.find(id);
+  CHECK(iter != supported_.end()) << "Passed invalid DLC: " << id;
+  return iter->second;
+}
+
 // Loads the preloadable DLC(s) from preloaded content directory by scanning the
 // preloaded DLC(s) and verifying the validity to be preloaded before doing
 // so.
@@ -68,22 +74,19 @@ void DlcManager::PreloadDlcModuleImages() {
   }
 }
 
-DlcModuleList DlcManager::GetInstalled() {
-  return ToDlcModuleList(supported_, [](const DlcId&, const DlcBase& dlc) {
-    return dlc.IsInstalled();
-  });
+DlcSet DlcManager::GetInstalled() {
+  return ToDlcSet(supported_,
+                  [](const DlcBase& dlc) { return dlc.IsInstalled(); });
 }
 
-DlcModuleList DlcManager::GetSupported() {
-  return ToDlcModuleList(supported_,
-                         [](const DlcId&, const DlcBase&) { return true; });
+DlcSet DlcManager::GetSupported() {
+  return ToDlcSet(supported_, [](const DlcBase&) { return true; });
 }
 
-DlcModuleList DlcManager::GetMissingInstalls() {
+DlcSet DlcManager::GetMissingInstalls() {
   // Only return the DLC(s) that aren't already installed.
-  return ToDlcModuleList(supported_, [](const DlcId&, const DlcBase& dlc) {
-    return dlc.IsInstalling();
-  });
+  return ToDlcSet(supported_,
+                  [](const DlcBase& dlc) { return dlc.IsInstalling(); });
 }
 
 bool DlcManager::GetState(const DlcId& id, DlcState* state, ErrorPtr* err) {

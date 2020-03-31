@@ -23,6 +23,7 @@
 
 #include "dlcservice/boot/boot_slot.h"
 #include "dlcservice/boot/mock_boot_device.h"
+#include "dlcservice/dlc.h"
 #include "dlcservice/dlc_service.h"
 #include "dlcservice/utils.h"
 
@@ -31,6 +32,7 @@ using std::move;
 using std::string;
 using std::vector;
 using testing::_;
+using testing::ElementsAre;
 using testing::Return;
 using testing::SetArgPointee;
 using testing::StrictMock;
@@ -285,13 +287,10 @@ TEST_F(DlcServiceSkipConstructionTest, PreloadAllowedDlcTest) {
 
   dlc_service_->LoadDlcModuleImages();
 
-  DlcModuleList dlc_module_list;
-  EXPECT_TRUE(dlc_service_->GetInstalled(&dlc_module_list, err_ptr_));
-  EXPECT_EQ(dlc_module_list.dlc_module_infos_size(), 1);
+  const auto& dlcs = dlc_service_->GetInstalled();
 
-  DlcModuleInfo dlc_module = dlc_module_list.dlc_module_infos(0);
-  EXPECT_EQ(dlc_module.dlc_id(), kFirstDlc);
-  EXPECT_FALSE(dlc_module.dlc_root().empty());
+  EXPECT_THAT(dlcs, ElementsAre(kFirstDlc));
+  EXPECT_FALSE(dlc_service_->GetDlc(kFirstDlc).GetRoot().value().empty());
   CheckDlcState(kFirstDlc, DlcState::INSTALLED);
 }
 
@@ -312,13 +311,10 @@ TEST_F(DlcServiceSkipConstructionTest,
 
   dlc_service_->LoadDlcModuleImages();
 
-  DlcModuleList dlc_module_list;
-  EXPECT_TRUE(dlc_service_->GetInstalled(&dlc_module_list, err_ptr_));
-  EXPECT_EQ(dlc_module_list.dlc_module_infos_size(), 1);
+  const auto& dlcs = dlc_service_->GetInstalled();
 
-  DlcModuleInfo dlc_module = dlc_module_list.dlc_module_infos(0);
-  EXPECT_EQ(dlc_module.dlc_id(), kFirstDlc);
-  EXPECT_FALSE(dlc_module.dlc_root().empty());
+  EXPECT_THAT(dlcs, ElementsAre(kFirstDlc));
+  EXPECT_FALSE(dlc_service_->GetDlc(kFirstDlc).GetRoot().value().empty());
   CheckDlcState(kFirstDlc, DlcState::INSTALLED);
 }
 
@@ -328,9 +324,9 @@ TEST_F(DlcServiceSkipConstructionTest, PreloadNotAllowedDlcTest) {
 
   dlc_service_->LoadDlcModuleImages();
 
-  DlcModuleList dlc_module_list;
-  EXPECT_TRUE(dlc_service_->GetInstalled(&dlc_module_list, err_ptr_));
-  EXPECT_EQ(dlc_module_list.dlc_module_infos_size(), 0);
+  const auto& dlcs = dlc_service_->GetInstalled();
+
+  EXPECT_TRUE(dlcs.empty());
   CheckDlcState(kFirstDlc, DlcState::NOT_INSTALLED);
 }
 
@@ -368,13 +364,10 @@ TEST_F(DlcServiceTest,
 }
 
 TEST_F(DlcServiceTest, GetInstalledTest) {
-  DlcModuleList dlc_module_list;
-  EXPECT_TRUE(dlc_service_->GetInstalled(&dlc_module_list, err_ptr_));
-  EXPECT_EQ(dlc_module_list.dlc_module_infos_size(), 1);
+  const auto& dlcs = dlc_service_->GetInstalled();
 
-  DlcModuleInfo dlc_module = dlc_module_list.dlc_module_infos(0);
-  EXPECT_EQ(dlc_module.dlc_id(), kFirstDlc);
-  EXPECT_FALSE(dlc_module.dlc_root().empty());
+  EXPECT_THAT(dlcs, ElementsAre(kFirstDlc));
+  EXPECT_FALSE(dlc_service_->GetDlc(kFirstDlc).GetRoot().value().empty());
   CheckDlcState(kFirstDlc, DlcState::INSTALLED);
 }
 
@@ -760,13 +753,12 @@ TEST_F(DlcServiceTest, OnStatusUpdateAdvancedSignalDlcRootTest) {
     CheckDlcState(id, DlcState::INSTALLED);
   }
 
-  DlcModuleList dlc_module_list_after;
-  EXPECT_TRUE(dlc_service_->GetInstalled(&dlc_module_list_after, err_ptr_));
-  EXPECT_EQ(dlc_module_list_after.dlc_module_infos_size(), 3);
+  const auto& dlcs_after = dlc_service_->GetInstalled();
 
-  for (const DlcModuleInfo& dlc_module :
-       dlc_module_list_after.dlc_module_infos())
-    EXPECT_FALSE(dlc_module.dlc_root().empty());
+  EXPECT_THAT(dlcs_after, ElementsAre(kFirstDlc, kSecondDlc, kThirdDlc));
+  EXPECT_FALSE(dlc_service_->GetDlc(kFirstDlc).GetRoot().value().empty());
+  for (const auto& id : dlcs_after)
+    EXPECT_FALSE(dlc_service_->GetDlc(id).GetRoot().value().empty());
 }
 
 TEST_F(DlcServiceTest, OnStatusUpdateAdvancedSignalNoRemountTest) {

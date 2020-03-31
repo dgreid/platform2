@@ -14,7 +14,6 @@
 
 #include "dlcservice/dbus_adaptors/org.chromium.DlcServiceInterface.h"
 #include "dlcservice/dlc_service.h"
-#include "dlcservice/types.h"
 
 namespace dlcservice {
 

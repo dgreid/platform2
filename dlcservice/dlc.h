@@ -5,23 +5,27 @@
 #ifndef DLCSERVICE_DLC_H_
 #define DLCSERVICE_DLC_H_
 
+#include <map>
+#include <set>
 #include <string>
 
 #include <base/files/file_path.h>
+#include <brillo/errors/error.h>
 #include <dbus/dlcservice/dbus-constants.h>
 #include <dlcservice/proto_bindings/dlcservice.pb.h>
 #include <libimageloader/manifest.h>
 #include <chromeos/dbus/service_constants.h>
 
-#include "dlcservice/system_state.h"
-#include "dlcservice/types.h"
-#include "dlcservice/utils.h"
+#include "dlcservice/boot/boot_slot.h"
 
 using base::FilePath;
 using brillo::ErrorPtr;
 using std::string;
 
 namespace dlcservice {
+
+// |DlcId| is the ID of the DLC.
+using DlcId = std::string;
 
 class DlcBase {
  public:
@@ -110,6 +114,9 @@ class DlcBase {
 
   DISALLOW_COPY_AND_ASSIGN(DlcBase);
 };
+
+using DlcMap = std::map<DlcId, DlcBase>;
+using DlcSet = std::set<DlcId>;
 
 }  // namespace dlcservice
 
