@@ -10,6 +10,7 @@
 #include <base/files/file_path.h>
 #include <base/files/file_util.h>
 #include <base/logging.h>
+#include <base/stl_util.h>
 #include <gtest/gtest.h>
 
 #include "modemfwd/scoped_temp_file.h"
@@ -45,8 +46,8 @@ TEST_F(FirmwareFileTest, PrepareFromCompressedFileDecompressFailed) {
 
   ASSERT_EQ(base::WriteFile(compressed_file_path,
                             reinterpret_cast<const char*>(kInvalidContent),
-                            arraysize(kInvalidContent)),
-            arraysize(kInvalidContent));
+                            base::size(kInvalidContent)),
+            base::size(kInvalidContent));
   FirmwareFileInfo file_info(compressed_file_path, kFirmwareVersion,
                              FirmwareFileInfo::Compression::XZ);
   EXPECT_FALSE(firmware_file_.PrepareFrom(file_info));
@@ -68,8 +69,8 @@ TEST_F(FirmwareFileTest, PrepareFromCompressedFileDecompressSucceeded) {
   base::FilePath compressed_file_path = temp_file_->path().AddExtension(".xz");
   ASSERT_EQ(base::WriteFile(compressed_file_path,
                             reinterpret_cast<const char*>(kCompressedContent),
-                            arraysize(kCompressedContent)),
-            arraysize(kCompressedContent));
+                            base::size(kCompressedContent)),
+            base::size(kCompressedContent));
 
   FirmwareFileInfo file_info(compressed_file_path, kFirmwareVersion,
                              FirmwareFileInfo::Compression::XZ);

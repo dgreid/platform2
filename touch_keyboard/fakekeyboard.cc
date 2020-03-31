@@ -4,6 +4,8 @@
 
 #include "touch_keyboard/fakekeyboard.h"
 
+#include <base/stl_util.h>
+
 namespace touch_keyboard {
 
 // This sets how long (in ms) to delay a key down event before sending it.  More
@@ -123,7 +125,7 @@ void FakeKeyboard::SetUpLayout() {
                         kShiftWidth,
                         row1_ymin,
                         row1_ymin + kKeyHeight));
-  for (i = 0; i < arraysize(row1); i++) {
+  for (i = 0; i < base::size(row1); i++) {
     layout_.push_back(Key(row1[i],
                           kShiftWidth + i * kKeyWidth,
                           kShiftWidth + i * kKeyWidth + kKeyWidth,
@@ -142,7 +144,7 @@ void FakeKeyboard::SetUpLayout() {
                         kSearchWidth,
                         row2_ymin,
                         row2_ymin + kKeyHeight));
-  for (i = 0; i < arraysize(row2); i++) {
+  for (i = 0; i < base::size(row2); i++) {
     layout_.push_back(Key(row2[i],
                           kSearchWidth + i * kKeyWidth,
                           kSearchWidth + i * kKeyWidth + kKeyWidth,
@@ -161,7 +163,7 @@ void FakeKeyboard::SetUpLayout() {
                         kTabWidth,
                         row3_ymin,
                         row3_ymin + kKeyHeight));
-  for (i = 0; i < arraysize(row3); i++) {
+  for (i = 0; i < base::size(row3); i++) {
     layout_.push_back(Key(row3[i],
                           kTabWidth + i * kKeyWidth,
                           kTabWidth + i * kKeyWidth + kKeyWidth,
@@ -170,7 +172,7 @@ void FakeKeyboard::SetUpLayout() {
   }
 
   int row4_ymin = row3_ymin + kKeyHeight;
-  for (i = 0; i < arraysize(row4); i++) {
+  for (i = 0; i < base::size(row4); i++) {
     layout_.push_back(Key(row4[i],
                           i * kKeyWidth,
                           i * kKeyWidth + kKeyWidth,
@@ -184,7 +186,7 @@ void FakeKeyboard::SetUpLayout() {
                         row4_ymin + kKeyHeight));
 
   int rowfn_ymin = row4_ymin + kKeyHeight;
-  for (i = 0; i < arraysize(rowfn); i++) {
+  for (i = 0; i < base::size(rowfn); i++) {
     layout_.push_back(Key(rowfn[i],
                           i * kFnKeyWidth,
                           i * kFnKeyWidth + kFnKeyWidth,

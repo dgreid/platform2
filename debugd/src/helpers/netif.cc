@@ -62,6 +62,7 @@
 #include <utility>
 
 #include <base/json/json_writer.h>
+#include <base/stl_util.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_util.h>
 #include <base/values.h>
@@ -128,7 +129,7 @@ struct ifflag {
 
 std::unique_ptr<ListValue> flags2list(unsigned int flags) {
   auto lv = std::make_unique<ListValue>();
-  for (unsigned int i = 0; i < arraysize(ifflags); ++i) {
+  for (unsigned int i = 0; i < base::size(ifflags); ++i) {
     if (flags & ifflags[i].bit)
       lv->Append(std::make_unique<Value>(ifflags[i].name));
   }

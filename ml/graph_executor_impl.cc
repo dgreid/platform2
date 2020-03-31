@@ -9,6 +9,8 @@
 #include <utility>
 #include <vector>
 
+#include <base/stl_util.h>
+
 #include "ml/mojom/tensor.mojom.h"
 #include "ml/tensor_view.h"
 
@@ -231,7 +233,7 @@ void GraphExecutorImpl::Execute(
 
     // Check that the current input node is a supported type.
     const uint32_t cur_input_type = interpreter_->tensor(cur_input_id)->type;
-    if (cur_input_type >= arraysize(kPopulateInputFns)) {
+    if (cur_input_type >= base::size(kPopulateInputFns)) {
       LOG(ERROR) << "TF lite graph contains invalid input node " << cur_input_id
                  << " of type " << cur_input_type << ".";
       callback.Run(ExecuteResult::EXECUTION_ERROR, base::nullopt);
@@ -269,7 +271,7 @@ void GraphExecutorImpl::Execute(
 
     // Check that the current output node is a supported type.
     const uint32_t cur_output_type = interpreter_->tensor(cur_output_id)->type;
-    if (cur_output_type >= arraysize(kPopulateOutputFns)) {
+    if (cur_output_type >= base::size(kPopulateOutputFns)) {
       LOG(ERROR) << "TF lite graph contains invalid output node "
                  << cur_output_id << " of type " << cur_output_type << ".";
       callback.Run(ExecuteResult::EXECUTION_ERROR, base::nullopt);

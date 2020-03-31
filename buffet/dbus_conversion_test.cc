@@ -11,6 +11,7 @@
 
 #include <base/guid.h>
 #include <base/rand_util.h>
+#include <base/stl_util.h>
 #include <base/values.h>
 #include <brillo/variant_dictionary.h>
 #include <gtest/gtest.h>
@@ -55,9 +56,9 @@ const base::Value::Type kRandomTypesWithChildren[] = {
 base::Value::Type CreateRandomValueType(bool with_children) {
   if (with_children) {
     return kRandomTypesWithChildren[base::RandInt(
-        0, arraysize(kRandomTypesWithChildren) - 1)];
+        0, base::size(kRandomTypesWithChildren) - 1)];
   }
-  return kRandomTypes[base::RandInt(0, arraysize(kRandomTypes) - 1)];
+  return kRandomTypes[base::RandInt(0, base::size(kRandomTypes) - 1)];
 }
 
 std::unique_ptr<base::DictionaryValue> CreateRandomDictionary(int children) {

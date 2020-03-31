@@ -7,9 +7,10 @@
 #include <memory>
 #include <string>
 
-#include <base/logging.h>
 #include <base/files/file_path.h>
 #include <base/files/file_util.h>
+#include <base/logging.h>
+#include <base/stl_util.h>
 #include <gtest/gtest.h>
 
 #include "modemfwd/scoped_temp_file.h"
@@ -78,8 +79,8 @@ TEST_F(FileDecompressorTest, Decompress1MOfZeroes) {
 
   ASSERT_EQ(base::WriteFile(in_file_->path(),
                             reinterpret_cast<const char*>(kCompressedContent),
-                            arraysize(kCompressedContent)),
-            arraysize(kCompressedContent));
+                            base::size(kCompressedContent)),
+            base::size(kCompressedContent));
   EXPECT_TRUE(DecompressXzFile(in_file_->path(), out_file_->path()));
 
   std::string content;

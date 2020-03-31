@@ -12,6 +12,7 @@
 
 #include <base/files/file_path.h>
 #include <base/macros.h>
+#include <base/stl_util.h>
 #include <base/strings/string_util.h>
 #include <brillo/syslog_logging.h>
 
@@ -93,7 +94,7 @@ static int PrintUsage(const std::string& progname,
   struct {
     std::string usage;
     std::string description;
-  } usagestrings[arraysize(subcommands)];
+  } usagestrings[base::size(subcommands)];
 
   size_t max_usage_len = 0;
   auto usagestrings_it = usagestrings;

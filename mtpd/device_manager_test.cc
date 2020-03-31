@@ -11,6 +11,7 @@
 
 #include <base/compiler_specific.h>
 #include <base/message_loop/message_loop.h>
+#include <base/stl_util.h>
 
 #include "mtpd/device_event_delegate.h"
 
@@ -42,7 +43,7 @@ TEST_F(DeviceManagerTest, ParseStorageName) {
       {"usb:123:not_number", false, "", 0},
   };
 
-  for (size_t i = 0; i < arraysize(test_cases); ++i) {
+  for (size_t i = 0; i < base::size(test_cases); ++i) {
     std::string bus;
     uint32_t storage_id = static_cast<uint32_t>(-1);
     bool result =

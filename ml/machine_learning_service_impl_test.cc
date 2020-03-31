@@ -12,6 +12,7 @@
 #include <base/files/file_util.h>
 #include <base/macros.h>
 #include <base/run_loop.h>
+#include <base/stl_util.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <mojo/public/cpp/bindings/binding.h>
@@ -314,7 +315,7 @@ TEST(ModelLoadAndInferenceTest, SmartDim20181115) {
   base::flat_map<std::string, TensorPtr> inputs;
   inputs.emplace(
       "input", NewTensor<double>(
-                   {1, arraysize(kSmartDim20181115TestInput)},
+                   {1, base::size(kSmartDim20181115TestInput)},
                    std::vector<double>(std::begin(kSmartDim20181115TestInput),
                                        std::end(kSmartDim20181115TestInput))));
   std::vector<std::string> outputs({"output"});
@@ -394,7 +395,7 @@ TEST(ModelLoadAndInferenceTest, SmartDim20190221) {
   base::flat_map<std::string, TensorPtr> inputs;
   inputs.emplace(
       "input", NewTensor<double>(
-                   {1, arraysize(kSmartDim20190221TestInput)},
+                   {1, base::size(kSmartDim20190221TestInput)},
                    std::vector<double>(std::begin(kSmartDim20190221TestInput),
                                        std::end(kSmartDim20190221TestInput))));
   std::vector<std::string> outputs({"output"});
@@ -474,7 +475,7 @@ TEST(ModelLoadAndInferenceTest, SmartDim20190521) {
   base::flat_map<std::string, TensorPtr> inputs;
   inputs.emplace(
       "input", NewTensor<double>(
-                   {1, arraysize(kSmartDim20190521TestInput)},
+                   {1, base::size(kSmartDim20190521TestInput)},
                    std::vector<double>(std::begin(kSmartDim20190521TestInput),
                                        std::end(kSmartDim20190521TestInput))));
   std::vector<std::string> outputs({"output"});
@@ -552,11 +553,11 @@ TEST(ModelLoadAndInferenceTest, TopCat20190722) {
 
   // Construct input.
   base::flat_map<std::string, TensorPtr> inputs;
-  inputs.emplace(
-      "input", NewTensor<double>(
-                   {1, arraysize(kTopCat20190722TestInput)},
-                   std::vector<double>(std::begin(kTopCat20190722TestInput),
-                                       std::end(kTopCat20190722TestInput))));
+  inputs.emplace("input",
+                 NewTensor<double>(
+                     {1, base::size(kTopCat20190722TestInput)},
+                     std::vector<double>(std::begin(kTopCat20190722TestInput),
+                                         std::end(kTopCat20190722TestInput))));
   std::vector<std::string> outputs({"output"});
 
   // Perform inference.
@@ -633,7 +634,7 @@ TEST(ModelLoadAndInferenceTest, SearchRanker20190923) {
   // Construct input.
   base::flat_map<std::string, TensorPtr> inputs;
   inputs.emplace("input", NewTensor<double>(
-                              {1, arraysize(kSearchRanker20190923TestInput)},
+                              {1, base::size(kSearchRanker20190923TestInput)},
                               std::vector<double>(
                                   std::begin(kSearchRanker20190923TestInput),
                                   std::end(kSearchRanker20190923TestInput))));
@@ -778,7 +779,7 @@ TEST(LoadModelStringAndInferenceTest, SmartDim20181115ModelString) {
   base::flat_map<std::string, TensorPtr> inputs;
   inputs.emplace(
       "input", NewTensor<double>(
-                   {1, arraysize(kSmartDim20181115TestInput)},
+                   {1, base::size(kSmartDim20181115TestInput)},
                    std::vector<double>(std::begin(kSmartDim20181115TestInput),
                                        std::end(kSmartDim20181115TestInput))));
   std::vector<std::string> outputs({"output"});

@@ -14,6 +14,7 @@
 
 #include "base/containers/adapters.h"
 #include "base/logging.h"
+#include "base/stl_util.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/string_split.h"
 #include "base/strings/string_util.h"
@@ -289,7 +290,7 @@ bool DenyClaimedHidrawDeviceRule::ShouldInputCapabilitiesExcludeHidAccess(
 
     // Remove whitelisted capabilities. Any other absolute pointer capabilities
     // exclude access.
-    for (size_t i = 0; i < arraysize(kAllowedAbsCapabilities); ++i)
+    for (size_t i = 0; i < base::size(kAllowedAbsCapabilities); ++i)
       UnsetCapabilityBit(&capabilities, kAllowedAbsCapabilities[i]);
     if (AnyCapabilityBitsSet(capabilities))
       return true;

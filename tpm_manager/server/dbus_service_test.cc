@@ -5,6 +5,7 @@
 #include <string>
 
 #include <base/bind.h>
+#include <base/stl_util.h>
 #include <brillo/dbus/dbus_object_test_helpers.h>
 #include <dbus/mock_bus.h>
 #include <dbus/mock_exported_object.h>
@@ -392,7 +393,7 @@ TEST_F(DBusServiceTest, ListSpaces) {
   ListSpacesReply reply;
   ExecuteMethod(kListSpaces, request, &reply, kTpmNvramInterface);
   EXPECT_EQ(NVRAM_RESULT_SUCCESS, reply.result());
-  EXPECT_EQ(arraysize(nvram_index_list), reply.index_list_size());
+  EXPECT_EQ(base::size(nvram_index_list), reply.index_list_size());
   for (size_t i = 0; i < 3; i++) {
     EXPECT_EQ(nvram_index_list[i], reply.index_list(i));
   }

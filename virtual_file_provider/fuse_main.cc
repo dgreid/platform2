@@ -12,6 +12,7 @@
 
 #include <base/files/scoped_file.h>
 #include <base/posix/eintr_wrapper.h>
+#include <base/stl_util.h>
 
 #include "virtual_file_provider/operation_throttle.h"
 #include "virtual_file_provider/util.h"
@@ -163,7 +164,7 @@ int FuseMain(const base::FilePath& mount_path, FuseMainDelegate* delegate) {
   FusePrivateData private_data;
   private_data.delegate = delegate;
   private_data.operation_throttle = &operation_throttle;
-  return fuse_main(arraysize(fuse_argv), const_cast<char**>(fuse_argv),
+  return fuse_main(base::size(fuse_argv), const_cast<char**>(fuse_argv),
                    &operations, &private_data);
 }
 
