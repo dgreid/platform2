@@ -16,6 +16,7 @@
 #include <base/files/file_util.h>
 #include <base/hash.h>
 #include <base/logging.h>
+#include <base/stl_util.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_split.h>
 #include <base/strings/string_util.h>
@@ -1006,9 +1007,15 @@ void MetricsDaemon::ReportProcessMemory() {
   for (int i = 0; i < PG_KINDS_COUNT; i++) {
     ProcessGroupKind kind = static_cast<ProcessGroupKind>(i);
     ProcessMemoryStats stats;
-    static_assert(
-        arraysize(kProcessMemoryUMANames[i]) == arraysize(stats.rss_sizes),
-        "RSS array size mismatch");
+    // base::size is not compile time value, thus not usable by static_assert.
+    // use sizeof instead, sizeof(kProcessMemoryUMANames[i]) should return
+    // (number of elements * size of pointers), so is sizeof(stats.rss_sizes)
+    // since both kProcessMemoryUMANames[i] and rss_sizes are arrays with fixed
+    // size defined.
+    static_assert(sizeof(kProcessMemoryUMANames[i]) /
+                          sizeof(*kProcessMemoryUMANames[i]) ==
+                      sizeof(stats.rss_sizes) / sizeof(*stats.rss_sizes),
+                  "RSS array size mismatch");
     AccumulateProcessGroupStats(procfs_path, info.GetGroup(kind), &stats);
     ReportProcessGroupStats(kProcessMemoryUMANames[i], stats);
   }
@@ -1018,7 +1025,7 @@ void MetricsDaemon::ReportProcessGroupStats(
     const char* const uma_names[MEM_KINDS_COUNT],
     const ProcessMemoryStats& stats) {
   const uint64_t MiB = 1 << 20;
-  for (int i = 0; i < arraysize(stats.rss_sizes); i++) {
+  for (int i = 0; i < base::size(stats.rss_sizes); i++) {
     SendSample(uma_names[i], stats.rss_sizes[i] / MiB, 1, kMaxMemSizeMiB, 50);
   }
 }
@@ -1265,7 +1272,7 @@ bool MetricsDaemon::ProcessMeminfo(const string& meminfo_raw) {
       // { "SUnreclaim", "SUnreclaim" },
   };
   vector<MeminfoRecord> fields(fields_array,
-                               fields_array + arraysize(fields_array));
+                               fields_array + base::size(fields_array));
   if (!FillMeminfo(meminfo_raw, &fields)) {
     return false;
   }
@@ -1395,7 +1402,7 @@ void MetricsDaemon::MemuseCallback() {
     // Report stats and advance the measurement interval unless there are
     // errors or we've completed the last interval.
     if (MemuseCallbackWork() &&
-        memuse_interval_index_ < arraysize(kMemuseIntervals)) {
+        memuse_interval_index_ < base::size(kMemuseIntervals)) {
       double interval = kMemuseIntervals[memuse_interval_index_++];
       memuse_final_time_ = now + interval;
       ScheduleMemuseCallback(interval);
@@ -1420,7 +1427,7 @@ bool MetricsDaemon::ProcessMemuse(const string& meminfo_raw) {
       {"InactiveAnon", "Inactive(anon)"},
   };
   vector<MeminfoRecord> fields(fields_array,
-                               fields_array + arraysize(fields_array));
+                               fields_array + base::size(fields_array));
   if (!FillMeminfo(meminfo_raw, &fields)) {
     return false;
   }

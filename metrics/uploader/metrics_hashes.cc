@@ -4,9 +4,10 @@
 
 #include "metrics/uploader/metrics_hashes.h"
 
-#include "base/logging.h"
-#include "base/md5.h"
-#include "base/sys_byteorder.h"
+#include <base/logging.h>
+#include <base/md5.h>
+#include <base/stl_util.h>
+#include <base/sys_byteorder.h>
 
 namespace metrics {
 
@@ -32,7 +33,7 @@ uint64_t HashMetricName(const std::string& name) {
   base::MD5Digest digest;
   base::MD5Final(&digest, &context);
 
-  std::string hash_str(reinterpret_cast<char*>(digest.a), arraysize(digest.a));
+  std::string hash_str(reinterpret_cast<char*>(digest.a), base::size(digest.a));
   return HashToUInt64(hash_str);
 }
 

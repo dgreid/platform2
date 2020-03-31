@@ -8,6 +8,7 @@
 #include <base/files/scoped_file.h>
 #include <base/guid.h>
 #include <base/logging.h>
+#include <base/stl_util.h>
 #include <base/strings/string_util.h>
 #include <base/strings/stringprintf.h>
 #include <errno.h>
@@ -293,7 +294,7 @@ void MetricsLibrary::SetPolicyProvider(policy::PolicyProvider* provider) {
 }
 
 bool MetricsLibrary::SendCrosEventToUMA(const std::string& event) {
-  for (size_t i = 0; i < arraysize(kCrosEventNames); i++) {
+  for (size_t i = 0; i < base::size(kCrosEventNames); i++) {
     if (strcmp(event.c_str(), kCrosEventNames[i]) == 0) {
       return SendEnumToUMA(kCrosEventHistogramName, i, kCrosEventHistogramMax);
     }

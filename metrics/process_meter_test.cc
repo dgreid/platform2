@@ -11,6 +11,7 @@
 #include <base/files/file_path.h>
 #include <base/files/file_util.h>
 #include <base/files/scoped_temp_dir.h>
+#include <base/stl_util.h>
 #include <base/strings/string_util.h>
 #include <base/strings/stringprintf.h>
 
@@ -180,8 +181,8 @@ TEST_F(ProcessMeterTest, CheckUMANames) {
 
   // Extra consistency checks.
   ProcessMemoryStats stats;
-  CHECK_EQ(arraysize(stats.rss_sizes), arraysize(kProcessMemoryUMANames[0]));
-  CHECK_EQ(arraysize(kProcessMemoryUMANames), PG_KINDS_COUNT);
+  CHECK_EQ(base::size(stats.rss_sizes), base::size(kProcessMemoryUMANames[0]));
+  CHECK_EQ(base::size(kProcessMemoryUMANames), PG_KINDS_COUNT);
 }
 
 }  // namespace chromeos_metrics
