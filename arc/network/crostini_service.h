@@ -30,7 +30,7 @@ class CrostiniService {
                   AddressManager* addr_mgr,
                   Datapath* datapath,
                   TrafficForwarder* forwarder);
-  ~CrostiniService() = default;
+  ~CrostiniService();
 
   bool Start(uint64_t vm_id, bool is_termina, int subnet_index);
   void Stop(uint64_t vm_id, bool is_termina);

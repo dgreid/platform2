@@ -58,6 +58,11 @@ CrostiniService::CrostiniService(ShillClient* shill_client,
       &CrostiniService::OnDefaultInterfaceChanged, weak_factory_.GetWeakPtr()));
 }
 
+CrostiniService::~CrostiniService() {
+  if (bus_)
+    bus_->ShutdownAndBlock();
+}
+
 bool CrostiniService::Start(uint64_t vm_id, bool is_termina, int subnet_index) {
   if (vm_id == kInvalidID) {
     LOG(ERROR) << "Invalid VM id";
