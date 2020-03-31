@@ -13,10 +13,11 @@
 #include <utility>
 #include <vector>
 
-#include <base/format_macros.h>
 #include <base/files/file_util.h>
 #include <base/files/scoped_temp_dir.h>
+#include <base/format_macros.h>
 #include <base/logging.h>
+#include <base/stl_util.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/timer/timer.h>
 #include <chromeos/dbus/service_constants.h>
@@ -280,7 +281,7 @@ TEST_F(MetricsCollectorTest, BatteryInfoWhenChargeStarts) {
   metrics_to_test_.insert(kBatteryRemainingWhenChargeStartsName);
   metrics_to_test_.insert(kBatteryChargeHealthName);
 
-  for (size_t i = 0; i < arraysize(kBatteryPercentages); ++i) {
+  for (size_t i = 0; i < base::size(kBatteryPercentages); ++i) {
     IgnoreHandlePowerStatusUpdateMetrics();
 
     power_status_.line_power_on = false;
@@ -306,14 +307,14 @@ TEST_F(MetricsCollectorTest, SessionStartOrStop) {
   const uint kUserAdjustments[] = {0, 200};
   const double kBatteryPercentages[] = {10.5, 23.0};
   const int kSessionSecs[] = {900, kLengthOfSessionMax + 10};
-  ASSERT_EQ(arraysize(kAlsAdjustments), arraysize(kUserAdjustments));
-  ASSERT_EQ(arraysize(kAlsAdjustments), arraysize(kBatteryPercentages));
-  ASSERT_EQ(arraysize(kAlsAdjustments), arraysize(kSessionSecs));
+  ASSERT_EQ(base::size(kAlsAdjustments), base::size(kUserAdjustments));
+  ASSERT_EQ(base::size(kAlsAdjustments), base::size(kBatteryPercentages));
+  ASSERT_EQ(base::size(kAlsAdjustments), base::size(kSessionSecs));
 
   power_status_.line_power_on = false;
   Init();
 
-  for (size_t i = 0; i < arraysize(kAlsAdjustments); ++i) {
+  for (size_t i = 0; i < base::size(kAlsAdjustments); ++i) {
     IgnoreHandlePowerStatusUpdateMetrics();
     power_status_.battery_percentage = kBatteryPercentages[i];
     ExpectEnumMetric(

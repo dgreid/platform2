@@ -18,6 +18,7 @@
 #include <base/files/file_path.h>
 #include <base/files/file_util.h>
 #include <base/logging.h>
+#include <base/stl_util.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_util.h>
 #include <base/strings/stringprintf.h>
@@ -228,7 +229,7 @@ void AmbientLightSensor::ErrorColorChannelCallback(
 }
 
 void AmbientLightSensor::CollectChannelReadings() {
-  if (color_readings_.size() != arraysize(kColorChannelConfig))
+  if (color_readings_.size() != base::size(kColorChannelConfig))
     return;
 
   // We should notify observers if there is either a change in lux or a change
@@ -320,7 +321,7 @@ bool AmbientLightSensor::InitAlsFile() {
         continue;
       }
     }
-    for (unsigned int i = 0; i < arraysize(input_names); i++) {
+    for (unsigned int i = 0; i < base::size(input_names); i++) {
       base::FilePath als_path = check_path.Append(input_names[i]);
       if (!base::PathExists(als_path))
         continue;
