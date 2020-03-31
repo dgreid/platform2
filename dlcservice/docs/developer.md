@@ -4,32 +4,27 @@
 
 This guide describes how to use Chrome OS DLC (Downloadable Content).
 DLC allows Chrome OS developers to ship a feature (e.g. a Chrome OS package) to
-stateful partition as a separate module and provides a way to download it at
-runtime on device. If you‘re looking for detailed information about how to do
+stateful partition as packages and provides a way to download it at runtime
+onto the device. If you‘re looking for detailed information about how to do
 this, you’re in the right place.
 
-[TOC]
+### Chrome OS DLC vs Chrome OS package (ebuild)
 
-### Chrome OS DLC module vs Chrome OS package
+Chrome OS DLC is an extension of the Chrome OS package (ebuild).
 
-The most similar concept to Chrome OS DLC is the Chrome OS package. But here
-are the differences:
-
-*   **Development** Similar to creating a package, creating a DLC module
-    requires creating an ebuild file ([Create a DLC module]). To modify a DLC
-    module, it requires upreving the DLC ebuild (after DLC content is updated,
-    also similar to modifying a Chrome OS package).
-*   **Location** Packages are usually located in the root filesystem partition.
-    DLC modules are downloaded at runtime and thus are located in the stateful
-    partition.
+*   **Development** Similar to creating a package, creating a DLC requires
+    creating an ebuild file ([Create a DLC]). Modifying a DLC requires upreving
+    the ebuild like when modifying a Chrome OS package.
+*   **Location** A Package is usually located in the root filesystem partition.
+    A DLC is downloaded at runtime and located in the stateful partition.
 *   **Install/Update** Packages can not be updated or installed independently
     and can only be updated via Autoupdate (as part of the root filesystem
-    partition). DLC modules can be installed independently. Installation of a
-    DLC module on device is handled by a daemon service ([dlcservice]) which
-    takes D-Bus method calls (Install, Uninstall, etc.).
+    partition). A DLC can be installed independently. Installation of a
+    DLC is handled by a daemon service ([dlcservice]) which takes D-Bus method
+    calls (Install, Uninstall, etc.).
 *   **Update payload/artifacts** All the package updates are embedded in a
     monolithic payload (a.k.a root filesystem partition) and are downloadable
-    from Omaha. Each DLC module has its own update (or install) payload and
+    from Omaha. Each DLC has its own update (or install) payload and
     is downloadable from Omaha. Chrome OS infrastructure automatically handles
     packaging and serving of DLC payloads.
 
@@ -37,46 +32,51 @@ are the differences:
 
 The workflow of a DLC developer involves following few tasks:
 
-* [Create a DLC module]
-* [Write platform code to request DLC module]
-* [Install a DLC module for dev/test]
-* [Write tests for a DLC module]
+* [Create a DLC]
+* [Write platform code to request DLC]
+* [Install a DLC for dev/test]
+* [Write tests for a DLC]
 
-## Create a DLC module
+## Create a DLC
 
-Introducing a DLC module into Chrome OS involves adding an ebuild. The ebuild
+Introducing a DLC into Chrome OS involves adding an ebuild. The ebuild
 file should inherit [dlc.eclass]. Within the ebuild file the following
 variables should be set:
 
-*   `DLC_NAME` - Name of the DLC. It is for description/info purpose only and
-    can be empty (but not encouraged).
-*   `DLC_VERSION` - Version of the DLC module. It is for description/info
-    purpose only and can be empty. By default you can set it to `${PV}`.
-*   `DLC_PREALLOC_BLOCKS` - The storage space (in the unit of number of blocks,
-    block size is 4 KB) the system reserves for a copy of the DLC module
-    image. Note that on device we reserve 2 copies of the image so the actual
-    space consumption doubles. It is necessary to set this value more than the
-    minimum required at the launch time to accommodate future size growth
-    (recommendation is 130% of the DLC module size).
-*    `DLC_ID` - Unique ID of the DLC module (among all DLC modules). Format of
-     an ID has a few restrictions:
+Required:
+*    `DLC_ID` - Unique ID. Format of an ID has a few restrictions:
 	 *    It should not be empty.
-	 *    It should only contain alphanumeric characters (a-zA-Z0-9) and `-`
-          (dash).
+	 *    It should only contain alphanumeric characters (a-zA-Z0-9) and `-` (dash).
 	 *    The first letter cannot be dash.
 	 *    No underscore.
 	 *    It has a maximum length of 40 characters.
 	 (check out [imageloader_impl.cc] for the actual implementation).
 *    `DLC_PACKAGE` - Its format restrictions are the same as `DLC_ID`. Note:
-     This variable is here to help enable multiple packages support for DLC in
-     the future (allow downloading selectively a set of packages within one
-     DLC). When multiple packages are supported, each package should have a
-     unique name among all packages in a DLC module.
-*    `DLC_ENABLED` - (Optional) When set to "false", `$(dlc_get_path)` will
-     point to `/` and everything will be installed into the rootfs instead of
-     the DLC path. This allows the use of the same ebuild file to create a DLC
-     under special conditions(i.e. Make a package a DLC for certain boards or
-     install in rootfs for others).
+    This variable is here to help enable multiple packages support for DLC in
+    the future (allow downloading selectively a set of packages within one
+    DLC). When multiple packages are supported, each package should have a
+    unique name among all packages in a DLC.
+*   ` DLC_PREALLOC_BLOCKS` - The storage space (in the unit of number of blocks,
+    block size is 4 KB) the system reserves for a copy of the DLC image.
+    Note that on device we reserve 2 copies of the image so the actual
+    space consumption doubles. It is necessary to set this value more than the
+    minimum required at the launch time to accommodate future size growth
+    (recommendation is 130% of the DLC size).
+
+Optional:
+*   `DLC_NAME` - Name of the DLC.
+    It is for description/info purpose only (Default is `${PN}`).
+*   `DLC_VERSION` - Version of the DLC.
+    It is for description/info purpose only (Default is `${PVR}`).
+*   `DLC_PRELOAD` - Preloading DLC.
+    When set to true, the DLC will be preloaded during startup of dlcservice
+    for test images. (Default is false)
+*   `DLC_ENABLED` - Override being a DLC.
+    When set to false, `$(dlc_get_path)` will point to `/` and everything will
+    be installed into the rootfs instead of the DLC path. This allows the use
+    of the same ebuild file to create a DLC under special conditions (i.e. Make
+    a package a DLC for certain boards or install in rootfs for others).
+    (Default is true)
 
 Within the build file, the implementation should include at least the
 `src_install` function. Within `src_install`, all the DLC content should be
@@ -84,54 +84,7 @@ installed using the special path prefix `$(dlc_get_path)`. This means, that
 before installing any DLC files, you have add the prefix `$(dlc_get_path)` to
 `into, insinto` and `exeinto`. See example below.
 
-Here is an example of a DLC ebuild (ebuild name:
-`chromeos-base/demo-dlc-1.0.0.ebuild`):
-
-```
-# Copyright 2019 The Chromium OS Authors. All rights reserved.
-# Distributed under the terms of the GNU General Public License v2
-
-EAPI=6
-inherit dlc
-DESCRIPTION="A demo DLC"
-HOMEPAGE=""
-SRC_URI=""
-
-LICENSE="BSD-Google"
-SLOT="0"
-KEYWORDS="*"
-IUSE="dlc"
-REQUIRED_USE="dlc"
-
-DLC_NAME="A demo DLC"
-DLC_VERSION="${PV}"
-DLC_PREALLOC_BLOCKS="1024"
-DLC_ID="demo-dlc"
-DLC_PACKAGE="demo-dlc-package"
-
-src_install() {
-  #Install files to rootfs
-  instinto /
-  echo "Hello World rootfs!" | newins - one_file_rootfs.txt
-
-  #Install files to DLC.
-  # Setup DLC paths.
-  into "$(dlc_get_path)/"
-  insinto "$(dlc_get_path)/opt/demo_dlc/"
-  exeinto "$(dlc_get_path)/opt/demo_dlc/"
-
-  # Create a DLC file in /opt/demo_dlc/.
-  echo "Hello World DLC!" | newins - one_file_dlc.txt
-
-  dosym one_file_dlc "$(dlc_get_path)/one_file_dlc.txt"
-
-  fperms -R a+w "$(dlc_get_path)/opt/demo_dlc/"
-  dosym one_file_dlc "$(dlc_get_path)/opt/demo_dlc/one_file_dlc.txt
-
-  # Build DLC.
-  dlc_src_install
-}
-```
+See an example of a DLC ebuild: [dummy-dlc]
 
 To avoid generating large tarballs with all the DLC build files, a configuration
 file should be added under
@@ -139,48 +92,44 @@ src/third_party/chromiumos-overlay/chromeos/config/env/\[name of ebuild\]. This
 reduces the build time and disk space used by the build.
 
 See the example: [dummy-dlc config]
-## Write platform code to request DLC module
 
-A DLC module is downloaded (from the Internet) and installed at runtime by
-dlcservice. Any feature should not rely on the existence of a DLC module and
-thus has to request (install) the DLC module from dlcservice before using the
-DLC. Once a DLC module is installed, dlcservice keeps it available and mounted
+## Write platform code to request DLC
+
+A DLC is downloaded (from the Internet) and installed at runtime by
+dlcservice. Any feature should not rely on the existence of a DLC and
+thus has to request (install) the DLC from dlcservice before using the
+DLC. Once a DLC is installed, dlcservice keeps it available and mounted
 across device reboot and update.
 
 Chrome (and other system daemons that can access D-Bus) calls the dlcservice API
-to install/uninstall a DLC module. For calling the dlcservice API inside Chrome,
+to install/uninstall a DLC. For calling the dlcservice API inside Chrome,
 use [system_api] to send API calls. For calling dlcservice API outside of
 Chrome, use generated D-Bus bindings.
 
 On a locally built test build|image, calling dlcservice API does not download
 the DLC (no DLC is being served). You need to
-[Install a DLC module for dev/test] before calling dlcservice API.
+[Install a DLC for dev/test] before calling dlcservice API.
 
-## Install a DLC module for dev/test
+## Install a DLC for dev/test
 
-Installing a Chrome OS DLC module on a device is similar to installing a Chrome
+Installing a Chrome OS DLC on a device is similar to installing a Chrome
 OS package:
 
-*   Build the DLC module: `emerge-${BOARD} chromeos-base/demo-dlc`
-*   Build DLC image and copy the DLC module to device:
-`cros deploy ${IP} chromeos-base/demo-dlc`
+*   Build the DLC: `emerge-${BOARD} chromeos-base/demo-dlc`
+*   Build DLC image and copy the DLC to device:
+    `cros deploy ${IP} chromeos-base/demo-dlc`
 
-## Write tests for a DLC module
+## Write tests for a DLC
 
-Writing unit tests for a DLC module is equivalent to writing unit tests for a
-Chrome OS package.
-You can write integration tests for a DLC module using tast framework ([tast]).
-We use Tast Test Dependencies ([tast-deps]) to run DLC integration tests on
-devices with a DLC dependency satisfied. Specifically you need to introduce a
-tast software dependency for your DLC ebuild (created in [Create a DLC module])
-and let your test depend on the software dependency.
+In order to test a DLC, the optional variable field `DLC_PRELOAD` should be set
+to true while the integration/tast tests invoke installing the DLC.
 
 ## Frequently Asked Questions
 
 ### How do I set up the DLC download server (upload artifacts, manage releases, etc.)?
 
-All you need is to add a DLC module and our infrastructure automatically build
-and release the DLC modules.
+All you need is to add a DLC and our infrastructure will automatically build
+and release the DLC.
 
 ### Can I release my DLC at my own schedule?
 
@@ -189,17 +138,18 @@ each version of a DLC image is tied to the version of the OS image.
 
 ### How do I update my DLC?
 
-Modifying a Chrome OS DLC is the same as modifying a Chrome OS package. On
-user’s device, a DLC is updated at the same time when a device is updated.
+Modifying a Chrome OS DLC is the same as modifying a Chrome OS package (ebuild).
+A DLC is updated at the same time the device itself is updated.
 
 [dlcservice]: https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/dlcservice
-[Create a DLC module]: #Create-a-DLC-module
-[Write platform code to request DLC module]: #Write-platform-code-to-request-DLC-module
-[Install a DLC module for dev/test]: #install-a-dlc-module-for-dev_test
-[Write tests for a DLC module]: #Write-tests-for-a-DLC-module
+[Create a DLC]: #Create-a-DLC
+[Write platform code to request DLC]: #Write-platform-code-to-request-DLC
+[Install a DLC for dev/test]: #install-a-dlc-for-devtest
+[Write tests for a DLC]: #Write-tests-for-a-DLC
 [dlc.eclass]: https://chromium.googlesource.com/chromiumos/overlays/chromiumos-overlay/+/master/eclass/dlc.eclass
 [system_api]: https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/system_api
 [imageloader_impl.cc]: https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/imageloader/imageloader_impl.cc
 [tast]: go/tast
 [tast-deps]: go/tast-deps
+[dummy-dlc]: https://source.corp.google.com/chromeos_public/src/third_party/chromiumos-overlay/chromeos-base/dummy-dlc/dummy-dlc-1.0.0.ebuild
 [dummy-dlc config]: https://chromium.googlesource.com/chromiumos/overlays/chromiumos-overlay/+/refs/heads/master/chromeos/config/env/chromeos-base/dummy-dlc
