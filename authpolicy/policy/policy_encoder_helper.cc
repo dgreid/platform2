@@ -122,8 +122,7 @@ bool GetAsIntegerInRangeAndPrintError(const base::Value* value,
   return true;
 }
 
-GetPolicyValueCallback GetValueFromDictCallback(
-    const RegistryDict* policy_dict) {
+PolicyValueCallback GetValueFromDictCallback(const RegistryDict* policy_dict) {
   return base::BindRepeating(
       [](const RegistryDict* dict, const std::string& policy_name) {
         return dict->GetValue(policy_name);
@@ -138,83 +137,79 @@ void SetPolicyOptions(em::PolicyOptions* options, PolicyLevel level) {
                         : em::PolicyOptions_PolicyMode_MANDATORY);
 }
 
-void EncodeBooleanPolicy(const char* policy_name,
-                         GetPolicyValueCallback get_policy_value,
-                         const SetBooleanPolicyCallback& set_policy,
-                         bool log_policy_value) {
-  const base::Value* value = std::move(get_policy_value).Run(policy_name);
+base::Optional<bool> EncodeBooleanPolicy(const char* policy_name,
+                                         PolicyValueCallback get_policy_value,
+                                         bool log_policy_value) {
+  const base::Value* value = get_policy_value.Run(policy_name);
 
   if (!value)
-    return;
+    return base::nullopt;
 
   // Get actual value, doing type conversion if necessary.
   bool bool_value;
   if (!GetAsBoolean(value, &bool_value)) {
     PrintConversionError(value, "boolean", policy_name);
-    return;
+    return base::nullopt;
   }
 
   LOG_IF(INFO, log_policy_value)
       << authpolicy::kColorPolicy << "  " << policy_name << " = "
       << (bool_value ? "true" : "false") << authpolicy::kColorReset;
 
-  // Create proto and set value.
-  set_policy(bool_value);
+  return base::make_optional(bool_value);
 }
 
-void EncodeIntegerInRangePolicy(const char* policy_name,
-                                GetPolicyValueCallback get_policy_value,
-                                int range_min,
-                                int range_max,
-                                const SetIntegerPolicyCallback& set_policy,
-                                bool log_policy_value) {
-  const base::Value* value = std::move(get_policy_value).Run(policy_name);
+base::Optional<int> EncodeIntegerInRangePolicy(
+    const char* policy_name,
+    PolicyValueCallback get_policy_value,
+    int range_min,
+    int range_max,
+    bool log_policy_value) {
+  const base::Value* value = get_policy_value.Run(policy_name);
   if (!value)
-    return;
+    return base::nullopt;
 
   // Get actual value, doing type conversion if necessary.
   int int_value;
   if (!GetAsIntegerInRangeAndPrintError(value, range_min, range_max,
                                         policy_name, &int_value)) {
-    return;
+    return base::nullopt;
   }
 
   LOG_IF(INFO, log_policy_value)
       << authpolicy::kColorPolicy << "  " << policy_name << " = " << int_value
       << authpolicy::kColorReset;
 
-  // Create proto and set value.
-  set_policy(int_value);
+  return base::make_optional(int_value);
 }
 
-void EncodeStringPolicy(const char* policy_name,
-                        GetPolicyValueCallback get_policy_value,
-                        const SetStringPolicyCallback& set_policy,
-                        bool log_policy_value) {
+base::Optional<std::string> EncodeStringPolicy(
+    const char* policy_name,
+    PolicyValueCallback get_policy_value,
+    bool log_policy_value) {
   // Try to get policy value from dict.
-  const base::Value* value = std::move(get_policy_value).Run(policy_name);
+  const base::Value* value = get_policy_value.Run(policy_name);
   if (!value)
-    return;
+    return base::nullopt;
 
   // Get actual value, doing type conversion if necessary.
   std::string string_value;
   if (!GetAsString(value, &string_value)) {
     PrintConversionError(value, "string", policy_name);
-    return;
+    return base::nullopt;
   }
 
   LOG_IF(INFO, log_policy_value)
       << authpolicy::kColorPolicy << "  " << policy_name << " = "
       << string_value << authpolicy::kColorReset;
 
-  // Create proto and set value.
-  set_policy(string_value);
+  return base::make_optional(string_value);
 }
 
-void EncodeStringListPolicy(const char* policy_name,
-                            GetPolicyValueCallback get_policy_value,
-                            const SetStringListPolicyCallback& set_policy,
-                            bool log_policy_value) {
+base::Optional<std::vector<std::string>> EncodeStringListPolicy(
+    const char* policy_name,
+    PolicyValueCallback get_policy_value,
+    bool log_policy_value) {
   // Get and check all values. Do this in advance to prevent partial writes.
   std::vector<std::string> string_values;
   for (int index = 0; /* empty */; ++index) {
@@ -226,7 +221,7 @@ void EncodeStringListPolicy(const char* policy_name,
     std::string string_value;
     if (!GetAsString(value, &string_value)) {
       PrintConversionError(value, "string", policy_name, &index_str);
-      return;
+      return base::nullopt;
     }
     string_values.push_back(string_value);
   }
@@ -239,8 +234,7 @@ void EncodeStringListPolicy(const char* policy_name,
                 << authpolicy::kColorReset;
   }
 
-  // Create proto and set values.
-  set_policy(string_values);
+  return base::make_optional(string_values);
 }
 
 }  // namespace policy

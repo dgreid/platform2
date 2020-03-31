@@ -59,30 +59,22 @@ class DevicePolicyEncoder {
       enterprise_management::ChromeDeviceSettingsProto* policy) const;
 
   // Boolean policies.
-  void EncodeBoolean(const char* policy_name,
-                     const SetBooleanPolicyCallback& set_policy) const;
+  base::Optional<bool> EncodeBoolean(const char* policy_name) const;
 
-  // Boolean policies with PolicyOptions.
-  void EncodeBooleanWithPolicyOptions(
-      const char* policy_name,
-      const SetBooleanPolicyCallback& set_policy) const;
   // Integer policies.
-  void EncodeInteger(const char* policy_name,
-                     const SetIntegerPolicyCallback& set_policy) const;
+  base::Optional<int> EncodeInteger(const char* policy_name) const;
   // Integer in range policies.
-  void EncodeIntegerInRange(const char* policy_name,
-                            int range_min,
-                            int range_max,
-                            const SetIntegerPolicyCallback& set_policy) const;
+  base::Optional<int> EncodeIntegerInRange(const char* policy_name,
+                                           int range_min,
+                                           int range_max) const;
   // String policies.
-  void EncodeString(const char* policy_name,
-                    const SetStringPolicyCallback& set_policy) const;
+  base::Optional<std::string> EncodeString(const char* policy_name) const;
 
   // String list policies are a little different. Unlike the basic types they
   // are not stored as registry value, but as registry key with values 1, 2, ...
   // for the entries.
-  void EncodeStringList(const char* policy_name,
-                        const SetStringListPolicyCallback& set_policy) const;
+  base::Optional<std::vector<std::string>> EncodeStringList(
+      const char* policy_name) const;
 
   // Prints out an error message if the |policy_name| is contained in the
   // registry dictionary. Use this for unsupported policies.

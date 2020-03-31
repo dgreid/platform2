@@ -6,6 +6,7 @@
 
 #include <limits>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <base/bind.h>
@@ -42,45 +43,48 @@ void UserPolicyEncoder::EncodePolicy(em::CloudPolicySettings* policy) const {
 void UserPolicyEncoder::EncodeBoolean(em::CloudPolicySettings* policy,
                                       const BooleanPolicyAccess* access) const {
   const char* policy_name = access->policy_key;
-  const SetBooleanPolicyCallback& set_policy = [&](bool bool_value) {
+
+  base::Optional<bool> bool_value = EncodeBooleanPolicy(
+      policy_name, GetValueFromDictCallback(dict_), log_policy_values_);
+  if (bool_value) {
     // Create proto and set value.
     em::BooleanPolicyProto* proto = (policy->*access->mutable_proto_ptr)();
     DCHECK(proto);
-    proto->set_value(bool_value);
+    proto->set_value(bool_value.value());
     SetPolicyOptions(proto->mutable_policy_options(), level_);
-  };
-  EncodeBooleanPolicy(policy_name, GetValueFromDictCallback(dict_), set_policy,
-                      log_policy_values_);
+  }
 }
 
 void UserPolicyEncoder::EncodeInteger(em::CloudPolicySettings* policy,
                                       const IntegerPolicyAccess* access) const {
   const char* policy_name = access->policy_key;
-  const SetIntegerPolicyCallback& set_policy = [&](int int_value) {
+
+  base::Optional<int> int_value = EncodeIntegerInRangePolicy(
+      policy_name, GetValueFromDictCallback(dict_),
+      std::numeric_limits<int>::min(), std::numeric_limits<int>::max(),
+      log_policy_values_);
+  if (int_value) {
     // Create proto and set value.
     em::IntegerPolicyProto* proto = (policy->*access->mutable_proto_ptr)();
     DCHECK(proto);
-    proto->set_value(int_value);
+    proto->set_value(int_value.value());
     SetPolicyOptions(proto->mutable_policy_options(), level_);
-  };
-  EncodeIntegerInRangePolicy(policy_name, GetValueFromDictCallback(dict_),
-                             std::numeric_limits<int>::min(),
-                             std::numeric_limits<int>::max(), set_policy,
-                             log_policy_values_);
+  }
 }
 
 void UserPolicyEncoder::EncodeString(em::CloudPolicySettings* policy,
                                      const StringPolicyAccess* access) const {
   const char* policy_name = access->policy_key;
-  const SetStringPolicyCallback& set_policy = [&](std::string string_value) {
+
+  base::Optional<std::string> string_value = EncodeStringPolicy(
+      policy_name, GetValueFromDictCallback(dict_), log_policy_values_);
+  if (string_value) {
     // Create proto and set value.
     em::StringPolicyProto* proto = (policy->*access->mutable_proto_ptr)();
     DCHECK(proto);
-    *proto->mutable_value() = string_value;
+    *proto->mutable_value() = string_value.value();
     SetPolicyOptions(proto->mutable_policy_options(), level_);
-  };
-  EncodeStringPolicy(policy_name, GetValueFromDictCallback(dict_), set_policy,
-                     log_policy_values_);
+  }
 }
 
 void UserPolicyEncoder::EncodeStringList(
@@ -92,22 +96,20 @@ void UserPolicyEncoder::EncodeStringList(
   if (!key)
     return;
 
-  const SetStringListPolicyCallback& set_policy =
-      [&](const std::vector<std::string>& string_values) {
-        // Create proto and set value.
-        em::StringListPolicyProto* proto =
-            (policy->*access->mutable_proto_ptr)();
-        DCHECK(proto);
-        em::StringList* proto_list = proto->mutable_value();
-        DCHECK(proto_list);
-        proto_list->clear_entries();
-        for (const std::string& value : string_values)
-          *proto_list->add_entries() = value;
-        SetPolicyOptions(proto->mutable_policy_options(), level_);
-      };
-
-  EncodeStringListPolicy(policy_name, GetValueFromDictCallback(key), set_policy,
-                         log_policy_values_);
+  base::Optional<std::vector<std::string>> string_values =
+      EncodeStringListPolicy(policy_name, GetValueFromDictCallback(key),
+                             log_policy_values_);
+  if (string_values) {
+    // Create proto and set value.
+    em::StringListPolicyProto* proto = (policy->*access->mutable_proto_ptr)();
+    DCHECK(proto);
+    em::StringList* proto_list = proto->mutable_value();
+    DCHECK(proto_list);
+    proto_list->clear_entries();
+    for (const std::string& value : string_values.value())
+      *proto_list->add_entries() = value;
+    SetPolicyOptions(proto->mutable_policy_options(), level_);
+  }
 }
 
 template <typename T_Access>
