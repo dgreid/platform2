@@ -36,24 +36,6 @@ extern const int kDlcDirectoryPerms;
 // Timeout in ms for DBus method calls into imageloader.
 extern const int kImageLoaderTimeoutMs;
 
-template <typename BindedCallback>
-class ScopedCleanups {
- public:
-  ScopedCleanups() = default;
-  ~ScopedCleanups() {
-    for (const auto& cleanup : queue_)
-      cleanup.Run();
-  }
-  void Insert(BindedCallback cleanup) { queue_.push_back(cleanup); }
-  // Clears everything so destructor is a no-op.
-  void Cancel() { queue_.clear(); }
-
- private:
-  std::vector<BindedCallback> queue_;
-
-  DISALLOW_COPY_AND_ASSIGN(ScopedCleanups<BindedCallback>);
-};
-
 template <typename Arg>
 base::FilePath JoinPaths(Arg&& path) {
   return base::FilePath(path);

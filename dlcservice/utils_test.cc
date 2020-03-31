@@ -166,24 +166,4 @@ TEST(UtilsTest, GetDlcModuleImagePathB) {
             "/tmp/dlc/id/package/dlc_b/dlc.img");
 }
 
-TEST(UtilsTest, ScopedCleanupsTest) {
-  bool flag = false;
-  base::Callback<void()> cleanup =
-      base::Bind([](bool* flag_ptr) { *flag_ptr = true; }, &flag);
-
-  {
-    ScopedCleanups<decltype(cleanup)> scoped_cleanups;
-    scoped_cleanups.Insert(cleanup);
-  }
-  EXPECT_TRUE(flag);
-
-  flag = false;
-  {
-    ScopedCleanups<decltype(cleanup)> scoped_cleanups;
-    scoped_cleanups.Insert(cleanup);
-    scoped_cleanups.Cancel();
-  }
-  EXPECT_FALSE(flag);
-}
-
 }  // namespace dlcservice
