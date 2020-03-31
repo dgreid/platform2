@@ -42,8 +42,8 @@ class DlcService {
   DlcService();
   ~DlcService();
 
-  // Loads installed DLC module images.
-  void LoadDlcModuleImages();
+  // Preloads preloadable DLCs from preloaded content directory.
+  void PreloadDlcs();
 
   bool Install(const DlcSet& dlcs,
                const std::string& omaha_url,

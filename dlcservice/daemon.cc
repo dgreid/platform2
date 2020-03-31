@@ -34,7 +34,7 @@ int Daemon::OnInit() {
   if (return_code != EX_OK)
     return return_code;
 
-  dlc_service_->LoadDlcModuleImages();
+  dlc_service_->PreloadDlcs();
   return EX_OK;
 }
 

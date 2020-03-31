@@ -55,7 +55,7 @@ const DlcBase& DlcManager::GetDlc(const DlcId& id) {
 // Loads the preloadable DLC(s) from preloaded content directory by scanning the
 // preloaded DLC(s) and verifying the validity to be preloaded before doing
 // so.
-void DlcManager::PreloadDlcModuleImages() {
+void DlcManager::PreloadDlcs() {
   // Load all preloaded DLC(s) into |content_dir_| one by one.
   for (const auto& id :
        ScanDirectory(SystemState::Get()->preloaded_content_dir())) {

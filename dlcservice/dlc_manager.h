@@ -38,9 +38,8 @@ class DlcManager {
   // Returns true and sets |state| if the DLC is supported.
   bool GetState(const DlcId& id, DlcState* state, brillo::ErrorPtr* err);
 
-  // TODO(ahassani): Fix comment
-  // Loads installed DLC module images.
-  void PreloadDlcModuleImages();
+  // Preloads preloadable DLCs from preloaded content directory.
+  void PreloadDlcs();
 
   // DLC Installation Flow
 

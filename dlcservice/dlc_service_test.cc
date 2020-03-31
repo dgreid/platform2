@@ -199,7 +199,7 @@ class DlcServiceTest : public testing::Test {
   void SetUp() override {
     SetUpDlcWithSlots(content_path_, kFirstDlc, kPackage);
     ConstructDlcService();
-    dlc_service_->LoadDlcModuleImages();
+    dlc_service_->PreloadDlcs();
 
     EXPECT_CALL(*mock_image_loader_proxy_ptr_, LoadDlcImage(_, _, _, _, _, _))
         .WillOnce(DoAll(SetArgPointee<3>(mount_path_.value()), Return(true)));
@@ -285,7 +285,7 @@ TEST_F(DlcServiceSkipConstructionTest, PreloadAllowedDlcTest) {
               SetDlcActiveValue(true, kFirstDlc, _, _))
       .WillOnce(Return(true));
 
-  dlc_service_->LoadDlcModuleImages();
+  dlc_service_->PreloadDlcs();
 
   const auto& dlcs = dlc_service_->GetInstalled();
 
@@ -309,7 +309,7 @@ TEST_F(DlcServiceSkipConstructionTest,
               SetDlcActiveValue(true, kFirstDlc, _, _))
       .WillOnce(Return(true));
 
-  dlc_service_->LoadDlcModuleImages();
+  dlc_service_->PreloadDlcs();
 
   const auto& dlcs = dlc_service_->GetInstalled();
 
@@ -322,7 +322,7 @@ TEST_F(DlcServiceSkipConstructionTest, PreloadNotAllowedDlcTest) {
   SetUpDlcWithoutSlots(preloaded_content_path_, kFirstDlc, kPackage);
   ConstructDlcService();
 
-  dlc_service_->LoadDlcModuleImages();
+  dlc_service_->PreloadDlcs();
 
   const auto& dlcs = dlc_service_->GetInstalled();
 
