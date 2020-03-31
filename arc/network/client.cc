@@ -29,7 +29,12 @@ std::unique_ptr<Client> Client::New() {
     return nullptr;
   }
 
-  return std::make_unique<Client>(bus, proxy);
+  return std::make_unique<Client>(std::move(bus), proxy);
+}
+
+Client::~Client() {
+  if (bus_)
+    bus_->ShutdownAndBlock();
 }
 
 bool Client::NotifyArcStartup(pid_t pid) {

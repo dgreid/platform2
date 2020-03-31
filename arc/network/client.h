@@ -20,9 +20,9 @@ class BRILLO_EXPORT Client {
  public:
   static std::unique_ptr<Client> New();
 
-  Client(scoped_refptr<dbus::Bus> bus, dbus::ObjectProxy* proxy)
+  Client(const scoped_refptr<dbus::Bus>& bus, dbus::ObjectProxy* proxy)
       : bus_(std::move(bus)), proxy_(proxy) {}
-  ~Client() = default;
+  ~Client();
 
   bool NotifyArcStartup(pid_t pid);
   bool NotifyArcShutdown();
