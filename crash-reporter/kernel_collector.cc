@@ -12,9 +12,11 @@
 #include <base/files/file_enumerator.h>
 #include <base/files/file_util.h>
 #include <base/logging.h>
+#include <base/stl_util.h>
+#include <base/strings/string_number_conversions.h>
 #include <base/strings/string_util.h>
 #include <base/strings/stringprintf.h>
-#include <base/strings/string_number_conversions.h>
+
 using base::FilePath;
 using base::StringPiece;
 using base::StringPrintf;
@@ -91,7 +93,7 @@ const char* const kPCRegex[] = {
     " RIP \\[<.*>\\] ([^\\+ ]+).*",   // X86_64 uses RIP for the program counter
 };
 
-static_assert(arraysize(kPCRegex) == KernelCollector::kArchCount,
+static_assert(base::size(kPCRegex) == KernelCollector::kArchCount,
               "Missing Arch PC RegExp");
 
 pcrecpp::RE kSanityCheckRe("\n(<\\d+>)?\\[\\s*(\\d+\\.\\d+)\\]");
