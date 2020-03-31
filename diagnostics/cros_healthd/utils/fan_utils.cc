@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <string>
 
+#include <base/files/file_util.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_split.h>
 #include <base/strings/string_util.h>
@@ -20,9 +21,6 @@ namespace {
 using ::chromeos::cros_healthd::mojom::FanInfo;
 using ::chromeos::cros_healthd::mojom::FanInfoPtr;
 
-// The maximum amount of time to wait for a debugd response.
-constexpr base::TimeDelta kDebugdDBusTimeout = base::TimeDelta::FromSeconds(10);
-
 }  // namespace
 
 FanFetcher::FanFetcher(org::chromium::debugdProxyInterface* debugd_proxy)
@@ -32,8 +30,16 @@ FanFetcher::FanFetcher(org::chromium::debugdProxyInterface* debugd_proxy)
 
 FanFetcher::~FanFetcher() = default;
 
-std::vector<FanInfoPtr> FanFetcher::FetchFanInfo() {
+std::vector<FanInfoPtr> FanFetcher::FetchFanInfo(
+    const base::FilePath& root_dir) {
   std::vector<FanInfoPtr> fan_info;
+
+  // Devices without a Google EC, and therefore ectool, cannot obtain fan info.
+  if (!base::PathExists(root_dir.Append(kRelativeCrosEcPath))) {
+    LOG(INFO) << "Device does not have a Google EC.";
+    return fan_info;
+  }
+
   std::string debugd_result;
   brillo::ErrorPtr error;
   if (!debugd_proxy_->CollectFanSpeed(&debugd_result, &error,
