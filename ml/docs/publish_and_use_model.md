@@ -1,8 +1,8 @@
-# ChromeOS ML Service: How to publish your ML models
+# ChromeOS ML Service: How to publish and use your ML models
 
 This page explains how to publish a trained ML model so that the ML Service
-can make it available at runtime for inference.
-Design doc for model publishing: [go/cros-ml-service-models].
+can make it available at runtime for inference, as well as how to use it in
+Chromium side.
 
 [TOC]
 
@@ -22,6 +22,7 @@ deployment lifecycle across google3, Chromium, and Chrome OS, see [go/ml-abc].
 
 You need to be aware what (minimum) version of the TFLite runtime your model
 requires.
+
 > TODO(amoylan): Show an example of how to verify this using Toco.
 
 The following table shows the version of ML Service's TFLite runtime for each
@@ -40,7 +41,8 @@ CrOS major version:
 | M79             | 1.14.0           |
 | M80             | 1.14.0           |
 | M81             | 1.14.0           |
-
+| M83             | 1.14.0           |
+| M84             | 1.14.0           |
 
 ## Two methods to publish your models
 
@@ -48,12 +50,12 @@ Two methods will be supported to publish an ML model:
 
 1. Installed into rootfs partition.
 2. Installed into the user partition as a downloadable component using Chrome
-   component updater. (Under development, ETA 2020-Q1).
+   component updater.
 
 To know more about why we have two methods and the pros and cons of each, read
 the [section below](#two-methods-why).
 
-## Method #1: Install a model inside rootfs
+## Method #1: Install a model inside rootfs {#method1}
 
 ### Step 1. Upload the model to the ChromeOS file mirror
 
@@ -65,6 +67,7 @@ The mirror is accessible to all Googlers with prod access.
 
 There is no directory structure under `distfiles/`, so the filename needs to be
 unique enough to avoid conflicts.
+
 This is the **required convention** for filenames of models:
 
 ```
@@ -93,16 +96,20 @@ don't plan to use them ever again.
 
 Once your model is uploaded to the ChromeOS file mirror, the next step is to
 create a CL.
+
 This CL will have changes to the [ML Service ebuild], which installs the
 model(s) into rootfs.
+
 The ebuild is located at
 `/chromiumos/overlays/chromiumos-overlay/chromeos-base/ml/ml-9999.ebuild`.
 Simply add your models in the `MODELS` variable: they are installed in the
 `src_install()` function in the same file.
+
 The install location in the ChromeOS system is `/opt/google/chrome/ml_models`.
 
 Then you need to update the Manifest file. In the ebuild path above, run
 `ebuild <ebuild_file> manifest`.
+
 A new entry for the new model will be added into Manifest file. This is the
 checksum to ensure the model file is downloaded successfully.
 
@@ -163,15 +170,33 @@ Finch rollout. Optionally, you can also take this shortcut (with caveats):
   unlaunched feature for a few days is OK. (Don't cause Chrome to start crashing
   of course.)
 
+## Method #2: Use component updater to install a model inside the stateful partition {#method2}
 
+### Set up Chromium components for downloadable models (server side)
 
-## Method #2: Use component updater to install a model inside the stateful partition
+See [this doc](setup_component.md) for detailed instructions of creating a new
+Chromium component for a downloadable model.
 
-> Detailed instructions for this section are pending the final implementation of
-> OOB model updates. See [go/cros-model-update] for the design. ETA 2020-Q1.
+### Make use of downloadable models (Chromium side)
 
+Following steps are required to use a downloadable model:
+
+- Enable your feature to load machine learning models from chromium components.
+  See [this CL](https://crrev.com/c/1903168) as an example.
+  - Notice: downloadable models are not always installed, for example, when a
+    device starts up for the first time after unboxed or re-flashed. Hence a
+    fallback is necessary when there's no model available. It can be a [builtin
+    model](#method1), or simply a const return value.
+
+- Implement a [`ComponentInstallerPolicy`][cs-component-installer-policy] for
+  it, which downloads the component from the server and feeds it to your
+  feature code. See [this CL](https://crrev.com/c/1990885) as an example.
+  - Notice: you may need to conduct experiments for different versions of your
+    models, the component installer can help with that. Please see [this
+    doc][version-control-doc] for more details (available to Googlers only).
 
 ## Which method to use and why {#two-methods-why}
+
 We provide two methods of model deployment, each with their own pros and cons.
 
 Method #1, installing inside rootfs, has the benefit of making the model
@@ -202,10 +227,37 @@ needed.
 
 Contact chrome-knowledge-eng@ to consult about the right approach.
 
+## Usage of Mojo APIs
+
+[ML service client library][ml-service-client-library] in Chromium provides two
+functions, `LoadBuiltinModel` is intended for [method 1](#method1) and
+`LoadFlatBufferModel` is intended for [method 2](#method2). You can use them to
+load and use your model from Chromium.
+
+`LoadBuiltinModel` requires a `BuiltinModelSpec` that indicates the
+`BuiltinModelId`, while `LoadFlatBufferModel` requires a `FlatBufferModelSpec`
+that contains the model flatbuffer string and other essential meta info. Both of
+the load methods will bind a `mojo::Remote<Model>` object in Chromium side to a
+`ModelImpl` in ml-service (Chromium OS) side.
+
+With the bound `mojo::Remote<Model>` object, you can call `CreateGraphExecutor`
+to bind a `mojo::Remote<GraphExecutor>` object to a `GraphExecutorImpl`, then
+with the bound `mojo::Remote<GraphExecutor>` object, you can call `Execute` to
+do inference.
+
+See:
+
+- [Example of LoadBuiltinModel][example-load-buitin-model]
+- [Example of LoadFlatBufferModel][example-load-flatbuffer-model]
+
+## Further reading
+
+Design doc for model publishing: [go/cros-ml-service-models].
 
 ## Log your model on UMA {#log-your-model-on-uma}
 
 ### Introduction to the metrics
+
 There are 9 "request performance metric" histograms and 3 “request event” enums
 histograms that model owner MUST config to be logged on go/uma-.
 
@@ -282,3 +334,8 @@ reviewer from the owners of histograms.xml. The owners can be found at
 [pretty_print.py]: https://cs.chromium.org/chromium/src/tools/metrics/histograms/pretty_print.py?sq=package:chromium&dr&g=0
 [toco]: https://github.com/tensorflow/tensorflow/tree/master/tensorflow/lite/toco
 [validate_format.py]: https://cs.chromium.org/chromium/src/tools/metrics/histograms/validate_format.py?sq=package:chromium&dr&g=0
+[ml-service-client-library]: https://source.chromium.org/chromium/chromium/src/+/master:chromeos/services/machine_learning/public/cpp/service_connection.h
+[example-load-buitin-model]: https://source.chromium.org/chromium/chromium/src/+/master:chrome/browser/chromeos/power/ml/smart_dim/builtin_worker.cc;l=92
+[example-load-flatbuffer-model]: https://source.chromium.org/chromium/chromium/src/+/master:chrome/browser/chromeos/power/ml/smart_dim/download_worker.cc;l=93
+[version-control-doc]: http://doc/11erwhc0Ppul4SPXE7DtvW9wz-0CQmKK4b9dFTloByos#heading=h.urp1fskeo868
+[cs-component-installer-policy]: https://source.chromium.org/search?q=%22public%20ComponentInstallerPolicy%22
