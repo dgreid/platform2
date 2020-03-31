@@ -2847,7 +2847,7 @@ TPM_RC TpmUtilityImpl::GetRsuDeviceIdInternal(std::string* device_id) {
   }
   *device_id = crypto::SHA256HashString(
       std::string(reinterpret_cast<const char*>(c.device_id),
-                  arraysize(c.device_id)) +
+                  base::size(c.device_id)) +
       kRsuSalt);
   return result;
 }

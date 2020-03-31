@@ -8,6 +8,7 @@
 #include <base/callback.h>
 #include <base/message_loop/message_loop.h>
 #include <base/run_loop.h>
+#include <base/stl_util.h>
 #include <gtest/gtest.h>
 
 #include "trunks/mock_authorization_delegate.h"
@@ -81,7 +82,7 @@ TEST(GeneratorTest, SerializeParseEmptyStruct) {
 
 TEST(GeneratorTest, SerializeBufferOverflow) {
   TPM2B_MAX_BUFFER value;
-  value.size = arraysize(value.buffer) + 1;
+  value.size = base::size(value.buffer) + 1;
   std::string tmp;
   EXPECT_EQ(TPM_RC_INSUFFICIENT, Serialize_TPM2B_MAX_BUFFER(value, &tmp));
 }

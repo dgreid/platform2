@@ -1126,7 +1126,7 @@ TPM_RC Serialize_TPM2B_DIGEST(const TPM2B_DIGEST& value, std::string* buffer) {
     return result;
   }
 
-  if (arraysize(value.buffer) < value.size) {
+  if (base::size(value.buffer) < value.size) {
     return TPM_RC_INSUFFICIENT;
   }
   for (uint32_t i = 0; i < value.size; ++i) {
@@ -1149,7 +1149,7 @@ TPM_RC Parse_TPM2B_DIGEST(std::string* buffer,
     return result;
   }
 
-  if (arraysize(value->buffer) < value->size) {
+  if (base::size(value->buffer) < value->size) {
     return TPM_RC_INSUFFICIENT;
   }
   for (uint32_t i = 0; i < value->size; ++i) {
@@ -2215,7 +2215,7 @@ TPM_RC Serialize_TPMU_HA(const TPMU_HA& value,
   VLOG(3) << __func__;
 
   if (selector == TPM_ALG_SHA384) {
-    if (arraysize(value.sha384) < SHA384_DIGEST_SIZE) {
+    if (base::size(value.sha384) < SHA384_DIGEST_SIZE) {
       return TPM_RC_INSUFFICIENT;
     }
     for (uint32_t i = 0; i < SHA384_DIGEST_SIZE; ++i) {
@@ -2227,7 +2227,7 @@ TPM_RC Serialize_TPMU_HA(const TPMU_HA& value,
   }
 
   if (selector == TPM_ALG_SHA1) {
-    if (arraysize(value.sha1) < SHA1_DIGEST_SIZE) {
+    if (base::size(value.sha1) < SHA1_DIGEST_SIZE) {
       return TPM_RC_INSUFFICIENT;
     }
     for (uint32_t i = 0; i < SHA1_DIGEST_SIZE; ++i) {
@@ -2239,7 +2239,7 @@ TPM_RC Serialize_TPMU_HA(const TPMU_HA& value,
   }
 
   if (selector == TPM_ALG_SM3_256) {
-    if (arraysize(value.sm3_256) < SM3_256_DIGEST_SIZE) {
+    if (base::size(value.sm3_256) < SM3_256_DIGEST_SIZE) {
       return TPM_RC_INSUFFICIENT;
     }
     for (uint32_t i = 0; i < SM3_256_DIGEST_SIZE; ++i) {
@@ -2255,7 +2255,7 @@ TPM_RC Serialize_TPMU_HA(const TPMU_HA& value,
   }
 
   if (selector == TPM_ALG_SHA256) {
-    if (arraysize(value.sha256) < SHA256_DIGEST_SIZE) {
+    if (base::size(value.sha256) < SHA256_DIGEST_SIZE) {
       return TPM_RC_INSUFFICIENT;
     }
     for (uint32_t i = 0; i < SHA256_DIGEST_SIZE; ++i) {
@@ -2267,7 +2267,7 @@ TPM_RC Serialize_TPMU_HA(const TPMU_HA& value,
   }
 
   if (selector == TPM_ALG_SHA512) {
-    if (arraysize(value.sha512) < SHA512_DIGEST_SIZE) {
+    if (base::size(value.sha512) < SHA512_DIGEST_SIZE) {
       return TPM_RC_INSUFFICIENT;
     }
     for (uint32_t i = 0; i < SHA512_DIGEST_SIZE; ++i) {
@@ -2288,7 +2288,7 @@ TPM_RC Parse_TPMU_HA(std::string* buffer,
   VLOG(3) << __func__;
 
   if (selector == TPM_ALG_SHA384) {
-    if (arraysize(value->sha384) < SHA384_DIGEST_SIZE) {
+    if (base::size(value->sha384) < SHA384_DIGEST_SIZE) {
       return TPM_RC_INSUFFICIENT;
     }
     for (uint32_t i = 0; i < SHA384_DIGEST_SIZE; ++i) {
@@ -2300,7 +2300,7 @@ TPM_RC Parse_TPMU_HA(std::string* buffer,
   }
 
   if (selector == TPM_ALG_SHA1) {
-    if (arraysize(value->sha1) < SHA1_DIGEST_SIZE) {
+    if (base::size(value->sha1) < SHA1_DIGEST_SIZE) {
       return TPM_RC_INSUFFICIENT;
     }
     for (uint32_t i = 0; i < SHA1_DIGEST_SIZE; ++i) {
@@ -2312,7 +2312,7 @@ TPM_RC Parse_TPMU_HA(std::string* buffer,
   }
 
   if (selector == TPM_ALG_SM3_256) {
-    if (arraysize(value->sm3_256) < SM3_256_DIGEST_SIZE) {
+    if (base::size(value->sm3_256) < SM3_256_DIGEST_SIZE) {
       return TPM_RC_INSUFFICIENT;
     }
     for (uint32_t i = 0; i < SM3_256_DIGEST_SIZE; ++i) {
@@ -2328,7 +2328,7 @@ TPM_RC Parse_TPMU_HA(std::string* buffer,
   }
 
   if (selector == TPM_ALG_SHA256) {
-    if (arraysize(value->sha256) < SHA256_DIGEST_SIZE) {
+    if (base::size(value->sha256) < SHA256_DIGEST_SIZE) {
       return TPM_RC_INSUFFICIENT;
     }
     for (uint32_t i = 0; i < SHA256_DIGEST_SIZE; ++i) {
@@ -2340,7 +2340,7 @@ TPM_RC Parse_TPMU_HA(std::string* buffer,
   }
 
   if (selector == TPM_ALG_SHA512) {
-    if (arraysize(value->sha512) < SHA512_DIGEST_SIZE) {
+    if (base::size(value->sha512) < SHA512_DIGEST_SIZE) {
       return TPM_RC_INSUFFICIENT;
     }
     for (uint32_t i = 0; i < SHA512_DIGEST_SIZE; ++i) {
@@ -2396,7 +2396,7 @@ TPM_RC Serialize_TPM2B_DATA(const TPM2B_DATA& value, std::string* buffer) {
     return result;
   }
 
-  if (arraysize(value.buffer) < value.size) {
+  if (base::size(value.buffer) < value.size) {
     return TPM_RC_INSUFFICIENT;
   }
   for (uint32_t i = 0; i < value.size; ++i) {
@@ -2419,7 +2419,7 @@ TPM_RC Parse_TPM2B_DATA(std::string* buffer,
     return result;
   }
 
-  if (arraysize(value->buffer) < value->size) {
+  if (base::size(value->buffer) < value->size) {
     return TPM_RC_INSUFFICIENT;
   }
   for (uint32_t i = 0; i < value->size; ++i) {
@@ -2454,7 +2454,7 @@ TPM_RC Serialize_TPM2B_EVENT(const TPM2B_EVENT& value, std::string* buffer) {
     return result;
   }
 
-  if (arraysize(value.buffer) < value.size) {
+  if (base::size(value.buffer) < value.size) {
     return TPM_RC_INSUFFICIENT;
   }
   for (uint32_t i = 0; i < value.size; ++i) {
@@ -2477,7 +2477,7 @@ TPM_RC Parse_TPM2B_EVENT(std::string* buffer,
     return result;
   }
 
-  if (arraysize(value->buffer) < value->size) {
+  if (base::size(value->buffer) < value->size) {
     return TPM_RC_INSUFFICIENT;
   }
   for (uint32_t i = 0; i < value->size; ++i) {
@@ -2513,7 +2513,7 @@ TPM_RC Serialize_TPM2B_MAX_BUFFER(const TPM2B_MAX_BUFFER& value,
     return result;
   }
 
-  if (arraysize(value.buffer) < value.size) {
+  if (base::size(value.buffer) < value.size) {
     return TPM_RC_INSUFFICIENT;
   }
   for (uint32_t i = 0; i < value.size; ++i) {
@@ -2536,7 +2536,7 @@ TPM_RC Parse_TPM2B_MAX_BUFFER(std::string* buffer,
     return result;
   }
 
-  if (arraysize(value->buffer) < value->size) {
+  if (base::size(value->buffer) < value->size) {
     return TPM_RC_INSUFFICIENT;
   }
   for (uint32_t i = 0; i < value->size; ++i) {
@@ -2572,7 +2572,7 @@ TPM_RC Serialize_TPM2B_MAX_NV_BUFFER(const TPM2B_MAX_NV_BUFFER& value,
     return result;
   }
 
-  if (arraysize(value.buffer) < value.size) {
+  if (base::size(value.buffer) < value.size) {
     return TPM_RC_INSUFFICIENT;
   }
   for (uint32_t i = 0; i < value.size; ++i) {
@@ -2595,7 +2595,7 @@ TPM_RC Parse_TPM2B_MAX_NV_BUFFER(std::string* buffer,
     return result;
   }
 
-  if (arraysize(value->buffer) < value->size) {
+  if (base::size(value->buffer) < value->size) {
     return TPM_RC_INSUFFICIENT;
   }
   for (uint32_t i = 0; i < value->size; ++i) {
@@ -2631,7 +2631,7 @@ TPM_RC Serialize_TPM2B_TIMEOUT(const TPM2B_TIMEOUT& value,
     return result;
   }
 
-  if (arraysize(value.buffer) < value.size) {
+  if (base::size(value.buffer) < value.size) {
     return TPM_RC_INSUFFICIENT;
   }
   for (uint32_t i = 0; i < value.size; ++i) {
@@ -2654,7 +2654,7 @@ TPM_RC Parse_TPM2B_TIMEOUT(std::string* buffer,
     return result;
   }
 
-  if (arraysize(value->buffer) < value->size) {
+  if (base::size(value->buffer) < value->size) {
     return TPM_RC_INSUFFICIENT;
   }
   for (uint32_t i = 0; i < value->size; ++i) {
@@ -2689,7 +2689,7 @@ TPM_RC Serialize_TPM2B_IV(const TPM2B_IV& value, std::string* buffer) {
     return result;
   }
 
-  if (arraysize(value.buffer) < value.size) {
+  if (base::size(value.buffer) < value.size) {
     return TPM_RC_INSUFFICIENT;
   }
   for (uint32_t i = 0; i < value.size; ++i) {
@@ -2712,7 +2712,7 @@ TPM_RC Parse_TPM2B_IV(std::string* buffer,
     return result;
   }
 
-  if (arraysize(value->buffer) < value->size) {
+  if (base::size(value->buffer) < value->size) {
     return TPM_RC_INSUFFICIENT;
   }
   for (uint32_t i = 0; i < value->size; ++i) {
@@ -2747,7 +2747,7 @@ TPM_RC Serialize_TPM2B_NAME(const TPM2B_NAME& value, std::string* buffer) {
     return result;
   }
 
-  if (arraysize(value.name) < value.size) {
+  if (base::size(value.name) < value.size) {
     return TPM_RC_INSUFFICIENT;
   }
   for (uint32_t i = 0; i < value.size; ++i) {
@@ -2770,7 +2770,7 @@ TPM_RC Parse_TPM2B_NAME(std::string* buffer,
     return result;
   }
 
-  if (arraysize(value->name) < value->size) {
+  if (base::size(value->name) < value->size) {
     return TPM_RC_INSUFFICIENT;
   }
   for (uint32_t i = 0; i < value->size; ++i) {
@@ -2806,7 +2806,7 @@ TPM_RC Serialize_TPMS_PCR_SELECT(const TPMS_PCR_SELECT& value,
     return result;
   }
 
-  if (arraysize(value.pcr_select) < value.sizeof_select) {
+  if (base::size(value.pcr_select) < value.sizeof_select) {
     return TPM_RC_INSUFFICIENT;
   }
   for (uint32_t i = 0; i < value.sizeof_select; ++i) {
@@ -2829,7 +2829,7 @@ TPM_RC Parse_TPMS_PCR_SELECT(std::string* buffer,
     return result;
   }
 
-  if (arraysize(value->pcr_select) < value->sizeof_select) {
+  if (base::size(value->pcr_select) < value->sizeof_select) {
     return TPM_RC_INSUFFICIENT;
   }
   for (uint32_t i = 0; i < value->sizeof_select; ++i) {
@@ -2856,7 +2856,7 @@ TPM_RC Serialize_TPMS_PCR_SELECTION(const TPMS_PCR_SELECTION& value,
     return result;
   }
 
-  if (arraysize(value.pcr_select) < value.sizeof_select) {
+  if (base::size(value.pcr_select) < value.sizeof_select) {
     return TPM_RC_INSUFFICIENT;
   }
   for (uint32_t i = 0; i < value.sizeof_select; ++i) {
@@ -2884,7 +2884,7 @@ TPM_RC Parse_TPMS_PCR_SELECTION(std::string* buffer,
     return result;
   }
 
-  if (arraysize(value->pcr_select) < value->sizeof_select) {
+  if (base::size(value->pcr_select) < value->sizeof_select) {
     return TPM_RC_INSUFFICIENT;
   }
   for (uint32_t i = 0; i < value->sizeof_select; ++i) {
@@ -3160,7 +3160,7 @@ TPM_RC Serialize_TPMS_TAGGED_PCR_SELECT(const TPMS_TAGGED_PCR_SELECT& value,
     return result;
   }
 
-  if (arraysize(value.pcr_select) < value.sizeof_select) {
+  if (base::size(value.pcr_select) < value.sizeof_select) {
     return TPM_RC_INSUFFICIENT;
   }
   for (uint32_t i = 0; i < value.sizeof_select; ++i) {
@@ -3188,7 +3188,7 @@ TPM_RC Parse_TPMS_TAGGED_PCR_SELECT(std::string* buffer,
     return result;
   }
 
-  if (arraysize(value->pcr_select) < value->sizeof_select) {
+  if (base::size(value->pcr_select) < value->sizeof_select) {
     return TPM_RC_INSUFFICIENT;
   }
   for (uint32_t i = 0; i < value->sizeof_select; ++i) {
@@ -3209,7 +3209,7 @@ TPM_RC Serialize_TPML_CC(const TPML_CC& value, std::string* buffer) {
     return result;
   }
 
-  if (arraysize(value.command_codes) < value.count) {
+  if (base::size(value.command_codes) < value.count) {
     return TPM_RC_INSUFFICIENT;
   }
   for (uint32_t i = 0; i < value.count; ++i) {
@@ -3232,7 +3232,7 @@ TPM_RC Parse_TPML_CC(std::string* buffer,
     return result;
   }
 
-  if (arraysize(value->command_codes) < value->count) {
+  if (base::size(value->command_codes) < value->count) {
     return TPM_RC_INSUFFICIENT;
   }
   for (uint32_t i = 0; i < value->count; ++i) {
@@ -3253,7 +3253,7 @@ TPM_RC Serialize_TPML_CCA(const TPML_CCA& value, std::string* buffer) {
     return result;
   }
 
-  if (arraysize(value.command_attributes) < value.count) {
+  if (base::size(value.command_attributes) < value.count) {
     return TPM_RC_INSUFFICIENT;
   }
   for (uint32_t i = 0; i < value.count; ++i) {
@@ -3276,7 +3276,7 @@ TPM_RC Parse_TPML_CCA(std::string* buffer,
     return result;
   }
 
-  if (arraysize(value->command_attributes) < value->count) {
+  if (base::size(value->command_attributes) < value->count) {
     return TPM_RC_INSUFFICIENT;
   }
   for (uint32_t i = 0; i < value->count; ++i) {
@@ -3297,7 +3297,7 @@ TPM_RC Serialize_TPML_ALG(const TPML_ALG& value, std::string* buffer) {
     return result;
   }
 
-  if (arraysize(value.algorithms) < value.count) {
+  if (base::size(value.algorithms) < value.count) {
     return TPM_RC_INSUFFICIENT;
   }
   for (uint32_t i = 0; i < value.count; ++i) {
@@ -3320,7 +3320,7 @@ TPM_RC Parse_TPML_ALG(std::string* buffer,
     return result;
   }
 
-  if (arraysize(value->algorithms) < value->count) {
+  if (base::size(value->algorithms) < value->count) {
     return TPM_RC_INSUFFICIENT;
   }
   for (uint32_t i = 0; i < value->count; ++i) {
@@ -3341,7 +3341,7 @@ TPM_RC Serialize_TPML_HANDLE(const TPML_HANDLE& value, std::string* buffer) {
     return result;
   }
 
-  if (arraysize(value.handle) < value.count) {
+  if (base::size(value.handle) < value.count) {
     return TPM_RC_INSUFFICIENT;
   }
   for (uint32_t i = 0; i < value.count; ++i) {
@@ -3364,7 +3364,7 @@ TPM_RC Parse_TPML_HANDLE(std::string* buffer,
     return result;
   }
 
-  if (arraysize(value->handle) < value->count) {
+  if (base::size(value->handle) < value->count) {
     return TPM_RC_INSUFFICIENT;
   }
   for (uint32_t i = 0; i < value->count; ++i) {
@@ -3385,7 +3385,7 @@ TPM_RC Serialize_TPML_DIGEST(const TPML_DIGEST& value, std::string* buffer) {
     return result;
   }
 
-  if (arraysize(value.digests) < value.count) {
+  if (base::size(value.digests) < value.count) {
     return TPM_RC_INSUFFICIENT;
   }
   for (uint32_t i = 0; i < value.count; ++i) {
@@ -3408,7 +3408,7 @@ TPM_RC Parse_TPML_DIGEST(std::string* buffer,
     return result;
   }
 
-  if (arraysize(value->digests) < value->count) {
+  if (base::size(value->digests) < value->count) {
     return TPM_RC_INSUFFICIENT;
   }
   for (uint32_t i = 0; i < value->count; ++i) {
@@ -3430,7 +3430,7 @@ TPM_RC Serialize_TPML_DIGEST_VALUES(const TPML_DIGEST_VALUES& value,
     return result;
   }
 
-  if (arraysize(value.digests) < value.count) {
+  if (base::size(value.digests) < value.count) {
     return TPM_RC_INSUFFICIENT;
   }
   for (uint32_t i = 0; i < value.count; ++i) {
@@ -3453,7 +3453,7 @@ TPM_RC Parse_TPML_DIGEST_VALUES(std::string* buffer,
     return result;
   }
 
-  if (arraysize(value->digests) < value->count) {
+  if (base::size(value->digests) < value->count) {
     return TPM_RC_INSUFFICIENT;
   }
   for (uint32_t i = 0; i < value->count; ++i) {
@@ -3475,7 +3475,7 @@ TPM_RC Serialize_TPM2B_DIGEST_VALUES(const TPM2B_DIGEST_VALUES& value,
     return result;
   }
 
-  if (arraysize(value.buffer) < value.size) {
+  if (base::size(value.buffer) < value.size) {
     return TPM_RC_INSUFFICIENT;
   }
   for (uint32_t i = 0; i < value.size; ++i) {
@@ -3498,7 +3498,7 @@ TPM_RC Parse_TPM2B_DIGEST_VALUES(std::string* buffer,
     return result;
   }
 
-  if (arraysize(value->buffer) < value->size) {
+  if (base::size(value->buffer) < value->size) {
     return TPM_RC_INSUFFICIENT;
   }
   for (uint32_t i = 0; i < value->size; ++i) {
@@ -3534,7 +3534,7 @@ TPM_RC Serialize_TPML_PCR_SELECTION(const TPML_PCR_SELECTION& value,
     return result;
   }
 
-  if (arraysize(value.pcr_selections) < value.count) {
+  if (base::size(value.pcr_selections) < value.count) {
     return TPM_RC_INSUFFICIENT;
   }
   for (uint32_t i = 0; i < value.count; ++i) {
@@ -3557,7 +3557,7 @@ TPM_RC Parse_TPML_PCR_SELECTION(std::string* buffer,
     return result;
   }
 
-  if (arraysize(value->pcr_selections) < value->count) {
+  if (base::size(value->pcr_selections) < value->count) {
     return TPM_RC_INSUFFICIENT;
   }
   for (uint32_t i = 0; i < value->count; ++i) {
@@ -3580,7 +3580,7 @@ TPM_RC Serialize_TPML_ALG_PROPERTY(const TPML_ALG_PROPERTY& value,
     return result;
   }
 
-  if (arraysize(value.alg_properties) < value.count) {
+  if (base::size(value.alg_properties) < value.count) {
     return TPM_RC_INSUFFICIENT;
   }
   for (uint32_t i = 0; i < value.count; ++i) {
@@ -3603,7 +3603,7 @@ TPM_RC Parse_TPML_ALG_PROPERTY(std::string* buffer,
     return result;
   }
 
-  if (arraysize(value->alg_properties) < value->count) {
+  if (base::size(value->alg_properties) < value->count) {
     return TPM_RC_INSUFFICIENT;
   }
   for (uint32_t i = 0; i < value->count; ++i) {
@@ -3626,7 +3626,7 @@ TPM_RC Serialize_TPML_TAGGED_TPM_PROPERTY(const TPML_TAGGED_TPM_PROPERTY& value,
     return result;
   }
 
-  if (arraysize(value.tpm_property) < value.count) {
+  if (base::size(value.tpm_property) < value.count) {
     return TPM_RC_INSUFFICIENT;
   }
   for (uint32_t i = 0; i < value.count; ++i) {
@@ -3649,7 +3649,7 @@ TPM_RC Parse_TPML_TAGGED_TPM_PROPERTY(std::string* buffer,
     return result;
   }
 
-  if (arraysize(value->tpm_property) < value->count) {
+  if (base::size(value->tpm_property) < value->count) {
     return TPM_RC_INSUFFICIENT;
   }
   for (uint32_t i = 0; i < value->count; ++i) {
@@ -3672,7 +3672,7 @@ TPM_RC Serialize_TPML_TAGGED_PCR_PROPERTY(const TPML_TAGGED_PCR_PROPERTY& value,
     return result;
   }
 
-  if (arraysize(value.pcr_property) < value.count) {
+  if (base::size(value.pcr_property) < value.count) {
     return TPM_RC_INSUFFICIENT;
   }
   for (uint32_t i = 0; i < value.count; ++i) {
@@ -3695,7 +3695,7 @@ TPM_RC Parse_TPML_TAGGED_PCR_PROPERTY(std::string* buffer,
     return result;
   }
 
-  if (arraysize(value->pcr_property) < value->count) {
+  if (base::size(value->pcr_property) < value->count) {
     return TPM_RC_INSUFFICIENT;
   }
   for (uint32_t i = 0; i < value->count; ++i) {
@@ -3718,7 +3718,7 @@ TPM_RC Serialize_TPML_ECC_CURVE(const TPML_ECC_CURVE& value,
     return result;
   }
 
-  if (arraysize(value.ecc_curves) < value.count) {
+  if (base::size(value.ecc_curves) < value.count) {
     return TPM_RC_INSUFFICIENT;
   }
   for (uint32_t i = 0; i < value.count; ++i) {
@@ -3741,7 +3741,7 @@ TPM_RC Parse_TPML_ECC_CURVE(std::string* buffer,
     return result;
   }
 
-  if (arraysize(value->ecc_curves) < value->count) {
+  if (base::size(value->ecc_curves) < value->count) {
     return TPM_RC_INSUFFICIENT;
   }
   for (uint32_t i = 0; i < value->count; ++i) {
@@ -4511,7 +4511,7 @@ TPM_RC Serialize_TPM2B_ATTEST(const TPM2B_ATTEST& value, std::string* buffer) {
     return result;
   }
 
-  if (arraysize(value.attestation_data) < value.size) {
+  if (base::size(value.attestation_data) < value.size) {
     return TPM_RC_INSUFFICIENT;
   }
   for (uint32_t i = 0; i < value.size; ++i) {
@@ -4534,7 +4534,7 @@ TPM_RC Parse_TPM2B_ATTEST(std::string* buffer,
     return result;
   }
 
-  if (arraysize(value->attestation_data) < value->size) {
+  if (base::size(value->attestation_data) < value->size) {
     return TPM_RC_INSUFFICIENT;
   }
   for (uint32_t i = 0; i < value->size; ++i) {
@@ -4932,7 +4932,7 @@ TPM_RC Serialize_TPM2B_SYM_KEY(const TPM2B_SYM_KEY& value,
     return result;
   }
 
-  if (arraysize(value.buffer) < value.size) {
+  if (base::size(value.buffer) < value.size) {
     return TPM_RC_INSUFFICIENT;
   }
   for (uint32_t i = 0; i < value.size; ++i) {
@@ -4955,7 +4955,7 @@ TPM_RC Parse_TPM2B_SYM_KEY(std::string* buffer,
     return result;
   }
 
-  if (arraysize(value->buffer) < value->size) {
+  if (base::size(value->buffer) < value->size) {
     return TPM_RC_INSUFFICIENT;
   }
   for (uint32_t i = 0; i < value->size; ++i) {
@@ -5016,7 +5016,7 @@ TPM_RC Serialize_TPM2B_SENSITIVE_DATA(const TPM2B_SENSITIVE_DATA& value,
     return result;
   }
 
-  if (arraysize(value.buffer) < value.size) {
+  if (base::size(value.buffer) < value.size) {
     return TPM_RC_INSUFFICIENT;
   }
   for (uint32_t i = 0; i < value.size; ++i) {
@@ -5039,7 +5039,7 @@ TPM_RC Parse_TPM2B_SENSITIVE_DATA(std::string* buffer,
     return result;
   }
 
-  if (arraysize(value->buffer) < value->size) {
+  if (base::size(value->buffer) < value->size) {
     return TPM_RC_INSUFFICIENT;
   }
   for (uint32_t i = 0; i < value->size; ++i) {
@@ -6008,7 +6008,7 @@ TPM_RC Serialize_TPM2B_PUBLIC_KEY_RSA(const TPM2B_PUBLIC_KEY_RSA& value,
     return result;
   }
 
-  if (arraysize(value.buffer) < value.size) {
+  if (base::size(value.buffer) < value.size) {
     return TPM_RC_INSUFFICIENT;
   }
   for (uint32_t i = 0; i < value.size; ++i) {
@@ -6031,7 +6031,7 @@ TPM_RC Parse_TPM2B_PUBLIC_KEY_RSA(std::string* buffer,
     return result;
   }
 
-  if (arraysize(value->buffer) < value->size) {
+  if (base::size(value->buffer) < value->size) {
     return TPM_RC_INSUFFICIENT;
   }
   for (uint32_t i = 0; i < value->size; ++i) {
@@ -6067,7 +6067,7 @@ TPM_RC Serialize_TPM2B_PRIVATE_KEY_RSA(const TPM2B_PRIVATE_KEY_RSA& value,
     return result;
   }
 
-  if (arraysize(value.buffer) < value.size) {
+  if (base::size(value.buffer) < value.size) {
     return TPM_RC_INSUFFICIENT;
   }
   for (uint32_t i = 0; i < value.size; ++i) {
@@ -6090,7 +6090,7 @@ TPM_RC Parse_TPM2B_PRIVATE_KEY_RSA(std::string* buffer,
     return result;
   }
 
-  if (arraysize(value->buffer) < value->size) {
+  if (base::size(value->buffer) < value->size) {
     return TPM_RC_INSUFFICIENT;
   }
   for (uint32_t i = 0; i < value->size; ++i) {
@@ -6127,7 +6127,7 @@ TPM_RC Serialize_TPM2B_ECC_PARAMETER(const TPM2B_ECC_PARAMETER& value,
     return result;
   }
 
-  if (arraysize(value.buffer) < value.size) {
+  if (base::size(value.buffer) < value.size) {
     return TPM_RC_INSUFFICIENT;
   }
   for (uint32_t i = 0; i < value.size; ++i) {
@@ -6150,7 +6150,7 @@ TPM_RC Parse_TPM2B_ECC_PARAMETER(std::string* buffer,
     return result;
   }
 
-  if (arraysize(value->buffer) < value->size) {
+  if (base::size(value->buffer) < value->size) {
     return TPM_RC_INSUFFICIENT;
   }
   for (uint32_t i = 0; i < value->size; ++i) {
@@ -6710,7 +6710,7 @@ TPM_RC Serialize_TPM2B_ENCRYPTED_SECRET(const TPM2B_ENCRYPTED_SECRET& value,
     return result;
   }
 
-  if (arraysize(value.secret) < value.size) {
+  if (base::size(value.secret) < value.size) {
     return TPM_RC_INSUFFICIENT;
   }
   for (uint32_t i = 0; i < value.size; ++i) {
@@ -6733,7 +6733,7 @@ TPM_RC Parse_TPM2B_ENCRYPTED_SECRET(std::string* buffer,
     return result;
   }
 
-  if (arraysize(value->secret) < value->size) {
+  if (base::size(value->secret) < value->size) {
     return TPM_RC_INSUFFICIENT;
   }
   for (uint32_t i = 0; i < value->size; ++i) {
@@ -7253,7 +7253,7 @@ TPM_RC Serialize_TPM2B_PRIVATE_VENDOR_SPECIFIC(
     return result;
   }
 
-  if (arraysize(value.buffer) < value.size) {
+  if (base::size(value.buffer) < value.size) {
     return TPM_RC_INSUFFICIENT;
   }
   for (uint32_t i = 0; i < value.size; ++i) {
@@ -7276,7 +7276,7 @@ TPM_RC Parse_TPM2B_PRIVATE_VENDOR_SPECIFIC(std::string* buffer,
     return result;
   }
 
-  if (arraysize(value->buffer) < value->size) {
+  if (base::size(value->buffer) < value->size) {
     return TPM_RC_INSUFFICIENT;
   }
   for (uint32_t i = 0; i < value->size; ++i) {
@@ -7542,7 +7542,7 @@ TPM_RC Serialize_TPM2B_PRIVATE(const TPM2B_PRIVATE& value,
     return result;
   }
 
-  if (arraysize(value.buffer) < value.size) {
+  if (base::size(value.buffer) < value.size) {
     return TPM_RC_INSUFFICIENT;
   }
   for (uint32_t i = 0; i < value.size; ++i) {
@@ -7565,7 +7565,7 @@ TPM_RC Parse_TPM2B_PRIVATE(std::string* buffer,
     return result;
   }
 
-  if (arraysize(value->buffer) < value->size) {
+  if (base::size(value->buffer) < value->size) {
     return TPM_RC_INSUFFICIENT;
   }
   for (uint32_t i = 0; i < value->size; ++i) {
@@ -7635,7 +7635,7 @@ TPM_RC Serialize_TPM2B_ID_OBJECT(const TPM2B_ID_OBJECT& value,
     return result;
   }
 
-  if (arraysize(value.credential) < value.size) {
+  if (base::size(value.credential) < value.size) {
     return TPM_RC_INSUFFICIENT;
   }
   for (uint32_t i = 0; i < value.size; ++i) {
@@ -7658,7 +7658,7 @@ TPM_RC Parse_TPM2B_ID_OBJECT(std::string* buffer,
     return result;
   }
 
-  if (arraysize(value->credential) < value->size) {
+  if (base::size(value->credential) < value->size) {
     return TPM_RC_INSUFFICIENT;
   }
   for (uint32_t i = 0; i < value->size; ++i) {
@@ -7813,7 +7813,7 @@ TPM_RC Serialize_TPM2B_CONTEXT_SENSITIVE(const TPM2B_CONTEXT_SENSITIVE& value,
     return result;
   }
 
-  if (arraysize(value.buffer) < value.size) {
+  if (base::size(value.buffer) < value.size) {
     return TPM_RC_INSUFFICIENT;
   }
   for (uint32_t i = 0; i < value.size; ++i) {
@@ -7836,7 +7836,7 @@ TPM_RC Parse_TPM2B_CONTEXT_SENSITIVE(std::string* buffer,
     return result;
   }
 
-  if (arraysize(value->buffer) < value->size) {
+  if (base::size(value->buffer) < value->size) {
     return TPM_RC_INSUFFICIENT;
   }
   for (uint32_t i = 0; i < value->size; ++i) {
@@ -7909,7 +7909,7 @@ TPM_RC Serialize_TPM2B_CONTEXT_DATA(const TPM2B_CONTEXT_DATA& value,
     return result;
   }
 
-  if (arraysize(value.buffer) < value.size) {
+  if (base::size(value.buffer) < value.size) {
     return TPM_RC_INSUFFICIENT;
   }
   for (uint32_t i = 0; i < value.size; ++i) {
@@ -7932,7 +7932,7 @@ TPM_RC Parse_TPM2B_CONTEXT_DATA(std::string* buffer,
     return result;
   }
 
-  if (arraysize(value->buffer) < value->size) {
+  if (base::size(value->buffer) < value->size) {
     return TPM_RC_INSUFFICIENT;
   }
   for (uint32_t i = 0; i < value->size; ++i) {

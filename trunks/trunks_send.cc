@@ -6,6 +6,7 @@
 
 #include <base/command_line.h>
 #include <base/files/file_util.h>
+#include <base/stl_util.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_util.h>
 #include <base/sys_byteorder.h>
@@ -349,7 +350,7 @@ static bool SetupConnection(TrunksDBusProxy* proxy,
   rpdu->backup_ro_offset = base::NetToHost32(rpdu->backup_ro_offset);
   rpdu->backup_rw_offset = base::NetToHost32(rpdu->backup_rw_offset);
 
-  for (int i = 0; i < arraysize(FirstResponsePdu::shv); i++) {
+  for (int i = 0; i < base::size(rpdu->shv); i++) {
     rpdu->shv[i].minor = base::NetToHost32(rpdu->shv[i].minor);
     rpdu->shv[i].major = base::NetToHost32(rpdu->shv[i].major);
     rpdu->shv[i].epoch = base::NetToHost32(rpdu->shv[i].epoch);
@@ -464,7 +465,7 @@ static int TransferImage(TrunksDBusProxy* proxy,
   //
 
   index = section_offsets[0] > section_offsets[1] ? 1 : 0;
-  for (int i = 0; i < arraysize(section_offsets); i++) {
+  for (int i = 0; i < base::size(section_offsets); i++) {
     if (!TransferSection(proxy, update_image, section_offsets[index],
                          rpdu.shv[index], force)) {
       if (!force) {
@@ -473,7 +474,7 @@ static int TransferImage(TrunksDBusProxy* proxy,
     } else {
       num_txed_sections++;
     }
-    index = (index + 1) % arraysize(section_offsets);
+    index = (index + 1) % base::size(section_offsets);
   }
 
   return num_txed_sections;

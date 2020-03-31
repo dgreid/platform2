@@ -79,11 +79,11 @@ TPM_RC PolicySessionImpl::GetDigest(std::string* digest) {
 }
 
 TPM_RC PolicySessionImpl::PolicyOR(const std::vector<std::string>& digests) {
-  if (digests.size() >= arraysize(TPML_DIGEST::digests)) {
+  TPML_DIGEST tpm_digests;
+  if (digests.size() >= base::size(tpm_digests.digests)) {
     LOG(ERROR) << "TPM2.0 Spec only allows for up to 8 digests.";
     return SAPI_RC_BAD_PARAMETER;
   }
-  TPML_DIGEST tpm_digests;
   tpm_digests.count = digests.size();
   for (size_t i = 0; i < digests.size(); i++) {
     tpm_digests.digests[i] = Make_TPM2B_DIGEST(digests[i]);
