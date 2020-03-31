@@ -12,6 +12,7 @@
 #include <base/logging.h>
 #include <base/message_loop/message_loop.h>
 #include <base/run_loop.h>
+#include <base/stl_util.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_util.h>
 #include <brillo/syslog_logging.h>
@@ -38,7 +39,7 @@ bool DropUnnecessaryCapabilities() {
   }
   // Drop cap bset.
   for (int i = 0; i <= last_cap; ++i) {
-    if (std::count(kKeep, kKeep + arraysize(kKeep), i) == 0) {
+    if (std::count(kKeep, kKeep + base::size(kKeep), i) == 0) {
       if (prctl(PR_CAPBSET_DROP, i)) {
         PLOG(ERROR) << "Failed to drop bset " << i;
         return false;
@@ -58,11 +59,11 @@ bool DropUnnecessaryCapabilities() {
     PLOG(ERROR) << "Failed to cap_clear_flag()";
     return false;
   }
-  if (cap_set_flag(cap.get(), CAP_EFFECTIVE, arraysize(kKeep), kKeep,
+  if (cap_set_flag(cap.get(), CAP_EFFECTIVE, base::size(kKeep), kKeep,
                    CAP_SET) ||
-      cap_set_flag(cap.get(), CAP_PERMITTED, arraysize(kKeep), kKeep,
+      cap_set_flag(cap.get(), CAP_PERMITTED, base::size(kKeep), kKeep,
                    CAP_SET) ||
-      cap_set_flag(cap.get(), CAP_INHERITABLE, arraysize(kKeep), kKeep,
+      cap_set_flag(cap.get(), CAP_INHERITABLE, base::size(kKeep), kKeep,
                    CAP_SET)) {
     PLOG(ERROR) << "Failed to cap_set_flag()";
     return false;

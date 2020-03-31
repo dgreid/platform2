@@ -156,8 +156,8 @@ base::Optional<CK_OBJECT_HANDLE> ChapsClient::FindKey(
   CK_ULONG count = 0;
 
   for (size_t attempts = 0; attempts < kMaxAttemps; ++attempts) {
-    CK_RV rv =
-        C_FindObjectsInit(*session_handle(), attributes, arraysize(attributes));
+    CK_RV rv = C_FindObjectsInit(*session_handle(), attributes,
+                                 base::size(attributes));
     if (CKR_SESSION_HANDLE_INVALID == rv) {
       session_.reset();
       continue;
@@ -168,7 +168,7 @@ base::Optional<CK_OBJECT_HANDLE> ChapsClient::FindKey(
     }
 
     count = 0;
-    rv = C_FindObjects(*session_handle(), handles, arraysize(handles), &count);
+    rv = C_FindObjects(*session_handle(), handles, base::size(handles), &count);
     if (CKR_SESSION_HANDLE_INVALID == rv) {
       session_.reset();
       continue;
@@ -242,7 +242,7 @@ base::Optional<CK_OBJECT_HANDLE> ChapsClient::GenerateEncryptionKey() {
 
   for (size_t attempts = 0; attempts < kMaxAttemps; ++attempts) {
     CK_RV rv = C_GenerateKey(*session_handle(), &mechanism, attributes,
-                             arraysize(attributes), &key_handle);
+                             base::size(attributes), &key_handle);
     if (CKR_SESSION_HANDLE_INVALID == rv) {
       session_.reset();
       continue;

@@ -7,6 +7,7 @@
 #include <base/files/scoped_file.h>
 #include <base/logging.h>
 #include <base/macros.h>
+#include <base/stl_util.h>
 
 namespace arc {
 namespace {
@@ -114,9 +115,9 @@ vda_result FakeContext::Flush() {
 
 FakeVdaImpl::FakeVdaImpl() {
   LOG(INFO) << "Creating new fake implementation.";
-  capabilities_.num_input_formats = arraysize(kInputFormats);
+  capabilities_.num_input_formats = base::size(kInputFormats);
   capabilities_.input_formats = kInputFormats;
-  capabilities_.num_output_formats = arraysize(kOutputFormats);
+  capabilities_.num_output_formats = base::size(kOutputFormats);
   capabilities_.output_formats = kOutputFormats;
 }
 

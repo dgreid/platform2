@@ -16,6 +16,7 @@
 #include <base/files/file_util.h>
 #include <base/memory/ref_counted.h>
 #include <base/single_thread_task_runner.h>
+#include <base/stl_util.h>
 #include <base/synchronization/waitable_event.h>
 #include <chromeos/dbus/service_constants.h>
 #include <dbus/bus.h>
@@ -459,7 +460,7 @@ GpuVdaImpl::GpuVdaImpl(VafConnection* conn) : connection_(conn) {}
 GpuVdaImpl::~GpuVdaImpl() = default;
 
 bool GpuVdaImpl::PopulateCapabilities() {
-  capabilities_.num_input_formats = arraysize(kInputFormats);
+  capabilities_.num_input_formats = base::size(kInputFormats);
   capabilities_.input_formats = kInputFormats;
 
   output_formats_ = GetSupportedRawFormats(GbmUsageType::DECODE);

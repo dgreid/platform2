@@ -11,6 +11,7 @@
 #include <vector>
 
 #include <base/bind.h>
+#include <base/stl_util.h>
 
 namespace arc {
 
@@ -25,7 +26,7 @@ struct fuse_chan* Mount(const base::FilePath& mount_path,
       subtype_option.c_str(),
   };
   struct fuse_args args =
-      FUSE_ARGS_INIT(arraysize(argv), const_cast<char**>(argv));
+      FUSE_ARGS_INIT(base::size(argv), const_cast<char**>(argv));
   auto* channel = fuse_mount(mount_path.value().c_str(), &args);
   fuse_opt_free_args(&args);
   return channel;
