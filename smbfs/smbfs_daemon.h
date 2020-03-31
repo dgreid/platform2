@@ -43,10 +43,6 @@ class SmbFsDaemon : public brillo::DBusDaemon,
   // SmbFsBootstrapImpl::Delegate overrides.
   void SetupKerberos(mojom::KerberosConfigPtr kerberos_config,
                      base::OnceCallback<void(bool success)> callback) override;
-  std::unique_ptr<SmbFilesystem> CreateSmbFilesystem(
-      const std::string& share_path,
-      std::unique_ptr<SmbCredential> credential,
-      bool allow_ntlm) override;
 
  private:
   // Starts the fuse session using the filesystem |fs|. Returns true if the
@@ -64,6 +60,10 @@ class SmbFsDaemon : public brillo::DBusDaemon,
 
   // Callback for SmbFsBootstrapImpl::Start().
   void OnBootstrapComplete(std::unique_ptr<SmbFilesystem> fs);
+
+  // Factory function for creating an SmbFilesystem.
+  std::unique_ptr<SmbFilesystem> CreateSmbFilesystem(
+      SmbFilesystem::Options options);
 
   fuse_chan* chan_;
   const bool use_test_fs_;

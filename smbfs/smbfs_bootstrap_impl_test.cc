@@ -52,10 +52,6 @@ class MockBootstrapDelegate : public SmbFsBootstrapImpl::Delegate {
               (mojom::KerberosConfigPtr,
                base::OnceCallback<void(bool success)>),
               (override));
-  MOCK_METHOD(std::unique_ptr<SmbFilesystem>,
-              CreateSmbFilesystem,
-              (const std::string&, std::unique_ptr<SmbCredential>, bool),
-              (override));
 };
 
 class MockSmbFsDelegate : public mojom::SmbFsDelegate {
@@ -96,14 +92,14 @@ class TestSmbFsBootstrapImpl : public testing::Test {
 
 TEST_F(TestSmbFsBootstrapImpl, GuestAuth) {
   mojom::SmbFsBootstrapPtr boostrap_ptr;
-  SmbFsBootstrapImpl boostrap_impl(mojo::MakeRequest(&boostrap_ptr),
-                                   &mock_delegate_);
-  EXPECT_CALL(mock_delegate_,
-              CreateSmbFilesystem(kSharePath, _, false /* allow_ntlm */))
-      .WillOnce(WithArg<1>([](std::unique_ptr<SmbCredential> credential) {
-        EXPECT_TRUE(credential->workgroup.empty());
-        EXPECT_TRUE(credential->username.empty());
-        EXPECT_FALSE(credential->password);
+
+  auto fs_factory = base::BindLambdaForTesting(
+      [](SmbFilesystem::Options options) -> std::unique_ptr<SmbFilesystem> {
+        EXPECT_EQ(options.share_path, kSharePath);
+        EXPECT_FALSE(options.allow_ntlm);
+        EXPECT_TRUE(options.credentials->workgroup.empty());
+        EXPECT_TRUE(options.credentials->username.empty());
+        EXPECT_FALSE(options.credentials->password);
 
         std::unique_ptr<MockSmbFilesystem> fs =
             std::make_unique<MockSmbFilesystem>();
@@ -112,7 +108,9 @@ TEST_F(TestSmbFsBootstrapImpl, GuestAuth) {
         EXPECT_CALL(*fs, SetResolvedAddress(std::vector<uint8_t>({1, 2, 3, 4})))
             .Times(1);
         return fs;
-      }));
+      });
+  SmbFsBootstrapImpl boostrap_impl(mojo::MakeRequest(&boostrap_ptr), fs_factory,
+                                   &mock_delegate_);
   bool bootstrap_done = false;
   boostrap_impl.Start(base::BindLambdaForTesting(
       [&bootstrap_done](std::unique_ptr<SmbFilesystem> fs) {
@@ -140,15 +138,15 @@ TEST_F(TestSmbFsBootstrapImpl, GuestAuth) {
 
 TEST_F(TestSmbFsBootstrapImpl, UsernamePasswordAuth) {
   mojom::SmbFsBootstrapPtr boostrap_ptr;
-  SmbFsBootstrapImpl boostrap_impl(mojo::MakeRequest(&boostrap_ptr),
-                                   &mock_delegate_);
 
-  EXPECT_CALL(mock_delegate_,
-              CreateSmbFilesystem(kSharePath, _, true /* allow_ntlm */))
-      .WillOnce(WithArg<1>([](std::unique_ptr<SmbCredential> credential) {
-        EXPECT_EQ(credential->workgroup, kWorkgroup);
-        EXPECT_EQ(credential->username, kUsername);
-        EXPECT_EQ(credential->password->GetRaw(), std::string(kPassword));
+  auto fs_factory = base::BindLambdaForTesting(
+      [](SmbFilesystem::Options options) -> std::unique_ptr<SmbFilesystem> {
+        EXPECT_EQ(options.share_path, kSharePath);
+        EXPECT_TRUE(options.allow_ntlm);
+        EXPECT_EQ(options.credentials->workgroup, kWorkgroup);
+        EXPECT_EQ(options.credentials->username, kUsername);
+        EXPECT_EQ(options.credentials->password->GetRaw(),
+                  std::string(kPassword));
 
         std::unique_ptr<MockSmbFilesystem> fs =
             std::make_unique<MockSmbFilesystem>();
@@ -156,7 +154,9 @@ TEST_F(TestSmbFsBootstrapImpl, UsernamePasswordAuth) {
             .WillOnce(Return(SmbFilesystem::ConnectError::kOk));
         EXPECT_CALL(*fs, SetResolvedAddress(_)).Times(0);
         return fs;
-      }));
+      });
+  SmbFsBootstrapImpl boostrap_impl(mojo::MakeRequest(&boostrap_ptr), fs_factory,
+                                   &mock_delegate_);
   bool bootstrap_done = false;
   boostrap_impl.Start(base::BindLambdaForTesting(
       [&bootstrap_done](std::unique_ptr<SmbFilesystem> fs) {
@@ -186,7 +186,23 @@ TEST_F(TestSmbFsBootstrapImpl, UsernamePasswordAuth) {
 
 TEST_F(TestSmbFsBootstrapImpl, KerberosAuth) {
   mojom::SmbFsBootstrapPtr boostrap_ptr;
-  SmbFsBootstrapImpl boostrap_impl(mojo::MakeRequest(&boostrap_ptr),
+
+  auto fs_factory = base::BindLambdaForTesting(
+      [](SmbFilesystem::Options options) -> std::unique_ptr<SmbFilesystem> {
+        EXPECT_EQ(options.share_path, kSharePath);
+        EXPECT_FALSE(options.allow_ntlm);
+        EXPECT_EQ(options.credentials->workgroup, kWorkgroup);
+        EXPECT_EQ(options.credentials->username, kUsername);
+        EXPECT_FALSE(options.credentials->password);
+
+        std::unique_ptr<MockSmbFilesystem> fs =
+            std::make_unique<MockSmbFilesystem>();
+        EXPECT_CALL(*fs, EnsureConnected())
+            .WillOnce(Return(SmbFilesystem::ConnectError::kOk));
+        EXPECT_CALL(*fs, SetResolvedAddress(_)).Times(0);
+        return fs;
+      });
+  SmbFsBootstrapImpl boostrap_impl(mojo::MakeRequest(&boostrap_ptr), fs_factory,
                                    &mock_delegate_);
 
   EXPECT_CALL(mock_delegate_, SetupKerberos(_, _))
@@ -196,20 +212,6 @@ TEST_F(TestSmbFsBootstrapImpl, KerberosAuth) {
         EXPECT_EQ(config->identity, kKerberosGuid);
         std::move(callback).Run(true);
       });
-  EXPECT_CALL(mock_delegate_,
-              CreateSmbFilesystem(kSharePath, _, false /* allow_ntlm */))
-      .WillOnce(WithArg<1>([](std::unique_ptr<SmbCredential> credential) {
-        EXPECT_EQ(credential->workgroup, kWorkgroup);
-        EXPECT_EQ(credential->username, kUsername);
-        EXPECT_FALSE(credential->password);
-
-        std::unique_ptr<MockSmbFilesystem> fs =
-            std::make_unique<MockSmbFilesystem>();
-        EXPECT_CALL(*fs, EnsureConnected())
-            .WillOnce(Return(SmbFilesystem::ConnectError::kOk));
-        EXPECT_CALL(*fs, SetResolvedAddress(_)).Times(0);
-        return fs;
-      }));
   bool bootstrap_done = false;
   boostrap_impl.Start(base::BindLambdaForTesting(
       [&bootstrap_done](std::unique_ptr<SmbFilesystem> fs) {
@@ -243,19 +245,22 @@ TEST_F(TestSmbFsBootstrapImpl, KerberosAuth) {
 
 TEST_F(TestSmbFsBootstrapImpl, SkipConnect) {
   mojom::SmbFsBootstrapPtr boostrap_ptr;
-  SmbFsBootstrapImpl boostrap_impl(mojo::MakeRequest(&boostrap_ptr),
-                                   &mock_delegate_);
 
-  EXPECT_CALL(mock_delegate_,
-              CreateSmbFilesystem(kSharePath, _, false /* allow_ntlm */))
-      .WillOnce(WithArg<1>([](std::unique_ptr<SmbCredential> credential) {
+  auto fs_factory = base::BindLambdaForTesting(
+      [](SmbFilesystem::Options options) -> std::unique_ptr<SmbFilesystem> {
+        EXPECT_EQ(options.share_path, kSharePath);
+        EXPECT_FALSE(options.allow_ntlm);
+
         std::unique_ptr<MockSmbFilesystem> fs =
             std::make_unique<MockSmbFilesystem>();
         // Expect that EnsureConnected() is never called when skip_connect mount
         // option is set.
         EXPECT_CALL(*fs, EnsureConnected()).Times(0);
         return fs;
-      }));
+      });
+  SmbFsBootstrapImpl boostrap_impl(mojo::MakeRequest(&boostrap_ptr), fs_factory,
+                                   &mock_delegate_);
+
   bool bootstrap_done = false;
   boostrap_impl.Start(base::BindLambdaForTesting(
       [&bootstrap_done](std::unique_ptr<SmbFilesystem> fs) {
@@ -282,7 +287,14 @@ TEST_F(TestSmbFsBootstrapImpl, SkipConnect) {
 
 TEST_F(TestSmbFsBootstrapImpl, Disconnect) {
   mojom::SmbFsBootstrapPtr boostrap_ptr;
-  SmbFsBootstrapImpl boostrap_impl(mojo::MakeRequest(&boostrap_ptr),
+
+  auto fs_factory = base::BindLambdaForTesting(
+      [](SmbFilesystem::Options options) -> std::unique_ptr<SmbFilesystem> {
+        // FAIL() can only be used in a function that returns void.
+        ADD_FAILURE();
+        return nullptr;
+      });
+  SmbFsBootstrapImpl boostrap_impl(mojo::MakeRequest(&boostrap_ptr), fs_factory,
                                    &mock_delegate_);
 
   base::RunLoop run_loop;
@@ -298,10 +310,15 @@ TEST_F(TestSmbFsBootstrapImpl, Disconnect) {
 
 TEST_F(TestSmbFsBootstrapImpl, InvalidPath) {
   mojom::SmbFsBootstrapPtr boostrap_ptr;
-  SmbFsBootstrapImpl boostrap_impl(mojo::MakeRequest(&boostrap_ptr),
+
+  auto fs_factory = base::BindLambdaForTesting(
+      [](SmbFilesystem::Options options) -> std::unique_ptr<SmbFilesystem> {
+        ADD_FAILURE();
+        return nullptr;
+      });
+  SmbFsBootstrapImpl boostrap_impl(mojo::MakeRequest(&boostrap_ptr), fs_factory,
                                    &mock_delegate_);
 
-  EXPECT_CALL(mock_delegate_, CreateSmbFilesystem(_, _, _)).Times(0);
   boostrap_impl.Start(
       base::BindOnce([](std::unique_ptr<SmbFilesystem> fs) { FAIL(); }));
 
@@ -322,7 +339,13 @@ TEST_F(TestSmbFsBootstrapImpl, InvalidPath) {
 
 TEST_F(TestSmbFsBootstrapImpl, KerberosSetupFailure) {
   mojom::SmbFsBootstrapPtr boostrap_ptr;
-  SmbFsBootstrapImpl boostrap_impl(mojo::MakeRequest(&boostrap_ptr),
+
+  auto fs_factory = base::BindLambdaForTesting(
+      [](SmbFilesystem::Options options) -> std::unique_ptr<SmbFilesystem> {
+        ADD_FAILURE();
+        return nullptr;
+      });
+  SmbFsBootstrapImpl boostrap_impl(mojo::MakeRequest(&boostrap_ptr), fs_factory,
                                    &mock_delegate_);
 
   EXPECT_CALL(mock_delegate_, SetupKerberos(_, _))
@@ -330,7 +353,6 @@ TEST_F(TestSmbFsBootstrapImpl, KerberosSetupFailure) {
                    base::OnceCallback<void(bool success)> callback) {
         std::move(callback).Run(false);
       });
-  EXPECT_CALL(mock_delegate_, CreateSmbFilesystem(kSharePath, _, _)).Times(0);
   boostrap_impl.Start(
       base::BindOnce([](std::unique_ptr<SmbFilesystem> fs) { FAIL(); }));
 
@@ -355,17 +377,20 @@ TEST_F(TestSmbFsBootstrapImpl, KerberosSetupFailure) {
 
 TEST_F(TestSmbFsBootstrapImpl, ConnectionAuthFailure) {
   mojom::SmbFsBootstrapPtr boostrap_ptr;
-  SmbFsBootstrapImpl boostrap_impl(mojo::MakeRequest(&boostrap_ptr),
-                                   &mock_delegate_);
 
-  EXPECT_CALL(mock_delegate_, CreateSmbFilesystem(kSharePath, _, _))
-      .WillOnce(WithArg<1>([](std::unique_ptr<SmbCredential> credential) {
+  auto fs_factory = base::BindLambdaForTesting(
+      [](SmbFilesystem::Options options) -> std::unique_ptr<SmbFilesystem> {
+        EXPECT_EQ(options.share_path, kSharePath);
+
         std::unique_ptr<MockSmbFilesystem> fs =
             std::make_unique<MockSmbFilesystem>();
         EXPECT_CALL(*fs, EnsureConnected())
             .WillOnce(Return(SmbFilesystem::ConnectError::kAccessDenied));
         return fs;
-      }));
+      });
+  SmbFsBootstrapImpl boostrap_impl(mojo::MakeRequest(&boostrap_ptr), fs_factory,
+                                   &mock_delegate_);
+
   boostrap_impl.Start(
       base::BindOnce([](std::unique_ptr<SmbFilesystem> fs) { FAIL(); }));
 
@@ -386,17 +411,20 @@ TEST_F(TestSmbFsBootstrapImpl, ConnectionAuthFailure) {
 
 TEST_F(TestSmbFsBootstrapImpl, UnsupportedProtocolSmb1) {
   mojom::SmbFsBootstrapPtr boostrap_ptr;
-  SmbFsBootstrapImpl boostrap_impl(mojo::MakeRequest(&boostrap_ptr),
-                                   &mock_delegate_);
 
-  EXPECT_CALL(mock_delegate_, CreateSmbFilesystem(kSharePath, _, _))
-      .WillOnce(WithArg<1>([](std::unique_ptr<SmbCredential> credential) {
+  auto fs_factory = base::BindLambdaForTesting(
+      [](SmbFilesystem::Options options) -> std::unique_ptr<SmbFilesystem> {
+        EXPECT_EQ(options.share_path, kSharePath);
+
         std::unique_ptr<MockSmbFilesystem> fs =
             std::make_unique<MockSmbFilesystem>();
         EXPECT_CALL(*fs, EnsureConnected())
             .WillOnce(Return(SmbFilesystem::ConnectError::kSmb1Unsupported));
         return fs;
-      }));
+      });
+  SmbFsBootstrapImpl boostrap_impl(mojo::MakeRequest(&boostrap_ptr), fs_factory,
+                                   &mock_delegate_);
+
   boostrap_impl.Start(
       base::BindOnce([](std::unique_ptr<SmbFilesystem> fs) { FAIL(); }));
 

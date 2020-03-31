@@ -198,6 +198,8 @@ bool SmbFsDaemon::InitMojo() {
   bootstrap_impl_ = std::make_unique<SmbFsBootstrapImpl>(
       mojom::SmbFsBootstrapRequest(
           invitation.ExtractMessagePipe(mojom::kBootstrapPipeName)),
+      base::BindRepeating(&SmbFsDaemon::CreateSmbFilesystem,
+                          base::Unretained(this)),
       this);
   bootstrap_impl_->Start(base::BindOnce(&SmbFsDaemon::OnBootstrapComplete,
                                         base::Unretained(this)));
@@ -239,15 +241,9 @@ void SmbFsDaemon::SetupKerberos(
 }
 
 std::unique_ptr<SmbFilesystem> SmbFsDaemon::CreateSmbFilesystem(
-    const std::string& share_path,
-    std::unique_ptr<SmbCredential> credentials,
-    bool allow_ntlm) {
-  SmbFilesystem::Options options;
-  options.share_path = share_path;
+    SmbFilesystem::Options options) {
   options.uid = uid_;
   options.gid = gid_;
-  options.credentials = std::move(credentials);
-  options.allow_ntlm = allow_ntlm;
   return std::make_unique<SmbFilesystem>(std::move(options));
 }
 

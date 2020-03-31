@@ -32,9 +32,14 @@ mojom::MountError ConnectErrorToMountError(SmbFilesystem::ConnectError error) {
 
 }  // namespace
 
-SmbFsBootstrapImpl::SmbFsBootstrapImpl(mojom::SmbFsBootstrapRequest request,
-                                       Delegate* delegate)
-    : binding_(this, std::move(request)), delegate_(delegate) {
+SmbFsBootstrapImpl::SmbFsBootstrapImpl(
+    mojom::SmbFsBootstrapRequest request,
+    SmbFilesystemFactory smb_filesystem_factory,
+    Delegate* delegate)
+    : binding_(this, std::move(request)),
+      smb_filesystem_factory_(smb_filesystem_factory),
+      delegate_(delegate) {
+  DCHECK(smb_filesystem_factory_);
   DCHECK(delegate_);
   binding_.set_connection_error_handler(base::Bind(
       &SmbFsBootstrapImpl::OnMojoConnectionError, base::Unretained(this)));
@@ -96,8 +101,11 @@ void SmbFsBootstrapImpl::OnCredentialsSetup(
     return;
   }
 
-  auto fs = delegate_->CreateSmbFilesystem(
-      options->share_path, std::move(credential), options->allow_ntlm);
+  SmbFilesystem::Options smb_options;
+  smb_options.share_path = options->share_path;
+  smb_options.credentials = std::move(credential);
+  smb_options.allow_ntlm = options->allow_ntlm;
+  auto fs = smb_filesystem_factory_.Run(std::move(smb_options));
   // Don't use the resolved address if Kerberos is set up. Kerberos requires the
   // full hostname to obtain auth tickets.
   if (options->resolved_host && !use_kerberos) {

@@ -13,35 +13,37 @@
 #include <mojo/public/cpp/bindings/binding.h>
 
 #include "smbfs/mojom/smbfs.mojom.h"
+#include "smbfs/smb_filesystem.h"
 
 namespace smbfs {
 
 class Filesystem;
-class SmbFilesystem;
 struct SmbCredential;
 
 // Implements mojom::SmbFsBootstrap to mount an SMB share.
 class SmbFsBootstrapImpl : public mojom::SmbFsBootstrap {
  public:
+  // Delegate interface used for actions that need to persist after the
+  // bootstrap process has completed.
   class Delegate {
    public:
     // Sets up Kerberos authentication.
     virtual void SetupKerberos(
         mojom::KerberosConfigPtr kerberos_config,
         base::OnceCallback<void(bool success)> callback) = 0;
-
-    // Creates a new SmbFilesystem. Must always succeed and return a new
-    // SmbFilesystem.
-    virtual std::unique_ptr<SmbFilesystem> CreateSmbFilesystem(
-        const std::string& share_path,
-        std::unique_ptr<SmbCredential> credential,
-        bool allow_ntlm) = 0;
   };
+
+  // Factory function to create an SmbFilesystem instance.
+  using SmbFilesystemFactory =
+      base::RepeatingCallback<std::unique_ptr<SmbFilesystem>(
+          SmbFilesystem::Options)>;
 
   using BootstrapCompleteCallback =
       base::OnceCallback<void(std::unique_ptr<SmbFilesystem> fs)>;
 
-  SmbFsBootstrapImpl(mojom::SmbFsBootstrapRequest request, Delegate* delegate);
+  SmbFsBootstrapImpl(mojom::SmbFsBootstrapRequest request,
+                     SmbFilesystemFactory smb_filesystem_factory,
+                     Delegate* delegate);
   ~SmbFsBootstrapImpl() override;
 
   // Start the bootstrap process and run |callback| when finished or the Mojo
@@ -71,6 +73,7 @@ class SmbFsBootstrapImpl : public mojom::SmbFsBootstrap {
   mojo::Binding<mojom::SmbFsBootstrap> binding_;
   base::OnceClosure disconnect_callback_;
 
+  const SmbFilesystemFactory smb_filesystem_factory_;
   Delegate* const delegate_;
   BootstrapCompleteCallback completion_callback_;
 
