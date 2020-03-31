@@ -62,6 +62,7 @@ generate_mojom_bindings("media_perception_mojo_bindings") {
     "mojom/scoped_access_permission.mojom",
     "mojom/shared_memory.mojom",
     "mojom/one_touch_autozoom.mojom",
+    "mojom/software_autozoom.mojom",
     "mojom/sync_token.mojom",
     "mojom/time.mojom",
     "mojom/unguessable_token.mojom",

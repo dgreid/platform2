@@ -60,6 +60,9 @@ class OutputManager {
 
   chromeos::media_perception::mojom::OneTouchAutozoomHandlerPtr
       one_touch_autozoom_handler_ptr_;
+
+  chromeos::media_perception::mojom::SoftwareAutozoomHandlerPtr
+      software_autozoom_handler_ptr_;
 };
 
 }  // namespace mri

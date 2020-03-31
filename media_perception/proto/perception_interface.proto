@@ -25,6 +25,7 @@ enum PerceptionInterfaceType {
   INTERFACE_OCCUPANCY_TRIGGER = 4;
   INTERFACE_APPEARANCES = 5;
   INTERFACE_ONE_TOUCH_AUTOZOOM = 6;
+  INTERFACE_SOFTWARE_AUTOZOOM = 7;
 }
 
 message PerceptionInterface {

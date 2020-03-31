@@ -209,6 +209,37 @@ OutputManager::OutputManager(
       }
       continue;
     }
+
+    // Software Autozoom interface setup.
+    if (interface.interface_type() ==
+        PerceptionInterfaceType::INTERFACE_SOFTWARE_AUTOZOOM) {
+      (*interfaces_ptr)->software_autozoom_handler_request =
+          mojo::MakeRequest(&software_autozoom_handler_ptr_);
+      software_autozoom_handler_ptr_.set_connection_error_handler(
+          base::Bind(&OnConnectionClosedOrError,
+          "SOFTWARE_AUTOZOOM"));
+
+      // Software Autozoom outputs setup.
+      for (const PipelineOutput& output : interface.output()) {
+        if (output.output_type() ==
+            PipelineOutputType::OUTPUT_SMART_FRAMING) {
+          SerializedSuccessStatus serialized_status =
+              rtanalytics->SetPipelineOutputHandler(
+                  configuration_name, output.stream_name(),
+                  std::bind(&OutputManager::HandleSmartFraming,
+                            this, std::placeholders::_1));
+          SuccessStatus status = Serialized<SuccessStatus>(
+              serialized_status).Deserialize();
+          if (!status.success()) {
+            LOG(ERROR) << "Failed to set output handler for "
+                       << configuration_name << " with output "
+                       << output.stream_name();
+          }
+        }
+      }
+      continue;
+    }
+
   }
 }
 
