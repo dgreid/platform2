@@ -45,7 +45,9 @@ class DlcService {
   // Loads installed DLC module images.
   void LoadDlcModuleImages();
 
-  bool Install(const DlcModuleList& dlc_module_list_in, brillo::ErrorPtr* err);
+  bool Install(const DlcSet& dlcs,
+               const std::string& omaha_url,
+               brillo::ErrorPtr* err);
   bool Uninstall(const std::string& id_in, brillo::ErrorPtr* err);
   bool GetInstalled(DlcModuleList* dlc_module_list_out, brillo::ErrorPtr* err);
   bool GetState(const std::string& id_in,

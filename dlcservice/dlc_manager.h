@@ -45,11 +45,11 @@ class DlcManager {
   // During this phase, all necessary setup for update_engine to successfully
   // install DLC(s) and other files that require creation are handled.
   // Args:
-  //   dlc_module_list: All the DLC(s) that want to be installed.
+  //   dlcs: All the DLC(s) that want to be installed.
   //   err: The error that's set when returned false.
   // Return:
   //   True on success, otherwise false.
-  bool InitInstall(const DlcModuleList& dlc_module_list, brillo::ErrorPtr* err);
+  bool InitInstall(const DlcSet& dlcs, brillo::ErrorPtr* err);
 
   // Install Step 2:
   // To get the actual list of DLC(s) to pass into update_engine.

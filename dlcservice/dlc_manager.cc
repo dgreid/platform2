@@ -101,20 +101,16 @@ bool DlcManager::GetState(const DlcId& id, DlcState* state, ErrorPtr* err) {
   return true;
 }
 
-bool DlcManager::InitInstall(const DlcModuleList& dlc_module_list,
-                             ErrorPtr* err) {
+bool DlcManager::InitInstall(const DlcSet& dlcs, ErrorPtr* err) {
   DCHECK(err);
-  const auto dlc_set =
-      ToDlcSet(dlc_module_list, [](const DlcModuleInfo&) { return true; });
-
-  if (dlc_set.empty()) {
+  if (dlcs.empty()) {
     *err = Error::Create(kErrorInvalidDlc,
                          "Must provide at least one DLC to install.");
     return false;
   }
 
   // Don't even start installing if we have some unsupported DLC request.
-  for (const auto& id : dlc_set) {
+  for (const auto& id : dlcs) {
     if (!IsSupported(id)) {
       *err = Error::Create(
           kErrorInvalidDlc,
@@ -127,7 +123,7 @@ bool DlcManager::InitInstall(const DlcModuleList& dlc_module_list,
   DCHECK(!IsInstalling());
 
   ErrorPtr tmp_err;
-  for (const auto& id : dlc_set) {
+  for (const auto& id : dlcs) {
     DlcBase& dlc = supported_.find(id)->second;
     if (!dlc.InitInstall(&tmp_err)) {
       *err = Error::Create(

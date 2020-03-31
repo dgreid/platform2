@@ -54,7 +54,8 @@ void DlcService::LoadDlcModuleImages() {
   dlc_manager_->PreloadDlcModuleImages();
 }
 
-bool DlcService::Install(const DlcModuleList& dlc_module_list_in,
+bool DlcService::Install(const DlcSet& dlcs,
+                         const string& omaha_url,
                          ErrorPtr* err) {
   // If an install is already in progress, dlcservice is busy.
   if (dlc_manager_->IsInstalling()) {
@@ -87,7 +88,7 @@ bool DlcService::Install(const DlcModuleList& dlc_module_list_in,
       return false;
   }
 
-  if (!dlc_manager_->InitInstall(dlc_module_list_in, err)) {
+  if (!dlc_manager_->InitInstall(dlcs, err)) {
     LOG(ERROR) << Error::ToString(*err);
     return false;
   }
@@ -96,8 +97,7 @@ bool DlcService::Install(const DlcModuleList& dlc_module_list_in,
   DlcModuleList unique_dlc_module_list_to_install =
       dlc_manager_->GetMissingInstalls();
   // Copy over the Omaha URL.
-  unique_dlc_module_list_to_install.set_omaha_url(
-      dlc_module_list_in.omaha_url());
+  unique_dlc_module_list_to_install.set_omaha_url(omaha_url);
 
   // Check if there is nothing to install.
   if (unique_dlc_module_list_to_install.dlc_module_infos_size() == 0) {

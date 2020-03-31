@@ -12,6 +12,8 @@
 #include <chromeos/dbus/service_constants.h>
 #include <dbus/dlcservice/dbus-constants.h>
 
+#include "dlcservice/utils.h"
+
 using std::string;
 using std::unique_ptr;
 
@@ -21,7 +23,10 @@ DBusService::DBusService(DlcService* dlc_service) : dlc_service_(dlc_service) {}
 
 bool DBusService::Install(brillo::ErrorPtr* err,
                           const DlcModuleList& dlc_module_list_in) {
-  return dlc_service_->Install(dlc_module_list_in, err);
+  const auto dlcs =
+      ToDlcSet(dlc_module_list_in, [](const DlcModuleInfo&) { return true; });
+
+  return dlc_service_->Install(dlcs, dlc_module_list_in.omaha_url(), err);
 }
 
 bool DBusService::Uninstall(brillo::ErrorPtr* err, const string& id_in) {
