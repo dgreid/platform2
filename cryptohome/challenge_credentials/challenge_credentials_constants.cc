@@ -10,6 +10,7 @@
 #include <base/logging.h>
 #include <base/macros.h>
 #include <base/no_destructor.h>
+#include <base/stl_util.h>
 
 using brillo::Blob;
 using brillo::BlobFromString;
@@ -27,10 +28,10 @@ namespace {
 constexpr char kChallengeCredentialsSaltConstantPrefix[] =
     "Chrome OS challenge credentials salt Chrome OS challenge credentials "
     "salt\0";
-static_assert(arraysize(kChallengeCredentialsSaltConstantPrefix) > 64,
+static_assert(base::size(kChallengeCredentialsSaltConstantPrefix) > 64,
               "The salt prefix is too short");
 static_assert(!kChallengeCredentialsSaltConstantPrefix
-                  [arraysize(kChallengeCredentialsSaltConstantPrefix) - 1],
+                  [base::size(kChallengeCredentialsSaltConstantPrefix) - 1],
               "The salt prefix must terminate with a null character");
 
 }  // namespace

@@ -20,6 +20,7 @@
 #include <base/files/file_path.h>
 #include <base/files/file_util.h>
 #include <base/logging.h>
+#include <base/stl_util.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/time/time.h>
 #include <brillo/cryptohome.h>
@@ -2374,7 +2375,7 @@ const TestUserInfo kNoUsers[] = {
   {"user2@invalid.domain", "dwaa", false},
   {"owner@invalid.domain", "1234", false},
 };
-const int kNoUserCount = arraysize(kNoUsers);
+const int kNoUserCount = base::size(kNoUsers);
 
 // Test setup that initially has a cryptohome for the owner only.
 const TestUserInfo kOwnerOnlyUsers[] = {
@@ -2383,7 +2384,7 @@ const TestUserInfo kOwnerOnlyUsers[] = {
   {"user2@invalid.domain", "dwaa", false},
   {"owner@invalid.domain", "1234", true},
 };
-const int kOwnerOnlyUserCount = arraysize(kOwnerOnlyUsers);
+const int kOwnerOnlyUserCount = base::size(kOwnerOnlyUsers);
 
 // Test setup that initially has cryptohomes for all users.
 const TestUserInfo kAlternateUsers[] = {
@@ -2392,7 +2393,7 @@ const TestUserInfo kAlternateUsers[] = {
   {"user2@invalid.domain", "dwaa", true},
   {"owner@invalid.domain", "1234", true},
 };
-const int kAlternateUserCount = arraysize(kAlternateUsers);
+const int kAlternateUserCount = base::size(kAlternateUsers);
 
 class AltImageTest : public MountTest {
  public:

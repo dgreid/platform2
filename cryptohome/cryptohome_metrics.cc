@@ -7,6 +7,7 @@
 #include <string>
 
 #include <base/logging.h>
+#include <base/stl_util.h>
 #include <metrics/metrics_library.h>
 #include <metrics/timer.h>
 
@@ -329,7 +330,7 @@ void ReportAlertsData(const Tpm::AlertsData& alerts) {
     return;
   }
 
-  for (int i = 0; i < arraysize(alerts.counters); i++) {
+  for (int i = 0; i < base::size(alerts.counters); i++) {
     uint16_t counter = alerts.counters[i];
     if (counter) {
       LOG(INFO) << "TPM alert of type " << i << " reported " << counter
@@ -337,7 +338,7 @@ void ReportAlertsData(const Tpm::AlertsData& alerts) {
     }
     for (int c = 0; c < counter; c++) {
       g_metrics->SendEnumToUMA(kTpmAlertsHistogram, i,
-          arraysize(alerts.counters));
+                               base::size(alerts.counters));
     }
   }
 }

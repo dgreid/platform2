@@ -129,30 +129,16 @@ bool Pkcs11KeyStore::Write(bool is_user_specific,
   CK_BBOOL true_value = CK_TRUE;
   CK_BBOOL false_value = CK_FALSE;
   CK_ATTRIBUTE attributes[] = {
-    {CKA_CLASS, &object_class, sizeof(object_class)},
-    {
-      CKA_LABEL,
-      const_cast<char*>(key_name.data()),
-      key_name.size()
-    },
-    {
-      CKA_VALUE,
-      const_cast<uint8_t*>(key_data.data()),
-      key_data.size()
-    },
-    {
-      CKA_APPLICATION,
-      const_cast<char*>(kApplicationID),
-      arraysize(kApplicationID)
-    },
-    {CKA_TOKEN, &true_value, sizeof(true_value)},
-    {CKA_PRIVATE, &true_value, sizeof(true_value)},
-    {CKA_MODIFIABLE, &false_value, sizeof(false_value)}
-  };
+      {CKA_CLASS, &object_class, sizeof(object_class)},
+      {CKA_LABEL, const_cast<char*>(key_name.data()), key_name.size()},
+      {CKA_VALUE, const_cast<uint8_t*>(key_data.data()), key_data.size()},
+      {CKA_APPLICATION, const_cast<char*>(kApplicationID),
+       base::size(kApplicationID)},
+      {CKA_TOKEN, &true_value, sizeof(true_value)},
+      {CKA_PRIVATE, &true_value, sizeof(true_value)},
+      {CKA_MODIFIABLE, &false_value, sizeof(false_value)}};
   CK_OBJECT_HANDLE key_handle = CK_INVALID_HANDLE;
-  if (C_CreateObject(session.handle(),
-                     attributes,
-                     arraysize(attributes),
+  if (C_CreateObject(session.handle(), attributes, base::size(attributes),
                      &key_handle) != CKR_OK) {
     LOG(ERROR) << "Pkcs11KeyStore: Failed to write key data: " << key_name;
     return false;
@@ -244,25 +230,23 @@ bool Pkcs11KeyStore::Register(bool is_user_specific,
   CK_ULONG modulus_bits = modulus.size() * 8;
   unsigned char public_exponent[] = {1, 0, 1};
   CK_ATTRIBUTE public_key_attributes[] = {
-    {CKA_CLASS, &public_key_class, sizeof(public_key_class)},
-    {CKA_TOKEN, &true_value, sizeof(true_value)},
-    {CKA_DERIVE, &false_value, sizeof(false_value)},
-    {CKA_WRAP, &false_value, sizeof(false_value)},
-    {CKA_VERIFY, &true_value, sizeof(true_value)},
-    {CKA_VERIFY_RECOVER, &false_value, sizeof(false_value)},
-    {CKA_ENCRYPT, &false_value, sizeof(false_value)},
-    {CKA_KEY_TYPE, &key_type, sizeof(key_type)},
-    {CKA_ID, id.data(), id.size()},
-    {CKA_LABEL, mutable_label.data(), mutable_label.size()},
-    {CKA_MODULUS_BITS, &modulus_bits, sizeof(modulus_bits)},
-    {CKA_PUBLIC_EXPONENT, public_exponent, arraysize(public_exponent)},
-    {CKA_MODULUS, modulus.data(), modulus.size()}
-  };
+      {CKA_CLASS, &public_key_class, sizeof(public_key_class)},
+      {CKA_TOKEN, &true_value, sizeof(true_value)},
+      {CKA_DERIVE, &false_value, sizeof(false_value)},
+      {CKA_WRAP, &false_value, sizeof(false_value)},
+      {CKA_VERIFY, &true_value, sizeof(true_value)},
+      {CKA_VERIFY_RECOVER, &false_value, sizeof(false_value)},
+      {CKA_ENCRYPT, &false_value, sizeof(false_value)},
+      {CKA_KEY_TYPE, &key_type, sizeof(key_type)},
+      {CKA_ID, id.data(), id.size()},
+      {CKA_LABEL, mutable_label.data(), mutable_label.size()},
+      {CKA_MODULUS_BITS, &modulus_bits, sizeof(modulus_bits)},
+      {CKA_PUBLIC_EXPONENT, public_exponent, base::size(public_exponent)},
+      {CKA_MODULUS, modulus.data(), modulus.size()}};
 
   CK_OBJECT_HANDLE object_handle = CK_INVALID_HANDLE;
-  if (C_CreateObject(session.handle(),
-                     public_key_attributes,
-                     arraysize(public_key_attributes),
+  if (C_CreateObject(session.handle(), public_key_attributes,
+                     base::size(public_key_attributes),
                      &object_handle) != CKR_OK) {
     LOG(ERROR) << "Pkcs11KeyStore: Failed to create public key object.";
     return false;
@@ -271,31 +255,26 @@ bool Pkcs11KeyStore::Register(bool is_user_specific,
   // Construct a PKCS #11 template for the private key object.
   CK_OBJECT_CLASS private_key_class = CKO_PRIVATE_KEY;
   CK_ATTRIBUTE private_key_attributes[] = {
-    {CKA_CLASS, &private_key_class, sizeof(private_key_class)},
-    {CKA_TOKEN, &true_value, sizeof(true_value)},
-    {CKA_PRIVATE, &true_value, sizeof(true_value)},
-    {CKA_SENSITIVE, &true_value, sizeof(true_value)},
-    {CKA_EXTRACTABLE, &false_value, sizeof(false_value)},
-    {CKA_DERIVE, &false_value, sizeof(false_value)},
-    {CKA_UNWRAP, &false_value, sizeof(false_value)},
-    {CKA_SIGN, &true_value, sizeof(true_value)},
-    {CKA_SIGN_RECOVER, &false_value, sizeof(false_value)},
-    {CKA_DECRYPT, &false_value, sizeof(false_value)},
-    {CKA_KEY_TYPE, &key_type, sizeof(key_type)},
-    {CKA_ID, id.data(), id.size()},
-    {CKA_LABEL, mutable_label.data(), mutable_label.size()},
-    {CKA_PUBLIC_EXPONENT, public_exponent, arraysize(public_exponent)},
-    {CKA_MODULUS, modulus.data(), modulus.size()},
-    {
-      kKeyBlobAttribute,
-      const_cast<uint8_t*>(private_key_blob.data()),
-      private_key_blob.size()
-    }
-  };
+      {CKA_CLASS, &private_key_class, sizeof(private_key_class)},
+      {CKA_TOKEN, &true_value, sizeof(true_value)},
+      {CKA_PRIVATE, &true_value, sizeof(true_value)},
+      {CKA_SENSITIVE, &true_value, sizeof(true_value)},
+      {CKA_EXTRACTABLE, &false_value, sizeof(false_value)},
+      {CKA_DERIVE, &false_value, sizeof(false_value)},
+      {CKA_UNWRAP, &false_value, sizeof(false_value)},
+      {CKA_SIGN, &true_value, sizeof(true_value)},
+      {CKA_SIGN_RECOVER, &false_value, sizeof(false_value)},
+      {CKA_DECRYPT, &false_value, sizeof(false_value)},
+      {CKA_KEY_TYPE, &key_type, sizeof(key_type)},
+      {CKA_ID, id.data(), id.size()},
+      {CKA_LABEL, mutable_label.data(), mutable_label.size()},
+      {CKA_PUBLIC_EXPONENT, public_exponent, base::size(public_exponent)},
+      {CKA_MODULUS, modulus.data(), modulus.size()},
+      {kKeyBlobAttribute, const_cast<uint8_t*>(private_key_blob.data()),
+       private_key_blob.size()}};
 
-  if (C_CreateObject(session.handle(),
-                     private_key_attributes,
-                     arraysize(private_key_attributes),
+  if (C_CreateObject(session.handle(), private_key_attributes,
+                     base::size(private_key_attributes),
                      &object_handle) != CKR_OK) {
     LOG(ERROR) << "Pkcs11KeyStore: Failed to create private key object.";
     return false;
@@ -321,9 +300,8 @@ bool Pkcs11KeyStore::Register(bool is_user_specific,
       {CKA_VALUE, mutable_certificate.data(), mutable_certificate.size()}
     };
 
-    if (C_CreateObject(session.handle(),
-                       certificate_attributes,
-                       arraysize(certificate_attributes),
+    if (C_CreateObject(session.handle(), certificate_attributes,
+                       base::size(certificate_attributes),
                        &object_handle) != CKR_OK) {
       LOG(ERROR) << "Pkcs11KeyStore: Failed to create certificate object.";
       return false;
@@ -367,9 +345,8 @@ bool Pkcs11KeyStore::RegisterCertificate(
     {CKA_VALUE, mutable_certificate.data(), mutable_certificate.size()}
   };
   CK_OBJECT_HANDLE object_handle = CK_INVALID_HANDLE;
-  if (C_CreateObject(session.handle(),
-                     certificate_attributes,
-                     arraysize(certificate_attributes),
+  if (C_CreateObject(session.handle(), certificate_attributes,
+                     base::size(certificate_attributes),
                      &object_handle) != CKR_OK) {
     LOG(ERROR) << "Pkcs11KeyStore: Failed to create certificate object.";
     return false;
@@ -388,15 +365,14 @@ CK_OBJECT_HANDLE Pkcs11KeyStore::FindObject(CK_SESSION_HANDLE session_handle,
       {CKA_LABEL, base::data(const_cast<std::string&>(key_name)),
        key_name.size()},
       {CKA_APPLICATION, const_cast<char*>(kApplicationID),
-       arraysize(kApplicationID)},
+       base::size(kApplicationID)},
       {CKA_TOKEN, &true_value, sizeof(true_value)},
       {CKA_PRIVATE, &true_value, sizeof(true_value)},
       {CKA_MODIFIABLE, &false_value, sizeof(false_value)}};
   CK_OBJECT_HANDLE key_handle = CK_INVALID_HANDLE;
   CK_ULONG count = 0;
-  if ((C_FindObjectsInit(session_handle,
-                         attributes,
-                         arraysize(attributes)) != CKR_OK) ||
+  if ((C_FindObjectsInit(session_handle, attributes, base::size(attributes)) !=
+       CKR_OK) ||
       (C_FindObjects(session_handle, &key_handle, 1, &count) != CKR_OK) ||
       (C_FindObjectsFinal(session_handle) != CKR_OK)) {
     LOG(ERROR) << "Key search failed: " << key_name;
@@ -426,22 +402,17 @@ bool Pkcs11KeyStore::EnumObjects(
   CK_BBOOL true_value = CK_TRUE;
   CK_BBOOL false_value = CK_FALSE;
   CK_ATTRIBUTE attributes[] = {
-    {CKA_CLASS, &object_class, sizeof(object_class)},
-    {
-      CKA_APPLICATION,
-      const_cast<char*>(kApplicationID),
-      arraysize(kApplicationID)
-    },
-    {CKA_TOKEN, &true_value, sizeof(true_value)},
-    {CKA_PRIVATE, &true_value, sizeof(true_value)},
-    {CKA_MODIFIABLE, &false_value, sizeof(false_value)}
-  };
+      {CKA_CLASS, &object_class, sizeof(object_class)},
+      {CKA_APPLICATION, const_cast<char*>(kApplicationID),
+       base::size(kApplicationID)},
+      {CKA_TOKEN, &true_value, sizeof(true_value)},
+      {CKA_PRIVATE, &true_value, sizeof(true_value)},
+      {CKA_MODIFIABLE, &false_value, sizeof(false_value)}};
   const CK_ULONG kMaxHandles = 100;  // Arbitrary.
   CK_OBJECT_HANDLE handles[kMaxHandles];
   CK_ULONG count = 0;
-  if ((C_FindObjectsInit(session_handle,
-                         attributes,
-                         arraysize(attributes)) != CKR_OK) ||
+  if ((C_FindObjectsInit(session_handle, attributes, base::size(attributes)) !=
+       CKR_OK) ||
       (C_FindObjects(session_handle, handles, kMaxHandles, &count) != CKR_OK)) {
     LOG(ERROR) << "Key search failed.";
     return false;
@@ -535,9 +506,8 @@ bool Pkcs11KeyStore::DoesCertificateExist(
   };
   CK_OBJECT_HANDLE object_handle = CK_INVALID_HANDLE;
   CK_ULONG count = 0;
-  if ((C_FindObjectsInit(session_handle,
-                         attributes,
-                         arraysize(attributes)) != CKR_OK) ||
+  if ((C_FindObjectsInit(session_handle, attributes, base::size(attributes)) !=
+       CKR_OK) ||
       (C_FindObjects(session_handle, &object_handle, 1, &count) != CKR_OK) ||
       (C_FindObjectsFinal(session_handle) != CKR_OK)) {
     return false;

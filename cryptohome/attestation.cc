@@ -1642,10 +1642,8 @@ bool Attestation::VerifyEndorsementCredential(const SecureBlob& credential,
   }
   // Manually verify the certificate signature.
   char issuer[100];  // A longer CN will truncate.
-  X509_NAME_get_text_by_NID(X509_get_issuer_name(x509.get()),
-                            NID_commonName,
-                            issuer,
-                            arraysize(issuer));
+  X509_NAME_get_text_by_NID(X509_get_issuer_name(x509.get()), NID_commonName,
+                            issuer, base::size(issuer));
   crypto::ScopedEVP_PKEY issuer_key =
       GetAuthorityPublicKey(issuer, is_cros_core);
   if (!issuer_key.get()) {
@@ -1711,7 +1709,7 @@ bool Attestation::VerifyPCR0Quote(const SecureBlob& aik_public_key,
   }
 
   // Check if the PCR0 value represents a known mode.
-  for (size_t i = 0; i < arraysize(kKnownPCRValues); ++i) {
+  for (size_t i = 0; i < base::size(kKnownPCRValues); ++i) {
     Blob settings_blob(3);
     settings_blob[0] = kKnownPCRValues[i].developer_mode_enabled;
     settings_blob[1] = kKnownPCRValues[i].recovery_mode_enabled;
@@ -1843,9 +1841,8 @@ crypto::ScopedEVP_PKEY
                                        bool is_cros_core) {
   const CertificateAuthority* const kKnownCA =
       is_cros_core ? kKnownCrosCoreEndorsementCA : kKnownEndorsementCA;
-  const int kNumIssuers =
-      is_cros_core ? arraysize(kKnownCrosCoreEndorsementCA) :
-                     arraysize(kKnownEndorsementCA);
+  const int kNumIssuers = is_cros_core ? base::size(kKnownCrosCoreEndorsementCA)
+                                       : base::size(kKnownEndorsementCA);
   for (int i = 0; i < kNumIssuers; ++i) {
     if (0 == strcmp(issuer_name, kKnownCA[i].issuer)) {
       crypto::ScopedRSA rsa = CreateRSAFromHexModulus(kKnownCA[i].modulus);
@@ -2113,12 +2110,12 @@ bool Attestation::EncryptEndorsementCredential(
     case kDefaultPCA:
       rsa = CreateRSAFromHexModulus(kDefaultPCAPublicKey);
       key_id = std::string(kDefaultPCAPublicKeyID,
-                           arraysize(kDefaultPCAPublicKeyID) - 1);
+                           base::size(kDefaultPCAPublicKeyID) - 1);
       break;
     case kTestPCA:
       rsa = CreateRSAFromHexModulus(kTestPCAPublicKey);
-      key_id = std::string(kTestPCAPublicKeyID,
-                           arraysize(kTestPCAPublicKeyID) - 1);
+      key_id =
+          std::string(kTestPCAPublicKeyID, base::size(kTestPCAPublicKeyID) - 1);
       break;
     default:
       NOTREACHED();
@@ -2371,9 +2368,10 @@ std::string Attestation::GetEnterpriseEncryptionPublicKeyID(
     Attestation::VAType va_type) const {
   return std::string(
       va_type == kDefaultVA ? kDefaultEnterpriseEncryptionPublicKeyID
-          : kTestEnterpriseEncryptionPublicKeyID,
-      arraysize(va_type == kDefaultVA ? kDefaultEnterpriseEncryptionPublicKeyID
-                            : kTestEnterpriseEncryptionPublicKeyID) - 1);
+                            : kTestEnterpriseEncryptionPublicKeyID,
+      base::size(va_type == kDefaultVA ? kDefaultEnterpriseEncryptionPublicKeyID
+                                       : kTestEnterpriseEncryptionPublicKeyID) -
+          1);
 }
 
 void Attestation::set_enterprise_test_keys(VAType va_type,

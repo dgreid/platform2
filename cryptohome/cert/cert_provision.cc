@@ -5,6 +5,7 @@
 // Library that provides certificate provisioning/signing interface.
 
 #include <base/logging.h>
+#include <base/stl_util.h>
 #include <base/strings/string_number_conversions.h>
 
 #include "cryptohome/cert/cert_provision_cryptohome.h"
@@ -275,7 +276,7 @@ Status GetCertificate(const std::string& label,
   } else {
     pos = provision_status.certificate_chain().find(kEndCertificate);
     if (pos != std::string::npos) {
-      pos += arraysize(kEndCertificate) - 1;
+      pos += base::size(kEndCertificate) - 1;
     }
   }
   cert->assign(provision_status.certificate_chain().substr(0, pos));

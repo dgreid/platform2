@@ -14,6 +14,7 @@
 #include <base/json/json_writer.h>
 #include <base/logging.h>
 #include <base/optional.h>
+#include <base/stl_util.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_util.h>
 #include <base/strings/stringprintf.h>
@@ -3649,7 +3650,7 @@ void Service::ResetDictionaryAttackMitigation() {
 
 void Service::DetectEnterpriseOwnership() {
   static const char true_str[] = "true";
-  const brillo::Blob true_value(true_str, true_str + arraysize(true_str));
+  const brillo::Blob true_value(true_str, true_str + base::size(true_str));
   brillo::Blob value;
   if (install_attrs_->Get("enterprise.owned", &value) && value == true_value) {
     enterprise_owned_ = true;

@@ -20,6 +20,7 @@
 #include <base/command_line.h>
 #include <base/files/file_path.h>
 #include <base/logging.h>
+#include <base/stl_util.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_split.h>
 #include <base/strings/string_util.h>
@@ -349,7 +350,7 @@ bool GetPassword(const brillo::dbus::Proxy& proxy,
     tcsetattr(0, TCSANOW, &new_attr);
     printf("%s: ", prompt.c_str());
     fflush(stdout);
-    if (fgets(buffer, arraysize(buffer), stdin))
+    if (fgets(buffer, base::size(buffer), stdin))
       password = buffer;
     printf("\n");
     tcsetattr(0, TCSANOW, &original_attr);
@@ -405,7 +406,7 @@ bool ConfirmRemove(const std::string& user) {
   fflush(stdout);
 
   char buffer[256];
-  if (!fgets(buffer, arraysize(buffer), stdin)) {
+  if (!fgets(buffer, base::size(buffer), stdin)) {
     printf("Error while reading username.\n");
     return false;
   }

@@ -5,6 +5,7 @@
 // Utility classes for cert_provision library.
 
 #include <base/logging.h>
+#include <base/stl_util.h>
 #include <brillo/secure_blob.h>
 #include <crypto/libcrypto-compat.h>
 #include <crypto/scoped_openssl_types.h>
@@ -64,7 +65,7 @@ std::string GetKeyID(const brillo::SecureBlob& public_key) {
   SHA1_Update(&sha_context, modulus.data(), modulus.size());
   SHA1_Final(md_value, &sha_context);
 
-  return std::string(reinterpret_cast<char*>(md_value), arraysize(md_value));
+  return std::string(reinterpret_cast<char*>(md_value), base::size(md_value));
 }
 
 }  // namespace cert_provision

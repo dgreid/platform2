@@ -9,6 +9,7 @@
 
 #include <base/files/file_path.h>
 #include <base/files/scoped_temp_dir.h>
+#include <base/stl_util.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/stringprintf.h>
 #include <brillo/cryptohome.h>
@@ -287,13 +288,13 @@ TEST_P(HomeDirsTest, ComputeSize) {
   // Put test files under base_path and user_path.
   const char kTestFileName0[] = "test.txt";
   const char kExpectedData0[] = "file content";
-  int expected_bytes_0 = arraysize(kExpectedData0);
+  int expected_bytes_0 = base::size(kExpectedData0);
   ASSERT_EQ(expected_bytes_0,
             base::WriteFile(base_path.Append(kTestFileName0),
                             kExpectedData0, expected_bytes_0));
   const char kTestFileName1[] = "test1.txt";
   const char kExpectedData1[] = "file content";
-  int expected_bytes_1 = arraysize(kExpectedData1);
+  int expected_bytes_1 = base::size(kExpectedData1);
   ASSERT_EQ(expected_bytes_1,
             base::WriteFile(base_path.Append(kTestFileName1),
                             kExpectedData1, expected_bytes_1));
@@ -623,13 +624,13 @@ TEST_P(FreeDiskSpaceTest, InitializeTimeCacheWithNoTime) {
     .Times(1);
 
   // It then walks the user vault to populate.
-  MockVaultKeyset* vk[arraysize(kHomedirs)];
+  MockVaultKeyset* vk[base::size(kHomedirs)];
   EXPECT_CALL(vault_keyset_factory_, New(_, _))
     .WillOnce(Return(vk[0] = new MockVaultKeyset()))
     .WillOnce(Return(vk[1] = new MockVaultKeyset()))
     .WillOnce(Return(vk[2] = new MockVaultKeyset()))
     .WillOnce(Return(vk[3] = new MockVaultKeyset()));
-  for (size_t i = 0; i < arraysize(vk); ++i) {
+  for (size_t i = 0; i < base::size(vk); ++i) {
     EXPECT_CALL(*vk[i], Load(_))
       .WillRepeatedly(Return(false));
   }
@@ -724,7 +725,7 @@ TEST_P(FreeDiskSpaceTest, InitializeTimeCacheWithOneTime) {
         Property(&FilePath::value, StartsWith(homedir_paths_[0].value()))))
     .WillRepeatedly(Return(true));
 
-  MockVaultKeyset* vk[arraysize(kHomedirs)];
+  MockVaultKeyset* vk[base::size(kHomedirs)];
   EXPECT_CALL(vault_keyset_factory_, New(_, _))
     .WillOnce(Return(vk[0] = new MockVaultKeyset()))
     .WillOnce(Return(vk[1] = new MockVaultKeyset()))
@@ -732,7 +733,7 @@ TEST_P(FreeDiskSpaceTest, InitializeTimeCacheWithOneTime) {
     .WillOnce(Return(vk[3] = new MockVaultKeyset()));
   // The first three will have no time.
   size_t i;
-  for (i = 0; i < arraysize(vk) - 1; ++i) {
+  for (i = 0; i < base::size(vk) - 1; ++i) {
     EXPECT_CALL(*vk[i], Load(_))
       .WillRepeatedly(Return(false));
   }
@@ -797,14 +798,14 @@ TEST_P(FreeDiskSpaceTest, OnlyCacheCleanup) {
                                                   EndsWith(kEcryptfsVaultDir))))
       .WillRepeatedly(Return(ShouldTestEcryptfs()));
   // Empty enumerators per-user per-cache dirs
-  NiceMock<MockFileEnumerator>* fe[arraysize(kHomedirs)];
+  NiceMock<MockFileEnumerator>* fe[base::size(kHomedirs)];
   EXPECT_CALL(platform_, GetFileEnumerator(_, false, _))
     .WillOnce(Return(fe[0] = new NiceMock<MockFileEnumerator>))
     .WillOnce(Return(fe[1] = new NiceMock<MockFileEnumerator>))
     .WillOnce(Return(fe[2] = new NiceMock<MockFileEnumerator>))
     .WillOnce(Return(fe[3] = new NiceMock<MockFileEnumerator>));
   // Exercise the delete file path.
-  for (size_t f = 0; f < arraysize(fe); ++f) {
+  for (size_t f = 0; f < base::size(fe); ++f) {
     EXPECT_CALL(*fe[f], Next())
       .WillOnce(Return(homedir_paths_[f].Append("Cache/foo")))
       .WillRepeatedly(Return(FilePath()));

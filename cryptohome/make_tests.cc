@@ -18,6 +18,7 @@
 #include <base/files/file_util.h>
 #include <base/logging.h>
 #include <base/memory/ref_counted.h>
+#include <base/stl_util.h>
 #include <base/strings/string_util.h>
 #include <base/strings/stringprintf.h>
 #include <brillo/cryptohome.h>
@@ -76,7 +77,7 @@ const TestUserInfo kDefaultUsers[] = {
   {"testuser13@invalid.domain", "thirteen", true, false},
   {"testuser14@invalid.domain", "0014", true, true},
 };
-const size_t kDefaultUserCount = arraysize(kDefaultUsers);
+const size_t kDefaultUserCount = base::size(kDefaultUsers);
 
 MakeTests::MakeTests() { }
 

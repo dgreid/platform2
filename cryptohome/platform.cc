@@ -49,6 +49,7 @@
 #include <base/logging.h>
 #include <base/numerics/safe_conversions.h>
 #include <base/posix/eintr_wrapper.h>
+#include <base/stl_util.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_split.h>
 #include <base/strings/string_util.h>
@@ -1118,7 +1119,8 @@ void Platform::Sync() {
 
 std::string Platform::GetHardwareID() {
   char buffer[VB_MAX_STRING_PROPERTY];
-  const char *rc = VbGetSystemPropertyString("hwid", buffer, arraysize(buffer));
+  const char* rc =
+      VbGetSystemPropertyString("hwid", buffer, base::size(buffer));
 
   if (rc != nullptr) {
     return std::string(rc);

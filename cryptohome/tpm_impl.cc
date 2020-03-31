@@ -16,6 +16,7 @@
 
 #include <arpa/inet.h>
 #include <base/memory/free_deleter.h>
+#include <base/stl_util.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/stringprintf.h>
 #include <base/threading/platform_thread.h>
@@ -1883,15 +1884,13 @@ bool TpmImpl::GetEndorsementCredential(SecureBlob* credential) {
     LOG(ERROR) << "Malformed EK certificate: Bad header.";
     return false;
   }
-  if (memcmp(kStoredCertHeader,
-             &nvram_value[kStoredCertHeaderOffset],
-             arraysize(kStoredCertHeader)) != 0) {
+  if (memcmp(kStoredCertHeader, &nvram_value[kStoredCertHeaderOffset],
+             base::size(kStoredCertHeader)) != 0) {
     LOG(ERROR) << "Malformed EK certificate: Bad PCCLIENT_STORED_CERT.";
     return false;
   }
-  if (memcmp(kFullCertHeader,
-             &nvram_value[kFullCertHeaderOffset],
-             arraysize(kFullCertHeader)) != 0) {
+  if (memcmp(kFullCertHeader, &nvram_value[kFullCertHeaderOffset],
+             base::size(kFullCertHeader)) != 0) {
     LOG(ERROR) << "Malformed EK certificate: Bad PCCLIENT_FULL_CERT.";
     return false;
   }
@@ -1903,8 +1902,8 @@ bool TpmImpl::GetEndorsementCredential(SecureBlob* credential) {
     return false;
   }
   // The X.509 certificate follows the header bytes.
-  size_t full_cert_end = kTotalHeaderBytes + full_cert_size -
-                         arraysize(kFullCertHeader);
+  size_t full_cert_end =
+      kTotalHeaderBytes + full_cert_size - base::size(kFullCertHeader);
   credential->assign(nvram_value.begin() + kTotalHeaderBytes,
                      nvram_value.begin() + full_cert_end);
   return true;
@@ -2053,10 +2052,9 @@ bool TpmImpl::MakeIdentity(SecureBlob* identity_public_key_der,
     TPM_LOG(ERROR, result) << "MakeIdentity: Cannot create PCA public key.";
     return false;
   }
-  result = Tspi_SetAttribData(pca_public_key_object,
-                              TSS_TSPATTRIB_RSAKEY_INFO,
+  result = Tspi_SetAttribData(pca_public_key_object, TSS_TSPATTRIB_RSAKEY_INFO,
                               TSS_TSPATTRIB_KEYINFO_RSA_MODULUS,
-                              arraysize(modulus_buffer), modulus_buffer);
+                              base::size(modulus_buffer), modulus_buffer);
   if (TPM_ERROR(result)) {
     TPM_LOG(ERROR, result) << "MakeIdentity: Cannot create PCA public key 2.";
     return false;

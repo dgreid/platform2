@@ -10,6 +10,7 @@
 #include <base/files/file_path.h>
 #include <base/files/file_util.h>
 #include <base/location.h>
+#include <base/stl_util.h>
 #include <brillo/cryptohome.h>
 #include <chaps/token_manager_client_mock.h>
 #include <dbus/mock_bus.h>
@@ -1282,7 +1283,7 @@ bool LoopDeviceMounts(std::multimap<const FilePath, const FilePath>* mounts) {
   if (!mounts)
     return false;
   const Mounts* m = kLoopDevMounts;
-  for (int i = 0; i < arraysize(kLoopDevMounts); ++i, ++m)
+  for (int i = 0; i < base::size(kLoopDevMounts); ++i, ++m)
     mounts->insert(std::make_pair(m->src, m->dst));
   return true;
 }

@@ -16,6 +16,7 @@
 #include <base/bind.h>
 #include <base/files/file_path.h>
 #include <base/files/file_util.h>
+#include <base/stl_util.h>
 #include <base/strings/sys_string_conversions.h>
 #include <base/synchronization/lock.h>
 #include <base/threading/platform_thread.h>
@@ -634,7 +635,7 @@ bool LoopDeviceMounts(
   if (!mounts)
     return false;
   const Mounts* m = kLoopDevMounts;
-  for (int i = 0; i < arraysize(kLoopDevMounts); ++i, ++m)
+  for (int i = 0; i < base::size(kLoopDevMounts); ++i, ++m)
     mounts->insert(std::make_pair(m->src, m->dst));
   return true;
 }
