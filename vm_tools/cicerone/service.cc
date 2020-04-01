@@ -993,6 +993,11 @@ void Service::UpdateApplicationList(const std::string& container_token,
   app_list->set_vm_name(vm_name);
   app_list->set_container_name(container_name);
   app_list->set_owner_id(owner_id);
+  if (vm->IsPluginVm()) {
+    app_list->set_vm_type(vm_tools::apps::ApplicationList::PLUGIN_VM);
+  } else {
+    app_list->set_vm_type(vm_tools::apps::ApplicationList::CROS_VM);
+  }
   dbus::MethodCall method_call(
       vm_tools::apps::kVmApplicationsServiceInterface,
       vm_tools::apps::kVmApplicationsServiceUpdateApplicationListMethod);
