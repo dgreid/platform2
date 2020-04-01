@@ -8,6 +8,7 @@
 #include <memory>
 #include <string>
 
+#include <base/files/file_path.h>
 #include <base/macros.h>
 #include <base/callback.h>
 #include <mojo/public/cpp/bindings/binding.h>
@@ -45,7 +46,8 @@ class SmbFsBootstrapImpl : public mojom::SmbFsBootstrap {
 
   SmbFsBootstrapImpl(mojom::SmbFsBootstrapRequest request,
                      SmbFilesystemFactory smb_filesystem_factory,
-                     Delegate* delegate);
+                     Delegate* delegate,
+                     const base::FilePath& daemon_store_root);
   ~SmbFsBootstrapImpl() override;
 
   // Start the bootstrap process and run |callback| when finished or the Mojo
@@ -72,11 +74,16 @@ class SmbFsBootstrapImpl : public mojom::SmbFsBootstrap {
   // Mojo connection error handler.
   void OnMojoConnectionError();
 
+  // Return the daemon store directory for the user profile |username_hash|.
+  base::FilePath GetUserDaemonStoreDirectory(
+      const std::string& username_hash) const;
+
   mojo::Binding<mojom::SmbFsBootstrap> binding_;
   base::OnceClosure disconnect_callback_;
 
   const SmbFilesystemFactory smb_filesystem_factory_;
   Delegate* const delegate_;
+  const base::FilePath daemon_store_root_;
   BootstrapCompleteCallback completion_callback_;
 
   DISALLOW_COPY_AND_ASSIGN(SmbFsBootstrapImpl);

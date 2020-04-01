@@ -10,6 +10,7 @@
 
 #include <base/bind.h>
 #include <base/logging.h>
+#include <base/files/file_path.h>
 #include <base/files/file_util.h>
 #include <mojo/public/cpp/bindings/binding.h>
 
@@ -28,6 +29,7 @@ constexpr char kKerberosConfDir[] = ".krb";
 constexpr char kKrb5ConfFile[] = "krb5.conf";
 constexpr char kCCacheFile[] = "ccache";
 constexpr char kKrbTraceFile[] = "krb_trace.txt";
+constexpr char kDaemonStoreDirectory[] = "/run/daemon-store/smbfs";
 
 }  // namespace
 
@@ -48,7 +50,8 @@ MojoSession::MojoSession(scoped_refptr<dbus::Bus> bus,
           std::move(bootstrap_request),
           base::BindRepeating(&MojoSession::CreateSmbFilesystem,
                               base::Unretained(this)),
-          this)) {
+          this,
+          base::FilePath(kDaemonStoreDirectory))) {
   DCHECK(!temp_dir_.empty());
   DCHECK(chan_);
   DCHECK(shutdown_callback_);
