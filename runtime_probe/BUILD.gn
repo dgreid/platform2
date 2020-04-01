@@ -60,6 +60,7 @@ static_library("libruntime_probe") {
     "functions/nvme_storage.cc",
     "functions/sequence.cc",
     "functions/sysfs.cc",
+    "functions/usb_camera.cc",
     "functions/vpd_cached.cc",
     "functions/wireless_network.cc",
     "probe_config.cc",
