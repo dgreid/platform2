@@ -17,6 +17,7 @@ flags are declared in the [system API] repo.
 * `--prepare_to_flash`: put the modem into firmware download mode
 * `--flash_main_fw=<file>`
 * `--flash_carrier_fw=<file>`
+* `--flash_mode_check`: see if the modem is present in firmware download mode
 * `--reboot`
 
 `--get_fw_info` should return the main firmware on the first line, the carrier
@@ -30,6 +31,10 @@ big-long-carrier-uuid-string
 ```
 
 The carrier UUID should match with one from the shill mobile operator DB.
+
+`--flash_mode_check` should return the string "true" if the modem is present
+in flash mode, and something else otherwise (preferably "false" for
+readability).
 
 All commands should return 0 on success and something non-zero on failure.
 `modemfwd` will look for these binaries in the directory passed as the
