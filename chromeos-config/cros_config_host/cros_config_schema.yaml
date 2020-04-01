@@ -488,7 +488,6 @@ properties:
                       type: string
                     sku-id: *sku_id
                     platform-name: *platform_name
-                    customization-id: *customization_id
                     whitelabel-tag: *whitelabel_tag
                   additionalProperties: false
             name:
