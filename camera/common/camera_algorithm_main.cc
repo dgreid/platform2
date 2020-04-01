@@ -108,6 +108,4 @@ int main(int argc, char** argv) {
       LOGF(ERROR) << "Fork failed";
     }
   }
-
-  return 0;
 }
