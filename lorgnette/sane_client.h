@@ -5,6 +5,7 @@
 #ifndef LORGNETTE_SANE_CLIENT_H_
 #define LORGNETTE_SANE_CLIENT_H_
 
+#include <cstdint>
 #include <map>
 #include <memory>
 #include <string>
@@ -13,6 +14,23 @@
 #include <sane/sane.h>
 
 namespace lorgnette {
+
+// This class represents an active connection to a scanning device.
+// At most 1 active connection to a particular device is allowed at once.
+// This class is thread-compatible, but not thread-safe.
+class SaneDevice {
+ public:
+  virtual ~SaneDevice() {}
+
+  virtual bool SetScanResolution(brillo::ErrorPtr* error, int resolution) = 0;
+  virtual bool SetScanMode(brillo::ErrorPtr* error,
+                           const std::string& scan_mode) = 0;
+  virtual bool StartScan(brillo::ErrorPtr* error) = 0;
+  virtual bool ReadScanData(brillo::ErrorPtr* error,
+                            uint8_t* buf,
+                            size_t count,
+                            size_t* read_out) = 0;
+};
 
 // This class represents a connection to the scanner library SANE.  Once
 // created, it will initialize a connection to SANE, and it will disconnect
@@ -26,6 +44,8 @@ class SaneClient {
   virtual ~SaneClient() {}
 
   virtual bool ListDevices(brillo::ErrorPtr* error, ScannerInfo* info_out) = 0;
+  virtual std::unique_ptr<SaneDevice> ConnectToDevice(
+      brillo::ErrorPtr* error, const std::string& device_name) = 0;
 };
 
 }  // namespace lorgnette
