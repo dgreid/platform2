@@ -8,6 +8,8 @@
 #include "chaps/chaps.h"
 
 #include <string>
+#include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include <base/at_exit.h>
@@ -44,12 +46,20 @@ static bool g_is_initialized = false;
 // to provide access to the user's private slots.
 static brillo::SecureBlob* g_user_isolate = NULL;
 
+// Keeps track of all open sessions for C_CloseAllSessions(). Maps session ID to
+// slot ID.
+std::unordered_multimap<CK_SESSION_HANDLE, CK_SLOT_ID> g_open_sessions;
+
 // Timeout and retry delay used for repeating non-blocking calls.
 static uint32_t g_retry_timeout_ms = 5 * 60 * 1000;
 static uint32_t g_retry_delay_ms = 100;
 
 // Tear down helper.
 static void TearDown() {
+  for (const auto& itr : g_open_sessions) {
+    LOG(WARNING) << "Orphan session " << itr.first << " for slot " << itr.second
+                 << " left open";
+  }
   if (g_is_initialized && !g_is_using_mock && g_proxy) {
     delete g_proxy;
     delete g_user_isolate;
@@ -119,6 +129,7 @@ EXPORT_SPEC void EnableMockProxy(ChapsInterface* proxy,
   g_user_isolate = isolate_credential;
   g_is_using_mock = true;
   g_is_initialized = is_initialized;
+  g_open_sessions.clear();
 }
 
 EXPORT_SPEC void DisableMockProxy() {
@@ -417,6 +428,11 @@ CK_RV C_OpenSession(CK_SLOT_ID slotID,
                                 chaps::PreservedCK_ULONG(phSession));
   });
   LOG_CK_RV_AND_RETURN_IF_ERR(result);
+
+  // Keep track of the pair because the session is now open.
+  g_open_sessions.insert(
+      std::pair<CK_SESSION_HANDLE, CK_SLOT_ID>(*phSession, slotID));
+
   VLOG(1) << __func__ << " - CKR_OK";
   return CKR_OK;
 }
@@ -428,14 +444,37 @@ CK_RV C_CloseSession(CK_SESSION_HANDLE hSession) {
       [&] { return g_proxy->CloseSession(*g_user_isolate, hSession); });
   LOG_CK_RV_AND_RETURN_IF_ERR(result);
   VLOG(1) << __func__ << " - CKR_OK";
+
+  // Update the records.
+  g_open_sessions.erase(hSession);
+
   return CKR_OK;
 }
 
 // PKCS #11 v2.20 section 11.6 page 120.
 CK_RV C_CloseAllSessions(CK_SLOT_ID slotID) {
   LOG_CK_RV_AND_RETURN_IF(!g_is_initialized, CKR_CRYPTOKI_NOT_INITIALIZED);
-  CK_RV result = PerformNonBlocking(
-      [&] { return g_proxy->CloseAllSessions(*g_user_isolate, slotID); });
+
+  CK_RV result = CKR_OK;
+  // Note that this O(n) algorithm is chosen, instead of having another reverse
+  // lookup table is because usually the number of open slots and open session
+  // is low, so lower memory usage is worth the extra run time.
+  for (const auto& itr : g_open_sessions) {
+    if (itr.second != slotID) {
+      continue;
+    }
+    // We've a match.
+    const auto& session = itr.first;
+    CK_RV rv = PerformNonBlocking(
+        [&] { return g_proxy->CloseSession(*g_user_isolate, session); });
+    if (rv != CKR_OK) {
+      // Note: We only return the last error, but we logs the rest, so that when
+      // things go wrong, we could find out what happened.
+      LOG(ERROR) << "Failed to close session " << session << ", error " << rv;
+      result = rv;
+    }
+  }
+
   LOG_CK_RV_AND_RETURN_IF_ERR(result);
   VLOG(1) << __func__ << " - CKR_OK";
   return CKR_OK;

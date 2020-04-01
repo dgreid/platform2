@@ -655,8 +655,34 @@ TEST(TestCloseSession, CloseSessionFail) {
 
 TEST(TestCloseSession, CloseAllSessionsOK) {
   ChapsProxyMock proxy(true);
-  EXPECT_CALL(proxy, CloseAllSessions(_, 1)).WillOnce(Return(CKR_OK));
-  EXPECT_EQ(CKR_OK, C_CloseAllSessions(1));
+
+  constexpr uint64_t kSlot1 = 1;
+  constexpr uint64_t kSlot2 = 2;
+
+  constexpr CK_SESSION_HANDLE kSession1 = 5;
+  constexpr CK_SESSION_HANDLE kSession2 = 6;
+  constexpr CK_SESSION_HANDLE kSession3 = 7;
+
+  // Open 3 sessions, 2 of them belong to slot1 (5,6) and 1 of them slot2 (7).
+  EXPECT_CALL(proxy, OpenSession(_, kSlot1, CKF_SERIAL_SESSION, _))
+      .WillOnce(DoAll(SetArgPointee<3>(kSession1), Return(CKR_OK)))
+      .WillOnce(DoAll(SetArgPointee<3>(kSession2), Return(CKR_OK)));
+  EXPECT_CALL(proxy, OpenSession(_, kSlot2, CKF_SERIAL_SESSION, _))
+      .WillOnce(DoAll(SetArgPointee<3>(kSession3), Return(CKR_OK)));
+
+  CK_SESSION_HANDLE session1, session2, session3;
+  EXPECT_EQ(CKR_OK,
+            C_OpenSession(kSlot1, CKF_SERIAL_SESSION, NULL, NULL, &session1));
+  EXPECT_EQ(CKR_OK,
+            C_OpenSession(kSlot1, CKF_SERIAL_SESSION, NULL, NULL, &session2));
+  EXPECT_EQ(CKR_OK,
+            C_OpenSession(kSlot2, CKF_SERIAL_SESSION, NULL, NULL, &session3));
+
+  EXPECT_CALL(proxy, CloseSession(_, kSession1)).WillOnce(Return(CKR_OK));
+  EXPECT_CALL(proxy, CloseSession(_, kSession2)).WillOnce(Return(CKR_OK));
+  EXPECT_CALL(proxy, CloseSession(_, kSession3)).Times(0);
+
+  EXPECT_EQ(CKR_OK, C_CloseAllSessions(kSlot1));
 }
 
 TEST(TestCloseSession, CloseAllSessionsNotInit) {
@@ -666,9 +692,29 @@ TEST(TestCloseSession, CloseAllSessionsNotInit) {
 
 TEST(TestCloseSession, CloseAllSessionsFail) {
   ChapsProxyMock proxy(true);
-  EXPECT_CALL(proxy, CloseAllSessions(_, 1))
-      .WillOnce(Return(CKR_SLOT_ID_INVALID));
-  EXPECT_EQ(CKR_SLOT_ID_INVALID, C_CloseAllSessions(1));
+
+  constexpr uint64_t kSlot1 = 1;
+
+  constexpr CK_SESSION_HANDLE kSession1 = 5;
+  constexpr CK_SESSION_HANDLE kSession2 = 6;
+
+  // Open 2 sessions belonging to slot1.
+  EXPECT_CALL(proxy, OpenSession(_, kSlot1, CKF_SERIAL_SESSION, _))
+      .WillOnce(DoAll(SetArgPointee<3>(kSession1), Return(CKR_OK)))
+      .WillOnce(DoAll(SetArgPointee<3>(kSession2), Return(CKR_OK)));
+
+  CK_SESSION_HANDLE session1, session2;
+  EXPECT_EQ(CKR_OK,
+            C_OpenSession(kSlot1, CKF_SERIAL_SESSION, NULL, NULL, &session1));
+  EXPECT_EQ(CKR_OK,
+            C_OpenSession(kSlot1, CKF_SERIAL_SESSION, NULL, NULL, &session2));
+
+  // When closing one of the handles failed, the function should fail.
+  EXPECT_CALL(proxy, CloseSession(_, kSession1))
+      .WillOnce(Return(CKR_SESSION_HANDLE_INVALID));
+  EXPECT_CALL(proxy, CloseSession(_, kSession2)).WillOnce(Return(CKR_OK));
+
+  EXPECT_EQ(CKR_SESSION_HANDLE_INVALID, C_CloseAllSessions(kSlot1));
 }
 
 // Get Session Info Tests
