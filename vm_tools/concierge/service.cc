@@ -462,7 +462,7 @@ bool SetUserChosenSizeAttr(const base::ScopedFD& fd) {
   // Store something human-readable for debugging.
   constexpr char val[] = "1";
   return fsetxattr(fd.get(), kDiskImageUserChosenSizeXattr, val, sizeof(val),
-                   XATTR_CREATE) == 0;
+                   0) == 0;
 }
 
 bool GetPluginDirectory(const base::FilePath& prefix,
