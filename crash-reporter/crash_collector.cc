@@ -731,9 +731,12 @@ bool CrashCollector::GetUserCrashDirectories(std::vector<FilePath>* directories,
 FilePath CrashCollector::GetUserCrashDirectory(
     bool use_non_chronos_cryptohome) {
   FilePath user_directory = FilePath(paths::kFallbackUserCrashDirectory);
-  // When testing, store crashes in the fallback crash directory; otherwise,
-  // the test framework can't get to them after logging the user out.
-  if (util::IsTestImage() || ShouldHandleChromeCrashes()) {
+  // When testing, store crashes in the fallback crash directory; otherwise, the
+  // test framework can't get to them after logging the user out. We don't so
+  // this when using the daemon-store crash directory because crash_reporter
+  // won't be able to write to the fallback directory.
+  if ((util::IsTestImage() || ShouldHandleChromeCrashes()) &&
+      !use_non_chronos_cryptohome) {
     return user_directory;
   }
   // In this multiprofile world, there is no one-specific user dir anymore.
