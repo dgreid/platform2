@@ -114,9 +114,6 @@ void HttpServerExternalProcess::OnMessageReceived(const P2PServerMessage& msg,
     // Stop the child and abort ourselves.
     server->Stop();
     exit(1);
-
-    // Just in case exit(2) returns.
-    return;
   }
 
   switch (message_type) {
