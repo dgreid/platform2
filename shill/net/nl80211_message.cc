@@ -524,7 +524,6 @@ std::unique_ptr<NetlinkMessage> Nl80211Message::CreateMessage(
           "Unknown/unhandled netlink nl80211 message 0x%02x", header.cmd);
       return std::make_unique<UnknownNl80211Message>(header.cmd);
   }
-  return nullptr;
 }
 
 }  // namespace shill.
