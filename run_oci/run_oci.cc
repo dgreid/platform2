@@ -8,6 +8,7 @@
 #include <sys/types.h>
 
 #include <algorithm>
+#include <functional>
 #include <memory>
 #include <ostream>
 #include <sstream>
@@ -740,17 +741,17 @@ int RunOci(const base::FilePath& bundle_dir,
   // if the |child_pid| is -1. Either the pre-start hooks or the call to
   // container_pid() will populate the value, and RunHooks() will simply refuse
   // to run if |child_pid| is -1, so we will always do the right thing.
-  // The callback is run in the same stack, so base::ConstRef() is safe.
+  // The callback is run in the same stack, so std::cref() is safe.
   base::ScopedClosureRunner post_stop_hooks(base::Bind(
-      base::IgnoreResult(&RunHooks),
-      base::ConstRef(oci_config->post_stop_hooks), base::Unretained(&child_pid),
-      container_id, bundle_dir, container_dir, "poststop", "stopped"));
+      base::IgnoreResult(&RunHooks), std::cref(oci_config->post_stop_hooks),
+      base::Unretained(&child_pid), container_id, bundle_dir, container_dir,
+      "poststop", "stopped"));
 
   if (!oci_config->pre_chroot_hooks.empty()) {
     config.AddHook(
         MINIJAIL_HOOK_EVENT_PRE_CHROOT,
         base::Bind(&SaveChildPidAndRunHooks,
-                   base::ConstRef(oci_config->pre_chroot_hooks),
+                   std::cref(oci_config->pre_chroot_hooks),
                    base::Unretained(&child_pid), container_id, bundle_dir,
                    container_dir, "prechroot", "created"));
   }
@@ -758,7 +759,7 @@ int RunOci(const base::FilePath& bundle_dir,
     config.AddHook(
         MINIJAIL_HOOK_EVENT_PRE_EXECVE,
         base::Bind(&SaveChildPidAndRunHooks,
-                   base::ConstRef(oci_config->pre_start_hooks),
+                   std::cref(oci_config->pre_start_hooks),
                    base::Unretained(&child_pid), container_id, bundle_dir,
                    container_dir, "prestart", "created"));
   }
