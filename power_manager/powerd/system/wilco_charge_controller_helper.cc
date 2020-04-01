@@ -146,7 +146,6 @@ bool WilcoChargeControllerHelper::SetAdvancedBatteryChargeModeEnabled(
                                .Append(kAdvancedChargingDirectory)
                                .Append(kAdvancedChargingEnablePath),
                            enable ? "1" : "0");
-  return false;
 }
 
 bool WilcoChargeControllerHelper::SetAdvancedBatteryChargeModeDayConfig(
