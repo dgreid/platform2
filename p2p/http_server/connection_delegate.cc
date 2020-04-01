@@ -119,7 +119,6 @@ bool ConnectionDelegate::ReadLine(string* str) {
     num_recv = recv(fd_, buf, n, 0);  // skip
     CHECK(num_recv == n);
   }
-  return true;
 }
 
 // Removes "\r\n" from the passed in string. Returns false if
