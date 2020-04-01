@@ -5,14 +5,20 @@
 #include <sysexits.h>
 #include <unistd.h>
 
+#include <fstream>
 #include <iostream>
 #include <set>
 #include <string>
 #include <vector>
 
+#include <base/files/file_util.h>
 #include <base/logging.h>
+#include <base/json/json_writer.h>
+#include <base/strings/string_number_conversions.h>
+#include <base/strings/string_piece.h>
 #include <base/strings/string_split.h>
 #include <base/strings/string_util.h>
+#include <base/values.h>
 #include <brillo/daemons/daemon.h>
 #include <brillo/flag_helper.h>
 #include <chromeos/constants/imageloader.h>
@@ -25,6 +31,10 @@
 #include "dlcservice/dbus-proxies.h"
 #include "dlcservice/utils.h"
 
+using base::DictionaryValue;
+using base::FilePath;
+using base::ListValue;
+using base::Value;
 using dlcservice::DlcModuleInfo;
 using dlcservice::DlcModuleList;
 using org::chromium::DlcServiceInterfaceProxy;
@@ -66,8 +76,8 @@ class DlcServiceUtil : public brillo::Daemon {
 
  private:
   bool InitDlcModuleList(const string& omaha_url, const string& dlc_ids) {
-    const vector<string>& dlc_ids_list = SplitString(
-        dlc_ids, ":", base::TRIM_WHITESPACE, base::SPLIT_WANT_NONEMPTY);
+    const auto& dlc_ids_list = SplitString(dlc_ids, ":", base::TRIM_WHITESPACE,
+                                           base::SPLIT_WANT_NONEMPTY);
     if (dlc_ids_list.empty()) {
       LOG(ERROR) << "Please specify a list of DLC modules.";
       return false;
@@ -82,13 +92,22 @@ class DlcServiceUtil : public brillo::Daemon {
   }
 
   int OnEventLoopStarted() override {
+    // "--install" related flags.
     DEFINE_bool(install, false, "Install a given list of DLC modules.");
-    DEFINE_bool(uninstall, false, "Uninstall a given list of DLC modules.");
-    DEFINE_bool(list, false, "List all installed DLC modules.");
-    DEFINE_bool(oneline, false, "Print short module DLC module information.");
-    DEFINE_string(dlc_ids, "", "Colon separated list of DLC module ids.");
     DEFINE_string(omaha_url, "",
                   "Overrides the default Omaha URL in the update_engine.");
+
+    // "--uninstall" related flags.
+    DEFINE_bool(uninstall, false, "Uninstall a given list of DLC modules.");
+
+    // "--install" and "--uninstall" related flags.
+    DEFINE_string(dlc_ids, "", "Colon separated list of DLC IDs.");
+
+    // "--list" related flags.
+    DEFINE_bool(list, false, "List installed DLC(s).");
+    DEFINE_string(dump, "",
+                  "Path to dump to, by default will print to stdout.");
+
     brillo::FlagHelper::Init(argc_, argv_, "dlcservice_util");
 
     // Enforce mutually exclusive flags.
@@ -108,7 +127,7 @@ class DlcServiceUtil : public brillo::Daemon {
     if (FLAGS_list) {
       if (!GetInstalled(&dlc_module_list_))
         return EX_SOFTWARE;
-      PrintDlcModuleList(FLAGS_oneline);
+      PrintInstalled(FLAGS_dump);
       Quit();
       return EX_OK;
     }
@@ -232,64 +251,80 @@ class DlcServiceUtil : public brillo::Daemon {
     return true;
   }
 
-  void PrintDlcModuleList(bool quiet) {
-    std::cout << "Installed DLC modules:\n";
-    for (const auto& dlc_module_info : dlc_module_list_.dlc_module_infos()) {
-      std::cout << dlc_module_info.dlc_id() << std::endl;
-      if (!quiet) {
-        if (!DlcServiceUtil::PrintDlcDetails(dlc_module_info))
-          LOG(ERROR) << "Failed to print details of DLC '"
-                     << dlc_module_info.dlc_id() << "'.";
-      }
+  decltype(auto) GetPackages(const string& id) {
+    return dlcservice::ScanDirectory(
+        dlcservice::JoinPaths(imageloader::kDlcManifestRootpath, id));
+  }
+
+  bool GetManifest(const string& id,
+                   const string& package,
+                   imageloader::Manifest* manifest) {
+    if (!dlcservice::GetDlcManifest(FilePath(imageloader::kDlcManifestRootpath),
+                                    id, package, manifest)) {
+      LOG(ERROR) << "Failed to get DLC manifest.";
+      return false;
+    }
+    return true;
+  }
+
+  // Helper to print to file, or stdout if |path| is empty.
+  void PrintToFileOrStdout(const string& path, const string& content) {
+    if (!path.empty()) {
+      if (!dlcservice::WriteToFile(FilePath(path), content))
+        PLOG(ERROR) << "Failed to write to file " << path;
+    } else {
+      std::cout << content;
     }
   }
 
-  // Prints the information contained in the manifest of a DLC.
-  static bool PrintDlcDetails(const DlcModuleInfo& dlc_info) {
-    base::FilePath manifest_root =
-        base::FilePath(imageloader::kDlcManifestRootpath);
-    base::FilePath dlc_path =
-        dlcservice::JoinPaths(manifest_root, dlc_info.dlc_id());
-    // TODO(ahassani): This is a workaround. We need to get the list of packages
-    // in the |GetInstalled()| or a separate signal. But for now since we just
-    // have one package per DLC, this would work.
-    std::set<string> packages = dlcservice::ScanDirectory(dlc_path);
-    if (packages.empty()) {
-      LOG(ERROR) << "Failed to get DLC package";
-      return false;
+  void PrintInstalled(const string& dump) {
+    DictionaryValue dict;
+    for (const auto& dlc_module_info : dlc_module_list_.dlc_module_infos()) {
+      const auto& id = dlc_module_info.dlc_id();
+      const auto& packages = GetPackages(id);
+      if (packages.empty())
+        continue;
+      auto dlc_info_list = std::make_unique<ListValue>();
+      for (const auto& package : packages) {
+        imageloader::Manifest manifest;
+        if (!GetManifest(id, package, &manifest))
+          return;
+        auto dlc_info = std::make_unique<DictionaryValue>();
+        dlc_info->SetKey("name", Value(manifest.name()));
+        dlc_info->SetKey("id", Value(manifest.id()));
+        dlc_info->SetKey("package", Value(manifest.package()));
+        dlc_info->SetKey("version", Value(manifest.version()));
+        dlc_info->SetKey(
+            "preallocated_size",
+            Value(base::Int64ToString(manifest.preallocated_size())));
+        dlc_info->SetKey("size", Value(base::Int64ToString(manifest.size())));
+        dlc_info->SetKey("image_type", Value(manifest.image_type()));
+        switch (manifest.fs_type()) {
+          case imageloader::FileSystem::kExt4:
+            dlc_info->SetKey("fs-type", Value("ext4"));
+            break;
+          case imageloader::FileSystem::kSquashFS:
+            dlc_info->SetKey("fs-type", Value("squashfs"));
+            break;
+        }
+        dlc_info->SetKey("manifest",
+                         Value(dlcservice::JoinPaths(
+                                   FilePath(imageloader::kDlcManifestRootpath),
+                                   id, package, dlcservice::kManifestName)
+                                   .value()));
+        dlc_info->SetKey("root_mount", Value(dlc_module_info.dlc_root()));
+        dlc_info_list->Append(std::move(dlc_info));
+      }
+      dict.Set(id, std::move(dlc_info_list));
     }
-    string package = *(packages.begin());
 
-    imageloader::Manifest manifest;
-    if (!dlcservice::GetDlcManifest(manifest_root, dlc_info.dlc_id(), package,
-                                    &manifest)) {
-      LOG(ERROR) << "Failed to get DLC module manifest.";
-      return false;
+    string json;
+    if (!base::JSONWriter::WriteWithOptions(
+            dict, base::JSONWriter::OPTIONS_PRETTY_PRINT, &json)) {
+      LOG(ERROR) << "Failed to write json.";
+      return;
     }
-    std::cout << "\tname: " << manifest.name() << std::endl;
-    std::cout << "\tid: " << manifest.id() << std::endl;
-    std::cout << "\tpackage: " << manifest.package() << std::endl;
-    std::cout << "\tversion: " << manifest.version() << std::endl;
-    std::cout << "\tmanifest version: " << manifest.manifest_version()
-              << std::endl;
-    std::cout << "\tpreallocated size: " << manifest.preallocated_size()
-              << std::endl;
-    std::cout << "\tsize: " << manifest.size() << std::endl;
-    std::cout << "\timage type: " << manifest.image_type() << std::endl;
-    std::cout << "\tremovable: " << (manifest.is_removable() ? "true" : "false")
-              << std::endl;
-    std::cout << "\tfs-type: ";
-    switch (manifest.fs_type()) {
-      case imageloader::FileSystem::kExt4:
-        std::cout << "ext4" << std::endl;
-        break;
-      case imageloader::FileSystem::kSquashFS:
-        std::cout << "squashfs" << std::endl;
-        break;
-    }
-    std::cout << "\tdlc_path: " << dlc_path.value() << std::endl;
-    std::cout << "\tdlc_root: " << dlc_info.dlc_root() << std::endl;
-    return true;
+    PrintToFileOrStdout(dump, json);
   }
 
   std::unique_ptr<DlcServiceInterfaceProxy> dlc_service_proxy_;
