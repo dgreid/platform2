@@ -285,6 +285,15 @@ class DeviceConfig(object):
     """Get a set of wallpaper files used for this model"""
     pass
 
+  def GetAutobrightnessFiles(self):
+    """Get a list of autobrightness files
+
+    Returns:
+      List of BaseFile objects representing the autobrightness files referenced
+      by this device.
+    """
+    pass
+
 
 class CrosConfigBaseImpl(object):
   """The ChromeOS Configuration API for the host."""
@@ -333,6 +342,7 @@ class CrosConfigBaseImpl(object):
     result['GetFirmwareBuildCombinations'] = \
       self.GetFirmwareBuildCombinations(['coreboot', 'ec'])
     result['GetWallpaperFiles'] = self.GetWallpaperFiles()
+    result['GetAutobrightnessFiles'] = self.GetAutobrightnessFiles()
 
     schema_properties = GetValidSchemaProperties()
     for device in self.GetDeviceConfigs():
@@ -594,3 +604,17 @@ class CrosConfigBaseImpl(object):
     for device in self.GetDeviceConfigs():
       wallpapers |= device.GetWallpaperFiles()
     return sorted(wallpapers)
+
+  def GetAutobrightnessFiles(self):
+    """Get a list of unique autobrightness files for all models
+
+    Returns:
+      List of BaseFile objects representing all the autobrightness files
+      referenced by all devices
+    """
+    file_set = set()
+    for device in self.GetDeviceConfigs():
+      for files in device.GetAutobrightnessFiles():
+        file_set.add(files)
+
+    return sorted(file_set, key=lambda files: files.source)

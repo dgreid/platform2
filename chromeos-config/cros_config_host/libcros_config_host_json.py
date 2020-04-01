@@ -36,7 +36,7 @@ UNIBOARD_JSON_INSTALL_PATH = 'usr/share/chromeos-config/config.json'
 class DeviceConfigJson(DeviceConfig):
   """JSON specific impl of DeviceConfig
 
-  Properties:
+  Attributes:
     _config: Root dictionary element for a given config.
   """
 
@@ -134,11 +134,14 @@ class DeviceConfigJson(DeviceConfig):
       result.add(wallpaper)
     return result
 
+  def GetAutobrightnessFiles(self):
+    return self._GetFiles('/power/autobrightness')
+
 
 class CrosConfigJson(CrosConfigBaseImpl):
   """JSON specific impl of CrosConfig
 
-  Properties:
+  Attributes:
     _json: Root json for the entire config.
     _configs: List of DeviceConfigJson instances
   """

@@ -513,6 +513,15 @@ properties:
                   description: Enable (1) or disable (0) Ambient EQ.
                   type: string
                   pattern: "^[01]$"
+                autobrightness:
+                  type: object
+                  properties:
+                    files:
+                      type: array
+                      items: *system_file_v2
+                  additionalProperties: false
+                  required:
+                  - files
                 touchpad-wakeup:
                   description: Enable (1) or disable (0) wake from touchpad.
                   type: string

@@ -205,6 +205,21 @@ def GetWallpaperFiles(config):
   for fname in config.GetWallpaperFiles():
     print(fname)
 
+def GetAutobrightnessFiles(config):
+  """Print a list of autobrightness files across all models
+
+  The output is one line for the source file (typically relative to ${FILESDIR})
+  and one line for the install file, e.g.:
+     kohaku/autobrightness/model_params.json
+     usr/share/chromeos-assets/autobrightness/kohaku/model_params.json
+
+  Args:
+    config: A CrosConfig instance
+  """
+  for files in config.GetAutobrightnessFiles():
+    print(files.source)
+    print(files.dest)
+
 
 def GetParser(description):
   """Returns an ArgumentParser structured for the cros_config_host CLI.
@@ -312,6 +327,11 @@ def GetParser(description):
   subparsers.add_parser(
       'get-wallpaper-files',
       help='Gets a list of wallpaper files which are used in the config')
+  # Parser: get-autobrightness-files
+  subparsers.add_parser(
+      'get-autobrightness-files',
+      help='Lists pairs of autobrightness files in sequence: first line is '
+      'the relative source pathname, second line is the full install pathname')
   return parser
 
 
@@ -372,6 +392,8 @@ def main(argv=None):
     GetFirmwareBuildCombinations(config, opts.components.split(','))
   elif opts.subcommand == 'get-wallpaper-files':
     GetWallpaperFiles(config)
+  elif opts.subcommand == 'get-autobrightness-files':
+    GetAutobrightnessFiles(config)
 
 
 if __name__ == '__main__':

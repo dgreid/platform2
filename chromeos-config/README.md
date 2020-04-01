@@ -520,6 +520,7 @@ In the tables below,
 | --------- | ------ | --------- | -------- | ----------- | ---------- | ----------- |
 | allow-ambient-eq | string | ```^[01]$``` | False |  | False | Enable (1) or disable (0) Ambient EQ. |
 | als-smoothing-constant | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
+| autobrightness | [autobrightness](#autobrightness) |  | False |  | False |  |
 | avoid-suspend-when-headphone-jack-plugged | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
 | battery-poll-interval-initial-ms | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
 | battery-poll-interval-ms | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
@@ -588,6 +589,17 @@ In the tables below,
 | use-lid | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
 | wake-on-dp | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
 | wakeup-input-device-names | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
+
+### autobrightness
+| Attribute | Type   | RegEx     | Required | Oneof Group | Build-only | Description |
+| --------- | ------ | --------- | -------- | ----------- | ---------- | ----------- |
+| files | array - [files](#files) |  | True |  | False |  |
+
+### files
+| Attribute | Type   | RegEx     | Required | Oneof Group | Build-only | Description |
+| --------- | ------ | --------- | -------- | ----------- | ---------- | ----------- |
+| build-path | string |  | True |  | True | Source of the file relative to the build system. |
+| system-path | string |  | True |  | False | Installation path for the file on the system image. |
 
 ### thermal
 | Attribute | Type   | RegEx     | Required | Oneof Group | Build-only | Description |
