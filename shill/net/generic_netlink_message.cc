@@ -152,7 +152,6 @@ std::unique_ptr<NetlinkMessage> ControlNetlinkMessage::CreateMessage(
                    << header.cmd;
       return std::make_unique<UnknownControlMessage>(header.cmd);
   }
-  return nullptr;
 }
 
 }  // namespace shill.
