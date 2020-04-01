@@ -52,11 +52,20 @@ void enter_vfs_namespace() {
   if (minijail_bind(j.get(), kVpdPath, kVpdPath, 1))
     LOG(FATAL) << "minijail_bind(\"" << kVpdPath << "\") failed";
 
-  // Mount /run/dbus to be able to communicate with D-Bus.
+  minijail_remount_mode(j.get(), MS_SLAVE);
+
   if (minijail_mount_with_data(j.get(), "tmpfs", "/run", "tmpfs",
                                MS_NOSUID | MS_NOEXEC | MS_NODEV, nullptr)) {
     LOG(FATAL) << "minijail_mount_with_data(\"/run\") failed";
   }
+
+  if (minijail_mount(j.get(), "/run/daemon-store/debugd",
+                     "/run/daemon-store/debugd", "none",
+                     MS_BIND | MS_REC) != 0) {
+    LOG(FATAL) << "minijail_mount(\"/run/daemon-store/debugd\") failed";
+  }
+
+  // Mount /run/dbus to be able to communicate with D-Bus.
   if (minijail_bind(j.get(), "/run/dbus", "/run/dbus", 0))
     LOG(FATAL) << "minijail_bind(\"/run/dbus\") failed";
 
