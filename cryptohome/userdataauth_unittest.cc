@@ -2637,7 +2637,7 @@ TEST_F(UserDataAuthTestThreaded,
   // Wait for the change to take effect.
   base::PlatformThread::Sleep(base::TimeDelta::FromMilliseconds(period_ms * 5));
 
-  // Cleanup invokable lambdas so they don't capture this test variables
+  // Cleanup invocable lambdas so they don't capture this test variables
   // anymore. If this is not done then the periodic callbacks might call
   // platform_.GetCurrentTime() between the time local variables here gets
   // destructed and the time |platform_| object gets destructed in test fixture
@@ -2719,7 +2719,7 @@ TEST_F(UserDataAuthTestThreaded, CheckAutoCleanupCallback) {
                 base::TimeDelta::FromMilliseconds(kAutoCleanupPeriodMS *
                                                   kTimesFreeDiskSpaceCalled));
 
-  // Cleanup invokable lambdas so they don't capture this test variables
+  // Cleanup invocable lambdas so they don't capture this test variables
   // anymore. If this is not done then the periodic callbacks might call
   // platform_.GetCurrentTime() between the time local variables here gets
   // destructed and the time |platform_| object gets destructed in test fixture
