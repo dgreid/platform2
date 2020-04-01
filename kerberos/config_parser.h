@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef KERBEROS_CONFIG_VALIDATOR_H_
-#define KERBEROS_CONFIG_VALIDATOR_H_
+#ifndef KERBEROS_CONFIG_PARSER_H_
+#define KERBEROS_CONFIG_PARSER_H_
 
 #include <string>
 #include <unordered_set>
@@ -15,13 +15,14 @@
 
 namespace kerberos {
 
-// Verifies that only whitelisted configuration options are used in a Kerberos
-// configuration. The Kerberos daemon does not allow all options for security
+// Parses the Kerberos configuration for either validation or encryption types
+// retrieval. During Validation, verifies that only whitelisted configuration
+// options are used. The Kerberos daemon does not allow all options for security
 // reasons. Also performs basic syntax checks and returns more useful error
 // information than "You screwed up your config, screw you!"
-class ConfigValidator {
+class ConfigParser {
  public:
-  ConfigValidator();
+  ConfigParser();
 
   // Checks the Kerberos configuration |krb5conf|. If the config cannot be
   // parsed or a non-whitelisted option is used, returns a message with proper
@@ -72,9 +73,9 @@ class ConfigValidator {
   StringHashSet weak_enctypes_;
   StringHashSet strong_enctypes_;
 
-  DISALLOW_COPY_AND_ASSIGN(ConfigValidator);
+  DISALLOW_COPY_AND_ASSIGN(ConfigParser);
 };
 
 }  // namespace kerberos
 
-#endif  // KERBEROS_CONFIG_VALIDATOR_H_
+#endif  // KERBEROS_CONFIG_PARSER_H_

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "kerberos/config_validator.h"
+#include "kerberos/config_parser.h"
 
 #include <ostream>
 #include <string>
@@ -87,10 +87,10 @@ std::ostream& operator<<(std::ostream& os, const ConfigErrorInfo& error_info) {
   return os << error_info.code() << " at line " << error_info.line_index();
 }
 
-class ConfigValidatorTest : public ::testing::Test {
+class ConfigParserTest : public ::testing::Test {
  protected:
   void ExpectNoError(const char* krb5conf) {
-    ConfigErrorInfo error_info = config_validator_.Validate(krb5conf);
+    ConfigErrorInfo error_info = config_parser_.Validate(krb5conf);
 
     EXPECT_TRUE(error_info.has_code()) << error_info;
     EXPECT_EQ(CONFIG_ERROR_NONE, error_info.code()) << error_info;
@@ -100,7 +100,7 @@ class ConfigValidatorTest : public ::testing::Test {
   void ExpectError(const std::string& krb5conf,
                    ConfigErrorCode code,
                    int line_index) {
-    ConfigErrorInfo error_info = config_validator_.Validate(krb5conf);
+    ConfigErrorInfo error_info = config_parser_.Validate(krb5conf);
 
     EXPECT_TRUE(error_info.has_code()) << error_info;
     EXPECT_EQ(code, error_info.code()) << error_info;
@@ -108,14 +108,14 @@ class ConfigValidatorTest : public ::testing::Test {
     EXPECT_EQ(line_index, error_info.line_index()) << error_info;
   }
 
-  ConfigValidator config_validator_;
+  ConfigParser config_parser_;
 };
 
-TEST_F(ConfigValidatorTest, ValidConfig) {
+TEST_F(ConfigParserTest, ValidConfig) {
   ExpectNoError(kCompleteKrb5Conf);
 }
 
-TEST_F(ConfigValidatorTest, Empty) {
+TEST_F(ConfigParserTest, Empty) {
   ExpectNoError("");
   ExpectNoError("\n");
   ExpectNoError("\n\n\n");
@@ -124,7 +124,7 @@ TEST_F(ConfigValidatorTest, Empty) {
   ExpectNoError("[libdefaults]\n\n\n");
 }
 
-TEST_F(ConfigValidatorTest, ModulesAndIncludesBlocked) {
+TEST_F(ConfigParserTest, ModulesAndIncludesBlocked) {
   ExpectError("module MODULEPATH:RESIDUAL", CONFIG_ERROR_KEY_NOT_SUPPORTED, 0);
   ExpectError("include /path/to/file", CONFIG_ERROR_KEY_NOT_SUPPORTED, 0);
   ExpectError("includedir /path/to/files", CONFIG_ERROR_KEY_NOT_SUPPORTED, 0);
@@ -135,14 +135,14 @@ TEST_F(ConfigValidatorTest, ModulesAndIncludesBlocked) {
   ExpectError(kKrb5Conf, CONFIG_ERROR_KEY_NOT_SUPPORTED, 2);
 }
 
-TEST_F(ConfigValidatorTest, UnsupportedLibdefaultsKey) {
+TEST_F(ConfigParserTest, UnsupportedLibdefaultsKey) {
   constexpr char kKrb5Conf[] = R"(
 [libdefaults]
   stonkskew = 123)";
   ExpectError(kKrb5Conf, CONFIG_ERROR_KEY_NOT_SUPPORTED, 2);
 }
 
-TEST_F(ConfigValidatorTest, UnsupportedNestedLibdefaultsKey) {
+TEST_F(ConfigParserTest, UnsupportedNestedLibdefaultsKey) {
   constexpr char kKrb5Conf[] = R"(
 [libdefaults]
   A.EXAMPLE.COM = {
@@ -151,7 +151,7 @@ TEST_F(ConfigValidatorTest, UnsupportedNestedLibdefaultsKey) {
   ExpectError(kKrb5Conf, CONFIG_ERROR_KEY_NOT_SUPPORTED, 3);
 }
 
-TEST_F(ConfigValidatorTest, UnsupportedRealmKey) {
+TEST_F(ConfigParserTest, UnsupportedRealmKey) {
   constexpr char kKrb5Conf[] = R"(
 [realms]
   BEISPIEL.FIR = {
@@ -160,7 +160,7 @@ TEST_F(ConfigValidatorTest, UnsupportedRealmKey) {
   ExpectError(kKrb5Conf, CONFIG_ERROR_KEY_NOT_SUPPORTED, 3);
 }
 
-TEST_F(ConfigValidatorTest, RelationSyntaxErrorKeyWithoutEquals) {
+TEST_F(ConfigParserTest, RelationSyntaxErrorKeyWithoutEquals) {
   constexpr char kKrb5Conf[] = R"(
 [libdefaults]
   kdc: kdc.example.com
@@ -168,11 +168,11 @@ TEST_F(ConfigValidatorTest, RelationSyntaxErrorKeyWithoutEquals) {
   ExpectError(kKrb5Conf, CONFIG_ERROR_RELATION_SYNTAX, 2);
 }
 
-TEST_F(ConfigValidatorTest, UnsupportedSection) {
+TEST_F(ConfigParserTest, UnsupportedSection) {
   ExpectError("[appdefaults]", CONFIG_ERROR_SECTION_NOT_SUPPORTED, 0);
 }
 
-TEST_F(ConfigValidatorTest, SectionNestedInGroup) {
+TEST_F(ConfigParserTest, SectionNestedInGroup) {
   constexpr char kKrb5Conf[] = R"(
 [realms]
   EXAMPLE.COM = {
@@ -181,45 +181,45 @@ TEST_F(ConfigValidatorTest, SectionNestedInGroup) {
   ExpectError(kKrb5Conf, CONFIG_ERROR_SECTION_NESTED_IN_GROUP, 3);
 }
 
-TEST_F(ConfigValidatorTest, MissingSectionBrackets) {
+TEST_F(ConfigParserTest, MissingSectionBrackets) {
   ExpectError("[realms", CONFIG_ERROR_SECTION_SYNTAX, 0);
 }
 
-TEST_F(ConfigValidatorTest, SpacesBeforeSectionEndMarker) {
+TEST_F(ConfigParserTest, SpacesBeforeSectionEndMarker) {
   // Note that the krb5 parser appears to accept spaces before the ']', but
   // it's a different section than without the spaces, so we reject it.
   ExpectError("[realms  ]", CONFIG_ERROR_SECTION_NOT_SUPPORTED, 0);
 }
 
-TEST_F(ConfigValidatorTest, ExtraStuffBeforeSectionBrackets) {
+TEST_F(ConfigParserTest, ExtraStuffBeforeSectionBrackets) {
   ExpectError("extra [realms]", CONFIG_ERROR_RELATION_SYNTAX, 0);
 }
 
-TEST_F(ConfigValidatorTest, ExtraStuffAfterSectionBrackets) {
+TEST_F(ConfigParserTest, ExtraStuffAfterSectionBrackets) {
   ExpectError("[realms] extra", CONFIG_ERROR_SECTION_SYNTAX, 0);
 }
 
-TEST_F(ConfigValidatorTest, FinalMarkersAllowed) {
+TEST_F(ConfigParserTest, FinalMarkersAllowed) {
   ExpectNoError("[libdefaults]* \nclockskew*=9");
 }
 
-TEST_F(ConfigValidatorTest, FinalMarkersWithSpacesNotAllowed) {
+TEST_F(ConfigParserTest, FinalMarkersWithSpacesNotAllowed) {
   ExpectError("[libdefaults] *)", CONFIG_ERROR_SECTION_SYNTAX, 0);
   ExpectError("[libdefaults]\nclockskew *=9", CONFIG_ERROR_RELATION_SYNTAX, 1);
 }
 
-TEST_F(ConfigValidatorTest, RelationSyntaxError) {
+TEST_F(ConfigParserTest, RelationSyntaxError) {
   ExpectError("[libdefaults]\nclockskew", CONFIG_ERROR_RELATION_SYNTAX, 1);
   ExpectError("[libdefaults]\nclockskew ", CONFIG_ERROR_RELATION_SYNTAX, 1);
   ExpectError("[libdefaults]\nclockskew* ", CONFIG_ERROR_RELATION_SYNTAX, 1);
   ExpectError("[libdefaults]\n=clockskew*", CONFIG_ERROR_RELATION_SYNTAX, 1);
 }
 
-TEST_F(ConfigValidatorTest, TwoEqualSignsAllowed) {
+TEST_F(ConfigParserTest, TwoEqualSignsAllowed) {
   ExpectNoError("[libdefaults]\nclockskew=1=2");
 }
 
-TEST_F(ConfigValidatorTest, RelationSyntaxEdgeCases) {
+TEST_F(ConfigParserTest, RelationSyntaxEdgeCases) {
   ExpectError("*", CONFIG_ERROR_RELATION_SYNTAX, 0);
   ExpectError("*=", CONFIG_ERROR_RELATION_SYNTAX, 0);
   ExpectError("=", CONFIG_ERROR_RELATION_SYNTAX, 0);
@@ -239,11 +239,11 @@ TEST_F(ConfigValidatorTest, RelationSyntaxEdgeCases) {
   ExpectError(" * = ", CONFIG_ERROR_RELATION_SYNTAX, 0);
 }
 
-TEST_F(ConfigValidatorTest, WhitespaceBeforeAndAfterSectionBrackets) {
+TEST_F(ConfigParserTest, WhitespaceBeforeAndAfterSectionBrackets) {
   ExpectNoError("   [realms]   ");
 }
 
-TEST_F(ConfigValidatorTest, MissingOpeningCurlyBrace) {
+TEST_F(ConfigParserTest, MissingOpeningCurlyBrace) {
   constexpr char kKrb5Conf[] = R"(
 [realms]
   EXAMPLE.COM =
@@ -253,7 +253,7 @@ TEST_F(ConfigValidatorTest, MissingOpeningCurlyBrace) {
   ExpectError(kKrb5Conf, CONFIG_ERROR_EXPECTED_OPENING_CURLY_BRACE, 3);
 }
 
-TEST_F(ConfigValidatorTest, ExtraCurlyBraceFound) {
+TEST_F(ConfigParserTest, ExtraCurlyBraceFound) {
   constexpr char kKrb5Conf[] = R"(
   [realms]
   EXAMPLE.COM =
@@ -265,7 +265,7 @@ TEST_F(ConfigValidatorTest, ExtraCurlyBraceFound) {
 }
 
 // Things that the fuzzer found.
-TEST_F(ConfigValidatorTest, FuzzerRegressionTests) {
+TEST_F(ConfigParserTest, FuzzerRegressionTests) {
   // Code was looking at character after "include" to check if it's a space.
   ExpectError("include", CONFIG_ERROR_KEY_NOT_SUPPORTED, 0);
 
@@ -275,7 +275,7 @@ TEST_F(ConfigValidatorTest, FuzzerRegressionTests) {
   krb5confWithZero[7] = 0;
   ExpectError(krb5confWithZero, CONFIG_ERROR_SECTION_SYNTAX, 0);
 
-  // Code was allowing spaces in keys. Note that ConfigValidator allows all keys
+  // Code was allowing spaces in keys. Note that ConfigParser allows all keys
   // in the [domain_realm] section, but it should still check spaces!
   ExpectError("[domain_realm]\nkey x=", CONFIG_ERROR_RELATION_SYNTAX, 1);
 
@@ -287,13 +287,13 @@ TEST_F(ConfigValidatorTest, FuzzerRegressionTests) {
 }
 
 // |GetEncryptionTypes| with a complete config to be parsed.
-TEST_F(ConfigValidatorTest, GetEncryptionTypesCompleteConfig) {
+TEST_F(ConfigParserTest, GetEncryptionTypesCompleteConfig) {
   EXPECT_EQ(KerberosEncryptionTypes::kStrong,
-            config_validator_.GetEncryptionTypes(kCompleteKrb5Conf));
+            config_parser_.GetEncryptionTypes(kCompleteKrb5Conf));
 }
 
 // |GetEncryptionTypes| with all encryption types allowed.
-TEST_F(ConfigValidatorTest, GetEncryptionTypesAll) {
+TEST_F(ConfigParserTest, GetEncryptionTypesAll) {
   constexpr char kKrb5Conf[] = R"(
 [libdefaults]
   default_tkt_enctypes = aes256-cts-hmac-sha1-96 arcfour-hmac-md5-exp
@@ -301,11 +301,11 @@ TEST_F(ConfigValidatorTest, GetEncryptionTypesAll) {
   permitted_enctypes = aes256-cts-hmac-sha1-96 arcfour-hmac-md5-exp)";
 
   EXPECT_EQ(KerberosEncryptionTypes::kAll,
-            config_validator_.GetEncryptionTypes(kKrb5Conf));
+            config_parser_.GetEncryptionTypes(kKrb5Conf));
 }
 
 // |GetEncryptionTypes| with only strong encryption types allowed.
-TEST_F(ConfigValidatorTest, GetEncryptionTypesStrong) {
+TEST_F(ConfigParserTest, GetEncryptionTypesStrong) {
   constexpr char kKrb5Conf[] = R"(
 [libdefaults]
   default_tkt_enctypes = aes256-cts-hmac-sha1-96 aes128-cts-hmac-sha1-96
@@ -313,11 +313,11 @@ TEST_F(ConfigValidatorTest, GetEncryptionTypesStrong) {
   permitted_enctypes = aes256-cts-hmac-sha1-96 aes128-cts-hmac-sha1-96)";
 
   EXPECT_EQ(KerberosEncryptionTypes::kStrong,
-            config_validator_.GetEncryptionTypes(kKrb5Conf));
+            config_parser_.GetEncryptionTypes(kKrb5Conf));
 }
 
 // |GetEncryptionTypes| with only legacy encryption types allowed.
-TEST_F(ConfigValidatorTest, GetEncryptionTypesLegacy) {
+TEST_F(ConfigParserTest, GetEncryptionTypesLegacy) {
   constexpr char kKrb5Conf[] = R"(
 [libdefaults]
   default_tkt_enctypes = arcfour-hmac-md5-exp des3-cbc-raw
@@ -325,14 +325,14 @@ TEST_F(ConfigValidatorTest, GetEncryptionTypesLegacy) {
   permitted_enctypes = arcfour-hmac-md5-exp des3-cbc-raw)";
 
   EXPECT_EQ(KerberosEncryptionTypes::kLegacy,
-            config_validator_.GetEncryptionTypes(kKrb5Conf));
+            config_parser_.GetEncryptionTypes(kKrb5Conf));
 }
 
 // |GetEncryptionTypes| with enctypes fields missing.
-TEST_F(ConfigValidatorTest, GetEncryptionTypesMissingFields) {
+TEST_F(ConfigParserTest, GetEncryptionTypesMissingFields) {
   // Empty config allows all encryption types.
   EXPECT_EQ(KerberosEncryptionTypes::kAll,
-            config_validator_.GetEncryptionTypes(""));
+            config_parser_.GetEncryptionTypes(""));
 
   constexpr char kKrb5Conf1[] = R"(
 [libdefaults]
@@ -340,7 +340,7 @@ TEST_F(ConfigValidatorTest, GetEncryptionTypesMissingFields) {
   default_tgs_enctypes = aes256-cts-hmac-sha1-96 aes128-cts-hmac-sha1-96)";
 
   EXPECT_EQ(KerberosEncryptionTypes::kAll,
-            config_validator_.GetEncryptionTypes(kKrb5Conf1));
+            config_parser_.GetEncryptionTypes(kKrb5Conf1));
 
   constexpr char kKrb5Conf2[] = R"(
 [libdefaults]
@@ -348,7 +348,7 @@ TEST_F(ConfigValidatorTest, GetEncryptionTypesMissingFields) {
   permitted_enctypes = aes256-cts-hmac-sha1-96 aes128-cts-hmac-sha1-96)";
 
   EXPECT_EQ(KerberosEncryptionTypes::kAll,
-            config_validator_.GetEncryptionTypes(kKrb5Conf2));
+            config_parser_.GetEncryptionTypes(kKrb5Conf2));
 
   constexpr char kKrb5Conf3[] = R"(
 [libdefaults]
@@ -356,11 +356,11 @@ TEST_F(ConfigValidatorTest, GetEncryptionTypesMissingFields) {
   permitted_enctypes =aes256-cts-hmac-sha1-96 aes128-cts-hmac-sha1-96)";
 
   EXPECT_EQ(KerberosEncryptionTypes::kAll,
-            config_validator_.GetEncryptionTypes(kKrb5Conf3));
+            config_parser_.GetEncryptionTypes(kKrb5Conf3));
 }
 
 // |GetEncryptionTypes| with |DEFAULT| enctypes assigned.
-TEST_F(ConfigValidatorTest, GetEncryptionTypesDefaultValues) {
+TEST_F(ConfigParserTest, GetEncryptionTypesDefaultValues) {
   constexpr char kKrb5Conf[] = R"(
 [libdefaults]
   default_tkt_enctypes = DEFAULT
@@ -369,11 +369,11 @@ TEST_F(ConfigValidatorTest, GetEncryptionTypesDefaultValues) {
 
   // |DEFAULT| value allows all encryption types.
   EXPECT_EQ(KerberosEncryptionTypes::kAll,
-            config_validator_.GetEncryptionTypes(kKrb5Conf));
+            config_parser_.GetEncryptionTypes(kKrb5Conf));
 }
 
 // |GetEncryptionTypes| with comma separated encryption types list.
-TEST_F(ConfigValidatorTest, GetEncryptionTypesCommaSeparated) {
+TEST_F(ConfigParserTest, GetEncryptionTypesCommaSeparated) {
   constexpr char kKrb5Conf[] = R"(
 [libdefaults]
   default_tkt_enctypes = aes256-cts-hmac-sha1-96, arcfour-hmac-md5-exp
@@ -381,7 +381,7 @@ TEST_F(ConfigValidatorTest, GetEncryptionTypesCommaSeparated) {
   permitted_enctypes = aes256-cts-hmac-sha1-96,arcfour-hmac-md5-exp)";
 
   EXPECT_EQ(KerberosEncryptionTypes::kAll,
-            config_validator_.GetEncryptionTypes(kKrb5Conf));
+            config_parser_.GetEncryptionTypes(kKrb5Conf));
 }
 
 }  // namespace kerberos

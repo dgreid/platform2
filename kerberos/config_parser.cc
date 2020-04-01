@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "kerberos/config_validator.h"
+#include "kerberos/config_parser.h"
 
 #include <vector>
 
@@ -104,7 +104,7 @@ ConfigErrorInfo MakeErrorInfo(ConfigErrorCode code, int line_index) {
 
 }  // namespace
 
-ConfigValidator::ConfigValidator()
+ConfigParser::ConfigParser()
     : libdefaults_whitelist_(std::begin(kLibDefaultsWhitelist),
                              std::end(kLibDefaultsWhitelist)),
       realms_whitelist_(std::begin(kRealmsWhitelist),
@@ -116,14 +116,14 @@ ConfigValidator::ConfigValidator()
       strong_enctypes_(std::begin(kStrongEnctypes), std::end(kStrongEnctypes)) {
 }
 
-ConfigErrorInfo ConfigValidator::Validate(const std::string& krb5conf) const {
+ConfigErrorInfo ConfigParser::Validate(const std::string& krb5conf) const {
   KerberosEncryptionTypes encryption_types;
   return ParseConfig(krb5conf, &encryption_types);
 }
 
 // Parses |krb5conf| similarly to |Validate(krb5conf)|, but assumes that the
 // input has already been validated.
-KerberosEncryptionTypes ConfigValidator::GetEncryptionTypes(
+KerberosEncryptionTypes ConfigParser::GetEncryptionTypes(
     const std::string& krb5conf) const {
   KerberosEncryptionTypes encryption_types;
   ParseConfig(krb5conf, &encryption_types);
@@ -134,7 +134,7 @@ KerberosEncryptionTypes ConfigValidator::GetEncryptionTypes(
 // fields and maps the union of the enctypes into one of the buckets of
 // interest: 'All', 'Strong' or 'Legacy'. If an enctypes field is missing, the
 // default value for this field ('All') will be used.
-ConfigErrorInfo ConfigValidator::ParseConfig(
+ConfigErrorInfo ConfigParser::ParseConfig(
     const std::string& krb5conf,
     KerberosEncryptionTypes* encryption_types) const {
   // Variables used to keep track of encryption fields and types on |krc5conf|.
@@ -299,9 +299,9 @@ ConfigErrorInfo ConfigValidator::ParseConfig(
   return error_info;
 }
 
-bool ConfigValidator::IsKeySupported(const std::string& key,
-                                     const std::string& section,
-                                     int group_level) const {
+bool ConfigParser::IsKeySupported(const std::string& key,
+                                  const std::string& section,
+                                  int group_level) const {
   // Bail on anything outside of a section.
   if (section.empty())
     return false;
@@ -330,12 +330,11 @@ bool ConfigValidator::IsKeySupported(const std::string& key,
   return true;
 }
 
-bool ConfigValidator::StrEquals::operator()(const char* a,
-                                            const char* b) const {
+bool ConfigParser::StrEquals::operator()(const char* a, const char* b) const {
   return strcmp(a, b) == 0;
 }
 
-size_t ConfigValidator::StrHash::operator()(const char* str) const {
+size_t ConfigParser::StrHash::operator()(const char* str) const {
   // Taken from base::StringPieceHash.
   std::size_t result = 0;
   for (const char* c = str; *c; ++c)

@@ -17,7 +17,7 @@ group("all") {
     deps += [ ":kerberos_test" ]
   }
   if (use.fuzzer) {
-    deps += [ ":config_validator_fuzzer" ]
+    deps += [ ":config_parser_fuzzer" ]
   }
 }
 
@@ -71,7 +71,7 @@ static_library("libkerberos") {
   ]
   sources = [
     "account_manager.cc",
-    "config_validator.cc",
+    "config_parser.cc",
     "error_strings.cc",
     "fake_krb5_interface.cc",
     "kerberos_adaptor.cc",
@@ -151,7 +151,7 @@ if (use.test) {
     ]
     sources = [
       "account_manager_test.cc",
-      "config_validator_test.cc",
+      "config_parser_test.cc",
       "kerberos_adaptor_test.cc",
       "kerberos_metrics_test.cc",
       "krb5_interface_impl_test.cc",
@@ -186,14 +186,14 @@ if (use.fuzzer) {
   #pkg_config("libchrome_test_config") {
   #  pkg_deps = [ "libchrome-test-${libbase_ver}" ]
   #}
-  executable("config_validator_fuzzer") {
+  executable("config_parser_fuzzer") {
     configs += [
       "//common-mk/common_fuzzer",
       ":fuzzer_config",
       ":target_defaults",
     ]
     sources = [
-      "config_validator_fuzzer.cc",
+      "config_parser_fuzzer.cc",
     ]
     deps = [
       ":libkerberos",

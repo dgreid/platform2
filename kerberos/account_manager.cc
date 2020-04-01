@@ -365,7 +365,7 @@ ErrorType AccountManager::AcquireTgt(const std::string& principal_name,
 
     if (load_config_error == ERROR_NONE) {
       KerberosEncryptionTypes encryption_types =
-          config_validator_.GetEncryptionTypes(krb5conf);
+          config_parser_.GetEncryptionTypes(krb5conf);
       metrics_->ReportKerberosEncryptionTypes(encryption_types);
     }
   }

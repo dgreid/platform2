@@ -452,7 +452,7 @@ ErrorType Krb5InterfaceImpl::GetTgtStatus(const base::FilePath& krb5cc_path,
 
 ErrorType Krb5InterfaceImpl::ValidateConfig(const std::string& krb5conf,
                                             ConfigErrorInfo* error_info) {
-  *error_info = config_validator_.Validate(krb5conf);
+  *error_info = config_parser_.Validate(krb5conf);
   if (error_info->code() != CONFIG_ERROR_NONE)
     return ERROR_BAD_CONFIG;
 
@@ -465,7 +465,7 @@ ErrorType Krb5InterfaceImpl::ValidateConfig(const std::string& krb5conf,
   }
 
   // Ignore all other errors, they're most likely unrelated. The
-  // |config_validator_| should already cover pretty much everything, anyway.
+  // |config_parser_| should already cover pretty much everything, anyway.
   error_info->set_code(CONFIG_ERROR_NONE);
   if (error != ERROR_NONE) {
     LOG(WARNING) << "Ignoring unrelated error " << GetErrorString(error)

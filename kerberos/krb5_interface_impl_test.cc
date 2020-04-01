@@ -57,9 +57,9 @@ TEST_F(Krb5InterfaceImplTest, ValidateConfigFailure) {
 // Tests the krb5-part of config validation.
 TEST_F(Krb5InterfaceImplTest, ValidateConfigViaKrb5Failure) {
   // |kBadBoolKrb5conf| contains a bool variable that's not true or false. The
-  // MIT parser doesn't accept this, but ConfigValidator does since it doesn't
-  // check values. Thus, the validator returns a generic KRB5 error without line
-  // index.
+  // MIT parser doesn't accept this, but ConfigParser does since it doesn't
+  // check values. Thus, the config validation returns a generic KRB5 error
+  // without line index.
   ConfigErrorInfo error_info;
   ErrorType error = krb5_.ValidateConfig(kBadBoolKrb5conf, &error_info);
   EXPECT_EQ(ERROR_BAD_CONFIG, error);

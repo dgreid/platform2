@@ -9,7 +9,7 @@
 
 #include <base/macros.h>
 
-#include "kerberos/config_validator.h"
+#include "kerberos/config_parser.h"
 #include "kerberos/krb5_interface.h"
 #include "kerberos/proto_bindings/kerberos_service.pb.h"
 
@@ -44,7 +44,7 @@ class Krb5InterfaceImpl : public Krb5Interface {
                            ConfigErrorInfo* error_info) override;
 
  private:
-  ConfigValidator config_validator_;
+  ConfigParser config_parser_;
 
   DISALLOW_COPY_AND_ASSIGN(Krb5InterfaceImpl);
 };

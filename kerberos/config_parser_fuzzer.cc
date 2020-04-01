@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "kerberos/config_validator.h"
+#include "kerberos/config_parser.h"
 #include "kerberos/krb5_interface_impl.h"
 
 #include <stddef.h>
@@ -19,7 +19,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   static Environment env;
   const std::string krb5conf(reinterpret_cast<const char*>(data), size);
 
-  // Note: Krb5InterfaceImpl owns and calls a ConfigValidator, but it also runs
+  // Note: Krb5InterfaceImpl owns and calls a ConfigParser, but it also runs
   // the MIT krb5 parsing code, so we use that.
   kerberos::Krb5InterfaceImpl krb5;
 
