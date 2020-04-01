@@ -192,6 +192,14 @@ class ModemHelperImpl : public ModemHelper {
                                          path_to_fw.value().c_str()));
   }
 
+  bool FlashModeCheck() override {
+    std::string output;
+    if (!RunHelperProcess(helper_info_, kFlashModeCheck, &output))
+      return false;
+
+    return base::TrimWhitespaceASCII(output, base::TRIM_ALL) == "true";
+  }
+
  private:
   HelperInfo helper_info_;
 

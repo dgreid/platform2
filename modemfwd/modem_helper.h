@@ -43,6 +43,8 @@ class ModemHelper {
 
   virtual bool FlashMainFirmware(const base::FilePath& path_to_fw) = 0;
   virtual bool FlashCarrierFirmware(const base::FilePath& path_to_fw) = 0;
+
+  virtual bool FlashModeCheck() = 0;
 };
 
 std::unique_ptr<ModemHelper> CreateModemHelper(const HelperInfo& helper_info);
