@@ -25,6 +25,7 @@
 #include <base/strings/string_util.h>
 #include <base/threading/platform_thread.h>
 #include <base/time/time.h>
+#include <brillo/file_utils.h>
 #include <brillo/syslog_logging.h>
 #include <crypto/libcrypto-compat.h>
 #include <crypto/scoped_openssl_types.h>
@@ -870,6 +871,134 @@ void CopyObject(
   printf("Operation completed successfully.\n");
 }
 
+// This checks if a session is still functional/open.
+bool TestSession(CK_SESSION_HANDLE session) {
+  CK_OBJECT_CLASS class_value = CKO_PUBLIC_KEY;
+  CK_ATTRIBUTE attributes[] = {
+      {CKA_CLASS, &class_value, sizeof(class_value)},
+  };
+
+  CK_RV result = C_FindObjectsInit(session, attributes, arraysize(attributes));
+  LOG(INFO) << "C_FindObjectsInit: " << chaps::CK_RVToString(result);
+  if (result != CKR_OK) {
+    return false;
+  }
+
+  CK_OBJECT_HANDLE object = 0;
+  CK_ULONG object_count = 1;
+  result = C_FindObjects(session, &object, 1, &object_count);
+  LOG(INFO) << "C_FindObjects: " << chaps::CK_RVToString(result);
+  if (result != CKR_OK) {
+    return false;
+  }
+
+  result = C_FindObjectsFinal(session);
+  LOG(INFO) << "C_FindObjectsFinal: " << chaps::CK_RVToString(result);
+  if (result != CKR_OK) {
+    return false;
+  }
+
+  return true;
+}
+
+int ReplayCloseAllSessionsLoop(CK_SESSION_HANDLE session,
+                               const std::string& ipc_file_path) {
+  // Check session is operation at the start.
+  bool success = TestSession(session);
+  if (!success) {
+    LOG(ERROR)
+        << "Session destroyed at the start of ReplayCloseAllSessionsLoop()";
+    return 1;
+  }
+
+  // Since we have an operation session, touch the file to let
+  // ReplayCloseAllSessionsCheck() know.
+  base::FilePath path(ipc_file_path);
+  CHECK(brillo::WriteStringToFile(path, "")) << "Failed to write ipc_file";
+  CHECK(brillo::SyncFileOrDirectory(
+      path.DirName(), true /* is directory? */,
+      false /* data_sync? false because we want to sync metadata */))
+      << "Failed to sync after writing ipc_file";
+
+  // We'll test that the session works during the test run time.
+  for (int i = 0; i < 30; i++) {
+    bool success = TestSession(session);
+    bool done = !base::PathExists(path);
+    if (!success) {
+      LOG(ERROR)
+          << "Session destroyed halfway during ReplayCloseAllSessionsLoop()";
+      return 1;
+    }
+    if (done) {
+      LOG(INFO)
+          << "Signaled by ReplayCloseAllSessionsCheck() that they are done.";
+      return 0;
+    }
+    base::PlatformThread::Sleep(base::TimeDelta::FromMilliseconds(300));
+  }
+  LOG(ERROR)
+      << "Timed out waiting for signal from ReplayCloseAllSessionsCheck().";
+  return 1;
+}
+
+int ReplayCloseAllSessionsCheck(CK_SESSION_HANDLE session,
+                                CK_SLOT_ID slotID,
+                                const std::string& ipc_file_path) {
+  base::FilePath path(ipc_file_path);
+
+  // Wait for ipc_file_path to exist (i.e. ReplayCloseAllSessionsLoop() is
+  // ready).
+  constexpr int kWaitLoopCount = 30;
+  for (int i = 0; i < kWaitLoopCount; i++) {
+    if (i == kWaitLoopCount - 1) {
+      LOG(ERROR)
+          << "Timed out waiting for signal from ReplayCloseAllSessionsLoop().";
+      return 1;
+    }
+    if (base::PathExists(path))
+      break;
+    base::PlatformThread::Sleep(base::TimeDelta::FromMilliseconds(300));
+  }
+
+  base::ScopedClosureRunner ipc_file_cleanup(base::BindOnce(
+      [](const std::string& ipc_file_path) {
+        base::FilePath path(ipc_file_path);
+
+        CHECK(base::DeleteFile(path, false))
+            << "Failed to delete ipc_file after ReplayCloseAllSessionsCheck()";
+        CHECK(brillo::SyncFileOrDirectory(
+            path.DirName(), true /* is directory? */,
+            false /* data_sync? false because we want to sync metadata */))
+            << "Failed to sync after writing ipc_file";
+      },
+      ipc_file_path));
+
+  // Check session works at first, then call C_CloseAllSessions(), then check it
+  // doesn't work.
+  bool success = TestSession(session);
+  if (!success) {
+    LOG(ERROR)
+        << "Session doesn't work at the start of ReplayCloseAllSessionsCheck()";
+    return 1;
+  }
+
+  CK_RV rv = C_CloseAllSessions(slotID);
+  if (rv != CKR_OK) {
+    LOG(ERROR)
+        << "Failed to C_CloseAllSessions() in ReplayCloseAllSessionsCheck()";
+    return 1;
+  }
+
+  success = TestSession(session);
+  if (success) {
+    LOG(ERROR) << "Session still works after C_CloseAllSessions() in "
+                  "ReplayCloseAllSessionsCheck()";
+    return 1;
+  }
+
+  return 0;
+}
+
 // Cleans up the session and library.
 void TearDown(CK_SESSION_HANDLE session, bool logout) {
   CK_RV result = CKR_OK;
@@ -923,6 +1052,18 @@ void PrintHelp() {
       "  --copy_object --id=<token id str> --attr_list=CKA_XXX:<hex "
       "value>,CKA_YYY:<hex value>,... --type=<cert, privkey, pubkey>: Copy the "
       "object specified by --id into a new object.\n");
+  printf(
+      "  --replay_close_all_sessions --check_close_all_sessions "
+      "--ipc_file=<path>: This is a helper for hwsec.ChapsCloseAllSessions "
+      "test. --check_close_all_sessions will open a session, check it works, "
+      "then close it with C_CloseAllSessions(), then check the session is "
+      "indeed closed. ipc_file should point to a file that does not yet exist, "
+      "and is the same that is passed to --use_sessions_loop.\n");
+  printf(
+      "  --replay_close_all_sessions --use_sessions_loop --ipc_file=<path>: "
+      "Same as above, but it repeately uses a session that it opened for "
+      "around 5 seconds to make sure it doesn't get invalidated for no reason. "
+      "See above for --ipc_file.\n");
 }
 
 void PrintTicks(base::TimeTicks* start_ticks) {
@@ -1021,9 +1162,10 @@ int main(int argc, char** argv) {
   bool get_attribute = cl->HasSwitch("get_attribute");
   bool set_attribute = cl->HasSwitch("set_attribute");
   bool copy = cl->HasSwitch("copy_object");
+  bool close_all_sessions = cl->HasSwitch("replay_close_all_sessions");
   if (!generate && !generate_delete && !vpn && !wifi && !logout && !cleanup &&
       !inject && !list_objects && !import && !digest_test && !list_tokens &&
-      !get_attribute && !set_attribute && !copy) {
+      !get_attribute && !set_attribute && !copy && !close_all_sessions) {
     PrintHelp();
     return 0;
   }
@@ -1202,6 +1344,24 @@ int main(int argc, char** argv) {
       attr_map[current_attr] = attr_value;
     }
     CopyObject(session, cl->GetSwitchValueASCII("type"), object_id, attr_map);
+  }
+  if (close_all_sessions) {
+    // This section is used to test that C_CloseAllSessions() behaves correctly.
+    // --use_sessions_loop will create a process that continuously use a
+    // session, to check that it's session is not closed by C_CloseAllSessions()
+    // from another process. This will continue for approximately 10 seconds.
+    // --check_close_all_sessions will check that the current session works,
+    // then call C_CloseAllSessions(), then check that it no longer works.
+    string ipc_file_path = cl->GetSwitchValueASCII("ipc_file");
+    CHECK(!ipc_file_path.empty()) << "--ipc_file should be specified";
+    if (cl->HasSwitch("use_sessions_loop")) {
+      return ReplayCloseAllSessionsLoop(session, ipc_file_path);
+    } else if (cl->HasSwitch("check_close_all_sessions")) {
+      return ReplayCloseAllSessionsCheck(session, slot, ipc_file_path);
+    } else {
+      LOG(FATAL) << "--replay_close_all_sessions needs --use_sessions_loop or "
+                    "--check_close_all_sessions";
+    }
   }
   if (cleanup)
     DeleteAllTestKeys(session);
