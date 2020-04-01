@@ -59,6 +59,13 @@ class ModemHelperDirectoryImpl : public ModemHelperDirectory {
     return it->second;
   }
 
+  void ForEachHelper(
+      const base::Callback<void(const std::string&, ModemHelper*)>& callback)
+      override {
+    for (const auto& entry : helpers_by_id_)
+      callback.Run(entry.first, entry.second);
+  }
+
  private:
   std::vector<std::unique_ptr<ModemHelper>> available_helpers_;
   // Pointers in this map are owned by |available_helpers_|.

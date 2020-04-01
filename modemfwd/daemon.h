@@ -7,6 +7,7 @@
 
 #include <map>
 #include <memory>
+#include <set>
 #include <string>
 
 #include <base/files/file_path.h>
@@ -18,6 +19,7 @@
 #include "modemfwd/journal.h"
 #include "modemfwd/modem.h"
 #include "modemfwd/modem_flasher.h"
+#include "modemfwd/modem_helper.h"
 #include "modemfwd/modem_tracker.h"
 
 namespace modemfwd {
@@ -76,6 +78,11 @@ class Daemon : public brillo::DBusServiceDaemon {
   void OnModemAppeared(
       std::unique_ptr<org::chromium::flimflam::DeviceProxy> modem);
 
+  // Check for wedged modems and force-flash them if necessary.
+  void CheckForWedgedModems();
+  void ForceFlashIfWedged(const std::string& device_id,
+                          ModemHelper* modem_helper);
+
   base::FilePath journal_file_path_;
   base::FilePath helper_dir_path_;
   base::FilePath firmware_dir_path_;
@@ -86,6 +93,7 @@ class Daemon : public brillo::DBusServiceDaemon {
   std::unique_ptr<ModemFlasher> modem_flasher_;
 
   std::map<std::string, base::Closure> modem_reappear_callbacks_;
+  std::set<std::string> device_ids_seen_;
 
   std::unique_ptr<DBusAdaptor> dbus_adaptor_;
 

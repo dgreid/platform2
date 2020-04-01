@@ -28,6 +28,12 @@ class ModemHelperDirectoryStub : public ModemHelperDirectory {
     return it->second;
   }
 
+  void ForEachHelper(
+      const base::Callback<void(const std::string&, ModemHelper*)>& callback) {
+    for (const auto& entry : helpers_)
+      callback.Run(entry.first, entry.second);
+  }
+
  private:
   std::map<std::string, ModemHelper*> helpers_;
 

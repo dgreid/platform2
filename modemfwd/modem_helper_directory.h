@@ -8,6 +8,7 @@
 #include <memory>
 #include <string>
 
+#include <base/callback.h>
 #include <base/files/file_path.h>
 
 namespace modemfwd {
@@ -20,6 +21,12 @@ class ModemHelperDirectory {
 
   // Returns a weak pointer. Ensure users do not outlive the directory.
   virtual ModemHelper* GetHelperForDeviceId(const std::string& device_id) = 0;
+
+  // Calls |callback| for each pair of {device_id, helper} known to the
+  // ModemHelperDirectory.
+  virtual void ForEachHelper(
+      const base::Callback<void(const std::string&, ModemHelper*)>&
+          callback) = 0;
 };
 
 std::unique_ptr<ModemHelperDirectory> CreateModemHelperDirectory(

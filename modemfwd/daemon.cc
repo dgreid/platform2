@@ -13,6 +13,7 @@
 #include <base/bind.h>
 #include <base/files/file_util.h>
 #include <base/time/time.h>
+#include <base/threading/thread_task_runner_handle.h>
 #include <chromeos/dbus/service_constants.h>
 
 #include "modemfwd/firmware_directory.h"
@@ -23,6 +24,8 @@
 #include "modemfwd/modem_tracker.h"
 
 namespace {
+
+constexpr base::TimeDelta kWedgeCheckDelay = base::TimeDelta::FromMinutes(5);
 
 std::string ToOnOffString(bool b) {
   return b ? "on" : "off";
@@ -122,6 +125,11 @@ int Daemon::CompleteInitialization() {
       bus_,
       base::Bind(&Daemon::OnModemAppeared, weak_ptr_factory_.GetWeakPtr()));
 
+  base::ThreadTaskRunnerHandle::Get()->PostDelayedTask(
+      FROM_HERE,
+      base::Bind(&Daemon::CheckForWedgedModems, weak_ptr_factory_.GetWeakPtr()),
+      kWedgeCheckDelay);
+
   return EX_OK;
 }
 
@@ -137,7 +145,12 @@ void Daemon::OnModemAppeared(
     return;
 
   std::string equipment_id = modem->GetEquipmentId();
-  ELOG(INFO) << "Modem appeared with equipment ID \"" << equipment_id << "\"";
+  std::string device_id = modem->GetDeviceId();
+  ELOG(INFO) << "Modem appeared with equipment ID \"" << equipment_id << "\""
+             << " and device ID [" << device_id << "]";
+  // Record that we've seen this modem so we don't auto-force-flash it.
+  device_ids_seen_.insert(device_id);
+
   if (modem_reappear_callbacks_.count(equipment_id) > 0) {
     modem_reappear_callbacks_[equipment_id].Run();
     modem_reappear_callbacks_.erase(equipment_id);
@@ -169,6 +182,25 @@ bool Daemon::ForceFlash(const std::string& device_id) {
   if (!cb.is_null())
     cb.Run();
   return !cb.is_null();
+}
+
+void Daemon::CheckForWedgedModems() {
+  EVLOG(1) << "Running wedged modems check...";
+  helper_directory_->ForEachHelper(
+      base::Bind(&Daemon::ForceFlashIfWedged, base::Unretained(this)));
+}
+
+void Daemon::ForceFlashIfWedged(const std::string& device_id,
+                                ModemHelper* helper) {
+  if (device_ids_seen_.count(device_id) > 0)
+    return;
+
+  if (!helper->FlashModeCheck())
+    return;
+
+  LOG(INFO) << "Modem with device ID [" << device_id
+            << "] appears to be wedged, attempting recovery";
+  ForceFlash(device_id);
 }
 
 }  // namespace modemfwd
