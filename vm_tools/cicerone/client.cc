@@ -717,7 +717,6 @@ int InstallLinuxPackage(dbus::ObjectProxy* proxy,
         LOG(ERROR) << "Failed to install application: " << failure_details;
         return -1;
       }
-      return 0;
     case vm_tools::cicerone::InstallLinuxPackageResponse::
         INSTALL_ALREADY_ACTIVE:
       LOG(ERROR) << "Failed starting the package install because one is "
@@ -825,7 +824,6 @@ int UninstallApplication(dbus::ObjectProxy* proxy,
         LOG(ERROR) << "Failed to uninstall application: " << failure_details;
         return -1;
       }
-      return 0;
     case vm_tools::cicerone::UninstallPackageOwningFileResponse::
         BLOCKING_OPERATION_IN_PROGRESS:
       LOG(ERROR) << "Failed starting the package uninstall because one is "
