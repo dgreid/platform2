@@ -95,7 +95,6 @@ bool LoadOobeConfigRollback::GetOobeConfigJson(string* config,
       }
     }
     exit(0);
-    return false;
   }
 
   if (oobe_config_->CheckThirdStage()) {
