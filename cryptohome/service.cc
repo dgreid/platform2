@@ -7,6 +7,8 @@
 #include "cryptohome/bootlockbox/boot_lockbox_client.h"
 #endif  // USE_TPM2
 
+#include <functional>
+
 #include <base/bind.h>
 #include <base/callback.h>
 #include <base/command_line.h>
@@ -2097,7 +2099,7 @@ gboolean Service::Mount(const gchar *userid,
   PostTask(FROM_HERE,
            base::Bind(&Service::DoMount, base::Unretained(this),
                       base::RetainedRef(user_mount),
-                      base::ConstRef(credentials), base::ConstRef(mount_args),
+                      std::cref(credentials), std::cref(mount_args),
                       base::Unretained(&event), base::Unretained(&return_code),
                       base::Unretained(&return_status)));
 
