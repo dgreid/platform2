@@ -68,7 +68,6 @@ bool TestPattern::GenerateTestPattern() {
     default:
       return false;
   }
-  return false;
 }
 
 bool TestPattern::GenerateColorBar() {
