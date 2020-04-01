@@ -126,9 +126,8 @@ TEST_F(SandboxedInitTest, RunInitNoDaemon_WaitForTermination) {
 }
 
 TEST_F(SandboxedInitTest, RunInitNoDaemon_Crash) {
-  RunUnderInit([]() {
+  RunUnderInit([]() -> int {
     _exit(1);
-    return 12;
   });
 
   int status;
