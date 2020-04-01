@@ -223,6 +223,13 @@ class Service final {
                      DiskImageStatus* status,
                      std::string* failure_reason);
 
+  // Finalize the resize process after a success resize has completed.
+  void FinishResize(const std::string& owner_id,
+                    const std::string& vm_name,
+                    StorageLocation location,
+                    DiskImageStatus* status,
+                    std::string* failure_reason);
+
   using VmMap = std::map<VmId, std::unique_ptr<VmInterface>>;
 
   // Returns an iterator to vm with key (|owner_id|, |vm_name|). If no such

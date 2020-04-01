@@ -2521,6 +2521,15 @@ std::unique_ptr<dbus::Response> Service::ResizeDiskImage(
     base::ThreadTaskRunnerHandle::Get()->PostTask(
         FROM_HERE, base::Bind(&Service::RunDiskImageOperation,
                               weak_ptr_factory_.GetWeakPtr(), std::move(uuid)));
+  } else if (op->status() == DISK_STATUS_RESIZED) {
+    DiskImageStatus status = DISK_STATUS_RESIZED;
+    std::string failure_reason;
+    FinishResize(request.cryptohome_id(), request.vm_name(), location, &status,
+                 &failure_reason);
+    if (status != DISK_STATUS_RESIZED) {
+      response.set_status(status);
+      response.set_failure_reason(failure_reason);
+    }
   }
 
   writer.AppendProtoAsArrayOfBytes(response);
@@ -2561,29 +2570,40 @@ void Service::ProcessResize(const std::string& owner_id,
   *status = iter->second->GetDiskResizeStatus(failure_reason);
 
   if (*status == DISK_STATUS_RESIZED) {
-    base::FilePath disk_path;
-    if (!GetDiskPathFromName(vm_name, owner_id, location,
-                             false, /* create_parent_dir */
-                             &disk_path)) {
-      LOG(ERROR) << "Failed to get disk path after resize";
-      *status = DISK_STATUS_FAILED;
-      return;
-    }
+    FinishResize(owner_id, vm_name, location, status, failure_reason);
+  }
+}
 
-    base::ScopedFD fd(
-        open(disk_path.value().c_str(), O_CREAT | O_NONBLOCK | O_WRONLY, 0600));
-    if (!fd.is_valid()) {
-      PLOG(ERROR) << "Failed to open disk image";
-      *status = DISK_STATUS_FAILED;
-      return;
-    }
+void Service::FinishResize(const std::string& owner_id,
+                           const std::string& vm_name,
+                           StorageLocation location,
+                           DiskImageStatus* status,
+                           std::string* failure_reason) {
+  base::FilePath disk_path;
+  if (!GetDiskPathFromName(vm_name, owner_id, location,
+                           false, /* create_parent_dir */
+                           &disk_path)) {
+    LOG(ERROR) << "Failed to get disk path after resize";
+    *failure_reason = "Failed to get disk path after resize";
+    *status = DISK_STATUS_FAILED;
+    return;
+  }
 
-    // This disk now has a user-chosen size by virtue of being resized.
-    if (!SetUserChosenSizeAttr(fd)) {
-      LOG(ERROR) << "Failed to set user-chosen size xattr";
-      *status = DISK_STATUS_FAILED;
-      return;
-    }
+  base::ScopedFD fd(
+      open(disk_path.value().c_str(), O_CREAT | O_NONBLOCK | O_WRONLY, 0600));
+  if (!fd.is_valid()) {
+    PLOG(ERROR) << "Failed to open disk image";
+    *failure_reason = "Failed to open disk image";
+    *status = DISK_STATUS_FAILED;
+    return;
+  }
+
+  // This disk now has a user-chosen size by virtue of being resized.
+  if (!SetUserChosenSizeAttr(fd)) {
+    LOG(ERROR) << "Failed to set user-chosen size xattr";
+    *failure_reason = "Failed to set user-chosen size xattr";
+    *status = DISK_STATUS_FAILED;
+    return;
   }
 }
 
