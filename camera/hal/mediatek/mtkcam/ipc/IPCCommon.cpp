@@ -86,6 +86,8 @@ IPC_GROUP Mediatek3AIpcCmdToGroup(IPC_CMD cmd) {
       return IPC_GROUP_AF;
     case IPC_HAL3A_AFLENS_ENABLE:
       return IPC_GROUP_AF_ENABLE;
+    case IPC_HAL3A_SEND3ACTRL:
+      return IPC_GROUP_3ACTRL;
     default:
       return IPC_GROUP_0;
   }
