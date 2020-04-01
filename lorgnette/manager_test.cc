@@ -5,6 +5,7 @@
 #include "lorgnette/manager.h"
 
 #include <string>
+#include <vector>
 
 #include <base/stl_util.h>
 #include <base/strings/string_number_conversions.h>
@@ -15,6 +16,9 @@
 #include <chromeos/dbus/service_constants.h>
 #include <gtest/gtest.h>
 #include <metrics/metrics_library_mock.h>
+#include <sane/sane.h>
+
+#include "lorgnette/sane_client_impl.h"
 
 using base::ScopedFD;
 using brillo::VariantDictionary;
@@ -341,6 +345,104 @@ TEST_F(ManagerTest, ScannerInfoFromString) {
   EXPECT_STREQ(kManufacturer1, scan_info[kDevice1]["Manufacturer"].c_str());
   EXPECT_STREQ(kModel1, scan_info[kDevice1]["Model"].c_str());
   EXPECT_STREQ(kType1, scan_info[kDevice1]["Type"].c_str());
+}
+
+class SaneClientTest : public testing::Test {
+ protected:
+  void SetUp() override {
+    dev_ = CreateTestDevice();
+    dev_two_ = CreateTestDevice();
+  }
+
+  static SANE_Device CreateTestDevice() {
+    SANE_Device dev;
+    dev.name = "Test Name";
+    dev.vendor = "Test Vendor";
+    dev.model = "Test Model";
+    dev.type = "film scanner";
+
+    return dev;
+  }
+
+  SANE_Device dev_;
+  SANE_Device dev_two_;
+  const SANE_Device* empty_devices_[1] = {NULL};
+  const SANE_Device* one_device_[2] = {&dev_, NULL};
+  const SANE_Device* two_devices_[3] = {&dev_, &dev_two_, NULL};
+
+  Manager::ScannerInfo info_;
+};
+
+TEST_F(SaneClientTest, ScannerInfoFromDeviceListInvalidParameters) {
+  EXPECT_FALSE(SaneClientImpl::DeviceListToScannerInfo(NULL, NULL));
+  EXPECT_FALSE(SaneClientImpl::DeviceListToScannerInfo(one_device_, NULL));
+  EXPECT_FALSE(SaneClientImpl::DeviceListToScannerInfo(NULL, &info_));
+}
+
+TEST_F(SaneClientTest, ScannerInfoFromDeviceListNoDevices) {
+  EXPECT_TRUE(SaneClientImpl::DeviceListToScannerInfo(empty_devices_, &info_));
+  EXPECT_EQ(info_.size(), 0);
+}
+
+TEST_F(SaneClientTest, ScannerInfoFromDeviceListOneDevice) {
+  EXPECT_TRUE(SaneClientImpl::DeviceListToScannerInfo(one_device_, &info_));
+  EXPECT_EQ(info_.size(), 1);
+  EXPECT_EQ(info_.count(dev_.name), 1);
+  EXPECT_EQ(info_[dev_.name]["Manufacturer"], dev_.vendor);
+  EXPECT_EQ(info_[dev_.name]["Model"], dev_.model);
+  EXPECT_EQ(info_[dev_.name]["Type"], dev_.type);
+}
+
+TEST_F(SaneClientTest, ScannerInfoFromDeviceListNullFields) {
+  dev_ = CreateTestDevice();
+  dev_.name = NULL;
+  EXPECT_TRUE(SaneClientImpl::DeviceListToScannerInfo(one_device_, &info_));
+  EXPECT_EQ(info_.size(), 0);
+
+  dev_ = CreateTestDevice();
+  dev_.vendor = NULL;
+  EXPECT_TRUE(SaneClientImpl::DeviceListToScannerInfo(one_device_, &info_));
+  EXPECT_EQ(info_.size(), 1);
+  EXPECT_EQ(info_.count(dev_.name), 1);
+  EXPECT_EQ(info_[dev_.name]["Manufacturer"], "");
+  EXPECT_EQ(info_[dev_.name]["Model"], dev_.model);
+  EXPECT_EQ(info_[dev_.name]["Type"], dev_.type);
+
+  dev_ = CreateTestDevice();
+  dev_.model = NULL;
+  EXPECT_TRUE(SaneClientImpl::DeviceListToScannerInfo(one_device_, &info_));
+  EXPECT_EQ(info_.size(), 1);
+  EXPECT_EQ(info_.count(dev_.name), 1);
+  EXPECT_EQ(info_[dev_.name]["Manufacturer"], dev_.vendor);
+  EXPECT_EQ(info_[dev_.name]["Model"], "");
+  EXPECT_EQ(info_[dev_.name]["Type"], dev_.type);
+
+  dev_ = CreateTestDevice();
+  dev_.type = NULL;
+  EXPECT_TRUE(SaneClientImpl::DeviceListToScannerInfo(one_device_, &info_));
+  EXPECT_EQ(info_.size(), 1);
+  EXPECT_EQ(info_.count(dev_.name), 1);
+  EXPECT_EQ(info_[dev_.name]["Manufacturer"], dev_.vendor);
+  EXPECT_EQ(info_[dev_.name]["Model"], dev_.model);
+  EXPECT_EQ(info_[dev_.name]["Type"], "");
+}
+
+TEST_F(SaneClientTest, ScannerInfoFromDeviceListMultipleDevices) {
+  EXPECT_FALSE(SaneClientImpl::DeviceListToScannerInfo(two_devices_, &info_));
+
+  dev_two_.name = "Test Device 2";
+  dev_two_.vendor = "Test Vendor 2";
+  EXPECT_TRUE(SaneClientImpl::DeviceListToScannerInfo(two_devices_, &info_));
+  EXPECT_EQ(info_.size(), 2);
+  EXPECT_EQ(info_.count(dev_.name), 1);
+  EXPECT_EQ(info_[dev_.name]["Manufacturer"], dev_.vendor);
+  EXPECT_EQ(info_[dev_.name]["Model"], dev_.model);
+  EXPECT_EQ(info_[dev_.name]["Type"], dev_.type);
+
+  EXPECT_EQ(info_.count(dev_two_.name), 1);
+  EXPECT_EQ(info_[dev_two_.name]["Manufacturer"], dev_two_.vendor);
+  EXPECT_EQ(info_[dev_two_.name]["Model"], dev_two_.model);
+  EXPECT_EQ(info_[dev_two_.name]["Type"], dev_.type);
 }
 
 }  // namespace lorgnette

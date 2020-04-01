@@ -52,6 +52,8 @@ static_library("liblorgnette") {
     "epson_probe.cc",
     "firewall_manager.cc",
     "manager.cc",
+    "sane_client_fake.cc",
+    "sane_client_impl.cc",
   ]
 }
 
