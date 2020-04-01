@@ -79,9 +79,6 @@ class ChapsInterface {
   virtual uint32_t CloseSession(const brillo::SecureBlob& isolate_credential,
                                 uint64_t session) = 0;
   // PKCS #11 v2.20 section 11.6 page 120.
-  virtual uint32_t CloseAllSessions(
-      const brillo::SecureBlob& isolate_credential, uint64_t slot_id) = 0;
-  // PKCS #11 v2.20 section 11.6 page 120.
   virtual uint32_t GetSessionInfo(const brillo::SecureBlob& isolate_credential,
                                   uint64_t session_id,
                                   SessionInfo* session_info) = 0;

@@ -184,18 +184,6 @@ uint32_t ChapsServiceImpl::CloseSession(const SecureBlob& isolate_credential,
   return CKR_OK;
 }
 
-uint32_t ChapsServiceImpl::CloseAllSessions(
-    const SecureBlob& isolate_credential, uint64_t slot_id) {
-  if (static_cast<int>(slot_id) >= slot_manager_->GetSlotCount() ||
-      !slot_manager_->IsTokenAccessible(isolate_credential, slot_id))
-    LOG_CK_RV_AND_RETURN(CKR_SLOT_ID_INVALID);
-  LOG_CK_RV_AND_RETURN_IF(
-      !slot_manager_->IsTokenPresent(isolate_credential, slot_id),
-      CKR_TOKEN_NOT_PRESENT);
-  slot_manager_->CloseAllSessions(isolate_credential, slot_id);
-  return CKR_OK;
-}
-
 uint32_t ChapsServiceImpl::GetSessionInfo(const SecureBlob& isolate_credential,
                                           uint64_t session_id,
                                           SessionInfo* session_info) {

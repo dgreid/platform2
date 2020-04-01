@@ -222,12 +222,6 @@ TEST_F(TestP11, OpenCloseSession) {
             chaps_->OpenSession(credential_, 0, CKF_SERIAL_SESSION, NULL));
   EXPECT_EQ(CKR_SESSION_PARALLEL_NOT_SUPPORTED,
             chaps_->OpenSession(credential_, 0, 0, &session));
-  // Test CloseAllSessions.
-  EXPECT_EQ(CKR_OK,
-            chaps_->OpenSession(credential_, 0, CKF_SERIAL_SESSION, &session));
-  EXPECT_EQ(CKR_OK, chaps_->CloseAllSessions(credential_, 0));
-  EXPECT_EQ(CKR_SESSION_HANDLE_INVALID,
-            chaps_->CloseSession(credential_, session));
 }
 
 TEST_F(TestP11PublicSession, GetSessionInfo) {

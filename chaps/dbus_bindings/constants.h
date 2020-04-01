@@ -28,7 +28,6 @@ const char kInitPINMethod[] = "InitPIN";
 const char kSetPINMethod[] = "SetPIN";
 const char kOpenSessionMethod[] = "OpenSession";
 const char kCloseSessionMethod[] = "CloseSession";
-const char kCloseAllSessionsMethod[] = "CloseAllSessions";
 const char kGetSessionInfoMethod[] = "GetSessionInfo";
 const char kGetOperationStateMethod[] = "GetOperationState";
 const char kSetOperationStateMethod[] = "SetOperationState";

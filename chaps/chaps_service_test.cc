@@ -247,21 +247,6 @@ TEST_F(TestService, CloseSession) {
   EXPECT_EQ(CKR_OK, service_->CloseSession(ic_, 0));
 }
 
-TEST_F(TestService, CloseAllSessions) {
-  EXPECT_CALL(slot_manager_, GetSlotCount()).WillRepeatedly(Return(2));
-  EXPECT_CALL(slot_manager_, IsTokenAccessible(ic_, _))
-      .WillOnce(Return(false))
-      .WillRepeatedly(Return(true));
-  EXPECT_CALL(slot_manager_, IsTokenPresent(ic_, _))
-      .WillOnce(Return(false))
-      .WillRepeatedly(Return(true));
-  EXPECT_CALL(slot_manager_, CloseAllSessions(ic_, 1));
-  EXPECT_EQ(CKR_SLOT_ID_INVALID, service_->CloseAllSessions(ic_, 2));
-  EXPECT_EQ(CKR_SLOT_ID_INVALID, service_->CloseAllSessions(ic_, 1));
-  EXPECT_EQ(CKR_TOKEN_NOT_PRESENT, service_->CloseAllSessions(ic_, 1));
-  EXPECT_EQ(CKR_OK, service_->CloseAllSessions(ic_, 1));
-}
-
 TEST_F(TestService, GetSessionInfo) {
   EXPECT_CALL(slot_manager_, GetSession(ic_, 1, _))
       .WillOnce(Return(false))

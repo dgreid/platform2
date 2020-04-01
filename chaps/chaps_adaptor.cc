@@ -78,9 +78,6 @@ void ChapsAdaptor::RegisterAsync(
                                     &ChapsAdaptor::OpenSession);
   interface->AddSimpleMethodHandler(kCloseSessionMethod, base::Unretained(this),
                                     &ChapsAdaptor::CloseSession);
-  interface->AddSimpleMethodHandler(kCloseAllSessionsMethod,
-                                    base::Unretained(this),
-                                    &ChapsAdaptor::CloseAllSessions);
   interface->AddSimpleMethodHandler(kGetSessionInfoMethod,
                                     base::Unretained(this),
                                     &ChapsAdaptor::GetSessionInfo);
@@ -490,17 +487,6 @@ uint32_t ChapsAdaptor::CloseSession(
                                      isolate_credential.end());
 
   return service_->CloseSession(isolate_credential_blob, session_id);
-}
-
-uint32_t ChapsAdaptor::CloseAllSessions(
-    const brillo::SecureVector& isolate_credential, uint64_t slot_id) {
-  VLOG(1) << "CALL: " << __func__;
-  VLOG(2) << "IN: "
-          << "slot_id=" << slot_id;
-  SecureBlob isolate_credential_blob(isolate_credential.begin(),
-                                     isolate_credential.end());
-
-  return service_->CloseAllSessions(isolate_credential_blob, slot_id);
 }
 
 void ChapsAdaptor::GetSessionInfo(

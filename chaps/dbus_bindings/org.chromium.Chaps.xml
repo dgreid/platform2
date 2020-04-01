@@ -216,15 +216,6 @@
     </method>
 
     <!-- PKCS #11 v2.20 section 11.6 page 120. -->
-    <method name="CloseAllSessions">
-      <arg type="ay" name="isolate_credential" direction="in"/>
-      <arg type="t" name="slot_id" direction="in"/>
-      <arg type="u" name="result" direction="out">
-        <annotation name="org.freedesktop.DBus.GLib.ReturnVal" value=""/>
-      </arg>
-    </method>
-
-    <!-- PKCS #11 v2.20 section 11.6 page 120. -->
     <method name="GetSessionInfo">
       <arg type="ay" name="isolate_credential" direction="in"/>
       <arg type="t" name="session_id" direction="in"/>

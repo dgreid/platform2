@@ -104,8 +104,6 @@ class ChapsAdaptor {
                    uint32_t* result);
   uint32_t CloseSession(const brillo::SecureVector& isolate_credential,
                         uint64_t session_id);
-  uint32_t CloseAllSessions(const brillo::SecureVector& isolate_credential,
-                            uint64_t slot_id);
   void GetSessionInfo(const brillo::SecureVector& isolate_credential,
                       uint64_t session_id,
                       SessionInfo* session_info,

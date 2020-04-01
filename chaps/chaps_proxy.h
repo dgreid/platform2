@@ -91,8 +91,6 @@ class ChapsProxyImpl : public ChapsInterface {
                        uint64_t* session_id) override;
   uint32_t CloseSession(const brillo::SecureBlob& isolate_credential,
                         uint64_t session_id) override;
-  uint32_t CloseAllSessions(const brillo::SecureBlob& isolate_credential,
-                            uint64_t slot_id) override;
   uint32_t GetSessionInfo(const brillo::SecureBlob& isolate_credential,
                           uint64_t session_id,
                           SessionInfo* session_info) override;

@@ -292,12 +292,6 @@ uint32_t ChapsProxyImpl::CloseSession(const SecureBlob& isolate_credential,
   return result;
 }
 
-uint32_t ChapsProxyImpl::CloseAllSessions(const SecureBlob& isolate_credential,
-                                          uint64_t slot_id) {
-  NOTREACHED() << "CloseAllSessions() is now implemented on client side.";
-  return CKR_GENERAL_ERROR;
-}
-
 uint32_t ChapsProxyImpl::GetSessionInfo(const SecureBlob& isolate_credential,
                                         uint64_t session_id,
                                         SessionInfo* session_info) {
