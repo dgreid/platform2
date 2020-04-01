@@ -6,7 +6,9 @@
 
 #include <base/files/file_util.h>
 #include <base/logging.h>
+#include <base/strings/strcat.h>
 #include <base/strings/stringprintf.h>
+#include <re2/re2.h>
 
 #include "crash-reporter/util.h"
 
@@ -42,6 +44,10 @@ bool KernelWarningCollector::LoadKernelWarning(std::string* content,
   *signature = content->substr(0, end_position);
   return true;
 }
+
+// Extract the crashing function name from the signature.
+// Signature example: 6a839c19-lkdtm_do_action+0x225/0x5bc
+constexpr LazyRE2 sig_re = {R"(^[0-9a-fA-F]+-([0-9a-zA-Z_]+)\+.*$)"};
 
 bool KernelWarningCollector::Collect(WarningType type) {
   std::string reason = "normal collection";
@@ -80,8 +86,18 @@ bool KernelWarningCollector::Collect(WarningType type) {
   else
     exec_name = kGenericWarningExecName;
 
-  std::string dump_basename =
-      FormatDumpBasename(exec_name, time(nullptr), kKernelPid);
+  std::string func_name;
+  // Attempt to make the exec_name more unique to avoid collisions.
+  if (RE2::FullMatch(warning_signature, *sig_re, &func_name)) {
+    func_name.insert(func_name.begin(), '_');
+  } else {
+    LOG(WARNING) << "Couldn't extract function name from signature. "
+                    "Going on without it.";
+    func_name.clear();
+  }
+
+  std::string dump_basename = FormatDumpBasename(
+      base::StrCat({exec_name, func_name}), time(nullptr), kKernelPid);
   FilePath log_path =
       GetCrashPath(root_crash_directory, dump_basename, "log.gz");
   FilePath meta_path =

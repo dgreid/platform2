@@ -78,6 +78,18 @@ TEST_F(KernelWarningCollectorTest, CollectOK) {
                             "<remaining log contents>"));
   EXPECT_TRUE(
       collector_.Collect(KernelWarningCollector::WarningType::kGeneric));
+  EXPECT_TRUE(DirectoryHasFileWithPattern(
+      test_crash_directory_, "kernel_warning_iwl_mvm_rm_sta.*.meta"));
+}
+
+TEST_F(KernelWarningCollectorTest, CollectOKBadSig) {
+  // Collector produces a crash report.
+  ASSERT_TRUE(test_util::CreateFile(test_path_,
+                                    "70e67541-0x161/0x344 [iwlmvm]()\n"
+                                    "\n"
+                                    "<remaining log contents>"));
+  EXPECT_TRUE(
+      collector_.Collect(KernelWarningCollector::WarningType::kGeneric));
   EXPECT_TRUE(DirectoryHasFileWithPattern(test_crash_directory_,
                                           "kernel_warning.*.meta"));
 }
@@ -90,8 +102,8 @@ TEST_F(KernelWarningCollectorTest, CollectWifiWarningOK) {
                             "\n"
                             "<remaining log contents>"));
   EXPECT_TRUE(collector_.Collect(KernelWarningCollector::WarningType::kWifi));
-  EXPECT_TRUE(DirectoryHasFileWithPattern(test_crash_directory_,
-                                          "kernel_wifi_warning.*.meta"));
+  EXPECT_TRUE(DirectoryHasFileWithPattern(
+      test_crash_directory_, "kernel_wifi_warning_iwl_mvm_rm_sta.*.meta"));
 }
 
 TEST_F(KernelWarningCollectorTest, FeedbackNotAllowed) {
