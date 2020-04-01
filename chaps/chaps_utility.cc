@@ -416,7 +416,6 @@ string AttributeToString(CK_ATTRIBUTE_TYPE attribute) {
       ss << attribute;
       return ss.str();
   }
-  return string();
 }
 
 bool StringToAttribute(string attribute_string, CK_ATTRIBUTE_TYPE* output) {
@@ -564,7 +563,6 @@ static string PrintClass(const vector<uint8_t>& value) {
       ss << num_value;
       return ss.str();
   }
-  return string();
 }
 
 static string PrintKeyType(const vector<uint8_t>& value) {
@@ -595,7 +593,6 @@ static string PrintKeyType(const vector<uint8_t>& value) {
       ss << num_value;
       return ss.str();
   }
-  return string();
 }
 
 static string PrintYesNo(const vector<uint8_t>& value) {
@@ -634,7 +631,6 @@ string ValueToString(CK_ATTRIBUTE_TYPE attribute,
     default:
       return "***";
   }
-  return string();
 }
 
 string PrintAttributes(const vector<uint8_t>& serialized,
