@@ -703,7 +703,7 @@ void ArcSetup::SetUpBinFmtMisc(ArcBinaryTranslationType bin_type) {
 }
 
 void ArcSetup::SetUpAndroidData() {
-  EXIT_IF(!InstallDirectory(0700, kHostRootUid, kHostRootGid,
+  EXIT_IF(!InstallDirectory(0700, kRootUid, kRootGid,
                             arc_paths_->android_data_directory));
   // To make our bind-mount business easier, we first bind-mount the real
   // android-data directory to a fixed path ($ANDROID_MUTABLE_SOURCE).
