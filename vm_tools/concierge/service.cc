@@ -904,13 +904,6 @@ bool Service::Init() {
   sigaddset(&mask, SIGCHLD);
   sigaddset(&mask, SIGTERM);
 
-  // Add CAP_SETGID to the list of ambient capabilities to allow crosvm
-  // establish proper gid map in its plugin jail.
-  if (prctl(PR_CAP_AMBIENT, PR_CAP_AMBIENT_RAISE, CAP_SETGID, 0, 0)) {
-    PLOG(ERROR) << "Failed to add CAP_SETGID to the ambient capabilities";
-    return false;
-  }
-
   // Restore process' "dumpable" flag so that /proc will be writable.
   // We need it to properly set up jail for Plugin VM helper process.
   if (prctl(PR_SET_DUMPABLE, 1) < 0) {
