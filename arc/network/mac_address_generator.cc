@@ -37,20 +37,4 @@ MacAddress MacAddressGenerator::GetStable(uint8_t id) const {
   return addr;
 }
 
-bool MacAddressGenerator::Insert(const MacAddress& addr) {
-  // Validate the address.
-  if ((addr[0] & 0x02U) == 0) {
-    // Locally administered bit is not set.
-    return false;
-  }
-  if ((addr[0] & 0x01U) != 0) {
-    // Multicast bit is set.
-    return false;
-  }
-
-  addrs_.insert(addr);
-
-  return true;
-}
-
 }  // namespace arc_networkd
