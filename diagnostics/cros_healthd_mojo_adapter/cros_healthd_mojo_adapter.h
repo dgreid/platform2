@@ -11,9 +11,9 @@
 
 #include <base/macros.h>
 #include <base/optional.h>
-#include <base/threading/thread.h>
-#include <mojo/core/embedder/scoped_ipc_support.h>
 
+#include "diagnostics/cros_healthd_mojo_adapter/cros_healthd_mojo_adapter_delegate.h"
+#include "diagnostics/cros_healthd_mojo_adapter/cros_healthd_mojo_adapter_delegate_impl.h"
 #include "mojo/cros_healthd.mojom.h"
 
 namespace diagnostics {
@@ -23,7 +23,9 @@ namespace diagnostics {
 // processes whose only mojo connection is to cros_healthd.
 class CrosHealthdMojoAdapter final {
  public:
-  CrosHealthdMojoAdapter();
+  // Override |delegate| for testing only.
+  explicit CrosHealthdMojoAdapter(
+      CrosHealthdMojoAdapterDelegate* delegate = nullptr);
   ~CrosHealthdMojoAdapter();
 
   // Gets telemetry information from cros_healthd.
@@ -101,11 +103,10 @@ class CrosHealthdMojoAdapter final {
   // Establishes a mojo connection with cros_healthd.
   void Connect();
 
-  // IPC threads.
-  base::Thread mojo_thread_{"Mojo Thread"};
-  base::Thread dbus_thread_{"D-Bus Thread"};
-
-  std::unique_ptr<mojo::core::ScopedIPCSupport> ipc_support_;
+  // Default delegate implementation.
+  std::unique_ptr<CrosHealthdMojoAdapterDelegateImpl> delegate_impl_;
+  // Unowned. Must outlive this instance.
+  CrosHealthdMojoAdapterDelegate* delegate_;
 
   // Binds to an implementation of CrosHealthdServiceFactory. The implementation
   // is provided by cros_healthd. Allows calling cros_healthd's mojo factory
