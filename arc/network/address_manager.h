@@ -36,8 +36,10 @@ class BRILLO_EXPORT AddressManager {
 
   // Generates a MAC address guaranteed to be unique for the lifetime of this
   // object.
+  // If |index| is provided, a MAC address will be returned that is stable
+  // across all invocations and instantions.
   // Virtual for testing only.
-  virtual MacAddress GenerateMacAddress();
+  virtual MacAddress GenerateMacAddress(uint8_t index = kAnySubnetIndex);
 
   // Allocates a subnet from the specified guest network pool if available.
   // Returns nullptr if the guest was configured or no more subnets are

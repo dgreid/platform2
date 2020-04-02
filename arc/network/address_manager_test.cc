@@ -12,6 +12,7 @@
 
 #include "arc/network/net_util.h"
 
+#include <base/rand_util.h>
 #include <gtest/gtest.h>
 
 namespace arc_networkd {
@@ -122,6 +123,20 @@ TEST(AddressManager, SubnetIndexing) {
   EXPECT_FALSE(mgr.AllocateIPv4Subnet(AddressManager::Guest::VM_TERMINA, 1));
   EXPECT_TRUE(mgr.AllocateIPv4Subnet(AddressManager::Guest::VM_PLUGIN, 1));
   EXPECT_FALSE(mgr.AllocateIPv4Subnet(AddressManager::Guest::CONTAINER, 1));
+}
+
+TEST(AddressManager, StableMacAddresses) {
+  AddressManager mgr({});
+  EXPECT_NE(mgr.GenerateMacAddress(), mgr.GenerateMacAddress());
+  EXPECT_NE(mgr.GenerateMacAddress(kAnySubnetIndex),
+            mgr.GenerateMacAddress(kAnySubnetIndex));
+  for (int i = 0; i < 100; ++i) {
+    uint8_t index = 0;
+    while (index == 0) {
+      base::RandBytes(&index, 1);
+    }
+    EXPECT_EQ(mgr.GenerateMacAddress(index), mgr.GenerateMacAddress(index));
+  }
 }
 
 }  // namespace arc_networkd

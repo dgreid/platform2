@@ -148,7 +148,7 @@ std::unique_ptr<Device> CrostiniService::AddTAP(bool is_termina,
     }
   }
 
-  const auto mac_addr = addr_mgr_->GenerateMacAddress();
+  const auto mac_addr = addr_mgr_->GenerateMacAddress(subnet_index);
   const std::string tap =
       datapath_->AddTAP("" /* auto-generate name */, &mac_addr,
                         host_ipv4_addr.get(), vm_tools::kCrosVmUser);
