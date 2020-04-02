@@ -13,7 +13,8 @@
 
 #include <base/logging.h>
 #include <base/no_destructor.h>
-#include <base/threading/platform_thread.h>
+#include <base/run_loop.h>
+#include <base/threading/thread_task_runner_handle.h>
 #include <base/time/time.h>
 
 #include "diagnostics/common/mojo_utils.h"
@@ -91,9 +92,18 @@ std::string GetSwitchFromRoutine(mojo_ipc::DiagnosticRoutineEnum routine) {
 }  // namespace
 
 DiagActions::DiagActions(base::TimeDelta polling_interval,
-                         base::TimeDelta maximum_execution_time)
+                         base::TimeDelta maximum_execution_time,
+                         const base::TickClock* tick_clock)
     : kPollingInterval(polling_interval),
-      kMaximumExecutionTime(maximum_execution_time) {}
+      kMaximumExecutionTime(maximum_execution_time) {
+  if (tick_clock) {
+    tick_clock_ = tick_clock;
+  } else {
+    default_tick_clock_ = std::make_unique<base::DefaultTickClock>();
+    tick_clock_ = default_tick_clock_.get();
+  }
+  DCHECK(tick_clock_);
+}
 
 DiagActions::~DiagActions() = default;
 
@@ -221,12 +231,11 @@ void DiagActions::ForceCancelAtPercent(uint32_t percent) {
 
 bool DiagActions::PollRoutineAndProcessResult() {
   mojo_ipc::RoutineUpdatePtr response;
-  const base::TimeTicks start_time = base::TimeTicks::Now();
+  const base::TimeTicks start_time = tick_clock_->NowTicks();
 
   do {
     // Poll the routine until it's either interactive and requires user input,
     // or it's noninteractive but no longer running.
-    // TODO(crbug/1062436): change base::TimeTicks::Now() to a TickClock.
     response = adapter_.GetRoutineUpdate(
         id_, mojo_ipc::DiagnosticRoutineCommandEnum::kGetStatus,
         true /* include_output */);
@@ -240,13 +249,16 @@ bool DiagActions::PollRoutineAndProcessResult() {
       force_cancel_ = false;
     }
 
-    base::PlatformThread::Sleep(kPollingInterval);
+    base::RunLoop run_loop;
+    base::ThreadTaskRunnerHandle::Get()->PostDelayedTask(
+        FROM_HERE, run_loop.QuitClosure(), kPollingInterval);
+    run_loop.Run();
   } while (
       !response.is_null() &&
       response->routine_update_union->is_noninteractive_update() &&
       response->routine_update_union->get_noninteractive_update()->status ==
           mojo_ipc::DiagnosticRoutineStatusEnum::kRunning &&
-      base::TimeTicks::Now() < start_time + kMaximumExecutionTime);
+      tick_clock_->NowTicks() < start_time + kMaximumExecutionTime);
 
   if (response.is_null()) {
     std::cout << "No GetRoutineUpdateResponse received." << std::endl;

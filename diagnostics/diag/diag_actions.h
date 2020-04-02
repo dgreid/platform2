@@ -6,10 +6,13 @@
 #define DIAGNOSTICS_DIAG_DIAG_ACTIONS_H_
 
 #include <cstdint>
+#include <memory>
 #include <string>
 
 #include <base/macros.h>
 #include <base/optional.h>
+#include <base/time/default_tick_clock.h>
+#include <base/time/tick_clock.h>
 #include <base/time/time.h>
 
 #include "diagnostics/cros_healthd_mojo_adapter/cros_healthd_mojo_adapter.h"
@@ -24,8 +27,10 @@ class DiagActions final {
   // The two TimeDelta inputs are used to configure this instance's polling
   // behavior - the time between polls, and the maximum time before giving up on
   // a running routine.
+  // Override |tick_clock| for testing only.
   DiagActions(base::TimeDelta polling_interval,
-              base::TimeDelta maximum_execution_time);
+              base::TimeDelta maximum_execution_time,
+              const base::TickClock* tick_clock = nullptr);
   ~DiagActions();
 
   // Print a list of routines available on the platform. Returns true iff all
@@ -97,6 +102,12 @@ class DiagActions final {
   const base::TimeDelta kPollingInterval;
   // Maximum time we're willing to wait for a routine to finish.
   const base::TimeDelta kMaximumExecutionTime;
+
+  // Tracks the passage of time.
+  std::unique_ptr<base::DefaultTickClock> default_tick_clock_;
+  // Unowned pointer which should outlive this instance. Allows the default tick
+  // clock to be overridden for testing.
+  const base::TickClock* tick_clock_;
 
   DISALLOW_COPY_AND_ASSIGN(DiagActions);
 };
