@@ -466,6 +466,25 @@ std::string GetOrCreateArcSalt() {
   return arc_salt;
 }
 
+bool IsChromeOSUserAvailable(Mode mode) {
+  switch (mode) {
+    case Mode::BOOT_CONTINUE:
+    case Mode::CREATE_DATA:
+    case Mode::REMOVE_DATA:
+      return true;
+    case Mode::SETUP:
+    case Mode::STOP:
+    case Mode::ONETIME_SETUP:
+    case Mode::ONETIME_STOP:
+    case Mode::PRE_CHROOT:
+    case Mode::MOUNT_SDCARD:
+    case Mode::UNMOUNT_SDCARD:
+    case Mode::UPDATE_RESTORECON_LAST:
+    case Mode::UNKNOWN:
+      return false;
+  }
+}
+
 }  // namespace
 
 // A struct that holds all the FilePaths ArcSetup uses.
@@ -474,7 +493,7 @@ struct ArcPaths {
     base::FilePath android_data;
     base::FilePath android_data_old;
 
-    if (mode == Mode::BOOT_CONTINUE || mode == Mode::REMOVE_DATA) {
+    if (IsChromeOSUserAvailable(mode)) {
       std::string chromeos_user = config.GetStringOrDie("CHROMEOS_USER");
       const base::FilePath root_path =
           brillo::cryptohome::home::GetRootPath(chromeos_user);
@@ -563,7 +582,8 @@ ArcSetup::ArcSetup(Mode mode, const base::FilePath& config_json)
       arc_mounter_(GetDefaultMounter()),
       arc_paths_(ArcPaths::Create(mode_, config_)),
       arc_setup_metrics_(std::make_unique<ArcSetupMetrics>()) {
-  CHECK(mode == Mode::REMOVE_DATA || !config_json.empty());
+  CHECK(mode == Mode::CREATE_DATA || mode == Mode::REMOVE_DATA ||
+        !config_json.empty());
 }
 
 ArcSetup::~ArcSetup() = default;
@@ -699,21 +719,24 @@ void ArcSetup::SetUpBinFmtMisc(ArcBinaryTranslationType bin_type) {
       arc_paths_->binfmt_misc_directory));
 }
 
-void ArcSetup::SetUpAndroidData() {
+void ArcSetup::SetUpAndroidData(bool bind_mount) {
   EXIT_IF(!InstallDirectory(0700, kRootUid, kRootGid,
                             arc_paths_->android_data_directory));
+
+  // match android/system/core/rootdir/init.rc
+  EXIT_IF(!InstallDirectory(0771, kSystemUid, kSystemGid,
+                            arc_paths_->android_data_directory.Append("data")));
+  EXIT_IF(
+      !InstallDirectory(0770, kSystemUid, kCacheGid,
+                        arc_paths_->android_data_directory.Append("cache")));
+
+  if (!bind_mount)
+    return;
   // To make our bind-mount business easier, we first bind-mount the real
   // android-data directory to a fixed path ($ANDROID_MUTABLE_SOURCE).
   // Then we do not need to pass the android-data path to other processes.
   EXIT_IF(!arc_mounter_->BindMount(arc_paths_->android_data_directory,
                                    arc_paths_->android_mutable_source));
-
-  // match android/system/core/rootdir/init.rc
-  EXIT_IF(!InstallDirectory(0771, kSystemUid, kSystemGid,
-                            arc_paths_->android_mutable_source.Append("data")));
-  EXIT_IF(
-      !InstallDirectory(0770, kSystemUid, kCacheGid,
-                        arc_paths_->android_mutable_source.Append("cache")));
 }
 
 void ArcSetup::UnmountSdcard() {
@@ -2069,7 +2092,7 @@ void ArcSetup::OnBootContinue() {
   // session_manager can delete (to be more precise, move) the directory
   // on opt-out. Since this creates cache and data directories when they
   // don't exist, this has to be done before calling ShareAndroidData().
-  SetUpAndroidData();
+  SetUpAndroidData(/*bind_mount=*/true);
 
   if (GetSdkVersion() <= AndroidSdkVersion::ANDROID_P) {
     if (!InstallLinksToHostSideCode()) {
@@ -2156,6 +2179,12 @@ void ArcSetup::OnRemoveData() {
                                  arc_paths_->android_data_old_directory));
 }
 
+void ArcSetup::OnCreateData() {
+  // Bind mounting is not needed here because ARCVM does not use
+  // |kAndroidRootfsDirectory|.
+  SetUpAndroidData(/*bind_mount=*/false);
+}
+
 void ArcSetup::OnMountSdcard() {
   // Set up sdcard asynchronously from arc-sdcard so that waiting on installd
   // does not add latency to boot-continue (and result in session-manager
@@ -2239,6 +2268,9 @@ void ArcSetup::Run() {
       break;
     case Mode::PRE_CHROOT:
       OnPreChroot();
+      break;
+    case Mode::CREATE_DATA:
+      OnCreateData();
       break;
     case Mode::REMOVE_DATA:
       OnRemoveData();

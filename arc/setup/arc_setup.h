@@ -67,6 +67,7 @@ enum class Mode {
   ONETIME_STOP,
 
   PRE_CHROOT,
+  CREATE_DATA,  // for ARCVM
   REMOVE_DATA,
   MOUNT_SDCARD,
   UNMOUNT_SDCARD,
@@ -128,8 +129,9 @@ class ArcSetup {
   // Sets up a dummy android-data directory on tmpfs.
   void SetUpDummyAndroidDataOnTmpfs();
 
-  // Sets up android-data directory.
-  void SetUpAndroidData();
+  // Sets up android-data directory. If |bind_mount| is true, it mounts
+  // /home/root/<hash>/android-data to |kAndroidRootfsDirectory|.
+  void SetUpAndroidData(bool bind_mount);
 
   // Sets up shared APK cache directory.
   void SetUpSharedApkDirectory();
@@ -350,7 +352,10 @@ class ArcSetup {
   // Called when arc-setup is called with --mode=pre-chroot.
   void OnPreChroot();
 
-  // Called when arc-setup is called with --mode=remove-data.
+  // Called when arc-create-data is executed.
+  void OnCreateData();
+
+  // Called when arc-remove-data is executed.
   void OnRemoveData();
 
   // Called when arc-setup is called with --mode=mount-sdcard.
