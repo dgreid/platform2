@@ -996,7 +996,8 @@ template <class StartXXRequest>
 std::tuple<bool, StartXXRequest, StartVmResponse> Service::StartVmHelper(
     dbus::MethodCall* method_call,
     dbus::MessageReader* reader,
-    dbus::MessageWriter* writer) {
+    dbus::MessageWriter* writer,
+    bool allow_zero_cpus) {
   DCHECK(sequence_checker_.CalledOnValidSequence());
 
   StartXXRequest request;
@@ -1012,7 +1013,7 @@ std::tuple<bool, StartXXRequest, StartVmResponse> Service::StartVmHelper(
   }
 
   // Check the CPU count.
-  if (request.cpus() == 0 ||
+  if ((request.cpus() == 0 && !allow_zero_cpus) ||
       request.cpus() > base::SysInfo::NumberOfProcessors()) {
     LOG(ERROR) << "Invalid number of CPUs: " << request.cpus();
     response.set_failure_reason("Invalid CPU count");
@@ -1073,8 +1074,8 @@ std::unique_ptr<dbus::Response> Service::StartVm(
   dbus::MessageWriter writer(dbus_response.get());
   StartVmRequest request;
   StartVmResponse response;
-  std::tie(success, request, response) =
-      StartVmHelper<StartVmRequest>(method_call, &reader, &writer);
+  std::tie(success, request, response) = StartVmHelper<StartVmRequest>(
+      method_call, &reader, &writer, true /* allow_zero_cpus */);
 
   if (!success) {
     return dbus_response;

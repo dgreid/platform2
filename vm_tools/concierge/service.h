@@ -70,7 +70,8 @@ class Service final {
   std::tuple<bool, StartXXRequest, StartVmResponse> StartVmHelper(
       dbus::MethodCall* method_call,
       dbus::MessageReader* reader,
-      dbus::MessageWriter* writer);
+      dbus::MessageWriter* writer,
+      bool allow_zero_cpus = false);
 
   // Handles a request to start a VM.  |method_call| must have a StartVmRequest
   // protobuf serialized as an array of bytes.
