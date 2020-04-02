@@ -5,6 +5,7 @@
 #include <stdint.h>
 
 #include <functional>
+#include <map>
 #include <unordered_set>
 
 #include <gtest/gtest.h>
@@ -87,6 +88,24 @@ TEST(MacAddressGenerator, Multicast) {
   addr[0] |= static_cast<uint8_t>(0x01);
 
   EXPECT_FALSE(generator.Insert(addr));
+}
+
+TEST(MacAddressGenerator, Stable) {
+  MacAddressGenerator generator1, generator2;
+  std::map<uint8_t, MacAddress> addrs;
+  for (uint8_t i = 0;; ++i) {
+    addrs[i] = generator1.GetStable(i);
+    EXPECT_EQ(static_cast<uint8_t>(0x02),
+              addrs[i][0] & static_cast<uint8_t>(0x02));
+    EXPECT_EQ(static_cast<uint8_t>(0),
+              addrs[i][0] & static_cast<uint8_t>(0x01));
+    if (i == 255)
+      break;
+  }
+  EXPECT_EQ(addrs.size(), 256);
+  for (const auto addr : addrs) {
+    EXPECT_EQ(addr.second, generator2.GetStable(addr.first));
+  }
 }
 
 }  // namespace arc_networkd
