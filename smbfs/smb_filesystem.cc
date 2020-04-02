@@ -15,6 +15,7 @@
 #include <base/strings/string_piece.h>
 #include <base/strings/string_util.h>
 
+#include "smbfs/samba_interface_impl.h"
 #include "smbfs/util.h"
 
 namespace smbfs {
@@ -32,30 +33,8 @@ constexpr mode_t kFileModeMask = kAllowedFileTypes | 0770;
 constexpr int kStatCacheSize = 1024;
 constexpr double kStatCacheTimeoutSeconds = kAttrTimeoutSeconds;
 
-void SambaLog(void* private_ptr, int level, const char* msg) {
-  VLOG(level) << "libsmbclient: " << msg;
-}
-
 bool IsAllowedFileMode(mode_t mode) {
   return mode & kAllowedFileTypes;
-}
-
-void CopyCredential(const std::string& cred, char* out, int out_len) {
-  DCHECK_GT(out_len, 0);
-  if (cred.size() > out_len - 1) {
-    LOG(ERROR) << "Credential string longer than buffer provided";
-  }
-  base::strlcpy(out, cred.c_str(), out_len);
-}
-
-void CopyPassword(const password_provider::Password& password,
-                  char* out,
-                  int out_len) {
-  DCHECK_GT(out_len, 0);
-  if (password.size() > out_len - 1) {
-    LOG(ERROR) << "Password string longer than buffer provided";
-  }
-  base::strlcpy(out, password.GetRaw(), out_len);
 }
 
 }  // namespace
@@ -75,7 +54,6 @@ SmbFilesystem::SmbFilesystem(Delegate* delegate, Options options)
       gid_(options.gid),
       use_kerberos_(options.use_kerberos),
       samba_thread_(kSambaThreadName),
-      credentials_(std::move(options.credentials)),
       stat_cache_(kStatCacheSize) {
   DCHECK(delegate_);
 
@@ -86,42 +64,8 @@ SmbFilesystem::SmbFilesystem(Delegate* delegate, Options options)
   CHECK(!share_path_.empty());
   CHECK_NE(share_path_.back(), '/');
 
-  context_ = smbc_new_context();
-  CHECK(context_);
-  CHECK(smbc_init_context(context_));
-
-  smbc_setOptionUserData(context_, this);
-  smbc_setOptionUseKerberos(context_, 1);
-  // Allow fallback to NTLMv2 authentication if Kerberos fails. This does not
-  // prevent fallback to anonymous auth if authentication fails.
-  smbc_setOptionFallbackAfterKerberos(context_, options.allow_ntlm);
-  LOG_IF(WARNING, !options.allow_ntlm) << "NTLM protocol is disabled";
-  smbc_setFunctionAuthDataWithContext(context_, &SmbFilesystem::GetUserAuth);
-
-  smbc_setLogCallback(context_, nullptr, &SambaLog);
-  int vlog_level = logging::GetVlogVerbosity();
-  if (vlog_level > 0) {
-    smbc_setDebug(context_, vlog_level);
-  }
-
-  smbc_close_ctx_ = smbc_getFunctionClose(context_);
-  smbc_closedir_ctx_ = smbc_getFunctionClosedir(context_);
-  smbc_ftruncate_ctx_ = smbc_getFunctionFtruncate(context_);
-  smbc_lseek_ctx_ = smbc_getFunctionLseek(context_);
-  smbc_lseekdir_ctx_ = smbc_getFunctionLseekdir(context_);
-  smbc_mkdir_ctx_ = smbc_getFunctionMkdir(context_);
-  smbc_open_ctx_ = smbc_getFunctionOpen(context_);
-  smbc_opendir_ctx_ = smbc_getFunctionOpendir(context_);
-  smbc_read_ctx_ = smbc_getFunctionRead(context_);
-  smbc_readdir_ctx_ = smbc_getFunctionReaddir(context_);
-  smbc_readdirplus_ctx_ = smbc_getFunctionReaddirPlus(context_);
-  smbc_rename_ctx_ = smbc_getFunctionRename(context_);
-  smbc_rmdir_ctx_ = smbc_getFunctionRmdir(context_);
-  smbc_stat_ctx_ = smbc_getFunctionStat(context_);
-  smbc_statvfs_ctx_ = smbc_getFunctionStatVFS(context_);
-  smbc_telldir_ctx_ = smbc_getFunctionTelldir(context_);
-  smbc_unlink_ctx_ = smbc_getFunctionUnlink(context_);
-  smbc_write_ctx_ = smbc_getFunctionWrite(context_);
+  samba_impl_ = std::make_unique<SambaInterfaceImpl>(
+      std::move(options.credentials), options.allow_ntlm);
 
   CHECK(samba_thread_.Start());
 }
@@ -135,11 +79,10 @@ SmbFilesystem::SmbFilesystem(Delegate* delegate, const std::string& share_path)
 }
 
 SmbFilesystem::~SmbFilesystem() {
-  if (context_) {
+  if (samba_impl_) {
     // Stop the Samba processing thread before destroying the context to avoid a
     // UAF on the context.
     samba_thread_.Stop();
-    smbc_free_context(context_, 1 /* shutdown_ctx */);
   }
 }
 
@@ -147,11 +90,16 @@ base::WeakPtr<SmbFilesystem> SmbFilesystem::GetWeakPtr() {
   return weak_factory_.GetWeakPtr();
 }
 
+void SmbFilesystem::SetSambaInterface(
+    std::unique_ptr<SambaInterface> samba_interface) {
+  samba_impl_ = std::move(samba_interface);
+}
+
 SmbFilesystem::ConnectError SmbFilesystem::EnsureConnected() {
-  SMBCFILE* dir = smbc_opendir_ctx_(context_, resolved_share_path_.c_str());
-  if (!dir) {
-    int err = errno;
-    PLOG(INFO) << "EnsureConnected smbc_opendir_ctx_ failed";
+  SMBCFILE* dir = nullptr;
+  int err = samba_impl_->OpenDirectory(resolved_share_path_, &dir);
+  if (err) {
+    LOG(INFO) << "EnsureConnected OpenDirectory failed";
     switch (err) {
       case EPERM:
       case EACCES:
@@ -176,8 +124,12 @@ SmbFilesystem::ConnectError SmbFilesystem::EnsureConnected() {
     }
   }
 
-  smbc_closedir_ctx_(context_, dir);
   connected_ = true;
+
+  err = samba_impl_->CloseDirectory(dir);
+  LOG_IF(WARNING, err) << "CloseDirectory during EnsureConnected failed: "
+                       << base::safe_strerror(err);
+
   return ConnectError::kOk;
 }
 
@@ -217,25 +169,6 @@ struct stat SmbFilesystem::MakeStat(ino_t inode,
   stat.st_ctim = in_stat.st_ctim;
   stat.st_mtim = in_stat.st_mtim;
   return stat;
-}
-
-mode_t SmbFilesystem::MakeStatModeBitsFromDOSAttributes(uint16_t attrs) const {
-  mode_t mode = 0;
-
-  if (attrs & SMBC_DOS_MODE_DIRECTORY) {
-    mode = S_IFDIR;
-  } else {
-    mode = S_IFREG;
-  }
-
-  // All files and directories are read / write unless read only.
-  if (attrs & SMBC_DOS_MODE_READONLY) {
-    mode |= S_IRUSR;
-  } else {
-    mode |= S_IRUSR | S_IWUSR;
-  }
-
-  return MakeStatModeBits(mode);
 }
 
 mode_t SmbFilesystem::MakeStatModeBits(mode_t in_mode) const {
@@ -355,35 +288,7 @@ void SmbFilesystem::OnRequestCredentialsDone(
     return;
   }
 
-  base::AutoLock l(lock_);
-  credentials_ = std::move(credentials);
-}
-
-// static
-void SmbFilesystem::GetUserAuth(SMBCCTX* context,
-                                const char* server,
-                                const char* share,
-                                char* workgroup,
-                                int workgroup_len,
-                                char* username,
-                                int username_len,
-                                char* password,
-                                int password_len) {
-  SmbFilesystem* fs =
-      static_cast<SmbFilesystem*>(smbc_getOptionUserData(context));
-  DCHECK(fs);
-
-  base::AutoLock l(fs->lock_);
-  if (!fs->credentials_) {
-    return;
-  }
-
-  CopyCredential(fs->credentials_->workgroup, workgroup, workgroup_len);
-  CopyCredential(fs->credentials_->username, username, username_len);
-  password[0] = 0;
-  if (fs->credentials_->password) {
-    CopyPassword(*fs->credentials_->password, password, password_len);
-  }
+  samba_impl_->UpdateCredentials(std::move(credentials));
 }
 
 void SmbFilesystem::StatFs(std::unique_ptr<StatFsRequest> request,
@@ -402,23 +307,14 @@ void SmbFilesystem::StatFsInternal(std::unique_ptr<StatFsRequest> request,
 
   std::string share_file_path = ShareFilePathFromInode(inode);
   struct statvfs smb_statvfs = {0};
-  // libsmbclient's statvfs() takes a non-const char* as path, hence the
-  // address-of-first-element pattern/hack.
-  int error = smbc_statvfs_ctx_(context_, &share_file_path[0], &smb_statvfs);
-  if (error < 0) {
-    request->ReplyError(errno);
+  int error = samba_impl_->StatVfs(share_file_path, &smb_statvfs);
+  if (error) {
+    VLOG(1) << "StatVfs path: " << share_file_path
+            << " failed: " << base::safe_strerror(error);
+    request->ReplyError(error);
     return;
   }
 
-  if ((smb_statvfs.f_flag & SMBC_VFS_FEATURE_NO_UNIXCIFS) &&
-      smb_statvfs.f_frsize) {
-    // If the server does not support the UNIX CIFS extensions, libsmbclient
-    // incorrectly fills out the value of f_frsize. Instead of providing the
-    // size in bytes, it provides it as a multiple of f_bsize. See the
-    // implementation of SMBC_fstatvfs_ctx() in the Samba source tree for
-    // details.
-    smb_statvfs.f_frsize *= smb_statvfs.f_bsize;
-  }
   request->ReplyStatFs(smb_statvfs);
 }
 
@@ -447,9 +343,11 @@ void SmbFilesystem::LookupInternal(std::unique_ptr<EntryRequest> request,
   ino_t inode = inode_map_.IncInodeRef(file_path);
   struct stat smb_stat = {0};
   if (!GetCachedInodeStat(inode, &smb_stat)) {
-    int error = smbc_stat_ctx_(context_, share_file_path.c_str(), &smb_stat);
-    if (error < 0) {
-      request->ReplyError(errno);
+    int error = samba_impl_->Stat(share_file_path, &smb_stat);
+    if (error) {
+      VLOG(1) << "Stat path: " << share_file_path
+              << " failed: " << base::safe_strerror(error);
+      request->ReplyError(error);
       inode_map_.Forget(inode, 1);
       return;
     } else if (!IsAllowedFileMode(smb_stat.st_mode)) {
@@ -502,12 +400,15 @@ void SmbFilesystem::GetAttrInternal(std::unique_ptr<AttrRequest> request,
   const std::string share_file_path = ShareFilePathFromInode(inode);
 
   if (!GetCachedInodeStat(inode, &smb_stat)) {
-    int error = smbc_stat_ctx_(context_, share_file_path.c_str(), &smb_stat);
-    if (error < 0) {
-      int error = errno;
+    int error = samba_impl_->Stat(share_file_path, &smb_stat);
+    if (error) {
+      VLOG(1) << "Stat path: " << share_file_path
+              << " failed: " << base::safe_strerror(error);
+
       if (inode == FUSE_ROOT_ID) {
         MaybeUpdateCredentials(error);
       }
+
       request->ReplyError(error);
       return;
     }
@@ -561,9 +462,11 @@ void SmbFilesystem::SetAttrInternal(std::unique_ptr<AttrRequest> request,
   const std::string share_file_path = ShareFilePathFromInode(inode);
 
   struct stat smb_stat = {0};
-  int error = smbc_stat_ctx_(context_, share_file_path.c_str(), &smb_stat);
-  if (error < 0) {
-    request->ReplyError(errno);
+  int error = samba_impl_->Stat(share_file_path, &smb_stat);
+  if (error) {
+    VLOG(1) << "Stat path: " << share_file_path
+            << " failed: " << base::safe_strerror(error);
+    request->ReplyError(error);
     return;
   }
   if (smb_stat.st_mode & S_IFDIR) {
@@ -586,27 +489,30 @@ void SmbFilesystem::SetAttrInternal(std::unique_ptr<AttrRequest> request,
       return;
     }
   } else {
-    file = smbc_open_ctx_(context_, share_file_path.c_str(), O_WRONLY, 0);
-    if (!file) {
-      int err = errno;
-      VPLOG(1) << "smbc_open path: " << share_file_path << " failed";
-      request->ReplyError(err);
+    error = samba_impl_->OpenFile(share_file_path, O_WRONLY, 0, &file);
+    if (error) {
+      VLOG(1) << "OpenFile path: " << share_file_path
+              << " failed: " << base::safe_strerror(error);
+      request->ReplyError(error);
       return;
     }
 
     file_closer.ReplaceClosure(base::BindOnce(
-        [](SMBCCTX* context, SMBCFILE* file) {
-          if (smbc_getFunctionClose(context)(context, file) < 0) {
-            PLOG(ERROR) << "smbc_close failed on temporary setattr file";
+        [](SambaInterface* samba_impl, SMBCFILE* file) {
+          int error = samba_impl->CloseFile(file);
+          if (error) {
+            LOG(ERROR) << "CloseFile failed on temporary setattr file: "
+                       << base::safe_strerror(error);
           }
         },
-        context_, file));
+        samba_impl_.get(), file));
   }
 
-  if (smbc_ftruncate_ctx_(context_, file, attr.st_size) < 0) {
-    int err = errno;
-    VPLOG(1) << "smbc_ftruncate size: " << attr.st_size << " failed";
-    request->ReplyError(err);
+  error = samba_impl_->TruncateFile(file, attr.st_size);
+  if (error) {
+    VLOG(1) << "TruncateFile size: " << attr.st_size
+            << " failed: " << base::safe_strerror(error);
+    request->ReplyError(error);
     return;
   }
   reply_stat.st_size = attr.st_size;
@@ -639,11 +545,12 @@ void SmbFilesystem::OpenInternal(std::unique_ptr<OpenRequest> request,
   }
 
   const std::string share_file_path = ShareFilePathFromInode(inode);
-  SMBCFILE* file = smbc_open_ctx_(context_, share_file_path.c_str(), flags, 0);
-  if (!file) {
-    int err = errno;
-    VPLOG(1) << "smbc_open on path " << share_file_path << " failed";
-    request->ReplyError(err);
+  SMBCFILE* file = nullptr;
+  int error = samba_impl_->OpenFile(share_file_path, flags, 0, &file);
+  if (error) {
+    VLOG(1) << "OpenFile path " << share_file_path
+            << " failed: " << base::safe_strerror(error);
+    request->ReplyError(error);
     return;
   }
 
@@ -680,12 +587,12 @@ void SmbFilesystem::CreateInternal(std::unique_ptr<CreateRequest> request,
   const std::string share_file_path = MakeShareFilePath(file_path);
 
   // NOTE: |mode| appears to be ignored by libsmbclient.
-  SMBCFILE* file =
-      smbc_open_ctx_(context_, share_file_path.c_str(), flags, mode);
-  if (!file) {
-    int err = errno;
-    VPLOG(1) << "smbc_open path: " << share_file_path << " failed";
-    request->ReplyError(err);
+  SMBCFILE* file = nullptr;
+  int error = samba_impl_->OpenFile(share_file_path, flags, mode, &file);
+  if (error) {
+    VLOG(1) << "OpenFile path: " << share_file_path
+            << " failed: " << base::safe_strerror(error);
+    request->ReplyError(error);
     return;
   }
 
@@ -731,21 +638,23 @@ void SmbFilesystem::ReadInternal(std::unique_ptr<BufRequest> request,
     return;
   }
 
-  if (smbc_lseek_ctx_(context_, file, offset, SEEK_SET) < 0) {
-    int err = errno;
-    VPLOG(1) << "smbc_lseek path: " << ShareFilePathFromInode(inode)
-             << ", offset: " << offset << " failed";
-    request->ReplyError(err);
+  int error = samba_impl_->SeekFile(file, offset, SEEK_SET);
+  if (error) {
+    VLOG(1) << "SeekFile path: " << ShareFilePathFromInode(inode)
+            << ", offset: " << offset
+            << " failed: " << base::safe_strerror(error);
+    request->ReplyError(error);
     return;
   }
 
   std::vector<char> buf(size);
-  ssize_t bytes_read = smbc_read_ctx_(context_, file, buf.data(), size);
-  if (bytes_read < 0) {
-    int err = errno;
-    VPLOG(1) << "smbc_read path: " << ShareFilePathFromInode(inode)
-             << " offset: " << offset << ", size: " << size << " failed";
-    request->ReplyError(err);
+  size_t bytes_read = 0;
+  error = samba_impl_->ReadFile(file, buf.data(), size, &bytes_read);
+  if (error) {
+    VLOG(1) << "ReadFile path: " << ShareFilePathFromInode(inode)
+            << " offset: " << offset << ", size: " << size
+            << " failed: " << base::safe_strerror(error);
+    request->ReplyError(error);
     return;
   }
 
@@ -780,21 +689,22 @@ void SmbFilesystem::WriteInternal(std::unique_ptr<WriteRequest> request,
     return;
   }
 
-  if (smbc_lseek_ctx_(context_, file, offset, SEEK_SET) < 0) {
-    int err = errno;
-    VPLOG(1) << "smbc_lseek path: " << ShareFilePathFromInode(inode)
-             << ", offset: " << offset << " failed";
-    request->ReplyError(err);
+  int error = samba_impl_->SeekFile(file, offset, SEEK_SET);
+  if (error) {
+    VLOG(1) << "SeekFile path: " << ShareFilePathFromInode(inode)
+            << ", offset: " << offset
+            << " failed: " << base::safe_strerror(error);
+    request->ReplyError(error);
     return;
   }
 
-  ssize_t bytes_written =
-      smbc_write_ctx_(context_, file, buf.data(), buf.size());
-  if (bytes_written < 0) {
-    int err = errno;
-    VPLOG(1) << "smbc_write path: " << ShareFilePathFromInode(inode)
-             << " offset: " << offset << ", size: " << buf.size() << " failed";
-    request->ReplyError(err);
+  size_t bytes_written = 0;
+  error = samba_impl_->WriteFile(file, buf.data(), buf.size(), &bytes_written);
+  if (error) {
+    VLOG(1) << "WriteFile path: " << ShareFilePathFromInode(inode)
+            << " offset: " << offset << ", size: " << buf.size()
+            << " failed: " << base::safe_strerror(error);
+    request->ReplyError(error);
     return;
   }
 
@@ -826,8 +736,9 @@ void SmbFilesystem::ReleaseInternal(std::unique_ptr<SimpleRequest> request,
     return;
   }
 
-  if (smbc_close_ctx_(context_, file) < 0) {
-    request->ReplyError(errno);
+  int error = samba_impl_->CloseFile(file);
+  if (error) {
+    request->ReplyError(error);
     return;
   }
 
@@ -868,12 +779,12 @@ void SmbFilesystem::RenameInternal(std::unique_ptr<SimpleRequest> request,
   const std::string new_share_path =
       MakeShareFilePath(new_parent_path.Append(new_name));
 
-  if (smbc_rename_ctx_(context_, old_share_path.c_str(), context_,
-                       new_share_path.c_str()) < 0) {
-    int err = errno;
-    VPLOG(1) << "smbc_rename old_path: " << old_share_path
-             << " new_path: " << new_share_path << " failed";
-    request->ReplyError(err);
+  int error = samba_impl_->Rename(old_share_path, new_share_path);
+  if (error) {
+    VLOG(1) << "Rename old_path: " << old_share_path
+            << " new_path: " << new_share_path
+            << " failed: " << base::safe_strerror(error);
+    request->ReplyError(error);
     return;
   }
 
@@ -902,10 +813,11 @@ void SmbFilesystem::UnlinkInternal(std::unique_ptr<SimpleRequest> request,
   const std::string share_file_path =
       MakeShareFilePath(parent_path.Append(name));
 
-  if (smbc_unlink_ctx_(context_, share_file_path.c_str()) < 0) {
-    int err = errno;
-    VPLOG(1) << "smbc_unlink path: " << share_file_path << " failed";
-    request->ReplyError(err);
+  int error = samba_impl_->UnlinkFile(share_file_path);
+  if (error) {
+    VLOG(1) << "Unlink path: " << share_file_path
+            << " failed: " << base::safe_strerror(error);
+    request->ReplyError(error);
     return;
   }
 
@@ -934,9 +846,12 @@ void SmbFilesystem::OpenDirInternal(std::unique_ptr<OpenRequest> request,
   }
 
   const std::string share_dir_path = ShareFilePathFromInode(inode);
-  SMBCFILE* dir = smbc_opendir_ctx_(context_, share_dir_path.c_str());
-  if (!dir) {
-    request->ReplyError(errno);
+  SMBCFILE* dir = nullptr;
+  int error = samba_impl_->OpenDirectory(share_dir_path, &dir);
+  if (error) {
+    VLOG(1) << "OpenDirectory path: " << share_dir_path
+            << " failed: " << base::safe_strerror(error);
+    request->ReplyError(error);
     return;
   }
 
@@ -975,37 +890,36 @@ void SmbFilesystem::ReadDirInternal(std::unique_ptr<DirentryRequest> request,
   const base::FilePath dir_path = inode_map_.GetPath(inode);
   CHECK(!dir_path.empty()) << "Inode not found: " << inode;
 
-  int error = smbc_lseekdir_ctx_(context_, dir, offset);
-  if (error < 0) {
-    int err = errno;
-    VPLOG(1) << "smbc_lseekdir on path " << dir_path.value()
-             << ", offset: " << offset << " failed";
-    request->ReplyError(err);
+  int error = samba_impl_->SeekDirectory(dir, offset);
+  if (error) {
+    VLOG(1) << "SeekDirectory path: " << dir_path.value()
+            << ", offset: " << offset
+            << " failed: " << base::safe_strerror(error);
+    request->ReplyError(error);
     return;
   }
 
   while (true) {
-    // Explicitly set |errno| to 0 to detect EOF vs. error cases.
-    errno = 0;
-    // TODO(crbug.com/1054711): When smbc_readdirplus2 is available we can
-    // retrieve a struct stat along with libsmb_file_info.
-    const struct libsmb_file_info* dirent_info =
-        smbc_readdirplus_ctx_(context_, dir);
-    if (!dirent_info) {
-      if (!errno) {
-        // EOF.
-        break;
-      }
-      int err = errno;
-      VPLOG(1) << "smbc_readdirplus on path " << dir_path.value() << " failed";
-      request->ReplyError(err);
+    const struct libsmb_file_info* dirent_info = nullptr;
+    struct stat inode_stat = {0};
+
+    error = samba_impl_->ReadDirectory(dir, &dirent_info, &inode_stat);
+    if (error) {
+      VLOG(1) << "ReadDirectory path: " << dir_path.value()
+              << " failed: " << base::safe_strerror(error);
+      request->ReplyError(error);
       return;
     }
-    off_t next_offset = smbc_telldir_ctx_(context_, dir);
-    if (next_offset < 0 && errno) {
-      int err = errno;
-      VPLOG(1) << "smbc_telldir on path " << dir_path.value() << " failed";
-      request->ReplyError(err);
+    if (!dirent_info) {
+      // EOF.
+      break;
+    }
+    off_t next_offset = 0;
+    error = samba_impl_->TellDirectory(dir, &next_offset);
+    if (error) {
+      VLOG(1) << "TellDirectory path: " << dir_path.value()
+              << " failed: " << base::safe_strerror(error);
+      request->ReplyError(error);
       return;
     }
 
@@ -1017,10 +931,8 @@ void SmbFilesystem::ReadDirInternal(std::unique_ptr<DirentryRequest> request,
     CHECK(!filename.empty());
     CHECK_EQ(filename.find("/"), base::StringPiece::npos);
 
-    struct stat inode_stat = {0};
-    // TODO(crbug.com/1054711): The mapping of DOS attributes to a mode_t can
-    // be removed when struct stat is available from smbc_readdirplus2.
-    inode_stat.st_mode = MakeStatModeBitsFromDOSAttributes(dirent_info->attrs);
+    // Ensure mode bits are appropriately cleaned and propagated.
+    inode_stat.st_mode = MakeStatModeBits(inode_stat.st_mode);
 
     const base::FilePath entry_path = dir_path.Append(filename);
     ino_t entry_inode = inode_map_.IncInodeRef(entry_path);
@@ -1030,13 +942,6 @@ void SmbFilesystem::ReadDirInternal(std::unique_ptr<DirentryRequest> request,
       inode_map_.Forget(entry_inode, 1);
       break;
     }
-
-    // Synthesize a struct stat that can be cached and returned from
-    // GetAttrInternal().
-    inode_stat.st_atim = dirent_info->atime_ts;
-    inode_stat.st_ctim = dirent_info->ctime_ts;
-    inode_stat.st_mtim = dirent_info->mtime_ts;
-    inode_stat.st_size = dirent_info->size;
 
     inode_stat = MakeStat(entry_inode, inode_stat);
     AddCachedInodeStat(inode_stat);
@@ -1067,8 +972,10 @@ void SmbFilesystem::ReleaseDirInternal(std::unique_ptr<SimpleRequest> request,
     return;
   }
 
-  if (smbc_closedir_ctx_(context_, dir) < 0) {
-    request->ReplyError(errno);
+  int error = samba_impl_->CloseDirectory(dir);
+  if (error) {
+    VLOG(1) << "CloseDirectory failed: " << base::safe_strerror(error);
+    request->ReplyError(error);
     return;
   }
 
@@ -1100,10 +1007,11 @@ void SmbFilesystem::MkDirInternal(std::unique_ptr<EntryRequest> request,
   const base::FilePath file_path = parent_path.Append(name);
   const std::string share_file_path = MakeShareFilePath(file_path);
 
-  if (smbc_mkdir_ctx_(context_, share_file_path.c_str(), mode) < 0) {
-    int err = errno;
-    VPLOG(1) << "smbc_mkdir path: " << share_file_path << " failed";
-    request->ReplyError(err);
+  int error = samba_impl_->CreateDirectory(share_file_path, mode);
+  if (error) {
+    VLOG(1) << "CreateDirectory path: " << share_file_path
+            << " failed: " << base::safe_strerror(error);
+    request->ReplyError(error);
     return;
   }
 
@@ -1143,10 +1051,11 @@ void SmbFilesystem::RmDirinternal(std::unique_ptr<SimpleRequest> request,
   const base::FilePath file_path = parent_path.Append(name);
   const std::string share_file_path = MakeShareFilePath(file_path);
 
-  if (smbc_rmdir_ctx_(context_, share_file_path.c_str()) < 0) {
-    int err = errno;
-    VPLOG(1) << "smbc_rmdir path: " << share_file_path << " failed";
-    request->ReplyError(err);
+  int error = samba_impl_->RemoveDirectory(share_file_path);
+  if (error) {
+    VLOG(1) << "RemoveDirectory path: " << share_file_path
+            << " failed: " << base::safe_strerror(error);
+    request->ReplyError(error);
     return;
   }
 

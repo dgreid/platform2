@@ -30,6 +30,8 @@
 
 namespace smbfs {
 
+class SambaInterface;
+
 class SmbFilesystem : public Filesystem {
  public:
   // Delegate functions will always be called on the SmbFilesystem's constructor
@@ -155,9 +157,11 @@ class SmbFilesystem : public Filesystem {
   // Protected constructor for unit tests.
   SmbFilesystem(Delegate* delegate, const std::string& share_path);
 
+  // Allow mock interface to be provided during tests.
+  void SetSambaInterface(std::unique_ptr<SambaInterface> samba_interface);
+
  private:
   FRIEND_TEST(SmbFilesystemTest, MakeStatModeBits);
-  FRIEND_TEST(SmbFilesystemTest, MakeStatModeBitsFromDOSAttributes);
   FRIEND_TEST(SmbFilesystemTest, MaybeUpdateCredentials_NoRequest);
   FRIEND_TEST(SmbFilesystemTest, MaybeUpdateCredentials_RequestOnEPERM);
   FRIEND_TEST(SmbFilesystemTest, MaybeUpdateCredentials_RequestOnEACCES);
@@ -237,9 +241,6 @@ class SmbFilesystem : public Filesystem {
   // Clear / propagate permission bits appropriately (crbug.com/1063715).
   mode_t MakeStatModeBits(mode_t in_mode) const;
 
-  // Constructs mode (type and permission) bits for stat from DOS attributes.
-  mode_t MakeStatModeBitsFromDOSAttributes(uint16_t attrs) const;
-
   // Constructs a share file path suitable for passing to libsmbclient from the
   // given absolute file path.
   std::string MakeShareFilePath(const base::FilePath& path) const;
@@ -270,18 +271,6 @@ class SmbFilesystem : public Filesystem {
   // Callback handler for Delegate::RequestCredentials().
   void OnRequestCredentialsDone(std::unique_ptr<SmbCredential> credentials);
 
-  // Callback function for obtaining authentication credentials. Set by calling
-  // smbc_setFunctionAuthDataWithContext() and called from libsmbclient.
-  static void GetUserAuth(SMBCCTX* context,
-                          const char* server,
-                          const char* share,
-                          char* workgroup,
-                          int workgroup_len,
-                          char* username,
-                          int username_len,
-                          char* password,
-                          int password_len);
-
   // Cache a stat structure. |inode_stat.st_ino| is used as the key.
   void AddCachedInodeStat(const struct stat& inode_stat);
 
@@ -309,7 +298,9 @@ class SmbFilesystem : public Filesystem {
 
   mutable base::Lock lock_;
   std::string resolved_share_path_ = share_path_;
-  std::unique_ptr<SmbCredential> credentials_;
+
+  // Interface to libsmbclient.
+  std::unique_ptr<SambaInterface> samba_impl_;
 
   // Cache stat information during ReadDir() to speed up subsequent access.
   base::HashingMRUCache<ino_t, StatCacheItem> stat_cache_;
@@ -320,28 +311,6 @@ class SmbFilesystem : public Filesystem {
   std::atomic<bool> connected_{false};
   // Flag to ensure only one credential request is active at a time.
   bool requesting_credentials_ = false;
-
-  SMBCCTX* context_ = nullptr;
-  smbc_close_fn smbc_close_ctx_ = nullptr;
-  smbc_closedir_fn smbc_closedir_ctx_ = nullptr;
-  smbc_ftruncate_fn smbc_ftruncate_ctx_ = nullptr;
-  smbc_lseek_fn smbc_lseek_ctx_ = nullptr;
-  smbc_lseekdir_fn smbc_lseekdir_ctx_ = nullptr;
-  smbc_mkdir_fn smbc_mkdir_ctx_ = nullptr;
-  smbc_open_fn smbc_open_ctx_ = nullptr;
-  smbc_opendir_fn smbc_opendir_ctx_ = nullptr;
-  smbc_read_fn smbc_read_ctx_ = nullptr;
-  smbc_readdir_fn smbc_readdir_ctx_ = nullptr;
-  // TODO(crbug.com/1054711): This should be swapped out for
-  // smbc_readdirplus2_fn when Samba is updated to 4.12.
-  smbc_readdirplus_fn smbc_readdirplus_ctx_ = nullptr;
-  smbc_rename_fn smbc_rename_ctx_ = nullptr;
-  smbc_rmdir_fn smbc_rmdir_ctx_ = nullptr;
-  smbc_stat_fn smbc_stat_ctx_ = nullptr;
-  smbc_statvfs_fn smbc_statvfs_ctx_ = nullptr;
-  smbc_telldir_fn smbc_telldir_ctx_ = nullptr;
-  smbc_unlink_fn smbc_unlink_ctx_ = nullptr;
-  smbc_write_fn smbc_write_ctx_ = nullptr;
 
   base::WeakPtrFactory<SmbFilesystem> weak_factory_{this};
 
