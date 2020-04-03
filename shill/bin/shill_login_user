@@ -106,6 +106,26 @@ if [ ! -h "$log_link_dir" ]; then
       "Failed to create shill logs link $log_link_dir"
 fi
 
+# wait_for_shill_dbus_services polls for the org.chromium.flimflam
+# in the org.freedesktop.DBus.ListNames list that has all connected
+# names on the Bus.
+wait_for_shill_dbus_services() {
+  for i in $(seq 1 15); do
+    if dbus-send --system --print-reply --dest=org.freedesktop.DBus \
+      /org/freedesktop/DBus org.freedesktop.DBus.ListNames |
+        grep -q '"org.chromium.flimflam"'; then
+          return 0
+    fi
+    sleep 0.2
+  done
+}
+
+# Technically, there's no guarantee that Shill has finished initializing
+# before a login event happens. In practice, we don't experience that
+# race unless Shill is actively crashing, but it does occur in tests
+# (where we may intentionally restart Shill).
+wait_for_shill_dbus_services
+
 if [ ! -f "$profile" ]; then
   # If profile does not exist, ask shill to create one.
   dbus-send --system --dest=org.chromium.flimflam --print-reply / \
