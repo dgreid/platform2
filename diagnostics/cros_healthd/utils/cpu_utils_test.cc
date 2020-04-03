@@ -47,7 +47,9 @@ TEST(CpuUtils, TestFetchCpuInfo) {
   ASSERT_TRUE(WriteFileAndCreateParentDirs(
       root_dir.Append(kSecondRelativeCpuinfoMaxFreqPath),
       base::NumberToString(kSecondFakeMaxClockSpeed)));
-  auto cpu_info = FetchCpuInfo(root_dir);
+  auto cpu_result = FetchCpuInfo(root_dir);
+  ASSERT_FALSE(cpu_result->is_error());
+  const auto& cpu_info = cpu_result->get_cpu_info();
   EXPECT_EQ(cpu_info.size(), 2);
   EXPECT_EQ(cpu_info[0]->model_name, kFirstFakeModelName);
   EXPECT_EQ(cpu_info[0]->max_clock_speed_khz, kFirstFakeMaxClockSpeed);
@@ -59,8 +61,8 @@ TEST(CpuUtils, TestFetchCpuInfo) {
 TEST(CpuUtils, TestFetchCpuInfoNoFile) {
   base::ScopedTempDir temp_dir;
   ASSERT_TRUE(temp_dir.CreateUniqueTempDir());
-  auto cpu_info = FetchCpuInfo(temp_dir.GetPath());
-  EXPECT_EQ(cpu_info.size(), 0);
+  auto cpu_result = FetchCpuInfo(temp_dir.GetPath());
+  EXPECT_TRUE(cpu_result->is_error());
 }
 
 // Test that failing to parse CPU info fails gracefully.
@@ -70,8 +72,8 @@ TEST(CpuUtils, TestFetchCpuInfoBadCpuinfo) {
   base::FilePath root_dir = temp_dir.GetPath();
   ASSERT_TRUE(WriteFileAndCreateParentDirs(
       root_dir.Append(kRelativeCpuinfoPath), kBadCpuinfoContents));
-  auto cpu_info = FetchCpuInfo(root_dir);
-  EXPECT_EQ(cpu_info.size(), 0);
+  auto cpu_result = FetchCpuInfo(root_dir);
+  EXPECT_TRUE(cpu_result->is_error());
 }
 
 // Test that attempting to read a max frequency file that does not exist fails
@@ -82,8 +84,8 @@ TEST(CpuUtils, TestFetchCpuInfoNoMaxFreqFile) {
   base::FilePath root_dir = temp_dir.GetPath();
   ASSERT_TRUE(WriteFileAndCreateParentDirs(
       root_dir.Append(kRelativeCpuinfoPath), kFakeCpuinfoContents));
-  auto cpu_info = FetchCpuInfo(root_dir);
-  EXPECT_EQ(cpu_info.size(), 0);
+  auto cpu_result = FetchCpuInfo(root_dir);
+  EXPECT_TRUE(cpu_result->is_error());
 }
 
 }  // namespace diagnostics

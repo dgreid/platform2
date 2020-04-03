@@ -42,6 +42,19 @@ constexpr std::pair<const char*,
         {"fan", chromeos::cros_healthd::mojom::ProbeCategoryEnum::kFan},
 };
 
+std::string ErrorTypeToString(chromeos::cros_healthd::mojom::ErrorType type) {
+  switch (type) {
+    case chromeos::cros_healthd::mojom::ErrorType::kFileReadError:
+      return "File Read Error";
+    case chromeos::cros_healthd::mojom::ErrorType::kParseError:
+      return "Parse Error";
+  }
+}
+
+void DisplayError(const chromeos::cros_healthd::mojom::ProbeErrorPtr& error) {
+  printf("%s: %s", ErrorTypeToString(error->type).c_str(), error->msg.c_str());
+}
+
 std::string GetArchitectureString(CpuArchitectureEnum architecture) {
   switch (architecture) {
     case CpuArchitectureEnum::kUnknown:
@@ -102,7 +115,13 @@ void DisplayCachedVpdInfo(
 }
 
 void DisplayCpuInfo(
-    const std::vector<chromeos::cros_healthd::mojom::CpuInfoPtr>& cpus) {
+    const chromeos::cros_healthd::mojom::CpuResultPtr& cpu_result) {
+  if (cpu_result->is_error()) {
+    DisplayError(cpu_result->get_error());
+    return;
+  }
+
+  const auto& cpus = cpu_result->get_cpu_info();
   printf("model_name,architecture,max_clock_speed_khz\n");
   for (const auto& cpu : cpus) {
     // Remove commas from the model name before printing CSVs.
@@ -169,9 +188,9 @@ void DisplayTelemetryInfo(
   if (!vpd.is_null())
     DisplayCachedVpdInfo(vpd);
 
-  const auto& cpus = info->cpu_info;
-  if (cpus)
-    DisplayCpuInfo(cpus.value());
+  const auto& cpu_result = info->cpu_result;
+  if (cpu_result)
+    DisplayCpuInfo(cpu_result);
 
   const auto& timezone = info->timezone_info;
   if (timezone)

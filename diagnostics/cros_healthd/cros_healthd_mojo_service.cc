@@ -205,7 +205,7 @@ void CrosHealthdMojoService::ProbeTelemetryInfo(
         break;
       }
       case ProbeCategoryEnum::kCpu: {
-        telemetry_info.cpu_info = FetchCpuInfo(base::FilePath("/"));
+        telemetry_info.cpu_result = FetchCpuInfo(base::FilePath("/"));
         break;
       }
       case ProbeCategoryEnum::kNonRemovableBlockDevices: {
