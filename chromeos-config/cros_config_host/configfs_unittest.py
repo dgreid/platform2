@@ -11,6 +11,7 @@ from __future__ import print_function
 import functools
 import json
 import os
+import struct
 import subprocess
 import tempfile
 import configfs
@@ -75,8 +76,10 @@ class ConfigFSTests(cros_test_lib.TestCase):
         _CheckConfigRec(entry, childpath)
     _CheckConfigRec(config, os.path.join(output_dir, 'squashfs-root/v1'))
 
+  # TODO(jrosenth): remove once we've fully moved over to struct-based
+  # identity.
   @TestConfigs('test.json', 'test_arm.json')
-  def testConfigV1Identity(self, config, output_dir):
+  def testConfigV1IdentityJson(self, config, output_dir):
     identity_path = os.path.join(output_dir, 'squashfs-root/v1/identity.json')
     self.assertTrue(os.path.isfile(identity_path))
     with open(identity_path) as f:
@@ -86,6 +89,91 @@ class ConfigFSTests(cros_test_lib.TestCase):
       self.assertEqual(set(identity_config.keys()), {'identity'})
       self.assertEqual(device_config['identity'], identity_config['identity'])
 
+  def testConfigIdentityStructSizes(self):
+    self.assertEqual(struct.calcsize(configfs.HEADER_FORMAT), 16)
+    self.assertEqual(struct.calcsize(configfs.ENTRY_FORMAT), 16)
+
+  @TestConfigs('test.json', 'test_arm.json')
+  def testConfigIdentityV0(self, config, output_dir):
+    device_configs = config['chromeos']['configs']
+    identity_path = os.path.join(output_dir, 'squashfs-root/identity.bin')
+    identity_bin = osutils.ReadFile(identity_path, mode='rb')
+    version, identity_type, entry_count = struct.unpack_from(
+        configfs.HEADER_FORMAT, identity_bin)
+    offset = struct.calcsize(configfs.HEADER_FORMAT)
+    identity_type = configfs.IdentityType(identity_type)
+
+    self.assertEqual(version, configfs.STRUCT_VERSION)
+    if 'smbios-name-match' in device_configs[0]['identity']:
+      self.assertEqual(identity_type, configfs.IdentityType.X86)
+    else:
+      self.assertEqual(identity_type, configfs.IdentityType.ARM)
+    self.assertEqual(len(device_configs), entry_count)
+
+    # Get an entry from the string table.
+    def _GetString(offset):
+      base = (struct.calcsize(configfs.HEADER_FORMAT)
+              + struct.calcsize(configfs.ENTRY_FORMAT) * entry_count)
+      string, _, _ = identity_bin[base + offset:].partition(b'\000')
+      return string.decode('utf-8')
+
+    for device in device_configs:
+      flags, model_match_offset, sku_id, whitelabel_offset = struct.unpack_from(
+          configfs.ENTRY_FORMAT, identity_bin, offset=offset)
+      offset += struct.calcsize(configfs.ENTRY_FORMAT)
+
+      if identity_type == configfs.IdentityType.X86:
+        self.assertEqual(
+            flags & configfs.EntryFlags.USES_FIRMWARE_NAME.value, 0)
+      else:
+        self.assertEqual(
+            flags & configfs.EntryFlags.IS_X86_LEGACY_CUSTOMIZATION_ID.value, 0)
+
+      if 'smbios-name-match' in device['identity']:
+        self.assertEqual(identity_type, configfs.IdentityType.X86)
+        self.assertEqual(_GetString(model_match_offset),
+                         device['identity']['smbios-name-match'])
+
+      if 'device-tree-compatible-match' in device['identity']:
+        self.assertEqual(identity_type, configfs.IdentityType.ARM)
+        self.assertEqual(_GetString(model_match_offset),
+                         device['identity']['device-tree-compatible-match'])
+
+      if 'firmware-name' in device['identity']:
+        self.assertEqual(flags & configfs.EntryFlags.USES_FIRMWARE_NAME.value,
+                         configfs.EntryFlags.USES_FIRMWARE_NAME.value)
+        self.assertEqual(identity_type, configfs.IdentityType.ARM)
+        self.assertEqual(_GetString(model_match_offset),
+                         device['identity']['firmware-name'])
+      else:
+        self.assertEqual(
+            flags & configfs.EntryFlags.USES_FIRMWARE_NAME.value, 0)
+
+      if 'sku-id' in device['identity']:
+        self.assertEqual(flags & configfs.EntryFlags.HAS_SKU_ID.value,
+                         configfs.EntryFlags.HAS_SKU_ID.value)
+        self.assertEqual(sku_id, device['identity']['sku-id'])
+      else:
+        self.assertEqual(flags & configfs.EntryFlags.HAS_SKU_ID.value, 0)
+
+      if 'whitelabel-tag' in device['identity']:
+        self.assertEqual(flags & configfs.EntryFlags.HAS_WHITELABEL.value,
+                         configfs.EntryFlags.HAS_WHITELABEL.value)
+        self.assertEqual(_GetString(whitelabel_offset),
+                         device['identity']['whitelabel-tag'])
+      else:
+        self.assertEqual(
+            flags & configfs.EntryFlags.HAS_WHITELABEL.value, 0)
+
+      if 'customization-id' in device['identity']:
+        self.assertEqual(
+            flags & configfs.EntryFlags.IS_X86_LEGACY_CUSTOMIZATION_ID.value,
+            configfs.EntryFlags.IS_X86_LEGACY_CUSTOMIZATION_ID.value)
+        self.assertEqual(_GetString(whitelabel_offset),
+                         device['identity']['customization-id'])
+      else:
+        self.assertEqual(
+            flags & configfs.EntryFlags.IS_X86_LEGACY_CUSTOMIZATION_ID.value, 0)
 
 if __name__ == '__main__':
   cros_test_lib.main(module=__name__)
