@@ -189,6 +189,11 @@ bool ArcVm::Start(base::FilePath kernel,
 
   const std::string rootfs_flag = rootfs_writable() ? "--rwdisk" : "--disk";
 
+  // TODO(yusukes): Add ugid mappings.
+  std::string host_generated_shared_dir =
+      base::StringPrintf("%s:%s:type=fs:cache=always:timeout=3600",
+                         kHostGeneratedSharedDir, kHostGeneratedSharedDirTag);
+
   // Build up the process arguments.
   // clang-format off
   base::StringPairs args = {
@@ -208,9 +213,10 @@ bool ArcVm::Start(base::FilePath kernel,
     { "--android-fstab",   fstab.value() },
     { "--pstore",          base::StringPrintf("path=%s,size=%d",
                               pstore_path.value().c_str(), pstore_size) },
-    // TODO(yusukes): Switch from 9p to virtio-fs.
+    // TODO(yusukes): Remove the 9p export once the guest is updated.
     { "--shared-dir",     base::StringPrintf("%s:%s", kHostGeneratedSharedDir,
                                              kHostGeneratedSharedDirTag) },
+    { "--shared-dir",     host_generated_shared_dir },
     { "--params",         base::JoinString(params, " ") },
   };
   // clang-format on
