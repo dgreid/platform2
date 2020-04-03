@@ -156,10 +156,6 @@ TEST_F(CrosConfigTest, CheckWriteFallbackFS) {
 }
 
 int main(int argc, char** argv) {
-  int status = system("exec ./chromeos-config-test-setup.sh");
-  if (status != 0)
-    return EXIT_FAILURE;
-
   logging::LoggingSettings settings;
   settings.logging_dest = logging::LOG_TO_FILE;
   settings.log_file = "log.test";
@@ -167,6 +163,12 @@ int main(int argc, char** argv) {
   settings.delete_old = logging::DELETE_OLD_LOG_FILE;
   logging::InitLogging(settings);
   logging::SetMinLogLevel(-3);
+
+  int status = system("exec ./chromeos-config-test-setup.sh");
+  if (status != 0) {
+    LOG(ERROR) << "Failed to run ./chromeos-config-test-setup.sh";
+    return EXIT_FAILURE;
+  }
 
   // $SRC/testbin contains a fake mosys which is used by the tests
   const char* src_path = getenv("SRC");
