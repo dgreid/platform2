@@ -95,6 +95,7 @@ void EnterVFSNamespace(brillo::Minijail* minijail) {
 
 void DropPrivileges(brillo::Minijail* minijail) {
   struct minijail* jail = minijail->New();
+  minijail_inherit_usergroups(jail);  // Keep access to ippusb group.
   minijail->DropRoot(jail, lorgnette::Daemon::kScanUserName,
                      lorgnette::Daemon::kScanGroupName);
   minijail_enter(jail);
