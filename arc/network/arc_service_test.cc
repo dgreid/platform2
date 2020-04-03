@@ -240,8 +240,7 @@ class ContainerImplTest : public testing::Test {
 
   std::unique_ptr<Device> MakeDevice(const std::string& name,
                                      const std::string& host,
-                                     const std::string& guest,
-                                     bool is_arcvm = false) {
+                                     const std::string& guest) {
     Device::Options opt{};
     auto subnet = addr_mgr_->AllocateIPv4Subnet(AddressManager::Guest::ARC_NET);
     auto addr0 = subnet->AllocateAtOffset(0);
@@ -356,16 +355,29 @@ class VmImplTest : public testing::Test {
     addr_mgr_ = std::make_unique<AddressManager>();
   }
 
-  std::unique_ptr<ArcService::VmImpl> Impl(bool start = true,
-                                           bool multinet = false) {
+  std::unique_ptr<ArcService::VmImpl> Impl(
+      bool start = true, const std::vector<Device::Config*> configs = {}) {
     auto impl = std::make_unique<ArcService::VmImpl>(
         shill_client_.get(), datapath_.get(), addr_mgr_.get(), &forwarder_,
-        multinet);
+        configs);
     if (start) {
       impl->Start(kTestCID);
     }
 
     return impl;
+  }
+
+  std::unique_ptr<Device> MakeDevice(const std::string& name,
+                                     const std::string& host,
+                                     const std::string& guest) {
+    Device::Options opt{};
+    auto subnet = addr_mgr_->AllocateIPv4Subnet(AddressManager::Guest::ARC_NET);
+    auto addr0 = subnet->AllocateAtOffset(0);
+    auto addr1 = subnet->AllocateAtOffset(1);
+    auto cfg = std::make_unique<Device::Config>(
+        addr_mgr_->GenerateMacAddress(), std::move(subnet), std::move(addr0),
+        std::move(addr1));
+    return std::make_unique<Device>(name, host, guest, std::move(cfg), opt);
   }
 
   std::unique_ptr<AddressManager> addr_mgr_;
@@ -377,16 +389,17 @@ class VmImplTest : public testing::Test {
 };
 
 TEST_F(VmImplTest, Start) {
+  EXPECT_CALL(*datapath_, AddTAP(StrEq(""), nullptr, nullptr, StrEq("crosvm")))
+      .WillOnce(Return("vmtap0"));
+  // OnStartDevice
   EXPECT_CALL(*datapath_, AddBridge(StrEq("arc_br1"), kArcVmHostIP, 30))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*datapath_, AddToBridge(StrEq("arc_br1"), StrEq("vmtap0")))
       .WillOnce(Return(true));
   EXPECT_CALL(*datapath_,
               AddLegacyIPv4DNAT(StrEq(IPv4AddressToString(kArcVmGuestIP))))
       .WillOnce(Return(true));
   EXPECT_CALL(*datapath_, AddOutboundIPv4(StrEq("arc_br1")))
-      .WillOnce(Return(true));
-  EXPECT_CALL(*datapath_, AddTAP(StrEq(""), nullptr, nullptr, StrEq("crosvm")))
-      .WillOnce(Return("vmtap0"));
-  EXPECT_CALL(*datapath_, AddToBridge(StrEq("arc_br1"), StrEq("vmtap0")))
       .WillOnce(Return(true));
   // OnDefaultInterfaceChanged
   EXPECT_CALL(forwarder_,
@@ -399,18 +412,55 @@ TEST_F(VmImplTest, Start) {
   Impl(false)->Start(kTestCID);
 }
 
+// Verifies TAPs are added for each provided config.
+TEST_F(VmImplTest, StartWithConfigs) {
+  EXPECT_CALL(*datapath_, AddTAP(StrEq(""), nullptr, nullptr, StrEq("crosvm")))
+      .WillOnce(Return("vmtap0"))
+      .WillOnce(Return("vmtap1"))
+      .WillOnce(Return("vmtap2"));
+  EXPECT_CALL(*datapath_, AddBridge(StrEq("arc_br1"), kArcVmHostIP, 30))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*datapath_, AddToBridge(StrEq("arc_br1"), StrEq("vmtap0")))
+      .WillOnce(Return(true));
+
+  Device::Config config1({0, 0, 0, 0, 0, 0}, nullptr, nullptr, nullptr);
+  Device::Config config2({0, 0, 0, 0, 0, 0}, nullptr, nullptr, nullptr);
+  Impl(false, {&config1, &config2})->Start(kTestCID);
+  EXPECT_EQ(config1.tap_ifname(), "vmtap1");
+  EXPECT_EQ(config2.tap_ifname(), "vmtap2");
+}
+
+TEST_F(VmImplTest, StartDeviceWithConfigs) {
+  EXPECT_CALL(*datapath_, AddTAP(StrEq(""), nullptr, nullptr, StrEq("crosvm")))
+      .WillOnce(Return("vmtap0"))
+      .WillOnce(Return("vmtap1"));
+  EXPECT_CALL(*datapath_, AddBridge(StrEq("arc_br1"), kArcVmHostIP, 30))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*datapath_, AddToBridge(StrEq("arc_br1"), StrEq("vmtap0")))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*datapath_, AddToBridge(StrEq("arc_eth0"), StrEq("vmtap1")))
+      .WillOnce(Return(true));
+  EXPECT_CALL(forwarder_,
+              StartForwarding(StrEq("eth0"), StrEq("arc_eth0"), _, _));
+
+  auto dev = MakeDevice("eth0", "arc_eth0", "eth0");
+  auto* config = &dev->config();
+  Impl(true, {config})->OnStartDevice(dev.get());
+  EXPECT_EQ(config->tap_ifname(), "vmtap1");
+}
+
 TEST_F(VmImplTest, Stop) {
   // Start
+  EXPECT_CALL(*datapath_, AddTAP(StrEq(""), nullptr, nullptr, StrEq("crosvm")))
+      .WillOnce(Return("vmtap0"));
   EXPECT_CALL(*datapath_, AddBridge(StrEq("arc_br1"), kArcVmHostIP, 30))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*datapath_, AddToBridge(StrEq("arc_br1"), StrEq("vmtap0")))
       .WillOnce(Return(true));
   EXPECT_CALL(*datapath_,
               AddLegacyIPv4DNAT(StrEq(IPv4AddressToString(kArcVmGuestIP))))
       .WillOnce(Return(true));
   EXPECT_CALL(*datapath_, AddOutboundIPv4(StrEq("arc_br1")))
-      .WillOnce(Return(true));
-  EXPECT_CALL(*datapath_, AddTAP(StrEq(""), nullptr, nullptr, StrEq("crosvm")))
-      .WillOnce(Return("vmtap0"));
-  EXPECT_CALL(*datapath_, AddToBridge(StrEq("arc_br1"), StrEq("vmtap0")))
       .WillOnce(Return(true));
   // OnDefaultInterfaceChanged
   EXPECT_CALL(forwarder_,
@@ -432,4 +482,43 @@ TEST_F(VmImplTest, Stop) {
   Impl()->Stop(kTestCID);
 }
 
+// Verifies TAPs are added for each provided config.
+TEST_F(VmImplTest, StopWithConfigs) {
+  EXPECT_CALL(*datapath_, AddTAP(StrEq(""), nullptr, nullptr, StrEq("crosvm")))
+      .WillOnce(Return("vmtap0"))
+      .WillOnce(Return("vmtap1"))
+      .WillOnce(Return("vmtap2"));
+  EXPECT_CALL(*datapath_, AddBridge(StrEq("arc_br1"), kArcVmHostIP, 30))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*datapath_, AddToBridge(StrEq("arc_br1"), StrEq("vmtap0")))
+      .WillOnce(Return(true));
+  // Stop
+  EXPECT_CALL(*datapath_, RemoveInterface(StrEq("vmtap0")));
+  EXPECT_CALL(*datapath_, RemoveInterface(StrEq("vmtap1")));
+  EXPECT_CALL(*datapath_, RemoveInterface(StrEq("vmtap2")));
+
+  Device::Config config1({0, 0, 0, 0, 0, 0}, nullptr, nullptr, nullptr);
+  Device::Config config2({0, 0, 0, 0, 0, 0}, nullptr, nullptr, nullptr);
+  Impl(true, {&config1, &config2})->Stop(kTestCID);
+  EXPECT_TRUE(config1.tap_ifname().empty());
+  EXPECT_TRUE(config2.tap_ifname().empty());
+}
+
+TEST_F(VmImplTest, StopDeviceWithConfigs) {
+  EXPECT_CALL(*datapath_, AddTAP(StrEq(""), nullptr, nullptr, StrEq("crosvm")))
+      .WillOnce(Return("vmtap0"))
+      .WillOnce(Return("vmtap1"));
+  EXPECT_CALL(*datapath_, AddBridge(StrEq("arc_br1"), kArcVmHostIP, 30))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*datapath_, AddToBridge(StrEq("arc_br1"), StrEq("vmtap0")))
+      .WillOnce(Return(true));
+  EXPECT_CALL(forwarder_,
+              StopForwarding(StrEq("eth0"), StrEq("arc_eth0"), _, _));
+
+  auto dev = MakeDevice("eth0", "arc_eth0", "eth0");
+  auto* config = &dev->config();
+  config->set_tap_ifname("vmtap1");  // Usually happens in OnStartDevice.
+  Impl(true, {config})->OnStopDevice(dev.get());
+  EXPECT_TRUE(config->tap_ifname().empty());
+}
 }  // namespace arc_networkd

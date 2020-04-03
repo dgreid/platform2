@@ -441,7 +441,7 @@ std::unique_ptr<dbus::Response> Manager::OnArcVmStartup(
 
   // Populate the response with the known devices.
   auto build_resp = [](patchpanel::ArcVmStartupResponse* resp, Device* device) {
-    const auto& tap = device->tap_ifname();
+    const auto& tap = device->config().tap_ifname();
     if (tap.empty())
       return;
 

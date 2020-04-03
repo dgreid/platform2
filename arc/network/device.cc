@@ -49,20 +49,20 @@ Device::Config& Device::config() const {
   return *config_.get();
 }
 
+void Device::Config::set_tap_ifname(const std::string& tap_ifname) {
+  tap_ = tap_ifname;
+}
+
+const std::string& Device::Config::tap_ifname() const {
+  return tap_;
+}
+
 std::unique_ptr<Device::Config> Device::release_config() {
   return std::move(config_);
 }
 
 const Device::Options& Device::options() const {
   return options_;
-}
-
-void Device::set_tap_ifname(const std::string& tap_ifname) {
-  tap_ = tap_ifname;
-}
-
-const std::string& Device::tap_ifname() const {
-  return tap_;
 }
 
 std::ostream& operator<<(std::ostream& stream, const Device& device) {
@@ -74,7 +74,8 @@ std::ostream& operator<<(std::ostream& stream, const Device& device) {
          << ", guest_mac_addr: "
          << MacAddressToString(device.config_->mac_addr())
          << ", fwd_multicast: " << device.options_.fwd_multicast
-         << ", ipv6_enabled: " << device.options_.ipv6_enabled << '}';
+         << ", ipv6_enabled: " << device.options_.ipv6_enabled
+         << ", tap_ifname: " << device.config_->tap_ifname() << '}';
   return stream;
 }
 

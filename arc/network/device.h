@@ -57,6 +57,9 @@ class Device {
       return lxd_ipv4_subnet_.get();
     }
 
+    void set_tap_ifname(const std::string& tap);
+    const std::string& tap_ifname() const;
+
     friend std::ostream& operator<<(std::ostream& stream, const Device& device);
 
    private:
@@ -74,6 +77,8 @@ class Device {
     // like Crostini to use for assigning addresses to containers running within
     // the VM.
     std::unique_ptr<Subnet> lxd_ipv4_subnet_;
+    // TAP devices currently associated with the configuration.
+    std::string tap_;
 
     DISALLOW_COPY_AND_ASSIGN(Config);
   };
@@ -102,9 +107,6 @@ class Device {
   std::unique_ptr<Config> release_config();
   const Options& options() const;
 
-  void set_tap_ifname(const std::string& tap);
-  const std::string& tap_ifname() const;
-
   friend std::ostream& operator<<(std::ostream& stream, const Device& device);
 
  private:
@@ -113,7 +115,6 @@ class Device {
   std::string guest_ifname_;
   std::unique_ptr<Config> config_;
   const Options options_;
-  std::string tap_;
 
   FRIEND_TEST(DeviceTest, DisableLegacyAndroidDeviceSendsTwoMessages);
 

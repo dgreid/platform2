@@ -10,6 +10,7 @@
 #include <memory>
 #include <set>
 #include <string>
+#include <vector>
 
 #include <base/memory/weak_ptr.h>
 #include <gtest/gtest_prod.h>  // for FRIEND_TEST
@@ -85,11 +86,14 @@ class ArcService {
   // Encapsulates all ARC VM-specific logic.
   class VmImpl : public Impl {
    public:
+    // |configs| is an optional list of device configurations that, if provided,
+    // will be used to pre-allocated and associate them, when necessary, to
+    // devices as they are added. The caller retains ownership of the pointers.
     VmImpl(ShillClient* shill_client,
            Datapath* datapath,
            AddressManager* addr_mgr,
            TrafficForwarder* forwarder,
-           bool enable_multinet);
+           const std::vector<Device::Config*>& configs);
     ~VmImpl() = default;
 
     GuestMessage::GuestType guest() const override;
@@ -108,12 +112,14 @@ class ArcService {
     bool OnStartArcPDevice();
     void OnStopArcPDevice();
 
+    bool IsMultinetEnabled() const;
+
     uint32_t cid_;
     const ShillClient* const shill_client_;
     Datapath* datapath_;
     AddressManager* addr_mgr_;
     TrafficForwarder* forwarder_;
-    bool enable_multinet_;
+    std::vector<Device::Config*> configs_;
 
     DISALLOW_COPY_AND_ASSIGN(VmImpl);
   };
@@ -175,7 +181,8 @@ class ArcService {
   // address configurations and re-add existing devices. This is necessary to
   // properly handle the IPv4 addressing binding difference between ARC++ and
   // ARCVM.
-  void ReallocateAddressConfigs();
+  // Returns the list of all configurations ordered by type.
+  std::vector<Device::Config*> ReallocateAddressConfigs();
 
   // Reserve a configuration for an interface.
   std::unique_ptr<Device::Config> AcquireConfig(const std::string& ifname);
