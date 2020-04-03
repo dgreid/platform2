@@ -167,6 +167,20 @@ TEST(Ipv4, BroadcastAddr) {
   }
 }
 
+TEST(IPv4, SetSockaddrIn) {
+  struct sockaddr_storage sockaddr = {};
+  std::ostringstream stream;
+
+  SetSockaddrIn((struct sockaddr*)&sockaddr, 0);
+  stream << sockaddr;
+  EXPECT_EQ("{family: AF_INET, port: 0, addr: 0.0.0.0}", stream.str());
+
+  stream.str("");
+  SetSockaddrIn((struct sockaddr*)&sockaddr, Ipv4Addr(192, 168, 1, 37));
+  stream << sockaddr;
+  EXPECT_EQ("{family: AF_INET, port: 0, addr: 192.168.1.37}", stream.str());
+}
+
 TEST(PrettyPrint, SocketAddrIn) {
   struct sockaddr_in ipv4_sockaddr = {};
   std::ostringstream stream;
@@ -293,6 +307,34 @@ TEST(PrettyPrint, SocketAddrUnix) {
   stream.str("");
   stream << sockaddr_storage;
   EXPECT_EQ(expected_output, stream.str());
+}
+
+TEST(PrettyPrint, Rtentry) {
+  struct rtentry route;
+  memset(&route, 0, sizeof(route));
+  std::ostringstream stream;
+
+  stream << route;
+  EXPECT_EQ(
+      "{rt_dst: {unset}, rt_genmask: {unset}, rt_gateway: {unset}, rt_dev: "
+      "null, rt_flags: 0}",
+      stream.str());
+
+  SetSockaddrIn(&route.rt_dst, Ipv4Addr(100, 115, 92, 128));
+  SetSockaddrIn(&route.rt_genmask, Ipv4Addr(255, 255, 255, 252));
+  SetSockaddrIn(&route.rt_gateway, Ipv4Addr(192, 168, 1, 1));
+  std::string rt_dev = "eth0";
+  route.rt_dev = (char*)rt_dev.c_str();
+  route.rt_flags =
+      RTF_UP | RTF_GATEWAY | RTF_DYNAMIC | RTF_MODIFIED | RTF_REJECT;
+  stream.str("");
+  stream << route;
+  EXPECT_EQ(
+      "{rt_dst: {family: AF_INET, port: 0, addr: 100.115.92.128}, rt_genmask: "
+      "{family: AF_INET, port: 0, addr: 255.255.255.252}, rt_gateway: {family: "
+      "AF_INET, port: 0, addr: 192.168.1.1}, rt_dev: eth0, rt_flags: RTF_UP | "
+      "RTF_GATEWAY | RTF_DYNAMIC | RTF_MODIFIED | RTF_REJECT}",
+      stream.str());
 }
 
 }  // namespace arc_networkd

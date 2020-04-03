@@ -10,7 +10,6 @@
 #include <linux/sockios.h>
 #include <net/if.h>
 #include <net/if_arp.h>
-#include <net/route.h>
 #include <netinet/in.h>
 #include <string.h>
 #include <sys/ioctl.h>
@@ -32,6 +31,7 @@ namespace {
 constexpr pid_t kTestPID = -2;
 constexpr char kDefaultIfname[] = "vmtap%d";
 constexpr char kTunDev[] = "/dev/net/tun";
+
 }  // namespace
 
 std::string ArcVethHostName(std::string ifname) {
@@ -77,9 +77,7 @@ bool Datapath::AddBridge(const std::string& ifname,
   }
 
   // See nat.conf in chromeos-nat-init for the rest of the NAT setup rules.
-  if (process_runner_->iptables("mangle",
-                                {"-A", "PREROUTING", "-i", ifname, "-j", "MARK",
-                                 "--set-mark", "1", "-w"}) != 0) {
+  if (!AddOutboundIPv4SNATMark(ifname)) {
     RemoveBridge(ifname);
     return false;
   }
@@ -88,8 +86,7 @@ bool Datapath::AddBridge(const std::string& ifname,
 }
 
 void Datapath::RemoveBridge(const std::string& ifname) {
-  process_runner_->iptables("mangle", {"-D", "PREROUTING", "-i", ifname, "-j",
-                                       "MARK", "--set-mark", "1", "-w"});
+  RemoveOutboundIPv4SNATMark(ifname);
   process_runner_->ip("link", "set", {ifname, "down"});
   process_runner_->brctl("delbr", {ifname});
 }
@@ -414,6 +411,17 @@ void Datapath::RemoveOutboundIPv4(const std::string& ifname) {
       "filter", {"-D", "FORWARD", "-o", ifname, "-j", "ACCEPT", "-w"});
 }
 
+bool Datapath::AddOutboundIPv4SNATMark(const std::string& ifname) {
+  return process_runner_->iptables(
+             "mangle", {"-A", "PREROUTING", "-i", ifname, "-j", "MARK",
+                        "--set-mark", "1", "-w"}) == 0;
+}
+
+void Datapath::RemoveOutboundIPv4SNATMark(const std::string& ifname) {
+  process_runner_->iptables("mangle", {"-D", "PREROUTING", "-i", ifname, "-j",
+                                       "MARK", "--set-mark", "1", "-w"});
+}
+
 bool Datapath::MaskInterfaceFlags(const std::string& ifname,
                                   uint16_t on,
                                   uint16_t off) {
@@ -508,32 +516,69 @@ bool Datapath::AddIPv4Route(uint32_t gateway_addr,
                             uint32_t netmask) {
   struct rtentry route;
   memset(&route, 0, sizeof(route));
-
-  struct sockaddr_in* gateway =
-      reinterpret_cast<struct sockaddr_in*>(&route.rt_gateway);
-  gateway->sin_family = AF_INET;
-  gateway->sin_addr.s_addr = static_cast<in_addr_t>(gateway_addr);
-
-  struct sockaddr_in* dst =
-      reinterpret_cast<struct sockaddr_in*>(&route.rt_dst);
-  dst->sin_family = AF_INET;
-  dst->sin_addr.s_addr = (addr & netmask);
-
-  struct sockaddr_in* genmask =
-      reinterpret_cast<struct sockaddr_in*>(&route.rt_genmask);
-  genmask->sin_family = AF_INET;
-  genmask->sin_addr.s_addr = netmask;
-
+  SetSockaddrIn(&route.rt_gateway, gateway_addr);
+  SetSockaddrIn(&route.rt_dst, addr & netmask);
+  SetSockaddrIn(&route.rt_genmask, netmask);
   route.rt_flags = RTF_UP | RTF_GATEWAY;
+  return ModifyRtentry(SIOCADDRT, &route);
+}
 
-  base::ScopedFD fd(socket(AF_INET, SOCK_DGRAM | SOCK_CLOEXEC, 0));
-  if (!fd.is_valid()) {
-    PLOG(ERROR) << "Failed to create socket";
+bool Datapath::DeleteIPv4Route(uint32_t gateway_addr,
+                               uint32_t addr,
+                               uint32_t netmask) {
+  struct rtentry route;
+  memset(&route, 0, sizeof(route));
+  SetSockaddrIn(&route.rt_gateway, gateway_addr);
+  SetSockaddrIn(&route.rt_dst, addr & netmask);
+  SetSockaddrIn(&route.rt_genmask, netmask);
+  route.rt_flags = RTF_UP | RTF_GATEWAY;
+  return ModifyRtentry(SIOCDELRT, &route);
+}
+
+bool Datapath::AddIPv4Route(const std::string& ifname,
+                            uint32_t addr,
+                            uint32_t netmask) {
+  struct rtentry route;
+  memset(&route, 0, sizeof(route));
+  SetSockaddrIn(&route.rt_dst, addr & netmask);
+  SetSockaddrIn(&route.rt_genmask, netmask);
+  char rt_dev[IFNAMSIZ];
+  strncpy(rt_dev, ifname.c_str(), IFNAMSIZ);
+  rt_dev[IFNAMSIZ - 1] = '\0';
+  route.rt_dev = rt_dev;
+  route.rt_flags = RTF_UP | RTF_GATEWAY;
+  return ModifyRtentry(SIOCADDRT, &route);
+}
+
+bool Datapath::DeleteIPv4Route(const std::string& ifname,
+                               uint32_t addr,
+                               uint32_t netmask) {
+  struct rtentry route;
+  memset(&route, 0, sizeof(route));
+  SetSockaddrIn(&route.rt_dst, addr & netmask);
+  SetSockaddrIn(&route.rt_genmask, netmask);
+  char rt_dev[IFNAMSIZ];
+  strncpy(rt_dev, ifname.c_str(), IFNAMSIZ);
+  rt_dev[IFNAMSIZ - 1] = '\0';
+  route.rt_dev = rt_dev;
+  route.rt_flags = RTF_UP | RTF_GATEWAY;
+  return ModifyRtentry(SIOCDELRT, &route);
+}
+
+bool Datapath::ModifyRtentry(unsigned long op, struct rtentry* route) {
+  DCHECK(route);
+  if (op != SIOCADDRT && op != SIOCDELRT) {
+    LOG(ERROR) << "Invalid operation " << op << " for rtentry " << route;
     return false;
   }
-
-  if (HANDLE_EINTR(ioctl(fd.get(), SIOCADDRT, &route)) != 0) {
-    PLOG(ERROR) << "Failed to set route for container";
+  base::ScopedFD fd(socket(AF_INET, SOCK_DGRAM | SOCK_CLOEXEC, 0));
+  if (!fd.is_valid()) {
+    PLOG(ERROR) << "Failed to create socket for adding rtentry " << route;
+    return false;
+  }
+  if (HANDLE_EINTR(ioctl_(fd.get(), op, route)) != 0) {
+    std::string opname = op == SIOCADDRT ? "add" : "delete";
+    PLOG(ERROR) << "Failed to " << opname << " rtentry " << route;
     return false;
   }
   return true;

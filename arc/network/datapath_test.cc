@@ -8,7 +8,6 @@
 #include <net/if.h>
 #include <sys/ioctl.h>
 
-#include <set>
 #include <utility>
 #include <vector>
 
@@ -31,11 +30,26 @@ namespace {
 // TODO(hugobenichi) Centralize this constant definition
 constexpr pid_t kTestPID = -2;
 
-std::set<ioctl_req_t> ioctl_reqs;
+std::vector<ioctl_req_t> ioctl_reqs;
+std::vector<std::pair<std::string, struct rtentry>> ioctl_rtentry_args;
 
 // Capture all ioctls and succeed.
 int ioctl_req_cap(int fd, ioctl_req_t req, ...) {
-  ioctl_reqs.insert(req);
+  ioctl_reqs.push_back(req);
+  return 0;
+}
+
+// Capture ioctls for SIOCADDRT and SIOCDELRT and succeed.
+int ioctl_rtentry_cap(int fd, ioctl_req_t req, struct rtentry* arg) {
+  ioctl_reqs.push_back(req);
+  ioctl_rtentry_args.push_back({"", *arg});
+  // Copy the string poited by rtentry.rt_dev because Add/DeleteIPv4Route pass
+  // this value to ioctl() on the stack.
+  if (arg->rt_dev) {
+    auto& cap = ioctl_rtentry_args.back();
+    cap.first = std::string(arg->rt_dev);
+    cap.second.rt_dev = (char*)cap.first.c_str();
+  }
   return 0;
 }
 
@@ -92,9 +106,9 @@ TEST(DatapathTest, AddTAP) {
   auto addr = subnet.AllocateAtOffset(0);
   auto ifname = datapath.AddTAP("foo0", &mac, addr.get(), "");
   EXPECT_EQ(ifname, "foo0");
-  std::set<ioctl_req_t> expected = {TUNSETIFF,      TUNSETPERSIST, SIOCSIFADDR,
-                                    SIOCSIFNETMASK, SIOCSIFHWADDR, SIOCGIFFLAGS,
-                                    SIOCSIFFLAGS};
+  std::vector<ioctl_req_t> expected = {
+      TUNSETIFF,     TUNSETPERSIST, SIOCSIFADDR, SIOCSIFNETMASK,
+      SIOCSIFHWADDR, SIOCGIFFLAGS,  SIOCSIFFLAGS};
   EXPECT_EQ(ioctl_reqs, expected);
   ioctl_reqs.clear();
 }
@@ -107,9 +121,9 @@ TEST(DatapathTest, AddTAPWithOwner) {
   auto addr = subnet.AllocateAtOffset(0);
   auto ifname = datapath.AddTAP("foo0", &mac, addr.get(), "root");
   EXPECT_EQ(ifname, "foo0");
-  std::set<ioctl_req_t> expected = {TUNSETIFF,    TUNSETPERSIST,  TUNSETOWNER,
-                                    SIOCSIFADDR,  SIOCSIFNETMASK, SIOCSIFHWADDR,
-                                    SIOCGIFFLAGS, SIOCSIFFLAGS};
+  std::vector<ioctl_req_t> expected = {
+      TUNSETIFF,      TUNSETPERSIST, TUNSETOWNER,  SIOCSIFADDR,
+      SIOCSIFNETMASK, SIOCSIFHWADDR, SIOCGIFFLAGS, SIOCSIFFLAGS};
   EXPECT_EQ(ioctl_reqs, expected);
   ioctl_reqs.clear();
 }
@@ -119,8 +133,8 @@ TEST(DatapathTest, AddTAPNoAddrs) {
   Datapath datapath(&runner, ioctl_req_cap);
   auto ifname = datapath.AddTAP("foo0", nullptr, nullptr, "");
   EXPECT_EQ(ifname, "foo0");
-  std::set<ioctl_req_t> expected = {TUNSETIFF, TUNSETPERSIST, SIOCGIFFLAGS,
-                                    SIOCSIFFLAGS};
+  std::vector<ioctl_req_t> expected = {TUNSETIFF, TUNSETPERSIST, SIOCGIFFLAGS,
+                                       SIOCSIFFLAGS};
   EXPECT_EQ(ioctl_reqs, expected);
   ioctl_reqs.clear();
 }
@@ -375,7 +389,7 @@ TEST(DatapathTest, MaskInterfaceFlags) {
   Datapath datapath(&runner, ioctl_req_cap);
   bool result = datapath.MaskInterfaceFlags("foo0", IFF_DEBUG);
   EXPECT_TRUE(result);
-  std::set<ioctl_req_t> expected = {SIOCGIFFLAGS, SIOCSIFFLAGS};
+  std::vector<ioctl_req_t> expected = {SIOCGIFFLAGS, SIOCSIFFLAGS};
   EXPECT_EQ(ioctl_reqs, expected);
   ioctl_reqs.clear();
 }
@@ -440,6 +454,46 @@ TEST(DatapathTest, AddIPv6HostRoute) {
                   ElementsAre("2001:da8:e00::1234/128", "dev", "eth0"), true));
   Datapath datapath(&runner);
   datapath.AddIPv6HostRoute("eth0", "2001:da8:e00::1234", 128);
+}
+
+TEST(DatapathTest, AddIPv4Route) {
+  MockProcessRunner runner;
+  Datapath datapath(&runner, (ioctl_t)ioctl_rtentry_cap);
+
+  datapath.AddIPv4Route(Ipv4Addr(192, 168, 1, 1), Ipv4Addr(100, 115, 93, 0),
+                        Ipv4Addr(255, 255, 255, 0));
+  datapath.DeleteIPv4Route(Ipv4Addr(192, 168, 1, 1), Ipv4Addr(100, 115, 93, 0),
+                           Ipv4Addr(255, 255, 255, 0));
+  datapath.AddIPv4Route("eth0", Ipv4Addr(100, 115, 92, 8),
+                        Ipv4Addr(255, 255, 255, 252));
+  datapath.DeleteIPv4Route("eth0", Ipv4Addr(100, 115, 92, 8),
+                           Ipv4Addr(255, 255, 255, 252));
+
+  std::vector<ioctl_req_t> expected_reqs = {SIOCADDRT, SIOCDELRT, SIOCADDRT,
+                                            SIOCDELRT};
+  EXPECT_EQ(expected_reqs, ioctl_reqs);
+  ioctl_reqs.clear();
+
+  std::string route1 =
+      "{rt_dst: {family: AF_INET, port: 0, addr: 100.115.93.0}, rt_genmask: "
+      "{family: AF_INET, port: 0, addr: 255.255.255.0}, rt_gateway: {family: "
+      "AF_INET, port: 0, addr: 192.168.1.1}, rt_dev: null, rt_flags: RTF_UP | "
+      "RTF_GATEWAY}";
+  std::string route2 =
+      "{rt_dst: {family: AF_INET, port: 0, addr: 100.115.92.8}, rt_genmask: "
+      "{family: AF_INET, port: 0, addr: 255.255.255.252}, rt_gateway: {unset}, "
+      "rt_dev: eth0, rt_flags: RTF_UP | RTF_GATEWAY}";
+  std::vector<std::string> captured_routes;
+  for (const auto& route : ioctl_rtentry_args) {
+    std::ostringstream stream;
+    stream << route.second;
+    captured_routes.emplace_back(stream.str());
+  }
+  ioctl_rtentry_args.clear();
+  EXPECT_EQ(route1, captured_routes[0]);
+  EXPECT_EQ(route1, captured_routes[1]);
+  EXPECT_EQ(route2, captured_routes[2]);
+  EXPECT_EQ(route2, captured_routes[3]);
 }
 
 }  // namespace arc_networkd

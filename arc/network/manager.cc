@@ -27,6 +27,7 @@
 #include <brillo/minijail/minijail.h>
 
 #include "arc/network/ipc.pb.h"
+#include "arc/network/mac_address_generator.h"
 #include "arc/network/net_util.h"
 #include "arc/network/routing_service.h"
 #include "arc/network/scoped_ns.h"
@@ -263,6 +264,12 @@ void Manager::OnShutdown(int* exit_code) {
   cros_svc_.reset();
   arc_svc_.reset();
   close(connected_namespaces_epollfd_);
+  // Tear down any remaining connected namespace.
+  std::vector<int> connected_namespaces_fdkeys;
+  for (const auto& kv : connected_namespaces_)
+    connected_namespaces_fdkeys.push_back(kv.first);
+  for (const int fdkey : connected_namespaces_fdkeys)
+    DisconnectNamespace(fdkey);
 
   // Restore original local port range.
   // TODO(garrick): The original history behind this tweak is gone. Some
@@ -743,21 +750,98 @@ void Manager::ConnectNamespace(
   const std::string ifname_id = std::to_string(connected_namespaces_next_id_);
   const std::string host_ifname = "arc_ns" + ifname_id;
   const std::string client_ifname = "veth" + ifname_id;
+  const uint32_t host_ipv4_addr = subnet->AddressAtOffset(0);
+  const uint32_t client_ipv4_addr = subnet->AddressAtOffset(1);
 
-  // TODO(hugobenichi, b/147712924) Implement:
+  // Veth interface configuration and client routing configuration:
   //  - create veth pair inside client namespace.
   //  - configure IPv4 address on remote veth inside client namespace.
-  //  - add default route inside client namespace.
-  //  - add route to client subnet on host namespace.
-  //  - if allow_user_traffic is true allow forwarding both ways between
-  //  client namespace and other guest OSs and namespaces.
-  //  - if outbound_physical_device is defined, set strong routing.
+  //  - configure IPv4 address on local veth inside host namespace.
+  //  - add a default IPv4 /0 route sending traffic to that remote veth.
+  //  - bring back one veth to the host namespace, and set it up.
+  pid_t pid = request.pid();
+  if (!datapath_->ConnectVethPair(
+          pid, host_ifname, client_ifname, addr_mgr_.GenerateMacAddress(),
+          client_ipv4_addr, subnet->PrefixLength(),
+          false /* enable_multicast */)) {
+    LOG(ERROR) << "ConnectNamespaceRequest: failed to create veth pair for "
+                  "namespace pid "
+               << pid;
+    return;
+  }
+  if (!datapath_->ConfigureInterface(
+          host_ifname, addr_mgr_.GenerateMacAddress(), host_ipv4_addr,
+          subnet->PrefixLength(), true /* link up */,
+          false /* enable_multicast */)) {
+    LOG(ERROR) << "ConnectNamespaceRequest: cannot configure host interface "
+               << host_ifname;
+    datapath_->RemoveInterface(host_ifname);
+    return;
+  }
+  {
+    ScopedNS ns(pid);
+    if (!ns.IsValid()) {
+      LOG(ERROR) << "ConnectNamespaceRequest: cannot enter client pid " << pid;
+      datapath_->RemoveInterface(host_ifname);
+      return;
+    }
+    if (!datapath_->AddIPv4Route(host_ipv4_addr, INADDR_ANY, INADDR_ANY)) {
+      LOG(ERROR)
+          << "ConnectNamespaceRequest: failed to add default /0 route to "
+          << host_ifname << " inside namespace pid " << pid;
+      datapath_->RemoveInterface(host_ifname);
+      return;
+    }
+  }
+
+  // Host namespace routing configuration
+  //  - ingress: add route to client subnet via |host_ifname|.
+  //  - egress: - allow forwarding for traffic outgoing |host_ifname|.
+  //            - add SNAT mark 0x1/0x1 for traffic outgoing |host_ifname|.
+  //  Note that by default unsolicited ingress traffic is not forwarded to the
+  //  client namespace unless the client specifically set port forwarding
+  //  through permission_broker DBus APIs.
+  // TODO(hugobenichi) If allow_user_traffic is false, then prevent forwarding
+  // both ways between client namespace and other guest containers and VMs.
+  // TODO(hugobenichi) If outbound_physical_device is defined, then set strong
+  // routing to that interface routing table.
+  if (!datapath_->AddIPv4Route(host_ipv4_addr, subnet->BaseAddress(),
+                               subnet->Netmask())) {
+    LOG(ERROR)
+        << "ConnectNamespaceRequest: failed to set route to client namespace";
+    datapath_->RemoveInterface(host_ifname);
+    return;
+  }
+  if (!datapath_->AddOutboundIPv4(host_ifname)) {
+    LOG(ERROR) << "ConnectNamespaceRequest: failed to allow FORWARD for "
+                  "traffic outgoing from "
+               << host_ifname;
+    datapath_->RemoveInterface(host_ifname);
+    datapath_->DeleteIPv4Route(host_ipv4_addr, subnet->BaseAddress(),
+                               subnet->Netmask());
+    return;
+  }
+  if (!datapath_->AddOutboundIPv4SNATMark(host_ifname)) {
+    LOG(ERROR) << "ConnectNamespaceRequest: failed to set SNAT for traffic "
+                  "outgoing from "
+               << host_ifname;
+    datapath_->RemoveInterface(host_ifname);
+    datapath_->DeleteIPv4Route(host_ipv4_addr, subnet->BaseAddress(),
+                               subnet->Netmask());
+    datapath_->RemoveOutboundIPv4(host_ifname);
+    return;
+  }
 
   // Dup the client fd into our own: this guarantees that the fd number will
   // be stable and tied to the actual kernel resources used by the client.
   base::ScopedFD local_client_fd(dup(client_fd.get()));
   if (!local_client_fd.is_valid()) {
     PLOG(ERROR) << "ConnectNamespaceRequest: failed to dup() client fd";
+    datapath_->RemoveInterface(host_ifname);
+    datapath_->DeleteIPv4Route(host_ipv4_addr, subnet->BaseAddress(),
+                               subnet->Netmask());
+    datapath_->RemoveOutboundIPv4(host_ifname);
+    datapath_->RemoveOutboundIPv4SNATMark(host_ifname);
     return;
   }
 
@@ -770,11 +854,17 @@ void Manager::ConnectNamespace(
   if (epoll_ctl(connected_namespaces_epollfd_, EPOLL_CTL_ADD,
                 local_client_fd.get(), &epevent) != 0) {
     PLOG(ERROR) << "ConnectNamespaceResponse: epoll_ctl(EPOLL_CTL_ADD) failed";
+    datapath_->RemoveInterface(host_ifname);
+    datapath_->DeleteIPv4Route(host_ipv4_addr, subnet->BaseAddress(),
+                               subnet->Netmask());
+    datapath_->RemoveOutboundIPv4(host_ifname);
+    datapath_->RemoveOutboundIPv4SNATMark(host_ifname);
     return;
   }
 
   // Prepare the response before storing ConnectNamespaceInfo.
   response.set_ifname(host_ifname);
+  response.set_ipv4_address(client_ipv4_addr);
   auto* response_subnet = response.mutable_ipv4_subnet();
   response_subnet->set_base_addr(subnet->BaseAddress());
   response_subnet->set_prefix_len(subnet->PrefixLength());
@@ -807,17 +897,24 @@ void Manager::DisconnectNamespace(int client_fd) {
 
   // Remove the client fd dupe from the epoll watcher and close it.
   if (epoll_ctl(connected_namespaces_epollfd_, EPOLL_CTL_DEL, client_fd,
-                nullptr) != 0) {
+                nullptr) != 0)
     PLOG(ERROR) << "DisconnectNamespace: epoll_ctl(EPOLL_CTL_DEL) failed";
-  }
-  if (close(client_fd) < 0) {
+  if (close(client_fd) < 0)
     PLOG(ERROR) << "DisconnectNamespace: close(client_fd) failed";
-  }
 
-  // TODO(hugobenichi, b/147712924) Implement
+  // Destroy the interface configuration and routing configuration:
   //  - destroy veth pair.
-  //  - remove route to client subnet on host namespace.
-  //  - remove forwarding rules to/from other guest OSs if any.
+  //  - remove forwarding rules on host namespace.
+  //  - remove SNAT marking rule on host namespace.
+  //  Note that the default route set inside the client namespace by patchpanel
+  //  is not destroyed: it is assumed the client will also teardown its
+  //  namespace if it triggered DisconnectNamespace.
+  datapath_->RemoveInterface(it->second.host_ifname);
+  datapath_->RemoveOutboundIPv4(it->second.host_ifname);
+  datapath_->RemoveOutboundIPv4SNATMark(it->second.host_ifname);
+  datapath_->DeleteIPv4Route(it->second.client_subnet->AddressAtOffset(0),
+                             it->second.client_subnet->BaseAddress(),
+                             it->second.client_subnet->Netmask());
 
   LOG(INFO) << "Disconnected network namespace " << it->second;
 
@@ -847,7 +944,7 @@ void Manager::CheckConnectedNamespaces() {
   base::MessageLoopForIO::current()->task_runner()->PostDelayedTask(
       FROM_HERE,
       base::Bind(&Manager::CheckConnectedNamespaces,
-                 base::Unretained(this)),
+                 weak_factory_.GetWeakPtr()),
       kConnectNamespaceCheckInterval);
 }
 

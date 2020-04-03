@@ -4,14 +4,51 @@
 
 #include "arc/network/net_util.h"
 
+#include <net/if.h>
+#include <string.h>
+
 #include <fstream>
 #include <iostream>
 #include <random>
+#include <utility>
+#include <vector>
 
 #include <base/logging.h>
 #include <base/strings/stringprintf.h>
 
 namespace arc_networkd {
+
+namespace {
+
+using flags_info_t = std::vector<std::pair<uint32_t, std::string>>;
+
+// Helper for pretty printing flags
+void AddFlags(std::ostream& stream,
+              uint32_t flags,
+              const flags_info_t& flags_info) {
+  if (flags == 0) {
+    stream << '0';
+    return;
+  }
+  std::string sep = "";
+  for (const auto& flag_descr : flags_info) {
+    if ((flags & flag_descr.first) == 0)
+      continue;
+    stream << sep << flag_descr.second;
+    sep = " | ";
+  }
+}
+
+const flags_info_t kRtentryRTF = {
+    {RTF_UP, "RTF_UP"},           {RTF_GATEWAY, "RTF_GATEWAY"},
+    {RTF_HOST, "RTF_HOST"},       {RTF_REINSTATE, "RTF_REINSTATE"},
+    {RTF_DYNAMIC, "RTF_DYNAMIC"}, {RTF_MODIFIED, "RTF_MODIFIED"},
+    {RTF_MTU, "RTF_MTU"},         {RTF_MSS, "RTF_MSS"},
+    {RTF_WINDOW, "RTF_WINDOW"},   {RTF_IRTT, "RTF_IRTT"},
+    {RTF_REJECT, "RTF_REJECT"},
+};
+
+}  // namespace
 
 uint32_t Ipv4Netmask(uint32_t prefix_len) {
   return htonl((0xffffffffull << (32 - prefix_len)) & 0xffffffff);
@@ -84,6 +121,13 @@ bool GenerateRandomIPv6Prefix(struct in6_addr* prefix, int len) {
   return true;
 }
 
+void SetSockaddrIn(struct sockaddr* sockaddr, uint32_t addr) {
+  struct sockaddr_in* sockaddr_in =
+      reinterpret_cast<struct sockaddr_in*>(sockaddr);
+  sockaddr_in->sin_family = AF_INET;
+  sockaddr_in->sin_addr.s_addr = static_cast<in_addr_t>(addr);
+}
+
 std::ostream& operator<<(std::ostream& stream, const struct in_addr& addr) {
   char buf[INET_ADDRSTRLEN];
   inet_ntop(AF_INET, &addr, buf, sizeof(buf));
@@ -100,6 +144,8 @@ std::ostream& operator<<(std::ostream& stream, const struct in6_addr& addr) {
 
 std::ostream& operator<<(std::ostream& stream, const struct sockaddr& addr) {
   switch (addr.sa_family) {
+    case 0:
+      return stream << "{unset}";
     case AF_INET:
       return stream << (const struct sockaddr_in&)addr;
     case AF_INET6:
@@ -147,6 +193,17 @@ std::ostream& operator<<(std::ostream& stream, const struct sockaddr_un& addr) {
 std::ostream& operator<<(std::ostream& stream, const struct sockaddr_vm& addr) {
   return stream << "{family: AF_VSOCK, port: " << addr.svm_port
                 << ", cid: " << addr.svm_cid << "}";
+}
+
+std::ostream& operator<<(std::ostream& stream, const struct rtentry& route) {
+  std::string rt_dev =
+      route.rt_dev ? std::string(route.rt_dev, strnlen(route.rt_dev, IFNAMSIZ))
+                   : "null";
+  stream << "{rt_dst: " << route.rt_dst << ", rt_genmask: " << route.rt_genmask
+         << ", rt_gateway: " << route.rt_gateway << ", rt_dev: " << rt_dev
+         << ", rt_flags: ";
+  AddFlags(stream, route.rt_flags, kRtentryRTF);
+  return stream << "}";
 }
 
 uint16_t FoldChecksum(uint32_t sum) {

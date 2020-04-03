@@ -5,6 +5,8 @@
 #ifndef ARC_NETWORK_DATAPATH_H_
 #define ARC_NETWORK_DATAPATH_H_
 
+#include <net/route.h>
+
 #include <string>
 
 #include <base/macros.h>
@@ -115,6 +117,13 @@ class Datapath {
   virtual bool AddOutboundIPv4(const std::string& ifname);
   virtual void RemoveOutboundIPv4(const std::string& ifname);
 
+  // Create (or delete) a mangle PREROUTING rule for marking IPv4 traffic
+  // outgoing of |ifname| with the SNAT fwmark value 0x1.
+  // TODO(hugobenichi) Refer to RoutingService to obtain the fwmark value and
+  // add a fwmark mask in the generated rule.
+  virtual bool AddOutboundIPv4SNATMark(const std::string& ifname);
+  virtual void RemoveOutboundIPv4SNATMark(const std::string& ifname);
+
   // Methods supporting IPv6 configuration for ARC.
   virtual bool MaskInterfaceFlags(const std::string& ifname,
                                   uint16_t on,
@@ -137,15 +146,30 @@ class Datapath {
   virtual void RemoveIPv6Neighbor(const std::string& ifname,
                                   const std::string& ipv6_addr);
 
+  // Adds (or deletes) a route to direct to |gateway_addr| the traffic destined
+  // to the subnet defined by |addr| and |netmask|.
   virtual bool AddIPv4Route(uint32_t gateway_addr,
                             uint32_t addr,
                             uint32_t netmask);
+  virtual bool DeleteIPv4Route(uint32_t gateway_addr,
+                               uint32_t addr,
+                               uint32_t netmask);
+  // Adds (or deletes) a route to direct to |ifname| the traffic destined to the
+  // subnet defined by |addr| and |netmask|.
+  virtual bool AddIPv4Route(const std::string& ifname,
+                            uint32_t addr,
+                            uint32_t netmask);
+  virtual bool DeleteIPv4Route(const std::string& ifname,
+                               uint32_t addr,
+                               uint32_t netmask);
 
   MinijailedProcessRunner& runner() const;
 
  private:
   MinijailedProcessRunner* process_runner_;
   ioctl_t ioctl_;
+
+  bool ModifyRtentry(unsigned long op, struct rtentry* route);
 
   DISALLOW_COPY_AND_ASSIGN(Datapath);
 };

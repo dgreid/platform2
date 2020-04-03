@@ -6,6 +6,7 @@
 #include <ifaddrs.h>
 #include <linux/in6.h>
 #include <linux/vm_sockets.h>
+#include <net/route.h>
 #include <netinet/icmp6.h>
 #include <netinet/in.h>
 #include <netinet/ip.h>
@@ -89,6 +90,8 @@ BRILLO_EXPORT bool FindFirstIPv6Address(const std::string& ifname,
 
 BRILLO_EXPORT bool GenerateRandomIPv6Prefix(struct in6_addr* prefix, int len);
 
+BRILLO_EXPORT void SetSockaddrIn(struct sockaddr* sockaddr, uint32_t addr);
+
 BRILLO_EXPORT std::ostream& operator<<(std::ostream& stream,
                                        const struct in_addr& addr);
 BRILLO_EXPORT std::ostream& operator<<(std::ostream& stream,
@@ -105,6 +108,9 @@ BRILLO_EXPORT std::ostream& operator<<(std::ostream& stream,
                                        const struct sockaddr_un& addr);
 BRILLO_EXPORT std::ostream& operator<<(std::ostream& stream,
                                        const struct sockaddr_vm& addr);
+
+BRILLO_EXPORT std::ostream& operator<<(std::ostream& stream,
+                                       const struct rtentry& route);
 
 // Fold 32-bit into 16 bits.
 BRILLO_EXPORT uint16_t FoldChecksum(uint32_t sum);
