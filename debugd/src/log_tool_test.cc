@@ -6,6 +6,7 @@
 #include <pwd.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -29,10 +30,26 @@ namespace debugd {
 
 class LogToolTest : public testing::Test {
  protected:
-  LogToolTest() : log_tool_(new dbus::MockBus(dbus::Bus::Options())) {}
+  std::unique_ptr<LogTool> log_tool_;
+  base::ScopedTempDir temp_dir_;
 
-  LogTool log_tool_;
+  void SetUp() override {
+    ASSERT_TRUE(temp_dir_.CreateUniqueTempDir());
+    log_tool_ = std::unique_ptr<LogTool>(new LogTool(
+        new dbus::MockBus(dbus::Bus::Options()), temp_dir_.GetPath()));
+  }
 };
+
+TEST_F(LogToolTest, DeleteArcBugReportBackup) {
+  std::string userhash = "user";
+  base::FilePath logPath = temp_dir_.GetPath()
+                            .Append(userhash)
+                            .Append("arc-bugreport.log");
+  EXPECT_TRUE(WriteFile(logPath, userhash));
+  EXPECT_TRUE(PathExists(logPath));
+  log_tool_->DeleteArcBugReportBackup(userhash);
+  EXPECT_FALSE(PathExists(logPath));
+}
 
 TEST_F(LogToolTest, EncodeString) {
   // U+1F600 GRINNING FACE

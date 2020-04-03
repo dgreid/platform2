@@ -316,6 +316,31 @@
       </arg>
       <annotation name="org.chromium.DBus.Method.Kind" value="simple"/>
     </method>
+    <method name="BackupArcBugReport">
+      <tp:docstring>
+        Retrieves the ARC bug report and saves it in debugd daemon store.
+        If a backup already exists, it is over-written.
+        If backup operation fails, an error is logged.
+      </tp:docstring>
+      <arg name="userhash" type="s" direction="in">
+        <tp:docstring>
+          User hash of the user for which the report is backed up.
+        </tp:docstring>
+      </arg>
+      <annotation name="org.chromium.DBus.Method.Kind" value="simple"/>
+    </method>
+    <method name="DeleteArcBugReportBackup">
+      <tp:docstring>
+        Deletes the backed up ARC bug report saved in daemon store.
+        If delete operation fails, an error is logged.
+      </tp:docstring>
+      <arg name="userhash" type="s" direction="in">
+        <tp:docstring>
+          User hash of the user for which the report is backed up.
+        </tp:docstring>
+      </arg>
+      <annotation name="org.chromium.DBus.Method.Kind" value="simple"/>
+    </method>
     <method name="GetJournalLog">
       <tp:docstring>
         Fills the journal log in export format for feedback reports in the

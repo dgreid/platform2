@@ -78,7 +78,8 @@ class LogTool {
     bool minijail_disabled_for_test_ = false;
   };
 
-  explicit LogTool(scoped_refptr<dbus::Bus> bus) : bus_(bus) {}
+  explicit LogTool(scoped_refptr<dbus::Bus> bus);
+
   ~LogTool() = default;
 
   using LogMap = std::map<std::string, std::string>;
@@ -87,6 +88,8 @@ class LogTool {
   LogMap GetAllLogs();
   LogMap GetAllDebugLogs();
   void GetBigFeedbackLogs(const base::ScopedFD& fd);
+  void BackupArcBugReport(const std::string& userhash);
+  void DeleteArcBugReportBackup(const std::string& userhash);
   void GetJournalLog(const base::ScopedFD& fd);
 
   // Returns a representation of |value| with the specified encoding.
@@ -96,9 +99,15 @@ class LogTool {
  private:
   friend class LogToolTest;
 
+  // For testing only.
+  LogTool(scoped_refptr<dbus::Bus> bus,
+          const base::FilePath& daemon_store_base_dir);
+
   void CreateConnectivityReport(bool wait_for_results);
+  base::FilePath GetArcBugReportBackupFilePath(const std::string& userhash);
 
   scoped_refptr<dbus::Bus> bus_;
+  base::FilePath daemon_store_base_dir_;
 
   DISALLOW_COPY_AND_ASSIGN(LogTool);
 };

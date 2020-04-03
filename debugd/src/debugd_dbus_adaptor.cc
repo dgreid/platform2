@@ -203,6 +203,14 @@ void DebugdDBusAdaptor::GetBigFeedbackLogs(const base::ScopedFD& fd) {
   log_tool_->GetBigFeedbackLogs(fd);
 }
 
+void DebugdDBusAdaptor::BackupArcBugReport(const std::string& userhash) {
+  log_tool_->BackupArcBugReport(userhash);
+}
+
+void DebugdDBusAdaptor::DeleteArcBugReportBackup(const std::string& userhash) {
+  log_tool_->DeleteArcBugReportBackup(userhash);
+}
+
 void DebugdDBusAdaptor::GetJournalLog(const base::ScopedFD& fd) {
   log_tool_->GetJournalLog(fd);
 }

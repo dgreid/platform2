@@ -49,6 +49,8 @@ namespace {
 const char kRoot[] = "root";
 const char kShell[] = "/bin/sh";
 constexpr char kLsbReleasePath[] = "/etc/lsb-release";
+constexpr char kArcBugReportBackupFileName[] = "arc-bugreport.log";
+constexpr char kDaemonStoreBaseDir[] = "/run/daemon-store/debugd/";
 
 // Minimum time in seconds needed to allow shill to test active connections.
 const int kConnectionTesterTimeoutSeconds = 5;
@@ -72,6 +74,15 @@ constexpr const char kPerfDataDescription[] =
 using Log = LogTool::Log;
 constexpr Log::LogType kCommand = Log::kCommand;
 constexpr Log::LogType kFile = Log::kFile;
+const Log kArcBugReportLog{
+    kCommand,
+    "arc-bugreport",
+    "/usr/bin/nsenter -t1 -m /usr/sbin/android-sh -c /system/bin/arc-bugreport",
+    kRoot,
+    kRoot,
+    10 * 1024 * 1024 /*10 MiB*/,
+    LogTool::Encoding::kUtf8};
+
 // NOTE: IF YOU ADD AN ENTRY TO THIS LIST, PLEASE:
 // * add a row to http://go/cros-feedback-audit and fill it out
 // * email cros-monitoring-forensics@
@@ -350,12 +361,7 @@ const std::vector<Log> kFeedbackLogs {
 // must be sent back to the client via the file descriptor using
 // LogTool::GetBigFeedbackLogs().
 const std::vector<Log> kBigFeedbackLogs{
-  // We need to enter init's mount namespace because android-sh accesses
-  // /run/chrome/is_arcvm and /run/state/logged-in
-
-  {kCommand, "arc-bugreport",
-    "/usr/bin/nsenter -t1 -m /usr/sbin/android-sh -c /system/bin/arc-bugreport",
-    kRoot, kRoot, 10 * 1024 * 1024, LogTool::Encoding::kUtf8},
+  kArcBugReportLog,
 };
 
 // Fills |dictionary| with the contents of the logs in |logs|.
@@ -645,6 +651,21 @@ gid_t Log::GidForGroup(const std::string& group) {
   return entry.gr_gid;
 }
 
+LogTool::LogTool(scoped_refptr<dbus::Bus> bus,
+                 const base::FilePath& daemon_store_base_dir)
+    : bus_(bus), daemon_store_base_dir_(daemon_store_base_dir) {}
+
+LogTool::LogTool(scoped_refptr<dbus::Bus> bus) : bus_(bus) {
+  daemon_store_base_dir_ = base::FilePath(kDaemonStoreBaseDir);
+}
+
+base::FilePath LogTool::GetArcBugReportBackupFilePath
+  (const std::string& userhash) {
+  return daemon_store_base_dir_
+    .Append(userhash)
+    .Append(kArcBugReportBackupFileName);
+}
+
 void LogTool::CreateConnectivityReport(bool wait_for_results) {
   // Perform ConnectivityTrial to report connection state in feedback log.
   auto shill = std::make_unique<org::chromium::flimflam::ManagerProxy>(bus_);
@@ -697,6 +718,27 @@ void LogTool::GetBigFeedbackLogs(const base::ScopedFD& fd) {
   GetOsReleaseInfo(&map);
   PopulateDictionaryValue(map, &dictionary);
   SerializeLogsAsJSON(dictionary, fd);
+}
+
+void LogTool::BackupArcBugReport(const std::string& userhash) {
+  DLOG(INFO) << "Backing up ARC bug report";
+
+  const base::FilePath reportPath = GetArcBugReportBackupFilePath(userhash);
+  const std::string logData = kArcBugReportLog.GetLogData();
+  // TODO(b/149874690) Record an entry in backup map.
+  if (!base::WriteFile(reportPath, logData.c_str(), logData.length())) {
+    PLOG(ERROR) << "Failed to backup ARC bug report";
+  }
+}
+
+void LogTool::DeleteArcBugReportBackup(const std::string& userhash) {
+  DLOG(INFO) << "Deleting the ARC bug report backup";
+
+  const base::FilePath reportPath = GetArcBugReportBackupFilePath(userhash);
+  // TODO(b/149874690) Remove the entry from backup map.
+  if (!base::DeleteFile(reportPath, false)) {
+    PLOG(ERROR) << "Failed to delete ARC bug report backup";
+  }
 }
 
 void LogTool::GetJournalLog(const base::ScopedFD& fd) {
