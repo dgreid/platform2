@@ -10,10 +10,7 @@
 // it's launched by cryptohome when a Guest session is requested, and it's
 // killed by cryptohome when the Guest session exits.
 
-#include <sys/types.h>
-#include <sys/wait.h>
 #include <sysexits.h>
-#include <unistd.h>
 
 #include <memory>
 #include <vector>
@@ -45,30 +42,6 @@ namespace {
 
 const std::vector<FilePath> kDaemonDirPaths = {
     FilePath("session_manager"), FilePath("shill"), FilePath("shill_logs")};
-
-// Forks a child process that immediately prints |message| and crashes.
-// This is useful to report an error through crash reporting without taking down
-// the entire cryptohome-namespace-mounter process, therefore allowing it to
-// clean up and exit normally. This ensures the process doesn't leave mounts
-// laying around.
-void ForkAndCrash(const std::string& message) {
-  pid_t child_pid = fork();
-
-  if (child_pid < 0) {
-    PLOG(ERROR) << "fork() failed";
-  } else if (child_pid == 0) {
-    // Child process: crash with |message|.
-    LOG(FATAL) << message;
-  } else {
-    // |child_pid| > 0
-    // Parent process: reap the child process in a best-effort way and return
-    // normally.
-    // Reaping is not absolutely necessary because the parent process is also
-    // short-lived. As soon as this process exits the child process would get
-    // reparented to init and init would reap it. Still, reap for completeness.
-    waitpid(child_pid, nullptr, 0);
-  }
-}
 
 void CleanUpGuestDaemonDirectories(cryptohome::Platform* platform) {
   FilePath root_home_dir = brillo::cryptohome::home::GetRootPath(
@@ -155,7 +128,7 @@ int main(int argc, char** argv) {
       base::Bind(&TearDown, base::Unretained(&mounter)));
 
   if (!mounter.PerformEphemeralMount(request.username())) {
-    ForkAndCrash("PerformEphemeralMount failed");
+    cryptohome::ForkAndCrash("PerformEphemeralMount failed");
     return EX_SOFTWARE;
   }
   VLOG(1) << "PerformEphemeralMount succeeded";
@@ -166,7 +139,7 @@ int main(int argc, char** argv) {
   }
 
   if (!cryptohome::WriteProtobuf(STDOUT_FILENO, response)) {
-    ForkAndCrash("Failed to write response protobuf");
+    cryptohome::ForkAndCrash("Failed to write response protobuf");
     return EX_OSERR;
   }
   VLOG(1) << "Sent protobuf";

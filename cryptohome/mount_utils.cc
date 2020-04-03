@@ -6,6 +6,10 @@
 
 #include "cryptohome/mount_utils.h"
 
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <unistd.h>
+
 #include <vector>
 
 #include <base/files/file_util.h>
@@ -54,6 +58,22 @@ bool WriteProtobuf(int out_fd, const google::protobuf::MessageLite& message) {
   }
 
   return true;
+}
+
+void ForkAndCrash(const std::string& message) {
+  pid_t child_pid = fork();
+
+  if (child_pid < 0) {
+    PLOG(ERROR) << "fork() failed";
+  } else if (child_pid == 0) {
+    // Child process: crash with |message|.
+    LOG(FATAL) << message;
+  } else {
+    // |child_pid| > 0
+    // Parent process: reap the child process in a best-effort way and return
+    // normally.
+    waitpid(child_pid, nullptr, 0);
+  }
 }
 
 }  // namespace cryptohome

@@ -9,9 +9,6 @@
 #include <errno.h>
 #include <sys/mount.h>
 #include <sys/stat.h>
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <unistd.h>
 
 #include <map>
 #include <memory>
@@ -45,6 +42,7 @@
 #include "cryptohome/dircrypto_data_migrator/migration_helper.h"
 #include "cryptohome/dircrypto_util.h"
 #include "cryptohome/homedirs.h"
+#include "cryptohome/mount_utils.h"
 #include "cryptohome/obfuscated_username.h"
 #include "cryptohome/pkcs11_init.h"
 #include "cryptohome/platform.h"
@@ -71,31 +69,6 @@ bool __attribute__((unused)) IsolateUserSession() {
 #else
   return false;
 #endif
-}
-
-// TODO(betuls): Move the function to mount_utils.cc.
-// Forks a child process that immediately prints |message| and crashes.
-// This is useful to report an error through crash reporting without taking
-// down the entire mount process, therefore allowing it to clean up and exit
-// normally.
-void ForkAndCrash(const std::string& message) {
-  pid_t child_pid = fork();
-
-  if (child_pid < 0) {
-    PLOG(ERROR) << "fork() failed";
-  } else if (child_pid == 0) {
-    // Child process: crash with |message|.
-    LOG(FATAL) << message;
-  } else {
-    // |child_pid| > 0
-    // Parent process: reap the child process in a best-effort way and return
-    // normally.
-    // Reaping is not absolutely necessary because the parent process is also
-    // short-lived. As soon as this process exits the child process would get
-    // reparented to init and init would reap it. Still, reap for
-    // completeness.
-    waitpid(child_pid, nullptr, 0);
-  }
 }
 
 }  // namespace
@@ -240,10 +213,10 @@ bool Mount::Init(Platform* platform, Crypto* crypto,
     chrome_mnt_ns = std::make_unique<MountNamespace>(
         base::FilePath(kUserSessionMountNamespacePath), platform_);
     if (!chrome_mnt_ns->Create()) {
-      std::string message = base::StringPrintf(
-          "Failed to create mount namespace at %s",
-          kUserSessionMountNamespacePath);
-      ForkAndCrash(message);
+      std::string message =
+          base::StringPrintf("Failed to create mount namespace at %s",
+                             kUserSessionMountNamespacePath);
+      cryptohome::ForkAndCrash(message);
       result = false;
     }
   }
