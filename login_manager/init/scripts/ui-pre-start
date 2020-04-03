@@ -66,6 +66,14 @@ if [ ! -d "${USERSPACE_SWAP_DIR}" ]; then
   chown -R chronos "${USERSPACE_SWAP_DIR}"
 fi
 
+# Set up the ui freezer cgroup. This is used during suspend to order the
+# freezing of processes to avoid FUSE causing freeze to timeout.
+if [ ! -d ${UI_FREEZER_CGROUP_DIR} ]; then
+  mkdir -p ${UI_FREEZER_CGROUP_DIR}
+  chown -R chronos ${UI_FREEZER_CGROUP_DIR}
+  chown power:power ${UI_FREEZER_CGROUP_DIR}/freezer.state
+fi
+
 # Set up the renderer freezer.  This is used during the suspend/resume cycle
 # to freeze all the chrome renderers so that they don't take up a lot of power
 # when the system comes up in dark resume

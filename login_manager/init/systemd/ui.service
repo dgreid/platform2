@@ -26,7 +26,8 @@ Environment=UI_LOG_FILE=ui.LATEST
 Environment=CONTAINER_ROOT_DIR=/run/containers
 
 # Directory for renderer freezer.
-Environment=CHROME_FREEZER_CGROUP_DIR=/sys/fs/cgroup/freezer/chrome_renderers
+Environment=UI_FREEZER_CGROUP_DIR=/sys/fs/cgroup/freezer/ui
+Environment=CHROME_FREEZER_CGROUP_DIR=/sys/fs/cgroup/freezer/ui/chrome_renderers
 Environment=UI_CPU_CGROUP_DIR=/sys/fs/cgroup/cpu/ui
 
 # This may be used to wrap the Chrome executable within another command
@@ -41,6 +42,8 @@ ExecStartPre=/usr/share/cros/init/ui-pre-start
 ExecStart=/bin/sh -c '/sbin/session_manager "${CHROME_COMMAND_FLAG}">"${UI_LOG_DIR}/${UI_LOG_FILE}" 2>&1'
 ExecStartPost=/bin/sh -c "echo $(systemctl show -p MainPID ui | cut -f 2 -d '=')\
 	> \"${UI_CPU_CGROUP_DIR}/tasks\""
+ExecStartPost=/bin/sh -c "echo $(systemctl show -p MainPID ui | cut -f 2 -d '=')\
+	> \"${UI_FREEZER_CGROUP_DIR}/cgroup.procs\""
 ExecStopPost=/usr/share/cros/init/ui-post-stop
 ExecStopPost=-/usr/bin/systemctl --no-block start logout.service
 ExecStopPost=-/usr/bin/systemctl --no-block start shill-stop-user-session.service
