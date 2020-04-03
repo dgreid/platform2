@@ -76,6 +76,7 @@ class PeripheralBatteryWatcher;
 class PowerSupplyInterface;
 class UserProximityWatcherInterface;
 class SuspendConfiguratorInterface;
+class SuspendFreezerInterface;
 class UdevInterface;
 class WakeupSourceIdentifierInterface;
 }  // namespace system
@@ -306,6 +307,7 @@ class Daemon : public policy::InputEventHandler::Delegate,
   std::unique_ptr<policy::WifiController> wifi_controller_;
   std::unique_ptr<policy::CellularController> cellular_controller_;
   std::unique_ptr<system::SuspendConfiguratorInterface> suspend_configurator_;
+  std::unique_ptr<system::SuspendFreezerInterface> suspend_freezer_;
   std::unique_ptr<system::WakeupSourceIdentifierInterface>
       wakeup_source_identifier_;
 

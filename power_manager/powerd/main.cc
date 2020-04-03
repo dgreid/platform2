@@ -54,6 +54,7 @@
 #include "power_manager/powerd/system/power_supply.h"
 #include "power_manager/powerd/system/sar_watcher.h"
 #include "power_manager/powerd/system/suspend_configurator.h"
+#include "power_manager/powerd/system/suspend_freezer.h"
 #include "power_manager/powerd/system/udev.h"
 #include "power_manager/powerd/system/wilco_charge_controller_helper.h"
 
@@ -252,6 +253,13 @@ class DaemonDelegateImpl : public DaemonDelegate {
     auto suspend_configurator = std::make_unique<system::SuspendConfigurator>();
     suspend_configurator->Init(prefs);
     return suspend_configurator;
+  }
+
+  std::unique_ptr<system::SuspendFreezerInterface> CreateSuspendFreezer(
+      PrefsInterface* prefs) override {
+    auto suspend_freezer = std::make_unique<system::SuspendFreezer>();
+    suspend_freezer->Init(prefs);
+    return suspend_freezer;
   }
 
   pid_t GetPid() override { return getpid(); }

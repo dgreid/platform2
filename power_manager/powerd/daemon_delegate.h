@@ -151,6 +151,9 @@ class DaemonDelegate {
   virtual std::unique_ptr<system::SuspendConfiguratorInterface>
   CreateSuspendConfigurator(PrefsInterface* prefs) = 0;
 
+  virtual std::unique_ptr<system::SuspendFreezerInterface> CreateSuspendFreezer(
+      PrefsInterface* prefs) = 0;
+
   // Returns the process's PID.
   virtual pid_t GetPid() = 0;
 
