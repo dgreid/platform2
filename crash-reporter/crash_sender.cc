@@ -39,7 +39,11 @@ namespace {
 //
 void SetUpSandbox(struct minijail* jail) {
   // Keep CAP_DAC_OVERRIDE in order to access non-root paths.
-  minijail_use_caps(jail, CAP_TO_MASK(CAP_DAC_OVERRIDE));
+  // Keep CAP_FOWNER to be able to delete files in sticky-bit directories.
+  // TODO(crbug.com/782243) Remove CAP_FOWNER once crash_sender can run with
+  // non-root uids.
+  minijail_use_caps(jail,
+                    CAP_TO_MASK(CAP_DAC_OVERRIDE) | CAP_TO_MASK(CAP_FOWNER));
   // Set ambient capabilities because crash_sender runs other programs.
   // TODO(satorux): Remove this once the code is entirely C++.
   minijail_set_ambient_caps(jail);
