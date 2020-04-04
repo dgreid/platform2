@@ -10,8 +10,9 @@
 #include <base/logging.h>
 #include <base/macros.h>
 #include <base/rand_util.h>
-#include <base/strings/stringprintf.h>
+#include <base/stl_util.h>
 #include <base/strings/string_number_conversions.h>
+#include <base/strings/stringprintf.h>
 #include <base/time/time.h>
 #include <base/timer/elapsed_timer.h>
 #include <brillo/syslog_logging.h>
@@ -49,7 +50,7 @@ struct FrameInit {
     return (static_cast<size_t>(header.bcnth) << 8) + header.bcntl;
   }
   constexpr static size_t MaxDataSize() {
-    return arraysize(data);
+    return base::size(decltype(data) {});
   }
   constexpr static size_t DataFits(size_t all_data_size) {
     return std::min(all_data_size, MaxDataSize());
@@ -67,7 +68,7 @@ struct FrameCont {
   uint8_t data[kFrameSize - sizeof(FrameContHeader)];
 
   constexpr static size_t MaxDataSize() {
-    return arraysize(data);
+    return base::size(decltype(data) {});
   }
   constexpr static size_t DataFits(size_t all_data_size) {
     return std::min(all_data_size, MaxDataSize());
