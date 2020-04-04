@@ -165,7 +165,6 @@ constexpr uid_t kMediaUid = AID_MEDIA_RW + kShiftUid;
 constexpr gid_t kMediaGid = AID_MEDIA_RW + kShiftGid;
 constexpr uid_t kShellUid = AID_SHELL + kShiftUid;
 constexpr uid_t kShellGid = AID_SHELL + kShiftGid;
-constexpr gid_t kCacheGid = AID_CACHE + kShiftGid;
 constexpr gid_t kLogGid = AID_LOG + kShiftGid;
 constexpr gid_t kSdcardRwGid = AID_SDCARD_RW + kShiftGid;
 constexpr gid_t kEverybodyGid = AID_EVERYBODY + kShiftGid;
@@ -726,9 +725,6 @@ void ArcSetup::SetUpAndroidData(bool bind_mount) {
   // match android/system/core/rootdir/init.rc
   EXIT_IF(!InstallDirectory(0771, kSystemUid, kSystemGid,
                             arc_paths_->android_data_directory.Append("data")));
-  EXIT_IF(
-      !InstallDirectory(0770, kSystemUid, kCacheGid,
-                        arc_paths_->android_data_directory.Append("cache")));
 
   if (!bind_mount)
     return;
@@ -1649,6 +1645,7 @@ std::string ArcSetup::GetSerialNumber() {
   return arc::GenerateFakeSerialNumber(chromeos_user, salt);
 }
 
+// TODO(yusukes): Delete this function in M85.
 void ArcSetup::DeleteUnusedCacheDirectory() {
   // /home/.../android-data/cache is bind-mounted to /cache on N in
   // MountSharedAndroidDirectories, but it is no longer bind-mounted on P.
