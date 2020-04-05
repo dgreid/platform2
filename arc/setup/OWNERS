@@ -1,5 +1,5 @@
-hidehiko@chromium.org
-linben@chromium.org
-yusukes@chromium.org
+include chromium/src:/components/arc/session/OWNERS
 # Native bridge / binary translation setup
 levarum@chromium.org
+# Additional backup reviewers
+linben@chromium.org
