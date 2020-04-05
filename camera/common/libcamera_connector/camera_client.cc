@@ -126,7 +126,8 @@ int CameraClient::StartCapture(cros_cam_device_t id,
   request_context_ = context;
 
   // TODO(b/151047930): Support other formats.
-  CHECK_EQ(request_format_.fourcc, DRM_FORMAT_R8);
+  CHECK(request_format_.fourcc == DRM_FORMAT_R8 ||
+        request_format_.fourcc == DRM_FORMAT_NV12);
 
   auto future = cros::Future<int>::Create(nullptr);
   start_callback_ = cros::GetFutureCallback(future);

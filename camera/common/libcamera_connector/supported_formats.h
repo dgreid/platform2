@@ -16,7 +16,8 @@
 namespace cros {
 
 constexpr std::pair<int, uint32_t> kSupportedFormats[] = {
-    {HAL_PIXEL_FORMAT_BLOB, DRM_FORMAT_R8}};
+    {HAL_PIXEL_FORMAT_BLOB, DRM_FORMAT_R8},
+    {HAL_PIXEL_FORMAT_YCbCr_420_888, DRM_FORMAT_NV12}};
 
 // Resolves the given HAL pixel format to its corresponding DRM format. Returns
 // 0 if a HAL Pixel format cannot be resolved.

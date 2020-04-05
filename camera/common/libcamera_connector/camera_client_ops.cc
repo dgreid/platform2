@@ -141,6 +141,58 @@ void CameraClientOps::ProcessCaptureResult(
 
       munmap(data, mapped_size);
       buffer_manager_.ReleaseBuffer(output_buffer->buffer_id);
+    } else if (buffer_handle->drm_format == DRM_FORMAT_NV12) {
+      CHECK_EQ(buffer_handle->fds.size(), 2);
+
+      const auto* fds_ptr = buffer_manager_.GetFds(output_buffer->buffer_id);
+
+      uint32_t y_unaligned_offset = buffer_handle->offsets[0] % page_size;
+      uint32_t y_mapped_size = buffer_handle->sizes->at(0) + y_unaligned_offset;
+      uint32_t y_aligned_offset =
+          buffer_handle->offsets[0] - y_unaligned_offset;
+      void* y_ptr = mmap(NULL, y_mapped_size, PROT_READ | PROT_WRITE,
+                         MAP_SHARED, fds_ptr->at(0).get(), y_aligned_offset);
+      CHECK_NE(y_ptr, MAP_FAILED);
+
+      uint32_t cb_unaligned_offset = buffer_handle->offsets[1] % page_size;
+      uint32_t cb_mapped_size =
+          buffer_handle->sizes->at(1) + cb_unaligned_offset;
+      uint32_t cb_aligned_offset =
+          buffer_handle->offsets[1] - cb_unaligned_offset;
+      void* cb_ptr = mmap(NULL, cb_mapped_size, PROT_READ | PROT_WRITE,
+                          MAP_SHARED, fds_ptr->at(1).get(), cb_aligned_offset);
+      CHECK_NE(cb_ptr, MAP_FAILED);
+
+      cros_cam_frame_t frame = {
+          .format = request_format_,
+          .plane = {
+              {.stride = buffer_handle->strides[0],
+               .size = buffer_handle->sizes->at(0),
+               .data = static_cast<uint8_t*>(y_ptr) + y_unaligned_offset},
+              {.stride = buffer_handle->strides[1],
+               .size = buffer_handle->sizes->at(1),
+               .data = static_cast<uint8_t*>(cb_ptr) + cb_unaligned_offset},
+              {.size = 0},
+              {.size = 0}}};
+      if (request_callback_lock_.Try()) {
+        if (request_callback_) {
+          int ret = (*request_callback_)(request_context_, &frame);
+          if (ret != 0) {
+            LOGF(INFO)
+                << "Request callback returned non-zero, stopping capture";
+            buffer_manager_.ReleaseBuffer(output_buffer->buffer_id);
+            StopCapture(base::DoNothing());
+          }
+        }
+        request_callback_lock_.Release();
+      } else {
+        LOGF(WARNING)
+            << "Start/Stop capture is in progress, dropping this frame";
+      }
+
+      munmap(y_ptr, y_mapped_size);
+      munmap(cb_ptr, cb_mapped_size);
+      buffer_manager_.ReleaseBuffer(output_buffer->buffer_id);
     }
   }
 }
@@ -165,7 +217,8 @@ void CameraClientOps::StartCaptureOnThread(int32_t camera_id,
   jpeg_max_size_ = jpeg_max_size;
 
   // TODO(b/151047930): Support other formats.
-  CHECK_EQ(request_format_.fourcc, DRM_FORMAT_R8);
+  CHECK(request_format_.fourcc == DRM_FORMAT_R8 ||
+        request_format_.fourcc == DRM_FORMAT_NV12);
 
   InitializeDevice();
 }
@@ -303,7 +356,8 @@ void CameraClientOps::ConstructCaptureRequestOnThread() {
   }
 
   // TODO(b/151047930): Support other formats.
-  CHECK_EQ(request_format_.fourcc, DRM_FORMAT_R8);
+  CHECK(request_format_.fourcc == DRM_FORMAT_R8 ||
+        request_format_.fourcc == DRM_FORMAT_NV12);
 
   mojom::Camera3CaptureRequestPtr request = mojom::Camera3CaptureRequest::New();
   {

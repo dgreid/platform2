@@ -130,6 +130,7 @@ void CrosCameraConnectorClient::RestartCapture() {
 
 void CrosCameraConnectorClient::ProcessFrame(const cros_cam_frame_t* frame) {
   static const char kJpegFilePattern[] = "/tmp/connector_#.jpg";
+  static const char kNv12FilePattern[] = "/tmp/connector_#.yuv";
   static int frame_iter = 0;
 
   if (frame->format.fourcc == DRM_FORMAT_R8) {
@@ -142,6 +143,19 @@ void CrosCameraConnectorClient::ProcessFrame(const cros_cam_frame_t* frame) {
                            frame->plane[0].size);
     LOGF(INFO) << "Saved JPEG: " << output_path
                << "  (size = " << frame->plane[0].size << ")";
+  } else if (frame->format.fourcc == DRM_FORMAT_NV12) {
+    std::string output_path(kNv12FilePattern);
+    base::ReplaceSubstringsAfterOffset(&output_path, /*start_offset=*/0, "#",
+                                       base::StringPrintf("%06u", frame_iter));
+    base::File file(base::FilePath(output_path),
+                    base::File::FLAG_CREATE_ALWAYS | base::File::FLAG_WRITE);
+    file.WriteAtCurrentPos(
+        reinterpret_cast<const char*>(frame->plane[0].data),
+        request_format_iter_->height * frame->plane[0].stride);
+    file.WriteAtCurrentPos(
+        reinterpret_cast<const char*>(frame->plane[1].data),
+        (request_format_iter_->height + 1) / 2 * frame->plane[1].stride);
+    LOGF(INFO) << "Saved YUV (NV12): " << output_path;
   }
 
   frame_iter++;
