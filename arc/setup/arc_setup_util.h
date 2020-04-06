@@ -311,6 +311,9 @@ bool FindFingerprintAndSdkVersion(std::string* out_fingerprint,
                                   std::string* out_sdk_version,
                                   const std::string& line);
 
+// Returns the user and group ids for a user.
+bool GetUserId(const std::string& user, uid_t* user_id, gid_t* group_id);
+
 }  // namespace arc
 
 #endif  // ARC_SETUP_ARC_SETUP_UTIL_H_

@@ -12,6 +12,7 @@
 #include <net/if.h>
 #include <net/if_arp.h>
 #include <openssl/sha.h>
+#include <pwd.h>
 #include <selinux/restorecon.h>
 #include <selinux/selinux.h>
 #include <signal.h>
@@ -1110,6 +1111,26 @@ bool FindFingerprintAndSdkVersion(std::string* out_fingerprint,
 
   fingerprint.CopyToString(out_fingerprint);
   sdk_version.CopyToString(out_sdk_version);
+  return true;
+}
+
+bool GetUserId(const std::string& user, uid_t* user_id, gid_t* group_id) {
+  constexpr int kDefaultPwnameLength = 1024;
+  // Load the passwd entry
+  long user_name_length = sysconf(_SC_GETPW_R_SIZE_MAX);  // NOLINT long
+  if (user_name_length == -1)
+    user_name_length = kDefaultPwnameLength;
+  passwd user_info;
+  passwd* user_infop = nullptr;
+  std::vector<char> user_name_buf(user_name_length);
+  if (getpwnam_r(user.c_str(), &user_info, user_name_buf.data(),
+                 user_name_length, &user_infop)) {
+    return false;
+  }
+  if (!user_infop)
+    return false;  // no such user
+  *user_id = user_info.pw_uid;
+  *group_id = user_info.pw_gid;
   return true;
 }
 

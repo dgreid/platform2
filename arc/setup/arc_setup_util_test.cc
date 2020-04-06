@@ -991,4 +991,16 @@ TEST(ArcSetupUtil, TestShouldDeleteAndroidData) {
                                       AndroidSdkVersion::ANDROID_M));
 }
 
+TEST(ArcSetupUtil, TestGetUserId) {
+  uid_t uid = -1;
+  gid_t gid = -1;
+  EXPECT_FALSE(GetUserId("thisuserdoesntexist", &uid, &gid));
+  EXPECT_TRUE(GetUserId("root", &uid, &gid));
+  EXPECT_EQ(0, uid);
+  EXPECT_EQ(0, gid);
+  EXPECT_TRUE(GetUserId("android-root", &uid, &gid));
+  EXPECT_EQ(655360, uid);
+  EXPECT_EQ(655360, gid);
+}
+
 }  // namespace arc
