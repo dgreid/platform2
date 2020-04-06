@@ -559,8 +559,6 @@ def GetParser():
                       action='split_extend', help='USE flags to enable')
   parser.add_argument('-j', '--jobs', type=int, default=None,
                       help='number of jobs to run in parallel')
-  parser.add_argument('--verbose', action='store_true', default=None,
-                      help='enable verbose log output')
   parser.add_argument('--platform_subdir', required=True,
                       help='subdir in platform2 where the package is located')
   parser.add_argument('args', nargs='*')
@@ -570,12 +568,24 @@ def GetParser():
 
 def main(argv):
   parser = GetParser()
-  options = parser.parse_args(argv)
+
+  # Temporary measure. Moving verbose argument, but can't do it all in one
+  # sweep due to CROS_WORKON_BLACKLISTed packages. Use parse_known_args and
+  # manually handle verbose parsing to maintain compatibility.
+  options, unknown = parser.parse_known_args(argv)
+
+  if not hasattr(options, 'verbose'):
+    options.verbose = '--verbose' in unknown
+
+  if '--verbose' in unknown:
+    unknown.remove('--verbose')
+  if unknown:
+    parser.error('Unrecognized arguments: %s' % unknown)
 
   if options.host and options.board:
     raise AssertionError('You must provide only one of --board or --host')
 
-  if options.verbose is None:
+  if not options.verbose:
     # Should convert to cros_build_lib.BooleanShellValue.
     options.verbose = (os.environ.get('VERBOSE', '0') == '1')
   p2 = Platform2(options.use_flags, options.board, options.host,
