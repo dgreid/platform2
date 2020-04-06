@@ -38,6 +38,26 @@ bool DirectoryHasFileWithPattern(const FilePath& directory,
   return !path.empty();
 }
 
+bool DirectoryHasFileWithPatternAndContents(const FilePath& directory,
+                                            const std::string& pattern,
+                                            const std::string& contents) {
+  base::FileEnumerator enumerator(
+      directory, false, base::FileEnumerator::FileType::FILES, pattern);
+  for (FilePath path = enumerator.Next(); !path.empty();
+       path = enumerator.Next()) {
+    LOG(INFO) << "Checking " << path.value();
+    std::string actual_contents;
+    if (!base::ReadFileToString(path, &actual_contents)) {
+      LOG(ERROR) << "Failed to read file " << path.value();
+      return false;
+    }
+    if (actual_contents.find(contents)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 }  // namespace
 
 class KernelWarningCollectorMock : public KernelWarningCollector {
@@ -78,8 +98,38 @@ TEST_F(KernelWarningCollectorTest, CollectOK) {
                             "<remaining log contents>"));
   EXPECT_TRUE(
       collector_.Collect(KernelWarningCollector::WarningType::kGeneric));
-  EXPECT_TRUE(DirectoryHasFileWithPattern(
-      test_crash_directory_, "kernel_warning_iwl_mvm_rm_sta.*.meta"));
+  EXPECT_TRUE(DirectoryHasFileWithPatternAndContents(
+      test_crash_directory_, "kernel_warning_iwl_mvm_rm_sta.*.meta",
+      "sig=70e67541-iwl_mvm_rm_sta+0x161/0x344 [iwlmvm]()"));
+}
+
+TEST_F(KernelWarningCollectorTest, CollectOKMultiline) {
+  // Collector produces a crash report.
+  ASSERT_TRUE(
+      test_util::CreateFile(test_path_,
+                            "Warning message trigger count: 0\n"
+                            "70e67541-iwl_mvm_rm_sta+0x161/0x344 [iwlmvm]()\n"
+                            "\n"
+                            "<remaining log contents>"));
+  EXPECT_TRUE(
+      collector_.Collect(KernelWarningCollector::WarningType::kGeneric));
+  EXPECT_TRUE(DirectoryHasFileWithPatternAndContents(
+      test_crash_directory_, "kernel_warning_iwl_mvm_rm_sta.*.meta",
+      "sig=70e67541-iwl_mvm_rm_sta+0x161/0x344 [iwlmvm]()"));
+}
+
+TEST_F(KernelWarningCollectorTest, CollectOKUnknownFunc) {
+  // Collector produces a crash report.
+  ASSERT_TRUE(
+      test_util::CreateFile(test_path_,
+                            "70e67541-unknown-function+0x161/0x344 [iwlmvm]()\n"
+                            "\n"
+                            "<remaining log contents>"));
+  EXPECT_TRUE(
+      collector_.Collect(KernelWarningCollector::WarningType::kGeneric));
+  EXPECT_TRUE(DirectoryHasFileWithPatternAndContents(
+      test_crash_directory_, "kernel_warning_unknown_function.*.meta",
+      "sig=70e67541-unknown-function+0x161/0x344 [iwlmvm]()"));
 }
 
 TEST_F(KernelWarningCollectorTest, CollectOKBadSig) {
@@ -90,8 +140,9 @@ TEST_F(KernelWarningCollectorTest, CollectOKBadSig) {
                                     "<remaining log contents>"));
   EXPECT_TRUE(
       collector_.Collect(KernelWarningCollector::WarningType::kGeneric));
-  EXPECT_TRUE(DirectoryHasFileWithPattern(test_crash_directory_,
-                                          "kernel_warning.*.meta"));
+  EXPECT_TRUE(DirectoryHasFileWithPatternAndContents(
+      test_crash_directory_, "kernel_warning.*.meta",
+      "sig=70e67541-0x161/0x344 [iwlmvm]()"));
 }
 
 TEST_F(KernelWarningCollectorTest, CollectWifiWarningOK) {

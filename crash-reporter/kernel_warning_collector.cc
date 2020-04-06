@@ -28,26 +28,48 @@ KernelWarningCollector::KernelWarningCollector()
 
 KernelWarningCollector::~KernelWarningCollector() {}
 
+// Extract the crashing function name from the signature.
+// Signature example: 6a839c19-lkdtm_do_action+0x225/0x5bc
+// Signature example2: 6a839c19-unknown-function+0x161/0x344 [iwlmvm]
+constexpr LazyRE2 sig_re = {R"(^[0-9a-fA-F]+-([0-9a-zA-Z_-]+)\+.*$)"};
+
 bool KernelWarningCollector::LoadKernelWarning(std::string* content,
-                                               std::string* signature) {
+                                               std::string* signature,
+                                               std::string* func_name) {
   FilePath kernel_warning_path(warning_report_path_.c_str());
   if (!base::ReadFileToString(kernel_warning_path, content)) {
     PLOG(ERROR) << "Could not open " << kernel_warning_path.value();
     return false;
   }
-  // The signature is in the first line.
+  // The signature is in the first or second line.
+  // First, try the first, and if it's not there, try the second.
   std::string::size_type end_position = content->find('\n');
   if (end_position == std::string::npos) {
     LOG(ERROR) << "unexpected kernel warning format";
     return false;
   }
-  *signature = content->substr(0, end_position);
+  size_t start = 0;
+  for (int i = 0; i < 2; i++) {
+    *signature = content->substr(start, end_position - start);
+
+    if (RE2::FullMatch(*signature, *sig_re, func_name)) {
+      return true;
+    } else {
+      LOG(INFO) << *signature << " does not match regex";
+      signature->clear();
+      func_name->clear();
+    }
+
+    // Else, try the next line.
+    start = end_position + 1;
+    end_position = content->find('\n', start);
+  }
+
+  LOG(WARNING) << "Couldn't find match for signature line. "
+               << "Falling back to first line of warning.";
+  *signature = content->substr(0, content->find('\n'));
   return true;
 }
-
-// Extract the crashing function name from the signature.
-// Signature example: 6a839c19-lkdtm_do_action+0x225/0x5bc
-constexpr LazyRE2 sig_re = {R"(^[0-9a-fA-F]+-([0-9a-zA-Z_]+)\+.*$)"};
 
 bool KernelWarningCollector::Collect(WarningType type) {
   std::string reason = "normal collection";
@@ -68,7 +90,8 @@ bool KernelWarningCollector::Collect(WarningType type) {
 
   std::string kernel_warning;
   std::string warning_signature;
-  if (!LoadKernelWarning(&kernel_warning, &warning_signature)) {
+  std::string func_name;
+  if (!LoadKernelWarning(&kernel_warning, &warning_signature, &func_name)) {
     return true;
   }
 
@@ -86,14 +109,12 @@ bool KernelWarningCollector::Collect(WarningType type) {
   else
     exec_name = kGenericWarningExecName;
 
-  std::string func_name;
   // Attempt to make the exec_name more unique to avoid collisions.
-  if (RE2::FullMatch(warning_signature, *sig_re, &func_name)) {
+  if (!func_name.empty()) {
     func_name.insert(func_name.begin(), '_');
   } else {
     LOG(WARNING) << "Couldn't extract function name from signature. "
                     "Going on without it.";
-    func_name.clear();
   }
 
   std::string dump_basename = FormatDumpBasename(

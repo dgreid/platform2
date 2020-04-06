@@ -40,7 +40,9 @@ class KernelWarningCollector : public CrashCollector {
   FRIEND_TEST(KernelWarningCollectorTest, CollectOK);
 
   // Reads the full content of the kernel warn dump and its signature.
-  bool LoadKernelWarning(std::string* content, std::string* signature);
+  bool LoadKernelWarning(std::string* content,
+                         std::string* signature,
+                         std::string* func_name);
 
   DISALLOW_COPY_AND_ASSIGN(KernelWarningCollector);
 };
