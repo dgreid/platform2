@@ -66,6 +66,7 @@ class MockImpl : public ArcService::Impl {
 
   MOCK_CONST_METHOD0(guest, GuestMessage::GuestType());
   MOCK_CONST_METHOD0(id, uint32_t());
+  MOCK_CONST_METHOD0(GetDeviceConfigs, std::vector<const Device::Config*>());
   MOCK_METHOD1(Start, bool(uint32_t));
   MOCK_METHOD1(Stop, void(uint32_t));
   MOCK_CONST_METHOD1(IsStarted, bool(uint32_t*));

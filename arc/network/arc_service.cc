@@ -463,11 +463,11 @@ void ArcService::OnDefaultInterfaceChanged(const std::string& new_ifname,
     impl_->OnDefaultInterfaceChanged(new_ifname, prev_ifname);
 }
 
-Device* ArcService::ArcDevice() const {
-  if (!impl_)
-    return nullptr;
+std::vector<const Device::Config*> ArcService::GetDeviceConfigs() const {
+  if (impl_)
+    return impl_->GetDeviceConfigs();
 
-  return impl_->ArcDevice();
+  return {};
 }
 
 // ARC++ specific functions.
@@ -662,6 +662,15 @@ GuestMessage::GuestType ArcService::VmImpl::guest() const {
 
 uint32_t ArcService::VmImpl::id() const {
   return cid_;
+}
+
+std::vector<const Device::Config*> ArcService::VmImpl::GetDeviceConfigs()
+    const {
+  std::vector<const Device::Config*> configs;
+  for (const auto* c : configs_)
+    configs.emplace_back(c);
+
+  return configs;
 }
 
 bool ArcService::VmImpl::Start(uint32_t cid) {

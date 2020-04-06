@@ -33,6 +33,11 @@ class ArcService {
     virtual GuestMessage::GuestType guest() const = 0;
     virtual uint32_t id() const = 0;
 
+    // Returns the list of device configurations that were provided to the
+    // implementation at creation time plus the one for the ARC device, if
+    // applicable. Currently only ARCVM supports this method.
+    virtual std::vector<const Device::Config*> GetDeviceConfigs() const = 0;
+
     virtual bool Start(uint32_t id) = 0;
     virtual void Stop(uint32_t id) = 0;
     virtual bool IsStarted(uint32_t* id = nullptr) const = 0;
@@ -40,9 +45,6 @@ class ArcService {
     virtual void OnStopDevice(Device* device) = 0;
     virtual void OnDefaultInterfaceChanged(const std::string& new_ifname,
                                            const std::string& prev_ifname) = 0;
-
-    // Returns the ARC management interface.
-    Device* ArcDevice() const { return arc_device_.get(); }
 
    protected:
     Impl() = default;
@@ -63,6 +65,9 @@ class ArcService {
 
     GuestMessage::GuestType guest() const override;
     uint32_t id() const override;
+    std::vector<const Device::Config*> GetDeviceConfigs() const override {
+      return {};
+    }
 
     bool Start(uint32_t pid) override;
     void Stop(uint32_t pid) override;
@@ -98,6 +103,7 @@ class ArcService {
 
     GuestMessage::GuestType guest() const override;
     uint32_t id() const override;
+    std::vector<const Device::Config*> GetDeviceConfigs() const override;
 
     bool Start(uint32_t cid) override;
     void Stop(uint32_t cid) override;
@@ -142,8 +148,10 @@ class ArcService {
   bool Start(uint32_t id);
   void Stop(uint32_t id);
 
-  // Returns the ARC management interface.
-  Device* ArcDevice() const;
+  // Returns a list of device configurations. This method only really is useful
+  // when ARCVM is running as it enables the caller to discover which
+  // configurations, if any, are currently associated to TAP devices.
+  std::vector<const Device::Config*> GetDeviceConfigs() const;
 
  private:
   // Callback from ShillClient, invoked whenever the device list changes.

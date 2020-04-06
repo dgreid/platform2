@@ -440,20 +440,14 @@ std::unique_ptr<dbus::Response> Manager::OnArcVmStartup(
   }
 
   // Populate the response with the known devices.
-  auto build_resp = [](patchpanel::ArcVmStartupResponse* resp, Device* device) {
-    const auto& tap = device->config().tap_ifname();
-    if (tap.empty())
-      return;
+  for (const auto* config : arc_svc_->GetDeviceConfigs()) {
+    if (config->tap_ifname().empty())
+      continue;
 
-    auto* dev = resp->add_devices();
-    dev->set_ifname(tap);
-    dev->set_ipv4_addr(device->config().guest_ipv4_addr());
-  };
-
-  // TODO(garrick): Update to return all devices instead once ARCVM supports
-  // multi-networking.
-  if (auto* arc = arc_svc_->ArcDevice())
-    build_resp(&response, arc);
+    auto* dev = response.add_devices();
+    dev->set_ifname(config->tap_ifname());
+    dev->set_ipv4_addr(config->guest_ipv4_addr());
+  }
 
   writer.AppendProtoAsArrayOfBytes(response);
   return dbus_response;
