@@ -136,6 +136,10 @@ constexpr char kSdcardRootfsImage[] =
 constexpr char kSharedMountDirectory[] = "/run/arc/shared_mounts";
 constexpr char kSysfsCpu[] = "/sys/devices/system/cpu";
 constexpr char kSysfsTracing[] = "/sys/kernel/debug/tracing";
+// TODO(niwa): Remove kSystemBinArm* when we remove container Q+ support
+// from arc-setup.
+constexpr char kSystemBinArmDirectoryRelative[] = "system/bin/arm";
+constexpr char kSystemBinArm64DirectoryRelative[] = "system/bin/arm64";
 constexpr char kSystemLibArmDirectoryRelative[] = "system/lib/arm";
 constexpr char kSystemLibArm64DirectoryRelative[] = "system/lib64/arm64";
 constexpr char kSystemImage[] = "/opt/google/containers/android/system.raw.img";
@@ -555,6 +559,10 @@ struct ArcPaths {
   const base::FilePath shared_mount_directory{kSharedMountDirectory};
   const base::FilePath sysfs_cpu{kSysfsCpu};
   const base::FilePath sysfs_tracing{kSysfsTracing};
+  const base::FilePath system_bin_arm_directory_relative{
+      kSystemBinArmDirectoryRelative};
+  const base::FilePath system_bin_arm64_directory_relative{
+      kSystemBinArm64DirectoryRelative};
   const base::FilePath system_lib_arm_directory_relative{
       kSystemLibArmDirectoryRelative};
   const base::FilePath system_lib64_arm64_directory_relative{
@@ -1562,7 +1570,16 @@ void ArcSetup::UnmountOnStop() {
       arc_mounter_->UmountIfExists(arc_paths_->binfmt_misc_directory));
   IGNORE_ERRORS(
       arc_mounter_->UmountIfExists(arc_paths_->android_rootfs_directory.Append(
+          arc_paths_->system_bin_arm_directory_relative)));
+  IGNORE_ERRORS(
+      arc_mounter_->UmountIfExists(arc_paths_->android_rootfs_directory.Append(
+          arc_paths_->system_bin_arm64_directory_relative)));
+  IGNORE_ERRORS(
+      arc_mounter_->UmountIfExists(arc_paths_->android_rootfs_directory.Append(
           arc_paths_->system_lib_arm_directory_relative)));
+  IGNORE_ERRORS(
+      arc_mounter_->UmountIfExists(arc_paths_->android_rootfs_directory.Append(
+          arc_paths_->system_lib64_arm64_directory_relative)));
 }
 
 void ArcSetup::RemoveBugreportPipe() {
@@ -1921,12 +1938,24 @@ void ArcSetup::BindMountInContainerNamespaceOnPreChroot(
     EXIT_IF(!arc_mounter_->BindMount(
         rootfs.Append("vendor/lib/arm"),
         rootfs.Append(arc_paths_->system_lib_arm_directory_relative)));
+    // Since Android Qt, we need to do the same for system_bin_arm.
+    if (GetSdkVersion() >= AndroidSdkVersion::ANDROID_Q) {
+      EXIT_IF(!arc_mounter_->BindMount(
+          rootfs.Append("vendor/bin/arm"),
+          rootfs.Append(arc_paths_->system_bin_arm_directory_relative)));
+    }
 
     if (kUseHoudini64) {
       // Bind mount arm64 directory for houdini64.
       EXIT_IF(!arc_mounter_->BindMount(
           rootfs.Append("vendor/lib64/arm64"),
           rootfs.Append(arc_paths_->system_lib64_arm64_directory_relative)));
+      // Since Android Qt, we need to do the same for system_bin_arm.
+      if (GetSdkVersion() >= AndroidSdkVersion::ANDROID_Q) {
+        EXIT_IF(!arc_mounter_->BindMount(
+            rootfs.Append("vendor/bin/arm64"),
+            rootfs.Append(arc_paths_->system_bin_arm64_directory_relative)));
+      }
     }
   }
 
