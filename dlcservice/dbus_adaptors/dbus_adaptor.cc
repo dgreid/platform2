@@ -34,7 +34,8 @@ DlcSet ToDlcSet(const dlcservice::DlcModuleList& dlc_module_list,
 }
 };  // namespace
 
-DBusService::DBusService(DlcService* dlc_service) : dlc_service_(dlc_service) {}
+DBusService::DBusService(DlcServiceInterface* dlc_service)
+    : dlc_service_(dlc_service) {}
 
 bool DBusService::Install(brillo::ErrorPtr* err,
                           const DlcModuleList& dlc_module_list_in) {
@@ -54,7 +55,7 @@ bool DBusService::GetInstalled(brillo::ErrorPtr* err,
   for (const auto& id : ids) {
     auto* dlc_info = dlc_module_list_out->add_dlc_module_infos();
     dlc_info->set_dlc_id(id);
-    dlc_info->set_dlc_root(dlc_service_->GetDlc(id).GetRoot().value());
+    dlc_info->set_dlc_root(dlc_service_->GetDlc(id)->GetRoot().value());
   }
   return true;
 }

@@ -13,6 +13,7 @@
 #include <brillo/errors/error.h>
 #include <dbus/dlcservice/dbus-constants.h>
 #include <dlcservice/proto_bindings/dlcservice.pb.h>
+#include <gtest/gtest_prod.h>  // for FRIEND_TEST
 #include <libimageloader/manifest.h>
 #include <chromeos/dbus/service_constants.h>
 
@@ -70,6 +71,9 @@ class DlcBase {
   bool Delete(ErrorPtr* err);
 
  private:
+  friend class DBusServiceTest;
+  FRIEND_TEST(DBusServiceTest, GetInstalled);
+
   // Returns the path to the DLC image given the slot number.
   FilePath GetImagePath(BootSlot::Slot slot) const;
 

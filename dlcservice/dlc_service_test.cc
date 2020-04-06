@@ -41,7 +41,7 @@ MATCHER_P(ProtoHasUrl,
   return url == arg.omaha_url();
 }
 
-class DlcServiceTestObserver : public DlcService::Observer {
+class DlcServiceTestObserver : public DlcServiceInterface::Observer {
  public:
   DlcServiceTestObserver() = default;
 
@@ -152,7 +152,7 @@ TEST_F(DlcServiceTest, PreloadAllowedDlcTest) {
   dlc_service_->PreloadDlcs();
 
   EXPECT_THAT(dlc_service_->GetInstalled(), ElementsAre(kFirstDlc, kThirdDlc));
-  EXPECT_FALSE(dlc_service_->GetDlc(kThirdDlc).GetRoot().value().empty());
+  EXPECT_FALSE(dlc_service_->GetDlc(kThirdDlc)->GetRoot().value().empty());
   CheckDlcState(kThirdDlc, DlcState::INSTALLED);
 }
 
@@ -174,7 +174,7 @@ TEST_F(DlcServiceTest, PreloadAllowedWithBadPreinstalledDlcTest) {
   dlc_service_->PreloadDlcs();
 
   EXPECT_THAT(dlc_service_->GetInstalled(), ElementsAre(kFirstDlc, kThirdDlc));
-  EXPECT_FALSE(dlc_service_->GetDlc(kThirdDlc).GetRoot().value().empty());
+  EXPECT_FALSE(dlc_service_->GetDlc(kThirdDlc)->GetRoot().value().empty());
   CheckDlcState(kThirdDlc, DlcState::INSTALLED);
 }
 
@@ -222,7 +222,7 @@ TEST_F(DlcServiceTest, GetInstalledTest) {
   const auto& dlcs = dlc_service_->GetInstalled();
 
   EXPECT_THAT(dlcs, ElementsAre(kFirstDlc));
-  EXPECT_FALSE(dlc_service_->GetDlc(kFirstDlc).GetRoot().value().empty());
+  EXPECT_FALSE(dlc_service_->GetDlc(kFirstDlc)->GetRoot().value().empty());
   CheckDlcState(kFirstDlc, DlcState::INSTALLED);
 }
 
@@ -574,7 +574,7 @@ TEST_F(DlcServiceTest, InstallAlreadyInstalledThatGotUnmountedTest) {
   CheckDlcState(kFirstDlc, DlcState::INSTALLED);
 }
 
-TEST_F(DlcServiceTest, OnStatusUpdateAdvancedSignalDlcRootTest) {
+TEST_F(DlcServiceTest, OnStatusUpdateSignalDlcRootTest) {
   EXPECT_CALL(*mock_update_engine_proxy_ptr_, GetStatusAdvanced(_, _, _))
       .WillOnce(Return(true));
   EXPECT_CALL(*mock_update_engine_proxy_ptr_, AttemptInstall(_, _, _))
@@ -611,12 +611,12 @@ TEST_F(DlcServiceTest, OnStatusUpdateAdvancedSignalDlcRootTest) {
   const auto& dlcs_after = dlc_service_->GetInstalled();
 
   EXPECT_THAT(dlcs_after, ElementsAre(kFirstDlc, kSecondDlc, kThirdDlc));
-  EXPECT_FALSE(dlc_service_->GetDlc(kFirstDlc).GetRoot().value().empty());
+  EXPECT_FALSE(dlc_service_->GetDlc(kFirstDlc)->GetRoot().value().empty());
   for (const auto& id : dlcs_after)
-    EXPECT_FALSE(dlc_service_->GetDlc(id).GetRoot().value().empty());
+    EXPECT_FALSE(dlc_service_->GetDlc(id)->GetRoot().value().empty());
 }
 
-TEST_F(DlcServiceTest, OnStatusUpdateAdvancedSignalNoRemountTest) {
+TEST_F(DlcServiceTest, OnStatusUpdateSignalNoRemountTest) {
   EXPECT_CALL(*mock_update_engine_proxy_ptr_, GetStatusAdvanced(_, _, _))
       .WillRepeatedly(Return(true));
   EXPECT_CALL(*mock_update_engine_proxy_ptr_, AttemptInstall(_, _, _))
@@ -648,7 +648,7 @@ TEST_F(DlcServiceTest, OnStatusUpdateAdvancedSignalNoRemountTest) {
     EXPECT_TRUE(base::PathExists(JoinPaths(content_path_, id)));
 }
 
-TEST_F(DlcServiceTest, OnStatusUpdateAdvancedSignalTest) {
+TEST_F(DlcServiceTest, OnStatusUpdateSignalTest) {
   EXPECT_CALL(*mock_update_engine_proxy_ptr_, GetStatusAdvanced(_, _, _))
       .WillRepeatedly(Return(true));
   EXPECT_CALL(*mock_update_engine_proxy_ptr_, AttemptInstall(_, _, _))
@@ -887,7 +887,7 @@ TEST_F(DlcServiceTest, UpdateEngineFailAfterSignalsSafeTest) {
   }
 }
 
-TEST_F(DlcServiceTest, OnStatusUpdateAdvancedSignalDownloadProgressTest) {
+TEST_F(DlcServiceTest, OnStatusUpdateSignalDownloadProgressTest) {
   EXPECT_CALL(*mock_update_engine_proxy_ptr_, GetStatusAdvanced(_, _, _))
       .WillRepeatedly(Return(true));
   EXPECT_CALL(*mock_update_engine_proxy_ptr_, AttemptInstall(_, _, _))
@@ -936,9 +936,8 @@ TEST_F(DlcServiceTest, OnStatusUpdateAdvancedSignalDownloadProgressTest) {
     CheckDlcState(id, DlcState::INSTALLED);
 }
 
-TEST_F(
-    DlcServiceTest,
-    OnStatusUpdateAdvancedSignalSubsequentialBadOrNonInstalledDlcsNonBlocking) {
+TEST_F(DlcServiceTest,
+       OnStatusUpdateSignalSubsequentialBadOrNonInstalledDlcsNonBlocking) {
   EXPECT_CALL(*mock_update_engine_proxy_ptr_, GetStatusAdvanced(_, _, _))
       .WillRepeatedly(Return(true));
 

@@ -14,6 +14,7 @@
 #include <base/memory/weak_ptr.h>
 #include <brillo/message_loops/message_loop.h>
 #include <dlcservice/proto_bindings/dlcservice.pb.h>
+#include <gtest/gtest_prod.h>  // for FRIEND_TEST
 #include <imageloader/dbus-proxies.h>
 #include <update_engine/proto_bindings/update_engine.pb.h>
 #include <update_engine/dbus-proxies.h>
@@ -24,12 +25,8 @@
 
 namespace dlcservice {
 
-// DlcService manages life-cycles of DLCs (Downloadable Content) and provides an
-// API for the rest of the system to install/uninstall DLCs.
-class DlcService {
+class DlcServiceInterface {
  public:
-  static const size_t kUECheckTimeout = 5;
-
   // |DlcService| calls the registered implementation of this class when a
   // |StatusResult| signal needs to be propagated.
   class Observer {
@@ -39,30 +36,59 @@ class DlcService {
     virtual void SendInstallStatus(const InstallStatus& status) = 0;
   };
 
-  DlcService();
-  ~DlcService();
+  virtual ~DlcServiceInterface() = default;
 
   // Preloads preloadable DLCs from preloaded content directory.
-  void PreloadDlcs();
+  virtual void PreloadDlcs() = 0;
 
-  bool Install(const DlcSet& dlcs,
-               const std::string& omaha_url,
-               brillo::ErrorPtr* err);
-  bool Uninstall(const std::string& id_in, brillo::ErrorPtr* err);
-  DlcSet GetInstalled();
-  const DlcBase& GetDlc(const DlcId& id);
-
-  bool GetState(const std::string& id_in,
-                DlcState* dlc_state_out,
-                brillo::ErrorPtr* err);
+  virtual bool Install(const DlcSet& dlcs,
+                       const std::string& omaha_url,
+                       brillo::ErrorPtr* err) = 0;
+  virtual bool Uninstall(const std::string& id_in, brillo::ErrorPtr* err) = 0;
+  virtual DlcSet GetInstalled() = 0;
+  virtual const DlcBase* GetDlc(const DlcId& id) = 0;
+  virtual bool GetState(const std::string& id_in,
+                        DlcState* dlc_state_out,
+                        brillo::ErrorPtr* err) = 0;
 
   // Adds a new observer to report install result status changes.
-  void AddObserver(Observer* observer);
-  // Called on receiving update_engine's |StatusUpdate| signal.
-  void OnStatusUpdateAdvancedSignal(
-      const update_engine::StatusResult& status_result);
+  virtual void AddObserver(Observer* observer) = 0;
+};
+
+// DlcService manages life-cycles of DLCs (Downloadable Content) and provides an
+// API for the rest of the system to install/uninstall DLCs.
+class DlcService : public DlcServiceInterface {
+ public:
+  static const size_t kUECheckTimeout = 5;
+
+  DlcService();
+  virtual ~DlcService();
+
+  void PreloadDlcs() override;
+  bool Install(const DlcSet& dlcs,
+               const std::string& omaha_url,
+               brillo::ErrorPtr* err) override;
+  bool Uninstall(const std::string& id_in, brillo::ErrorPtr* err) override;
+  DlcSet GetInstalled() override;
+  const DlcBase* GetDlc(const DlcId& id) override;
+  bool GetState(const std::string& id_in,
+                DlcState* dlc_state_out,
+                brillo::ErrorPtr* err) override;
+  void AddObserver(Observer* observer) override;
 
  private:
+  friend class DlcServiceTest;
+  FRIEND_TEST(DlcServiceTest, OnStatusUpdateSignalTest);
+  FRIEND_TEST(DlcServiceTest, OnStatusUpdateSignalDlcRootTest);
+  FRIEND_TEST(DlcServiceTest, OnStatusUpdateSignalNoRemountTest);
+  FRIEND_TEST(DlcServiceTest, ReportingFailureCleanupTest);
+  FRIEND_TEST(DlcServiceTest, ReportingFailureSignalTest);
+  FRIEND_TEST(DlcServiceTest, ProbableUpdateEngineRestartCleanupTest);
+  FRIEND_TEST(DlcServiceTest, UpdateEngineFailAfterSignalsSafeTest);
+  FRIEND_TEST(DlcServiceTest, OnStatusUpdateSignalDownloadProgressTest);
+  FRIEND_TEST(
+      DlcServiceTest,
+      OnStatusUpdateSignalSubsequentialBadOrNonInstalledDlcsNonBlocking);
   // Sends a signal indicating failure to install and cleans up prepped DLC(s).
   void SendFailedSignalAndCleanup();
 
@@ -87,6 +113,10 @@ class DlcService {
                                  const std::string& error_code,
                                  const DlcSet& ids,
                                  double progress);
+
+  // Called on receiving update_engine's |StatusUpdate| signal.
+  void OnStatusUpdateAdvancedSignal(
+      const update_engine::StatusResult& status_result);
 
   // Called on being connected to update_engine's |StatusUpdate| signal.
   void OnStatusUpdateAdvancedSignalConnected(const std::string& interface_name,

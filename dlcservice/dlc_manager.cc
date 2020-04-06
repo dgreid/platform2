@@ -46,10 +46,10 @@ bool DlcManager::IsInstalling() {
       [](const auto& pair) { return pair.second.IsInstalling(); });
 }
 
-const DlcBase& DlcManager::GetDlc(const DlcId& id) {
+const DlcBase* DlcManager::GetDlc(const DlcId& id) {
   const auto& iter = supported_.find(id);
   CHECK(iter != supported_.end()) << "Passed invalid DLC: " << id;
-  return iter->second;
+  return &iter->second;
 }
 
 // Loads the preloadable DLC(s) from preloaded content directory by scanning the

@@ -20,7 +20,7 @@ namespace dlcservice {
 class DBusService : public org::chromium::DlcServiceInterfaceInterface {
  public:
   // Will take the ownership of |dlc_service|.
-  explicit DBusService(DlcService* dlc_service);
+  explicit DBusService(DlcServiceInterface* dlc_service);
   ~DBusService() = default;
 
   // org::chromium::DlServiceInterfaceInterface overrides:
@@ -34,7 +34,7 @@ class DBusService : public org::chromium::DlcServiceInterfaceInterface {
                 DlcState* dlc_state_out) override;
 
  private:
-  DlcService* dlc_service_;
+  DlcServiceInterface* dlc_service_;
 
   DISALLOW_COPY_AND_ASSIGN(DBusService);
 };

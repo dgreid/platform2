@@ -132,6 +132,7 @@ if (use.test) {
     sources = [
       "boot/boot_device_test.cc",
       "boot/boot_slot_test.cc",
+      "dbus_adaptors/dbus_adaptor_test.cc",
       "dlc_service_test.cc",
       "test_utils.cc",
       "utils_test.cc",

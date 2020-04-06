@@ -55,7 +55,7 @@ void DlcService::PreloadDlcs() {
   dlc_manager_->PreloadDlcs();
 }
 
-const DlcBase& DlcService::GetDlc(const DlcId& id) {
+const DlcBase* DlcService::GetDlc(const DlcId& id) {
   return dlc_manager_->GetDlc(id);
 }
 
@@ -316,9 +316,9 @@ void DlcService::SendOnInstallStatusSignal(const dlcservice::Status& status,
   install_status.set_error_code(error_code);
   DlcModuleList* dlc_list = install_status.mutable_dlc_module_list();
   for (const auto& id : ids) {
-    const auto& dlc = dlc_manager_->GetDlc(id);
+    const auto* dlc = dlc_manager_->GetDlc(id);
     dlc_list->add_dlc_module_infos()->set_dlc_id(id);
-    dlc_list->add_dlc_module_infos()->set_dlc_root(dlc.GetRoot().value());
+    dlc_list->add_dlc_module_infos()->set_dlc_root(dlc->GetRoot().value());
   }
   install_status.set_progress(progress);
 
