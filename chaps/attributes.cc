@@ -18,13 +18,10 @@ using std::vector;
 
 namespace chaps {
 
-Attributes::Attributes()
-    : attributes_(NULL), num_attributes_(0), is_free_required_(false) {}
+Attributes::Attributes() : attributes_(NULL), num_attributes_(0) {}
 
 Attributes::Attributes(CK_ATTRIBUTE_PTR attributes, CK_ULONG num_attributes)
-    : attributes_(attributes),
-      num_attributes_(num_attributes),
-      is_free_required_(false) {}
+    : attributes_(attributes), num_attributes_(num_attributes) {}
 
 Attributes::~Attributes() {
   Free();
@@ -42,11 +39,13 @@ bool Attributes::Serialize(vector<uint8_t>* serialized_attributes) const {
 
 bool Attributes::Parse(const vector<uint8_t>& serialized_attributes) {
   Free();
-  bool success = ParseInternal(ConvertByteVectorToString(serialized_attributes),
-                               true,  // Allow nesting.
-                               &attributes_, &num_attributes_);
-  is_free_required_ = success;
-  return success;
+  if (!ParseInternal(ConvertByteVectorToString(serialized_attributes),
+                     true,  // Allow nesting.
+                     &attributes_, &num_attributes_)) {
+    Free();
+    return false;
+  }
+  return true;
 }
 
 bool Attributes::ParseAndFill(const vector<uint8_t>& serialized_attributes) {
@@ -66,12 +65,25 @@ void Attributes::FreeAttributes(CK_ATTRIBUTE_PTR attributes,
 }
 
 void Attributes::Free() {
-  if (is_free_required_) {
-    allocated_attribute_arrays_.clear();
-    allocated_byte_arrays_.clear();
+  // This function is effective only when the memory is allocated internally.
+  if (allocated_attribute_arrays_.empty()) {
+    // |allocated_byte_arrays_| is supposed to be empty as well as they are
+    // always the children of some allocated attributes.
+    DCHECK(allocated_byte_arrays_.empty())
+        << "no byte arrays should be allocated when no parent attribute is.";
+    return;
+  }
+
+  // Also resets |attributes_| and |num_attributes_| if |attributes_| has been
+  // freed up. Note that by implementation a successful parsing results in
+  // |attributes_| being put at the front of |allocated_attribute_arrays_|, so
+  // it's unnecessary to scan the entire vector.
+  if (attributes_ == allocated_attribute_arrays_[0].get()) {
     attributes_ = NULL;
     num_attributes_ = 0;
   }
+  allocated_attribute_arrays_.clear();
+  allocated_byte_arrays_.clear();
 }
 
 bool Attributes::SerializeInternal(CK_ATTRIBUTE_PTR attributes,

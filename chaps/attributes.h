@@ -47,6 +47,9 @@ class EXPORT_SPEC Attributes {
                              CK_ULONG num_attributes);
 
  private:
+  // Frees all allocated memory blocks by |AllocateCkAttributeArray| and
+  // |AllocateCkByteArray|. Also resets |attributes_| and |num_attributes_| if
+  // |attributes_| is also allocated by |AllocateCkAttributeArray|.
   void Free();
   // Allocates memory for |num| |CK_ATTRIBUTE|s, records the result in
   // |allocated_attribute_arrays_| before returns it.
@@ -76,9 +79,6 @@ class EXPORT_SPEC Attributes {
   // The array being managed (i.e. the 'current' array).
   CK_ATTRIBUTE_PTR attributes_;
   CK_ULONG num_attributes_;
-  // This tracks whether attributes_ was allocated internally and needs to be
-  // deallocated.
-  bool is_free_required_;
 
   // A container that keeps track of all allocated attribute arrays.
   std::vector<std::unique_ptr<CK_ATTRIBUTE[]>> allocated_attribute_arrays_;
