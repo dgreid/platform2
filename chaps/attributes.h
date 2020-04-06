@@ -40,11 +40,6 @@ class EXPORT_SPEC Attributes {
 
   // This method determines if a given attribute holds a nested attribute array.
   static bool IsAttributeNested(CK_ATTRIBUTE_TYPE type);
-  // This method recursively deallocates an array of attributes.  Each value
-  // will be deallocated as well as the array itself.  Nested attribute arrays
-  // will only be deallocated to a single level.
-  static void FreeAttributes(CK_ATTRIBUTE_PTR attributes,
-                             CK_ULONG num_attributes);
 
  private:
   // Frees all allocated memory blocks by |AllocateCkAttributeArray| and
@@ -70,9 +65,6 @@ class EXPORT_SPEC Attributes {
                             CK_ATTRIBUTE_PTR attributes,
                             CK_ULONG num_attributes);
 
-  static void FreeAttributesInternal(CK_ATTRIBUTE_PTR attributes,
-                                     CK_ULONG num_attributes,
-                                     bool is_nesting_allowed);
   static CK_ULONG IntToValueLength(int i);
   static std::string AttributeValueToString(const CK_ATTRIBUTE& attributes);
 

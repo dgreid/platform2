@@ -58,12 +58,6 @@ bool Attributes::IsAttributeNested(CK_ATTRIBUTE_TYPE type) {
   return (type == CKA_WRAP_TEMPLATE || type == CKA_UNWRAP_TEMPLATE);
 }
 
-void Attributes::FreeAttributes(CK_ATTRIBUTE_PTR attributes,
-                                CK_ULONG num_attributes) {
-  FreeAttributesInternal(attributes, num_attributes,
-                         true);  // Allow nesting.
-}
-
 void Attributes::Free() {
   // This function is effective only when the memory is allocated internally.
   if (allocated_attribute_arrays_.empty()) {
@@ -245,35 +239,6 @@ bool Attributes::ParseAndFillInternal(const string& serialized,
     }
   }
   return true;
-}
-
-void Attributes::FreeAttributesInternal(CK_ATTRIBUTE_PTR attributes,
-                                        CK_ULONG num_attributes,
-                                        bool is_nesting_allowed) {
-  DCHECK(attributes != NULL);
-  for (CK_ULONG i = 0; i < num_attributes; ++i) {
-    if (!attributes[i].pValue)
-      continue;
-    if (!IsAttributeNested(attributes[i].type)) {
-      // This was allocated as a CK_BYTE array, delete the same way.
-      CK_BYTE_PTR value = reinterpret_cast<CK_BYTE_PTR>(attributes[i].pValue);
-      delete[] value;
-      continue;
-    }
-    // If nesting is not allowed, then the array is malformed and we won't
-    // process it recursively.
-    DCHECK(is_nesting_allowed);
-    if (!is_nesting_allowed)
-      continue;
-    // This attribute is itself an attribute array; we need to recurse.
-    CK_ATTRIBUTE_PTR inner_attribute_list =
-        reinterpret_cast<CK_ATTRIBUTE_PTR>(attributes[i].pValue);
-    CK_ULONG num_inner_attributes =
-        attributes[i].ulValueLen / sizeof(CK_ATTRIBUTE);
-    FreeAttributesInternal(inner_attribute_list, num_inner_attributes,
-                           false);  // Do not allow nesting.
-  }
-  delete[] attributes;
 }
 
 // Convert int to CK_ULONG preserving -1.  Unfortunately, PKCS #11 uses -1 as a
