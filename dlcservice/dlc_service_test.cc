@@ -7,8 +7,6 @@
 
 #include <base/files/file_path.h>
 #include <base/files/file_util.h>
-#include <base/files/scoped_temp_dir.h>
-#include <base/optional.h>
 #include <base/run_loop.h>
 #include <brillo/message_loops/base_message_loop.h>
 #include <brillo/message_loops/message_loop_utils.h>
@@ -17,18 +15,13 @@
 #include <update_engine/proto_bindings/update_engine.pb.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
-#include <imageloader/dbus-proxy-mocks.h>
-#include <update_engine/dbus-constants.h>
-#include <update_engine/dbus-proxy-mocks.h>
 
-#include "dlcservice/boot/boot_slot.h"
-#include "dlcservice/boot/mock_boot_device.h"
 #include "dlcservice/dlc.h"
 #include "dlcservice/dlc_service.h"
+#include "dlcservice/test_utils.h"
 #include "dlcservice/utils.h"
 
 using brillo::ErrorPtr;
-using std::move;
 using std::string;
 using std::vector;
 using testing::_;
@@ -42,14 +35,6 @@ using update_engine::StatusResult;
 namespace dlcservice {
 
 namespace {
-
-constexpr char kFirstDlc[] = "First-Dlc";
-constexpr char kSecondDlc[] = "Second-Dlc";
-constexpr char kThirdDlc[] = "Third-Dlc";
-constexpr char kPackage[] = "Package";
-
-constexpr char kDefaultOmahaUrl[] = "http://foo-url";
-
 MATCHER_P(ProtoHasUrl,
           url,
           string("The protobuf provided does not have url: ") + url) {
@@ -58,6 +43,8 @@ MATCHER_P(ProtoHasUrl,
 
 class DlcServiceTestObserver : public DlcService::Observer {
  public:
+  DlcServiceTestObserver() = default;
+
   void SendInstallStatus(const InstallStatus& install_status) override {
     install_status_.emplace(install_status);
   }
@@ -74,108 +61,28 @@ class DlcServiceTestObserver : public DlcService::Observer {
 
  private:
   base::Optional<InstallStatus> install_status_;
+
+  DISALLOW_COPY_AND_ASSIGN(DlcServiceTestObserver);
 };
 
 }  // namespace
 
-class BaseTest : public testing::Test {
+class DlcServiceTest : public BaseTest {
  public:
-  BaseTest() {
+  DlcServiceTest() = default;
+
+  void SetUp() override {
     loop_.SetAsCurrent();
 
-    // Create mocks with default behaviors.
-    mock_image_loader_proxy_ =
-        std::make_unique<StrictMock<ImageLoaderProxyMock>>();
-    mock_image_loader_proxy_ptr_ = mock_image_loader_proxy_.get();
+    BaseTest::SetUp();
 
-    mock_update_engine_proxy_ =
-        std::make_unique<StrictMock<UpdateEngineProxyMock>>();
-    mock_update_engine_proxy_ptr_ = mock_update_engine_proxy_.get();
-  }
+    ConstructDlcService();
 
-  void SetUp() override { SetUpFilesAndDirectories(); }
-
-  void SetUpFilesAndDirectories() {
-    // Initialize DLC path.
-    CHECK(scoped_temp_dir_.CreateUniqueTempDir());
-    manifest_path_ = JoinPaths(scoped_temp_dir_.GetPath(), "rootfs");
-    preloaded_content_path_ =
-        JoinPaths(scoped_temp_dir_.GetPath(), "preloaded_stateful");
-    content_path_ = JoinPaths(scoped_temp_dir_.GetPath(), "stateful");
-    mount_path_ = JoinPaths(scoped_temp_dir_.GetPath(), "mount");
-    base::FilePath mount_root_path = JoinPaths(mount_path_, "root");
-    base::CreateDirectory(manifest_path_);
-    base::CreateDirectory(preloaded_content_path_);
-    base::CreateDirectory(content_path_);
-    base::CreateDirectory(mount_root_path);
-    testdata_path_ = JoinPaths(getenv("SRC"), "testdata");
-
-    // Create DLC manifest sub-directories.
-    for (auto&& id : {kFirstDlc, kSecondDlc, kThirdDlc}) {
-      base::CreateDirectory(JoinPaths(manifest_path_, id, kPackage));
-      base::CopyFile(JoinPaths(testdata_path_, id, kPackage, kManifestName),
-                     JoinPaths(manifest_path_, id, kPackage, kManifestName));
-    }
-  }
-
-  int64_t GetFileSize(const base::FilePath& path) {
-    int64_t file_size;
-    EXPECT_TRUE(base::GetFileSize(path, &file_size));
-    return file_size;
-  }
-
-  void ResizeImageFile(const base::FilePath& image_path, int64_t image_size) {
-    constexpr uint32_t file_flags =
-        base::File::FLAG_WRITE | base::File::FLAG_OPEN;
-    base::File file(image_path, file_flags);
-    EXPECT_TRUE(file.SetLength(image_size));
-  }
-
-  void CreateImageFileWithRightSize(const base::FilePath& image_path,
-                                    const base::FilePath& manifest_path,
-                                    const string& id,
-                                    const string& package) {
-    imageloader::Manifest manifest;
-    dlcservice::GetDlcManifest(manifest_path, id, package, &manifest);
-    int64_t image_size = manifest.preallocated_size();
-
-    constexpr uint32_t file_flags = base::File::FLAG_WRITE |
-                                    base::File::FLAG_READ |
-                                    base::File::FLAG_CREATE;
-    base::File file(image_path, file_flags);
-    EXPECT_TRUE(file.SetLength(image_size));
-  }
-
-  // Will create |path|/|id|/|package|/dlc.img file.
-  void SetUpDlcWithoutSlots(const string& id) {
-    base::FilePath image_path =
-        JoinPaths(preloaded_content_path_, id, kPackage, kDlcImageFileName);
-    base::CreateDirectory(image_path.DirName());
-    CreateImageFileWithRightSize(image_path, manifest_path_, id, kPackage);
-  }
-  // Will create |path/|id|/|package|/dlc_[a|b]/dlc.img files.
-  void SetUpDlcWithSlots(const string& id) {
-    // Create DLC content sub-directories and empty images.
-    for (const auto& slot : {BootSlot::Slot::A, BootSlot::Slot::B}) {
-      base::FilePath image_path =
-          GetDlcImagePath(content_path_, id, kPackage, slot);
-      base::CreateDirectory(image_path.DirName());
-      CreateImageFileWithRightSize(image_path, manifest_path_, id, kPackage);
-    }
+    SetUpDlcWithSlots(kFirstDlc);
+    InstallDlcs({kFirstDlc});
   }
 
   void ConstructDlcService() {
-    auto mock_boot_device = std::make_unique<MockBootDevice>();
-    EXPECT_CALL(*mock_boot_device, GetBootDevice())
-        .WillOnce(Return("/dev/sdb5"));
-    EXPECT_CALL(*mock_boot_device, IsRemovableDevice(_))
-        .WillOnce(Return(false));
-
-    SystemState::Initialize(
-        move(mock_image_loader_proxy_), move(mock_update_engine_proxy_),
-        std::make_unique<BootSlot>(move(mock_boot_device)), manifest_path_,
-        preloaded_content_path_, content_path_, /*for_test=*/true);
-
     EXPECT_CALL(*mock_update_engine_proxy_ptr_,
                 DoRegisterStatusUpdateAdvancedSignalHandler(_, _))
         .Times(1);
@@ -184,65 +91,6 @@ class BaseTest : public testing::Test {
 
     dlc_service_test_observer_ = std::make_unique<DlcServiceTestObserver>();
     dlc_service_->AddObserver(dlc_service_test_observer_.get());
-  }
-
-  void SetMountPath(const string& mount_path_expected) {
-    ON_CALL(*mock_image_loader_proxy_ptr_, LoadDlcImage(_, _, _, _, _, _))
-        .WillByDefault(
-            DoAll(SetArgPointee<3>(mount_path_expected), Return(true)));
-  }
-
-  inline void CheckDlcState(const DlcId& id_in,
-                            const DlcState::State& state_in,
-                            bool fail = false) {
-    DlcState state;
-    if (fail) {
-      EXPECT_FALSE(dlc_service_->GetState(id_in, &state, &err_));
-      return;
-    }
-    EXPECT_TRUE(dlc_service_->GetState(id_in, &state, &err_));
-    EXPECT_EQ(state_in, state.state());
-  }
-
- protected:
-  ErrorPtr err_;
-
-  base::MessageLoopForIO base_loop_;
-  brillo::BaseMessageLoop loop_{&base_loop_};
-
-  base::ScopedTempDir scoped_temp_dir_;
-
-  base::FilePath testdata_path_;
-  base::FilePath manifest_path_;
-  base::FilePath preloaded_content_path_;
-  base::FilePath content_path_;
-  base::FilePath mount_path_;
-
-  using ImageLoaderProxyMock = org::chromium::ImageLoaderInterfaceProxyMock;
-  std::unique_ptr<ImageLoaderProxyMock> mock_image_loader_proxy_;
-  ImageLoaderProxyMock* mock_image_loader_proxy_ptr_;
-
-  using UpdateEngineProxyMock = org::chromium::UpdateEngineInterfaceProxyMock;
-  std::unique_ptr<UpdateEngineProxyMock> mock_update_engine_proxy_;
-  UpdateEngineProxyMock* mock_update_engine_proxy_ptr_;
-
-  std::unique_ptr<DlcService> dlc_service_;
-  std::unique_ptr<DlcServiceTestObserver> dlc_service_test_observer_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(BaseTest);
-};
-
-class DlcServiceTest : public BaseTest {
- public:
-  DlcServiceTest() = default;
-
-  void SetUp() override {
-    BaseTest::SetUp();
-
-    ConstructDlcService();
-    SetUpDlcWithSlots(kFirstDlc);
-    InstallDlcs({kFirstDlc});
   }
 
   void InstallDlcs(const DlcSet& ids) {
@@ -264,14 +112,32 @@ class DlcServiceTest : public BaseTest {
               Status::COMPLETED);
   }
 
+  void CheckDlcState(const DlcId& id_in,
+                     const DlcState::State& state_in,
+                     bool fail = false) {
+    DlcState state;
+    if (fail) {
+      EXPECT_FALSE(dlc_service_->GetState(id_in, &state, &err_));
+      return;
+    }
+    EXPECT_TRUE(dlc_service_->GetState(id_in, &state, &err_));
+    EXPECT_EQ(state_in, state.state());
+  }
+
+ protected:
+  base::MessageLoopForIO base_loop_;
+  brillo::BaseMessageLoop loop_{&base_loop_};
+
+  std::unique_ptr<DlcService> dlc_service_;
+  std::unique_ptr<DlcServiceTestObserver> dlc_service_test_observer_;
+
  private:
   DISALLOW_COPY_AND_ASSIGN(DlcServiceTest);
 };
 
-TEST_F(BaseTest, PreloadAllowedDlcTest) {
+TEST_F(DlcServiceTest, PreloadAllowedDlcTest) {
   // The third DLC has pre-loaded flag on.
   SetUpDlcWithoutSlots(kThirdDlc);
-  ConstructDlcService();
 
   EXPECT_CALL(*mock_image_loader_proxy_ptr_, LoadDlcImage(_, _, _, _, _, _))
       .WillOnce(DoAll(SetArgPointee<3>(mount_path_.value()), Return(true)));
@@ -281,21 +147,19 @@ TEST_F(BaseTest, PreloadAllowedDlcTest) {
   EXPECT_CALL(*mock_update_engine_proxy_ptr_,
               SetDlcActiveValue(true, kThirdDlc, _, _))
       .WillOnce(Return(true));
+  EXPECT_THAT(dlc_service_->GetInstalled(), ElementsAre(kFirstDlc));
 
   dlc_service_->PreloadDlcs();
 
-  const auto& dlcs = dlc_service_->GetInstalled();
-
-  EXPECT_THAT(dlcs, ElementsAre(kThirdDlc));
+  EXPECT_THAT(dlc_service_->GetInstalled(), ElementsAre(kFirstDlc, kThirdDlc));
   EXPECT_FALSE(dlc_service_->GetDlc(kThirdDlc).GetRoot().value().empty());
   CheckDlcState(kThirdDlc, DlcState::INSTALLED);
 }
 
-TEST_F(BaseTest, PreloadAllowedWithBadPreinstalledDlcTest) {
+TEST_F(DlcServiceTest, PreloadAllowedWithBadPreinstalledDlcTest) {
   // The third DLC has pre-loaded flag on.
   SetUpDlcWithSlots(kThirdDlc);
   SetUpDlcWithoutSlots(kThirdDlc);
-  ConstructDlcService();
 
   EXPECT_CALL(*mock_image_loader_proxy_ptr_, LoadDlcImage(_, _, _, _, _, _))
       .WillOnce(DoAll(SetArgPointee<3>(mount_path_.value()), Return(true)));
@@ -305,25 +169,24 @@ TEST_F(BaseTest, PreloadAllowedWithBadPreinstalledDlcTest) {
   EXPECT_CALL(*mock_update_engine_proxy_ptr_,
               SetDlcActiveValue(true, kThirdDlc, _, _))
       .WillOnce(Return(true));
+  EXPECT_THAT(dlc_service_->GetInstalled(), ElementsAre(kFirstDlc));
 
   dlc_service_->PreloadDlcs();
 
-  const auto& dlcs = dlc_service_->GetInstalled();
-
-  EXPECT_THAT(dlcs, ElementsAre(kThirdDlc));
+  EXPECT_THAT(dlc_service_->GetInstalled(), ElementsAre(kFirstDlc, kThirdDlc));
   EXPECT_FALSE(dlc_service_->GetDlc(kThirdDlc).GetRoot().value().empty());
   CheckDlcState(kThirdDlc, DlcState::INSTALLED);
 }
 
-TEST_F(BaseTest, PreloadNotAllowedDlcTest) {
-  SetUpDlcWithoutSlots(kFirstDlc);
-  ConstructDlcService();
+TEST_F(DlcServiceTest, PreloadNotAllowedDlcTest) {
+  SetUpDlcWithoutSlots(kSecondDlc);
+
+  EXPECT_THAT(dlc_service_->GetInstalled(), ElementsAre(kFirstDlc));
 
   dlc_service_->PreloadDlcs();
-  const auto& dlcs = dlc_service_->GetInstalled();
 
-  EXPECT_TRUE(dlcs.empty());
-  CheckDlcState(kFirstDlc, DlcState::NOT_INSTALLED);
+  EXPECT_THAT(dlc_service_->GetInstalled(), ElementsAre(kFirstDlc));
+  CheckDlcState(kSecondDlc, DlcState::NOT_INSTALLED);
 }
 
 TEST_F(DlcServiceTest,

@@ -133,6 +133,7 @@ if (use.test) {
       "boot/boot_device_test.cc",
       "boot/boot_slot_test.cc",
       "dlc_service_test.cc",
+      "test_utils.cc",
       "utils_test.cc",
     ]
     deps = [
