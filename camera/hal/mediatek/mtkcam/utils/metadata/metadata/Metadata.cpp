@@ -1359,7 +1359,8 @@ ssize_t IMetadata::Implementor::flatten(char* buf, size_t buf_size) const {
       CASE_WRITER(Memory);
 #undef CASE_WRITER
       default:
-        CAM_LOGE("[flatten] unsupported format:%ul", info.type);
+        CAM_LOGW("[flatten] data type %u is unsupported. tag:0x%x", info.type,
+                 info.tag);
         ret = BAD_VALUE;
         continue;
     }
@@ -1415,7 +1416,8 @@ ssize_t IMetadata::Implementor::unflatten(char* buf, size_t buf_size) {
       CASE_READER(Memory);
 #undef CASE_READER
       default:
-        CAM_LOGE("[unflatten] unsupported format:%ul", info.type);
+        CAM_LOGW("[unflatten] data type %u is unsupported. tag:0x%x", info.type,
+                 info.tag);
         ret = BAD_VALUE;
         continue;
     }
