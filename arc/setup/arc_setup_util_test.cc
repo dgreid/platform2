@@ -1001,6 +1001,11 @@ TEST(ArcSetupUtil, TestGetUserId) {
   EXPECT_TRUE(GetUserId("android-root", &uid, &gid));
   EXPECT_EQ(655360, uid);
   EXPECT_EQ(655360, gid);
+#if defined(USE_ARCVM)
+  EXPECT_TRUE(GetUserId("crosvm", &uid, &gid));
+  EXPECT_NE(655360, uid);
+  EXPECT_NE(655360, gid);
+#endif
 }
 
 }  // namespace arc

@@ -64,6 +64,9 @@ static_library("libarc_setup") {
   ]
   configs += [ ":target_defaults" ]
   defines = []
+  if (defined(use.arcvm) && use.arcvm) {
+    defines += [ "USE_ARCVM=1" ]
+  }
   if (defined(use.houdini) && use.houdini) {
     defines += [ "USE_HOUDINI=1" ]
   }
@@ -177,6 +180,11 @@ if (use.test) {
       ":arc-setup_testrunner_pkg_deps",
       ":target_defaults",
     ]
+
+    defines = []
+    if (defined(use.arcvm) && use.arcvm) {
+      defines += [ "USE_ARCVM=1" ]
+    }
 
     deps = [
       ":libarc_setup",

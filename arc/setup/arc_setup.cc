@@ -719,7 +719,16 @@ void ArcSetup::SetUpBinFmtMisc(ArcBinaryTranslationType bin_type) {
 }
 
 void ArcSetup::SetUpAndroidData(bool bind_mount) {
-  EXIT_IF(!InstallDirectory(0700, kRootUid, kRootGid,
+  mode_t android_data_mode = 0700;
+  gid_t android_data_gid = kRootGid;
+#if defined(USE_ARCVM)
+  // When ARCVM is enabled on the board, allow vm_concierge to access the
+  // directory. Note that vm_concierge runs as ugid crosvm in minijail.
+  uid_t dummy_uid;
+  EXIT_IF(!GetUserId("crosvm", &dummy_uid, &android_data_gid));
+  android_data_mode = 0750;
+#endif
+  EXIT_IF(!InstallDirectory(android_data_mode, kRootUid, android_data_gid,
                             arc_paths_->android_data_directory));
 
   // match android/system/core/rootdir/init.rc
