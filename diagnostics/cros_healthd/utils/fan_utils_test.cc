@@ -109,6 +109,42 @@ TEST_F(FanUtilsTest, CollectFanSpeedFailure) {
   EXPECT_EQ(fan_info.size(), 0);
 }
 
+// Test that fan speed is set to 0 RPM when a fan stalls.
+TEST_F(FanUtilsTest, FanStalled) {
+  // Set the mock debugd response.
+  EXPECT_CALL(*mock_debugd_proxy(),
+              CollectFanSpeed(_, _, kDebugdDBusTimeout.InMilliseconds()))
+      .WillOnce(DoAll(WithArg<0>(Invoke([](std::string* output) {
+                        *output = base::StringPrintf(
+                            "Fan 0 stalled!\nFan 1 RPM: %u\n",
+                            kSecondFanSpeedRpm);
+                      })),
+                      Return(true)));
+
+  auto fan_info = fan_fetcher()->FetchFanInfo(GetTempDirPath());
+  ASSERT_EQ(fan_info.size(), 2);
+  EXPECT_EQ(fan_info[0]->speed_rpm, 0);
+  EXPECT_EQ(fan_info[1]->speed_rpm, kSecondFanSpeedRpm);
+}
+
+// Test that failing to match a line of output to the fan speed regex fails
+// gracefully and does not prevent other valid lines from being matched.
+TEST_F(FanUtilsTest, BadLine) {
+  // Set the mock debugd response.
+  EXPECT_CALL(*mock_debugd_proxy(),
+              CollectFanSpeed(_, _, kDebugdDBusTimeout.InMilliseconds()))
+      .WillOnce(DoAll(WithArg<0>(Invoke([](std::string* output) {
+                        *output = base::StringPrintf(
+                            "Fan 0 RPM: bad\nFan 1 RPM: %u\n",
+                            kSecondFanSpeedRpm);
+                      })),
+                      Return(true)));
+
+  auto fan_info = fan_fetcher()->FetchFanInfo(GetTempDirPath());
+  ASSERT_EQ(fan_info.size(), 1);
+  EXPECT_EQ(fan_info[0]->speed_rpm, kSecondFanSpeedRpm);
+}
+
 // Test that failing to convert the first fan speed string to an integer fails
 // gracefully and does not prevent other valid fan speed strings from being
 // converted.
@@ -118,7 +154,7 @@ TEST_F(FanUtilsTest, BadValue) {
               CollectFanSpeed(_, _, kDebugdDBusTimeout.InMilliseconds()))
       .WillOnce(DoAll(WithArg<0>(Invoke([](std::string* output) {
                         *output = base::StringPrintf(
-                            "Fan 0 RPM: bad\nFan 1 RPM: %u\n",
+                            "Fan 0 RPM: -115\nFan 1 RPM: %u\n",
                             kSecondFanSpeedRpm);
                       })),
                       Return(true)));

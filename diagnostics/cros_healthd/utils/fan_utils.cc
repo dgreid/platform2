@@ -13,6 +13,7 @@
 #include <base/strings/string_util.h>
 #include <base/time/time.h>
 #include <brillo/errors/error.h>
+#include <re2/re2.h>
 
 namespace diagnostics {
 
@@ -20,6 +21,9 @@ namespace {
 
 using ::chromeos::cros_healthd::mojom::FanInfo;
 using ::chromeos::cros_healthd::mojom::FanInfoPtr;
+
+constexpr auto kFanStalledRegex = R"(Fan \d+ stalled!)";
+constexpr auto kFanSpeedRegex = R"(Fan \d+ RPM: (\d+))";
 
 }  // namespace
 
@@ -49,15 +53,26 @@ std::vector<FanInfoPtr> FanFetcher::FetchFanInfo(
     return fan_info;
   }
 
-  base::StringPairs pairs;
-  base::SplitStringIntoKeyValuePairs(debugd_result, ':', '\n', &pairs);
-  for (auto& pair : pairs) {
-    base::TrimWhitespaceASCII(pair.second, base::TRIM_ALL, &pair.second);
+  std::vector<std::string> lines = base::SplitString(
+      debugd_result, "\n", base::KEEP_WHITESPACE, base::SPLIT_WANT_NONEMPTY);
+  for (const auto& line : lines) {
+    if (RE2::FullMatch(line, kFanStalledRegex)) {
+      fan_info.push_back(FanInfo::New(0));
+      continue;
+    }
+
+    std::string regex_result;
+    if (!RE2::FullMatch(line, kFanSpeedRegex, &regex_result)) {
+      LOG(ERROR) << "Line does not match regex: " << line;
+      continue;
+    }
+
     uint32_t speed;
-    if (base::StringToUint(pair.second, &speed)) {
+    if (base::StringToUint(regex_result, &speed)) {
       fan_info.push_back(FanInfo::New(speed));
     } else {
-      LOG(ERROR) << "Failed to convert string to integer: " << pair.second;
+      LOG(ERROR) << "Failed to convert regex result to integer: "
+                 << regex_result;
     }
   }
 
