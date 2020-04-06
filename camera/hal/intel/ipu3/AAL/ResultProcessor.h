@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2019 Intel Corporation
+ * Copyright (C) 2013-2020 Intel Corporation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -82,7 +82,7 @@ private:  /* types  and constants */
      * Always in the context of the ResultProcesssor Thread, avoiding the need
      * of mutex locking
      **/
-    typedef struct  {
+    typedef struct RequestState_t {
         int reqId;
         Camera3Request *request;
 
