@@ -92,8 +92,7 @@ MountErrorType MountManager::Mount(const std::string& source_path,
   // Source is not necessary a path, but if it is let's resolve it to
   // some real underlying object.
   std::string real_path;
-  if (Uri::IsUri(source_path) ||
-      !platform_->GetRealPath(source_path, &real_path)) {
+  if (Uri::IsUri(source_path) || !ResolvePath(source_path, &real_path)) {
     real_path = source_path;
   }
 
@@ -147,6 +146,11 @@ MountErrorType MountManager::Remount(const std::string& source_path,
                              applied_options.IsReadOnlyOptionSet());
 
   return error_type;
+}
+
+bool MountManager::ResolvePath(const std::string& path,
+                               std::string* real_path) {
+  return platform_->GetRealPath(path, real_path);
 }
 
 MountErrorType MountManager::MountNewSource(

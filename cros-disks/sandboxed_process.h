@@ -37,6 +37,11 @@ class SandboxedProcess : public Process {
   // Puts the process to be sandboxed in a new mount namespace.
   void NewMountNamespace();
 
+  // Puts the process to be sandboxed in an existing mount namespace.
+  // Can be combined with NewMountNamespace() above: the process will first
+  // enter the existing namespace and then unshare a new child namespace.
+  void EnterExistingMountNamespace(const std::string& ns_path);
+
   // Puts the process to be sandboxed in a new network namespace.
   void NewNetworkNamespace();
 

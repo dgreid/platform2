@@ -8,10 +8,12 @@
 #include <memory>
 
 #include <base/files/file_path.h>
+#include <base/files/file_util.h>
 #include <base/logging.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_util.h>
 #include <brillo/cryptohome.h>
+#include <brillo/scoped_mount_namespace.h>
 
 #include "cros-disks/error_logger.h"
 #include "cros-disks/fuse_helper.h"
@@ -21,10 +23,13 @@
 #include "cros-disks/platform.h"
 #include "cros-disks/quote.h"
 
+using ScopedMountNamespace = brillo::ScopedMountNamespace;
+
 namespace cros_disks {
 namespace {
 
 const char kExtension[] = ".rar";
+const char kChromeMountNamespacePath[] = "/run/namespaces/mnt_chrome";
 
 }  // namespace
 
@@ -78,6 +83,19 @@ std::string RarManager::SuggestMountPath(const std::string& source_path) const {
   return mount_root().Append(base_name).value();
 }
 
+bool RarManager::ResolvePath(const std::string& path, std::string* real_path) {
+  std::unique_ptr<ScopedMountNamespace> guard =
+      ScopedMountNamespace::CreateFromPath(
+          base::FilePath(kChromeMountNamespacePath));
+
+  // If the path doesn't exist in Chrome's mount namespace, exit the namespace,
+  // so that GetRealPath() below gets executed in cros-disks's mount namespace.
+  if (!base::PathExists(base::FilePath(path)))
+    guard.reset();
+
+  return platform()->GetRealPath(path, real_path);
+}
+
 std::unique_ptr<MountPoint> RarManager::DoMount(
     const std::string& source_path,
     const std::string& /*filesystem_type*/,
@@ -114,12 +132,37 @@ std::unique_ptr<MountPoint> RarManager::DoMount(
 
   *applied_options = options;
 
+  // Mount namespace to use when running rar2fs.
+  std::string mount_namespace_path;
+  std::vector<FUSEMounter::BindPath> bind_paths;
+
+  // Determine which mount namespace to use.
+  {
+    // Attempt to enter the Chrome mount namespace, if it exists.
+    std::unique_ptr<ScopedMountNamespace> guard =
+        ScopedMountNamespace::CreateFromPath(
+            base::FilePath(kChromeMountNamespacePath));
+
+    if (guard) {
+      // Check if the source path exists in Chrome's mount namespace.
+      if (base::PathExists(base::FilePath(source_path))) {
+        // The source path exists in Chrome's mount namespace.
+        mount_namespace_path = kChromeMountNamespacePath;
+      } else {
+        // Use the default mount namespace.
+        guard.reset();
+      }
+    }
+
+    bind_paths = GetBindPaths(source_path);
+  }
+
   // Run rar2fs.
-  FUSEMounter mounter(
-      "rarfs", options, platform(), process_reaper(), "/usr/bin/rar2fs",
-      "fuse-rar2fs", "/usr/share/policy/rar2fs-seccomp.policy",
-      GetBindPaths(source_path), false /* permit_network_access */,
-      FUSEHelper::kFilesGroup, metrics());
+  FUSEMounter mounter("rarfs", options, platform(), process_reaper(),
+                      "/usr/bin/rar2fs", "fuse-rar2fs",
+                      "/usr/share/policy/rar2fs-seccomp.policy", bind_paths,
+                      false /* permit_network_access */,
+                      FUSEHelper::kFilesGroup, mount_namespace_path, metrics());
 
   // To access Play Files.
   if (!mounter.AddGroup("android-everybody"))

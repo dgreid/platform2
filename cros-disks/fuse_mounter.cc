@@ -274,6 +274,7 @@ FUSEMounter::FUSEMounter(const std::string& filesystem_type,
                          const std::vector<BindPath>& accessible_paths,
                          bool permit_network_access,
                          const std::string& mount_group,
+                         const std::string& mount_namespace_path,
                          Metrics* metrics)
     : MounterCompat(filesystem_type, mount_options),
       platform_(platform),
@@ -284,7 +285,8 @@ FUSEMounter::FUSEMounter(const std::string& filesystem_type,
       mount_group_(mount_group),
       seccomp_policy_(seccomp_policy),
       accessible_paths_(accessible_paths),
-      permit_network_access_(permit_network_access) {}
+      permit_network_access_(permit_network_access),
+      mount_namespace_path_(mount_namespace_path) {}
 
 bool FUSEMounter::AddGroup(const std::string& group) {
   gid_t gid;
@@ -381,6 +383,10 @@ std::unique_ptr<MountPoint> FUSEMounter::Mount(
       return nullptr;
     }
   }
+
+  // Enter mount namespace in the sandbox if necessary.
+  if (!mount_namespace_path_.empty())
+    mount_process->EnterExistingMountNamespace(mount_namespace_path_);
 
   // This is for additional data dirs.
   for (const auto& path : accessible_paths_) {

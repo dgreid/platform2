@@ -183,6 +183,10 @@ class MountManager {
   // error that caused the mount path to be reserved.
   using ReservedMountPathMap = std::map<std::string, MountErrorType>;
 
+  // The base class calls Platform::GetRealPath(), derived classes can override
+  // it.
+  virtual bool ResolvePath(const std::string& path, std::string* real_path);
+
   // Mounts |source_path| to |mount_path| as |filesystem_type| with |options|.
   MountErrorType MountNewSource(const std::string& source_path,
                                 const std::string& filesystem_type,

@@ -33,6 +33,8 @@ class RarManager : public MountManager {
     return MOUNT_SOURCE_ARCHIVE;
   }
 
+  bool ResolvePath(const std::string& path, std::string* real_path) override;
+
   bool CanMount(const std::string& source_path) const override;
 
   std::string SuggestMountPath(const std::string& source_path) const override;

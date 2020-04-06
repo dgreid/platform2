@@ -62,6 +62,10 @@ void SandboxedProcess::NewMountNamespace() {
   minijail_namespace_vfs(jail_);
 }
 
+void SandboxedProcess::EnterExistingMountNamespace(const std::string& ns_path) {
+  minijail_namespace_enter_vfs(jail_, ns_path.c_str());
+}
+
 void SandboxedProcess::NewPidNamespace() {
   minijail_namespace_pids(jail_);
   minijail_run_as_init(jail_);

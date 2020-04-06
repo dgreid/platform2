@@ -12,6 +12,7 @@
 #include <vector>
 
 #include <base/files/file.h>
+#include <base/files/file_path.h>
 #include <base/strings/string_piece.h>
 
 #include "cros-disks/metrics.h"
@@ -45,6 +46,7 @@ class FUSEMounter : public MounterCompat {
               const std::vector<BindPath>& accessible_paths,
               bool permit_network_access,
               const std::string& mount_group = {},
+              const std::string& mount_namespace_path = {},
               Metrics* metrics = nullptr);
 
   // Adds a supplementary group to run the FUSE mount program with.
@@ -88,6 +90,9 @@ class FUSEMounter : public MounterCompat {
 
   // Whether to leave network access to the mount program.
   const bool permit_network_access_;
+
+  // If not empty, mount namespace where the source path exists.
+  const std::string mount_namespace_path_;
 
   // Supplementary groups to run the FUSE mount program with.
   std::vector<gid_t> supplementary_groups_;
