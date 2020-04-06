@@ -989,6 +989,9 @@ void CameraDeviceAdapter::ProcessReprocessRequestOnDeviceOpsThread(
     std::unique_ptr<Camera3CaptureRequest> req,
     base::Callback<void(int32_t)> callback) {
   VLOGF_ENTER();
+  frame_number_mapper_.RegisterCaptureRequest(req.get(),
+                                              /*is_request_split=*/false,
+                                              /*is_request_added=*/false);
   callback.Run(
       camera_device_->ops->process_capture_request(camera_device_, req.get()));
 }
