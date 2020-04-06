@@ -67,7 +67,8 @@ void Attributes::FreeAttributes(CK_ATTRIBUTE_PTR attributes,
 
 void Attributes::Free() {
   if (is_free_required_) {
-    FreeAttributes(attributes_, num_attributes_);
+    allocated_attribute_arrays_.clear();
+    allocated_byte_arrays_.clear();
     attributes_ = NULL;
     num_attributes_ = 0;
   }
@@ -126,9 +127,9 @@ bool Attributes::ParseInternal(const string& serialized,
     LOG(ERROR) << "Failed to parse proto-buffer.";
     return false;
   }
-  std::unique_ptr<CK_ATTRIBUTE[]> attribute_array(
-      new CK_ATTRIBUTE[attribute_list.attribute_size()]);
-  CHECK(attribute_array.get());
+  CK_ATTRIBUTE_PTR attribute_array =
+      AllocateCkAttributeArray(attribute_list.attribute_size());
+  CHECK(attribute_array);
   for (int i = 0; i < attribute_list.attribute_size(); ++i) {
     const Attribute& attribute = attribute_list.attribute(i);
     attribute_array[i].type = attribute.type();
@@ -141,7 +142,8 @@ bool Attributes::ParseInternal(const string& serialized,
     }
     if (!IsAttributeNested(attribute_array[i].type)) {
       attribute_array[i].ulValueLen = attribute.value().length();
-      attribute_array[i].pValue = new CK_BYTE[attribute.value().length()];
+      attribute_array[i].pValue =
+          AllocateCkByteArray(attribute.value().length());
       CHECK(attribute_array[i].pValue);
       memcpy(attribute_array[i].pValue, attribute.value().data(),
              attribute.value().length());
@@ -163,7 +165,7 @@ bool Attributes::ParseInternal(const string& serialized,
     attribute_array[i].ulValueLen = num_inner_attributes * sizeof(CK_ATTRIBUTE);
     attribute_array[i].pValue = inner_attribute_list;
   }
-  *attributes = attribute_array.release();
+  *attributes = attribute_array;
   *num_attributes = attribute_list.attribute_size();
   return true;
 }
@@ -273,6 +275,23 @@ CK_ULONG Attributes::IntToValueLength(int i) {
 string Attributes::AttributeValueToString(const CK_ATTRIBUTE& attributes) {
   return string(reinterpret_cast<char*>(attributes.pValue),
                 attributes.ulValueLen);
+}
+
+CK_ATTRIBUTE_PTR Attributes::AllocateCkAttributeArray(size_t num) {
+  allocated_attribute_arrays_.emplace_back(
+      std::make_unique<CK_ATTRIBUTE[]>(num));
+  CK_ATTRIBUTE_PTR attribute_array = allocated_attribute_arrays_.back().get();
+  // Initializes the value and the length to prevent dangling pointers.
+  for (size_t i = 0; i < num; ++i) {
+    attribute_array[i].ulValueLen = 0;
+    attribute_array[i].pValue = nullptr;
+  }
+  return attribute_array;
+}
+
+CK_BYTE_PTR Attributes::AllocateCkByteArray(size_t size) {
+  allocated_byte_arrays_.emplace_back(std::make_unique<CK_BYTE[]>(size));
+  return allocated_byte_arrays_.back().get();
 }
 
 }  // namespace chaps

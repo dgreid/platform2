@@ -5,6 +5,7 @@
 #ifndef CHAPS_ATTRIBUTES_H_
 #define CHAPS_ATTRIBUTES_H_
 
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -47,6 +48,12 @@ class EXPORT_SPEC Attributes {
 
  private:
   void Free();
+  // Allocates memory for |num| |CK_ATTRIBUTE|s, records the result in
+  // |allocated_attribute_arrays_| before returns it.
+  CK_ATTRIBUTE_PTR AllocateCkAttributeArray(size_t num);
+  // Allocates memory for |CK_BYTE|s in size of |size|, records the result in
+  // |allocated_byte_arrays_| before returns it.
+  CK_BYTE_PTR AllocateCkByteArray(size_t size);
   bool SerializeInternal(CK_ATTRIBUTE_PTR attributes,
                          CK_ULONG num_attributes,
                          bool is_nesting_allowed,
@@ -72,6 +79,11 @@ class EXPORT_SPEC Attributes {
   // This tracks whether attributes_ was allocated internally and needs to be
   // deallocated.
   bool is_free_required_;
+
+  // A container that keeps track of all allocated attribute arrays.
+  std::vector<std::unique_ptr<CK_ATTRIBUTE[]>> allocated_attribute_arrays_;
+  // A container that keeps track of all allocated byte arrays.
+  std::vector<std::unique_ptr<CK_BYTE[]>> allocated_byte_arrays_;
 
   DISALLOW_COPY_AND_ASSIGN(Attributes);
 };
