@@ -8,6 +8,7 @@
 
 #include <base/bind.h>
 #include <base/logging.h>
+#include <base/numerics/safe_conversions.h>
 
 #include "cros-camera/common.h"
 #include "cros-camera/export.h"
@@ -133,8 +134,13 @@ void CameraGPUAlgorithm::RequestOnThread(uint32_t req_id,
       callback(EINVAL);
       return;
     }
+    const creative_camera::PortraitCrosWrapper::Request portrait_request{
+        .width = base::checked_cast<int>(params.width),
+        .height = base::checked_cast<int>(params.height),
+        .orientation = base::checked_cast<int>(params.orientation),
+    };
     if (!portrait_processor_.Process(
-            req_id, params.width, params.height, params.orientation,
+            req_id, portrait_request,
             static_cast<const uint8_t*>(
                 shm_map_.at(params.input_buffer_handle)->memory()),
             static_cast<uint8_t*>(
