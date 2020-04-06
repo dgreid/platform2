@@ -1264,7 +1264,7 @@ void HomeDirs::DeleteCacheCallback(const FilePath& user_dir) {
     LOG(ERROR) << "Failed to locate the cache directory.";
     return;
   }
-  LOG(WARNING) << "Deleting Cache " << cache.value();
+  VLOG(1) << "Deleting Cache " << cache.value();
   DeleteDirectoryContents(cache);
 }
 
@@ -1283,7 +1283,7 @@ void HomeDirs::DeleteGCacheTmpCallback(const FilePath& user_dir) {
       LOG(ERROR) << "Failed to locate GCache temp directory " << dir.value();
       continue;
     }
-    LOG(WARNING) << "Deleting GCache " << gcachetmp.value();
+    VLOG(1) << "Deleting GCache " << gcachetmp.value();
     DeleteDirectoryContents(gcachetmp);
   }
 
@@ -1300,7 +1300,7 @@ void HomeDirs::DeleteGCacheTmpCallback(const FilePath& user_dir) {
       continue;
     }
 
-    LOG(WARNING) << "Cleaning removable files in " << gcache_dir.value();
+    VLOG(1) << "Cleaning removable files in " << gcache_dir.value();
     RemoveAllRemovableFiles(platform_, gcache_dir);
   }
 }
@@ -1335,7 +1335,7 @@ void HomeDirs::DeleteAndroidCacheCallback(const FilePath& user_dir) {
     if (cache_inodes.find(parent_inode_pair) != cache_inodes.end() ||
         platform_->HasExtendedFileAttribute(next_path,
                                             kAndroidCacheFilesAttribute)) {
-      LOG(WARNING) << "Deleting Android Cache " << next_path.value();
+      VLOG(1) << "Deleting Android Cache " << next_path.value();
       std::vector<FilePath> entry_list;
       platform_->EnumerateDirectoryEntries(next_path, false, &entry_list);
       for (const FilePath& entry : entry_list)
