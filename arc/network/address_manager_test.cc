@@ -86,7 +86,7 @@ TEST(AddressManager, SubnetIndexing) {
 }
 
 TEST(AddressManager, StableMacAddresses) {
-  AddressManager mgr({});
+  AddressManager mgr;
   EXPECT_NE(mgr.GenerateMacAddress(), mgr.GenerateMacAddress());
   EXPECT_NE(mgr.GenerateMacAddress(kAnySubnetIndex),
             mgr.GenerateMacAddress(kAnySubnetIndex));
