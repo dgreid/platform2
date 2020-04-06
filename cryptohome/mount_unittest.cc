@@ -24,6 +24,7 @@
 #include <base/strings/string_number_conversions.h>
 #include <base/time/time.h>
 #include <brillo/cryptohome.h>
+#include <brillo/process_mock.h>
 #include <brillo/secure_blob.h>
 #include <chromeos/constants/cryptohome.h>
 #include <gtest/gtest.h>
@@ -625,6 +626,22 @@ TEST_P(MountTest, BadInitTest) {
       mount_->Init(&platform_, &crypto_, user_timestamp_cache_.get(),
                    base::DoNothing()));
   ASSERT_FALSE(mount_->AreValid(credentials));
+}
+
+TEST_P(MountTest, NamespaceCreationPass) {
+  mount_->set_mount_guest_session_non_root_namespace(true);
+  brillo::ProcessMock* mock_process = platform_.mock_process();
+  EXPECT_CALL(*mock_process, Run()).WillOnce(Return(0));
+  EXPECT_TRUE(mount_->Init(&platform_, &crypto_, user_timestamp_cache_.get(),
+                            base::DoNothing()));
+}
+
+TEST_P(MountTest, NamespaceCreationFail) {
+  mount_->set_mount_guest_session_non_root_namespace(true);
+  brillo::ProcessMock* mock_process = platform_.mock_process();
+  EXPECT_CALL(*mock_process, Run()).WillOnce(Return(1));
+  EXPECT_FALSE(mount_->Init(&platform_, &crypto_, user_timestamp_cache_.get(),
+                            base::DoNothing()));
 }
 
 TEST_P(MountTest, CurrentCredentialsTest) {
