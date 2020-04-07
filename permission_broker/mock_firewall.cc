@@ -21,7 +21,10 @@ int MockFirewall::GetRunInMinijailCriterionMatchCount(int id) {
 }
 
 bool MockFirewall::MatchAndUpdate(const std::vector<std::string>& argv) {
-  for (auto& criterion : match_criteria_) {
+  // Make a copy of the container so that we can delete elements while
+  // iterating.
+  auto criteria = match_criteria_;
+  for (auto& criterion : criteria) {
     bool match = true;
     // Empty criterion is a catch all -- fail on any RunInMinijail.
     for (const std::string& keyword : criterion.keywords) {
