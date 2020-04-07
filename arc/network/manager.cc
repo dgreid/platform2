@@ -8,6 +8,7 @@
 #include <net/if.h>
 #include <netinet/in.h>
 #include <stdint.h>
+#include <sys/epoll.h>
 #include <sys/prctl.h>
 #include <sys/socket.h>
 #include <sys/un.h>
@@ -42,6 +43,11 @@ constexpr char kArcVmMultinetFeatureName[] = "ARCVM Multinet";
 constexpr int kArcVmMultinetMinAndroidSdkVersion = 29;  // R DEV
 constexpr int kArcVmMultinetMinChromeMilestone = 99;    // DISABLED
 
+// Time interval between epoll checks on file descriptors committed by callers
+// of ConnectNamespace DBus API.
+constexpr const base::TimeDelta kConnectNamespaceCheckInterval =
+    base::TimeDelta::FromSeconds(30);
+
 // Passes |method_call| to |handler| and passes the response to
 // |response_sender|. If |handler| returns nullptr, an empty response is
 // created and sent.
@@ -65,6 +71,7 @@ Manager::Manager(std::unique_ptr<HelperProcess> adb_proxy,
       nd_proxy_(std::move(nd_proxy)) {
   runner_ = std::make_unique<MinijailedProcessRunner>();
   datapath_ = std::make_unique<Datapath>(runner_.get());
+  connected_namespaces_epollfd_ = epoll_create(1 /* size */);
 }
 
 Manager::~Manager() {
@@ -255,6 +262,7 @@ void Manager::OnShutdown(int* exit_code) {
   LOG(INFO) << "Shutting down and cleaning up";
   cros_svc_.reset();
   arc_svc_.reset();
+  close(connected_namespaces_epollfd_);
 
   // Restore original local port range.
   // TODO(garrick): The original history behind this tweak is gone. Some
@@ -745,6 +753,26 @@ void Manager::ConnectNamespace(
   //  client namespace and other guest OSs and namespaces.
   //  - if outbound_physical_device is defined, set strong routing.
 
+  // Dup the client fd into our own: this guarantees that the fd number will
+  // be stable and tied to the actual kernel resources used by the client.
+  base::ScopedFD local_client_fd(dup(client_fd.get()));
+  if (!local_client_fd.is_valid()) {
+    PLOG(ERROR) << "ConnectNamespaceRequest: failed to dup() client fd";
+    return;
+  }
+
+  // Add the dupe fd to the epoll watcher.
+  // TODO(hugobenichi) Find a way to reuse base::FileDescriptorWatcher for
+  // listening to EPOLLHUP.
+  struct epoll_event epevent;
+  epevent.events = EPOLLIN;  // EPOLLERR | EPOLLHUP are always waited for.
+  epevent.data.fd = local_client_fd.get();
+  if (epoll_ctl(connected_namespaces_epollfd_, EPOLL_CTL_ADD,
+                local_client_fd.get(), &epevent) != 0) {
+    PLOG(ERROR) << "ConnectNamespaceResponse: epoll_ctl(EPOLL_CTL_ADD) failed";
+    return;
+  }
+
   // Prepare the response before storing ConnectNamespaceInfo.
   response.set_ifname(host_ifname);
   auto* response_subnet = response.mutable_ipv4_subnet();
@@ -753,7 +781,7 @@ void Manager::ConnectNamespace(
 
   // Store ConnectNamespaceInfo
   connected_namespaces_next_id_++;
-  int fdkey = client_fd.release();
+  int fdkey = local_client_fd.release();
   connected_namespaces_[fdkey] = {};
   ConnectNamespaceInfo& ns_info = connected_namespaces_[fdkey];
   ns_info.pid = request.pid();
@@ -762,10 +790,12 @@ void Manager::ConnectNamespace(
   ns_info.client_ifname = std::move(client_ifname);
   ns_info.client_subnet = std::move(subnet);
 
-  // TODO(hugobenichi, b/147712924) Monitor client_fd and call
-  // DisconnectNamespace when the client invalidates client_fd.
-
   LOG(INFO) << "Connected network namespace " << ns_info;
+
+  if (connected_namespaces_.size() == 1) {
+    LOG(INFO) << "Starting ConnectNamespace client fds monitoring";
+    CheckConnectedNamespaces();
+  }
 }
 
 void Manager::DisconnectNamespace(int client_fd) {
@@ -773,6 +803,15 @@ void Manager::DisconnectNamespace(int client_fd) {
   if (it == connected_namespaces_.end()) {
     LOG(ERROR) << "No ConnectNamespaceInfo found for client_fd " << client_fd;
     return;
+  }
+
+  // Remove the client fd dupe from the epoll watcher and close it.
+  if (epoll_ctl(connected_namespaces_epollfd_, EPOLL_CTL_DEL, client_fd,
+                nullptr) != 0) {
+    PLOG(ERROR) << "DisconnectNamespace: epoll_ctl(EPOLL_CTL_DEL) failed";
+  }
+  if (close(client_fd) < 0) {
+    PLOG(ERROR) << "DisconnectNamespace: close(client_fd) failed";
   }
 
   // TODO(hugobenichi, b/147712924) Implement
@@ -784,6 +823,32 @@ void Manager::DisconnectNamespace(int client_fd) {
 
   // This release the allocated IPv4 subnet.
   connected_namespaces_.erase(it);
+}
+
+// TODO(hugobenichi) Generalize this check to all resources created by
+// patchpanel on behalf of a remote client.
+void Manager::CheckConnectedNamespaces() {
+  int max_event = 10;
+  struct epoll_event epevents[max_event];
+  int nready = epoll_wait(connected_namespaces_epollfd_, epevents, max_event,
+                          0 /* do not block */);
+  if (nready < 0)
+    PLOG(ERROR) << "CheckConnectedNamespaces: epoll_wait(0) failed";
+
+  for (int i = 0; i < nready; i++)
+    if (epevents[i].events & (EPOLLHUP | EPOLLERR))
+      DisconnectNamespace(epevents[i].data.fd);
+
+  if (connected_namespaces_.empty()) {
+    LOG(INFO) << "Stopping ConnectNamespace client fds monitoring";
+    return;
+  }
+
+  base::MessageLoopForIO::current()->task_runner()->PostDelayedTask(
+      FROM_HERE,
+      base::Bind(&Manager::CheckConnectedNamespaces,
+                 base::Unretained(this)),
+      kConnectNamespaceCheckInterval);
 }
 
 void Manager::SendGuestMessage(const GuestMessage& msg) {

@@ -144,6 +144,10 @@ class Manager final : public brillo::DBusDaemon, private TrafficForwarder {
                         const patchpanel::ConnectNamespaceRequest& request,
                         patchpanel::ConnectNamespaceResponse& response);
   void DisconnectNamespace(int client_fd);
+  // Detects if any file descriptor committed in ConnectNamespace DBus API has
+  // been invalidated by the caller. Calls DisconnectNamespace for any invalid
+  // fd found.
+  void CheckConnectedNamespaces();
 
   // Dispatch |msg| to child processes.
   void SendGuestMessage(const GuestMessage& msg);
@@ -180,6 +184,9 @@ class Manager final : public brillo::DBusDaemon, private TrafficForwarder {
   // ConnectNamespace.
   std::map<int, ConnectNamespaceInfo> connected_namespaces_;
   int connected_namespaces_next_id_{0};
+  // epoll file descriptor for watching client fds committed with the
+  // ConnectNamespace DBus API.
+  int connected_namespaces_epollfd_;
 
   base::WeakPtrFactory<Manager> weak_factory_{this};
   DISALLOW_COPY_AND_ASSIGN(Manager);
