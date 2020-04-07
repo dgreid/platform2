@@ -111,6 +111,7 @@ include(sepolicy/file_contexts/sysfs_contexts)
 /usr/sbin/cros-machine-id-regen u:object_r:cros_machine_id_regen_exec:s0
 /usr/sbin/cryptohomed           u:object_r:cros_cryptohomed_exec:s0
 /usr/sbin/cryptohome-namespace-mounter u:object_r:cros_cryptohome_namespace_mounter_exec:s0
+/usr/sbin/cupsd                 u:object_r:cros_cupsd_exec:s0
 /usr/sbin/daisydog              u:object_r:cros_daisydog_exec:s0
 /usr/sbin/dlcservice            u:object_r:cros_dlcservice_exec:s0
 /usr/sbin/huddly-monitor         u:object_r:cros_huddly_monitor_exec:s0
