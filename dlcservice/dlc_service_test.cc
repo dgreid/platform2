@@ -184,6 +184,20 @@ TEST_F(DlcServiceTest, GetInstalledTest) {
   CheckDlcState(kFirstDlc, DlcState::INSTALLED);
 }
 
+TEST_F(DlcServiceTest, GetInstalledMimicDlcserviceRebootWithoutMountableStamp) {
+  const auto& dlcs_before = dlc_service_->GetInstalled();
+  EXPECT_THAT(dlcs_before, ElementsAre(kFirstDlc));
+  EXPECT_FALSE(dlc_service_->GetDlc(kFirstDlc)->GetRoot().value().empty());
+
+  // Create |kSecondDlc| image, but not mountable after device reboot.
+  SetUpDlcWithSlots(kSecondDlc);
+
+  const auto& dlcs_after = dlc_service_->GetInstalled();
+  EXPECT_THAT(dlcs_after, ElementsAre(kFirstDlc));
+  EXPECT_FALSE(dlc_service_->GetDlc(kFirstDlc)->GetRoot().value().empty());
+  EXPECT_TRUE(dlc_service_->GetDlc(kSecondDlc)->GetRoot().value().empty());
+}
+
 TEST_F(DlcServiceTest, UninstallTest) {
   EXPECT_CALL(*mock_update_engine_proxy_ptr_, GetStatusAdvanced(_, _, _))
       .WillOnce(Return(true));
@@ -367,8 +381,15 @@ TEST_F(DlcServiceTest, InstallTest) {
   auto dlc_prefs_path = prefs_path_.Append("dlc").Append(kSecondDlc);
   EXPECT_FALSE(base::PathExists(dlc_prefs_path));
 
+  const auto& dlcs_before = dlc_service_->GetInstalled();
+  EXPECT_THAT(dlcs_before, ElementsAre(kFirstDlc));
+
   EXPECT_TRUE(dlc_service_->Install({kSecondDlc}, kDefaultOmahaUrl, &err_));
   CheckDlcState(kSecondDlc, DlcState::INSTALLING);
+
+  // Should remain same as it's not stamped mountable.
+  const auto& dlcs_after = dlc_service_->GetInstalled();
+  EXPECT_THAT(dlcs_after, ElementsAre(kFirstDlc));
 
   constexpr int expected_permissions = 0755;
   int permissions;

@@ -82,8 +82,9 @@ DlcSet DlcManager::GetInstalled() {
     if (!pr.second.ClearMountable(SystemState::Get()->inactive_boot_slot(),
                                   &tmp_err))
       PLOG(WARNING) << Error::ToString(tmp_err);
-  return ToDlcSet(supported_,
-                  [](const DlcBase& dlc) { return dlc.IsInstalled(); });
+  return ToDlcSet(supported_, [](const DlcBase& dlc) {
+    return dlc.IsInstalled() || dlc.IsMountable();
+  });
 }
 
 DlcSet DlcManager::GetSupported() {

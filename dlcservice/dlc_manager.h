@@ -32,7 +32,7 @@ class DlcManager {
   // |CancelInstall()| should be called before |InitInstall()|'ing again.
   bool IsInstalling();
 
-  // Returns the list of fully installed + mounted DLC(s).
+  // Returns the list of installed or mountable DLCs.
   DlcSet GetInstalled();
 
   // Returns the list of all supported DLC(s).

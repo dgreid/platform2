@@ -76,6 +76,8 @@ bool DlcBase::IsPreloadAllowed() const {
 }
 
 base::FilePath DlcBase::GetRoot() const {
+  if (mount_point_.empty())
+    return {};
   return JoinPaths(mount_point_, kRootDirectoryInsideDlcModule);
 }
 
