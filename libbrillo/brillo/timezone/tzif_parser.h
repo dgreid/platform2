@@ -8,6 +8,7 @@
 #include <string>
 
 #include <base/files/file_path.h>
+#include <base/optional.h>
 #include <brillo/brillo_export.h>
 
 namespace brillo {
@@ -18,9 +19,8 @@ namespace timezone {
 // a string. See 'man tzfile' for more info on the format. If |tzif_path| is a
 // relative path, it will be appended to /usr/share/zoneinfo/, otherwise
 // |tzif_path| as an absolute path will be used directly.
-// TODO(tbegin): change signature to use base::optional.
-bool BRILLO_EXPORT GetPosixTimezone(const base::FilePath& tzif_path,
-                                    std::string* timezone_string_out);
+base::Optional<std::string> BRILLO_EXPORT GetPosixTimezone(
+        const base::FilePath& tzif_path);
 
 }  // namespace timezone
 

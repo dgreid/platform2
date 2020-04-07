@@ -5,6 +5,7 @@
 #include "diagnostics/cros_healthd/utils/timezone_utils.h"
 
 #include <string>
+#include <utility>
 
 #include <base/files/file_util.h>
 #include <brillo/timezone/tzif_parser.h>
@@ -43,13 +44,15 @@ bool GetTimezone(const base::FilePath& root,
                << timezone_path.value();
     return false;
   }
-  *region = timezone_region_path.value();
 
-  if (!brillo::timezone::GetPosixTimezone(timezone_path, posix)) {
+  auto posix_result = brillo::timezone::GetPosixTimezone(timezone_path);
+  if (!posix_result) {
     LOG(ERROR) << "Unable to get posix timezone from timezone path: "
                << timezone_path.value();
     return false;
   }
+  *posix = std::move(posix_result.value());
+  *region = timezone_region_path.value();
 
   return true;
 }

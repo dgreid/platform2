@@ -25,24 +25,20 @@ class TzifParserTest : public ::testing::Test {
 };
 
 TEST_F(TzifParserTest, EST) {
-  std::string posix_string;
-  EXPECT_TRUE(
-      GetPosixTimezone(source_dir_.Append("EST_test.tzif"), &posix_string));
-  EXPECT_EQ(posix_string, "EST5");
+  auto posix_result = GetPosixTimezone(source_dir_.Append("EST_test.tzif"));
+  EXPECT_EQ(posix_result, "EST5");
 }
 
 TEST_F(TzifParserTest, TzifVersionTwo) {
-  std::string posix_string;
-  EXPECT_TRUE(GetPosixTimezone(source_dir_.Append("Indian_Christmas_test.tzif"),
-                               &posix_string));
-  EXPECT_EQ(posix_string, "<+07>-7");
+  auto posix_result =
+      GetPosixTimezone(source_dir_.Append("Indian_Christmas_test.tzif"));
+  EXPECT_EQ(posix_result, "<+07>-7");
 }
 
 TEST_F(TzifParserTest, TzifVersionThree) {
-  std::string posix_string;
-  EXPECT_TRUE(GetPosixTimezone(source_dir_.Append("Pacific_Fiji_test.tzif"),
-                               &posix_string));
-  EXPECT_EQ(posix_string, "<+12>-12<+13>,M11.1.0,M1.2.2/123");
+  auto posix_result =
+      GetPosixTimezone(source_dir_.Append("Pacific_Fiji_test.tzif"));
+  EXPECT_EQ(posix_result, "<+12>-12<+13>,M11.1.0,M1.2.2/123");
 }
 
 }  // namespace timezone

@@ -289,12 +289,11 @@ void SetTimezoneForContainer(VirtualMachine* vm,
     return;
   }
 
-  std::string posix_tz_string;
-  if (!brillo::timezone::GetPosixTimezone(system_timezone, &posix_tz_string)) {
-    LOG(WARNING) << "Reading POSIX TZ string failed for timezone file "
-                 << system_timezone.value();
-    posix_tz_string = "";
-  }
+  auto posix_tz_result = brillo::timezone::GetPosixTimezone(system_timezone);
+  LOG_IF(WARNING, !posix_tz_result.has_value())
+      << "Reading POSIX TZ string failed for timezone file "
+      << system_timezone.value();
+  std::string posix_tz_string = posix_tz_result.value_or("");
 
   base::FilePath zoneinfo("/usr/share/zoneinfo");
   base::FilePath system_timezone_name;
@@ -2290,14 +2289,12 @@ std::unique_ptr<dbus::Response> Service::SetTimezone(
 
   LOG(INFO) << "Received request to SetTimezone to " << request.timezone_name();
 
-  std::string posix_tz_string;
-  if (!brillo::timezone::GetPosixTimezone(
-          base::FilePath("/usr/share/zoneinfo").Append(request.timezone_name()),
-          &posix_tz_string)) {
-    LOG(WARNING) << "Reading POSIX TZ string failed for timezone "
-                 << request.timezone_name();
-    posix_tz_string = "";
-  }
+  auto posix_tz_result = brillo::timezone::GetPosixTimezone(
+      base::FilePath("/usr/share/zoneinfo").Append(request.timezone_name()));
+  LOG_IF(WARNING, !posix_tz_result.has_value())
+      << "Reading POSIX TZ string failed for timezone "
+      << request.timezone_name();
+  std::string posix_tz_string = posix_tz_result.value_or("");
 
   response.set_successes(0);
   for (const auto& elem : vms_) {
@@ -3238,12 +3235,11 @@ void Service::OnLocaltimeFileChanged(const base::FilePath& path, bool error) {
     return;
   }
 
-  std::string posix_tz_string;
-  if (!brillo::timezone::GetPosixTimezone(system_timezone, &posix_tz_string)) {
-    LOG(WARNING) << "Reading POSIX TZ string failed for timezone file "
-                 << system_timezone.value();
-    posix_tz_string = "";
-  }
+  auto posix_tz_result = brillo::timezone::GetPosixTimezone(system_timezone);
+  LOG_IF(WARNING, !posix_tz_result.has_value())
+      << "Reading POSIX TZ string failed for timezone file "
+      << system_timezone.value();
+  std::string posix_tz_string = posix_tz_result.value_or("");
 
   base::FilePath zoneinfo("/usr/share/zoneinfo");
   base::FilePath system_timezone_name;

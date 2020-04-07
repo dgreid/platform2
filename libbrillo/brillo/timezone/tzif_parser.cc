@@ -99,10 +99,7 @@ namespace brillo {
 
 namespace timezone {
 
-bool GetPosixTimezone(const base::FilePath& tzif_path,
-                      std::string* timezone_string_out) {
-  if (!timezone_string_out)
-    return false;
+base::Optional<std::string> GetPosixTimezone(const base::FilePath& tzif_path) {
   base::FilePath to_parse;
   if (tzif_path.IsAbsolute()) {
     to_parse = tzif_path;
@@ -112,7 +109,7 @@ bool GetPosixTimezone(const base::FilePath& tzif_path,
   base::File tzfile(to_parse, base::File::FLAG_OPEN | base::File::FLAG_READ);
   struct tzif_header first_header;
   if (!tzfile.IsValid() || !ParseTzifHeader(&tzfile, &first_header)) {
-    return false;
+    return base::nullopt;
   }
 
   if (first_header.version == '\0') {
@@ -124,7 +121,7 @@ bool GetPosixTimezone(const base::FilePath& tzif_path,
     //
     // Because of this, we're not going to try and handle this, and instead just
     // return an error.
-    return false;
+    return base::nullopt;
   }
 
   // TZif versions 2 and 3 embed a POSIX-style TZ string after their
@@ -141,7 +138,7 @@ bool GetPosixTimezone(const base::FilePath& tzif_path,
 
   struct tzif_header second_header;
   if (!ParseTzifHeader(&tzfile, &second_header)) {
-    return false;
+    return base::nullopt;
   }
 
   int64_t second_body_size =
@@ -154,13 +151,12 @@ bool GetPosixTimezone(const base::FilePath& tzif_path,
   std::string time_string(tzfile.GetLength() - offset, '\0');
   if (tzfile.ReadAtCurrentPos(base::data(time_string), time_string.size()) !=
       time_string.size()) {
-    return false;
+    return base::nullopt;
   }
 
   // According to the spec, the embedded string is enclosed by '\n' characters.
   base::TrimWhitespaceASCII(time_string, base::TRIM_ALL, &time_string);
-  *timezone_string_out = std::move(time_string);
-  return true;
+  return std::move(time_string);
 }
 
 }  // namespace timezone
