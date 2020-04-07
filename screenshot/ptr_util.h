@@ -57,6 +57,37 @@ struct DrmModeFB2Deleter {
 };
 using ScopedDrmModeFB2Ptr = std::unique_ptr<drmModeFB2, DrmModeFB2Deleter>;
 
+struct DrmModePlaneResDeleter {
+  void operator()(drmModePlaneRes* res) {
+    drmModeFreePlaneResources(res);
+  }
+};
+using ScopedDrmPlaneResPtr =
+    std::unique_ptr<drmModePlaneRes, DrmModePlaneResDeleter>;
+
+struct DrmModePlaneDeleter {
+  void operator()(drmModePlane* plane) {
+    drmModeFreePlane(plane);
+  }
+};
+using ScopedDrmPlanePtr = std::unique_ptr<drmModePlane, DrmModePlaneDeleter>;
+
+struct DrmModePropertyDeleter {
+  void operator()(drmModePropertyRes* prop) {
+    drmModeFreeProperty(prop);
+  }
+};
+using ScopedDrmPropertyPtr =
+    std::unique_ptr<drmModePropertyRes, DrmModePropertyDeleter>;
+
+struct DrmModeObjectPropertiesDeleter {
+  void operator()(drmModeObjectProperties* props) {
+    drmModeFreeObjectProperties(props);
+  }
+};
+using ScopedDrmObjectPropertiesPtr =
+    std::unique_ptr<drmModeObjectProperties, DrmModeObjectPropertiesDeleter>;
+
 struct GbmDeviceDeleter {
   void operator()(gbm_device* device) {
     gbm_device_destroy(device);

@@ -19,6 +19,7 @@
 
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "base/strings/string_split.h"
 #include "screenshot/crtc.h"
@@ -39,9 +40,9 @@ GLuint LoadShader(const GLenum type, const char* const src) {
   if (compiled != GL_TRUE) {
     GLint log_length;
     glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &log_length);
-    char shader_log[log_length];
-    glGetShaderInfoLog(shader, log_length, nullptr, shader_log);
-    CHECK(false) << "Shader failed to compile: " << shader_log;
+    std::vector<char> shader_log(log_length);
+    glGetShaderInfoLog(shader, log_length, nullptr, shader_log.data());
+    CHECK(false) << "Shader failed to compile: " << shader_log.data();
   }
 
   return shader;
@@ -60,9 +61,9 @@ void LoadProgram(const GLchar* vert, const GLchar* frag) {
   if (linked != GL_TRUE) {
     GLint log_length = 0;
     glGetProgramiv(program, GL_INFO_LOG_LENGTH, &log_length);
-    char program_log[log_length];
-    glGetProgramInfoLog(program, log_length, nullptr, program_log);
-    CHECK(false) << "GL program failed to link: " << program_log;
+    std::vector<char> program_log(log_length);
+    glGetProgramInfoLog(program, log_length, nullptr, program_log.data());
+    CHECK(false) << "GL program failed to link: " << program_log.data();
   }
   glUseProgram(program);
   glUniform1i(glGetUniformLocation(program, "tex"), 0);
@@ -78,6 +79,64 @@ bool DoesExtensionExist(const char* extension_string, const char* name) {
 
   return std::find(extensions.begin(), extensions.end(), std::string(name)) !=
          extensions.end();
+}
+
+EGLImageKHR CreateImage(
+    PFNEGLCREATEIMAGEKHRPROC CreateImageKHR,
+    bool import_modifiers_exist,
+    int drm_fd, EGLDisplay display, const drmModeFB2Ptr fb) {
+  int num_planes = 0;
+  // CreateImageKHR takes its own references to the dma-bufs, so closing the fds
+  // at the end of the function is necessary and won't break the returned image.
+  base::ScopedFD fds[GBM_MAX_PLANES] = {};
+  for (size_t plane = 0; plane < GBM_MAX_PLANES; plane++) {
+    // getfb2() doesn't return the number of planes so get handles
+    // and count planes until we find a handle that isn't set
+    if (fb->handles[plane] == 0)
+      break;
+
+    int fd;
+    int ret = drmPrimeHandleToFD(drm_fd, fb->handles[plane], 0, &fd);
+    CHECK_EQ(ret, 0) << "drmPrimeHandleToFD failed";
+    fds[plane].reset(fd);
+    num_planes++;
+  }
+
+  CHECK_GT(num_planes, 0);
+
+  EGLint attr_list[46] = {
+      EGL_WIDTH,
+      static_cast<EGLint>(fb->width),
+      EGL_HEIGHT,
+      static_cast<EGLint>(fb->height),
+      EGL_LINUX_DRM_FOURCC_EXT,
+      static_cast<EGLint>(fb->pixel_format),
+  };
+
+  size_t attrs_index = 6;
+
+  for (size_t plane = 0; plane < num_planes; plane++) {
+    attr_list[attrs_index++] = EGL_DMA_BUF_PLANE0_FD_EXT + plane * 3;
+    attr_list[attrs_index++] = fds[plane].get();
+    attr_list[attrs_index++] = EGL_DMA_BUF_PLANE0_OFFSET_EXT + plane * 3;
+    attr_list[attrs_index++] = fb->offsets[plane];
+    attr_list[attrs_index++] = EGL_DMA_BUF_PLANE0_PITCH_EXT + plane * 3;
+    attr_list[attrs_index++] = fb->pitches[plane];
+    if (import_modifiers_exist) {
+      attr_list[attrs_index++] = EGL_DMA_BUF_PLANE0_MODIFIER_LO_EXT + plane * 2;
+      attr_list[attrs_index++] = fb->modifier & 0xfffffffful;
+      attr_list[attrs_index++] = EGL_DMA_BUF_PLANE0_MODIFIER_HI_EXT + plane * 2;
+      attr_list[attrs_index++] = fb->modifier >> 32;
+    }
+  }
+
+  attr_list[attrs_index] = EGL_NONE;
+
+  EGLImageKHR image = CreateImageKHR(display, EGL_NO_CONTEXT,
+                                     EGL_LINUX_DMA_BUF_EXT, 0, attr_list);
+  CHECK(image != EGL_NO_IMAGE_KHR) << "Failed to create image";
+
+  return image;
 }
 
 }  // namespace
@@ -138,67 +197,17 @@ std::unique_ptr<EglPixelBuf> EglCapture(
   CHECK(gl_extensions.find("GL_OES_EGL_image_external") != std::string::npos)
       << "Missing GL extension: GL_OES_EGL_image_external";
 
-  int num_planes = 0;
-  base::ScopedFD fds[GBM_MAX_PLANES] = {};
-  for (size_t plane = 0; plane < GBM_MAX_PLANES; plane++) {
-    // getfb2() doesn't return the number of planes so get handles
-    // and count planes until we find a handle that isn't set
-    if (crtc.fb2()->handles[plane] == 0)
-      break;
-
-    int fd;
-    int ret = drmPrimeHandleToFD(crtc.file().GetPlatformFile(),
-                                 crtc.fb2()->handles[plane], 0, &fd);
-    CHECK_EQ(ret, 0) << "drmPrimeHandleToFD failed";
-    fds[plane].reset(fd);
-    num_planes++;
-  }
-
-  CHECK_GT(num_planes, 0);
-
-  EGLint attr_list[46] = {
-      EGL_WIDTH,
-      static_cast<EGLint>(crtc.fb2()->width),
-      EGL_HEIGHT,
-      static_cast<EGLint>(crtc.fb2()->height),
-      EGL_LINUX_DRM_FOURCC_EXT,
-      static_cast<EGLint>(crtc.fb2()->pixel_format),
-  };
-
-  size_t attrs_index = 6;
-  const char* extensions = eglQueryString(display, EGL_EXTENSIONS);
-  CHECK(extensions) << "eglQueryString() failed to get egl extensions";
-  const bool import_modifiers_exist =
-      DoesExtensionExist(extensions, "EGL_EXT_image_dma_buf_import_modifiers");
-
-  for (size_t plane = 0; plane < num_planes; plane++) {
-    attr_list[attrs_index++] = EGL_DMA_BUF_PLANE0_FD_EXT + plane * 3;
-    attr_list[attrs_index++] = fds[plane].get();
-    attr_list[attrs_index++] = EGL_DMA_BUF_PLANE0_OFFSET_EXT + plane * 3;
-    attr_list[attrs_index++] = crtc.fb2()->offsets[plane];
-    attr_list[attrs_index++] = EGL_DMA_BUF_PLANE0_PITCH_EXT + plane * 3;
-    attr_list[attrs_index++] = crtc.fb2()->pitches[plane];
-    if (import_modifiers_exist) {
-      attr_list[attrs_index++] = EGL_DMA_BUF_PLANE0_MODIFIER_LO_EXT + plane * 2;
-      attr_list[attrs_index++] = crtc.fb2()->modifier & 0xfffffffful;
-      attr_list[attrs_index++] = EGL_DMA_BUF_PLANE0_MODIFIER_HI_EXT + plane * 2;
-      attr_list[attrs_index++] = crtc.fb2()->modifier >> 32;
-    }
-  }
-
-  attr_list[attrs_index] = EGL_NONE;
-
   PFNEGLCREATEIMAGEKHRPROC CreateImageKHR =
       (PFNEGLCREATEIMAGEKHRPROC)eglGetProcAddress("eglCreateImageKHR");
   CHECK(CreateImageKHR) << "CreateImageKHR not supported";
-
   PFNEGLDESTROYIMAGEKHRPROC DestroyImageKHR =
       (PFNEGLDESTROYIMAGEKHRPROC)eglGetProcAddress("eglDestroyImageKHR");
   CHECK(DestroyImageKHR) << "DestroyImageKHR not supported";
 
-  EGLImageKHR image = CreateImageKHR(display, EGL_NO_CONTEXT,
-                                     EGL_LINUX_DMA_BUF_EXT, 0, attr_list);
-  CHECK(image != EGL_NO_IMAGE_KHR) << "Failed to create image";
+  const char* extensions = eglQueryString(display, EGL_EXTENSIONS);
+  CHECK(extensions) << "eglQueryString() failed to get egl extensions";
+  const bool import_modifiers_exist =
+      DoesExtensionExist(extensions, "EGL_EXT_image_dma_buf_import_modifiers");
 
   GLuint output_texture;
   glGenTextures(1, &output_texture);
@@ -215,13 +224,6 @@ std::unique_ptr<EglPixelBuf> EglCapture(
           "glEGLImageTargetTexture2DOES");
   CHECK(glEGLImageTargetTexture2DOES)
       << "glEGLImageTargetTexture2DOES not supported";
-
-  glEGLImageTargetTexture2DOES(GL_TEXTURE_EXTERNAL_OES, image);
-
-  glTexParameteri(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-  glTexParameteri(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-  glTexParameteri(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
   unsigned int fbo;
   glGenFramebuffers(1, &fbo);
@@ -257,7 +259,6 @@ std::unique_ptr<EglPixelBuf> EglCapture(
       "  fragColor = texture(tex, tex_pos);\n"
       "}\n";
 
-  glViewport(0, 0, width, height);
   LoadProgram(vert, frag);
 
   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
@@ -267,7 +268,45 @@ std::unique_ptr<EglPixelBuf> EglCapture(
   CHECK(fb_status == GL_FRAMEBUFFER_COMPLETE) << "fb did not complete";
 
   GLuint indices[4] = {0, 1, 2, 3};
-  glDrawElements(GL_TRIANGLE_STRIP, 4, GL_UNSIGNED_INT, indices);
+
+  glTexParameteri(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+  if (crtc.planes().empty()) {
+    EGLImageKHR image = CreateImage(
+        CreateImageKHR, import_modifiers_exist,
+        crtc.file().GetPlatformFile(), display, crtc.fb2());
+    CHECK(image != EGL_NO_IMAGE_KHR) << "Failed to create image";
+
+    glViewport(0, 0, width, height);
+    glEGLImageTargetTexture2DOES(GL_TEXTURE_EXTERNAL_OES, image);
+
+    glDrawElements(GL_TRIANGLE_STRIP, 4, GL_UNSIGNED_INT, indices);
+
+    DestroyImageKHR(display, image);
+  } else {
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    for (auto& plane : crtc.planes()) {
+      EGLImageKHR image = CreateImage(
+          CreateImageKHR, import_modifiers_exist,
+          crtc.file().GetPlatformFile(), display, plane.first.get());
+      CHECK(image != EGL_NO_IMAGE_KHR) << "Failed to create image";
+
+      // TODO(dcastagna): Handle SRC_ and rotation.
+      glViewport(plane.second.x, plane.second.y,
+                 plane.second.w, plane.second.h);
+
+      glEGLImageTargetTexture2DOES(GL_TEXTURE_EXTERNAL_OES, image);
+
+      glDrawElements(GL_TRIANGLE_STRIP, 4, GL_UNSIGNED_INT, indices);
+
+      DestroyImageKHR(display, image);
+    }
+  }
 
   std::vector<char> buffer(width * height * 4);
   glPixelStorei(GL_PACK_ALIGNMENT, 1);
@@ -276,7 +315,6 @@ std::unique_ptr<EglPixelBuf> EglCapture(
 
   eglMakeCurrent(display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
 
-  DestroyImageKHR(display, image);
   glDeleteTextures(1, &input_texture);
   glDeleteTextures(1, &output_texture);
   glDeleteFramebuffers(1, &fbo);

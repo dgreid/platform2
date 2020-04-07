@@ -12,8 +12,8 @@
 #include <base/strings/string_number_conversions.h>
 
 #include "screenshot/capture.h"
-#include "screenshot/egl_capture.h"
 #include "screenshot/crtc.h"
+#include "screenshot/egl_capture.h"
 #include "screenshot/png.h"
 
 namespace screenshot {
@@ -105,13 +105,8 @@ int Main() {
   uint32_t crtc_width;
   uint32_t crtc_height;
 
-  if (crtc->fb2()) {
-    crtc_width = crtc->fb2()->width;
-    crtc_height = crtc->fb2()->height;
-  } else {
-    crtc_width = crtc->fb()->width;
-    crtc_height = crtc->fb()->height;
-  }
+  crtc_width = crtc->width();
+  crtc_height = crtc->height();
 
   if (!crop_set) {
     x = 0;
@@ -124,7 +119,11 @@ int Main() {
   CHECK_LE(x + width, crtc_width);
   CHECK_LE(y + height, crtc_height);
 
-  if (crtc->fb2()) {
+  if (crtc->planes().empty()) {
+    LOG(INFO) << "Capturing primary plane only\n";
+  }
+
+  if (crtc->fb2() || !crtc->planes().empty()) {
     auto map = screenshot::EglCapture(*crtc, x, y, width, height);
     screenshot::SaveAsPng(cmdline->GetArgs()[0].c_str(), map->buffer().data(),
                           map->width(), map->height(), map->stride());

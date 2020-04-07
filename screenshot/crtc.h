@@ -6,6 +6,8 @@
 #define SCREENSHOT_CRTC_H_
 
 #include <memory>
+#include <utility>
+#include <vector>
 
 #include <base/files/file.h>
 #include <base/macros.h>
@@ -16,18 +18,36 @@
 
 namespace screenshot {
 
+struct PlanePosition {
+  int32_t x;
+  int32_t y;
+  uint32_t w;
+  uint32_t h;
+};
+
 class Crtc {
  public:
+  using PlaneInfo = std::pair<ScopedDrmModeFB2Ptr, PlanePosition>;
+
   Crtc(base::File file, ScopedDrmModeConnectorPtr connector,
       ScopedDrmModeEncoderPtr encoder, ScopedDrmModeCrtcPtr crtc,
       ScopedDrmModeFBPtr fb, ScopedDrmModeFB2Ptr fb2);
+
+  Crtc(base::File file, ScopedDrmModeConnectorPtr connector,
+      ScopedDrmModeEncoderPtr encoder, ScopedDrmModeCrtcPtr crtc,
+      std::vector<PlaneInfo> planes);
 
   const base::File& file() const { return file_; }
   drmModeConnector* connector() const { return connector_.get(); }
   drmModeEncoder* encoder() const { return encoder_.get(); }
   drmModeCrtc* crtc() const { return crtc_.get(); }
+
   drmModeFB* fb() const { return fb_.get(); }
   drmModeFB2* fb2() const { return fb2_.get(); }
+  const std::vector<PlaneInfo>& planes() const { return planes_; }
+
+  uint32_t width() const { return crtc_->width; }
+  uint32_t height() const { return crtc_->height; }
 
   bool IsInternalDisplay() const;
 
@@ -38,6 +58,8 @@ class Crtc {
   ScopedDrmModeCrtcPtr crtc_;
   ScopedDrmModeFBPtr fb_;
   ScopedDrmModeFB2Ptr fb2_;
+
+  std::vector<PlaneInfo> planes_;
 
   DISALLOW_COPY_AND_ASSIGN(Crtc);
 };
