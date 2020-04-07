@@ -148,7 +148,8 @@ class Daemon : public policy::InputEventHandler::Delegate,
   void ShutDownFromSuspend() override;
 
   // Overridden from policy::WifiController::Delegate:
-  void SetWifiTransmitPower(RadioTransmitPower power) override;
+  void SetWifiTransmitPower(RadioTransmitPower power,
+                            WifiRegDomain domain) override;
 
   // Overridden from policy::CellularController::Delegate:
   void SetCellularTransmitPower(RadioTransmitPower power,

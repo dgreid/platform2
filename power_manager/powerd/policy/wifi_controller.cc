@@ -51,6 +51,14 @@ void WifiController::HandleTabletModeChange(TabletMode mode) {
   UpdateTransmitPower();
 }
 
+void WifiController::HandleRegDomainChange(WifiRegDomain domain) {
+  if (wifi_reg_domain_ == domain)
+    return;
+
+  wifi_reg_domain_ = domain;
+  UpdateTransmitPower();
+}
+
 void WifiController::ProximitySensorDetected(UserProximity value) {
   if (!set_transmit_power_for_proximity_)
     return;
@@ -93,10 +101,12 @@ void WifiController::UpdateTransmitPowerForTabletMode() {
     case TabletMode::UNSUPPORTED:
       break;
     case TabletMode::ON:
-      delegate_->SetWifiTransmitPower(RadioTransmitPower::LOW);
+      delegate_->SetWifiTransmitPower(RadioTransmitPower::LOW,
+                                      wifi_reg_domain_);
       break;
     case TabletMode::OFF:
-      delegate_->SetWifiTransmitPower(RadioTransmitPower::HIGH);
+      delegate_->SetWifiTransmitPower(RadioTransmitPower::HIGH,
+                                      wifi_reg_domain_);
       break;
   }
 }
@@ -106,10 +116,12 @@ void WifiController::UpdateTransmitPowerForProximity() {
     case UserProximity::UNKNOWN:
       break;
     case UserProximity::NEAR:
-      delegate_->SetWifiTransmitPower(RadioTransmitPower::LOW);
+      delegate_->SetWifiTransmitPower(RadioTransmitPower::LOW,
+                                      wifi_reg_domain_);
       break;
     case UserProximity::FAR:
-      delegate_->SetWifiTransmitPower(RadioTransmitPower::HIGH);
+      delegate_->SetWifiTransmitPower(RadioTransmitPower::HIGH,
+                                      wifi_reg_domain_);
       break;
   }
 }

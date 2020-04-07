@@ -30,7 +30,8 @@ class WifiController : public system::UdevSubsystemObserver,
     virtual ~Delegate() = default;
 
     // Updates the wifi transmit power to |power|.
-    virtual void SetWifiTransmitPower(RadioTransmitPower power) = 0;
+    virtual void SetWifiTransmitPower(RadioTransmitPower power,
+                                      WifiRegDomain domain) = 0;
   };
 
   // Net subsystem and wlan devtype for udev events.
@@ -48,6 +49,8 @@ class WifiController : public system::UdevSubsystemObserver,
 
   // Called when the tablet mode changes.
   void HandleTabletModeChange(TabletMode mode);
+
+  void HandleRegDomainChange(WifiRegDomain domain);
 
   // UserProximityHandler::Delegate overrides:
   void ProximitySensorDetected(UserProximity proximity) override;
@@ -76,6 +79,7 @@ class WifiController : public system::UdevSubsystemObserver,
   system::UdevInterface* udev_ = nullptr;  // Not owned.
 
   TabletMode tablet_mode_ = TabletMode::UNSUPPORTED;
+  WifiRegDomain wifi_reg_domain_ = WifiRegDomain::NONE;
   UserProximity proximity_ = UserProximity::UNKNOWN;
 
   // True if powerd has been configured to set wifi transmit power in response

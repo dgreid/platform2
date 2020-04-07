@@ -76,6 +76,8 @@ int main(int argc, char* argv[]) {
               "Should the system suspend to idle (freeze)?");
   DEFINE_bool(wifi_transmit_power_tablet, false,
               "Set wifi transmit power mode to tablet mode");
+  DEFINE_string(wifi_transmit_power_domain, "",
+                "Regulatory domain for wifi transmit power");
   DEFINE_bool(cellular_transmit_power_low, false,
               "Set cellular transmit power mode to low");
   DEFINE_int64(cellular_transmit_power_gpio, -1,
@@ -115,9 +117,11 @@ int main(int argc, char* argv[]) {
     RunCommand("set_cellular_transmit_power", mode.c_str(), target.c_str(),
                nullptr);
   } else if (FLAGS_action == "set_wifi_transmit_power") {
-    const char* tablet =
+    const std::string tablet =
         FLAGS_wifi_transmit_power_tablet ? "--tablet" : "--notablet";
-    RunCommand("set_wifi_transmit_power", tablet, nullptr);
+    const std::string domain = "--domain=" + FLAGS_wifi_transmit_power_domain;
+    RunCommand("set_wifi_transmit_power", tablet.c_str(), domain.c_str(),
+               nullptr);
   } else if (FLAGS_action == "suspend") {
     std::string idle_flag = FLAGS_suspend_to_idle
                                 ? std::string("--suspend_to_idle")

@@ -25,18 +25,22 @@ class TestWifiControllerDelegate : public WifiController::Delegate {
   RadioTransmitPower last_transmit_power() const {
     return last_transmit_power_;
   }
+  WifiRegDomain last_reg_domain() const { return last_reg_domain_; }
 
   // Resets stat members.
   void ResetStats() {
     num_set_calls_ = 0;
     last_transmit_power_ = RadioTransmitPower::UNSPECIFIED;
+    last_reg_domain_ = WifiRegDomain::NONE;
   }
 
   // WifiController::Delegate:
-  void SetWifiTransmitPower(RadioTransmitPower power) override {
+  void SetWifiTransmitPower(RadioTransmitPower power,
+                            WifiRegDomain domain) override {
     CHECK_NE(power, RadioTransmitPower::UNSPECIFIED);
     num_set_calls_++;
     last_transmit_power_ = power;
+    last_reg_domain_ = domain;
   }
 
  private:
@@ -45,6 +49,8 @@ class TestWifiControllerDelegate : public WifiController::Delegate {
 
   // Last power mode passed to SetWifiTransmitPower().
   RadioTransmitPower last_transmit_power_ = RadioTransmitPower::UNSPECIFIED;
+
+  WifiRegDomain last_reg_domain_ = WifiRegDomain::NONE;
 
   DISALLOW_COPY_AND_ASSIGN(TestWifiControllerDelegate);
 };
@@ -92,12 +98,14 @@ TEST_F(WifiControllerTest, SetTransmitPowerForInitialTabletMode) {
   Init(TabletMode::ON);
   EXPECT_EQ(1, delegate_.num_set_calls());
   EXPECT_EQ(RadioTransmitPower::LOW, delegate_.last_transmit_power());
+  EXPECT_EQ(WifiRegDomain::NONE, delegate_.last_reg_domain());
 }
 
 TEST_F(WifiControllerTest, SetTransmitPowerForInitialClamshellMode) {
   Init(TabletMode::OFF);
   EXPECT_EQ(1, delegate_.num_set_calls());
   EXPECT_EQ(RadioTransmitPower::HIGH, delegate_.last_transmit_power());
+  EXPECT_EQ(WifiRegDomain::NONE, delegate_.last_reg_domain());
 }
 
 TEST_F(WifiControllerTest, SetTransmitPowerForTabletModeChange) {
@@ -131,10 +139,12 @@ TEST_F(WifiControllerTest, SetTransmitPowerForDeviceAdded) {
       {{WifiController::kUdevSubsystem, WifiController::kUdevDevtype, "", ""},
        system::UdevEvent::Action::CHANGE});
   EXPECT_EQ(1, delegate_.num_set_calls());
+  EXPECT_EQ(WifiRegDomain::NONE, delegate_.last_reg_domain());
   udev_.NotifySubsystemObservers(
       {{WifiController::kUdevSubsystem, "eth", "", ""},
        system::UdevEvent::Action::ADD});
   EXPECT_EQ(1, delegate_.num_set_calls());
+  EXPECT_EQ(WifiRegDomain::NONE, delegate_.last_reg_domain());
 }
 
 TEST_F(WifiControllerTest, DontSetTransmitPowerWhenUnsupported) {
@@ -177,6 +187,42 @@ TEST_F(WifiControllerTest, IgnoreTabletEventIfProximity) {
   controller_.ProximitySensorDetected(UserProximity::NEAR);
   EXPECT_EQ(RadioTransmitPower::LOW, delegate_.last_transmit_power());
   controller_.HandleTabletModeChange(TabletMode::OFF);
+  EXPECT_EQ(RadioTransmitPower::LOW, delegate_.last_transmit_power());
+}
+
+TEST_F(WifiControllerTest, SetRegDomainOnRegDomainEventIfTablet) {
+  set_transmit_power_tablet_pref_value_ = true;
+  Init(TabletMode::ON);
+  EXPECT_EQ(1, delegate_.num_set_calls());
+  controller_.HandleRegDomainChange(WifiRegDomain::FCC);
+  EXPECT_EQ(WifiRegDomain::FCC, delegate_.last_reg_domain());
+  EXPECT_EQ(2, delegate_.num_set_calls());
+}
+
+TEST_F(WifiControllerTest, SetRegDomainOnRegDomainEventIfProximity) {
+  set_transmit_power_proximity_pref_value_ = true;
+  Init(TabletMode::UNSUPPORTED);
+  controller_.ProximitySensorDetected(UserProximity::NEAR);
+  controller_.HandleRegDomainChange(WifiRegDomain::FCC);
+  EXPECT_EQ(WifiRegDomain::FCC, delegate_.last_reg_domain());
+  EXPECT_EQ(2, delegate_.num_set_calls());
+}
+
+TEST_F(WifiControllerTest, MaintainRegDomainOnTabletEvent) {
+  set_transmit_power_tablet_pref_value_ = true;
+  Init(TabletMode::ON);
+  EXPECT_EQ(WifiRegDomain::NONE, delegate_.last_reg_domain());
+  controller_.HandleRegDomainChange(WifiRegDomain::FCC);
+  EXPECT_EQ(WifiRegDomain::FCC, delegate_.last_reg_domain());
+  controller_.HandleTabletModeChange(TabletMode::OFF);
+  EXPECT_EQ(WifiRegDomain::FCC, delegate_.last_reg_domain());
+}
+
+TEST_F(WifiControllerTest, MaintainTabletModeOnRegDomainEvent) {
+  set_transmit_power_tablet_pref_value_ = true;
+  Init(TabletMode::ON);
+  EXPECT_EQ(RadioTransmitPower::LOW, delegate_.last_transmit_power());
+  controller_.HandleRegDomainChange(WifiRegDomain::FCC);
   EXPECT_EQ(RadioTransmitPower::LOW, delegate_.last_transmit_power());
 }
 

@@ -28,6 +28,7 @@
 #include <netlink/genl/family.h>
 #include <netlink/genl/genl.h>
 #include <netlink/msg.h>
+#include <power_manager/common/power_constants.h>
 
 // Vendor command definition for marvell mwifiex driver
 // Defined in Linux kernel:
@@ -151,28 +152,72 @@ std::vector<std::string> GetWirelessDeviceNames() {
 // If the board does not store power limits for rtw driver in chromeos-config,
 // the function will fail.
 std::map<enum RealtekVndcmdSARBand, uint8_t> GetRtwChromeosConfigPowerTable(
-    bool tablet) {
+    bool tablet, power_manager::WifiRegDomain domain) {
   std::map<enum RealtekVndcmdSARBand, uint8_t> power_table = {};
   auto config = std::make_unique<brillo::CrosConfig>();
   CHECK(config->Init()) << "Could not find config";
-  std::string value;
   std::string wifi_power_table_path =
       tablet ? "/wifi/tablet-mode-power-table-rtw"
              : "/wifi/non-tablet-mode-power-table-rtw";
+  std::string wifi_geo_offsets_path;
+  switch (domain) {
+    case power_manager::WifiRegDomain::FCC:
+      wifi_geo_offsets_path = "/wifi/geo-offsets-fcc";
+      break;
+    case power_manager::WifiRegDomain::EU:
+      wifi_geo_offsets_path = "/wifi/geo-offsets-eu";
+      break;
+    case power_manager::WifiRegDomain::REST_OF_WORLD:
+      wifi_geo_offsets_path = "/wifi/geo-offsets-rest-of-world";
+      break;
+    case power_manager::WifiRegDomain::NONE:
+      break;
+  }
+
+  int offset_2g = 0, offset_5g = 0;
+  if (domain != power_manager::WifiRegDomain::NONE) {
+    std::string offset_string;
+    if (config->GetString(wifi_geo_offsets_path, "offset-2g", &offset_string)) {
+      offset_2g = std::stoi(offset_string);
+    }
+    if (config->GetString(wifi_geo_offsets_path, "offset-5g", &offset_string)) {
+      offset_5g = std::stoi(offset_string);
+    }
+  }
+
+  std::string value;
+  int power_limit;
 
   CHECK(config->GetString(wifi_power_table_path, "limit-2g", &value))
       << "Could not get ChromeosConfig power table.";
-  power_table[REALTEK_VNDCMD_ATTR_SAR_BAND_2g] = std::stoi(value);
+  power_limit = std::stoi(value) + offset_2g;
+  CHECK(power_limit <= UINT8_MAX) << "Invalid power limit configs. Limit "
+                                     "value cannot exceed 255.";
+  power_table[REALTEK_VNDCMD_ATTR_SAR_BAND_2g] = power_limit;
+
   CHECK(config->GetString(wifi_power_table_path, "limit-5g-1", &value))
       << "Could not get ChromeosConfig power table.";
-  power_table[REALTEK_VNDCMD_ATTR_SAR_BAND_5g_1] = std::stoi(value);
+  power_limit = std::stoi(value) + offset_5g;
+  CHECK(power_limit <= UINT8_MAX) << "Invalid power limit configs. Limit "
+                                     "value cannot exceed 255.";
+  power_table[REALTEK_VNDCMD_ATTR_SAR_BAND_5g_1] = power_limit;
+
   // Rtw driver does not support 5g band 2, so skip it.
+
   CHECK(config->GetString(wifi_power_table_path, "limit-5g-3", &value))
       << "Could not get ChromeosConfig power table.";
-  power_table[REALTEK_VNDCMD_ATTR_SAR_BAND_5g_3] = std::stoi(value);
+  power_limit = std::stoi(value) + offset_5g;
+  CHECK(power_limit <= UINT8_MAX) << "Invalid power limit configs. Limit "
+                                     "value cannot exceed 255.";
+  power_table[REALTEK_VNDCMD_ATTR_SAR_BAND_5g_3] = power_limit;
+
   CHECK(config->GetString(wifi_power_table_path, "limit-5g-4", &value))
       << "Could not get ChromeosConfig power table.";
-  power_table[REALTEK_VNDCMD_ATTR_SAR_BAND_5g_4] = std::stoi(value);
+  power_limit = std::stoi(value) + offset_5g;
+  CHECK(power_limit <= UINT8_MAX) << "Invalid power limit configs. Limit "
+                                     "value cannot exceed 255.";
+  power_table[REALTEK_VNDCMD_ATTR_SAR_BAND_5g_4] = power_limit;
+
   return power_table;
 }
 
@@ -248,7 +293,9 @@ void FillMessageIwl(struct nl_msg* msg, bool tablet) {
 }
 
 // Fill in nl80211 message for the rtw driver.
-void FillMessageRtw(struct nl_msg* msg, bool tablet) {
+void FillMessageRtw(struct nl_msg* msg,
+                    bool tablet,
+                    power_manager::WifiRegDomain domain) {
   CHECK(!nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, REALTEK_OUI))
       << "Failed to put NL80211_ATTR_VENDOR_ID";
   CHECK(!nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
@@ -257,7 +304,7 @@ void FillMessageRtw(struct nl_msg* msg, bool tablet) {
 
   struct nlattr* vendor_cmd = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA);
   struct nlattr* rules = nla_nest_start(msg, REALTEK_VNDCMD_ATTR_SAR_RULES);
-  for (const auto& limit : GetRtwChromeosConfigPowerTable(tablet)) {
+  for (const auto& limit : GetRtwChromeosConfigPowerTable(tablet, domain)) {
     struct nlattr* rule = nla_nest_start(msg, 1);
     CHECK(rule) << "Failed in nla_nest_start";
     CHECK(!nla_put_u32(msg, REALTEK_VNDCMD_ATTR_SAR_BAND, limit.first))
@@ -287,7 +334,9 @@ class PowerSetter {
     nl_cb_put(cb_);
   }
 
-  bool SendModeSwitch(const std::string& dev_name, bool tablet) {
+  bool SendModeSwitch(const std::string& dev_name,
+                      bool tablet,
+                      power_manager::WifiRegDomain domain) {
     const uint32_t index = if_nametoindex(dev_name.c_str());
     if (!index) {
       LOG(ERROR) << "Failed to find wireless device index for " << dev_name;
@@ -320,7 +369,7 @@ class PowerSetter {
         FillMessageIwl(msg, tablet);
         break;
       case WirelessDriver::RTW:
-        FillMessageRtw(msg, tablet);
+        FillMessageRtw(msg, tablet, domain);
         break;
       case WirelessDriver::ATH10K:
         // TODO(https://crbug.com/782924): implement for ath10k.
@@ -339,7 +388,7 @@ class PowerSetter {
 
   // Sets power mode according to tablet mode state. Returns true on success and
   // false on failure.
-  bool SetPowerMode(bool tablet) {
+  bool SetPowerMode(bool tablet, power_manager::WifiRegDomain domain) {
     CHECK(!genl_connect(nl_sock_)) << "Failed to connect to netlink";
 
     nl_family_id_ = genl_ctrl_resolve(nl_sock_, "nl80211");
@@ -353,7 +402,7 @@ class PowerSetter {
 
     bool ret = true;
     for (const auto& name : device_names)
-      if (!SendModeSwitch(name, tablet))
+      if (!SendModeSwitch(name, tablet, domain))
         ret = false;
     return ret;
   }
@@ -371,8 +420,24 @@ class PowerSetter {
 
 int main(int argc, char* argv[]) {
   DEFINE_bool(tablet, false, "Set wifi transmit power mode to tablet mode");
+  DEFINE_string(domain, "none",
+                "Regulatory domain for wifi transmit power"
+                "Options: fcc, eu, rest-of-world, none");
   brillo::FlagHelper::Init(argc, argv, "Set wifi transmit power mode");
 
   base::AtExitManager at_exit_manager;
-  return PowerSetter().SetPowerMode(FLAGS_tablet) ? 0 : 1;
+  power_manager::WifiRegDomain domain = power_manager::WifiRegDomain::NONE;
+  if (FLAGS_domain == "fcc") {
+    domain = power_manager::WifiRegDomain::FCC;
+  } else if (FLAGS_domain == "eu") {
+    domain = power_manager::WifiRegDomain::EU;
+  } else if (FLAGS_domain == "rest-of-world") {
+    domain = power_manager::WifiRegDomain::REST_OF_WORLD;
+  } else if (FLAGS_domain != "none") {
+    LOG(ERROR) << "Domain argument \"" << FLAGS_domain
+               << "\" is not an "
+                  "accepted value. Options: fcc, eu, rest-of-world, none";
+    return 1;
+  }
+  return PowerSetter().SetPowerMode(FLAGS_tablet, domain) ? 0 : 1;
 }

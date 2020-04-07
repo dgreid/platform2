@@ -748,11 +748,27 @@ void Daemon::ShutDownFromSuspend() {
   ShutDown(ShutdownMode::POWER_OFF, ShutdownReason::SHUTDOWN_FROM_SUSPEND);
 }
 
-void Daemon::SetWifiTransmitPower(RadioTransmitPower power) {
-  std::string args = (power == RadioTransmitPower::LOW)
-                         ? "--wifi_transmit_power_tablet"
-                         : "--nowifi_transmit_power_tablet";
-
+void Daemon::SetWifiTransmitPower(RadioTransmitPower power,
+                                  WifiRegDomain domain) {
+  const std::string power_arg = (power == RadioTransmitPower::LOW)
+                                    ? "--wifi_transmit_power_tablet"
+                                    : "--nowifi_transmit_power_tablet";
+  std::string domain_arg = "--wifi_transmit_power_domain=none";
+  switch (domain) {
+    case WifiRegDomain::FCC:
+      domain_arg = "--wifi_transmit_power_domain=fcc";
+      break;
+    case WifiRegDomain::EU:
+      domain_arg = "--wifi_transmit_power_domain=eu";
+      break;
+    case WifiRegDomain::REST_OF_WORLD:
+      domain_arg = "--wifi_transmit_power_domain=rest-of-world";
+      break;
+    default:
+      break;
+  }
+  const std::string args =
+      base::StringPrintf("%s %s", power_arg.c_str(), domain_arg.c_str());
   LOG(INFO) << ((power == RadioTransmitPower::LOW) ? "Enabling" : "Disabling")
             << " tablet mode wifi transmit power";
   RunSetuidHelper("set_wifi_transmit_power", args, false);
@@ -1236,6 +1252,7 @@ std::unique_ptr<dbus::Response> Daemon::HandleChangeWifiRegDomainMethod(
 
   LOG(INFO) << "Received request to change reg domain to \""
             << WifiRegDomainToString(domain) << "\"";
+  wifi_controller_->HandleRegDomainChange(domain);
   return nullptr;
 }
 
