@@ -11,8 +11,8 @@
 #include <base/files/file_path.h>
 #include <base/files/scoped_temp_dir.h>
 #include <dlcservice/proto_bindings/dlcservice.pb.h>
-#include <update_engine/proto_bindings/update_engine.pb.h>
 #include <imageloader/dbus-proxy-mocks.h>
+#include <update_engine/proto_bindings/update_engine.pb.h>
 #include <update_engine/dbus-proxy-mocks.h>
 
 #include "dlcservice/dlc.h"
