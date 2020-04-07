@@ -32,10 +32,16 @@ namespace dlcservice {
 DlcService::DlcService()
     : scheduled_period_ue_check_id_(MessageLoop::kTaskIdNull),
       weak_ptr_factory_(this) {
-  update_engine_proxy_ = SystemState::Get()->update_engine();
+  const auto prefs_dir = SystemState::Get()->dlc_prefs_dir();
+  if (!base::PathExists(prefs_dir)) {
+    CHECK(CreateDir(prefs_dir))
+        << "Failed to create dlc prefs directory: " << prefs_dir;
+  }
+
   dlc_manager_ = std::make_unique<DlcManager>();
 
   // Register D-Bus signal callbacks.
+  update_engine_proxy_ = SystemState::Get()->update_engine();
   update_engine_proxy_->RegisterStatusUpdateAdvancedSignalHandler(
       base::Bind(&DlcService::OnStatusUpdateAdvancedSignal,
                  weak_ptr_factory_.GetWeakPtr()),

@@ -36,6 +36,7 @@ class SystemState {
       const base::FilePath& manifest_dir,
       const base::FilePath& preloaded_content_dir,
       const base::FilePath& content_dir,
+      const base::FilePath& prefs_dir,
       bool for_test = false);
 
   // Gets the pointer to the current |SystemState|.
@@ -47,6 +48,8 @@ class SystemState {
   const base::FilePath& manifest_dir() const;
   const base::FilePath& preloaded_content_dir() const;
   const base::FilePath& content_dir() const;
+  const base::FilePath& prefs_dir() const;
+  const base::FilePath dlc_prefs_dir() const;
 
   // Getting active and inactive boot slots easily.
   BootSlot::Slot active_boot_slot() const;
@@ -61,7 +64,8 @@ class SystemState {
       std::unique_ptr<BootSlot> boot_slot,
       const base::FilePath& manifest_dir,
       const base::FilePath& preloaded_content_dir,
-      const base::FilePath& content_dir);
+      const base::FilePath& content_dir,
+      const base::FilePath& prefs_dir);
 
  private:
   std::unique_ptr<org::chromium::ImageLoaderInterfaceProxyInterface>
@@ -71,6 +75,7 @@ class SystemState {
   base::FilePath manifest_dir_;
   base::FilePath preloaded_content_dir_;
   base::FilePath content_dir_;
+  base::FilePath prefs_dir_;
   BootSlot::Slot active_boot_slot_;
 
   static std::unique_ptr<SystemState> g_instance_;

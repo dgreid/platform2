@@ -23,22 +23,23 @@ using std::string;
 using std::vector;
 
 namespace dlcservice {
-
 // TODO(ahassani): Instead of initlialize function, create a factory method so
 // we can develop different types of DLC classes.
 bool DlcBase::Initialize() {
-  const auto& manifest_dir = SystemState::Get()->manifest_dir();
+  const auto* system_state = SystemState::Get();
+  const auto& manifest_dir = system_state->manifest_dir();
   package_ = *ScanDirectory(manifest_dir.Append(id_)).begin();
-  if (!GetDlcManifest(SystemState::Get()->manifest_dir(), id_, package_,
+  if (!GetDlcManifest(system_state->manifest_dir(), id_, package_,
                       &manifest_)) {
     // Failing to read the manifest will be considered a blocker.
     LOG(ERROR) << "Failed to read the manifest of DLC " << id_;
     return false;
   }
 
-  const auto& content_dir = SystemState::Get()->content_dir();
+  const auto& content_dir = system_state->content_dir();
   content_id_path_ = content_dir.Append(id_);
   content_package_path_ = content_id_path_.Append(package_);
+  prefs_path_ = system_state->dlc_prefs_dir().Append(id_);
 
   state_.set_state(DlcState::NOT_INSTALLED);
 
@@ -234,6 +235,13 @@ void DlcBase::PreloadImage() {
 }
 
 bool DlcBase::InitInstall(ErrorPtr* err) {
+  if (!base::PathExists(prefs_path_)) {
+    if (!CreateDir(prefs_path_)) {
+      *err = Error::Create(kErrorInternal, "Failed to create prefs directory.");
+      return false;
+    }
+  }
+
   switch (state_.state()) {
     case DlcState::NOT_INSTALLED:
       if (IsActiveImagePresent()) {
@@ -364,7 +372,8 @@ bool DlcBase::IsActiveImagePresent() const {
 bool DlcBase::DeleteInternal(ErrorPtr* err) {
   vector<string> undeleted_paths;
   auto content_dir = SystemState::Get()->content_dir();
-  for (const auto& path : {content_id_path_, content_package_path_}) {
+  for (const auto& path :
+       {content_id_path_, content_package_path_, prefs_path_}) {
     if (!base::DeleteFile(path, true)) {
       PLOG(ERROR) << "Failed to delete path=" << path;
       undeleted_paths.push_back(path.value());

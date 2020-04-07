@@ -232,12 +232,14 @@ TEST_F(DlcServiceTest, UninstallTest) {
   EXPECT_CALL(*mock_update_engine_proxy_ptr_,
               SetDlcActiveValue(false, kFirstDlc, _, _))
       .WillOnce(Return(true));
-
   EXPECT_CALL(*mock_image_loader_proxy_ptr_, UnloadDlcImage(_, _, _, _, _))
       .WillOnce(DoAll(SetArgPointee<2>(true), Return(true)));
+  auto dlc_prefs_path = prefs_path_.Append("dlc").Append(kFirstDlc);
+  EXPECT_TRUE(base::PathExists(dlc_prefs_path));
 
   EXPECT_TRUE(dlc_service_->Uninstall(kFirstDlc, &err_));
   EXPECT_FALSE(base::PathExists(JoinPaths(content_path_, kFirstDlc)));
+  EXPECT_FALSE(base::PathExists(dlc_prefs_path));
   CheckDlcState(kFirstDlc, DlcState::NOT_INSTALLED);
 }
 
@@ -387,6 +389,8 @@ TEST_F(DlcServiceTest, InstallTest) {
   EXPECT_CALL(*mock_update_engine_proxy_ptr_,
               SetDlcActiveValue(true, kSecondDlc, _, _))
       .WillOnce(Return(true));
+  auto dlc_prefs_path = prefs_path_.Append("dlc").Append(kSecondDlc);
+  EXPECT_FALSE(base::PathExists(dlc_prefs_path));
 
   EXPECT_TRUE(dlc_service_->Install({kSecondDlc}, kDefaultOmahaUrl, &err_));
   CheckDlcState(kSecondDlc, DlcState::INSTALLING);
@@ -403,6 +407,10 @@ TEST_F(DlcServiceTest, InstallTest) {
   base::FilePath image_b_path =
       GetDlcImagePath(content_path_, kSecondDlc, kPackage, BootSlot::Slot::B);
   base::GetPosixFilePermissions(image_b_path.DirName(), &permissions);
+  EXPECT_EQ(permissions, expected_permissions);
+
+  EXPECT_TRUE(base::PathExists(dlc_prefs_path));
+  base::GetPosixFilePermissions(dlc_prefs_path, &permissions);
   EXPECT_EQ(permissions, expected_permissions);
 }
 

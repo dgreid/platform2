@@ -115,6 +115,7 @@ class DlcBase {
   // The directories on the stateful partition where the DLC image will reside.
   base::FilePath content_id_path_;
   base::FilePath content_package_path_;
+  base::FilePath prefs_path_;
 
   DISALLOW_COPY_AND_ASSIGN(DlcBase);
 };
