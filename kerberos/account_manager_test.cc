@@ -51,6 +51,9 @@ constexpr char kLegacyKrb5Conf[] = R"(
     default_tkt_enctypes = arcfour-hmac
     default_tgs_enctypes = arcfour-hmac
     permitted_enctypes = arcfour-hmac)";
+constexpr char kInvalidKrb5Conf[] = R"(
+  [libdefaults]
+    stonkskew = 123)";
 
 constexpr Krb5Interface::TgtStatus kValidTgt(3600, 3600);
 constexpr Krb5Interface::TgtStatus kExpiredTgt(0, 0);
@@ -665,6 +668,17 @@ TEST_F(AccountManagerTest, AcquireTgtEnctypesMetricsFailure) {
 // available.
 TEST_F(AccountManagerTest, AcquireTgtEnctypesMetricsNoConfig) {
   ignore_result(AddAccount());
+
+  // No encryption type should be reported through |metric_|.
+  EXPECT_CALL(*metrics_, ReportKerberosEncryptionTypes(_)).Times(0);
+
+  EXPECT_EQ(ERROR_NONE, AcquireTgt());
+}
+
+// AcquireTgt() doesn't record encryption types UMA stats if config is invalid.
+TEST_F(AccountManagerTest, AcquireTgtEnctypesMetricsInvalidConfig) {
+  ignore_result(AddAccount());
+  ignore_result(SetConfig(kInvalidKrb5Conf));
 
   // No encryption type should be reported through |metric_|.
   EXPECT_CALL(*metrics_, ReportKerberosEncryptionTypes(_)).Times(0);

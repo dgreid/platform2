@@ -108,6 +108,15 @@ class ConfigParserTest : public ::testing::Test {
     EXPECT_EQ(line_index, error_info.line_index()) << error_info;
   }
 
+  void ExpectEncryptionTypes(
+      const std::string& krb5conf,
+      KerberosEncryptionTypes expected_encryption_types) {
+    KerberosEncryptionTypes encryption_types;
+
+    EXPECT_TRUE(config_parser_.GetEncryptionTypes(krb5conf, &encryption_types));
+    EXPECT_EQ(expected_encryption_types, encryption_types);
+  }
+
   ConfigParser config_parser_;
 };
 
@@ -288,8 +297,7 @@ TEST_F(ConfigParserTest, FuzzerRegressionTests) {
 
 // |GetEncryptionTypes| with a complete config to be parsed.
 TEST_F(ConfigParserTest, GetEncryptionTypesCompleteConfig) {
-  EXPECT_EQ(KerberosEncryptionTypes::kStrong,
-            config_parser_.GetEncryptionTypes(kCompleteKrb5Conf));
+  ExpectEncryptionTypes(kCompleteKrb5Conf, KerberosEncryptionTypes::kStrong);
 }
 
 // |GetEncryptionTypes| with all encryption types allowed.
@@ -300,8 +308,7 @@ TEST_F(ConfigParserTest, GetEncryptionTypesAll) {
   default_tgs_enctypes = aes256-cts-hmac-sha1-96 arcfour-hmac-md5-exp
   permitted_enctypes = aes256-cts-hmac-sha1-96 arcfour-hmac-md5-exp)";
 
-  EXPECT_EQ(KerberosEncryptionTypes::kAll,
-            config_parser_.GetEncryptionTypes(kKrb5Conf));
+  ExpectEncryptionTypes(kKrb5Conf, KerberosEncryptionTypes::kAll);
 }
 
 // |GetEncryptionTypes| with only strong encryption types allowed.
@@ -312,8 +319,7 @@ TEST_F(ConfigParserTest, GetEncryptionTypesStrong) {
   default_tgs_enctypes = aes256-cts-hmac-sha1-96 aes128-cts-hmac-sha1-96
   permitted_enctypes = aes256-cts-hmac-sha1-96 aes128-cts-hmac-sha1-96)";
 
-  EXPECT_EQ(KerberosEncryptionTypes::kStrong,
-            config_parser_.GetEncryptionTypes(kKrb5Conf));
+  ExpectEncryptionTypes(kKrb5Conf, KerberosEncryptionTypes::kStrong);
 }
 
 // |GetEncryptionTypes| with only legacy encryption types allowed.
@@ -324,39 +330,34 @@ TEST_F(ConfigParserTest, GetEncryptionTypesLegacy) {
   default_tgs_enctypes = arcfour-hmac-md5-exp des3-cbc-raw
   permitted_enctypes = arcfour-hmac-md5-exp des3-cbc-raw)";
 
-  EXPECT_EQ(KerberosEncryptionTypes::kLegacy,
-            config_parser_.GetEncryptionTypes(kKrb5Conf));
+  ExpectEncryptionTypes(kKrb5Conf, KerberosEncryptionTypes::kLegacy);
 }
 
 // |GetEncryptionTypes| with enctypes fields missing.
 TEST_F(ConfigParserTest, GetEncryptionTypesMissingFields) {
   // Empty config allows all encryption types.
-  EXPECT_EQ(KerberosEncryptionTypes::kAll,
-            config_parser_.GetEncryptionTypes(""));
+  ExpectEncryptionTypes("", KerberosEncryptionTypes::kAll);
 
   constexpr char kKrb5Conf1[] = R"(
 [libdefaults]
   default_tkt_enctypes = aes256-cts-hmac-sha1-96 aes128-cts-hmac-sha1-96
   default_tgs_enctypes = aes256-cts-hmac-sha1-96 aes128-cts-hmac-sha1-96)";
 
-  EXPECT_EQ(KerberosEncryptionTypes::kAll,
-            config_parser_.GetEncryptionTypes(kKrb5Conf1));
+  ExpectEncryptionTypes(kKrb5Conf1, KerberosEncryptionTypes::kAll);
 
   constexpr char kKrb5Conf2[] = R"(
 [libdefaults]
   default_tkt_enctypes = aes256-cts-hmac-sha1-96 aes128-cts-hmac-sha1-96
   permitted_enctypes = aes256-cts-hmac-sha1-96 aes128-cts-hmac-sha1-96)";
 
-  EXPECT_EQ(KerberosEncryptionTypes::kAll,
-            config_parser_.GetEncryptionTypes(kKrb5Conf2));
+  ExpectEncryptionTypes(kKrb5Conf2, KerberosEncryptionTypes::kAll);
 
   constexpr char kKrb5Conf3[] = R"(
 [libdefaults]
   default_tgs_enctypes = aes256-cts-hmac-sha1-96 aes128-cts-hmac-sha1-96
   permitted_enctypes =aes256-cts-hmac-sha1-96 aes128-cts-hmac-sha1-96)";
 
-  EXPECT_EQ(KerberosEncryptionTypes::kAll,
-            config_parser_.GetEncryptionTypes(kKrb5Conf3));
+  ExpectEncryptionTypes(kKrb5Conf3, KerberosEncryptionTypes::kAll);
 }
 
 // |GetEncryptionTypes| with |DEFAULT| enctypes assigned.
@@ -368,8 +369,7 @@ TEST_F(ConfigParserTest, GetEncryptionTypesDefaultValues) {
   permitted_enctypes = DEFAULT)";
 
   // |DEFAULT| value allows all encryption types.
-  EXPECT_EQ(KerberosEncryptionTypes::kAll,
-            config_parser_.GetEncryptionTypes(kKrb5Conf));
+  ExpectEncryptionTypes(kKrb5Conf, KerberosEncryptionTypes::kAll);
 }
 
 // |GetEncryptionTypes| with comma separated encryption types list.
@@ -380,8 +380,20 @@ TEST_F(ConfigParserTest, GetEncryptionTypesCommaSeparated) {
   default_tgs_enctypes = aes256-cts-hmac-sha1-96, arcfour-hmac-md5-exp
   permitted_enctypes = aes256-cts-hmac-sha1-96,arcfour-hmac-md5-exp)";
 
-  EXPECT_EQ(KerberosEncryptionTypes::kAll,
-            config_parser_.GetEncryptionTypes(kKrb5Conf));
+  ExpectEncryptionTypes(kKrb5Conf, KerberosEncryptionTypes::kAll);
+}
+
+// |GetEncryptionTypes| with invalid config.
+TEST_F(ConfigParserTest, GetEncryptionTypesInvalidConfig) {
+  constexpr char kKrb5Conf[] = R"(
+[libdefaults]
+  stonkskew = 123)";
+
+  KerberosEncryptionTypes encryption_types;
+
+  EXPECT_FALSE(config_parser_.GetEncryptionTypes(kKrb5Conf, &encryption_types));
+  // |encryption_types| should've been set to the default value in our feature.
+  EXPECT_EQ(KerberosEncryptionTypes::kStrong, encryption_types);
 }
 
 }  // namespace kerberos

@@ -121,13 +121,11 @@ ConfigErrorInfo ConfigParser::Validate(const std::string& krb5conf) const {
   return ParseConfig(krb5conf, &encryption_types);
 }
 
-// Parses |krb5conf| similarly to |Validate(krb5conf)|, but assumes that the
-// input has already been validated.
-KerberosEncryptionTypes ConfigParser::GetEncryptionTypes(
-    const std::string& krb5conf) const {
-  KerberosEncryptionTypes encryption_types;
-  ParseConfig(krb5conf, &encryption_types);
-  return encryption_types;
+bool ConfigParser::GetEncryptionTypes(
+    const std::string& krb5conf,
+    KerberosEncryptionTypes* encryption_types) const {
+  ConfigErrorInfo error_info = ParseConfig(krb5conf, encryption_types);
+  return error_info.code() == CONFIG_ERROR_NONE;
 }
 
 // Validates the config and gets encryption types from it. Finds the enctypes
@@ -142,9 +140,8 @@ ConfigErrorInfo ConfigParser::ParseConfig(
   bool has_weak_enctype = false;
   bool has_strong_enctype = false;
 
-  // Initializes |encryption_types| with the default values in our feature. It
-  // should be replaced at the end of this method, but this is here to handle
-  // unexpected cases.
+  // Initializes |encryption_types| with the default value in our feature. It
+  // will be replaced at the end of this method, if |krb5conf| is valid.
   *encryption_types = KerberosEncryptionTypes::kStrong;
 
   // Keep empty lines, they're necessary to get the line numbers right.

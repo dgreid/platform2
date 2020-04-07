@@ -31,9 +31,10 @@ class ConfigParser {
   // |CONFIG_ERROR_NONE|.
   ConfigErrorInfo Validate(const std::string& krb5conf) const;
 
-  // Retrieves the encryption types allowed in |krb5conf|, which is assumed to
-  // be a valid config. Encryption types can be specified in three different
-  // fields. If any of these fields is not specified, the default value for the
+  // Retrieves the encryption types allowed in |krb5conf| and returns whether
+  // the operation was successful or not. It should fail only if the config is
+  // invalid. Encryption types can be specified in three different fields. If
+  // any of these fields is not specified, the default value for the
   // corresponding field in krb5.conf ('all') will be used. The union of the
   // three provided lists will be taken into consideration and mapped into one
   // of the following comprehensive disjoint groups:
@@ -41,7 +42,8 @@ class ConfigParser {
   // encryption family
   // * 'Strong': contains only AES encryption types (at least one of them)
   // * 'Legacy': contains no AES encryption types
-  KerberosEncryptionTypes GetEncryptionTypes(const std::string& krb5conf) const;
+  bool GetEncryptionTypes(const std::string& krb5conf,
+                          KerberosEncryptionTypes* encryption_types) const;
 
  private:
   // Internal method with common parsing features, used by |Validate(krb5conf)|
