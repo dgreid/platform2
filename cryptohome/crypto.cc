@@ -120,8 +120,8 @@ Crypto::Crypto(Platform* platform)
       tpm_(NULL),
       platform_(platform),
       tpm_init_(NULL),
-      scrypt_max_encrypt_time_(kScryptMaxEncryptTime) {
-}
+      scrypt_max_encrypt_time_(kScryptMaxEncryptTime),
+      disable_logging_for_tests_(false) {}
 
 Crypto::~Crypto() {
 }
@@ -947,7 +947,7 @@ bool Crypto::EncryptVaultKeyset(const VaultKeyset& vault_keyset,
           vault_keyset, vault_key, vault_key_salt, &blobs, serialized);
     }
     if (!encrypt_tpm_success) {
-      LOG(ERROR) << "Encrypt using TPM failed";
+      LOG_IF(ERROR, !disable_logging_for_tests_) << "Encrypt using TPM failed";
       if (use_tpm_ && tpm_ && tpm_->IsOwned()) {
         ReportCryptohomeError(kEncryptWithTpmFailed);
       }

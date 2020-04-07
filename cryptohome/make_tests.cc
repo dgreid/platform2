@@ -200,7 +200,8 @@ void TestUser::GenerateCredentials(bool force_ecryptfs) {
   NiceMock<MockPlatform> platform;
   Crypto crypto(&platform);
   crypto.set_use_tpm(false);
-  crypto.set_scrypt_max_encrypt_time(0.001);
+  crypto.set_scrypt_max_encrypt_time_for_testing(0.001);
+  crypto.set_disable_logging_for_testing(/*disable=*/true);
   UserOldestActivityTimestampCache timestamp_cache;
 
   scoped_refptr<Mount> mount = new Mount();

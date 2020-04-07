@@ -223,8 +223,12 @@ class Crypto {
     return platform_;
   }
 
-  void set_scrypt_max_encrypt_time(double max_time) {
+  void set_scrypt_max_encrypt_time_for_testing(double max_time) {
     scrypt_max_encrypt_time_ = max_time;
+  }
+
+  void set_disable_logging_for_testing(bool disable) {
+    disable_logging_for_tests_ = disable;
   }
 
   void set_le_manager_for_testing(
@@ -376,6 +380,8 @@ class Crypto {
 
   // Handler for Low Entropy credentials.
   std::unique_ptr<LECredentialManager> le_manager_;
+
+  bool disable_logging_for_tests_;
 
   DISALLOW_COPY_AND_ASSIGN(Crypto);
 };
