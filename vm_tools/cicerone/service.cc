@@ -1003,7 +1003,7 @@ void Service::UpdateApplicationList(const std::string& container_token,
   if (vm->IsPluginVm()) {
     app_list->set_vm_type(vm_tools::apps::ApplicationList::PLUGIN_VM);
   } else {
-    app_list->set_vm_type(vm_tools::apps::ApplicationList::CROS_VM);
+    app_list->set_vm_type(vm_tools::apps::ApplicationList::TERMINA);
   }
   dbus::MethodCall method_call(
       vm_tools::apps::kVmApplicationsServiceInterface,
