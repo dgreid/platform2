@@ -159,7 +159,7 @@ Mount::Mount()
       boot_lockbox_(NULL),
       dircrypto_migration_stopped_condition_(&active_dircrypto_migrator_lock_),
       mount_guest_session_out_of_process_(true),
-      mount_guest_session_non_root_namespace_(true) {}
+      mount_guest_session_non_root_namespace_(false) {}
 
 Mount::~Mount() {
   if (IsMounted())

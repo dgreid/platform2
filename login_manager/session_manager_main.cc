@@ -246,7 +246,7 @@ int main(int argc, char* argv[]) {
   // Start shaving this yak by isolating Guest mode sessions, which don't
   // support many of the above features. Put Guest mode process trees in a
   // non-root mount namespace to test the waters.
-  config.isolate_guest_session = true;
+  config.isolate_guest_session = false;
   config.isolate_regular_session = false;
 
   if (config.isolate_guest_session) {
