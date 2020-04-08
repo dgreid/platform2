@@ -44,3 +44,4 @@ mlock: 1
 mmap: arg2 in ~PROT_EXEC || arg2 in ~PROT_WRITE
 munlock: 1
 munmap: 1
+clock_gettime: 1
