@@ -145,6 +145,12 @@ bool DlcService::Install(const DlcSet& dlcs,
 }
 
 bool DlcService::Uninstall(const string& id_in, brillo::ErrorPtr* err) {
+  // TODO(crbug.com/1069162): Uninstall should remove based on ref-counting
+  // logic.
+  return Purge(id_in, err);
+}
+
+bool DlcService::Purge(const string& id_in, brillo::ErrorPtr* err) {
   // Check that an update isn't in progress.
   if (!dlc_manager_->IsInstalling()) {
     Operation op;

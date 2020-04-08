@@ -26,6 +26,10 @@ class MockDlcService : public DlcServiceInterface {
               Uninstall,
               (const std::string& id_in, brillo::ErrorPtr* err),
               (override));
+  MOCK_METHOD(bool,
+              Purge,
+              (const std::string& id_in, brillo::ErrorPtr* err),
+              (override));
   MOCK_METHOD(DlcSet, GetInstalled, (), (override));
   MOCK_METHOD((const DlcBase*), GetDlc, (const DlcId& id), (override));
   MOCK_METHOD(bool,

@@ -31,6 +31,16 @@
       </tp:docstring>
     </arg>
   </method>
+  <method name="Purge">
+    <tp:docstring>
+      Removes a DLC and all files related to it.
+    </tp:docstring>
+    <arg name="id" type="s" direction="in">
+      <tp:docstring>
+        ID of the DLC.
+      </tp:docstring>
+    </arg>
+  </method>
   <method name="GetInstalled">
     <tp:docstring>
       Returns a list of installed Downloadable Content (DLC) modules.

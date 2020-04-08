@@ -100,7 +100,10 @@ class DlcServiceUtil : public brillo::Daemon {
     // "--uninstall" related flags.
     DEFINE_bool(uninstall, false, "Uninstall a given list of DLC modules.");
 
-    // "--install" and "--uninstall" related flags.
+    // "--purge" related flags.
+    DEFINE_bool(purge, false, "Purge a given list of DLC modules.");
+
+    // "--install", "--purge", and "--uninstall" related flags.
     DEFINE_string(dlc_ids, "", "Colon separated list of DLC IDs.");
 
     // "--list" related flags.
@@ -113,7 +116,8 @@ class DlcServiceUtil : public brillo::Daemon {
     // Enforce mutually exclusive flags.
     vector<bool> exclusive_flags = {FLAGS_install, FLAGS_uninstall, FLAGS_list};
     if (std::count(exclusive_flags.begin(), exclusive_flags.end(), true) != 1) {
-      LOG(ERROR) << "Only one of --install, --uninstall, --list must be set.";
+      LOG(ERROR) << "Only one of --install, --uninstall, --purge, --list must "
+                 << "be set.";
       return EX_SOFTWARE;
     }
 
@@ -151,7 +155,15 @@ class DlcServiceUtil : public brillo::Daemon {
 
     // Called with "--uninstall".
     if (FLAGS_uninstall) {
-      if (Uninstall()) {
+      if (Uninstall(false)) {
+        Quit();
+        return EX_OK;
+      }
+    }
+
+    // Called with "--purge".
+    if (FLAGS_purge) {
+      if (Uninstall(true)) {
         Quit();
         return EX_OK;
       }
@@ -220,20 +232,23 @@ class DlcServiceUtil : public brillo::Daemon {
     return true;
   }
 
-  // Uninstall a list of DLC modules. Returns true of all uninstall operations
-  // complete successfully, false otherwise. Sets the given error pointer on
-  // failure.
-  bool Uninstall() {
+  // Uninstalls or purges a list of DLC modules based on input argument
+  // |purge|. Returns true if all uninstall/purge operations complete
+  // successfully, false otherwise. Sets the given error pointer on failure.
+  bool Uninstall(bool purge) {
+    auto cmd_str = purge ? "purge" : "uninstall";
     brillo::ErrorPtr err;
     for (const auto& dlc_module : dlc_module_list_.dlc_module_infos()) {
       const string& dlc_id = dlc_module.dlc_id();
-      LOG(INFO) << "Attempting to uninstall DLC module '" << dlc_id << "'.";
-      if (!dlc_service_proxy_->Uninstall(dlc_id, &err)) {
-        LOG(ERROR) << "Failed to uninstall '" << dlc_id << ", "
+      LOG(INFO) << "Attempting to " << cmd_str << " DLC: " << dlc_id;
+      bool result = purge ? dlc_service_proxy_->Purge(dlc_id, &err)
+                          : dlc_service_proxy_->Uninstall(dlc_id, &err);
+      if (!result) {
+        LOG(ERROR) << "Failed to " << cmd_str << " DLC: " << dlc_id << ", "
                    << ErrorPtrStr(err);
         return false;
       }
-      LOG(INFO) << "'" << dlc_id << "' successfully uninstalled.";
+      LOG(INFO) << "'" << dlc_id << "' successfully " << cmd_str << "ed.";
     }
     return true;
   }

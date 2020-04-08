@@ -45,6 +45,7 @@ class DlcServiceInterface {
                        const std::string& omaha_url,
                        brillo::ErrorPtr* err) = 0;
   virtual bool Uninstall(const std::string& id_in, brillo::ErrorPtr* err) = 0;
+  virtual bool Purge(const std::string& id_in, brillo::ErrorPtr* err) = 0;
   virtual DlcSet GetInstalled() = 0;
   virtual const DlcBase* GetDlc(const DlcId& id) = 0;
   virtual bool GetState(const std::string& id_in,
@@ -69,6 +70,7 @@ class DlcService : public DlcServiceInterface {
                const std::string& omaha_url,
                brillo::ErrorPtr* err) override;
   bool Uninstall(const std::string& id_in, brillo::ErrorPtr* err) override;
+  bool Purge(const std::string& id_in, brillo::ErrorPtr* err) override;
   DlcSet GetInstalled() override;
   const DlcBase* GetDlc(const DlcId& id) override;
   bool GetState(const std::string& id_in,

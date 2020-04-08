@@ -243,6 +243,23 @@ TEST_F(DlcServiceTest, UninstallTest) {
   CheckDlcState(kFirstDlc, DlcState::NOT_INSTALLED);
 }
 
+TEST_F(DlcServiceTest, PurgeTest) {
+  EXPECT_CALL(*mock_update_engine_proxy_ptr_, GetStatusAdvanced(_, _, _))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*mock_update_engine_proxy_ptr_,
+              SetDlcActiveValue(false, kFirstDlc, _, _))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*mock_image_loader_proxy_ptr_, UnloadDlcImage(_, _, _, _, _))
+      .WillOnce(DoAll(SetArgPointee<2>(true), Return(true)));
+  auto dlc_prefs_path = prefs_path_.Append("dlc").Append(kFirstDlc);
+  EXPECT_TRUE(base::PathExists(dlc_prefs_path));
+
+  EXPECT_TRUE(dlc_service_->Purge(kFirstDlc, &err_));
+  EXPECT_FALSE(base::PathExists(JoinPaths(content_path_, kFirstDlc)));
+  EXPECT_FALSE(base::PathExists(dlc_prefs_path));
+  CheckDlcState(kFirstDlc, DlcState::NOT_INSTALLED);
+}
+
 TEST_F(DlcServiceTest, UninstallNotInstalledIsValidTest) {
   EXPECT_CALL(*mock_update_engine_proxy_ptr_, GetStatusAdvanced(_, _, _))
       .WillOnce(Return(true));
