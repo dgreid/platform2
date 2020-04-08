@@ -281,6 +281,9 @@ void Manager::InitialSetup() {
                           kArcVmMultinetFeatureName));
   cros_svc_ = std::make_unique<CrostiniService>(shill_client_.get(), &addr_mgr_,
                                                 datapath_.get(), forwarder);
+  network_monitor_svc_ =
+      std::make_unique<NetworkMonitorService>(shill_client_.get());
+  network_monitor_svc_->Start();
 
   nd_proxy_->Listen();
 }

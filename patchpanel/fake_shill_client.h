@@ -6,6 +6,7 @@
 #define PATCHPANEL_FAKE_SHILL_CLIENT_H_
 
 #include <memory>
+#include <set>
 #include <string>
 #include <utility>
 
@@ -47,8 +48,18 @@ class FakeShillClient : public ShillClient {
     OnDevicePropertyChange(device, name, value);
   }
 
+  bool GetDeviceProperties(const std::string& device, Device* output) override {
+    get_device_properties_calls_.insert(device);
+    return true;
+  }
+
+  const std::set<std::string>& get_device_properties_calls() {
+    return get_device_properties_calls_;
+  }
+
  private:
   std::string fake_default_ifname_;
+  std::set<std::string> get_device_properties_calls_;
 };
 
 class FakeShillClientHelper {

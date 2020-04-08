@@ -44,6 +44,19 @@ class ShillClient {
     std::vector<std::string> ipv6_dns_addresses;
   };
 
+  // Represents the properties of an object of org.chromium.flimflam.Device.
+  // Only contains the properties we care about.
+  // TODO(jiejiang): add the following fields into this struct:
+  // - the DBus path of the Service associated to this Device if any
+  // - the connection state of the Service, if possible by translating back to
+  //   the enum shill::Service::ConnectState
+  struct Device {
+    // Device technology name in shill.
+    std::string type;
+    std::string ifname;
+    IPConfig ipconfig;
+  };
+
   using DefaultInterfaceChangeHandler = base::Callback<void(
       const std::string& new_ifname, const std::string& prev_ifname)>;
   using DevicesChangeHandler =
@@ -63,6 +76,10 @@ class ShillClient {
   void RegisterIPConfigsChangedHandler(const IPConfigsChangeHandler& handler);
 
   void ScanDevices();
+
+  // Fetches device properties via dbus. Returns false if an error occurs. Notes
+  // that this method will block the current thread.
+  virtual bool GetDeviceProperties(const std::string& device, Device* output);
 
   // Returns the cached interface name; does not initiate a property fetch.
   virtual const std::string& default_interface() const;

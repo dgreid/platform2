@@ -216,6 +216,7 @@ void ShillClient::UpdateDevices(const brillo::Any& property_value) {
                      weak_factory_.GetWeakPtr(), device),
           base::Bind(&ShillClient::OnDevicePropertyChangeRegistration,
                      weak_factory_.GetWeakPtr()));
+      known_device_paths_[device] = path;
     }
   }
 
@@ -334,6 +335,46 @@ ShillClient::IPConfig ShillClient::ParseIPConfigsProperty(
   }
 
   return ipconfig;
+}
+
+bool ShillClient::GetDeviceProperties(const std::string& device,
+                                      Device* output) {
+  DCHECK(output);
+  const auto& device_it = known_device_paths_.find(device);
+  if (device_it == known_device_paths_.end()) {
+    LOG(ERROR) << "Unknown device " << device;
+    return false;
+  }
+
+  org::chromium::flimflam::DeviceProxy proxy(bus_, device_it->second);
+  brillo::VariantDictionary props;
+  if (!proxy.GetProperties(&props, nullptr)) {
+    LOG(WARNING) << "Unable to get device properties for " << device;
+    return false;
+  }
+
+  const auto& type_it = props.find(shill::kTypeProperty);
+  if (type_it == props.end()) {
+    LOG(WARNING) << "Device properties is missing Type for " << device;
+    return false;
+  }
+  output->type = type_it->second.TryGet<std::string>();
+
+  const auto& interface_it = props.find(shill::kInterfaceProperty);
+  if (interface_it == props.end()) {
+    LOG(WARNING) << "Device properties is missing Interface for " << device;
+    return false;
+  }
+  output->ifname = interface_it->second.TryGet<std::string>();
+
+  const auto& ipconfigs_it = props.find(shill::kIPConfigsProperty);
+  if (ipconfigs_it == props.end()) {
+    LOG(WARNING) << "Device properties is missing IPConfigs for " << device;
+    return false;
+  }
+  output->ipconfig = ParseIPConfigsProperty(device, ipconfigs_it->second);
+
+  return true;
 }
 
 void ShillClient::OnDevicePropertyChangeRegistration(

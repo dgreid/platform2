@@ -22,6 +22,7 @@
 #include "patchpanel/arc_service.h"
 #include "patchpanel/crostini_service.h"
 #include "patchpanel/helper_process.h"
+#include "patchpanel/network_monitor_service.h"
 #include "patchpanel/routing_service.h"
 #include "patchpanel/shill_client.h"
 #include "patchpanel/socket.h"
@@ -169,6 +170,7 @@ class Manager final : public brillo::DBusDaemon, private TrafficForwarder {
   std::unique_ptr<HelperProcess> adb_proxy_;
   std::unique_ptr<HelperProcess> mcast_proxy_;
   std::unique_ptr<HelperProcess> nd_proxy_;
+  std::unique_ptr<NetworkMonitorService> network_monitor_svc_;
 
   AddressManager addr_mgr_;
 
