@@ -30,8 +30,10 @@ constexpr size_t kLibScryptSubHeaderSize = 48;
 
 constexpr size_t kLibScryptHeaderBytesToHMAC = 64;
 
+constexpr char kLibScryptHeaderMagic[] = "scrypt";
+
 // Bytes 33-64 of the derived key are used for the HMAC key.
-constexpr size_t kLibScryptHMACOffset = 32;
+constexpr size_t kLibScryptHMACKeyOffset = 32;
 
 constexpr size_t kLibScryptHMACSize = 32;
 
@@ -97,13 +99,34 @@ void GenerateHeader(const brillo::SecureBlob& salt,
          sizeof(header_struct->check_sum));
 
   // Add the header signature (used for verifying the passsword).
-  brillo::SecureBlob key_hmac(derived_key.begin() + kLibScryptHMACOffset,
+  brillo::SecureBlob key_hmac(derived_key.begin() + kLibScryptHMACKeyOffset,
                               derived_key.end());
   brillo::Blob data_to_hmac(header_ptr,
                             header_ptr + kLibScryptHeaderBytesToHMAC);
   brillo::SecureBlob hmac = CryptoLib::HmacSha256(key_hmac, data_to_hmac);
   memcpy(&header_struct->signature[0], hmac.data(),
          sizeof(header_struct->signature));
+}
+
+bool VerifyDerivedKey(const brillo::SecureBlob& encrypted_blob,
+                      const brillo::SecureBlob& derived_key) {
+  const LibScryptHeader* header =
+      reinterpret_cast<const LibScryptHeader*>(encrypted_blob.data());
+  const uint8_t* header_ptr = reinterpret_cast<const uint8_t*>(header);
+
+  // Verify the password.
+  brillo::SecureBlob key_hmac(derived_key.begin() + kLibScryptHMACKeyOffset,
+                              derived_key.end());
+  brillo::Blob data_to_hmac(header_ptr,
+                            header_ptr + kLibScryptHeaderBytesToHMAC);
+  brillo::SecureBlob hmac = CryptoLib::HmacSha256(key_hmac, data_to_hmac);
+  if (brillo::SecureMemcmp(header->signature, hmac.data(),
+                           kLibScryptHMACSize) != 0) {
+    LOG(ERROR) << "hmac verification failed.";
+    return false;
+  }
+
+  return true;
 }
 
 }  // namespace
@@ -122,7 +145,11 @@ bool LibScryptCompat::Encrypt(const brillo::SecureBlob& derived_key,
   memcpy(encrypted_data->data(), &header_struct, sizeof(header_struct));
 
   brillo::SecureBlob aes_key(derived_key.begin(),
-                             derived_key.end() - kLibScryptHMACOffset);
+                             derived_key.end() - kLibScryptHMACKeyOffset);
+  // libscrypt uses a 0 IV for every message. This is safe _ONLY_ because
+  // libscrypt mixes the passphrase with a new salt, generating a new derived
+  // key, FOR EACH ENCRYPTION. DO NOT CALL THIS ENCRYPTION method multiple times
+  // with the same key, it is only safe under this limited circumstances.
   brillo::SecureBlob iv(kLibScryptIVSize, 0);
   brillo::SecureBlob aes_ciphertext;
 
@@ -135,7 +162,7 @@ bool LibScryptCompat::Encrypt(const brillo::SecureBlob& derived_key,
   memcpy(encrypted_data->data() + sizeof(header_struct), aes_ciphertext.data(),
          aes_ciphertext.size());
 
-  brillo::SecureBlob key_hmac(derived_key.begin() + kLibScryptHMACOffset,
+  brillo::SecureBlob key_hmac(derived_key.begin() + kLibScryptHMACKeyOffset,
                               derived_key.end());
   brillo::Blob data_to_hmac(
       encrypted_data->begin(),
@@ -145,6 +172,93 @@ bool LibScryptCompat::Encrypt(const brillo::SecureBlob& derived_key,
   memcpy(encrypted_data->data() + sizeof(header_struct) + aes_ciphertext.size(),
          hmac.data(), kLibScryptHMACSize);
 
+  return true;
+}
+
+// static
+bool LibScryptCompat::ParseHeader(const brillo::SecureBlob& encrypted_blob,
+                                  ScryptParameters* out_params,
+                                  brillo::SecureBlob* salt) {
+  if (encrypted_blob.size() < kLibScryptHeaderSize + kLibScryptHMACSize) {
+    LOG(ERROR) << "Incomplete header present.";
+    return false;
+  }
+
+  const LibScryptHeader* header =
+      reinterpret_cast<const LibScryptHeader*>(encrypted_blob.data());
+  if (brillo::SecureMemcmp(header->magic, kLibScryptHeaderMagic,
+                           strlen(kLibScryptHeaderMagic)) != 0) {
+    LOG(ERROR) << "wrong header text present";
+    return false;
+  }
+
+  if (header->header_reserved_byte != 0) {
+    LOG(ERROR) << "Wrong reserved byte present";
+    return false;
+  }
+
+  // Verify the header checksum before returning any information.
+  const uint8_t* header_ptr = reinterpret_cast<const uint8_t*>(header);
+  brillo::Blob header_blob_to_hash(header_ptr,
+                                   header_ptr + kLibScryptSubHeaderSize);
+  brillo::Blob sha = CryptoLib::Sha256(header_blob_to_hash);
+  if (brillo::SecureMemcmp(sha.data(), header->check_sum,
+                           sizeof(header->check_sum)) != 0) {
+    LOG(ERROR) << "Wrong checksum present.";
+    return false;
+  }
+
+  // Now parse the parameters.
+  if (header->log_n < 1 || header->log_n > 63) {
+    LOG(ERROR) << "Invalid logN present in header.";
+    return false;
+  }
+
+  out_params->n_factor = static_cast<uint64_t>(1) << header->log_n;
+  out_params->r_factor = base::ByteSwap(header->r_factor);
+  out_params->p_factor = base::ByteSwap(header->p_factor);
+  salt->assign(header->salt, header->salt + kLibScryptSaltSize);
+
+  return true;
+}
+
+// static
+bool LibScryptCompat::Decrypt(
+    const brillo::SecureBlob& encrypted_data,
+    const brillo::SecureBlob& derived_key,
+    brillo::SecureBlob* decrypted_data) {
+  if (!VerifyDerivedKey(encrypted_data, derived_key))
+    return false;
+
+  // lib scrypt appends an HMAC.
+  brillo::SecureBlob key_hmac(derived_key.begin() + kLibScryptHMACKeyOffset,
+                              derived_key.end());
+  brillo::Blob data_to_hmac(encrypted_data.begin(),
+                            encrypted_data.end() - kLibScryptHMACSize);
+  brillo::SecureBlob hmac = CryptoLib::HmacSha256(key_hmac, data_to_hmac);
+  brillo::SecureBlob hmac_from_blob(encrypted_data.end() - kLibScryptHMACSize,
+                                    encrypted_data.end());
+  if (brillo::SecureMemcmp(hmac.data(), hmac_from_blob.data(),
+                           kLibScryptHMACSize) != 0) {
+    return false;
+  }
+
+  brillo::SecureBlob aes_key(derived_key.begin(),
+                             derived_key.end() - kLibScryptHMACKeyOffset);
+  // libscrypt uses a 0 IV for every message. This is safe _ONLY_ because
+  // libscrypt mixes the passphrase with a new salt, generating a new derived
+  // key, FOR EACH ENCRYPTION.
+  brillo::SecureBlob iv(kLibScryptIVSize, 0);
+  brillo::SecureBlob data_to_decrypt(
+      encrypted_data.begin() + kLibScryptHeaderSize,
+      encrypted_data.end() - kLibScryptHMACSize);
+
+  if (!CryptoLib::AesDecryptSpecifyBlockMode(
+          data_to_decrypt, 0, data_to_decrypt.size(), aes_key, iv,
+          CryptoLib::kPaddingStandard, CryptoLib::kCtr, decrypted_data)) {
+    LOG(ERROR) << "AesDecryptSpecifyBlockMode failed.";
+    return false;
+  }
   return true;
 }
 

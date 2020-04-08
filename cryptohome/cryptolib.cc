@@ -34,15 +34,6 @@ using brillo::SecureBlob;
 
 namespace {
 
-// An upper bound on the amount of time we allow Scrypt to use when performing
-// key strenthening (100s) for decryption.  This number can be high because in
-// practice, it doesn't mean much.  It simply needs to be large enough that we
-// can guarantee that the key derived during encryption can always be derived at
-// decryption time, so the typical time is usually close to 1/3s.  However,
-// because sometimes other processes may interfere, we need it to be large
-// enough to allow the same calculation to be made amidst other heavy use.
-const double kScryptMaxDecryptTime = 100.0;
-
 template <class T, class U>
 T Sha1Helper(const U& data) {
   SHA_CTX sha_context;
@@ -1146,25 +1137,35 @@ bool CryptoLib::DecryptScryptBlob(const brillo::SecureBlob& wrapped_blob,
                                   CryptoError* error) {
   DCHECK(blob->size() >= wrapped_blob.size());
 
-  int scrypt_rc;
-  size_t out_len = 0;
-
-  scrypt_rc = scryptdec_buf(wrapped_blob.data(), wrapped_blob.size(),
-                            blob->data(), &out_len, key.data(), key.size(),
-                            kScryptMaxMem, 100.0, kScryptMaxDecryptTime);
-  if (scrypt_rc) {
-    LOG(ERROR) << "Blob Scrypt decryption returned error code: " << scrypt_rc;
+  ScryptParameters params;
+  brillo::SecureBlob salt;
+  if (!LibScryptCompat::ParseHeader(wrapped_blob, &params, &salt)) {
+    LOG(ERROR) << "Failed to parse header.";
     PopulateError(error, CryptoError::CE_SCRYPT_CRYPTO);
     return false;
   }
+
+  // Generate the derived key.
+  brillo::SecureBlob derived_key(kLibScryptDerivedKeySize, 0);
+  if (SCrypt(key, salt, params.n_factor, params.r_factor, params.p_factor,
+             &derived_key) != 0) {
+    LOG(ERROR) << "crypto_scrypt failed";
+    return false;
+  }
+
+  if (!LibScryptCompat::Decrypt(wrapped_blob, derived_key, blob)) {
+    LOG(ERROR) << "Failed to decrypt output.";
+    PopulateError(error, CryptoError::CE_SCRYPT_CRYPTO);
+    return false;
+  }
+
   // Check if the plaintext is the right length.
   if ((wrapped_blob.size() < kScryptMetadataSize) ||
-      (out_len != (wrapped_blob.size() - kScryptMetadataSize))) {
+      (blob->size() != (wrapped_blob.size() - kScryptMetadataSize))) {
     LOG(ERROR) << "Blob Scrypt decryption output was the wrong length";
     PopulateError(error, CryptoError::CE_SCRYPT_CRYPTO);
     return false;
   }
-  blob->resize(out_len);
   return true;
 }
 
