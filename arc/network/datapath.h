@@ -66,6 +66,17 @@ class Datapath {
   // When specified, |ipv4_addr| is always singlar dotted-form (a.b.c.d)
   // IPv4 address (not a CIDR representation).
 
+  // Creates a virtual interface pair split across the current namespace and the
+  // namespace corresponding to |pid|, and set up the remote interface
+  // |peer_ifname| according // to the given parameters.
+  virtual bool ConnectVethPair(pid_t pid,
+                               const std::string& veth_ifname,
+                               const std::string& peer_ifname,
+                               const MacAddress& remote_mac_addr,
+                               uint32_t remote_ipv4_addr,
+                               uint32_t remote_ipv4_prefix_len,
+                               bool remote_multicast_flag);
+
   // Creates a virtual interface pair.
   virtual bool AddVirtualInterfacePair(const std::string& veth_ifname,
                                        const std::string& peer_ifname);

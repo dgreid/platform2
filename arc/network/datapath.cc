@@ -23,10 +23,13 @@
 #include <brillo/userdb_utils.h>
 
 #include "arc/network/net_util.h"
+#include "arc/network/scoped_ns.h"
 
 namespace arc_networkd {
 
 namespace {
+// TODO(hugobenichi) Consolidate this constant definition in a single place.
+constexpr pid_t kTestPID = -2;
 constexpr char kDefaultIfname[] = "vmtap%d";
 constexpr char kTunDev[] = "/dev/net/tun";
 }  // namespace
@@ -203,6 +206,58 @@ std::string Datapath::AddTAP(const std::string& name,
 
 void Datapath::RemoveTAP(const std::string& ifname) {
   process_runner_->ip("tuntap", "del", {ifname, "mode", "tap"});
+}
+
+bool Datapath::ConnectVethPair(pid_t pid,
+                               const std::string& veth_ifname,
+                               const std::string& peer_ifname,
+                               const MacAddress& remote_mac_addr,
+                               uint32_t remote_ipv4_addr,
+                               uint32_t remote_ipv4_prefix_len,
+                               bool remote_multicast_flag) {
+  // Set up the virtual pair inside the remote namespace.
+  {
+    ScopedNS ns(pid);
+    if (!ns.IsValid() && pid != kTestPID) {
+      LOG(ERROR)
+          << "Cannot create virtual link -- invalid container namespace?";
+      return false;
+    }
+
+    if (!AddVirtualInterfacePair(veth_ifname, peer_ifname)) {
+      LOG(ERROR) << "Failed to create veth pair " << veth_ifname << ","
+                 << peer_ifname;
+      return false;
+    }
+
+    if (!ConfigureInterface(peer_ifname, remote_mac_addr, remote_ipv4_addr,
+                            remote_ipv4_prefix_len, true /* link up */,
+                            remote_multicast_flag)) {
+      LOG(ERROR) << "Failed to configure interface " << peer_ifname;
+      RemoveInterface(peer_ifname);
+      return false;
+    }
+  }
+
+  // Now pull the local end out into the local namespace.
+  if (runner().RestoreDefaultNamespace(veth_ifname, pid) != 0) {
+    LOG(ERROR) << "Failed to prepare interface " << veth_ifname;
+    {
+      ScopedNS ns(pid);
+      if (ns.IsValid()) {
+        RemoveInterface(peer_ifname);
+      } else {
+        LOG(ERROR) << "Failed to re-enter container namespace pid " << pid;
+      }
+    }
+    return false;
+  }
+  if (!ToggleInterface(veth_ifname, true /*up*/)) {
+    LOG(ERROR) << "Failed to bring up interface " << veth_ifname;
+    RemoveInterface(veth_ifname);
+    return false;
+  }
+  return true;
 }
 
 bool Datapath::AddVirtualInterfacePair(const std::string& veth_ifname,

@@ -38,6 +38,7 @@ executable("ndproxyd") {
     "../minijailed_process_runner.cc",
     "../ndproxy.cc",
     "../net_util.cc",
+    "../scoped_ns.cc",
     "../subnet.cc",
     "main.cc",
   ]

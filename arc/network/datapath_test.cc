@@ -28,6 +28,9 @@ using testing::StrEq;
 namespace arc_networkd {
 namespace {
 
+// TODO(hugobenichi) Centralize this constant definition
+constexpr pid_t kTestPID = -2;
+
 std::set<ioctl_req_t> ioctl_reqs;
 
 // Capture all ioctls and succeed.
@@ -145,6 +148,31 @@ TEST(DatapathTest, AddBridge) {
                                            "MARK", "--set-mark", "1", "-w"),
                                true));
   datapath.AddBridge("br", Ipv4Addr(1, 1, 1, 1), 30);
+}
+
+TEST(DatapathTest, ConnectVethPair) {
+  MockProcessRunner runner;
+  EXPECT_CALL(runner, ip(StrEq("link"), StrEq("add"),
+                         ElementsAre("veth_foo", "type", "veth", "peer", "name",
+                                     "peer_foo"),
+                         true));
+  EXPECT_CALL(runner, ip(StrEq("addr"), StrEq("add"),
+                         ElementsAre("100.115.92.169/30", "brd",
+                                     "100.115.92.171", "dev", "peer_foo"),
+                         true))
+      .WillOnce(Return(0));
+  EXPECT_CALL(runner, ip(StrEq("link"), StrEq("set"),
+                         ElementsAre("dev", "peer_foo", "up", "addr",
+                                     "01:02:03:04:05:06", "multicast", "on"),
+                         true))
+      .WillOnce(Return(0));
+  EXPECT_CALL(runner, RestoreDefaultNamespace(StrEq("veth_foo"), kTestPID));
+  EXPECT_CALL(runner, ip(StrEq("link"), StrEq("set"),
+                         ElementsAre("veth_foo", "up"), true));
+  Datapath datapath(&runner);
+  EXPECT_TRUE(datapath.ConnectVethPair(kTestPID, "veth_foo", "peer_foo",
+                                       {1, 2, 3, 4, 5, 6},
+                                       Ipv4Addr(100, 115, 92, 169), 30, true));
 }
 
 TEST(DatapathTest, AddVirtualInterfacePair) {

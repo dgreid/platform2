@@ -35,7 +35,6 @@ GuestMessage::GuestType guest = GuestMessage::UNKNOWN_GUEST;
 
 namespace {
 constexpr pid_t kInvalidPID = 0;
-constexpr pid_t kTestPID = -2;
 constexpr uint32_t kInvalidCID = 0;
 constexpr char kArcIfname[] = "arc0";
 constexpr char kArcBridge[] = "arcbr0";
@@ -562,50 +561,12 @@ bool ArcService::ContainerImpl::OnStartDevice(Device* device) {
 
   // Set up the virtual pair inside the container namespace.
   const std::string veth_ifname = ArcVethHostName(device->guest_ifname());
-  {
-    ScopedNS ns(pid_);
-    if (!ns.IsValid() && pid_ != kTestPID) {
-      LOG(ERROR)
-          << "Cannot create virtual link -- invalid container namespace?";
-      return false;
-    }
-
-    if (!datapath_->AddVirtualInterfacePair(veth_ifname,
-                                            device->guest_ifname())) {
-      LOG(ERROR) << "Failed to create virtual interface pair for "
-                 << device->phys_ifname();
-      return false;
-    }
-
-    const auto& config = device->config();
-
-    if (!datapath_->ConfigureInterface(
-            device->guest_ifname(), config.mac_addr(), config.guest_ipv4_addr(),
-            30, true /* link up */, device->options().fwd_multicast)) {
-      LOG(ERROR) << "Failed to configure interface " << device->guest_ifname();
-      datapath_->RemoveInterface(device->guest_ifname());
-      return false;
-    }
-  }
-
-  // Now pull the host end out into the root namespace and add it to the bridge.
-  if (datapath_->runner().RestoreDefaultNamespace(veth_ifname, pid_) != 0) {
-    LOG(ERROR) << "Failed to prepare interface " << veth_ifname;
-    {
-      ScopedNS ns(pid_);
-      if (ns.IsValid()) {
-        datapath_->RemoveInterface(device->guest_ifname());
-      } else {
-        LOG(ERROR) << "Failed to re-enter container namespace."
-                   << " Subsequent attempts to restart "
-                   << device->phys_ifname() << " may not succeed.";
-      }
-    }
-    return false;
-  }
-  if (!datapath_->ToggleInterface(veth_ifname, true /*up*/)) {
-    LOG(ERROR) << "Failed to bring up interface " << veth_ifname;
-    datapath_->RemoveInterface(veth_ifname);
+  const auto& config = device->config();
+  if (!datapath_->ConnectVethPair(pid_, veth_ifname, device->guest_ifname(),
+                                  config.mac_addr(), config.guest_ipv4_addr(),
+                                  30, device->options().fwd_multicast)) {
+    LOG(ERROR) << "Cannot create virtual link for device "
+               << device->phys_ifname();
     return false;
   }
   if (!datapath_->AddToBridge(device->host_ifname(), veth_ifname)) {
