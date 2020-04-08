@@ -7,6 +7,7 @@
 #include <memory>
 #include <set>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <chromeos/dbus/service_constants.h>
@@ -27,6 +28,8 @@ class ShillClientTest : public testing::Test {
                    base::Unretained(this)));
     client_->RegisterDevicesChangedHandler(base::Bind(
         &ShillClientTest::DevicesChangedHandler, base::Unretained(this)));
+    client_->RegisterIPConfigsChangedHandler(base::Bind(
+        &ShillClientTest::IPConfigsChangedHandler, base::Unretained(this)));
     default_ifname_.clear();
     added_.clear();
     removed_.clear();
@@ -43,10 +46,17 @@ class ShillClientTest : public testing::Test {
     removed_ = removed;
   }
 
+  void IPConfigsChangedHandler(const std::string& device,
+                               const ShillClient::IPConfig& ipconfig) {
+    ipconfig_change_calls_.emplace_back(std::make_pair(device, ipconfig));
+  }
+
  protected:
   std::string default_ifname_;
   std::set<std::string> added_;
   std::set<std::string> removed_;
+  std::vector<std::pair<std::string, ShillClient::IPConfig>>
+      ipconfig_change_calls_;
   std::unique_ptr<FakeShillClient> client_;
   std::unique_ptr<FakeShillClientHelper> helper_;
 };
@@ -154,6 +164,45 @@ TEST_F(ShillClientTest, DefaultInterfaceFallbackUsingDevices) {
   client_->NotifyManagerPropertyChange(shill::kDevicesProperty, value);
   // No device is used as the fallback default interface.
   EXPECT_EQ(default_ifname_, "");
+}
+
+TEST_F(ShillClientTest, ListenToDeviceChangeSignalOnNewDevices) {
+  // Adds a device.
+  std::vector<dbus::ObjectPath> devices = {dbus::ObjectPath("/wlan0")};
+  auto value = brillo::Any(devices);
+  EXPECT_CALL(*helper_->mock_proxy(),
+              DoConnectToSignal(shill::kFlimflamDeviceInterface,
+                                shill::kMonitorPropertyChanged, _, _))
+      .Times(1);
+  client_->NotifyManagerPropertyChange(shill::kDevicesProperty, value);
+
+  // Adds another device. DoConnectToSignal() called only for the new added one.
+  devices = {dbus::ObjectPath("/wlan0"), dbus::ObjectPath("/eth0")};
+  value = brillo::Any(devices);
+  EXPECT_CALL(*helper_->mock_proxy(),
+              DoConnectToSignal(shill::kFlimflamDeviceInterface,
+                                shill::kMonitorPropertyChanged, _, _))
+      .Times(1);
+  client_->NotifyManagerPropertyChange(shill::kDevicesProperty, value);
+}
+
+TEST_F(ShillClientTest, TriggerOnIPConfigsChangeHandlerOnce) {
+  // Adds a device.
+  std::vector<dbus::ObjectPath> devices = {dbus::ObjectPath("/wlan0")};
+  auto devices_value = brillo::Any(devices);
+  client_->NotifyManagerPropertyChange(shill::kDevicesProperty, devices_value);
+  client_->NotifyDevicePropertyChange("wlan0", shill::kIPConfigsProperty,
+                                      brillo::Any());
+  ASSERT_EQ(ipconfig_change_calls_.size(), 1u);
+  EXPECT_EQ(ipconfig_change_calls_.back().first, "wlan0");
+
+  // Removes the device and adds it again.
+  client_->NotifyManagerPropertyChange(shill::kDevicesProperty, brillo::Any());
+  client_->NotifyManagerPropertyChange(shill::kDevicesProperty, devices_value);
+  client_->NotifyDevicePropertyChange("wlan0", shill::kIPConfigsProperty,
+                                      brillo::Any());
+  ASSERT_EQ(ipconfig_change_calls_.size(), 2u);
+  EXPECT_EQ(ipconfig_change_calls_.back().first, "wlan0");
 }
 
 }  // namespace patchpanel

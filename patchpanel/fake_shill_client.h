@@ -41,6 +41,12 @@ class FakeShillClient : public ShillClient {
     OnManagerPropertyChange(name, value);
   }
 
+  void NotifyDevicePropertyChange(const std::string& device,
+                                  const std::string& name,
+                                  const brillo::Any& value) {
+    OnDevicePropertyChange(device, name, value);
+  }
+
  private:
   std::string fake_default_ifname_;
 };
@@ -58,6 +64,9 @@ class FakeShillClientHelper {
     EXPECT_CALL(*mock_proxy_, DoConnectToSignal("org.chromium.flimflam.Manager",
                                                 "PropertyChanged", _, _))
         .Times(AnyNumber());
+    EXPECT_CALL(*mock_proxy_, DoConnectToSignal("org.chromium.flimflam.Device",
+                                                "PropertyChanged", _, _))
+        .Times(AnyNumber());
 
     client_ = std::make_unique<FakeShillClient>(mock_bus_);
   }
@@ -65,6 +74,8 @@ class FakeShillClientHelper {
   std::unique_ptr<ShillClient> Client() { return std::move(client_); }
 
   std::unique_ptr<FakeShillClient> FakeClient() { return std::move(client_); }
+
+  dbus::MockObjectProxy* mock_proxy() { return mock_proxy_.get(); }
 
  private:
   scoped_refptr<dbus::MockBus> mock_bus_{

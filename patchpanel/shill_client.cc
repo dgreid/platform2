@@ -4,6 +4,7 @@
 
 #include "patchpanel/shill_client.h"
 
+#include <utility>
 #include <vector>
 
 #include <base/bind.h>
@@ -190,6 +191,11 @@ void ShillClient::RegisterDevicesChangedHandler(
   device_handlers_.emplace_back(handler);
 }
 
+void ShillClient::RegisterIPConfigsChangedHandler(
+    const IPConfigsChangeHandler& handler) {
+  ipconfigs_handlers_.emplace_back(handler);
+}
+
 void ShillClient::UpdateDevices(const brillo::Any& property_value) {
   std::set<std::string> new_devices, added, removed;
   for (const auto& path :
@@ -201,6 +207,16 @@ void ShillClient::UpdateDevices(const brillo::Any& property_value) {
     new_devices.emplace(device);
     if (devices_.find(device) == devices_.end())
       added.insert(device);
+
+    // Registers handler if we see this device for the first time.
+    if (known_device_paths_.insert(std::make_pair(device, path)).second) {
+      org::chromium::flimflam::DeviceProxy proxy(bus_, path);
+      proxy.RegisterPropertyChangedSignalHandler(
+          base::Bind(&ShillClient::OnDevicePropertyChange,
+                     weak_factory_.GetWeakPtr(), device),
+          base::Bind(&ShillClient::OnDevicePropertyChangeRegistration,
+                     weak_factory_.GetWeakPtr()));
+    }
   }
 
   for (const auto& d : devices_) {
@@ -212,6 +228,134 @@ void ShillClient::UpdateDevices(const brillo::Any& property_value) {
 
   for (const auto& h : device_handlers_)
     h.Run(added, removed);
+}
+
+ShillClient::IPConfig ShillClient::ParseIPConfigsProperty(
+    const std::string& device, const brillo::Any& property_value) {
+  IPConfig ipconfig;
+  for (const auto& path :
+       property_value.TryGet<std::vector<dbus::ObjectPath>>()) {
+    std::unique_ptr<org::chromium::flimflam::IPConfigProxy> ipconfig_proxy(
+        new org::chromium::flimflam::IPConfigProxy(bus_, path));
+    brillo::VariantDictionary ipconfig_props;
+
+    if (!ipconfig_proxy->GetProperties(&ipconfig_props, nullptr)) {
+      // It is possible that an IPConfig object is removed after we know its
+      // path, especially when the interface is going down.
+      LOG(WARNING) << "[" << device << "]: "
+                   << "Unable to get properties for " << path.value();
+      continue;
+    }
+
+    // Detects the type of IPConfig. For ipv4 and ipv6 configurations, there
+    // should be at most one for each type.
+    auto it = ipconfig_props.find(shill::kMethodProperty);
+    if (it == ipconfig_props.end()) {
+      LOG(WARNING) << "[" << device << "]: "
+                   << "IPConfig properties is missing Method";
+      continue;
+    }
+    const std::string& method = it->second.TryGet<std::string>();
+    const bool is_ipv4_type =
+        (method == shill::kTypeIPv4 || method == shill::kTypeDHCP ||
+         method == shill::kTypeBOOTP || method == shill::kTypeZeroConf);
+    const bool is_ipv6_type = (method == shill::kTypeIPv6);
+    if (!is_ipv4_type && !is_ipv6_type) {
+      LOG(WARNING) << "[" << device << "]: "
+                   << "unknown type \"" << method << "\" for " << path.value();
+      continue;
+    }
+    if ((is_ipv4_type && !ipconfig.ipv4_address.empty()) ||
+        (is_ipv6_type && !ipconfig.ipv6_address.empty())) {
+      LOG(WARNING) << "[" << device << "]: "
+                   << "Duplicated ipconfig for " << method;
+      continue;
+    }
+
+    // Gets the value of address, prefix_length, gateway, and dns_servers.
+    it = ipconfig_props.find(shill::kAddressProperty);
+    if (it == ipconfig_props.end()) {
+      LOG(WARNING) << "[" << device << "]: "
+                   << "IPConfig properties is missing Address";
+      continue;
+    }
+    const std::string& address = it->second.TryGet<std::string>();
+
+    it = ipconfig_props.find(shill::kPrefixlenProperty);
+    if (it == ipconfig_props.end()) {
+      LOG(WARNING) << "[" << device << "]: "
+                   << "IPConfig properties is missing Prefixlen";
+      continue;
+    }
+    int prefix_length = it->second.TryGet<int>();
+
+    it = ipconfig_props.find(shill::kGatewayProperty);
+    if (it == ipconfig_props.end()) {
+      LOG(WARNING) << "[" << device << "]: "
+                   << "IPConfig properties is missing Gateway";
+      continue;
+    }
+    const std::string& gateway = it->second.TryGet<std::string>();
+
+    it = ipconfig_props.find(shill::kNameServersProperty);
+    if (it == ipconfig_props.end()) {
+      LOG(WARNING) << "[" << device << "]: "
+                   << "IPConfig properties is missing NameServers";
+      // Shill will emit this property with empty value if it has no dns for
+      // this device, so missing this property indicates an error.
+      continue;
+    }
+    const std::vector<std::string>& dns_addresses =
+        it->second.TryGet<std::vector<std::string>>();
+
+    // Checks if this ipconfig is valid: address, gateway, and prefix_length
+    // should not be empty.
+    if (address.empty() || gateway.empty() || prefix_length == 0) {
+      LOG(WARNING) << "[" << device << "]: "
+                   << "Skipped invalid ipconfig: "
+                   << "address.length()=" << address.length()
+                   << ", gateway.length()=" << gateway.length()
+                   << ", prefix_length=" << prefix_length;
+      continue;
+    }
+
+    // Fills the IPConfig struct according to the type.
+    if (is_ipv4_type) {
+      ipconfig.ipv4_prefix_length = prefix_length;
+      ipconfig.ipv4_address = address;
+      ipconfig.ipv4_gateway = gateway;
+      ipconfig.ipv4_dns_addresses = dns_addresses;
+    } else {  // is_ipv6_type
+      ipconfig.ipv6_prefix_length = prefix_length;
+      ipconfig.ipv6_address = address;
+      ipconfig.ipv6_gateway = gateway;
+      ipconfig.ipv6_dns_addresses = dns_addresses;
+    }
+  }
+
+  return ipconfig;
+}
+
+void ShillClient::OnDevicePropertyChangeRegistration(
+    const std::string& interface,
+    const std::string& signal_name,
+    bool success) {
+  if (!success)
+    LOG(ERROR) << "[" << interface << "]: "
+               << "Unable to register listener for " << signal_name;
+}
+
+void ShillClient::OnDevicePropertyChange(const std::string& device,
+                                         const std::string& property_name,
+                                         const brillo::Any& property_value) {
+  if (property_name != shill::kIPConfigsProperty)
+    return;
+
+  const IPConfig& ipconfig = ParseIPConfigsProperty(device, property_value);
+  // TODO(jiejiang): Keep a cache of the last parsed IPConfig, and only
+  // trigger handlers if there is an actual change.
+  for (const auto& handler : ipconfigs_handlers_)
+    handler.Run(device, ipconfig);
 }
 
 }  // namespace patchpanel
