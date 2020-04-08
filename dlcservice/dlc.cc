@@ -414,7 +414,6 @@ bool DlcBase::Delete(ErrorPtr* err) {
       NOTREACHED();
       return false;
   }
-  return true;
 }
 
 }  // namespace dlcservice
