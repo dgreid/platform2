@@ -144,7 +144,9 @@ struct FanInfo {
 // capable of reporting. Note that every field in TelemetryInfo is nullable, and
 // the response for a particular ProbeTelemetryInfo request will only contain
 // fields corresponding to the categories passed to the ProbeTelemetryInfo
-// request.
+// request. All optional array members will be null if cros_healthd did not
+// attempt to fetch that information, and size zero if cros_healthd did attempt
+// to fetch that information, but was unable to.
 struct TelemetryInfo {
   // Information about the device's main battery. Only present when kBattery was
   // included in the categories input to ProbeTelemetryInfo.
