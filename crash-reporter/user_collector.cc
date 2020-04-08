@@ -16,6 +16,7 @@
 #include <base/logging.h>
 #include <base/posix/eintr_wrapper.h>
 #include <base/stl_util.h>
+#include <base/strings/string_util.h>
 #include <base/strings/stringprintf.h>
 #include <brillo/process.h>
 
@@ -145,13 +146,27 @@ bool UserCollector::SetUpInternal(bool enabled, bool early) {
   std::string pattern = GetPattern(enabled, early);
   if (base::WriteFile(FilePath(core_pattern_file_), pattern.c_str(),
                       pattern.length()) != static_cast<int>(pattern.length())) {
+    int saved_errno = errno;
     // If the core pattern is locked and we try to reset the |core_pattern|
-    // while disabling |user_collector|, expect failure here with an EPERM.
-    if (errno == EPERM && !enabled &&
-        base::PathExists(FilePath(kCorePatternLockFile))) {
-      LOG(WARNING) << "Failed to write to locked core pattern; ignoring";
-    } else {
-      PLOG(ERROR) << "Unable to write " << core_pattern_file_;
+    // while disabling |user_collector| or resetting it to what it already was,
+    // expect failure here with an EPERM.
+    bool ignore_error = false;
+    if (errno == EPERM && base::PathExists(FilePath(kCorePatternLockFile))) {
+      std::string actual_contents;
+      if (!base::ReadFileToString(FilePath(core_pattern_file_),
+                                  &actual_contents)) {
+        PLOG(ERROR) << "Failed to read " << core_pattern_file_;
+        actual_contents.clear();
+      }
+      if (!enabled || base::TrimWhitespaceASCII(
+                          actual_contents, base::TRIM_TRAILING) == pattern) {
+        ignore_error = true;
+        LOG(WARNING) << "Failed to write to locked core pattern; ignoring";
+      }
+    }
+    if (!ignore_error) {
+      LOG(ERROR) << "Unable to write " << core_pattern_file_ << ": "
+                 << strerror(saved_errno);
       return false;
     }
   }
