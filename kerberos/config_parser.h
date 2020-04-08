@@ -6,8 +6,8 @@
 #define KERBEROS_CONFIG_PARSER_H_
 
 #include <string>
-#include <unordered_set>
 
+#include <base/containers/flat_set.h>
 #include <base/macros.h>
 
 #include "kerberos/kerberos_metrics.h"
@@ -57,23 +57,13 @@ class ConfigParser {
                       const std::string& section,
                       int group_level) const;
 
-  // Note: std::hash<const char*> hashes pointers, not the strings!
-  struct StrHash {
-    size_t operator()(const char* str) const;
-  };
-
-  // Equivalent to strcmp(a,b) == 0.
-  struct StrEquals {
-    bool operator()(const char* a, const char* b) const;
-  };
-
-  using StringHashSet = std::unordered_set<const char*, StrHash, StrEquals>;
-  StringHashSet libdefaults_whitelist_;
-  StringHashSet realms_whitelist_;
-  StringHashSet section_whitelist_;
-  StringHashSet enctypes_fields_;
-  StringHashSet weak_enctypes_;
-  StringHashSet strong_enctypes_;
+  using StringSet = base::flat_set<std::string>;
+  const StringSet libdefaults_whitelist_;
+  const StringSet realms_whitelist_;
+  const StringSet section_whitelist_;
+  const StringSet enctypes_fields_;
+  const StringSet weak_enctypes_;
+  const StringSet strong_enctypes_;
 
   DISALLOW_COPY_AND_ASSIGN(ConfigParser);
 };

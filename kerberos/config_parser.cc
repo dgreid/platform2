@@ -136,7 +136,7 @@ ConfigErrorInfo ConfigParser::ParseConfig(
     const std::string& krb5conf,
     KerberosEncryptionTypes* encryption_types) const {
   // Variables used to keep track of encryption fields and types on |krc5conf|.
-  std::unordered_set<std::string> listed_enctypes_fields;
+  StringSet listed_enctypes_fields;
   bool has_weak_enctype = false;
   bool has_strong_enctype = false;
 
@@ -217,7 +217,7 @@ ConfigErrorInfo ConfigParser::ParseConfig(
 
       // Bail if the section is not supported, e.g. [appdefaults].
       if (current_section.empty() ||
-          !base::ContainsKey(section_whitelist_, current_section.c_str())) {
+          !base::ContainsKey(section_whitelist_, current_section)) {
         return MakeErrorInfo(CONFIG_ERROR_SECTION_NOT_SUPPORTED, line_index);
       }
       continue;
@@ -267,7 +267,7 @@ ConfigErrorInfo ConfigParser::ParseConfig(
 
     // If |key| is a enctypes field in the [libdefaults] section.
     if (current_section == kSectionLibdefaults && group_level <= 1 &&
-        base::ContainsKey(enctypes_fields_, key.c_str())) {
+        base::ContainsKey(enctypes_fields_, key)) {
       listed_enctypes_fields.insert(key);
 
       // Note: encryption types can be delimited by comma or whitespace.
@@ -275,8 +275,8 @@ ConfigErrorInfo ConfigParser::ParseConfig(
           value, ", ", base::TRIM_WHITESPACE, base::SPLIT_WANT_NONEMPTY);
 
       for (const std::string& type : enctypes) {
-        has_weak_enctype |= base::ContainsKey(weak_enctypes_, type.c_str());
-        has_strong_enctype |= base::ContainsKey(strong_enctypes_, type.c_str());
+        has_weak_enctype |= base::ContainsKey(weak_enctypes_, type);
+        has_strong_enctype |= base::ContainsKey(strong_enctypes_, type);
       }
     }
   }
@@ -310,7 +310,7 @@ bool ConfigParser::IsKeySupported(const std::string& key,
   //     clockskew = 500
   //   }
   if (section == kSectionLibdefaults && group_level <= 1) {
-    return base::ContainsKey(libdefaults_whitelist_, key.c_str());
+    return base::ContainsKey(libdefaults_whitelist_, key);
   }
 
   // Enforce only whitelisted realm keys on the root and realm levels:
@@ -321,22 +321,10 @@ bool ConfigParser::IsKeySupported(const std::string& key,
   //   }
   // Not sure if they can actually be at the root level, but just in case...
   if (section == kSectionRealms && group_level <= 1)
-    return base::ContainsKey(realms_whitelist_, key.c_str());
+    return base::ContainsKey(realms_whitelist_, key);
 
   // Anything else is fine (all keys of other supported sections).
   return true;
-}
-
-bool ConfigParser::StrEquals::operator()(const char* a, const char* b) const {
-  return strcmp(a, b) == 0;
-}
-
-size_t ConfigParser::StrHash::operator()(const char* str) const {
-  // Taken from base::StringPieceHash.
-  std::size_t result = 0;
-  for (const char* c = str; *c; ++c)
-    result = (result * 131) + *c;
-  return result;
 }
 
 }  // namespace kerberos
