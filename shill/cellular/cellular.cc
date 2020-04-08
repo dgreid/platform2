@@ -8,6 +8,7 @@
 #include <linux/if.h>  // NOLINT - Needs definitions from netinet/in.h
 
 #include <string>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -64,37 +65,56 @@ static string ObjectID(Cellular* c) {
 
 namespace {
 
-void AddApns(
-    const std::vector<std::unique_ptr<MobileOperatorInfo::MobileAPN>>& apns,
-    Stringmaps* apn_list_dict) {
-  for (const auto& mobile_apn : apns) {
-    Stringmap props;
-    if (!mobile_apn->apn.empty()) {
-      props[kApnProperty] = mobile_apn->apn;
+class ApnList {
+ public:
+  void AddApns(
+      const std::vector<std::unique_ptr<MobileOperatorInfo::MobileAPN>>& apns) {
+    for (const auto& mobile_apn : apns)
+      AddApn(mobile_apn);
+  }
+
+  const Stringmaps& GetList() { return apn_dict_list_; }
+
+ private:
+  using ApnIndexKey =
+      std::tuple<std::string, std::string, std::string, std::string>;
+
+  ApnIndexKey GetKey(
+      const std::unique_ptr<MobileOperatorInfo::MobileAPN>& mobile_apn) {
+    return std::make_tuple(mobile_apn->apn, mobile_apn->username,
+                           mobile_apn->password, mobile_apn->authentication);
+  }
+
+  void AddApn(
+      const std::unique_ptr<MobileOperatorInfo::MobileAPN>& mobile_apn) {
+    ApnIndexKey index = GetKey(mobile_apn);
+    if (apn_index_[index] == nullptr) {
+      apn_dict_list_.emplace_back();
+      apn_index_[index] = &apn_dict_list_.back();
     }
-    if (!mobile_apn->username.empty()) {
-      props[kApnUsernameProperty] = mobile_apn->username;
-    }
-    if (!mobile_apn->password.empty()) {
-      props[kApnPasswordProperty] = mobile_apn->password;
-    }
-    if (!mobile_apn->authentication.empty()) {
-      props[kApnAuthenticationProperty] = mobile_apn->authentication;
-    }
+
+    Stringmap* props = apn_index_[index];
+    if (!mobile_apn->apn.empty())
+      props->emplace(kApnProperty, mobile_apn->apn);
+    if (!mobile_apn->username.empty())
+      props->emplace(kApnUsernameProperty, mobile_apn->username);
+    if (!mobile_apn->password.empty())
+      props->emplace(kApnPasswordProperty, mobile_apn->password);
+    if (!mobile_apn->authentication.empty())
+      props->emplace(kApnAuthenticationProperty, mobile_apn->authentication);
 
     // Find the first localized and non-localized name, if any.
-    if (!mobile_apn->operator_name_list.empty()) {
-      props[kApnNameProperty] = mobile_apn->operator_name_list[0].name;
-    }
+    if (!mobile_apn->operator_name_list.empty())
+      props->emplace(kApnNameProperty, mobile_apn->operator_name_list[0].name);
     for (const auto& lname : mobile_apn->operator_name_list) {
-      if (!lname.language.empty()) {
-        props[kApnLocalizedNameProperty] = lname.name;
-      }
+      if (!lname.language.empty())
+        props->emplace(kApnLocalizedNameProperty, lname.name);
     }
-
-    apn_list_dict->push_back(props);
   }
-}
+
+  Stringmaps apn_dict_list_;
+  std::map<ApnIndexKey, Stringmap*> apn_index_;
+};
 
 }  // namespace
 
@@ -1541,10 +1561,10 @@ void Cellular::UpdateHomeProvider(const MobileOperatorInfo* operator_info) {
   }
   set_home_provider(home_provider);
 
-  Stringmaps apn_list_dict;
-  AddApns(capability_->GetProfiles(), &apn_list_dict);
-  AddApns(operator_info->apn_list(), &apn_list_dict);
-  set_apn_list(apn_list_dict);
+  ApnList apn_list;
+  apn_list.AddApns(capability_->GetProfiles());
+  apn_list.AddApns(operator_info->apn_list());
+  set_apn_list(apn_list.GetList());
 
   set_provider_requires_roaming(operator_info->requires_roaming());
 }

@@ -2234,6 +2234,87 @@ TEST_P(CellularTest, SimpleApnList) {
   CHECK_EQ(kPassword, apn_list_prop[0][kApnPasswordProperty]);
 }
 
+TEST_P(CellularTest, ProfilesApnList) {
+  if (!IsCellularTypeUnderTestOneOf({Cellular::kType3gpp})) {
+    return;
+  }
+
+  constexpr char kApn1[] = "ota.apn";
+  brillo::VariantDictionary profile;
+  profile["apn"] = std::string(kApn1);
+  GetCapability3gpp()->OnProfilesChanged({profile});
+
+  constexpr char kApn2[] = "normal.apn";
+  std::vector<std::unique_ptr<MobileOperatorInfo::MobileAPN>> apn_list;
+  auto mobile_apn = std::make_unique<MobileOperatorInfo::MobileAPN>();
+  mobile_apn->apn = kApn2;
+  apn_list.emplace_back(std::move(mobile_apn));
+  FakeMobileOperatorInfo info(&dispatcher_, std::move(apn_list));
+
+  device_->UpdateHomeProvider(&info);
+  auto apn_list_prop = device_->apn_list();
+  CHECK_EQ(2U, apn_list_prop.size());
+  // Profile APNs are likely deployed by the network. They should be tried
+  // first, so they should be higher in the list.
+  CHECK_EQ(kApn1, apn_list_prop[0][kApnProperty]);
+  CHECK_EQ(kApn2, apn_list_prop[1][kApnProperty]);
+}
+
+TEST_P(CellularTest, MergeProfileAndOperatorApn) {
+  if (!IsCellularTypeUnderTestOneOf({Cellular::kType3gpp})) {
+    return;
+  }
+
+  constexpr char kApn[] = "normal.apn";
+  constexpr char kApnName[] = "Normal APN";
+  brillo::VariantDictionary profile;
+  profile["apn"] = std::string(kApn);
+  GetCapability3gpp()->OnProfilesChanged({profile});
+
+  std::vector<std::unique_ptr<MobileOperatorInfo::MobileAPN>> apn_list;
+  auto mobile_apn = std::make_unique<MobileOperatorInfo::MobileAPN>();
+  mobile_apn->apn = kApn;
+  mobile_apn->operator_name_list.push_back({kApnName, ""});
+  apn_list.emplace_back(std::move(mobile_apn));
+  FakeMobileOperatorInfo info(&dispatcher_, std::move(apn_list));
+
+  device_->UpdateHomeProvider(&info);
+  auto apn_list_prop = device_->apn_list();
+  CHECK_EQ(1U, apn_list_prop.size());
+  CHECK_EQ(kApn, apn_list_prop[0][kApnProperty]);
+  CHECK_EQ(kApnName, apn_list_prop[0][kApnNameProperty]);
+}
+
+TEST_P(CellularTest, DontMergeProfileAndOperatorApn) {
+  if (!IsCellularTypeUnderTestOneOf({Cellular::kType3gpp})) {
+    return;
+  }
+
+  constexpr char kApn[] = "normal.apn";
+  constexpr char kUsernameFromProfile[] = "user1";
+  brillo::VariantDictionary profile;
+  profile["apn"] = std::string(kApn);
+  profile["username"] = std::string(kUsernameFromProfile);
+  GetCapability3gpp()->OnProfilesChanged({profile});
+
+  constexpr char kUsernameFromOperator[] = "user2";
+  std::vector<std::unique_ptr<MobileOperatorInfo::MobileAPN>> apn_list;
+  auto mobile_apn = std::make_unique<MobileOperatorInfo::MobileAPN>();
+  mobile_apn->apn = kApn;
+  mobile_apn->username = kUsernameFromOperator;
+  apn_list.emplace_back(std::move(mobile_apn));
+  FakeMobileOperatorInfo info(&dispatcher_, std::move(apn_list));
+
+  device_->UpdateHomeProvider(&info);
+  auto apn_list_prop = device_->apn_list();
+  CHECK_EQ(2U, apn_list_prop.size());
+  // As before, profile APNs come first.
+  CHECK_EQ(kApn, apn_list_prop[0][kApnProperty]);
+  CHECK_EQ(kUsernameFromProfile, apn_list_prop[0][kApnUsernameProperty]);
+  CHECK_EQ(kApn, apn_list_prop[1][kApnProperty]);
+  CHECK_EQ(kUsernameFromOperator, apn_list_prop[1][kApnUsernameProperty]);
+}
+
 INSTANTIATE_TEST_CASE_P(CellularTest,
                         CellularTest,
                         testing::Values(Cellular::kType3gpp,

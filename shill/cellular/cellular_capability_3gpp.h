@@ -210,6 +210,9 @@ class CellularCapability3gpp : public CellularCapability {
   FRIEND_TEST(CellularTest, DisconnectFailure);
   FRIEND_TEST(CellularTest, ModemStateChangeLostRegistration);
   FRIEND_TEST(CellularTest, OnPPPDied);
+  FRIEND_TEST(CellularTest, ProfilesApnList);
+  FRIEND_TEST(CellularTest, MergeProfileAndOperatorApn);
+  FRIEND_TEST(CellularTest, DontMergeProfileAndOperatorApn);
 
   // SimLockStatus represents the fields in the Cellular.SIMLockStatus
   // DBUS property of the shill device.
