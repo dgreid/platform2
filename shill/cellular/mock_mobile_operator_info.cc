@@ -16,6 +16,7 @@ MockMobileOperatorInfo::MockMobileOperatorInfo(EventDispatcher* dispatcher,
     : MobileOperatorInfo(dispatcher, info_owner) {
   ON_CALL(*this, IsMobileNetworkOperatorKnown()).WillByDefault(Return(false));
   ON_CALL(*this, mccmnc()).WillByDefault(ReturnRef(empty_mccmnc_));
+  ON_CALL(*this, apn_list()).WillByDefault(ReturnRef(empty_apn_list_));
   ON_CALL(*this, olp_list()).WillByDefault(ReturnRef(empty_olp_list_));
   ON_CALL(*this, activation_code())
       .WillByDefault(ReturnRef(empty_activation_code_));

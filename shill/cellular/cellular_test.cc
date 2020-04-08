@@ -2195,6 +2195,45 @@ TEST_P(CellularTest, GetGeolocationObjects) {
   }
 }
 
+// Helper class because gmock doesn't play nicely with unique_ptr
+class FakeMobileOperatorInfo : public MockMobileOperatorInfo {
+ public:
+  FakeMobileOperatorInfo(
+      EventDispatcher* dispatcher,
+      std::vector<std::unique_ptr<MobileOperatorInfo::MobileAPN>> apn_list)
+      : MockMobileOperatorInfo(dispatcher, "Fake"),
+        apn_list_(std::move(apn_list)) {}
+
+  const std::vector<std::unique_ptr<MobileOperatorInfo::MobileAPN>>& apn_list()
+      const override {
+    return apn_list_;
+  }
+
+ private:
+  std::vector<std::unique_ptr<MobileOperatorInfo::MobileAPN>> apn_list_;
+};
+
+TEST_P(CellularTest, SimpleApnList) {
+  constexpr char kApn[] = "apn";
+  constexpr char kUsername[] = "foo";
+  constexpr char kPassword[] = "bar";
+
+  std::vector<std::unique_ptr<MobileOperatorInfo::MobileAPN>> apn_list;
+  auto mobile_apn = std::make_unique<MobileOperatorInfo::MobileAPN>();
+  mobile_apn->apn = kApn;
+  mobile_apn->username = kUsername;
+  mobile_apn->password = kPassword;
+  apn_list.emplace_back(std::move(mobile_apn));
+  FakeMobileOperatorInfo info(&dispatcher_, std::move(apn_list));
+
+  device_->UpdateHomeProvider(&info);
+  auto apn_list_prop = device_->apn_list();
+  CHECK_EQ(1U, apn_list_prop.size());
+  CHECK_EQ(kApn, apn_list_prop[0][kApnProperty]);
+  CHECK_EQ(kUsername, apn_list_prop[0][kApnUsernameProperty]);
+  CHECK_EQ(kPassword, apn_list_prop[0][kApnPasswordProperty]);
+}
+
 INSTANTIATE_TEST_CASE_P(CellularTest,
                         CellularTest,
                         testing::Values(Cellular::kType3gpp,
