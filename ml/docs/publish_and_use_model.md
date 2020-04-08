@@ -57,7 +57,7 @@ the [section below](#two-methods-why).
 
 ## Method #1: Install a model inside rootfs {#method1}
 
-### Step 1. Upload the model to the ChromeOS file mirror
+### Step 1. Upload the model to the ChromeOS file mirror {#upload-model}
 
 Once you have a model ready that you want to publish, upload it to
 https://storage.googleapis.com/chromeos-localmirror/distfiles/.
@@ -92,7 +92,7 @@ Files in the ChromeOS file mirror should never be deleted. You simply add newer
 models as you need them, but leave the previous ones in the mirror, even if you
 don't plan to use them ever again.
 
-### Step 2. Write an ebuild to install the model into rootfs
+### Step 2. Write an ebuild to install the model into rootfs {#add-model-to-ebuild}
 
 Once your model is uploaded to the ChromeOS file mirror, the next step is to
 create a CL.
@@ -102,8 +102,8 @@ model(s) into rootfs.
 
 The ebuild is located at
 `/chromiumos/overlays/chromiumos-overlay/chromeos-base/ml/ml-9999.ebuild`.
-Simply add your models in the `MODELS` variable: they are installed in the
-`src_install()` function in the same file.
+Simply add your models in the `MODELS_TO_INSTALL` variable: they are installed
+in the `src_install()` function in the same file.
 
 The install location in the ChromeOS system is `/opt/google/chrome/ml_models`.
 
@@ -194,6 +194,28 @@ Following steps are required to use a downloadable model:
   - Notice: you may need to conduct experiments for different versions of your
     models, the component installer can help with that. Please see [this
     doc][version-control-doc] for more details (available to Googlers only).
+
+### Unit test for downloadable models
+
+To make sure ml-service can load the downloadable models successfully and do
+inference with them as intended, unit tests for them are necessary.
+
+1.  Upload the model file to ChromeOS file mirror as in [step 1 of method 1](
+    #upload-model). The file name convention for downloadable models is:
+
+    ```
+    mlservice-model-<feature_name_and_variant>-<timestamp_and_version>-downloadable.<ext>
+    ```
+
+    e.g. `mlservice-model-smart_dim-20200206-v5-downloadable.tflite`
+2.  Add the model URI to `DOWNLOADABLE_MODELS` variable of [ML Service ebuild],
+    similar to [step 2 of method 1](#add-model-to-ebuild).
+    Models in `DOWNLOADABLE_MODELS` will only be downloaded and copied to
+    `${T}/ml_models`, a temporary path in chroot, in `platform_pkg_test`
+    function for use in unit test.
+3.  Add a basic [loading & inference test] for the model.
+4.  Merge the unit test back to any previous release branch that you intend
+    to Finch-deploy the model to.
 
 ## Which method to use and why {#two-methods-why}
 
