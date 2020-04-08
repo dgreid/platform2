@@ -88,7 +88,7 @@ class HomeDirs {
                     UserOldestActivityTimestampCache *cache);
 
   // Checks if it is possible to free up disk space
-  virtual bool IsFreableDiskSpaceAvaible();
+  virtual bool IsFreeableDiskSpaceAvailable();
 
   // Frees disk space for unused cryptohomes. If the available disk space is
   // below |kFreeSpaceThresholdToTriggerCleanup|, attempts to free space until

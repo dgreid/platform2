@@ -2506,9 +2506,9 @@ void UserDataAuth::LowDiskCallback() {
   // We shouldn't repeat cleanups on every minute if the disk space
   // stays below the threshold. Trigger it only if there was no notification
   // previously or if enterprise owned and free space can be reclaimed.
-  const bool early_cleanup_needed =
-      low_disk_space_signal_emitted && (!low_disk_space_signal_was_emitted_ ||
-                                        homedirs_->IsFreableDiskSpaceAvaible());
+  const bool early_cleanup_needed = low_disk_space_signal_emitted &&
+                                    (!low_disk_space_signal_was_emitted_ ||
+                                     homedirs_->IsFreeableDiskSpaceAvailable());
 
   if (time_for_auto_cleanup || early_cleanup_needed) {
     DoAutoCleanup();

@@ -132,7 +132,7 @@ bool HomeDirs::Init(Platform* platform, Crypto* crypto,
   return GetSystemSalt(NULL);
 }
 
-bool HomeDirs::IsFreableDiskSpaceAvaible() {
+bool HomeDirs::IsFreeableDiskSpaceAvailable() {
   if (!enterprise_owned_)
     return false;
 

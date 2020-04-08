@@ -372,7 +372,7 @@ TEST_P(HomeDirsTest, GetTrackedDirectoryForDirCrypto) {
       temp_dir.GetPath(), FilePath("aaa/zzz"), &result));
 }
 
-TEST_P(HomeDirsTest, IsFreableDiskSpaceAvaible) {
+TEST_P(HomeDirsTest, IsFreeableDiskSpaceAvailable) {
   EXPECT_CALL(platform_, EnumerateDirectoryEntries(kTestRoot, false, _))
       .WillRepeatedly(DoAll(SetArgPointee<2>(homedir_paths_), Return(true)));
 
@@ -395,14 +395,14 @@ TEST_P(HomeDirsTest, IsFreableDiskSpaceAvaible) {
       .WillOnce(Return(is_mounted2));
 
   homedirs_.set_enterprise_owned(true);
-  EXPECT_TRUE(homedirs_.IsFreableDiskSpaceAvaible());
+  EXPECT_TRUE(homedirs_.IsFreeableDiskSpaceAvailable());
 
   // Does not check dirs as it is not enterprise enrolled
   homedirs_.set_enterprise_owned(false);
-  EXPECT_FALSE(homedirs_.IsFreableDiskSpaceAvaible());
+  EXPECT_FALSE(homedirs_.IsFreeableDiskSpaceAvailable());
 
   homedirs_.set_enterprise_owned(true);
-  EXPECT_FALSE(homedirs_.IsFreableDiskSpaceAvaible());
+  EXPECT_FALSE(homedirs_.IsFreeableDiskSpaceAvailable());
 }
 
 TEST_P(HomeDirsTest, GetUnmountedAndroidDataCount) {
