@@ -42,9 +42,11 @@ TEST(TimezoneUtils, TestGetTimezone) {
                                  .AppendASCII(kPosixTimezoneFile);
   ASSERT_TRUE(base::CopyFile(test_file, timezone_file_path));
 
-  auto timezone_info = FetchTimezoneInfo(root.GetPath());
-  ASSERT_EQ(timezone_info->posix, kPosixTimezoneOutput);
-  ASSERT_EQ(timezone_info->region, kTimezoneRegion);
+  auto timezone_result = FetchTimezoneInfo(root.GetPath());
+  ASSERT_TRUE(timezone_result->is_timezone_info());
+  const auto& timezone_info = timezone_result->get_timezone_info();
+  EXPECT_EQ(timezone_info->posix, kPosixTimezoneOutput);
+  EXPECT_EQ(timezone_info->region, kTimezoneRegion);
 }
 
 // Test that the function fails gracefully if the files do not exist.
@@ -52,9 +54,10 @@ TEST(TimezoneUtils, TestGetTimezoneFailure) {
   base::ScopedTempDir root;
   ASSERT_TRUE(root.CreateUniqueTempDir());
 
-  auto timezone_info = FetchTimezoneInfo(root.GetPath());
-  ASSERT_EQ(timezone_info->posix, "");
-  ASSERT_EQ(timezone_info->region, "");
+  auto timezone_result = FetchTimezoneInfo(root.GetPath());
+  ASSERT_TRUE(timezone_result->is_error());
+  EXPECT_EQ(timezone_result->get_error()->type,
+            chromeos::cros_healthd::mojom::ErrorType::kFileReadError);
 }
 
 }  // namespace

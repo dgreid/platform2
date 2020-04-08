@@ -215,7 +215,7 @@ void CrosHealthdMojoService::ProbeTelemetryInfo(
         break;
       }
       case ProbeCategoryEnum::kTimezone: {
-        telemetry_info.timezone_info = FetchTimezoneInfo(base::FilePath("/"));
+        telemetry_info.timezone_result = FetchTimezoneInfo(base::FilePath("/"));
         break;
       }
       case ProbeCategoryEnum::kMemory: {

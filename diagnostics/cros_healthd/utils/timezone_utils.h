@@ -11,7 +11,9 @@
 
 namespace diagnostics {
 
-chromeos::cros_healthd::mojom::TimezoneInfoPtr FetchTimezoneInfo(
+// Returns a structure with either the device's timezone data or the error that
+// occurred fetching the information.
+chromeos::cros_healthd::mojom::TimezoneResultPtr FetchTimezoneInfo(
     const base::FilePath& root_dir);
 
 }  // namespace diagnostics

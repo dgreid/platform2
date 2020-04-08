@@ -17,6 +17,7 @@
 #include <base/strings/string_util.h>
 
 #include "diagnostics/common/file_utils.h"
+#include "diagnostics/cros_healthd/utils/error_utils.h"
 
 namespace diagnostics {
 
@@ -32,13 +33,6 @@ constexpr char kRelativeCpuinfoPath[] = "proc/cpuinfo";
 constexpr char kModelNameKey[] = "model name";
 constexpr char kPhysicalIdKey[] = "physical id";
 constexpr char kProcessorIdKey[] = "processor";
-
-mojo_ipc::ProbeErrorPtr CreateAndLogError(mojo_ipc::ErrorType type,
-                                          const std::string& msg) {
-  auto error = mojo_ipc::ProbeError::New(type, msg);
-  LOG(ERROR) << msg;
-  return error;
-}
 
 // Uses uname to obtain the CPU architecture.
 mojo_ipc::CpuArchitectureEnum GetArchitecture() {
@@ -94,9 +88,9 @@ mojo_ipc::CpuResultPtr GetCpuInfoFromProcessorInfo(
     std::string physical_id;
     std::string model_name;
     if (!ParseProcessor(processor, &processor_id, &physical_id, &model_name)) {
-      return mojo_ipc::CpuResult::NewError(
-          CreateAndLogError(mojo_ipc::ErrorType::kParseError,
-                            "Unable to parse processor string: " + processor));
+      return mojo_ipc::CpuResult::NewError(CreateAndLogProbeError(
+          mojo_ipc::ErrorType::kParseError,
+          "Unable to parse processor string: " + processor));
     }
     if (physical_ids.find(physical_id) != physical_ids.end())
       continue;
@@ -106,10 +100,10 @@ mojo_ipc::CpuResultPtr GetCpuInfoFromProcessorInfo(
     auto cpu_dir = root_dir.Append(kRelativeCpufreqPolicyPath + processor_id);
     if (!ReadInteger(cpu_dir, kCpuinfoMaxFreqFile, &base::StringToUint,
                      &max_clock_speed_khz)) {
-      return mojo_ipc::CpuResult::NewError(
-          CreateAndLogError(mojo_ipc::ErrorType::kFileReadError,
-                            "Unable to read max CPU frequency file: " +
-                                cpu_dir.Append(kCpuinfoMaxFreqFile).value()));
+      return mojo_ipc::CpuResult::NewError(CreateAndLogProbeError(
+          mojo_ipc::ErrorType::kFileReadError,
+          "Unable to read max CPU frequency file: " +
+              cpu_dir.Append(kCpuinfoMaxFreqFile).value()));
     }
 
     cpu_info.push_back(
@@ -125,7 +119,7 @@ mojo_ipc::CpuResultPtr FetchCpuInfo(const base::FilePath& root_dir) {
   std::string contents;
   auto cpu_info_file = root_dir.Append(kRelativeCpuinfoPath);
   if (!ReadFileToString(cpu_info_file, &contents)) {
-    return mojo_ipc::CpuResult::NewError(CreateAndLogError(
+    return mojo_ipc::CpuResult::NewError(CreateAndLogProbeError(
         mojo_ipc::ErrorType::kFileReadError,
         "Unable to read CPU info file: " + cpu_info_file.value()));
   }

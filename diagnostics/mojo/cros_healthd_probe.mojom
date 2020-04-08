@@ -131,6 +131,15 @@ struct CpuInfo {
   uint32 max_clock_speed_khz;
 };
 
+// Timezone probe result. Can either be populated with the TimezoneInfo or an
+// error retrieving the information.
+union TimezoneResult {
+  // Valid TimezoneInfo.
+  TimezoneInfo timezone_info;
+  // The error that occurred attempting to retrieve the TimezoneInfo.
+  ProbeError error;
+};
+
 // Timezone information.
 struct TimezoneInfo {
   // The timezone of the device in POSIX standard.
@@ -191,7 +200,7 @@ struct TelemetryInfo {
   CpuResult? cpu_result;
   // Information about the device's timezone. Only present when kTimezone was
   // included in the categories input to ProbeTelemetryInfo.
-  TimezoneInfo? timezone_info;
+  TimezoneResult? timezone_result;
   // Information about the system's memory. Only present when kMemory was
   // included in the categories input to ProbeTelemetryInfo.
   MemoryInfo? memory_info;

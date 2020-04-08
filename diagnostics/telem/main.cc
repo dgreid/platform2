@@ -142,9 +142,13 @@ void DisplayFanInfo(
 }
 
 void DisplayTimezoneInfo(
-    const chromeos::cros_healthd::mojom::TimezoneInfoPtr& timezone) {
-  DCHECK(!timezone.is_null());
+    const chromeos::cros_healthd::mojom::TimezoneResultPtr& timezone_result) {
+  if (timezone_result->is_error()) {
+    DisplayError(timezone_result->get_error());
+    return;
+  }
 
+  const auto& timezone = timezone_result->get_timezone_info();
   // Replace commas in POSIX timezone before printing CSVs.
   std::string csv_posix_timezone;
   base::ReplaceChars(timezone->posix, ",", " ", &csv_posix_timezone);
@@ -192,9 +196,9 @@ void DisplayTelemetryInfo(
   if (cpu_result)
     DisplayCpuInfo(cpu_result);
 
-  const auto& timezone = info->timezone_info;
-  if (timezone)
-    DisplayTimezoneInfo(timezone);
+  const auto& timezone_result = info->timezone_result;
+  if (timezone_result)
+    DisplayTimezoneInfo(timezone_result);
 
   const auto& memory = info->memory_info;
   if (!memory.is_null())
