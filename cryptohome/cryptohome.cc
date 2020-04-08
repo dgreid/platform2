@@ -2452,17 +2452,14 @@ int main(int argc, char **argv) {
              switches::kAttrNameSwitch);
       return 1;
     }
+    const gboolean is_user_specific = !account_id.empty();
     ClientLoop client_loop;
     client_loop.Initialize(&proxy);
     gint async_id = -1;
     brillo::glib::ScopedError error;
     if (!org_chromium_CryptohomeInterface_tpm_attestation_register_key(
-          proxy.gproxy(),
-          true,
-          account_id.c_str(),
-          key_name.c_str(),
-          &async_id,
-          &brillo::Resetter(&error).lvalue())) {
+            proxy.gproxy(), is_user_specific, account_id.c_str(),
+            key_name.c_str(), &async_id, &brillo::Resetter(&error).lvalue())) {
       printf("TpmAttestationRegisterKey call failed: %s.\n", error->message);
       return 1;
     } else {
