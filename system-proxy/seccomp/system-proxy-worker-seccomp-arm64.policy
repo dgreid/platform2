@@ -23,7 +23,7 @@ getrlimit: 1
 ioctl: arg1 == TCGETS || arg1 == SIOCGIFFLAGS || arg1 == SIOCSIFFLAGS
 _llseek: 1
 getpid: 1
-socket: arg0 == AF_UNIX || arg0 == AF_INET
+socket: arg0 == AF_UNIX || arg0 == AF_INET || arg0 == AF_INET6
 connect: 1
 send: 1
 exit_group: 1
@@ -46,3 +46,7 @@ epoll_ctl: 1
 geteuid: 1
 listen: 1
 bind: 1
+accept: 1
+recvfrom: 1
+sendto:1
+getsockopt: arg1 == SOL_SOCKET

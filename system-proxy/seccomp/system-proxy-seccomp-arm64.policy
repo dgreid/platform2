@@ -28,7 +28,7 @@ brk: 1
 getpid: 1
 epoll_ctl: 1
 rt_sigaction: 1
-socket: arg0 == AF_UNIX || arg0 == AF_INET
+socket: arg0 == AF_UNIX || arg0 == AF_INET || arg0 == AF_INET6
 connect: 1
 pipe2: 1
 fcntl: 1
@@ -70,3 +70,7 @@ tgkill: 1
 kill: arg1 == SIGTERM
 bind: 1
 listen: 1
+accept: 1
+recvfrom: 1
+sendto:1
+getsockopt: arg1 == SOL_SOCKET
