@@ -1072,7 +1072,7 @@ JpegNodeImp::onProcessFrame(
             nullptr;
         if (OK != getStreamInfo(mpInYuv_thumbnail->getStreamId(), pFrame,
                                 &pThumbnailStreamInfo)) {
-          MY_LOGW("getThumbnailStreamInfo fail, hasThumbnail :%d",
+          MY_LOGI("getThumbnailStreamInfo fail, hasThumbnail :%d",
                   mpEncodeFrame->mbHasThumbnail);
           mpEncodeFrame->mbHasThumbnail = MFALSE;
         } else {

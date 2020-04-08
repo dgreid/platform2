@@ -263,11 +263,19 @@ NSCam::v3::Imp::AppStreamMgr::checkStream(camera3_stream* stream) const {
       stream->crop_rotate_scale_degrees != CAMERA3_STREAM_ROTATION_0) {
     stream->rotation = stream->crop_rotate_scale_degrees;
   }
-  if (HAL_DATASPACE_DEPTH == stream->data_space) {
-    MY_LOGE("Not support depth dataspace:0x%x!", stream->data_space);
-    return -EINVAL;
-  } else if (HAL_DATASPACE_UNKNOWN != stream->data_space) {
-    MY_LOGW("framework stream dataspace:0x%x", stream->data_space);
+  switch (stream->data_space) {
+    case HAL_DATASPACE_BT601_525:
+    case HAL_DATASPACE_BT601_625:
+    case HAL_DATASPACE_BT709:
+    case HAL_DATASPACE_JFIF:
+    case HAL_DATASPACE_UNKNOWN:
+      MY_LOGI("framework stream dataspace:0x%x", stream->data_space);
+      break;
+    case HAL_DATASPACE_DEPTH:
+      MY_LOGE("Not support depth dataspace:0x%x!", stream->data_space);
+      return -EINVAL;
+    default:
+      MY_LOGW("framework stream dataspace:0x%x", stream->data_space);
   }
   //
   if (CAMERA3_STREAM_ROTATION_0 != stream->rotation) {

@@ -103,7 +103,7 @@ BaseImageBufferHeap::onCreate(MSize const& imgSize,
     return MFALSE;
   }
   if (CC_UNLIKELY(!imgSize)) {
-    CAM_LOGE("Unvalid Image Size(%dx%d)", imgSize.w, imgSize.h);
+    CAM_LOGE("Invalid Image Size(%dx%d)", imgSize.w, imgSize.h);
     return MFALSE;
   }
   //

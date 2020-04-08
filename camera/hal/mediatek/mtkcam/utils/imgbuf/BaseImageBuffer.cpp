@@ -181,16 +181,6 @@ BaseImageBuffer::onCreate() {
                                                            getImgSize().h);
         MRect roi(MPoint(planeStartXInPixels, planeStartYInPixels),
                   MSize(imgWidthInPixels, imgHeightInPixels));
-        MY_LOGW_IF(mspImgBufHeap->getLogCond() &&
-                       mspImgBufHeap->getBufStridesInBytes(i) !=
-                           (MUINT32)PIXEL2BYTE(getPlaneBitsPerPixel(i),
-                                               planeStridesInPixels),
-                   "%s@ Bad stride at %zu-th plane: heapStridesInBytes(%zu) -> "
-                   "(%f)(pixels) -> StridesInBytes(%zu)",
-                   getMagicName(), i, mspImgBufHeap->getBufStridesInBytes(i),
-                   (MFLOAT)mspImgBufHeap->getBufStridesInBytes(i) * 8 /
-                       getPlaneBitsPerPixel(i),
-                   PIXEL2BYTE(getPlaneBitsPerPixel(i), planeStridesInPixels));
         if ((size_t)roi.leftTop().x + (size_t)roi.width() >
                 planeStridesInPixels ||
             (size_t)roi.leftTop().y + (size_t)roi.height() >

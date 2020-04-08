@@ -1821,21 +1821,24 @@ StreamConfig::acquireHalStreamBuffer(
           "%s StreamId:%#" PRIx64 " %dx%d %p %p", pStreamInfo->getStreamName(),
           pStreamInfo->getStreamId(), pStreamInfo->getImgSize().w,
           pStreamInfo->getImgSize().h, pStreamInfo.get(), item->pInfo.get());
-      IImageStreamInfo::BufPlanes_t const& bufPlanes =
-          pStreamInfo->getBufPlanes();
-      size_t bufStridesInBytes[3] = {0};
-      size_t bufBoundaryInBytes[3] = {0};
-      for (size_t i = 0; i < bufPlanes.size(); i++) {
-        bufStridesInBytes[i] = bufPlanes[i].rowStrideInBytes;
-      }
-      IImageBufferAllocator::ImgParam const imgParam(
-          pStreamInfo->getImgFormat(), pStreamInfo->getImgSize(),
-          bufStridesInBytes, bufBoundaryInBytes, bufPlanes.size());
-      //
-      *rpStreamBuffer = HalImageStreamBufferAllocatorT(pStreamInfo, imgParam)();
-      err = rpStreamBuffer->get() ? NSCam::OK : UNKNOWN_ERROR;
-      if (err != NSCam::OK) {
-        MY_LOGE("Fail to allocate - %s", str.c_str());
+      if (!!pStreamInfo->getImgSize()) {
+        IImageStreamInfo::BufPlanes_t const& bufPlanes =
+            pStreamInfo->getBufPlanes();
+        size_t bufStridesInBytes[3] = {0};
+        size_t bufBoundaryInBytes[3] = {0};
+        for (size_t i = 0; i < bufPlanes.size(); i++) {
+          bufStridesInBytes[i] = bufPlanes[i].rowStrideInBytes;
+        }
+        IImageBufferAllocator::ImgParam const imgParam(
+            pStreamInfo->getImgFormat(), pStreamInfo->getImgSize(),
+            bufStridesInBytes, bufBoundaryInBytes, bufPlanes.size());
+        //
+        *rpStreamBuffer =
+            HalImageStreamBufferAllocatorT(pStreamInfo, imgParam)();
+        err = rpStreamBuffer->get() ? NSCam::OK : UNKNOWN_ERROR;
+        if (err != NSCam::OK) {
+          MY_LOGE("Fail to allocate - %s", str.c_str());
+        }
       }
     } break;
     default:

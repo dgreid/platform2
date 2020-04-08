@@ -160,11 +160,11 @@ int MetadataProvider::getDeviceFacing() const {
  ******************************************************************************/
 int MetadataProvider::getDeviceWantedOrientation() const {
   pthread_rwlock_rdlock(&mRWLock);
-  if (mpHALMetadata.entryFor(MTK_SENSOR_INFO_WANTED_ORIENTATION).isEmpty()) {
+  if (mpHALMetadata.entryFor(MTK_SENSOR_INFO_ORIENTATION).isEmpty()) {
     return mInfo.getDeviceId() == 0 ? 90 : 270;
   }
 
-  int ret = mpHALMetadata.entryFor(MTK_SENSOR_INFO_WANTED_ORIENTATION)
+  int ret = mpHALMetadata.entryFor(MTK_SENSOR_INFO_ORIENTATION)
                 .itemAt(0, Type2Type<MINT32>());
   pthread_rwlock_unlock(&mRWLock);
   return ret;

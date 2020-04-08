@@ -643,7 +643,7 @@ halFDVT::halFDUninit() {
   std::lock_guard<std::mutex> _l(gInitLock);
 
   if (!mInited) {
-    MY_LOGW("FD HAL Object is already uninited...");
+    MY_LOGI("FD HAL Object is already uninited...");
     return MHAL_NO_ERROR;
   }
 

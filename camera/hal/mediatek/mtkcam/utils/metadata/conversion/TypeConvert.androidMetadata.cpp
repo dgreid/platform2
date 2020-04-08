@@ -18,9 +18,9 @@
 //
 #include "MyUtils.h"
 #include <MetadataConverter.h>
+#include <mtkcam/utils/metadata/client/mtk_metadata_tag.h>
 #include <mtkcam/utils/metadata/IMetadataTagSet.h>
 #include <mtkcam/utils/metadata/mtk_metadata_types.h>
-#include <mtkcam/utils/metadata/client/mtk_metadata_tag.h>
 #include <system/camera_metadata.h>
 #include <vector>
 
@@ -150,9 +150,10 @@ MetadataConverter::convert(const IMetadata& rMetadata,
 #endif
 
     if (mtk_tag == MTK_SENSOR_SYNC_TIMESTAMP) {
-        MY_LOGI("find the tag MTK_SENSOR_SYNC_TIMESTAMP: 0x%x,android_tag:0x%x",MTK_SENSOR_SYNC_TIMESTAMP,android_tag);
+      CAM_LOGI("find the tag MTK_SENSOR_SYNC_TIMESTAMP: 0x%x,android_tag:0x%x",
+               MTK_SENSOR_SYNC_TIMESTAMP, android_tag);
     }
-    if (android_tag == IMetadata::IEntry::BAD_TAG) {
+    else if (android_tag == IMetadata::IEntry::BAD_TAG) {
       CAM_LOGW("%s: Tag 0x%x not found in Android Metadata", __FUNCTION__,
                mtk_tag);
       continue;

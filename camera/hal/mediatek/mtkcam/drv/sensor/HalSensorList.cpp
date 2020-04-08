@@ -1473,11 +1473,6 @@ HalSensorList::buildStaticInfo(Info const& rInfo, IMetadata* pMetadata) const {
       entryA.push_back(sensor_info.wf_sensor.orientation, Type2Type<MINT32>());
       rMetadata.update(MTK_SENSOR_INFO_ORIENTATION, entryA);
 
-      rMetadata.remove(MTK_SENSOR_INFO_WANTED_ORIENTATION);
-      IMetadata::IEntry entryB(MTK_SENSOR_INFO_WANTED_ORIENTATION);
-      entryB.push_back(sensor_info.wf_sensor.orientation, Type2Type<MINT32>());
-      rMetadata.update(MTK_SENSOR_INFO_WANTED_ORIENTATION, entryB);
-
       rMetadata.remove(MTK_SENSOR_INFO_FACING);
       IMetadata::IEntry entryC(MTK_SENSOR_INFO_FACING);
       entryC.push_back(MTK_LENS_FACING_BACK, Type2Type<MUINT8>());
@@ -1487,11 +1482,6 @@ HalSensorList::buildStaticInfo(Info const& rInfo, IMetadata* pMetadata) const {
       IMetadata::IEntry entryA(MTK_SENSOR_INFO_ORIENTATION);
       entryA.push_back(sensor_info.uf_sensor.orientation, Type2Type<MINT32>());
       rMetadata.update(MTK_SENSOR_INFO_ORIENTATION, entryA);
-
-      rMetadata.remove(MTK_SENSOR_INFO_WANTED_ORIENTATION);
-      IMetadata::IEntry entryB(MTK_SENSOR_INFO_WANTED_ORIENTATION);
-      entryB.push_back(sensor_info.uf_sensor.orientation, Type2Type<MINT32>());
-      rMetadata.update(MTK_SENSOR_INFO_WANTED_ORIENTATION, entryB);
 
       rMetadata.remove(MTK_SENSOR_INFO_FACING);
       IMetadata::IEntry entryC(MTK_SENSOR_INFO_FACING);

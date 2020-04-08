@@ -158,11 +158,6 @@ status_t MetadataProvider::constructStaticMetadata(
       entryA.push_back(sensor_info.wf_sensor.orientation, Type2Type<MINT32>());
       mtkMetadata->update(MTK_SENSOR_INFO_ORIENTATION, entryA);
 
-      mtkMetadata->remove(MTK_SENSOR_INFO_WANTED_ORIENTATION);
-      IMetadata::IEntry entryB(MTK_SENSOR_INFO_WANTED_ORIENTATION);
-      entryB.push_back(sensor_info.wf_sensor.orientation, Type2Type<MINT32>());
-      mtkMetadata->update(MTK_SENSOR_INFO_WANTED_ORIENTATION, entryB);
-
       mtkMetadata->remove(MTK_SENSOR_INFO_FACING);
       IMetadata::IEntry entryC(MTK_SENSOR_INFO_FACING);
       entryC.push_back(MTK_LENS_FACING_BACK, Type2Type<MUINT8>());
@@ -175,11 +170,6 @@ status_t MetadataProvider::constructStaticMetadata(
       IMetadata::IEntry entryA(MTK_SENSOR_INFO_ORIENTATION);
       entryA.push_back(sensor_info.uf_sensor.orientation, Type2Type<MINT32>());
       mtkMetadata->update(MTK_SENSOR_INFO_ORIENTATION, entryA);
-
-      mtkMetadata->remove(MTK_SENSOR_INFO_WANTED_ORIENTATION);
-      IMetadata::IEntry entryB(MTK_SENSOR_INFO_WANTED_ORIENTATION);
-      entryB.push_back(sensor_info.uf_sensor.orientation, Type2Type<MINT32>());
-      mtkMetadata->update(MTK_SENSOR_INFO_WANTED_ORIENTATION, entryB);
 
       mtkMetadata->remove(MTK_SENSOR_INFO_FACING);
       IMetadata::IEntry entryC(MTK_SENSOR_INFO_FACING);

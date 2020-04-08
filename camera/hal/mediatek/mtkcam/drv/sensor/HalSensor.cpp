@@ -950,6 +950,7 @@ MINT HalSensor::sendCommand(MUINT indexDual,
     case SENSOR_CMD_GET_SENSOR_PDAF_CAPACITY:
     case SENSOR_CMD_GET_VERTICAL_BLANKING:
     case SENSOR_CMD_SET_FLICKER_FRAME_RATE:
+    case SENSOR_CMD_SET_OB_LOCK:
       CAM_LOGD("TODO sendCommand(0x%x)", cmd);
       ret = MFALSE;
       break;
