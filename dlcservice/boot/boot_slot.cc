@@ -12,6 +12,7 @@
 #include <base/strings/string_util.h>
 
 #include "dlcservice/boot/boot_device.h"
+#include "dlcservice/utils.h"
 
 using std::string;
 using std::unique_ptr;
@@ -113,6 +114,11 @@ bool BootSlot::SplitPartitionName(string partition_name,
   }
   LOG(ERROR) << "Unable to parse partition device name: " << partition_name;
   return false;
+}
+
+// static
+string BootSlot::ToString(BootSlot::Slot slot) {
+  return slot == BootSlot::Slot::A ? kDlcDirAName : kDlcDirBName;
 }
 
 }  // namespace dlcservice

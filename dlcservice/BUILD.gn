@@ -80,6 +80,7 @@ static_library("libdlcservice") {
     "dlc_manager.cc",
     "dlc_service.cc",
     "error.cc",
+    "prefs.cc",
     "system_state.cc",
   ]
   deps = [
@@ -134,6 +135,7 @@ if (use.test) {
       "boot/boot_slot_test.cc",
       "dbus_adaptors/dbus_adaptor_test.cc",
       "dlc_service_test.cc",
+      "prefs_test.cc",
       "system_state_test.cc",
       "test_utils.cc",
       "utils_test.cc",

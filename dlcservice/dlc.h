@@ -37,6 +37,9 @@ class DlcBase {
   // object.
   bool Initialize();
 
+  // Returns the ID of the DLC.
+  DlcId GetId() const;
+
   // Returns the current state of the DLC.
   DlcState GetState() const;
 

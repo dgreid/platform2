@@ -33,6 +33,9 @@ class BootSlot {
   bool GetCurrentSlot(std::string* boot_disk_name_out,
                       BootSlot::Slot* current_slot_out) const;
 
+  // Returns the string representation of |Slot|.
+  static std::string ToString(Slot slot);
+
  private:
   FRIEND_TEST(BootSlotTest, SplitPartitionNameTest);
 

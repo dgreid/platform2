@@ -46,6 +46,10 @@ bool DlcBase::Initialize() {
   return true;
 }
 
+DlcId DlcBase::GetId() const {
+  return id_;
+}
+
 DlcState DlcBase::GetState() const {
   return state_;
 }
@@ -62,13 +66,12 @@ bool DlcBase::IsPreloadAllowed() const {
 }
 
 base::FilePath DlcBase::GetRoot() const {
-  return mount_point_.Append(kRootDirectoryInsideDlcModule);
+  return JoinPaths(mount_point_, kRootDirectoryInsideDlcModule);
 }
 
 FilePath DlcBase::GetImagePath(BootSlot::Slot slot) const {
-  return content_package_path_
-      .Append(slot == BootSlot::Slot::A ? kDlcDirAName : kDlcDirBName)
-      .Append(kDlcImageFileName);
+  return JoinPaths(content_package_path_, BootSlot::ToString(slot),
+                   kDlcImageFileName);
 }
 
 bool DlcBase::Create(ErrorPtr* err) {

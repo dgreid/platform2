@@ -158,9 +158,8 @@ FilePath GetDlcImagePath(const FilePath& dlc_module_root_path,
                          const string& id,
                          const string& package,
                          BootSlot::Slot slot) {
-  return JoinPaths(dlc_module_root_path, id, package)
-      .Append(slot == BootSlot::Slot::A ? kDlcDirAName : kDlcDirBName)
-      .Append(kDlcImageFileName);
+  return JoinPaths(dlc_module_root_path, id, package, BootSlot::ToString(slot),
+                   kDlcImageFileName);
 }
 
 // Extract details about a DLC module from its manifest file.
