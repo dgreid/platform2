@@ -85,6 +85,11 @@ constexpr size_t kMaxMetaFileSize = 1024 * 1024;
 constexpr char kTestModeSuccessful[] =
     "Test Mode: Logging success and exiting instead of actually uploading";
 
+// UMA metrics to track crash removal attempts and failures.
+constexpr char kUMAFailedCrashRemoval[] = "Crash.Sender.FailedCrashRemoval";
+constexpr char kUMAAttemptedCrashRemoval[] =
+    "Crash.Sender.AttemptedCrashRemoval";
+
 // Returns true if the given report kind is known.
 // TODO(satorux): Move collector constants to a common file.
 bool IsKnownKind(const std::string& kind) {
@@ -306,41 +311,6 @@ void SortReports(std::vector<MetaFile>* reports) {
             });
 }
 
-void RemoveReportFiles(const base::FilePath& meta_file, bool delete_crashes) {
-  if (meta_file.Extension() != ".meta") {
-    LOG(ERROR) << "Not a meta file: " << meta_file.value();
-    return;
-  }
-
-  const std::string pattern =
-      meta_file.BaseName().RemoveExtension().value() + ".*";
-
-  bool add_uploaded_file = !delete_crashes;
-  if (delete_crashes) {
-    base::FileEnumerator iter(meta_file.DirName(), false /* recursive */,
-                              base::FileEnumerator::FILES, pattern);
-    for (base::FilePath file = iter.Next(); !file.empty(); file = iter.Next()) {
-      if (!base::DeleteFile(file, false /* recursive */)) {
-        PLOG(WARNING) << "Failed to remove " << file.value();
-        // We may have failed to remove the file due to incorrect selinux config
-        // on the directory. However, we may still be able to add files to it,
-        // so mark the crash as uploaded to prevent uploading it again.
-        // See https://crbug.com/1060019.
-        if (file.Extension() == ".meta") {
-          add_uploaded_file = true;
-        }
-      }
-    }
-  }
-  if (add_uploaded_file) {
-    base::File f(meta_file.ReplaceExtension(kAlreadyUploadedExt),
-                 base::File::FLAG_CREATE | base::File::FLAG_WRITE);
-    if (!f.IsValid()) {
-      LOG(ERROR) << "Failed to mark crash as uploaded";
-    }
-  }
-}
-
 std::vector<base::FilePath> GetMetaFiles(const base::FilePath& crash_dir) {
   std::vector<base::FilePath> meta_files;
   if (!base::DirectoryExists(crash_dir)) {
@@ -483,7 +453,7 @@ bool IsBelowRate(const base::FilePath& timestamps_dir,
       current_bytes += previous_send.size();
     } else {
       if (!base::DeleteFile(file, false /* recursive */))
-        PLOG(WARNING) << "Failed to remove " << file.value();
+        PLOG(WARNING) << "Failed to remove old report " << file.value();
     }
   }
   LOG(INFO) << "Current send rate: " << current_rate << " sends and "
@@ -1075,6 +1045,48 @@ std::unique_ptr<brillo::http::FormData> Sender::CreateCrashFormData(
     *product_name_out = product;
 
   return form_data;
+}
+
+void Sender::RemoveReportFiles(const base::FilePath& meta_file,
+                               bool delete_crashes) {
+  if (meta_file.Extension() != ".meta") {
+    LOG(ERROR) << "Not a meta file: " << meta_file.value();
+    return;
+  }
+
+  const std::string pattern =
+      meta_file.BaseName().RemoveExtension().value() + ".*";
+
+  bool add_uploaded_file = !delete_crashes;
+  if (delete_crashes) {
+    if (!metrics_lib_->SendCrosEventToUMA(kUMAAttemptedCrashRemoval)) {
+      LOG(WARNING) << "Failed to record crash removal attempt in UMA";
+    }
+    base::FileEnumerator iter(meta_file.DirName(), false /* recursive */,
+                              base::FileEnumerator::FILES, pattern);
+    for (base::FilePath file = iter.Next(); !file.empty(); file = iter.Next()) {
+      if (!base::DeleteFile(file, false /* recursive */)) {
+        PLOG(WARNING) << "Failed to remove " << file.value();
+        // We may have failed to remove the file due to incorrect selinux config
+        // on the directory. However, we may still be able to add files to it,
+        // so mark the crash as uploaded to prevent uploading it again.
+        // See https://crbug.com/1060019.
+        if (file.Extension() == ".meta") {
+          if (!metrics_lib_->SendCrosEventToUMA(kUMAFailedCrashRemoval)) {
+            LOG(WARNING) << "Further, couldn't record UMA event for failure";
+          }
+          add_uploaded_file = true;
+        }
+      }
+    }
+  }
+  if (add_uploaded_file) {
+    base::File f(meta_file.ReplaceExtension(kAlreadyUploadedExt),
+                 base::File::FLAG_CREATE | base::File::FLAG_WRITE);
+    if (!f.IsValid()) {
+      LOG(ERROR) << "Failed to mark crash as uploaded";
+    }
+  }
 }
 
 std::unique_ptr<base::Value> Sender::CreateJsonEntity(

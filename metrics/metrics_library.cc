@@ -76,12 +76,14 @@ const char* kCrosEventNames[] = {
     "Crash.Collector.CollectionCount",          // 27
     "Cryptohome.DoubleMountRequest",            // 28
     "SessionManager.SafeModeEnabled",           // 29
+    "Crash.Sender.FailedCrashRemoval",          // 30
+    "Crash.Sender.AttemptedCrashRemoval",       // 31
 };
 
 // Update this to be last entry + 1 when you add new entries to the end. Checks
 // that no one tries to remove entries from the middle or misnumbers during a
 // merge conflict.
-static_assert(base::size(kCrosEventNames) == 30,
+static_assert(base::size(kCrosEventNames) == 32,
               "CrosEvent enums not lining up properly");
 
 }  // namespace

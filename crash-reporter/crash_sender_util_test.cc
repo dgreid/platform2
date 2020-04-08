@@ -1006,6 +1006,11 @@ TEST_F(CrashSenderUtilTest, RemoveAndPickCrashFiles) {
 }
 
 TEST_F(CrashSenderUtilTest, RemoveReportFiles) {
+  Sender::Options options;
+  Sender sender(std::move(metrics_lib_),
+                std::make_unique<test_util::AdvancingClock>(), options);
+  ASSERT_TRUE(sender.Init());
+
   const base::FilePath crash_directory =
       paths::Get(paths::kSystemCrashDirectory);
   ASSERT_TRUE(base::CreateDirectory(crash_directory));
@@ -1024,7 +1029,7 @@ TEST_F(CrashSenderUtilTest, RemoveReportFiles) {
   EXPECT_FALSE(base::PathExists(foo_uploaded));
 
   // This should create the alreadyuploaded file.
-  RemoveReportFiles(foo_meta, false);
+  sender.RemoveReportFiles(foo_meta, false);
   std::string contents;
   ASSERT_TRUE(base::ReadFileToString(foo_meta, &contents));
   EXPECT_TRUE(base::PathExists(foo_uploaded));
@@ -1033,7 +1038,7 @@ TEST_F(CrashSenderUtilTest, RemoveReportFiles) {
   base::File::Info uploaded_info;
   ASSERT_TRUE(base::GetFileInfo(foo_uploaded, &uploaded_info));
   // This should not update the alreadyuploaded file, since it already exists
-  RemoveReportFiles(foo_meta, false);
+  sender.RemoveReportFiles(foo_meta, false);
   ASSERT_TRUE(base::ReadFileToString(foo_meta, &contents));
   EXPECT_TRUE(base::PathExists(foo_uploaded));
   base::File::Info new_uploaded_info;
@@ -1042,15 +1047,47 @@ TEST_F(CrashSenderUtilTest, RemoveReportFiles) {
   EXPECT_EQ(new_uploaded_info.size, uploaded_info.size);
 
   // This should remove foo.*.
-  RemoveReportFiles(foo_meta, true);
+  sender.RemoveReportFiles(foo_meta, true);
   // This should do nothing because the suffix is not ".meta".
-  RemoveReportFiles(bar_log, true);
+  sender.RemoveReportFiles(bar_log, true);
 
   // Check what files were removed.
   EXPECT_FALSE(base::PathExists(foo_meta));
   EXPECT_FALSE(base::PathExists(foo_log));
   EXPECT_FALSE(base::PathExists(foo_dmp));
   EXPECT_TRUE(base::PathExists(bar_log));
+}
+
+TEST_F(CrashSenderUtilTest, FailRemoveReportFilesSendsMetric) {
+  Sender::Options options;
+  EXPECT_CALL(*metrics_lib_,
+              SendCrosEventToUMA("Crash.Sender.AttemptedCrashRemoval"))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*metrics_lib_,
+              SendCrosEventToUMA("Crash.Sender.FailedCrashRemoval"))
+      .WillOnce(Return(true));
+
+  Sender sender(std::move(metrics_lib_),
+                std::make_unique<test_util::AdvancingClock>(), options);
+  ASSERT_TRUE(sender.Init());
+
+  const base::FilePath crash_directory =
+      paths::Get(paths::kSystemCrashDirectory);
+  ASSERT_TRUE(base::CreateDirectory(crash_directory));
+
+  const base::FilePath foo_meta = crash_directory.Append("foo.meta");
+  ASSERT_TRUE(test_util::CreateFile(foo_meta, ""));
+  const base::FilePath foo_log = crash_directory.Append("foo.log");
+  ASSERT_TRUE(test_util::CreateFile(foo_log, ""));
+
+  // chmod the file so RemoveReportFiles fails
+  ASSERT_EQ(chmod(crash_directory.value().c_str(), 0500), 0);
+
+  sender.RemoveReportFiles(foo_meta, true);
+
+  // Clean up after ourselves
+  EXPECT_EQ(chmod(crash_directory.value().c_str(), 0700), 0);
+  EXPECT_TRUE(base::DeleteFile(crash_directory, true));
 }
 
 TEST_F(CrashSenderUtilTest, GetMetaFiles) {

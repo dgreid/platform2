@@ -20,6 +20,7 @@
 #include <brillo/http/http_form_data.h>
 #include <brillo/key_value_store.h>
 #include <brillo/osrelease_reader.h>
+#include <gtest/gtest_prod.h>  // for FRIEND_TEST
 #include <metrics/metrics_library.h>
 #include <session_manager/dbus-proxies.h>
 #include <shill/dbus-proxies.h>
@@ -125,10 +126,6 @@ void RemoveOrphanedCrashFiles(const base::FilePath& crash_dir);
 // Sort the vector of crash reports so that the report we want to send first
 // is at the front of the vector.
 void SortReports(std::vector<MetaFile>* reports);
-
-// Removes report files associated with the given meta file.
-// More specifically, if "foo.meta" is given, "foo.*" will be removed.
-void RemoveReportFiles(const base::FilePath& meta_file, bool delete_crashes);
 
 // Returns the list of meta data files (files with ".meta" suffix), sorted by
 // the timestamp in the old-to-new order.
@@ -312,6 +309,12 @@ class Sender {
 
  private:
   friend class IsNetworkOnlineTest;
+  FRIEND_TEST(CrashSenderUtilTest, RemoveReportFiles);
+  FRIEND_TEST(CrashSenderUtilTest, FailRemoveReportFilesSendsMetric);
+
+  // Removes report files associated with the given meta file.
+  // More specifically, if "foo.meta" is given, "foo.*" will be removed.
+  void RemoveReportFiles(const base::FilePath& meta_file, bool delete_crashes);
 
   // Creates a JSON entity with the required fields for uploads.log file.
   std::unique_ptr<base::Value> CreateJsonEntity(const std::string& report_id,
