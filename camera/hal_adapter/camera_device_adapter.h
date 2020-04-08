@@ -262,6 +262,10 @@ class CameraDeviceAdapter : public camera3_callback_ops_t {
   std::unordered_map<uint32_t, android::CameraMetadata>
       reprocess_result_metadata_;
 
+  // A pending reprocessing request task for HAL to run.
+  base::OnceClosure process_reprocess_request_callback_;
+  base::Lock process_reprocess_request_callback_lock_;
+
   // A mutex to guard |buffer_handles_|.
   base::Lock buffer_handles_lock_;
 

@@ -248,8 +248,20 @@ mojom::CameraMetadataPtr CameraDeviceAdapter::ConstructDefaultRequestSettings(
 int32_t CameraDeviceAdapter::ProcessCaptureRequest(
     mojom::Camera3CaptureRequestPtr request) {
   VLOGF_ENTER();
-  camera3_capture_request_t req;
 
+  // Complete the pending reprocess request first if exists. We need to
+  // prioritize reprocess requests because CCA can be waiting for the
+  // reprocessed picture before unblocking UI.
+  {
+    base::AutoLock lock(process_reprocess_request_callback_lock_);
+    if (!process_reprocess_request_callback_.is_null())
+      std::move(process_reprocess_request_callback_).Run();
+  }
+  if (!request) {
+    return 0;
+  }
+
+  camera3_capture_request_t req;
   req.frame_number =
       frame_number_mapper_.GetHalFrameNumber(request->frame_number);
 
@@ -971,13 +983,25 @@ void CameraDeviceAdapter::ReprocessEffectsOnReprocessEffectThread(
       reprocess_result_metadata_.emplace(req->frame_number,
                                          reprocess_result_metadata);
     }
+    // Store the HAL reprocessing request and wait for CameraDeviceOpsThread to
+    // complete it. Also post a null capture request to guarantee it will be
+    // called when there's no existing capture requests.
     auto future = cros::Future<int32_t>::Create(nullptr);
+    {
+      base::AutoLock lock(process_reprocess_request_callback_lock_);
+      DCHECK(process_reprocess_request_callback_.is_null());
+      process_reprocess_request_callback_ = base::BindOnce(
+          &CameraDeviceAdapter::ProcessReprocessRequestOnDeviceOpsThread,
+          base::Unretained(this), base::Passed(&req),
+          cros::GetFutureCallback(future));
+    }
     camera_device_ops_thread_.task_runner()->PostTask(
-        FROM_HERE,
-        base::Bind(
-            &CameraDeviceAdapter::ProcessReprocessRequestOnDeviceOpsThread,
-            base::Unretained(this), base::Passed(&req),
-            cros::GetFutureCallback(future)));
+        FROM_HERE, base::BindOnce(
+                       [](CameraDeviceAdapter* adapter) {
+                         // Ignore returned value.
+                         adapter->ProcessCaptureRequest(nullptr);
+                       },
+                       base::Unretained(this)));
     reprocess_context.result = future->Get();
     if (reprocess_context.result != 0) {
       LOGF(ERROR) << "Failed to process capture request after reprocessing";
