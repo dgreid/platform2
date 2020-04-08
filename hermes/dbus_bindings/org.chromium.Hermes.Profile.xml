@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!--
+  Copyright 2020 The Chromium Authors. All rights reserved.
+  Use of this source code is governed by a BSD-style license that can be
+  found in the LICENSE file.
+-->
+<node>
+<interface name="org.chromium.Hermes.Profile">
+  <method name="Enable">
+    <tp:docstring>
+      Enable the profile.
+    </tp:docstring>
+    <annotation name="org.chromium.DBus.Method.Kind" value="async" />
+  </method>
+  <method name="Disable">
+    <tp:docstring>
+      Disable the profile.
+    </tp:docstring>
+    <annotation name="org.chromium.DBus.Method.Kind" value="async" />
+  </method>
+  <property name="Iccid" type="s" access="read"/>
+  <property name="ServiceProvider" type="s" access="read"/>
+  <property name="MccMnc" type="s" access="read"/>
+  <property name="ActivationCode" type="s" access="read"/>
+  <property name="State" type="i" access="read"/>
+  <property name="ProfileClass" type="i" access="read"/>
+  <property name="Name" type="s" access="read"/>
+  <property name="Nickname" type="s" access="readwrite">
+    <tp:docstring>
+      User-visible nickname for the profile.
+    </tp:docstring>
+  </property>
+</interface>
+</node>

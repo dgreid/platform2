@@ -12,9 +12,10 @@
 #include <google-lpa/lpa/card/euicc_card.h>
 #include <google-lpa/lpa/core/lpa.h>
 
-#include "hermes/dbus_adaptor.h"
 #include "hermes/executor.h"
 #include "hermes/logger.h"
+#include "hermes/lpa_util.h"
+#include "hermes/manager.h"
 #include "hermes/smdp.h"
 #include "hermes/smds.h"
 
@@ -29,9 +30,6 @@ class Daemon : public brillo::DBusServiceDaemon {
   void RegisterDBusObjectsAsync(
       brillo::dbus_utils::AsyncEventSequencer* sequencer) override;
 
-  std::unique_ptr<brillo::dbus_utils::DBusObject> dbus_object_;
-  std::unique_ptr<DBusAdaptor> dbus_adaptor_;
-
   // Objects for use with google-lpa.
   Executor executor_;
   Logger logger_;
@@ -39,6 +37,9 @@ class Daemon : public brillo::DBusServiceDaemon {
   SmdsFactory smds_;
   std::unique_ptr<lpa::card::EuiccCard> card_;
   std::unique_ptr<lpa::core::Lpa> lpa_;
+
+  LpaContext context_;
+  std::unique_ptr<Manager> manager_;
 
   DISALLOW_COPY_AND_ASSIGN(Daemon);
 };

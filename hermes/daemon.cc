@@ -12,7 +12,6 @@
 #include <google-lpa/lpa/core/lpa.h>
 
 #include "hermes/card_qrtr.h"
-#include "hermes/dbus_bindings/org.chromium.Hermes.h"
 #include "hermes/socket_qrtr.h"
 
 namespace hermes {
@@ -30,16 +29,14 @@ Daemon::Daemon()
       .SetSmdsClientFactory(&smds_)
       .SetLogger(&logger_);
   lpa_ = b.Build();
+
+  context_.executor = &executor_;
+  context_.lpa = lpa_.get();
 }
 
 void Daemon::RegisterDBusObjectsAsync(
     brillo::dbus_utils::AsyncEventSequencer* sequencer) {
-  dbus_object_ = std::make_unique<brillo::dbus_utils::DBusObject>(
-      nullptr, bus_, org::chromium::HermesAdaptor::GetObjectPath());
-  dbus_adaptor_ = std::make_unique<DBusAdaptor>(lpa_.get(), &executor_);
-  dbus_adaptor_->RegisterWithDBusObject(dbus_object_.get());
-  dbus_object_->RegisterAsync(
-      sequencer->GetHandler("RegisterAsync() failed.", true));
+  manager_ = std::make_unique<Manager>(bus_, &context_);
 }
 
 }  // namespace hermes
