@@ -437,6 +437,4 @@ int main(int argc, char** argv) {
     child_count++;
     close(client_socket);
   }
-
-  return 0;
 }
