@@ -129,5 +129,4 @@ MINT32 get_swnr_type(MUINT32 const sensorDev) {
       return eSWNRType_SW2_VPU;
       // return eSWNRType_SW;
   }
-  return eSWNRType_NUM;
 }
