@@ -61,9 +61,6 @@ constexpr char kResolvConfPath[] = "/run/resolv.conf";
 constexpr char kRunPath[] = "/run";
 constexpr char kTmpResolvConfPath[] = "/run/resolv.conf.tmp";
 
-// How long to wait before timing out on `lxd waitready`.
-constexpr int kLxdWaitreadyTimeoutSeconds = 120;
-
 // Common environment for all LXD functionality.
 const std::map<string, string> kLxdEnv = {
     {"LXD_DIR", "/mnt/stateful/lxd"},
@@ -625,27 +622,6 @@ grpc::Status ServiceImpl::StartTermina(grpc::ServerContext* ctx,
   }
   if (launch_info.status != Init::ProcessStatus::LAUNCHED) {
     return grpc::Status(grpc::INTERNAL, "lxcfs did not launch");
-  }
-
-  if (!init_->Spawn({"lxd", "--group", "lxd", "--syslog"}, kLxdEnv,
-                    true /*respawn*/, true /*use_console*/,
-                    false /*wait_for_exit*/, &launch_info)) {
-    return grpc::Status(grpc::INTERNAL, "failed to spawn lxd");
-  }
-  if (launch_info.status != Init::ProcessStatus::LAUNCHED) {
-    return grpc::Status(grpc::INTERNAL, "lxd did not launch");
-  }
-
-  string timeout = std::to_string(kLxdWaitreadyTimeoutSeconds);
-  if (!init_->Spawn({"lxd", "waitready", "--timeout", timeout}, kLxdEnv,
-                    false /*respawn*/, true /*use_console*/,
-                    true /*wait_for_exit*/, &launch_info)) {
-    return grpc::Status(grpc::INTERNAL, "failed to spawn lxd waitready");
-  }
-  if (launch_info.status != Init::ProcessStatus::EXITED) {
-    return grpc::Status(grpc::INTERNAL, "lxd waitready did not complete");
-  } else if (launch_info.code != 0) {
-    return grpc::Status(grpc::INTERNAL, "lxd waitready returned non-zero");
   }
 
   if (!init_->Spawn({"tremplin", "-lxd_subnet", request->lxd_ipv4_subnet()},
