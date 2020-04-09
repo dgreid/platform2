@@ -136,6 +136,11 @@ usage() {
   echo "Usage: $(basename $0) <command> [args...]"
   echo "  activate [-modem <modem>] [<carrier>]        Activate modem"
   echo "  connect [-modem <modem>] [phone number]      Connect modem"
+  echo "  esim status                                  Display eSIM status"
+  echo "  esim install <activation_code>               Install eSIM profile"
+  echo "  esim uninstall <iccid>                       Uninstall eSIM profile"
+  echo "  esim enable <iccid>                          Enable eSIM profile"
+  echo "  esim disable <iccid>                         Disable eSIM profile"
   echo "  factory-reset [-modem <modem>] [<spc>]       Factory-reset the modem"
   echo "  force-flash <device_id>                      Force-flash the modem"
   echo "  reset [-modem <modem>]                       Reset the modem"
@@ -158,6 +163,9 @@ case "${cmd}" in
     ;;
   connect)
     connect "$@"
+    ;;
+  esim)
+    esim "$@"
     ;;
   factory-reset)
     factory_reset "$@"

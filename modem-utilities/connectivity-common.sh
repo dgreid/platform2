@@ -86,6 +86,20 @@ extract_dbus_match() {
   sed -r -n -e "s_^/[[:digit:]]+/$argument/\S+\s+__p"
 }
 
+# Waits for a particular DBus service to be up.
+poll_for_dbus_service() {
+  local service="$1"
+  local found
+  for _ in {0..9}; do
+    found=$(dbus_call "org.freedesktop.DBus" "/org/freedesktop/DBus" \
+                      "org.freedesktop.DBus.NameHasOwner" \
+                      string:"${service}")
+    [ "${found}" = "true" ] && return 0
+    sleep 0.1
+  done
+  error_exit "${service} could not be found."
+}
+
 # Invokes a DBus method on a DBus object.
 dbus_call() {
   local dest="$1"

@@ -95,3 +95,104 @@ force_flash() {
   dbus_call "${MODEMFWD}" "${MODEMFWD_OBJECT}" "${MODEMFWD_IFACE}.ForceFlash" \
     "string:${device}"
 }
+
+#
+# For eSIM interactions.
+#
+HERMES=org.chromium.Hermes
+HERMES_MANAGER_OBJECT=/org/chromium/Hermes/Manager
+HERMES_MANAGER_IFACE=org.chromium.Hermes.Manager
+HERMES_PROFILE_IFACE=org.chromium.Hermes.Profile
+
+esim() {
+  local command="$1"
+  shift
+  case "${command}" in
+    status)
+      poll_for_dbus_service "${HERMES}"
+      esim_status "$@"
+      ;;
+    install)
+      poll_for_dbus_service "${HERMES}"
+      esim_install "$@"
+      ;;
+    uninstall)
+      poll_for_dbus_service "${HERMES}"
+      esim_uninstall "$@"
+      ;;
+    enable)
+      poll_for_dbus_service "${HERMES}"
+      esim_enable "$@"
+      ;;
+    disable)
+      poll_for_dbus_service "${HERMES}"
+      esim_disable "$@"
+      ;;
+    *)
+      error_exit "Expected one of {status|install|uninstall|enable|disable}"
+      ;;
+  esac
+}
+
+esim_profiles() {
+  dbus_property "${HERMES}" "${HERMES_MANAGER_OBJECT}" \
+                "${HERMES_MANAGER_IFACE}" Profiles |
+    sed 's|^/[[:digit:]]* ||'
+}
+
+esim_profile_from_iccid() {
+  local iccid="$1"
+  [ -z "${iccid}" ] && error_exit "No iccid provided."
+
+  local profile
+  for profile in $(esim_profiles); do
+    local current
+    current=$(dbus_property "${HERMES}" "${profile}" \
+                            "${HERMES_PROFILE_IFACE}" Iccid)
+    if [ "${current}" = "${iccid}" ]; then
+      echo "${profile}"
+      return
+    fi
+  done
+  error_exit "No matching Profile found for iccid ${iccid}."
+}
+
+esim_status() {
+  local profile
+  for profile in $(esim_profiles); do
+    echo "${profile}"
+    dbus_properties "${HERMES}" "${profile}" "${HERMES_PROFILE_IFACE}" |
+        stripindexes
+    echo
+  done
+}
+
+esim_install() {
+  local activation_code="$1"
+  [ -z "${activation_code}" ] && error_exit "No activation_code provided."
+
+  dbus_call "${HERMES}" "${HERMES_MANAGER_OBJECT}" \
+            "${HERMES_MANAGER_IFACE}.InstallProfile" string:"${activation_code}"
+}
+
+esim_uninstall() {
+  local profile
+  profile=$(esim_profile_from_iccid "$@")
+  [ -z "${profile}" ] && exit 1
+  dbus_call "${HERMES}" "${HERMES_MANAGER_OBJECT}" \
+            "${HERMES_MANAGER_IFACE}.UninstallProfile" objpath:"${profile}"
+}
+
+esim_enable() {
+  local profile
+  profile=$(esim_profile_from_iccid "$@")
+  [ -z "${profile}" ] && exit 1
+  dbus_call "${HERMES}" "${profile}" "${HERMES_PROFILE_IFACE}.Enable"
+}
+
+esim_disable() {
+  local profile
+  profile=$(esim_profile_from_iccid "$@")
+  [ -z "${profile}" ] && exit 1
+  dbus_call "${HERMES}" "${profile}" "${HERMES_PROFILE_IFACE}.Disable"
+}
