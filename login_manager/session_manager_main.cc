@@ -31,6 +31,7 @@
 #include <base/time/time.h>
 #include <brillo/message_loops/base_message_loop.h>
 #include <brillo/syslog_logging.h>
+#include <chromeos/constants/cryptohome.h>
 #include <chromeos-config/libcros_config/cros_config.h>
 #include <linux/limits.h>
 #include <rootdev/rootdev.h>
@@ -107,10 +108,6 @@ constexpr base::TimeDelta kHangDetectionIntervalTest =
 // with a SIGABRT.
 constexpr int kKillTimeoutDefaultSeconds = 3;
 constexpr int kKillTimeoutLongSeconds = 12;
-
-// Non-root mount namespace to run user sessions in.
-// Currently only used for Guest sessions.
-constexpr char kChromeMountNsPath[] = "/run/namespaces/mnt_chrome";
 
 bool BootDeviceIsRotationalDisk() {
   char full_rootdev_path[PATH_MAX];
@@ -252,7 +249,7 @@ int main(int argc, char* argv[]) {
   if (config.isolate_guest_session) {
     // Instead of having Chrome unshare a new mount namespace on launch, have
     // Chrome enter the mount namespace where the user data directory exists.
-    ns_path = base::FilePath(kChromeMountNsPath);
+    ns_path = base::FilePath(cryptohome::kUserSessionMountNamespacePath);
     config.chrome_mount_ns_path = ns_path;
   }
 

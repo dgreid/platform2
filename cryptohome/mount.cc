@@ -34,6 +34,7 @@
 #include <brillo/process.h>
 #include <brillo/scoped_umask.h>
 #include <brillo/secure_blob.h>
+#include <chromeos/constants/cryptohome.h>
 
 #include "cryptohome/bootlockbox/boot_lockbox.h"
 #include "cryptohome/chaps_client_factory.h"
@@ -64,8 +65,6 @@ using brillo::cryptohome::home::SanitizeUserName;
 using chaps::IsolateCredentialManager;
 
 namespace {
-constexpr char kChromeMountNamespacePath[] = "/run/namespaces/mnt_chrome";
-
 bool __attribute__((unused)) IsolateUserSession() {
 #if USE_USER_SESSION_ISOLATION
   return true;
@@ -239,10 +238,11 @@ bool Mount::Init(Platform* platform, Crypto* crypto,
   std::unique_ptr<MountNamespace> chrome_mnt_ns;
   if (mount_guest_session_non_root_namespace_) {
     chrome_mnt_ns = std::make_unique<MountNamespace>(
-        base::FilePath(kChromeMountNamespacePath), platform_);
+        base::FilePath(kUserSessionMountNamespacePath), platform_);
     if (!chrome_mnt_ns->Create()) {
       std::string message = base::StringPrintf(
-          "Failed to create mount namespace at %s", kChromeMountNamespacePath);
+          "Failed to create mount namespace at %s",
+          kUserSessionMountNamespacePath);
       ForkAndCrash(message);
       result = false;
     }
