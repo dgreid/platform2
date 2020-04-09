@@ -44,7 +44,6 @@ PixelFormat GetPixelFormatFromVideoCapturePixelFormat(
     default:
       return PixelFormat::FORMAT_UNKNOWN;
   }
-  return PixelFormat::FORMAT_UNKNOWN;
 }
 
 media::mojom::VideoCapturePixelFormat GetVideoCapturePixelFormatFromPixelFormat(
@@ -57,7 +56,6 @@ media::mojom::VideoCapturePixelFormat GetVideoCapturePixelFormatFromPixelFormat(
     default:
       return media::mojom::VideoCapturePixelFormat::UNKNOWN;
   }
-  return media::mojom::VideoCapturePixelFormat::UNKNOWN;
 }
 
 constexpr char kConnectorPipe[] = "mpp-connector-pipe";
