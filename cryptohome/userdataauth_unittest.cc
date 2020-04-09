@@ -1143,7 +1143,7 @@ TEST_F(UserDataAuthTest, GetSystemSaltSucess) {
   EXPECT_EQ(salt, userdataauth_->GetSystemSalt());
 }
 
-TEST_F(UserDataAuthTestNotInitialized, GetSystemSaltUninitialized) {
+TEST_F(UserDataAuthTestNotInitialized, DISABLED_GetSystemSaltUninitialized) {
   EXPECT_DEATH(userdataauth_->GetSystemSalt(),
                "Cannot call GetSystemSalt before initialization");
 }
