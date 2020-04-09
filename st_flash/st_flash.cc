@@ -163,8 +163,6 @@ bool IAPFirmwareUpdater::PollForAck(uint32_t timeoutMs) {
       return false;
     }
   }
-
-  return false;
 }
 
 void IAPFirmwareUpdater::Flash(uint32_t address, std::string path,
