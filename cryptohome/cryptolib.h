@@ -52,6 +52,7 @@ class CryptoLib {
   enum BlockMode {
     kEcb = 1,
     kCbc = 2,
+    kCtr = 3,
   };
 
   static void GetSecureRandom(unsigned char *bytes, size_t len);

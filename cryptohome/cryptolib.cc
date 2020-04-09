@@ -566,6 +566,9 @@ bool CryptoLib::AesDecryptSpecifyBlockMode(const SecureBlob& encrypted,
     case kEcb:
       cipher = EVP_aes_256_ecb();
       break;
+    case kCtr:
+      cipher = EVP_aes_256_ctr();
+      break;
     default:
       LOG(ERROR) << "Invalid block mode specified: " << block_mode;
       return false;
@@ -742,6 +745,9 @@ bool CryptoLib::AesEncryptSpecifyBlockMode(const SecureBlob& plain_text,
       break;
     case kEcb:
       cipher = EVP_aes_256_ecb();
+      break;
+    case kCtr:
+      cipher = EVP_aes_256_ctr();
       break;
     default:
       LOG(ERROR) << "Invalid block mode specified";
