@@ -743,6 +743,14 @@ void ArcSetup::SetUpAndroidData(bool bind_mount) {
   EXIT_IF(!InstallDirectory(0771, kSystemUid, kSystemGid,
                             arc_paths_->android_data_directory.Append("data")));
 
+#if defined(USE_ARCVM)
+  // For ARCVM, create /data/media too since crosvm exports the directory via
+  // virtio-fs.
+  EXIT_IF(!InstallDirectory(
+      0770, kMediaUid, kMediaGid,
+      arc_paths_->android_data_directory.Append("data").Append("media")));
+#endif
+
   if (!bind_mount)
     return;
   // To make our bind-mount business easier, we first bind-mount the real

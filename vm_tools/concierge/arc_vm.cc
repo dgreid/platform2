@@ -115,6 +115,15 @@ bool ShutdownArcVm(int cid) {
   return true;
 }
 
+std::string CreateSharedDataParam(const base::FilePath& data_dir,
+                                  const std::string& tag,
+                                  bool enable_caches) {
+  return base::StringPrintf(
+      "%s:%s:type=fs:cache=%s:uidmap=%s:gidmap=%s:timeout=3600",
+      data_dir.value().c_str(), tag.c_str(), enable_caches ? "always" : "never",
+      kAndroidUidMap, kAndroidGidMap);
+}
+
 }  // namespace
 
 ArcVm::ArcVm(int32_t vsock_cid,
@@ -207,10 +216,9 @@ bool ArcVm::Start(base::FilePath kernel,
       base::StringPrintf("%s:%s:type=fs:cache=always:timeout=3600",
                          kHostGeneratedSharedDir, kHostGeneratedSharedDirTag);
 
-  // TODO(yusukes): Add another device for /data/media/0 with caching disabled.
-  std::string shared_data = base::StringPrintf(
-      "%s:data:type=fs:cache=always:uidmap=%s:gidmap=%s:timeout=3600",
-      data_dir.value().c_str(), kAndroidUidMap, kAndroidGidMap);
+  std::string shared_data = CreateSharedDataParam(data_dir, "data", true);
+  std::string shared_data_media =
+      CreateSharedDataParam(data_dir.Append("media"), "data_media", false);
 
   // Build up the process arguments.
   // clang-format off
@@ -234,8 +242,9 @@ bool ArcVm::Start(base::FilePath kernel,
     // TODO(yusukes): Remove the 9p export once the guest is updated.
     { "--shared-dir",     base::StringPrintf("%s:%s", kHostGeneratedSharedDir,
                                              kHostGeneratedSharedDirTag) },
-    { "--shared-dir",     host_generated_shared_dir },
+    { "--shared-dir",     std::move(host_generated_shared_dir) },
     { "--shared-dir",     std::move(shared_data) },
+    { "--shared-dir",     std::move(shared_data_media) },
     { "--params",         base::JoinString(params, " ") },
   };
   // clang-format on
