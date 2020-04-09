@@ -32,12 +32,8 @@ class Modem {
         ModemInfo* modem_info);
   virtual ~Modem();
 
-  // Asynchronously initializes support for the modem.
-  // If the |properties| are valid and the MAC address is present,
-  // constructs and registers a Cellular device in |device_| based on
-  // |properties|.
-  virtual void CreateDeviceFromModemProperties(
-      const InterfaceToProperties& properties);
+  // Gathers information and passes it to CreateDeviceFromModemProperties.
+  void CreateDeviceMM1(const InterfaceToProperties& properties);
 
   void OnDeviceInfoAvailable(const std::string& link_name);
 
@@ -46,23 +42,8 @@ class Modem {
 
   void set_type(Cellular::Type type) { type_ = type; }
 
- protected:
-  virtual void Init();
-
-  CellularRefPtr device() const { return device_; }
-
-  virtual Cellular* ConstructCellular(const std::string& link_name,
-                                      const std::string& device_name,
-                                      int interface_index);
-  virtual bool GetLinkName(const KeyValueStore& properties,
-                           std::string* name) const = 0;
-  // Returns the name of the DBUS Modem interface.
-  virtual std::string GetModemInterface() const = 0;
-
  private:
   friend class ModemTest;
-  friend class Modem1Test;
-  FRIEND_TEST(Modem1Test, CreateDeviceMM1);
   FRIEND_TEST(ModemManager1Test, Connect);
   FRIEND_TEST(ModemManager1Test, AddRemoveInterfaces);
   FRIEND_TEST(ModemTest, CreateDeviceEarlyFailures);
@@ -77,18 +58,33 @@ class Modem {
   static const char kFakeDevAddress[];
   static const int kFakeDevInterfaceIndex;
 
+  // These are virtual for mock implementation. TODO(stevenjb): Use a Fake.
+  virtual std::string GetModemInterface() const;
+  virtual Cellular* ConstructCellular(const std::string& link_name,
+                                      const std::string& device_name,
+                                      int interface_index);
+  virtual bool GetLinkName(const KeyValueStore& properties,
+                           std::string* name) const;
+
+  // Asynchronously initializes support for the modem.
+  // If the |properties| are valid and the MAC address is present,
+  // constructs and registers a Cellular device in |device_| based on
+  // |properties|.
+  void CreateDeviceFromModemProperties(const InterfaceToProperties& properties);
+
   // Find the |mac_address| and |interface_index| for the kernel
   // network device with name |link_name|. Returns true iff both
   // |mac_address| and |interface_index| were found. Modifies
   // |interface_index| even on failure.
-  virtual bool GetDeviceParams(std::string* mac_address, int* interface_index);
+  bool GetDeviceParams(std::string* mac_address, int* interface_index);
 
-  virtual void OnPropertiesChanged(
+  void OnPropertiesChanged(
       const std::string& interface,
       const KeyValueStore& changed_properties,
       const std::vector<std::string>& invalidated_properties);
-  virtual void OnModemManagerPropertiesChanged(const std::string& interface,
-                                               const KeyValueStore& properties);
+
+  void OnModemManagerPropertiesChanged(const std::string& interface,
+                                       const KeyValueStore& properties);
 
   // A proxy to the org.freedesktop.DBusProperties interface used to obtain
   // ModemManager.Modem properties and watch for property changes
@@ -113,27 +109,6 @@ class Modem {
   static size_t fake_dev_serial_;
 
   DISALLOW_COPY_AND_ASSIGN(Modem);
-};
-
-class Modem1 : public Modem {
- public:
-  Modem1(const std::string& service,
-         const RpcIdentifier& path,
-         ModemInfo* modem_info);
-  ~Modem1() override;
-
-  // Gathers information and passes it to CreateDeviceFromModemProperties.
-  void CreateDeviceMM1(const InterfaceToProperties& properties);
-
- protected:
-  bool GetLinkName(const KeyValueStore& modem_properties,
-                   std::string* name) const override;
-  std::string GetModemInterface() const override;
-
- private:
-  friend class Modem1Test;
-
-  DISALLOW_COPY_AND_ASSIGN(Modem1);
 };
 
 }  // namespace shill

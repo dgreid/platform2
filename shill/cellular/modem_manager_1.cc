@@ -65,21 +65,21 @@ void ModemManager1::Disconnect() {
   ModemManager::Disconnect();
 }
 
-void ModemManager1::AddModem1(const RpcIdentifier& path,
-                              const InterfaceToProperties& properties) {
+void ModemManager1::AddModem(const RpcIdentifier& path,
+                             const InterfaceToProperties& properties) {
   if (ModemExists(path)) {
     LOG(INFO) << "Modem " << path.value() << " already exists.";
     return;
   }
 
-  auto modem = std::make_unique<Modem1>(service(), path, modem_info());
-  InitModem1(modem.get(), properties);
+  auto modem = std::make_unique<Modem>(service(), path, modem_info());
+  InitModem(modem.get(), properties);
 
   RecordAddedModem(std::move(modem));
 }
 
-void ModemManager1::InitModem1(Modem1* modem,
-                               const InterfaceToProperties& properties) {
+void ModemManager1::InitModem(Modem* modem,
+                              const InterfaceToProperties& properties) {
   modem->CreateDeviceMM1(properties);
 }
 
@@ -88,7 +88,7 @@ void ModemManager1::InitModem1(Modem1* modem,
 void ModemManager1::OnInterfacesAddedSignal(
     const RpcIdentifier& object_path, const InterfaceToProperties& properties) {
   if (base::ContainsKey(properties, MM_DBUS_INTERFACE_MODEM)) {
-    AddModem1(object_path, properties);
+    AddModem(object_path, properties);
   } else {
     LOG(ERROR) << "Interfaces added, but not modem interface.";
   }

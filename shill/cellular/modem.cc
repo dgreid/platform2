@@ -4,11 +4,17 @@
 
 #include "shill/cellular/modem.h"
 
+#include <limits>
+#include <tuple>
+
 #include <base/bind.h>
 #include <base/strings/stringprintf.h>
 
+#include <ModemManager/ModemManager.h>
+
 #include "shill/cellular/cellular.h"
 #include "shill/control_interface.h"
+#include "shill/device_info.h"
 #include "shill/logging.h"
 #include "shill/manager.h"
 #include "shill/net/rtnl_handler.h"
@@ -82,7 +88,7 @@ Modem::~Modem() {
       device_->interface_index());
 }
 
-void Modem::Init() {
+void Modem::CreateDeviceMM1(const InterfaceToProperties& properties) {
   dbus_properties_proxy_ =
       modem_info_->control_interface()->CreateDBusPropertiesProxy(path(),
                                                                   service());
@@ -90,6 +96,33 @@ void Modem::Init() {
       Bind(&Modem::OnModemManagerPropertiesChanged, Unretained(this)));
   dbus_properties_proxy_->set_properties_changed_callback(
       Bind(&Modem::OnPropertiesChanged, Unretained(this)));
+
+  uint32_t capabilities = std::numeric_limits<uint32_t>::max();
+  InterfaceToProperties::const_iterator it =
+      properties.find(MM_DBUS_INTERFACE_MODEM);
+  if (it == properties.end()) {
+    LOG(ERROR) << "Cellular device with no modem properties";
+    return;
+  }
+  const KeyValueStore& modem_props = it->second;
+  if (modem_props.Contains<uint32_t>(MM_MODEM_PROPERTY_CURRENTCAPABILITIES)) {
+    capabilities =
+        modem_props.Get<uint32_t>(MM_MODEM_PROPERTY_CURRENTCAPABILITIES);
+  }
+
+  if (capabilities & (MM_MODEM_CAPABILITY_GSM_UMTS | MM_MODEM_CAPABILITY_LTE |
+                      MM_MODEM_CAPABILITY_LTE_ADVANCED)) {
+    set_type(Cellular::kType3gpp);
+  } else if (capabilities & MM_MODEM_CAPABILITY_CDMA_EVDO) {
+    set_type(Cellular::kTypeCdma);
+  } else {
+    LOG(ERROR) << "Unsupported capabilities: " << capabilities;
+    return;
+  }
+
+  // We cannot check the IP method to make sure it's not PPP. The IP
+  // method will be checked later when the bearer object is fetched.
+  CreateDeviceFromModemProperties(properties);
 }
 
 void Modem::OnDeviceInfoAvailable(const string& link_name) {
@@ -103,6 +136,10 @@ void Modem::OnDeviceInfoAvailable(const string& link_name) {
   }
 }
 
+string Modem::GetModemInterface() const {
+  return string(MM_DBUS_INTERFACE_MODEM);
+}
+
 Cellular* Modem::ConstructCellular(const string& link_name,
                                    const string& address,
                                    int interface_index) {
@@ -110,6 +147,31 @@ Cellular* Modem::ConstructCellular(const string& link_name,
             << " interface index " << interface_index << ".";
   return new Cellular(modem_info_, link_name, address, interface_index, type_,
                       service_, path_);
+}
+
+bool Modem::GetLinkName(const KeyValueStore& modem_props, string* name) const {
+  if (!modem_props.ContainsVariant(MM_MODEM_PROPERTY_PORTS)) {
+    LOG(ERROR) << "Device missing property: " << MM_MODEM_PROPERTY_PORTS;
+    return false;
+  }
+
+  auto ports = modem_props.GetVariant(MM_MODEM_PROPERTY_PORTS)
+                   .Get<std::vector<std::tuple<string, uint32_t>>>();
+  string net_port;
+  for (const auto& port_pair : ports) {
+    if (std::get<1>(port_pair) == MM_MODEM_PORT_TYPE_NET) {
+      net_port = std::get<0>(port_pair);
+      break;
+    }
+  }
+
+  if (net_port.empty()) {
+    LOG(ERROR) << "Could not find net port used by the device.";
+    return false;
+  }
+
+  *name = net_port;
+  return true;
 }
 
 void Modem::CreateDeviceFromModemProperties(

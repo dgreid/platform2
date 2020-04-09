@@ -119,8 +119,8 @@ class ModemManager1MockInit : public ModemManager1 {
       : ModemManager1(service, path, modem_info_) {}
 
   MOCK_METHOD(void,
-              InitModem1,
-              (Modem1*, const InterfaceToProperties&),
+              InitModem,
+              (Modem*, const InterfaceToProperties&),
               (override));
 };
 
@@ -191,12 +191,12 @@ TEST_F(ModemManager1Test, AddRemoveInterfaces) {
   EXPECT_EQ(0, modem_manager_.modems_.size());
 
   // Add an object that doesn't have a modem interface.  Nothing should be added
-  EXPECT_CALL(modem_manager_, InitModem1(_, _)).Times(0);
+  EXPECT_CALL(modem_manager_, InitModem(_, _)).Times(0);
   modem_manager_.OnInterfacesAddedSignal(kModemPath, InterfaceToProperties());
   EXPECT_EQ(0, modem_manager_.modems_.size());
 
   // Actually add a modem
-  EXPECT_CALL(modem_manager_, InitModem1(_, _)).Times(1);
+  EXPECT_CALL(modem_manager_, InitModem(_, _)).Times(1);
   modem_manager_.OnInterfacesAddedSignal(kModemPath,
                                          GetModemWithProperties()[kModemPath]);
   EXPECT_EQ(1, modem_manager_.modems_.size());

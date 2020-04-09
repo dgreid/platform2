@@ -4,6 +4,8 @@
 
 #include "shill/cellular/modem.h"
 
+#include <tuple>
+
 #include <ModemManager/ModemManager.h>
 #include <net/if.h>
 #include <sys/ioctl.h>
@@ -15,10 +17,12 @@
 #include <gtest/gtest.h>
 
 #include "shill/cellular/cellular.h"
+#include "shill/cellular/cellular_capability.h"
 #include "shill/cellular/mock_cellular.h"
 #include "shill/cellular/mock_modem.h"
 #include "shill/cellular/mock_modem_info.h"
 #include "shill/manager.h"
+#include "shill/mock_dbus_properties_proxy.h"
 #include "shill/mock_device_info.h"
 #include "shill/net/mock_rtnl_handler.h"
 #include "shill/net/rtnl_handler.h"
@@ -27,6 +31,7 @@
 using std::string;
 using testing::_;
 using testing::AnyNumber;
+using testing::ByMove;
 using testing::DoAll;
 using testing::Return;
 using testing::SetArgPointee;
@@ -58,11 +63,24 @@ class ModemTest : public Test {
 
   void ReplaceSingletons() { modem_->rtnl_handler_ = &rtnl_handler_; }
 
+  void SetupRealModem() {
+    real_modem_.reset(new Modem(kService, kPath, &modem_info_));
+    real_modem_->rtnl_handler_ = &rtnl_handler_;
+    EXPECT_CALL(device_info_, GetMacAddress(kTestInterfaceIndex, _))
+        .WillOnce(DoAll(SetArgPointee<1>(expected_address_), Return(true)));
+  }
+
+  CellularRefPtr GetRealModemDevice() { return real_modem_->device_; }
+  CellularCapability* GetRealModemCapability() {
+    return real_modem_->device_->capability_.get();
+  }
+
  protected:
   EventDispatcherForTest dispatcher_;
   MockModemInfo modem_info_;
   MockDeviceInfo device_info_;
   std::unique_ptr<StrictModem> modem_;
+  std::unique_ptr<Modem> real_modem_;
   MockRTNLHandler rtnl_handler_;
   ByteString expected_address_;
 };
@@ -238,6 +256,33 @@ TEST_F(ModemTest, GetDeviceParams) {
   EXPECT_TRUE(modem_->GetDeviceParams(&mac_address, &interface_index));
   EXPECT_EQ(2, interface_index);
   EXPECT_EQ(kAddressAsString, mac_address);
+}
+
+TEST_F(ModemTest, CreateDeviceMM1) {
+  SetupRealModem();
+
+  InterfaceToProperties properties;
+
+  KeyValueStore modem_properties;
+  modem_properties.Set<uint32_t>(MM_MODEM_PROPERTY_UNLOCKREQUIRED,
+                                 MM_MODEM_LOCK_NONE);
+  std::vector<std::tuple<std::string, uint32_t>> ports = {
+      std::make_tuple(kLinkName, MM_MODEM_PORT_TYPE_NET)};
+  modem_properties.SetVariant(MM_MODEM_PROPERTY_PORTS, brillo::Any(ports));
+  properties[MM_DBUS_INTERFACE_MODEM] = modem_properties;
+
+  KeyValueStore modem3gpp_properties;
+  modem3gpp_properties.Set<uint32_t>(
+      MM_MODEM_MODEM3GPP_PROPERTY_REGISTRATIONSTATE,
+      MM_MODEM_3GPP_REGISTRATION_STATE_HOME);
+  properties[MM_DBUS_INTERFACE_MODEM_MODEM3GPP] = modem3gpp_properties;
+
+  EXPECT_CALL(*(modem_info_.mock_control_interface()),
+              CreateDBusPropertiesProxy(kPath, kService))
+      .WillOnce(Return(ByMove(std::make_unique<MockDBusPropertiesProxy>())));
+  real_modem_->CreateDeviceMM1(properties);
+  EXPECT_NE(nullptr, GetRealModemDevice());
+  EXPECT_TRUE(GetRealModemCapability()->IsRegistered());
 }
 
 }  // namespace shill

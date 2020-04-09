@@ -380,7 +380,6 @@ class Cellular : public Device,
   FRIEND_TEST(CellularTest, StartPPP);
   FRIEND_TEST(CellularTest, StartPPPAfterEthernetUp);
   FRIEND_TEST(CellularTest, StartPPPAlreadyStarted);
-  FRIEND_TEST(Modem1Test, CreateDeviceMM1);
   FRIEND_TEST(CellularTest, GetGeolocationObjects);
 
   // Names of properties in storage

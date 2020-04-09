@@ -22,7 +22,6 @@ namespace shill {
 
 class ControlInterface;
 class DBusObjectManagerProxyInterface;
-class Modem1;
 class Modem;
 
 // Handles a modem manager service and creates and destroys modem instances.
@@ -99,10 +98,9 @@ class ModemManager1 : public ModemManager {
   void Stop() override;
 
  protected:
-  void AddModem1(const RpcIdentifier& path,
-                 const InterfaceToProperties& properties);
-  virtual void InitModem1(Modem1* modem,
-                          const InterfaceToProperties& properties);
+  void AddModem(const RpcIdentifier& path,
+                const InterfaceToProperties& properties);
+  virtual void InitModem(Modem* modem, const InterfaceToProperties& properties);
 
   // ModemManager methods
   void Connect() override;
