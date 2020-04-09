@@ -1,0 +1,23 @@
+# Copyright 2020 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("all") {
+  deps = [
+    ":cros_camera_connector_test",
+  ]
+}
+
+executable("cros_camera_connector_test") {
+  sources = [
+    "//camera/common/libcamera_connector_test/gtest_main.cc",
+  ]
+  configs += [
+    "//common-mk:test",
+    "//camera/build:cros_camera_common",
+  ]
+  pkg_deps = [
+    "libbrillo",
+    "libcamera_connector",
+  ]
+}
