@@ -566,8 +566,6 @@ const void* IMetadata::IEntry::Implementor::data() const {
       return nullptr;
 #undef __DATA_CASE__
   }
-
-  return nullptr;
 }
 
 MBOOL
