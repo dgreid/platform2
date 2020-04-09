@@ -216,9 +216,7 @@ IMetadata* DebugExifUtils::setDebugExif(
     }
   }(exifMetadata);
 
-  return (ret == true) ? exifMetadata : nullptr;
-
-  return nullptr;
+  return ret ? exifMetadata : nullptr;
 }
 // ---------------------------------------------------------------------------
 
@@ -254,7 +252,5 @@ IMetadata* DebugExifUtils::setDebugExif(const DebugExifType type,
     }
   }(exifMetadata);
 
-  return (ret == true) ? exifMetadata : nullptr;
-
-  return nullptr;
+  return ret ? exifMetadata : nullptr;
 }
