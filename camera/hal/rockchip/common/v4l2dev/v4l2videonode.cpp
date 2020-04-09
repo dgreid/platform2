@@ -238,9 +238,10 @@ uint32_t V4L2Format::numPlanes()
     CheckError(!V4L2_TYPE_IS_VALID(vfmt.type), BAD_VALUE, \
                "@%s: invalid buffer type: %d.", __FUNCTION__, vfmt.type);
 
-    if (!V4L2_TYPE_IS_MULTIPLANAR(vfmt.type))
+    if (!V4L2_TYPE_IS_MULTIPLANAR(vfmt.type)) {
         LOGE("@%s: reading number of planes non multi-plane format is not allowed.", __FUNCTION__);
         return 0;
+    }
 
     return vfmt.fmt.pix_mp.num_planes;
 }
