@@ -2049,6 +2049,9 @@ gboolean Service::Mount(const gchar *userid,
   // TODO(wad) Can we get rid of this code path?
 
   if (user_mount->IsMounted()) {
+    // Count this event to confirm the code path can be removed.
+    ReportCrosEvent(kCryptohomeDoubleMount);
+
     // TODO(wad) This tests against the stored credentials, not the TPM.
     // If mounts are "repopulated", then a trip through the TPM would be needed.
     LOG(INFO) << "Mount exists. Rechecking credentials.";

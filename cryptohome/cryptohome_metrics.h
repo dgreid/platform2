@@ -242,6 +242,7 @@ static_assert(static_cast<int>(DeprecatedApiEvent::kMaxValue) == 8,
 // Cros events emitted by cryptohome.
 const char kAttestationOriginSpecificIdentifiersExhausted[] =
     "Attestation.OriginSpecificExhausted";
+const char kCryptohomeDoubleMount[] = "Cryptohome.DoubleMountRequest";
 
 // Constants related to LE Credential UMA logging.
 constexpr char kLEOpResetTree[]= ".ResetTree";
