@@ -65,6 +65,10 @@ class ModemManagerForTest : public ModemManager {
 
   MOCK_METHOD(void, Start, (), (override));
   MOCK_METHOD(void, Stop, (), (override));
+  MOCK_METHOD(void,
+              InitModem,
+              (Modem*, const InterfaceToProperties&),
+              (override));
 };
 
 class ModemManagerCoreTest : public ModemManagerTest {
@@ -83,7 +87,7 @@ TEST_F(ModemManagerCoreTest, ConnectDisconnect) {
   modem_manager_.RecordAddedModem(CreateModem());
   EXPECT_EQ(1, modem_manager_.modems_.size());
 
-  modem_manager_.ModemManager::Disconnect();
+  modem_manager_.Disconnect();
   EXPECT_EQ(0, modem_manager_.modems_.size());
   EXPECT_FALSE(modem_manager_.service_connected_);
 }
@@ -111,12 +115,12 @@ TEST_F(ModemManagerCoreTest, AddRemoveModem) {
   EXPECT_FALSE(modem_manager_.ModemExists(kModemPath));
 }
 
-class ModemManager1MockInit : public ModemManager1 {
+class ModemManager1MockInit : public ModemManager {
  public:
   ModemManager1MockInit(const string& service,
                         const RpcIdentifier& path,
                         ModemInfo* modem_info_)
-      : ModemManager1(service, path, modem_info_) {}
+      : ModemManager(service, path, modem_info_) {}
 
   MOCK_METHOD(void,
               InitModem,

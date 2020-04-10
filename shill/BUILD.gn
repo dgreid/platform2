@@ -423,7 +423,6 @@ static_library("libshill") {
       "cellular/modem.cc",
       "cellular/modem_info.cc",
       "cellular/modem_manager.cc",
-      "cellular/modem_manager_1.cc",
       "cellular/subscription_state.cc",
       "cellular/verizon_subscription_state.cc",
       "dbus/dbus_objectmanager_proxy.cc",

@@ -8,6 +8,7 @@
 #include <utility>
 
 #include <base/stl_util.h>
+#include <ModemManager/ModemManager.h>
 
 #include "shill/cellular/modem.h"
 #include "shill/control_interface.h"
@@ -15,27 +16,65 @@
 #include "shill/logging.h"
 #include "shill/manager.h"
 
-using std::string;
-
 namespace shill {
 
-ModemManager::ModemManager(const string& service,
+namespace {
+constexpr int kGetManagedObjectsTimeout = 5000;
+}
+
+ModemManager::ModemManager(const std::string& service,
                            const RpcIdentifier& path,
                            ModemInfo* modem_info)
     : service_(service),
       path_(path),
       service_connected_(false),
-      modem_info_(modem_info) {}
+      modem_info_(modem_info),
+      weak_ptr_factory_(this) {}
 
-ModemManager::~ModemManager() = default;
+ModemManager::~ModemManager() {
+  Stop();
+}
+
+void ModemManager::Start() {
+  LOG(INFO) << "Start watching modem manager service: " << service_;
+  CHECK(!proxy_);
+  proxy_ = modem_info_->control_interface()->CreateDBusObjectManagerProxy(
+      path_, service_,
+      base::Bind(&ModemManager::OnAppeared, weak_ptr_factory_.GetWeakPtr()),
+      base::Bind(&ModemManager::OnVanished, weak_ptr_factory_.GetWeakPtr()));
+  proxy_->set_interfaces_added_callback(Bind(
+      &ModemManager::OnInterfacesAddedSignal, weak_ptr_factory_.GetWeakPtr()));
+  proxy_->set_interfaces_removed_callback(
+      Bind(&ModemManager::OnInterfacesRemovedSignal,
+           weak_ptr_factory_.GetWeakPtr()));
+}
+
+void ModemManager::Stop() {
+  LOG(INFO) << "Stop watching modem manager service: " << service_;
+  proxy_.reset();
+  Disconnect();
+}
+
+void ModemManager::OnDeviceInfoAvailable(const std::string& link_name) {
+  for (const auto& modem_entry : modems_) {
+    modem_entry.second->OnDeviceInfoAvailable(link_name);
+  }
+}
 
 void ModemManager::Connect() {
-  // Inheriting classes call this superclass method.
   service_connected_ = true;
+
+  if (!proxy_)
+    return;  // May be null in tests
+
+  Error error;
+  proxy_->GetManagedObjects(&error,
+                            Bind(&ModemManager::OnGetManagedObjectsReply,
+                                 weak_ptr_factory_.GetWeakPtr()),
+                            kGetManagedObjectsTimeout);
 }
 
 void ModemManager::Disconnect() {
-  // Inheriting classes call this superclass method.
   modems_.clear();
   service_connected_ = false;
 }
@@ -55,8 +94,26 @@ bool ModemManager::ModemExists(const RpcIdentifier& path) const {
   return base::ContainsKey(modems_, path);
 }
 
+void ModemManager::AddModem(const RpcIdentifier& path,
+                            const InterfaceToProperties& properties) {
+  if (ModemExists(path)) {
+    LOG(INFO) << "Modem " << path.value() << " already exists.";
+    return;
+  }
+
+  auto modem = std::make_unique<Modem>(service_, path, modem_info_);
+  InitModem(modem.get(), properties);
+
+  RecordAddedModem(std::move(modem));
+}
+
 void ModemManager::RecordAddedModem(std::unique_ptr<Modem> modem) {
   modems_[modem->path()] = std::move(modem);
+}
+
+void ModemManager::InitModem(Modem* modem,
+                             const InterfaceToProperties& properties) {
+  modem->CreateDeviceMM1(properties);
 }
 
 void ModemManager::RemoveModem(const RpcIdentifier& path) {
@@ -65,9 +122,35 @@ void ModemManager::RemoveModem(const RpcIdentifier& path) {
   modems_.erase(path);
 }
 
-void ModemManager::OnDeviceInfoAvailable(const string& link_name) {
-  for (const auto& modem_entry : modems_) {
-    modem_entry.second->OnDeviceInfoAvailable(link_name);
+void ModemManager::OnInterfacesAddedSignal(
+    const RpcIdentifier& object_path, const InterfaceToProperties& properties) {
+  if (!base::ContainsKey(properties, MM_DBUS_INTERFACE_MODEM)) {
+    LOG(ERROR) << "Interfaces added, but not modem interface.";
+    return;
+  }
+  AddModem(object_path, properties);
+}
+
+void ModemManager::OnInterfacesRemovedSignal(
+    const RpcIdentifier& object_path,
+    const std::vector<std::string>& interfaces) {
+  LOG(INFO) << "MM1:  Removing interfaces from " << object_path.value();
+  if (!base::ContainsValue(interfaces, MM_DBUS_INTERFACE_MODEM)) {
+    // In theory, a modem could drop, say, 3GPP, but not CDMA.  In
+    // practice, we don't expect this
+    LOG(ERROR) << "Interfaces removed, but not modem interface";
+    return;
+  }
+  RemoveModem(object_path);
+}
+
+void ModemManager::OnGetManagedObjectsReply(
+    const ObjectsWithProperties& objects, const Error& error) {
+  if (!error.IsSuccess())
+    return;
+  for (const auto& object_properties_pair : objects) {
+    OnInterfacesAddedSignal(object_properties_pair.first,
+                            object_properties_pair.second);
   }
 }
 

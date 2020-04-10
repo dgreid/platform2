@@ -33,47 +33,52 @@ class ModemManager {
   virtual ~ModemManager();
 
   // Starts watching for and handling the DBus modem manager service.
-  virtual void Start() = 0;
+  // virtual for test mocks. TODO(crbug.com/984627): Use fakes or test setters.
+  virtual void Start();
 
   // Stops watching for the DBus modem manager service and destroys any
   // associated modems.
-  virtual void Stop() = 0;
+  // virtual for test mocks. TODO(crbug.com/984627): Use fakes or test setters.
+  virtual void Stop();
 
   void OnDeviceInfoAvailable(const std::string& link_name);
 
- protected:
-  const std::string& service() const { return service_; }
-  const RpcIdentifier& path() const { return path_; }
-  ControlInterface* control_interface() const {
-    return modem_info_->control_interface();
-  }
-  ModemInfo* modem_info() const { return modem_info_; }
+ private:
+  friend class ModemManager1Test;
+  friend class ModemManagerCoreTest;
+
+  FRIEND_TEST(ModemManager1Test, AddRemoveInterfaces);
+  FRIEND_TEST(ModemManager1Test, Connect);
+  FRIEND_TEST(ModemManager1Test, StartStop);
+  FRIEND_TEST(ModemManagerCoreTest, AddRemoveModem);
+  FRIEND_TEST(ModemManagerCoreTest, ConnectDisconnect);
+
+  // Connect/Disconnect to a modem manager service.
+  void Connect();
+  void Disconnect();
 
   // Service availability callbacks.
   void OnAppeared();
   void OnVanished();
 
-  // Connect/Disconnect to a modem manager service.
-  // Inheriting classes must call this superclass method.
-  virtual void Connect();
-  // Inheriting classes must call this superclass method.
-  virtual void Disconnect();
-
   bool ModemExists(const RpcIdentifier& path) const;
-  // Put the modem into our modem map
-  void RecordAddedModem(std::unique_ptr<Modem> modem);
 
-  // Removes a modem on |path|.
+  void AddModem(const RpcIdentifier& path,
+                const InterfaceToProperties& properties);
+  void RecordAddedModem(std::unique_ptr<Modem> modem);
+  // virtual for test mocks. TODO(crbug.com/984627): Use fakes or test setters.
+  virtual void InitModem(Modem* modem, const InterfaceToProperties& properties);
   void RemoveModem(const RpcIdentifier& path);
 
- private:
-  friend class ModemManagerCoreTest;
-  friend class ModemManager1Test;
+  // DBusObjectManagerProxyDelegate signal methods
+  void OnInterfacesAddedSignal(const RpcIdentifier& object_path,
+                               const InterfaceToProperties& properties);
+  void OnInterfacesRemovedSignal(const RpcIdentifier& object_path,
+                                 const std::vector<std::string>& interfaces);
 
-  FRIEND_TEST(ModemManager1Test, AddRemoveInterfaces);
-  FRIEND_TEST(ModemManager1Test, Connect);
-  FRIEND_TEST(ModemManagerCoreTest, AddRemoveModem);
-  FRIEND_TEST(ModemManagerCoreTest, ConnectDisconnect);
+  // DBusObjectManagerProxyDelegate method callbacks
+  void OnGetManagedObjectsReply(
+      const ObjectsWithProperties& objects_with_properties, const Error& error);
 
   const std::string service_;
   const RpcIdentifier path_;
@@ -84,49 +89,10 @@ class ModemManager {
 
   ModemInfo* modem_info_;
 
-  DISALLOW_COPY_AND_ASSIGN(ModemManager);
-};
-
-class ModemManager1 : public ModemManager {
- public:
-  ModemManager1(const std::string& service,
-                const RpcIdentifier& path,
-                ModemInfo* modem_info);
-  ~ModemManager1() override;
-
-  void Start() override;
-  void Stop() override;
-
- protected:
-  void AddModem(const RpcIdentifier& path,
-                const InterfaceToProperties& properties);
-  virtual void InitModem(Modem* modem, const InterfaceToProperties& properties);
-
-  // ModemManager methods
-  void Connect() override;
-  void Disconnect() override;
-
-  // DBusObjectManagerProxyDelegate signal methods
-  virtual void OnInterfacesAddedSignal(const RpcIdentifier& object_path,
-                                       const InterfaceToProperties& properties);
-  virtual void OnInterfacesRemovedSignal(
-      const RpcIdentifier& object_path,
-      const std::vector<std::string>& interfaces);
-
-  // DBusObjectManagerProxyDelegate method callbacks
-  virtual void OnGetManagedObjectsReply(
-      const ObjectsWithProperties& objects_with_properties, const Error& error);
-
- private:
-  friend class ModemManager1Test;
-  FRIEND_TEST(ModemManager1Test, Connect);
-  FRIEND_TEST(ModemManager1Test, AddRemoveInterfaces);
-  FRIEND_TEST(ModemManager1Test, StartStop);
-
   std::unique_ptr<DBusObjectManagerProxyInterface> proxy_;
-  base::WeakPtrFactory<ModemManager1> weak_ptr_factory_;
+  base::WeakPtrFactory<ModemManager> weak_ptr_factory_;
 
-  DISALLOW_COPY_AND_ASSIGN(ModemManager1);
+  DISALLOW_COPY_AND_ASSIGN(ModemManager);
 };
 
 }  // namespace shill
