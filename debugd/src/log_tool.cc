@@ -357,13 +357,6 @@ const std::vector<Log> kFeedbackLogs {
       "/usr/bin/network_diag --wifi-internal --no-log --anonymize"},
 };
 
-// List of log files needed to be part of the feedback report that are huge and
-// must be sent back to the client via the file descriptor using
-// LogTool::GetBigFeedbackLogs().
-const std::vector<Log> kBigFeedbackLogs{
-  kArcBugReportLog,
-};
-
 // Fills |dictionary| with the contents of the logs in |logs|.
 void GetLogsInDictionary(const std::vector<Log>& logs,
                          base::DictionaryValue* dictionary) {
@@ -653,11 +646,13 @@ gid_t Log::GidForGroup(const std::string& group) {
 
 LogTool::LogTool(scoped_refptr<dbus::Bus> bus,
                  const base::FilePath& daemon_store_base_dir)
-    : bus_(bus), daemon_store_base_dir_(daemon_store_base_dir) {}
-
-LogTool::LogTool(scoped_refptr<dbus::Bus> bus) : bus_(bus) {
-  daemon_store_base_dir_ = base::FilePath(kDaemonStoreBaseDir);
+    : bus_(bus), daemon_store_base_dir_(daemon_store_base_dir) {
+  cryptohome_proxy_ =
+      std::make_unique<org::chromium::CryptohomeInterfaceProxy>(bus);
 }
+
+LogTool::LogTool(scoped_refptr<dbus::Bus> bus)
+    : LogTool(bus, base::FilePath(kDaemonStoreBaseDir)) {}
 
 base::FilePath LogTool::GetArcBugReportBackupFilePath
   (const std::string& userhash) {
@@ -700,24 +695,65 @@ LogTool::LogMap LogTool::GetAllDebugLogs() {
   LogMap result;
   GetLogsFrom(kCommandLogs, &result);
   GetLogsFrom(kExtraLogs, &result);
-  GetLogsFrom(kBigFeedbackLogs, &result);
+  result[kArcBugReportLog.GetName()] = GetArcBugReport("");
   GetLsbReleaseInfo(&result);
   GetOsReleaseInfo(&result);
   return result;
 }
 
-void LogTool::GetBigFeedbackLogs(const base::ScopedFD& fd) {
+void LogTool::GetBigFeedbackLogs(const base::ScopedFD& fd,
+                                 const std::string& username) {
   CreateConnectivityReport(true);
   LogMap map;
   GetPerfData(&map);
   base::DictionaryValue dictionary;
   GetLogsInDictionary(kCommandLogs, &dictionary);
   GetLogsInDictionary(kFeedbackLogs, &dictionary);
-  GetLogsInDictionary(kBigFeedbackLogs, &dictionary);
+  dictionary.SetKey(kArcBugReportLog.GetName(),
+                    base::Value(GetArcBugReport(username)));
   GetLsbReleaseInfo(&map);
   GetOsReleaseInfo(&map);
   PopulateDictionaryValue(map, &dictionary);
   SerializeLogsAsJSON(dictionary, fd);
+}
+
+std::string GetSanitizedUsername(
+    org::chromium::CryptohomeInterfaceProxyInterface* cryptohome_proxy,
+    std::string username) {
+  if (username.empty()) {
+    return std::string();
+  }
+
+  std::string sanitized_username;
+  brillo::ErrorPtr error;
+  if (!cryptohome_proxy->GetSanitizedUsername(username, &sanitized_username,
+                                              &error)) {
+    LOG(ERROR) << "Failed to call GetSanitizedUsername, error: "
+               << error->GetMessage();
+    return std::string();
+  }
+
+  return sanitized_username;
+}
+
+std::string LogTool::GetArcBugReport(const std::string& username) {
+  std::string userhash =
+      GetSanitizedUsername(cryptohome_proxy_.get(), username);
+
+  std::string contents;
+  if (userhash.empty() ||
+      arc_bug_report_backups_.find(userhash) == arc_bug_report_backups_.end() ||
+      !base::ReadFileToString(GetArcBugReportBackupFilePath(userhash),
+                              &contents)) {
+    // If |userhash| was not empty, but was not found in the backup set
+    // or the file did not exist, attempt to delete the file.
+    if (!userhash.empty()) {
+      DeleteArcBugReportBackup(userhash);
+    }
+    contents = kArcBugReportLog.GetLogData();
+  }
+
+  return contents;
 }
 
 void LogTool::BackupArcBugReport(const std::string& userhash) {
@@ -725,8 +761,9 @@ void LogTool::BackupArcBugReport(const std::string& userhash) {
 
   const base::FilePath reportPath = GetArcBugReportBackupFilePath(userhash);
   const std::string logData = kArcBugReportLog.GetLogData();
-  // TODO(b/149874690) Record an entry in backup map.
-  if (!base::WriteFile(reportPath, logData.c_str(), logData.length())) {
+  if (base::WriteFile(reportPath, logData.c_str(), logData.length())) {
+    arc_bug_report_backups_.insert(userhash);
+  } else {
     PLOG(ERROR) << "Failed to backup ARC bug report";
   }
 }
@@ -735,7 +772,7 @@ void LogTool::DeleteArcBugReportBackup(const std::string& userhash) {
   DLOG(INFO) << "Deleting the ARC bug report backup";
 
   const base::FilePath reportPath = GetArcBugReportBackupFilePath(userhash);
-  // TODO(b/149874690) Remove the entry from backup map.
+  arc_bug_report_backups_.erase(userhash);
   if (!base::DeleteFile(reportPath, false)) {
     PLOG(ERROR) << "Failed to delete ARC bug report backup";
   }

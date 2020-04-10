@@ -7,11 +7,15 @@
 
 #include <sys/types.h>
 #include <map>
+#include <memory>
+#include <set>
 #include <string>
 
 #include <base/files/scoped_file.h>
 #include <base/macros.h>
 #include <base/memory/ref_counted.h>
+#include <cryptohome/proto_bindings/rpc.pb.h>
+#include <cryptohome-client/cryptohome/dbus-proxies.h>
 #include <dbus/bus.h>
 
 #include "debugd/src/sandboxed_process.h"
@@ -87,7 +91,8 @@ class LogTool {
   std::string GetLog(const std::string& name);
   LogMap GetAllLogs();
   LogMap GetAllDebugLogs();
-  void GetBigFeedbackLogs(const base::ScopedFD& fd);
+  void GetBigFeedbackLogs(const base::ScopedFD& fd,
+                          const std::string& username);
   void BackupArcBugReport(const std::string& userhash);
   void DeleteArcBugReportBackup(const std::string& userhash);
   void GetJournalLog(const base::ScopedFD& fd);
@@ -104,10 +109,19 @@ class LogTool {
           const base::FilePath& daemon_store_base_dir);
 
   void CreateConnectivityReport(bool wait_for_results);
+
+  // Returns the output of arc-bugreport program in ARC.
+  // Returns cached output if it is available for this user.
+  std::string GetArcBugReport(const std::string& username);
   base::FilePath GetArcBugReportBackupFilePath(const std::string& userhash);
 
   scoped_refptr<dbus::Bus> bus_;
+  std::unique_ptr<org::chromium::CryptohomeInterfaceProxyInterface>
+      cryptohome_proxy_;
   base::FilePath daemon_store_base_dir_;
+  // Set containing userhash of all users for which
+  // ARC bug report has been backed up.
+  std::set<std::string> arc_bug_report_backups_;
 
   DISALLOW_COPY_AND_ASSIGN(LogTool);
 };

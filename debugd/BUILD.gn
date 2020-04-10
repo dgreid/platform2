@@ -42,6 +42,7 @@ pkg_config("target_defaults") {
     "dbus-1",
     "libbrillo",
     "libchrome-${libbase_ver}",
+    "libcryptohome-client",
     "liblzma",
     "libminijail",
     "libpcrecpp",
