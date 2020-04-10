@@ -544,6 +544,7 @@ if (use.test) {
       "brillo/files/file_util_test.cc",
       "brillo/files/safe_fd_test.cc",
       "brillo/flag_helper_test.cc",
+      "brillo/future_test.cc",
       "brillo/glib/object_test.cc",
       "brillo/http/http_connection_curl_test.cc",
       "brillo/http/http_form_data_test.cc",
