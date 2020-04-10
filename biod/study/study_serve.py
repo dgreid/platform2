@@ -226,7 +226,7 @@ if __name__ == '__main__':
                       help="Number of verification images per finger")
   parser.add_argument('-p', '--port', type=int, default=9000,
                       help="port for the webserver socket")
-  parser.add_argument('-d', '--picture_dir', default="/usr/local/fingers",
+  parser.add_argument('-d', '--picture_dir', default="./fingers",
                       help="Log files directory")
   parser.add_argument('-l', '--log_dir')
   args = parser.parse_args()
