@@ -270,7 +270,12 @@ class SessionManagerImpl
                              const std::vector<uint8_t>& in_request) override;
   bool UpgradeArcContainer(brillo::ErrorPtr* error,
                            const std::vector<uint8_t>& in_request) override;
-  bool StopArcInstance(brillo::ErrorPtr* error) override;
+  bool StopArcInstance(brillo::ErrorPtr* error,
+                       const std::string& account_id,
+                       bool backup_log);
+  // TODO(b/149874690) Remove this overload when clients are updated.
+  void StopArcInstance(dbus::MethodCall* method_call,
+                       brillo::dbus_utils::ResponseSender sender) override;
   bool SetArcCpuRestriction(brillo::ErrorPtr* error,
                             uint32_t in_restriction_state) override;
   bool EmitArcBooted(brillo::ErrorPtr* error,

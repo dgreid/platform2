@@ -583,6 +583,8 @@
 
     <!--
         StopArcInstance:
+        @account_id: Account ID of the user to stop ARC for.
+        @backup_log: Flag to back up arc-bugreport before shutdown.
 
         Stops the currently running ARC instance. Used to manually stop the ARC
         instance. If the instance is not running, this will result in a no-op.
@@ -590,7 +592,16 @@
         instance when the user's session ends. This method is only available if
         the board supports ARC. This method gets invoked by Chrome.
     -->
-    <method name="StopArcInstance" />
+    <method name="StopArcInstance">
+      <arg name="account_id" type="s" direction="in" />
+      <arg name="backup_log" type="b" direction="in" />
+      <!--
+        TODO(b/149874690) Change back to normal after clients are updated.
+        Changed to raw to temporarily introduce optional account_id and
+        backup_log parameter.
+       -->
+      <annotation name="org.chromium.DBus.Method.Kind" value="raw"/>
+    </method>
 
     <!--
         ArcInstanceStopped:

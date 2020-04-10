@@ -2208,7 +2208,8 @@ TEST_F(SessionManagerImplTest, StartArcMiniContainer) {
       .Times(1);
   {
     brillo::ErrorPtr error;
-    EXPECT_TRUE(impl_->StopArcInstance(&error));
+    EXPECT_TRUE(impl_->StopArcInstance(&error, std::string() /*account_id*/,
+                                       false /*backup_log*/));
     EXPECT_FALSE(error.get());
   }
 
@@ -2269,7 +2270,8 @@ TEST_F(SessionManagerImplTest, UpgradeArcContainer) {
 
   {
     brillo::ErrorPtr error;
-    EXPECT_TRUE(impl_->StopArcInstance(&error));
+    EXPECT_TRUE(impl_->StopArcInstance(&error, std::string() /*account_id*/,
+                                       false /*backup_log*/));
     EXPECT_FALSE(error.get());
   }
   EXPECT_FALSE(android_container_.running());
@@ -2372,7 +2374,8 @@ TEST_P(SessionManagerPackagesCacheTest, PackagesCache) {
       impl_->UpgradeArcContainer(&error, SerializeAsBlob(upgrade_request)));
   EXPECT_TRUE(android_container_.running());
 
-  EXPECT_TRUE(impl_->StopArcInstance(&error));
+  EXPECT_TRUE(
+      impl_->StopArcInstance(&error, std::string() /*account_id*/, false /*backup_log*/));
   EXPECT_FALSE(android_container_.running());
 }
 
@@ -2460,7 +2463,8 @@ TEST_F(SessionManagerImplTest, UpgradeArcContainerForDemoSession) {
       impl_->UpgradeArcContainer(&error, SerializeAsBlob(upgrade_request)));
   EXPECT_TRUE(android_container_.running());
 
-  EXPECT_TRUE(impl_->StopArcInstance(&error));
+  EXPECT_TRUE(
+      impl_->StopArcInstance(&error, std::string() /*account_id*/, false /*backup_log*/));
   EXPECT_FALSE(android_container_.running());
 }
 
@@ -2507,7 +2511,8 @@ TEST_F(SessionManagerImplTest,
       impl_->UpgradeArcContainer(&error, SerializeAsBlob(upgrade_request)));
   EXPECT_TRUE(android_container_.running());
 
-  EXPECT_TRUE(impl_->StopArcInstance(&error));
+  EXPECT_TRUE(
+      impl_->StopArcInstance(&error, std::string() /*account_id*/, false /*backup_log*/));
   EXPECT_FALSE(android_container_.running());
 }
 
@@ -2734,7 +2739,8 @@ TEST_F(SessionManagerImplTest, ArcUpgradeCrash) {
   // This should now fail since the container was cleaned up already.
   {
     brillo::ErrorPtr error;
-    EXPECT_FALSE(impl_->StopArcInstance(&error));
+    EXPECT_FALSE(impl_->StopArcInstance(&error, std::string() /*account_id*/,
+                                        false /*backup_log*/));
     ASSERT_TRUE(error.get());
     EXPECT_EQ(dbus_error::kContainerShutdownFail, error->GetCode());
   }

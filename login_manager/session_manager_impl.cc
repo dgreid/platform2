@@ -32,6 +32,7 @@
 #include <base/time/time.h>
 #include <brillo/cryptohome.h>
 #include <brillo/dbus/dbus_object.h>
+#include <brillo/dbus/utils.h>
 #include <brillo/scoped_mount_namespace.h>
 #include <chromeos/dbus/service_constants.h>
 #include <crypto/scoped_nss_types.h>
@@ -1323,7 +1324,13 @@ bool SessionManagerImpl::UpgradeArcContainer(
 #endif  // !USE_CHEETS
 }
 
-bool SessionManagerImpl::StopArcInstance(brillo::ErrorPtr* error) {
+bool SessionManagerImpl::StopArcInstance(brillo::ErrorPtr* error,
+                                         const std::string& account_id,
+                                         bool backup_log) {
+  if (backup_log) {
+    // TODO(b/149874690) Call BackupArcBugReport on debugd.
+  }
+
 #if USE_CHEETS
   if (!StopArcInstanceInternal(ArcContainerStopReason::USER_REQUEST)) {
     *error = CREATE_ERROR_AND_LOG(dbus_error::kContainerShutdownFail,
@@ -1336,6 +1343,28 @@ bool SessionManagerImpl::StopArcInstance(brillo::ErrorPtr* error) {
   *error = CreateError(dbus_error::kNotAvailable, "ARC not supported.");
   return false;
 #endif  // USE_CHEETS
+}
+
+void SessionManagerImpl::StopArcInstance(
+    dbus::MethodCall* method_call, brillo::dbus_utils::ResponseSender sender) {
+  dbus::MessageReader reader(method_call);
+
+  std::string account_id;
+  bool backup_log;
+  if (!reader.PopString(&account_id) || !reader.PopBool(&backup_log)) {
+    backup_log = false;
+    account_id = "";
+  }
+
+  std::unique_ptr<brillo::Error> error;
+  std::unique_ptr<dbus::Response> response;
+  if (StopArcInstance(&error, account_id, backup_log)) {
+    response = dbus::Response::FromMethodCall(method_call);
+  } else {
+    response = brillo::dbus_utils::GetDBusError(method_call, error.get());
+  }
+
+  std::move(sender).Run(std::move(response));
 }
 
 bool SessionManagerImpl::SetArcCpuRestriction(brillo::ErrorPtr* error,
