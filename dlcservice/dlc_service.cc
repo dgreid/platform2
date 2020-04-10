@@ -57,8 +57,8 @@ DlcService::~DlcService() {
         << "Failed to cancel delayed update_engine check during cleanup.";
 }
 
-void DlcService::PreloadDlcs() {
-  dlc_manager_->PreloadDlcs();
+void DlcService::Initialize() {
+  dlc_manager_->Initialize();
 }
 
 const DlcBase* DlcService::GetDlc(const DlcId& id) {

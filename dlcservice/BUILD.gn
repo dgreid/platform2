@@ -134,6 +134,7 @@ if (use.test) {
       "boot/boot_device_test.cc",
       "boot/boot_slot_test.cc",
       "dbus_adaptors/dbus_adaptor_test.cc",
+      "dlc_manager_test.cc",
       "dlc_service_test.cc",
       "prefs_test.cc",
       "system_state_test.cc",

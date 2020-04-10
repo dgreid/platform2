@@ -21,7 +21,7 @@ using brillo::ErrorPtr;
 
 namespace dlcservice {
 
-DlcManager::DlcManager() {
+void DlcManager::Initialize() {
   // Initialize supported DLC(s).
   for (const auto& id : ScanDirectory(SystemState::Get()->manifest_dir())) {
     auto result = supported_.emplace(id, id);
@@ -30,9 +30,9 @@ DlcManager::DlcManager() {
       supported_.erase(id);
     }
   }
-}
 
-DlcManager::~DlcManager() = default;
+  PreloadDlcs();
+}
 
 bool DlcManager::IsSupported(const DlcId& id) {
   // TODO(ahassani): Consider searching through the manifest directory again if

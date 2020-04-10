@@ -76,13 +76,13 @@ class DlcServiceTest : public BaseTest {
 
     BaseTest::SetUp();
 
-    ConstructDlcService();
+    InitializeDlcService();
 
     SetUpDlcWithSlots(kFirstDlc);
     InstallDlcs({kFirstDlc});
   }
 
-  void ConstructDlcService() {
+  void InitializeDlcService() {
     EXPECT_CALL(*mock_update_engine_proxy_ptr_,
                 DoRegisterStatusUpdateAdvancedSignalHandler(_, _))
         .Times(1);
@@ -91,6 +91,8 @@ class DlcServiceTest : public BaseTest {
 
     dlc_service_test_observer_ = std::make_unique<DlcServiceTestObserver>();
     dlc_service_->AddObserver(dlc_service_test_observer_.get());
+
+    dlc_service_->Initialize();
   }
 
   void InstallDlcs(const DlcSet& ids) {
@@ -134,60 +136,6 @@ class DlcServiceTest : public BaseTest {
  private:
   DISALLOW_COPY_AND_ASSIGN(DlcServiceTest);
 };
-
-TEST_F(DlcServiceTest, PreloadAllowedDlcTest) {
-  // The third DLC has pre-loaded flag on.
-  SetUpDlcWithoutSlots(kThirdDlc);
-
-  EXPECT_CALL(*mock_image_loader_proxy_ptr_, LoadDlcImage(_, _, _, _, _, _))
-      .WillOnce(DoAll(SetArgPointee<3>(mount_path_.value()), Return(true)));
-  EXPECT_CALL(*mock_update_engine_proxy_ptr_,
-              SetDlcActiveValue(false, kThirdDlc, _, _))
-      .WillOnce(Return(true));
-  EXPECT_CALL(*mock_update_engine_proxy_ptr_,
-              SetDlcActiveValue(true, kThirdDlc, _, _))
-      .WillOnce(Return(true));
-  EXPECT_THAT(dlc_service_->GetInstalled(), ElementsAre(kFirstDlc));
-
-  dlc_service_->PreloadDlcs();
-
-  EXPECT_THAT(dlc_service_->GetInstalled(), ElementsAre(kFirstDlc, kThirdDlc));
-  EXPECT_FALSE(dlc_service_->GetDlc(kThirdDlc)->GetRoot().value().empty());
-  CheckDlcState(kThirdDlc, DlcState::INSTALLED);
-}
-
-TEST_F(DlcServiceTest, PreloadAllowedWithBadPreinstalledDlcTest) {
-  // The third DLC has pre-loaded flag on.
-  SetUpDlcWithSlots(kThirdDlc);
-  SetUpDlcWithoutSlots(kThirdDlc);
-
-  EXPECT_CALL(*mock_image_loader_proxy_ptr_, LoadDlcImage(_, _, _, _, _, _))
-      .WillOnce(DoAll(SetArgPointee<3>(mount_path_.value()), Return(true)));
-  EXPECT_CALL(*mock_update_engine_proxy_ptr_,
-              SetDlcActiveValue(false, kThirdDlc, _, _))
-      .WillOnce(Return(true));
-  EXPECT_CALL(*mock_update_engine_proxy_ptr_,
-              SetDlcActiveValue(true, kThirdDlc, _, _))
-      .WillOnce(Return(true));
-  EXPECT_THAT(dlc_service_->GetInstalled(), ElementsAre(kFirstDlc));
-
-  dlc_service_->PreloadDlcs();
-
-  EXPECT_THAT(dlc_service_->GetInstalled(), ElementsAre(kFirstDlc, kThirdDlc));
-  EXPECT_FALSE(dlc_service_->GetDlc(kThirdDlc)->GetRoot().value().empty());
-  CheckDlcState(kThirdDlc, DlcState::INSTALLED);
-}
-
-TEST_F(DlcServiceTest, PreloadNotAllowedDlcTest) {
-  SetUpDlcWithoutSlots(kSecondDlc);
-
-  EXPECT_THAT(dlc_service_->GetInstalled(), ElementsAre(kFirstDlc));
-
-  dlc_service_->PreloadDlcs();
-
-  EXPECT_THAT(dlc_service_->GetInstalled(), ElementsAre(kFirstDlc));
-  CheckDlcState(kSecondDlc, DlcState::NOT_INSTALLED);
-}
 
 TEST_F(DlcServiceTest,
        MimicUpdateRebootInstallWherePreallocatedSizeIncreasedTest) {

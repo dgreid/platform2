@@ -35,7 +35,7 @@ int Daemon::OnInit() {
   if (return_code != EX_OK)
     return return_code;
 
-  dlc_service_->PreloadDlcs();
+  dlc_service_->Initialize();
   return EX_OK;
 }
 

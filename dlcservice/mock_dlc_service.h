@@ -17,7 +17,7 @@ class MockDlcService : public DlcServiceInterface {
  public:
   MockDlcService() = default;
 
-  MOCK_METHOD(void, PreloadDlcs, (), (override));
+  MOCK_METHOD(void, Initialize, (), (override));
   MOCK_METHOD(bool,
               Install,
               (const DlcSet&, const std::string&, brillo::ErrorPtr*),

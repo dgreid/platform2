@@ -17,12 +17,15 @@ namespace dlcservice {
 
 class DlcManager {
  public:
-  DlcManager();
-  virtual ~DlcManager();
+  DlcManager() = default;
+  virtual ~DlcManager() = default;
 
   // Returns a reference to a DLC object given a DLC ID. We assume the ID is
   // valid.
   const DlcBase* GetDlc(const DlcId& id);
+
+  // Initializes the state of DlcManager.
+  void Initialize();
 
   // Returns true when an install is currently running.
   // If the desire is to |Initnstall()| again, then |FinishInstall()| or
@@ -37,9 +40,6 @@ class DlcManager {
 
   // Returns true and sets |state| if the DLC is supported.
   bool GetState(const DlcId& id, DlcState* state, brillo::ErrorPtr* err);
-
-  // Preloads preloadable DLCs from preloaded content directory.
-  void PreloadDlcs();
 
   // DLC Installation Flow
 
@@ -103,6 +103,9 @@ class DlcManager {
   bool Delete(const DlcId& id, brillo::ErrorPtr* err);
 
  private:
+  // Preloads preloadable DLCs from preloaded content directory.
+  void PreloadDlcs();
+
   bool IsSupported(const DlcId& id);
 
   DlcMap supported_;

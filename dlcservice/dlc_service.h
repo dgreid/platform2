@@ -38,9 +38,8 @@ class DlcServiceInterface {
 
   virtual ~DlcServiceInterface() = default;
 
-  // Preloads preloadable DLCs from preloaded content directory.
-  virtual void PreloadDlcs() = 0;
-
+  // Initializes the state of dlcservice.
+  virtual void Initialize() = 0;
   virtual bool Install(const DlcSet& dlcs,
                        const std::string& omaha_url,
                        brillo::ErrorPtr* err) = 0;
@@ -65,7 +64,7 @@ class DlcService : public DlcServiceInterface {
   DlcService();
   virtual ~DlcService();
 
-  void PreloadDlcs() override;
+  void Initialize() override;
   bool Install(const DlcSet& dlcs,
                const std::string& omaha_url,
                brillo::ErrorPtr* err) override;
