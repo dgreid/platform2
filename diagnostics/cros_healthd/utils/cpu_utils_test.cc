@@ -48,7 +48,7 @@ TEST(CpuUtils, TestFetchCpuInfo) {
       root_dir.Append(kSecondRelativeCpuinfoMaxFreqPath),
       base::NumberToString(kSecondFakeMaxClockSpeed)));
   auto cpu_result = FetchCpuInfo(root_dir);
-  ASSERT_FALSE(cpu_result->is_error());
+  ASSERT_TRUE(cpu_result->is_cpu_info());
   const auto& cpu_info = cpu_result->get_cpu_info();
   EXPECT_EQ(cpu_info.size(), 2);
   EXPECT_EQ(cpu_info[0]->model_name, kFirstFakeModelName);
