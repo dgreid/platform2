@@ -28,8 +28,9 @@ class FanFetcher {
   explicit FanFetcher(org::chromium::debugdProxyInterface* debugd_proxy);
   ~FanFetcher();
 
-  // Returns information about each of the device's fans.
-  std::vector<chromeos::cros_healthd::mojom::FanInfoPtr> FetchFanInfo(
+  // Returns either a list of data about each of the device's fans or the error
+  // that occurred retrieving the information.
+  chromeos::cros_healthd::mojom::FanResultPtr FetchFanInfo(
       const base::FilePath& root_dir);
 
  private:

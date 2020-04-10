@@ -228,7 +228,7 @@ void CrosHealthdMojoService::ProbeTelemetryInfo(
         break;
       }
       case ProbeCategoryEnum::kFan: {
-        telemetry_info.fan_info =
+        telemetry_info.fan_result =
             fan_fetcher_->FetchFanInfo(base::FilePath("/"));
         break;
       }

@@ -48,6 +48,8 @@ std::string ErrorTypeToString(chromeos::cros_healthd::mojom::ErrorType type) {
       return "File Read Error";
     case chromeos::cros_healthd::mojom::ErrorType::kParseError:
       return "Parse Error";
+    case chromeos::cros_healthd::mojom::ErrorType::kSystemUtilityError:
+      return "Error running system utility";
   }
 }
 
@@ -134,7 +136,13 @@ void DisplayCpuInfo(
 }
 
 void DisplayFanInfo(
-    const std::vector<chromeos::cros_healthd::mojom::FanInfoPtr>& fans) {
+    const chromeos::cros_healthd::mojom::FanResultPtr& fan_result) {
+  if (fan_result->is_error()) {
+    DisplayError(fan_result->get_error());
+    return;
+  }
+
+  const auto& fans = fan_result->get_fan_info();
   printf("speed_rpm\n");
   for (const auto& fan : fans) {
     printf("%u\n", fan->speed_rpm);
@@ -208,9 +216,9 @@ void DisplayTelemetryInfo(
   if (backlights)
     DisplayBacklightInfo(backlights.value());
 
-  const auto& fans = info->fan_info;
-  if (fans)
-    DisplayFanInfo(fans.value());
+  const auto& fan_result = info->fan_result;
+  if (fan_result)
+    DisplayFanInfo(fan_result);
 }
 
 // Create a stringified list of the category names for use in help.

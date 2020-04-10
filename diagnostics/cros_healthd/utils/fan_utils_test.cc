@@ -76,7 +76,9 @@ TEST_F(FanUtilsTest, FetchFanInfo) {
                       })),
                       Return(true)));
 
-  auto fan_info = fan_fetcher()->FetchFanInfo(GetTempDirPath());
+  auto fan_result = fan_fetcher()->FetchFanInfo(GetTempDirPath());
+  ASSERT_TRUE(fan_result->is_fan_info());
+  const auto& fan_info = fan_result->get_fan_info();
   ASSERT_EQ(fan_info.size(), 2);
   EXPECT_EQ(fan_info[0]->speed_rpm, kFirstFanSpeedRpm);
   EXPECT_EQ(fan_info[1]->speed_rpm, kSecondFanSpeedRpm);
@@ -91,11 +93,13 @@ TEST_F(FanUtilsTest, NoFan) {
           DoAll(WithArg<0>(Invoke([](std::string* output) { *output = ""; })),
                 Return(true)));
 
-  auto fan_info = fan_fetcher()->FetchFanInfo(GetTempDirPath());
-  EXPECT_EQ(fan_info.size(), 0);
+  auto fan_result = fan_fetcher()->FetchFanInfo(GetTempDirPath());
+  ASSERT_TRUE(fan_result->is_fan_info());
+  EXPECT_EQ(fan_result->get_fan_info().size(), 0);
 }
 
-// Test that debugd failing to collect fan speed fails gracefully.
+// Test that debugd failing to collect fan speed fails gracefully and returns a
+// ProbeError.
 TEST_F(FanUtilsTest, CollectFanSpeedFailure) {
   // Set the mock debugd response.
   EXPECT_CALL(*mock_debugd_proxy(),
@@ -105,8 +109,10 @@ TEST_F(FanUtilsTest, CollectFanSpeedFailure) {
                       })),
                       Return(false)));
 
-  auto fan_info = fan_fetcher()->FetchFanInfo(GetTempDirPath());
-  EXPECT_EQ(fan_info.size(), 0);
+  auto fan_result = fan_fetcher()->FetchFanInfo(GetTempDirPath());
+  ASSERT_TRUE(fan_result->is_error());
+  EXPECT_EQ(fan_result->get_error()->type,
+            chromeos::cros_healthd::mojom::ErrorType::kSystemUtilityError);
 }
 
 // Test that fan speed is set to 0 RPM when a fan stalls.
@@ -121,14 +127,16 @@ TEST_F(FanUtilsTest, FanStalled) {
                       })),
                       Return(true)));
 
-  auto fan_info = fan_fetcher()->FetchFanInfo(GetTempDirPath());
+  auto fan_result = fan_fetcher()->FetchFanInfo(GetTempDirPath());
+  ASSERT_TRUE(fan_result->is_fan_info());
+  const auto& fan_info = fan_result->get_fan_info();
   ASSERT_EQ(fan_info.size(), 2);
   EXPECT_EQ(fan_info[0]->speed_rpm, 0);
   EXPECT_EQ(fan_info[1]->speed_rpm, kSecondFanSpeedRpm);
 }
 
 // Test that failing to match a line of output to the fan speed regex fails
-// gracefully and does not prevent other valid lines from being matched.
+// gracefully and returns a ProbeError.
 TEST_F(FanUtilsTest, BadLine) {
   // Set the mock debugd response.
   EXPECT_CALL(*mock_debugd_proxy(),
@@ -140,14 +148,14 @@ TEST_F(FanUtilsTest, BadLine) {
                       })),
                       Return(true)));
 
-  auto fan_info = fan_fetcher()->FetchFanInfo(GetTempDirPath());
-  ASSERT_EQ(fan_info.size(), 1);
-  EXPECT_EQ(fan_info[0]->speed_rpm, kSecondFanSpeedRpm);
+  auto fan_result = fan_fetcher()->FetchFanInfo(GetTempDirPath());
+  ASSERT_TRUE(fan_result->is_error());
+  EXPECT_EQ(fan_result->get_error()->type,
+            chromeos::cros_healthd::mojom::ErrorType::kParseError);
 }
 
 // Test that failing to convert the first fan speed string to an integer fails
-// gracefully and does not prevent other valid fan speed strings from being
-// converted.
+// gracefully and returns a ProbeError.
 TEST_F(FanUtilsTest, BadValue) {
   // Set the mock debugd response.
   EXPECT_CALL(*mock_debugd_proxy(),
@@ -159,9 +167,10 @@ TEST_F(FanUtilsTest, BadValue) {
                       })),
                       Return(true)));
 
-  auto fan_info = fan_fetcher()->FetchFanInfo(GetTempDirPath());
-  ASSERT_EQ(fan_info.size(), 1);
-  EXPECT_EQ(fan_info[0]->speed_rpm, kSecondFanSpeedRpm);
+  auto fan_result = fan_fetcher()->FetchFanInfo(GetTempDirPath());
+  ASSERT_TRUE(fan_result->is_error());
+  EXPECT_EQ(fan_result->get_error()->type,
+            chromeos::cros_healthd::mojom::ErrorType::kParseError);
 }
 
 // Test that no fan info is fetched for a device that does not have a Google EC.
@@ -169,8 +178,9 @@ TEST_F(FanUtilsTest, NoGoogleEc) {
   base::FilePath root_dir = GetTempDirPath();
   ASSERT_TRUE(base::DeleteFile(root_dir.Append(kRelativeCrosEcPath),
                                true /* recursive */));
-  auto fan_info = fan_fetcher()->FetchFanInfo(root_dir);
-  EXPECT_EQ(fan_info.size(), 0);
+  auto fan_result = fan_fetcher()->FetchFanInfo(root_dir);
+  ASSERT_TRUE(fan_result->is_fan_info());
+  EXPECT_EQ(fan_result->get_fan_info().size(), 0);
 }
 
 }  // namespace diagnostics
