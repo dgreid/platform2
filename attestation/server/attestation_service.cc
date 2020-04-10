@@ -2767,12 +2767,7 @@ void AttestationService::CreateCertificateRequestTask(
     result->set_status(STATUS_UNEXPECTED_DEVICE_ERROR);
     return;
   }
-  std::string key_label;
-  if (!crypto_utility_->GetRandom(kNonceSize, &key_label)) {
-    LOG(ERROR) << __func__ << ": GetRandom(message_id) failed.";
-    result->set_status(STATUS_UNEXPECTED_DEVICE_ERROR);
-    return;
-  }
+
   std::string nonce;
   if (!crypto_utility_->GetRandom(kNonceSize, &nonce)) {
     LOG(ERROR) << __func__ << ": GetRandom(nonce) failed.";
@@ -2797,7 +2792,6 @@ void AttestationService::CreateCertificateRequestTask(
   }
   key.set_key_blob(key_blob);
   key.set_public_key(public_key_der);
-  key.set_key_name(key_label);
   key.set_public_key_tpm_format(public_key_tpm_format);
   key.set_certified_key_info(key_info);
   key.set_certified_key_proof(proof);
