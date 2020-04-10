@@ -5,7 +5,10 @@
 #ifndef LIBBRILLO_BRILLO_NAMESPACES_PLATFORM_H_
 #define LIBBRILLO_BRILLO_NAMESPACES_PLATFORM_H_
 
+#include <sys/types.h>
+
 #include <memory>
+#include <string>
 
 #include <base/files/file_path.h>
 #include <base/macros.h>
@@ -30,6 +33,20 @@ class BRILLO_EXPORT Platform {
   //   lazy - Whether to call a lazy unmount
   //   was_busy (OUT) - Set to true on return if the mount point was busy
   virtual bool Unmount(const base::FilePath& path, bool lazy, bool* was_busy);
+
+  // Calls the platform mount.
+  //
+  // Parameters
+  //   source - The path to mount from
+  //   target - The path to mount to
+  //   fs_type - File system type of the mount
+  //   mount_flags - Flags spesifying the type of the mount operation
+  //   data - Mount options
+  virtual int Mount(const std::string& source,
+                    const std::string& target,
+                    const std::string& fs_type,
+                    uint64_t mount_flags,
+                    const void* = nullptr);
 
   // Checks the file system type of the |path| and returns true if the
   // filesystem type is nsfs.

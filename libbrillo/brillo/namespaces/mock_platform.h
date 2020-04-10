@@ -7,6 +7,8 @@
 
 #include "brillo/namespaces/platform.h"
 
+#include <string>
+
 #include <base/files/file_path.h>
 #include <gmock/gmock.h>
 
@@ -20,6 +22,14 @@ class MockPlatform : public Platform {
   MOCK_METHOD(bool, Unmount, (const base::FilePath&, bool, bool*), (override));
   MOCK_METHOD(pid_t, Fork, (), (override));
   MOCK_METHOD(pid_t, Waitpid, (pid_t, int*), (override));
+  MOCK_METHOD(int,
+              Mount,
+              (const std::string&,
+               const std::string&,
+               const std::string&,
+               uint64_t,
+               const void*),
+              (override));
 };
 
 }  // namespace brillo

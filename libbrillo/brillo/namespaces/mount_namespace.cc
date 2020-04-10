@@ -10,13 +10,13 @@
 #include <sys/mount.h>
 #include <sys/types.h>
 
-#include <base/files/file_path.h>
-#include <base/logging.h>
-#include <brillo/namespaces/platform.h>
+#include <string>
 
-namespace {
-constexpr char kProcNsPath[] = "/proc/self/ns/mnt";
-}
+#include <base/files/file_path.h>
+#include <base/files/file_util.h>
+#include <base/logging.h>
+#include <base/strings/stringprintf.h>
+#include <brillo/namespaces/platform.h>
 
 namespace brillo {
 MountNamespace::MountNamespace(const base::FilePath& ns_path,
@@ -34,31 +34,56 @@ bool MountNamespace::Create() {
                << " already exists.";
     return false;
   }
+  int fd_mounted[2];
+  int fd_unshared[2];
+  char byte = '\0';
+  if (pipe(fd_mounted) != 0) {
+    PLOG(ERROR) << "Cannot create mount signalling pipe";
+    return false;
+  }
+  if (pipe(fd_unshared) != 0) {
+    PLOG(ERROR) << "Cannot create unshare signalling pipe";
+    return false;
+  }
   pid_t pid = platform_->Fork();
   if (pid < 0) {
-    PLOG(ERROR) << "Fork failed.";
+    PLOG(ERROR) << "Fork failed";
   } else if (pid == 0) {
     // Child.
-    if (unshare(CLONE_NEWNS) == 0 &&
-        mount(kProcNsPath, ns_path_.value().c_str(), nullptr, MS_BIND,
-              nullptr) == 0) {
-      exit(0);
+    close(fd_mounted[1]);
+    close(fd_unshared[0]);
+    if (unshare(CLONE_NEWNS) != 0) {
+      PLOG(ERROR) << "unshare(CLONE_NEWNS) failed";
+      exit(1);
     }
-    exit(1);
+    base::WriteFileDescriptor(fd_unshared[1], &byte, 1);
+    base::ReadFromFD(fd_mounted[0], &byte, 1);
+    exit(0);
   } else {
     // Parent.
+    close(fd_mounted[0]);
+    close(fd_unshared[1]);
+    std::string proc_ns_path = base::StringPrintf("/proc/%d/ns/mnt", pid);
+    bool mount_success = true;
+    base::ReadFromFD(fd_unshared[0], &byte, 1);
+    if (platform_->Mount(proc_ns_path, ns_path_.value(), "", MS_BIND) != 0) {
+      PLOG(ERROR) << "Mount(" << proc_ns_path << ", " << ns_path_.value()
+                  << ", MS_BIND) failed";
+      mount_success = false;
+    }
+    base::WriteFileDescriptor(fd_mounted[1], &byte, 1);
+
     int status;
     if (platform_->Waitpid(pid, &status) < 0) {
-      PLOG(ERROR) << "waitpid(" << pid << ") failed.";
+      PLOG(ERROR) << "waitpid(" << pid << ") failed";
       return false;
     }
-
     if (!WIFEXITED(status)) {
       LOG(ERROR) << "Child process did not exit normally.";
     } else if (WEXITSTATUS(status) != 0) {
-      LOG(ERROR) << "Child process failed to create namespace.";
+      LOG(ERROR) << "Child process failed.";
     } else {
-      exists_ = true;
+      exists_ = mount_success;
     }
   }
   return exists_;

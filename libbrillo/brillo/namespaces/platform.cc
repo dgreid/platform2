@@ -11,7 +11,6 @@
 #include <stdio.h>
 #include <sys/mount.h>
 #include <sys/stat.h>
-#include <sys/types.h>
 #include <sys/vfs.h>
 #include <sys/wait.h>
 
@@ -54,6 +53,15 @@ bool Platform::Unmount(const FilePath& path, bool lazy, bool* was_busy) {
     *was_busy = false;
   }
   return true;
+}
+
+int Platform::Mount(const std::string& source,
+                    const std::string& target,
+                    const std::string& fs_type,
+                    uint64_t mount_flags,
+                    const void* data) {
+  return mount(source.c_str(), target.c_str(), fs_type.c_str(), mount_flags,
+               data);
 }
 
 pid_t Platform::Fork() {
