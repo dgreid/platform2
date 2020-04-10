@@ -206,6 +206,10 @@ class UserDataAuthTestNotInitialized : public ::testing::Test {
   DISALLOW_COPY_AND_ASSIGN(UserDataAuthTestNotInitialized);
 };
 
+// Variant of UserDataAuthTestNotInitialized for DeathTest. We should be careful
+// in not creating threads in this class.
+using UserDataAuthTestNotInitializedDeathTest = UserDataAuthTestNotInitialized;
+
 // Standard, fully initialized UserDataAuth test fixture
 class UserDataAuthTest : public UserDataAuthTestNotInitialized {
  public:
@@ -1143,9 +1147,9 @@ TEST_F(UserDataAuthTest, GetSystemSaltSucess) {
   EXPECT_EQ(salt, userdataauth_->GetSystemSalt());
 }
 
-TEST_F(UserDataAuthTestNotInitialized, DISABLED_GetSystemSaltUninitialized) {
-  EXPECT_DEATH(userdataauth_->GetSystemSalt(),
-               "Cannot call GetSystemSalt before initialization");
+TEST_F(UserDataAuthTestNotInitializedDeathTest, GetSystemSaltUninitialized) {
+  EXPECT_DEBUG_DEATH(userdataauth_->GetSystemSalt(),
+                     "Cannot call GetSystemSalt before initialization");
 }
 
 TEST_F(UserDataAuthTest, OwnershipCallbackSanity) {
