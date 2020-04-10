@@ -104,8 +104,11 @@ class BRILLO_PRIVATE SecureAllocator : public std::allocator<T> {
       return nullptr;
 
     // Lock buffer into physical memory.
-    if (mlock(buffer, buffer_size))
+    if (mlock(buffer, buffer_size)) {
+      CHECK_NE(errno, ENOMEM) << "It is likely that SecureAllocator have "
+                                 "exceeded the RLIMIT_MEMLOCK limit";
       return nullptr;
+    }
 
     // Mark memory as non dumpable in a core dump.
     if (madvise(buffer, buffer_size, MADV_DONTDUMP))
