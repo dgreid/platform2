@@ -15,6 +15,8 @@ using std::string;
 
 namespace dlcservice {
 
+const char kDlcPrefMountable[] = "mountable";
+
 Prefs::Prefs(const base::FilePath& prefs_root) : prefs_root_(prefs_root) {}
 
 Prefs::Prefs(const DlcBase& dlc, BootSlot::Slot slot)

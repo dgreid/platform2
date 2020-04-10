@@ -14,6 +14,8 @@
 
 namespace dlcservice {
 
+extern const char kDlcPrefMountable[];
+
 // |Prefs| class can be used to persist key value pairs to disk.
 class Prefs {
  public:

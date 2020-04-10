@@ -16,6 +16,7 @@
 #include <dbus/dlcservice/dbus-constants.h>
 
 #include "dlcservice/error.h"
+#include "dlcservice/prefs.h"
 #include "dlcservice/system_state.h"
 #include "dlcservice/utils.h"
 
@@ -67,6 +68,30 @@ bool DlcBase::IsPreloadAllowed() const {
 
 base::FilePath DlcBase::GetRoot() const {
   return JoinPaths(mount_point_, kRootDirectoryInsideDlcModule);
+}
+
+bool DlcBase::MarkMountable(const BootSlot::Slot& slot, ErrorPtr* err) const {
+  if (!Prefs(*this, slot).Create(kDlcPrefMountable)) {
+    *err = Error::Create(
+        kErrorInternal,
+        base::StringPrintf(
+            "Failed to persist kDlcPrefMountable pref for DLC=%s, Slot=%s",
+            id_.c_str(), BootSlot::ToString(slot).c_str()));
+    return false;
+  }
+  return true;
+}
+
+bool DlcBase::ClearMountable(const BootSlot::Slot& slot, ErrorPtr* err) const {
+  if (!Prefs(*this, slot).Delete(kDlcPrefMountable)) {
+    *err = Error::Create(
+        kErrorInternal,
+        base::StringPrintf(
+            "Failed to remove kDlcPrefMountable pref for DLC=%s, Slot=%s",
+            id_.c_str(), BootSlot::ToString(slot).c_str()));
+    return false;
+  }
+  return true;
 }
 
 FilePath DlcBase::GetImagePath(BootSlot::Slot slot) const {

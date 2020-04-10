@@ -7,6 +7,7 @@
 #include <memory>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include <brillo/errors/error.h>
 #include <chromeos/dbus/service_constants.h>
@@ -17,6 +18,7 @@
 
 using std::string;
 using std::unique_ptr;
+using std::vector;
 
 namespace dlcservice {
 
@@ -68,6 +70,16 @@ bool DBusService::GetState(brillo::ErrorPtr* err,
                            const string& id_in,
                            DlcState* dlc_state_out) {
   return dlc_service_->GetState(id_in, dlc_state_out, err);
+}
+
+bool DBusService::InstallCompleted(brillo::ErrorPtr* err,
+                                   const vector<string>& dlcs) {
+  return dlc_service_->InstallCompleted(dlcs, err);
+}
+
+bool DBusService::UpdateCompleted(brillo::ErrorPtr* err,
+                                  const vector<string>& dlcs) {
+  return dlc_service_->UpdateCompleted(dlcs, err);
 }
 
 DBusAdaptor::DBusAdaptor(unique_ptr<DBusService> dbus_service)

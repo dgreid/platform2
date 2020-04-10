@@ -8,6 +8,7 @@
 #include <map>
 #include <set>
 #include <string>
+#include <vector>
 
 #include <base/files/file_path.h>
 #include <brillo/errors/error.h>
@@ -73,6 +74,12 @@ class DlcBase {
   // Deletes all files associated with the DLC.
   bool Delete(ErrorPtr* err);
 
+  // Persists the mountable pref for DLC.
+  bool MarkMountable(const BootSlot::Slot& slot, ErrorPtr* err) const;
+
+  // Removes the mountable pref for DLC.
+  bool ClearMountable(const BootSlot::Slot& slot, ErrorPtr* err) const;
+
  private:
   friend class DBusServiceTest;
   FRIEND_TEST(DBusServiceTest, GetInstalled);
@@ -125,6 +132,7 @@ class DlcBase {
 
 using DlcMap = std::map<DlcId, DlcBase>;
 using DlcSet = std::set<DlcId>;
+using DlcVec = std::vector<DlcId>;
 
 }  // namespace dlcservice
 

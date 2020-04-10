@@ -43,7 +43,8 @@
   </method>
   <method name="GetInstalled">
     <tp:docstring>
-      Returns a list of installed Downloadable Content (DLC) modules.
+      Returns a list of installed Downloadable Content (DLC) IDs and marks the
+      inactive DLCs as unmountable.
     </tp:docstring>
     <arg name="dlc_module_list" type="ay" direction="out">
       <tp:docstring>
@@ -72,6 +73,26 @@
       </tp:docstring>
       <annotation name="org.chromium.DBus.Argument.ProtobufClass"
                   value="dlcservice::DlcState"/>
+    </arg>
+  </method>
+  <method name="InstallCompleted">
+    <tp:docstring>
+      Notifies dlcservice that the installation is complete for the given DLCs.
+    </tp:docstring>
+    <arg name="ids" type="as" direction="in">
+      <tp:docstring>
+        List of DLC ID.
+      </tp:docstring>
+    </arg>
+  </method>
+  <method name="UpdateCompleted">
+    <tp:docstring>
+      Notifies dlcservice that the update is complete for the given DLCs.
+    </tp:docstring>
+    <arg name="ids" type="as" direction="in">
+      <tp:docstring>
+        List of DLC ID.
+      </tp:docstring>
     </arg>
   </method>
   <signal name="OnInstallStatus">

@@ -24,6 +24,7 @@ using base::Callback;
 using brillo::ErrorPtr;
 using brillo::MessageLoop;
 using std::string;
+using std::vector;
 using update_engine::Operation;
 using update_engine::StatusResult;
 
@@ -176,14 +177,28 @@ bool DlcService::Purge(const string& id_in, brillo::ErrorPtr* err) {
   return ret;
 }
 
-DlcSet DlcService::GetInstalled() {
-  return dlc_manager_->GetInstalled();
-}
-
 bool DlcService::GetState(const std::string& id_in,
                           DlcState* dlc_state,
                           ErrorPtr* err) {
   bool ret = dlc_manager_->GetState(id_in, dlc_state, err);
+  if (!ret)
+    LOG(ERROR) << Error::ToString(*err);
+  return ret;
+}
+
+DlcSet DlcService::GetInstalled() {
+  return dlc_manager_->GetInstalled();
+}
+
+bool DlcService::InstallCompleted(const DlcVec& ids_in, ErrorPtr* err) {
+  bool ret = dlc_manager_->InstallCompleted(ids_in, err);
+  if (!ret)
+    LOG(ERROR) << Error::ToString(*err);
+  return ret;
+}
+
+bool DlcService::UpdateCompleted(const DlcVec& ids_in, ErrorPtr* err) {
+  bool ret = dlc_manager_->UpdateCompleted(ids_in, err);
   if (!ret)
     LOG(ERROR) << Error::ToString(*err);
   return ret;

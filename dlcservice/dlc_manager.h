@@ -41,6 +41,12 @@ class DlcManager {
   // Returns true and sets |state| if the DLC is supported.
   bool GetState(const DlcId& id, DlcState* state, brillo::ErrorPtr* err);
 
+  // Persists the mountable pref for given DLC(s) on install completion.
+  bool InstallCompleted(const DlcVec& ids, brillo::ErrorPtr* err);
+
+  // Persists the mountable pref for given DLC(s) on update completion.
+  bool UpdateCompleted(const DlcVec& ids, brillo::ErrorPtr* err);
+
   // DLC Installation Flow
 
   // Install Step 1:

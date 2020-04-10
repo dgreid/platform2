@@ -45,11 +45,14 @@ class DlcServiceInterface {
                        brillo::ErrorPtr* err) = 0;
   virtual bool Uninstall(const std::string& id_in, brillo::ErrorPtr* err) = 0;
   virtual bool Purge(const std::string& id_in, brillo::ErrorPtr* err) = 0;
-  virtual DlcSet GetInstalled() = 0;
   virtual const DlcBase* GetDlc(const DlcId& id) = 0;
   virtual bool GetState(const std::string& id_in,
                         DlcState* dlc_state_out,
                         brillo::ErrorPtr* err) = 0;
+  virtual DlcSet GetInstalled() = 0;
+  virtual bool InstallCompleted(const DlcVec& ids_in,
+                                brillo::ErrorPtr* err) = 0;
+  virtual bool UpdateCompleted(const DlcVec& ids_in, brillo::ErrorPtr* err) = 0;
 
   // Adds a new observer to report install result status changes.
   virtual void AddObserver(Observer* observer) = 0;
@@ -75,6 +78,8 @@ class DlcService : public DlcServiceInterface {
   bool GetState(const std::string& id_in,
                 DlcState* dlc_state_out,
                 brillo::ErrorPtr* err) override;
+  bool InstallCompleted(const DlcVec& ids_in, brillo::ErrorPtr* err) override;
+  bool UpdateCompleted(const DlcVec& ids_in, brillo::ErrorPtr* err) override;
   void AddObserver(Observer* observer) override;
 
  private:

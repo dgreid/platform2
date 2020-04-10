@@ -18,6 +18,7 @@
 
 #include "dlcservice/dlc.h"
 #include "dlcservice/dlc_service.h"
+#include "dlcservice/prefs.h"
 #include "dlcservice/test_utils.h"
 #include "dlcservice/utils.h"
 
@@ -971,6 +972,29 @@ TEST_F(DlcServiceTest, PeriodCheckUpdateEngineInstallSignalRaceChecker) {
     EXPECT_FALSE(base::PathExists(JoinPaths(content_path_, id)));
     CheckDlcState(id, DlcState::NOT_INSTALLED);
   }
+}
+
+TEST_F(DlcServiceTest, InstallCompleted) {
+  auto ids = DlcVec{kFirstDlc, kSecondDlc};
+  auto active_boot_slot = SystemState::Get()->active_boot_slot();
+  for (const auto& id : ids)
+    EXPECT_FALSE(
+        Prefs(DlcBase(id), active_boot_slot).Exists(kDlcPrefMountable));
+  EXPECT_TRUE(dlc_service_->InstallCompleted({kFirstDlc, kSecondDlc}, &err_));
+  for (const auto& id : ids)
+    EXPECT_TRUE(Prefs(DlcBase(id), active_boot_slot).Exists(kDlcPrefMountable));
+}
+
+TEST_F(DlcServiceTest, UpdateCompleted) {
+  auto ids = DlcVec{kFirstDlc, kSecondDlc};
+  auto inactive_boot_slot = SystemState::Get()->inactive_boot_slot();
+  for (const auto& id : ids)
+    EXPECT_FALSE(
+        Prefs(DlcBase(id), inactive_boot_slot).Exists(kDlcPrefMountable));
+  EXPECT_TRUE(dlc_service_->UpdateCompleted({kFirstDlc, kSecondDlc}, &err_));
+  for (const auto& id : ids)
+    EXPECT_TRUE(
+        Prefs(DlcBase(id), inactive_boot_slot).Exists(kDlcPrefMountable));
 }
 
 }  // namespace dlcservice

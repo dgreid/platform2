@@ -75,6 +75,13 @@ void DlcManager::PreloadDlcs() {
 }
 
 DlcSet DlcManager::GetInstalled() {
+  // TODO(kimjae): Once update_engine repeatedly calls into |GetInstalled()| for
+  // updating update, need to handle clearing differently.
+  ErrorPtr tmp_err;
+  for (const auto& pr : supported_)
+    if (!pr.second.ClearMountable(SystemState::Get()->inactive_boot_slot(),
+                                  &tmp_err))
+      PLOG(WARNING) << Error::ToString(tmp_err);
   return ToDlcSet(supported_,
                   [](const DlcBase& dlc) { return dlc.IsInstalled(); });
 }
@@ -102,6 +109,46 @@ bool DlcManager::GetState(const DlcId& id, DlcState* state, ErrorPtr* err) {
 
   *state = supported_.find(id)->second.GetState();
   return true;
+}
+
+bool DlcManager::InstallCompleted(const DlcVec& ids, brillo::ErrorPtr* err) {
+  DCHECK(err);
+  bool ret = true;
+  for (const auto& id : ids) {
+    if (!IsSupported(id)) {
+      LOG(WARNING) << "Trying to mark mountable for unsupported DLC=" << id;
+      ret = false;
+    } else if (!supported_.find(id)->second.MarkMountable(
+                   SystemState::Get()->active_boot_slot(), err)) {
+      PLOG(WARNING) << Error::ToString(*err);
+      ret = false;
+    }
+  }
+  if (!ret)
+    *err = Error::Create(
+        kErrorInvalidDlc,
+        base::StringPrintf("Failed to mark all installed DLCs as hashed."));
+  return ret;
+}
+
+bool DlcManager::UpdateCompleted(const DlcVec& ids, brillo::ErrorPtr* err) {
+  DCHECK(err);
+  bool ret = true;
+  for (const auto& id : ids) {
+    if (!IsSupported(id)) {
+      LOG(WARNING) << "Trying to mark mountable for unsupported DLC=" << id;
+      ret = false;
+    } else if (!supported_.find(id)->second.MarkMountable(
+                   SystemState::Get()->inactive_boot_slot(), err)) {
+      PLOG(WARNING) << Error::ToString(*err);
+      ret = false;
+    }
+  }
+  if (!ret)
+    *err = Error::Create(
+        kErrorInvalidDlc,
+        base::StringPrintf("Failed to mark all updated DLCs as hashed."));
+  return ret;
 }
 
 bool DlcManager::InitInstall(const DlcSet& dlcs, ErrorPtr* err) {

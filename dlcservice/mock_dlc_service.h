@@ -38,6 +38,14 @@ class MockDlcService : public DlcServiceInterface {
                DlcState* dlc_state_out,
                brillo::ErrorPtr* err),
               (override));
+  MOCK_METHOD(bool,
+              InstallCompleted,
+              (const DlcVec& ids_in, brillo::ErrorPtr* err),
+              (override));
+  MOCK_METHOD(bool,
+              UpdateCompleted,
+              (const DlcVec& ids_in, brillo::ErrorPtr* err),
+              (override));
   MOCK_METHOD(void, AddObserver, (Observer * observer), (override));
 
  private:
