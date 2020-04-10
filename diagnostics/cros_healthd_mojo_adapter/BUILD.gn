@@ -1,0 +1,51 @@
+# Copyright 2020 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//common-mk/pkg_config.gni")
+
+# Library that provides a mojo connection to cros_healthd.
+pkg_config("libcros_healthd_mojo_adapter_pkg_deps") {
+  pkg_deps = [
+    "dbus-1",
+    "libbrillo",
+    "libchrome-${libbase_ver}",
+    "libmojo-${libbase_ver}",
+    "system_api",
+  ]
+}
+
+source_set("libcros_healthd_mojo_adapter") {
+  deps = [
+    "//diagnostics:diagnostics_mojo_bindings",
+  ]
+  all_dependent_configs = [ ":libcros_healthd_mojo_adapter_pkg_deps" ]
+  sources = [
+    "cros_healthd_mojo_adapter.cc",
+    "cros_healthd_mojo_adapter_delegate_impl.cc",
+  ]
+}
+
+if (use.test) {
+  pkg_config("cros_healthd_mojo_adapter_test_pkg_deps") {
+    pkg_deps = [
+      "libchrome-${libbase_ver}",
+      "libchrome-test-${libbase_ver}",
+    ]
+  }
+
+  executable("cros_healthd_mojo_adapter_test") {
+    configs += [
+      "//common-mk:test",
+      ":cros_healthd_mojo_adapter_test_pkg_deps",
+    ]
+    deps = [
+      ":libcros_healthd_mojo_adapter",
+      "../../common-mk/testrunner:testrunner",
+      "//diagnostics/cros_healthd/fake:libfake_cros_healthd",
+    ]
+    sources = [
+      "cros_healthd_mojo_adapter_test.cc",
+    ]
+  }
+}

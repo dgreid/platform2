@@ -15,8 +15,8 @@ pkg_config("libdiag_pkg_deps") {
 source_set("libdiag") {
   deps = [
     "//diagnostics:diagnostics_mojo_bindings",
-    "//diagnostics:libcros_healthd_mojo_adapter",
     "//diagnostics/common:libcommon",
+    "//diagnostics/cros_healthd_mojo_adapter:libcros_healthd_mojo_adapter",
   ]
   all_dependent_configs = [ ":libdiag_pkg_deps" ]
   sources = [

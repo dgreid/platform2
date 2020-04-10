@@ -22,6 +22,7 @@ group("all") {
       ":libcros_healthd_utils_test",
       ":wilco_dtc_supportd_test",
       "//diagnostics/common:libcommon_test",
+      "//diagnostics/cros_healthd_mojo_adapter:cros_healthd_mojo_adapter_test",
       "//diagnostics/grpc_async_adapter:libgrpc_async_adapter_test",
       "//diagnostics/routines:routine_test",
     ]
@@ -51,28 +52,6 @@ generate_mojom_bindings("diagnostics_mojo_bindings") {
     "mojo/wilco_dtc_supportd.mojom",
   ]
   use_once_callback = true
-}
-
-# Library that provides a mojo connection to cros_healthd.
-pkg_config("libcros_healthd_mojo_adapter_pkg_deps") {
-  pkg_deps = [
-    "dbus-1",
-    "libbrillo",
-    "libchrome-${libbase_ver}",
-    "libmojo-${libbase_ver}",
-    "system_api",
-  ]
-}
-
-source_set("libcros_healthd_mojo_adapter") {
-  deps = [
-    ":diagnostics_mojo_bindings",
-  ]
-  all_dependent_configs = [ ":libcros_healthd_mojo_adapter_pkg_deps" ]
-  sources = [
-    "cros_healthd_mojo_adapter/cros_healthd_mojo_adapter.cc",
-    "cros_healthd_mojo_adapter/cros_healthd_mojo_adapter_delegate_impl.cc",
-  ]
 }
 
 # Library that provides utilities used by cros_healthd.
@@ -216,7 +195,7 @@ pkg_config("telem_pkg_deps") {
 
 executable("telem") {
   deps = [
-    ":libcros_healthd_mojo_adapter",
+    "//diagnostics/cros_healthd_mojo_adapter:libcros_healthd_mojo_adapter",
   ]
   configs += [ ":telem_pkg_deps" ]
   sources = [
