@@ -841,7 +841,7 @@ u2f_warning='
   ### play with this, but use at your own risk. You have been warned.
 '
 
-USAGE_u2f_flags='<u2f | g2f>[, user keys, verbose]'
+USAGE_u2f_flags='<u2f | g2f>[, user_keys, verbose]'
 HELP_u2f_flags="
 ${u2f_warning}
   Set flags to override the second-factor authentication daemon configuration.
