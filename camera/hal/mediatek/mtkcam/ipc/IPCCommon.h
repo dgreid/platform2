@@ -163,6 +163,7 @@ enum IPC_GROUP {
 };
 
 IPC_GROUP Mediatek3AIpcCmdToGroup(IPC_CMD cmd);
+std::string Mediatek3AIpcCmdToString(IPC_CMD cmd);
 
 #define IPC_MAX_SENSOR_NUM 2
 
