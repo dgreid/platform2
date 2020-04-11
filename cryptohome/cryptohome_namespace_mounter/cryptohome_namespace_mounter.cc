@@ -16,6 +16,7 @@
 #include <unistd.h>
 
 #include <memory>
+#include <vector>
 
 #include <base/at_exit.h>
 #include <base/callback.h>
@@ -42,6 +43,9 @@ using base::FilePath;
 
 namespace {
 
+const std::vector<FilePath> kDaemonDirPaths = {
+    FilePath("session_manager"), FilePath("shill"), FilePath("shill_logs")};
+
 // Forks a child process that immediately prints |message| and crashes.
 // This is useful to report an error through crash reporting without taking down
 // the entire cryptohome-namespace-mounter process, therefore allowing it to
@@ -63,6 +67,26 @@ void ForkAndCrash(const std::string& message) {
     // short-lived. As soon as this process exits the child process would get
     // reparented to init and init would reap it. Still, reap for completeness.
     waitpid(child_pid, nullptr, 0);
+  }
+}
+
+void CleanUpGuestDaemonDirectories(cryptohome::Platform* platform) {
+  FilePath root_home_dir = brillo::cryptohome::home::GetRootPath(
+      brillo::cryptohome::home::kGuestUserName);
+  if (!platform->DirectoryExists(root_home_dir)) {
+    // No previous Guest sessions have been started, do nothing.
+    return;
+  }
+
+  for (const FilePath& daemon_path : kDaemonDirPaths) {
+    FilePath to_delete = root_home_dir.Append(daemon_path);
+    if (platform->DirectoryExists(to_delete)) {
+      LOG(INFO) << "Attempting to delete " << to_delete.value();
+      // Platform::DeleteFile() works with directories too.
+      if (!platform->DeleteFile(to_delete, /*recursive=*/true)) {
+        LOG(WARNING) << "Failed to delete " << to_delete.value();
+      }
+    }
   }
 }
 
@@ -104,6 +128,15 @@ int main(int argc, char** argv) {
   brillo::SecureBlob::HexStringToSecureBlob(request.system_salt(),
                                             &system_salt);
 
+  cryptohome::Platform platform;
+
+  // Before performing any mounts, check whether there are any leftover
+  // Guest session daemon directories in /home/root/<hashed username>/.
+  // See crbug.com/1069501 for details.
+  if (request.username() == brillo::cryptohome::home::kGuestUserName) {
+    CleanUpGuestDaemonDirectories(&platform);
+  }
+
   std::unique_ptr<brillo::ScopedMountNamespace> ns_mnt;
   if (!request.mount_namespace_path().empty()) {
     // Enter the required mount namespace.
@@ -111,7 +144,6 @@ int main(int argc, char** argv) {
         base::FilePath(request.mount_namespace_path()));
   }
 
-  cryptohome::Platform platform;
   cryptohome::MountHelper mounter(
       uid, gid, access_gid, FilePath(cryptohome::kDefaultShadowRoot),
       FilePath(cryptohome::kDefaultSkeletonSource), system_salt,
