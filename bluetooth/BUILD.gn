@@ -90,7 +90,6 @@ if (use.test) {
       "dispatcher/catch_all_forwarder_test.cc",
       "dispatcher/dispatcher_client_test.cc",
       "dispatcher/dispatcher_test.cc",
-      "dispatcher/impersonation_object_manager_interface_test.cc",
       "dispatcher/object_manager_interface_multiplexer_test.cc",
       "dispatcher/suspend_manager_test.cc",
       "dispatcher/test_helper.cc",

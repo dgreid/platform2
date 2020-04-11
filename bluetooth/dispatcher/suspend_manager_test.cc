@@ -45,9 +45,9 @@ class SuspendManagerTest : public ::testing::Test {
   SuspendManagerTest() = default;
 
   void SetUp() override {
-    auto flags = new RuntimeFlags();
-    flags->Init();
-    if (!flags->Get("enable-suspend-management")) {
+    flags_ = std::make_unique<RuntimeFlags>();
+    flags_->Init();
+    if (!flags_->Get("enable-suspend-management")) {
       GTEST_SKIP();
     }
     dbus::Bus::Options options;
@@ -253,6 +253,8 @@ class SuspendManagerTest : public ::testing::Test {
     is_power_manager_available_ = !new_owner.empty();
     power_manager_name_owner_changed_callback_.Run(old_owner, new_owner);
   }
+
+  std::unique_ptr<RuntimeFlags> flags_;
 
   // Keeps track whether we have simulated power manager available event.
   // Needed to decide if stub power manager should reject any method calls.
