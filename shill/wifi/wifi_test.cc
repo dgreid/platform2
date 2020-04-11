@@ -3028,7 +3028,7 @@ void WiFiTimerTest::ExpectInitialScanSequence() {
 
   // Each time we call FireScanTimer() below, WiFi will post a task to actually
   // run Scan() on the wpa_supplicant proxy.
-  EXPECT_CALL(*mock_dispatcher_, PostTask(_, _)).Times(kScanTimes);
+  EXPECT_CALL(*mock_dispatcher_, PostDelayedTask(_, _, 0)).Times(kScanTimes);
   {
     InSequence seq;
     // The scans immediately after the initial scan should happen at the short
@@ -3055,7 +3055,7 @@ TEST_F(WiFiTimerTest, FastRescan) {
   EXPECT_CALL(*mock_dispatcher_, PostDelayedTask(_, _, _)).Times(AnyNumber());
   // This PostTask is a result of the call to Scan(nullptr), and is meant to
   // post a task to call Scan() on the wpa_supplicant proxy immediately.
-  EXPECT_CALL(*mock_dispatcher_, PostTask(_, _));
+  EXPECT_CALL(*mock_dispatcher_, PostDelayedTask(_, _, 0));
   EXPECT_CALL(*mock_dispatcher_,
               PostDelayedTask(_, _, WiFi::kFastScanIntervalSeconds * 1000));
   StartWiFi();
@@ -3071,7 +3071,7 @@ TEST_F(WiFiTimerTest, FastRescan) {
 }
 
 TEST_F(WiFiTimerTest, ReconnectTimer) {
-  EXPECT_CALL(*mock_dispatcher_, PostTask(_, _)).Times(AnyNumber());
+  EXPECT_CALL(*mock_dispatcher_, PostDelayedTask(_, _, 0)).Times(AnyNumber());
   EXPECT_CALL(*mock_dispatcher_, PostDelayedTask(_, _, _)).Times(AnyNumber());
   StartWiFi();
   SetupConnectedService(RpcIdentifier(""), nullptr, nullptr);
@@ -3104,7 +3104,7 @@ TEST_F(WiFiTimerTest, ReconnectTimer) {
 }
 
 TEST_F(WiFiTimerTest, RequestStationInfo) {
-  EXPECT_CALL(*mock_dispatcher_, PostTask(_, _)).Times(AnyNumber());
+  EXPECT_CALL(*mock_dispatcher_, PostDelayedTask(_, _, 0)).Times(AnyNumber());
   EXPECT_CALL(*mock_dispatcher_, PostDelayedTask(_, _, _)).Times(AnyNumber());
 
   // Setup a connected service here while we have the expectations above set.
@@ -3333,7 +3333,7 @@ TEST_F(WiFiTimerTest, RequestStationInfo) {
 }
 
 TEST_F(WiFiTimerTest, ResumeDispatchesConnectivityReportTask) {
-  EXPECT_CALL(*mock_dispatcher_, PostTask(_, _)).Times(AnyNumber());
+  EXPECT_CALL(*mock_dispatcher_, PostDelayedTask(_, _, 0)).Times(AnyNumber());
   EXPECT_CALL(*mock_dispatcher_, PostDelayedTask(_, _, _)).Times(AnyNumber());
   StartWiFi();
   SetupConnectedService(RpcIdentifier(""), nullptr, nullptr);
@@ -3409,7 +3409,7 @@ TEST_F(WiFiTimerTest, ScanDoneDispatchesTasks) {
 
   // Dispatch WiFi::ScanDoneTask if scan succeeded, and cancel the scan failed
   // callback if has been dispatched.
-  EXPECT_CALL(*mock_dispatcher_, PostTask(_, _));
+  EXPECT_CALL(*mock_dispatcher_, PostDelayedTask(_, _, 0));
   ScanDone(true);
   EXPECT_TRUE(ScanFailedCallbackIsCancelled());
 }

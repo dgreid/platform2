@@ -219,7 +219,7 @@ TEST_F(PassiveLinkMonitorTest, CycleFailed) {
   // invoke result callback.
   EXPECT_CALL(*client_, StartRequestListener()).Times(0);
   EXPECT_CALL(dispatcher_, PostDelayedTask(_, _, _)).Times(0);
-  EXPECT_CALL(dispatcher_, PostTask(_, _)).Times(1);
+  EXPECT_CALL(dispatcher_, PostDelayedTask(_, _, 0)).Times(1);
   InvokeCycleTimeoutHandler();
 }
 
@@ -232,7 +232,7 @@ TEST_F(PassiveLinkMonitorTest, CycleSucceed) {
   // Monitor succeed for the current cycle, post a task to trigger a new cycle.
   EXPECT_CALL(*client_, StartRequestListener()).WillOnce(Return(true));
   EXPECT_CALL(dispatcher_, PostDelayedTask(_, _, _)).Times(1);
-  EXPECT_CALL(dispatcher_, PostTask(_, _)).Times(0);
+  EXPECT_CALL(dispatcher_, PostDelayedTask(_, _, 0)).Times(0);
   InvokeCycleTimeoutHandler();
   // ARP request received count should be resetted.
   VerifyCurrentCycleStats(0, kCurrentCycle + 1);
@@ -247,7 +247,7 @@ TEST_F(PassiveLinkMonitorTest, AllCyclesCompleted) {
   // Monitor completed all the cycles, post a task to perform cleanup and
   // invoke result callback.
   EXPECT_CALL(dispatcher_, PostDelayedTask(_, _, _)).Times(0);
-  EXPECT_CALL(dispatcher_, PostTask(_, _)).Times(1);
+  EXPECT_CALL(dispatcher_, PostDelayedTask(_, _, 0)).Times(1);
   InvokeCycleTimeoutHandler();
   VerifyCurrentCycleStats(0, PassiveLinkMonitor::kDefaultMonitorCycles);
 }

@@ -93,7 +93,7 @@ class IcmpSessionTest : public Test {
     EXPECT_CALL(io_handler_factory_,
                 CreateIOInputHandler(icmp_->socket(), _, _));
     EXPECT_CALL(dispatcher_, PostDelayedTask(_, _, GetTimeoutSeconds() * 1000));
-    EXPECT_CALL(dispatcher_, PostTask(_, _));
+    EXPECT_CALL(dispatcher_, PostDelayedTask(_, _, 0));
     EXPECT_TRUE(Start(destination, interface_index));
     EXPECT_TRUE(GetSeqNumToSentRecvTime()->empty());
     EXPECT_TRUE(GetReceivedEchoReplySeqNumbers()->empty());
@@ -200,7 +200,7 @@ TEST_F(IcmpSessionTest, StartWhileAlreadyStarted) {
       .Times(0);
   EXPECT_CALL(io_handler_factory_, CreateIOInputHandler(_, _, _)).Times(0);
   EXPECT_CALL(dispatcher_, PostDelayedTask(_, _, _)).Times(0);
-  EXPECT_CALL(dispatcher_, PostTask(_, _)).Times(0);
+  EXPECT_CALL(dispatcher_, PostDelayedTask(_, _, 0)).Times(0);
   EXPECT_FALSE(Start(ipv4_destination, kInterfaceIndex));
 }
 

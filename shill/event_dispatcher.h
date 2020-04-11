@@ -28,8 +28,7 @@ class EventDispatcher {
 
   // These are thin wrappers around calls of the same name in
   // <base/message_loop_proxy.h>
-  virtual void PostTask(const base::Location& location,
-                        const base::Closure& task);
+  void PostTask(const base::Location& location, const base::Closure& task);
   virtual void PostDelayedTask(const base::Location& location,
                                const base::Closure& task,
                                int64_t delay_ms);

@@ -241,7 +241,7 @@ class ActiveLinkMonitorTest : public Test {
     EXPECT_CALL(device_info_, GetMacAddress(0, _))
         .WillOnce(DoAll(SetArgPointee<1>(local_mac_), Return(true)));
     EXPECT_CALL(*client_, StartReplyListener()).WillOnce(Return(true));
-    EXPECT_CALL(dispatcher_, PostTask(_, _)).Times(1);
+    EXPECT_CALL(dispatcher_, PostDelayedTask(_, _, 0)).Times(1);
     EXPECT_TRUE(
         monitor_.Start(ActiveLinkMonitor::kDefaultTestPeriodMilliseconds));
     EXPECT_FALSE(GetSendRequestCallback().IsCancelled());

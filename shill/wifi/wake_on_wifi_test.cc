@@ -2542,7 +2542,7 @@ TEST_F(WakeOnWiFiTestWithMockDispatcher, OnBeforeSuspend_DHCPLeaseRenewal) {
   is_connected = true;
   have_dhcp_lease = true;
   EXPECT_CALL(*this, RenewDHCPLeaseCallback()).Times(1);
-  EXPECT_CALL(mock_dispatcher_, PostTask(_, _)).Times(1);
+  EXPECT_CALL(mock_dispatcher_, PostDelayedTask(_, _, 0)).Times(1);
   OnBeforeSuspend(is_connected, whitelist, have_dhcp_lease,
                   kTimeToNextLeaseRenewalShort);
 
@@ -2550,7 +2550,7 @@ TEST_F(WakeOnWiFiTestWithMockDispatcher, OnBeforeSuspend_DHCPLeaseRenewal) {
   is_connected = false;
   have_dhcp_lease = true;
   EXPECT_CALL(*this, RenewDHCPLeaseCallback()).Times(0);
-  EXPECT_CALL(mock_dispatcher_, PostTask(_, _)).Times(1);
+  EXPECT_CALL(mock_dispatcher_, PostDelayedTask(_, _, 0)).Times(1);
   OnBeforeSuspend(is_connected, whitelist, have_dhcp_lease,
                   kTimeToNextLeaseRenewalShort);
 
@@ -2559,7 +2559,7 @@ TEST_F(WakeOnWiFiTestWithMockDispatcher, OnBeforeSuspend_DHCPLeaseRenewal) {
   is_connected = true;
   have_dhcp_lease = true;
   EXPECT_CALL(*this, RenewDHCPLeaseCallback()).Times(0);
-  EXPECT_CALL(mock_dispatcher_, PostTask(_, _)).Times(1);
+  EXPECT_CALL(mock_dispatcher_, PostDelayedTask(_, _, 0)).Times(1);
   OnBeforeSuspend(is_connected, whitelist, have_dhcp_lease,
                   kTimeToNextLeaseRenewalLong);
 
@@ -2568,7 +2568,7 @@ TEST_F(WakeOnWiFiTestWithMockDispatcher, OnBeforeSuspend_DHCPLeaseRenewal) {
   is_connected = true;
   have_dhcp_lease = false;
   EXPECT_CALL(*this, RenewDHCPLeaseCallback()).Times(0);
-  EXPECT_CALL(mock_dispatcher_, PostTask(_, _)).Times(1);
+  EXPECT_CALL(mock_dispatcher_, PostDelayedTask(_, _, 0)).Times(1);
   OnBeforeSuspend(is_connected, whitelist, have_dhcp_lease,
                   kTimeToNextLeaseRenewalLong);
 }

@@ -364,7 +364,7 @@ TEST_F(EthernetTest, ConnectToLinkDown) {
   EXPECT_EQ(nullptr, GetSelectedService());
   EXPECT_CALL(dhcp_provider_, CreateIPv4Config(_, _, _, _)).Times(0);
   EXPECT_CALL(*dhcp_config_, RequestIP()).Times(0);
-  EXPECT_CALL(dispatcher_, PostTask(_, _)).Times(0);
+  EXPECT_CALL(dispatcher_, PostDelayedTask(_, _, 0)).Times(0);
   EXPECT_CALL(*mock_service_, SetState(_)).Times(0);
   ethernet_->ConnectTo(mock_service_.get());
   EXPECT_EQ(nullptr, GetSelectedService());
@@ -378,7 +378,8 @@ TEST_F(EthernetTest, ConnectToFailure) {
   EXPECT_CALL(dhcp_provider_, CreateIPv4Config(_, _, _, _))
       .WillOnce(Return(dhcp_config_));
   EXPECT_CALL(*dhcp_config_, RequestIP()).WillOnce(Return(false));
-  EXPECT_CALL(dispatcher_, PostTask(_, _));  // Posts ConfigureStaticIPTask.
+  EXPECT_CALL(dispatcher_,
+              PostDelayedTask(_, _, 0));  // Posts ConfigureStaticIPTask.
   EXPECT_CALL(*mock_service_, SetState(Service::kStateFailure));
   ethernet_->ConnectTo(mock_service_.get());
   EXPECT_EQ(mock_service_, GetSelectedService());
@@ -392,7 +393,8 @@ TEST_F(EthernetTest, ConnectToSuccess) {
   EXPECT_CALL(dhcp_provider_, CreateIPv4Config(_, _, _, _))
       .WillOnce(Return(dhcp_config_));
   EXPECT_CALL(*dhcp_config_, RequestIP()).WillOnce(Return(true));
-  EXPECT_CALL(dispatcher_, PostTask(_, _));  // Posts ConfigureStaticIPTask.
+  EXPECT_CALL(dispatcher_,
+              PostDelayedTask(_, _, 0));  // Posts ConfigureStaticIPTask.
   EXPECT_CALL(*mock_service_, SetState(Service::kStateConfiguring));
   ethernet_->ConnectTo(mock_service_.get());
   EXPECT_EQ(GetService(), GetSelectedService());
@@ -409,7 +411,8 @@ TEST_F(EthernetTest, OnEapDetected) {
   EXPECT_CALL(*eap_listener_, Stop());
   EXPECT_CALL(ethernet_eap_provider_,
               SetCredentialChangeCallback(ethernet_.get(), _));
-  EXPECT_CALL(dispatcher_, PostTask(_, _));  // Posts TryEapAuthenticationTask.
+  EXPECT_CALL(dispatcher_,
+              PostDelayedTask(_, _, 0));  // Posts TryEapAuthenticationTask.
   TriggerOnEapDetected();
   EXPECT_TRUE(GetIsEapDetected());
 }

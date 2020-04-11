@@ -29,7 +29,7 @@ void EventDispatcher::DispatchPendingEvents() {
 }
 
 void EventDispatcher::PostTask(const Location& location, const Closure& task) {
-  base::MessageLoop::current()->task_runner()->PostTask(location, task);
+  PostDelayedTask(FROM_HERE, task, 0);
 }
 
 void EventDispatcher::PostDelayedTask(const Location& location,
@@ -40,7 +40,7 @@ void EventDispatcher::PostDelayedTask(const Location& location,
 }
 
 void EventDispatcher::QuitDispatchForever() {
-  this->PostTask(FROM_HERE, quit_closure_);
+  PostTask(FROM_HERE, quit_closure_);
 }
 
 }  // namespace shill

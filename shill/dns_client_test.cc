@@ -179,7 +179,9 @@ class DnsClientTest : public Test {
     address_result_ = address;
   }
 
-  void ExpectPostCompletionTask() { EXPECT_CALL(dispatcher_, PostTask(_, _)); }
+  void ExpectPostCompletionTask() {
+    EXPECT_CALL(dispatcher_, PostDelayedTask(_, _, 0));
+  }
 
   void ExpectReset() {
     EXPECT_TRUE(dns_client_->address_.family() == IPAddress::kFamilyIPv4);
