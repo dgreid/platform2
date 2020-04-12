@@ -36,7 +36,7 @@ constexpr char kPrefixHttp[] = "http://";
 namespace system_proxy {
 
 SandboxedWorker::SandboxedWorker(base::WeakPtr<SystemProxyAdaptor> adaptor)
-    : jail_(minijail_new()), adaptor_(adaptor) {}
+    : jail_(minijail_new()), adaptor_(adaptor), pid_(0) {}
 
 void SandboxedWorker::Start() {
   DCHECK(!IsRunning()) << "Worker is already running.";
@@ -85,7 +85,7 @@ void SandboxedWorker::Start() {
 
   stderr_watcher_ = base::FileDescriptorWatcher::WatchReadable(
       stderr_pipe_.get(),
-      base::BindRepeating(&SandboxedWorker::OnMessageReceived,
+      base::BindRepeating(&SandboxedWorker::OnErrorReceived,
                           base::Unretained(this)));
 }
 
