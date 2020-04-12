@@ -42,6 +42,9 @@ class BRILLO_EXPORT Socket {
 
   int fd() const { return fd_.get(); }
 
+  // Releases the underlying fd rendering the Socket instance invalid.
+  int release() { return fd_.release(); }
+
  private:
   base::ScopedFD fd_;
 
