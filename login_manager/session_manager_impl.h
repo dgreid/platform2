@@ -147,6 +147,7 @@ class SessionManagerImpl
                      InstallAttributesReader* install_attributes_reader,
                      dbus::ObjectProxy* powerd_proxy,
                      dbus::ObjectProxy* system_clock_proxy,
+                     dbus::ObjectProxy* debugd_proxy,
                      ArcSideloadStatusInterface* arc_sideload_status);
   ~SessionManagerImpl() override;
 
@@ -389,6 +390,9 @@ class SessionManagerImpl
       brillo::dbus_utils::DBusMethodResponse<bool>* response,
       ArcSideloadStatusInterface::Status status);
 
+  void BackupArcBugReport(const std::string& account_id);
+  void DeleteArcBugReportBackup(const std::string& account_id);
+
 #if USE_CHEETS
   // Starts the Android container for ARC. If an error occurs, brillo::Error
   // instance is set to |error_out|.  After this succeeds, in case of ARC stop,
@@ -455,7 +459,7 @@ class SessionManagerImpl
   InstallAttributesReader* install_attributes_reader_;
   dbus::ObjectProxy* powerd_proxy_;
   dbus::ObjectProxy* system_clock_proxy_;
-
+  dbus::ObjectProxy* debugd_proxy_;
   std::unique_ptr<DevicePolicyService> device_policy_;
   std::unique_ptr<UserPolicyServiceFactory> user_policy_factory_;
   std::unique_ptr<DeviceLocalAccountManager> device_local_account_manager_;

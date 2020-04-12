@@ -301,7 +301,9 @@ class SessionManagerImplTest : public ::testing::Test,
         powerd_proxy_(new dbus::MockObjectProxy(
             nullptr, "", dbus::ObjectPath("/fake/powerd"))),
         system_clock_proxy_(new dbus::MockObjectProxy(
-            nullptr, "", dbus::ObjectPath("/fake/clock"))) {}
+            nullptr, "", dbus::ObjectPath("/fake/clock"))),
+        debugd_proxy_(new dbus::MockObjectProxy(
+            nullptr, "", dbus::ObjectPath("/fake/debugd"))) {}
 
   ~SessionManagerImplTest() override = default;
 
@@ -351,7 +353,7 @@ class SessionManagerImplTest : public ::testing::Test,
         &key_gen_, &state_key_generator_, &manager_, &metrics_, &nss_,
         base::nullopt, &utils_, &crossystem_, &vpd_process_, &owner_key_,
         &android_container_, &install_attributes_reader_, powerd_proxy_.get(),
-        system_clock_proxy_.get(), arc_sideload_status_);
+        system_clock_proxy_.get(), debugd_proxy_.get(), arc_sideload_status_);
     impl_->SetSystemClockLastSyncInfoRetryDelayForTesting(base::TimeDelta());
     impl_->SetUiLogSymlinkPathForTesting(log_symlink_);
 
@@ -397,6 +399,10 @@ class SessionManagerImplTest : public ::testing::Test,
     shared_memory_util_ = shared_memory_util.get();
     impl_->SetLoginScreenStorageForTesting(std::make_unique<LoginScreenStorage>(
         login_screen_storage_path_, std::move(shared_memory_util)));
+
+    EXPECT_CALL(*debugd_proxy_, CallMethodAndBlock(_, _))
+        .WillRepeatedly(
+            Invoke(this, &SessionManagerImplTest::CreateMockProxyResponse));
 
     EXPECT_CALL(*powerd_proxy_,
                 DoConnectToSignal(power_manager::kPowerManagerInterface,
@@ -877,6 +883,8 @@ class SessionManagerImplTest : public ::testing::Test,
   scoped_refptr<dbus::MockObjectProxy> system_clock_proxy_;
   dbus::ObjectProxy::WaitForServiceToBeAvailableCallback available_callback_;
 
+  scoped_refptr<dbus::MockObjectProxy> debugd_proxy_;
+
   password_provider::FakePasswordProvider* password_provider_ = nullptr;
 
   base::ScopedTempDir log_dir_;  // simulates /var/log/ui
@@ -894,6 +902,13 @@ class SessionManagerImplTest : public ::testing::Test,
   static const int kAllKeyFlags;
 
  private:
+  // Returns a response for the given method call. Used to implement
+  // CallMethodAndBlock() for |mock_proxy_|.
+  std::unique_ptr<dbus::Response> CreateMockProxyResponse(
+      dbus::MethodCall* method_call, int timeout_ms) {
+    return dbus::Response::CreateEmpty();
+  }
+
   void ExpectSessionBoilerplate(const string& account_id_string,
                                 bool guest,
                                 bool for_owner) {

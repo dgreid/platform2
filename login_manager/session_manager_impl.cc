@@ -121,6 +121,10 @@ constexpr base::TimeDelta SessionManagerImpl::kCrashAfterSuspendInterval =
 
 namespace {
 
+// Because the cheets logs are huge, we set the D-Bus timeout to 1 minute.
+const base::TimeDelta kBackupArcBugReportTimeout =
+    base::TimeDelta::FromMinutes(1);
+
 // The flag to pass to chrome to open a named socket for testing.
 const char kTestingChannelFlag[] = "--testing-channel=NamedTestingInterface:";
 
@@ -370,6 +374,7 @@ SessionManagerImpl::SessionManagerImpl(
     InstallAttributesReader* install_attributes_reader,
     dbus::ObjectProxy* powerd_proxy,
     dbus::ObjectProxy* system_clock_proxy,
+    dbus::ObjectProxy* debugd_proxy,
     ArcSideloadStatusInterface* arc_sideload_status)
     : init_controller_(std::move(init_controller)),
       system_clock_last_sync_info_retry_delay_(
@@ -392,6 +397,7 @@ SessionManagerImpl::SessionManagerImpl(
       install_attributes_reader_(install_attributes_reader),
       powerd_proxy_(powerd_proxy),
       system_clock_proxy_(system_clock_proxy),
+      debugd_proxy_(debugd_proxy),
       arc_sideload_status_(arc_sideload_status),
       mitigator_(key_gen),
       ui_log_symlink_path_(kDefaultUiLogSymlinkPath),
@@ -703,6 +709,8 @@ bool SessionManagerImpl::StartSession(brillo::ErrorPtr* error,
     key_gen_->Start(actual_account_id,
                     is_incognito ? chrome_mount_ns_path_ : base::nullopt);
   }
+
+  DeleteArcBugReportBackup(actual_account_id);
 
   // Record that a login has successfully completed on this boot.
   system_->AtomicFileWrite(base::FilePath(kLoggedInFlag), "1");
@@ -1311,12 +1319,16 @@ bool SessionManagerImpl::UpgradeArcContainer(
           InitDaemonController::TriggerMode::SYNC)) {
     *error = CREATE_ERROR_AND_LOG(dbus_error::kEmitFailed,
                                   "Emitting continue-arc-boot impulse failed.");
+
+    BackupArcBugReport(account_id);
     return false;
   }
 
   login_metrics_->StartTrackingArcUseTime();
 
   ignore_result(scoped_runner.Release());
+  DeleteArcBugReportBackup(account_id);
+
   return true;
 #else
   *error = CreateError(dbus_error::kNotAvailable, "ARC not supported.");
@@ -1327,11 +1339,17 @@ bool SessionManagerImpl::UpgradeArcContainer(
 bool SessionManagerImpl::StopArcInstance(brillo::ErrorPtr* error,
                                          const std::string& account_id,
                                          bool backup_log) {
-  if (backup_log) {
-    // TODO(b/149874690) Call BackupArcBugReport on debugd.
+#if USE_CHEETS
+  if (backup_log && !account_id.empty()) {
+    std::string actual_account_id;
+    if (!NormalizeAccountId(account_id, &actual_account_id, error)) {
+      DCHECK(*error);
+      return false;
+    }
+
+    BackupArcBugReport(actual_account_id);
   }
 
-#if USE_CHEETS
   if (!StopArcInstanceInternal(ArcContainerStopReason::USER_REQUEST)) {
     *error = CREATE_ERROR_AND_LOG(dbus_error::kContainerShutdownFail,
                                   "Error getting Android container pid.");
@@ -1719,6 +1737,44 @@ void SessionManagerImpl::StorePolicyInternalEx(
 
 void SessionManagerImpl::RestartDevice(const std::string& reason) {
   delegate_->RestartDevice("session_manager (" + reason + ")");
+}
+
+void SessionManagerImpl::BackupArcBugReport(const std::string& account_id) {
+  if (user_sessions_.count(account_id) == 0) {
+    LOG(ERROR) << "Cannot back up ARC bug report for inactive user.";
+    return;
+  }
+
+  dbus::MethodCall method_call(debugd::kDebugdInterface,
+                               debugd::kBackupArcBugReport);
+  dbus::MessageWriter writer(&method_call);
+
+  std::string userhash = SanitizeUserName(account_id);
+  writer.AppendString(userhash);
+
+  std::unique_ptr<dbus::Response> response(debugd_proxy_->CallMethodAndBlock(
+      &method_call, kBackupArcBugReportTimeout.InMilliseconds()));
+
+  if (!response) {
+    LOG(DFATAL) << "Error contacting debugd to back up ARC bug report.";
+  }
+}
+
+void SessionManagerImpl::DeleteArcBugReportBackup(
+    const std::string& account_id) {
+  dbus::MethodCall method_call(debugd::kDebugdInterface,
+                               debugd::kDeleteArcBugReportBackup);
+  dbus::MessageWriter writer(&method_call);
+
+  std::string userhash = SanitizeUserName(account_id);
+  writer.AppendString(userhash);
+
+  std::unique_ptr<dbus::Response> response(debugd_proxy_->CallMethodAndBlock(
+      &method_call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT));
+
+  if (!response) {
+    LOG(DFATAL) << "Error contacting debugd to delete ARC bug report backup.";
+  }
 }
 
 #if USE_CHEETS

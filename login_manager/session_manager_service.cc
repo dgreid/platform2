@@ -186,6 +186,10 @@ bool SessionManagerService::Initialize() {
       system_clock::kSystemClockServiceName,
       dbus::ObjectPath(system_clock::kSystemClockServicePath));
 
+  debugd_dbus_proxy_ = bus_->GetObjectProxy(
+      debugd::kDebugdServiceName,
+      dbus::ObjectPath(debugd::kDebugdServicePath));
+
 #if USE_SYSTEMD
   using InitDaemonControllerImpl = SystemdUnitStarter;
 #else
@@ -227,7 +231,8 @@ bool SessionManagerService::Initialize() {
       this /* manager, i.e. ProcessManagerServiceInterface */, login_metrics_,
       nss_.get(), chrome_mount_ns_path_, system_, &crossystem_, &vpd_process_,
       &owner_key_, android_container_.get(), &install_attributes_reader_,
-      powerd_dbus_proxy_, system_clock_proxy, arc_sideload_status);
+      powerd_dbus_proxy_, system_clock_proxy, debugd_dbus_proxy_,
+      arc_sideload_status);
   if (!InitializeImpl())
     return false;
 
