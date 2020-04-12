@@ -82,7 +82,7 @@ TEST_F(ProxyConnectJobTest, SuccessfulConnection) {
   cros_client_socket_->SendTo(validConnRequest, std::strlen(validConnRequest));
   brillo_loop_.RunOnce(false);
 
-  EXPECT_EQ("http://www.example.server.com:443", connect_job_->target_url_);
+  EXPECT_EQ("www.example.server.com:443", connect_job_->target_url_);
   EXPECT_EQ(1, connect_job_->proxy_servers_.size());
   EXPECT_EQ(kProxyServerUrl, connect_job_->proxy_servers_.front());
 }

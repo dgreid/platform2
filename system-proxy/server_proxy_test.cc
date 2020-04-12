@@ -184,7 +184,7 @@ TEST_F(ServerProxyTest, HandleConnectRequest) {
   ASSERT_TRUE(ReadProtobuf(stdout_read_fd_.get(), &request));
   ASSERT_TRUE(request.has_proxy_resolution_request());
 
-  EXPECT_EQ("http://www.example.server.com:443",
+  EXPECT_EQ("www.example.server.com:443",
             request.proxy_resolution_request().target_url());
 
   EXPECT_EQ(1, server_proxy_->pending_proxy_resolution_requests_.size());

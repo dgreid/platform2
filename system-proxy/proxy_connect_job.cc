@@ -39,9 +39,12 @@ namespace {
 // to 8000.
 constexpr int kMaxHttpRequestHeadersSize = 8000;
 constexpr char kConnectMethod[] = "CONNECT";
-constexpr char kHttpScheme[] = "http://";
 constexpr base::TimeDelta kCurlConnectTimeout = base::TimeDelta::FromMinutes(2);
 constexpr size_t kMaxBadRequestPrintSize = 120;
+// This sequence is used to identify the end of a HTTP header which should be an
+// empty line. Note: all HTTP header lines end with CRLF. HTTP connect requests
+// don't have a body so end of header is end of request.
+const std::string_view kCrlfCrlf = "\r\n\r\n";
 
 // HTTP error codes and messages with origin information for debugging (RFC723,
 // section 6.1).
@@ -52,24 +55,65 @@ const std::string_view kHttpInternalServerError =
 const std::string_view kHttpBadGateway =
     "HTTP/1.1 502 Bad Gateway - Origin: local proxy\r\n\r\n";
 
-static size_t WriteCallback(char* contents,
-                            size_t size,
-                            size_t nmemb,
-                            void* userp) {
-  for (int i = 0; i < nmemb * size; ++i) {
-    ((std::vector<char>*)userp)->push_back(contents[i]);
+// Verifies if the http headers are ending with an http empty line, meaning a
+// line that contains only CR LF preceded by a line ending with CRLF.
+bool IsEndingWithHttpEmptyLine(const char* headers, int headers_size) {
+  return headers_size > kCrlfCrlf.size() &&
+         std::memcmp(kCrlfCrlf.data(),
+                     headers + headers_size - kCrlfCrlf.size(),
+                     kCrlfCrlf.size()) == 0;
+}
+
+// CURLOPT_HEADERFUNCTION callback implementation that only returns the headers
+// from the last response sent by the sever. This is to make sure that we
+// send back valid HTTP replies and auhentication data from the HTTP messages is
+// not being leaked to the client. |userdata| is set on the libcurl CURL handle
+// used to configure the request, using the the CURLOPT_HEADERDATA option. Note,
+// from the libcurl documentation: This callback is being called for all the
+// responses received from the proxy server after intiating the connection
+// request. Multiple responses can be received in an authentication sequence.
+// Only the last response's headers should be forwarded to the System-proxy
+// client. The header callback will be called once for each header and only
+// complete header lines are passed on to the callback.
+static size_t WriteHeadersCallback(char* contents,
+                                   size_t size,
+                                   size_t nmemb,
+                                   void* userdata) {
+  std::vector<char>* vec = (std::vector<char>*)userdata;
+
+  // Check if we are receiving a new HTTP message (after the last one was
+  // terminated with an empty line).
+  if (IsEndingWithHttpEmptyLine(vec->data(), vec->size())) {
+    VLOG(1) << "Removing the http reply headers from the server "
+            << base::StringPiece(vec->data(), vec->size());
+    vec->clear();
   }
+  vec->insert(vec->end(), contents, contents + (nmemb * size));
   return size * nmemb;
 }
 
-// Parses the first line of the http CONNECT request and extracts the target
-// url. The destination URI is specified in the request line as the host name
-// and destination port number separated by a colon (RFC2817, section 5.2):
+// CONNECT requests may have a reply body. This method will capture the reply
+// and save it in |userdata|. |userdata| is set on the libcurl CURL handle
+// used to configure the request, using the the CURLOPT_WRITEDATA option.
+static size_t WriteCallback(char* contents,
+                            size_t size,
+                            size_t nmemb,
+                            void* userdata) {
+  std::vector<char>* vec = (std::vector<char>*)userdata;
+  vec->insert(vec->end(), contents, contents + (nmemb * size));
+  return size * nmemb;
+}
+
+// Parses the first line of the http CONNECT request and extracts the URI
+// authority, defined in RFC3986, section 3.2, as the host name and port number
+// separated by a colon. The destination URI is specified in the request line
+// (RFC2817, section 5.2):
 //      CONNECT server.example.com:80 HTTP/1.1
 // If the first line in |raw_request| (the Request-Line) is a correctly formed
-// CONNECT request, it will return the destination URI as scheme://host:port,
-// otherwise it will return an empty string.
-std::string GetUrlFromHttpHeader(const std::vector<char>& raw_request) {
+// CONNECT request, it will return the destination URI as host:port, otherwise
+// it will return an empty string.
+std::string GetUriAuthorityFromHttpHeader(
+    const std::vector<char>& raw_request) {
   base::StringPiece request(raw_request.data(), raw_request.size());
   // Request-Line ends with CRLF (RFC2616, section 5.1).
   size_t i = request.find_first_of("\r\n");
@@ -85,7 +129,7 @@ std::string GetUrlFromHttpHeader(const std::vector<char>& raw_request) {
   if (pieces[0] != kConnectMethod)
     return std::string();
 
-  return base::JoinString({kHttpScheme, pieces[1]}, "");
+  return pieces[1];
 }
 }  // namespace
 
@@ -136,7 +180,7 @@ void ProxyConnectJob::OnClientReadReady() {
     return;
   }
 
-  target_url_ = GetUrlFromHttpHeader(connect_request);
+  target_url_ = GetUriAuthorityFromHttpHeader(connect_request);
   if (target_url_.empty()) {
     LOG(ERROR)
         << *this
@@ -151,10 +195,6 @@ void ProxyConnectJob::OnClientReadReady() {
 }
 
 bool ProxyConnectJob::TryReadHttpHeader(std::vector<char>* raw_request) {
-  // Used to identify the end of a HTTP header which should be an empty line.
-  // Note: all HTTP header lines end with CRLF. HTTP connect requests don't have
-  // a body so end of header is end of request.
-  std::string crlf_crlf = "\r\n\r\n";
   size_t read_byte_count = 0;
   raw_request->resize(kMaxHttpRequestHeadersSize);
 
@@ -172,11 +212,7 @@ bool ProxyConnectJob::TryReadHttpHeader(std::vector<char>* raw_request) {
     }
     ++read_byte_count;
 
-    // Check if we have an empty line.
-    if (read_byte_count > crlf_crlf.size() &&
-        std::memcmp(crlf_crlf.data(),
-                    raw_request->data() + read_byte_count - crlf_crlf.size(),
-                    crlf_crlf.size()) == 0) {
+    if (IsEndingWithHttpEmptyLine(raw_request->data(), read_byte_count)) {
       raw_request->resize(read_byte_count);
       return true;
     }
@@ -193,8 +229,8 @@ void ProxyConnectJob::OnProxyResolution(
 void ProxyConnectJob::DoCurlServerConnection(const std::string& proxy_url) {
   CURL* easyhandle = curl_easy_init();
   CURLcode res;
-  int newSocket = -1;
-  std::vector<char> server_connect_reply;
+  curl_socket_t newSocket = -1;
+  std::vector<char> server_header_reply, server_body_reply;
 
   if (!easyhandle) {
     // Unfortunately it's not possible to get the failure reason.
@@ -216,8 +252,10 @@ void ProxyConnectJob::DoCurlServerConnection(const std::string& proxy_url) {
   }
   curl_easy_setopt(easyhandle, CURLOPT_CONNECTTIMEOUT_MS,
                    kCurlConnectTimeout.InMilliseconds());
-  curl_easy_setopt(easyhandle, CURLOPT_HEADERFUNCTION, WriteCallback);
-  curl_easy_setopt(easyhandle, CURLOPT_HEADERDATA, server_connect_reply.data());
+  curl_easy_setopt(easyhandle, CURLOPT_HEADERFUNCTION, WriteHeadersCallback);
+  curl_easy_setopt(easyhandle, CURLOPT_HEADERDATA, &server_header_reply);
+  curl_easy_setopt(easyhandle, CURLOPT_WRITEFUNCTION, WriteCallback);
+  curl_easy_setopt(easyhandle, CURLOPT_WRITEDATA, &server_body_reply);
 
   res = curl_easy_perform(easyhandle);
 
@@ -225,7 +263,14 @@ void ProxyConnectJob::DoCurlServerConnection(const std::string& proxy_url) {
     LOG(ERROR) << *this << " curl_easy_perform() failed with error: ",
         curl_easy_strerror(res);
     curl_easy_cleanup(easyhandle);
-    OnError(kHttpInternalServerError);
+
+    if (server_header_reply.size() > 0) {
+      // Send the error message from the remote server back to the client.
+      OnError(std::string_view(server_header_reply.data(),
+                               server_header_reply.size()));
+    } else {
+      OnError(kHttpInternalServerError);
+    }
     return;
   }
   // Extract the socket from the curl handle.
@@ -243,9 +288,30 @@ void ProxyConnectJob::DoCurlServerConnection(const std::string& proxy_url) {
                                                   std::move(scoped_handle));
 
   // Send the server reply to the client. If the connection is successful, the
-  // reply should be "HTTP/1.1 200 Connection Established".
-  client_socket_->SendTo(server_connect_reply.data(),
-                         server_connect_reply.size());
+  // reply headers should be "HTTP/1.1 200 Connection Established".
+  if (client_socket_->SendTo(server_header_reply.data(),
+                             server_header_reply.size()) !=
+      server_header_reply.size()) {
+    PLOG(ERROR) << *this << " Failed to send HTTP reply headers to client: "
+                << base::StringPiece(server_header_reply.data(),
+                                     server_header_reply.size());
+    OnError(kHttpInternalServerError);
+    return;
+  }
+  // HTTP CONNECT responses can have a payload body which should be forwarded to
+  // the client.
+  if (server_body_reply.size() > 0) {
+    // TODO(acostinas, chromium:1064536) Resend the reply body in case of EAGAIN
+    // or EWOULDBLOCK errors.
+    if (client_socket_->SendTo(server_body_reply.data(),
+                               server_body_reply.size()) !=
+        server_body_reply.size()) {
+      PLOG(ERROR) << *this
+                  << " Failed to send HTTP  CONNECT reply body to client: "
+                  << base::StringPiece(server_body_reply.data(),
+                                       server_body_reply.size());
+    }
+  }
 
   auto fwd = std::make_unique<patchpanel::SocketForwarder>(
       base::StringPrintf("%d-%d", client_socket_->fd(), server_conn->fd()),
