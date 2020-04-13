@@ -44,8 +44,6 @@ class Modem {
 
  private:
   friend class ModemTest;
-  FRIEND_TEST(ModemManager1Test, Connect);
-  FRIEND_TEST(ModemManager1Test, AddRemoveInterfaces);
   FRIEND_TEST(ModemTest, CreateDeviceEarlyFailures);
   FRIEND_TEST(ModemTest, CreateDevicePPP);
   FRIEND_TEST(ModemTest, EarlyDeviceProperties);

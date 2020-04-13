@@ -38,15 +38,7 @@ ModemManager::~ModemManager() {
 void ModemManager::Start() {
   LOG(INFO) << "Start watching modem manager service: " << service_;
   CHECK(!proxy_);
-  proxy_ = modem_info_->control_interface()->CreateDBusObjectManagerProxy(
-      path_, service_,
-      base::Bind(&ModemManager::OnAppeared, weak_ptr_factory_.GetWeakPtr()),
-      base::Bind(&ModemManager::OnVanished, weak_ptr_factory_.GetWeakPtr()));
-  proxy_->set_interfaces_added_callback(Bind(
-      &ModemManager::OnInterfacesAddedSignal, weak_ptr_factory_.GetWeakPtr()));
-  proxy_->set_interfaces_removed_callback(
-      Bind(&ModemManager::OnInterfacesRemovedSignal,
-           weak_ptr_factory_.GetWeakPtr()));
+  proxy_ = CreateProxy();
 }
 
 void ModemManager::Stop() {
@@ -61,13 +53,32 @@ void ModemManager::OnDeviceInfoAvailable(const std::string& link_name) {
   }
 }
 
+std::unique_ptr<DBusObjectManagerProxyInterface> ModemManager::CreateProxy() {
+  std::unique_ptr<DBusObjectManagerProxyInterface> proxy =
+      modem_info_->control_interface()->CreateDBusObjectManagerProxy(
+          path_, service_,
+          base::Bind(&ModemManager::OnAppeared, weak_ptr_factory_.GetWeakPtr()),
+          base::Bind(&ModemManager::OnVanished,
+                     weak_ptr_factory_.GetWeakPtr()));
+  proxy->set_interfaces_added_callback(Bind(
+      &ModemManager::OnInterfacesAddedSignal, weak_ptr_factory_.GetWeakPtr()));
+  proxy->set_interfaces_removed_callback(
+      Bind(&ModemManager::OnInterfacesRemovedSignal,
+           weak_ptr_factory_.GetWeakPtr()));
+  return proxy;
+}
+
+std::unique_ptr<Modem> ModemManager::CreateModem(
+    const RpcIdentifier& path, const InterfaceToProperties& properties) {
+  auto modem = std::make_unique<Modem>(service_, path, modem_info_);
+  modem->CreateDeviceMM1(properties);
+  return modem;
+}
+
 void ModemManager::Connect() {
   service_connected_ = true;
-
-  if (!proxy_)
-    return;  // May be null in tests
-
   Error error;
+  CHECK(proxy_);
   proxy_->GetManagedObjects(&error,
                             Bind(&ModemManager::OnGetManagedObjectsReply,
                                  weak_ptr_factory_.GetWeakPtr()),
@@ -100,20 +111,8 @@ void ModemManager::AddModem(const RpcIdentifier& path,
     LOG(INFO) << "Modem " << path.value() << " already exists.";
     return;
   }
-
-  auto modem = std::make_unique<Modem>(service_, path, modem_info_);
-  InitModem(modem.get(), properties);
-
-  RecordAddedModem(std::move(modem));
-}
-
-void ModemManager::RecordAddedModem(std::unique_ptr<Modem> modem) {
+  std::unique_ptr<Modem> modem = CreateModem(path, properties);
   modems_[modem->path()] = std::move(modem);
-}
-
-void ModemManager::InitModem(Modem* modem,
-                             const InterfaceToProperties& properties) {
-  modem->CreateDeviceMM1(properties);
 }
 
 void ModemManager::RemoveModem(const RpcIdentifier& path) {

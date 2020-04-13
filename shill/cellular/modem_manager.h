@@ -33,25 +33,31 @@ class ModemManager {
   virtual ~ModemManager();
 
   // Starts watching for and handling the DBus modem manager service.
-  // virtual for test mocks. TODO(crbug.com/984627): Use fakes or test setters.
-  virtual void Start();
+  void Start();
 
   // Stops watching for the DBus modem manager service and destroys any
   // associated modems.
-  // virtual for test mocks. TODO(crbug.com/984627): Use fakes or test setters.
-  virtual void Stop();
+  void Stop();
 
   void OnDeviceInfoAvailable(const std::string& link_name);
 
- private:
-  friend class ModemManager1Test;
-  friend class ModemManagerCoreTest;
+ protected:
+  // The following methods are virtual to support test overrides.
+  virtual std::unique_ptr<DBusObjectManagerProxyInterface> CreateProxy();
+  virtual std::unique_ptr<Modem> CreateModem(
+      const RpcIdentifier& path, const InterfaceToProperties& properties);
 
-  FRIEND_TEST(ModemManager1Test, AddRemoveInterfaces);
-  FRIEND_TEST(ModemManager1Test, Connect);
-  FRIEND_TEST(ModemManager1Test, StartStop);
-  FRIEND_TEST(ModemManagerCoreTest, AddRemoveModem);
-  FRIEND_TEST(ModemManagerCoreTest, ConnectDisconnect);
+  ModemInfo* modem_info() { return modem_info_; }
+  const std::string& service() const { return service_; }
+
+ private:
+  friend class ModemManagerTest;
+
+  FRIEND_TEST(ModemManagerTest, AddRemoveModem);
+  FRIEND_TEST(ModemManagerTest, ConnectDisconnect);
+  FRIEND_TEST(ModemManagerTest, AddRemoveInterfaces);
+  FRIEND_TEST(ModemManagerTest, Connect);
+  FRIEND_TEST(ModemManagerTest, StartStop);
 
   // Connect/Disconnect to a modem manager service.
   void Connect();
@@ -65,9 +71,6 @@ class ModemManager {
 
   void AddModem(const RpcIdentifier& path,
                 const InterfaceToProperties& properties);
-  void RecordAddedModem(std::unique_ptr<Modem> modem);
-  // virtual for test mocks. TODO(crbug.com/984627): Use fakes or test setters.
-  virtual void InitModem(Modem* modem, const InterfaceToProperties& properties);
   void RemoveModem(const RpcIdentifier& path);
 
   // DBusObjectManagerProxyDelegate signal methods
