@@ -70,8 +70,7 @@ typeDefs:
     description: "'customization_id' value set in the VPD for non-unibuild Zergs and Whitelabels. Deprecated for use in new products since 2017/07/26."
     type: string
   platform-name: &platform_name
-    description: "Defines the name that is reported by 'mosys platform name'
-      This is typically the reference design name with the first letter capitalized"
+    description: "Defines the name of the mosys platform used. Mosys is the only software which is allowed to used this value."
     type: string
   stylus-category: &stylus-category
     description: "Denotes the category of stylus this device contains."

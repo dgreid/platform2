@@ -501,12 +501,12 @@ In the tables below,
 | Attribute | Type   | RegEx     | Required | Oneof Group | Build-only | Description |
 | --------- | ------ | --------- | -------- | ----------- | ---------- | ----------- |
 | customization-id | string |  | False | x86 | False | 'customization_id' value set in the VPD for non-unibuild Zergs and Whitelabels. Deprecated for use in new products since 2017/07/26. |
-| platform-name | string |  | False | x86 | False | Defines the name that is reported by 'mosys platform name' This is typically the reference design name with the first letter capitalized |
+| platform-name | string |  | False | x86 | False | Defines the name of the mosys platform used. Mosys is the only software which is allowed to used this value. |
 | sku-id | integer |  | False | x86 | False | SKU/Board strapping pins configured during board manufacturing. Minimum value: -0x1. Maximum value: 0x7fffffff. |
 | smbios-name-match | string |  | False | x86 | False | [x86] Firmware name built into the firmware and reflected back out in the SMBIOS tables. |
 | whitelabel-tag | string |  | False | x86 | False | 'whitelabel_tag' value set in the VPD, to add Whitelabel branding over an unbranded base model. |
 | device-tree-compatible-match | string |  | False | ARM | False | [ARM] String pattern (partial) that is matched against the contents of /proc/device-tree/compatible on ARM devices. |
-| platform-name | string |  | False | ARM | False | Defines the name that is reported by 'mosys platform name' This is typically the reference design name with the first letter capitalized |
+| platform-name | string |  | False | ARM | False | Defines the name of the mosys platform used. Mosys is the only software which is allowed to used this value. |
 | sku-id | integer |  | False | ARM | False | SKU/Board strapping pins configured during board manufacturing. Minimum value: -0x1. Maximum value: 0x7fffffff. |
 | whitelabel-tag | string |  | False | ARM | False | 'whitelabel_tag' value set in the VPD, to add Whitelabel branding over an unbranded base model. |
 
