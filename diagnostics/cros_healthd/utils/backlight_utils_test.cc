@@ -24,6 +24,8 @@ namespace {
 
 using ::chromeos::cros_healthd::mojom::BacklightInfo;
 using ::chromeos::cros_healthd::mojom::BacklightInfoPtr;
+using ::chromeos::cros_healthd::mojom::BacklightResultPtr;
+using ::chromeos::cros_healthd::mojom::ErrorType;
 using ::testing::UnorderedElementsAreArray;
 
 constexpr char kBacklightPropertiesPath[] = "/cros-healthd/backlight";
@@ -72,8 +74,7 @@ class BacklightUtilsTest : public ::testing::Test {
     return temp_dir_.GetPath();
   }
 
-  std::vector<BacklightInfoPtr> FetchBacklightInfo(
-      const base::FilePath& root_dir) {
+  BacklightResultPtr FetchBacklightInfo(const base::FilePath& root_dir) {
     return backlight_fetcher_->FetchBacklightInfo(root_dir);
   }
 
@@ -109,8 +110,6 @@ TEST_F(BacklightUtilsTest, TestFetchBacklightInfo) {
       second_backlight_dir.Append(kBrightnessFileName),
       std::to_string(kSecondFakeBacklightBrightness)));
 
-  auto backlight_info = FetchBacklightInfo(root_dir);
-
   std::vector<BacklightInfoPtr> expected_results;
   expected_results.push_back(BacklightInfo::New(
       first_backlight_dir.value(), kFirstFakeBacklightMaxBrightness,
@@ -118,6 +117,11 @@ TEST_F(BacklightUtilsTest, TestFetchBacklightInfo) {
   expected_results.push_back(BacklightInfo::New(
       second_backlight_dir.value(), kSecondFakeBacklightMaxBrightness,
       kSecondFakeBacklightBrightness));
+
+  auto backlight_result = FetchBacklightInfo(root_dir);
+  ASSERT_TRUE(backlight_result->is_backlight_info());
+  const auto& backlight_info = backlight_result->get_backlight_info();
+
   // Since FetchBacklightInfo uses base::FileEnumerator, we're not guaranteed
   // the order of the two results.
   EXPECT_THAT(backlight_info,
@@ -127,8 +131,8 @@ TEST_F(BacklightUtilsTest, TestFetchBacklightInfo) {
               }));
 }
 
-// Test that one bad backlight directory (missing required files) doesn't stop
-// other correct backlight directories from being reported.
+// Test that one bad backlight directory (missing required files) returns an
+// error.
 TEST_F(BacklightUtilsTest, TestFetchBacklightInfoOneBadOneGoodDirectory) {
   auto root_dir = GetTempDirPath();
   base::FilePath first_backlight_dir = GetFirstFakeBacklightDirectory(root_dir);
@@ -145,24 +149,20 @@ TEST_F(BacklightUtilsTest, TestFetchBacklightInfoOneBadOneGoodDirectory) {
       second_backlight_dir.Append(kBrightnessFileName),
       std::to_string(kSecondFakeBacklightBrightness)));
 
-  auto backlight_info = FetchBacklightInfo(root_dir);
-
-  ASSERT_EQ(backlight_info.size(), 1);
-  EXPECT_EQ(backlight_info[0]->path, second_backlight_dir.value());
-  EXPECT_EQ(backlight_info[0]->max_brightness,
-            kSecondFakeBacklightMaxBrightness);
-  EXPECT_EQ(backlight_info[0]->brightness, kSecondFakeBacklightBrightness);
+  auto backlight_result = FetchBacklightInfo(root_dir);
+  ASSERT_TRUE(backlight_result->is_error());
+  EXPECT_EQ(backlight_result->get_error()->type, ErrorType::kFileReadError);
 }
 
-// Test that fetching backlight info fails gracefully when no backlight
+// Test that fetching backlight info returns an empty list when no backlight
 // directories exist.
 TEST_F(BacklightUtilsTest, TestFetchBacklightInfoNoDirectories) {
-  auto backlight_info = FetchBacklightInfo(GetTempDirPath());
-
-  EXPECT_EQ(backlight_info.size(), 0);
+  auto backlight_result = FetchBacklightInfo(GetTempDirPath());
+  ASSERT_TRUE(backlight_result->is_backlight_info());
+  EXPECT_EQ(backlight_result->get_backlight_info().size(), 0);
 }
 
-// Test that fetching backlight info fails gracefully when the brightness file
+// Test that fetching backlight info returns an error when the brightness file
 // doesn't exist.
 TEST_F(BacklightUtilsTest, TestFetchBacklightInfoNoBrightness) {
   auto root_dir = GetTempDirPath();
@@ -171,12 +171,12 @@ TEST_F(BacklightUtilsTest, TestFetchBacklightInfoNoBrightness) {
       first_backlight_dir.Append(kMaxBrightnessFileName),
       std::to_string(kFirstFakeBacklightMaxBrightness)));
 
-  auto backlight_info = FetchBacklightInfo(root_dir);
-
-  EXPECT_EQ(backlight_info.size(), 0);
+  auto backlight_result = FetchBacklightInfo(root_dir);
+  ASSERT_TRUE(backlight_result->is_error());
+  EXPECT_EQ(backlight_result->get_error()->type, ErrorType::kFileReadError);
 }
 
-// Test that fetching backlight info fails gracefully when the max_brightness
+// Test that fetching backlight info returns an error when the max_brightness
 // file doesn't exist.
 TEST_F(BacklightUtilsTest, TestFetchBacklightInfoNoMaxBrightness) {
   auto root_dir = GetTempDirPath();
@@ -185,12 +185,12 @@ TEST_F(BacklightUtilsTest, TestFetchBacklightInfoNoMaxBrightness) {
       first_backlight_dir.Append(kBrightnessFileName),
       std::to_string(kFirstFakeBacklightBrightness)));
 
-  auto backlight_info = FetchBacklightInfo(root_dir);
-
-  EXPECT_EQ(backlight_info.size(), 0);
+  auto backlight_result = FetchBacklightInfo(root_dir);
+  ASSERT_TRUE(backlight_result->is_error());
+  EXPECT_EQ(backlight_result->get_error()->type, ErrorType::kFileReadError);
 }
 
-// Test that fetching backlight info fails gracefully when the brightess file is
+// Test that fetching backlight info returns an error when the brightess file is
 // formatted incorrectly.
 TEST_F(BacklightUtilsTest,
        TestFetchBacklightInfoBrightnessFormattedIncorrectly) {
@@ -203,12 +203,12 @@ TEST_F(BacklightUtilsTest,
       first_backlight_dir.Append(kBrightnessFileName),
       kFakeNonIntegerFileContents));
 
-  auto backlight_info = FetchBacklightInfo(root_dir);
-
-  EXPECT_EQ(backlight_info.size(), 0);
+  auto backlight_result = FetchBacklightInfo(root_dir);
+  ASSERT_TRUE(backlight_result->is_error());
+  EXPECT_EQ(backlight_result->get_error()->type, ErrorType::kFileReadError);
 }
 
-// Test that fetching backlight info fails gracefully when the max_brightess
+// Test that fetching backlight info returns an error when the max_brightess
 // file is formatted incorrectly.
 TEST_F(BacklightUtilsTest,
        TestFetchBacklightInfoMaxBrightnessFormattedIncorrectly) {
@@ -221,19 +221,19 @@ TEST_F(BacklightUtilsTest,
       first_backlight_dir.Append(kBrightnessFileName),
       std::to_string(kFirstFakeBacklightMaxBrightness)));
 
-  auto backlight_info = FetchBacklightInfo(root_dir);
-
-  EXPECT_EQ(backlight_info.size(), 0);
+  auto backlight_result = FetchBacklightInfo(root_dir);
+  ASSERT_TRUE(backlight_result->is_error());
+  EXPECT_EQ(backlight_result->get_error()->type, ErrorType::kFileReadError);
 }
 
-// Test that we don't attempt to fetch backlight info when cros_config says it
+// Test that we return an empty BacklightInfo list when cros_config says it
 // doesn't exist.
 TEST_F(BacklightUtilsTest, TestCrosConfigReportsNoBacklight) {
   SetHasBacklightString("false");
 
-  auto backlight_info = FetchBacklightInfo(GetTempDirPath());
-
-  EXPECT_EQ(backlight_info.size(), 0);
+  auto backlight_result = FetchBacklightInfo(GetTempDirPath());
+  ASSERT_TRUE(backlight_result->is_backlight_info());
+  EXPECT_EQ(backlight_result->get_backlight_info().size(), 0);
 }
 
 }  // namespace diagnostics

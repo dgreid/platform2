@@ -223,7 +223,7 @@ void CrosHealthdMojoService::ProbeTelemetryInfo(
         break;
       }
       case ProbeCategoryEnum::kBacklight: {
-        telemetry_info.backlight_info =
+        telemetry_info.backlight_result =
             backlight_fetcher_->FetchBacklightInfo(base::FilePath("/"));
         break;
       }

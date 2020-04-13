@@ -180,8 +180,13 @@ void DisplayMemoryInfo(
 }
 
 void DisplayBacklightInfo(
-    const std::vector<chromeos::cros_healthd::mojom::BacklightInfoPtr>&
-        backlights) {
+    const chromeos::cros_healthd::mojom::BacklightResultPtr& backlight_result) {
+  if (backlight_result->is_error()) {
+    DisplayError(backlight_result->get_error());
+    return;
+  }
+
+  const auto& backlights = backlight_result->get_backlight_info();
   printf("path,max_brightness,brightness\n");
   for (const auto& backlight : backlights) {
     printf("%s,%u,%u\n", backlight->path.c_str(), backlight->max_brightness,
@@ -216,9 +221,9 @@ void DisplayTelemetryInfo(
   if (memory_result)
     DisplayMemoryInfo(memory_result);
 
-  const auto& backlights = info->backlight_info;
-  if (backlights)
-    DisplayBacklightInfo(backlights.value());
+  const auto& backlight_result = info->backlight_result;
+  if (backlight_result)
+    DisplayBacklightInfo(backlight_result);
 
   const auto& fan_result = info->fan_result;
   if (fan_result)

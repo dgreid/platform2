@@ -20,8 +20,10 @@ class BacklightFetcher final {
   explicit BacklightFetcher(brillo::CrosConfigInterface* cros_config);
   ~BacklightFetcher();
 
-  std::vector<chromeos::cros_healthd::mojom::BacklightInfoPtr>
-  FetchBacklightInfo(const base::FilePath& root_dir);
+  // Returns a structure with either the device's backlight info or the error
+  // that occurred fetching the information.
+  chromeos::cros_healthd::mojom::BacklightResultPtr FetchBacklightInfo(
+      const base::FilePath& root_dir);
 
  private:
   // Unowned pointer that should outlive this instance.
