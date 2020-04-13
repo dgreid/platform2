@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2017 Intel Corporation
+ * Copyright (C) 2015-2020 Intel Corporation
  * Copyright (c) 2017, Fuzhou Rockchip Electronics Co., Ltd
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -34,25 +34,25 @@ extern "C" {
 using std::string;
 
 NAMESPACE_DECLARATION {
-typedef struct {
+typedef struct MediaCtlElement {
     string name;
     string type;
     int isysNodeName;
 } MediaCtlElement;
 
-typedef struct {
+typedef struct ConfigProperties {
     int outputWidth;
     int outputHeight;
     string name;
     int id;
 } ConfigProperties;
 
-typedef struct {
+typedef struct FrameTimingCalcSize {
     int Width;
     int Height;
 } FrameTimingCalcSize;
 
-typedef struct {
+typedef struct MediaCtlLinkParams {
     string srcName;
     int srcPad;
     string sinkName;
@@ -61,7 +61,7 @@ typedef struct {
     int flags;
 } MediaCtlLinkParams;
 
-typedef struct {
+typedef struct MediaCtlFormatParams {
     string entityName;
     int pad;
     int width;
@@ -72,7 +72,7 @@ typedef struct {
     int quantization;
 } MediaCtlFormatParams;
 
-typedef struct {
+typedef struct MediaCtlSelectionParams {
     string entityName;
     int pad;
     int target;
@@ -82,12 +82,12 @@ typedef struct {
     int height;
 } MediaCtlSelectionParams;
 
-typedef struct {
+typedef struct MediaCtlSelectionVideoParams {
     string entityName;
     struct v4l2_selection select;
 } MediaCtlSelectionVideoParams;
 
-typedef struct {
+typedef struct MediaCtlControlParams {
     string entityName;
     int controlId;
     int value;
@@ -104,7 +104,7 @@ typedef struct {
  * setting up a camera pipe.
  *
  */
-typedef struct {
+typedef struct MediaCtlConfig {
     ConfigProperties mCameraProps;
     FrameTimingCalcSize mFTCSize;
     std::vector<MediaCtlLinkParams> mLinkParams;
