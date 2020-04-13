@@ -45,6 +45,10 @@ BaseTest::BaseTest() {
   mock_update_engine_proxy_ =
       std::make_unique<StrictMock<UpdateEngineProxyMock>>();
   mock_update_engine_proxy_ptr_ = mock_update_engine_proxy_.get();
+
+  mock_session_manager_proxy_ =
+      std::make_unique<StrictMock<SessionManagerProxyMock>>();
+  mock_session_manager_proxy_ptr_ = mock_session_manager_proxy_.get();
 }
 
 void BaseTest::SetUp() {
@@ -56,6 +60,7 @@ void BaseTest::SetUp() {
 
   SystemState::Initialize(
       std::move(mock_image_loader_proxy_), std::move(mock_update_engine_proxy_),
+      std::move(mock_session_manager_proxy_),
       std::make_unique<BootSlot>(move(mock_boot_device)), manifest_path_,
       preloaded_content_path_, content_path_, prefs_path_, /*for_test=*/true);
 }

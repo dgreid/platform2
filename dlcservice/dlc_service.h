@@ -135,7 +135,15 @@ class DlcService : public DlcServiceInterface {
                                              const std::string& signal_name,
                                              bool success);
 
-  org::chromium::UpdateEngineInterfaceProxyInterface* update_engine_proxy_{};
+  // Called when we are connected to the session_manager's |SessionStateChanged|
+  // signal.
+  void OnSessionStateChangedSignalConnected(const std::string& interface_name,
+                                            const std::string& signal_name,
+                                            bool success);
+
+  // Called when the session state changes (user logs in or logs out).
+  void OnSessionStateChangedSignal(const std::string& state);
+
   std::unique_ptr<DlcManager> dlc_manager_{};
 
   // Holds the ML task id of the delayed |PeriodicInstallCheck()| if an install

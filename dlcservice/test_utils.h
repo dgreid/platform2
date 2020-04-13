@@ -12,6 +12,7 @@
 #include <base/files/scoped_temp_dir.h>
 #include <dlcservice/proto_bindings/dlcservice.pb.h>
 #include <imageloader/dbus-proxy-mocks.h>
+#include <session_manager/dbus-proxy-mocks.h>
 #include <update_engine/proto_bindings/update_engine.pb.h>
 #include <update_engine/dbus-proxy-mocks.h>
 
@@ -68,6 +69,11 @@ class BaseTest : public testing::Test {
   using UpdateEngineProxyMock = org::chromium::UpdateEngineInterfaceProxyMock;
   std::unique_ptr<UpdateEngineProxyMock> mock_update_engine_proxy_;
   UpdateEngineProxyMock* mock_update_engine_proxy_ptr_;
+
+  using SessionManagerProxyMock =
+      org::chromium::SessionManagerInterfaceProxyMock;
+  std::unique_ptr<SessionManagerProxyMock> mock_session_manager_proxy_;
+  SessionManagerProxyMock* mock_session_manager_proxy_ptr_;
 
  private:
   DISALLOW_COPY_AND_ASSIGN(BaseTest);

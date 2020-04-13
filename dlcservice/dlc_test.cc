@@ -41,6 +41,7 @@ class DlcBaseTestRemovable : public DlcBaseTest {
 
     SystemState::Initialize(std::move(mock_image_loader_proxy_),
                             std::move(mock_update_engine_proxy_),
+                            std::move(mock_session_manager_proxy_),
                             std::make_unique<BootSlot>(move(mock_boot_device)),
                             manifest_path_, preloaded_content_path_,
                             content_path_, prefs_path_, /*for_test=*/true);

@@ -11,6 +11,7 @@
 #include <base/macros.h>
 #include <dlcservice/proto_bindings/dlcservice.pb.h>
 #include <imageloader/dbus-proxies.h>
+#include <session_manager/dbus-proxies.h>
 #include <update_engine/proto_bindings/update_engine.pb.h>
 #include <update_engine/dbus-proxies.h>
 
@@ -32,6 +33,8 @@ class SystemState {
           image_loader_proxy,
       std::unique_ptr<org::chromium::UpdateEngineInterfaceProxyInterface>
           update_engine_proxy,
+      std::unique_ptr<org::chromium::SessionManagerInterfaceProxyInterface>
+          session_manage_proxy,
       std::unique_ptr<BootSlot> boot_slot,
       const base::FilePath& manifest_dir,
       const base::FilePath& preloaded_content_dir,
@@ -45,6 +48,7 @@ class SystemState {
   // Getters for states that |SystemState| holds.
   org::chromium::ImageLoaderInterfaceProxyInterface* image_loader() const;
   org::chromium::UpdateEngineInterfaceProxyInterface* update_engine() const;
+  org::chromium::SessionManagerInterfaceProxyInterface* session_manager() const;
   const base::FilePath& manifest_dir() const;
   const base::FilePath& preloaded_content_dir() const;
   const base::FilePath& content_dir() const;
@@ -64,6 +68,8 @@ class SystemState {
           image_loader_proxy,
       std::unique_ptr<org::chromium::UpdateEngineInterfaceProxyInterface>
           update_engine_proxy,
+      std::unique_ptr<org::chromium::SessionManagerInterfaceProxyInterface>
+          session_manager_proxy,
       std::unique_ptr<BootSlot> boot_slot,
       const base::FilePath& manifest_dir,
       const base::FilePath& preloaded_content_dir,
@@ -75,6 +81,9 @@ class SystemState {
       image_loader_proxy_{};
   std::unique_ptr<org::chromium::UpdateEngineInterfaceProxyInterface>
       update_engine_proxy_{};
+  std::unique_ptr<org::chromium::SessionManagerInterfaceProxyInterface>
+      session_manager_proxy_{};
+
   base::FilePath manifest_dir_;
   base::FilePath preloaded_content_dir_;
   base::FilePath content_dir_;

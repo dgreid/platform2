@@ -81,6 +81,9 @@ class DlcServiceTest : public BaseTest {
     EXPECT_CALL(*mock_update_engine_proxy_ptr_,
                 DoRegisterStatusUpdateAdvancedSignalHandler(_, _))
         .Times(1);
+    EXPECT_CALL(*mock_session_manager_proxy_ptr_,
+                DoRegisterSessionStateChangedSignalHandler(_, _))
+        .Times(1);
 
     dlc_service_ = std::make_unique<DlcService>();
 

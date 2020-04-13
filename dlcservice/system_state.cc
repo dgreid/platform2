@@ -23,6 +23,8 @@ SystemState::SystemState(
         image_loader_proxy,
     std::unique_ptr<org::chromium::UpdateEngineInterfaceProxyInterface>
         update_engine_proxy,
+    std::unique_ptr<org::chromium::SessionManagerInterfaceProxyInterface>
+        session_manager_proxy,
     std::unique_ptr<BootSlot> boot_slot,
     const base::FilePath& manifest_dir,
     const base::FilePath& preloaded_content_dir,
@@ -30,6 +32,7 @@ SystemState::SystemState(
     const base::FilePath& prefs_dir)
     : image_loader_proxy_(std::move(image_loader_proxy)),
       update_engine_proxy_(std::move(update_engine_proxy)),
+      session_manager_proxy_(std::move(session_manager_proxy)),
       manifest_dir_(manifest_dir),
       preloaded_content_dir_(preloaded_content_dir),
       content_dir_(content_dir),
@@ -47,6 +50,8 @@ void SystemState::Initialize(
         image_loader_proxy,
     std::unique_ptr<org::chromium::UpdateEngineInterfaceProxyInterface>
         update_engine_proxy,
+    std::unique_ptr<org::chromium::SessionManagerInterfaceProxyInterface>
+        session_manager_proxy,
     std::unique_ptr<BootSlot> boot_slot,
     const base::FilePath& manifest_dir,
     const base::FilePath& preloaded_content_dir,
@@ -57,8 +62,8 @@ void SystemState::Initialize(
     CHECK(!g_instance_) << "SystemState::Initialize() called already.";
   g_instance_.reset(new SystemState(
       std::move(image_loader_proxy), std::move(update_engine_proxy),
-      std::move(boot_slot), manifest_dir, preloaded_content_dir, content_dir,
-      prefs_dir));
+      std::move(session_manager_proxy), std::move(boot_slot), manifest_dir,
+      preloaded_content_dir, content_dir, prefs_dir));
 }
 
 // static
@@ -75,6 +80,11 @@ org::chromium::ImageLoaderInterfaceProxyInterface* SystemState::image_loader()
 org::chromium::UpdateEngineInterfaceProxyInterface* SystemState::update_engine()
     const {
   return update_engine_proxy_.get();
+}
+
+org::chromium::SessionManagerInterfaceProxyInterface*
+SystemState::session_manager() const {
+  return session_manager_proxy_.get();
 }
 
 BootSlot::Slot SystemState::active_boot_slot() const {

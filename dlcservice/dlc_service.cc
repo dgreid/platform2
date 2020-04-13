@@ -34,7 +34,8 @@ namespace dlcservice {
 DlcService::DlcService()
     : scheduled_period_ue_check_id_(MessageLoop::kTaskIdNull),
       weak_ptr_factory_(this) {
-  const auto prefs_dir = SystemState::Get()->dlc_prefs_dir();
+  auto system_state = SystemState::Get();
+  const auto prefs_dir = system_state->dlc_prefs_dir();
   if (!base::PathExists(prefs_dir)) {
     CHECK(CreateDir(prefs_dir))
         << "Failed to create dlc prefs directory: " << prefs_dir;
@@ -43,11 +44,16 @@ DlcService::DlcService()
   dlc_manager_ = std::make_unique<DlcManager>();
 
   // Register D-Bus signal callbacks.
-  update_engine_proxy_ = SystemState::Get()->update_engine();
-  update_engine_proxy_->RegisterStatusUpdateAdvancedSignalHandler(
+  system_state->update_engine()->RegisterStatusUpdateAdvancedSignalHandler(
       base::Bind(&DlcService::OnStatusUpdateAdvancedSignal,
                  weak_ptr_factory_.GetWeakPtr()),
       base::Bind(&DlcService::OnStatusUpdateAdvancedSignalConnected,
+                 weak_ptr_factory_.GetWeakPtr()));
+
+  system_state->session_manager()->RegisterSessionStateChangedSignalHandler(
+      base::Bind(&DlcService::OnSessionStateChangedSignal,
+                 weak_ptr_factory_.GetWeakPtr()),
+      base::Bind(&DlcService::OnSessionStateChangedSignalConnected,
                  weak_ptr_factory_.GetWeakPtr()));
 }
 
@@ -121,8 +127,8 @@ bool DlcService::Install(const DlcIdList& dlcs,
 
   // Invokes update_engine to install the DLC.
   ErrorPtr tmp_err;
-  if (!update_engine_proxy_->AttemptInstall(omaha_url, unique_dlcs_to_install,
-                                            &tmp_err)) {
+  if (!SystemState::Get()->update_engine()->AttemptInstall(
+          omaha_url, unique_dlcs_to_install, &tmp_err)) {
     // TODO(kimjae): need update engine to propagate correct error message by
     // passing in |ErrorPtr| and being set within update engine, current default
     // is to indicate that update engine is updating because there is no way an
@@ -337,7 +343,8 @@ bool DlcService::HandleStatusResult(const StatusResult& status_result) {
 
 bool DlcService::GetUpdateEngineStatus(Operation* operation) {
   StatusResult status_result;
-  if (!update_engine_proxy_->GetStatusAdvanced(&status_result, nullptr)) {
+  if (!SystemState::Get()->update_engine()->GetStatusAdvanced(&status_result,
+                                                              nullptr)) {
     return false;
   }
   *operation = status_result.current_operation();
@@ -402,6 +409,17 @@ void DlcService::OnStatusUpdateAdvancedSignalConnected(
   if (!success) {
     LOG(ERROR) << "Failed to connect to update_engine's StatusUpdate signal.";
   }
+}
+
+void DlcService::OnSessionStateChangedSignalConnected(
+    const string& interface_name, const string& signal_name, bool success) {
+  if (!success) {
+    LOG(ERROR) << "Failed to connect to session_manager's SessionStateChanged "
+               << "signal.";
+  }
+}
+
+void DlcService::OnSessionStateChangedSignal(const std::string& state) {
 }
 
 }  // namespace dlcservice

@@ -29,6 +29,7 @@ pkg_config("target_defaults") {
     "libchrome-${libbase_ver}",
     "libbrillo",
     "libimageloader-client",
+    "libsession_manager-client",
     "libimageloader-manifest",
     "libupdate_engine-client",
 
@@ -120,6 +121,7 @@ if (use.test) {
     pkg_deps = [
       "libchrome-test-${libbase_ver}",
       "libimageloader-client-test",
+      "libsession_manager-client-test",
       "libupdate_engine-client-test",
     ]
   }
