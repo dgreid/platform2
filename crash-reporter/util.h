@@ -114,6 +114,11 @@ int GetServiceFailureWeight();
 // Read the content binding to fd to stream.
 bool ReadFdToStream(unsigned int fd, std::stringstream* stream);
 
+#if USE_DIRENCRYPTION
+// Joins the session key if the kernel supports ext4 directory encryption.
+void JoinSessionKeyring();
+#endif  // USE_DIRENCRYPTION
+
 }  // namespace util
 
 #endif  // CRASH_REPORTER_UTIL_H_

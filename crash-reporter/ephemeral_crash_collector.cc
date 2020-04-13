@@ -32,6 +32,12 @@ void EphemeralCrashCollector::Initialize(
     source_directories_.push_back(
         base::FilePath(paths::kEncryptedRebootVaultCrashDirectory));
   }
+
+#if USE_DIRENCRYPTION
+  // Join the session keyring, if one exists.
+  util::JoinSessionKeyring();
+#endif  // USE_DIRENCRYPTION
+
   // Disable early mode.
   CrashCollector::Initialize(is_feedback_allowed_function, false /* early */);
 }

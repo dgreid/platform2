@@ -46,6 +46,12 @@ static_library("libcrash") {
     "paths.cc",
     "util.cc",
   ]
+
+  defines = [ "USE_DIRENCRYPTION=${use.direncryption}" ]
+
+  if (use.direncryption) {
+    libs = [ "keyutils" ]
+  }
 }
 
 pkg_config("libcrash_reporter_config") {
@@ -95,10 +101,6 @@ static_library("libcrash_reporter") {
 
   if (use.kvm_guest) {
     sources += [ "vm_support_proper.cc" ]
-  }
-
-  if (use.direncryption) {
-    libs = [ "keyutils" ]
   }
 }
 

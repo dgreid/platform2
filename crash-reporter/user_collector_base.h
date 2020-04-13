@@ -123,11 +123,6 @@ class UserCollectorBase : public CrashCollector {
                                 base::FilePath* crash_file_path,
                                 bool* out_of_capacity);
 
-#if USE_DIRENCRYPTION
-  // Joins the session keyring to get the directory encryption keys.
-  void JoinSessionKeyring();
-#endif  // USE_DIRENCRYPTION
-
   bool generate_diagnostics_ = false;
   bool directory_failure_ = false;
   std::string filter_in_;

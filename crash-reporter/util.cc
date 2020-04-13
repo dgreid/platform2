@@ -11,6 +11,10 @@
 #include <map>
 #include <memory>
 
+#if USE_DIRENCRYPTION
+#include <keyutils.h>
+#endif  // USE_DIRENCRYPTION
+
 #include <base/files/file_util.h>
 #include <base/strings/string_split.h>
 #include <base/strings/string_util.h>
@@ -36,6 +40,11 @@ constexpr char kDevMode[] = "dev";
 
 // If the OS version is older than this we do not upload crash reports.
 constexpr base::TimeDelta kAgeForNoUploads = base::TimeDelta::FromDays(180);
+
+#if USE_DIRENCRYPTION
+// Name of the session keyring.
+const char kDircrypt[] = "dircrypt";
+#endif  // USE_DIRENCRYPTION
 
 }  // namespace
 
@@ -423,5 +432,16 @@ bool ReadFdToStream(unsigned int fd, std::stringstream* stream) {
     stream->write(buffer, count);
   }
 }
+
+#if USE_DIRENCRYPTION
+void JoinSessionKeyring() {
+  key_serial_t session_keyring = keyctl_join_session_keyring(kDircrypt);
+  if (session_keyring == -1) {
+    // The session keyring may not exist if ext4 encryption isn't enabled so
+    // just log an info message instead of an error.
+    PLOG(INFO) << "Unable to join session keying";
+  }
+}
+#endif  // USE_DIRENCRYPTION
 
 }  // namespace util

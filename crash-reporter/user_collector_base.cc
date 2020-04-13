@@ -7,10 +7,6 @@
 #include <pcrecpp.h>
 #include "crash-reporter/vm_support.h"
 
-#if USE_DIRENCRYPTION
-#include <keyutils.h>
-#endif  // USE_DIRENCRYPTION
-
 #include <base/files/file_util.h>
 #include <base/strings/string_split.h>
 #include <base/strings/stringprintf.h>
@@ -27,11 +23,6 @@ namespace {
 const char kStatePrefix[] = "State:\t";
 const char kUptimeField[] = "ptime";
 const char kUserCrashSignal[] = "org.chromium.CrashReporter.UserCrash";
-
-#if USE_DIRENCRYPTION
-// Name of the session keyring.
-const char kDircrypt[] = "dircrypt";
-#endif  // USE_DIRENCRYPTION
 
 void AccounceUserCrash() {
   brillo::ProcessImpl dbus;
@@ -321,7 +312,7 @@ UserCollectorBase::ErrorType UserCollectorBase::ConvertAndEnqueueCrash(
 
 #if USE_DIRENCRYPTION
   // Join the session keyring, if one exists.
-  JoinSessionKeyring();
+  util::JoinSessionKeyring();
 #endif  // USE_DIRENCRYPTION
 
   ErrorType error_type =
@@ -433,14 +424,3 @@ std::vector<std::string> UserCollectorBase::GetCommandLine(pid_t pid) const {
   return base::SplitString(cmdline, std::string(1, '\0'), base::KEEP_WHITESPACE,
                            base::SPLIT_WANT_ALL);
 }
-
-#if USE_DIRENCRYPTION
-void UserCollectorBase::JoinSessionKeyring() {
-  key_serial_t session_keyring = keyctl_join_session_keyring(kDircrypt);
-  if (session_keyring == -1) {
-    // The session keyring may not exist if ext4 encryption isn't enabled so
-    // just log an info message instead of an error.
-    PLOG(INFO) << "Unable to join session keying";
-  }
-}
-#endif  // USE_DIRENCRYPTION
