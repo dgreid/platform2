@@ -25,9 +25,9 @@ namespace NSCam {
 namespace NSIoPipe {
 namespace NSCamIOPipe {
 
-typedef struct {
+typedef struct sCAM_QUERY_X_PIX {
   ENPipeQueryCmd const Cmd = ENPipeQueryCmd_X_PIX;
-  typedef struct {
+  typedef struct QUERY_INPUT {
     MUINT32 portId;
     EImageFormat format;
     MUINT32 width;
@@ -38,9 +38,9 @@ typedef struct {
   MUINT32 QueryOutput;
 } sCAM_QUERY_X_PIX;
 
-typedef struct {
+typedef struct sCAM_QUERY_CROP_X_PIX {
   ENPipeQueryCmd const Cmd = ENPipeQueryCmd_CROP_X_PIX;
-  typedef struct {
+  typedef struct QUERY_INPUT {
     MUINT32 portId;
     EImageFormat format;
     MUINT32 width;
@@ -51,10 +51,10 @@ typedef struct {
   MUINT32 QueryOutput;
 } sCAM_QUERY_CROP_X_PIX;
 
-typedef struct {
+typedef struct sCAM_QUERY_X_BYTE {
   ENPipeQueryCmd const Cmd = ENPipeQueryCmd_X_BYTE;
 
-  typedef struct {
+  typedef struct QUERY_INPUT {
     MUINT32 portId;
     EImageFormat format;
     MUINT32 width;
@@ -65,10 +65,10 @@ typedef struct {
   MUINT32 QueryOutput;
 } sCAM_QUERY_X_BYTE;
 
-typedef struct {
+typedef struct sCAM_QUERY_CROP_X_BYTE {
   ENPipeQueryCmd const Cmd = ENPipeQueryCmd_CROP_X_BYTE;
 
-  typedef struct {
+  typedef struct QUERY_INPUT {
     MUINT32 portId;
     EImageFormat format;
     MUINT32 width;
@@ -79,10 +79,10 @@ typedef struct {
   MUINT32 QueryOutput;
 } sCAM_QUERY_CROP_X_BYTE;
 
-typedef struct {
+typedef struct sCAM_QUERY_CROP_START_X {
   ENPipeQueryCmd const Cmd = ENPipeQueryCmd_CROP_START_X;
 
-  typedef struct {
+  typedef struct QUERY_INPUT {
     MUINT32 portId;
     EImageFormat format;
     MUINT32 width;
@@ -93,10 +93,10 @@ typedef struct {
   MUINT32 QueryOutput;
 } sCAM_QUERY_CROP_START_X;
 
-typedef struct {
+typedef struct sCAM_QUERY_STRIDE_PIX {
   ENPipeQueryCmd const Cmd = ENPipeQueryCmd_STRIDE_PIX;
 
-  typedef struct {
+  typedef struct QUERY_INPUT {
     MUINT32 portId;
     EImageFormat format;
     MUINT32 width;
@@ -107,10 +107,10 @@ typedef struct {
   MUINT32 QueryOutput;
 } sCAM_QUERY_STRIDE_PIX;
 
-typedef struct {
+typedef struct sCAM_QUERY_STRIDE_BYTE {
   ENPipeQueryCmd const Cmd = ENPipeQueryCmd_STRIDE_BYTE;
 
-  typedef struct {
+  typedef struct QUERY_INPUT {
     MUINT32 portId;
     EImageFormat format;
     MUINT32 width;
@@ -121,33 +121,33 @@ typedef struct {
   MUINT32 QueryOutput;
 } sCAM_QUERY_STRIDE_BYTE;
 
-typedef struct {
+typedef struct sCAM_QUERY_MAX_SEN_NUM {
   ENPipeQueryCmd const Cmd = ENPipeQueryCmd_MAX_SEN_NUM;
 
   MUINT32 QueryOutput;
 } sCAM_QUERY_MAX_SEN_NUM;
 
-typedef struct {
+typedef struct sCAM_QUERY_PIPELINE_BITDEPTH {
   ENPipeQueryCmd const Cmd = ENPipeQueryCmd_PIPELINE_BITDEPTH;
 
   MUINT32 QueryOutput;
 } sCAM_QUERY_PIPELINE_BITDEPTH;
 
-typedef struct {
+typedef struct sCAM_QUERY_BURST_NUM {
   ENPipeQueryCmd const Cmd = ENPipeQueryCmd_BURST_NUM;
 
   MUINT32 QueryOutput;
 } sCAM_QUERY_BURST_NUM;
 
-typedef struct {
+typedef struct sCAM_QUERY_SUPPORT_PATTERN {
   ENPipeQueryCmd const Cmd = ENPipeQueryCmd_SUPPORT_PATTERN;
 
   MUINT32 QueryOutput;
 } sCAM_QUERY_SUPPORT_PATTERN;
 
-typedef struct {
+typedef struct sCAM_QUERY_QUERY_FMT {
   ENPipeQueryCmd const Cmd = ENPipeQueryCmd_QUERY_FMT;
-  typedef struct {
+  typedef struct QUERY_INPUT {
     MUINT32 portId;
   } QUERY_INPUT;
 
@@ -155,9 +155,9 @@ typedef struct {
   vector<EImageFormat> QueryOutput;
 } sCAM_QUERY_QUERY_FMT;
 
-typedef struct {
+typedef struct sCAM_QUERY_BS_RATIO {
   ENPipeQueryCmd const Cmd = ENPipeQueryCmd_BS_RATIO;
-  typedef struct {
+  typedef struct QUERY_INPUT {
     MUINT32 portId;
   } QUERY_INPUT;
 
@@ -165,21 +165,21 @@ typedef struct {
   MUINT32 QueryOutput;
 } sCAM_QUERY_BS_RATIO;
 
-typedef struct {
+typedef struct sCAM_QUERY_D_Twin {
   ENPipeQueryCmd const Cmd = ENPipeQueryCmd_D_Twin;
 
   MBOOL QueryOutput;
 } sCAM_QUERY_D_Twin;
 
-typedef struct {
+typedef struct sCAM_QUERY_D_BAYERENC {
   ENPipeQueryCmd const Cmd = ENPipeQueryCmd_D_BayerEnc;
 
   MUINT32 QueryOutput;
 } sCAM_QUERY_D_BAYERENC;
 
-typedef struct {
+typedef struct sCAM_QUERY_IQ_LEVEL {
   ENPipeQueryCmd const Cmd = ENPipeQueryCmd_IQ_LEVEL;
-  typedef struct {
+  typedef struct QUERY_INPUT {
     vector<QueryInData_t> vInData;
     vector<vector<QueryOutData_t>> vOutData;
   } QUERY_INPUT;
@@ -188,9 +188,9 @@ typedef struct {
   MBOOL QueryOutput;
 } sCAM_QUERY_IQ_LEVEL;
 
-typedef struct {
+typedef struct sCAM_QUERY_ISP_RES {
   ENPipeQueryCmd const Cmd = ENPipeQueryCmd_ISP_RES;
-  typedef struct {
+  typedef struct QUERY_INPUT {
     MUINT32 sensorIdx;
     MUINT32 scenarioId;
     MUINT32 rrz_out_w;
@@ -202,26 +202,26 @@ typedef struct {
   MBOOL QueryOutput;
 } sCAM_QUERY_ISP_RES;
 
-typedef struct {
+typedef struct sCAM_QUERY_HW_RES_MGR {
   ENPipeQueryCmd const Cmd = ENPipeQueryCmd_HW_RES_MGR;
 
   vector<SEN_INFO> QueryInput;
   vector<PIPE_SEL> QueryOutput;
 } sCAM_QUERY_HW_RES_MGR;
 
-typedef struct {
+typedef struct sCAM_QUERY_PDO_AVAILABLE {
   ENPipeQueryCmd const Cmd = ENPipeQueryCmd_PDO_AVAILABLE;
 
   MBOOL QueryOutput;
 } sCAM_QUERY_PDO_AVAILABLE;
 
-typedef struct {
+typedef struct sCAM_QUERY_DYNAMIC_PAK {
   ENPipeQueryCmd const Cmd = ENPipeQueryCmd_DYNAMIC_PAK;
 
   MBOOL QueryOutput;
 } sCAM_QUERY_DYNAMIC_PAK;
 
-typedef struct {
+typedef struct sCAM_QUERY_MAX_PREVIEW_SIZE {
   ENPipeQueryCmd const Cmd = ENPipeQueryCmd_MAX_PREVIEW_SIZE;
 
   MUINT32 QueryOutput;

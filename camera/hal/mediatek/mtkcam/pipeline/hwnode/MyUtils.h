@@ -204,7 +204,7 @@ inline MBOOL isPostProcRawSupported() {
 
 class OpaqueReprocUtil {
  private:
-  typedef struct {
+  typedef struct opaque_reproc_info_t {
     MINT8 aligned_byte;
     MSize raw_size;
     MINT raw_format;

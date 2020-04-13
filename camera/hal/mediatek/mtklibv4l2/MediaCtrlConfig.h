@@ -58,7 +58,7 @@ enum MediaDeviceTag {
   MEDIA_CONTROLLER_END = 0xFFFFFFFF
 };
 
-typedef struct {
+typedef struct MediaCtrl_P1Topology {
   MediaDeviceTag tag;
   string mdev_name;
   string hub_name;
@@ -71,7 +71,7 @@ typedef struct {
   string rrzo_sink_name;
 } MediaCtrl_P1Topology;
 
-typedef struct {
+typedef struct MediaCtrl_P2Topology {
   MediaDeviceTag tag;
   string mdev_name;
   string hub_name;
@@ -81,7 +81,7 @@ typedef struct {
   string sink2_name;
 } MediaCtrl_P2Topology;
 
-typedef struct {
+typedef struct MediaCtrl_P2NewTopology {
   MediaDeviceTag tag;
   string mdev_name;
   string hub_name;
@@ -95,11 +95,11 @@ typedef struct {
   string sink4_name;
 } MediaCtrl_P2NewTopology;
 
-typedef struct {
+typedef struct MediaCtlElement {
   string name;
 } MediaCtlElement;
 
-typedef struct {
+typedef struct MediaCtlLinkParams {
   string srcName;
   int srcPad;
   string sinkName;
@@ -108,12 +108,12 @@ typedef struct {
   int flags;
 } MediaCtlLinkParams;
 
-typedef struct {
+typedef struct MediaCtlConfig {
   vector<MediaCtlLinkParams> mLinkParams;
   vector<MediaCtlElement> mVideoNodes;
 } MediaCtlConfig;
 
-typedef struct {
+typedef struct EntityNameMap {
   string entityName;
   string devName;
 } EntityNameMap;
