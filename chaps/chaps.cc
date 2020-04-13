@@ -58,12 +58,7 @@ static uint32_t g_retry_delay_ms = 100;
 static void TearDown() {
   for (const auto& itr : g_open_sessions) {
     LOG(WARNING) << "Orphan session " << itr.first << " for slot " << itr.second
-                 << " left open, closing it.";
-    CK_RV rv = C_CloseSession(itr.first);
-    if (rv != CKR_OK) {
-      LOG(WARNING) << "Failed to close orphan session " << itr.first
-                   << ", error " << rv;
-    }
+                 << " left open";
   }
   if (g_is_initialized && !g_is_using_mock && g_proxy) {
     delete g_proxy;
