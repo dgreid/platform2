@@ -66,7 +66,7 @@ bool PinWeaverAuthBlock::Derive(const AuthInput& user_input,
   brillo::SecureBlob kdf_skey(kDefaultAesKeySize);
   brillo::SecureBlob le_iv(kAesBlockSize);
   brillo::SecureBlob salt(serialized.salt().begin(), serialized.salt().end());
-  if (!CryptoLib::DeriveSecretsSCrypt(user_input.user_input.value(), salt,
+  if (!CryptoLib::DeriveSecretsScrypt(user_input.user_input.value(), salt,
                                       {&le_secret, &kdf_skey, &le_iv})) {
     PopulateError(error, CryptoError::CE_OTHER_FATAL);
     return false;

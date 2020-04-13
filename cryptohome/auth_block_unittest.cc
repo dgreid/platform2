@@ -36,7 +36,7 @@ TEST(PinWeaverAuthBlockTest, DeriveTest) {
   brillo::SecureBlob fek_iv(kAesBlockSize, 'X');
 
   brillo::SecureBlob le_secret(kDefaultAesKeySize);
-  ASSERT_TRUE(CryptoLib::DeriveSecretsSCrypt(vault_key, salt, {&le_secret}));
+  ASSERT_TRUE(CryptoLib::DeriveSecretsScrypt(vault_key, salt, {&le_secret}));
 
   NiceMock<MockLECredentialManager> le_cred_manager;
 
@@ -81,7 +81,7 @@ TEST(PinWeaverAuthBlockTest, CheckCredentialFailureTest) {
   brillo::SecureBlob fek_iv(kAesBlockSize, 'X');
 
   brillo::SecureBlob le_secret(kDefaultAesKeySize);
-  ASSERT_TRUE(CryptoLib::DeriveSecretsSCrypt(vault_key, salt, {&le_secret}));
+  ASSERT_TRUE(CryptoLib::DeriveSecretsScrypt(vault_key, salt, {&le_secret}));
 
   NiceMock<MockLECredentialManager> le_cred_manager;
 
@@ -118,7 +118,7 @@ TEST(TPMAuthBlockTest, DecryptBoundToPcrTest) {
   brillo::SecureBlob vkk_key;
 
   brillo::SecureBlob pass_blob(kDefaultPassBlobSize);
-  ASSERT_TRUE(CryptoLib::DeriveSecretsSCrypt(vault_key, salt, {&pass_blob}));
+  ASSERT_TRUE(CryptoLib::DeriveSecretsScrypt(vault_key, salt, {&pass_blob}));
 
   NiceMock<MockTpm> tpm;
   NiceMock<MockTpmInit> tpm_init;
@@ -147,7 +147,7 @@ TEST(TPMAuthBlockTest, DecryptNotBoundToPcrTest) {
   brillo::SecureBlob vkk_iv(kDefaultAesKeySize);
   brillo::SecureBlob aes_key(kDefaultAesKeySize);
 
-  ASSERT_TRUE(CryptoLib::DeriveSecretsSCrypt(vault_key, salt, {&aes_key}));
+  ASSERT_TRUE(CryptoLib::DeriveSecretsScrypt(vault_key, salt, {&aes_key}));
 
   NiceMock<MockTpm> tpm;
   NiceMock<MockTpmInit> tpm_init;

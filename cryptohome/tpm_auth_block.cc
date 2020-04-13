@@ -191,7 +191,7 @@ bool TpmAuthBlock::DecryptTpmBoundToPcr(const brillo::SecureBlob& vault_key,
                                         brillo::SecureBlob* vkk_iv,
                                         brillo::SecureBlob* vkk_key) const {
   brillo::SecureBlob pass_blob(kDefaultPassBlobSize);
-  if (!CryptoLib::DeriveSecretsSCrypt(vault_key, salt, {&pass_blob, vkk_iv})) {
+  if (!CryptoLib::DeriveSecretsScrypt(vault_key, salt, {&pass_blob, vkk_iv})) {
     return false;
   }
 
@@ -240,7 +240,7 @@ bool TpmAuthBlock::DecryptTpmNotBoundToPcr(
   bool scrypt_derived =
       serialized.flags() & SerializedVaultKeyset::SCRYPT_DERIVED;
   if (scrypt_derived) {
-    if (!CryptoLib::DeriveSecretsSCrypt(vault_key, salt,
+    if (!CryptoLib::DeriveSecretsScrypt(vault_key, salt,
                                         {&aes_skey, &kdf_skey, vkk_iv})) {
       PopulateError(error, CryptoError::CE_OTHER_FATAL);
       return false;

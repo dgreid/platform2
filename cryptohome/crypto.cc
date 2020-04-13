@@ -173,7 +173,7 @@ bool Crypto::PasskeyToTokenAuthData(const brillo::SecureBlob& passkey,
 
   SecureBlob local_auth_data;
   local_auth_data.resize(kAuthDataSizeBytes);
-  if (0 != CryptoLib::SCrypt(passkey, salt, kScryptParameterN,
+  if (0 != CryptoLib::Scrypt(passkey, salt, kScryptParameterN,
                              kScryptParameterR, kScryptParameterP,
                              &local_auth_data)) {
     LOG(ERROR) << "Scrypt key derivation failed.";
@@ -552,7 +552,7 @@ bool Crypto::EncryptTPM(const VaultKeyset& vault_keyset,
   const auto vkk_key = CryptoLib::CreateSecureRandomBlob(kDefaultAesKeySize);
   SecureBlob pass_blob(kDefaultPassBlobSize);
   SecureBlob vkk_iv(kAesBlockSize);
-  if (!CryptoLib::DeriveSecretsSCrypt(key, salt, {&pass_blob, &vkk_iv}))
+  if (!CryptoLib::DeriveSecretsScrypt(key, salt, {&pass_blob, &vkk_iv}))
     return false;
 
   SecureBlob tpm_key;
@@ -621,7 +621,7 @@ bool Crypto::EncryptTPMNotBoundToPcr(const VaultKeyset& vault_keyset,
   SecureBlob kdf_skey(kDefaultAesKeySize);
   SecureBlob vkk_iv(kAesBlockSize);
 
-  if (!CryptoLib::DeriveSecretsSCrypt(key, salt,
+  if (!CryptoLib::DeriveSecretsScrypt(key, salt,
                                       {&aes_skey, &kdf_skey, &vkk_iv})) {
     return false;
   }
@@ -742,7 +742,7 @@ bool Crypto::EncryptLECredential(const VaultKeyset& vault_keyset,
   SecureBlob le_secret(kDefaultAesKeySize);
   SecureBlob kdf_skey(kDefaultAesKeySize);
   SecureBlob le_iv(kAesBlockSize);
-  if (!CryptoLib::DeriveSecretsSCrypt(key, salt,
+  if (!CryptoLib::DeriveSecretsScrypt(key, salt,
                                       {&le_secret, &kdf_skey, &le_iv})) {
     return false;
   }

@@ -267,7 +267,7 @@ class CryptoLib {
   //                          The caller allocates each blob in |gen_secrets|
   //                          to the appropriate size.
   //
-  static bool DeriveSecretsSCrypt(const brillo::SecureBlob& passkey,
+  static bool DeriveSecretsScrypt(const brillo::SecureBlob& passkey,
                                   const brillo::SecureBlob& salt,
                                   std::vector<brillo::SecureBlob*> gen_secrets);
 
@@ -283,7 +283,7 @@ class CryptoLib {
   //            containing the result secret.
   //
   //  Returns 0 on success.
-  static int SCrypt(const brillo::SecureBlob& passkey,
+  static int Scrypt(const brillo::SecureBlob& passkey,
                     const brillo::SecureBlob& salt,
                     int work_factor,
                     int block_size,
