@@ -17,6 +17,7 @@
 #include "shill/ipconfig.h"
 #include "shill/net/ip_address.h"
 #include "shill/refptr_types.h"
+#include "shill/routing_policy_entry.h"
 #include "shill/technology.h"
 
 namespace shill {
@@ -182,13 +183,14 @@ class Connection : public base::RefCounted<Connection> {
   // True if this device should have rules sending traffic whose src address
   // matches one of the interface's addresses to the per-device table.
   bool use_if_addrs_;
-  // |allowed_{uids,iifs,dsts,srcs}_| allow for this connection to serve more
-  // traffic than it would by default.
+  // |allowed_{uids,iifs,dsts,srcs}| and |included_fwmarks_| allow for this
+  // connection to serve more traffic than it would by default.
   // TODO(crbug.com/1022028) Replace this with a RoutingPolicy.
   std::vector<uint32_t> allowed_uids_;
   std::vector<std::string> allowed_iifs_;
   std::vector<IPAddress> allowed_srcs_;
   std::vector<IPAddress> allowed_dsts_;
+  std::vector<RoutingPolicyEntry::FwMark> included_fwmarks_;
   std::vector<uint32_t> blackholed_uids_;
 
   // Do not reconfigure the IP addresses, subnet mask, broadcast, etc.

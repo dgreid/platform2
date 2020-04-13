@@ -630,6 +630,9 @@ DeviceRefPtr DeviceInfo::CreateDevice(const string& link_name,
       return nullptr;
     case Technology::kGuestInterface:
       // Traffic that comes from guest devices should be routed through VPNs.
+      // TODO(b/154183305) Move to platform2/patchpanel once it becomes aware of
+      // the VPN routing table id and fwmark policies for output network
+      // selection are implemented.
       manager_->vpn_provider()->AddAllowedInterface(link_name);
       return nullptr;
     default:

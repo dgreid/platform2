@@ -19,7 +19,6 @@
 #include "shill/logging.h"
 #include "shill/net/rtnl_handler.h"
 #include "shill/resolver.h"
-#include "shill/routing_policy_entry.h"
 #include "shill/routing_table.h"
 #include "shill/routing_table_entry.h"
 
@@ -171,6 +170,7 @@ void Connection::UpdateFromIPConfig(const IPConfigRefPtr& config) {
   const IPConfig::Properties& properties = config->properties();
   allowed_uids_ = properties.allowed_uids;
   allowed_iifs_ = properties.allowed_iifs;
+  included_fwmarks_ = properties.included_fwmarks;
   use_if_addrs_ =
       properties.use_if_addrs || technology_.IsPrimaryConnectivityTechnology();
 
@@ -378,6 +378,15 @@ void Connection::AllowTrafficThrough(uint32_t table_id,
                             RoutingPolicyEntry::CreateFromDst(dst_address)
                                 .SetPriority(kDstRulePriority)
                                 .SetTable(table_id));
+  }
+
+  for (const auto& fwmark : included_fwmarks_) {
+    auto entry = RoutingPolicyEntry::Create(IPAddress::kFamilyIPv4)
+                     .SetPriority(base_priority)
+                     .SetTable(table_id)
+                     .SetFwMark(fwmark);
+    routing_table_->AddRule(interface_index_, entry);
+    routing_table_->AddRule(interface_index_, entry.FlipFamily());
   }
 
   // Add output interface rule for all interfaces, such that SO_BINDTODEVICE can

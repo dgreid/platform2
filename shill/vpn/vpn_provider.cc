@@ -18,6 +18,7 @@
 #include "shill/manager.h"
 #include "shill/process_manager.h"
 #include "shill/profile.h"
+#include "shill/routing_policy_entry.h"
 #include "shill/store_interface.h"
 #include "shill/vpn/arc_vpn_driver.h"
 #include "shill/vpn/l2tp_ipsec_driver.h"
@@ -37,6 +38,18 @@ static string ObjectID(const VPNProvider* v) {
 }  // namespace Logging
 
 namespace {
+
+// TODO(b/151879931) Import these from libarcnetwork after platform2/arc/network
+// has been moved to platform2/patchpanel
+constexpr const uint32_t kFwMarkRouteOnVpnBit = 0x80000000;  // 1st MSB
+constexpr const uint32_t kFwMarkBypassVpnBit = 0x40000000;   // 2nd MSB
+constexpr const uint32_t kFwMarkVpnMask =
+    kFwMarkBypassVpnBit | kFwMarkRouteOnVpnBit;
+
+constexpr const RoutingPolicyEntry::FwMark kFwMarkRouteOnVpn = {
+    .value = kFwMarkRouteOnVpnBit,
+    .mask = kFwMarkVpnMask,
+};
 
 // Populates |type_ptr|, |name_ptr| and |host_ptr| with the appropriate
 // values from |args|.  Returns True on success, otherwise if any of
@@ -374,10 +387,14 @@ void VPNProvider::DisconnectAll() {
   }
 }
 
+// TODO(crbug.com/1022028, b/154183305) Do not reuse IP properties object to
+// carry routing policies related to VPN services. IP properties should be
+// strictly layer 3 data only ideally.
 void VPNProvider::SetDefaultRoutingPolicy(IPConfig::Properties* properties) {
   CHECK(!manager_->user_traffic_uids().empty());
   properties->allowed_uids = manager_->user_traffic_uids();
   properties->allowed_iifs = allowed_iifs_;
+  properties->included_fwmarks = {kFwMarkRouteOnVpn};
 }
 
 }  // namespace shill

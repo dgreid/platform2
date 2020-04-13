@@ -18,6 +18,7 @@
 #include "shill/net/ip_address.h"
 #include "shill/property_store.h"
 #include "shill/refptr_types.h"
+#include "shill/routing_policy_entry.h"
 
 namespace shill {
 class ControlInterface;
@@ -76,6 +77,9 @@ class IPConfig : public base::RefCounted<IPConfig> {
     // all system traffic can use this connection.
     std::vector<uint32_t> allowed_uids;
     std::vector<std::string> allowed_iifs;
+    // Any egress traffic marked with a fwmark matching a FwMark in
+    // |included_fwmarks| will be routed through this connection.
+    std::vector<RoutingPolicyEntry::FwMark> included_fwmarks;
     // List of uids that have their traffic blocked.
     std::vector<uint32_t> blackholed_uids;
     // Set the flag to true when the interface should be set as the default
