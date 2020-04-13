@@ -52,6 +52,10 @@
 #include "shill/vpn/vpn_provider.h"
 #include "shill/vpn/vpn_service.h"
 
+#if !defined(DISABLE_CELLULAR)
+#include "shill/cellular/modem_info.h"
+#endif  // DISABLE_CELLULAR
+
 #if !defined(DISABLE_WIFI)
 #include "shill/wifi/wifi.h"
 #include "shill/wifi/wifi_provider.h"
@@ -165,7 +169,7 @@ Manager::Manager(ControlInterface* control_interface,
       adaptor_(control_interface->CreateManagerAdaptor(this)),
       device_info_(this),
 #if !defined(DISABLE_CELLULAR)
-      modem_info_(control_interface, dispatcher, metrics, this),
+      modem_info_(new ModemInfo(control_interface, dispatcher, metrics, this)),
 #endif  // DISABLE_CELLULAR
       ethernet_provider_(new EthernetProvider(this)),
 #if !defined(DISABLE_WIRED_8021X)
@@ -311,7 +315,7 @@ void Manager::Start() {
   running_ = true;
   device_info_.Start();
 #if !defined(DISABLE_CELLULAR)
-  modem_info_.Start();
+  modem_info_->Start();
 #endif  // DISABLE_CELLULAR
   for (const auto& provider_mapping : providers_) {
     provider_mapping.second->Start();
@@ -356,7 +360,7 @@ void Manager::Stop() {
     provider_mapping.second->Stop();
   }
 #if !defined(DISABLE_CELLULAR)
-  modem_info_.Stop();
+  modem_info_->Stop();
 #endif  // DISABLE_CELLULAR
   device_info_.Stop();
   device_status_check_task_.Cancel();

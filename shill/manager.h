@@ -19,7 +19,6 @@
 #include <chromeos/dbus/service_constants.h>
 #include <gtest/gtest_prod.h>  // for FRIEND_TEST
 
-#include "shill/cellular/modem_info.h"
 #include "shill/default_service_observer.h"
 #include "shill/device.h"
 #include "shill/device_info.h"
@@ -45,6 +44,7 @@ class Error;
 class EthernetProvider;
 class EventDispatcher;
 class ManagerAdaptorInterface;
+class ModemInfo;
 class Resolver;
 class VPNProvider;
 class Throttler;
@@ -359,7 +359,7 @@ class Manager : public base::SupportsWeakPtr<Manager> {
 
   virtual DeviceInfo* device_info() { return &device_info_; }
 #if !defined(DISABLE_CELLULAR)
-  virtual ModemInfo* modem_info() { return &modem_info_; }
+  virtual ModemInfo* modem_info() { return modem_info_.get(); }
 #endif  // DISABLE_CELLULAR
   PowerManager* power_manager() const { return power_manager_.get(); }
   virtual EthernetProvider* ethernet_provider() {
@@ -735,7 +735,7 @@ class Manager : public base::SupportsWeakPtr<Manager> {
   std::unique_ptr<ManagerAdaptorInterface> adaptor_;
   DeviceInfo device_info_;
 #if !defined(DISABLE_CELLULAR)
-  ModemInfo modem_info_;
+  std::unique_ptr<ModemInfo> modem_info_;
 #endif  // DISABLE_CELLULAR
   std::unique_ptr<EthernetProvider> ethernet_provider_;
 #if !defined(DISABLE_WIRED_8021X)

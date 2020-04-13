@@ -51,6 +51,10 @@
 #include "shill/routing_table.h"
 #include "shill/vpn/vpn_provider.h"
 
+#if !defined(DISABLE_CELLULAR)
+#include "shill/cellular/modem_info.h"
+#endif  // DISABLE_CELLULAR
+
 #if !defined(DISABLE_WIFI)
 #include "shill/net/netlink_attribute.h"
 #include "shill/net/netlink_manager.h"

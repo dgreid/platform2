@@ -24,26 +24,26 @@ MockModemInfo::~MockModemInfo() = default;
 void MockModemInfo::SetMockMembers() {
   // These are always replaced by mocks.
   // Assumes ownership.
-  set_pending_activation_store(new MockPendingActivationStore());
+  pending_activation_store_ = std::make_unique<MockPendingActivationStore>();
   mock_pending_activation_store_ =
-      static_cast<MockPendingActivationStore*>(pending_activation_store());
+      static_cast<MockPendingActivationStore*>(pending_activation_store_.get());
   // These are replaced by mocks only if current unset in ModemInfo.
-  if (control_interface() == nullptr) {
+  if (!control_interface_) {
     mock_control_.reset(new MockControl());
-    set_control_interface(mock_control_.get());
+    control_interface_ = mock_control_.get();
   }
-  if (dispatcher() == nullptr) {
+  if (!dispatcher_) {
     mock_dispatcher_.reset(new MockEventDispatcher());
-    set_event_dispatcher(mock_dispatcher_.get());
+    dispatcher_ = mock_dispatcher_.get();
   }
-  if (metrics() == nullptr) {
+  if (!metrics_) {
     mock_metrics_.reset(new MockMetrics());
-    set_metrics(mock_metrics_.get());
+    metrics_ = mock_metrics_.get();
   }
-  if (manager() == nullptr) {
+  if (!manager_) {
     mock_manager_.reset(
         new MockManager(control_interface(), dispatcher(), metrics()));
-    set_manager(mock_manager_.get());
+    manager_ = mock_manager_.get();
   }
 }
 

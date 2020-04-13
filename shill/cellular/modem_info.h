@@ -5,11 +5,18 @@
 #ifndef SHILL_CELLULAR_MODEM_INFO_H_
 #define SHILL_CELLULAR_MODEM_INFO_H_
 
+#include <map>
 #include <memory>
 #include <string>
+#include <vector>
 
 #include <base/macros.h>
+#include <base/memory/weak_ptr.h>
 #include <gtest/gtest_prod.h>  // for FRIEND_TEST
+
+#include "shill/cellular/dbus_objectmanager_proxy_interface.h"
+#include "shill/data_types.h"
+#include "shill/error.h"
 
 namespace shill {
 
@@ -17,10 +24,10 @@ class ControlInterface;
 class EventDispatcher;
 class Manager;
 class Metrics;
-class ModemManager;
+class Modem;
 class PendingActivationStore;
 
-// Manages modem managers.
+// Handles the modem manager service and creates and destroys modem instances.
 class ModemInfo {
  public:
   ModemInfo(ControlInterface* control,
@@ -29,9 +36,14 @@ class ModemInfo {
             Manager* manager);
   virtual ~ModemInfo();
 
+  // Starts watching for and handling the DBus modem manager service.
   virtual void Start();
+
+  // Stops watching for the DBus modem manager service and destroys any
+  // associated modems.
   virtual void Stop();
 
+  // Called when a Cellular Device is created.
   virtual void OnDeviceInfoAvailable(const std::string& link_name);
 
   ControlInterface* control_interface() const { return control_interface_; }
@@ -43,27 +55,55 @@ class ModemInfo {
   }
 
  protected:
-  // Write accessors for unit-tests.
-  void set_control_interface(ControlInterface* control) {
-    control_interface_ = control;
-  }
-  void set_event_dispatcher(EventDispatcher* dispatcher) {
-    dispatcher_ = dispatcher;
-  }
-  void set_metrics(Metrics* metrics) { metrics_ = metrics; }
-  void set_manager(Manager* manager) { manager_ = manager; }
-  void set_pending_activation_store(
-      PendingActivationStore* pending_activation_store);
+  // The following methods are virtual to support test overrides.
+  virtual std::unique_ptr<DBusObjectManagerProxyInterface> CreateProxy();
+  virtual std::unique_ptr<Modem> CreateModem(
+      const RpcIdentifier& path, const InterfaceToProperties& properties);
 
  private:
-  std::unique_ptr<ModemManager> modem_manager_;
+  friend class MockModemInfo;
+  friend class ModemInfoTest;
+
+  FRIEND_TEST(ModemInfoTest, AddRemoveModem);
+  FRIEND_TEST(ModemInfoTest, ConnectDisconnect);
+  FRIEND_TEST(ModemInfoTest, AddRemoveInterfaces);
+  FRIEND_TEST(ModemInfoTest, Connect);
+  FRIEND_TEST(ModemInfoTest, StartStop);
+
+  void Connect();
+  void Disconnect();
+
+  bool ModemExists(const RpcIdentifier& path) const;
+  void AddModem(const RpcIdentifier& path,
+                const InterfaceToProperties& properties);
+  void RemoveModem(const RpcIdentifier& path);
+
+  // Service availability callbacks.
+  void OnAppeared();
+  void OnVanished();
+
+  // DBusObjectManagerProxyDelegate signal methods
+  void OnInterfacesAddedSignal(const RpcIdentifier& object_path,
+                               const InterfaceToProperties& properties);
+  void OnInterfacesRemovedSignal(const RpcIdentifier& object_path,
+                                 const std::vector<std::string>& interfaces);
+
+  // DBusObjectManagerProxyDelegate method callbacks
+  void OnGetManagedObjectsReply(
+      const ObjectsWithProperties& objects_with_properties, const Error& error);
+
   ControlInterface* control_interface_;
   EventDispatcher* dispatcher_;
   Metrics* metrics_;
   Manager* manager_;
+  std::unique_ptr<DBusObjectManagerProxyInterface> proxy_;
+  std::map<RpcIdentifier, std::unique_ptr<Modem>> modems_;
+  bool service_connected_ = false;
 
   // Post-payment activation state of the modem.
   std::unique_ptr<PendingActivationStore> pending_activation_store_;
+
+  base::WeakPtrFactory<ModemInfo> weak_ptr_factory_;
 
   DISALLOW_COPY_AND_ASSIGN(ModemInfo);
 };
