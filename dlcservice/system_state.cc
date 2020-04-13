@@ -29,7 +29,8 @@ SystemState::SystemState(
     const base::FilePath& manifest_dir,
     const base::FilePath& preloaded_content_dir,
     const base::FilePath& content_dir,
-    const base::FilePath& prefs_dir)
+    const base::FilePath& prefs_dir,
+    const base::FilePath& users_dir)
     : image_loader_proxy_(std::move(image_loader_proxy)),
       update_engine_proxy_(std::move(update_engine_proxy)),
       session_manager_proxy_(std::move(session_manager_proxy)),
@@ -37,6 +38,7 @@ SystemState::SystemState(
       preloaded_content_dir_(preloaded_content_dir),
       content_dir_(content_dir),
       prefs_dir_(prefs_dir),
+      users_dir_(users_dir),
       is_device_removable_(false) {
   std::string boot_disk_name;
   PCHECK(boot_slot->GetCurrentSlot(&boot_disk_name, &active_boot_slot_,
@@ -57,13 +59,14 @@ void SystemState::Initialize(
     const base::FilePath& preloaded_content_dir,
     const base::FilePath& content_dir,
     const base::FilePath& prefs_dir,
+    const base::FilePath& users_dir,
     bool for_test) {
   if (!for_test)
     CHECK(!g_instance_) << "SystemState::Initialize() called already.";
   g_instance_.reset(new SystemState(
       std::move(image_loader_proxy), std::move(update_engine_proxy),
       std::move(session_manager_proxy), std::move(boot_slot), manifest_dir,
-      preloaded_content_dir, content_dir, prefs_dir));
+      preloaded_content_dir, content_dir, prefs_dir, users_dir));
 }
 
 // static
@@ -118,6 +121,10 @@ const base::FilePath& SystemState::prefs_dir() const {
 
 base::FilePath SystemState::dlc_prefs_dir() const {
   return prefs_dir_.Append("dlc");
+}
+
+const base::FilePath& SystemState::users_dir() const {
+  return users_dir_;
 }
 
 }  // namespace dlcservice

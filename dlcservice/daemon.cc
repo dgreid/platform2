@@ -24,6 +24,9 @@ constexpr char kDlcPreloadedImageRootpath[] =
     "/mnt/stateful_partition/var_overlay/cache/dlc-images";
 
 constexpr char kDlcServicePrefsPath[] = "/var/lib/dlcservice";
+
+constexpr char kUsersPath[] = "/home/user";
+
 }  // namespace
 
 // kDlcServiceServiceName is defined in
@@ -61,7 +64,7 @@ void Daemon::RegisterDBusObjectsAsync(
       base::FilePath(imageloader::kDlcManifestRootpath),
       base::FilePath(kDlcPreloadedImageRootpath),
       base::FilePath(imageloader::kDlcImageRootpath),
-      base::FilePath(kDlcServicePrefsPath));
+      base::FilePath(kDlcServicePrefsPath), base::FilePath(kUsersPath));
   CHECK(SystemState::Get());
   dlc_service_ = std::make_unique<DlcService>();
 

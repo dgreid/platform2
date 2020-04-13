@@ -62,7 +62,8 @@ void BaseTest::SetUp() {
       std::move(mock_image_loader_proxy_), std::move(mock_update_engine_proxy_),
       std::move(mock_session_manager_proxy_),
       std::make_unique<BootSlot>(move(mock_boot_device)), manifest_path_,
-      preloaded_content_path_, content_path_, prefs_path_, /*for_test=*/true);
+      preloaded_content_path_, content_path_, prefs_path_, users_path_,
+      /*for_test=*/true);
 }
 
 void BaseTest::SetUpFilesAndDirectories() {
@@ -73,12 +74,14 @@ void BaseTest::SetUpFilesAndDirectories() {
       JoinPaths(scoped_temp_dir_.GetPath(), "preloaded_stateful");
   content_path_ = JoinPaths(scoped_temp_dir_.GetPath(), "stateful");
   prefs_path_ = JoinPaths(scoped_temp_dir_.GetPath(), "var_lib_dlcservice");
+  users_path_ = JoinPaths(scoped_temp_dir_.GetPath(), "users");
   mount_path_ = JoinPaths(scoped_temp_dir_.GetPath(), "mount");
   base::FilePath mount_root_path = JoinPaths(mount_path_, "root");
   base::CreateDirectory(manifest_path_);
   base::CreateDirectory(preloaded_content_path_);
   base::CreateDirectory(content_path_);
   base::CreateDirectory(prefs_path_);
+  base::CreateDirectory(users_path_);
   base::CreateDirectory(mount_root_path);
   testdata_path_ = JoinPaths(getenv("SRC"), "testdata");
 

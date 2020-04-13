@@ -60,6 +60,7 @@ class BaseTest : public testing::Test {
   base::FilePath preloaded_content_path_;
   base::FilePath content_path_;
   base::FilePath prefs_path_;
+  base::FilePath users_path_;
   base::FilePath mount_path_;
 
   using ImageLoaderProxyMock = org::chromium::ImageLoaderInterfaceProxyMock;

@@ -44,7 +44,8 @@ class DlcBaseTestRemovable : public DlcBaseTest {
                             std::move(mock_session_manager_proxy_),
                             std::make_unique<BootSlot>(move(mock_boot_device)),
                             manifest_path_, preloaded_content_path_,
-                            content_path_, prefs_path_, /*for_test=*/true);
+                            content_path_, prefs_path_, users_path_,
+                            /*for_test=*/true);
   }
 
  private:
