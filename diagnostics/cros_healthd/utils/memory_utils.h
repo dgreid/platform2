@@ -11,8 +11,9 @@
 
 namespace diagnostics {
 
-// Returns memory information read from the device.
-chromeos::cros_healthd::mojom::MemoryInfoPtr FetchMemoryInfo(
+// Returns a structure with either the device's memory info or the error that
+// occurred fetching the information.
+chromeos::cros_healthd::mojom::MemoryResultPtr FetchMemoryInfo(
     const base::FilePath& root_dir);
 
 }  // namespace diagnostics

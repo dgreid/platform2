@@ -5,33 +5,37 @@
 #include "diagnostics/cros_healthd/utils/memory_utils.h"
 
 #include <string>
+#include <utility>
 
 #include <base/logging.h>
+#include <base/optional.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_split.h>
 #include <base/strings/string_tokenizer.h>
 
 #include "diagnostics/common/file_utils.h"
+#include "diagnostics/cros_healthd/utils/error_utils.h"
 
 namespace diagnostics {
 
 namespace {
 
-using ::chromeos::cros_healthd::mojom::MemoryInfo;
-using ::chromeos::cros_healthd::mojom::MemoryInfoPtr;
+namespace mojo_ipc = ::chromeos::cros_healthd::mojom;
 
 // Path to procfs, relative to the root directory.
 constexpr char kRelativeProcPath[] = "proc";
 
 // Sets the total_memory_kib, free_memory_kib and available_memory_kib fields of
-// |info| with information read from proc/meminfo. Returns true iff all three
-// fields were found and valid within proc/meminfo.
-bool ParseProcMeminfo(const base::FilePath& root_dir, MemoryInfo* info) {
+// |info| with information read from proc/meminfo. Returns any error
+// encountered probing the memory information. |info| is valid iff no error
+// occurred.
+base::Optional<mojo_ipc::ProbeErrorPtr> ParseProcMeminfo(
+    const base::FilePath& root_dir, mojo_ipc::MemoryInfo* info) {
   std::string file_contents;
   if (!ReadAndTrimString(root_dir.Append(kRelativeProcPath), "meminfo",
                          &file_contents)) {
-    LOG(ERROR) << "Unable to read /proc/meminfo.";
-    return false;
+    return CreateAndLogProbeError(mojo_ipc::ErrorType::kFileReadError,
+                                  "Unable to read /proc/meminfo");
   }
 
   // Parse the meminfo contents for MemTotal, MemFree and MemAvailable. Note
@@ -39,8 +43,8 @@ bool ParseProcMeminfo(const base::FilePath& root_dir, MemoryInfo* info) {
   // claiming to be in kB.
   base::StringPairs keyVals;
   if (!base::SplitStringIntoKeyValuePairs(file_contents, ':', '\n', &keyVals)) {
-    LOG(ERROR) << "Incorrectly formatted /proc/meminfo.";
-    return false;
+    return CreateAndLogProbeError(mojo_ipc::ErrorType::kParseError,
+                                  "Incorrectly formatted /proc/meminfo");
   }
 
   bool memtotal_found = false;
@@ -55,8 +59,8 @@ bool ParseProcMeminfo(const base::FilePath& root_dir, MemoryInfo* info) {
         info->total_memory_kib = memtotal;
         memtotal_found = true;
       } else {
-        LOG(ERROR) << "Incorrectly formatted MemTotal.";
-        return false;
+        return CreateAndLogProbeError(mojo_ipc::ErrorType::kParseError,
+                                      "Incorrectly formatted MemTotal");
       }
     } else if (keyVals[i].first == "MemFree") {
       int memfree;
@@ -66,8 +70,8 @@ bool ParseProcMeminfo(const base::FilePath& root_dir, MemoryInfo* info) {
         info->free_memory_kib = memfree;
         memfree_found = true;
       } else {
-        LOG(ERROR) << "Incorrectly formatted MemFree.";
-        return false;
+        return CreateAndLogProbeError(mojo_ipc::ErrorType::kParseError,
+                                      "Incorrectly formatted MemFree");
       }
     } else if (keyVals[i].first == "MemAvailable") {
       // Convert from kB to MB and cache the result.
@@ -78,59 +82,80 @@ bool ParseProcMeminfo(const base::FilePath& root_dir, MemoryInfo* info) {
         info->available_memory_kib = memavailable;
         memavailable_found = true;
       } else {
-        LOG(ERROR) << "Incorrectly formatted MemAvailable.";
-        return false;
+        return CreateAndLogProbeError(mojo_ipc::ErrorType::kParseError,
+                                      "Incorrectly formatted MemAvailable");
       }
     }
   }
 
-  return memtotal_found && memfree_found && memavailable_found;
+  if (!memtotal_found || !memfree_found || !memavailable_found) {
+    std::string error_msg = !memtotal_found ? "Memtotal " : "";
+    error_msg += !memfree_found ? "MemFree " : "";
+    error_msg += !memavailable_found ? "MemAvailable " : "";
+    error_msg += "not found in /proc/meminfo";
+
+    return CreateAndLogProbeError(mojo_ipc::ErrorType::kParseError,
+                                  std::move(error_msg));
+  }
+
+  return base::nullopt;
 }
 
 // Sets the page_faults_per_second field of |info| with information read from
-// /proc/vmstat. Returns true iff the field was found and valid within
-// /proc/vmstat.
-bool ParseProcVmStat(const base::FilePath& root_dir, MemoryInfo* info) {
+// /proc/vmstat. Returns any error encountered probing the memory information.
+// |info| is valid iff no error occurred.
+base::Optional<mojo_ipc::ProbeErrorPtr> ParseProcVmStat(
+    const base::FilePath& root_dir, mojo_ipc::MemoryInfo* info) {
   std::string file_contents;
   if (!ReadAndTrimString(root_dir.Append(kRelativeProcPath), "vmstat",
                          &file_contents)) {
-    LOG(ERROR) << "Unable to read /proc/vmstat.";
-    return false;
+    return CreateAndLogProbeError(mojo_ipc::ErrorType::kFileReadError,
+                                  "Unable to read /proc/vmstat");
   }
 
   // Parse the vmstat contents for pgfault.
   base::StringPairs keyVals;
   if (!base::SplitStringIntoKeyValuePairs(file_contents, ' ', '\n', &keyVals)) {
-    LOG(ERROR) << "Incorrectly formatted /proc/vmstat.";
-    return false;
+    return CreateAndLogProbeError(mojo_ipc::ErrorType::kParseError,
+                                  "Incorrectly formatted /proc/vmstat");
   }
 
+  bool pgfault_found = false;
   for (int i = 0; i < keyVals.size(); i++) {
     if (keyVals[i].first == "pgfault") {
       int num_page_faults;
       if (base::StringToInt(keyVals[i].second, &num_page_faults)) {
         info->page_faults_since_last_boot = num_page_faults;
-        return true;
+        pgfault_found = true;
+        break;
       } else {
-        LOG(ERROR) << "Incorrectly formatted pgfault.";
-        return false;
+        return CreateAndLogProbeError(mojo_ipc::ErrorType::kParseError,
+                                      "Incorrectly formatted pgfault");
       }
     }
   }
 
-  // At this point, pgfault must not have been found.
-  return false;
+  if (!pgfault_found)
+    return CreateAndLogProbeError(mojo_ipc::ErrorType::kParseError,
+                                  "pgfault not found in /proc/vmstat");
+
+  return base::nullopt;
 }
 
 }  // namespace
 
-MemoryInfoPtr FetchMemoryInfo(const base::FilePath& root_dir) {
-  MemoryInfo info;
+mojo_ipc::MemoryResultPtr FetchMemoryInfo(const base::FilePath& root_dir) {
+  mojo_ipc::MemoryInfo info;
 
-  if (!ParseProcMeminfo(root_dir, &info) || !ParseProcVmStat(root_dir, &info))
-    return MemoryInfoPtr();
+  auto error = ParseProcMeminfo(root_dir, &info);
+  if (error.has_value())
+    return mojo_ipc::MemoryResult::NewError(std::move(error.value()));
 
-  return info.Clone();
+  error = ParseProcVmStat(root_dir, &info);
+  if (error.has_value())
+    return mojo_ipc::MemoryResult::NewError(std::move(error.value()));
+
+  return mojo_ipc::MemoryResult::NewMemoryInfo(mojo_ipc::MemoryInfo::New(info));
 }
 
 }  // namespace diagnostics

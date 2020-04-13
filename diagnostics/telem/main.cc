@@ -165,9 +165,13 @@ void DisplayTimezoneInfo(
 }
 
 void DisplayMemoryInfo(
-    const chromeos::cros_healthd::mojom::MemoryInfoPtr& memory) {
-  DCHECK(!memory.is_null());
+    const chromeos::cros_healthd::mojom::MemoryResultPtr& memory_result) {
+  if (memory_result->is_error()) {
+    DisplayError(memory_result->get_error());
+    return;
+  }
 
+  const auto& memory = memory_result->get_memory_info();
   printf(
       "total_memory_kib,free_memory_kib,available_memory_kib,page_faults_since_"
       "last_boot\n");
@@ -208,9 +212,9 @@ void DisplayTelemetryInfo(
   if (timezone_result)
     DisplayTimezoneInfo(timezone_result);
 
-  const auto& memory = info->memory_info;
-  if (!memory.is_null())
-    DisplayMemoryInfo(memory);
+  const auto& memory_result = info->memory_result;
+  if (memory_result)
+    DisplayMemoryInfo(memory_result);
 
   const auto& backlights = info->backlight_info;
   if (backlights)

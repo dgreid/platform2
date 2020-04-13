@@ -55,15 +55,16 @@ TEST(MemoryUtils, TestFetchMemoryInfo) {
       root_dir.Append(kRelativeMeminfoPath), kFakeMeminfoContents));
   ASSERT_TRUE(WriteFileAndCreateParentDirs(root_dir.Append(kRelativeVmStatPath),
                                            kFakeVmStatContents));
-  auto memory_info = FetchMemoryInfo(root_dir);
-  ASSERT_FALSE(memory_info.is_null());
+  auto memory_result = FetchMemoryInfo(root_dir);
+  ASSERT_TRUE(memory_result->is_memory_info());
+  const auto& memory_info = memory_result->get_memory_info();
   EXPECT_EQ(memory_info->total_memory_kib, 3906320);
   EXPECT_EQ(memory_info->free_memory_kib, 873180);
   EXPECT_EQ(memory_info->available_memory_kib, 87980);
   EXPECT_EQ(memory_info->page_faults_since_last_boot, 654654);
 }
 
-// Test that fetching memory info fails gracefully when /proc/meminfo doesn't
+// Test that fetching memory info returns an error when /proc/meminfo doesn't
 // exist.
 TEST(MemoryUtils, TestFetchMemoryInfoNoProcMeminfo) {
   base::ScopedTempDir temp_dir;
@@ -71,11 +72,13 @@ TEST(MemoryUtils, TestFetchMemoryInfoNoProcMeminfo) {
   base::FilePath root_dir = temp_dir.GetPath();
   ASSERT_TRUE(WriteFileAndCreateParentDirs(root_dir.Append(kRelativeVmStatPath),
                                            kFakeVmStatContents));
-  auto memory_info = FetchMemoryInfo(root_dir);
-  EXPECT_TRUE(memory_info.is_null());
+  auto memory_result = FetchMemoryInfo(root_dir);
+  ASSERT_TRUE(memory_result->is_error());
+  EXPECT_EQ(memory_result->get_error()->type,
+            chromeos::cros_healthd::mojom::ErrorType::kFileReadError);
 }
 
-// Test that fetching memory info fails gracefully when /proc/meminfo is
+// Test that fetching memory info returns an error when /proc/meminfo is
 // formatted incorrectly.
 TEST(MemoryUtils, TestFetchMemoryInfoProcMeminfoFormattedIncorrectly) {
   base::ScopedTempDir temp_dir;
@@ -84,11 +87,13 @@ TEST(MemoryUtils, TestFetchMemoryInfoProcMeminfoFormattedIncorrectly) {
   ASSERT_TRUE(WriteFileAndCreateParentDirs(
       root_dir.Append(kRelativeMeminfoPath),
       kFakeMeminfoContentsIncorrectlyFormattedFile));
-  auto memory_info = FetchMemoryInfo(root_dir);
-  EXPECT_TRUE(memory_info.is_null());
+  auto memory_result = FetchMemoryInfo(root_dir);
+  ASSERT_TRUE(memory_result->is_error());
+  EXPECT_EQ(memory_result->get_error()->type,
+            chromeos::cros_healthd::mojom::ErrorType::kParseError);
 }
 
-// Test that fetching memory info fails gracefully when /proc/meminfo doesn't
+// Test that fetching memory info returns an error when /proc/meminfo doesn't
 // contain the MemTotal key.
 TEST(MemoryUtils, TestFetchMemoryInfoProcMeminfoNoMemTotal) {
   base::ScopedTempDir temp_dir;
@@ -99,11 +104,13 @@ TEST(MemoryUtils, TestFetchMemoryInfoProcMeminfoNoMemTotal) {
                                    kFakeMeminfoContentsMissingMemtotal));
   ASSERT_TRUE(WriteFileAndCreateParentDirs(root_dir.Append(kRelativeVmStatPath),
                                            kFakeVmStatContents));
-  auto memory_info = FetchMemoryInfo(root_dir);
-  EXPECT_TRUE(memory_info.is_null());
+  auto memory_result = FetchMemoryInfo(root_dir);
+  ASSERT_TRUE(memory_result->is_error());
+  EXPECT_EQ(memory_result->get_error()->type,
+            chromeos::cros_healthd::mojom::ErrorType::kParseError);
 }
 
-// Test that fetching memory info fails gracefully when /proc/meminfo doesn't
+// Test that fetching memory info returns an error when /proc/meminfo doesn't
 // contain the MemFree key.
 TEST(MemoryUtils, TestFetchMemoryInfoProcMeminfoNoMemFree) {
   base::ScopedTempDir temp_dir;
@@ -114,11 +121,13 @@ TEST(MemoryUtils, TestFetchMemoryInfoProcMeminfoNoMemFree) {
                                    kFakeMeminfoContentsMissingMemfree));
   ASSERT_TRUE(WriteFileAndCreateParentDirs(root_dir.Append(kRelativeVmStatPath),
                                            kFakeVmStatContents));
-  auto memory_info = FetchMemoryInfo(root_dir);
-  EXPECT_TRUE(memory_info.is_null());
+  auto memory_result = FetchMemoryInfo(root_dir);
+  ASSERT_TRUE(memory_result->is_error());
+  EXPECT_EQ(memory_result->get_error()->type,
+            chromeos::cros_healthd::mojom::ErrorType::kParseError);
 }
 
-// Test that fetching memory info fails gracefully when /proc/meminfo doesn't
+// Test that fetching memory info returns an error when /proc/meminfo doesn't
 // contain the MemAvailable key.
 TEST(MemoryUtils, TestFetchMemoryInfoProcMeminfoNoMemAvailable) {
   base::ScopedTempDir temp_dir;
@@ -129,11 +138,13 @@ TEST(MemoryUtils, TestFetchMemoryInfoProcMeminfoNoMemAvailable) {
                                    kFakeMeminfoContentsMissingMemavailable));
   ASSERT_TRUE(WriteFileAndCreateParentDirs(root_dir.Append(kRelativeVmStatPath),
                                            kFakeVmStatContents));
-  auto memory_info = FetchMemoryInfo(root_dir);
-  EXPECT_TRUE(memory_info.is_null());
+  auto memory_result = FetchMemoryInfo(root_dir);
+  ASSERT_TRUE(memory_result->is_error());
+  EXPECT_EQ(memory_result->get_error()->type,
+            chromeos::cros_healthd::mojom::ErrorType::kParseError);
 }
 
-// Test that fetching memory info fails gracefully when /proc/meminfo contains
+// Test that fetching memory info returns an error when /proc/meminfo contains
 // an incorrectly formatted MemTotal key.
 TEST(MemoryUtils, TestFetchMemoryInfoProcMeminfoIncorrectlyFormattedMemTotal) {
   base::ScopedTempDir temp_dir;
@@ -144,11 +155,13 @@ TEST(MemoryUtils, TestFetchMemoryInfoProcMeminfoIncorrectlyFormattedMemTotal) {
       kFakeMeminfoContentsIncorrectlyFormattedMemtotal));
   ASSERT_TRUE(WriteFileAndCreateParentDirs(root_dir.Append(kRelativeVmStatPath),
                                            kFakeVmStatContents));
-  auto memory_info = FetchMemoryInfo(root_dir);
-  EXPECT_TRUE(memory_info.is_null());
+  auto memory_result = FetchMemoryInfo(root_dir);
+  ASSERT_TRUE(memory_result->is_error());
+  EXPECT_EQ(memory_result->get_error()->type,
+            chromeos::cros_healthd::mojom::ErrorType::kParseError);
 }
 
-// Test that fetching memory info fails gracefully when /proc/meminfo contains
+// Test that fetching memory info returns an error when /proc/meminfo contains
 // an incorrectly formatted MemFree key.
 TEST(MemoryUtils, TestFetchMemoryInfoProcMeminfoIncorrectlyFormattedMemFree) {
   base::ScopedTempDir temp_dir;
@@ -159,11 +172,13 @@ TEST(MemoryUtils, TestFetchMemoryInfoProcMeminfoIncorrectlyFormattedMemFree) {
       kFakeMeminfoContentsIncorrectlyFormattedMemfree));
   ASSERT_TRUE(WriteFileAndCreateParentDirs(root_dir.Append(kRelativeVmStatPath),
                                            kFakeVmStatContents));
-  auto memory_info = FetchMemoryInfo(root_dir);
-  EXPECT_TRUE(memory_info.is_null());
+  auto memory_result = FetchMemoryInfo(root_dir);
+  ASSERT_TRUE(memory_result->is_error());
+  EXPECT_EQ(memory_result->get_error()->type,
+            chromeos::cros_healthd::mojom::ErrorType::kParseError);
 }
 
-// Test that fetching memory info fails gracefully when /proc/meminfo contains
+// Test that fetching memory info returns an error when /proc/meminfo contains
 // an incorrectly formatted MemAvailable key.
 TEST(MemoryUtils,
      TestFetchMemoryInfoProcMeminfoIncorrectlyFormattedMemAvailable) {
@@ -175,11 +190,13 @@ TEST(MemoryUtils,
       kFakeMeminfoContentsIncorrectlyFormattedMemavailable));
   ASSERT_TRUE(WriteFileAndCreateParentDirs(root_dir.Append(kRelativeVmStatPath),
                                            kFakeVmStatContents));
-  auto memory_info = FetchMemoryInfo(root_dir);
-  EXPECT_TRUE(memory_info.is_null());
+  auto memory_result = FetchMemoryInfo(root_dir);
+  ASSERT_TRUE(memory_result->is_error());
+  EXPECT_EQ(memory_result->get_error()->type,
+            chromeos::cros_healthd::mojom::ErrorType::kParseError);
 }
 
-// Test that fetching memory info fails gracefully when /proc/vmstat doesn't
+// Test that fetching memory info returns an error when /proc/vmstat doesn't
 // exist.
 TEST(MemoryUtils, TestFetchMemoryInfoNoProcVmStat) {
   base::ScopedTempDir temp_dir;
@@ -187,11 +204,13 @@ TEST(MemoryUtils, TestFetchMemoryInfoNoProcVmStat) {
   base::FilePath root_dir = temp_dir.GetPath();
   ASSERT_TRUE(WriteFileAndCreateParentDirs(
       root_dir.Append(kRelativeMeminfoPath), kFakeMeminfoContents));
-  auto memory_info = FetchMemoryInfo(root_dir);
-  EXPECT_TRUE(memory_info.is_null());
+  auto memory_result = FetchMemoryInfo(root_dir);
+  ASSERT_TRUE(memory_result->is_error());
+  EXPECT_EQ(memory_result->get_error()->type,
+            chromeos::cros_healthd::mojom::ErrorType::kFileReadError);
 }
 
-// Test that fetching memory info fails gracefully when /proc/vmstat is
+// Test that fetching memory info returns an error when /proc/vmstat is
 // formatted incorrectly.
 TEST(MemoryUtils, TestFetchMemoryInfoProcVmStatFormattedIncorrectly) {
   base::ScopedTempDir temp_dir;
@@ -202,11 +221,13 @@ TEST(MemoryUtils, TestFetchMemoryInfoProcVmStatFormattedIncorrectly) {
   ASSERT_TRUE(WriteFileAndCreateParentDirs(
       root_dir.Append(kRelativeVmStatPath),
       kFakeVmStatContentsIncorrectlyFormattedFile));
-  auto memory_info = FetchMemoryInfo(root_dir);
-  EXPECT_TRUE(memory_info.is_null());
+  auto memory_result = FetchMemoryInfo(root_dir);
+  ASSERT_TRUE(memory_result->is_error());
+  EXPECT_EQ(memory_result->get_error()->type,
+            chromeos::cros_healthd::mojom::ErrorType::kParseError);
 }
 
-// Test that fetching memory info fails gracefully when /proc/vmstat doesn't
+// Test that fetching memory info returns an error when /proc/vmstat doesn't
 // contain the pgfault key.
 TEST(MemoryUtils, TestFetchMemoryInfoProcVmStatNoPgfault) {
   base::ScopedTempDir temp_dir;
@@ -216,11 +237,13 @@ TEST(MemoryUtils, TestFetchMemoryInfoProcVmStatNoPgfault) {
       root_dir.Append(kRelativeMeminfoPath), kFakeMeminfoContents));
   ASSERT_TRUE(WriteFileAndCreateParentDirs(root_dir.Append(kRelativeVmStatPath),
                                            kFakeVmStatContentsMissingPgfault));
-  auto memory_info = FetchMemoryInfo(root_dir);
-  EXPECT_TRUE(memory_info.is_null());
+  auto memory_result = FetchMemoryInfo(root_dir);
+  ASSERT_TRUE(memory_result->is_error());
+  EXPECT_EQ(memory_result->get_error()->type,
+            chromeos::cros_healthd::mojom::ErrorType::kParseError);
 }
 
-// Test that fetching memory info fails gracefully when /proc/vmstat contains
+// Test that fetching memory info returns an error when /proc/vmstat contains
 // an incorrectly formatted pgfault key.
 TEST(MemoryUtils, TestFetchMemoryInfoProcVmStatIncorrectlyFormattedPgfault) {
   base::ScopedTempDir temp_dir;
@@ -231,8 +254,10 @@ TEST(MemoryUtils, TestFetchMemoryInfoProcVmStatIncorrectlyFormattedPgfault) {
   ASSERT_TRUE(WriteFileAndCreateParentDirs(
       root_dir.Append(kRelativeVmStatPath),
       kFakeVmStatContentsIncorrectlyFormattedPgfault));
-  auto memory_info = FetchMemoryInfo(root_dir);
-  EXPECT_TRUE(memory_info.is_null());
+  auto memory_result = FetchMemoryInfo(root_dir);
+  ASSERT_TRUE(memory_result->is_error());
+  EXPECT_EQ(memory_result->get_error()->type,
+            chromeos::cros_healthd::mojom::ErrorType::kParseError);
 }
 
 }  // namespace diagnostics

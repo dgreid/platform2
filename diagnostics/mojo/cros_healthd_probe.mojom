@@ -150,6 +150,15 @@ struct TimezoneInfo {
   string region;
 };
 
+// Memory probe result. Can either be populated with the MemoryInfo or an
+// error retrieving the information.
+union MemoryResult {
+  // Valid MemoryInfo.
+  MemoryInfo memory_info;
+  // The error that occurred attempting to retrieve the MemoryInfo.
+  ProbeError error;
+};
+
 // Memory information.
 struct MemoryInfo {
   // Total memory, in KiB.
@@ -214,7 +223,7 @@ struct TelemetryInfo {
   TimezoneResult? timezone_result;
   // Information about the system's memory. Only present when kMemory was
   // included in the categories input to ProbeTelemetryInfo.
-  MemoryInfo? memory_info;
+  MemoryResult? memory_result;
   // Information about all of the device's backlights. Only present when
   // kBacklight was included in the categories input to ProbeTelemetryInfo.
   array<BacklightInfo>? backlight_info;

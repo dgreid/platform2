@@ -219,7 +219,7 @@ void CrosHealthdMojoService::ProbeTelemetryInfo(
         break;
       }
       case ProbeCategoryEnum::kMemory: {
-        telemetry_info.memory_info = FetchMemoryInfo(base::FilePath("/"));
+        telemetry_info.memory_result = FetchMemoryInfo(base::FilePath("/"));
         break;
       }
       case ProbeCategoryEnum::kBacklight: {
