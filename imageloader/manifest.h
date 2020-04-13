@@ -41,6 +41,7 @@ class BRILLO_EXPORT Manifest {
   bool is_removable() const { return is_removable_; }
   // Indicator for |dlcservice| to allow preloading at a per DLC level.
   bool preload_allowed() const { return preload_allowed_; }
+  const std::string& used_by() const { return used_by_; }
   const std::map<std::string, std::string> metadata() const {
     return metadata_;
   }
@@ -62,6 +63,7 @@ class BRILLO_EXPORT Manifest {
   int64_t size_;
   bool is_removable_;
   bool preload_allowed_;
+  std::string used_by_;
   std::map<std::string, std::string> metadata_;
 
   DISALLOW_COPY_AND_ASSIGN(Manifest);

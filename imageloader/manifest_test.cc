@@ -22,6 +22,7 @@ TEST(ManifestTest, ParseManifest) {
   const std::string preallocated_size = R"("600613")";
   const std::string size = R"("42")";
   const std::string preload_allowed = R"(true)";
+  const std::string used_by = R"("foo-user")";
   const std::string manifest_version = R"(1)";
   const std::string manifest_raw = std::string() + R"(
     {
@@ -40,6 +41,8 @@ TEST(ManifestTest, ParseManifest) {
                                    R"(,
     "size":)" + size + R"(,
     "preload-allowed":)" + preload_allowed +
+                                   R"(,
+    "used-by":)" + used_by +
                                    R"(,
     "manifest-version":)" + manifest_version +
                                    R"(
@@ -60,6 +63,7 @@ TEST(ManifestTest, ParseManifest) {
   EXPECT_EQ(manifest.preallocated_size(), 600613);
   EXPECT_EQ(manifest.size(), 42);
   EXPECT_EQ(manifest.preload_allowed(), true);
+  EXPECT_EQ(manifest.used_by(), "foo-user");
 }
 
 TEST(ManifestTest, ParseManifestNoOptional) {
@@ -94,6 +98,7 @@ TEST(ManifestTest, ParseManifestNoOptional) {
   EXPECT_NE(manifest.version().size(), 0);
   EXPECT_EQ(manifest.manifest_version(), 1);
   EXPECT_EQ(manifest.preload_allowed(), false);
+  EXPECT_EQ(manifest.used_by(), "");
 
   // Sizes should default to 0.
   EXPECT_EQ(manifest.preallocated_size(), 0);
