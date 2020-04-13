@@ -44,18 +44,6 @@ file should inherit [dlc.eclass]. Within the ebuild file the following
 variables should be set:
 
 Required:
-*    `DLC_ID` - Unique ID. Format of an ID has a few restrictions:
-	 *    It should not be empty.
-	 *    It should only contain alphanumeric characters (a-zA-Z0-9) and `-` (dash).
-	 *    The first letter cannot be dash.
-	 *    No underscore.
-	 *    It has a maximum length of 40 characters.
-	 (check out [imageloader_impl.cc] for the actual implementation).
-*    `DLC_PACKAGE` - Its format restrictions are the same as `DLC_ID`. Note:
-    This variable is here to help enable multiple packages support for DLC in
-    the future (allow downloading selectively a set of packages within one
-    DLC). When multiple packages are supported, each package should have a
-    unique name among all packages in a DLC.
 *   ` DLC_PREALLOC_BLOCKS` - The storage space (in the unit of number of blocks,
     block size is 4 KB) the system reserves for a copy of the DLC image.
     Note that on device we reserve 2 copies of the image so the actual
@@ -64,19 +52,42 @@ Required:
     (recommendation is 130% of the DLC size).
 
 Optional:
+*    `DLC_ID` - Unique ID. Format of an ID has a few restrictions:
+     *    It should not be empty.
+     *    It should only contain alphanumeric characters (a-zA-Z0-9) and `-` (dash).
+     *    The first letter cannot be dash.
+     *    No underscore.
+     *    It has a maximum length of 40 characters.
+    (Default is `${PN}`)
+    (check out [imageloader_impl.cc] for the actual implementation).
+*   `DLC_PACKAGE` - Its format restrictions are the same as `DLC_ID`. Note:
+    This variable is here to help enable multiple packages support for DLC in
+    the future (allow downloading selectively a set of packages within one
+    DLC). When multiple packages are supported, each package should have a
+    unique name among all packages in a DLC.
+    (Default is `package`)
 *   `DLC_NAME` - Name of the DLC.
-    It is for description/info purpose only (Default is `${PN}`).
+    It is for description/info purpose only.
+    (Default is `${PN}`)
 *   `DLC_VERSION` - Version of the DLC.
-    It is for description/info purpose only (Default is `${PVR}`).
+    It is for description/info purpose only.
+    (Default is `${PVR}`)
 *   `DLC_PRELOAD` - Preloading DLC.
     When set to true, the DLC will be preloaded during startup of dlcservice
-    for test images. (Default is false)
+    for test images.
+    (Default is false)
 *   `DLC_ENABLED` - Override being a DLC.
     When set to false, `$(dlc_get_path)` will point to `/` and everything will
     be installed into the rootfs instead of the DLC path. This allows the use
     of the same ebuild file to create a DLC under special conditions (i.e. Make
     a package a DLC for certain boards or install in rootfs for others).
     (Default is true)
+*   `DLC_USED_BY` - Defines who is the user of this DLC. This is
+    primarily used by DLCs that have visibility and privacy issues among users
+    on a device, and setting this flag allows us to properly do a ref-count of
+    the users of this DLC and show proper UI/confirmations to address these
+    issues. Acceptable values are "user" and "system".
+    (Default is "system")
 
 Within the build file, the implementation should include at least the
 `src_install` function. Within `src_install`, all the DLC content should be
