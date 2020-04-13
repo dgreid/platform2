@@ -516,12 +516,12 @@ result_code EncryptedFs::TeardownByStage(TeardownStage stage,
       FALLTHROUGH;
     case TeardownStage::kTeardownDevmapper:
       LOG(INFO) << "Removing " << dmcrypt_dev_;
-      if (!device_mapper_->Remove(dmcrypt_name_) && !ignore_errors)
+      if (!device_mapper_->Remove(dmcrypt_name_) && !ignore_errors) {
         LOG(ERROR) << "dm_teardown: " << dmcrypt_dev_;
-      if (!UdevAdmSettle(dmcrypt_dev_, false) && !ignore_errors) {
-        LOG(ERROR) << "udevadm settle failed.";
         return RESULT_FAIL_FATAL;
       }
+      if (!UdevAdmSettle(dmcrypt_dev_, false) && !ignore_errors)
+        LOG(WARNING) << "udevadm settle failed.";
       platform_->Sync();
 
       // Intentionally fall through here to teardown the lower loop device.
