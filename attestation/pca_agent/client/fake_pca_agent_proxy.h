@@ -10,6 +10,7 @@
 #include <attestation/pca_agent/dbus-proxy-mocks.h>
 #include <attestation/proto_bindings/pca_agent.pb.h>
 #include <base/optional.h>
+#include <base/threading/thread_task_runner_handle.h>
 #include <base/time/time.h>
 
 namespace attestation {
@@ -100,7 +101,7 @@ class FakePcaAgentProxy : public org::chromium::PcaAgentProxyMock {
                 const ErrorCallbackType& on_error) {
     auto task = config.success ? base::Bind(on_success, reply)
                                : base::Bind(on_error, dummy_error_.get());
-    base::MessageLoop::current()->task_runner()->PostDelayedTask(
+    base::ThreadTaskRunnerHandle::Get()->PostDelayedTask(
         FROM_HERE, task, config.delay);
   }
 

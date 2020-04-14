@@ -13,8 +13,8 @@
 #include <base/bind.h>
 #include <base/command_line.h>
 #include <base/files/file_util.h>
-#include <base/message_loop/message_loop.h>
 #include <base/strings/string_number_conversions.h>
+#include <base/threading/thread_task_runner_handle.h>
 #include <brillo/daemons/daemon.h>
 #include <brillo/syslog_logging.h>
 
@@ -503,7 +503,7 @@ class ClientLoop : public ClientLoopBase {
     } else {
       return EX_USAGE;
     }
-    base::MessageLoop::current()->task_runner()->PostTask(FROM_HERE, task);
+    base::ThreadTaskRunnerHandle::Get()->PostTask(FROM_HERE, task);
     return EX_OK;
   }
 
