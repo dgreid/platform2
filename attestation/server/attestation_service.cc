@@ -1475,12 +1475,12 @@ bool AttestationService::SaveKey(const std::string& username,
   return true;
 }
 
-void AttestationService::DeleteKey(const std::string& username,
+bool AttestationService::DeleteKey(const std::string& username,
                                    const std::string& key_label) {
   if (!username.empty()) {
-    key_store_->Delete(username, key_label);
+    return key_store_->Delete(username, key_label);
   } else {
-    RemoveDeviceKey(key_label);
+    return RemoveDeviceKey(key_label);
   }
 }
 
@@ -1510,7 +1510,7 @@ bool AttestationService::AddDeviceKey(const std::string& key_label,
   return database_->SaveChanges();
 }
 
-void AttestationService::RemoveDeviceKey(const std::string& key_label) {
+bool AttestationService::RemoveDeviceKey(const std::string& key_label) {
   auto* database_pb = database_->GetMutableProtobuf();
   bool found = false;
   for (int i = 0; i < database_pb->device_keys_size(); ++i) {
@@ -1527,8 +1527,10 @@ void AttestationService::RemoveDeviceKey(const std::string& key_label) {
   if (found) {
     if (!database_->SaveChanges()) {
       LOG(WARNING) << __func__ << ": Failed to persist key deletion.";
+      return false;
     }
   }
+  return true;
 }
 
 bool AttestationService::RemoveDeviceKeysByPrefix(

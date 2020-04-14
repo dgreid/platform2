@@ -437,7 +437,7 @@ class AttestationService : public AttestationInterface {
                const CertifiedKey& key);
 
   // Deletes the key associated with |username| and |key_label|.
-  void DeleteKey(const std::string& username, const std::string& key_label);
+  bool DeleteKey(const std::string& username, const std::string& key_label);
 
   // Deletes the key associated with |username| and having prefix |key_prefix|.
   bool DeleteKeysByPrefix(const std::string& username,
@@ -447,7 +447,7 @@ class AttestationService : public AttestationInterface {
   bool AddDeviceKey(const std::string& key_label, const CertifiedKey& key);
 
   // Removes a device-wide key from the attestation database.
-  void RemoveDeviceKey(const std::string& key_label);
+  bool RemoveDeviceKey(const std::string& key_label);
 
   // Removes device-wide keys with a given prefix from the attestation
   // database.
