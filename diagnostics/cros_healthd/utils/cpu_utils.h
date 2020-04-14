@@ -13,7 +13,7 @@
 
 namespace diagnostics {
 
-// Returns a structure with a list of data fields for each of the device's CPUs,
+// Returns a structure with a list of data fields for each of the device's CPUs
 // or the error that occurred fetching the information.
 chromeos::cros_healthd::mojom::CpuResultPtr FetchCpuInfo(
     const base::FilePath& root_dir);
