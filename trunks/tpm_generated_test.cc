@@ -9,6 +9,7 @@
 #include <base/message_loop/message_loop.h>
 #include <base/run_loop.h>
 #include <base/stl_util.h>
+#include <base/threading/thread_task_runner_handle.h>
 #include <gtest/gtest.h>
 
 #include "trunks/mock_authorization_delegate.h"
@@ -311,7 +312,7 @@ class PostResponse {
  public:
   explicit PostResponse(const std::string& response) : response_(response) {}
   void operator()(const base::Callback<void(const std::string&)>& callback) {
-    base::MessageLoop::current()->task_runner()->PostTask(
+    base::ThreadTaskRunnerHandle::Get()->PostTask(
         FROM_HERE, base::Bind(callback, response_));
   }
 
