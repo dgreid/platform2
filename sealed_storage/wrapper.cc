@@ -8,6 +8,7 @@
 #include <vector>
 
 #include <base/message_loop/message_loop.h>
+#include <base/message_loop/message_loop_current.h>
 
 #include "sealed_storage/sealed_storage.h"
 #include "sealed_storage/wrapper.h"
@@ -27,7 +28,7 @@ bool Unseal(bool verified_boot_mode,
   DCHECK(plain_size);
 
   std::unique_ptr<base::MessageLoop> loop;
-  if (!base::MessageLoop::current()) {
+  if (!base::MessageLoopCurrent::IsSet()) {
     VLOG(2) << "Creating local MessageLoop";
     loop.reset(new base::MessageLoop(base::MessageLoop::TYPE_IO));
   }
