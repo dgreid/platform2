@@ -5,7 +5,8 @@
 #ifndef HERMES_EXECUTOR_H_
 #define HERMES_EXECUTOR_H_
 
-#include <base/message_loop/message_loop.h>
+#include <base/memory/scoped_refptr.h>
+#include <base/threading/thread_task_runner_handle.h>
 #include <google-lpa/lpa/util/executor.h>
 
 namespace hermes {
@@ -14,11 +15,11 @@ namespace hermes {
 // thread of the provided MessageLoop.
 class Executor : public lpa::util::Executor {
  public:
-  explicit Executor(base::MessageLoop* message_loop);
+  explicit Executor(scoped_refptr<base::SingleThreadTaskRunner> task_runner);
   void Execute(std::function<void()> f) override;
 
  private:
-  base::MessageLoop* message_loop_;
+  scoped_refptr<base::SingleThreadTaskRunner> task_runner_;
 };
 
 }  // namespace hermes

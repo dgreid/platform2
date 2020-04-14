@@ -7,7 +7,7 @@
 #include <memory>
 #include <utility>
 
-#include <base/message_loop/message_loop.h>
+#include <base/threading/thread_task_runner_handle.h>
 #include <chromeos/dbus/service_constants.h>
 #include <google-lpa/lpa/core/lpa.h>
 
@@ -18,7 +18,7 @@ namespace hermes {
 
 Daemon::Daemon()
     : DBusServiceDaemon(kHermesServiceName),
-      executor_(base::MessageLoop::current()),
+      executor_(base::ThreadTaskRunnerHandle::Get()),
       smdp_(&logger_, &executor_) {
   card_ =
       CardQrtr::Create(std::make_unique<SocketQrtr>(), &logger_, &executor_);
