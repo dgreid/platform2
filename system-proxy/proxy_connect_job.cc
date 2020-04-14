@@ -11,9 +11,6 @@
 #include <curl/curl.h>
 #include <curl/easy.h>
 
-#include <arc/network/net_util.h>
-#include <arc/network/socket.h>
-#include <arc/network/socket_forwarder.h>
 #include <base/base64.h>
 #include <base/bind.h>
 #include <base/bind_helpers.h>
@@ -24,6 +21,9 @@
 #include <base/strings/string_util.h>
 #include <base/time/time.h>
 #include <brillo/http/http_transport.h>
+#include <chromeos/patchpanel/net_util.h>
+#include <chromeos/patchpanel/socket.h>
+#include <chromeos/patchpanel/socket_forwarder.h>
 
 #include "system-proxy/curl_socket.h"
 

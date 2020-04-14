@@ -9,8 +9,6 @@
 #include <utility>
 #include <vector>
 
-#include <arc/network/socket.h>
-#include <arc/network/socket_forwarder.h>
 #include <base/bind.h>
 #include <base/bind_helpers.h>
 #include <base/callback_helpers.h>
@@ -21,6 +19,8 @@
 #include <base/threading/thread_task_runner_handle.h>
 #include <brillo/data_encoding.h>
 #include <brillo/http/http_transport.h>
+#include <chromeos/patchpanel/socket.h>
+#include <chromeos/patchpanel/socket_forwarder.h>
 
 #include "bindings/worker_common.pb.h"
 #include "system-proxy/protobuf_util.h"

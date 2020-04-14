@@ -12,8 +12,6 @@
 #include <gtest/gtest.h>
 #include <utility>
 
-#include <arc/network/socket.h>
-#include <arc/network/socket_forwarder.h>
 #include <base/bind.h>
 #include <base/bind_helpers.h>
 #include <base/callback_helpers.h>
@@ -23,7 +21,8 @@
 #include <base/strings/string_util.h>
 #include <brillo/dbus/async_event_sequencer.h>
 #include <brillo/message_loops/base_message_loop.h>
-
+#include <chromeos/patchpanel/socket.h>
+#include <chromeos/patchpanel/socket_forwarder.h>
 #include "bindings/worker_common.pb.h"
 #include "system-proxy/protobuf_util.h"
 #include "system-proxy/proxy_connect_job.h"

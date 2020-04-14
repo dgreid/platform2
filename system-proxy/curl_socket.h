@@ -9,8 +9,8 @@
 #include <curl/curl.h>
 #include <curl/easy.h>
 
-#include <arc/network/socket.h>
 #include <base/files/scoped_file.h>
+#include <chromeos/patchpanel/socket.h>
 
 namespace system_proxy {
 
