@@ -14,11 +14,11 @@
 #include <base/files/file_path.h>
 #include <base/files/file_util.h>
 #include <base/logging.h>
-#include <base/message_loop/message_loop.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_split.h>
 #include <base/strings/string_util.h>
 #include <base/strings/stringprintf.h>
+#include <base/threading/thread_task_runner_handle.h>
 #include <chromeos/dbus/service_constants.h>
 #include <dbus/message.h>
 
@@ -1248,7 +1248,7 @@ bool PowerSupply::PerformUpdate(UpdatePolicy update_policy,
   } else {
     notify_observers_task_.Reset(
         base::Bind(&PowerSupply::NotifyObservers, base::Unretained(this)));
-    base::MessageLoop::current()->task_runner()->PostTask(
+    base::ThreadTaskRunnerHandle::Get()->PostTask(
         FROM_HERE, notify_observers_task_.callback());
   }
 

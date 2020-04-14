@@ -21,6 +21,7 @@
 #include <base/message_loop/message_loop.h>
 #include <base/run_loop.h>
 #include <base/strings/string_number_conversions.h>
+#include <base/threading/thread_task_runner_handle.h>
 #include <base/time/time.h>
 #include <brillo/flag_helper.h>
 #include <brillo/file_utils.h>
@@ -216,7 +217,7 @@ int main(int argc, char* argv[]) {
 
   // Schedule a task to fire after the timeout.
   if (FLAGS_timeout) {
-    base::MessageLoop::current()->task_runner()->PostDelayedTask(
+    base::ThreadTaskRunnerHandle::Get()->PostDelayedTask(
         FROM_HERE, base::Bind(&OnTimeout),
         base::TimeDelta::FromSeconds(FLAGS_timeout));
   }

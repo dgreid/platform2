@@ -11,7 +11,7 @@
 #include <base/bind.h>
 #include <base/logging.h>
 #include <base/memory/ptr_util.h>
-#include <base/message_loop/message_loop.h>
+#include <base/threading/thread_task_runner_handle.h>
 #include <dbus/dbus.h>
 
 namespace power_manager {
@@ -269,7 +269,7 @@ void DBusWrapperStub::CallMethodAsync(
     base::TimeDelta timeout,
     dbus::ObjectProxy::ResponseCallback callback) {
   // Call the method handler now and post |callback| to run later.
-  base::MessageLoop::current()->task_runner()->PostTask(
+  base::ThreadTaskRunnerHandle::Get()->PostTask(
       FROM_HERE, base::BindOnce(&RunResponseCallback, std::move(callback),
                                 CallMethodSync(proxy, method_call, timeout)));
 }

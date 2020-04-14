@@ -9,8 +9,8 @@
 #include <base/callback.h>
 #include <base/macros.h>
 #include <base/memory/weak_ptr.h>
-#include <base/message_loop/message_loop.h>
 #include <base/time/time.h>
+#include <base/threading/thread_task_runner_handle.h>
 
 #include "buffet/dbus-proxies.h"
 
@@ -61,7 +61,7 @@ class CommandHandler final {
         // cloud status doesn't get updated and we get into a reboot loop.
         //
         // TODO(kemp): This should be removed once brbug.com/1265 is fixed.
-        base::MessageLoop::current()->task_runner()->PostDelayedTask(
+        base::ThreadTaskRunnerHandle::Get()->PostDelayedTask(
             FROM_HERE, reboot_callback_,
             base::TimeDelta::FromSeconds(kRebootDelayInSeconds));
       }

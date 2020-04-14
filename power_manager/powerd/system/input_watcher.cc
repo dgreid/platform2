@@ -12,12 +12,12 @@
 #include <base/files/file_path.h>
 #include <base/files/file_util.h>
 #include <base/logging.h>
-#include <base/message_loop/message_loop.h>
 #include <base/posix/eintr_wrapper.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_split.h>
 #include <base/strings/string_util.h>
 #include <base/strings/stringprintf.h>
+#include <base/threading/thread_task_runner_handle.h>
 
 #include "power_manager/common/power_constants.h"
 #include "power_manager/common/prefs.h"
@@ -189,7 +189,7 @@ LidState InputWatcher::QueryLidState() {
   if (!queued_events_.empty()) {
     send_queued_events_task_.Reset(
         base::Bind(&InputWatcher::SendQueuedEvents, base::Unretained(this)));
-    base::MessageLoop::current()->task_runner()->PostTask(
+    base::ThreadTaskRunnerHandle::Get()->PostTask(
         FROM_HERE, send_queued_events_task_.callback());
   }
 
