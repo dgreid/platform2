@@ -101,6 +101,12 @@ class CellularService : public Service {
 
   void NotifySubscriptionStateChanged(SubscriptionState subscription_state);
 
+  static const char kStorageIccid[];
+  static const char kStorageImsi[];
+  static const char kStoragePPPUsername[];
+  static const char kStoragePPPPassword[];
+  static const char kStorageSimCardId[];
+
  protected:
   // Protected Service overrides
   void OnConnect(Error* error) override;
@@ -138,11 +144,6 @@ class CellularService : public Service {
   static const char kAutoConnBadPPPCredentials[];
   static const char kAutoConnDeviceDisabled[];
   static const char kAutoConnOutOfCredits[];
-  static const char kStorageIccid[];
-  static const char kStorageImsi[];
-  static const char kStoragePPPUsername[];
-  static const char kStoragePPPPassword[];
-  static const char kStorageSimCardId[];
 
   KeyValueStore GetStorageProperties() const;
   std::string GetDefaultStorageIdentifier() const;

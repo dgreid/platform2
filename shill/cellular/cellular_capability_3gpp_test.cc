@@ -19,6 +19,7 @@
 #include "shill/cellular/cellular.h"
 #include "shill/cellular/cellular_bearer.h"
 #include "shill/cellular/cellular_service.h"
+#include "shill/cellular/cellular_service_provider.h"
 #include "shill/cellular/mock_cellular.h"
 #include "shill/cellular/mock_cellular_service.h"
 #include "shill/cellular/mock_mm1_modem_location_proxy.h"
@@ -143,6 +144,8 @@ class CellularCapability3gppTest : public testing::TestWithParam<string> {
     ON_CALL(*modem_info_.mock_pending_activation_store(),
             GetActivationState(PendingActivationStore::kIdentifierICCID, _))
         .WillByDefault(Return(PendingActivationStore::kStateUnknown));
+    EXPECT_CALL(*modem_info_.mock_manager(), cellular_service_provider())
+        .WillRepeatedly(Return(&cellular_service_provider_));
 
     SetMockMobileOperatorInfoObjects();
   }
@@ -368,6 +371,8 @@ class CellularCapability3gppTest : public testing::TestWithParam<string> {
   DeviceMockAdaptor* device_adaptor_;   // Owned by |cellular_|.
   CellularRefPtr cellular_;
   MockCellularService* service_;  // owned by cellular_
+  CellularServiceProvider cellular_service_provider_{modem_info_.manager()};
+
   // saved for testing connect operations.
   RpcIdentifierCallback connect_callback_;
 

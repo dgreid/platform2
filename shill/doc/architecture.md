@@ -49,15 +49,17 @@ state.
 one instance exists for each child `Provider` type. `Provider` instances
 generally create new `Services` either from persisted state (see the
 [`Profile`](#profiles) section) or from the D-Bus interface (see the
-[`Manager`](#manager) section). For the `WiFiProvider` in particular, `Services`
-are also created based on network scans performed by `wpa_supplicant`, which
-leads to the reception of BSSAdded D-Bus signals that trigger the `WiFiProvider`
-to create a corresponding `WiFiService`. In the case of cellular, `Cellular`
-instances create a single `CellularService` instance when it is needed rather
-than using any `Provider` type. In the case of ethernet, the `EthernetProvider`
-by default has a single `EthernetService`, which the first `Ethernet` instance
-will use. Additional `Ethernet` instances will cause the `EthernetProvider` to
-create additional `EthernetService` instances.
+[`Manager`](#manager) section).
+For `WiFiProvider`, `Services` are also created based on network scans performed
+by `wpa_supplicant`, which leads to the reception of BSSAdded D-Bus signals that
+trigger `WiFiProvider` to create a corresponding `WiFiService`.
+The `CellularServiceProvider` instance ensures that a `CellularService` for a
+`Cellular` Device is created when it is ready, corresponding to the IMSI
+associated with the active SIM. Additional `CellularService` instances may also
+be created if they match the SIM Card Id (eID or ICCID) of the active SIM.
+The `EthernetProvider` by default has a single `EthernetService`, which the
+first `Ethernet` instance will use. Additional `Ethernet` instances will cause
+the `EthernetProvider` to create additional `EthernetService` instances.
 
 ![Provider Inheritance](images/provider_inheritance.png)
 

@@ -102,9 +102,17 @@ CellularService::~CellularService() {
 void CellularService::SetDevice(Cellular* device) {
   SLOG(this, 2) << __func__ << ": " << (device ? device->iccid() : "None");
   cellular_ = device;
-  if (cellular_)
-    set_friendly_name(cellular_->CreateDefaultFriendlyServiceName());
+  if (!cellular_)
+    return;
   SetConnectable(!!device);
+  set_friendly_name(cellular_->CreateDefaultFriendlyServiceName());
+  activation_type_ = kActivationTypeUnknown;
+
+  // Update the ICCID and Sim Card ID to match |device|. This could potentially
+  // happen if a SIM was reprogrammed with an IMSI from another SIM Card, e.g.
+  // to replace a lost card.
+  iccid_ = cellular_->iccid();
+  sim_card_id_ = cellular_->GetSimCardId();
 }
 
 void CellularService::AutoConnect() {

@@ -1743,7 +1743,7 @@ TEST_F(ManagerTest, ConfigureServiceForProfileWithNoType) {
 
 TEST_F(ManagerTest, ConfigureServiceForProfileWithWrongType) {
   KeyValueStore args;
-  args.Set<string>(kTypeProperty, kTypeCellular);
+  args.Set<string>(kTypeProperty, "UnknownType");
   Error error;
   ServiceRefPtr service =
       manager()->ConfigureServiceForProfile("", args, &error);

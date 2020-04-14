@@ -28,6 +28,10 @@ class MockManager : public Manager {
   MOCK_METHOD(DeviceInfo*, device_info, (), (override));
 #if !defined(DISABLE_CELLULAR)
   MOCK_METHOD(ModemInfo*, modem_info, (), (override));
+  MOCK_METHOD(CellularServiceProvider*,
+              cellular_service_provider,
+              (),
+              (override));
 #endif  // DISABLE_CELLULAR
   MOCK_METHOD(EthernetProvider*, ethernet_provider, (), (override));
 #if !defined(DISABLE_WIRED_8021X)

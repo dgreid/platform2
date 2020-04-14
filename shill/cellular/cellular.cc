@@ -26,6 +26,7 @@
 #include "shill/cellular/cellular_bearer.h"
 #include "shill/cellular/cellular_capability.h"
 #include "shill/cellular/cellular_service.h"
+#include "shill/cellular/cellular_service_provider.h"
 #include "shill/cellular/mobile_operator_info.h"
 #include "shill/connection.h"
 #include "shill/control_interface.h"
@@ -704,11 +705,15 @@ void Cellular::HandleNewSignalQuality(uint32_t strength) {
 
 void Cellular::CreateService() {
   SLOG(this, 2) << __func__;
-  CHECK(!service_.get());
-  service_ = new CellularService(manager(), imsi(), iccid(), GetSimCardId());
-  service_->SetDevice(this);
+  if (service_) {
+    LOG(ERROR) << "Service already exists.";
+    return;
+  }
+
+  DCHECK(manager()->cellular_service_provider());
+  service_ =
+      manager()->cellular_service_provider()->LoadServicesForDevice(this);
   capability_->OnServiceCreated();
-  manager()->RegisterService(service_);
 
   // We might have missed a property update because the service wasn't created
   // ealier.
@@ -720,9 +725,8 @@ void Cellular::DestroyService() {
   SLOG(this, 2) << __func__;
   DropConnection();
   if (service_) {
-    LOG(INFO) << "Deregistering cellular service " << service_->log_name()
-              << " for device " << link_name();
-    manager()->DeregisterService(service_);
+    DCHECK(manager()->cellular_service_provider());
+    manager()->cellular_service_provider()->RemoveServicesForDevice(this);
     service_ = nullptr;
   }
 }

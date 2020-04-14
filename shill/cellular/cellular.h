@@ -414,6 +414,7 @@ class Cellular : public Device,
 
   void InitCapability(Type type);
 
+  // Creates and registers the default CellularService for the Device.
   void CreateService();
 
   // HelpRegisterDerived*: Expose a property over RPC, with the name |name|.
@@ -536,6 +537,8 @@ class Cellular : public Device,
 
   ProcessManager* process_manager_;
 
+  // The active CellularService instance for this Device. This will always be
+  // set to a valid service instance.
   CellularServiceRefPtr service_;
 
   // User preference to allow or disallow roaming

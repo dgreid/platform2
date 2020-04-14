@@ -30,6 +30,7 @@ extern "C" {
 #include "shill/cellular/cellular_bearer.h"
 #include "shill/cellular/cellular_capability_3gpp.h"
 #include "shill/cellular/cellular_service.h"
+#include "shill/cellular/cellular_service_provider.h"
 #include "shill/cellular/mock_cellular_service.h"
 #include "shill/cellular/mock_mm1_modem_location_proxy.h"
 #include "shill/cellular/mock_mm1_modem_modem3gpp_proxy.h"
@@ -49,6 +50,8 @@ extern "C" {
 #include "shill/mock_ppp_device.h"
 #include "shill/mock_ppp_device_factory.h"
 #include "shill/mock_process_manager.h"
+#include "shill/mock_profile.h"
+#include "shill/mock_store.h"
 #include "shill/net/mock_rtnl_handler.h"
 #include "shill/property_store_test.h"
 #include "shill/rpc_task.h"  // for RpcTaskDelegate
@@ -136,7 +139,7 @@ class CellularTest : public testing::TestWithParam<Cellular::Type> {
         kServingOperatorCountry("ca"),
         kServingOperatorName("ServingOperatorName"),
         control_interface_(this),
-        modem_info_(&control_interface_, &dispatcher_, nullptr, nullptr),
+        modem_info_(&control_interface_, &dispatcher_, &metrics_, nullptr),
         device_info_(modem_info_.manager()),
         dhcp_config_(new MockDHCPConfig(modem_info_.control_interface(),
                                         kTestDeviceName)),
@@ -148,10 +151,11 @@ class CellularTest : public testing::TestWithParam<Cellular::Type> {
                              3,
                              GetParam(),
                              kDBusService,
-                             kDBusPath)) {
+                             kDBusPath)),
+        profile_(new NiceMock<MockProfile>(modem_info_.manager())) {
+    cellular_service_provider_.set_profile_for_testing(profile_);
     PopulateProxies();
-    modem_info_.metrics()->RegisterDevice(device_->interface_index(),
-                                          Technology::kCellular);
+    metrics_.RegisterDevice(device_->interface_index(), Technology::kCellular);
   }
 
   void SetUp() override {
@@ -162,6 +166,15 @@ class CellularTest : public testing::TestWithParam<Cellular::Type> {
         .WillRepeatedly(Return(&device_info_));
     EXPECT_CALL(*modem_info_.mock_manager(), DeregisterService(_))
         .Times(AnyNumber());
+    EXPECT_CALL(*modem_info_.mock_pending_activation_store(),
+                GetActivationState(_, _))
+        .WillRepeatedly(Return(PendingActivationStore::kStateActivated));
+    EXPECT_CALL(*modem_info_.mock_manager(), cellular_service_provider())
+        .WillRepeatedly(Return(&cellular_service_provider_));
+    EXPECT_CALL(*profile_, GetConstStorage())
+        .WillRepeatedly(Return(&profile_storage_));
+    EXPECT_CALL(*profile_, GetStorage())
+        .WillRepeatedly(Return(&profile_storage_));
   }
 
   void TearDown() override {
@@ -184,7 +197,7 @@ class CellularTest : public testing::TestWithParam<Cellular::Type> {
   }
 
   void PopulateProxies() {
-    dbus_properties_proxy_.reset(new MockDBusPropertiesProxy());
+    dbus_properties_proxy_.reset(new NiceMock<MockDBusPropertiesProxy>());
     mm1_modem_location_proxy_.reset(new mm1::MockModemLocationProxy());
     mm1_modem_3gpp_proxy_.reset(new mm1::MockModemModem3gppProxy());
     mm1_modem_cdma_proxy_.reset(new mm1::MockModemModemCdmaProxy());
@@ -327,8 +340,6 @@ class CellularTest : public testing::TestWithParam<Cellular::Type> {
     EXPECT_CALL(*dbus_properties_proxy_, GetAll(_))
         .WillRepeatedly(Return(KeyValueStore()));
     EXPECT_CALL(*mm1_proxy_, set_state_changed_callback(_)).Times(AnyNumber());
-    EXPECT_CALL(*modem_info_.mock_metrics(), NotifyDeviceScanStarted(_))
-        .Times(AnyNumber());
     EXPECT_CALL(*modem_info_.mock_manager(), UpdateEnabledTechnologies())
         .Times(AnyNumber());
     EXPECT_CALL(*static_cast<DeviceMockAdaptor*>(device_->adaptor()),
@@ -477,6 +488,7 @@ class CellularTest : public testing::TestWithParam<Cellular::Type> {
 
   EventDispatcherForTest dispatcher_;
   TestControl control_interface_;
+  NiceMock<MockMetrics> metrics_;
   MockModemInfo modem_info_;
   NiceMock<MockDeviceInfo> device_info_;
   NiceMock<MockProcessManager> process_manager_;
@@ -486,7 +498,7 @@ class CellularTest : public testing::TestWithParam<Cellular::Type> {
   scoped_refptr<MockDHCPConfig> dhcp_config_;
 
   bool create_gsm_card_proxy_from_factory_;
-  unique_ptr<MockDBusPropertiesProxy> dbus_properties_proxy_;
+  unique_ptr<NiceMock<MockDBusPropertiesProxy>> dbus_properties_proxy_;
   unique_ptr<mm1::MockModemModem3gppProxy> mm1_modem_3gpp_proxy_;
   unique_ptr<mm1::MockModemModemCdmaProxy> mm1_modem_cdma_proxy_;
   unique_ptr<mm1::MockModemLocationProxy> mm1_modem_location_proxy_;
@@ -495,6 +507,9 @@ class CellularTest : public testing::TestWithParam<Cellular::Type> {
   MockMobileOperatorInfo* mock_home_provider_info_;
   MockMobileOperatorInfo* mock_serving_operator_info_;
   CellularRefPtr device_;
+  CellularServiceProvider cellular_service_provider_{modem_info_.manager()};
+  NiceMock<MockStore> profile_storage_;
+  scoped_refptr<NiceMock<MockProfile>> profile_;
 };
 
 const char CellularTest::kTestDeviceName[] = "usb0";

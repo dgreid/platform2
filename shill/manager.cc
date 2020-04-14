@@ -53,6 +53,7 @@
 #include "shill/vpn/vpn_service.h"
 
 #if !defined(DISABLE_CELLULAR)
+#include "shill/cellular/cellular_service_provider.h"
 #include "shill/cellular/modem_info.h"
 #endif  // DISABLE_CELLULAR
 
@@ -170,6 +171,7 @@ Manager::Manager(ControlInterface* control_interface,
       device_info_(this),
 #if !defined(DISABLE_CELLULAR)
       modem_info_(new ModemInfo(control_interface, dispatcher, metrics, this)),
+      cellular_service_provider_(new CellularServiceProvider(this)),
 #endif  // DISABLE_CELLULAR
       ethernet_provider_(new EthernetProvider(this)),
 #if !defined(DISABLE_WIRED_8021X)
@@ -2604,6 +2606,9 @@ bool Manager::IsWifiIdle() {
 }
 
 void Manager::UpdateProviderMapping() {
+#if !defined(DISABLE_CELLULAR)
+  providers_[Technology::kCellular] = cellular_service_provider_.get();
+#endif  // DISABLE_CELLULAR
   providers_[Technology::kEthernet] = ethernet_provider_.get();
 #if !defined(DISABLE_WIRED_8021X)
   providers_[Technology::kEthernetEap] = ethernet_eap_provider_.get();

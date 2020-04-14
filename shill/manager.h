@@ -44,10 +44,14 @@ class Error;
 class EthernetProvider;
 class EventDispatcher;
 class ManagerAdaptorInterface;
-class ModemInfo;
 class Resolver;
 class VPNProvider;
 class Throttler;
+
+#if !defined(DISABLE_CELLULAR)
+class CellularServiceProvider;
+class ModemInfo;
+#endif
 
 #if !defined(DISABLE_WIFI)
 class WiFiProvider;
@@ -358,6 +362,9 @@ class Manager : public base::SupportsWeakPtr<Manager> {
   virtual DeviceInfo* device_info() { return &device_info_; }
 #if !defined(DISABLE_CELLULAR)
   virtual ModemInfo* modem_info() { return modem_info_.get(); }
+  virtual CellularServiceProvider* cellular_service_provider() {
+    return cellular_service_provider_.get();
+  }
 #endif  // DISABLE_CELLULAR
   PowerManager* power_manager() const { return power_manager_.get(); }
   virtual EthernetProvider* ethernet_provider() {
@@ -735,6 +742,7 @@ class Manager : public base::SupportsWeakPtr<Manager> {
   DeviceInfo device_info_;
 #if !defined(DISABLE_CELLULAR)
   std::unique_ptr<ModemInfo> modem_info_;
+  std::unique_ptr<CellularServiceProvider> cellular_service_provider_;
 #endif  // DISABLE_CELLULAR
   std::unique_ptr<EthernetProvider> ethernet_provider_;
 #if !defined(DISABLE_WIRED_8021X)
