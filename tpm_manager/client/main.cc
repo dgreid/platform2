@@ -13,7 +13,7 @@
 #include <base/command_line.h>
 #include <base/files/file_util.h>
 #include <base/logging.h>
-#include <base/message_loop/message_loop.h>
+#include <base/threading/thread_task_runner_handle.h>
 #include <brillo/daemons/daemon.h>
 #include <brillo/syslog_logging.h>
 #include <crypto/sha2.h>
@@ -304,7 +304,7 @@ class ClientLoop : public ClientLoopBase {
       // Command line arguments did not match any valid commands.
       return EX_USAGE;
     }
-    base::MessageLoop::current()->task_runner()->PostTask(FROM_HERE, task);
+    base::ThreadTaskRunnerHandle::Get()->PostTask(FROM_HERE, task);
     return EX_OK;
   }
 
