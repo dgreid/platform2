@@ -106,9 +106,13 @@ void DisplayBlockDeviceInfo(
 }
 
 void DisplayCachedVpdInfo(
-    const chromeos::cros_healthd::mojom::CachedVpdInfoPtr& vpd) {
-  DCHECK(!vpd.is_null());
+    const chromeos::cros_healthd::mojom::CachedVpdResultPtr& vpd_result) {
+  if (vpd_result->is_error()) {
+    DisplayError(vpd_result->get_error());
+    return;
+  }
 
+  const auto& vpd = vpd_result->get_vpd_info();
   printf("sku_number\n");
   if (vpd->sku_number.has_value())
     printf("%s\n", vpd->sku_number.value().c_str());
@@ -205,9 +209,9 @@ void DisplayTelemetryInfo(
   if (block_devices)
     DisplayBlockDeviceInfo(block_devices.value());
 
-  const auto& vpd = info->vpd_info;
-  if (!vpd.is_null())
-    DisplayCachedVpdInfo(vpd);
+  const auto& vpd_result = info->vpd_result;
+  if (vpd_result)
+    DisplayCachedVpdInfo(vpd_result);
 
   const auto& cpu_result = info->cpu_result;
   if (cpu_result)

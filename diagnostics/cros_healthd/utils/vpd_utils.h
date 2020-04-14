@@ -18,7 +18,9 @@ class CachedVpdFetcher final {
   explicit CachedVpdFetcher(brillo::CrosConfigInterface* cros_config);
   ~CachedVpdFetcher();
 
-  chromeos::cros_healthd::mojom::CachedVpdInfoPtr FetchCachedVpdInfo(
+  // Returns either a structure with the cached VPD fields or the error that
+  // occurred fetching the information.
+  chromeos::cros_healthd::mojom::CachedVpdResultPtr FetchCachedVpdInfo(
       const base::FilePath& root_dir);
 
  private:

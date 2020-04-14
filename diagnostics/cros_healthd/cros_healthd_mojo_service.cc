@@ -200,7 +200,7 @@ void CrosHealthdMojoService::ProbeTelemetryInfo(
         break;
       }
       case ProbeCategoryEnum::kCachedVpdData: {
-        telemetry_info.vpd_info =
+        telemetry_info.vpd_result =
             cached_vpd_fetcher_->FetchCachedVpdInfo(base::FilePath("/"));
         break;
       }

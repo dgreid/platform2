@@ -18,7 +18,8 @@ namespace diagnostics {
 
 namespace {
 
-using ::chromeos::cros_healthd::mojom::CachedVpdInfoPtr;
+using ::chromeos::cros_healthd::mojom::CachedVpdResultPtr;
+using ::chromeos::cros_healthd::mojom::ErrorType;
 
 const char kCachedVpdPropertiesPath[] = "/cros-healthd/cached-vpd";
 const char kHasSkuNumberProperty[] = "has-sku-number";
@@ -42,7 +43,7 @@ class VpdUtilsTest : public ::testing::Test {
     return temp_dir_.GetPath();
   }
 
-  CachedVpdInfoPtr FetchCachedVpdInfo(const base::FilePath& root_dir) {
+  CachedVpdResultPtr FetchCachedVpdInfo(const base::FilePath& root_dir) {
     return cached_vpd_fetcher_->FetchCachedVpdInfo(root_dir);
   }
 
@@ -65,23 +66,27 @@ TEST_F(VpdUtilsTest, TestFetchCachedVpdInfo) {
   EXPECT_TRUE(WriteFileAndCreateParentDirs(
       root_dir.Append(kRelativeSKUNumberPath), kFakeSKUNumber));
   SetHasSkuNumberString("true");
-  auto vpd_info = FetchCachedVpdInfo(root_dir);
+  auto vpd_result = FetchCachedVpdInfo(root_dir);
+  ASSERT_TRUE(vpd_result->is_vpd_info());
+  const auto& vpd_info = vpd_result->get_vpd_info();
   ASSERT_TRUE(vpd_info->sku_number.has_value());
   EXPECT_EQ(vpd_info->sku_number.value(), kFakeSKUNumber);
 }
 
-// Test that reading cached VPD info that does not exist fails gracefully.
+// Test that reading cached VPD info that does not exist returns an error.
 TEST_F(VpdUtilsTest, TestFetchCachedVpdInfoNoFile) {
   SetHasSkuNumberString("true");
-  auto vpd_info = FetchCachedVpdInfo(GetTempDirPath());
-  ASSERT_TRUE(vpd_info->sku_number.has_value());
-  EXPECT_EQ(vpd_info->sku_number.value(), "");
+  auto vpd_result = FetchCachedVpdInfo(GetTempDirPath());
+  ASSERT_TRUE(vpd_result->is_error());
+  EXPECT_EQ(vpd_result->get_error()->type, ErrorType::kFileReadError);
 }
 
 // Test that no sku_number is returned when the device does not have a SKU
 // number.
 TEST_F(VpdUtilsTest, TestFetchCachedVpdInfoNoSkuNumber) {
-  auto vpd_info = FetchCachedVpdInfo(base::FilePath());
+  auto vpd_result = FetchCachedVpdInfo(base::FilePath());
+  ASSERT_TRUE(vpd_result->is_vpd_info());
+  const auto& vpd_info = vpd_result->get_vpd_info();
   EXPECT_FALSE(vpd_info->sku_number.has_value());
 }
 

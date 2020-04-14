@@ -9,13 +9,16 @@
 #include <base/logging.h>
 
 #include "diagnostics/common/file_utils.h"
+#include "diagnostics/cros_healthd/utils/error_utils.h"
 
 namespace diagnostics {
 
 namespace {
 
 using ::chromeos::cros_healthd::mojom::CachedVpdInfo;
-using ::chromeos::cros_healthd::mojom::CachedVpdInfoPtr;
+using ::chromeos::cros_healthd::mojom::CachedVpdResult;
+using ::chromeos::cros_healthd::mojom::CachedVpdResultPtr;
+using ::chromeos::cros_healthd::mojom::ErrorType;
 
 constexpr char kCachedVpdPropertiesPath[] = "/cros-healthd/cached-vpd";
 constexpr char kHasSkuNumberProperty[] = "has-sku-number";
@@ -31,7 +34,7 @@ CachedVpdFetcher::CachedVpdFetcher(brillo::CrosConfigInterface* cros_config)
 
 CachedVpdFetcher::~CachedVpdFetcher() = default;
 
-CachedVpdInfoPtr CachedVpdFetcher::FetchCachedVpdInfo(
+CachedVpdResultPtr CachedVpdFetcher::FetchCachedVpdInfo(
     const base::FilePath& root_dir) {
   CachedVpdInfo vpd_info;
   std::string has_sku_number;
@@ -39,12 +42,17 @@ CachedVpdInfoPtr CachedVpdFetcher::FetchCachedVpdInfo(
                           &has_sku_number);
   if (has_sku_number == "true") {
     std::string sku_number;
-    ReadAndTrimString(root_dir.Append(kRelativeSkuNumberDir),
-                      kSkuNumberFileName, &sku_number);
+    if (!ReadAndTrimString(root_dir.Append(kRelativeSkuNumberDir),
+                           kSkuNumberFileName, &sku_number)) {
+      return CachedVpdResult::NewError(CreateAndLogProbeError(
+          ErrorType::kFileReadError,
+          "Unable to read VPD file " + std::string(kSkuNumberFileName) +
+              " at path " + std::string(kRelativeSkuNumberDir)));
+    }
     vpd_info.sku_number = sku_number;
   }
 
-  return vpd_info.Clone();
+  return CachedVpdResult::NewVpdInfo(CachedVpdInfo::New(vpd_info));
 }
 
 }  // namespace diagnostics
