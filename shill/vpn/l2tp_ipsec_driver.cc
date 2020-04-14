@@ -13,8 +13,6 @@
 // performed, which is not fully supported by shill's implementation.
 // In order to support "tunnel groups" from some vendor VPNs shill supports
 // supplying the authentication realm portion during the outer authentication.
-// Notably, XAUTH and other forms of user authentication on this outer link
-// are not supported.
 //
 // When IPSec authentication completes, traffic is tunneled through a
 // layer 2 tunnel, called "L2TP".  Using the secured link, we tunnel a

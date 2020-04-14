@@ -647,6 +647,92 @@ Properties	string ArcVpn.TunnelChrome [writeonly]
 			detection has completed, or if a previous portal detection
 			attempt failed.
 
+		string L2TPIPsec.CACertPEM [writeonly]
+
+			(VPN Services of type l2tpipsec only) The list of
+			x509 CA certificates to be used to verify the remote
+			server.  Any of these certificates can directly sign
+			the server certificate.  Each x509 CA certificate
+			must be in in PEM format; specifically
+			the base64 counterpart of the DER contents, optionally
+			surrounded by a "-----BEGIN CERTIFICATE-----" and
+			"-----END CERTIFICATE-----" line.  The current value
+			of this property is readable in the "Provider" property
+			of this Service.
+
+		string L2TPIPsec.ClientCertID [writeonly]
+
+			(VPN Services of type l2tpipsec only) PKCS#11 key ID with client
+			certificate. Required to be set when certificate-based IPsec
+			authentication is used. The current value of this property is
+			readable in the "Provider" property of this Service.
+
+		string L2TPIPsec.ClientCertSlot [writeonly]
+
+			(VPN Services of type l2tpipsec only) PKCS#11 slot with client
+			certificate. If certificate-based IPsec authentication is used but
+			this is not set, the default value of "0" will be used. The current
+			value of this property is readable in the "Provider" property of
+			this Service.
+
+		string L2TPIPsec.LCPEchoDisabled [writeonly]
+
+			(VPN Services of type l2tpipsec only) If "true", the l2tp layer will
+			not presume the connection to be dead if LCP echo requests
+			continuously fail to get valid echo replies.  The current value of
+			this property is readable in the "Provider" property of this
+			Service.
+
+		string L2TPIPsec.Password [writeonly]
+
+			(VPN Services of type l2tpipsec only) The password at the l2tp
+			layer. This property must be set.
+
+		string L2TPIPsec.PIN [writeonly]
+
+			(VPN Services of type l2tpipsec only) PKCS#11 user PIN. Required to
+			be set when certificate-based IPsec authentication is used. The
+			current value of this property is readable in the "Provider"
+			property of this Service.
+
+		string L2TPIPsec.PSK [writeonly]
+
+			(VPN Services of type l2tpipsec only) Pre-shared key value when
+			PSK-based authentication is used.
+
+		string L2TPIPsec.PSKRequired [readonly]
+
+			(VPN Services of type l2tpipsec only) Indicates whether no
+			credentials were provided (cert or psk), meaning that the
+			configuration is incomplete. The current value of this property is
+			readable in the "Provider" property of this Service.
+
+		string L2TPIPsec.User [writeonly]
+
+			(VPN Services of type l2tpipsec only) The username at the l2tp
+			layer. This property must be set. The current value of this property
+			is readable in the "Provider" property of this Service.
+
+		string L2TPIPsec.TunnelGroup [writeonly]
+
+			(VPN Services of type l2tpipsec only) The Cisco Tunnel Group Name,
+			if used. The current value of this property is readable in the
+			"Provider" property of this Service.
+
+		string L2TPIPsec.XauthPassword [writeonly]
+
+			(VPN Services of type l2tpipsec only) The XAUTH password if XAUTH is
+			used. If this property is set, L2TPIPsec.XauthUser must also be
+			set. In addition, since XAUTH is an extension rather than
+			replacement of psk, L2TPIPsec.PSK must also be set.
+
+		string L2TPIPsec.XauthUser [writeonly]
+
+			(VPN Services of type l2tpipsec only) The XAUTH user if XAUTH is
+			used. If this property is set, L2TPIPsec.XauthPassword must also be
+			set. In addition, since XAUTH is an extension rather than
+			replacement of psk, L2TPIPsec.PSK must also be set.
+
 		boolean LinkMonitorDisable [readwrite]
 
 			Specifies whether to disable or enable link monitoring
