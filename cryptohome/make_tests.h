@@ -101,6 +101,7 @@ class TestUser {
   base::FilePath root_ephemeral_mount_path;
   base::FilePath keyset_path;
   base::FilePath salt_path;
+  base::FilePath timestamp_path;
   base::FilePath mount_prefix;
   base::FilePath legacy_user_mount_path;
   base::FilePath user_mount_path;

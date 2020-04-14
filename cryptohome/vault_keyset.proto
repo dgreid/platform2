@@ -129,4 +129,7 @@ message SerializedVaultKeyset {
   // Set if the keyset has PCR_BOUND flag. Represents the encrypted vkk_key for
   // the case when PCR is extended with user specific value.
   optional bytes extended_tpm_key = 18;
+
+  // Set if the timestamp has been moved to its own file.
+  optional bool timestamp_file_exists = 19;
 }

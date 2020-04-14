@@ -146,10 +146,23 @@ TEST_F(VaultKeysetTest, LoadSaveTest) {
   keyset.CreateRandom();
   SecureBlob bytes;
 
+  static const int kTestTimestamp = 123;
+  cryptohome::Timestamp timestamp;
+  timestamp.set_timestamp(kTestTimestamp);
+  SecureBlob tbytes(timestamp.ByteSize());
+  google::protobuf::uint8* buf =
+    static_cast<google::protobuf::uint8*>(tbytes.data());
+  timestamp.SerializeWithCachedSizesToArray(buf);
+
+  keyset.mutable_serialized()->set_timestamp_file_exists(true);
+
   EXPECT_CALL(platform, WriteFileAtomicDurable(FilePath("foo"), _, _))
       .WillOnce(WithArg<1>(CopyToSecureBlob(&bytes)));
   EXPECT_CALL(platform, ReadFile(FilePath("foo"), _))
       .WillOnce(WithArg<1>(CopyFromSecureBlob(&bytes)));
+
+  EXPECT_CALL(platform, ReadFile(FilePath("foo").AddExtension("timestamp"), _))
+      .WillOnce(WithArg<1>(CopyFromSecureBlob(&tbytes)));
 
   SecureBlob key("key");
   EXPECT_TRUE(keyset.Encrypt(key, ""));
@@ -158,6 +171,8 @@ TEST_F(VaultKeysetTest, LoadSaveTest) {
   VaultKeyset new_keyset;
   new_keyset.Initialize(&platform, &crypto);
   EXPECT_TRUE(new_keyset.Load(FilePath("foo")));
+  ASSERT_TRUE(new_keyset.serialized().has_last_activity_timestamp());
+  EXPECT_EQ(kTestTimestamp, new_keyset.serialized().last_activity_timestamp());
   EXPECT_TRUE(new_keyset.Decrypt(key, false /* locked_to_single_user */,
                                  nullptr /* crypto_error */));
 }

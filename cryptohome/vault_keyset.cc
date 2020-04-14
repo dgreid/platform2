@@ -219,6 +219,18 @@ bool VaultKeyset::Load(const FilePath& filename) {
       serialized_.mutable_key_data()->mutable_policy()
           ->set_low_entropy_credential(true);
     }
+    if (serialized_.has_timestamp_file_exists()) {
+      FilePath timestamp_path = filename.AddExtension("timestamp");
+      brillo::Blob tcontents;
+      if (!platform_->ReadFile(timestamp_path, &tcontents)) {
+        return false;
+      }
+      cryptohome::Timestamp timestamp;
+      if (!timestamp.ParseFromArray(tcontents.data(), tcontents.size())) {
+        return false;
+      }
+      serialized_.set_last_activity_timestamp(timestamp.timestamp());
+    }
   }
   return loaded_;
 }

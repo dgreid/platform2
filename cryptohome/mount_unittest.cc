@@ -52,7 +52,7 @@
 #include "cryptohome/user_oldest_activity_timestamp_cache.h"
 #include "cryptohome/vault_keyset.h"
 
-
+#include "timestamp.pb.h"  // NOLINT(build/include)
 #include "vault_keyset.pb.h"  // NOLINT(build/include)
 
 using brillo::SecureBlob;
@@ -781,7 +781,7 @@ TEST_P(MountTest, MountCryptohomeHasPrivileges) {
   EXPECT_CALL(platform_, GetCurrentTime())
       .WillOnce(Return(base::Time::Now()));
   EXPECT_CALL(platform_,
-              WriteFileAtomicDurable(user->keyset_path, _, _))
+              WriteStringToFileAtomicDurable(user->timestamp_path, _, _))
       .WillOnce(Return(true));
   EXPECT_CALL(platform_, ClearUserKeyring())
     .WillOnce(Return(true));
@@ -1106,6 +1106,8 @@ TEST_P(MountTest, CreateCryptohomeTest) {
 
   // TODO(wad) Make this into a UserDoesntExist() helper.
   EXPECT_CALL(platform_, FileExists(user->image_path))
+    .WillOnce(Return(false));
+  EXPECT_CALL(platform_, FileExists(user->keyset_path))
     .WillOnce(Return(false));
   EXPECT_CALL(platform_,
       CreateDirectory(
@@ -1481,7 +1483,8 @@ TEST_P(MountTest, MountCryptohomeNoChapsKey) {
   MountError error;
   int key_index = -1;
   EXPECT_CALL(platform_, ReadFile(user->keyset_path, _))
-    .WillOnce(DoAll(SetArgPointee<1>(user->credentials),
+    .Times(2)
+    .WillRepeatedly(DoAll(SetArgPointee<1>(user->credentials),
                          Return(true)));
 
   ASSERT_TRUE(mount_->DecryptVaultKeyset(credentials, &vault_keyset,
@@ -1768,18 +1771,20 @@ TEST_P(MountTest, UserActivityTimestampUpdated) {
   // background but here in the test we must call it manually.
   static const int kMagicTimestamp = 123;
   brillo::Blob updated_keyset;
-  EXPECT_CALL(platform_, WriteFileAtomicDurable(user->keyset_path, _, _))
-    .WillRepeatedly(DoAll(SaveArg<1>(&updated_keyset), Return(true)));
+  std::string timestamp_str;
+  EXPECT_CALL(platform_,
+              WriteStringToFileAtomicDurable(user->timestamp_path,
+                                             _, _))
+    .WillRepeatedly(DoAll(SaveArg<1>(&timestamp_str), Return(true)));
   EXPECT_CALL(platform_, GetCurrentTime())
       .WillOnce(Return(base::Time::FromInternalValue(kMagicTimestamp)));
   mount_->UpdateCurrentUserActivityTimestamp(0);
-  SerializedVaultKeyset serialized1;
-  ASSERT_TRUE(serialized1.ParseFromArray(updated_keyset.data(),
-                                         updated_keyset.size()));
 
   // Check that last activity timestamp is updated.
-  ASSERT_TRUE(serialized1.has_last_activity_timestamp());
-  EXPECT_EQ(kMagicTimestamp, serialized1.last_activity_timestamp());
+  ASSERT_TRUE(platform_.FileExists(user->timestamp_path));
+  Timestamp tstamp;
+  tstamp.ParseFromString(timestamp_str);
+  EXPECT_EQ(kMagicTimestamp, tstamp.timestamp());
 
   // Unmount the user. This must update user's activity timestamps.
   static const int kMagicTimestamp2 = 234;
@@ -1787,21 +1792,18 @@ TEST_P(MountTest, UserActivityTimestampUpdated) {
       .WillOnce(Return(base::Time::FromInternalValue(kMagicTimestamp2)));
   EXPECT_CALL(platform_, Unmount(_, _, _)).WillRepeatedly(Return(true));
   mount_->UnmountCryptohome();
-  SerializedVaultKeyset serialized2;
-  ASSERT_TRUE(serialized2.ParseFromArray(updated_keyset.data(),
-                                         updated_keyset.size()));
-  ASSERT_TRUE(serialized2.has_last_activity_timestamp());
-  EXPECT_EQ(kMagicTimestamp2, serialized2.last_activity_timestamp());
+  Timestamp tstamp2;
+  tstamp2.ParseFromString(timestamp_str);
+  EXPECT_EQ(kMagicTimestamp2, tstamp2.timestamp());
+
 
   // Update timestamp again, after user is unmounted. User's activity
   // timestamp must not change this.
   mount_->UpdateCurrentUserActivityTimestamp(0);
-  SerializedVaultKeyset serialized3;
-  ASSERT_TRUE(serialized3.ParseFromArray(updated_keyset.data(),
-                                         updated_keyset.size()));
-  ASSERT_TRUE(serialized3.has_last_activity_timestamp());
-  EXPECT_EQ(serialized3.has_last_activity_timestamp(),
-            serialized2.has_last_activity_timestamp());
+  Timestamp tstamp3;
+  tstamp3.ParseFromString(timestamp_str);
+  EXPECT_EQ(tstamp3.timestamp(),
+            tstamp2.timestamp());
 }
 
 TEST_P(MountTest, RememberMountOrderingTest) {
@@ -2081,7 +2083,7 @@ TEST_P(MountTest, BothFlagsMigrationTest) {
     SerializedVaultKeyset::TPM_WRAPPED |
     SerializedVaultKeyset::SCRYPT_WRAPPED);
   EXPECT_TRUE(mount_->StoreVaultKeysetForUser(user->obfuscated_username,
-                                              0, serialized));
+                                              0, &serialized));
 
   // When we call DecryptVaultKeyset, it should re-encrypt
   // the keys and write with only one flag set

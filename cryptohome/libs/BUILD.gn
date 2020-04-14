@@ -62,6 +62,7 @@ proto_library("cryptohome-proto") {
     "${proto_in_dir}/fake_le_credential_metadata.proto",
     "${proto_in_dir}/hash_tree_leaf_data.proto",
     "${proto_in_dir}/signature_sealed_data.proto",
+    "${proto_in_dir}/timestamp.proto",
     "${proto_in_dir}/tpm_status.proto",
     "${proto_in_dir}/vault_keyset.proto",
   ]

@@ -180,6 +180,7 @@ void TestUser::FromInfo(const struct TestUserInfo* info,
   user_ephemeral_mount_path = ephemeral_mount_path.Append("user");
   keyset_path = base_path.Append("master.0");
   salt_path = base_path.Append("master.0.salt");
+  timestamp_path = base_path.Append("master.0.timestamp");
   user_salt.assign('A', PKCS5_SALT_LEN);
   mount_prefix = brillo::cryptohome::home::GetUserPathPrefix().DirName();
   legacy_user_mount_path = FilePath("/home/chronos/user");
@@ -215,6 +216,10 @@ void TestUser::GenerateCredentials(bool force_ecryptfs) {
     .WillRepeatedly(Return(true));
   mount->set_policy_provider(new policy::PolicyProvider(
       std::unique_ptr<NiceMock<policy::MockDevicePolicy>>(device_policy)));
+  FilePath keyset_path = shadow_root.Append(obfuscated_username)
+    .Append("master.0");
+  EXPECT_CALL(platform, FileExists(keyset_path))
+    .WillOnce(Return(false));
   FilePath salt_path = shadow_root.Append("salt");
   int64_t salt_size = salt.size();
   EXPECT_CALL(platform, FileExists(salt_path))

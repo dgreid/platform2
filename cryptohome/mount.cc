@@ -32,6 +32,7 @@
 #include <brillo/scoped_umask.h>
 #include <brillo/secure_blob.h>
 #include <chromeos/constants/cryptohome.h>
+#include <google/protobuf/util/message_differencer.h>
 
 #include "cryptohome/bootlockbox/boot_lockbox.h"
 #include "cryptohome/chaps_client_factory.h"
@@ -49,6 +50,7 @@
 #include "cryptohome/tpm.h"
 #include "cryptohome/vault_keyset.h"
 
+#include "timestamp.pb.h"  // NOLINT(build/include)
 #include "vault_keyset.pb.h"  // NOLINT(build/include)
 
 using base::FilePath;
@@ -61,6 +63,7 @@ using brillo::cryptohome::home::IsSanitizedUserName;
 using brillo::cryptohome::home::kGuestUserName;
 using brillo::cryptohome::home::SanitizeUserName;
 using chaps::IsolateCredentialManager;
+using google::protobuf::util::MessageDifferencer;
 
 namespace {
 bool __attribute__((unused)) IsolateUserSession() {
@@ -792,7 +795,7 @@ bool Mount::CreateCryptohome(const Credentials& credentials) const {
   if (!StoreVaultKeysetForUser(
        credentials.GetObfuscatedUsername(system_salt_),
        0,  // first key
-       serialized)) {
+       &serialized)) {
     LOG(ERROR) << "Failed to store vault keyset for new user";
     return false;
   }
@@ -821,17 +824,16 @@ bool Mount::UpdateCurrentUserActivityTimestamp(int time_shift_sec) {
   current_user_->GetObfuscatedUsername(&obfuscated_username);
   if (!obfuscated_username.empty() && mount_type_ != MountType::EPHEMERAL) {
     SerializedVaultKeyset serialized;
-    // TODO(wad) Start using current_user_'s key_data label when
-    //           it is defined.
     LoadVaultKeysetForUser(obfuscated_username, current_user_->key_index(),
                            &serialized);
     base::Time timestamp = platform_->GetCurrentTime();
     if (time_shift_sec > 0)
       timestamp -= base::TimeDelta::FromSeconds(time_shift_sec);
     serialized.set_last_activity_timestamp(timestamp.ToInternalValue());
-    // Only update the key in use.
-    StoreVaultKeysetForUser(obfuscated_username, current_user_->key_index(),
-                            serialized);
+    if (!StoreTimestampForUser(obfuscated_username, current_user_->key_index(),
+                               &serialized)) {
+      return false;
+    }
     if (user_timestamp_cache_->initialized()) {
       user_timestamp_cache_->UpdateExistingUser(
           FilePath(GetUserDirectoryForUser(obfuscated_username)), timestamp);
@@ -890,24 +892,93 @@ bool Mount::LoadVaultKeysetForUser(const std::string& obfuscated_username,
     LOG(ERROR) << "Failed to parse keyset for user " << obfuscated_username;
     return false;
   }
+  Timestamp timestamp;
+  if (serialized->has_timestamp_file_exists() &&
+      LoadTimestampForUser(obfuscated_username, index, &timestamp)) {
+    serialized->set_last_activity_timestamp(timestamp.timestamp());
+  }
   return true;
 }
 
 bool Mount::StoreVaultKeysetForUser(
     const std::string& obfuscated_username,
     int index,
-    const SerializedVaultKeyset& serialized) const {
+    SerializedVaultKeyset* serialized) const {
   if (index < 0 || index > kKeyFileMax) {
     LOG(ERROR) << "Attempted to store an invalid key index: " << index;
     return false;
   }
-  brillo::Blob final_blob(serialized.ByteSizeLong());
-  serialized.SerializeWithCachedSizesToArray(
+  if (platform_->FileExists(GetUserLegacyKeyFileForUser(
+          obfuscated_username, index))) {
+    SerializedVaultKeyset stored;
+    LoadVaultKeysetForUser(obfuscated_username, index, &stored);
+    if (serialized->has_last_activity_timestamp()) {
+      stored.set_last_activity_timestamp(serialized->last_activity_timestamp());
+      if (MessageDifferencer::Equals(*serialized, stored)) {
+        LOG(INFO) << "Only the timestamp has changed, should not store keyset.";
+        return StoreTimestampForUser(obfuscated_username, index, serialized);
+      }
+    }
+  }
+  if (serialized->has_last_activity_timestamp()) {
+    if (!StoreTimestampForUser(obfuscated_username, index, serialized)) {
+      return false;
+    }
+  }
+  brillo::Blob final_blob(serialized->ByteSizeLong());
+  serialized->SerializeWithCachedSizesToArray(
       static_cast<google::protobuf::uint8*>(final_blob.data()));
   return platform_->WriteFileAtomicDurable(
       GetUserLegacyKeyFileForUser(obfuscated_username, index),
       final_blob,
       kKeyFilePermissions);
+}
+
+bool Mount::LoadTimestampForUser(const std::string& obfuscated_username,
+                                 int index,
+                                 Timestamp* timestamp) const {
+  std::string timestamp_str;
+  base::FilePath timestamp_file =
+    GetUserTimestampFileForUser(obfuscated_username, index);
+
+  if (!platform_->ReadFileToString(timestamp_file, &timestamp_str)) {
+    return false;
+  }
+
+  return timestamp->ParseFromString(timestamp_str);
+}
+
+bool Mount::StoreTimestampForUser(const std::string& obfuscated_username,
+                                  int index,
+                                  SerializedVaultKeyset* serialized)
+  const {
+  Timestamp timestamp;
+  timestamp.set_timestamp(serialized->last_activity_timestamp());
+  std::string timestamp_str;
+  if (!timestamp.SerializeToString(&timestamp_str)) {
+    return false;
+  }
+  if (!platform_->WriteStringToFileAtomicDurable(
+      GetUserTimestampFileForUser(obfuscated_username, index),
+      timestamp_str, kKeyFilePermissions)) {
+    LOG(ERROR) << "Failed writing to timestamp file";
+    return false;
+  }
+  if (!serialized->timestamp_file_exists()) {
+    // The first time we write to a timestamp file we need to update the
+    // vault_keyset to indicate that the timestamp is stored separately.
+    // The initial 0 timestamp is also written to the vault_keyset which
+    // means a timestamp will exist and can be read in case of a rollback.
+    serialized->set_timestamp_file_exists(true);
+    brillo::Blob blob(serialized->ByteSize());
+    serialized->SerializeWithCachedSizesToArray(
+        static_cast<google::protobuf::uint8*>(blob.data()));
+    return platform_->WriteFileAtomicDurable(
+                GetUserLegacyKeyFileForUser(obfuscated_username, index),
+                blob,
+                kKeyFilePermissions);
+  }
+  return true;
 }
 
 bool Mount::DecryptVaultKeyset(const Credentials& credentials,
@@ -1063,7 +1134,7 @@ bool Mount::ReEncryptVaultKeyset(const Credentials& credentials,
   // lack of KeyData in the future as input to migration.
   if (!StoreVaultKeysetForUser(
         credentials.GetObfuscatedUsername(system_salt_),
-        key_index, *serialized)) {
+        key_index, serialized)) {
     LOG(ERROR) << "Write to master key failed";
     RevertCacheFiles(files);
     return false;
@@ -1125,6 +1196,12 @@ FilePath Mount::GetUserSaltFileForUser(
     const std::string& obfuscated_username, int index) const {
   return GetUserLegacyKeyFileForUser(obfuscated_username, index)
       .AddExtension("salt");
+}
+
+FilePath Mount::GetUserTimestampFileForUser(
+    const std::string& obfuscated_username, int index) const {
+  return GetUserLegacyKeyFileForUser(obfuscated_username, index)
+    .AddExtension("timestamp");
 }
 
 FilePath Mount::GetUserLegacyKeyFileForUser(

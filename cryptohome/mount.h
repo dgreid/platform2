@@ -43,6 +43,7 @@
 #include "cryptohome/user_session.h"
 #include "cryptohome/vault_keyset.h"
 
+#include "timestamp.pb.h"  // NOLINT(build/include)
 #include "vault_keyset.pb.h"  // NOLINT(build/include)
 
 namespace cryptohome {
@@ -347,7 +348,17 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
   virtual bool StoreVaultKeysetForUser(
       const std::string& obfuscated_username,
       int index,
-      const SerializedVaultKeyset& encrypted_keyset) const;
+      SerializedVaultKeyset* encrypted_keyset) const;
+
+  virtual bool LoadTimestampForUser(
+      const std::string& obfuscated_username,
+      int index,
+      Timestamp* timestamp) const;
+
+  virtual bool StoreTimestampForUser(
+      const std::string& obfuscated_username,
+      int index,
+      SerializedVaultKeyset* serialized) const;
 
   // Encrypts and adds the VaultKeyset to the serialized store
   //
@@ -414,6 +425,10 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
   //   index - key index the salt is associated with
   base::FilePath GetUserSaltFileForUser(const std::string& obfuscated_username,
                                         int index) const;
+
+  base::FilePath GetUserTimestampFileForUser(
+      const std::string& obfuscated_username,
+      int index) const;
 
   // Gets the user's key file name by index
   //
