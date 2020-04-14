@@ -10,13 +10,13 @@
 
 #include <base/bind.h>
 #include <base/logging.h>
-#include <base/message_loop/message_loop.h>
 #include <base/metrics/histogram.h>
 #include <base/metrics/histogram_base.h>
 #include <base/metrics/histogram_snapshot_manager.h>
 #include <base/metrics/sparse_histogram.h>
 #include <base/metrics/statistics_recorder.h>
 #include <base/sha1.h>
+#include <base/threading/thread_task_runner_handle.h>
 
 #include "metrics/serialization/metric_sample.h"
 #include "metrics/serialization/serialization_utils.h"
@@ -50,10 +50,9 @@ void UploadService::Init(const base::TimeDelta& upload_interval,
   skip_upload_ = !uploads_enabled;
 
   if (!testing_) {
-    base::MessageLoop::current()->task_runner()->PostDelayedTask(
+    base::ThreadTaskRunnerHandle::Get()->PostDelayedTask(
         FROM_HERE,
-        base::Bind(&UploadService::UploadEventCallback,
-                   base::Unretained(this),
+        base::Bind(&UploadService::UploadEventCallback, base::Unretained(this),
                    upload_interval),
         upload_interval);
   }
@@ -70,10 +69,9 @@ void UploadService::StartNewLog() {
 void UploadService::UploadEventCallback(const base::TimeDelta& interval) {
   UploadEvent();
 
-  base::MessageLoop::current()->task_runner()->PostDelayedTask(
+  base::ThreadTaskRunnerHandle::Get()->PostDelayedTask(
       FROM_HERE,
-      base::Bind(&UploadService::UploadEventCallback,
-                 base::Unretained(this),
+      base::Bind(&UploadService::UploadEventCallback, base::Unretained(this),
                  interval),
       interval);
 }
