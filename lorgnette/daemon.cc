@@ -11,6 +11,7 @@
 #include <base/bind.h>
 #include <base/logging.h>
 #include <base/run_loop.h>
+#include <base/threading/thread_task_runner_handle.h>
 #include <chromeos/dbus/service_constants.h>
 
 #include "lorgnette/sane_client_impl.h"
@@ -57,7 +58,7 @@ void Daemon::OnShutdown(int* return_code) {
 void Daemon::PostponeShutdown() {
   shutdown_callback_.Reset(base::Bind(&brillo::Daemon::Quit,
                                       base::Unretained(this)));
-  base::MessageLoop::current()->task_runner()->PostDelayedTask(
+  base::ThreadTaskRunnerHandle::Get()->PostDelayedTask(
       FROM_HERE,
       shutdown_callback_.callback(),
       base::TimeDelta::FromMilliseconds(kShutdownTimeoutMilliseconds));
