@@ -2600,21 +2600,43 @@ class UserDataAuthTestThreaded : public UserDataAuthTestNotInitialized {
 
 TEST_F(UserDataAuthTestThreaded,
        CheckUpdateCurrentUserActivityTimestampCalledDaily) {
+  // Note: This test is constructed similar to CheckAutoCleanupCallback test.
+  constexpr int kTimesUpdateUserActivityCalled = 3;
+
   SetupMount("some-user-to-clean-up");
 
-  // Check that UpdateCurrentUserActivityTimestamp happens daily.
-  EXPECT_CALL(*mount_, UpdateCurrentUserActivityTimestamp(0)).Times(AtLeast(1));
+  // Used to signal that the test is done.
+  base::WaitableEvent done(base::WaitableEvent::ResetPolicy::MANUAL,
+                           base::WaitableEvent::InitialState::NOT_SIGNALED);
 
   // These are shared between threads, so guard by the lock.
-  base::Time current_time;
+  base::Time current_time = base::Time::UnixEpoch();
   base::Lock lock;
+  int update_user_activity_called = 0;
 
   // These will be invoked from the mount thread.
   EXPECT_CALL(platform_, GetCurrentTime())
       .WillRepeatedly(Invoke([&lock, &current_time]() {
         base::AutoLock scoped_lock(lock);
+        // Note: We aim to have update user actvitity timestamp happens every 5
+        // times GetCurrentTime() is called.
+        current_time += base::TimeDelta::FromMinutes(
+            kUpdateUserActivityPeriodHours * 60 / 5 + 1);
         return current_time;
       }));
+
+  // Count the number of times updateCurrentUserActivityTimestamp happens.
+  EXPECT_CALL(*mount_, UpdateCurrentUserActivityTimestamp(0))
+      .Times(AtLeast(kTimesUpdateUserActivityCalled))
+      .WillRepeatedly(Invoke([&lock, &update_user_activity_called, &done](int) {
+        base::AutoLock scoped_lock(lock);
+        update_user_activity_called++;
+        if (update_user_activity_called == kTimesUpdateUserActivityCalled) {
+          done.Signal();
+        }
+        return true;
+      }));
+
   const int period_ms = 1;
 
   // This will cause the low disk space callback to be called every ms
@@ -2622,15 +2644,26 @@ TEST_F(UserDataAuthTestThreaded,
 
   InitializeUserDataAuth();
 
-  // Move the time forward for slightly more than a day, this guarantees that
-  // the UpdateCurrentUserActivityTimestamp() should fire at least once.
+  // Advance time once so that the first call gets triggered.
   {
     base::AutoLock scoped_lock(lock);
     current_time +=
         base::TimeDelta::FromHours(kUpdateUserActivityPeriodHours + 1);
   }
-  // Wait for the call back to trigger at least once.
-  base::PlatformThread::Sleep(base::TimeDelta::FromMilliseconds(period_ms * 2));
+
+  // Wait for at most 5 seconds. 5 seconds is most likely enough, a period this
+  // long is to avoid flakiness.
+  done.TimedWait(base::TimeDelta::FromSeconds(5));
+
+  // Check that not too much or too little "time" elapsed.
+  EXPECT_LT(current_time,
+            base::Time::UnixEpoch() +
+                base::TimeDelta::FromHours(kUpdateUserActivityPeriodHours *
+                                           kTimesUpdateUserActivityCalled * 2));
+  EXPECT_GT(current_time,
+            base::Time::UnixEpoch() +
+                base::TimeDelta::FromHours(kUpdateUserActivityPeriodHours *
+                                           kTimesUpdateUserActivityCalled));
 
   // Currently low disk space callback runs every 1 ms. If that test callback
   // runs before we finish test teardown but after platform_ object is cleared,
