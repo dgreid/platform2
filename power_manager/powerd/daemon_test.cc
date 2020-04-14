@@ -26,7 +26,6 @@
 #include "power_manager/common/power_constants.h"
 #include "power_manager/powerd/daemon_delegate.h"
 #include "power_manager/powerd/policy/backlight_controller_stub.h"
-#include "power_manager/powerd/policy/bluetooth_controller_stub.h"
 #include "power_manager/powerd/system/acpi_wakeup_helper_stub.h"
 #include "power_manager/powerd/system/ambient_light_sensor_manager_stub.h"
 #include "power_manager/powerd/system/audio_client_stub.h"
@@ -71,7 +70,6 @@ class DaemonTest : public ::testing::Test, public DaemonDelegate {
             new policy::BacklightControllerStub()),
         passed_keyboard_backlight_controller_(
             new policy::BacklightControllerStub()),
-        passed_bluetooth_controller_(new policy::BluetoothControllerStub()),
         passed_input_watcher_(new system::InputWatcherStub()),
         passed_acpi_wakeup_helper_(new system::AcpiWakeupHelperStub()),
         passed_ec_helper_(new system::CrosEcHelperStub()),
@@ -99,7 +97,6 @@ class DaemonTest : public ::testing::Test, public DaemonDelegate {
             passed_internal_backlight_controller_.get()),
         keyboard_backlight_controller_(
             passed_keyboard_backlight_controller_.get()),
-        bluetooth_controller_(passed_bluetooth_controller_.get()),
         input_watcher_(passed_input_watcher_.get()),
         acpi_wakeup_helper_(passed_acpi_wakeup_helper_.get()),
         ec_helper_(passed_ec_helper_.get()),
@@ -237,10 +234,6 @@ class DaemonTest : public ::testing::Test, public DaemonDelegate {
     EXPECT_EQ(input_watcher_->GetTabletMode(), initial_tablet_mode);
     return std::move(passed_keyboard_backlight_controller_);
   }
-  std::unique_ptr<policy::BluetoothControllerInterface>
-  CreateBluetoothController() override {
-    return std::move(passed_bluetooth_controller_);
-  }
   std::unique_ptr<system::InputWatcherInterface> CreateInputWatcher(
       PrefsInterface* prefs, system::UdevInterface* udev) override {
     EXPECT_EQ(prefs_, prefs);
@@ -363,7 +356,6 @@ class DaemonTest : public ::testing::Test, public DaemonDelegate {
       passed_internal_backlight_controller_;
   std::unique_ptr<policy::BacklightControllerStub>
       passed_keyboard_backlight_controller_;
-  std::unique_ptr<policy::BluetoothControllerStub> passed_bluetooth_controller_;
   std::unique_ptr<system::InputWatcherStub> passed_input_watcher_;
   std::unique_ptr<system::AcpiWakeupHelperStub> passed_acpi_wakeup_helper_;
   std::unique_ptr<system::CrosEcHelperStub> passed_ec_helper_;
@@ -392,7 +384,6 @@ class DaemonTest : public ::testing::Test, public DaemonDelegate {
   policy::BacklightControllerStub* external_backlight_controller_;
   policy::BacklightControllerStub* internal_backlight_controller_;
   policy::BacklightControllerStub* keyboard_backlight_controller_;
-  policy::BluetoothControllerInterface* bluetooth_controller_;
   system::InputWatcherStub* input_watcher_;
   system::AcpiWakeupHelperStub* acpi_wakeup_helper_;
   system::CrosEcHelperStub* ec_helper_;

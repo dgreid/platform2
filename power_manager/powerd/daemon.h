@@ -20,7 +20,6 @@
 #include <dbus/exported_object.h>
 
 #include "power_manager/common/prefs_observer.h"
-#include "power_manager/powerd/policy/bluetooth_controller.h"
 #include "power_manager/powerd/policy/cellular_controller.h"
 #include "power_manager/powerd/policy/charge_controller.h"
 #include "power_manager/powerd/policy/input_event_handler.h"
@@ -290,7 +289,6 @@ class Daemon : public policy::InputEventHandler::Delegate,
   std::unique_ptr<system::UdevInterface> udev_;
   std::unique_ptr<system::InputWatcherInterface> input_watcher_;
   std::unique_ptr<policy::StateController> state_controller_;
-  std::unique_ptr<policy::BluetoothControllerInterface> bluetooth_controller_;
   std::unique_ptr<policy::InputEventHandler> input_event_handler_;
   std::unique_ptr<system::AcpiWakeupHelperInterface> acpi_wakeup_helper_;
   std::unique_ptr<system::CrosEcHelperInterface> ec_helper_;

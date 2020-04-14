@@ -36,7 +36,6 @@
 #include "power_manager/powerd/daemon_delegate.h"
 #include "power_manager/powerd/metrics_collector.h"
 #include "power_manager/powerd/policy/backlight_controller.h"
-#include "power_manager/powerd/policy/bluetooth_controller.h"
 #include "power_manager/powerd/policy/input_device_controller.h"
 #include "power_manager/powerd/policy/keyboard_backlight_controller.h"
 #include "power_manager/powerd/policy/shutdown_from_suspend.h"
@@ -401,11 +400,10 @@ void Daemon::Init() {
 
   acpi_wakeup_helper_ = delegate_->CreateAcpiWakeupHelper();
   ec_helper_ = delegate_->CreateCrosEcHelper();
-  bluetooth_controller_ = delegate_->CreateBluetoothController();
-  input_device_controller_->Init(
-      display_backlight_controller_.get(), bluetooth_controller_.get(),
-      udev_.get(), acpi_wakeup_helper_.get(), ec_helper_.get(), lid_state,
-      tablet_mode, DisplayMode::NORMAL, prefs_.get());
+  input_device_controller_->Init(display_backlight_controller_.get(),
+                                 udev_.get(), acpi_wakeup_helper_.get(),
+                                 ec_helper_.get(), lid_state, tablet_mode,
+                                 DisplayMode::NORMAL, prefs_.get());
 
   const PowerSource power_source =
       power_status.line_power_on ? PowerSource::AC : PowerSource::BATTERY;

@@ -20,8 +20,6 @@ namespace policy {
 
 namespace {
 
-const char kPowerdRoleCrosBT[] = "cros_bluetooth";
-
 // Returns a string describing |mode|.
 const char* ModeToString(InputDeviceController::Mode mode) {
   switch (mode) {
@@ -88,10 +86,6 @@ bool IsWakeupEnabledInMode(const system::TaggedDevice& device,
   return false;
 }
 
-bool HasBluetoothRole(const system::TaggedDevice& device) {
-  return device.role() == kPowerdRoleCrosBT;
-}
-
 }  // namespace
 
 const char InputDeviceController::kTagInhibit[] = "inhibit";
@@ -130,7 +124,6 @@ InputDeviceController::~InputDeviceController() {
 
 void InputDeviceController::Init(
     BacklightController* backlight_controller,
-    BluetoothControllerInterface* bluetooth_controller,
     system::UdevInterface* udev,
     system::AcpiWakeupHelperInterface* acpi_wakeup_helper,
     system::CrosEcHelperInterface* ec_helper,
@@ -139,7 +132,6 @@ void InputDeviceController::Init(
     DisplayMode display_mode,
     PrefsInterface* prefs) {
   backlight_controller_ = backlight_controller;
-  bluetooth_controller_ = bluetooth_controller;
   udev_ = udev;
   acpi_wakeup_helper_ = acpi_wakeup_helper;
   ec_helper_ = ec_helper;
@@ -237,14 +229,6 @@ void InputDeviceController::ConfigureWakeup(
     wakeup = IsUsableInMode(device, mode_);
   else if (HasModeWakeupTags(device))
     wakeup = IsWakeupEnabledInMode(device, mode_);
-
-  // For Bluetooth input devices, check if chrome flag that allows bluetooth
-  // wakes is set.
-  if (HasBluetoothRole(device)) {
-    VLOG(1) << "For bluetooth role, changing " << wakeup << " to "
-            << (wakeup && bluetooth_controller_->AllowWakeup());
-    wakeup = wakeup && bluetooth_controller_->AllowWakeup();
-  }
 
   SetWakeupFromS3(device, wakeup);
 }

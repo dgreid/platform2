@@ -11,7 +11,6 @@
 
 #include "power_manager/common/power_constants.h"
 #include "power_manager/powerd/policy/backlight_controller_observer.h"
-#include "power_manager/powerd/policy/bluetooth_controller.h"
 #include "power_manager/powerd/system/udev_tagged_device_observer.h"
 #include "power_manager/proto_bindings/backlight.pb.h"
 
@@ -70,7 +69,6 @@ class InputDeviceController : public policy::BacklightControllerObserver,
   ~InputDeviceController() override;
 
   void Init(policy::BacklightController* backlight_controller,
-            policy::BluetoothControllerInterface* bluetooth_controller,
             system::UdevInterface* udev,
             system::AcpiWakeupHelperInterface* acpi_wakeup_helper,
             system::CrosEcHelperInterface* ec_helper,
@@ -116,8 +114,6 @@ class InputDeviceController : public policy::BacklightControllerObserver,
 
   system::UdevInterface* udev_ = nullptr;                            // weak
   policy::BacklightController* backlight_controller_ = nullptr;      // weak
-  policy::BluetoothControllerInterface* bluetooth_controller_ =
-      nullptr;                                                       // weak
   system::AcpiWakeupHelperInterface* acpi_wakeup_helper_ = nullptr;  // weak
   system::CrosEcHelperInterface* ec_helper_ = nullptr;               // weak
 
