@@ -143,7 +143,8 @@ namespace switches {
                                    "tpm_attestation_simple_challenge",
                                    "tpm_attestation_get_key_payload",
                                    "tpm_attestation_set_key_payload",
-                                   "tpm_attestation_delete",
+                                   "tpm_attestation_delete_keys",
+                                   "tpm_attestation_delete_key",
                                    "tpm_attestation_get_ek",
                                    "tpm_attestation_reset_identity",
                                    "tpm_attestation_reset_identity_result",
@@ -220,7 +221,8 @@ namespace switches {
     ACTION_TPM_ATTESTATION_SIMPLE_CHALLENGE,
     ACTION_TPM_ATTESTATION_GET_KEY_PAYLOAD,
     ACTION_TPM_ATTESTATION_SET_KEY_PAYLOAD,
-    ACTION_TPM_ATTESTATION_DELETE,
+    ACTION_TPM_ATTESTATION_DELETE_KEYS,
+    ACTION_TPM_ATTESTATION_DELETE_KEY,
     ACTION_TPM_ATTESTATION_GET_EK,
     ACTION_TPM_ATTESTATION_RESET_IDENTITY,
     ACTION_TPM_ATTESTATION_RESET_IDENTITY_RESULT,
@@ -256,6 +258,7 @@ namespace switches {
   static const char kAsyncSwitch[] = "async";
   static const char kCreateSwitch[] = "create";
   static const char kAttrNameSwitch[] = "name";
+  static const char kAttrPrefixSwitch[] = "prefix";
   static const char kAttrValueSwitch[] = "value";
   static const char kFileSwitch[] = "file";
   static const char kInputFileSwitch[] = "input";
@@ -2631,11 +2634,40 @@ int main(int argc, char **argv) {
       return 1;
     }
   } else if (!strcmp(
-      switches::kActions[switches::ACTION_TPM_ATTESTATION_DELETE],
+      switches::kActions[switches::ACTION_TPM_ATTESTATION_DELETE_KEYS],
+      action.c_str())) {
+    std::string account_id = cl->GetSwitchValueASCII(switches::kUserSwitch);
+    std::string key_prefix =
+        cl->GetSwitchValueASCII(switches::kAttrPrefixSwitch);
+    if (key_prefix.empty()) {
+      printf("No key prefix specified (--%s=<prefix>)\n",
+             switches::kAttrPrefixSwitch);
+      return 1;
+    }
+    gboolean is_user_specific = !account_id.empty();
+    brillo::glib::ScopedError error;
+    gboolean success = FALSE;
+    if (!org_chromium_CryptohomeInterface_tpm_attestation_delete_keys(
+            proxy.gproxy(),
+            is_user_specific,
+            account_id.c_str(),
+            key_prefix.c_str(),
+            &success,
+            &brillo::Resetter(&error).lvalue())) {
+      printf("AsyncTpmAttestationDeleteKeys call failed: %s.\n",
+             error->message);
+      return 1;
+    }
+    if (!success) {
+      printf("Delete operation failed.\n");
+      return 1;
+    }
+  } else if (!strcmp(
+      switches::kActions[switches::ACTION_TPM_ATTESTATION_DELETE_KEY],
       action.c_str())) {
     std::string account_id = cl->GetSwitchValueASCII(switches::kUserSwitch);
     std::string key_name = cl->GetSwitchValueASCII(switches::kAttrNameSwitch);
-    if (key_name.length() == 0) {
+    if (key_name.empty()) {
       printf("No key name specified (--%s=<name>)\n",
              switches::kAttrNameSwitch);
       return 1;
@@ -2643,7 +2675,7 @@ int main(int argc, char **argv) {
     gboolean is_user_specific = !account_id.empty();
     brillo::glib::ScopedError error;
     gboolean success = FALSE;
-    if (!org_chromium_CryptohomeInterface_tpm_attestation_delete_keys(
+    if (!org_chromium_CryptohomeInterface_tpm_attestation_delete_key(
             proxy.gproxy(),
             is_user_specific,
             account_id.c_str(),

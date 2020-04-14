@@ -22,6 +22,7 @@ namespace {
 using ::hwsec::MockDBusMethodResponse;
 
 using ::testing::_;
+using ::testing::DoAll;
 using ::testing::Invoke;
 using ::testing::InvokeArgument;
 using ::testing::NiceMock;
@@ -104,6 +105,7 @@ class LegacyCryptohomeInterfaceAdaptorForTesting
 
 // Some common constants used for testing.
 constexpr char kUsername1[] = "foo@gmail.com";
+constexpr char kKeyLabel[] = "somelabel";
 constexpr char kSecret[] = "blah";
 constexpr char kSanitizedUsername1[] = "baadf00ddeadbeeffeedcafe";
 constexpr char kPCARequest[] = "PCA\0Request\xFFMay\x80Have\0None.ASCII";
@@ -784,6 +786,93 @@ TEST_F(LegacyCryptohomeInterfaceAdaptorTest,
   EXPECT_EQ(proxied_request.request_origin(), kRequestOrigin);
   EXPECT_EQ(proxied_request.certificate_profile(),
             attestation::ENTERPRISE_USER_CERTIFICATE);
+}
+
+// ------------- TpmAttestationDeleteKey(s) Related Tests -------------
+TEST_F(LegacyCryptohomeInterfaceAdaptorTest,
+       TpmAttestationDeleteKeysSuccess) {
+  attestation::DeleteKeysRequest proxied_request;
+  EXPECT_CALL(attestation_, DeleteKeysAsync(_, _, _, _))
+      .WillOnce(DoAll(
+          SaveArg<0>(&proxied_request),
+          Invoke(
+              [](const attestation::DeleteKeysRequest& in_request,
+                 const base::Callback<void(
+                     const attestation::DeleteKeysReply&)>&
+                     success_callback,
+                 const base::Callback<void(brillo::Error*)>& error_callback,
+                 int timeout_ms) {
+                attestation::DeleteKeysReply proxied_reply;
+                proxied_reply.set_status(attestation::STATUS_SUCCESS);
+                success_callback.Run(proxied_reply);
+              })));
+
+  base::Optional<bool> result;
+  std::unique_ptr<MockDBusMethodResponse<bool>> response(
+      new MockDBusMethodResponse<bool>(nullptr));
+  response->save_return_args(&result);
+
+  adaptor_->TpmAttestationDeleteKeys(
+      std::move(response),
+      /*is_user_specific=*/true,
+      kUsername1,
+      kKeyLabel);
+
+  // Verify that Return() is indeed called at least once.
+  ASSERT_TRUE(result.has_value());
+
+  // Verify response content.
+  EXPECT_TRUE(result.value());
+
+  // Verify that the parameters passed to DBus Proxy (New interface) are
+  // correct.
+  EXPECT_EQ(proxied_request.username(), kUsername1);
+  EXPECT_EQ(proxied_request.key_label_match(), kKeyLabel);
+  EXPECT_EQ(proxied_request.match_behavior(),
+            attestation::DeleteKeysRequest::MATCH_BEHAVIOR_PREFIX);
+}
+
+TEST_F(LegacyCryptohomeInterfaceAdaptorTest,
+       TpmAttestationDeleteKeySuccess) {
+  attestation::DeleteKeysRequest proxied_request;
+  EXPECT_CALL(attestation_, DeleteKeysAsync(_, _, _, _))
+      .WillOnce(DoAll(
+          SaveArg<0>(&proxied_request),
+          Invoke(
+              [](const attestation::DeleteKeysRequest& in_request,
+                 const base::Callback<void(
+                     const attestation::DeleteKeysReply&)>&
+                     success_callback,
+                 const base::Callback<void(brillo::Error*)>& error_callback,
+                 int timeout_ms) {
+                attestation::DeleteKeysReply proxied_reply;
+                proxied_reply.set_status(attestation::STATUS_SUCCESS);
+                success_callback.Run(proxied_reply);
+              })));
+
+  base::Optional<bool> result;
+  std::unique_ptr<MockDBusMethodResponse<bool>> response(
+      new MockDBusMethodResponse<bool>(nullptr));
+  response->save_return_args(&result);
+
+  adaptor_->TpmAttestationDeleteKey(
+      std::move(response),
+      /*is_user_specific=*/true,
+      kUsername1,
+      kKeyLabel);
+
+  // Verify that Return() is indeed called at least once.
+  ASSERT_TRUE(result.has_value());
+
+  // Verify response content.
+  EXPECT_TRUE(result.value());
+
+  // Verify that the parameters passed to DBus Proxy (New interface) are
+  // correct.
+  EXPECT_EQ(proxied_request.username(), kUsername1);
+  EXPECT_EQ(proxied_request.key_label_match(), kKeyLabel);
+  EXPECT_EQ(proxied_request.match_behavior(),
+            attestation::DeleteKeysRequest::MATCH_BEHAVIOR_EXACT);
 }
 
 // -------------------- MigrateToDircrypto Related Tests --------------------

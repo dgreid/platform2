@@ -590,6 +590,11 @@ class Service : public brillo::dbus::AbstractDbusService,
                                             gchar* key_prefix,
                                             gboolean* OUT_success,
                                             GError** error) = 0;
+  virtual gboolean TpmAttestationDeleteKey(gboolean is_user_specific,
+                                           gchar* username,
+                                           gchar* key_name,
+                                           gboolean* OUT_success,
+                                           GError** error) = 0;
   virtual gboolean TpmAttestationGetEK(gchar** ek_info,
                                        gboolean* OUT_success,
                                        GError** error) = 0;

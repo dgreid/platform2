@@ -1609,7 +1609,9 @@ void LegacyCryptohomeInterfaceAdaptor::TpmAttestationDeleteKeys(
       new SharedDBusMethodResponse<bool>(std::move(response)));
 
   attestation::DeleteKeysRequest request;
-  request.set_key_prefix(in_key_prefix);
+  request.set_key_label_match(in_key_prefix);
+  request.set_match_behavior(
+      attestation::DeleteKeysRequest::MATCH_BEHAVIOR_PREFIX);
   if (in_is_user_specific) {
     request.set_username(in_username);
   }
@@ -1629,6 +1631,43 @@ void LegacyCryptohomeInterfaceAdaptor::TpmAttestationDeleteKeysOnSuccess(
   if (reply.status() != attestation::AttestationStatus::STATUS_SUCCESS) {
     LOG(WARNING)
         << "TpmAttestationDeleteKeys(): Attestation daemon returned status "
+        << static_cast<int>(reply.status());
+  }
+  response->Return(reply.status() ==
+                   attestation::AttestationStatus::STATUS_SUCCESS);
+}
+
+void LegacyCryptohomeInterfaceAdaptor::TpmAttestationDeleteKey(
+    std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<bool>> response,
+    bool in_is_user_specific,
+    const std::string& in_username,
+    const std::string& in_key_name) {
+  std::shared_ptr<SharedDBusMethodResponse<bool>> response_shared(
+      new SharedDBusMethodResponse<bool>(std::move(response)));
+
+  attestation::DeleteKeysRequest request;
+  request.set_key_label_match(in_key_name);
+  request.set_match_behavior(
+      attestation::DeleteKeysRequest::MATCH_BEHAVIOR_EXACT);
+  if (in_is_user_specific) {
+    request.set_username(in_username);
+  }
+
+  attestation_proxy_->DeleteKeysAsync(
+      request,
+      base::Bind(
+          &LegacyCryptohomeInterfaceAdaptor::TpmAttestationDeleteKeysOnSuccess,
+          base::Unretained(this), response_shared),
+      base::Bind(&LegacyCryptohomeInterfaceAdaptor::ForwardError<bool>,
+                 base::Unretained(this), response_shared));
+}
+
+void LegacyCryptohomeInterfaceAdaptor::TpmAttestationDeleteKeyOnSuccess(
+    std::shared_ptr<SharedDBusMethodResponse<bool>> response,
+    const attestation::DeleteKeysReply& reply) {
+  if (reply.status() != attestation::AttestationStatus::STATUS_SUCCESS) {
+    LOG(WARNING)
+        << "TpmAttestationDeleteKey(): Attestation daemon returned status "
         << static_cast<int>(reply.status());
   }
   response->Return(reply.status() ==

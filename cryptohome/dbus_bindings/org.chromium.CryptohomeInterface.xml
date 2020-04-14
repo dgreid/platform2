@@ -618,6 +618,14 @@
       <arg type="s" name="key_prefix" direction="in" />
       <arg type="b" name="success" direction="out" />
     </method>
+    <method name="TpmAttestationDeleteKey">
+      <annotation name="org.chromium.DBus.Method.Kind"
+                  value="async"/>
+      <arg type="b" name="is_user_specific" direction="in" />
+      <arg type="s" name="username" direction="in" />
+      <arg type="s" name="key_name" direction="in" />
+      <arg type="b" name="success" direction="out" />
+    </method>
     <method name="TpmAttestationGetEK">
       <annotation name="org.chromium.DBus.Method.Kind"
                   value="async"/>

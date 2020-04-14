@@ -578,6 +578,18 @@ gboolean cryptohome_tpm_attestation_delete_keys(Cryptohome* self,
                          key_prefix,
                          OUT_success);
 }
+gboolean cryptohome_tpm_attestation_delete_key(Cryptohome* self,
+                                               gboolean is_user_specific,
+                                               gchar* username,
+                                               gchar* key_name,
+                                               gboolean* OUT_success,
+                                               GError** error) {
+  CRYPTOHOME_WRAP_METHOD(TpmAttestationDeleteKey,
+                         is_user_specific,
+                         username,
+                         key_name,
+                         OUT_success);
+}
 gboolean cryptohome_tpm_attestation_get_ek(Cryptohome* self,
                                            gchar** OUT_ek_info,
                                            gboolean* OUT_success,

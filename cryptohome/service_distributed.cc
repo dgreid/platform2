@@ -978,7 +978,35 @@ gboolean ServiceDistributed::TpmAttestationDeleteKeys(gboolean is_user_specific,
                                                       GError** error) {
   VLOG(1) << __func__;
   attestation::DeleteKeysRequest request;
-  request.set_key_prefix(key_prefix);
+  request.set_key_label_match(key_prefix);
+  request.set_match_behavior(
+      attestation::DeleteKeysRequest::MATCH_BEHAVIOR_PREFIX);
+  if (is_user_specific) {
+    request.set_username(username);
+  }
+  attestation::DeleteKeysReply reply;
+  auto method = base::Bind(&AttestationInterface::DeleteKeys,
+                           base::Unretained(attestation_interface_), request);
+  if (!SendRequestAndWait(method, &reply)) {
+    ReportSendFailure(error);
+    return FALSE;
+  }
+  VLOG_IF(1, reply.status() != AttestationStatus::STATUS_SUCCESS)
+      << "Attestation daemon returned status " << reply.status();
+  *OUT_success = (reply.status() == AttestationStatus::STATUS_SUCCESS);
+  return TRUE;
+}
+
+gboolean ServiceDistributed::TpmAttestationDeleteKey(gboolean is_user_specific,
+                                                     gchar* username,
+                                                     gchar* key_name,
+                                                     gboolean* OUT_success,
+                                                     GError** error) {
+  VLOG(1) << __func__;
+  attestation::DeleteKeysRequest request;
+  request.set_key_label_match(key_name);
+  request.set_match_behavior(
+      attestation::DeleteKeysRequest::MATCH_BEHAVIOR_EXACT);
   if (is_user_specific) {
     request.set_username(username);
   }

@@ -532,6 +532,18 @@ gboolean ServiceMonolithic::TpmAttestationDeleteKeys(
   return TRUE;
 }
 
+gboolean ServiceMonolithic::TpmAttestationDeleteKey(
+    gboolean is_user_specific,
+    gchar* username,
+    gchar* key_name,
+    gboolean* OUT_success,
+    GError** error) {
+  *OUT_success = attestation_->DeleteKey(is_user_specific,
+                                         username,
+                                         key_name);
+  return TRUE;
+}
+
 gboolean ServiceMonolithic::TpmAttestationGetEK(
     gchar** OUT_ek_info,
     gboolean* OUT_success,

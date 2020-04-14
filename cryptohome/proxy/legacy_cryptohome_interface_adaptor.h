@@ -389,6 +389,11 @@ class LegacyCryptohomeInterfaceAdaptor
       bool in_is_user_specific,
       const std::string& in_username,
       const std::string& in_key_prefix) override;
+  void TpmAttestationDeleteKey(
+      std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<bool>> response,
+      bool in_is_user_specific,
+      const std::string& in_username,
+      const std::string& in_key_name) override;
   void TpmAttestationGetEK(
       std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<std::string, bool>>
           response) override;
@@ -728,6 +733,9 @@ class LegacyCryptohomeInterfaceAdaptor
       std::shared_ptr<SharedDBusMethodResponse<bool>> response,
       const attestation::SetKeyPayloadReply& reply);
   void TpmAttestationDeleteKeysOnSuccess(
+      std::shared_ptr<SharedDBusMethodResponse<bool>> response,
+      const attestation::DeleteKeysReply& reply);
+  void TpmAttestationDeleteKeyOnSuccess(
       std::shared_ptr<SharedDBusMethodResponse<bool>> response,
       const attestation::DeleteKeysReply& reply);
   void TpmAttestationGetEKOnSuccess(
