@@ -19,6 +19,7 @@
 #include "dlcservice/boot/boot_slot.h"
 #include "dlcservice/boot/mock_boot_device.h"
 #include "dlcservice/dlc.h"
+#include "dlcservice/system_state.h"
 #include "dlcservice/utils.h"
 
 using std::string;

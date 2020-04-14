@@ -15,7 +15,7 @@ using std::string;
 
 namespace dlcservice {
 
-const char kDlcPrefMountable[] = "mountable";
+const char kDlcPrefVerified[] = "verified";
 
 Prefs::Prefs(const base::FilePath& prefs_root) : prefs_root_(prefs_root) {}
 

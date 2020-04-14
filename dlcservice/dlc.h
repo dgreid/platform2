@@ -53,6 +53,9 @@ class DlcBase {
   // Returns true if the DLC is already installed and mounted.
   bool IsInstalled() const;
 
+  // Returns true if the DLC is mountable.
+  bool IsMountable() const;
+
   // Returns true if the DLC module has a boolean true for 'preload-allowed'
   // attribute in the manifest for the given |id| and |package|.
   bool IsPreloadAllowed() const;

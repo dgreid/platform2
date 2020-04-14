@@ -79,7 +79,6 @@ class DlcServiceTest : public BaseTest {
 
     InitializeDlcService();
 
-    SetUpDlcWithSlots(kFirstDlc);
     InstallDlcs({kFirstDlc});
   }
 
@@ -97,20 +96,30 @@ class DlcServiceTest : public BaseTest {
   }
 
   void InstallDlcs(const DlcSet& ids) {
-    EXPECT_CALL(*mock_image_loader_proxy_ptr_, LoadDlcImage(_, _, _, _, _, _))
-        .Times(ids.size())
-        .WillRepeatedly(
-            DoAll(SetArgPointee<3>(mount_path_.value()), Return(true)));
     EXPECT_CALL(*mock_update_engine_proxy_ptr_, GetStatusAdvanced(_, _, _))
         .WillOnce(Return(true));
     EXPECT_CALL(*mock_update_engine_proxy_ptr_,
                 SetDlcActiveValue(true, _, _, _))
         .Times(ids.size())
         .WillRepeatedly(Return(true));
+    EXPECT_CALL(*mock_update_engine_proxy_ptr_, AttemptInstall(_, _, _))
+        .WillOnce(Return(true));
     EXPECT_TRUE(dlc_service_->Install(ids, kDefaultOmahaUrl, &err_));
-    for (const auto& id : ids) {
+
+    EXPECT_TRUE(
+        dlc_service_->InstallCompleted({ids.begin(), ids.end()}, &err_));
+
+    EXPECT_CALL(*mock_image_loader_proxy_ptr_, LoadDlcImage(_, _, _, _, _, _))
+        .Times(ids.size())
+        .WillRepeatedly(
+            DoAll(SetArgPointee<3>(mount_path_.value()), Return(true)));
+    StatusResult status_result;
+    status_result.set_is_install(true);
+    status_result.set_current_operation(Operation::IDLE);
+    dlc_service_->OnStatusUpdateAdvancedSignal(status_result);
+
+    for (const auto& id : ids)
       CheckDlcState(id, DlcState::INSTALLED);
-    }
     EXPECT_EQ(dlc_service_test_observer_->GetInstallStatus().status(),
               Status::COMPLETED);
   }
@@ -572,6 +581,8 @@ TEST_F(DlcServiceTest, OnStatusUpdateSignalDlcRootTest) {
     CheckDlcState(id, DlcState::INSTALLING);
   }
 
+  EXPECT_TRUE(dlc_service_->InstallCompleted({ids.begin(), ids.end()}, &err_));
+
   StatusResult status_result;
   status_result.set_current_operation(Operation::IDLE);
   status_result.set_is_install(true);
@@ -613,6 +624,8 @@ TEST_F(DlcServiceTest, OnStatusUpdateSignalNoRemountTest) {
   CheckDlcState(kFirstDlc, DlcState::INSTALLED);
   CheckDlcState(kSecondDlc, DlcState::INSTALLING);
 
+  EXPECT_TRUE(dlc_service_->InstallCompleted({ids.begin(), ids.end()}, &err_));
+
   StatusResult status_result;
   status_result.set_current_operation(Operation::IDLE);
   status_result.set_is_install(true);
@@ -648,6 +661,8 @@ TEST_F(DlcServiceTest, OnStatusUpdateSignalTest) {
   EXPECT_CALL(*mock_image_loader_proxy_ptr_, LoadDlcImage(_, _, _, _, _, _))
       .WillOnce(DoAll(SetArgPointee<3>(mount_path_.value()), Return(true)))
       .WillOnce(DoAll(SetArgPointee<3>(""), Return(true)));
+
+  EXPECT_TRUE(dlc_service_->InstallCompleted({ids.begin(), ids.end()}, &err_));
 
   StatusResult status_result;
   status_result.set_current_operation(Operation::IDLE);
@@ -901,6 +916,8 @@ TEST_F(DlcServiceTest, OnStatusUpdateSignalDownloadProgressTest) {
   EXPECT_EQ(dlc_service_test_observer_->GetInstallStatus().status(),
             Status::RUNNING);
 
+  EXPECT_TRUE(dlc_service_->InstallCompleted({ids.begin(), ids.end()}, &err_));
+
   status_result.set_current_operation(Operation::IDLE);
   dlc_service_->OnStatusUpdateAdvancedSignal(status_result);
   EXPECT_EQ(dlc_service_test_observer_->GetInstallStatus().status(),
@@ -932,6 +949,8 @@ TEST_F(DlcServiceTest,
 
     EXPECT_CALL(*mock_image_loader_proxy_ptr_, LoadDlcImage(_, _, _, _, _, _))
         .WillOnce(Return(false));
+    EXPECT_TRUE(
+        dlc_service_->InstallCompleted({ids.begin(), ids.end()}, &err_));
     StatusResult status_result;
     status_result.set_is_install(true);
     status_result.set_current_operation(Operation::IDLE);
@@ -975,26 +994,25 @@ TEST_F(DlcServiceTest, PeriodCheckUpdateEngineInstallSignalRaceChecker) {
 }
 
 TEST_F(DlcServiceTest, InstallCompleted) {
-  auto ids = DlcVec{kFirstDlc, kSecondDlc};
+  auto ids = DlcVec{kSecondDlc};
   auto active_boot_slot = SystemState::Get()->active_boot_slot();
   for (const auto& id : ids)
-    EXPECT_FALSE(
-        Prefs(DlcBase(id), active_boot_slot).Exists(kDlcPrefMountable));
+    EXPECT_FALSE(Prefs(DlcBase(id), active_boot_slot).Exists(kDlcPrefVerified));
   EXPECT_TRUE(dlc_service_->InstallCompleted({kFirstDlc, kSecondDlc}, &err_));
   for (const auto& id : ids)
-    EXPECT_TRUE(Prefs(DlcBase(id), active_boot_slot).Exists(kDlcPrefMountable));
+    EXPECT_TRUE(Prefs(DlcBase(id), active_boot_slot).Exists(kDlcPrefVerified));
 }
 
 TEST_F(DlcServiceTest, UpdateCompleted) {
-  auto ids = DlcVec{kFirstDlc, kSecondDlc};
+  auto ids = DlcVec{kSecondDlc};
   auto inactive_boot_slot = SystemState::Get()->inactive_boot_slot();
   for (const auto& id : ids)
     EXPECT_FALSE(
-        Prefs(DlcBase(id), inactive_boot_slot).Exists(kDlcPrefMountable));
+        Prefs(DlcBase(id), inactive_boot_slot).Exists(kDlcPrefVerified));
   EXPECT_TRUE(dlc_service_->UpdateCompleted({kFirstDlc, kSecondDlc}, &err_));
   for (const auto& id : ids)
     EXPECT_TRUE(
-        Prefs(DlcBase(id), inactive_boot_slot).Exists(kDlcPrefMountable));
+        Prefs(DlcBase(id), inactive_boot_slot).Exists(kDlcPrefVerified));
 }
 
 }  // namespace dlcservice

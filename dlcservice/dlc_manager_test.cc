@@ -4,7 +4,6 @@
 
 #include <gtest/gtest.h>
 
-#include "dlcservice/system_state.h"
 #include "dlcservice/test_utils.h"
 
 using testing::_;
