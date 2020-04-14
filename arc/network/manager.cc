@@ -17,11 +17,11 @@
 #include <base/bind.h>
 #include "base/files/scoped_file.h"
 #include <base/logging.h>
-#include <base/message_loop/message_loop.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_split.h>
 #include <base/strings/string_util.h>
 #include <base/strings/stringprintf.h>
+#include <base/threading/thread_task_runner_handle.h>
 #include <brillo/key_value_store.h>
 #include <brillo/minijail/minijail.h>
 
@@ -161,7 +161,7 @@ int Manager::OnInit() {
       << "Failed to watch nd-proxy child process";
 
   // Run after Daemon::OnInit().
-  base::MessageLoopForIO::current()->task_runner()->PostTask(
+  base::ThreadTaskRunnerHandle::Get()->PostTask(
       FROM_HERE,
       base::Bind(&Manager::InitialSetup, weak_factory_.GetWeakPtr()));
 
@@ -281,7 +281,7 @@ void Manager::OnSubprocessExited(pid_t pid, const siginfo_t&) {
 
   process_reaper_.ForgetChild(pid);
 
-  base::MessageLoopForIO::current()->task_runner()->PostDelayedTask(
+  base::ThreadTaskRunnerHandle::Get()->PostDelayedTask(
       FROM_HERE,
       base::Bind(&Manager::RestartSubprocess, weak_factory_.GetWeakPtr(), proc),
       base::TimeDelta::FromMilliseconds((2 << proc->restarts()) *
