@@ -14,8 +14,8 @@
 #include <vector>
 
 #include <base/bind.h>
-#include <base/message_loop/message_loop.h>
 #include <base/strings/stringprintf.h>
+#include <base/threading/thread_task_runner_handle.h>
 #include <chromeos/dbus/service_constants.h>
 
 #include "bluetooth/newblued/util.h"
@@ -41,8 +41,8 @@ base::WeakPtr<Newblue> Newblue::GetWeakPtr() {
 }
 
 bool Newblue::Init() {
-  if (base::MessageLoop::current())
-    origin_task_runner_ = base::MessageLoop::current()->task_runner();
+  if (base::ThreadTaskRunnerHandle::IsSet())
+    origin_task_runner_ = base::ThreadTaskRunnerHandle::Get();
   return true;
 }
 
