@@ -36,10 +36,9 @@ std::string DpslRequesterImpl::GetWilcoDtcSupportdGrpcUri(
 
 DpslRequesterImpl::DpslRequesterImpl(
     const std::string& wilco_dtc_supportd_grpc_uri)
-    : message_loop_(base::MessageLoop::current()),
-      async_grpc_client_(base::ThreadTaskRunnerHandle::Get(),
-                         wilco_dtc_supportd_grpc_uri) {
-  DCHECK(message_loop_);
+    : task_runner_(base::ThreadTaskRunnerHandle::Get()),
+      async_grpc_client_(task_runner_, wilco_dtc_supportd_grpc_uri) {
+  DCHECK(task_runner_);
 }
 
 DpslRequesterImpl::~DpslRequesterImpl() {
@@ -167,7 +166,7 @@ void DpslRequesterImpl::ScheduleGrpcClientMethodCall(
     GrpcStubMethod grpc_stub_method,
     std::unique_ptr<RequestType> request,
     std::function<void(std::unique_ptr<ResponseType>)> response_callback) {
-  message_loop_->task_runner()->PostTask(
+  task_runner_->PostTask(
       location,
       base::Bind(
           &DpslRequesterImpl::CallGrpcClientMethod<GrpcStubMethod, RequestType,

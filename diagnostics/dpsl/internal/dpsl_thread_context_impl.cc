@@ -10,6 +10,7 @@
 #include <base/location.h>
 #include <base/logging.h>
 #include <base/threading/thread_local.h>
+#include <base/threading/thread_task_runner_handle.h>
 #include <base/time/time.h>
 
 #include "diagnostics/dpsl/internal/callback_utils.h"
@@ -31,15 +32,14 @@ void DpslThreadContextImpl::CleanThreadCounterForTesting() {
 }
 
 DpslThreadContextImpl::DpslThreadContextImpl()
-    : thread_id_(base::PlatformThread::CurrentId()) {
-  // Initialize the message loop only if there's no one yet (it could be already
-  // set up by the calling code via other means, e.g., brillo::Daemon).
-  if (!base::MessageLoop::current()) {
-    owned_message_loop_ = std::make_unique<base::MessageLoopForIO>();
-    CHECK(base::MessageLoop::current());
-  }
-  message_loop_ = base::MessageLoop::current();
-}
+    : thread_id_(base::PlatformThread::CurrentId()),
+      // Initialize the message loop only if there's no one yet (it could be
+      // already set up by the calling code via other means, e.g.,
+      // brillo::Daemon).
+      owned_message_loop_(base::ThreadTaskRunnerHandle::IsSet()
+                              ? nullptr
+                              : std::make_unique<base::MessageLoopForIO>()),
+      task_runner_(base::ThreadTaskRunnerHandle::Get()) {}
 
 DpslThreadContextImpl::~DpslThreadContextImpl() {
   CHECK(sequence_checker_.CalledOnValidSequence())
@@ -72,14 +72,14 @@ bool DpslThreadContextImpl::IsEventLoopRunning() {
 }
 
 void DpslThreadContextImpl::PostTask(std::function<void()> task) {
-  message_loop_->task_runner()->PostTask(
-      FROM_HERE, MakeCallbackFromStdFunction(std::move(task)));
+  task_runner_->PostTask(FROM_HERE,
+                         MakeCallbackFromStdFunction(std::move(task)));
 }
 
 void DpslThreadContextImpl::PostDelayedTask(std::function<void()> task,
                                             int64_t delay_milliseconds) {
   CHECK_GE(delay_milliseconds, 0) << "Delay must be non-negative";
-  message_loop_->task_runner()->PostDelayedTask(
+  task_runner_->PostDelayedTask(
       FROM_HERE, MakeCallbackFromStdFunction(std::move(task)),
       base::TimeDelta::FromMilliseconds(delay_milliseconds));
 }

@@ -14,6 +14,7 @@
 #include <base/message_loop/message_loop.h>
 #include <base/run_loop.h>
 #include <base/task_runner.h>
+#include <base/threading/thread_task_runner_handle.h>
 #include <base/time/time.h>
 #include <gmock/gmock.h>
 #include <grpcpp/alarm.h>
@@ -85,19 +86,18 @@ class ObjectDestroyedTester {
   // Will set |*has_been_destroyed| to true when this instance is being
   // destroyed.
   explicit ObjectDestroyedTester(bool* has_been_destroyed)
-      : expected_message_loop_(base::MessageLoop::current()),
+      : expected_task_runner_(base::ThreadTaskRunnerHandle::Get()),
         has_been_destroyed_(has_been_destroyed) {
     *has_been_destroyed_ = false;
   }
 
   ~ObjectDestroyedTester() {
-    EXPECT_TRUE(
-        expected_message_loop_->task_runner()->BelongsToCurrentThread());
+    EXPECT_TRUE(expected_task_runner_->BelongsToCurrentThread());
     *has_been_destroyed_ = true;
   }
 
  private:
-  base::MessageLoop* const expected_message_loop_;
+  const scoped_refptr<base::SingleThreadTaskRunner> expected_task_runner_;
   bool* const has_been_destroyed_;
 
   DISALLOW_COPY_AND_ASSIGN(ObjectDestroyedTester);
@@ -118,8 +118,7 @@ void ObjectDestroyedTesterAdapter(
 class GrpcCompletionQueueDispatcherTest : public ::testing::Test {
  public:
   GrpcCompletionQueueDispatcherTest()
-      : dispatcher_(&completion_queue_,
-                    base::MessageLoop::current()->task_runner()) {
+      : dispatcher_(&completion_queue_, base::ThreadTaskRunnerHandle::Get()) {
     dispatcher_.Start();
   }
 

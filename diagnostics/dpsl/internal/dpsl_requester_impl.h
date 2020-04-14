@@ -11,9 +11,10 @@
 
 #include <base/callback.h>
 #include <base/macros.h>
+#include <base/memory/scoped_refptr.h>
 #include <base/memory/weak_ptr.h>
-#include <base/message_loop/message_loop.h>
 #include <base/sequence_checker_impl.h>
+#include <base/single_thread_task_runner.h>
 
 #include "diagnostics/dpsl/public/dpsl_requester.h"
 #include "diagnostics/grpc_async_adapter/async_grpc_client.h"
@@ -93,8 +94,8 @@ class DpslRequesterImpl final : public DpslRequester {
       std::unique_ptr<RequestType> request,
       base::Callback<void(std::unique_ptr<ResponseType>)> response_callback);
 
-  // Message loop of the main thread (on which this instance was created).
-  base::MessageLoop* const message_loop_;
+  // Task runner of the main thread (on which this instance was created).
+  const scoped_refptr<base::SingleThreadTaskRunner> task_runner_;
 
   AsyncGrpcWilcoDtcSupportdClient async_grpc_client_;
 

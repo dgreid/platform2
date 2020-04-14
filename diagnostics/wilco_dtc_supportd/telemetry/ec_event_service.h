@@ -12,9 +12,9 @@
 #include <base/files/file_path.h>
 #include <base/files/scoped_file.h>
 #include <base/macros.h>
-#include <base/message_loop/message_loop.h>
 #include <base/observer_list.h>
 #include <base/sequence_checker_impl.h>
+#include <base/single_thread_task_runner.h>
 #include <base/threading/simple_thread.h>
 
 #include "diagnostics/wilco_dtc_supportd/ec_constants.h"
@@ -221,15 +221,15 @@ class EcEventService {
   // OnShutdown() on the foreground thread.
   void ShutDownMonitoringThread();
 
-  // This is called on the |message_loop_->task_runner()| when new EC event
+  // This is called on the |task_runner_| when new EC event
   // was received by background monitoring thread.
   void OnEventAvailable(const EcEvent& ec_event);
 
-  // This is called on the |message_loop_->task_runner()| when the background
+  // This is called on the |task_runner_| when the background
   // monitoring thread is shutting down.
   void OnShutdown();
 
-  base::MessageLoop* const message_loop_;
+  const scoped_refptr<base::SingleThreadTaskRunner> task_runner_;
 
   // This callback will be invoked after current service shutdown.
   base::Closure on_shutdown_callback_;

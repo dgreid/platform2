@@ -172,9 +172,8 @@ size_t EcEventService::EcEvent::PayloadSizeInBytes() const {
   return (sanitized_size - 1) * sizeof(uint16_t);
 }
 
-EcEventService::EcEventService() : message_loop_(base::MessageLoop::current()) {
-  DCHECK(message_loop_);
-}
+EcEventService::EcEventService()
+    : task_runner_(base::ThreadTaskRunnerHandle::Get()) {}
 
 EcEventService::~EcEventService() {
   DCHECK(sequence_checker_.CalledOnValidSequence());
@@ -202,8 +201,7 @@ bool EcEventService::Start() {
 
   monitoring_thread_delegate_ =
       std::make_unique<internal::EcEventMonitoringThreadDelegate>(
-          event_fd_.get(), event_fd_events_, shutdown_fd_.get(),
-          message_loop_->task_runner(),
+          event_fd_.get(), event_fd_events_, shutdown_fd_.get(), task_runner_,
           base::BindRepeating(&EcEventService::OnEventAvailable,
                               base::Unretained(this)),
           base::BindOnce(&EcEventService::OnShutdown, base::Unretained(this)));
