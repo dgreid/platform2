@@ -26,6 +26,7 @@
 #include <base/run_loop.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_split.h>
+#include <base/threading/thread_task_runner_handle.h>
 
 #include <brillo/location_logging.h>
 #include <brillo/strings/string_utils.h>
@@ -43,7 +44,7 @@ const int BaseMessageLoop::kInvalidMinor = -1;
 const int BaseMessageLoop::kUninitializedMinor = -2;
 
 BaseMessageLoop::BaseMessageLoop() {
-  CHECK(!base::MessageLoop::current())
+  CHECK(!base::ThreadTaskRunnerHandle::IsSet())
       << "You can't create a base::MessageLoopForIO when another "
          "base::MessageLoop is already created for this thread.";
   owned_base_loop_.reset(new base::MessageLoopForIO());

@@ -8,6 +8,7 @@
 #include <base/bind.h>
 #include <base/message_loop/message_loop.h>
 #include <base/run_loop.h>
+#include <base/threading/thread_task_runner_handle.h>
 #include <brillo/http/http_connection_curl.h>
 #include <brillo/http/http_request.h>
 #include <brillo/http/mock_curl_api.h>
@@ -242,7 +243,7 @@ TEST_F(HttpCurlTransportAsyncTest, StartAsyncTransfer) {
   auto success_callback = base::Bind([](
       int* success_call_count, const base::Closure& quit_closure,
       RequestID /* request_id */, std::unique_ptr<http::Response> /* resp */) {
-    base::MessageLoop::current()->task_runner()->PostTask(
+    base::ThreadTaskRunnerHandle::Get()->PostTask(
         FROM_HERE, quit_closure);
     (*success_call_count)++;
   }, &success_call_count, run_loop.QuitClosure());
