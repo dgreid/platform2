@@ -20,7 +20,6 @@
 #include <base/bind.h>
 #include <base/callback_helpers.h>
 #include <base/files/file_util.h>
-#include <base/message_loop/message_loop.h>
 #include <base/rand_util.h>
 #include <base/run_loop.h>
 #include <base/strings/string_number_conversions.h>
@@ -28,6 +27,7 @@
 #include <base/strings/string_tokenizer.h>
 #include <base/strings/string_util.h>
 #include <base/strings/stringprintf.h>
+#include <base/threading/thread_task_runner_handle.h>
 #include <base/time/default_tick_clock.h>
 #include <base/time/time.h>
 #include <brillo/cryptohome.h>
@@ -1148,7 +1148,7 @@ void SessionManagerImpl::OnGotSystemClockLastSyncInfo(
   if (!response) {
     LOG(ERROR) << system_clock::kSystemClockInterface << "."
                << system_clock::kSystemLastSyncInfo << " request failed.";
-    base::MessageLoop::current()->task_runner()->PostDelayedTask(
+    base::ThreadTaskRunnerHandle::Get()->PostDelayedTask(
         FROM_HERE,
         base::Bind(&SessionManagerImpl::GetSystemClockLastSyncInfo,
                    weak_ptr_factory_.GetWeakPtr()),
@@ -1171,7 +1171,7 @@ void SessionManagerImpl::OnGotSystemClockLastSyncInfo(
       state_key_generator_->RequestStateKeys(callback);
     pending_state_key_callbacks_.clear();
   } else {
-    base::MessageLoop::current()->task_runner()->PostDelayedTask(
+    base::ThreadTaskRunnerHandle::Get()->PostDelayedTask(
         FROM_HERE,
         base::Bind(&SessionManagerImpl::GetSystemClockLastSyncInfo,
                    weak_ptr_factory_.GetWeakPtr()),
