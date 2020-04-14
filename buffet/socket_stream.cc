@@ -15,8 +15,8 @@
 #include <base/bind.h>
 #include <base/bind_helpers.h>
 #include <base/files/file_util.h>
-#include <base/message_loop/message_loop.h>
 #include <base/strings/stringprintf.h>
+#include <base/threading/thread_task_runner_handle.h>
 #include <brillo/streams/file_stream.h>
 #include <brillo/streams/tls_stream.h>
 
@@ -111,7 +111,7 @@ void SocketStream::Read(void* buffer,
           base::Bind(&OnError, base::Bind(callback, 0)), &brillo_error)) {
     weave::ErrorPtr error;
     ConvertError(*brillo_error, &error);
-    base::MessageLoop::current()->task_runner()->PostTask(
+    base::ThreadTaskRunnerHandle::Get()->PostTask(
         FROM_HERE, base::Bind(callback, 0, base::Passed(&error)));
   }
 }
@@ -124,7 +124,7 @@ void SocketStream::Write(const void* buffer,
                            base::Bind(&OnError, callback), &brillo_error)) {
     weave::ErrorPtr error;
     ConvertError(*brillo_error, &error);
-    base::MessageLoop::current()->task_runner()->PostTask(
+    base::ThreadTaskRunnerHandle::Get()->PostTask(
         FROM_HERE, base::Bind(callback, base::Passed(&error)));
   }
 }

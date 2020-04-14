@@ -13,6 +13,7 @@
 #include <base/memory/ref_counted.h>
 #include <base/memory/weak_ptr.h>
 #include <base/strings/stringprintf.h>
+#include <base/threading/thread_task_runner_handle.h>
 #include <base/values.h>
 #include <brillo/any.h>
 #include <brillo/daemons/dbus_daemon.h>
@@ -217,7 +218,7 @@ class Daemon final : public brillo::DBusDaemon {
       // initialized asynchronously without a way to get a callback when
       // it is ready to be used. So, just wait a bit before calling its
       // methods.
-      base::MessageLoop::current()->task_runner()->PostDelayedTask(
+      base::ThreadTaskRunnerHandle::Get()->PostDelayedTask(
           FROM_HERE,
           base::Bind(&Daemon::CallGetPendingCommands,
                      weak_factory_.GetWeakPtr()),
@@ -230,7 +231,7 @@ class Daemon final : public brillo::DBusDaemon {
       object_manager_->SetManagerAddedCallback(job);
     timeout_task_.Reset(
         base::Bind(&Daemon::OnJobTimeout, weak_factory_.GetWeakPtr()));
-    base::MessageLoop::current()->task_runner()->PostDelayedTask(
+    base::ThreadTaskRunnerHandle::Get()->PostDelayedTask(
         FROM_HERE, timeout_task_.callback(), base::TimeDelta::FromSeconds(10));
 
     return EX_OK;
