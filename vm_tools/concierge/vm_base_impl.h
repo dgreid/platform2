@@ -10,10 +10,10 @@
 #include <memory>
 #include <utility>
 
-#include <arc/network/client.h>
 #include <base/macros.h>
 #include <base/files/scoped_temp_dir.h>
 #include <brillo/process.h>
+#include <chromeos/patchpanel/client.h>
 
 namespace patchpanel {
 class Client;

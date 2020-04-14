@@ -15,7 +15,6 @@
 #include <utility>
 #include <vector>
 
-#include <arc/network/subnet.h>
 #include <base/files/file_descriptor_watcher_posix.h>
 #include <base/files/file_path.h>
 #include <base/files/scoped_file.h>
@@ -23,6 +22,7 @@
 #include <base/macros.h>
 #include <brillo/process.h>
 #include <dbus/exported_object.h>
+#include <chromeos/patchpanel/subnet.h>
 #include <vm_concierge/proto_bindings/concierge_service.pb.h>
 
 #include "vm_tools/common/vm_id.h"

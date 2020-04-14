@@ -14,9 +14,6 @@
 #include <utility>
 #include <vector>
 
-#include <arc/network/address_manager.h>
-#include <arc/network/mac_address_generator.h>
-#include <arc/network/subnet.h>
 #include <base/bind.h>
 #include <base/bind_helpers.h>
 #include <base/callback.h>
@@ -37,6 +34,9 @@
 #include <google/protobuf/util/message_differencer.h>
 #include <grpcpp/grpcpp.h>
 #include <gtest/gtest.h>
+#include <chromeos/patchpanel/address_manager.h>
+#include <chromeos/patchpanel/mac_address_generator.h>
+#include <chromeos/patchpanel/subnet.h>
 #include <vm_protos/proto_bindings/vm_guest.grpc.pb.h>
 
 #include "vm_tools/concierge/vsock_cid_pool.h"

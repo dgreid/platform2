@@ -12,9 +12,9 @@
 #include <string>
 #include <vector>
 
-#include <arc/network/mac_address_generator.h>
 #include <base/files/file_path.h>
 #include <base/macros.h>
+#include <chromeos/patchpanel/mac_address_generator.h>
 #include <vm_concierge/proto_bindings/concierge_service.pb.h>
 
 #include "vm_tools/concierge/seneschal_server_proxy.h"

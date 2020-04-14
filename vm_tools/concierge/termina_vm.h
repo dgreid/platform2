@@ -13,12 +13,12 @@
 #include <string>
 #include <vector>
 
-#include <arc/network/mac_address_generator.h>
-#include <arc/network/subnet.h>
 #include <base/files/file_path.h>
 #include <base/macros.h>
 #include <base/time/time.h>
 #include <brillo/process.h>
+#include <chromeos/patchpanel/mac_address_generator.h>
+#include <chromeos/patchpanel/subnet.h>
 #include <patchpanel/proto_bindings/patchpanel_service.pb.h>
 #include <vm_concierge/proto_bindings/concierge_service.pb.h>
 #include <vm_protos/proto_bindings/vm_guest.grpc.pb.h>
