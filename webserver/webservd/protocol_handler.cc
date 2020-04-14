@@ -18,6 +18,7 @@
 #include <base/guid.h>
 #include <base/logging.h>
 #include <base/message_loop/message_loop.h>
+#include <base/threading/thread_task_runner_handle.h>
 
 #include "webservd/request.h"
 #include "webservd/request_handler_interface.h"
@@ -348,7 +349,7 @@ void ProtocolHandler::ScheduleWork() {
     return;
 
   work_scheduled_ = true;
-  base::MessageLoopForIO::current()->task_runner()->PostTask(
+  base::ThreadTaskRunnerHandle::Get()->PostTask(
       FROM_HERE,
       base::Bind(&ProtocolHandler::DoWork, weak_ptr_factory_.GetWeakPtr()));
 }
@@ -401,7 +402,7 @@ void ProtocolHandler::DoWork() {
   // Schedule a time-out timer, if asked by libmicrohttpd.
   MHD_UNSIGNED_LONG_LONG mhd_timeout = 0;
   if (MHD_get_timeout(server_, &mhd_timeout) == MHD_YES) {
-    base::MessageLoopForIO::current()->task_runner()->PostDelayedTask(
+    base::ThreadTaskRunnerHandle::Get()->PostDelayedTask(
         FROM_HERE,
         base::Bind(&ProtocolHandler::DoWork, weak_ptr_factory_.GetWeakPtr()),
         base::TimeDelta::FromMilliseconds(mhd_timeout));
