@@ -3237,11 +3237,17 @@ void AttestationService::DeleteKeys(
 void AttestationService::DeleteKeysTask(
     const DeleteKeysRequest& request,
     const std::shared_ptr<DeleteKeysReply>& result) {
-  if (!DeleteKeysByPrefix(request.username(), request.key_prefix())) {
-    LOG(ERROR) << __func__ << ": Failed to delete keys with prefix: "
-               << request.key_prefix();
-    result->set_status(STATUS_UNEXPECTED_DEVICE_ERROR);
+  if (request.has_match_behavior() &&
+      request.match_behavior() == DeleteKeysRequest::MATCH_BEHAVIOR_EXACT) {
+    if (!DeleteKey(request.username(), request.key_label_match())) {
+      result->set_status(STATUS_UNEXPECTED_DEVICE_ERROR);
+    }
     return;
+  }
+  if (!DeleteKeysByPrefix(request.username(), request.key_label_match())) {
+    LOG(ERROR) << __func__ << ": Failed to delete keys with prefix: "
+               << request.key_label_match();
+    result->set_status(STATUS_UNEXPECTED_DEVICE_ERROR);
   }
 }
 

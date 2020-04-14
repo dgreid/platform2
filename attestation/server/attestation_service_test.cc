@@ -1808,6 +1808,140 @@ TEST_P(AttestationServiceTest, RegisterAdditionalFailure) {
   Run();
 }
 
+TEST_P(AttestationServiceTest, DeleteKeysByLabelSuccess) {
+  // Setup a key in the user key store.
+  CertifiedKey key;
+  key.set_key_blob("key_blob");
+  key.set_public_key("public_key");
+  key.set_certified_key_credential("fake_cert");
+  key.set_intermediate_ca_cert("fake_ca_cert");
+  *key.add_additional_intermediate_ca_cert() = "fake_ca_cert2";
+  key.set_key_name("label");
+  key.set_key_type(KEY_TYPE_RSA);
+  key.set_key_usage(KEY_USAGE_SIGN);
+  std::string key_bytes;
+  key.SerializeToString(&key_bytes);
+
+  EXPECT_CALL(mock_key_store_, Delete("user", "label"))
+      .Times(1).WillOnce(Return(true));
+  // Set expectations on the outputs.
+  auto callback = [](const base::Closure& quit_closure,
+                     const DeleteKeysReply& reply) {
+    EXPECT_EQ(STATUS_SUCCESS, reply.status());
+    quit_closure.Run();
+  };
+  DeleteKeysRequest request;
+  request.set_key_label_match("label");
+  request.set_match_behavior(DeleteKeysRequest::MATCH_BEHAVIOR_EXACT);
+  request.set_username("user");
+  service_->DeleteKeys(request,
+                       base::Bind(callback, QuitClosure()));
+  Run();
+}
+
+TEST_P(AttestationServiceTest, DeleteKeyByLabelNoUserSuccess) {
+  // Setup a key in the device_keys field.
+  CertifiedKey& key = *mock_database_.GetMutableProtobuf()->add_device_keys();
+  key.set_key_blob("key_blob");
+  key.set_public_key("public_key");
+  key.set_certified_key_credential("fake_cert");
+  key.set_intermediate_ca_cert("fake_ca_cert");
+  *key.add_additional_intermediate_ca_cert() = "fake_ca_cert2";
+  key.set_key_name("label");
+  key.set_key_type(KEY_TYPE_RSA);
+  key.set_key_usage(KEY_USAGE_SIGN);
+
+  // Set expectations on the outputs.
+  auto callback = [](const base::Closure& quit_closure, Database* database,
+                     const DeleteKeysReply& reply) {
+    EXPECT_EQ(STATUS_SUCCESS, reply.status());
+    EXPECT_EQ(0, database->GetMutableProtobuf()->device_keys_size());
+    quit_closure.Run();
+  };
+  DeleteKeysRequest request;
+  request.set_key_label_match("label");
+  request.set_match_behavior(DeleteKeysRequest::MATCH_BEHAVIOR_EXACT);
+  service_->DeleteKeys(request,
+                       base::Bind(callback, QuitClosure(), &mock_database_));
+  Run();
+}
+
+TEST_P(AttestationServiceTest, DeleteKeysByLabelNoKey) {
+  // Set expectations on the outputs.
+  auto callback = [](const base::Closure& quit_closure,
+                     const DeleteKeysReply& reply) {
+    EXPECT_EQ(STATUS_SUCCESS, reply.status());
+    quit_closure.Run();
+  };
+  DeleteKeysRequest request;
+  request.set_key_label_match("label");
+  request.set_match_behavior(DeleteKeysRequest::MATCH_BEHAVIOR_EXACT);
+  request.set_username("user");
+  service_->DeleteKeys(request, base::Bind(callback, QuitClosure()));
+  Run();
+}
+
+TEST_P(AttestationServiceTest, DeleteKeyByLabelNoUserNoKey) {
+  // Set expectations on the outputs.
+  auto callback = [](const base::Closure& quit_closure,
+                     const DeleteKeysReply& reply) {
+    EXPECT_EQ(STATUS_SUCCESS, reply.status());
+    quit_closure.Run();
+  };
+  DeleteKeysRequest request;
+  request.set_key_label_match("label");
+  request.set_match_behavior(DeleteKeysRequest::MATCH_BEHAVIOR_EXACT);
+  service_->DeleteKeys(request, base::Bind(callback, QuitClosure()));
+  Run();
+}
+
+TEST_P(AttestationServiceTest, DeleteKeysByPrefixSuccess) {
+  EXPECT_CALL(mock_key_store_, DeleteByPrefix("user", "label"))
+      .Times(1).WillOnce(Return(true));
+  // Set expectations on the outputs.
+  auto callback = [](const base::Closure& quit_closure,
+                     const DeleteKeysReply& reply) {
+    EXPECT_EQ(STATUS_SUCCESS, reply.status());
+    quit_closure.Run();
+  };
+  DeleteKeysRequest request;
+  request.set_key_label_match("label");
+  request.set_username("user");
+  service_->DeleteKeys(request, base::Bind(callback, QuitClosure()));
+  Run();
+}
+
+TEST_P(AttestationServiceTest, DeleteKeyByPrefixNoUserSuccess) {
+  // Setup a key in the device_keys field.
+  const std::string key_labels[] = {"label1", "label2", "otherprefix"};
+  for (const auto& key_label : key_labels) {
+    CertifiedKey& key = *mock_database_.GetMutableProtobuf()->add_device_keys();
+    key.set_key_blob("key_blob");
+    key.set_public_key("public_key");
+    key.set_certified_key_credential("fake_cert");
+    key.set_intermediate_ca_cert("fake_ca_cert");
+    *key.add_additional_intermediate_ca_cert() = "fake_ca_cert2";
+    key.set_key_name(key_label);
+    key.set_key_type(KEY_TYPE_RSA);
+    key.set_key_usage(KEY_USAGE_SIGN);
+  }
+
+  // Set expectations on the outputs.
+  auto callback = [](const base::Closure& quit_closure, Database* database,
+                     const DeleteKeysReply& reply) {
+    EXPECT_EQ(STATUS_SUCCESS, reply.status());
+    EXPECT_EQ(1, database->GetMutableProtobuf()->device_keys_size());
+    EXPECT_EQ("otherprefix",
+              database->GetMutableProtobuf()->device_keys()[0].key_name());
+    quit_closure.Run();
+  };
+  DeleteKeysRequest request;
+  request.set_key_label_match("label");
+  service_->DeleteKeys(request,
+                       base::Bind(callback, QuitClosure(), &mock_database_));
+  Run();
+}
+
 TEST_P(AttestationServiceTest, PrepareForEnrollment) {
   // Start with an empty database.
   mock_database_.GetMutableProtobuf()->Clear();

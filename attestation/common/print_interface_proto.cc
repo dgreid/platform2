@@ -1472,9 +1472,9 @@ std::string GetProtoDebugStringWithIndent(const DeleteKeysRequest& value,
   std::string output =
       base::StringPrintf("[%s] {\n", value.GetTypeName().c_str());
 
-  if (value.has_key_prefix()) {
-    output += indent + "  key_prefix: ";
-    base::StringAppendF(&output, "%s", value.key_prefix().c_str());
+  if (value.has_key_label_match()) {
+    output += indent + "  key_label_match: ";
+    base::StringAppendF(&output, "%s", value.key_label_match().c_str());
     output += "\n";
   }
   if (value.has_username()) {

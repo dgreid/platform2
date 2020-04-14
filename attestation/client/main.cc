@@ -216,8 +216,13 @@ class ClientLoop : public ClientLoopBase {
                         command_line->GetSwitchValueASCII("label"),
                         command_line->GetSwitchValueASCII("user"));
     } else if (args.front() == kDeleteKeysCommand) {
+      if (command_line->HasSwitch("label") &&
+          command_line->HasSwitch("prefix")) {
+        return EX_USAGE;
+      }
       task = base::Bind(&ClientLoop::CallDeleteKeys, weak_factory_.GetWeakPtr(),
                         command_line->GetSwitchValueASCII("prefix"),
+                        command_line->GetSwitchValueASCII("label"),
                         command_line->GetSwitchValueASCII("user"));
     } else if (args.front() == kEndorsementCommand) {
       task = base::Bind(&ClientLoop::CallGetEndorsementInfo,
@@ -598,9 +603,18 @@ class ClientLoop : public ClientLoopBase {
                             weak_factory_.GetWeakPtr()));
   }
 
-  void CallDeleteKeys(const std::string& prefix, const std::string& username) {
+  void CallDeleteKeys(const std::string& prefix,
+                      const std::string& label,
+                      const std::string& username) {
     DeleteKeysRequest request;
-    request.set_key_prefix(prefix);
+    if (!label.empty()) {
+      request.set_key_label_match(label);
+      request.set_match_behavior(DeleteKeysRequest::MATCH_BEHAVIOR_EXACT);
+    }
+    if (!prefix.empty()) {
+      request.set_key_label_match(prefix);
+      request.set_match_behavior(DeleteKeysRequest::MATCH_BEHAVIOR_PREFIX);
+    }
     request.set_username(username);
     attestation_->DeleteKeys(
         request, base::Bind(&ClientLoop::PrintReplyAndQuit<DeleteKeysReply>,
