@@ -2143,7 +2143,7 @@ bool Attestation::AddDeviceKey(const std::string& key_name,
   return PersistDatabaseChanges();
 }
 
-void Attestation::RemoveDeviceKey(const std::string& key_name) {
+bool Attestation::RemoveDeviceKey(const std::string& key_name) {
   bool found = false;
   for (int i = 0; i < database_pb_.device_keys_size(); ++i) {
     if (database_pb_.device_keys(i).key_name() == key_name) {
@@ -2159,8 +2159,10 @@ void Attestation::RemoveDeviceKey(const std::string& key_name) {
   if (found) {
     if (!PersistDatabaseChanges()) {
       LOG(WARNING) << __func__ << ": Failed to persist key deletion.";
+      return false;
     }
   }
+  return true;
 }
 
 bool Attestation::FindKeyByName(bool is_user_specific,
@@ -2214,13 +2216,13 @@ bool Attestation::SaveKey(bool is_user_specific,
   return true;
 }
 
-void Attestation::DeleteKey(bool is_user_specific,
+bool Attestation::DeleteKey(bool is_user_specific,
                             const std::string& username,
                             const std::string& key_name) {
   if (is_user_specific) {
-    key_store_->Delete(is_user_specific, username, key_name);
+    return key_store_->Delete(is_user_specific, username, key_name);
   } else {
-    RemoveDeviceKey(key_name);
+    return RemoveDeviceKey(key_name);
   }
 }
 

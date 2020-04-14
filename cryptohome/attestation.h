@@ -419,6 +419,19 @@ class Attestation : public base::PlatformThread::Delegate,
                                   const std::string& username,
                                   const std::string& key_prefix);
 
+  // Deletes a key either from the device or user key store.
+  // Returns false if the key exists but could not be deleted.
+  // Return true if the key did not exist or if it has been deleted.
+  //
+  // Parameters
+  //
+  //   is_user_specific - Whether the key is associated with the current user.
+  //   username - The current user canonical email address.
+  //   key_name - The exact key name of the key to delete.
+  virtual bool DeleteKey(bool is_user_specific,
+                         const std::string& username,
+                         const std::string& key_name);
+
   // Gets the TPM Endorsement Key (EK) certificate and returns it in PEM format
   // in addition to a hex SHA256 hash of the raw DER encoded certificate.  The
   // result is intended to be human readable and is always valid ASCII.  Returns
@@ -724,7 +737,8 @@ class Attestation : public base::PlatformThread::Delegate,
   bool AddDeviceKey(const std::string& key_name, const CertifiedKey& key);
 
   // Removes a device-wide key from the attestation database.
-  void RemoveDeviceKey(const std::string& key_name);
+  // Returns false if the key exists but could not be deleted.
+  bool RemoveDeviceKey(const std::string& key_name);
 
   // Finds a key by name.
   bool FindKeyByName(bool is_user_specific,
@@ -737,11 +751,6 @@ class Attestation : public base::PlatformThread::Delegate,
                const std::string& username,
                const std::string& key_name,
                const CertifiedKey& key);
-
-  // Deletes a key either from the device or user key store.
-  void DeleteKey(bool is_user_specific,
-                 const std::string& username,
-                 const std::string& key_name);
 
   // Assembles a certificate chain in PEM format for a certified key. By
   // convention, the leaf certificate will be first.
