@@ -17,6 +17,7 @@
 #include <base/logging.h>
 #include <base/posix/eintr_wrapper.h>
 #include <base/strings/string_util.h>
+#include <base/threading/thread_task_runner_handle.h>
 
 namespace permission_broker {
 
@@ -93,7 +94,7 @@ std::ostream& operator<<(std::ostream& stream,
 }  // namespace
 
 PortTracker::PortTracker(Firewall* firewall)
-    : task_runner_{base::MessageLoopForIO::current()->task_runner()},
+    : task_runner_{base::ThreadTaskRunnerHandle::Get()},
       epfd_{kInvalidHandle},
       firewall_{firewall} {}
 
