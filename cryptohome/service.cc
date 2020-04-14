@@ -15,6 +15,7 @@
 #include <base/files/file_util.h>
 #include <base/json/json_writer.h>
 #include <base/logging.h>
+#include <base/message_loop/message_loop_current.h>
 #include <base/optional.h>
 #include <base/stl_util.h>
 #include <base/strings/string_number_conversions.h>
@@ -112,8 +113,8 @@ bool KeyHasWrappedAuthorizationSecrets(const Key& k) {
 
 void AddTaskObserverToThread(base::Thread* thread,
                              base::MessageLoop::TaskObserver* task_observer) {
-  // Since MessageLoop::AddTaskObserver need to be executed in the same thread
-  // of that message loop. So we need to wrap it and post as a task.
+  // Since MessageLoopCurrent::AddTaskObserver need to be executed in the same
+  // thread of that message loop. So we need to wrap it and post as a task.
 
   scoped_refptr<base::SingleThreadTaskRunner> task_runner =
       thread->task_runner();
@@ -126,7 +127,7 @@ void AddTaskObserverToThread(base::Thread* thread,
       FROM_HERE,
       base::BindOnce(
           [](base::MessageLoop::TaskObserver* task_observer) {
-            base::MessageLoop::current()->AddTaskObserver(task_observer);
+            base::MessageLoopCurrent::Get().AddTaskObserver(task_observer);
           },
           base::Unretained(task_observer)));
 }
