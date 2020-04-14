@@ -8,8 +8,6 @@
 #include <utility>
 #include <vector>
 
-#include <base/callback_helpers.h>
-
 #include "metrics/metrics_library.h"
 
 namespace {
@@ -81,7 +79,7 @@ bool VpdProcessImpl::HandleExit(const siginfo_t& info) {
 
   // Reset the completion to ensure we won't call it again.
   if (!completion_.is_null())
-    base::ResetAndReturn(&completion_).Run(success);
+    std::move(completion_).Run(success);
   return true;
 }
 
