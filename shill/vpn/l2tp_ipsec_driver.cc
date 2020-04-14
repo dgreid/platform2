@@ -108,10 +108,8 @@ Service::ConnectFailure ExitStatusToFailure(int status) {
 const char L2TPIPSecDriver::kL2TPIPSecVPNPath[] = "/usr/sbin/l2tpipsec_vpn";
 // static
 const VPNDriver::Property L2TPIPSecDriver::kProperties[] = {
-    {kL2tpIpsecAuthenticationType, 0},
     {kL2tpIpsecClientCertIdProperty, 0},
     {kL2tpIpsecClientCertSlotProperty, 0},
-    {kL2tpIpsecIkeVersion, 0},
     {kL2tpIpsecPasswordProperty, Property::kCredential | Property::kWriteOnly},
     {kL2tpIpsecPinProperty, Property::kCredential},
     {kL2tpIpsecPskProperty, Property::kCredential | Property::kWriteOnly},
