@@ -207,7 +207,7 @@ int CameraHal::SetCallbacks(const camera_module_callbacks_t* callbacks) {
 
   // Some external cameras might be detected before SetCallbacks, we should
   // enumerate existing devices again after we return from SetCallbacks().
-  base::MessageLoop::current()->task_runner()->PostTask(
+  base::ThreadTaskRunnerHandle::Get()->PostTask(
       FROM_HERE,
       base::Bind(base::IgnoreResult(&UdevWatcher::EnumerateExistingDevices),
                  base::Unretained(&udev_watcher_)));
