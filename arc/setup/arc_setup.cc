@@ -24,7 +24,6 @@
 #include <string>
 #include <vector>
 
-#include <arc/network/client.h>
 #include <base/bind.h>
 #include <base/command_line.h>
 #include <base/environment.h>
@@ -48,6 +47,7 @@
 #include <crypto/random.h>
 #include <metrics/bootstat.h>
 #include <metrics/metrics_library.h>
+#include <chromeos/patchpanel/client.h>
 
 #include "arc/setup/art_container.h"
 
