@@ -8,10 +8,14 @@
 
 #include <base/files/file_path.h>
 
+#include "hardware_verifier/hardware_verifier.pb.h"
+
 namespace hardware_verifier {
 
 // Gets the root path to the test data.
 base::FilePath GetTestDataPath();
+
+HwVerificationReport LoadHwVerificationReport(const base::FilePath& file_path);
 
 }  // namespace hardware_verifier
 

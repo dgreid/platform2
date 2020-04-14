@@ -8,7 +8,6 @@
 
 #include <base/files/file_path.h>
 #include <base/files/file_util.h>
-#include <google/protobuf/text_format.h>
 #include <google/protobuf/util/message_differencer.h>
 #include <gtest/gtest.h>
 #include <runtime_probe/proto_bindings/runtime_probe.pb.h>
@@ -55,16 +54,6 @@ class TestVerifierImpl : public testing::Test {
         hw_verification_report_differencer_.TreatAsSet(field_desc);
       }
     }
-  }
-
-  HwVerificationReport LoadHwVerificationReport(
-      const base::FilePath& file_path) {
-    std::string content;
-    EXPECT_TRUE(base::ReadFileToString(file_path, &content));
-
-    HwVerificationReport ret;
-    EXPECT_TRUE(google::protobuf::TextFormat::ParseFromString(content, &ret));
-    return ret;
   }
 
   HwVerificationSpec LoadHwVerificationSpec(const base::FilePath& file_path) {

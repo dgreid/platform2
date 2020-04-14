@@ -8,6 +8,11 @@
 #include <cstdlib>
 
 #include <base/logging.h>
+#include <base/files/file_util.h>
+#include <google/protobuf/text_format.h>
+#include <gtest/gtest.h>
+
+#include "hardware_verifier/hardware_verifier.pb.h"
 
 namespace hardware_verifier {
 
@@ -16,6 +21,15 @@ base::FilePath GetTestDataPath() {
   CHECK_NE(src_env, nullptr)
       << "Expect to have the envvar |SRC| set when testing.";
   return base::FilePath(src_env).Append("testdata");
+}
+
+HwVerificationReport LoadHwVerificationReport(const base::FilePath& file_path) {
+  std::string content;
+  EXPECT_TRUE(base::ReadFileToString(file_path, &content));
+
+  HwVerificationReport ret;
+  EXPECT_TRUE(google::protobuf::TextFormat::ParseFromString(content, &ret));
+  return ret;
 }
 
 }  // namespace hardware_verifier
