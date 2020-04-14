@@ -4,8 +4,8 @@
 
 #include "shill/event_dispatcher.h"
 
-#include <base/message_loop/message_loop.h>
 #include <base/run_loop.h>
+#include <base/threading/thread_task_runner_handle.h>
 #include <base/time/time.h>
 
 using base::Callback;
@@ -35,7 +35,7 @@ void EventDispatcher::PostTask(const Location& location, const Closure& task) {
 void EventDispatcher::PostDelayedTask(const Location& location,
                                       const Closure& task,
                                       int64_t delay_ms) {
-  base::MessageLoop::current()->task_runner()->PostDelayedTask(
+  base::ThreadTaskRunnerHandle::Get()->PostDelayedTask(
       location, task, base::TimeDelta::FromMilliseconds(delay_ms));
 }
 
