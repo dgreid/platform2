@@ -77,13 +77,13 @@ constexpr uint16_t kLongLe = 1800;
 TEST(CommandCase1, Standard) {
   CommandApdu cmd(ApduClass::STORE_DATA, ApduInstruction::STORE_DATA, false, 0);
   EXPECT_FRAGMENT(cmd, kHeaderStart, kApduP1LastBlock, 0);
-  EXPECT_FRAGMENT(cmd);
+  EXPECT_FALSE(cmd.HasMoreFragments());
 }
 
 TEST(CommandCase1, Extended) {
   CommandApdu cmd(ApduClass::STORE_DATA, ApduInstruction::STORE_DATA, true, 0);
   EXPECT_FRAGMENT(cmd, kHeaderStart, kApduP1LastBlock, 0);
-  EXPECT_FRAGMENT(cmd);
+  EXPECT_FALSE(cmd.HasMoreFragments());
 }
 
 //////////////////////////
@@ -95,7 +95,7 @@ TEST(CommandCase2, StandardWithShortLe) {
                   kShortLe);
   EXPECT_FRAGMENT(cmd, kHeaderStart, kApduP1LastBlock, 0,
                   static_cast<uint8_t>(kShortLe));
-  EXPECT_FRAGMENT(cmd);
+  EXPECT_FALSE(cmd.HasMoreFragments());
 }
 
 TEST(CommandCase2, StandardWithLongLe) {
@@ -103,7 +103,7 @@ TEST(CommandCase2, StandardWithLongLe) {
                   kLongLe);
   // Le field should be set to 0 (Ne=256)
   EXPECT_FRAGMENT(cmd, kHeaderStart, kApduP1LastBlock, 0, 0);
-  EXPECT_FRAGMENT(cmd);
+  EXPECT_FALSE(cmd.HasMoreFragments());
 }
 
 TEST(CommandCase2, ExtendedWithShortLe) {
@@ -114,7 +114,7 @@ TEST(CommandCase2, ExtendedWithShortLe) {
                   kHeaderStart, kApduP1LastBlock, 0,
                   // Extended Le field
                   0, static_cast<uint8_t>(kShortLe), 0);
-  EXPECT_FRAGMENT(cmd);
+  EXPECT_FALSE(cmd.HasMoreFragments());
 }
 
 TEST(CommandCase2, ExtendedWithLongLe) {
@@ -126,7 +126,7 @@ TEST(CommandCase2, ExtendedWithLongLe) {
                   // Extended Le field
                   0, static_cast<uint8_t>(kLongLe),
                   static_cast<uint8_t>(kLongLe >> 8));
-  EXPECT_FRAGMENT(cmd);
+  EXPECT_FALSE(cmd.HasMoreFragments());
 }
 
 //////////////////////////
@@ -138,7 +138,7 @@ TEST(CommandCase3, StandardNoFragment) {
   std::vector<uint8_t> data = ToVector(1, 2, 3);
   cmd.AddData(data);
   EXPECT_FRAGMENT(cmd, kHeaderStart, kApduP1LastBlock, 0, data.size(), data);
-  EXPECT_FRAGMENT(cmd);
+  EXPECT_FALSE(cmd.HasMoreFragments());
 }
 
 TEST(CommandCase3, StandardTwoFragments) {
@@ -153,7 +153,7 @@ TEST(CommandCase3, StandardTwoFragments) {
                   std::vector<uint8_t>(data.begin(), data.begin() + 255));
   EXPECT_FRAGMENT(cmd, kHeaderStart, kApduP1LastBlock, 1, 45,
                   std::vector<uint8_t>(data.begin() + 255, data.end()));
-  EXPECT_FRAGMENT(cmd);
+  EXPECT_FALSE(cmd.HasMoreFragments());
 }
 
 TEST(CommandCase3, ExtendedNoFragmentShort) {
@@ -163,7 +163,7 @@ TEST(CommandCase3, ExtendedNoFragmentShort) {
   EXPECT_FRAGMENT(cmd,
                   // Header
                   kHeaderStart, kApduP1LastBlock, 0, 0, data.size(), 0, data);
-  EXPECT_FRAGMENT(cmd);
+  EXPECT_FALSE(cmd.HasMoreFragments());
 }
 
 TEST(CommandCase3, ExtendedNoFragmentLong) {
@@ -178,7 +178,7 @@ TEST(CommandCase3, ExtendedNoFragmentLong) {
                   // Header
                   kHeaderStart, kApduP1LastBlock, 0, 0, data_len & 0xFF,
                   data_len >> 8, data);
-  EXPECT_FRAGMENT(cmd);
+  EXPECT_FALSE(cmd.HasMoreFragments());
 }
 
 TEST(CommandCase3, ExtendedTwoFragments) {
@@ -201,7 +201,7 @@ TEST(CommandCase3, ExtendedTwoFragments) {
                   kHeaderStart, kApduP1LastBlock, 1, 0, frag_len & 0xFF,
                   frag_len >> 8,
                   std::vector<uint8_t>(data.begin() + 32767, data.end()));
-  EXPECT_FRAGMENT(cmd);
+  EXPECT_FALSE(cmd.HasMoreFragments());
 }
 
 //////////////////////////
@@ -215,7 +215,7 @@ TEST(CommandCase4, StandardNoFragmentShortLe) {
   cmd.AddData(data);
   EXPECT_FRAGMENT(cmd, kHeaderStart, kApduP1LastBlock, 0, data.size(), data,
                   kShortLe);
-  EXPECT_FRAGMENT(cmd);
+  EXPECT_FALSE(cmd.HasMoreFragments());
 }
 
 TEST(CommandCase4, StandardTwoFragmentsShortLe) {
@@ -233,7 +233,7 @@ TEST(CommandCase4, StandardTwoFragmentsShortLe) {
   EXPECT_FRAGMENT(cmd, kHeaderStart, kApduP1LastBlock, 1, 45,
                   std::vector<uint8_t>(data.begin() + 255, data.end()),
                   kShortLe);
-  EXPECT_FRAGMENT(cmd);
+  EXPECT_FALSE(cmd.HasMoreFragments());
 }
 
 TEST(CommandCase4, StandardNoFragmentLongLe) {
@@ -243,7 +243,7 @@ TEST(CommandCase4, StandardNoFragmentLongLe) {
   cmd.AddData(data);
   EXPECT_FRAGMENT(cmd, kHeaderStart, kApduP1LastBlock, 0, data.size(), data,
                   256);
-  EXPECT_FRAGMENT(cmd);
+  EXPECT_FALSE(cmd.HasMoreFragments());
 }
 
 TEST(CommandCase4, StandardTwoFragmentsLongLe) {
@@ -260,7 +260,7 @@ TEST(CommandCase4, StandardTwoFragmentsLongLe) {
                   std::vector<uint8_t>(data.begin(), data.begin() + 255));
   EXPECT_FRAGMENT(cmd, kHeaderStart, kApduP1LastBlock, 1, 45,
                   std::vector<uint8_t>(data.begin() + 255, data.end()), 256);
-  EXPECT_FRAGMENT(cmd);
+  EXPECT_FALSE(cmd.HasMoreFragments());
 }
 
 TEST(CommandCase4, ExtendedNoFragmentShortLe) {
@@ -272,7 +272,7 @@ TEST(CommandCase4, ExtendedNoFragmentShortLe) {
                   // Header
                   kHeaderStart, kApduP1LastBlock, 0, 0, data.size(), 0, data, 0,
                   kShortLe, 0);
-  EXPECT_FRAGMENT(cmd);
+  EXPECT_FALSE(cmd.HasMoreFragments());
 }
 
 TEST(CommandCase4, ExtendedNoFragmentLongLe) {
@@ -288,7 +288,7 @@ TEST(CommandCase4, ExtendedNoFragmentLongLe) {
                   // Header
                   kHeaderStart, kApduP1LastBlock, 0, 0, data_len & 0xFF,
                   data_len >> 8, data, 0, kLongLe & 0xFF, kLongLe >> 8);
-  EXPECT_FRAGMENT(cmd);
+  EXPECT_FALSE(cmd.HasMoreFragments());
 }
 
 TEST(CommandCase4, ExtendedTwoFragmentsShortLe) {
@@ -312,7 +312,7 @@ TEST(CommandCase4, ExtendedTwoFragmentsShortLe) {
       // Header
       kHeaderStart, kApduP1LastBlock, 1, 0, frag_len & 0xFF, frag_len >> 8,
       std::vector<uint8_t>(data.begin() + 32767, data.end()), 0, kShortLe, 0);
-  EXPECT_FRAGMENT(cmd);
+  EXPECT_FALSE(cmd.HasMoreFragments());
 }
 
 TEST(CommandCase4, ExtendedTwoFragmentsLongLe) {
@@ -337,7 +337,7 @@ TEST(CommandCase4, ExtendedTwoFragmentsLongLe) {
                   frag_len >> 8,
                   std::vector<uint8_t>(data.begin() + 32767, data.end()), 0,
                   kLongLe & 0xFF, kLongLe >> 8);
-  EXPECT_FRAGMENT(cmd);
+  EXPECT_FALSE(cmd.HasMoreFragments());
 }
 
 }  // namespace hermes
