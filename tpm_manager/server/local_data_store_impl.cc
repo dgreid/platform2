@@ -29,6 +29,7 @@ bool LocalDataStoreImpl::Read(LocalData* data) {
   CHECK(data);
   FilePath path(local_data_path_);
   if (!base::PathExists(path)) {
+    LOG(INFO) << __func__ << ": the local data path does not exist.";
     data->Clear();
     return true;
   }
