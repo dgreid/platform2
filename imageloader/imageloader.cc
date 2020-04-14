@@ -12,6 +12,7 @@
 #include <utility>
 
 #include <base/files/file_path.h>
+#include <base/threading/thread_task_runner_handle.h>
 #include <chromeos/dbus/service_constants.h>
 
 namespace imageloader {
@@ -90,7 +91,7 @@ void ImageLoader::OnSubprocessExited(pid_t pid, const siginfo_t& info) {
 void ImageLoader::PostponeShutdown() {
   shutdown_callback_.Reset(
       base::Bind(&brillo::Daemon::Quit, base::Unretained(this)));
-  base::MessageLoop::current()->task_runner()->PostDelayedTask(
+  base::ThreadTaskRunnerHandle::Get()->PostDelayedTask(
       FROM_HERE, shutdown_callback_.callback(),
       base::TimeDelta::FromMilliseconds(kShutdownTimeoutMilliseconds));
 }
