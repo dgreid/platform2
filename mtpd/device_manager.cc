@@ -636,7 +636,7 @@ void DeviceManager::HandleDeviceNotification(udev_device* device) {
   if (kEventAction == "add") {
     // Some devices do not respond well when immediately probed. Thus there is
     // a 1 second wait here to give the device to settle down.
-    base::MessageLoopForIO::current()->task_runner()->PostDelayedTask(
+    base::ThreadTaskRunnerHandle::Get()->PostDelayedTask(
         FROM_HERE,
         base::BindOnce(&DeviceManager::AddDevices,
                        weak_ptr_factory_.GetWeakPtr()),
@@ -646,7 +646,7 @@ void DeviceManager::HandleDeviceNotification(udev_device* device) {
   if (kEventAction == "remove") {
     // libmtp still detects the mtp device as connected now, so add a 1 second
     // wait to ensure libmtp does not detect the device.
-    base::MessageLoopForIO::current()->task_runner()->PostDelayedTask(
+    base::ThreadTaskRunnerHandle::Get()->PostDelayedTask(
         FROM_HERE,
         base::BindOnce(&DeviceManager::RemoveDevices,
                        weak_ptr_factory_.GetWeakPtr(), false /* !remove_all */),
