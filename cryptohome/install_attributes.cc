@@ -84,6 +84,7 @@ bool InstallAttributes::Init(TpmInit* tpm_init) {
     // first boot.
     tpm_init->RemoveTpmOwnerDependency(
         TpmPersistentState::TpmOwnerDependency::kInstallAttributes);
+    LOG(INFO) << "Valid install attributes cache found.";
     return true;
   }
 
@@ -141,6 +142,8 @@ bool InstallAttributes::Init(TpmInit* tpm_init) {
         status_ = Status::kValid;
         tpm_init->RemoveTpmOwnerDependency(
             TpmPersistentState::TpmOwnerDependency::kInstallAttributes);
+        LOG(INFO) << "Found legacy install that didn't create install "
+                     "attributes NVRAM space at OOBE.";
         return true;
       case LockboxError::kNvramInvalid:
         LOG(ERROR) << "Inconsistent install attributes state.";
@@ -160,12 +163,14 @@ bool InstallAttributes::Init(TpmInit* tpm_init) {
   // Reset succeeded, so we have a writable lockbox now.
   // Delete data file potentially left around from previous installation.
   if (!ClearData()) {
+    // ClearData() will log its own error message if it fails.
     return false;
   }
 
   status_ = Status::kFirstInstall;
   tpm_init->RemoveTpmOwnerDependency(
       TpmPersistentState::TpmOwnerDependency::kInstallAttributes);
+  LOG(INFO) << "Install attributes reset back to first install.";
   return true;
 }
 

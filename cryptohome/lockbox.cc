@@ -92,20 +92,33 @@ bool Lockbox::Reset(LockboxError* error) {
     }
     LOG(INFO) << "Lockbox created.";
     return true;
+  } else {
+    LOG(WARNING) << "No owner password when trying to reset LockBox.";
   }
 
   // Check if the space is already set up correctly.
   if (!tpm_->IsNvramDefined(nvram_index_)) {
+    LOG(ERROR) << "NVRAM space absent when resetting LockBox.";
     *error = LockboxError::kNvramSpaceAbsent;
     return false;
   }
 
   if (tpm_->IsNvramLocked(nvram_index_)) {
+    LOG(ERROR) << "NVRAM space not locked when resetting LockBox.";
     *error = LockboxError::kNvramInvalid;
     return false;
   }
 
-  // Space looks writable.
+  // The NVRAM space that we are looking at is not created by us, and it is too
+  // expensive to extensively inspect it. Given the above, we aren't sure about
+  // all its attributes, all we know is that:
+  // 1. It's not locked.
+  // 2. It exists (is defined).
+  // Therefore, it is highly likely that the NVRAM space is writable, and
+  // suitable for our use case. The most probable scenario is that this NVRAM
+  // index is created by previous installations of Chromium OS, so we'll just
+  // continue to use it.
+  LOG(INFO) << "Existing Lockbox seems writable.";
   return true;
 }
 
