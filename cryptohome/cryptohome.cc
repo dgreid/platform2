@@ -253,6 +253,7 @@ namespace switches {
   };
   static const char kUserSwitch[] = "user";
   static const char kPasswordSwitch[] = "password";
+  static const char kFingerprintSwitch[] = "fingerprint";
   static const char kKeyLabelSwitch[] = "key_label";
   static const char kKeyRevisionSwitch[] = "key_revision";
   static const char kHmacSigningKeySwitch[] = "hmac_signing_key";
@@ -1100,8 +1101,13 @@ int main(int argc, char **argv) {
     if (!BuildAccountId(cl, &id))
       return 1;
     cryptohome::AuthorizationRequest auth;
-    if (!BuildAuthorization(cl, proxy, true /* need_password */, &auth))
+    if (cl->HasSwitch(switches::kFingerprintSwitch)) {
+      auth.mutable_key()->mutable_data()->set_type(
+          cryptohome::KeyData::KEY_TYPE_FINGERPRINT);
+    } else if (!BuildAuthorization(cl, proxy, true /* need_password */,
+                                   &auth)) {
       return 1;
+    }
 
     cryptohome::CheckKeyRequest check_req;
     // TODO(wad) Add a privileges cl interface
