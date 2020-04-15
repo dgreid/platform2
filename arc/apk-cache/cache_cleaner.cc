@@ -58,8 +58,11 @@ bool IsMatch(const std::string& file_name, const std::string& pattern) {
 bool IsAccessTimeValid(const base::StringPiece& json_message) {
   std::string error_msg;
   int error_code = 0;
-  const std::unique_ptr<base::Value> root(base::JSONReader::ReadAndReturnError(
-      json_message, base::JSON_PARSE_RFC, &error_code, &error_msg));
+  // TODO(crbug.com/1054279): use base::JSONReader::ReadAndReturnValueWithError
+  // after uprev to r680000.
+  const std::unique_ptr<base::Value> root(
+      base::JSONReader::ReadAndReturnErrorDeprecated(
+          json_message, base::JSON_PARSE_RFC, &error_code, &error_msg));
   if (!root.get()) {
     LOG(ERROR) << "Reading attributes JSON failed (error code: " << error_code
                << "; error message: " << error_msg << ").";
