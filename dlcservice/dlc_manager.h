@@ -8,7 +8,10 @@
 #include <string>
 
 #include <base/macros.h>
+#include <base/time/time.h>
 #include <brillo/errors/error.h>
+#include <brillo/message_loops/message_loop.h>
+#include <gtest/gtest_prod.h>  // for FRIEND_TEST
 
 #include "dlcservice/dlc.h"
 
@@ -17,7 +20,7 @@ namespace dlcservice {
 class DlcManager {
  public:
   DlcManager() = default;
-  virtual ~DlcManager() = default;
+  virtual ~DlcManager();
 
   // Returns a reference to a DLC object given a DLC ID. We assume the ID is
   // valid.
@@ -105,18 +108,29 @@ class DlcManager {
   //   otherwise false. Deleting a valid DLC that's not installed is considered
   //   successfully uninstalled, however uninstalling a DLC that's not supported
   //   is a failure. Uninstalling a DLC that is installing is also a failure.
-  bool Delete(const DlcId& id, brillo::ErrorPtr* err);
+  bool Uninstall(const DlcId& id, brillo::ErrorPtr* err);
+  bool Purge(const DlcId& id, brillo::ErrorPtr* err);
 
   // Changes the progress on all DLCs being installed to |progress|.
   void ChangeProgress(double progress);
 
  private:
+  FRIEND_TEST(DlcManagerTest, CleanupDanglingDlcs);
+
   // Removes all unsupported/deprecated DLC files and images.
   void CleanupUnsupportedDlcs();
+
+  // Cleans up all DLCs that are dangling based on the ref count.
+  void CleanupDanglingDlcs();
+
+  // Posts the |CleanuupDanglingDlcs| as a delayed task with timeout |timeout|.
+  void PostCleanupDanglingDlcs(const base::TimeDelta& timeout);
 
   bool IsSupported(const DlcId& id);
 
   DlcMap supported_;
+
+  brillo::MessageLoop::TaskId cleanup_dangling_task_id_;
 
   DISALLOW_COPY_AND_ASSIGN(DlcManager);
 };

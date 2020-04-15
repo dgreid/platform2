@@ -4,6 +4,7 @@
 
 import("//common-mk/generate-dbus-adaptors.gni")
 import("//common-mk/pkg_config.gni")
+import("//common-mk/proto_library.gni")
 
 group("all") {
   deps = [
@@ -12,6 +13,7 @@ group("all") {
     ":dlcservice_util",
     ":libdlcservice",
     ":libdlcservice_utils",
+    ":ref_count-proto",
   ]
   if (use.test) {
     deps += [ ":dlcservice_tests" ]
@@ -59,6 +61,13 @@ generate_dbus_adaptors("dlcservice_adaptors") {
   sources = [ "dbus_adaptors/org.chromium.DlcServiceInterface.xml" ]
 }
 
+# Protobufs.
+proto_library("ref_count-proto") {
+  proto_in_dir = "."
+  proto_out_dir = "include/dlcservice"
+  sources = [ "ref_count.proto" ]
+}
+
 # DLC utils related files.
 static_library("libdlcservice_utils") {
   configs += [ ":target_defaults" ]
@@ -79,11 +88,13 @@ static_library("libdlcservice") {
     "dlc_service.cc",
     "error.cc",
     "prefs.cc",
+    "ref_count.cc",
     "system_state.cc",
   ]
   deps = [
     ":dlcservice_adaptors",
     ":libdlcservice_utils",
+    ":ref_count-proto",
   ]
 }
 
@@ -130,6 +141,7 @@ if (use.test) {
       "dlc_test.cc",
       "error_test.cc",
       "prefs_test.cc",
+      "ref_count_test.cc",
       "system_state_test.cc",
       "test_utils.cc",
       "utils_test.cc",

@@ -1,0 +1,22 @@
+// Copyright 2020 The Chromium OS Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+syntax = "proto3";
+
+option optimize_for = LITE_RUNTIME;
+
+package dlcservice;
+
+message RefCountInfo {
+  message User {
+    // User’s ID can be whatever to identify a user which is basically
+    // the hash of the user's email address.
+    string sanitized_username = 1;
+  }
+  repeated User users = 1;
+
+  // The timestamp of the last time the DLC was installed or uninstalled in
+  // microseconds.
+  int64 last_access_time_us = 2;
+}

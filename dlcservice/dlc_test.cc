@@ -441,4 +441,26 @@ TEST_F(DlcBaseTest, ChangeProgress) {
   dlc.ChangeProgress(0.5);
 }
 
+TEST_F(DlcBaseTest, InstallIncreasesRefCount) {
+  DlcBase dlc(kFirstDlc);
+  dlc.Initialize();
+
+  EXPECT_CALL(*mock_update_engine_proxy_ptr_,
+              SetDlcActiveValue(_, kFirstDlc, _, _))
+      .WillRepeatedly(Return(true));
+  EXPECT_CALL(*mock_image_loader_proxy_ptr_, LoadDlcImage(_, _, _, _, _, _))
+      .WillOnce(DoAll(SetArgPointee<3>(mount_path_.value()), Return(true)));
+  EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(2);
+
+  EXPECT_TRUE(dlc.Install(&err_));
+  InstallWithUpdateEngine({kFirstDlc});
+  dlc.InstallCompleted(&err_);
+  dlc.FinishInstall(&err_);
+
+  EXPECT_TRUE(dlc.IsInstalled());
+  auto ref_count_file = JoinPaths(SystemState::Get()->dlc_prefs_dir(),
+                                  kFirstDlc, kRefCountFileName);
+  EXPECT_TRUE(base::PathExists(ref_count_file));
+}
+
 }  // namespace dlcservice

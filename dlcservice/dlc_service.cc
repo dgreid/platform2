@@ -20,6 +20,7 @@
 
 #include "dlcservice/dlc.h"
 #include "dlcservice/error.h"
+#include "dlcservice/ref_count.h"
 #include "dlcservice/utils.h"
 
 using base::Callback;
@@ -155,31 +156,27 @@ bool DlcService::InstallWithUpdateEngine(const DlcId& id,
 }
 
 bool DlcService::Uninstall(const string& id, brillo::ErrorPtr* err) {
-  // TODO(crbug.com/1069162): Uninstall should remove based on ref-counting
-  // logic.
-  return Purge(id, err);
+  return dlc_manager_->Uninstall(id, err);
 }
 
 bool DlcService::Purge(const string& id, brillo::ErrorPtr* err) {
   // Check that an update isn't in progress.
-  if (!dlc_manager_->IsInstalling()) {
-    Operation op;
-    if (!GetUpdateEngineStatus(&op)) {
-      *err = Error::Create(FROM_HERE, kErrorInternal,
-                           "Failed to get the status of Update Engine");
-      return false;
-    }
-    switch (op) {
-      case update_engine::IDLE:
-      case update_engine::UPDATED_NEED_REBOOT:
-        break;
-      default:
-        *err = Error::Create(FROM_HERE, kErrorBusy,
-                             "Install or update is in progress.");
-        return false;
-    }
+  Operation op;
+  if (!GetUpdateEngineStatus(&op)) {
+    *err = Error::Create(FROM_HERE, kErrorInternal,
+                         "Failed to get the status of Update Engine");
+    return false;
   }
-  return dlc_manager_->Delete(id, err);
+  switch (op) {
+    case update_engine::IDLE:
+    case update_engine::UPDATED_NEED_REBOOT:
+      break;
+    default:
+      *err = Error::Create(FROM_HERE, kErrorBusy,
+                           "Install or update is in progress.");
+      return false;
+  }
+  return dlc_manager_->Purge(id, err);
 }
 
 const DlcBase* DlcService::GetDlc(const DlcId& id) {
@@ -363,6 +360,7 @@ void DlcService::OnSessionStateChangedSignalConnected(
 }
 
 void DlcService::OnSessionStateChangedSignal(const std::string& state) {
+  UserRefCount::SessionChanged(state);
 }
 
 }  // namespace dlcservice

@@ -8,6 +8,7 @@
 #include <utility>
 
 #include <base/strings/stringprintf.h>
+#include <brillo/message_loops/message_loop.h>
 #include <chromeos/dbus/service_constants.h>
 #include <dbus/dlcservice/dbus-constants.h>
 #include <dlcservice/proto_bindings/dlcservice.pb.h>
@@ -18,10 +19,20 @@
 #include "dlcservice/utils.h"
 
 using brillo::ErrorPtr;
+using brillo::MessageLoop;
 
 namespace dlcservice {
 
+DlcManager::~DlcManager() {
+  if (cleanup_dangling_task_id_ != MessageLoop::kTaskIdNull) {
+    MessageLoop::current()->CancelTask(cleanup_dangling_task_id_);
+    cleanup_dangling_task_id_ = MessageLoop::kTaskIdNull;
+  }
+}
+
 void DlcManager::Initialize() {
+  supported_.clear();
+
   // Initialize supported DLC(s).
   for (const auto& id : ScanDirectory(SystemState::Get()->manifest_dir())) {
     auto result = supported_.emplace(id, id);
@@ -30,7 +41,13 @@ void DlcManager::Initialize() {
       supported_.erase(id);
     }
   }
+
   CleanupUnsupportedDlcs();
+
+  // Post cleaning up dangling Dlcs for after the user has worked on the device
+  // for a bit in case they install one of the dangling DLCs.
+  constexpr int kTimeoutMinutes = 30;
+  PostCleanupDanglingDlcs(base::TimeDelta::FromMinutes(kTimeoutMinutes));
 }
 
 void DlcManager::CleanupUnsupportedDlcs() {
@@ -65,6 +82,34 @@ void DlcManager::CleanupUnsupportedDlcs() {
       LOG(INFO) << "Deleted path=" << path
                 << " for unsupported/preload not allowed DLC=" << id;
   }
+}
+
+void DlcManager::CleanupDanglingDlcs() {
+  LOG(INFO) << "Going to clean up dangling DLCs.";
+  for (auto& pair : supported_) {
+    auto& dlc = pair.second;
+    if (dlc.ShouldPurge()) {
+      LOG(INFO) << "DLC=" << dlc.GetId() << " should be removed because it is "
+                << "dangling.";
+      brillo::ErrorPtr error;
+      if (!dlc.Purge(&error)) {
+        LOG(ERROR) << "Failed to delete dangling DLC=" << dlc.GetId()
+                   << " with error: " << Error::ToString(error);
+      }
+    }
+  }
+
+  // Post another one to happen in a day in case they never shutdown their
+  // devices.
+  constexpr int kTimeoutDays = 1;
+  PostCleanupDanglingDlcs(base::TimeDelta::FromDays(kTimeoutDays));
+}
+
+void DlcManager::PostCleanupDanglingDlcs(const base::TimeDelta& timeout) {
+  cleanup_dangling_task_id_ = MessageLoop::current()->PostDelayedTask(
+      FROM_HERE,
+      base::Bind(&DlcManager::CleanupDanglingDlcs, base::Unretained(this)),
+      timeout);
 }
 
 bool DlcManager::IsSupported(const DlcId& id) {
@@ -178,7 +223,7 @@ bool DlcManager::Install(const DlcId& id,
   return true;
 }
 
-bool DlcManager::Delete(const DlcId& id, ErrorPtr* err) {
+bool DlcManager::Uninstall(const DlcId& id, ErrorPtr* err) {
   DCHECK(err);
   if (!IsSupported(id)) {
     *err = Error::Create(
@@ -186,7 +231,18 @@ bool DlcManager::Delete(const DlcId& id, ErrorPtr* err) {
         base::StringPrintf("Trying to delete unsupported DLC=%s", id.c_str()));
     return false;
   }
-  return supported_.find(id)->second.Delete(err);
+  return supported_.find(id)->second.Uninstall(err);
+}
+
+bool DlcManager::Purge(const DlcId& id, ErrorPtr* err) {
+  DCHECK(err);
+  if (!IsSupported(id)) {
+    *err = Error::Create(
+        FROM_HERE, kErrorInvalidDlc,
+        base::StringPrintf("Trying to purge unsupported DLC=%s", id.c_str()));
+    return false;
+  }
+  return supported_.find(id)->second.Purge(err);
 }
 
 bool DlcManager::FinishInstall(ErrorPtr* err) {
@@ -216,20 +272,17 @@ bool DlcManager::CancelInstall(const DlcId& id, ErrorPtr* err) {
     return false;
   }
 
-  return supported_.find(id)->second.CancelInstall(err);
+  auto& dlc = supported_.find(id)->second;
+  return !dlc.IsInstalling() || dlc.CancelInstall(err);
 }
 
 bool DlcManager::CancelInstall(ErrorPtr* err) {
   DCHECK(err);
-  if (!IsInstalling()) {
-    LOG(WARNING) << "No install started to being with, nothing to cancel.";
-    return true;
-  }
 
   bool ret = true;
   for (auto& pr : supported_) {
     auto& dlc = pr.second;
-    if (!dlc.CancelInstall(err)) {
+    if (dlc.IsInstalling() && !dlc.CancelInstall(err)) {
       LOG(ERROR) << "Failed during install cancellation: "
                  << Error::ToString(*err);
       ret = false;

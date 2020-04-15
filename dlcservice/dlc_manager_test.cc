@@ -2,11 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <memory>
+#include <string>
+
+#include <base/time/time.h>
+#include <brillo/message_loops/base_message_loop.h>
+#include <brillo/message_loops/message_loop_utils.h>
 #include <gtest/gtest.h>
 
+#include "dlcservice/ref_count.h"
 #include "dlcservice/test_utils.h"
 #include "dlcservice/utils.h"
 
+using std::string;
 using testing::_;
 using testing::ElementsAre;
 using testing::Return;
@@ -18,6 +26,37 @@ class DlcManagerTest : public BaseTest {
  public:
   DlcManagerTest() { dlc_manager_ = std::make_unique<DlcManager>(); }
 
+  void SetUp() override {
+    loop_.SetAsCurrent();
+    BaseTest::SetUp();
+  }
+
+  void Install(const DlcId& id) {
+    EXPECT_CALL(*mock_image_loader_proxy_ptr_, LoadDlcImage(id, _, _, _, _, _))
+        .WillOnce(DoAll(SetArgPointee<3>(mount_path_.value()), Return(true)));
+    EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(2);
+    EXPECT_CALL(*mock_update_engine_proxy_ptr_,
+                SetDlcActiveValue(true, id, _, _))
+        .WillOnce(Return(true));
+
+    bool external_install_needed = false;
+    EXPECT_TRUE(dlc_manager_->Install(id, &external_install_needed, &err_));
+    CheckDlcState(id, DlcState::INSTALLING);
+
+    InstallWithUpdateEngine({id});
+    EXPECT_TRUE(dlc_manager_->InstallCompleted({id}, &err_));
+    EXPECT_TRUE(dlc_manager_->FinishInstall(&err_));
+    CheckDlcState(id, DlcState::INSTALLED);
+  }
+
+  void Uninstall(const DlcId& id) {
+    EXPECT_CALL(*mock_image_loader_proxy_ptr_, UnloadDlcImage(_, _, _, _, _))
+        .WillOnce(DoAll(SetArgPointee<2>(true), Return(true)));
+    EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(1);
+    EXPECT_TRUE(dlc_manager_->Uninstall(id, &err_));
+    CheckDlcState(id, DlcState::NOT_INSTALLED);
+  }
+
   void CheckDlcState(const DlcId& id, const DlcState::State& expected_state) {
     const auto* dlc = dlc_manager_->GetDlc(id);
     EXPECT_NE(dlc, nullptr);
@@ -25,6 +64,11 @@ class DlcManagerTest : public BaseTest {
   }
 
  protected:
+  // These should come before |dlc_manager_| so it would have the loop in its
+  // dtor.
+  base::MessageLoopForIO base_loop_;
+  brillo::BaseMessageLoop loop_{&base_loop_};
+
   std::unique_ptr<DlcManager> dlc_manager_;
 
  private:
@@ -113,6 +157,52 @@ TEST_F(DlcManagerTest, UnsupportedPreloadedDlcRemovalCheck) {
   EXPECT_TRUE(base::PathExists(JoinPaths(preloaded_content_path_, id)));
   dlc_manager_->Initialize();
   EXPECT_FALSE(base::PathExists(JoinPaths(preloaded_content_path_, id)));
+}
+
+TEST_F(DlcManagerTest, CleanupDanglingDlcs) {
+  dlc_manager_->Initialize();
+  Install(kFirstDlc);
+
+  // Make sure the ref count is not deleted.
+  auto ref_count_path = JoinPaths(SystemState::Get()->dlc_prefs_dir(),
+                                  kFirstDlc, kRefCountFileName);
+  EXPECT_TRUE(base::PathExists(ref_count_path));
+  Uninstall(kFirstDlc);
+  EXPECT_TRUE(base::PathExists(ref_count_path));
+
+  // Read the ref count, reduce its timestamp by like 6 days, and write it back
+  // so we can assume the |kFirstDlc| is dangling now.
+  string str;
+  EXPECT_TRUE(base::ReadFileToString(ref_count_path, &str));
+  RefCountInfo info;
+  EXPECT_TRUE(info.ParseFromString(str));
+  int64_t past_time =
+      (base::TimeDelta::FromMicroseconds(info.last_access_time_us()) -
+       base::TimeDelta::FromDays(6))
+          .InMicroseconds();
+  info.set_last_access_time_us(past_time);
+  EXPECT_TRUE(info.SerializeToString(&str));
+  EXPECT_TRUE(WriteToFile(ref_count_path, str));
+
+  // Reinitialize the |dlc_manager_| so it initializes the kFirstDlc again.
+  dlc_manager_->Initialize();
+  // Install another DLC to make sure cleanup dangling doesn't remove them.
+  Install(kSecondDlc);
+
+  // These should happen when the |kFirstDlc| is purged.
+  EXPECT_CALL(*mock_image_loader_proxy_ptr_, UnloadDlcImage(_, _, _, _, _))
+      .WillOnce(DoAll(SetArgPointee<2>(true), Return(true)));
+  EXPECT_CALL(*mock_update_engine_proxy_ptr_,
+              SetDlcActiveValue(false, kFirstDlc, _, _))
+      .WillOnce(Return(true));
+  EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(1);
+
+  dlc_manager_->CleanupDanglingDlcs();
+
+  // |kFirstDLC| should be gone by now.
+  EXPECT_FALSE(base::PathExists(ref_count_path));
+  // |kSecondDlc| should still be around.
+  // CheckDlcState(kSecondDlc, DlcState::INSTALLED);
 }
 
 }  // namespace dlcservice

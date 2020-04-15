@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <cinttypes>
+#include <memory>
 #include <utility>
 #include <vector>
 
@@ -54,6 +55,7 @@ bool DlcBase::Initialize() {
   prefs_path_ = system_state->dlc_prefs_dir().Append(id_);
   preloaded_image_path_ = JoinPaths(system_state->preloaded_content_dir(), id_,
                                     package_, kDlcImageFileName);
+  ref_count_ = RefCountInterface::Create(manifest_.used_by(), prefs_path_);
 
   state_.set_state(DlcState::NOT_INSTALLED);
   state_.set_id(id_);
@@ -359,7 +361,6 @@ bool DlcBase::Install(ErrorPtr* err) {
 
   // Let's try to finish the installation.
   if (!FinishInstall(err)) {
-    CancelInstall(err);
     return false;
   }
 
@@ -397,8 +398,9 @@ bool DlcBase::FinishInstall(ErrorPtr* err) {
         *err = Error::Create(
             FROM_HERE, state_.last_error_code(),
             base::StringPrintf("Cannot mount image for DLC=%s", id_.c_str()));
+
         ErrorPtr tmp_err;
-        if (!DeleteInternal(&tmp_err))
+        if (!CancelInstall(&tmp_err))
           LOG(ERROR) << "Failed during install finalization: "
                      << Error::ToString(tmp_err) << " for DLC=" << id_;
         return false;
@@ -410,21 +412,19 @@ bool DlcBase::FinishInstall(ErrorPtr* err) {
       return false;
   }
 
+  // Increase the ref count.
+  ref_count_->InstalledDlc();
+
   // Now that we are sure the image is installed, we can go ahead and set it as
   // active. Failure to set the metadata flags should not fail the install.
-  if (!SystemState::Get()->update_engine()->SetDlcActiveValue(true, id_, err)) {
-    LOG(WARNING) << "Update Engine failed to set DLC to active:" << id_
-                 << (*err ? Error::ToString(*err)
-                          : "Missing error from update engine proxy.");
-  }
+  SetActiveValue(true);
 
   return true;
 }
 
 bool DlcBase::CancelInstall(ErrorPtr* err) {
-  if (!IsInstalling()) {
-    return true;
-  }
+  ChangeState(DlcState::NOT_INSTALLED);
+
   // Consider as not installed even if delete fails below, correct errors
   // will be propagated later and should not block on further installs.
   if (!DeleteInternal(err)) {
@@ -487,6 +487,9 @@ bool DlcBase::IsActiveImagePresent() const {
 
 // Deletes all directories related to this DLC.
 bool DlcBase::DeleteInternal(ErrorPtr* err) {
+  // If we're deleting the image, we need to set it as unverified.
+  MarkUnverified();
+
   vector<string> undeleted_paths;
   for (const auto& path : GetPathsToDelete(id_)) {
     if (base::PathExists(path)) {
@@ -498,8 +501,6 @@ bool DlcBase::DeleteInternal(ErrorPtr* err) {
       }
     }
   }
-  ChangeState(DlcState::NOT_INSTALLED);
-  MarkUnverified();
 
   if (!undeleted_paths.empty()) {
     state_.set_last_error_code(kErrorInternal);
@@ -512,35 +513,55 @@ bool DlcBase::DeleteInternal(ErrorPtr* err) {
   return true;
 }
 
-bool DlcBase::Delete(ErrorPtr* err) {
+bool DlcBase::Uninstall(ErrorPtr* err) {
   switch (state_.state()) {
     case DlcState::NOT_INSTALLED:
-      // We still have to delete the DLC, in case we never mounted in this
+      // We still have to uninstall the DLC, in case we never mounted in this
       // session.
       LOG(WARNING) << "Trying to uninstall not installed DLC=" << id_;
       FALLTHROUGH;
-    case DlcState::INSTALLED: {
-      ErrorPtr tmp_err;
-      if (!SystemState::Get()->update_engine()->SetDlcActiveValue(false, id_,
-                                                                  &tmp_err))
-        LOG(WARNING) << "Failed to set DLC(" << id_ << ") to inactive."
-                     << (tmp_err ? Error::ToString(tmp_err)
-                                 : "Missing error from update engine proxy.");
-      return Unmount(err) && DeleteInternal(err);
-    }
+    case DlcState::INSTALLED:
+      ref_count_->UninstalledDlc();
+      Unmount(err);
+      ChangeState(DlcState::NOT_INSTALLED);
+      break;
     case DlcState::INSTALLING:
-      // We cannot delete the image while it is being installed by the
+      // We cannot uninstall the image while it is being installed by the
       // update_engine.
       state_.set_last_error_code(kErrorBusy);
       *err = Error::Create(
           FROM_HERE, state_.last_error_code(),
-          base::StringPrintf("Trying to delete a currently installing DLC=%s",
+          base::StringPrintf("Trying to uninstall an installing DLC=%s",
                              id_.c_str()));
       return false;
     default:
       NOTREACHED();
       return false;
   }
+
+  return true;
+}
+
+bool DlcBase::Purge(ErrorPtr* err) {
+  if (!Uninstall(err))
+    return false;
+
+  SetActiveValue(false);
+  return DeleteInternal(err);
+}
+
+bool DlcBase::ShouldPurge() {
+  return ref_count_->ShouldPurgeDlc();
+}
+
+void DlcBase::SetActiveValue(bool active) {
+  ErrorPtr tmp_err;
+  if (!SystemState::Get()->update_engine()->SetDlcActiveValue(active, id_,
+                                                              &tmp_err))
+    LOG(WARNING) << "Failed to set DLC=" << id_ << (active ? " " : " in")
+                 << "active."
+                 << (tmp_err ? Error::ToString(tmp_err)
+                             : "Missing error from update engine proxy.");
 }
 
 void DlcBase::ChangeState(DlcState::State state) {

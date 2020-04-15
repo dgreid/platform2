@@ -6,6 +6,7 @@
 #define DLCSERVICE_DLC_H_
 
 #include <map>
+#include <memory>
 #include <set>
 #include <string>
 #include <utility>
@@ -20,6 +21,7 @@
 #include <chromeos/dbus/service_constants.h>
 
 #include "dlcservice/boot/boot_slot.h"
+#include "dlcservice/ref_count.h"
 
 namespace dlcservice {
 
@@ -87,8 +89,14 @@ class DlcBase {
   // uninstalled after this call if successful.
   bool CancelInstall(brillo::ErrorPtr* err);
 
+  // Uninstalls the DLC.
+  bool Uninstall(brillo::ErrorPtr* err);
+
   // Deletes all files associated with the DLC.
-  bool Delete(brillo::ErrorPtr* err);
+  bool Purge(brillo::ErrorPtr* err);
+
+  // Returns true if the DLC has to be removed/purged.
+  bool ShouldPurge();
 
   // Is called when the DLC image is finally installed on the disk and is
   // verified.
@@ -158,6 +166,9 @@ class DlcBase {
   // reporter that a state change has been made.
   void ChangeState(DlcState::State state);
 
+  // Sets the DLC as being active or not based on |active| value.
+  void SetActiveValue(bool active);
+
   DlcId id_;
   std::string package_;
 
@@ -175,6 +186,10 @@ class DlcBase {
 
   // True if the pref |kDlcPrefVerified| exists.
   bool is_verified_;
+
+  // The object that keeps track of ref counts. NOTE: Do NOT access this object
+  // directly. Use |GetRefCount()| instead.
+  std::unique_ptr<RefCountInterface> ref_count_;
 
   DISALLOW_COPY_AND_ASSIGN(DlcBase);
 };
