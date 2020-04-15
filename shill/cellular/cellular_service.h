@@ -16,6 +16,7 @@
 
 #include "shill/cellular/cellular.h"
 #include "shill/cellular/subscription_state.h"
+#include "shill/mockable.h"
 #include "shill/refptr_types.h"
 #include "shill/service.h"
 
@@ -37,19 +38,23 @@ class CellularService : public Service {
   CellularService(Manager* manager, const CellularRefPtr& device);
   ~CellularService() override;
 
-  // Inherited from Service.
+  // Public Service overrides
   void AutoConnect() override;
   void CompleteCellularActivation(Error* error) override;
-
   std::string GetStorageIdentifier() const override;
+  std::string GetLoadableStorageIdentifier(
+      const StoreInterface& storage) const override;
+  bool IsLoadableFrom(const StoreInterface& storage) const override;
+  bool Load(StoreInterface* storage) override;
+  bool Save(StoreInterface* storage) override;
 
   const CellularRefPtr& cellular() const { return cellular_; }
 
   void SetActivationType(ActivationType type);
   std::string GetActivationTypeString() const;
 
-  virtual void SetActivationState(const std::string& state);
-  virtual const std::string& activation_state() const {
+  mockable void SetActivationState(const std::string& state);
+  mockable const std::string& activation_state() const {
     return activation_state_;
   }
 
@@ -61,7 +66,7 @@ class CellularService : public Service {
   void SetUsageURL(const std::string& url);
   const std::string& usage_url() const { return usage_url_; }
 
-  void set_serving_operator(const Stringmap& serving_operator);
+  void SetServingOperator(const Stringmap& serving_operator);
   const Stringmap& serving_operator() const { return serving_operator_; }
 
   // Sets network technology to |technology| and broadcasts the property change.
@@ -77,11 +82,6 @@ class CellularService : public Service {
   const std::string& ppp_username() const { return ppp_username_; }
   const std::string& ppp_password() const { return ppp_password_; }
 
-  // Overrides Load and Save from parent Service class.  We will call
-  // the parent method.
-  bool Load(StoreInterface* storage) override;
-  bool Save(StoreInterface* storage) override;
-
   Stringmap* GetUserSpecifiedApn();
   Stringmap* GetLastGoodApn();
   virtual void SetLastGoodApn(const Stringmap& apn_info);
@@ -90,17 +90,13 @@ class CellularService : public Service {
   void NotifySubscriptionStateChanged(SubscriptionState subscription_state);
 
  protected:
-  // Inherited from Service.
+  // Protected Service overrides
   void OnConnect(Error* error) override;
   void OnDisconnect(Error* error, const char* reason) override;
   bool IsAutoConnectable(const char** reason) const override;
-
-  // Overrides the maximum auto connect cooldown time set in the Service class
-  // as a cellular service requires a much longer cooldown period.
   uint64_t GetMaxAutoConnectCooldownTimeMilliseconds() const override;
-
-  // Overrides IsMeteredByServiceProperties from parent Service class.
   bool IsMeteredByServiceProperties() const override;
+  RpcIdentifier GetDeviceRpcId(Error* error) const override;
 
  private:
   friend class CellularCapability3gppTest;
@@ -148,35 +144,15 @@ class CellularService : public Service {
                                bool (CellularService::*set)(const bool&,
                                                             Error*));
 
-  RpcIdentifier GetDeviceRpcId(Error* error) const override;
-
   std::set<std::string> GetStorageGroupsWithProperty(
       const StoreInterface& storage,
       const std::string& key,
       const std::string& value) const;
 
-  // The cellular service may be loaded from profile entries with matching
-  // properties but a different storage identifier. The following methods are
-  // overridden from the Service base class to return a loadable profile from
-  // |storage| for this cellular service, which either matches the current
-  // storage identifier or certain service properties.
-  std::string GetLoadableStorageIdentifier(
-      const StoreInterface& storage) const override;
-  bool IsLoadableFrom(const StoreInterface& storage) const override;
-
   std::string CalculateActivationType(Error* error);
 
   Stringmap GetApn(Error* error);
   bool SetApn(const Stringmap& value, Error* error);
-  static void SaveApn(StoreInterface* storage,
-                      const std::string& storage_group,
-                      const Stringmap* apn_info,
-                      const std::string& keytag);
-  static void SaveApnField(StoreInterface* storage,
-                           const std::string& storage_group,
-                           const Stringmap* apn_info,
-                           const std::string& keytag,
-                           const std::string& apntag);
   static void LoadApn(StoreInterface* storage,
                       const std::string& storage_group,
                       const std::string& keytag,
@@ -186,6 +162,15 @@ class CellularService : public Service {
                            const std::string& keytag,
                            const std::string& apntag,
                            Stringmap* apn_info);
+  static void SaveApn(StoreInterface* storage,
+                      const std::string& storage_group,
+                      const Stringmap* apn_info,
+                      const std::string& keytag);
+  static void SaveApnField(StoreInterface* storage,
+                           const std::string& storage_group,
+                           const Stringmap* apn_info,
+                           const std::string& keytag,
+                           const std::string& apntag);
   bool IsOutOfCredits(Error* /*error*/);
 
   // Properties

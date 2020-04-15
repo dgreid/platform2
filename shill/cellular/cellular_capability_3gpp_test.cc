@@ -162,7 +162,7 @@ class CellularCapability3gppTest : public testing::TestWithParam<string> {
     serving_operator[kOperatorCodeKey] = kOperatorCode;
     serving_operator[kOperatorNameKey] = kOperatorName;
     serving_operator[kOperatorCountryKey] = kOperatorCountry;
-    service->set_serving_operator(serving_operator);
+    service->SetServingOperator(serving_operator);
     cellular_->set_home_provider(serving_operator);
     cellular_->service_ = service;
   }

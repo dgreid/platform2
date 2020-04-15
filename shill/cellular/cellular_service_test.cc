@@ -104,11 +104,11 @@ TEST_F(CellularServiceTest, SetServingOperator) {
   static const char kCode[] = "123456";
   static const char kName[] = "Some Cellular Operator";
   Stringmap test_operator;
-  service_->set_serving_operator(test_operator);
+  service_->SetServingOperator(test_operator);
   test_operator[kOperatorCodeKey] = kCode;
   test_operator[kOperatorNameKey] = kName;
   EXPECT_CALL(*adaptor_, EmitStringmapChanged(kServingOperatorProperty, _));
-  service_->set_serving_operator(test_operator);
+  service_->SetServingOperator(test_operator);
   const Stringmap& serving_operator = service_->serving_operator();
   ASSERT_NE(serving_operator.end(), serving_operator.find(kOperatorCodeKey));
   ASSERT_NE(serving_operator.end(), serving_operator.find(kOperatorNameKey));
@@ -117,7 +117,7 @@ TEST_F(CellularServiceTest, SetServingOperator) {
   Mock::VerifyAndClearExpectations(adaptor_);
   EXPECT_CALL(*adaptor_, EmitStringmapChanged(kServingOperatorProperty, _))
       .Times(0);
-  service_->set_serving_operator(serving_operator);
+  service_->SetServingOperator(serving_operator);
 }
 
 TEST_F(CellularServiceTest, SetOLP) {

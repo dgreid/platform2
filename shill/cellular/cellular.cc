@@ -1596,7 +1596,7 @@ void Cellular::UpdateServingOperator(
   if (!operator_info->uuid().empty()) {
     serving_operator[kOperatorUuidKey] = operator_info->uuid();
   }
-  service()->set_serving_operator(serving_operator);
+  service()->SetServingOperator(serving_operator);
 
   // Set friendly name of service.
   string service_name;

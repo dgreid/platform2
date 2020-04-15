@@ -581,6 +581,7 @@ class Service : public base::RefCounted<Service> {
   virtual bool IsAutoConnectable(const char** reason) const;
 
   // Returns maximum auto connect cooldown time for ThrottleFutureAutoConnects.
+  // May be overridden for types that require a longer cooldown period.
   virtual uint64_t GetMaxAutoConnectCooldownTimeMilliseconds() const;
 
   // HelpRegisterDerived*: Expose a property over RPC, with the name |name|.
