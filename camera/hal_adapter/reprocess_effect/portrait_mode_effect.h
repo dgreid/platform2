@@ -53,13 +53,6 @@ class PortraitModeEffect final
   void UpdateResultMetadata(android::CameraMetadata* result_metadata,
                             const int* result);
 
-  base::Process LaunchPortraitProcessor(int input_rgb_buf_fd,
-                                        int output_rgb_buf_fd,
-                                        int result_report_fd,
-                                        uint32_t width,
-                                        uint32_t height,
-                                        uint32_t orientation);
-
   int ConvertYUVToRGB(uint32_t v4l2_format,
                       const android_ycbcr& ycbcr,
                       void* rgb_buf_addr,
@@ -75,8 +68,6 @@ class PortraitModeEffect final
                       uint32_t height);
 
   void ReturnCallback(uint32_t status, int32_t buffer_handle);
-
-  bool use_portrait_processor_binary_;
 
   uint32_t enable_vendor_tag_;
 

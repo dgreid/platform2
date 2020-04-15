@@ -36,8 +36,6 @@
 
 namespace cros {
 
-const char kPortraitProcessorBinary[] = "/usr/bin/portrait_processor_shm";
-
 // 1: enable portrait processing
 // 0: disable portrait processing; apps should not set this value
 const VendorTagInfo kRequestVendorTag[] = {
@@ -50,9 +48,7 @@ const VendorTagInfo kResultVendorTag[] = {
     {"com.google.effect.portraitModeSegmentationResult", TYPE_BYTE, {.u8 = 0}}};
 
 PortraitModeEffect::PortraitModeEffect()
-    : use_portrait_processor_binary_(access(kPortraitProcessorBinary, X_OK) ==
-                                     0),
-      enable_vendor_tag_(0),
+    : enable_vendor_tag_(0),
       result_vendor_tag_(0),
       buffer_manager_(CameraBufferManager::GetInstance()),
       gpu_algo_manager_(nullptr),
@@ -65,13 +61,11 @@ int32_t PortraitModeEffect::InitializeAndGetVendorTags(
   if (!request_vendor_tags || !result_vendor_tags) {
     return -EINVAL;
   }
-  if (!use_portrait_processor_binary_) {
-    gpu_algo_manager_ = GPUAlgoManager::GetInstance();
-    if (!gpu_algo_manager_) {
-      LOGF(WARNING) << "Neither found Portrait processor binary nor connected "
-                       "to GPU algorithm. Disable portrait mode.";
-      return 0;
-    }
+  gpu_algo_manager_ = GPUAlgoManager::GetInstance();
+  if (!gpu_algo_manager_) {
+    LOGF(WARNING)
+        << "Cannot connect to GPU algorithm service. Disable portrait mode.";
+    return 0;
   }
   *request_vendor_tags = {std::begin(kRequestVendorTag),
                           std::end(kRequestVendorTag)};
@@ -160,114 +154,56 @@ int32_t PortraitModeEffect::ReprocessRequest(
         HANDLE_EINTR(dup(input_rgb_shm.handle().GetHandle())));
     base::ScopedFD dup_output_rgb_buf_fd(
         HANDLE_EINTR(dup(output_rgb_shm.handle().GetHandle())));
-    if (use_portrait_processor_binary_) {
-      base::SharedMemory result_report_shm;
-      // The size of result report is determined by portrait processor. Allocate
-      // a minimum size here.
-      if (!result_report_shm.CreateAnonymous(1)) {
-        LOGF(ERROR) << "Failed to create shared memory for result report";
-        result = -ENOMEM;
-        return result;
-      }
-      base::ScopedFD dup_result_report_fd(
-          HANDLE_EINTR(dup(result_report_shm.handle().GetHandle())));
 
-      base::Process process = LaunchPortraitProcessor(
-          dup_input_rgb_buf_fd.get(), dup_output_rgb_buf_fd.get(),
-          dup_result_report_fd.get(), width, height, orientation);
-      if (!process.IsValid()) {
-        LOGF(ERROR) << "Failed to launch portrait processor";
-        result = -EINVAL;
-        return result;
+    class ScopedHandle {
+     public:
+      explicit ScopedHandle(GPUAlgoManager* algo, int fd)
+          : algo_(algo), handle_(-1) {
+        if (algo_ != nullptr) {
+          handle_ = algo_->RegisterBuffer(fd);
+        }
       }
-      int exit_code;
-      if (!process.WaitForExitWithTimeout(
-              base::TimeDelta::FromSeconds(kPortraitProcessorTimeoutSecs),
-              &exit_code) ||
-          exit_code != 0) {
-        PLOGF(ERROR) << "Wait for portrait processing error";
-        result = -EINVAL;
-        return 0;
+      ~ScopedHandle() {
+        if (IsValid()) {
+          std::vector<int32_t> handles({handle_});
+          algo_->DeregisterBuffers(handles);
+        }
       }
+      bool IsValid() const { return handle_ >= 0; }
+      int32_t Get() const { return handle_; }
 
+     private:
+      GPUAlgoManager* algo_;
+      int32_t handle_;
+    };
+
+    ScopedHandle input_buffer_handle(gpu_algo_manager_,
+                                     dup_input_rgb_buf_fd.get());
+    ScopedHandle output_buffer_handle(gpu_algo_manager_,
+                                      dup_output_rgb_buf_fd.get());
+    if (!input_buffer_handle.IsValid() || !output_buffer_handle.IsValid()) {
+      LOGF(ERROR) << "Failed to register buffers";
       result = -EINVAL;
-      // The size stored in the SharedMemoryHandle is not updated after
-      // ftruncate() on the underlying FD (b/149365040). Use lseek() to query
-      // the actual size.
-      const size_t size = base::checked_cast<size_t>(
-          lseek(dup_result_report_fd.get(), 0, SEEK_END));
-      if (size == 0) {
-        LOGF(ERROR) << "Failed to get report or the report is empty";
-        return -EINVAL;
-      }
-      if (!result_report_shm.Map(size)) {
-        LOGF(ERROR) << "Failed to map shared memory";
-        return -EINVAL;
-      }
-      std::string report(static_cast<char*>(result_report_shm.memory()), size);
-      VLOGF(1) << "Result report json: " << report;
-      std::unique_ptr<base::DictionaryValue> report_dict =
-          base::DictionaryValue::From(base::JSONReader::ReadDeprecated(report));
-      std::string result_value;
-      if (!report_dict) {
-        LOGF(ERROR) << "There is no value in report";
-      } else if (!report_dict->GetString("result", &result_value)) {
-        LOGF(ERROR) << "Failed to find result in report";
-      } else if (result_value == "success") {
-        result = 0;
-      }
-    } else {
-      class ScopedHandle {
-       public:
-        explicit ScopedHandle(GPUAlgoManager* algo, int fd)
-            : algo_(algo), handle_(-1) {
-          if (algo_ != nullptr) {
-            handle_ = algo_->RegisterBuffer(fd);
-          }
-        }
-        ~ScopedHandle() {
-          if (IsValid()) {
-            std::vector<int32_t> handles({handle_});
-            algo_->DeregisterBuffers(handles);
-          }
-        }
-        bool IsValid() const { return handle_ >= 0; }
-        int32_t Get() const { return handle_; }
-
-       private:
-        GPUAlgoManager* algo_;
-        int32_t handle_;
-      };
-
-      ScopedHandle input_buffer_handle(gpu_algo_manager_,
-                                       dup_input_rgb_buf_fd.get());
-      ScopedHandle output_buffer_handle(gpu_algo_manager_,
-                                        dup_output_rgb_buf_fd.get());
-      if (!input_buffer_handle.IsValid() || !output_buffer_handle.IsValid()) {
-        LOGF(ERROR) << "Failed to register buffers";
-        result = -EINVAL;
-        return result;
-      }
-      std::vector<uint8_t> req_header(sizeof(CameraGPUAlgoCmdHeader));
-      auto* header =
-          reinterpret_cast<CameraGPUAlgoCmdHeader*>(req_header.data());
-      header->command = CameraGPUAlgoCommand::PORTRAIT_MODE;
-      auto& params = header->params.portrait_mode;
-      params.input_buffer_handle = input_buffer_handle.Get();
-      params.output_buffer_handle = output_buffer_handle.Get();
-      params.width = width;
-      params.height = height;
-      params.orientation = orientation;
-      return_status_ = -ETIMEDOUT;
-      gpu_algo_manager_->Request(req_header,
-                                 -1 /* buffers are passed in the header */,
-                                 base::Bind(&PortraitModeEffect::ReturnCallback,
-                                            base::AsWeakPtr(this)));
-      base::AutoLock auto_lock(lock_);
-      condvar_.TimedWait(
-          base::TimeDelta::FromSeconds(kPortraitProcessorTimeoutSecs));
-      result = return_status_;
+      return result;
     }
+    std::vector<uint8_t> req_header(sizeof(CameraGPUAlgoCmdHeader));
+    auto* header = reinterpret_cast<CameraGPUAlgoCmdHeader*>(req_header.data());
+    header->command = CameraGPUAlgoCommand::PORTRAIT_MODE;
+    auto& params = header->params.portrait_mode;
+    params.input_buffer_handle = input_buffer_handle.Get();
+    params.output_buffer_handle = output_buffer_handle.Get();
+    params.width = width;
+    params.height = height;
+    params.orientation = orientation;
+    return_status_ = -ETIMEDOUT;
+    gpu_algo_manager_->Request(
+        req_header, -1 /* buffers are passed in the header */,
+        base::Bind(&PortraitModeEffect::ReturnCallback, base::AsWeakPtr(this)));
+    base::AutoLock auto_lock(lock_);
+    condvar_.TimedWait(
+        base::TimeDelta::FromSeconds(kPortraitProcessorTimeoutSecs));
+    result = return_status_;
+
     LOGF(INFO) << "Portrait processing finished, result: " << result;
     if (result != 0) {
       // Portrait processing finishes with non-zero result when there's no human
@@ -345,38 +281,6 @@ void PortraitModeEffect::UpdateResultMetadata(
                                                : SegmentationResult::kFailure;
   result_metadata->update(result_vendor_tag_,
                           reinterpret_cast<uint8_t*>(&segmentation_result), 1);
-}
-
-base::Process PortraitModeEffect::LaunchPortraitProcessor(
-    int input_rgb_buf_fd,
-    int output_rgb_buf_fd,
-    int result_report_fd,
-    uint32_t width,
-    uint32_t height,
-    uint32_t orientation) {
-  LOGF(INFO) << "Prepare arguments for portrait processor";
-  // Added a pair of parentheses to declare a variable so as to avoid the most
-  // vexing parse ambiguity
-  base::CommandLine cmdline((base::FilePath(kPortraitProcessorBinary)));
-  cmdline.AppendSwitchASCII("debug_images_verbosity", "1");
-  cmdline.AppendSwitchASCII("input_shmbuf_fd",
-                            std::to_string(input_rgb_buf_fd));
-  cmdline.AppendSwitchASCII("output_shmbuf_fd",
-                            std::to_string(output_rgb_buf_fd));
-  cmdline.AppendSwitchASCII("width", std::to_string(width));
-  cmdline.AppendSwitchASCII("height", std::to_string(height));
-  cmdline.AppendSwitchASCII("orientation", std::to_string(orientation));
-  cmdline.AppendSwitchASCII("result_report_fd",
-                            std::to_string(result_report_fd));
-  VLOGF(1) << cmdline.GetCommandLineString();
-  LOGF(INFO) << "Start portrait processing ...";
-  base::FileHandleMappingVector fds_to_remap;
-  fds_to_remap.emplace_back(input_rgb_buf_fd, input_rgb_buf_fd);
-  fds_to_remap.emplace_back(output_rgb_buf_fd, output_rgb_buf_fd);
-  fds_to_remap.emplace_back(result_report_fd, result_report_fd);
-  base::LaunchOptions options;
-  options.fds_to_remap = std::move(fds_to_remap);
-  return base::LaunchProcess(cmdline, options);
 }
 
 void PortraitModeEffect::ReturnCallback(uint32_t status,
