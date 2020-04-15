@@ -348,8 +348,8 @@ int Mediatek3AClient::Runner::requestSync(IPC_CMD cmd,
        mCbResult);
 
   // check callback result
-  CheckError((mCbResult != true), UNKNOWN_ERROR, "@%s, %s callback fail",
-             __FUNCTION__, Mediatek3AIpcCmdToString(cmd).c_str());
+  CheckError((mCbResult != true), UNKNOWN_ERROR, "@%s, %s(%d) callback fail",
+             __FUNCTION__, Mediatek3AIpcCmdToString(cmd).c_str(), cmd);
 
   return OK;
 }
