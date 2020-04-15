@@ -172,7 +172,9 @@ bool CrosConfigJson::ReadConfigFile(const base::FilePath& filepath) {
     return false;
   }
   std::string error_msg;
-  json_config_ = base::JSONReader::ReadAndReturnError(
+  // TODO(crbug.com/1054279): use base::JSONReader::ReadAndReturnValueWithError
+  // after uprev to r680000.
+  json_config_ = base::JSONReader::ReadAndReturnErrorDeprecated(
       json_data, base::JSON_PARSE_RFC, nullptr /* error_code_out */, &error_msg,
       nullptr /* error_line_out */, nullptr /* error_column_out */);
   if (!json_config_) {
