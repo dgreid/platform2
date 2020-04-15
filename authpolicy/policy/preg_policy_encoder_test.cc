@@ -51,8 +51,9 @@ constexpr char kExtensionPolicy4[] = "Policy4";
 // Converts a json string that contains a dict into a base::DictionaryValue.
 std::unique_ptr<base::DictionaryValue> JsonStringToDictionaryValue(
     const std::string& json_string) {
-  std::unique_ptr<base::Value> root =
-      base::JSONReader::Read(json_string, base::JSON_ALLOW_TRAILING_COMMAS);
+  // TODO(crbug.com/1054279): use base::JSONReader::Read after uprev to r680000.
+  std::unique_ptr<base::Value> root = base::JSONReader::ReadDeprecated(
+      json_string, base::JSON_ALLOW_TRAILING_COMMAS);
   return root ? base::DictionaryValue::From(std::move(root)) : nullptr;
 }
 

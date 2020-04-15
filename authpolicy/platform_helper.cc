@@ -133,7 +133,7 @@ bool ReadPipeToString(int fd, std::string* out) {
 
 base::ScopedFD ReadFileToPipe(const base::FilePath& path) {
   base::ScopedFD pipe_read_end, pipe_write_end;
-  if (!CreatePipe(&pipe_read_end, &pipe_write_end))
+  if (!authpolicy::CreatePipe(&pipe_read_end, &pipe_write_end))
     return base::ScopedFD();
 
   bool done = false;
@@ -269,7 +269,7 @@ bool PerformPipeIo(int stdin_fd,
 
 base::ScopedFD DuplicatePipe(int src_fd) {
   base::ScopedFD pipe_read_end, pipe_write_end;
-  if (!CreatePipe(&pipe_read_end, &pipe_write_end))
+  if (!authpolicy::CreatePipe(&pipe_read_end, &pipe_write_end))
     return base::ScopedFD();
 
   if (HANDLE_EINTR(
@@ -282,7 +282,7 @@ base::ScopedFD DuplicatePipe(int src_fd) {
 
 base::ScopedFD WriteStringToPipe(const std::string& str) {
   base::ScopedFD pipe_read_end, pipe_write_end;
-  if (!CreatePipe(&pipe_read_end, &pipe_write_end))
+  if (!authpolicy::CreatePipe(&pipe_read_end, &pipe_write_end))
     return base::ScopedFD();
 
   if (!base::WriteFileDescriptor(pipe_write_end.get(), str.data(),
@@ -295,7 +295,7 @@ base::ScopedFD WriteStringToPipe(const std::string& str) {
 
 base::ScopedFD WriteStringAndPipeToPipe(const std::string& str, int fd) {
   base::ScopedFD pipe_read_end, pipe_write_end;
-  if (!CreatePipe(&pipe_read_end, &pipe_write_end))
+  if (!authpolicy::CreatePipe(&pipe_read_end, &pipe_write_end))
     return base::ScopedFD();
 
   if (!base::WriteFileDescriptor(pipe_write_end.get(), str.data(),

@@ -73,8 +73,11 @@ bool DecodeConnectionType(const std::string& value,
 std::unique_ptr<base::DictionaryValue> JsonToDictionary(const std::string& json,
                                                         std::string* error) {
   DCHECK(error);
-  std::unique_ptr<base::Value> root = base::JSONReader::ReadAndReturnError(
-      json, base::JSON_ALLOW_TRAILING_COMMAS, NULL, error);
+  // TODO(crbug.com/1054279): use base::JSONReader::ReadAndReturnValueWithError
+  // after uprev to r680000.
+  std::unique_ptr<base::Value> root =
+      base::JSONReader::ReadAndReturnErrorDeprecated(
+          json, base::JSON_ALLOW_TRAILING_COMMAS, NULL, error);
   if (!root)
     return nullptr;  // |error| is set by ReadAndReturnError().
 

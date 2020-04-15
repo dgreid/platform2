@@ -16,7 +16,7 @@
 #include <base/strings/string16.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/utf_string_conversions.h>
-#include <base/sys_info.h>
+#include <base/system/sys_info.h>
 #include <components/policy/core/common/policy_load_status.h>
 #include <components/policy/core/common/registry_dict.h>
 
