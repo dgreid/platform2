@@ -31,6 +31,10 @@ using testing::StrEq;
 
 namespace shill {
 
+namespace {
+const char kImsi[] = "111222123456789";
+}
+
 MATCHER_P2(ContainsCellularProperties, key, value, "") {
   return arg.template Contains<string>(CellularService::kStorageType) &&
          arg.template Get<string>(CellularService::kStorageType) ==
@@ -50,6 +54,8 @@ class CellularServiceTest : public testing::Test {
         .Times(AnyNumber());
     device_ = new MockCellular(&modem_info_, "usb0", kAddress, 3,
                                Cellular::kTypeCdma, "", RpcIdentifier(""));
+    // CellularService expects an IMSI to always be set in the Device.
+    device_->set_imsi(kImsi);
     service_ = new CellularService(modem_info_.manager(), device_);
   }
   ~CellularServiceTest() override { adaptor_ = nullptr; }
@@ -238,7 +244,6 @@ TEST_F(CellularServiceTest, IsAutoConnectable) {
   EXPECT_CALL(*modem_info_.mock_manager(), IsTechnologyAutoConnectDisabled(_))
       .WillRepeatedly(Return(false));
 
-  device_->set_imsi("111222123456789");
   const char* reason = nullptr;
 
   // Auto-connect should be suppressed if the device is not running.
@@ -316,8 +321,6 @@ TEST_F(CellularServiceTest, IsAutoConnectable) {
 }
 
 TEST_F(CellularServiceTest, LoadResetsPPPAuthFailure) {
-  device_->set_imsi("111222123456789");
-
   NiceMock<MockStore> storage;
   EXPECT_CALL(storage, ContainsGroup(_)).WillRepeatedly(Return(true));
   EXPECT_CALL(storage, GetString(_, _, _)).WillRepeatedly(Return(true));
@@ -359,8 +362,6 @@ TEST_F(CellularServiceTest, LoadResetsPPPAuthFailure) {
 }
 
 TEST_F(CellularServiceTest, LoadFromProfileMatchingImsi) {
-  device_->set_imsi("111222123456789");
-
   NiceMock<MockStore> storage;
   string initial_storage_id = service_->GetStorageIdentifier();
   string matching_storage_id = "another-storage-id";
@@ -377,28 +378,7 @@ TEST_F(CellularServiceTest, LoadFromProfileMatchingImsi) {
   EXPECT_EQ(matching_storage_id, service_->GetStorageIdentifier());
 }
 
-TEST_F(CellularServiceTest, LoadFromProfileMatchingMeid) {
-  device_->set_meid("ABCDEF01234567");
-
-  NiceMock<MockStore> storage;
-  string initial_storage_id = service_->GetStorageIdentifier();
-  string matching_storage_id = "another-storage-id";
-  std::set<string> groups = {matching_storage_id};
-  EXPECT_CALL(storage, ContainsGroup(initial_storage_id)).Times(0);
-  EXPECT_CALL(storage, ContainsGroup(matching_storage_id))
-      .WillOnce(Return(true));
-  EXPECT_CALL(storage, GetGroupsWithProperties(ContainsCellularProperties(
-                           CellularService::kStorageMeid, device_->meid())))
-      .WillRepeatedly(Return(groups));
-  EXPECT_CALL(storage, GetString(_, _, _)).WillRepeatedly(Return(true));
-  EXPECT_TRUE(service_->IsLoadableFrom(storage));
-  EXPECT_TRUE(service_->Load(&storage));
-  EXPECT_EQ(matching_storage_id, service_->GetStorageIdentifier());
-}
-
 TEST_F(CellularServiceTest, LoadFromFirstOfMultipleMatchingProfiles) {
-  device_->set_imsi("111222123456789");
-
   NiceMock<MockStore> storage;
   string initial_storage_id = service_->GetStorageIdentifier();
   string matching_storage_id1 = "another-storage-id1";
@@ -421,11 +401,29 @@ TEST_F(CellularServiceTest, LoadFromFirstOfMultipleMatchingProfiles) {
   EXPECT_EQ(matching_storage_id1, service_->GetStorageIdentifier());
 }
 
+// The default storage_identifier_ will be {kCellular}_{kImsi}, however older
+// profile/storage entries may use a different identifier. This sets up an entry
+// with a matching IMSI but an arbitrary storage id and ensures that the older
+// storage_identifer_ value is set.
+TEST_F(CellularServiceTest, LoadFromOlderProfile) {
+  NiceMock<MockStore> storage;
+  string storage_id = "arbitrary-storage-id";
+  std::set<string> groups = {storage_id};
+
+  EXPECT_CALL(storage, GetGroupsWithProperties(ContainsCellularProperties(
+                           CellularService::kStorageImsi, kImsi)))
+      .WillRepeatedly(Return(groups));
+  EXPECT_CALL(storage, ContainsGroup(storage_id)).WillRepeatedly(Return(true));
+
+  EXPECT_TRUE(service_->IsLoadableFrom(storage));
+  EXPECT_TRUE(service_->Load(&storage));
+  EXPECT_EQ(storage_id, service_->GetStorageIdentifier());
+}
+
 TEST_F(CellularServiceTest, Save) {
   NiceMock<MockStore> storage;
   device_->set_sim_identifier("9876543210123456789");
   device_->set_imei("012345678901234");
-  device_->set_imsi("111222123456789");
   device_->set_meid("ABCDEF01234567");
   EXPECT_CALL(storage, SetString(_, _, _)).WillRepeatedly(Return(true));
   EXPECT_CALL(storage, SetString(service_->GetStorageIdentifier(),

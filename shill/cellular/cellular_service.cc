@@ -96,21 +96,7 @@ CellularService::CellularService(Manager* manager, const CellularRefPtr& device)
 
   set_friendly_name(cellular_->CreateDefaultFriendlyServiceName());
 
-  string service_id;
-  if (!device->home_provider_info()->uuid().empty()) {
-    service_id = device->home_provider_info()->uuid();
-  } else if (!device->serving_operator_info()->uuid().empty()) {
-    service_id = device->serving_operator_info()->uuid();
-  } else if (!device->sim_identifier().empty()) {
-    service_id = device->sim_identifier();
-  } else if (!device->meid().empty()) {
-    service_id = device->meid();
-  } else {
-    service_id = friendly_name();
-  }
-  storage_identifier_ = SanitizeStorageIdentifier(base::StringPrintf(
-      "%s_%s_%s", kTypeCellular, device->GetEquipmentIdentifier().c_str(),
-      service_id.c_str()));
+  storage_identifier_ = GetDefaultStorageIdentifier();
 }
 
 CellularService::~CellularService() {}
@@ -131,31 +117,19 @@ string CellularService::GetStorageIdentifier() const {
 
 string CellularService::GetLoadableStorageIdentifier(
     const StoreInterface& storage) const {
-  // We try the following service related identifiers in order:
-  // - IMSI
-  // - MEID
-  //
-  // TODO(benchan): IMSI / MEID is associated with the subscriber but not
-  // necessarily with the currently registered network. In case of roaming and
-  // MVNO, we may need to consider the home provider or serving operator UUID,
-  // which requires further investigations.
-  set<string> groups;
-  if (!cellular_->imsi().empty()) {
-    groups =
-        GetStorageGroupsWithProperty(storage, kStorageImsi, cellular_->imsi());
-  }
-
-  if (groups.empty() && !cellular_->meid().empty()) {
-    groups =
-        GetStorageGroupsWithProperty(storage, kStorageMeid, cellular_->meid());
-  }
-
+  set<string> groups = storage.GetGroupsWithProperties(GetStorageProperties());
   if (groups.empty()) {
     LOG(WARNING) << "Configuration for service " << log_name()
                  << " is not available in the persistent store";
     return std::string();
   }
   if (groups.size() > 1) {
+    // This could happen when different properties were used to identify a
+    // Cellular service. Look for an entry with a matching identifier,
+    // otherwise use the first matchng entry.
+    auto iter = std::find(groups.begin(), groups.end(), storage_identifier_);
+    if (iter != groups.end())
+      return *iter;
     LOG(WARNING) << "More than one configuration for service " << log_name()
                  << " is available; choosing the first.";
   }
@@ -167,12 +141,6 @@ bool CellularService::IsLoadableFrom(const StoreInterface& storage) const {
 }
 
 bool CellularService::Load(StoreInterface* storage) {
-  // The initial storage identifier contains the MAC address of the cellular
-  // device. However, the MAC address of a cellular device may not be constant
-  // (e.g. the kernel driver may pick a random MAC address for a modem when the
-  // driver can't obtain that information from the modem). As a remedy, we
-  // first try to locate a profile with other service related properties (IMSI,
-  // MEID, etc).
   string id = GetLoadableStorageIdentifier(*storage);
   if (id.empty()) {
     LOG(WARNING) << "No service with matching properties found";
@@ -181,12 +149,22 @@ bool CellularService::Load(StoreInterface* storage) {
 
   SLOG(this, 2) << __func__
                 << ": Service with matching properties found: " << id;
-  // Set our storage identifier to match the storage name in the Profile.
+
+  std::string default_storage_identifier = storage_identifier_;
+
+  // Set |storage identifier_| to match the storage name in the Profile.
+  // This needs to be done before calling Service::Load().
+  // NOTE: Older profiles used other identifiers instead of IMSI. This is fine
+  // since entries are identified by their properties, not the id.
   storage_identifier_ = id;
 
   // Load properties common to all Services.
-  if (!Service::Load(storage))
+  if (!Service::Load(storage)) {
+    // Restore the default storage id. The invalid profile entry will become
+    // ignored.
+    storage_identifier_ = default_storage_identifier;
     return false;
+  }
 
   LoadApn(storage, id, kStorageAPN, &apn_info_);
   LoadApn(storage, id, kStorageLastGoodAPN, &last_good_apn_info_);
@@ -506,6 +484,22 @@ void CellularService::SaveApnField(StoreInterface* storage,
     storage->SetString(storage_group, key, str);
   else
     storage->DeleteKey(storage_group, key);
+}
+
+KeyValueStore CellularService::GetStorageProperties() const {
+  KeyValueStore properties;
+  properties.Set<string>(kStorageType, kTypeCellular);
+  properties.Set<string>(kStorageImsi, cellular_->imsi());
+  return properties;
+}
+
+std::string CellularService::GetDefaultStorageIdentifier() const {
+  if (cellular_->imsi().empty()) {
+    LOG(ERROR) << "CellularService created with empty IMSI";
+    return std::string();
+  }
+  return SanitizeStorageIdentifier(
+      base::StringPrintf("%s_%s", kTypeCellular, cellular_->imsi().c_str()));
 }
 
 bool CellularService::IsOutOfCredits(Error* /*error*/) {

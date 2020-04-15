@@ -114,7 +114,7 @@ class CellularService : public Service {
   FRIEND_TEST(CellularServiceTest, LastGoodApn);
   FRIEND_TEST(CellularServiceTest, LoadFromFirstOfMultipleMatchingProfiles);
   FRIEND_TEST(CellularServiceTest, LoadFromProfileMatchingImsi);
-  FRIEND_TEST(CellularServiceTest, LoadFromProfileMatchingMeid);
+  FRIEND_TEST(CellularServiceTest, LoadFromOlderProfile);
   FRIEND_TEST(CellularServiceTest, LoadResetsPPPAuthFailure);
   FRIEND_TEST(CellularServiceTest, Save);
   FRIEND_TEST(CellularServiceTest, IsAutoConnectable);
@@ -130,6 +130,9 @@ class CellularService : public Service {
   static const char kStorageMeid[];
   static const char kStoragePPPUsername[];
   static const char kStoragePPPPassword[];
+
+  KeyValueStore GetStorageProperties() const;
+  std::string GetDefaultStorageIdentifier() const;
 
   void HelpRegisterDerivedString(
       const std::string& name,
@@ -186,6 +189,8 @@ class CellularService : public Service {
   std::string ppp_username_;
   std::string ppp_password_;
 
+  // The storage identifier defaults to cellular_{imsi}, however for older
+  // profiles it may use a different identifier which is set in Load().
   std::string storage_identifier_;
 
   CellularRefPtr cellular_;

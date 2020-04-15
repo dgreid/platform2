@@ -971,77 +971,10 @@ TEST_P(CellularTest, HomeProviderServingOperator) {
 }
 
 TEST_P(CellularTest, StorageIdentifier) {
-  // Test that the storage identifier name used by the service is sensible under
-  // different scenarios w.r.t. information about the mobile network operator.
-  SetMockMobileOperatorInfoObjects();
-  CHECK(mock_home_provider_info_);
-  CHECK(mock_serving_operator_info_);
-
-  // See cellular_service.cc
-  string prefix = Service::SanitizeStorageIdentifier(
-      string(kTypeCellular) + "_" + string(kTestDeviceAddress) + "_");
-  const string kUuidHomeProvider = "uuidHomeProvider";
-  const string kUuidServingOperator = "uuidServingOperator";
-  const string kSimIdentifier = "12345123451234512345";
-
-  ON_CALL(*mock_home_provider_info_, IsMobileNetworkOperatorKnown())
-      .WillByDefault(Return(false));
-
-  // (1) Service created, both home provider and serving operator known =>
-  // home provider used.
-  EXPECT_CALL(*mock_home_provider_info_, IsMobileNetworkOperatorKnown())
-      .WillRepeatedly(Return(true));
-  EXPECT_CALL(*mock_home_provider_info_, uuid())
-      .WillRepeatedly(ReturnRef(kUuidHomeProvider));
-  EXPECT_CALL(*mock_serving_operator_info_, IsMobileNetworkOperatorKnown())
-      .WillRepeatedly(Return(true));
-  EXPECT_CALL(*mock_serving_operator_info_, uuid())
-      .WillRepeatedly(ReturnRef(kUuidServingOperator));
+  // The default storage identifier should always be cellular_{imsi}
+  device_->set_imsi("test_imsi");
   device_->CreateService();
-  EXPECT_EQ(prefix + kUuidHomeProvider,
-            device_->service()->GetStorageIdentifier());
-  Mock::VerifyAndClearExpectations(mock_home_provider_info_);
-  Mock::VerifyAndClearExpectations(mock_serving_operator_info_);
-  device_->DestroyService();
-
-  PopulateProxies();
-
-  // Common expectation for following tests:
-  EXPECT_CALL(*mock_home_provider_info_, IsMobileNetworkOperatorKnown())
-      .WillRepeatedly(Return(false));
-
-  // (2) Service created, no extra information => Default storage_id;
-  EXPECT_CALL(*mock_serving_operator_info_, IsMobileNetworkOperatorKnown())
-      .WillRepeatedly(Return(false));
-  device_->CreateService();
-  EXPECT_EQ(prefix + device_->service()->friendly_name(),
-            device_->service()->GetStorageIdentifier());
-  Mock::VerifyAndClearExpectations(mock_serving_operator_info_);
-  device_->DestroyService();
-
-  PopulateProxies();
-
-  // (3) Service created, serving operator known, uuid known.
-  EXPECT_CALL(*mock_serving_operator_info_, IsMobileNetworkOperatorKnown())
-      .WillRepeatedly(Return(true));
-  EXPECT_CALL(*mock_serving_operator_info_, uuid())
-      .WillRepeatedly(ReturnRef(kUuidServingOperator));
-  device_->CreateService();
-  EXPECT_EQ(prefix + kUuidServingOperator,
-            device_->service()->GetStorageIdentifier());
-  Mock::VerifyAndClearExpectations(mock_serving_operator_info_);
-  device_->DestroyService();
-
-  PopulateProxies();
-
-  // (4) Service created, serving operator known, uuid not known, iccid known.
-  EXPECT_CALL(*mock_serving_operator_info_, IsMobileNetworkOperatorKnown())
-      .WillRepeatedly(Return(true));
-  device_->set_sim_identifier(kSimIdentifier);
-  device_->CreateService();
-  EXPECT_EQ(prefix + kSimIdentifier,
-            device_->service()->GetStorageIdentifier());
-  Mock::VerifyAndClearExpectations(mock_serving_operator_info_);
+  EXPECT_EQ("cellular_test_imsi", device_->service()->GetStorageIdentifier());
   device_->DestroyService();
 }
 
