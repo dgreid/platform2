@@ -53,17 +53,17 @@ void SmbFsBootstrapImpl::Start(BootstrapCompleteCallback callback) {
 
 void SmbFsBootstrapImpl::MountShare(mojom::MountOptionsPtr options,
                                     mojom::SmbFsDelegatePtr smbfs_delegate,
-                                    const MountShareCallback& callback) {
+                                    MountShareCallback callback) {
   if (!completion_callback_) {
     LOG(ERROR) << "Mojo bootstrap not active";
-    callback.Run(mojom::MountError::kUnknown, nullptr);
+    std::move(callback).Run(mojom::MountError::kUnknown, nullptr);
     return;
   }
 
   if (options->share_path.find("smb://") != 0) {
     // TODO(amistry): More extensive URL validation.
     LOG(ERROR) << "Invalid share path: " << options->share_path;
-    callback.Run(mojom::MountError::kInvalidUrl, nullptr);
+    std::move(callback).Run(mojom::MountError::kInvalidUrl, nullptr);
     return;
   }
 
@@ -74,7 +74,7 @@ void SmbFsBootstrapImpl::MountShare(mojom::MountOptionsPtr options,
         std::move(options->kerberos_config),
         base::BindOnce(&SmbFsBootstrapImpl::OnCredentialsSetup,
                        base::Unretained(this), std::move(options),
-                       std::move(smbfs_delegate), callback,
+                       std::move(smbfs_delegate), std::move(callback),
                        std::move(credential), true /* use_kerberos */));
     return;
   }
@@ -83,20 +83,20 @@ void SmbFsBootstrapImpl::MountShare(mojom::MountOptionsPtr options,
     credential->password = std::move(options->password.value());
   }
 
-  OnCredentialsSetup(std::move(options), std::move(smbfs_delegate), callback,
-                     std::move(credential), false /* use_kerberos */,
-                     true /* setup_success */);
+  OnCredentialsSetup(std::move(options), std::move(smbfs_delegate),
+                     std::move(callback), std::move(credential),
+                     false /* use_kerberos */, true /* setup_success */);
 }
 
 void SmbFsBootstrapImpl::OnCredentialsSetup(
     mojom::MountOptionsPtr options,
     mojom::SmbFsDelegatePtr smbfs_delegate,
-    const MountShareCallback& callback,
+    MountShareCallback callback,
     std::unique_ptr<SmbCredential> credential,
     bool use_kerberos,
     bool setup_success) {
   if (!setup_success) {
-    callback.Run(mojom::MountError::kUnknown, nullptr);
+    std::move(callback).Run(mojom::MountError::kUnknown, nullptr);
     return;
   }
 
@@ -111,7 +111,7 @@ void SmbFsBootstrapImpl::OnCredentialsSetup(
     if (options->resolved_host->address_bytes.size() != 4) {
       LOG(ERROR) << "Invalid IP address size: "
                  << options->resolved_host->address_bytes.size();
-      callback.Run(mojom::MountError::kInvalidOptions, nullptr);
+      std::move(callback).Run(mojom::MountError::kInvalidOptions, nullptr);
       return;
     }
     fs->SetResolvedAddress(options->resolved_host->address_bytes);
@@ -121,7 +121,7 @@ void SmbFsBootstrapImpl::OnCredentialsSetup(
     if (error != SmbFilesystem::ConnectError::kOk) {
       LOG(ERROR) << "Unable to connect to SMB share " << options->share_path
                  << ": " << error;
-      callback.Run(ConnectErrorToMountError(error), nullptr);
+      std::move(callback).Run(ConnectErrorToMountError(error), nullptr);
       return;
     }
   }
@@ -131,7 +131,7 @@ void SmbFsBootstrapImpl::OnCredentialsSetup(
       .Run(std::move(fs), mojo::MakeRequest(&smbfs_ptr),
            std::move(smbfs_delegate));
 
-  callback.Run(mojom::MountError::kOk, std::move(smbfs_ptr));
+  std::move(callback).Run(mojom::MountError::kOk, std::move(smbfs_ptr));
 }
 
 void SmbFsBootstrapImpl::OnMojoConnectionError() {

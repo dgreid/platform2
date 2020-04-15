@@ -58,13 +58,13 @@ class SmbFsBootstrapImpl : public mojom::SmbFsBootstrap {
   // mojom::SmbFsBootstrap overrides.
   void MountShare(mojom::MountOptionsPtr options,
                   mojom::SmbFsDelegatePtr smbfs_delegate,
-                  const MountShareCallback& callback) override;
+                  MountShareCallback callback) override;
 
   // Callback to continue MountShare after setting up credentials
   // (username/password, or kerberos).
   void OnCredentialsSetup(mojom::MountOptionsPtr options,
                           mojom::SmbFsDelegatePtr smbfs_delegate,
-                          const MountShareCallback& callback,
+                          MountShareCallback callback,
                           std::unique_ptr<SmbCredential> credential,
                           bool use_kerberos,
                           bool setup_success);

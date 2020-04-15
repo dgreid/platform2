@@ -74,7 +74,7 @@ class MockSmbFsDelegate : public mojom::SmbFsDelegate {
 
   MOCK_METHOD(void,
               RequestCredentials,
-              (const RequestCredentialsCallback&),
+              (RequestCredentialsCallback),
               (override));
 
  private:
