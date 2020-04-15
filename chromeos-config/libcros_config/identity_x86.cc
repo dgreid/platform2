@@ -53,14 +53,14 @@ bool CrosConfigIdentityX86::ReadInfo(const base::FilePath& product_name_file,
   std::string raw_name;
   if (!base::ReadFileToString(product_name_file, &raw_name)) {
     CROS_CONFIG_LOG(WARNING) << "Cannot read product_name file ";
-    return false;
+    raw_name = "";
   }
   base::TrimWhitespaceASCII(raw_name, base::TRIM_TRAILING, &name_);
 
   std::string sku_str;
   if (!base::ReadFileToString(product_sku_file, &sku_str)) {
     CROS_CONFIG_LOG(WARNING) << "Cannot read product_sku file ";
-    return false;
+    sku_str = "";
   }
   if (std::sscanf(sku_str.c_str(), "sku%d", &sku_id_) != 1) {
     CROS_CONFIG_LOG(WARNING) << "Invalid SKU string: " << sku_str;
