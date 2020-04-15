@@ -113,10 +113,6 @@ class Attestation : public base::PlatformThread::Delegate,
   // and given Privacy CA.
   virtual bool HasIdentityCertificate(int identity, PCAType pca_type);
 
-  // Creates a new identity and returns its index, or -1 if it could not be
-  // created.
-  virtual int CreateIdentity(int identity_features);
-
   // Returns the count of identities in the attestation database.
   virtual int GetIdentitiesCount() const;
   // Returns the identity features of |identity|.

@@ -646,21 +646,6 @@ void Attestation::PrepareForEnrollment() {
                              AttestationOpsStatus::kSuccess);
 }
 
-int Attestation::CreateIdentity(int identity_features) {
-  if (!IsPreparedForEnrollment()) {
-    return -1;
-  }
-  SecureBlob ek_public_key;
-  if (GetTpmEndorsementPublicKey(&ek_public_key) != Tpm::kTpmRetryNone) {
-    return -1;
-  }
-
-  int new_index;
-  AttestationResult result =
-      CreateIdentity(identity_features, ek_public_key, &new_index);
-  return result == AttestationResult::kSuccess ? new_index : -1;
-}
-
 AttestationResult Attestation::CreateIdentity(
     int identity_features, const SecureBlob& ek_public_key, int* new_index) {
   // The identity we're creating will have the next index in identities.
