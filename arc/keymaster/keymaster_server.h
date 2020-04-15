@@ -28,42 +28,42 @@ class KeymasterServer : public arc::mojom::KeymasterServer {
   void SetSystemVersion(uint32_t osVersion, uint32_t osPatchLevel) override;
 
   void AddRngEntropy(const std::vector<uint8_t>& data,
-                     const AddRngEntropyCallback& callback) override;
+                     AddRngEntropyCallback callback) override;
 
   void GetKeyCharacteristics(
       ::arc::mojom::GetKeyCharacteristicsRequestPtr request,
-      const GetKeyCharacteristicsCallback& callback) override;
+      GetKeyCharacteristicsCallback callback) override;
 
   void GenerateKey(std::vector<mojom::KeyParameterPtr> key_params,
-                   const GenerateKeyCallback& callback) override;
+                   GenerateKeyCallback callback) override;
 
   void ImportKey(arc::mojom::ImportKeyRequestPtr request,
-                 const ImportKeyCallback& callback) override;
+                 ImportKeyCallback callback) override;
 
   void ExportKey(arc::mojom::ExportKeyRequestPtr request,
-                 const ExportKeyCallback& callback) override;
+                 ExportKeyCallback callback) override;
 
   void AttestKey(arc::mojom::AttestKeyRequestPtr request,
-                 const AttestKeyCallback& callback) override;
+                 AttestKeyCallback callback) override;
 
   void UpgradeKey(arc::mojom::UpgradeKeyRequestPtr request,
-                  const UpgradeKeyCallback& callback) override;
+                  UpgradeKeyCallback callback) override;
 
   void DeleteKey(const std::vector<uint8_t>& key_blob,
-                 const DeleteKeyCallback& callback) override;
+                 DeleteKeyCallback callback) override;
 
-  void DeleteAllKeys(const DeleteKeyCallback& callback) override;
+  void DeleteAllKeys(DeleteKeyCallback callback) override;
 
   void Begin(arc::mojom::BeginRequestPtr request,
-             const BeginCallback& callback) override;
+             BeginCallback callback) override;
 
   void Update(arc::mojom::UpdateRequestPtr request,
-              const UpdateCallback& callback) override;
+              UpdateCallback callback) override;
 
   void Finish(arc::mojom::FinishRequestPtr request,
-              const FinishCallback& callback) override;
+              FinishCallback callback) override;
 
-  void Abort(uint64_t operationHandle, const AbortCallback& callback) override;
+  void Abort(uint64_t operationHandle, AbortCallback callback) override;
 
  private:
   // Owned by |keymaster_|.

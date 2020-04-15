@@ -20,8 +20,7 @@ class CertStoreInstance : public mojom::CertStoreInstance {
   ~CertStoreInstance() override = default;
 
   // mojom::CertStoreInstance overrides.
-  void Init(mojom::CertStoreHostPtr host_ptr,
-            const InitCallback& callback) override;
+  void Init(mojom::CertStoreHostPtr host_ptr, InitCallback callback) override;
 
  private:
   // arc::mojom::CertStoreHost access methods.

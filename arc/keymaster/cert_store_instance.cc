@@ -13,10 +13,10 @@ namespace arc {
 namespace keymaster {
 
 void CertStoreInstance::Init(mojom::CertStoreHostPtr host_ptr,
-                             const InitCallback& callback) {
+                             InitCallback callback) {
   LOG(INFO) << "CertStoreInstance::Init";
   host_ptr_ = std::move(host_ptr);
-  callback.Run();
+  std::move(callback).Run();
 
   RequestSecurityTokenOperation();
 }

@@ -27,7 +27,7 @@ void KeymasterServer::SetSystemVersion(uint32_t os_version,
 }
 
 void KeymasterServer::AddRngEntropy(const std::vector<uint8_t>& data,
-                                    const AddRngEntropyCallback& callback) {
+                                    AddRngEntropyCallback callback) {
   // Prepare keymaster request.
   ::keymaster::AddEntropyRequest km_request;
   ConvertToMessage(data, &km_request.random_data);
@@ -42,7 +42,7 @@ void KeymasterServer::AddRngEntropy(const std::vector<uint8_t>& data,
 
 void KeymasterServer::GetKeyCharacteristics(
     ::arc::mojom::GetKeyCharacteristicsRequestPtr request,
-    const GetKeyCharacteristicsCallback& callback) {
+    GetKeyCharacteristicsCallback callback) {
   // Prepare keymaster request.
   auto km_request = MakeGetKeyCharacteristicsRequest(request);
 
@@ -59,7 +59,7 @@ void KeymasterServer::GetKeyCharacteristics(
 
 void KeymasterServer::GenerateKey(
     std::vector<mojom::KeyParameterPtr> key_params,
-    const GenerateKeyCallback& callback) {
+    GenerateKeyCallback callback) {
   // Prepare keymaster request.
   auto km_request = MakeGenerateKeyRequest(key_params);
 
@@ -75,7 +75,7 @@ void KeymasterServer::GenerateKey(
 }
 
 void KeymasterServer::ImportKey(arc::mojom::ImportKeyRequestPtr request,
-                                const ImportKeyCallback& callback) {
+                                ImportKeyCallback callback) {
   // Prepare keymaster request.
   auto km_request = MakeImportKeyRequest(request);
 
@@ -91,7 +91,7 @@ void KeymasterServer::ImportKey(arc::mojom::ImportKeyRequestPtr request,
 }
 
 void KeymasterServer::ExportKey(arc::mojom::ExportKeyRequestPtr request,
-                                const ExportKeyCallback& callback) {
+                                ExportKeyCallback callback) {
   // Prepare keymaster request.
   auto km_request = MakeExportKeyRequest(request);
 
@@ -107,7 +107,7 @@ void KeymasterServer::ExportKey(arc::mojom::ExportKeyRequestPtr request,
 }
 
 void KeymasterServer::AttestKey(arc::mojom::AttestKeyRequestPtr request,
-                                const AttestKeyCallback& callback) {
+                                AttestKeyCallback callback) {
   // Prepare keymaster request.
   auto km_request = MakeAttestKeyRequest(request);
 
@@ -123,7 +123,7 @@ void KeymasterServer::AttestKey(arc::mojom::AttestKeyRequestPtr request,
 }
 
 void KeymasterServer::UpgradeKey(arc::mojom::UpgradeKeyRequestPtr request,
-                                 const UpgradeKeyCallback& callback) {
+                                 UpgradeKeyCallback callback) {
   // Prepare keymaster request.
   auto km_request = MakeUpgradeKeyRequest(request);
 
@@ -139,7 +139,7 @@ void KeymasterServer::UpgradeKey(arc::mojom::UpgradeKeyRequestPtr request,
 }
 
 void KeymasterServer::DeleteKey(const std::vector<uint8_t>& key_blob,
-                                const DeleteKeyCallback& callback) {
+                                DeleteKeyCallback callback) {
   // Prepare keymaster request.
   ::keymaster::DeleteKeyRequest km_request;
   km_request.SetKeyMaterial(key_blob.data(), key_blob.size());
@@ -152,7 +152,7 @@ void KeymasterServer::DeleteKey(const std::vector<uint8_t>& key_blob,
   std::move(callback).Run(km_response.error);
 }
 
-void KeymasterServer::DeleteAllKeys(const DeleteAllKeysCallback& callback) {
+void KeymasterServer::DeleteAllKeys(DeleteAllKeysCallback callback) {
   // Call keymaster (nothing to prepare on DeleteAllKeys).
   ::keymaster::DeleteAllKeysRequest km_request;
   ::keymaster::DeleteAllKeysResponse km_response;
@@ -163,7 +163,7 @@ void KeymasterServer::DeleteAllKeys(const DeleteAllKeysCallback& callback) {
 }
 
 void KeymasterServer::Begin(arc::mojom::BeginRequestPtr request,
-                            const BeginCallback& callback) {
+                            BeginCallback callback) {
   // Prepare keymaster request.
   auto km_request = MakeBeginOperationRequest(request);
 
@@ -179,7 +179,7 @@ void KeymasterServer::Begin(arc::mojom::BeginRequestPtr request,
 }
 
 void KeymasterServer::Update(arc::mojom::UpdateRequestPtr request,
-                             const UpdateCallback& callback) {
+                             UpdateCallback callback) {
   // Prepare keymaster request.
   auto km_request = MakeUpdateOperationRequest(request);
 
@@ -195,7 +195,7 @@ void KeymasterServer::Update(arc::mojom::UpdateRequestPtr request,
 }
 
 void KeymasterServer::Finish(arc::mojom::FinishRequestPtr request,
-                             const FinishCallback& callback) {
+                             FinishCallback callback) {
   // Prepare keymaster request.
   auto km_request = MakeFinishOperationRequest(request);
 
@@ -210,7 +210,7 @@ void KeymasterServer::Finish(arc::mojom::FinishRequestPtr request,
   std::move(callback).Run(std::move(response));
 }
 
-void KeymasterServer::Abort(uint64_t op_handle, const AbortCallback& callback) {
+void KeymasterServer::Abort(uint64_t op_handle, AbortCallback callback) {
   // Prepare keymaster request.
   ::keymaster::AbortOperationRequest km_request;
   km_request.op_handle = op_handle;
