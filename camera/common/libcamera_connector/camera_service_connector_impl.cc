@@ -31,31 +31,46 @@ CameraServiceConnector* CameraServiceConnector::GetInstance() {
   return instance.get();
 }
 
-void CameraServiceConnector::Init(IntOnceCallback init_callback) {
+int CameraServiceConnector::Init() {
   VLOGF_ENTER();
   DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
+
+  if (initialized_.IsSet()) {
+    LOGF(ERROR) << "Should not run init() more than once";
+    return -EPERM;
+  }
 
   mojo::core::Init();
   bool ret = ipc_thread_.StartWithOptions(
       base::Thread::Options(base::MessageLoop::TYPE_IO, 0));
   if (!ret) {
     LOGF(ERROR) << "Failed to start IPC thread";
-    std::move(init_callback).Run(-ENODEV);
-    return;
+    return -ENODEV;
   }
   ipc_support_ = std::make_unique<mojo::core::ScopedIPCSupport>(
       ipc_thread_.task_runner(),
       mojo::core::ScopedIPCSupport::ShutdownPolicy::CLEAN);
 
+  auto future = cros::Future<int>::Create(nullptr);
   ipc_thread_.task_runner()->PostTask(
       FROM_HERE,
       base::BindOnce(&CameraServiceConnector::InitOnThread,
-                     base::Unretained(this), std::move(init_callback)));
+                     base::Unretained(this), GetFutureCallback(future)));
+  int result = future->Get();
+  if (result == 0) {
+    initialized_.Set();
+  }
+  return result;
 }
 
 void CameraServiceConnector::Exit() {
   VLOGF_ENTER();
   DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
+
+  if (!initialized_.IsSet()) {
+    LOGF(ERROR) << "Should run init() before other functions";
+    return;
+  }
 
   camera_client_->Exit();
 
@@ -65,6 +80,11 @@ void CameraServiceConnector::Exit() {
 
 int CameraServiceConnector::GetCameraInfo(cros_cam_get_cam_info_cb_t callback,
                                           void* context) {
+  if (!initialized_.IsSet()) {
+    LOGF(ERROR) << "Should run init() before other functions";
+    return -EPERM;
+  }
+
   return camera_client_->SetCameraInfoCallback(callback, context);
 }
 
@@ -72,11 +92,21 @@ int CameraServiceConnector::StartCapture(cros_cam_device_t id,
                                          const cros_cam_format_info_t* format,
                                          cros_cam_capture_cb_t callback,
                                          void* context) {
+  if (!initialized_.IsSet()) {
+    LOGF(ERROR) << "Should run init() before other functions";
+    return -EPERM;
+  }
+
   LOGF(INFO) << "StartCapture";
   return camera_client_->StartCapture(id, format, callback, context);
 }
 
 void CameraServiceConnector::StopCapture(cros_cam_device_t id) {
+  if (!initialized_.IsSet()) {
+    LOGF(ERROR) << "Should run init() before other functions";
+    return;
+  }
+
   camera_client_->StopCapture(id);
 }
 

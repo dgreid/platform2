@@ -8,13 +8,10 @@
 
 #include "common/libcamera_connector/camera_service_connector_impl.h"
 #include "cros-camera/camera_service_connector.h"
-#include "cros-camera/future.h"
 
 int cros_cam_init() {
   auto* connector = cros::CameraServiceConnector::GetInstance();
-  auto future = cros::Future<int>::Create(nullptr);
-  connector->Init(cros::GetFutureCallback(future));
-  return future->Get();
+  return connector->Init();
 }
 
 void cros_cam_exit() {

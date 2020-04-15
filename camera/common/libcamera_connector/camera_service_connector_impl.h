@@ -11,6 +11,7 @@
 
 #include <base/bind.h>
 #include <base/sequence_checker.h>
+#include <base/synchronization/atomic_flag.h>
 #include <base/threading/thread.h>
 #include <base/time/time.h>
 #include <mojo/public/cpp/bindings/binding.h>
@@ -29,7 +30,7 @@ class CameraServiceConnector {
 
   // Initializes the connection to camera HAL dispatcher and registers the
   // camera HAL client. Must be called before any other functions.
-  void Init(IntOnceCallback init_callback);
+  int Init();
 
   // Terminates camera HAL client, all connections and threads.
   void Exit();
@@ -66,6 +67,8 @@ class CameraServiceConnector {
   std::unique_ptr<mojo::core::ScopedIPCSupport> ipc_support_;
   mojom::CameraHalDispatcherPtr dispatcher_;
   std::unique_ptr<CameraClient> camera_client_;
+
+  base::AtomicFlag initialized_;
 
   SEQUENCE_CHECKER(sequence_checker_);
 };
