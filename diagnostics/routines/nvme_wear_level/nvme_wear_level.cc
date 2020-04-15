@@ -83,8 +83,15 @@ void NvmeWearLevelRoutine::PopulateStatusUpdate(
   response->routine_update_union->set_noninteractive_update(update.Clone());
   response->progress_percent = percent_;
 
-  if (include_output)
-    response->output = CreateReadOnlySharedMemoryMojoHandle(output_);
+  if (include_output) {
+    // If routine status is not at completed/cancelled then prints the debugd
+    // raw data with output.
+    if (status_ != mojo_ipc::DiagnosticRoutineStatusEnum::kPassed &&
+        status_ != mojo_ipc::DiagnosticRoutineStatusEnum::kCancelled) {
+      response->output =
+          CreateReadOnlySharedMemoryMojoHandle("Raw debugd data: " + output_);
+    }
+  }
 }
 
 mojo_ipc::DiagnosticRoutineStatusEnum NvmeWearLevelRoutine::GetStatus() {
