@@ -93,8 +93,12 @@ bool Config::ParseJsonFile(const base::FilePath& config_json) {
   }
 
   std::string error_msg;
-  std::unique_ptr<base::Value> value = base::JSONReader::ReadAndReturnError(
-      json_str, base::JSON_PARSE_RFC, nullptr /* error_code_out */, &error_msg);
+  // TODO(crbug.com/1054279): use base::JSONReader::ReadAndReturnValueWithError
+  // after uprev to r680000.
+  std::unique_ptr<base::Value> value =
+      base::JSONReader::ReadAndReturnErrorDeprecated(
+          json_str, base::JSON_PARSE_RFC, nullptr /* error_code_out */,
+          &error_msg);
   if (!value) {
     LOG(ERROR) << "Failed to parse json: " << error_msg;
     return false;

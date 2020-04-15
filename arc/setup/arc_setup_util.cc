@@ -790,8 +790,10 @@ bool GetOciContainerState(const base::FilePath& path,
     return false;
   }
   std::string error_msg;
+  // TODO(crbug.com/1054279): use base::JSONReader::ReadAndReturnValueWithError
+  // after uprev to r680000.
   std::unique_ptr<base::Value> container_state_value =
-      base::JSONReader::ReadAndReturnError(
+      base::JSONReader::ReadAndReturnErrorDeprecated(
           json_str, base::JSON_PARSE_RFC, nullptr /* error_code_out */,
           &error_msg, nullptr /* error_line_out */,
           nullptr /* error_column_out */);
