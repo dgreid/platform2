@@ -13,7 +13,9 @@
 
 namespace diagnostics {
 
-std::vector<chromeos::cros_healthd::mojom::NonRemovableBlockDeviceInfoPtr>
+// Returns a structure with either the device's non-removeable block device info
+// or the error that occurred fetching the information.
+chromeos::cros_healthd::mojom::NonRemovableBlockDeviceResultPtr
 FetchNonRemovableBlockDevicesInfo(const base::FilePath& root_dir);
 
 }  // namespace diagnostics

@@ -93,11 +93,15 @@ void DisplayBatteryInfo(
 }
 
 void DisplayBlockDeviceInfo(
-    const std::vector<
-        chromeos::cros_healthd::mojom::NonRemovableBlockDeviceInfoPtr>&
-        block_devices) {
-  printf("path,size,type,manfid,name,serial\n");
+    const chromeos::cros_healthd::mojom::NonRemovableBlockDeviceResultPtr&
+        block_device_result) {
+  if (block_device_result->is_error()) {
+    DisplayError(block_device_result->get_error());
+    return;
+  }
 
+  const auto& block_devices = block_device_result->get_block_device_info();
+  printf("path,size,type,manfid,name,serial\n");
   for (const auto& device : block_devices) {
     printf("%s,%ld,%s,0x%x,%s,0x%x\n", device->path.c_str(), device->size,
            device->type.c_str(), static_cast<int>(device->manufacturer_id),
@@ -205,9 +209,9 @@ void DisplayTelemetryInfo(
   if (!battery.is_null())
     DisplayBatteryInfo(battery);
 
-  const auto& block_devices = info->block_device_info;
-  if (block_devices)
-    DisplayBlockDeviceInfo(block_devices.value());
+  const auto& block_device_result = info->block_device_result;
+  if (block_device_result)
+    DisplayBlockDeviceInfo(block_device_result);
 
   const auto& vpd_result = info->vpd_result;
   if (vpd_result)

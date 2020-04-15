@@ -91,6 +91,16 @@ struct BatteryInfo {
   SmartBatteryInfo? smart_battery_info;
 };
 
+// Non-removable block device probe result. Can either be populated with the
+// NonRemovableBlockDeviceInfo or an error retrieving the information.
+union NonRemovableBlockDeviceResult {
+  // Valid NonRemovableBlockDeviceInfo.
+  array<NonRemovableBlockDeviceInfo> block_device_info;
+  // The error that occurred attempting to retrieve the
+  // NonRemovableBlockDeviceInfo.
+  ProbeError error;
+};
+
 // Information related to a specific non-removable block device.
 struct NonRemovableBlockDeviceInfo {
   // The path of this storage on the system. It is useful if caller needs to
@@ -229,7 +239,7 @@ struct TelemetryInfo {
   // Information about all of the device's non-removable block devices. Only
   // present when kNonRemovableBlockDevices was included in the categories input
   // to ProbeTelemetryInfo.
-  array<NonRemovableBlockDeviceInfo>? block_device_info;
+  NonRemovableBlockDeviceResult? block_device_result;
   // Only present when kCachedVpdData was included in the categories input to
   // ProbeTelemetryInfo.
   CachedVpdResult? vpd_result;

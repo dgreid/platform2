@@ -207,9 +207,8 @@ void CrosHealthdMojoService::ProbeTelemetryInfo(
         break;
       }
       case ProbeCategoryEnum::kNonRemovableBlockDevices: {
-        telemetry_info.block_device_info = base::Optional<std::vector<
-            chromeos::cros_healthd::mojom::NonRemovableBlockDeviceInfoPtr>>(
-            FetchNonRemovableBlockDevicesInfo(base::FilePath("/")));
+        telemetry_info.block_device_result =
+            FetchNonRemovableBlockDevicesInfo(base::FilePath("/"));
         break;
       }
       case ProbeCategoryEnum::kTimezone: {
