@@ -9,12 +9,17 @@
 #include <unistd.h>
 
 #include <algorithm>
+#include <memory>
 #include <utility>
+#include <vector>
 
 #include <base/files/file_enumerator.h>
 #include <base/files/file_util.h>
 #include <base/logging.h>
+#include <base/strings/string_number_conversions.h>
 #include <brillo/file_utils.h>
+#include <crypto/secure_hash.h>
+#include <crypto/sha2.h>
 
 #include "dlcservice/dlc.h"
 #include "dlcservice/dlc_service.h"
@@ -23,6 +28,8 @@ using base::FilePath;
 using std::pair;
 using std::set;
 using std::string;
+using std::unique_ptr;
+using std::vector;
 
 namespace dlcservice {
 
@@ -143,15 +150,49 @@ bool CreateFile(const base::FilePath& path, int64_t size) {
   return ResizeFile(path, size) && SetFilePermissions(path, kDlcFilePerms);
 }
 
-bool CopyAndResizeFile(const base::FilePath& from,
-                       const base::FilePath& to,
-                       int64_t size) {
-  if (!base::CopyFile(from, to)) {
-    PLOG(ERROR) << "Failed to copy from (" << from.value() << ") to ("
-                << to.value() << ").";
+bool CopyAndHashFile(const base::FilePath& from,
+                     const base::FilePath& to,
+                     string* sha256) {
+  base::File f_from(from, base::File::FLAG_OPEN | base::File::FLAG_READ);
+  if (!f_from.IsValid()) {
+    PLOG(ERROR) << "Failed to read file at " << from.value() << " reason: "
+                << base::File::ErrorToString(f_from.error_details());
     return false;
   }
-  return ResizeFile(to, size) && SetFilePermissions(to, kDlcFilePerms);
+  base::File f_to(to, base::File::FLAG_OPEN_ALWAYS | base::File::FLAG_WRITE);
+  if (!f_to.IsValid()) {
+    PLOG(ERROR) << "Failed to open file at " << to.value() << " reason: "
+                << base::File::ErrorToString(f_to.error_details());
+    return false;
+  }
+
+  auto from_length = f_from.GetLength();
+  if (from_length < 0) {
+    LOG(ERROR) << "Failed to get length for file at " << from.value();
+    return false;
+  }
+
+  constexpr int64_t kMaxBufSize = 4096;
+  auto hash = crypto::SecureHash::Create(crypto::SecureHash::SHA256);
+
+  vector<char> buf(kMaxBufSize);
+  for (; from_length > 0; from_length -= kMaxBufSize) {
+    int bytes = std::min(kMaxBufSize, from_length);
+    if (f_from.ReadAtCurrentPos(buf.data(), bytes) != bytes) {
+      PLOG(ERROR) << "Failed to read from file at " << from.value();
+      return false;
+    }
+    if (f_to.WriteAtCurrentPos(buf.data(), bytes) != bytes) {
+      PLOG(ERROR) << "Failed to write to file at " << from.value();
+      return false;
+    }
+    hash->Update(buf.data(), bytes);
+  }
+
+  vector<uint8_t> vhash(crypto::kSHA256Length);
+  hash->Finish(vhash.data(), vhash.size());
+  *sha256 = base::HexEncode(vhash.data(), vhash.size());
+  return SetFilePermissions(to, kDlcFilePerms);
 }
 
 FilePath GetDlcImagePath(const FilePath& dlc_module_root_path,

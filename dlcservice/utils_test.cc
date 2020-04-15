@@ -12,7 +12,9 @@
 #include <base/bind.h>
 #include <base/files/file_util.h>
 #include <base/files/scoped_temp_dir.h>
+#include <base/strings/string_number_conversions.h>
 #include <brillo/file_utils.h>
+#include <crypto/sha2.h>
 #include <gtest/gtest.h>
 
 #include "dlcservice/utils.h"
@@ -124,23 +126,24 @@ TEST_F(FixtureUtilsTest, ResizeFile) {
   EXPECT_FALSE(IsFileSparse(path));
 }
 
-TEST_F(FixtureUtilsTest, CopyAndResizeFile) {
-  int64_t src_size = -1, dst_size = -1;
+TEST_F(FixtureUtilsTest, CopyAndHashFile) {
   auto src_path = JoinPaths(scoped_temp_dir_.GetPath(), "src_file");
   auto dst_path = JoinPaths(scoped_temp_dir_.GetPath(), "dst_file");
 
   EXPECT_FALSE(base::PathExists(src_path));
   EXPECT_FALSE(base::PathExists(dst_path));
-  EXPECT_TRUE(CreateFile(src_path, 0));
-  EXPECT_TRUE(base::GetFileSize(src_path, &src_size));
-  EXPECT_EQ(0, src_size);
+  EXPECT_TRUE(CreateFile(src_path, 10));
 
-  EXPECT_TRUE(CopyAndResizeFile(src_path, dst_path, 1));
+  string file_content;
+  EXPECT_TRUE(base::ReadFileToString(src_path, &file_content));
+  auto sha256_str = crypto::SHA256HashString(file_content);
+  auto expected_sha256 = base::HexEncode(sha256_str.data(), sha256_str.size());
+
+  string actual_sha256;
+  EXPECT_TRUE(CopyAndHashFile(src_path, dst_path, &actual_sha256));
+  EXPECT_EQ(actual_sha256, expected_sha256);
 
   EXPECT_TRUE(base::PathExists(dst_path));
-  EXPECT_TRUE(base::GetFileSize(dst_path, &dst_size));
-  EXPECT_EQ(1, dst_size);
-
   CheckPerms(dst_path, kDlcFilePerms);
 }
 

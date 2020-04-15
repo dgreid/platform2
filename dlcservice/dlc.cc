@@ -10,6 +10,7 @@
 #include <vector>
 
 #include <base/strings/stringprintf.h>
+#include <base/strings/string_number_conversions.h>
 #include <base/strings/string_util.h>
 #include <brillo/errors/error.h>
 #include <chromeos/dbus/service_constants.h>
@@ -219,9 +220,23 @@ bool DlcBase::PreloadedCopier() const {
   }
   // TODO(kimjae): when preloaded images are place into unencrypted, this
   // operation can be a move.
-  if (!CopyAndResizeFile(image_preloaded_path, image_boot_path,
-                         max_image_size)) {
-    LOG(ERROR) << "Failed to preload DLC (" << id_ << ") into boot slot.";
+  string sha256;
+  if (!CopyAndHashFile(image_preloaded_path, image_boot_path, &sha256)) {
+    LOG(ERROR) << "Failed to preload DLC (" << id_ << ") into boot slot path ("
+               << image_boot_path << ")";
+    return false;
+  }
+
+  auto manifest_sha256 = manifest_.image_sha256();
+  if (sha256 !=
+      base::HexEncode(manifest_sha256.data(), manifest_sha256.size())) {
+    LOG(ERROR) << "Image is corrupted or modified for DLC=" << id_;
+    return false;
+  }
+
+  if (!ResizeFile(image_boot_path, max_image_size)) {
+    LOG(ERROR) << "Image failed to resize for DLC=" << id_
+               << ", Path=" << image_boot_path << " ,Size=" << max_image_size;
     return false;
   }
 
