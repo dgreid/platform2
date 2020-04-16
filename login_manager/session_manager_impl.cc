@@ -1791,6 +1791,11 @@ std::vector<std::string> SessionManagerImpl::CreateUpgradeArcEnvVars(
     const UpgradeArcContainerRequest& request,
     const std::string& account_id,
     pid_t pid) {
+  // Only allow for managed account if the policies allow it.
+  bool is_adb_sideloading_allowed_for_request =
+      !request.is_account_managed() ||
+      request.is_managed_adb_sideloading_allowed();
+
   std::vector<std::string> env_vars = {
       base::StringPrintf("CHROMEOS_DEV_MODE=%d", IsDevMode(system_)),
       base::StringPrintf("CHROMEOS_INSIDE_VM=%d", IsInsideVm(system_)),
@@ -1802,10 +1807,9 @@ std::vector<std::string> SessionManagerImpl::CreateUpgradeArcEnvVars(
       base::StringPrintf("IS_DEMO_SESSION=%d", request.is_demo_session()),
       base::StringPrintf("SUPERVISION_TRANSITION=%d",
                          request.supervision_transition()),
-      // Never allow for managed account until the policy is properly defined.
       base::StringPrintf("ENABLE_ADB_SIDELOAD=%d",
-                         !request.is_account_managed() &&
-                             arc_sideload_status_->IsAdbSideloadAllowed())};
+                         arc_sideload_status_->IsAdbSideloadAllowed() &&
+                             is_adb_sideloading_allowed_for_request)};
 
   switch (request.packages_cache_mode()) {
     case UpgradeArcContainerRequest_PackageCacheMode_SKIP_SETUP_COPY_ON_INIT:

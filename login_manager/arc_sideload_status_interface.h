@@ -42,7 +42,7 @@ class ArcSideloadStatusInterface {
   // initialized.
   virtual void EnableAdbSideload(EnableAdbSideloadCallback callback) = 0;
 
-  // Callback of EnableAdbSideload. The first argument indicates whether
+  // Callback of QueryAdbSideload. The first argument indicates whether
   // sideloading is allowed on the current device.
   using QueryAdbSideloadCallback = base::Callback<void(Status)>;
 
