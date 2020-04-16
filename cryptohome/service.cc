@@ -415,6 +415,9 @@ void Service::SendDBusErrorReply(DBusGMethodInvocation* context,
                                  GQuark domain,
                                  gint code,
                                  const gchar* message) {
+  if (message) {
+    LOG(ERROR) << message;
+  }
   GError* error = g_error_new_literal(domain, code, message);
   event_source_.AddEvent(std::make_unique<DBusErrorReply>(context, error));
 }
@@ -2188,6 +2191,7 @@ void Service::DoMountEx(std::unique_ptr<AccountIdentifier> identifier,
       // Don't allow a key creation and mount if the key lacks
       // the privileges.
       if (!auth_key->data().privileges().mount()) {
+        LOG(ERROR) << "Auth key denied";
         reply.set_error(CRYPTOHOME_ERROR_AUTHORIZATION_KEY_DENIED);
         SendReply(context, reply);
         return;
@@ -2198,7 +2202,7 @@ void Service::DoMountEx(std::unique_ptr<AccountIdentifier> identifier,
       SendInvalidArgsReply(context, "CreateRequest supplied with no keys");
       return;
     } else if (keys_size > 1) {
-      LOG(INFO) << "MountEx: unimplemented CreateRequest with multiple keys";
+      LOG(ERROR) << "MountEx: unimplemented CreateRequest with multiple keys";
       reply.set_error(CRYPTOHOME_ERROR_NOT_IMPLEMENTED);
       SendReply(context, reply);
       return;
@@ -2260,6 +2264,7 @@ void Service::DoMountEx(std::unique_ptr<AccountIdentifier> identifier,
   ContinueMountExWithCredentials(std::move(identifier),
                                  std::move(authorization), std::move(request),
                                  std::move(credentials), mount_args, context);
+  LOG(INFO) << "Finished mount request process";
 }
 
 bool Service::InitForChallengeResponseAuth(CryptohomeErrorCode* error_code) {
@@ -2523,6 +2528,7 @@ void Service::DoChallengeResponseMountEx(
 
   if (!homedirs_->Exists(obfuscated_username) &&
       !mount_args.create_if_missing) {
+    LOG(ERROR) << "Cannot do challenge-response mount. Account not found.";
     reply.set_error(CRYPTOHOME_ERROR_ACCOUNT_NOT_FOUND);
     SendReply(context, reply);
     return;
@@ -2597,7 +2603,9 @@ void Service::ContinueMountExWithCredentials(
     std::unique_ptr<Credentials> credentials,
     const Mount::MountArgs& mount_args,
     DBusGMethodInvocation* context) {
-  CleanUpHiddenMounts();
+  if (!CleanUpHiddenMounts()) {
+    LOG(WARNING) << "Failed to clean up hidden mounts";
+  }
 
   // Setup a reply for use during error handling.
   BaseReply reply;
@@ -2613,6 +2621,7 @@ void Service::ContinueMountExWithCredentials(
 
   if (!request->has_create() &&
       !homedirs_->Exists(credentials->GetObfuscatedUsername(system_salt_))) {
+    LOG(ERROR) << "Account not found when mounting with credentials.";
     reply.set_error(CRYPTOHOME_ERROR_ACCOUNT_NOT_FOUND);
     SendReply(context, reply);
     return;
@@ -2676,7 +2685,6 @@ void Service::ContinueMountExWithCredentials(
   }
 
   if (user_mount->IsMounted()) {
-    LOG(INFO) << "Mount exists. Rechecking credentials.";
     // Attempt a short-circuited credential test.
     if (user_mount->AreSameUser(
             credentials->GetObfuscatedUsername(system_salt_)) &&
@@ -2690,6 +2698,7 @@ void Service::ContinueMountExWithCredentials(
     // TODO(wad) Should we unmount on a failed re-mount attempt?
     if (!user_mount->AreValid(*credentials) &&
         !homedirs_->AreCredentialsValid(*credentials)) {
+      LOG(ERROR) << "Credentials are invalid";
       reply.set_error(CRYPTOHOME_ERROR_AUTHORIZATION_KEY_FAILED);
     } else {
       homedirs_->ResetLECredentials(*credentials);
@@ -2713,6 +2722,7 @@ void Service::ContinueMountExWithCredentials(
   // Mark the timer as done.
   ReportTimerStop(kMountExTimer);
   if (!status) {
+    LOG(ERROR) << "Failed to mount cryptohome, error = " << code;
     reply.set_error(MountErrorToCryptohomeError(code));
     ResetDictionaryAttackMitigation();
   }
@@ -2763,6 +2773,8 @@ gboolean Service::MountEx(const GArray *account_id,
                           const GArray *authorization_request,
                           const GArray *mount_request,
                           DBusGMethodInvocation *context) {
+  LOG(INFO) << "Received a mount request.";
+
   std::unique_ptr<AccountIdentifier> identifier(new AccountIdentifier);
   std::unique_ptr<AuthorizationRequest> authorization(new AuthorizationRequest);
   std::unique_ptr<MountRequest> request(new MountRequest);

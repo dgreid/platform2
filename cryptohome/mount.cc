@@ -296,7 +296,7 @@ bool Mount::MountCryptohome(const Credentials& credentials,
                             MountError* mount_error) {
   CHECK(boot_lockbox_ || !use_tpm_);
   if (boot_lockbox_ && !boot_lockbox_->FinalizeBoot()) {
-    LOG(WARNING) << "Failed to finalize boot lockbox.";
+    LOG(WARNING) << "Failed to finalize boot lockbox when mounting cryptohome.";
   }
 
   if (!pre_mount_callback_.is_null()) {
@@ -316,6 +316,7 @@ bool Mount::MountCryptohome(const Credentials& credentials,
                                      &local_mount_error);
   // Retry once if there is a TPM communications failure
   if (!result && local_mount_error == MOUNT_ERROR_TPM_COMM_ERROR) {
+    LOG(WARNING) << "TPM communication error. Retrying.";
     result = MountCryptohomeInner(credentials,
                                   mount_args,
                                   true,
@@ -392,8 +393,6 @@ bool Mount::MountCryptohomeInner(const Credentials& credentials,
     }
 
     if (is_owner) {
-      LOG(ERROR) << "An ephemeral cryptohome can only be mounted when the user "
-                    "is not the owner.";
       *mount_error = MOUNT_ERROR_EPHEMERAL_MOUNT_BY_OWNER;
       return false;
     }
@@ -465,6 +464,8 @@ bool Mount::MountCryptohomeInner(const Credentials& credentials,
       }
       return local_result;
     }
+
+    LOG(ERROR) << "Failed to decrypt VK, error = " << local_mount_error;
     return false;
   }
 
@@ -482,7 +483,9 @@ bool Mount::MountCryptohomeInner(const Credentials& credentials,
   SecureBlob local_chaps_key(vault_keyset.chaps_key().begin(),
                              vault_keyset.chaps_key().end());
   pkcs11_token_auth_data_.swap(local_chaps_key);
-  platform_->ClearUserKeyring();
+  if (!platform_->ClearUserKeyring()) {
+    LOG(ERROR) << "Failed to clear user keyring";
+  }
 
   // Before we use the matching keyset, make sure it isn't being misused.
   // Note, privileges don't protect against information leakage, they are
@@ -580,7 +583,8 @@ bool Mount::MountCryptohomeInner(const Credentials& credentials,
 
   mount_point_ = homedirs_->GetUserMountDirectory(obfuscated_username);
   if (!platform_->CreateDirectory(mount_point_)) {
-    PLOG(ERROR) << "Directory creation failed for " << mount_point_.value();
+    PLOG(ERROR) << "User mount directory creation failed for "
+                << mount_point_.value();
     *mount_error = MOUNT_ERROR_DIR_CREATION_FAILED;
     return false;
   }
@@ -588,7 +592,7 @@ bool Mount::MountCryptohomeInner(const Credentials& credentials,
     FilePath temporary_mount_point =
         GetUserTemporaryMountDirectory(obfuscated_username);
     if (!platform_->CreateDirectory(temporary_mount_point)) {
-      PLOG(ERROR) << "Directory creation failed for "
+      PLOG(ERROR) << "User temporary mount directory creation failed for "
                   << temporary_mount_point.value();
       *mount_error = MOUNT_ERROR_DIR_CREATION_FAILED;
       return false;
@@ -627,7 +631,7 @@ bool Mount::MountCryptohomeInner(const Credentials& credentials,
 
   if (!mounter_->PerformMount(mount_opts, credentials, key_signature,
                               fnek_signature, created, mount_error)) {
-    LOG(ERROR) << "MountHelper::PerformMount failed";
+    LOG(ERROR) << "MountHelper::PerformMount failed, error = " << *mount_error;
     return false;
   }
 
@@ -1071,7 +1075,8 @@ bool Mount::ReEncryptVaultKeyset(const Credentials& credentials,
 bool Mount::MountGuestCryptohome() {
   CHECK(boot_lockbox_ || !use_tpm_);
   if (boot_lockbox_ && !boot_lockbox_->FinalizeBoot()) {
-    LOG(WARNING) << "Failed to finalize boot lockbox.";
+    LOG(WARNING) << "Failed to finalize boot lockbox when mounting guest "
+                    "cryptohome";
   }
 
   if (!pre_mount_callback_.is_null()) {

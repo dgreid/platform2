@@ -1000,6 +1000,8 @@ void UserDataAuth::DoMount(
     base::OnceCallback<void(const user_data_auth::MountReply&)> on_done) {
   AssertOnMountThread();
 
+  LOG(INFO) << "Received a mount request.";
+
   // DoMount current supports guest login/mount, normal plaintext password login
   // and challenge response login. For guest mount, a special process
   // (MountGuest()) is used. Meanwhile, for normal plaintext password login and
@@ -1077,6 +1079,7 @@ void UserDataAuth::DoMount(
       // Don't allow a key creation and mount if the key lacks
       // the privileges.
       if (!auth_key->data().privileges().mount()) {
+        LOG(ERROR) << "Auth key denied";
         reply.set_error(user_data_auth::CryptohomeErrorCode::
                             CRYPTOHOME_ERROR_AUTHORIZATION_KEY_DENIED);
         std::move(on_done).Run(reply);
@@ -1093,7 +1096,7 @@ void UserDataAuth::DoMount(
       std::move(on_done).Run(reply);
       return;
     } else if (keys_size > 1) {
-      LOG(INFO) << "MountEx: unimplemented CreateRequest with multiple keys";
+      LOG(ERROR) << "MountEx: unimplemented CreateRequest with multiple keys";
       reply.set_error(user_data_auth::CRYPTOHOME_ERROR_NOT_IMPLEMENTED);
       std::move(on_done).Run(reply);
       return;
@@ -1159,7 +1162,7 @@ void UserDataAuth::DoMount(
 
   ContinueMountWithCredentials(request, std::move(credentials), mount_args,
                                std::move(on_done));
-  return;
+  LOG(INFO) << "Finished mount request process";
 }
 
 bool UserDataAuth::InitForChallengeResponseAuth(
@@ -1269,6 +1272,7 @@ void UserDataAuth::DoChallengeResponseMount(
 
   if (!homedirs_->Exists(obfuscated_username) &&
       !mount_args.create_if_missing) {
+    LOG(ERROR) << "Cannot do challenge-response mount. Account not found.";
     reply.set_error(user_data_auth::CRYPTOHOME_ERROR_ACCOUNT_NOT_FOUND);
     std::move(on_done).Run(reply);
     return;
@@ -1350,7 +1354,9 @@ void UserDataAuth::ContinueMountWithCredentials(
     std::unique_ptr<Credentials> credentials,
     const Mount::MountArgs& mount_args,
     base::OnceCallback<void(const user_data_auth::MountReply&)> on_done) {
-  CleanUpHiddenMounts();
+  if (!CleanUpHiddenMounts()) {
+    LOG(WARNING) << "Failed to clean up hidden mounts";
+  }
 
   // Setup a reply for use during error handling.
   user_data_auth::MountReply reply;
@@ -1375,6 +1381,7 @@ void UserDataAuth::ContinueMountWithCredentials(
   // to create the home directory, and reply with the error.
   if (!request.has_create() &&
       !homedirs_->Exists(credentials->GetObfuscatedUsername(system_salt_))) {
+    LOG(ERROR) << "Account not found when mounting with credentials.";
     reply.set_error(user_data_auth::CRYPTOHOME_ERROR_ACCOUNT_NOT_FOUND);
     std::move(on_done).Run(reply);
     return;
@@ -1443,7 +1450,6 @@ void UserDataAuth::ContinueMountWithCredentials(
   // credential with what's cached in memory. This is much faster than going to
   // the TPM.
   if (user_mount->IsMounted()) {
-    LOG(INFO) << "Mount exists. Rechecking credentials.";
     // Attempt a short-circuited credential test.
     if (user_mount->AreSameUser(
             credentials->GetObfuscatedUsername(system_salt_)) &&
@@ -1457,6 +1463,7 @@ void UserDataAuth::ContinueMountWithCredentials(
     // TODO(wad) Should we unmount on a failed re-mount attempt?
     if (!user_mount->AreValid(*credentials) &&
         !homedirs_->AreCredentialsValid(*credentials)) {
+      LOG(ERROR) << "Credentials are invalid";
       reply.set_error(
           user_data_auth::CRYPTOHOME_ERROR_AUTHORIZATION_KEY_FAILED);
     } else {
@@ -1488,6 +1495,7 @@ void UserDataAuth::ContinueMountWithCredentials(
   ReportTimerStop(kMountExTimer);
 
   if (!status) {
+    LOG(ERROR) << "Failed to mount cryptohome, error = " << code;
     reply.set_error(MountErrorToCryptohomeError(code));
     ResetDictionaryAttackMitigation();
   }
