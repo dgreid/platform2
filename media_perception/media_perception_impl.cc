@@ -43,7 +43,7 @@ void MediaPerceptionImpl::set_connection_error_handler(
 
 void MediaPerceptionImpl::SetupConfiguration(
     const std::string& configuration_name,
-    const SetupConfigurationCallback& callback) {
+    SetupConfigurationCallback callback) {
   SerializedSuccessStatus serialized_status;
   SerializedPerceptionInterfaces serialized_perception_interfaces =
       rtanalytics_->SetupConfiguration(
@@ -62,26 +62,25 @@ void MediaPerceptionImpl::SetupConfiguration(
       std::make_unique<OutputManager>(
           configuration_name, rtanalytics_, perception_interfaces,
           &interfaces_ptr);
-  callback.Run(chromeos::media_perception::mojom::ToMojom(status),
-               std::move(interfaces_ptr));
+  std::move(callback).Run(chromeos::media_perception::mojom::ToMojom(status),
+                          std::move(interfaces_ptr));
 }
 
 void MediaPerceptionImpl::SetTemplateArguments(
-      const std::string& configuration_name,
-      const std::vector<uint8_t>& serialized_arguments_proto,
-      const SetTemplateArgumentsCallback& callback) {
+    const std::string& configuration_name,
+    const std::vector<uint8_t>& serialized_arguments_proto,
+    SetTemplateArgumentsCallback callback) {
   SerializedSuccessStatus serialized_status =
       rtanalytics_->SetTemplateArguments(
           configuration_name, serialized_arguments_proto);
-  callback.Run(chromeos::media_perception::mojom::ToMojom(
+  std::move(callback).Run(chromeos::media_perception::mojom::ToMojom(
       Serialized<SuccessStatus>(serialized_status).Deserialize()));
 }
 
-void MediaPerceptionImpl::GetVideoDevices(
-    const GetVideoDevicesCallback& callback) {
+void MediaPerceptionImpl::GetVideoDevices(GetVideoDevicesCallback callback) {
   // Get the list of video devices from the VideoCaptureServiceClient and
   // convert them to mojom objects.
-  vidcap_client_->GetDevices([=](std::vector<SerializedVideoDevice> devices) {
+  vidcap_client_->GetDevices([&](std::vector<SerializedVideoDevice> devices) {
     std::vector<chromeos::media_perception::mojom::VideoDevicePtr>
         mojom_devices;
     for (const SerializedVideoDevice& device : devices) {
@@ -89,12 +88,11 @@ void MediaPerceptionImpl::GetVideoDevices(
       mojom_devices.push_back(
           chromeos::media_perception::mojom::ToMojom(video_device));
     }
-    callback.Run(std::move(mojom_devices));
+    std::move(callback).Run(std::move(mojom_devices));
   });
 }
 
-void MediaPerceptionImpl::GetAudioDevices(
-    const GetAudioDevicesCallback& callback) {
+void MediaPerceptionImpl::GetAudioDevices(GetAudioDevicesCallback callback) {
   // Get the list of audio devices from the ChromeAudioServiceClient and convert
   // them to mojom objects.
   std::vector<SerializedAudioDevice> devices = cras_client_->GetInputDevices();
@@ -104,12 +102,12 @@ void MediaPerceptionImpl::GetAudioDevices(
     mojom_devices.push_back(
         chromeos::media_perception::mojom::ToMojom(audio_device));
   }
-  callback.Run(std::move(mojom_devices));
+  std::move(callback).Run(std::move(mojom_devices));
 }
 
 void MediaPerceptionImpl::GetTemplateDevices(
     const std::string& configuration_name,
-    const GetTemplateDevicesCallback& callback) {
+    GetTemplateDevicesCallback callback) {
   std::vector<SerializedDeviceTemplate> device_templates =
       rtanalytics_->GetTemplateDevices(configuration_name);
   std::vector<chromeos::media_perception::mojom::DeviceTemplatePtr>
@@ -120,14 +118,14 @@ void MediaPerceptionImpl::GetTemplateDevices(
     template_ptrs.push_back(
         chromeos::media_perception::mojom::ToMojom(device_template));
   }
-  callback.Run(std::move(template_ptrs));
+  std::move(callback).Run(std::move(template_ptrs));
 }
 
 void MediaPerceptionImpl::SetVideoDeviceForTemplateName(
     const std::string& configuration_name,
     const std::string& template_name,
     chromeos::media_perception::mojom::VideoDevicePtr device,
-    const SetVideoDeviceForTemplateNameCallback& callback) {
+    SetVideoDeviceForTemplateNameCallback callback) {
   SerializedVideoDevice serialized_video_device =
       Serialized<VideoDevice>(ToProto(device)).GetBytes();
   SerializedSuccessStatus status = rtanalytics_->SetVideoDeviceForTemplateName(
@@ -135,14 +133,15 @@ void MediaPerceptionImpl::SetVideoDeviceForTemplateName(
 
   SuccessStatus success_status = Serialized<SuccessStatus>(
       status).Deserialize();
-  callback.Run(chromeos::media_perception::mojom::ToMojom(success_status));
+  std::move(callback).Run(
+      chromeos::media_perception::mojom::ToMojom(success_status));
 }
 
 void MediaPerceptionImpl::SetAudioDeviceForTemplateName(
     const std::string& configuration_name,
     const std::string& template_name,
     chromeos::media_perception::mojom::AudioDevicePtr device,
-    const SetAudioDeviceForTemplateNameCallback& callback) {
+    SetAudioDeviceForTemplateNameCallback callback) {
   SerializedAudioDevice serialized_audio_device =
       Serialized<AudioDevice>(ToProto(device)).GetBytes();
   SerializedSuccessStatus status = rtanalytics_->SetAudioDeviceForTemplateName(
@@ -150,14 +149,15 @@ void MediaPerceptionImpl::SetAudioDeviceForTemplateName(
 
   SuccessStatus success_status = Serialized<SuccessStatus>(
       status).Deserialize();
-  callback.Run(chromeos::media_perception::mojom::ToMojom(success_status));
+  std::move(callback).Run(
+      chromeos::media_perception::mojom::ToMojom(success_status));
 }
 
 void MediaPerceptionImpl::SetVirtualVideoDeviceForTemplateName(
     const std::string& configuration_name,
     const std::string& template_name,
     chromeos::media_perception::mojom::VirtualVideoDevicePtr device,
-    const SetVirtualVideoDeviceForTemplateNameCallback& callback) {
+    SetVirtualVideoDeviceForTemplateNameCallback callback) {
   SerializedVirtualVideoDevice serialized_virtual_video_device =
       Serialized<VirtualVideoDevice>(ToProto(device)).GetBytes();
   SerializedSuccessStatus status =
@@ -166,24 +166,25 @@ void MediaPerceptionImpl::SetVirtualVideoDeviceForTemplateName(
 
   SuccessStatus success_status = Serialized<SuccessStatus>(
       status).Deserialize();
-  callback.Run(chromeos::media_perception::mojom::ToMojom(success_status));
+  std::move(callback).Run(
+      chromeos::media_perception::mojom::ToMojom(success_status));
 }
 
 void MediaPerceptionImpl::GetPipelineState(
-    const std::string& configuration_name,
-    const GetPipelineStateCallback& callback) {
+    const std::string& configuration_name, GetPipelineStateCallback callback) {
   SerializedPipelineState serialized_pipeline_state =
       rtanalytics_->GetPipelineState(configuration_name);
 
   PipelineState pipeline_state = Serialized<PipelineState>(
       serialized_pipeline_state).Deserialize();
-  callback.Run(chromeos::media_perception::mojom::ToMojom(pipeline_state));
+  std::move(callback).Run(
+      chromeos::media_perception::mojom::ToMojom(pipeline_state));
 }
 
 void MediaPerceptionImpl::SetPipelineState(
     const std::string& configuration_name,
     chromeos::media_perception::mojom::PipelineStatePtr desired_state,
-    const SetPipelineStateCallback& callback) {
+    SetPipelineStateCallback callback) {
   SerializedPipelineState serialized_desired_state =
       Serialized<PipelineState>(ToProto(desired_state)).GetBytes();
   SerializedPipelineState serialized_pipeline_state =
@@ -192,18 +193,18 @@ void MediaPerceptionImpl::SetPipelineState(
 
   PipelineState pipeline_state = Serialized<PipelineState>(
       serialized_pipeline_state).Deserialize();
-  callback.Run(chromeos::media_perception::mojom::ToMojom(pipeline_state));
+  std::move(callback).Run(
+      chromeos::media_perception::mojom::ToMojom(pipeline_state));
 }
 
 void MediaPerceptionImpl::GetGlobalPipelineState(
-    const GetGlobalPipelineStateCallback& callback) {
+    GetGlobalPipelineStateCallback callback) {
   SerializedGlobalPipelineState serialized_state =
       rtanalytics_->GetGlobalPipelineState();
 
   GlobalPipelineState state = Serialized<GlobalPipelineState>(
       serialized_state).Deserialize();
-  callback.Run(chromeos::media_perception::mojom::ToMojom(state));
+  std::move(callback).Run(chromeos::media_perception::mojom::ToMojom(state));
 }
-
 
 }  // namespace mri

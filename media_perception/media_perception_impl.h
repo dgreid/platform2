@@ -31,38 +31,37 @@ class MediaPerceptionImpl :
 
   // chromeos::media_perception::mojom::MediaPerception:
   void SetupConfiguration(const std::string& configuration_name,
-                          const SetupConfigurationCallback& callback) override;
+                          SetupConfigurationCallback callback) override;
   void SetTemplateArguments(
       const std::string& configuration_name,
       const std::vector<uint8_t>& serialized_arguments_proto,
-      const SetTemplateArgumentsCallback& callback) override;
-  void GetVideoDevices(const GetVideoDevicesCallback& callback) override;
-  void GetAudioDevices(const GetAudioDevicesCallback& callback) override;
+      SetTemplateArgumentsCallback callback) override;
+  void GetVideoDevices(GetVideoDevicesCallback callback) override;
+  void GetAudioDevices(GetAudioDevicesCallback callback) override;
   void GetTemplateDevices(const std::string& configuration_name,
-                          const GetTemplateDevicesCallback& callback) override;
+                          GetTemplateDevicesCallback callback) override;
   void SetVideoDeviceForTemplateName(
       const std::string& configuration_name,
       const std::string& template_name,
       chromeos::media_perception::mojom::VideoDevicePtr device,
-      const SetVideoDeviceForTemplateNameCallback& callback) override;
+      SetVideoDeviceForTemplateNameCallback callback) override;
   void SetAudioDeviceForTemplateName(
       const std::string& configuration_name,
       const std::string& template_name,
       chromeos::media_perception::mojom::AudioDevicePtr device,
-      const SetAudioDeviceForTemplateNameCallback& callback) override;
+      SetAudioDeviceForTemplateNameCallback callback) override;
   void SetVirtualVideoDeviceForTemplateName(
       const std::string& configuration_name,
       const std::string& template_name,
       chromeos::media_perception::mojom::VirtualVideoDevicePtr device,
-      const SetVirtualVideoDeviceForTemplateNameCallback& callback) override;
+      SetVirtualVideoDeviceForTemplateNameCallback callback) override;
   void GetPipelineState(const std::string& configuration_name,
-                        const GetPipelineStateCallback& callback) override;
+                        GetPipelineStateCallback callback) override;
   void SetPipelineState(
       const std::string& configuration_name,
       chromeos::media_perception::mojom::PipelineStatePtr desired_state,
-      const SetPipelineStateCallback& callback) override;
-  void GetGlobalPipelineState(
-      const GetGlobalPipelineStateCallback& callback) override;
+      SetPipelineStateCallback callback) override;
+  void GetGlobalPipelineState(GetGlobalPipelineStateCallback callback) override;
 
   void set_connection_error_handler(base::Closure connection_error_handler);
 

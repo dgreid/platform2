@@ -28,7 +28,7 @@ void ProducerImpl::RegisterVirtualDevice(
 
 void ProducerImpl::OnNewBuffer(int32_t buffer_id,
                                media::mojom::VideoBufferHandlePtr buffer_handle,
-                               const OnNewBufferCallback& callback) {
+                               OnNewBufferCallback callback) {
   CHECK(buffer_handle->is_shared_memory_via_raw_file_descriptor());
   std::unique_ptr<SharedMemoryProvider> shared_memory_provider =
       SharedMemoryProvider::CreateFromRawFileDescriptor(

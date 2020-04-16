@@ -32,7 +32,7 @@ class ProducerImpl : public video_capture::mojom::Producer {
   // video_capture::mojom::Producer overrides.
   void OnNewBuffer(int32_t buffer_id,
                    media::mojom::VideoBufferHandlePtr buffer_handle,
-                   const OnNewBufferCallback& callback) override;
+                   OnNewBufferCallback callback) override;
   void OnBufferRetired(int32_t buffer_id) override;
 
  private:
