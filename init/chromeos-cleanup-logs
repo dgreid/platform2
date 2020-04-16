@@ -203,6 +203,15 @@ main() {
   metrics_client Platform.StatefulUsedSpace \
     "$((STATEFUL_USED / 1000000))" 0 16777216 50
 
+  # Report free space from the stateful partition in MBs. Some boards
+  # ship with a variety of SSD sizes, so free space metrics can be
+  # useful in addition to used space. Record in MB so we have higher
+  # precision in the buckets close to zero (out of space). Max out at
+  # 2 TB.
+  STATEFUL_FREE="$(get_stateful_free_space_blocks 1000)"
+  metrics_client Platform.StatefulFreeSpace \
+    "$((STATEFUL_FREE / 1000))" 0 2097152 50
+
   NUMBER_OF_USERS="$(ls /home/user/ | wc -l)"
   metrics_client Platform.DiskUsage.NumUserHomeDirectories \
                 "${NUMBER_OF_USERS}" 1 50 50
