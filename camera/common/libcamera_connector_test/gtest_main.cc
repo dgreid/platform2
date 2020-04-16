@@ -157,20 +157,33 @@ class CameraClient {
   base::WaitableEvent frame_captured_;
 };
 
+class CaptureTest : public ::testing::Test,
+                    public ::testing::WithParamInterface<uint32_t> {
+ protected:
+  void SetUp() override { client_.ProbeCameraInfo(); }
+
+  CameraClient client_;
+};
+
 TEST(ConnectorTest, GetInfo) {
   CameraClient client;
   client.ProbeCameraInfo();
   client.DumpCameraInfo();
 }
 
-TEST(ConnectorTest, Capture) {
-  CameraClient client;
-  client.ProbeCameraInfo();
-
-  // This format should be supported on all devices.
-  // TODO(b/151047930): Test other formats such as MJPEG as well.
-  client.Capture(V4L2_PIX_FMT_NV12, 640, 480, 30);
+TEST_P(CaptureTest, OneFrame) {
+  uint32_t fourcc = GetParam();
+  // This should be supported on all devices.
+  client_.Capture(fourcc, 640, 480, 30);
 }
+
+INSTANTIATE_TEST_SUITE_P(ConnectorTest,
+                         CaptureTest,
+                         ::testing::Values(V4L2_PIX_FMT_NV12,
+                                           V4L2_PIX_FMT_MJPEG),
+                         [](const auto& info) {
+                           return FourccToString(info.param);
+                         });
 
 }  // namespace tests
 }  // namespace cros
@@ -178,6 +191,8 @@ TEST(ConnectorTest, Capture) {
 int main(int argc, char** argv) {
   base::CommandLine::Init(argc, argv);
   brillo::InitLog(brillo::kLogToStderr);
+  logging::SetLogItems(/*enable_process_id=*/true, /*enable_thread_id=*/true,
+                       /*enable_timestamp=*/true, /*enable_tickcount=*/false);
 
   ::testing::AddGlobalTestEnvironment(new cros::tests::ConnectorEnvironment());
   ::testing::InitGoogleTest(&argc, argv);
