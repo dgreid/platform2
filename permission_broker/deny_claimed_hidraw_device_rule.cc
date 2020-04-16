@@ -8,6 +8,7 @@
 #include <libudev.h>
 #include <linux/input.h>
 
+#include <algorithm>
 #include <limits>
 #include <string>
 #include <vector>
@@ -23,6 +24,9 @@
 namespace permission_broker {
 
 namespace {
+
+const std::vector<std::string> kGenericSubsystems = {
+    "bluetooth", "hid", "hidraw", "rfkill", "usb", "usbmisc"};
 
 const char kLogitechUnifyingReceiverDriver[] = "logitech-djreceiver";
 const char kThingmDriver[] = "thingm";
@@ -241,11 +245,9 @@ bool DenyClaimedHidrawDeviceRule::ShouldSiblingSubsystemExcludeHidAccess(
     return false;
   }
 
-  // Generic USB/HID is okay.
-  if (strcmp(subsystem, "hid") == 0 ||
-      strcmp(subsystem, "hidraw") == 0 ||
-      strcmp(subsystem, "usb") == 0 ||
-      strcmp(subsystem, "usbmisc") == 0) {
+  // Generic subsystems (such as "hid" or "usb") should never exclude access.
+  if (std::find(kGenericSubsystems.begin(), kGenericSubsystems.end(),
+                subsystem) != kGenericSubsystems.end()) {
     return false;
   }
 
