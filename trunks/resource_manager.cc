@@ -657,6 +657,13 @@ TPM_RC ResourceManager::ParseResponse(const MessageInfo& command_info,
     return TPM_RC_SUCCESS;
   }
 
+  if (response_info->code != TPM_RC_SUCCESS) {
+    // We have received an error response for a standard (non vendor-specific)
+    // TPM command. Error responses include only a header and error code. Return
+    // immediately; don't attempt to parse handles or sessions.
+    return TPM_RC_SUCCESS;
+  }
+
   size_t number_of_handles = GetNumberOfResponseHandles(command_info.code);
   response_info->handles = ExtractHandlesFromBuffer(number_of_handles, &buffer);
   if (number_of_handles != response_info->handles.size()) {

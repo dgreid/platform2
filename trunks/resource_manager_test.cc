@@ -1005,4 +1005,25 @@ TEST_F(ResourceManagerTest, SuspendBlocksCommands) {
   EXPECT_TRUE(CommandReturnsSuccess(all_handles.command));
 }
 
+TEST_F(ResourceManagerTest, ResponseErrorPropogatedNoHandles) {
+  std::string command = CreateCommand(TPM_CC_Startup, kNoHandles,
+                                      kNoAuthorization, kNoParameters);
+  std::string response = CreateErrorResponse(TPM_RC_FAILURE);
+  EXPECT_CALL(transceiver_, SendCommandAndWait(command))
+      .WillOnce(Return(response));
+
+  std::string actual_response = resource_manager_.SendCommandAndWait(command);
+  EXPECT_EQ(actual_response, response);
+}
+
+TEST_F(ResourceManagerTest, ResponseErrorPropogated) {
+  std::string command = CreateCommand(TPM_CC_Load, {trunks::NV_INDEX_FIRST},
+                                      kNoAuthorization, kNoParameters);
+  std::string response = CreateErrorResponse(TPM_RC_FAILURE);
+  EXPECT_CALL(transceiver_, SendCommandAndWait(command))
+      .WillOnce(Return(response));
+
+  std::string actual_response = resource_manager_.SendCommandAndWait(command);
+  EXPECT_EQ(actual_response, response);
+}
 }  // namespace trunks
