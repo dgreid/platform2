@@ -15,9 +15,9 @@
 #include <vector>
 
 #include <base/bind.h>
+#include <base/files/file_descriptor_watcher_posix.h>
 #include <base/guid.h>
 #include <base/logging.h>
-#include <base/message_loop/message_loop.h>
 #include <base/threading/thread_task_runner_handle.h>
 
 #include "webservd/request.h"
@@ -294,40 +294,33 @@ Request* ProtocolHandler::GetRequest(const std::string& request_id) const {
 
 // A file descriptor watcher class that oversees I/O operation notification
 // on particular socket file descriptor.
-class ProtocolHandler::Watcher final
-    : public base::MessagePumpLibevent::FdWatcher {
+class ProtocolHandler::Watcher final {
  public:
-  Watcher(ProtocolHandler* handler, int fd)
-      : fd_{fd}, handler_{handler}, controller_{FROM_HERE} {}
+  Watcher(ProtocolHandler* handler, int fd) : fd_{fd}, handler_{handler} {}
 
   void Watch(bool read, bool write) {
-    if (read == watching_read_ && write == watching_write_ && !triggered_)
+    if (read == (controller_read_ != nullptr) &&
+        write == (controller_write_ != nullptr) && !triggered_)
       return;
 
-    controller_.StopWatchingFileDescriptor();
-    watching_read_ = read;
-    watching_write_ = write;
+    controller_read_ = nullptr;
+    controller_write_ = nullptr;
     triggered_ = false;
 
-    auto mode = base::MessagePumpLibevent::WATCH_READ_WRITE;
-    if (watching_read_ && watching_write_)
-      mode = base::MessagePumpLibevent::WATCH_READ_WRITE;
-    else if (watching_read_)
-      mode = base::MessagePumpLibevent::WATCH_READ;
-    else if (watching_write_)
-      mode = base::MessagePumpLibevent::WATCH_WRITE;
-    base::MessageLoopForIO::current()->WatchFileDescriptor(fd_, false, mode,
-                                                           &controller_, this);
+    if (read) {
+      controller_read_ = base::FileDescriptorWatcher::WatchReadable(
+          fd_, base::BindRepeating(&Watcher::OnReady, base::Unretained(this)));
+    }
+    if (write) {
+      controller_write_ = base::FileDescriptorWatcher::WatchWritable(
+          fd_, base::BindRepeating(&Watcher::OnReady, base::Unretained(this)));
+    }
   }
 
-  // Overrides from base::MessagePumpLibevent::FdWatcher.
-  void OnFileCanReadWithoutBlocking(int /* fd */) override {
+  void OnReady() {
     triggered_ = true;
-    handler_->ScheduleWork();
-  }
-
-  void OnFileCanWriteWithoutBlocking(int /* fd */) override {
-    triggered_ = true;
+    controller_read_ = nullptr;
+    controller_write_ = nullptr;
     handler_->ScheduleWork();
   }
 
@@ -336,10 +329,9 @@ class ProtocolHandler::Watcher final
  private:
   int fd_{-1};
   ProtocolHandler* handler_{nullptr};
-  bool watching_read_{false};
-  bool watching_write_{false};
   bool triggered_{false};
-  base::MessagePumpLibevent::FdWatchController controller_;
+  std::unique_ptr<base::FileDescriptorWatcher::Controller> controller_read_;
+  std::unique_ptr<base::FileDescriptorWatcher::Controller> controller_write_;
 
   DISALLOW_COPY_AND_ASSIGN(Watcher);
 };

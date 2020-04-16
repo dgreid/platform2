@@ -101,7 +101,9 @@ bool LoadConfigFromString(const std::string& config_json,
                           Config* config,
                           brillo::ErrorPtr* error) {
   std::string error_msg;
-  auto value = base::JSONReader::ReadAndReturnError(
+  // TODO(crbug.com/1054279): use base::JSONReader::ReadAndReturnValueWithError
+  // after uprev to r680000.
+  auto value = base::JSONReader::ReadAndReturnErrorDeprecated(
       config_json, base::JSON_ALLOW_TRAILING_COMMAS, nullptr, &error_msg);
 
   if (!value) {
