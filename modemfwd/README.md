@@ -19,6 +19,8 @@ flags are declared in the [system API] repo.
 * `--flash_carrier_fw=<file>`
 * `--flash_mode_check`: see if the modem is present in firmware download mode
 * `--reboot`
+* `--fw_version`: can be optionally passed along with `--flash_main_fw` or
+  `--flash_carrier_fw` to signify the firmware version of the passed file
 
 `--get_fw_info` should return the main firmware on the first line, the carrier
 UUID on the next line and the carrier version on the one after that:
