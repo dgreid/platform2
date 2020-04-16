@@ -364,8 +364,6 @@ class WiFiServiceFixupStorageTest : public WiFiServiceTest {
 TEST_F(WiFiServiceTest, Constructor) {
   string histogram = metrics()->GetFullMetricName(
       Metrics::kMetricTimeToJoinMillisecondsSuffix, Technology::kWifi);
-  EXPECT_CALL(*metrics(), AddServiceStateTransitionTimer(_, _, _, _))
-      .Times(AnyNumber());
   EXPECT_CALL(*metrics(), AddServiceStateTransitionTimer(
                               _, histogram, Service::kStateAssociating,
                               Service::kStateConfiguring));

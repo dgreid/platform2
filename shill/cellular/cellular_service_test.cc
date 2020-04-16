@@ -21,6 +21,7 @@
 
 using std::string;
 using testing::_;
+using testing::AnyNumber;
 using testing::InSequence;
 using testing::Mock;
 using testing::NiceMock;
@@ -44,6 +45,9 @@ class CellularServiceTest : public testing::Test {
       : modem_info_(nullptr, &dispatcher_, nullptr, nullptr),
         adaptor_(nullptr) {
     Service::SetNextSerialNumberForTesting(0);
+    // Many tests set service properties which call Manager.UpdateService().
+    EXPECT_CALL(*modem_info_.mock_manager(), UpdateService(_))
+        .Times(AnyNumber());
     device_ = new MockCellular(&modem_info_, "usb0", kAddress, 3,
                                Cellular::kTypeCdma, "", RpcIdentifier(""));
     service_ = new CellularService(modem_info_.manager(), device_);
@@ -230,6 +234,10 @@ TEST_F(CellularServiceTest, LastGoodApn) {
 }
 
 TEST_F(CellularServiceTest, IsAutoConnectable) {
+  // This test assumes AutoConnect is not disabled by policy.
+  EXPECT_CALL(*modem_info_.mock_manager(), IsTechnologyAutoConnectDisabled(_))
+      .WillRepeatedly(Return(false));
+
   device_->set_imsi("111222123456789");
   const char* reason = nullptr;
 
