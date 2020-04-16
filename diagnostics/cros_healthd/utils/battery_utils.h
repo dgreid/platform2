@@ -9,6 +9,7 @@
 #include <vector>
 
 #include <base/macros.h>
+#include <base/optional.h>
 #include <chromeos/chromeos-config/libcros_config/cros_config_interface.h>
 #include <dbus/object_proxy.h>
 
@@ -27,25 +28,31 @@ class BatteryFetcher {
                  brillo::CrosConfigInterface* cros_config);
   ~BatteryFetcher();
 
-  // Fetches a device's battery info.
-  chromeos::cros_healthd::mojom::BatteryInfoPtr FetchBatteryInfo();
+  // Returns a structure with either the device's battery info or the error that
+  // occurred fetching the information.
+  chromeos::cros_healthd::mojom::BatteryResultPtr FetchBatteryInfo();
 
  private:
-  // Populates |info| with battery info from |response|. Returns true on
-  // success.
-  bool GetBatteryInfoFromPowerdResponse(
+  using OptionalProbeErrorPtr =
+      base::Optional<chromeos::cros_healthd::mojom::ProbeErrorPtr>;
+
+  // Populates general battery data fields in |info| obtained from a
+  // powerd |response|. Returns base::nullopt on success or a ProbeError
+  // on failure.
+  OptionalProbeErrorPtr PopulateBatteryInfoFromPowerdResponse(
       dbus::Response* response,
       chromeos::cros_healthd::mojom::BatteryInfo* info);
 
-  // Populates |smart_info| with Smart Battery info obtained by using ectool via
-  // debugd.
-  void GetSmartBatteryInfo(
-      chromeos::cros_healthd::mojom::SmartBatteryInfo* smart_info);
+  // Populates the Smart Battery fields in |info| obtained by using ectool
+  // via debugd. Returns base::nullopt on success or a ProbeError on failure.
+  OptionalProbeErrorPtr PopulateSmartBatteryInfo(
+      chromeos::cros_healthd::mojom::BatteryInfo* info);
 
   // Populates |metric_value| with the value obtained from requesting
-  // |metric_name| from ectool via debugd. Returns true on success.
+  // |metric_name| from ectool via debugd. Returns base::nullopt on success or a
+  // ProbeError on failure.
   template <typename T>
-  bool GetSmartBatteryMetric(
+  OptionalProbeErrorPtr GetSmartBatteryMetric(
       const std::string& metric_name,
       base::OnceCallback<bool(const base::StringPiece& input, T* output)>
           convert_string_to_num,

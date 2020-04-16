@@ -14,6 +14,7 @@
 #include <base/bind.h>
 #include <base/process/launch.h>
 #include <base/files/file_util.h>
+#include <base/optional.h>
 #include <base/strings/stringprintf.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_util.h>
@@ -25,15 +26,14 @@
 #include <dbus/object_proxy.h>
 #include <re2/re2.h>
 
+#include "diagnostics/cros_healthd/utils/error_utils.h"
 #include "power_manager/proto_bindings/power_supply_properties.pb.h"
 
 namespace diagnostics {
 
 namespace {
 
-using ::chromeos::cros_healthd::mojom::BatteryInfo;
-using ::chromeos::cros_healthd::mojom::BatteryInfoPtr;
-using ::chromeos::cros_healthd::mojom::SmartBatteryInfo;
+namespace mojo_ipc = ::chromeos::cros_healthd::mojom;
 
 // The path used to check a device's master configuration hardware properties.
 constexpr char kHardwarePropertiesPath[] = "/hardware-properties";
@@ -87,50 +87,56 @@ BatteryFetcher::BatteryFetcher(
 
 BatteryFetcher::~BatteryFetcher() = default;
 
-BatteryInfoPtr BatteryFetcher::FetchBatteryInfo() {
+mojo_ipc::BatteryResultPtr BatteryFetcher::FetchBatteryInfo() {
   if (!HasBattery())
-    return BatteryInfoPtr();
+    return mojo_ipc::BatteryResult::NewBatteryInfo(mojo_ipc::BatteryInfoPtr());
 
-  BatteryInfo info;
+  mojo_ipc::BatteryInfo info;
   dbus::MethodCall method_call(power_manager::kPowerManagerInterface,
                                power_manager::kGetPowerSupplyPropertiesMethod);
   auto response = power_manager_proxy_->CallMethodAndBlock(
       &method_call, kPowerManagerDBusTimeout.InMilliseconds());
   if (!response) {
-    LOG(ERROR) << "Failed to obtain response from powerd.";
-    return BatteryInfoPtr();
+    return mojo_ipc::BatteryResult::NewError(CreateAndLogProbeError(
+        mojo_ipc::ErrorType::kSystemUtilityError,
+        "Failed to obtain power supply properties from powerd"));
   }
 
-  if (!GetBatteryInfoFromPowerdResponse(response.get(), &info))
-    return BatteryInfoPtr();
+  auto error = PopulateBatteryInfoFromPowerdResponse(response.get(), &info);
+  if (error.has_value()) {
+    return mojo_ipc::BatteryResult::NewError(std::move(error.value()));
+  }
 
   if (HasSmartBatteryInfo()) {
-    SmartBatteryInfo smart_info;
-    GetSmartBatteryInfo(&smart_info);
-    info.smart_battery_info = smart_info.Clone();
+    error = PopulateSmartBatteryInfo(&info);
+    if (error.has_value()) {
+      return mojo_ipc::BatteryResult::NewError(std::move(error.value()));
+    }
   }
 
-  return info.Clone();
+  return mojo_ipc::BatteryResult::NewBatteryInfo(info.Clone());
 }
 
-bool BatteryFetcher::GetBatteryInfoFromPowerdResponse(dbus::Response* response,
-                                                      BatteryInfo* info) {
+base::Optional<mojo_ipc::ProbeErrorPtr>
+BatteryFetcher::PopulateBatteryInfoFromPowerdResponse(
+    dbus::Response* response, mojo_ipc::BatteryInfo* info) {
   DCHECK(response);
   DCHECK(info);
 
   power_manager::PowerSupplyProperties power_supply_proto;
   dbus::MessageReader reader(response);
   if (!reader.PopArrayOfBytesAsProto(&power_supply_proto)) {
-    LOG(ERROR) << "Could not successfully read PowerSupplyProperties protobuf.";
-    return false;
+    return CreateAndLogProbeError(
+        mojo_ipc::ErrorType::kParseError,
+        "Could not successfully read PowerSupplyProperties protobuf");
   }
 
   if (!power_supply_proto.has_battery_state() ||
       power_supply_proto.battery_state() ==
           power_manager::PowerSupplyProperties_BatteryState_NOT_PRESENT) {
-    LOG(ERROR)
-        << "PowerSupplyProperties protobuf indicates battery is not present.";
-    return false;
+    return CreateAndLogProbeError(
+        mojo_ipc::ErrorType::kSystemUtilityError,
+        "PowerSupplyProperties protobuf indicates battery is not present");
   }
 
   info->cycle_count = power_supply_proto.battery_cycle_count();
@@ -146,36 +152,41 @@ bool BatteryFetcher::GetBatteryInfoFromPowerdResponse(dbus::Response* response,
   info->technology = power_supply_proto.battery_technology();
   info->status = power_supply_proto.battery_status();
 
-  return true;
+  return base::nullopt;
 }
 
-void BatteryFetcher::GetSmartBatteryInfo(SmartBatteryInfo* smart_info) {
+base::Optional<mojo_ipc::ProbeErrorPtr>
+BatteryFetcher::PopulateSmartBatteryInfo(mojo_ipc::BatteryInfo* info) {
   uint32_t manufacture_date;
   auto convert_hex_string_to_uint32 =
       base::BindOnce([](const base::StringPiece& input, uint32_t* output) {
         return base::HexStringToUInt(input, output);
       });
-  smart_info->manufacture_date =
-      GetSmartBatteryMetric(kManufactureDateSmart,
-                            std::move(convert_hex_string_to_uint32),
-                            &manufacture_date)
-          ? ConvertSmartBatteryManufactureDate(manufacture_date)
-          : "0000-00-00";
+  auto error = GetSmartBatteryMetric(kManufactureDateSmart,
+                                     std::move(convert_hex_string_to_uint32),
+                                     &manufacture_date);
+  if (error.has_value()) {
+    return error;
+  }
+  info->manufacture_date = ConvertSmartBatteryManufactureDate(manufacture_date);
+
   uint64_t temperature;
   auto convert_hex_string_to_uint64 =
       base::BindOnce([](const base::StringPiece& input, uint64_t* output) {
         return base::HexStringToUInt64(input, output);
       });
-  smart_info->temperature =
-      GetSmartBatteryMetric(kTemperatureSmart,
-                            std::move(convert_hex_string_to_uint64),
-                            &temperature)
-          ? temperature
-          : 0;
+  error = GetSmartBatteryMetric(
+      kTemperatureSmart, std::move(convert_hex_string_to_uint64), &temperature);
+  if (error.has_value()) {
+    return error;
+  }
+  info->temperature = mojo_ipc::UInt64Value::New(temperature);
+
+  return base::nullopt;
 }
 
 template <typename T>
-bool BatteryFetcher::GetSmartBatteryMetric(
+base::Optional<mojo_ipc::ProbeErrorPtr> BatteryFetcher::GetSmartBatteryMetric(
     const std::string& metric_name,
     base::OnceCallback<bool(const base::StringPiece& input, T* output)>
         convert_string_to_num,
@@ -184,10 +195,10 @@ bool BatteryFetcher::GetSmartBatteryMetric(
   std::string debugd_result;
   if (!debugd_proxy_->CollectSmartBatteryMetric(metric_name, &debugd_result,
                                                 &error, kDebugdDBusTimeout)) {
-    LOG(ERROR) << "Failed retrieving " << metric_name
-               << " from debugd: " << error->GetCode() << " "
-               << error->GetMessage();
-    return false;
+    return CreateAndLogProbeError(mojo_ipc::ErrorType::kSystemUtilityError,
+                                  "Failed retrieving " + metric_name +
+                                      " from debugd: " + error->GetCode() +
+                                      " " + error->GetMessage());
   }
 
   // Parse the output from debugd to obtain the battery metric.
@@ -196,11 +207,18 @@ bool BatteryFetcher::GetSmartBatteryMetric(
   std::string reg_value;
   if (!RE2::PartialMatch(base::CollapseWhitespaceASCII(debugd_result, true),
                          kRegexPattern, &reg_value)) {
-    LOG(ERROR) << "Failed to match debugd output to regex.";
-    return false;
+    return CreateAndLogProbeError(
+        mojo_ipc::ErrorType::kParseError,
+        "Failed to match debugd output to regex: " + debugd_result);
   }
 
-  return std::move(convert_string_to_num).Run(reg_value, metric_value);
+  if (!std::move(convert_string_to_num).Run(reg_value, metric_value)) {
+    return CreateAndLogProbeError(
+        mojo_ipc::ErrorType::kParseError,
+        "Unable to run convert string to num callback");
+  }
+
+  return base::nullopt;
 }
 
 bool BatteryFetcher::HasBattery() {

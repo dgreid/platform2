@@ -194,7 +194,7 @@ void CrosHealthdMojoService::ProbeTelemetryInfo(
   for (const auto category : categories) {
     switch (category) {
       case ProbeCategoryEnum::kBattery: {
-        telemetry_info.battery_info = battery_fetcher_->FetchBatteryInfo();
+        telemetry_info.battery_result = battery_fetcher_->FetchBatteryInfo();
         break;
       }
       case ProbeCategoryEnum::kCachedVpdData: {

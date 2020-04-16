@@ -67,8 +67,17 @@ std::string GetArchitectureString(CpuArchitectureEnum architecture) {
 }
 
 void DisplayBatteryInfo(
-    const chromeos::cros_healthd::mojom::BatteryInfoPtr& battery) {
-  DCHECK(!battery.is_null());
+    const chromeos::cros_healthd::mojom::BatteryResultPtr& battery_result) {
+  if (battery_result->is_error()) {
+    DisplayError(battery_result->get_error());
+    return;
+  }
+
+  const auto& battery = battery_result->get_battery_info();
+  if (battery.is_null()) {
+    printf("Device does not have battery\n");
+    return;
+  }
 
   printf(
       "charge_full,charge_full_design,cycle_count,serial_number,"
@@ -76,12 +85,11 @@ void DisplayBatteryInfo(
       "manufacture_date_smart,temperature_smart,model_name,charge_now,"
       "current_now,technology,status\n");
 
-  bool has_smart_info = !battery->smart_battery_info.is_null();
-  std::string manufacture_date_smart =
-      has_smart_info ? battery->smart_battery_info->manufacture_date : "NA";
+  std::string manufacture_date_smart = battery->manufacture_date.value_or("NA");
   std::string temperature_smart =
-      has_smart_info ? std::to_string(battery->smart_battery_info->temperature)
-                     : "NA";
+      !battery->temperature.is_null()
+          ? std::to_string(battery->temperature->value)
+          : "NA";
 
   printf("%f,%f,%ld,%s,%s,%f,%f,%s,%s,%s,%f,%f,%s,%s\n", battery->charge_full,
          battery->charge_full_design, battery->cycle_count,
@@ -205,9 +213,9 @@ void DisplayBacklightInfo(
 // Displays the retrieved telemetry information to the console.
 void DisplayTelemetryInfo(
     const chromeos::cros_healthd::mojom::TelemetryInfoPtr& info) {
-  const auto& battery = info->battery_info;
-  if (!battery.is_null())
-    DisplayBatteryInfo(battery);
+  const auto& battery_result = info->battery_result;
+  if (battery_result)
+    DisplayBatteryInfo(battery_result);
 
   const auto& block_device_result = info->block_device_result;
   if (block_device_result)

@@ -26,6 +26,7 @@
 
 namespace diagnostics {
 
+using ::chromeos::cros_healthd::mojom::ErrorType;
 using ::dbus::MockBus;
 using ::dbus::MockObjectProxy;
 using ::testing::_;
@@ -172,9 +173,10 @@ TEST_F(BatteryUtilsTest, FetchBatteryInfo) {
                       })),
                       Return(true)));
 
-  auto battery = battery_fetcher()->FetchBatteryInfo();
-  ASSERT_TRUE(battery);
+  auto battery_result = battery_fetcher()->FetchBatteryInfo();
+  ASSERT_TRUE(battery_result->is_battery_info());
 
+  const auto& battery = battery_result->get_battery_info();
   EXPECT_EQ(kBatteryCycleCount, battery->cycle_count);
   EXPECT_EQ(kBatteryVendor, battery->vendor);
   EXPECT_EQ(kBatteryVoltage, battery->voltage_now);
@@ -187,23 +189,27 @@ TEST_F(BatteryUtilsTest, FetchBatteryInfo) {
   EXPECT_EQ(kBatteryCurrentNow, battery->current_now);
   EXPECT_EQ(kBatteryTechnology, battery->technology);
   EXPECT_EQ(kBatteryStatus, battery->status);
-  EXPECT_EQ(kSmartBatteryManufactureDate,
-            battery->smart_battery_info->manufacture_date);
-  EXPECT_EQ(kSmartBatteryTemperature, battery->smart_battery_info->temperature);
+
+  // Test that optional smart battery metrics are populated.
+  ASSERT_TRUE(battery->manufacture_date.has_value());
+  ASSERT_TRUE(battery->temperature);
+  EXPECT_EQ(kSmartBatteryManufactureDate, battery->manufacture_date.value());
+  EXPECT_EQ(kSmartBatteryTemperature, battery->temperature->value);
 }
 
-// Test that we handle a malformed power_manager D-Bus response.
+// Test that a malformed power_manager D-Bus response returns an error.
 TEST_F(BatteryUtilsTest, MalformedPowerManagerDbusResponse) {
   EXPECT_CALL(*mock_power_manager_proxy(),
               CallMethodAndBlock(_, kPowerManagerDBusTimeout.InMilliseconds()))
       .WillOnce(
           [](dbus::MethodCall*, int) { return dbus::Response::CreateEmpty(); });
 
-  auto battery = battery_fetcher()->FetchBatteryInfo();
-  EXPECT_FALSE(battery);
+  auto battery_result = battery_fetcher()->FetchBatteryInfo();
+  ASSERT_TRUE(battery_result->is_error());
+  EXPECT_EQ(battery_result->get_error()->type, ErrorType::kParseError);
 }
 
-// Test that we handle an empty proto in a power_manager D-Bus response.
+// Test that an empty proto in a power_manager D-Bus response returns an error.
 TEST_F(BatteryUtilsTest, EmptyProtoPowerManagerDbusResponse) {
   power_manager::PowerSupplyProperties power_supply_proto;
 
@@ -218,12 +224,14 @@ TEST_F(BatteryUtilsTest, EmptyProtoPowerManagerDbusResponse) {
         return power_manager_response;
       });
 
-  auto battery = battery_fetcher()->FetchBatteryInfo();
-  EXPECT_FALSE(battery);
+  auto battery_result = battery_fetcher()->FetchBatteryInfo();
+  ASSERT_TRUE(battery_result->is_error());
+  EXPECT_EQ(battery_result->get_error()->type, ErrorType::kSystemUtilityError);
 }
 
-// Test that we handle debugd failing to collect smart metrics.
-TEST_F(BatteryUtilsTest, SmartMetricRetrievalFailure) {
+// Test that debugd failing to collect battery manufacture date returns an
+// error.
+TEST_F(BatteryUtilsTest, ManufactureDateRetrievalFailure) {
   power_manager::PowerSupplyProperties power_supply_proto;
   power_supply_proto.set_battery_state(kBatteryStateFull);
 
@@ -246,6 +254,36 @@ TEST_F(BatteryUtilsTest, SmartMetricRetrievalFailure) {
                         *error = brillo::Error::Create(FROM_HERE, "", "", "");
                       })),
                       Return(false)));
+
+  auto battery_result = battery_fetcher()->FetchBatteryInfo();
+  ASSERT_TRUE(battery_result->is_error());
+  EXPECT_EQ(battery_result->get_error()->type, ErrorType::kSystemUtilityError);
+}
+
+// Test that debugd failing to collect battery temperature returns an error.
+TEST_F(BatteryUtilsTest, TemperatureRetrievalFailure) {
+  power_manager::PowerSupplyProperties power_supply_proto;
+  power_supply_proto.set_battery_state(kBatteryStateFull);
+
+  // Set the mock power manager response.
+  EXPECT_CALL(*mock_power_manager_proxy(),
+              CallMethodAndBlock(_, kPowerManagerDBusTimeout.InMilliseconds()))
+      .WillOnce([&power_supply_proto](dbus::MethodCall*, int) {
+        std::unique_ptr<dbus::Response> power_manager_response =
+            dbus::Response::CreateEmpty();
+        dbus::MessageWriter power_manager_writer(power_manager_response.get());
+        power_manager_writer.AppendProtoAsArrayOfBytes(power_supply_proto);
+        return power_manager_response;
+      });
+
+  // Set the mock Debugd Adapter responses.
+  EXPECT_CALL(
+      *mock_debugd_proxy(),
+      CollectSmartBatteryMetric("manufacture_date_smart", _, _, kDebugdTimeOut))
+      .WillOnce(DoAll(WithArg<1>(Invoke([](std::string* result) {
+                        *result = kSmartBatteryManufactureDateResponse;
+                      })),
+                      Return(true)));
   EXPECT_CALL(
       *mock_debugd_proxy(),
       CollectSmartBatteryMetric("temperature_smart", _, _, kDebugdTimeOut))
@@ -254,14 +292,13 @@ TEST_F(BatteryUtilsTest, SmartMetricRetrievalFailure) {
                       })),
                       Return(false)));
 
-  auto battery = battery_fetcher()->FetchBatteryInfo();
-  ASSERT_TRUE(battery);
-
-  EXPECT_EQ("0000-00-00", battery->smart_battery_info->manufacture_date);
-  EXPECT_EQ(0, battery->smart_battery_info->temperature);
+  auto battery_result = battery_fetcher()->FetchBatteryInfo();
+  ASSERT_TRUE(battery_result->is_error());
+  EXPECT_EQ(battery_result->get_error()->type, ErrorType::kSystemUtilityError);
 }
 
-// Test that we handle failing to match the regex to the debugd responses.
+// Test that failing to match the regex to the debugd responses returns an
+// error.
 TEST_F(BatteryUtilsTest, SmartMetricRegexFailure) {
   power_manager::PowerSupplyProperties power_supply_proto;
   power_supply_proto.set_battery_state(kBatteryStateFull);
@@ -285,19 +322,10 @@ TEST_F(BatteryUtilsTest, SmartMetricRegexFailure) {
                         *result = kInvalidRegexSmartMetricResponse;
                       })),
                       Return(true)));
-  EXPECT_CALL(
-      *mock_debugd_proxy(),
-      CollectSmartBatteryMetric("temperature_smart", _, _, kDebugdTimeOut))
-      .WillOnce(DoAll(WithArg<1>(Invoke([](std::string* result) {
-                        *result = kInvalidRegexSmartMetricResponse;
-                      })),
-                      Return(true)));
 
-  auto battery = battery_fetcher()->FetchBatteryInfo();
-  ASSERT_TRUE(battery);
-
-  EXPECT_EQ("0000-00-00", battery->smart_battery_info->manufacture_date);
-  EXPECT_EQ(0, battery->smart_battery_info->temperature);
+  auto battery_result = battery_fetcher()->FetchBatteryInfo();
+  ASSERT_TRUE(battery_result->is_error());
+  EXPECT_EQ(battery_result->get_error()->type, ErrorType::kParseError);
 }
 
 // Test that Smart Battery metrics are not fetched when a device does not have a
@@ -318,17 +346,19 @@ TEST_F(BatteryUtilsTest, NoSmartBattery) {
         return power_manager_response;
       });
 
-  auto battery = battery_fetcher()->FetchBatteryInfo();
-  ASSERT_TRUE(battery);
+  auto battery_result = battery_fetcher()->FetchBatteryInfo();
+  ASSERT_TRUE(battery_result->is_battery_info());
+  const auto& battery = battery_result->get_battery_info();
 
-  EXPECT_TRUE(battery->smart_battery_info.is_null());
+  EXPECT_FALSE(battery->manufacture_date.has_value());
+  EXPECT_FALSE(battery->temperature);
 }
 
 // Test that no battery info is returned when a device does not have a battery.
 TEST_F(BatteryUtilsTest, NoBattery) {
   SetPsuType("AC_only");
-  auto battery = battery_fetcher()->FetchBatteryInfo();
-  EXPECT_FALSE(battery);
+  auto battery_result = battery_fetcher()->FetchBatteryInfo();
+  ASSERT_TRUE(battery_result->get_battery_info().is_null());
 }
 
 }  // namespace diagnostics
