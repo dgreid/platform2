@@ -5,12 +5,14 @@
 #ifndef CROS_DISKS_SESSION_MANAGER_OBSERVER_INTERFACE_H_
 #define CROS_DISKS_SESSION_MANAGER_OBSERVER_INTERFACE_H_
 
+#include "base/observer_list_types.h"
+
 namespace cros_disks {
 
 // An interface class for observing events from the session manager.
 // A derived class of this class should override the event methods
 // that it would like to observe.
-class SessionManagerObserverInterface {
+class SessionManagerObserverInterface : public base::CheckedObserver {
  public:
   virtual ~SessionManagerObserverInterface() = default;
 
