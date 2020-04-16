@@ -10,7 +10,7 @@
 
 #include <base/time/tick_clock.h>
 #include <base/time/time.h>
-#include <base/sys_info.h>
+#include <base/system/sys_info.h>
 #include <cros_config/cros_config_interface.h>
 
 #include <dbus/bus.h>

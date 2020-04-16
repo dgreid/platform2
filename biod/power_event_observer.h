@@ -5,10 +5,12 @@
 #ifndef BIOD_POWER_EVENT_OBSERVER_H_
 #define BIOD_POWER_EVENT_OBSERVER_H_
 
+#include "base/observer_list_types.h"
+
 namespace biod {
 
 // Interface for observing signals from the power manager client.
-class PowerEventObserver {
+class PowerEventObserver : public base::CheckedObserver {
  public:
   PowerEventObserver() = default;
   virtual ~PowerEventObserver() = default;
