@@ -4,15 +4,16 @@
  * found in the LICENSE file.
  */
 
+#include <linux/videodev2.h>
+#include <sysexits.h>
+
 #include <cstring>
 #include <string>
-#include <sysexits.h>
 
 #include <base/bind.h>
 #include <base/files/file.h>
 #include <base/strings/string_util.h>
 #include <base/strings/stringprintf.h>
-#include <drm_fourcc.h>
 
 #include "cros-camera/common.h"
 #include "tools/connector_client/cros_camera_connector_client.h"
@@ -133,7 +134,7 @@ void CrosCameraConnectorClient::ProcessFrame(const cros_cam_frame_t* frame) {
   static const char kNv12FilePattern[] = "/tmp/connector_#.yuv";
   static int frame_iter = 0;
 
-  if (frame->format.fourcc == DRM_FORMAT_R8) {
+  if (frame->format.fourcc == V4L2_PIX_FMT_MJPEG) {
     std::string output_path(kJpegFilePattern);
     base::ReplaceSubstringsAfterOffset(&output_path, /*start_offset=*/0, "#",
                                        base::StringPrintf("%06u", frame_iter));
@@ -143,7 +144,7 @@ void CrosCameraConnectorClient::ProcessFrame(const cros_cam_frame_t* frame) {
                            frame->plane[0].size);
     LOGF(INFO) << "Saved JPEG: " << output_path
                << "  (size = " << frame->plane[0].size << ")";
-  } else if (frame->format.fourcc == DRM_FORMAT_NV12) {
+  } else if (frame->format.fourcc == V4L2_PIX_FMT_NV12) {
     std::string output_path(kNv12FilePattern);
     base::ReplaceSubstringsAfterOffset(&output_path, /*start_offset=*/0, "#",
                                        base::StringPrintf("%06u", frame_iter));

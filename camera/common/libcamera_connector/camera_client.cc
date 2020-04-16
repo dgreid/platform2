@@ -14,7 +14,6 @@
 #include <base/files/file_util.h>
 #include <base/files/scoped_file.h>
 #include <base/posix/safe_strerror.h>
-#include <drm_fourcc.h>
 
 #include "common/libcamera_connector/camera_metadata_utils.h"
 #include "common/libcamera_connector/supported_formats.h"
@@ -124,10 +123,6 @@ int CameraClient::StartCapture(cros_cam_device_t id,
   request_format_ = *format;
   request_callback_ = callback;
   request_context_ = context;
-
-  // TODO(b/151047930): Support other formats.
-  CHECK(request_format_.fourcc == DRM_FORMAT_R8 ||
-        request_format_.fourcc == DRM_FORMAT_NV12);
 
   auto future = cros::Future<int>::Create(nullptr);
   start_callback_ = cros::GetFutureCallback(future);
@@ -246,17 +241,23 @@ void CameraClient::OnGotCameraInfo(int32_t result, mojom::CameraInfoPtr info) {
       info->static_camera_characteristics,
       mojom::CameraMetadataTag::ANDROID_SCALER_AVAILABLE_MIN_FRAME_DURATIONS);
   for (size_t i = 0; i < min_frame_durations.size(); i += 4) {
-    uint32_t drm_format = ResolveDrmFormat(min_frame_durations[i + 0]);
-    if (drm_format == 0) {  // Failed to resolve to a format
-      LOGF(WARNING) << "Failed to resolve to a DRM format for "
-                    << min_frame_durations[i + 0];
+    int64_t hal_pixel_format = min_frame_durations[i + 0];
+    int64_t width = min_frame_durations[i + 1];
+    int64_t height = min_frame_durations[i + 2];
+    int64_t duration_ns = min_frame_durations[i + 3];
+
+    uint32_t fourcc = GetV4L2PixelFormat(hal_pixel_format);
+    if (fourcc == 0) {
+      VLOGF(1) << "Skip unsupported format " << hal_pixel_format;
       continue;
     }
+
     cros_cam_format_info_t info = {
-        .fourcc = drm_format,
-        .width = static_cast<unsigned>(min_frame_durations[i + 1]),
-        .height = static_cast<unsigned>(min_frame_durations[i + 2]),
-        .fps = static_cast<unsigned>(round(1e9 / min_frame_durations[i + 3]))};
+        .fourcc = fourcc,
+        .width = static_cast<unsigned>(width),
+        .height = static_cast<unsigned>(height),
+        .fps = static_cast<unsigned>(round(1e9 / duration_ns)),
+    };
     format_info.push_back(std::move(info));
   }
 

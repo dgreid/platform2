@@ -10,22 +10,18 @@
 #include <utility>
 #include <vector>
 
-#include <drm_fourcc.h>
 #include <hardware/gralloc.h>
+#include <linux/videodev2.h>
 
 namespace cros {
 
-constexpr std::pair<int, uint32_t> kSupportedFormats[] = {
-    {HAL_PIXEL_FORMAT_BLOB, DRM_FORMAT_R8},
-    {HAL_PIXEL_FORMAT_YCbCr_420_888, DRM_FORMAT_NV12}};
+// Gets the corresponding V4L2 pixel format with the given HAL pixel format.
+// Returns 0 if no format is found.
+uint32_t GetV4L2PixelFormat(int hal_pixel_format);
 
-// Resolves the given HAL pixel format to its corresponding DRM format. Returns
-// 0 if a HAL Pixel format cannot be resolved.
-uint32_t ResolveDrmFormat(int hal_pixel_format);
-
-// Gets the corresponding HAL pixel format with the given DRM format. Returns 0
-// if no format is found.
-int GetHalPixelFormat(uint32_t drm_format);
+// Gets the corresponding HAL pixel format with the given V4L2 pixel format.
+// Returns 0 if no format is found.
+int GetHalPixelFormat(uint32_t v4l2_pixel_format);
 
 }  // namespace cros
 

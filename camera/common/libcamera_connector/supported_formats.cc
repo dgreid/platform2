@@ -8,7 +8,15 @@
 
 namespace cros {
 
-uint32_t ResolveDrmFormat(int hal_pixel_format) {
+namespace {
+
+constexpr std::pair<int, uint32_t> kSupportedFormats[] = {
+    {HAL_PIXEL_FORMAT_BLOB, V4L2_PIX_FMT_MJPEG},
+    {HAL_PIXEL_FORMAT_YCbCr_420_888, V4L2_PIX_FMT_NV12}};
+
+}
+
+uint32_t GetV4L2PixelFormat(int hal_pixel_format) {
   for (const auto& format_pair : kSupportedFormats) {
     if (format_pair.first == hal_pixel_format) {
       return format_pair.second;
@@ -17,9 +25,9 @@ uint32_t ResolveDrmFormat(int hal_pixel_format) {
   return 0;
 }
 
-int GetHalPixelFormat(uint32_t drm_format) {
+int GetHalPixelFormat(uint32_t v4l2_pixel_format) {
   for (const auto& format_pair : kSupportedFormats) {
-    if (format_pair.second == drm_format) {
+    if (format_pair.second == v4l2_pixel_format) {
       return format_pair.first;
     }
   }

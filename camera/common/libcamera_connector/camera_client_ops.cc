@@ -216,10 +216,6 @@ void CameraClientOps::StartCaptureOnThread(int32_t camera_id,
   request_context_ = context;
   jpeg_max_size_ = jpeg_max_size;
 
-  // TODO(b/151047930): Support other formats.
-  CHECK(request_format_.fourcc == DRM_FORMAT_R8 ||
-        request_format_.fourcc == DRM_FORMAT_NV12);
-
   InitializeDevice();
 }
 
@@ -354,10 +350,6 @@ void CameraClientOps::ConstructCaptureRequestOnThread() {
         &CameraClientOps::ConstructCaptureRequest, base::Unretained(this)));
     return;
   }
-
-  // TODO(b/151047930): Support other formats.
-  CHECK(request_format_.fourcc == DRM_FORMAT_R8 ||
-        request_format_.fourcc == DRM_FORMAT_NV12);
 
   mojom::Camera3CaptureRequestPtr request = mojom::Camera3CaptureRequest::New();
   {
