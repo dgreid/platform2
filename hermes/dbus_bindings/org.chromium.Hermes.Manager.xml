@@ -7,9 +7,9 @@
 <node name="/org/chromium/Hermes/Manager"
   xmlns:tp="http://telepathy.freedesktop.org/wiki/DbusSpec#extensions-v0">
 <interface name="org.chromium.Hermes.Manager">
-  <method name="InstallProfile">
+  <method name="InstallProfileFromActivationCode">
     <tp:docstring>
-      Install a profile onto the eUICC.
+      Install a profile onto the eUICC using an activation code.
     </tp:docstring>
     <annotation name="org.chromium.DBus.Method.Kind" value="async" />
     <arg name="activation_code" type="s" direction="in">
@@ -17,6 +17,19 @@
         Activation code of the profile to install.
       </tp:docstring>
     </arg>
+    <arg name="profile" type="o" direction="out">
+      <tp:docstring>
+        Profile object representing the newly-installed profile.
+      </tp:docstring>
+    </arg>
+  </method>
+  <method name="InstallProfileFromEvent">
+    <tp:docstring>
+      Install a profile onto the eUICC using an Event from the SM-DS.
+    </tp:docstring>
+    <annotation name="org.chromium.DBus.Method.Kind" value="async" />
+    <arg name="smdp_address" type="s" direction="in" />
+    <arg name="event_id" type="s" direction="in" />
     <arg name="profile" type="o" direction="out">
       <tp:docstring>
         Profile object representing the newly-installed profile.
@@ -34,13 +47,24 @@
       </tp:docstring>
     </arg>
   </method>
+  <method name="RequestPendingEvents">
+    <tp:docstring>
+      Request Events from SM-DS.
+    </tp:docstring>
+    <annotation name="org.chromium.DBus.Method.Kind" value="async" />
+    <arg name="events" type="a(ss)" direction="out">
+      <tp:docstring>
+        List of (SM-DP+ Address, EventId) pairs representing pending Events.
+      </tp:docstring>
+    </arg>
+  </method>
   <method name="SetTestMode">
     <tp:docstring>
       Set/unset test mode.
     </tp:docstring>
     <annotation name="org.chromium.DBus.Method.Kind" value="simple" />
-    <arg name="is_test_mode" type="b" direction="in"/>
+    <arg name="is_test_mode" type="b" direction="in" />
   </method>
-  <property name="Profiles" type="ao" access="read"/>
+  <property name="Profiles" type="ao" access="read" />
 </interface>
 </node>

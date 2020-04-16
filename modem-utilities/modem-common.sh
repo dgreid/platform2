@@ -172,7 +172,8 @@ esim_install() {
   [ -z "${activation_code}" ] && error_exit "No activation_code provided."
 
   dbus_call "${HERMES}" "${HERMES_MANAGER_OBJECT}" \
-            "${HERMES_MANAGER_IFACE}.InstallProfile" string:"${activation_code}"
+            "${HERMES_MANAGER_IFACE}.InstallProfileFromActivationCode" \
+            string:"${activation_code}"
 }
 
 esim_uninstall() {

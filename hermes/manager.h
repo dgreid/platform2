@@ -8,6 +8,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <tuple>
 #include <vector>
 
 #include <google-lpa/lpa/core/lpa.h>
@@ -22,6 +23,8 @@ class Manager : public org::chromium::Hermes::ManagerInterface,
                 public org::chromium::Hermes::ManagerAdaptor {
  public:
   using ByteArray = std::vector<uint8_t>;
+  // (SM-DP+ Address, EventId) representing an Event received from a SM-DS.
+  using Event = std::tuple<std::string, std::string>;
 
   template <typename... T>
   using DBusResponse = brillo::dbus_utils::DBusMethodResponse<T...>;
@@ -31,10 +34,17 @@ class Manager : public org::chromium::Hermes::ManagerInterface,
   // org::chromium::Hermes::ManagerInterface overrides.
   // Install a profile. An empty activation code will cause the default profile
   // to be installed.
-  void InstallProfile(std::unique_ptr<DBusResponse<dbus::ObjectPath>> response,
-                      const std::string& in_activation_code) override;
+  void InstallProfileFromActivationCode(
+      std::unique_ptr<DBusResponse<dbus::ObjectPath>> response,
+      const std::string& in_activation_code) override;
+  void InstallProfileFromEvent(
+      std::unique_ptr<DBusResponse<dbus::ObjectPath>> response,
+      const std::string& in_smdp_address,
+      const std::string& in_event_id) override;
   void UninstallProfile(std::unique_ptr<DBusResponse<>> response,
                         const dbus::ObjectPath& in_profile) override;
+  void RequestPendingEvents(
+      std::unique_ptr<DBusResponse<std::vector<Event>>> response) override;
   // Set/unset test mode. Normally, only production profiles may be
   // downloaded. In test mode, only test profiles may be downloaded.
   void SetTestMode(bool in_is_test_mode) override;

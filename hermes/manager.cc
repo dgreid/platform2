@@ -16,9 +16,15 @@
 
 #include "hermes/lpa_util.h"
 
+using lpa::proto::ProfileInfo;
+
 namespace hermes {
 
-using lpa::proto::ProfileInfo;
+namespace {
+
+const char kHermesErrorDomain[] = "Hermes";
+
+}  // namespace
 
 Manager::Manager(const scoped_refptr<dbus::Bus>& bus, LpaContext* context)
     : org::chromium::Hermes::ManagerAdaptor(this),
@@ -33,7 +39,7 @@ Manager::Manager(const scoped_refptr<dbus::Bus>& bus, LpaContext* context)
   RetrieveInstalledProfiles();
 }
 
-void Manager::InstallProfile(
+void Manager::InstallProfileFromActivationCode(
     std::unique_ptr<DBusResponse<dbus::ObjectPath>> response,
     const std::string& in_activation_code) {
   auto profile_cb = [response{std::shared_ptr<DBusResponse<dbus::ObjectPath>>(
@@ -61,6 +67,15 @@ void Manager::InstallProfile(
                                  context_->executor, std::move(profile_cb));
 }
 
+void Manager::InstallProfileFromEvent(
+    std::unique_ptr<DBusResponse<dbus::ObjectPath>> response,
+    const std::string& /*in_smdp_address*/,
+    const std::string& /*in_event_id*/) {
+  response->ReplyWithError(
+      FROM_HERE, kHermesErrorDomain, "UnsupportedMethod",
+      "This method is not supported until crbug.com/1071470 is implemented");
+}
+
 void Manager::UninstallProfile(std::unique_ptr<DBusResponse<>> response,
                                const dbus::ObjectPath& in_profile) {
   const Profile* matching_profile = nullptr;
@@ -71,7 +86,7 @@ void Manager::UninstallProfile(std::unique_ptr<DBusResponse<>> response,
     }
   }
   if (!matching_profile) {
-    response->ReplyWithError(FROM_HERE, "Hermes", "InvalidParameter",
+    response->ReplyWithError(FROM_HERE, kHermesErrorDomain, "InvalidParameter",
                              "Could not find Profile " + in_profile.value());
     return;
   }
@@ -98,6 +113,12 @@ void Manager::UninstallProfile(std::unique_ptr<DBusResponse<>> response,
       };
   context_->lpa->DeleteProfile(matching_profile->GetIccid(), context_->executor,
                                std::move(profile_cb));
+}
+
+void Manager::RequestPendingEvents(
+    std::unique_ptr<DBusResponse<std::vector<Event>>> response) {
+  // TODO(crbug.com/1071470) This is stubbed until google-lpa supports SM-DS.
+  response->Return({});
 }
 
 void Manager::UpdateProfilesProperty() {
