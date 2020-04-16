@@ -93,7 +93,7 @@ void BaseTest::SetUpFilesAndDirectories() {
   }
 }
 
-int64_t BaseTest::GetFileSize(const base::FilePath& path) {
+int64_t GetFileSize(const base::FilePath& path) {
   int64_t file_size;
   EXPECT_TRUE(base::GetFileSize(path, &file_size));
   return file_size;

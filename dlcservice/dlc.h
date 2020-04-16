@@ -105,8 +105,11 @@ class DlcBase {
   // Returns the path to the DLC image given the slot number.
   base::FilePath GetImagePath(BootSlot::Slot slot) const;
 
-  // Create the DLC directories and files if they don't exist.
-  bool Create(brillo::ErrorPtr* err);
+  // Creates the DLC directories and files if they don't exist. This function
+  // should be used as fall-through. We should call this even if we presumably
+  // know the files are already there. This allows us to create any new DLC
+  // files that didn't exist on a previous version of the DLC.
+  bool CreateDlc(brillo::ErrorPtr* err);
 
   // Validate that:
   //  - If inactive image for DLC is missing, try creating it.

@@ -39,9 +39,6 @@ TEST_F(DlcManagerTest, PreloadAllowedDlcTest) {
   EXPECT_CALL(*mock_image_loader_proxy_ptr_, LoadDlcImage(_, _, _, _, _, _))
       .WillOnce(DoAll(SetArgPointee<3>(mount_path_.value()), Return(true)));
   EXPECT_CALL(*mock_update_engine_proxy_ptr_,
-              SetDlcActiveValue(false, kThirdDlc, _, _))
-      .WillOnce(Return(true));
-  EXPECT_CALL(*mock_update_engine_proxy_ptr_,
               SetDlcActiveValue(true, kThirdDlc, _, _))
       .WillOnce(Return(true));
   EXPECT_THAT(dlc_manager_->GetInstalled(), ElementsAre());
@@ -61,9 +58,6 @@ TEST_F(DlcManagerTest, PreloadAllowedWithBadPreinstalledDlcTest) {
 
   EXPECT_CALL(*mock_image_loader_proxy_ptr_, LoadDlcImage(_, _, _, _, _, _))
       .WillOnce(DoAll(SetArgPointee<3>(mount_path_.value()), Return(true)));
-  EXPECT_CALL(*mock_update_engine_proxy_ptr_,
-              SetDlcActiveValue(false, kThirdDlc, _, _))
-      .WillOnce(Return(true));
   EXPECT_CALL(*mock_update_engine_proxy_ptr_,
               SetDlcActiveValue(true, kThirdDlc, _, _))
       .WillOnce(Return(true));

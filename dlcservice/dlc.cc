@@ -166,9 +166,10 @@ FilePath DlcBase::GetImagePath(BootSlot::Slot slot) const {
                    kDlcImageFileName);
 }
 
-bool DlcBase::Create(ErrorPtr* err) {
+bool DlcBase::CreateDlc(ErrorPtr* err) {
   // Create content directories.
-  for (const auto& path : {content_id_path_, content_package_path_}) {
+  for (const auto& path :
+       {content_id_path_, content_package_path_, prefs_path_}) {
     if (!CreateDir(path)) {
       *err = Error::Create(
           FROM_HERE, kErrorInternal,
@@ -178,20 +179,10 @@ bool DlcBase::Create(ErrorPtr* err) {
     }
   }
 
-  const int64_t image_size = manifest_.preallocated_size();
-  if (image_size <= 0) {
-    *err =
-        Error::Create(FROM_HERE, kErrorInternal,
-                      base::StringPrintf("Preallocated size=%" PRId64
-                                         " in manifest is illegal for DLC=%s",
-                                         image_size, id_.c_str()));
-    return false;
-  }
-
   // Creates image A and B.
   for (const auto& slot : {BootSlot::Slot::A, BootSlot::Slot::B}) {
     FilePath image_path = GetImagePath(slot);
-    if (!CreateFile(image_path, image_size)) {
+    if (!CreateFile(image_path, manifest_.preallocated_size())) {
       *err = Error::Create(
           FROM_HERE, kErrorAllocation,
           base::StringPrintf("Failed to create image file %s for DLC=%s",
@@ -344,15 +335,6 @@ bool DlcBase::PreloadedCopier(ErrorPtr* err) {
 }
 
 bool DlcBase::Preload(ErrorPtr* err) {
-  // Deleting DLC(s) that might already be installed as preloading DLC
-  // take precedence in order to allow stale DLC in cache to be cleared.
-  // TODO(crbug.com/1059445): Verify before deleting that image to preload
-  // has the correct hash.
-  if (!DeleteInternal(err)) {
-    LOG(ERROR) << "Failed to delete prior to preloading DLC=" << id_;
-    return false;
-  }
-
   if (!SetupInitInstall(err)) {
     LOG(ERROR) << "Failed to initialize preloaded DLC=" << id_;
     return false;
@@ -392,29 +374,25 @@ bool DlcBase::Preload(ErrorPtr* err) {
 
 bool DlcBase::SetupInitInstall(ErrorPtr* err) {
   switch (state_.state()) {
-    case DlcState::NOT_INSTALLED:
-      if (IsActiveImagePresent()) {
-        if ((IsVerified() || Verify()) && (ValidateInactiveImage() || true) &&
-            TryMount(err)) {
-          LOG(INFO) << "Image verified and marked installed for DLC=" << id_;
-          break;
-        }
-        LOG(WARNING) << "Deleting the image for DLC=" << id_
-                     << " as failed to verify.";
-        if (!DeleteInternal(err)) {
-          if (!CancelInstall(err))
-            LOG(ERROR) << "Failed during install initialization: "
-                       << Error::ToString(*err);
-          return false;
-        }
-      }
-      if (!Create(err)) {
+    case DlcState::NOT_INSTALLED: {
+      bool image_present_before_creation = IsActiveImagePresent();
+      // Always try to create the DLC files and directories to make sure they
+      // all exist before we start the install.
+      if (!CreateDlc(err)) {
         if (!CancelInstall(err))
           LOG(ERROR) << "Failed during install initialization: "
                      << Error::ToString(*err);
         return false;
       }
+      if (image_present_before_creation) {
+        if ((IsVerified() || Verify()) && (ValidateInactiveImage() || true) &&
+            TryMount(err)) {
+          LOG(INFO) << "Image verified and marked installed for DLC=" << id_;
+          break;
+        }
+      }
       break;
+    }
     case DlcState::INSTALLED:
       if (!ValidateInactiveImage())
         LOG(ERROR) << "Bad inactive image for DLC=" << id_;
@@ -441,13 +419,6 @@ bool DlcBase::SetupInitInstall(ErrorPtr* err) {
 }
 
 bool DlcBase::InitInstall(ErrorPtr* err) {
-  if (!base::PathExists(prefs_path_)) {
-    if (!CreateDir(prefs_path_)) {
-      *err = Error::Create(FROM_HERE, kErrorInternal,
-                           "Failed to create prefs directory.");
-      return false;
-    }
-  }
   if (IsPreloadAllowed() && base::PathExists(preloaded_image_path_)) {
     if (Preload(err))
       return true;

@@ -27,6 +27,8 @@ extern const char kThirdDlc[];
 extern const char kPackage[];
 extern const char kDefaultOmahaUrl[];
 
+int64_t GetFileSize(const base::FilePath& path);
+
 class BaseTest : public testing::Test {
  public:
   BaseTest();
@@ -34,8 +36,6 @@ class BaseTest : public testing::Test {
   void SetUp() override;
 
   void SetUpFilesAndDirectories();
-
-  int64_t GetFileSize(const base::FilePath& path);
 
   void CreateImageFileWithRightSize(const base::FilePath& image_path,
                                     const base::FilePath& manifest_path,

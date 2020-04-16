@@ -18,6 +18,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "dlcservice/test_utils.h"
 #include "dlcservice/utils.h"
 
 namespace dlcservice {
@@ -106,24 +107,35 @@ TEST_F(FixtureUtilsTest, CreateFile) {
     EXPECT_TRUE(CreateFile(path, size));
     EXPECT_TRUE(base::PathExists(path));
     CheckPerms(path, kDlcFilePerms);
-    LOG(ERROR) << size;
     EXPECT_FALSE(IsFileSparse(path));
+    EXPECT_EQ(GetFileSize(path), size);
     EXPECT_TRUE(base::DeleteFile(path, true));
   }
 }
 
+TEST_F(FixtureUtilsTest, CreateFileEvenIfItExists) {
+  auto path = JoinPaths(scoped_temp_dir_.GetPath(), "file");
+  EXPECT_FALSE(base::PathExists(path));
+  EXPECT_TRUE(CreateFile(path, 4096));
+  EXPECT_TRUE(base::PathExists(path));
+  CheckPerms(path, kDlcFilePerms);
+  EXPECT_EQ(GetFileSize(path), 4096);
+
+  // Create again with different size.
+  EXPECT_TRUE(CreateFile(path, 8192));
+  EXPECT_TRUE(base::PathExists(path));
+  EXPECT_EQ(GetFileSize(path), 8192);
+}
+
 TEST_F(FixtureUtilsTest, ResizeFile) {
-  int64_t size = -1;
   auto path = JoinPaths(scoped_temp_dir_.GetPath(), "file");
   EXPECT_TRUE(CreateFile(path, 0));
-  EXPECT_TRUE(base::GetFileSize(path, &size));
-  EXPECT_EQ(0, size);
+  EXPECT_EQ(GetFileSize(path), 0);
   EXPECT_FALSE(IsFileSparse(path));
 
   EXPECT_TRUE(ResizeFile(path, 1));
 
-  EXPECT_TRUE(base::GetFileSize(path, &size));
-  EXPECT_EQ(1, size);
+  EXPECT_EQ(GetFileSize(path), 1);
   EXPECT_FALSE(IsFileSparse(path));
 }
 

@@ -37,6 +37,12 @@ namespace dlcservice {
 namespace {
 
 bool SetFilePermissions(const base::FilePath& path, int perms) {
+  // Do not try to set the permission if the permissions are already correct. If
+  // it failed to get the permissions, go ahead and set them.
+  int tmp_perms;
+  if (base::GetPosixFilePermissions(path, &tmp_perms) && perms == tmp_perms)
+    return true;
+
   if (!base::SetPosixFilePermissions(path, perms)) {
     PLOG(ERROR) << "Failed to set permissions for: " << path.value();
     return false;
@@ -141,7 +147,7 @@ bool CreateFile(const base::FilePath& path, int64_t size) {
     return false;
   // Keep scoped to not explicitly close file.
   {
-    base::File f(path, base::File::FLAG_CREATE | base::File::FLAG_WRITE);
+    base::File f(path, base::File::FLAG_OPEN_ALWAYS | base::File::FLAG_WRITE);
     if (!f.IsValid()) {
       LOG(ERROR) << "Failed to create file at " << path.value()
                  << " reason: " << base::File::ErrorToString(f.error_details());
