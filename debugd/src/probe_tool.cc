@@ -90,8 +90,11 @@ bool ProbeTool::EvaluateProbeFunction(
     DLOG(INFO) << "minijail arguments : " << minijail_args_str;
 
     // Parse the JSON formatted minijail arguments.
+    // TODO(crbug.com/1054279): use base::JSONReader::ReadToValue after uprev to
+    // r680000.
     std::unique_ptr<ListValue> minijail_args =
-        ListValue::From(base::JSONReader().ReadToValue(minijail_args_str));
+        ListValue::From(
+            base::JSONReader().ReadToValueDeprecated(minijail_args_str));
 
     if (!minijail_args) {
       DEBUGD_ADD_ERROR(error, kErrorPath,

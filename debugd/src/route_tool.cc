@@ -4,6 +4,8 @@
 
 #include "debugd/src/route_tool.h"
 
+#include <map>
+
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_util.h>
 #include <base/strings/stringprintf.h>
