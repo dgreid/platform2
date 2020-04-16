@@ -10,12 +10,13 @@
 #include <string>
 
 #include <base/macros.h>
+#include <base/observer_list_types.h>
 
 namespace mist {
 
 // An interface class for observing USB device events from
 // UsbDeviceEventNotifier.
-class UsbDeviceEventObserver {
+class UsbDeviceEventObserver : public base::CheckedObserver {
  public:
   // Invoked when a USB device is added to the system.
   virtual void OnUsbDeviceAdded(const std::string& sys_path,
