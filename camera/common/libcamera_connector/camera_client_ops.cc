@@ -226,7 +226,7 @@ void CameraClientOps::StopCaptureOnThread(
 
   base::AutoLock l(request_callback_lock_);
   request_callback_ = nullptr;
-  device_ops_->Close(close_callback);
+  device_ops_->Close(std::move(close_callback));
   camera3_callback_ops_.Close();
 }
 

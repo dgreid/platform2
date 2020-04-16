@@ -38,11 +38,11 @@ class CameraAlgorithmOpsImpl : public mojom::CameraAlgorithmOps,
 
   // Implementation of mojom::CameraAlgorithmOps::Initialize interface
   void Initialize(mojom::CameraAlgorithmCallbackOpsPtr callbacks,
-                  const InitializeCallback& callback) override;
+                  InitializeCallback callback) override;
 
   // Implementation of mojom::CameraAlgorithmOps::RegisterBuffer interface
   void RegisterBuffer(mojo::ScopedHandle buffer_fd,
-                      const RegisterBufferCallback& callback) override;
+                      RegisterBufferCallback callback) override;
 
   // Implementation of mojom::CameraAlgorithmOps::Request interface
   void Request(uint32_t req_id,

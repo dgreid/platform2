@@ -38,22 +38,21 @@ class ArcCameraServiceImpl : public ArcCameraService {
 
   // ArcCameraService:
   void Connect(const std::string& device_path,
-               const ConnectCallback& callback) override;
-  void Disconnect(const DisconnectCallback& callback) override;
+               ConnectCallback callback) override;
+  void Disconnect(DisconnectCallback callback) override;
   void StreamOn(uint32_t width,
                 uint32_t height,
                 uint32_t pixel_format,
                 float frame_rate,
-                const StreamOnCallback& callback) override;
-  void StreamOff(const StreamOffCallback& callback) override;
-  void GetNextFrameBuffer(const GetNextFrameBufferCallback& callback) override;
+                StreamOnCallback callback) override;
+  void StreamOff(StreamOffCallback callback) override;
+  void GetNextFrameBuffer(GetNextFrameBufferCallback callback) override;
   void ReuseFrameBuffer(uint32_t buffer_id,
-                        const ReuseFrameBufferCallback& callback) override;
+                        ReuseFrameBufferCallback callback) override;
   void GetDeviceSupportedFormats(
       const std::string& device_path,
-      const GetDeviceSupportedFormatsCallback& callback) override;
-  void GetCameraDeviceInfos(
-      const GetCameraDeviceInfosCallback& callback) override;
+      GetDeviceSupportedFormatsCallback callback) override;
+  void GetCameraDeviceInfos(GetCameraDeviceInfosCallback callback) override;
 
   // Quit callback to exit daemon.
   base::Closure quit_cb_;

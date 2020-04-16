@@ -67,7 +67,7 @@ void CameraAlgorithmOpsImpl::Unbind() {
 
 void CameraAlgorithmOpsImpl::Initialize(
     mojom::CameraAlgorithmCallbackOpsPtr callback_ops,
-    const InitializeCallback& callback) {
+    InitializeCallback callback) {
   DCHECK(cam_algo_);
   DCHECK(ipc_task_runner_->BelongsToCurrentThread());
   DCHECK(callback_ops.is_bound());
@@ -75,19 +75,19 @@ void CameraAlgorithmOpsImpl::Initialize(
   int32_t result = 0;
   if (cb_ptr_.is_bound()) {
     LOGF(ERROR) << "Return callback is already registered";
-    callback.Run(-EINVAL);
+    std::move(callback).Run(-EINVAL);
     return;
   }
   CameraAlgorithmOpsImpl::return_callback =
       CameraAlgorithmOpsImpl::ReturnCallbackForwarder;
   result = cam_algo_->initialize(this);
   cb_ptr_ = std::move(callback_ops);
-  callback.Run(result);
+  std::move(callback).Run(result);
   VLOGF_EXIT();
 }
 
-void CameraAlgorithmOpsImpl::RegisterBuffer(
-    mojo::ScopedHandle buffer_fd, const RegisterBufferCallback& callback) {
+void CameraAlgorithmOpsImpl::RegisterBuffer(mojo::ScopedHandle buffer_fd,
+                                            RegisterBufferCallback callback) {
   DCHECK(cam_algo_);
   DCHECK(ipc_task_runner_->BelongsToCurrentThread());
   VLOGF_ENTER();
@@ -95,11 +95,11 @@ void CameraAlgorithmOpsImpl::RegisterBuffer(
   MojoResult mojo_result = mojo::UnwrapPlatformFile(std::move(buffer_fd), &fd);
   if (mojo_result != MOJO_RESULT_OK) {
     LOGF(ERROR) << "Failed to unwrap handle: " << mojo_result;
-    callback.Run(-EBADF);
+    std::move(callback).Run(-EBADF);
     return;
   }
   int32_t result = cam_algo_->register_buffer(fd);
-  callback.Run(result);
+  std::move(callback).Run(result);
   VLOGF_EXIT();
 }
 

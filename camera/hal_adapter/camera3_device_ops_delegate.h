@@ -27,22 +27,21 @@ class Camera3DeviceOpsDelegate final
 
  private:
   void Initialize(mojom::Camera3CallbackOpsPtr callback_ops,
-                  const InitializeCallback& callback) final;
+                  InitializeCallback callback) final;
 
   void ConfigureStreams(mojom::Camera3StreamConfigurationPtr config,
-                        const ConfigureStreamsCallback& callback) final;
+                        ConfigureStreamsCallback callback) final;
 
   void ConstructDefaultRequestSettings(
       mojom::Camera3RequestTemplate type,
-      const ConstructDefaultRequestSettingsCallback& callback) final;
+      ConstructDefaultRequestSettingsCallback callback) final;
 
-  void ProcessCaptureRequest(
-      mojom::Camera3CaptureRequestPtr request,
-      const ProcessCaptureRequestCallback& callback) final;
+  void ProcessCaptureRequest(mojom::Camera3CaptureRequestPtr request,
+                             ProcessCaptureRequestCallback callback) final;
 
   void Dump(mojo::ScopedHandle fd) final;
 
-  void Flush(const FlushCallback& callback) final;
+  void Flush(FlushCallback callback) final;
 
   void RegisterBuffer(uint64_t buffer_id,
                       mojom::Camera3DeviceOps::BufferType type,
@@ -53,13 +52,13 @@ class Camera3DeviceOpsDelegate final
                       uint32_t height,
                       const std::vector<uint32_t>& strides,
                       const std::vector<uint32_t>& offsets,
-                      const RegisterBufferCallback& callback) final;
+                      RegisterBufferCallback callback) final;
 
-  void Close(const CloseCallback& callback) final;
+  void Close(CloseCallback callback) final;
 
   void ConfigureStreamsAndGetAllocatedBuffers(
       mojom::Camera3StreamConfigurationPtr config,
-      const ConfigureStreamsAndGetAllocatedBuffersCallback& callback) final;
+      ConfigureStreamsAndGetAllocatedBuffersCallback callback) final;
 
   CameraDeviceAdapter* camera_device_adapter_;
 

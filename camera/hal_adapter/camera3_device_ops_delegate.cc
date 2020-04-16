@@ -27,17 +27,17 @@ Camera3DeviceOpsDelegate::Camera3DeviceOpsDelegate(
 Camera3DeviceOpsDelegate::~Camera3DeviceOpsDelegate() {}
 
 void Camera3DeviceOpsDelegate::Initialize(
-    mojom::Camera3CallbackOpsPtr callback_ops,
-    const InitializeCallback& callback) {
+    mojom::Camera3CallbackOpsPtr callback_ops, InitializeCallback callback) {
   VLOGF_ENTER();
   DCHECK(task_runner_->BelongsToCurrentThread());
   TRACE_CAMERA_SCOPED();
-  callback.Run(camera_device_adapter_->Initialize(std::move(callback_ops)));
+  std::move(callback).Run(
+      camera_device_adapter_->Initialize(std::move(callback_ops)));
 }
 
 void Camera3DeviceOpsDelegate::ConfigureStreams(
     mojom::Camera3StreamConfigurationPtr config,
-    const ConfigureStreamsCallback& callback) {
+    ConfigureStreamsCallback callback) {
   VLOGF_ENTER();
   DCHECK(task_runner_->BelongsToCurrentThread());
   for (const auto& stream : config->streams) {
@@ -47,21 +47,22 @@ void Camera3DeviceOpsDelegate::ConfigureStreams(
   mojom::Camera3StreamConfigurationPtr updated_config;
   int32_t result = camera_device_adapter_->ConfigureStreams(std::move(config),
                                                             &updated_config);
-  callback.Run(result, std::move(updated_config));
+  std::move(callback).Run(result, std::move(updated_config));
 }
 
 void Camera3DeviceOpsDelegate::ConstructDefaultRequestSettings(
     mojom::Camera3RequestTemplate type,
-    const ConstructDefaultRequestSettingsCallback& callback) {
+    ConstructDefaultRequestSettingsCallback callback) {
   VLOGF_ENTER();
   DCHECK(task_runner_->BelongsToCurrentThread());
   TRACE_CAMERA_SCOPED();
-  callback.Run(camera_device_adapter_->ConstructDefaultRequestSettings(type));
+  std::move(callback).Run(
+      camera_device_adapter_->ConstructDefaultRequestSettings(type));
 }
 
 void Camera3DeviceOpsDelegate::ProcessCaptureRequest(
     mojom::Camera3CaptureRequestPtr request,
-    const ProcessCaptureRequestCallback& callback) {
+    ProcessCaptureRequestCallback callback) {
   VLOGF_ENTER();
   DCHECK(task_runner_->BelongsToCurrentThread());
   for (const auto& output_buffer : request->output_buffers) {
@@ -72,7 +73,7 @@ void Camera3DeviceOpsDelegate::ProcessCaptureRequest(
                              output_buffer->stream_id, "buffer_id",
                              output_buffer->buffer_id);
   }
-  callback.Run(
+  std::move(callback).Run(
       camera_device_adapter_->ProcessCaptureRequest(std::move(request)));
 }
 
@@ -83,11 +84,11 @@ void Camera3DeviceOpsDelegate::Dump(mojo::ScopedHandle fd) {
   camera_device_adapter_->Dump(std::move(fd));
 }
 
-void Camera3DeviceOpsDelegate::Flush(const FlushCallback& callback) {
+void Camera3DeviceOpsDelegate::Flush(FlushCallback callback) {
   VLOGF_ENTER();
   DCHECK(task_runner_->BelongsToCurrentThread());
   TRACE_CAMERA_SCOPED();
-  callback.Run(camera_device_adapter_->Flush());
+  std::move(callback).Run(camera_device_adapter_->Flush());
 }
 
 void Camera3DeviceOpsDelegate::RegisterBuffer(
@@ -100,25 +101,25 @@ void Camera3DeviceOpsDelegate::RegisterBuffer(
     uint32_t height,
     const std::vector<uint32_t>& strides,
     const std::vector<uint32_t>& offsets,
-    const RegisterBufferCallback& callback) {
+    RegisterBufferCallback callback) {
   VLOGF_ENTER();
   DCHECK(task_runner_->BelongsToCurrentThread());
   TRACE_CAMERA_SCOPED("buffer_id", buffer_id);
-  callback.Run(camera_device_adapter_->RegisterBuffer(
+  std::move(callback).Run(camera_device_adapter_->RegisterBuffer(
       buffer_id, type, std::move(fds), drm_format, hal_pixel_format, width,
       height, strides, offsets));
 }
 
-void Camera3DeviceOpsDelegate::Close(const CloseCallback& callback) {
+void Camera3DeviceOpsDelegate::Close(CloseCallback callback) {
   VLOGF_ENTER();
   DCHECK(task_runner_->BelongsToCurrentThread());
   TRACE_CAMERA_SCOPED();
-  callback.Run(camera_device_adapter_->Close());
+  std::move(callback).Run(camera_device_adapter_->Close());
 }
 
 void Camera3DeviceOpsDelegate::ConfigureStreamsAndGetAllocatedBuffers(
     mojom::Camera3StreamConfigurationPtr config,
-    const ConfigureStreamsAndGetAllocatedBuffersCallback& callback) {
+    ConfigureStreamsAndGetAllocatedBuffersCallback callback) {
   VLOGF_ENTER();
   DCHECK(task_runner_->BelongsToCurrentThread());
   for (const auto& stream : config->streams) {
@@ -130,7 +131,8 @@ void Camera3DeviceOpsDelegate::ConfigureStreamsAndGetAllocatedBuffers(
   int32_t result =
       camera_device_adapter_->ConfigureStreamsAndGetAllocatedBuffers(
           std::move(config), &updated_config, &allocated_buffers);
-  callback.Run(result, std::move(updated_config), std::move(allocated_buffers));
+  std::move(callback).Run(result, std::move(updated_config),
+                          std::move(allocated_buffers));
 }
 
 }  // namespace cros

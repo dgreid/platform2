@@ -24,59 +24,60 @@ CameraModuleDelegate::~CameraModuleDelegate() {}
 void CameraModuleDelegate::OpenDevice(
     int32_t camera_id,
     mojom::Camera3DeviceOpsRequest device_ops_request,
-    const OpenDeviceCallback& callback) {
+    OpenDeviceCallback callback) {
   VLOGF_ENTER();
   DCHECK(task_runner_->BelongsToCurrentThread());
   mojom::Camera3DeviceOpsPtr device_ops;
-  callback.Run(camera_hal_adapter_->OpenDevice(camera_id,
-                                               std::move(device_ops_request)));
+  std::move(callback).Run(camera_hal_adapter_->OpenDevice(
+      camera_id, std::move(device_ops_request)));
 }
 
 void CameraModuleDelegate::GetNumberOfCameras(
-    const GetNumberOfCamerasCallback& callback) {
+    GetNumberOfCamerasCallback callback) {
   VLOGF_ENTER();
   DCHECK(task_runner_->BelongsToCurrentThread());
-  callback.Run(camera_hal_adapter_->GetNumberOfCameras());
+  std::move(callback).Run(camera_hal_adapter_->GetNumberOfCameras());
 }
 
-void CameraModuleDelegate::GetCameraInfo(
-    int32_t camera_id, const GetCameraInfoCallback& callback) {
+void CameraModuleDelegate::GetCameraInfo(int32_t camera_id,
+                                         GetCameraInfoCallback callback) {
   VLOGF_ENTER();
   DCHECK(task_runner_->BelongsToCurrentThread());
   mojom::CameraInfoPtr camera_info;
   int32_t result = camera_hal_adapter_->GetCameraInfo(camera_id, &camera_info);
-  callback.Run(result, std::move(camera_info));
+  std::move(callback).Run(result, std::move(camera_info));
 }
 
 void CameraModuleDelegate::SetCallbacks(
-    mojom::CameraModuleCallbacksPtr callbacks,
-    const SetCallbacksCallback& callback) {
+    mojom::CameraModuleCallbacksPtr callbacks, SetCallbacksCallback callback) {
   VLOGF_ENTER();
   DCHECK(task_runner_->BelongsToCurrentThread());
-  callback.Run(camera_hal_adapter_->SetCallbacks(std::move(callbacks)));
+  std::move(callback).Run(
+      camera_hal_adapter_->SetCallbacks(std::move(callbacks)));
 }
 
 void CameraModuleDelegate::SetTorchMode(int32_t camera_id,
                                         bool enabled,
-                                        const SetTorchModeCallback& callback) {
+                                        SetTorchModeCallback callback) {
   VLOGF_ENTER();
   DCHECK(task_runner_->BelongsToCurrentThread());
-  callback.Run(camera_hal_adapter_->SetTorchMode(camera_id, enabled));
+  std::move(callback).Run(
+      camera_hal_adapter_->SetTorchMode(camera_id, enabled));
 }
 
-void CameraModuleDelegate::Init(const InitCallback& callback) {
+void CameraModuleDelegate::Init(InitCallback callback) {
   VLOGF_ENTER();
   DCHECK(task_runner_->BelongsToCurrentThread());
-  callback.Run(camera_hal_adapter_->Init());
+  std::move(callback).Run(camera_hal_adapter_->Init());
 }
 
 void CameraModuleDelegate::GetVendorTagOps(
     mojom::VendorTagOpsRequest vendor_tag_ops_request,
-    const GetVendorTagOpsCallback& callback) {
+    GetVendorTagOpsCallback callback) {
   VLOGF_ENTER();
   DCHECK(task_runner_->BelongsToCurrentThread());
   camera_hal_adapter_->GetVendorTagOps(std::move(vendor_tag_ops_request));
-  callback.Run();
+  std::move(callback).Run();
 }
 
 }  // namespace cros

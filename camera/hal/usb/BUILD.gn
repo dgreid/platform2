@@ -42,6 +42,7 @@ generate_mojom_bindings("libcamera_hal_mojom") {
     "//camera/mojo/cros_camera_enum.mojom",
   ]
   mojo_root = "//camera"
+  use_once_callback = true
 }
 
 shared_library("libcamera_hal") {

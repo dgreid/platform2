@@ -19,46 +19,46 @@ VendorTagOpsDelegate::VendorTagOpsDelegate(
     vendor_tag_ops_t* ops)
     : internal::MojoBinding<VendorTagOps>(task_runner), vendor_tag_ops_(ops) {}
 
-void VendorTagOpsDelegate::GetTagCount(const GetTagCountCallback& callback) {
+void VendorTagOpsDelegate::GetTagCount(GetTagCountCallback callback) {
   VLOGF_ENTER();
   DCHECK_NE(vendor_tag_ops_, nullptr);
   DCHECK(task_runner_->BelongsToCurrentThread());
-  callback.Run(vendor_tag_ops_->get_tag_count(vendor_tag_ops_));
+  std::move(callback).Run(vendor_tag_ops_->get_tag_count(vendor_tag_ops_));
 }
 
-void VendorTagOpsDelegate::GetAllTags(const GetAllTagsCallback& callback) {
+void VendorTagOpsDelegate::GetAllTags(GetAllTagsCallback callback) {
   VLOGF_ENTER();
   DCHECK_NE(vendor_tag_ops_, nullptr);
   DCHECK(task_runner_->BelongsToCurrentThread());
   std::vector<uint32_t> tags(vendor_tag_ops_->get_tag_count(vendor_tag_ops_));
   vendor_tag_ops_->get_all_tags(vendor_tag_ops_, tags.data());
-  callback.Run(tags);
+  std::move(callback).Run(tags);
 }
 
-void VendorTagOpsDelegate::GetSectionName(
-    uint32_t tag, const GetSectionNameCallback& callback) {
+void VendorTagOpsDelegate::GetSectionName(uint32_t tag,
+                                          GetSectionNameCallback callback) {
   VLOGF_ENTER();
   DCHECK_NE(vendor_tag_ops_, nullptr);
   DCHECK(task_runner_->BelongsToCurrentThread());
-  callback.Run(
+  std::move(callback).Run(
       std::string(vendor_tag_ops_->get_section_name(vendor_tag_ops_, tag)));
 }
 
 void VendorTagOpsDelegate::GetTagName(uint32_t tag,
-                                      const GetTagNameCallback& callback) {
+                                      GetTagNameCallback callback) {
   VLOGF_ENTER();
   DCHECK_NE(vendor_tag_ops_, nullptr);
   DCHECK(task_runner_->BelongsToCurrentThread());
-  callback.Run(
+  std::move(callback).Run(
       std::string(vendor_tag_ops_->get_tag_name(vendor_tag_ops_, tag)));
 }
 
 void VendorTagOpsDelegate::GetTagType(uint32_t tag,
-                                      const GetTagTypeCallback& callback) {
+                                      GetTagTypeCallback callback) {
   VLOGF_ENTER();
   DCHECK_NE(vendor_tag_ops_, nullptr);
   DCHECK(task_runner_->BelongsToCurrentThread());
-  callback.Run(vendor_tag_ops_->get_tag_type(vendor_tag_ops_, tag));
+  std::move(callback).Run(vendor_tag_ops_->get_tag_type(vendor_tag_ops_, tag));
 }
 
 }  // namespace cros

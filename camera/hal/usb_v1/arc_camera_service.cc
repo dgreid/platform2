@@ -148,23 +148,23 @@ void ArcCameraServiceImpl::OnChannelClosed(const std::string& error_msg) {
 }
 
 void ArcCameraServiceImpl::Connect(const std::string& device_path,
-                                   const ConnectCallback& callback) {
+                                   ConnectCallback callback) {
   VLOG(1) << "Receive Connect message, device_path: " << device_path;
   int ret = camera_device_->Connect(device_path);
-  callback.Run(ret);
+  std::move(callback).Run(ret);
 }
 
-void ArcCameraServiceImpl::Disconnect(const DisconnectCallback& callback) {
+void ArcCameraServiceImpl::Disconnect(DisconnectCallback callback) {
   VLOG(1) << "Receive Disconnect message";
   camera_device_->Disconnect();
-  callback.Run();
+  std::move(callback).Run();
 }
 
 void ArcCameraServiceImpl::StreamOn(uint32_t width,
                                     uint32_t height,
                                     uint32_t pixel_format,
                                     float frame_rate,
-                                    const StreamOnCallback& callback) {
+                                    StreamOnCallback callback) {
   VLOG(1) << "Receive StreamOn message, width: " << width
           << ", height: " << height << ", pixel_format: " << pixel_format
           << ", frame_rate: " << frame_rate;
@@ -180,33 +180,33 @@ void ArcCameraServiceImpl::StreamOn(uint32_t width,
   if (ret) {
     handles.clear();
   }
-  callback.Run(std::move(handles), buffer_size, ret);
+  std::move(callback).Run(std::move(handles), buffer_size, ret);
 }
 
-void ArcCameraServiceImpl::StreamOff(const StreamOffCallback& callback) {
+void ArcCameraServiceImpl::StreamOff(StreamOffCallback callback) {
   VLOG(1) << "Receive StreamOff message";
   int ret = camera_device_->StreamOff();
-  callback.Run(ret);
+  std::move(callback).Run(ret);
 }
 
 void ArcCameraServiceImpl::GetNextFrameBuffer(
-    const GetNextFrameBufferCallback& callback) {
+    GetNextFrameBufferCallback callback) {
   VLOG(1) << "Receive GetNextFrameBuffer message";
   uint32_t buffer_id, data_size;
   int ret = camera_device_->GetNextFrameBuffer(&buffer_id, &data_size);
-  callback.Run(buffer_id, data_size, ret);
+  std::move(callback).Run(buffer_id, data_size, ret);
 }
 
-void ArcCameraServiceImpl::ReuseFrameBuffer(
-    uint32_t buffer_id, const ReuseFrameBufferCallback& callback) {
+void ArcCameraServiceImpl::ReuseFrameBuffer(uint32_t buffer_id,
+                                            ReuseFrameBufferCallback callback) {
   VLOG(1) << "Receive ReuseFrameBuffer message, buffer_id: " << buffer_id;
   int ret = camera_device_->ReuseFrameBuffer(buffer_id);
-  callback.Run(ret);
+  std::move(callback).Run(ret);
 }
 
 void ArcCameraServiceImpl::GetDeviceSupportedFormats(
     const std::string& device_path,
-    const GetDeviceSupportedFormatsCallback& callback) {
+    GetDeviceSupportedFormatsCallback callback) {
   VLOG(1) << "Receive GetDeviceSupportedFormats message, device_path: "
           << device_path;
   SupportedFormats formats =
@@ -223,11 +223,11 @@ void ArcCameraServiceImpl::GetDeviceSupportedFormats(
     }
     mojo_formats.push_back(std::move(mojo_format));
   }
-  callback.Run(std::move(mojo_formats));
+  std::move(callback).Run(std::move(mojo_formats));
 }
 
 void ArcCameraServiceImpl::GetCameraDeviceInfos(
-    const GetCameraDeviceInfosCallback& callback) {
+    GetCameraDeviceInfosCallback callback) {
   VLOG(1) << "Receive GetCameraDeviceInfos message";
   DeviceInfos device_infos = camera_device_->GetCameraDeviceInfos();
 
@@ -255,7 +255,7 @@ void ArcCameraServiceImpl::GetCameraDeviceInfos(
     info->vertical_view_angle_4_3 = device_info.vertical_view_angle_4_3;
     mojo_device_infos.push_back(std::move(info));
   }
-  callback.Run(std::move(mojo_device_infos));
+  std::move(callback).Run(std::move(mojo_device_infos));
 }
 
 }  // namespace arc

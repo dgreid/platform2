@@ -23,15 +23,15 @@ class VendorTagOpsDelegate final
   ~VendorTagOpsDelegate() = default;
 
  private:
-  void GetTagCount(const GetTagCountCallback& callback);
+  void GetTagCount(GetTagCountCallback callback);
 
-  void GetAllTags(const GetAllTagsCallback& callback);
+  void GetAllTags(GetAllTagsCallback callback);
 
-  void GetSectionName(uint32_t tag, const GetSectionNameCallback& callback);
+  void GetSectionName(uint32_t tag, GetSectionNameCallback callback);
 
-  void GetTagName(uint32_t tag, const GetTagNameCallback& callback);
+  void GetTagName(uint32_t tag, GetTagNameCallback callback);
 
-  void GetTagType(uint32_t tag, const GetTagTypeCallback& callback);
+  void GetTagType(uint32_t tag, GetTagTypeCallback callback);
 
   vendor_tag_ops_t* vendor_tag_ops_;
 

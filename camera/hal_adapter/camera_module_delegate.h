@@ -26,24 +26,23 @@ class CameraModuleDelegate final
  private:
   void OpenDevice(int32_t camera_id,
                   mojom::Camera3DeviceOpsRequest device_ops_request,
-                  const OpenDeviceCallback& callback) final;
+                  OpenDeviceCallback callback) final;
 
-  void GetNumberOfCameras(const GetNumberOfCamerasCallback& callback) final;
+  void GetNumberOfCameras(GetNumberOfCamerasCallback callback) final;
 
-  void GetCameraInfo(int32_t camera_id,
-                     const GetCameraInfoCallback& callback) final;
+  void GetCameraInfo(int32_t camera_id, GetCameraInfoCallback callback) final;
 
   void SetCallbacks(mojom::CameraModuleCallbacksPtr callbacks,
-                    const SetCallbacksCallback& callback) final;
+                    SetCallbacksCallback callback) final;
 
   void SetTorchMode(int32_t camera_id,
                     bool enabled,
-                    const SetTorchModeCallback& callback) final;
+                    SetTorchModeCallback callback) final;
 
-  void Init(const InitCallback& callback) final;
+  void Init(InitCallback callback) final;
 
   void GetVendorTagOps(mojom::VendorTagOpsRequest vendor_tag_ops_request,
-                       const GetVendorTagOpsCallback& callback) final;
+                       GetVendorTagOpsCallback callback) final;
 
   CameraHalAdapter* camera_hal_adapter_;
 
