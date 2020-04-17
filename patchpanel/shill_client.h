@@ -34,7 +34,7 @@ class ShillClient {
 
   void RegisterDevicesChangedHandler(const DevicesChangeHandler& handler);
 
-  void ScanDevices(const DevicesChangeHandler& handler);
+  void ScanDevices();
 
   // Returns the cached interface name; does not initiate a property fetch.
   virtual const std::string& default_interface() const;

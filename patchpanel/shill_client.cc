@@ -34,7 +34,7 @@ bool ShillClient::has_device(const std::string& ifname) const {
   return devices_.find(ifname) != devices_.end();
 }
 
-void ShillClient::ScanDevices(const DevicesChangeHandler& handler) {
+void ShillClient::ScanDevices() {
   brillo::VariantDictionary props;
   if (!manager_proxy_->GetProperties(&props, nullptr)) {
     LOG(ERROR) << "Unable to get manager properties";

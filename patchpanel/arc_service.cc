@@ -207,8 +207,7 @@ ArcService::ArcService(ShillClient* shill_client,
   AllocateAddressConfigs();
   shill_client_->RegisterDevicesChangedHandler(
       base::Bind(&ArcService::OnDevicesChanged, weak_factory_.GetWeakPtr()));
-  shill_client_->ScanDevices(
-      base::Bind(&ArcService::OnDevicesChanged, weak_factory_.GetWeakPtr()));
+  shill_client_->ScanDevices();
   shill_client_->RegisterDefaultInterfaceChangedHandler(base::Bind(
       &ArcService::OnDefaultInterfaceChanged, weak_factory_.GetWeakPtr()));
 }
