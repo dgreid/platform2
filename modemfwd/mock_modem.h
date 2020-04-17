@@ -27,8 +27,14 @@ class MockModem : public Modem {
   MOCK_METHOD(std::string, GetCarrierFirmwareId, (), (const, override));
   MOCK_METHOD(std::string, GetCarrierFirmwareVersion, (), (const, override));
 
-  MOCK_METHOD(bool, FlashMainFirmware, (const base::FilePath&), (override));
-  MOCK_METHOD(bool, FlashCarrierFirmware, (const base::FilePath&), (override));
+  MOCK_METHOD(bool,
+              FlashMainFirmware,
+              (const base::FilePath&, const std::string&),
+              (override));
+  MOCK_METHOD(bool,
+              FlashCarrierFirmware,
+              (const base::FilePath&, const std::string&),
+              (override));
 };
 
 }  // namespace modemfwd

@@ -85,7 +85,8 @@ base::Closure ModemFlasher::TryFlash(Modem* modem) {
       // reboot afterwards, we can wait to get called again to check the
       // carrier firmware.
       journal_->MarkStartOfFlashingMainFirmware(device_id, current_carrier);
-      if (modem->FlashMainFirmware(firmware_file.path_on_filesystem())) {
+      if (modem->FlashMainFirmware(firmware_file.path_on_filesystem(),
+                                   file_info.version)) {
         // Refer to |firmware_file.path_for_logging()| in the log and journal.
         flash_state->OnFlashedMainFirmware();
         ELOG(INFO) << "Flashed " << firmware_file.path_for_logging().value()
@@ -143,7 +144,8 @@ base::Closure ModemFlasher::TryFlash(Modem* modem) {
       return base::Closure();
 
     journal_->MarkStartOfFlashingCarrierFirmware(device_id, current_carrier);
-    if (modem->FlashCarrierFirmware(firmware_file.path_on_filesystem())) {
+    if (modem->FlashCarrierFirmware(firmware_file.path_on_filesystem(),
+                                    file_info.version)) {
       // Refer to |firmware_file.path_for_logging()| in the log and journal.
       flash_state->OnFlashedCarrierFirmware(firmware_file.path_for_logging());
       ELOG(INFO) << "Flashed " << firmware_file.path_for_logging().value()

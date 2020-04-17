@@ -6,12 +6,14 @@
 
 #include <memory>
 #include <utility>
+#include <vector>
 
 #include <base/files/file.h>
 #include <base/files/file_util.h>
 #include <base/macros.h>
 #include <base/memory/ptr_util.h>
 #include <base/strings/string_split.h>
+#include <base/strings/string_util.h>
 #include <base/strings/stringprintf.h>
 #include <brillo/process.h>
 #include <chromeos/switches/modemfwd_switches.h>
@@ -28,13 +30,13 @@ constexpr char kPowerOverrideLockFilePath[] =
 constexpr char kModemfwdLogDirectory[] = "/var/log/modemfwd";
 
 bool RunHelperProcessWithLogs(const HelperInfo& helper_info,
-                              const std::string& argument) {
+                              const std::vector<std::string>& arguments) {
   brillo::ProcessImpl helper;
   helper.AddArg(helper_info.executable_path.value());
-  helper.AddArg("--" + argument);
-  for (const std::string& extra_argument : helper_info.extra_arguments) {
+  for (const std::string& argument : arguments)
+    helper.AddArg("--" + argument);
+  for (const std::string& extra_argument : helper_info.extra_arguments)
     helper.AddArg(extra_argument);
-  }
 
   base::Time::Exploded time;
   base::Time::Now().LocalExplode(&time);
@@ -46,7 +48,8 @@ bool RunHelperProcessWithLogs(const HelperInfo& helper_info,
 
   int exit_code = helper.Run();
   if (exit_code != 0) {
-    LOG(ERROR) << "Failed to perform \"" << argument << "\" on the modem";
+    LOG(ERROR) << "Failed to perform \"" << base::JoinString(arguments, ",")
+               << "\" on the modem";
     return false;
   }
 
@@ -54,14 +57,14 @@ bool RunHelperProcessWithLogs(const HelperInfo& helper_info,
 }
 
 bool RunHelperProcess(const HelperInfo& helper_info,
-                      const std::string& argument,
+                      const std::vector<std::string>& arguments,
                       std::string* output) {
   brillo::ProcessImpl helper;
   helper.AddArg(helper_info.executable_path.value());
-  helper.AddArg("--" + argument);
-  for (const std::string& extra_argument : helper_info.extra_arguments) {
+  for (const std::string& argument : arguments)
+    helper.AddArg("--" + argument);
+  for (const std::string& extra_argument : helper_info.extra_arguments)
     helper.AddArg(extra_argument);
-  }
 
   // Set up output redirection, if requested. We keep the file open
   // across the process lifetime to ensure nobody is swapping out the
@@ -94,7 +97,8 @@ bool RunHelperProcess(const HelperInfo& helper_info,
   }
 
   if (exit_code != 0) {
-    LOG(ERROR) << "Failed to perform \"" << argument << "\" on the modem";
+    LOG(ERROR) << "Failed to perform \"" << base::JoinString(arguments, ",")
+               << "\" on the modem";
     return false;
   }
 
@@ -119,7 +123,7 @@ class FlashMode {
       }
     }
 
-    if (!RunHelperProcess(helper_info, kPrepareToFlash, nullptr)) {
+    if (!RunHelperProcess(helper_info, {kPrepareToFlash}, nullptr)) {
       base::DeleteFile(lock_path, false /* recursive */);
       return nullptr;
     }
@@ -128,7 +132,7 @@ class FlashMode {
   }
 
   ~FlashMode() {
-    RunHelperProcess(helper_info_, kReboot, nullptr);
+    RunHelperProcess(helper_info_, {kReboot}, nullptr);
     base::DeleteFile(base::FilePath(kPowerOverrideLockFilePath),
                      false /* recursive */);
   }
@@ -155,7 +159,7 @@ class ModemHelperImpl : public ModemHelper {
     CHECK(out_info);
 
     std::string helper_output;
-    if (!RunHelperProcess(helper_info_, kGetFirmwareInfo, &helper_output))
+    if (!RunHelperProcess(helper_info_, {kGetFirmwareInfo}, &helper_output))
       return false;
 
     std::vector<std::string> parsed_output = base::SplitString(
@@ -172,29 +176,35 @@ class ModemHelperImpl : public ModemHelper {
   }
 
   // modemfwd::ModemHelper overrides.
-  bool FlashMainFirmware(const base::FilePath& path_to_fw) override {
+  bool FlashMainFirmware(const base::FilePath& path_to_fw,
+                         const std::string& version) override {
     auto flash_mode = FlashMode::Create(helper_info_);
     if (!flash_mode)
       return false;
 
     return RunHelperProcessWithLogs(
-        helper_info_, base::StringPrintf("%s=%s", kFlashMainFirmware,
-                                         path_to_fw.value().c_str()));
+        helper_info_,
+        {base::StringPrintf("%s=%s", kFlashMainFirmware,
+                            path_to_fw.value().c_str()),
+         base::StringPrintf("%s=%s", kFwVersion, version.c_str())});
   }
 
-  bool FlashCarrierFirmware(const base::FilePath& path_to_fw) override {
+  bool FlashCarrierFirmware(const base::FilePath& path_to_fw,
+                            const std::string& version) override {
     auto flash_mode = FlashMode::Create(helper_info_);
     if (!flash_mode)
       return false;
 
     return RunHelperProcessWithLogs(
-        helper_info_, base::StringPrintf("%s=%s", kFlashCarrierFirmware,
-                                         path_to_fw.value().c_str()));
+        helper_info_,
+        {base::StringPrintf("%s=%s", kFlashCarrierFirmware,
+                            path_to_fw.value().c_str()),
+         base::StringPrintf("%s=%s", kFwVersion, version.c_str())});
   }
 
   bool FlashModeCheck() override {
     std::string output;
-    if (!RunHelperProcess(helper_info_, kFlashModeCheck, &output))
+    if (!RunHelperProcess(helper_info_, {kFlashModeCheck}, &output))
       return false;
 
     return base::TrimWhitespaceASCII(output, base::TRIM_ALL) == "true";

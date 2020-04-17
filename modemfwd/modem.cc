@@ -55,12 +55,14 @@ class ModemImpl : public Modem {
     return installed_firmware_.carrier_version;
   }
 
-  bool FlashMainFirmware(const base::FilePath& path_to_fw) override {
-    return helper_->FlashMainFirmware(path_to_fw);
+  bool FlashMainFirmware(const base::FilePath& path_to_fw,
+                         const std::string& version) override {
+    return helper_->FlashMainFirmware(path_to_fw, version);
   }
 
-  bool FlashCarrierFirmware(const base::FilePath& path_to_fw) override {
-    return helper_->FlashCarrierFirmware(path_to_fw);
+  bool FlashCarrierFirmware(const base::FilePath& path_to_fw,
+                            const std::string& version) override {
+    return helper_->FlashCarrierFirmware(path_to_fw, version);
   }
 
  private:
@@ -144,12 +146,14 @@ class StubModem : public Modem {
 
   std::string GetCarrierFirmwareVersion() const override { return ""; }
 
-  bool FlashMainFirmware(const base::FilePath& path_to_fw) override {
-    return helper_->FlashMainFirmware(path_to_fw);
+  bool FlashMainFirmware(const base::FilePath& path_to_fw,
+                         const std::string& version) override {
+    return helper_->FlashMainFirmware(path_to_fw, version);
   }
 
-  bool FlashCarrierFirmware(const base::FilePath& path_to_fw) override {
-    return helper_->FlashCarrierFirmware(path_to_fw);
+  bool FlashCarrierFirmware(const base::FilePath& path_to_fw,
+                            const std::string& version) override {
+    return helper_->FlashCarrierFirmware(path_to_fw, version);
   }
 
  private:

@@ -41,8 +41,10 @@ class ModemHelper {
 
   virtual bool GetFirmwareInfo(FirmwareInfo* out_info) = 0;
 
-  virtual bool FlashMainFirmware(const base::FilePath& path_to_fw) = 0;
-  virtual bool FlashCarrierFirmware(const base::FilePath& path_to_fw) = 0;
+  virtual bool FlashMainFirmware(const base::FilePath& path_to_fw,
+                                 const std::string& version) = 0;
+  virtual bool FlashCarrierFirmware(const base::FilePath& path_to_fw,
+                                    const std::string& version) = 0;
 
   virtual bool FlashModeCheck() = 0;
 };

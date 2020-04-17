@@ -51,7 +51,8 @@ bool RestartOperation(const JournalEntry& entry,
     const FirmwareFileInfo& firmware_file = res.carrier_firmware.value();
     ELOG(INFO) << "Journal reflashing carrier firmware "
                << firmware_file.firmware_path.value();
-    return helper->FlashCarrierFirmware(firmware_file.firmware_path);
+    return helper->FlashCarrierFirmware(firmware_file.firmware_path,
+                                        firmware_file.version);
   }
 
   DCHECK(entry.type() == JournalEntryType::MAIN ||
@@ -65,7 +66,8 @@ bool RestartOperation(const JournalEntry& entry,
   const FirmwareFileInfo& firmware_file = res.main_firmware.value();
   ELOG(INFO) << "Journal reflashing main firmware "
              << firmware_file.firmware_path.value();
-  return helper->FlashMainFirmware(firmware_file.firmware_path);
+  return helper->FlashMainFirmware(firmware_file.firmware_path,
+                                   firmware_file.version);
 }
 
 class JournalImpl : public Journal {

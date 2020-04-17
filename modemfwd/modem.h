@@ -35,8 +35,10 @@ class Modem {
   virtual std::string GetCarrierFirmwareId() const = 0;
   virtual std::string GetCarrierFirmwareVersion() const = 0;
 
-  virtual bool FlashMainFirmware(const base::FilePath& path_to_fw) = 0;
-  virtual bool FlashCarrierFirmware(const base::FilePath& path_to_fw) = 0;
+  virtual bool FlashMainFirmware(const base::FilePath& path_to_fw,
+                                 const std::string& version) = 0;
+  virtual bool FlashCarrierFirmware(const base::FilePath& path_to_fw,
+                                    const std::string& version) = 0;
 };
 
 std::unique_ptr<Modem> CreateModem(
