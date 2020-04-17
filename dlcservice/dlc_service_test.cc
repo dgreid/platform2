@@ -114,8 +114,9 @@ class DlcServiceTest : public BaseTest {
 
     for (const auto& id : ids)
       CheckDlcState(id, DlcState::INSTALLED);
-    EXPECT_EQ(dlc_service_test_observer_->GetInstallStatus().status(),
-              Status::COMPLETED);
+    auto install_status = dlc_service_test_observer_->GetInstallStatus();
+    EXPECT_EQ(install_status.status(), Status::COMPLETED);
+    EXPECT_EQ(install_status.state(), InstallStatus::IDLE);
   }
 
   void CheckDlcState(const DlcId& id_in,
@@ -901,8 +902,9 @@ TEST_F(DlcServiceTest, OnStatusUpdateSignalDownloadProgressTest) {
 
   status_result.set_current_operation(Operation::IDLE);
   dlc_service_->OnStatusUpdateAdvancedSignal(status_result);
-  EXPECT_EQ(dlc_service_test_observer_->GetInstallStatus().status(),
-            Status::COMPLETED);
+  auto install_status = dlc_service_test_observer_->GetInstallStatus();
+  EXPECT_EQ(install_status.status(), Status::COMPLETED);
+  EXPECT_EQ(install_status.state(), InstallStatus::IDLE);
 
   for (const auto& id : ids)
     CheckDlcState(id, DlcState::INSTALLED);

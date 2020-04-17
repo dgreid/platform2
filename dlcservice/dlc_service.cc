@@ -347,6 +347,18 @@ void DlcService::SendOnInstallStatusSignal(const dlcservice::Status& status,
                                            double progress) {
   InstallStatus install_status;
   install_status.set_status(status);
+  switch (status) {
+    case COMPLETED:
+    case FAILED:
+      install_status.set_state(InstallStatus::IDLE);
+      break;
+    case RUNNING:
+      install_status.set_state(InstallStatus::INSTALLING);
+      break;
+    default:
+      NOTREACHED();
+  }
+
   install_status.set_error_code(error_code);
   DlcModuleList* dlc_list = install_status.mutable_dlc_module_list();
   for (const auto& id : ids) {
