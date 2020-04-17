@@ -10,7 +10,6 @@
 #include "bluetooth/common/bluetooth_daemon.h"
 #include "bluetooth/dispatcher/dispatcher.h"
 #include "bluetooth/dispatcher/dispatcher_debug_manager.h"
-#include "bluetooth/dispatcher/suspend_manager.h"
 
 namespace bluetooth {
 
@@ -28,10 +27,6 @@ class DispatcherDaemon : public BluetoothDaemon {
   // The exported object manager to be shared with other components
   std::unique_ptr<ExportedObjectManagerWrapper>
       exported_object_manager_wrapper_;
-
-  // The suspend/resume handler for pausing/unpausing discovery during system
-  // suspend.
-  std::unique_ptr<SuspendManager> suspend_manager_;
 
   // Exposes D-Bus API to enable debug logs
   std::unique_ptr<DispatcherDebugManager> debug_manager_;

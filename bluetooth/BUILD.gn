@@ -40,12 +40,9 @@ static_library("libcommon") {
     "common/dbus_daemon.cc",
     "common/exported_object_manager_wrapper.cc",
     "common/property.cc",
-    "common/runtime_flags.cc",
     "common/util.cc",
   ]
   configs += [ ":target_defaults" ]
-  defines =
-      [ "USE_BLUETOOTH_SUSPEND_MANAGEMENT=${use.bluetooth_suspend_management}" ]
 }
 
 static_library("libdispatcher") {
@@ -62,7 +59,6 @@ static_library("libdispatcher") {
     "dispatcher/impersonation_object_manager_interface.cc",
     "dispatcher/object_manager_interface_multiplexer.cc",
     "dispatcher/service_watcher.cc",
-    "dispatcher/suspend_manager.cc",
   ]
   configs += [ ":target_defaults" ]
 }
@@ -91,7 +87,6 @@ if (use.test) {
       "dispatcher/dispatcher_client_test.cc",
       "dispatcher/dispatcher_test.cc",
       "dispatcher/object_manager_interface_multiplexer_test.cc",
-      "dispatcher/suspend_manager_test.cc",
       "dispatcher/test_helper.cc",
     ]
     configs += [
