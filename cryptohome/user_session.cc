@@ -11,6 +11,7 @@
 #include <openssl/evp.h>
 
 #include <base/logging.h>
+#include "cryptohome/cryptohome_metrics.h"
 #include "cryptohome/cryptolib.h"
 
 using brillo::SecureBlob;
@@ -66,6 +67,8 @@ bool UserSession::CheckUser(const std::string& obfuscated_username) const {
 }
 
 bool UserSession::Verify(const Credentials& credentials) const {
+  ReportTimerStart(kSessionUnlockTimer);
+
   if (!CheckUser(credentials.GetObfuscatedUsername(username_salt_))) {
     return false;
   }
@@ -91,7 +94,10 @@ bool UserSession::Verify(const Credentials& credentials) const {
   }
 
   SecureBlob plaintext;
-  return CryptoLib::AesDecryptDeprecated(cipher_, aes_key, aes_iv, &plaintext);
+  bool status =
+      CryptoLib::AesDecryptDeprecated(cipher_, aes_key, aes_iv, &plaintext);
+  ReportTimerStop(kSessionUnlockTimer);
+  return status;
 }
 
 void UserSession::GetObfuscatedUsername(std::string* username) const {
