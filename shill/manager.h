@@ -500,8 +500,9 @@ class Manager : public base::SupportsWeakPtr<Manager> {
   // on the system e.g. eth0, wlan0.
   virtual std::vector<std::string> GetDeviceInterfaceNames();
 
-  bool GetFTEnabled() const { return ft_enabled_; }
-
+#if !defined(DISABLE_WIFI)
+  bool ft_enabled() const { return ft_enabled_; }
+#endif
   bool ShouldBlackholeUserTraffic(const std::string& device_name) const;
 
   const std::vector<uint32_t>& user_traffic_uids() const {
@@ -856,8 +857,10 @@ class Manager : public base::SupportsWeakPtr<Manager> {
   uint32_t download_rate_kbits_;
   uint32_t upload_rate_kbits_;
 
+#if !defined(DISABLE_WIFI)
   // Fast Transition enabled
   bool ft_enabled_;
+#endif
 
   // "User traffic" refers to traffic from processes that run under one of the
   // unix users enumered in |kUserTrafficUsernames| constant in

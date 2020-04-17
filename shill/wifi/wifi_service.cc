@@ -618,7 +618,7 @@ KeyValueStore WiFiService::GetSupplicantConfigurationParameters() const {
   }
 
   string key_mgmt = key_management();
-  if (manager()->GetFTEnabled() && ft_enabled_) {
+  if (manager()->ft_enabled() && ft_enabled_) {
     if (key_mgmt == WPASupplicant::kKeyManagementWPAPSK)
       key_mgmt =
           base::StringPrintf("%s %s", WPASupplicant::kKeyManagementWPAPSK,

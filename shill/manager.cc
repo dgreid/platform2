@@ -201,11 +201,13 @@ Manager::Manager(ControlInterface* control_interface,
       network_throttling_enabled_(false),
       download_rate_kbits_(0),
       upload_rate_kbits_(0),
+#if !defined(DISABLE_WIFI)
 #if !defined(DISABLE_FT)
       ft_enabled_(true),
 #else
       ft_enabled_(false),
 #endif  // DISABLE_FT
+#endif  // DISABLE_WIFI
       should_blackhole_user_traffic_(false) {
   HelpRegisterConstDerivedRpcIdentifier(
       kActiveProfileProperty, &Manager::GetActiveProfileRpcIdentifier);
