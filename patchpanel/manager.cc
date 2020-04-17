@@ -760,10 +760,10 @@ void Manager::ConnectNamespace(
   //  - add a default IPv4 /0 route sending traffic to that remote veth.
   //  - bring back one veth to the host namespace, and set it up.
   pid_t pid = request.pid();
-  if (!datapath_->ConnectVethPair(
-          pid, host_ifname, client_ifname, addr_mgr_.GenerateMacAddress(),
-          client_ipv4_addr, subnet->PrefixLength(),
-          false /* enable_multicast */)) {
+  if (!datapath_->ConnectVethPair(pid, host_ifname, client_ifname,
+                                  addr_mgr_.GenerateMacAddress(),
+                                  client_ipv4_addr, subnet->PrefixLength(),
+                                  false /* enable_multicast */)) {
     LOG(ERROR) << "ConnectNamespaceRequest: failed to create veth pair for "
                   "namespace pid "
                << pid;
@@ -863,8 +863,10 @@ void Manager::ConnectNamespace(
   }
 
   // Prepare the response before storing ConnectNamespaceInfo.
-  response.set_ifname(host_ifname);
-  response.set_ipv4_address(client_ipv4_addr);
+  response.set_peer_ifname(client_ifname);
+  response.set_peer_ipv4_address(host_ipv4_addr);
+  response.set_host_ifname(host_ifname);
+  response.set_host_ipv4_address(client_ipv4_addr);
   auto* response_subnet = response.mutable_ipv4_subnet();
   response_subnet->set_base_addr(subnet->BaseAddress());
   response_subnet->set_prefix_len(subnet->PrefixLength());

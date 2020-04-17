@@ -44,18 +44,22 @@ TEST(ClientTest, ConnectNamespace) {
   // Failure case
   auto result = client.ConnectNamespace(pid, outboud_ifname, false);
   EXPECT_FALSE(result.first.is_valid());
-  EXPECT_TRUE(result.second.ifname().empty());
+  EXPECT_TRUE(result.second.peer_ifname().empty());
+  EXPECT_TRUE(result.second.host_ifname().empty());
+  EXPECT_EQ(0, result.second.peer_ipv4_address());
+  EXPECT_EQ(0, result.second.host_ipv4_address());
   EXPECT_EQ(0, result.second.ipv4_subnet().base_addr());
   EXPECT_EQ(0, result.second.ipv4_subnet().prefix_len());
-  EXPECT_EQ(0, result.second.ipv4_address());
 
   // Success case
   patchpanel::ConnectNamespaceResponse response_proto;
-  response_proto.set_ifname("arc_ns0");
+  response_proto.set_peer_ifname("veth0");
+  response_proto.set_host_ifname("arc_ns0");
+  response_proto.set_peer_ipv4_address(Ipv4Addr(100, 115, 92, 130));
+  response_proto.set_host_ipv4_address(Ipv4Addr(100, 115, 92, 129));
   auto* response_subnet = response_proto.mutable_ipv4_subnet();
   response_subnet->set_prefix_len(30);
   response_subnet->set_base_addr(Ipv4Addr(100, 115, 92, 128));
-  response_proto.set_ipv4_address(Ipv4Addr(100, 115, 92, 130));
   std::unique_ptr<dbus::Response> response = dbus::Response::CreateEmpty();
   dbus::MessageWriter response_writer(response.get());
   response_writer.AppendProtoAsArrayOfBytes(response_proto);
@@ -64,11 +68,13 @@ TEST(ClientTest, ConnectNamespace) {
 
   result = client.ConnectNamespace(pid, outboud_ifname, false);
   EXPECT_TRUE(result.first.is_valid());
-  EXPECT_EQ("arc_ns0", result.second.ifname());
+  EXPECT_EQ("arc_ns0", result.second.host_ifname());
+  EXPECT_EQ("veth0", result.second.peer_ifname());
   EXPECT_EQ(30, result.second.ipv4_subnet().prefix_len());
   EXPECT_EQ(Ipv4Addr(100, 115, 92, 128),
             result.second.ipv4_subnet().base_addr());
-  EXPECT_EQ(Ipv4Addr(100, 115, 92, 130), result.second.ipv4_address());
+  EXPECT_EQ(Ipv4Addr(100, 115, 92, 129), result.second.host_ipv4_address());
+  EXPECT_EQ(Ipv4Addr(100, 115, 92, 130), result.second.peer_ipv4_address());
 }
 
 }  // namespace patchpanel

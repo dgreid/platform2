@@ -389,7 +389,7 @@ Client::ConnectNamespace(pid_t pid,
     return {};
   }
 
-  if (response.ifname().empty()) {
+  if (response.peer_ifname().empty() || response.host_ifname().empty()) {
     LOG(ERROR) << "ConnectNamespace for netns pid " << pid << " failed";
     return {};
   }
@@ -397,7 +397,12 @@ Client::ConnectNamespace(pid_t pid,
   std::string subnet_info = IPv4AddressToCidrString(
       response.ipv4_subnet().base_addr(), response.ipv4_subnet().prefix_len());
   LOG(INFO) << "ConnectNamespace for netns pid " << pid
-            << " succeeded: veth=" << response.ifname()
+            << " succeeded: peer_ifname=" << response.peer_ifname()
+            << " peer_ipv4_address="
+            << IPv4AddressToString(response.peer_ipv4_address())
+            << " host_ifname=" << response.host_ifname()
+            << " host_ipv4_address="
+            << IPv4AddressToString(response.host_ipv4_address())
             << " subnet=" << subnet_info;
 
   return std::make_pair(std::move(fd_local), std::move(response));
