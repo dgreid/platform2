@@ -19,10 +19,12 @@
 namespace cros_disks {
 namespace {
 
+// Signal handler that forwards the received signal to all children processes.
 void SigTerm(int sig) {
-  if (kill(-1, sig) == -1) {
-    RAW_LOG(FATAL, "Can't broadcast signal");
-    _exit(errno + 128);
+  if (kill(-1, sig) < 0) {
+    const int err = errno;
+    RAW_LOG(ERROR, "Cannot broadcast signal");
+    _exit(err + 64);
   }
 }
 
@@ -92,6 +94,11 @@ SandboxedInit::~SandboxedInit() = default;
   // Avoid leaking file descriptor into launcher process.
   PCHECK(base::SetCloseOnExec(ctrl_fd_.get()));
 
+  // Setup the SIGTERM signal handler.
+  if (signal(SIGTERM, SigTerm) == SIG_ERR) {
+    PLOG(FATAL) << "Cannot install signal handler";
+  }
+
   // PID of the launcher process inside the jail PID namespace (e.g. PID 2).
   pid_t root_pid = StartLauncher(std::move(launcher));
   CHECK_LT(0, root_pid);
@@ -105,11 +112,6 @@ int SandboxedInit::RunInitLoop(pid_t root_pid, base::ScopedFD ctrl_fd) {
 
   // Most of this is mirroring minijail's embedded "init" (exit status handling)
   // with addition of piping the "root" status code to the calling process.
-
-  // Forward SIGTERM to all children instead of handling it directly.
-  if (signal(SIGTERM, SigTerm) == SIG_ERR) {
-    PLOG(FATAL) << "Can't install signal handler";
-  }
 
   // By now it's unlikely something to go wrong here, so disconnect
   // from in/out.

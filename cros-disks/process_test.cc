@@ -265,6 +265,84 @@ TEST_P(ProcessRunTest, WaitKilledBySigSys) {
   EXPECT_EQ(process.Wait(), MINIJAIL_ERR_JAIL);
 }
 
+TEST_P(ProcessRunTest, ExternallyKilledBySigKill) {
+  Process& process = *process_;
+  process.AddArgument("/bin/sh");
+  process.AddArgument("-c");
+
+  // Pipe to block the child process.
+  SubprocessPipe to_block(SubprocessPipe::kParentToChild);
+
+  // Pipe to monitor the child process.
+  SubprocessPipe to_wait(SubprocessPipe::kChildToParent);
+
+  process.AddArgument(base::StringPrintf(
+      R"(
+        printf 'Begin\n' >&%d;
+        read line <&%d;
+        printf '%%s and End\n' "$line" >&%d;
+        exit 42;
+    )",
+      to_wait.child_fd.get(), to_block.child_fd.get(), to_wait.child_fd.get()));
+
+  EXPECT_TRUE(process.Start());
+
+  // Close unused pipe ends.
+  to_block.child_fd.reset();
+  to_wait.child_fd.reset();
+
+  // Wait for child process to start.
+  EXPECT_EQ(Read(to_wait.parent_fd.get()), "Begin\n");
+
+  // Send SIGKILL to child process.
+  const pid_t pid = process.pid();
+  LOG(INFO) << "Sending signal to PID " << pid;
+  EXPECT_EQ(kill(pid, SIGKILL), 0);
+
+  // Wait for child process to finish.
+  EXPECT_EQ(Read(to_wait.parent_fd.get()), "");
+  EXPECT_EQ(process.Wait(), MINIJAIL_ERR_SIG_BASE + SIGKILL);
+}
+
+TEST_P(ProcessRunTest, ExternallyKilledBySigTerm) {
+  Process& process = *process_;
+  process.AddArgument("/bin/sh");
+  process.AddArgument("-c");
+
+  // Pipe to block the child process.
+  SubprocessPipe to_block(SubprocessPipe::kParentToChild);
+
+  // Pipe to monitor the child process.
+  SubprocessPipe to_wait(SubprocessPipe::kChildToParent);
+
+  process.AddArgument(base::StringPrintf(
+      R"(
+        printf 'Begin\n' >&%d;
+        read line <&%d;
+        printf '%%s and End\n' "$line" >&%d;
+        exit 42;
+    )",
+      to_wait.child_fd.get(), to_block.child_fd.get(), to_wait.child_fd.get()));
+
+  EXPECT_TRUE(process.Start());
+
+  // Close unused pipe ends.
+  to_block.child_fd.reset();
+  to_wait.child_fd.reset();
+
+  // Wait for child process to start.
+  EXPECT_EQ(Read(to_wait.parent_fd.get()), "Begin\n");
+
+  // Send SIGTERM to child process.
+  const pid_t pid = process.pid();
+  LOG(INFO) << "Sending signal to PID " << pid;
+  EXPECT_EQ(kill(pid, SIGTERM), 0);
+
+  // Wait for child process to finish.
+  EXPECT_EQ(Read(to_wait.parent_fd.get()), "");
+  EXPECT_EQ(process.Wait(), MINIJAIL_ERR_SIG_BASE + SIGTERM);
+}
+
 TEST_P(ProcessRunTest, RunCannotFindCommand) {
   Process& process = *process_;
   process.AddArgument("non existing command");
