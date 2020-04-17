@@ -24,6 +24,12 @@ namespace {
 
 constexpr auto kDefaultTimeout = base::TimeDelta::FromSeconds(5);
 
+// These should be supported on all devices.
+constexpr cros_cam_format_info_t kTestFormats[] = {
+    {V4L2_PIX_FMT_NV12, 640, 480, 30},
+    {V4L2_PIX_FMT_MJPEG, 640, 480, 30},
+};
+
 std::string FourccToString(uint32_t fourcc) {
   std::string result = "0000";
   for (int i = 0; i < 4; i++) {
@@ -66,8 +72,50 @@ class ConnectorEnvironment : public ::testing::Environment {
 
 class I420Buffer {
  public:
-  I420Buffer(int width, int height)
+  explicit I420Buffer(int width = 0, int height = 0)
       : width_(width), height_(height), data_(DataSize()) {}
+
+  static I420Buffer Create(const cros_cam_frame_t* frame) {
+    const cros_cam_format_info_t& format = frame->format;
+    I420Buffer buf(format.width, format.height);
+
+    // TODO(b/115453284): It's an anonymous struct now. We can give it a name
+    // to make it more clear.
+    const auto planes = frame->plane;
+
+    auto expect_empty = [&](decltype(planes[0]) plane) {
+      EXPECT_EQ(plane.size, 0);
+      EXPECT_EQ(plane.stride, 0);
+      EXPECT_EQ(plane.data, nullptr);
+    };
+
+    switch (format.fourcc) {
+      case V4L2_PIX_FMT_NV12: {
+        expect_empty(planes[2]);
+        expect_empty(planes[3]);
+        int ret = libyuv::NV12ToI420(
+            planes[0].data, planes[0].stride, planes[1].data, planes[1].stride,
+            buf.DataY(), buf.StrideY(), buf.DataU(), buf.StrideU(), buf.DataY(),
+            buf.StrideV(), buf.Width(), buf.Height());
+        EXPECT_EQ(ret, 0) << "invalid NV12 frame";
+        break;
+      }
+      case V4L2_PIX_FMT_MJPEG: {
+        expect_empty(planes[1]);
+        expect_empty(planes[2]);
+        expect_empty(planes[3]);
+        int ret = libyuv::MJPGToI420(
+            planes[0].data, planes[0].size, buf.DataY(), buf.StrideY(),
+            buf.DataU(), buf.StrideU(), buf.DataV(), buf.StrideV(),
+            format.width, format.height, buf.Width(), buf.Height());
+        EXPECT_EQ(ret, 0) << "invalid MJPEG frame";
+        break;
+      }
+      default:
+        ADD_FAILURE() << "unexpected fourcc: " << FourccToString(format.fourcc);
+    }
+    return buf;
+  }
 
   int Width() const { return width_; }
   int Height() const { return height_; }
@@ -127,52 +175,9 @@ class FrameCapturer {
     return num_frames_captured_;
   }
 
+  I420Buffer LastI420Frame() const { return last_i420_frame_; }
+
  private:
-  void CheckFrame(const cros_cam_frame_t* frame) {
-    ASSERT_TRUE(IsSameFormat(frame->format, format_));
-
-    // TODO(b/115453284): It's an anonymous struct now. We can give it a name
-    // to make it more clear.
-    const auto planes = frame->plane;
-
-    auto expect_empty = [&](decltype(planes[0]) plane) {
-      EXPECT_EQ(plane.size, 0);
-      EXPECT_EQ(plane.stride, 0);
-      EXPECT_EQ(plane.data, nullptr);
-    };
-
-    I420Buffer i420_buf(format_.width, format_.height);
-
-    switch (format_.fourcc) {
-      case V4L2_PIX_FMT_NV12: {
-        expect_empty(planes[2]);
-        expect_empty(planes[3]);
-        int ret = libyuv::NV12ToI420(
-            planes[0].data, planes[0].stride, planes[1].data, planes[1].stride,
-            i420_buf.DataY(), i420_buf.StrideY(), i420_buf.DataU(),
-            i420_buf.StrideU(), i420_buf.DataY(), i420_buf.StrideV(),
-            format_.width, format_.height);
-        EXPECT_EQ(ret, 0) << "invalid NV12 frame";
-        break;
-      }
-      case V4L2_PIX_FMT_MJPEG: {
-        expect_empty(planes[1]);
-        expect_empty(planes[2]);
-        expect_empty(planes[3]);
-        int ret = libyuv::MJPGToI420(
-            planes[0].data, planes[0].size, i420_buf.DataY(),
-            i420_buf.StrideY(), i420_buf.DataU(), i420_buf.StrideU(),
-            i420_buf.DataV(), i420_buf.StrideV(), format_.width, format_.height,
-            format_.width, format_.height);
-        EXPECT_EQ(ret, 0) << "invalid MJPEG frame";
-        break;
-      }
-      default:
-        ADD_FAILURE() << "unexpected fourcc: "
-                      << FourccToString(format_.fourcc);
-    }
-  }
-
   // non-zero return value should stop the capture.
   int GotFrame(const cros_cam_frame_t* frame) {
     if (capture_done_.IsSignaled()) {
@@ -180,7 +185,8 @@ class FrameCapturer {
       return -1;
     }
 
-    CheckFrame(frame);
+    EXPECT_TRUE(IsSameFormat(frame->format, format_));
+    last_i420_frame_ = I420Buffer::Create(frame);
 
     num_frames_captured_++;
     if (num_frames_captured_ == num_frames_) {
@@ -202,6 +208,7 @@ class FrameCapturer {
 
   int num_frames_captured_;
   base::WaitableEvent capture_done_;
+  I420Buffer last_i420_frame_;
 };
 
 class CameraClient {
@@ -298,11 +305,38 @@ TEST_P(CaptureTest, ThreeSeconds) {
   EXPECT_GT(num_frames_captured, 1);
 }
 
-// These should be supported on all devices.
-constexpr cros_cam_format_info_t kTestFormats[] = {
-    {V4L2_PIX_FMT_NV12, 640, 480, 30},
-    {V4L2_PIX_FMT_MJPEG, 640, 480, 30},
-};
+TEST(ConnectorTest, CompareFrames) {
+  CameraClient client;
+  client.ProbeCameraInfo();
+
+  cros_cam_device_t id = client.FindIdForFormat(kTestFormats[0]);
+  ASSERT_NE(id, nullptr);
+
+  FrameCapturer capturer;
+  capturer.SetNumFrames(1);
+
+  ASSERT_EQ(capturer.Run(id, kTestFormats[0]), 1);
+  I420Buffer frame1 = capturer.LastI420Frame();
+
+  ASSERT_EQ(capturer.Run(id, kTestFormats[1]), 1);
+  I420Buffer frame2 = capturer.LastI420Frame();
+
+  double ssim = libyuv::I420Ssim(
+      frame1.DataY(), frame1.StrideY(), frame1.DataU(), frame1.StrideU(),
+      frame1.DataV(), frame1.StrideV(), frame2.DataY(), frame2.StrideY(),
+      frame2.DataU(), frame2.StrideU(), frame2.DataV(), frame2.StrideV(),
+      frame1.Width(), frame1.Height());
+  LOGF(INFO) << "ssim = " << ssim;
+
+  // It's expected have two similar but not exactly same frames captured in the
+  // short period with MJPEG and NV12. The normal values are around 0.7~0.8.
+  EXPECT_GE(ssim, 0.4);
+
+  // If the frames are exactly same (ssim = 1.0), the frame is likely broken
+  // such as all pixels are black. Set the threshold as 0.99 for potential jpeg
+  // artifacts and floating point error.
+  EXPECT_LE(ssim, 0.99);
+}
 
 INSTANTIATE_TEST_SUITE_P(ConnectorTest,
                          CaptureTest,
