@@ -41,12 +41,6 @@ const char CellularService::kStorageMeid[] = "Cellular.Meid";
 const char CellularService::kStoragePPPUsername[] = "Cellular.PPP.Username";
 const char CellularService::kStoragePPPPassword[] = "Cellular.PPP.Password";
 
-// TODO(petkov): Add these to system_api/dbus/service_constants.h
-namespace {
-const char kCellularPPPUsernameProperty[] = "Cellular.PPP.Username";
-const char kCellularPPPPasswordProperty[] = "Cellular.PPP.Password";
-}  // namespace
-
 namespace {
 
 const char kStorageAPN[] = "Cellular.APN";
