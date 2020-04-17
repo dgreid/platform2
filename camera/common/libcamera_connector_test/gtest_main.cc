@@ -12,6 +12,7 @@
 #include <brillo/syslog_logging.h>
 #include <gtest/gtest.h>
 #include <linux/videodev2.h>
+#include <libyuv.h>
 
 #include "cros-camera/camera_service_connector.h"
 #include "cros-camera/common.h"
@@ -63,6 +64,34 @@ class ConnectorEnvironment : public ::testing::Environment {
   }
 };
 
+class I420Buffer {
+ public:
+  I420Buffer(int width, int height)
+      : width_(width), height_(height), data_(DataSize()) {}
+
+  int Width() const { return width_; }
+  int Height() const { return height_; }
+
+  int StrideY() const { return width_; }
+  int StrideU() const { return (width_ + 1) / 2; }
+  int StrideV() const { return (width_ + 1) / 2; }
+
+  uint8_t* DataY() { return data_.data(); }
+  uint8_t* DataU() { return DataY() + StrideY() * Height(); }
+  uint8_t* DataV() { return DataU() + StrideU() * HalfHeight(); }
+
+ private:
+  int HalfHeight() const { return (height_ + 1) / 2; }
+  int HalfWidth() const { return (width_ + 1) / 2; }
+  int DataSize() const {
+    return StrideY() * Height() + (StrideU() + StrideV()) * HalfHeight();
+  }
+
+  int width_;
+  int height_;
+  std::vector<uint8_t> data_;
+};
+
 class FrameCapturer {
  public:
   FrameCapturer& SetNumFrames(int num_frames) {
@@ -78,6 +107,7 @@ class FrameCapturer {
   int Run(cros_cam_device_t id, cros_cam_format_info_t format) {
     num_frames_captured_ = 0;
     capture_done_.Reset();
+    format_ = format;
 
     if (cros_cam_start_capture(id, &format, &FrameCapturer::CaptureCallback,
                                this) != 0) {
@@ -98,6 +128,51 @@ class FrameCapturer {
   }
 
  private:
+  void CheckFrame(const cros_cam_frame_t* frame) {
+    ASSERT_TRUE(IsSameFormat(frame->format, format_));
+
+    // TODO(b/115453284): It's an anonymous struct now. We can give it a name
+    // to make it more clear.
+    const auto planes = frame->plane;
+
+    auto expect_empty = [&](decltype(planes[0]) plane) {
+      EXPECT_EQ(plane.size, 0);
+      EXPECT_EQ(plane.stride, 0);
+      EXPECT_EQ(plane.data, nullptr);
+    };
+
+    I420Buffer i420_buf(format_.width, format_.height);
+
+    switch (format_.fourcc) {
+      case V4L2_PIX_FMT_NV12: {
+        expect_empty(planes[2]);
+        expect_empty(planes[3]);
+        int ret = libyuv::NV12ToI420(
+            planes[0].data, planes[0].stride, planes[1].data, planes[1].stride,
+            i420_buf.DataY(), i420_buf.StrideY(), i420_buf.DataU(),
+            i420_buf.StrideU(), i420_buf.DataY(), i420_buf.StrideV(),
+            format_.width, format_.height);
+        EXPECT_EQ(ret, 0) << "invalid NV12 frame";
+        break;
+      }
+      case V4L2_PIX_FMT_MJPEG: {
+        expect_empty(planes[1]);
+        expect_empty(planes[2]);
+        expect_empty(planes[3]);
+        int ret = libyuv::MJPGToI420(
+            planes[0].data, planes[0].size, i420_buf.DataY(),
+            i420_buf.StrideY(), i420_buf.DataU(), i420_buf.StrideU(),
+            i420_buf.DataV(), i420_buf.StrideV(), format_.width, format_.height,
+            format_.width, format_.height);
+        EXPECT_EQ(ret, 0) << "invalid MJPEG frame";
+        break;
+      }
+      default:
+        ADD_FAILURE() << "unexpected fourcc: "
+                      << FourccToString(format_.fourcc);
+    }
+  }
+
   // non-zero return value should stop the capture.
   int GotFrame(const cros_cam_frame_t* frame) {
     if (capture_done_.IsSignaled()) {
@@ -105,13 +180,13 @@ class FrameCapturer {
       return -1;
     }
 
+    CheckFrame(frame);
+
     num_frames_captured_++;
     if (num_frames_captured_ == num_frames_) {
       capture_done_.Signal();
       return -1;
     }
-
-    // TODO(b/151047930): Verify the content of frame.
 
     return 0;
   }
@@ -123,6 +198,7 @@ class FrameCapturer {
 
   int num_frames_ = INT_MAX;
   base::TimeDelta duration_ = kDefaultTimeout;
+  cros_cam_format_info_t format_;
 
   int num_frames_captured_;
   base::WaitableEvent capture_done_;
