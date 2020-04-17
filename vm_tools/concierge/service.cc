@@ -151,13 +151,6 @@ constexpr char kProcFileDescriptorsPath[] = "/proc/self/fd/";
 // Only allow hex digits in the cryptohome id.
 constexpr char kValidCryptoHomeCharacters[] = "abcdefABCDEF0123456789";
 
-// Common environment for all LXD functionality.
-const std::map<string, string> kLxdEnv = {
-    {"LXD_DIR", "/mnt/stateful/lxd"},
-    {"LXD_CONF", "/mnt/stateful/lxd_conf"},
-    {"LXD_UNPRIVILEGED_ONLY", "true"},
-};
-
 constexpr uint64_t kMinimumDiskSize = 1ll * 1024 * 1024 * 1024;  // 1 GiB
 constexpr uint64_t kDiskSizeMask = ~4095ll;  // Round to disk block size.
 
@@ -2134,7 +2127,7 @@ bool Service::StartTermina(
     vm_tools::StartTerminaResponse::MountResult* result) {
   DCHECK(sequence_checker_.CalledOnValidSequence());
   DCHECK(result);
-  LOG(INFO) << "Starting lxd";
+  LOG(INFO) << "Starting Termina-specific services";
 
   std::string dst_addr;
   IPv4AddressToString(vm->ContainerSubnet(), &dst_addr);
