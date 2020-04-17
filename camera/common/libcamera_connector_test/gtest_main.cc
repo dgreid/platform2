@@ -42,6 +42,12 @@ std::string CameraFormatInfoToString(const cros_cam_format_info_t& info) {
                             info.height, info.fps);
 }
 
+bool IsSameFormat(const cros_cam_format_info_t& fmt1,
+                  const cros_cam_format_info_t& fmt2) {
+  return fmt1.fourcc == fmt2.fourcc && fmt1.width == fmt2.width &&
+         fmt1.height == fmt2.height && fmt1.fps == fmt2.fps;
+}
+
 }  // namespace
 
 class ConnectorEnvironment : public ::testing::Environment {
@@ -55,6 +61,71 @@ class ConnectorEnvironment : public ::testing::Environment {
     cros_cam_exit();
     LOGF(INFO) << "Camera connector exited";
   }
+};
+
+class FrameCapturer {
+ public:
+  FrameCapturer& SetNumFrames(int num_frames) {
+    num_frames_ = num_frames;
+    return *this;
+  }
+
+  FrameCapturer& SetDuration(base::TimeDelta duration) {
+    duration_ = duration;
+    return *this;
+  }
+
+  int Run(cros_cam_device_t id, cros_cam_format_info_t format) {
+    num_frames_captured_ = 0;
+    capture_done_.Reset();
+
+    if (cros_cam_start_capture(id, &format, &FrameCapturer::CaptureCallback,
+                               this) != 0) {
+      ADD_FAILURE() << "failed to start capture";
+      return 0;
+    }
+
+    // Wait until |duration_| passed or |num_frames_| captured.
+    capture_done_.TimedWait(duration_);
+
+    cros_cam_stop_capture(id);
+    if (!capture_done_.IsSignaled()) {
+      capture_done_.Signal();
+    }
+
+    LOGF(INFO) << "Captured " << num_frames_captured_ << " frames";
+    return num_frames_captured_;
+  }
+
+ private:
+  // non-zero return value should stop the capture.
+  int GotFrame(const cros_cam_frame_t* frame) {
+    if (capture_done_.IsSignaled()) {
+      ADD_FAILURE() << "got frame after capture is done";
+      return -1;
+    }
+
+    num_frames_captured_++;
+    if (num_frames_captured_ == num_frames_) {
+      capture_done_.Signal();
+      return -1;
+    }
+
+    // TODO(b/151047930): Verify the content of frame.
+
+    return 0;
+  }
+
+  static int CaptureCallback(void* context, const cros_cam_frame_t* frame) {
+    auto* self = reinterpret_cast<FrameCapturer*>(context);
+    return self->GotFrame(frame);
+  }
+
+  int num_frames_ = INT_MAX;
+  base::TimeDelta duration_ = kDefaultTimeout;
+
+  int num_frames_captured_;
+  base::WaitableEvent capture_done_;
 };
 
 class CameraClient {
@@ -83,21 +154,15 @@ class CameraClient {
     }
   }
 
-  void Capture(uint32_t fourcc, int width, int height, int fps) {
-    LOGF(INFO) << base::StringPrintf("Capture one %s frame with %dx%d %dfps",
-                                     FormatToString(fourcc).c_str(), width,
-                                     height, fps);
-
-    cros_cam_device_t id;
-    const cros_cam_format_info_t* format;
-    ASSERT_TRUE(ResolveCaptureParams(fourcc, width, height, fps, &id, &format));
-
-    frame_captured_.Reset();
-    ASSERT_EQ(cros_cam_start_capture(id, format, &CameraClient::CaptureCallback,
-                                     this),
-              0);
-    EXPECT_TRUE(frame_captured_.TimedWait(kDefaultTimeout));
-    cros_cam_stop_capture(id);
+  cros_cam_device_t FindIdForFormat(const cros_cam_format_info_t& format) {
+    for (const auto& info : camera_infos_) {
+      for (int i = 0; i < info.format_count; i++) {
+        if (IsSameFormat(format, info.format_info[i])) {
+          return info.id;
+        }
+      }
+    }
+    return nullptr;
   }
 
  private:
@@ -110,59 +175,32 @@ class CameraClient {
     return 0;
   }
 
-  int GotFrame(const cros_cam_frame_t* frame) {
-    // TODO(b/151047930): Verify the content of frame.
-    EXPECT_FALSE(frame_captured_.IsSignaled()) << "got too many frames";
-    frame_captured_.Signal();
-
-    // non-zero return value should stop the capture.
-    return -1;
-  }
-
-  bool ResolveCaptureParams(uint32_t fourcc,
-                            int width,
-                            int height,
-                            int fps,
-                            cros_cam_device_t* id,
-                            const cros_cam_format_info_t** format) {
-    for (const auto& info : camera_infos_) {
-      for (int i = 0; i < info.format_count; i++) {
-        const auto& fmt = info.format_info[i];
-        if (fmt.fourcc == fourcc && fmt.width == width &&
-            fmt.height == height && fmt.fps == fps) {
-          *id = info.id;
-          *format = &fmt;
-          return true;
-        }
-      }
-    }
-    return false;
-  }
-
   static int GetCamInfoCallback(void* context,
                                 const cros_cam_info_t* info,
                                 unsigned is_removed) {
     auto* self = reinterpret_cast<CameraClient*>(context);
     return self->GotCameraInfo(info, is_removed);
   }
-
-  static int CaptureCallback(void* context, const cros_cam_frame_t* frame) {
-    auto* self = reinterpret_cast<CameraClient*>(context);
-    return self->GotFrame(frame);
-  }
-
   std::vector<cros_cam_info_t> camera_infos_;
   bool camera_info_frozen_ = false;
-
-  base::WaitableEvent frame_captured_;
 };
 
-class CaptureTest : public ::testing::Test,
-                    public ::testing::WithParamInterface<uint32_t> {
+class CaptureTest
+    : public ::testing::Test,
+      public ::testing::WithParamInterface<cros_cam_format_info_t> {
  protected:
-  void SetUp() override { client_.ProbeCameraInfo(); }
+  void SetUp() override {
+    client_.ProbeCameraInfo();
+    format_ = GetParam();
+    camera_id_ = client_.FindIdForFormat(format_);
+    ASSERT_NE(camera_id_, nullptr);
+  }
 
   CameraClient client_;
+  FrameCapturer capturer_;
+
+  cros_cam_device_t camera_id_;
+  cros_cam_format_info_t format_;
 };
 
 TEST(ConnectorTest, GetInfo) {
@@ -172,17 +210,33 @@ TEST(ConnectorTest, GetInfo) {
 }
 
 TEST_P(CaptureTest, OneFrame) {
-  uint32_t fourcc = GetParam();
-  // This should be supported on all devices.
-  client_.Capture(fourcc, 640, 480, 30);
+  int num_frames_captured = capturer_.SetNumFrames(1).Run(camera_id_, format_);
+  EXPECT_EQ(num_frames_captured, 1);
 }
+
+TEST_P(CaptureTest, ThreeSeconds) {
+  const auto kDuration = base::TimeDelta::FromSeconds(3);
+  int num_frames_captured =
+      capturer_.SetDuration(kDuration).Run(camera_id_, format_);
+  // It's expected to get more than 1 frame in 3s.
+  EXPECT_GT(num_frames_captured, 1);
+}
+
+// These should be supported on all devices.
+constexpr cros_cam_format_info_t kTestFormats[] = {
+    {V4L2_PIX_FMT_NV12, 640, 480, 30},
+    {V4L2_PIX_FMT_MJPEG, 640, 480, 30},
+};
 
 INSTANTIATE_TEST_SUITE_P(ConnectorTest,
                          CaptureTest,
-                         ::testing::Values(V4L2_PIX_FMT_NV12,
-                                           V4L2_PIX_FMT_MJPEG),
+                         ::testing::ValuesIn(kTestFormats),
                          [](const auto& info) {
-                           return FourccToString(info.param);
+                           const cros_cam_format_info_t& fmt = info.param;
+                           return base::StringPrintf(
+                               "%s_%ux%u_%ufps",
+                               FourccToString(fmt.fourcc).c_str(), fmt.width,
+                               fmt.height, fmt.fps);
                          });
 
 }  // namespace tests
