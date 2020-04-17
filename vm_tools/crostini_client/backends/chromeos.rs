@@ -524,7 +524,8 @@ impl ChromeOS {
             DEBUGD_INTERFACE,
             START_VM_PLUGIN_DISPATCHER,
         )?
-        .append(user_id_hash);
+        .append(user_id_hash)
+        .append("en-US");
 
         let message = self
             .connection

@@ -11,6 +11,7 @@
 #include <base/files/file_util.h>
 #include <base/logging.h>
 #include <base/memory/ref_counted.h>
+#include <base/strings/string_split.h>
 #include <base/strings/string_util.h>
 #include <brillo/variant_dictionary.h>
 #include <chromeos/dbus/service_constants.h>
@@ -511,7 +512,8 @@ void DebugdDBusAdaptor::StopVmConcierge() {
 
 void DebugdDBusAdaptor::StartVmPluginDispatcher(
     std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<bool>> response,
-    const std::string& in_user_id_hash) {
+    const std::string& in_user_id_hash,
+    const std::string& in_lang) {
   // Perform basic validation of user ID hash.
   if (in_user_id_hash.length() != 40) {
     LOG(ERROR) << "Incorrect length of the user_id_hash (" << in_user_id_hash
@@ -527,8 +529,19 @@ void DebugdDBusAdaptor::StartVmPluginDispatcher(
     return;
   }
 
+  // Perform basic validation of the language string. We expect it to be
+  // <language>[-<territory>].
+  std::vector<base::StringPiece> chunks = base::SplitStringPiece(
+      in_lang, "-", base::TRIM_WHITESPACE, base::SPLIT_WANT_ALL);
+  if (chunks.size() < 1 || chunks.size() > 2 || chunks[0].empty()) {
+    LOG(ERROR) << "malformed language argument (" << in_lang << ")";
+    response->Return(false);
+    return;
+  }
+
   vm_plugin_dispatcher_tool_->StartService(
-      {{"CROS_USER_ID_HASH", in_user_id_hash}}, std::move(response));
+      {{"CROS_USER_ID_HASH", in_user_id_hash}, {"CROS_USER_UI_LANG", in_lang}},
+      std::move(response));
 }
 
 void DebugdDBusAdaptor::StopVmPluginDispatcher() {

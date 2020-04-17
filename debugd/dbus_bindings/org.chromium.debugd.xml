@@ -1065,8 +1065,12 @@
         Cryptohome ID of the user owning the session that will own this
         dispatcher instance.
       </arg>
+      <arg name="lang" type="s" direction="in">
+        Language that user owning the session has selected for the UI to be
+        passed to the dispatcher instance.
+      </arg>
       <arg name="status" type="b" direction="out">
-        Whether the VM Plugin dispather service is ready to handle requests.
+        Whether the VM Plugin dispatcher service is ready to handle requests.
       </arg>
       <annotation name="org.chromium.DBus.Method.Kind" value="async"/>
     </method>

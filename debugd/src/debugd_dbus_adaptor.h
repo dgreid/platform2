@@ -195,7 +195,8 @@ class DebugdDBusAdaptor : public org::chromium::debugdAdaptor,
   void StopVmConcierge() override;
   void StartVmPluginDispatcher(
       std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<bool>> response,
-      const std::string& in_user_id_hash) override;
+      const std::string& in_user_id_hash,
+      const std::string& in_lang) override;
   void StopVmPluginDispatcher() override;
   bool SetRlzPingSent(brillo::ErrorPtr* error) override;
   bool UpdateAndVerifyFWOnUsbStart(brillo::ErrorPtr* error,
