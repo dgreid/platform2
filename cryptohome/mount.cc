@@ -666,7 +666,6 @@ bool Mount::MountCryptohomeInner(const Credentials& credentials,
 
   // TODO(fqj,b/116072767) Ignore errors since unlabeled files are currently
   // still okay during current development progress.
-  LOG(INFO) << "Restoring SELinux context for homedir.";
   platform_->RestoreSELinuxContexts(
       homedirs_->GetUserMountDirectory(obfuscated_username),
       true);

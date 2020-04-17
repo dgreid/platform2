@@ -32,6 +32,7 @@
 #include <unistd.h>
 #include <memory>
 
+#include <ios>
 #include <limits>
 #include <sstream>
 #include <utility>
@@ -1355,14 +1356,14 @@ bool Platform::ResizeFilesystem(const base::FilePath& file,
 bool Platform::RestoreSELinuxContexts(
     const base::FilePath& path, bool recursive) {
 #if USE_SELINUX
-  LOG(INFO) << "Restoring selinux contexts for: " << path.value();
+  LOG(INFO) << "Restoring SELinux contexts for: " << path.value()
+            << ", recursive=" << std::boolalpha << recursive;
   int restorecon_flag = 0;
   if (recursive)
     restorecon_flag |= SELINUX_RESTORECON_RECURSE;
   if (selinux_restorecon(path.value().c_str(),
                          restorecon_flag) != 0) {
-    PLOG(ERROR) << "An error occurred to restorecon "
-               << path.value();
+    PLOG(ERROR) << "restorecon(" << path.value() << ") failed";
     return false;
   }
 #endif
