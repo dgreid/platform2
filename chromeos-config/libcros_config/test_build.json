@@ -4,7 +4,10 @@
       {
         "arc": {
           "build-properties": {
-            "first-api-level": "27"
+            "device": "some_cheets",
+            "first-api-level": "27",
+            "metrics-tag": "abc123",
+            "product": "some"
           },
           "files": [
             {
@@ -134,7 +137,10 @@
       {
         "arc": {
           "build-properties": {
-            "first-api-level": "27"
+            "device": "some_cheets",
+            "first-api-level": "27",
+            "metrics-tag": "abc123",
+            "product": "some"
           },
           "files": [
             {
@@ -360,7 +366,10 @@
       {
         "arc": {
           "build-properties": {
-            "first-api-level": "27"
+            "device": "whitelabel_cheets",
+            "first-api-level": "27",
+            "metrics-tag": "abc123",
+            "product": "whitelabel"
           },
           "files": [
             {
@@ -450,7 +459,10 @@
       {
         "arc": {
           "build-properties": {
-            "first-api-level": "27"
+            "device": "whitelabel_cheets",
+            "first-api-level": "27",
+            "metrics-tag": "abc123",
+            "product": "whitelabel"
           },
           "files": [
             {
@@ -539,7 +551,10 @@
       {
         "arc": {
           "build-properties": {
-            "first-api-level": "27"
+            "device": "whitelabel_cheets",
+            "first-api-level": "27",
+            "metrics-tag": "abc123",
+            "product": "whitelabel"
           },
           "files": [
             {
@@ -629,7 +644,10 @@
       {
         "arc": {
           "build-properties": {
-            "first-api-level": "27"
+            "device": "whitelabel_cheets",
+            "first-api-level": "27",
+            "metrics-tag": "abc123",
+            "product": "whitelabel"
           },
           "files": [
             {

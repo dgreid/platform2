@@ -325,20 +325,20 @@ In the tables below,
 ### arc
 | Attribute | Type   | RegEx     | Required | Oneof Group | Build-only | Description |
 | --------- | ------ | --------- | -------- | ----------- | ---------- | ----------- |
-| build-properties | [build-properties](#build_properties) |  | False |  | False |  |
+| build-properties | [build-properties](#build_properties) |  | True |  | False |  |
 | files | array - [files](#files) |  | False |  | True |  |
 | scale | integer |  | False |  | False | The screen density value in dpi that will be used for ARC apps. This value should be from the list of DPIs in android cdd. |
 
 ### build-properties
 | Attribute | Type   | RegEx     | Required | Oneof Group | Build-only | Description |
 | --------- | ------ | --------- | -------- | ----------- | ---------- | ----------- |
-| device | string |  | False |  | False | Device name to report in 'ro.product.device'. This is often '{product}_cheets' but it can be something else if desired. |
-| first-api-level | string |  | False |  | False | The first Android API level that this model shipped with.  |
+| device | string |  | True |  | False | Device name to report in 'ro.product.device'. This is often '{product}_cheets' but it can be something else if desired. |
+| first-api-level | string |  | True |  | False | The first Android API level that this model shipped with.  |
 | marketing-name | string |  | False |  | False | Name of this model as it is called in the market, reported in 'ro.product.model'. This often starts with '{oem}'. |
-| metrics-tag | string |  | False |  | False | Tag to use to track metrics for this model. The tag can be shared across many devices if desired, but this will result in larger granularity for metrics reporting.  Ideally the metrics system should support collation of metrics with different tags into groups, but if this is not supported, this tag can be used to achieve the same end.  This is reported in 'ro.product.metrics.tag'. |
+| metrics-tag | string |  | True |  | False | Tag to use to track metrics for this model. The tag can be shared across many devices if desired, but this will result in larger granularity for metrics reporting.  Ideally the metrics system should support collation of metrics with different tags into groups, but if this is not supported, this tag can be used to achieve the same end.  This is reported in 'ro.product.metrics.tag'. |
 | oem | string |  | False |  | False | Original Equipment Manufacturer for this model. This generally means the OEM name printed on the device. |
 | pai-regions | string | ```(^([a-zA-Z0-9\.\-]+,)*[a-zA-Z0-9\.\-]+$)|(^\*$)``` | False |  | False | (Optional) Comma-separated allow list of region codes that can be appended to 'ro.oem.key1' for the purpose of targeting Play Auto Install applications by region. The value(s) should match the values that would be returned by `cros_region_data region_code` for the relevant region(s). If the device's region code is not in the allow list, or if there is no allow list, 'ro.oem.key1' will not include the region code. The allow list can also be a single '*' character to indicate that the region code should always be appended.  |
-| product | string |  | False |  | False | Product name to report in 'ro.product.name'. This may be the device name, or it can be something else, to allow several devices to be grouped into one product. |
+| product | string |  | True |  | False | Product name to report in 'ro.product.name'. This may be the device name, or it can be something else, to allow several devices to be grouped into one product. |
 
 ### files
 | Attribute | Type   | RegEx     | Required | Oneof Group | Build-only | Description |

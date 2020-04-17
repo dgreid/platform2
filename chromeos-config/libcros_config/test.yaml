@@ -44,6 +44,9 @@ some_base_config: &some_base_config
         destination: "/usr/share/chromeos-config/sbin/some/hardware_features"
     build-properties:
       first-api-level: "27"
+      product: "{{$name}}"
+      device: "{{$name}}_cheets"
+      metrics-tag: "abc123"
   bluetooth:
     config:
       build-path: "some/main.conf"

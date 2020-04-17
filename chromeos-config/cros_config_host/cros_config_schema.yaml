@@ -175,9 +175,16 @@ properties:
           properties:
             arc:
               type: object
+              required:
+                - build-properties
               properties:
                 build-properties:
                   type: object
+                  required:
+                    - first-api-level
+                    - product
+                    - device
+                    - metrics-tag
                   properties:
                     product:
                       description: Product name to report in 'ro.product.name'.
