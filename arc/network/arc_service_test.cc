@@ -22,6 +22,8 @@
 
 using testing::_;
 using testing::AnyNumber;
+using testing::Eq;
+using testing::Pointee;
 using testing::Return;
 using testing::ReturnRef;
 using testing::StrEq;
@@ -40,6 +42,7 @@ constexpr uint32_t kSecondEthHostIP = Ipv4Addr(100, 115, 92, 9);
 constexpr uint32_t kFirstWifiHostIP = Ipv4Addr(100, 115, 92, 13);
 constexpr uint32_t kSecondWifiHostIP = Ipv4Addr(100, 115, 92, 17);
 constexpr uint32_t kFirstCellHostIP = Ipv4Addr(100, 115, 92, 21);
+constexpr MacAddress kArcVmArc0MacAddr = {0x42, 0x37, 0x05, 0x13, 0x17, 0x01};
 
 class MockTrafficForwarder : public TrafficForwarder {
  public:
@@ -91,10 +94,12 @@ class ArcServiceTest : public testing::Test {
     addr_mgr_ = std::make_unique<AddressManager>();
   }
 
-  std::unique_ptr<ArcService> NewService() {
-    arc_networkd::test::guest = GuestMessage::ARC;
+  std::unique_ptr<ArcService> NewService(
+      GuestMessage::GuestType guest = GuestMessage::ARC) {
+    arc_networkd::test::guest = guest;
     return std::make_unique<ArcService>(shill_client_.get(), datapath_.get(),
-                                        addr_mgr_.get(), &forwarder_, false);
+                                        addr_mgr_.get(), &forwarder_,
+                                        guest == GuestMessage::ARC_VM);
   }
 
   FakeShillClientHelper shill_helper_;
@@ -199,6 +204,23 @@ TEST_F(ArcServiceTest, VerifyAddrOrder) {
   svc->AddDevice("eth0");
   svc->RemoveDevice("eth0");
   svc->AddDevice("eth0");
+}
+
+TEST_F(ArcServiceTest, StableArcVmMacAddrs) {
+  EXPECT_CALL(*datapath_, AddTAP(StrEq(""), _, nullptr, StrEq("crosvm")))
+      .WillRepeatedly(Return("vmtap"));
+  EXPECT_CALL(*datapath_, AddBridge(_, _, 30)).WillRepeatedly(Return(true));
+  EXPECT_CALL(*datapath_, AddToBridge(_, _)).WillRepeatedly(Return(true));
+
+  auto svc = NewService(GuestMessage::ARC_VM);
+  svc->Start(kTestCID);
+  auto configs = svc->GetDeviceConfigs();
+  EXPECT_EQ(configs.size(), 6);
+  auto mac_addr = kArcVmArc0MacAddr;
+  for (const auto* config : configs) {
+    EXPECT_EQ(config->mac_addr(), mac_addr);
+    mac_addr[5]++;
+  }
 }
 
 // ContainerImpl
@@ -347,6 +369,7 @@ class VmImplTest : public testing::Test {
 
  protected:
   void SetUp() override {
+    test::guest = GuestMessage::ARC_VM;
     addr_mgr_ = std::make_unique<AddressManager>();
     runner_ = std::make_unique<FakeProcessRunner>();
     runner_->Capture(false);
@@ -390,7 +413,8 @@ class VmImplTest : public testing::Test {
 };
 
 TEST_F(VmImplTest, Start) {
-  EXPECT_CALL(*datapath_, AddTAP(StrEq(""), nullptr, nullptr, StrEq("crosvm")))
+  EXPECT_CALL(*datapath_, AddTAP(StrEq(""), Pointee(Eq(kArcVmArc0MacAddr)),
+                                 nullptr, StrEq("crosvm")))
       .WillOnce(Return("vmtap0"));
   // OnStartDevice
   EXPECT_CALL(*datapath_, AddBridge(StrEq("arc_br1"), kArcVmHostIP, 30))
@@ -415,7 +439,7 @@ TEST_F(VmImplTest, Start) {
 
 // Verifies TAPs are added for each provided config.
 TEST_F(VmImplTest, StartWithConfigs) {
-  EXPECT_CALL(*datapath_, AddTAP(StrEq(""), nullptr, nullptr, StrEq("crosvm")))
+  EXPECT_CALL(*datapath_, AddTAP(StrEq(""), _, nullptr, StrEq("crosvm")))
       .WillOnce(Return("vmtap0"))
       .WillOnce(Return("vmtap1"))
       .WillOnce(Return("vmtap2"));
@@ -432,7 +456,7 @@ TEST_F(VmImplTest, StartWithConfigs) {
 }
 
 TEST_F(VmImplTest, StartDeviceWithConfigs) {
-  EXPECT_CALL(*datapath_, AddTAP(StrEq(""), nullptr, nullptr, StrEq("crosvm")))
+  EXPECT_CALL(*datapath_, AddTAP(StrEq(""), _, nullptr, StrEq("crosvm")))
       .WillOnce(Return("vmtap0"))
       .WillOnce(Return("vmtap1"));
   EXPECT_CALL(*datapath_, AddBridge(StrEq("arc_br1"), kArcVmHostIP, 30))
@@ -452,7 +476,7 @@ TEST_F(VmImplTest, StartDeviceWithConfigs) {
 
 TEST_F(VmImplTest, Stop) {
   // Start
-  EXPECT_CALL(*datapath_, AddTAP(StrEq(""), nullptr, nullptr, StrEq("crosvm")))
+  EXPECT_CALL(*datapath_, AddTAP(StrEq(""), _, nullptr, StrEq("crosvm")))
       .WillOnce(Return("vmtap0"));
   EXPECT_CALL(*datapath_, AddBridge(StrEq("arc_br1"), kArcVmHostIP, 30))
       .WillOnce(Return(true));
@@ -485,7 +509,7 @@ TEST_F(VmImplTest, Stop) {
 
 // Verifies TAPs are added for each provided config.
 TEST_F(VmImplTest, StopWithConfigs) {
-  EXPECT_CALL(*datapath_, AddTAP(StrEq(""), nullptr, nullptr, StrEq("crosvm")))
+  EXPECT_CALL(*datapath_, AddTAP(StrEq(""), _, nullptr, StrEq("crosvm")))
       .WillOnce(Return("vmtap0"))
       .WillOnce(Return("vmtap1"))
       .WillOnce(Return("vmtap2"));
@@ -506,7 +530,7 @@ TEST_F(VmImplTest, StopWithConfigs) {
 }
 
 TEST_F(VmImplTest, StopDeviceWithConfigs) {
-  EXPECT_CALL(*datapath_, AddTAP(StrEq(""), nullptr, nullptr, StrEq("crosvm")))
+  EXPECT_CALL(*datapath_, AddTAP(StrEq(""), _, nullptr, StrEq("crosvm")))
       .WillOnce(Return("vmtap0"))
       .WillOnce(Return("vmtap1"));
   EXPECT_CALL(*datapath_, AddBridge(StrEq("arc_br1"), kArcVmHostIP, 30))

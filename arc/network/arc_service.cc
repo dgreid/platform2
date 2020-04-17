@@ -96,6 +96,11 @@ void OneTimeSetup(const Datapath& datapath) {
 }
 
 bool IsArcVm() {
+  if (test::guest == GuestMessage::ARC_VM) {
+    LOG(WARNING) << "Overridden for testing";
+    return true;
+  }
+
   const base::FilePath path("/run/chrome/is_arcvm");
   std::string contents;
   if (!base::ReadFileToString(path, &contents)) {
@@ -182,8 +187,9 @@ std::unique_ptr<Device::Config> MakeArcConfig(AddressManager* addr_mgr,
   }
 
   return std::make_unique<Device::Config>(
-      addr_mgr->GenerateMacAddress(), std::move(ipv4_subnet),
-      std::move(host_ipv4_addr), std::move(guest_ipv4_addr));
+      addr_mgr->GenerateMacAddress(IsArcVm() ? 1 : kAnySubnetIndex),
+      std::move(ipv4_subnet), std::move(host_ipv4_addr),
+      std::move(guest_ipv4_addr));
 }
 
 }  // namespace
@@ -218,8 +224,11 @@ void ArcService::AllocateAddressConfigs() {
   // The first usable subnet is the "other" ARC device subnet.
   // TODO(garrick): This can be removed and ARC_NET will be widened once ARCVM
   // switches over to use .0/30.
+  const bool is_arcvm = IsArcVm();
   AddressManager::Guest alloc =
-      IsArcVm() ? AddressManager::Guest::ARC : AddressManager::Guest::VM_ARC;
+      is_arcvm ? AddressManager::Guest::ARC : AddressManager::Guest::VM_ARC;
+  // As a temporary workaround, for ARCVM, allocate fixed MAC addresses.
+  uint8_t mac_addr_index = 2;
   // Allocate 2 subnets each for Ethernet and WiFi and 1 for LTE WAN interfaces.
   for (const auto itype :
        {InterfaceType::ETHERNET, InterfaceType::ETHERNET, InterfaceType::WIFI,
@@ -242,9 +251,13 @@ void ArcService::AllocateAddressConfigs() {
       continue;
     }
 
+    MacAddress mac_addr = is_arcvm
+                              ? addr_mgr_->GenerateMacAddress(mac_addr_index++)
+                              : addr_mgr_->GenerateMacAddress();
+
     configs_[itype].emplace_back(std::make_unique<Device::Config>(
-        addr_mgr_->GenerateMacAddress(), std::move(ipv4_subnet),
-        std::move(host_ipv4_addr), std::move(guest_ipv4_addr)));
+        mac_addr, std::move(ipv4_subnet), std::move(host_ipv4_addr),
+        std::move(guest_ipv4_addr)));
   }
 }
 
@@ -655,11 +668,10 @@ bool ArcService::VmImpl::Start(uint32_t cid) {
 
   // Allocate TAP devices for all configs.
   for (auto* config : configs_) {
-    // Since the interface will be added to the bridge, no address configuration
-    // should be provided here.
-    auto tap = datapath_->AddTAP(
-        "" /* auto-generate name */, nullptr /* no mac addr */,
-        nullptr /* no ipv4 subnet */, vm_tools::kCrosVmUser);
+    auto mac = config->mac_addr();
+    auto tap =
+        datapath_->AddTAP("" /* auto-generate name */, &mac,
+                          nullptr /* no ipv4 subnet */, vm_tools::kCrosVmUser);
     if (tap.empty()) {
       LOG(ERROR) << "Failed to create TAP device";
       continue;
