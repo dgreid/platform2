@@ -111,17 +111,17 @@ void MojoHandler::ProxyRequestOnThread(
     const std::string& version,
     IppHeaders headers,
     const IppBody& body,
-    const mojom::CupsProxier::ProxyRequestCallback& callback) {
+    mojom::CupsProxier::ProxyRequestCallback callback) {
   DCHECK(mojo_task_runner_->BelongsToCurrentThread());
 
   if (chrome_proxy_) {
     chrome_proxy_->ProxyRequest(method, url, version, std::move(headers), body,
-                                callback);
+                                std::move(callback));
   } else {
     LOG(INFO) << "Chrome Proxy is not up yet, queuing the request.";
     queued_requests_.push_back(base::BindOnce(
         &MojoHandler::ProxyRequestOnThread, base::Unretained(this), method, url,
-        version, std::move(headers), body, callback));
+        version, std::move(headers), body, std::move(callback)));
   }
 }
 
@@ -139,7 +139,7 @@ IppResponse MojoHandler::ProxyRequestSync(const MHDHttpRequest& request) {
   base::WaitableEvent event(base::WaitableEvent::ResetPolicy::MANUAL,
                             base::WaitableEvent::InitialState::NOT_SIGNALED);
 
-  auto callback = base::Bind(
+  auto callback = base::BindOnce(
       [](IppResponse* response, base::WaitableEvent* event, IppHeaders headers,
          const IppBody& ipp_message, int http_status_code) {
         response->headers = std::move(headers);
@@ -155,9 +155,9 @@ IppResponse MojoHandler::ProxyRequestSync(const MHDHttpRequest& request) {
   DVLOG(2) << "body = " << ShowBody(body);
 
   mojo_task_runner_->PostTask(
-      FROM_HERE,
-      base::BindOnce(&MojoHandler::ProxyRequestOnThread, base::Unretained(this),
-                     method, url, version, std::move(headers), body, callback));
+      FROM_HERE, base::BindOnce(&MojoHandler::ProxyRequestOnThread,
+                                base::Unretained(this), method, url, version,
+                                std::move(headers), body, std::move(callback)));
   event.Wait();
 
   DVLOG(2) << "response headers = " << ShowHeaders(response.headers);

@@ -16,6 +16,7 @@ generate_mojom_bindings("cups_proxy_mojo_bindings") {
   sources = [
     "mojom/proxy.mojom",
   ]
+  use_once_callback = true
 }
 
 pkg_config("cups_proxy_common_pkg_deps") {

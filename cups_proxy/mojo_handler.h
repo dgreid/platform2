@@ -57,13 +57,12 @@ class MojoHandler {
 
   // Sends the request to the mojo pipe. This is always called on the mojo
   // thread.
-  void ProxyRequestOnThread(
-      const std::string& method,
-      const std::string& url,
-      const std::string& version,
-      IppHeaders headers,
-      const IppBody& body,
-      const mojom::CupsProxier::ProxyRequestCallback& callback);
+  void ProxyRequestOnThread(const std::string& method,
+                            const std::string& url,
+                            const std::string& version,
+                            IppHeaders headers,
+                            const IppBody& body,
+                            mojom::CupsProxier::ProxyRequestCallback callback);
 
   base::Thread mojo_thread_;
 
