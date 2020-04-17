@@ -412,12 +412,8 @@ properties:
                   type: string
                   build-only-element: false
                 no-firmware:
-                  description: If present this indicates that this model has no firmware at present.
-                    This means that it will be omitted from the firmware updater
-                    (chromeos-firmware- ebuild) and it will not be included in the signer
-                    instructions file sent to the signer.
-                    This option is often useful when a model is first added,
-                    since it may not have firmware at that point.
+                  description: Does nothing and pending removal. Do not set.
+                    ([Bug](https://crbug.com/1072007))
                   type: boolean
                   build-only-element: true
                 firmware-config:
@@ -756,7 +752,6 @@ properties:
               additionalProperties: false
           additionalProperties: false
           required:
-          - firmware
           - name
     additionalProperties: false
     required:
