@@ -1,0 +1,6 @@
+# Copyright 2020 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+ACTION=="add", SUBSYSTEM=="video4linux", ENV{ID_USB_DRIVER}=="uvcvideo", \
+  RUN+="/sbin/initctl emit --no-wait usbcam-device-added"
