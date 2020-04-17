@@ -399,8 +399,8 @@ bool RunOneHook(const OciHook& hook,
                 const std::string& container_state) {
   base::LaunchOptions options;
   if (!hook.env.empty()) {
-    options.clear_environ = true;
-    options.environ = hook.env;
+    options.clear_environment = true;
+    options.environment = hook.env;
   }
 
   base::ScopedFD write_pipe_read_fd, write_pipe_write_fd;

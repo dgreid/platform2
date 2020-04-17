@@ -193,7 +193,7 @@ bool MapperRemove(const std::string& name) {
 // include the path to the binary.
 bool RunDMSetup(const std::vector<std::string>& argv) {
   base::LaunchOptions options;
-  options.clear_environ = true;
+  options.clear_environment = true;
 
   std::vector<std::string> full_argv(argv);
   full_argv.insert(full_argv.begin(), "/sbin/dmsetup");
