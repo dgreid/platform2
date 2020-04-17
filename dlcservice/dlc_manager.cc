@@ -74,7 +74,7 @@ void DlcManager::PreloadDlcs() {
   }
 }
 
-DlcSet DlcManager::GetInstalled() {
+DlcIdList DlcManager::GetInstalled() {
   // TODO(kimjae): Once update_engine repeatedly calls into |GetInstalled()| for
   // updating update, need to handle clearing differently.
   ErrorPtr tmp_err;
@@ -82,19 +82,19 @@ DlcSet DlcManager::GetInstalled() {
     if (!pr.second.ClearMountable(SystemState::Get()->inactive_boot_slot(),
                                   &tmp_err))
       PLOG(WARNING) << Error::ToString(tmp_err);
-  return ToDlcSet(supported_, [](const DlcBase& dlc) {
+  return ToDlcIdList(supported_, [](const DlcBase& dlc) {
     return dlc.IsInstalled() || dlc.IsMountable();
   });
 }
 
-DlcSet DlcManager::GetSupported() {
-  return ToDlcSet(supported_, [](const DlcBase&) { return true; });
+DlcIdList DlcManager::GetSupported() {
+  return ToDlcIdList(supported_, [](const DlcBase&) { return true; });
 }
 
-DlcSet DlcManager::GetMissingInstalls() {
+DlcIdList DlcManager::GetMissingInstalls() {
   // Only return the DLC(s) that aren't already installed.
-  return ToDlcSet(supported_,
-                  [](const DlcBase& dlc) { return dlc.IsInstalling(); });
+  return ToDlcIdList(supported_,
+                     [](const DlcBase& dlc) { return dlc.IsInstalling(); });
 }
 
 bool DlcManager::GetState(const DlcId& id, DlcState* state, ErrorPtr* err) {
@@ -112,7 +112,7 @@ bool DlcManager::GetState(const DlcId& id, DlcState* state, ErrorPtr* err) {
   return true;
 }
 
-bool DlcManager::InstallCompleted(const DlcVec& ids, brillo::ErrorPtr* err) {
+bool DlcManager::InstallCompleted(const DlcIdList& ids, brillo::ErrorPtr* err) {
   DCHECK(err);
   bool ret = true;
   for (const auto& id : ids) {
@@ -132,7 +132,7 @@ bool DlcManager::InstallCompleted(const DlcVec& ids, brillo::ErrorPtr* err) {
   return ret;
 }
 
-bool DlcManager::UpdateCompleted(const DlcVec& ids, brillo::ErrorPtr* err) {
+bool DlcManager::UpdateCompleted(const DlcIdList& ids, brillo::ErrorPtr* err) {
   DCHECK(err);
   bool ret = true;
   for (const auto& id : ids) {
@@ -152,7 +152,7 @@ bool DlcManager::UpdateCompleted(const DlcVec& ids, brillo::ErrorPtr* err) {
   return ret;
 }
 
-bool DlcManager::InitInstall(const DlcSet& dlcs, ErrorPtr* err) {
+bool DlcManager::InitInstall(const DlcIdList& dlcs, ErrorPtr* err) {
   DCHECK(err);
   if (dlcs.empty()) {
     *err = Error::Create(kErrorInvalidDlc,

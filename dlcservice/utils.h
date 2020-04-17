@@ -79,8 +79,8 @@ bool GetDlcManifest(const base::FilePath& dlc_manifest_path,
 // Scans a directory and returns all its subdirectory names in a list.
 std::set<std::string> ScanDirectory(const base::FilePath& dir);
 
-DlcSet ToDlcSet(const DlcMap& dlcs,
-                const std::function<bool(const DlcBase&)>& filter);
+DlcIdList ToDlcIdList(const DlcMap& dlcs,
+                      const std::function<bool(const DlcBase&)>& filter);
 
 }  // namespace dlcservice
 

@@ -95,7 +95,7 @@ class DlcServiceTest : public BaseTest {
     dlc_service_->Initialize();
   }
 
-  void InstallDlcs(const DlcSet& ids) {
+  void InstallDlcs(const DlcIdList& ids) {
     EXPECT_CALL(*mock_update_engine_proxy_ptr_, GetStatusAdvanced(_, _, _))
         .WillOnce(Return(true));
     EXPECT_CALL(*mock_update_engine_proxy_ptr_,
@@ -106,8 +106,7 @@ class DlcServiceTest : public BaseTest {
         .WillOnce(Return(true));
     EXPECT_TRUE(dlc_service_->Install(ids, kDefaultOmahaUrl, &err_));
 
-    EXPECT_TRUE(
-        dlc_service_->InstallCompleted({ids.begin(), ids.end()}, &err_));
+    EXPECT_TRUE(dlc_service_->InstallCompleted(ids, &err_));
 
     EXPECT_CALL(*mock_image_loader_proxy_ptr_, LoadDlcImage(_, _, _, _, _, _))
         .Times(ids.size())
@@ -423,49 +422,6 @@ TEST_F(DlcServiceTest, InstallAlreadyInstalledValid) {
   CheckDlcState(kFirstDlc, DlcState::INSTALLED);
 }
 
-TEST_F(DlcServiceTest, InstallDuplicatesSucceeds) {
-  SetMountPath(mount_path_.value());
-  EXPECT_CALL(*mock_update_engine_proxy_ptr_, GetStatusAdvanced(_, _, _))
-      .WillOnce(Return(true));
-  EXPECT_CALL(*mock_update_engine_proxy_ptr_, AttemptInstall(_, _, _))
-      .WillOnce(Return(true));
-  EXPECT_CALL(*mock_update_engine_proxy_ptr_,
-              SetDlcActiveValue(true, kSecondDlc, _, _))
-      .WillOnce(Return(true));
-
-  EXPECT_TRUE(
-      dlc_service_->Install({kSecondDlc, kSecondDlc}, kDefaultOmahaUrl, &err_));
-
-  for (const auto& id : {kFirstDlc, kSecondDlc})
-    for (const auto& path : {JoinPaths(content_path_, id)})
-      EXPECT_TRUE(base::PathExists(path));
-  CheckDlcState(kFirstDlc, DlcState::INSTALLED);
-  CheckDlcState(kSecondDlc, DlcState::INSTALLING);
-}
-
-TEST_F(DlcServiceTest, InstallAlreadyInstalledAndDuplicatesSucceeds) {
-  SetMountPath(mount_path_.value());
-  EXPECT_CALL(*mock_update_engine_proxy_ptr_, GetStatusAdvanced(_, _, _))
-      .WillOnce(Return(true));
-  EXPECT_CALL(*mock_update_engine_proxy_ptr_, AttemptInstall(_, _, _))
-      .WillOnce(Return(true));
-  EXPECT_CALL(*mock_update_engine_proxy_ptr_,
-              SetDlcActiveValue(true, kFirstDlc, _, _))
-      .WillOnce(Return(true));
-  EXPECT_CALL(*mock_update_engine_proxy_ptr_,
-              SetDlcActiveValue(true, kSecondDlc, _, _))
-      .WillOnce(Return(true));
-
-  EXPECT_TRUE(dlc_service_->Install({kFirstDlc, kSecondDlc, kSecondDlc},
-                                    kDefaultOmahaUrl, &err_));
-
-  for (const auto& id : {kFirstDlc, kSecondDlc})
-    for (const auto& path : {JoinPaths(content_path_, id)})
-      EXPECT_TRUE(base::PathExists(path));
-  CheckDlcState(kFirstDlc, DlcState::INSTALLED);
-  CheckDlcState(kSecondDlc, DlcState::INSTALLING);
-}
-
 TEST_F(DlcServiceTest, InstallCannotSetDlcActiveValue) {
   SetMountPath(mount_path_.value());
   EXPECT_CALL(*mock_update_engine_proxy_ptr_, GetStatusAdvanced(_, _, _))
@@ -590,7 +546,7 @@ TEST_F(DlcServiceTest, OnStatusUpdateSignalDlcRootTest) {
               SetDlcActiveValue(true, kThirdDlc, _, _))
       .WillOnce(Return(true));
 
-  const DlcSet ids = {kSecondDlc, kThirdDlc};
+  const DlcIdList ids = {kSecondDlc, kThirdDlc};
   EXPECT_TRUE(dlc_service_->Install(ids, kDefaultOmahaUrl, &err_));
 
   EXPECT_CALL(*mock_image_loader_proxy_ptr_, LoadDlcImage(_, _, _, _, _, _))
@@ -602,7 +558,7 @@ TEST_F(DlcServiceTest, OnStatusUpdateSignalDlcRootTest) {
     CheckDlcState(id, DlcState::INSTALLING);
   }
 
-  EXPECT_TRUE(dlc_service_->InstallCompleted({ids.begin(), ids.end()}, &err_));
+  EXPECT_TRUE(dlc_service_->InstallCompleted(ids, &err_));
 
   StatusResult status_result;
   status_result.set_current_operation(Operation::IDLE);
@@ -634,7 +590,7 @@ TEST_F(DlcServiceTest, OnStatusUpdateSignalNoRemountTest) {
               SetDlcActiveValue(true, kSecondDlc, _, _))
       .WillOnce(Return(true));
 
-  const DlcSet ids = {kFirstDlc, kSecondDlc};
+  const DlcIdList ids = {kFirstDlc, kSecondDlc};
   EXPECT_TRUE(dlc_service_->Install(ids, kDefaultOmahaUrl, &err_));
 
   EXPECT_CALL(*mock_image_loader_proxy_ptr_, LoadDlcImage(_, _, _, _, _, _))
@@ -645,7 +601,7 @@ TEST_F(DlcServiceTest, OnStatusUpdateSignalNoRemountTest) {
   CheckDlcState(kFirstDlc, DlcState::INSTALLED);
   CheckDlcState(kSecondDlc, DlcState::INSTALLING);
 
-  EXPECT_TRUE(dlc_service_->InstallCompleted({ids.begin(), ids.end()}, &err_));
+  EXPECT_TRUE(dlc_service_->InstallCompleted(ids, &err_));
 
   StatusResult status_result;
   status_result.set_current_operation(Operation::IDLE);
@@ -671,7 +627,7 @@ TEST_F(DlcServiceTest, OnStatusUpdateSignalTest) {
               SetDlcActiveValue(false, kThirdDlc, _, _))
       .WillOnce(Return(true));
 
-  const DlcSet ids = {kSecondDlc, kThirdDlc};
+  const DlcIdList ids = {kSecondDlc, kThirdDlc};
   EXPECT_TRUE(dlc_service_->Install(ids, kDefaultOmahaUrl, &err_));
 
   for (const string& id : ids) {
@@ -683,7 +639,7 @@ TEST_F(DlcServiceTest, OnStatusUpdateSignalTest) {
       .WillOnce(DoAll(SetArgPointee<3>(mount_path_.value()), Return(true)))
       .WillOnce(DoAll(SetArgPointee<3>(""), Return(true)));
 
-  EXPECT_TRUE(dlc_service_->InstallCompleted({ids.begin(), ids.end()}, &err_));
+  EXPECT_TRUE(dlc_service_->InstallCompleted(ids, &err_));
 
   StatusResult status_result;
   status_result.set_current_operation(Operation::IDLE);
@@ -714,7 +670,7 @@ TEST_F(DlcServiceTest, ReportingFailureCleanupTest) {
               SetDlcActiveValue(false, kThirdDlc, _, _))
       .WillOnce(Return(true));
 
-  const DlcSet ids = {kSecondDlc, kThirdDlc};
+  const DlcIdList ids = {kSecondDlc, kThirdDlc};
   EXPECT_TRUE(dlc_service_->Install(ids, kDefaultOmahaUrl, &err_));
 
   for (const string& id : ids) {
@@ -760,7 +716,7 @@ TEST_F(DlcServiceTest, ReportingFailureSignalTest) {
               SetDlcActiveValue(false, kThirdDlc, _, _))
       .WillOnce(Return(true));
 
-  const DlcSet ids = {kSecondDlc, kThirdDlc};
+  const DlcIdList ids = {kSecondDlc, kThirdDlc};
   EXPECT_TRUE(dlc_service_->Install(ids, kDefaultOmahaUrl, &err_));
 
   for (const auto& id : ids) {
@@ -806,7 +762,7 @@ TEST_F(DlcServiceTest, ProbableUpdateEngineRestartCleanupTest) {
               SetDlcActiveValue(false, kThirdDlc, _, _))
       .WillOnce(Return(true));
 
-  const DlcSet ids = {kSecondDlc, kThirdDlc};
+  const DlcIdList ids = {kSecondDlc, kThirdDlc};
   EXPECT_TRUE(dlc_service_->Install(ids, kDefaultOmahaUrl, &err_));
 
   for (const string& id : ids) {
@@ -839,7 +795,7 @@ TEST_F(DlcServiceTest, UpdateEngineFailSafeTest) {
               SetDlcActiveValue(false, kSecondDlc, _, _))
       .WillOnce(Return(true));
 
-  const DlcSet ids = {kSecondDlc};
+  const DlcIdList ids = {kSecondDlc};
   EXPECT_TRUE(dlc_service_->Install(ids, kDefaultOmahaUrl, &err_));
 
   for (const string& id : ids) {
@@ -870,7 +826,7 @@ TEST_F(DlcServiceTest, UpdateEngineFailAfterSignalsSafeTest) {
               SetDlcActiveValue(false, kSecondDlc, _, _))
       .WillOnce(Return(true));
 
-  const DlcSet ids = {kSecondDlc};
+  const DlcIdList ids = {kSecondDlc};
   EXPECT_TRUE(dlc_service_->Install(ids, kDefaultOmahaUrl, &err_));
 
   for (const string& id : ids) {
@@ -909,7 +865,7 @@ TEST_F(DlcServiceTest, OnStatusUpdateSignalDownloadProgressTest) {
               SetDlcActiveValue(true, kThirdDlc, _, _))
       .WillOnce(Return(true));
 
-  const DlcSet ids = {kSecondDlc, kThirdDlc};
+  const DlcIdList ids = {kSecondDlc, kThirdDlc};
   EXPECT_TRUE(dlc_service_->Install(ids, kDefaultOmahaUrl, &err_));
 
   for (const auto& id : ids)
@@ -937,7 +893,7 @@ TEST_F(DlcServiceTest, OnStatusUpdateSignalDownloadProgressTest) {
   EXPECT_EQ(dlc_service_test_observer_->GetInstallStatus().status(),
             Status::RUNNING);
 
-  EXPECT_TRUE(dlc_service_->InstallCompleted({ids.begin(), ids.end()}, &err_));
+  EXPECT_TRUE(dlc_service_->InstallCompleted(ids, &err_));
 
   status_result.set_current_operation(Operation::IDLE);
   dlc_service_->OnStatusUpdateAdvancedSignal(status_result);
@@ -963,15 +919,14 @@ TEST_F(DlcServiceTest,
                 SetDlcActiveValue(false, kSecondDlc, _, _))
         .WillOnce(Return(true));
 
-    const DlcSet ids = {kSecondDlc};
+    const DlcIdList ids = {kSecondDlc};
     EXPECT_TRUE(dlc_service_->Install(ids, kDefaultOmahaUrl, &err_));
     for (const auto& id : ids)
       CheckDlcState(id, DlcState::INSTALLING);
 
     EXPECT_CALL(*mock_image_loader_proxy_ptr_, LoadDlcImage(_, _, _, _, _, _))
         .WillOnce(Return(false));
-    EXPECT_TRUE(
-        dlc_service_->InstallCompleted({ids.begin(), ids.end()}, &err_));
+    EXPECT_TRUE(dlc_service_->InstallCompleted(ids, &err_));
     StatusResult status_result;
     status_result.set_is_install(true);
     status_result.set_current_operation(Operation::IDLE);
@@ -1001,7 +956,7 @@ TEST_F(DlcServiceTest, PeriodCheckUpdateEngineInstallSignalRaceChecker) {
               SetDlcActiveValue(false, kThirdDlc, _, _))
       .WillOnce(Return(true));
 
-  const DlcSet ids = {kSecondDlc, kThirdDlc};
+  const DlcIdList ids = {kSecondDlc, kThirdDlc};
   EXPECT_TRUE(dlc_service_->Install(ids, kDefaultOmahaUrl, &err_));
 
   MessageLoopRunUntil(

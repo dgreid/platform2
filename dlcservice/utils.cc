@@ -236,14 +236,14 @@ set<string> ScanDirectory(const FilePath& dir) {
   return result;
 }
 
-DlcSet ToDlcSet(const DlcMap& dlcs,
-                const std::function<bool(const DlcBase&)>& filter) {
-  DlcSet s;
+DlcIdList ToDlcIdList(const DlcMap& dlcs,
+                      const std::function<bool(const DlcBase&)>& filter) {
+  DlcIdList list;
   for (const auto& pair : dlcs) {
     if (filter(pair.second))
-      s.insert(pair.first);
+      list.push_back(pair.first);
   }
-  return s;
+  return list;
 }
 
 }  // namespace dlcservice

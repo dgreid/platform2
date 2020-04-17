@@ -33,19 +33,19 @@ class DlcManager {
   bool IsInstalling();
 
   // Returns the list of installed or mountable DLCs.
-  DlcSet GetInstalled();
+  DlcIdList GetInstalled();
 
   // Returns the list of all supported DLC(s).
-  DlcSet GetSupported();
+  DlcIdList GetSupported();
 
   // Returns true and sets |state| if the DLC is supported.
   bool GetState(const DlcId& id, DlcState* state, brillo::ErrorPtr* err);
 
   // Persists the mountable pref for given DLC(s) on install completion.
-  bool InstallCompleted(const DlcVec& ids, brillo::ErrorPtr* err);
+  bool InstallCompleted(const DlcIdList& ids, brillo::ErrorPtr* err);
 
   // Persists the mountable pref for given DLC(s) on update completion.
-  bool UpdateCompleted(const DlcVec& ids, brillo::ErrorPtr* err);
+  bool UpdateCompleted(const DlcIdList& ids, brillo::ErrorPtr* err);
 
   // DLC Installation Flow
 
@@ -58,7 +58,7 @@ class DlcManager {
   //   err: The error that's set when returned false.
   // Return:
   //   True on success, otherwise false.
-  bool InitInstall(const DlcSet& dlcs, brillo::ErrorPtr* err);
+  bool InitInstall(const DlcIdList& dlcs, brillo::ErrorPtr* err);
 
   // Install Step 2:
   // To get the actual list of DLC(s) to pass into update_engine.
@@ -68,7 +68,7 @@ class DlcManager {
   //   none
   // Return:
   //   Will return all the DLC(s) that update_engine needs to download/install.
-  DlcSet GetMissingInstalls();
+  DlcIdList GetMissingInstalls();
 
   // Install Step 3a:
   // Once the missing DLC(s) are installed or there were no missing DLC(s), this

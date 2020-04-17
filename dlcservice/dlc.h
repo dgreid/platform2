@@ -134,8 +134,7 @@ class DlcBase {
 };
 
 using DlcMap = std::map<DlcId, DlcBase>;
-using DlcSet = std::set<DlcId>;
-using DlcVec = std::vector<DlcId>;
+using DlcIdList = std::vector<DlcId>;
 
 }  // namespace dlcservice
 

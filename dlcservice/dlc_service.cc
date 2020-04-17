@@ -66,7 +66,7 @@ const DlcBase* DlcService::GetDlc(const DlcId& id) {
   return dlc_manager_->GetDlc(id);
 }
 
-bool DlcService::Install(const DlcSet& dlcs,
+bool DlcService::Install(const DlcIdList& dlcs,
                          const string& omaha_url,
                          ErrorPtr* err) {
   // If an install is already in progress, dlcservice is busy.
@@ -106,7 +106,7 @@ bool DlcService::Install(const DlcSet& dlcs,
   }
 
   // This is the unique DLC(s) that actually need to be installed.
-  DlcSet unique_dlcs_to_install = dlc_manager_->GetMissingInstalls();
+  DlcIdList unique_dlcs_to_install = dlc_manager_->GetMissingInstalls();
   // Check if there is nothing to install.
   if (unique_dlcs_to_install.size() == 0) {
     SendOnInstallStatusSignal(Status::COMPLETED, kErrorNone,
@@ -186,18 +186,18 @@ bool DlcService::GetState(const std::string& id_in,
   return ret;
 }
 
-DlcSet DlcService::GetInstalled() {
+DlcIdList DlcService::GetInstalled() {
   return dlc_manager_->GetInstalled();
 }
 
-bool DlcService::InstallCompleted(const DlcVec& ids_in, ErrorPtr* err) {
+bool DlcService::InstallCompleted(const DlcIdList& ids_in, ErrorPtr* err) {
   bool ret = dlc_manager_->InstallCompleted(ids_in, err);
   if (!ret)
     LOG(ERROR) << Error::ToString(*err);
   return ret;
 }
 
-bool DlcService::UpdateCompleted(const DlcVec& ids_in, ErrorPtr* err) {
+bool DlcService::UpdateCompleted(const DlcIdList& ids_in, ErrorPtr* err) {
   bool ret = dlc_manager_->UpdateCompleted(ids_in, err);
   if (!ret)
     LOG(ERROR) << Error::ToString(*err);
@@ -336,7 +336,7 @@ void DlcService::AddObserver(DlcService::Observer* observer) {
 
 void DlcService::SendOnInstallStatusSignal(const dlcservice::Status& status,
                                            const std::string& error_code,
-                                           const DlcSet& ids,
+                                           const DlcIdList& ids,
                                            double progress) {
   InstallStatus install_status;
   install_status.set_status(status);

@@ -36,8 +36,8 @@ class DBusServiceTest : public BaseTest {
 };
 
 TEST_F(DBusServiceTest, Install) {
-  EXPECT_CALL(*dlc_service_,
-              Install(DlcSet({kFirstDlc, kSecondDlc}), kDefaultOmahaUrl, &err_))
+  EXPECT_CALL(*dlc_service_, Install(DlcIdList({kFirstDlc, kSecondDlc}),
+                                     kDefaultOmahaUrl, &err_))
       .WillOnce(Return(true));
 
   DlcModuleList dlc_list;
@@ -50,8 +50,8 @@ TEST_F(DBusServiceTest, Install) {
 
 // Tries to install duplicate DLCs.
 TEST_F(DBusServiceTest, InstallDuplicate) {
-  EXPECT_CALL(*dlc_service_,
-              Install(DlcSet({kFirstDlc, kSecondDlc}), kDefaultOmahaUrl, &err_))
+  EXPECT_CALL(*dlc_service_, Install(DlcIdList({kFirstDlc, kSecondDlc}),
+                                     kDefaultOmahaUrl, &err_))
       .WillOnce(Return(true));
 
   DlcModuleList dlc_list;
@@ -64,7 +64,7 @@ TEST_F(DBusServiceTest, InstallDuplicate) {
 
 TEST_F(DBusServiceTest, GetInstalled) {
   EXPECT_CALL(*dlc_service_, GetInstalled())
-      .WillOnce(Return(DlcSet({kFirstDlc, kSecondDlc})));
+      .WillOnce(Return(DlcIdList({kFirstDlc, kSecondDlc})));
 
   DlcBase first_dlc(kFirstDlc);
   DlcBase second_dlc(kSecondDlc);

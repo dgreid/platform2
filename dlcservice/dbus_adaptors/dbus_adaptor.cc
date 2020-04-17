@@ -5,6 +5,7 @@
 #include "dlcservice/dbus_adaptors/dbus_adaptor.h"
 
 #include <memory>
+#include <set>
 #include <string>
 #include <utility>
 #include <vector>
@@ -16,35 +17,24 @@
 #include "dlcservice/dlc.h"
 #include "dlcservice/utils.h"
 
+using std::set;
 using std::string;
 using std::unique_ptr;
 using std::vector;
 
 namespace dlcservice {
 
-namespace {
-// Converts a |DlcModuleList| into a |DlcSet| based on filtering logic where
-// a return value of true indicates insertion into |DlcSet|.
-DlcSet ToDlcSet(const dlcservice::DlcModuleList& dlc_module_list,
-                const std::function<bool(const DlcModuleInfo&)>& filter) {
-  DlcSet s;
-  for (const DlcModuleInfo& dlc_module : dlc_module_list.dlc_module_infos()) {
-    if (filter(dlc_module))
-      s.insert(dlc_module.dlc_id());
-  }
-  return s;
-}
-};  // namespace
-
 DBusService::DBusService(DlcServiceInterface* dlc_service)
     : dlc_service_(dlc_service) {}
 
 bool DBusService::Install(brillo::ErrorPtr* err,
                           const DlcModuleList& dlc_module_list_in) {
-  const auto dlcs =
-      ToDlcSet(dlc_module_list_in, [](const DlcModuleInfo&) { return true; });
-
-  return dlc_service_->Install(dlcs, dlc_module_list_in.omaha_url(), err);
+  // Remove duplicates.
+  set<DlcId> unique_ids;
+  for (const auto& dlc_module : dlc_module_list_in.dlc_module_infos())
+    unique_ids.insert(dlc_module.dlc_id());
+  return dlc_service_->Install({unique_ids.begin(), unique_ids.end()},
+                               dlc_module_list_in.omaha_url(), err);
 }
 
 bool DBusService::Uninstall(brillo::ErrorPtr* err, const string& id_in) {
@@ -57,7 +47,7 @@ bool DBusService::Purge(brillo::ErrorPtr* err, const string& id_in) {
 
 bool DBusService::GetInstalled(brillo::ErrorPtr* err,
                                DlcModuleList* dlc_module_list_out) {
-  DlcSet ids = dlc_service_->GetInstalled();
+  DlcIdList ids = dlc_service_->GetInstalled();
   for (const auto& id : ids) {
     auto* dlc_info = dlc_module_list_out->add_dlc_module_infos();
     dlc_info->set_dlc_id(id);

@@ -40,7 +40,7 @@ class DlcServiceInterface {
 
   // Initializes the state of dlcservice.
   virtual void Initialize() = 0;
-  virtual bool Install(const DlcSet& dlcs,
+  virtual bool Install(const DlcIdList& dlcs,
                        const std::string& omaha_url,
                        brillo::ErrorPtr* err) = 0;
   virtual bool Uninstall(const std::string& id_in, brillo::ErrorPtr* err) = 0;
@@ -49,10 +49,11 @@ class DlcServiceInterface {
   virtual bool GetState(const std::string& id_in,
                         DlcState* dlc_state_out,
                         brillo::ErrorPtr* err) = 0;
-  virtual DlcSet GetInstalled() = 0;
-  virtual bool InstallCompleted(const DlcVec& ids_in,
+  virtual DlcIdList GetInstalled() = 0;
+  virtual bool InstallCompleted(const DlcIdList& ids_in,
                                 brillo::ErrorPtr* err) = 0;
-  virtual bool UpdateCompleted(const DlcVec& ids_in, brillo::ErrorPtr* err) = 0;
+  virtual bool UpdateCompleted(const DlcIdList& ids_in,
+                               brillo::ErrorPtr* err) = 0;
 
   // Adds a new observer to report install result status changes.
   virtual void AddObserver(Observer* observer) = 0;
@@ -68,18 +69,19 @@ class DlcService : public DlcServiceInterface {
   virtual ~DlcService();
 
   void Initialize() override;
-  bool Install(const DlcSet& dlcs,
+  bool Install(const DlcIdList& dlcs,
                const std::string& omaha_url,
                brillo::ErrorPtr* err) override;
   bool Uninstall(const std::string& id_in, brillo::ErrorPtr* err) override;
   bool Purge(const std::string& id_in, brillo::ErrorPtr* err) override;
-  DlcSet GetInstalled() override;
+  DlcIdList GetInstalled() override;
   const DlcBase* GetDlc(const DlcId& id) override;
   bool GetState(const std::string& id_in,
                 DlcState* dlc_state_out,
                 brillo::ErrorPtr* err) override;
-  bool InstallCompleted(const DlcVec& ids_in, brillo::ErrorPtr* err) override;
-  bool UpdateCompleted(const DlcVec& ids_in, brillo::ErrorPtr* err) override;
+  bool InstallCompleted(const DlcIdList& ids_in,
+                        brillo::ErrorPtr* err) override;
+  bool UpdateCompleted(const DlcIdList& ids_in, brillo::ErrorPtr* err) override;
   void AddObserver(Observer* observer) override;
 
  private:
@@ -117,7 +119,7 @@ class DlcService : public DlcServiceInterface {
   // Send |OnInstallStatus| D-Bus signal.
   void SendOnInstallStatusSignal(const dlcservice::Status& status,
                                  const std::string& error_code,
-                                 const DlcSet& ids,
+                                 const DlcIdList& ids,
                                  double progress);
 
   // Called on receiving update_engine's |StatusUpdate| signal.
