@@ -395,7 +395,6 @@ static_library("libshill") {
   sources += net_sources
   libs = [
     "bootstat",
-    "policy",
     "rootdev",
     "rt",
   ]

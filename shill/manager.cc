@@ -283,27 +283,10 @@ void Manager::SetWhitelistedDevices(const vector<string>& whitelisted_devices) {
   whitelisted_devices_ = whitelisted_devices;
 }
 
-void Manager::ApplyPolicies() {
-  if (!policy_provider_)
-    policy_provider_.reset(new policy::PolicyProvider());
-  policy_provider_->Reload();
-  SLOG(this, 2) << "Reloaded policies";
-
-  if (policy_provider_->device_policy_is_loaded()) {
-    // TODO(kirtika): Blocked on Chrome providing throttling policy.
-    // crbug.com/634529
-    // Read from the policy here instead of using dummy values
-    // network_throttling_enabled_ = true;
-    // download_rate_kbits_ = 1000;
-    // upload_rate_kbits_ = 1000;
-  }
-}
-
 void Manager::Start() {
   LOG(INFO) << "Manager started.";
 
   ComputeUserTrafficUids();
-  ApplyPolicies();
 
 #if !defined(DISABLE_WIFI) || !defined(DISABLE_WIRED_8021X)
   supplicant_manager_->Start();
@@ -1213,7 +1196,7 @@ void Manager::RegisterDevice(const DeviceRefPtr& to_manage) {
       throttler_->ThrottleInterfaces(dummy, upload_rate_kbits_,
                                      download_rate_kbits_);
     } else {
-      // Apply any existing network bandwidth throttling policy
+      // Apply any existing network bandwidth throttling.
       throttler_->ApplyThrottleToNewInterface(to_manage->link_name());
     }
   }

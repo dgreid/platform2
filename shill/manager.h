@@ -18,8 +18,6 @@
 #include <base/observer_list.h>
 #include <chromeos/dbus/service_constants.h>
 #include <gtest/gtest_prod.h>  // for FRIEND_TEST
-#include <policy/device_policy.h>
-#include <policy/libpolicy.h>
 
 #include "shill/cellular/modem_info.h"
 #include "shill/default_service_observer.h"
@@ -584,7 +582,6 @@ class Manager : public base::SupportsWeakPtr<Manager> {
   FRIEND_TEST(VPNProviderTest, SetDefaultRoutingPolicy);
   FRIEND_TEST(WiFiServiceTest, ConnectTaskFT);
 
-  void ApplyPolicies();
   void AutoConnect();
   std::vector<std::string> AvailableTechnologies(Error* error);
   std::vector<std::string> ConnectedTechnologies(Error* error);
@@ -744,8 +741,6 @@ class Manager : public base::SupportsWeakPtr<Manager> {
 #if !defined(DISABLE_WIRED_8021X)
   std::unique_ptr<EthernetEapProvider> ethernet_eap_provider_;
 #endif  // DISABLE_WIRED_8021X
-  // To fetch network policies from
-  std::unique_ptr<policy::PolicyProvider> policy_provider_;
   std::unique_ptr<VPNProvider> vpn_provider_;
 #if !defined(DISABLE_WIFI)
   std::unique_ptr<WiFiProvider> wifi_provider_;
@@ -855,8 +850,8 @@ class Manager : public base::SupportsWeakPtr<Manager> {
   // DhcpProperties stored for the default profile.
   std::unique_ptr<DhcpProperties> dhcp_properties_;
 
-  // Cache for bandwidth throttling policy variables, until Throttler class
-  // is called.
+  // Bandwidth throttling variables. Default values are overridden by
+  // SetNetworkThrottlingStatus, called from the client.
   bool network_throttling_enabled_;
   uint32_t download_rate_kbits_;
   uint32_t upload_rate_kbits_;
