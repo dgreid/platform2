@@ -181,7 +181,9 @@ void HomeDirs::FreeDiskSpace() {
 
   FreeDiskSpaceInternal();
 
-  ReportFreeDiskSpaceTotalTime(total_timer.Elapsed().InMilliseconds());
+  int cleanup_time = total_timer.Elapsed().InMilliseconds();
+  ReportFreeDiskSpaceTotalTime(cleanup_time);
+  VLOG(1) << "Disk cleanup took " << cleanup_time << "ms.";
 
   auto after_cleanup = AmountOfFreeDiskSpace();
   if (!after_cleanup) {
