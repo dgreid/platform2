@@ -192,18 +192,30 @@ bool BrowserJob::RunInBackground() {
   const std::vector<std::string> env_vars(ExportEnvironmentVariables());
   LOG(INFO) << "Running browser " << base::JoinString(argv, " ");
 
+  bool enter_existing_mount_ns = false;
   if (IsGuestSession()) {
     if (config_.isolate_guest_session &&
         config_.chrome_mount_ns_path.has_value()) {
-      base::FilePath ns_path = config_.chrome_mount_ns_path.value();
-      LOG(INFO) << "Entering mount namespace '" << ns_path.value()
-                << "' for browser";
-      subprocess_->EnterExistingMountNamespace(ns_path);
+      enter_existing_mount_ns = true;
     } else {
       LOG(INFO) << "Entering new mount namespace for browser.";
       subprocess_->UseNewMountNamespace();
     }
+  } else {
+    // Regular session.
+    if (config_.isolate_regular_session &&
+        config_.chrome_mount_ns_path.has_value()) {
+      enter_existing_mount_ns = true;
+    }
   }
+
+  if (enter_existing_mount_ns) {
+    base::FilePath ns_path = config_.chrome_mount_ns_path.value();
+    LOG(INFO) << "Entering mount namespace '" << ns_path.value()
+              << "' for browser";
+    subprocess_->EnterExistingMountNamespace(ns_path);
+  }
+
   return subprocess_->ForkAndExec(argv, env_vars);
 }
 

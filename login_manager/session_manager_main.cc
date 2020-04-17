@@ -27,9 +27,12 @@
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_split.h>
 #include <base/strings/string_util.h>
+#include <base/strings/stringprintf.h>
 #include <base/sys_info.h>
 #include <base/time/time.h>
 #include <brillo/message_loops/base_message_loop.h>
+#include <brillo/namespaces/mount_namespace.h>
+#include <brillo/namespaces/platform.h>
 #include <brillo/syslog_logging.h>
 #include <chromeos/constants/cryptohome.h>
 #include <chromeos-config/libcros_config/cros_config.h>
@@ -232,7 +235,7 @@ int main(int argc, char* argv[]) {
   // make it stricter.
   // Back when the above bugs were filed, the interaction between
   // session_manager and Chrome was a lot simpler: Chrome would display the
-  // login screen, the user would log in, and then and session_manager would
+  // login screen, the user would log in, and then session_manager would
   // relaunch Chrome after cryptohomed had mounted the user's encrypted home
   // directory.
   // Nowadays, big features like ARC and Crostini have added a lot of complexity
@@ -243,14 +246,30 @@ int main(int argc, char* argv[]) {
   // Start shaving this yak by isolating Guest mode sessions, which don't
   // support many of the above features. Put Guest mode process trees in a
   // non-root mount namespace to test the waters.
+  // Extending the feature for regular user sessions is developed behind
+  // the USE flag 'user_session_isolation'. If the flag is set Chrome will
+  // be launched in a non-root mount namespace for regular sessions as well.
   config.isolate_guest_session = true;
-  config.isolate_regular_session = false;
+  config.isolate_regular_session = IsolateUserSession();
 
-  if (config.isolate_guest_session) {
+  if (config.isolate_guest_session || config.isolate_regular_session) {
     // Instead of having Chrome unshare a new mount namespace on launch, have
     // Chrome enter the mount namespace where the user data directory exists.
     ns_path = base::FilePath(cryptohome::kUserSessionMountNamespacePath);
     config.chrome_mount_ns_path = ns_path;
+  }
+
+  brillo::Platform platform;
+  std::unique_ptr<brillo::MountNamespace> chrome_mnt_ns;
+  if (config.isolate_regular_session) {
+    chrome_mnt_ns =
+        std::make_unique<brillo::MountNamespace>(ns_path.value(), &platform);
+    if (chrome_mnt_ns->Create()) {
+      DLOG(INFO) << "Mount namespace created at " << ns_path.value();
+    } else {
+      DLOG(WARNING) << "Failed to create mount namespace at "
+                    << ns_path.value();
+    }
   }
 
   // This job encapsulates the command specified on the command line, and the

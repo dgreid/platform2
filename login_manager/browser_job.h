@@ -21,6 +21,7 @@
 #include <base/macros.h>
 #include <base/optional.h>
 #include <base/time/time.h>
+#include <brillo/namespaces/mount_namespace.h>
 
 #include "login_manager/chrome_setup.h"
 

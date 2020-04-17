@@ -206,6 +206,30 @@ TEST_F(BrowserJobTest, EnterMountNamespaceForGuest) {
   ASSERT_TRUE(job.RunInBackground());
 }
 
+TEST_F(BrowserJobTest, EnterMountNamespaceForRegularUser) {
+  MockSubprocess* mock_subp = new MockSubprocess();
+  EXPECT_CALL(*mock_subp, EnterExistingMountNamespace(base::FilePath(
+                              BrowserJobTest::kChromeMountNamespacePath)));
+  EXPECT_CALL(*mock_subp, ForkAndExec(_, _)).WillOnce(Return(true));
+
+  EXPECT_CALL(utils_, time(nullptr)).WillRepeatedly(Return(0));
+
+  EXPECT_CALL(metrics_, HasRecordedChromeExec()).WillRepeatedly(Return(false));
+  EXPECT_CALL(metrics_, RecordStats(_)).Times(AnyNumber());
+
+  std::unique_ptr<SubprocessInterface> p_subp(mock_subp);
+
+  BrowserJob job(
+      argv_, env_, &checker_, &metrics_, &utils_,
+      BrowserJob::Config{true /*isolate_guest_session*/,
+                         true /*isolate_regular_session*/, kAlwaysUseCrashpad,
+                         base::Optional<base::FilePath>(
+                             BrowserJobTest::kChromeMountNamespacePath)},
+      std::move(p_subp));
+
+  ASSERT_TRUE(job.RunInBackground());
+}
+
 TEST_F(BrowserJobTest, ShouldStopTest) {
   EXPECT_CALL(utils_, time(nullptr))
       .WillRepeatedly(Return(BrowserJob::kRestartWindowSeconds));
