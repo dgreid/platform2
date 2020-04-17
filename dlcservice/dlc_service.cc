@@ -114,13 +114,10 @@ bool DlcService::Install(const DlcIdList& dlcs,
     return true;
   }
 
-  DlcModuleList dlc_list;
-  dlc_list.set_omaha_url(omaha_url);
-  for (const auto& id : unique_dlcs_to_install) {
-    dlc_list.add_dlc_module_infos()->set_dlc_id(id);
-  }
   // Invokes update_engine to install the DLC.
-  if (!update_engine_proxy_->AttemptInstall(dlc_list, nullptr)) {
+  ErrorPtr tmp_err;
+  if (!update_engine_proxy_->AttemptInstall(omaha_url, unique_dlcs_to_install,
+                                            &tmp_err)) {
     // TODO(kimjae): need update engine to propagate correct error message by
     // passing in |ErrorPtr| and being set within update engine, current default
     // is to indicate that update engine is updating because there is no way an
@@ -129,13 +126,15 @@ bool DlcService::Install(const DlcIdList& dlcs,
     // above, but just return |kErrorBusy| because the next time around if an
     // update has been applied and is in a reboot needed state, it will indicate
     // correctly then).
+    LOG(ERROR) << "Update Engine failed to install requested DLCs: "
+               << (tmp_err ? Error::ToString(tmp_err)
+                           : "Missing error from update engine proxy.");
     *err = Error::Create(
         kErrorBusy, "Update Engine failed to schedule install operations.");
     LOG(ERROR) << Error::ToString(*err);
     // dlcservice must cancel the install by communicating to dlc_manager who
     // manages the DLC(s), as update_engine won't be able to install the
     // initialized DLC(s) for installation.
-    ErrorPtr tmp_err;
     if (!dlc_manager_->CancelInstall(&tmp_err))
       LOG(ERROR) << Error::ToString(tmp_err);
     return false;
