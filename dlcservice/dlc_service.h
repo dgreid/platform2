@@ -50,6 +50,7 @@ class DlcServiceInterface {
                         DlcState* dlc_state_out,
                         brillo::ErrorPtr* err) = 0;
   virtual DlcIdList GetInstalled() = 0;
+  virtual DlcIdList GetDlcsToUpdate() = 0;
   virtual bool InstallCompleted(const DlcIdList& ids_in,
                                 brillo::ErrorPtr* err) = 0;
   virtual bool UpdateCompleted(const DlcIdList& ids_in,
@@ -79,6 +80,7 @@ class DlcService : public DlcServiceInterface {
   bool GetState(const std::string& id_in,
                 DlcState* dlc_state_out,
                 brillo::ErrorPtr* err) override;
+  DlcIdList GetDlcsToUpdate() override;
   bool InstallCompleted(const DlcIdList& ids_in,
                         brillo::ErrorPtr* err) override;
   bool UpdateCompleted(const DlcIdList& ids_in, brillo::ErrorPtr* err) override;

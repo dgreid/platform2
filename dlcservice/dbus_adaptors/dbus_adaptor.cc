@@ -56,6 +56,12 @@ bool DBusService::GetInstalled(brillo::ErrorPtr* err,
   return true;
 }
 
+bool DBusService::GetDlcsToUpdate(brillo::ErrorPtr* err,
+                                  std::vector<std::string>* dlc_ids_out) {
+  *dlc_ids_out = dlc_service_->GetDlcsToUpdate();
+  return true;
+}
+
 bool DBusService::GetState(brillo::ErrorPtr* err,
                            const string& id_in,
                            DlcState* dlc_state_out) {

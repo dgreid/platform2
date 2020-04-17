@@ -77,6 +77,11 @@ void DlcManager::PreloadDlcs() {
 DlcIdList DlcManager::GetInstalled() {
   // TODO(kimjae): Once update_engine repeatedly calls into |GetInstalled()| for
   // updating update, need to handle clearing differently.
+  return ToDlcIdList(supported_,
+                     [](const DlcBase& dlc) { return dlc.IsInstalled(); });
+}
+
+DlcIdList DlcManager::GetDlcsToUpdate() {
   ErrorPtr tmp_err;
   for (const auto& pr : supported_)
     if (!pr.second.ClearMountable(SystemState::Get()->inactive_boot_slot(),

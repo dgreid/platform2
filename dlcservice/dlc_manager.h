@@ -35,6 +35,9 @@ class DlcManager {
   // Returns the list of installed or mountable DLCs.
   DlcIdList GetInstalled();
 
+  // Returns the list of DLCs that need to be updated.
+  DlcIdList GetDlcsToUpdate();
+
   // Returns the list of all supported DLC(s).
   DlcIdList GetSupported();
 

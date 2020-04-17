@@ -43,8 +43,8 @@
   </method>
   <method name="GetInstalled">
     <tp:docstring>
-      Returns a list of installed Downloadable Content (DLC) IDs and marks the
-      inactive DLCs as unmountable.
+      Returns a list of installed Downloadable Content (DLC) IDs that are
+      installed.
     </tp:docstring>
     <arg name="dlc_module_list" type="ay" direction="out">
       <tp:docstring>
@@ -54,6 +54,17 @@
       </tp:docstring>
       <annotation name="org.chromium.DBus.Argument.ProtobufClass"
                   value="dlcservice::DlcModuleList"/>
+    </arg>
+  </method>
+  <method name="GetDlcsToUpdate">
+    <tp:docstring>
+      Returns a list of DLCs that need to be updated. The implementation needs
+      to make sure the target DLC images are ready to be updated.
+    </tp:docstring>
+    <arg name="dlc_ids" type="as" direction="out">
+      <tp:docstring>
+        A list of DLC Ids for DLCs that need to be updated.
+      </tp:docstring>
     </arg>
   </method>
   <method name="GetState">

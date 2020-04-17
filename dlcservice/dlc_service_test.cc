@@ -183,6 +183,15 @@ TEST_F(DlcServiceTest, GetInstalledTest) {
   CheckDlcState(kFirstDlc, DlcState::INSTALLED);
 }
 
+TEST_F(DlcServiceTest, GetDlcsToUpdateTest) {
+  // TODO(crbug.com/1074090): Add a DLC that is mountable too.
+  const auto& dlcs = dlc_service_->GetDlcsToUpdate();
+
+  EXPECT_THAT(dlcs, ElementsAre(kFirstDlc));
+  EXPECT_FALSE(dlc_service_->GetDlc(kFirstDlc)->GetRoot().value().empty());
+  CheckDlcState(kFirstDlc, DlcState::INSTALLED);
+}
+
 TEST_F(DlcServiceTest, GetInstalledMimicDlcserviceRebootWithoutMountableStamp) {
   const auto& dlcs_before = dlc_service_->GetInstalled();
   EXPECT_THAT(dlcs_before, ElementsAre(kFirstDlc));

@@ -190,6 +190,10 @@ DlcIdList DlcService::GetInstalled() {
   return dlc_manager_->GetInstalled();
 }
 
+DlcIdList DlcService::GetDlcsToUpdate() {
+  return dlc_manager_->GetDlcsToUpdate();
+}
+
 bool DlcService::InstallCompleted(const DlcIdList& ids_in, ErrorPtr* err) {
   bool ret = dlc_manager_->InstallCompleted(ids_in, err);
   if (!ret)
