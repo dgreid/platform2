@@ -16,11 +16,10 @@
 #include <base/logging.h>
 #include <base/posix/eintr_wrapper.h>
 #include <base/strings/string_util.h>
-#include <base/strings/string_number_conversions.h>
-#include <base/sys_info.h>
 
 #include "diagnostics/wilco_dtc_supportd/ec_constants.h"
 #include "diagnostics/wilco_dtc_supportd/telemetry/system_files_service_impl.h"
+#include "diagnostics/wilco_dtc_supportd/telemetry/system_info_service_impl.h"
 #include "diagnostics/wilco_dtc_supportd/vpd_constants.h"
 
 namespace diagnostics {
@@ -199,10 +198,11 @@ void ForwardGetDriveSystemDataResponse(
 
 }  // namespace
 
-GrpcService::GrpcService(Delegate* delegate) : delegate_(delegate) {
+GrpcService::GrpcService(Delegate* delegate)
+    : delegate_(delegate),
+      system_files_service_(new SystemFilesServiceImpl()),
+      system_info_service_(new SystemInfoServiceImpl()) {
   DCHECK(delegate_);
-
-  system_files_service_ = std::make_unique<SystemFilesServiceImpl>();
 }
 
 GrpcService::~GrpcService() = default;
@@ -221,6 +221,11 @@ void GrpcService::set_root_dir_for_testing(const base::FilePath& root_dir) {
 void GrpcService::set_system_files_service_for_testing(
     std::unique_ptr<SystemFilesService> service) {
   system_files_service_ = std::move(service);
+}
+
+void GrpcService::set_system_info_service_for_testing(
+    std::unique_ptr<SystemInfoService> service) {
+  system_info_service_ = std::move(service);
 }
 
 void GrpcService::SendMessageToUi(
@@ -640,26 +645,18 @@ void GrpcService::GetOsVersion(
     const GetOsVersionCallback& callback) {
   DCHECK(request);
 
-  std::string version;
-  std::string milestone_str;
-  int milestone = 0;
-
-  if (!base::SysInfo::GetLsbReleaseValue("CHROMEOS_RELEASE_VERSION",
-                                         &version)) {
-    LOG(ERROR) << "Could not read the release version";
-  }
-  if (!base::SysInfo::GetLsbReleaseValue("CHROMEOS_RELEASE_CHROME_MILESTONE",
-                                         &milestone_str)) {
-    LOG(ERROR) << "Could not read the release milestone";
-  }
-
-  if (!base::StringToInt(milestone_str, &milestone)) {
-    LOG(ERROR) << "Failed to convert the milestone '" << milestone_str
-               << "' to integer.";
-  }
   auto reply = std::make_unique<grpc_api::GetOsVersionResponse>();
-  reply->set_version(version);
-  reply->set_milestone(milestone);
+
+  std::string version;
+  if (system_info_service_->GetOsVersion(&version)) {
+    reply->set_version(version);
+  }
+
+  int milestone = 0;
+  if (system_info_service_->GetOsMilestone(&milestone)) {
+    reply->set_milestone(milestone);
+  }
+
   callback.Run(std::move(reply));
 }
 

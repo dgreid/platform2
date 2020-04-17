@@ -16,6 +16,7 @@
 #include <google/protobuf/repeated_field.h>
 
 #include "diagnostics/wilco_dtc_supportd/telemetry/system_files_service.h"
+#include "diagnostics/wilco_dtc_supportd/telemetry/system_info_service.h"
 
 #include "wilco_dtc_supportd.pb.h"  // NOLINT(build/include)
 
@@ -194,6 +195,10 @@ class GrpcService final {
   void set_system_files_service_for_testing(
       std::unique_ptr<SystemFilesService> service);
 
+  // Overrides the system info service for operations in tests.
+  void set_system_info_service_for_testing(
+      std::unique_ptr<SystemInfoService> service);
+
   // Implementation of the "WilcoDtcSupportd" gRPC interface:
   void SendMessageToUi(
       std::unique_ptr<grpc_api::SendMessageToUiRequest> request,
@@ -242,6 +247,8 @@ class GrpcService final {
   Delegate* const delegate_;
 
   std::unique_ptr<SystemFilesService> system_files_service_;
+
+  std::unique_ptr<SystemInfoService> system_info_service_;
 
   // The file system root directory. Can be overridden in tests.
   base::FilePath root_dir_{"/"};

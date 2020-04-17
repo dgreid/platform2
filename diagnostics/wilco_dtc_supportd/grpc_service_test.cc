@@ -28,6 +28,7 @@
 #include "diagnostics/wilco_dtc_supportd/ec_constants.h"
 #include "diagnostics/wilco_dtc_supportd/grpc_service.h"
 #include "diagnostics/wilco_dtc_supportd/telemetry/fake_system_files_service.h"
+#include "diagnostics/wilco_dtc_supportd/telemetry/mock_system_info_service.h"
 #include "diagnostics/wilco_dtc_supportd/vpd_constants.h"
 
 #include "wilco_dtc_supportd.pb.h"  // NOLINT(build/include)
@@ -35,9 +36,12 @@
 using testing::_;
 using testing::AnyOf;
 using testing::ByRef;
+using testing::DoAll;
 using testing::Eq;
 using testing::Invoke;
+using testing::NotNull;
 using testing::Return;
+using testing::SetArgPointee;
 using testing::StrEq;
 using testing::StrictMock;
 using testing::UnorderedElementsAre;
@@ -454,13 +458,6 @@ class GrpcServiceTest : public testing::Test {
                                 GrpcCallbackResponseSaver(response));
   }
 
-  void ExecuteGetOsVersion(
-      std::unique_ptr<grpc_api::GetOsVersionResponse>* response) {
-    auto request = std::make_unique<grpc_api::GetOsVersionRequest>();
-    service()->GetOsVersion(std::move(request),
-                            GrpcCallbackResponseSaver(response));
-  }
-
   void ExecuteGetConfigurationData(
       const std::string& json_configuration_data,
       std::unique_ptr<grpc_api::GetConfigurationDataResponse>* response) {
@@ -788,36 +785,6 @@ TEST_F(GrpcServiceTest, RunPrimeSearchRoutineNoParameters) {
   EXPECT_EQ(response->status(), grpc_api::ROUTINE_STATUS_INVALID_FIELD);
 }
 
-TEST_F(GrpcServiceTest, GetOsVersionUnset) {
-  std::unique_ptr<grpc_api::GetOsVersionResponse> response;
-  base::SysInfo::SetChromeOSVersionInfoForTest("", base::Time());
-  ExecuteGetOsVersion(&response);
-
-  ASSERT_TRUE(response);
-
-  EXPECT_TRUE(response->version().empty());
-  EXPECT_EQ(response->milestone(), 0);
-}
-
-TEST_F(GrpcServiceTest, GetOsVersion) {
-  constexpr char kLsbRelease[] =
-      "CHROMEOS_RELEASE_CHROME_MILESTONE=%d\n"
-      "CHROMEOS_RELEASE_VERSION=%s";
-  constexpr int kMilestone = 75;
-  constexpr char kOsVersion[] = "11932.0.2019_03_20_1100";
-
-  std::unique_ptr<grpc_api::GetOsVersionResponse> response;
-  base::SysInfo::SetChromeOSVersionInfoForTest(
-      base::StringPrintf(kLsbRelease, kMilestone, kOsVersion), base::Time());
-
-  ExecuteGetOsVersion(&response);
-
-  ASSERT_TRUE(response);
-
-  EXPECT_EQ(response->version(), kOsVersion);
-  EXPECT_EQ(response->milestone(), kMilestone);
-}
-
 // Test that an empty string is a valid result.
 TEST_F(GrpcServiceTest, GetConfigurationDataEmpty) {
   std::unique_ptr<grpc_api::GetConfigurationDataResponse> response;
@@ -898,6 +865,67 @@ TEST_F(GrpcServiceTest, RequestBluetoothDataNotification) {
           run_loop.QuitClosure()));
 
   run_loop.Run();
+}
+
+class GrpcServiceWithMockSystemInfoServiceTest : public GrpcServiceTest {
+ public:
+  GrpcServiceWithMockSystemInfoServiceTest() = default;
+  ~GrpcServiceWithMockSystemInfoServiceTest() override = default;
+
+  GrpcServiceWithMockSystemInfoServiceTest(
+      const GrpcServiceWithMockSystemInfoServiceTest&) = delete;
+  GrpcServiceWithMockSystemInfoServiceTest& operator=(
+      const GrpcServiceWithMockSystemInfoServiceTest&) = delete;
+
+  void SetUp() override {
+    GrpcServiceTest::SetUp();
+
+    auto mock = std::make_unique<StrictMock<MockSystemInfoService>>();
+    system_info_service_mock_ = mock.get();
+    service()->set_system_info_service_for_testing(std::move(mock));
+  }
+
+  void ExecuteGetOsVersion(
+      std::unique_ptr<grpc_api::GetOsVersionResponse>* response) {
+    auto request = std::make_unique<grpc_api::GetOsVersionRequest>();
+    service()->GetOsVersion(std::move(request),
+                            GrpcCallbackResponseSaver(response));
+  }
+
+ protected:
+  // Owned by |service_| from GrpcServiceTest
+  MockSystemInfoService* system_info_service_mock_ = nullptr;
+};
+
+TEST_F(GrpcServiceWithMockSystemInfoServiceTest, GetOsVersionUnset) {
+  EXPECT_CALL(*system_info_service_mock_, GetOsVersion(NotNull()));
+  EXPECT_CALL(*system_info_service_mock_, GetOsMilestone(NotNull()));
+
+  std::unique_ptr<grpc_api::GetOsVersionResponse> response;
+  ExecuteGetOsVersion(&response);
+
+  ASSERT_TRUE(response);
+
+  EXPECT_TRUE(response->version().empty());
+  EXPECT_EQ(response->milestone(), 0);
+}
+
+TEST_F(GrpcServiceWithMockSystemInfoServiceTest, GetOsVersion) {
+  constexpr char kOsVersion[] = "11932.0.2019_03_20_1100";
+  constexpr int kMilestone = 75;
+
+  EXPECT_CALL(*system_info_service_mock_, GetOsVersion(NotNull()))
+      .WillOnce(DoAll(WithArgs<0>(SetArgPointee<0>(kOsVersion)), Return(true)));
+  EXPECT_CALL(*system_info_service_mock_, GetOsMilestone(NotNull()))
+      .WillOnce(DoAll(WithArgs<0>(SetArgPointee<0>(kMilestone)), Return(true)));
+
+  std::unique_ptr<grpc_api::GetOsVersionResponse> response;
+  ExecuteGetOsVersion(&response);
+
+  ASSERT_TRUE(response);
+
+  EXPECT_EQ(response->version(), kOsVersion);
+  EXPECT_EQ(response->milestone(), kMilestone);
 }
 
 class GrpcServiceWithFakeSystemFilesServiceTest : public GrpcServiceTest {
