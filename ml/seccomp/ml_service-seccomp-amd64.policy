@@ -44,6 +44,7 @@ recvmsg: 1
 restart_syscall: 1
 rt_sigprocmask: 1
 rt_sigreturn: 1
+sched_getaffinity: 1
 sendmsg: 1
 sendto: 1
 signalfd4: 1

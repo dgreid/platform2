@@ -4,6 +4,7 @@
 
 import("//common-mk/mojom_bindings_generator.gni")
 import("//common-mk/pkg_config.gni")
+import("//common-mk/proto_library.gni")
 
 group("all") {
   deps = [
@@ -56,6 +57,15 @@ pkg_config("ml_common_pkg_deps") {
   ]
 }
 
+proto_library("ml_handwriting_proto") {
+  proto_in_dir = "${sysroot}/usr/include/chromeos/libhandwriting/proto"
+  proto_out_dir = "chrome/knowledge/handwriting/"
+  sources = [
+    "${proto_in_dir}/interface.proto",
+    "${proto_in_dir}/validate.proto",
+  ]
+}
+
 static_library("ml_common") {
   include_dirs = [
     "${sysroot}/usr/include/icu-chrome/common",
@@ -69,13 +79,16 @@ static_library("ml_common") {
     "tensorflowlite",
     "textclassifier",
   ]
+  pkg_deps = [ "protobuf" ]
   deps = [
+    ":ml_handwriting_proto",
     ":ml_mojo_bindings",
   ]
   all_dependent_configs = [ ":ml_common_pkg_deps" ]
   sources = [
     "daemon.cc",
     "graph_executor_impl.cc",
+    "handwriting.cc",
     "machine_learning_service_impl.cc",
     "metrics.cc",
     "model_impl.cc",
@@ -113,15 +126,32 @@ if (use.test) {
     include_dirs = [ "${sysroot}/usr/include/tensorflow" ]
     deps = [
       ":ml_common",
+      ":ml_handwriting_proto",
     ]
     sources = [
       "graph_executor_impl_test.cc",
+      "handwriting_test.cc",
       "machine_learning_service_impl_test.cc",
       "model_impl_test.cc",
       "test_utils.cc",
       "testrunner.cc",
       "util_test.cc",
     ]
+
+    # TODO(charleszhao) this macro is only used in the unit test file
+    # "handwriting_test.cc". After the mojo API is implemented, maybe we should
+    #    1. Remove "handwriting_test.cc" and move all the unit test into mojo
+    #       unit tests, like those in "machine_learning_service_impl_test.cc".
+    #    2. Use separate unit test files rather than "one test file+macro". And
+    #       The following build config can be something like,
+    #       if (use.ondevice_handwriting) {
+    #         sources += "handwriting_supported_test.cc"
+    #       } else {
+    #         sources += "handwriting_unsupported_test.cc"
+    #       }
+    if (use.ondevice_handwriting) {
+      defines = [ "ML_SUPPORT_HANDWRITING" ]
+    }
   }
 }
 

@@ -73,6 +73,7 @@ _IUSE = [
     'mojo',
     'msan',
     'mtd',
+    'ondevice_handwriting',
     'opengles',
     'passive_metrics',
     'pinweaver',
