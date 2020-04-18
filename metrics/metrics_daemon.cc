@@ -163,6 +163,12 @@ const int MetricsDaemon::kMetricSectorsBuckets = 50;    // buckets
 const int MetricsDaemon::kMetricPageFaultsMax = kMetricSectorsIOMax / 8;
 const int MetricsDaemon::kMetricPageFaultsBuckets = 50;
 
+// Assume a max rate of 54000000 pages/day, based on current 99 percentile
+// for Platform.SwapOutLong being about 1500 pages/second. Assume 10 hours
+// of use per day.
+const int MetricsDaemon::kMetricDailySwapMax = 54000000;
+const int MetricsDaemon::kMetricDailySwapBuckets = 50;
+
 // Major page faults, i.e. the ones that require data to be read from disk or
 // decompressed from zram.  "Anon" and "File" qualifiers are in grammatically
 // incorrect positions for better sorting in UMA.
@@ -182,9 +188,11 @@ const char MetricsDaemon::kMetricAnonPageFaultsShortName[] =
 
 // Swap in and Swap out
 
+const char MetricsDaemon::kMetricSwapInDailyName[] = "Platform.SwapInDaily";
 const char MetricsDaemon::kMetricSwapInLongName[] = "Platform.SwapInLong";
 const char MetricsDaemon::kMetricSwapInShortName[] = "Platform.SwapInShort";
 
+const char MetricsDaemon::kMetricSwapOutDailyName[] = "Platform.SwapOutDaily";
 const char MetricsDaemon::kMetricSwapOutLongName[] = "Platform.SwapOutLong";
 const char MetricsDaemon::kMetricSwapOutShortName[] = "Platform.SwapOutShort";
 
@@ -392,6 +400,8 @@ void MetricsDaemon::Init(bool testing,
   cpuinfo_max_freq_path_ = cpuinfo_max_freq_path;
 
   zone_path_base_ = base::FilePath("/sys/class/thermal/");
+
+  vmstats_daily_success = VmStatsReadStats(&vmstats_daily_start);
 
   // If testing, initialize Stats Reporter without connecting DBus
   if (testing_)
@@ -1519,6 +1529,23 @@ void MetricsDaemon::SendAndResetCrashFrequencySample(
              50);  // number of buckets
 }
 
+void MetricsDaemon::SendAndResetDailyVmstats() {
+  struct VmstatRecord vmstats_now;
+  bool vmstats_success = VmStatsReadStats(&vmstats_now);
+  if (vmstats_success && vmstats_daily_success) {
+    uint64_t delta_swap_in =
+        vmstats_now.swap_in_ - vmstats_daily_start.swap_in_;
+    uint64_t delta_swap_out =
+        vmstats_now.swap_out_ - vmstats_daily_start.swap_out_;
+    SendSample(kMetricSwapInDailyName, delta_swap_in, 1, kMetricDailySwapMax,
+               kMetricDailySwapBuckets);
+    SendSample(kMetricSwapOutDailyName, delta_swap_out, 1, kMetricDailySwapMax,
+               kMetricDailySwapBuckets);
+  }
+  vmstats_daily_start = vmstats_now;
+  vmstats_daily_success = vmstats_success;
+}
+
 void MetricsDaemon::SendLinearSample(const string& name,
                                      int sample,
                                      int max,
@@ -1567,6 +1594,7 @@ void MetricsDaemon::UpdateStats(TimeTicks now_ticks, Time now_wall_time) {
     SendAndResetCrashFrequencySample(unclean_shutdowns_daily_count_,
                                      kUncleanShutdownsDailyName);
     SendKernelCrashesCumulativeCountStats();
+    SendAndResetDailyVmstats();
   }
 
   if (weekly_cycle_->Get() != week) {

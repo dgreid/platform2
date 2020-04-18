@@ -179,8 +179,10 @@ class MetricsDaemon : public brillo::DBusDaemon {
   static const char kMetricFilePageFaultsLongName[];
   static const char kMetricAnonPageFaultsShortName[];
   static const char kMetricAnonPageFaultsLongName[];
+  static const char kMetricSwapInDailyName[];
   static const char kMetricSwapInLongName[];
   static const char kMetricSwapInShortName[];
+  static const char kMetricSwapOutDailyName[];
   static const char kMetricSwapOutLongName[];
   static const char kMetricSwapOutShortName[];
   static const char kMetricScaledCpuFrequencyName[];
@@ -193,6 +195,8 @@ class MetricsDaemon : public brillo::DBusDaemon {
   static const int kMetricSectorsBuckets;
   static const int kMetricPageFaultsMax;
   static const int kMetricPageFaultsBuckets;
+  static const int kMetricDailySwapMax;
+  static const int kMetricDailySwapBuckets;
   static const char kMetricsDiskStatsPath[];
   static const char kMetricsVmStatsPath[];
   static const char kMetricsProcStatFileName[];
@@ -276,6 +280,10 @@ class MetricsDaemon : public brillo::DBusDaemon {
   void SendAndResetCrashFrequencySample(
       const std::unique_ptr<PersistentInteger>& frequency,
       const std::string& name);
+
+  // Sends stats representing the difference in vmstat values after a day, and
+  // then resets the starting values.
+  void SendAndResetDailyVmstats();
 
   // Initializes vm and disk stats reporting.
   void StatsReporterInit();
@@ -475,6 +483,9 @@ class MetricsDaemon : public brillo::DBusDaemon {
   std::unique_ptr<PersistentInteger> kernel_crashes_version_count_;
   std::unique_ptr<PersistentInteger> unclean_shutdowns_daily_count_;
   std::unique_ptr<PersistentInteger> unclean_shutdowns_weekly_count_;
+
+  struct VmstatRecord vmstats_daily_start;
+  bool vmstats_daily_success;
 
   std::string diskstats_path_;
   std::string vmstats_path_;
