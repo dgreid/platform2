@@ -74,10 +74,12 @@ class DevicePolicyEncoderTest
 
 TEST_F(DevicePolicyEncoderTest, TestEncoding) {
   // Note that kStringList can't be constexpr, so we put them all here.
-  const bool kBool = true;
-  const int kInt = 123;
-  const int kScreenMagnifierTypeInRangeInt = 1;
-  const int kScreenMagnifierTypeOutOfRangeInt = 10;
+  constexpr bool kBool = true;
+  constexpr int kInt = 123;
+  constexpr int kScreenMagnifierTypeInRangeInt = 1;
+  constexpr int kScreenMagnifierTypeOutOfRangeInt = 10;
+  constexpr int kDeviceChromeVariationsInRangeInt = 1;
+  constexpr int kDeviceChromeVariationsOutOfRangeInt = 12;
   const std::string kString = "val1";
   const std::vector<std::string> kStringList = {"val1", "val2", "val3"};
 
@@ -311,6 +313,29 @@ TEST_F(DevicePolicyEncoderTest, TestEncoding) {
   EXPECT_EQ(kBool, policy.accessibility_settings()
                        .login_screen_default_high_contrast_enabled());
 
+  EncodeInteger(&policy, key::kDeviceChromeVariations,
+                kDeviceChromeVariationsOutOfRangeInt);
+  EXPECT_FALSE(policy.has_device_chrome_variations_type());
+
+  EncodeInteger(&policy, key::kDeviceChromeVariations,
+                kDeviceChromeVariationsInRangeInt);
+  EXPECT_EQ(kDeviceChromeVariationsInRangeInt,
+            policy.device_chrome_variations_type().value());
+
+  EncodeBoolean(&policy, key::kDeviceLoginScreenPrivacyScreenEnabled, kBool);
+  EXPECT_EQ(kBool,
+            policy.device_login_screen_privacy_screen_enabled().enabled());
+
+  EncodeBoolean(&policy, key::kDeviceShowNumericKeyboardForPassword, kBool);
+  EXPECT_EQ(kBool, policy.device_show_numeric_keyboard_for_password().value());
+
+  EncodeStringList(&policy, key::kDeviceWebBasedAttestationAllowedUrls,
+                   kStringList);
+  EXPECT_EQ(kStringList,
+            ToVector(policy.device_web_based_attestation_allowed_urls()
+                         .value()
+                         .entries()));
+
   // The encoder of this policy converts ints to ScreenMagnifierType enums.
   EncodeInteger(&policy, key::kDeviceLoginScreenDefaultScreenMagnifierType,
                 em::AccessibilitySettingsProto::SCREEN_MAGNIFIER_TYPE_FULL);
@@ -336,6 +361,26 @@ TEST_F(DevicePolicyEncoderTest, TestEncoding) {
 
   EncodeString(&policy, key::kSystemTimezone, kString);
   EXPECT_EQ(kString, policy.system_timezone().timezone());
+
+  EncodeString(&policy, key::kRequiredClientCertificateForDevice, kString);
+  EXPECT_EQ(policy.required_client_certificate_for_device()
+                .required_client_certificate_for_device(),
+            kString);
+
+  EncodeString(&policy, key::kSystemProxySettings, kString);
+  EXPECT_FALSE(policy.has_system_proxy_settings());
+
+  EncodeString(&policy, key::kSystemProxySettings,
+               R"!!!(
+               {
+                 "system_proxy_username": "test_user",
+                 "system_services_password": "1234",
+                 "system_proxy_enabled": true,
+               })!!!");
+  EXPECT_TRUE(policy.has_system_proxy_settings());
+
+  EncodeString(&policy, key::kMinimumChromeVersionEnforced, kString);
+  EXPECT_EQ(policy.minimum_chrome_version_enforced().value(), kString);
 
   // The encoder of this policy converts ints to AutomaticTimezoneDetectionType
   // enums.
@@ -462,9 +507,6 @@ TEST_F(DevicePolicyEncoderTest, TestEncoding) {
   EXPECT_EQ(true, policy.tpm_firmware_update_settings()
                       .allow_user_initiated_preserve_device_state());
 
-  EncodeString(&policy, key::kMinimumRequiredChromeVersion, kString);
-  EXPECT_EQ(kString, policy.minimum_required_version().chrome_version());
-
   EncodeBoolean(&policy, key::kUnaffiliatedArcAllowed, kBool);
   EXPECT_EQ(kBool,
             policy.unaffiliated_arc_allowed().unaffiliated_arc_allowed());
@@ -552,14 +594,6 @@ TEST_F(DevicePolicyEncoderTest, TestEncoding) {
 
   EncodeInteger(&policy, key::kDeviceAuthDataCacheLifetime, kInt);
   EXPECT_EQ(kInt, policy.device_auth_data_cache_lifetime().lifetime_hours());
-
-  // The encoder of this policy converts ints to
-  // SamlLoginAuthenticationTypeProto::Type enums.
-  EncodeInteger(&policy, key::kDeviceSamlLoginAuthenticationType,
-                em::SamlLoginAuthenticationTypeProto::TYPE_CLIENT_CERTIFICATE);
-  EXPECT_EQ(
-      em::SamlLoginAuthenticationTypeProto::TYPE_CLIENT_CERTIFICATE,
-      policy.saml_login_authentication_type().saml_login_authentication_type());
 
   EncodeBoolean(&policy, key::kDeviceUnaffiliatedCrostiniAllowed, kBool);
   EXPECT_EQ(kBool, policy.device_unaffiliated_crostini_allowed()

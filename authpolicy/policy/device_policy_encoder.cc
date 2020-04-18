@@ -41,8 +41,12 @@ constexpr std::pair<const char*, int> kConnectionTypes[] = {
 constexpr size_t kConnectionTypesSize = base::size(kConnectionTypes);
 
 // Integer range for DeviceLoginScreenScreenMagnifierType policy.
-const int kScreenMagnifierTypeRangeMin = 0;
-const int kScreenMagnifierTypeRangeMax = 2;
+constexpr int kScreenMagnifierTypeRangeMin = 0;
+constexpr int kScreenMagnifierTypeRangeMax = 2;
+
+// Integer range for DeviceChromeVariations policy.
+constexpr int kChromeVariationsRangeMin = 0;
+constexpr int kChromeVariationsRangeMax = 2;
 
 static_assert(em::AutoUpdateSettingsProto_ConnectionType_ConnectionType_MAX ==
                   kConnectionTypes[kConnectionTypesSize - 1].second,
@@ -240,6 +244,58 @@ void DevicePolicyEncoder::EncodeLoginPolicies(
           EncodeBoolean(key::kDevicePowerwashAllowed)) {
     policy->mutable_device_powerwash_allowed()->set_device_powerwash_allowed(
         value.value());
+  }
+
+  if (base::Optional<int> value = EncodeIntegerInRange(
+          key::kDeviceChromeVariations, kChromeVariationsRangeMin,
+          kChromeVariationsRangeMax)) {
+    policy->mutable_device_chrome_variations_type()->set_value(value.value());
+  }
+
+  if (base::Optional<bool> value =
+          EncodeBoolean(key::kDeviceLoginScreenPrivacyScreenEnabled)) {
+    policy->mutable_device_login_screen_privacy_screen_enabled()->set_enabled(
+        value.value());
+  }
+
+  if (base::Optional<bool> value =
+          EncodeBoolean(key::kDeviceShowNumericKeyboardForPassword)) {
+    policy->mutable_device_show_numeric_keyboard_for_password()->set_value(
+        value.value());
+  }
+
+  if (base::Optional<std::vector<std::string>> values =
+          EncodeStringList(key::kDeviceWebBasedAttestationAllowedUrls)) {
+    auto* list = policy->mutable_device_web_based_attestation_allowed_urls()
+                     ->mutable_value();
+    list->clear_entries();
+    for (const std::string& value : values.value())
+      list->add_entries(value);
+  }
+
+  if (base::Optional<std::string> value =
+          EncodeString(key::kMinimumChromeVersionEnforced))
+    policy->mutable_minimum_chrome_version_enforced()->set_value(value.value());
+
+  if (base::Optional<std::string> value =
+          EncodeString(key::kRequiredClientCertificateForDevice)) {
+    policy->mutable_required_client_certificate_for_device()
+        ->set_required_client_certificate_for_device(value.value());
+  }
+
+  if (base::Optional<std::string> value =
+          EncodeString(key::kSystemProxySettings)) {
+    std::string error;
+    std::unique_ptr<base::DictionaryValue> dict_value =
+        JsonToDictionary(value.value(), &error);
+    if (!dict_value) {
+      LOG(ERROR) << "Invalid JSON string '"
+                 << (!error.empty() ? error : value.value()) << "' for policy '"
+                 << key::kSystemProxySettings << "', ignoring.";
+    } else {
+      policy->mutable_system_proxy_settings()->set_system_proxy_settings(
+          value.value());
+    }
   }
 }
 
@@ -707,12 +763,6 @@ void DevicePolicyEncoder::EncodeGenericPolicies(
     }
   }
 
-  if (base::Optional<std::string> value =
-          EncodeString(key::kMinimumRequiredChromeVersion)) {
-    policy->mutable_minimum_required_version()->set_chrome_version(
-        value.value());
-  }
-
   if (base::Optional<bool> value =
           EncodeBoolean(key::kUnaffiliatedArcAllowed)) {
     policy->mutable_unaffiliated_arc_allowed()->set_unaffiliated_arc_allowed(
@@ -753,14 +803,6 @@ void DevicePolicyEncoder::EncodeGenericPolicies(
           EncodeInteger(key::kDeviceAuthDataCacheLifetime)) {
     policy->mutable_device_auth_data_cache_lifetime()->set_lifetime_hours(
         value.value());
-  }
-
-  if (base::Optional<int> value =
-          EncodeInteger(key::kDeviceSamlLoginAuthenticationType)) {
-    policy->mutable_saml_login_authentication_type()
-        ->set_saml_login_authentication_type(
-            static_cast<em::SamlLoginAuthenticationTypeProto::Type>(
-                value.value()));
   }
 
   if (base::Optional<bool> value =
