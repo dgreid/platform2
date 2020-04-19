@@ -43,7 +43,7 @@ class MojoService final
   using MojomPerformWebRequestCallback = base::Callback<void(
       MojomWilcoDtcSupportdWebRequestStatus, int, base::StringPiece)>;
   using MojomGetConfigurationDataCallback =
-      base::Callback<void(const std::string&)>;
+      base::OnceCallback<void(const std::string&)>;
 
   class Delegate {
    public:
@@ -86,7 +86,7 @@ class MojoService final
   // chromeos::wilco_dtc_supportd::mojom::WilcoDtcSupportdService overrides:
   void SendUiMessageToWilcoDtc(
       mojo::ScopedHandle json_message,
-      const SendUiMessageToWilcoDtcCallback& callback) override;
+      SendUiMessageToWilcoDtcCallback callback) override;
   void NotifyConfigurationDataChanged() override;
 
   // Calls to WilcoDtcSupportdClient.
@@ -98,7 +98,7 @@ class MojoService final
                          const std::vector<std::string>& headers,
                          const std::string& request_body,
                          const MojomPerformWebRequestCallback& callback);
-  void GetConfigurationData(const MojomGetConfigurationDataCallback& callback);
+  void GetConfigurationData(MojomGetConfigurationDataCallback callback);
   void HandleEvent(const MojomWilcoDtcSupportdEvent event);
   void GetCrosHealthdDiagnosticsService(
       chromeos::cros_healthd::mojom::CrosHealthdDiagnosticsServiceRequest

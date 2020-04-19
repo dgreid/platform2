@@ -26,37 +26,36 @@ class MockMojoClient
       chromeos::wilco_dtc_supportd::mojom::WilcoDtcSupportdWebRequestStatus;
   using MojoWilcoDtcSupportdEvent =
       chromeos::wilco_dtc_supportd::mojom::WilcoDtcSupportdEvent;
-  using MojoPerformWebRequestCallback = base::Callback<void(
-      MojoWilcoDtcSupportdWebRequestStatus, int, mojo::ScopedHandle)>;
+  using MojoPerformWebRequestCallback = base::OnceCallback<void(
+      MojoWilcoDtcSupportdWebRequestStatus, int32_t, mojo::ScopedHandle)>;
   using MojoGetConfigurationDataCallback =
-      base::Callback<void(const std::string&)>;
+      base::OnceCallback<void(const std::string&)>;
   using MojoCrosHealthdDiagnosticsServiceRequest =
       chromeos::cros_healthd::mojom::CrosHealthdDiagnosticsServiceRequest;
 
   void SendWilcoDtcMessageToUi(
       mojo::ScopedHandle json_message,
-      const SendWilcoDtcMessageToUiCallback& callback) override;
+      SendWilcoDtcMessageToUiCallback callback) override;
 
-  void PerformWebRequest(
-      MojoWilcoDtcSupportdWebRequestHttpMethod http_method,
-      mojo::ScopedHandle url,
-      std::vector<mojo::ScopedHandle> headers,
-      mojo::ScopedHandle request_body,
-      const MojoPerformWebRequestCallback& callback) override;
+  void PerformWebRequest(MojoWilcoDtcSupportdWebRequestHttpMethod http_method,
+                         mojo::ScopedHandle url,
+                         std::vector<mojo::ScopedHandle> headers,
+                         mojo::ScopedHandle request_body,
+                         MojoPerformWebRequestCallback callback) override;
 
   MOCK_METHOD(void,
               SendWilcoDtcMessageToUiImpl,
-              (const std::string&, const SendWilcoDtcMessageToUiCallback&));
+              (const std::string&, SendWilcoDtcMessageToUiCallback));
   MOCK_METHOD(void,
               PerformWebRequestImpl,
               (MojoWilcoDtcSupportdWebRequestHttpMethod,
                const std::string&,
                const std::vector<std::string>&,
                const std::string&,
-               const MojoPerformWebRequestCallback&));
+               MojoPerformWebRequestCallback));
   MOCK_METHOD(void,
               GetConfigurationData,
-              (const MojoGetConfigurationDataCallback&),
+              (MojoGetConfigurationDataCallback),
               (override));
   MOCK_METHOD(void, HandleEvent, (const MojoWilcoDtcSupportdEvent), (override));
   MOCK_METHOD(void,

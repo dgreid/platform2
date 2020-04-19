@@ -866,8 +866,8 @@ TEST_F(BootstrappedCoreTest, SendWilcoDtcMessageToUi) {
               SendWilcoDtcMessageToUiImpl(kFakeMessageToUi, _))
       .WillOnce(WithArg<1>(
           Invoke([kFakeMessageFromUi](
-                     const base::Callback<void(mojo::ScopedHandle)>& callback) {
-            callback.Run(
+                     base::OnceCallback<void(mojo::ScopedHandle)> callback) {
+            std::move(callback).Run(
                 CreateReadOnlySharedMemoryMojoHandle(kFakeMessageFromUi));
           })));
 
@@ -972,12 +972,12 @@ TEST_F(BootstrappedCoreTest, PerformWebRequestToBrowser) {
         PerformWebRequestImpl(
             MojomWilcoDtcSupportdWebRequestHttpMethod::kPost, kHttpsUrl,
             std::vector<std::string>{kHeader1, kHeader2}, kBodyRequest, _))
-        .WillOnce(WithArg<4>(Invoke(
-            [kBodyResponse](
-                const MockMojoClient::MojoPerformWebRequestCallback& callback) {
-              callback.Run(MojomWilcoDtcSupportdWebRequestStatus::kOk,
-                           kHttpStatusOk,
-                           CreateReadOnlySharedMemoryMojoHandle(kBodyResponse));
+        .WillOnce(WithArg<4>(
+            Invoke([kBodyResponse](
+                       MockMojoClient::MojoPerformWebRequestCallback callback) {
+              std::move(callback).Run(
+                  MojomWilcoDtcSupportdWebRequestStatus::kOk, kHttpStatusOk,
+                  CreateReadOnlySharedMemoryMojoHandle(kBodyResponse));
             })));
     fake_wilco_dtc()->PerformWebRequest(
         request, MakeAsyncResponseWriter(run_loop.QuitClosure(), &response));
@@ -1001,8 +1001,8 @@ TEST_F(BootstrappedCoreTest, GetConfigurationDataFromBrowser) {
   EXPECT_CALL(*wilco_dtc_supportd_client(), GetConfigurationData(_))
       .WillOnce(
           Invoke([kFakeJsonConfigurationData](
-                     const base::Callback<void(const std::string&)>& callback) {
-            callback.Run(kFakeJsonConfigurationData);
+                     base::OnceCallback<void(const std::string&)> callback) {
+            std::move(callback).Run(kFakeJsonConfigurationData);
           }));
   std::unique_ptr<grpc_api::GetConfigurationDataResponse> response;
   {

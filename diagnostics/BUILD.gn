@@ -50,6 +50,7 @@ generate_mojom_bindings("diagnostics_mojo_bindings") {
     "mojo/cros_healthd_probe.mojom",
     "mojo/wilco_dtc_supportd.mojom",
   ]
+  use_once_callback = true
 }
 
 # Library that provides a mojo connection to cros_healthd.

@@ -12,13 +12,12 @@
 namespace diagnostics {
 
 void MockMojoClient::SendWilcoDtcMessageToUi(
-    mojo::ScopedHandle json_message,
-    const SendWilcoDtcMessageToUiCallback& callback) {
+    mojo::ScopedHandle json_message, SendWilcoDtcMessageToUiCallback callback) {
   std::string json_message_content =
       GetStringFromMojoHandle(std::move(json_message));
   // Redirect to a separate mockable method to workaround GMock's issues with
   // move-only parameters.
-  SendWilcoDtcMessageToUiImpl(json_message_content, callback);
+  SendWilcoDtcMessageToUiImpl(json_message_content, std::move(callback));
 }
 
 void MockMojoClient::PerformWebRequest(
@@ -26,7 +25,7 @@ void MockMojoClient::PerformWebRequest(
     mojo::ScopedHandle url,
     std::vector<mojo::ScopedHandle> headers,
     mojo::ScopedHandle request_body,
-    const MojoPerformWebRequestCallback& callback) {
+    MojoPerformWebRequestCallback callback) {
   // Extract string content from mojo::Handle's.
   std::string url_content = GetStringFromMojoHandle(std::move(url));
   std::vector<std::string> header_contents;
@@ -39,7 +38,7 @@ void MockMojoClient::PerformWebRequest(
   // Redirect to a separate mockable method to workaround GMock's issues with
   // move-only parameters.
   PerformWebRequestImpl(http_method, url_content, header_contents,
-                        request_body_content, callback);
+                        request_body_content, std::move(callback));
 }
 
 }  // namespace diagnostics

@@ -33,100 +33,98 @@ bool FakeDiagnosticsService::GetCrosHealthdDiagnosticsService(
 }
 
 void FakeDiagnosticsService::GetAvailableRoutines(
-    const GetAvailableRoutinesCallback& callback) {
-  callback.Run(available_routines_);
+    GetAvailableRoutinesCallback callback) {
+  std::move(callback).Run(available_routines_);
 }
 
 void FakeDiagnosticsService::GetRoutineUpdate(
     int32_t id,
     mojo_ipc::DiagnosticRoutineCommandEnum command,
     bool include_output,
-    const GetRoutineUpdateCallback& callback) {
-  callback.Run(mojo_ipc::RoutineUpdate::New(
+    GetRoutineUpdateCallback callback) {
+  std::move(callback).Run(mojo_ipc::RoutineUpdate::New(
       routine_update_response_.progress_percent,
       std::move(routine_update_response_.output),
       std::move(routine_update_response_.routine_update_union)));
 }
 
 void FakeDiagnosticsService::RunUrandomRoutine(
-    uint32_t length_seconds, const RunUrandomRoutineCallback& callback) {
-  callback.Run(run_routine_response_.Clone());
+    uint32_t length_seconds, RunUrandomRoutineCallback callback) {
+  std::move(callback).Run(run_routine_response_.Clone());
 }
 
 void FakeDiagnosticsService::RunBatteryCapacityRoutine(
     uint32_t low_mah,
     uint32_t high_mah,
-    const RunBatteryCapacityRoutineCallback& callback) {
-  callback.Run(run_routine_response_.Clone());
+    RunBatteryCapacityRoutineCallback callback) {
+  std::move(callback).Run(run_routine_response_.Clone());
 }
 
 void FakeDiagnosticsService::RunBatteryHealthRoutine(
     uint32_t maximum_cycle_count,
     uint32_t percent_battery_wear_allowed,
-    const RunBatteryHealthRoutineCallback& callback) {
-  callback.Run(run_routine_response_.Clone());
+    RunBatteryHealthRoutineCallback callback) {
+  std::move(callback).Run(run_routine_response_.Clone());
 }
 
 void FakeDiagnosticsService::RunSmartctlCheckRoutine(
-    const RunSmartctlCheckRoutineCallback& callback) {
-  callback.Run(run_routine_response_.Clone());
+    RunSmartctlCheckRoutineCallback callback) {
+  std::move(callback).Run(run_routine_response_.Clone());
 }
 
 void FakeDiagnosticsService::RunAcPowerRoutine(
     chromeos::cros_healthd::mojom::AcPowerStatusEnum expected_status,
     const base::Optional<std::string>& expected_power_type,
-    const RunAcPowerRoutineCallback& callback) {
-  callback.Run(run_routine_response_.Clone());
+    RunAcPowerRoutineCallback callback) {
+  std::move(callback).Run(run_routine_response_.Clone());
 }
 
 void FakeDiagnosticsService::RunCpuCacheRoutine(
-    uint32_t length_seconds, const RunCpuCacheRoutineCallback& callback) {
-  callback.Run(run_routine_response_.Clone());
+    uint32_t length_seconds, RunCpuCacheRoutineCallback callback) {
+  std::move(callback).Run(run_routine_response_.Clone());
 }
 
 void FakeDiagnosticsService::RunCpuStressRoutine(
-    uint32_t length_seconds, const RunCpuStressRoutineCallback& callback) {
-  callback.Run(run_routine_response_.Clone());
+    uint32_t length_seconds, RunCpuStressRoutineCallback callback) {
+  std::move(callback).Run(run_routine_response_.Clone());
 }
 
 void FakeDiagnosticsService::RunFloatingPointAccuracyRoutine(
-    uint32_t length_seconds,
-    const RunFloatingPointAccuracyRoutineCallback& callback) {
-  callback.Run(run_routine_response_.Clone());
+    uint32_t length_seconds, RunFloatingPointAccuracyRoutineCallback callback) {
+  std::move(callback).Run(run_routine_response_.Clone());
 }
 
 void FakeDiagnosticsService::RunNvmeWearLevelRoutine(
-    uint32_t wear_level_threshold,
-    const RunNvmeWearLevelRoutineCallback& callback) {
-  callback.Run(run_routine_response_.Clone());
+    uint32_t wear_level_threshold, RunNvmeWearLevelRoutineCallback callback) {
+  std::move(callback).Run(run_routine_response_.Clone());
 }
 
 void FakeDiagnosticsService::RunNvmeSelfTestRoutine(
     chromeos::cros_healthd::mojom::NvmeSelfTestTypeEnum nvme_self_test_type,
-    const RunNvmeSelfTestRoutineCallback& callback) {
-  callback.Run(run_routine_response_.Clone());
+    RunNvmeSelfTestRoutineCallback callback) {
+  std::move(callback).Run(run_routine_response_.Clone());
 }
 
 void FakeDiagnosticsService::RunDiskReadRoutine(
     mojo_ipc::DiskReadRoutineTypeEnum type,
     uint32_t length_seconds,
     uint32_t file_size_mb,
-    const RunDiskReadRoutineCallback& callback) {
-  callback.Run(run_routine_response_.Clone());
+    RunDiskReadRoutineCallback callback) {
+  std::move(callback).Run(run_routine_response_.Clone());
 }
 
 void FakeDiagnosticsService::RunPrimeSearchRoutine(
     uint32_t length_seconds,
     uint64_t max_num,
-    const RunBatteryCapacityRoutineCallback& callback) {
-  callback.Run(run_routine_response_.Clone());
+    RunPrimeSearchRoutineCallback callback) {
+  std::move(callback).Run(run_routine_response_.Clone());
 }
 
 void FakeDiagnosticsService::RunBatteryDischargeRoutine(
     uint32_t length_seconds,
     uint32_t maximum_discharge_percent_allowed,
-    const RunBatteryDischargeRoutineCallback& callback) {
-  callback.Run(run_routine_response_.Clone());
+    RunBatteryDischargeRoutineCallback callback) {
+  std::move(callback).Run(run_routine_response_.Clone());
 }
 
 void FakeDiagnosticsService::SetMojoServiceIsAvailable(bool is_available) {

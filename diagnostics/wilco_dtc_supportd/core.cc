@@ -312,7 +312,7 @@ bool Core::GetCrosHealthdDiagnosticsService(
 
 void Core::GetService(MojomWilcoDtcSupportdServiceRequest service,
                       MojomWilcoDtcSupportdClientPtr client,
-                      const GetServiceCallback& callback) {
+                      GetServiceCallback callback) {
   // Mojo guarantees that these parameters are nun-null (see
   // VALIDATION_ERROR_UNEXPECTED_INVALID_HANDLE).
   DCHECK(service.is_pending());
@@ -333,7 +333,7 @@ void Core::GetService(MojomWilcoDtcSupportdServiceRequest service,
   mojo_service_ = std::make_unique<MojoService>(
       this /* delegate */, std::move(service), std::move(client));
 
-  callback.Run();
+  std::move(callback).Run();
 }
 
 void Core::ShutDownDueToMojoError(const std::string& debug_reason) {

@@ -44,154 +44,152 @@ CrosHealthdMojoService::CrosHealthdMojoService(
 CrosHealthdMojoService::~CrosHealthdMojoService() = default;
 
 void CrosHealthdMojoService::GetAvailableRoutines(
-    const GetAvailableRoutinesCallback& callback) {
-  callback.Run(routine_service_->GetAvailableRoutines());
+    GetAvailableRoutinesCallback callback) {
+  std::move(callback).Run(routine_service_->GetAvailableRoutines());
 }
 
 void CrosHealthdMojoService::GetRoutineUpdate(
     int32_t id,
     chromeos::cros_healthd::mojom::DiagnosticRoutineCommandEnum command,
     bool include_output,
-    const GetRoutineUpdateCallback& callback) {
+    GetRoutineUpdateCallback callback) {
   chromeos::cros_healthd::mojom::RoutineUpdate response{
       0, mojo::ScopedHandle(),
       chromeos::cros_healthd::mojom::RoutineUpdateUnion::New()};
   routine_service_->GetRoutineUpdate(id, command, include_output, &response);
-  callback.Run(chromeos::cros_healthd::mojom::RoutineUpdate::New(
+  std::move(callback).Run(chromeos::cros_healthd::mojom::RoutineUpdate::New(
       response.progress_percent, std::move(response.output),
       std::move(response.routine_update_union)));
 }
 
 void CrosHealthdMojoService::RunUrandomRoutine(
-    uint32_t length_seconds, const RunUrandomRoutineCallback& callback) {
+    uint32_t length_seconds, RunUrandomRoutineCallback callback) {
   RunRoutineResponse response;
   routine_service_->RunUrandomRoutine(length_seconds, &response.id,
                                       &response.status);
-  callback.Run(response.Clone());
+  std::move(callback).Run(response.Clone());
 }
 
 void CrosHealthdMojoService::RunBatteryCapacityRoutine(
     uint32_t low_mah,
     uint32_t high_mah,
-    const RunBatteryCapacityRoutineCallback& callback) {
+    RunBatteryCapacityRoutineCallback callback) {
   RunRoutineResponse response;
   routine_service_->RunBatteryCapacityRoutine(low_mah, high_mah, &response.id,
                                               &response.status);
-  callback.Run(response.Clone());
+  std::move(callback).Run(response.Clone());
 }
 
 void CrosHealthdMojoService::RunBatteryHealthRoutine(
     uint32_t maximum_cycle_count,
     uint32_t percent_battery_wear_allowed,
-    const RunBatteryHealthRoutineCallback& callback) {
+    RunBatteryHealthRoutineCallback callback) {
   RunRoutineResponse response;
   routine_service_->RunBatteryHealthRoutine(maximum_cycle_count,
                                             percent_battery_wear_allowed,
                                             &response.id, &response.status);
-  callback.Run(response.Clone());
+  std::move(callback).Run(response.Clone());
 }
 
 void CrosHealthdMojoService::RunSmartctlCheckRoutine(
-    const RunSmartctlCheckRoutineCallback& callback) {
+    RunSmartctlCheckRoutineCallback callback) {
   RunRoutineResponse response;
   routine_service_->RunSmartctlCheckRoutine(&response.id, &response.status);
-  callback.Run(response.Clone());
+  std::move(callback).Run(response.Clone());
 }
 
 void CrosHealthdMojoService::RunAcPowerRoutine(
     chromeos::cros_healthd::mojom::AcPowerStatusEnum expected_status,
     const base::Optional<std::string>& expected_power_type,
-    const RunAcPowerRoutineCallback& callback) {
+    RunAcPowerRoutineCallback callback) {
   RunRoutineResponse response;
   routine_service_->RunAcPowerRoutine(expected_status, expected_power_type,
                                       &response.id, &response.status);
-  callback.Run(response.Clone());
+  std::move(callback).Run(response.Clone());
 }
 
 void CrosHealthdMojoService::RunCpuCacheRoutine(
-    uint32_t length_seconds, const RunCpuCacheRoutineCallback& callback) {
+    uint32_t length_seconds, RunCpuCacheRoutineCallback callback) {
   RunRoutineResponse response;
   routine_service_->RunCpuCacheRoutine(
       base::TimeDelta().FromSeconds(length_seconds), &response.id,
       &response.status);
-  callback.Run(response.Clone());
+  std::move(callback).Run(response.Clone());
 }
 
 void CrosHealthdMojoService::RunCpuStressRoutine(
-    uint32_t length_seconds, const RunCpuStressRoutineCallback& callback) {
+    uint32_t length_seconds, RunCpuStressRoutineCallback callback) {
   RunRoutineResponse response;
   routine_service_->RunCpuStressRoutine(
       base::TimeDelta().FromSeconds(length_seconds), &response.id,
       &response.status);
-  callback.Run(response.Clone());
+  std::move(callback).Run(response.Clone());
 }
 
 void CrosHealthdMojoService::RunFloatingPointAccuracyRoutine(
-    uint32_t length_seconds,
-    const RunFloatingPointAccuracyRoutineCallback& callback) {
+    uint32_t length_seconds, RunFloatingPointAccuracyRoutineCallback callback) {
   RunRoutineResponse response;
   routine_service_->RunFloatingPointAccuracyRoutine(
       base::TimeDelta::FromSeconds(length_seconds), &response.id,
       &response.status);
-  callback.Run(response.Clone());
+  std::move(callback).Run(response.Clone());
 }
 
 void CrosHealthdMojoService::RunNvmeWearLevelRoutine(
-    uint32_t wear_level_threshold,
-    const RunNvmeWearLevelRoutineCallback& callback) {
+    uint32_t wear_level_threshold, RunNvmeWearLevelRoutineCallback callback) {
   RunRoutineResponse response;
   routine_service_->RunNvmeWearLevelRoutine(wear_level_threshold, &response.id,
                                             &response.status);
-  callback.Run(response.Clone());
+  std::move(callback).Run(response.Clone());
 }
 
 void CrosHealthdMojoService::RunNvmeSelfTestRoutine(
     chromeos::cros_healthd::mojom::NvmeSelfTestTypeEnum nvme_self_test_type,
-    const RunNvmeSelfTestRoutineCallback& callback) {
+    RunNvmeSelfTestRoutineCallback callback) {
   RunRoutineResponse response;
   routine_service_->RunNvmeSelfTestRoutine(nvme_self_test_type, &response.id,
                                            &response.status);
-  callback.Run(response.Clone());
+  std::move(callback).Run(response.Clone());
 }
 
 void CrosHealthdMojoService::RunDiskReadRoutine(
     mojo_ipc::DiskReadRoutineTypeEnum type,
     uint32_t length_seconds,
     uint32_t file_size_mb,
-    const RunDiskReadRoutineCallback& callback) {
+    RunDiskReadRoutineCallback callback) {
   RunRoutineResponse response;
   base::TimeDelta exec_duration = base::TimeDelta::FromSeconds(length_seconds);
   routine_service_->RunDiskReadRoutine(type, exec_duration, file_size_mb,
                                        &response.id, &response.status);
-  callback.Run(response.Clone());
+  std::move(callback).Run(response.Clone());
 }
 
 void CrosHealthdMojoService::RunPrimeSearchRoutine(
     uint32_t length_seconds,
     uint64_t max_num,
-    const RunPrimeSearchRoutineCallback& callback) {
+    RunPrimeSearchRoutineCallback callback) {
   RunRoutineResponse response;
   base::TimeDelta exec_duration = base::TimeDelta::FromSeconds(length_seconds);
 
   routine_service_->RunPrimeSearchRoutine(exec_duration, max_num, &response.id,
                                           &response.status);
-  callback.Run(response.Clone());
+  std::move(callback).Run(response.Clone());
 }
 
 void CrosHealthdMojoService::RunBatteryDischargeRoutine(
     uint32_t length_seconds,
     uint32_t maximum_discharge_percent_allowed,
-    const RunBatteryDischargeRoutineCallback& callback) {
+    RunBatteryDischargeRoutineCallback callback) {
   RunRoutineResponse response;
   routine_service_->RunBatteryDischargeRoutine(
       base::TimeDelta::FromSeconds(length_seconds),
       maximum_discharge_percent_allowed, &response.id, &response.status);
-  callback.Run(response.Clone());
+  std::move(callback).Run(response.Clone());
 }
 
 void CrosHealthdMojoService::ProbeTelemetryInfo(
     const std::vector<ProbeCategoryEnum>& categories,
-    const ProbeTelemetryInfoCallback& callback) {
+    ProbeTelemetryInfoCallback callback) {
   chromeos::cros_healthd::mojom::TelemetryInfo telemetry_info;
   for (const auto category : categories) {
     switch (category) {
@@ -235,7 +233,7 @@ void CrosHealthdMojoService::ProbeTelemetryInfo(
     }
   }
 
-  callback.Run(telemetry_info.Clone());
+  std::move(callback).Run(telemetry_info.Clone());
 }
 
 void CrosHealthdMojoService::AddProbeBinding(

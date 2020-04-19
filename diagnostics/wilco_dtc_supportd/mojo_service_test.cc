@@ -149,10 +149,10 @@ TEST_F(MojoServiceTest, SendWilcoDtcMessageToUi) {
 
   EXPECT_CALL(*mojo_client(),
               SendWilcoDtcMessageToUiImpl(kJsonMessageToUi.as_string(), _))
-      .WillOnce(WithArg<1>(Invoke(
-          [kJsonMessageFromUi](
-              const MockMojoClient::SendWilcoDtcMessageToUiCallback& callback) {
-            callback.Run(
+      .WillOnce(WithArg<1>(
+          Invoke([kJsonMessageFromUi](
+                     MockMojoClient::SendWilcoDtcMessageToUiCallback callback) {
+            std::move(callback).Run(
                 CreateReadOnlySharedMemoryMojoHandle(kJsonMessageFromUi));
           })));
 
@@ -172,13 +172,13 @@ TEST_F(MojoServiceTest, SendWilcoDtcMessageToUi) {
 
 TEST_F(MojoServiceTest, SendWilcoDtcMessageToUiEmptyMessage) {
   base::RunLoop run_loop;
-  const auto callback = base::Bind(
+  auto callback = base::Bind(
       [](const base::Closure& quit_closure, base::StringPiece json_message) {
         EXPECT_TRUE(json_message.empty());
         quit_closure.Run();
       },
       run_loop.QuitClosure());
-  mojo_service()->SendWilcoDtcMessageToUi("", callback);
+  mojo_service()->SendWilcoDtcMessageToUi("", std::move(callback));
   run_loop.Run();
 }
 
@@ -197,11 +197,12 @@ TEST_F(MojoServiceTest, PerformWebRequest) {
                                   kHttpMethod, kHttpsUrl,
                                   std::vector<std::string>{kHeader1, kHeader2},
                                   kBodyRequest, _))
-      .WillOnce(WithArg<4>(Invoke(
-          [kBodyResponse](
-              const MockMojoClient::MojoPerformWebRequestCallback& callback) {
-            callback.Run(kWebRequestStatus, kHttpStatusOk,
-                         CreateReadOnlySharedMemoryMojoHandle(kBodyResponse));
+      .WillOnce(WithArg<4>(
+          Invoke([kBodyResponse](
+                     MockMojoClient::MojoPerformWebRequestCallback callback) {
+            std::move(callback).Run(
+                kWebRequestStatus, kHttpStatusOk,
+                CreateReadOnlySharedMemoryMojoHandle(kBodyResponse));
           })));
 
   base::RunLoop run_loop;
@@ -229,8 +230,8 @@ TEST_F(MojoServiceTest, GetConfigurationData) {
   EXPECT_CALL(*mojo_client(), GetConfigurationData(_))
       .WillOnce(WithArg<0>(
           Invoke([kFakeJsonConfigurationData](
-                     const base::Callback<void(const std::string&)>& callback) {
-            callback.Run(kFakeJsonConfigurationData);
+                     base::OnceCallback<void(const std::string&)> callback) {
+            std::move(callback).Run(kFakeJsonConfigurationData);
           })));
 
   base::RunLoop run_loop;

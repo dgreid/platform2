@@ -21,17 +21,18 @@ using SendUiMessageToWilcoDtcCallback =
 namespace {
 
 void ForwardMojoJsonResponse(
-    const SendUiMessageToWilcoDtcCallback& mojo_response_callback,
+    SendUiMessageToWilcoDtcCallback mojo_response_callback,
     std::string response_json_message) {
   if (response_json_message.empty()) {
-    mojo_response_callback.Run(
-        mojo::ScopedHandle() /* response_json_message */);
+    std::move(mojo_response_callback)
+        .Run(mojo::ScopedHandle() /* response_json_message */);
     return;
   }
   mojo::ScopedHandle response_json_message_handle =
       CreateReadOnlySharedMemoryMojoHandle(
           base::StringPiece(response_json_message));
-  mojo_response_callback.Run(std::move(response_json_message_handle));
+  std::move(mojo_response_callback)
+      .Run(std::move(response_json_message_handle));
 }
 
 void ForwardMojoSendtoUiResponse(
@@ -90,13 +91,12 @@ MojoService::MojoService(
 MojoService::~MojoService() = default;
 
 void MojoService::SendUiMessageToWilcoDtc(
-    mojo::ScopedHandle json_message,
-    const SendUiMessageToWilcoDtcCallback& callback) {
+    mojo::ScopedHandle json_message, SendUiMessageToWilcoDtcCallback callback) {
   std::unique_ptr<base::SharedMemory> shared_memory =
       GetReadOnlySharedMemoryFromMojoHandle(std::move(json_message));
   if (!shared_memory) {
     LOG(ERROR) << "Failed to read data from mojo handle";
-    callback.Run(mojo::ScopedHandle() /* response_json_message */);
+    std::move(callback).Run(mojo::ScopedHandle() /* response_json_message */);
     return;
   }
   base::StringPiece json_message_content(
@@ -106,12 +106,13 @@ void MojoService::SendUiMessageToWilcoDtc(
   std::string json_error_message;
   if (!IsJsonValid(json_message_content, &json_error_message)) {
     LOG(ERROR) << "Invalid JSON error: " << json_error_message;
-    callback.Run(mojo::ScopedHandle() /* response_json_message */);
+    std::move(callback).Run(mojo::ScopedHandle() /* response_json_message */);
     return;
   }
 
   delegate_->SendGrpcUiMessageToWilcoDtc(
-      json_message_content, base::Bind(&ForwardMojoJsonResponse, callback));
+      json_message_content,
+      base::Bind(&ForwardMojoJsonResponse, base::Passed(std::move(callback))));
 }
 
 void MojoService::NotifyConfigurationDataChanged() {
@@ -177,9 +178,9 @@ void MojoService::PerformWebRequest(
 }
 
 void MojoService::GetConfigurationData(
-    const MojomGetConfigurationDataCallback& callback) {
+    MojomGetConfigurationDataCallback callback) {
   DCHECK(client_ptr_);
-  client_ptr_->GetConfigurationData(callback);
+  client_ptr_->GetConfigurationData(std::move(callback));
 }
 
 void MojoService::HandleEvent(const MojomWilcoDtcSupportdEvent event) {

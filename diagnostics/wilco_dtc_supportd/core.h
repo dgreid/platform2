@@ -204,7 +204,7 @@ class Core final : public DBusService::Delegate,
   // overrides:
   void GetService(MojomWilcoDtcSupportdServiceRequest service,
                   MojomWilcoDtcSupportdClientPtr client,
-                  const GetServiceCallback& callback) override;
+                  GetServiceCallback callback) override;
 
   // BluetoothEventService::Observer overrides:
   void BluetoothAdapterDataChanged(
