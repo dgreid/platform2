@@ -54,10 +54,10 @@ class GraphExecutorImpl
  private:
   // chromeos::machine_learning::mojom::GraphExecutor:
   void Execute(
-      base::flat_map<std::string,
-                    chromeos::machine_learning::mojom::TensorPtr> inputs,
+      base::flat_map<std::string, chromeos::machine_learning::mojom::TensorPtr>
+          inputs,
       const std::vector<std::string>& output_names,
-      const ExecuteCallback& callback);
+      ExecuteCallback callback);
 
   const std::map<std::string, int>& required_inputs_;
   const std::map<std::string, int>& required_outputs_;

@@ -39,13 +39,13 @@ class MachineLearningServiceImpl
   void LoadBuiltinModel(
       chromeos::machine_learning::mojom::BuiltinModelSpecPtr spec,
       chromeos::machine_learning::mojom::ModelRequest request,
-      const LoadBuiltinModelCallback& callback) override;
+      LoadBuiltinModelCallback callback) override;
 
   // chromeos::machine_learning::mojom::MachineLearningService:
   void LoadFlatBufferModel(
       chromeos::machine_learning::mojom::FlatBufferModelSpecPtr spec,
       chromeos::machine_learning::mojom::ModelRequest request,
-      const LoadFlatBufferModelCallback& callback) override;
+      LoadFlatBufferModelCallback callback) override;
 
   // Metadata required to load builtin models. Initialized at construction.
   const std::map<chromeos::machine_learning::mojom::BuiltinModelId,

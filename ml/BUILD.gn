@@ -28,6 +28,7 @@ generate_mojom_bindings("ml_mojo_bindings") {
     "mojom/model.mojom",
     "mojom/tensor.mojom",
   ]
+  use_once_callback = true
 }
 
 pkg_config("ml_common_pkg_deps") {

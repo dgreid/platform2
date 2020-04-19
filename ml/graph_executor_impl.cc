@@ -170,10 +170,9 @@ void GraphExecutorImpl::set_connection_error_handler(
   binding_.set_connection_error_handler(std::move(connection_error_handler));
 }
 
-void GraphExecutorImpl::Execute(
-    base::flat_map<std::string, TensorPtr> tensors,
-    const std::vector<std::string>& outputs,
-    const ExecuteCallback& callback) {
+void GraphExecutorImpl::Execute(base::flat_map<std::string, TensorPtr> tensors,
+                                const std::vector<std::string>& outputs,
+                                ExecuteCallback callback) {
   DCHECK(!metrics_model_name_.empty());
 
   RequestMetrics<ExecuteResult> request_metrics(metrics_model_name_,
@@ -188,13 +187,14 @@ void GraphExecutorImpl::Execute(
     const auto name_lookup = required_inputs_.find(cur_input_name);
     if (name_lookup == required_inputs_.end() ||
         name_lookup->second >= interpreter_->tensors_size()) {
-      callback.Run(ExecuteResult::UNKNOWN_INPUT_ERROR, base::nullopt);
+      std::move(callback).Run(ExecuteResult::UNKNOWN_INPUT_ERROR,
+                              base::nullopt);
       request_metrics.RecordRequestEvent(ExecuteResult::UNKNOWN_INPUT_ERROR);
       return;
     }
   }
   if (tensors.size() != required_inputs_.size()) {
-    callback.Run(ExecuteResult::INPUT_MISSING_ERROR, base::nullopt);
+    std::move(callback).Run(ExecuteResult::INPUT_MISSING_ERROR, base::nullopt);
     request_metrics.RecordRequestEvent(ExecuteResult::INPUT_MISSING_ERROR);
     return;
   }
@@ -204,7 +204,8 @@ void GraphExecutorImpl::Execute(
     const auto name_lookup = required_outputs_.find(cur_output_name);
     if (name_lookup == required_outputs_.end() ||
         name_lookup->second >= interpreter_->tensors_size()) {
-      callback.Run(ExecuteResult::UNKNOWN_OUTPUT_ERROR, base::nullopt);
+      std::move(callback).Run(ExecuteResult::UNKNOWN_OUTPUT_ERROR,
+                              base::nullopt);
       request_metrics.RecordRequestEvent(ExecuteResult::UNKNOWN_OUTPUT_ERROR);
       return;
     }
@@ -212,13 +213,14 @@ void GraphExecutorImpl::Execute(
     // Specifying the same output twice is an error.
     const auto insert_result = seen_outputs.insert(cur_output_name);
     if (!insert_result.second) {
-      callback.Run(ExecuteResult::DUPLICATE_OUTPUT_ERROR, base::nullopt);
+      std::move(callback).Run(ExecuteResult::DUPLICATE_OUTPUT_ERROR,
+                              base::nullopt);
       request_metrics.RecordRequestEvent(ExecuteResult::DUPLICATE_OUTPUT_ERROR);
       return;
     }
   }
   if (outputs.size() != required_outputs_.size()) {
-    callback.Run(ExecuteResult::OUTPUT_MISSING_ERROR, base::nullopt);
+    std::move(callback).Run(ExecuteResult::OUTPUT_MISSING_ERROR, base::nullopt);
     request_metrics.RecordRequestEvent(ExecuteResult::OUTPUT_MISSING_ERROR);
     return;
   }
@@ -236,7 +238,7 @@ void GraphExecutorImpl::Execute(
     if (cur_input_type >= base::size(kPopulateInputFns)) {
       LOG(ERROR) << "TF lite graph contains invalid input node " << cur_input_id
                  << " of type " << cur_input_type << ".";
-      callback.Run(ExecuteResult::EXECUTION_ERROR, base::nullopt);
+      std::move(callback).Run(ExecuteResult::EXECUTION_ERROR, base::nullopt);
       request_metrics.RecordRequestEvent(ExecuteResult::EXECUTION_ERROR);
       return;
     }
@@ -246,7 +248,7 @@ void GraphExecutorImpl::Execute(
         (*kPopulateInputFns[cur_input_type])(cur_input, cur_input_id,
                                              interpreter_.get());
     if (populate_input_result != ExecuteResult::OK) {
-      callback.Run(populate_input_result, base::nullopt);
+      std::move(callback).Run(populate_input_result, base::nullopt);
       request_metrics.RecordRequestEvent(populate_input_result);
       return;
     }
@@ -255,7 +257,7 @@ void GraphExecutorImpl::Execute(
   // Execute graph.
   if (interpreter_->Invoke() != kTfLiteOk) {
     LOG(ERROR) << "TF lite graph execution failed unexpectedly.";
-    callback.Run(ExecuteResult::EXECUTION_ERROR, base::nullopt);
+    std::move(callback).Run(ExecuteResult::EXECUTION_ERROR, base::nullopt);
     request_metrics.RecordRequestEvent(ExecuteResult::EXECUTION_ERROR);
     return;
   }
@@ -274,7 +276,7 @@ void GraphExecutorImpl::Execute(
     if (cur_output_type >= base::size(kPopulateOutputFns)) {
       LOG(ERROR) << "TF lite graph contains invalid output node "
                  << cur_output_id << " of type " << cur_output_type << ".";
-      callback.Run(ExecuteResult::EXECUTION_ERROR, base::nullopt);
+      std::move(callback).Run(ExecuteResult::EXECUTION_ERROR, base::nullopt);
       request_metrics.RecordRequestEvent(ExecuteResult::EXECUTION_ERROR);
       return;
     }
@@ -284,13 +286,13 @@ void GraphExecutorImpl::Execute(
         (*kPopulateOutputFns[cur_output_type])(cur_output_id, *interpreter_,
                                                *--output_tensors.end());
     if (populate_output_result != ExecuteResult::OK) {
-      callback.Run(populate_output_result, base::nullopt);
+      std::move(callback).Run(populate_output_result, base::nullopt);
       request_metrics.RecordRequestEvent(populate_output_result);
       return;
     }
   }
 
-  callback.Run(ExecuteResult::OK, std::move(output_tensors));
+  std::move(callback).Run(ExecuteResult::OK, std::move(output_tensors));
   request_metrics.FinishRecordingPerformanceMetrics();
   request_metrics.RecordRequestEvent(ExecuteResult::OK);
 }

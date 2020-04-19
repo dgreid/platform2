@@ -88,8 +88,8 @@ int ModelImpl::num_graph_executors_for_testing() const {
   return graph_executors_.size();
 }
 
-void ModelImpl::CreateGraphExecutor(
-    GraphExecutorRequest request, const CreateGraphExecutorCallback& callback) {
+void ModelImpl::CreateGraphExecutor(GraphExecutorRequest request,
+                                    CreateGraphExecutorCallback callback) {
   DCHECK(!metrics_model_name_.empty());
 
   RequestMetrics<CreateGraphExecutorResult> request_metrics(
@@ -98,7 +98,8 @@ void ModelImpl::CreateGraphExecutor(
 
   if (model_ == nullptr) {
     LOG(ERROR) << "Null model provided.";
-    callback.Run(CreateGraphExecutorResult::MODEL_INTERPRETATION_ERROR);
+    std::move(callback).Run(
+        CreateGraphExecutorResult::MODEL_INTERPRETATION_ERROR);
     request_metrics.RecordRequestEvent(
         CreateGraphExecutorResult::MODEL_INTERPRETATION_ERROR);
     return;
@@ -111,7 +112,8 @@ void ModelImpl::CreateGraphExecutor(
       tflite::InterpreterBuilder(*model_, resolver)(&interpreter);
   if (resolve_status != kTfLiteOk || !interpreter) {
     LOG(ERROR) << "Could not resolve model ops.";
-    callback.Run(CreateGraphExecutorResult::MODEL_INTERPRETATION_ERROR);
+    std::move(callback).Run(
+        CreateGraphExecutorResult::MODEL_INTERPRETATION_ERROR);
     request_metrics.RecordRequestEvent(
         CreateGraphExecutorResult::MODEL_INTERPRETATION_ERROR);
     return;
@@ -119,7 +121,7 @@ void ModelImpl::CreateGraphExecutor(
 
   // Allocate memory for tensors.
   if (interpreter->AllocateTensors() != kTfLiteOk) {
-    callback.Run(CreateGraphExecutorResult::MEMORY_ALLOCATION_ERROR);
+    std::move(callback).Run(CreateGraphExecutorResult::MEMORY_ALLOCATION_ERROR);
     request_metrics.RecordRequestEvent(
         CreateGraphExecutorResult::MEMORY_ALLOCATION_ERROR);
     return;
@@ -133,7 +135,7 @@ void ModelImpl::CreateGraphExecutor(
       base::Bind(&ModelImpl::EraseGraphExecutor, base::Unretained(this),
                  graph_executors_.begin()));
 
-  callback.Run(CreateGraphExecutorResult::OK);
+  std::move(callback).Run(CreateGraphExecutorResult::OK);
   request_metrics.FinishRecordingPerformanceMetrics();
   request_metrics.RecordRequestEvent(CreateGraphExecutorResult::OK);
 }

@@ -54,13 +54,13 @@ MachineLearningServiceImpl::MachineLearningServiceImpl(
 void MachineLearningServiceImpl::LoadBuiltinModel(
     BuiltinModelSpecPtr spec,
     ModelRequest request,
-    const LoadBuiltinModelCallback& callback) {
+    LoadBuiltinModelCallback callback) {
   // Unsupported models do not have metadata entries.
   const auto metadata_lookup = builtin_model_metadata_.find(spec->id);
   if (metadata_lookup == builtin_model_metadata_.end()) {
     LOG(WARNING) << "LoadBuiltinModel requested for unsupported model ID "
                  << spec->id << ".";
-    callback.Run(LoadModelResult::MODEL_SPEC_ERROR);
+    std::move(callback).Run(LoadModelResult::MODEL_SPEC_ERROR);
     RecordModelSpecificationErrorEvent();
     return;
   }
@@ -79,7 +79,7 @@ void MachineLearningServiceImpl::LoadBuiltinModel(
       tflite::FlatBufferModel::BuildFromFile(model_path.c_str());
   if (model == nullptr) {
     LOG(ERROR) << "Failed to load model file '" << model_path << "'.";
-    callback.Run(LoadModelResult::LOAD_MODEL_ERROR);
+    std::move(callback).Run(LoadModelResult::LOAD_MODEL_ERROR);
     request_metrics.RecordRequestEvent(LoadModelResult::LOAD_MODEL_ERROR);
     return;
   }
@@ -88,7 +88,7 @@ void MachineLearningServiceImpl::LoadBuiltinModel(
                     std::move(model), std::move(request),
                     metadata.metrics_model_name);
 
-  callback.Run(LoadModelResult::OK);
+  std::move(callback).Run(LoadModelResult::OK);
 
   request_metrics.FinishRecordingPerformanceMetrics();
   request_metrics.RecordRequestEvent(LoadModelResult::OK);
@@ -97,7 +97,7 @@ void MachineLearningServiceImpl::LoadBuiltinModel(
 void MachineLearningServiceImpl::LoadFlatBufferModel(
     FlatBufferModelSpecPtr spec,
     ModelRequest request,
-    const LoadFlatBufferModelCallback& callback) {
+    LoadFlatBufferModelCallback callback) {
   DCHECK(!spec->metrics_model_name.empty());
 
   RequestMetrics<LoadModelResult> request_metrics(spec->metrics_model_name,
@@ -115,7 +115,7 @@ void MachineLearningServiceImpl::LoadFlatBufferModel(
   if (model == nullptr) {
     LOG(ERROR) << "Failed to load model string of metric name: "
                << spec->metrics_model_name << "'.";
-    callback.Run(LoadModelResult::LOAD_MODEL_ERROR);
+    std::move(callback).Run(LoadModelResult::LOAD_MODEL_ERROR);
     request_metrics.RecordRequestEvent(LoadModelResult::LOAD_MODEL_ERROR);
     return;
   }
@@ -126,7 +126,7 @@ void MachineLearningServiceImpl::LoadFlatBufferModel(
       std::move(model), std::move(model_string_impl), std::move(request),
       spec->metrics_model_name);
 
-  callback.Run(LoadModelResult::OK);
+  std::move(callback).Run(LoadModelResult::OK);
 
   request_metrics.FinishRecordingPerformanceMetrics();
   request_metrics.RecordRequestEvent(LoadModelResult::OK);
