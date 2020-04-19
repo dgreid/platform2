@@ -878,4 +878,38 @@ TEST_F(RTNLMessageTest, EncodeLinkDel) {
   EXPECT_FALSE(msg.HasAttribute(IFLA_OPERSTATE));
 }
 
+TEST_F(RTNLMessageTest, ToString) {
+  struct {
+    const unsigned char* payload;
+    size_t length;
+    std::string expected_string;
+  } test_cases[] = {
+      {kNewLinkMessageWlan0, sizeof(kNewLinkMessageWlan0),
+       "Add Link: LinkStatus type 1 flags 11043 change 0"},
+      {kNewLinkMessageIfb1, sizeof(kNewLinkMessageIfb1),
+       "Add Link: LinkStatus type 1 flags 82 change 0 kind ifb"},
+      {kDelLinkMessageEth0, sizeof(kDelLinkMessageEth0),
+       "Delete Link: LinkStatus type 1 flags 1002 change FFFFFFFF"},
+      {kNewAddrIPV4, sizeof(kNewAddrIPV4),
+       "Add Address: AddressStatus prefix_len 24 flags 80 scope 0"},
+      {kDelAddrIPV6, sizeof(kDelRouteIPV6),
+       "Delete Address: AddressStatus prefix_len 64 flags 80 scope 253"},
+      {kAddRouteIPV4, sizeof(kAddRouteIPV4),
+       "Add Route: RouteStatus dst_prefix 0 src_prefix 0 table 254 protocol 3 "
+       "scope 0 type 1 flags 0"},
+      {kDelRouteIPV6, sizeof(kDelRouteIPV6),
+       "Delete Route: RouteStatus dst_prefix 128 src_prefix 0 table 254 "
+       "protocol 0 scope 0 type 1 flags 200"},
+      {kAddNeighborMessage, sizeof(kAddNeighborMessage),
+       "Add Neighbor: NeighborStatus state 2 flags 0 type 1"},
+      {kNdRdnssMessage, sizeof(kNdRdnssMessage),
+       "Add Rdnss: RdnssOption lifetime -1"},
+  };
+  for (const auto& tt : test_cases) {
+    RTNLMessage msg;
+    EXPECT_TRUE(msg.Decode(ByteString(tt.payload, tt.length)));
+    EXPECT_EQ(tt.expected_string, msg.ToString());
+  }
+}
+
 }  // namespace shill
