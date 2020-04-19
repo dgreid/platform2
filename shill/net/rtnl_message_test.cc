@@ -891,19 +891,20 @@ TEST_F(RTNLMessageTest, ToString) {
       {kDelLinkMessageEth0, sizeof(kDelLinkMessageEth0),
        "Delete Link: LinkStatus type 1 flags 1002 change FFFFFFFF"},
       {kNewAddrIPV4, sizeof(kNewAddrIPV4),
-       "Add Address: AddressStatus prefix_len 24 flags 80 scope 0"},
+       "Add IPv4 Address: AddressStatus prefix_len 24 flags 80 scope 0"},
       {kDelAddrIPV6, sizeof(kDelRouteIPV6),
-       "Delete Address: AddressStatus prefix_len 64 flags 80 scope 253"},
+       "Delete IPv6 Address: AddressStatus prefix_len 64 flags 80 scope 253"},
       {kAddRouteIPV4, sizeof(kAddRouteIPV4),
-       "Add Route: RouteStatus dst_prefix 0 src_prefix 0 table 254 protocol 3 "
+       "Add IPv4 Route: RouteStatus dst_prefix 0 src_prefix 0 table 254 "
+       "protocol 3 "
        "scope 0 type 1 flags 0"},
       {kDelRouteIPV6, sizeof(kDelRouteIPV6),
-       "Delete Route: RouteStatus dst_prefix 128 src_prefix 0 table 254 "
+       "Delete IPv6 Route: RouteStatus dst_prefix 128 src_prefix 0 table 254 "
        "protocol 0 scope 0 type 1 flags 200"},
       {kAddNeighborMessage, sizeof(kAddNeighborMessage),
-       "Add Neighbor: NeighborStatus state 2 flags 0 type 1"},
+       "Add IPv4 Neighbor: NeighborStatus state 2 flags 0 type 1"},
       {kNdRdnssMessage, sizeof(kNdRdnssMessage),
-       "Add Rdnss: RdnssOption lifetime -1"},
+       "Add IPv6 Rdnss: RdnssOption lifetime -1"},
   };
   for (const auto& tt : test_cases) {
     RTNLMessage msg;

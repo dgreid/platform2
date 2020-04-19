@@ -147,6 +147,7 @@ class SHILL_EXPORT RTNLMessage {
   IPAddress::Family family() const { return family_; }
 
   static std::string ModeToString(Mode mode);
+  static std::string TypeToString(Type type);
   std::string ToString() const;
 
   const LinkStatus& link_status() const { return link_status_; }

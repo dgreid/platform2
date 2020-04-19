@@ -22,27 +22,6 @@ namespace shill {
 
 namespace {
 
-const char* TypeToString(RTNLMessage::Type type) {
-  switch (type) {
-    case RTNLMessage::kTypeLink:
-      return "Link";
-    case RTNLMessage::kTypeAddress:
-      return "Address";
-    case RTNLMessage::kTypeRoute:
-      return "Route";
-    case RTNLMessage::kTypeRule:
-      return "Rule";
-    case RTNLMessage::kTypeRdnss:
-      return "Rdnss";
-    case RTNLMessage::kTypeDnssl:
-      return "Dnssl";
-    case RTNLMessage::kTypeNeighbor:
-      return "Neighbor";
-    default:
-      return "UnknownType";
-  }
-}
-
 std::unique_ptr<RTNLAttrMap> ParseAttrs(struct rtattr* data, int len) {
   RTNLAttrMap attrs;
   ByteString attr_bytes(reinterpret_cast<const char*>(data), len);
@@ -664,31 +643,58 @@ std::string RTNLMessage::ModeToString(RTNLMessage::Mode mode) {
   }
 }
 
+// static
+std::string RTNLMessage::TypeToString(RTNLMessage::Type type) {
+  switch (type) {
+    case RTNLMessage::kTypeLink:
+      return "Link";
+    case RTNLMessage::kTypeAddress:
+      return "Address";
+    case RTNLMessage::kTypeRoute:
+      return "Route";
+    case RTNLMessage::kTypeRule:
+      return "Rule";
+    case RTNLMessage::kTypeRdnss:
+      return "Rdnss";
+    case RTNLMessage::kTypeDnssl:
+      return "Dnssl";
+    case RTNLMessage::kTypeNeighbor:
+      return "Neighbor";
+    default:
+      return "UnknownType";
+  }
+}
+
 std::string RTNLMessage::ToString() const {
-  std::string str = base::StringPrintf("%s %s: ", ModeToString(mode()).c_str(),
-                                       TypeToString(type()));
+  // Include the space separator in |ip_family| to avoid double spaces for
+  // messages with family AF_UNSPEC.
+  std::string ip_family = " " + IPAddress::GetAddressFamilyName(family());
+  std::string details;
   switch (type()) {
     case RTNLMessage::kTypeLink:
-      str += link_status_.ToString();
+      ip_family = "";
+      details = link_status_.ToString();
       break;
     case RTNLMessage::kTypeAddress:
-      str += address_status_.ToString();
+      details = address_status_.ToString();
       break;
     case RTNLMessage::kTypeRoute:
     case RTNLMessage::kTypeRule:
-      str += route_status_.ToString();
+      details = route_status_.ToString();
       break;
     case RTNLMessage::kTypeRdnss:
     case RTNLMessage::kTypeDnssl:
-      str += rdnss_option_.ToString();
+      details = rdnss_option_.ToString();
       break;
     case RTNLMessage::kTypeNeighbor:
-      str += neighbor_status_.ToString();
+      details = neighbor_status_.ToString();
       break;
     default:
       break;
   }
-  return str;
+  return base::StringPrintf("%s%s %s: %s", ModeToString(mode()).c_str(),
+                            ip_family.c_str(), TypeToString(type()).c_str(),
+                            details.c_str());
 }
 
 }  // namespace shill
