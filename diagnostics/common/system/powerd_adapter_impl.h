@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef DIAGNOSTICS_WILCO_DTC_SUPPORTD_SYSTEM_POWERD_ADAPTER_IMPL_H_
-#define DIAGNOSTICS_WILCO_DTC_SUPPORTD_SYSTEM_POWERD_ADAPTER_IMPL_H_
+#ifndef DIAGNOSTICS_COMMON_SYSTEM_POWERD_ADAPTER_IMPL_H_
+#define DIAGNOSTICS_COMMON_SYSTEM_POWERD_ADAPTER_IMPL_H_
 
 #include <memory>
 
@@ -16,7 +16,7 @@
 #include <power_manager/proto_bindings/power_supply_properties.pb.h>
 #include <power_manager/proto_bindings/suspend.pb.h>
 
-#include "diagnostics/wilco_dtc_supportd/system/powerd_adapter.h"
+#include "diagnostics/common/system/powerd_adapter.h"
 
 namespace diagnostics {
 
@@ -54,4 +54,4 @@ class PowerdAdapterImpl : public PowerdAdapter {
 
 }  // namespace diagnostics
 
-#endif  // DIAGNOSTICS_WILCO_DTC_SUPPORTD_SYSTEM_POWERD_ADAPTER_IMPL_H_
+#endif  // DIAGNOSTICS_COMMON_SYSTEM_POWERD_ADAPTER_IMPL_H_

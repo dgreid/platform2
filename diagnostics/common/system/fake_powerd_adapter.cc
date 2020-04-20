@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "diagnostics/wilco_dtc_supportd/system/fake_powerd_adapter.h"
+#include "diagnostics/common/system/fake_powerd_adapter.h"
 
 namespace diagnostics {
 
