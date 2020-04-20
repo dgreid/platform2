@@ -29,7 +29,6 @@
 #include "diagnostics/wilco_dtc_supportd/grpc_service.h"
 #include "diagnostics/wilco_dtc_supportd/telemetry/fake_system_files_service.h"
 #include "diagnostics/wilco_dtc_supportd/telemetry/mock_system_info_service.h"
-#include "diagnostics/wilco_dtc_supportd/vpd_constants.h"
 
 #include "wilco_dtc_supportd.pb.h"  // NOLINT(build/include)
 
@@ -87,7 +86,6 @@ constexpr grpc_api::DiagnosticRoutineUserMessage kFakeUserMessage =
     grpc_api::ROUTINE_USER_MESSAGE_UNSET;
 constexpr char kFakeOutput[] = "Some output.";
 constexpr char kFakeStatusMessage[] = "Status message.";
-constexpr char kFakeVpdValue[] = "fakeserialnumber";
 
 constexpr char kTestFilePath[] = "file/path";
 constexpr char kTestCanonicalFilePath[] = "canonical/path";
@@ -1551,44 +1549,50 @@ INSTANTIATE_TEST_CASE_P(,
 //
 // This is a parametrized test with the following parameters:
 // * |vpd_field| - the requested VPD field.
-// * |file_path| - the corresponding file path.
+// * |expected_vpd_field| - SystemFilesService::VpdField that should be
+//    requested.
 class GetVpdFieldGrpcServiceTest
-    : public GrpcServiceTest,
+    : public GrpcServiceWithFakeSystemFilesServiceTest,
       public testing::WithParamInterface<
           std::tuple<grpc_api::GetVpdFieldRequest::VpdField /* vpd_field */,
-                     std::string /* file_path */>> {
+                     SystemFilesService::VpdField /* expected_vpd_field */>> {
  protected:
   grpc_api::GetVpdFieldRequest::VpdField vpd_field() const {
     return std::get<0>(GetParam());
   }
-  base::FilePath file_path() const {
-    return temp_dir_path().Append(std::get<1>(GetParam()));
+  SystemFilesService::VpdField expected_vpd_field() const {
+    return std::get<1>(GetParam());
   }
 };
 
-// Test that GetVpdField() is read properly.
-TEST_P(GetVpdFieldGrpcServiceTest, GetVpdField) {
-  EXPECT_TRUE(WriteFileAndCreateParentDirs(file_path(), kFakeVpdValue));
+// Test that GetVpdField() returns requested VPD field.
+TEST_P(GetVpdFieldGrpcServiceTest, Success) {
+  constexpr char kFakeVpdField[] = "VPD test value";
+
+  SystemFilesService::FileDump file_dump;
+  file_dump.contents = kFakeVpdField;
+
+  system_files_service_fake_->set_vpd_field(expected_vpd_field(),
+                                            std::move(file_dump));
+
   grpc_api::GetVpdFieldResponse::Status status;
   std::string vpd_field_value;
   ASSERT_NO_FATAL_FAILURE(
       ExecuteGetVpdField(vpd_field(), &status, &vpd_field_value));
 
   EXPECT_EQ(status, grpc_api::GetVpdFieldResponse::STATUS_OK);
-  EXPECT_EQ(vpd_field_value, kFakeVpdValue);
+  EXPECT_EQ(vpd_field_value, kFakeVpdField);
 }
 
-TEST_F(GetVpdFieldGrpcServiceTest, GetVpdFieldWithWhiteSpaces) {
-  EXPECT_TRUE(WriteFileAndCreateParentDirs(
-      temp_dir_path().Append(kVpdFieldSerialNumberFilePath),
-      base::StringPrintf("%s\n\t", kFakeVpdValue)));
+// Test that GetVpdField() returns error if VPD field does not exist.
+TEST_P(GetVpdFieldGrpcServiceTest, NoVpdField) {
   grpc_api::GetVpdFieldResponse::Status status;
   std::string vpd_field_value;
   ASSERT_NO_FATAL_FAILURE(
-      ExecuteGetVpdField(grpc_api::GetVpdFieldRequest::FIELD_SERIAL_NUMBER,
-                         &status, &vpd_field_value));
-  EXPECT_EQ(status, grpc_api::GetVpdFieldResponse::STATUS_OK);
-  EXPECT_EQ(vpd_field_value, kFakeVpdValue);
+      ExecuteGetVpdField(vpd_field(), &status, &vpd_field_value));
+
+  EXPECT_EQ(status, grpc_api::GetVpdFieldResponse::STATUS_ERROR_INTERNAL);
+  EXPECT_TRUE(vpd_field_value.empty());
 }
 
 INSTANTIATE_TEST_CASE_P(
@@ -1596,52 +1600,21 @@ INSTANTIATE_TEST_CASE_P(
     GetVpdFieldGrpcServiceTest,
     testing::Values(
         std::make_tuple(grpc_api::GetVpdFieldRequest::FIELD_SERIAL_NUMBER,
-                        kVpdFieldSerialNumberFilePath),
+                        SystemFilesService::VpdField::kSerialNumber),
         std::make_tuple(grpc_api::GetVpdFieldRequest::FIELD_MODEL_NAME,
-                        kVpdFieldModelNameFilePath),
+                        SystemFilesService::VpdField::kModelName),
         std::make_tuple(grpc_api::GetVpdFieldRequest::FIELD_ASSET_ID,
-                        kVpdFieldAssetIdFilePath),
+                        SystemFilesService::VpdField::kAssetId),
         std::make_tuple(grpc_api::GetVpdFieldRequest::FIELD_SKU_NUMBER,
-                        kVpdFieldSkuNumberFilePath),
+                        SystemFilesService::VpdField::kSkuNumber),
         std::make_tuple(grpc_api::GetVpdFieldRequest::FIELD_UUID_ID,
-                        kVpdFieldUuidFilePath),
+                        SystemFilesService::VpdField::kUuid),
         std::make_tuple(grpc_api::GetVpdFieldRequest::FIELD_MANUFACTURE_DATE,
-                        kVpdFieldMfgDateFilePath),
+                        SystemFilesService::VpdField::kMfgDate),
         std::make_tuple(grpc_api::GetVpdFieldRequest::FIELD_ACTIVATE_DATE,
-                        kVpdFieldActivateDateFilePath),
+                        SystemFilesService::VpdField::kActivateDate),
         std::make_tuple(grpc_api::GetVpdFieldRequest::FIELD_SYSTEM_ID,
-                        kVpdFieldSystemIdFilePath)));
-
-class GetVpdFieldFailGrpcServiceTest
-    : public GrpcServiceTest,
-      public testing::WithParamInterface<
-          std::tuple<std::string /* file_content */>> {
- protected:
-  std::string file_content() const { return std::get<0>(GetParam()); }
-};
-
-TEST_P(GetVpdFieldFailGrpcServiceTest, GetVpdFieldFail) {
-  EXPECT_TRUE(WriteFileAndCreateParentDirs(
-      temp_dir_path().Append(kVpdFieldSerialNumberFilePath), file_content()));
-  grpc_api::GetVpdFieldResponse::Status status;
-  std::string vpd_field_value;
-  ASSERT_NO_FATAL_FAILURE(
-      ExecuteGetVpdField(grpc_api::GetVpdFieldRequest::FIELD_SERIAL_NUMBER,
-                         &status, &vpd_field_value));
-  EXPECT_EQ(status, grpc_api::GetVpdFieldResponse::STATUS_ERROR_INTERNAL);
-  EXPECT_TRUE(vpd_field_value.empty());
-}
-
-INSTANTIATE_TEST_CASE_P(
-    ,
-    GetVpdFieldFailGrpcServiceTest,
-    testing::Values(
-        // Valid empty file test case.
-        std::make_tuple(base::StringPrintf("")),
-        // Valid whitespace characters only test case.
-        std::make_tuple(base::StringPrintf("\t\n")),
-        // Valid non ASCII characters test case.
-        std::make_tuple(base::StringPrintf("%s不", kFakeVpdValue))));
+                        SystemFilesService::VpdField::kSystemId)));
 
 // Test for the GetDriveSystemData() method of GrpcService.
 //

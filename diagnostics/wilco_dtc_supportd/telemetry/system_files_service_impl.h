@@ -21,6 +21,7 @@ class SystemFilesServiceImpl final : public SystemFilesService {
  public:
   static base::FilePath GetPathForDirectory(Directory location);
   static base::FilePath GetPathForFile(File location);
+  static base::FilePath GetPathForVpdField(VpdField vpd_field);
 
   SystemFilesServiceImpl();
   ~SystemFilesServiceImpl() override;
@@ -29,6 +30,7 @@ class SystemFilesServiceImpl final : public SystemFilesService {
   bool GetFileDump(File location, FileDump* dump) override;
   bool GetDirectoryDump(Directory location,
                         std::vector<std::unique_ptr<FileDump>>* dumps) override;
+  bool GetVpdField(VpdField vpd_field, FileDump* dump) override;
 
   void set_root_dir_for_testing(const base::FilePath& dir);
 

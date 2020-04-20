@@ -54,6 +54,22 @@ bool FakeSystemFilesService::GetDirectoryDump(
   return true;
 }
 
+bool FakeSystemFilesService::GetVpdField(VpdField vpd_field,
+                                         SystemFilesService::FileDump* dump) {
+  DCHECK(dump);
+
+  auto it = vpd_field_dump_.find(vpd_field);
+
+  if (it == vpd_field_dump_.end())
+    return false;
+
+  dump->contents = it->second.contents;
+  dump->path = it->second.path;
+  dump->canonical_path = it->second.canonical_path;
+
+  return true;
+}
+
 void FakeSystemFilesService::set_file_dump(
     File location, const SystemFilesService::FileDump& file_dump) {
   auto& ref = file_dump_[location];
@@ -79,6 +95,15 @@ void FakeSystemFilesService::set_directory_dump(
 
     ref.push_back(std::move(dump));
   }
+}
+
+void FakeSystemFilesService::set_vpd_field(
+    VpdField vpd_field, const SystemFilesService::FileDump& file_dump) {
+  auto& ref = vpd_field_dump_[vpd_field];
+
+  ref.contents = file_dump.contents;
+  ref.path = file_dump.path;
+  ref.canonical_path = file_dump.canonical_path;
 }
 
 const std::deque<SystemFilesService::File>&

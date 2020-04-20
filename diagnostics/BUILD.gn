@@ -176,7 +176,6 @@ source_set("libwilco_dtc_supportd") {
     "wilco_dtc_supportd/telemetry/system_files_service.cc",
     "wilco_dtc_supportd/telemetry/system_files_service_impl.cc",
     "wilco_dtc_supportd/telemetry/system_info_service_impl.cc",
-    "wilco_dtc_supportd/vpd_constants.cc",
   ]
 }
 

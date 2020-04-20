@@ -25,6 +25,8 @@ class FakeSystemFilesService : public SystemFilesService {
   bool GetFileDump(File location, SystemFilesService::FileDump* dump) override;
   bool GetDirectoryDump(Directory location,
                         std::vector<std::unique_ptr<FileDump>>* dumps) override;
+  bool GetVpdField(VpdField vpd_field,
+                   SystemFilesService::FileDump* dump) override;
 
   // Set file dump for GetFileDump. If not set false will be returned.
   void set_file_dump(File location,
@@ -35,6 +37,10 @@ class FakeSystemFilesService : public SystemFilesService {
       Directory location,
       const std::vector<std::unique_ptr<SystemFilesService::FileDump>>&
           directory_dump);
+
+  // Set file dump for GetVpdField. If not set false will be returned.
+  void set_vpd_field(VpdField vpd_field,
+                     const SystemFilesService::FileDump& file_dump);
 
   // Used to check the location parameter passed to GetFileDump
   const std::deque<File>& get_dumped_files() const;
@@ -47,6 +53,7 @@ class FakeSystemFilesService : public SystemFilesService {
   std::unordered_map<Directory,
                      std::vector<std::unique_ptr<SystemFilesService::FileDump>>>
       directory_dump_;
+  std::unordered_map<VpdField, SystemFilesService::FileDump> vpd_field_dump_;
 
   std::deque<File> dumped_files_;
   std::deque<Directory> dumped_directories_;

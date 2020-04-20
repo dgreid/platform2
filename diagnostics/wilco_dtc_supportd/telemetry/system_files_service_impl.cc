@@ -9,6 +9,7 @@
 #include <base/files/file_enumerator.h>
 #include <base/files/file_util.h>
 #include <base/logging.h>
+#include <base/strings/string_util.h>
 
 namespace diagnostics {
 
@@ -64,6 +65,30 @@ base::FilePath SystemFilesServiceImpl::GetPathForDirectory(
   NOTREACHED();
 }
 
+// static
+base::FilePath SystemFilesServiceImpl::GetPathForVpdField(VpdField vpd_field) {
+  switch (vpd_field) {
+    case VpdField::kActivateDate:
+      return base::FilePath("run/wilco_dtc/vpd_fields/ActivateDate");
+    case VpdField::kAssetId:
+      return base::FilePath("run/wilco_dtc/vpd_fields/asset_id");
+    case VpdField::kMfgDate:
+      return base::FilePath("run/wilco_dtc/vpd_fields/mfg_date");
+    case VpdField::kModelName:
+      return base::FilePath("run/wilco_dtc/vpd_fields/model_name");
+    case VpdField::kSerialNumber:
+      return base::FilePath("run/wilco_dtc/vpd_fields/serial_number");
+    case VpdField::kSkuNumber:
+      return base::FilePath("run/wilco_dtc/vpd_fields/sku_number");
+    case VpdField::kSystemId:
+      return base::FilePath("run/wilco_dtc/vpd_fields/system_id");
+    case VpdField::kUuid:
+      return base::FilePath("run/wilco_dtc/vpd_fields/uuid_id");
+  }
+
+  NOTREACHED();
+}
+
 SystemFilesServiceImpl::SystemFilesServiceImpl() = default;
 
 SystemFilesServiceImpl::~SystemFilesServiceImpl() = default;
@@ -85,6 +110,25 @@ bool SystemFilesServiceImpl::GetDirectoryDump(
 
   std::set<std::string> visited_paths;
   SearchDirectory(path, &visited_paths, dumps);
+
+  return true;
+}
+
+// TODO(b/154595154): consider changing VPD reader behavior: empty string is
+// valid, non ASCII symbols are allowed.
+bool SystemFilesServiceImpl::GetVpdField(VpdField vpd_field, FileDump* dump) {
+  DCHECK(dump);
+
+  if (!MakeFileDump(root_dir_.Append(GetPathForVpdField(vpd_field)), dump)) {
+    return false;
+  }
+
+  base::TrimString(dump->contents, base::kWhitespaceASCII, &dump->contents);
+  if (dump->contents.empty() || !base::IsStringASCII(dump->contents)) {
+    VLOG(2) << "VPD field from " << GetPathForVpdField(vpd_field).BaseName()
+            << " is not non-empty ASCII string";
+    return false;
+  }
 
   return true;
 }

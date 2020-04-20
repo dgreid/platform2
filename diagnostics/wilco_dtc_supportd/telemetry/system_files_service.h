@@ -67,6 +67,17 @@ class SystemFilesService {
     kProcVmstat,      // request contents of “/proc/vmstat"
   };
 
+  enum class VpdField {
+    kActivateDate,  // request value of ActivateDate VPD field
+    kAssetId,       // request value of AssetId VPD field
+    kMfgDate,       // request value of MfgDate VPD field
+    kModelName,     // request value of ModelName VPD field
+    kSerialNumber,  // request value of SerialNumber VPD field
+    kSkuNumber,     // request value of SkuNumber VPD field
+    kSystemId,      // request value of SystemId VPD field
+    kUuid,          // request value of Uuid VPD field
+  };
+
   SystemFilesService() = default;
   virtual ~SystemFilesService() = default;
 
@@ -77,6 +88,9 @@ class SystemFilesService {
   // successful.
   virtual bool GetDirectoryDump(
       Directory location, std::vector<std::unique_ptr<FileDump>>* dumps) = 0;
+
+  // Gets the value of the specified VPD field. Returns true if successful.
+  virtual bool GetVpdField(VpdField vpd_field, FileDump* dump) = 0;
 
  private:
   DISALLOW_COPY_AND_ASSIGN(SystemFilesService);

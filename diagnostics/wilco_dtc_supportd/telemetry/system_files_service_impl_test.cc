@@ -99,6 +99,58 @@ TEST_F(SystemFilesServiceTest, Symlink) {
   EXPECT_EQ(file_dump.contents, FakeFileContents());
 }
 
+// Test that GetVpdField() returns false when the VPD field doesn't exist.
+TEST_F(SystemFilesServiceTest, NoVpdField) {
+  SystemFilesService::FileDump file_dump;
+  EXPECT_FALSE(system_files_service_.GetVpdField(
+      SystemFilesService::VpdField::kSerialNumber, &file_dump));
+}
+
+// Test that GetVpdField() returns false when the VPD field contains non ASCII
+// symbols.
+TEST_F(SystemFilesServiceTest, NonASCIIVpdField) {
+  constexpr char kNonASCIIContent[] = "test1 Œ test2 不 test3";
+
+  base::FilePath abs_file =
+      temp_dir_.GetPath().Append("run/wilco_dtc/vpd_fields/system_id");
+
+  ASSERT_TRUE(WriteFileAndCreateParentDirs(abs_file, kNonASCIIContent));
+
+  SystemFilesService::FileDump file_dump;
+  EXPECT_FALSE(system_files_service_.GetVpdField(
+      SystemFilesService::VpdField::kSystemId, &file_dump));
+}
+
+// Test that GetVpdField() returns false when the VPD field is empty.
+TEST_F(SystemFilesServiceTest, EmptyVpdField) {
+  base::FilePath abs_file =
+      temp_dir_.GetPath().Append("run/wilco_dtc/vpd_fields/model_name");
+
+  ASSERT_TRUE(WriteFileAndCreateParentDirs(abs_file, ""));
+
+  SystemFilesService::FileDump file_dump;
+  EXPECT_FALSE(system_files_service_.GetVpdField(
+      SystemFilesService::VpdField::kModelName, &file_dump));
+}
+
+// Test that GetVpdField() returns the requested trimmed VPD field when the VPD
+// field exists.
+TEST_F(SystemFilesServiceTest, TrimmedVpdField) {
+  base::FilePath abs_file =
+      temp_dir_.GetPath().Append("run/wilco_dtc/vpd_fields/ActivateDate");
+
+  ASSERT_TRUE(
+      WriteFileAndCreateParentDirs(abs_file, "\n \t 20 Apr 2020 \t\t \n\n"));
+
+  SystemFilesService::FileDump file_dump;
+  EXPECT_TRUE(system_files_service_.GetVpdField(
+      SystemFilesService::VpdField::kActivateDate, &file_dump));
+
+  EXPECT_EQ(file_dump.path, abs_file);
+  EXPECT_EQ(file_dump.canonical_path, abs_file);
+  EXPECT_EQ(file_dump.contents, "20 Apr 2020");
+}
+
 // Test that GetDirectoryDump() returns false when the directory doesn't
 // exist.
 TEST_F(SystemFilesServiceTest, NonExistingDirectory) {
@@ -389,5 +441,70 @@ INSTANTIATE_TEST_SUITE_P(
                         "sys/class/net/"),
         std::make_tuple(SystemFilesService::Directory::kSysDevicesSystemCpu,
                         "sys/devices/system/cpu/")));
+
+class SystemFilesServiceVpdFieldTest
+    : public SystemFilesServiceTest,
+      public testing::WithParamInterface<
+          std::tuple<SystemFilesService::VpdField, std::string>> {
+ public:
+  SystemFilesServiceVpdFieldTest() = default;
+  ~SystemFilesServiceVpdFieldTest() override = default;
+
+  SystemFilesServiceVpdFieldTest(const SystemFilesServiceVpdFieldTest&) =
+      delete;
+  SystemFilesServiceVpdFieldTest& operator=(
+      const SystemFilesServiceVpdFieldTest&) = delete;
+
+ protected:
+  SystemFilesService::VpdField GetVpdFieldParam() const {
+    return std::get<0>(GetParam());
+  }
+
+  const std::string& GetPathParam() const { return std::get<1>(GetParam()); }
+
+  base::FilePath GetAbsoluteTestFilePath() const {
+    return temp_dir_.GetPath().Append(GetPathParam());
+  }
+  const std::string& GetTestFileContents() const { return GetPathParam(); }
+};
+
+TEST_P(SystemFilesServiceVpdFieldTest, Path) {
+  EXPECT_EQ(
+      system_files_service_.GetPathForVpdField(GetVpdFieldParam()).value(),
+      GetPathParam());
+}
+
+TEST_P(SystemFilesServiceVpdFieldTest, Dump) {
+  ASSERT_TRUE(WriteFileAndCreateParentDirs(GetAbsoluteTestFilePath(),
+                                           GetTestFileContents()));
+
+  SystemFilesService::FileDump file_dump;
+  ASSERT_TRUE(
+      system_files_service_.GetVpdField(GetVpdFieldParam(), &file_dump));
+
+  EXPECT_EQ(file_dump.path, GetAbsoluteTestFilePath());
+  EXPECT_EQ(file_dump.canonical_path, GetAbsoluteTestFilePath());
+  EXPECT_EQ(file_dump.contents, GetTestFileContents());
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    ,
+    SystemFilesServiceVpdFieldTest,
+    testing::Values(std::make_tuple(SystemFilesService::VpdField::kActivateDate,
+                                    "run/wilco_dtc/vpd_fields/ActivateDate"),
+                    std::make_tuple(SystemFilesService::VpdField::kAssetId,
+                                    "run/wilco_dtc/vpd_fields/asset_id"),
+                    std::make_tuple(SystemFilesService::VpdField::kMfgDate,
+                                    "run/wilco_dtc/vpd_fields/mfg_date"),
+                    std::make_tuple(SystemFilesService::VpdField::kModelName,
+                                    "run/wilco_dtc/vpd_fields/model_name"),
+                    std::make_tuple(SystemFilesService::VpdField::kSerialNumber,
+                                    "run/wilco_dtc/vpd_fields/serial_number"),
+                    std::make_tuple(SystemFilesService::VpdField::kSkuNumber,
+                                    "run/wilco_dtc/vpd_fields/sku_number"),
+                    std::make_tuple(SystemFilesService::VpdField::kSystemId,
+                                    "run/wilco_dtc/vpd_fields/system_id"),
+                    std::make_tuple(SystemFilesService::VpdField::kUuid,
+                                    "run/wilco_dtc/vpd_fields/uuid_id")));
 
 }  // namespace diagnostics
