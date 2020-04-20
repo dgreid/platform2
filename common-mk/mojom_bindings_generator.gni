@@ -192,7 +192,7 @@ template("generate_mojom_bindings_gen") {
              "--generators",
              "c++",
            ] + mojo_extra_args
-    if (defined(invoker.use_once_callback) && invoker.use_once_callback) {
+    if (!defined(invoker.use_once_callback) || invoker.use_once_callback) {
       args += [ "--use_once_callback" ]
     }
     if (defined(invoker.disallow_native_types) &&
