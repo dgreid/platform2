@@ -32,6 +32,8 @@ class SystemFilesService {
     std::string contents;
   };
 
+  using FileDumps = std::vector<std::unique_ptr<FileDump>>;
+
   enum class Directory {
     kProcAcpiButton,  // request contents of files under
                       // “/proc/acpi/button/"
@@ -85,10 +87,9 @@ class SystemFilesService {
   // Gets the dump of the specified file. Returns base::nullopt on failure.
   virtual base::Optional<FileDump> GetFileDump(File location) = 0;
 
-  // Gets the dumps of the files in the specified directory. Returns
-  // base::nullopt on failure.
-  virtual base::Optional<std::vector<std::unique_ptr<FileDump>>>
-  GetDirectoryDump(Directory location) = 0;
+  // Gets the dumps of the files in the specified directory.  Returns true if
+  // successful.
+  virtual base::Optional<FileDumps> GetDirectoryDump(Directory location) = 0;
 
   // Gets trimmed value of the specified VPD field.
   // Returns base::nullopt if VPD value does not exist, empty or contains

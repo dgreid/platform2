@@ -31,7 +31,7 @@ FakeSystemFilesService::GetFileDump(File location) {
   return dump;
 }
 
-base::Optional<std::vector<std::unique_ptr<SystemFilesService::FileDump>>>
+base::Optional<SystemFilesService::FileDumps>
 FakeSystemFilesService::GetDirectoryDump(Directory location) {
   dumped_directories_.push_back(location);
 
@@ -75,9 +75,7 @@ void FakeSystemFilesService::set_file_dump(
 }
 
 void FakeSystemFilesService::set_directory_dump(
-    Directory location,
-    const std::vector<std::unique_ptr<SystemFilesService::FileDump>>&
-        directory_dump) {
+    Directory location, const SystemFilesService::FileDumps& directory_dump) {
   auto& ref = directory_dump_[location];
   ref.clear();
 

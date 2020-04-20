@@ -29,8 +29,7 @@ class SystemFilesServiceImpl final : public SystemFilesService {
 
   // SystemFilesService overrides:
   base::Optional<FileDump> GetFileDump(File location) override;
-  base::Optional<std::vector<std::unique_ptr<FileDump>>> GetDirectoryDump(
-      Directory location) override;
+  base::Optional<FileDumps> GetDirectoryDump(Directory location) override;
   base::Optional<std::string> GetVpdField(VpdField vpd_field) override;
 
   void set_root_dir_for_testing(const base::FilePath& dir);
@@ -43,10 +42,9 @@ class SystemFilesServiceImpl final : public SystemFilesService {
   // specified directory (with the path given relative to |root_dir|) to the
   // given vector. This will follow allowable symlinks - see
   // ShouldFollowSymlink() for details.
-  void SearchDirectory(
-      const base::FilePath& root_dir,
-      std::set<std::string>* visited_paths,
-      std::vector<std::unique_ptr<FileDump>>* file_dumps) const;
+  void SearchDirectory(const base::FilePath& root_dir,
+                       std::set<std::string>* visited_paths,
+                       FileDumps* file_dumps) const;
 
   // While dumping files in a directory, determines if we should follow a
   // symlink or not. Currently, we only follow symlinks one level down from

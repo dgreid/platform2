@@ -943,7 +943,7 @@ class GrpcServiceWithFakeSystemFilesServiceTest : public GrpcServiceTest {
 
 TEST_F(GrpcServiceWithFakeSystemFilesServiceTest,
        DirectoryAcpiButtonSingleFile) {
-  std::vector<std::unique_ptr<SystemFilesService::FileDump>> directory_dump;
+  SystemFilesService::FileDumps directory_dump;
   auto single_dump = std::make_unique<SystemFilesService::FileDump>();
   single_dump->contents = FakeFileContents();
   single_dump->path = base::FilePath(kTestFilePath);
@@ -969,7 +969,7 @@ TEST_F(GrpcServiceWithFakeSystemFilesServiceTest,
 
 TEST_F(GrpcServiceWithFakeSystemFilesServiceTest,
        DirectoryAcpiButtonMultiFile) {
-  std::vector<std::unique_ptr<SystemFilesService::FileDump>> directory_dump;
+  SystemFilesService::FileDumps directory_dump;
   auto first_dump = std::make_unique<SystemFilesService::FileDump>();
   first_dump->contents = FakeFileContents();
   first_dump->path = base::FilePath(kTestFilePath);
@@ -1003,7 +1003,7 @@ TEST_F(GrpcServiceWithFakeSystemFilesServiceTest,
 TEST_F(GrpcServiceWithFakeSystemFilesServiceTest, DirectoryAcpiButtonEmpty) {
   system_files_service_fake_->set_directory_dump(
       SystemFilesService::Directory::kProcAcpiButton,
-      std::vector<std::unique_ptr<SystemFilesService::FileDump>>());
+      SystemFilesService::FileDumps());
 
   std::vector<grpc_api::FileDump> file_dumps;
   ExecuteGetProcData(grpc_api::GetProcDataRequest::DIRECTORY_ACPI_BUTTON,
@@ -1148,7 +1148,7 @@ class SysfsDirectoryGrpcServiceTest
 // Test that GetSysfsData() returns a single file when called on a directory
 // containing a single file.
 TEST_P(SysfsDirectoryGrpcServiceTest, SingleFile) {
-  std::vector<std::unique_ptr<SystemFilesService::FileDump>> directory_dump;
+  SystemFilesService::FileDumps directory_dump;
   auto single_dump = std::make_unique<SystemFilesService::FileDump>();
   single_dump->contents = FakeFileContents();
   single_dump->path = base::FilePath(kTestFilePath);
@@ -1174,7 +1174,7 @@ TEST_P(SysfsDirectoryGrpcServiceTest, SingleFile) {
 // Test that GetSysfsData() returns a multiple files when called on a directory
 // containing multiple files.
 TEST_P(SysfsDirectoryGrpcServiceTest, MultiFile) {
-  std::vector<std::unique_ptr<SystemFilesService::FileDump>> directory_dump;
+  SystemFilesService::FileDumps directory_dump;
   auto first_dump = std::make_unique<SystemFilesService::FileDump>();
   first_dump->contents = FakeFileContents();
   first_dump->path = base::FilePath(kTestFilePath);
@@ -1223,8 +1223,7 @@ TEST_P(SysfsDirectoryGrpcServiceTest, NonExisting) {
 // empty.
 TEST_P(SysfsDirectoryGrpcServiceTest, Empty) {
   system_files_service_fake_->set_directory_dump(
-      expected_location(),
-      std::vector<std::unique_ptr<SystemFilesService::FileDump>>());
+      expected_location(), SystemFilesService::FileDumps());
 
   std::vector<grpc_api::FileDump> file_dumps;
   ExecuteGetSysfsData(sysfs_data_request_type(), &file_dumps);
