@@ -21,6 +21,7 @@ generate_mojom_bindings("midis_mojo_bindings") {
   sources = [
     "mojo/midis.mojom",
   ]
+  use_once_callback = true
 }
 
 pkg_config("midis_common_pkg_deps") {

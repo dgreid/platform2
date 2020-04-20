@@ -38,12 +38,11 @@ class Client : public DeviceTracker::Observer, public arc::mojom::MidisServer {
   void TriggerClientDeletion();
 
   // arc::mojom:MidisServer overrides
-  void ListDevices(const ListDevicesCallback& callback) override;
-  void RequestPortDeprecated(
-      arc::mojom::MidisRequestPtr request,
-      const RequestPortDeprecatedCallback& callback) override;
+  void ListDevices(ListDevicesCallback callback) override;
+  void RequestPortDeprecated(arc::mojom::MidisRequestPtr request,
+                             RequestPortDeprecatedCallback callback) override;
   void RequestPort(arc::mojom::MidisRequestPtr request,
-                   const RequestPortCallback& callback) override;
+                   RequestPortCallback callback) override;
   void CloseDevice(arc::mojom::MidisRequestPtr request) override;
 
   // Function which returns a scoped handle when a port is requested,

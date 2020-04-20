@@ -60,29 +60,28 @@ void Client::OnDeviceAddedOrRemoved(const Device& dev, bool added) {
   }
 }
 
-void Client::ListDevices(const ListDevicesCallback& callback) {
+void Client::ListDevices(ListDevicesCallback callback) {
   // Get all the device information from device_tracker.
   std::vector<arc::mojom::MidisDeviceInfoPtr> device_list;
   device_tracker_->ListDevices(&device_list);
-  callback.Run(std::move(device_list));
+  std::move(callback).Run(std::move(device_list));
 }
 
 void Client::RequestPort(arc::mojom::MidisRequestPtr request,
-                         const RequestPortCallback& callback) {
+                         RequestPortCallback callback) {
   mojo::ScopedHandle handle = CreateRequestPortFD(
       request->card, request->device_num, request->subdevice_num);
-  callback.Run(std::move(handle));
+  std::move(callback).Run(std::move(handle));
 }
 
-void Client::RequestPortDeprecated(
-    arc::mojom::MidisRequestPtr request,
-    const RequestPortDeprecatedCallback& callback) {
+void Client::RequestPortDeprecated(arc::mojom::MidisRequestPtr request,
+                                   RequestPortDeprecatedCallback callback) {
   mojo::ScopedHandle handle = CreateRequestPortFD(
       request->card, request->device_num, request->subdevice_num);
   if (!handle.is_valid()) {
     return;
   }
-  callback.Run(std::move(handle));
+  std::move(callback).Run(std::move(handle));
 }
 
 void Client::CloseDevice(arc::mojom::MidisRequestPtr request) {
