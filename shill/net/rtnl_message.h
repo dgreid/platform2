@@ -25,6 +25,9 @@ struct RTNLHeader;
 
 using RTNLAttrMap = std::unordered_map<uint16_t, ByteString>;
 
+// Helper class for processing rtnetlink messages. See uapi/linux/rtnetlink.h
+// and rtnetlink manual page for details about the message binary encoding and
+// meaning of struct fields populated by the kernel.
 class SHILL_EXPORT RTNLMessage {
  public:
   enum Type {
@@ -40,6 +43,7 @@ class SHILL_EXPORT RTNLMessage {
 
   enum Mode { kModeUnknown, kModeGet, kModeAdd, kModeDelete, kModeQuery };
 
+  // Helper struct corresponding to struct ifinfomsg.
   struct LinkStatus {
     LinkStatus() : type(0), flags(0), change(0) {}
     LinkStatus(unsigned int in_type,
@@ -48,12 +52,18 @@ class SHILL_EXPORT RTNLMessage {
                base::Optional<std::string> kind = base::nullopt)
         : type(in_type), flags(in_flags), change(in_change), kind(kind) {}
     std::string ToString() const;
+    // Device type. Corresponds to ifi_type.
     unsigned int type;
+    // Device flags. Corresponds to ifi_flags.
     unsigned int flags;
+    // Change mask. Corresponds to ifi_mask.
     unsigned int change;
+    // Device kind, as defined by the device driver. Corresponds to rtattr
+    // IFLA_INFO_KIND nested inside rtattr IFLA_LINKINFO.
     base::Optional<std::string> kind;
   };
 
+  // Helper struct corresponding to struct ifaddrmsg.
   struct AddressStatus {
     AddressStatus() : prefix_len(0), flags(0), scope(0) {}
     AddressStatus(unsigned char prefix_len_in,
@@ -61,11 +71,15 @@ class SHILL_EXPORT RTNLMessage {
                   unsigned char scope_in)
         : prefix_len(prefix_len_in), flags(flags_in), scope(scope_in) {}
     std::string ToString() const;
+    // Prefix length of the address. Corresponds to ifa_prefixlen.
     unsigned char prefix_len;
+    // Address flags. Corresponds to ifa_flags.
     unsigned char flags;
+    // Address scope. Corresponds to ifa_scope.
     unsigned char scope;
   };
 
+  // Helper struct corresponding to struct rtmsg.
   struct RouteStatus {
     RouteStatus()
         : dst_prefix(0),
@@ -90,22 +104,37 @@ class SHILL_EXPORT RTNLMessage {
           type(type_in),
           flags(flags_in) {}
     std::string ToString() const;
+    // Prefix length of the destination. Corresponds to rtm_dst_len.
     unsigned char dst_prefix;
+    // Prefix length of the source. Corresponds to rtm_src_len.
     unsigned char src_prefix;
+    // Legacy routing table id. Corresponds to rtm_table.
+    // TODO(b/154500323) This cannot expose correctly the per-device routing
+    // tables which starts with a +1000 offset. Instead this class should
+    // expose the RTA_TABLE rtattr for kTypeRoute messages and the FRA_TABLE
+    // rtattr for kTypeRule messages.
     unsigned char table;
+    // Routing protocol. Corresponds to rtm_protocol.
     unsigned char protocol;
+    // Distance to the destination. Corresponds to rtm_scope.
     unsigned char scope;
+    // The type of route. Corresponds to rtm_type.
     unsigned char type;
+    // Route flags. Corresponds to rtm_flags.
     unsigned flags;
   };
 
+  // Helper struct corresponding to struct ndmsg.
   struct NeighborStatus {
     NeighborStatus() : state(0), flags(0), type(0) {}
     NeighborStatus(uint16_t state_in, uint8_t flags_in, uint8_t type_in)
         : state(state_in), flags(flags_in), type(type_in) {}
     std::string ToString() const;
+    // Neighbor state. Corresponds to ndm_state.
     uint16_t state;
+    // Neighbor flags. Corresponds to ndm_flags.
     uint8_t flags;
+    // Neighbor type. Corresponds to ndm_type.
     uint8_t type;
   };
 
@@ -217,18 +246,31 @@ class SHILL_EXPORT RTNLMessage {
   SHILL_PRIVATE bool EncodeRoute(RTNLHeader* hdr) const;
   SHILL_PRIVATE bool EncodeNeighbor(RTNLHeader* hdr) const;
 
+  // Type and mode of the message, corresponding to a subset of the RTM_* enum
+  // defined in uapi/linux/rtnetlink.h
   Type type_;
   Mode mode_;
+  // Netlink request flags. Corresponds to nlmsg_flags in struct nlmsghdr.
   uint16_t flags_;
+  // Arbitrary msg id used for response correlation. Corresponds to nlmsg_seq in
+  // struct nlmsghdr.
   uint32_t seq_;
+  // The sender id. Corresponds to nlmsg_pid in struct nlmsghdr.
   uint32_t pid_;
+  // Corresponds to ifi_index (kTypeLink), ifa_index (kTypeAddress), ndm_ifindex
+  // (kTypeNeighbor).
   int32_t interface_index_;
+  // Corresponds to ifi_family (kTypeLink), ifa_family (kTypeAddress),
+  // rtm_family (kTypeRoute and kTypeRule), ndm_family (kTypeNeighbor). Always
+  // IPv6 for neighbor discovery options (kTypeRdnss, kTypeDnssl).
   IPAddress::Family family_;
+  // Details specific to a message type.
   LinkStatus link_status_;
   AddressStatus address_status_;
   RouteStatus route_status_;
   NeighborStatus neighbor_status_;
   RdnssOption rdnss_option_;
+  // Additional rtattr contained in the message.
   RTNLAttrMap attributes_;
   // NOTE: Update Reset() accordingly when adding a new member field.
 
