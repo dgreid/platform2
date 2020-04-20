@@ -98,8 +98,8 @@ static void RunEventLoop(IpsecManager* ipsec, L2tpManager* l2tp) {
 }
 
 int main(int argc, char* argv[]) {
-  DEFINE_string(client_cert_id, "", "PKCS#11 slot with client certificate");
-  DEFINE_string(client_cert_slot, "", "PKCS#11 key ID for client certificate");
+  DEFINE_string(client_cert_id, "", "PKCS#11 key ID with client certificate");
+  DEFINE_string(client_cert_slot, "", "PKCS#11 slot for client certificate");
   DEFINE_int32(log_level, 0, "Log verbosity; negative values enable debugging");
   DEFINE_string(psk_file, "", "File with IPsec pre-shared key");
   DEFINE_string(remote_host, "", "VPN server hostname");
