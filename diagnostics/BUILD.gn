@@ -306,7 +306,7 @@ if (use.test) {
       "wilco_dtc_supportd/telemetry/fake_bluetooth_event_service.cc",
       "wilco_dtc_supportd/telemetry/fake_ec_event_service.cc",
       "wilco_dtc_supportd/telemetry/fake_powerd_event_service.cc",
-      "wilco_dtc_supportd/telemetry/fake_system_files_service.cc",
+      "wilco_dtc_supportd/telemetry/mock_system_files_service.cc",
       "wilco_dtc_supportd/telemetry/mock_system_info_service.cc",
       "wilco_dtc_supportd/telemetry/powerd_event_service_impl_test.cc",
       "wilco_dtc_supportd/telemetry/system_files_service_impl_test.cc",
