@@ -46,7 +46,7 @@ class CryptoLib {
     // Also called PKCS padding.
     // See http://tools.ietf.org/html/rfc5652#section-6.3.
     kPaddingStandard = 1,
-    kPaddingCryptohomeDefault = 2,
+    kPaddingCryptohomeDefaultDeprecated = 2,
   };
 
   enum BlockMode {
@@ -102,10 +102,10 @@ class CryptoLib {
   //   key - The AES key to use in decryption
   //   iv - The initialization vector to use
   //   plaintext - The unwrapped (decrypted) data
-  static bool AesDecrypt(const brillo::SecureBlob& ciphertext,
-                        const brillo::SecureBlob& key,
-                        const brillo::SecureBlob& iv,
-                        brillo::SecureBlob* plaintext);
+  static bool AesDecryptDeprecated(const brillo::SecureBlob& ciphertext,
+                                   const brillo::SecureBlob& key,
+                                   const brillo::SecureBlob& iv,
+                                   brillo::SecureBlob* plaintext);
 
   // AES encrypts the plain text data using the specified key and IV.  This
   // method uses custom padding and is not inter-operable with other crypto
@@ -116,10 +116,10 @@ class CryptoLib {
   //   key - The AES key to use
   //   iv - The initialization vector to use
   //   ciphertext - On success, the encrypted data
-  static bool AesEncrypt(const brillo::SecureBlob& plaintext,
-                         const brillo::SecureBlob& key,
-                         const brillo::SecureBlob& iv,
-                         brillo::SecureBlob* ciphertext);
+  static bool AesEncryptDeprecated(const brillo::SecureBlob& plaintext,
+                                   const brillo::SecureBlob& key,
+                                   const brillo::SecureBlob& iv,
+                                   brillo::SecureBlob* ciphertext);
 
   // AES-GCM decrypts the |ciphertext| using the |key| and |iv|. |key| must be
   // 256-bits and |iv| must be 96-bits.

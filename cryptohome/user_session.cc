@@ -49,7 +49,7 @@ bool UserSession::SetUser(const Credentials& credentials) {
     return false;
   }
 
-  return CryptoLib::AesEncrypt(plaintext, aes_key, aes_iv, &cipher_);
+  return CryptoLib::AesEncryptDeprecated(plaintext, aes_key, aes_iv, &cipher_);
 }
 
 void UserSession::Reset() {
@@ -91,7 +91,7 @@ bool UserSession::Verify(const Credentials& credentials) const {
   }
 
   SecureBlob plaintext;
-  return CryptoLib::AesDecrypt(cipher_, aes_key, aes_iv, &plaintext);
+  return CryptoLib::AesDecryptDeprecated(cipher_, aes_key, aes_iv, &plaintext);
 }
 
 void UserSession::GetObfuscatedUsername(std::string* username) const {

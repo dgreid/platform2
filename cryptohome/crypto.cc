@@ -263,8 +263,8 @@ bool Crypto::UnwrapVaultKeyset(const SerializedVaultKeyset& serialized,
                                     serialized.wrapped_keyset().end());
   SecureBlob plain_text;
 
-  if (!CryptoLib::AesDecrypt(local_encrypted_keyset, vkk_key, vkk_iv,
-                             &plain_text)) {
+  if (!CryptoLib::AesDecryptDeprecated(local_encrypted_keyset, vkk_key, vkk_iv,
+                                       &plain_text)) {
     LOG(ERROR) << "AES decryption failed for vault keyset.";
     PopulateError(error, CryptoError::CE_OTHER_CRYPTO);
     return false;
@@ -280,10 +280,8 @@ bool Crypto::UnwrapVaultKeyset(const SerializedVaultKeyset& serialized,
     SecureBlob local_wrapped_chaps_key(serialized.wrapped_chaps_key());
     SecureBlob unwrapped_chaps_key;
 
-    if (!CryptoLib::AesDecrypt(local_wrapped_chaps_key,
-                               vkk_key,
-                               chaps_iv,
-                               &unwrapped_chaps_key)) {
+    if (!CryptoLib::AesDecryptDeprecated(local_wrapped_chaps_key, vkk_key,
+                                         chaps_iv, &unwrapped_chaps_key)) {
       LOG(ERROR) << "AES decryption failed for chaps key.";
       PopulateError(error, CryptoError::CE_OTHER_CRYPTO);
       return false;
@@ -300,8 +298,9 @@ bool Crypto::UnwrapVaultKeyset(const SerializedVaultKeyset& serialized,
         SecureBlob(serialized.wrapped_reset_seed());
     SecureBlob local_reset_iv = SecureBlob(serialized.reset_iv());
 
-    if (!CryptoLib::AesDecrypt(local_wrapped_reset_seed, vkk_key,
-                               local_reset_iv, &unwrapped_reset_seed)) {
+    if (!CryptoLib::AesDecryptDeprecated(local_wrapped_reset_seed, vkk_key,
+                                         local_reset_iv,
+                                         &unwrapped_reset_seed)) {
       LOG(ERROR) << "AES decryption failed for reset seed.";
       PopulateError(error, CryptoError::CE_OTHER_CRYPTO);
       return false;
@@ -478,9 +477,9 @@ bool Crypto::GenerateEncryptedRawKeyset(const VaultKeyset& vault_keyset,
   }
 
   SecureBlob chaps_key = vault_keyset.chaps_key();
-  if (!CryptoLib::AesEncrypt(blob, vkk_key, fek_iv, cipher_text) ||
-      !CryptoLib::AesEncrypt(chaps_key, vkk_key, chaps_iv,
-                             wrapped_chaps_key)) {
+  if (!CryptoLib::AesEncryptDeprecated(blob, vkk_key, fek_iv, cipher_text) ||
+      !CryptoLib::AesEncryptDeprecated(chaps_key, vkk_key, chaps_iv,
+                                       wrapped_chaps_key)) {
     LOG(ERROR) << "AES encryption failed.";
     return false;
   }
@@ -522,8 +521,9 @@ bool Crypto::GenerateAndWrapKeys(const VaultKeyset& vault_keyset,
     const auto reset_iv =
         CryptoLib::CreateSecureRandomBlob(kAesBlockSize);
     SecureBlob wrapped_reset_seed;
-    if (!CryptoLib::AesEncrypt(vault_keyset.reset_seed(), blobs.vkk_key.value(),
-                               reset_iv, &wrapped_reset_seed)) {
+    if (!CryptoLib::AesEncryptDeprecated(vault_keyset.reset_seed(),
+                                         blobs.vkk_key.value(), reset_iv,
+                                         &wrapped_reset_seed)) {
       LOG(ERROR) << "AES encryption of Reset seed failed.";
       return false;
     }
@@ -850,8 +850,8 @@ bool Crypto::EncryptAuthorizationData(SerializedVaultKeyset* serialized,
         SecureBlob clear_auth_key(secret->symmetric_key());
         SecureBlob encrypted_auth_key;
 
-        if (!CryptoLib::AesEncrypt(clear_auth_key, vkk_key, vkk_iv,
-                                   &encrypted_auth_key)) {
+        if (!CryptoLib::AesEncryptDeprecated(clear_auth_key, vkk_key, vkk_iv,
+                                             &encrypted_auth_key)) {
           LOG(ERROR) << "Failed to wrap a symmetric authorization key:"
                      << " (" << auth_data_i << "," << secret_i << ")";
           // This forces a failure.
@@ -884,8 +884,8 @@ void Crypto::DecryptAuthorizationData(const SerializedVaultKeyset& serialized,
         SecureBlob encrypted_auth_key(secret->symmetric_key());
         SecureBlob clear_key;
         // Is it reasonable to use this key here as well?
-        if (!CryptoLib::AesDecrypt(encrypted_auth_key, vkk_key, vkk_iv,
-                                   &clear_key)) {
+        if (!CryptoLib::AesDecryptDeprecated(encrypted_auth_key, vkk_key,
+                                             vkk_iv, &clear_key)) {
           LOG(ERROR) << "Failed to unwrap a symmetric authorization key:"
                      << " (" << auth_data_i << "," << secret_i << ")";
           // This does not force a failure to use the keyset.

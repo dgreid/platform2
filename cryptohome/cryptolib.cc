@@ -508,21 +508,22 @@ bool CryptoLib::AesGcmEncrypt(const brillo::SecureBlob& plaintext,
   return true;
 }
 
-bool CryptoLib::AesEncrypt(const SecureBlob& plaintext,
-                           const SecureBlob& key,
-                           const SecureBlob& iv,
-                           SecureBlob* ciphertext) {
+bool CryptoLib::AesEncryptDeprecated(const SecureBlob& plaintext,
+                                     const SecureBlob& key,
+                                     const SecureBlob& iv,
+                                     SecureBlob* ciphertext) {
   return AesEncryptSpecifyBlockMode(plaintext, 0, plaintext.size(), key, iv,
-                                    kPaddingCryptohomeDefault, kCbc,
+                                    kPaddingCryptohomeDefaultDeprecated, kCbc,
                                     ciphertext);
 }
 
-bool CryptoLib::AesDecrypt(const SecureBlob& ciphertext,
-                           const SecureBlob& key,
-                           const SecureBlob& iv,
-                           SecureBlob* plaintext) {
+bool CryptoLib::AesDecryptDeprecated(const SecureBlob& ciphertext,
+                                     const SecureBlob& key,
+                                     const SecureBlob& iv,
+                                     SecureBlob* plaintext) {
   return AesDecryptSpecifyBlockMode(ciphertext, 0, ciphertext.size(), key, iv,
-                                    kPaddingCryptohomeDefault, kCbc, plaintext);
+                                    kPaddingCryptohomeDefaultDeprecated, kCbc,
+                                    plaintext);
 }
 
 // This is the reverse operation of AesEncryptSpecifyBlockMode above.  See that
@@ -629,7 +630,7 @@ bool CryptoLib::AesDecryptSpecifyBlockMode(const SecureBlob& encrypted,
   }
   final_size += decrypt_size;
 
-  if (padding == kPaddingCryptohomeDefault) {
+  if (padding == kPaddingCryptohomeDefaultDeprecated) {
     if (final_size < SHA_DIGEST_LENGTH) {
       LOG(ERROR) << "Plain text was too small.";
       return false;
@@ -673,12 +674,14 @@ bool CryptoLib::AesDecryptSpecifyBlockMode(const SecureBlob& encrypted,
 //     multiple of the AES block size (16 bytes).
 //   - kPaddingStandard uses standard PKCS padding, which is the default for
 //     OpenSSL.
-//   - kPaddingCryptohomeDefault appends a SHA1 hash of the plaintext in
-//     plain_text before passing it to OpenSSL, which still uses PKCS padding
+//   - kPaddingCryptohomeDefaultDeprecated appends a SHA1 hash of the plaintext
+//     in plain_text before passing it to OpenSSL, which still uses PKCS padding
 //     so that we do not have to re-implement block-multiple padding ourselves.
 //     This padding scheme allows us to strongly verify the plaintext on
 //     decryption, which is essential when, for example, test decrypting a nonce
 //     to test whether a password was correct (we do this in user_session.cc).
+//     This padding is now deprecated and a standard integrity checking
+//     algorithm such as AES-GCM should be used instead.
 //
 // The block mode switches between ECB and CBC.  Generally, CBC is used for most
 // AES crypto that we perform, since it is a better mode for us for data that is
@@ -713,7 +716,7 @@ bool CryptoLib::AesEncryptSpecifyBlockMode(const SecureBlob& plain_text,
   unsigned int block_size = GetAesBlockSize();
   unsigned int needed_size = count;
   switch (padding) {
-    case kPaddingCryptohomeDefault:
+    case kPaddingCryptohomeDefaultDeprecated:
       // The AES block size and SHA digest length are not enough for this to
       // overflow, as needed_size is initialized to count, which must be <=
       // INT_MAX, but needed_size is itself an unsigned.  The block size and
@@ -800,7 +803,7 @@ bool CryptoLib::AesEncryptSpecifyBlockMode(const SecureBlob& plain_text,
 
   // Next, if the padding uses the cryptohome default scheme, encrypt a SHA1
   // hash of the preceding plain_text into the output data
-  if (padding == kPaddingCryptohomeDefault) {
+  if (padding == kPaddingCryptohomeDefaultDeprecated) {
     SHA_CTX sha_context;
     unsigned char md_value[SHA_DIGEST_LENGTH];
 
