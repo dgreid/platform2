@@ -102,19 +102,17 @@ SystemFilesServiceImpl::GetFileDump(File location) {
   return std::move(dump);
 }
 
-bool SystemFilesServiceImpl::GetDirectoryDump(
-    Directory location, std::vector<std::unique_ptr<FileDump>>* dumps) {
-  DCHECK(dumps);
-
+base::Optional<std::vector<std::unique_ptr<SystemFilesService::FileDump>>>
+SystemFilesServiceImpl::GetDirectoryDump(Directory location) {
   base::FilePath path = root_dir_.Append(GetPathForDirectory(location));
-
   if (!base::DirectoryExists(path))
-    return false;
+    return base::nullopt;
 
+  std::vector<std::unique_ptr<FileDump>> dumps;
   std::set<std::string> visited_paths;
-  SearchDirectory(path, &visited_paths, dumps);
+  SearchDirectory(path, &visited_paths, &dumps);
 
-  return true;
+  return std::move(dumps);
 }
 
 base::Optional<std::string> SystemFilesServiceImpl::GetVpdField(

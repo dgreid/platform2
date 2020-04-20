@@ -149,10 +149,8 @@ TEST_F(SystemFilesServiceTest, TrimmedVpdField) {
 // Test that GetDirectoryDump() returns false when the directory doesn't
 // exist.
 TEST_F(SystemFilesServiceTest, NonExistingDirectory) {
-  std::vector<std::unique_ptr<SystemFilesService::FileDump>> file_dumps;
-
   EXPECT_FALSE(system_files_service_.GetDirectoryDump(
-      SystemFilesService::Directory::kSysFirmwareDmiTables, &file_dumps));
+      SystemFilesService::Directory::kSysFirmwareDmiTables));
 }
 
 // Test that GetDirectoryDump() returns a single file when called on a
@@ -166,15 +164,15 @@ TEST_F(SystemFilesServiceTest, SingleFileInDirectory) {
 
   ASSERT_TRUE(WriteFileAndCreateParentDirs(abs_path, FakeFileContents()));
 
-  std::vector<std::unique_ptr<SystemFilesService::FileDump>> file_dumps;
-  EXPECT_TRUE(system_files_service_.GetDirectoryDump(
-      SystemFilesService::Directory::kSysFirmwareDmiTables, &file_dumps));
+  auto file_dumps = system_files_service_.GetDirectoryDump(
+      SystemFilesService::Directory::kSysFirmwareDmiTables);
 
-  ASSERT_EQ(file_dumps.size(), 1);
+  ASSERT_TRUE(file_dumps);
+  ASSERT_EQ(file_dumps.value().size(), 1);
 
-  EXPECT_EQ(file_dumps[0]->path, abs_path);
-  EXPECT_EQ(file_dumps[0]->canonical_path, abs_path);
-  EXPECT_EQ(file_dumps[0]->contents, FakeFileContents());
+  EXPECT_EQ(file_dumps.value()[0]->path, abs_path);
+  EXPECT_EQ(file_dumps.value()[0]->canonical_path, abs_path);
+  EXPECT_EQ(file_dumps.value()[0]->contents, FakeFileContents());
 }
 
 // Test that GetDirectoryDump returns correct file dumps for files in nested
@@ -195,27 +193,27 @@ TEST_F(SystemFilesServiceTest, GetFileInNestedDirectory) {
       WriteFileAndCreateParentDirs(abs_nested_path, nested_file_contents));
   ASSERT_TRUE(WriteFileAndCreateParentDirs(abs_file_path, FakeFileContents()));
 
-  std::vector<std::unique_ptr<SystemFilesService::FileDump>> file_dumps;
-  EXPECT_TRUE(system_files_service_.GetDirectoryDump(
-      SystemFilesService::Directory::kSysFirmwareDmiTables, &file_dumps));
+  auto file_dumps = system_files_service_.GetDirectoryDump(
+      SystemFilesService::Directory::kSysFirmwareDmiTables);
 
-  ASSERT_EQ(file_dumps.size(), 2);
+  ASSERT_TRUE(file_dumps);
+  ASSERT_EQ(file_dumps.value().size(), 2);
 
   // We need to sort to ensure ordering for the next checks as file listing
   // is not deterministic
-  std::sort(file_dumps.begin(), file_dumps.end(),
+  std::sort(file_dumps.value().begin(), file_dumps.value().end(),
             [](const std::unique_ptr<SystemFilesService::FileDump>& a,
                const std::unique_ptr<SystemFilesService::FileDump>& b) {
               return a->path.value() < b->path.value();
             });
 
-  EXPECT_EQ(file_dumps[0]->path, abs_file_path);
-  EXPECT_EQ(file_dumps[0]->canonical_path, abs_file_path);
-  EXPECT_EQ(file_dumps[0]->contents, FakeFileContents());
+  EXPECT_EQ(file_dumps.value()[0]->path, abs_file_path);
+  EXPECT_EQ(file_dumps.value()[0]->canonical_path, abs_file_path);
+  EXPECT_EQ(file_dumps.value()[0]->contents, FakeFileContents());
 
-  EXPECT_EQ(file_dumps[1]->path, abs_nested_path);
-  EXPECT_EQ(file_dumps[1]->canonical_path, abs_nested_path);
-  EXPECT_EQ(file_dumps[1]->contents, nested_file_contents);
+  EXPECT_EQ(file_dumps.value()[1]->path, abs_nested_path);
+  EXPECT_EQ(file_dumps.value()[1]->canonical_path, abs_nested_path);
+  EXPECT_EQ(file_dumps.value()[1]->contents, nested_file_contents);
 }
 
 TEST_F(SystemFilesServiceTest, ShouldFollowSymlink) {
@@ -232,15 +230,15 @@ TEST_F(SystemFilesServiceTest, ShouldFollowSymlink) {
   ASSERT_TRUE(WriteFileAndCreateSymbolicLink(abs_file_path, FakeFileContents(),
                                              abs_link_path));
 
-  std::vector<std::unique_ptr<SystemFilesService::FileDump>> file_dumps;
-  EXPECT_TRUE(system_files_service_.GetDirectoryDump(
-      SystemFilesService::Directory::kSysClassNetwork, &file_dumps));
+  auto file_dumps = system_files_service_.GetDirectoryDump(
+      SystemFilesService::Directory::kSysClassNetwork);
 
-  ASSERT_EQ(file_dumps.size(), 1);
+  ASSERT_TRUE(file_dumps);
+  ASSERT_EQ(file_dumps.value().size(), 1);
 
-  EXPECT_EQ(file_dumps[0]->path, abs_link_path);
-  EXPECT_EQ(file_dumps[0]->canonical_path, abs_file_path);
-  EXPECT_EQ(file_dumps[0]->contents, FakeFileContents());
+  EXPECT_EQ(file_dumps.value()[0]->path, abs_link_path);
+  EXPECT_EQ(file_dumps.value()[0]->canonical_path, abs_file_path);
+  EXPECT_EQ(file_dumps.value()[0]->contents, FakeFileContents());
 }
 
 // Test that GetDirectoryDump() returns an empty result when given a directory
@@ -255,11 +253,11 @@ TEST_F(SystemFilesServiceTest, CyclicSymLink) {
 
   ASSERT_TRUE(CreateCyclicSymbolicLink(abs_path));
 
-  std::vector<std::unique_ptr<SystemFilesService::FileDump>> file_dumps;
-  EXPECT_TRUE(system_files_service_.GetDirectoryDump(
-      SystemFilesService::Directory::kSysClassNetwork, &file_dumps));
+  auto file_dumps = system_files_service_.GetDirectoryDump(
+      SystemFilesService::Directory::kSysClassNetwork);
 
-  EXPECT_EQ(file_dumps.size(), 0);
+  ASSERT_TRUE(file_dumps);
+  EXPECT_EQ(file_dumps.value().size(), 0);
 }
 
 // Test that GetDirectoryDump() returns a single result when given a directory
@@ -277,19 +275,20 @@ TEST_F(SystemFilesServiceTest, DuplicateSymLink) {
   ASSERT_TRUE(WriteFileAndCreateSymbolicLink(abs_file_path, FakeFileContents(),
                                              abs_link_path));
 
-  std::vector<std::unique_ptr<SystemFilesService::FileDump>> file_dumps;
-  EXPECT_TRUE(system_files_service_.GetDirectoryDump(
-      SystemFilesService::Directory::kSysClassNetwork, &file_dumps));
+  auto file_dumps = system_files_service_.GetDirectoryDump(
+      SystemFilesService::Directory::kSysClassNetwork);
 
-  ASSERT_EQ(file_dumps.size(), 1);
+  ASSERT_TRUE(file_dumps);
+  ASSERT_EQ(file_dumps.value().size(), 1);
 
   // The non-canonical path could be either |abs_file_path| or
   // |abs_link_path|. Dumping a directory uses base::FileIterator,
   // whose order is not guaranteed.
-  EXPECT_THAT(file_dumps[0]->path.value(), AnyOf(StrEq(abs_file_path.value()),
-                                                 StrEq(abs_link_path.value())));
-  EXPECT_EQ(file_dumps[0]->canonical_path, abs_file_path);
-  EXPECT_EQ(file_dumps[0]->contents, FakeFileContents());
+  EXPECT_THAT(
+      file_dumps.value()[0]->path.value(),
+      AnyOf(StrEq(abs_file_path.value()), StrEq(abs_link_path.value())));
+  EXPECT_EQ(file_dumps.value()[0]->canonical_path, abs_file_path);
+  EXPECT_EQ(file_dumps.value()[0]->contents, FakeFileContents());
 }
 
 TEST_F(SystemFilesServiceTest, ShouldNotFollowSymlink) {
@@ -306,11 +305,11 @@ TEST_F(SystemFilesServiceTest, ShouldNotFollowSymlink) {
   ASSERT_TRUE(WriteFileAndCreateSymbolicLink(abs_file_path, FakeFileContents(),
                                              abs_link_path));
 
-  std::vector<std::unique_ptr<SystemFilesService::FileDump>> file_dumps;
-  EXPECT_TRUE(system_files_service_.GetDirectoryDump(
-      SystemFilesService::Directory::kSysFirmwareDmiTables, &file_dumps));
+  auto file_dumps = system_files_service_.GetDirectoryDump(
+      SystemFilesService::Directory::kSysFirmwareDmiTables);
 
-  EXPECT_EQ(file_dumps.size(), 0);
+  ASSERT_TRUE(file_dumps);
+  EXPECT_EQ(file_dumps.value().size(), 0);
 }
 
 // Ensure Location mapping is valid
@@ -404,15 +403,14 @@ TEST_P(SystemFilesServiceDirectoryLocationTest, Dump) {
   ASSERT_TRUE(WriteFileAndCreateParentDirs(GetAbsoluteTestFilePath(),
                                            GetTestFileContents()));
 
-  std::vector<std::unique_ptr<SystemFilesService::FileDump>> file_dumps;
-  ASSERT_TRUE(
-      system_files_service_.GetDirectoryDump(GetLocationParam(), &file_dumps));
+  auto file_dumps = system_files_service_.GetDirectoryDump(GetLocationParam());
 
-  ASSERT_EQ(file_dumps.size(), 1);
+  ASSERT_TRUE(file_dumps);
+  ASSERT_EQ(file_dumps.value().size(), 1);
 
-  EXPECT_EQ(file_dumps[0]->path, GetAbsoluteTestFilePath());
-  EXPECT_EQ(file_dumps[0]->canonical_path, GetAbsoluteTestFilePath());
-  EXPECT_EQ(file_dumps[0]->contents, GetTestFileContents());
+  EXPECT_EQ(file_dumps.value()[0]->path, GetAbsoluteTestFilePath());
+  EXPECT_EQ(file_dumps.value()[0]->canonical_path, GetAbsoluteTestFilePath());
+  EXPECT_EQ(file_dumps.value()[0]->contents, GetTestFileContents());
 }
 
 INSTANTIATE_TEST_SUITE_P(

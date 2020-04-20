@@ -85,10 +85,10 @@ class SystemFilesService {
   // Gets the dump of the specified file. Returns base::nullopt on failure.
   virtual base::Optional<FileDump> GetFileDump(File location) = 0;
 
-  // Gets the dumps of the files in the specified directory.  Returns true if
-  // successful.
-  virtual bool GetDirectoryDump(
-      Directory location, std::vector<std::unique_ptr<FileDump>>* dumps) = 0;
+  // Gets the dumps of the files in the specified directory. Returns
+  // base::nullopt on failure.
+  virtual base::Optional<std::vector<std::unique_ptr<FileDump>>>
+  GetDirectoryDump(Directory location) = 0;
 
   // Gets trimmed value of the specified VPD field.
   // Returns base::nullopt if VPD value does not exist, empty or contains

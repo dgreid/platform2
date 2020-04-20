@@ -31,16 +31,16 @@ FakeSystemFilesService::GetFileDump(File location) {
   return dump;
 }
 
-bool FakeSystemFilesService::GetDirectoryDump(
-    Directory location, std::vector<std::unique_ptr<FileDump>>* dumps) {
-  DCHECK(dumps);
-
+base::Optional<std::vector<std::unique_ptr<SystemFilesService::FileDump>>>
+FakeSystemFilesService::GetDirectoryDump(Directory location) {
   dumped_directories_.push_back(location);
 
   auto it = directory_dump_.find(location);
 
   if (it == directory_dump_.end())
-    return false;
+    return base::nullopt;
+
+  std::vector<std::unique_ptr<FileDump>> dumps;
 
   for (const auto& file_dump : it->second) {
     auto dump = std::make_unique<SystemFilesService::FileDump>();
@@ -49,10 +49,10 @@ bool FakeSystemFilesService::GetDirectoryDump(
     dump->path = file_dump->path;
     dump->canonical_path = file_dump->canonical_path;
 
-    dumps->push_back(std::move(dump));
+    dumps.push_back(std::move(dump));
   }
 
-  return true;
+  return std::move(dumps);
 }
 
 base::Optional<std::string> FakeSystemFilesService::GetVpdField(

@@ -25,8 +25,8 @@ class FakeSystemFilesService : public SystemFilesService {
 
   // SystemFilesService overrides:
   base::Optional<FileDump> GetFileDump(File location) override;
-  bool GetDirectoryDump(Directory location,
-                        std::vector<std::unique_ptr<FileDump>>* dumps) override;
+  base::Optional<std::vector<std::unique_ptr<FileDump>>> GetDirectoryDump(
+      Directory location) override;
   base::Optional<std::string> GetVpdField(VpdField vpd_field) override;
 
   // Set file dump for GetFileDump. If not set false will be returned.

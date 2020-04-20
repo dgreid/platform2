@@ -808,12 +808,11 @@ void GrpcService::AddFileDump(
 void GrpcService::AddDirectoryDump(
     SystemFilesService::Directory location,
     google::protobuf::RepeatedPtrField<grpc_api::FileDump>* grpc_dumps) {
-  std::vector<std::unique_ptr<SystemFilesService::FileDump>> dumps;
-
-  if (!system_files_service_->GetDirectoryDump(location, &dumps))
+  auto dumps = system_files_service_->GetDirectoryDump(location);
+  if (!dumps)
     return;
 
-  for (auto& dump : dumps) {
+  for (auto& dump : dumps.value()) {
     grpc_api::FileDump grpc_dump;
     grpc_dump.set_path(dump->path.value());
     grpc_dump.set_canonical_path(dump->canonical_path.value());
