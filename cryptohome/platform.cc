@@ -905,7 +905,7 @@ bool Platform::HasNoDumpFileAttribute(const FilePath& path) {
 }
 
 bool Platform::Rename(const FilePath& from, const FilePath& to) {
-  return base::Move(from, to);
+  return base::ReplaceFile(from, to, /*error=*/nullptr);
 }
 
 bool Platform::Copy(const FilePath& from, const FilePath& to) {
