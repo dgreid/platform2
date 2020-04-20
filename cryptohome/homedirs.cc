@@ -1518,33 +1518,31 @@ bool HomeDirs::Rename(const std::string& account_id_from,
     return false;
   }
 
-  // |user_dir_renamed| is return value, because two other directories are
+  // |user_dir_renamed| is return value, because three other directories are
   // empty and will be created as needed.
   const bool user_dir_renamed =
       !base::PathExists(user_dir_from) ||
       platform_->Rename(user_dir_from, user_dir_to);
 
   if (user_dir_renamed) {
-    const bool user_path_renamed =
-        !base::PathExists(user_path_from) ||
-        platform_->Rename(user_path_from, user_path_to);
-    const bool root_path_renamed =
-        !base::PathExists(root_path_from) ||
-        platform_->Rename(root_path_from, root_path_to);
-    const bool new_user_path_renamed =
-        !base::PathExists(new_user_path_from) ||
-        platform_->Rename(new_user_path_from, new_user_path_to);
-    if (!user_path_renamed) {
+    constexpr bool kIsRecursive = true;
+    const bool user_path_deleted =
+        platform_->DeleteFile(user_path_from, kIsRecursive);
+    const bool root_path_deleted =
+        platform_->DeleteFile(root_path_from, kIsRecursive);
+    const bool new_user_path_deleted =
+        platform_->DeleteFile(new_user_path_from, kIsRecursive);
+    if (!user_path_deleted) {
       LOG(WARNING) << "HomeDirs::Rename(from='" << account_id_from << "', to='"
-                   << account_id_to << "'): failed to rename user_path.";
+                   << account_id_to << "'): failed to delete user_path.";
     }
-    if (!root_path_renamed) {
+    if (!root_path_deleted) {
       LOG(WARNING) << "HomeDirs::Rename(from='" << account_id_from << "', to='"
-                   << account_id_to << "'): failed to rename root_path.";
+                   << account_id_to << "'): failed to delete root_path.";
     }
-    if (!new_user_path_renamed) {
+    if (!new_user_path_deleted) {
       LOG(WARNING) << "HomeDirs::Rename(from='" << account_id_from << "', to='"
-                   << account_id_to << "'): failed to rename new_user_path.";
+                   << account_id_to << "'): failed to delete new_user_path.";
     }
   } else {
     LOG(ERROR) << "HomeDirs::Rename(from='" << account_id_from << "', to='"
