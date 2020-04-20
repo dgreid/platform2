@@ -9,9 +9,13 @@
 
 #include <base/logging.h>
 #include <base/no_destructor.h>
+#include <base/strings/strcat.h>
 #include <base/time/time.h>
 #include <metrics/metrics_library.h>
 
+#include <runtime_probe/proto_bindings/runtime_probe.pb.h>
+
+#include "hardware_verifier/hardware_verifier.pb.h"
 #include "hardware_verifier/observer.h"
 
 namespace hardware_verifier {
@@ -48,6 +52,33 @@ void Observer::StopTimer(const std::string& timer_name) {
 void Observer::SetMetricsLibrary(
     std::unique_ptr<MetricsLibraryInterface> metrics) {
   metrics_ = std::move(metrics);
+}
+
+void Observer::RecordHwVerificationReport(const HwVerificationReport& report) {
+  {
+    auto key = base::StrCat({kMetricVerifierReportPrefix, "IsCompliant"});
+    LOG(INFO) << key << ": " << report.is_compliant();
+    if (metrics_) {
+      metrics_->SendBoolToUMA(key, report.is_compliant());
+    }
+  }
+
+  for (auto i = 0; i < report.found_component_infos_size(); i++) {
+    const auto& info = report.found_component_infos(i);
+    const auto& name = runtime_probe::ProbeRequest_SupportCategory_Name(
+        info.component_category());
+    const auto& qualification_status = info.qualification_status();
+
+    const std::string uma_key =
+        base::StrCat({kMetricVerifierReportPrefix, name});
+
+    LOG(INFO) << uma_key << ": "
+              << QualificationStatus_Name(qualification_status);
+    if (metrics_) {
+      metrics_->SendEnumToUMA(uma_key, qualification_status,
+                              QualificationStatus_ARRAYSIZE);
+    }
+  }
 }
 
 }  // namespace hardware_verifier

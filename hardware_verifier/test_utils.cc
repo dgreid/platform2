@@ -6,6 +6,7 @@
 #include "hardware_verifier/test_utils.h"
 
 #include <cstdlib>
+#include <string>
 
 #include <base/logging.h>
 #include <base/files/file_util.h>

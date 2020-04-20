@@ -17,20 +17,25 @@
 #include "hardware_verifier/hw_verification_spec_getter_fake.h"
 #include "hardware_verifier/observer.h"
 #include "hardware_verifier/probe_result_getter_fake.h"
+#include "hardware_verifier/test_utils.h"
 #include "hardware_verifier/verifier_fake.h"
+
+using ::testing::_;
+using ::testing::AtLeast;
 
 namespace hardware_verifier {
 
 class CLITest : public testing::Test {
  protected:
-  void SetUp() {
+  void SetUp() override {
     pr_getter_ = new FakeProbeResultGetter();
     vp_getter_ = new FakeHwVerificationSpecGetter();
     verifier_ = new FakeVerifier();
     output_stream_.reset(new std::ostringstream());
 
-    Observer::GetInstance()->SetMetricsLibrary(
-        std::make_unique<MetricsLibraryMock>());
+    auto metrics = std::make_unique<MetricsLibraryMock>();
+    metrics_ = metrics.get();
+    Observer::GetInstance()->SetMetricsLibrary(std::move(metrics));
 
     cli_ = std::make_unique<CLI>();
     cli_->pr_getter_.reset(pr_getter_);
@@ -46,11 +51,19 @@ class CLITest : public testing::Test {
     verifier_->SetVerifySuccess(positive_report);
   }
 
+  void TearDown() override {
+    // We have to clear the MetricsLibraryMock manually, because
+    // Observer::GetInstance() object is a singleton, which won't be destroyed
+    // across the tests.
+    Observer::GetInstance()->SetMetricsLibrary(nullptr);
+  }
+
   std::unique_ptr<CLI> cli_;
   FakeProbeResultGetter* pr_getter_;
   FakeHwVerificationSpecGetter* vp_getter_;
   FakeVerifier* verifier_;
   std::unique_ptr<std::ostringstream> output_stream_;
+  MetricsLibraryMock* metrics_;
 };
 
 TEST_F(CLITest, TestBasicFlow) {
@@ -110,6 +123,46 @@ TEST_F(CLITest, TestOutput) {
   EXPECT_EQ(cli_->Run("", "", CLIOutputFormat::kText),
             CLIVerificationResult::kPass);
   EXPECT_FALSE(output_stream_->str().empty());
+}
+
+TEST_F(CLITest, TestVerifyReportSample1) {
+  const auto& path = GetTestDataPath()
+                         .Append("verifier_impl_sample_data")
+                         .Append("expect_hw_verification_report_1.prototxt");
+
+  const auto& vr = LoadHwVerificationReport(path);
+  verifier_->SetVerifySuccess(vr);
+
+  // This is for recording running time.
+  EXPECT_CALL(*metrics_, SendToUMA(_, _, _, _, _)).Times(AtLeast(1));
+  EXPECT_CALL(
+      *metrics_,
+      SendBoolToUMA("ChromeOS.HardwareVerifier.Report.IsCompliant", true));
+  // This is for recording qualification status of each components.
+  EXPECT_CALL(*metrics_, SendEnumToUMA(_, _, _)).Times(AtLeast(3));
+
+  EXPECT_EQ(cli_->Run("", "", CLIOutputFormat::kText),
+            CLIVerificationResult::kPass);
+}
+
+TEST_F(CLITest, TestVerifyReportSample2) {
+  const auto& path = GetTestDataPath()
+                         .Append("verifier_impl_sample_data")
+                         .Append("expect_hw_verification_report_2.prototxt");
+
+  const auto& vr = LoadHwVerificationReport(path);
+  verifier_->SetVerifySuccess(vr);
+
+  // This is for recording running time.
+  EXPECT_CALL(*metrics_, SendToUMA(_, _, _, _, _)).Times(AtLeast(1));
+  EXPECT_CALL(
+      *metrics_,
+      SendBoolToUMA("ChromeOS.HardwareVerifier.Report.IsCompliant", false));
+  // This is for recording qualification status of each components.
+  EXPECT_CALL(*metrics_, SendEnumToUMA(_, _, _)).Times(AtLeast(2));
+
+  EXPECT_EQ(cli_->Run("", "", CLIOutputFormat::kText),
+            CLIVerificationResult::kFail);
 }
 
 }  // namespace hardware_verifier

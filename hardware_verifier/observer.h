@@ -15,13 +15,19 @@
 #include <base/time/time.h>
 #include <metrics/metrics_library.h>
 
+#include "hardware_verifier/hardware_verifier.pb.h"
+
 namespace hardware_verifier {
 
 // Total time to finish execution (initialization + probing + verification).
-const char kMetricTimeToFinish[] = "ChromeOS.HardwareVerifier.TimeToFinish";
+constexpr auto kMetricTimeToFinish = "ChromeOS.HardwareVerifier.TimeToFinish";
 
 // Total time to finish probing.
-const char kMetricTimeToProbe[] = "ChromeOS.HardwareVerifier.TimeToProbe";
+constexpr auto kMetricTimeToProbe = "ChromeOS.HardwareVerifier.TimeToProbe";
+
+// Prefix for VerificationReport items.
+constexpr auto kMetricVerifierReportPrefix =
+    "ChromeOS.HardwareVerifier.Report.";
 
 // The entire program should end within one minutes, so it should be safe to
 // assume that all timer samples should be a value in range [0, 60 * 1000] ms.
@@ -39,6 +45,8 @@ class Observer {
   void StopTimer(const std::string& timer_name);
 
   void SetMetricsLibrary(std::unique_ptr<MetricsLibraryInterface> metrics);
+
+  void RecordHwVerificationReport(const HwVerificationReport&);
 
  private:
   friend class base::NoDestructor<Observer>;

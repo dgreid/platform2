@@ -136,6 +136,9 @@ CLIVerificationResult CLI::Run(const std::string& probe_result_file,
     }
   }
 
+  LOG(INFO) << "Send to Observer.";
+  observer->RecordHwVerificationReport(hw_verification_report);
+
   return (hw_verification_report.is_compliant() ? CLIVerificationResult::kPass
                                                 : CLIVerificationResult::kFail);
 }
