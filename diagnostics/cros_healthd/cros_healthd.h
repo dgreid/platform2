@@ -22,9 +22,11 @@
 
 #include "debugd/dbus-proxies.h"
 #include "diagnostics/common/system/debugd_adapter_impl.h"
+#include "diagnostics/common/system/powerd_adapter.h"
 #include "diagnostics/cros_healthd/cros_healthd_mojo_service.h"
 #include "diagnostics/cros_healthd/cros_healthd_routine_factory_impl.h"
 #include "diagnostics/cros_healthd/cros_healthd_routine_service.h"
+#include "diagnostics/cros_healthd/events/power_events.h"
 #include "diagnostics/cros_healthd/utils/backlight_utils.h"
 #include "diagnostics/cros_healthd/utils/battery_utils.h"
 #include "diagnostics/cros_healthd/utils/fan_utils.h"
@@ -54,6 +56,9 @@ class CrosHealthd final
   void GetDiagnosticsService(
       chromeos::cros_healthd::mojom::CrosHealthdDiagnosticsServiceRequest
           service) override;
+  void GetEventService(
+      chromeos::cros_healthd::mojom::CrosHealthdEventServiceRequest service)
+      override;
 
   // Implementation of the "org.chromium.CrosHealthdInterface" D-Bus interface
   // exposed by the cros_healthd daemon (see constants for the API methods at
@@ -89,6 +94,8 @@ class CrosHealthd final
   // power_manager. Example: cros_healthd calls out to power_manager when it
   // needs to collect battery metrics like cycle count.
   dbus::ObjectProxy* power_manager_proxy_;
+  // Use |powerd_adapter_| to subscribe to notifications from powerd.
+  std::unique_ptr<PowerdAdapter> powerd_adapter_;
   // Use |cros_config_| to determine which metrics a device supports.
   std::unique_ptr<brillo::CrosConfig> cros_config_;
   // |backlight_fetcher_| is responsible for collecting metrics related to
@@ -105,6 +112,9 @@ class CrosHealthd final
   // |fan_fetcher_| is responsible for collecting fan information using
   // |debugd_proxy_|.
   std::unique_ptr<FanFetcher> fan_fetcher_;
+
+  // Provides support for power-related events.
+  std::unique_ptr<PowerEvents> power_events_;
 
   // Production implementation of the CrosHealthdRoutineFactory interface. Will
   // be injected into |routine_service_|.

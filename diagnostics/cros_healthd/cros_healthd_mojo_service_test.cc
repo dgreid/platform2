@@ -21,8 +21,10 @@
 #include <mojo/core/embedder/embedder.h>
 
 #include "debugd/dbus-proxy-mocks.h"
+#include "diagnostics/common/system/fake_powerd_adapter.h"
 #include "diagnostics/cros_healthd/cros_healthd_mojo_service.h"
 #include "diagnostics/cros_healthd/cros_healthd_routine_service.h"
+#include "diagnostics/cros_healthd/events/power_events_impl.h"
 #include "diagnostics/cros_healthd/utils/backlight_utils.h"
 #include "diagnostics/cros_healthd/utils/battery_utils.h"
 #include "diagnostics/cros_healthd/utils/fan_utils.h"
@@ -133,6 +135,7 @@ class CrosHealthdMojoServiceTest : public testing::Test {
     mock_power_manager_proxy_ = new dbus::MockObjectProxy(
         mock_bus_.get(), power_manager::kPowerManagerServiceName,
         dbus::ObjectPath(power_manager::kPowerManagerServicePath));
+    fake_powerd_adapter_ = std::make_unique<FakePowerdAdapter>();
     fake_cros_config_ = std::make_unique<brillo::FakeCrosConfig>();
     backlight_fetcher_ =
         std::make_unique<BacklightFetcher>(fake_cros_config_.get());
@@ -142,9 +145,12 @@ class CrosHealthdMojoServiceTest : public testing::Test {
     cached_vpd_fetcher_ =
         std::make_unique<CachedVpdFetcher>(fake_cros_config_.get());
     fan_fetcher_ = std::make_unique<FanFetcher>(mock_debugd_proxy_.get());
+    power_events_ =
+        std::make_unique<PowerEventsImpl>(fake_powerd_adapter_.get());
     service_ = std::make_unique<CrosHealthdMojoService>(
         backlight_fetcher_.get(), battery_fetcher_.get(),
-        cached_vpd_fetcher_.get(), fan_fetcher_.get(), &routine_service_);
+        cached_vpd_fetcher_.get(), fan_fetcher_.get(), power_events_.get(),
+        &routine_service_);
   }
 
   CrosHealthdMojoService* service() { return service_.get(); }
@@ -158,11 +164,13 @@ class CrosHealthdMojoServiceTest : public testing::Test {
   dbus::Bus::Options options_;
   scoped_refptr<dbus::MockBus> mock_bus_;
   scoped_refptr<dbus::MockObjectProxy> mock_power_manager_proxy_;
+  std::unique_ptr<FakePowerdAdapter> fake_powerd_adapter_;
   std::unique_ptr<brillo::FakeCrosConfig> fake_cros_config_;
   std::unique_ptr<BacklightFetcher> backlight_fetcher_;
   std::unique_ptr<BatteryFetcher> battery_fetcher_;
   std::unique_ptr<CachedVpdFetcher> cached_vpd_fetcher_;
   std::unique_ptr<FanFetcher> fan_fetcher_;
+  std::unique_ptr<PowerEventsImpl> power_events_;
   std::unique_ptr<CrosHealthdMojoService> service_;
 };
 

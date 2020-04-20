@@ -28,16 +28,19 @@ CrosHealthdMojoService::CrosHealthdMojoService(
     BatteryFetcher* battery_fetcher,
     CachedVpdFetcher* cached_vpd_fetcher,
     FanFetcher* fan_fetcher,
+    PowerEvents* power_events,
     CrosHealthdRoutineService* routine_service)
     : backlight_fetcher_(backlight_fetcher),
       battery_fetcher_(battery_fetcher),
       cached_vpd_fetcher_(cached_vpd_fetcher),
       fan_fetcher_(fan_fetcher),
+      power_events_(power_events),
       routine_service_(routine_service) {
   DCHECK(backlight_fetcher_);
   DCHECK(battery_fetcher_);
   DCHECK(cached_vpd_fetcher_);
   DCHECK(fan_fetcher_);
+  DCHECK(power_events_);
   DCHECK(routine_service_);
 }
 
@@ -187,6 +190,11 @@ void CrosHealthdMojoService::RunBatteryDischargeRoutine(
   std::move(callback).Run(response.Clone());
 }
 
+void CrosHealthdMojoService::AddPowerObserver(
+    chromeos::cros_healthd::mojom::CrosHealthdPowerObserverPtr observer) {
+  power_events_->AddObserver(std::move(observer));
+}
+
 void CrosHealthdMojoService::ProbeTelemetryInfo(
     const std::vector<ProbeCategoryEnum>& categories,
     ProbeTelemetryInfoCallback callback) {
@@ -244,6 +252,11 @@ void CrosHealthdMojoService::AddDiagnosticsBinding(
     chromeos::cros_healthd::mojom::CrosHealthdDiagnosticsServiceRequest
         request) {
   diagnostics_binding_set_.AddBinding(this /* impl */, std::move(request));
+}
+
+void CrosHealthdMojoService::AddEventBinding(
+    chromeos::cros_healthd::mojom::CrosHealthdEventServiceRequest request) {
+  event_binding_set_.AddBinding(this /* impl */, std::move(request));
 }
 
 }  // namespace diagnostics

@@ -15,6 +15,7 @@
 #include <mojo/public/cpp/bindings/binding_set.h>
 
 #include "diagnostics/cros_healthd/cros_healthd_routine_service.h"
+#include "diagnostics/cros_healthd/events/power_events.h"
 #include "diagnostics/cros_healthd/utils/backlight_utils.h"
 #include "diagnostics/cros_healthd/utils/battery_utils.h"
 #include "diagnostics/cros_healthd/utils/fan_utils.h"
@@ -27,6 +28,7 @@ namespace diagnostics {
 // cros_healthd daemon (see the API definition at mojo/cros_healthd.mojom)
 class CrosHealthdMojoService final
     : public chromeos::cros_healthd::mojom::CrosHealthdDiagnosticsService,
+      public chromeos::cros_healthd::mojom::CrosHealthdEventService,
       public chromeos::cros_healthd::mojom::CrosHealthdProbeService {
  public:
   using DiagnosticRoutineStatusEnum =
@@ -38,11 +40,13 @@ class CrosHealthdMojoService final
   // |battery_fetcher| - BatteryFetcher implementation.
   // |cached_vpd_fetcher| - CachedVpdFetcher implementation.
   // |fan_fetcher| - FanFetcher implementation.
+  // |power_events| - PowerEvents implementation.
   // |routine_service| - CrosHealthdRoutineService implementation.
   CrosHealthdMojoService(BacklightFetcher* backlight_fetcher,
                          BatteryFetcher* battery_fetcher,
                          CachedVpdFetcher* cached_vpd_fetcher,
                          FanFetcher* fan_fetcher,
+                         PowerEvents* power_events,
                          CrosHealthdRoutineService* routine_service);
   ~CrosHealthdMojoService() override;
 
@@ -95,6 +99,11 @@ class CrosHealthdMojoService final
       uint32_t maximum_discharge_percent_allowed,
       RunBatteryDischargeRoutineCallback callback) override;
 
+  // chromeos::cros_healthd::mojom::CrosHealthdEventService overrides:
+  void AddPowerObserver(
+      chromeos::cros_healthd::mojom::CrosHealthdPowerObserverPtr observer)
+      override;
+
   // chromeos::cros_healthd::mojom::CrosHealthdProbeService overrides:
   void ProbeTelemetryInfo(const std::vector<ProbeCategoryEnum>& categories,
                           ProbeTelemetryInfoCallback callback) override;
@@ -105,6 +114,8 @@ class CrosHealthdMojoService final
   void AddDiagnosticsBinding(
       chromeos::cros_healthd::mojom::CrosHealthdDiagnosticsServiceRequest
           request);
+  void AddEventBinding(
+      chromeos::cros_healthd::mojom::CrosHealthdEventServiceRequest request);
 
  private:
   // Mojo binding sets that connect |this| with message pipes, allowing the
@@ -113,6 +124,8 @@ class CrosHealthdMojoService final
       probe_binding_set_;
   mojo::BindingSet<chromeos::cros_healthd::mojom::CrosHealthdDiagnosticsService>
       diagnostics_binding_set_;
+  mojo::BindingSet<chromeos::cros_healthd::mojom::CrosHealthdEventService>
+      event_binding_set_;
 
   // Unowned. The backlight fetcher should outlive this instance.
   BacklightFetcher* backlight_fetcher_;
@@ -122,6 +135,8 @@ class CrosHealthdMojoService final
   CachedVpdFetcher* cached_vpd_fetcher_;
   // Unowned. The fan fetcher should outlive this instance.
   FanFetcher* fan_fetcher_;
+  // Unowned. The power events should outlive this instance.
+  PowerEvents* const power_events_ = nullptr;
   // Unowned. The routine service should outlive this instance.
   CrosHealthdRoutineService* const routine_service_;
 

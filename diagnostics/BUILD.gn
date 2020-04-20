@@ -22,6 +22,7 @@ group("all") {
       ":libcros_healthd_utils_test",
       ":wilco_dtc_supportd_test",
       "//diagnostics/common:libcommon_test",
+      "//diagnostics/cros_healthd/events:libcros_healthd_events_test",
       "//diagnostics/cros_healthd_mojo_adapter:cros_healthd_mojo_adapter_test",
       "//diagnostics/grpc_async_adapter:libgrpc_async_adapter_test",
       "//diagnostics/routines:routine_test",
@@ -48,6 +49,7 @@ generate_mojom_bindings("diagnostics_mojo_bindings") {
   sources = [
     "mojo/cros_healthd.mojom",
     "mojo/cros_healthd_diagnostics.mojom",
+    "mojo/cros_healthd_events.mojom",
     "mojo/cros_healthd_probe.mojom",
     "mojo/wilco_dtc_supportd.mojom",
   ]
@@ -103,6 +105,7 @@ source_set("libcros_healthd") {
   deps = [
     ":diagnostics_mojo_bindings",
     ":libcros_healthd_utils",
+    "//diagnostics/cros_healthd/events:libcros_healthd_events",
     "//diagnostics/routines:libdiag_routine",
   ]
   all_dependent_configs = [ ":libcros_healthd_pkg_deps" ]

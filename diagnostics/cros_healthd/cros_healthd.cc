@@ -22,7 +22,9 @@
 #include <mojo/public/cpp/system/invitation.h>
 
 #include "debugd/dbus-proxies.h"
+#include "diagnostics/common/system/powerd_adapter_impl.h"
 #include "diagnostics/cros_healthd/cros_healthd_routine_service_impl.h"
+#include "diagnostics/cros_healthd/events/power_events_impl.h"
 
 namespace diagnostics {
 
@@ -37,9 +39,13 @@ CrosHealthd::CrosHealthd()
   debugd_adapter_ = std::make_unique<DebugdAdapterImpl>(
       std::make_unique<org::chromium::debugdProxy>(dbus_bus_));
 
+  // TODO(crbug/1074476): Remove |power_manager_proxy_| once |powerd_adapter_|
+  // supports all the methods we call on |power_manager_proxy_|.
   power_manager_proxy_ = dbus_bus_->GetObjectProxy(
       power_manager::kPowerManagerServiceName,
       dbus::ObjectPath(power_manager::kPowerManagerServicePath));
+
+  powerd_adapter_ = std::make_unique<PowerdAdapterImpl>(dbus_bus_);
 
   cros_config_ = std::make_unique<brillo::CrosConfig>();
   // Init should always succeed on unibuild boards.
@@ -54,12 +60,15 @@ CrosHealthd::CrosHealthd()
 
   fan_fetcher_ = std::make_unique<FanFetcher>(debugd_proxy_.get());
 
+  power_events_ = std::make_unique<PowerEventsImpl>(powerd_adapter_.get());
+
   routine_service_ = std::make_unique<CrosHealthdRoutineServiceImpl>(
       debugd_adapter_.get(), &routine_factory_impl_);
 
   mojo_service_ = std::make_unique<CrosHealthdMojoService>(
       backlight_fetcher_.get(), battery_fetcher_.get(),
-      cached_vpd_fetcher_.get(), fan_fetcher_.get(), routine_service_.get());
+      cached_vpd_fetcher_.get(), fan_fetcher_.get(), power_events_.get(),
+      routine_service_.get());
 
   binding_set_.set_connection_error_handler(
       base::Bind(&CrosHealthd::OnDisconnect, base::Unretained(this)));
@@ -185,6 +194,11 @@ void CrosHealthd::GetDiagnosticsService(
     chromeos::cros_healthd::mojom::CrosHealthdDiagnosticsServiceRequest
         service) {
   mojo_service_->AddDiagnosticsBinding(std::move(service));
+}
+
+void CrosHealthd::GetEventService(
+    chromeos::cros_healthd::mojom::CrosHealthdEventServiceRequest service) {
+  mojo_service_->AddEventBinding(std::move(service));
 }
 
 void CrosHealthd::ShutDownDueToMojoError(const std::string& debug_reason) {
