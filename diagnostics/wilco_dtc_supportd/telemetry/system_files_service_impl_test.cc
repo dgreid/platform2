@@ -101,9 +101,8 @@ TEST_F(SystemFilesServiceTest, Symlink) {
 
 // Test that GetVpdField() returns false when the VPD field doesn't exist.
 TEST_F(SystemFilesServiceTest, NoVpdField) {
-  SystemFilesService::FileDump file_dump;
   EXPECT_FALSE(system_files_service_.GetVpdField(
-      SystemFilesService::VpdField::kSerialNumber, &file_dump));
+      SystemFilesService::VpdField::kSerialNumber));
 }
 
 // Test that GetVpdField() returns false when the VPD field contains non ASCII
@@ -116,9 +115,8 @@ TEST_F(SystemFilesServiceTest, NonASCIIVpdField) {
 
   ASSERT_TRUE(WriteFileAndCreateParentDirs(abs_file, kNonASCIIContent));
 
-  SystemFilesService::FileDump file_dump;
   EXPECT_FALSE(system_files_service_.GetVpdField(
-      SystemFilesService::VpdField::kSystemId, &file_dump));
+      SystemFilesService::VpdField::kSystemId));
 }
 
 // Test that GetVpdField() returns false when the VPD field is empty.
@@ -128,9 +126,8 @@ TEST_F(SystemFilesServiceTest, EmptyVpdField) {
 
   ASSERT_TRUE(WriteFileAndCreateParentDirs(abs_file, ""));
 
-  SystemFilesService::FileDump file_dump;
   EXPECT_FALSE(system_files_service_.GetVpdField(
-      SystemFilesService::VpdField::kModelName, &file_dump));
+      SystemFilesService::VpdField::kModelName));
 }
 
 // Test that GetVpdField() returns the requested trimmed VPD field when the VPD
@@ -142,13 +139,11 @@ TEST_F(SystemFilesServiceTest, TrimmedVpdField) {
   ASSERT_TRUE(
       WriteFileAndCreateParentDirs(abs_file, "\n \t 20 Apr 2020 \t\t \n\n"));
 
-  SystemFilesService::FileDump file_dump;
-  EXPECT_TRUE(system_files_service_.GetVpdField(
-      SystemFilesService::VpdField::kActivateDate, &file_dump));
+  auto vpd_field = system_files_service_.GetVpdField(
+      SystemFilesService::VpdField::kActivateDate);
 
-  EXPECT_EQ(file_dump.path, abs_file);
-  EXPECT_EQ(file_dump.canonical_path, abs_file);
-  EXPECT_EQ(file_dump.contents, "20 Apr 2020");
+  EXPECT_TRUE(vpd_field);
+  EXPECT_EQ(vpd_field.value(), "20 Apr 2020");
 }
 
 // Test that GetDirectoryDump() returns false when the directory doesn't
@@ -478,13 +473,10 @@ TEST_P(SystemFilesServiceVpdFieldTest, Dump) {
   ASSERT_TRUE(WriteFileAndCreateParentDirs(GetAbsoluteTestFilePath(),
                                            GetTestFileContents()));
 
-  SystemFilesService::FileDump file_dump;
-  ASSERT_TRUE(
-      system_files_service_.GetVpdField(GetVpdFieldParam(), &file_dump));
+  auto vpd_field = system_files_service_.GetVpdField(GetVpdFieldParam());
 
-  EXPECT_EQ(file_dump.path, GetAbsoluteTestFilePath());
-  EXPECT_EQ(file_dump.canonical_path, GetAbsoluteTestFilePath());
-  EXPECT_EQ(file_dump.contents, GetTestFileContents());
+  EXPECT_TRUE(vpd_field);
+  EXPECT_EQ(vpd_field.value(), GetTestFileContents());
 }
 
 INSTANTIATE_TEST_SUITE_P(

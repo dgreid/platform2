@@ -723,8 +723,8 @@ void GrpcService::GetVpdField(
     return;
   }
 
-  SystemFilesService::FileDump file_dump;
-  if (!system_files_service_->GetVpdField(vpd_field, &file_dump)) {
+  auto result = system_files_service_->GetVpdField(vpd_field);
+  if (!result.has_value()) {
     VPLOG(2) << "Failed to read VPD field "
              << static_cast<int>(request->vpd_field());
     reply->set_status(grpc_api::GetVpdFieldResponse::STATUS_ERROR_INTERNAL);
@@ -733,7 +733,7 @@ void GrpcService::GetVpdField(
   }
 
   reply->set_status(grpc_api::GetVpdFieldResponse::STATUS_OK);
-  reply->set_vpd_field_value(std::move(file_dump.contents));
+  reply->set_vpd_field_value(std::move(result.value()));
 
   callback.Run(std::move(reply));
 }

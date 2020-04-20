@@ -11,6 +11,7 @@
 
 #include <base/files/file_path.h>
 #include <base/macros.h>
+#include <base/optional.h>
 
 namespace diagnostics {
 
@@ -89,8 +90,12 @@ class SystemFilesService {
   virtual bool GetDirectoryDump(
       Directory location, std::vector<std::unique_ptr<FileDump>>* dumps) = 0;
 
-  // Gets the value of the specified VPD field. Returns true if successful.
-  virtual bool GetVpdField(VpdField vpd_field, FileDump* dump) = 0;
+  // Gets trimmed value of the specified VPD field.
+  // Returns base::nullopt if VPD value does not exist, empty or contains
+  // non-ASCII symbols.
+  // TODO(b/154595154): consider changing behavior: empty string is valid, non
+  // ASCII symbols are allowed.
+  virtual base::Optional<std::string> GetVpdField(VpdField vpd_field) = 0;
 
  private:
   DISALLOW_COPY_AND_ASSIGN(SystemFilesService);

@@ -12,6 +12,7 @@
 
 #include <base/files/file_path.h>
 #include <base/macros.h>
+#include <base/optional.h>
 
 #include "diagnostics/wilco_dtc_supportd/telemetry/system_files_service.h"
 
@@ -30,7 +31,7 @@ class SystemFilesServiceImpl final : public SystemFilesService {
   bool GetFileDump(File location, FileDump* dump) override;
   bool GetDirectoryDump(Directory location,
                         std::vector<std::unique_ptr<FileDump>>* dumps) override;
-  bool GetVpdField(VpdField vpd_field, FileDump* dump) override;
+  base::Optional<std::string> GetVpdField(VpdField vpd_field) override;
 
   void set_root_dir_for_testing(const base::FilePath& dir);
 

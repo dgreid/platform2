@@ -54,20 +54,14 @@ bool FakeSystemFilesService::GetDirectoryDump(
   return true;
 }
 
-bool FakeSystemFilesService::GetVpdField(VpdField vpd_field,
-                                         SystemFilesService::FileDump* dump) {
-  DCHECK(dump);
-
+base::Optional<std::string> FakeSystemFilesService::GetVpdField(
+    VpdField vpd_field) {
   auto it = vpd_field_dump_.find(vpd_field);
 
   if (it == vpd_field_dump_.end())
-    return false;
+    return base::nullopt;
 
-  dump->contents = it->second.contents;
-  dump->path = it->second.path;
-  dump->canonical_path = it->second.canonical_path;
-
-  return true;
+  return it->second.contents;
 }
 
 void FakeSystemFilesService::set_file_dump(

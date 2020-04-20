@@ -7,10 +7,12 @@
 
 #include <deque>
 #include <memory>
+#include <string>
 #include <unordered_map>
 #include <vector>
 
 #include <base/macros.h>
+#include <base/optional.h>
 
 #include "diagnostics/wilco_dtc_supportd/telemetry/system_files_service.h"
 
@@ -25,8 +27,7 @@ class FakeSystemFilesService : public SystemFilesService {
   bool GetFileDump(File location, SystemFilesService::FileDump* dump) override;
   bool GetDirectoryDump(Directory location,
                         std::vector<std::unique_ptr<FileDump>>* dumps) override;
-  bool GetVpdField(VpdField vpd_field,
-                   SystemFilesService::FileDump* dump) override;
+  base::Optional<std::string> GetVpdField(VpdField vpd_field) override;
 
   // Set file dump for GetFileDump. If not set false will be returned.
   void set_file_dump(File location,

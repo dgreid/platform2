@@ -114,23 +114,21 @@ bool SystemFilesServiceImpl::GetDirectoryDump(
   return true;
 }
 
-// TODO(b/154595154): consider changing VPD reader behavior: empty string is
-// valid, non ASCII symbols are allowed.
-bool SystemFilesServiceImpl::GetVpdField(VpdField vpd_field, FileDump* dump) {
-  DCHECK(dump);
-
-  if (!MakeFileDump(root_dir_.Append(GetPathForVpdField(vpd_field)), dump)) {
-    return false;
+base::Optional<std::string> SystemFilesServiceImpl::GetVpdField(
+    VpdField vpd_field) {
+  FileDump dump;
+  if (!MakeFileDump(root_dir_.Append(GetPathForVpdField(vpd_field)), &dump)) {
+    return base::nullopt;
   }
 
-  base::TrimString(dump->contents, base::kWhitespaceASCII, &dump->contents);
-  if (dump->contents.empty() || !base::IsStringASCII(dump->contents)) {
+  base::TrimString(dump.contents, base::kWhitespaceASCII, &dump.contents);
+  if (dump.contents.empty() || !base::IsStringASCII(dump.contents)) {
     VLOG(2) << "VPD field from " << GetPathForVpdField(vpd_field).BaseName()
             << " is not non-empty ASCII string";
-    return false;
+    return base::nullopt;
   }
 
-  return true;
+  return std::move(dump.contents);
 }
 
 void SystemFilesServiceImpl::set_root_dir_for_testing(
