@@ -182,10 +182,10 @@ fi
 . /etc/cpufreq.conf
 
 if [ -z "${CPUFREQ_GOVERNOR}" ]; then
-  if dump_power_status | grep -q 'line_power_connected 1'; then
-    CPUFREQ_GOVERNOR="${CPUFREQ_GOVERNOR_ON_AC}"
+  if dump_power_status | grep -q 'battery_status Discharging'; then
+    CPUFREQ_GOVERNOR="${CPUFREQ_GOVERNOR_BATTERY_DISCHARGE}"
   else
-    CPUFREQ_GOVERNOR="${CPUFREQ_GOVERNOR_OFF_AC}"
+    CPUFREQ_GOVERNOR="${CPUFREQ_GOVERNOR_BATTERY_CHARGE}"
   fi
 fi
 
