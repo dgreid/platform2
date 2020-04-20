@@ -30,7 +30,7 @@
 #include <base/strings/string_split.h>
 #include <base/strings/string_util.h>
 #include <base/synchronization/waitable_event.h>
-#include <base/sys_info.h>
+#include <base/system/sys_info.h>
 #include <base/threading/thread_task_runner_handle.h>
 #include <brillo/timezone/tzif_parser.h>
 #include <chromeos/dbus/service_constants.h>

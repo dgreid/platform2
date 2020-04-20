@@ -49,7 +49,7 @@
 #include <base/strings/stringprintf.h>
 #include <base/strings/string_split.h>
 #include <base/synchronization/waitable_event.h>
-#include <base/sys_info.h>
+#include <base/system/sys_info.h>
 #include <base/threading/thread_task_runner_handle.h>
 #include <base/time/time.h>
 #include <base/version.h>
