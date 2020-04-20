@@ -55,9 +55,9 @@ class SystemFilesServiceTest : public testing::Test {
 
 // Test that GetFileDump() returns false when the file doesn't exist.
 TEST_F(SystemFilesServiceTest, NonExistingFile) {
-  SystemFilesService::FileDump file_dump;
-  EXPECT_FALSE(system_files_service_.GetFileDump(
-      SystemFilesService::File::kProcMeminfo, &file_dump));
+  auto file_dump =
+      system_files_service_.GetFileDump(SystemFilesService::File::kProcMeminfo);
+  EXPECT_FALSE(file_dump);
 }
 
 // Test that GetFileDump() returns the requested file data when the file
@@ -69,13 +69,13 @@ TEST_F(SystemFilesServiceTest, SimpleFile) {
 
   ASSERT_TRUE(WriteFileAndCreateParentDirs(abs_file, FakeFileContents()));
 
-  SystemFilesService::FileDump file_dump;
-  EXPECT_TRUE(system_files_service_.GetFileDump(
-      SystemFilesService::File::kProcMeminfo, &file_dump));
+  const auto file_dump =
+      system_files_service_.GetFileDump(SystemFilesService::File::kProcMeminfo);
 
-  EXPECT_EQ(file_dump.path, abs_file);
-  EXPECT_EQ(file_dump.canonical_path, abs_file);
-  EXPECT_EQ(file_dump.contents, FakeFileContents());
+  EXPECT_TRUE(file_dump);
+  EXPECT_EQ(file_dump.value().path, abs_file);
+  EXPECT_EQ(file_dump.value().canonical_path, abs_file);
+  EXPECT_EQ(file_dump.value().contents, FakeFileContents());
 }
 
 // Test that GetFileDump() returns the requested file data when the file
@@ -90,13 +90,13 @@ TEST_F(SystemFilesServiceTest, Symlink) {
   ASSERT_TRUE(
       WriteFileAndCreateSymbolicLink(abs_file, FakeFileContents(), abs_link));
 
-  SystemFilesService::FileDump file_dump;
-  EXPECT_TRUE(system_files_service_.GetFileDump(
-      SystemFilesService::File::kProcLoadavg, &file_dump));
+  const auto file_dump =
+      system_files_service_.GetFileDump(SystemFilesService::File::kProcLoadavg);
 
-  EXPECT_EQ(file_dump.path, abs_link);
-  EXPECT_EQ(file_dump.canonical_path, abs_file);
-  EXPECT_EQ(file_dump.contents, FakeFileContents());
+  EXPECT_TRUE(file_dump);
+  EXPECT_EQ(file_dump.value().path, abs_link);
+  EXPECT_EQ(file_dump.value().canonical_path, abs_file);
+  EXPECT_EQ(file_dump.value().contents, FakeFileContents());
 }
 
 // Test that GetVpdField() returns false when the VPD field doesn't exist.
@@ -347,13 +347,12 @@ TEST_P(SystemFilesServiceFileLocationTest, Dump) {
   ASSERT_TRUE(WriteFileAndCreateParentDirs(GetAbsoluteTestFilePath(),
                                            GetTestFileContents()));
 
-  SystemFilesService::FileDump file_dump;
-  ASSERT_TRUE(
-      system_files_service_.GetFileDump(GetLocationParam(), &file_dump));
+  const auto file_dump = system_files_service_.GetFileDump(GetLocationParam());
 
-  EXPECT_EQ(file_dump.path, GetAbsoluteTestFilePath());
-  EXPECT_EQ(file_dump.canonical_path, GetAbsoluteTestFilePath());
-  EXPECT_EQ(file_dump.contents, GetTestFileContents());
+  EXPECT_TRUE(file_dump);
+  EXPECT_EQ(file_dump.value().path, GetAbsoluteTestFilePath());
+  EXPECT_EQ(file_dump.value().canonical_path, GetAbsoluteTestFilePath());
+  EXPECT_EQ(file_dump.value().contents, GetTestFileContents());
 }
 
 INSTANTIATE_TEST_SUITE_P(

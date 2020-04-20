@@ -21,15 +21,15 @@ class SystemFilesService {
     FileDump();
     ~FileDump();
 
+    FileDump(FileDump&& other);
+    FileDump& operator=(FileDump&& other);
+
     // Absolute path to the file.
     base::FilePath path;
     // Canonicalized path to the file. Unlike |path|, this path never contains
     // symbolic links.
     base::FilePath canonical_path;
     std::string contents;
-
-   private:
-    DISALLOW_COPY_AND_ASSIGN(FileDump);
   };
 
   enum class Directory {
@@ -82,8 +82,8 @@ class SystemFilesService {
   SystemFilesService() = default;
   virtual ~SystemFilesService() = default;
 
-  // Gets the dump of the specified file. Returns true if successful.
-  virtual bool GetFileDump(File location, FileDump* dump) = 0;
+  // Gets the dump of the specified file. Returns base::nullopt on failure.
+  virtual base::Optional<FileDump> GetFileDump(File location) = 0;
 
   // Gets the dumps of the files in the specified directory.  Returns true if
   // successful.

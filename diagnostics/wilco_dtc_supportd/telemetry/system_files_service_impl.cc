@@ -93,10 +93,13 @@ SystemFilesServiceImpl::SystemFilesServiceImpl() = default;
 
 SystemFilesServiceImpl::~SystemFilesServiceImpl() = default;
 
-bool SystemFilesServiceImpl::GetFileDump(File location, FileDump* dump) {
-  DCHECK(dump);
-
-  return MakeFileDump(root_dir_.Append(GetPathForFile(location)), dump);
+base::Optional<SystemFilesService::FileDump>
+SystemFilesServiceImpl::GetFileDump(File location) {
+  FileDump dump;
+  if (!MakeFileDump(root_dir_.Append(GetPathForFile(location)), &dump)) {
+    return base::nullopt;
+  }
+  return std::move(dump);
 }
 
 bool SystemFilesServiceImpl::GetDirectoryDump(

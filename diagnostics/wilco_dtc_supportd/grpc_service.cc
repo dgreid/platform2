@@ -793,15 +793,14 @@ void GrpcService::GetStatefulPartitionAvailableCapacity(
 void GrpcService::AddFileDump(
     SystemFilesService::File location,
     google::protobuf::RepeatedPtrField<grpc_api::FileDump>* file_dumps) {
-  SystemFilesService::FileDump file_dump;
-
-  if (!system_files_service_->GetFileDump(location, &file_dump))
+  auto file_dump = system_files_service_->GetFileDump(location);
+  if (!file_dump)
     return;
 
   grpc_api::FileDump grpc_dump;
-  grpc_dump.set_path(file_dump.path.value());
-  grpc_dump.set_canonical_path(file_dump.canonical_path.value());
-  grpc_dump.set_contents(std::move(file_dump.contents));
+  grpc_dump.set_path(file_dump.value().path.value());
+  grpc_dump.set_canonical_path(file_dump.value().canonical_path.value());
+  grpc_dump.set_contents(std::move(file_dump.value().contents));
 
   file_dumps->Add()->Swap(&grpc_dump);
 }

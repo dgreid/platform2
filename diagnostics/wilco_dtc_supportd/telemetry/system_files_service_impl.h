@@ -28,7 +28,7 @@ class SystemFilesServiceImpl final : public SystemFilesService {
   ~SystemFilesServiceImpl() override;
 
   // SystemFilesService overrides:
-  bool GetFileDump(File location, FileDump* dump) override;
+  base::Optional<FileDump> GetFileDump(File location) override;
   bool GetDirectoryDump(Directory location,
                         std::vector<std::unique_ptr<FileDump>>* dumps) override;
   base::Optional<std::string> GetVpdField(VpdField vpd_field) override;

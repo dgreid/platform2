@@ -13,21 +13,22 @@ namespace diagnostics {
 FakeSystemFilesService::FakeSystemFilesService() = default;
 FakeSystemFilesService::~FakeSystemFilesService() = default;
 
-bool FakeSystemFilesService::GetFileDump(File location, FileDump* dump) {
-  DCHECK(dump);
+base::Optional<SystemFilesService::FileDump>
+FakeSystemFilesService::GetFileDump(File location) {
+  FileDump dump;
 
   dumped_files_.push_back(location);
 
   auto it = file_dump_.find(location);
 
   if (it == file_dump_.end())
-    return false;
+    return base::nullopt;
 
-  dump->contents = it->second.contents;
-  dump->path = it->second.path;
-  dump->canonical_path = it->second.canonical_path;
+  dump.contents = it->second.contents;
+  dump.path = it->second.path;
+  dump.canonical_path = it->second.canonical_path;
 
-  return true;
+  return dump;
 }
 
 bool FakeSystemFilesService::GetDirectoryDump(

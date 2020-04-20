@@ -10,4 +10,10 @@ SystemFilesService::FileDump::FileDump() = default;
 
 SystemFilesService::FileDump::~FileDump() = default;
 
+SystemFilesService::FileDump::FileDump(SystemFilesService::FileDump&& other) =
+    default;
+
+SystemFilesService::FileDump& SystemFilesService::FileDump::operator=(
+    SystemFilesService::FileDump&& other) = default;
+
 }  // namespace diagnostics
