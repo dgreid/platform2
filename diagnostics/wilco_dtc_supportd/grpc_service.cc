@@ -46,6 +46,8 @@ using GetConfigurationDataCallback = GrpcService::GetConfigurationDataCallback;
 using GetDriveSystemDataCallback = GrpcService::GetDriveSystemDataCallback;
 using RequestBluetoothDataNotificationCallback =
     GrpcService::RequestBluetoothDataNotificationCallback;
+using GetStatefulPartitionAvailableCapacityCallback =
+    GrpcService::GetStatefulPartitionAvailableCapacityCallback;
 
 // Https prefix expected to be a prefix of URL in PerformWebRequestParameter.
 constexpr char kHttpsPrefix[] = "https://";
@@ -767,6 +769,22 @@ void GrpcService::RequestBluetoothDataNotification(
 
   callback.Run(
       std::make_unique<grpc_api::RequestBluetoothDataNotificationResponse>());
+}
+
+void GrpcService::GetStatefulPartitionAvailableCapacity(
+    std::unique_ptr<grpc_api::GetStatefulPartitionAvailableCapacityRequest>
+        request,
+    const GetStatefulPartitionAvailableCapacityCallback& callback) {
+  DCHECK(request);
+
+  // TODO(rbock@google.com, b/153633602): Obtain real response!
+  auto reply = std::make_unique<
+      grpc_api::GetStatefulPartitionAvailableCapacityResponse>();
+  reply->set_status(
+      grpc_api::GetStatefulPartitionAvailableCapacityResponse::STATUS_OK);
+  reply->set_available_capacity_mb(4200);
+
+  callback.Run(std::move(reply));
 }
 
 void GrpcService::AddFileDump(

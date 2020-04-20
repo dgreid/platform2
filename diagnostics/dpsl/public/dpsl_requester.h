@@ -102,6 +102,9 @@ class DpslRequester {
   using RequestBluetoothDataNotificationCallback = std::function<void(
       std::unique_ptr<grpc_api::RequestBluetoothDataNotificationResponse>
           response)>;
+  using GetStatefulPartitionAvailableCapacityCallback = std::function<void(
+      std::unique_ptr<grpc_api::GetStatefulPartitionAvailableCapacityResponse>
+          response)>;
 
   // Factory method that returns an instance of the real implementation of this
   // interface.
@@ -162,6 +165,10 @@ class DpslRequester {
       std::unique_ptr<grpc_api::RequestBluetoothDataNotificationRequest>
           request,
       RequestBluetoothDataNotificationCallback callback) = 0;
+  virtual void GetStatefulPartitionAvailableCapacity(
+      std::unique_ptr<grpc_api::GetStatefulPartitionAvailableCapacityRequest>
+          request,
+      GetStatefulPartitionAvailableCapacityCallback callback) = 0;
 };
 
 }  // namespace diagnostics

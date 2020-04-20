@@ -61,6 +61,11 @@ service WilcoDtcSupportd {
   // Request a notification with the current bluetooth adapter data.
   rpc RequestBluetoothDataNotification(RequestBluetoothDataNotificationRequest)
       returns (RequestBluetoothDataNotificationResponse) {}
+
+  // Retrieves the available disk capacity of the stateful partition.
+  rpc GetStatefulPartitionAvailableCapacity(
+      GetStatefulPartitionAvailableCapacityRequest)
+      returns (GetStatefulPartitionAvailableCapacityResponse) {}
 }
 
 // Parameters for the SendMessageToUi RPC.
@@ -633,3 +638,29 @@ message RequestBluetoothDataNotificationRequest {}
 // Return value for the RequestBluetoothDataNotification RPC. The message is
 // currently empty.
 message RequestBluetoothDataNotificationResponse {}
+
+// Parameters for the GetStatefulPartitionAvailableCapacity RPC. The message is
+// currently empty.
+message GetStatefulPartitionAvailableCapacityRequest {}
+
+// Return value for the GetStatefulPartitionAvailableCapacity RPC.
+message GetStatefulPartitionAvailableCapacityResponse {
+  // Status of the finished request.
+  enum Status {
+    STATUS_UNSET = 0;
+    // The request was successfully completed and |available_capacity_mb| is
+    // set.
+    STATUS_OK = 1;
+    // Failed to get the requested capacity data.
+    STATUS_ERROR_REQUEST_PROCESSING = 2;
+  }
+
+  // Is guaranteed to be distinct from |STATUS_UNSET|.
+  Status status = 1;
+
+  // Stateful partition available capacity, rounded down to
+  // multiples of 100MB.
+  // TODO(b/153633602): This is currently a dummy implementation, yielding a
+  // fixed value.
+  int32 available_capacity_mb = 2;
+}

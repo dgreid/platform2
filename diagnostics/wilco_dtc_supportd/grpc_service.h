@@ -184,6 +184,9 @@ class GrpcService final {
       std::unique_ptr<grpc_api::GetDriveSystemDataResponse>)>;
   using RequestBluetoothDataNotificationCallback = base::Callback<void(
       std::unique_ptr<grpc_api::RequestBluetoothDataNotificationResponse>)>;
+  using GetStatefulPartitionAvailableCapacityCallback = base::Callback<void(
+      std::unique_ptr<
+          grpc_api::GetStatefulPartitionAvailableCapacityResponse>)>;
 
   explicit GrpcService(Delegate* delegate);
   ~GrpcService();
@@ -234,6 +237,10 @@ class GrpcService final {
       std::unique_ptr<grpc_api::RequestBluetoothDataNotificationRequest>
           request,
       const RequestBluetoothDataNotificationCallback& callback);
+  void GetStatefulPartitionAvailableCapacity(
+      std::unique_ptr<grpc_api::GetStatefulPartitionAvailableCapacityRequest>
+          request,
+      const GetStatefulPartitionAvailableCapacityCallback& callback);
 
  private:
   void AddFileDump(

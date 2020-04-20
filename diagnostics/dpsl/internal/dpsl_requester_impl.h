@@ -67,6 +67,10 @@ class DpslRequesterImpl final : public DpslRequester {
       std::unique_ptr<grpc_api::RequestBluetoothDataNotificationRequest>
           request,
       RequestBluetoothDataNotificationCallback callback) override;
+  void GetStatefulPartitionAvailableCapacity(
+      std::unique_ptr<grpc_api::GetStatefulPartitionAvailableCapacityRequest>
+          request,
+      GetStatefulPartitionAvailableCapacityCallback callback) override;
 
  private:
   using AsyncGrpcWilcoDtcSupportdClient =
