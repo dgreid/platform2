@@ -14,7 +14,6 @@
 #include <vector>
 
 #include <base/macros.h>
-#include <base/memory/linked_ptr.h>
 #include <base/memory/weak_ptr.h>
 
 #include "mtpd/file_entry.h"
