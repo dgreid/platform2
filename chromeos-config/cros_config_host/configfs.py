@@ -31,8 +31,18 @@ class EntryFlags(enum.Enum):
   """The flags used at the beginning of each entry."""
   HAS_SKU_ID = 1 << 0
   HAS_WHITELABEL = 1 << 1
+
+  # For x86 only: this device uses a customization ID from VPD to
+  # match instead of a whitelabel tag. This is deprecated for new
+  # devices since 2017, so it should only be set by Reef.
   IS_X86_LEGACY_CUSTOMIZATION_ID = 1 << 2
+
+  # For ARM only: use a portion of the FRID to match the device
+  # instead of a device-tree compatible string.
   USES_FIRMWARE_NAME = 1 << 3
+
+  # For x86 only: this device has an SMBIOS name to match.
+  HAS_SMBIOS_NAME = 1 << 4
 
 
 def Serialize(obj):
@@ -126,16 +136,15 @@ def WriteIdentityStruct(config, output_file):
       index += len(entry)
 
   # Detecting x86 vs. ARM is rather annoying given the JSON-like
-  # schema.  Implemented like this:
-  #   1. If there are no device configs, just say it's x86 as the
-  #      value will never get used anyway.
-  #   2. If the first config has a key /identity:smbios-name-match,
-  #      say it's x86.
-  #   3. Otherwise, say it's ARM.
-  if not device_configs or 'smbios-name-match' in device_configs[0]['identity']:
-    identity_type = IdentityType.X86
-  else:
+  # schema.  This implementation checks if any config has an identity
+  # dict containing a device-tree-compatible-match or firmware-name,
+  # and correspondingly sets the identity type to ARM, otherwise X86.
+  if any('device-tree-compatible-match' in c.get('identity', {})
+         or 'firmware-name' in c.get('identity', {})
+         for c in device_configs):
     identity_type = IdentityType.ARM
+  else:
+    identity_type = IdentityType.X86
 
   # Write the header of the struct, containing version and identity
   # type (x86 vs. ARM).
@@ -145,16 +154,19 @@ def WriteIdentityStruct(config, output_file):
 
   # Write each of the entry structs.
   for device_config in device_configs:
-    identity_info = device_config['identity']
+    identity_info = device_config.get('identity', {})
     flags = 0
     sku_id = 0
     if 'sku-id' in identity_info:
       flags |= EntryFlags.HAS_SKU_ID.value
       sku_id = identity_info['sku-id']
 
+    model_match = None
     whitelabel_match = None
     if identity_type is IdentityType.X86:
-      model_match = identity_info['smbios-name-match']
+      if 'smbios-name-match' in identity_info:
+        flags |= EntryFlags.HAS_SMBIOS_NAME.value
+        model_match = identity_info['smbios-name-match']
       if 'customization-id' in identity_info:
         flags |= EntryFlags.IS_X86_LEGACY_CUSTOMIZATION_ID.value
         whitelabel_match = identity_info['customization-id']

@@ -3,6 +3,7 @@
 # Copyright 2020 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+# pylint: disable=unused-argument
 
 """Unit tests for ConfigFS data file generator."""
 
@@ -27,15 +28,15 @@ def TestConfigs(*args):
 
   Use like so:
   @TestConfigs('test.json', [any other files you want...])
-  def testFoo(self, config, output_dir):
+  def testFoo(self, config_filename, config, output_dir):
     # do something!
     pass
   """
   def _Decorator(method):
     @functools.wraps(method)
     def _Wrapper(self):
-      for fn in args:
-        with open(os.path.join(this_dir, '../libcros_config', fn)) as f:
+      for filename in args:
+        with open(os.path.join(this_dir, '../libcros_config', filename)) as f:
           config = json.load(f)
 
         with tempfile.TemporaryDirectory(prefix='test.') as output_dir:
@@ -43,7 +44,7 @@ def TestConfigs(*args):
           configfs.GenerateConfigFSData(config, squashfs_img)
           subprocess.run(['unsquashfs', squashfs_img], check=True,
                          cwd=output_dir, stdout=subprocess.PIPE)
-          method(self, config, output_dir)
+          method(self, filename, config, output_dir)
     return _Wrapper
   return _Decorator
 
@@ -59,7 +60,7 @@ class ConfigFSTests(cros_test_lib.TestCase):
     self.assertEqual(configfs.Serialize(b'\xff\xff\xff'), b'\xff\xff\xff')
 
   @TestConfigs('test.json', 'test_arm.json')
-  def testConfigV1FileStructure(self, config, output_dir):
+  def testConfigV1FileStructure(self, filename, config, output_dir):
     def _CheckConfigRec(config, path):
       if isinstance(config, dict):
         iterator = config.items()
@@ -79,7 +80,7 @@ class ConfigFSTests(cros_test_lib.TestCase):
   # TODO(jrosenth): remove once we've fully moved over to struct-based
   # identity.
   @TestConfigs('test.json', 'test_arm.json')
-  def testConfigV1IdentityJson(self, config, output_dir):
+  def testConfigV1IdentityJson(self, filename, config, output_dir):
     identity_path = os.path.join(output_dir, 'squashfs-root/v1/identity.json')
     self.assertTrue(os.path.isfile(identity_path))
     with open(identity_path) as f:
@@ -94,7 +95,7 @@ class ConfigFSTests(cros_test_lib.TestCase):
     self.assertEqual(struct.calcsize(configfs.ENTRY_FORMAT), 16)
 
   @TestConfigs('test.json', 'test_arm.json')
-  def testConfigIdentityV0(self, config, output_dir):
+  def testConfigIdentityV0(self, filename, config, output_dir):
     device_configs = config['chromeos']['configs']
     identity_path = os.path.join(output_dir, 'squashfs-root/identity.bin')
     identity_bin = osutils.ReadFile(identity_path, mode='rb')
@@ -104,10 +105,10 @@ class ConfigFSTests(cros_test_lib.TestCase):
     identity_type = configfs.IdentityType(identity_type)
 
     self.assertEqual(version, configfs.STRUCT_VERSION)
-    if 'smbios-name-match' in device_configs[0]['identity']:
-      self.assertEqual(identity_type, configfs.IdentityType.X86)
-    else:
+    if 'arm' in filename:
       self.assertEqual(identity_type, configfs.IdentityType.ARM)
+    else:
+      self.assertEqual(identity_type, configfs.IdentityType.X86)
     self.assertEqual(len(device_configs), entry_count)
 
     # Get an entry from the string table.
@@ -130,6 +131,8 @@ class ConfigFSTests(cros_test_lib.TestCase):
             flags & configfs.EntryFlags.IS_X86_LEGACY_CUSTOMIZATION_ID.value, 0)
 
       if 'smbios-name-match' in device['identity']:
+        self.assertEqual(flags & configfs.EntryFlags.HAS_SMBIOS_NAME.value,
+                         configfs.EntryFlags.HAS_SMBIOS_NAME.value)
         self.assertEqual(identity_type, configfs.IdentityType.X86)
         self.assertEqual(_GetString(model_match_offset),
                          device['identity']['smbios-name-match'])
