@@ -74,8 +74,13 @@ bool CrosConfigIdentityX86::ReadInfo(const base::FilePath& product_name_file,
 bool CrosConfigIdentityX86::PlatformIdentityMatch(
     const base::DictionaryValue& identity_dict) const {
   std::string name_match;
-  if (!identity_dict.GetString("smbios-name-match", &name_match))
-    return false;
+  if (!identity_dict.GetString("smbios-name-match", &name_match)) {
+    // If smbios-name-match is left unspecified, this means that any
+    // SMBIOS product name will match.  This is useful on platforms
+    // like Betty, where the product name is something arbitrary QEMU
+    // (or some other emulator firmware) chooses.
+    return true;
+  }
   return name_ == name_match;
 }
 
