@@ -492,10 +492,7 @@ Properties	string Address [readonly]
 
 		string Interface [readonly]
 
-			The device interface (for example "eth0" etc.)
-
-			This value is for pure informational purposes. It
-			is not guaranteed that it is always present.
+			The Device's interface name (for example "eth0").
 
 		object SelectedService [readonly]
 
@@ -613,11 +610,7 @@ Properties	string Address [readonly]
 
 		string Name [readonly]
 
-			The device name (for example "Wireless" etc.)
-
-			This name can be used for directly displaying it in
-			the application. It has pure informational purpose
-			and there is not guarantee that it is present.
+			Deprecated; use Interface instead.
 
 		boolean Powered [readonly]
 
