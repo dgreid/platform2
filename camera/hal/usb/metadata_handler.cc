@@ -811,6 +811,61 @@ int MetadataHandler::FillMetadataFromDeviceInfo(
     update_static(kVendorTagTimestampSync, timestamp_sync);
   }
 
+  std::unique_ptr<CameraConfig> camera_config =
+      CameraConfig::Create(constants::kCrosCameraConfigPathString);
+  if (camera_config->GetBoolean(constants::kCrosEnableUsbAdvancedControl,
+                                false)) {
+    ControlRange range;
+
+    if (V4L2CameraDevice::GetControlRange(device_info.device_path,
+                                          kControlBrightness, &range)) {
+      update_static(
+          kVendorTagControlBrightnessRange,
+          std::vector<int32_t>{range.minimum, range.maximum, range.step});
+      update_request(kVendorTagControlBrightness, range.default_value);
+    }
+
+    if (V4L2CameraDevice::GetControlRange(device_info.device_path,
+                                          kControlContrast, &range)) {
+      update_static(
+          kVendorTagControlContrastRange,
+          std::vector<int32_t>{range.minimum, range.maximum, range.step});
+      update_request(kVendorTagControlContrast, range.default_value);
+    }
+
+    if (V4L2CameraDevice::GetControlRange(device_info.device_path, kControlPan,
+                                          &range)) {
+      update_static(
+          kVendorTagControlPanRange,
+          std::vector<int32_t>{range.minimum, range.maximum, range.step});
+      update_request(kVendorTagControlPan, range.default_value);
+    }
+
+    if (V4L2CameraDevice::GetControlRange(device_info.device_path,
+                                          kControlSaturation, &range)) {
+      update_static(
+          kVendorTagControlSaturationRange,
+          std::vector<int32_t>{range.minimum, range.maximum, range.step});
+      update_request(kVendorTagControlSaturation, range.default_value);
+    }
+
+    if (V4L2CameraDevice::GetControlRange(device_info.device_path,
+                                          kControlSharpness, &range)) {
+      update_static(
+          kVendorTagControlSharpnessRange,
+          std::vector<int32_t>{range.minimum, range.maximum, range.step});
+      update_request(kVendorTagControlSharpness, range.default_value);
+    }
+
+    if (V4L2CameraDevice::GetControlRange(device_info.device_path, kControlTilt,
+                                          &range)) {
+      update_static(
+          kVendorTagControlTiltRange,
+          std::vector<int32_t>{range.minimum, range.maximum, range.step});
+      update_request(kVendorTagControlTilt, range.default_value);
+    }
+  }
+
   return update_static.ok() && update_request.ok() ? 0 : -EINVAL;
 }
 
@@ -906,6 +961,36 @@ int MetadataHandler::PreHandleRequest(int frame_number,
   const int64_t exposure_time = sensor_handler_->GetExposureTime(resolution);
   update_request(ANDROID_SENSOR_EXPOSURE_TIME, exposure_time);
 
+  if (metadata->exists(kVendorTagControlBrightness)) {
+    camera_metadata_entry entry = metadata->find(kVendorTagControlBrightness);
+    device_->SetControlValue(kControlBrightness, entry.data.i32[0]);
+  }
+
+  if (metadata->exists(kVendorTagControlContrast)) {
+    camera_metadata_entry entry = metadata->find(kVendorTagControlContrast);
+    device_->SetControlValue(kControlContrast, entry.data.i32[0]);
+  }
+
+  if (metadata->exists(kVendorTagControlPan)) {
+    camera_metadata_entry entry = metadata->find(kVendorTagControlPan);
+    device_->SetControlValue(kControlPan, entry.data.i32[0]);
+  }
+
+  if (metadata->exists(kVendorTagControlSaturation)) {
+    camera_metadata_entry entry = metadata->find(kVendorTagControlSaturation);
+    device_->SetControlValue(kControlSaturation, entry.data.i32[0]);
+  }
+
+  if (metadata->exists(kVendorTagControlSharpness)) {
+    camera_metadata_entry entry = metadata->find(kVendorTagControlSharpness);
+    device_->SetControlValue(kControlSharpness, entry.data.i32[0]);
+  }
+
+  if (metadata->exists(kVendorTagControlTilt)) {
+    camera_metadata_entry entry = metadata->find(kVendorTagControlTilt);
+    device_->SetControlValue(kControlTilt, entry.data.i32[0]);
+  }
+
   current_frame_number_ = frame_number;
   return 0;
 }
@@ -976,6 +1061,32 @@ int MetadataHandler::PostHandleRequest(int frame_number,
 
   update_request(ANDROID_STATISTICS_SCENE_FLICKER,
                  ANDROID_STATISTICS_SCENE_FLICKER_NONE);
+
+  int32_t value;
+  if (metadata->exists(kVendorTagControlBrightness) &&
+      device_->GetControlValue(kControlBrightness, &value))
+    update_request(kVendorTagControlBrightness, value);
+
+  if (metadata->exists(kVendorTagControlContrast) &&
+      device_->GetControlValue(kControlContrast, &value))
+    update_request(kVendorTagControlContrast, value);
+
+  if (metadata->exists(kVendorTagControlPan) &&
+      device_->GetControlValue(kControlPan, &value))
+    update_request(kVendorTagControlPan, value);
+
+  if (metadata->exists(kVendorTagControlSaturation) &&
+      device_->GetControlValue(kControlSaturation, &value))
+    update_request(kVendorTagControlSaturation, value);
+
+  if (metadata->exists(kVendorTagControlSharpness) &&
+      device_->GetControlValue(kControlSharpness, &value))
+    update_request(kVendorTagControlSharpness, value);
+
+  if (metadata->exists(kVendorTagControlTilt) &&
+      device_->GetControlValue(kControlTilt, &value))
+    update_request(kVendorTagControlTilt, value);
+
   return 0;
 }
 

@@ -9,8 +9,8 @@
 
 #include <time.h>
 
+#include <map>
 #include <string>
-#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -21,6 +21,22 @@
 #include "hal/usb/common_types.h"
 
 namespace cros {
+
+struct ControlRange {
+  int32_t minimum;
+  int32_t maximum;
+  int32_t step;
+  int32_t default_value;
+};
+
+enum ControlType {
+  kControlBrightness,
+  kControlContrast,
+  kControlPan,
+  kControlSaturation,
+  kControlSharpness,
+  kControlTilt,
+};
 
 // The class is thread-safe.
 class V4L2CameraDevice {
@@ -95,6 +111,14 @@ class V4L2CameraDevice {
   // Sets the frame rate to |frame_rate| for current device.
   int SetFrameRate(float frame_rate);
 
+  // Sets the |type|'s value to |value| for current device.
+  bool SetControlValue(ControlType type, int32_t value);
+
+  // Gets the |type|'s current value for current device.
+  // To prevent ioctl overhead, this API only returned cached value if there is
+  // one. The cached current value is updated in SetControlValue.
+  bool GetControlValue(ControlType type, int32_t* value);
+
   // Get all supported formats of device by |device_path|. This function can be
   // called without calling Connect().
   static const SupportedFormats GetDeviceSupportedFormats(
@@ -116,11 +140,32 @@ class V4L2CameraDevice {
   // Get the model name from |device_path|.
   static std::string GetModelName(const std::string& device_path);
 
+  // Get control's range.
+  // Return true if operation successfully. Otherwise, return false.
+  // The returned value is stored in |range|.
+  static bool GetControlRange(const std::string& device_path,
+                              ControlType type,
+                              ControlRange* range);
+
  private:
   static std::vector<float> GetFrameRateList(int fd,
                                              uint32_t fourcc,
                                              uint32_t width,
                                              uint32_t height);
+
+  // Get the control range of |control_id|.
+  // Return true if operation successfully. Otherwise, return false.
+  // The returned value is stored in |range|.
+  static bool GetControlRange(const std::string& device_path,
+                              int control_id,
+                              ControlRange* range);
+
+  // Return true if set control successfully. Otherwise, return false.
+  static bool SetControlValue(int fd, int control_id, int32_t value);
+
+  // Return true if get control successfully. Otherwise, return false.
+  // The returned value is stored in |value|.
+  static bool GetControlValue(int fd, int control_id, int32_t* value);
 
   // This is for suspend/resume feature. USB camera will be enumerated after
   // device resumed. But camera device may not be ready immediately.
@@ -151,11 +196,10 @@ class V4L2CameraDevice {
   // True if the buffer is used by client after GetNextFrameBuffer().
   std::vector<bool> buffers_at_client_;
 
-  // Keep internal camera devices to distinguish external camera.
-  // First index is VID:PID and second index is the device info.
-  std::unordered_map<std::string, DeviceInfo> internal_devices_;
-
   const DeviceInfo device_info_;
+
+  // Current control values.
+  std::map<ControlType, int32_t> control_values_;
 
   // Since V4L2CameraDevice may be called on different threads, this is used to
   // guard all variables.

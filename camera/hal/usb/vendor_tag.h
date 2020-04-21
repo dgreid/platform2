@@ -16,6 +16,7 @@
 namespace cros {
 
 const char kVendorUsbSectionName[] = "com.google.usb";
+const char kVendorControlSectionName[] = "com.google.control";
 
 enum VendorTags : uint32_t {
   kVendorTagVendorId = kUsbHalVendorTagStart,
@@ -23,7 +24,23 @@ enum VendorTags : uint32_t {
   kVendorTagModelName,
   kVendorTagDevicePath,
   kVendorTagTimestampSync,
-  kVendorTagEnd = kVendorTagTimestampSync,
+
+  // These tags are for controls.
+  // ControlFoo is for the request value, and ControlFooRange is the static
+  // metadata for the available range as a tuple of [min, max, step].
+  kVendorTagControlBrightness,
+  kVendorTagControlBrightnessRange,
+  kVendorTagControlContrast,
+  kVendorTagControlContrastRange,
+  kVendorTagControlPan,
+  kVendorTagControlPanRange,
+  kVendorTagControlSaturation,
+  kVendorTagControlSaturationRange,
+  kVendorTagControlSharpness,
+  kVendorTagControlSharpnessRange,
+  kVendorTagControlTilt,
+  kVendorTagControlTiltRange,
+  kVendorTagEnd = kVendorTagControlTiltRange,
 };
 
 static_assert(kVendorTagEnd < kUsbHalVendorTagEnd,

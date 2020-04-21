@@ -18,6 +18,28 @@ const VendorTagManager& VendorTagOps::GetVendorTagManager() {
     m.Add(kVendorTagDevicePath, kVendorUsbSectionName, "devicePath", TYPE_BYTE);
     m.Add(kVendorTagTimestampSync, kVendorUsbSectionName, "timestampSync",
           TYPE_INT32);
+    m.Add(kVendorTagControlBrightness, kVendorControlSectionName, "brightness",
+          TYPE_INT32);
+    m.Add(kVendorTagControlBrightnessRange, kVendorControlSectionName,
+          "brightnessRange", TYPE_INT32);
+    m.Add(kVendorTagControlContrast, kVendorControlSectionName, "contrast",
+          TYPE_INT32);
+    m.Add(kVendorTagControlContrastRange, kVendorControlSectionName,
+          "contrastRange", TYPE_INT32);
+    m.Add(kVendorTagControlPan, kVendorControlSectionName, "pan", TYPE_INT32);
+    m.Add(kVendorTagControlPanRange, kVendorControlSectionName, "panRange",
+          TYPE_INT32);
+    m.Add(kVendorTagControlSaturation, kVendorControlSectionName, "saturation",
+          TYPE_INT32);
+    m.Add(kVendorTagControlSaturationRange, kVendorControlSectionName,
+          "saturationRange", TYPE_INT32);
+    m.Add(kVendorTagControlSharpness, kVendorControlSectionName, "sharpness",
+          TYPE_INT32);
+    m.Add(kVendorTagControlSharpnessRange, kVendorControlSectionName,
+          "sharpnessRange", TYPE_INT32);
+    m.Add(kVendorTagControlTilt, kVendorControlSectionName, "tilt", TYPE_INT32);
+    m.Add(kVendorTagControlTiltRange, kVendorControlSectionName, "tiltRange",
+          TYPE_INT32);
     return m;
   }();
   return manager;

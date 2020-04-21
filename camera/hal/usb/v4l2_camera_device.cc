@@ -27,13 +27,66 @@
 #include "hal/usb/camera_characteristics.h"
 #include "hal/usb/quirks.h"
 
+namespace cros {
+
 namespace {
+
 // Since cameras might report non-integer fps but in Android Camera 3 API we
 // can only set fps range with integer in metadata.
 constexpr float kFpsDifferenceThreshold = 1.0f;
-}  // namespace
 
-namespace cros {
+const int ControlTypeToCid(ControlType type) {
+  switch (type) {
+    case kControlBrightness:
+      return V4L2_CID_BRIGHTNESS;
+
+    case kControlContrast:
+      return V4L2_CID_CONTRAST;
+
+    case kControlPan:
+      return V4L2_CID_PAN_ABSOLUTE;
+
+    case kControlSaturation:
+      return V4L2_CID_SATURATION;
+
+    case kControlSharpness:
+      return V4L2_CID_SHARPNESS;
+
+    case kControlTilt:
+      return V4L2_CID_TILT_ABSOLUTE;
+
+    default:
+      NOTREACHED() << "Unexpected control type " << type;
+      return -1;
+  }
+}
+
+const std::string ControlTypeToString(ControlType type) {
+  switch (type) {
+    case kControlBrightness:
+      return "brightness";
+
+    case kControlContrast:
+      return "contrast";
+
+    case kControlPan:
+      return "pan";
+
+    case kControlSaturation:
+      return "saturation";
+
+    case kControlSharpness:
+      return "sharpness";
+
+    case kControlTilt:
+      return "tilt";
+
+    default:
+      NOTREACHED() << "Unexpected control type " << type;
+      return "N/A";
+  }
+}
+}  // namespace
 
 V4L2CameraDevice::V4L2CameraDevice()
     : stream_on_(false), device_info_(DeviceInfo()) {}
@@ -461,6 +514,43 @@ int V4L2CameraDevice::SetFrameRate(float frame_rate) {
   return 0;
 }
 
+bool V4L2CameraDevice::SetControlValue(ControlType type, int32_t value) {
+  auto iter_value = control_values_.find(type);
+  // Has cached value
+  if (iter_value != control_values_.end())
+    if (iter_value->second == value)
+      return true;
+
+  int cid = ControlTypeToCid(type);
+  int32_t current_value;
+
+  if (SetControlValue(device_fd_.get(), cid, value)) {
+    if (GetControlValue(type, &current_value)) {
+      LOG(INFO) << "Set " << ControlTypeToString(type) << " to " << value;
+      control_values_[type] = value;
+      return true;
+    }
+  }
+
+  return false;
+}
+
+bool V4L2CameraDevice::GetControlValue(ControlType type, int32_t* value) {
+  auto iter_value = control_values_.find(type);
+  // Has cached value
+  if (iter_value != control_values_.end()) {
+    *value = iter_value->second;
+    return true;
+  }
+
+  int cid = ControlTypeToCid(type);
+  if (GetControlValue(device_fd_.get(), cid, value)) {
+    control_values_[type] = *value;
+    return true;
+  }
+  return false;
+}
+
 // static
 const SupportedFormats V4L2CameraDevice::GetDeviceSupportedFormats(
     const std::string& device_path) {
@@ -503,6 +593,108 @@ const SupportedFormats V4L2CameraDevice::GetDeviceSupportedFormats(
     }
   }
   return formats;
+}
+
+// static
+bool V4L2CameraDevice::GetControlRange(const std::string& device_path,
+                                       int control_id,
+                                       ControlRange* range) {
+  base::ScopedFD fd(RetryDeviceOpen(device_path, O_RDONLY));
+  if (!fd.is_valid()) {
+    PLOGF(ERROR) << "Failed to open " << device_path;
+    return false;
+  }
+
+  v4l2_queryctrl query_ctrl = {};
+
+  query_ctrl.id = control_id;
+  query_ctrl.type = V4L2_CTRL_TYPE_INTEGER;
+  if (HANDLE_EINTR(ioctl(fd.get(), VIDIOC_QUERYCTRL, &query_ctrl)) < 0) {
+    VLOGF(1) << "Unsupported control_id: " << control_id;
+    return false;
+  }
+
+  if (query_ctrl.flags & V4L2_CTRL_FLAG_DISABLED) {
+    LOGF(WARNING) << "Disabled control_id: " << control_id;
+    return false;
+  }
+
+  if (query_ctrl.minimum > query_ctrl.maximum) {
+    LOGF(WARNING) << "control_id:" << control_id << " min "
+                  << query_ctrl.minimum << " > max " << query_ctrl.maximum;
+    return false;
+  }
+
+  if (query_ctrl.minimum > query_ctrl.default_value) {
+    LOGF(WARNING) << "control_id:" << control_id << " min "
+                  << query_ctrl.minimum << " > default "
+                  << query_ctrl.default_value;
+    return false;
+  }
+
+  if (query_ctrl.maximum < query_ctrl.default_value) {
+    LOGF(WARNING) << "control_id:" << control_id << " max "
+                  << query_ctrl.maximum << " < default "
+                  << query_ctrl.default_value;
+    return false;
+  }
+
+  if (query_ctrl.step <= 0) {
+    LOGF(WARNING) << "control_id:" << control_id << " step " << query_ctrl.step
+                  << " <= 0";
+    return false;
+  }
+
+  if ((query_ctrl.default_value - query_ctrl.minimum) % query_ctrl.step != 0) {
+    LOGF(WARNING) << "control_id:" << control_id << " step " << query_ctrl.step
+                  << " can't divide minimum " << query_ctrl.minimum
+                  << " default_value " << query_ctrl.default_value;
+    return false;
+  }
+
+  if ((query_ctrl.maximum - query_ctrl.minimum) % query_ctrl.step != 0) {
+    LOGF(WARNING) << "control_id:" << control_id << " step " << query_ctrl.step
+                  << " can't divide minimum " << query_ctrl.minimum
+                  << " maximum " << query_ctrl.maximum;
+    return false;
+  }
+
+  range->minimum = query_ctrl.minimum;
+  range->maximum = query_ctrl.maximum;
+  range->step = query_ctrl.step;
+  range->default_value = query_ctrl.default_value;
+
+  return true;
+}
+
+// static
+bool V4L2CameraDevice::SetControlValue(int fd, int control_id, int32_t value) {
+  VLOGF(1) << "Set control_id:" << control_id << ", value:" << value;
+
+  v4l2_control current = {.id = static_cast<__u32>(control_id), .value = value};
+  if (HANDLE_EINTR(ioctl(fd, VIDIOC_S_CTRL, &current)) < 0) {
+    PLOGF(WARNING) << "Error setting control_id: " << control_id << " to "
+                   << value;
+    return false;
+  }
+
+  return true;
+}
+
+// static
+bool V4L2CameraDevice::GetControlValue(int fd, int control_id, int32_t* value) {
+  v4l2_control current = {.id = static_cast<__u32>(control_id)};
+
+  current.id = control_id;
+  if (HANDLE_EINTR(ioctl(fd, VIDIOC_G_CTRL, &current)) < 0) {
+    PLOGF(WARNING) << "Error getting control_id: " << control_id;
+    return false;
+  }
+  *value = current.value;
+
+  VLOGF(1) << "Get control_id:" << control_id << ", value:" << *value;
+
+  return true;
 }
 
 // static
@@ -617,6 +809,22 @@ std::string V4L2CameraDevice::GetModelName(const std::string& device_path) {
     return name;
   }
   return "USB Camera";
+}
+
+// static
+bool V4L2CameraDevice::GetControlRange(const std::string& device_path,
+                                       ControlType type,
+                                       ControlRange* range) {
+  int cid = ControlTypeToCid(type);
+
+  if (!GetControlRange(device_path, cid, range)) {
+    return false;
+  }
+
+  LOGF(INFO) << ControlTypeToString(type) << "(min,max,step,default) = "
+             << "(" << range->minimum << "," << range->maximum << ","
+             << range->step << "," << range->default_value << ")";
+  return true;
 }
 
 // static
