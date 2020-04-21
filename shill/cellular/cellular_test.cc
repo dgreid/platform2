@@ -194,12 +194,12 @@ class CellularTest : public testing::TestWithParam<Cellular::Type> {
 
   void SetMockMobileOperatorInfoObjects() {
     mock_home_provider_info_ =
-        new MockMobileOperatorInfo(&dispatcher_, "HomeProvider");
+        new NiceMock<MockMobileOperatorInfo>(&dispatcher_, "HomeProvider");
     // Takes ownership.
     device_->set_home_provider_info(mock_home_provider_info_);
 
     mock_serving_operator_info_ =
-        new MockMobileOperatorInfo(&dispatcher_, "ServingOperator");
+        new NiceMock<MockMobileOperatorInfo>(&dispatcher_, "ServingOperator");
     // Takes ownership.
     device_->set_serving_operator_info(mock_serving_operator_info_);
   }
@@ -454,11 +454,15 @@ class CellularTest : public testing::TestWithParam<Cellular::Type> {
   // Different tests simulate a cellular service being set using a real /mock
   // service.
   CellularService* SetService() {
-    device_->service_ = new CellularService(modem_info_.manager(), device_);
+    device_->service_ =
+        new CellularService(modem_info_.manager(), device_->imsi(),
+                            device_->iccid(), device_->GetSimCardId());
+    device_->service_->SetDevice(device_.get());
     return device_->service_.get();
   }
   MockCellularService* SetMockService() {
-    device_->service_ = new MockCellularService(modem_info_.manager(), device_);
+    device_->service_ =
+        new NiceMock<MockCellularService>(modem_info_.manager(), device_);
     return static_cast<MockCellularService*>(device_->service_.get());
   }
 
@@ -474,8 +478,8 @@ class CellularTest : public testing::TestWithParam<Cellular::Type> {
   EventDispatcherForTest dispatcher_;
   TestControl control_interface_;
   MockModemInfo modem_info_;
-  MockDeviceInfo device_info_;
-  MockProcessManager process_manager_;
+  NiceMock<MockDeviceInfo> device_info_;
+  NiceMock<MockProcessManager> process_manager_;
   NiceMock<MockRTNLHandler> rtnl_handler_;
 
   MockDHCPProvider dhcp_provider_;
@@ -2129,12 +2133,12 @@ TEST_P(CellularTest, GetGeolocationObjects) {
 }
 
 // Helper class because gmock doesn't play nicely with unique_ptr
-class FakeMobileOperatorInfo : public MockMobileOperatorInfo {
+class FakeMobileOperatorInfo : public NiceMock<MockMobileOperatorInfo> {
  public:
   FakeMobileOperatorInfo(
       EventDispatcher* dispatcher,
       std::vector<std::unique_ptr<MobileOperatorInfo::MobileAPN>> apn_list)
-      : MockMobileOperatorInfo(dispatcher, "Fake"),
+      : NiceMock<MockMobileOperatorInfo>(dispatcher, "Fake"),
         apn_list_(std::move(apn_list)) {}
 
   const std::vector<std::unique_ptr<MobileOperatorInfo::MobileAPN>>& apn_list()

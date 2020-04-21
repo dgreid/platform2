@@ -278,7 +278,13 @@ class Cellular : public Device,
   bool provider_requires_roaming() const { return provider_requires_roaming_; }
   bool sim_present() const { return sim_present_; }
   const Stringmaps& apn_list() const { return apn_list_; }
-  const std::string& sim_identifier() const { return sim_identifier_; }
+  const std::string& iccid() const { return iccid_; }
+
+  // Returns a unique identifier for a SIM Card. For physical cards this will be
+  // the ICCID and there should only be one matching service. For eSIM cards,
+  // this will be the eUICCID (eID) and there may be multiple services
+  // associated with the card.
+  const std::string& GetSimCardId() const;
 
   // setters
   void set_home_provider(const Stringmap& home_provider);
@@ -305,7 +311,7 @@ class Cellular : public Device,
   void set_provider_requires_roaming(bool provider_requires_roaming);
   void set_sim_present(bool sim_present);
   void set_apn_list(const Stringmaps& apn_list);
-  void set_sim_identifier(const std::string& sim_identifier);
+  void set_iccid(const std::string& iccid);
 
   // Takes ownership.
   void set_home_provider_info(MobileOperatorInfo* home_provider_info);
@@ -517,7 +523,7 @@ class Cellular : public Device,
   uint16_t scan_interval_;
   bool sim_present_;
   Stringmaps apn_list_;
-  std::string sim_identifier_;
+  std::string iccid_;
 
   // End of DBus properties.
   // ///////////////////////////////////////////////////////////////////////////

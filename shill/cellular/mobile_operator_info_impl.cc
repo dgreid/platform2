@@ -135,7 +135,7 @@ bool MobileOperatorInfoImpl::Init() {
                  << database_path_cstr;
       continue;
     }
-    LOG(INFO) << "Successfully loaded database: " << database_path_cstr;
+    SLOG(this, 1) << "Successfully loaded database: " << database_path_cstr;
     // Collate loaded databases into one as they're found.
     // TODO(pprabhu) This merge might be very costly. Determine if we need to
     // implement move semantics / bias the merge to use the largest database

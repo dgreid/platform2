@@ -4,6 +4,8 @@
 
 #include "shill/cellular/mock_modem_info.h"
 
+using testing::NiceMock;
+
 namespace shill {
 
 MockModemInfo::MockModemInfo()
@@ -41,8 +43,8 @@ void MockModemInfo::SetMockMembers() {
     metrics_ = mock_metrics_.get();
   }
   if (!manager_) {
-    mock_manager_.reset(
-        new MockManager(control_interface(), dispatcher(), metrics()));
+    mock_manager_.reset(new NiceMock<MockManager>(control_interface(),
+                                                  dispatcher(), metrics()));
     manager_ = mock_manager_.get();
   }
 }

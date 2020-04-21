@@ -35,8 +35,17 @@ class CellularService : public Service {
     kActivationTypeUnknown
   };
 
-  CellularService(Manager* manager, const CellularRefPtr& device);
+  // A CellularService is associated with a single SIM Profile, uniquely
+  // identified by IMSI. We also need to provide ICCID which is used to identify
+  // eSIM profiles, and a SIM Card Identifier which is used to identify which
+  // SIM Profiles are available on an active SIM Card.
+  CellularService(Manager* manager,
+                  const std::string& imsi,
+                  const std::string& iccid,
+                  const std::string& sim_card_id);
   ~CellularService() override;
+
+  void SetDevice(Cellular* device);
 
   // Public Service overrides
   void AutoConnect() override;
@@ -48,6 +57,9 @@ class CellularService : public Service {
   bool Load(const StoreInterface* storage) override;
   bool Save(StoreInterface* storage) override;
 
+  const std::string& imsi() const { return imsi_; }
+  const std::string& iccid() const { return iccid_; }
+  const std::string& sim_card_id() const { return sim_card_id_; }
   const CellularRefPtr& cellular() const { return cellular_; }
 
   void SetActivationType(ActivationType type);
@@ -100,7 +112,9 @@ class CellularService : public Service {
 
  private:
   friend class CellularCapability3gppTest;
+  friend class CellularCapabilityCdmaTest;
   friend class CellularServiceTest;
+  friend class CellularTest;
 
   template <typename key_type, typename value_type>
   friend class ContainsCellularPropertiesMatcherP2;
@@ -125,11 +139,10 @@ class CellularService : public Service {
   static const char kAutoConnDeviceDisabled[];
   static const char kAutoConnOutOfCredits[];
   static const char kStorageIccid[];
-  static const char kStorageImei[];
   static const char kStorageImsi[];
-  static const char kStorageMeid[];
   static const char kStoragePPPUsername[];
   static const char kStoragePPPPassword[];
+  static const char kStorageSimCardId[];
 
   KeyValueStore GetStorageProperties() const;
   std::string GetDefaultStorageIdentifier() const;
@@ -176,7 +189,17 @@ class CellularService : public Service {
                            const std::string& apntag);
   bool IsOutOfCredits(Error* /*error*/);
 
-  // Properties
+  // IMSI uniquely identifies a CellularService.
+  std::string imsi_;
+
+  // ICCID identifies a SIM Card profile. Strongly tied to IMSI and used to
+  // identify eSIM profiles.
+  std::string iccid_;
+
+  // Uniquely identifies a SIM Card (physical or eSIM). This value is used to
+  // identify services that may be available on the active SIM Card.
+  std::string sim_card_id_;
+
   ActivationType activation_type_;
   std::string activation_state_;
   Stringmap serving_operator_;

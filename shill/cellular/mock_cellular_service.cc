@@ -12,7 +12,8 @@ namespace shill {
 
 MockCellularService::MockCellularService(Manager* manager,
                                          const CellularRefPtr& device)
-    : CellularService(manager, device),
+    : CellularService(
+          manager, device->imsi(), device->iccid(), device->GetSimCardId()),
       default_activation_state_(kActivationStateUnknown) {
   ON_CALL(*this, activation_state())
       .WillByDefault(ReturnRef(default_activation_state_));

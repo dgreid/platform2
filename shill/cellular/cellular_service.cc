@@ -13,6 +13,7 @@
 
 #include "shill/adaptor_interfaces.h"
 #include "shill/cellular/cellular.h"
+#include "shill/control_interface.h"
 #include "shill/property_accessor.h"
 #include "shill/store_interface.h"
 
@@ -35,11 +36,10 @@ const char CellularService::kAutoConnBadPPPCredentials[] =
 const char CellularService::kAutoConnDeviceDisabled[] = "device disabled";
 const char CellularService::kAutoConnOutOfCredits[] = "service out of credits";
 const char CellularService::kStorageIccid[] = "Cellular.Iccid";
-const char CellularService::kStorageImei[] = "Cellular.Imei";
 const char CellularService::kStorageImsi[] = "Cellular.Imsi";
-const char CellularService::kStorageMeid[] = "Cellular.Meid";
 const char CellularService::kStoragePPPUsername[] = "Cellular.PPP.Username";
 const char CellularService::kStoragePPPPassword[] = "Cellular.PPP.Password";
+const char CellularService::kStorageSimCardId[] = "Cellular.SimCardId";
 
 namespace {
 
@@ -59,18 +59,22 @@ bool GetNonEmptyField(const Stringmap& stringmap,
 
 }  // namespace
 
-CellularService::CellularService(Manager* manager, const CellularRefPtr& device)
+CellularService::CellularService(Manager* manager,
+                                 const std::string& imsi,
+                                 const std::string& iccid,
+                                 const std::string& sim_card_id)
     : Service(manager, Technology::kCellular),
+      imsi_(imsi),
+      iccid_(iccid),
+      sim_card_id_(sim_card_id),
       activation_type_(kActivationTypeUnknown),
-      cellular_(device),
       is_auto_connecting_(false),
       out_of_credits_(false) {
   // Note: This will change once SetNetworkTechnology() is called, but the
   // serial number remains unchanged so correlating log lines will be easy.
   set_log_name("cellular_" + base::NumberToString(serial_number()));
 
-  SetConnectable(true);
-  PropertyStore* store = this->mutable_store();
+  PropertyStore* store = mutable_store();
   HelpRegisterDerivedString(kActivationTypeProperty,
                             &CellularService::CalculateActivationType, nullptr);
   store->RegisterConstString(kActivationStateProperty, &activation_state_);
@@ -88,12 +92,20 @@ CellularService::CellularService(Manager* manager, const CellularRefPtr& device)
   store->RegisterString(kCellularPPPUsernameProperty, &ppp_username_);
   store->RegisterWriteOnlyString(kCellularPPPPasswordProperty, &ppp_password_);
 
-  set_friendly_name(cellular_->CreateDefaultFriendlyServiceName());
-
   storage_identifier_ = GetDefaultStorageIdentifier();
 }
 
-CellularService::~CellularService() {}
+CellularService::~CellularService() {
+  SLOG(this, 2) << "CellularService Destroyed: " << log_name();
+}
+
+void CellularService::SetDevice(Cellular* device) {
+  SLOG(this, 2) << __func__ << ": " << (device ? device->iccid() : "None");
+  cellular_ = device;
+  if (cellular_)
+    set_friendly_name(cellular_->CreateDefaultFriendlyServiceName());
+  SetConnectable(!!device);
+}
 
 void CellularService::AutoConnect() {
   is_auto_connecting_ = true;
@@ -102,6 +114,14 @@ void CellularService::AutoConnect() {
 }
 
 void CellularService::CompleteCellularActivation(Error* error) {
+  if (!cellular_) {
+    Error::PopulateAndLog(
+        FROM_HERE, error, Error::kOperationFailed,
+        base::StringPrintf("CompleteCellularActivation attempted but %s "
+                           "Service %s has no device.",
+                           kTypeCellular, log_name().c_str()));
+    return;
+  }
   cellular_->CompleteActivation(error);
 }
 
@@ -182,13 +202,14 @@ bool CellularService::Save(StoreInterface* storage) {
   const string id = GetStorageIdentifier();
   SaveApn(storage, id, GetUserSpecifiedApn(), kStorageAPN);
   SaveApn(storage, id, GetLastGoodApn(), kStorageLastGoodAPN);
-  SaveString(storage, id, kStorageIccid, cellular_->sim_identifier(), false,
-             true);
-  SaveString(storage, id, kStorageImei, cellular_->imei(), false, true);
-  SaveString(storage, id, kStorageImsi, cellular_->imsi(), false, true);
-  SaveString(storage, id, kStorageMeid, cellular_->meid(), false, true);
+  SaveString(storage, id, kStorageIccid, iccid_, false, true);
+  SaveString(storage, id, kStorageImsi, imsi_, false, true);
   SaveString(storage, id, kStoragePPPUsername, ppp_username_, false, true);
   SaveString(storage, id, kStoragePPPPassword, ppp_password_, false, true);
+  SaveString(storage, id, kStorageSimCardId, sim_card_id_, false, true);
+  // Delete deprecated keys. TODO: Remove after M84.
+  storage->DeleteKey(id, "Cellular.Imei");
+  storage->DeleteKey(id, "Cellular.Meid");
   return true;
 }
 
@@ -316,15 +337,30 @@ void CellularService::NotifySubscriptionStateChanged(
 }
 
 void CellularService::OnConnect(Error* error) {
+  if (!cellular_) {
+    Error::PopulateAndLog(
+        FROM_HERE, error, Error::kOperationFailed,
+        base::StringPrintf("Connect attempted but %s Service %s has no device.",
+                           kTypeCellular, log_name().c_str()));
+    return;
+  }
   cellular_->Connect(error);
 }
 
 void CellularService::OnDisconnect(Error* error, const char* reason) {
+  if (!cellular_) {
+    Error::PopulateAndLog(
+        FROM_HERE, error, Error::kOperationFailed,
+        base::StringPrintf(
+            "Disconnect attempted but %s Service %s has no device.",
+            kTypeCellular, log_name().c_str()));
+    return;
+  }
   cellular_->Disconnect(error, reason);
 }
 
 bool CellularService::IsAutoConnectable(const char** reason) const {
-  if (!cellular_->running()) {
+  if (!cellular_ || !cellular_->running()) {
     *reason = kAutoConnDeviceDisabled;
     return false;
   }
@@ -353,7 +389,9 @@ bool CellularService::IsMeteredByServiceProperties() const {
   return true;
 }
 
-RpcIdentifier CellularService::GetDeviceRpcId(Error* /*error*/) const {
+RpcIdentifier CellularService::GetDeviceRpcId(Error* error) const {
+  if (!cellular_)
+    return control_interface()->NullRpcIdentifier();
   return cellular_->GetRpcIdentifier();
 }
 
@@ -483,17 +521,17 @@ void CellularService::SaveApnField(StoreInterface* storage,
 KeyValueStore CellularService::GetStorageProperties() const {
   KeyValueStore properties;
   properties.Set<string>(kStorageType, kTypeCellular);
-  properties.Set<string>(kStorageImsi, cellular_->imsi());
+  properties.Set<string>(kStorageImsi, imsi_);
   return properties;
 }
 
 std::string CellularService::GetDefaultStorageIdentifier() const {
-  if (cellular_->imsi().empty()) {
+  if (imsi_.empty()) {
     LOG(ERROR) << "CellularService created with empty IMSI";
     return std::string();
   }
   return SanitizeStorageIdentifier(
-      base::StringPrintf("%s_%s", kTypeCellular, cellular_->imsi().c_str()));
+      base::StringPrintf("%s_%s", kTypeCellular, imsi_.c_str()));
 }
 
 bool CellularService::IsOutOfCredits(Error* /*error*/) {

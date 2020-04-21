@@ -416,16 +416,16 @@ void CellularCapability3gpp::CompleteActivation(Error* error) {
 
   // Persist the ICCID as "Pending Activation".
   // We're assuming that when this function gets called,
-  // |cellular()->sim_identifier()| will be non-empty. We still check here that
+  // |cellular()->iccid()| will be non-empty. We still check here that
   // is non-empty, though something is wrong if it is empty.
-  const string& sim_identifier = cellular()->sim_identifier();
-  if (sim_identifier.empty()) {
+  const string& iccid = cellular()->iccid();
+  if (iccid.empty()) {
     SLOG(this, 2) << "SIM identifier not available. Nothing to do.";
     return;
   }
 
   modem_info()->pending_activation_store()->SetActivationState(
-      PendingActivationStore::kIdentifierICCID, sim_identifier,
+      PendingActivationStore::kIdentifierICCID, iccid,
       PendingActivationStore::kStatePending);
   UpdatePendingActivationState();
 
@@ -460,7 +460,7 @@ void CellularCapability3gpp::OnResetAfterActivationReply(const Error& error) {
 void CellularCapability3gpp::UpdatePendingActivationState() {
   SLOG(this, 3) << __func__;
 
-  const string& sim_identifier = cellular()->sim_identifier();
+  const string& iccid = cellular()->iccid();
   bool registered =
       registration_state_ == MM_MODEM_3GPP_REGISTRATION_STATE_HOME;
 
@@ -473,9 +473,9 @@ void CellularCapability3gpp::UpdatePendingActivationState() {
        (subscription_state_ == SubscriptionState::kOutOfCredits)) ||
       ((subscription_state_ == SubscriptionState::kUnknown) && IsMdnValid());
 
-  if (activated && !sim_identifier.empty())
+  if (activated && !iccid.empty())
     modem_info()->pending_activation_store()->RemoveEntry(
-        PendingActivationStore::kIdentifierICCID, sim_identifier);
+        PendingActivationStore::kIdentifierICCID, iccid);
 
   CellularServiceRefPtr service = cellular()->service();
 
@@ -488,12 +488,12 @@ void CellularCapability3gpp::UpdatePendingActivationState() {
 
   // If the ICCID is not available, the following logic can be delayed until it
   // becomes available.
-  if (sim_identifier.empty())
+  if (iccid.empty())
     return;
 
   PendingActivationStore::State state =
       modem_info()->pending_activation_store()->GetActivationState(
-          PendingActivationStore::kIdentifierICCID, sim_identifier);
+          PendingActivationStore::kIdentifierICCID, iccid);
   switch (state) {
     case PendingActivationStore::kStatePending:
       // Always mark the service as activating here, as the ICCID could have
@@ -502,7 +502,7 @@ void CellularCapability3gpp::UpdatePendingActivationState() {
       if (reset_done_) {
         SLOG(this, 2) << "Post-payment activation reset complete.";
         modem_info()->pending_activation_store()->SetActivationState(
-            PendingActivationStore::kIdentifierICCID, sim_identifier,
+            PendingActivationStore::kIdentifierICCID, iccid,
             PendingActivationStore::kStateActivated);
       }
       break;
@@ -570,15 +570,14 @@ void CellularCapability3gpp::UpdateServiceActivationState() {
 
   service->NotifySubscriptionStateChanged(subscription_state_);
 
-  const string& sim_identifier = cellular()->sim_identifier();
+  const string& iccid = cellular()->iccid();
   string activation_state;
   PendingActivationStore::State state =
       modem_info()->pending_activation_store()->GetActivationState(
-          PendingActivationStore::kIdentifierICCID, sim_identifier);
+          PendingActivationStore::kIdentifierICCID, iccid);
   if ((subscription_state_ == SubscriptionState::kUnknown ||
        subscription_state_ == SubscriptionState::kUnprovisioned) &&
-      !sim_identifier.empty() &&
-      state == PendingActivationStore::kStatePending) {
+      !iccid.empty() && state == PendingActivationStore::kStatePending) {
     activation_state = kActivationStateActivating;
   } else if (IsServiceActivationRequired()) {
     activation_state = kActivationStateNotActivated;
@@ -712,7 +711,7 @@ void CellularCapability3gpp::UpdateServiceOLP() {
   }
   string post_data = olp_list[0].post_data;
   base::ReplaceSubstringsAfterOffset(&post_data, 0, "${iccid}",
-                                     cellular()->sim_identifier());
+                                     cellular()->iccid());
   base::ReplaceSubstringsAfterOffset(&post_data, 0, "${imei}",
                                      cellular()->imei());
   base::ReplaceSubstringsAfterOffset(&post_data, 0, "${imsi}",
@@ -751,7 +750,7 @@ void CellularCapability3gpp::UpdateActiveBearer() {
 }
 
 bool CellularCapability3gpp::IsServiceActivationRequired() const {
-  const string& sim_identifier = cellular()->sim_identifier();
+  const string& iccid = cellular()->iccid();
   // subscription_state_ is the definitive answer. If that does not work,
   // fallback on MDN based logic.
   if (subscription_state_ == SubscriptionState::kProvisioned ||
@@ -760,9 +759,9 @@ bool CellularCapability3gpp::IsServiceActivationRequired() const {
 
   // We are in the process of activating, ignore all other clues from the
   // network and use our own knowledge about the activation state.
-  if (!sim_identifier.empty() &&
+  if (!iccid.empty() &&
       modem_info()->pending_activation_store()->GetActivationState(
-          PendingActivationStore::kIdentifierICCID, sim_identifier) !=
+          PendingActivationStore::kIdentifierICCID, iccid) !=
           PendingActivationStore::kStateUnknown)
     return false;
 
@@ -1626,7 +1625,7 @@ void CellularCapability3gpp::OnSpnChanged(const std::string& spn) {
 }
 
 void CellularCapability3gpp::OnSimIdentifierChanged(const string& id) {
-  cellular()->set_sim_identifier(id);
+  cellular()->set_iccid(id);
   cellular()->home_provider_info()->UpdateICCID(id);
   // Provide ICCID to serving operator as well to aid in MVNO identification.
   cellular()->serving_operator_info()->UpdateICCID(id);

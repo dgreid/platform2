@@ -83,7 +83,9 @@ class CellularCapabilityCdmaTest : public testing::Test {
   }
 
   void SetService() {
-    cellular_->service_ = new CellularService(modem_info_.manager(), cellular_);
+    cellular_->service_ =
+        new CellularService(modem_info_.manager(), cellular_->imsi(),
+                            cellular_->iccid(), cellular_->GetSimCardId());
   }
 
   void SetMockMobileOperatorInfoObjects() {

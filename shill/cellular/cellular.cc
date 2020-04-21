@@ -705,7 +705,8 @@ void Cellular::HandleNewSignalQuality(uint32_t strength) {
 void Cellular::CreateService() {
   SLOG(this, 2) << __func__;
   CHECK(!service_.get());
-  service_ = new CellularService(manager(), this);
+  service_ = new CellularService(manager(), imsi(), iccid(), GetSimCardId());
+  service_->SetDevice(this);
   capability_->OnServiceCreated();
   manager()->RegisterService(service_);
 
@@ -1254,7 +1255,7 @@ void Cellular::RegisterProperties() {
                            &provider_requires_roaming_);
   store->RegisterConstBool(kSIMPresentProperty, &sim_present_);
   store->RegisterConstStringmaps(kCellularApnListProperty, &apn_list_);
-  store->RegisterConstString(kIccidProperty, &sim_identifier_);
+  store->RegisterConstString(kIccidProperty, &iccid_);
 
   // TODO(pprabhu): Decide whether these need their own custom setters.
   HelpRegisterConstDerivedString(kTechnologyFamilyProperty,
@@ -1263,6 +1264,11 @@ void Cellular::RegisterProperties() {
   HelpRegisterDerivedBool(kCellularAllowRoamingProperty,
                           &Cellular::GetAllowRoaming,
                           &Cellular::SetAllowRoaming);
+}
+
+const std::string& Cellular::GetSimCardId() const {
+  // TODO(b/154014577): Support eSIM.
+  return iccid_;
 }
 
 std::deque<Stringmap> Cellular::BuildApnTryList() const {
@@ -1524,12 +1530,12 @@ void Cellular::set_apn_list(const Stringmaps& apn_list) {
                   << "| change. DBus adaptor is NULL!";
 }
 
-void Cellular::set_sim_identifier(const string& sim_identifier) {
-  if (sim_identifier_ == sim_identifier)
+void Cellular::set_iccid(const string& iccid) {
+  if (iccid_ == iccid)
     return;
 
-  sim_identifier_ = sim_identifier;
-  adaptor()->EmitStringChanged(kIccidProperty, sim_identifier_);
+  iccid_ = iccid;
+  adaptor()->EmitStringChanged(kIccidProperty, iccid_);
 }
 
 void Cellular::set_home_provider_info(MobileOperatorInfo* home_provider_info) {

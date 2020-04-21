@@ -33,7 +33,8 @@ namespace shill {
 
 namespace {
 const char kImsi[] = "111222123456789";
-}
+const char kIccid[] = "1234567890000";
+}  // namespace
 
 MATCHER_P2(ContainsCellularProperties, key, value, "") {
   return arg.template Contains<string>(CellularService::kStorageType) &&
@@ -54,9 +55,12 @@ class CellularServiceTest : public testing::Test {
         .Times(AnyNumber());
     device_ = new MockCellular(&modem_info_, "usb0", kAddress, 3,
                                Cellular::kTypeCdma, "", RpcIdentifier(""));
-    // CellularService expects an IMSI to always be set in the Device.
+    // CellularService expects an IMSI and SIM ID be set in the Device.
     device_->set_imsi(kImsi);
-    service_ = new CellularService(modem_info_.manager(), device_);
+    device_->set_iccid(kIccid);
+    service_ = new CellularService(modem_info_.manager(), kImsi, kIccid,
+                                   device_->GetSimCardId());
+    service_->SetDevice(device_.get());
   }
   ~CellularServiceTest() override { adaptor_ = nullptr; }
 
@@ -422,28 +426,17 @@ TEST_F(CellularServiceTest, LoadFromOlderProfile) {
 
 TEST_F(CellularServiceTest, Save) {
   NiceMock<MockStore> storage;
-  device_->set_sim_identifier("9876543210123456789");
-  device_->set_imei("012345678901234");
-  device_->set_meid("ABCDEF01234567");
   EXPECT_CALL(storage, SetString(_, _, _)).WillRepeatedly(Return(true));
   EXPECT_CALL(storage, SetString(service_->GetStorageIdentifier(),
                                  StrEq(Service::kStorageType), kTypeCellular))
-      .Times(1);
-  EXPECT_CALL(storage, SetString(service_->GetStorageIdentifier(),
-                                 StrEq(CellularService::kStorageIccid),
-                                 device_->sim_identifier()))
-      .Times(1);
-  EXPECT_CALL(storage,
-              SetString(service_->GetStorageIdentifier(),
-                        StrEq(CellularService::kStorageImei), device_->imei()))
       .Times(1);
   EXPECT_CALL(storage,
               SetString(service_->GetStorageIdentifier(),
                         StrEq(CellularService::kStorageImsi), device_->imsi()))
       .Times(1);
-  EXPECT_CALL(storage,
-              SetString(service_->GetStorageIdentifier(),
-                        StrEq(CellularService::kStorageMeid), device_->meid()))
+  EXPECT_CALL(storage, SetString(service_->GetStorageIdentifier(),
+                                 StrEq(CellularService::kStorageIccid),
+                                 device_->iccid()))
       .Times(1);
   EXPECT_TRUE(service_->Save(&storage));
 }
