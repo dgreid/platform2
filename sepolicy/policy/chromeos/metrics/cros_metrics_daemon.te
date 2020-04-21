@@ -15,6 +15,8 @@ rw_dir_file(cros_metrics_daemon, cros_metrics_file);
 allow cros_metrics_daemon cros_metrics_file:file create_file_perms;
 allow cros_metrics_daemon sysfs:file { open read getattr };
 allow cros_metrics_daemon sysfs:dir { open read };
+allow cros_metrics_daemon sysfs_dm:dir { open read search };
+allow cros_metrics_daemon sysfs_dm:file { open read };
 allow cros_metrics_daemon sysfs_zram:dir search;
 allow cros_metrics_daemon sysfs_zram:file { open read getattr };
 allow cros_metrics_daemon sysfs_devices_system_cpu:file { open read getattr };

@@ -289,6 +289,7 @@ neverallow fs_type file_type:filesystem associate;
 
 type sysfs_class_devcoredump, sysfs_type;
 type sysfs_net, sysfs_type;
+type sysfs_dm, sysfs_type;
 
 type debugfs_gpu, debugfs_type;
 
