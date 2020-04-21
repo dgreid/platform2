@@ -4,8 +4,11 @@
 
 #include "shill/net/rtnl_message.h"
 
+#include <arpa/inet.h>
+#include <linux/if_addr.h>
 #include <linux/netlink.h>
 #include <linux/rtnetlink.h>
+#include <net/if.h>
 #include <netinet/in.h>
 #include <string.h>
 #include <sys/socket.h>
@@ -21,6 +24,39 @@
 namespace shill {
 
 namespace {
+
+using flags_info_t = std::vector<std::pair<uint32_t, std::string>>;
+
+// Helper for pretty printing flags
+std::string PrintFlags(uint32_t flags, const flags_info_t& flags_info) {
+  std::string str;
+  if (flags == 0)
+    return str;
+  std::string sep = "";
+  for (const auto& flag_descr : flags_info) {
+    if ((flags & flag_descr.first) == 0)
+      continue;
+    str += sep;
+    str += flag_descr.second;
+    sep = " | ";
+  }
+  return str;
+}
+
+const flags_info_t kIfaFlags = {
+    {IFA_F_TEMPORARY, "TEMPORARY"},
+    {IFA_F_NODAD, "NODAD"},
+    {IFA_F_OPTIMISTIC, "OPTIMISTIC"},
+    {IFA_F_DADFAILED, "DADFAILED"},
+    {IFA_F_HOMEADDRESS, "HOMEADDRESS"},
+    {IFA_F_DEPRECATED, "DEPRECATED"},
+    {IFA_F_TENTATIVE, "TENTATIVE"},
+    {IFA_F_PERMANENT, "PERMANENT"},
+    {IFA_F_MANAGETEMPADDR, "MANAGETEMPADDR"},
+    {IFA_F_NOPREFIXROUTE, "NOPREFIXROUTE"},
+    {IFA_F_MCAUTOJOIN, "MCAUTOJOIN"},
+    {IFA_F_STABLE_PRIVACY, "STABLE_PRIVACY"},
+};
 
 std::unique_ptr<RTNLAttrMap> ParseAttrs(struct rtattr* data, int len) {
   RTNLAttrMap attrs;
@@ -67,6 +103,14 @@ ByteString PackAttrs(const RTNLAttrMap& attrs) {
   return attributes;
 }
 
+// Returns the interface name for the device with interface index |ifindex|, or
+// returns an empty string if it fails to find the interface.
+std::string IndexToName(int ifindex) {
+  char buf[IFNAMSIZ] = {};
+  if_indextoname(ifindex, buf);
+  return std::string(buf);
+}
+
 }  // namespace
 
 struct RTNLHeader {
@@ -87,11 +131,6 @@ std::string RTNLMessage::LinkStatus::ToString() const {
       kind.has_value()
           ? base::StringPrintf(" kind %s", kind.value().c_str()).c_str()
           : "");
-}
-
-std::string RTNLMessage::AddressStatus::ToString() const {
-  return base::StringPrintf("AddressStatus prefix_len %d flags %X scope %d",
-                            prefix_len, flags, scope);
 }
 
 std::string RTNLMessage::RouteStatus::ToString() const {
@@ -641,6 +680,11 @@ std::string RTNLMessage::GetStringAttribute(uint16_t attr) const {
   return std::string(bytes.GetConstCString(), len);
 }
 
+IPAddress RTNLMessage::GetIfaAddress() const {
+  return IPAddress(family_, GetAttribute(IFA_ADDRESS),
+                   address_status_.prefix_len);
+}
+
 // static
 std::string RTNLMessage::ModeToString(RTNLMessage::Mode mode) {
   switch (mode) {
@@ -690,7 +734,14 @@ std::string RTNLMessage::ToString() const {
       details = link_status_.ToString();
       break;
     case RTNLMessage::kTypeAddress:
-      details = address_status_.ToString();
+      details = base::StringPrintf(
+          "%s/%d if %s[%d] flags %s scope %d",
+          GetIfaAddress().ToString().c_str(), address_status_.prefix_len,
+          IndexToName(interface_index_).c_str(), interface_index_,
+          address_status_.flags
+              ? PrintFlags(address_status_.flags, kIfaFlags).c_str()
+              : "0",
+          address_status_.scope);
       break;
     case RTNLMessage::kTypeRoute:
     case RTNLMessage::kTypeRule:

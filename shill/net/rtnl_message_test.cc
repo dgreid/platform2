@@ -10,6 +10,7 @@
 #include <linux/rtnetlink.h>
 #include <sys/socket.h>
 
+#include <regex>
 #include <string>
 
 #include <gtest/gtest.h>
@@ -462,6 +463,8 @@ class RTNLMessageTest : public Test {
     EXPECT_TRUE(IPAddress(address.family(), msg.GetAttribute(IFA_ADDRESS),
                           status.prefix_len)
                     .Equals(address));
+    EXPECT_TRUE(msg.GetIfaAddress().IsValid());
+    EXPECT_TRUE(msg.GetIfaAddress().Equals(address));
   }
 
   void TestParseRoute(const ByteString& packet,
@@ -882,7 +885,7 @@ TEST_F(RTNLMessageTest, ToString) {
   struct {
     const unsigned char* payload;
     size_t length;
-    std::string expected_string;
+    std::string regexp;
   } test_cases[] = {
       {kNewLinkMessageWlan0, sizeof(kNewLinkMessageWlan0),
        "Add Link: LinkStatus type 1 flags 11043 change 0"},
@@ -890,10 +893,15 @@ TEST_F(RTNLMessageTest, ToString) {
        "Add Link: LinkStatus type 1 flags 82 change 0 kind ifb"},
       {kDelLinkMessageEth0, sizeof(kDelLinkMessageEth0),
        "Delete Link: LinkStatus type 1 flags 1002 change FFFFFFFF"},
+      // For Address events, the output interface index cannot be converted
+      // after the fact using if_indextoname(), but can still happen to match an
+      // unrelated interface on the unit test host. Escape it with \w*.
       {kNewAddrIPV4, sizeof(kNewAddrIPV4),
-       "Add IPv4 Address: AddressStatus prefix_len 24 flags 80 scope 0"},
+       "Add IPv4 Address: 192\\.168\\.10\\.100/24 if \\w*\\[8\\] flags "
+       "PERMANENT scope 0"},
       {kDelAddrIPV6, sizeof(kDelAddrIPV6),
-        "Delete IPv6 Address: AddressStatus prefix_len 64 flags 80 scope 253"},
+       "Delete IPv6 Address: fe80::6a7f:74ff:feba:efc7/64 if \\w*\\[15\\] "
+       "flags PERMANENT scope 253"},
       {kAddRouteIPV4, sizeof(kAddRouteIPV4),
        "Add IPv4 Route: RouteStatus dst_prefix 0 src_prefix 0 table 254 "
        "protocol 3 "
@@ -909,7 +917,9 @@ TEST_F(RTNLMessageTest, ToString) {
   for (const auto& tt : test_cases) {
     RTNLMessage msg;
     EXPECT_TRUE(msg.Decode(ByteString(tt.payload, tt.length)));
-    EXPECT_EQ(tt.expected_string, msg.ToString());
+    EXPECT_TRUE(std::regex_match(msg.ToString(), std::regex(tt.regexp)))
+        << '"' << msg.ToString() << "\" did not match regex \"" << tt.regexp
+        << '"';
   }
 }
 

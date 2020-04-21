@@ -70,7 +70,6 @@ class SHILL_EXPORT RTNLMessage {
                   unsigned char flags_in,
                   unsigned char scope_in)
         : prefix_len(prefix_len_in), flags(flags_in), scope(scope_in) {}
-    std::string ToString() const;
     // Prefix length of the address. Corresponds to ifa_prefixlen.
     unsigned char prefix_len;
     // Address flags. Corresponds to ifa_flags.
@@ -219,6 +218,9 @@ class SHILL_EXPORT RTNLMessage {
   // the ByteString does not contain any terminator, all the bytes of contained
   // in the ByteString are copied into the standard string.
   std::string GetStringAttribute(uint16_t attr) const;
+  // Returns the IFA_ADDRESS attribute as a shill::IPAddress. This should only
+  // be used for RTNLMessages of type kTypeAddress.
+  IPAddress GetIfaAddress() const;
 
  private:
   SHILL_PRIVATE bool DecodeInternal(const ByteString& msg);
