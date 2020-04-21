@@ -578,8 +578,8 @@ fi
 
 # /var/tmp must be world-writable and sticky
 chmod 1777 /var/tmp
-# /home/root must be group-writable and sticky
-chmod 1771 /home/root
+# /home/root must be sticky
+chmod 1751 /home/root
 # Selected directories must belong to the chronos user.
 chown chronos:chronos /home/chronos /var/log/metrics
 # rsyslog needs to be able to create new logfiles, but not delete other logs
