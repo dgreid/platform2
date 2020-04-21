@@ -6,11 +6,11 @@
 #define POWER_MANAGER_POWERD_POLICY_EXTERNAL_BACKLIGHT_CONTROLLER_H_
 
 #include <map>
+#include <memory>
 #include <vector>
 
 #include <base/compiler_specific.h>
 #include <base/macros.h>
-#include <base/memory/linked_ptr.h>
 #include <base/observer_list.h>
 
 #include "power_manager/powerd/policy/backlight_controller.h"
@@ -114,7 +114,7 @@ class ExternalBacklightController : public BacklightController,
 
   // Map from DRM device directories to ExternalDisplay objects for controlling
   // the corresponding displays.
-  typedef std::map<base::FilePath, linked_ptr<system::ExternalDisplay>>
+  typedef std::map<base::FilePath, std::unique_ptr<system::ExternalDisplay>>
       ExternalDisplayMap;
   ExternalDisplayMap external_displays_;
 

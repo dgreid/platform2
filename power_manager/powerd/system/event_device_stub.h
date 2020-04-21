@@ -8,11 +8,11 @@
 #include "power_manager/powerd/system/event_device_interface.h"
 
 #include <map>
+#include <memory>
 #include <string>
 #include <vector>
 
 #include <base/callback.h>
-#include <base/memory/linked_ptr.h>
 #include <linux/input.h>
 
 namespace power_manager {
@@ -94,14 +94,15 @@ class EventDeviceFactoryStub : public EventDeviceFactoryInterface {
   // Adds a mapping in |devices_| so that |device| will be returned in response
   // to Open() calls for |path|.
   void RegisterDevice(const base::FilePath& path,
-                      linked_ptr<EventDeviceInterface> device);
+                      std::shared_ptr<EventDeviceInterface> device);
 
   // Implementation of EventDeviceFactoryInterface.
-  linked_ptr<EventDeviceInterface> Open(const base::FilePath& path) override;
+  std::shared_ptr<EventDeviceInterface> Open(
+      const base::FilePath& path) override;
 
  private:
   // Map from device paths to registered devices.
-  std::map<base::FilePath, linked_ptr<EventDeviceInterface>> devices_;
+  std::map<base::FilePath, std::shared_ptr<EventDeviceInterface>> devices_;
 
   DISALLOW_COPY_AND_ASSIGN(EventDeviceFactoryStub);
 };

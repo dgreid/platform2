@@ -97,14 +97,15 @@ EventDeviceFactoryStub::EventDeviceFactoryStub() {}
 EventDeviceFactoryStub::~EventDeviceFactoryStub() {}
 
 void EventDeviceFactoryStub::RegisterDevice(
-    const base::FilePath& path, linked_ptr<EventDeviceInterface> device) {
+    const base::FilePath& path, std::shared_ptr<EventDeviceInterface> device) {
   devices_[path] = device;
 }
 
-linked_ptr<EventDeviceInterface> EventDeviceFactoryStub::Open(
+std::shared_ptr<EventDeviceInterface> EventDeviceFactoryStub::Open(
     const base::FilePath& path) {
   auto it = devices_.find(path);
-  return it != devices_.end() ? it->second : linked_ptr<EventDeviceInterface>();
+  return it != devices_.end() ? it->second
+                              : std::shared_ptr<EventDeviceInterface>();
 }
 
 }  // namespace system

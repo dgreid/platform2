@@ -377,7 +377,8 @@ void InputWatcher::HandleAddedInput(const std::string& input_name,
   }
 
   const base::FilePath path = dev_input_path_.Append(input_name);
-  linked_ptr<EventDeviceInterface> device(event_device_factory_->Open(path));
+  std::shared_ptr<EventDeviceInterface> device(
+      event_device_factory_->Open(path));
   if (!device.get()) {
     LOG(ERROR) << "Failed to open " << path.value();
     return;

@@ -1,4 +1,4 @@
-// Copyright (c) 2017 The Chromium OS Authors. All rights reserved.
+// Copyright 2017 The Chromium OS Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -11,7 +11,6 @@
 
 #include <base/files/file_path.h>
 #include <base/files/file_path_watcher.h>
-#include <base/memory/linked_ptr.h>
 
 #include "power_manager/common/prefs.h"
 
@@ -32,7 +31,7 @@ class FilePrefsStore : public PrefsStoreInterface {
 
  private:
   using FileWatcherMap =
-      std::map<std::string, linked_ptr<base::FilePathWatcher>>;
+      std::map<std::string, std::unique_ptr<base::FilePathWatcher>>;
 
   // Called by |dir_watcher_| and |file_watchers_|. Calls UpdateFileWatchers()
   // for directory changes or notifies |callback_| for pref file changes.

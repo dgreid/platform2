@@ -15,7 +15,6 @@
 #include <base/files/file_descriptor_watcher_posix.h>
 #include <base/files/file_path.h>
 #include <base/macros.h>
-#include <base/memory/linked_ptr.h>
 
 namespace power_manager {
 namespace system {
@@ -63,7 +62,8 @@ class EventDeviceFactory : public EventDeviceFactoryInterface {
   ~EventDeviceFactory() override;
 
   // Implementation of EventDeviceFactoryInterface.
-  linked_ptr<EventDeviceInterface> Open(const base::FilePath& path) override;
+  std::shared_ptr<EventDeviceInterface> Open(
+      const base::FilePath& path) override;
 
  private:
   DISALLOW_COPY_AND_ASSIGN(EventDeviceFactory);

@@ -171,14 +171,14 @@ EventDeviceFactory::EventDeviceFactory() {}
 
 EventDeviceFactory::~EventDeviceFactory() {}
 
-linked_ptr<EventDeviceInterface> EventDeviceFactory::Open(
+std::shared_ptr<EventDeviceInterface> EventDeviceFactory::Open(
     const base::FilePath& path) {
-  int fd = open(path.value().c_str(), O_RDONLY | O_NONBLOCK);
+  int fd = HANDLE_EINTR(open(path.value().c_str(), O_RDONLY | O_NONBLOCK));
   if (fd < 0) {
     PLOG(ERROR) << "open() failed for " << path.value();
-    return linked_ptr<EventDeviceInterface>();
+    return std::shared_ptr<EventDeviceInterface>();
   }
-  return linked_ptr<EventDeviceInterface>(new EventDevice(fd, path));
+  return std::shared_ptr<EventDeviceInterface>(new EventDevice(fd, path));
 }
 
 }  // namespace system

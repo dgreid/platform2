@@ -158,7 +158,7 @@ class InputWatcherTest : public testing::Test {
   // Registers |device| named |name| within |dev_input_dir_|. To be recognized,
   // |name| should be of the form "event<num>".
   void AddDevice(const std::string& name,
-                 linked_ptr<EventDeviceStub> device,
+                 std::shared_ptr<EventDeviceStub> device,
                  const std::string& syspath) {
     const base::FilePath path = dev_input_path_.Append(name);
     ASSERT_EQ(0, base::WriteFile(path, "", 0));
@@ -239,7 +239,7 @@ TEST_F(InputWatcherTest, DetectUSBDevices) {
 
 TEST_F(InputWatcherTest, PowerButton) {
   // Create an ACPI power button device that should be skipped.
-  linked_ptr<EventDeviceStub> skipped_power_button(new EventDeviceStub);
+  std::shared_ptr<EventDeviceStub> skipped_power_button(new EventDeviceStub());
   const base::FilePath kLegacyPowerButtonSysfsFile(
       "/sys/devices/LNXSYSTM:00/LNXPWRBN:00");
   const base::FilePath kNormalPowerButtonSysfsFile(
@@ -252,7 +252,7 @@ TEST_F(InputWatcherTest, PowerButton) {
   AddDevice("event" + base::NumberToString(kSkippedPowerButtonEventNum),
             skipped_power_button, kLegacyPowerButtonSysfsFile.value());
 
-  linked_ptr<EventDeviceStub> power_button(new EventDeviceStub);
+  std::shared_ptr<EventDeviceStub> power_button(new EventDeviceStub());
   power_button->set_is_power_button(true);
   int kNormalPowerButtonEventNum = 1;
   AddDevice("event" + base::NumberToString(kNormalPowerButtonEventNum),
@@ -296,7 +296,7 @@ TEST_F(InputWatcherTest, PowerButton) {
 }
 
 TEST_F(InputWatcherTest, LidSwitch) {
-  linked_ptr<EventDeviceStub> lid_switch(new EventDeviceStub);
+  std::shared_ptr<EventDeviceStub> lid_switch(new EventDeviceStub());
   const base::FilePath kAcpiLidSysfsFile("/sys/devices/LNXSYSTM:00/PNP0C0D:00");
   lid_switch->set_is_lid_switch(true);
   lid_switch->set_initial_lid_state(LidState::CLOSED);
@@ -351,7 +351,7 @@ TEST_F(InputWatcherTest, LidSwitch) {
 }
 
 TEST_F(InputWatcherTest, TabletModeSwitch) {
-  linked_ptr<EventDeviceStub> tablet_mode_switch(new EventDeviceStub);
+  std::shared_ptr<EventDeviceStub> tablet_mode_switch(new EventDeviceStub());
   const base::FilePath kTabletModeSysfsFile(
       "/sys/devices/LNXSYSTM:00/GOOG0007:00");
   tablet_mode_switch->set_is_tablet_mode_switch(true);
@@ -384,7 +384,7 @@ TEST_F(InputWatcherTest, TabletModeSwitch) {
 }
 
 TEST_F(InputWatcherTest, HoverMultitouch) {
-  linked_ptr<EventDeviceStub> touchpad(new EventDeviceStub);
+  std::shared_ptr<EventDeviceStub> touchpad(new EventDeviceStub());
   const base::FilePath kTouchpadSysfsFile(
       "/sys/devices/pci0000:00/0000:00:15.0/i2c_designware.0/i2c-6/"
       "i2c-ELAN0001:00");
@@ -396,7 +396,7 @@ TEST_F(InputWatcherTest, HoverMultitouch) {
   AddDevice("event" + base::NumberToString(kTouchPadEventNum), touchpad,
             kTouchpadSysfsFile.value());
 
-  linked_ptr<EventDeviceStub> touchscreen(new EventDeviceStub);
+  std::shared_ptr<EventDeviceStub> touchscreen(new EventDeviceStub());
   const base::FilePath kTouchscreenSysfsFile(
       "/sys/devices/pci0000:00/0000:00:15.0/i2c_designware.0/i2c-6/"
       "i2c-ELAN0001:01");
@@ -470,13 +470,13 @@ TEST_F(InputWatcherTest, HoverMultitouch) {
 }
 
 TEST_F(InputWatcherTest, HoverSingletouch) {
-  linked_ptr<EventDeviceStub> touchpad(new EventDeviceStub);
+  std::shared_ptr<EventDeviceStub> touchpad(new EventDeviceStub());
   touchpad->set_debug_name("touchpad");
   touchpad->set_hover_supported(true);
   touchpad->set_has_left_button(true);
   AddDevice("event0", touchpad, "");
 
-  linked_ptr<EventDeviceStub> touchscreen(new EventDeviceStub);
+  std::shared_ptr<EventDeviceStub> touchscreen(new EventDeviceStub());
   touchscreen->set_debug_name("touchscreen");
   touchscreen->set_hover_supported(true);
   touchscreen->set_has_left_button(false);
@@ -539,7 +539,7 @@ TEST_F(InputWatcherTest, IgnoreDevices) {
   // Create a device that looks like a power button but that doesn't follow the
   // expected device naming scheme. InputWatcher shouldn't request eents from
   // it.
-  linked_ptr<EventDeviceStub> other_device(new EventDeviceStub);
+  std::shared_ptr<EventDeviceStub> other_device(new EventDeviceStub());
   const base::FilePath kOtherDeviceSysfsFile(
       "/sys/devices/pci0000:00/0000:00:15.0/OtherDevice");
   other_device->set_is_power_button(true);
@@ -548,7 +548,7 @@ TEST_F(InputWatcherTest, IgnoreDevices) {
   // Create a touchpad that doesn't support hover and check that it's also
   // ignored.
   detect_hover_pref_ = 1;
-  linked_ptr<EventDeviceStub> touchpad(new EventDeviceStub);
+  std::shared_ptr<EventDeviceStub> touchpad(new EventDeviceStub());
   touchpad->set_has_left_button(true);
   touchpad->set_hover_supported(false);
   AddDevice("event0", touchpad, "");
@@ -560,24 +560,24 @@ TEST_F(InputWatcherTest, IgnoreDevices) {
 }
 
 TEST_F(InputWatcherTest, IgnoreUnexpectedEvents) {
-  linked_ptr<EventDeviceStub> touchpad(new EventDeviceStub);
+  std::shared_ptr<EventDeviceStub> touchpad(new EventDeviceStub());
   touchpad->set_debug_name("touchpad");
   touchpad->set_hover_supported(true);
   touchpad->set_has_left_button(true);
   AddDevice("event0", touchpad, "");
 
-  linked_ptr<EventDeviceStub> power_button(new EventDeviceStub);
+  std::shared_ptr<EventDeviceStub> power_button(new EventDeviceStub());
   power_button->set_debug_name("power_button");
   power_button->set_is_power_button(true);
   AddDevice("event1", power_button, "");
 
-  linked_ptr<EventDeviceStub> lid_switch(new EventDeviceStub);
+  std::shared_ptr<EventDeviceStub> lid_switch(new EventDeviceStub());
   lid_switch->set_debug_name("lid_switch");
   lid_switch->set_is_lid_switch(true);
   lid_switch->set_initial_lid_state(LidState::OPEN);
   AddDevice("event2", lid_switch, "");
 
-  linked_ptr<EventDeviceStub> tablet_mode_switch(new EventDeviceStub);
+  std::shared_ptr<EventDeviceStub> tablet_mode_switch(new EventDeviceStub());
   tablet_mode_switch->set_debug_name("tablet_mode_switch");
   tablet_mode_switch->set_is_tablet_mode_switch(true);
   tablet_mode_switch->set_initial_tablet_mode(TabletMode::ON);
@@ -620,7 +620,7 @@ TEST_F(InputWatcherTest, IgnoreUnexpectedEvents) {
 TEST_F(InputWatcherTest, SingleDeviceForAllTypes) {
   // Just to make sure that overlap is handled correctly, create a single device
   // that claims to report all types of events.
-  linked_ptr<EventDeviceStub> device(new EventDeviceStub);
+  std::shared_ptr<EventDeviceStub> device(new EventDeviceStub());
   device->set_hover_supported(true);
   device->set_has_left_button(true);
   device->set_is_power_button(true);
@@ -650,7 +650,7 @@ TEST_F(InputWatcherTest, RegisterForUdevEvents) {
 
   // Connect a keyboard and send a power button event.
   const char kDeviceName[] = "event0";
-  linked_ptr<EventDeviceStub> keyboard(new EventDeviceStub);
+  std::shared_ptr<EventDeviceStub> keyboard(new EventDeviceStub());
   keyboard->set_is_power_button(true);
   AddDevice(kDeviceName, keyboard, "");
   udev_.NotifySubsystemObservers(
@@ -676,7 +676,7 @@ TEST_F(InputWatcherTest, NotifyAboutAddedSwitch) {
 
   // Make a lid switch device show up and check that a fake event is sent to the
   // observer.
-  linked_ptr<EventDeviceStub> lid_switch(new EventDeviceStub);
+  std::shared_ptr<EventDeviceStub> lid_switch(new EventDeviceStub());
   lid_switch->set_debug_name("lid_switch");
   lid_switch->set_is_lid_switch(true);
   lid_switch->set_initial_lid_state(LidState::OPEN);
@@ -687,7 +687,7 @@ TEST_F(InputWatcherTest, NotifyAboutAddedSwitch) {
 
   // The same thing should happen if a tablet mode switch appears. This is
   // needed to ensure that Chrome learns about tablet mode: http://b/116006288
-  linked_ptr<EventDeviceStub> tablet_mode_switch(new EventDeviceStub);
+  std::shared_ptr<EventDeviceStub> tablet_mode_switch(new EventDeviceStub());
   tablet_mode_switch->set_debug_name("tablet_mode_switch");
   tablet_mode_switch->set_is_tablet_mode_switch(true);
   tablet_mode_switch->set_initial_tablet_mode(TabletMode::ON);

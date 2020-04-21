@@ -5,13 +5,13 @@
 #ifndef POWER_MANAGER_POWERD_SYSTEM_EVENT_DEVICE_INTERFACE_H_
 #define POWER_MANAGER_POWERD_SYSTEM_EVENT_DEVICE_INTERFACE_H_
 
+#include <memory>
 #include <string>
 #include <vector>
 
 #include <base/callback_forward.h>
 #include <base/files/file_path.h>
 #include <base/macros.h>
-#include <base/memory/linked_ptr.h>
 
 #include "power_manager/common/power_constants.h"
 
@@ -80,7 +80,16 @@ class EventDeviceFactoryInterface {
   virtual ~EventDeviceFactoryInterface() {}
 
   // Opens an event device by path. Returns the device or NULL on error.
-  virtual linked_ptr<EventDeviceInterface> Open(const base::FilePath& path) = 0;
+  // TODO(crbug.com/1073772,ejcaruso): migrate to unique_ptr.
+  // In theory, this can be unique_ptr. InputWatcher will consume this
+  // unique_ptr and transfer ownership for device that should_watch. But
+  // EventDeviceStub didn't create new instances for each device, instead
+  // reuses the same instance. Thus if we transfer ownership via Open, this
+  // device can be released by InputWatcher. devices raw pointer is created in
+  // input_watcher_test.cc, and keeps reused even after an Open(). This could
+  // cause heap use after free in unittest.
+  virtual std::shared_ptr<EventDeviceInterface> Open(
+      const base::FilePath& path) = 0;
 };
 
 }  // namespace system

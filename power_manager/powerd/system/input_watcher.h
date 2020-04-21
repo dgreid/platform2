@@ -15,7 +15,6 @@
 #include <base/cancelable_callback.h>
 #include <base/files/file_path.h>
 #include <base/macros.h>
-#include <base/memory/linked_ptr.h>
 #include <base/memory/weak_ptr.h>
 #include <base/observer_list.h>
 
@@ -202,7 +201,7 @@ class InputWatcher : public InputWatcherInterface,
   UdevInterface* udev_ = nullptr;  // non-owned
 
   // Keyed by input event number.
-  typedef std::map<int, linked_ptr<EventDeviceInterface>> InputMap;
+  typedef std::map<int, std::shared_ptr<EventDeviceInterface>> InputMap;
   InputMap event_devices_;
 
   base::ObserverList<InputObserver> observers_;

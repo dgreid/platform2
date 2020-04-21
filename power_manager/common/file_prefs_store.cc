@@ -84,11 +84,12 @@ void FilePrefsStore::UpdateFileWatchers() {
   // Start watching new files.
   for (const auto& name : added_prefs) {
     const base::FilePath path = pref_path_.Append(name);
-    linked_ptr<base::FilePathWatcher> watcher(new base::FilePathWatcher);
+    std::unique_ptr<base::FilePathWatcher> watcher =
+        std::make_unique<base::FilePathWatcher>();
     if (watcher->Watch(path, false,
                        base::Bind(&FilePrefsStore::HandlePathChanged,
                                   base::Unretained(this)))) {
-      file_watchers_.insert(std::make_pair(name, watcher));
+      file_watchers_.insert(std::make_pair(name, std::move(watcher)));
     } else {
       LOG(ERROR) << "Unable to watch " << path.value() << " for changes";
     }
