@@ -1,7 +1,0 @@
-type cros_arc_networkd, chromeos_domain, cros_miscdomain, domain;
-
-permissive cros_arc_networkd;
-
-
-domain_auto_trans(cros_init, cros_arc_networkd_exec, cros_arc_networkd);
-

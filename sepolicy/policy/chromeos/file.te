@@ -24,7 +24,6 @@ type cros_apk_cache_cleaner_jailed_exec, exec_type, file_type, cros_file_type, c
 type cros_arc_appfuse_provider_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_arc_camera_service_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_arc_keymasterd_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
-type cros_arc_networkd_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_arc_obb_mounter_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_arc_oemcrypto_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_arc_setup_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
@@ -89,6 +88,7 @@ type cros_mount_passthrough_jailed_exec, exec_type, file_type, cros_file_type, c
 type cros_mtpd_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_newblued_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_oobe_config_restore_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
+type cros_patchpaneld_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_p2p_http_server_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_p2p_server_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_pca_agentd_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
