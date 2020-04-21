@@ -13,11 +13,9 @@ TaggedDevice::TaggedDevice() {}
 
 TaggedDevice::TaggedDevice(const std::string& syspath,
                            const base::FilePath& wakeup_device_path,
-                           const std::string& role,
                            const std::string& tags) {
   syspath_ = syspath;
   wakeup_device_path_ = wakeup_device_path;
-  role_ = role;
 
   base::StringTokenizer parts(tags, " ");
   while (parts.GetNext())

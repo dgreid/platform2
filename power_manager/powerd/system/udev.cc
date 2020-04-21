@@ -452,14 +452,13 @@ void Udev::HandleTaggedDevice(UdevEvent::Action action,
     return;
 
   const char* syspath = udev_device_get_syspath(dev);
-  const char* role = udev_device_get_property_value(dev, kPowerdRoleVar);
   const char* tags = udev_device_get_property_value(dev, kPowerdTagsVar);
 
   switch (action) {
     case UdevEvent::Action::ADD:
     case UdevEvent::Action::CHANGE:
       TaggedDeviceChanged(syspath, FindWakeCapableParent(syspath),
-                          role ? role : "", tags ? tags : "");
+                          tags ? tags : "");
       break;
 
     case UdevEvent::Action::REMOVE:
@@ -473,7 +472,6 @@ void Udev::HandleTaggedDevice(UdevEvent::Action action,
 
 void Udev::TaggedDeviceChanged(const std::string& syspath,
                                const base::FilePath& wakeup_device_path,
-                               const std::string& role,
                                const std::string& tags) {
   if (!tags.empty()) {
     LOG(INFO) << (tagged_devices_.count(syspath) ? "Updating" : "Adding")
@@ -481,8 +479,7 @@ void Udev::TaggedDeviceChanged(const std::string& syspath,
   }
 
   // Replace existing device with same syspath.
-  tagged_devices_[syspath] =
-      TaggedDevice(syspath, wakeup_device_path, role, tags);
+  tagged_devices_[syspath] = TaggedDevice(syspath, wakeup_device_path, tags);
   const TaggedDevice& device = tagged_devices_[syspath];
   for (UdevTaggedDeviceObserver& observer : tagged_device_observers_)
     observer.OnTaggedDeviceChanged(device);
@@ -526,16 +523,13 @@ bool Udev::EnumerateTaggedDevices() {
       LOG(ERROR) << "Enumerated device does not exist: " << syspath;
       continue;
     }
-    const char* role_cstr =
-        udev_device_get_property_value(device, kPowerdRoleVar);
     const char* tags_cstr =
         udev_device_get_property_value(device, kPowerdTagsVar);
-    const std::string role = role_cstr ? role_cstr : "";
     const std::string tags = tags_cstr ? tags_cstr : "";
     if (!tags.empty())
       LOG(INFO) << "Adding device " << syspath << " with tags " << tags;
     tagged_devices_[syspath] =
-        TaggedDevice(syspath, FindWakeCapableParent(syspath), role, tags);
+        TaggedDevice(syspath, FindWakeCapableParent(syspath), tags);
     udev_device_unref(device);
   }
   udev_enumerate_unref(enumerate);

@@ -87,8 +87,7 @@ class InputDeviceControllerTest : public ::testing::Test {
     }
     va_end(arg_list);
 
-    udev_.TaggedDeviceChanged(syspath, base::FilePath(syspath), "test_device",
-                              tags);
+    udev_.TaggedDeviceChanged(syspath, base::FilePath(syspath), tags);
   }
 
   void InitInputDeviceController() {
