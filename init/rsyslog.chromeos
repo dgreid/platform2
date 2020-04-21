@@ -36,9 +36,9 @@ if (($programname == 'shill') or \
     ($programname == 'openvpn') or \
     ($programname == 'openvpn-script') or \
     ($programname == 'l2tpipsec_vpn') or \
+    ($programname == 'patchpaneld') or \
     ($programname == 'pppd') or \
     ($programname == 'pseudomodem') or \
-    ($programname == 'arc-networkd') or \
     ($programname == 'charon')) then -/var/log/net.log
 
 # Log important (EMERG..ERR) network stuff in /var/log/messages too,
@@ -52,9 +52,9 @@ if (($programname == 'shill') or \
     ($programname == 'openvpn') or \
     ($programname == 'openvpn-script') or \
     ($programname == 'l2tpipsec_vpn') or \
+    ($programname == 'patchpaneld') or \
     ($programname == 'pppd') or \
     ($programname == 'pseudomodem') or \
-    ($programname == 'arc-networkd') or \
     ($programname == 'charon')) and $syslogseverity >= '4' then ~
 
 # Keep Upstart logs in /var/log/upstart.log

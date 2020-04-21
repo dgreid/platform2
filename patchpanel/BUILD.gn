@@ -7,7 +7,7 @@ import("//common-mk/proto_library.gni")
 
 group("all") {
   deps = [
-    ":arc-networkd",
+    ":patchpaneld",
     ":libarcnetwork",
     ":libarcnetwork-util",
     ":libpatchpanel-client",
@@ -123,7 +123,7 @@ shared_library("libpatchpanel-client") {
   sources += util_sources
 }
 
-executable("arc-networkd") {
+executable("patchpaneld") {
   sources = [
     "main.cc",
   ]
