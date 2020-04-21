@@ -51,7 +51,6 @@ class SHILL_EXPORT RTNLMessage {
                unsigned int in_change,
                base::Optional<std::string> kind = base::nullopt)
         : type(in_type), flags(in_flags), change(in_change), kind(kind) {}
-    std::string ToString() const;
     // Device type. Corresponds to ifi_type.
     unsigned int type;
     // Device flags. Corresponds to ifi_flags.
@@ -218,6 +217,9 @@ class SHILL_EXPORT RTNLMessage {
   // the ByteString does not contain any terminator, all the bytes of contained
   // in the ByteString are copied into the standard string.
   std::string GetStringAttribute(uint16_t attr) const;
+  // returns the IFLA_IFNAME attribute as standard string. This should only be
+  // used for RTNLMessages of type kTypeLink.
+  std::string GetIflaIfname() const;
   // Returns the IFA_ADDRESS attribute as a shill::IPAddress. This should only
   // be used for RTNLMessages of type kTypeAddress.
   IPAddress GetIfaAddress() const;

@@ -406,7 +406,7 @@ class RTNLMessageTest : public Test {
                      unsigned int flags,
                      unsigned int change,
                      ByteString address,
-                     ByteString name,
+                     std::string name,
                      uint32_t mtu,
                      ByteString qdisc,
                      int oper_state) {
@@ -425,9 +425,12 @@ class RTNLMessageTest : public Test {
     EXPECT_EQ(address.GetLength(), msg.GetAttribute(IFLA_ADDRESS).GetLength());
     EXPECT_TRUE(msg.GetAttribute(IFLA_ADDRESS).Equals(address));
 
+    ByteString bytestring_name(name, true);
     EXPECT_TRUE(msg.HasAttribute(IFLA_IFNAME));
-    EXPECT_EQ(name.GetLength(), msg.GetAttribute(IFLA_IFNAME).GetLength());
-    EXPECT_TRUE(msg.GetAttribute(IFLA_IFNAME).Equals(name));
+    EXPECT_EQ(bytestring_name.GetLength(),
+              msg.GetAttribute(IFLA_IFNAME).GetLength());
+    EXPECT_TRUE(msg.GetAttribute(IFLA_IFNAME).Equals(bytestring_name));
+    EXPECT_EQ(name, msg.GetIflaIfname());
 
     EXPECT_TRUE(msg.HasAttribute(IFLA_MTU));
     uint32_t mtu_val;
@@ -678,7 +681,7 @@ TEST_F(RTNLMessageTest, NewLinkWlan0) {
                 kNewLinkMessageWlan0InterfaceFlags,
                 kNewLinkMessageWlan0InterfaceFlagsChange,
                 ByteString(string(kNewLinkMessageWlan0MacAddress), false),
-                ByteString(string(kNewLinkMessageWlan0InterfaceName), true),
+                string(kNewLinkMessageWlan0InterfaceName),
                 kNewLinkMessageWlan0MTU,
                 ByteString(string(kNewLinkMessageWlan0Qdisc), true),
                 kNewLinkMessageWlan0OperState);
@@ -708,8 +711,7 @@ TEST_F(RTNLMessageTest, DelLinkEth0) {
                 kDelLinkMessageEth0InterfaceFlags,
                 kDelLinkMessageEth0InterfaceFlagsChange,
                 ByteString(string(kDelLinkMessageEth0MacAddress), false),
-                ByteString(string(kDelLinkMessageEth0InterfacName), true),
-                kDelLinkMessageEth0MTU,
+                string(kDelLinkMessageEth0InterfacName), kDelLinkMessageEth0MTU,
                 ByteString(string(kDelLinkMessageEth0Qdisc), true),
                 kDelLinkMessageEth0OperState);
 }
@@ -888,11 +890,14 @@ TEST_F(RTNLMessageTest, ToString) {
     std::string regexp;
   } test_cases[] = {
       {kNewLinkMessageWlan0, sizeof(kNewLinkMessageWlan0),
-       "Add Link: LinkStatus type 1 flags 11043 change 0"},
+       "Add Link: wlan0\\[2\\] type ETHER flags <BROADCAST,LOWER_UP,MULTICAST,"
+       "RUNNING,UP> change 0"},
       {kNewLinkMessageIfb1, sizeof(kNewLinkMessageIfb1),
-       "Add Link: LinkStatus type 1 flags 82 change 0 kind ifb"},
+       "Add Link: ifb1\\[17\\] type ETHER flags <BROADCAST,NOARP> change 0 "
+       "kind ifb"},
       {kDelLinkMessageEth0, sizeof(kDelLinkMessageEth0),
-       "Delete Link: LinkStatus type 1 flags 1002 change FFFFFFFF"},
+       "Delete Link: eth0\\[8\\] type ETHER flags <BROADCAST,MULTICAST> change "
+       "FFFFFFFF"},
       // For Address events, the output interface index cannot be converted
       // after the fact using if_indextoname(), but can still happen to match an
       // unrelated interface on the unit test host. Escape it with \w*.

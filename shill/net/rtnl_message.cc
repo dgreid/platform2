@@ -4,16 +4,18 @@
 
 #include "shill/net/rtnl_message.h"
 
+#include <net/if.h>
 #include <arpa/inet.h>
 #include <linux/if_addr.h>
+#include <linux/if_arp.h>
 #include <linux/netlink.h>
 #include <linux/rtnetlink.h>
-#include <net/if.h>
 #include <netinet/in.h>
 #include <string.h>
 #include <sys/socket.h>
 
 #include <memory>
+#include <map>
 
 #include <base/logging.h>
 #include <base/strings/string_util.h>
@@ -28,7 +30,9 @@ namespace {
 using flags_info_t = std::vector<std::pair<uint32_t, std::string>>;
 
 // Helper for pretty printing flags
-std::string PrintFlags(uint32_t flags, const flags_info_t& flags_info) {
+std::string PrintFlags(uint32_t flags,
+                       const flags_info_t& flags_info,
+                       const std::string& separator = " | ") {
   std::string str;
   if (flags == 0)
     return str;
@@ -38,7 +42,7 @@ std::string PrintFlags(uint32_t flags, const flags_info_t& flags_info) {
       continue;
     str += sep;
     str += flag_descr.second;
-    sep = " | ";
+    sep = separator;
   }
   return str;
 }
@@ -56,6 +60,100 @@ const flags_info_t kIfaFlags = {
     {IFA_F_NOPREFIXROUTE, "NOPREFIXROUTE"},
     {IFA_F_MCAUTOJOIN, "MCAUTOJOIN"},
     {IFA_F_STABLE_PRIVACY, "STABLE_PRIVACY"},
+};
+
+// Flag names for Link events. Defined in uapi/linux/if.h
+const flags_info_t kNetDeviceFlags = {
+    {IFF_ALLMULTI, "ALLMULTI"},
+    {IFF_AUTOMEDIA, "AUTOMEDIA"},
+    {IFF_BROADCAST, "BROADCAST"},
+    {IFF_DEBUG, "DEBUG"},
+    {IFF_DORMANT, "DORMANT"},
+    {IFF_DYNAMIC, "DYNAMIC"},
+    {IFF_ECHO, "ECHO"},
+    {IFF_LOOPBACK, "LOOPBACK"},
+    {IFF_LOWER_UP, "LOWER_UP"},
+    {IFF_MASTER, "MASTER"},
+    {IFF_MULTICAST, "MULTICAST"},
+    {IFF_NOARP, "NOARP"},
+    {IFF_NOTRAILERS, "NOTRAILERS"},
+    {IFF_POINTOPOINT, "POINTOPOINT"},
+    {IFF_PORTSEL, "PORTSEL"},
+    {IFF_PROMISC, "PROMISC"},
+    {IFF_RUNNING, "RUNNING"},
+    {IFF_SLAVE, "SLAVE"},
+    {IFF_UP, "UP"},
+};
+
+// Fine grained link types. Defined in uapi/linux/if_arp.h
+std::map<uint16_t, std::string> kNetDeviceTypes = {
+    {ARPHRD_NETROM, "NETROM"},
+    {ARPHRD_ETHER, "ETHER"},
+    {ARPHRD_EETHER, "EETHER"},
+    {ARPHRD_AX25, "AX25"},
+    {ARPHRD_PRONET, "PRONET"},
+    {ARPHRD_CHAOS, "CHAOS"},
+    {ARPHRD_IEEE802, "IEEE802"},
+    {ARPHRD_ARCNET, "ARCNET"},
+    {ARPHRD_APPLETLK, "APPLETLK"},
+    {ARPHRD_DLCI, "DLCI"},
+    {ARPHRD_ATM, "ATM"},
+    {ARPHRD_METRICOM, "METRICOM"},
+    {ARPHRD_IEEE1394, "IEEE1394"},
+    {ARPHRD_EUI64, "EUI64"},
+    {ARPHRD_INFINIBAND, "INFINIBAND"},
+    {ARPHRD_SLIP, "SLIP"},
+    {ARPHRD_CSLIP, "CSLIP"},
+    {ARPHRD_SLIP6, "SLIP6"},
+    {ARPHRD_CSLIP6, "CSLIP6"},
+    {ARPHRD_RSRVD, "RSRVD"},
+    {ARPHRD_ADAPT, "ADAPT"},
+    {ARPHRD_ROSE, "ROSE"},
+    {ARPHRD_X25, "X25"},
+    {ARPHRD_HWX25, "HWX25"},
+    {ARPHRD_CAN, "CAN"},
+    {ARPHRD_PPP, "PPP"},
+    {ARPHRD_CISCO, "CISCO"},
+    {ARPHRD_HDLC, "HDLC"},
+    {ARPHRD_LAPB, "LAPB"},
+    {ARPHRD_DDCMP, "DDCMP"},
+    {ARPHRD_RAWHDLC, "RAWHDLC"},
+    {ARPHRD_RAWIP, "RAWIP"},
+    {ARPHRD_TUNNEL, "TUNNEL"},
+    {ARPHRD_TUNNEL6, "TUNNEL6"},
+    {ARPHRD_FRAD, "FRAD"},
+    {ARPHRD_SKIP, "SKIP"},
+    {ARPHRD_LOOPBACK, "LOOPBACK"},
+    {ARPHRD_LOCALTLK, "LOCALTLK"},
+    {ARPHRD_FDDI, "FDDI"},
+    {ARPHRD_BIF, "BIF"},
+    {ARPHRD_SIT, "SIT"},
+    {ARPHRD_IPDDP, "IPDDP"},
+    {ARPHRD_IPGRE, "IPGRE"},
+    {ARPHRD_PIMREG, "PIMREG"},
+    {ARPHRD_HIPPI, "HIPPI"},
+    {ARPHRD_ASH, "ASH"},
+    {ARPHRD_ECONET, "ECONET"},
+    {ARPHRD_IRDA, "IRDA"},
+    {ARPHRD_FCPP, "FCPP"},
+    {ARPHRD_FCAL, "FCAL"},
+    {ARPHRD_FCPL, "FCPL"},
+    {ARPHRD_FCFABRIC, "FCFABRIC"},
+    {ARPHRD_IEEE802_TR, "IEEE802_TR"},
+    {ARPHRD_IEEE80211, "IEEE80211"},
+    {ARPHRD_IEEE80211_PRISM, "IEEE80211_PRISM"},
+    {ARPHRD_IEEE80211_RADIOTAP, "IEEE80211_RADIOTAP"},
+    {ARPHRD_IEEE802154, "IEEE802154  "},
+    {ARPHRD_IEEE802154_MONITOR, "IEEE802154_MONITOR"},
+    {ARPHRD_PHONET, "PHONET"},
+    {ARPHRD_PHONET_PIPE, "PHONET_PIPE"},
+    {ARPHRD_CAIF, "CAIF"},
+    {ARPHRD_IP6GRE, "IP6GRE"},
+    {ARPHRD_NETLINK, "NETLINK"},
+    {ARPHRD_6LOWPAN, "6LOWPAN"},
+    {ARPHRD_VSOCKMON, "VSOCKMON"},
+    {ARPHRD_VOID, "VOID"},
+    {ARPHRD_NONE, "NONE"},
 };
 
 std::unique_ptr<RTNLAttrMap> ParseAttrs(struct rtattr* data, int len) {
@@ -124,14 +222,6 @@ struct RTNLHeader {
     struct ndmsg ndm;
   };
 };
-
-std::string RTNLMessage::LinkStatus::ToString() const {
-  return base::StringPrintf(
-      "LinkStatus type %d flags %X change %X%s", type, flags, change,
-      kind.has_value()
-          ? base::StringPrintf(" kind %s", kind.value().c_str()).c_str()
-          : "");
-}
 
 std::string RTNLMessage::RouteStatus::ToString() const {
   return base::StringPrintf(
@@ -680,6 +770,10 @@ std::string RTNLMessage::GetStringAttribute(uint16_t attr) const {
   return std::string(bytes.GetConstCString(), len);
 }
 
+std::string RTNLMessage::GetIflaIfname() const {
+  return GetStringAttribute(IFLA_IFNAME);
+}
+
 IPAddress RTNLMessage::GetIfaAddress() const {
   return IPAddress(family_, GetAttribute(IFA_ADDRESS),
                    address_status_.prefix_len);
@@ -731,7 +825,13 @@ std::string RTNLMessage::ToString() const {
   switch (type()) {
     case RTNLMessage::kTypeLink:
       ip_family = "";
-      details = link_status_.ToString();
+      details = base::StringPrintf(
+          "%s[%d] type %s flags <%s> change %X", GetIflaIfname().c_str(),
+          interface_index_, kNetDeviceTypes[link_status_.type].c_str(),
+          PrintFlags(link_status_.flags, kNetDeviceFlags, ",").c_str(),
+          link_status_.change);
+      if (link_status_.kind.has_value())
+        details += " kind " + link_status_.kind.value();
       break;
     case RTNLMessage::kTypeAddress:
       details = base::StringPrintf(
