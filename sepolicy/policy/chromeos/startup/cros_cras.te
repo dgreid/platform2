@@ -36,7 +36,7 @@ allow cros_cras device:dir search;
 allow cros_cras sysfs:dir search;
 ');
 
-allow cros_cras is_arc_nyc(proc, proc_filesystems):file r_file_perms;
+allow cros_cras proc_filesystems:file r_file_perms;
 
 allow cros_cras self:socket { create ioctl };
 

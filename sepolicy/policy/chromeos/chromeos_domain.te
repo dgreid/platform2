@@ -89,10 +89,10 @@ auditallow chromeos_domain cros_home_shadow_uid_root_shill_logs:dir create;
 # defaults for all processes. Note that granting this whitelist to domain does
 # not grant the ioctl permission on these socket types. That must be granted
 # separately.
-allowxperm is_arc_nyc(chromeos_domain, domain) is_arc_nyc(chromeos_domain, domain):{ rawip_socket tcp_socket udp_socket }
+allowxperm domain domain:{ rawip_socket tcp_socket udp_socket }
   ioctl { unpriv_sock_ioctls unpriv_tty_ioctls };
 # default whitelist for unix sockets.
-allowxperm is_arc_nyc(chromeos_domain, domain) is_arc_nyc(chromeos_domain, domain):{ unix_dgram_socket unix_stream_socket }
+allowxperm domain domain:{ unix_dgram_socket unix_stream_socket }
   ioctl unpriv_unix_sock_ioctls;
 
 # Restrict PTYs to only whitelisted ioctls.

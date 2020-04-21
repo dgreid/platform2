@@ -240,7 +240,7 @@ include(sepolicy/file_contexts/sysfs_contexts)
 
 
 has_arc(`
-/run/arc/cmdline.android        u:object_r:is_arc_nyc(proc, proc_cmdline):s0
+/run/arc/cmdline.android        u:object_r:proc_cmdline:s0
 ')
 
 

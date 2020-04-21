@@ -4,7 +4,7 @@ from_minijail_static(cros_journald, cros_journald_exec);
 log_writer(cros_journald);
 
 allow cros_journald cros_run_systemd:dir { search getattr };
-allow cros_journald is_arc_nyc(proc, {proc_cmdline proc_hostname}):file r_file_perms;
+allow cros_journald {proc_cmdline proc_hostname}:file r_file_perms;
 
 filetrans_pattern(cros_journald, cros_run_journal, logger_device, sock_file, "dev-log");
 allow cros_journald logger_device:sock_file create_file_perms;

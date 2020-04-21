@@ -17,8 +17,8 @@ allow chromeos_startup sysfs:file { open read };
 allow chromeos_startup sysfs:dir { open read };
 allow chromeos_startup device:blk_file getattr;
 
-allow chromeos_startup { is_arc_nyc(proc, proc_cmdline proc_swaps proc_uptime) }:file r_file_perms;
-allow chromeos_startup { is_arc_nyc(proc, proc_dirty proc_page_cluster proc_panic proc_sched) proc_net }:file rw_file_perms;
+allow chromeos_startup { proc_cmdline proc_swaps proc_uptime }:file r_file_perms;
+allow chromeos_startup { proc_dirty proc_page_cluster proc_panic proc_sched proc_net }:file rw_file_perms;
 
 # we don't want to allow cros_shm and devpts to associate device, so let's leave
 # it as is and wait for restorecon after mounting devpts or tmpfs, instead of using

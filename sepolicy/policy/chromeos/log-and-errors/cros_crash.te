@@ -121,11 +121,6 @@ arc_cts_fails_release(`
 allow cros_crash usermodehelper:file w_file_perms;
 ', (`cros_crash'))
 
-# /proc/sys/kernel/core_pipe_limit in NYC
-is_arc_nyc(`
-allow cros_crash proc:file w_file_perms;
-');
-
 allow cros_crash pstorefs:dir r_dir_perms;
 allow cros_crash sysfs_class_devcoredump:file w_file_perms;
 allow cros_crash sysfs_class_devcoredump:dir search;

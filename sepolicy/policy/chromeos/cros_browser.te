@@ -20,14 +20,7 @@ filetrans_pattern(cros_browser, cros_home_chronos, cros_home_chronos_crash, dir,
 
 tmp_file(cros_browser, dir);
 
-is_arc_nyc(
-`
-permissive cros_browser;
-',
-`
 allow cros_browser proc_type:file getattr;
-'
-)
 allow cros_browser { proc_cmdline proc_meminfo proc_stat }:file r_file_perms;
 
 uma_writer(cros_browser);
