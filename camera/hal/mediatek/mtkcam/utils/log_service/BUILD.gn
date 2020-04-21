@@ -4,9 +4,7 @@
 
 shared_library("libmtk_platform_log") {
   import("//camera/hal/mediatek/common-config.gni")
-  sources = [
-    "platform_log.cpp",
-  ]
+  sources = [ "platform_log.cpp" ]
   include_dirs += [
     ".",
     "../property_service",

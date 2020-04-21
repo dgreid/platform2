@@ -4,9 +4,7 @@
 
 action("gen_static_metadata") {
   script = "run_script.py"
-  outputs = [
-    "$target_gen_dir/custgen.config_metadata.h",
-  ]
+  outputs = [ "$target_gen_dir/custgen.config_metadata.h" ]
   args = [
     rebase_path("./mt8183/custom/gen_static_metadata.sh", root_build_dir),
     "${sysroot}/usr/include/cros-camera/custom/imgsensor_metadata",

@@ -100,12 +100,8 @@ static_library("libmetrics_daemon") {
 
 executable("metrics_client") {
   configs += [ ":target_defaults" ]
-  deps = [
-    ":libmetrics-${libbase_ver}",
-  ]
-  sources = [
-    "metrics_client.cc",
-  ]
+  deps = [ ":libmetrics-${libbase_ver}" ]
+  sources = [ "metrics_client.cc" ]
 }
 
 executable("chromeos-pgmem") {
@@ -154,9 +150,7 @@ proto_library("metrics_proto") {
 if (use.passive_metrics) {
   executable("metrics_daemon") {
     configs += [ ":target_defaults" ]
-    deps = [
-      ":libmetrics_daemon",
-    ]
+    deps = [ ":libmetrics_daemon" ]
   }
 }
 
@@ -166,9 +160,7 @@ if (use.test) {
       "//common-mk:test",
       ":target_defaults",
     ]
-    deps = [
-      "//common-mk/testrunner:testrunner",
-    ]
+    deps = [ "//common-mk/testrunner:testrunner" ]
     sources = [
       "persistent_integer.cc",
       "persistent_integer_test.cc",
@@ -179,9 +171,7 @@ if (use.test) {
       "//common-mk:test",
       ":target_defaults",
     ]
-    deps = [
-      "../common-mk/testrunner:testrunner",
-    ]
+    deps = [ "../common-mk/testrunner:testrunner" ]
     sources = [
       "cumulative_metrics.cc",
       "cumulative_metrics_test.cc",
@@ -208,9 +198,7 @@ if (use.test) {
       "//common-mk:test",
       ":target_defaults",
     ]
-    deps = [
-      "//common-mk/testrunner:testrunner",
-    ]
+    deps = [ "//common-mk/testrunner:testrunner" ]
     sources = [
       "process_meter.cc",
       "process_meter_test.cc",
@@ -221,9 +209,7 @@ if (use.test) {
       "//common-mk:test",
       ":target_defaults",
     ]
-    deps = [
-      "../common-mk/testrunner:testrunner",
-    ]
+    deps = [ "../common-mk/testrunner:testrunner" ]
     sources = [
       "timer.cc",
       "timer_test.cc",
@@ -251,9 +237,7 @@ if (use.test) {
 
 if (use.passive_metrics && use.test) {
   executable("metrics_daemon_test") {
-    deps = [
-      ":libmetrics_daemon",
-    ]
+    deps = [ ":libmetrics_daemon" ]
     configs += [
       "//common-mk:test",
       ":target_defaults",
@@ -268,27 +252,19 @@ if (use.passive_metrics && use.test) {
 
 if (use.fuzzer) {
   executable("metrics_library_consent_id_fuzzer") {
-    deps = [
-      ":libmetrics-${libbase_ver}",
-    ]
+    deps = [ ":libmetrics-${libbase_ver}" ]
     configs += [
       "//common-mk/common_fuzzer:common_fuzzer",
       ":target_defaults",
     ]
-    sources = [
-      "metrics_library_consent_id_fuzzer.cc",
-    ]
+    sources = [ "metrics_library_consent_id_fuzzer.cc" ]
   }
   executable("metrics_serialization_utils_fuzzer") {
     configs += [
       "//common-mk/common_fuzzer:common_fuzzer",
       ":target_defaults",
     ]
-    deps = [
-      ":libmetrics-${libbase_ver}",
-    ]
-    sources = [
-      "serialization/metrics_serialization_utils_fuzzer.cc",
-    ]
+    deps = [ ":libmetrics-${libbase_ver}" ]
+    sources = [ "serialization/metrics_serialization_utils_fuzzer.cc" ]
   }
 }

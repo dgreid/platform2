@@ -107,9 +107,9 @@ pkg_config("target_defaults") {
 
   pkg_deps = [
     "dbus-1",
-    "libtirpc",
     "libbrillo",
     "libchrome-${libbase_ver}",
+    "libtirpc",
     "re2",
   ]
 }
@@ -117,9 +117,7 @@ pkg_config("target_defaults") {
 proto_library("mobile_operator_db-protos") {
   proto_in_dir = "mobile_operator_db"
   proto_out_dir = "include/shill/mobile_operator_db"
-  sources = [
-    "${proto_in_dir}/mobile_operator_db.proto",
-  ]
+  sources = [ "${proto_in_dir}/mobile_operator_db.proto" ]
 }
 
 protoc_text_to_bin("mobile_operator_db-db") {
@@ -128,9 +126,7 @@ protoc_text_to_bin("mobile_operator_db-db") {
   protoc_text_dir = "mobile_operator_db"
   protoc_proto_dir = "mobile_operator_db"
   protoc_bin_dir = "${root_out_dir}"
-  sources = [
-    "${protoc_text_dir}/serviceproviders.prototxt",
-  ]
+  sources = [ "${protoc_text_dir}/serviceproviders.prototxt" ]
 }
 
 protoc_text_to_bin("mobile_operator_db-test-db") {
@@ -216,9 +212,7 @@ shared_library("libshill-net-${libbase_ver}") {
     "-Wno-unused-variable",
     "-Wno-unused-function",
   ]
-  deps = [
-    ":${target_name}_deps",
-  ]
+  deps = [ ":${target_name}_deps" ]
 }
 
 pkg_config("libshill_config") {
@@ -266,9 +260,7 @@ generate_dbus_proxies("generate_cellular_proxies") {
 
 generate_dbus_proxies("generate_dhcpcd_proxies") {
   proxy_output_file = "include/dhcpcd/dbus-proxies.h"
-  sources = [
-    "dbus_bindings/dhcpcd.dbus-xml",
-  ]
+  sources = [ "dbus_bindings/dhcpcd.dbus-xml" ]
 }
 
 generate_dbus_proxies("generate_upstart_proxies") {
@@ -506,12 +498,8 @@ executable("shill") {
     ":shill_config",
     ":target_defaults",
   ]
-  sources = [
-    "shill_main.cc",
-  ]
-  deps = [
-    ":libshill",
-  ]
+  sources = [ "shill_main.cc" ]
+  deps = [ ":libshill" ]
 }
 
 pkg_config("netfilter-queue-helper_config") {
@@ -558,9 +546,7 @@ if (use.cellular) {
       ":set-apn-helper_config",
       ":target_defaults",
     ]
-    sources = [
-      "shims/set_apn_helper.c",
-    ]
+    sources = [ "shims/set_apn_helper.c" ]
   }
 }
 
@@ -591,12 +577,8 @@ if (use.fuzzer) {
       ":fuzzed_data_config",
       ":target_defaults",
     ]
-    sources = [
-      "net/arp_client_fuzzer.cc",
-    ]
-    deps = [
-      ":libshill",
-    ]
+    sources = [ "net/arp_client_fuzzer.cc" ]
+    deps = [ ":libshill" ]
   }
   executable("cellular_pco_fuzzer") {
     configs += [
@@ -604,48 +586,32 @@ if (use.fuzzer) {
       ":fuzzed_data_config",
       ":target_defaults",
     ]
-    sources = [
-      "cellular/cellular_pco_fuzzer.cc",
-    ]
-    deps = [
-      ":libshill",
-    ]
+    sources = [ "cellular/cellular_pco_fuzzer.cc" ]
+    deps = [ ":libshill" ]
   }
   executable("nl80211_message_fuzzer") {
     configs += [
       "//common-mk/common_fuzzer",
       ":target_defaults",
     ]
-    sources = [
-      "net/nl80211_message_fuzzer.cc",
-    ]
-    deps = [
-      ":libshill",
-    ]
+    sources = [ "net/nl80211_message_fuzzer.cc" ]
+    deps = [ ":libshill" ]
   }
   executable("rtnl_handler_fuzzer") {
     configs += [
       "//common-mk/common_fuzzer",
       ":target_defaults",
     ]
-    sources = [
-      "net/rtnl_handler_fuzzer.cc",
-    ]
-    deps = [
-      ":libshill",
-    ]
+    sources = [ "net/rtnl_handler_fuzzer.cc" ]
+    deps = [ ":libshill" ]
   }
   executable("verizon_subscription_state_fuzzer") {
     configs += [
       "//common-mk/common_fuzzer",
       ":target_defaults",
     ]
-    sources = [
-      "cellular/verizon_subscription_state_fuzzer.cc",
-    ]
-    deps = [
-      ":libshill",
-    ]
+    sources = [ "cellular/verizon_subscription_state_fuzzer.cc" ]
+    deps = [ ":libshill" ]
   }
   executable("wifi_ies_fuzzer") {
     configs += [
@@ -653,12 +619,8 @@ if (use.fuzzer) {
       ":target_defaults",
       ":shill_config",
     ]
-    sources = [
-      "wifi/wifi_ies_fuzzer.cc",
-    ]
-    deps = [
-      ":libshill",
-    ]
+    sources = [ "wifi/wifi_ies_fuzzer.cc" ]
+    deps = [ ":libshill" ]
   }
 }
 
@@ -666,9 +628,9 @@ if (use.test) {
   pkg_config("shill_unittest_config") {
     pkg_deps = [
       "libchrome-test-${libbase_ver}",
+      "libminijail",
       "libnetfilter_queue",
       "libnfnetlink",
-      "libminijail",
     ]
     if (use.cellular) {
       pkg_deps += [ "ModemManager" ]
@@ -818,9 +780,7 @@ if (use.test) {
       "virtual_device_test.cc",
       "vpn/mock_vpn_provider.cc",
     ]
-    deps = [
-      ":libshill",
-    ]
+    deps = [ ":libshill" ]
 
     if (use.cellular) {
       sources += [
@@ -941,8 +901,6 @@ if (use.test) {
       ":openvpn-script_config",
       ":target_defaults",
     ]
-    sources = [
-      "setup_wifi/main.cc",
-    ]
+    sources = [ "setup_wifi/main.cc" ]
   }
 }

@@ -20,17 +20,11 @@ pkg_config("target_defaults") {
 
 shared_library("libsecure_erase_file") {
   configs += [ ":target_defaults" ]
-  sources = [
-    "secure_erase_file.cc",
-  ]
+  sources = [ "secure_erase_file.cc" ]
 }
 
 executable("secure_erase_file") {
   configs += [ ":target_defaults" ]
-  sources = [
-    "secure_erase_file_main.cc",
-  ]
-  deps = [
-    ":libsecure_erase_file",
-  ]
+  sources = [ "secure_erase_file_main.cc" ]
+  deps = [ ":libsecure_erase_file" ]
 }

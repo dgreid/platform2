@@ -5,9 +5,7 @@
 import("//common-mk/pkg_config.gni")
 
 group("all") {
-  deps = [
-    ":mems_setup",
-  ]
+  deps = [ ":mems_setup" ]
   if (use.test) {
     deps += [ ":mems_setup_testrunner" ]
   }
@@ -36,12 +34,8 @@ static_library("libmems_setup") {
 
 executable("mems_setup") {
   configs += [ ":target_defaults" ]
-  sources = [
-    "main.cc",
-  ]
-  deps = [
-    ":libmems_setup",
-  ]
+  sources = [ "main.cc" ]
+  deps = [ ":libmems_setup" ]
 }
 
 if (use.test) {

@@ -2,9 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 group("all") {
-  deps = [
-    ":librendernodehost",
-  ]
+  deps = [ ":librendernodehost" ]
 }
 
 static_library("librendernodehost") {
@@ -13,7 +11,5 @@ static_library("librendernodehost") {
     "//common-mk:nouse_thin_archive",
   ]
   configs -= [ "//common-mk:use_thin_archive" ]
-  sources = [
-    "src.c",
-  ]
+  sources = [ "src.c" ]
 }

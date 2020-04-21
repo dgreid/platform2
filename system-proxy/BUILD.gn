@@ -30,21 +30,18 @@ generate_dbus_adaptors("dbus_code_generator") {
   new_fd_bindings = true
   dbus_service_config = "dbus_bindings/dbus-service-config.json"
   dbus_adaptors_out_dir = "include/system_proxy"
-  sources = [
-    "dbus_bindings/org.chromium.SystemProxy.xml",
-  ]
+  sources = [ "dbus_bindings/org.chromium.SystemProxy.xml" ]
 }
 
 # Worker configs protos.
 proto_library("worker-protos") {
   proto_in_dir = "proto"
   proto_out_dir = "include/bindings"
-  sources = [
-    "${proto_in_dir}/worker_common.proto",
-  ]
+  sources = [ "${proto_in_dir}/worker_common.proto" ]
 }
 
 pkg_config("target_defaults") {
+  # NOSORT
   pkg_deps = [
     "dbus-1",
     "libpatchpanel-util",
@@ -57,6 +54,7 @@ pkg_config("target_defaults") {
     # appear before protobuf or the linker flags won't be in the right
     # order.
     "system_api",
+    "protobuf-lite",
   ]
   if (use.fuzzer) {
     # Link against protobuf for fuzzers so we can use libprotobuf-mutator.
@@ -90,17 +88,13 @@ static_library("libsystemproxyworker") {
     "proxy_connect_job.cc",
     "server_proxy.cc",
   ]
-  deps = [
-    ":worker-protos",
-  ]
+  deps = [ ":worker-protos" ]
 }
 
 executable("system_proxy_worker") {
   configs += [ ":target_defaults" ]
   all_dependent_pkg_deps = [ "libcurl" ]
-  sources = [
-    "system_proxy_worker.cc",
-  ]
+  sources = [ "system_proxy_worker.cc" ]
   deps = [
     ":libsystemproxyworker",
     ":worker-protos",
@@ -109,12 +103,8 @@ executable("system_proxy_worker") {
 
 executable("system_proxy") {
   configs += [ ":target_defaults" ]
-  sources = [
-    "system_proxy.cc",
-  ]
-  deps = [
-    ":libsystemproxy",
-  ]
+  sources = [ "system_proxy.cc" ]
+  deps = [ ":libsystemproxy" ]
 }
 
 # Unit tests.
@@ -157,12 +147,8 @@ if (use.fuzzer) {
       ":config_fuzzer_pkg_deps",
       ":target_defaults",
     ]
-    sources = [
-      "worker_config_fuzzer.cc",
-    ]
-    deps = [
-      ":libsystemproxyworker",
-    ]
+    sources = [ "worker_config_fuzzer.cc" ]
+    deps = [ ":libsystemproxyworker" ]
   }
 
   executable("system_proxy_connect_headers_parser_fuzzer") {
@@ -171,11 +157,7 @@ if (use.fuzzer) {
       "//common-mk/common_fuzzer",
       ":target_defaults",
     ]
-    sources = [
-      "connect_headers_parser_fuzzer.cc",
-    ]
-    deps = [
-      ":libsystemproxyworker",
-    ]
+    sources = [ "connect_headers_parser_fuzzer.cc" ]
+    deps = [ ":libsystemproxyworker" ]
   }
 }

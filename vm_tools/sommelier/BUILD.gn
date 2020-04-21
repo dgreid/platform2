@@ -5,9 +5,7 @@
 import("wayland_protocol.gni")
 
 group("all") {
-  deps = [
-    ":sommelier",
-  ]
+  deps = [ ":sommelier" ]
 }
 
 if (!defined(peer_cmd_prefix)) {
@@ -83,9 +81,7 @@ executable("sommelier") {
     "xkbcommon",
   ]
   libs = [ "m" ]
-  deps = [
-    ":sommelier-protocol",
-  ]
+  deps = [ ":sommelier-protocol" ]
   sources = [
     "sommelier-compositor.c",
     "sommelier-data-device-manager.c",

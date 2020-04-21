@@ -89,9 +89,7 @@ static_library("libp2p-client") {
 
 executable("p2p-client") {
   configs += [ ":target_defaults" ]
-  sources = [
-    "client/main.cc",
-  ]
+  sources = [ "client/main.cc" ]
   deps = [
     ":libp2p-client",
     ":libp2p-util",
@@ -124,9 +122,7 @@ static_library("libp2p-server") {
 
 executable("p2p-server") {
   configs += [ ":target_defaults" ]
-  sources = [
-    "server/main.cc",
-  ]
+  sources = [ "server/main.cc" ]
   deps = [
     ":libp2p-server",
     ":libp2p-util",
@@ -155,9 +151,7 @@ static_library("libp2p-http-server") {
 
 executable("p2p-http-server") {
   configs += [ ":target_defaults" ]
-  sources = [
-    "http_server/main.cc",
-  ]
+  sources = [ "http_server/main.cc" ]
   deps = [
     ":libp2p-http-server",
     ":libp2p-util",
@@ -180,9 +174,7 @@ if (use.test) {
       ":target_defaults",
     ]
     all_dependent_configs = [ ":libp2p-testutil_dependent_config" ]
-    sources = [
-      "common/testutil.cc",
-    ]
+    sources = [ "common/testutil.cc" ]
   }
 
   # common tests
@@ -279,9 +271,7 @@ if (use.fuzzer) {
       "//common-mk/common_fuzzer",
       ":p2p_http_server_fuzzer_config",
     ]
-    sources = [
-      "fuzzers/p2p_http_server_fuzzer.cc",
-    ]
+    sources = [ "fuzzers/p2p_http_server_fuzzer.cc" ]
     deps = [
       ":libp2p-server",
       ":libp2p-util",

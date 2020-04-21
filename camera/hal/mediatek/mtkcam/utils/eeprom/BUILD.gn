@@ -4,9 +4,7 @@
 
 executable("eeprom_updater") {
   import("//camera/hal/mediatek/common-config.gni")
-  sources = [
-    "eeprom_updater.cpp",
-  ]
+  sources = [ "eeprom_updater.cpp" ]
   include_dirs += [ "." ]
   deps += [
     "//camera/hal/mediatek/mtkcam/utils/TuningUtils:libmtkcam_tuning_utils",

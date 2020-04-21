@@ -3,15 +3,11 @@
 # found in the LICENSE file.
 
 group("all") {
-  deps = [
-    ":libcamera_exif",
-  ]
+  deps = [ ":libcamera_exif" ]
 }
 
 shared_library("libcamera_exif") {
-  sources = [
-    "//camera/common/exif_utils.cc",
-  ]
+  sources = [ "//camera/common/exif_utils.cc" ]
   configs += [ "//camera/build:cros_camera_common" ]
   pkg_deps = [ "libexif" ]
 }

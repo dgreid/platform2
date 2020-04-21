@@ -5,9 +5,7 @@
 import("//common-mk/pkg_config.gni")
 
 group("all") {
-  deps = [
-    ":dev_install",
-  ]
+  deps = [ ":dev_install" ]
   if (use.test) {
     deps += [ ":dev_install_test" ]
   }
@@ -23,19 +21,13 @@ pkg_config("target_defaults") {
 
 static_library("libdev_install") {
   configs += [ ":target_defaults" ]
-  sources = [
-    "dev_install.cc",
-  ]
+  sources = [ "dev_install.cc" ]
 }
 
 executable("dev_install") {
   configs += [ ":target_defaults" ]
-  sources = [
-    "dev_install_main.cc",
-  ]
-  deps = [
-    ":libdev_install",
-  ]
+  sources = [ "dev_install_main.cc" ]
+  deps = [ ":libdev_install" ]
 }
 
 if (use.test) {
@@ -49,9 +41,7 @@ if (use.test) {
       ":target_defaults",
       ":test_config",
     ]
-    sources = [
-      "dev_install_test.cc",
-    ]
+    sources = [ "dev_install_test.cc" ]
     deps = [
       ":libdev_install",
       "//common-mk/testrunner",

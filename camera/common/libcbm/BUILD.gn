@@ -5,9 +5,7 @@
 import("//common-mk/pkg_config.gni")
 
 group("all") {
-  deps = [
-    ":libcbm",
-  ]
+  deps = [ ":libcbm" ]
   if (use.test) {
     deps += [ ":cbm_test" ]
   }

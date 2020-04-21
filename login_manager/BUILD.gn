@@ -25,6 +25,7 @@ group("all") {
 }
 
 pkg_config("target_defaults") {
+  # NOSORT
   pkg_deps = [
     "dbus-1",
     "libbrillo",
@@ -65,9 +66,7 @@ generate_dbus_adaptors("session_manager-adaptors") {
   new_fd_bindings = true
   dbus_service_config = "dbus_bindings/dbus-service-config.json"
   dbus_adaptors_out_dir = "include/login_manager/dbus_adaptors"
-  sources = [
-    "dbus_bindings/org.chromium.SessionManagerInterface.xml",
-  ]
+  sources = [ "dbus_bindings/org.chromium.SessionManagerInterface.xml" ]
 }
 
 static_library("libsession_manager") {
@@ -146,16 +145,12 @@ executable("keygen") {
 
 executable("session_manager") {
   configs += [ ":target_defaults" ]
-  sources = [
-    "session_manager_main.cc",
-  ]
+  sources = [ "session_manager_main.cc" ]
   libs = [
     "rootdev",
     "container",
   ]
-  deps = [
-    ":libsession_manager",
-  ]
+  deps = [ ":libsession_manager" ]
 }
 
 if (use.test) {
@@ -223,9 +218,7 @@ if (use.test) {
 proto_library("login_manager-login_screen_storage-protos") {
   proto_in_dir = "proto"
   proto_out_dir = "include/login_manager/login_screen_storage"
-  sources = [
-    "${proto_in_dir}/login_screen_storage_index.proto",
-  ]
+  sources = [ "${proto_in_dir}/login_screen_storage_index.proto" ]
   standalone = true
 }
 
@@ -240,12 +233,8 @@ if (use.fuzzer) {
       ":run_fuzzer_config",
       ":target_defaults",
     ]
-    deps = [
-      ":libsession_manager",
-    ]
-    sources = [
-      "fuzzers/validator_utils_policy_desc_fuzzer.cc",
-    ]
+    deps = [ ":libsession_manager" ]
+    sources = [ "fuzzers/validator_utils_policy_desc_fuzzer.cc" ]
   }
 
   executable("login_manager_validator_utils_fuzzer") {
@@ -253,11 +242,7 @@ if (use.fuzzer) {
       "//common-mk/common_fuzzer:common_fuzzer",
       ":target_defaults",
     ]
-    deps = [
-      ":libsession_manager",
-    ]
-    sources = [
-      "fuzzers/validator_utils_fuzzer.cc",
-    ]
+    deps = [ ":libsession_manager" ]
+    sources = [ "fuzzers/validator_utils_fuzzer.cc" ]
   }
 }

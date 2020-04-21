@@ -22,9 +22,9 @@ pkg_config("target_defaults") {
     "libbrillo",
     "libchrome-${libbase_ver}",
     "openssl",
+    "protobuf-lite",
     "re2",
     "system_api",
-    "protobuf-lite",
   ]
   libs = [ "qrtr" ]
 }
@@ -54,19 +54,13 @@ static_library("libhermes") {
     "smds.cc",
     "socket_qrtr.cc",
   ]
-  deps = [
-    ":hermes_adaptors",
-  ]
+  deps = [ ":hermes_adaptors" ]
 }
 
 executable("hermes") {
   configs += [ ":target_defaults" ]
-  sources = [
-    "main.cc",
-  ]
-  deps = [
-    ":libhermes",
-  ]
+  sources = [ "main.cc" ]
+  deps = [ ":libhermes" ]
 }
 
 if (use.test) {

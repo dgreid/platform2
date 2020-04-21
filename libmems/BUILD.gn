@@ -36,12 +36,8 @@ shared_library("libmems") {
 
 shared_library("libmems_test_support") {
   configs += [ ":target_defaults_pkg_deps" ]
-  deps = [
-    ":libmems",
-  ]
-  sources = [
-    "test_fakes.cc",
-  ]
+  deps = [ ":libmems" ]
+  sources = [ "test_fakes.cc" ]
 }
 
 if (use.test) {
@@ -68,8 +64,6 @@ if (use.test) {
 
     pkg_deps = [ "libmems_test_support" ]
 
-    sources = [
-      "iio_device_test.cc",
-    ]
+    sources = [ "iio_device_test.cc" ]
   }
 }

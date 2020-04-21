@@ -51,65 +51,45 @@ executable("clobber-state") {
     "clobber_state_main.cc",
     "clobber_ui.cc",
   ]
-  deps = [
-    ":libcrossystem",
-  ]
+  deps = [ ":libcrossystem" ]
 }
 
 static_library("file_attrs_cleaner_lib") {
   configs += [ ":target_defaults" ]
-  sources = [
-    "file_attrs_cleaner_lib.cc",
-  ]
+  sources = [ "file_attrs_cleaner_lib.cc" ]
 }
 
 executable("file_attrs_cleaner_tool") {
   configs += [ ":target_defaults" ]
-  deps = [
-    ":file_attrs_cleaner_lib",
-  ]
-  sources = [
-    "file_attrs_cleaner_tool.cc",
-  ]
+  deps = [ ":file_attrs_cleaner_lib" ]
+  sources = [ "file_attrs_cleaner_tool.cc" ]
 }
 
 executable("cros_sysrq_init") {
   configs += [ ":target_defaults" ]
-  sources = [
-    "cros_sysrq_init.cc",
-  ]
+  sources = [ "cros_sysrq_init.cc" ]
   pkg_deps = [ "vboot_host" ]
 }
 
 executable("net_poll_tool") {
   configs += [ ":target_defaults" ]
-  sources = [
-    "net_poll_tool.cc",
-  ]
+  sources = [ "net_poll_tool.cc" ]
 }
 
 executable("static_node_tool") {
   configs += [ ":target_defaults" ]
-  sources = [
-    "static_node_tool.cc",
-  ]
+  sources = [ "static_node_tool.cc" ]
 }
 
 static_library("usermode-helper_lib") {
   configs += [ ":target_defaults" ]
-  sources = [
-    "usermode-helper_lib.cc",
-  ]
+  sources = [ "usermode-helper_lib.cc" ]
 }
 
 executable("usermode-helper") {
   configs += [ ":target_defaults" ]
-  deps = [
-    ":usermode-helper_lib",
-  ]
-  sources = [
-    "usermode-helper.cc",
-  ]
+  deps = [ ":usermode-helper_lib" ]
+  sources = [ "usermode-helper.cc" ]
 }
 
 if (use.test) {
@@ -141,9 +121,7 @@ if (use.test) {
       ":target_defaults",
       ":test_config",
     ]
-    sources = [
-      "file_attrs_cleaner_test.cc",
-    ]
+    sources = [ "file_attrs_cleaner_test.cc" ]
     deps = [
       ":file_attrs_cleaner_lib",
       "//common-mk/testrunner",
@@ -156,9 +134,7 @@ if (use.test) {
       ":target_defaults",
       ":test_config",
     ]
-    sources = [
-      "usermode-helper_test.cc",
-    ]
+    sources = [ "usermode-helper_test.cc" ]
     deps = [
       ":usermode-helper_lib",
       "//common-mk/testrunner",

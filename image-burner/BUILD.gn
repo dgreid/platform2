@@ -34,9 +34,7 @@ generate_dbus_glib("image-burner-dbus-server") {
   dbus_glib_prefix = "image_burner"
   dbus_glib_type = "server"
   dbus_glib_header_stem = "image_burner"
-  sources = [
-    "image_burner.xml",
-  ]
+  sources = [ "image_burner.xml" ]
 }
 
 static_library("libimage-burner") {
@@ -50,19 +48,13 @@ static_library("libimage-burner") {
 
   # The generated dbus headers use "register".
   cflags = [ "-Wno-deprecated-register" ]
-  deps = [
-    ":image-burner-dbus-server",
-  ]
+  deps = [ ":image-burner-dbus-server" ]
 }
 
 executable("image_burner") {
   configs += [ ":target_defaults" ]
-  sources = [
-    "image_burner_main.cc",
-  ]
-  deps = [
-    ":libimage-burner",
-  ]
+  sources = [ "image_burner_main.cc" ]
+  deps = [ ":libimage-burner" ]
 }
 
 if (use.test) {

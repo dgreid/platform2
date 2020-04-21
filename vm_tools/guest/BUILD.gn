@@ -49,9 +49,7 @@ pkg_config("target_defaults") {
 }
 
 static_library("libvm_tools_common") {
-  sources = [
-    "../common/spawn_util.cc",
-  ]
+  sources = [ "../common/spawn_util.cc" ]
   configs += [ ":target_defaults" ]
 }
 
@@ -106,9 +104,7 @@ static_library("libsyslog") {
 }
 
 executable("maitred") {
-  sources = [
-    "../maitred/main.cc",
-  ]
+  sources = [ "../maitred/main.cc" ]
   configs += [ ":target_defaults" ]
   deps = [
     ":libmaitred",
@@ -117,9 +113,7 @@ executable("maitred") {
 }
 
 executable("garcon") {
-  sources = [
-    "../garcon/main.cc",
-  ]
+  sources = [ "../garcon/main.cc" ]
   configs += [ ":target_defaults" ]
   deps = [
     ":libgarcon",
@@ -128,28 +122,20 @@ executable("garcon") {
 }
 
 executable("vm_syslog") {
-  sources = [
-    "../syslog/main.cc",
-  ]
+  sources = [ "../syslog/main.cc" ]
   configs += [ ":target_defaults" ]
-  deps = [
-    ":libsyslog",
-  ]
+  deps = [ ":libsyslog" ]
 }
 
 executable("virtwl_guest_proxy") {
-  sources = [
-    "../virtwl_guest_proxy/main.c",
-  ]
+  sources = [ "../virtwl_guest_proxy/main.c" ]
   configs += [ ":target_defaults" ]
   ldflags = [ "-pthread" ]
 }
 
 if (!use.fuzzer) {
   wayland_protocol_library("notification-protocol") {
-    sources = [
-      "../notificationd/protocol/notification-shell-unstable-v1.xml",
-    ]
+    sources = [ "../notificationd/protocol/notification-shell-unstable-v1.xml" ]
     configs = [ ":target_defaults" ]
     out_dir = "include"
   }
@@ -170,15 +156,11 @@ if (!use.fuzzer) {
       "dbus-1",
       "libbrillo",
     ]
-    deps = [
-      ":notification-protocol",
-    ]
+    deps = [ ":notification-protocol" ]
   }
 
   executable("notificationd") {
-    sources = [
-      "../notificationd/notificationd.cc",
-    ]
+    sources = [ "../notificationd/notificationd.cc" ]
     include_dirs = [ ".." ]
     public_pkg_deps = [
       "wayland-client",
@@ -201,9 +183,7 @@ if (!use.fuzzer) {
       "wayland-client",
     ]
     libs = [ "wayland-client" ]
-    sources = [
-      "../demos/wayland_demo.cc",
-    ]
+    sources = [ "../demos/wayland_demo.cc" ]
   }
 
   executable("x11_demo") {
@@ -212,26 +192,18 @@ if (!use.fuzzer) {
       "libchrome-${libbase_ver}",
     ]
     libs = [ "X11" ]
-    sources = [
-      "../demos/x11_demo.cc",
-    ]
+    sources = [ "../demos/x11_demo.cc" ]
   }
 }
 
 copy("upgrade_container") {
-  sources = [
-    "../upgrade_container/upgrade_container",
-  ]
-  outputs = [
-    "$root_out_dir/upgrade_container",
-  ]
+  sources = [ "../upgrade_container/upgrade_container" ]
+  outputs = [ "$root_out_dir/upgrade_container" ]
 }
 
 if (use.test) {
   executable("maitred_service_test") {
-    sources = [
-      "../maitred/service_impl_test.cc",
-    ]
+    sources = [ "../maitred/service_impl_test.cc" ]
     configs += [
       "//common-mk:test",
       ":target_defaults",
@@ -259,9 +231,7 @@ if (use.test) {
   }
 
   executable("garcon_desktop_file_test") {
-    sources = [
-      "../garcon/desktop_file_test.cc",
-    ]
+    sources = [ "../garcon/desktop_file_test.cc" ]
     configs += [
       "//common-mk:test",
       ":target_defaults",
@@ -273,9 +243,7 @@ if (use.test) {
   }
 
   executable("garcon_icon_index_file_test") {
-    sources = [
-      "../garcon/icon_index_file_test.cc",
-    ]
+    sources = [ "../garcon/icon_index_file_test.cc" ]
     configs += [
       "//common-mk:test",
       ":target_defaults",
@@ -287,9 +255,7 @@ if (use.test) {
   }
 
   executable("garcon_icon_finder_test") {
-    sources = [
-      "../garcon/icon_finder_test.cc",
-    ]
+    sources = [ "../garcon/icon_finder_test.cc" ]
     configs += [
       "//common-mk:test",
       ":target_defaults",
@@ -301,9 +267,7 @@ if (use.test) {
   }
 
   executable("garcon_mime_types_parser_test") {
-    sources = [
-      "../garcon/mime_types_parser_test.cc",
-    ]
+    sources = [ "../garcon/mime_types_parser_test.cc" ]
     configs += [
       "//common-mk:test",
       ":target_defaults",
@@ -315,9 +279,7 @@ if (use.test) {
   }
 
   executable("notificationd_test") {
-    sources = [
-      "../notificationd/dbus_service_test.cc",
-    ]
+    sources = [ "../notificationd/dbus_service_test.cc" ]
     configs += [
       "//common-mk:test",
       ":target_defaults",
@@ -341,58 +303,42 @@ if (use.test) {
 
 if (use.fuzzer) {
   executable("garcon_desktop_file_fuzzer") {
-    sources = [
-      "../garcon/desktop_file_fuzzer.cc",
-    ]
+    sources = [ "../garcon/desktop_file_fuzzer.cc" ]
 
     configs += [ "//common-mk/common_fuzzer:common_fuzzer" ]
 
     pkg_deps = [ "libchrome-test-${libbase_ver}" ]
 
-    deps = [
-      "//vm_tools/guest:libgarcon",
-    ]
+    deps = [ "//vm_tools/guest:libgarcon" ]
   }
 
   executable("garcon_icon_index_file_fuzzer") {
-    sources = [
-      "../garcon/icon_index_file_fuzzer.cc",
-    ]
+    sources = [ "../garcon/icon_index_file_fuzzer.cc" ]
 
     configs += [ "//common-mk/common_fuzzer:common_fuzzer" ]
 
     pkg_deps = [ "libchrome-test-${libbase_ver}" ]
 
-    deps = [
-      "//vm_tools/guest:libgarcon",
-    ]
+    deps = [ "//vm_tools/guest:libgarcon" ]
   }
 
   executable("garcon_ini_parse_util_fuzzer") {
-    sources = [
-      "../garcon/ini_parse_util_fuzzer.cc",
-    ]
+    sources = [ "../garcon/ini_parse_util_fuzzer.cc" ]
 
     configs += [ "//common-mk/common_fuzzer:common_fuzzer" ]
 
     pkg_deps = [ "libchrome-test-${libbase_ver}" ]
 
-    deps = [
-      "//vm_tools/guest:libgarcon",
-    ]
+    deps = [ "//vm_tools/guest:libgarcon" ]
   }
 
   executable("garcon_mime_types_parser_fuzzer") {
-    sources = [
-      "../garcon/mime_types_parser_fuzzer.cc",
-    ]
+    sources = [ "../garcon/mime_types_parser_fuzzer.cc" ]
 
     configs += [ "//common-mk/common_fuzzer:common_fuzzer" ]
 
     pkg_deps = [ "libchrome-test-${libbase_ver}" ]
 
-    deps = [
-      "//vm_tools/guest:libgarcon",
-    ]
+    deps = [ "//vm_tools/guest:libgarcon" ]
   }
 }

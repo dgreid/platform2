@@ -6,9 +6,7 @@ import("//common-mk/generate-dbus-adaptors.gni")
 import("//common-mk/pkg_config.gni")
 
 group("all") {
-  deps = [
-    ":smbproviderd",
-  ]
+  deps = [ ":smbproviderd" ]
   if (use.test) {
     deps += [ ":smbprovider_test" ]
   }
@@ -18,6 +16,7 @@ group("all") {
 }
 
 pkg_config("target_defaults") {
+  # NOSORT
   pkg_deps = [
     "libbrillo",
     "libchrome-${libbase_ver}",
@@ -40,16 +39,12 @@ generate_dbus_adaptors("smbproviderd_adaptors") {
   dbus_adaptors_out_dir = "include/dbus_adaptors"
   dbus_service_config = "dbus_bindings/dbus-service-config.json"
   new_fd_bindings = true
-  sources = [
-    "dbus_bindings/org.chromium.SmbProvider.xml",
-  ]
+  sources = [ "dbus_bindings/org.chromium.SmbProvider.xml" ]
 }
 
 static_library("libsmbprovider") {
   configs += [ ":target_defaults" ]
-  deps = [
-    ":smbproviderd_adaptors",
-  ]
+  deps = [ ":smbproviderd_adaptors" ]
   sources = [
     "authpolicy_kerberos_artifact_client.cc",
     "authpolicy_kerberos_artifact_client.h",
@@ -102,12 +97,8 @@ static_library("libsmbprovider") {
 
 executable("smbproviderd") {
   configs += [ ":target_defaults" ]
-  deps = [
-    ":libsmbprovider",
-  ]
-  sources = [
-    "smbprovider_main.cc",
-  ]
+  deps = [ ":libsmbprovider" ]
+  sources = [ "smbprovider_main.cc" ]
   libs = [ "installattributes" ]
 }
 
@@ -165,11 +156,7 @@ if (use.fuzzer) {
       "//common-mk/common_fuzzer:common_fuzzer",
       ":target_defaults",
     ]
-    deps = [
-      ":libsmbprovider",
-    ]
-    sources = [
-      "netbios_packet_fuzzer.cc",
-    ]
+    deps = [ ":libsmbprovider" ]
+    sources = [ "netbios_packet_fuzzer.cc" ]
   }
 }

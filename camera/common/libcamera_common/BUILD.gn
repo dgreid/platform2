@@ -5,9 +5,7 @@
 import("//common-mk/pkg_config.gni")
 
 group("all") {
-  deps = [
-    ":libcamera_common",
-  ]
+  deps = [ ":libcamera_common" ]
   if (use.test) {
     deps += [ ":future_test" ]
   }

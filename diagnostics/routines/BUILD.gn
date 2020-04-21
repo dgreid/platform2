@@ -14,9 +14,7 @@ pkg_config("urandom_pkg_deps") {
 
 executable("urandom") {
   configs += [ ":urandom_pkg_deps" ]
-  sources = [
-    "urandom/main.cc",
-  ]
+  sources = [ "urandom/main.cc" ]
 }
 
 # The smartctl-check tool executable.
@@ -58,9 +56,7 @@ executable("floating-point-accuracy") {
     "-msse",
     "-mno-mmx",
   ]
-  sources = [
-    "floating_point/main.cc",
-  ]
+  sources = [ "floating_point/main.cc" ]
 }
 
 executable("prime-search") {
@@ -115,16 +111,12 @@ if (use.test) {
   }
 
   source_set("libroutine_test_utils") {
-    deps = [
-      "//diagnostics:diagnostics_mojo_bindings",
-    ]
+    deps = [ "//diagnostics:diagnostics_mojo_bindings" ]
     configs += [
       ":libroutine_test_utils_pkg_deps",
       "//common-mk:test",
     ]
-    sources = [
-      "routine_test_utils.cc",
-    ]
+    sources = [ "routine_test_utils.cc" ]
   }
 
   pkg_config("routine_test_pkg_deps") {

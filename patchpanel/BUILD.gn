@@ -45,9 +45,7 @@ proto_library("protos") {
   configs = [ ":target_defaults" ]
   proto_in_dir = "."
   proto_out_dir = "include/patchpanel"
-  sources = [
-    "${proto_in_dir}/ipc.proto",
-  ]
+  sources = [ "${proto_in_dir}/ipc.proto" ]
 }
 
 util_sources = [
@@ -94,9 +92,7 @@ static_library("libpatchpanel_test") {
     "system_api",
   ]
   sources = libpatchpanel_sources
-  deps = [
-    ":protos",
-  ]
+  deps = [ ":protos" ]
 }
 
 static_library("libpatchpanel") {
@@ -106,9 +102,7 @@ static_library("libpatchpanel") {
     "system_api",
   ]
   sources = libpatchpanel_sources + util_sources
-  deps = [
-    ":protos",
-  ]
+  deps = [ ":protos" ]
 }
 
 shared_library("libpatchpanel-client") {
@@ -117,20 +111,14 @@ shared_library("libpatchpanel-client") {
     "protobuf",
     "system_api",
   ]
-  sources = [
-    "client.cc",
-  ]
+  sources = [ "client.cc" ]
   sources += util_sources
 }
 
 executable("patchpaneld") {
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
   configs += [ ":target_defaults" ]
-  deps = [
-    ":libpatchpanel",
-  ]
+  deps = [ ":libpatchpanel" ]
 }
 
 if (use.fuzzer) {
@@ -144,12 +132,8 @@ if (use.fuzzer) {
       ":target_defaults",
       ":fuzzing_config",
     ]
-    sources = [
-      "multicast_forwarder_fuzzer.cc",
-    ]
-    deps = [
-      ":libpatchpanel",
-    ]
+    sources = [ "multicast_forwarder_fuzzer.cc" ]
+    deps = [ ":libpatchpanel" ]
   }
 
   executable("ndproxy_fuzzer") {
@@ -158,12 +142,8 @@ if (use.fuzzer) {
       ":target_defaults",
       ":fuzzing_config",
     ]
-    sources = [
-      "ndproxy_fuzzer.cc",
-    ]
-    deps = [
-      ":libpatchpanel",
-    ]
+    sources = [ "ndproxy_fuzzer.cc" ]
+    deps = [ ":libpatchpanel" ]
   }
 
   executable("datapath_fuzzer") {
@@ -172,12 +152,8 @@ if (use.fuzzer) {
       ":target_defaults",
       ":fuzzing_config",
     ]
-    sources = [
-      "datapath_fuzzer.cc",
-    ]
-    deps = [
-      ":libpatchpanel",
-    ]
+    sources = [ "datapath_fuzzer.cc" ]
+    deps = [ ":libpatchpanel" ]
   }
 }
 

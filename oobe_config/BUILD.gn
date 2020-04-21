@@ -26,6 +26,8 @@ group("all") {
 
 pkg_config("target_defaults") {
   defines = [ "USE_TPM2=${use.tpm2}" ]
+
+  # NOSORT
   pkg_deps = [
     "libbrillo",
     "libchrome-${libbase_ver}",
@@ -48,9 +50,7 @@ generate_dbus_adaptors("oobe_config_restore_adaptors") {
   dbus_adaptors_out_dir = "include/dbus_adaptors"
   dbus_service_config = "dbus_bindings/dbus-service-config.json"
   new_fd_bindings = true
-  sources = [
-    "dbus_bindings/org.chromium.OobeConfigRestore.xml",
-  ]
+  sources = [ "dbus_bindings/org.chromium.OobeConfigRestore.xml" ]
 }
 
 pkg_config("liboobeconfig_config") {
@@ -74,9 +74,7 @@ static_library("liboobeconfig") {
     "policy",
     "tpmcrypto",
   ]
-  deps = [
-    ":oobe_config_proto",
-  ]
+  deps = [ ":oobe_config_proto" ]
 }
 
 pkg_config("crypto") {
@@ -110,32 +108,20 @@ static_library("libsave_oobe_config_usb") {
 
 executable("finish_oobe_auto_config") {
   configs += [ ":target_defaults" ]
-  sources = [
-    "save_oobe_config_usb_main.cc",
-  ]
-  deps = [
-    ":libsave_oobe_config_usb",
-  ]
+  sources = [ "save_oobe_config_usb_main.cc" ]
+  deps = [ ":libsave_oobe_config_usb" ]
 }
 
 executable("store_usb_oobe_config") {
   configs += [ ":target_defaults" ]
-  sources = [
-    "store_usb_oobe_config.cc",
-  ]
-  deps = [
-    ":libload_oobe_config_usb",
-  ]
+  sources = [ "store_usb_oobe_config.cc" ]
+  deps = [ ":libload_oobe_config_usb" ]
 }
 
 executable("oobe_config_save") {
   configs += [ ":target_defaults" ]
-  sources = [
-    "oobe_config_save_main.cc",
-  ]
-  deps = [
-    ":liboobeconfig",
-  ]
+  sources = [ "oobe_config_save_main.cc" ]
+  deps = [ ":liboobeconfig" ]
 }
 
 executable("oobe_config_restore") {
@@ -167,9 +153,7 @@ static_library("librollback_helper") {
 # Helper running as root before oobe_config_save.
 executable("rollback_prepare_save") {
   configs += [ ":target_defaults" ]
-  sources = [
-    "rollback_prepare_save_main.cc",
-  ]
+  sources = [ "rollback_prepare_save_main.cc" ]
   deps = [
     ":liboobeconfig",
     ":librollback_helper",
@@ -179,9 +163,7 @@ executable("rollback_prepare_save") {
 # Helper running as root after oobe_config_restore.
 executable("rollback_finish_restore") {
   configs += [ ":target_defaults" ]
-  sources = [
-    "rollback_finish_restore_main.cc",
-  ]
+  sources = [ "rollback_finish_restore_main.cc" ]
   deps = [
     ":liboobeconfig",
     ":librollback_helper",
@@ -191,9 +173,7 @@ executable("rollback_finish_restore") {
 proto_library("oobe_config_proto") {
   proto_in_dir = "."
   proto_out_dir = "include/oobe_config"
-  sources = [
-    "rollback_data.proto",
-  ]
+  sources = [ "rollback_data.proto" ]
 }
 
 if (use.test) {

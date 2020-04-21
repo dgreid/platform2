@@ -7,9 +7,7 @@ config("libcamera_metrics_config") {
 }
 
 static_library("libcamera_metrics") {
-  sources = [
-    "camera_metrics_impl.cc",
-  ]
+  sources = [ "camera_metrics_impl.cc" ]
   configs += [
     "//camera/build:cros_camera_common",
     "//common-mk:pic",
@@ -33,9 +31,7 @@ config("libcamera_jpeg_config") {
 }
 
 static_library("libcamera_jpeg") {
-  sources = [
-    "jpeg_compressor_impl.cc",
-  ]
+  sources = [ "jpeg_compressor_impl.cc" ]
   public_configs = [ ":libcamera_jpeg_config" ]
   configs += [
     "//camera/build:cros_camera_common",

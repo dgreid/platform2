@@ -6,9 +6,7 @@ import("//common-mk/pkg_config.gni")
 import("//common-mk/proto_library.gni")
 
 group("all") {
-  deps = [
-    ":mcastd",
-  ]
+  deps = [ ":mcastd" ]
 }
 
 pkg_config("target_defaults") {
@@ -27,9 +25,7 @@ proto_library("protos") {
   configs = [ ":target_defaults" ]
   proto_in_dir = ".."
   proto_out_dir = "include/patchpanel"
-  sources = [
-    "${proto_in_dir}/ipc.proto",
-  ]
+  sources = [ "${proto_in_dir}/ipc.proto" ]
 }
 
 executable("mcastd") {
@@ -42,7 +38,5 @@ executable("mcastd") {
     "main.cc",
   ]
   configs += [ ":target_defaults" ]
-  deps = [
-    ":protos",
-  ]
+  deps = [ ":protos" ]
 }

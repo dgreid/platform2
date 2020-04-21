@@ -13,9 +13,7 @@ pkg_config("libfake_cros_healthd_pkg_deps") {
 }
 
 source_set("libfake_cros_healthd") {
-  deps = [
-    "//diagnostics:diagnostics_mojo_bindings",
-  ]
+  deps = [ "//diagnostics:diagnostics_mojo_bindings" ]
   all_dependent_configs = [ ":libfake_cros_healthd_pkg_deps" ]
   sources = [
     "fake_probe_service.cc",

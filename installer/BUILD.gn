@@ -56,19 +56,13 @@ executable("cros_installer") {
     ":cros_installer_config",
     ":target_defaults",
   ]
-  deps = [
-    ":libcros_installer",
-  ]
-  sources = [
-    "cros_installer_main.cc",
-  ]
+  deps = [ ":libcros_installer" ]
+  sources = [ "cros_installer_main.cc" ]
 }
 
 executable("evwaitkey") {
   configs += [ ":target_defaults" ]
-  sources = [
-    "util/evwaitkey.c",
-  ]
+  sources = [ "util/evwaitkey.c" ]
 }
 
 pkg_config("cros_oobe_crypto_config") {
@@ -80,9 +74,7 @@ executable("cros_oobe_crypto") {
     ":cros_oobe_crypto_config",
     ":target_defaults",
   ]
-  sources = [
-    "util/cros_oobe_crypto.c",
-  ]
+  sources = [ "util/cros_oobe_crypto.c" ]
 }
 
 if (use.mtd) {
@@ -94,9 +86,7 @@ if (use.mtd) {
       ":nand_partition_config",
       ":target_defaults",
     ]
-    deps = [
-      ":libcros_installer",
-    ]
+    deps = [ ":libcros_installer" ]
     sources = [
       "nand_partition.cc",
       "nand_partition_main.cc",

@@ -30,6 +30,8 @@ pkg_config("target_defaults") {
   if (use.fp_on_power_button) {
     defines = [ "FP_ON_POWER_BUTTON" ]
   }
+
+  # NOSORT
   pkg_deps = [
     "libbrillo",
     "libchrome-${libbase_ver}",
@@ -53,9 +55,7 @@ pkg_config("target_defaults") {
 
 static_library("libbiod_proxy") {
   configs += [ ":target_defaults" ]
-  sources = [
-    "dbus/biometrics_manager_proxy_base.cc",
-  ]
+  sources = [ "dbus/biometrics_manager_proxy_base.cc" ]
 }
 
 static_library("libbiod") {
@@ -80,60 +80,38 @@ static_library("libbiod") {
 }
 
 static_library("fake_libbiod") {
-  sources = [
-    "fake_power_manager_client.cc",
-  ]
+  sources = [ "fake_power_manager_client.cc" ]
   configs += [ ":target_defaults" ]
 }
 
 executable("biod") {
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
   configs += [ ":target_defaults" ]
-  deps = [
-    ":libbiod",
-  ]
+  deps = [ ":libbiod" ]
 }
 
 executable("bio_crypto_init") {
-  sources = [
-    "tools/bio_crypto_init.cc",
-  ]
+  sources = [ "tools/bio_crypto_init.cc" ]
   configs += [ ":target_defaults" ]
-  deps = [
-    ":libbiod",
-  ]
+  deps = [ ":libbiod" ]
 }
 
 executable("bio_wash") {
-  sources = [
-    "tools/bio_wash.cc",
-  ]
+  sources = [ "tools/bio_wash.cc" ]
   configs += [ ":target_defaults" ]
-  deps = [
-    ":libbiod",
-  ]
+  deps = [ ":libbiod" ]
 }
 
 executable("biod_client_tool") {
-  sources = [
-    "tools/biod_client_tool.cc",
-  ]
+  sources = [ "tools/biod_client_tool.cc" ]
   configs += [ ":target_defaults" ]
-  deps = [
-    ":libbiod_proxy",
-  ]
+  deps = [ ":libbiod_proxy" ]
 }
 
 executable("bio_fw_updater") {
-  sources = [
-    "tools/bio_fw_updater.cc",
-  ]
+  sources = [ "tools/bio_fw_updater.cc" ]
   configs += [ ":target_defaults" ]
-  deps = [
-    ":libbiod",
-  ]
+  deps = [ ":libbiod" ]
 }
 
 if (use.test) {
@@ -178,29 +156,21 @@ if (use.fuzzer) {
     pkg_deps = [ "libchrome-test-${libbase_ver}" ]
   }
   executable("biod_storage_fuzzer") {
-    sources = [
-      "biod_storage_fuzzer.cc",
-    ]
+    sources = [ "biod_storage_fuzzer.cc" ]
     configs += [
       "//common-mk/common_fuzzer",
       ":libchrome_test_config",
       ":target_defaults",
     ]
-    deps = [
-      ":libbiod",
-    ]
+    deps = [ ":libbiod" ]
   }
   executable("biod_crypto_validation_value_fuzzer") {
-    sources = [
-      "biod_crypto_validation_value_fuzzer.cc",
-    ]
+    sources = [ "biod_crypto_validation_value_fuzzer.cc" ]
     configs += [
       "//common-mk/common_fuzzer",
       ":libchrome_test_config",
       ":target_defaults",
     ]
-    deps = [
-      ":libbiod",
-    ]
+    deps = [ ":libbiod" ]
   }
 }

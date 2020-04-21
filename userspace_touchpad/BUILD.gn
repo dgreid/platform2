@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 group("all") {
-  deps = [
-    ":userspace_touchpad",
-  ]
+  deps = [ ":userspace_touchpad" ]
 }
 
 executable("userspace_touchpad") {

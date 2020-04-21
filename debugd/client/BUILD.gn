@@ -2,13 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//common-mk/pkg_config.gni")
 import("//common-mk/generate-dbus-proxies.gni")
+import("//common-mk/pkg_config.gni")
 
 group("all") {
-  deps = [
-    ":libdebugd-client-headers",
-  ]
+  deps = [ ":libdebugd-client-headers" ]
 }
 
 # debugd client library generated headers. Used by other daemons to
@@ -18,7 +16,5 @@ generate_dbus_proxies("libdebugd-client-headers") {
   proxy_output_file = "include/debugd/dbus-proxies.h"
   mock_output_file = "include/debugd/dbus-proxy-mocks.h"
   proxy_path_in_mocks = "debugd/dbus-proxies.h"
-  sources = [
-    "../dbus_bindings/org.chromium.debugd.xml",
-  ]
+  sources = [ "../dbus_bindings/org.chromium.debugd.xml" ]
 }

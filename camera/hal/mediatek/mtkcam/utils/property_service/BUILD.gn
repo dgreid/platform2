@@ -4,26 +4,20 @@
 
 shared_library("libmtk_property") {
   import("//camera/hal/mediatek/common-config.gni")
-  sources = [
-    "property_lib.cpp",
-  ]
+  sources = [ "property_lib.cpp" ]
   include_dirs += [ "." ]
 }
 
 executable("setprop") {
   import("//camera/hal/mediatek/common-config.gni")
-  sources = [
-    "property_set.cpp",
-  ]
+  sources = [ "property_set.cpp" ]
   include_dirs += [ "." ]
   deps += [ ":libmtk_property" ]
 }
 
 executable("getprop") {
   import("//camera/hal/mediatek/common-config.gni")
-  sources = [
-    "property_get.cpp",
-  ]
+  sources = [ "property_get.cpp" ]
   include_dirs += [ "." ]
   deps += [ ":libmtk_property" ]
 }

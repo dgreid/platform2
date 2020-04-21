@@ -26,9 +26,7 @@ group("all") {
 }
 
 source_set("mojo_bindings_traits") {
-  sources = [
-    "mojom/time_mojom_traits.h",
-  ]
+  sources = [ "mojom/time_mojom_traits.h" ]
 }
 
 generate_mojom_bindings("ml_mojo_bindings") {
@@ -45,9 +43,7 @@ generate_mojom_bindings("ml_mojo_bindings") {
     "--typemap",
     rebase_path("mojom/type_mappings.json"),
   ]
-  deps = [
-    ":mojo_bindings_traits",
-  ]
+  deps = [ ":mojo_bindings_traits" ]
 }
 
 pkg_config("ml_common_pkg_deps") {
@@ -104,31 +100,19 @@ static_library("ml_common") {
 }
 
 static_library("ml_cmdline_common") {
-  deps = [
-    ":ml_common",
-  ]
-  sources = [
-    "simple.cc",
-  ]
+  deps = [ ":ml_common" ]
+  sources = [ "simple.cc" ]
 }
 
 executable("ml_service") {
-  deps = [
-    ":ml_common",
-  ]
-  sources = [
-    "main.cc",
-  ]
+  deps = [ ":ml_common" ]
+  sources = [ "main.cc" ]
 }
 
 executable("ml_cmdline") {
   include_dirs = [ "${sysroot}/usr/include/tensorflow" ]
-  deps = [
-    ":ml_cmdline_common",
-  ]
-  sources = [
-    "command_line.cc",
-  ]
+  deps = [ ":ml_cmdline_common" ]
+  sources = [ "command_line.cc" ]
 }
 
 if (use.test) {
@@ -175,9 +159,7 @@ if (use.test) {
   executable("ml_cmdline_test") {
     configs += [ "//common-mk:test" ]
     include_dirs = [ "${sysroot}/usr/include/tensorflow" ]
-    deps = [
-      ":ml_cmdline_common",
-    ]
+    deps = [ ":ml_cmdline_common" ]
     sources = [
       "simple_test.cc",
       "testrunner.cc",
@@ -189,20 +171,12 @@ if (use.test) {
 if (use.fuzzer) {
   executable("ml_service_impl_fuzzer") {
     configs += [ "//common-mk/common_fuzzer:common_fuzzer" ]
-    deps = [
-      ":ml_common",
-    ]
-    sources = [
-      "fuzzers/ml_service_impl_fuzzer.cc",
-    ]
+    deps = [ ":ml_common" ]
+    sources = [ "fuzzers/ml_service_impl_fuzzer.cc" ]
   }
   executable("ml_service_load_flatbuffer_fuzzer") {
     configs += [ "//common-mk/common_fuzzer" ]
-    deps = [
-      ":ml_common",
-    ]
-    sources = [
-      "fuzzers/ml_service_load_flatbuffer_fuzzer.cc",
-    ]
+    deps = [ ":ml_common" ]
+    sources = [ "fuzzers/ml_service_load_flatbuffer_fuzzer.cc" ]
   }
 }

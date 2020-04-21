@@ -15,6 +15,7 @@ group("all") {
 }
 
 pkg_config("target_defaults") {
+  # NOSORT
   pkg_deps = [
     "libbrillo",
     "libchrome-${libbase_ver}",
@@ -29,8 +30,8 @@ pkg_config("target_defaults") {
 
 pkg_config("virtual-file-provider_config") {
   pkg_deps = [
-    "libcap",
     "fuse",
+    "libcap",
   ]
 }
 
@@ -39,12 +40,8 @@ executable("virtual-file-provider") {
     ":target_defaults",
     ":virtual-file-provider_config",
   ]
-  sources = [
-    "virtual_file_provider.cc",
-  ]
-  deps = [
-    ":libvirtual-file-provider",
-  ]
+  sources = [ "virtual_file_provider.cc" ]
+  deps = [ ":libvirtual-file-provider" ]
 }
 
 static_library("libvirtual-file-provider") {
@@ -65,9 +62,7 @@ if (use.test) {
       "//common-mk:test",
       ":target_defaults",
     ]
-    sources = [
-      "operation_throttle_test.cc",
-    ]
+    sources = [ "operation_throttle_test.cc" ]
     deps = [
       ":libvirtual-file-provider",
       "//common-mk/testrunner",

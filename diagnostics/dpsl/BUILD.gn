@@ -41,13 +41,9 @@ source_set("libdpsl") {
 }
 
 source_set("libdpslutil") {
-  deps = [
-    ":libdpsl",
-  ]
+  deps = [ ":libdpsl" ]
   configs += [ ":libdpsl_pkg_deps" ]
-  sources = [
-    "test_utils/common.cc",
-  ]
+  sources = [ "test_utils/common.cc" ]
 }
 
 # Executables for DPSL demos.
@@ -56,9 +52,7 @@ executable("diagnostics_dpsl_demo_vm") {
     ":libdpsl",
     "//diagnostics/grpc:wilco_dtc_grpc_protos",
   ]
-  sources = [
-    "demo_single_thread/main.cc",
-  ]
+  sources = [ "demo_single_thread/main.cc" ]
 }
 
 # Executables for E2E VM tests.
@@ -67,9 +61,7 @@ executable("diagnostics_dpsl_test_listener") {
     ":libdpslutil",
     "//diagnostics/grpc:wilco_dtc_grpc_protos",
   ]
-  sources = [
-    "test_utils/listener.cc",
-  ]
+  sources = [ "test_utils/listener.cc" ]
 }
 
 # Executables for E2E VM tests.
@@ -78,9 +70,7 @@ executable("diagnostics_dpsl_test_requester") {
     ":libdpslutil",
     "//diagnostics/grpc:wilco_dtc_grpc_protos",
   ]
-  sources = [
-    "test_utils/requester.cc",
-  ]
+  sources = [ "test_utils/requester.cc" ]
 }
 
 if (use.test) {

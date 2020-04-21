@@ -16,6 +16,7 @@ group("all") {
 }
 
 pkg_config("target_defaults") {
+  # NOSORT
   pkg_deps = [
     "libcros_config",
     "dbus-1",
@@ -64,9 +65,7 @@ static_library("libdispatcher") {
 }
 
 executable("btdispatch") {
-  sources = [
-    "dispatcher/main.cc",
-  ]
+  sources = [ "dispatcher/main.cc" ]
   configs += [ ":target_defaults" ]
   deps = [
     ":libcommon",

@@ -36,9 +36,7 @@ generate_dbus_adaptors("dbus_code_generator") {
   new_fd_bindings = true
   dbus_service_config = "dbus_bindings/dbus-service-config.json"
   dbus_adaptors_out_dir = "include/kerberos"
-  sources = [
-    "dbus_bindings/org.chromium.Kerberos.xml",
-  ]
+  sources = [ "dbus_bindings/org.chromium.Kerberos.xml" ]
 }
 
 # Container protos.
@@ -46,9 +44,7 @@ proto_library("container-protos") {
   configs = [ ":target_defaults" ]
   proto_in_dir = "proto"
   proto_out_dir = "include/bindings"
-  sources = [
-    "${proto_in_dir}/kerberos_containers.proto",
-  ]
+  sources = [ "${proto_in_dir}/kerberos_containers.proto" ]
 }
 
 pkg_config("libkerberos_config") {
@@ -89,6 +85,7 @@ static_library("libkerberos") {
 }
 
 pkg_config("kerberosd_config") {
+  # NOSORT
   pkg_deps = [
     "libbrillo",
     "libchrome-${libbase_ver}",
@@ -113,17 +110,14 @@ executable("kerberosd") {
     ":kerberosd_config",
     ":target_defaults",
   ]
-  sources = [
-    "kerberosd_main.cc",
-  ]
-  deps = [
-    ":libkerberos",
-  ]
+  sources = [ "kerberosd_main.cc" ]
+  deps = [ ":libkerberos" ]
 }
 
 # Unit tests.
 if (use.test) {
   pkg_config("kerberos_test_config") {
+    # NOSORT
     pkg_deps = [
       "libbrillo",
       "libchrome-${libbase_ver}",
@@ -169,6 +163,7 @@ if (use.test) {
 # Fuzzers.
 if (use.fuzzer) {
   pkg_config("fuzzer_config") {
+    # NOSORT
     pkg_deps = [
       "libbrillo",
       "libchrome-${libbase_ver}",
@@ -192,11 +187,7 @@ if (use.fuzzer) {
       ":fuzzer_config",
       ":target_defaults",
     ]
-    sources = [
-      "config_parser_fuzzer.cc",
-    ]
-    deps = [
-      ":libkerberos",
-    ]
+    sources = [ "config_parser_fuzzer.cc" ]
+    deps = [ ":libkerberos" ]
   }
 }

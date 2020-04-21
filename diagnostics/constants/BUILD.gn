@@ -3,8 +3,6 @@
 # found in the LICENSE file.
 
 static_library("libconstants") {
-  sources = [
-    "grpc_constants.cc",
-  ]
+  sources = [ "grpc_constants.cc" ]
   pkg_deps = [ "libchrome-${libbase_ver}" ]
 }

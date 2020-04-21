@@ -28,6 +28,8 @@ executable("attestation-injected-keys") {
     "attestation_injected_keys/main.cc",
     "attestation_injected_keys/utility.cc",
   ]
+
+  # NOSORT
   pkg_deps = [
     # system_api depends on protobuf (or protobuf-lite). It must appear
     # before protobuf here or the linker flags won't be in the right
@@ -39,12 +41,10 @@ executable("attestation-injected-keys") {
 
 executable("hwsec-test-va") {
   configs += [ ":target_defaults" ]
-  sources = [
-    "verified_access/main.cc",
-  ]
-  deps = [
-    ":verified_access_library",
-  ]
+  sources = [ "verified_access/main.cc" ]
+  deps = [ ":verified_access_library" ]
+
+  # NOSORT
   pkg_deps = [
     # system_api depends on protobuf (or protobuf-lite). It must appear
     # before protobuf here or the linker flags won't be in the right
@@ -56,9 +56,7 @@ executable("hwsec-test-va") {
 
 source_set("verified_access_library") {
   configs += [ ":target_defaults" ]
-  sources = [
-    "verified_access/verified_access.cc",
-  ]
+  sources = [ "verified_access/verified_access.cc" ]
 }
 
 if (use.test) {
@@ -72,13 +70,13 @@ if (use.test) {
       ":hwsec-test-utils_testrunner_config",
       "//common-mk:test",
     ]
-    sources = [
-      "verified_access/verified_access_test.cc",
-    ]
+    sources = [ "verified_access/verified_access_test.cc" ]
     deps = [
       ":verified_access_library",
       "//common-mk/testrunner",
     ]
+
+    # NOSORT
     pkg_deps = [
       # system_api depends on protobuf (or protobuf-lite). It must appear
       # before protobuf here or the linker flags won't be in the right

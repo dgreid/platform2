@@ -6,9 +6,7 @@ import("//common-mk/mojom_bindings_generator.gni")
 import("//common-mk/pkg_config.gni")
 
 group("all") {
-  deps = [
-    ":libcamera_hal",
-  ]
+  deps = [ ":libcamera_hal" ]
 
   if (use.test) {
     deps += [ ":image_processor_test" ]
@@ -18,12 +16,12 @@ group("all") {
 pkg_config("target_defaults") {
   pkg_deps = [
     "cros-camera-android-headers",
-    "libcbm",
     "libcamera_client",
     "libcamera_common",
     "libcamera_exif",
     "libcamera_metadata",
     "libcamera_timezone",
+    "libcbm",
     "libcros_config",
     "libjda",
     "libsync",
@@ -38,9 +36,7 @@ pkg_config("target_defaults") {
 }
 
 generate_mojom_bindings("libcamera_hal_mojom") {
-  sources = [
-    "//camera/mojo/cros_camera_enum.mojom",
-  ]
+  sources = [ "//camera/mojo/cros_camera_enum.mojom" ]
   mojo_root = "//camera"
 }
 

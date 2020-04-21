@@ -11,13 +11,9 @@ generate_dbus_proxies("libattestation-client-headers") {
   proxy_output_file = "include/attestation/dbus-proxies.h"
   mock_output_file = "include/attestation/dbus-proxy-mocks.h"
   proxy_path_in_mocks = "attestation/dbus-proxies.h"
-  sources = [
-    "../common/dbus_bindings/org.chromium.Attestation.xml",
-  ]
+  sources = [ "../common/dbus_bindings/org.chromium.Attestation.xml" ]
 }
 
 group("all") {
-  deps = [
-    ":libattestation-client-headers",
-  ]
+  deps = [ ":libattestation-client-headers" ]
 }

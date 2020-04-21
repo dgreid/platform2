@@ -5,9 +5,7 @@
 import("//common-mk/pkg_config.gni")
 
 group("all") {
-  deps = [
-    ":croslog",
-  ]
+  deps = [ ":croslog" ]
   if (use.test) {
     deps += [ ":run_tests" ]
   }
@@ -28,19 +26,13 @@ pkg_config("target_defaults") {
 executable("croslog") {
   configs += [ ":target_defaults" ]
 
-  sources = [
-    "main.cc",
-  ]
-  deps = [
-    ":libcroslog_static",
-  ]
+  sources = [ "main.cc" ]
+  deps = [ ":libcroslog_static" ]
 }
 
 if (use.test) {
   executable("run_tests") {
-    sources = [
-      "config_test.cc",
-    ]
+    sources = [ "config_test.cc" ]
     configs += [
       "//common-mk:test",
       ":target_defaults",

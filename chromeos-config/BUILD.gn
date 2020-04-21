@@ -20,8 +20,8 @@ group("all") {
 
 pkg_config("target_defaults") {
   pkg_deps = [
-    "libchrome-${libbase_ver}",
     "libbrillo-${libbase_ver}",
+    "libchrome-${libbase_ver}",
   ]
 }
 
@@ -41,64 +41,44 @@ shared_library("libcros_config") {
 }
 
 executable("cros_config") {
-  sources = [
-    "cros_config_main.cc",
-  ]
+  sources = [ "cros_config_main.cc" ]
   configs += [ ":target_defaults" ]
-  deps = [
-    ":libcros_config",
-  ]
+  deps = [ ":libcros_config" ]
 }
 
 executable("cros_configfs") {
-  sources = [
-    "cros_configfs_main.cc",
-  ]
+  sources = [ "cros_configfs_main.cc" ]
   configs += [ ":target_defaults" ]
-  deps = [
-    ":libcros_config",
-  ]
+  deps = [ ":libcros_config" ]
 }
 
 if (use.test) {
   executable("cros_config_test") {
-    sources = [
-      "libcros_config/cros_config_test.cc",
-    ]
+    sources = [ "libcros_config/cros_config_test.cc" ]
     configs += [
       "//common-mk:test",
       ":target_defaults",
     ]
     include_dirs = [ "libcros_config" ]
-    deps = [
-      ":libcros_config",
-    ]
+    deps = [ ":libcros_config" ]
   }
 
   executable("cros_config_main_test") {
-    sources = [
-      "cros_config_main_test.cc",
-    ]
+    sources = [ "cros_config_main_test.cc" ]
     configs += [
       "//common-mk:test",
       ":target_defaults",
     ]
-    deps = [
-      ":cros_config",
-    ]
+    deps = [ ":cros_config" ]
   }
 
   executable("fake_cros_config_test") {
-    sources = [
-      "libcros_config/fake_cros_config_test.cc",
-    ]
+    sources = [ "libcros_config/fake_cros_config_test.cc" ]
     configs += [
       "//common-mk:test",
       ":target_defaults",
     ]
     include_dirs = [ "libcros_config" ]
-    deps = [
-      ":libcros_config",
-    ]
+    deps = [ ":libcros_config" ]
   }
 }

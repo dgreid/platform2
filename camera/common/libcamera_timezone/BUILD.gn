@@ -3,14 +3,10 @@
 # found in the LICENSE file.
 
 group("all") {
-  deps = [
-    ":libcamera_timezone",
-  ]
+  deps = [ ":libcamera_timezone" ]
 }
 
 shared_library("libcamera_timezone") {
-  sources = [
-    "//camera/common/timezone.cc",
-  ]
+  sources = [ "//camera/common/timezone.cc" ]
   configs += [ "//camera/build:cros_camera_common" ]
 }

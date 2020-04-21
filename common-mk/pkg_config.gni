@@ -81,9 +81,7 @@ template("generate_pkg_config") {
     if (!defined(output_name)) {
       output_name = name
     }
-    outputs = [
-      "${target_out_dir}/${output_name}.pc",
-    ]
+    outputs = [ "${target_out_dir}/${output_name}.pc" ]
 
     script = "//common-mk/generate-pc.py"
     args = [ "--output" ] + outputs + [ "--name=" + name ]

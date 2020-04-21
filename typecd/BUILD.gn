@@ -5,9 +5,7 @@
 import("//common-mk/pkg_config.gni")
 
 group("all") {
-  deps = [
-    ":typecd",
-  ]
+  deps = [ ":typecd" ]
   if (use.test) {
     deps += [ ":typecd_testrunner" ]
   }
@@ -19,19 +17,13 @@ pkg_config("target_defaults") {
 
 executable("typecd") {
   configs += [ ":target_defaults" ]
-  deps = [
-    ":typecd_common",
-  ]
-  sources = [
-    "main.cc",
-  ]
+  deps = [ ":typecd_common" ]
+  sources = [ "main.cc" ]
 }
 
 static_library("typecd_common") {
   all_dependent_configs = [ ":target_defaults" ]
-  sources = [
-    "partner.cc",
-  ]
+  sources = [ "partner.cc" ]
 }
 
 if (use.test) {
@@ -41,8 +33,6 @@ if (use.test) {
       ":typecd_common",
       "//common-mk/testrunner:testrunner",
     ]
-    sources = [
-      "partner_test.cc",
-    ]
+    sources = [ "partner_test.cc" ]
   }
 }

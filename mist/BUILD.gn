@@ -6,9 +6,7 @@ import("//common-mk/pkg_config.gni")
 import("//common-mk/proto_library.gni")
 
 group("all") {
-  deps = [
-    ":mist",
-  ]
+  deps = [ ":mist" ]
   if (use.test) {
     deps += [ ":mist_testrunner" ]
   }
@@ -35,9 +33,7 @@ proto_library("mist-protos") {
 
 static_library("libmist") {
   configs += [ ":target_defaults" ]
-  deps = [
-    ":mist-protos",
-  ]
+  deps = [ ":mist-protos" ]
   sources = [
     "config_loader.cc",
     "context.cc",
@@ -65,12 +61,8 @@ static_library("libmist") {
 
 executable("mist") {
   configs += [ ":target_defaults" ]
-  deps = [
-    ":libmist",
-  ]
-  sources = [
-    "main.cc",
-  ]
+  deps = [ ":libmist" ]
+  sources = [ "main.cc" ]
 }
 
 if (use.test) {

@@ -42,9 +42,7 @@ static_library("libapk-cache-cleaner") {
 }
 
 static_library("libapk-cache-ctl") {
-  sources = [
-    "apk_cache_ctl_ls.cc",
-  ]
+  sources = [ "apk_cache_ctl_ls.cc" ]
   configs += [ ":libapk-cache-common_config" ]
 }
 
@@ -56,9 +54,7 @@ pkg_config("apk-cache-common_config") {
 }
 
 executable("apk-cache-cleaner") {
-  sources = [
-    "cache_cleaner_main.cc",
-  ]
+  sources = [ "cache_cleaner_main.cc" ]
   configs += [ ":apk-cache-common_config" ]
   deps = [
     ":libapk-cache",
@@ -67,9 +63,7 @@ executable("apk-cache-cleaner") {
 }
 
 executable("apk-cache-ctl") {
-  sources = [
-    "apk_cache_ctl_main.cc",
-  ]
+  sources = [ "apk_cache_ctl_main.cc" ]
   configs += [ ":apk-cache-common_config" ]
   deps = [
     ":libapk-cache",

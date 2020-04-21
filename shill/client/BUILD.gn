@@ -5,9 +5,7 @@
 import("//common-mk/generate-dbus-proxies.gni")
 
 group("all") {
-  deps = [
-    ":libshill-client-headers",
-  ]
+  deps = [ ":libshill-client-headers" ]
 }
 
 generate_dbus_proxies("libshill-client-headers") {

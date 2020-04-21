@@ -5,9 +5,7 @@
 import("//common-mk/pkg_config.gni")
 
 group("all") {
-  deps = [
-    ":timberslide",
-  ]
+  deps = [ ":timberslide" ]
   if (use.test) {
     deps += [ ":timberslide_test_runner" ]
   }
@@ -15,8 +13,8 @@ group("all") {
 
 pkg_config("target_defaults") {
   pkg_deps = [
-    "libchrome-${libbase_ver}",
     "libbrillo",
+    "libchrome-${libbase_ver}",
     "libmetrics-${libbase_ver}",
     "re2",
   ]
@@ -32,12 +30,8 @@ static_library("libtimberslide") {
 
 executable("timberslide") {
   configs += [ ":target_defaults" ]
-  sources = [
-    "main.cc",
-  ]
-  deps = [
-    ":libtimberslide",
-  ]
+  sources = [ "main.cc" ]
+  deps = [ ":libtimberslide" ]
 }
 
 if (use.test) {

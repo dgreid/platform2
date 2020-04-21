@@ -5,9 +5,7 @@
 import("//common-mk/pkg_config.gni")
 
 group("all") {
-  deps = [
-    ":override-max-pressure",
-  ]
+  deps = [ ":override-max-pressure" ]
 }
 
 pkg_config("target_defaults") {
@@ -19,7 +17,5 @@ pkg_config("target_defaults") {
 
 executable("override-max-pressure") {
   configs += [ ":target_defaults" ]
-  sources = [
-    "override_max_pressure.cc",
-  ]
+  sources = [ "override_max_pressure.cc" ]
 }

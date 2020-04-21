@@ -81,9 +81,7 @@ template("flatbuffer") {
       out_dir = "{{source_gen_dir}}"
     }
 
-    outputs = [
-      "$out_dir/{{source_name_part}}_generated.h",
-    ]
+    outputs = [ "$out_dir/{{source_name_part}}_generated.h" ]
 
     if (defined(invoker.flatc_args)) {
       args += invoker.flatc_args
@@ -135,9 +133,7 @@ template("flatbuffer") {
       testonly = invoker.testonly
     }
 
-    public_deps = [
-      ":$action_name",
-    ]
+    public_deps = [ ":$action_name" ]
 
     # This will link any libraries in the deps (the use of invoker.deps in the
     # action won't link it).

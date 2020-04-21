@@ -15,16 +15,12 @@ pkg_config("target_defaults") {
 }
 
 shared_library("libcam_algo") {
-  sources = [
-    "//camera/common/fake_libcam_algo.cc",
-  ]
+  sources = [ "//camera/common/fake_libcam_algo.cc" ]
   configs += [ ":target_defaults" ]
 }
 
 executable("libcab_test") {
-  sources = [
-    "//camera/common/libcab_test_main.cc",
-  ]
+  sources = [ "//camera/common/libcab_test_main.cc" ]
   configs += [
     ":target_defaults",
     "//common-mk:test",

@@ -3,7 +3,5 @@
 # found in the LICENSE file.
 
 group("all") {
-  deps = [
-    "//common-mk/external_dependencies:policy-goprotos",
-  ]
+  deps = [ "//common-mk/external_dependencies:policy-goprotos" ]
 }

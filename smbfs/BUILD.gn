@@ -18,6 +18,7 @@ group("all") {
 }
 
 pkg_config("target_defaults") {
+  # NOSORT
   pkg_deps = [
     "libbrillo",
     "libchrome-${libbase_ver}",
@@ -81,9 +82,7 @@ static_library("libsmbfs") {
 }
 
 generate_dbus_proxies("dbus_bindings") {
-  sources = [
-    "dbus_bindings/org.chromium.SmbFs.xml",
-  ]
+  sources = [ "dbus_bindings/org.chromium.SmbFs.xml" ]
   proxy_output_file = "include/smbfs/dbus-proxies.h"
   mock_output_file = "include/smbfs/dbus-proxy-mocks.h"
 }
@@ -107,19 +106,13 @@ generate_mojom_bindings("mojo_bindings") {
     rebase_path("mojom/type_mappings.json"),
   ]
   configs = [ ":target_defaults" ]
-  deps = [
-    ":mojo_bindings_traits",
-  ]
+  deps = [ ":mojo_bindings_traits" ]
 }
 
 executable("smbfs") {
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
   configs += [ ":target_defaults" ]
-  deps = [
-    ":libsmbfs",
-  ]
+  deps = [ ":libsmbfs" ]
 }
 
 if (use.test) {
@@ -132,9 +125,7 @@ if (use.test) {
       ":target_defaults",
       ":smbfs_test_config",
     ]
-    deps = [
-      ":libsmbfs",
-    ]
+    deps = [ ":libsmbfs" ]
     sources = [
       "fake_kerberos_artifact_client.cc",
       "fake_kerberos_artifact_client.h",

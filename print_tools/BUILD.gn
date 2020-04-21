@@ -5,9 +5,7 @@
 import("//common-mk/pkg_config.gni")
 
 group("all") {
-  deps = [
-    ":printer_diag",
-  ]
+  deps = [ ":printer_diag" ]
 }
 
 pkg_config("target_defaults") {

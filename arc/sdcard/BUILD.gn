@@ -3,16 +3,12 @@
 # found in the LICENSE file.
 
 group("all") {
-  deps = [
-    ":generate_squashfs",
-  ]
+  deps = [ ":generate_squashfs" ]
 }
 
 action("mkdir_squashfs_source_dir") {
   inputs = []
-  outputs = [
-    "${root_gen_dir}/squashfs_source_dir",
-  ]
+  outputs = [ "${root_gen_dir}/squashfs_source_dir" ]
   script = "//common-mk/file_generator_wrapper.py"
   args = [
     "mkdir",
@@ -22,12 +18,8 @@ action("mkdir_squashfs_source_dir") {
 }
 
 action("generate_squashfs") {
-  inputs = [
-    "${root_gen_dir}/squashfs_source_dir",
-  ]
-  outputs = [
-    "${root_out_dir}/rootfs.squashfs",
-  ]
+  inputs = [ "${root_gen_dir}/squashfs_source_dir" ]
+  outputs = [ "${root_out_dir}/rootfs.squashfs" ]
   script = "//common-mk/file_generator_wrapper.py"
   args = [
     "mksquashfs",
@@ -62,7 +54,5 @@ action("generate_squashfs") {
     "-p",
     "/Downloads d 700 0 0",
   ]
-  deps = [
-    ":mkdir_squashfs_source_dir",
-  ]
+  deps = [ ":mkdir_squashfs_source_dir" ]
 }

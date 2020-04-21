@@ -113,12 +113,8 @@ libbrillo_sublibs = [
 
   {
     library_name = "brillo-blockdeviceutils"
-    deps = [
-      ":libbrillo-core",
-    ]
-    sources = [
-      "brillo/blkdev_utils/loop_device.cc",
-    ]
+    deps = [ ":libbrillo-core" ]
+    sources = [ "brillo/blkdev_utils/loop_device.cc" ]
     if (use.device_mapper) {
       pkg_deps = [ "devmapper" ]
       sources += [
@@ -151,9 +147,7 @@ libbrillo_sublibs = [
 
   {
     library_name = "brillo-streams"
-    deps = [
-      ":libbrillo-core",
-    ]
+    deps = [ ":libbrillo-core" ]
     all_dependent_pkg_deps = [ "openssl" ]
     sources = [
       "brillo/streams/file_stream.cc",
@@ -171,16 +165,12 @@ libbrillo_sublibs = [
   {
     library_name = "brillo-cryptohome"
     all_dependent_pkg_deps = [ "openssl" ]
-    sources = [
-      "brillo/cryptohome.cc",
-    ]
+    sources = [ "brillo/cryptohome.cc" ]
   },
 
   {
     library_name = "brillo-namespaces"
-    deps = [
-      ":libbrillo-core",
-    ]
+    deps = [ ":libbrillo-core" ]
     sources = [
       "brillo/namespaces/mount_namespace.cc",
       "brillo/namespaces/platform.cc",
@@ -191,17 +181,13 @@ libbrillo_sublibs = [
   {
     library_name = "brillo-minijail"
     all_dependent_pkg_deps = [ "libminijail" ]
-    sources = [
-      "brillo/minijail/minijail.cc",
-    ]
+    sources = [ "brillo/minijail/minijail.cc" ]
   },
 
   {
     library_name = "brillo-protobuf"
     all_dependent_pkg_deps = [ "protobuf" ]
-    sources = [
-      "brillo/proto_file_io.cc",
-    ]
+    sources = [ "brillo/proto_file_io.cc" ]
   },
 ]
 
@@ -301,9 +287,7 @@ action("libbrillo") {
     deps += [ ":lib" + sublib.library_name ]
   }
   script = "//common-mk/write_args.py"
-  outputs = [
-    "${root_out_dir}/lib/libbrillo.so",
-  ]
+  outputs = [ "${root_out_dir}/lib/libbrillo.so" ]
   args = [ "--output" ] + outputs + [ "--" ] + [
            "GROUP",
            "(",
@@ -407,9 +391,7 @@ shared_library("libinstallattributes") {
     "../common-mk/external_dependencies:install_attributes-proto",
   ]
   all_dependent_pkg_deps = [ "protobuf-lite" ]
-  sources = [
-    "install_attributes/libinstallattributes.cc",
-  ]
+  sources = [ "install_attributes/libinstallattributes.cc" ]
 }
 
 shared_library("libpolicy") {
@@ -499,9 +481,7 @@ if (use.test) {
   proto_library("libbrillo_tests_proto") {
     proto_in_dir = "brillo/dbus"
     proto_out_dir = "include/brillo/dbus"
-    sources = [
-      "${proto_in_dir}/test.proto",
-    ]
+    sources = [ "${proto_in_dir}/test.proto" ]
   }
   executable("libbrillo_tests") {
     configs += [
@@ -603,9 +583,7 @@ if (use.test) {
       "../common-mk/external_dependencies:install_attributes-proto",
       "../common-mk/testrunner:testrunner",
     ]
-    sources = [
-      "install_attributes/tests/libinstallattributes_test.cc",
-    ]
+    sources = [ "install_attributes/tests/libinstallattributes_test.cc" ]
   }
 
   executable("libpolicy_tests") {
@@ -632,9 +610,7 @@ if (use.test) {
 
 if (use.fuzzer) {
   executable("libbrillo_data_encoding_fuzzer") {
-    sources = [
-      "brillo/data_encoding_fuzzer.cc",
-    ]
+    sources = [ "brillo/data_encoding_fuzzer.cc" ]
 
     configs += [ "//common-mk/common_fuzzer:common_fuzzer" ]
 
@@ -642,15 +618,11 @@ if (use.fuzzer) {
 
     include_dirs = [ "../libbrillo" ]
 
-    deps = [
-      ":libbrillo-core",
-    ]
+    deps = [ ":libbrillo-core" ]
   }
 
   executable("libbrillo_dbus_data_serialization_fuzzer") {
-    sources = [
-      "brillo/dbus/data_serialization_fuzzer.cc",
-    ]
+    sources = [ "brillo/dbus/data_serialization_fuzzer.cc" ]
 
     configs += [ "//common-mk/common_fuzzer:common_fuzzer" ]
 
@@ -658,15 +630,11 @@ if (use.fuzzer) {
 
     include_dirs = [ "../libbrillo" ]
 
-    deps = [
-      ":libbrillo-core",
-    ]
+    deps = [ ":libbrillo-core" ]
   }
 
   executable("libbrillo_http_form_data_fuzzer") {
-    sources = [
-      "brillo/http/http_form_data_fuzzer.cc",
-    ]
+    sources = [ "brillo/http/http_form_data_fuzzer.cc" ]
 
     configs += [ "//common-mk/common_fuzzer:common_fuzzer" ]
 
@@ -682,12 +650,9 @@ if (use.fuzzer) {
 }
 
 copy("libinstallattributes-includes") {
-  sources = [
-    "install_attributes/libinstallattributes.h",
-  ]
-  outputs = [
-    "${root_gen_dir}/include/install_attributes/{{source_file_part}}",
-  ]
+  sources = [ "install_attributes/libinstallattributes.h" ]
+  outputs =
+      [ "${root_gen_dir}/include/install_attributes/{{source_file_part}}" ]
 }
 
 copy("libpolicy-includes") {
@@ -700,7 +665,5 @@ copy("libpolicy-includes") {
     "policy/policy_util.h",
     "policy/resilient_policy_util.h",
   ]
-  outputs = [
-    "${root_gen_dir}/include/policy/{{source_file_part}}",
-  ]
+  outputs = [ "${root_gen_dir}/include/policy/{{source_file_part}}" ]
 }

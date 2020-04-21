@@ -31,18 +31,14 @@ generate_dbus_adaptors("crosdns_adaptors") {
   dbus_adaptors_out_dir = "include/crosdns/dbus_adaptors"
   dbus_service_config = "dbus_adaptors/dbus-service-config.json"
   new_fd_bindings = true
-  sources = [
-    "dbus_adaptors/org.chromium.CrosDns.xml",
-  ]
+  sources = [ "dbus_adaptors/org.chromium.CrosDns.xml" ]
 }
 
 generate_dbus_proxies("crosdns_proxies") {
   dbus_service_config = "dbus_adaptors/dbus-service-config.json"
   proxy_output_file = "include/crosdns/dbus_adaptors/dbus-proxies.h"
   new_fd_bindings = true
-  sources = [
-    "dbus_adaptors/org.chromium.CrosDns.xml",
-  ]
+  sources = [ "dbus_adaptors/org.chromium.CrosDns.xml" ]
 }
 
 static_library("libcrosdns_static") {
@@ -53,9 +49,7 @@ static_library("libcrosdns_static") {
     "hosts_modifier.h",
   ]
   configs += [ ":target_defaults" ]
-  deps = [
-    ":crosdns_adaptors",
-  ]
+  deps = [ ":crosdns_adaptors" ]
 }
 
 executable("crosdns") {
@@ -72,9 +66,7 @@ executable("crosdns") {
 
 if (use.test) {
   executable("run_tests") {
-    sources = [
-      "hosts_modifier_test.cc",
-    ]
+    sources = [ "hosts_modifier_test.cc" ]
     configs += [
       "//common-mk:test",
       ":target_defaults",
@@ -93,16 +85,12 @@ if (use.fuzzer) {
   }
 
   executable("hosts_modifier_fuzzer") {
-    sources = [
-      "hosts_modifier_fuzzer.cc",
-    ]
+    sources = [ "hosts_modifier_fuzzer.cc" ]
     configs += [
       "//common-mk/common_fuzzer",
       ":hosts_modifier_fuzzer_config",
       ":target_defaults",
     ]
-    deps = [
-      ":libcrosdns_static",
-    ]
+    deps = [ ":libcrosdns_static" ]
   }
 }

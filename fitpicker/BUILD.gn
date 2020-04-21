@@ -5,14 +5,10 @@
 import("//common-mk/pkg_config.gni")
 
 group("all") {
-  deps = [
-    ":fitpicker",
-  ]
+  deps = [ ":fitpicker" ]
 }
 
 executable("fitpicker") {
-  sources = [
-    "fitpicker.c",
-  ]
+  sources = [ "fitpicker.c" ]
   libs = [ "fdt" ]
 }

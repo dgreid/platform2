@@ -6,9 +6,7 @@ import("//common-mk/generate-dbus-adaptors.gni")
 import("//common-mk/pkg_config.gni")
 
 group("all") {
-  deps = [
-    ":permission_broker",
-  ]
+  deps = [ ":permission_broker" ]
   if (use.test) {
     deps += [ ":permission_broker_test" ]
   }
@@ -40,16 +38,12 @@ generate_dbus_adaptors("permission_broker_adaptors") {
   dbus_service_config = "dbus_bindings/dbus-service-config.json"
   dbus_adaptors_out_dir = "include/permission_broker/dbus_adaptors"
   new_fd_bindings = true
-  sources = [
-    "dbus_bindings/org.chromium.PermissionBroker.xml",
-  ]
+  sources = [ "dbus_bindings/org.chromium.PermissionBroker.xml" ]
 }
 
 static_library("libpermission_broker") {
   configs += [ ":target_defaults" ]
-  deps = [
-    ":permission_broker_adaptors",
-  ]
+  deps = [ ":permission_broker_adaptors" ]
   libs = [ "policy" ]
   sources = [
     "allow_group_tty_device_rule.cc",
@@ -81,12 +75,8 @@ static_library("libpermission_broker") {
 
 executable("permission_broker") {
   configs += [ ":target_defaults" ]
-  deps = [
-    ":libpermission_broker",
-  ]
-  sources = [
-    "permission_broker_main.cc",
-  ]
+  deps = [ ":libpermission_broker" ]
+  sources = [ "permission_broker_main.cc" ]
 }
 
 if (use.test) {
@@ -138,12 +128,8 @@ if (use.fuzzer) {
       ":permission_broker_fuzzer_config",
       ":target_defaults",
     ]
-    deps = [
-      ":libpermission_broker",
-    ]
-    sources = [
-      "firewall_fuzzer.cc",
-    ]
+    deps = [ ":libpermission_broker" ]
+    sources = [ "firewall_fuzzer.cc" ]
   }
   executable("port_tracker_fuzzer") {
     configs += [
@@ -151,11 +137,7 @@ if (use.fuzzer) {
       ":permission_broker_fuzzer_config",
       ":target_defaults",
     ]
-    deps = [
-      ":libpermission_broker",
-    ]
-    sources = [
-      "port_tracker_fuzzer.cc",
-    ]
+    deps = [ ":libpermission_broker" ]
+    sources = [ "port_tracker_fuzzer.cc" ]
   }
 }

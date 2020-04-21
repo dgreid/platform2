@@ -46,8 +46,8 @@ pkg_config("target_defaults") {
     "liblzma",
     "libminijail",
     "libpcrecpp",
-    "vboot_host",
     "re2",
+    "vboot_host",
   ]
 }
 
@@ -64,9 +64,7 @@ generate_dbus_adaptors("debugd-adaptors") {
   new_fd_bindings = true
   dbus_service_config = "dbus_bindings/dbus-service-config.json"
   dbus_adaptors_out_dir = "include/debugd/dbus_adaptors"
-  sources = [
-    "dbus_bindings/org.chromium.debugd.xml",
-  ]
+  sources = [ "dbus_bindings/org.chromium.debugd.xml" ]
 }
 
 pkg_config("libdebugd_dependent_config") {
@@ -144,19 +142,13 @@ executable("debugd") {
     ":debugd_config",
     ":target_defaults",
   ]
-  sources = [
-    "src/main.cc",
-  ]
-  deps = [
-    ":libdebugd",
-  ]
+  sources = [ "src/main.cc" ]
+  deps = [ ":libdebugd" ]
 }
 
 executable("capture_packets") {
   configs += [ ":target_defaults" ]
-  sources = [
-    "src/helpers/capture_packets.cc",
-  ]
+  sources = [ "src/helpers/capture_packets.cc" ]
   libs = [ "pcap" ]
 }
 
@@ -170,12 +162,8 @@ executable("cups_uri_helper") {
 
 executable("dev_features_chrome_remote_debugging") {
   configs += [ ":target_defaults" ]
-  sources = [
-    "src/helpers/dev_features_chrome_remote_debugging.cc",
-  ]
-  deps = [
-    ":libdebugd",
-  ]
+  sources = [ "src/helpers/dev_features_chrome_remote_debugging.cc" ]
+  deps = [ ":libdebugd" ]
 }
 
 executable("dev_features_password") {
@@ -184,30 +172,20 @@ executable("dev_features_password") {
     "src/helpers/dev_features_password.cc",
     "src/helpers/dev_features_password_utils.cc",
   ]
-  deps = [
-    ":libdebugd",
-  ]
+  deps = [ ":libdebugd" ]
 }
 
 executable("dev_features_rootfs_verification") {
   configs += [ ":target_defaults" ]
-  sources = [
-    "src/helpers/dev_features_rootfs_verification.cc",
-  ]
+  sources = [ "src/helpers/dev_features_rootfs_verification.cc" ]
   libs = [ "rootdev" ]
-  deps = [
-    ":libdebugd",
-  ]
+  deps = [ ":libdebugd" ]
 }
 
 executable("dev_features_ssh") {
   configs += [ ":target_defaults" ]
-  sources = [
-    "src/helpers/dev_features_ssh.cc",
-  ]
-  deps = [
-    ":libdebugd",
-  ]
+  sources = [ "src/helpers/dev_features_ssh.cc" ]
+  deps = [ ":libdebugd" ]
 }
 
 pkg_config("dev_features_usb_boot_config") {
@@ -219,46 +197,30 @@ executable("dev_features_usb_boot") {
     ":dev_features_usb_boot_config",
     ":target_defaults",
   ]
-  sources = [
-    "src/helpers/dev_features_usb_boot.cc",
-  ]
-  deps = [
-    ":libdebugd",
-  ]
+  sources = [ "src/helpers/dev_features_usb_boot.cc" ]
+  deps = [ ":libdebugd" ]
 }
 
 executable("generate_logs") {
   configs += [ ":target_defaults" ]
-  sources = [
-    "tools/generate_logs.cc",
-  ]
+  sources = [ "tools/generate_logs.cc" ]
 }
 
 executable("icmp") {
   configs += [ ":target_defaults" ]
-  sources = [
-    "src/helpers/icmp.cc",
-  ]
+  sources = [ "src/helpers/icmp.cc" ]
 }
 
 executable("netif") {
   configs += [ ":target_defaults" ]
-  sources = [
-    "src/helpers/netif.cc",
-  ]
-  deps = [
-    ":debugd_dbus_utils",
-  ]
+  sources = [ "src/helpers/netif.cc" ]
+  deps = [ ":debugd_dbus_utils" ]
 }
 
 executable("network_status") {
   configs += [ ":target_defaults" ]
-  sources = [
-    "src/helpers/network_status.cc",
-  ]
-  deps = [
-    ":debugd_dbus_utils",
-  ]
+  sources = [ "src/helpers/network_status.cc" ]
+  deps = [ ":debugd_dbus_utils" ]
 }
 
 executable("scheduler_configuration_helper") {
@@ -272,8 +234,8 @@ executable("scheduler_configuration_helper") {
 if (use.test) {
   pkg_config("debugd_testrunner_config") {
     pkg_deps = [
-      "protobuf",
       "libchrome-test-${libbase_ver}",
+      "protobuf",
     ]
   }
 

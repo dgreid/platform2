@@ -5,9 +5,7 @@
 import("//common-mk/mojom_bindings_generator.gni")
 
 group("all") {
-  deps = [
-    ":libcamera_ipc",
-  ]
+  deps = [ ":libcamera_ipc" ]
 }
 
 generate_mojom_bindings("libcamera_ipc_mojom") {
@@ -45,7 +43,5 @@ shared_library("libcamera_ipc") {
     "libchrome-${libbase_ver}",
     "libmojo-${libbase_ver}",
   ]
-  deps = [
-    ":libcamera_ipc_mojom",
-  ]
+  deps = [ ":libcamera_ipc_mojom" ]
 }

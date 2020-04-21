@@ -4,9 +4,7 @@
 
 shared_library("libmtkcam.logicalmodule") {
   import("//camera/hal/mediatek/common-config.gni")
-  sources = [
-    "HalLogicalDeviceList.cpp",
-  ]
+  sources = [ "HalLogicalDeviceList.cpp" ]
   include_dirs += [
     ".",
     "${mtk_root_path}/mtkcam/custom/common/hal/inc",

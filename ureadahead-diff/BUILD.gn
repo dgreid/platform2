@@ -5,9 +5,7 @@
 import("//common-mk/pkg_config.gni")
 
 group("all") {
-  deps = [
-    ":ureadahead-diff",
-  ]
+  deps = [ ":ureadahead-diff" ]
   if (use.test) {
     deps += [ ":ureadahead-diff_testrunner" ]
   }
@@ -26,21 +24,15 @@ config("target_defaults") {
 }
 
 static_library("libureadahead_diff") {
-  sources = [
-    "ureadahead_diff.cc",
-  ]
+  sources = [ "ureadahead_diff.cc" ]
   configs += [ ":target_defaults" ]
   defines = []
 }
 
 executable("ureadahead-diff") {
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
   configs += [ ":target_defaults" ]
-  deps = [
-    ":libureadahead_diff",
-  ]
+  deps = [ ":libureadahead_diff" ]
 }
 
 if (use.test) {
@@ -51,9 +43,7 @@ if (use.test) {
     ]
   }
   executable("ureadahead-diff_testrunner") {
-    sources = [
-      "ureadahead_diff_test.cc",
-    ]
+    sources = [ "ureadahead_diff_test.cc" ]
     configs += [
       "//common-mk:test",
       ":ureadahead-diff_testrunner_pkg_deps",

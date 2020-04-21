@@ -15,9 +15,7 @@ group("all") {
 }
 
 static_library("libvsh") {
-  sources = [
-    "vsh/utils.cc",
-  ]
+  sources = [ "vsh/utils.cc" ]
   pkg_deps = [ "libchrome-${libbase_ver}" ]
 }
 
@@ -28,11 +26,9 @@ executable("vshd") {
   ]
   pkg_deps = [
     "libbrillo",
+    "libchrome-${libbase_ver}",
     "protobuf",
     "vm_protos",
-    "libchrome-${libbase_ver}",
   ]
-  deps = [
-    ":libvsh",
-  ]
+  deps = [ ":libvsh" ]
 }

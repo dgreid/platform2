@@ -34,9 +34,9 @@ group("host") {
 
 pkg_config("host_target_defaults_pkgs") {
   pkg_deps = [
-    "libpatchpanel-client",
     "libbrillo",
     "libchrome-${libbase_ver}",
+    "libpatchpanel-client",
   ]
 }
 
@@ -49,9 +49,7 @@ config("host_target_defaults") {
 }
 
 executable("maitred_client") {
-  sources = [
-    "../maitred/client.cc",
-  ]
+  sources = [ "../maitred/client.cc" ]
   configs += [ ":host_target_defaults" ]
   libs = [ "grpc" ]
   pkg_deps = [
@@ -76,13 +74,9 @@ static_library("libforwarder") {
 }
 
 executable("vmlog_forwarder") {
-  sources = [
-    "../syslog/host_server.cc",
-  ]
+  sources = [ "../syslog/host_server.cc" ]
   configs += [ ":host_target_defaults" ]
-  deps = [
-    ":libforwarder",
-  ]
+  deps = [ ":libforwarder" ]
 }
 
 static_library("libvsh-client") {
@@ -95,9 +89,7 @@ static_library("libvsh-client") {
     "system_api",
     "vm_protos",
   ]
-  deps = [
-    "//vm_tools:libvsh",
-  ]
+  deps = [ "//vm_tools:libvsh" ]
   all_dependent_pkg_deps = [ "vm_protos" ]
   if (use.fuzzer) {
     all_dependent_pkg_deps += [ "protobuf" ]
@@ -107,17 +99,13 @@ static_library("libvsh-client") {
 }
 
 executable("vsh") {
-  sources = [
-    "../vsh/vsh.cc",
-  ]
+  sources = [ "../vsh/vsh.cc" ]
   configs += [ ":host_target_defaults" ]
   pkg_deps = [
     "system_api",
     "vm_protos",
   ]
-  deps = [
-    ":libvsh-client",
-  ]
+  deps = [ ":libvsh-client" ]
 }
 
 static_library("libconcierge") {
@@ -155,19 +143,13 @@ static_library("libconcierge") {
 }
 
 executable("vm_concierge") {
-  sources = [
-    "../concierge/main.cc",
-  ]
+  sources = [ "../concierge/main.cc" ]
   configs += [ ":host_target_defaults" ]
-  deps = [
-    ":libconcierge",
-  ]
+  deps = [ ":libconcierge" ]
 }
 
 executable("concierge_client") {
-  sources = [
-    "../concierge/client.cc",
-  ]
+  sources = [ "../concierge/client.cc" ]
   configs += [ ":host_target_defaults" ]
   pkg_deps = [
     "libqcow_utils",
@@ -190,28 +172,22 @@ static_library("libcicerone") {
   libs = [ "grpc" ]
   all_dependent_pkg_deps = [
     "grpc++",
+    "libmetrics-${libbase_ver}",
     "libshill-client",
     "protobuf",
     "system_api",
     "vm_protos",
-    "libmetrics-${libbase_ver}",
   ]
 }
 
 executable("vm_cicerone") {
-  sources = [
-    "../cicerone/main.cc",
-  ]
+  sources = [ "../cicerone/main.cc" ]
   configs += [ ":host_target_defaults" ]
-  deps = [
-    ":libcicerone",
-  ]
+  deps = [ ":libcicerone" ]
 }
 
 executable("cicerone_client") {
-  sources = [
-    "../cicerone/client.cc",
-  ]
+  sources = [ "../cicerone/client.cc" ]
   configs += [ ":host_target_defaults" ]
   pkg_deps = [
     "protobuf",
@@ -220,9 +196,7 @@ executable("cicerone_client") {
 }
 
 static_library("libseneschal") {
-  sources = [
-    "../seneschal/service.cc",
-  ]
+  sources = [ "../seneschal/service.cc" ]
   configs += [ ":host_target_defaults" ]
   all_dependent_pkg_deps = [
     "libminijail",
@@ -232,19 +206,13 @@ static_library("libseneschal") {
 }
 
 executable("seneschal") {
-  sources = [
-    "../seneschal/main.cc",
-  ]
+  sources = [ "../seneschal/main.cc" ]
   configs += [ ":host_target_defaults" ]
-  deps = [
-    ":libseneschal",
-  ]
+  deps = [ ":libseneschal" ]
 }
 
 executable("seneschal_client") {
-  sources = [
-    "../seneschal/client.cc",
-  ]
+  sources = [ "../seneschal/client.cc" ]
   configs += [ ":host_target_defaults" ]
   pkg_deps = [
     "protobuf",
@@ -263,9 +231,7 @@ if (use.test || use.fuzzer) {
     ]
     configs += [ ":host_target_defaults" ]
     all_dependent_pkg_deps = [ "libchrome-test-${libbase_ver}" ]
-    deps = [
-      ":libcicerone",
-    ]
+    deps = [ ":libcicerone" ]
   }
 }
 
@@ -331,9 +297,7 @@ if (use.fuzzer) {
     ]
   }
   executable("cicerone_container_listener_fuzzer") {
-    sources = [
-      "../cicerone/container_listener_impl_fuzzer.cc",
-    ]
+    sources = [ "../cicerone/container_listener_impl_fuzzer.cc" ]
 
     # //common-mk:test should be on the top.
     # TODO(crbug.com/887845): Remove this comment after library ordering issue is fixed.
@@ -353,16 +317,12 @@ if (use.fuzzer) {
   }
 
   executable("vsh_client_fuzzer") {
-    sources = [
-      "../vsh/vsh_client_fuzzer.cc",
-    ]
+    sources = [ "../vsh/vsh_client_fuzzer.cc" ]
     configs += [
       "//common-mk/common_fuzzer",
       ":host_target_defaults",
       ":vm_host_tools_fuzzer_pkg_deps",
     ]
-    deps = [
-      ":libvsh-client",
-    ]
+    deps = [ ":libvsh-client" ]
   }
 }

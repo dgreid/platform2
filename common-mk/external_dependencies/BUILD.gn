@@ -39,9 +39,7 @@ genxml2cpp("dbus-proxies") {
   xml2cpp_type = "proxy"
   xml2cpp_in_dir = "${sysroot}/usr/share/dbus-1/interfaces/"
   xml2cpp_out_dir = "include/dbus_proxies"
-  sources = [
-    "${xml2cpp_in_dir}/org.freedesktop.DBus.Properties.xml",
-  ]
+  sources = [ "${xml2cpp_in_dir}/org.freedesktop.DBus.Properties.xml" ]
 }
 
 action("cloud_policy_proto_generator") {
@@ -54,9 +52,7 @@ action("cloud_policy_proto_generator") {
     "${policy_resources_dir}/VERSION",
     "${policy_resources_dir}/policy_templates.json",
   ]
-  outputs = [
-    "${proto_out_dir}/cloud_policy.proto",
-  ]
+  outputs = [ "${proto_out_dir}/cloud_policy.proto" ]
   args = [
     "--cloud-policy-protobuf=${proto_out_dir}/cloud_policy.proto",
     "--chrome-version-file=${policy_resources_dir}/VERSION",
@@ -68,9 +64,7 @@ action("cloud_policy_proto_generator") {
 proto_library("policy_common_definitions-protos") {
   proto_in_dir = "${sysroot}/usr/share/protofiles"
   proto_out_dir = "include/bindings"
-  sources = [
-    "${proto_in_dir}/policy_common_definitions.proto",
-  ]
+  sources = [ "${proto_in_dir}/policy_common_definitions.proto" ]
 
   # policy-protos.a is used by a shared_libary object: https://crbug.com/715795
   # Build it with '-fPIC' instead of '-fPIE'.
@@ -86,9 +80,7 @@ proto_library("policy-protos") {
     "${proto_in_dir}/chrome_extension_policy.proto",
     "${proto_in_dir}/device_management_backend.proto",
   ]
-  public_deps = [
-    ":policy_common_definitions-protos",
-  ]
+  public_deps = [ ":policy_common_definitions-protos" ]
 
   # policy-protos.a is used by a shared_libary object: https://crbug.com/715795
   # Build it with '-fPIC' instead of '-fPIE'.
@@ -112,23 +104,15 @@ proto_library("user_policy-protos") {
   proto_in_dir = "${target_gen_dir}/proto"
   proto_out_dir = "include/bindings"
   proto_lib_dirs = [ "${sysroot}/usr/share/protofiles" ]
-  sources = [
-    "${proto_in_dir}/cloud_policy.proto",
-  ]
-  deps = [
-    ":cloud_policy_proto_generator",
-  ]
-  public_deps = [
-    ":policy_common_definitions-protos",
-  ]
+  sources = [ "${proto_in_dir}/cloud_policy.proto" ]
+  deps = [ ":cloud_policy_proto_generator" ]
+  public_deps = [ ":policy_common_definitions-protos" ]
 }
 
 proto_library("install_attributes-proto") {
   proto_in_dir = "${sysroot}/usr/include/proto"
   proto_out_dir = "include/bindings"
-  sources = [
-    "${proto_in_dir}/install_attributes.proto",
-  ]
+  sources = [ "${proto_in_dir}/install_attributes.proto" ]
 
   # install_attributes-proto.a is used by a shared_libary.
   # Build it with '-fPIC' instead of '-fPIE'.

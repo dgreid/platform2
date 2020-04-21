@@ -6,9 +6,7 @@ import("//common-mk/pkg_config.gni")
 import("//common-mk/proto_library.gni")
 
 group("all") {
-  deps = [
-    ":libtpmcrypto",
-  ]
+  deps = [ ":libtpmcrypto" ]
   if (use.test) {
     deps += [ ":tpmcrypto_test" ]
   }
@@ -19,17 +17,15 @@ pkg_config("target_defaults") {
   pkg_deps = [
     "libbrillo",
     "libchrome-${libbase_ver}",
-    "protobuf-lite",
     "openssl",
+    "protobuf-lite",
   ]
 }
 
 proto_library("tpm_encrypted_data_proto") {
   proto_in_dir = "."
   proto_out_dir = "include/libtpmcrypto"
-  sources = [
-    "tpm_encrypted_data.proto",
-  ]
+  sources = [ "tpm_encrypted_data.proto" ]
 
   # tpm_encrypted_data_proto.a is used by a shared_libary
   # object, so we need to build it with '-fPIC' instead of '-fPIE'.
@@ -42,9 +38,7 @@ shared_library("libtpmcrypto") {
     "tpm_crypto_impl.cc",
     "tpm_proto_utils.cc",
   ]
-  deps = [
-    ":tpm_encrypted_data_proto",
-  ]
+  deps = [ ":tpm_encrypted_data_proto" ]
   if (use.tpm2) {
     sources += [ "tpm2_impl.cc" ]
     libs = [ "trunks" ]

@@ -5,9 +5,7 @@
 import("//common-mk/pkg_config.gni")
 
 group("all") {
-  deps = [
-    ":cros_camera_service",
-  ]
+  deps = [ ":cros_camera_service" ]
 }
 
 pkg_config("target_defaults") {

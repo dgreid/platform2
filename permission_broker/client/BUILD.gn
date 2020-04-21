@@ -2,13 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//common-mk/pkg_config.gni")
 import("//common-mk/generate-dbus-proxies.gni")
+import("//common-mk/pkg_config.gni")
 
 group("all") {
-  deps = [
-    ":permission_broker_proxies",
-  ]
+  deps = [ ":permission_broker_proxies" ]
 }
 
 generate_dbus_proxies("permission_broker_proxies") {
@@ -16,7 +14,5 @@ generate_dbus_proxies("permission_broker_proxies") {
   proxy_output_file = "include/permission_broker/dbus-proxies.h"
   mock_output_file = "include/permission_broker/dbus-proxy-mocks.h"
   proxy_path_in_mocks = "permission_broker/dbus-proxies.h"
-  sources = [
-    "../dbus_bindings/org.chromium.PermissionBroker.xml",
-  ]
+  sources = [ "../dbus_bindings/org.chromium.PermissionBroker.xml" ]
 }

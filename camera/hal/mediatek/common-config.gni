@@ -11,9 +11,9 @@ ldflags = [ "-Wl,--no-undefined" ]
 libs = [ "base-${libbase_ver}" ]
 pkg_deps = [
   "cros-camera-android-headers",
+  "libcab",
   "libcamera_common",
   "libcamera_metadata",
-  "libcab",
   "libcbm",
   "libdrm",
   "libyuv",

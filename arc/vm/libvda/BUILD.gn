@@ -53,9 +53,7 @@ source_set("libvda_source_set") {
     ":target_defaults",
     "//common-mk:pic",
   ]
-  deps = [
-    ":video_mojo_bindings",
-  ]
+  deps = [ ":video_mojo_bindings" ]
   sources = [
     "decode/fake/fake_vda_impl.cc",
     "decode/gpu/gpu_vda_impl.cc",
@@ -72,19 +70,13 @@ source_set("libvda_source_set") {
 
 shared_library("libvda") {
   output_name = "libvda"
-  sources = [
-    "at_exit_util.cc",
-  ]
+  sources = [ "at_exit_util.cc" ]
   pkg_deps = [ "gbm" ]
-  deps = [
-    ":libvda_source_set",
-  ]
+  deps = [ ":libvda_source_set" ]
 }
 
 generate_pkg_config("libvda_pc") {
-  deps = [
-    ":libvda",
-  ]
+  deps = [ ":libvda" ]
   output_name = "libvda"
   description = "CrOS VDA Connection Library"
   version = "0.1"
@@ -106,8 +98,8 @@ if (use.test) {
     ]
     configs += [ "//common-mk:test" ]
     pkg_deps = [
-      "libchrome-test-${libbase_ver}",
       "gbm",
+      "libchrome-test-${libbase_ver}",
     ]
     deps = [
       ":libvda_source_set",
@@ -131,12 +123,10 @@ executable("libvda_gpu_unittest") {
   configs += [ "//common-mk:test" ]
   libs = [ "pthread" ]
   pkg_deps = [
-    "libchrome-test-${libbase_ver}",
     "gbm",
+    "libchrome-test-${libbase_ver}",
   ]
-  deps = [
-    ":libvda_source_set",
-  ]
+  deps = [ ":libvda_source_set" ]
 }
 
 if (use.fuzzer) {
@@ -149,8 +139,6 @@ if (use.fuzzer) {
     configs += [ "//common-mk/common_fuzzer" ]
     configs -= [ "//common-mk:no_exceptions" ]
     pkg_deps = [ "gbm" ]
-    deps = [
-      ":libvda_source_set",
-    ]
+    deps = [ ":libvda_source_set" ]
   }
 }

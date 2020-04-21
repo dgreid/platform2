@@ -33,6 +33,7 @@ pkg_config("test_defaults") {
 }
 
 pkg_config("sealed_storage_dependent_config") {
+  # NOSORT
   pkg_deps = [
     "libbrillo",
     "libchrome-${libbase_ver}",
@@ -66,9 +67,7 @@ static_library("sealed_storage") {
 }
 
 shared_library("sealed_storage_wrapper") {
-  deps = [
-    ":sealed_storage",
-  ]
+  deps = [ ":sealed_storage" ]
 }
 
 executable("sealed_storage_tool") {
@@ -76,12 +75,8 @@ executable("sealed_storage_tool") {
     ":cli_defaults",
     ":target_defaults",
   ]
-  sources = [
-    "sealed_storage_tool.cc",
-  ]
-  deps = [
-    ":sealed_storage",
-  ]
+  sources = [ "sealed_storage_tool.cc" ]
+  deps = [ ":sealed_storage" ]
 }
 
 if (use.test) {

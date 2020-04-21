@@ -22,9 +22,7 @@ proto_library("common-protos") {
   proto_in_dir = "./"
   proto_out_dir = "include/vm_protos/proto_bindings"
   gen_grpc = true
-  sources = [
-    "${proto_in_dir}/common.proto",
-  ]
+  sources = [ "${proto_in_dir}/common.proto" ]
   standalone = true
 }
 
@@ -36,9 +34,7 @@ proto_library("container-rpcs") {
     "${proto_in_dir}/container_guest.proto",
     "${proto_in_dir}/container_host.proto",
   ]
-  deps = [
-    ":common-protos",
-  ]
+  deps = [ ":common-protos" ]
   all_dependent_pkg_deps = [
     "grpc++",
     "protobuf",
@@ -50,12 +46,8 @@ proto_library("vm-crash-rpcs") {
   proto_in_dir = "./"
   proto_out_dir = "include/vm_protos/proto_bindings"
   gen_grpc = true
-  sources = [
-    "${proto_in_dir}/vm_crash.proto",
-  ]
-  deps = [
-    ":common-protos",
-  ]
+  sources = [ "${proto_in_dir}/vm_crash.proto" ]
+  deps = [ ":common-protos" ]
   all_dependent_pkg_deps = [
     "grpc++",
     "protobuf",
@@ -71,9 +63,7 @@ proto_library("fuzzer-protos") {
     ":container-rpcs",
     ":tremplin-rpcs",
   ]
-  sources = [
-    "${proto_in_dir}/fuzzer.proto",
-  ]
+  sources = [ "${proto_in_dir}/fuzzer.proto" ]
   standalone = true
 }
 
@@ -81,9 +71,7 @@ proto_library("tremplin-rpcs") {
   proto_in_dir = "./"
   proto_out_dir = "include/vm_protos/proto_bindings"
   gen_grpc = true
-  sources = [
-    "${proto_in_dir}/tremplin.proto",
-  ]
+  sources = [ "${proto_in_dir}/tremplin.proto" ]
   all_dependent_pkg_deps = [
     "grpc++",
     "protobuf",
@@ -96,9 +84,7 @@ goproto_library("tremplin-gorpcs") {
   proto_in_dir = "./"
   proto_out_dir = "go/src/chromiumos/vm_tools/tremplin_proto"
   gen_grpc = true
-  sources = [
-    "${proto_in_dir}/tremplin.proto",
-  ]
+  sources = [ "${proto_in_dir}/tremplin.proto" ]
 }
 
 proto_library("vm-rpcs") {
@@ -109,9 +95,7 @@ proto_library("vm-rpcs") {
     "${proto_in_dir}/vm_guest.proto",
     "${proto_in_dir}/vm_host.proto",
   ]
-  deps = [
-    ":common-protos",
-  ]
+  deps = [ ":common-protos" ]
   all_dependent_pkg_deps = [
     "grpc++",
     "protobuf",
@@ -133,9 +117,7 @@ goproto_library("vm-gorpcs") {
 proto_library("vsh-protos") {
   proto_in_dir = "./"
   proto_out_dir = "include/vm_protos/proto_bindings"
-  sources = [
-    "${proto_in_dir}/vsh.proto",
-  ]
+  sources = [ "${proto_in_dir}/vsh.proto" ]
   standalone = true
   if (use.fuzzer) {
     # Override optimize_for option in proto file.

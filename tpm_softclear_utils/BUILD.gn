@@ -5,9 +5,7 @@
 import("//common-mk/pkg_config.gni")
 
 group("all") {
-  deps = [
-    ":tpm_softclear",
-  ]
+  deps = [ ":tpm_softclear" ]
   if (use.test) {
     deps += [ ":tpm_softclear_utils_testrunner" ]
   }
@@ -15,12 +13,8 @@ group("all") {
 
 executable("tpm_softclear") {
   configs += [ ":target_defaults" ]
-  sources = [
-    "main.cc",
-  ]
-  deps = [
-    ":utility_library",
-  ]
+  sources = [ "main.cc" ]
+  deps = [ ":utility_library" ]
   pkg_deps = [ "libbrillo" ]
 }
 
@@ -31,12 +25,12 @@ pkg_config("target_defaults") {
 
 static_library("utility_library") {
   configs += [ ":target_defaults" ]
-  sources = [
-    "tpm.cc",
-  ]
+  sources = [ "tpm.cc" ]
   if (use.tpm2) {
     sources += [ "tpm2_impl.cc" ]
     libs = [ "trunks" ]
+
+    # NOSORT
     pkg_deps = [
       # system_api depends on protobuf. It must appear before protobuf here or the
       # linker flags won't be in the right order.
@@ -60,9 +54,7 @@ if (use.test) {
       "//common-mk:test",
     ]
     if (use.tpm2) {
-      sources = [
-        "tpm2_test.cc",
-      ]
+      sources = [ "tpm2_test.cc" ]
       libs = [ "trunks_test" ]
     }
     deps = [

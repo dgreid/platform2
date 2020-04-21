@@ -56,12 +56,12 @@ generate_mojom_bindings("media_perception_mojo_bindings") {
     "mojom/media_perception.mojom",
     "mojom/media_perception_service.mojom",
     "mojom/occupancy_trigger.mojom",
+    "mojom/one_touch_autozoom.mojom",
     "mojom/pipeline.mojom",
     "mojom/presence_perception.mojom",
     "mojom/producer.mojom",
     "mojom/scoped_access_permission.mojom",
     "mojom/shared_memory.mojom",
-    "mojom/one_touch_autozoom.mojom",
     "mojom/software_autozoom.mojom",
     "mojom/sync_token.mojom",
     "mojom/time.mojom",
@@ -77,8 +77,8 @@ generate_mojom_bindings("media_perception_mojo_bindings") {
 
 static_library("media_perception_service_lib") {
   all_dependent_pkg_deps = [
-    "libchrome-${libbase_ver}",
     "libbrillo",
+    "libchrome-${libbase_ver}",
     "libmojo-${libbase_ver}",
   ]
   configs += [ ":target_defaults" ]
@@ -103,19 +103,15 @@ static_library("media_perception_service_lib") {
     "video_frame_handler_impl.cc",
   ]
   pkg_deps = [
-    "libcras",
     "dbus-1",
+    "libcras",
   ]
 }
 
 executable("rtanalytics_main") {
   configs += [ ":target_defaults" ]
-  deps = [
-    ":media_perception_service_lib",
-  ]
-  sources = [
-    "main.cc",
-  ]
+  deps = [ ":media_perception_service_lib" ]
+  sources = [ "main.cc" ]
   libs = [
     "rtanalytics",
     "dl",
@@ -127,12 +123,8 @@ executable("rtanalytics_main") {
 
 executable("mps_main") {
   configs += [ ":target_defaults" ]
-  deps = [
-    ":media_perception_service_lib",
-  ]
-  sources = [
-    "mps_main.cc",
-  ]
+  deps = [ ":media_perception_service_lib" ]
+  sources = [ "mps_main.cc" ]
   libs = [
     "rtanalytics",
     "dl",
@@ -148,9 +140,7 @@ if (use.test) {
       "//common-mk:test",
       ":target_defaults",
     ]
-    deps = [
-      ":media_perception_service_lib",
-    ]
+    deps = [ ":media_perception_service_lib" ]
     sources = [
       "fake_chrome_audio_service_client.cc",
       "fake_rtanalytics.cc",

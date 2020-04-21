@@ -5,9 +5,7 @@
 import("//common-mk/pkg_config.gni")
 
 group("all") {
-  deps = [
-    ":generate-chromeos-dbus-bindings",
-  ]
+  deps = [ ":generate-chromeos-dbus-bindings" ]
   if (use.test) {
     deps += [ ":chromeos_dbus_bindings_unittest" ]
   }
@@ -59,13 +57,9 @@ static_library("libchromeos-dbus-bindings") {
 }
 
 executable("generate-chromeos-dbus-bindings") {
-  sources = [
-    "generate_chromeos_dbus_bindings.cc",
-  ]
+  sources = [ "generate_chromeos_dbus_bindings.cc" ]
   configs += [ ":target_defaults" ]
-  deps = [
-    ":libchromeos-dbus-bindings",
-  ]
+  deps = [ ":libchromeos-dbus-bindings" ]
 }
 
 if (use.test) {

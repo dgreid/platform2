@@ -6,9 +6,7 @@ import("//common-mk/mojom_bindings_generator.gni")
 import("//common-mk/pkg_config.gni")
 
 group("all") {
-  deps = [
-    ":midis",
-  ]
+  deps = [ ":midis" ]
   if (use.test) {
     deps += [ ":midis_testrunner" ]
   }
@@ -18,24 +16,20 @@ group("all") {
 }
 
 generate_mojom_bindings("midis_mojo_bindings") {
-  sources = [
-    "mojo/midis.mojom",
-  ]
+  sources = [ "mojo/midis.mojom" ]
 }
 
 pkg_config("midis_common_pkg_deps") {
   pkg_deps = [
+    "alsa",
     "libbrillo",
     "libchrome-${libbase_ver}",
     "libmojo-${libbase_ver}",
-    "alsa",
   ]
 }
 
 static_library("midis_common") {
-  deps = [
-    ":midis_mojo_bindings",
-  ]
+  deps = [ ":midis_mojo_bindings" ]
   all_dependent_configs = [ ":midis_common_pkg_deps" ]
   sources = [
     # Files included from Chrome //src/media/midi checkout.
@@ -53,9 +47,7 @@ static_library("midis_common") {
 }
 
 executable("midis") {
-  deps = [
-    ":midis_common",
-  ]
+  deps = [ ":midis_common" ]
   libs = [ "dl" ]
   sources = [
     "daemon.cc",
@@ -84,11 +76,7 @@ if (use.test) {
 if (use.fuzzer) {
   executable("midis_seq_handler_fuzzer") {
     configs += [ "//common-mk/common_fuzzer:common_fuzzer" ]
-    deps = [
-      ":midis_common",
-    ]
-    sources = [
-      "seq_handler_fuzzer.cc",
-    ]
+    deps = [ ":midis_common" ]
+    sources = [ "seq_handler_fuzzer.cc" ]
   }
 }

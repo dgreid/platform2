@@ -55,9 +55,7 @@ group("all") {
 # Main programs.
 executable("cryptohome") {
   configs += [ "libs:target_defaults" ]
-  sources = [
-    "cryptohome.cc",
-  ]
+  sources = [ "cryptohome.cc" ]
   libs = [
     "chaps",
     "keyutils",
@@ -72,6 +70,8 @@ executable("cryptohome") {
     "libs:libcrostpm",
     "libs:libcryptohome",
   ]
+
+  # NOSORT
   pkg_deps = [
     "dbus-1",
     "dbus-glib-1",
@@ -93,9 +93,7 @@ executable("cryptohome") {
 }
 
 executable("cryptohome-path") {
-  sources = [
-    "cryptohome-path.cc",
-  ]
+  sources = [ "cryptohome-path.cc" ]
   deps = [
     "libs:libcrostpm",
     "libs:libcryptohome",
@@ -108,9 +106,7 @@ executable("cryptohome-path") {
 
 executable("cryptohomed") {
   configs += [ "libs:target_defaults" ]
-  sources = [
-    "cryptohomed.cc",
-  ]
+  sources = [ "cryptohomed.cc" ]
   libs = [
     "chaps",
     "keyutils",
@@ -122,6 +118,8 @@ executable("cryptohomed") {
     "libs:libcrostpm",
     "libs:libcryptohome",
   ]
+
+  # NOSORT
   pkg_deps = [
     "dbus-1",
     "dbus-glib-1",
@@ -145,13 +143,13 @@ executable("cryptohomed") {
 # This executable is used to mount cryptohomes.
 executable("cryptohome-namespace-mounter") {
   configs += [ "libs:target_defaults" ]
-  sources = [
-    "cryptohome_namespace_mounter/cryptohome_namespace_mounter.cc",
-  ]
+  sources = [ "cryptohome_namespace_mounter/cryptohome_namespace_mounter.cc" ]
   deps = [
     "libs:libcryptohome",
     "libs:namespace-mounter-ipc-proto",
   ]
+
+  # NOSORT
   pkg_deps = [
     "libbrillo",
     "libchrome-${libbase_ver}",
@@ -180,6 +178,8 @@ executable("cryptohome-proxy") {
     "libs:libcryptohome",
     "libs:userdataauth-client-headers",
   ]
+
+  # NOSORT
   pkg_deps = [
     "dbus-1",
     "libattestation-client",
@@ -235,9 +235,7 @@ static_library("mount_encrypted_lib") {
     "mount_encrypted/tpm.cc",
   ]
   defines = [ "CHROMEOS_ENVIRONMENT=1" ]
-  deps = [
-    "libs:cryptohome-proto",
-  ]
+  deps = [ "libs:cryptohome-proto" ]
   pkg_deps = [
     "glib-2.0",
     "libbrillo",
@@ -261,9 +259,7 @@ executable("encrypted-reboot-vault") {
     "encrypted_reboot_vault/encrypted_reboot_vault.cc",
     "encrypted_reboot_vault/encrypted_reboot_vault_main.cc",
   ]
-  deps = [
-    "libs:libcrostpm",
-  ]
+  deps = [ "libs:libcrostpm" ]
   pkg_deps = [
     "libbrillo",
     "libchrome-${libbase_ver}",
@@ -271,9 +267,7 @@ executable("encrypted-reboot-vault") {
 }
 
 executable("mount-encrypted") {
-  sources = [
-    "mount_encrypted/mount_encrypted.cc",
-  ]
+  sources = [ "mount_encrypted/mount_encrypted.cc" ]
   deps = [
     ":mount_encrypted_lib",
     "libs:libcrostpm",
@@ -289,12 +283,10 @@ executable("mount-encrypted") {
 
 executable("tpm-manager") {
   configs += [ "libs:target_defaults" ]
-  sources = [
-    "tpm_manager.cc",
-  ]
-  deps = [
-    "libs:libcrostpm",
-  ]
+  sources = [ "tpm_manager.cc" ]
+  deps = [ "libs:libcrostpm" ]
+
+  # NOSORT
   pkg_deps = [
     "glib-2.0",
     "libbrillo",
@@ -330,13 +322,13 @@ executable("tpm-manager") {
 
 executable("homedirs_initializer") {
   configs += [ "libs:target_defaults" ]
-  sources = [
-    "homedirs_initializer.cc",
-  ]
+  sources = [ "homedirs_initializer.cc" ]
   deps = [
     "libs:libcrostpm",
     "libs:libcryptohome",
   ]
+
+  # NOSORT
   pkg_deps = [
     "libbrillo-${libbase_ver}",
     "libchrome-${libbase_ver}",
@@ -360,18 +352,14 @@ if (use.cert_provision) {
     proto_in_dir = "./cert"
     proto_out_dir = "include/cert"
     use_pic = true
-    sources = [
-      "cert/cert_provision.proto",
-    ]
+    sources = [ "cert/cert_provision.proto" ]
 
     # libcert_provision-proto.a is used by a shared_libary
     all_dependent_configs = [ ":cert_provision-proto_config" ]
   }
 
   shared_library("cert_provision") {
-    deps = [
-      ":cert_provision-static",
-    ]
+    deps = [ ":cert_provision-static" ]
   }
 
   static_library("cert_provision-static") {
@@ -409,12 +397,8 @@ if (use.cert_provision) {
   }
 
   executable("cert_provision_client") {
-    sources = [
-      "cert/cert_provision_client.cc",
-    ]
-    deps = [
-      ":cert_provision",
-    ]
+    sources = [ "cert/cert_provision_client.cc" ]
+    deps = [ ":cert_provision" ]
     pkg_deps = [
       "libbrillo",
       "libchrome-${libbase_ver}",
@@ -501,6 +485,8 @@ if (use.test) {
       "libs:libcryptohome",
       "//common-mk/testrunner",
     ]
+
+    # NOSORT
     pkg_deps = [
       "dbus-1",
       "dbus-glib-1",
@@ -591,9 +577,9 @@ if (use.test) {
       "//common-mk:test",
       "libs:target_defaults",
     ]
-    deps = [
-      "//common-mk/testrunner",
-    ]
+    deps = [ "//common-mk/testrunner" ]
+
+    # NOSORT
     pkg_deps = [
       "glib-2.0",
       "libbrillo",
@@ -644,12 +630,10 @@ if (use.tpm2) {
       "libs:libnvram-boot-lockbox",
       "libs:libnvram-boot-lockbox-client",
     ]
-    sources = [
-      "bootlockbox/boot_lockbox_tool.cc",
-    ]
+    sources = [ "bootlockbox/boot_lockbox_tool.cc" ]
     pkg_deps = [
-      "libchrome-${libbase_ver}",
       "libbrillo",
+      "libchrome-${libbase_ver}",
       "protobuf",
     ]
   }
@@ -674,6 +658,8 @@ if (use.tpm2) {
       "bootlockbox/boot_lockbox_service.cc",
       "bootlockbox/boot_lockboxd.cc",
     ]
+
+    # NOSORT
     pkg_deps = [
       "libbrillo",
       "libchrome-${libbase_ver}",
@@ -694,12 +680,8 @@ if (use.tpm2) {
 if (use.fuzzer) {
   executable("cryptohome_cryptolib_rsa_oaep_decrypt_fuzzer") {
     configs += [ "//common-mk/common_fuzzer" ]
-    sources = [
-      "fuzzers/cryptolib_rsa_oaep_decrypt_fuzzer.cc",
-    ]
-    deps = [
-      "libs:libcrosplatform",
-    ]
+    sources = [ "fuzzers/cryptolib_rsa_oaep_decrypt_fuzzer.cc" ]
+    deps = [ "libs:libcrosplatform" ]
     libs = [ "scrypt" ]
     pkg_deps = [
       "libbrillo",
@@ -711,12 +693,8 @@ if (use.fuzzer) {
 
   executable("cryptohome_cryptolib_blob_to_hex_fuzzer") {
     configs += [ "//common-mk/common_fuzzer" ]
-    sources = [
-      "fuzzers/cryptolib_blob_to_hex_fuzzer.cc",
-    ]
-    deps = [
-      "libs:libcrosplatform",
-    ]
+    sources = [ "fuzzers/cryptolib_blob_to_hex_fuzzer.cc" ]
+    deps = [ "libs:libcrosplatform" ]
     libs = [ "scrypt" ]
   }
 }

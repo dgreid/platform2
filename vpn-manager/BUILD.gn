@@ -43,12 +43,8 @@ static_library("libl2tpipsec_vpn") {
 
 executable("l2tpipsec_vpn") {
   configs += [ ":target_defaults" ]
-  sources = [
-    "l2tpipsec_vpn.cc",
-  ]
-  deps = [
-    ":libl2tpipsec_vpn",
-  ]
+  sources = [ "l2tpipsec_vpn.cc" ]
+  deps = [ ":libl2tpipsec_vpn" ]
 }
 
 if (use.test) {
@@ -66,9 +62,7 @@ if (use.test) {
       "service_manager_test.cc",
       "testrunner.cc",
     ]
-    deps = [
-      ":libl2tpipsec_vpn",
-    ]
+    deps = [ ":libl2tpipsec_vpn" ]
   }
 }
 

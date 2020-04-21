@@ -19,8 +19,6 @@ if (use.test) {
       "//common-mk:test",
       ":testrunner_config",
     ]
-    sources = [
-      "../testrunner.cc",
-    ]
+    sources = [ "../testrunner.cc" ]
   }
 }

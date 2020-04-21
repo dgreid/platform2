@@ -162,12 +162,8 @@ executable("webservd") {
     ":target_defaults",
     ":webservd_config",
   ]
-  sources = [
-    "webservd/main.cc",
-  ]
-  deps = [
-    ":webservd_common",
-  ]
+  sources = [ "webservd/main.cc" ]
+  deps = [ ":webservd_common" ]
 }
 
 if (use.test) {

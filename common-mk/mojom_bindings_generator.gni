@@ -89,9 +89,7 @@ template("generate_mojom_bindings_gen") {
   mojo_templates_dir_action_name = "${target_name}_mojo_templates_dir"
   action(mojo_templates_dir_action_name) {
     inputs = []
-    outputs = [
-      mojo_templates_dir,
-    ]
+    outputs = [ mojo_templates_dir ]
     print("Creating mojo C++ templates dir")
     script = "//common-mk/file_generator_wrapper.py"
     args = [
@@ -107,9 +105,7 @@ template("generate_mojom_bindings_gen") {
       mojom_bindings_generator,
       mojo_templates_dir,
     ]
-    outputs = [
-      "${mojo_templates_dir}/cpp_templates.zip",
-    ]
+    outputs = [ "${mojo_templates_dir}/cpp_templates.zip" ]
     print("Generating mojo C++ templates")
     script = mojom_bindings_generator
     args = [
@@ -118,16 +114,12 @@ template("generate_mojom_bindings_gen") {
       "-o",
       mojo_templates_dir,
     ]
-    deps = [
-      ":${mojo_templates_dir_action_name}",
-    ]
+    deps = [ ":${mojo_templates_dir_action_name}" ]
   }
 
   mojo_parse_action_name = "${target_name}_parse"
   action(mojo_parse_action_name) {
-    inputs = [
-      mojom_bindings_generator,
-    ]
+    inputs = [ mojom_bindings_generator ]
     sources = invoker.sources
     outputs = []
     filelist = []
@@ -282,9 +274,7 @@ template("generate_mojom_bindings") {
       configs -= [ "//common-mk:use_thin_archive" ]
       configs += [ "//common-mk:nouse_thin_archive" ]
     }
-    deps = [
-      ":${target_gen_name}",
-    ]
+    deps = [ ":${target_gen_name}" ]
     if (defined(invoker.deps)) {
       deps += invoker.deps
     }

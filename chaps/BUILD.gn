@@ -46,6 +46,7 @@ group("all") {
 pkg_config("target_defaults") {
   defines = [ "USE_TPM2=${use.tpm2}" ]
 
+  # NOSORT
   pkg_deps = [
     # system_api depends on protobuf (or protobuf-lite). It must appear
     # before protobuf here or the linker flags won't be in the right
@@ -66,9 +67,7 @@ pkg_config("target_defaults") {
 proto_library("chaps-protos") {
   proto_in_dir = "."
   proto_out_dir = "include/chaps/proto_bindings"
-  sources = [
-    "${proto_in_dir}/attributes.proto",
-  ]
+  sources = [ "${proto_in_dir}/attributes.proto" ]
   if (use.fuzzer) {
     # Override optimize_for option in proto file.
     gen_cpp_mode = "speed"
@@ -94,9 +93,7 @@ static_library("libchaps_static") {
     "token_manager_client.cc",
   ]
   configs += [ ":target_defaults" ]
-  deps = [
-    ":chaps-protos",
-  ]
+  deps = [ ":chaps-protos" ]
 }
 
 shared_library("libchaps") {
@@ -112,9 +109,7 @@ shared_library("libchaps") {
     "token_manager_client.cc",
   ]
   configs += [ ":target_defaults" ]
-  deps = [
-    ":chaps-protos",
-  ]
+  deps = [ ":chaps-protos" ]
 }
 
 pkg_config("chapsd_config") {
@@ -173,23 +168,15 @@ executable("chapsd") {
 }
 
 executable("chaps_client") {
-  sources = [
-    "chaps_client.cc",
-  ]
+  sources = [ "chaps_client.cc" ]
   configs += [ ":target_defaults" ]
-  deps = [
-    ":libchaps_static",
-  ]
+  deps = [ ":libchaps_static" ]
 }
 
 executable("p11_replay") {
-  sources = [
-    "p11_replay.cc",
-  ]
+  sources = [ "p11_replay.cc" ]
   configs += [ ":target_defaults" ]
-  deps = [
-    ":libchaps",
-  ]
+  deps = [ ":libchaps" ]
 }
 
 if (use.test) {
@@ -218,9 +205,7 @@ if (use.test) {
   }
 
   executable("chaps_test") {
-    sources = [
-      "chaps_test.cc",
-    ]
+    sources = [ "chaps_test.cc" ]
     configs += [
       "//common-mk:test",
       ":target_defaults",
@@ -384,9 +369,7 @@ if (use.test) {
       "leveldb",
       "memenv",
     ]
-    deps = [
-      ":libchaps_static",
-    ]
+    deps = [ ":libchaps_static" ]
   }
 
   executable("opencryptoki_importer_test") {
@@ -446,9 +429,7 @@ if (use.test) {
   }
 
   executable("tpm_utility_test") {
-    sources = [
-      "tpm_utility_test.cc",
-    ]
+    sources = [ "tpm_utility_test.cc" ]
     configs += [
       "//common-mk:test",
       ":target_defaults",
@@ -496,9 +477,7 @@ if (use.test) {
 
 if (use.fuzzer) {
   executable("chaps_attributes_fuzzer") {
-    sources = [
-      "attributes_fuzzer.cc",
-    ]
+    sources = [ "attributes_fuzzer.cc" ]
 
     configs += [ "//common-mk/common_fuzzer:common_fuzzer" ]
 
@@ -531,8 +510,6 @@ if (use.fuzzer) {
 
     pkg_deps = [ "libchrome-test-${libbase_ver}" ]
 
-    deps = [
-      ":libchaps_static",
-    ]
+    deps = [ ":libchaps_static" ]
   }
 }

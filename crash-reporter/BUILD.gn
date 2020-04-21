@@ -120,9 +120,7 @@ pkg_config("crash_reporter_config") {
 
 executable("crash_reporter") {
   configs += [ ":crash_reporter_config" ]
-  sources = [
-    "crash_reporter.cc",
-  ]
+  sources = [ "crash_reporter.cc" ]
   defines = [
     "USE_CHEETS=${use.cheets}",
     "USE_KVM_GUEST=${use.kvm_guest}",
@@ -152,26 +150,18 @@ pkg_config("libcrash_sender_config") {
 proto_library("crash_sender_proto") {
   proto_in_dir = "./proto"
   proto_out_dir = "include/crash-reporter"
-  sources = [
-    "${proto_in_dir}/crash_sender.proto",
-  ]
+  sources = [ "${proto_in_dir}/crash_sender.proto" ]
 }
 
 static_library("libcrash_sender") {
   all_dependent_configs = [ ":libcrash_sender_config" ]
-  sources = [
-    "crash_sender_util.cc",
-  ]
+  sources = [ "crash_sender_util.cc" ]
   defines = [ "USE_CHROMELESS_TTY=${use.chromeless_tty}" ]
-  deps = [
-    ":crash_sender_proto",
-  ]
+  deps = [ ":crash_sender_proto" ]
 }
 
 executable("crash_sender") {
-  sources = [
-    "crash_sender.cc",
-  ]
+  sources = [ "crash_sender.cc" ]
   deps = [
     ":libcrash",
     ":libcrash_sender",
@@ -182,6 +172,8 @@ pkg_config("anomaly_detector_config") {
   # Laikitu uses systemd, while the rest of Chrome OS uses only the journald
   # part of it, which has a different pkg-config name, but the same library.
   libs = [ "systemd" ]
+
+  # NOSORT
   pkg_deps = [
     "libbrillo",
     "libchrome-${libbase_ver}",
@@ -206,9 +198,7 @@ executable("anomaly_detector") {
     "anomaly_detector.cc",
     "anomaly_detector_main.cc",
   ]
-  deps = [
-    ":libcrash",
-  ]
+  deps = [ ":libcrash" ]
   libs = [
     "system_api-metrics_event-protos",
     "system_api-anomaly_detector-protos",
@@ -241,10 +231,10 @@ if (use.test || use.fuzzer) {
   pkg_config("crash_reporter_test_config") {
     pkg_deps = [
       "libchrome-test-${libbase_ver}",
+      "libdebugd-client-test",
       "libmetrics-${libbase_ver}",
       "libsession_manager-client-test",
       "libshill-client-test",
-      "libdebugd-client-test",
       "protobuf",
       "vm_protos",
     ]
@@ -263,9 +253,7 @@ if (use.test || use.fuzzer) {
       "//common-mk:test",
       ":libcrash_reporter_config",
     ]
-    sources = [
-      "test_util.cc",
-    ]
+    sources = [ "test_util.cc" ]
   }
 }
 
@@ -283,9 +271,7 @@ if (use.test) {
       "//common-mk:test",
       ":test_helper_config",
     ]
-    sources = [
-      "lock_file_tester.cc",
-    ]
+    sources = [ "lock_file_tester.cc" ]
   }
 
   executable("hold_lock_file") {
@@ -293,9 +279,7 @@ if (use.test) {
       "//common-mk:test",
       ":test_helper_config",
     ]
-    sources = [
-      "hold_lock_file.cc",
-    ]
+    sources = [ "hold_lock_file.cc" ]
   }
 
   executable("crash_reporter_test") {
@@ -376,9 +360,7 @@ if (use.fuzzer) {
       ":libcrash_sender",
       ":libcrash_test_util",
     ]
-    sources = [
-      "crash_sender_fuzzer.cc",
-    ]
+    sources = [ "crash_sender_fuzzer.cc" ]
   }
 
   executable("anomaly_detector_fuzzer") {
@@ -386,9 +368,7 @@ if (use.fuzzer) {
       "//common-mk/common_fuzzer:common_fuzzer",
       ":anomaly_detector_config",
     ]
-    deps = [
-      ":libcrash_test_util",
-    ]
+    deps = [ ":libcrash_test_util" ]
     sources = [
       "anomaly_detector.cc",
       "anomaly_detector_fuzzer.cc",

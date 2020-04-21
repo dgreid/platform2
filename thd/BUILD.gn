@@ -5,9 +5,7 @@
 import("//common-mk/pkg_config.gni")
 
 group("all") {
-  deps = [
-    ":libthd",
-  ]
+  deps = [ ":libthd" ]
   if (use.test) {
     deps += [ ":thd_unittests" ]
   }

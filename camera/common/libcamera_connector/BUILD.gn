@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 group("all") {
-  deps = [
-    ":libcamera_connector",
-  ]
+  deps = [ ":libcamera_connector" ]
 }
 
 shared_library("libcamera_connector") {

@@ -36,11 +36,7 @@ pkg_config("cros-health-event_pkg_deps") {
 }
 
 executable("cros-health-event") {
-  deps = [
-    ":libcros_healthd_event_tool",
-  ]
+  deps = [ ":libcros_healthd_event_tool" ]
   configs += [ ":cros-health-event_pkg_deps" ]
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
 }

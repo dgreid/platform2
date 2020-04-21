@@ -3,15 +3,11 @@
 # found in the LICENSE file.
 
 group("all") {
-  deps = [
-    ":cros-camera-tool",
-  ]
+  deps = [ ":cros-camera-tool" ]
 }
 
 executable("cros-camera-tool") {
-  sources = [
-    "//camera/tools/cros_camera_tool.cc",
-  ]
+  sources = [ "//camera/tools/cros_camera_tool.cc" ]
   configs += [ "//camera/build:cros_camera_common" ]
   pkg_deps = [ "libbrillo" ]
 }

@@ -6,9 +6,7 @@ import("//common-mk/pkg_config.gni")
 import("//common-mk/proto_library.gni")
 
 group("all") {
-  deps = [
-    ":usb_bouncer",
-  ]
+  deps = [ ":usb_bouncer" ]
   if (use.test) {
     deps += [ ":run_tests" ]
   }
@@ -36,16 +34,12 @@ pkg_config("target_defaults") {
 proto_library("usb_bouncer_protos") {
   proto_in_dir = "."
   proto_out_dir = "include/usb_bouncer"
-  sources = [
-    "${proto_in_dir}/usb_bouncer.proto",
-  ]
+  sources = [ "${proto_in_dir}/usb_bouncer.proto" ]
 }
 
 static_library("usb_bouncer_common") {
   configs += [ ":target_defaults" ]
-  deps = [
-    ":usb_bouncer_protos",
-  ]
+  deps = [ ":usb_bouncer_protos" ]
   sources = [
     "entry_manager.cc",
     "rule_db_storage.cc",
@@ -62,12 +56,8 @@ executable("usb_bouncer") {
     ":target_defaults",
     ":usb_bouncer_pkg_deps",
   ]
-  deps = [
-    ":usb_bouncer_common",
-  ]
-  sources = [
-    "usb_bouncer.cc",
-  ]
+  deps = [ ":usb_bouncer_common" ]
+  sources = [ "usb_bouncer.cc" ]
 }
 
 if (use.test) {
@@ -106,9 +96,7 @@ if (use.fuzzer) {
       ":usb_bouncer_fuzzer_pkg_deps",
       ":target_defaults",
     ]
-    deps = [
-      ":usb_bouncer_common",
-    ]
+    deps = [ ":usb_bouncer_common" ]
     sources = [
       "entry_manager_test_util.cc",
       "usb_bouncer_fuzzer.cc",

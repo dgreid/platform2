@@ -5,9 +5,7 @@
 import("//common-mk/pkg_config.gni")
 
 group("all") {
-  deps = [
-    ":arcvm_boot_notification_server",
-  ]
+  deps = [ ":arcvm_boot_notification_server" ]
   if (use.test) {
     deps += [ ":arcvm_boot_notification_server_testrunner" ]
   }
@@ -46,8 +44,6 @@ if (use.test) {
       "//common-mk:test",
       ":arcvm_boot_notification_server_testrunner_config",
     ]
-    deps = [
-      "//common-mk/testrunner:testrunner",
-    ]
+    deps = [ "//common-mk/testrunner:testrunner" ]
   }
 }

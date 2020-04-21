@@ -24,6 +24,7 @@ group("all") {
 }
 
 pkg_config("target_defaults") {
+  # NOSORT
   pkg_deps = [
     "fmap",
     "libbrillo",
@@ -59,23 +60,15 @@ static_library("libhammerd") {
 
 executable("hammerd") {
   configs += [ ":target_defaults" ]
-  sources = [
-    "main.cc",
-  ]
-  deps = [
-    ":libhammerd",
-  ]
+  sources = [ "main.cc" ]
+  deps = [ ":libhammerd" ]
 }
 
 if (use.hammerd_api) {
   shared_library("libhammerd-api") {
     configs += [ ":target_defaults" ]
-    sources = [
-      "hammerd_api.cc",
-    ]
-    deps = [
-      ":libhammerd",
-    ]
+    sources = [ "hammerd_api.cc" ]
+    deps = [ ":libhammerd" ]
   }
 }
 
@@ -106,23 +99,15 @@ if (use.fuzzer) {
       "//common-mk/common_fuzzer",
       ":target_defaults",
     ]
-    sources = [
-      "update_fw_load_ec_image_fuzzer.cc",
-    ]
-    deps = [
-      ":libhammerd",
-    ]
+    sources = [ "update_fw_load_ec_image_fuzzer.cc" ]
+    deps = [ ":libhammerd" ]
   }
   executable("hammerd_update_fw_fuzzer") {
     configs += [
       "//common-mk/common_fuzzer",
       ":target_defaults",
     ]
-    sources = [
-      "update_fw_fuzzer.cc",
-    ]
-    deps = [
-      ":libhammerd",
-    ]
+    sources = [ "update_fw_fuzzer.cc" ]
+    deps = [ ":libhammerd" ]
   }
 }

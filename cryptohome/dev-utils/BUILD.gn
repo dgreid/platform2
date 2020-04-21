@@ -5,9 +5,7 @@
 import("//common-mk/pkg_config.gni")
 
 group("all") {
-  deps = [
-    ":cryptohome-tpm-live-test",
-  ]
+  deps = [ ":cryptohome-tpm-live-test" ]
 }
 
 pkg_config("cryptohome-tpm-live-test_config") {
@@ -29,9 +27,9 @@ executable("cryptohome-tpm-live-test") {
     "../cryptohome-tpm-live-test.cc",
     "../tpm_live_test.cc",
   ]
-  deps = [
-    "//cryptohome/libs:libcrostpm",
-  ]
+  deps = [ "//cryptohome/libs:libcrostpm" ]
+
+  # NOSORT
   pkg_deps = [
     # system_api depends on protobuf (or protobuf-lite). It must appear
     # before protobuf here or the linker flags won't be in the right

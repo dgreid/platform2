@@ -9,13 +9,9 @@ generate_dbus_proxies("bootlockbox-proxies") {
   proxy_output_file = "include/bootlockbox/dbus-proxies.h"
   mock_output_file = "include/bootlockbox/dbus-proxy-mocks.h"
   proxy_path_in_mocks = "bootlockbox/dbus-proxies.h"
-  sources = [
-    "../dbus_adaptors/org.chromium.BootLockboxInterface.xml",
-  ]
+  sources = [ "../dbus_adaptors/org.chromium.BootLockboxInterface.xml" ]
 }
 
 group("all") {
-  deps = [
-    ":bootlockbox-proxies",
-  ]
+  deps = [ ":bootlockbox-proxies" ]
 }

@@ -5,7 +5,5 @@
 assert(platform_subdir != "", "platform_subdir must be set")
 
 group("root") {
-  deps = [
-    "//${platform_subdir}:all",
-  ]
+  deps = [ "//${platform_subdir}:all" ]
 }

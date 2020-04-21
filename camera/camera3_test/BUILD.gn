@@ -5,9 +5,7 @@
 import("//common-mk/pkg_config.gni")
 
 group("all") {
-  deps = [
-    ":cros_camera_test",
-  ]
+  deps = [ ":cros_camera_test" ]
 }
 
 pkg_config("target_defaults") {
@@ -57,7 +55,5 @@ executable("cros_camera_test") {
     "dl",
     "jpeg",
   ]
-  deps = [
-    "//camera/common/libcamera_ipc:libcamera_ipc_mojom",
-  ]
+  deps = [ "//camera/common/libcamera_ipc:libcamera_ipc_mojom" ]
 }

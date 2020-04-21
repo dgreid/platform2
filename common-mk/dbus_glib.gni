@@ -28,9 +28,7 @@ template("generate_dbus_glib") {
   action(target_name) {
     sources = invoker.sources
     script = "//common-mk/file_generator_wrapper.py"
-    outputs = [
-      "${dbus_glib_output}",
-    ]
+    outputs = [ "${dbus_glib_output}" ]
     args = [ "dbus-binding-tool" ] + rebase_path(sources) + [
              "--mode=glib-${dbus_glib_type}",
              "--prefix=${dbus_glib_prefix}",

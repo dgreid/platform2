@@ -17,6 +17,7 @@ group("all") {
 }
 
 pkg_config("target_defaults") {
+  # NOSORT
   pkg_deps = [
     "libbrillo",
     "libchrome-${libbase_ver}",
@@ -35,9 +36,7 @@ generate_dbus_adaptors("mtpd-adaptors") {
   new_fd_bindings = true
   dbus_service_config = "dbus_bindings/dbus-service-config.json"
   dbus_adaptors_out_dir = "include/mtpd/dbus_adaptors"
-  sources = [
-    "dbus_bindings/org.chromium.Mtpd.xml",
-  ]
+  sources = [ "dbus_bindings/org.chromium.Mtpd.xml" ]
 }
 
 static_library("libmtpd") {
@@ -49,16 +48,12 @@ static_library("libmtpd") {
     "mtpd_server_impl.cc",
     "storage_info.cc",
   ]
-  deps = [
-    ":mtpd-adaptors",
-  ]
+  deps = [ ":mtpd-adaptors" ]
 }
 
 executable("mtpd") {
   configs += [ ":target_defaults" ]
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
   deps = [
     ":libmtpd",
     ":mtpd-adaptors",
@@ -71,9 +66,7 @@ if (use.test) {
       "//common-mk:test",
       ":target_defaults",
     ]
-    sources = [
-      "device_manager_test.cc",
-    ]
+    sources = [ "device_manager_test.cc" ]
     deps = [
       ":libmtpd",
       ":mtpd-adaptors",

@@ -3,18 +3,12 @@
 # found in the LICENSE file.
 
 group("all") {
-  deps = [
-    ":libcamera_metadata",
-  ]
+  deps = [ ":libcamera_metadata" ]
 }
 
 shared_library("libcamera_metadata") {
-  sources = [
-    "//camera/android/libcamera_metadata/src/camera_metadata.c",
-  ]
+  sources = [ "//camera/android/libcamera_metadata/src/camera_metadata.c" ]
   configs += [ "//camera/build:cros_camera_common" ]
   include_dirs = [ "//camera/android/libcamera_metadata/include" ]
-  pkg_deps = [
-    "cros-camera-android-headers",
-  ]
+  pkg_deps = [ "cros-camera-android-headers" ]
 }

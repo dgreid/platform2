@@ -5,9 +5,7 @@
 import("//common-mk/pkg_config.gni")
 
 group("all") {
-  deps = [
-    ":libpasswordprovider",
-  ]
+  deps = [ ":libpasswordprovider" ]
   if (use.test) {
     deps += [ ":password_provider_test" ]
   }

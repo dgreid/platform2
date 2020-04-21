@@ -9,9 +9,7 @@ import("//common-mk/proto_library.gni")
 keymaster_src = "../../../aosp/system/keymaster"
 
 group("all") {
-  deps = [
-    ":arc-keymasterd",
-  ]
+  deps = [ ":arc-keymasterd" ]
   if (use.test) {
     deps += [ ":arc-keymasterd_testrunner" ]
   }
@@ -163,9 +161,7 @@ proto_library("context_proto") {
   proto_out_dir = "include/arc/keymaster"
   use_pic = true
   standalone = true
-  sources = [
-    "proto/key_data.proto",
-  ]
+  sources = [ "proto/key_data.proto" ]
 
   all_dependent_configs = [ ":context_proto_config" ]
 }
@@ -174,9 +170,9 @@ proto_library("context_proto") {
 if (use.test) {
   pkg_config("arc-keymasterd_testrunner_config") {
     pkg_deps = [
+      "libbrillo-${libbase_ver}",
       "libchrome-${libbase_ver}",
       "libchrome-test-${libbase_ver}",
-      "libbrillo-${libbase_ver}",
     ]
   }
   executable("arc-keymasterd_testrunner") {

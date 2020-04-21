@@ -6,9 +6,7 @@ import("//common-mk/generate-dbus-proxies.gni")
 import("//common-mk/mojom_bindings_generator.gni")
 
 group("all") {
-  deps = [
-    ":libcamera_hal",
-  ]
+  deps = [ ":libcamera_hal" ]
   if (use.test) {
     deps += [ ":request_queue_test" ]
   }
@@ -16,15 +14,11 @@ group("all") {
 
 generate_dbus_proxies("libcamera_hal_dbus") {
   proxy_output_file = "include/dbus_proxies/dbus-proxies.h"
-  sources = [
-    "dbus/org.chromium.IpPeripheralService.CameraDetector.xml",
-  ]
+  sources = [ "dbus/org.chromium.IpPeripheralService.CameraDetector.xml" ]
 }
 
 generate_mojom_bindings("libcamera_hal_mojom") {
-  sources = [
-    "//camera/mojo/ip/ip_camera.mojom",
-  ]
+  sources = [ "//camera/mojo/ip/ip_camera.mojom" ]
   mojo_root = "//camera"
 }
 
@@ -69,8 +63,6 @@ if (use.test) {
       "libcamera_client",
       "libsync",
     ]
-    deps = [
-      "//common-mk/testrunner",
-    ]
+    deps = [ "//common-mk/testrunner" ]
   }
 }

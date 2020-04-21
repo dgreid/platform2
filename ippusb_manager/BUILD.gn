@@ -5,9 +5,7 @@
 import("//common-mk/pkg_config.gni")
 
 group("all") {
-  deps = [
-    ":ippusb_manager",
-  ]
+  deps = [ ":ippusb_manager" ]
   if (use.test) {
     deps += [ ":ippusb_manager_testrunner" ]
   }
@@ -52,9 +50,7 @@ if (use.test) {
       "usb.cc",
       "usb_test.cc",
     ]
-    deps = [
-      "//common-mk/testrunner",
-    ]
+    deps = [ "//common-mk/testrunner" ]
   }
 }
 

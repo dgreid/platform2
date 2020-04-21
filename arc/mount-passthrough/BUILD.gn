@@ -5,9 +5,7 @@
 import("//common-mk/pkg_config.gni")
 
 group("all") {
-  deps = [
-    ":mount-passthrough",
-  ]
+  deps = [ ":mount-passthrough" ]
 }
 
 pkg_config("mount-passthrough_config") {
@@ -19,8 +17,6 @@ pkg_config("mount-passthrough_config") {
 }
 
 executable("mount-passthrough") {
-  sources = [
-    "mount-passthrough.cc",
-  ]
+  sources = [ "mount-passthrough.cc" ]
   configs += [ ":mount-passthrough_config" ]
 }

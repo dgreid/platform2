@@ -18,9 +18,7 @@ template("write_deps") {
                          ])
   action(target_name) {
     script = "//common-mk/write_args.py"
-    outputs = [
-      "${root_gen_dir}/${target}-deps.txt",
-    ]
+    outputs = [ "${root_gen_dir}/${target}-deps.txt" ]
     args = [ "--output" ] + outputs + [ "--" ] + pkg_deps
   }
 }

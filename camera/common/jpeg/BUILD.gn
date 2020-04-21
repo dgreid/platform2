@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 static_library("libjea") {
-  sources = [
-    "jpeg_encode_accelerator_impl.cc",
-  ]
+  sources = [ "jpeg_encode_accelerator_impl.cc" ]
   output_name = "libjea.pic"
   include_dirs = [
     "//camera",
@@ -20,12 +18,10 @@ static_library("libjea") {
     "//common-mk:use_thin_archive",
   ]
   pkg_deps = [
-    "libchrome-${libbase_ver}",
     "cros-camera-android-headers",
     "libcamera_common",
+    "libchrome-${libbase_ver}",
     "libmojo-${libbase_ver}",
   ]
-  deps = [
-    "//camera/common/libcamera_ipc",
-  ]
+  deps = [ "//camera/common/libcamera_ipc" ]
 }

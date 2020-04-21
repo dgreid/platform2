@@ -5,9 +5,7 @@
 import("//common-mk/pkg_config.gni")
 
 group("all") {
-  deps = [
-    ":cfm_dfu_notification",
-  ]
+  deps = [ ":cfm_dfu_notification" ]
   if (use.test) {
     deps += [ ":cfm_dfu_notification_test" ]
   }
@@ -41,8 +39,6 @@ if (use.test) {
       "idfu_notification.cc",
     ]
     defines = [ "UNIT_TEST" ]
-    deps = [
-      "//common-mk/testrunner",
-    ]
+    deps = [ "//common-mk/testrunner" ]
   }
 }

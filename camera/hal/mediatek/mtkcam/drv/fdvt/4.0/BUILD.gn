@@ -4,9 +4,7 @@
 
 shared_library("libmtkcam_fdvt") {
   import("//camera/hal/mediatek/common-config.gni")
-  sources = [
-    "cam_fdvt_v4l2.cpp",
-  ]
+  sources = [ "cam_fdvt_v4l2.cpp" ]
   include_dirs += [
     ".",
     "${mtk_root_path}/mtkcam/utils",

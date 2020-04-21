@@ -4,9 +4,7 @@
 
 action("gen_config_metadata") {
   script = "run_script.py"
-  outputs = [
-    "$target_gen_dir/custgen.config_static.h",
-  ]
+  outputs = [ "$target_gen_dir/custgen.config_static.h" ]
   args = [
     rebase_path("./metadataprovider/custom/gen_config_metadata.sh",
                 root_build_dir),
@@ -17,9 +15,7 @@ action("gen_config_metadata") {
 
 action("gen_request_metadata") {
   script = "run_script.py"
-  outputs = [
-    "$target_gen_dir/custgen.config_request.h",
-  ]
+  outputs = [ "$target_gen_dir/custgen.config_request.h" ]
   args = [
     rebase_path("./templateRequest/custom/gen_request_metadata.sh",
                 root_build_dir),

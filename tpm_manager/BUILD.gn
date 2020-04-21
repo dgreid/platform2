@@ -43,9 +43,7 @@ proto_library("legacy_local_data_proto") {
   use_pic = true
   proto_in_dir = "server"
   proto_out_dir = "include/tpm_manager/server"
-  sources = [
-    "${proto_in_dir}/legacy_local_data.proto",
-  ]
+  sources = [ "${proto_in_dir}/legacy_local_data.proto" ]
 }
 
 static_library("proto_library") {
@@ -62,9 +60,7 @@ static_library("proto_library") {
     "//common-mk:pic",
   ]
   proto_in_dir = "common"
-  sources = [
-    "${proto_in_dir}/print_tpm_manager_proto.cc",
-  ]
+  sources = [ "${proto_in_dir}/print_tpm_manager_proto.cc" ]
 }
 
 # A shared library for clients.
@@ -75,21 +71,19 @@ shared_library("libtpm_manager") {
     "client/tpm_nvram_dbus_proxy.cc",
     "client/tpm_ownership_dbus_proxy.cc",
   ]
-  deps = [
-    ":proto_library",
-  ]
+  deps = [ ":proto_library" ]
 }
 
 # A client command line utility.
 executable("tpm_manager_client") {
   configs += [ ":target_defaults" ]
-  sources = [
-    "client/main.cc",
-  ]
+  sources = [ "client/main.cc" ]
   deps = [
     ":libtpm_manager",
     ":proto_library",
   ]
+
+  # NOSORT
   pkg_deps = [
     # system_api depends on protobuf (or protobuf-lite). It must appear
     # before protobuf here or the linker flags won't be in the right
@@ -141,6 +135,8 @@ static_library("server_library") {
     ":legacy_local_data_proto",
     ":proto_library",
   ]
+
+  # NOSORT
   pkg_deps = [
     # system_api depends on protobuf (or protobuf-lite). It must appear
     # before protobuf here or the linker flags won't be in the right
@@ -163,13 +159,13 @@ executable("tpm_managerd") {
     ":target_defaults",
     ":tpm_managerd_config",
   ]
-  sources = [
-    "server/main.cc",
-  ]
+  sources = [ "server/main.cc" ]
   deps = [
     ":proto_library",
     ":server_library",
   ]
+
+  # NOSORT
   pkg_deps = [
     # system_api depends on protobuf (or protobuf-lite). It must appear
     # before protobuf here or the linker flags won't be in the right
@@ -189,12 +185,8 @@ executable("local_data_migration") {
     ":local_data_migration_config",
     ":target_defaults",
   ]
-  sources = [
-    "server/local_data_migration_main.cc",
-  ]
-  deps = [
-    ":server_library",
-  ]
+  sources = [ "server/local_data_migration_main.cc" ]
+  deps = [ ":server_library" ]
 }
 
 # A library for externally useful tpm_manager_testtest code.
@@ -208,9 +200,9 @@ static_library("tpm_manager_test") {
     "common/mock_tpm_nvram_interface.cc",
     "common/mock_tpm_ownership_interface.cc",
   ]
-  deps = [
-    ":proto_library",
-  ]
+  deps = [ ":proto_library" ]
+
+  # NOSORT
   pkg_deps = [
     # system_api depends on protobuf (or protobuf-lite). It must appear
     # before protobuf here or the linker flags won't be in the right
@@ -271,6 +263,8 @@ if (use.test) {
       ":server_library",
       ":tpm_manager_test",
     ]
+
+    # NOSORT
     pkg_deps = [
       # system_api depends on protobuf (or protobuf-lite). It must appear
       # before protobuf here or the linker flags won't be in the right

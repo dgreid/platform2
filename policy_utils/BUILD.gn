@@ -5,9 +5,7 @@
 import("//common-mk/pkg_config.gni")
 
 group("all") {
-  deps = [
-    ":policy",
-  ]
+  deps = [ ":policy" ]
   if (use.test) {
     deps += [ ":libmgmt_test" ]
   }
@@ -22,16 +20,12 @@ pkg_config("target_defaults") {
 
 static_library("libmgmt") {
   configs += [ ":target_defaults" ]
-  sources = [
-    "policy_writer.cc",
-  ]
+  sources = [ "policy_writer.cc" ]
 }
 
 executable("policy") {
   configs += [ ":target_defaults" ]
-  deps = [
-    ":libmgmt",
-  ]
+  deps = [ ":libmgmt" ]
   sources = [
     "main.cc",
     "policy_tool.cc",

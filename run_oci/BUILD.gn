@@ -31,9 +31,7 @@ pkg_config("target_defaults") {
 shared_library("container_config_parser") {
   configs += [ ":target_defaults" ]
   configs -= [ "//common-mk:no_exceptions" ]
-  sources = [
-    "container_config_parser.cc",
-  ]
+  sources = [ "container_config_parser.cc" ]
 }
 
 pkg_config("run_oci_config") {
@@ -69,9 +67,7 @@ if (use.test) {
       "container_config_parser.cc",
       "container_config_parser_test.cc",
     ]
-    deps = [
-      "//common-mk/testrunner",
-    ]
+    deps = [ "//common-mk/testrunner" ]
   }
 
   executable("run_oci_test") {
@@ -86,8 +82,6 @@ if (use.test) {
       "run_oci_utils.cc",
       "run_oci_utils_test.cc",
     ]
-    deps = [
-      "//common-mk/testrunner",
-    ]
+    deps = [ "//common-mk/testrunner" ]
   }
 }

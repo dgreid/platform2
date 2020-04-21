@@ -6,24 +6,18 @@ import("//common-mk/generate-dbus-adaptors.gni")
 import("//common-mk/mojom_bindings_generator.gni")
 
 group("all") {
-  deps = [
-    ":arc_camera_service",
-  ]
+  deps = [ ":arc_camera_service" ]
 }
 
 generate_dbus_adaptors("arc_camera_service_adaptors") {
-  sources = [
-    "dbus_bindings/org.chromium.ArcCamera.xml",
-  ]
+  sources = [ "dbus_bindings/org.chromium.ArcCamera.xml" ]
   dbus_service_config = "dbus_bindings/dbus-service-config.json"
   dbus_adaptors_out_dir = "include/dbus_adaptors"
   new_fd_bindings = true
 }
 
 generate_mojom_bindings("arc_camera_service_mojom") {
-  sources = [
-    "arc_camera.mojom",
-  ]
+  sources = [ "arc_camera.mojom" ]
   mojo_root = "//camera"
 }
 

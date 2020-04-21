@@ -73,19 +73,13 @@ static_library("buffet_common") {
 }
 
 executable("buffet") {
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
   configs += [ ":target_defaults" ]
-  deps = [
-    ":buffet_common",
-  ]
+  deps = [ ":buffet_common" ]
 }
 
 executable("buffet_client") {
-  sources = [
-    "buffet_client.cc",
-  ]
+  sources = [ "buffet_client.cc" ]
   configs += [ ":target_defaults" ]
 }
 

@@ -3,15 +3,11 @@
 # found in the LICENSE file.
 
 group("all") {
-  deps = [
-    ":libcamera_client",
-  ]
+  deps = [ ":libcamera_client" ]
 }
 
 shared_library("libcamera_client") {
-  sources = [
-    "src/camera_metadata.cc",
-  ]
+  sources = [ "src/camera_metadata.cc" ]
   include_dirs = [ "//camera/android/libcamera_client/include" ]
   configs += [
     "//camera/build:cros_camera_common",

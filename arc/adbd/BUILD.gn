@@ -5,9 +5,7 @@
 import("//common-mk/pkg_config.gni")
 
 group("all") {
-  deps = [
-    ":arc-adbd",
-  ]
+  deps = [ ":arc-adbd" ]
 
   if (use.fuzzer) {
     deps += [
@@ -34,13 +32,9 @@ static_library("libarcadbd") {
 }
 
 executable("arc-adbd") {
-  sources = [
-    "adbd_main.cc",
-  ]
+  sources = [ "adbd_main.cc" ]
 
-  deps = [
-    ":libarcadbd",
-  ]
+  deps = [ ":libarcadbd" ]
   configs += [ ":config" ]
 }
 
@@ -51,47 +45,35 @@ if (use.fuzzer) {
   }
 
   executable("arc-adbd-setup-config-fs-fuzzer") {
-    sources = [
-      "fuzzers/adbd_setup_config_fs_fuzzer.cc",
-    ]
+    sources = [ "fuzzers/adbd_setup_config_fs_fuzzer.cc" ]
 
     configs += [
       "//common-mk/common_fuzzer",
       ":arc_adbd_fuzzer_config",
     ]
 
-    deps = [
-      ":libarcadbd",
-    ]
+    deps = [ ":libarcadbd" ]
   }
 
   executable("arc-adbd-setup-function-fs-fuzzer") {
-    sources = [
-      "fuzzers/adbd_setup_function_fs_fuzzer.cc",
-    ]
+    sources = [ "fuzzers/adbd_setup_function_fs_fuzzer.cc" ]
 
     configs += [
       "//common-mk/common_fuzzer",
       ":arc_adbd_fuzzer_config",
     ]
 
-    deps = [
-      ":libarcadbd",
-    ]
+    deps = [ ":libarcadbd" ]
   }
 
   executable("arc-adbd-create-pipe-fuzzer") {
-    sources = [
-      "fuzzers/adbd_create_pipe_fuzzer.cc",
-    ]
+    sources = [ "fuzzers/adbd_create_pipe_fuzzer.cc" ]
 
     configs += [
       "//common-mk/common_fuzzer",
       ":arc_adbd_fuzzer_config",
     ]
 
-    deps = [
-      ":libarcadbd",
-    ]
+    deps = [ ":libarcadbd" ]
   }
 }

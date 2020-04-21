@@ -5,9 +5,7 @@
 import("//common-mk/pkg_config.gni")
 
 group("all") {
-  deps = [
-    ":libcontainer",
-  ]
+  deps = [ ":libcontainer" ]
   if (use.test) {
     deps += [ ":libcontainer_test" ]
   }
@@ -15,8 +13,8 @@ group("all") {
 
 pkg_config("target_defaults") {
   pkg_deps = [
-    "libminijail",
     "libchrome-${libbase_ver}",
+    "libminijail",
   ]
   defines = [ "USE_device_mapper=${use.device_mapper}" ]
   if (use.device_mapper) {
@@ -74,8 +72,6 @@ if (use.test) {
       "-Wl,-wrap=__xmknod",
       "-Wl,-wrap=__xstat",
     ]
-    deps = [
-      "//common-mk/testrunner",
-    ]
+    deps = [ "//common-mk/testrunner" ]
   }
 }

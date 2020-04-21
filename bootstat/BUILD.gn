@@ -15,26 +15,18 @@ group("all") {
 }
 
 shared_library("libbootstat") {
-  sources = [
-    "bootstat_log.c",
-  ]
+  sources = [ "bootstat_log.c" ]
   libs = [ "rootdev" ]
 }
 
 executable("bootstat") {
-  sources = [
-    "bootstat.c",
-  ]
-  deps = [
-    ":libbootstat",
-  ]
+  sources = [ "bootstat.c" ]
+  deps = [ ":libbootstat" ]
 }
 
 if (use.test) {
   executable("libbootstat_unittests") {
-    sources = [
-      "bootstat_test.cc",
-    ]
+    sources = [ "bootstat_test.cc" ]
     configs += [ "//common-mk:test" ]
     deps = [
       ":libbootstat",

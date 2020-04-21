@@ -23,19 +23,13 @@ pkg_config("target_defaults") {
 
 static_library("libgoldfishd") {
   configs += [ ":target_defaults" ]
-  sources = [
-    "goldfish_library.cc",
-  ]
+  sources = [ "goldfish_library.cc" ]
 }
 
 executable("goldfishd") {
   configs += [ ":target_defaults" ]
-  sources = [
-    "main.cc",
-  ]
-  deps = [
-    ":libgoldfishd",
-  ]
+  sources = [ "main.cc" ]
+  deps = [ ":libgoldfishd" ]
 }
 
 if (use.test) {
@@ -50,9 +44,7 @@ if (use.test) {
       ":target_defaults",
       ":test_config",
     ]
-    sources = [
-      "goldfish_library_test.cc",
-    ]
+    sources = [ "goldfish_library_test.cc" ]
     deps = [
       ":libgoldfishd",
       "//common-mk/testrunner",

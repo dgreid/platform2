@@ -11,13 +11,9 @@ generate_dbus_proxies("libtpm_manager-client-headers") {
   proxy_output_file = "include/tpm_manager/dbus-proxies.h"
   mock_output_file = "include/tpm_manager/dbus-proxy-mocks.h"
   proxy_path_in_mocks = "tpm_manager/dbus-proxies.h"
-  sources = [
-    "../common/dbus_bindings/org.chromium.TpmManager.xml",
-  ]
+  sources = [ "../common/dbus_bindings/org.chromium.TpmManager.xml" ]
 }
 
 group("all") {
-  deps = [
-    ":libtpm_manager-client-headers",
-  ]
+  deps = [ ":libtpm_manager-client-headers" ]
 }

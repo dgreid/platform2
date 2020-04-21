@@ -40,12 +40,8 @@ static_library("libeasyunlock") {
 
 executable("easy_unlock") {
   configs += [ ":target_defaults" ]
-  sources = [
-    "main.cc",
-  ]
-  deps = [
-    ":libeasyunlock",
-  ]
+  sources = [ "main.cc" ]
+  deps = [ ":libeasyunlock" ]
 }
 
 if (use.test) {
@@ -59,9 +55,7 @@ if (use.test) {
       ":target_defaults",
       ":test_config",
     ]
-    sources = [
-      "easy_unlock_test.cc",
-    ]
+    sources = [ "easy_unlock_test.cc" ]
     deps = [
       ":libeasyunlock",
       "//common-mk/testrunner",

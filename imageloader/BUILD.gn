@@ -44,9 +44,7 @@ pkg_config("target_defaults") {
 proto_library("protos") {
   proto_in_dir = "."
   proto_out_dir = "include/imageloader"
-  sources = [
-    "${proto_in_dir}/ipc.proto",
-  ]
+  sources = [ "${proto_in_dir}/ipc.proto" ]
   if (use.fuzzer) {
     # Override optimize_for option in proto file.
     gen_cpp_mode = "speed"
@@ -56,9 +54,7 @@ proto_library("protos") {
 generate_dbus_adaptors("imageloader-adaptors") {
   dbus_adaptors_out_dir = "include/imageloader/dbus_adaptors"
   dbus_service_config = "dbus_adaptors/dbus-service-config.json"
-  sources = [
-    "dbus_adaptors/org.chromium.ImageLoaderInterface.xml",
-  ]
+  sources = [ "dbus_adaptors/org.chromium.ImageLoaderInterface.xml" ]
 }
 
 shared_library("libimageloader-manifest") {
@@ -159,12 +155,8 @@ if (use.fuzzer) {
       ":run_fuzzer_config",
       ":target_defaults",
     ]
-    deps = [
-      ":libimageloader_static",
-    ]
-    sources = [
-      "helper_process_receiver_fuzzer.cc",
-    ]
+    deps = [ ":libimageloader_static" ]
+    sources = [ "helper_process_receiver_fuzzer.cc" ]
   }
 
   executable("imageloader_manifest_fuzzer") {
@@ -172,11 +164,7 @@ if (use.fuzzer) {
       "//common-mk/common_fuzzer",
       ":target_defaults",
     ]
-    deps = [
-      ":libimageloader_static",
-    ]
-    sources = [
-      "manifest_fuzzer.cc",
-    ]
+    deps = [ ":libimageloader_static" ]
+    sources = [ "manifest_fuzzer.cc" ]
   }
 }

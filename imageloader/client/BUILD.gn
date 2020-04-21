@@ -2,13 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//common-mk/pkg_config.gni")
 import("//common-mk/generate-dbus-proxies.gni")
+import("//common-mk/pkg_config.gni")
 
 group("all") {
-  deps = [
-    ":imageloader-proxies",
-  ]
+  deps = [ ":imageloader-proxies" ]
 }
 
 generate_dbus_proxies("imageloader-proxies") {
@@ -16,7 +14,5 @@ generate_dbus_proxies("imageloader-proxies") {
   proxy_output_file = "include/imageloader/dbus-proxies.h"
   mock_output_file = "include/imageloader/dbus-proxy-mocks.h"
   proxy_path_in_mocks = "imageloader/dbus-proxies.h"
-  sources = [
-    "../dbus_adaptors/org.chromium.ImageLoaderInterface.xml",
-  ]
+  sources = [ "../dbus_adaptors/org.chromium.ImageLoaderInterface.xml" ]
 }

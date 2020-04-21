@@ -4,9 +4,7 @@
 
 shared_library("libmtkcam_modulehelper") {
   import("//camera/hal/mediatek/common-config.gni")
-  sources = [
-    "helper.cpp",
-  ]
+  sources = [ "helper.cpp" ]
   include_dirs += [
     ".",
     "${mtk_root_path}/mtkcam/utils",

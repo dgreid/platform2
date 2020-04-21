@@ -19,9 +19,7 @@ source_set("libdiag") {
     "//diagnostics/cros_healthd_mojo_adapter:libcros_healthd_mojo_adapter",
   ]
   all_dependent_configs = [ ":libdiag_pkg_deps" ]
-  sources = [
-    "diag_actions.cc",
-  ]
+  sources = [ "diag_actions.cc" ]
 }
 
 # The diag tool executable.
@@ -38,7 +36,5 @@ executable("diag") {
     "//diagnostics:diagnostics_mojo_bindings",
   ]
   configs += [ ":diag_pkg_deps" ]
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
 }

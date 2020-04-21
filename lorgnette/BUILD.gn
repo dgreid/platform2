@@ -6,9 +6,7 @@ import("//common-mk/generate-dbus-adaptors.gni")
 import("//common-mk/pkg_config.gni")
 
 group("all") {
-  deps = [
-    ":lorgnette",
-  ]
+  deps = [ ":lorgnette" ]
   if (use.test) {
     deps += [ ":lorgnette_unittest" ]
   }
@@ -37,9 +35,7 @@ config("target_defaults") {
 generate_dbus_adaptors("lorgnette-adaptors") {
   dbus_adaptors_out_dir = "include/lorgnette/dbus_adaptors"
   new_fd_bindings = true
-  sources = [
-    "dbus_bindings/org.chromium.lorgnette.Manager.xml",
-  ]
+  sources = [ "dbus_bindings/org.chromium.lorgnette.Manager.xml" ]
 }
 
 pkg_config("liblorgnette_config") {
@@ -49,9 +45,7 @@ pkg_config("liblorgnette_config") {
 static_library("liblorgnette") {
   all_dependent_configs = [ ":liblorgnette_config" ]
   configs += [ ":target_defaults" ]
-  deps = [
-    ":lorgnette-adaptors",
-  ]
+  deps = [ ":lorgnette-adaptors" ]
   sources = [
     "daemon.cc",
     "epson_probe.cc",
@@ -64,12 +58,8 @@ static_library("liblorgnette") {
 
 executable("lorgnette") {
   configs += [ ":target_defaults" ]
-  deps = [
-    ":liblorgnette",
-  ]
-  sources = [
-    "main.cc",
-  ]
+  deps = [ ":liblorgnette" ]
+  sources = [ "main.cc" ]
 }
 
 if (use.test) {
@@ -82,8 +72,6 @@ if (use.test) {
       ":liblorgnette",
       "//common-mk/testrunner:testrunner",
     ]
-    sources = [
-      "manager_test.cc",
-    ]
+    sources = [ "manager_test.cc" ]
   }
 }

@@ -8,9 +8,7 @@ import("//common-mk/pkg_config.gni")
 import("//common-mk/proto_library.gni")
 
 group("all") {
-  deps = [
-    ":modemfwd",
-  ]
+  deps = [ ":modemfwd" ]
   if (use.test) {
     deps += [ ":modemfw_test" ]
   }
@@ -23,6 +21,7 @@ group("all") {
 }
 
 pkg_config("target_defaults") {
+  # NOSORT
   pkg_deps = [
     "libchrome-${libbase_ver}",
     "libbrillo",
@@ -62,9 +61,7 @@ generate_dbus_adaptors("modemfwd_adaptors") {
   dbus_service_config = "dbus_bindings/dbus-service-config.json"
   dbus_adaptors_out_dir = "include/modemfwd/dbus_adaptors"
   new_fd_bindings = true
-  sources = [
-    "dbus_bindings/org.chromium.Modemfwd.xml",
-  ]
+  sources = [ "dbus_bindings/org.chromium.Modemfwd.xml" ]
 }
 
 static_library("libmodemfw") {
@@ -131,12 +128,8 @@ if (use.fuzzer) {
       ":target_defaults",
     ]
     pkg_deps = [ "libprotobuf-mutator" ]
-    sources = [
-      "firmware_manifest_fuzzer.cc",
-    ]
-    deps = [
-      ":libmodemfw",
-    ]
+    sources = [ "firmware_manifest_fuzzer.cc" ]
+    deps = [ ":libmodemfw" ]
   }
   executable("firmware_manifest_v2_fuzzer") {
     configs += [
@@ -144,11 +137,7 @@ if (use.fuzzer) {
       ":target_defaults",
     ]
     pkg_deps = [ "libprotobuf-mutator" ]
-    sources = [
-      "firmware_manifest_v2_fuzzer.cc",
-    ]
-    deps = [
-      ":libmodemfw",
-    ]
+    sources = [ "firmware_manifest_v2_fuzzer.cc" ]
+    deps = [ ":libmodemfw" ]
   }
 }

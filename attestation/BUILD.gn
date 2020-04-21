@@ -52,9 +52,7 @@ proto_library("proto_library_proto") {
   proto_out_dir = "include/attestation/common"
   proto_lib_dirs = [ "${sysroot}/usr/include/chromeos/dbus/attestation/" ]
   configs = [ ":local_proto_include" ]
-  sources = [
-    "${proto_in_dir}/database.proto",
-  ]
+  sources = [ "${proto_in_dir}/database.proto" ]
   standalone = true
 }
 
@@ -129,9 +127,7 @@ source_set("client_library") {
     # TODO: Use brillo/brillo_export.h instead to export symbols.
     "//common-mk:visibility_default",
   ]
-  sources = [
-    "client/dbus_proxy.cc",
-  ]
+  sources = [ "client/dbus_proxy.cc" ]
   deps = [
     ":proto_library",
     ":proto_library_proto",
@@ -161,15 +157,15 @@ executable("attestation_client") {
     ":target_defaults",
     ":local_proto_include",
   ]
-  sources = [
-    "client/main.cc",
-  ]
+  sources = [ "client/main.cc" ]
   deps = [
     ":client_library",
     ":common_library",
     ":proto_library",
     ":proto_library_proto",
   ]
+
+  # NOSORT
   pkg_deps = [
     # system_api depends on protobuf (or protobuf-lite). It must appear
     # before protobuf here or the linker flags won't be in the right
@@ -212,9 +208,7 @@ pkg_config("attestationd_config") {
 }
 
 executable("attestationd") {
-  sources = [
-    "server/main.cc",
-  ]
+  sources = [ "server/main.cc" ]
   configs += [
     ":attestationd_config",
     ":local_proto_include",
@@ -226,6 +220,8 @@ executable("attestationd") {
     ":proto_library_proto",
     ":server_library",
   ]
+
+  # NOSORT
   pkg_deps = [
     # system_api depends on protobuf (or protobuf-lite). It must appear
     # before protobuf here or the linker flags won't be in the right
@@ -236,17 +232,13 @@ executable("attestationd") {
 }
 
 generate_dbus_adaptors("pca-agent-adaptors") {
-  sources = [
-    "pca_agent/dbus_bindings/org.chromium.PcaAgent.xml",
-  ]
+  sources = [ "pca_agent/dbus_bindings/org.chromium.PcaAgent.xml" ]
   dbus_adaptors_out_dir = "include/attestation/pca-agent/dbus_adaptors"
   dbus_service_config = "pca_agent/dbus_bindings/dbus-service-config.json"
 }
 
 generate_dbus_proxies("pca-agent-proxies") {
-  sources = [
-    "pca_agent/dbus_bindings/org.chromium.PcaAgent.xml",
-  ]
+  sources = [ "pca_agent/dbus_bindings/org.chromium.PcaAgent.xml" ]
   dbus_service_config = "pca_agent/dbus_bindings/dbus-service-config.json"
   mock_output_file = "include/attestation/pca_agent/dbus-proxy-mocks.h"
   proxy_output_file = "include/attestation/pca_agent/dbus-proxies.h"
@@ -263,9 +255,7 @@ source_set("pca_agent_server_library") {
 }
 
 executable("pca_agentd") {
-  sources = [
-    "pca_agent/server/main.cc",
-  ]
+  sources = [ "pca_agent/server/main.cc" ]
   deps = [
     ":pca-agent-adaptors",
     ":pca_agent_server_library",
@@ -274,6 +264,8 @@ executable("pca_agentd") {
     ":attestationd_config",
     ":target_defaults",
   ]
+
+  # NOSORT
   pkg_deps = [
     # system_api depends on protobuf (or protobuf-lite). It must appear
     # before protobuf here or the linker flags won't be in the right
@@ -284,14 +276,14 @@ executable("pca_agentd") {
 }
 
 executable("pca_agent_client") {
-  sources = [
-    "pca_agent/client/main.cc",
-  ]
+  sources = [ "pca_agent/client/main.cc" ]
   configs += [ ":target_defaults" ]
   deps = [
     ":pca-agent-proxies",
     ":proto_library",
   ]
+
+  # NOSORT
   pkg_deps = [
     # system_api depends on protobuf (or protobuf-lite). It must appear
     # before protobuf here or the linker flags won't be in the right
@@ -350,6 +342,8 @@ if (use.test) {
       ":proto_library_proto",
       ":server_library",
     ]
+
+    # NOSORT
     pkg_deps = [
       # system_api depends on protobuf (or protobuf-lite). It must appear
       # before protobuf here or the linker flags won't be in the right

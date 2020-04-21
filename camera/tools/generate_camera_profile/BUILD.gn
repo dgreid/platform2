@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 group("all") {
-  deps = [
-    ":generate_camera_profile",
-  ]
+  deps = [ ":generate_camera_profile" ]
 }
 
 executable("generate_camera_profile") {

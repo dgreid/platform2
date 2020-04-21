@@ -25,6 +25,7 @@ group("all") {
 }
 
 pkg_config("target_defaults") {
+  # NOSORT
   pkg_deps = [
     "libchrome-${libbase_ver}",
     "libbrillo",
@@ -55,17 +56,13 @@ pkg_config("dlcservice_util_config") {
 generate_dbus_adaptors("dlcservice_adaptors") {
   dbus_service_config = "dbus_adaptors/dbus-service-config.json"
   dbus_adaptors_out_dir = "include/dlcservice/dbus_adaptors"
-  sources = [
-    "dbus_adaptors/org.chromium.DlcServiceInterface.xml",
-  ]
+  sources = [ "dbus_adaptors/org.chromium.DlcServiceInterface.xml" ]
 }
 
 # DLC utils related files.
 static_library("libdlcservice_utils") {
   configs += [ ":target_defaults" ]
-  sources = [
-    "utils.cc",
-  ]
+  sources = [ "utils.cc" ]
 }
 
 # DLC service related files.
@@ -93,12 +90,8 @@ static_library("libdlcservice") {
 # For dlcservice:
 executable("dlcservice") {
   configs += [ ":target_defaults" ]
-  sources = [
-    "main.cc",
-  ]
-  deps = [
-    ":libdlcservice",
-  ]
+  sources = [ "main.cc" ]
+  deps = [ ":libdlcservice" ]
 }
 
 # For dlcservice_util:
@@ -107,12 +100,8 @@ executable("dlcservice_util") {
     ":target_defaults",
     ":dlcservice_util_config",
   ]
-  sources = [
-    "tools/dlc_service_util.cc",
-  ]
-  deps = [
-    ":libdlcservice_utils",
-  ]
+  sources = [ "tools/dlc_service_util.cc" ]
+  deps = [ ":libdlcservice_utils" ]
 }
 
 # For test:
@@ -162,12 +151,8 @@ if (use.fuzzer) {
       ":dlcservice_fuzzer_config",
       ":target_defaults",
     ]
-    sources = [
-      "boot/boot_slot_fuzzer.cc",
-    ]
-    deps = [
-      ":libdlcservice",
-    ]
+    sources = [ "boot/boot_slot_fuzzer.cc" ]
+    deps = [ ":libdlcservice" ]
   }
   executable("dlcservice_boot_device_fuzzer") {
     configs += [
@@ -175,11 +160,7 @@ if (use.fuzzer) {
       ":dlcservice_fuzzer_config",
       ":target_defaults",
     ]
-    sources = [
-      "boot/boot_device_fuzzer.cc",
-    ]
-    deps = [
-      ":libdlcservice",
-    ]
+    sources = [ "boot/boot_device_fuzzer.cc" ]
+    deps = [ ":libdlcservice" ]
   }
 }

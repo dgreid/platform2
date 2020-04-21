@@ -5,9 +5,7 @@
 import("//common-mk/pkg_config.gni")
 
 group("all") {
-  deps = [
-    ":libhwsec",
-  ]
+  deps = [ ":libhwsec" ]
   deps += [ ":libhwsec_test" ]
   if (use.test) {
     deps += [ ":hwsec_testrunner" ]
@@ -52,13 +50,9 @@ config("libhwsec_tpm1_config") {
 
 shared_library("libhwsec") {
   configs += [ ":target_defaults" ]
-  sources = [
-    "crypto_utility.cc",
-  ]
+  sources = [ "crypto_utility.cc" ]
   if (!use.tpm2) {
-    deps = [
-      ":overalls_library",
-    ]
+    deps = [ ":overalls_library" ]
     all_dependent_configs = [ ":libhwsec_tpm1_config" ]
   }
 }

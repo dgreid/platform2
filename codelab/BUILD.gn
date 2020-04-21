@@ -16,26 +16,20 @@ group("all") {
 
 pkg_config("target_defaults") {
   pkg_deps = [
-    "libchrome-${libbase_ver}",
     "libbrillo",
+    "libchrome-${libbase_ver}",
   ]
 }
 
 static_library("libcodelab") {
-  sources = [
-    "codelab.cc",
-  ]
+  sources = [ "codelab.cc" ]
   configs += [ ":target_defaults" ]
 }
 
 executable("codelab") {
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
   configs += [ ":target_defaults" ]
-  deps = [
-    ":libcodelab",
-  ]
+  deps = [ ":libcodelab" ]
 }
 
 if (use.test) {
@@ -44,9 +38,7 @@ if (use.test) {
   }
 
   executable("codelab_test") {
-    sources = [
-      "codelab_test.cc",
-    ]
+    sources = [ "codelab_test.cc" ]
     configs += [
       "//common-mk:test",
       ":codelab_test_config",

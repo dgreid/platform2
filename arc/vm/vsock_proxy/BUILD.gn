@@ -6,9 +6,7 @@ import("//common-mk/pkg_config.gni")
 import("//common-mk/proto_library.gni")
 
 group("all") {
-  deps = [
-    ":server_proxy",
-  ]
+  deps = [ ":server_proxy" ]
   if (use.test) {
     deps += [ ":vsock_proxy_test" ]
   }
@@ -16,8 +14,8 @@ group("all") {
 
 pkg_config("target_defaults") {
   pkg_deps = [
-    "libchrome-${libbase_ver}",
     "libbrillo",
+    "libchrome-${libbase_ver}",
     "protobuf-lite",
   ]
 }
@@ -25,9 +23,7 @@ pkg_config("target_defaults") {
 proto_library("message") {
   proto_in_dir = "."
   proto_out_dir = "include/arc/vm/vsock_proxy"
-  sources = [
-    "${proto_in_dir}/message.proto",
-  ]
+  sources = [ "${proto_in_dir}/message.proto" ]
 }
 
 static_library("vsock_proxy_lib") {
@@ -43,19 +39,13 @@ static_library("vsock_proxy_lib") {
   configs += [ ":target_defaults" ]
   pkg_deps = [ "fuse" ]
   defines = [ "FUSE_USE_VERSION=26" ]
-  deps = [
-    ":message",
-  ]
+  deps = [ ":message" ]
 }
 
 executable("server_proxy") {
-  sources = [
-    "server_proxy_main.cc",
-  ]
+  sources = [ "server_proxy_main.cc" ]
   configs += [ ":target_defaults" ]
-  deps = [
-    ":vsock_proxy_lib",
-  ]
+  deps = [ ":vsock_proxy_lib" ]
 }
 
 if (use.test) {

@@ -37,9 +37,7 @@ template("wayland_protocol_library") {
       sources = invoker.sources
       script = "//common-mk/file_generator_wrapper.py"
       output_file = "${wayland_dir}/{{source_name_part}}${g.output_suffix}"
-      outputs = [
-        output_file,
-      ]
+      outputs = [ output_file ]
       args = [
         "wayland-scanner",
         g.subcommand,

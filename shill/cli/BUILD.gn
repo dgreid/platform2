@@ -5,9 +5,7 @@
 import("//common-mk/pkg_config.gni")
 
 group("all") {
-  deps = [
-    ":shillcli",
-  ]
+  deps = [ ":shillcli" ]
   if (use.test) {
     deps += [ ":shillcli_test" ]
   }
@@ -25,18 +23,12 @@ pkg_config("target_defaults") {
 static_library("libshillcli") {
   configs += [ ":target_defaults" ]
   all_dependent_configs = [ ":target_defaults" ]
-  sources = [
-    "command.cc",
-  ]
+  sources = [ "command.cc" ]
 }
 
 executable("shillcli") {
-  sources = [
-    "main.cc",
-  ]
-  deps = [
-    ":libshillcli",
-  ]
+  sources = [ "main.cc" ]
+  deps = [ ":libshillcli" ]
 }
 
 if (use.test) {
@@ -45,9 +37,7 @@ if (use.test) {
   }
 
   executable("shillcli_test") {
-    sources = [
-      "command_test.cc",
-    ]
+    sources = [ "command_test.cc" ]
     configs += [
       "//common-mk:test",
       ":test_config",

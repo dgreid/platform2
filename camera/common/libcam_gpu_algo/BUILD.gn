@@ -3,15 +3,11 @@
 # found in the LICENSE file.
 
 group("all") {
-  deps = [
-    ":libcam_gpu_algo",
-  ]
+  deps = [ ":libcam_gpu_algo" ]
 }
 
 shared_library("libcam_gpu_algo") {
-  sources = [
-    "//camera/common/camera_gpu_algorithm.cc",
-  ]
+  sources = [ "//camera/common/camera_gpu_algorithm.cc" ]
   configs += [ "//camera/build:cros_camera_common" ]
   libs = [ "portrait_cros" ]
 }

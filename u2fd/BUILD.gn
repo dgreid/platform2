@@ -31,6 +31,7 @@ pkg_config("target_defaults") {
 }
 
 pkg_config("u2fd_config") {
+  # NOSORT
   pkg_deps = [
     "libattestation-client",
     "libmetrics-${libbase_ver}",
@@ -79,34 +80,25 @@ static_library("libu2fd") {
 
 executable("u2fd") {
   configs += [ ":target_defaults" ]
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
   libs = [ "policy" ]
-  deps = [
-    ":libu2fd",
-  ]
+  deps = [ ":libu2fd" ]
 }
 
 proto_library("user_state_proto") {
   proto_in_dir = "."
   proto_out_dir = "include/u2fd"
-  sources = [
-    "user_state.proto",
-  ]
+  sources = [ "user_state.proto" ]
 }
 
 executable("g2ftool") {
   configs += [ ":target_defaults" ]
-  sources = [
-    "g2f_tools/g2ftool.cc",
-  ]
-  deps = [
-    ":libg2fclient",
-  ]
+  sources = [ "g2f_tools/g2ftool.cc" ]
+  deps = [ ":libg2fclient" ]
 }
 
 pkg_config("webauthntool_config") {
+  # NOSORT
   pkg_deps = [
     # system_api depends on protobuf (or protobuf-lite). It must appear
     # before protobuf here or the linker flags won't be in the right
@@ -125,16 +117,12 @@ executable("webauthntool") {
     ":target_defaults",
     ":webauthntool_config",
   ]
-  sources = [
-    "g2f_tools/webauthntool.cc",
-  ]
+  sources = [ "g2f_tools/webauthntool.cc" ]
 }
 
 static_library("libg2fclient") {
   configs += [ ":target_defaults" ]
-  sources = [
-    "g2f_tools/g2f_client.cc",
-  ]
+  sources = [ "g2f_tools/g2f_client.cc" ]
   libs = [ "hidapi-hidraw" ]
 }
 
@@ -153,9 +141,7 @@ if (use.test) {
       "g2f_tools/g2f_client.cc",
       "g2f_tools/g2f_client_test.cc",
     ]
-    deps = [
-      "//common-mk/testrunner",
-    ]
+    deps = [ "//common-mk/testrunner" ]
   }
 
   pkg_config("u2fd_test_config") {

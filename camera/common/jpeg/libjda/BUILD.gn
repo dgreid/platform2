@@ -3,15 +3,11 @@
 # found in the LICENSE file.
 
 group("all") {
-  deps = [
-    ":libjda",
-  ]
+  deps = [ ":libjda" ]
 }
 
 static_library("libjda") {
-  sources = [
-    "//camera/common/jpeg/jpeg_decode_accelerator_impl.cc",
-  ]
+  sources = [ "//camera/common/jpeg/jpeg_decode_accelerator_impl.cc" ]
   output_name = "libjda.pic"
   configs += [
     "//common-mk:pic",
@@ -22,8 +18,8 @@ static_library("libjda") {
   pkg_deps = [
     "cros-camera-android-headers",
     "libcamera_common",
-    "libmojo-${libbase_ver}",
     "libchrome-${libbase_ver}",
+    "libmojo-${libbase_ver}",
   ]
   deps = [
     "//camera/common:libcamera_metrics",

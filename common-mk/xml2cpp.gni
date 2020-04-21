@@ -12,9 +12,7 @@ template("genxml2cpp") {
   action_foreach(target_name) {
     sources = invoker.sources
     script = "//common-mk/file_generator_wrapper.py"
-    outputs = [
-      "${h_dir}/{{source_name_part}}.h",
-    ]
+    outputs = [ "${h_dir}/{{source_name_part}}.h" ]
     args = [
       "dbusxx-xml2cpp",
       "{{source}}",

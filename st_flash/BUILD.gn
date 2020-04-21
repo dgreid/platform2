@@ -5,9 +5,7 @@
 import("//common-mk/pkg_config.gni")
 
 group("all") {
-  deps = [
-    ":st_flash",
-  ]
+  deps = [ ":st_flash" ]
 }
 
 pkg_config("target_defaults") {
@@ -19,7 +17,5 @@ pkg_config("target_defaults") {
 
 executable("st_flash") {
   configs += [ ":target_defaults" ]
-  sources = [
-    "st_flash.cc",
-  ]
+  sources = [ "st_flash.cc" ]
 }

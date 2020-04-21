@@ -5,9 +5,7 @@
 import("//common-mk/pkg_config.gni")
 
 group("all") {
-  deps = [
-    ":libipp",
-  ]
+  deps = [ ":libipp" ]
   if (use.test) {
     deps += [ ":libipp_test" ]
   }
@@ -70,11 +68,7 @@ if (use.fuzzer) {
       "//common-mk/common_fuzzer",
       ":libchrome_test_config",
     ]
-    sources = [
-      "ipp_fuzzer.cc",
-    ]
-    deps = [
-      ":libipp",
-    ]
+    sources = [ "ipp_fuzzer.cc" ]
+    deps = [ ":libipp" ]
   }
 }

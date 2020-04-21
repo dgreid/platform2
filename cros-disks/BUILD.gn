@@ -37,9 +37,7 @@ pkg_config("target_defaults") {
 generate_dbus_adaptors("libdisks-adaptors") {
   dbus_service_config = "dbus_bindings/dbus-service-config.json"
   dbus_adaptors_out_dir = "include/cros-disks/dbus_adaptors"
-  sources = [
-    "dbus_bindings/org.chromium.CrosDisks.xml",
-  ]
+  sources = [ "dbus_bindings/org.chromium.CrosDisks.xml" ]
 }
 
 static_library("libdisks") {
@@ -88,19 +86,13 @@ static_library("libdisks") {
     "usb_device_info.cc",
   ]
   configs += [ ":target_defaults" ]
-  deps = [
-    ":libdisks-adaptors",
-  ]
+  deps = [ ":libdisks-adaptors" ]
 }
 
 executable("cros-disks") {
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
   configs += [ ":target_defaults" ]
-  deps = [
-    ":libdisks",
-  ]
+  deps = [ ":libdisks" ]
 }
 
 if (use.fuzzer) {
@@ -108,31 +100,23 @@ if (use.fuzzer) {
     pkg_deps = [ "libchrome-test-${libbase_ver}" ]
   }
   executable("cros-disks_mount_options_fuzzer") {
-    sources = [
-      "mount_options_fuzzer.cc",
-    ]
+    sources = [ "mount_options_fuzzer.cc" ]
     configs += [
       "//common-mk/common_fuzzer",
       ":fuzzed_data_config",
       ":target_defaults",
     ]
     configs -= [ "//common-mk:no_exceptions" ]
-    deps = [
-      ":libdisks",
-    ]
+    deps = [ ":libdisks" ]
   }
 
   executable("cros-disks_filesystem_label_fuzzer") {
-    sources = [
-      "fuzzers/filesystem_label_fuzzer.cc",
-    ]
+    sources = [ "fuzzers/filesystem_label_fuzzer.cc" ]
     configs += [
       "//common-mk/common_fuzzer:common_fuzzer",
       ":target_defaults",
     ]
-    deps = [
-      ":libdisks",
-    ]
+    deps = [ ":libdisks" ]
   }
 }
 

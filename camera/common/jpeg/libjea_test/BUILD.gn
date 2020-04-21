@@ -3,15 +3,11 @@
 # found in the LICENSE file.
 
 group("all") {
-  deps = [
-    ":libjea_test",
-  ]
+  deps = [ ":libjea_test" ]
 }
 
 executable("libjea_test") {
-  sources = [
-    "//camera/common/jpeg/jpeg_encode_accelerator_test.cc",
-  ]
+  sources = [ "//camera/common/jpeg/jpeg_encode_accelerator_test.cc" ]
   configs += [
     "//camera/build:cros_camera_common",
     "//common-mk:test",

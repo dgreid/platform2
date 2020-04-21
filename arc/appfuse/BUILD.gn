@@ -40,15 +40,11 @@ generate_dbus_adaptors("arc-appfuse-provider-adaptors") {
   new_fd_bindings = true
   dbus_service_config = "dbus_bindings/dbus-service-config.json"
   dbus_adaptors_out_dir = "include/appfuse/dbus_adaptors"
-  sources = [
-    "dbus_bindings/org.chromium.ArcAppfuseProvider.xml",
-  ]
+  sources = [ "dbus_bindings/org.chromium.ArcAppfuseProvider.xml" ]
 }
 
 executable("arc-appfuse-provider") {
-  sources = [
-    "arc_appfuse_provider.cc",
-  ]
+  sources = [ "arc_appfuse_provider.cc" ]
   install_path = "bin"
   configs += [ ":target_defaults" ]
   deps = [
@@ -59,9 +55,7 @@ executable("arc-appfuse-provider") {
 
 if (use.test) {
   executable("arc-appfuse_testrunner") {
-    sources = [
-      "data_filter_test.cc",
-    ]
+    sources = [ "data_filter_test.cc" ]
     run_test = true
     configs += [
       ":target_defaults",
@@ -76,26 +70,18 @@ if (use.test) {
 }
 
 install_config("install_system.d") {
-  sources = [
-    "org.chromium.ArcAppfuseProvider.conf",
-  ]
+  sources = [ "org.chromium.ArcAppfuseProvider.conf" ]
   install_path = "/etc/dbus-1/system.d"
 }
 
 install_config("install_init") {
-  sources = [
-    "init/arc-appfuse-provider.conf",
-  ]
+  sources = [ "init/arc-appfuse-provider.conf" ]
   install_path = "/etc/init"
 }
 
 install_config("install_policy") {
   arch = getenv("ARCH")
-  sources = [
-    "seccomp/arc-appfuse-provider-seccomp-${arch}.policy",
-  ]
-  outputs = [
-    "arc-appfuse-provider-seccomp.policy",
-  ]
+  sources = [ "seccomp/arc-appfuse-provider-seccomp-${arch}.policy" ]
+  outputs = [ "arc-appfuse-provider-seccomp.policy" ]
   install_path = "/usr/share/policy"
 }
