@@ -17,6 +17,7 @@ MAX_SUBDIR_FILES=21
 # Threshold for additional histogram reporting (in 1KB blocks), 1GB in total.
 ADDITIONAL_REPORTING_THRESHOLD_BLOCKS=1048576
 SHADOW="/home/.shadow"
+ENCRYPTED_REBOOT_VAULT="/mnt/stateful_partition/reboot_vault"
 
 # Paths for the CRX cache. Shared with installer/crx-import.conf
 UNVALIDATED_CRX_CACHE="${STATEFUL}/unencrypted/import_extensions"
@@ -118,6 +119,11 @@ wipe_crx_cache() {
   fi
 }
 
+remove_old_files_encrypted_reboot_vault() {
+  find "${ENCRYPTED_REBOOT_VAULT}" -type f -mtime "+${NUM_DAYS_TO_PRESERVE}" \
+      -delete
+}
+
 remove_old_pattern_log_files() {
   # Remove old biometrics cypto init, daemon, and firmware
   # updater logs
@@ -174,6 +180,9 @@ main() {
 
   # Remove iwlwifi logs older than one hour, since they are large.
   find /var/log -name "last_iwlwifi_dump*" -mmin +60 -delete
+
+  # Remove old files in the encrypted reboot vault.
+  remove_old_files_encrypted_reboot_vault
 
   # Quit if called at init; everything below only happens periodically
   if [ "$1" = "--no-periodic" ]; then
