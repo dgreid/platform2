@@ -22,7 +22,7 @@ from libcros_config_host import CrosConfig
 from libcros_config_host_base import BaseFile, SymlinkedFile, FirmwareInfo
 from libcros_config_host_base import FirmwareImage, DeviceSignerInfo
 
-YAML_FILE = '../libcros_config/test.yaml'
+YAML_FILE = '../test_data/test.yaml'
 MODELS = sorted(['some', 'another', 'whitelabel'])
 ANOTHER_BUCKET = ('gs://chromeos-binaries/HOME/bcs-another-private/overlay-'
                   'another-private/chromeos-base/chromeos-firmware-another/')

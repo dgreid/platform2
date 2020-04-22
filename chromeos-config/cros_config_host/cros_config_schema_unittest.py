@@ -472,37 +472,37 @@ class MainTests(cros_test_lib.TempDirTestCase):
     c_output = os.path.join(self.tempdir, 'config.c')
     cros_config_schema.Main(
         None,
-        os.path.join(this_dir, '../libcros_config/test.yaml'),
+        os.path.join(this_dir, '../test_data/test.yaml'),
         json_output,
         gen_c_output_dir=self.tempdir)
     regen_cmd = ('To regenerate the expected output, run:\n'
                  '\tpython -m cros_config_host.cros_config_schema '
-                 '-c libcros_config/test.yaml '
-                 '-o libcros_config/test_build.json '
-                 '-g libcros_config')
+                 '-c test_data/test.yaml '
+                 '-o test_data/test_build.json '
+                 '-g test_data')
 
     expected_json_file = \
-            os.path.join(this_dir, '../libcros_config/test_build.json')
+            os.path.join(this_dir, '../test_data/test_build.json')
     self.assertFileEqual(expected_json_file, json_output, regen_cmd)
 
-    expected_c_file = os.path.join(this_dir, '../libcros_config/test.c')
+    expected_c_file = os.path.join(this_dir, '../test_data/test.c')
     self.assertFileEqual(expected_c_file, c_output, regen_cmd)
 
   def testMainWithExampleWithoutBuild(self):
     output = os.path.join(self.tempdir, 'output')
     cros_config_schema.Main(
         None,
-        os.path.join(this_dir, '../libcros_config/test.yaml'),
+        os.path.join(this_dir, '../test_data/test.yaml'),
         output,
         filter_build_details=True)
 
     regen_cmd = ('To regenerate the expected output, run:\n'
                  '\tpython -m cros_config_host.cros_config_schema '
                  '-f True '
-                 '-c libcros_config/test.yaml '
-                 '-o libcros_config/test.json')
+                 '-c test_data/test.yaml '
+                 '-o test_data/test.json')
 
-    expected_file = os.path.join(this_dir, '../libcros_config/test.json')
+    expected_file = os.path.join(this_dir, '../test_data/test.json')
     self.assertFileEqual(expected_file, output, regen_cmd)
 
   def testMainArmExample(self):
@@ -510,40 +510,40 @@ class MainTests(cros_test_lib.TempDirTestCase):
     c_output = os.path.join(self.tempdir, 'config.c')
     cros_config_schema.Main(
         None,
-        os.path.join(this_dir, '../libcros_config/test_arm.yaml'),
+        os.path.join(this_dir, '../test_data/test_arm.yaml'),
         json_output,
         filter_build_details=True,
         gen_c_output_dir=self.tempdir)
     regen_cmd = ('To regenerate the expected output, run:\n'
                  '\tpython -m cros_config_host.cros_config_schema '
                  '-f True '
-                 '-c libcros_config/test_arm.yaml '
-                 '-o libcros_config/test_arm.json '
-                 '-g libcros_config')
+                 '-c test_data/test_arm.yaml '
+                 '-o test_data/test_arm.json '
+                 '-g test_data')
 
     expected_json_file = \
-            os.path.join(this_dir, '../libcros_config/test_arm.json')
+            os.path.join(this_dir, '../test_data/test_arm.json')
     self.assertFileEqual(expected_json_file, json_output, regen_cmd)
 
-    expected_c_file = os.path.join(this_dir, '../libcros_config/test_arm.c')
+    expected_c_file = os.path.join(this_dir, '../test_data/test_arm.c')
     self.assertFileEqual(expected_c_file, c_output, regen_cmd)
 
   def testMainImportExample(self):
     output = os.path.join(self.tempdir, 'output')
     cros_config_schema.Main(
         None,
-        os.path.join(this_dir, '../libcros_config/test_import.yaml'),
+        os.path.join(this_dir, '../test_data/test_import.yaml'),
         output)
     regen_cmd = ('To regenerate the expected output, run:\n'
                  '\tpython -m cros_config_host.cros_config_schema '
-                 '-c libcros_config/test_import.yaml '
-                 '-o libcros_config/test_import.json')
-    expected_file = os.path.join(this_dir, '../libcros_config/test_import.json')
+                 '-c test_data/test_import.yaml '
+                 '-o test_data/test_import.json')
+    expected_file = os.path.join(this_dir, '../test_data/test_import.json')
     self.assertFileEqual(expected_file, output, regen_cmd)
 
   def testMainMergeExample(self):
     output = os.path.join(self.tempdir, 'output')
-    base_path = os.path.join(this_dir, '../libcros_config')
+    base_path = os.path.join(this_dir, '../test_data')
     cros_config_schema.Main(
         None,
         None,
@@ -552,10 +552,10 @@ class MainTests(cros_test_lib.TempDirTestCase):
                  os.path.join(base_path, 'test_merge_overlay.yaml')])
     regen_cmd = ('To regenerate the expected output, run:\n'
                  '\tpython -m cros_config_host.cros_config_schema '
-                 '-o libcros_config/test_merge.json '
-                 '-m libcros_config/test_merge_base.yaml '
-                 'libcros_config/test_merge_overlay.yaml')
-    expected_file = os.path.join(this_dir, '../libcros_config/test_merge.json')
+                 '-o test_data/test_merge.json '
+                 '-m test_data/test_merge_base.yaml '
+                 'test_data/test_merge_overlay.yaml')
+    expected_file = os.path.join(this_dir, '../test_data/test_merge.json')
     self.assertFileEqual(expected_file, output, regen_cmd)
 
 

@@ -36,7 +36,7 @@ def TestConfigs(*args):
     @functools.wraps(method)
     def _Wrapper(self):
       for filename in args:
-        with open(os.path.join(this_dir, '../libcros_config', filename)) as f:
+        with open(os.path.join(this_dir, '../test_data', filename)) as f:
           config = json.load(f)
 
         with tempfile.TemporaryDirectory(prefix='test.') as output_dir:

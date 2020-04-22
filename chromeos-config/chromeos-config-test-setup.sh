@@ -7,5 +7,5 @@
 set -e
 
 # Copy the json test config locally
-cp libcros_config/test.json test.json
-cp libcros_config/test_arm.json test_arm.json
+cp test_data/test.json test.json
+cp test_data/test_arm.json test_arm.json
