@@ -156,6 +156,57 @@ std::map<uint16_t, std::string> kNetDeviceTypes = {
     {ARPHRD_NONE, "NONE"},
 };
 
+// Route types. Defined in uapi/linux/rtnetlink.h
+std::map<uint8_t, std::string> kRouteTypes = {
+    {RTN_UNSPEC, "UNSPEC"},
+    {RTN_UNICAST, "UNICAST"},
+    {RTN_LOCAL, "LOCAL"},
+    {RTN_BROADCAST, "BROADCAST"},
+    {RTN_ANYCAST, "ANYCAST"},
+    {RTN_MULTICAST, "MULTICAST"},
+    {RTN_BLACKHOLE, "BLACKHOLE"},
+    {RTN_UNREACHABLE, "UNREACHABLE"},
+    {RTN_PROHIBIT, "PROHIBIT"},
+    {RTN_THROW, "THROW"},
+    {RTN_NAT, "NAT"},
+    {RTN_XRESOLVE, "XRESOLVE"},
+};
+
+// Route protocols. Defined in uapi/linux/rtnetlink.h
+std::map<uint8_t, std::string> kRouteProtocols = {
+    {RTPROT_UNSPEC, "UNSPEC"},
+    {RTPROT_REDIRECT, "REDIRECT"},
+    {RTPROT_KERNEL, "KERNEL"},
+    {RTPROT_BOOT, "BOOT"},
+    {RTPROT_STATIC, "STATIC"},
+    {RTPROT_GATED, "GATED"},
+    {RTPROT_RA, "RA"},
+    {RTPROT_MRT, "MRT"},
+    {RTPROT_ZEBRA, "ZEBRA"},
+    {RTPROT_BIRD, "BIRD"},
+    {RTPROT_DNROUTED, "DNROUTED"},
+    {RTPROT_XORP, "XORP"},
+    {RTPROT_NTK, "NTK"},
+    {RTPROT_DHCP, "DHCP"},
+    {RTPROT_MROUTED, "MROUTED"},
+    {RTPROT_BABEL,"BABEL"},
+    // The following protocols are not defined on Linux 4.14
+    {186 /* RTPROT_BGP */, "BGP"},
+    {187 /* RTPROT_ISIS */, "ISIS"},
+    {188 /* RTPROT_OSPF */, "OSPF"},
+    {189 /* RTPROT_RIP */, "RIP"},
+    {192 /* RTPROT_EIGRP */, "EIGRP"},
+};
+
+// Helper function to return route protocol names defined by the kernel.
+// User reserved protocol values are returned as decimal numbers.
+std::string GetRouteProtocol(uint8_t protocol) {
+  const auto it = kRouteProtocols.find(protocol);
+  if (it == kRouteProtocols.end())
+    return std::to_string(protocol);
+  return it->second;
+}
+
 std::unique_ptr<RTNLAttrMap> ParseAttrs(struct rtattr* data, int len) {
   RTNLAttrMap attrs;
   ByteString attr_bytes(reinterpret_cast<const char*>(data), len);
@@ -222,13 +273,6 @@ struct RTNLHeader {
     struct ndmsg ndm;
   };
 };
-
-std::string RTNLMessage::RouteStatus::ToString() const {
-  return base::StringPrintf(
-      "RouteStatus dst_prefix %d src_prefix %d table %d"
-      " protocol %d scope %d type %d flags %X",
-      dst_prefix, src_prefix, table, protocol, scope, type, flags);
-}
 
 std::string RTNLMessage::NeighborStatus::ToString() const {
   return base::StringPrintf("NeighborStatus state %d flags %X type %d", state,
@@ -779,6 +823,34 @@ IPAddress RTNLMessage::GetIfaAddress() const {
                    address_status_.prefix_len);
 }
 
+uint32_t RTNLMessage::GetRtaTable() const {
+  return GetUint32Attribute(RTA_TABLE);
+}
+
+IPAddress RTNLMessage::GetRtaDst() const {
+  return IPAddress(family_, GetAttribute(RTA_DST), route_status_.dst_prefix);
+}
+
+IPAddress RTNLMessage::GetRtaSrc() const {
+  return IPAddress(family_, GetAttribute(RTA_SRC), route_status_.src_prefix);
+}
+
+IPAddress RTNLMessage::GetRtaGateway() const {
+  return IPAddress(family_, GetAttribute(RTA_GATEWAY));
+}
+
+uint32_t RTNLMessage::GetRtaOif() const {
+  return GetUint32Attribute(RTA_OIF);
+}
+
+std::string RTNLMessage::GetRtaOifname() const {
+  return IndexToName(GetRtaOif());
+}
+
+uint32_t RTNLMessage::GetRtaPriority() const {
+  return GetUint32Attribute(RTA_PRIORITY);
+}
+
 // static
 std::string RTNLMessage::ModeToString(RTNLMessage::Mode mode) {
   switch (mode) {
@@ -844,8 +916,31 @@ std::string RTNLMessage::ToString() const {
           address_status_.scope);
       break;
     case RTNLMessage::kTypeRoute:
+      if (HasAttribute(RTA_SRC))
+        details +=
+            base::StringPrintf("src %s/%d ", GetRtaSrc().ToString().c_str(),
+                               route_status_.src_prefix);
+      if (HasAttribute(RTA_DST))
+        details +=
+            base::StringPrintf("dst %s/%d ", GetRtaDst().ToString().c_str(),
+                               route_status_.dst_prefix);
+      if (HasAttribute(RTA_GATEWAY))
+        details += "via " + GetRtaGateway().ToString() + " ";
+      if (HasAttribute(RTA_OIF))
+        details += base::StringPrintf("if %s[%d] ", GetRtaOifname().c_str(),
+                                      GetRtaOif());
+      details += base::StringPrintf(
+          "table %d priority %d protocol %s type %s", GetRtaTable(),
+          GetRtaPriority(), GetRouteProtocol(route_status_.protocol).c_str(),
+          kRouteTypes[route_status_.type].c_str());
+      break;
     case RTNLMessage::kTypeRule:
-      details = route_status_.ToString();
+      details = base::StringPrintf(
+          "dst_prefix %d src_prefix %d table %d"
+          " protocol %d scope %d type %d flags %X",
+          route_status_.dst_prefix, route_status_.src_prefix,
+          route_status_.table, route_status_.protocol, route_status_.scope,
+          route_status_.type, route_status_.flags);
       break;
     case RTNLMessage::kTypeRdnss:
     case RTNLMessage::kTypeDnssl:

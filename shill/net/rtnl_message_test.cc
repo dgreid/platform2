@@ -500,6 +500,7 @@ class RTNLMessageTest : public Test {
       EXPECT_TRUE(
           IPAddress(family, msg.GetAttribute(RTA_DST), status.dst_prefix)
               .Equals(dst));
+      EXPECT_TRUE(msg.GetRtaDst().Equals(dst));
     }
 
     if (!src.IsDefault()) {
@@ -507,12 +508,14 @@ class RTNLMessageTest : public Test {
       EXPECT_TRUE(
           IPAddress(family, msg.GetAttribute(RTA_SRC), status.src_prefix)
               .Equals(src));
+      EXPECT_TRUE(msg.GetRtaSrc().Equals(src));
     }
 
     if (!gateway.IsDefault()) {
       EXPECT_TRUE(msg.HasAttribute(RTA_GATEWAY));
       EXPECT_TRUE(
           IPAddress(family, msg.GetAttribute(RTA_GATEWAY)).Equals(gateway));
+      EXPECT_TRUE(msg.GetRtaGateway().Equals(gateway));
     }
 
     if (interface_index >= 0) {
@@ -520,6 +523,7 @@ class RTNLMessageTest : public Test {
       uint32_t int_val;
       EXPECT_TRUE(msg.GetAttribute(RTA_OIF).ConvertToCPUUInt32(&int_val));
       EXPECT_EQ(interface_index, int_val);
+      EXPECT_EQ(interface_index, msg.GetRtaOif());
     } else {
       EXPECT_FALSE(msg.HasAttribute(RTA_OIF));
     }
@@ -908,12 +912,14 @@ TEST_F(RTNLMessageTest, ToString) {
        "Delete IPv6 Address: fe80::6a7f:74ff:feba:efc7/64 if \\w*\\[15\\] "
        "flags PERMANENT scope 253"},
       {kAddRouteIPV4, sizeof(kAddRouteIPV4),
-       "Add IPv4 Route: RouteStatus dst_prefix 0 src_prefix 0 table 254 "
-       "protocol 3 "
-       "scope 0 type 1 flags 0"},
+       // For routes, the output interface index cannot be converted after the
+       // fact using if_indextoname(), but can still happen to match an
+       // unrelated interface on the unit test host. Escape it with \w*.
+       "Add IPv4 Route: via 192\\.168\\.17\\.254 if \\w*\\[12\\] table 254 "
+       "priority 9 protocol BOOT type UNICAST"},
       {kDelRouteIPV6, sizeof(kDelRouteIPV6),
-       "Delete IPv6 Route: RouteStatus dst_prefix 128 src_prefix 0 table 254 "
-       "protocol 0 scope 0 type 1 flags 200"},
+       "Delete IPv6 Route: dst ff02::1:ffa0:688/128 via ff02::1:ffa0:688 if "
+       "\\w*\\[2\\] table 254 priority 0 protocol UNSPEC type UNICAST"},
       {kAddNeighborMessage, sizeof(kAddNeighborMessage),
        "Add IPv4 Neighbor: NeighborStatus state 2 flags 0 type 1"},
       {kNdRdnssMessage, sizeof(kNdRdnssMessage),

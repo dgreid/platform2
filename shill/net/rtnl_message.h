@@ -101,7 +101,6 @@ class SHILL_EXPORT RTNLMessage {
           scope(scope_in),
           type(type_in),
           flags(flags_in) {}
-    std::string ToString() const;
     // Prefix length of the destination. Corresponds to rtm_dst_len.
     unsigned char dst_prefix;
     // Prefix length of the source. Corresponds to rtm_src_len.
@@ -223,6 +222,25 @@ class SHILL_EXPORT RTNLMessage {
   // Returns the IFA_ADDRESS attribute as a shill::IPAddress. This should only
   // be used for RTNLMessages of type kTypeAddress.
   IPAddress GetIfaAddress() const;
+  // Returns the routing table id of RTNLMessages with type kTypeRoute.
+  uint32_t GetRtaTable() const;
+  // Returns the RTA_DST attribute as a shill::IPAddress for RTNLMessages of
+  // type kTypeRoute.
+  IPAddress GetRtaDst() const;
+  // Returns the RTA_SRC attribute as a shill::IPAddress for RTNLMessages of
+  // type kTypeRoute.
+  IPAddress GetRtaSrc() const;
+  // Returns the RTA_GATEWAY attribute as a shill::IPAddress for RTNLMessages of
+  // type kTypeRoute.
+  IPAddress GetRtaGateway() const;
+  // Returns the RTA_OIF output interface attribute as an interface index
+  // name for RTNLMessages of type kTypeRoute.
+  uint32_t GetRtaOif() const;
+  // Returns the RTA_OIF output interface attribute translated as an interface
+  // name for RTNLMessages of type kTypeRoute.
+  std::string GetRtaOifname() const;
+  // Returns the RTA_PRIORITY attribute for RTNLMessages of type kTypeRoute.
+  uint32_t GetRtaPriority() const;
 
  private:
   SHILL_PRIVATE bool DecodeInternal(const ByteString& msg);
