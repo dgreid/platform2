@@ -25,6 +25,7 @@ const char kSeccompPolicyFile[] = "/usr/share/policy/smbfs-seccomp.policy";
 
 const char kMojoIdOptionPrefix[] = "mojo_id=";
 const char kDbusSocketPath[] = "/run/dbus";
+const char kDaemonStorePath[] = "/run/daemon-store/smbfs";
 
 class SmbfsMounter : public FUSEMounter {
  public:
@@ -89,9 +90,14 @@ std::unique_ptr<FUSEMounter> SmbfsHelper::CreateMounter(
   mount_options.Initialize(options, true, base::NumberToString(files_uid),
                            base::NumberToString(files_gid));
 
-  // Bind DBus communication socket into the sandbox.
+  // Bind DBus communication socket and daemon-store into the sandbox.
   std::vector<FUSEMounter::BindPath> paths = {
       {kDbusSocketPath, true},
+      // Need to use recursive binding because the daemon-store directory in
+      // their cryptohome is bind mounted inside |kDaemonStorePath|.
+      // TODO(crbug.com/1054705): Pass the user account hash as a mount option
+      // and restrict binding to that specific directory.
+      {kDaemonStorePath, true /* writable */, true /* recursive */},
   };
 
   return std::make_unique<SmbfsMounter>(
