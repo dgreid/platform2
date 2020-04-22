@@ -8,14 +8,15 @@
 
 #include <base/files/file_util.h>
 #include <base/logging.h>
+#include <base/strings/string_number_conversions.h>
 
 #include "crash-reporter/util.h"
 
 namespace {
 constexpr char kExecName[] = "selinux-violation";
 constexpr char kSignatureKey[] = "sig";
-// Truncate "comm" strings longer than this
-constexpr size_t kMaxCommLen = 128;
+// Truncate values of key=value strings longer than this
+constexpr size_t kMaxValueLen = 128;
 }  // namespace
 
 using base::FilePath;
@@ -63,6 +64,34 @@ bool SELinuxViolationCollector::LoadSELinuxViolation(
   return !signature->empty();
 }
 
+// Extract the value of the given key from the selinux log.
+// Params:
+//   log: The string with the selinux message
+//   key: The key to search for
+//   has_quotes: True iff the value is surrounded by quotes; e.g. comm="cros"
+//   value: Output parameter.
+// Return true if the key was present, or false otherwise.
+bool GetValueFromLog(const std::string& log,
+                     const std::string& key,
+                     bool has_quotes,
+                     std::string* value) {
+  std::string full_key = key + "=";
+  if (has_quotes) {
+    full_key += "\"";
+  }
+  std::string::size_type key_start = log.find(full_key);
+  if (key_start != std::string::npos) {
+    std::string::size_type value_start = key_start + full_key.size();
+    char end_char = has_quotes ? '"' : ' ';
+    std::string::size_type value_end = log.find(end_char, value_start);
+    std::string::size_type substr_len = value_end - value_start;
+    substr_len = substr_len > kMaxValueLen ? kMaxValueLen : substr_len;
+    *value = log.substr(value_start, substr_len);
+    return true;
+  }
+  return false;
+}
+
 bool SELinuxViolationCollector::Collect() {
   std::string reason = "normal collection";
   bool feedback = true;
@@ -92,17 +121,23 @@ bool SELinuxViolationCollector::Collect() {
   // (if one is present) and adding it to the "selinux-violation" prefix.
   std::string name_prefix = kExecName;
 
-  std::string comm_key = "comm=\"";
-  std::string::size_type comm = content.find(comm_key);
-  if (comm != std::string::npos) {
-    std::string::size_type key_start = comm + comm_key.size();
-    std::string::size_type key_end = content.find("\"", key_start);
-    std::string::size_type substr_len = key_end - key_start;
-    substr_len = substr_len > kMaxCommLen ? kMaxCommLen : substr_len;
-    name_prefix += "_" + content.substr(key_start, substr_len);
+  std::string comm;
+  if (GetValueFromLog(content, "comm", /*has_quotes=*/true, &comm)) {
+    name_prefix += "_" + comm;
+  }
+  LOG(WARNING) << "name_prefix is " << name_prefix;
+
+  std::string pid_str;
+  int pid = 0;
+  if (GetValueFromLog(content, "pid", /*has_quotes=*/false, &pid_str)) {
+    if (!base::StringToInt(pid_str, &pid)) {
+      // Fall back to a pid of 0 on any errors.
+      pid = 0;
+    }
   }
 
-  std::string dump_basename = FormatDumpBasename(name_prefix, time(nullptr), 0);
+  std::string dump_basename =
+      FormatDumpBasename(name_prefix, time(nullptr), pid);
   FilePath meta_path = GetCrashPath(crash_directory, dump_basename, "meta");
   FilePath log_path = GetCrashPath(crash_directory, dump_basename, "log");
 

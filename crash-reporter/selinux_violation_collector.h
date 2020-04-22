@@ -41,6 +41,8 @@ class SELinuxViolationCollector : public CrashCollector {
   friend class SELinuxViolationCollectorTest;
   FRIEND_TEST(SELinuxViolationCollectorTest, CollectOK);
   FRIEND_TEST(SELinuxViolationCollectorTest, CollectOKWithComm);
+  FRIEND_TEST(SELinuxViolationCollectorTest, CollectOKWithPid);
+  FRIEND_TEST(SELinuxViolationCollectorTest, CollectOKWithPidAndComm);
   FRIEND_TEST(SELinuxViolationCollectorTest, CollectWithInvalidComm);
   FRIEND_TEST(SELinuxViolationCollectorTest, CollectWithLongComm);
   FRIEND_TEST(SELinuxViolationCollectorTest, CollectWithNonTerminatedComm);

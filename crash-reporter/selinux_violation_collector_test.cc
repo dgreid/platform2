@@ -40,8 +40,24 @@ constexpr char TestSELinuxViolationMessageWithComm[] =
     "comm\001init\002scontext\001context1\002\n"
     "SELINUX VIOLATION TRIGGERED FOR comm=\"init\" AT context1.\n";
 
+constexpr char TestSELinuxViolationMessageWithPid[] =
+    "sssss-selinux-init\n"
+    "comm\001init\002scontext\001context1\002\n"
+    "SELINUX VIOLATION TRIGGERED FOR pid=1234 AT context1.\n";
+
+constexpr char TestSELinuxViolationMessageWithPidAndComm[] =
+    "sssss-selinux-init\n"
+    "comm\001init\002scontext\001context1\002\n"
+    "SELINUX VIOLATION TRIGGERED FOR pid=1234 comm=\"init\" AT context1.\n";
+
 constexpr char TestSELinuxViolationMessageWithCommContent[] =
     "SELINUX VIOLATION TRIGGERED FOR comm=\"init\" AT context1.\n";
+
+constexpr char TestSELinuxViolationMessageWithPidContent[] =
+    "SELINUX VIOLATION TRIGGERED FOR pid=1234 AT context1.\n";
+
+constexpr char TestSELinuxViolationMessageWithPidAndCommContent[] =
+    "SELINUX VIOLATION TRIGGERED FOR pid=1234 comm=\"init\" AT context1.\n";
 
 constexpr char TestSELinuxViolationMessageWithInvalidComm[] =
     "sssss-selinux-init\n"
@@ -130,6 +146,43 @@ TEST_F(SELinuxViolationCollectorTest, CollectOKWithComm) {
   std::string content;
   base::ReadFileToString(file_path, &content);
   EXPECT_STREQ(content.c_str(), TestSELinuxViolationMessageWithCommContent);
+}
+
+TEST_F(SELinuxViolationCollectorTest, CollectOKWithPid) {
+  // Collector produces a violation report named using the "pid" key.
+  collector_.set_developer_image_for_testing();
+  ASSERT_TRUE(
+      test_util::CreateFile(test_path_, TestSELinuxViolationMessageWithPid));
+  EXPECT_TRUE(collector_.Collect());
+  EXPECT_FALSE(IsDirectoryEmpty(test_crash_directory_));
+  EXPECT_TRUE(test_util::DirectoryHasFileWithPattern(
+      test_crash_directory_, "selinux_violation.*.1234.meta", nullptr));
+
+  FilePath file_path;
+  EXPECT_TRUE(test_util::DirectoryHasFileWithPattern(
+      test_crash_directory_, "selinux_violation.*.1234.log", &file_path));
+  std::string content;
+  base::ReadFileToString(file_path, &content);
+  EXPECT_STREQ(content.c_str(), TestSELinuxViolationMessageWithPidContent);
+}
+
+TEST_F(SELinuxViolationCollectorTest, CollectOKWithPidAndComm) {
+  // Collector produces a violation report named using "pid" and "comm" keys.
+  collector_.set_developer_image_for_testing();
+  ASSERT_TRUE(test_util::CreateFile(test_path_,
+                                    TestSELinuxViolationMessageWithPidAndComm));
+  EXPECT_TRUE(collector_.Collect());
+  EXPECT_FALSE(IsDirectoryEmpty(test_crash_directory_));
+  EXPECT_TRUE(test_util::DirectoryHasFileWithPattern(
+      test_crash_directory_, "selinux_violation_init.*.1234.meta", nullptr));
+
+  FilePath file_path;
+  EXPECT_TRUE(test_util::DirectoryHasFileWithPattern(
+      test_crash_directory_, "selinux_violation_init.*.1234.log", &file_path));
+  std::string content;
+  base::ReadFileToString(file_path, &content);
+  EXPECT_STREQ(content.c_str(),
+               TestSELinuxViolationMessageWithPidAndCommContent);
 }
 
 TEST_F(SELinuxViolationCollectorTest, CollectWithInvalidComm) {
