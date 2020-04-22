@@ -48,7 +48,8 @@ class TimeoutSet {
   }
 
   // Insert an element into the list with the specified lifetime. If the element
-  // already exists, its lifetime will be updated.
+  // already exists, its lifetime will be updated. TimeDelta::Max() may be used
+  // to indicate an infinite lifetime.
   //
   // This method currently runs in time linear to the number of elements in the
   // set, as duplicates are checked for prior to insertion.
@@ -63,9 +64,14 @@ class TimeoutSet {
     }
     // Perform element insertion.
     base::TimeTicks now = TimeNow();
-    base::TimeTicks deathtime = now + lifetime;
+    base::TimeTicks deathtime =
+        lifetime.is_max() ? base::TimeTicks::Max() : now + lifetime;
     elements_.push_back({std::move(element), deathtime});
     std::push_heap(elements_.begin(), elements_.end());
+
+    if (elements_[0].deathtime.is_max()) {
+      return;
+    }
 
     int64_t shortest_lifetime = (elements_[0].deathtime - now).InMilliseconds();
     timeout_callback_.Reset(
@@ -114,7 +120,7 @@ class TimeoutSet {
       elements_.pop_back();
     }
     // Post task for earliest subsequent timeout.
-    if (!elements_.empty()) {
+    if (!elements_.empty() && !elements_[0].deathtime.is_max()) {
       int64_t shortest_lifetime =
           (elements_[0].deathtime - now).InMilliseconds();
       timeout_callback_.Reset(

@@ -45,6 +45,7 @@ struct TestData {
     data.push_back(1);
     data.push_back(2);
     data.push_back(3);
+    data.push_back(4);
   }
 
   std::vector<T> data;
@@ -53,9 +54,10 @@ struct TestData {
 template <>
 struct TestData<IPAddress> {
   TestData() {
-    data.push_back(IPAddress("121.44.30.54"));
-    data.push_back(IPAddress("192.144.30.54"));
-    data.push_back(IPAddress("0.0.0.0"));
+    data.push_back(IPAddress("1.1.1.1"));
+    data.push_back(IPAddress("2.2.2.2"));
+    data.push_back(IPAddress("3.3.3.3"));
+    data.push_back(IPAddress("4.4.4.4"));
   }
 
   std::vector<IPAddress> data;
@@ -137,6 +139,29 @@ TYPED_TEST(TimeoutSetTest, MultipleSequentialTimeouts) {
   EXPECT_TRUE(this->elements_.IsEmpty());
 }
 
+TYPED_TEST(TimeoutSetTest, MultipleSequentialTimeoutsWithInfiniteLifetime) {
+  EXPECT_CALL(this->dispatcher_, PostDelayedTask(_, _, _)).Times(AtLeast(1));
+  this->elements_.Insert(this->data_.data[0],
+                         base::TimeDelta::FromMilliseconds(10));
+  this->elements_.Insert(this->data_.data[1],
+                         base::TimeDelta::FromMilliseconds(20));
+  this->elements_.Insert(this->data_.data[2], base::TimeDelta::Max());
+
+  this->IncrementTime(10);
+  EXPECT_TIMEOUT(this->data_.data[0]);
+
+  this->IncrementTime(10);
+  EXPECT_TIMEOUT(this->data_.data[1]);
+
+  EXPECT_FALSE(this->elements_.IsEmpty());
+
+  // Check that element with infinite lifetime is still around after an
+  // arbitrary amount of time.
+  this->IncrementTime(1000);
+  EXPECT_TIMEOUT();
+  EXPECT_FALSE(this->elements_.IsEmpty());
+}
+
 // Single timeout has multiple elements expiring.
 TYPED_TEST(TimeoutSetTest, MultiTimeout) {
   EXPECT_CALL(this->dispatcher_, PostDelayedTask(_, _, _)).Times(AtLeast(1));
@@ -147,8 +172,28 @@ TYPED_TEST(TimeoutSetTest, MultiTimeout) {
 
   this->IncrementTime(10);
   EXPECT_TIMEOUT(this->data_.data[0], this->data_.data[1]);
-
   EXPECT_TRUE(this->elements_.IsEmpty());
+}
+
+// Single timeout has multiple elements expiring.
+TYPED_TEST(TimeoutSetTest, MultiTimeoutWithInfiniteLifetime) {
+  EXPECT_CALL(this->dispatcher_, PostDelayedTask(_, _, _)).Times(AtLeast(1));
+  this->elements_.Insert(this->data_.data[0],
+                         base::TimeDelta::FromMilliseconds(10));
+  this->elements_.Insert(this->data_.data[1],
+                         base::TimeDelta::FromMilliseconds(10));
+  this->elements_.Insert(this->data_.data[2], base::TimeDelta::Max());
+  this->elements_.Insert(this->data_.data[3], base::TimeDelta::Max());
+
+  this->IncrementTime(10);
+  EXPECT_TIMEOUT(this->data_.data[0], this->data_.data[1]);
+  EXPECT_FALSE(this->elements_.IsEmpty());
+
+  // Check that elements with infinite lifetime are still around after an
+  // arbitrary amount of time.
+  this->IncrementTime(1000);
+  EXPECT_TIMEOUT();
+  EXPECT_FALSE(this->elements_.IsEmpty());
 }
 
 TYPED_TEST(TimeoutSetTest, InsertResetTimeout) {
