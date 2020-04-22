@@ -63,6 +63,7 @@ copies.
 | [hammerd](./hammerd/) | Firmware updater utility for hammer hardware |
 | [hardware_verifier](./hardware_verifier/) | Hardware verifier tool |
 | [hermes](./hermes/) | Chrome OS LPA implementation for eSIM hardware support |
+| [hwsec-test-utils](./hwsec-test-utils/) | Hwsec-related test-only features |
 | [image-burner](./image-burner/) | Daemon for writing disk images (e.g. recovery) to USB sticks & SD cards |
 | [imageloader](./imageloader/) | Daemon for mounting signed disk images |
 | [init](./init/) | CrOS common startup init scripts and boot time helpers |
