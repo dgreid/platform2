@@ -74,6 +74,14 @@ typedef int (*cros_cam_get_cam_info_cb_t)(void* context,
                                           const cros_cam_info_t* info,
                                           unsigned is_removed);
 
+// Plane descriptor
+//   Stores the data for a plane of a frame.
+typedef struct cros_cam_plane_t_ {
+  unsigned stride;  // stride (pixel line) size in bytes, 0 if unused
+  unsigned size;    // size of the data, 0 if the data plane is unused
+  uint8_t* data;    // data, null if unused
+} cros_cam_plane_t;
+
 // Frame (captured data) descriptor
 //   format should be same as requested in start call
 //   pointer to frame data valid only until the callback returns
@@ -88,11 +96,7 @@ typedef int (*cros_cam_get_cam_info_cb_t)(void* context,
 //   'YUY2' - one plane: plane[0] is interleaved YUV data
 typedef struct cros_cam_frame_t_ {
   cros_cam_format_info_t format;  // frame format information
-  struct {
-    unsigned stride;  // stride (pixel line) size in bytes, 0 if unused
-    unsigned size;    // size of the data, 0 if the data plane is unused
-    uint8_t* data;    // data, null if unused
-  } plane[4];
+  cros_cam_plane_t planes[4];
 } cros_cam_frame_t;
 
 // Callback type for capture

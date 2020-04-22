@@ -79,11 +79,9 @@ class I420Buffer {
     const cros_cam_format_info_t& format = frame->format;
     I420Buffer buf(format.width, format.height);
 
-    // TODO(b/151047930): It's an anonymous struct now. We can give it a name
-    // to make it more clear.
-    const auto planes = frame->plane;
+    const cros_cam_plane_t* planes = frame->planes;
 
-    auto expect_empty = [&](decltype(planes[0]) plane) {
+    auto expect_empty = [&](const cros_cam_plane_t& plane) {
       EXPECT_EQ(plane.size, 0);
       EXPECT_EQ(plane.stride, 0);
       EXPECT_EQ(plane.data, nullptr);

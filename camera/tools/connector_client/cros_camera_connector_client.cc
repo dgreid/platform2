@@ -140,10 +140,10 @@ void CrosCameraConnectorClient::ProcessFrame(const cros_cam_frame_t* frame) {
                                        base::StringPrintf("%06u", frame_iter));
     base::File file(base::FilePath(output_path),
                     base::File::FLAG_CREATE_ALWAYS | base::File::FLAG_WRITE);
-    file.WriteAtCurrentPos(reinterpret_cast<char*>(frame->plane[0].data),
-                           frame->plane[0].size);
+    file.WriteAtCurrentPos(reinterpret_cast<char*>(frame->planes[0].data),
+                           frame->planes[0].size);
     LOGF(INFO) << "Saved JPEG: " << output_path
-               << "  (size = " << frame->plane[0].size << ")";
+               << "  (size = " << frame->planes[0].size << ")";
   } else if (frame->format.fourcc == V4L2_PIX_FMT_NV12) {
     std::string output_path(kNv12FilePattern);
     base::ReplaceSubstringsAfterOffset(&output_path, /*start_offset=*/0, "#",
@@ -151,11 +151,11 @@ void CrosCameraConnectorClient::ProcessFrame(const cros_cam_frame_t* frame) {
     base::File file(base::FilePath(output_path),
                     base::File::FLAG_CREATE_ALWAYS | base::File::FLAG_WRITE);
     file.WriteAtCurrentPos(
-        reinterpret_cast<const char*>(frame->plane[0].data),
-        request_format_iter_->height * frame->plane[0].stride);
+        reinterpret_cast<const char*>(frame->planes[0].data),
+        request_format_iter_->height * frame->planes[0].stride);
     file.WriteAtCurrentPos(
-        reinterpret_cast<const char*>(frame->plane[1].data),
-        (request_format_iter_->height + 1) / 2 * frame->plane[1].stride);
+        reinterpret_cast<const char*>(frame->planes[1].data),
+        (request_format_iter_->height + 1) / 2 * frame->planes[1].stride);
     LOGF(INFO) << "Saved YUV (NV12): " << output_path;
   }
 
