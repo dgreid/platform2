@@ -7,8 +7,6 @@ import("wayland_protocol.gni")
 group("all") {
   deps = [
     ":sommelier",
-    ":wayland_demo",
-    ":x11_demo",
   ]
 }
 
@@ -120,28 +118,5 @@ executable("sommelier") {
     "PEER_CMD_PREFIX=${peer_cmd_prefix}",
     "FRAME_COLOR=${frame_color}",
     "DARK_FRAME_COLOR=${dark_frame_color}",
-  ]
-}
-
-executable("wayland_demo") {
-  pkg_deps = [
-    "libbrillo",
-    "libchrome-${libbase_ver}",
-    "wayland-client",
-  ]
-  libs = [ "wayland-client" ]
-  sources = [
-    "demos/wayland_demo.cc",
-  ]
-}
-
-executable("x11_demo") {
-  pkg_deps = [
-    "libbrillo",
-    "libchrome-${libbase_ver}",
-  ]
-  libs = [ "X11" ]
-  sources = [
-    "demos/x11_demo.cc",
   ]
 }
