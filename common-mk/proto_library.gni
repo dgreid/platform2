@@ -173,9 +173,7 @@ template("proto_library") {
     }
 
     sources = get_target_outputs(":${action_name}")
-    deps = [
-      ":${action_name}",
-    ]
+    deps = [ ":${action_name}" ]
     if (defined(invoker.deps)) {
       deps += invoker.deps
     }
@@ -239,16 +237,7 @@ template("goproto_library") {
       }
     }
 
-    # TODO(clarkchung): Use string_join instead. (Need uprev gn)
-    go_out_prefix = ""
-    if (go_plugin_parameters != []) {
-      prefix = ""
-      foreach(x, go_plugin_parameters) {
-        go_out_prefix += prefix + x
-        prefix = ","
-      }
-      go_out_prefix += ":"
-    }
+    go_out_prefix = string_join(",", go_plugin_parameters)
 
     args = [ "protoc" ]
 
@@ -261,7 +250,9 @@ template("goproto_library") {
 
     args += [
       "--go_out",
-      "${go_out_prefix}${root_gen_dir}/${proto_out_dir}",
+
+      # go_out_prefix can be empty, so we can always add a colon here.
+      "${go_out_prefix}:${root_gen_dir}/${proto_out_dir}",
     ]
     foreach(source, sources) {
       args += [ rebase_path(source) ]
