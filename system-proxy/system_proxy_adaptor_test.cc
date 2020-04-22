@@ -41,7 +41,7 @@ class FakeSandboxedWorker : public SandboxedWorker {
   FakeSandboxedWorker& operator=(const FakeSandboxedWorker&) = delete;
   ~FakeSandboxedWorker() override = default;
 
-  void Start() override { is_running_ = true; }
+  bool Start() override { return is_running_ = true; }
   bool Stop() override { return is_running_ = false; }
   bool IsRunning() override { return is_running_; }
 

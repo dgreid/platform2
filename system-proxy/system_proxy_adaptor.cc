@@ -17,8 +17,6 @@
 namespace system_proxy {
 namespace {
 
-constexpr int kProxyPort = 3128;
-
 // Serializes |proto| to a vector of bytes.
 std::vector<uint8_t> SerializeProto(
     const google::protobuf::MessageLite& proto) {
@@ -78,7 +76,12 @@ std::vector<uint8_t> SystemProxyAdaptor::SetSystemTrafficCredentials(
 
   if (!system_services_worker_) {
     system_services_worker_ = CreateWorker();
-    StartWorker(system_services_worker_.get());
+    if (!StartWorker(system_services_worker_.get())) {
+      system_services_worker_->Stop();
+      system_services_worker_.reset();
+      response.set_error_message("Failed to start worker process");
+      return SerializeProto(response);
+    }
   }
 
   brillo::MessageLoop::current()->PostTask(
@@ -120,9 +123,8 @@ std::vector<uint8_t> SystemProxyAdaptor::ShutDown() {
 void SystemProxyAdaptor::GetChromeProxyServersAsync(
     const std::string& target_url,
     const brillo::http::GetChromeProxyServersCallback& callback) {
-  brillo::http::GetChromeProxyServersAsync(
-      dbus_object_->GetBus(), target_url,
-      move(callback));
+  brillo::http::GetChromeProxyServersAsync(dbus_object_->GetBus(), target_url,
+                                           move(callback));
 }
 
 std::unique_ptr<SandboxedWorker> SystemProxyAdaptor::CreateWorker() {
@@ -140,24 +142,15 @@ void SystemProxyAdaptor::ShutDownTask() {
   brillo::MessageLoop::current()->BreakLoop();
 }
 
-void SystemProxyAdaptor::StartWorker(SandboxedWorker* worker) {
+bool SystemProxyAdaptor::StartWorker(SandboxedWorker* worker) {
   DCHECK(worker);
-  worker->Start();
-  if (!worker->IsRunning()) {
-    LOG(ERROR) << "Failed to start worker process";
-    return;
-  }
-  ConnectNamespace(worker);
+  return worker->Start() && ConnectNamespace(worker);
 }
 
-void SystemProxyAdaptor::ConnectNamespace(SandboxedWorker* worker) {
+bool SystemProxyAdaptor::ConnectNamespace(SandboxedWorker* worker) {
   // TODO(acostinas,b/147712924) Call the datapath service to setup routing and
   // create a veth pair for the network namespace.
-}
-
-void SystemProxyAdaptor::OnConnectNamespace(
-    SandboxedWorker* worker, const patchpanel::IPv4Subnet& ipv4_subnet) {
-  worker->SetListeningAddress(ipv4_subnet.base_addr(), kProxyPort);
+  return true;
 }
 
 }  // namespace system_proxy

@@ -29,13 +29,13 @@ class SandboxedWorker {
   virtual ~SandboxedWorker() = default;
 
   // Starts a sandboxed worker with pipes.
-  virtual void Start();
+  virtual bool Start();
   // Sends the username and password to the worker via communication pipes.
   void SetUsernameAndPassword(const std::string& username,
                               const std::string& password);
   // Sends the listening address and port to the worker via communication
   // pipes.
-  void SetListeningAddress(uint32_t addr, int port);
+  bool SetListeningAddress(uint32_t addr, int port);
 
   // Terminates the child process by sending a SIGTERM signal.
   virtual bool Stop();

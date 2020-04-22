@@ -38,11 +38,11 @@ namespace system_proxy {
 SandboxedWorker::SandboxedWorker(base::WeakPtr<SystemProxyAdaptor> adaptor)
     : jail_(minijail_new()), adaptor_(adaptor), pid_(0) {}
 
-void SandboxedWorker::Start() {
+bool SandboxedWorker::Start() {
   DCHECK(!IsRunning()) << "Worker is already running.";
 
   if (!jail_)
-    return;
+    return false;
 
   minijail_namespace_net(jail_.get());
   minijail_no_new_privs(jail_.get());
@@ -63,7 +63,7 @@ void SandboxedWorker::Start() {
 
   if (res != 0) {
     LOG(ERROR) << "Failed to start sandboxed worker: " << strerror(-res);
-    return;
+    return false;
   }
 
   // Make sure the pipes never block.
@@ -84,9 +84,9 @@ void SandboxedWorker::Start() {
                           base::Unretained(this)));
 
   stderr_watcher_ = base::FileDescriptorWatcher::WatchReadable(
-      stderr_pipe_.get(),
-      base::BindRepeating(&SandboxedWorker::OnErrorReceived,
-                          base::Unretained(this)));
+      stderr_pipe_.get(), base::BindRepeating(&SandboxedWorker::OnErrorReceived,
+                                              base::Unretained(this)));
+  return true;
 }
 
 void SandboxedWorker::SetUsernameAndPassword(const std::string& username,
@@ -101,7 +101,7 @@ void SandboxedWorker::SetUsernameAndPassword(const std::string& username,
   }
 }
 
-void SandboxedWorker::SetListeningAddress(uint32_t addr, int port) {
+bool SandboxedWorker::SetListeningAddress(uint32_t addr, int port) {
   SocketAddress address;
   address.set_addr(addr);
   address.set_port(port);
@@ -109,8 +109,10 @@ void SandboxedWorker::SetListeningAddress(uint32_t addr, int port) {
   *configs.mutable_listening_address() = address;
 
   if (!WriteProtobuf(stdin_pipe_.get(), configs)) {
-    LOG(ERROR) << "Failed to set local proy address for worker " << pid_;
+    LOG(ERROR) << "Failed to set local proxy address for worker " << pid_;
+    return false;
   }
+  return true;
 }
 
 bool SandboxedWorker::Stop() {

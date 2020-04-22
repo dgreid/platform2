@@ -65,12 +65,9 @@ class SystemProxyAdaptor : public org::chromium::SystemProxyAdaptor,
 
   void ShutDownTask();
 
-  void StartWorker(SandboxedWorker* worker);
+  bool StartWorker(SandboxedWorker* worker);
 
-  void ConnectNamespace(SandboxedWorker* worker);
-
-  void OnConnectNamespace(SandboxedWorker* worker,
-                          const patchpanel::IPv4Subnet& ipv4_subnet);
+  bool ConnectNamespace(SandboxedWorker* worker);
 
   // The callback of |GetChromeProxyServersAsync|.
   void OnGetProxyServers(bool success, const std::vector<std::string>& servers);
