@@ -40,9 +40,6 @@
 extern "C" {
 #endif
 
-// Opaque type for camera instance
-typedef void* cros_cam_device_t;
-
 // Format descriptor
 typedef struct cros_cam_format_info_t_ {
   uint32_t fourcc;  // format type (FOURCC code)
@@ -54,7 +51,7 @@ typedef struct cros_cam_format_info_t_ {
 // Camera descriptor
 //   At least one format expected (format_count >= 1)
 typedef struct cros_cam_info_t_ {
-  cros_cam_device_t id;   // device id
+  int id;                 // device id
   const char* name;       // user friendly camera name, UTF8
   unsigned format_count;  // number of format descriptors
   cros_cam_format_info_t*
@@ -161,7 +158,7 @@ CROS_CAMERA_EXPORT int cros_cam_get_cam_info(
 //   0  - on success
 //   <0 - on failure
 CROS_CAMERA_EXPORT int cros_cam_start_capture(
-    cros_cam_device_t id,
+    int id,
     const cros_cam_format_info_t* format,
     cros_cam_capture_cb_t callback,
     void* context);
@@ -172,7 +169,7 @@ CROS_CAMERA_EXPORT int cros_cam_start_capture(
 //
 // Params:
 //   id         - the camera device on which we want to stop
-CROS_CAMERA_EXPORT void cros_cam_stop_capture(cros_cam_device_t id);
+CROS_CAMERA_EXPORT void cros_cam_stop_capture(int id);
 
 #ifdef __cplusplus
 }

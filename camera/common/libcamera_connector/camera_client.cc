@@ -56,7 +56,6 @@ void CameraClient::Init(RegisterClientCallback register_client_callback,
     std::move(init_callback).Run(-ENODEV);
     return;
   }
-  std::set<cros_cam_device_t> active_devices_;
   init_callback_ = std::move(init_callback);
   ipc_thread_.task_runner()->PostTask(
       FROM_HERE,
@@ -106,7 +105,7 @@ int CameraClient::SetCameraInfoCallback(cros_cam_get_cam_info_cb_t callback,
   return 0;
 }
 
-int CameraClient::StartCapture(cros_cam_device_t id,
+int CameraClient::StartCapture(int id,
                                const cros_cam_format_info_t* format,
                                cros_cam_capture_cb_t callback,
                                void* context) {
@@ -119,7 +118,7 @@ int CameraClient::StartCapture(cros_cam_device_t id,
   LOGF(INFO) << "Starting capture";
 
   // TODO(b/151047930): Check whether this format info is actually supported.
-  request_camera_id_ = *reinterpret_cast<int32_t*>(id);
+  request_camera_id_ = id;
   request_format_ = *format;
   request_callback_ = callback;
   request_context_ = context;
@@ -138,7 +137,7 @@ int CameraClient::StartCapture(cros_cam_device_t id,
   return future->Get();
 }
 
-void CameraClient::StopCapture(cros_cam_device_t id) {
+void CameraClient::StopCapture(int id) {
   VLOGF_ENTER();
   if (!IsDeviceActive(id)) {
     LOGF(ERROR) << "Cannot stop capture on an inactive device";
@@ -147,9 +146,8 @@ void CameraClient::StopCapture(cros_cam_device_t id) {
 
   LOGF(INFO) << "Stopping capture";
 
-  int32_t camera_id = *reinterpret_cast<int32_t*>(id);
   // TODO(lnishan): Support multi-device streaming.
-  CHECK_EQ(request_camera_id_, camera_id);
+  CHECK_EQ(request_camera_id_, id);
 
   base::AutoLock l(capture_started_lock_);
   if (!capture_started_) {
@@ -200,7 +198,6 @@ void CameraClient::OnGotNumberOfCameras(int32_t num_builtin_cameras) {
 
   for (int32_t i = 0; i < num_builtin_cameras_; ++i) {
     camera_id_list_.push_back(i);
-    active_devices_.insert(&camera_id_list_.back());
   }
   if (num_builtin_cameras_ == 0) {
     std::move(init_callback_).Run(0);
@@ -283,7 +280,7 @@ void CameraClient::SendCameraInfo() {
       continue;
     }
     cros_cam_info_t cam_info = {
-        .id = reinterpret_cast<void*>(&camera_id),
+        .id = camera_id,
         .name = it->second.name.c_str(),
         .format_count = static_cast<unsigned>(it->second.format_info.size()),
         .format_info = it->second.format_info.data()};
@@ -348,8 +345,8 @@ void CameraClient::OnClosedDevice(int32_t result) {
   std::move(stop_callback_).Run(result);
 }
 
-bool CameraClient::IsDeviceActive(cros_cam_device_t device) {
-  return active_devices_.find(device) != active_devices_.end();
+bool CameraClient::IsDeviceActive(int device) {
+  return camera_info_map_.find(device) != camera_info_map_.end();
 }
 
 }  // namespace cros

@@ -24,7 +24,7 @@ int cros_cam_get_cam_info(cros_cam_get_cam_info_cb_t callback, void* context) {
   return connector->GetCameraInfo(callback, context);
 }
 
-int cros_cam_start_capture(cros_cam_device_t id,
+int cros_cam_start_capture(int id,
                            const cros_cam_format_info_t* format,
                            cros_cam_capture_cb_t callback,
                            void* context) {
@@ -32,7 +32,7 @@ int cros_cam_start_capture(cros_cam_device_t id,
   return connector->StartCapture(id, format, callback, context);
 }
 
-void cros_cam_stop_capture(cros_cam_device_t id) {
+void cros_cam_stop_capture(int id) {
   auto* connector = cros::CameraServiceConnector::GetInstance();
   connector->StopCapture(id);
 }

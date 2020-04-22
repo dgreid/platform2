@@ -152,7 +152,7 @@ class FrameCapturer {
     return *this;
   }
 
-  int Run(cros_cam_device_t id, cros_cam_format_info_t format) {
+  int Run(int id, cros_cam_format_info_t format) {
     num_frames_captured_ = 0;
     capture_done_.Reset();
     format_ = format;
@@ -237,7 +237,7 @@ class CameraClient {
     }
   }
 
-  cros_cam_device_t FindIdForFormat(const cros_cam_format_info_t& format) {
+  int FindIdForFormat(const cros_cam_format_info_t& format) {
     for (const auto& info : camera_infos_) {
       for (int i = 0; i < info.format_count; i++) {
         if (IsSameFormat(format, info.format_info[i])) {
@@ -245,7 +245,7 @@ class CameraClient {
         }
       }
     }
-    return nullptr;
+    return -1;
   }
 
  private:
@@ -276,13 +276,13 @@ class CaptureTest
     client_.ProbeCameraInfo();
     format_ = GetParam();
     camera_id_ = client_.FindIdForFormat(format_);
-    ASSERT_NE(camera_id_, nullptr);
+    ASSERT_NE(camera_id_, -1);
   }
 
   CameraClient client_;
   FrameCapturer capturer_;
 
-  cros_cam_device_t camera_id_;
+  int camera_id_;
   cros_cam_format_info_t format_;
 };
 
@@ -309,8 +309,8 @@ TEST(ConnectorTest, CompareFrames) {
   CameraClient client;
   client.ProbeCameraInfo();
 
-  cros_cam_device_t id = client.FindIdForFormat(kTestFormats[0]);
-  ASSERT_NE(id, nullptr);
+  int id = client.FindIdForFormat(kTestFormats[0]);
+  ASSERT_NE(id, -1);
 
   FrameCapturer capturer;
   capturer.SetNumFrames(1);

@@ -52,13 +52,13 @@ class CameraClient final : public mojom::CameraHalClient {
 
   // Starts capturing with the given parameters. Blocks until the device is
   // opened.
-  int StartCapture(cros_cam_device_t id,
+  int StartCapture(int id,
                    const cros_cam_format_info_t* format,
                    cros_cam_capture_cb_t callback,
                    void* context);
 
   // Stops capturing immediately. Blocks until the camera device is closed.
-  void StopCapture(cros_cam_device_t id);
+  void StopCapture(int id);
 
  private:
   struct CameraInfo {
@@ -91,7 +91,7 @@ class CameraClient final : public mojom::CameraHalClient {
 
   void OnClosedDevice(int32_t result);
 
-  bool IsDeviceActive(cros_cam_device_t device);
+  bool IsDeviceActive(int device);
 
   base::Thread ipc_thread_;
 
@@ -108,7 +108,6 @@ class CameraClient final : public mojom::CameraHalClient {
   std::list<int32_t> camera_id_list_;
   std::list<int32_t>::iterator camera_id_iter_;
   std::map<int32_t, CameraInfo> camera_info_map_;
-  std::set<cros_cam_device_t> active_devices_;
 
   CameraClientOps client_ops_;
   IntOnceCallback start_callback_;
