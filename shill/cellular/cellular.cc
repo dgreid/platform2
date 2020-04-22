@@ -1165,6 +1165,10 @@ void Cellular::OnPPPConnected(const map<string, string>& params) {
   if (!ppp_device_ || ppp_device_->interface_index() != interface_index) {
     if (ppp_device_) {
       ppp_device_->SelectService(nullptr);  // No longer drives |service_|.
+      // Destroy the existing device before creating a new one to avoid the
+      // possibility of multiple DBus Objects with the same interface name.
+      // See https://crbug.com/1032030 for details.
+      ppp_device_ = nullptr;
     }
     ppp_device_ = ppp_device_factory_->CreatePPPDevice(
         manager(), interface_name, interface_index);
