@@ -13,7 +13,7 @@ FakeProbeService::~FakeProbeService() = default;
 
 void FakeProbeService::ProbeTelemetryInfo(
     const std::vector<ProbeCategoryEnum>& categories,
-    const ProbeTelemetryInfoCallback& callback) {
+    ProbeTelemetryInfoCallback callback) {
   NOTIMPLEMENTED();
 }
 

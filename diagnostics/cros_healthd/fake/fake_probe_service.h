@@ -25,7 +25,7 @@ class FakeProbeService final
 
   // chromeos::cros_healthd::mojom::CrosHealthdProbeService overrides:
   void ProbeTelemetryInfo(const std::vector<ProbeCategoryEnum>& categories,
-                          const ProbeTelemetryInfoCallback& callback) override;
+                          ProbeTelemetryInfoCallback callback) override;
 
  private:
   DISALLOW_COPY_AND_ASSIGN(FakeProbeService);
