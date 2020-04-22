@@ -189,12 +189,27 @@ bool MountHelper::EnsureDirHasOwner(const FilePath& dir,
   return true;
 }
 
-bool MountHelper::EnsureNewUserDirExists(const FilePath& dir,
-                                         uid_t uid,
-                                         gid_t gid) const {
-  if (!EnsureDirHasOwner(dir.DirName(), uid, gid))
+bool MountHelper::EnsureNewUserDirExists(const std::string& username) const {
+  FilePath dir(GetNewUserPath(username));
+  if (!EnsureDirHasOwner(dir.DirName(), default_uid_, default_gid_)) {
+    LOG(ERROR) << "EnsureDirHasOwner() failed: " << dir.value();
     return false;
-  return platform_->CreateDirectory(dir);
+  }
+  if (!platform_->CreateDirectory(dir)) {
+    // chronos can modify the contents of /home/chronos.
+    // Try deleting the file or link at /home/chronos/u-$hash to be robust
+    // against malicious code running as chronos.
+    if (!platform_->DeleteFile(dir, /*recursive=*/ false)) {
+      LOG(ERROR) << "DeleteFile() failed: " << dir.value();
+      return false;
+    }
+    // Try again.
+    if (!platform_->CreateDirectory(dir)) {
+      LOG(ERROR) << "CreateDirectory() failed: " << dir.value();
+      return false;
+    }
+  }
+  return true;
 }
 
 void MountHelper::MigrateToUserHome(const FilePath& vault_path) const {
@@ -275,7 +290,6 @@ void MountHelper::MigrateToUserHome(const FilePath& vault_path) const {
 bool MountHelper::EnsureUserMountPoints(const std::string& username) const {
   FilePath root_path = GetRootPath(username);
   FilePath user_path = GetUserPath(username);
-  FilePath temp_path(GetNewUserPath(username));
   if (!EnsureDirHasOwner(root_path, kMountOwnerUid, kMountOwnerGid)) {
     LOG(ERROR) << "Couldn't ensure root path: " << root_path.value();
     return false;
@@ -284,8 +298,8 @@ bool MountHelper::EnsureUserMountPoints(const std::string& username) const {
     LOG(ERROR) << "Couldn't ensure user path: " << user_path.value();
     return false;
   }
-  if (!EnsureNewUserDirExists(temp_path, default_uid_, default_gid_)) {
-    LOG(ERROR) << "Couldn't ensure temp path: " << temp_path.value();
+  if (!EnsureNewUserDirExists(username)) {
+    LOG(ERROR) << "Couldn't ensure temp path.";
     return false;
   }
   return true;

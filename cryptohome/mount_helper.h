@@ -212,14 +212,13 @@ class MountHelper : public EphemeralMountHelperInterface {
                            uid_t uid,
                            gid_t gid) const;
 
-  // Ensures that the permissions on every parent of |dir| are correct and that
-  // they are all directories. Since we're going to bind-mount over |dir|
-  // itself, we don't care what the permissions on it are, just that it exists.
-  // |dir| looks like: /home/chronos/u-$hash
-  // /home needs to be root:root, /home/chronos needs to be uid:gid.
-  bool EnsureNewUserDirExists(const base::FilePath& dir,
-                              uid_t uid,
-                              gid_t gid) const;
+  // Ensures that the permissions on every parent of /home/chronos/u-$hash are
+  // correct and that they are all directories. Since we're going to bind-mount
+  // over the directory, we don't care what the permissions on it are, just that
+  // it exists.
+  // /home needs to be root:root.
+  // /home/chronos needs to be default_uid_:default_gid_.
+  bool EnsureNewUserDirExists(const std::string& username) const;
 
   // Attempts to unmount a mountpoint. If the unmount fails, logs processes with
   // open handles to it and performs a lazy unmount.
