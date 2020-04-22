@@ -13,7 +13,34 @@
 
 namespace brillo {
 
-class BRILLO_EXPORT MountNamespace {
+class BRILLO_EXPORT MountNamespaceInterface {
+  // An interface declaring the basic functionality of a mount namespace bound
+  // to a specific path. This basic functionality consists of reporting the
+  // namespace path.
+ public:
+  virtual ~MountNamespaceInterface() = default;
+
+  virtual const base::FilePath& path() const = 0;
+};
+
+class BRILLO_EXPORT UnownedMountNamespace : public MountNamespaceInterface {
+  // A class to store and retrieve the path of a persistent namespace. This
+  // class doesn't create nor destroy the namespace.
+ public:
+  explicit UnownedMountNamespace(const base::FilePath& ns_path)
+      : ns_path_(ns_path) {}
+
+  ~UnownedMountNamespace() override;
+
+  const base::FilePath& path() const override { return ns_path_; }
+
+ private:
+  base::FilePath ns_path_;
+
+  DISALLOW_COPY_AND_ASSIGN(UnownedMountNamespace);
+};
+
+class BRILLO_EXPORT MountNamespace : public MountNamespaceInterface {
   // A class to create a persistent mount namespace bound to a specific path.
   // A new mount namespace is unshared from the mount namespace of the calling
   // process when Create() is called; the namespace of the calling process
@@ -24,11 +51,11 @@ class BRILLO_EXPORT MountNamespace {
   // destroyed when the object goes out of scope.
  public:
   MountNamespace(const base::FilePath& ns_path, Platform* platform);
-  ~MountNamespace();
+  ~MountNamespace() override;
 
   bool Create();
   bool Destroy();
-  const base::FilePath& path() const { return ns_path_; }
+  const base::FilePath& path() const override { return ns_path_; }
 
  private:
   base::FilePath ns_path_;
