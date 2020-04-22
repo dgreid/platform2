@@ -21,11 +21,16 @@
 #include <dbus/object_path.h>
 #include <dbus/message.h>
 #include <dbus/mock_bus.h>
+#include <dbus/mock_object_proxy.h>
+#include <chromeos/dbus/service_constants.h>
 
 #include "bindings/worker_common.pb.h"
 #include "system_proxy/proto_bindings/system_proxy_service.pb.h"
 #include "system-proxy/protobuf_util.h"
 #include "system-proxy/sandboxed_worker.h"
+
+using testing::_;
+using testing::Return;
 
 namespace system_proxy {
 namespace {
@@ -63,6 +68,9 @@ class FakeSystemProxyAdaptor : public SystemProxyAdaptor {
     return std::make_unique<FakeSandboxedWorker>(
         weak_ptr_factory_.GetWeakPtr());
   }
+  bool ConnectNamespace(SandboxedWorker* worker, bool user_traffic) override {
+    return true;
+  }
 
  private:
   base::WeakPtrFactory<FakeSystemProxyAdaptor> weak_ptr_factory_;
@@ -76,6 +84,9 @@ class SystemProxyAdaptorTest : public ::testing::Test {
     adaptor_.reset(new FakeSystemProxyAdaptor(
         std::make_unique<brillo::dbus_utils::DBusObject>(nullptr, bus_,
                                                          object_path)));
+    mock_patchpanel_proxy_ = base::MakeRefCounted<dbus::MockObjectProxy>(
+        bus_.get(), patchpanel::kPatchPanelServiceName,
+        dbus::ObjectPath(patchpanel::kPatchPanelServicePath));
     brillo_loop_.SetAsCurrent();
   }
   SystemProxyAdaptorTest(const SystemProxyAdaptorTest&) = delete;
@@ -86,11 +97,15 @@ class SystemProxyAdaptorTest : public ::testing::Test {
   // SystemProxyAdaptor instance that creates fake worker processes.
   std::unique_ptr<FakeSystemProxyAdaptor> adaptor_;
   scoped_refptr<dbus::MockBus> bus_ = new dbus::MockBus(dbus::Bus::Options());
+  scoped_refptr<dbus::MockObjectProxy> mock_patchpanel_proxy_;
   base::MessageLoopForIO loop_;
   brillo::BaseMessageLoop brillo_loop_{&loop_};
 };
 
 TEST_F(SystemProxyAdaptorTest, SetSystemTrafficCredentials) {
+  EXPECT_CALL(*bus_, GetObjectProxy(patchpanel::kPatchPanelServiceName, _))
+      .WillOnce(Return(mock_patchpanel_proxy_.get()));
+
   EXPECT_FALSE(adaptor_->system_services_worker_.get());
   SetSystemTrafficCredentialsRequest request;
   request.set_system_services_username(kUser);
@@ -122,6 +137,8 @@ TEST_F(SystemProxyAdaptorTest, SetSystemTrafficCredentials) {
 }
 
 TEST_F(SystemProxyAdaptorTest, ShutDown) {
+  EXPECT_CALL(*bus_, GetObjectProxy(patchpanel::kPatchPanelServiceName, _))
+      .WillOnce(Return(mock_patchpanel_proxy_.get()));
   EXPECT_FALSE(adaptor_->system_services_worker_.get());
   SetSystemTrafficCredentialsRequest request;
   request.set_system_services_username(kUser);

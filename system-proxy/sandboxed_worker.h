@@ -42,6 +42,8 @@ class SandboxedWorker {
 
   virtual bool IsRunning();
 
+  void SetNetNamespaceLifelineFd(base::ScopedFD net_namespace_lifeline_fd);
+
   pid_t pid() { return pid_; }
 
  private:
@@ -62,6 +64,11 @@ class SandboxedWorker {
   base::ScopedFD stdin_pipe_;
   base::ScopedFD stdout_pipe_;
   base::ScopedFD stderr_pipe_;
+
+  // The fd will be released when the owning sandbox worker instance is
+  // destroyed. Closing this fd will signal to the patchpanel service to tear
+  // down the network namespace setup for the associated worker process.
+  base::ScopedFD net_namespace_lifeline_fd_;
 
   std::unique_ptr<base::FileDescriptorWatcher::Controller> stdout_watcher_;
   std::unique_ptr<base::FileDescriptorWatcher::Controller> stderr_watcher_;

@@ -10,12 +10,17 @@
 #include <base/location.h>
 #include <brillo/dbus/dbus_object.h>
 #include <brillo/message_loops/message_loop.h>
+#include <chromeos/dbus/service_constants.h>
+#include <chromeos/patchpanel/client.h>
+#include <dbus/object_proxy.h>
 
 #include "system_proxy/proto_bindings/system_proxy_service.pb.h"
 #include "system-proxy/sandboxed_worker.h"
 
 namespace system_proxy {
 namespace {
+
+constexpr int kProxyPort = 3128;
 
 // Serializes |proto| to a vector of bytes.
 std::vector<uint8_t> SerializeProto(
@@ -76,12 +81,21 @@ std::vector<uint8_t> SystemProxyAdaptor::SetSystemTrafficCredentials(
 
   if (!system_services_worker_) {
     system_services_worker_ = CreateWorker();
-    if (!StartWorker(system_services_worker_.get())) {
-      system_services_worker_->Stop();
+    if (!StartWorker(system_services_worker_.get(),
+                     /* user_traffic= */ false)) {
       system_services_worker_.reset();
+
       response.set_error_message("Failed to start worker process");
       return SerializeProto(response);
     }
+    // patchpanel_proxy is owned by |dbus_object_->bus_|.
+    dbus::ObjectProxy* patchpanel_proxy =
+        dbus_object_->GetBus()->GetObjectProxy(
+            patchpanel::kPatchPanelServiceName,
+            dbus::ObjectPath(patchpanel::kPatchPanelServicePath));
+    patchpanel_proxy->WaitForServiceToBeAvailable(
+        base::Bind(&SystemProxyAdaptor::OnPatchpanelServiceAvailable,
+                   weak_ptr_factory_.GetWeakPtr()));
   }
 
   brillo::MessageLoop::current()->PostTask(
@@ -142,15 +156,45 @@ void SystemProxyAdaptor::ShutDownTask() {
   brillo::MessageLoop::current()->BreakLoop();
 }
 
-bool SystemProxyAdaptor::StartWorker(SandboxedWorker* worker) {
+bool SystemProxyAdaptor::StartWorker(SandboxedWorker* worker,
+                                     bool user_traffic) {
   DCHECK(worker);
-  return worker->Start() && ConnectNamespace(worker);
+  return worker->Start();
 }
 
-bool SystemProxyAdaptor::ConnectNamespace(SandboxedWorker* worker) {
-  // TODO(acostinas,b/147712924) Call the datapath service to setup routing and
-  // create a veth pair for the network namespace.
-  return true;
+// Called when the patchpanel D-Bus service becomes available.
+void SystemProxyAdaptor::OnPatchpanelServiceAvailable(bool is_available) {
+  if (!is_available) {
+    LOG(ERROR) << "Patchpanel service not available";
+    return;
+  }
+  if (system_services_worker_) {
+    DCHECK(system_services_worker_->IsRunning());
+    ConnectNamespace(system_services_worker_.get(), /* user_traffic= */ false);
+  }
+}
+
+bool SystemProxyAdaptor::ConnectNamespace(SandboxedWorker* worker,
+                                          bool user_traffic) {
+  std::unique_ptr<patchpanel::Client> patchpanel_client =
+      patchpanel::Client::New();
+  if (!patchpanel_client) {
+    LOG(ERROR) << "Failed to open networking service client";
+    return false;
+  }
+
+  std::pair<base::ScopedFD, patchpanel::ConnectNamespaceResponse> result =
+      patchpanel_client->ConnectNamespace(
+          worker->pid(), "" /* outbound_ifname */, user_traffic);
+
+  if (!result.first.is_valid()) {
+    LOG(ERROR) << "Failed to setup network namespace";
+    return false;
+  }
+
+  worker->SetNetNamespaceLifelineFd(std::move(result.first));
+  return worker->SetListeningAddress(result.second.peer_ipv4_address(),
+                                     kProxyPort);
 }
 
 }  // namespace system_proxy

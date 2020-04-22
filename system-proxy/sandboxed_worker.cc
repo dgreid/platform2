@@ -9,6 +9,7 @@
 #include <sys/types.h>
 
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <base/bind.h>
@@ -44,6 +45,7 @@ bool SandboxedWorker::Start() {
   if (!jail_)
     return false;
 
+  minijail_namespace_pids(jail_.get());
   minijail_namespace_net(jail_.get());
   minijail_no_new_privs(jail_.get());
   minijail_use_seccomp_filter(jail_.get());
@@ -162,6 +164,14 @@ void SandboxedWorker::OnMessageReceived() {
                             weak_ptr_factory_.GetWeakPtr(),
                             proxy_request.target_url()));
   }
+}
+
+void SandboxedWorker::SetNetNamespaceLifelineFd(
+    base::ScopedFD net_namespace_lifeline_fd) {
+  // Sanity check that only one network namespace is setup for the worker
+  // process.
+  DCHECK(!net_namespace_lifeline_fd.is_valid());
+  net_namespace_lifeline_fd_ = std::move(net_namespace_lifeline_fd);
 }
 
 void SandboxedWorker::OnErrorReceived() {
