@@ -59,7 +59,8 @@ typeDefs:
         type: string
     additionalProperties: false
   sku-id: &sku_id
-    description: "SKU/Board strapping pins configured during board manufacturing."
+    description: SKU/Board strapping pins configured during board manufacturing.
+      Leaving this value unset will cause the config to match any SKU ID.
     type: integer
     minimum: -1
     maximum: 0x7FFFFFFF
@@ -502,7 +503,8 @@ properties:
                 - properties:
                     smbios-name-match:
                       description: "[x86] Firmware name built into the firmware and reflected back
-                        out in the SMBIOS tables."
+                        out in the SMBIOS tables. Leaving this value unset will cause the config
+                        to match any SMBIOS product name."
                       type: string
                     sku-id: *sku_id
                     platform-name: *platform_name
