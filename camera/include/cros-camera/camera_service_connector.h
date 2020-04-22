@@ -169,7 +169,10 @@ CROS_CAMERA_EXPORT int cros_cam_start_capture(
 //
 // Params:
 //   id         - the camera device on which we want to stop
-CROS_CAMERA_EXPORT void cros_cam_stop_capture(int id);
+// Returns:
+//   0  - on success
+//   <0 - on failure
+CROS_CAMERA_EXPORT int cros_cam_stop_capture(int id);
 
 #ifdef __cplusplus
 }

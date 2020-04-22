@@ -32,7 +32,7 @@ int cros_cam_start_capture(int id,
   return connector->StartCapture(id, format, callback, context);
 }
 
-void cros_cam_stop_capture(int id) {
+int cros_cam_stop_capture(int id) {
   auto* connector = cros::CameraServiceConnector::GetInstance();
-  connector->StopCapture(id);
+  return connector->StopCapture(id);
 }

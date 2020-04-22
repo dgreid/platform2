@@ -101,13 +101,13 @@ int CameraServiceConnector::StartCapture(int id,
   return camera_client_->StartCapture(id, format, callback, context);
 }
 
-void CameraServiceConnector::StopCapture(int id) {
+int CameraServiceConnector::StopCapture(int id) {
   if (!initialized_.IsSet()) {
     LOGF(ERROR) << "Should run init() before other functions";
-    return;
+    return -EPERM;
   }
 
-  camera_client_->StopCapture(id);
+  return camera_client_->StopCapture(id);
 }
 
 void CameraServiceConnector::RegisterClient(

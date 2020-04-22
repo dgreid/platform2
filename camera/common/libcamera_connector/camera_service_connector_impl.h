@@ -49,7 +49,7 @@ class CameraServiceConnector {
 
   // Stops capturing. Waits for the ongoing capture callback if there is any
   // underway.
-  void StopCapture(int id);
+  int StopCapture(int id);
 
  private:
   using ConnectDispatcherCallback = base::OnceCallback<void()>;

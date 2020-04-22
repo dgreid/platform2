@@ -79,7 +79,7 @@ class I420Buffer {
     const cros_cam_format_info_t& format = frame->format;
     I420Buffer buf(format.width, format.height);
 
-    // TODO(b/115453284): It's an anonymous struct now. We can give it a name
+    // TODO(b/151047930): It's an anonymous struct now. We can give it a name
     // to make it more clear.
     const auto planes = frame->plane;
 
@@ -166,6 +166,10 @@ class FrameCapturer {
     // Wait until |duration_| passed or |num_frames_| captured.
     capture_done_.TimedWait(duration_);
 
+    // TODO(b/151047930): Check the return value and only call this when
+    // TimedWait() return false. There is a bug in libcamera_connector so we
+    // cannot do this yet, otherwise the next cros_cam_start_capture() will
+    // fail.
     cros_cam_stop_capture(id);
     if (!capture_done_.IsSignaled()) {
       capture_done_.Signal();

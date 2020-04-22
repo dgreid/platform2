@@ -137,11 +137,11 @@ int CameraClient::StartCapture(int id,
   return future->Get();
 }
 
-void CameraClient::StopCapture(int id) {
+int CameraClient::StopCapture(int id) {
   VLOGF_ENTER();
   if (!IsDeviceActive(id)) {
     LOGF(ERROR) << "Cannot stop capture on an inactive device";
-    return;
+    return -ENODEV;
   }
 
   LOGF(INFO) << "Stopping capture";
@@ -152,16 +152,14 @@ void CameraClient::StopCapture(int id) {
   base::AutoLock l(capture_started_lock_);
   if (!capture_started_) {
     LOGF(WARNING) << "Capture already stopped";
-    return;
+    return -EPERM;
   }
 
   auto future = cros::Future<int>::Create(nullptr);
   stop_callback_ = cros::GetFutureCallback(future);
   client_ops_.StopCapture(
       base::Bind(&CameraClient::OnClosedDevice, base::Unretained(this)));
-  if (future->Get() != 0) {
-    LOGF(ERROR) << "Failed to close device";
-  }
+  return future->Get();
 }
 
 void CameraClient::RegisterClient(

@@ -58,7 +58,7 @@ class CameraClient final : public mojom::CameraHalClient {
                    void* context);
 
   // Stops capturing immediately. Blocks until the camera device is closed.
-  void StopCapture(int id);
+  int StopCapture(int id);
 
  private:
   struct CameraInfo {
