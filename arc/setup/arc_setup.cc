@@ -21,7 +21,6 @@
 #include <array>
 #include <limits>
 #include <memory>
-#include <string>
 #include <vector>
 
 #include <base/bind.h>
@@ -42,12 +41,13 @@
 #include <base/timer/elapsed_timer.h>
 #include <brillo/cryptohome.h>
 #include <brillo/file_utils.h>
+#include <brillo/files/safe_fd.h>
 #include <brillo/scoped_mount_namespace.h>
 #include <chromeos-config/libcros_config/cros_config.h>
+#include <chromeos/patchpanel/client.h>
 #include <crypto/random.h>
 #include <metrics/bootstat.h>
 #include <metrics/metrics_library.h>
-#include <chromeos/patchpanel/client.h>
 
 #include "arc/setup/art_container.h"
 
@@ -474,6 +474,7 @@ bool IsChromeOSUserAvailable(Mode mode) {
     case Mode::BOOT_CONTINUE:
     case Mode::CREATE_DATA:
     case Mode::REMOVE_DATA:
+    case Mode::REMOVE_STALE_DATA:
       return true;
     case Mode::SETUP:
     case Mode::STOP:
@@ -486,6 +487,26 @@ bool IsChromeOSUserAvailable(Mode mode) {
     case Mode::UNKNOWN:
       return false;
   }
+}
+
+bool IsArcVmActive() {
+  brillo::SafeFD fd;
+  brillo::SafeFD::Error err;
+  std::tie(fd, err) = brillo::SafeFD::Root().first.OpenExistingFile(
+      base::FilePath("/run/chrome/is_arcvm"));
+  if (err == brillo::SafeFD::Error::kDoesNotExist) {
+    return false;
+  }
+  EXIT_IF(!fd.is_valid());
+
+  std::vector<char> buf;
+  std::tie(buf, err) = fd.ReadContents();
+  EXIT_IF(err != brillo::SafeFD::Error::kNoError);
+
+  int active = 0;
+  EXIT_IF(!base::StringToInt(std::string(buf.begin(), buf.end()), &active));
+
+  return active == 1;
 }
 
 }  // namespace
@@ -590,7 +611,7 @@ ArcSetup::ArcSetup(Mode mode, const base::FilePath& config_json)
       arc_paths_(ArcPaths::Create(mode_, config_)),
       arc_setup_metrics_(std::make_unique<ArcSetupMetrics>()) {
   CHECK(mode == Mode::CREATE_DATA || mode == Mode::REMOVE_DATA ||
-        !config_json.empty());
+        mode == Mode::REMOVE_STALE_DATA || !config_json.empty());
 }
 
 ArcSetup::~ArcSetup() = default;
@@ -2225,6 +2246,49 @@ void ArcSetup::OnRemoveData() {
                                  arc_paths_->android_data_old_directory));
 }
 
+void ArcSetup::OnRemoveStaleData() {
+  // To protect itself, base::SafeFD::RmDir() uses a default maximum
+  // recursion depth of 256. In this case, we are deleting the user's
+  // arbitrary filesystem and want to be more generous. However, RmDir()
+  // uses one fd per path level when recursing so we will have the max
+  // number of fds per process as an upper bound (default 1024). Leave a
+  // 25% buffer below this default 1024 limit to give lots of room for
+  // incidental usage elsewhere in the process. Use this everywhere here
+  // for consistency.
+  constexpr int kRmdirMaxDepth = 768;
+
+  brillo::SafeFD root = brillo::SafeFD::Root().first;
+  if (IsArcVmActive()) {
+    // On ARCVM, stale *.odex files are kept in /data/vendor/arc.
+    base::FilePath arcvm_stale_odex = arc_paths_->android_data_directory.Append(
+        "data/vendor/arc/old_arc_executables_pre_ota");
+    brillo::SafeFD parent_dir =
+        root.OpenExistingDir(arcvm_stale_odex.DirName()).first;
+    brillo::SafeFD::Error err = parent_dir.Rmdir(
+        arcvm_stale_odex.BaseName().value(), true /*recursive*/, kRmdirMaxDepth,
+        true /*keep_going*/);
+    if (brillo::SafeFD::IsError(err) &&
+        err != brillo::SafeFD::Error::kDoesNotExist) {
+      LOG(ERROR) << "Errors while cleaning old data from "
+                 << arcvm_stale_odex.value();
+    }
+  }
+
+  // Moving data to android_data_old no longer has race conditions so it is safe
+  // to delete the entire directory.
+  brillo::SafeFD parent_dir =
+      root.OpenExistingDir(arc_paths_->android_data_old_directory.DirName())
+          .first;
+  brillo::SafeFD::Error err = parent_dir.Rmdir(
+      arc_paths_->android_data_old_directory.BaseName().value(),
+      true /*recursive*/, kRmdirMaxDepth, true /*keep_going*/);
+  if (brillo::SafeFD::IsError(err) &&
+      err != brillo::SafeFD::Error::kDoesNotExist) {
+    LOG(ERROR) << "Errors while cleaning old data from "
+               << arc_paths_->android_data_old_directory.value();
+  }
+}
+
 void ArcSetup::OnCreateData() {
   // Bind mounting is not needed here because ARCVM does not use
   // |kAndroidRootfsDirectory|.
@@ -2320,6 +2384,9 @@ void ArcSetup::Run() {
       break;
     case Mode::REMOVE_DATA:
       OnRemoveData();
+      break;
+    case Mode::REMOVE_STALE_DATA:
+      OnRemoveStaleData();
       break;
     case Mode::MOUNT_SDCARD:
       OnMountSdcard();

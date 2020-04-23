@@ -8,6 +8,7 @@ group("all") {
   deps = [
     ":arc-create-data",
     ":arc-remove-data",
+    ":arc-remove-stale-data",
     ":arc-setup",
     ":generate_squashfs",
   ]
@@ -91,6 +92,16 @@ executable("arc-setup") {
 executable("arc-remove-data") {
   sources = [
     "arc_remove_data_main.cc",
+  ]
+  configs += [ ":target_defaults" ]
+  deps = [
+    ":libarc_setup",
+  ]
+}
+
+executable("arc-remove-stale-data") {
+  sources = [
+    "arc_remove_stale_data_main.cc",
   ]
   configs += [ ":target_defaults" ]
   deps = [

@@ -69,6 +69,7 @@ enum class Mode {
   PRE_CHROOT,
   CREATE_DATA,  // for ARCVM
   REMOVE_DATA,
+  REMOVE_STALE_DATA,
   MOUNT_SDCARD,
   UNMOUNT_SDCARD,
   UPDATE_RESTORECON_LAST,
@@ -352,6 +353,9 @@ class ArcSetup {
 
   // Called when arc-remove-data is executed.
   void OnRemoveData();
+
+  // Called when arc-remove-stale-data is executed.
+  void OnRemoveStaleData();
 
   // Called when arc-setup is called with --mode=mount-sdcard.
   void OnMountSdcard();
