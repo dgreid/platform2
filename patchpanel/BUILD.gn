@@ -60,9 +60,43 @@ util_sources = [
   "subnet_pool.cc",
 ]
 
+libarcnetwork_sources = [
+  "adb_proxy.cc",
+  "arc_service.cc",
+  "broadcast_forwarder.cc",
+  "crostini_service.cc",
+  "datapath.cc",
+  "device.cc",
+  "dns/big_endian.cc",
+  "dns/dns_response.cc",
+  "dns/io_buffer.cc",
+  "helper_process.cc",
+  "manager.cc",
+  "message_dispatcher.cc",
+  "minijailed_process_runner.cc",
+  "multicast_forwarder.cc",
+  "multicast_proxy.cc",
+  "ndproxy.cc",
+  "routing_service.cc",
+  "scoped_ns.cc",
+  "shill_client.cc",
+]
+
 shared_library("libarcnetwork-util") {
   sources = util_sources
   configs += [ ":target_defaults" ]
+}
+
+static_library("libarcnetwork_test") {
+  configs += [ ":target_defaults" ]
+  all_dependent_pkg_deps = [
+    "protobuf",
+    "system_api",
+  ]
+  sources = libarcnetwork_sources
+  deps = [
+    ":protos",
+  ]
 }
 
 static_library("libarcnetwork") {
@@ -71,28 +105,7 @@ static_library("libarcnetwork") {
     "protobuf",
     "system_api",
   ]
-  sources = [
-    "adb_proxy.cc",
-    "arc_service.cc",
-    "broadcast_forwarder.cc",
-    "crostini_service.cc",
-    "datapath.cc",
-    "device.cc",
-    "dns/big_endian.cc",
-    "dns/dns_response.cc",
-    "dns/io_buffer.cc",
-    "helper_process.cc",
-    "manager.cc",
-    "message_dispatcher.cc",
-    "minijailed_process_runner.cc",
-    "multicast_forwarder.cc",
-    "multicast_proxy.cc",
-    "ndproxy.cc",
-    "routing_service.cc",
-    "scoped_ns.cc",
-    "shill_client.cc",
-  ]
-  sources += util_sources
+  sources = libarcnetwork_sources + util_sources
   deps = [
     ":protos",
   ]
@@ -195,7 +208,7 @@ if (use.test) {
     ]
     defines = [ "UNIT_TEST" ]
     deps = [
-      ":libarcnetwork",
+      ":libarcnetwork_test",
       ":libpatchpanel-client",
       "//common-mk/testrunner",
     ]
