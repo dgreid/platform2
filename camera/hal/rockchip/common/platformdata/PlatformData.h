@@ -199,8 +199,8 @@ public:
     status_t init(const std::string &mediaDevicePath);
 
     const char* boardName(void) const { return mBoardName.c_str(); }
-    const char* productName(void) const { return mProductName.c_str(); }
-    const char* manufacturerName(void) const { return mManufacturerName.c_str(); }
+    const char* productName(void);
+    const char* manufacturerName(void);
     bool supportDualVideo(void) const { return mSupportDualVideo; }
     int getCameraDeviceAPIVersion(void) const { return mCameraDeviceAPIVersion; }
     bool supportExtendedMakernote(void) const { return mSupportExtendedMakernote; }
@@ -224,13 +224,14 @@ public:
     bool mSupportIPUAcceleration;
     bool mSupportFullColorRange;
     bool mHasMediaController; // TODO: REMOVE. WA to overcome BXT MC-related issue with camera ID <-> ISP port
+    bool mPropertyRead;
     media_device_info mDeviceInfo;
     std::vector<struct SensorDriverDescriptor> mSensorInfo;
     struct AiqdDataInfo mAiqdDataInfo[MAX_CAMERAS];
 private:
     // the below functions are used to init the mSensorInfo
     status_t initDriverList();
-    status_t readProperty();
+    status_t tryReadProperty();
     status_t findMediaControllerSensors();
     status_t findMediaDeviceInfo();
     status_t initDriverListHelper(unsigned major, unsigned minor, SensorDriverDescriptor& drvInfo);
