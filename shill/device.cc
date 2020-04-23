@@ -636,7 +636,7 @@ void Device::OnIPv6DnsServerAddressesChanged() {
     return;
   }
 
-  ip6config_->UpdateDNSServers(addresses_str);
+  ip6config_->UpdateDNSServers(std::move(addresses_str));
   UpdateIPConfigsProperty();
   OnIPv6ConfigUpdated();
 }
@@ -1027,7 +1027,7 @@ void Device::PrependDNSServersIntoIPConfig(const IPConfigRefPtr& ipconfig) {
     return;
   }
 
-  ipconfig->UpdateDNSServers(servers);
+  ipconfig->UpdateDNSServers(std::move(servers));
 }
 
 void Device::PrependDNSServers(const IPAddress::Family family,

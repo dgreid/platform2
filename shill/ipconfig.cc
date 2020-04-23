@@ -7,6 +7,7 @@
 #include <sys/time.h>
 
 #include <limits>
+#include <utility>
 
 #include <chromeos/dbus/service_constants.h>
 
@@ -181,8 +182,8 @@ void IPConfig::UpdateProperties(const Properties& properties,
   EmitChanges();
 }
 
-void IPConfig::UpdateDNSServers(const std::vector<std::string>& dns_servers) {
-  properties_.dns_servers = dns_servers;
+void IPConfig::UpdateDNSServers(std::vector<std::string> dns_servers) {
+  properties_.dns_servers = std::move(dns_servers);
   EmitChanges();
 }
 
