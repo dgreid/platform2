@@ -496,7 +496,7 @@ properties:
               description: Defines attributes that are used by cros_config to detect the identity
                 of the platform and which corresponding config should be used.
                 This tuple must either contain x86 properties only or ARM properties only.
-              oneOf:
+              anyOf:
                 - properties:
                     smbios-name-match:
                       description: "[x86] Firmware name built into the firmware and reflected back

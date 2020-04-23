@@ -9,6 +9,7 @@ from __future__ import print_function
 
 import argparse
 import collections
+import itertools
 import os.path
 import re
 import sys
@@ -68,7 +69,8 @@ def PopulateTypeDef(
   attrs_by_group = {'': collections.OrderedDict(
       sorted(type_def.get('properties', {}).items()))}
   group_index = 0
-  for group in type_def.get('oneOf', []):
+  for group in itertools.chain(type_def.get('oneOf', []),
+                               type_def.get('anyOf', [])):
     group_attrs = collections.OrderedDict(
         sorted(group.get('properties', {}).items()))
     group_name = 'GROUP(%s)' % group_index
