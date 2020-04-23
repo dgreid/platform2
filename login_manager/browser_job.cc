@@ -97,6 +97,21 @@ void MergeSwitches(std::vector<std::string>* args,
     args->push_back(prefix + values);
 }
 
+std::string GetUnprefixedFlagName(const std::string& flag) {
+  static const char* const kSwitchPrefixes[] = {"--", "-"};
+
+  std::string unprefixed = flag;
+  for (const char* const prefix : kSwitchPrefixes) {
+    std::string prefix_str(prefix);
+    if (flag.rfind(prefix, 0) == 0) {
+      unprefixed = flag.substr(prefix_str.length());
+      break;
+    }
+  }
+
+  return unprefixed.substr(0, unprefixed.find('='));
+}
+
 }  // namespace
 
 BrowserJob::BrowserJob(const std::vector<std::string>& arguments,
@@ -273,7 +288,32 @@ void BrowserJob::SetArguments(const std::vector<std::string>& arguments) {
 }
 
 void BrowserJob::SetExtraArguments(const std::vector<std::string>& arguments) {
-  extra_arguments_ = arguments;
+  extra_arguments_.clear();
+  auto is_not_unsafe = [](const std::string& flag) {
+    // A list of flags that shouldn't be user-configurable on Chrome OS.
+    // Keeping this the list watertight will be hard to impossible in practice,
+    // so this is only a temporary measure until we have a more robust solution
+    // for flag handling. See crbug.com/1073940 for details.
+    static const char* const kUnsafeFlags[] = {
+        "allow-sandbox-debugging",
+        "disable-gpu-sandbox",
+        "disable-namespace-sandbox",
+        "disable-seccomp-filter-sandbox",
+        "disable-setuid-sandbox",
+        "gpu-launcher",
+        "no-sandbox",
+        "no-zygote-sandbox",
+        "ppapi-plugin-launcher",
+        "remote-debugging-port",
+        "renderer-cmd-prefix",
+        "single-process",
+        "utility-cmd-prefix",
+    };
+    return std::find(std::begin(kUnsafeFlags), std::end(kUnsafeFlags),
+                     GetUnprefixedFlagName(flag)) == std::end(kUnsafeFlags);
+  };
+  std::copy_if(arguments.begin(), arguments.end(),
+               std::back_inserter(extra_arguments_), is_not_unsafe);
 }
 
 void BrowserJob::SetTestArguments(const std::vector<std::string>& arguments) {

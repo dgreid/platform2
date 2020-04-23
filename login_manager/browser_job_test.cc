@@ -422,13 +422,19 @@ TEST_F(BrowserJobTest, SetArguments) {
 }
 
 TEST_F(BrowserJobTest, SetExtraArguments) {
-  std::vector<std::string> extra_args = {"--ichi", "--ni", "--san"};
+  std::vector<std::string> safe_args = {"--ichi", "--ni", "--san"};
+  std::vector<std::string> unsafe_args = {"--no-sandbox", "-no-sandbox"};
+  std::vector<std::string> extra_args = safe_args;
+  extra_args.insert(extra_args.end(), unsafe_args.begin(), unsafe_args.end());
   job_->SetExtraArguments(extra_args);
 
   std::vector<std::string> job_args = job_->ExportArgv();
   ExpectArgsToContainAll(job_args, argv_);
-  ExpectArgsToContainAll(job_args, extra_args);
+  ExpectArgsToContainAll(job_args, safe_args);
   EXPECT_THAT(job_args, Contains(BrowserJob::kForceCrashpadFlag));
+  for (const std::string& unsafe : unsafe_args) {
+    EXPECT_THAT(job_args, Not(Contains(unsafe)));
+  }
 }
 
 TEST_F(BrowserJobTest, SetTestArguments) {
