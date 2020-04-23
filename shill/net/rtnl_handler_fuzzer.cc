@@ -2,10 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "shill/net/rtnl_handler.h"
 #include "shill/net/io_handler.h"
+#include "shill/net/rtnl_handler.h"
+#include "shill/net/rtnl_listener.h"
 
 #include <base/at_exit.h>
+#include <base/bind.h>
 #include <base/logging.h>
 
 namespace shill {
@@ -15,7 +17,16 @@ class RTNLHandlerFuzz {
   static void Run(const uint8_t* data, size_t size) {
     base::AtExitManager exit_manager;
     InputData input(static_cast<const unsigned char*>(data), size);
+
+    // Listen for all messages.
+    RTNLListener listener(~0, base::Bind(&RTNLHandlerFuzz::Listener));
     RTNLHandler::GetInstance()->ParseRTNL(&input);
+  }
+
+ private:
+  static void Listener(const RTNLMessage& msg) {
+    CHECK_NE(msg.ToString(), "");
+    CHECK(!msg.Encode().IsEmpty());
   }
 };
 
