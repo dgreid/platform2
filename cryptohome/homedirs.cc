@@ -1559,24 +1559,41 @@ int64_t HomeDirs::ComputeSize(const std::string& account_id) {
     return 0;
   }
 
+  // Note that for ephemeral mounts, there could be a vault that's not
+  // ephemeral, but the current mount is ephemeral. In this case, ComputeSize()
+  // return the non ephemeral on disk vault's size.
   std::string obfuscated = BuildObfuscatedUsername(account_id, system_salt_);
   FilePath user_dir = FilePath(shadow_root_).Append(obfuscated);
-  FilePath user_path = brillo::cryptohome::home::GetUserPath(account_id);
-  FilePath root_path = brillo::cryptohome::home::GetRootPath(account_id);
-  int64_t total_size = 0;
-  int64_t size = platform_->ComputeDirectorySize(user_dir);
-  if (size > 0) {
-    total_size += size;
+
+  int64_t size = 0;
+  if (!platform_->DirectoryExists(user_dir)) {
+    // It's either ephemeral or the user doesn't exist. In either case, we check
+    // /home/user/$hash.
+    FilePath user_home_dir = brillo::cryptohome::home::GetUserPath(account_id);
+    size = platform_->ComputeDirectorySize(user_home_dir);
+  } else {
+    // Note that we'll need to handle both ecryptfs and dircrypto.
+    // dircrypto:
+    // /home/.shadow/$hash/mount: Always equal to the size occupied.
+    // ecryptfs:
+    // /home/.shadow/$hash/vault: Always equal to the size occupied.
+    // /home/.shadow/$hash/mount: Equal to the size occupied only when mounted.
+    // Therefore, we check to see if vault exists, if it exists, we compute
+    // vault's size, otherwise, we check mount's size.
+    FilePath mount_dir = user_dir.Append(kMountDir);
+    FilePath vault_dir = user_dir.Append(kEcryptfsVaultDir);
+    if (platform_->DirectoryExists(vault_dir)) {
+      // ecryptfs
+      size = platform_->ComputeDirectorySize(vault_dir);
+    } else {
+      // dircrypto
+      size = platform_->ComputeDirectorySize(mount_dir);
+    }
   }
-  size = platform_->ComputeDirectorySize(user_path);
   if (size > 0) {
-    total_size += size;
+    return size;
   }
-  size = platform_->ComputeDirectorySize(root_path);
-  if (size > 0) {
-    total_size += size;
-  }
-  return total_size;
+  return 0;
 }
 
 bool HomeDirs::Migrate(const Credentials& newcreds,

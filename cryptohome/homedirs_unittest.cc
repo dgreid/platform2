@@ -276,38 +276,89 @@ TEST_P(HomeDirsTest, RenameCryptohome) {
   EXPECT_TRUE(homedirs_.Rename(kNewUserId, kDefaultUsers[0].username));
 }
 
-TEST_P(HomeDirsTest, ComputeSize) {
+TEST_P(HomeDirsTest, ComputeSizeDircrypto) {
   FilePath base_path(test_helper_.users[0].base_path);
-  FilePath user_path = brillo::cryptohome::home::GetUserPathPrefix()
-      .Append(test_helper_.users[0].obfuscated_username);
-  FilePath root_path = brillo::cryptohome::home::GetRootPathPrefix()
-      .Append(test_helper_.users[0].obfuscated_username);
+  // /home/.shadow in production code.
+  FilePath shadow_home =
+      homedirs_.shadow_root().Append(base_path.BaseName().value());
+  // /home/.shadow/$hash/mount in production code.
+  FilePath mount_dir = shadow_home.Append(kMountDir);
+  // /home/.shadow/$hash/vault in production code.
+  FilePath vault_dir = shadow_home.Append(kEcryptfsVaultDir);
+  // /home/user/$hash in production code and here in unit test.
+  FilePath user_dir = brillo::cryptohome::home::GetUserPathPrefix().Append(
+      test_helper_.users[0].obfuscated_username);
 
-  ASSERT_TRUE(base::CreateDirectory(base_path));
+  // If anyone asks, shadow_home, mount_dir and user_dir exists but not
+  // vault_dir.
+  ON_CALL(platform_, DirectoryExists(shadow_home)).WillByDefault(Return(true));
+  ON_CALL(platform_, DirectoryExists(mount_dir)).WillByDefault(Return(true));
+  ON_CALL(platform_, DirectoryExists(vault_dir)).WillByDefault(Return(false));
+  ON_CALL(platform_, DirectoryExists(user_dir)).WillByDefault(Return(true));
 
-  // Put test files under base_path and user_path.
-  const char kTestFileName0[] = "test.txt";
-  const char kExpectedData0[] = "file content";
-  int expected_bytes_0 = base::size(kExpectedData0);
-  ASSERT_EQ(expected_bytes_0,
-            base::WriteFile(base_path.Append(kTestFileName0),
-                            kExpectedData0, expected_bytes_0));
-  const char kTestFileName1[] = "test1.txt";
-  const char kExpectedData1[] = "file content";
-  int expected_bytes_1 = base::size(kExpectedData1);
-  ASSERT_EQ(expected_bytes_1,
-            base::WriteFile(base_path.Append(kTestFileName1),
-                            kExpectedData1, expected_bytes_1));
+  constexpr int64_t expected_bytes = 123456789012345;
+  constexpr int64_t unexpected_bytes = 98765432154321;
+  EXPECT_CALL(platform_, ComputeDirectorySize(mount_dir))
+      .WillOnce(Return(expected_bytes));
+  ON_CALL(platform_, ComputeDirectorySize(vault_dir))
+      .WillByDefault(Return(unexpected_bytes));
 
-  EXPECT_CALL(platform_, ComputeDirectorySize(base_path))
-    .WillOnce(Return(expected_bytes_0));
-  EXPECT_CALL(platform_, ComputeDirectorySize(user_path))
-    .WillOnce(Return(expected_bytes_1));
-  EXPECT_CALL(platform_, ComputeDirectorySize(root_path))
-    .WillOnce(Return(0));
+  EXPECT_EQ(expected_bytes, homedirs_.ComputeSize(kDefaultUsers[0].username));
+}
 
-  EXPECT_EQ(expected_bytes_0 + expected_bytes_1,
-            homedirs_.ComputeSize(kDefaultUsers[0].username));
+TEST_P(HomeDirsTest, ComputeSizeEcryptfs) {
+  FilePath base_path(test_helper_.users[0].base_path);
+  FilePath shadow_home =
+      homedirs_.shadow_root().Append(base_path.BaseName().value());
+  FilePath mount_dir = shadow_home.Append(kMountDir);
+  FilePath vault_dir = shadow_home.Append(kEcryptfsVaultDir);
+  FilePath user_dir = brillo::cryptohome::home::GetUserPathPrefix().Append(
+      test_helper_.users[0].obfuscated_username);
+
+  // If anyone asks, shadow_home, mount_dir, vault_dir and user_dir all exists.
+  ON_CALL(platform_, DirectoryExists(shadow_home)).WillByDefault(Return(true));
+  ON_CALL(platform_, DirectoryExists(mount_dir)).WillByDefault(Return(true));
+  ON_CALL(platform_, DirectoryExists(vault_dir)).WillByDefault(Return(true));
+  ON_CALL(platform_, DirectoryExists(user_dir)).WillByDefault(Return(true));
+
+  constexpr int64_t expected_bytes = 123456789012345;
+  constexpr int64_t unexpected_bytes = 98765432154321;
+  EXPECT_CALL(platform_, ComputeDirectorySize(vault_dir))
+      .WillOnce(Return(expected_bytes));
+  ON_CALL(platform_, ComputeDirectorySize(mount_dir))
+      .WillByDefault(Return(unexpected_bytes));
+
+  EXPECT_EQ(expected_bytes, homedirs_.ComputeSize(kDefaultUsers[0].username));
+}
+
+TEST_P(HomeDirsTest, ComputeSizeEphemeral) {
+  FilePath base_path(test_helper_.users[0].base_path);
+  FilePath shadow_home =
+      homedirs_.shadow_root().Append(base_path.BaseName().value());
+  FilePath mount_dir = shadow_home.Append(kMountDir);
+  FilePath vault_dir = shadow_home.Append(kEcryptfsVaultDir);
+  FilePath user_dir = brillo::cryptohome::home::GetUserPathPrefix().Append(
+      test_helper_.users[0].obfuscated_username);
+
+  // If anyone asks, shadow_home, mount_dir and vault_dir doesn't exist, but
+  // user_dir exists.
+  ON_CALL(platform_, DirectoryExists(shadow_home)).WillByDefault(Return(false));
+  ON_CALL(platform_, DirectoryExists(mount_dir)).WillByDefault(Return(false));
+  ON_CALL(platform_, DirectoryExists(vault_dir)).WillByDefault(Return(false));
+  ON_CALL(platform_, DirectoryExists(user_dir)).WillByDefault(Return(true));
+
+  constexpr int64_t expected_bytes = 123456789012345;
+  constexpr int64_t unexpected_bytes = 98765432154321;
+  EXPECT_CALL(platform_, ComputeDirectorySize(user_dir))
+      .WillOnce(Return(expected_bytes));
+  ON_CALL(platform_, ComputeDirectorySize(mount_dir))
+      .WillByDefault(Return(unexpected_bytes));
+  ON_CALL(platform_, ComputeDirectorySize(vault_dir))
+      .WillByDefault(Return(unexpected_bytes));
+  ON_CALL(platform_, ComputeDirectorySize(shadow_home))
+      .WillByDefault(Return(unexpected_bytes));
+
+  EXPECT_EQ(expected_bytes, homedirs_.ComputeSize(kDefaultUsers[0].username));
 }
 
 TEST_P(HomeDirsTest, ComputeSizeWithNonexistentUser) {
