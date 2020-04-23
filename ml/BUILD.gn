@@ -33,6 +33,7 @@ generate_mojom_bindings("ml_mojo_bindings") {
   mojo_root = "${platform2_root}"
   sources = [
     "mojom/graph_executor.mojom",
+    "mojom/handwriting_recognizer.mojom",
     "mojom/machine_learning_service.mojom",
     "mojom/model.mojom",
     "mojom/tensor.mojom",
@@ -88,6 +89,8 @@ static_library("ml_common") {
     "daemon.cc",
     "graph_executor_impl.cc",
     "handwriting.cc",
+    "handwriting_proto_mojom_conversion.cc",
+    "handwriting_recognizer_impl.cc",
     "machine_learning_service_impl.cc",
     "metrics.cc",
     "model_impl.cc",
@@ -97,6 +100,9 @@ static_library("ml_common") {
     "text_classifier_impl.cc",
     "util.cc",
   ]
+  if (use.ondevice_handwriting) {
+    defines = [ "ML_SUPPORT_HANDWRITING" ]
+  }
 }
 
 static_library("ml_cmdline_common") {
@@ -125,33 +131,14 @@ if (use.test) {
     ]
     sources = [
       "graph_executor_impl_test.cc",
+      "handwriting_proto_mojom_conversion_test.cc",
+      "handwriting_test.cc",
       "machine_learning_service_impl_test.cc",
       "model_impl_test.cc",
       "test_utils.cc",
       "testrunner.cc",
       "util_test.cc",
     ]
-
-    # TODO(honglinyu) Now we only do the unit test of handwriting when asan is
-    # disabled. This is because using the current version of libhandwriting.so
-    # requires enabling RTLD_DEEPBIND in dlopen, which is not compatible with
-    # asan (see https://crbug.com/1082632). This unit test should be always
-    # enabled again after RTLD_DEEPBIND is avoided.
-    if (!use.asan) {
-      sources += [ "handwriting_test.cc" ]
-    }
-
-    # TODO(charleszhao) this macro is only used in the unit test file
-    # "handwriting_test.cc". After the mojo API is implemented, maybe we should
-    #    1. Remove "handwriting_test.cc" and move all the unit test into mojo
-    #       unit tests, like those in "machine_learning_service_impl_test.cc".
-    #    2. Use separate unit test files rather than "one test file+macro". And
-    #       The following build config can be something like,
-    #       if (use.ondevice_handwriting) {
-    #         sources += "handwriting_supported_test.cc"
-    #       } else {
-    #         sources += "handwriting_unsupported_test.cc"
-    #       }
     if (use.ondevice_handwriting) {
       defines = [ "ML_SUPPORT_HANDWRITING" ]
     }

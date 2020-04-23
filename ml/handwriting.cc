@@ -14,7 +14,23 @@ namespace ml {
 
 namespace {
 constexpr char kHandwritingLibraryPath[] = "/usr/lib64/libhandwriting.so";
+
+// Returns whether HandwritingLibrary is supported.
+constexpr bool IsHandwritingLibrarySupported() {
+#ifdef ML_SUPPORT_HANDWRITING
+  // Currently HandwritingLibrary is supported only when the "sanitizer" is not
+  // enabled (see https://crbug.com/1082632).
+  #if __has_feature(address_sanitizer)
+    return false;
+  #else
+    return true;
+  #endif
+#else
+  return false;
+#endif
 }
+
+}  // namespace
 
 HandwritingLibrary::HandwritingLibrary()
     : status_(Status::kUninitialized),
@@ -23,14 +39,14 @@ HandwritingLibrary::HandwritingLibrary()
       recognize_handwriting_(nullptr),
       delete_handwriting_result_data_(nullptr),
       destroy_handwriting_recognizer_(nullptr) {
+  if (!IsHandwritingLibrarySupported()) {
+    status_ = Status::kNotSupported;
+    return;
+  }
   // Load the library with an option preferring own symbols. Otherwise the
   // library will try to call, e.g., external tflite, which leads to crash.
-  // But this can only be done when the "sanitizer" is not enabled (see,
-  // https://crbug.com/1082632).
   base::NativeLibraryOptions native_library_options;
-#if !__has_feature(address_sanitizer)
   native_library_options.prefer_own_symbols = true;
-#endif
   library_.emplace(base::LoadNativeLibraryWithOptions(
       base::FilePath(kHandwritingLibraryPath), native_library_options,
       nullptr));

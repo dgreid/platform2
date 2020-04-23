@@ -17,7 +17,10 @@
 #include <unicode/udata.h>
 #include <utils/memory/mmap.h>
 
+#include "ml/handwriting.h"
+#include "ml/handwriting_recognizer_impl.h"
 #include "ml/model_impl.h"
+#include "ml/mojom/handwriting_recognizer.mojom.h"
 #include "ml/mojom/model.mojom.h"
 #include "ml/text_classifier_impl.h"
 
@@ -28,12 +31,13 @@ namespace {
 using ::chromeos::machine_learning::mojom::BuiltinModelId;
 using ::chromeos::machine_learning::mojom::BuiltinModelSpecPtr;
 using ::chromeos::machine_learning::mojom::FlatBufferModelSpecPtr;
+using ::chromeos::machine_learning::mojom::HandwritingRecognizerRequest;
 using ::chromeos::machine_learning::mojom::LoadModelResult;
 using ::chromeos::machine_learning::mojom::ModelRequest;
 
 constexpr char kSystemModelDir[] = "/opt/google/chrome/ml_models/";
-// Base name for UMA metrics related to model loading (either |LoadBuiltinModel|
-// or |LoadFlatBufferModel|) requests
+// Base name for UMA metrics related to model loading (|LoadBuiltinModel|,
+// |LoadFlatBufferModel|, |LoadTextClassifier| or LoadHandwritingModel).
 constexpr char kMetricsRequestName[] = "LoadModelResult";
 
 constexpr char kTextClassifierModelFile[] =
@@ -186,6 +190,49 @@ void MachineLearningServiceImpl::LoadTextClassifier(
   request_metrics.RecordRequestEvent(LoadModelResult::OK);
 }
 
+void MachineLearningServiceImpl::LoadHandwritingModel(
+    HandwritingRecognizerRequest request,
+    LoadHandwritingModelCallback callback) {
+  RequestMetrics<LoadModelResult> request_metrics("HandwritingModel",
+                                                  kMetricsRequestName);
+  request_metrics.StartRecordingPerformanceMetrics();
+
+  // Load HandwritingLibrary.
+  auto* const hwr_library = ml::HandwritingLibrary::GetInstance();
+
+  if (hwr_library->GetStatus() ==
+      ml::HandwritingLibrary::Status::kNotSupported) {
+    LOG(ERROR) << "Initialize ml::HandwritingLibrary with error "
+               << static_cast<int>(hwr_library->GetStatus());
+
+    std::move(callback).Run(LoadModelResult::FEATURE_NOT_SUPPORTED_ERROR);
+    request_metrics.RecordRequestEvent(
+        LoadModelResult::FEATURE_NOT_SUPPORTED_ERROR);
+    return;
+  }
+
+  if (hwr_library->GetStatus() != ml::HandwritingLibrary::Status::kOk) {
+    LOG(ERROR) << "Initialize ml::HandwritingLibrary with error "
+               << static_cast<int>(hwr_library->GetStatus());
+
+    std::move(callback).Run(LoadModelResult::LOAD_MODEL_ERROR);
+    request_metrics.RecordRequestEvent(LoadModelResult::LOAD_MODEL_ERROR);
+    return;
+  }
+
+  // Create HandwritingRecognizer.
+  if (!HandwritingRecognizerImpl::Create(std::move(request))) {
+    LOG(ERROR) << "LoadHandwritingRecognizer returned false.";
+    std::move(callback).Run(LoadModelResult::LOAD_MODEL_ERROR);
+    request_metrics.RecordRequestEvent(LoadModelResult::LOAD_MODEL_ERROR);
+    return;
+  }
+
+  std::move(callback).Run(LoadModelResult::OK);
+  request_metrics.FinishRecordingPerformanceMetrics();
+  request_metrics.RecordRequestEvent(LoadModelResult::OK);
+}
+
 void MachineLearningServiceImpl::InitIcuIfNeeded() {
   if (icu_data_ == nullptr) {
     // Need to load the data file again.
@@ -203,6 +250,5 @@ void MachineLearningServiceImpl::InitIcuIfNeeded() {
     udata_setFileAccess(UDATA_ONLY_PACKAGES, &err);
   }
 }
-
 
 }  // namespace ml

@@ -18,8 +18,11 @@
 #include <mojo/public/cpp/bindings/binding.h>
 #include <mojo/public/cpp/bindings/interface_request.h>
 
+#include "ml/handwriting.h"
+#include "ml/handwriting_proto_mojom_conversion.h"
 #include "ml/machine_learning_service_impl.h"
 #include "ml/mojom/graph_executor.mojom.h"
+#include "ml/mojom/handwriting_recognizer.mojom.h"
 #include "ml/mojom/machine_learning_service.mojom.h"
 #include "ml/mojom/model.mojom.h"
 #include "ml/mojom/text_classifier.mojom.h"
@@ -169,6 +172,16 @@ constexpr double kTopCat20190722TestInput[] = {
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0
 };
 
+// Points that are used to generate a stroke for handwriting.
+constexpr float kHandwritingTestPoints[23][2] = {
+    {1.928, 0.827}, {1.828, 0.826}, {1.73, 0.858},  {1.667, 0.901},
+    {1.617, 0.955}, {1.567, 1.043}, {1.548, 1.148}, {1.569, 1.26},
+    {1.597, 1.338}, {1.641, 1.408}, {1.688, 1.463}, {1.783, 1.473},
+    {1.853, 1.418}, {1.897, 1.362}, {1.938, 1.278}, {1.968, 1.204},
+    {1.999, 1.112}, {2.003, 1.004}, {1.984, 0.905}, {1.988, 1.043},
+    {1.98, 1.178},  {1.976, 1.303}, {1.984, 1.415},
+};
+
 constexpr char kTextClassifierTestInput[] =
     "user.name@gmail.com. 123 George Street. unknownword. 12pm. 23 cm";
 
@@ -182,6 +195,10 @@ using ::chromeos::machine_learning::mojom::ExecuteResult;
 using ::chromeos::machine_learning::mojom::FlatBufferModelSpec;
 using ::chromeos::machine_learning::mojom::FlatBufferModelSpecPtr;
 using ::chromeos::machine_learning::mojom::GraphExecutorPtr;
+using ::chromeos::machine_learning::mojom::HandwritingRecognitionQueryPtr;
+using ::chromeos::machine_learning::mojom::HandwritingRecognizerPtr;
+using ::chromeos::machine_learning::mojom::HandwritingRecognizerResult;
+using ::chromeos::machine_learning::mojom::HandwritingRecognizerResultPtr;
 using ::chromeos::machine_learning::mojom::LoadModelResult;
 using ::chromeos::machine_learning::mojom::MachineLearningServicePtr;
 using ::chromeos::machine_learning::mojom::Model;
@@ -971,6 +988,98 @@ TEST(TextClassifierSelectionTest, WrongInput) {
           &infer_callback_done));
   base::RunLoop().RunUntilIdle();
   ASSERT_TRUE(infer_callback_done);
+}
+
+// Tests that the HandwritingRecognizer is properly constructed and destructed.
+TEST(ModelLoadAndInferenceTest, HandwritingRecognizer) {
+  // Nothing to test on an unsupported platform.
+  if (ml::HandwritingLibrary::GetInstance()->GetStatus() ==
+      ml::HandwritingLibrary::Status::kNotSupported) {
+    return;
+  }
+
+  MachineLearningServicePtr ml_service;
+  const MachineLearningServiceImplForTesting ml_service_impl(
+      mojo::MakeRequest(&ml_service).PassMessagePipe());
+
+  // Load recognizer.
+  HandwritingRecognizerPtr recognizer;
+  bool model_callback_done = false;
+  ml_service->LoadHandwritingModel(
+      mojo::MakeRequest(&recognizer),
+      base::Bind(
+          [](bool* model_callback_done, const LoadModelResult result) {
+            ASSERT_EQ(result, LoadModelResult::OK);
+            *model_callback_done = true;
+          },
+          &model_callback_done));
+  base::RunLoop().RunUntilIdle();
+  ASSERT_TRUE(model_callback_done);
+  ASSERT_TRUE(recognizer.is_bound());
+
+  // Construct input.
+  chrome_knowledge::HandwritingRecognizerRequest request;
+  request.set_max_num_results(1);
+  auto& stroke = *request.mutable_ink()->add_strokes();
+  for (int i = 0; i < 23; ++i) {
+    auto& point = *stroke.add_points();
+    point.set_x(kHandwritingTestPoints[i][0]);
+    point.set_y(kHandwritingTestPoints[i][1]);
+  }
+
+  {
+    HandwritingRecognitionQueryPtr query =
+        HandwritingRecognitionQueryFromProtoForTesting(request);
+    // Perform inference.
+    bool infer_callback_done = false;
+    recognizer->Recognize(
+        std::move(query),
+        base::Bind(
+            [](bool* infer_callback_done,
+               const HandwritingRecognizerResultPtr result) {
+              // Check that the inference succeeded and gives
+              // the expected number of outputs.
+              EXPECT_EQ(result->status,
+                        HandwritingRecognizerResult::Status::OK);
+              ASSERT_EQ(result->candidates.size(), 1);
+              EXPECT_EQ(result->candidates.at(0)->text, "a");
+              EXPECT_FLOAT_EQ(result->candidates.at(0)->score, 0.50640869f);
+              *infer_callback_done = true;
+            },
+            &infer_callback_done));
+    base::RunLoop().RunUntilIdle();
+    ASSERT_TRUE(infer_callback_done);
+  }
+
+  // Set fake time as 100 milliseconds apart.
+  for (int i = 0; i < 23; ++i) {
+    auto& point = *stroke.mutable_points(i);
+    point.set_t(i * i * 100);
+  }
+
+  {
+    HandwritingRecognitionQueryPtr query =
+        HandwritingRecognitionQueryFromProtoForTesting(request);
+    // Perform inference.
+    bool infer_callback_done = false;
+    recognizer->Recognize(
+        std::move(query),
+        base::Bind(
+            [](bool* infer_callback_done,
+               const HandwritingRecognizerResultPtr result) {
+              // Check that the inference succeeded and gives
+              // the expected number of outputs.
+              EXPECT_EQ(result->status,
+                        HandwritingRecognizerResult::Status::OK);
+              ASSERT_EQ(result->candidates.size(), 1);
+              EXPECT_EQ(result->candidates.at(0)->text, "a");
+              EXPECT_FLOAT_EQ(result->candidates.at(0)->score, 0.51218414f);
+              *infer_callback_done = true;
+            },
+            &infer_callback_done));
+    base::RunLoop().RunUntilIdle();
+    ASSERT_TRUE(infer_callback_done);
+  }
 }
 
 }  // namespace

@@ -17,16 +17,25 @@ namespace ml {
 TEST(HandwritingLibraryTest, CanLoadLibrary) {
   auto* const instance = ml::HandwritingLibrary::GetInstance();
 #ifdef ML_SUPPORT_HANDWRITING
-  EXPECT_EQ(instance->GetStatus(), ml::HandwritingLibrary::Status::kOk);
+  #if __has_feature(address_sanitizer)
+    EXPECT_EQ(instance->GetStatus(),
+              ml::HandwritingLibrary::Status::kNotSupported);
+  #else
+    EXPECT_EQ(instance->GetStatus(), ml::HandwritingLibrary::Status::kOk);
+  #endif
 #else
   EXPECT_EQ(instance->GetStatus(),
-            ml::HandwritingLibrary::Status::kLoadLibraryFailed);
+            ml::HandwritingLibrary::Status::kNotSupported);
 #endif
 }
 
-#ifdef ML_SUPPORT_HANDWRITING
 TEST(HandwritingLibraryTest, ExampleRequest) {
   auto* const instance = ml::HandwritingLibrary::GetInstance();
+  // Nothing to test on an unsupported platform.
+  if (instance->GetStatus() == ml::HandwritingLibrary::Status::kNotSupported) {
+    return;
+  }
+
   ASSERT_EQ(instance->GetStatus(), ml::HandwritingLibrary::Status::kOk);
 
   HandwritingRecognizer const recognizer =
@@ -61,6 +70,5 @@ TEST(HandwritingLibraryTest, ExampleRequest) {
   }
   instance->DestroyHandwritingRecognizer(recognizer);
 }
-#endif
 
 }  // namespace ml

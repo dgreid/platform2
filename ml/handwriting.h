@@ -27,12 +27,12 @@ namespace ml {
 //   }
 class HandwritingLibrary {
  public:
-  // TODO(charleszhao) This enum may be defined in mojom.
   enum class Status {
     kOk = 0,
     kUninitialized = 1,
     kLoadLibraryFailed = 2,
-    kFunctionLookupFailed = 3
+    kFunctionLookupFailed = 3,
+    kNotSupported = 4,
   };
 
   ~HandwritingLibrary() = default;

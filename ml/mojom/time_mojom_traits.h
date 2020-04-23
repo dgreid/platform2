@@ -32,15 +32,6 @@ struct StructTraits<mojo_base::mojom::TimeDataView, base::Time> {
 
 template <>
 struct StructTraits<mojo_base::mojom::TimeDeltaDataView, base::TimeDelta> {
-  static bool IsNull(const base::TimeDelta& input) {
-    return input.InMicroseconds() == std::numeric_limits<int64_t>::min();
-  }
-
-  static void SetToNull(base::TimeDelta* output) {
-    *output =
-        base::TimeDelta::FromMicroseconds(std::numeric_limits<int64_t>::min());
-  }
-
   static int64_t microseconds(const base::TimeDelta& delta) {
     return delta.InMicroseconds();
   }
