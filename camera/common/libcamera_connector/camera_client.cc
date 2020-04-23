@@ -37,6 +37,20 @@ std::string GetCameraName(const cros::mojom::CameraInfoPtr& info) {
   }
 }
 
+int GetCameraFacing(const cros::mojom::CameraInfoPtr& info) {
+  switch (info->facing) {
+    case cros::mojom::CameraFacing::CAMERA_FACING_BACK:
+      return CROS_CAM_FACING_BACK;
+    case cros::mojom::CameraFacing::CAMERA_FACING_FRONT:
+      return CROS_CAM_FACING_FRONT;
+    case cros::mojom::CameraFacing::CAMERA_FACING_EXTERNAL:
+      return CROS_CAM_FACING_EXTERNAL;
+    default:
+      LOGF(ERROR) << "unknown facing " << info->facing;
+      return CROS_CAM_FACING_EXTERNAL;
+  }
+}
+
 }  // namespace
 
 namespace cros {
@@ -229,6 +243,7 @@ void CameraClient::OnGotCameraInfo(int32_t result, mojom::CameraInfoPtr info) {
   LOGF(INFO) << "Gotten camera info of " << camera_id;
 
   auto& camera_info = camera_info_map_[camera_id];
+  camera_info.facing = GetCameraFacing(info);
   camera_info.name = GetCameraName(info);
 
   auto& format_info = camera_info_map_[camera_id].format_info;
@@ -279,6 +294,7 @@ void CameraClient::SendCameraInfo() {
     }
     cros_cam_info_t cam_info = {
         .id = camera_id,
+        .facing = it->second.facing,
         .name = it->second.name.c_str(),
         .format_count = static_cast<unsigned>(it->second.format_info.size()),
         .format_info = it->second.format_info.data()};

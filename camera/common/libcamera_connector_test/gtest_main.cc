@@ -31,6 +31,19 @@ constexpr cros_cam_format_info_t kTestFormats[] = {
     {V4L2_PIX_FMT_MJPEG, 640, 480, 30},
 };
 
+std::string FacingToString(int facing) {
+  switch (facing) {
+    case CROS_CAM_FACING_BACK:
+      return "back";
+    case CROS_CAM_FACING_FRONT:
+      return "front";
+    case CROS_CAM_FACING_EXTERNAL:
+      return "external";
+    default:
+      return "unknown";
+  }
+}
+
 std::string FourccToString(uint32_t fourcc) {
   std::string result = "0000";
   for (int i = 0; i < 4; i++) {
@@ -239,6 +252,7 @@ class CameraClient {
     for (const auto& info : camera_infos_) {
       LOGF(INFO) << "id: " << info.id;
       LOGF(INFO) << "name: " << info.name;
+      LOGF(INFO) << "facing: " << FacingToString(info.facing);
       LOGF(INFO) << "format_count: " << info.format_count;
       for (int i = 0; i < info.format_count; i++) {
         LOGF(INFO) << base::StringPrintf(

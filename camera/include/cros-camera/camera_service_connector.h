@@ -40,6 +40,13 @@
 extern "C" {
 #endif
 
+// Camera lens facing enum
+enum {
+  CROS_CAM_FACING_BACK = 0,     // world facing
+  CROS_CAM_FACING_FRONT = 1,    // user facing
+  CROS_CAM_FACING_EXTERNAL = 2  // external webcams
+};
+
 // Format descriptor
 typedef struct cros_cam_format_info_t_ {
   uint32_t fourcc;  // format type (FOURCC code)
@@ -52,6 +59,7 @@ typedef struct cros_cam_format_info_t_ {
 //   At least one format expected (format_count >= 1)
 typedef struct cros_cam_info_t_ {
   int id;                 // device id
+  int facing;             // lens facing, should be one of enum value
   const char* name;       // user friendly camera name, UTF8
   unsigned format_count;  // number of format descriptors
   cros_cam_format_info_t*

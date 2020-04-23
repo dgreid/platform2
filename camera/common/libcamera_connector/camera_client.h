@@ -62,6 +62,7 @@ class CameraClient final : public mojom::CameraHalClient {
 
  private:
   struct CameraInfo {
+    int facing;
     std::string name;
     std::vector<cros_cam_format_info_t> format_info;
     int32_t jpeg_max_size;
