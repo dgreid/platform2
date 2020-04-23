@@ -329,8 +329,7 @@ def GenerateMosysCBindings(config):
      .whitelabel_tag = "%s",
      .info = {.brand = "%s",
               .model = "%s",
-              .customization = "%s",
-              .signature_id = "%s"}}"""
+              .customization = "%s"}}"""
   structs = []
   json_config = json.loads(config)
   for config in json_config[CHROMEOS][CONFIGS]:
@@ -339,8 +338,6 @@ def GenerateMosysCBindings(config):
     whitelabel_tag = identity.get('whitelabel-tag', '')
     customization_id = identity.get('customization-id', '')
     customization = customization_id or whitelabel_tag or name
-    signature_id = config.get('firmware-signing', {}).get('signature-id', '')
-    signature_id = signature_id or name
     brand_code = config.get('brand-code', '')
     platform_name = identity.get('platform-name', '')
     sku_id = identity.get('sku-id', -1)
@@ -365,8 +362,7 @@ def GenerateMosysCBindings(config):
                          whitelabel_tag,
                          brand_code,
                          name,
-                         customization,
-                         signature_id))
+                         customization))
 
   file_format = """\
 #include "lib/cros_config_struct.h"

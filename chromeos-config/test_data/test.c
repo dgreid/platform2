@@ -8,8 +8,7 @@ static struct config_map all_configs[] = {
      .whitelabel_tag = "",
      .info = {.brand = "",
               .model = "some",
-              .customization = "some",
-              .signature_id = "some"}},
+              .customization = "some"}},
 
     {.platform_name = "Some",
      .firmware_name_match = "Some",
@@ -18,8 +17,7 @@ static struct config_map all_configs[] = {
      .whitelabel_tag = "",
      .info = {.brand = "",
               .model = "some",
-              .customization = "some",
-              .signature_id = "some"}},
+              .customization = "some"}},
 
     {.platform_name = "Another",
      .firmware_name_match = "Another",
@@ -28,8 +26,7 @@ static struct config_map all_configs[] = {
      .whitelabel_tag = "",
      .info = {.brand = "",
               .model = "another",
-              .customization = "another",
-              .signature_id = "another"}},
+              .customization = "another"}},
 
     {.platform_name = "SomeCustomization",
      .firmware_name_match = "SomeCustomization",
@@ -38,8 +35,7 @@ static struct config_map all_configs[] = {
      .whitelabel_tag = "",
      .info = {.brand = "",
               .model = "some_customization",
-              .customization = "SomeCustomization",
-              .signature_id = "some_customization"}},
+              .customization = "SomeCustomization"}},
 
     {.platform_name = "Some",
      .firmware_name_match = "Some",
@@ -48,8 +44,7 @@ static struct config_map all_configs[] = {
      .whitelabel_tag = "whitelabel1",
      .info = {.brand = "WLBA",
               .model = "whitelabel",
-              .customization = "whitelabel1",
-              .signature_id = "whitelabel-whitelabel1"}},
+              .customization = "whitelabel1"}},
 
     {.platform_name = "Some",
      .firmware_name_match = "Some",
@@ -58,8 +53,7 @@ static struct config_map all_configs[] = {
      .whitelabel_tag = "whitelabel1",
      .info = {.brand = "WLBA",
               .model = "whitelabel",
-              .customization = "whitelabel1",
-              .signature_id = "whitelabel-whitelabel1"}},
+              .customization = "whitelabel1"}},
 
     {.platform_name = "Some",
      .firmware_name_match = "Some",
@@ -68,8 +62,7 @@ static struct config_map all_configs[] = {
      .whitelabel_tag = "whitelabel2",
      .info = {.brand = "WLBB",
               .model = "whitelabel",
-              .customization = "whitelabel2",
-              .signature_id = "whitelabel-whitelabel2"}},
+              .customization = "whitelabel2"}},
 
     {.platform_name = "Some",
      .firmware_name_match = "Some",
@@ -78,8 +71,7 @@ static struct config_map all_configs[] = {
      .whitelabel_tag = "whitelabel2",
      .info = {.brand = "WLBB",
               .model = "whitelabel",
-              .customization = "whitelabel2",
-              .signature_id = "whitelabel-whitelabel2"}}
+              .customization = "whitelabel2"}}
 };
 
 const struct config_map *cros_config_get_config_map(int *num_entries) {
