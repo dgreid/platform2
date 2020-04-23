@@ -10,6 +10,7 @@ group("all") {
     ":cros_healthd",
     ":telem",
     ":wilco_dtc_supportd",
+    "//diagnostics/cros_healthd_event_tool:cros-health-event",
     "//diagnostics/diag:diag",
     "//diagnostics/routines:floating-point-accuracy",
     "//diagnostics/routines:prime-search",

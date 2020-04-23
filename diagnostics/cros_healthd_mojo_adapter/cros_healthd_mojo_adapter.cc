@@ -328,14 +328,24 @@ CrosHealthdMojoAdapter::GetRoutineUpdate(
   return response;
 }
 
+void CrosHealthdMojoAdapter::AddPowerObserver(
+    chromeos::cros_healthd::mojom::CrosHealthdPowerObserverPtr observer) {
+  if (!cros_healthd_service_factory_.is_bound())
+    Connect();
+
+  cros_healthd_event_service_->AddPowerObserver(std::move(observer));
+}
+
 void CrosHealthdMojoAdapter::Connect() {
   cros_healthd_service_factory_ = delegate_->GetCrosHealthdServiceFactory();
 
-  // Bind the probe and diagnostics services.
+  // Bind the probe, diagnostics and event services.
   cros_healthd_service_factory_->GetProbeService(
       mojo::MakeRequest(&cros_healthd_probe_service_));
   cros_healthd_service_factory_->GetDiagnosticsService(
       mojo::MakeRequest(&cros_healthd_diagnostics_service_));
+  cros_healthd_service_factory_->GetEventService(
+      mojo::MakeRequest(&cros_healthd_event_service_));
 }
 
 }  // namespace diagnostics

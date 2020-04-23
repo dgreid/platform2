@@ -1,0 +1,44 @@
+# Copyright 2020 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//common-mk/pkg_config.gni")
+
+# Library that provides helpers for cros-health-event.
+pkg_config("libcros_healthd_event_tool_pkg_deps") {
+  pkg_deps = [
+    "libbrillo",
+    "libchrome-${libbase_ver}",
+    "libmojo-${libbase_ver}",
+  ]
+}
+
+source_set("libcros_healthd_event_tool") {
+  deps = [
+    "//diagnostics:diagnostics_mojo_bindings",
+    "//diagnostics/cros_healthd_mojo_adapter:libcros_healthd_mojo_adapter",
+  ]
+  all_dependent_configs = [ ":libcros_healthd_event_tool_pkg_deps" ]
+  sources = [
+    "event_subscriber.cc",
+    "power_subscriber.cc",
+  ]
+}
+
+# The cros-health-event executable.
+pkg_config("cros-health-event_pkg_deps") {
+  pkg_deps = [
+    "libbrillo",
+    "libchrome-${libbase_ver}",
+  ]
+}
+
+executable("cros-health-event") {
+  deps = [
+    ":libcros_healthd_event_tool",
+  ]
+  configs += [ ":cros-health-event_pkg_deps" ]
+  sources = [
+    "main.cc",
+  ]
+}

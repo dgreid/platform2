@@ -99,6 +99,10 @@ class CrosHealthdMojoAdapter final {
   chromeos::cros_healthd::mojom::RunRoutineResponsePtr
   RunFloatingPointAccuracyRoutine(base::TimeDelta exec_duration);
 
+  // Subscribes the client to power events.
+  void AddPowerObserver(
+      chromeos::cros_healthd::mojom::CrosHealthdPowerObserverPtr observer);
+
  private:
   // Establishes a mojo connection with cros_healthd.
   void Connect();
@@ -123,6 +127,11 @@ class CrosHealthdMojoAdapter final {
   // diagnostics-related mojo methods.
   chromeos::cros_healthd::mojom::CrosHealthdDiagnosticsServicePtr
       cros_healthd_diagnostics_service_;
+  // Binds to an implementation of CrosHealthdEventService. The
+  // implementation is provided by cros_healthd. Allows calling cros_healthd's
+  // event-related mojo methods.
+  chromeos::cros_healthd::mojom::CrosHealthdEventServicePtr
+      cros_healthd_event_service_;
 
   DISALLOW_COPY_AND_ASSIGN(CrosHealthdMojoAdapter);
 };
