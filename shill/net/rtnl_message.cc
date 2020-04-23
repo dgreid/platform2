@@ -6,6 +6,7 @@
 
 #include <net/if.h>
 #include <arpa/inet.h>
+#include <linux/fib_rules.h>
 #include <linux/if_addr.h>
 #include <linux/if_arp.h>
 #include <linux/netlink.h>
@@ -196,6 +197,18 @@ std::map<uint8_t, std::string> kRouteProtocols = {
     {188 /* RTPROT_OSPF */, "OSPF"},
     {189 /* RTPROT_RIP */, "RIP"},
     {192 /* RTPROT_EIGRP */, "EIGRP"},
+};
+
+// Rule actions. Defined in struct fib_rule_hdr in uapi/linux/fib_rules.h such
+// that it aligns with the |rtm_type| field of struct rtmsg defined in
+// uapi/linux/rtnetlink.h. Possible values are defined in
+// uapi/linux/fib_rules.h.
+std::map<uint8_t, std::string> kRuleActions = {
+    {FR_ACT_UNSPEC, "UNSPEC"},       {FR_ACT_TO_TBL, "TO_TBL"},
+    {FR_ACT_GOTO, "GOTO"},           {FR_ACT_NOP, "NOP"},
+    {FR_ACT_RES3, "RES3"},           {FR_ACT_RES4, "RES4"},
+    {FR_ACT_BLACKHOLE, "BLACKHOLE"}, {FR_ACT_UNREACHABLE, "UNREACHABLE"},
+    {FR_ACT_PROHIBIT, "PROHIBIT"},
 };
 
 // Helper function to return route protocol names defined by the kernel.
@@ -851,6 +864,38 @@ uint32_t RTNLMessage::GetRtaPriority() const {
   return GetUint32Attribute(RTA_PRIORITY);
 }
 
+uint32_t RTNLMessage::GetFraTable() const {
+  return GetUint32Attribute(FRA_TABLE);
+}
+
+std::string RTNLMessage::GetFraOifname() const {
+  return GetStringAttribute(FRA_OIFNAME);
+}
+
+std::string RTNLMessage::GetFraIifname() const {
+  return GetStringAttribute(FRA_IIFNAME);
+}
+
+IPAddress RTNLMessage::GetFraSrc() const {
+  return IPAddress(family_, GetAttribute(FRA_SRC), route_status_.src_prefix);
+}
+
+IPAddress RTNLMessage::GetFraDst() const {
+  return IPAddress(family_, GetAttribute(FRA_DST), route_status_.dst_prefix);
+}
+
+uint32_t RTNLMessage::GetFraFwmark() const {
+  return GetUint32Attribute(FRA_FWMARK);
+}
+
+uint32_t RTNLMessage::GetFraFwmask() const {
+  return GetUint32Attribute(FRA_FWMASK);
+}
+
+uint32_t RTNLMessage::GetFraPriority() const {
+  return GetUint32Attribute(FRA_PRIORITY);
+}
+
 // static
 std::string RTNLMessage::ModeToString(RTNLMessage::Mode mode) {
   switch (mode) {
@@ -935,12 +980,28 @@ std::string RTNLMessage::ToString() const {
           kRouteTypes[route_status_.type].c_str());
       break;
     case RTNLMessage::kTypeRule:
-      details = base::StringPrintf(
-          "dst_prefix %d src_prefix %d table %d"
-          " protocol %d scope %d type %d flags %X",
-          route_status_.dst_prefix, route_status_.src_prefix,
-          route_status_.table, route_status_.protocol, route_status_.scope,
-          route_status_.type, route_status_.flags);
+      // Rules are serialized via struct fib_rule_hdr which aligns with struct
+      // rtmsg used for routes such that |type| corresponds to the rule action.
+      // |protocol| and |scope| are currently unused as of Linux 5.6.
+      if (HasAttribute(FRA_IIFNAME))
+        details += "iif " + GetFraIifname() + " ";
+      if (HasAttribute(FRA_OIFNAME))
+        details += "oif " + GetFraOifname() = " ";
+      if (HasAttribute(FRA_SRC))
+        details +=
+            base::StringPrintf("src %s/%d ", GetFraSrc().ToString().c_str(),
+                               route_status_.src_prefix);
+      if (HasAttribute(FRA_DST))
+        details +=
+            base::StringPrintf("dst %s/%d ", GetFraDst().ToString().c_str(),
+                               route_status_.dst_prefix);
+      if (HasAttribute(FRA_FWMARK))
+        details += base::StringPrintf("fwmark 0x%X/0x%X ", GetFraFwmark(),
+                                      GetFraFwmask());
+      details += base::StringPrintf("table %d priority %d action %s flags %X",
+                                    GetFraTable(), GetFraPriority(),
+                                    kRuleActions[route_status_.type].c_str(),
+                                    route_status_.flags);
       break;
     case RTNLMessage::kTypeRdnss:
     case RTNLMessage::kTypeDnssl:

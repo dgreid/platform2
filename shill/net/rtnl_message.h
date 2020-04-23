@@ -241,6 +241,24 @@ class SHILL_EXPORT RTNLMessage {
   std::string GetRtaOifname() const;
   // Returns the RTA_PRIORITY attribute for RTNLMessages of type kTypeRoute.
   uint32_t GetRtaPriority() const;
+  // Returns the lookup routing table id of RTNLMessages with type kTypeRule.
+  uint32_t GetFraTable() const;
+  // Returns the input interface name of RTNLMessages with type kTypeRule.
+  std::string GetFraOifname() const;
+  // Returns the output interface name of RTNLMessages with type kTypeRule.
+  std::string GetFraIifname() const;
+  // Returns the fwmark value of RTNLMessages with type kTypeRule.
+  uint32_t GetFraFwmark() const;
+  // Returns the fwmask value of RTNLMessages with type kTypeRule.
+  uint32_t GetFraFwmask() const;
+  // Returns the FRA_PRIORITY attribute for RTNLMessages of type kTypeRule.
+  uint32_t GetFraPriority() const;
+  // Returns the FRA_SRC attribute as a shill::IPAddress for RTNLMessages of
+  // type kTypeRule.
+  IPAddress GetFraSrc() const;
+  // Returns the FRA_DST attribute as a shill::IPAddress for RTNLMessages of
+  // type kTypeRule.
+  IPAddress GetFraDst() const;
 
  private:
   SHILL_PRIVATE bool DecodeInternal(const ByteString& msg);

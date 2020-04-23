@@ -52,7 +52,8 @@ IPAddress::IPAddress(Family family,
                      unsigned int prefix)
     : family_(family), address_(address), prefix_(prefix) {}
 
-IPAddress::IPAddress(const std::string& ip_string) : prefix_(0) {
+IPAddress::IPAddress(const std::string& ip_string, unsigned int prefix)
+    : prefix_(prefix) {
   family_ = IPAddress::kFamilyIPv4;
   if (!SetAddressFromString(ip_string)) {
     family_ = IPAddress::kFamilyIPv6;
@@ -61,6 +62,8 @@ IPAddress::IPAddress(const std::string& ip_string) : prefix_(0) {
     }
   }
 }
+
+IPAddress::IPAddress(const std::string& ip_string) : IPAddress(ip_string, 0) {}
 
 IPAddress::IPAddress(const sockaddr* address_struct, size_t size)
     : family_(kFamilyUnknown), prefix_(0) {

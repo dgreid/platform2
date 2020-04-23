@@ -36,6 +36,7 @@ class SHILL_EXPORT IPAddress {
   // Constructs an IPAddress object given a standard string representation of an
   // IP address (e.g. "192.144.30.54").
   explicit IPAddress(const std::string& ip_string);
+  IPAddress(const std::string& ip_string, unsigned int prefix);
 
   // Constructs an IPAddress object from a sockaddr_in or sockaddr_in6
   // structure, depending on the family specified in |address_struct|.  |size|
