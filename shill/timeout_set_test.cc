@@ -110,6 +110,10 @@ TYPED_TEST(TimeoutSetTest, EmptyInsertion) {
   this->elements_.Insert(this->data_.data[0],
                          base::TimeDelta::FromMilliseconds(10));
   EXPECT_FALSE(this->elements_.IsEmpty());
+  EXPECT_TRUE(
+      std::equal(this->elements_.cbegin(), this->elements_.cend(),
+                 this->data_.data.cbegin(),
+                 [](const auto& a, const auto& b) { return a.element == b; }));
 }
 
 TYPED_TEST(TimeoutSetTest, SingleTimeout) {
@@ -121,6 +125,7 @@ TYPED_TEST(TimeoutSetTest, SingleTimeout) {
   EXPECT_TIMEOUT(this->data_.data[0]);
 
   EXPECT_TRUE(this->elements_.IsEmpty());
+  EXPECT_EQ(this->elements_.cbegin(), this->elements_.cend());
 }
 
 TYPED_TEST(TimeoutSetTest, MultipleSequentialTimeouts) {

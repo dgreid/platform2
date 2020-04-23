@@ -38,6 +38,18 @@ class TimeoutSetTest;
 template <typename T>
 class TimeoutSet {
  public:
+  struct TimeElement {
+    T element;
+    base::TimeTicks deathtime;
+
+    bool operator<(const TimeElement& rhs) const {
+      // Since std::make_heap makes a max heap, define ordering such that the
+      // greatest elements expire first.
+      return deathtime >= rhs.deathtime;
+    }
+  };
+  using const_iterator = typename std::vector<TimeElement>::const_iterator;
+
   explicit TimeoutSet(EventDispatcher* dispatcher) : dispatcher_(dispatcher) {}
 
   virtual ~TimeoutSet() { Clear(); }
@@ -96,18 +108,12 @@ class TimeoutSet {
     }
   }
 
+  const_iterator begin() const { return elements_.cbegin(); }
+  const_iterator end() const { return elements_.cend(); }
+  const_iterator cbegin() const { return elements_.cbegin(); }
+  const_iterator cend() const { return elements_.cend(); }
+
  private:
-  struct TimeElement {
-    T element;
-    base::TimeTicks deathtime;
-
-    bool operator<(const TimeElement& rhs) const {
-      // Since std::make_heap makes a max heap, define ordering such that the
-      // greatest elements expire first.
-      return deathtime >= rhs.deathtime;
-    }
-  };
-
   virtual base::TimeTicks TimeNow() const { return base::TimeTicks::Now(); }
 
   void OnTimeout() {
