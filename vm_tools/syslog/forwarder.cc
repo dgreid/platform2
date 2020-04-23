@@ -15,6 +15,7 @@
 #include <utility>
 #include <vector>
 
+#include <base/files/file_util.h>
 #include <base/logging.h>
 #include <base/strings/stringprintf.h>
 
@@ -131,8 +132,8 @@ grpc::Status Forwarder::ForwardLogs(grpc::ServerContext* ctx,
                    << contents[i] << "\n";
     }
     const std::string lines = lines_stream.str();
-    if (write(destination_.get(), lines.c_str(), lines.size()) !=
-        lines.size()) {
+    if (!base::WriteFileDescriptor(destination_.get(), lines.c_str(),
+                                   lines.size())) {
       PLOG(ERROR) << "Failed to write log records to file" << lines;
       return grpc::Status(grpc::INTERNAL,
                           "failed to write log records to file");

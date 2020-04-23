@@ -64,6 +64,7 @@ executable("maitred_client") {
 static_library("libforwarder") {
   sources = [
     "../syslog/forwarder.cc",
+    "../syslog/rotator.cc",
     "../syslog/scrubber.cc",
   ]
   configs += [ ":host_target_defaults" ]
@@ -273,6 +274,7 @@ if (use.test) {
   executable("syslog_forwarder_test") {
     sources = [
       "../syslog/forwarder_test.cc",
+      "../syslog/rotator_test.cc",
       "../syslog/scrubber_test.cc",
     ]
     configs += [
