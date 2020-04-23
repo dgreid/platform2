@@ -1338,9 +1338,9 @@ bool SessionManagerImpl::UpgradeArcContainer(
 
 bool SessionManagerImpl::StopArcInstance(brillo::ErrorPtr* error,
                                          const std::string& account_id,
-                                         bool backup_log) {
+                                         bool should_backup_log) {
 #if USE_CHEETS
-  if (backup_log && !account_id.empty()) {
+  if (should_backup_log && !account_id.empty()) {
     std::string actual_account_id;
     if (!NormalizeAccountId(account_id, &actual_account_id, error)) {
       DCHECK(*error);
@@ -1368,15 +1368,15 @@ void SessionManagerImpl::StopArcInstance(
   dbus::MessageReader reader(method_call);
 
   std::string account_id;
-  bool backup_log;
-  if (!reader.PopString(&account_id) || !reader.PopBool(&backup_log)) {
-    backup_log = false;
+  bool should_backup_log;
+  if (!reader.PopString(&account_id) || !reader.PopBool(&should_backup_log)) {
+    should_backup_log = false;
     account_id = "";
   }
 
   std::unique_ptr<brillo::Error> error;
   std::unique_ptr<dbus::Response> response;
-  if (StopArcInstance(&error, account_id, backup_log)) {
+  if (StopArcInstance(&error, account_id, should_backup_log)) {
     response = dbus::Response::FromMethodCall(method_call);
   } else {
     response = brillo::dbus_utils::GetDBusError(method_call, error.get());
