@@ -32,7 +32,6 @@
 #include <base/time/time.h>
 #include <base/timer/elapsed_timer.h>
 #include <brillo/file_utils.h>
-#include <chromeos-config/libcros_config/fake_cros_config.h>
 #include <gtest/gtest.h>
 
 namespace arc {
@@ -796,117 +795,6 @@ TEST(ArcSetupUtil, TestParseContainerState) {
   EXPECT_TRUE(GetOciContainerState(json_file, &container_pid, &rootfs));
   EXPECT_EQ(4422, container_pid);
   EXPECT_EQ(kRootfsPath, rootfs);
-}
-
-TEST(ArcSetupUtil, TestPropertyExpansions) {
-  brillo::FakeCrosConfig config;
-  config.SetString("/arc/build-properties", "brand", "alphabet");
-
-  std::string expanded;
-  EXPECT_TRUE(ExpandPropertyContents("line1\n{brand}\nline3\n{brand} {brand}",
-                                     &config, &expanded));
-  EXPECT_EQ("line1\nalphabet\nline3\nalphabet alphabet\n", expanded);
-}
-
-TEST(ArcSetupUtil, TestPropertyExpansionsUnmatchedBrace) {
-  brillo::FakeCrosConfig config;
-  config.SetString("/arc/build-properties", "brand", "alphabet");
-
-  std::string expanded;
-  EXPECT_FALSE(
-      ExpandPropertyContents("line{1\nline}2\nline3", &config, &expanded));
-}
-
-TEST(ArcSetupUtil, TestPropertyExpansionsRecursive) {
-  brillo::FakeCrosConfig config;
-  config.SetString("/arc/build-properties", "brand", "alphabet");
-  config.SetString("/arc/build-properties", "model", "{brand} soup");
-
-  std::string expanded;
-  EXPECT_TRUE(ExpandPropertyContents("{model}", &config, &expanded));
-  EXPECT_EQ("alphabet soup\n", expanded);
-}
-
-TEST(ArcSetupUtil, TestPropertyExpansionsMissingProperty) {
-  brillo::FakeCrosConfig config;
-  config.SetString("/arc/build-properties", "model", "{brand} soup");
-
-  std::string expanded;
-
-  EXPECT_FALSE(
-      ExpandPropertyContents("{missing-property}", &config, &expanded));
-  EXPECT_FALSE(ExpandPropertyContents("{model}", &config, &expanded));
-}
-
-// Verify that ro.product.board gets copied to ro.oem.key1 as well.
-TEST(ArcSetupUtil, TestPropertyExpansionBoard) {
-  brillo::FakeCrosConfig config;
-  config.SetString("/arc/build-properties", "board", "testboard");
-
-  std::string expanded;
-  EXPECT_TRUE(
-      ExpandPropertyContents("ro.product.board={board}", &config, &expanded));
-  EXPECT_EQ("ro.product.board=testboard\nro.oem.key1=testboard\n", expanded);
-}
-
-// Non-fingerprint property should do simple truncation.
-TEST(ArcSetupUtil, TestPropertyTruncation) {
-  std::string truncated;
-  EXPECT_TRUE(TruncateAndroidProperty(
-      "property.name="
-      "012345678901234567890123456789012345678901234567890123456789"
-      "01234567890123456789012345678901",
-      &truncated));
-  EXPECT_EQ(
-      "property.name=0123456789012345678901234567890123456789"
-      "012345678901234567890123456789012345678901234567890",
-      truncated);
-}
-
-// Fingerprint truncation with /release-keys should do simple truncation.
-TEST(ArcSetupUtil, TestPropertyTruncationFingerprintRelease) {
-  std::string truncated;
-  EXPECT_TRUE(TruncateAndroidProperty(
-      "ro.bootimage.build.fingerprint=google/toolongdevicename/"
-      "toolongdevicename_cheets:7.1.1/R65-10299.0.9999/4538390:user/"
-      "release-keys",
-      &truncated));
-  EXPECT_EQ(
-      "ro.bootimage.build.fingerprint=google/toolongdevicename/"
-      "toolongdevicename_cheets:7.1.1/R65-10299.0.9999/4538390:user/relea",
-      truncated);
-}
-
-// Fingerprint truncation with /dev-keys needs to preserve the /dev-keys.
-TEST(ArcSetupUtil, TestPropertyTruncationFingerprintDev) {
-  std::string truncated;
-  EXPECT_TRUE(TruncateAndroidProperty(
-      "ro.bootimage.build.fingerprint=google/toolongdevicename/"
-      "toolongdevicename_cheets:7.1.1/R65-10299.0.9999/4538390:user/dev-keys",
-      &truncated));
-  EXPECT_EQ(
-      "ro.bootimage.build.fingerprint=google/toolongdevicena/"
-      "toolongdevicena_cheets/R65-10299.0.9999/4538390:user/dev-keys",
-      truncated);
-}
-
-// Fingerprint truncation with the wrong format should fail.
-TEST(ArcSetupUtil, TestPropertyTruncationBadFingerprint) {
-  std::string truncated;
-  EXPECT_FALSE(TruncateAndroidProperty(
-      "ro.bootimage.build.fingerprint=google/toolongdevicename/"
-      "toolongdevicename_cheets:7.1.1:123456789012345678901234567890/dev-keys",
-      &truncated));
-}
-
-// Fingerprint truncation without enough room should fail.
-TEST(ArcSetupUtil, TestPropertyTruncationFingerprintShortDevice) {
-  std::string truncated;
-  EXPECT_FALSE(TruncateAndroidProperty(
-      "ro.bootimage.build.fingerprint=google/dev/"
-      "dev_cheets:7.1.1/R65-10299.0.9999/453839012345678901234567890"
-      "12345678901234567890:user/dev-keys",
-      &truncated));
 }
 
 TEST(ArcSetupUtil, TestIsProcessAlive) {

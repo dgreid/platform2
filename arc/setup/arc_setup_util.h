@@ -28,12 +28,6 @@ class TimeDelta;
 
 }  // namespace base
 
-namespace brillo {
-
-class CrosConfigInterface;
-
-}  // namespace brillo
-
 namespace arc {
 
 #if defined(USE_HOUDINI64)
@@ -251,30 +245,6 @@ std::string GetChromeOsChannelFromFile(
 bool GetOciContainerState(const base::FilePath& path,
                           pid_t* out_container_pid,
                           base::FilePath* out_rootfs);
-
-// Obsolete. Do not call.
-// TODO(yusukes): Move the fuzzer to Chromium and remove this function.
-//
-// Note: Do not modify this directly.
-// Modify src/components/arc/session/arc_property_util.cc in Chromium first.
-bool ExpandPropertyContents(const std::string& content,
-                            brillo::CrosConfigInterface* config,
-                            std::string* expanded_content);
-
-// Obsolete. Do not call.
-// TODO(yusukes): Move the fuzzer to Chromium and remove this function.
-//
-// Note: Do not modify this directly.
-// Modify src/components/arc/session/arc_property_util.cc in Chromium first.
-std::string ComputeOEMKey(brillo::CrosConfigInterface* config,
-                          const std::string& board);
-
-// Obsolete. Do not call.
-// TODO(yusukes): Move the fuzzer to Chromium and remove this function.
-//
-// Note: Do not modify this directly.
-// Modify src/components/arc/session/arc_property_util.cc in Chromium first.
-bool TruncateAndroidProperty(const std::string& line, std::string* truncated);
 
 // Returns true if the process with |pid| is alive or zombie.
 bool IsProcessAlive(pid_t pid);
