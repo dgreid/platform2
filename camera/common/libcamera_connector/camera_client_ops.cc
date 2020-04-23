@@ -123,9 +123,10 @@ void CameraClientOps::ProcessCaptureResult(
                      {.size = 0},
                      {.size = 0},
                      {.size = 0}}};
+      cros_cam_capture_result_t result = {.status = 0, .frame = &frame};
       if (request_callback_lock_.Try()) {
         if (request_callback_) {
-          int ret = (*request_callback_)(request_context_, &frame);
+          int ret = (*request_callback_)(request_context_, &result);
           if (ret != 0) {
             LOGF(INFO)
                 << "Request callback returned non-zero, stopping capture";
@@ -174,9 +175,10 @@ void CameraClientOps::ProcessCaptureResult(
                .data = static_cast<uint8_t*>(cb_ptr) + cb_unaligned_offset},
               {.size = 0},
               {.size = 0}}};
+      cros_cam_capture_result_t result = {.status = 0, .frame = &frame};
       if (request_callback_lock_.Try()) {
         if (request_callback_) {
-          int ret = (*request_callback_)(request_context_, &frame);
+          int ret = (*request_callback_)(request_context_, &result);
           if (ret != 0) {
             LOGF(INFO)
                 << "Request callback returned non-zero, stopping capture";

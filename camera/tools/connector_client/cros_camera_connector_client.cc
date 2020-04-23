@@ -53,10 +53,15 @@ int OnGotCameraInfo(void* context,
   return 0;
 }
 
-int OnFrameAvailable(void* context, const cros_cam_frame_t* frame) {
+int OnCaptureResultAvailable(void* context,
+                             const cros_cam_capture_result_t* result) {
   static uint32_t frame_count = 0;
 
+  CHECK_EQ(result->status, 0);
+  const cros_cam_frame_t* frame = result->frame;
+  CHECK_NE(frame, nullptr);
   LOGF(INFO) << "Frame Available";
+
   auto* client = reinterpret_cast<CrosCameraConnectorClient*>(context);
   client->ProcessFrame(frame);
 
@@ -163,7 +168,7 @@ void CrosCameraConnectorClient::ProcessFrame(const cros_cam_frame_t* frame) {
 }
 
 void CrosCameraConnectorClient::StartCaptureOnThread() {
-  DCHECK(capture_thread_.task_runner()->BelongsToCurrentThread());
+  CHECK(capture_thread_.task_runner()->BelongsToCurrentThread());
 
   LOGF(INFO) << "Startin capture: device = " << (*request_device_iter_)
              << ", fourcc = " << request_format_iter_->fourcc
@@ -172,17 +177,17 @@ void CrosCameraConnectorClient::StartCaptureOnThread() {
              << ", fps = " << request_format_iter_->fps;
 
   cros_cam_start_capture(*request_device_iter_, &(*request_format_iter_),
-                         &OnFrameAvailable, this);
+                         &OnCaptureResultAvailable, this);
 }
 
 void CrosCameraConnectorClient::StopCaptureOnThread() {
-  DCHECK(capture_thread_.task_runner()->BelongsToCurrentThread());
+  CHECK(capture_thread_.task_runner()->BelongsToCurrentThread());
 
   cros_cam_stop_capture(*request_device_iter_);
 }
 
 void CrosCameraConnectorClient::RestartCaptureOnThread() {
-  DCHECK(capture_thread_.task_runner()->BelongsToCurrentThread());
+  CHECK(capture_thread_.task_runner()->BelongsToCurrentThread());
   ++num_restarts_;
   LOGF(INFO) << "Restarting capture #" << num_restarts_;
   StopCaptureOnThread();

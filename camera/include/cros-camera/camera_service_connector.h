@@ -99,16 +99,23 @@ typedef struct cros_cam_frame_t_ {
   cros_cam_plane_t planes[4];
 } cros_cam_frame_t;
 
+// Capture result descriptor
+typedef struct cros_cam_capture_result_t_ {
+  int status;               // 0 for success, -errno for error
+  cros_cam_frame_t* frame;  // captured frame. null if error
+} cros_cam_capture_result_t;
+
 // Callback type for capture
+//   pointer to result valid only until the callback returns
 //
 // Params:
 //   context    - arbitrary user context
-//   frame      - captured frame
+//   result     - capture result with frame
 // Returns:
 //   0   - continue capture
 //   <>0 - stop capture
 typedef int (*cros_cam_capture_cb_t)(void* context,
-                                     const cros_cam_frame_t* frame);
+                                     const cros_cam_capture_result_t* result);
 
 //
 // General initialization.

@@ -7,12 +7,13 @@
 #include <vector>
 
 #include <base/command_line.h>
-#include <base/synchronization/waitable_event.h>
+#include <base/posix/safe_strerror.h>
 #include <base/strings/stringprintf.h>
+#include <base/synchronization/waitable_event.h>
 #include <brillo/syslog_logging.h>
 #include <gtest/gtest.h>
-#include <linux/videodev2.h>
 #include <libyuv.h>
+#include <linux/videodev2.h>
 
 #include "cros-camera/camera_service_connector.h"
 #include "cros-camera/common.h"
@@ -181,12 +182,19 @@ class FrameCapturer {
 
  private:
   // non-zero return value should stop the capture.
-  int GotFrame(const cros_cam_frame_t* frame) {
+  int GotCaptureResult(const cros_cam_capture_result_t* result) {
     if (capture_done_.IsSignaled()) {
-      ADD_FAILURE() << "got frame after capture is done";
+      ADD_FAILURE() << "got capture result after capture is done";
       return -1;
     }
 
+    if (result->status != 0) {
+      ADD_FAILURE() << "capture result error: "
+                    << base::safe_strerror(-result->status);
+      return -1;
+    }
+
+    const cros_cam_frame_t* frame = result->frame;
     EXPECT_TRUE(IsSameFormat(frame->format, format_));
     last_i420_frame_ = I420Buffer::Create(frame);
 
@@ -199,9 +207,10 @@ class FrameCapturer {
     return 0;
   }
 
-  static int CaptureCallback(void* context, const cros_cam_frame_t* frame) {
+  static int CaptureCallback(void* context,
+                             const cros_cam_capture_result_t* result) {
     auto* self = reinterpret_cast<FrameCapturer*>(context);
-    return self->GotFrame(frame);
+    return self->GotCaptureResult(result);
   }
 
   int num_frames_ = INT_MAX;
