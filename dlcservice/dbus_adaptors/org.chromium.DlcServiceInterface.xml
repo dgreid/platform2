@@ -67,7 +67,7 @@
       </tp:docstring>
     </arg>
   </method>
-  <method name="GetState">
+  <method name="GetDlcState">
     <tp:docstring>
       Returns the state of a DLC.
     </tp:docstring>

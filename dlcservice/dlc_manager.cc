@@ -102,7 +102,7 @@ DlcIdList DlcManager::GetMissingInstalls() {
                      [](const DlcBase& dlc) { return dlc.IsInstalling(); });
 }
 
-bool DlcManager::GetState(const DlcId& id, DlcState* state, ErrorPtr* err) {
+bool DlcManager::GetDlcState(const DlcId& id, DlcState* state, ErrorPtr* err) {
   DCHECK(state);
   DCHECK(err);
   if (!IsSupported(id)) {

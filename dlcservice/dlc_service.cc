@@ -176,10 +176,10 @@ bool DlcService::Purge(const string& id_in, brillo::ErrorPtr* err) {
   return ret;
 }
 
-bool DlcService::GetState(const std::string& id_in,
-                          DlcState* dlc_state,
-                          ErrorPtr* err) {
-  bool ret = dlc_manager_->GetState(id_in, dlc_state, err);
+bool DlcService::GetDlcState(const std::string& id_in,
+                             DlcState* dlc_state,
+                             ErrorPtr* err) {
+  bool ret = dlc_manager_->GetDlcState(id_in, dlc_state, err);
   if (!ret)
     LOG(ERROR) << Error::ToString(*err);
   return ret;

@@ -62,10 +62,10 @@ bool DBusService::GetDlcsToUpdate(brillo::ErrorPtr* err,
   return true;
 }
 
-bool DBusService::GetState(brillo::ErrorPtr* err,
-                           const string& id_in,
-                           DlcState* dlc_state_out) {
-  return dlc_service_->GetState(id_in, dlc_state_out, err);
+bool DBusService::GetDlcState(brillo::ErrorPtr* err,
+                              const string& id_in,
+                              DlcState* dlc_state_out) {
+  return dlc_service_->GetDlcState(id_in, dlc_state_out, err);
 }
 
 bool DBusService::InstallCompleted(brillo::ErrorPtr* err,

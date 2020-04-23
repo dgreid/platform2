@@ -146,7 +146,7 @@ const DLC_SERVICE_INTERFACE: &str = "org.chromium.DlcServiceInterface";
 const DLC_SERVICE_PATH: &str = "/org/chromium/DlcService";
 const DLC_SERVICE_NAME: &str = "org.chromium.DlcService";
 const DLC_INSTALL_METHOD: &str = "Install";
-const DLC_GET_STATE_METHOD: &str = "GetState";
+const DLC_GET_STATE_METHOD: &str = "GetDlcState";
 
 enum ChromeOSError {
     BadChromeFeatureStatus,

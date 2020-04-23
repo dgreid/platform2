@@ -22,10 +22,10 @@ class DlcManagerTest : public BaseTest {
                      bool fail = false) {
     DlcState state;
     if (fail) {
-      EXPECT_FALSE(dlc_manager_->GetState(id_in, &state, &err_));
+      EXPECT_FALSE(dlc_manager_->GetDlcState(id_in, &state, &err_));
       return;
     }
-    EXPECT_TRUE(dlc_manager_->GetState(id_in, &state, &err_));
+    EXPECT_TRUE(dlc_manager_->GetDlcState(id_in, &state, &err_));
     EXPECT_EQ(state_in, state.state());
   }
 
