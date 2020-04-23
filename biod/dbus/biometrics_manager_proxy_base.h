@@ -21,10 +21,15 @@ const char* ScanResultToString(ScanResult result);
 class BiometricsManagerProxyBase {
  public:
   using FinishCallback = base::Callback<void(bool success)>;
+  using SignalCallback = dbus::ObjectProxy::SignalCallback;
+  using OnConnectedCallback = dbus::ObjectProxy::OnConnectedCallback;
 
   // Factory method. Returns nullptr if cannot get a dbus proxy for biod.
   static std::unique_ptr<BiometricsManagerProxyBase> Create(
       const scoped_refptr<dbus::Bus>& bus, const dbus::ObjectPath& path);
+
+  void ConnectToAuthScanDoneSignal(SignalCallback signal_callback,
+                                   OnConnectedCallback on_connected_callback);
 
   const dbus::ObjectPath path() const;
 

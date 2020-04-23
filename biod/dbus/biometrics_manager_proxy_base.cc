@@ -72,6 +72,14 @@ std::unique_ptr<BiometricsManagerProxyBase> BiometricsManagerProxyBase::Create(
   return biometrics_manager_proxy_base;
 }
 
+void BiometricsManagerProxyBase::ConnectToAuthScanDoneSignal(
+    SignalCallback signal_callback, OnConnectedCallback on_connected_callback) {
+  proxy_->ConnectToSignal(biod::kBiometricsManagerInterface,
+                          biod::kBiometricsManagerAuthScanDoneSignal,
+                          std::move(signal_callback),
+                          std::move(on_connected_callback));
+}
+
 const dbus::ObjectPath BiometricsManagerProxyBase::path() const {
   return proxy_->object_path();
 }
