@@ -337,7 +337,7 @@ bool RTNLMessage::DecodeInternal(const ByteString& msg) {
       msg.GetLength() < hdr->hdr.nlmsg_len)
     return false;
 
-  Mode mode = kModeUnknown;
+  mode_ = kModeUnknown;
   switch (hdr->hdr.nlmsg_type) {
     case RTM_NEWLINK:
     case RTM_NEWADDR:
@@ -345,7 +345,7 @@ bool RTNLMessage::DecodeInternal(const ByteString& msg) {
     case RTM_NEWRULE:
     case RTM_NEWNDUSEROPT:
     case RTM_NEWNEIGH:
-      mode = kModeAdd;
+      mode_ = kModeAdd;
       break;
 
     case RTM_DELLINK:
@@ -353,7 +353,7 @@ bool RTNLMessage::DecodeInternal(const ByteString& msg) {
     case RTM_DELROUTE:
     case RTM_DELRULE:
     case RTM_DELNEIGH:
-      mode = kModeDelete;
+      mode_ = kModeDelete;
       break;
 
     default:
@@ -366,36 +366,36 @@ bool RTNLMessage::DecodeInternal(const ByteString& msg) {
   switch (hdr->hdr.nlmsg_type) {
     case RTM_NEWLINK:
     case RTM_DELLINK:
-      if (!DecodeLink(hdr, mode, &attr_data, &attr_length))
+      if (!DecodeLink(hdr, &attr_data, &attr_length))
         return false;
       break;
 
     case RTM_NEWADDR:
     case RTM_DELADDR:
-      if (!DecodeAddress(hdr, mode, &attr_data, &attr_length))
+      if (!DecodeAddress(hdr, &attr_data, &attr_length))
         return false;
       break;
 
     case RTM_NEWROUTE:
     case RTM_DELROUTE:
-      if (!DecodeRoute(hdr, mode, &attr_data, &attr_length))
+      if (!DecodeRoute(hdr, &attr_data, &attr_length))
         return false;
       break;
 
     case RTM_NEWRULE:
     case RTM_DELRULE:
-      if (!DecodeRule(hdr, mode, &attr_data, &attr_length))
+      if (!DecodeRule(hdr, &attr_data, &attr_length))
         return false;
       break;
 
     case RTM_NEWNDUSEROPT:
-      if (!DecodeNdUserOption(hdr, mode, &attr_data, &attr_length))
+      if (!DecodeNdUserOption(hdr, &attr_data, &attr_length))
         return false;
       break;
 
     case RTM_NEWNEIGH:
     case RTM_DELNEIGH:
-      if (!DecodeNeighbor(hdr, mode, &attr_data, &attr_length))
+      if (!DecodeNeighbor(hdr, &attr_data, &attr_length))
         return false;
       break;
 
@@ -420,14 +420,12 @@ bool RTNLMessage::DecodeInternal(const ByteString& msg) {
 }
 
 bool RTNLMessage::DecodeLink(const RTNLHeader* hdr,
-                             Mode mode,
                              rtattr** attr_data,
                              int* attr_length) {
   if (hdr->hdr.nlmsg_len < NLMSG_LENGTH(sizeof(hdr->ifi))) {
     return false;
   }
 
-  mode_ = mode;
   *attr_data = IFLA_RTA(NLMSG_DATA(&hdr->hdr));
   *attr_length = IFLA_PAYLOAD(&hdr->hdr);
 
@@ -468,13 +466,11 @@ bool RTNLMessage::DecodeLink(const RTNLHeader* hdr,
 }
 
 bool RTNLMessage::DecodeAddress(const RTNLHeader* hdr,
-                                Mode mode,
                                 rtattr** attr_data,
                                 int* attr_length) {
   if (hdr->hdr.nlmsg_len < NLMSG_LENGTH(sizeof(hdr->ifa))) {
     return false;
   }
-  mode_ = mode;
   *attr_data = IFA_RTA(NLMSG_DATA(&hdr->hdr));
   *attr_length = IFA_PAYLOAD(&hdr->hdr);
 
@@ -487,13 +483,11 @@ bool RTNLMessage::DecodeAddress(const RTNLHeader* hdr,
 }
 
 bool RTNLMessage::DecodeRoute(const RTNLHeader* hdr,
-                              Mode mode,
                               rtattr** attr_data,
                               int* attr_length) {
   if (hdr->hdr.nlmsg_len < NLMSG_LENGTH(sizeof(hdr->rtm))) {
     return false;
   }
-  mode_ = mode;
   *attr_data = RTM_RTA(NLMSG_DATA(&hdr->hdr));
   *attr_length = RTM_PAYLOAD(&hdr->hdr);
 
@@ -507,13 +501,11 @@ bool RTNLMessage::DecodeRoute(const RTNLHeader* hdr,
 }
 
 bool RTNLMessage::DecodeRule(const RTNLHeader* hdr,
-                             Mode mode,
                              rtattr** attr_data,
                              int* attr_length) {
   if (hdr->hdr.nlmsg_len < NLMSG_LENGTH(sizeof(hdr->rtm))) {
     return false;
   }
-  mode_ = mode;
   *attr_data = RTM_RTA(NLMSG_DATA(&hdr->hdr));
   *attr_length = RTM_PAYLOAD(&hdr->hdr);
 
@@ -527,7 +519,6 @@ bool RTNLMessage::DecodeRule(const RTNLHeader* hdr,
 }
 
 bool RTNLMessage::DecodeNdUserOption(const RTNLHeader* hdr,
-                                     Mode mode,
                                      rtattr** attr_data,
                                      int* attr_length) {
   size_t min_payload_len = sizeof(hdr->nd_user_opt) +
@@ -537,7 +528,6 @@ bool RTNLMessage::DecodeNdUserOption(const RTNLHeader* hdr,
     return false;
   }
 
-  mode_ = mode;
   interface_index_ = hdr->nd_user_opt.nduseropt_ifindex;
   family_ = hdr->nd_user_opt.nduseropt_family;
 
@@ -608,14 +598,12 @@ bool RTNLMessage::ParseRdnssOption(const uint8_t* data,
 }
 
 bool RTNLMessage::DecodeNeighbor(const RTNLHeader* hdr,
-                                 Mode mode,
                                  rtattr** attr_data,
                                  int* attr_length) {
   if (hdr->hdr.nlmsg_len < NLMSG_LENGTH(sizeof(hdr->ndm))) {
     return false;
   }
 
-  mode_ = mode;
   interface_index_ = hdr->ndm.ndm_ifindex;
   family_ = hdr->ndm.ndm_family;
   type_ = kTypeNeighbor;

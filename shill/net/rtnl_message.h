@@ -263,30 +263,24 @@ class SHILL_EXPORT RTNLMessage {
  private:
   SHILL_PRIVATE bool DecodeInternal(const ByteString& msg);
   SHILL_PRIVATE bool DecodeLink(const RTNLHeader* hdr,
-                                Mode mode,
                                 rtattr** attr_data,
                                 int* attr_length);
   SHILL_PRIVATE bool DecodeAddress(const RTNLHeader* hdr,
-                                   Mode mode,
                                    rtattr** attr_data,
                                    int* attr_length);
   SHILL_PRIVATE bool DecodeRoute(const RTNLHeader* hdr,
-                                 Mode mode,
                                  rtattr** attr_data,
                                  int* attr_length);
   SHILL_PRIVATE bool DecodeRule(const RTNLHeader* hdr,
-                                Mode mode,
                                 rtattr** attr_data,
                                 int* attr_length);
   SHILL_PRIVATE bool DecodeNdUserOption(const RTNLHeader* hdr,
-                                        Mode mode,
                                         rtattr** attr_data,
                                         int* attr_length);
   SHILL_PRIVATE bool ParseRdnssOption(const uint8_t* data,
                                       int length,
                                       uint32_t lifetime);
   SHILL_PRIVATE bool DecodeNeighbor(const RTNLHeader* hdr,
-                                    Mode mode,
                                     rtattr** attr_data,
                                     int* attr_length);
   SHILL_PRIVATE bool EncodeLink(RTNLHeader* hdr) const;
