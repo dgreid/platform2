@@ -40,6 +40,7 @@ class SHILL_EXPORT ByteString {
 
   unsigned char* GetData();
   const unsigned char* GetConstData() const;
+  const char* GetConstCString() const;
   size_t GetLength() const;
 
   // Returns a ByteString containing |length| bytes from the ByteString

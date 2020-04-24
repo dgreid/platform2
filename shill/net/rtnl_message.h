@@ -211,6 +211,14 @@ class SHILL_EXPORT RTNLMessage {
   void SetAttribute(uint16_t attr, const ByteString& val) {
     attributes_[attr] = val;
   }
+  // Return the value of an rtattr attribute of type uint32_t.
+  uint32_t GetUint32Attribute(uint16_t attr) const;
+  // Returns the value of an rtattr attribute of type string. String attributes
+  // serialized by the kernel with nla_put_string() are null terminated and the
+  // null terminator is included in the underlying ByteString value. In case
+  // the ByteString does not contain any terminator, all the bytes of contained
+  // in the ByteString are copied into the standard string.
+  std::string GetStringAttribute(uint16_t attr) const;
 
  private:
   SHILL_PRIVATE bool DecodeInternal(const ByteString& msg);

@@ -25,6 +25,10 @@ const unsigned char* ByteString::GetConstData() const {
   return (GetLength() == 0) ? nullptr : &data_.front();
 }
 
+const char* ByteString::GetConstCString() const {
+  return reinterpret_cast<const char*>(GetConstData());
+}
+
 size_t ByteString::GetLength() const {
   return data_.size();
 }

@@ -627,6 +627,20 @@ void RTNLMessage::Reset() {
   attributes_.clear();
 }
 
+uint32_t RTNLMessage::GetUint32Attribute(uint16_t attr) const {
+  uint32_t val = 0;
+  GetAttribute(attr).ConvertToCPUUInt32(&val);
+  return val;
+}
+
+std::string RTNLMessage::GetStringAttribute(uint16_t attr) const {
+  if (!HasAttribute(attr))
+    return "";
+  ByteString bytes = GetAttribute(attr);
+  size_t len = strnlen(bytes.GetConstCString(), bytes.GetLength());
+  return std::string(bytes.GetConstCString(), len);
+}
+
 // static
 std::string RTNLMessage::ModeToString(RTNLMessage::Mode mode) {
   switch (mode) {

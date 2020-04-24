@@ -893,7 +893,7 @@ TEST_F(RTNLMessageTest, ToString) {
       {kNewAddrIPV4, sizeof(kNewAddrIPV4),
        "Add IPv4 Address: AddressStatus prefix_len 24 flags 80 scope 0"},
       {kDelAddrIPV6, sizeof(kDelRouteIPV6),
-       "Delete IPv6 Address: AddressStatus prefix_len 64 flags 80 scope 253"},
+        "Delete IPv6 Address: AddressStatus prefix_len 64 flags 80 scope 253"},
       {kAddRouteIPV4, sizeof(kAddRouteIPV4),
        "Add IPv4 Route: RouteStatus dst_prefix 0 src_prefix 0 table 254 "
        "protocol 3 "
@@ -911,6 +911,41 @@ TEST_F(RTNLMessageTest, ToString) {
     EXPECT_TRUE(msg.Decode(ByteString(tt.payload, tt.length)));
     EXPECT_EQ(tt.expected_string, msg.ToString());
   }
+}
+
+TEST_F(RTNLMessageTest, GetUint32Attribute) {
+  // Attribute not found
+  RTNLMessage msg;
+  EXPECT_EQ(0, msg.GetUint32Attribute(4));
+
+  // Attribute found
+  msg.SetAttribute(5, ByteString::CreateFromCPUUInt32(1234));
+  EXPECT_EQ(1234, msg.GetUint32Attribute(5));
+}
+
+TEST_F(RTNLMessageTest, GetStringAttribute) {
+  const char* attr = "attribute";
+
+  // Attribute not found
+  RTNLMessage msg;
+  EXPECT_EQ("", msg.GetStringAttribute(4));
+
+  // Valid c string attribute found
+  msg.SetAttribute(5, ByteString(attr, strlen(attr) + 1));
+  EXPECT_EQ("attribute", msg.GetStringAttribute(5));
+
+  // Non null-terminated c string attribute found
+  msg.SetAttribute(6, ByteString(attr, 3));
+  EXPECT_EQ("att", msg.GetStringAttribute(6));
+
+  // Non null-terminated c string attribute found
+  msg.SetAttribute(7, ByteString(attr, 1));
+  EXPECT_EQ("a", msg.GetStringAttribute(7));
+
+  // Non text attribute
+  const unsigned char not_text[] = {0xff, 0xff, 0xff, 0xff};
+  msg.SetAttribute(8, ByteString(not_text, 4));
+  EXPECT_EQ("\xff\xff\xff\xff", msg.GetStringAttribute(8));
 }
 
 }  // namespace shill
