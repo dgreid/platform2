@@ -37,6 +37,7 @@ constexpr char kPreallocatedSize[] = "pre-allocated-size";
 constexpr char kSize[] = "size";
 constexpr char kPreloadAllowed[] = "preload-allowed";
 constexpr char kUsedBy[] = "used-by";
+constexpr char kDescription[] = "description";
 
 bool GetSHA256FromString(const std::string& hash_str,
                          std::vector<uint8_t>* bytes) {
@@ -167,6 +168,7 @@ bool Manifest::ParseManifest(const std::string& manifest_raw) {
   manifest_dict->GetString(kName, &name_);
   manifest_dict->GetString(kImageType, &image_type_);
   manifest_dict->GetString(kUsedBy, &used_by_);
+  manifest_dict->GetString(kDescription, &description_);
 
   std::string preallocated_size_str;
   if (manifest_dict->GetString(kPreallocatedSize, &preallocated_size_str)) {
