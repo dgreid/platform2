@@ -112,13 +112,13 @@ constexpr base::TimeDelta kVmStartupTimeout = base::TimeDelta::FromSeconds(30);
 constexpr char kCrosvmDir[] = "crosvm";
 
 // crosvm log directory name.
-constexpr char kCrosvmLogDir[] = "crosvm/log";
+constexpr char kCrosvmLogDir[] = "log";
 
 // Plugin VM directory name.
 constexpr char kPluginVmDir[] = "pvm";
 
-// Cryptohome root base path.
-constexpr char kCryptohomeRoot[] = "/home/root";
+// Daemon store base path.
+constexpr char kCryptohomeRoot[] = "/run/daemon-store";
 
 // Extended attribute indicating that user has picked a disk size and it should
 // not be resized.
@@ -193,6 +193,9 @@ struct UntrustedVMCheckResult {
   // untrusted VMs.
   bool skip_host_checks;
 };
+
+// Android data directory.
+constexpr const char kAndroidDataDir[] = "/run/arcvm/android-data/data";
 
 // Passes |method_call| to |handler| and passes the response to
 // |response_sender|. If |handler| returns NULL, an empty response is created
@@ -324,8 +327,7 @@ base::Optional<base::FilePath> GetFilePathFromName(
   base::Base64UrlEncode(vm_name, base::Base64UrlEncodePolicy::INCLUDE_PADDING,
                         &encoded_name);
 
-  base::FilePath storage_dir =
-      base::FilePath(kCryptohomeRoot).Append(cryptohome_id);
+  base::FilePath storage_dir = base::FilePath(kCryptohomeRoot);
   switch (storage_location) {
     case STORAGE_CRYPTOHOME_ROOT: {
       storage_dir = storage_dir.Append(kCrosvmDir);
@@ -340,6 +342,8 @@ base::Optional<base::FilePath> GetFilePathFromName(
       return base::nullopt;
     }
   }
+  storage_dir = storage_dir.Append(cryptohome_id);
+
   if (!base::DirectoryExists(storage_dir)) {
     if (!create_parent_dir) {
       return base::nullopt;
@@ -347,7 +351,7 @@ base::Optional<base::FilePath> GetFilePathFromName(
     base::File::Error dir_error;
 
     if (!base::CreateDirectoryAndGetError(storage_dir, &dir_error)) {
-      LOG(ERROR) << "Failed to create storage directory in /home/root: "
+      LOG(ERROR) << "Failed to create storage directory " << storage_dir << ": "
                  << base::File::ErrorToString(dir_error);
       return base::nullopt;
     }
@@ -509,8 +513,8 @@ bool GetPluginStatefulDirectory(const string& vm_id,
                                 const string& cryptohome_id,
                                 base::FilePath* path_out) {
   return GetPluginDirectory(base::FilePath(kCryptohomeRoot)
-                                .Append(cryptohome_id)
-                                .Append(kPluginVmDir),
+                                .Append(kPluginVmDir)
+                                .Append(cryptohome_id),
                             "pvm", vm_id, true /* create */, path_out);
 }
 
@@ -519,8 +523,8 @@ bool GetPluginIsoDirectory(const string& vm_id,
                            bool create,
                            base::FilePath* path_out) {
   return GetPluginDirectory(base::FilePath(kCryptohomeRoot)
-                                .Append(cryptohome_id)
-                                .Append(kPluginVmDir),
+                                .Append(kPluginVmDir)
+                                .Append(cryptohome_id),
                             "iso", vm_id, create, path_out);
 }
 
@@ -639,6 +643,7 @@ base::FilePath GetVmLogPath(const std::string& owner_id,
 
   base::FilePath path =
       base::FilePath(kCryptohomeRoot)
+          .Append(kCrosvmDir)
           .Append(owner_id)
           .Append(kCrosvmLogDir)
           .Append(base::StringPrintf(
@@ -649,8 +654,8 @@ base::FilePath GetVmLogPath(const std::string& owner_id,
   if (!base::DirectoryExists(parent_dir)) {
     base::File::Error dir_error;
     if (!base::CreateDirectoryAndGetError(parent_dir, &dir_error)) {
-      LOG(ERROR) << "Failed to create crosvm/log directory in /home/root: "
-                 << base::File::ErrorToString(dir_error);
+      LOG(ERROR) << "Failed to create crosvm log directory in " << parent_dir
+                 << ": " << base::File::ErrorToString(dir_error);
       return base::FilePath();
     }
   }
@@ -711,14 +716,14 @@ bool Service::ListVmDisksInLocation(const string& cryptohome_id,
   switch (location) {
     case STORAGE_CRYPTOHOME_ROOT:
       image_dir = base::FilePath(kCryptohomeRoot)
-                      .Append(cryptohome_id)
-                      .Append(kCrosvmDir);
+                      .Append(kCrosvmDir)
+                      .Append(cryptohome_id);
       break;
 
     case STORAGE_CRYPTOHOME_PLUGINVM:
       image_dir = base::FilePath(kCryptohomeRoot)
-                      .Append(cryptohome_id)
-                      .Append(kPluginVmDir);
+                      .Append(kPluginVmDir)
+                      .Append(cryptohome_id);
       file_type = base::FileEnumerator::DIRECTORIES;
       allowed_ext = kPluginVmImageExtensions;
       break;
@@ -1883,10 +1888,7 @@ std::unique_ptr<dbus::Response> Service::StartArcVm(
   }
   const uint32_t pstore_size = 1024 * 1024;
 
-  base::FilePath data_dir = base::FilePath("/home/root")
-                                .Append(request.owner_id())
-                                .Append("android-data")
-                                .Append("data");
+  base::FilePath data_dir = base::FilePath(kAndroidDataDir);
   if (!base::PathExists(data_dir)) {
     LOG(WARNING) << "Android data directory does not exist";
 

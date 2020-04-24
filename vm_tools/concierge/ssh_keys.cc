@@ -19,11 +19,11 @@ namespace vm_tools {
 namespace concierge {
 
 namespace {
-// Cryptohome root base path.
-constexpr char kCryptohomeRoot[] = "/home/root";
+// Daemon store base path.
+constexpr char kCryptohomeRoot[] = "/run/daemon-store/crosvm";
 
 // Dir name that all ssh keys are stored under.
-constexpr char kSshKeysDir[] = "crosvm/sshkeys";
+constexpr char kSshKeysDir[] = "sshkeys";
 
 // Filename used for the host keys in the ssh key dir.
 constexpr char kHostKeyFilename[] = "host_key";
@@ -105,8 +105,8 @@ bool GenerateKeyPair(const base::FilePath& path) {
   if (!base::DirectoryExists(parent_dir)) {
     base::File::Error dir_error;
     if (!base::CreateDirectoryAndGetError(parent_dir, &dir_error)) {
-      LOG(ERROR) << "Failed to create crosvm_sshkeys directory in /home/root: "
-                 << base::File::ErrorToString(dir_error);
+      LOG(ERROR) << "Failed to create crosvm_sshkeys directory in "
+                 << parent_dir << ": " << base::File::ErrorToString(dir_error);
       return false;
     }
   }
