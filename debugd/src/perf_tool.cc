@@ -124,6 +124,7 @@ void PerfTool::OnQuipperProcessExited(const siginfo_t& siginfo) {
   // process.
   quipper_process_->Wait();
   quipper_process_ = nullptr;
+  quipper_process_output_fd_.reset();
 
   profiler_session_id_.reset();
 }
@@ -169,6 +170,20 @@ bool PerfTool::GetPerfOutputFd(uint32_t duration_secs,
   process_reaper_.WatchForChild(
       FROM_HERE, quipper_process_->pid(),
       base::Bind(&PerfTool::OnQuipperProcessExited, base::Unretained(this)));
+
+  // When GetPerfOutputFd() is used to run the perf tool, the user will read
+  // from the read end of |stdout_fd| until the write end is closed.  At that
+  // point, it may make another call to GetPerfOutputFd() and expect that will
+  // start another perf run. |stdout_fd| will be closed when the last process
+  // holding it exits, which is minijail0 in this case. However, the kernel
+  // closes fds before signaling process exit. Therefore, it's possible for
+  // |stdout_fd| to be closed and the user tries to run another
+  // GetPerfOutputFd() before we're signaled of the process exit. To mitigate
+  // this, hold on to a dup() of |stdout_fd| until we're signaled that the
+  // process has exited. This guarantees that the caller can make a new
+  // GetPerfOutputFd() call when it finishes reading the output.
+  quipper_process_output_fd_.reset(dup(stdout_fd.get()));
+  DCHECK(quipper_process_output_fd_.is_valid());
 
   // Generate an opaque, pseudo-unique, session ID using time and process ID.
   profiler_session_id_ = *session_id =

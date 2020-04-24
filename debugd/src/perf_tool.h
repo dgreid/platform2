@@ -57,6 +57,7 @@ class PerfTool {
 
   base::Optional<uint64_t> profiler_session_id_;
   std::unique_ptr<SandboxedProcess> quipper_process_;
+  base::ScopedFD quipper_process_output_fd_;
   brillo::AsynchronousSignalHandler signal_handler_;
   brillo::ProcessReaper process_reaper_;
 
