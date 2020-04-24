@@ -576,8 +576,7 @@ void Attestation::PrepareForEnrollment() {
   // Create a new AIK and PCR quotes for the first identity with default
   // identity features.
   AttestationResult result = CreateIdentity(default_identity_features_,
-                                            ek_public_key,
-                                            nullptr /* unused new_index */);
+                                            ek_public_key);
   if (result != AttestationResult::kSuccess) {
     AttestationOpsStatus status =
         result == AttestationResult::kInvalidPcr0Value ?
@@ -647,7 +646,7 @@ void Attestation::PrepareForEnrollment() {
 }
 
 AttestationResult Attestation::CreateIdentity(
-    int identity_features, const SecureBlob& ek_public_key, int* new_index) {
+    int identity_features, const SecureBlob& ek_public_key) {
   // The identity we're creating will have the next index in identities.
   const int identity = database_pb_.identities().size();
   LOG(INFO) << "Attestation: Creating identity " << identity << " with "
@@ -741,10 +740,6 @@ AttestationResult Attestation::CreateIdentity(
     }
   }
 
-  // Return the index of the newly created identity.
-  if (new_index) {
-    *new_index = database_pb_.identities().size() - 1;
-  }
   return AttestationResult::kSuccess;
 }
 

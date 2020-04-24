@@ -674,14 +674,9 @@ class Attestation : public base::PlatformThread::Delegate,
   Tpm::TpmRetryAction ComputeEnterpriseEnrollmentIdInternal(
       brillo::SecureBlob* enterprise_enrollment_id);
 
-  // Creates a new identity. If |new_index| is not nullptr, the index of the new
-  // identity will be stored in |new_index|.
-  //
-  // The output value in |new_index| shouldn't be used if the return value isn't
-  // kSuccess.
+  // Creates a new identity.
   AttestationResult CreateIdentity(const int identity_features,
-                                   const brillo::SecureBlob& ek_public_key,
-                                   int* new_index);
+                                   const brillo::SecureBlob& ek_public_key);
 
   // Verifies an endorsement credential against known Chrome OS issuers. If
   // |is_cros_core| is true, checks that the EK is endorsed for that
