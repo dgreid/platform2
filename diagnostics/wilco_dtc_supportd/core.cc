@@ -165,6 +165,11 @@ bool Core::Start() {
           RequestRequestBluetoothDataNotification,
       base::Bind(&GrpcService::RequestBluetoothDataNotification,
                  base::Unretained(&grpc_service_)));
+  grpc_server_.RegisterHandler(
+      &grpc_api::WilcoDtcSupportd::AsyncService::
+          RequestGetStatefulPartitionAvailableCapacity,
+      base::Bind(&GrpcService::GetStatefulPartitionAvailableCapacity,
+                 base::Unretained(&grpc_service_)));
 
   // Start the gRPC server that listens for incoming gRPC requests.
   VLOG(1) << "Starting gRPC server";
