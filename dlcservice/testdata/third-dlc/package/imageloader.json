@@ -1,6 +1,6 @@
 {
   "fs-type": "squashfs",
-  "id": "Third-Dlc",
+  "id": "third-dlc",
   "image-sha256-hash": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
   "image-type": "dlc",
   "is-removable": true,

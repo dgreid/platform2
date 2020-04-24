@@ -30,10 +30,10 @@ using testing::StrictMock;
 
 namespace dlcservice {
 
-const char kFirstDlc[] = "First-Dlc";
-const char kSecondDlc[] = "Second-Dlc";
-const char kThirdDlc[] = "Third-Dlc";
-const char kPackage[] = "Package";
+const char kFirstDlc[] = "first-dlc";
+const char kSecondDlc[] = "second-dlc";
+const char kThirdDlc[] = "third-dlc";
+const char kPackage[] = "package";
 const char kDefaultOmahaUrl[] = "http://foo-url";
 
 BaseTest::BaseTest() {
