@@ -166,8 +166,10 @@ void DBusProtocolHandler::Connect(ProtocolHandlerProxyInterface* proxy) {
 
 void DBusProtocolHandler::Disconnect(const dbus::ObjectPath& object_path) {
   proxies_.erase(object_path);
-  if (proxies_.empty())
+  if (proxies_.empty()) {
     remote_handler_id_map_.clear();
+    request_id_map_.clear();
+  }
   for (auto& pair : request_handlers_)
     pair.second.remote_handler_ids.clear();
 }
@@ -193,7 +195,6 @@ bool DBusProtocolHandler::ProcessRequest(const std::string& protocol_handler_id,
                                      const std::string& request_id,
                                      std::unique_ptr<Request> request,
                                      brillo::ErrorPtr* error) {
-  request_id_map_.emplace(request_id, protocol_handler_id);
   auto id_iter = remote_handler_id_map_.find(remote_handler_id);
   if (id_iter == remote_handler_id_map_.end()) {
     brillo::Error::AddToPrintf(error, FROM_HERE,
@@ -212,6 +213,7 @@ bool DBusProtocolHandler::ProcessRequest(const std::string& protocol_handler_id,
                                id_iter->second);
     return false;
   }
+  request_id_map_.emplace(request_id, protocol_handler_id);
   handler_iter->second.handler->HandleRequest(
       std::move(request),
       std::unique_ptr<Response>{new DBusResponse{this, request_id}});
@@ -223,10 +225,18 @@ void DBusProtocolHandler::CompleteRequest(
     int status_code,
     const std::multimap<std::string, std::string>& headers,
     brillo::StreamPtr data_stream) {
+
+  // Once request gets a response and the request_id_map should remove
+  // the request id from the map
+  auto clear_request_itr = request_id_map_.find(request_id);
   ProtocolHandlerProxyInterface* proxy =
       GetRequestProtocolHandlerProxy(request_id);
-  if (!proxy)
+  if (!proxy) {
+    if (clear_request_itr != request_id_map_.end()) {
+      request_id_map_.erase(clear_request_itr);
+    }
     return;
+  }
 
   std::vector<std::tuple<std::string, std::string>> header_list;
   header_list.reserve(headers.size());
@@ -240,6 +250,9 @@ void DBusProtocolHandler::CompleteRequest(
       request_id, status_code, header_list, data_size,
       base::Bind(&WriteResponseData, base::Passed(&data_stream)),
       base::Bind(&IgnoreDBusError));
+  if (clear_request_itr != request_id_map_.end()) {
+    request_id_map_.erase(clear_request_itr);
+  }
 }
 
 void DBusProtocolHandler::GetFileData(
