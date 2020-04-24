@@ -745,7 +745,7 @@ void ArcSetup::SetUpBinFmtMisc(ArcBinaryTranslationType bin_type) {
       arc_paths_->binfmt_misc_directory));
 }
 
-void ArcSetup::SetUpAndroidData(bool bind_mount) {
+void ArcSetup::SetUpAndroidData(const base::FilePath& bind_target) {
   mode_t android_data_mode = 0700;
   gid_t android_data_gid = kRootGid;
   if (USE_ARCVM) {
@@ -770,13 +770,11 @@ void ArcSetup::SetUpAndroidData(bool bind_mount) {
         arc_paths_->android_data_directory.Append("data").Append("media")));
   }
 
-  if (!bind_mount)
-    return;
   // To make our bind-mount business easier, we first bind-mount the real
-  // android-data directory to a fixed path ($ANDROID_MUTABLE_SOURCE).
+  // android-data directory to bind_target (usually $ANDROID_MUTABLE_SOURCE).
   // Then we do not need to pass the android-data path to other processes.
   EXIT_IF(!arc_mounter_->BindMount(arc_paths_->android_data_directory,
-                                   arc_paths_->android_mutable_source));
+                                   bind_target));
 }
 
 void ArcSetup::UnmountSdcard() {
@@ -2169,7 +2167,7 @@ void ArcSetup::OnBootContinue() {
   // session_manager can delete (to be more precise, move) the directory
   // on opt-out. Since this creates cache and data directories when they
   // don't exist, this has to be done before calling ShareAndroidData().
-  SetUpAndroidData(/*bind_mount=*/true);
+  SetUpAndroidData(arc_paths_->android_mutable_source);
 
   if (GetSdkVersion() <= AndroidSdkVersion::ANDROID_P) {
     if (!InstallLinksToHostSideCode()) {
@@ -2316,9 +2314,15 @@ void ArcSetup::OnApplyPerBoardConfig() {
 }
 
 void ArcSetup::OnCreateData() {
-  // Bind mounting is not needed here because ARCVM does not use
-  // |kAndroidRootfsDirectory|.
-  SetUpAndroidData(/*bind_mount=*/false);
+  const base::FilePath bind_target(
+      config_.GetStringOrDie("ANDROID_MUTABLE_SOURCE"));
+  // bind_target may be already bound if arc-create-data has previously run
+  // during this session.
+  EXIT_IF(!arc_mounter_->UmountIfExists(bind_target));
+  // Create data folder and bind to bind_target. The bind mount will be cleaned
+  // up in vm_concierge.conf's post-stop script, when the mnt_concierge
+  // namespace is unmounted.
+  SetUpAndroidData(bind_target);
 }
 
 void ArcSetup::OnMountSdcard() {

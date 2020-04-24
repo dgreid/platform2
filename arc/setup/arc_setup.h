@@ -131,9 +131,9 @@ class ArcSetup {
   // Sets up a dummy android-data directory on tmpfs.
   void SetUpDummyAndroidDataOnTmpfs();
 
-  // Sets up android-data directory. If |bind_mount| is true, it mounts
-  // /home/root/<hash>/android-data to |kAndroidRootfsDirectory|.
-  void SetUpAndroidData(bool bind_mount);
+  // Sets up android-data directory. It bind-mounts
+  // /home/root/<hash>/android-data to |bind_target|.
+  void SetUpAndroidData(const base::FilePath& bind_target);
 
   // Sets up shared APK cache directory.
   void SetUpSharedApkDirectory();
