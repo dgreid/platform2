@@ -5,6 +5,7 @@
 #ifndef BIOD_DBUS_BIOMETRICS_MANAGER_PROXY_BASE_H_
 #define BIOD_DBUS_BIOMETRICS_MANAGER_PROXY_BASE_H_
 
+#include <memory>
 #include <string>
 
 #include <base/memory/weak_ptr.h>
@@ -21,8 +22,9 @@ class BiometricsManagerProxyBase {
  public:
   using FinishCallback = base::Callback<void(bool success)>;
 
-  BiometricsManagerProxyBase(const scoped_refptr<dbus::Bus>& bus,
-                             const dbus::ObjectPath& path);
+  // Factory method. Returns nullptr if cannot get a dbus proxy for biod.
+  static std::unique_ptr<BiometricsManagerProxyBase> Create(
+      const scoped_refptr<dbus::Bus>& bus, const dbus::ObjectPath& path);
 
   const dbus::ObjectPath path() const;
 
@@ -39,6 +41,11 @@ class BiometricsManagerProxyBase {
   void EndAuthSession();
 
  protected:
+  BiometricsManagerProxyBase();
+
+  bool Initialize(const scoped_refptr<dbus::Bus>& bus,
+                  const dbus::ObjectPath& path);
+
   void OnFinish(bool success);
 
   void OnSignalConnected(const std::string& interface,

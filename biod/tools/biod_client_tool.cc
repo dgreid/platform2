@@ -11,6 +11,7 @@
 #include <base/command_line.h>
 #include <base/files/file_descriptor_watcher_posix.h>
 #include <base/logging.h>
+#include <base/memory/ptr_util.h>
 #include <base/message_loop/message_loop.h>
 #include <base/run_loop.h>
 #include <base/strings/string_split.h>
@@ -118,36 +119,16 @@ class BiometricsManagerProxy : public biod::BiometricsManagerProxyBase {
  public:
   using FinishCallback = base::Callback<void(bool success)>;
 
-  BiometricsManagerProxy(const scoped_refptr<dbus::Bus>& bus,
-                         const dbus::ObjectPath& path,
-                         dbus::MessageReader* pset_reader)
-      : biod::BiometricsManagerProxyBase(bus, path), weak_factory_(this) {
-    while (pset_reader->HasMoreData()) {
-      dbus::MessageReader pset_entry_reader(nullptr);
-      std::string property_name;
-      CHECK(pset_reader->PopDictEntry(&pset_entry_reader));
-      CHECK(pset_entry_reader.PopString(&property_name));
+  static std::unique_ptr<BiometricsManagerProxy> Create(
+      const scoped_refptr<dbus::Bus>& bus,
+      const dbus::ObjectPath& path,
+      dbus::MessageReader* pset_reader) {
+    auto biometrics_manager_proxy =
+        base::WrapUnique(new BiometricsManagerProxy());
 
-      if (property_name == biod::kBiometricsManagerBiometricTypeProperty) {
-        CHECK(pset_entry_reader.PopVariantOfUint32(
-            reinterpret_cast<uint32_t*>(&type_)));
-      }
-    }
-
-    proxy_->ConnectToSignal(
-        biod::kBiometricsManagerInterface,
-        biod::kBiometricsManagerEnrollScanDoneSignal,
-        base::Bind(&BiometricsManagerProxy::OnEnrollScanDone,
-                   weak_factory_.GetWeakPtr()),
-        base::Bind(&BiometricsManagerProxy::OnSignalConnected,
-                   weak_factory_.GetWeakPtr()));
-    proxy_->ConnectToSignal(
-        biod::kBiometricsManagerInterface,
-        biod::kBiometricsManagerAuthScanDoneSignal,
-        base::Bind(&BiometricsManagerProxy::OnAuthScanDone,
-                   weak_factory_.GetWeakPtr()),
-        base::Bind(&BiometricsManagerProxy::OnSignalConnected,
-                   weak_factory_.GetWeakPtr()));
+    if (!biometrics_manager_proxy->Initialize(bus, path, pset_reader))
+      return nullptr;
+    return biometrics_manager_proxy;
   }
 
   BiometricsManagerType type() const { return type_; }
@@ -209,6 +190,45 @@ class BiometricsManagerProxy : public biod::BiometricsManagerProxyBase {
   }
 
  private:
+  BiometricsManagerProxy() : weak_factory_(this) {}
+
+  bool Initialize(const scoped_refptr<dbus::Bus>& bus,
+                  const dbus::ObjectPath& path,
+                  dbus::MessageReader* pset_reader) {
+    if (!BiometricsManagerProxyBase::Initialize(bus, path)) {
+      LOG(ERROR) << "Cannot get dbus object proxy for biod";
+      return false;
+    }
+
+    while (pset_reader->HasMoreData()) {
+      dbus::MessageReader pset_entry_reader(nullptr);
+      std::string property_name;
+      CHECK(pset_reader->PopDictEntry(&pset_entry_reader));
+      CHECK(pset_entry_reader.PopString(&property_name));
+
+      if (property_name == biod::kBiometricsManagerBiometricTypeProperty) {
+        CHECK(pset_entry_reader.PopVariantOfUint32(
+            reinterpret_cast<uint32_t*>(&type_)));
+      }
+    }
+
+    proxy_->ConnectToSignal(
+        biod::kBiometricsManagerInterface,
+        biod::kBiometricsManagerEnrollScanDoneSignal,
+        base::Bind(&BiometricsManagerProxy::OnEnrollScanDone,
+                   weak_factory_.GetWeakPtr()),
+        base::Bind(&BiometricsManagerProxy::OnSignalConnected,
+                   weak_factory_.GetWeakPtr()));
+    proxy_->ConnectToSignal(
+        biod::kBiometricsManagerInterface,
+        biod::kBiometricsManagerAuthScanDoneSignal,
+        base::Bind(&BiometricsManagerProxy::OnAuthScanDone,
+                   weak_factory_.GetWeakPtr()),
+        base::Bind(&BiometricsManagerProxy::OnSignalConnected,
+                   weak_factory_.GetWeakPtr()));
+    return true;
+  }
+
   void OnEnrollScanDone(dbus::Signal* signal) {
     dbus::MessageReader signal_reader(signal);
     biod::EnrollScanDone proto;
@@ -308,9 +328,10 @@ class BiodProxy {
         dbus::MessageReader pset_reader(nullptr);
         CHECK(interface_entry_reader.PopArray(&pset_reader));
         if (interface_name == biod::kBiometricsManagerInterface) {
-          biometrics_managers_.emplace_back(
-              std::make_unique<BiometricsManagerProxy>(bus_, object_path,
-                                                       &pset_reader));
+          auto biometrics_manager =
+              BiometricsManagerProxy::Create(bus_, object_path, &pset_reader);
+          if (biometrics_manager)
+            biometrics_managers_.emplace_back(std::move(biometrics_manager));
         }
       }
     }

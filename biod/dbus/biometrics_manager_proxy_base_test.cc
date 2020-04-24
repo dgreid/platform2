@@ -37,7 +37,7 @@ class BiometricsManagerProxyBaseTest : public testing::Test {
                                            dbus::ObjectPath(kBiodServicePath)))
         .WillOnce(Return(mock_object_proxy_.get()));
 
-    proxy_base_ = std::make_unique<BiometricsManagerProxyBase>(
+    proxy_base_ = BiometricsManagerProxyBase::Create(
         mock_bus_.get(), dbus::ObjectPath(kBiodServicePath));
   }
 

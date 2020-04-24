@@ -9,6 +9,7 @@
 #include <utility>
 
 #include <base/bind.h>
+#include <base/memory/ptr_util.h>
 #include <chromeos/dbus/service_constants.h>
 
 namespace biod {
@@ -38,10 +39,16 @@ const char* ScanResultToString(ScanResult result) {
   }
 }
 
-BiometricsManagerProxyBase::BiometricsManagerProxyBase(
-    const scoped_refptr<dbus::Bus>& bus, const dbus::ObjectPath& path)
-    : bus_(bus), weak_factory_(this), biod_auth_session_(nullptr) {
+BiometricsManagerProxyBase::BiometricsManagerProxyBase()
+    : proxy_(nullptr), weak_factory_(this), biod_auth_session_(nullptr) {}
+
+bool BiometricsManagerProxyBase::Initialize(const scoped_refptr<dbus::Bus>& bus,
+                                            const dbus::ObjectPath& path) {
+  bus_ = bus;
   proxy_ = bus_->GetObjectProxy(biod::kBiodServiceName, path);
+
+  if (!proxy_)
+    return false;
 
   proxy_->ConnectToSignal(
       biod::kBiometricsManagerInterface,
@@ -50,6 +57,19 @@ BiometricsManagerProxyBase::BiometricsManagerProxyBase(
                  weak_factory_.GetWeakPtr()),
       base::Bind(&BiometricsManagerProxyBase::OnSignalConnected,
                  weak_factory_.GetWeakPtr()));
+  return true;
+}
+
+std::unique_ptr<BiometricsManagerProxyBase> BiometricsManagerProxyBase::Create(
+    const scoped_refptr<dbus::Bus>& bus, const dbus::ObjectPath& path) {
+  // Using new to access non-public constructor. See https://abseil.io/tips/134.
+  auto biometrics_manager_proxy_base =
+      base::WrapUnique(new BiometricsManagerProxyBase());
+
+  if (!biometrics_manager_proxy_base->Initialize(bus, path))
+    return nullptr;
+
+  return biometrics_manager_proxy_base;
 }
 
 const dbus::ObjectPath BiometricsManagerProxyBase::path() const {
