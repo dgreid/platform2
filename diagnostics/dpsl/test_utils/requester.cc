@@ -13,7 +13,6 @@
 
 #include <brillo/flag_helper.h>
 #include <google/protobuf/message.h>
-#include <google/protobuf/util/json_util.h>
 
 #include "diagnostics/dpsl/public/dpsl_global_context.h"
 #include "diagnostics/dpsl/public/dpsl_requester.h"
@@ -31,19 +30,6 @@ template <typename Request, typename Response>
 using GrpcRequestFunction = void (DpslRequester::*)(
     std::unique_ptr<Request>, std::function<void(std::unique_ptr<Response>)>);
 
-template <typename Proto>
-std::unique_ptr<Proto> JsonToProto(const std::string& request_json) {
-  auto request = std::make_unique<Proto>();
-  auto status =
-      google::protobuf::util::JsonStringToMessage(request_json, request.get());
-  if (!status.ok()) {
-    std::cerr << "Failed to parse '" << request_json << "' to "
-              << Proto::descriptor()->name() << " proto: " << status << "\n";
-    return nullptr;
-  }
-  return request;
-}
-
 // Used to make gRPC requests to wilco_dtc_supportd.
 // Parse the supplied |request_json| to a proto of type |Request|, and then
 // call the provided |request_function| on the |requester| with that
@@ -55,7 +41,7 @@ bool MakeRequest(
     GrpcRequestFunction<Request, Response> request_function,
     const std::string& request_json,
     std::function<void(std::unique_ptr<google::protobuf::Message>)> callback) {
-  auto request = JsonToProto<Request>(request_json);
+  auto request = test_utils::JsonToProto<Request>(request_json);
   if (!request) {
     return false;
   }
