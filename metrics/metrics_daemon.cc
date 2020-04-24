@@ -621,6 +621,8 @@ void MetricsDaemon::ProcessUncleanShutdown() {
                                   kUncleanShutdownIntervalName);
 
   unclean_shutdowns_daily_count_->Add(1);
+  LOG(INFO) << "metrics_daemon processing unclean shutdown; new value: "
+            << unclean_shutdowns_daily_count_->Get();
   unclean_shutdowns_weekly_count_->Add(1);
   any_crashes_daily_count_->Add(1);
   any_crashes_weekly_count_->Add(1);
