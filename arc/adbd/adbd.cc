@@ -24,7 +24,7 @@
 #include <base/macros.h>
 #include <base/process/launch.h>
 #include <base/strings/string_util.h>
-#include <base/sys_info.h>
+#include <base/system/sys_info.h>
 #include <base/values.h>
 
 namespace adbd {
@@ -155,8 +155,10 @@ bool GetConfiguration(AdbdConfiguration* config) {
   }
 
   std::string error_msg;
+  // TODO(crbug.com/1054279): use base::JSONReader::ReadAndReturnValueWithError
+  // after uprev to r680000.
   std::unique_ptr<const base::Value> config_root_val =
-      base::JSONReader::ReadAndReturnError(
+      base::JSONReader::ReadAndReturnErrorDeprecated(
           config_json_data, base::JSON_PARSE_RFC, nullptr /* error_code_out */,
           &error_msg, nullptr /* error_line_out */,
           nullptr /* error_column_out */);
