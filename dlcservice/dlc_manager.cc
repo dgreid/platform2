@@ -84,12 +84,10 @@ DlcIdList DlcManager::GetInstalled() {
 DlcIdList DlcManager::GetDlcsToUpdate() {
   ErrorPtr tmp_err;
   for (const auto& pr : supported_)
-    if (!pr.second.ClearMountable(SystemState::Get()->inactive_boot_slot(),
-                                  &tmp_err))
+    if (!pr.second.MakeReadyForUpdate(&tmp_err))
       PLOG(WARNING) << Error::ToString(tmp_err);
-  return ToDlcIdList(supported_, [](const DlcBase& dlc) {
-    return dlc.IsInstalled() || dlc.IsMountable();
-  });
+  return ToDlcIdList(supported_,
+                     [](const DlcBase& dlc) { return dlc.IsVerified(); });
 }
 
 DlcIdList DlcManager::GetSupported() {
@@ -122,10 +120,10 @@ bool DlcManager::InstallCompleted(const DlcIdList& ids, brillo::ErrorPtr* err) {
   bool ret = true;
   for (const auto& id : ids) {
     if (!IsSupported(id)) {
-      LOG(WARNING) << "Trying to mark mountable for unsupported DLC=" << id;
+      LOG(WARNING) << "Trying to complete installation for unsupported DLC="
+                   << id;
       ret = false;
-    } else if (!supported_.find(id)->second.MarkMountable(
-                   SystemState::Get()->active_boot_slot(), err)) {
+    } else if (!supported_.find(id)->second.InstallCompleted(err)) {
       PLOG(WARNING) << Error::ToString(*err);
       ret = false;
     }
@@ -133,7 +131,7 @@ bool DlcManager::InstallCompleted(const DlcIdList& ids, brillo::ErrorPtr* err) {
   if (!ret)
     *err = Error::Create(
         kErrorInvalidDlc,
-        base::StringPrintf("Failed to mark all installed DLCs as hashed."));
+        base::StringPrintf("Failed to mark all installed DLCs as verified."));
   return ret;
 }
 
@@ -142,10 +140,9 @@ bool DlcManager::UpdateCompleted(const DlcIdList& ids, brillo::ErrorPtr* err) {
   bool ret = true;
   for (const auto& id : ids) {
     if (!IsSupported(id)) {
-      LOG(WARNING) << "Trying to mark mountable for unsupported DLC=" << id;
+      LOG(WARNING) << "Trying to complete update for unsupported DLC=" << id;
       ret = false;
-    } else if (!supported_.find(id)->second.MarkMountable(
-                   SystemState::Get()->inactive_boot_slot(), err)) {
+    } else if (!supported_.find(id)->second.UpdateCompleted(err)) {
       PLOG(WARNING) << Error::ToString(*err);
       ret = false;
     }

@@ -180,20 +180,20 @@ TEST_F(DlcServiceTest, GetInstalledTest) {
 }
 
 TEST_F(DlcServiceTest, GetDlcsToUpdateTest) {
-  // TODO(crbug.com/1074090): Add a DLC that is mountable too.
+  // Make second DLC marked as verified so we can get it in the list of DLCs
+  // needed to be updated.
+  EXPECT_TRUE(dlc_service_->InstallCompleted({kSecondDlc}, &err_));
   const auto& dlcs = dlc_service_->GetDlcsToUpdate();
 
-  EXPECT_THAT(dlcs, ElementsAre(kFirstDlc));
-  EXPECT_FALSE(dlc_service_->GetDlc(kFirstDlc)->GetRoot().value().empty());
-  CheckDlcState(kFirstDlc, DlcState::INSTALLED);
+  EXPECT_THAT(dlcs, ElementsAre(kFirstDlc, kSecondDlc));
 }
 
-TEST_F(DlcServiceTest, GetInstalledMimicDlcserviceRebootWithoutMountableStamp) {
+TEST_F(DlcServiceTest, GetInstalledMimicDlcserviceRebootWithoutVerifiedStamp) {
   const auto& dlcs_before = dlc_service_->GetInstalled();
   EXPECT_THAT(dlcs_before, ElementsAre(kFirstDlc));
   EXPECT_FALSE(dlc_service_->GetDlc(kFirstDlc)->GetRoot().value().empty());
 
-  // Create |kSecondDlc| image, but not mountable after device reboot.
+  // Create |kSecondDlc| image, but not verified after device reboot.
   SetUpDlcWithSlots(kSecondDlc);
 
   const auto& dlcs_after = dlc_service_->GetInstalled();
@@ -391,7 +391,7 @@ TEST_F(DlcServiceTest, InstallTest) {
   EXPECT_TRUE(dlc_service_->Install({kSecondDlc}, kDefaultOmahaUrl, &err_));
   CheckDlcState(kSecondDlc, DlcState::INSTALLING);
 
-  // Should remain same as it's not stamped mountable.
+  // Should remain same as it's not stamped verfied.
   const auto& dlcs_after = dlc_service_->GetInstalled();
   EXPECT_THAT(dlcs_after, ElementsAre(kFirstDlc));
 

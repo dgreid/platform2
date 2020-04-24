@@ -19,29 +19,48 @@ class DlcBaseTest : public BaseTest {
  public:
   DlcBaseTest() = default;
 
-  void Init(const DlcId& id) { dlc_ = std::make_unique<DlcBase>(id); }
-
- protected:
-  std::unique_ptr<DlcBase> dlc_;
-
  private:
   DISALLOW_COPY_AND_ASSIGN(DlcBaseTest);
 };
 
-TEST_F(DlcBaseTest, MountableOnInitialization) {
-  Init(kSecondDlc);
-  SetUpDlcWithSlots(kSecondDlc);
+TEST_F(DlcBaseTest, VerifiedOnInitialization) {
+  DlcBase dlc(kSecondDlc);
 
   // Explicitly set |kDlcPrefVerified| here.
-  auto pref =
-      Prefs(DlcBase(kSecondDlc), SystemState::Get()->active_boot_slot());
-  EXPECT_TRUE(pref.Create(kDlcPrefVerified));
+  EXPECT_TRUE(Prefs(dlc, SystemState::Get()->active_boot_slot())
+                  .Create(kDlcPrefVerified));
+  EXPECT_EQ(dlc.GetState().state(), DlcState::NOT_INSTALLED);
 
-  EXPECT_EQ(dlc_->GetState().state(), DlcState::NOT_INSTALLED);
+  dlc.Initialize();
+  EXPECT_TRUE(dlc.IsVerified());
+}
 
-  dlc_->Initialize();
+TEST_F(DlcBaseTest, InstallCompleted) {
+  DlcBase dlc(kSecondDlc);
+  dlc.Initialize();
 
-  EXPECT_EQ(dlc_->GetState().state(), DlcState::MOUNTABLE);
+  EXPECT_FALSE(dlc.IsVerified());
+  EXPECT_TRUE(dlc.InstallCompleted(&err_));
+  EXPECT_TRUE(dlc.IsVerified());
+}
+
+TEST_F(DlcBaseTest, UpdateCompleted) {
+  DlcBase dlc(kSecondDlc);
+  dlc.Initialize();
+
+  EXPECT_TRUE(dlc.UpdateCompleted(&err_));
+  EXPECT_TRUE(Prefs(dlc, SystemState::Get()->inactive_boot_slot())
+                  .Exists(kDlcPrefVerified));
+}
+
+TEST_F(DlcBaseTest, MakeReadyForUpdate) {
+  DlcBase dlc(kSecondDlc);
+  dlc.Initialize();
+
+  auto prefs = Prefs(dlc, SystemState::Get()->inactive_boot_slot());
+  EXPECT_TRUE(prefs.Create(kDlcPrefVerified));
+  EXPECT_TRUE(dlc.MakeReadyForUpdate(&err_));
+  EXPECT_FALSE(prefs.Exists(kDlcPrefVerified));
 }
 
 }  // namespace dlcservice

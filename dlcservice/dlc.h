@@ -31,7 +31,7 @@ using DlcId = std::string;
 
 class DlcBase {
  public:
-  explicit DlcBase(const DlcId& id) : id_(id) {}
+  explicit DlcBase(const DlcId& id) : id_(id), is_verified_(false) {}
   virtual ~DlcBase() = default;
 
   // Initializes the DLC. This should be called right after creating the DLC
@@ -53,8 +53,8 @@ class DlcBase {
   // Returns true if the DLC is already installed and mounted.
   bool IsInstalled() const;
 
-  // Returns true if the DLC is mountable.
-  bool IsMountable() const;
+  // Returns true if the DLC is marked verified.
+  bool IsVerified() const;
 
   // Returns true if the DLC module has a boolean true for 'preload-allowed'
   // attribute in the manifest for the given |id| and |package|.
@@ -77,11 +77,15 @@ class DlcBase {
   // Deletes all files associated with the DLC.
   bool Delete(ErrorPtr* err);
 
-  // Persists the mountable pref for DLC.
-  bool MarkMountable(const BootSlot::Slot& slot, ErrorPtr* err) const;
+  // Is called when the DLC image is finally installed on the disk and is
+  // verified.
+  bool InstallCompleted(ErrorPtr* err);
 
-  // Removes the mountable pref for DLC.
-  bool ClearMountable(const BootSlot::Slot& slot, ErrorPtr* err) const;
+  // Is called when the inactive DLC image is updated and verified.
+  bool UpdateCompleted(ErrorPtr* err) const;
+
+  // Makes the DLC ready to be updated. Returns false if anything goes wrong.
+  bool MakeReadyForUpdate(ErrorPtr* err) const;
 
  private:
   friend class DBusServiceTest;
@@ -99,7 +103,7 @@ class DlcBase {
   bool ValidateInactiveImage() const;
 
   // Helper used to load in (copy + cleanup) preloadable files for the DLC.
-  bool PreloadedCopier() const;
+  bool PreloadedCopier();
 
   // Mounts the DLC image.
   bool Mount(ErrorPtr* err);
@@ -108,7 +112,7 @@ class DlcBase {
   bool Unmount(ErrorPtr* err);
 
   // Tries to mount the DLC image if it has not been mounted already.
-  bool TryMount();
+  bool TryMount(ErrorPtr* err);
 
   // Returns true if the active DLC image is present.
   bool IsActiveImagePresent() const;
@@ -129,6 +133,9 @@ class DlcBase {
   base::FilePath content_id_path_;
   base::FilePath content_package_path_;
   base::FilePath prefs_path_;
+
+  // True if the pref |kDlcPrefVerified| exists.
+  bool is_verified_;
 
   DISALLOW_COPY_AND_ASSIGN(DlcBase);
 };

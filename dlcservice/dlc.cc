@@ -43,11 +43,10 @@ bool DlcBase::Initialize() {
   content_package_path_ = content_id_path_.Append(package_);
   prefs_path_ = system_state->dlc_prefs_dir().Append(id_);
 
-  state_.set_state(
-      Prefs(*this, system_state->active_boot_slot()).Exists(kDlcPrefVerified)
-          ? DlcState::MOUNTABLE
-          : DlcState::NOT_INSTALLED);
+  state_.set_state(DlcState::NOT_INSTALLED);
 
+  is_verified_ =
+      Prefs(*this, system_state->active_boot_slot()).Exists(kDlcPrefVerified);
   return true;
 }
 
@@ -67,8 +66,8 @@ bool DlcBase::IsInstalled() const {
   return state_.state() == DlcState::INSTALLED;
 }
 
-bool DlcBase::IsMountable() const {
-  return state_.state() == DlcState::MOUNTABLE;
+bool DlcBase::IsVerified() const {
+  return is_verified_;
 }
 
 bool DlcBase::IsPreloadAllowed() const {
@@ -81,25 +80,38 @@ base::FilePath DlcBase::GetRoot() const {
   return JoinPaths(mount_point_, kRootDirectoryInsideDlcModule);
 }
 
-bool DlcBase::MarkMountable(const BootSlot::Slot& slot, ErrorPtr* err) const {
-  if (!Prefs(*this, slot).Create(kDlcPrefVerified)) {
+bool DlcBase::InstallCompleted(ErrorPtr* err) {
+  if (!Prefs(*this, SystemState::Get()->active_boot_slot())
+           .Create(kDlcPrefVerified)) {
     *err = Error::Create(
         kErrorInternal,
-        base::StringPrintf(
-            "Failed to persist kDlcPrefVerified pref for DLC=%s, Slot=%s",
-            id_.c_str(), BootSlot::ToString(slot).c_str()));
+        base::StringPrintf("Failed to mark active DLC=%s as verified.",
+                           id_.c_str()));
+    return false;
+  }
+  is_verified_ = true;
+  return true;
+}
+
+bool DlcBase::UpdateCompleted(ErrorPtr* err) const {
+  if (!Prefs(*this, SystemState::Get()->inactive_boot_slot())
+           .Create(kDlcPrefVerified)) {
+    *err = Error::Create(
+        kErrorInternal,
+        base::StringPrintf("Failed to mark inactive DLC=%s as verified.",
+                           id_.c_str()));
     return false;
   }
   return true;
 }
 
-bool DlcBase::ClearMountable(const BootSlot::Slot& slot, ErrorPtr* err) const {
-  if (!Prefs(*this, slot).Delete(kDlcPrefVerified)) {
+bool DlcBase::MakeReadyForUpdate(ErrorPtr* err) const {
+  if (!Prefs(*this, SystemState::Get()->inactive_boot_slot())
+           .Delete(kDlcPrefVerified)) {
     *err = Error::Create(
         kErrorInternal,
-        base::StringPrintf(
-            "Failed to remove kDlcPrefVerified pref for DLC=%s, Slot=%s",
-            id_.c_str(), BootSlot::ToString(slot).c_str()));
+        base::StringPrintf("Failed to mark inactive DLC=%s as not-verified.",
+                           id_.c_str()));
     return false;
   }
   return true;
@@ -191,7 +203,7 @@ bool DlcBase::ValidateInactiveImage() const {
   return true;
 }
 
-bool DlcBase::PreloadedCopier() const {
+bool DlcBase::PreloadedCopier() {
   FilePath image_preloaded_path =
       JoinPaths(SystemState::Get()->preloaded_content_dir(), id_, package_,
                 kDlcImageFileName);
@@ -247,7 +259,7 @@ bool DlcBase::PreloadedCopier() const {
   }
 
   ErrorPtr tmp_err;
-  if (!MarkMountable(SystemState::Get()->active_boot_slot(), &tmp_err)) {
+  if (!InstallCompleted(&tmp_err)) {
     LOG(ERROR) << Error::ToString(tmp_err);
     return false;
   }
@@ -308,6 +320,10 @@ bool DlcBase::InitInstall(ErrorPtr* err) {
 
   switch (state_.state()) {
     case DlcState::NOT_INSTALLED:
+      if (IsVerified() && (ValidateInactiveImage() || true) && !TryMount(err)) {
+        return false;
+      }
+
       if (IsActiveImagePresent()) {
         if (!DeleteInternal(err)) {
           if (!CancelInstall(err))
@@ -322,12 +338,6 @@ bool DlcBase::InitInstall(ErrorPtr* err) {
                      << Error::ToString(*err);
         return false;
       }
-      break;
-    case DlcState::MOUNTABLE:
-      if (!ValidateInactiveImage())
-        LOG(ERROR) << "Bad inactive image for DLC=" << id_;
-      if (!TryMount())
-        LOG(ERROR) << "Mounting mountable image failed for DLC=" << id_;
       break;
     case DlcState::INSTALLED:
       if (!ValidateInactiveImage())
@@ -350,7 +360,6 @@ bool DlcBase::InitInstall(ErrorPtr* err) {
 bool DlcBase::FinishInstall(ErrorPtr* err) {
   switch (state_.state()) {
     case DlcState::NOT_INSTALLED:
-    case DlcState::MOUNTABLE:
     case DlcState::INSTALLED:
       return true;
     case DlcState::INSTALLING: {
@@ -360,7 +369,7 @@ bool DlcBase::FinishInstall(ErrorPtr* err) {
         *err =
             Error::Create(kErrorInternal,
                           base::StringPrintf("Cannot mount image which is not "
-                                             "marked as mountable for DLC=%s",
+                                             "marked as verified for DLC=%s",
                                              id_.c_str()));
         LOG(ERROR) << "Failed during install finalization: "
                    << Error::ToString(*err);
@@ -438,17 +447,16 @@ bool DlcBase::Unmount(ErrorPtr* err) {
   return true;
 }
 
-bool DlcBase::TryMount() {
+bool DlcBase::TryMount(ErrorPtr* err) {
   if (!mount_point_.empty() && base::PathExists(GetRoot())) {
     LOG(INFO) << "Skipping mount as already mounted at " << GetRoot();
     state_.set_state(DlcState::INSTALLED);
     return true;
   }
 
-  ErrorPtr tmp_err;
-  if (!Mount(&tmp_err)) {
+  if (!Mount(err)) {
     LOG(ERROR) << "DLC thought to have been installed, but maybe is in a "
-               << "bad state. DLC=" << id_ << ", " << Error::ToString(tmp_err);
+               << "bad state. DLC=" << id_ << ", " << Error::ToString(*err);
     return false;
   }
   return true;
@@ -477,14 +485,8 @@ bool DlcBase::DeleteInternal(ErrorPtr* err) {
                  << (tmp_err ? Error::ToString(tmp_err)
                              : "Missing error from update engine proxy.");
   state_.set_state(DlcState::NOT_INSTALLED);
-  if (!Prefs(*this, SystemState::Get()->active_boot_slot())
-           .Delete(kDlcPrefVerified))
-    LOG(ERROR) << "Failed to remove active kDlcPrefVerified pref for DLC="
-               << id_;
-  if (!Prefs(*this, SystemState::Get()->inactive_boot_slot())
-           .Delete(kDlcPrefVerified))
-    LOG(ERROR) << "Failed to remove inactive kDlcPrefVerified pref for DLC="
-               << id_;
+  is_verified_ = false;
+
   if (!undeleted_paths.empty()) {
     *err = Error::Create(
         kErrorInternal,
@@ -506,9 +508,6 @@ bool DlcBase::Delete(ErrorPtr* err) {
           base::StringPrintf("Trying to delete a currently installing DLC=%s",
                              id_.c_str()));
       return false;
-    case DlcState::MOUNTABLE:
-      LOG(WARNING) << "Uninstalling mountable but not mounted DLC=" << id_;
-      return DeleteInternal(err);
     case DlcState::INSTALLED:
       return Unmount(err) && DeleteInternal(err);
     default:

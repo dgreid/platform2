@@ -32,7 +32,7 @@ class DlcManager {
   // |CancelInstall()| should be called before |InitInstall()|'ing again.
   bool IsInstalling();
 
-  // Returns the list of installed or mountable DLCs.
+  // Returns the list of installed DLCs.
   DlcIdList GetInstalled();
 
   // Returns the list of DLCs that need to be updated.
@@ -44,10 +44,10 @@ class DlcManager {
   // Returns true and sets |state| if the DLC is supported.
   bool GetDlcState(const DlcId& id, DlcState* state, brillo::ErrorPtr* err);
 
-  // Persists the mountable pref for given DLC(s) on install completion.
+  // Persists the verified pref for given DLC(s) on install completion.
   bool InstallCompleted(const DlcIdList& ids, brillo::ErrorPtr* err);
 
-  // Persists the mountable pref for given DLC(s) on update completion.
+  // Persists the verified pref for given DLC(s) on update completion.
   bool UpdateCompleted(const DlcIdList& ids, brillo::ErrorPtr* err);
 
   // DLC Installation Flow
