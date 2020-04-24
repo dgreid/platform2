@@ -542,6 +542,16 @@ TEST_F(ArcKeymasterContextTest,
   ASSERT_EQ(KM_ERROR_INVALID_KEY_BLOB, error);
 }
 
+TEST_F(ArcKeymasterContextTest, ParseKeyBlob_NullOutputParameterError) {
+  // Verify ParseKeyBlob returns error if the |key| output parameter is null.
+  ::keymaster::KeymasterKeyBlob blob(kValidKeyBlob1.data(),
+                                     kValidKeyBlob1.size());
+  ::keymaster::AuthorizationSet additional;
+  keymaster_error_t error =
+      context_->ParseKeyBlob(blob, additional, /* key */ nullptr);
+  ASSERT_EQ(KM_ERROR_OUTPUT_PARAMETER_NULL, error);
+}
+
 TEST_F(ArcKeymasterContextTest, SerializeKeyDataBlob_NullOutputParameterError) {
   // Verify serialize returns error if the output parameter is null.
   keymaster_error_t error = ContextTestPeer::SerializeKeyDataBlob(

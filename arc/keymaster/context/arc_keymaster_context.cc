@@ -154,6 +154,9 @@ keymaster_error_t ArcKeymasterContext::ParseKeyBlob(
     const ::keymaster::KeymasterKeyBlob& key_blob,
     const ::keymaster::AuthorizationSet& additional_params,
     ::keymaster::UniquePtr<::keymaster::Key>* key) const {
+  if (!key)
+    return KM_ERROR_OUTPUT_PARAMETER_NULL;
+
   ::keymaster::AuthorizationSet hw_enforced;
   ::keymaster::AuthorizationSet sw_enforced;
   ::keymaster::KeymasterKeyBlob key_material;
