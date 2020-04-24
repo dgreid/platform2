@@ -39,9 +39,9 @@ audio: &audio
 some_base_config: &some_base_config
   name: "{{$name}}"
   arc:
-    files:
-      - source: "some/hardware_features"
-        destination: "/usr/share/chromeos-config/sbin/some/hardware_features"
+    hardware-features:
+      build-path: "some/hardware_features"
+      system-path: "/usr/share/chromeos-config/sbin/some/hardware_features"
     build-properties:
       first-api-level: "27"
       product: "{{$name}}"

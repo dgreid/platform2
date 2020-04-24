@@ -326,7 +326,7 @@ In the tables below,
 | Attribute | Type   | RegEx     | Required | Oneof Group | Build-only | Description |
 | --------- | ------ | --------- | -------- | ----------- | ---------- | ----------- |
 | build-properties | [build-properties](#build_properties) |  | True |  | False |  |
-| files | array - [files](#files) |  | False |  | True |  |
+| hardware-features | [hardware-features](#hardware_features) |  | False |  | False |  |
 | scale | integer |  | False |  | False | The screen density value in dpi that will be used for ARC apps. This value should be from the list of DPIs in android cdd. |
 
 ### build-properties
@@ -340,11 +340,11 @@ In the tables below,
 | pai-regions | string | ```(^([a-zA-Z0-9\.\-]+,)*[a-zA-Z0-9\.\-]+$)|(^\*$)``` | False |  | False | (Optional) Comma-separated allow list of region codes that can be appended to 'ro.oem.key1' for the purpose of targeting Play Auto Install applications by region. The value(s) should match the values that would be returned by `cros_region_data region_code` for the relevant region(s). If the device's region code is not in the allow list, or if there is no allow list, 'ro.oem.key1' will not include the region code. The allow list can also be a single '*' character to indicate that the region code should always be appended.  |
 | product | string |  | True |  | False | Product name to report in 'ro.product.name'. This may be the device name, or it can be something else, to allow several devices to be grouped into one product. |
 
-### files
+### hardware-features
 | Attribute | Type   | RegEx     | Required | Oneof Group | Build-only | Description |
 | --------- | ------ | --------- | -------- | ----------- | ---------- | ----------- |
-| destination | string |  | False |  | True | Installation path for the file on the system image. |
-| source | string |  | False |  | True | Source of the file relative to the build system. |
+| build-path | string |  | True |  | True | Source of the file relative to the build system. |
+| system-path | string |  | True |  | False | Installation path for the file on the system image. |
 
 ### audio
 | Attribute | Type   | RegEx     | Required | Oneof Group | Build-only | Description |

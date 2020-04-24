@@ -112,7 +112,11 @@ class DeviceConfigJson(DeviceConfig):
     return self._GetSymlinkedFiles('/detachable-base')
 
   def GetArcFiles(self):
-    return self._GetFiles('/arc')
+    result = []
+    config = self.GetProperties('/arc/hardware-features')
+    if config:
+      result.append(BaseFile(config['build-path'], config['system-path']))
+    return result
 
   def GetAudioFiles(self):
     return self._GetFiles('/audio/main')

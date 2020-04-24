@@ -9,12 +9,10 @@
             "metrics-tag": "abc123",
             "product": "some"
           },
-          "files": [
-            {
-              "destination": "/usr/share/chromeos-config/sbin/some/hardware_features",
-              "source": "some/hardware_features"
-            }
-          ]
+          "hardware-features": {
+            "build-path": "some/hardware_features",
+            "system-path": "/usr/share/chromeos-config/sbin/some/hardware_features"
+          }
         },
         "audio": {
           "main": {
@@ -142,12 +140,10 @@
             "metrics-tag": "abc123",
             "product": "some"
           },
-          "files": [
-            {
-              "destination": "/usr/share/chromeos-config/sbin/some/hardware_features",
-              "source": "some/hardware_features"
-            }
-          ]
+          "hardware-features": {
+            "build-path": "some/hardware_features",
+            "system-path": "/usr/share/chromeos-config/sbin/some/hardware_features"
+          }
         },
         "audio": {
           "main": {
@@ -371,12 +367,10 @@
             "metrics-tag": "abc123",
             "product": "whitelabel"
           },
-          "files": [
-            {
-              "destination": "/usr/share/chromeos-config/sbin/some/hardware_features",
-              "source": "some/hardware_features"
-            }
-          ]
+          "hardware-features": {
+            "build-path": "some/hardware_features",
+            "system-path": "/usr/share/chromeos-config/sbin/some/hardware_features"
+          }
         },
         "bluetooth": {
           "config": {
@@ -464,12 +458,10 @@
             "metrics-tag": "abc123",
             "product": "whitelabel"
           },
-          "files": [
-            {
-              "destination": "/usr/share/chromeos-config/sbin/some/hardware_features",
-              "source": "some/hardware_features"
-            }
-          ]
+          "hardware-features": {
+            "build-path": "some/hardware_features",
+            "system-path": "/usr/share/chromeos-config/sbin/some/hardware_features"
+          }
         },
         "bluetooth": {
           "config": {
@@ -556,12 +548,10 @@
             "metrics-tag": "abc123",
             "product": "whitelabel"
           },
-          "files": [
-            {
-              "destination": "/usr/share/chromeos-config/sbin/some/hardware_features",
-              "source": "some/hardware_features"
-            }
-          ]
+          "hardware-features": {
+            "build-path": "some/hardware_features",
+            "system-path": "/usr/share/chromeos-config/sbin/some/hardware_features"
+          }
         },
         "bluetooth": {
           "config": {
@@ -649,12 +639,10 @@
             "metrics-tag": "abc123",
             "product": "whitelabel"
           },
-          "files": [
-            {
-              "destination": "/usr/share/chromeos-config/sbin/some/hardware_features",
-              "source": "some/hardware_features"
-            }
-          ]
+          "hardware-features": {
+            "build-path": "some/hardware_features",
+            "system-path": "/usr/share/chromeos-config/sbin/some/hardware_features"
+          }
         },
         "bluetooth": {
           "config": {

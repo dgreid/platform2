@@ -234,10 +234,7 @@ properties:
                       type: string
                       pattern: "(^([a-zA-Z0-9\\.\\-]+,)*[a-zA-Z0-9\\.\\-]+$)|(^\\*$)"
                   additionalProperties: false
-                files:
-                  type: array
-                  build-only-element: true
-                  items: *system_file
+                hardware-features: *system_file_v2
                 scale:
                   type: integer
                   description: The screen density value in dpi that will be used
