@@ -5,6 +5,7 @@
 #include "vpn-manager/l2tp_manager.h"
 
 #include <fcntl.h>
+#include <signal.h>
 #include <stdlib.h>  // for setenv()
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -13,6 +14,7 @@
 #include <base/logging.h>
 #include <base/posix/eintr_wrapper.h>
 #include <base/strings/pattern.h>
+#include <base/strings/string_number_conversions.h>
 #include <base/strings/string_util.h>
 #include <brillo/process.h>
 
@@ -35,6 +37,8 @@ const char kBpsParameter[] = "1000000";
 const char kRedialParameter[] = "yes";
 const char kRedialTimeoutParameter[] = "2";
 const char kMaxRedialsParameter[] = "30";
+// Path to pid file that contains pid for xl2tpd process.
+const char kXl2tpdPidFilePath[] = "/run/l2tpipsec_vpn/xl2tpd.pid";
 
 }  // namespace
 
@@ -266,12 +270,28 @@ bool L2tpManager::Start() {
     setenv(kLnsAddress, remote_address_text_.c_str(), 1);
   }
 
+  // crbug/1046396 - Kill existing xl2tpd process first.
+  base::FilePath pidFilePath(kXl2tpdPidFilePath);
+  if (base::PathExists(pidFilePath)) {
+    std::string pid_str;
+    int pid = 0;
+    base::ReadFileToString(pidFilePath, &pid_str);
+    base::StringToInt(pid_str, &pid);
+    if (pid != 0) {
+      LOG(INFO) << "Killing existing xl2tpd process " << pid;
+      l2tpd_->Reset(pid);
+      l2tpd_->Kill(SIGKILL, 0);
+    } else {
+      LOG(ERROR) << "Unable to parse pid file " << kXl2tpdPidFilePath;
+    }
+  }
+
   l2tpd_->Reset(0);
   l2tpd_->AddArg(L2TPD);
   l2tpd_->AddStringOption("-c", l2tpd_config_path.value());
   l2tpd_->AddStringOption("-C", l2tpd_control_path_.value());
   l2tpd_->AddArg("-D");
-  l2tpd_->AddStringOption("-p", "/run/l2tpipsec_vpn/xl2tpd.pid");
+  l2tpd_->AddStringOption("-p", kXl2tpdPidFilePath);
   l2tpd_->RedirectUsingPipe(STDERR_FILENO, false);
   l2tpd_->Start();
   output_fd_ = l2tpd_->GetPipe(STDERR_FILENO);
