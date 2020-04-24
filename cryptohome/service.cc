@@ -368,6 +368,8 @@ bool Service::UnloadPkcs11Tokens(const std::vector<FilePath>& exclude) {
 CryptohomeErrorCode Service::MountErrorToCryptohomeError(
     const MountError code) const {
   switch (code) {
+  case MOUNT_ERROR_NONE:
+    return CRYPTOHOME_ERROR_NOT_SET;
   case MOUNT_ERROR_FATAL:
     return CRYPTOHOME_ERROR_MOUNT_FATAL;
   case MOUNT_ERROR_KEY_FAILURE:
@@ -376,8 +378,12 @@ CryptohomeErrorCode Service::MountErrorToCryptohomeError(
     return CRYPTOHOME_ERROR_MOUNT_MOUNT_POINT_BUSY;
   case MOUNT_ERROR_TPM_COMM_ERROR:
     return CRYPTOHOME_ERROR_TPM_COMM_ERROR;
+  case MOUNT_ERROR_UNPRIVILEGED_KEY:
+    return CRYPTOHOME_ERROR_AUTHORIZATION_KEY_DENIED;
   case MOUNT_ERROR_TPM_DEFEND_LOCK:
     return CRYPTOHOME_ERROR_TPM_DEFEND_LOCK;
+  case MOUNT_ERROR_TPM_UPDATE_REQUIRED:
+    return CRYPTOHOME_ERROR_TPM_UPDATE_REQUIRED;
   case MOUNT_ERROR_USER_DOES_NOT_EXIST:
     return CRYPTOHOME_ERROR_ACCOUNT_NOT_FOUND;
   case MOUNT_ERROR_TPM_NEEDS_REBOOT:
@@ -387,8 +393,9 @@ CryptohomeErrorCode Service::MountErrorToCryptohomeError(
   case MOUNT_ERROR_PREVIOUS_MIGRATION_INCOMPLETE:
     return CRYPTOHOME_ERROR_MOUNT_PREVIOUS_MIGRATION_INCOMPLETE;
   case MOUNT_ERROR_RECREATED:
-  default:
     return CRYPTOHOME_ERROR_NOT_SET;
+  default:
+    return CRYPTOHOME_ERROR_MOUNT_FATAL;
   }
 }
 
