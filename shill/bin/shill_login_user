@@ -33,13 +33,14 @@ if [ -e "${profile_link_dir}" ]; then
 fi
 
 if [ -n "${user}" ]; then
-  profile_base="$(cryptohome-path system "${user}")"
+  system_path="$(cryptohome-path system "${user}")"
+  profile_base="/run/daemon-store/shill"
   if [ ! -d "${profile_base}" ]; then
     logger -t "${script_name}" \
-      "User cryptohome dir ${profile_base} does not exist"
+      "Daemon-store dir ${profile_base} does not exist"
     exit 1
   fi
-  username_hash="$(basename "${profile_base}")"
+  username_hash="$(basename "${system_path}")"
 else
   # If no user is given, create a temporary profile directory which will
   # be erased on logout.
@@ -47,7 +48,7 @@ else
   rm -rf "${profile_base}"
 fi
 
-profile_dir="${profile_base}/shill"
+profile_dir="${profile_base}/${username_hash}"
 profile="${profile_dir}/shill.profile"
 
 if [ ! -d "${profile_dir}" ]; then
