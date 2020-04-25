@@ -82,6 +82,10 @@ bool AttributeList::IterateAttributes(
     const ByteString& payload,
     size_t offset,
     const AttributeList::AttributeMethod& method) {
+  // Nothing to iterate over.
+  if (payload.IsEmpty())
+    return true;
+
   const unsigned char* ptr = payload.GetConstData() + NLA_ALIGN(offset);
   const unsigned char* end = payload.GetConstData() + payload.GetLength();
   while (ptr + sizeof(nlattr) <= end) {
