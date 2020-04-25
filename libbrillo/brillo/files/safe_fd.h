@@ -183,10 +183,13 @@ class SafeFD {
   //  recursive - if true also unlink child paths.
   //  max_depth - limit on recursion depth to prevent fd exhaustion and stack
   //    overflows.
+  //  keep_going - in recursive case continue deleting even in the face of
+  //    errors. If all entries cannot be deleted, the last error encountered
+  //    during recursion is returned.
   BRILLO_EXPORT Error Rmdir(const std::string& name,
                             bool recursive = false,
-                            size_t max_depth = kDefaultMaxPathDepth)
-      WARN_UNUSED_RESULT;
+                            size_t max_depth = kDefaultMaxPathDepth,
+                            bool keep_going = true) WARN_UNUSED_RESULT;
 
  private:
   BRILLO_EXPORT static const char* RootPath;

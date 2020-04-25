@@ -446,7 +446,8 @@ SafeFD::Error SafeFD::Unlink(const std::string& name) {
 
 SafeFD::Error SafeFD::Rmdir(const std::string& name,
                             bool recursive,
-                            size_t max_depth) {
+                            size_t max_depth,
+                            bool keep_going) {
   if (!fd_.is_valid()) {
     return SafeFD::Error::kNotInitialized;
   }
@@ -459,6 +460,8 @@ SafeFD::Error SafeFD::Rmdir(const std::string& name,
   if (IsError(err)) {
     return err;
   }
+
+  SafeFD::Error last_err = SafeFD::Error::kNoError;
 
   if (recursive) {
     SafeFD dir_fd;
@@ -490,32 +493,36 @@ SafeFD::Error SafeFD::Rmdir(const std::string& name,
     errno = 0;
     const dirent* entry = HANDLE_EINTR_IF_EQ(readdir(dir.get()), nullptr);
     while (entry != nullptr) {
-      if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
-        goto continue_;
-      }
+      SafeFD::Error err = [&]() {
+        if (strcmp(entry->d_name, ".") == 0 ||
+            strcmp(entry->d_name, "..") == 0) {
+          return SafeFD::Error::kNoError;
+        }
 
-      struct stat child_info;
-      if (fstatat(dir_fd.get(), entry->d_name, &child_info,
-                  AT_NO_AUTOMOUNT | AT_SYMLINK_NOFOLLOW) != 0) {
-        return SafeFD::Error::kIOError;
-      }
+        struct stat child_info;
+        if (fstatat(dir_fd.get(), entry->d_name, &child_info,
+                    AT_NO_AUTOMOUNT | AT_SYMLINK_NOFOLLOW) != 0) {
+          return SafeFD::Error::kIOError;
+        }
 
-      if (child_info.st_dev != dir_info.st_dev) {
-        return SafeFD::Error::kBoundaryDetected;
-      }
+        if (child_info.st_dev != dir_info.st_dev) {
+          return SafeFD::Error::kBoundaryDetected;
+        }
 
-      SafeFD::Error err;
-      if (entry->d_type == DT_DIR) {
-        err = dir_fd.Rmdir(entry->d_name, true, max_depth - 1);
-      } else {
-        err = dir_fd.Unlink(entry->d_name);
-      }
+        if (entry->d_type != DT_DIR) {
+          return dir_fd.Unlink(entry->d_name);
+        }
+
+        return dir_fd.Rmdir(entry->d_name, true, max_depth - 1, keep_going);
+      }();
 
       if (IsError(err)) {
-        return err;
+        if (!keep_going) {
+          return err;
+        }
+        last_err = err;
       }
 
-    continue_:
       errno = 0;
       entry = HANDLE_EINTR_IF_EQ(readdir(dir.get()), nullptr);
     }
@@ -530,9 +537,16 @@ SafeFD::Error SafeFD::Rmdir(const std::string& name,
     if (errno == ENOTDIR) {
       return SafeFD::Error::kWrongType;
     }
+    // If there was an error during the recursive delete, we expect unlink
+    // to fail with ENOTEMPTY and we bubble the error from recursion
+    // instead.
+    if (IsError(last_err) && errno == ENOTEMPTY) {
+      return last_err;
+    }
     return SafeFD::Error::kIOError;
   }
-  return SafeFD::Error::kNoError;
+
+  return last_err;
 }
 
 }  // namespace brillo

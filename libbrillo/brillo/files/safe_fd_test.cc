@@ -624,4 +624,62 @@ TEST_F(SafeFDTest, Rmdir_WrongType) {
   EXPECT_EQ(subdir.first.Rmdir(kFileName), SafeFD::Error::kWrongType);
 }
 
+TEST_F(SafeFDTest, Rmdir_Recursive_KeepGoing) {
+  ASSERT_TRUE(SetupSubdir());
+
+  ASSERT_TRUE(base::CreateDirectory(sub_dir_path_.Append(kSubdirName)));
+
+  // We cannot control the directory listing order. But we can ensure
+  // there are more than 1e29 orderings, of which one would result in a
+  // false pass.
+  constexpr int kNumSentinel = 25;
+  for (int i = 0; i < kNumSentinel; i++) {
+    SafeFD::SafeFDResult file =
+        root_.MakeFile(sub_dir_path_.Append(GetRandomSuffix()));
+    EXPECT_EQ(file.second, SafeFD::Error::kNoError);
+    ASSERT_TRUE(file.first.is_valid());
+  }
+
+  // Recursively delete with a max level that is too small.
+  EXPECT_EQ(root_.Rmdir(kSubdirName, true /*recursive*/, 1 /*max_depth*/,
+                        true /*keep_going*/),
+            SafeFD::Error::kExceededMaximum);
+
+  // The deep directory must still exist.
+  ASSERT_TRUE(
+      base::DeleteFile(sub_dir_path_.Append(kSubdirName), false /*recursive*/));
+
+  // But we must have kept going and deleted all other entries.
+  ASSERT_TRUE(base::IsDirectoryEmpty(sub_dir_path_));
+}
+
+TEST_F(SafeFDTest, Rmdir_Recursive_StopOnError) {
+  ASSERT_TRUE(SetupSubdir());
+
+  ASSERT_TRUE(base::CreateDirectory(sub_dir_path_.Append(kSubdirName)));
+
+  // We cannot control the directory listing order. But we can ensure
+  // there are more than 1e29 orderings, of which one would result in a
+  // false failure.
+  constexpr int kNumSentinel = 25;
+  for (int i = 0; i < kNumSentinel; i++) {
+    SafeFD::SafeFDResult file =
+        root_.MakeFile(sub_dir_path_.Append(GetRandomSuffix()));
+    EXPECT_EQ(file.second, SafeFD::Error::kNoError);
+    ASSERT_TRUE(file.first.is_valid());
+  }
+
+  // Recursively delete with a max level that is too small.
+  EXPECT_EQ(root_.Rmdir(kSubdirName, true /*recursive*/, 1 /*max_depth*/,
+                        false /*keep_going*/),
+            SafeFD::Error::kExceededMaximum);
+
+  // The deep directory must still exist.
+  ASSERT_TRUE(
+      base::DeleteFile(sub_dir_path_.Append(kSubdirName), false /*recursive*/));
+
+  // But there has to be at least a few files left since we gave up.
+  ASSERT_FALSE(base::IsDirectoryEmpty(sub_dir_path_));
+}
+
 }  // namespace brillo
