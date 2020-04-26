@@ -12,14 +12,16 @@ group("guest") {
     ":upgrade_container",
     ":virtwl_guest_proxy",
     ":vm_syslog",
-    ":wayland_demo",
-    ":x11_demo",
     "//vm_tools:vshd",
   ]
   if (!use.fuzzer) {
-    # Exclude notificationd from fuzzer builds since it pulls in wayland which
-    # causes build problems.
-    deps += [ ":notificationd" ]
+    # Exclude notificationd and the demos from fuzzer builds since they
+    # pull in wayland, which causes build problems.
+    deps += [
+      ":notificationd",
+      ":wayland_demo",
+      ":x11_demo",
+    ]
   }
   if (use.test) {
     deps += [
@@ -141,29 +143,6 @@ executable("virtwl_guest_proxy") {
   ldflags = [ "-pthread" ]
 }
 
-executable("wayland_demo") {
-  pkg_deps = [
-    "libbrillo",
-    "libchrome-${libbase_ver}",
-    "wayland-client",
-  ]
-  libs = [ "wayland-client" ]
-  sources = [
-    "../demos/wayland_demo.cc",
-  ]
-}
-
-executable("x11_demo") {
-  pkg_deps = [
-    "libbrillo",
-    "libchrome-${libbase_ver}",
-  ]
-  libs = [ "X11" ]
-  sources = [
-    "../demos/x11_demo.cc",
-  ]
-}
-
 if (!use.fuzzer) {
   wayland_protocol_library("notification-protocol") {
     sources = [
@@ -210,6 +189,29 @@ if (!use.fuzzer) {
     deps = [
       ":libnotificationd",
       ":notification-protocol",
+    ]
+  }
+
+  executable("wayland_demo") {
+    pkg_deps = [
+      "libbrillo",
+      "libchrome-${libbase_ver}",
+      "wayland-client",
+    ]
+    libs = [ "wayland-client" ]
+    sources = [
+      "../demos/wayland_demo.cc",
+    ]
+  }
+
+  executable("x11_demo") {
+    pkg_deps = [
+      "libbrillo",
+      "libchrome-${libbase_ver}",
+    ]
+    libs = [ "X11" ]
+    sources = [
+      "../demos/x11_demo.cc",
     ]
   }
 }
