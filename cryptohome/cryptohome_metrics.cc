@@ -107,7 +107,12 @@ const TimerHistogramParams kTimerHistogramParams[cryptohome::kNumTimerTypes] = {
     // Minimal migration is expected to take few seconds in a fast case,
     // and minutes in the worst case if we forgot to blacklist files.
     {"Cryptohome.TimeToCompleteDircryptoMinimalMigration", 200,
-     2 * 60 * 1000, 50}
+     2 * 60 * 1000, 50},
+    // The out-of-process mount operation will time out after 3 seconds.
+    {"Cryptohome.TimeToPerformOOPMountOperation", 0, 3000, 50},
+    // The out-of-process cleanup operation includes a call to waitpid(2) with
+    // a 1-second timeout, so make the max sample a bit higher than that.
+    {"Cryptohome.TimeToPerformOOPMountCleanup", 0, 1100, 50},
 };
 
 constexpr char kCryptohomeDeprecatedApiHistogramName[] =

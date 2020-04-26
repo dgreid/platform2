@@ -78,6 +78,8 @@ enum TimerType {
   kMountExTimer,
   kDircryptoMigrationTimer,
   kDircryptoMinimalMigrationTimer,
+  kOOPMountOperationTimer,
+  kOOPMountCleanupTimer,
   kNumTimerTypes  // For the number of timer types.
 };
 
