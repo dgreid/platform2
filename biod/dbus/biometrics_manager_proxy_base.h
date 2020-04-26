@@ -28,22 +28,26 @@ class BiometricsManagerProxyBase {
   static std::unique_ptr<BiometricsManagerProxyBase> Create(
       const scoped_refptr<dbus::Bus>& bus, const dbus::ObjectPath& path);
 
-  void ConnectToAuthScanDoneSignal(SignalCallback signal_callback,
-                                   OnConnectedCallback on_connected_callback);
+  virtual ~BiometricsManagerProxyBase() = default;
 
-  const dbus::ObjectPath path() const;
+  virtual void ConnectToAuthScanDoneSignal(
+      SignalCallback signal_callback,
+      OnConnectedCallback on_connected_callback);
 
-  void SetFinishHandler(const FinishCallback& on_finish);
+  virtual const dbus::ObjectPath path() const;
+
+  virtual void SetFinishHandler(const FinishCallback& on_finish);
 
   // Starts biometrics auth session synchronously.
-  bool StartAuthSession();
+  virtual bool StartAuthSession();
 
   // Starts biometrics auth session asynchronously.
   // |callback| is called when starting the auth session succeeds/fails.
-  void StartAuthSessionAsync(base::Callback<void(bool success)> callback);
+  virtual void StartAuthSessionAsync(
+      base::Callback<void(bool success)> callback);
 
   // Ends biometrics auth session and resets state.
-  void EndAuthSession();
+  virtual void EndAuthSession();
 
  protected:
   BiometricsManagerProxyBase();
