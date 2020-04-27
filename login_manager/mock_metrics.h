@@ -32,6 +32,7 @@ class MockMetrics : public LoginMetrics {
   MOCK_METHOD(bool, HasRecordedChromeExec, (), (override));
   MOCK_METHOD(void, SendSessionExitType, (SessionExitType), (override));
   MOCK_METHOD(void, SendBrowserShutdownTime, (base::TimeDelta), (override));
+  MOCK_METHOD(void, SendArcBugReportBackupTime, (base::TimeDelta), (override));
 
  private:
   DISALLOW_COPY_AND_ASSIGN(MockMetrics);

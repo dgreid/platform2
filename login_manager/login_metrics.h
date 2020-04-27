@@ -132,6 +132,10 @@ class LoginMetrics {
   // Submits to UMA the browser shutdown time of normal exit.
   virtual void SendBrowserShutdownTime(base::TimeDelta browser_shutdown_time);
 
+  // Submits to UMA the time to backup ARC bug report.
+  virtual void SendArcBugReportBackupTime(
+      base::TimeDelta arc_bug_report_backup_time);
+
  private:
   friend class LoginMetricsTest;
   friend class UserTypeTest;
