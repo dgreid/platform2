@@ -543,12 +543,10 @@ properties:
                 autobrightness:
                   type: object
                   properties:
-                    files:
-                      type: array
-                      items: *system_file_v2
+                    config-file: *system_file_v2
                   additionalProperties: false
                   required:
-                  - files
+                  - config-file
                 touchpad-wakeup:
                   description: Enable (1) or disable (0) wake from touchpad.
                   type: string

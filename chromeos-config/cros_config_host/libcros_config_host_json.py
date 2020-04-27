@@ -96,6 +96,13 @@ class DeviceConfigJson(DeviceConfig):
 
     return result
 
+  def _GetSystemFileV2(self, path):
+    config = self.GetProperties(path)
+    if config:
+      return [BaseFile(config['build-path'], config['system-path'])]
+    else:
+      return []
+
   def GetFirmwareConfig(self):
     firmware = self.GetProperties('/firmware')
     if not firmware or self.GetValue(firmware, 'no-firmware'):
@@ -112,21 +119,13 @@ class DeviceConfigJson(DeviceConfig):
     return self._GetSymlinkedFiles('/detachable-base')
 
   def GetArcFiles(self):
-    result = []
-    config = self.GetProperties('/arc/hardware-features')
-    if config:
-      result.append(BaseFile(config['build-path'], config['system-path']))
-    return result
+    return self._GetSystemFileV2('/arc/hardware-features')
 
   def GetAudioFiles(self):
     return self._GetFiles('/audio/main')
 
   def GetBluetoothFiles(self):
-    result = []
-    config = self.GetProperties('/bluetooth/config')
-    if config:
-      result.append(BaseFile(config['build-path'], config['system-path']))
-    return result
+    return self._GetSystemFileV2('/bluetooth/config')
 
   def GetThermalFiles(self):
     return self._GetFiles('/thermal')
@@ -139,7 +138,7 @@ class DeviceConfigJson(DeviceConfig):
     return result
 
   def GetAutobrightnessFiles(self):
-    return self._GetFiles('/power/autobrightness')
+    return self._GetSystemFileV2('/power/autobrightness/config-file')
 
 
 class CrosConfigJson(CrosConfigBaseImpl):

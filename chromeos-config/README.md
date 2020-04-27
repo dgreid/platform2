@@ -593,9 +593,9 @@ In the tables below,
 ### autobrightness
 | Attribute | Type   | RegEx     | Required | Oneof Group | Build-only | Description |
 | --------- | ------ | --------- | -------- | ----------- | ---------- | ----------- |
-| files | array - [files](#files) |  | True |  | False |  |
+| config-file | [config-file](#config_file) |  | True |  | False |  |
 
-### files
+### config-file
 | Attribute | Type   | RegEx     | Required | Oneof Group | Build-only | Description |
 | --------- | ------ | --------- | -------- | ----------- | ---------- | ----------- |
 | build-path | string |  | True |  | True | Source of the file relative to the build system. |
