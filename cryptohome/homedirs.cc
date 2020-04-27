@@ -241,8 +241,12 @@ void HomeDirs::FreeDiskSpaceInternal() {
 
   // Clean Cache directories for every unmounted user that has logged out after
   // the last normal cleanup happened.
-  for (const auto& dir : normal_cleanup_homedirs) {
-    HomeDirs::DeleteCacheCallback(dir.shadow);
+  for (auto dir = normal_cleanup_homedirs.rbegin();
+       dir != normal_cleanup_homedirs.rend(); dir++) {
+    HomeDirs::DeleteCacheCallback(dir->shadow);
+
+    if (HasTargetFreeSpace())
+      break;
   }
 
   auto freeDiskSpace = AmountOfFreeDiskSpace();
@@ -260,8 +264,12 @@ void HomeDirs::FreeDiskSpaceInternal() {
 
   // Clean GCache directories for every unmounted user that has logged out after
   // after the last normal cleanup happened.
-  for (const auto& dir : normal_cleanup_homedirs) {
-    HomeDirs::DeleteGCacheTmpCallback(dir.shadow);
+  for (auto dir = normal_cleanup_homedirs.rbegin();
+       dir != normal_cleanup_homedirs.rend(); dir++) {
+    HomeDirs::DeleteGCacheTmpCallback(dir->shadow);
+
+    if (HasTargetFreeSpace())
+      break;
   }
 
   last_normal_disk_cleanup_complete_ = platform_->GetCurrentTime();
@@ -310,8 +318,12 @@ void HomeDirs::FreeDiskSpaceInternal() {
 
   // Clean Android cache directories for every unmounted user that has logged
   // out after after the last normal cleanup happened.
-  for (const auto& dir : aggressive_cleanup_homedirs) {
-    HomeDirs::DeleteAndroidCacheCallback(dir.shadow);
+  for (auto dir = aggressive_cleanup_homedirs.rbegin();
+       dir != aggressive_cleanup_homedirs.rend(); dir++) {
+    HomeDirs::DeleteAndroidCacheCallback(dir->shadow);
+
+    if (HasTargetFreeSpace())
+      break;
   }
 
   last_aggressive_disk_cleanup_complete_ = platform_->GetCurrentTime();

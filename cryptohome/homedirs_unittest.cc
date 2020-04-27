@@ -604,9 +604,13 @@ class FreeDiskSpaceTest : public HomeDirsTest {
       .WillRepeatedly(
           DoAll(SetArgPointee<2>(homedir_paths_),
                 Return(true)));
+    // FreeDiskCleanup early termination +
+    // 3 * user cleanup eary termination checks +
+    // Cache, GCache and Android termination check.
     EXPECT_CALL(platform_, AmountOfFreeDiskSpace(kTestRoot))
-      .Times(4).WillRepeatedly(Return(0))
-      .RetiresOnSaturation();
+        .Times(1 + user_count * 3 + 3)
+        .WillRepeatedly(Return(0))
+        .RetiresOnSaturation();
     EXPECT_CALL(platform_, DirectoryExists(_))
       .WillRepeatedly(Return(true));
     EXPECT_CALL(platform_, DirectoryExists(Property(
@@ -647,6 +651,7 @@ TEST_P(FreeDiskSpaceTest, InitializeTimeCacheWithNoTime) {
   EXPECT_CALL(platform_, AmountOfFreeDiskSpace(kTestRoot))
       .WillOnce(Return(0))
       .WillOnce(Return(kTargetFreeSpaceAfterCleanup + 1))
+      .WillOnce(Return(kTargetFreeSpaceAfterCleanup + 1))
       .WillRepeatedly(Return(0));
 
   // Expect cache clean ups.
@@ -665,11 +670,11 @@ TEST_P(FreeDiskSpaceTest, InitializeTimeCacheWithNoTime) {
     .Times(4).WillRepeatedly(InvokeWithoutArgs(CreateMockFileEnumerator));
   // Empty enumerators per-user per-cache dirs plus
   // enumerators for empty vaults.
-  EXPECT_CALL(platform_, GetFileEnumerator(
-        Property(&FilePath::value, HasSubstr("user/Cache")),
-        false, _))
-    .Times(4)
-    .WillRepeatedly(InvokeWithoutArgs(CreateMockFileEnumerator));
+  EXPECT_CALL(platform_, GetFileEnumerator(Property(&FilePath::value,
+                                                    HasSubstr("user/Cache")),
+                                           false, _))
+      .Times(1)
+      .WillOnce(InvokeWithoutArgs(CreateMockFileEnumerator));
 
   ExpectTrackedDirectoriesEnumeration();
 
@@ -709,6 +714,7 @@ TEST_P(FreeDiskSpaceTest, InitializeTimeCacheWithOneTime) {
   EXPECT_CALL(platform_, AmountOfFreeDiskSpace(kTestRoot))
       .WillOnce(Return(0))
       .WillOnce(Return(kTargetFreeSpaceAfterCleanup + 1))
+      .WillOnce(Return(kTargetFreeSpaceAfterCleanup + 1))
       .WillRepeatedly(Return(0));
 
   // Expect cache clean ups.
@@ -726,11 +732,11 @@ TEST_P(FreeDiskSpaceTest, InitializeTimeCacheWithOneTime) {
     .Times(3).WillRepeatedly(InvokeWithoutArgs(CreateMockFileEnumerator));
   // Empty enumerators per-user per-cache dirs plus
   // enumerators for empty vaults.
-  EXPECT_CALL(platform_,
-      GetFileEnumerator(
-        Property(&FilePath::value, HasSubstr("user/Cache")),
-        false, _))
-    .Times(4).WillRepeatedly(InvokeWithoutArgs(CreateMockFileEnumerator));
+  EXPECT_CALL(platform_, GetFileEnumerator(Property(&FilePath::value,
+                                                    HasSubstr("user/Cache")),
+                                           false, _))
+      .Times(1)
+      .WillRepeatedly(InvokeWithoutArgs(CreateMockFileEnumerator));
 
   ExpectTrackedDirectoriesEnumeration();
 
@@ -793,18 +799,6 @@ TEST_P(FreeDiskSpaceTest, InitializeTimeCacheWithOneTime) {
 }
 
 TEST_P(FreeDiskSpaceTest, TimeCacheSkipNormalCleanupIfNotActive) {
-  // To get to the init logic, we need to fail the check in FreeDiskSpace amd
-  // GCache cleanup.
-  // Cleanup is executed twice.
-  EXPECT_CALL(platform_, AmountOfFreeDiskSpace(kTestRoot))
-      .WillOnce(Return(0))
-      .WillOnce(Return(0))
-      .WillOnce(Return(kTargetFreeSpaceAfterCleanup + 1))
-      .WillOnce(Return(0))
-      .WillOnce(Return(0))
-      .WillOnce(Return(kTargetFreeSpaceAfterCleanup + 1))
-      .WillRepeatedly(Return(0));
-
   // Expect cache clean ups.
   EXPECT_CALL(platform_, EnumerateDirectoryEntries(kTestRoot, false, _))
       .WillRepeatedly(DoAll(SetArgPointee<2>(homedir_paths_), Return(true)));
@@ -867,11 +861,45 @@ TEST_P(FreeDiskSpaceTest, TimeCacheSkipNormalCleanupIfNotActive) {
   // Now skip the deletion steps by not having a legit owner.
   set_policy(false, "", false, "");
 
+  EXPECT_CALL(platform_, AmountOfFreeDiskSpace(kTestRoot))
+      // FreeDiskSpace early termination.
+      .WillOnce(Return(0))
+
+      // Skip early Cache termination.
+      .WillOnce(Return(0))
+      .WillOnce(Return(0))
+      .WillOnce(Return(0))
+      .WillOnce(Return(0))
+
+      // Continue with GCache cleanup.
+      .WillOnce(Return(0))
+
+      // Skip early GCache termination.
+      .WillOnce(Return(0))
+      .WillOnce(Return(0))
+      .WillOnce(Return(0))
+      .WillOnce(Return(0))
+
+      // Stop after GCache cleanup.
+      .WillRepeatedly(Return(kTargetFreeSpaceAfterCleanup + 1));
+
   homedirs_.FreeDiskSpace();
 
   // Simulate logout
   EXPECT_CALL(timestamp_cache_, GetLastUserActivityTimestamp(homedir_paths_[2]))
       .WillRepeatedly(Return(base::Time::Now()));
+
+  EXPECT_CALL(platform_, AmountOfFreeDiskSpace(kTestRoot))
+      // FreeDiskSpace early termination.
+      .WillOnce(Return(0))
+
+      // Skip early Cache termination for 1 user.
+      .WillOnce(Return(0))
+
+      // Stop before GCache cleanup.
+      .WillOnce(Return(kTargetFreeSpaceAfterCleanup + 1))
+
+      .WillRepeatedly(Return(0));
 
   homedirs_.FreeDiskSpace();
 
@@ -879,21 +907,6 @@ TEST_P(FreeDiskSpaceTest, TimeCacheSkipNormalCleanupIfNotActive) {
 }
 
 TEST_P(FreeDiskSpaceTest, TimeCacheSkipAggressiveCleanupIfNotActive) {
-  // To get to the init logic, we need to fail the check in FreeDiskSpace amd
-  // GCache cleanup.
-  // Cleanup is executed twice.
-  EXPECT_CALL(platform_, AmountOfFreeDiskSpace(kTestRoot))
-      .WillOnce(Return(0))
-      .WillOnce(Return(0))
-      .WillOnce(Return(0))
-      .WillOnce(Return(kTargetFreeSpaceAfterCleanup + 1))
-      .WillOnce(Return(0))
-      .WillOnce(Return(0))
-      .WillOnce(Return(0))
-      .WillOnce(Return(0))
-      .WillOnce(Return(kTargetFreeSpaceAfterCleanup + 1))
-      .WillRepeatedly(Return(0));
-
   // Expect cache clean ups.
   EXPECT_CALL(platform_, EnumerateDirectoryEntries(kTestRoot, false, _))
       .WillRepeatedly(DoAll(SetArgPointee<2>(homedir_paths_), Return(true)));
@@ -966,11 +979,66 @@ TEST_P(FreeDiskSpaceTest, TimeCacheSkipAggressiveCleanupIfNotActive) {
   // Now skip the deletion steps by not having a legit owner.
   set_policy(false, "", false, "");
 
+  EXPECT_CALL(platform_, AmountOfFreeDiskSpace(kTestRoot))
+      // FreeDiskSpace early termination.
+      .WillOnce(Return(0))
+
+      // Skip early Cache termination.
+      .WillOnce(Return(0))
+      .WillOnce(Return(0))
+      .WillOnce(Return(0))
+      .WillOnce(Return(0))
+
+      // Continue with GCache cleanup.
+      .WillOnce(Return(0))
+
+      // Skip early GCache termination.
+      .WillOnce(Return(0))
+      .WillOnce(Return(0))
+      .WillOnce(Return(0))
+      .WillOnce(Return(0))
+
+      // Continue with Android cleanup.
+      .WillOnce(Return(0))
+
+      // Skip early Android termination.
+      .WillOnce(Return(0))
+      .WillOnce(Return(0))
+      .WillOnce(Return(0))
+      .WillOnce(Return(0))
+
+      // Stop after Android cleanup
+      .WillRepeatedly(Return(kTargetFreeSpaceAfterCleanup + 1));
+
   homedirs_.FreeDiskSpace();
 
   // Simulate logout
   EXPECT_CALL(timestamp_cache_, GetLastUserActivityTimestamp(homedir_paths_[2]))
       .WillRepeatedly(Return(base::Time::Now()));
+
+  EXPECT_CALL(platform_, AmountOfFreeDiskSpace(kTestRoot))
+      // FreeDiskSpace early termination.
+      .WillOnce(Return(0))
+
+      // Skip early Cache termination for 1 user.
+      .WillOnce(Return(0))
+
+      // Continue with GCache cleanup.
+      .WillOnce(Return(0))
+
+      // Skip early GCache termination for 1 user.
+      .WillOnce(Return(0))
+
+      // Continue with Android cleanup.
+      .WillOnce(Return(0))
+
+      // Skip early Android termination for 1 user.
+      .WillOnce(Return(0))
+
+      // Stop after Android cleanup.
+      .WillOnce(Return(kTargetFreeSpaceAfterCleanup + 1))
+
+      .WillRepeatedly(Return(0));
 
   homedirs_.FreeDiskSpace();
 
@@ -995,6 +1063,10 @@ TEST_P(FreeDiskSpaceTest, OnlyCacheCleanup) {
               Return(true)));
 
   EXPECT_CALL(platform_, AmountOfFreeDiskSpace(kTestRoot))
+      .WillOnce(Return(0))
+      .WillOnce(Return(0))
+      .WillOnce(Return(0))
+      .WillOnce(Return(0))
       .WillOnce(Return(0))
       .WillRepeatedly(Return(kTargetFreeSpaceAfterCleanup + 1));
   EXPECT_CALL(platform_, DirectoryExists(_))
@@ -1036,6 +1108,21 @@ TEST_P(FreeDiskSpaceTest, GCacheCleanup) {
         DoAll(SetArgPointee<2>(homedir_paths_),
               Return(true)));
   EXPECT_CALL(platform_, AmountOfFreeDiskSpace(kTestRoot))
+      // FreeDiskSpace early termination.
+      .WillOnce(Return(0))
+
+      // Skip early Cache termination.
+      .WillOnce(Return(0))
+      .WillOnce(Return(0))
+      .WillOnce(Return(0))
+      .WillOnce(Return(0))
+
+      // Continue with GCache cleanup.
+      .WillOnce(Return(0))
+
+      // Skip early GCache termination.
+      .WillOnce(Return(0))
+      .WillOnce(Return(0))
       .WillOnce(Return(0))
       .WillOnce(Return(0))
       .WillRepeatedly(Return(kTargetFreeSpaceAfterCleanup + 1));
@@ -1137,8 +1224,23 @@ TEST_P(FreeDiskSpaceTest, CacheAndGCacheCleanup) {
         DoAll(SetArgPointee<2>(homedir_paths_),
               Return(true)));
   EXPECT_CALL(platform_, AmountOfFreeDiskSpace(kTestRoot))
-      .WillOnce(Return(0))  // Before cleanup
-      .WillOnce(Return(0))  // After removing cache
+      // FreeDiskSpace early termination.
+      .WillOnce(Return(0))
+
+      // Skip early Cache termination.
+      .WillOnce(Return(0))
+      .WillOnce(Return(0))
+      .WillOnce(Return(0))
+      .WillOnce(Return(0))
+
+      // Continue with GCache cleanup.
+      .WillOnce(Return(0))
+
+      // Skip early GCache termination.
+      .WillOnce(Return(0))
+      .WillOnce(Return(0))
+      .WillOnce(Return(0))
+      .WillOnce(Return(0))
       .WillRepeatedly(  // After removing gcache
           Return(kFreeSpaceThresholdToTriggerAggressiveCleanup + 1));
   EXPECT_CALL(platform_, DirectoryExists(_))
@@ -1211,11 +1313,34 @@ TEST_P(FreeDiskSpaceTest, CacheAndGCacheAndAndroidCleanup) {
         DoAll(SetArgPointee<2>(homedir_paths_),
               Return(true)));
   EXPECT_CALL(platform_, AmountOfFreeDiskSpace(kTestRoot))
+      // FreeDiskSpace early termination.
+      .WillOnce(Return(0))
+
+      // Skip early Cache termination.
       .WillOnce(Return(0))
       .WillOnce(Return(0))
+      .WillOnce(Return(0))
+      .WillOnce(Return(0))
+
+      // Continue with GCache cleanup.
+      .WillOnce(Return(0))
+
+      // Skip early GCache termination.
+      .WillOnce(Return(0))
+      .WillOnce(Return(0))
+      .WillOnce(Return(0))
+      .WillOnce(Return(0))
+
+      // Continue with Android cleanup.
       .WillOnce(Return(kFreeSpaceThresholdToTriggerAggressiveCleanup - 1))
+
+      // Skip early Android termination.
+      .WillOnce(Return(0))
+      .WillOnce(Return(0))
+      .WillOnce(Return(0))
+      .WillOnce(Return(0))
       .WillRepeatedly(
-        Return(kFreeSpaceThresholdToTriggerAggressiveCleanup + 1));
+          Return(kFreeSpaceThresholdToTriggerAggressiveCleanup + 1));
   EXPECT_CALL(platform_, DirectoryExists(_))
     .WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, DirectoryExists(Property(&FilePath::value,
