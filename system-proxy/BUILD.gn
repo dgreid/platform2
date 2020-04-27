@@ -17,6 +17,9 @@ group("all") {
   if (use.test) {
     deps += [ ":system-proxy_test" ]
   }
+  if (use.fuzzer) {
+    deps += [ ":system_proxy_worker_config_fuzzer" ]
+  }
 }
 
 # D-Bus code generator.
@@ -49,9 +52,14 @@ pkg_config("target_defaults") {
     # system_api depends on protobuf (or protobuf-lite). It must
     # appear before protobuf or the linker flags won't be in the right
     # order.
-    "protobuf-lite",
     "system_api",
   ]
+  if (use.fuzzer) {
+    # Link against protobuf for fuzzers so we can use libprotobuf-mutator.
+    pkg_deps += [ "protobuf" ]
+  } else {
+    pkg_deps += [ "protobuf-lite" ]
+  }
 }
 
 # System-proxy library (shared between executables and tests).
@@ -130,6 +138,26 @@ if (use.test) {
       ":libsystemproxy",
       ":libsystemproxyworker",
       "//common-mk/testrunner:testrunner",
+    ]
+  }
+}
+
+if (use.fuzzer) {
+  pkg_config("config_fuzzer_pkg_deps") {
+    pkg_deps = [ "libprotobuf-mutator" ]
+  }
+  executable("system_proxy_worker_config_fuzzer") {
+    all_dependent_pkg_deps = [ "libcurl" ]
+    configs += [
+      "//common-mk/common_fuzzer",
+      ":config_fuzzer_pkg_deps",
+      ":target_defaults",
+    ]
+    sources = [
+      "worker_config_fuzzer.cc",
+    ]
+    deps = [
+      ":libsystemproxyworker",
     ]
   }
 }
