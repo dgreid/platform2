@@ -9,12 +9,12 @@
 #include <string>
 #include <vector>
 
-#include "ipp_attribute.h"    // NOLINT(build/include)
-#include "ipp_base.h"         // NOLINT(build/include)
-#include "ipp_collections.h"  // NOLINT(build/include)
-#include "ipp_enums.h"        // NOLINT(build/include)
-#include "ipp_export.h"       // NOLINT(build/include)
-#include "ipp_package.h"      // NOLINT(build/include)
+#include "ipp_attribute.h"
+#include "ipp_base.h"
+#include "ipp_collections.h"
+#include "ipp_enums.h"
+#include "ipp_export.h"
+#include "ipp_package.h"
 
 // This file contains definition of classes corresponding to supported IPP
 // operations. See ipp.h for more details.

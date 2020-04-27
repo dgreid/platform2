@@ -5,7 +5,7 @@
 #ifndef LIBIPP_IPP_ENUMS_H_
 #define LIBIPP_IPP_ENUMS_H_
 
-#include "ipp_export.h"  // NOLINT(build/include)
+#include "ipp_export.h"
 
 #include <cstdint>
 #include <string>

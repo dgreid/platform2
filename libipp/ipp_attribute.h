@@ -13,8 +13,8 @@
 #include <utility>
 #include <vector>
 
-#include "ipp_enums.h"   // NOLINT(build/include)
-#include "ipp_export.h"  // NOLINT(build/include)
+#include "ipp_enums.h"
+#include "ipp_export.h"
 
 namespace ipp {
 
