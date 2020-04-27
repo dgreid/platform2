@@ -9,8 +9,6 @@ use std::mem;
 use std::os::raw::c_void;
 use std::os::unix::io::{FromRawFd, RawFd};
 
-use libc;
-
 use crate::decode_bindings;
 use crate::error::*;
 use crate::event::*;
