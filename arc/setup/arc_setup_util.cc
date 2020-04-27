@@ -50,6 +50,7 @@
 #include <base/timer/elapsed_timer.h>
 #include <base/values.h>
 #include <brillo/file_utils.h>
+#include <brillo/files/safe_fd.h>
 #include <crypto/sha2.h>
 
 using base::StringPiece;
@@ -639,40 +640,81 @@ uint64_t GetArtCompilationOffsetSeed(const std::string& image_build_id,
 // Note: This function has to be in sync with Android's arc-boot-type-detector.
 bool MoveDirIntoDataOldDir(const base::FilePath& dir,
                            const base::FilePath& android_data_old_dir) {
-  if (!base::DirectoryExists(dir))
-    return true;  // Nothing to do.
-
-  // Create |android_data_old_dir| if it doesn't exist.
-  if (!base::DirectoryExists(android_data_old_dir)) {
-    if (base::PathExists(android_data_old_dir)) {
-      LOG(INFO) << "Deleting a file " << android_data_old_dir.value();
-      base::DeleteFile(android_data_old_dir, false);
-    }
-    base::File::Error error;
-    if (!base::CreateDirectoryAndGetError(android_data_old_dir, &error)) {
-      PLOG(ERROR) << "Failed to create " << android_data_old_dir.value()
-                  << " : " << error;
-      return false;
-    }
+  if (!base::DirectoryExists(dir)) {
+    // Nothing to do.
+    return true;
   }
 
-  // Create a randomly-named temp dir in |android_data_old_dir|.
-  base::FilePath target_dir_name;
-  if (!base::CreateTemporaryDirInDir(
-          android_data_old_dir,
-          base::StringPrintf("%s_", dir.BaseName().value().c_str()),
-          &target_dir_name)) {
-    LOG(WARNING) << "Failed to create a temporary directory in "
-                 << android_data_old_dir.value();
+  brillo::SafeFD root = brillo::SafeFD::Root().first;
+
+  brillo::SafeFD source_parent = root.OpenExistingDir(dir.DirName()).first;
+  if (!source_parent.is_valid()) {
+    LOG(ERROR) << "Cannot open " << dir.DirName().value();
     return false;
   }
-  LOG(INFO) << "Renaming " << dir.value() << " to " << target_dir_name.value();
 
-  // Rename |dir| to the temp dir.
-  // Note: Renaming a dir to an existing empty dir works.
-  if (!base::Move(dir, target_dir_name)) {
-    LOG(WARNING) << "Failed to rename " << dir.value() << " to "
-                 << target_dir_name.value();
+  brillo::SafeFD dest_dir_parent =
+      root.OpenExistingDir(android_data_old_dir.DirName()).first;
+  if (!dest_dir_parent.is_valid()) {
+    LOG(ERROR) << "Cannot open " << android_data_old_dir.DirName().value();
+    return false;
+  }
+
+  brillo::SafeFD dest_dir;
+  brillo::SafeFD::Error err;
+  std::tie(dest_dir, err) = dest_dir_parent.MakeDir(
+      android_data_old_dir.BaseName(), 0700 /*permissions*/);
+  if (err == brillo::SafeFD::Error::kWrongType) {
+    LOG(INFO) << "Deleting something that is not a directory at "
+              << android_data_old_dir.value();
+    if (dest_dir_parent.Unlink(android_data_old_dir.BaseName().value()) !=
+        brillo::SafeFD::Error::kNoError) {
+      LOG(ERROR) << "Failed to delete " << android_data_old_dir.value();
+      return false;
+    }
+    std::tie(dest_dir, err) = dest_dir_parent.MakeDir(
+        android_data_old_dir.BaseName(), 0700 /*permissions*/);
+  }
+  if (!dest_dir.is_valid()) {
+    LOG(ERROR) << "Cannot open or create " << android_data_old_dir.value();
+    return false;
+  }
+
+  // Create a unique directory under android_data_old_dir.
+  // TODO(crbug.com/1076654): Add temporary directory create and rename
+  // APIs to SafeFD and replace the inline implementation here.
+  int seed =
+      std::chrono::high_resolution_clock::now().time_since_epoch().count() &
+      0xFFFFFF;
+  const std::string dest_base = dir.BaseName().value();
+  bool moved = false;
+  // How many different unique names shall we try? FreeBSD insists on
+  // exhaustively trying all 56**5 (2.4e10) combinations to find that last
+  // possible free filename. In contrast, glibc "only" tries 300000 times.
+  // Conservativelty, we do not expect more than something on the order of
+  // 100 names to be taken, but failing to opt-out is pretty bad for the
+  // user so we use a safety factor of 1000 to be very sure. At 100000
+  // syscalls, will still only block for a second before erroring out.
+  constexpr int kMaxTries = 100000;
+  for (int i = 0; i < kMaxTries; i++) {
+    std::string new_name =
+        base::StringPrintf("%s_%06x", dest_base.c_str(), seed);
+    if (renameat(source_parent.get(), dir.BaseName().value().c_str(),
+                 dest_dir.get(), new_name.c_str()) == 0) {
+      moved = true;
+      break;
+    }
+    if (errno != EEXIST && errno != ENOTEMPTY && errno != ENOTDIR) {
+      PLOG(ERROR) << "Cannot move" << dir.value() << " to "
+                  << android_data_old_dir.Append(new_name).value();
+      return false;
+    }
+    seed = (seed + 1) & 0xFFFFFF;
+  }
+  if (!moved) {
+    LOG(ERROR) << "Giving up, cannot move " << dir.value()
+               << " to a directory of the form "
+               << android_data_old_dir.Append(dest_base + "_XXXXXX").value();
     return false;
   }
 

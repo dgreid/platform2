@@ -713,6 +713,52 @@ TEST(ArcSetupUtil, MoveDirIntoDataOldDir_AndroidDataOldIsFile) {
   EXPECT_EQ(1, temp_dir_count);
 }
 
+TEST(ArcSetupUtil, MoveDirIntoDataOldDir_DirUnderSymlink) {
+  base::ScopedTempDir test_dir;
+  ASSERT_TRUE(test_dir.CreateUniqueTempDir());
+
+  const base::FilePath target = test_dir.GetPath().Append("symlink_target");
+  const base::FilePath test_file = target.Append("android-data/path/to/file");
+  ASSERT_TRUE(brillo::MkdirRecursively(test_file.DirName(), 0755).is_valid());
+  ASSERT_TRUE(CreateOrTruncate(test_file, 0755));
+
+  base::FilePath data_old_dir =
+      test_dir.GetPath().Append("old-parent/android-data-old");
+  ASSERT_TRUE(brillo::MkdirRecursively(data_old_dir, 0755).is_valid());
+
+  base::FilePath dir = test_dir.GetPath().Append("data-parent/android-data");
+  ASSERT_TRUE(base::CreateSymbolicLink(target, dir.DirName()));
+
+  EXPECT_FALSE(MoveDirIntoDataOldDir(dir, data_old_dir));
+
+  EXPECT_TRUE(base::IsDirectoryEmpty(data_old_dir));
+  EXPECT_TRUE(base::PathExists(test_file));
+}
+
+TEST(ArcSetupUtil, MoveDirIntoDataOldDir_OldDirUnderSymlink) {
+  base::ScopedTempDir test_dir;
+  ASSERT_TRUE(test_dir.CreateUniqueTempDir());
+
+  base::FilePath dir = test_dir.GetPath().Append("data-parent/android-data");
+  base::FilePath data_old_dir =
+      test_dir.GetPath().Append("old-parent/android-data-old");
+
+  const base::FilePath target = test_dir.GetPath().Append("symlink_target");
+  ASSERT_TRUE(brillo::MkdirRecursively(target.Append("android-data-old"), 0755)
+                  .is_valid());
+
+  ASSERT_TRUE(base::CreateSymbolicLink(target, data_old_dir.DirName()));
+
+  const base::FilePath test_file = dir.Append("path/to/file");
+  ASSERT_TRUE(brillo::MkdirRecursively(test_file.DirName(), 0755).is_valid());
+  ASSERT_TRUE(CreateOrTruncate(test_file, 0755));
+
+  EXPECT_FALSE(MoveDirIntoDataOldDir(dir, data_old_dir));
+
+  EXPECT_TRUE(base::PathExists(dir));
+  EXPECT_TRUE(base::IsDirectoryEmpty(target.Append("android-data-old")));
+}
+
 TEST(ArcSetupUtil, TestGetChromeOsChannelFromFile) {
   base::ScopedTempDir temp_directory;
   ASSERT_TRUE(temp_directory.CreateUniqueTempDir());
