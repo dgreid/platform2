@@ -15,6 +15,12 @@
 #include <dbus/u2f/dbus-constants.h>
 #include <u2f/proto_bindings/u2f_interface.pb.h>
 
+constexpr int kRpIdHashBytes = 32;
+constexpr int kFlagsBytes = 1;
+constexpr int kCounterBytes = 4;
+constexpr int kAaguidBytes = 16;
+constexpr int kCredentialIdLengthBytes = 2;
+
 template <typename Req, typename Resp>
 Resp SendRequest(dbus::ObjectProxy* proxy,
                  const std::string& method_name,
@@ -58,6 +64,23 @@ void AppendToString(const std::vector<uint8_t>& vect, std::string* str) {
   str->append(reinterpret_cast<const char*>(vect.data()), vect.size());
 }
 
+std::string ExtractCredentialId(const std::string& authenticator_data) {
+  size_t credential_id_length_offset =
+      kRpIdHashBytes + kFlagsBytes + kCounterBytes + kAaguidBytes;
+  if (authenticator_data.size() <
+      credential_id_length_offset + kCredentialIdLengthBytes)
+    return std::string();
+  std::string length_str = authenticator_data.substr(
+      credential_id_length_offset, kCredentialIdLengthBytes);
+  uint16_t length = ((static_cast<uint16_t>(length_str.at(0))) << 8) +
+                    static_cast<uint16_t>(length_str.at(1));
+  size_t credential_id_offset =
+      credential_id_length_offset + kCredentialIdLengthBytes;
+  if (authenticator_data.size() < credential_id_offset + length)
+    return std::string();
+  return authenticator_data.substr(credential_id_offset, length);
+}
+
 void MakeCredential(dbus::ObjectProxy* proxy,
                     int verification_type,
                     const std::string& rp_id) {
@@ -79,6 +102,8 @@ void MakeCredential(dbus::ObjectProxy* proxy,
   LOG(INFO) << "status: " << ResponseStatusToString(resp.status());
   LOG(INFO) << "authenticator_data: "
             << HexEncodeStr(resp.authenticator_data());
+  LOG(INFO) << "credential_id: "
+            << HexEncodeStr(ExtractCredentialId(resp.authenticator_data()));
   LOG(INFO) << "attestation_format: " << resp.attestation_format();
   LOG(INFO) << "attestation_statement: "
             << HexEncodeStr(resp.attestation_statement());
