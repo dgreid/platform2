@@ -1332,39 +1332,6 @@ TEST_F(DeviceTest, OnIPv6AddressChanged) {
   Mock::VerifyAndClearExpectations(&device_info_);
 }
 
-TEST_F(DeviceTest, OnIPv6DnsServerAddressesChanged_LeaseExpirationUpdated) {
-  MockManager manager(control_interface(), dispatcher(), metrics());
-  manager.set_mock_device_info(&device_info_);
-  EXPECT_CALL(manager, FilterPrependDNSServersByFamily(_))
-      .WillRepeatedly(Return(vector<string>()));
-  SetManager(&manager);
-
-  scoped_refptr<MockIPConfig> ip6config =
-      new MockIPConfig(control_interface(), kDeviceName);
-  device_->ip6config_ = ip6config;
-
-  // Non-infinite lifetime should trigger an update of the current lease
-  // expiration time.
-  const uint32_t kExpiredLifetime = 1;
-  EXPECT_CALL(device_info_,
-              GetIPv6DnsServerAddresses(kDeviceInterfaceIndex, _, _))
-      .WillOnce(DoAll(SetArgPointee<2>(kExpiredLifetime), Return(true)));
-  EXPECT_CALL(*ip6config, UpdateLeaseExpirationTime(_)).Times(1);
-  EXPECT_CALL(*ip6config, ResetLeaseExpirationTime()).Times(0);
-  device_->OnIPv6DnsServerAddressesChanged();
-
-  // Infinite lifetime should cause a reset of the current lease expiration
-  // time to its default value.
-  const uint32_t kExpiredLifetimeInfinity = ND_OPT_LIFETIME_INFINITY;
-  EXPECT_CALL(device_info_,
-              GetIPv6DnsServerAddresses(kDeviceInterfaceIndex, _, _))
-      .WillOnce(
-          DoAll(SetArgPointee<2>(kExpiredLifetimeInfinity), Return(true)));
-  EXPECT_CALL(*ip6config, UpdateLeaseExpirationTime(_)).Times(0);
-  EXPECT_CALL(*ip6config, ResetLeaseExpirationTime()).Times(1);
-  device_->OnIPv6DnsServerAddressesChanged();
-}
-
 TEST_F(DeviceTest, OnIPv6DnsServerAddressesChanged) {
   StrictMock<MockManager> manager(control_interface(), dispatcher(), metrics());
   manager.set_mock_device_info(&device_info_);

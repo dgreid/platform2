@@ -197,10 +197,10 @@ class IPConfig : public base::RefCounted<IPConfig> {
 
   // Updates |current_lease_expiration_time_| by adding |new_lease_duration| to
   // the current time.
-  virtual void UpdateLeaseExpirationTime(uint32_t new_lease_duration);
+  void UpdateLeaseExpirationTime(uint32_t new_lease_duration);
 
   // Resets |current_lease_expiration_time_| to its default value.
-  virtual void ResetLeaseExpirationTime();
+  void ResetLeaseExpirationTime();
 
   // Returns the time left (in seconds) till the current DHCP lease is to be
   // renewed in |time_left|. Returns false if an error occurs (i.e. current
