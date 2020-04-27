@@ -2,10 +2,16 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//common-mk/pkg_config.gni")
+
 group("all") {
   deps = [
     ":attestation-injected-keys",
+    ":hwsec-test-va",
   ]
+  if (use.test) {
+    deps += [ ":hwsec-test-utils_testrunner" ]
+  }
 }
 
 pkg_config("target_defaults") {
@@ -29,4 +35,56 @@ executable("attestation-injected-keys") {
     "system_api",
     "protobuf",
   ]
+}
+
+executable("hwsec-test-va") {
+  configs += [ ":target_defaults" ]
+  sources = [
+    "verified_access/main.cc",
+  ]
+  deps = [
+    ":verified_access_library",
+  ]
+  pkg_deps = [
+    # system_api depends on protobuf (or protobuf-lite). It must appear
+    # before protobuf here or the linker flags won't be in the right
+    # order.
+    "system_api",
+    "protobuf",
+  ]
+}
+
+source_set("verified_access_library") {
+  configs += [ ":target_defaults" ]
+  sources = [
+    "verified_access/verified_access.cc",
+  ]
+}
+
+if (use.test) {
+  pkg_config("hwsec-test-utils_testrunner_config") {
+    pkg_deps = [ "libchrome-test-${libbase_ver}" ]
+  }
+
+  executable("hwsec-test-utils_testrunner") {
+    configs += [
+      ":target_defaults",
+      ":hwsec-test-utils_testrunner_config",
+      "//common-mk:test",
+    ]
+    sources = [
+      "verified_access/verified_access_test.cc",
+    ]
+    deps = [
+      ":verified_access_library",
+      "//common-mk/testrunner",
+    ]
+    pkg_deps = [
+      # system_api depends on protobuf (or protobuf-lite). It must appear
+      # before protobuf here or the linker flags won't be in the right
+      # order.
+      "system_api",
+      "protobuf",
+    ]
+  }
 }
