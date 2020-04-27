@@ -16,7 +16,9 @@ connect: 1
 execve: 1
 exit: 1
 exit_group: 1
+faccessat: 1
 fcntl: 1
+fstat: 1
 futex: 1
 getdents64: 1
 getegid: 1
@@ -26,6 +28,7 @@ getgid: 1
 getrandom: arg2 in 0xfffffffd
 getresgid: 1
 getresuid: 1
+getrlimit: 1;
 getsockname: 1
 gettid: 1
 gettimeofday: 1
@@ -45,8 +48,10 @@ openat: 1
 pipe2: 1
 ppoll: 1
 prctl: 1
+prlimit64: arg2 == 0 && arg3 != 0
 read: 1
 readlinkat: 1
+recvfrom: 1
 recvmsg: 1
 restart_syscall: 1
 rt_sigaction: 1
