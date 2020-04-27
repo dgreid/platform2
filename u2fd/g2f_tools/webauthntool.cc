@@ -45,13 +45,56 @@ Resp SendRequest(dbus::ObjectProxy* proxy,
   return resp;
 }
 
-std::string ResponseStatusToString(int status) {
+std::string ResponseStatusToString(
+    u2f::MakeCredentialResponse::MakeCredentialStatus status) {
   switch (status) {
     case 1: return "SUCCESS";
-    case 2: return "VERIFICATION_FAILED";
-    case 3: return "VERIFICATION_TIMEOUT";
-    case 4: return "INVALID_REQUEST";
-    case 5: return "INTERNAL_ERROR";
+    case 2:
+      return "VERIFICATION_FAILED";
+    case 3:
+      return "VERIFICATION_TIMEOUT";
+    case 4:
+      return "INVALID_REQUEST";
+    case 5:
+      return "INTERNAL_ERROR";
+    case 6:
+      return "EXCLUDED_CREDENTIAL_ID";
+    default:
+      return "UNKNOWN";
+  }
+}
+
+std::string ResponseStatusToString(
+    u2f::GetAssertionResponse::GetAssertionStatus status) {
+  switch (status) {
+    case 1:
+      return "SUCCESS";
+    case 2:
+      return "VERIFICATION_FAILED";
+    case 3:
+      return "VERIFICATION_TIMEOUT";
+    case 4:
+      return "INVALID_REQUEST";
+    case 5:
+      return "INTERNAL_ERROR";
+    case 6:
+      return "UNKNOWN_CREDENTIAL_ID";
+    default:
+      return "UNKNOWN";
+  }
+}
+
+std::string ResponseStatusToString(
+    u2f::HasCredentialsResponse::HasCredentialsStatus status) {
+  switch (status) {
+    case 1:
+      return "SUCCESS";
+    case 2:
+      return "INVALID_REQUEST";
+    case 3:
+      return "INTERNAL_ERROR";
+    case 4:
+      return "UNKNOWN_CREDENTIAL_ID";
     default: return "UNKNOWN";
   }
 }
@@ -83,11 +126,22 @@ std::string ExtractCredentialId(const std::string& authenticator_data) {
 
 void MakeCredential(dbus::ObjectProxy* proxy,
                     int verification_type,
-                    const std::string& rp_id) {
+                    const std::string& rp_id,
+                    const std::string& excluded_credential_id) {
   u2f::MakeCredentialRequest req;
   req.set_verification_type(
       static_cast<u2f::VerificationType>(verification_type));
   req.set_rp_id(rp_id);
+
+  if (!excluded_credential_id.empty()) {
+    std::vector<uint8_t> excluded_credential_id_bytes;
+    if (!base::HexStringToBytes(excluded_credential_id,
+                                &excluded_credential_id_bytes)) {
+      LOG(FATAL) << "Could not parse excluded_credential_id bytes";
+    }
+    AppendToString(excluded_credential_id_bytes,
+                   req.add_excluded_credential_id());
+  }
 
   if (verification_type == u2f::VERIFICATION_USER_VERIFICATION) {
     LOG(INFO) << "Please touch the fingerprint sensor.";
@@ -157,6 +211,7 @@ void HasCredentials(dbus::ObjectProxy* proxy,
       SendRequest<u2f::HasCredentialsRequest, u2f::HasCredentialsResponse>(
           proxy, u2f::kU2FHasCredentials, req);
 
+  LOG(INFO) << "status: " << ResponseStatusToString(resp.status());
   LOG(INFO) << "number matched: " << resp.credential_id().size();
   for (const auto& cred : resp.credential_id()) {
     LOG(INFO) << "credential_id: " << HexEncodeStr(cred);
@@ -174,6 +229,9 @@ int main(int argc, char* argv[]) {
   DEFINE_string(rp_id, "", "relaying party ID (domain name)");
   DEFINE_string(client_data_hash, "", "client data hash, as a hex string");
   DEFINE_string(credential_id, "", "list of credential IDs, as hex strings");
+  DEFINE_string(
+      excluded_credential_id, "",
+      "list of credential IDs to be exluded in MakeCredential, as hex strings");
 
   brillo::FlagHelper::Init(argc, argv,
                            "webauthntool - WebAuthn DBus API testing tool");
@@ -195,7 +253,8 @@ int main(int argc, char* argv[]) {
   CHECK(u2f_proxy) << "Couldn't get u2f proxy";
 
   if (FLAGS_make_credential) {
-    MakeCredential(u2f_proxy, FLAGS_verification_type, FLAGS_rp_id);
+    MakeCredential(u2f_proxy, FLAGS_verification_type, FLAGS_rp_id,
+                   FLAGS_excluded_credential_id);
     return EX_OK;
   }
 

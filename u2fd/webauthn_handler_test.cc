@@ -515,7 +515,7 @@ TEST_F(WebAuthnHandlerTest, GetAssertionNoSecret) {
   bool called = false;
   mock_method_response->set_return_callback(base::Bind(
       [](bool* called_ptr, const GetAssertionResponse& resp) {
-        EXPECT_EQ(resp.status(), GetAssertionResponse::INVALID_REQUEST);
+        EXPECT_EQ(resp.status(), GetAssertionResponse::INTERNAL_ERROR);
         *called_ptr = true;
       },
       &called));
@@ -546,7 +546,7 @@ TEST_F(WebAuthnHandlerTest, GetAssertionInvalidKeyHandle) {
   bool called = false;
   mock_method_response->set_return_callback(base::Bind(
       [](bool* called_ptr, const GetAssertionResponse& resp) {
-        EXPECT_EQ(resp.status(), GetAssertionResponse::INVALID_REQUEST);
+        EXPECT_EQ(resp.status(), GetAssertionResponse::UNKNOWN_CREDENTIAL_ID);
         *called_ptr = true;
       },
       &called));

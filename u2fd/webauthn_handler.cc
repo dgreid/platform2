@@ -175,6 +175,15 @@ void WebAuthnHandler::DoMakeCredential(
     return;
   }
 
+  auto ret = HasExcludedCredentials(session.request_);
+  if (ret == HasCredentialsResponse::INTERNAL_ERROR) {
+    response.set_status(MakeCredentialResponse::INTERNAL_ERROR);
+    session.response_->Return(response);
+  } else if (ret == HasCredentialsResponse::SUCCESS) {
+    response.set_status(MakeCredentialResponse::EXCLUDED_CREDENTIAL_ID);
+    session.response_->Return(response);
+  }
+
   AppendToString(MakeAuthenticatorData(
                      rp_id_hash, credential_id,
                      EncodeCredentialPublicKeyInCBOR(credential_public_key),
@@ -290,6 +299,19 @@ MakeCredentialResponse::MakeCredentialStatus WebAuthnHandler::DoU2fGenerate(
   return MakeCredentialResponse::VERIFICATION_FAILED;
 }
 
+HasCredentialsResponse::HasCredentialsStatus
+WebAuthnHandler::HasExcludedCredentials(const MakeCredentialRequest& request) {
+  std::vector<uint8_t> rp_id_hash = util::Sha256(request.rp_id());
+  for (auto credential : request.excluded_credential_id()) {
+    auto ret = DoU2fSignCheckOnly(rp_id_hash, util::ToVector(credential));
+    if (ret == HasCredentialsResponse::SUCCESS)
+      return ret;
+    if (ret == HasCredentialsResponse::INTERNAL_ERROR)
+      return ret;
+  }
+  return HasCredentialsResponse::UNKNOWN_CREDENTIAL_ID;
+}
+
 void WebAuthnHandler::GetAssertion(
     std::unique_ptr<GetAssertionMethodResponse> method_response,
     const GetAssertionRequest& request) {
@@ -325,12 +347,17 @@ void WebAuthnHandler::GetAssertion(
     return;
   }
 
-  // If credential_id is not recognized, don't even start auth flow.
+  // If credential_id is not recognized or there's an internal error, don't
+  // even start auth flow.
   std::vector<uint8_t> rp_id_hash = util::Sha256(request.rp_id());
-  if (!DoU2fSignCheckOnly(
-          rp_id_hash, util::ToVector(request.allowed_credential_id().Get(0)))) {
-    // TODO(yichengli): Do we want to return a separate INVALID_KH value here?
-    response.set_status(GetAssertionResponse::INVALID_REQUEST);
+  auto ret = DoU2fSignCheckOnly(
+      rp_id_hash, util::ToVector(request.allowed_credential_id().Get(0)));
+  if (ret == HasCredentialsResponse::INTERNAL_ERROR) {
+    response.set_status(GetAssertionResponse::INTERNAL_ERROR);
+    method_response->Return(response);
+    return;
+  } else if (ret == HasCredentialsResponse::UNKNOWN_CREDENTIAL_ID) {
+    response.set_status(GetAssertionResponse::UNKNOWN_CREDENTIAL_ID);
     method_response->Return(response);
     return;
   }
@@ -428,29 +455,39 @@ HasCredentialsResponse WebAuthnHandler::HasCredentials(
     const HasCredentialsRequest& request) {
   HasCredentialsResponse response;
 
-  if (!Initialized() || request.rp_id().empty() ||
-      request.credential_id().empty()) {
-    // TODO(louiscollard): Return status to indicate INTERNAL_ERROR or
-    // INVALID_REQUEST.
+  if (!Initialized()) {
+    response.set_status(HasCredentialsResponse::INTERNAL_ERROR);
+    return response;
+  }
+
+  if (request.rp_id().empty() || request.credential_id().empty()) {
+    response.set_status(HasCredentialsResponse::INVALID_REQUEST);
     return response;
   }
 
   std::vector<uint8_t> rp_id_hash = util::Sha256(request.rp_id());
   for (const auto& credential_id : request.credential_id()) {
-    if (DoU2fSignCheckOnly(rp_id_hash, util::ToVector(credential_id))) {
+    auto ret = DoU2fSignCheckOnly(rp_id_hash, util::ToVector(credential_id));
+    if (ret == HasCredentialsResponse::INTERNAL_ERROR) {
+      response.set_status(ret);
+      return response;
+    } else if (ret == HasCredentialsResponse::SUCCESS) {
       *response.add_credential_id() = credential_id;
     }
   }
 
+  response.set_status((response.credential_id_size() > 0)
+                          ? HasCredentialsResponse::SUCCESS
+                          : HasCredentialsResponse::UNKNOWN_CREDENTIAL_ID);
   return response;
 }
 
-bool WebAuthnHandler::DoU2fSignCheckOnly(
-    const std::vector<uint8_t>& rp_id_hash,
-    const std::vector<uint8_t>& credential_id) {
+HasCredentialsResponse::HasCredentialsStatus
+WebAuthnHandler::DoU2fSignCheckOnly(const std::vector<uint8_t>& rp_id_hash,
+                                    const std::vector<uint8_t>& credential_id) {
   base::Optional<brillo::SecureBlob> user_secret = user_state_->GetUserSecret();
   if (!user_secret.has_value()) {
-    return false;
+    return HasCredentialsResponse::INTERNAL_ERROR;
   }
 
   struct u2f_sign_req sign_req = {.flags = U2F_AUTH_CHECK_ONLY};
@@ -464,7 +501,8 @@ bool WebAuthnHandler::DoU2fSignCheckOnly(
   brillo::SecureMemset(&sign_req.userSecret, 0, sizeof(sign_req.userSecret));
 
   // Return status of 0 indicates the credential is valid.
-  return sign_status == 0;
+  return (sign_status == 0) ? HasCredentialsResponse::SUCCESS
+                            : HasCredentialsResponse::UNKNOWN_CREDENTIAL_ID;
 }
 
 }  // namespace u2f

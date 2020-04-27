@@ -116,8 +116,9 @@ class WebAuthnHandler {
 
   // Runs a U2F_SIGN command with "check only" flag to check whether
   // |credential_id| is a key handle owned by this device tied to |rp_id_hash|.
-  bool DoU2fSignCheckOnly(const std::vector<uint8_t>& rp_id_hash,
-                          const std::vector<uint8_t>& credential_id);
+  HasCredentialsResponse::HasCredentialsStatus DoU2fSignCheckOnly(
+      const std::vector<uint8_t>& rp_id_hash,
+      const std::vector<uint8_t>& credential_id);
 
   // Prompts the user for presence through |request_presence_| and calls |fn|
   // repeatedly until success or timeout.
@@ -134,6 +135,11 @@ class WebAuthnHandler {
 
   // Appends a none attestation to |response|. Only used in MakeCredential.
   void AppendNoneAttestation(MakeCredentialResponse* response);
+
+  // Runs U2F_SIGN command with "check only" flag on each excluded credential
+  // id. Returns true if one of them belongs to this device.
+  HasCredentialsResponse::HasCredentialsStatus HasExcludedCredentials(
+      const MakeCredentialRequest& request);
 
   TpmVendorCommandProxy* tpm_proxy_;
   UserState* user_state_;
