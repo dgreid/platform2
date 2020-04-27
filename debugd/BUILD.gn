@@ -227,6 +227,13 @@ executable("dev_features_usb_boot") {
   ]
 }
 
+executable("generate_logs") {
+  configs += [ ":target_defaults" ]
+  sources = [
+    "tools/generate_logs.cc",
+  ]
+}
+
 executable("icmp") {
   configs += [ ":target_defaults" ]
   sources = [
@@ -251,13 +258,6 @@ executable("network_status") {
   ]
   deps = [
     ":debugd_dbus_utils",
-  ]
-}
-
-executable("generate_logs") {
-  configs += [ ":target_defaults" ]
-  sources = [
-    "tools/generate_logs.cc",
   ]
 }
 
