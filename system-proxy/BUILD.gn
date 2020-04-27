@@ -18,7 +18,10 @@ group("all") {
     deps += [ ":system-proxy_test" ]
   }
   if (use.fuzzer) {
-    deps += [ ":system_proxy_worker_config_fuzzer" ]
+    deps += [
+      ":system_proxy_connect_headers_parser_fuzzer",
+      ":system_proxy_worker_config_fuzzer",
+    ]
   }
 }
 
@@ -155,6 +158,20 @@ if (use.fuzzer) {
     ]
     sources = [
       "worker_config_fuzzer.cc",
+    ]
+    deps = [
+      ":libsystemproxyworker",
+    ]
+  }
+
+  executable("system_proxy_connect_headers_parser_fuzzer") {
+    all_dependent_pkg_deps = [ "libcurl" ]
+    configs += [
+      "//common-mk/common_fuzzer",
+      ":target_defaults",
+    ]
+    sources = [
+      "connect_headers_parser_fuzzer.cc",
     ]
     deps = [
       ":libsystemproxyworker",
