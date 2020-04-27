@@ -7,7 +7,9 @@
 
 #include "cryptohome/user_oldest_activity_timestamp_cache.h"
 
-#include <brillo/secure_blob.h>
+#include <base/files/file_path.h>
+#include <base/time/time.h>
+
 #include <gmock/gmock.h>
 
 namespace cryptohome {
@@ -15,8 +17,8 @@ namespace cryptohome {
 class MockUserOldestActivityTimestampCache :
     public UserOldestActivityTimestampCache {
  public:
-  MockUserOldestActivityTimestampCache();
-  virtual ~MockUserOldestActivityTimestampCache();
+  MockUserOldestActivityTimestampCache() = default;
+  virtual ~MockUserOldestActivityTimestampCache() = default;
 
   MOCK_METHOD(void, Initialize, (), (override));
   MOCK_METHOD(bool, initialized, (), (const, override));
@@ -28,23 +30,11 @@ class MockUserOldestActivityTimestampCache :
               UpdateExistingUser,
               (const base::FilePath&, base::Time),
               (override));
-  MOCK_METHOD(void, AddExistingUserNotime, (const base::FilePath&), (override));
-  MOCK_METHOD(base::Time, oldest_known_timestamp, (), (const, override));
-  MOCK_METHOD(bool, empty, (), (const, override));
-  MOCK_METHOD(base::FilePath, RemoveOldestUser, (), (override));
+  MOCK_METHOD(void, RemoveUser, (const base::FilePath&), (override));
   MOCK_METHOD(base::Time,
               GetLastUserActivityTimestamp,
               (const base::FilePath&),
               (const, override));
-
- private:
-  base::Time StubOldestKnownTimestamp() const {
-    return base::Time();  // null
-  }
-
-  base::FilePath StubRemoveOldestUser() {
-    return base::FilePath("/SATURATED/REMOVE/OLDEST/USER");
-  }
 };
 }  // namespace cryptohome
 

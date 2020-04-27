@@ -448,7 +448,6 @@ if (use.test) {
       "mock_signature_sealing_backend.cc",
       "mock_tpm.cc",
       "mock_tpm_init.cc",
-      "mock_user_oldest_activity_timestamp_cache.cc",
       "mock_user_session.cc",
       "mock_vault_keyset.cc",
       "mount_stack_unittest.cc",

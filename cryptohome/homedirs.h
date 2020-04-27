@@ -397,9 +397,6 @@ class HomeDirs {
   bool LoadVaultKeysetForUser(const std::string& obfuscated_user,
                               int index,
                               VaultKeyset* keyset) const;
-  // Deletes old user profiles, the oldest first.
-  // Returns a number, how many profiles were deleted.
-  int DeleteUserProfiles(const std::vector<HomeDir>& homedirs);
   // An implementation function for public FreeDiskSpace interface.
   void FreeDiskSpaceInternal();
 

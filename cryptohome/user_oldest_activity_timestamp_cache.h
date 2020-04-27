@@ -38,39 +38,16 @@ class UserOldestActivityTimestampCache {
   virtual void UpdateExistingUser(const base::FilePath& vault,
                                   base::Time timestamp);
 
-  // Adds a user to the cache without oldest activity timestamp. Such
-  // users are considered older than any existing user with timestamp.
-  virtual void AddExistingUserNotime(const base::FilePath& vault);
-
-  // Timestamp of the oldest user in the cache. May be null (check for
-  // is_null) if there is no user with definite timestamp.
-  virtual base::Time oldest_known_timestamp() const {
-    return oldest_known_timestamp_;
-  }
-
-  // Returns true if there are no users in the cache.
-  virtual bool empty() const {
-    return users_timestamp_.empty();
-  }
-
-  // Removes the oldest user stored in the cache. Users without
-  // a timestamp are removed first.
-  virtual base::FilePath RemoveOldestUser();
+  // Remove a user from the cache.
+  virtual void RemoveUser(const base::FilePath& vault);
 
   // Returns the last activity timestamp for a user. For users without a
-  // timestamp it returns the oldest known timestamp.
+  // timestamp it returns a NULL time.
   virtual base::Time GetLastUserActivityTimestamp(
       const base::FilePath& vault) const;
 
  private:
-  // Updates oldest known timestamp after the user with |timestamp|
-  // has been removed from cache.
-  void UpdateTimestampAfterRemoval(base::Time timestamp);
-
-  typedef std::multimap<base::Time, base::FilePath> UsersTimestamp;
-  UsersTimestamp users_timestamp_;
   std::map<base::FilePath, base::Time> users_timestamp_lookup_;
-  base::Time oldest_known_timestamp_;
   bool initialized_;
 
   DISALLOW_COPY_AND_ASSIGN(UserOldestActivityTimestampCache);

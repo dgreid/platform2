@@ -337,7 +337,45 @@ void HomeDirs::FreeDiskSpaceInternal() {
       return;
   }
 
-  const int deleted_users_count = DeleteUserProfiles(homedirs);
+  // Delete old users, the oldest first. Count how many are deleted.
+  // Don't delete anyone if we don't know who the owner is.
+  // For consumer devices, don't delete the device owner. Enterprise-enrolled
+  // devices have no owner, so don't delete the most-recent user.
+  int deleted_users_count = 0;
+  std::string owner;
+  if (!enterprise_owned_ && !GetOwner(&owner))
+    return;
+
+  int mounted_cryptohomes_count = homedirs.size() - unmounted_homedirs.size();
+
+  for (auto dir = unmounted_homedirs.rbegin(); dir != unmounted_homedirs.rend();
+       dir++) {
+    std::string obfuscated = dir->shadow.BaseName().value();
+
+    if (enterprise_owned_) {
+      // Leave the most-recent user on the device intact.
+      // The most-recent user is the first in unmounted_homedirs.
+      if (dir == unmounted_homedirs.rend() - 1 &&
+          mounted_cryptohomes_count == 0) {
+        LOG(INFO) << "Skipped deletion of the most recent device user.";
+        continue;
+      }
+    } else if (obfuscated == owner) {
+      // We never delete the device owner.
+      LOG(INFO) << "Skipped deletion of the device owner.";
+      continue;
+    }
+
+    LOG(INFO) << "Freeing disk space by deleting user " << dir->shadow.value();
+    RemoveLECredentials(obfuscated);
+    platform_->DeleteFile(dir->shadow, true);
+    timestamp_cache_->RemoveUser(dir->shadow);
+    ++deleted_users_count;
+
+    if (HasTargetFreeSpace())
+      break;
+  }
+
   if (deleted_users_count > 0) {
     ReportDeletedUserProfiles(deleted_users_count);
   }
@@ -351,64 +389,6 @@ void HomeDirs::FreeDiskSpaceInternal() {
   } else {
     ReportDiskCleanupProgress(DiskCleanupProgress::kNoUnmountedCryptohomes);
   }
-}
-
-int HomeDirs::DeleteUserProfiles(const std::vector<HomeDir>& homedirs) {
-  int deleted_users_count = 0;
-
-  // Delete old users using timestamp_cache_, the oldest first.
-  // Don't delete anyone if we don't know who the owner is.
-  // For consumer devices, don't delete the device owner. Enterprise-enrolled
-  // devices have no owner, so don't delete the last user.
-  std::string owner;
-  if (enterprise_owned_ || GetOwner(&owner)) {
-    int mounted_cryptohomes =
-        std::count_if(homedirs.begin(), homedirs.end(),
-                      [](auto& dir) { return dir.is_mounted; });
-    while (!timestamp_cache_->empty()) {
-      base::Time deleted_timestamp = timestamp_cache_->oldest_known_timestamp();
-      FilePath deleted_user_dir = timestamp_cache_->RemoveOldestUser();
-      std::string obfuscated = deleted_user_dir.BaseName().value();
-
-      if (enterprise_owned_) {
-        // If mounted_cryptohomes== 0, then there were no mounted cryptohomes
-        // and hence no logged in users.  Thus we want to skip the last user in
-        // our list, since they were the most-recent user on the device.
-        if (timestamp_cache_->empty() && mounted_cryptohomes == 0) {
-          // Put this user back in the cache, since they shouldn't be
-          // permanently skipped; they may not be most-recent the next
-          // time we run, and then they should be a candidate for deletion.
-          timestamp_cache_->AddExistingUser(deleted_user_dir,
-                                            deleted_timestamp);
-
-          LOG(INFO) << "Skipped deletion of the most recent device user.";
-          break;
-        }
-      } else {
-        if (obfuscated == owner) {
-          // We should never delete the device owner, so we permanently skip
-          // them by not adding them back to the cache.
-          LOG(INFO) << "Skipped deletion of the device owner.";
-          continue;
-        }
-      }
-
-      if (platform_->IsDirectoryMounted(
-            brillo::cryptohome::home::GetHashedUserPath(obfuscated))) {
-        LOG(INFO) << "Attempt to delete currently logged in user. Skipped...";
-      } else {
-        LOG(INFO) << "Freeing disk space by deleting user "
-                  << deleted_user_dir.value();
-        RemoveLECredentials(deleted_user_dir.BaseName().value());
-        platform_->DeleteFile(deleted_user_dir, true);
-        ++deleted_users_count;
-        if (HasTargetFreeSpace())
-          break;
-      }
-    }
-  }
-
-  return deleted_users_count;
 }
 
 base::Optional<int64_t> HomeDirs::AmountOfFreeDiskSpace() const {
@@ -1425,8 +1405,6 @@ void HomeDirs::AddUserTimestampToCacheCallback(const FilePath& user_dir) {
   }
   if (!timestamp.is_null()) {
       timestamp_cache_->AddExistingUser(user_dir, timestamp);
-  } else {
-      timestamp_cache_->AddExistingUserNotime(user_dir);
   }
 }
 

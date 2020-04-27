@@ -590,7 +590,6 @@ class FreeDiskSpaceTest : public HomeDirsTest {
           .RetiresOnSaturation();
     }
 
-    EXPECT_CALL(timestamp_cache_, AddExistingUserNotime(_)).Times(4);
     EXPECT_CALL(timestamp_cache_, GetLastUserActivityTimestamp(_))
         .WillRepeatedly(Return(base::Time()));
   }
@@ -693,9 +692,6 @@ TEST_P(FreeDiskSpaceTest, InitializeTimeCacheWithNoTime) {
   }
   homedirs_.set_vault_keyset_factory(&vault_keyset_factory_);
 
-  // Expect an addition for all users with no time.
-  EXPECT_CALL(timestamp_cache_, AddExistingUserNotime(_))
-    .Times(4);
   EXPECT_CALL(timestamp_cache_, GetLastUserActivityTimestamp(_))
       .WillRepeatedly(Return(base::Time()));
 
@@ -779,9 +775,6 @@ TEST_P(FreeDiskSpaceTest, InitializeTimeCacheWithOneTime) {
     .WillRepeatedly(ReturnRef(serialized));
   homedirs_.set_vault_keyset_factory(&vault_keyset_factory_);
 
-  // Expect an addition for all users with no time.
-  EXPECT_CALL(timestamp_cache_, AddExistingUserNotime(_))
-    .Times(3);
   // Adding the owner
   EXPECT_CALL(timestamp_cache_,
               AddExistingUser(homedir_paths_[3], homedir_times_[3]))
@@ -868,8 +861,6 @@ TEST_P(FreeDiskSpaceTest, TimeCacheSkipNormalCleanupIfNotActive) {
   }
   homedirs_.set_vault_keyset_factory(&vault_keyset_factory_);
 
-  // Expect an addition for all users with no time.
-  EXPECT_CALL(timestamp_cache_, AddExistingUserNotime(_)).Times(4);
   EXPECT_CALL(timestamp_cache_, GetLastUserActivityTimestamp(_))
       .WillRepeatedly(Return(base::Time()));
 
@@ -969,8 +960,6 @@ TEST_P(FreeDiskSpaceTest, TimeCacheSkipAggressiveCleanupIfNotActive) {
   }
   homedirs_.set_vault_keyset_factory(&vault_keyset_factory_);
 
-  // Expect an addition for all users with no time.
-  EXPECT_CALL(timestamp_cache_, AddExistingUserNotime(_)).Times(4);
   EXPECT_CALL(timestamp_cache_, GetLastUserActivityTimestamp(_))
       .WillRepeatedly(Return(base::Time()));
 
@@ -1345,21 +1334,23 @@ TEST_P(FreeDiskSpaceTest, CacheAndGCacheAndAndroidCleanup) {
 TEST_P(FreeDiskSpaceTest, CleanUpOneUser) {
   // Ensure that the oldest user directory deleted, but not any
   // others, if the first deletion frees enough space.
-  EXPECT_CALL(timestamp_cache_, empty())
-    .WillOnce(Return(false));
-
-  EXPECT_CALL(timestamp_cache_, RemoveOldestUser())
-    .WillOnce(Return(homedir_paths_[0]));
 
   EXPECT_CALL(platform_, AmountOfFreeDiskSpace(kTestRoot))
       .WillRepeatedly(Return(kTargetFreeSpaceAfterCleanup + 1));
 
   EXPECT_CALL(platform_, DeleteFile(homedir_paths_[0], true))
-    .WillOnce(Return(true));
+      .WillOnce(Return(true));
+  EXPECT_CALL(timestamp_cache_, RemoveUser(homedir_paths_[0])).Times(1);
 
   ExpectCacheDirCleanupCalls(4);
   ExpectTimestampCacheInitialization();
   ExpectDeletedLECredentialEnumeration(homedir_paths_[0]);
+
+  for (int i = 0; i < user_paths_.size(); i++) {
+    EXPECT_CALL(timestamp_cache_,
+                GetLastUserActivityTimestamp(homedir_paths_[i]))
+        .WillRepeatedly(Return(homedir_times_[i]));
+  }
 
   homedirs_.FreeDiskSpace();
 
@@ -1369,27 +1360,28 @@ TEST_P(FreeDiskSpaceTest, CleanUpOneUser) {
 TEST_P(FreeDiskSpaceTest, CleanUpMultipleUsers) {
   // Ensure that the two oldest user directories are deleted, but not any
   // others, if the second deletion frees enough space.
-  EXPECT_CALL(timestamp_cache_, empty())
-    .WillOnce(Return(false))
-    .WillOnce(Return(false));
-
-  EXPECT_CALL(timestamp_cache_, RemoveOldestUser())
-    .WillOnce(Return(homedir_paths_[0]))
-    .WillOnce(Return(homedir_paths_[1]));
 
   EXPECT_CALL(platform_, AmountOfFreeDiskSpace(kTestRoot))
       .WillOnce(Return(kTargetFreeSpaceAfterCleanup - 1))
       .WillRepeatedly(Return(kTargetFreeSpaceAfterCleanup + 1));
 
   EXPECT_CALL(platform_, DeleteFile(homedir_paths_[0], true))
-    .WillOnce(Return(true));
+      .WillOnce(Return(true));
   EXPECT_CALL(platform_, DeleteFile(homedir_paths_[1], true))
-    .WillOnce(Return(true));
+      .WillOnce(Return(true));
+  EXPECT_CALL(timestamp_cache_, RemoveUser(homedir_paths_[0])).Times(1);
+  EXPECT_CALL(timestamp_cache_, RemoveUser(homedir_paths_[1])).Times(1);
 
   ExpectCacheDirCleanupCalls(4);
   ExpectTimestampCacheInitialization();
   ExpectDeletedLECredentialEnumeration(homedir_paths_[0]);
   ExpectDeletedLECredentialEnumeration(homedir_paths_[1]);
+
+  for (int i = 0; i < user_paths_.size(); i++) {
+    EXPECT_CALL(timestamp_cache_,
+                GetLastUserActivityTimestamp(homedir_paths_[i]))
+        .WillRepeatedly(Return(homedir_times_[i]));
+  }
 
   homedirs_.FreeDiskSpace();
 
@@ -1424,11 +1416,6 @@ TEST_P(FreeDiskSpaceTest, EnterpriseCleanUpAllUsersButLast_LoginScreen) {
   homedirs_.FreeDiskSpace();
 
   EXPECT_FALSE(homedirs_.HasTargetFreeSpace());
-
-  // Last user is re-inserted into cache, to be a candidate for deletion
-  // next time.
-  EXPECT_FALSE(cache.empty());
-  EXPECT_EQ(homedir_times_[3], cache.oldest_known_timestamp());
 }
 
 
@@ -1479,26 +1466,11 @@ TEST_P(FreeDiskSpaceTest, EnterpriseCleanUpAllUsersButLast_UserLoggedIn) {
   homedirs_.FreeDiskSpace();
 
   EXPECT_FALSE(homedirs_.HasTargetFreeSpace());
-
-  // Cache is empty (oldest user only re-inserted if no one is logged in).
-  EXPECT_TRUE(cache.empty());
 }
 
 TEST_P(FreeDiskSpaceTest, CleanUpMultipleNonadjacentUsers) {
   // Ensure that the two oldest user directories are deleted, but not any
   // others.  The owner is inserted in the middle.
-  EXPECT_CALL(timestamp_cache_, initialized())
-    .WillRepeatedly(Return(true));
-
-  EXPECT_CALL(timestamp_cache_, empty())
-    .WillOnce(Return(false))
-    .WillOnce(Return(false))
-    .WillOnce(Return(false));
-
-  EXPECT_CALL(timestamp_cache_, RemoveOldestUser())
-    .WillOnce(Return((homedir_paths_[0])))
-    .WillOnce(Return((homedir_paths_[3])))
-    .WillOnce(Return((homedir_paths_[1])));
 
   EXPECT_CALL(platform_, AmountOfFreeDiskSpace(kTestRoot))
       .WillOnce(Return(0))
@@ -1512,11 +1484,25 @@ TEST_P(FreeDiskSpaceTest, CleanUpMultipleNonadjacentUsers) {
   // Ensure the owner isn't deleted!
   EXPECT_CALL(platform_, DeleteFile(homedir_paths_[3], true))
     .Times(0);
+  EXPECT_CALL(timestamp_cache_, RemoveUser(homedir_paths_[0])).Times(1);
+  EXPECT_CALL(timestamp_cache_, RemoveUser(homedir_paths_[1])).Times(1);
 
   ExpectCacheDirCleanupCalls(4);
-
+  ExpectTimestampCacheInitialization();
   ExpectDeletedLECredentialEnumeration(homedir_paths_[0]);
   ExpectDeletedLECredentialEnumeration(homedir_paths_[1]);
+
+  // Users ordered by age: 0, 3, 1, 2.
+  // Owner is 3.
+  EXPECT_CALL(timestamp_cache_, GetLastUserActivityTimestamp(homedir_paths_[0]))
+      .WillRepeatedly(Return(homedir_times_[0]));
+  EXPECT_CALL(timestamp_cache_, GetLastUserActivityTimestamp(homedir_paths_[1]))
+      .WillRepeatedly(Return(homedir_times_[2]));
+  EXPECT_CALL(timestamp_cache_, GetLastUserActivityTimestamp(homedir_paths_[2]))
+      .WillRepeatedly(Return(homedir_times_[3]));
+  EXPECT_CALL(timestamp_cache_, GetLastUserActivityTimestamp(homedir_paths_[3]))
+      .WillRepeatedly(Return(homedir_times_[1]));
+
   homedirs_.FreeDiskSpace();
 
   EXPECT_TRUE(homedirs_.HasTargetFreeSpace());
@@ -1526,10 +1512,6 @@ TEST_P(FreeDiskSpaceTest, NoOwnerNoEnterpriseNoCleanup) {
   // Ensure that no users are deleted with no owner/enterprise-owner.
   EXPECT_CALL(platform_, AmountOfFreeDiskSpace(kTestRoot))
     .WillRepeatedly(Return(0));
-
-  // Skip re-init
-  EXPECT_CALL(timestamp_cache_, initialized())
-    .WillOnce(Return(true));
 
   // No user deletions!
   EXPECT_CALL(platform_, DeleteFile(homedir_paths_[0], true))
@@ -1545,6 +1527,7 @@ TEST_P(FreeDiskSpaceTest, NoOwnerNoEnterpriseNoCleanup) {
   set_policy(false, "", false, "");
 
   ExpectCacheDirCleanupCalls(4);
+  ExpectTimestampCacheInitialization();
 
   homedirs_.FreeDiskSpace();
 
@@ -1657,16 +1640,6 @@ TEST_P(FreeDiskSpaceTest, EnterpriseEphemeralUsers) {
 
 TEST_P(FreeDiskSpaceTest, DontCleanUpMountedUser) {
   // Ensure that a user isn't deleted if it appears to be mounted.
-  EXPECT_CALL(timestamp_cache_, initialized())
-    .WillRepeatedly(Return(true));
-  EXPECT_CALL(timestamp_cache_, empty())
-    .WillOnce(Return(false))
-    .WillOnce(Return(true));
-
-  // This will only be called once (see time below).
-  EXPECT_CALL(timestamp_cache_, RemoveOldestUser())
-    .WillOnce(Return((homedir_paths_[0])));
-
   EXPECT_CALL(platform_, FileExists(base::FilePath(kLockedToSingleUserFile)))
     .WillRepeatedly(Return(false));
   EXPECT_CALL(platform_, EnumerateDirectoryEntries(kTestRoot, false, _))
@@ -1698,11 +1671,6 @@ TEST_P(FreeDiskSpaceTest, DontCleanUpMountedUser) {
 
   ExpectTrackedDirectoriesEnumeration();
 
-  // For DeleteUserProfiles
-  EXPECT_CALL(platform_, IsDirectoryMounted(Property(
-                             &FilePath::value, StrEq(user_paths_[0].value()))))
-      .WillRepeatedly(Return(true));
-
   EXPECT_CALL(platform_, AreDirectoriesMounted(_))
       .WillRepeatedly([&](const std::vector<base::FilePath>& directories) {
         std::vector<bool> ret(directories.size(), false);
@@ -1715,6 +1683,20 @@ TEST_P(FreeDiskSpaceTest, DontCleanUpMountedUser) {
 
         return ret;
       });
+
+  ExpectTimestampCacheInitialization();
+
+  // Mounted user and owner not deleted.
+  EXPECT_CALL(timestamp_cache_, RemoveUser(homedir_paths_[1])).Times(1);
+  EXPECT_CALL(timestamp_cache_, RemoveUser(homedir_paths_[2])).Times(1);
+  ExpectDeletedLECredentialEnumeration(homedir_paths_[1]);
+  ExpectDeletedLECredentialEnumeration(homedir_paths_[2]);
+
+  for (int i = 0; i < user_paths_.size(); i++) {
+    EXPECT_CALL(timestamp_cache_,
+                GetLastUserActivityTimestamp(homedir_paths_[i]))
+        .WillRepeatedly(Return(homedir_times_[i]));
+  }
 
   homedirs_.FreeDiskSpace();
 
