@@ -63,7 +63,7 @@ bool ResizeFile(const base::FilePath& path, int64_t size);
 // Copies and hashes the |from| file.
 bool CopyAndHashFile(const base::FilePath& from,
                      const base::FilePath& to,
-                     std::string* sha256);
+                     std::vector<uint8_t>* sha256);
 
 // Returns the path to a DLC module image given the |id| and |package|.
 base::FilePath GetDlcImagePath(const base::FilePath& dlc_module_root_path,

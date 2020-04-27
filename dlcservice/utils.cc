@@ -152,7 +152,7 @@ bool CreateFile(const base::FilePath& path, int64_t size) {
 
 bool CopyAndHashFile(const base::FilePath& from,
                      const base::FilePath& to,
-                     string* sha256) {
+                     vector<uint8_t>* sha256) {
   base::File f_from(from, base::File::FLAG_OPEN | base::File::FLAG_READ);
   if (!f_from.IsValid()) {
     PLOG(ERROR) << "Failed to read file at " << from.value() << " reason: "
@@ -188,10 +188,9 @@ bool CopyAndHashFile(const base::FilePath& from,
     }
     hash->Update(buf.data(), bytes);
   }
+  sha256->resize(crypto::kSHA256Length);
+  hash->Finish(sha256->data(), sha256->size());
 
-  vector<uint8_t> vhash(crypto::kSHA256Length);
-  hash->Finish(vhash.data(), vhash.size());
-  *sha256 = base::HexEncode(vhash.data(), vhash.size());
   return SetFilePermissions(to, kDlcFilePerms);
 }
 

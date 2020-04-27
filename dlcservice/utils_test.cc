@@ -15,6 +15,7 @@
 #include <base/strings/string_number_conversions.h>
 #include <brillo/file_utils.h>
 #include <crypto/sha2.h>
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 #include "dlcservice/utils.h"
@@ -134,14 +135,15 @@ TEST_F(FixtureUtilsTest, CopyAndHashFile) {
   EXPECT_FALSE(base::PathExists(dst_path));
   EXPECT_TRUE(CreateFile(src_path, 10));
 
-  string file_content;
+  std::string file_content;
   EXPECT_TRUE(base::ReadFileToString(src_path, &file_content));
-  auto sha256_str = crypto::SHA256HashString(file_content);
-  auto expected_sha256 = base::HexEncode(sha256_str.data(), sha256_str.size());
+  std::vector<uint8_t> expected_sha256(crypto::kSHA256Length);
+  crypto::SHA256HashString(file_content, expected_sha256.data(),
+                           expected_sha256.size());
 
-  string actual_sha256;
+  std::vector<uint8_t> actual_sha256;
   EXPECT_TRUE(CopyAndHashFile(src_path, dst_path, &actual_sha256));
-  EXPECT_EQ(actual_sha256, expected_sha256);
+  EXPECT_THAT(actual_sha256, testing::ElementsAreArray(expected_sha256));
 
   EXPECT_TRUE(base::PathExists(dst_path));
   CheckPerms(dst_path, kDlcFilePerms);

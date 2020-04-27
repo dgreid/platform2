@@ -1,1 +1,14 @@
-{"preload-allowed":true, "fs-type": "squashfs", "pre-allocated-size": "1048576", "id": "Third-Dlc", "size": "12288", "table-sha256-hash": "a963d36ec40e4af33bd4fe374247320123d5daad0fd93b06cd8fd6a4ce617971", "name": "Third Dlc", "image-sha256-hash": "30E14955EBF1352266DC2FF8067E68104607E750ABB9D3B36582B8AF909FCB58", "image-type": "dlc", "version": "0.0.1", "is-removable": true, "manifest-version": 1}
+{
+  "fs-type": "squashfs",
+  "id": "Third-Dlc",
+  "image-sha256-hash": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
+  "image-type": "dlc",
+  "is-removable": true,
+  "manifest-version": 1,
+  "name": "Third Dlc",
+  "pre-allocated-size": "1048576",
+  "preload-allowed": true,
+  "size": "12288",
+  "table-sha256-hash": "a963d36ec40e4af33bd4fe374247320123d5daad0fd93b06cd8fd6a4ce617971",
+  "version": "0.0.1"
+}

@@ -222,17 +222,21 @@ bool DlcBase::PreloadedCopier() const {
   }
   // TODO(kimjae): when preloaded images are place into unencrypted, this
   // operation can be a move.
-  string sha256;
-  if (!CopyAndHashFile(image_preloaded_path, image_boot_path, &sha256)) {
+  vector<uint8_t> image_sha256;
+  if (!CopyAndHashFile(image_preloaded_path, image_boot_path, &image_sha256)) {
     LOG(ERROR) << "Failed to preload DLC (" << id_ << ") into boot slot path ("
                << image_boot_path << ")";
     return false;
   }
 
-  auto manifest_sha256 = manifest_.image_sha256();
-  if (sha256 !=
-      base::HexEncode(manifest_sha256.data(), manifest_sha256.size())) {
-    LOG(ERROR) << "Image is corrupted or modified for DLC=" << id_;
+  if (image_sha256 != manifest_.image_sha256()) {
+    LOG(ERROR) << "Image is corrupted or modified for DLC=" << id_ << ". "
+               << "Expected: "
+               << base::HexEncode(manifest_.image_sha256().data(),
+                                  manifest_.image_sha256().size())
+               << " Found: "
+               << base::HexEncode(image_sha256.data(), image_sha256.size());
+
     return false;
   }
 
