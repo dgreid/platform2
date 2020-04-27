@@ -47,6 +47,7 @@ class MojoSession : public SmbFsBootstrapImpl::Delegate,
   // SmbFsBootstrapImpl::Delegate overrides.
   void SetupKerberos(mojom::KerberosConfigPtr kerberos_config,
                      base::OnceCallback<void(bool success)> callback) override;
+  void OnPasswordFilePathSet(const base::FilePath& path) override;
 
   // SmbFilesystem::Delegate overrides.
   void RequestCredentials(RequestCredentialsCallback callback) override;
@@ -78,6 +79,7 @@ class MojoSession : public SmbFsBootstrapImpl::Delegate,
   base::OnceClosure shutdown_callback_;
   std::unique_ptr<SmbFsBootstrapImpl> bootstrap_impl_;
 
+  base::FilePath password_file_path_;
   std::unique_ptr<FuseSession> fuse_session_;
   std::unique_ptr<KerberosArtifactSynchronizer> kerberos_sync_;
   std::unique_ptr<SmbFsImpl> smbfs_impl_;

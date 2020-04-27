@@ -208,6 +208,7 @@ void SmbFsBootstrapImpl::OnCredentialsSetup(
     pass_file_path = GetUserDaemonStoreDirectory(
                          options->credential_storage_options->account_hash)
                          .Append(pass_file_name);
+    delegate_->OnPasswordFilePathSet(pass_file_path);
 
     if (credential->password) {
       // We obfuscate the password now because |credential| is moved into the

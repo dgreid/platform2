@@ -5,6 +5,7 @@
 #ifndef SMBFS_SMBFS_IMPL_H_
 #define SMBFS_SMBFS_IMPL_H_
 
+#include <base/files/file_path.h>
 #include <base/macros.h>
 #include <base/memory/weak_ptr.h>
 #include <mojo/public/cpp/bindings/binding.h>
@@ -20,12 +21,17 @@ class SmbFilesystem;
 class SmbFsImpl : public mojom::SmbFs {
  public:
   explicit SmbFsImpl(base::WeakPtr<SmbFilesystem> fs,
-                     mojom::SmbFsRequest request);
+                     mojom::SmbFsRequest request,
+                     const base::FilePath& password_file_path);
   ~SmbFsImpl() override;
 
  private:
+  // mojom::SmbFs overrides.
+  void RemoveSavedCredentials(RemoveSavedCredentialsCallback callback) override;
+
   base::WeakPtr<SmbFilesystem> fs_;
   mojo::Binding<mojom::SmbFs> binding_;
+  const base::FilePath password_file_path_;
 
   DISALLOW_IMPLICIT_CONSTRUCTORS(SmbFsImpl);
 };

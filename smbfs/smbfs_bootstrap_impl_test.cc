@@ -67,6 +67,7 @@ class MockBootstrapDelegate : public SmbFsBootstrapImpl::Delegate {
               (mojom::KerberosConfigPtr,
                base::OnceCallback<void(bool success)>),
               (override));
+  MOCK_METHOD(void, OnPasswordFilePathSet, (const base::FilePath&), (override));
 };
 
 class MockSmbFsDelegate : public mojom::SmbFsDelegate {
@@ -514,6 +515,10 @@ TEST_F(TestSmbFsBootstrapImpl, SaveRestorePassword) {
               .WillOnce(Return(SmbFilesystem::ConnectError::kOk));
           return fs;
         });
+    EXPECT_CALL(mock_delegate_, OnPasswordFilePathSet(_))
+        .WillOnce([user_directory](const base::FilePath& path) {
+          EXPECT_TRUE(user_directory.IsParent(path));
+        });
     SmbFsBootstrapImpl boostrap_impl(mojo::MakeRequest(&boostrap_ptr),
                                      fs_factory, &mock_delegate_,
                                      daemon_store_dir_.GetPath());
@@ -561,6 +566,10 @@ TEST_F(TestSmbFsBootstrapImpl, SaveRestorePassword) {
           EXPECT_CALL(*fs, EnsureConnected())
               .WillOnce(Return(SmbFilesystem::ConnectError::kOk));
           return fs;
+        });
+    EXPECT_CALL(mock_delegate_, OnPasswordFilePathSet(_))
+        .WillOnce([user_directory](const base::FilePath& path) {
+          EXPECT_TRUE(user_directory.IsParent(path));
         });
     SmbFsBootstrapImpl boostrap_impl(mojo::MakeRequest(&boostrap_ptr),
                                      fs_factory, &mock_delegate_,

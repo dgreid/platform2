@@ -32,6 +32,11 @@ class SmbFsBootstrapImpl : public mojom::SmbFsBootstrap {
     virtual void SetupKerberos(
         mojom::KerberosConfigPtr kerberos_config,
         base::OnceCallback<void(bool success)> callback) = 0;
+
+    // Observer for when the password file path has been determined. The file
+    // at |path| may not exist at this point, but it will exist if bootstrap
+    // completes successfully.
+    virtual void OnPasswordFilePathSet(const base::FilePath& path) = 0;
   };
 
   // Factory function to create an SmbFilesystem instance.

@@ -105,6 +105,10 @@ void MojoSession::SetupKerberos(
   kerberos_sync_->SetupKerberos(std::move(callback));
 }
 
+void MojoSession::OnPasswordFilePathSet(const base::FilePath& path) {
+  password_file_path_ = path;
+}
+
 std::unique_ptr<SmbFilesystem> MojoSession::CreateSmbFilesystem(
     SmbFilesystem::Options options) {
   options.uid = uid_;
@@ -125,8 +129,8 @@ void MojoSession::OnBootstrapComplete(std::unique_ptr<SmbFilesystem> fs,
   DCHECK(!fuse_session_);
   DCHECK(chan_);
 
-  smbfs_impl_ =
-      std::make_unique<SmbFsImpl>(fs->GetWeakPtr(), std::move(smbfs_request));
+  smbfs_impl_ = std::make_unique<SmbFsImpl>(
+      fs->GetWeakPtr(), std::move(smbfs_request), password_file_path_);
   smbfs_delegate_ = std::move(delegate_ptr);
   smbfs_delegate_.set_connection_error_handler(
       base::BindOnce(&MojoSession::DoShutdown, base::Unretained(this)));
