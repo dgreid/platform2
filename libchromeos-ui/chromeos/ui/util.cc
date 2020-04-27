@@ -54,9 +54,16 @@ bool EnsureDirectoryExists(const base::FilePath& path,
                            uid_t uid,
                            gid_t gid,
                            mode_t mode) {
-  if (!base::CreateDirectory(path)) {
-    PLOG(ERROR) << "Unable to create " << path.value();
-    return false;
+  if (!base::DirectoryExists(path)) {
+    // Remove the existing file or link if any.
+    if (!base::DeleteFile(path, /*recursive=*/false)) {
+      PLOG(ERROR) << "Unable to delete " << path.value();
+      return false;
+    }
+    if (!base::CreateDirectory(path)) {
+      PLOG(ERROR) << "Unable to create " << path.value();
+      return false;
+    }
   }
   return SetPermissions(path, uid, gid, mode);
 }

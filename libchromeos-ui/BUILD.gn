@@ -57,7 +57,8 @@ if (use.test) {
       ":target_defaults",
     ]
     sources = [
-      "chromeos/ui/chromium_command_builder_unittest.cc",
+      "chromeos/ui/chromium_command_builder_test.cc",
+      "chromeos/ui/util_test.cc",
     ]
     deps = [
       ":libchromeos-ui-${libbase_ver}_source_set",
