@@ -73,11 +73,8 @@ wayland_protocol_library("sommelier-protocol") {
 executable("sommelier") {
   pkg_deps = [
     "gbm",
-    "grpc++",
     "libdrm",
     "pixman-1",
-    "protobuf",
-    "vm_protos",
     "wayland-client",
     "wayland-server",
     "xcb",
