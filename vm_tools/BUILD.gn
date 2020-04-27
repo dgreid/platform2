@@ -11,10 +11,6 @@ group("all") {
   }
   if (!use.kvm_host) {
     deps += [ "//vm_tools/guest" ]
-    if (!use.fuzzer) {
-      # Don't build sommelier if we are fuzzing.
-      deps += [ "//vm_tools/sommelier:all" ]
-    }
   }
 }
 
