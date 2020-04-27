@@ -3626,7 +3626,8 @@ int main(int argc, char** argv) {
               [ATOM_GTK_THEME_VARIANT] = {"_GTK_THEME_VARIANT"},
           },
       .visual_ids = {0},
-      .colormaps = {0}};
+      .colormaps = {0},
+      .virgl_transfer_xfer = 0};
   const char* display = getenv("SOMMELIER_DISPLAY");
   const char* scale = getenv("SOMMELIER_SCALE");
   const char* dpi = getenv("SOMMELIER_DPI");
@@ -3727,6 +3728,8 @@ int main(int argc, char** argv) {
       xauth_path = sl_arg_value(arg);
     } else if (strstr(arg, "--x-font-path") == arg) {
       xfont_path = sl_arg_value(arg);
+    } else if (strstr(arg, "--virgl-transfer-xfer") == arg) {
+      ctx.virgl_transfer_xfer = 1;
     } else if (arg[0] == '-') {
       if (strcmp(arg, "--") == 0) {
         ctx.runprog = &argv[i + 1];
@@ -4270,6 +4273,12 @@ int main(int argc, char** argv) {
         } else if (XWAYLAND_GL_DRIVER_PATH && *XWAYLAND_GL_DRIVER_PATH) {
           setenv("LIBGL_DRIVERS_PATH", XWAYLAND_GL_DRIVER_PATH, 1);
         }
+
+        // Mesa's use of copy transfer causes visual glitches in some
+        // applications so disable them as a work around.
+        // TODO(davidriley): Remove this work around.
+        if (!ctx.virgl_transfer_xfer)
+          setenv("VIRGL_DEBUG", "xfer", 1);
 
         sl_execvp(args[0], args, sv[1]);
         _exit(EXIT_FAILURE);
