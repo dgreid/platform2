@@ -121,6 +121,14 @@ are captured in any feedback reports that are uploaded to Google's servers.
 
 See [docs/logging.md](docs/logging.md) for more details on log handling.
 
+## vm_pstore_dump
+
+`vm_pstore_dump` is the command to print the console output of the guest
+kernel.  It runs in Chrome OS userspace and reads the file which is on the host
+file system and used as the backend of pstore of the guest kernel.  It is
+intended to be used for collecting logs when the guest kernel fails to boot in
+its early stage and other tools (e.g. logcat) are not available.
+
 ## crash_collector
 
 `crash_collector` is responsible for collecting crash reports of applications

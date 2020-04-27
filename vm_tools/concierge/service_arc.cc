@@ -6,6 +6,7 @@
 
 #include <base/files/file_util.h>
 
+#include "vm_tools/common/pstore.h"
 #include "vm_tools/concierge/arc_vm.h"
 #include "vm_tools/concierge/service.h"
 #include "vm_tools/concierge/shared_data.h"
@@ -166,7 +167,6 @@ std::unique_ptr<dbus::Response> Service::StartArcVm(
     writer.AppendProtoAsArrayOfBytes(response);
     return dbus_response;
   }
-  const uint32_t pstore_size = 1024 * 1024;
 
   base::FilePath data_dir = base::FilePath(kAndroidDataDir);
   if (!base::PathExists(data_dir)) {
@@ -182,7 +182,7 @@ std::unique_ptr<dbus::Response> Service::StartArcVm(
 
   auto vm = ArcVm::Create(
       std::move(kernel), std::move(rootfs), std::move(fstab), request.cpus(),
-      std::move(*pstore_path), pstore_size, std::move(disks), vsock_cid,
+      std::move(*pstore_path), kPstoreSize, std::move(disks), vsock_cid,
       std::move(data_dir), std::move(network_client), std::move(server_proxy),
       std::move(runtime_dir), features, std::move(params));
   if (!vm) {
