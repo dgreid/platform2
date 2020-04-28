@@ -139,7 +139,10 @@ bool CumulativeUseTimeMetric::AccumulatedActiveTime::ReadMetricsFile() {
     return false;
   }
 
-  std::unique_ptr<base::Value> data_value(base::JSONReader::Read(data_json));
+  // TODO(crbug.com/1054279): use base::JSONReader::ReadDeprecated after uprev
+  // to r680000.
+  std::unique_ptr<base::Value> data_value(
+      base::JSONReader::ReadDeprecated(data_json));
   if (!data_value.get()) {
     LOG(ERROR) << "Contents of " << metrics_file_.value() << " invalid JSON";
     return false;
