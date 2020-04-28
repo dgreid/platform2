@@ -9,7 +9,7 @@
         "identity": {
           "platform-name": "PlatformName",
           "sku-id": 0,
-          "smbios-name-match": "SMBiosNameMatch"
+          "smbios-name-match": "SMBIOSnamematch"
         },
         "name": "IdentityMatch",
         "wallpaper": "wallpaper-overridden-by-identity"
@@ -22,7 +22,7 @@
         "identity": {
           "platform-name": "PlatformName",
           "sku-id": 1,
-          "smbios-name-match": "SMBiosNameMatch"
+          "smbios-name-match": "SMBIOSnamematch"
         },
         "name": "IdentityMatch",
         "wallpaper": "wallpaper-overridden-by-identity"
@@ -35,7 +35,7 @@
         "identity": {
           "platform-name": "PlatformName",
           "sku-id": 3,
-          "smbios-name-match": "SMBiosNameMatch"
+          "smbios-name-match": "SMBIOSnamematch"
         },
         "name": "NameMatch",
         "wallpaper": "wallpaper-overridden-by-name"

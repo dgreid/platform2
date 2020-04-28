@@ -10,6 +10,7 @@ from __future__ import print_function
 import argparse
 import collections
 import copy
+import itertools
 import json
 import os
 import re
@@ -483,28 +484,56 @@ class ValidationError(Exception):
   """Exception raised for a validation error"""
 
 
+def _IdentityEq(a, b):
+  """Equality function for two identity dictionaries.
+
+  Args:
+    a: An identity dictionary.
+    b: Another identity dictionary.
+
+  Returns:
+    True if a is semantically equivalent to b with respect to identity
+    matching, False otherwise.
+  """
+  union_keys = set(a) | set(b)
+
+  # The platform-name plays no role in identity matching, so skip it
+  # when considering equivalency.
+  # TODO(crbug.com/1070692): Move /identity:platform-name to
+  # /mosys:platform-name so we can skip this.
+  union_keys.discard('platform-name')
+
+  def _FoldValue(value):
+    # Values we can get here are integers, strings, or None.  Use
+    # .lower() on strings, do nothing to everything else.
+    if isinstance(value, str):
+      # Consider strings of differing case to be equivalent.
+      return value.lower()
+    return value
+
+  for key in union_keys:
+    if _FoldValue(a.get(key)) != _FoldValue(b.get(key)):
+      return False
+  return True
+
+
 def _ValidateUniqueIdentities(json_config):
   """Verifies the identity tuple is globally unique within the config.
 
   Args:
     json_config: JSON config dictionary
   """
-  identities = set()
-  duplicate_identities = set()
   for config in json_config['chromeos']['configs']:
     if 'identity' not in config and 'name' not in config:
       raise ValidationError(
           'Missing identity for config: %s' % str(config))
-    identity_str = '%s-%s' % (
-        config.get('name', ''), str(config.get('identity', {})))
-    if identity_str in identities:
-      duplicate_identities.add(identity_str)
-    else:
-      identities.add(identity_str)
 
-  if duplicate_identities:
-    raise ValidationError(
-        'Identities are not unique: %s' % duplicate_identities)
+  for config_a, config_b in itertools.combinations(
+      json_config['chromeos']['configs'], 2):
+    if _IdentityEq(config_a['identity'], config_b['identity']):
+      raise ValidationError(
+          'Identities are not unique: %s and %s' % (config_a['identity'],
+                                                    config_b['identity']))
 
 
 def _ValidateWhitelabelBrandChangesOnly(json_config):
@@ -622,12 +651,18 @@ def MergeConfigs(configs):
         identity_match = False
         if to_merge_identity:
           source_identity = source_config['identity']
-          identity_match = True
-          for identity_key, identity_value in to_merge_identity.items():
-            if (identity_key not in source_identity or
-                source_identity[identity_key] != identity_value):
-              identity_match = False
-              break
+
+          # If we are missing anything from the source identity, copy
+          # it into to_merge_identity before doing the comparison, as
+          # missing attributes in the to_merge_identity should be
+          # treated as matched.
+          to_merge_identity_extended = to_merge_identity.copy()
+          for key, value in source_identity.items():
+            if key not in to_merge_identity_extended:
+              to_merge_identity_extended[key] = value
+
+          identity_match = _IdentityEq(source_identity,
+                                       to_merge_identity_extended)
         elif to_merge_name:
           identity_match = to_merge_name == source_config.get('name', '')
 

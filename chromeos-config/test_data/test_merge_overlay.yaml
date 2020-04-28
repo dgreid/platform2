@@ -10,10 +10,9 @@ chromeos:
       skus:
         - config:
             identity:
-              # Only matching on 2 identity attributes in order to override.
-              # sku-id will be ignored since it's not specified.
-              platform-name: "PlatformName"
-              smbios-name-match: "SMBiosNameMatch"
+              # - smbios-name-match should be case insensitive.
+              # - sku-id should match, as it was unspecified.
+              smbios-name-match: "SMBIOSnamematch"
             wallpaper: "wallpaper-overridden-by-identity"
     - $name: "NameMatch"
       skus:

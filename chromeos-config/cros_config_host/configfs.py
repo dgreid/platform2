@@ -125,6 +125,7 @@ def WriteIdentityStruct(config, output_file):
     if string is None:
       return 0
 
+    string = string.lower()
     string = string.encode('utf-8') + b'\000'
     if string not in string_table:
       string_table.append(string)

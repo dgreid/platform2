@@ -135,19 +135,20 @@ class ConfigFSTests(cros_test_lib.TestCase):
                          configfs.EntryFlags.HAS_SMBIOS_NAME.value)
         self.assertEqual(identity_type, configfs.IdentityType.X86)
         self.assertEqual(_GetString(model_match_offset),
-                         device['identity']['smbios-name-match'])
+                         device['identity']['smbios-name-match'].lower())
 
       if 'device-tree-compatible-match' in device['identity']:
         self.assertEqual(identity_type, configfs.IdentityType.ARM)
-        self.assertEqual(_GetString(model_match_offset),
-                         device['identity']['device-tree-compatible-match'])
+        self.assertEqual(
+            _GetString(model_match_offset),
+            device['identity']['device-tree-compatible-match'].lower())
 
       if 'firmware-name' in device['identity']:
         self.assertEqual(flags & configfs.EntryFlags.USES_FIRMWARE_NAME.value,
                          configfs.EntryFlags.USES_FIRMWARE_NAME.value)
         self.assertEqual(identity_type, configfs.IdentityType.ARM)
         self.assertEqual(_GetString(model_match_offset),
-                         device['identity']['firmware-name'])
+                         device['identity']['firmware-name'].lower())
       else:
         self.assertEqual(
             flags & configfs.EntryFlags.USES_FIRMWARE_NAME.value, 0)
@@ -163,7 +164,7 @@ class ConfigFSTests(cros_test_lib.TestCase):
         self.assertEqual(flags & configfs.EntryFlags.HAS_WHITELABEL.value,
                          configfs.EntryFlags.HAS_WHITELABEL.value)
         self.assertEqual(_GetString(whitelabel_offset),
-                         device['identity']['whitelabel-tag'])
+                         device['identity']['whitelabel-tag'].lower())
       else:
         self.assertEqual(
             flags & configfs.EntryFlags.HAS_WHITELABEL.value, 0)
@@ -173,7 +174,7 @@ class ConfigFSTests(cros_test_lib.TestCase):
             flags & configfs.EntryFlags.IS_X86_LEGACY_CUSTOMIZATION_ID.value,
             configfs.EntryFlags.IS_X86_LEGACY_CUSTOMIZATION_ID.value)
         self.assertEqual(_GetString(whitelabel_offset),
-                         device['identity']['customization-id'])
+                         device['identity']['customization-id'].lower())
       else:
         self.assertEqual(
             flags & configfs.EntryFlags.IS_X86_LEGACY_CUSTOMIZATION_ID.value, 0)
