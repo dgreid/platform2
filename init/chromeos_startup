@@ -6,9 +6,15 @@
 
 . /usr/share/misc/chromeos-common.sh
 
+# UNDO_MOUNTS stores the mounts that have currently been mounted. In case the
+# startup operations fail (from unrecoverable state on disk), the mounts
+# in UNDO_MOUNTS are unmounted in reverse order.
 UNDO_MOUNTS=
-cleanup_mounts()
-{
+
+# Unmounts the incomplete mount setup during the failure path. Failure to
+# set up mounts in this script result in the entire stateful partition getting
+# wiped using clobber-state.
+cleanup_mounts() {
   # On failure unmount all saved mount points and repair stateful
   for mount_point in ${UNDO_MOUNTS}; do
     umount -n "${mount_point}"
@@ -19,12 +25,16 @@ cleanup_mounts()
     "Self-repair incoherent stateful partition: $*. History: ${UNDO_MOUNTS}"
   exec clobber-state "fast keepimg"
 }
-remember_mount()
-{
+
+# Adds mounts to UNDO_MOUNT.
+remember_mount() {
     UNDO_MOUNTS="$1 ${UNDO_MOUNTS}"
 }
-mount_or_fail()
-{
+
+# Used to mount essential mount points for the system from the stateful
+# or encrypted stateful partition.
+# On failure, clobbers the stateful partition.
+mount_or_fail() {
   local mount_point
   # -c: Never canonicalize: it is a hazard to resolve symlinks.
   # -n: Do not write to mtab: we don't use it.
@@ -37,10 +47,10 @@ mount_or_fail()
   fi
   cleanup_mounts "failed to mount $*"
 }
+
 # Assert that the argument is a directory.
 # On failure, clobbers the stateful partition.
-check_directory()
-{
+check_directory() {
   local path="$1"
   if [ -L "${path}" ] || [ ! -d "${path}" ]; then
     cleanup_mounts "${path} is not a directory"
