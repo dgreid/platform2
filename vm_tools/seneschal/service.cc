@@ -456,6 +456,19 @@ std::unique_ptr<dbus::Response> Service::StartServer(
 
   // Get the listening address and any extra command line options.
   std::vector<string> args = {kServerPath, "-r", kServerRoot};
+
+  for (const auto& idmap : request.uid_maps()) {
+    args.emplace_back("--uid_map");
+    args.emplace_back(
+        base::StringPrintf("%u:%u", idmap.server(), idmap.client()));
+  }
+
+  for (const auto& idmap : request.gid_maps()) {
+    args.emplace_back("--gid_map");
+    args.emplace_back(
+        base::StringPrintf("%u:%u", idmap.server(), idmap.client()));
+  }
+
   base::ScopedFD listen_fd;
   bool valid_address = false;
   switch (request.listen_address_case()) {
