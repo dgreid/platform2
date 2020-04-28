@@ -6,6 +6,7 @@
 #include <fuzzer/FuzzedDataProvider.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <string.h>
 
 #include "hammerd/fmap_utils.h"
 #include "hammerd/update_fw.h"
@@ -58,35 +59,41 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 
   // Setup areas
   fmap_area fake_area;
-  memcpy(fake_area.name, ec_ro_name, strlen(ec_ro_name));
+  snprintf(reinterpret_cast<char*>(fake_area.name), sizeof(fake_area.name),
+           "%s", ec_ro_name);
   fake_area.offset = data_provider.ConsumeIntegral<uint32_t>();
   fake_area.size = data_provider.ConsumeIntegral<uint32_t>();
   ec_image.append(reinterpret_cast<char *>(&fake_area), sizeof(fake_area));
 
-  memcpy(fake_area.name, ro_frid_name, strlen(ro_frid_name));
+  snprintf(reinterpret_cast<char*>(fake_area.name), sizeof(fake_area.name),
+           "%s", ro_frid_name);
   fake_area.size = sizeof(SectionInfo::version);
   fake_area.offset = data_provider.ConsumeIntegral<uint32_t>();
   ec_image.append(reinterpret_cast<char *>(&fake_area), sizeof(fake_area));
 
-  memcpy(fake_area.name, ec_rw_name, strlen(ec_rw_name));
+  snprintf(reinterpret_cast<char*>(fake_area.name), sizeof(fake_area.name),
+           "%s", ec_rw_name);
   fake_area.offset = data_provider.ConsumeIntegral<uint32_t>();
   fake_area.size = data_provider.ConsumeIntegral<uint32_t>();
   ec_image.append(reinterpret_cast<char *>(&fake_area), sizeof(fake_area));
 
-  memcpy(fake_area.name, ec_fwid_name, strlen(ec_fwid_name));
+  snprintf(reinterpret_cast<char*>(fake_area.name), sizeof(fake_area.name),
+           "%s", ec_fwid_name);
   fake_area.size = sizeof(SectionInfo::version);
   fake_area.offset = data_provider.ConsumeIntegral<uint32_t>();
   ec_image.append(reinterpret_cast<char *>(&fake_area), sizeof(fake_area));
 
   if (fake_map.nareas > 4) {
-    memcpy(fake_area.name, rw_rbver_name, strlen(rw_rbver_name));
+    snprintf(reinterpret_cast<char*>(fake_area.name), sizeof(fake_area.name),
+             "%s", rw_rbver_name);
     fake_area.offset = data_provider.ConsumeIntegral<uint32_t>();
     fake_area.size = data_provider.ConsumeIntegral<uint32_t>();
     ec_image.append(reinterpret_cast<char *>(&fake_area), sizeof(fake_area));
   }
 
   if (fake_map.nareas > 5) {
-    memcpy(fake_area.name, key_ro_name, strlen(key_ro_name));
+    snprintf(reinterpret_cast<char*>(fake_area.name), sizeof(fake_area.name),
+             "%s", key_ro_name);
     fake_area.offset = data_provider.ConsumeIntegral<uint32_t>();
     fake_area.size = data_provider.ConsumeIntegral<uint32_t>();
     ec_image.append(reinterpret_cast<char *>(&fake_area), sizeof(fake_area));
