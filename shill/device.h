@@ -287,7 +287,7 @@ class Device : public base::RefCounted<Device> {
 
   // Called by DeviceInfo when the kernel adds or removes a globally-scoped
   // IPv6 address from this interface.
-  mockable void OnIPv6AddressChanged();
+  mockable void OnIPv6AddressChanged(const IPAddress* address);
 
   // Called by DeviceInfo when the kernel receives a update for IPv6 DNS server
   // addresses from this interface.

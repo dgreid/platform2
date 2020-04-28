@@ -50,7 +50,6 @@ class MockDeviceInfo : public DeviceInfo {
               HasOtherAddress,
               (int, const IPAddress&),
               (const, override));
-  MOCK_METHOD(bool, GetPrimaryIPv6Address, (int, IPAddress*), (override));
   MOCK_METHOD(bool,
               GetIPv6DnsServerAddresses,
               (int, std::vector<IPAddress>*, uint32_t*),

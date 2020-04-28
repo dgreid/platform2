@@ -536,10 +536,8 @@ void Device::DestroyIPConfig() {
   DestroyConnection();
 }
 
-void Device::OnIPv6AddressChanged() {
-  IPAddress address(IPAddress::kFamilyIPv6);
-  if (!manager_->device_info()->GetPrimaryIPv6Address(interface_index_,
-                                                      &address)) {
+void Device::OnIPv6AddressChanged(const IPAddress* address) {
+  if (!address) {
     if (ip6config_) {
       ip6config_ = nullptr;
       UpdateIPConfigsProperty();
@@ -547,18 +545,19 @@ void Device::OnIPv6AddressChanged() {
     return;
   }
 
+  CHECK_EQ(address->family(), IPAddress::kFamilyIPv6);
   IPConfig::Properties properties;
-  if (!address.IntoString(&properties.address)) {
-    LOG(ERROR) << "Unable to convert IPv6 address into a string!";
+  if (!address->IntoString(&properties.address)) {
+    LOG(ERROR) << "Unable to convert IPv6 address into a string";
     return;
   }
-  properties.subnet_prefix = address.prefix();
+  properties.subnet_prefix = address->prefix();
 
   RoutingTableEntry default_route;
   if (routing_table_->GetDefaultRoute(interface_index_, IPAddress::kFamilyIPv6,
                                       &default_route)) {
     if (!default_route.gateway.IntoString(&properties.gateway)) {
-      LOG(ERROR) << "Unable to convert IPv6 gateway into a string!";
+      LOG(ERROR) << "Unable to convert IPv6 gateway into a string";
       return;
     }
   } else {
@@ -575,7 +574,7 @@ void Device::OnIPv6AddressChanged() {
              properties.subnet_prefix ==
                  ip6config_->properties().subnet_prefix) {
     SLOG(this, 2) << __func__ << " primary address for " << link_name_
-                  << " is unchanged.";
+                  << " is unchanged";
     return;
   }
 

@@ -89,11 +89,6 @@ class DeviceInfo : public base::SupportsWeakPtr<DeviceInfo> {
   virtual bool HasOtherAddress(int interface_index,
                                const IPAddress& this_address) const;
 
-  // Get the preferred globally scoped IPv6 address for |interface_index|.
-  // This method returns true and sets |address| if a primary IPv6 address
-  // exists.  Otherwise it returns false and leaves |address| unmodified.
-  virtual bool GetPrimaryIPv6Address(int interface_index, IPAddress* address);
-
   // Get the IPv6 DNS server addresses for |interface_index|. This method
   // returns true and sets |address_list| and |life_time_seconds| if the IPv6
   // DNS server addresses exists. Otherwise, it returns false and leave
@@ -183,6 +178,9 @@ class DeviceInfo : public base::SupportsWeakPtr<DeviceInfo> {
   // a specific interface |iface_name|.
   base::FilePath GetDeviceInfoPath(const std::string& iface_name,
                                    const std::string& path_name);
+  // Return the preferred globally scoped IPv6 address for |interface_index|.
+  // If no primary IPv6 address exists, return nullptr.
+  const IPAddress* GetPrimaryIPv6Address(int interface_index);
   // Return the contents of the device info file |path_name| for interface
   // |iface_name| in output parameter |contents_out|.  Returns true if file
   // read succeeded, false otherwise.

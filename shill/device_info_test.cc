@@ -1097,23 +1097,23 @@ TEST_F(DeviceInfoTest, IPv6AddressChanged) {
       new MockDevice(&manager_, "null0", "addr0", kTestDeviceIndex));
 
   // Device info entry does not exist.
-  EXPECT_FALSE(device_info_.GetPrimaryIPv6Address(kTestDeviceIndex, nullptr));
+  EXPECT_EQ(device_info_.GetPrimaryIPv6Address(kTestDeviceIndex), nullptr);
 
   device_info_.infos_[kTestDeviceIndex].device = device;
 
   // Device info entry contains no addresses.
-  EXPECT_FALSE(device_info_.GetPrimaryIPv6Address(kTestDeviceIndex, nullptr));
+  EXPECT_EQ(device_info_.GetPrimaryIPv6Address(kTestDeviceIndex), nullptr);
 
   IPAddress ipv4_address(IPAddress::kFamilyIPv4);
   EXPECT_TRUE(ipv4_address.SetAddressFromString(kTestIPAddress0));
   unique_ptr<RTNLMessage> message =
       BuildAddressMessage(RTNLMessage::kModeAdd, ipv4_address, 0, 0);
 
-  EXPECT_CALL(*device, OnIPv6AddressChanged()).Times(0);
+  EXPECT_CALL(*device, OnIPv6AddressChanged(_)).Times(0);
 
   // We should ignore IPv4 addresses.
   SendMessageToDeviceInfo(*message);
-  EXPECT_FALSE(device_info_.GetPrimaryIPv6Address(kTestDeviceIndex, nullptr));
+  EXPECT_EQ(device_info_.GetPrimaryIPv6Address(kTestDeviceIndex), nullptr);
 
   IPAddress ipv6_address1(IPAddress::kFamilyIPv6);
   EXPECT_TRUE(ipv6_address1.SetAddressFromString(kTestIPAddress1));
@@ -1122,7 +1122,7 @@ TEST_F(DeviceInfoTest, IPv6AddressChanged) {
 
   // We should ignore non-SCOPE_UNIVERSE messages for IPv6.
   SendMessageToDeviceInfo(*message);
-  EXPECT_FALSE(device_info_.GetPrimaryIPv6Address(kTestDeviceIndex, nullptr));
+  EXPECT_EQ(device_info_.GetPrimaryIPv6Address(kTestDeviceIndex), nullptr);
 
   Mock::VerifyAndClearExpectations(device.get());
   IPAddress ipv6_address2(IPAddress::kFamilyIPv6);
@@ -1131,11 +1131,10 @@ TEST_F(DeviceInfoTest, IPv6AddressChanged) {
                                 IFA_F_TEMPORARY, RT_SCOPE_UNIVERSE);
 
   // Add a temporary address.
-  EXPECT_CALL(*device, OnIPv6AddressChanged());
+  EXPECT_CALL(*device, OnIPv6AddressChanged(_));
   SendMessageToDeviceInfo(*message);
-  IPAddress address0(IPAddress::kFamilyUnknown);
-  EXPECT_TRUE(device_info_.GetPrimaryIPv6Address(kTestDeviceIndex, &address0));
-  EXPECT_TRUE(address0.Equals(ipv6_address2));
+  EXPECT_EQ(*device_info_.GetPrimaryIPv6Address(kTestDeviceIndex),
+            ipv6_address2);
   Mock::VerifyAndClearExpectations(device.get());
 
   IPAddress ipv6_address3(IPAddress::kFamilyIPv6);
@@ -1145,11 +1144,10 @@ TEST_F(DeviceInfoTest, IPv6AddressChanged) {
 
   // Adding a non-temporary address alerts the Device, but does not override
   // the primary address since the previous one was temporary.
-  EXPECT_CALL(*device, OnIPv6AddressChanged());
+  EXPECT_CALL(*device, OnIPv6AddressChanged(_));
   SendMessageToDeviceInfo(*message);
-  IPAddress address1(IPAddress::kFamilyUnknown);
-  EXPECT_TRUE(device_info_.GetPrimaryIPv6Address(kTestDeviceIndex, &address1));
-  EXPECT_TRUE(address1.Equals(ipv6_address2));
+  EXPECT_EQ(*device_info_.GetPrimaryIPv6Address(kTestDeviceIndex),
+            ipv6_address2);
   Mock::VerifyAndClearExpectations(device.get());
 
   IPAddress ipv6_address4(IPAddress::kFamilyIPv6);
@@ -1160,11 +1158,10 @@ TEST_F(DeviceInfoTest, IPv6AddressChanged) {
 
   // Adding a temporary deprecated address alerts the Device, but does not
   // override the primary address since the previous one was non-deprecated.
-  EXPECT_CALL(*device, OnIPv6AddressChanged());
+  EXPECT_CALL(*device, OnIPv6AddressChanged(_));
   SendMessageToDeviceInfo(*message);
-  IPAddress address2(IPAddress::kFamilyUnknown);
-  EXPECT_TRUE(device_info_.GetPrimaryIPv6Address(kTestDeviceIndex, &address2));
-  EXPECT_TRUE(address2.Equals(ipv6_address2));
+  EXPECT_EQ(*device_info_.GetPrimaryIPv6Address(kTestDeviceIndex),
+            ipv6_address2);
   Mock::VerifyAndClearExpectations(device.get());
 
   IPAddress ipv6_address7(IPAddress::kFamilyIPv6);
@@ -1174,11 +1171,10 @@ TEST_F(DeviceInfoTest, IPv6AddressChanged) {
 
   // Another temporary (non-deprecated) address alerts the Device, and will
   // override the previous primary address.
-  EXPECT_CALL(*device, OnIPv6AddressChanged());
+  EXPECT_CALL(*device, OnIPv6AddressChanged(_));
   SendMessageToDeviceInfo(*message);
-  IPAddress address3(IPAddress::kFamilyUnknown);
-  EXPECT_TRUE(device_info_.GetPrimaryIPv6Address(kTestDeviceIndex, &address3));
-  EXPECT_TRUE(address3.Equals(ipv6_address7));
+  EXPECT_EQ(*device_info_.GetPrimaryIPv6Address(kTestDeviceIndex),
+            ipv6_address7);
 }
 
 TEST_F(DeviceInfoTest, IPv6DnsServerAddressesChanged) {

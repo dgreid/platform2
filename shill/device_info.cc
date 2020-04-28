@@ -961,15 +961,14 @@ bool DeviceInfo::HasOtherAddress(int interface_index,
   return has_other_address && !has_this_address;
 }
 
-bool DeviceInfo::GetPrimaryIPv6Address(int interface_index,
-                                       IPAddress* address) {
+const IPAddress* DeviceInfo::GetPrimaryIPv6Address(int interface_index) {
   const Info* info = GetInfo(interface_index);
   if (!info) {
-    return false;
+    return nullptr;
   }
   bool has_temporary_address = false;
   bool has_current_address = false;
-  bool has_address = false;
+  const IPAddress* address = nullptr;
   for (const auto& local_address : info->ip_addresses) {
     if (local_address.address.family() != IPAddress::kFamilyIPv6 ||
         local_address.scope != RT_SCOPE_UNIVERSE) {
@@ -990,13 +989,12 @@ bool DeviceInfo::GetPrimaryIPv6Address(int interface_index,
       continue;
     }
 
-    *address = local_address.address;
+    address = &local_address.address;
     has_temporary_address = is_temporary_address;
     has_current_address = is_current_address;
-    has_address = true;
   }
 
-  return has_address;
+  return address;
 }
 
 bool DeviceInfo::GetIPv6DnsServerAddresses(int interface_index,
@@ -1181,7 +1179,7 @@ void DeviceInfo::AddressMsgHandler(const RTNLMessage& msg) {
 
   if (address.family() == IPAddress::kFamilyIPv6 &&
       status.scope == RT_SCOPE_UNIVERSE) {
-    device->OnIPv6AddressChanged();
+    device->OnIPv6AddressChanged(GetPrimaryIPv6Address(interface_index));
   }
 
   if (device->connection()) {
