@@ -55,6 +55,14 @@ executable("hwsec-test-va") {
   ]
 }
 
+source_set("common_library") {
+  configs += [ ":target_defaults" ]
+  sources = [
+    "common/openssl_utility.cc",
+    "well_known_key_pairs/well_known_key_pairs.cc",
+  ]
+}
+
 source_set("verified_access_library") {
   configs += [ ":target_defaults" ]
   sources = [ "verified_access/verified_access.cc" ]
@@ -97,12 +105,14 @@ if (use.test) {
     ]
     sources = [ "verified_access/verified_access_test.cc" ]
     deps = [
+      ":common_library",
       ":verified_access_library",
       "//common-mk/testrunner",
     ]
 
     # NOSORT
     pkg_deps = [
+      "openssl",
       # system_api depends on protobuf (or protobuf-lite). It must appear
       # before protobuf here or the linker flags won't be in the right
       # order.
