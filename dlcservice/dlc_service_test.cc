@@ -157,7 +157,7 @@ TEST_F(DlcServiceTest,
   int64_t new_inactive_img_size = inactive_img_size / 2;
   EXPECT_TRUE(new_inactive_img_size < inactive_img_size);
 
-  ResizeImageFile(inactive_img_path, new_inactive_img_size);
+  ResizeFile(inactive_img_path, new_inactive_img_size);
   EXPECT_EQ(new_inactive_img_size, GetFileSize(inactive_img_path));
 
   CheckDlcState(kFirstDlc, DlcState::INSTALLED);

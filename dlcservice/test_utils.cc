@@ -91,14 +91,6 @@ int64_t BaseTest::GetFileSize(const base::FilePath& path) {
   return file_size;
 }
 
-void BaseTest::ResizeImageFile(const base::FilePath& image_path,
-                               int64_t image_size) {
-  constexpr uint32_t file_flags =
-      base::File::FLAG_WRITE | base::File::FLAG_OPEN;
-  base::File file(image_path, file_flags);
-  EXPECT_TRUE(file.SetLength(image_size));
-}
-
 void BaseTest::CreateImageFileWithRightSize(const base::FilePath& image_path,
                                             const base::FilePath& manifest_path,
                                             const DlcId& id,

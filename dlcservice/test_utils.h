@@ -36,8 +36,6 @@ class BaseTest : public testing::Test {
 
   int64_t GetFileSize(const base::FilePath& path);
 
-  void ResizeImageFile(const base::FilePath& image_path, int64_t image_size);
-
   void CreateImageFileWithRightSize(const base::FilePath& image_path,
                                     const base::FilePath& manifest_path,
                                     const std::string& id,
