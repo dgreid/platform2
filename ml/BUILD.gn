@@ -7,6 +7,7 @@ import("//common-mk/pkg_config.gni")
 
 group("all") {
   deps = [
+    ":ml_cmdline",
     ":ml_service",
   ]
   if (use.test) {
@@ -93,6 +94,16 @@ executable("ml_service") {
   ]
   sources = [
     "main.cc",
+  ]
+}
+
+executable("ml_cmdline") {
+  include_dirs = [ "${sysroot}/usr/include/tensorflow" ]
+  deps = [
+    ":ml_common",
+  ]
+  sources = [
+    "command_line.cc",
   ]
 }
 
