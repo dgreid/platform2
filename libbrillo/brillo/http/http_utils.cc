@@ -396,8 +396,10 @@ std::unique_ptr<base::DictionaryValue> ParseJsonResponse(
 
   std::string json = response->ExtractDataAsString();
   std::string error_message;
-  auto value = base::JSONReader::ReadAndReturnError(json, base::JSON_PARSE_RFC,
-                                                    nullptr, &error_message);
+  // TODO(crbug.com/1054279): use base::JSONReader::ReadAndReturnValueWithError
+  // after uprev to r680000.
+  auto value = base::JSONReader::ReadAndReturnErrorDeprecated(
+      json, base::JSON_PARSE_RFC, nullptr, &error_message);
   if (!value) {
     brillo::Error::AddToPrintf(error, FROM_HERE, brillo::errors::json::kDomain,
                                brillo::errors::json::kParseError,

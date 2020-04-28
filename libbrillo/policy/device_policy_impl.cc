@@ -154,10 +154,11 @@ bool DecodeWeeklyTimeFromValue(const base::DictionaryValue& dict_value,
 std::unique_ptr<base::ListValue> DecodeListValueFromJSON(
     const std::string& json_string) {
   std::string error;
+  // TODO(crbug.com/1054279): use base::JSONReader::ReadAndReturnValueWithError
+  // after uprev to r680000.
   std::unique_ptr<base::Value> decoded_json =
-      base::JSONReader::ReadAndReturnError(json_string,
-                                           base::JSON_ALLOW_TRAILING_COMMAS,
-                                           nullptr, &error);
+      base::JSONReader::ReadAndReturnErrorDeprecated(
+          json_string, base::JSON_ALLOW_TRAILING_COMMAS, nullptr, &error);
   if (!decoded_json) {
     LOG(ERROR) << "Invalid JSON string: " << error;
     return nullptr;
