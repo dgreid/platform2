@@ -908,8 +908,10 @@ bool ParseConfigDict(const base::DictionaryValue& config_root_dict,
 bool ParseContainerConfig(const std::string& config_json_data,
                           OciConfigPtr const& config_out) {
   std::string error_msg;
+  // TODO(crbug.com/1054279): use base::JSONReader::ReadAndReturnValueWithError
+  // after uprev to r680000.
   std::unique_ptr<const base::Value> config_root_val =
-      base::JSONReader::ReadAndReturnError(
+      base::JSONReader::ReadAndReturnErrorDeprecated(
           config_json_data, base::JSON_PARSE_RFC, nullptr /* error_code_out */,
           &error_msg, nullptr /* error_line_out */,
           nullptr /* error_column_out */);
