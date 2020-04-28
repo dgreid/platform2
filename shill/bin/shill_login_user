@@ -23,7 +23,6 @@ profile_name="~${profile_user}/shill"
 shill_state_root=/run/shill
 profile_link_root="${shill_state_root}/user_profiles"
 profile_link_dir="$profile_link_root/$profile_user"
-log_link_dir="${shill_state_root}/log"
 username_hash=""
 
 # We should not load multiple network profiles.  If a profile link
@@ -50,7 +49,6 @@ fi
 
 profile_dir="${profile_base}/shill"
 profile="${profile_dir}/shill.profile"
-log_dir="${profile_base}/shill_logs"
 
 if [ ! -d "${profile_dir}" ]; then
   if ! mkdir -p --mode=700 "${profile_dir}"; then
@@ -91,20 +89,9 @@ ln -s "${profile_dir}" "$profile_link_dir" ||
   logger -t "$script_name" \
     "Failed to create shill user cryptohome link $profile_link_dir"
 
-if ! mkdir -p --mode 0700 "$log_dir"; then
-  logger -t "$script_name" \
-    "Unable to create shill log directory"
-else
-  if ! chown shill:shill "$log_dir"; then
-    logger -t "$script_name" "Unable to chown shill log directory"
-  fi
-fi
-
-if [ ! -h "$log_link_dir" ]; then
-  ln -s "$log_dir" "$log_link_dir" ||
-    logger -t "$script_name" \
-      "Failed to create shill logs link $log_link_dir"
-fi
+# We don't log here any more.
+# TODO(crbug.com/1076094): remove this after M-86.
+rm -rf "${profile_base}/shill_logs"
 
 # wait_for_shill_dbus_services polls for the org.chromium.flimflam
 # in the org.freedesktop.DBus.ListNames list that has all connected
