@@ -406,8 +406,13 @@ bool DevInstall::ConfigurePortage() {
   // Create the directories defined in the portage config files. Permissions are
   // consistent with the other directories in /usr/local, which is a bind mount
   // for /mnt/stateful_partition/dev_image.
+  //
+  // We set ROOT in make.conf as portage ignores it in profile make.defaults.
   const base::FilePath make_conf_path = portage_dir.Append("make.conf");
-  const std::string make_conf_data{"PORTAGE_BINHOST=\"" + binhost_ + "\"\n"};
+  const std::string make_conf_data{"ROOT=\"" + state_dir_.value() +
+                                   "\"\n"
+                                   "PORTAGE_BINHOST=\"" +
+                                   binhost_ + "\"\n"};
   if (!WriteFile(make_conf_path, make_conf_data))
     return false;
 
