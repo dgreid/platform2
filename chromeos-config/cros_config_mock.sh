@@ -126,7 +126,7 @@ fi
 # file_mismatch filename contents
 # returns 0 if file exists and the contents don't match, 1 otherwise
 file_mismatch () {
-  if [[ -f "$1" && "$2" != "$(cat "$1")" ]]; then
+  if [[ -f "$1" && "${2,,}" != "$(tr '[:upper:]' '[:lower:]' <"$1")" ]]; then
     return 0
   fi
   return 1
