@@ -12,6 +12,7 @@
 #include <base/files/file_enumerator.h>
 #include <base/files/file_util.h>
 #include <base/files/scoped_temp_dir.h>
+#include <base/strings/string_util.h>
 #include <brillo/errors/error.h>
 #include <chromeos/dbus/service_constants.h>
 #include <dbus/dlcservice/dbus-constants.h>
@@ -113,6 +114,9 @@ bool DlcService::Install(const DlcIdList& dlcs,
                               dlc_manager_->GetSupported(), 1.);
     return true;
   }
+
+  LOG(INFO) << "Sending request to update_engine to install DLCs="
+            << base::JoinString(unique_dlcs_to_install, ",");
 
   // Invokes update_engine to install the DLC.
   ErrorPtr tmp_err;
