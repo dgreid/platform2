@@ -303,11 +303,6 @@ class ArcSetup {
   // exist.
   void EnsureContainerDirectories();
 
-  // Expands a template Android property file into /run/arc/properties.
-  void ExpandPropertyFile(const base::FilePath& input,
-                          const base::FilePath& output,
-                          brillo::CrosConfigInterface* config);
-
   // Mounts image files that are necessary for container startup.
   void MountOnOnetimeSetup();
 
