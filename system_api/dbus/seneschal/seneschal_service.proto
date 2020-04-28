@@ -58,6 +58,15 @@ message NetworkAddress {
 // should listen for requests.
 message FileDescriptor {}
 
+// An id mapping that the server should use when reporting ids to its clients.
+message IdMap {
+  // The id value on the server.
+  uint32 server = 1;
+  // The value that should be reported to the client instead of the value in
+  // `server`.
+  uint32 client = 2;
+}
+
 // Information that must be included with every StartServer dbus request.
 message StartServerRequest {
   // The address on which the server should listen for requests.
@@ -67,6 +76,12 @@ message StartServerRequest {
     NetworkAddress net = 3;
     FileDescriptor fd = 4;
   }
+
+  // Uid translations that should be performed by the server.
+  repeated IdMap uid_maps = 5;
+
+  // Gid translations to be performed by the server.
+  repeated IdMap gid_maps = 6;
 }
 
 // Information sent back by seneschal in response to a StartServer message.
