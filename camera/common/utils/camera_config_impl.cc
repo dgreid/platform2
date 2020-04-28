@@ -38,8 +38,8 @@ std::unique_ptr<CameraConfig> CameraConfig::Create(
 
   int error_code_out;
   std::string error_msg_out;
-  auto value = base::JSONReader::ReadAndReturnError(content, 0, &error_code_out,
-                                                    &error_msg_out);
+  auto value = base::JSONReader::ReadAndReturnErrorDeprecated(
+      content, 0, &error_code_out, &error_msg_out);
   if (!value) {
     LOGF(ERROR) << "Invalid JSON format of camera configuration file:"
                 << error_msg_out;

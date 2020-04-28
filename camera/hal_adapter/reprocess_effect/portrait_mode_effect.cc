@@ -207,7 +207,7 @@ int32_t PortraitModeEffect::ReprocessRequest(
       std::string report(static_cast<char*>(result_report_shm.memory()), size);
       VLOGF(1) << "Result report json: " << report;
       std::unique_ptr<base::DictionaryValue> report_dict =
-          base::DictionaryValue::From(base::JSONReader::Read(report));
+          base::DictionaryValue::From(base::JSONReader::ReadDeprecated(report));
       std::string result_value;
       if (!report_dict) {
         LOGF(ERROR) << "There is no value in report";
