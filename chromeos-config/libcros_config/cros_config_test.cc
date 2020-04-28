@@ -88,6 +88,13 @@ TEST_F(CrosConfigTest, CheckGoodStringNonRoot) {
   EXPECT_EQ("probe", val);
 }
 
+TEST_F(CrosConfigTest, CheckSMBIOSMatchInsensitive) {
+  InitConfig("AnOtHeR");
+  std::string val;
+  ASSERT_TRUE(cros_config_.GetString("/", "name", &val));
+  EXPECT_EQ("another", val);
+}
+
 TEST_F(CrosConfigTest, CheckEmptyPathError) {
   InitConfig();
   std::string val;

@@ -81,7 +81,7 @@ bool CrosConfigIdentityX86::PlatformIdentityMatch(
     // (or some other emulator firmware) chooses.
     return true;
   }
-  return name_ == name_match;
+  return base::EqualsCaseInsensitiveASCII(name_, name_match);
 }
 
 std::string CrosConfigIdentityX86::DebugString() const {
