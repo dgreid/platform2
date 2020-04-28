@@ -5,7 +5,9 @@
 #ifndef VM_TOOLS_MAITRED_SERVICE_IMPL_H_
 #define VM_TOOLS_MAITRED_SERVICE_IMPL_H_
 
+#include <map>
 #include <memory>
+#include <string>
 #include <utility>
 
 #include <base/callback.h>
@@ -92,6 +94,9 @@ class ServiceImpl final : public vm_tools::Maitred::Service {
   // Callback used for shutting down the gRPC server.  Called when handling a
   // Shutdown RPC.
   base::Callback<bool(void)> shutdown_cb_;
+
+  // Flags to configure LXD functionality.
+  std::map<std::string, std::string> lxd_env_;
 
   void ResizeCommandExitCallback(Init::ProcessStatus status, int code);
 

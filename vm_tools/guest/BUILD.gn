@@ -61,6 +61,8 @@ static_library("libmaitred") {
     "../maitred/service_impl.cc",
   ]
   configs += [ ":target_defaults" ]
+  defines =
+      [ "USE_ALLOW_PRIVILEGED_CONTAINERS=${use.allow_privileged_containers}" ]
   pkg_deps = [
     "grpc++",
     "protobuf",

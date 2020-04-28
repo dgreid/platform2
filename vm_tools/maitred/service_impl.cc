@@ -61,13 +61,6 @@ constexpr char kResolvConfPath[] = "/run/resolv.conf";
 constexpr char kRunPath[] = "/run";
 constexpr char kTmpResolvConfPath[] = "/run/resolv.conf.tmp";
 
-// Common environment for all LXD functionality.
-const std::map<string, string> kLxdEnv = {
-    {"LXD_DIR", "/mnt/stateful/lxd"},
-    {"LXD_CONF", "/mnt/stateful/lxd_conf"},
-    {"LXD_UNPRIVILEGED_ONLY", "true"},
-};
-
 // Convert a 32-bit int in network byte order into a printable string.
 string AddressToString(uint32_t address) {
   struct in_addr in = {
@@ -243,7 +236,12 @@ bool WriteResolvConf(const std::vector<string> nameservers,
 }  // namespace
 
 ServiceImpl::ServiceImpl(std::unique_ptr<vm_tools::maitred::Init> init)
-    : init_(std::move(init)) {}
+    : init_(std::move(init)),
+      lxd_env_({{"LXD_DIR", "/mnt/stateful/lxd"},
+                {"LXD_CONF", "/mnt/stateful/lxd_conf"}}) {
+  if (!USE_ALLOW_PRIVILEGED_CONTAINERS)
+    lxd_env_.emplace("LXD_UNPRIVILEGED_ONLY", "true");
+}
 
 bool ServiceImpl::Init() {
   string error;
@@ -558,9 +556,9 @@ grpc::Status ServiceImpl::StartTermina(grpc::ServerContext* ctx,
   const auto stateful_device = request->stateful_device().empty()
                                    ? "/dev/vdb"
                                    : request->stateful_device().c_str();
-  if (!init_->Spawn({"mkfs.btrfs", stateful_device}, kLxdEnv, false /*respawn*/,
-                    false /*use_console*/, true /*wait_for_exit*/,
-                    &launch_info)) {
+  if (!init_->Spawn({"mkfs.btrfs", stateful_device}, lxd_env_,
+                    false /*respawn*/, false /*use_console*/,
+                    true /*wait_for_exit*/, &launch_info)) {
     return grpc::Status(grpc::INTERNAL, "failed to spawn mkfs.btrfs");
   }
   if (launch_info.status != Init::ProcessStatus::EXITED) {
@@ -602,7 +600,7 @@ grpc::Status ServiceImpl::StartTermina(grpc::ServerContext* ctx,
   // Resize the stateful filesystem to fill the block device in case
   // the size was increased while the VM wasn't booted.
   if (!init_->Spawn({"btrfs", "filesystem", "resize", "max", "/mnt/stateful"},
-                    kLxdEnv, false /*respawn*/, false /*use_console*/,
+                    lxd_env_, false /*respawn*/, false /*use_console*/,
                     true /*wait_for_exit*/, &launch_info)) {
     return grpc::Status(grpc::INTERNAL, "failed to spawn btrfs resize");
   }
@@ -625,7 +623,7 @@ grpc::Status ServiceImpl::StartTermina(grpc::ServerContext* ctx,
   }
 
   if (!init_->Spawn({"tremplin", "-lxd_subnet", request->lxd_ipv4_subnet()},
-                    kLxdEnv, true /*respawn*/, true /*use_console*/,
+                    lxd_env_, true /*respawn*/, true /*use_console*/,
                     false /*wait_for_exit*/, &launch_info)) {
     return grpc::Status(grpc::INTERNAL, "failed to spawn tremplin");
   }
@@ -633,7 +631,7 @@ grpc::Status ServiceImpl::StartTermina(grpc::ServerContext* ctx,
     return grpc::Status(grpc::INTERNAL, "tremplin did not launch");
   }
 
-  if (!init_->Spawn({"ndproxyd", "eth0", "lxdbr0"}, kLxdEnv, true /*respawn*/,
+  if (!init_->Spawn({"ndproxyd", "eth0", "lxdbr0"}, lxd_env_, true /*respawn*/,
                     true /*use_console*/, false /*wait_for_exit*/,
                     &launch_info)) {
     LOG(WARNING) << "failed to spawn ndproxyd";
@@ -641,7 +639,7 @@ grpc::Status ServiceImpl::StartTermina(grpc::ServerContext* ctx,
     LOG(WARNING) << "ndproxyd did not launch";
   }
 
-  if (!init_->Spawn({"mcastd", "eth0", "lxdbr0"}, kLxdEnv, true /*respawn*/,
+  if (!init_->Spawn({"mcastd", "eth0", "lxdbr0"}, lxd_env_, true /*respawn*/,
                     true /*use_console*/, false /*wait_for_exit*/,
                     &launch_info)) {
     LOG(WARNING) << "failed to spawn mcastd";
@@ -686,7 +684,7 @@ grpc::Status ServiceImpl::ResizeFilesystem(
   Init::ProcessLaunchInfo launch_info;
   if (!init_->Spawn({"btrfs", "filesystem", "resize",
                      std::to_string(request->size()), "/mnt/stateful"},
-                    kLxdEnv, false /*respawn*/, true /*use_console*/,
+                    lxd_env_, false /*respawn*/, true /*use_console*/,
                     false /*wait_for_exit*/, &launch_info,
                     base::Bind(&ServiceImpl::ResizeCommandExitCallback,
                                base::Unretained(this)))) {
@@ -722,7 +720,7 @@ grpc::Status ServiceImpl::GetResizeBounds(
   Init::ProcessLaunchInfo launch_info;
   if (!init_->Spawn(
           {"btrfs", "inspect-internal", "min-dev-size", "/mnt/stateful"},
-          kLxdEnv, false /*respawn*/, false /*use_console*/,
+          lxd_env_, false /*respawn*/, false /*use_console*/,
           true /*wait_for_exit*/, &launch_info)) {
     LOG(ERROR) << "btrfs inspect-internal min-dev-size failed: "
                << launch_info.output;
