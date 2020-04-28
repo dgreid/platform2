@@ -395,7 +395,7 @@ fn setup<P: AsRef<Path>>(name: P) -> (ScopedPath<OsString>, Server) {
         .symlink_metadata()
         .expect("failed to get metadata for root dir");
 
-    let mut server = Server::new(&*test_dir);
+    let mut server = Server::new(&*test_dir, Default::default(), Default::default());
 
     let tversion = Tversion {
         msize: DEFAULT_BUFFER_SIZE,

@@ -123,6 +123,10 @@ enum Error {
     Address(ParseAddressError),
     Argument(getopts::Fail),
     Cid(ParseIntError),
+    IdMapConvertHost(String),
+    IdMapConvertClient(String),
+    IdMapDuplicate(String),
+    IdMapParse(String),
     IO(io::Error),
     MissingAcceptCid,
     SocketGid(ParseIntError),
@@ -136,6 +140,18 @@ impl fmt::Display for Error {
             &Error::Address(ref e) => e.fmt(f),
             &Error::Argument(ref e) => e.fmt(f),
             &Error::Cid(ref e) => write!(f, "invalid cid value: {}", e),
+            &Error::IdMapConvertClient(ref s) => {
+                write!(f, "malformed client portion of id map ({})", s)
+            }
+            &Error::IdMapConvertHost(ref s) => {
+                write!(f, "malformed host portion of id map ({})", s)
+            }
+            &Error::IdMapDuplicate(ref s) => write!(f, "duplicate mapping for host id {}", s),
+            &Error::IdMapParse(ref s) => write!(
+                f,
+                "id map must have exactly 2 components: <host_id>:<client_id> ({})",
+                s
+            ),
             &Error::IO(ref e) => e.fmt(f),
             &Error::MissingAcceptCid => write!(f, "`accept_cid` is required for vsock servers"),
             &Error::SocketGid(ref e) => write!(f, "invalid gid value: {}", e),
@@ -160,12 +176,20 @@ impl fmt::Display for UnixSocketAddr {
 
 type Result<T> = result::Result<T, Error>;
 
+#[derive(Clone)]
+struct ServerParams {
+    root: String,
+    uid_map: p9::ServerUidMap,
+    gid_map: p9::ServerGidMap,
+}
+
 fn handle_client<R: io::Read, W: io::Write>(
-    root: Arc<str>,
+    server_params: Arc<ServerParams>,
     mut reader: R,
     mut writer: W,
 ) -> io::Result<()> {
-    let mut server = p9::Server::new(PathBuf::from(&*root));
+    let params: ServerParams = (*server_params).clone();
+    let mut server = p9::Server::new(PathBuf::from(&params.root), params.uid_map, params.gid_map);
 
     loop {
         server.handle_message(&mut reader, &mut writer)?;
@@ -177,22 +201,26 @@ fn spawn_server_thread<
     W: 'static + io::Write + Send,
     D: 'static + fmt::Display + Send,
 >(
-    root: &Arc<str>,
+    server_params: &Arc<ServerParams>,
     reader: R,
     writer: W,
     peer: D,
 ) {
     let reader = BufReader::with_capacity(DEFAULT_BUFFER_SIZE, reader);
     let writer = BufWriter::with_capacity(DEFAULT_BUFFER_SIZE, writer);
-    let server_root = root.clone();
+    let params = server_params.clone();
     thread::spawn(move || {
-        if let Err(e) = handle_client(server_root, reader, writer) {
+        if let Err(e) = handle_client(params, reader, writer) {
             error!("error while handling client {}: {}", peer, e);
         }
     });
 }
 
-fn run_vsock_server(root: Arc<str>, port: c_uint, accept_cid: c_uint) -> io::Result<()> {
+fn run_vsock_server(
+    server_params: Arc<ServerParams>,
+    port: c_uint,
+    accept_cid: c_uint,
+) -> io::Result<()> {
     let listener = VsockListener::bind(port)?;
 
     loop {
@@ -204,7 +232,7 @@ fn run_vsock_server(root: Arc<str>, port: c_uint, accept_cid: c_uint) -> io::Res
         }
 
         info!("accepted connection from {}", peer);
-        spawn_server_thread(&root, stream.try_clone()?, stream, peer);
+        spawn_server_thread(&server_params, stream.try_clone()?, stream, peer);
     }
 }
 
@@ -230,18 +258,18 @@ fn adjust_socket_ownership(path: &Path, gid: gid_t) -> io::Result<()> {
     Ok(())
 }
 
-fn run_unix_server(root: Arc<str>, listener: UnixListener) -> io::Result<()> {
+fn run_unix_server(server_params: Arc<ServerParams>, listener: UnixListener) -> io::Result<()> {
     loop {
         let (stream, peer) = listener.accept()?;
         let peer = UnixSocketAddr(peer);
 
         info!("accepted connection from {}", peer);
-        spawn_server_thread(&root, stream.try_clone()?, stream, peer);
+        spawn_server_thread(&server_params, stream.try_clone()?, stream, peer);
     }
 }
 
 fn run_unix_server_with_path(
-    root: Arc<str>,
+    server_params: Arc<ServerParams>,
     path: &Path,
     socket_gid: Option<gid_t>,
 ) -> io::Result<()> {
@@ -262,10 +290,10 @@ fn run_unix_server_with_path(
         adjust_socket_ownership(path, gid)?;
     }
 
-    run_unix_server(root, listener)
+    run_unix_server(server_params, listener)
 }
 
-fn run_unix_server_with_fd(root: Arc<str>, fd: RawFd) -> io::Result<()> {
+fn run_unix_server_with_fd(server_params: Arc<ServerParams>, fd: RawFd) -> io::Result<()> {
     // This is safe as we are using our very own file descriptor.
     let file = unsafe { File::from_raw_fd(fd) };
     let metadata = file.metadata()?;
@@ -285,7 +313,27 @@ fn run_unix_server_with_fd(root: Arc<str>, fd: RawFd) -> io::Result<()> {
 
     // This is safe because we are dealing with listening socket.
     let listener = unsafe { UnixListener::from_raw_fd(file.into_raw_fd()) };
-    run_unix_server(root, listener)
+    run_unix_server(server_params, listener)
+}
+
+fn add_id_mapping<T: Clone + FromStr + Ord>(s: &str, map: &mut p9::ServerIdMap<T>) -> Result<()> {
+    let components: Vec<&str> = s.split(":").collect();
+    if components.len() != 2 {
+        return Err(Error::IdMapParse(s.to_owned()));
+    }
+    let host_id = components[0]
+        .parse::<T>()
+        .map_err(|_| Error::IdMapConvertHost(components[0].to_owned()))?;
+    let client_id = components[1]
+        .parse::<T>()
+        .map_err(|_| Error::IdMapConvertClient(components[1].to_owned()))?;
+
+    if map.contains_key(&host_id) {
+        return Err(Error::IdMapDuplicate(components[0].to_owned()));
+    }
+
+    map.insert(host_id, client_id);
+    Ok(())
 }
 
 fn main() -> Result<()> {
@@ -308,6 +356,18 @@ fn main() -> Result<()> {
         "change socket group ownership to the specified ID",
         "GID",
     );
+    opts.optmulti(
+        "",
+        "uid_map",
+        "translate uids from host to client",
+        "UID:UID",
+    );
+    opts.optmulti(
+        "",
+        "gid_map",
+        "translate gids from host to client",
+        "GID:GID",
+    );
     opts.optflag("h", "help", "print this help menu");
 
     let matches = opts
@@ -319,7 +379,23 @@ fn main() -> Result<()> {
         return Ok(());
     }
 
-    let root: Arc<str> = Arc::from(matches.opt_str("r").unwrap_or_else(|| "/".into()));
+    let mut uid_map: p9::ServerUidMap = Default::default();
+    matches
+        .opt_strs("uid_map")
+        .iter()
+        .try_for_each(|s| add_id_mapping(s, &mut uid_map))?;
+
+    let mut gid_map: p9::ServerGidMap = Default::default();
+    matches
+        .opt_strs("gid_map")
+        .iter()
+        .try_for_each(|s| add_id_mapping(s, &mut gid_map))?;
+
+    let server_params = Arc::from(ServerParams {
+        root: matches.opt_str("r").unwrap_or_else(|| "/".into()),
+        uid_map: uid_map,
+        gid_map: gid_map,
+    });
 
     // Safe because this string is defined above in this file and it contains exactly
     // one nul byte, which appears at the end.
@@ -337,7 +413,7 @@ fn main() -> Result<()> {
             } else {
                 Err(Error::MissingAcceptCid)
             }?;
-            run_vsock_server(root, port, accept_cid).map_err(Error::IO)?;
+            run_vsock_server(server_params, port, accept_cid).map_err(Error::IO)?;
         }
         ListenAddress::Net(_) => {
             error!("Network server unimplemented");
@@ -352,7 +428,7 @@ fn main() -> Result<()> {
                 .opt_get::<gid_t>("socket_gid")
                 .map_err(Error::SocketGid)?;
 
-            run_unix_server_with_path(root, path, socket_gid).map_err(Error::IO)?;
+            run_unix_server_with_path(server_params, path, socket_gid).map_err(Error::IO)?;
         }
         ListenAddress::UnixFd(fd) => {
             // Try duplicating the fd to verify that it is a valid file descriptor. It will also
@@ -363,7 +439,7 @@ fn main() -> Result<()> {
                 return Err(Error::IO(io::Error::last_os_error()));
             }
 
-            run_unix_server_with_fd(root, fd).map_err(Error::IO)?;
+            run_unix_server_with_fd(server_params, fd).map_err(Error::IO)?;
         }
     }
 

@@ -203,18 +203,34 @@ fn join_path<P: AsRef<Path>, R: AsRef<Path>>(
     Ok(buf)
 }
 
+pub type ServerIdMap<T> = BTreeMap<T, T>;
+pub type ServerUidMap = ServerIdMap<libc::uid_t>;
+pub type ServerGidMap = ServerIdMap<libc::gid_t>;
+
+fn map_id_from_host<T: Clone + Ord>(map: &ServerIdMap<T>, id: T) -> T {
+    map.get(&id).map_or(id.clone(), |v| v.clone())
+}
+
 pub struct Server {
     root: Box<Path>,
     msize: u32,
     fids: BTreeMap<u32, Fid>,
+    uid_map: ServerUidMap,
+    gid_map: ServerGidMap,
 }
 
 impl Server {
-    pub fn new<P: Into<Box<Path>>>(root: P) -> Server {
+    pub fn new<P: Into<Box<Path>>>(
+        root: P,
+        uid_map: ServerUidMap,
+        gid_map: ServerGidMap,
+    ) -> Server {
         Server {
             root: root.into(),
             msize: MAX_MESSAGE_SIZE,
             fids: BTreeMap::new(),
+            uid_map,
+            gid_map,
         }
     }
 
@@ -623,8 +639,8 @@ impl Server {
             valid: P9_GETATTR_BASIC,
             qid: metadata_to_qid(&fid.metadata),
             mode: fid.metadata.st_mode(),
-            uid: fid.metadata.st_uid(),
-            gid: fid.metadata.st_gid(),
+            uid: map_id_from_host(&self.uid_map, fid.metadata.st_uid()),
+            gid: map_id_from_host(&self.gid_map, fid.metadata.st_gid()),
             nlink: fid.metadata.st_nlink(),
             rdev: fid.metadata.st_rdev(),
             size: fid.metadata.st_size(),
