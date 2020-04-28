@@ -613,9 +613,22 @@ HELP_cras='
 
       Available events:
       - IncomingCall <PhoneNumber>: Make a call from external line.
-      Ex: $ cras IncomingCall 12345678
+          Ex: $ cras telephony IncomingCall 12345678
       - AnswerCall: Answer the call.
       - TerminateCall: Terminate the call.
+      - SetDialNumber [DailNumber]: Set the last dialed number recorded. Clear
+        the recorded number if no DailNumber is provided.
+      - SetBatteryLevel <BatteryLevel>: Set and transfer the battery level to
+        HF. The BatteryLevel should range from 0 to 5.
+      - SetSignalStrength <SignalStrength>: Set and transfer the signal strength
+        to HF. The SignalStrength should range from 0 to 5.
+      - SetServiceAvailability <0/1>: Set if the service is available or not.
+      - SetCallheld <CallHeldIndicator>: Set the callheld indicator.
+        CallHeldIndicator:
+          0 = No calls held
+          1 = Call is placed on hold or active/held calls swapped
+          (The AG has both an active AND a held call)
+          2 = Call on hold, no active call
 '
 cmd_cras() (
   if [ $# -eq 0 ]; then
@@ -669,14 +682,34 @@ cmd_cras() (
 
     local event="$1"; shift
     case "${event}" in
-    IncomingCall)
+    SetDialNumber)
+      if [ $# -gt 1 ]; then
+        help "invalid arguments for ${subcommand} ${event}"
+        return 1
+      fi
+      dbus-send --system --print-reply --type=method_call \
+            --dest=org.chromium.cras /org/chromium/cras/telephony \
+            "org.chromium.cras.Telephony.${event}" "string:$1"
+      return
+      ;;
+    IncomingCall|SetBatteryLevel|SetSignalStrength|SetServiceAvailability| \
+    SetCallheld)
+      local type
       if [ $# -ne 1 ]; then
         help "missing or invalid arguments for ${subcommand} ${event}"
         return 1
       fi
+      case "${event}" in
+      SetBatteryLevel|SetSignalStrength|SetServiceAvailability|SetCallheld)
+        type="int32"
+        ;;
+      *)
+        type="string"
+        ;;
+      esac
       dbus-send --system --print-reply --type=method_call \
-          --dest=org.chromium.cras /org/chromium/cras/telephony \
-          org.chromium.cras.Telephony.IncomingCall "string:$1"
+            --dest=org.chromium.cras /org/chromium/cras/telephony \
+            "org.chromium.cras.Telephony.${event}" "${type}:$1"
       return
       ;;
     AnswerCall|TerminateCall)
