@@ -532,9 +532,35 @@ class ConfigurePortageTest : public ::testing::Test {
 
 // Check setup works in general.
 TEST_F(ConfigurePortageTest, Works) {
+  std::string data;
+
+  // The exact path doesn't matter here, but we create a deep one to mimic
+  // common scenarios on real devices.
+  const auto portage_internal_dir = test_dir_.Append(
+      "lib64/python3.6/site-packages/portage/package/ebuild/_config");
+  const auto portage_internal_file =
+      portage_internal_dir.Append("special_env_vars.py");
+  ASSERT_TRUE(base::CreateDirectory(portage_internal_dir));
+  data = "foo\nenviron_whitelist = []\n\nbar\n";
+  ASSERT_TRUE(base::WriteFile(portage_internal_file, data.data(), data.size()));
+
+  // Create a symlink to mimic real devices to detect recursive search issues.
+  ASSERT_EQ(0, symlink(".", test_dir_.Append("usr").value().c_str()));
+  ASSERT_EQ(0, symlink(".", test_dir_.Append("local").value().c_str()));
+
+  // Check basic profile setup worked.
   EXPECT_TRUE(dev_install_.ConfigurePortage());
   const base::FilePath portage_dir = test_dir_.Append("etc/portage");
   EXPECT_TRUE(base::PathExists(portage_dir));
+
+  // Verify make.conf has valid ROOT= setting.
+  EXPECT_TRUE(base::ReadFileToString(portage_dir.Append("make.conf"), &data));
+  EXPECT_NE(data.find("ROOT=\"" + test_dir_.value() + "\"\n"),
+            std::string::npos);
+
+  // Check internal portage hacking.
+  EXPECT_TRUE(base::ReadFileToString(portage_internal_file, &data));
+  EXPECT_EQ(data, "foo\nenviron_whitelist = ['LD_LIBRARY_PATH']\n\nbar\n");
 }
 
 }  // namespace dev_install

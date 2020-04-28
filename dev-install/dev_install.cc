@@ -19,6 +19,7 @@
 #include <base/files/file_util.h>
 #include <base/logging.h>
 #include <base/strings/string_split.h>
+#include <base/strings/string_util.h>
 #include <brillo/key_value_store.h>
 #include <brillo/process.h>
 #include <vboot/crossystem.h>
@@ -396,10 +397,10 @@ bool DevInstall::ConfigurePortage() {
   if (!CreateMissingDirectory(provided_path))
     return false;
   const base::FilePath rootfs_provided{kRootfsProvidedDir};
-  base::FileEnumerator iter(rootfs_provided, false,
-                            base::FileEnumerator::FILES);
-  for (base::FilePath current = iter.Next(); !current.empty();
-       current = iter.Next()) {
+  base::FileEnumerator profile_iter(rootfs_provided, false,
+                                    base::FileEnumerator::FILES);
+  for (base::FilePath current = profile_iter.Next(); !current.empty();
+       current = profile_iter.Next()) {
     const base::FilePath sym = provided_path.Append(current.BaseName());
     if (!base::CreateSymbolicLink(current, sym)) {
       PLOG(ERROR) << "Creating " << sym.value() << " failed";
@@ -419,6 +420,79 @@ bool DevInstall::ConfigurePortage() {
                                    binhost_ + "\"\n"};
   if (!WriteFile(make_conf_path, make_conf_data))
     return false;
+
+  // Hack in LD_LIBRARY_PATH within portage env.  Otherwise builds will filter
+  // it out which breaks python as it can't find its libs in /usr/local.  This
+  // only shows up on base images as those won't have ldconfig run since the
+  // rootfs is read-only.  See https://crbug.com/1065727 for examples.
+  //
+  // The path we search for will be:
+  // /usr/local/ (state_dir_)
+  //   lib*/python*/site-packages/portage/ (internal python packages dir)
+  //     package/ebuild/_config/special_env_vars.py
+  //
+  // We do this manually because base::FileEnumerator is unable to handle
+  // symlink loops which we have in /usr/local by design.
+  bool found_file = false;
+  base::FileEnumerator lib_iter(state_dir_, false,
+                                base::FileEnumerator::DIRECTORIES, "lib*");
+  for (auto lib_current = lib_iter.Next(); !lib_current.empty();
+       lib_current = lib_iter.Next()) {
+    base::FileEnumerator python_iter(
+        lib_current, false, base::FileEnumerator::DIRECTORIES, "python3.*");
+    for (auto python_current = python_iter.Next(); !python_current.empty();
+         python_current = python_iter.Next()) {
+      const auto current = python_current.Append(
+          "site-packages/portage/package/ebuild/_config/special_env_vars.py");
+      if (!base::PathExists(current)) {
+        LOG(WARNING) << "Portage file does not exist: " << current.value();
+        continue;
+      }
+
+      found_file = true;
+      LOG(INFO) << "Hacking portage file for dev-install " << current.value();
+
+      // Load the file into memory.
+      std::string data;
+      if (!base::ReadFileToString(current, &data)) {
+        PLOG(ERROR) << "Unable to read " << current.value();
+        return false;
+      }
+
+      // Split it into lines.
+      auto lines = base::SplitStringPiece(data, "\n", base::KEEP_WHITESPACE,
+                                          base::SPLIT_WANT_ALL);
+      if (lines.empty()) {
+        LOG(ERROR) << "Portage internal file is empty: " << current.value();
+        return false;
+      }
+
+      // Replace the one line that we need.
+      const char kSearch[] = "environ_whitelist = []";
+      const char kReplace[] = "environ_whitelist = ['LD_LIBRARY_PATH']";
+      bool found_line = false;
+      for (auto& line : lines) {
+        if (line == kSearch) {
+          found_line = true;
+          line.set(kReplace);
+        }
+      }
+      if (!found_line) {
+        LOG(WARNING) << current.value() << ": Unable to find line to modify!";
+      }
+
+      // Write it back out.
+      data = base::JoinString(lines, "\n");
+      if (!base::WriteFile(current, data.data(), data.size())) {
+        LOG(ERROR) << "Unable to write " << current.value();
+        return false;
+      }
+    }
+  }
+  if (!found_file) {
+    LOG(WARNING) << "Unable to locate internal portage special_env_vars.py!";
+    LOG(WARNING) << "`emerge` might not work on your device; trying anyways.";
+  }
 
   return true;
 }
