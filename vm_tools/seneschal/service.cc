@@ -43,6 +43,7 @@
 #include <base/time/time.h>
 #include <brillo/file_utils.h>
 #include <chromeos/dbus/service_constants.h>
+#include <chromeos/libminijail.h>
 #include <chromeos/scoped_minijail.h>
 #include <seneschal/proto_bindings/seneschal_service.pb.h>
 
@@ -518,9 +519,21 @@ std::unique_ptr<dbus::Response> Service::StartServer(
                  [](const string& arg) -> const char* { return arg.c_str(); });
   argv.emplace_back(nullptr);
 
-  // Mount in some useful paths.  We cannot use minijail_bind here because that
-  // implicitly enters a new mount namespace and we explicitly want the child
-  // process to live in seneschal's mount namespace.
+  ScopedMinijail jail(minijail_new());
+  if (!jail) {
+    LOG(ERROR) << "Unable to create minijail";
+    response.set_failure_reason("Unable to create minijail");
+    writer.AppendProtoAsArrayOfBytes(response);
+    return dbus_response;
+  }
+
+  // Set up a new mount namespace but allow bind mounts from the parent
+  // namespace to propagate into the server's namespace.
+  minijail_namespace_vfs(jail.get());
+  minijail_remount_mode(jail.get(), MS_SLAVE);
+
+  // Since we are going to be in a user namespace all bind mounts have to use
+  // MS_REC.
   constexpr struct {
     const char* src;
     bool writable;
@@ -538,86 +551,33 @@ std::unique_ptr<dbus::Response> Service::StartServer(
           .writable = true,
       },
   };
+
   for (const auto& bind_mount : bind_mounts) {
-    // Offset by 1 because Append wants relative paths.
-    base::FilePath dst = root_dir.GetPath().Append(&bind_mount.src[1]);
-    struct stat info;
-    if (stat(bind_mount.src, &info) != 0) {
-      PLOG(ERROR) << "Unable to stat " << bind_mount.src;
-      response.set_failure_reason("Unable to set up server jail");
-      writer.AppendProtoAsArrayOfBytes(response);
-      return dbus_response;
-    }
-
-    if (S_ISDIR(info.st_mode)) {
-      // Only need to create the directory.
-      if (!MkdirRecursively(dst)) {
-        PLOG(ERROR) << "Failed to create " << dst.value();
-        response.set_failure_reason("Unable to set up server jail");
-        writer.AppendProtoAsArrayOfBytes(response);
-        return dbus_response;
-      }
-    } else {
-      // Need to create the file and the parent directories.
-      if (!MkdirRecursively(dst.DirName())) {
-        PLOG(ERROR) << "Failed to create " << dst.DirName().value();
-        response.set_failure_reason("Unable to set up server jail");
-        writer.AppendProtoAsArrayOfBytes(response);
-        return dbus_response;
-      }
-
-      // Now touch the file so we can mount over it.
-      base::ScopedFD file(open(dst.value().c_str(),
-                               O_WRONLY | O_CREAT | O_CLOEXEC | O_NONBLOCK,
-                               0600) != 0);
-      if (!file.is_valid()) {
-        PLOG(ERROR) << "Unable to touch " << dst.value();
-        response.set_failure_reason("Unable to set up server jail");
-        writer.AppendProtoAsArrayOfBytes(response);
-        return dbus_response;
-      }
-    }
-
-    // Now actually do the bind mount.
-    unsigned long flags = MS_BIND | MS_REC;  // NOLINT(runtime/int)
-    const char* target = dst.value().c_str();
-    if (mount(bind_mount.src, target, "none", flags, nullptr) != 0) {
-      PLOG(ERROR) << "Unable to bind mount " << bind_mount.src;
-      response.set_failure_reason("Unable to set up server jail");
-      writer.AppendProtoAsArrayOfBytes(response);
-      return dbus_response;
-    }
-
-    // Remount read-only if necessary.
+    int flags = MS_BIND | MS_REC;
     if (!bind_mount.writable) {
-      flags |= MS_REMOUNT | MS_RDONLY | MS_NOSUID | MS_NODEV | MS_NOEXEC;
-      if (mount(bind_mount.src, target, "none", flags, nullptr) != 0) {
-        PLOG(ERROR) << "Unable to remount " << bind_mount.src << " read-only";
-        response.set_failure_reason("Unable to set up server jail");
-        writer.AppendProtoAsArrayOfBytes(response);
-        return dbus_response;
-      }
+      flags |= MS_RDONLY;
     }
-  }
 
-  ScopedMinijail jail(minijail_new());
-  if (!jail) {
-    LOG(ERROR) << "Unable to create minijail";
-    response.set_failure_reason("Unable to create minijail");
-    writer.AppendProtoAsArrayOfBytes(response);
-    return dbus_response;
+    int ret = minijail_mount(jail.get(), bind_mount.src, bind_mount.src, "bind",
+                             flags);
+    if (ret < 0) {
+      LOG(ERROR) << "Failed to bind mount " << bind_mount.src << ": "
+                 << strerror(-ret);
+      response.set_failure_reason("Unable to set up server jail");
+      writer.AppendProtoAsArrayOfBytes(response);
+      return dbus_response;
+    }
   }
 
   // Add android-everybody for access to android files.
   minijail_set_supplementary_gids(jail.get(), base::size(kSupplementaryGroups),
                                   kSupplementaryGroups);
-  // We want this process to share namespaces with its parent.
   minijail_change_uid(jail.get(), kChronosUid);
   minijail_change_gid(jail.get(), kChronosGid);
 
   // The process can only see what is in its root directory.
   int ret =
-      minijail_enter_chroot(jail.get(), root_dir.GetPath().value().c_str());
+      minijail_enter_pivot_root(jail.get(), root_dir.GetPath().value().c_str());
   if (ret < 0) {
     LOG(ERROR) << "Unable to configure pivot_root: " << strerror(-ret);
     response.set_failure_reason("Unable to configure pivot_root");

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <stdlib.h>
+#include <sys/mount.h>
 
 #include <base/at_exit.h>
 #include <base/files/file_descriptor_watcher_posix.h>
@@ -19,6 +20,17 @@ int main(int argc, char** argv) {
 
   if (argc != 1) {
     LOG(ERROR) << "Unexpected command line arguments";
+    return EXIT_FAILURE;
+  }
+
+  // Make /run/seneschal a shared mount point in our namespace.
+  if (mount("/run/seneschal", "/run/seneschal", "none", MS_BIND | MS_REC,
+            nullptr) != 0) {
+    PLOG(ERROR) << "Failed to bind mount /run/seneschal";
+    return EXIT_FAILURE;
+  }
+  if (mount("none", "/run/seneschal", nullptr, MS_SHARED, nullptr) != 0) {
+    PLOG(ERROR) << "Failed to make /run/seneschal a shared mountpoint";
     return EXIT_FAILURE;
   }
 
