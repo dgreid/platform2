@@ -8,6 +8,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include <algorithm>
 #include <iostream>
 #include <istream>
 #include <string>
@@ -67,21 +68,24 @@ DevInstall::DevInstall()
       only_bootstrap_(false),
       state_dir_(kUsrLocal),
       binhost_(""),
-      binhost_version_("") {}
+      binhost_version_(""),
+      jobs_(0) {}
 
 DevInstall::DevInstall(const std::string& binhost,
                        const std::string& binhost_version,
                        bool reinstall,
                        bool uninstall,
                        bool yes,
-                       bool only_bootstrap)
+                       bool only_bootstrap,
+                       uint32_t jobs)
     : reinstall_(reinstall),
       uninstall_(uninstall),
       yes_(yes),
       only_bootstrap_(only_bootstrap),
       state_dir_(kUsrLocal),
       binhost_(binhost),
-      binhost_version_(binhost_version) {}
+      binhost_version_(binhost_version),
+      jobs_(jobs) {}
 
 bool DevInstall::IsDevMode() const {
   int value = ::VbGetSystemPropertyInt("cros_debug");
@@ -429,6 +433,10 @@ bool DevInstall::InstallExtraPackages() {
   brillo::ProcessImpl emerge;
   emerge.SetSearchPath(true);
   emerge.AddArg("emerge");
+  int jobs = jobs_;
+  if (jobs == 0)
+    jobs = std::max(1L, sysconf(_SC_NPROCESSORS_ONLN) - 1);
+  emerge.AddArg("--jobs=" + std::to_string(jobs));
   emerge.AddArg("virtual/target-os-dev");
   if (emerge.Run() != 0) {
     LOG(ERROR) << "Could not install virtual/target-os-dev";

@@ -24,7 +24,8 @@ class DevInstall {
              bool reinstall,
              bool uninstall,
              bool yes,
-             bool only_bootstrap);
+             bool only_bootstrap,
+             uint32_t jobs);
 
   // Run the dev_install routine.
   int Run();
@@ -86,6 +87,7 @@ class DevInstall {
   base::FilePath state_dir_;
   std::string binhost_;
   std::string binhost_version_;
+  int jobs_;
   // The URL to the devserver for local developer builds.
   std::string devserver_url_;
   // The active board for calculating default binhost.

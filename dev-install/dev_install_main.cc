@@ -29,6 +29,7 @@ int main(int argc, char* argv[]) {
               "Do not prompt for input -- assume yes to all responses");
   DEFINE_bool(only_bootstrap, false,
               "Only attempt to install the bootstrap packages");
+  DEFINE_uint32(jobs, 0, "How many install jobs to run in parallel");
 
   brillo::FlagHelper::Init(argc, argv,
                            "Chromium OS Development Image Installer");
@@ -53,6 +54,7 @@ int main(int argc, char* argv[]) {
   }
 
   DevInstall dev_install(FLAGS_binhost, FLAGS_binhost_version, FLAGS_reinstall,
-                         FLAGS_uninstall, FLAGS_yes, FLAGS_only_bootstrap);
+                         FLAGS_uninstall, FLAGS_yes, FLAGS_only_bootstrap,
+                         FLAGS_jobs);
   return dev_install.Run();
 }
