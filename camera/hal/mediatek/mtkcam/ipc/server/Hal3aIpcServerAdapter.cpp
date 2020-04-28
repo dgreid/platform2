@@ -346,6 +346,18 @@ int Hal3aIpcServerAdapter::setIsp(void* addr, int dataSize) {
       m_pLceImgBuf = nullptr;
     }
 
+#define ISP_LCS_OUT_WD (384)
+#define ISP_LCS_OUT_HT (384)
+    static char lcso_cpu_buffer[ISP_LCS_OUT_WD * ISP_LCS_OUT_HT * 2];
+    /* LCSO comes from gbm buffer (non-cache) and used for algo computation
+     * we move it to local buffer to avoid compute on non-cache buffer
+     * to improve performance and reduce DRAM bandwidth
+     * could remove this change after gbm supports cache buffer
+     * this buffer would be updated at each call of setIsp() and
+     * algo computes with it at each setIsp()
+     */
+    memcpy(lcso_cpu_buffer, (void*)params->lceBufInfo.bufVA[0],
+           sizeof(lcso_cpu_buffer));
     IPCImageBufAllocator::config cfg = {};
     cfg.format = params->lceBufInfo.imgFormat;
     cfg.width = params->lceBufInfo.width;
@@ -353,7 +365,7 @@ int Hal3aIpcServerAdapter::setIsp(void* addr, int dataSize) {
     cfg.planecount = params->lceBufInfo.planeCount;
     cfg.strides[0] = params->lceBufInfo.bufStrides[0];
     cfg.scanlines[0] = params->lceBufInfo.bufScanlines[0];
-    cfg.va[0] = params->lceBufInfo.bufVA[0];
+    cfg.va[0] = (MUINTPTR)lcso_cpu_buffer;
     cfg.pa[0] = params->lceBufInfo.bufPA[0];
     cfg.fd[0] = params->lceBufInfo.fd[0];
     IPCImageBufAllocator allocator(cfg, "LCS_P2");
