@@ -118,7 +118,8 @@ TEST(SequenceFunctionTest, TestEvalSuccess) {
 }
 
 TEST(SequenceFunctionTest, TestParserEmptyList) {
-  auto json_object = base::JSONReader::Read(R"({
+  // TODO(crbug.com/1054279): use base::JSONReader::Read after uprev to r680000.
+  auto json_object = base::JSONReader::ReadDeprecated(R"({
     "sequence": {
       "functions": []
     }
@@ -134,7 +135,8 @@ TEST(SequenceFunctionTest, TestParserEmptyList) {
 }
 
 TEST(SequenceFunctionTest, TestParseFunctions) {
-  auto json_object = base::JSONReader::Read(R"({
+  // TODO(crbug.com/1054279): use base::JSONReader::Read after uprev to r680000.
+  auto json_object = base::JSONReader::ReadDeprecated(R"({
     "sequence": {
       "functions": [
         {

@@ -30,7 +30,9 @@ int main(int argc, char* argv[]) {
   }
 
   std::unique_ptr<base::DictionaryValue> dict_val =
-      base::DictionaryValue::From(base::JSONReader::Read(argv[1]));
+      // TODO(crbug.com/1054279): use base::JSONReader::Read after uprev to
+      // r680000.
+      base::DictionaryValue::From(base::JSONReader::ReadDeprecated(argv[1]));
   if (dict_val == nullptr) {
     LOG(ERROR) << "Failed to parse the probe statement to JSON";
     return kFailedToParseProbeStatementFromArg;

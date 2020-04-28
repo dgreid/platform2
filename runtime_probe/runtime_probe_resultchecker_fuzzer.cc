@@ -57,10 +57,15 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     "hex": ")" + JsonSafe(str[3]) + R"("
   })";
 
-  auto probe_result =
-      base::DictionaryValue::From(base::JSONReader::Read(probe_result_string));
-  auto checker = ProbeResultChecker::FromDictionaryValue(
-      *base::DictionaryValue::From(base::JSONReader::Read(json_string)));
+  auto probe_result = base::DictionaryValue::From(
+      // TODO(crbug.com/1054279): use base::JSONReader::Read after uprev to
+      // r680000.
+      base::JSONReader::ReadDeprecated(probe_result_string));
+  auto checker =
+      ProbeResultChecker::FromDictionaryValue(*base::DictionaryValue::From(
+          // TODO(crbug.com/1054279): use base::JSONReader::Read after uprev to
+          // r680000.
+          base::JSONReader::ReadDeprecated(json_string)));
 
   if (checker != nullptr && probe_result != nullptr)
     checker->Apply(probe_result.get());

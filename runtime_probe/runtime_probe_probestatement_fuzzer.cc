@@ -107,13 +107,19 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 
   if (op == 0 || op == 1) {  // Fuzz Eval
     auto probe_statement = ProbeStatement::FromDictionaryValue(
-        "nop", *base::DictionaryValue::From(base::JSONReader::Read(eval_str)));
+        "nop", *base::DictionaryValue::From(
+                   // TODO(crbug.com/1054279): use base::JSONReader::Read after
+                   // uprev to r680000.
+                   base::JSONReader::ReadDeprecated(eval_str)));
 
     if (probe_statement != nullptr)
       auto results = probe_statement->Eval();
   } else {  // Fuzz EvalInHelper
-    auto probe_function = runtime_probe::ProbeFunction::FromValue(
-        *base::DictionaryValue::From(base::JSONReader::Read(eval_str)));
+    auto probe_function =
+        runtime_probe::ProbeFunction::FromValue(*base::DictionaryValue::From(
+            // TODO(crbug.com/1054279): use base::JSONReader::Read after uprev
+            // to r680000.
+            base::JSONReader::ReadDeprecated(eval_str)));
 
     if (probe_function != nullptr) {
       string output;

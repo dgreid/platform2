@@ -185,7 +185,8 @@ std::unique_ptr<base::Value> ProbeFunction::InvokeHelperToJSON() const {
   if (!InvokeHelper(&raw_output)) {
     return nullptr;
   }
-  return base::JSONReader::Read(raw_output);
+  // TODO(crbug.com/1054279): use base::JSONReader::Read after uprev to r680000.
+  return base::JSONReader::ReadDeprecated(raw_output);
 }
 
 int ProbeFunction::EvalInHelper(std::string* output) const {

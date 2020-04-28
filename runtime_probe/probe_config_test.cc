@@ -30,8 +30,10 @@ TEST(ProbeConfigTest, LoadConfig) {
       }
     }
   })";
-  auto dict_value =
-      base::DictionaryValue::From(base::JSONReader::Read(config_content));
+  auto dict_value = base::DictionaryValue::From(
+      // TODO(crbug.com/1054279): use base::JSONReader::Read after uprev to
+      // r680000.
+      base::JSONReader::ReadDeprecated(config_content));
 
   EXPECT_NE(dict_value, nullptr);
 

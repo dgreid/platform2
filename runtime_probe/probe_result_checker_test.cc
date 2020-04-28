@@ -127,8 +127,10 @@ TEST(StringFieldConverterTest, TestValidateRule) {
     "2": "??? hello ???",
     "3": "??? hello"
   })";
-  auto dict_value =
-      base::DictionaryValue::From(base::JSONReader::Read(json_string));
+  auto dict_value = base::DictionaryValue::From(
+      // TODO(crbug.com/1054279): use base::JSONReader::Read after uprev to
+      // r680000.
+      base::JSONReader::ReadDeprecated(json_string));
   ASSERT_TRUE(dict_value.get());
   {
     auto converter = StringFieldConverter::Build("!ne hello world");
@@ -180,8 +182,10 @@ TEST(IntegerFieldConverterTest, TestValidateRule) {
     "1": 1,
     "2": 2
   })";
-  auto dict_value =
-      base::DictionaryValue::From(base::JSONReader::Read(json_string));
+  auto dict_value = base::DictionaryValue::From(
+      // TODO(crbug.com/1054279): use base::JSONReader::Read after uprev to
+      // r680000.
+      base::JSONReader::ReadDeprecated(json_string));
   ASSERT_TRUE(dict_value.get());
   {
     auto converter = IntegerFieldConverter::Build("!ne 1");
@@ -248,8 +252,10 @@ TEST(HexFieldConverterTest, TestValidateRule) {
     "1": 1,
     "2": 2
   })";
-  auto dict_value =
-      base::DictionaryValue::From(base::JSONReader::Read(json_string));
+  auto dict_value = base::DictionaryValue::From(
+      // TODO(crbug.com/1054279): use base::JSONReader::Read after uprev to
+      // r680000.
+      base::JSONReader::ReadDeprecated(json_string));
   ASSERT_TRUE(dict_value.get());
   {
     auto converter = HexFieldConverter::Build("!ne 1");
@@ -316,8 +322,10 @@ TEST(DoubleFieldConverterTest, TestValidateRule) {
     "1": 1,
     "2": 2
   })";
-  auto dict_value =
-      base::DictionaryValue::From(base::JSONReader::Read(json_string));
+  auto dict_value = base::DictionaryValue::From(
+      // TODO(crbug.com/1054279): use base::JSONReader::Read after uprev to
+      // r680000.
+      base::JSONReader::ReadDeprecated(json_string));
   ASSERT_TRUE(dict_value.get());
   {
     auto converter = DoubleFieldConverter::Build("!ne 1");
@@ -387,8 +395,10 @@ TEST(ProbeResultCheckerTest, TestFromDictionaryValue) {
     "double_field": [true, "double"],
     "hex_field": [false, "hex"]
   })";
-  auto dict_value =
-      base::DictionaryValue::From(base::JSONReader::Read(json_string));
+  auto dict_value = base::DictionaryValue::From(
+      // TODO(crbug.com/1054279): use base::JSONReader::Read after uprev to
+      // r680000.
+      base::JSONReader::ReadDeprecated(json_string));
   ASSERT_TRUE(dict_value.get());
 
   auto expect_fields = ProbeResultChecker::FromDictionaryValue(*dict_value);
@@ -434,10 +444,14 @@ TEST(ProbeResultCheckerTest, TestApplySuccess) {
     "double": "1e2"
   })";
 
-  auto probe_result =
-      base::DictionaryValue::From(base::JSONReader::Read(probe_result_string));
+  auto probe_result = base::DictionaryValue::From(
+      // TODO(crbug.com/1054279): use base::JSONReader::Read after uprev to
+      // r680000.
+      base::JSONReader::ReadDeprecated(probe_result_string));
   auto checker = ProbeResultChecker::FromDictionaryValue(
-      *base::DictionaryValue::From(base::JSONReader::Read(expect)));
+      // TODO(crbug.com/1054279): use base::JSONReader::Read after uprev to
+      // r680000.
+      *base::DictionaryValue::From(base::JSONReader::ReadDeprecated(expect)));
 
   ASSERT_TRUE(checker->Apply(probe_result.get()));
 
@@ -473,10 +487,14 @@ TEST(ProbeResultCheckerTest, TestApplyWithLimitsSuccess) {
     "double": "1e2"
   })";
 
-  auto probe_result =
-      base::DictionaryValue::From(base::JSONReader::Read(probe_result_string));
+  auto probe_result = base::DictionaryValue::From(
+      // TODO(crbug.com/1054279): use base::JSONReader::Read after uprev to
+      // r680000.
+      base::JSONReader::ReadDeprecated(probe_result_string));
   auto checker = ProbeResultChecker::FromDictionaryValue(
-      *base::DictionaryValue::From(base::JSONReader::Read(expect)));
+      // TODO(crbug.com/1054279): use base::JSONReader::Read after uprev to
+      // r680000.
+      *base::DictionaryValue::From(base::JSONReader::ReadDeprecated(expect)));
 
   ASSERT_TRUE(checker->Apply(probe_result.get()));
 
@@ -513,10 +531,14 @@ TEST(ProbeResultCheckerTest, TestApplyWithLimitsFail) {
     "hex": "0x7b",
     "double": "1e2"
   })";
-  auto probe_result =
-      base::DictionaryValue::From(base::JSONReader::Read(probe_result_string));
+  auto probe_result = base::DictionaryValue::From(
+      // TODO(crbug.com/1054279): use base::JSONReader::Read after uprev to
+      // r680000.
+      base::JSONReader::ReadDeprecated(probe_result_string));
   auto checker = ProbeResultChecker::FromDictionaryValue(
-      *base::DictionaryValue::From(base::JSONReader::Read(expect)));
+      // TODO(crbug.com/1054279): use base::JSONReader::Read after uprev to
+      // r680000.
+      *base::DictionaryValue::From(base::JSONReader::ReadDeprecated(expect)));
   ASSERT_FALSE(checker->Apply(probe_result.get()));
 }
 

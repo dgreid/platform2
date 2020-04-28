@@ -75,7 +75,9 @@ base::Optional<ProbeConfigData> ParseProbeConfig(
             << ": " << probe_config_sha1_hash;
 
   std::unique_ptr<DictionaryValue> dict_val =
-      DictionaryValue::From(base::JSONReader::Read(config_json));
+      // TODO(crbug.com/1054279): use base::JSONReader::Read after uprev to
+      // r680000.
+      DictionaryValue::From(base::JSONReader::ReadDeprecated(config_json));
   if (dict_val == nullptr) {
     LOG(ERROR) << "Failed to parse ProbeConfig from : [" << config_file_path
                << "]\nInput JSON string is:\n"
