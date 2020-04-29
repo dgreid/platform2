@@ -56,6 +56,20 @@ bool DBusService::GetInstalled(brillo::ErrorPtr* err,
   return true;
 }
 
+bool DBusService::GetExistingDlcs(brillo::ErrorPtr* err,
+                                  DlcsWithContent* dlc_list_out) {
+  DlcIdList ids = dlc_service_->GetExistingDlcs();
+  for (const auto& id : ids) {
+    const auto* dlc = dlc_service_->GetDlc(id);
+    auto* dlc_info = dlc_list_out->add_dlc_infos();
+    dlc_info->set_id(id);
+    dlc_info->set_name(dlc->GetName());
+    dlc_info->set_description(dlc->GetDescription());
+    dlc_info->set_used_bytes_on_disk(dlc->GetUsedBytesOnDisk());
+  }
+  return true;
+}
+
 bool DBusService::GetDlcsToUpdate(brillo::ErrorPtr* err,
                                   std::vector<std::string>* dlc_ids_out) {
   *dlc_ids_out = dlc_service_->GetDlcsToUpdate();

@@ -35,6 +35,9 @@ class DlcManager {
   // Returns the list of installed DLCs.
   DlcIdList GetInstalled();
 
+  // Returns the list of DLCs with installed content.
+  DlcIdList GetExistingDlcs();
+
   // Returns the list of DLCs that need to be updated.
   DlcIdList GetDlcsToUpdate();
 

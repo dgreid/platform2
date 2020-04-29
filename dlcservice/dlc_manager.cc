@@ -81,6 +81,11 @@ DlcIdList DlcManager::GetInstalled() {
                      [](const DlcBase& dlc) { return dlc.IsInstalled(); });
 }
 
+DlcIdList DlcManager::GetExistingDlcs() {
+  return ToDlcIdList(supported_,
+                     [](const DlcBase& dlc) { return dlc.HasContent(); });
+}
+
 DlcIdList DlcManager::GetDlcsToUpdate() {
   ErrorPtr tmp_err;
   for (const auto& pr : supported_)

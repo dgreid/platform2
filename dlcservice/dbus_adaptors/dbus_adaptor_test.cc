@@ -84,4 +84,25 @@ TEST_F(DBusServiceTest, GetInstalled) {
   EXPECT_EQ(dlc_list.dlc_module_infos()[1].dlc_root(), "foo-path-2/root");
 }
 
+TEST_F(DBusServiceTest, GetExistingDlcs) {
+  EXPECT_CALL(*dlc_service_, GetExistingDlcs())
+      .WillOnce(Return(DlcIdList({kSecondDlc})));
+
+  DlcBase second_dlc(kSecondDlc);
+  SetUpDlcWithSlots(kSecondDlc);
+  second_dlc.Initialize();
+  EXPECT_CALL(*dlc_service_, GetDlc(kSecondDlc)).WillOnce(Return(&second_dlc));
+
+  DlcsWithContent dlc_list;
+  EXPECT_TRUE(dbus_service_->GetExistingDlcs(&err_, &dlc_list));
+
+  EXPECT_EQ(dlc_list.dlc_infos_size(), 1);
+  auto second_dlc_info = dlc_list.dlc_infos()[0];
+  EXPECT_EQ(second_dlc_info.id(), kSecondDlc);
+  EXPECT_EQ(second_dlc_info.name(), "Second Dlc");
+  EXPECT_EQ(second_dlc_info.description(), "unittest only description");
+  EXPECT_EQ(second_dlc_info.used_bytes_on_disk(),
+            second_dlc.GetUsedBytesOnDisk());
+}
+
 }  // namespace dlcservice

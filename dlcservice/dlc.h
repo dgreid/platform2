@@ -41,6 +41,12 @@ class DlcBase {
   // Returns the ID of the DLC.
   DlcId GetId() const;
 
+  // Returns the human readable name of the DLC.
+  const std::string& GetName() const;
+
+  // Returns the description of the DLC.
+  const std::string& GetDescription() const;
+
   // Returns the current state of the DLC.
   DlcState GetState() const;
 
@@ -55,6 +61,13 @@ class DlcBase {
 
   // Returns true if the DLC is marked verified.
   bool IsVerified() const;
+
+  // Returns true if the DLC has any content on disk that is taking space. This
+  // means mainly if it has images on disk.
+  bool HasContent() const;
+
+  // Returns the amount of disk space this DLC is using right now.
+  uint64_t GetUsedBytesOnDisk() const;
 
   // Returns true if the DLC module has a boolean true for 'preload-allowed'
   // attribute in the manifest for the given |id| and |package|.
@@ -90,6 +103,7 @@ class DlcBase {
  private:
   friend class DBusServiceTest;
   FRIEND_TEST(DBusServiceTest, GetInstalled);
+  FRIEND_TEST(DlcBaseTest, GetUsedBytesOnDisk);
 
   // Returns the path to the DLC image given the slot number.
   FilePath GetImagePath(BootSlot::Slot slot) const;

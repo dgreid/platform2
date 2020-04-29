@@ -54,6 +54,14 @@ DlcId DlcBase::GetId() const {
   return id_;
 }
 
+const std::string& DlcBase::GetName() const {
+  return manifest_.name();
+}
+
+const std::string& DlcBase::GetDescription() const {
+  return manifest_.description();
+}
+
 DlcState DlcBase::GetState() const {
   return state_;
 }
@@ -68,6 +76,30 @@ bool DlcBase::IsInstalled() const {
 
 bool DlcBase::IsVerified() const {
   return is_verified_;
+}
+
+bool DlcBase::HasContent() const {
+  for (const auto& path :
+       {GetImagePath(BootSlot::Slot::A), GetImagePath(BootSlot::Slot::B)}) {
+    if (base::PathExists(path))
+      return true;
+  }
+  return false;
+}
+
+uint64_t DlcBase::GetUsedBytesOnDisk() const {
+  uint64_t total_size = 0;
+  for (const auto& path :
+       {GetImagePath(BootSlot::Slot::A), GetImagePath(BootSlot::Slot::B)}) {
+    if (!base::PathExists(path))
+      continue;
+    int64_t size = 0;
+    if (!base::GetFileSize(path, &size)) {
+      LOG(WARNING) << "Failed to get file size for path: " << path.value();
+    }
+    total_size += size;
+  }
+  return total_size;
 }
 
 bool DlcBase::IsPreloadAllowed() const {

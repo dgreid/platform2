@@ -193,6 +193,10 @@ DlcIdList DlcService::GetInstalled() {
   return dlc_manager_->GetInstalled();
 }
 
+DlcIdList DlcService::GetExistingDlcs() {
+  return dlc_manager_->GetExistingDlcs();
+}
+
 DlcIdList DlcService::GetDlcsToUpdate() {
   return dlc_manager_->GetDlcsToUpdate();
 }

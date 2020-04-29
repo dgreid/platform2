@@ -1,4 +1,5 @@
 {
+  "description": "unittest only description",
   "fs-type": "squashfs",
   "id": "first-dlc",
   "image-sha256-hash": "9f1dcbc35c350d6027f98be0f5c8b43b42ca52b7604459c0c42be3aa88913d47",

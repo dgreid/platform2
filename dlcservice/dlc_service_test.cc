@@ -179,6 +179,13 @@ TEST_F(DlcServiceTest, GetInstalledTest) {
   CheckDlcState(kFirstDlc, DlcState::INSTALLED);
 }
 
+TEST_F(DlcServiceTest, GetExistingDlcs) {
+  SetUpDlcWithSlots(kSecondDlc);
+  const auto& dlcs = dlc_service_->GetExistingDlcs();
+
+  EXPECT_THAT(dlcs, ElementsAre(kFirstDlc, kSecondDlc));
+}
+
 TEST_F(DlcServiceTest, GetDlcsToUpdateTest) {
   // Make second DLC marked as verified so we can get it in the list of DLCs
   // needed to be updated.

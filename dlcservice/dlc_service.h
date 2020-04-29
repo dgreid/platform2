@@ -50,6 +50,7 @@ class DlcServiceInterface {
                            DlcState* dlc_state_out,
                            brillo::ErrorPtr* err) = 0;
   virtual DlcIdList GetInstalled() = 0;
+  virtual DlcIdList GetExistingDlcs() = 0;
   virtual DlcIdList GetDlcsToUpdate() = 0;
   virtual bool InstallCompleted(const DlcIdList& ids_in,
                                 brillo::ErrorPtr* err) = 0;
@@ -76,6 +77,7 @@ class DlcService : public DlcServiceInterface {
   bool Uninstall(const std::string& id_in, brillo::ErrorPtr* err) override;
   bool Purge(const std::string& id_in, brillo::ErrorPtr* err) override;
   DlcIdList GetInstalled() override;
+  DlcIdList GetExistingDlcs() override;
   const DlcBase* GetDlc(const DlcId& id) override;
   bool GetDlcState(const std::string& id_in,
                    DlcState* dlc_state_out,

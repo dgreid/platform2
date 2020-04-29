@@ -56,6 +56,20 @@
                   value="dlcservice::DlcModuleList"/>
     </arg>
   </method>
+  <method name="GetExistingDlcs">
+    <tp:docstring>
+      Returns a list of DLCs that have content on disk.
+    </tp:docstring>
+    <arg name="dlc_list" type="ay" direction="out">
+      <tp:docstring>
+        A serialized protobuf (DlcsWithContent,
+        platform2/system_api/dbus/dlcservice/dlcservice.proto) of a list of
+        DLCs that have content on disk.
+      </tp:docstring>
+      <annotation name="org.chromium.DBus.Argument.ProtobufClass"
+                  value="dlcservice::DlcsWithContent"/>
+    </arg>
+  </method>
   <method name="GetDlcsToUpdate">
     <tp:docstring>
       Returns a list of DLCs that need to be updated. The implementation needs

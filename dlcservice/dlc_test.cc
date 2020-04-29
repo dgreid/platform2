@@ -130,4 +130,31 @@ TEST_F(DlcBaseTestRemovable, BootingFromNonRemovableDeviceKeepsPreloadedDLCs) {
   EXPECT_TRUE(base::PathExists(image_path));
 }
 
+TEST_F(DlcBaseTest, HasContent) {
+  DlcBase dlc(kSecondDlc);
+  dlc.Initialize();
+
+  EXPECT_FALSE(dlc.HasContent());
+
+  SetUpDlcWithSlots(kSecondDlc);
+  EXPECT_TRUE(dlc.HasContent());
+}
+
+TEST_F(DlcBaseTest, GetUsedBytesOnDisk) {
+  DlcBase dlc(kSecondDlc);
+  dlc.Initialize();
+
+  EXPECT_EQ(dlc.GetUsedBytesOnDisk(), 0);
+
+  SetUpDlcWithSlots(kSecondDlc);
+  uint64_t expected_size = 0;
+  for (const auto& path : {dlc.GetImagePath(BootSlot::Slot::A),
+                           dlc.GetImagePath(BootSlot::Slot::B)}) {
+    expected_size += GetFileSize(path);
+  }
+  EXPECT_GT(expected_size, 0);
+
+  EXPECT_EQ(dlc.GetUsedBytesOnDisk(), expected_size);
+}
+
 }  // namespace dlcservice
