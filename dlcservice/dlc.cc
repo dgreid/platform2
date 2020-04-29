@@ -347,6 +347,13 @@ bool DlcBase::InitInstall(ErrorPtr* err) {
     case DlcState::INSTALLED:
       if (!ValidateInactiveImage())
         LOG(ERROR) << "Bad inactive image for DLC=" << id_;
+      // Tests that run at times will unmount all loopback devices, hence it's
+      // required that even installed DLC images need to be mounted again.
+      if (!TryMount(err)) {
+        LOG(ERROR) << Error::ToString(*err);
+        state_.set_state(DlcState::NOT_INSTALLED);
+        return false;
+      }
       break;
     case DlcState::INSTALLING:
     default:
