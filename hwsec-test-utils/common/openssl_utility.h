@@ -47,6 +47,13 @@ bool EVPDigestVerify(const crypto::ScopedEVP_PKEY& key,
                      const std::string& data,
                      const std::string& signature);
 
+// Performs the sequence of EVP_PKEY_decrypt(_init)? operations using |key| as
+// the decryption key of a RSA key. |rsa_padding| is set after
+// |EVP_PKEY_decrypt_init|.
+base::Optional<std::string> EVPRsaDecrypt(const crypto::ScopedEVP_PKEY& key,
+                                          const std::string& encrypted_data,
+                                          int rsa_padding);
+
 }  // namespace hwsec_test_utils
 
 #endif  // HWSEC_TEST_UTILS_COMMON_OPENSSL_UTILITY_H_
