@@ -44,6 +44,44 @@ std::string GetOpenSSLError() {
   return error_string;
 }
 
+crypto::ScopedEVP_PKEY CreateNewEcKey() {
+  crypto::ScopedEC_KEY ec_key(EC_KEY_new_by_curve_name(NID_X9_62_prime256v1));
+  if (!ec_key) {
+    LOG(ERROR) << __func__ << ": Failed to call EC_KEY_new_by_curve_name: "
+               << GetOpenSSLError();
+    return nullptr;
+  }
+  EC_KEY_set_asn1_flag(ec_key.get(), OPENSSL_EC_NAMED_CURVE);
+  if (EC_KEY_generate_key(ec_key.get()) != 1) {
+    LOG(ERROR) << __func__
+               << ": Failed to call EC_KEY_generate_key: " << GetOpenSSLError();
+    return nullptr;
+  }
+  // Not really sure if we need this call; supposedly it does no harm except for
+  // neglectable performance overhead.
+  if (EC_KEY_check_key(ec_key.get()) != 1) {
+    LOG(WARNING) << __func__
+                 << ": Retry due to Bad ECC key (EC_KEY_check_key failed): "
+                 << GetOpenSSLError();
+    // Probabilistically impossible to result in infinite loop; just invoke
+    // recursive call.
+    return CreateNewEcKey();
+  }
+
+  crypto::ScopedEVP_PKEY key(EVP_PKEY_new());
+  if (!key) {
+    LOG(ERROR) << __func__
+               << ": Failed to call EVP_PKEY_new: " << GetOpenSSLError();
+    return nullptr;
+  }
+  if (EVP_PKEY_set1_EC_KEY(key.get(), ec_key.get()) != 1) {
+    LOG(ERROR) << __func__ << ": Failed to call EVP_PKEY_set1_EC_KEY: "
+               << GetOpenSSLError();
+    return nullptr;
+  }
+  return key;
+}
+
 crypto::ScopedEVP_PKEY PemToEVP(const std::string& pem) {
   crypto::ScopedBIO bio(
       BIO_new_mem_buf(const_cast<char*>(pem.data()), pem.size()));

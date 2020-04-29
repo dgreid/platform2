@@ -20,6 +20,11 @@ void InitializeOpenSSL();
 // TODO(b/155150344): Use the libhwsec one after improving that implementation.
 std::string GetOpenSSLError();
 
+// Creates a newly generated EC key. The implementation hardcodes the curve id
+// to NID_X9_62_prime256v1, for the in practice we don't expect any other curve
+// to be used. In cae of failure, the returned object contains |nullptr|.
+crypto::ScopedEVP_PKEY CreateNewEcKey();
+
 // Parses |pem| into |crypto::ScopedEVP_PKEY| . In case of failure, the returned
 // object contains |nullptr|.
 crypto::ScopedEVP_PKEY PemToEVP(const std::string& pem);
