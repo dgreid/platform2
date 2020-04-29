@@ -95,7 +95,7 @@ TEST_F(FirmwareUpdaterTest, LoadEcImage) {
   // Build a fake EC image.
   std::string ec_image("12345678");
   int64_t mock_offset = ec_image.size();
-  fmap mock_fmap;
+  fmap mock_fmap = { };
   mock_fmap.nareas = 0;
   mock_fmap.size = 8 + sizeof(fmap) + 32 + 32 + 4 + sizeof(vb21_packed_key);
   ec_image.append(reinterpret_cast<char*>(&mock_fmap), sizeof(mock_fmap));
@@ -113,7 +113,7 @@ TEST_F(FirmwareUpdaterTest, LoadEcImage) {
   ec_image.append(reinterpret_cast<char*>(&rw_rollback), sizeof(rw_rollback));
 
   int64_t ro_key_offset = ec_image.size();
-  vb21_packed_key ro_key;
+  vb21_packed_key ro_key = { };
   ro_key.key_version = 1;
   ec_image.append(reinterpret_cast<char*>(&ro_key), sizeof(ro_key));
 
@@ -126,37 +126,37 @@ TEST_F(FirmwareUpdaterTest, LoadEcImage) {
 
   EXPECT_CALL(*fmap_, Find(_, ec_image_len)).WillOnce(Return(mock_offset));
   // Find RO section.
-  fmap_area ro_section_area;
+  fmap_area ro_section_area = { };
   ro_section_area.offset = 0x0;
   ro_section_area.size = 0x10;
   EXPECT_CALL(*fmap_, FindArea(mock_fmap_ptr, "EC_RO"))
       .WillOnce(Return(&ro_section_area));
   // Find RO version.
-  fmap_area ro_version_area;
+  fmap_area ro_version_area = { };
   ro_version_area.offset = ro_version_offset;
   ro_version_area.size = 32;
   EXPECT_CALL(*fmap_, FindArea(mock_fmap_ptr, "RO_FRID"))
       .WillOnce(Return(&ro_version_area));
   // Find RO key.
-  fmap_area ro_key_area;
+  fmap_area ro_key_area = { };
   ro_key_area.offset = ro_key_offset;
   ro_key_area.size = sizeof(ro_key);
   EXPECT_CALL(*fmap_, FindArea(mock_fmap_ptr, "KEY_RO"))
       .WillOnce(Return(&ro_key_area));
   // Find RW section.
-  fmap_area rw_section_area;
+  fmap_area rw_section_area = { };
   rw_section_area.offset = 0x10;
   rw_section_area.size = 0x10;
   EXPECT_CALL(*fmap_, FindArea(mock_fmap_ptr, "EC_RW"))
       .WillOnce(Return(&rw_section_area));
   // Find RW version.
-  fmap_area rw_version_area;
+  fmap_area rw_version_area = { };
   rw_version_area.offset = rw_version_offset;
   rw_version_area.size = 32;
   EXPECT_CALL(*fmap_, FindArea(mock_fmap_ptr, "RW_FWID"))
       .WillOnce(Return(&rw_version_area));
   // Find RW rollback version.
-  fmap_area rw_rollback_area;
+  fmap_area rw_rollback_area = { };
   rw_rollback_area.offset = rw_rollback_offset;
   rw_rollback_area.size = 4;
   EXPECT_CALL(*fmap_, FindArea(mock_fmap_ptr, "RW_RBVER"))
@@ -179,7 +179,7 @@ TEST_F(FirmwareUpdaterTest, LoadEcImage_ShortFmap) {
   // Build a fake EC image but don't pass it all.
   std::string ec_image("12345678");
   int64_t mock_offset = ec_image.size();
-  fmap mock_fmap;
+  fmap mock_fmap = { };
   mock_fmap.nareas = 0;
   mock_fmap.size = 8 + sizeof(fmap);
   ec_image.append(reinterpret_cast<char*>(&mock_fmap), sizeof(mock_fmap) - 1);
@@ -197,7 +197,7 @@ TEST_F(FirmwareUpdaterTest, LoadEcImage_TooManyFmapAreas) {
   // Build a fake EC image with one too many fmap areas
   std::string ec_image("12345678");
   int64_t mock_offset = ec_image.size();
-  fmap mock_fmap;
+  fmap mock_fmap = { };
   mock_fmap.nareas = 1;
   mock_fmap.size = 8 + sizeof(fmap);
   ec_image.append(reinterpret_cast<char*>(&mock_fmap), sizeof(mock_fmap));
@@ -215,7 +215,7 @@ TEST_F(FirmwareUpdaterTest, LoadEcImage_BadROVersion) {
   // Build a fake EC image
   std::string ec_image("12345678");
   int64_t mock_offset = ec_image.size();
-  fmap mock_fmap;
+  fmap mock_fmap = { };
   mock_fmap.nareas = 0;
   mock_fmap.size = 8 + sizeof(fmap);
   ec_image.append(reinterpret_cast<char*>(&mock_fmap), sizeof(mock_fmap));
@@ -227,7 +227,7 @@ TEST_F(FirmwareUpdaterTest, LoadEcImage_BadROVersion) {
 
   EXPECT_CALL(*fmap_, Find(_, ec_image_len)).WillOnce(Return(mock_offset));
   // Find RO section that is too large.
-  fmap_area ro_section_area;
+  fmap_area ro_section_area = { };
   ro_section_area.offset = 0;
   ro_section_area.size = ec_image_len + 1;
   EXPECT_CALL(*fmap_, FindArea(mock_fmap_ptr, "EC_RO"))
@@ -243,7 +243,7 @@ TEST_F(FirmwareUpdaterTest, LoadEcImage_OverflowRO) {
   // Build a fake EC image
   std::string ec_image("12345678");
   int64_t mock_offset = ec_image.size();
-  fmap mock_fmap;
+  fmap mock_fmap = { };
   mock_fmap.nareas = 0;
   mock_fmap.size = 8 + sizeof(fmap);
   ec_image.append(reinterpret_cast<char*>(&mock_fmap), sizeof(mock_fmap));
@@ -255,7 +255,7 @@ TEST_F(FirmwareUpdaterTest, LoadEcImage_OverflowRO) {
 
   EXPECT_CALL(*fmap_, Find(_, ec_image_len)).WillOnce(Return(mock_offset));
   // Find RW section that is too large and will overflow.
-  fmap_area ro_section_area;
+  fmap_area ro_section_area = { };
   ro_section_area.offset = UINT_MAX - 1;
   ro_section_area.size = 2;
   EXPECT_CALL(*fmap_, FindArea(mock_fmap_ptr, "EC_RO"))

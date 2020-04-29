@@ -182,6 +182,7 @@ class HammerUpdaterPostRWTest : public HammerUpdaterTest<MockNothing> {
     HammerUpdaterTest::SetUp();
     // Create a nice response of kTouchpadInfo for important fields.
     response_.status = 0x00;
+    response_.vendor = ELAN_VENDOR_ID;
     response_.elan.id = 0x01;
     response_.elan.fw_version = 0x02;
     response_.fw_size = touchpad_image_.size();
