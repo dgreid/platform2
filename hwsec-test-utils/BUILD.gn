@@ -43,10 +43,15 @@ executable("attestation-injected-keys") {
 executable("hwsec-test-va") {
   configs += [ ":target_defaults" ]
   sources = [ "verified_access/main.cc" ]
-  deps = [ ":verified_access_library" ]
+  deps = [
+    ":common_library",
+    ":verified_access_library",
+  ]
 
   # NOSORT
   pkg_deps = [
+    "openssl",
+
     # system_api depends on protobuf (or protobuf-lite). It must appear
     # before protobuf here or the linker flags won't be in the right
     # order.
@@ -113,6 +118,7 @@ if (use.test) {
     # NOSORT
     pkg_deps = [
       "openssl",
+
       # system_api depends on protobuf (or protobuf-lite). It must appear
       # before protobuf here or the linker flags won't be in the right
       # order.
