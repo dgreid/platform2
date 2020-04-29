@@ -26,6 +26,14 @@ base::Optional<std::string> EVPDigestSign(const crypto::ScopedEVP_PKEY& key,
                                           const EVP_MD* md_type,
                                           const std::string& data);
 
+// Performs the sequence of EVP_DigestVerify(Init|Update|Final) operations using
+// |key| as the signing key to verify |signature| against |data|. Returns |true|
+// iff the signature is verified.
+bool EVPDigestVerify(const crypto::ScopedEVP_PKEY& key,
+                     const EVP_MD* md_type,
+                     const std::string& data,
+                     const std::string& signature);
+
 }  // namespace hwsec_test_utils
 
 #endif  // HWSEC_TEST_UTILS_COMMON_OPENSSL_UTILITY_H_

@@ -84,4 +84,40 @@ base::Optional<std::string> EVPDigestSign(const crypto::ScopedEVP_PKEY& key,
   return std::string(output.get(), output.get() + output_length);
 }
 
+bool EVPDigestVerify(const crypto::ScopedEVP_PKEY& key,
+                     const EVP_MD* md_type,
+                     const std::string& data,
+                     const std::string& signature) {
+  CHECK(key.get());
+  CHECK(md_type != nullptr);
+
+  crypto::ScopedEVP_MD_CTX mdctx(EVP_MD_CTX_new());
+  if (!mdctx) {
+    LOG(ERROR) << __func__
+               << ": Failed to allocate EVP_MD_CTX: " << GetOpenSSLError();
+    return false;
+  }
+
+  if (EVP_DigestVerifyInit(mdctx.get(), nullptr, md_type, nullptr, key.get()) !=
+      1) {
+    LOG(ERROR) << __func__ << ": Failed to call EVP_DigestVerifyInit: "
+               << GetOpenSSLError();
+    return false;
+  }
+  if (EVP_DigestVerifyUpdate(mdctx.get(), data.data(), data.length()) != 1) {
+    LOG(ERROR) << __func__ << ": Failed to call EVP_DigestVerifyUpdate: "
+               << GetOpenSSLError();
+    return false;
+  }
+
+  if (EVP_DigestVerifyFinal(
+          mdctx.get(), reinterpret_cast<const unsigned char*>(signature.data()),
+          signature.length()) != 1) {
+    LOG(ERROR) << __func__ << ": Failed to call EVP_DigestVerifyFinal: "
+               << GetOpenSSLError();
+    return false;
+  }
+  return true;
+}
+
 }  // namespace hwsec_test_utils
