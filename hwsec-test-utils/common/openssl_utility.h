@@ -19,6 +19,10 @@ std::string GetOpenSSLError();
 // object contains |nullptr|.
 crypto::ScopedEVP_PKEY PemToEVP(const std::string& pem);
 
+// Generates random bytes with size of |length|. In case of failure, returns
+// |base::nullopt|.
+base::Optional<std::string> GetRandom(size_t length);
+
 // Performs the sequence of EVP_DigestSign(Init|Update|Final) operations using
 // |key| as the signing or HMAC key. Returns nullopt if any error; otherwise
 // returns the signature or HMAC.

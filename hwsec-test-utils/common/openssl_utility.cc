@@ -11,6 +11,7 @@
 #include <openssl/bio.h>
 #include <openssl/err.h>
 #include <openssl/pem.h>
+#include <openssl/rand.h>
 
 namespace hwsec_test_utils {
 
@@ -40,6 +41,15 @@ crypto::ScopedEVP_PKEY PemToEVP(const std::string& pem) {
     return nullptr;
   }
   return key;
+}
+
+base::Optional<std::string> GetRandom(size_t length) {
+  std::unique_ptr<unsigned char[]> buffer =
+      std::make_unique<unsigned char[]>(length);
+  if (RAND_bytes(buffer.get(), length) != 1) {
+    return {};
+  }
+  return std::string(buffer.get(), buffer.get() + length);
 }
 
 base::Optional<std::string> EVPDigestSign(const crypto::ScopedEVP_PKEY& key,
