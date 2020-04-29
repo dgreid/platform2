@@ -17,7 +17,7 @@ namespace verified_access {
 // checking validity of key used to sign challenges.
 class VerifiedAccessChallenge {
  public:
-  VerifiedAccessChallenge() = default;
+  VerifiedAccessChallenge();
   ~VerifiedAccessChallenge() = default;
   // Not copyable or movable.
   VerifiedAccessChallenge(const VerifiedAccessChallenge&) = delete;
