@@ -9,9 +9,9 @@
 #include "common/libcamera_connector/camera_service_connector_impl.h"
 #include "cros-camera/camera_service_connector.h"
 
-int cros_cam_init() {
+int cros_cam_init(const cros_cam_init_option_t* option) {
   auto* connector = cros::CameraServiceConnector::GetInstance();
-  return connector->Init();
+  return connector->Init(option);
 }
 
 int cros_cam_exit() {

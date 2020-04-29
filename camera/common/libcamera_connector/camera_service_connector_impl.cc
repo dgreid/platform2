@@ -31,13 +31,18 @@ CameraServiceConnector* CameraServiceConnector::GetInstance() {
   return instance.get();
 }
 
-int CameraServiceConnector::Init() {
+int CameraServiceConnector::Init(const cros_cam_init_option_t* option) {
   VLOGF_ENTER();
   DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
 
   if (initialized_.IsSet()) {
     LOGF(ERROR) << "Should not run init() more than once";
     return -EPERM;
+  }
+
+  if (option->api_version != 0) {
+    LOGF(ERROR) << "The only supported api version is 0 now";
+    return -EINVAL;
   }
 
   mojo::core::Init();

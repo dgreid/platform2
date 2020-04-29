@@ -74,7 +74,10 @@ bool IsSameFormat(const cros_cam_format_info_t& fmt1,
 class ConnectorEnvironment : public ::testing::Environment {
  public:
   void SetUp() override {
-    ASSERT_EQ(cros_cam_init(), 0);
+    const cros_cam_init_option_t option = {
+        .api_version = 0,
+    };
+    ASSERT_EQ(cros_cam_init(&option), 0);
     LOGF(INFO) << "Camera connector initialized";
   }
 

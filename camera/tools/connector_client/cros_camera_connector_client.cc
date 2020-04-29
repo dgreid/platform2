@@ -87,7 +87,10 @@ int CrosCameraConnectorClient::OnInit() {
     LOGF(FATAL) << "Failed to start capture thread";
   }
 
-  res = cros_cam_init();
+  const cros_cam_init_option_t option = {
+      .api_version = 0,
+  };
+  res = cros_cam_init(&option);
   if (res != 0) {
     return EX_UNAVAILABLE;
   }

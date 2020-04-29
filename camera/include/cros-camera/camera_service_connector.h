@@ -40,6 +40,15 @@
 extern "C" {
 #endif
 
+// Options for cros_cam_init().
+//   Current api version: 0
+//   Change logs:
+//     v0: It works but the public api is not stable yet.
+typedef struct cros_cam_init_option_t_ {
+  int api_version;    // the expected api version
+  void* reserved[8];  // reserved for future use
+} cros_cam_init_option_t;
+
 // Camera lens facing enum
 enum {
   CROS_CAM_FACING_BACK = 0,     // world facing
@@ -58,12 +67,12 @@ typedef struct cros_cam_format_info_t_ {
 // Camera descriptor
 //   At least one format expected (format_count >= 1)
 typedef struct cros_cam_info_t_ {
-  int id;                 // device id
-  int facing;             // lens facing, should be one of enum value
-  const char* name;       // user friendly camera name, UTF8
-  unsigned format_count;  // number of format descriptors
-  cros_cam_format_info_t*
-      format_info;  // pointer to array of format descriptors
+  int id;                               // device id
+  int facing;                           // one of lens facing enum value
+  const char* name;                     // user friendly camera name, UTF8
+  unsigned format_count;                // number of format descriptors
+  cros_cam_format_info_t* format_info;  // pointer to array of formats
+  void* reserved[8];                    // reserved for future use
 } cros_cam_info_t;
 
 // Callback type for camera information
@@ -85,9 +94,10 @@ typedef int (*cros_cam_get_cam_info_cb_t)(void* context,
 // Plane descriptor
 //   Stores the data for a plane of a frame.
 typedef struct cros_cam_plane_t_ {
-  unsigned stride;  // stride (pixel line) size in bytes, 0 if unused
-  unsigned size;    // size of the data, 0 if the data plane is unused
-  uint8_t* data;    // data, null if unused
+  unsigned stride;    // stride (pixel line) size in bytes, 0 if unused
+  unsigned size;      // size of the data, 0 if the data plane is unused
+  uint8_t* data;      // data, null if unused
+  void* reserved[8];  // reserved for future use
 } cros_cam_plane_t;
 
 // Frame (captured data) descriptor
@@ -104,19 +114,22 @@ typedef struct cros_cam_plane_t_ {
 //   'YUY2' - one plane: plane[0] is interleaved YUV data
 typedef struct cros_cam_frame_t_ {
   cros_cam_format_info_t format;  // frame format information
-  cros_cam_plane_t planes[4];
+  cros_cam_plane_t planes[4];     // frame data for each plane
+  void* reserved[8];              // reserved for future use
 } cros_cam_frame_t;
 
 // Capture request descriptor
 typedef struct cros_cam_capture_request_t_ {
-  int id;
-  cros_cam_format_info_t* format;
+  int id;                          // camera device to capture
+  cros_cam_format_info_t* format;  // format to capture
+  void* reserved[8];               // reserved for future use
 } cros_cam_capture_request_t;
 
 // Capture result descriptor
 typedef struct cros_cam_capture_result_t_ {
   int status;               // 0 for success, -errno for error
   cros_cam_frame_t* frame;  // captured frame. null if error
+  void* reserved[8];        // reserved for future use
 } cros_cam_capture_result_t;
 
 // Callback type for capture
@@ -138,13 +151,16 @@ typedef int (*cros_cam_capture_cb_t)(void* context,
 //   Should be called only once, i.e. sequence "init" -> "exit" -> "init" is
 //   prohibited
 //
+// Params:
+//   option - initialization option
+//
 // Returns:
 //   0  - on success
 //   <0 - on failure, for instance:
 //     -ENOMEM for OOM
 //     -EACCES if process doesn't have permissions to use this API
 //     -EPERM if called more than once
-CROS_CAMERA_EXPORT int cros_cam_init();
+CROS_CAMERA_EXPORT int cros_cam_init(const cros_cam_init_option_t* option);
 
 //
 // General cleanup, no other library calls and callbacks allowed after it.

@@ -30,7 +30,7 @@ class CameraServiceConnector {
 
   // Initializes the connection to camera HAL dispatcher and registers the
   // camera HAL client. Must be called before any other functions.
-  int Init();
+  int Init(const cros_cam_init_option_t* option);
 
   // Terminates camera HAL client, all connections and threads.
   int Exit();
