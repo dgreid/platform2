@@ -71,6 +71,8 @@ constexpr char kAndroidUidMap[] =
 constexpr char kAndroidGidMap[] =
     "0 655360 1065,1065 20119 1,1066 656426 3934,5000 600 50,5050 660410 "
     "1994950";
+// For |kHostGeneratedSharedDir|, map host's chronos to guest's root.
+constexpr char kHostGeneratedUgidMap[] = "0 1000 1";
 
 base::ScopedFD ConnectVSock(int cid) {
   DLOG(INFO) << "Creating VSOCK...";
@@ -211,10 +213,10 @@ bool ArcVm::Start(base::FilePath kernel,
 
   const std::string rootfs_flag = rootfs_writable() ? "--rwdisk" : "--disk";
 
-  // TODO(yusukes): Add ugid mappings.
-  std::string host_generated_shared_dir =
-      base::StringPrintf("%s:%s:type=fs:cache=always:timeout=3600",
-                         kHostGeneratedSharedDir, kHostGeneratedSharedDirTag);
+  std::string host_generated_shared_dir = base::StringPrintf(
+      "%s:%s:type=fs:cache=always:uidmap=%s:gidmap=%s:timeout=3600",
+      kHostGeneratedSharedDir, kHostGeneratedSharedDirTag,
+      kHostGeneratedUgidMap, kHostGeneratedUgidMap);
 
   std::string shared_data = CreateSharedDataParam(data_dir, "data", true);
   std::string shared_data_media =
