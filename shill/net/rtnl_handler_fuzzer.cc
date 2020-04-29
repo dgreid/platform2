@@ -26,7 +26,18 @@ class RTNLHandlerFuzz {
  private:
   static void Listener(const RTNLMessage& msg) {
     CHECK_NE(msg.ToString(), "");
-    CHECK(!msg.Encode().IsEmpty());
+
+    const auto& bytes = msg.Encode();
+    switch (msg.type()) {
+      case RTNLMessage::kTypeRdnss:
+      case RTNLMessage::kTypeDnssl:
+        // RDNSS and DNSSL (RTM_NEWNDUSEROPT) don't have "query" modes, so we
+        // don't support re-constructing them in user space.
+        CHECK(bytes.IsEmpty());
+        break;
+      default:
+        CHECK(!bytes.IsEmpty());
+    }
   }
 };
 
