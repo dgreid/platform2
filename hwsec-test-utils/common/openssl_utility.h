@@ -12,6 +12,11 @@
 
 namespace hwsec_test_utils {
 
+// Initializes the possibly needed initialization for use of OpenSSL library. If
+// it is called before, then performs no-ops. This function is by design not
+// thread-safe though the calls, for currently we don't have the usecase.
+void InitializeOpenSSL();
+
 // TODO(b/155150344): Use the libhwsec one after improving that implementation.
 std::string GetOpenSSLError();
 

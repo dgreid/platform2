@@ -15,6 +15,20 @@
 
 namespace hwsec_test_utils {
 
+void InitializeOpenSSL() {
+  static bool g_openssl_initialized = false;
+  if (g_openssl_initialized) {
+    return;
+  }
+  g_openssl_initialized = true;
+  OpenSSL_add_all_algorithms();
+  // Some certificates to RSA keys, e.g., endorsement certificates for TPM1.2,
+  // could have the algorithm type "rsaesOaep", which is not recognized by
+  // OpenSSL directly.
+  EVP_PKEY_asn1_add_alias(EVP_PKEY_RSA, NID_rsaesOaep);
+  ERR_load_crypto_strings();
+}
+
 std::string GetOpenSSLError() {
   crypto::ScopedBIO bio(BIO_new(BIO_s_mem()));
   ERR_print_errors(bio.get());
