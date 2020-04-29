@@ -20,6 +20,8 @@
 #include <base/strings/string_split.h>
 #include <base/strings/string_util.h>
 #include <base/time/time.h>
+#include <base/threading/thread.h>
+#include <base/threading/thread_task_runner_handle.h>
 #include <brillo/http/http_transport.h>
 #include <chromeos/patchpanel/net_util.h>
 #include <chromeos/patchpanel/socket.h>
@@ -40,6 +42,8 @@ namespace {
 constexpr int kMaxHttpRequestHeadersSize = 8000;
 constexpr char kConnectMethod[] = "CONNECT";
 constexpr base::TimeDelta kCurlConnectTimeout = base::TimeDelta::FromMinutes(2);
+constexpr base::TimeDelta kWaitClientConnectTimeout =
+    base::TimeDelta::FromMinutes(2);
 constexpr size_t kMaxBadRequestPrintSize = 120;
 // This sequence is used to identify the end of a HTTP header which should be an
 // empty line. Note: all HTTP header lines end with CRLF. HTTP connect requests
@@ -50,6 +54,8 @@ const std::string_view kCrlfCrlf = "\r\n\r\n";
 // section 6.1).
 const std::string_view kHttpBadRequest =
     "HTTP/1.1 400 Bad Request - Origin: local proxy\r\n\r\n";
+const std::string_view kHttpConnectionTimeout =
+    "HTTP/1.1 408 Request Timeout - Origin: local proxy\r\n\r\n";
 const std::string_view kHttpInternalServerError =
     "HTTP/1.1 500 Internal Server Error - Origin: local proxy\r\n\r\n";
 const std::string_view kHttpBadGateway =
@@ -142,7 +148,11 @@ ProxyConnectJob::ProxyConnectJob(
     OnConnectionSetupFinishedCallback setup_finished_callback)
     : credentials_(credentials),
       resolve_proxy_callback_(std::move(resolve_proxy_callback)),
-      setup_finished_callback_(std::move(setup_finished_callback)) {
+      setup_finished_callback_(std::move(setup_finished_callback)),
+      // Safe to use |base::Unretained| because the callback will be canceled
+      // when it goes out of scope.
+      client_connect_timeout_callback_(base::Bind(
+          &ProxyConnectJob::OnClientConnectTimeout, base::Unretained(this))) {
   client_socket_ = std::move(socket);
 }
 
@@ -156,6 +166,9 @@ bool ProxyConnectJob::Start() {
                            kHttpInternalServerError.size());
     return false;
   }
+  base::ThreadTaskRunnerHandle::Get()->PostDelayedTask(
+      FROM_HERE, client_connect_timeout_callback_.callback(),
+      kWaitClientConnectTimeout);
   read_watcher_ = base::FileDescriptorWatcher::WatchReadable(
       client_socket_->fd(),
       base::Bind(&ProxyConnectJob::OnClientReadReady, base::Unretained(this)));
@@ -163,6 +176,12 @@ bool ProxyConnectJob::Start() {
 }
 
 void ProxyConnectJob::OnClientReadReady() {
+  if (!read_watcher_) {
+    // The connection has timed out while waiting for the client's HTTP CONNECT
+    // request. See |OnClientConnectTimeout|.
+    return;
+  }
+  client_connect_timeout_callback_.Cancel();
   // Stop watching.
   read_watcher_.reset();
   // The first message should be a HTTP CONNECT request.
@@ -307,7 +326,7 @@ void ProxyConnectJob::DoCurlServerConnection(const std::string& proxy_url) {
                                server_body_reply.size()) !=
         server_body_reply.size()) {
       PLOG(ERROR) << *this
-                  << " Failed to send HTTP  CONNECT reply body to client: "
+                  << " Failed to send HTTP CONNECT reply body to client: "
                   << base::StringPiece(server_body_reply.data(),
                                        server_body_reply.size());
     }
@@ -324,6 +343,15 @@ void ProxyConnectJob::DoCurlServerConnection(const std::string& proxy_url) {
 void ProxyConnectJob::OnError(const std::string_view& http_error_message) {
   client_socket_->SendTo(http_error_message.data(), http_error_message.size());
   std::move(setup_finished_callback_).Run(nullptr, this);
+}
+
+void ProxyConnectJob::OnClientConnectTimeout() {
+  // Stop listening for client connect requests.
+  read_watcher_.reset();
+  LOG(ERROR) << *this
+             << " Connection timed out while waiting for the client to send a "
+                "connect request.";
+  OnError(kHttpConnectionTimeout);
 }
 
 std::ostream& operator<<(std::ostream& stream, const ProxyConnectJob& job) {

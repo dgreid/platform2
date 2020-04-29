@@ -11,6 +11,7 @@
 #include <vector>
 
 #include <base/callback_forward.h>
+#include <base/cancelable_callback.h>
 #include <base/files/file_descriptor_watcher_posix.h>
 #include <gtest/gtest_prod.h>  // for FRIEND_TEST
 
@@ -78,11 +79,15 @@ class ProxyConnectJob {
 
   void OnError(const std::string_view& http_error_message);
 
+  void OnClientConnectTimeout();
+
   std::string target_url_;
   const std::string credentials_;
   std::list<std::string> proxy_servers_;
   ResolveProxyCallback resolve_proxy_callback_;
   OnConnectionSetupFinishedCallback setup_finished_callback_;
+  base::CancelableClosure client_connect_timeout_callback_;
+
   std::unique_ptr<patchpanel::Socket> client_socket_;
   std::unique_ptr<base::FileDescriptorWatcher::Controller> read_watcher_;
 };
