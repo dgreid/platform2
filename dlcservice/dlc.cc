@@ -403,7 +403,6 @@ bool DlcBase::FinishInstall(ErrorPtr* err) {
       NOTREACHED();
       return false;
   }
-  return true;
 }
 
 bool DlcBase::CancelInstall(ErrorPtr* err) {
