@@ -164,11 +164,14 @@ std::string TerminaVm::GetVmSocketPath() const {
   return runtime_dir_.GetPath().Append(kCrosvmSocket).value();
 }
 
-std::string TerminaVm::GetCrosVmSerial() const {
+std::string TerminaVm::GetCrosVmSerial(std::string hardware,
+                                       std::string console_type) const {
+  std::string common_params =
+      "hardware=" + hardware + ",num=1," + console_type + "=true";
   if (log_path_.empty()) {
-    return "type=syslog,num=1";
+    return common_params + ",type=syslog";
   }
-  return "type=file,num=1,path=" + log_path_.value();
+  return common_params + ",type=file,path=" + log_path_.value();
 }
 
 bool TerminaVm::Start(base::FilePath kernel,
@@ -204,7 +207,8 @@ bool TerminaVm::Start(base::FilePath kernel,
       "--cid",          std::to_string(vsock_cid_),
       "--socket",       GetVmSocketPath(),
       "--wayland-sock", kWaylandSocket,
-      "--serial",       GetCrosVmSerial(),
+      "--serial",       GetCrosVmSerial("serial", "earlycon"),
+      "--serial",       GetCrosVmSerial("virtio-console", "console"),
       "--syslog-tag",   base::StringPrintf("VM(%u)", vsock_cid_),
       "--params",      "snd_intel8x0.inside_vm=1 snd_intel8x0.ac97_clock=48000",
   };

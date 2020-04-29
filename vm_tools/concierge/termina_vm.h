@@ -242,7 +242,10 @@ class TerminaVm final : public VmBaseImpl {
 
   // Returns the string value of the 'serial' arg passed to crosvm.
   // If |log_path_| is empty, syslog will be used.
-  std::string GetCrosVmSerial() const;
+  // |hardware| should be one of "serial" or "virtio-console".
+  // |console_type| should be either "console" or "earlycon".
+  std::string GetCrosVmSerial(std::string hardware,
+                              std::string console_type) const;
 
   // Starts the VM with the given kernel and root file system.
   bool Start(base::FilePath kernel,
