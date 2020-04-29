@@ -77,8 +77,9 @@ void CameraClient::Init(RegisterClientCallback register_client_callback,
                      std::move(register_client_callback)));
 }
 
-void CameraClient::Exit() {
+int CameraClient::Exit() {
   VLOGF_ENTER();
+  int ret = 0;
   {
     base::AutoLock l(capture_started_lock_);
     if (capture_started_) {
@@ -86,9 +87,7 @@ void CameraClient::Exit() {
       stop_callback_ = cros::GetFutureCallback(future);
       client_ops_.StopCapture(
           base::Bind(&CameraClient::OnClosedDevice, base::Unretained(this)));
-      if (future->Get() != 0) {
-        LOGF(ERROR) << "Failed to close device";
-      }
+      ret = future->Get();
     }
   }
 
@@ -96,6 +95,8 @@ void CameraClient::Exit() {
       FROM_HERE,
       base::BindOnce(&CameraClient::CloseOnThread, base::Unretained(this)));
   ipc_thread_.Stop();
+
+  return ret;
 }
 
 void CameraClient::SetUpChannel(mojom::CameraModulePtr camera_module) {

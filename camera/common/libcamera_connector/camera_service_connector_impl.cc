@@ -63,19 +63,21 @@ int CameraServiceConnector::Init() {
   return result;
 }
 
-void CameraServiceConnector::Exit() {
+int CameraServiceConnector::Exit() {
   VLOGF_ENTER();
   DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
 
   if (!initialized_.IsSet()) {
     LOGF(ERROR) << "Should run init() before other functions";
-    return;
+    return -EPERM;
   }
 
-  camera_client_->Exit();
+  int ret = camera_client_->Exit();
 
   ipc_support_ = nullptr;
   ipc_thread_.Stop();
+
+  return ret;
 }
 
 int CameraServiceConnector::GetCameraInfo(cros_cam_get_cam_info_cb_t callback,

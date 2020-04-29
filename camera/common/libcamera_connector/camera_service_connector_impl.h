@@ -33,7 +33,7 @@ class CameraServiceConnector {
   int Init();
 
   // Terminates camera HAL client, all connections and threads.
-  void Exit();
+  int Exit();
 
   // Sets the callback for camera info changes and fires |callback| with the
   // info of the cameras currently present.

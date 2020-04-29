@@ -14,9 +14,9 @@ int cros_cam_init() {
   return connector->Init();
 }
 
-void cros_cam_exit() {
+int cros_cam_exit() {
   auto* connector = cros::CameraServiceConnector::GetInstance();
-  connector->Exit();
+  return connector->Exit();
 }
 
 int cros_cam_get_cam_info(cros_cam_get_cam_info_cb_t callback, void* context) {

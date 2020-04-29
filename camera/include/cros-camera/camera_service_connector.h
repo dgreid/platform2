@@ -109,8 +109,8 @@ typedef struct cros_cam_frame_t_ {
 
 // Capture request descriptor
 typedef struct cros_cam_capture_request_t_ {
-  int id;                          // camera device to capture
-  cros_cam_format_info_t* format;  // format to capture
+  int id;
+  cros_cam_format_info_t* format;
 } cros_cam_capture_request_t;
 
 // Capture result descriptor
@@ -139,7 +139,7 @@ typedef int (*cros_cam_capture_cb_t)(void* context,
 //   prohibited
 //
 // Returns:
-//   0 - on success
+//   0  - on success
 //   <0 - on failure, for instance:
 //     -ENOMEM for OOM
 //     -EACCES if process doesn't have permissions to use this API
@@ -152,7 +152,10 @@ CROS_CAMERA_EXPORT int cros_cam_init();
 // TODO(lnishan): Figure out the detailed semantics of this function.
 // Should wait returns from callbacks
 // Abort capture on all devices
-CROS_CAMERA_EXPORT void cros_cam_exit();
+// Returns:
+//   0  - on success
+//   <0 - on failure
+CROS_CAMERA_EXPORT int cros_cam_exit();
 
 //
 // Get information about cameras and subscribe for hotplug notifications

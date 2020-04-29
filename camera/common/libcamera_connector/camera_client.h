@@ -38,7 +38,7 @@ class CameraClient final : public mojom::CameraHalClient {
             IntOnceCallback init_callback);
 
   // Disconnects the client from camera HAL dispatcher.
-  void Exit();
+  int Exit();
 
   // Implementation of cros::mojom::CameraHalClient. Called by camera HAL
   // dispatcher to provide the camera module interface.

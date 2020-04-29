@@ -79,7 +79,7 @@ class ConnectorEnvironment : public ::testing::Environment {
   }
 
   void TearDown() override {
-    cros_cam_exit();
+    EXPECT_EQ(cros_cam_exit(), 0);
     LOGF(INFO) << "Camera connector exited";
   }
 };
