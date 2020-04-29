@@ -15,7 +15,7 @@ namespace {
 
 constexpr char kLogToStderrSwitch[] = "log-to-stderr";
 constexpr char kOutputFilePathSwitch[] = "output";
-constexpr char kDefaultKeyDataPath[] = "/run/attestation_google_keys.data";
+constexpr char kDefaultKeyDataPath[] = "/run/attestation/google_keys.data";
 
 }  // namespace
 
