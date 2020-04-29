@@ -21,6 +21,8 @@
 #include "dlcservice/system_state.h"
 #include "dlcservice/utils.h"
 
+using base::FilePath;
+using brillo::ErrorPtr;
 using std::string;
 using std::vector;
 
@@ -50,7 +52,7 @@ bool DlcBase::Initialize() {
   return true;
 }
 
-DlcId DlcBase::GetId() const {
+const DlcId& DlcBase::GetId() const {
   return id_;
 }
 

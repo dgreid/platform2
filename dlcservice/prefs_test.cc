@@ -15,6 +15,7 @@
 #include "dlcservice/utils.h"
 
 using base::FilePath;
+using std::string;
 
 namespace dlcservice {
 

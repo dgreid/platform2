@@ -20,10 +20,6 @@
 
 #include "dlcservice/boot/boot_slot.h"
 
-using base::FilePath;
-using brillo::ErrorPtr;
-using std::string;
-
 namespace dlcservice {
 
 // |DlcId| is the ID of the DLC.
@@ -39,7 +35,7 @@ class DlcBase {
   bool Initialize();
 
   // Returns the ID of the DLC.
-  DlcId GetId() const;
+  const DlcId& GetId() const;
 
   // Returns the human readable name of the DLC.
   const std::string& GetName() const;
@@ -77,28 +73,28 @@ class DlcBase {
   void PreloadImage();
 
   // Initializes the installation like creating the necessary files, etc.
-  bool InitInstall(ErrorPtr* err);
+  bool InitInstall(brillo::ErrorPtr* err);
 
   // This is called after the update_engine finishes the installation of a
   // DLC. This marks the DLC as installed and mounts the DLC image.
-  bool FinishInstall(ErrorPtr* err);
+  bool FinishInstall(brillo::ErrorPtr* err);
 
   // Cancels the ongoing installation of this DLC. The state will be set to
   // uninstalled after this call if successful.
-  bool CancelInstall(ErrorPtr* err);
+  bool CancelInstall(brillo::ErrorPtr* err);
 
   // Deletes all files associated with the DLC.
-  bool Delete(ErrorPtr* err);
+  bool Delete(brillo::ErrorPtr* err);
 
   // Is called when the DLC image is finally installed on the disk and is
   // verified.
-  bool InstallCompleted(ErrorPtr* err);
+  bool InstallCompleted(brillo::ErrorPtr* err);
 
   // Is called when the inactive DLC image is updated and verified.
-  bool UpdateCompleted(ErrorPtr* err) const;
+  bool UpdateCompleted(brillo::ErrorPtr* err) const;
 
   // Makes the DLC ready to be updated. Returns false if anything goes wrong.
-  bool MakeReadyForUpdate(ErrorPtr* err) const;
+  bool MakeReadyForUpdate(brillo::ErrorPtr* err) const;
 
  private:
   friend class DBusServiceTest;
@@ -106,10 +102,10 @@ class DlcBase {
   FRIEND_TEST(DlcBaseTest, GetUsedBytesOnDisk);
 
   // Returns the path to the DLC image given the slot number.
-  FilePath GetImagePath(BootSlot::Slot slot) const;
+  base::FilePath GetImagePath(BootSlot::Slot slot) const;
 
   // Create the DLC directories and files if they don't exist.
-  bool Create(ErrorPtr* err);
+  bool Create(brillo::ErrorPtr* err);
 
   // Validate that:
   //  - If inactive image for DLC is missing, try creating it.
@@ -120,19 +116,19 @@ class DlcBase {
   bool PreloadedCopier();
 
   // Mounts the DLC image.
-  bool Mount(ErrorPtr* err);
+  bool Mount(brillo::ErrorPtr* err);
 
   // Unmounts the DLC image.
-  bool Unmount(ErrorPtr* err);
+  bool Unmount(brillo::ErrorPtr* err);
 
   // Tries to mount the DLC image if it has not been mounted already.
-  bool TryMount(ErrorPtr* err);
+  bool TryMount(brillo::ErrorPtr* err);
 
   // Returns true if the active DLC image is present.
   bool IsActiveImagePresent() const;
 
   // Deletes all directories related to this DLC.
-  bool DeleteInternal(ErrorPtr* err);
+  bool DeleteInternal(brillo::ErrorPtr* err);
 
   DlcId id_;
   std::string package_;

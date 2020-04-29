@@ -12,6 +12,7 @@
 #include "dlcservice/mock_dlc_service.h"
 #include "dlcservice/test_utils.h"
 
+using base::FilePath;
 using brillo::ErrorPtr;
 using testing::_;
 using testing::Return;
