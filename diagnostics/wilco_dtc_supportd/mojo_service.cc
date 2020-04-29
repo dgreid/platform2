@@ -193,4 +193,9 @@ void MojoService::GetCrosHealthdDiagnosticsService(
   client_ptr_->GetCrosHealthdDiagnosticsService(std::move(service));
 }
 
+void MojoService::GetCrosHealthdProbeService(
+    chromeos::cros_healthd::mojom::CrosHealthdProbeServiceRequest service) {
+  client_ptr_->GetCrosHealthdProbeService(std::move(service));
+}
+
 }  // namespace diagnostics

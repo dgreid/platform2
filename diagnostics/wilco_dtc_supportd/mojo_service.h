@@ -103,6 +103,8 @@ class MojoService final
   void GetCrosHealthdDiagnosticsService(
       chromeos::cros_healthd::mojom::CrosHealthdDiagnosticsServiceRequest
           service);
+  void GetCrosHealthdProbeService(
+      chromeos::cros_healthd::mojom::CrosHealthdProbeServiceRequest service);
 
  private:
   // Unowned. The delegate should outlive this instance.

@@ -33,6 +33,10 @@ This daemon uses three IPC mechanisms:
      |       (handles incoming Mojo requests and sends outgoing ones)
      +-> `mojo::Binding<mojom::WilcoDtcSupportdService>`
      |       (connects `MojoService` with the actual Mojo pipe)
+     +-> `RoutineService`
+     |       (handles diagnostics routines requests to cros_healthd)
+     +-> `ProbeService`
+     |       (handles probe requests to cros_healthd)
      |
      |   // D-Bus-related members:
      +-> `DBusService`

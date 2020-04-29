@@ -315,6 +315,18 @@ bool Core::GetCrosHealthdDiagnosticsService(
   return true;
 }
 
+bool Core::BindCrosHealthdProbeService(
+    chromeos::cros_healthd::mojom::CrosHealthdProbeServiceRequest service) {
+  if (!mojo_service_) {
+    LOG(WARNING) << "BindCrosHealthdProbeService happens before Mojo "
+                 << "connection is established.";
+    return false;
+  }
+
+  mojo_service_->GetCrosHealthdProbeService(std::move(service));
+  return true;
+}
+
 void Core::GetService(MojomWilcoDtcSupportdServiceRequest service,
                       MojomWilcoDtcSupportdClientPtr client,
                       GetServiceCallback callback) {
