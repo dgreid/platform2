@@ -28,6 +28,10 @@ crypto::ScopedEVP_PKEY PemToEVP(const std::string& pem);
 // |base::nullopt|.
 base::Optional<std::string> GetRandom(size_t length);
 
+// Reads |pem| string and parse it to X509 object. In case of any error, the
+// returned object contains |nullptr|.
+crypto::ScopedX509 PemToX509(const std::string& pem);
+
 // Performs the sequence of EVP_DigestSign(Init|Update|Final) operations using
 // |key| as the signing or HMAC key. Returns nullopt if any error; otherwise
 // returns the signature or HMAC.

@@ -57,6 +57,24 @@ crypto::ScopedEVP_PKEY PemToEVP(const std::string& pem) {
   return key;
 }
 
+crypto::ScopedX509 PemToX509(const std::string& pem) {
+  crypto::ScopedBIO bio(
+      BIO_new_mem_buf(const_cast<char*>(pem.data()), pem.size()));
+  if (!bio) {
+    LOG(ERROR) << __func__
+               << ": Failed to create mem BIO: " << GetOpenSSLError();
+    return nullptr;
+  }
+  crypto::ScopedX509 x509(
+      PEM_read_bio_X509(bio.get(), nullptr, nullptr, nullptr));
+  if (!x509) {
+    LOG(ERROR) << __func__
+               << ": Failed to call PEM_read_bio_X509: " << GetOpenSSLError();
+    return nullptr;
+  }
+  return x509;
+}
+
 base::Optional<std::string> GetRandom(size_t length) {
   std::unique_ptr<unsigned char[]> buffer =
       std::make_unique<unsigned char[]>(length);
