@@ -47,6 +47,13 @@ bool EVPDigestVerify(const crypto::ScopedEVP_PKEY& key,
                      const std::string& data,
                      const std::string& signature);
 
+// Performs the sequence of EVP_PKEY_encrypt(_init)? operations using |key| as
+// the encryption key of a RSA key. |rsa_padding| is set after
+// |EVP_PKEY_encrypt_init|.
+base::Optional<std::string> EVPRsaEncrypt(const crypto::ScopedEVP_PKEY& key,
+                                          const std::string& data,
+                                          int rsa_padding);
+
 // Performs the sequence of EVP_PKEY_decrypt(_init)? operations using |key| as
 // the decryption key of a RSA key. |rsa_padding| is set after
 // |EVP_PKEY_decrypt_init|.

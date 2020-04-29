@@ -168,6 +168,46 @@ bool EVPDigestVerify(const crypto::ScopedEVP_PKEY& key,
   return true;
 }
 
+base::Optional<std::string> EVPRsaEncrypt(const crypto::ScopedEVP_PKEY& key,
+                                          const std::string& data,
+                                          int rsa_padding) {
+  crypto::ScopedEVP_PKEY_CTX ctx(EVP_PKEY_CTX_new(key.get(), nullptr));
+  if (!ctx) {
+    LOG(ERROR) << __func__
+               << ": Failed to allocate EVP_PKEY_CTX: " << GetOpenSSLError();
+    return {};
+  }
+  if (EVP_PKEY_encrypt_init(ctx.get()) != 1) {
+    LOG(ERROR) << __func__ << ": Failed to call EVP_PKEY_decrypt_init: "
+               << GetOpenSSLError();
+    return {};
+  }
+  if (EVP_PKEY_CTX_set_rsa_padding(ctx.get(), rsa_padding) != 1) {
+    LOG(ERROR) << __func__ << ": Failed to call EVP_PKEY_CTX_set_rsa_padding: "
+               << GetOpenSSLError();
+    return {};
+  }
+  size_t output_length = 0;
+  if (EVP_PKEY_encrypt(ctx.get(), nullptr, &output_length,
+                       reinterpret_cast<const unsigned char*>(data.data()),
+                       data.length()) != 1) {
+    LOG(ERROR) << __func__
+               << ": Failed to call EVP_PKEY_encrypt to get output length: "
+               << GetOpenSSLError();
+    return {};
+  }
+  std::unique_ptr<unsigned char[]> output =
+      std::make_unique<unsigned char[]>(output_length);
+  if (EVP_PKEY_encrypt(ctx.get(), output.get(), &output_length,
+                       reinterpret_cast<const unsigned char*>(data.data()),
+                       data.length()) != 1) {
+    LOG(ERROR) << __func__
+               << ": Failed to call EVP_PKEY_encrypt: " << GetOpenSSLError();
+    return {};
+  }
+  return std::string(output.get(), output.get() + output_length);
+}
+
 base::Optional<std::string> EVPRsaDecrypt(const crypto::ScopedEVP_PKEY& key,
                                           const std::string& encrypted_data,
                                           int rsa_padding) {
