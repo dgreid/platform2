@@ -54,6 +54,14 @@ base::Optional<std::string> EVPRsaDecrypt(const crypto::ScopedEVP_PKEY& key,
                                           const std::string& encrypted_data,
                                           int rsa_padding);
 
+// Performs the sequence of EVP_Encrypt(Init_ex|Update|Final_ex) operations,
+// where |aes_key|, |evp_cipher|, and |iv| are the input of what their names
+// suggest.
+base::Optional<std::string> EVPAesEncrypt(const std::string& data,
+                                          const EVP_CIPHER* evp_cipher,
+                                          const std::string& aes_key,
+                                          const std::string& iv);
+
 // Performs the sequence of EVP_Decrypt(Init_ex|Update|Final_ex) operations,
 // where |aes_key|, |evp_cipher|, and |iv| are the input of what their names
 // suggest.

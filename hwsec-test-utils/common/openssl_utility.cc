@@ -15,6 +15,12 @@
 
 namespace hwsec_test_utils {
 
+namespace {
+
+constexpr int kAesBlockSize = 16;
+
+}  // namespace
+
 void InitializeOpenSSL() {
   static bool g_openssl_initialized = false;
   if (g_openssl_initialized) {
@@ -201,6 +207,46 @@ base::Optional<std::string> EVPRsaDecrypt(const crypto::ScopedEVP_PKEY& key,
                << ": Failed to call EVP_PKEY_decrypt: " << GetOpenSSLError();
     return {};
   }
+  return std::string(output.get(), output.get() + output_length);
+}
+
+base::Optional<std::string> EVPAesEncrypt(const std::string& data,
+                                          const EVP_CIPHER* evp_cipher,
+                                          const std::string& aes_key,
+                                          const std::string& iv) {
+  crypto::ScopedEVP_CIPHER_CTX ctx(EVP_CIPHER_CTX_new());
+  if (!ctx) {
+    LOG(ERROR) << __func__
+               << ": Failed to allocate EVP_CIPHER_CTX: " << GetOpenSSLError();
+    return {};
+  }
+  if (EVP_EncryptInit_ex(ctx.get(), evp_cipher, /*engine=*/nullptr,
+                         reinterpret_cast<const unsigned char*>(aes_key.data()),
+                         reinterpret_cast<const unsigned char*>(iv.data())) !=
+      1) {
+    LOG(ERROR) << __func__
+               << ": Failed to call EVP_DecryptInit_ex: " << GetOpenSSLError();
+    return {};
+  }
+  // Allocate the generous buffer and resize at the end.
+  std::unique_ptr<unsigned char[]> output =
+      std::make_unique<unsigned char[]>(data.size() + kAesBlockSize);
+  int output_length = 0;
+  if (EVP_EncryptUpdate(ctx.get(), output.get(), &output_length,
+                        reinterpret_cast<const unsigned char*>(data.data()),
+                        data.length()) != 1) {
+    LOG(ERROR) << __func__
+               << ": Failed to call EVP_EncryptUpdate: " << GetOpenSSLError();
+    return {};
+  }
+  int extra_output_length = 0;
+  if (EVP_EncryptFinal_ex(ctx.get(), output.get() + output_length,
+                          &extra_output_length) != 1) {
+    LOG(ERROR) << __func__
+               << ": Failed to call EVP_EncryptFinal_ex: " << GetOpenSSLError();
+    return {};
+  }
+  output_length += extra_output_length;
   return std::string(output.get(), output.get() + output_length);
 }
 
