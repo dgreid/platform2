@@ -176,8 +176,11 @@ void CrosCameraConnectorClient::StartCaptureOnThread() {
              << ", height = " << request_format_iter_->height
              << ", fps = " << request_format_iter_->fps;
 
-  cros_cam_start_capture(*request_device_iter_, &(*request_format_iter_),
-                         &OnCaptureResultAvailable, this);
+  const cros_cam_capture_request_t request = {
+      .id = *request_device_iter_,
+      .format = &(*request_format_iter_),
+  };
+  cros_cam_start_capture(&request, &OnCaptureResultAvailable, this);
 }
 
 void CrosCameraConnectorClient::StopCaptureOnThread() {

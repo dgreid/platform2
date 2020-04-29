@@ -119,12 +119,11 @@ int CameraClient::SetCameraInfoCallback(cros_cam_get_cam_info_cb_t callback,
   return 0;
 }
 
-int CameraClient::StartCapture(int id,
-                               const cros_cam_format_info_t* format,
+int CameraClient::StartCapture(const cros_cam_capture_request_t* request,
                                cros_cam_capture_cb_t callback,
                                void* context) {
   VLOGF_ENTER();
-  if (!IsDeviceActive(id)) {
+  if (!IsDeviceActive(request->id)) {
     LOGF(ERROR) << "Cannot start capture on an inactive device";
     return -ENODEV;
   }
@@ -132,8 +131,8 @@ int CameraClient::StartCapture(int id,
   LOGF(INFO) << "Starting capture";
 
   // TODO(b/151047930): Check whether this format info is actually supported.
-  request_camera_id_ = id;
-  request_format_ = *format;
+  request_camera_id_ = request->id;
+  request_format_ = *request->format;
   request_callback_ = callback;
   request_context_ = context;
 

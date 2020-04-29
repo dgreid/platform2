@@ -107,6 +107,12 @@ typedef struct cros_cam_frame_t_ {
   cros_cam_plane_t planes[4];
 } cros_cam_frame_t;
 
+// Capture request descriptor
+typedef struct cros_cam_capture_request_t_ {
+  int id;                          // camera device to capture
+  cros_cam_format_info_t* format;  // format to capture
+} cros_cam_capture_request_t;
+
 // Capture result descriptor
 typedef struct cros_cam_capture_result_t_ {
   int status;               // 0 for success, -errno for error
@@ -169,16 +175,14 @@ CROS_CAMERA_EXPORT int cros_cam_get_cam_info(
 //   Callback is called in context of other (capture) thread
 //
 // Params:
-//   id         - the camera device on which we want to start
-//   format     - requested stream format
+//   request    - capture parameters, pointers are only valid during the call
 //   callback   - callback used to receive frames
 //   context    - arbitrary contex data that directly passed to their callback
 // Returns:
 //   0  - on success
 //   <0 - on failure
 CROS_CAMERA_EXPORT int cros_cam_start_capture(
-    int id,
-    const cros_cam_format_info_t* format,
+    const cros_cam_capture_request_t* request,
     cros_cam_capture_cb_t callback,
     void* context);
 

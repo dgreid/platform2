@@ -88,17 +88,17 @@ int CameraServiceConnector::GetCameraInfo(cros_cam_get_cam_info_cb_t callback,
   return camera_client_->SetCameraInfoCallback(callback, context);
 }
 
-int CameraServiceConnector::StartCapture(int id,
-                                         const cros_cam_format_info_t* format,
-                                         cros_cam_capture_cb_t callback,
-                                         void* context) {
+int CameraServiceConnector::StartCapture(
+    const cros_cam_capture_request_t* request,
+    cros_cam_capture_cb_t callback,
+    void* context) {
   if (!initialized_.IsSet()) {
     LOGF(ERROR) << "Should run init() before other functions";
     return -EPERM;
   }
 
   LOGF(INFO) << "StartCapture";
-  return camera_client_->StartCapture(id, format, callback, context);
+  return camera_client_->StartCapture(request, callback, context);
 }
 
 int CameraServiceConnector::StopCapture(int id) {

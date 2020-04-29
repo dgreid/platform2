@@ -169,7 +169,12 @@ class FrameCapturer {
     capture_done_.Reset();
     format_ = format;
 
-    if (cros_cam_start_capture(id, &format, &FrameCapturer::CaptureCallback,
+    const cros_cam_capture_request_t request = {
+        .id = id,
+        .format = &format,
+    };
+
+    if (cros_cam_start_capture(&request, &FrameCapturer::CaptureCallback,
                                this) != 0) {
       ADD_FAILURE() << "failed to start capture";
       return 0;

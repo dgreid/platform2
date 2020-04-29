@@ -42,8 +42,7 @@ class CameraServiceConnector {
   int GetCameraInfo(cros_cam_get_cam_info_cb_t callback, void* context);
 
   // Starts capturing with the given parameters.
-  int StartCapture(int id,
-                   const cros_cam_format_info_t* format,
+  int StartCapture(const cros_cam_capture_request_t* request,
                    cros_cam_capture_cb_t callback,
                    void* context);
 

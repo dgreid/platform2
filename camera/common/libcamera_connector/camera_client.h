@@ -48,12 +48,9 @@ class CameraClient final : public mojom::CameraHalClient {
   // info of the cameras currently present.
   int SetCameraInfoCallback(cros_cam_get_cam_info_cb_t callback, void* context);
 
-  // ______________________________ DeviceOps () WIP
-
   // Starts capturing with the given parameters. Blocks until the device is
   // opened.
-  int StartCapture(int id,
-                   const cros_cam_format_info_t* format,
+  int StartCapture(const cros_cam_capture_request_t* request,
                    cros_cam_capture_cb_t callback,
                    void* context);
 
