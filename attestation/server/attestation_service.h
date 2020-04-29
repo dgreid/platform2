@@ -13,6 +13,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <utility>
 
 #include <attestation/proto_bindings/attestation_ca.pb.h>
 #include <attestation/proto_bindings/pca_agent.pb.h>
@@ -174,6 +175,10 @@ class AttestationService : public AttestationInterface {
 
   void set_pca_agent_proxy(org::chromium::PcaAgentProxyInterface* proxy) {
     pca_agent_proxy_ = proxy;
+  }
+
+  void set_google_keys(GoogleKeys google_keys) {
+    google_keys_ = std::move(google_keys);
   }
 
  private:
