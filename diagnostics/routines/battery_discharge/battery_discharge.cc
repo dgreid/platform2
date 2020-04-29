@@ -4,6 +4,8 @@
 
 #include "diagnostics/routines/battery_discharge/battery_discharge.h"
 
+#include <inttypes.h>
+
 #include <cmath>
 #include <cstdint>
 
@@ -204,8 +206,9 @@ void BatteryDischargeRoutine::DetermineRoutineResult(
 
   uint32_t discharge_percent =
       beginning_charge_percent - ending_charge_percent_value;
-  output_ = base::StringPrintf("Battery discharged %d%% in %ld seconds.",
-                               discharge_percent, exec_duration_.InSeconds());
+  output_ =
+      base::StringPrintf("Battery discharged %d%% in %" PRId64 " seconds.",
+                         discharge_percent, exec_duration_.InSeconds());
   if (discharge_percent > maximum_discharge_percent_allowed_) {
     status_message_ = kBatteryDischargeRoutineFailedExcessiveDischargeMessage;
     status_ = mojo_ipc::DiagnosticRoutineStatusEnum::kFailed;

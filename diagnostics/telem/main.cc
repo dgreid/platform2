@@ -54,7 +54,8 @@ std::string ErrorTypeToString(chromeos::cros_healthd::mojom::ErrorType type) {
 }
 
 void DisplayError(const chromeos::cros_healthd::mojom::ProbeErrorPtr& error) {
-  printf("%s: %s", ErrorTypeToString(error->type).c_str(), error->msg.c_str());
+  std::cout << ErrorTypeToString(error->type) << ": " << error->msg
+            << std::endl;
 }
 
 std::string GetArchitectureString(CpuArchitectureEnum architecture) {
@@ -75,15 +76,15 @@ void DisplayBatteryInfo(
 
   const auto& battery = battery_result->get_battery_info();
   if (battery.is_null()) {
-    printf("Device does not have battery\n");
+    std::cout << "Device does not have battery" << std::endl;
     return;
   }
 
-  printf(
-      "charge_full,charge_full_design,cycle_count,serial_number,"
-      "vendor(manufacturer),voltage_now,voltage_min_design,"
-      "manufacture_date_smart,temperature_smart,model_name,charge_now,"
-      "current_now,technology,status\n");
+  std::cout << "charge_full,charge_full_design,cycle_count,serial_number,"
+               "vendor(manufacturer),voltage_now,voltage_min_design,"
+               "manufacture_date_smart,temperature_smart,model_name,charge_now,"
+               "current_now,technology,status"
+            << std::endl;
 
   std::string manufacture_date_smart = battery->manufacture_date.value_or("NA");
   std::string temperature_smart =
@@ -91,13 +92,13 @@ void DisplayBatteryInfo(
           ? std::to_string(battery->temperature->value)
           : "NA";
 
-  printf("%f,%f,%ld,%s,%s,%f,%f,%s,%s,%s,%f,%f,%s,%s\n", battery->charge_full,
-         battery->charge_full_design, battery->cycle_count,
-         battery->serial_number.c_str(), battery->vendor.c_str(),
-         battery->voltage_now, battery->voltage_min_design,
-         manufacture_date_smart.c_str(), temperature_smart.c_str(),
-         battery->model_name.c_str(), battery->charge_now, battery->current_now,
-         battery->technology.c_str(), battery->status.c_str());
+  std::cout << battery->charge_full << "," << battery->charge_full_design << ","
+            << battery->cycle_count << "," << battery->serial_number << ","
+            << battery->vendor << "," << battery->voltage_now << ","
+            << battery->voltage_min_design << "," << manufacture_date_smart
+            << "," << temperature_smart << "," << battery->model_name << ","
+            << battery->charge_now << "," << battery->current_now << ","
+            << battery->technology << "," << battery->status << std::endl;
 }
 
 void DisplayBlockDeviceInfo(
@@ -109,11 +110,11 @@ void DisplayBlockDeviceInfo(
   }
 
   const auto& block_devices = block_device_result->get_block_device_info();
-  printf("path,size,type,manfid,name,serial\n");
+  std::cout << "path,size,type,manfid,name,serial" << std::endl;
   for (const auto& device : block_devices) {
-    printf("%s,%ld,%s,0x%x,%s,0x%x\n", device->path.c_str(), device->size,
-           device->type.c_str(), static_cast<int>(device->manufacturer_id),
-           device->name.c_str(), device->serial);
+    std::cout << device->path << "," << device->size << "," << device->type
+              << "," << device->manufacturer_id << "," << device->name << ","
+              << device->serial << std::endl;
   }
 }
 
@@ -125,11 +126,9 @@ void DisplayCachedVpdInfo(
   }
 
   const auto& vpd = vpd_result->get_vpd_info();
-  printf("sku_number\n");
-  if (vpd->sku_number.has_value())
-    printf("%s\n", vpd->sku_number.value().c_str());
-  else
-    printf("NA\n");
+  std::cout << "sku_number" << std::endl;
+  std::string sku_number = vpd->sku_number.value_or("NA");
+  std::cout << sku_number << std::endl;
 }
 
 void DisplayCpuInfo(
@@ -140,14 +139,14 @@ void DisplayCpuInfo(
   }
 
   const auto& cpus = cpu_result->get_cpu_info();
-  printf("model_name,architecture,max_clock_speed_khz\n");
+  std::cout << "model_name,architecture,max_clock_speed_khz" << std::endl;
   for (const auto& cpu : cpus) {
     // Remove commas from the model name before printing CSVs.
     std::string csv_model_name;
     base::RemoveChars(cpu->model_name, ",", &csv_model_name);
-    printf("%s,%s,%u\n", csv_model_name.c_str(),
-           GetArchitectureString(cpu->architecture).c_str(),
-           cpu->max_clock_speed_khz);
+    std::cout << csv_model_name << ","
+              << GetArchitectureString(cpu->architecture) << ","
+              << cpu->max_clock_speed_khz << std::endl;
   }
 }
 
@@ -159,9 +158,9 @@ void DisplayFanInfo(
   }
 
   const auto& fans = fan_result->get_fan_info();
-  printf("speed_rpm\n");
+  std::cout << "speed_rpm" << std::endl;
   for (const auto& fan : fans) {
-    printf("%u\n", fan->speed_rpm);
+    std::cout << fan->speed_rpm << std::endl;
   }
 }
 
@@ -176,8 +175,8 @@ void DisplayTimezoneInfo(
   // Replace commas in POSIX timezone before printing CSVs.
   std::string csv_posix_timezone;
   base::ReplaceChars(timezone->posix, ",", " ", &csv_posix_timezone);
-  printf("posix_timezone,timezone_region\n");
-  printf("%s,%s\n", csv_posix_timezone.c_str(), timezone->region.c_str());
+  std::cout << "posix_timezone,timezone_region" << std::endl;
+  std::cout << csv_posix_timezone << "," << timezone->region << std::endl;
 }
 
 void DisplayMemoryInfo(
@@ -188,11 +187,12 @@ void DisplayMemoryInfo(
   }
 
   const auto& memory = memory_result->get_memory_info();
-  printf(
-      "total_memory_kib,free_memory_kib,available_memory_kib,page_faults_since_"
-      "last_boot\n");
-  printf("%u,%u,%u,%u\n", memory->total_memory_kib, memory->free_memory_kib,
-         memory->available_memory_kib, memory->page_faults_since_last_boot);
+  std::cout << "total_memory_kib,free_memory_kib,available_memory_kib,"
+               "page_faults_since_last_boot"
+            << std::endl;
+  std::cout << memory->total_memory_kib << "," << memory->free_memory_kib << ","
+            << memory->available_memory_kib << ","
+            << memory->page_faults_since_last_boot << std::endl;
 }
 
 void DisplayBacklightInfo(
@@ -203,10 +203,10 @@ void DisplayBacklightInfo(
   }
 
   const auto& backlights = backlight_result->get_backlight_info();
-  printf("path,max_brightness,brightness\n");
+  std::cout << "path,max_brightness,brightness" << std::endl;
   for (const auto& backlight : backlights) {
-    printf("%s,%u,%u\n", backlight->path.c_str(), backlight->max_brightness,
-           backlight->brightness);
+    std::cout << backlight->path.c_str() << "," << backlight->max_brightness
+              << "," << backlight->brightness << std::endl;
   }
 }
 
