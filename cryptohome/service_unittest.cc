@@ -14,6 +14,7 @@
 
 #include <base/at_exit.h>
 #include <base/bind.h>
+#include <base/callback.h>
 #include <base/files/file_path.h>
 #include <base/files/file_util.h>
 #include <base/stl_util.h>
@@ -32,6 +33,8 @@
 
 #include "cryptohome/bootlockbox/mock_boot_attributes.h"
 #include "cryptohome/bootlockbox/mock_boot_lockbox.h"
+#include "cryptohome/challenge_credentials/challenge_credentials_helper.h"
+#include "cryptohome/challenge_credentials/mock_challenge_credentials_helper.h"
 #include "cryptohome/credentials.h"
 #include "cryptohome/crypto.h"
 #include "cryptohome/crypto_error.h"
@@ -44,12 +47,16 @@
 #include "cryptohome/mock_firmware_management_parameters.h"
 #include "cryptohome/mock_homedirs.h"
 #include "cryptohome/mock_install_attributes.h"
+#include "cryptohome/mock_key_challenge_service.h"
+#include "cryptohome/mock_key_challenge_service_factory.h"
 #include "cryptohome/mock_mount.h"
 #include "cryptohome/mock_mount_factory.h"
 #include "cryptohome/mock_platform.h"
 #include "cryptohome/mock_tpm.h"
 #include "cryptohome/mock_tpm_init.h"
+#include "cryptohome/mock_user_session.h"
 #include "cryptohome/mock_vault_keyset.h"
+#include "cryptohome/protobuf_test_utils.h"
 #include "cryptohome/user_oldest_activity_timestamp_cache.h"
 
 using base::FilePath;
@@ -61,6 +68,7 @@ using ::testing::AtLeast;
 using ::testing::DoAll;
 using ::testing::EndsWith;
 using ::testing::Invoke;
+using ::testing::InvokeWithoutArgs;
 using ::testing::Mock;
 using ::testing::NiceMock;
 using ::testing::Return;
@@ -177,6 +185,8 @@ class ServiceTestNotInitialized : public ::testing::Test {
     service_.set_firmware_management_parameters(&fwmp_);
     service_.set_event_source_sink(&event_sink_);
     service_.set_arc_disk_quota(&arc_disk_quota_);
+    service_.set_challenge_credentials_helper(&challenge_credentials_helper_);
+    service_.set_key_challenge_service_factory(&key_challenge_service_factory_);
     test_helper_.SetUpSystemSalt();
     homedirs_.set_crypto(&crypto_);
     homedirs_.set_platform(&platform_);
@@ -240,6 +250,8 @@ class ServiceTestNotInitialized : public ::testing::Test {
   NiceMock<MockPlatform> platform_;
   NiceMock<MockArcDiskQuota> arc_disk_quota_;
   NiceMock<chaps::TokenManagerClientMock> chaps_client_;
+  NiceMock<MockChallengeCredentialsHelper> challenge_credentials_helper_;
+  NiceMock<MockKeyChallengeServiceFactory> key_challenge_service_factory_;
   FakeEventSourceSink event_sink_;
   scoped_refptr<MockMount> mount_;
   // Declare service_ last so it gets destroyed before all the mocks. This is
@@ -1325,6 +1337,125 @@ TEST_F(ServiceExTest, CheckKeyMountTest) {
   DispatchEvents();
   ASSERT_TRUE(reply());
   EXPECT_EQ(CRYPTOHOME_ERROR_AUTHORIZATION_KEY_FAILED, reply()->error());
+}
+
+class ChallengeResponseServiceExTest : public ServiceExTest {
+ public:
+  static constexpr const char* kUser = "chromeos-user";
+  static constexpr const char* kKeyLabel = "key";
+  static constexpr const char* kKeyDelegateDBusService = "key-delegate-service";
+  static constexpr const char* kSpkiDer = "fake-spki";
+  static constexpr ChallengeSignatureAlgorithm kAlgorithm =
+      CHALLENGE_RSASSA_PKCS1_V1_5_SHA256;
+  static constexpr const char* kPasskey = "passkey";
+
+  // GMock actions that perform reply to ChallengeCredentialsHelper operations:
+
+  struct ReplyToVerifyKey {
+    void operator()(const std::string& account_id,
+                    const KeyData& key_data,
+                    std::unique_ptr<KeyChallengeService> key_challenge_service,
+                    ChallengeCredentialsHelper::VerifyKeyCallback callback) {
+      std::move(callback).Run(is_key_valid);
+    }
+
+    bool is_key_valid = false;
+  };
+
+  struct ReplyToDecrypt {
+    void operator()(const std::string& account_id,
+                    const KeyData& key_data,
+                    const SerializedVaultKeyset_SignatureChallengeInfo&
+                        keyset_challenge_info,
+                    std::unique_ptr<KeyChallengeService> key_challenge_service,
+                    ChallengeCredentialsHelper::DecryptCallback callback) {
+      std::unique_ptr<Credentials> credentials_to_pass;
+      if (credentials)
+        credentials_to_pass = std::make_unique<Credentials>(*credentials);
+      std::move(callback).Run(std::move(credentials_to_pass));
+    }
+
+    base::Optional<Credentials> credentials;
+  };
+
+  ChallengeResponseServiceExTest() {
+    key_data_.set_label(kKeyLabel);
+    key_data_.set_type(KeyData::KEY_TYPE_CHALLENGE_RESPONSE);
+    ChallengePublicKeyInfo* const key_public_info =
+        key_data_.add_challenge_response_key();
+    key_public_info->set_public_key_spki_der(kSpkiDer);
+    key_public_info->add_signature_algorithm(kAlgorithm);
+
+    PrepareArguments();
+    id_->set_account_id(kUser);
+    *auth_->mutable_key()->mutable_data() = key_data_;
+    auth_->mutable_key_delegate()->set_dbus_service_name(
+        kKeyDelegateDBusService);
+
+    ON_CALL(key_challenge_service_factory_, New(kKeyDelegateDBusService))
+        .WillByDefault(InvokeWithoutArgs(
+            []() { return std::make_unique<MockKeyChallengeService>(); }));
+  }
+
+  void SetUpActiveUserSession() {
+    EXPECT_CALL(homedirs_, Exists(_)).WillRepeatedly(Return(true));
+    EXPECT_CALL(homedirs_, GetVaultKeyset(_, kKeyLabel))
+        .WillRepeatedly(Invoke(this, &ServiceExTest::GetNiceMockVaultKeyset));
+
+    SetupMount(kUser);
+    EXPECT_CALL(*mount_, AreSameUser(_)).WillRepeatedly(Return(true));
+    user_session_.set_key_data(key_data_);
+    EXPECT_CALL(*mount_, GetCurrentUserSession())
+        .WillRepeatedly(Return(&user_session_));
+  }
+
+ protected:
+  KeyData key_data_;
+  NiceMock<MockUserSession> user_session_;
+};
+
+// Tests the CheckKeyEx lightweight check scenario for challenge-response
+// credentials, where the credentials are verified without going through full
+// decryption.
+TEST_F(ChallengeResponseServiceExTest, LightweightCheckKey) {
+  SetUpActiveUserSession();
+
+  // Simulate a successful key verification.
+  EXPECT_CALL(challenge_credentials_helper_,
+              VerifyKey(kUser, ProtobufEquals(key_data_), _, _))
+      .WillOnce(ReplyToVerifyKey{/*is_key_valid=*/true});
+
+  service_.DoCheckKeyEx(std::make_unique<AccountIdentifier>(*id_),
+                        std::make_unique<AuthorizationRequest>(*auth_),
+                        std::make_unique<CheckKeyRequest>(*check_req_),
+                        nullptr);
+
+  // Expect an empty reply as success.
+  DispatchEvents();
+  EXPECT_TRUE(ReplyIsEmpty());
+}
+
+// Tests the CheckKeyEx full check scenario for challenge-response credentials,
+// with falling back from the failed lightweight check.
+TEST_F(ChallengeResponseServiceExTest, FallbackLightweightCheckKey) {
+  SetUpActiveUserSession();
+
+  // Simulate a failure in the lightweight check and a successful decryption.
+  EXPECT_CALL(challenge_credentials_helper_,
+              VerifyKey(kUser, ProtobufEquals(key_data_), _, _))
+      .WillOnce(ReplyToVerifyKey{/*is_key_valid=*/false});
+  EXPECT_CALL(challenge_credentials_helper_,
+              Decrypt(kUser, ProtobufEquals(key_data_), _, _, _))
+      .WillOnce(ReplyToDecrypt{Credentials(kUser, SecureBlob(kPasskey))});
+
+  service_.DoCheckKeyEx(std::make_unique<AccountIdentifier>(*id_),
+                        std::make_unique<AuthorizationRequest>(*auth_),
+                        std::make_unique<CheckKeyRequest>(*check_req_),
+                        nullptr);
+
+  // Expect an empty reply as success.
+  DispatchEvents();
+  EXPECT_TRUE(ReplyIsEmpty());
 }
 
 MATCHER_P(CredentialsEqual, credentials, "") {
