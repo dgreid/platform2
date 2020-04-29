@@ -63,7 +63,8 @@
 #include "cryptohome/install_attributes.h"
 #include "cryptohome/interface.h"
 #include "cryptohome/key_challenge_service.h"
-#include "cryptohome/key_challenge_service_impl.h"
+#include "cryptohome/key_challenge_service_factory.h"
+#include "cryptohome/key_challenge_service_factory_impl.h"
 #include "cryptohome/mount.h"
 #include "cryptohome/obfuscated_username.h"
 #include "cryptohome/platform.h"
@@ -299,6 +300,11 @@ Service::Service()
       chaps_client_(default_chaps_client_.get()),
       boot_lockbox_(nullptr),
       boot_attributes_(nullptr),
+      default_key_challenge_service_factory_(
+          std::make_unique<KeyChallengeServiceFactoryImpl>(
+              &system_dbus_connection_)),
+      key_challenge_service_factory_(
+          default_key_challenge_service_factory_.get()),
       firmware_management_parameters_(nullptr),
       low_disk_notification_period_ms_(kLowDiskNotificationPeriodMS),
       upload_alerts_period_ms_(kUploadAlertsPeriodMS),
@@ -2312,12 +2318,6 @@ bool Service::InitForChallengeResponseAuth(CryptohomeErrorCode* error_code) {
                     "challenge-response mount due to running in test image";
   }
 
-  if (!system_dbus_connection_.Connect()) {
-    LOG(ERROR) << "Cannot do challenge-response mount without system D-Bus bus";
-    *error_code = CRYPTOHOME_ERROR_MOUNT_FATAL;
-    return false;
-  }
-
   // Lazily create the helper object that manages generation/decryption of
   // credentials for challenge-protected vaults.
   Blob delegate_blob, delegate_secret;
@@ -2391,6 +2391,17 @@ void Service::TryLightweightChallengeResponseCheckKeyEx(
   const std::string obfuscated_username =
       BuildObfuscatedUsername(account_id, system_salt_);
 
+  std::unique_ptr<KeyChallengeService> key_challenge_service =
+      key_challenge_service_factory_->New(
+          authorization->key_delegate().dbus_service_name());
+  if (!key_challenge_service) {
+    LOG(ERROR) << "Failed to create key challenge service";
+    BaseReply reply;
+    reply.set_error(CRYPTOHOME_ERROR_MOUNT_FATAL);
+    SendReply(context, reply);
+    return;
+  }
+
   base::Optional<KeyData> found_session_key_data;
   {
     base::AutoLock lock(mounts_lock_);
@@ -2414,9 +2425,6 @@ void Service::TryLightweightChallengeResponseCheckKeyEx(
   }
 
   // Attempt the lightweight check against the found user session.
-  auto key_challenge_service = std::make_unique<KeyChallengeServiceImpl>(
-      system_dbus_connection_.Connect(),
-      authorization->key_delegate().dbus_service_name());
   challenge_credentials_helper_->VerifyKey(
       account_id, *found_session_key_data, std::move(key_challenge_service),
       base::BindOnce(&Service::OnLightweightChallengeResponseCheckKeyExDone,
@@ -2451,11 +2459,18 @@ void Service::DoFullChallengeResponseCheckKeyEx(
   const std::string& account_id = GetAccountId(*identifier);
   const std::string obfuscated_username =
       BuildObfuscatedUsername(account_id, system_salt_);
-  auto key_challenge_service = std::make_unique<KeyChallengeServiceImpl>(
-      system_dbus_connection_.Connect(),
-      authorization->key_delegate().dbus_service_name());
 
   BaseReply reply;
+
+  std::unique_ptr<KeyChallengeService> key_challenge_service =
+      key_challenge_service_factory_->New(
+          authorization->key_delegate().dbus_service_name());
+  if (!key_challenge_service) {
+    LOG(ERROR) << "Failed to create key challenge service";
+    reply.set_error(CRYPTOHOME_ERROR_MOUNT_FATAL);
+    SendReply(context, reply);
+    return;
+  }
 
   if (!homedirs_->Exists(obfuscated_username)) {
     reply.set_error(CRYPTOHOME_ERROR_ACCOUNT_NOT_FOUND);
@@ -2529,9 +2544,15 @@ void Service::DoChallengeResponseMountEx(
     SendReply(context, reply);
     return;
   }
-  auto key_challenge_service = std::make_unique<KeyChallengeServiceImpl>(
-      system_dbus_connection_.Connect(),
-      authorization->key_delegate().dbus_service_name());
+  std::unique_ptr<KeyChallengeService> key_challenge_service =
+      key_challenge_service_factory_->New(
+          authorization->key_delegate().dbus_service_name());
+  if (!key_challenge_service) {
+    LOG(ERROR) << "Failed to create key challenge service";
+    reply.set_error(CRYPTOHOME_ERROR_MOUNT_FATAL);
+    SendReply(context, reply);
+    return;
+  }
 
   if (!homedirs_->Exists(obfuscated_username) &&
       !mount_args.create_if_missing) {

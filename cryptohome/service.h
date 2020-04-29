@@ -32,6 +32,7 @@
 #include "cryptohome/dbus_transition.h"
 #include "cryptohome/firmware_management_parameters.h"
 #include "cryptohome/install_attributes.h"
+#include "cryptohome/key_challenge_service_factory.h"
 #include "cryptohome/migration_type.h"
 #include "cryptohome/mount.h"
 #include "cryptohome/mount_factory.h"
@@ -180,6 +181,11 @@ class Service : public brillo::dbus::AbstractDbusService,
 
   virtual void set_event_source_sink(CryptohomeEventSourceSink* sink) {
     event_source_sink_ = sink;
+  }
+
+  void set_key_challenge_service_factory(
+      KeyChallengeServiceFactory* key_challenge_service_factory) {
+    key_challenge_service_factory_ = key_challenge_service_factory;
   }
 
   // Checks if the given user is the system owner.
@@ -1052,6 +1058,9 @@ virtual gboolean InstallAttributesIsFirstInstall(gboolean* OUT_first_install,
   std::unique_ptr<BootAttributes> default_boot_attributes_;
   // After construction, this should only be used on the mount thread.
   BootAttributes* boot_attributes_;
+  std::unique_ptr<KeyChallengeServiceFactory>
+      default_key_challenge_service_factory_;
+  KeyChallengeServiceFactory* key_challenge_service_factory_;
   std::unique_ptr<FirmwareManagementParameters>
       default_firmware_management_params_;
   FirmwareManagementParameters* firmware_management_parameters_;
