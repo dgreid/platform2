@@ -116,6 +116,16 @@ GoogleKeys ::GoogleKeys() {
       ZeroTerminatedCharArrayToString(kTestVAEncryptionPublicKeyID));
 }
 
+GoogleKeys::GoogleKeys(const DefaultGoogleRsaPublicKeySet& default_key_set)
+    : GoogleKeys() {
+  ca_encryption_keys_[attestation::DEFAULT_ACA] =
+      default_key_set.default_ca_encryption_key();
+  va_signing_keys_[attestation::DEFAULT_VA] =
+      default_key_set.default_va_signing_key();
+  va_encryption_keys_[attestation::DEFAULT_VA] =
+      default_key_set.default_va_encryption_key();
+}
+
 const GoogleRsaPublicKey& GoogleKeys ::ca_encryption_key(
     ACAType aca_type) const {
   CHECK(static_cast<int>(aca_type) < ACAType_ARRAYSIZE);

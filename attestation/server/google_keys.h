@@ -18,6 +18,7 @@ namespace attestation {
 class GoogleKeys {
  public:
   GoogleKeys();
+  explicit GoogleKeys(const DefaultGoogleRsaPublicKeySet& default_key_set);
   ~GoogleKeys() = default;
 
   // Copyable and movable with the default behavior.
