@@ -9,9 +9,11 @@
 #include <memory>
 #include <string>
 
+#include <attestation/proto_bindings/google_key.pb.h>
 #include <base/command_line.h>
 #include <base/files/file_path.h>
 #include <base/files/file_util.h>
+#include <base/optional.h>
 #include <base/strings/string_number_conversions.h>
 #include <brillo/cryptohome.h>
 #include <brillo/daemons/dbus_daemon.h>
@@ -24,6 +26,7 @@
 
 #include "attestation/server/attestation_service.h"
 #include "attestation/server/dbus_service.h"
+#include "attestation/server/google_keys.h"
 
 #include <chromeos/libminijail.h>
 
@@ -34,6 +37,7 @@ const char kAttestationUser[] = "attestation";
 const char kAttestationGroup[] = "attestation";
 const char kAttestationSeccompPath[] =
     "/usr/share/policy/attestationd-seccomp.policy";
+constexpr char kGoogleKeysPath[] = "/run/attestation/google_keys.data";
 
 namespace env {
 static const char kAttestationBasedEnrollmentDataFile[] = "ABE_DATA_FILE";
@@ -57,6 +61,21 @@ std::string ReadAbeDataFileContents() {
   }
 
   return data;
+}
+
+base::Optional<attestation::GoogleKeys> ReadGoogleKeysIfExists() {
+  base::FilePath file_path(kGoogleKeysPath);
+  std::string data;
+  if (!base::ReadFileToString(file_path, &data)) {
+    return {};
+  }
+  LOG(INFO) << "Found key set to be injected.";
+  attestation::DefaultGoogleRsaPublicKeySet default_key_set;
+  if (!default_key_set.ParseFromString(data)) {
+    LOG(WARNING) << "Failed ot parse google keys to be injected.";
+    return {};
+  }
+  return attestation::GoogleKeys(default_key_set);
 }
 
 bool GetAttestationEnrollmentData(const std::string& abe_data_hex,
@@ -96,10 +115,15 @@ using brillo::dbus_utils::AsyncEventSequencer;
 
 class AttestationDaemon : public brillo::DBusServiceDaemon {
  public:
-  explicit AttestationDaemon(brillo::SecureBlob abe_data)
+  AttestationDaemon(brillo::SecureBlob abe_data,
+                    base::Optional<attestation::GoogleKeys> google_keys)
       : brillo::DBusServiceDaemon(attestation::kAttestationServiceName),
         abe_data_(std::move(abe_data)),
-        attestation_service_(&abe_data_) {}
+        attestation_service_(&abe_data_) {
+    if (google_keys) {
+      attestation_service_.set_google_keys(*google_keys);
+    }
+  }
 
  protected:
   int OnInit() override {
@@ -144,8 +168,9 @@ int main(int argc, char* argv[]) {
   if (!brillo::cryptohome::home::EnsureSystemSaltIsLoaded()) {
     LOG(FATAL) << "Failed to ensure system salt to be loaded into memory.";
   }
+
   PLOG_IF(FATAL, daemon(0, 0) == -1) << "Failed to daemonize";
-  AttestationDaemon daemon(abe_data);
+  AttestationDaemon daemon(abe_data, ReadGoogleKeysIfExists());
   LOG(INFO) << "Attestation Daemon Started.";
   InitMinijailSandbox();
   return daemon.Run();
