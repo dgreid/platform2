@@ -17,6 +17,9 @@ namespace smbfs {
 
 namespace {
 
+// Default that is consistent with common filesystems (ie. ext3, ext4, NFTS).
+constexpr int kMaxShareFilenameLength = 255;
+
 void SambaLog(void* private_ptr, int level, const char* msg) {
   VLOG(level) << "libsmbclient: " << msg;
 }
@@ -148,6 +151,11 @@ int SambaInterfaceImpl::StatVfs(const std::string& path,
     // implementation of SMBC_fstatvfs_ctx() in the Samba source tree for
     // details.
     out_statvfs->f_frsize *= out_statvfs->f_bsize;
+  }
+
+  // libsmbclient can return 0 for this but some clients require it to be set.
+  if (!out_statvfs->f_namemax) {
+    out_statvfs->f_namemax = kMaxShareFilenameLength;
   }
 
   return 0;
