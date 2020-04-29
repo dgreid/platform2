@@ -4,6 +4,8 @@
 
 #include "hwsec-test-utils/common/openssl_utility.h"
 
+#include <memory>
+
 #include <base/logging.h>
 #include <crypto/scoped_openssl_types.h>
 #include <openssl/bio.h>
@@ -38,6 +40,48 @@ crypto::ScopedEVP_PKEY PemToEVP(const std::string& pem) {
     return nullptr;
   }
   return key;
+}
+
+base::Optional<std::string> EVPDigestSign(const crypto::ScopedEVP_PKEY& key,
+                                          const EVP_MD* md_type,
+                                          const std::string& data) {
+  CHECK(key.get());
+  CHECK(md_type != nullptr);
+
+  crypto::ScopedEVP_MD_CTX mdctx(EVP_MD_CTX_new());
+  if (!mdctx) {
+    LOG(ERROR) << __func__
+               << ": Failed to allocate EVP_MD_CTX: " << GetOpenSSLError();
+    return {};
+  }
+
+  if (EVP_DigestSignInit(mdctx.get(), nullptr, md_type, nullptr, key.get()) !=
+      1) {
+    LOG(ERROR) << __func__
+               << ": Failed to call EVP_DigestSignInit: " << GetOpenSSLError();
+    return {};
+  }
+  if (EVP_DigestSignUpdate(mdctx.get(), data.data(), data.length()) != 1) {
+    LOG(ERROR) << __func__ << ": Failed to call EVP_DigestSignUpdate: "
+               << GetOpenSSLError();
+    return {};
+  }
+  size_t output_length = 0;
+  if (EVP_DigestSignFinal(mdctx.get(), nullptr, &output_length) != 1) {
+    LOG(ERROR)
+        << __func__
+        << ": Failed to call EVP_DigestSignFinal to get signature length: "
+        << GetOpenSSLError();
+    return {};
+  }
+  std::unique_ptr<unsigned char[]> output =
+      std::make_unique<unsigned char[]>(output_length);
+  if (EVP_DigestSignFinal(mdctx.get(), output.get(), &output_length) != 1) {
+    LOG(ERROR) << __func__ << ": Failed to call EVP_DigestVerifyFinal: "
+               << GetOpenSSLError();
+    return {};
+  }
+  return std::string(output.get(), output.get() + output_length);
 }
 
 }  // namespace hwsec_test_utils
