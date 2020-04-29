@@ -452,6 +452,11 @@ void Daemon::Init() {
   if (prefs_->GetBool(kWakeOnDpPref, &wake_on_dp))
     system::ConfigureWakeOnDp(wake_on_dp);
 
+  // Configure wake for the EC.
+  if (acpi_wakeup_helper_->IsSupported()) {
+    acpi_wakeup_helper_->SetWakeupEnabled("CREC", true);
+  }
+
   // Call this last to ensure that all of our members are already initialized.
   OnPowerStatusUpdate();
 }
