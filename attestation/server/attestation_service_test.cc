@@ -30,6 +30,7 @@ extern "C" {
 #include "attestation/common/mock_tpm_utility.h"
 #include "attestation/pca_agent/client/fake_pca_agent_proxy.h"
 #include "attestation/server/attestation_service.h"
+#include "attestation/server/google_keys.h"
 #include "attestation/server/mock_database.h"
 #include "attestation/server/mock_key_store.h"
 
@@ -740,22 +741,27 @@ class AttestationServiceEnterpriseTest
 
  protected:
   VAType va_type_;
+  // A default GoogleKeys instance that is supposed to be the identical key
+  // database that |service_| uses.
+  GoogleKeys google_keys_;
 };
 
 TEST_P(AttestationServiceEnterpriseTest, SignEnterpriseChallengeSuccess) {
   KeyInfo key_info = CreateChallengeKeyInfo();
   std::string key_info_str;
   key_info.SerializeToString(&key_info_str);
-  EXPECT_CALL(mock_crypto_utility_,
-              VerifySignatureUsingHexKey(
-                  _, service_->GetEnterpriseSigningHexKey(va_type_), _, _))
+  EXPECT_CALL(
+      mock_crypto_utility_,
+      VerifySignatureUsingHexKey(
+          _, google_keys_.va_signing_key(va_type_).modulus_in_hex(), _, _))
       .WillRepeatedly(Return(true));
-  EXPECT_CALL(mock_crypto_utility_,
-              EncryptDataForGoogle(key_info_str,
-                  service_->GetEnterpriseEncryptionHexKey(va_type_), _, _))
-      .WillRepeatedly(
-          DoAll(SetArgPointee<3>(MockEncryptedData(key_info_str)),
-                Return(true)));
+  EXPECT_CALL(
+      mock_crypto_utility_,
+      EncryptDataForGoogle(
+          key_info_str,
+          google_keys_.va_encryption_key(va_type_).modulus_in_hex(), _, _))
+      .WillRepeatedly(DoAll(SetArgPointee<3>(MockEncryptedData(key_info_str)),
+                            Return(true)));
   EXPECT_CALL(mock_tpm_utility_, Sign(_, _, _))
       .WillRepeatedly(DoAll(SetArgPointee<2>(std::string("signature")),
                       Return(true)));
@@ -868,14 +874,16 @@ TEST_P(AttestationServiceEnterpriseTest,
   std::string expected_key_info_str;
   expected_key_info.SerializeToString(&expected_key_info_str);
 
-  EXPECT_CALL(mock_crypto_utility_,
-              VerifySignatureUsingHexKey(
-                  _, service_->GetEnterpriseSigningHexKey(va_type_), _, _))
+  EXPECT_CALL(
+      mock_crypto_utility_,
+      VerifySignatureUsingHexKey(
+          _, google_keys_.va_signing_key(va_type_).modulus_in_hex(), _, _))
       .WillOnce(Return(true));
-  EXPECT_CALL(mock_crypto_utility_,
-              EncryptDataForGoogle(
-                  expected_key_info_str,
-                  service_->GetEnterpriseEncryptionHexKey(va_type_), _, _))
+  EXPECT_CALL(
+      mock_crypto_utility_,
+      EncryptDataForGoogle(
+          expected_key_info_str,
+          google_keys_.va_encryption_key(va_type_).modulus_in_hex(), _, _))
       .WillOnce(
           DoAll(SetArgPointee<3>(MockEncryptedData(expected_key_info_str)),
                 Return(true)));

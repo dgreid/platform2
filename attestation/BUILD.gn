@@ -192,6 +192,7 @@ source_set("server_library") {
     "server/database_impl.cc",
     "server/dbus_service.cc",
     "server/enrollment_queue.cc",
+    "server/google_keys.cc",
     "server/pkcs11_key_store.cc",
   ]
   all_dependent_configs = [ ":server_library_config" ]

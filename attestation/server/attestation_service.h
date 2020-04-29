@@ -33,6 +33,7 @@
 #include "attestation/server/database.h"
 #include "attestation/server/database_impl.h"
 #include "attestation/server/enrollment_queue.h"
+#include "attestation/server/google_keys.h"
 #include "attestation/server/key_store.h"
 #include "attestation/server/pkcs11_key_store.h"
 #include "tpm_manager/client/tpm_nvram_dbus_proxy.h"
@@ -557,15 +558,6 @@ class AttestationService : public AttestationInterface {
   // for enrollment.
   bool IsVerifiedMode() const;
 
-  // Gets the enterprise signing key for |va_type| servers.
-  const char* GetEnterpriseSigningHexKey(VAType va_type) const;
-
-  // Gets the enterprise encryption key for |va_type| servers.
-  const char *GetEnterpriseEncryptionHexKey(VAType va_type) const;
-
-  // Gets the enterprise encryption key identifier for |va_type| servers.
-  std::string GetEnterpriseEncryptionPublicKeyID(VAType va_type) const;
-
   // Validates incoming enterprise challenge data.
   bool ValidateEnterpriseChallenge(VAType va_type,
                                    const SignedData& signed_challenge);
@@ -754,6 +746,7 @@ class AttestationService : public AttestationInterface {
   CertRequestMap pending_cert_requests_;
   std::string system_salt_;
   brillo::SecureBlob* abe_data_;
+  GoogleKeys google_keys_;
   // Default identity features for newly created identities.
   int default_identity_features_ =
       attestation::IDENTITY_FEATURE_ENTERPRISE_ENROLLMENT_ID;
