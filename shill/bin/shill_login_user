@@ -18,24 +18,24 @@ set -e
 user="$1"
 script_name="$(basename "$0")"
 
-profile_user=chronos
+profile_user="chronos"
 profile_name="~${profile_user}/shill"
-shill_state_root=/run/shill
+shill_state_root="/run/shill"
 profile_link_root="${shill_state_root}/user_profiles"
-profile_link_dir="$profile_link_root/$profile_user"
+profile_link_dir="${profile_link_root}/${profile_user}"
 username_hash=""
 
 # We should not load multiple network profiles.  If a profile link
 # directory already exists, we should go no further.
-if [ -e "$profile_link_dir" ]; then
-  logger -t "$script_name" "User already logged in; doing nothing."
+if [ -e "${profile_link_dir}" ]; then
+  logger -t "${script_name}" "User already logged in; doing nothing."
   exit 0
 fi
 
 if [ -n "${user}" ]; then
   profile_base="$(cryptohome-path system "${user}")"
   if [ ! -d "${profile_base}" ]; then
-    logger -t "$script_name" \
+    logger -t "${script_name}" \
       "User cryptohome dir ${profile_base} does not exist"
     exit 1
   fi
@@ -52,7 +52,7 @@ profile="${profile_dir}/shill.profile"
 
 if [ ! -d "${profile_dir}" ]; then
   if ! mkdir -p --mode=700 "${profile_dir}"; then
-    logger -t "$script_name" \
+    logger -t "${script_name}" \
       "Failed to create shill user profile directory ${profile_dir}"
     exit 1
   fi
@@ -71,23 +71,24 @@ fi
 # crbug.com/869170 to track this issue in the general sense for CrOS system
 # services.
 if ! chown -R shill:shill "${profile_dir}"; then
-  logger -t "$script_name" \
+  logger -t "${script_name}" \
     "Failed to chown shill user profile directory ${profile_dir}"
   exit 1
 fi
 
-if ! mkdir -p --mode 0700 "$profile_link_root"; then
-  logger -t "$script_name" \
+if ! mkdir -p --mode 0700 "${profile_link_root}"; then
+  logger -t "${script_name}" \
     "Unable to create shill user profile link directory"
 else
-  if ! chown shill:shill "$profile_link_root"; then
-    logger -t "$script_name" "Unable to chown shill user profile link directory"
+  if ! chown shill:shill "${profile_link_root}"; then
+    logger -t "${script_name}" \
+      "Unable to chown shill user profile link directory"
   fi
 fi
 
-ln -s "${profile_dir}" "$profile_link_dir" ||
-  logger -t "$script_name" \
-    "Failed to create shill user cryptohome link $profile_link_dir"
+ln -s "${profile_dir}" "${profile_link_dir}" ||
+  logger -t "${script_name}" \
+    "Failed to create shill user cryptohome link ${profile_link_dir}"
 
 # We don't log here any more.
 # TODO(crbug.com/1076094): remove this after M-86.
@@ -97,7 +98,7 @@ rm -rf "${profile_base}/shill_logs"
 # in the org.freedesktop.DBus.ListNames list that has all connected
 # names on the Bus.
 wait_for_shill_dbus_services() {
-  for i in $(seq 1 15); do
+  for _ in $(seq 1 15); do
     if dbus-send --system --print-reply --dest=org.freedesktop.DBus \
       /org/freedesktop/DBus org.freedesktop.DBus.ListNames |
         grep -q '"org.chromium.flimflam"'; then
@@ -113,15 +114,15 @@ wait_for_shill_dbus_services() {
 # (where we may intentionally restart Shill).
 wait_for_shill_dbus_services
 
-if [ ! -f "$profile" ]; then
+if [ ! -f "${profile}" ]; then
   # If profile does not exist, ask shill to create one.
   dbus-send --system --dest=org.chromium.flimflam --print-reply / \
-    org.chromium.flimflam.Manager.CreateProfile string:$profile_name ||
-      logger -t "$script_name" "Failed to create $profile_name profile"
+    org.chromium.flimflam.Manager.CreateProfile string:"${profile_name}" ||
+      logger -t "${script_name}" "Failed to create ${profile_name} profile"
 fi
 
 # Push user's network profile
 dbus-send --system --dest=org.chromium.flimflam --print-reply / \
   org.chromium.flimflam.Manager.InsertUserProfile \
       string:"${profile_name}" string:"${username_hash}" ||
-    logger -t "$script_name" "Failed to push $profile_name profile"
+    logger -t "${script_name}" "Failed to push ${profile_name} profile"
