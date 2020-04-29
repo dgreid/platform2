@@ -103,6 +103,7 @@ executable("ml_cmdline") {
   ]
   sources = [
     "command_line.cc",
+    "simple.cc",
   ]
 }
 

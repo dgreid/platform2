@@ -6,22 +6,37 @@
 
 #include <base/at_exit.h>
 #include <base/threading/thread_task_runner_handle.h>
+#include <brillo/flag_helper.h>
 #include <brillo/message_loops/base_message_loop.h>
 #include <mojo/core/embedder/embedder.h>
 #include <mojo/core/embedder/scoped_ipc_support.h>
 
-int main(int argc, char** argv) {
-  base::AtExitManager at_exit;
+#include "ml/simple.h"
 
+// Starts environment to support Mojo
+void StartMojo() {
   (new brillo::BaseMessageLoop())->SetAsCurrent();
-
   mojo::core::Init();
   mojo::core::ScopedIPCSupport _(
       base::ThreadTaskRunnerHandle::Get(),
       mojo::core::ScopedIPCSupport::ShutdownPolicy::FAST);
+}
 
-  // TODO(avg): add functionality here
-  std::cout << "This is the ML Service command line binary." << std::endl;
+int main(int argc, char** argv) {
+  base::AtExitManager at_exit;
+  StartMojo();
+
+  // TODO(avg): add flag to specify that NNAPI should be used
+  DEFINE_double(x, 1.0, "First operand for add");
+  DEFINE_double(y, 4.0, "Second operand for add");
+  brillo::FlagHelper::Init(argc, argv, "ML Service commandline tool");
+
+  // TODO(avg): add ability to run arbitrary models
+  std::string message;
+  std::cout << "Adding " << FLAGS_x << " and " << FLAGS_y << std::endl;
+  auto result = ml::simple::Add(FLAGS_x, FLAGS_y);
+  std::cout << "Status: " << result.status << std::endl;
+  std::cout << "Sum: " << result.sum << std::endl;
 
   return 0;
 }
