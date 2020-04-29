@@ -86,6 +86,15 @@ bool SaneDeviceFake::StartScan(brillo::ErrorPtr* error) {
   return true;
 }
 
+bool SaneDeviceFake::GetScanParameters(brillo::ErrorPtr* error,
+                                       ScanParameters* parameters) {
+  if (!parameters || !params_.has_value())
+    return false;
+
+  *parameters = params_.value();
+  return true;
+}
+
 bool SaneDeviceFake::ReadScanData(brillo::ErrorPtr*,
                                   uint8_t* buf,
                                   size_t count,
@@ -112,6 +121,11 @@ bool SaneDeviceFake::ReadScanData(brillo::ErrorPtr*,
 
 void SaneDeviceFake::SetStartScanResult(bool result) {
   start_scan_result_ = result;
+}
+
+void SaneDeviceFake::SetScanParameters(
+    const base::Optional<ScanParameters>& params) {
+  params_ = params;
 }
 
 void SaneDeviceFake::SetReadScanDataResult(bool result) {

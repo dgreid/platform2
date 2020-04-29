@@ -176,6 +176,50 @@ bool SaneDeviceImpl::StartScan(brillo::ErrorPtr* error) {
   return true;
 }
 
+bool SaneDeviceImpl::GetScanParameters(brillo::ErrorPtr* error,
+                                       ScanParameters* parameters) {
+  if (!handle_) {
+    brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
+                         kManagerServiceError, "No scanner connected");
+    return false;
+  }
+
+  if (!parameters) {
+    brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
+                         kManagerServiceError,
+                         "'parameters' pointer cannot be null");
+    return false;
+  }
+
+  SANE_Parameters params;
+  SANE_Status status = sane_get_parameters(handle_, &params);
+  if (status != SANE_STATUS_GOOD) {
+    brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
+                         kManagerServiceError,
+                         "Failed to read scan parameters");
+    return false;
+  }
+
+  switch (params.format) {
+    case SANE_FRAME_GRAY:
+      parameters->format = kGrayscale;
+      break;
+    case SANE_FRAME_RGB:
+      parameters->format = kRGB;
+      break;
+    default:
+      brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
+                           kManagerServiceError,
+                           "Unsupported scan frame format");
+      return false;
+  }
+
+  parameters->pixels_per_line = params.pixels_per_line;
+  parameters->lines = params.lines;
+  parameters->depth = params.depth;
+  return true;
+}
+
 bool SaneDeviceImpl::ReadScanData(brillo::ErrorPtr* error,
                                   uint8_t* buf,
                                   size_t count,

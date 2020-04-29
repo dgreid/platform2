@@ -15,6 +15,18 @@
 
 namespace lorgnette {
 
+enum FrameFormat {
+  kGrayscale,
+  kRGB,
+};
+
+struct ScanParameters {
+  FrameFormat format;
+  int pixels_per_line;
+  int lines;
+  int depth;
+};
+
 // This class represents an active connection to a scanning device.
 // At most 1 active connection to a particular device is allowed at once.
 // This class is thread-compatible, but not thread-safe.
@@ -26,6 +38,8 @@ class SaneDevice {
   virtual bool SetScanMode(brillo::ErrorPtr* error,
                            const std::string& scan_mode) = 0;
   virtual bool StartScan(brillo::ErrorPtr* error) = 0;
+  virtual bool GetScanParameters(brillo::ErrorPtr* error,
+                                 ScanParameters* parameters) = 0;
   virtual bool ReadScanData(brillo::ErrorPtr* error,
                             uint8_t* buf,
                             size_t count,

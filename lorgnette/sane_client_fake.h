@@ -11,6 +11,7 @@
 #include <string>
 #include <vector>
 
+#include <base/optional.h>
 #include <base/synchronization/lock.h>
 
 #include "lorgnette/manager.h"
@@ -53,12 +54,15 @@ class SaneDeviceFake : public SaneDevice {
   bool SetScanMode(brillo::ErrorPtr* error,
                    const std::string& scan_mode) override;
   bool StartScan(brillo::ErrorPtr* error) override;
+  bool GetScanParameters(brillo::ErrorPtr* error,
+                         ScanParameters* parameters) override;
   bool ReadScanData(brillo::ErrorPtr* error,
                     uint8_t* buf,
                     size_t count,
                     size_t* read_out) override;
 
   void SetStartScanResult(bool result);
+  void SetScanParameters(const base::Optional<ScanParameters>& params);
   void SetReadScanDataResult(bool result);
   void SetScanData(const std::vector<uint8_t>& scan_data);
 
@@ -66,6 +70,7 @@ class SaneDeviceFake : public SaneDevice {
   bool start_scan_result_;
   bool read_scan_data_result_;
   bool scan_running_;
+  base::Optional<ScanParameters> params_;
   std::vector<uint8_t> scan_data_;
   size_t scan_data_offset_;
 };
