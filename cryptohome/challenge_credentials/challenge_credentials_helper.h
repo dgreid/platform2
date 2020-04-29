@@ -12,22 +12,16 @@
 #include <vector>
 
 #include <base/callback.h>
-#include <base/macros.h>
-#include <base/memory/weak_ptr.h>
-#include <base/threading/thread_checker.h>
 #include <brillo/secure_blob.h>
 
-#include "cryptohome/tpm.h"
+#include "cryptohome/credentials.h"
+#include "cryptohome/key_challenge_service.h"
 
 #include "key.pb.h"           // NOLINT(build/include)
 #include "rpc.pb.h"           // NOLINT(build/include)
 #include "vault_keyset.pb.h"  // NOLINT(build/include)
 
 namespace cryptohome {
-
-class ChallengeCredentialsOperation;
-class Credentials;
-class KeyChallengeService;
 
 // This class provides generation of credentials for challenge-protected vault
 // keysets, and verification of key validity for such keysets.
@@ -42,7 +36,7 @@ class KeyChallengeService;
 // old operation will complete with a failure).
 //
 // This class must be used on a single thread only.
-class ChallengeCredentialsHelper final {
+class ChallengeCredentialsHelper {
  public:
   using KeysetSignatureChallengeInfo =
       SerializedVaultKeyset_SignatureChallengeInfo;
@@ -75,16 +69,11 @@ class ChallengeCredentialsHelper final {
   // when it fails with a transient error.
   static constexpr int kRetryAttemptCount = 3;
 
-  // |tpm| is a non-owned pointer that must stay valid for the whole lifetime of
-  // the created object.
-  // |delegate_blob| and |delegate_secret| should correspond to a TPM delegate
-  // that allows doing signature-sealing operations (currently used only on TPM
-  // 1.2).
-  ChallengeCredentialsHelper(Tpm* tpm,
-                             const brillo::Blob& delegate_blob,
-                             const brillo::Blob& delegate_secret);
-
-  ~ChallengeCredentialsHelper();
+  ChallengeCredentialsHelper() = default;
+  ChallengeCredentialsHelper(const ChallengeCredentialsHelper&) = delete;
+  ChallengeCredentialsHelper& operator=(const ChallengeCredentialsHelper&)
+      = delete;
+  virtual ~ChallengeCredentialsHelper() = default;
 
   // Generates and returns fresh random-based credentials for the given user
   // and the referenced key, and also returns the encrypted
@@ -102,12 +91,12 @@ class ChallengeCredentialsHelper final {
   // allowed number of sets.
   //
   // The result is reported via |callback|.
-  void GenerateNew(
+  virtual void GenerateNew(
       const std::string& account_id,
       const KeyData& key_data,
       const std::vector<std::map<uint32_t, brillo::Blob>>& pcr_restrictions,
       std::unique_ptr<KeyChallengeService> key_challenge_service,
-      GenerateNewCallback callback);
+      GenerateNewCallback callback) = 0;
 
   // Builds credentials for the given user, based on the encrypted
   // (challenge-protected) representation of the previously created secrets. The
@@ -120,11 +109,12 @@ class ChallengeCredentialsHelper final {
   // |keyset_challenge_info| is the encrypted representation of secrets as
   // created via GenerateNew().
   // The result is reported via |callback|.
-  void Decrypt(const std::string& account_id,
-               const KeyData& key_data,
-               const KeysetSignatureChallengeInfo& keyset_challenge_info,
-               std::unique_ptr<KeyChallengeService> key_challenge_service,
-               DecryptCallback callback);
+  virtual void Decrypt(
+      const std::string& account_id,
+      const KeyData& key_data,
+      const KeysetSignatureChallengeInfo& keyset_challenge_info,
+      std::unique_ptr<KeyChallengeService> key_challenge_service,
+      DecryptCallback callback) = 0;
 
   // Verifies that the specified cryptographic key is available and can be used
   // for authentication. This operation involves making challenge request(s)
@@ -133,60 +123,11 @@ class ChallengeCredentialsHelper final {
   //
   // |key_data| must have the |KEY_TYPE_CHALLENGE_RESPONSE| type.
   // The result is reported via |callback|.
-  void VerifyKey(const std::string& account_id,
-                 const KeyData& key_data,
-                 std::unique_ptr<KeyChallengeService> key_challenge_service,
-                 VerifyKeyCallback callback);
-
- private:
-  void StartDecryptOperation(
+  virtual void VerifyKey(
       const std::string& account_id,
       const KeyData& key_data,
-      const KeysetSignatureChallengeInfo& keyset_challenge_info,
-      int attempt_number,
-      DecryptCallback callback);
-
-  // Aborts the currently running operation, if any, and destroys all resources
-  // associated with it.
-  void CancelRunningOperation();
-
-  // Wrapper for the completion callback of GenerateNew(). Cleans up resources
-  // associated with the operation and forwards results to the original
-  // callback.
-  void OnGenerateNewCompleted(GenerateNewCallback original_callback,
-                              std::unique_ptr<Credentials> credentials);
-
-  // Wrapper for the completion callback of Decrypt(). Cleans up resources
-  // associated with the operation and forwards results to the original
-  // callback.
-  void OnDecryptCompleted(
-      const std::string& account_id,
-      const KeyData& key_data,
-      const KeysetSignatureChallengeInfo& keyset_challenge_info,
-      int attempt_number,
-      DecryptCallback original_callback,
-      Tpm::TpmRetryAction retry_action,
-      std::unique_ptr<Credentials> credentials);
-
-  // Wrapper for the completion callback of VerifyKey(). Cleans up resources
-  // associated with the operation and forwards results to the original
-  // callback.
-  void OnVerifyKeyCompleted(VerifyKeyCallback original_callback,
-                            bool is_key_valid);
-
-  // Non-owned.
-  Tpm* const tpm_;
-  // TPM delegate that was passed to the constructor.
-  const brillo::Blob delegate_blob_;
-  const brillo::Blob delegate_secret_;
-  // The key challenge service used for the currently running operation, if any.
-  std::unique_ptr<KeyChallengeService> key_challenge_service_;
-  // The state of the currently running operation, if any.
-  std::unique_ptr<ChallengeCredentialsOperation> operation_;
-
-  base::ThreadChecker thread_checker_;
-
-  DISALLOW_COPY_AND_ASSIGN(ChallengeCredentialsHelper);
+      std::unique_ptr<KeyChallengeService> key_challenge_service,
+      VerifyKeyCallback callback) = 0;
 };
 
 }  // namespace cryptohome

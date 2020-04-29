@@ -16,7 +16,7 @@
 #include <vector>
 
 #include "cryptohome/bootlockbox/boot_lockbox_client.h"
-#include "cryptohome/challenge_credentials/challenge_credentials_helper.h"
+#include "cryptohome/challenge_credentials/challenge_credentials_helper_impl.h"
 #include "cryptohome/cryptohome_common.h"
 #include "cryptohome/cryptohome_metrics.h"
 #include "cryptohome/cryptolib.h"
@@ -1226,8 +1226,9 @@ bool UserDataAuth::InitForChallengeResponseAuth(
     return false;
   }
 
-  challenge_credentials_helper_ = std::make_unique<ChallengeCredentialsHelper>(
-      tpm_, delegate_blob, delegate_secret);
+  challenge_credentials_helper_ =
+      std::make_unique<ChallengeCredentialsHelperImpl>(tpm_, delegate_blob,
+                                                       delegate_secret);
 
   return true;
 }

@@ -50,7 +50,7 @@
 
 #include "cryptohome/bootlockbox/boot_attributes.h"
 #include "cryptohome/bootlockbox/boot_lockbox.h"
-#include "cryptohome/challenge_credentials/challenge_credentials_helper.h"
+#include "cryptohome/challenge_credentials/challenge_credentials_helper_impl.h"
 #include "cryptohome/credentials.h"
 #include "cryptohome/crypto.h"
 #include "cryptohome/cryptohome_common.h"
@@ -2329,8 +2329,10 @@ bool Service::InitForChallengeResponseAuth(CryptohomeErrorCode* error_code) {
     *error_code = CRYPTOHOME_ERROR_MOUNT_FATAL;
     return false;
   }
-  challenge_credentials_helper_ = std::make_unique<ChallengeCredentialsHelper>(
-      tpm_, delegate_blob, delegate_secret);
+  default_challenge_credentials_helper_ =
+      std::make_unique<ChallengeCredentialsHelperImpl>(tpm_, delegate_blob,
+                                                       delegate_secret);
+  challenge_credentials_helper_ = default_challenge_credentials_helper_.get();
 
   return true;
 }

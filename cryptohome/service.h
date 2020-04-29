@@ -28,6 +28,7 @@
 #include <dbus/dbus-glib.h>
 
 #include "cryptohome/arc_disk_quota.h"
+#include "cryptohome/challenge_credentials/challenge_credentials_helper.h"
 #include "cryptohome/cryptohome_event_source.h"
 #include "cryptohome/dbus_transition.h"
 #include "cryptohome/firmware_management_parameters.h"
@@ -54,7 +55,6 @@ struct Cryptohome;
 
 class BootAttributes;
 class BootLockbox;
-class ChallengeCredentialsHelper;
 class Credentials;
 // Wrapper for all timers used by the cryptohome daemon.
 class TimerCollection;
@@ -181,6 +181,11 @@ class Service : public brillo::dbus::AbstractDbusService,
 
   virtual void set_event_source_sink(CryptohomeEventSourceSink* sink) {
     event_source_sink_ = sink;
+  }
+
+  void set_challenge_credentials_helper(
+      ChallengeCredentialsHelper* challenge_credentials_helper) {
+    challenge_credentials_helper_ = challenge_credentials_helper;
   }
 
   void set_key_challenge_service_factory(
@@ -1066,7 +1071,9 @@ virtual gboolean InstallAttributesIsFirstInstall(gboolean* OUT_first_install,
   FirmwareManagementParameters* firmware_management_parameters_;
   int low_disk_notification_period_ms_;
   int upload_alerts_period_ms_;
-  std::unique_ptr<ChallengeCredentialsHelper> challenge_credentials_helper_;
+  std::unique_ptr<ChallengeCredentialsHelper>
+      default_challenge_credentials_helper_;
+  ChallengeCredentialsHelper* challenge_credentials_helper_ = nullptr;
 
   // An atomic incrementing sequence for setting asynchronous call ids.
   base::AtomicSequenceNumber sequence_holder_;

@@ -434,7 +434,7 @@ if (use.test) {
       "auth_block_unittest.cc",
       "boot_attributes_unittest.cc",
       "bootlockbox/boot_lockbox_unittest.cc",
-      "challenge_credentials/challenge_credentials_helper_unittest.cc",
+      "challenge_credentials/challenge_credentials_helper_impl_unittest.cc",
       "challenge_credentials/challenge_credentials_test_utils.cc",
       "credentials_unittest.cc",
       "crypto_unittest.cc",
