@@ -1,0 +1,51 @@
+# Copyright 2020 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+option('xwayland_path',
+  type: 'string',
+  value: '/opt/google/cros-containers/bin/Xwayland',
+  description: 'path to Xwayland'
+)
+
+option('xwayland_gl_driver_path',
+  type: 'string',
+  value: '/opt/google/cros-containers/lib',
+  description: 'the GL driver path to use for Xwayland'
+)
+
+option('xwayland_shm_driver',
+  type: 'string',
+  value: 'virtwl',
+  description: 'shm driver to use for Xwayland'
+)
+
+option('shm_driver',
+  type: 'string',
+  value: 'virtwl-dmabuf',
+  description: 'shm driver to use for wayland clients'
+)
+
+option('virtwl_device',
+  type: 'string',
+  value: '/dev/wl0',
+  description: 'the virtwl device'
+)
+
+option('frame_color',
+  type: 'string',
+  value: '#f2f2f2',
+  description: 'frame color to use for Xwayland clients'
+)
+
+option('dark_frame_color',
+  type: 'string',
+  value: '#323639',
+  description: 'dark frame color to use for Xwayland clients'
+)
+
+option('peer_cmd_prefix',
+  type: 'string',
+  value: '',
+  description: 'command-line needed to spwan non-master sommeliers'
+)
