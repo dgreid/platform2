@@ -32,6 +32,8 @@ class MockMojoClient
       base::OnceCallback<void(const std::string&)>;
   using MojoCrosHealthdDiagnosticsServiceRequest =
       chromeos::cros_healthd::mojom::CrosHealthdDiagnosticsServiceRequest;
+  using MojoCrosHealthdProbeServiceRequest =
+      chromeos::cros_healthd::mojom::CrosHealthdProbeServiceRequest;
 
   void SendWilcoDtcMessageToUi(
       mojo::ScopedHandle json_message,
@@ -61,6 +63,10 @@ class MockMojoClient
   MOCK_METHOD(void,
               GetCrosHealthdDiagnosticsService,
               (MojoCrosHealthdDiagnosticsServiceRequest),
+              (override));
+  MOCK_METHOD(void,
+              GetCrosHealthdProbeService,
+              (MojoCrosHealthdProbeServiceRequest),
               (override));
 };
 
