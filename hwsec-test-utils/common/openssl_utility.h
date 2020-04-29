@@ -82,6 +82,12 @@ base::Optional<std::string> EVPAesDecrypt(const std::string& encrypted_data,
                                           const std::string& aes_key,
                                           const std::string& iv);
 
+// Performs the sequence of EVP_PKEY_derive_(_init|_set_peer) operations,
+// where |key| and |peer_key| are 2 keys that exchange the shared secret. As its
+// name suggests, |peer_key| is the key that comes from the other party.
+base::Optional<std::string> EVPDerive(const crypto::ScopedEVP_PKEY& key,
+                                      const crypto::ScopedEVP_PKEY& peer_key);
+
 }  // namespace hwsec_test_utils
 
 #endif  // HWSEC_TEST_UTILS_COMMON_OPENSSL_UTILITY_H_

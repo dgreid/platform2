@@ -370,4 +370,39 @@ base::Optional<std::string> EVPAesDecrypt(const std::string& encrypted_data,
   return std::string(output.get(), output.get() + output_length);
 }
 
+base::Optional<std::string> EVPDerive(const crypto::ScopedEVP_PKEY& key,
+                                      const crypto::ScopedEVP_PKEY& peer_key) {
+  crypto::ScopedEVP_PKEY_CTX ctx(EVP_PKEY_CTX_new(key.get(), nullptr));
+  if (!ctx) {
+    LOG(ERROR) << __func__
+               << ": Failed to call EVP_PKEY_CTX_new: " << GetOpenSSLError();
+    return {};
+  }
+  if (EVP_PKEY_derive_init(ctx.get()) != 1) {
+    LOG(ERROR) << __func__ << ": Failed to call EVP_PKEY_derive_init: "
+               << GetOpenSSLError();
+    return {};
+  }
+  if (EVP_PKEY_derive_set_peer(ctx.get(), peer_key.get()) != 1) {
+    LOG(ERROR) << __func__ << ": Failed to call EVP_PKEY_derive_set_peer: "
+               << GetOpenSSLError();
+    return {};
+  }
+  size_t output_length = 0;
+  if (EVP_PKEY_derive(ctx.get(), nullptr, &output_length) != 1) {
+    LOG(ERROR) << __func__
+               << ": Failed to call EVP_PKEY_derive to get output size: "
+               << GetOpenSSLError();
+    return {};
+  }
+  std::unique_ptr<unsigned char[]> output =
+      std::make_unique<unsigned char[]>(output_length);
+  if (EVP_PKEY_derive(ctx.get(), output.get(), &output_length) != 1) {
+    LOG(ERROR) << __func__
+               << ": Failed to call EVP_PKEY_derive: " << GetOpenSSLError();
+    return {};
+  }
+  return std::string(output.get(), output.get() + output_length);
+}
+
 }  // namespace hwsec_test_utils
