@@ -140,15 +140,62 @@ void DisplayCpuInfo(
     return;
   }
 
-  const auto& cpus = cpu_result->get_cpu_info();
-  std::cout << "model_name,architecture,max_clock_speed_khz" << std::endl;
-  for (const auto& cpu : cpus) {
+  // An example CpuInfo output containing a single physical CPU, which in turn
+  // contains two logical CPUs, would look like the following:
+  //
+  // num_total_threads,architecture
+  // some_uint32,some_string
+  // Physical CPU:
+  //     model_name
+  //     some_string
+  //     Logical CPU:
+  //         max_clock_speed_khz,scaling_max_frequency_khz,... (four keys total)
+  //         some_uint32,some_uint32,some_uint32,some_uint32
+  //         C-states:
+  //             name,time_in_state_since_last_boot_us
+  //             some_string,some_uint_64
+  //             ... (repeated per C-state)
+  //             some_string,some_uint_64
+  //     Logical CPU:
+  //         max_clock_speed_khz,scaling_max_frequency_khz,... (four keys total)
+  //         some_uint32,some_uint32,some_uint32,some_uint32
+  //         C-states:
+  //             name,time_in_state_since_last_boot_us
+  //             some_string,some_uint_64
+  //             ... (repeated per C-state)
+  //             some_string,some_uint_64
+  //
+  // Any additional physical CPUs would repeat, similarly to the two logical
+  // CPUs in the example.
+  const auto& cpu_info = cpu_result->get_cpu_info();
+  std::cout << "num_total_threads,architecture" << std::endl;
+  std::cout << cpu_info->num_total_threads << ","
+            << GetArchitectureString(cpu_info->architecture) << std::endl;
+  for (const auto& physical_cpu : cpu_info->physical_cpus) {
+    std::cout << "Physical CPU:" << std::endl;
+    std::cout << "\tmodel_name" << std::endl;
     // Remove commas from the model name before printing CSVs.
     std::string csv_model_name;
-    base::RemoveChars(cpu->model_name, ",", &csv_model_name);
-    std::cout << csv_model_name << ","
-              << GetArchitectureString(cpu->architecture) << ","
-              << cpu->max_clock_speed_khz << std::endl;
+    base::RemoveChars(physical_cpu->model_name, ",", &csv_model_name);
+    std::cout << "\t" << csv_model_name << std::endl;
+
+    for (const auto& logical_cpu : physical_cpu->logical_cpus) {
+      std::cout << "\tLogical CPU:" << std::endl;
+      std::cout << "\t\tmax_clock_speed_khz,scaling_max_frequency_khz,scaling_"
+                   "current_frequency_khz,idle_time_user_hz"
+                << std::endl;
+      std::cout << "\t\t" << logical_cpu->max_clock_speed_khz << ","
+                << logical_cpu->scaling_max_frequency_khz << ","
+                << logical_cpu->scaling_current_frequency_khz << ","
+                << logical_cpu->idle_time_user_hz << std::endl;
+
+      std::cout << "\t\tC-states:" << std::endl;
+      std::cout << "\t\t\tname,time_in_state_since_last_boot_us" << std::endl;
+      for (const auto& c_state : logical_cpu->c_states) {
+        std::cout << "\t\t\t" << c_state->name << ","
+                  << c_state->time_in_state_since_last_boot_us << std::endl;
+      }
+    }
   }
 }
 
