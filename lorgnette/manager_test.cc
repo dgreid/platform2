@@ -161,6 +161,39 @@ TEST_F(ManagerTest, ScanColorSuccess) {
   CompareImages("./test_images/color.png", output_path_.value());
 }
 
+TEST_F(ManagerTest, Scan16BitColorSuccess) {
+  std::string contents;
+  // Note: technically, color16.pnm does not really contain PNM data, since
+  // NetPBM assumes big endian 16-bit samples. Since SANE provides
+  // endian-native samples, color16.pnm stores the samples as little-endian.
+  ASSERT_TRUE(base::ReadFileToString(
+      base::FilePath("./test_images/color16.pnm"), &contents));
+  std::vector<uint8_t> image_data(contents.begin(), contents.end());
+  std::unique_ptr<SaneDeviceFake> device = std::make_unique<SaneDeviceFake>();
+  device->SetScanData(image_data);
+
+  ScanParameters parameters;
+  parameters.format = kRGB;
+  parameters.pixels_per_line = 32;
+  parameters.lines = 32;
+  parameters.depth = 16;
+  parameters.bytes_per_line =
+      parameters.pixels_per_line * parameters.depth / 8 * 3;
+  device->SetScanParameters(parameters);
+
+  sane_client_->SetDeviceForName("TestDevice", std::move(device));
+
+  base::File scan(output_path_,
+                  base::File::FLAG_CREATE | base::File::FLAG_WRITE);
+  ASSERT_TRUE(scan.IsValid());
+  base::ScopedFD scan_fd(scan.TakePlatformFile());
+
+  ExpectScanSuccess();
+  EXPECT_TRUE(manager_.ScanImage(nullptr, "TestDevice", scan_fd,
+                                 brillo::VariantDictionary()));
+  CompareImages("./test_images/color16.png", output_path_.value());
+}
+
 TEST_F(ManagerTest, ScanFailNoDevice) {
   std::string contents;
   ASSERT_TRUE(base::ReadFileToString(base::FilePath("./test_images/color.pnm"),

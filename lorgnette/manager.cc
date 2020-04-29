@@ -36,7 +36,7 @@ namespace {
 // Checks that the scan parameters in |params| are supported by our scanning
 // and PNG conversion logic.
 bool ValidateParams(brillo::ErrorPtr* error, const ScanParameters& params) {
-  if (params.depth != 1 && params.depth != 8) {
+  if (params.depth != 1 && params.depth != 8 && params.depth != 16) {
     brillo::Error::AddToPrintf(error, FROM_HERE, brillo::errors::dbus::kDomain,
                                kManagerServiceError,
                                "Invalid scan bit depth %d", params.depth);
@@ -142,6 +142,11 @@ bool SetupPngHeader(brillo::ErrorPtr* error,
       // Inverts black and white pixels, since monocolor data from SANE has an
       // inverted representation when compared to PNG.
       png_set_invert_mono(png);
+      break;
+    case 16:
+      // Transpose byte order, since PNG is big-endian and SANE is endian-native
+      // i.e. little-endian.
+      png_set_swap(png);
       break;
   }
 
