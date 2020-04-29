@@ -87,6 +87,14 @@ TEST_F(ManagerTest, ScanBlackAndWhiteSuccess) {
   std::vector<uint8_t> image_data(contents.begin(), contents.end());
   std::unique_ptr<SaneDeviceFake> device = std::make_unique<SaneDeviceFake>();
   device->SetScanData(image_data);
+
+  ScanParameters parameters;
+  parameters.format = kGrayscale;
+  parameters.pixels_per_line = 85;
+  parameters.lines = 29;
+  parameters.depth = 1;
+  device->SetScanParameters(parameters);
+
   sane_client_->SetDeviceForName("TestDevice", std::move(device));
 
   base::File scan(output_path_,
@@ -108,6 +116,14 @@ TEST_F(ManagerTest, ScanColorSuccess) {
   std::vector<uint8_t> image_data(contents.begin(), contents.end());
   std::unique_ptr<SaneDeviceFake> device = std::make_unique<SaneDeviceFake>();
   device->SetScanData(image_data);
+
+  ScanParameters parameters;
+  parameters.format = kRGB;
+  parameters.pixels_per_line = 98;
+  parameters.lines = 50;
+  parameters.depth = 8;
+  device->SetScanParameters(parameters);
+
   sane_client_->SetDeviceForName("TestDevice", std::move(device));
 
   base::File scan(output_path_,

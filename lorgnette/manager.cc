@@ -150,6 +150,50 @@ bool Manager::ScanImage(brillo::ErrorPtr* error,
   if (!device->StartScan(error))
     return false;
 
+  ScanParameters params;
+  if (!device->GetScanParameters(error, &params))
+    return false;
+
+  if (params.depth != 1 && params.depth != 8) {
+    brillo::Error::AddToPrintf(error, FROM_HERE, brillo::errors::dbus::kDomain,
+                               kManagerServiceError,
+                               "Invalid scan bit depth %d", params.depth);
+    return false;
+  }
+
+  if (params.depth == 1 && params.format != kGrayscale) {
+    brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
+                         kManagerServiceError,
+                         "Cannot have bit depth of 1 with non-grayscale scan");
+    return false;
+  }
+
+  if (params.lines < 0) {
+    brillo::Error::AddTo(
+        error, FROM_HERE, brillo::errors::dbus::kDomain, kManagerServiceError,
+        "Cannot handle scanning of files with unknown lengths");
+    return false;
+  }
+
+  int width = params.pixels_per_line;
+  int height = params.lines;
+  std::string header;
+  if (params.format == kGrayscale && params.depth == 1) {
+    header = base::StringPrintf("P4\n%d %d\n", width, height);
+  } else if (params.format == kGrayscale) {
+    header = base::StringPrintf("P5\n%d %d\n255\n", width, height);
+  } else if (params.format == kRGB) {
+    header = base::StringPrintf("P6\n%d %d\n255\n", width, height);
+  }
+
+  int written = pipe_in.WriteAtCurrentPos(header.c_str(), header.size());
+  if (written != header.size()) {
+    brillo::Error::AddToPrintf(
+        error, FROM_HERE, brillo::errors::dbus::kDomain, kManagerServiceError,
+        "Failed to write image header to pipe: %d", errno);
+    return false;
+  }
+
   const int buffer_length = 4 * 1024;
   std::vector<uint8_t> image_buffer(buffer_length, '\0');
   size_t read = 0;
@@ -165,6 +209,7 @@ bool Manager::ScanImage(brillo::ErrorPtr* error,
           "Failed to write image data to pipe: %d", errno);
       return false;
     }
+
     result = device->ReadScanData(error, image_buffer.data(),
                                   image_buffer.size(), &read);
   }
