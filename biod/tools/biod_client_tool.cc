@@ -286,7 +286,7 @@ class BiometricsManagerProxy : public biod::BiometricsManagerProxyBase {
     }
   }
 
-  BiometricsManagerType type_;
+  BiometricsManagerType type_ = BiometricsManagerType::BIOMETRIC_TYPE_UNKNOWN;
   std::vector<RecordProxy> records_;
   base::WeakPtrFactory<BiometricsManagerProxy> weak_factory_;
 
