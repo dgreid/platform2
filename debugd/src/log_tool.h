@@ -56,13 +56,18 @@ class LogTool {
         LogTool::Encoding encoding = LogTool::Encoding::kAutodetect,
         bool access_root_mount_ns = false);
 
+    virtual ~Log() = default;
+
     std::string GetName() const;
-    std::string GetLogData() const;
+    virtual std::string GetLogData() const;
 
     std::string GetCommandLogData() const;
     std::string GetFileLogData() const;
 
     void DisableMinijailForTest();
+
+   protected:
+    Log() = default;  // For testing only.
 
    private:
     static uid_t UidForUser(const std::string& name);
@@ -106,6 +111,9 @@ class LogTool {
 
   // For testing only.
   LogTool(scoped_refptr<dbus::Bus> bus,
+          std::unique_ptr<org::chromium::CryptohomeInterfaceProxyInterface>
+              cryptohome_proxy,
+          const std::unique_ptr<LogTool::Log> arc_bug_report_log,
           const base::FilePath& daemon_store_base_dir);
 
   void CreateConnectivityReport(bool wait_for_results);
@@ -118,6 +126,9 @@ class LogTool {
   scoped_refptr<dbus::Bus> bus_;
   std::unique_ptr<org::chromium::CryptohomeInterfaceProxyInterface>
       cryptohome_proxy_;
+
+  std::unique_ptr<LogTool::Log> arc_bug_report_log_;
+
   base::FilePath daemon_store_base_dir_;
   // Set containing userhash of all users for which
   // ARC bug report has been backed up.

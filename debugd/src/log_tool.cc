@@ -74,14 +74,21 @@ constexpr const char kPerfDataDescription[] =
 using Log = LogTool::Log;
 constexpr Log::LogType kCommand = Log::kCommand;
 constexpr Log::LogType kFile = Log::kFile;
-const Log kArcBugReportLog{
-    kCommand,
-    "arc-bugreport",
-    "/usr/bin/nsenter -t1 -m /usr/sbin/android-sh -c /system/bin/arc-bugreport",
-    kRoot,
-    kRoot,
-    10 * 1024 * 1024 /*10 MiB*/,
-    LogTool::Encoding::kUtf8};
+
+class ArcBugReportLog : public LogTool::Log {
+ public:
+  ArcBugReportLog()
+      : Log(kCommand,
+            "arc-bugreport",
+            "/usr/bin/nsenter -t1 -m /usr/sbin/android-sh -c "
+            "/system/bin/arc-bugreport",
+            kRoot,
+            kRoot,
+            10 * 1024 * 1024 /*10 MiB*/,
+            LogTool::Encoding::kUtf8) {}
+
+  virtual ~ArcBugReportLog() = default;
+};
 
 // NOTE: IF YOU ADD AN ENTRY TO THIS LIST, PLEASE:
 // * add a row to http://go/cros-feedback-audit and fill it out
@@ -644,15 +651,22 @@ gid_t Log::GidForGroup(const std::string& group) {
   return entry.gr_gid;
 }
 
-LogTool::LogTool(scoped_refptr<dbus::Bus> bus,
-                 const base::FilePath& daemon_store_base_dir)
-    : bus_(bus), daemon_store_base_dir_(daemon_store_base_dir) {
-  cryptohome_proxy_ =
-      std::make_unique<org::chromium::CryptohomeInterfaceProxy>(bus);
-}
+LogTool::LogTool(
+    scoped_refptr<dbus::Bus> bus,
+    std::unique_ptr<org::chromium::CryptohomeInterfaceProxyInterface>
+        cryptohome_proxy,
+    std::unique_ptr<LogTool::Log> arc_bug_report_log,
+    const base::FilePath& daemon_store_base_dir)
+    : bus_(bus),
+      cryptohome_proxy_(std::move(cryptohome_proxy)),
+      arc_bug_report_log_(std::move(arc_bug_report_log)),
+      daemon_store_base_dir_(daemon_store_base_dir) {}
 
 LogTool::LogTool(scoped_refptr<dbus::Bus> bus)
-    : LogTool(bus, base::FilePath(kDaemonStoreBaseDir)) {}
+    : LogTool(bus,
+              std::make_unique<org::chromium::CryptohomeInterfaceProxy>(bus),
+              std::make_unique<ArcBugReportLog>(),
+              base::FilePath(kDaemonStoreBaseDir)) {}
 
 base::FilePath LogTool::GetArcBugReportBackupFilePath
   (const std::string& userhash) {
@@ -695,7 +709,7 @@ LogTool::LogMap LogTool::GetAllDebugLogs() {
   LogMap result;
   GetLogsFrom(kCommandLogs, &result);
   GetLogsFrom(kExtraLogs, &result);
-  result[kArcBugReportLog.GetName()] = GetArcBugReport("");
+  result[arc_bug_report_log_->GetName()] = GetArcBugReport("");
   GetLsbReleaseInfo(&result);
   GetOsReleaseInfo(&result);
   return result;
@@ -709,7 +723,7 @@ void LogTool::GetBigFeedbackLogs(const base::ScopedFD& fd,
   base::DictionaryValue dictionary;
   GetLogsInDictionary(kCommandLogs, &dictionary);
   GetLogsInDictionary(kFeedbackLogs, &dictionary);
-  dictionary.SetKey(kArcBugReportLog.GetName(),
+  dictionary.SetKey(arc_bug_report_log_->GetName(),
                     base::Value(GetArcBugReport(username)));
   GetLsbReleaseInfo(&map);
   GetOsReleaseInfo(&map);
@@ -719,7 +733,7 @@ void LogTool::GetBigFeedbackLogs(const base::ScopedFD& fd,
 
 std::string GetSanitizedUsername(
     org::chromium::CryptohomeInterfaceProxyInterface* cryptohome_proxy,
-    std::string username) {
+    const std::string& username) {
   if (username.empty()) {
     return std::string();
   }
@@ -750,7 +764,7 @@ std::string LogTool::GetArcBugReport(const std::string& username) {
     if (!userhash.empty()) {
       DeleteArcBugReportBackup(userhash);
     }
-    contents = kArcBugReportLog.GetLogData();
+    contents = arc_bug_report_log_->GetLogData();
   }
 
   return contents;
@@ -760,7 +774,7 @@ void LogTool::BackupArcBugReport(const std::string& userhash) {
   DLOG(INFO) << "Backing up ARC bug report";
 
   const base::FilePath reportPath = GetArcBugReportBackupFilePath(userhash);
-  const std::string logData = kArcBugReportLog.GetLogData();
+  const std::string logData = arc_bug_report_log_->GetLogData();
   if (base::WriteFile(reportPath, logData.c_str(), logData.length())) {
     arc_bug_report_backups_.insert(userhash);
   } else {

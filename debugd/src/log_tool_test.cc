@@ -15,8 +15,15 @@
 #include <base/files/scoped_temp_dir.h>
 #include <dbus/mock_bus.h>
 #include <gtest/gtest.h>
+#include <cryptohome/proto_bindings/rpc.pb.h>
+#include <cryptohome-client-test/cryptohome/dbus-proxy-mocks.h>
 
 #include "debugd/src/log_tool.h"
+
+using testing::_;
+using testing::Invoke;
+using testing::Return;
+using testing::WithArg;
 
 namespace {
 bool WriteFile(const base::FilePath& path, const std::string& contents) {
@@ -28,6 +35,11 @@ bool WriteFile(const base::FilePath& path, const std::string& contents) {
 
 namespace debugd {
 
+class FakeLog : public LogTool::Log {
+ public:
+  MOCK_METHOD(std::string, GetLogData, (), (const, override));
+};
+
 class LogToolTest : public testing::Test {
  protected:
   std::unique_ptr<LogTool> log_tool_;
@@ -36,9 +48,67 @@ class LogToolTest : public testing::Test {
   void SetUp() override {
     ASSERT_TRUE(temp_dir_.CreateUniqueTempDir());
     log_tool_ = std::unique_ptr<LogTool>(new LogTool(
-        new dbus::MockBus(dbus::Bus::Options()), temp_dir_.GetPath()));
+        new dbus::MockBus(dbus::Bus::Options()),
+        std::make_unique<org::chromium::CryptohomeInterfaceProxyMock>(),
+        std::make_unique<FakeLog>(), temp_dir_.GetPath()));
+
+    ON_CALL(*GetFakeLog(), GetLogData).WillByDefault(Return("fake"));
+  }
+
+  FakeLog* GetFakeLog() {
+    return static_cast<FakeLog*>(log_tool_->arc_bug_report_log_.get());
+  }
+
+  std::string GetArcBugReport(const std::string& username) {
+    return log_tool_->GetArcBugReport(username);
+  }
+
+  org::chromium::CryptohomeInterfaceProxyMock* GetCryptHomeProxy() {
+    return static_cast<org::chromium::CryptohomeInterfaceProxyMock*>(
+        log_tool_->cryptohome_proxy_.get());
+  }
+
+  void SetArcBugReportBackup(const std::string& userhash) {
+    log_tool_->arc_bug_report_backups_.insert(userhash);
   }
 };
+
+TEST_F(LogToolTest, GetArcBugReport_ReturnsContents_WhenFileExists) {
+  std::string userhash = "userhash";
+  base::FilePath logPath =
+      temp_dir_.GetPath().Append(userhash).Append("arc-bugreport.log");
+  EXPECT_TRUE(WriteFile(logPath, "test"));
+  EXPECT_TRUE(base::PathExists(logPath));
+  SetArcBugReportBackup(userhash);
+  EXPECT_CALL(*GetCryptHomeProxy(), GetSanitizedUsername("username", _, _, _))
+      .WillOnce(WithArg<1>(Invoke([&userhash](std::string* out_sanitized) {
+        *out_sanitized = userhash;
+        return true;
+      })));
+
+  std::string report = GetArcBugReport("username");
+
+  EXPECT_EQ(report, "test");
+}
+
+TEST_F(LogToolTest, GetArcBugReport_DeletesFile_WhenBackupNotSet) {
+  std::string userhash = "userhash";
+  base::FilePath logPath =
+      temp_dir_.GetPath().Append(userhash).Append("arc-bugreport.log");
+  EXPECT_TRUE(WriteFile(logPath, "test"));
+  EXPECT_TRUE(base::PathExists(logPath));
+  EXPECT_CALL(*GetFakeLog(), GetLogData);
+  EXPECT_CALL(*GetCryptHomeProxy(), GetSanitizedUsername("username", _, _, _))
+      .WillOnce(WithArg<1>(Invoke([&userhash](std::string* out_sanitized) {
+        *out_sanitized = userhash;
+        return true;
+      })));
+
+  std::string report = GetArcBugReport("username");
+
+  EXPECT_EQ(report, "fake");
+  EXPECT_FALSE(base::PathExists(logPath));
+}
 
 TEST_F(LogToolTest, DeleteArcBugReportBackup) {
   std::string userhash = "user";
@@ -46,9 +116,9 @@ TEST_F(LogToolTest, DeleteArcBugReportBackup) {
                             .Append(userhash)
                             .Append("arc-bugreport.log");
   EXPECT_TRUE(WriteFile(logPath, userhash));
-  EXPECT_TRUE(PathExists(logPath));
+  EXPECT_TRUE(base::PathExists(logPath));
   log_tool_->DeleteArcBugReportBackup(userhash);
-  EXPECT_FALSE(PathExists(logPath));
+  EXPECT_FALSE(base::PathExists(logPath));
 }
 
 TEST_F(LogToolTest, EncodeString) {
