@@ -581,7 +581,7 @@ std::string CryptoUtilityImpl::HmacSha512(const std::string& key,
   return std::string(std::begin(mac), std::end(mac));
 }
 
-int CryptoUtilityImpl::DefaultDigestAlgoForSingature() {
+int CryptoUtilityImpl::DefaultDigestAlgoForSignature() {
   switch (tpm_utility_->GetVersion()) {
     case attestation::TPM_2_0:
       return NID_sha256;

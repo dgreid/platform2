@@ -155,7 +155,7 @@ class CryptoUtility {
 
   // Get the default signature hash algorithm according to TPM version.
   // TPM 1.2 use SHA1. TPM 2.0 use SHA256.
-  virtual int DefaultDigestAlgoForSingature() = 0;
+  virtual int DefaultDigestAlgoForSignature() = 0;
 };
 
 }  // namespace attestation

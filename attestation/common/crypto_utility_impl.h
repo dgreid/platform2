@@ -87,7 +87,7 @@ class CryptoUtilityImpl : public CryptoUtility {
   std::string HmacSha512(const std::string& key,
                          const std::string& data) override;
 
-  int DefaultDigestAlgoForSingature() override;
+  int DefaultDigestAlgoForSignature() override;
 
  private:
   friend class CryptoUtilityImplTest;

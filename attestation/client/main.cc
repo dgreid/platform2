@@ -787,7 +787,7 @@ class ClientLoop : public ClientLoopBase {
                         const std::string& signature,
                         const GetKeyInfoReply& key_info) {
     CryptoUtilityImpl crypto(nullptr);
-    if (crypto.VerifySignature(crypto.DefaultDigestAlgoForSingature(),
+    if (crypto.VerifySignature(crypto.DefaultDigestAlgoForSignature(),
                                key_info.public_key(), input, signature)) {
       printf("Signature is OK!\n");
     } else {

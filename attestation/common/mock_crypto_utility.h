@@ -110,7 +110,7 @@ class MockCryptoUtility : public CryptoUtility {
               HmacSha512,
               (const std::string&, const std::string&),
               (override));
-  MOCK_METHOD(int, DefaultDigestAlgoForSingature, (), (override));
+  MOCK_METHOD(int, DefaultDigestAlgoForSignature, (), (override));
 };
 
 }  // namespace attestation

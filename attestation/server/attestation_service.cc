@@ -2050,7 +2050,7 @@ bool AttestationService::VerifyIdentityBinding(
       return false;
     }
     if (!crypto_utility_->VerifySignature(
-            crypto_utility_->DefaultDigestAlgoForSingature(),
+            crypto_utility_->DefaultDigestAlgoForSignature(),
             identity_public_key_info,
             header + digest + binding.identity_public_key_tpm_format(),
             binding.identity_binding())) {
@@ -2072,7 +2072,7 @@ bool AttestationService::VerifyQuoteSignature(
     const Quote& quote,
     uint32_t pcr_index) {
   if (!crypto_utility_->VerifySignature(
-          crypto_utility_->DefaultDigestAlgoForSingature(), aik_public_key_info,
+          crypto_utility_->DefaultDigestAlgoForSignature(), aik_public_key_info,
           quote.quoted_data(), quote.quote())) {
     LOG(ERROR) << __func__ << ": Signature mismatch.";
     return false;
@@ -2165,7 +2165,7 @@ bool AttestationService::VerifyCertifiedKey(
     const std::string& key_info,
     const std::string& proof) {
   if (!crypto_utility_->VerifySignature(
-          crypto_utility_->DefaultDigestAlgoForSingature(), aik_public_key_info,
+          crypto_utility_->DefaultDigestAlgoForSignature(), aik_public_key_info,
           key_info, proof)) {
     LOG(ERROR) << __func__ << ": Bad key signature.";
     return false;
