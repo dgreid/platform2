@@ -66,11 +66,6 @@ const char kTestACAPublicKey[] =
     "7D1DC5B6AE210C52B008D87F2A7BFF6EB5C4FB32D6ECEC6505796173951A3167";
 const char kTestACAPublicKeyID[] = "\x00\xc2\xb0\x56\x2d";
 
-#ifdef USE_TEST_ACA
-#error "Do not compile with USE_TEST_ACA"
-       " but provide the right aca_type in requests."
-#endif
-
 const char kDefaultEnterpriseSigningPublicKey[] =
     "bf7fefa3a661437b26aed0801db64d7ba8b58875c351d3bdc9f653847d4a67b3"
     "b67479327724d56aa0f71a3f57c2290fdc1ff05df80589715e381dfbbda2c4ac"
