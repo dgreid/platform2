@@ -3,4 +3,30 @@
 # found in the LICENSE file.
 
 group("all") {
+  deps = [
+    ":attestation-injected-keys",
+  ]
+}
+
+pkg_config("target_defaults") {
+  pkg_deps = [
+    "libbrillo",
+    "libchrome-${libbase_ver}",
+  ]
+  defines = [ "USE_TPM2=${use.tpm2}" ]
+}
+
+executable("attestation-injected-keys") {
+  configs += [ ":target_defaults" ]
+  sources = [
+    "attestation_injected_keys/main.cc",
+    "attestation_injected_keys/utility.cc",
+  ]
+  pkg_deps = [
+    # system_api depends on protobuf (or protobuf-lite). It must appear
+    # before protobuf here or the linker flags won't be in the right
+    # order.
+    "system_api",
+    "protobuf",
+  ]
 }
