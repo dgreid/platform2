@@ -41,7 +41,7 @@ proto_library("worker-protos") {
 pkg_config("target_defaults") {
   pkg_deps = [
     "dbus-1",
-    "libarcnetwork-util",
+    "libpatchpanel-util",
     "libbrillo-${libbase_ver}",
     "libchrome-${libbase_ver}",
     "libminijail",

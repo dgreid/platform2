@@ -7,10 +7,10 @@ import("//common-mk/proto_library.gni")
 
 group("all") {
   deps = [
-    ":patchpaneld",
-    ":libarcnetwork",
-    ":libarcnetwork-util",
+    ":libpatchpanel",
     ":libpatchpanel-client",
+    ":libpatchpanel-util",
+    ":patchpaneld",
   ]
   if (use.fuzzer) {
     deps += [
@@ -20,7 +20,7 @@ group("all") {
     ]
   }
   if (use.test) {
-    deps += [ ":arc_network_testrunner" ]
+    deps += [ ":patchpanel_testrunner" ]
   }
 }
 
@@ -60,7 +60,7 @@ util_sources = [
   "subnet_pool.cc",
 ]
 
-libarcnetwork_sources = [
+libpatchpanel_sources = [
   "adb_proxy.cc",
   "arc_service.cc",
   "broadcast_forwarder.cc",
@@ -82,30 +82,30 @@ libarcnetwork_sources = [
   "shill_client.cc",
 ]
 
-shared_library("libarcnetwork-util") {
+shared_library("libpatchpanel-util") {
   sources = util_sources
   configs += [ ":target_defaults" ]
 }
 
-static_library("libarcnetwork_test") {
+static_library("libpatchpanel_test") {
   configs += [ ":target_defaults" ]
   all_dependent_pkg_deps = [
     "protobuf",
     "system_api",
   ]
-  sources = libarcnetwork_sources
+  sources = libpatchpanel_sources
   deps = [
     ":protos",
   ]
 }
 
-static_library("libarcnetwork") {
+static_library("libpatchpanel") {
   configs += [ ":target_defaults" ]
   all_dependent_pkg_deps = [
     "protobuf",
     "system_api",
   ]
-  sources = libarcnetwork_sources + util_sources
+  sources = libpatchpanel_sources + util_sources
   deps = [
     ":protos",
   ]
@@ -129,7 +129,7 @@ executable("patchpaneld") {
   ]
   configs += [ ":target_defaults" ]
   deps = [
-    ":libarcnetwork",
+    ":libpatchpanel",
   ]
 }
 
@@ -148,7 +148,7 @@ if (use.fuzzer) {
       "multicast_forwarder_fuzzer.cc",
     ]
     deps = [
-      ":libarcnetwork",
+      ":libpatchpanel",
     ]
   }
 
@@ -162,7 +162,7 @@ if (use.fuzzer) {
       "ndproxy_fuzzer.cc",
     ]
     deps = [
-      ":libarcnetwork",
+      ":libpatchpanel",
     ]
   }
 
@@ -176,7 +176,7 @@ if (use.fuzzer) {
       "datapath_fuzzer.cc",
     ]
     deps = [
-      ":libarcnetwork",
+      ":libpatchpanel",
     ]
   }
 }
@@ -186,7 +186,7 @@ if (use.test) {
     pkg_deps = [ "libchrome-test-${libbase_ver}" ]
   }
 
-  executable("arc_network_testrunner") {
+  executable("patchpanel_testrunner") {
     sources = [
       "address_manager_test.cc",
       "arc_service_test.cc",
@@ -208,8 +208,8 @@ if (use.test) {
     ]
     defines = [ "UNIT_TEST" ]
     deps = [
-      ":libarcnetwork_test",
       ":libpatchpanel-client",
+      ":libpatchpanel_test",
       "//common-mk/testrunner",
     ]
   }

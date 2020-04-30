@@ -34,7 +34,7 @@ group("host") {
 
 pkg_config("host_target_defaults_pkgs") {
   pkg_deps = [
-    "libarcnetwork-util",
+    "libpatchpanel-util",
     "libbrillo",
     "libchrome-${libbase_ver}",
   ]
