@@ -297,7 +297,10 @@ SaneDeviceImpl::SaneOption::~SaneOption() {
 SaneDeviceImpl::SaneDeviceImpl(SANE_Handle handle,
                                const std::string& name,
                                std::shared_ptr<DeviceSet> open_devices)
-    : handle_(handle), name_(name), open_devices_(open_devices) {}
+    : handle_(handle),
+      name_(name),
+      open_devices_(open_devices),
+      scan_running_(false) {}
 
 bool SaneDeviceImpl::LoadOptions(brillo::ErrorPtr* error) {
   // First we get option descriptor 0, which contains the total count of
