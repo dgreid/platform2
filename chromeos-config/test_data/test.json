@@ -145,7 +145,7 @@
           "is-lid-convertible": true
         },
         "identity": {
-          "platform-name": "Another",
+          "platform-name": "Some",
           "smbios-name-match": "Another"
         },
         "name": "another",
@@ -160,7 +160,7 @@
         "firmware": {},
         "identity": {
           "customization-id": "SomeCustomization",
-          "platform-name": "SomeCustomization",
+          "platform-name": "Some",
           "smbios-name-match": "SomeCustomization"
         },
         "name": "some_customization"

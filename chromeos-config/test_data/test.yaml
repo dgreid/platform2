@@ -181,7 +181,7 @@ chromeos:
             hardware-properties:
               is-lid-convertible: true
             identity:
-              platform-name: "Another"
+              platform-name: "Some"
               smbios-name-match: "Another"
             firmware:
               bcs-overlay: "overlay-another-private"
@@ -229,7 +229,7 @@ chromeos:
         - config:
             name: "some_customization"
             identity:
-              platform-name: "SomeCustomization"
+              platform-name: "Some"
               smbios-name-match: "SomeCustomization"
               customization-id: "SomeCustomization"
             firmware:

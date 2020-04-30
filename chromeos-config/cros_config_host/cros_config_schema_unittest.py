@@ -406,6 +406,31 @@ chromeos:
     cros_config_schema.ValidateConfig(
         cros_config_schema.TransformConfig(config))
 
+  def testMultipleMosysPlatformsInvalid(self):
+    config = {
+        'chromeos': {
+            'configs': [
+                {'identity': {'platform-name': 'SomePlatform',
+                              'sku-id': 1}},
+                {'identity': {'platform-name': 'SomePlatform',
+                              'sku-id': 2}},
+                # This causes the ValidationError.
+                {'identity': {'platform-name': 'AnotherPlatform',
+                              'sku-id': 3}},
+            ],
+        },
+    }
+    with self.assertRaises(cros_config_schema.ValidationError):
+      cros_config_schema.ValidateConfig(json.dumps(config))
+
+    # Removing the offending config should clear the ValidationError.
+    config['chromeos']['configs'].pop()
+    try:
+      cros_config_schema.ValidateConfig(json.dumps(config))
+    except cros_config_schema.ValidationError:
+      self.fail('Removing the offending config should have cleared the '
+                'ValidationError.')
+
 
 class FilterBuildElements(cros_test_lib.TestCase):
 

@@ -19,7 +19,7 @@ static struct config_map all_configs[] = {
               .model = "some",
               .customization = "some"}},
 
-    {.platform_name = "Another",
+    {.platform_name = "Some",
      .firmware_name_match = "Another",
      .sku_id = -1,
      .customization_id = "",
@@ -28,7 +28,7 @@ static struct config_map all_configs[] = {
               .model = "another",
               .customization = "another"}},
 
-    {.platform_name = "SomeCustomization",
+    {.platform_name = "Some",
      .firmware_name_match = "SomeCustomization",
      .sku_id = -1,
      .customization_id = "SomeCustomization",
