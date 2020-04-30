@@ -30,6 +30,9 @@ class DlcBase {
   explicit DlcBase(const DlcId& id) : id_(id), is_verified_(false) {}
   virtual ~DlcBase() = default;
 
+  // Returns the list of directories related to a DLC for deletion.
+  static std::vector<base::FilePath> GetPathsToDelete(const DlcId& id);
+
   // Initializes the DLC. This should be called right after creating the DLC
   // object.
   bool Initialize();

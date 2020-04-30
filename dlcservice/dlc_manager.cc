@@ -22,13 +22,23 @@ using brillo::ErrorPtr;
 namespace dlcservice {
 
 void DlcManager::Initialize() {
+  auto system_state = SystemState::Get();
   // Initialize supported DLC(s).
-  for (const auto& id : ScanDirectory(SystemState::Get()->manifest_dir())) {
+  for (const auto& id : ScanDirectory(system_state->manifest_dir())) {
     auto result = supported_.emplace(id, id);
     if (!result.first->second.Initialize()) {
       LOG(ERROR) << "Failed to initialize DLC " << id;
       supported_.erase(id);
     }
+  }
+
+  // Delete deprecated DLC(s) in content directory.
+  for (const auto& id : ScanDirectory(system_state->content_dir())) {
+    if (IsSupported(id))
+      continue;
+    for (const auto& path : DlcBase::GetPathsToDelete(id))
+      if (!base::DeleteFile(path, /*recursive=*/true))
+        PLOG(ERROR) << "Failed to delete path=" << path;
   }
 
   PreloadDlcs();
@@ -56,11 +66,14 @@ const DlcBase* DlcManager::GetDlc(const DlcId& id) {
 // preloaded DLC(s) and verifying the validity to be preloaded before doing
 // so.
 void DlcManager::PreloadDlcs() {
+  auto preloaded_dir = SystemState::Get()->preloaded_content_dir();
   // Load all preloaded DLC(s) into |content_dir_| one by one.
-  for (const auto& id :
-       ScanDirectory(SystemState::Get()->preloaded_content_dir())) {
+  for (const auto& id : ScanDirectory(preloaded_dir)) {
     if (!IsSupported(id)) {
       LOG(ERROR) << "Preloading is not allowed for unsupported DLC=" << id;
+      auto preloaded_path = JoinPaths(preloaded_dir, id);
+      if (!base::DeleteFile(preloaded_path, /*recursive=*/true))
+        PLOG(ERROR) << "Failed to delete path=" << preloaded_path.value();
       continue;
     }
 

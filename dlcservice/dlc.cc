@@ -27,6 +27,14 @@ using std::string;
 using std::vector;
 
 namespace dlcservice {
+
+// static
+vector<FilePath> DlcBase::GetPathsToDelete(const DlcId& id) {
+  const auto* system_state = SystemState::Get();
+  return {JoinPaths(system_state->content_dir(), id),
+          JoinPaths(system_state->dlc_prefs_dir(), id)};
+}
+
 // TODO(ahassani): Instead of initlialize function, create a factory method so
 // we can develop different types of DLC classes.
 bool DlcBase::Initialize() {
@@ -514,9 +522,7 @@ bool DlcBase::IsActiveImagePresent() const {
 // Deletes all directories related to this DLC.
 bool DlcBase::DeleteInternal(ErrorPtr* err) {
   vector<string> undeleted_paths;
-  auto content_dir = SystemState::Get()->content_dir();
-  for (const auto& path :
-       {content_id_path_, content_package_path_, prefs_path_}) {
+  for (const auto& path : GetPathsToDelete(id_)) {
     if (!base::DeleteFile(path, true)) {
       PLOG(ERROR) << "Failed to delete path=" << path;
       undeleted_paths.push_back(path.value());
