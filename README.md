@@ -48,6 +48,7 @@ copies.
 | [cros_component](./cros_component/) ||
 | [crosdns](./crosdns/) | Hostname resolution service for Chrome OS |
 | [crosh](./crosh/) | The Chromium OS shell |
+| [croslog](./croslog/) | The log manipulation command |
 | [cryptohome](./cryptohome/) | Daemon and tools for managing encrypted /home and /var directories |
 | [cups_proxy](./cups_proxy/) | Daemon for proxying CUPS printing request |
 | [debugd](./debugd/) | Centralized debug daemon for random tools |
