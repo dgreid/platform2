@@ -120,9 +120,7 @@
               "source": "some_touch_vendor/some-other-pid_some-other-version.bin",
               "symlink": "/lib/firmware/some_touch_vendorts_i2c_some-other-pid.bin"
             }
-          ],
-          "present": "probe",
-          "probe-regex": "some-prob-regex"
+          ]
         },
         "ui": {
           "power-button": {
@@ -247,8 +245,7 @@
               "source": "some_touch_vendor/some-other-pid_some-other-version.bin",
               "symlink": "/lib/firmware/some_touch_vendorts_i2c_some-other-pid.bin"
             }
-          ],
-          "present": "no"
+          ]
         },
         "ui": {
           "power-button": {
@@ -338,9 +335,7 @@
               "source": "some_touch_vendor/some-pid_some-version.bin",
               "symlink": "/lib/firmware/some_touch_vendorts_i2c_some-pid.bin"
             }
-          ],
-          "present": "probe",
-          "probe-regex": "another-prob-regex"
+          ]
         },
         "wallpaper": "default"
       },
@@ -438,9 +433,7 @@
               "source": "some_touch_vendor/some-other-pid_some-other-version.bin",
               "symlink": "/lib/firmware/some_touch_vendorts_i2c_some-other-pid.bin"
             }
-          ],
-          "present": "yes",
-          "probe-regex": "some-prob-regex"
+          ]
         },
         "ui": {
           "power-button": {
@@ -529,8 +522,7 @@
               "source": "some_touch_vendor/some-other-pid_some-other-version.bin",
               "symlink": "/lib/firmware/some_touch_vendorts_i2c_some-other-pid.bin"
             }
-          ],
-          "present": "no"
+          ]
         },
         "ui": {
           "power-button": {
@@ -619,9 +611,7 @@
               "source": "some_touch_vendor/some-other-pid_some-other-version.bin",
               "symlink": "/lib/firmware/some_touch_vendorts_i2c_some-other-pid.bin"
             }
-          ],
-          "present": "yes",
-          "probe-regex": "some-prob-regex"
+          ]
         },
         "ui": {
           "power-button": {
@@ -710,8 +700,7 @@
               "source": "some_touch_vendor/some-other-pid_some-other-version.bin",
               "symlink": "/lib/firmware/some_touch_vendorts_i2c_some-other-pid.bin"
             }
-          ],
-          "present": "no"
+          ]
         },
         "ui": {
           "power-button": {

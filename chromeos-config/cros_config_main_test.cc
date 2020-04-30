@@ -28,8 +28,7 @@ std::vector<std::string> GetCrosConfigCommand(
     const std::vector<std::string>& params) {
   std::vector<std::string> cmd = {
       base::StringPrintf("%s/cros_config", installed_dir),
-      "--test_file=test.json",
-      "--test_name=Another"};
+      "--test_file=test.json", "--test_name=Another"};
   cmd.insert(cmd.end(), params.begin(), params.end());
   return cmd;
 }
@@ -50,10 +49,10 @@ TEST(CrosConfigTest, GetStringRoot) {
 
 TEST(CrosConfigTest, GetStringNonRoot) {
   std::string val;
-  bool success =
-      base::GetAppOutput(GetCrosConfigCommand({"/touch", "present"}), &val);
+  bool success = base::GetAppOutput(
+      GetCrosConfigCommand({"/identity", "smbios-name-match"}), &val);
   EXPECT_TRUE(success);
-  EXPECT_EQ("probe", val);
+  EXPECT_EQ("Another", val);
 }
 
 int main(int argc, char** argv) {

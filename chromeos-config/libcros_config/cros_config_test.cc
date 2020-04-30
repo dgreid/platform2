@@ -84,8 +84,8 @@ TEST_F(CrosConfigTest, CheckGoodStringRoot) {
 TEST_F(CrosConfigTest, CheckGoodStringNonRoot) {
   InitConfig();
   std::string val;
-  ASSERT_TRUE(cros_config_.GetString("/touch", "present", &val));
-  EXPECT_EQ("probe", val);
+  ASSERT_TRUE(cros_config_.GetString("/identity", "smbios-name-match", &val));
+  EXPECT_EQ("Another", val);
 }
 
 TEST_F(CrosConfigTest, CheckSMBIOSMatchInsensitive) {

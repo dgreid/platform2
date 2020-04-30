@@ -573,17 +573,6 @@ properties:
             touch:
               type: object
               properties:
-                present:
-                  description: Whether touch is present or needs to be probed for.
-                  type: string
-                  enum:
-                  # Put these in quotes to avoid them meaning True / False
-                  - "yes"
-                  - "no"
-                  - probe
-                probe-regex:
-                  description: If probe is set, the regex used to look for touch.
-                  type: string
                 files:
                   type: array
                   build-only-element: true

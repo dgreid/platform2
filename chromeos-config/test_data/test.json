@@ -57,10 +57,7 @@
         "thermal": {
           "dptf-dv": "/etc/dptf/some_touch/dptf.dv"
         },
-        "touch": {
-          "present": "probe",
-          "probe-regex": "some-prob-regex"
-        },
+        "touch": {},
         "ui": {
           "power-button": {
             "edge": "left",
@@ -120,9 +117,7 @@
           "touchpad-wakeup": "1"
         },
         "thermal": {},
-        "touch": {
-          "present": "no"
-        },
+        "touch": {},
         "ui": {
           "power-button": {
             "edge": "left",
@@ -150,10 +145,7 @@
         },
         "name": "another",
         "thermal": {},
-        "touch": {
-          "present": "probe",
-          "probe-regex": "another-prob-regex"
-        },
+        "touch": {},
         "wallpaper": "default"
       },
       {
@@ -208,10 +200,7 @@
           "suspend-to-idle": "0",
           "touchpad-wakeup": "1"
         },
-        "touch": {
-          "present": "yes",
-          "probe-regex": "some-prob-regex"
-        },
+        "touch": {},
         "ui": {
           "power-button": {
             "edge": "left",
@@ -263,9 +252,7 @@
           "suspend-to-idle": "0",
           "touchpad-wakeup": "1"
         },
-        "touch": {
-          "present": "no"
-        },
+        "touch": {},
         "ui": {
           "power-button": {
             "edge": "left",
@@ -317,10 +304,7 @@
           "suspend-to-idle": "0",
           "touchpad-wakeup": "1"
         },
-        "touch": {
-          "present": "yes",
-          "probe-regex": "some-prob-regex"
-        },
+        "touch": {},
         "ui": {
           "power-button": {
             "edge": "left",
@@ -372,9 +356,7 @@
           "suspend-to-idle": "0",
           "touchpad-wakeup": "1"
         },
-        "touch": {
-          "present": "no"
-        },
+        "touch": {},
         "ui": {
           "power-button": {
             "edge": "left",

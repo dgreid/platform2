@@ -617,8 +617,6 @@ In the tables below,
 | Attribute | Type   | RegEx     | Required | Oneof Group | Build-only | Description |
 | --------- | ------ | --------- | -------- | ----------- | ---------- | ----------- |
 | files | array - [files](#files) |  | False |  | True |  |
-| present | string |  | False |  | False | Whether touch is present or needs to be probed for. |
-| probe-regex | string |  | False |  | False | If probe is set, the regex used to look for touch. |
 
 ### files
 | Attribute | Type   | RegEx     | Required | Oneof Group | Build-only | Description |
