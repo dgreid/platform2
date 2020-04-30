@@ -199,9 +199,9 @@ MaybeCrashReport KernelParser::ParseLogEntry(const std::string& line) {
   return base::nullopt;
 }
 
-constexpr char begin_suspend_stats[] =
-    "--- begin /sys/kernel/debug/suspend_stats ---";
-constexpr char end_suspend_stats[] =
+constexpr char begin_suspend_error_stats[] =
+    "Error writing to /sys/power/state: ";
+constexpr char end_suspend_error_stats[] =
     "--- end /sys/kernel/debug/suspend_stats ---";
 constexpr LazyRE2 last_failed_dev = {
     R"(\s*last_failed_dev: (.+))"};
@@ -211,7 +211,8 @@ constexpr LazyRE2 last_failed_step = {
     R"(\s*last_failed_step: (.+))"};
 
 MaybeCrashReport SuspendParser::ParseLogEntry(const std::string& line) {
-  if (last_line_ == LineType::None && line.find(begin_suspend_stats) == 0) {
+  if (last_line_ == LineType::None &&
+      line.find(begin_suspend_error_stats) == 0) {
     last_line_ = LineType::Start;
     dev_str_ = "none";
     errno_str_ = "unknown";
@@ -223,7 +224,7 @@ MaybeCrashReport SuspendParser::ParseLogEntry(const std::string& line) {
     return base::nullopt;
   }
 
-  if (line.find(end_suspend_stats) != 0) {
+  if (line.find(end_suspend_error_stats) != 0) {
     std::string info;
     if (RE2::FullMatch(line, *last_failed_dev, &info)) {
       dev_str_ = info;

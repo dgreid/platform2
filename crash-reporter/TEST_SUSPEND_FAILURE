@@ -1,3 +1,4 @@
+Error writing to /sys/power/state: -22
 --- begin /sys/kernel/debug/suspend_stats ---
 success: 0
 fail: 1
