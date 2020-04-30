@@ -108,6 +108,8 @@ int TrunksCurveIDToNID(int trunks_curve_id) {
 crypto::ScopedEC_KEY GetEccPublicKeyFromTpmPublicArea(
     const trunks::TPMT_PUBLIC& public_area) {
   if (public_area.type != trunks::TPM_ALG_ECC) {
+    LOG(ERROR) << __func__
+               << ": Unexpected algorithm type: " << public_area.type;
     return nullptr;
   }
 
