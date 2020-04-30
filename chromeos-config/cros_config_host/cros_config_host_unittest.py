@@ -93,6 +93,12 @@ class CrosConfigHostTest(unittest.TestCase):
     output = subprocess.check_output(call_args).decode('utf-8')
     self.CheckManyLines(output)
 
+  def testGetMosysPlatform(self):
+    call_args = '{} -c {} get-mosys-platform'.format(
+        CLI_FILE, self.conf_file).split()
+    output = subprocess.check_output(call_args, encoding='utf-8')
+    self.assertEqual(output, 'Some\n')
+
   def testGetTouchFirmwareFiles(self):
     call_args = '{} -c {} get-touch-firmware-files'.format(
         CLI_FILE, self.conf_file).split()

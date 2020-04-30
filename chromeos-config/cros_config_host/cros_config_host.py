@@ -151,6 +151,29 @@ def GetFirmwareBuildTargets(config, target_type):
   for target in config.GetFirmwareBuildTargets(target_type):
     print(target)
 
+
+def GetMosysPlatform(config):
+  """Get the name of the mosys platform for this board.
+
+  cros_config_schema validates there is only one mosys platform per
+  board.  This function finds and prints the first platform name.
+
+  Args:
+    config: A CrosConfig instance.
+
+  Returns:
+    An exit status (0 for success, 1 for failure).
+  """
+  devices = config.GetDeviceConfigs()
+  for device in devices:
+    identity = device.GetProperties('/identity')
+    platform_name = identity.get('platform-name')
+    if platform_name is not None:
+      print(platform_name)
+      return 0
+  return 1
+
+
 def GetThermalFiles(config):
   """Print a list of thermal files across all models
 
@@ -294,6 +317,10 @@ def GetParser(description):
   build_target_parser.add_argument(
       'type',
       help='The build-targets type to get (ex. coreboot, ec, depthcharge)')
+  # Parser: get-mosys-platform
+  subparsers.add_parser(
+      'get-mosys-platform',
+      help='Get the name of the mosys platform compiled for this device.')
   # Parser: get-thermal-files
   subparsers.add_parser(
       'get-thermal-files',
@@ -384,6 +411,8 @@ def main(argv=None):
     GetBluetoothFiles(config)
   elif opts.subcommand == 'get-firmware-build-targets':
     GetFirmwareBuildTargets(config, opts.type)
+  elif opts.subcommand == 'get-mosys-platform':
+    return GetMosysPlatform(config)
   elif opts.subcommand == 'get-thermal-files':
     GetThermalFiles(config)
   elif opts.subcommand == 'file-tree':
