@@ -125,7 +125,6 @@ bool SELinuxViolationCollector::Collect() {
   if (GetValueFromLog(content, "comm", /*has_quotes=*/true, &comm)) {
     name_prefix += "_" + comm;
   }
-  LOG(WARNING) << "name_prefix is " << name_prefix;
 
   std::string pid_str;
   int pid = 0;
