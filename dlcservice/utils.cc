@@ -25,6 +25,7 @@
 #include "dlcservice/dlc_service.h"
 
 using base::FilePath;
+using crypto::SecureHash;
 using std::pair;
 using std::set;
 using std::string;
@@ -173,7 +174,7 @@ bool CopyAndHashFile(const base::FilePath& from,
   }
 
   constexpr int64_t kMaxBufSize = 4096;
-  auto hash = crypto::SecureHash::Create(crypto::SecureHash::SHA256);
+  unique_ptr<SecureHash> hash(SecureHash::Create(SecureHash::SHA256));
 
   vector<char> buf(kMaxBufSize);
   for (; from_length > 0; from_length -= kMaxBufSize) {
