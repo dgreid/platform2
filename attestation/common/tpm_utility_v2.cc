@@ -102,7 +102,7 @@ int TrunksCurveIDToNID(int trunks_curve_id) {
   }
 }
 
-// Convert TPMT_PUBLIC TPM public area |public_area| of RSA key to a OpenSSL EC
+// Convert TPMT_PUBLIC TPM public area |public_area| of ECC key to a OpenSSL EC
 // key.
 crypto::ScopedEC_KEY GetEccPublicKeyFromTpmPublicArea(
     const trunks::TPMT_PUBLIC& public_area) {
