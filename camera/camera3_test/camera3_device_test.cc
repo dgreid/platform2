@@ -389,7 +389,7 @@ std::vector<ResolutionInfo> Camera3Device::StaticInfo::GetSortedResolutions(
 }
 
 bool Camera3Device::StaticInfo::GetInputOutputConfigurationMap(
-    std::unordered_map<int32_t, std::vector<int32_t>>* config_map) const {
+    std::map<int32_t, std::vector<int32_t>>* config_map) const {
   camera_metadata_ro_entry_t entry = {};
   if (find_camera_metadata_ro_entry(
           characteristics_, ANDROID_SCALER_AVAILABLE_INPUT_OUTPUT_FORMATS_MAP,
@@ -578,6 +578,7 @@ int32_t Camera3Device::StaticInfo::GetAvailableTestPatternModes(
 }
 
 int32_t Camera3Device::StaticInfo::GetAeMaxRegions() const {
+  constexpr size_t kMaxRegionsAeIdx = 0;
   camera_metadata_ro_entry_t entry;
   int32_t result = find_camera_metadata_ro_entry(
       characteristics_, ANDROID_CONTROL_MAX_REGIONS, &entry);
@@ -587,6 +588,7 @@ int32_t Camera3Device::StaticInfo::GetAeMaxRegions() const {
 }
 
 int32_t Camera3Device::StaticInfo::GetAwbMaxRegions() const {
+  constexpr size_t kMaxRegionsAwbIdx = 1;
   camera_metadata_ro_entry_t entry;
   int32_t result = find_camera_metadata_ro_entry(
       characteristics_, ANDROID_CONTROL_MAX_REGIONS, &entry);
@@ -596,6 +598,7 @@ int32_t Camera3Device::StaticInfo::GetAwbMaxRegions() const {
 }
 
 int32_t Camera3Device::StaticInfo::GetAfMaxRegions() const {
+  constexpr size_t kMaxRegionsAfIdx = 2;
   camera_metadata_ro_entry_t entry;
   int32_t result = find_camera_metadata_ro_entry(
       characteristics_, ANDROID_CONTROL_MAX_REGIONS, &entry);

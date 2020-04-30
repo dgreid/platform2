@@ -18,6 +18,7 @@
 #include <gtest/gtest.h>
 
 #include "camera3_test/camera3_module_connector.h"
+#include "camera3_test/common_types.h"
 
 namespace camera3_test {
 
@@ -38,30 +39,6 @@ bool isHardwareLevelSupported(int actual_level, int required_level);
 
 // Get recording parameter list of camera id, width, height and frame rate
 std::vector<std::tuple<int, int32_t, int32_t, float>> ParseRecordingParams();
-
-class ResolutionInfo {
- public:
-  ResolutionInfo(int32_t width, int32_t height)
-      : width_(width), height_(height) {}
-
-  ResolutionInfo() : width_(0), height_(0) {}
-
-  int32_t Width() const;
-
-  int32_t Height() const;
-
-  int32_t Area() const;
-
-  bool operator==(const ResolutionInfo& resolution) const;
-
-  bool operator<(const ResolutionInfo& resolution) const;
-
-  friend std::ostream& operator<<(std::ostream& out,
-                                  const ResolutionInfo& info);
-
- private:
-  int32_t width_, height_;
-};
 
 class CameraModuleCallbacksHandler {
  public:

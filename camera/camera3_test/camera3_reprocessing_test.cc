@@ -443,7 +443,7 @@ void Camera3ReprocessingTest::ProcessResultMetadataOutputBuffers(
 }
 
 TEST_P(Camera3ReprocessingTest, ConfigureMultipleInputStreams) {
-  std::unordered_map<int32_t, std::vector<int32_t>> config_map;
+  std::map<int32_t, std::vector<int32_t>> config_map;
   // Find all available size/format of input streams
   ASSERT_TRUE(
       cam_device_.GetStaticInfo()->GetInputOutputConfigurationMap(&config_map));
@@ -482,7 +482,7 @@ TEST_P(Camera3ReprocessingTest, SizeFormatCombination) {
       << "JPEG thumbnail sizes are not available";
   ResolutionInfo max_thumbnail_size = thumbnail_resolutions.back();
 
-  std::unordered_map<int32_t, std::vector<int32_t>> config_map;
+  std::map<int32_t, std::vector<int32_t>> config_map;
   ASSERT_TRUE(static_info->GetInputOutputConfigurationMap(&config_map));
   for (const auto& kv : config_map) {
     auto in_format = kv.first;
@@ -518,7 +518,7 @@ TEST_P(Camera3ReprocessingTest, JpegExif) {
   // camera2/cts/ReprocessCaptureTest.java#testReprocessJpegExif
   auto static_info = cam_device_.GetStaticInfo();
 
-  std::unordered_map<int32_t, std::vector<int32_t>> config_map;
+  std::map<int32_t, std::vector<int32_t>> config_map;
   ASSERT_TRUE(static_info->GetInputOutputConfigurationMap(&config_map));
 
   std::vector<ResolutionInfo> thumbnail_resolutions;
@@ -609,7 +609,7 @@ TEST_P(Camera3ReprocessingReorderTest, ReorderStream) {
       << "JPEG thumbnail sizes are not available";
   ResolutionInfo max_thumbnail_size = thumbnail_resolutions.back();
 
-  std::unordered_map<int32_t, std::vector<int32_t>> config_map;
+  std::map<int32_t, std::vector<int32_t>> config_map;
   ASSERT_TRUE(static_info->GetInputOutputConfigurationMap(&config_map));
 
   ResolutionInfo input_size(0, 0), output_size(0, 0);
