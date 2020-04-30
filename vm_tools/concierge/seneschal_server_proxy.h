@@ -8,6 +8,8 @@
 #include <stdint.h>
 
 #include <memory>
+#include <utility>
+#include <vector>
 
 #include <base/macros.h>
 #include <base/files/scoped_file.h>
@@ -23,7 +25,11 @@ class SeneschalServerProxy final {
   // Ask the seneschal service to start a new 9P server.  Callers must ensure
   // that the |seneschal_proxy| object outlives this object.
   static std::unique_ptr<SeneschalServerProxy> CreateVsockProxy(
-      dbus::ObjectProxy* seneschal_proxy, uint32_t port, uint32_t accept_cid);
+      dbus::ObjectProxy* seneschal_proxy,
+      uint32_t port,
+      uint32_t accept_cid,
+      std::vector<std::pair<uint32_t, uint32_t>> uid_map,
+      std::vector<std::pair<uint32_t, uint32_t>> gid_map);
   static std::unique_ptr<SeneschalServerProxy> CreateFdProxy(
       dbus::ObjectProxy* seneschal_proxy, const base::ScopedFD& socket_fd);
 

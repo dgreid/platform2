@@ -42,7 +42,11 @@ SeneschalServerProxy::SeneschalCreateProxy(dbus::ObjectProxy* seneschal_proxy,
 
 // static
 std::unique_ptr<SeneschalServerProxy> SeneschalServerProxy::CreateVsockProxy(
-    dbus::ObjectProxy* seneschal_proxy, uint32_t port, uint32_t accept_cid) {
+    dbus::ObjectProxy* seneschal_proxy,
+    uint32_t port,
+    uint32_t accept_cid,
+    std::vector<std::pair<uint32_t, uint32_t>> uid_map,
+    std::vector<std::pair<uint32_t, uint32_t>> gid_map) {
   dbus::MethodCall method_call(vm_tools::seneschal::kSeneschalInterface,
                                vm_tools::seneschal::kStartServerMethod);
   dbus::MessageWriter writer(&method_call);
@@ -50,6 +54,19 @@ std::unique_ptr<SeneschalServerProxy> SeneschalServerProxy::CreateVsockProxy(
   vm_tools::seneschal::StartServerRequest request;
   request.mutable_vsock()->set_port(port);
   request.mutable_vsock()->set_accept_cid(accept_cid);
+
+  for (const auto& mapping : uid_map) {
+    seneschal::IdMap* id_map = request.add_uid_maps();
+    id_map->set_server(mapping.first);
+    id_map->set_client(mapping.second);
+  }
+
+  for (const auto& mapping : gid_map) {
+    seneschal::IdMap* id_map = request.add_gid_maps();
+    id_map->set_server(mapping.first);
+    id_map->set_client(mapping.second);
+  }
+
   if (!writer.AppendProtoAsArrayOfBytes(request)) {
     LOG(ERROR) << "Failed to encode StartServerRequest protobuf";
     return nullptr;
