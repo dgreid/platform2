@@ -5,6 +5,8 @@
 #ifndef LIBBRILLO_BRILLO_DBUS_DBUS_PROPERTY_H_
 #define LIBBRILLO_BRILLO_DBUS_DBUS_PROPERTY_H_
 
+#include <utility>
+
 #include <brillo/dbus/data_serialization.h>
 #include <dbus/property.h>
 
@@ -42,7 +44,7 @@ class Property : public ::dbus::PropertyBase {
   // remote object.
   void Set(const T& value, ::dbus::PropertySet::SetCallback callback) {
     set_value_ = value;
-    property_set()->Set(this, callback);
+    property_set()->Set(this, std::move(callback));
   }
 
   // Synchronous version of Set().

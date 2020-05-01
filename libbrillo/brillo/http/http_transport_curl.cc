@@ -10,8 +10,8 @@
 #include <base/files/file_descriptor_watcher_posix.h>
 #include <base/files/file_util.h>
 #include <base/logging.h>
-#include <base/message_loop/message_loop.h>
 #include <base/strings/stringprintf.h>
+#include <base/threading/thread_task_runner_handle.h>
 #include <brillo/http/http_connection_curl.h>
 #include <brillo/http/http_request.h>
 #include <brillo/strings/string_utils.h>
@@ -222,8 +222,7 @@ std::shared_ptr<http::Connection> Transport::CreateConnection(
 
 void Transport::RunCallbackAsync(const base::Location& from_here,
                                  const base::Closure& callback) {
-  base::MessageLoopForIO::current()->task_runner()->PostTask(
-      from_here, callback);
+  base::ThreadTaskRunnerHandle::Get()->PostTask(from_here, callback);
 }
 
 RequestID Transport::StartAsyncTransfer(http::Connection* connection,
@@ -399,8 +398,7 @@ int Transport::MultiSocketCallback(CURL* easy,
     poll_data->StopWatcher();
     // This method can be called indirectly from SocketPollData::OnSocketReady,
     // so delay destruction of SocketPollData object till the next loop cycle.
-    base::MessageLoopForIO::current()->task_runner()->DeleteSoon(
-        FROM_HERE, poll_data);
+    base::ThreadTaskRunnerHandle::Get()->DeleteSoon(FROM_HERE, poll_data);
     return 0;
   }
 
@@ -424,11 +422,11 @@ int Transport::MultiTimerCallback(CURLM* /* multi */,
   // Cancel any previous timer callbacks.
   transport->weak_ptr_factory_for_timer_.InvalidateWeakPtrs();
   if (timeout_ms >= 0) {
-    base::MessageLoopForIO::current()->task_runner()->PostDelayedTask(
-      FROM_HERE,
-      base::Bind(&Transport::OnTimer,
-                 transport->weak_ptr_factory_for_timer_.GetWeakPtr()),
-      base::TimeDelta::FromMilliseconds(timeout_ms));
+    base::ThreadTaskRunnerHandle::Get()->PostDelayedTask(
+        FROM_HERE,
+        base::Bind(&Transport::OnTimer,
+                   transport->weak_ptr_factory_for_timer_.GetWeakPtr()),
+        base::TimeDelta::FromMilliseconds(timeout_ms));
   }
   return 0;
 }
