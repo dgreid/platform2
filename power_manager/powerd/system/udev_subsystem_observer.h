@@ -7,6 +7,8 @@
 
 #include <string>
 
+#include <base/observer_list_types.h>
+
 #include "power_manager/powerd/system/udev.h"
 
 namespace power_manager {
@@ -15,7 +17,7 @@ namespace system {
 struct UdevEvent;
 
 // Interface for receiving notification of udev events from UdevInterface.
-class UdevSubsystemObserver {
+class UdevSubsystemObserver : public base::CheckedObserver {
  public:
   virtual ~UdevSubsystemObserver() {}
 

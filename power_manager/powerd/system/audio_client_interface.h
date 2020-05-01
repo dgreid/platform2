@@ -7,10 +7,10 @@
 
 #include <base/macros.h>
 
+#include "power_manager/powerd/system/audio_observer.h"
+
 namespace power_manager {
 namespace system {
-
-class AudioObserver;
 
 // Interface for monitoring system audio activity.
 class AudioClientInterface {

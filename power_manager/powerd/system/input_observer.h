@@ -5,6 +5,8 @@
 #ifndef POWER_MANAGER_POWERD_SYSTEM_INPUT_OBSERVER_H_
 #define POWER_MANAGER_POWERD_SYSTEM_INPUT_OBSERVER_H_
 
+#include <base/observer_list_types.h>
+
 #include "power_manager/common/power_constants.h"
 
 namespace power_manager {
@@ -12,7 +14,7 @@ namespace system {
 
 // Interface for classes interested in observing input events announced by the
 // InputWatcher class.
-class InputObserver {
+class InputObserver : public base::CheckedObserver {
  public:
   virtual ~InputObserver() {}
 

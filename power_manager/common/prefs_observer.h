@@ -7,10 +7,12 @@
 
 #include <string>
 
+#include <base/observer_list_types.h>
+
 namespace power_manager {
 
 // Interface for classes that want to be notified when preferences changed.
-class PrefsObserver {
+class PrefsObserver : public base::CheckedObserver {
  public:
   virtual ~PrefsObserver() {}
 

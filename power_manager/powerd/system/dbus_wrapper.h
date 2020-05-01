@@ -13,6 +13,7 @@
 #include <base/memory/ref_counted.h>
 #include <base/memory/weak_ptr.h>
 #include <base/observer_list.h>
+#include <base/observer_list_types.h>
 #include <dbus/exported_object.h>
 #include <dbus/object_proxy.h>
 
@@ -36,7 +37,7 @@ namespace system {
 // D-Bus.
 class DBusWrapperInterface {
  public:
-  class Observer {
+  class Observer : public base::CheckedObserver {
    public:
     // Called when the ownership of a D-Bus service name changes. |old_owner| or
     // |new_owner| may be empty if the service just started or stopped.

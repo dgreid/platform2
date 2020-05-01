@@ -5,6 +5,8 @@
 #ifndef POWER_MANAGER_POWERD_SYSTEM_USER_PROXIMITY_OBSERVER_H_
 #define POWER_MANAGER_POWERD_SYSTEM_USER_PROXIMITY_OBSERVER_H_
 
+#include <base/observer_list_types.h>
+
 #include "power_manager/common/power_constants.h"
 
 namespace power_manager {
@@ -14,7 +16,7 @@ namespace system {
 // kind of user proximity sensor (i.e. any piece of hardware, software or mix
 // thereof that is capable of providing a signal as to whether a human user
 // is physically in close proximity to the device).
-class UserProximityObserver {
+class UserProximityObserver : public base::CheckedObserver {
  public:
   // Defines which subsystem(s) a sensor can provide proximity data for.
   enum SensorRole {

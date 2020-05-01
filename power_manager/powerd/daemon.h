@@ -340,7 +340,7 @@ class Daemon : public policy::InputEventHandler::Delegate,
   // |power_override_lockfile_checker_| reporting lockfiles. ShutDown() is
   // called repeatedly so the system will eventually be shut down after the
   // lockfile(s) are gone.
-  base::Timer retry_shutdown_for_lockfile_timer_;
+  base::RepeatingTimer retry_shutdown_for_lockfile_timer_;
 
   // Timer that periodically calls RequestTpmStatus() if
   // |cryptohome_dbus_proxy_| is non-null.

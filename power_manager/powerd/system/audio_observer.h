@@ -5,12 +5,14 @@
 #ifndef POWER_MANAGER_POWERD_SYSTEM_AUDIO_OBSERVER_H_
 #define POWER_MANAGER_POWERD_SYSTEM_AUDIO_OBSERVER_H_
 
+#include <base/observer_list_types.h>
+
 namespace power_manager {
 namespace system {
 
 // Interface for classes interested in observing audio activity detected by
 // the AudioDetector class.
-class AudioObserver {
+class AudioObserver : public base::CheckedObserver {
  public:
   virtual ~AudioObserver() {}
 

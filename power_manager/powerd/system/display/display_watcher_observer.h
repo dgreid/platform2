@@ -7,6 +7,8 @@
 
 #include <vector>
 
+#include <base/observer_list_types.h>
+
 #include "power_manager/powerd/system/display/display_info.h"
 
 namespace power_manager {
@@ -14,7 +16,7 @@ namespace system {
 
 // Interface for receiving notifications from DisplayWatcher about changes to
 // displays.
-class DisplayWatcherObserver {
+class DisplayWatcherObserver : public base::CheckedObserver {
  public:
   // Called when a display is connected or disconnected.
   virtual void OnDisplaysChanged(const std::vector<DisplayInfo>& displays) = 0;

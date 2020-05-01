@@ -7,12 +7,14 @@
 
 #include <string>
 
+#include <base/observer_list_types.h>
+
 namespace power_manager {
 namespace system {
 
 class TaggedDevice;
 
-class UdevTaggedDeviceObserver {
+class UdevTaggedDeviceObserver : public base::CheckedObserver {
  public:
   virtual ~UdevTaggedDeviceObserver() {}
 

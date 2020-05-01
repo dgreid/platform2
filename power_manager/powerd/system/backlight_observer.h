@@ -5,13 +5,15 @@
 #ifndef POWER_MANAGER_POWERD_SYSTEM_BACKLIGHT_OBSERVER_H_
 #define POWER_MANAGER_POWERD_SYSTEM_BACKLIGHT_OBSERVER_H_
 
+#include <base/observer_list_types.h>
+
 namespace power_manager {
 namespace system {
 
 class BacklightInterface;
 
 // Interface for observing changes to a BacklightInterface object.
-class BacklightObserver {
+class BacklightObserver : public base::CheckedObserver {
  public:
   // Called when |backlight|'s underlying backlight device is added or removed.
   virtual void OnBacklightDeviceChanged(BacklightInterface* backlight) = 0;

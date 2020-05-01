@@ -20,7 +20,7 @@
 #include <base/strings/string_split.h>
 #include <base/strings/string_util.h>
 #include <base/strings/stringprintf.h>
-#include <base/sys_info.h>
+#include <base/system/sys_info.h>
 #include <brillo/flag_helper.h>
 #include <chromeos-config/libcros_config/cros_config.h>
 #include <netlink/attr.h>

@@ -5,6 +5,8 @@
 #ifndef POWER_MANAGER_POWERD_SYSTEM_AMBIENT_LIGHT_OBSERVER_H_
 #define POWER_MANAGER_POWERD_SYSTEM_AMBIENT_LIGHT_OBSERVER_H_
 
+#include <base/observer_list_types.h>
+
 namespace power_manager {
 namespace system {
 
@@ -12,7 +14,7 @@ class AmbientLightSensorInterface;
 
 // Interface for classes interested in receiving updates about the ambient
 // light level from AmbientLightSensor.
-class AmbientLightObserver {
+class AmbientLightObserver : public base::CheckedObserver {
  public:
   virtual ~AmbientLightObserver() {}
 

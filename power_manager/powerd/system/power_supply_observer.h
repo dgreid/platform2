@@ -5,12 +5,14 @@
 #ifndef POWER_MANAGER_POWERD_SYSTEM_POWER_SUPPLY_OBSERVER_H_
 #define POWER_MANAGER_POWERD_SYSTEM_POWER_SUPPLY_OBSERVER_H_
 
+#include <base/observer_list_types.h>
+
 namespace power_manager {
 namespace system {
 
 struct PowerStatus;
 
-class PowerSupplyObserver {
+class PowerSupplyObserver : public base::CheckedObserver {
  public:
   virtual ~PowerSupplyObserver() {}
 
