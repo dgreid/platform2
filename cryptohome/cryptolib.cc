@@ -18,6 +18,7 @@
 
 #include <base/files/file_util.h>
 #include <base/logging.h>
+#include <base/numerics/safe_conversions.h>
 #include <base/stl_util.h>
 #include <brillo/secure_blob.h>
 #include <crypto/libcrypto-compat.h>
@@ -173,15 +174,9 @@ constexpr ScryptParameters kTestScryptParams = {1024, 8, 1};
 ScryptParameters CryptoLib::gScryptParams = kDefaultScryptParams;
 
 void CryptoLib::GetSecureRandom(unsigned char* buf, size_t length) {
-  // OpenSSL takes a signed integer.  On the off chance that the user requests
-  // something too large, truncate it.
-  //
-  // TODO(b/143445674): correctly handle the 2 corner cases: 1) length exceeds
-  // limit and 2) RAND_bytes() fails and make relevant changes.
-  if (length > static_cast<size_t>(std::numeric_limits<int>::max())) {
-    length = std::numeric_limits<int>::max();
-  }
-  RAND_bytes(buf, length);
+  // In unlikely situations, such as the random generator lacks enough entropy,
+  // RAND_bytes can fail.
+  CHECK_EQ(1, RAND_bytes(buf, base::checked_cast<int>(length)));
 }
 
 SecureBlob CryptoLib::CreateSecureRandomBlob(size_t length) {
