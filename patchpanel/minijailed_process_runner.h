@@ -14,7 +14,7 @@ namespace patchpanel {
 
 // Runs the current process with minimal privileges. This function is expected
 // to be used by child processes that need only CAP_NET_RAW and to run as the
-// arc-networkd user.
+// patchpaneld user.
 void EnterChildProcessJail();
 
 // Enforces the expected processes are run with the correct privileges.

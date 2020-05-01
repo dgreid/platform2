@@ -18,7 +18,7 @@ namespace patchpanel {
 namespace {
 
 constexpr char kUnprivilegedUser[] = "nobody";
-constexpr char kNetworkUnprivilegedUser[] = "arc-networkd";
+constexpr char kNetworkUnprivilegedUser[] = "patchpaneld";
 constexpr char kChownCapMask = CAP_TO_MASK(CAP_CHOWN);
 constexpr uint64_t kModprobeCapMask = CAP_TO_MASK(CAP_SYS_MODULE);
 constexpr uint64_t kNetRawCapMask = CAP_TO_MASK(CAP_NET_RAW);
