@@ -22,6 +22,8 @@ source_set("libcommon") {
   sources = [
     "file_utils.cc",
     "mojo_utils.cc",
+    "system/bluetooth_client.cc",
+    "system/bluetooth_client_impl.cc",
     "system/debugd_adapter_impl.cc",
     "system/powerd_adapter_impl.cc",
   ]
@@ -45,6 +47,7 @@ if (use.test) {
     sources = [
       "file_test_utils.cc",
       "mojo_test_utils.cc",
+      "system/fake_bluetooth_client.cc",
       "system/fake_powerd_adapter.cc",
       "system/mock_debugd_adapter.cc",
     ]
@@ -71,6 +74,7 @@ if (use.test) {
     ]
     sources = [
       "mojo_utils_test.cc",
+      "system/bluetooth_client_impl_test.cc",
       "system/debugd_adapter_impl_test.cc",
       "system/powerd_adapter_impl_test.cc",
     ]

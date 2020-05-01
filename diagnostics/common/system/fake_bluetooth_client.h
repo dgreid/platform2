@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef DIAGNOSTICS_WILCO_DTC_SUPPORTD_SYSTEM_FAKE_BLUETOOTH_CLIENT_H_
-#define DIAGNOSTICS_WILCO_DTC_SUPPORTD_SYSTEM_FAKE_BLUETOOTH_CLIENT_H_
+#ifndef DIAGNOSTICS_COMMON_SYSTEM_FAKE_BLUETOOTH_CLIENT_H_
+#define DIAGNOSTICS_COMMON_SYSTEM_FAKE_BLUETOOTH_CLIENT_H_
 
 #include <base/macros.h>
 #include <dbus/object_path.h>
 
-#include "diagnostics/wilco_dtc_supportd/system/bluetooth_client.h"
+#include "diagnostics/common/system/bluetooth_client.h"
 
 namespace diagnostics {
 
@@ -36,4 +36,4 @@ class FakeBluetoothClient : public BluetoothClient {
 
 }  // namespace diagnostics
 
-#endif  // DIAGNOSTICS_WILCO_DTC_SUPPORTD_SYSTEM_FAKE_BLUETOOTH_CLIENT_H_
+#endif  // DIAGNOSTICS_COMMON_SYSTEM_FAKE_BLUETOOTH_CLIENT_H_

@@ -14,8 +14,8 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "diagnostics/wilco_dtc_supportd/system/bluetooth_client.h"
-#include "diagnostics/wilco_dtc_supportd/system/fake_bluetooth_client.h"
+#include "diagnostics/common/system/bluetooth_client.h"
+#include "diagnostics/common/system/fake_bluetooth_client.h"
 #include "diagnostics/wilco_dtc_supportd/telemetry/bluetooth_event_service.h"
 
 using ::testing::_;

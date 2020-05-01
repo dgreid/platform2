@@ -20,6 +20,7 @@
 #include <dbus/bus.h>
 #include <mojo/public/cpp/bindings/binding.h>
 
+#include "diagnostics/common/system/bluetooth_client.h"
 #include "diagnostics/common/system/debugd_adapter.h"
 #include "diagnostics/common/system/powerd_adapter.h"
 #include "diagnostics/grpc_async_adapter/async_grpc_client.h"
@@ -28,7 +29,6 @@
 #include "diagnostics/wilco_dtc_supportd/grpc_service.h"
 #include "diagnostics/wilco_dtc_supportd/mojo_service.h"
 #include "diagnostics/wilco_dtc_supportd/routine_service.h"
-#include "diagnostics/wilco_dtc_supportd/system/bluetooth_client.h"
 #include "diagnostics/wilco_dtc_supportd/telemetry/bluetooth_event_service.h"
 #include "diagnostics/wilco_dtc_supportd/telemetry/ec_event_service.h"
 #include "diagnostics/wilco_dtc_supportd/telemetry/powerd_event_service.h"

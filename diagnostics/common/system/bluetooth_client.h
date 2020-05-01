@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef DIAGNOSTICS_WILCO_DTC_SUPPORTD_SYSTEM_BLUETOOTH_CLIENT_H_
-#define DIAGNOSTICS_WILCO_DTC_SUPPORTD_SYSTEM_BLUETOOTH_CLIENT_H_
+#ifndef DIAGNOSTICS_COMMON_SYSTEM_BLUETOOTH_CLIENT_H_
+#define DIAGNOSTICS_COMMON_SYSTEM_BLUETOOTH_CLIENT_H_
 
 #include <string>
 
@@ -107,4 +107,4 @@ class BluetoothClient {
 
 }  // namespace diagnostics
 
-#endif  // DIAGNOSTICS_WILCO_DTC_SUPPORTD_SYSTEM_BLUETOOTH_CLIENT_H_
+#endif  // DIAGNOSTICS_COMMON_SYSTEM_BLUETOOTH_CLIENT_H_

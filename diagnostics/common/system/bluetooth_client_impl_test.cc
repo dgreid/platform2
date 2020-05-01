@@ -18,8 +18,8 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "diagnostics/wilco_dtc_supportd/system/bluetooth_client.h"
-#include "diagnostics/wilco_dtc_supportd/system/bluetooth_client_impl.h"
+#include "diagnostics/common/system/bluetooth_client.h"
+#include "diagnostics/common/system/bluetooth_client_impl.h"
 
 using ::testing::_;
 using ::testing::Mock;

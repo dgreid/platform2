@@ -12,7 +12,7 @@
 
 #include <dbus/object_path.h>
 
-#include "diagnostics/wilco_dtc_supportd/system/bluetooth_client.h"
+#include "diagnostics/common/system/bluetooth_client.h"
 #include "diagnostics/wilco_dtc_supportd/telemetry/bluetooth_event_service.h"
 
 namespace diagnostics {

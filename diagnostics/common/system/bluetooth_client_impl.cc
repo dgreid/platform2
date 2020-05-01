@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "diagnostics/wilco_dtc_supportd/system/bluetooth_client_impl.h"
+#include "diagnostics/common/system/bluetooth_client_impl.h"
 
 #include <base/bind.h>
 #include <base/logging.h>
