@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <inttypes.h>
+
 #include <cstdint>
 #include <memory>
 #include <string>
@@ -32,6 +34,7 @@ using ::testing::WithArg;
 // Test values for fan speed.
 constexpr uint32_t kFirstFanSpeedRpm = 2255;
 constexpr uint32_t kSecondFanSpeedRpm = 1263;
+constexpr uint64_t kOverflowingValue = 0xFFFFFFFFFF;
 
 }  // namespace
 
@@ -181,6 +184,25 @@ TEST_F(FanUtilsTest, NoGoogleEc) {
   auto fan_result = fan_fetcher()->FetchFanInfo(root_dir);
   ASSERT_TRUE(fan_result->is_fan_info());
   EXPECT_EQ(fan_result->get_fan_info().size(), 0);
+}
+
+// Test that overflowing fan speed integer values from debug are handled
+// gracefully.
+TEST_F(FanUtilsTest, OverflowingFanSpeedValue) {
+  // Set the mock debugd response.
+  EXPECT_CALL(*mock_debugd_proxy(),
+              CollectFanSpeed(_, _, kDebugdDBusTimeout.InMilliseconds()))
+      .WillOnce(DoAll(WithArg<0>(Invoke([](std::string* output) {
+                        *output = base::StringPrintf(
+                            "Fan 0 RPM: %u\nFan 1 RPM: %" PRId64 "\n",
+                            kFirstFanSpeedRpm, kOverflowingValue);
+                      })),
+                      Return(true)));
+
+  auto fan_result = fan_fetcher()->FetchFanInfo(GetTempDirPath());
+  ASSERT_TRUE(fan_result->is_error());
+  EXPECT_EQ(fan_result->get_error()->type,
+            chromeos::cros_healthd::mojom::ErrorType::kParseError);
 }
 
 }  // namespace diagnostics
