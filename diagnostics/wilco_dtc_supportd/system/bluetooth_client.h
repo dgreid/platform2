@@ -8,6 +8,7 @@
 #include <string>
 
 #include <base/observer_list.h>
+#include <base/observer_list_types.h>
 #include <base/macros.h>
 #include <dbus/object_path.h>
 #include <dbus/object_proxy.h>
@@ -57,7 +58,7 @@ class BluetoothClient {
   };
 
   // Interface for observing bluetooth adapters and devices changes.
-  class Observer {
+  class Observer : public base::CheckedObserver {
    public:
     virtual ~Observer() = default;
 

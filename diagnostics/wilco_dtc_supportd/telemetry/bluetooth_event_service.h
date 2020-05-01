@@ -10,6 +10,7 @@
 #include <vector>
 
 #include <base/observer_list.h>
+#include <base/observer_list_types.h>
 #include <base/macros.h>
 
 namespace diagnostics {
@@ -31,7 +32,7 @@ class BluetoothEventService {
   };
 
   // Interface for observing bluetooth adapters and devices changes.
-  class Observer {
+  class Observer : public base::CheckedObserver {
    public:
     virtual ~Observer() = default;
 

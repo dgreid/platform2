@@ -13,6 +13,7 @@
 #include <base/files/scoped_file.h>
 #include <base/macros.h>
 #include <base/observer_list.h>
+#include <base/observer_list_types.h>
 #include <base/sequence_checker_impl.h>
 #include <base/single_thread_task_runner.h>
 #include <base/threading/simple_thread.h>
@@ -180,7 +181,7 @@ class EcEventService {
     } payload = {};
   };
 
-  class Observer {
+  class Observer : public base::CheckedObserver {
    public:
     virtual ~Observer() = default;
 

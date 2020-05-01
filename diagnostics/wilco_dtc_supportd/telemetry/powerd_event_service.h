@@ -5,11 +5,13 @@
 #ifndef DIAGNOSTICS_WILCO_DTC_SUPPORTD_TELEMETRY_POWERD_EVENT_SERVICE_H_
 #define DIAGNOSTICS_WILCO_DTC_SUPPORTD_TELEMETRY_POWERD_EVENT_SERVICE_H_
 
+#include <base/observer_list_types.h>
+
 namespace diagnostics {
 
 class PowerdEventService {
  public:
-  class Observer {
+  class Observer : public base::CheckedObserver {
    public:
     enum class PowerEventType {
       // Energy consuming from external power source has been started.

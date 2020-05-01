@@ -18,7 +18,7 @@
 #include <base/run_loop.h>
 #include <base/strings/string_piece.h>
 #include "base/strings/stringprintf.h"
-#include "base/sys_info.h"
+#include "base/system/sys_info.h"
 #include "base/time/time.h"
 #include <gmock/gmock.h>
 #include <google/protobuf/repeated_field.h>

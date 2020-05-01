@@ -5,6 +5,7 @@
 #ifndef DIAGNOSTICS_COMMON_SYSTEM_POWERD_ADAPTER_H_
 #define DIAGNOSTICS_COMMON_SYSTEM_POWERD_ADAPTER_H_
 
+#include <base/observer_list_types.h>
 #include <power_manager/proto_bindings/power_supply_properties.pb.h>
 #include <power_manager/proto_bindings/suspend.pb.h>
 
@@ -13,7 +14,7 @@ namespace diagnostics {
 // Adapter for communication with powerd daemon.
 class PowerdAdapter {
  public:
-  class Observer {
+  class Observer : public base::CheckedObserver {
    public:
     virtual ~Observer() = default;
 
