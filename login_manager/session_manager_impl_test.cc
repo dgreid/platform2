@@ -102,6 +102,7 @@ using ::testing::Matcher;
 using ::testing::Mock;
 using ::testing::NotNull;
 using ::testing::Return;
+using ::testing::ReturnNull;
 using ::testing::ReturnRef;
 using ::testing::SaveArg;
 using ::testing::SetArgPointee;
@@ -2182,6 +2183,53 @@ TEST_F(SessionManagerImplTest, DontDisconnectLogFileInOtherDir) {
 }
 
 #if USE_CHEETS
+TEST_F(SessionManagerImplTest, StopArcInstance) {
+  EXPECT_CALL(*init_controller_, TriggerImpulse(_, _, _))
+      .WillRepeatedly(
+          InvokeWithoutArgs([]() { return dbus::Response::CreateEmpty(); }));
+  EXPECT_CALL(*exported_object(),
+              SendSignal(SignalEq(login_manager::kArcInstanceStopped,
+                                  ArcContainerStopReason::USER_REQUEST)))
+      .Times(1);
+
+  brillo::ErrorPtr error;
+  EXPECT_TRUE(impl_->StartArcMiniContainer(
+      &error, SerializeAsBlob(StartArcMiniContainerRequest())));
+  EXPECT_FALSE(error.get());
+
+  EXPECT_TRUE(impl_->StopArcInstance(&error, std::string() /*account_id*/,
+                                     false /*should_backup_log*/));
+  EXPECT_FALSE(error.get());
+}
+
+TEST_F(SessionManagerImplTest, StopArcInstance_BackupsArcBugReport) {
+  ExpectAndRunStartSession(kSaneEmail);
+
+  EXPECT_CALL(*init_controller_, TriggerImpulse(_, _, _))
+      .WillRepeatedly(
+          InvokeWithoutArgs([] { return dbus::Response::CreateEmpty(); }));
+  EXPECT_CALL(*exported_object(),
+              SendSignal(SignalEq(login_manager::kArcInstanceStopped,
+                                  ArcContainerStopReason::USER_REQUEST)))
+      .Times(1);
+
+  EXPECT_CALL(*debugd_proxy_, CallMethodAndBlock(_, _))
+      .WillOnce(WithArg<0>(Invoke([](dbus::MethodCall* method_call) {
+        EXPECT_EQ(method_call->GetInterface(), debugd::kDebugdInterface);
+        EXPECT_EQ(method_call->GetMember(), debugd::kBackupArcBugReport);
+        return dbus::Response::CreateEmpty();
+      })));
+
+  brillo::ErrorPtr error;
+  EXPECT_TRUE(impl_->StartArcMiniContainer(
+      &error, SerializeAsBlob(StartArcMiniContainerRequest())));
+  EXPECT_FALSE(error.get());
+
+  EXPECT_TRUE(
+      impl_->StopArcInstance(&error, kSaneEmail, true /*should_backup_log*/));
+  EXPECT_FALSE(error.get());
+}
+
 TEST_F(SessionManagerImplTest, StartArcMiniContainer) {
   {
     int64_t start_time = 0;
@@ -2289,6 +2337,55 @@ TEST_F(SessionManagerImplTest, UpgradeArcContainer) {
                                        false /*should_backup_log*/));
     EXPECT_FALSE(error.get());
   }
+  EXPECT_FALSE(android_container_.running());
+}
+
+TEST_F(SessionManagerImplTest,
+       UpgradeArcContainer_BackupsArcBugReportOnFailure) {
+  ExpectAndRunStartSession(kSaneEmail);
+
+  // First, start ARC for login screen.
+  EXPECT_CALL(*init_controller_,
+              TriggerImpulse(SessionManagerImpl::kStartArcInstanceImpulse,
+                             StartArcInstanceExpectationsBuilder().Build(),
+                             InitDaemonController::TriggerMode::ASYNC))
+      .WillOnce(Return(ByMove(dbus::Response::CreateEmpty())));
+
+  brillo::ErrorPtr error;
+  EXPECT_TRUE(impl_->StartArcMiniContainer(
+      &error, SerializeAsBlob(StartArcMiniContainerRequest())));
+
+  EXPECT_CALL(*init_controller_,
+              TriggerImpulse(SessionManagerImpl::kContinueArcBootImpulse,
+                             UpgradeContainerExpectationsBuilder().Build(),
+                             InitDaemonController::TriggerMode::SYNC))
+      .WillOnce(ReturnNull());
+  EXPECT_CALL(
+      *init_controller_,
+      TriggerImpulse(SessionManagerImpl::kStopArcInstanceImpulse, ElementsAre(),
+                     InitDaemonController::TriggerMode::SYNC))
+      .WillOnce(Return(ByMove(dbus::Response::CreateEmpty())));
+
+  EXPECT_CALL(*exported_object(),
+              SendSignal(SignalEq(login_manager::kArcInstanceStopped,
+                                  ArcContainerStopReason::UPGRADE_FAILURE)))
+      .Times(1);
+
+  EXPECT_CALL(*arc_sideload_status_, IsAdbSideloadAllowed())
+      .WillRepeatedly(Return(false));
+
+  EXPECT_CALL(metrics_, SendArcBugReportBackupTime(_)).Times(1);
+  EXPECT_CALL(*debugd_proxy_, CallMethodAndBlock(_, _))
+      .WillOnce(WithArg<0>(Invoke([](dbus::MethodCall* method_call) {
+        EXPECT_EQ(method_call->GetInterface(), debugd::kDebugdInterface);
+        EXPECT_EQ(method_call->GetMember(), debugd::kBackupArcBugReport);
+        return dbus::Response::CreateEmpty();
+      })));
+
+  auto upgrade_request = CreateUpgradeArcContainerRequest();
+  EXPECT_FALSE(
+      impl_->UpgradeArcContainer(&error, SerializeAsBlob(upgrade_request)));
+  EXPECT_TRUE(error.get());
   EXPECT_FALSE(android_container_.running());
 }
 
