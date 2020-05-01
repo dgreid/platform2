@@ -892,7 +892,7 @@ TEST_F(RTNLMessageTest, ToString) {
        "Delete Link: LinkStatus type 1 flags 1002 change FFFFFFFF"},
       {kNewAddrIPV4, sizeof(kNewAddrIPV4),
        "Add IPv4 Address: AddressStatus prefix_len 24 flags 80 scope 0"},
-      {kDelAddrIPV6, sizeof(kDelRouteIPV6),
+      {kDelAddrIPV6, sizeof(kDelAddrIPV6),
         "Delete IPv6 Address: AddressStatus prefix_len 64 flags 80 scope 253"},
       {kAddRouteIPV4, sizeof(kAddRouteIPV4),
        "Add IPv4 Route: RouteStatus dst_prefix 0 src_prefix 0 table 254 "
