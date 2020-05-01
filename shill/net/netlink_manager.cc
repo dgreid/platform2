@@ -419,7 +419,7 @@ bool NetlinkManager::RemoveBroadcastHandler(
     const NetlinkMessageHandler& handler) {
   std::list<NetlinkMessageHandler>::iterator i;
   for (i = broadcast_handlers_.begin(); i != broadcast_handlers_.end(); ++i) {
-    if ((*i).Equals(handler)) {
+    if (*i == handler) {
       broadcast_handlers_.erase(i);
       // Should only be one copy in the list so we don't have to continue
       // looking for another one.
@@ -433,7 +433,7 @@ bool NetlinkManager::RemoveBroadcastHandler(
 bool NetlinkManager::FindBroadcastHandler(
     const NetlinkMessageHandler& handler) const {
   for (const auto& broadcast_handler : broadcast_handlers_) {
-    if (broadcast_handler.Equals(handler)) {
+    if (broadcast_handler == handler) {
       return true;
     }
   }

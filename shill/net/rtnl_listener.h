@@ -6,6 +6,7 @@
 #define SHILL_NET_RTNL_LISTENER_H_
 
 #include <base/callback.h>
+#include <base/observer_list_types.h>
 
 #include "shill/net/shill_export.h"
 
@@ -14,7 +15,7 @@ namespace shill {
 class RTNLHandler;
 class RTNLMessage;
 
-class SHILL_EXPORT RTNLListener {
+class SHILL_EXPORT RTNLListener : public base::CheckedObserver {
  public:
   RTNLListener(int listen_flags,
                const base::Callback<void(const RTNLMessage&)>& callback);

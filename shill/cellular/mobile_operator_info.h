@@ -10,6 +10,7 @@
 #include <vector>
 
 #include <base/files/file_path.h>
+#include <base/observer_list_types.h>
 
 namespace shill {
 
@@ -51,7 +52,7 @@ class MobileOperatorInfoImpl;
 //
 class MobileOperatorInfo {
  public:
-  class Observer {
+  class Observer : public base::CheckedObserver {
    public:
     virtual ~Observer() = default;
 

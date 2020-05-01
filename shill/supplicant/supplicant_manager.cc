@@ -51,7 +51,7 @@ void SupplicantManager::RemoveSupplicantListener(
     const SupplicantListenerCallback& present_callback) {
   std::vector<SupplicantListenerCallback>::const_iterator it;
   for (it = listeners_.begin(); it != listeners_.end(); ++it) {
-    if ((*it).Equals(present_callback)) {
+    if (*it == present_callback) {
       listeners_.erase(it);
       return;
     }

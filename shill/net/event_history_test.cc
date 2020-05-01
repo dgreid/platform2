@@ -4,12 +4,12 @@
 
 #include "shill/net/event_history.h"
 
-#include <base/stl_util.h>
-#include <gtest/gtest.h>
-
 #include <memory>
 #include <string>
 #include <vector>
+
+#include <base/stl_util.h>
+#include <gtest/gtest.h>
 
 #include "shill/net/mock_time.h"
 #include "shill/net/shill_time.h"

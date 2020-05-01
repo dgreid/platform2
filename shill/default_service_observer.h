@@ -7,11 +7,13 @@
 
 #include "shill/refptr_types.h"
 
+#include <base/observer_list_types.h>
+
 namespace shill {
 
 // Interface for Observer of default Service changes. Registered and
 // unregistered using Manager::{Add,Remove}DefaultServiceObserver.
-class DefaultServiceObserver {
+class DefaultServiceObserver : public base::CheckedObserver {
  public:
   virtual ~DefaultServiceObserver() = default;
 

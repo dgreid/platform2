@@ -81,8 +81,8 @@ class DnsServerTesterTest : public Test {
   CallbackTarget& callback_target() { return callback_target_; }
 
   void ExpectReset() {
-    EXPECT_TRUE(callback_target_.result_callback().Equals(
-        dns_server_tester_->dns_result_callback_));
+    EXPECT_TRUE(callback_target_.result_callback() ==
+                dns_server_tester_->dns_result_callback_);
   }
 
  private:

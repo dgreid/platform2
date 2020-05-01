@@ -167,8 +167,8 @@ class PortalDetectorTest : public Test {
 
   void ExpectReset() {
     EXPECT_FALSE(portal_detector_->attempt_count_);
-    EXPECT_TRUE(callback_target_.result_callback().Equals(
-        portal_detector_->portal_result_callback_));
+    EXPECT_TRUE(callback_target_.result_callback() ==
+                portal_detector_->portal_result_callback_);
     EXPECT_EQ(nullptr, portal_detector_->http_request_);
     EXPECT_EQ(nullptr, portal_detector_->https_request_);
   }
