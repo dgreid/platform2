@@ -52,9 +52,7 @@ template("protoc_text_to_bin") {
       "${protoc_bin_dir}/{{source_name_part}}.pbf",
       "${protoc_proto_dir}/${protoc_proto_def}",
     ]
-    outputs = [
-      "${protoc_bin_dir}/{{source_name_part}}.pbf",
-    ]
+    outputs = [ "${protoc_bin_dir}/{{source_name_part}}.pbf" ]
   }
 
   source_set(target_name) {
@@ -66,10 +64,8 @@ template("protoc_text_to_bin") {
     if (defined(invoker.configs)) {
       configs += invoker.configs
     }
-    sources = get_target_outputs(":${action_name}")
-    deps = [
-      ":${action_name}",
-    ]
+    data = get_target_outputs(":${action_name}")
+    deps = [ ":${action_name}" ]
     if (defined(invoker.deps)) {
       deps += invoker.deps
     }
