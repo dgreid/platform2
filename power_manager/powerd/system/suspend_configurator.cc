@@ -67,7 +67,7 @@ void SuspendConfigurator::PrepareForSuspend(
   // Do this at the end so that system spends close to |suspend_duration| in
   // suspend.
   if (suspend_duration != base::TimeDelta()) {
-    alarm_.Start(FROM_HERE, suspend_duration, base::DoNothing());
+    alarm_->Start(FROM_HERE, suspend_duration, base::DoNothing());
   }
 }
 

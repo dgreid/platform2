@@ -14,7 +14,11 @@
 namespace power_manager {
 namespace policy {
 
-ShutdownFromSuspend::ShutdownFromSuspend() = default;
+ShutdownFromSuspend::ShutdownFromSuspend()
+    : ShutdownFromSuspend(timers::SimpleAlarmTimer::Create()) {}
+ShutdownFromSuspend::ShutdownFromSuspend(
+    std::unique_ptr<timers::SimpleAlarmTimer> alarm_timer)
+    : alarm_timer_(std::move(alarm_timer)) {}
 ShutdownFromSuspend::~ShutdownFromSuspend() = default;
 
 void ShutdownFromSuspend::Init(PrefsInterface* prefs,
@@ -58,8 +62,8 @@ ShutdownFromSuspend::Action ShutdownFromSuspend::PrepareForSuspendAttempt() {
               << " in suspend as line power is connected";
   }
 
-  if (!alarm_timer_.IsRunning()) {
-    alarm_timer_.Start(
+  if (!alarm_timer_->IsRunning()) {
+    alarm_timer_->Start(
         FROM_HERE, shutdown_delay_,
         base::Bind(&ShutdownFromSuspend::OnTimerWake, base::Unretained(this)));
   }
@@ -73,7 +77,7 @@ void ShutdownFromSuspend::HandleDarkResume() {
 
 void ShutdownFromSuspend::HandleFullResume() {
   in_dark_resume_ = false;
-  alarm_timer_.Stop();
+  alarm_timer_->Stop();
   timer_fired_ = false;
 }
 

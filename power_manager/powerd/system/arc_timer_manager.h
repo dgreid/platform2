@@ -71,14 +71,15 @@ class ArcTimerManager {
   // resources. Returns a non-empty vector iff |ArcTimerInfo| objects are
   // created successfully.
   static std::vector<std::unique_ptr<ArcTimerInfo>> CreateArcTimers(
-      dbus::MessageReader* array_reader);
+      dbus::MessageReader* array_reader, bool create_for_testing);
 
   // Creates |ArcTimerInfo| by parsing |clock_id, expiration_fd| at the current
   // position in |array_reader|. Returns null on failure i.e. invalid arguments
   // in |array_reader| or failure while allocating resources. Returns non-null
-  // iff |ArcTimerInfo| object is created successfully.
+  // iff |ArcTimerInfo| object is created successfully. CLOCK_REALTIME will be
+  // used instead of CLOCK_REALTIME_ALARM when create_for_testing is true.
   static std::unique_ptr<ArcTimerInfo> CreateArcTimer(
-      dbus::MessageReader* array_reader);
+      dbus::MessageReader* array_reader, bool create_for_testing);
 
   // Returns true iff |arc_timers| have duplicate clock ids between two or more
   // entries.
@@ -110,6 +111,14 @@ class ArcTimerManager {
 
   // Deletes all timers, if any, created with the tag |tag|.
   void DeleteArcTimers(const std::string& tag);
+
+  // Set for testing.
+  void set_for_testing_(bool is_testing) { is_testing_ = is_testing; }
+  friend class ArcTimerManagerTest;
+
+  // Timers will be created with CLOCK_REALTIME instead of CLOCK_REALTIME_ALARM
+  // for testing.
+  bool is_testing_;
 
   // Finds |ArcTimerInfo| entry in |timers_| corresponding to |timer_id|.
   // Returns non-null pointer iff entry is present.

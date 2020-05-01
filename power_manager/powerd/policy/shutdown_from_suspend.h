@@ -7,6 +7,8 @@
 
 #include "power_manager/powerd/policy/shutdown_from_suspend_interface.h"
 
+#include <memory>
+
 #include <base/macros.h>
 #include <base/time/time.h>
 #include <components/timers/alarm_timer_chromeos.h>
@@ -38,6 +40,9 @@ class ShutdownFromSuspend : public ShutdownFromSuspendInterface {
   void HandleFullResume() override;
 
  private:
+  ShutdownFromSuspend(std::unique_ptr<timers::SimpleAlarmTimer> alarm_timer);
+  friend class ShutdownFromSuspendTest;
+
   // Invoked by |alarm_timer_| after spending |shutdown_delay_| in suspend.
   void OnTimerWake();
 
@@ -50,7 +55,7 @@ class ShutdownFromSuspend : public ShutdownFromSuspendInterface {
   // Has |alarm_timer_| fired since last full resume.
   bool timer_fired_ = false;
   // Timer to wake the system from suspend after |shutdown_delay_|.
-  timers::SimpleAlarmTimer alarm_timer_;
+  std::unique_ptr<timers::SimpleAlarmTimer> alarm_timer_;
 
   system::PowerSupplyInterface* power_supply_ = nullptr;  // weak
 

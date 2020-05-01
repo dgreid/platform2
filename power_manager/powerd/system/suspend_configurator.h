@@ -5,6 +5,7 @@
 #ifndef POWER_MANAGER_POWERD_SYSTEM_SUSPEND_CONFIGURATOR_H_
 #define POWER_MANAGER_POWERD_SYSTEM_SUSPEND_CONFIGURATOR_H_
 
+#include <memory>
 #include <string>
 
 #include <base/files/file_path.h>
@@ -74,7 +75,8 @@ class SuspendConfigurator : public SuspendConfiguratorInterface {
 
   // Timer to wake the system from suspend. Set when suspend_duration is passed
   // to  PrepareForSuspend().
-  timers::SimpleAlarmTimer alarm_;
+  std::unique_ptr<timers::SimpleAlarmTimer> alarm_ =
+      timers::SimpleAlarmTimer::Create();
 
   // Mode for suspend. One of Suspend-to-idle, Power-on-suspend, or
   // Suspend-to-RAM.

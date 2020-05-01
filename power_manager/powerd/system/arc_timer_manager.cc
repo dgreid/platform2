@@ -153,7 +153,7 @@ void ArcTimerManager::HandleCreateArcTimers(
   // Iterate over the array of |clock_id, expiration_fd| and create an
   // |ArcTimerInfo| entry for each clock.
   std::vector<std::unique_ptr<ArcTimerInfo>> arc_timers =
-      CreateArcTimers(&array_reader);
+      CreateArcTimers(&array_reader, is_testing_);
   if (arc_timers.size() == 0) {
     response_sender.Run(
         CreateInvalidArgsError(method_call, "Failed to create timers"));
@@ -188,10 +188,12 @@ void ArcTimerManager::HandleCreateArcTimers(
 
 // static:
 std::vector<std::unique_ptr<ArcTimerManager::ArcTimerInfo>>
-ArcTimerManager::CreateArcTimers(dbus::MessageReader* array_reader) {
+ArcTimerManager::CreateArcTimers(dbus::MessageReader* array_reader,
+                                 bool create_for_testing) {
   std::vector<std::unique_ptr<ArcTimerInfo>> result;
   while (array_reader->HasMoreData()) {
-    std::unique_ptr<ArcTimerInfo> arc_timer = CreateArcTimer(array_reader);
+    std::unique_ptr<ArcTimerInfo> arc_timer =
+        CreateArcTimer(array_reader, create_for_testing);
     if (!arc_timer) {
       result.clear();
       return result;
@@ -203,7 +205,7 @@ ArcTimerManager::CreateArcTimers(dbus::MessageReader* array_reader) {
 
 // static:
 std::unique_ptr<ArcTimerManager::ArcTimerInfo> ArcTimerManager::CreateArcTimer(
-    dbus::MessageReader* array_reader) {
+    dbus::MessageReader* array_reader, bool create_for_testing) {
   dbus::MessageReader struct_reader(nullptr);
   if (!array_reader->PopStruct(&struct_reader)) {
     LOG(WARNING) << "Failed to pop struct";
@@ -235,9 +237,13 @@ std::unique_ptr<ArcTimerManager::ArcTimerInfo> ArcTimerManager::CreateArcTimer(
     return nullptr;
   }
 
-  return std::make_unique<ArcTimerInfo>(
-      clock_id, std::move(expiration_fd),
-      std::make_unique<timers::SimpleAlarmTimer>());
+  if (create_for_testing) {
+    return std::make_unique<ArcTimerInfo>(
+        clock_id, std::move(expiration_fd),
+        timers::SimpleAlarmTimer::CreateForTesting());
+  }
+  return std::make_unique<ArcTimerInfo>(clock_id, std::move(expiration_fd),
+                                        timers::SimpleAlarmTimer::Create());
 }
 
 // static.

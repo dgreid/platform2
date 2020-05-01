@@ -17,7 +17,8 @@ namespace policy {
 
 class ShutdownFromSuspendTest : public ::testing::Test {
  public:
-  ShutdownFromSuspendTest() = default;
+  ShutdownFromSuspendTest()
+      : shutdown_from_suspend_(timers::SimpleAlarmTimer::CreateForTesting()) {}
   ~ShutdownFromSuspendTest() override = default;
 
  protected:

@@ -117,7 +117,10 @@ bool AreTimerIdsIdenticalSizeButDistinct(
 
 class ArcTimerManagerTest : public ::testing::Test {
  public:
-  ArcTimerManagerTest() { arc_timer_manager_.Init(&dbus_wrapper_); }
+  ArcTimerManagerTest() {
+    arc_timer_manager_.set_for_testing_(true);
+    arc_timer_manager_.Init(&dbus_wrapper_);
+  }
 
  protected:
   bool CreateTimers(const std::string& tag,
