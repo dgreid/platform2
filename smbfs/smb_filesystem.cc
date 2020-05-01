@@ -774,10 +774,20 @@ void SmbFilesystem::RenameInternal(std::unique_ptr<SimpleRequest> request,
   CHECK(!new_parent_path.empty())
       << "Lookup on invalid new parent inode: " << new_parent_inode;
 
-  const std::string old_share_path =
-      MakeShareFilePath(old_parent_path.Append(old_name));
-  const std::string new_share_path =
-      MakeShareFilePath(new_parent_path.Append(new_name));
+  const base::FilePath old_path = old_parent_path.Append(old_name);
+  const std::string old_share_path = MakeShareFilePath(old_path);
+  const base::FilePath new_path = new_parent_path.Append(new_name);
+  const std::string new_share_path = MakeShareFilePath(new_path);
+
+  if (inode_map_.PathExists(new_path)) {
+    // This is posix-violating behaviour since rename() is supposed to replace
+    // new_path if it exists. However, this is currently complicated by the need
+    // to maintain a consistent mapping between inodes and paths.
+    VLOG(1) << "Rename failed since new path already exists, new_path: "
+            << new_share_path;
+    request->ReplyError(EEXIST);
+    return;
+  }
 
   int error = samba_impl_->Rename(old_share_path, new_share_path);
   if (error) {
@@ -787,6 +797,20 @@ void SmbFilesystem::RenameInternal(std::unique_ptr<SimpleRequest> request,
     request->ReplyError(error);
     return;
   }
+
+  // A rename only moves the directory entry and doesn't change the underlying
+  // inode. So update our synthesized inode to point to the new location. This
+  // is safe since there's no support for hardlinks, and we have a 1:1 mapping
+  // between path and inode.
+  ino_t inode = inode_map_.IncInodeRef(old_path);
+  inode_map_.UpdatePath(inode, new_path);
+  // Unref the inode so we don't go out of sync with the kernel's refcount.
+  inode_map_.Forget(inode, 1);
+
+  // The SMB server might update attributes for the destination path (eg.
+  // modification time). Invalidate our cached stat and force a fetch from the
+  // server.
+  EraseCachedInodeStat(inode);
 
   request->ReplyOk();
 }
@@ -936,15 +960,24 @@ void SmbFilesystem::ReadDirInternal(std::unique_ptr<DirentryRequest> request,
 
     const base::FilePath entry_path = dir_path.Append(filename);
     ino_t entry_inode = inode_map_.IncInodeRef(entry_path);
+    // Immediately forget this inode reference. Readdir shouldn't increment
+    // the refcount, and this information is advisory to userspace and not used
+    // by the kernel.
+    bool forgotten = inode_map_.Forget(entry_inode, 1);
     if (!request->AddEntry(filename, entry_inode, inode_stat.st_mode,
                            next_offset)) {
       // Response buffer full.
-      inode_map_.Forget(entry_inode, 1);
       break;
     }
 
-    inode_stat = MakeStat(entry_inode, inode_stat);
-    AddCachedInodeStat(inode_stat);
+    if (!forgotten) {
+      // Only cache if the inode still exists. Unfortunately, this will not
+      // cache for newly seen entries, which is likely most new navigations of
+      // large directories. Effectievely rendering this performance optimization
+      // useless.
+      inode_stat = MakeStat(entry_inode, inode_stat);
+      AddCachedInodeStat(inode_stat);
+    }
   }
 
   request->ReplyDone();

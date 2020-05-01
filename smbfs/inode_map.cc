@@ -67,6 +67,27 @@ base::FilePath InodeMap::GetPath(ino_t inode) const {
   return it->second->path;
 }
 
+bool InodeMap::PathExists(const base::FilePath& path) const {
+  return base::ContainsKey(files_, path.value());
+}
+
+void InodeMap::UpdatePath(ino_t inode, const base::FilePath& new_path) {
+  CHECK_NE(inode, root_inode_);
+  CHECK(!new_path.empty());
+  CHECK(new_path.IsAbsolute());
+  CHECK(!new_path.ReferencesParent());
+  DCHECK(!PathExists(new_path));
+
+  const auto it = inodes_.find(inode);
+  CHECK(it != inodes_.end());
+
+  const base::FilePath old_path = it->second->path;
+  it->second->path = new_path;
+
+  files_.erase(old_path.value());
+  files_.emplace(new_path.value(), it->second.get());
+}
+
 bool InodeMap::Forget(ino_t inode, uint64_t forget_count) {
   if (inode == root_inode_) {
     // Ignore the root inode.

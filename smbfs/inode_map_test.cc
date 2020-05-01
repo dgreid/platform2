@@ -17,6 +17,7 @@ constexpr char kFilePath2[] = "/foo/bar";
 TEST(InodeMapTest, TestRootInode) {
   InodeMap map(kRootInode);
 
+  EXPECT_TRUE(map.PathExists(base::FilePath("/")));
   EXPECT_EQ(base::FilePath("/"), map.GetPath(kRootInode));
   EXPECT_EQ(kRootInode, map.IncInodeRef(base::FilePath("/")));
 }
@@ -24,12 +25,16 @@ TEST(InodeMapTest, TestRootInode) {
 TEST(InodeMapTest, TestInsertLookup) {
   InodeMap map(kRootInode);
 
+  EXPECT_FALSE(map.PathExists(base::FilePath(kFilePath1)));
   ino_t inode1 = map.IncInodeRef(base::FilePath(kFilePath1));
+  EXPECT_TRUE(map.PathExists(base::FilePath(kFilePath1)));
   EXPECT_NE(inode1, kRootInode);
   EXPECT_EQ(inode1, map.IncInodeRef(base::FilePath(kFilePath1)));
   EXPECT_EQ(base::FilePath(kFilePath1), map.GetPath(inode1));
 
+  EXPECT_FALSE(map.PathExists(base::FilePath(kFilePath2)));
   ino_t inode2 = map.IncInodeRef(base::FilePath(kFilePath2));
+  EXPECT_TRUE(map.PathExists(base::FilePath(kFilePath2)));
   EXPECT_NE(inode2, kRootInode);
   EXPECT_NE(inode2, inode1);
   EXPECT_EQ(inode2, map.IncInodeRef(base::FilePath(kFilePath2)));
@@ -75,17 +80,21 @@ TEST(InodeMapTest, TestForget) {
   bool removed = map.Forget(inode1, 2);
   EXPECT_EQ(base::FilePath(kFilePath1), map.GetPath(inode1));
   EXPECT_FALSE(removed);
+  EXPECT_TRUE(map.PathExists(base::FilePath(kFilePath1)));
 
   removed = map.Forget(inode1, 1);
   EXPECT_EQ(base::FilePath(), map.GetPath(inode1));
   EXPECT_TRUE(removed);
+  EXPECT_FALSE(map.PathExists(base::FilePath(kFilePath1)));
 
   // Previous Forget() calls shouldn't affect |inode2|.
   EXPECT_EQ(base::FilePath(kFilePath2), map.GetPath(inode2));
+  EXPECT_TRUE(map.PathExists(base::FilePath(kFilePath2)));
 
   removed = map.Forget(inode2, 2);
   EXPECT_EQ(base::FilePath(), map.GetPath(inode2));
   EXPECT_TRUE(removed);
+  EXPECT_FALSE(map.PathExists(base::FilePath(kFilePath2)));
 }
 
 TEST(InodeMapTest, TestForgetRoot) {
@@ -102,6 +111,26 @@ TEST(InodeMapTest, TestForgetTooMany) {
 
   ino_t inode1 = map.IncInodeRef(base::FilePath(kFilePath1));
   EXPECT_DEATH(map.Forget(inode1, 2), "Check failed.*");
+}
+
+TEST(InodeMapTest, TestUpdatePath) {
+  InodeMap map(kRootInode);
+
+  ino_t inode1 = map.IncInodeRef(base::FilePath(kFilePath1));
+  EXPECT_TRUE(map.PathExists(base::FilePath(kFilePath1)));
+  map.UpdatePath(inode1, base::FilePath(kFilePath2));
+  EXPECT_FALSE(map.PathExists(base::FilePath(kFilePath1)));
+  EXPECT_TRUE(map.PathExists(base::FilePath(kFilePath2)));
+  EXPECT_EQ(inode1, map.IncInodeRef(base::FilePath(kFilePath2)));
+  EXPECT_EQ(base::FilePath(kFilePath2), map.GetPath(inode1));
+
+  // Re-adding the original path should create a new inode.
+  ino_t inode2 = map.IncInodeRef(base::FilePath(kFilePath1));
+  EXPECT_TRUE(map.PathExists(base::FilePath(kFilePath1)));
+  EXPECT_NE(inode2, kRootInode);
+  EXPECT_NE(inode2, inode1);
+  EXPECT_EQ(inode2, map.IncInodeRef(base::FilePath(kFilePath1)));
+  EXPECT_EQ(base::FilePath(kFilePath1), map.GetPath(inode2));
 }
 
 }  // namespace

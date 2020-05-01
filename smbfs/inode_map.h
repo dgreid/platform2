@@ -34,6 +34,14 @@ class InodeMap {
   // exist, return the empty path.
   base::FilePath GetPath(ino_t inode) const;
 
+  // Return whether or not an inode exists for |path|.
+  bool PathExists(const base::FilePath& path) const;
+
+  // Update the path corresponding to the file |inode|. The inode must exist and
+  // must not be |root_inode|, and |new_path| must be an absolute path and not
+  // contain any relative components (i.e. '.' and '..').
+  void UpdatePath(ino_t inode, const base::FilePath& new_path);
+
   // Forget |forget_count| reference to |inode|. If the refcount falls to 0,
   // remove the inode. |forget_count| cannot be greater than the current
   // refcount of |inode|. Returns true if the inode was removed.
