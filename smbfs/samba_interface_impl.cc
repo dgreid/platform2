@@ -358,6 +358,13 @@ int SambaInterfaceImpl::ReadDirectory(
   out_stat->st_mtim = (*out_file_info)->mtime_ts;
   out_stat->st_size = (*out_file_info)->size;
 
+  // TODO(crbug.com/1075758): rounding of modification time can be removed once
+  // libsmbclient is up-revved to include nanosecond precision in SMBC_stat_ctx
+  if (out_stat->st_mtim.tv_nsec > 500000000) {
+    out_stat->st_mtim.tv_sec += 1;
+  }
+  out_stat->st_mtim.tv_nsec = 0;
+
   return 0;
 }
 
