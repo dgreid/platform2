@@ -25,6 +25,25 @@ constexpr char kDisableAutoUpdatePref[] =
 
 namespace modemfwd {
 
+namespace {
+
+class InhibitMode {
+ public:
+  explicit InhibitMode(Modem* modem) : modem_(modem) {
+    if (!modem_->SetInhibited(true))
+      ELOG(INFO) << "Inhibiting failed";
+  }
+  ~InhibitMode() {
+    if (!modem_->SetInhibited(false))
+      ELOG(INFO) << "Uninhibiting failed";
+  }
+
+ private:
+  Modem* modem_;
+};
+
+}  // namespace
+
 bool IsAutoUpdateDisabledByPref() {
   const base::FilePath pref_path(kDisableAutoUpdatePref);
   std::string contents;
@@ -84,6 +103,7 @@ base::Closure ModemFlasher::TryFlash(Modem* modem) {
       // We found different firmware! Flash the modem, and since it will
       // reboot afterwards, we can wait to get called again to check the
       // carrier firmware.
+      InhibitMode _inhibit(modem);
       journal_->MarkStartOfFlashingMainFirmware(device_id, current_carrier);
       if (modem->FlashMainFirmware(firmware_file.path_on_filesystem(),
                                    file_info.version)) {
@@ -143,6 +163,7 @@ base::Closure ModemFlasher::TryFlash(Modem* modem) {
     if (!firmware_file.PrepareFrom(file_info))
       return base::Closure();
 
+    InhibitMode _inhibit(modem);
     journal_->MarkStartOfFlashingCarrierFirmware(device_id, current_carrier);
     if (modem->FlashCarrierFirmware(firmware_file.path_on_filesystem(),
                                     file_info.version)) {

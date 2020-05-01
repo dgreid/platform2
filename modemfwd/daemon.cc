@@ -140,7 +140,7 @@ int Daemon::OnEventLoopStarted() {
 
 void Daemon::OnModemAppeared(
     std::unique_ptr<org::chromium::flimflam::DeviceProxy> device) {
-  auto modem = CreateModem(std::move(device), helper_directory_.get());
+  auto modem = CreateModem(bus_, std::move(device), helper_directory_.get());
   if (!modem)
     return;
 

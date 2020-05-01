@@ -9,6 +9,7 @@
 #include <string>
 
 #include <base/files/file_path.h>
+#include <dbus/bus.h>
 
 #include "modemfwd/modem_helper_directory.h"
 #include "shill/dbus-proxies.h"
@@ -35,6 +36,9 @@ class Modem {
   virtual std::string GetCarrierFirmwareId() const = 0;
   virtual std::string GetCarrierFirmwareVersion() const = 0;
 
+  // Tell ModemManager not to deal with this modem for a little while.
+  virtual bool SetInhibited(bool inhibited) = 0;
+
   virtual bool FlashMainFirmware(const base::FilePath& path_to_fw,
                                  const std::string& version) = 0;
   virtual bool FlashCarrierFirmware(const base::FilePath& path_to_fw,
@@ -42,6 +46,7 @@ class Modem {
 };
 
 std::unique_ptr<Modem> CreateModem(
+    scoped_refptr<dbus::Bus> bus,
     std::unique_ptr<org::chromium::flimflam::DeviceProxy> device,
     ModemHelperDirectory* helper_directory);
 

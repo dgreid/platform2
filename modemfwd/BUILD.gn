@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//common-mk/generate-dbus-adaptors.gni")
+import("//common-mk/generate-dbus-proxies.gni")
 import("//common-mk/pkg_config.gni")
 import("//common-mk/proto_library.gni")
 
@@ -28,6 +29,7 @@ pkg_config("target_defaults") {
     "libcros_config",
     "libshill-client",
     "liblzma",
+    "ModemManager",
 
     # system_api depends on protobuf. It must appear before protobuf
     # here or the linker flags won't be in the right order.
@@ -47,6 +49,15 @@ proto_library("modemfw-protos") {
   ]
 }
 
+generate_dbus_proxies("modemmanager_proxies") {
+  modemmanager_in_dir = "${sysroot}/usr/share/dbus-1/interfaces/"
+  proxy_output_file = "include/modemmanager/dbus-proxies.h"
+  sources = [
+    "${modemmanager_in_dir}/org.freedesktop.ModemManager1.Modem.xml",
+    "${modemmanager_in_dir}/org.freedesktop.ModemManager1.xml",
+  ]
+}
+
 generate_dbus_adaptors("modemfwd_adaptors") {
   dbus_service_config = "dbus_bindings/dbus-service-config.json"
   dbus_adaptors_out_dir = "include/modemfwd/dbus_adaptors"
@@ -60,6 +71,7 @@ static_library("libmodemfw") {
   configs += [ ":target_defaults" ]
   deps = [
     ":modemfw-protos",
+    ":modemmanager_proxies",
   ]
   sources = [
     "file_decompressor.cc",

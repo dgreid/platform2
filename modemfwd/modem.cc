@@ -15,9 +15,63 @@
 #include <base/logging.h>
 #include <base/strings/string_util.h>
 #include <base/unguessable_token.h>
+#include <brillo/dbus/dbus_method_invoker.h>
 #include <chromeos/dbus/service_constants.h>
+#include <ModemManager/ModemManager.h>
 
+#include "modemfwd/logging.h"
 #include "modemfwd/modem_helper.h"
+#include "modemmanager/dbus-proxies.h"
+
+namespace {
+
+class Inhibitor {
+ public:
+  Inhibitor(std::unique_ptr<org::freedesktop::ModemManager1Proxy> mm_proxy,
+            const std::string& physdev_uid)
+      : mm_proxy_(std::move(mm_proxy)), physdev_uid_(physdev_uid) {}
+
+  bool SetInhibited(bool inhibited) {
+    brillo::ErrorPtr error_unused;
+    return mm_proxy_->InhibitDevice(physdev_uid_, inhibited, &error_unused);
+  }
+
+ private:
+  std::unique_ptr<org::freedesktop::ModemManager1Proxy> mm_proxy_;
+  std::string physdev_uid_;
+};
+
+std::unique_ptr<Inhibitor> GetInhibitor(
+    scoped_refptr<dbus::Bus> bus, const dbus::ObjectPath& mm_object_path) {
+  // Get the MM object backing this modem, and retrieve its Device property.
+  // This is the mm_physdev_uid we use for inhibition during updates.
+  auto mm_device = bus->GetObjectProxy(modemmanager::kModemManager1ServiceName,
+                                       mm_object_path);
+  if (!mm_device)
+    return nullptr;
+
+  brillo::ErrorPtr error;
+  auto resp = brillo::dbus_utils::CallMethodAndBlock(
+      mm_device, dbus::kDBusPropertiesInterface, dbus::kDBusPropertiesGet,
+      &error, std::string(modemmanager::kModemManager1ModemInterface),
+      std::string(MM_MODEM_PROPERTY_DEVICE));
+  if (!resp)
+    return nullptr;
+
+  std::string mm_physdev_uid;
+  if (!brillo::dbus_utils::ExtractMethodCallResults(resp.get(), &error,
+                                                    &mm_physdev_uid)) {
+    return nullptr;
+  }
+
+  EVLOG(1) << "Modem " << mm_object_path.value() << " has physdev UID "
+           << mm_physdev_uid;
+  auto mm_proxy = std::make_unique<org::freedesktop::ModemManager1Proxy>(
+      bus, modemmanager::kModemManager1ServiceName);
+  return std::make_unique<Inhibitor>(std::move(mm_proxy), mm_physdev_uid);
+}
+
+}  // namespace
 
 namespace modemfwd {
 
@@ -26,10 +80,12 @@ class ModemImpl : public Modem {
   ModemImpl(const std::string& device_id,
             const std::string& equipment_id,
             const std::string& carrier_id,
+            std::unique_ptr<Inhibitor> inhibitor,
             ModemHelper* helper)
       : device_id_(device_id),
         equipment_id_(equipment_id),
         carrier_id_(carrier_id),
+        inhibitor_(std::move(inhibitor)),
         helper_(helper) {
     if (!helper->GetFirmwareInfo(&installed_firmware_))
       LOG(WARNING) << "Could not fetch installed firmware information";
@@ -55,6 +111,14 @@ class ModemImpl : public Modem {
     return installed_firmware_.carrier_version;
   }
 
+  bool SetInhibited(bool inhibited) override {
+    if (!inhibitor_) {
+      EVLOG(1) << "Inhibiting unavailable on this modem";
+      return false;
+    }
+    return inhibitor_->SetInhibited(inhibited);
+  }
+
   bool FlashMainFirmware(const base::FilePath& path_to_fw,
                          const std::string& version) override {
     return helper_->FlashMainFirmware(path_to_fw, version);
@@ -69,6 +133,7 @@ class ModemImpl : public Modem {
   std::string device_id_;
   std::string equipment_id_;
   std::string carrier_id_;
+  std::unique_ptr<Inhibitor> inhibitor_;
   FirmwareInfo installed_firmware_;
   ModemHelper* helper_;
 
@@ -76,6 +141,7 @@ class ModemImpl : public Modem {
 };
 
 std::unique_ptr<Modem> CreateModem(
+    scoped_refptr<dbus::Bus> bus,
     std::unique_ptr<org::chromium::flimflam::DeviceProxy> device,
     ModemHelperDirectory* helper_directory) {
   std::string object_path = device->GetObjectPath().value();
@@ -110,6 +176,17 @@ std::unique_ptr<Modem> CreateModem(
   if (properties[shill::kHomeProviderProperty].GetValue(&operator_info))
     carrier_id = operator_info[shill::kOperatorUuidKey];
 
+  // Get a helper object for inhibiting the modem, if possible.
+  std::unique_ptr<Inhibitor> inhibitor;
+  std::string mm_object_path;
+  if (!properties[shill::kDBusObjectProperty].GetValue(&mm_object_path)) {
+    LOG(INFO) << "Modem " << object_path << " has no ModemManager object";
+  } else {
+    inhibitor = GetInhibitor(bus, dbus::ObjectPath(mm_object_path));
+  }
+  if (!inhibitor)
+    LOG(INFO) << "Inhibiting modem " << object_path << " will not be possible";
+
   // Use the device ID to grab a helper.
   ModemHelper* helper = helper_directory->GetHelperForDeviceId(device_id);
   if (!helper) {
@@ -119,7 +196,7 @@ std::unique_ptr<Modem> CreateModem(
   }
 
   return std::make_unique<ModemImpl>(device_id, equipment_id, carrier_id,
-                                     helper);
+                                     std::move(inhibitor), helper);
 }
 
 // StubModem acts like a modem with a particular device ID but does not
@@ -145,6 +222,8 @@ class StubModem : public Modem {
   std::string GetCarrierFirmwareId() const override { return ""; }
 
   std::string GetCarrierFirmwareVersion() const override { return ""; }
+
+  bool SetInhibited(bool inhibited) override { return true; }
 
   bool FlashMainFirmware(const base::FilePath& path_to_fw,
                          const std::string& version) override {

@@ -666,4 +666,36 @@ TEST_F(ModemFlasherTest, CarrierSwitchingMainFirmware) {
   modem_flasher_->TryFlash(modem.get());
 }
 
+TEST_F(ModemFlasherTest, InhibitDuringMainFirmwareFlash) {
+  base::FilePath new_firmware(kMainFirmware2Path);
+  AddMainFirmwareFile(kDeviceId1, new_firmware, kMainFirmware2Version);
+
+  auto modem = GetDefaultModem();
+  EXPECT_CALL(*modem, GetDeviceId()).Times(AtLeast(1));
+  EXPECT_CALL(*modem, GetMainFirmwareVersion()).Times(AtLeast(1));
+  EXPECT_CALL(*modem, FlashMainFirmware(new_firmware, kMainFirmware2Version))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*modem, FlashCarrierFirmware(_, _)).Times(0);
+  EXPECT_CALL(*modem, SetInhibited(true)).WillOnce(Return(true));
+  EXPECT_CALL(*modem, SetInhibited(false)).WillOnce(Return(true));
+  modem_flasher_->TryFlash(modem.get());
+}
+
+TEST_F(ModemFlasherTest, InhibitDuringCarrierFirmwareFlash) {
+  base::FilePath new_firmware(kCarrier1Firmware2Path);
+  AddCarrierFirmwareFile(kDeviceId1, kCarrier1, new_firmware,
+                         kCarrier1Firmware2Version);
+
+  auto modem = GetDefaultModem();
+  EXPECT_CALL(*modem, GetDeviceId()).Times(AtLeast(1));
+  SetCarrierFirmwareInfo(modem.get(), kCarrier1, kCarrier1Firmware1Version);
+  EXPECT_CALL(*modem, FlashMainFirmware(_, _)).Times(0);
+  EXPECT_CALL(*modem,
+              FlashCarrierFirmware(new_firmware, kCarrier1Firmware2Version))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*modem, SetInhibited(true)).WillOnce(Return(true));
+  EXPECT_CALL(*modem, SetInhibited(false)).WillOnce(Return(true));
+  modem_flasher_->TryFlash(modem.get());
+}
+
 }  // namespace modemfwd
