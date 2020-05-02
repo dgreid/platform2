@@ -34,7 +34,7 @@ group("host") {
 
 pkg_config("host_target_defaults_pkgs") {
   pkg_deps = [
-    "libpatchpanel-util",
+    "libpatchpanel-client",
     "libbrillo",
     "libchrome-${libbase_ver}",
   ]
@@ -146,7 +146,6 @@ static_library("libconcierge") {
     "grpc++",
     "libarchive",
     "libminijail",
-    "libpatchpanel-client",
     "libqcow_utils",
     "libshill-client",
     "protobuf",
