@@ -7,6 +7,7 @@
 
 #include "chaps/chaps.h"
 
+#include <set>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -56,9 +57,17 @@ static uint32_t g_retry_delay_ms = 100;
 
 // Tear down helper.
 static void TearDown() {
+  std::set<CK_SESSION_HANDLE> open_session_handles;
   for (const auto& itr : g_open_sessions) {
-    LOG(WARNING) << "Orphan session " << itr.first << " for slot " << itr.second
-                 << " left open";
+    open_session_handles.insert(itr.first);
+  }
+  for (const auto& handle : open_session_handles) {
+    LOG(WARNING) << "Orphan session " << handle << " left open, closing it.";
+    CK_RV rv = C_CloseSession(handle);
+    if (rv != CKR_OK) {
+      LOG(WARNING) << "Failed to close orphan session " << handle << ", error "
+                   << rv;
+    }
   }
   if (g_is_initialized && !g_is_using_mock && g_proxy) {
     delete g_proxy;
