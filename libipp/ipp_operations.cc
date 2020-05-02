@@ -64,7 +64,6 @@ std::unique_ptr<Request> Request::NewRequest(Operation id) {
     default:
       return nullptr;
   }
-  return nullptr;
 }
 std::unique_ptr<Response> Response::NewResponse(Operation id) {
   switch (id) {
@@ -123,7 +122,6 @@ std::unique_ptr<Response> Response::NewResponse(Operation id) {
     default:
       return nullptr;
   }
-  return nullptr;
 }
 Request_CUPS_Add_Modify_Class::Request_CUPS_Add_Modify_Class()
     : Request(Operation::CUPS_Add_Modify_Class) {}
