@@ -22,8 +22,10 @@
 #include <mojo/public/cpp/system/invitation.h>
 
 #include "debugd/dbus-proxies.h"
+#include "diagnostics/common/system/bluetooth_client_impl.h"
 #include "diagnostics/common/system/powerd_adapter_impl.h"
 #include "diagnostics/cros_healthd/cros_healthd_routine_service_impl.h"
+#include "diagnostics/cros_healthd/events/bluetooth_events_impl.h"
 #include "diagnostics/cros_healthd/events/power_events_impl.h"
 
 namespace diagnostics {
@@ -34,6 +36,8 @@ CrosHealthd::CrosHealthd()
   // initiate the |debugd_proxy_| and a |power_manager_proxy_|.
   dbus_bus_ = connection_.Connect();
   CHECK(dbus_bus_) << "Failed to connect to the D-Bus system bus.";
+
+  bluetooth_client_ = std::make_unique<BluetoothClientImpl>(dbus_bus_);
 
   debugd_proxy_ = std::make_unique<org::chromium::debugdProxy>(dbus_bus_);
   debugd_adapter_ = std::make_unique<DebugdAdapterImpl>(
@@ -60,6 +64,9 @@ CrosHealthd::CrosHealthd()
 
   fan_fetcher_ = std::make_unique<FanFetcher>(debugd_proxy_.get());
 
+  bluetooth_events_ =
+      std::make_unique<BluetoothEventsImpl>(bluetooth_client_.get());
+
   power_events_ = std::make_unique<PowerEventsImpl>(powerd_adapter_.get());
 
   routine_service_ = std::make_unique<CrosHealthdRoutineServiceImpl>(
@@ -67,8 +74,8 @@ CrosHealthd::CrosHealthd()
 
   mojo_service_ = std::make_unique<CrosHealthdMojoService>(
       backlight_fetcher_.get(), battery_fetcher_.get(),
-      cached_vpd_fetcher_.get(), fan_fetcher_.get(), power_events_.get(),
-      routine_service_.get());
+      cached_vpd_fetcher_.get(), fan_fetcher_.get(), bluetooth_events_.get(),
+      power_events_.get(), routine_service_.get());
 
   binding_set_.set_connection_error_handler(
       base::Bind(&CrosHealthd::OnDisconnect, base::Unretained(this)));

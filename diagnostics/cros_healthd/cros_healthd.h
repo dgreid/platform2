@@ -21,11 +21,13 @@
 #include <mojo/public/cpp/bindings/binding_set.h>
 
 #include "debugd/dbus-proxies.h"
+#include "diagnostics/common/system/bluetooth_client.h"
 #include "diagnostics/common/system/debugd_adapter_impl.h"
 #include "diagnostics/common/system/powerd_adapter.h"
 #include "diagnostics/cros_healthd/cros_healthd_mojo_service.h"
 #include "diagnostics/cros_healthd/cros_healthd_routine_factory_impl.h"
 #include "diagnostics/cros_healthd/cros_healthd_routine_service.h"
+#include "diagnostics/cros_healthd/events/bluetooth_events.h"
 #include "diagnostics/cros_healthd/events/power_events.h"
 #include "diagnostics/cros_healthd/utils/backlight_utils.h"
 #include "diagnostics/cros_healthd/utils/battery_utils.h"
@@ -82,6 +84,9 @@ class CrosHealthd final
   // Single |dbus_bus_| object used by cros_healthd to initiate the
   // |debugd_proxy_| and |power_manager_proxy_|.
   scoped_refptr<dbus::Bus> dbus_bus_;
+  // Use the |bluetooth_client_| to subscribe to notifications for D-Bus objects
+  // representing Bluetooth adapters and devices.
+  std::unique_ptr<BluetoothClient> bluetooth_client_;
   // Use the |debugd_proxy_| to make calls to debugd. Example: cros_healthd
   // calls out to debugd when it needs to collect smart battery metrics like
   // manufacture_date_smart and temperature_smart.
@@ -113,6 +118,8 @@ class CrosHealthd final
   // |debugd_proxy_|.
   std::unique_ptr<FanFetcher> fan_fetcher_;
 
+  // Provides support for Bluetooth-related events.
+  std::unique_ptr<BluetoothEvents> bluetooth_events_;
   // Provides support for power-related events.
   std::unique_ptr<PowerEvents> power_events_;
 
