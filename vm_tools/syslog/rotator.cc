@@ -19,7 +19,8 @@ namespace syslog {
 namespace {
 int FileIndexFromName(const base::FilePath& file_path) {
   int index = 0;
-  base::StringPiece final_extension = file_path.FinalExtension();
+  std::string s = file_path.FinalExtension();
+  base::StringPiece final_extension(s);
   if (final_extension.starts_with(".")) {
     final_extension.remove_prefix(1);
     if (!base::StringToInt(final_extension, &index)) {
