@@ -170,7 +170,7 @@ constexpr double kTopCat20190722TestInput[] = {
 };
 
 constexpr char kTextClassifierTestInput[] =
-    "user.name@gmail.com. 123 George Street. unknownword. 12pm";
+    "user.name@gmail.com. 123 George Street. unknownword. 12pm. 23 cm";
 
 using ::chromeos::machine_learning::mojom::BuiltinModelId;
 using ::chromeos::machine_learning::mojom::BuiltinModelSpec;
@@ -827,7 +827,7 @@ TEST(TextClassifierAnnotateTest, ComplexString) {
           [](bool* infer_callback_done,
              std::vector<TextAnnotationPtr> annotations) {
             *infer_callback_done = true;
-            EXPECT_EQ(annotations.size(), 4);
+            EXPECT_EQ(annotations.size(), 5);
             EXPECT_EQ(annotations[0]->start_offset, 0);
             EXPECT_EQ(annotations[0]->end_offset, 19);
             ASSERT_GE(annotations[0]->entities.size(), 1);
@@ -841,9 +841,13 @@ TEST(TextClassifierAnnotateTest, ComplexString) {
             ASSERT_GE(annotations[2]->entities.size(), 1);
             EXPECT_EQ(annotations[2]->entities[0]->name, "dictionary");
             EXPECT_EQ(annotations[3]->start_offset, 53);
-            EXPECT_EQ(annotations[3]->end_offset, 57);
+            EXPECT_EQ(annotations[3]->end_offset, 58);
             ASSERT_GE(annotations[3]->entities.size(), 1);
             EXPECT_EQ(annotations[3]->entities[0]->name, "datetime");
+            EXPECT_EQ(annotations[4]->start_offset, 59);
+            EXPECT_EQ(annotations[4]->end_offset, 64);
+            ASSERT_GE(annotations[4]->entities.size(), 1);
+            EXPECT_EQ(annotations[4]->entities[0]->name, "unit");
           },
           &infer_callback_done));
   base::RunLoop().RunUntilIdle();
