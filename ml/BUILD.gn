@@ -44,7 +44,6 @@ generate_mojom_bindings("ml_mojo_bindings") {
   deps = [
     ":mojo_bindings_traits",
   ]
-  use_once_callback = true
 }
 
 pkg_config("ml_common_pkg_deps") {

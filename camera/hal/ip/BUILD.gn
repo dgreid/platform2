@@ -26,7 +26,6 @@ generate_mojom_bindings("libcamera_hal_mojom") {
     "//camera/mojo/ip/ip_camera.mojom",
   ]
   mojo_root = "//camera"
-  use_once_callback = true
 }
 
 shared_library("libcamera_hal") {

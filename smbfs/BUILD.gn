@@ -106,7 +106,6 @@ generate_mojom_bindings("mojo_bindings") {
   deps = [
     ":mojo_bindings_traits",
   ]
-  use_once_callback = true
 }
 
 executable("smbfs") {

@@ -25,7 +25,6 @@ generate_mojom_bindings("arc_camera_service_mojom") {
     "arc_camera.mojom",
   ]
   mojo_root = "//camera"
-  use_once_callback = true
 }
 
 executable("arc_camera_service") {

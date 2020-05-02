@@ -47,7 +47,6 @@ generate_mojom_bindings("keymaster_mojo_bindings") {
     "mojo/cert_store.mojom",
     "mojo/keymaster.mojom",
   ]
-  use_once_callback = true
 }
 
 # BoringSSL
