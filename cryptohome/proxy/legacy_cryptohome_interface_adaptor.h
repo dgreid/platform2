@@ -494,6 +494,16 @@ class LegacyCryptohomeInterfaceAdaptor
       std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
           cryptohome::BaseReply>> response,
       const cryptohome::InitializeCastKeyRequest& in_request) override;
+  void StartFingerprintAuthSession(
+      std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
+          cryptohome::BaseReply>> response,
+      const cryptohome::AccountIdentifier& in_account_id,
+      const cryptohome::StartFingerprintAuthSessionRequest& in_request)
+      override;
+  void EndFingerprintAuthSession(
+      std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
+          cryptohome::BaseReply>> response,
+      const cryptohome::EndFingerprintAuthSessionRequest& in_request) override;
   void GetFirmwareManagementParameters(
       std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
           cryptohome::BaseReply>> response,

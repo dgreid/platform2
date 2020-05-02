@@ -47,9 +47,23 @@ class FingerprintManager {
   // session started successfully.
   // |auth_session_start_client_callback| will be called with true if auth
   // session started successfully, or called with false otherwise.
+  //
+  // One auth session may serve multiple fingerprint-related calls, e.g.
+  // multiple CheckKey() calls with KEY_TYPE_FINGERPRINT, until one of the
+  // following occurs:
+  // 1. One fingerprint scan succeeds, or a non-recoverable error occurs.
+  //    |state_| will be set to AUTH_SESSION_LOCKED.
+  // 2. Max retry count reached for the current auth session. |state_| will be
+  //    set to AUTH_SESSION_LOCKED.
+  // 3. EndAuthSession() is called, e.g. user decides to cancel operation
+  //    through UI.
   virtual void StartAuthSessionAsyncForUser(
       const std::string& user,
       StartSessionCallback auth_session_start_client_callback);
+
+  // Tells Biometrics Daemon to end fingerprint auth session and resets all
+  // states.
+  virtual void EndAuthSession();
 
   // Sets the callback for a fingerprint scan. Must be called after
   // StartAuthSessionAsyncForUser. |auth_scan_done_callback| will be
@@ -62,20 +76,30 @@ class FingerprintManager {
  private:
   friend class FingerprintManagerPeer;
 
+  enum class State {
+    NO_AUTH_SESSION = 0,
+    AUTH_SESSION_OPEN = 1,
+    // A fatal error occurred, or max retry count reached, but auth
+    // session is not cancelled yet.
+    AUTH_SESSION_LOCKED = 2,
+  };
+
   // Class for properly finish processing an AuthScanDone signal.
   class AuthScanDoneResourceManager {
    public:
-    AuthScanDoneResourceManager(biod::BiometricsManagerProxyBase* proxy,
-                                FingerprintManager* fingerprint_manager)
-        : proxy_(proxy), fingerprint_manager_(fingerprint_manager) {}
+    explicit AuthScanDoneResourceManager(
+        FingerprintManager* fingerprint_manager)
+        : fingerprint_manager_(fingerprint_manager) {}
 
     ~AuthScanDoneResourceManager() {
-      proxy_->EndAuthSession();
-      fingerprint_manager_->Reset();
+      fingerprint_manager_->auth_scan_done_callback_.Reset();
+      // If auth session is still open, then we are waiting for retry, so keep
+      // |current_user_|.
+      if (fingerprint_manager_->state_ != State::AUTH_SESSION_OPEN)
+        fingerprint_manager_->current_user_.clear();
     }
 
    private:
-    biod::BiometricsManagerProxyBase* proxy_;
     FingerprintManager* fingerprint_manager_;
   };
 
@@ -113,6 +137,8 @@ class FingerprintManager {
   biod::BiometricsManagerProxyBase* proxy_;
   bool connected_to_auth_scan_done_signal_;
   ResultCallback auth_scan_done_callback_;
+  State state_ = State::NO_AUTH_SESSION;
+  // The obfuscated username tied to the current auth session.
   std::string current_user_;
   base::WeakPtrFactory<FingerprintManager> weak_factory_;
   base::PlatformThreadId mount_thread_id_;

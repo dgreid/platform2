@@ -774,6 +774,20 @@ gboolean cryptohome_initialize_cast_key(Cryptohome* self,
   CRYPTOHOME_WRAP_METHOD(InitializeCastKey, request);
 }
 
+gboolean cryptohome_start_fingerprint_auth_session(
+    Cryptohome* self,
+    GArray* id,
+    GArray* request,
+    DBusGMethodInvocation* error) {
+  CRYPTOHOME_WRAP_METHOD(StartFingerprintAuthSession, id, request);
+}
+
+gboolean cryptohome_end_fingerprint_auth_session(Cryptohome* self,
+                                                 GArray* request,
+                                                 DBusGMethodInvocation* error) {
+  CRYPTOHOME_WRAP_METHOD(EndFingerprintAuthSession, request);
+}
+
 gboolean cryptohome_get_firmware_management_parameters(
     Cryptohome* self,
     GArray* request,

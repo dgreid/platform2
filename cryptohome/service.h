@@ -720,6 +720,20 @@ virtual gboolean InstallAttributesIsFirstInstall(gboolean* OUT_first_install,
   virtual gboolean GetTpmStatus(const GArray* request,
                                 DBusGMethodInvocation* context);
   // Runs on the mount thread.
+  virtual void DoStartFingerprintAuthSession(
+      std::unique_ptr<AccountIdentifier> account_id,
+      std::unique_ptr<StartFingerprintAuthSessionRequest> request,
+      DBusGMethodInvocation* context);
+  virtual gboolean StartFingerprintAuthSession(const GArray* account_id,
+                                               const GArray* request,
+                                               DBusGMethodInvocation* context);
+  // Runs on the mount thread.
+  virtual void DoEndFingerprintAuthSession(
+      std::unique_ptr<EndFingerprintAuthSessionRequest> request,
+      DBusGMethodInvocation* context);
+  virtual gboolean EndFingerprintAuthSession(const GArray* request,
+                                             DBusGMethodInvocation* context);
+  // Runs on the mount thread.
   virtual void DoGetFirmwareManagementParameters(
       const brillo::SecureBlob& request,
       DBusGMethodInvocation* context);
@@ -1044,6 +1058,10 @@ virtual gboolean InstallAttributesIsFirstInstall(gboolean* OUT_first_install,
                                  bool has_create_request,
                                  bool* is_ephemeral,
                                  MountError* error) const;
+  // Called on Mount thread when starting fingerprint auth session succeeds or
+  // fails.
+  void OnStartFingerprintAuthSessionDone(DBusGMethodInvocation* context,
+                                         bool success);
 
   brillo::DBusConnection system_dbus_connection_;
 

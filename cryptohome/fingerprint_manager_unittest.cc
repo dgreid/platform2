@@ -33,6 +33,21 @@ class FingerprintManagerPeer {
     fingerprint_manager_->OnAuthScanDone(signal);
   }
 
+  bool NoAuthSession() {
+    return fingerprint_manager_->state_ ==
+           FingerprintManager::State::NO_AUTH_SESSION;
+  }
+
+  bool AuthSessionIsOpen() {
+    return fingerprint_manager_->state_ ==
+           FingerprintManager::State::AUTH_SESSION_OPEN;
+  }
+
+  bool AuthSessionIsLocked() {
+    return fingerprint_manager_->state_ ==
+           FingerprintManager::State::AUTH_SESSION_LOCKED;
+  }
+
  private:
   FingerprintManager* fingerprint_manager_;
 };
@@ -56,6 +71,16 @@ class FingerprintManagerTest : public testing::Test {
     fingerprint_manager_peer_->SetConnectedToAuthScanDoneSignal(true);
   }
 
+  void AddMatchToScanResult(dbus::MessageWriter* matches_writer,
+                            const std::string& user) {
+    dbus::MessageWriter entry_writer(nullptr);
+    matches_writer->OpenDictEntry(&entry_writer);
+    entry_writer.AppendString(user);
+    // A dumb fingerprint record path is sufficient.
+    entry_writer.AppendArrayOfObjectPaths(std::vector<dbus::ObjectPath>());
+    matches_writer->CloseContainer(&entry_writer);
+  }
+
   std::unique_ptr<FingerprintManager> fingerprint_manager_;
   std::unique_ptr<FingerprintManagerPeer> fingerprint_manager_peer_;
   NiceMock<biod::MockBiometricsManagerProxyBase> mock_biod_proxy_;
@@ -74,6 +99,7 @@ TEST_F(FingerprintManagerTest, StartAuthSessionFail) {
       base::BindLambdaForTesting([this](bool success) { status_ = success; }));
   EXPECT_FALSE(status_);
   EXPECT_TRUE(fingerprint_manager_->GetCurrentUser().empty());
+  EXPECT_TRUE(fingerprint_manager_peer_->NoAuthSession());
 }
 
 TEST_F(FingerprintManagerTest, StartAuthSessionSuccess) {
@@ -87,6 +113,12 @@ TEST_F(FingerprintManagerTest, StartAuthSessionSuccess) {
       base::BindLambdaForTesting([this](bool success) { status_ = success; }));
   EXPECT_TRUE(status_);
   EXPECT_EQ(fingerprint_manager_->GetCurrentUser(), kUser);
+  EXPECT_TRUE(fingerprint_manager_peer_->AuthSessionIsOpen());
+
+  // Test that we can close the auth session.
+  EXPECT_CALL(mock_biod_proxy_, EndAuthSession());
+  fingerprint_manager_->EndAuthSession();
+  EXPECT_TRUE(fingerprint_manager_peer_->NoAuthSession());
 }
 
 TEST_F(FingerprintManagerTest, StartAuthSessionTwice) {
@@ -108,6 +140,8 @@ TEST_F(FingerprintManagerTest, StartAuthSessionTwice) {
       kUser,
       base::BindLambdaForTesting([this](bool success) { status_ = success; }));
   EXPECT_FALSE(status_);
+  // The existing session is unaffected.
+  EXPECT_TRUE(fingerprint_manager_peer_->AuthSessionIsOpen());
 }
 
 TEST_F(FingerprintManagerTest, AuthScanDoneNoScanResult) {
@@ -118,7 +152,7 @@ TEST_F(FingerprintManagerTest, AuthScanDoneNoScanResult) {
   fingerprint_manager_->StartAuthSessionAsyncForUser(
       kUser,
       base::BindLambdaForTesting([this](bool success) { status_ = success; }));
-  EXPECT_CALL(mock_biod_proxy_, EndAuthSession());
+  EXPECT_TRUE(fingerprint_manager_peer_->AuthSessionIsOpen());
 
   // This signal does not include a ScanResult, so it's invalid.
   dbus::Signal signal(biod::kBiometricsManagerInterface,
@@ -129,6 +163,8 @@ TEST_F(FingerprintManagerTest, AuthScanDoneNoScanResult) {
   scan_status_ = FingerprintScanStatus::SUCCESS;
   fingerprint_manager_peer_->SignalAuthScanDone(&signal);
   EXPECT_EQ(scan_status_, FingerprintScanStatus::FAILED_RETRY_NOT_ALLOWED);
+  // Unrecoverable error should lock the auth session.
+  EXPECT_TRUE(fingerprint_manager_peer_->AuthSessionIsLocked());
 }
 
 TEST_F(FingerprintManagerTest, AuthScanDoneScanResultFailed) {
@@ -139,7 +175,7 @@ TEST_F(FingerprintManagerTest, AuthScanDoneScanResultFailed) {
   fingerprint_manager_->StartAuthSessionAsyncForUser(
       kUser,
       base::BindLambdaForTesting([this](bool success) { status_ = success; }));
-  EXPECT_CALL(mock_biod_proxy_, EndAuthSession());
+  EXPECT_TRUE(fingerprint_manager_peer_->AuthSessionIsOpen());
 
   dbus::Signal signal(biod::kBiometricsManagerInterface,
                       biod::kBiometricsManagerAuthScanDoneSignal);
@@ -152,6 +188,8 @@ TEST_F(FingerprintManagerTest, AuthScanDoneScanResultFailed) {
   scan_status_ = FingerprintScanStatus::SUCCESS;
   fingerprint_manager_peer_->SignalAuthScanDone(&signal);
   EXPECT_EQ(scan_status_, FingerprintScanStatus::FAILED_RETRY_ALLOWED);
+  // Auth session should still be open since retry is allowed.
+  EXPECT_TRUE(fingerprint_manager_peer_->AuthSessionIsOpen());
 }
 
 TEST_F(FingerprintManagerTest, AuthScanDoneSuccess) {
@@ -162,7 +200,7 @@ TEST_F(FingerprintManagerTest, AuthScanDoneSuccess) {
   fingerprint_manager_->StartAuthSessionAsyncForUser(
       kUser,
       base::BindLambdaForTesting([this](bool success) { status_ = success; }));
-  EXPECT_CALL(mock_biod_proxy_, EndAuthSession());
+  EXPECT_TRUE(fingerprint_manager_peer_->AuthSessionIsOpen());
 
   dbus::Signal signal(biod::kBiometricsManagerInterface,
                       biod::kBiometricsManagerAuthScanDoneSignal);
@@ -171,17 +209,17 @@ TEST_F(FingerprintManagerTest, AuthScanDoneSuccess) {
       static_cast<uint32_t>(biod::ScanResult::SCAN_RESULT_SUCCESS));
   dbus::MessageWriter matches_writer(nullptr);
   writer.OpenArray("{sao}", &matches_writer);
-  dbus::MessageWriter entry_writer(nullptr);
-  matches_writer.OpenDictEntry(&entry_writer);
-  entry_writer.AppendString(kUser);
-  entry_writer.AppendArrayOfObjectPaths(std::vector<dbus::ObjectPath>());
-  matches_writer.CloseContainer(&entry_writer);
+  AddMatchToScanResult(&matches_writer, kUser);
   writer.CloseContainer(&matches_writer);
+
   fingerprint_manager_->SetAuthScanDoneCallback(base::BindLambdaForTesting(
       [this](FingerprintScanStatus status) { scan_status_ = status; }));
   scan_status_ = FingerprintScanStatus::FAILED_RETRY_NOT_ALLOWED;
   fingerprint_manager_peer_->SignalAuthScanDone(&signal);
   EXPECT_EQ(scan_status_, FingerprintScanStatus::SUCCESS);
+  // A successful scan should cause further scans in the same session to be
+  // ignored.
+  EXPECT_TRUE(fingerprint_manager_peer_->AuthSessionIsLocked());
 }
 
 }  // namespace

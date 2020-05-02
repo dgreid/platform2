@@ -3446,6 +3446,100 @@ gboolean Service::GetTpmStatus(const GArray* request,
   return TRUE;
 }
 
+void Service::OnStartFingerprintAuthSessionDone(DBusGMethodInvocation* context,
+                                                bool success) {
+  VLOG(1) << "Start fingerprint auth session result: " << success;
+  BaseReply reply;
+  if (!success)
+    reply.set_error(CRYPTOHOME_ERROR_FINGERPRINT_ERROR_INTERNAL);
+  SendReply(context, reply);
+}
+
+void Service::DoStartFingerprintAuthSession(
+    std::unique_ptr<AccountIdentifier> identifier,
+    std::unique_ptr<StartFingerprintAuthSessionRequest> request,
+    DBusGMethodInvocation* context) {
+  if (!identifier || !request) {
+    SendInvalidArgsReply(context, "Failed to parse parameters.");
+    return;
+  }
+  if (GetAccountId(*identifier).empty()) {
+    SendInvalidArgsReply(context, "No email supplied");
+    return;
+  }
+
+  BaseReply reply;
+  const std::string obfuscated_username =
+      BuildObfuscatedUsername(GetAccountId(*identifier), system_salt_);
+  if (!homedirs_->Exists(obfuscated_username)) {
+    reply.set_error(CRYPTOHOME_ERROR_ACCOUNT_NOT_FOUND);
+    SendReply(context, reply);
+    return;
+  }
+
+  fingerprint_manager_->StartAuthSessionAsyncForUser(
+      obfuscated_username,
+      base::Bind(&Service::OnStartFingerprintAuthSessionDone,
+                 base::Unretained(this), context));
+}
+
+gboolean Service::StartFingerprintAuthSession(
+    const GArray* account_id,
+    const GArray* start_auth_session_request,
+    DBusGMethodInvocation* context) {
+  std::unique_ptr<AccountIdentifier> identifier(new AccountIdentifier);
+  std::unique_ptr<StartFingerprintAuthSessionRequest> request(
+      new StartFingerprintAuthSessionRequest);
+
+  // On parsing failure, pass along a NULL.
+  if (!identifier->ParseFromArray(account_id->data, account_id->len)) {
+    identifier.reset(NULL);
+  }
+  if (!request->ParseFromArray(start_auth_session_request->data,
+                               start_auth_session_request->len)) {
+    request.reset(NULL);
+  }
+
+  // If PBs don't parse, the validation in the handler will catch it.
+  PostTask(
+      FROM_HERE,
+      base::Bind(&Service::DoStartFingerprintAuthSession,
+                 base::Unretained(this), base::Passed(std::move(identifier)),
+                 base::Passed(std::move(request)), base::Unretained(context)));
+  return TRUE;
+}
+
+void Service::DoEndFingerprintAuthSession(
+    std::unique_ptr<EndFingerprintAuthSessionRequest> request,
+    DBusGMethodInvocation* context) {
+  if (!request) {
+    SendInvalidArgsReply(context, "Failed to parse parameters.");
+    return;
+  }
+
+  fingerprint_manager_->EndAuthSession();
+  SendReply(context, BaseReply());
+}
+
+gboolean Service::EndFingerprintAuthSession(
+    const GArray* end_auth_session_request, DBusGMethodInvocation* context) {
+  std::unique_ptr<EndFingerprintAuthSessionRequest> request(
+      new EndFingerprintAuthSessionRequest);
+
+  // On parsing failure, pass along a NULL.
+  if (!request->ParseFromArray(end_auth_session_request->data,
+                               end_auth_session_request->len)) {
+    request.reset(NULL);
+  }
+
+  // If PBs don't parse, the validation in the handler will catch it.
+  PostTask(
+      FROM_HERE,
+      base::Bind(&Service::DoEndFingerprintAuthSession, base::Unretained(this),
+                 base::Passed(std::move(request)), base::Unretained(context)));
+  return TRUE;
+}
+
 void Service::DoGetFirmwareManagementParameters(
     const brillo::SecureBlob& request,
     DBusGMethodInvocation* context) {

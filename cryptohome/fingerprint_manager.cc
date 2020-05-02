@@ -96,6 +96,7 @@ void FingerprintManager::OnAuthScanDoneSignalConnected(
 }
 
 void FingerprintManager::Reset() {
+  state_ = State::NO_AUTH_SESSION;
   current_user_.clear();
   auth_scan_done_callback_.Reset();
 }
@@ -112,11 +113,11 @@ void FingerprintManager::OnAuthScanDone(dbus::Signal* signal) {
   VLOG(1) << "Received AuthScanDone signal.";
 
   // This method is called if any auth scan operation completes, so we validate
-  // that this operation is for this class's current user.
-  if (current_user_.empty())
+  // that this signal is expected.
+  if (state_ != State::AUTH_SESSION_OPEN)
     return;
 
-  AuthScanDoneResourceManager resource_manager(proxy_, this);
+  AuthScanDoneResourceManager resource_manager(this);
 
   AuthScanDBusResult result;
   if (!ParseDBusSignal(signal, &result)) {
@@ -124,6 +125,7 @@ void FingerprintManager::OnAuthScanDone(dbus::Signal* signal) {
       auth_scan_done_callback_.Run(
           FingerprintScanStatus::FAILED_RETRY_NOT_ALLOWED);
     }
+    state_ = State::AUTH_SESSION_LOCKED;
     return;
   }
 
@@ -148,6 +150,7 @@ void FingerprintManager::OnAuthScanDone(dbus::Signal* signal) {
   VLOG(1) << "Authentication succeeded.";
   if (auth_scan_done_callback_)
     auth_scan_done_callback_.Run(FingerprintScanStatus::SUCCESS);
+  state_ = State::AUTH_SESSION_LOCKED;
 }
 
 void FingerprintManager::SetAuthScanDoneCallback(
@@ -157,13 +160,13 @@ void FingerprintManager::SetAuthScanDoneCallback(
   if (!connected_to_auth_scan_done_signal_)
     return;
 
-  // Do nothing if another session is pending.
-  if (auth_scan_done_callback_)
+  // Don't allow any operation if we are not in an auth session.
+  if (state_ != State::AUTH_SESSION_OPEN) {
+    auth_scan_done_callback.Run(
+        FingerprintScanStatus::FAILED_RETRY_NOT_ALLOWED);
     return;
-  // |auth_scan_done_callback_| must be set after |current_user_| is set by
-  // StartAuthSessionAsyncForUser().
-  if (current_user_.empty())
-    return;
+  }
+
   auth_scan_done_callback_ = std::move(auth_scan_done_callback);
 }
 
@@ -174,6 +177,7 @@ void FingerprintManager::SetUserAndRunClientCallback(
   // Set |current_user_| to |user| if auth session started successfully.
   if (success) {
     current_user_ = user;
+    state_ = State::AUTH_SESSION_OPEN;
   } else {
     Reset();
   }
@@ -189,7 +193,7 @@ void FingerprintManager::StartAuthSessionAsyncForUser(
     return;
 
   // Disallow starting auth session if another session might be pending.
-  if (!current_user_.empty()) {
+  if (state_ != State::NO_AUTH_SESSION) {
     auth_session_start_client_callback.Run(false);
     return;
   }
@@ -202,6 +206,17 @@ void FingerprintManager::StartAuthSessionAsyncForUser(
       std::move(auth_session_start_client_callback), user);
 
   proxy_->StartAuthSessionAsync(std::move(auth_session_start_callback));
+}
+
+void FingerprintManager::EndAuthSession() {
+  // Return an error to any pending call. This is for the case where the client
+  // decides to cancel fingerprint auth before receiving a response from us.
+  if (auth_scan_done_callback_) {
+    auth_scan_done_callback_.Run(
+        FingerprintScanStatus::FAILED_RETRY_NOT_ALLOWED);
+  }
+  proxy_->EndAuthSession();
+  Reset();
 }
 
 void FingerprintManager::SetProxy(biod::BiometricsManagerProxyBase* proxy) {

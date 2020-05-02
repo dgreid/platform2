@@ -448,6 +448,14 @@ gboolean cryptohome_initialize_cast_key(Cryptohome* self,
                                         GArray* request,
                                         DBusGMethodInvocation* resp);
 
+gboolean cryptohome_start_fingerprint_auth_session(Cryptohome* self,
+                                                   GArray* id,
+                                                   GArray* request,
+                                                   DBusGMethodInvocation* resp);
+gboolean cryptohome_end_fingerprint_auth_session(Cryptohome* self,
+                                                 GArray* request,
+                                                 DBusGMethodInvocation* resp);
+
 gboolean cryptohome_get_firmware_management_parameters(
     Cryptohome* self,
     GArray* request,

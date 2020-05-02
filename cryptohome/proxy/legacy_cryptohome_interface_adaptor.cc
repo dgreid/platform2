@@ -2427,6 +2427,17 @@ void LegacyCryptohomeInterfaceAdaptor::InitializeCastKey(
                            "Obsolete method InitializeCastKey() called");
 }
 
+void LegacyCryptohomeInterfaceAdaptor::StartFingerprintAuthSession(
+    std::unique_ptr<
+        brillo::dbus_utils::DBusMethodResponse<cryptohome::BaseReply>> response,
+    const cryptohome::AccountIdentifier& in_account_id,
+    const cryptohome::StartFingerprintAuthSessionRequest& in_request) {}
+
+void LegacyCryptohomeInterfaceAdaptor::EndFingerprintAuthSession(
+    std::unique_ptr<
+        brillo::dbus_utils::DBusMethodResponse<cryptohome::BaseReply>> response,
+    const cryptohome::EndFingerprintAuthSessionRequest& in_request) {}
+
 void LegacyCryptohomeInterfaceAdaptor::GetFirmwareManagementParameters(
     std::unique_ptr<
         brillo::dbus_utils::DBusMethodResponse<cryptohome::BaseReply>> response,
