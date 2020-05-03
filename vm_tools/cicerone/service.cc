@@ -67,21 +67,6 @@ const char* const kLocalhostReplaceNames[] = {"localhost", "127.0.0.1"};
 // Path of system timezone file.
 constexpr char kLocaltimePath[] = "/etc/localtime";
 
-// TCP ports to statically forward to the container over SSH.
-const uint16_t kStaticForwardPorts[] = {
-    3000,  // Rails
-    4200,  // Angular
-    5000,  // Flask
-    8000,  // Django
-    8008,  // HTTP alternative port
-    8080,  // HTTP alternative port
-    8085,  // Cloud SDK
-    8787,  // RStudio
-    8888,  // ipython/jupyter
-    9005,  // Firebase login
-    9100,  // Flutter
-};
-
 // TCP4 ports blacklisted from tunneling to the container.
 const uint16_t kBlacklistedPorts[] = {
     2222,  // cros-sftp service
@@ -219,20 +204,6 @@ std::string TranslateUrlForHost(const std::string& url,
   }
   auto port_check = url.find(':', front);
   if (port_check != std::string::npos && port_check < back) {
-    // Check if this port is one we already map to localhost, and if so then
-    // do not do the replacement.
-    if (alt_host == kDefaultContainerHostname) {
-      int port;
-      if (base::StringToInt(url.substr(port_check + 1, back - (port_check + 1)),
-                            &port)) {
-        if (std::find(kStaticForwardPorts,
-                      kStaticForwardPorts + sizeof(kStaticForwardPorts),
-                      port) !=
-            kStaticForwardPorts + sizeof(kStaticForwardPorts)) {
-          return url;
-        }
-      }
-    }
     back = port_check;
   }
   // We don't care about URL validity, but our logic should ensure that front
