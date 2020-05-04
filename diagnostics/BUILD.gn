@@ -85,6 +85,7 @@ source_set("libcros_healthd_utils") {
     "cros_healthd/utils/disk_utils.cc",
     "cros_healthd/utils/fan_utils.cc",
     "cros_healthd/utils/memory_utils.cc",
+    "cros_healthd/utils/stateful_partition_utils.cc",
     "cros_healthd/utils/timezone_utils.cc",
     "cros_healthd/utils/vpd_utils.cc",
   ]
@@ -261,6 +262,7 @@ if (use.test) {
       "cros_healthd/utils/cpu_utils_test.cc",
       "cros_healthd/utils/fan_utils_test.cc",
       "cros_healthd/utils/memory_utils_test.cc",
+      "cros_healthd/utils/stateful_partition_utils_test.cc",
       "cros_healthd/utils/timezone_utils_test.cc",
       "cros_healthd/utils/vpd_utils_test.cc",
     ]

@@ -40,6 +40,8 @@ constexpr std::pair<const char*,
         {"backlight",
          chromeos::cros_healthd::mojom::ProbeCategoryEnum::kBacklight},
         {"fan", chromeos::cros_healthd::mojom::ProbeCategoryEnum::kFan},
+        {"stateful_partition",
+         chromeos::cros_healthd::mojom::ProbeCategoryEnum::kStatefulPartition},
 };
 
 std::string ErrorTypeToString(chromeos::cros_healthd::mojom::ErrorType type) {
@@ -210,6 +212,21 @@ void DisplayBacklightInfo(
   }
 }
 
+void DisplayStatefulPartitionInfo(
+    const chromeos::cros_healthd::mojom::StatefulPartitionResultPtr&
+        stateful_partition_result) {
+  if (stateful_partition_result->is_error()) {
+    DisplayError(stateful_partition_result->get_error());
+    return;
+  }
+
+  const auto& stateful_partition_info =
+      stateful_partition_result->get_partition_info();
+  std::cout << "available_space,total_space" << std::endl;
+  std::cout << stateful_partition_info->available_space << ","
+            << stateful_partition_info->total_space << std::endl;
+}
+
 // Displays the retrieved telemetry information to the console.
 void DisplayTelemetryInfo(
     const chromeos::cros_healthd::mojom::TelemetryInfoPtr& info) {
@@ -244,6 +261,10 @@ void DisplayTelemetryInfo(
   const auto& fan_result = info->fan_result;
   if (fan_result)
     DisplayFanInfo(fan_result);
+
+  const auto& stateful_partition_result = info->stateful_partition_result;
+  if (stateful_partition_result)
+    DisplayStatefulPartitionInfo(stateful_partition_result);
 }
 
 // Create a stringified list of the category names for use in help.

@@ -18,6 +18,7 @@
 #include "diagnostics/cros_healthd/utils/cpu_utils.h"
 #include "diagnostics/cros_healthd/utils/disk_utils.h"
 #include "diagnostics/cros_healthd/utils/memory_utils.h"
+#include "diagnostics/cros_healthd/utils/stateful_partition_utils.h"
 #include "diagnostics/cros_healthd/utils/timezone_utils.h"
 
 namespace diagnostics {
@@ -251,6 +252,11 @@ void CrosHealthdMojoService::ProbeTelemetryInfo(
       case ProbeCategoryEnum::kFan: {
         telemetry_info.fan_result =
             fan_fetcher_->FetchFanInfo(base::FilePath("/"));
+        break;
+      }
+      case ProbeCategoryEnum::kStatefulPartition: {
+        telemetry_info.stateful_partition_result =
+            FetchStatefulPartitionInfo(base::FilePath("/"));
         break;
       }
     }
