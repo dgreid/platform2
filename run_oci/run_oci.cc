@@ -33,6 +33,7 @@
 #include <base/strings/string_util.h>
 #include <base/strings/stringprintf.h>
 #include <brillo/daemons/daemon.h>
+#include <brillo/files/safe_fd.h>
 #include <brillo/syslog_logging.h>
 #include <libminijail.h>
 #include <scoped_minijail.h>
@@ -333,14 +334,20 @@ bool ContainerConfigFromOci(const OciConfig& oci,
 // |oci_out| with the specified container configuration.
 bool OciConfigFromFile(const base::FilePath& config_path,
                        const OciConfigPtr& oci_out) {
-  std::string config_json_data;
-  if (!base::ReadFileToString(config_path, &config_json_data)) {
-    PLOG(ERROR) << "Fail to read container config: " << config_path.value();
+  brillo::SafeFD fd(OpenOciConfigSafely(config_path));
+  if (!fd.is_valid())
+    return false;
+
+  auto result = fd.ReadContents();
+  if (brillo::SafeFD::IsError(result.second)) {
+    LOG(ERROR) << "Failed to read container " << config_path.value()
+               << " with error " << static_cast<int>(result.second);
     return false;
   }
 
-  if (!run_oci::ParseContainerConfig(config_json_data, oci_out)) {
-    LOG(ERROR) << "Fail to parse container config: " << config_path.value();
+  if (!run_oci::ParseContainerConfig(
+          std::string(result.first.begin(), result.first.end()), oci_out)) {
+    LOG(ERROR) << "Failed to parse container config: " << config_path.value();
     return false;
   }
 

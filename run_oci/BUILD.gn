@@ -84,6 +84,7 @@ if (use.test) {
     sources = [
       "run_oci_test.cc",
       "run_oci_utils.cc",
+      "run_oci_utils_test.cc",
     ]
     deps = [
       "//common-mk/testrunner",

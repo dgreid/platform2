@@ -12,6 +12,8 @@
 #include <sys/mount.h>
 #include <sys/signal.h>
 #include <sys/stat.h>
+#include <sys/statvfs.h>
+#include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -23,6 +25,7 @@
 #include <base/strings/string_piece.h>
 #include <base/strings/string_split.h>
 #include <base/strings/string_util.h>
+#include <brillo/key_value_store.h>
 #include <brillo/syslog_logging.h>
 #include <libminijail.h>
 #include <libmount/libmount.h>
@@ -68,6 +71,23 @@ bool CreateStdioPipe(base::ScopedFD* pipe_read_fd, int stdio_fd) {
   }
 
   return true;
+}
+
+bool IsTestImage() {
+  brillo::KeyValueStore store;
+  std::string channel;
+  if (!store.Load(base::FilePath("/etc/lsb-release"))) {
+    LOG(WARNING) << "Failed to parse /etc/lsb-release, assuming non-test image";
+    return false;
+  }
+
+  if (!store.GetString("CHROMEOS_RELEASE_TRACK", &channel)) {
+    LOG(WARNING) << "Couldn't find release track an /etc/lsb-release, assuming "
+                    "non-test image";
+    return false;
+  }
+
+  return base::StartsWith(channel, "test", base::CompareCase::SENSITIVE);
 }
 
 }  // namespace
@@ -329,6 +349,34 @@ bool Pipe(base::ScopedFD* read_fd, base::ScopedFD* write_fd, int flags) {
   read_fd->reset(pipe_fds[0]);
   write_fd->reset(pipe_fds[1]);
   return true;
+}
+
+brillo::SafeFD OpenOciConfigSafely(const base::FilePath& config_path) {
+  brillo::SafeFD::SafeFDResult result(
+      brillo::SafeFD::Root().first.OpenExistingFile(config_path,
+                                                    O_RDONLY | O_CLOEXEC));
+  if (brillo::SafeFD::IsError(result.second)) {
+    LOG(ERROR) << "Failed to open " << config_path.value() << " with error "
+               << static_cast<int>(result.second);
+    return brillo::SafeFD();
+  }
+
+  brillo::SafeFD fd(std::move(result.first));
+  struct statvfs buf;
+  if (HANDLE_EINTR(fstatvfs(fd.get(), &buf)) < 0) {
+    PLOG(ERROR) << "Failed to statvfs container config: "
+                << config_path.value();
+    return brillo::SafeFD();
+  }
+
+  // Don't check the flag on a test image. security.RunOCI relies on configs on
+  // a writable partition.
+  if (!IsTestImage() && (buf.f_flag & ST_NOEXEC)) {
+    LOG(ERROR) << config_path.value() << " is on a noexec filesystem";
+    errno = EPERM;
+    return brillo::SafeFD();
+  }
+  return fd;
 }
 
 }  // namespace run_oci

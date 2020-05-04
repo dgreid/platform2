@@ -13,6 +13,7 @@
 #include <base/files/scoped_file.h>
 #include <base/macros.h>
 #include <base/process/process.h>
+#include <brillo/files/safe_fd.h>
 
 namespace run_oci {
 
@@ -72,6 +73,11 @@ bool RedirectLoggingAndStdio(const base::FilePath& log_file);
 
 // A wrapper around pipe(2) that provides base::ScopedFDs.
 bool Pipe(base::ScopedFD* read_fd, base::ScopedFD* write_fd, int flags);
+
+// Opens |config_path| for reading with brillo::OpenSafely and returns the FD.
+// If |config_path| is not on an exec filesystem, sets errno to EPERM and
+// returns an invalid FD.
+brillo::SafeFD OpenOciConfigSafely(const base::FilePath& config_path);
 
 }  // namespace run_oci
 
