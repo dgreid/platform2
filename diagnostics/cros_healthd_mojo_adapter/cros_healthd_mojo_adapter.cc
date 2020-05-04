@@ -328,6 +328,14 @@ CrosHealthdMojoAdapter::GetRoutineUpdate(
   return response;
 }
 
+void CrosHealthdMojoAdapter::AddBluetoothObserver(
+    chromeos::cros_healthd::mojom::CrosHealthdBluetoothObserverPtr observer) {
+  if (!cros_healthd_service_factory_.is_bound())
+    Connect();
+
+  cros_healthd_event_service_->AddBluetoothObserver(std::move(observer));
+}
+
 void CrosHealthdMojoAdapter::AddPowerObserver(
     chromeos::cros_healthd::mojom::CrosHealthdPowerObserverPtr observer) {
   if (!cros_healthd_service_factory_.is_bound())

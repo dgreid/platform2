@@ -7,6 +7,7 @@
 
 #include <memory>
 
+#include "diagnostics/cros_healthd_event_tool/bluetooth_subscriber.h"
 #include "diagnostics/cros_healthd_event_tool/power_subscriber.h"
 #include "diagnostics/cros_healthd_mojo_adapter/cros_healthd_mojo_adapter.h"
 
@@ -21,6 +22,9 @@ class EventSubscriber final {
   EventSubscriber& operator=(const EventSubscriber&) = delete;
   ~EventSubscriber();
 
+  // Subscribes to cros_healthd's Bluetooth events.
+  void SubscribeToBluetoothEvents();
+
   // Subscribes to cros_healthd's power events.
   void SubscribeToPowerEvents();
 
@@ -28,6 +32,8 @@ class EventSubscriber final {
   // Allows mojo communication with cros_healthd.
   CrosHealthdMojoAdapter mojo_adapter_;
 
+  // Used to subscribe to Bluetooth events.
+  std::unique_ptr<BluetoothSubscriber> bluetooth_subscriber_;
   // Used to subscribe to power events.
   std::unique_ptr<PowerSubscriber> power_subscriber_;
 };

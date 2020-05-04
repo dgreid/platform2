@@ -24,10 +24,12 @@ namespace mojo_ipc = ::chromeos::cros_healthd::mojom;
 
 enum class EventCategory {
   kPower,
+  kBluetooth,
 };
 
 constexpr std::pair<const char*, EventCategory> kCategorySwitches[] = {
     {"power", EventCategory::kPower},
+    {"bluetooth", EventCategory::kBluetooth},
 };
 
 // Create a stringified list of the category names for use in help.
@@ -83,6 +85,9 @@ int main(int argc, char** argv) {
   switch (iterator->second) {
     case EventCategory::kPower:
       event_subscriber.SubscribeToPowerEvents();
+      break;
+    case EventCategory::kBluetooth:
+      event_subscriber.SubscribeToBluetoothEvents();
       break;
   }
 

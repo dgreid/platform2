@@ -20,6 +20,7 @@ source_set("libcros_healthd_event_tool") {
   ]
   all_dependent_configs = [ ":libcros_healthd_event_tool_pkg_deps" ]
   sources = [
+    "bluetooth_subscriber.cc",
     "event_subscriber.cc",
     "power_subscriber.cc",
   ]

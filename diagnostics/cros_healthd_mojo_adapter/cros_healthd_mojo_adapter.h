@@ -99,6 +99,10 @@ class CrosHealthdMojoAdapter final {
   chromeos::cros_healthd::mojom::RunRoutineResponsePtr
   RunFloatingPointAccuracyRoutine(base::TimeDelta exec_duration);
 
+  // Subscribes the client to Bluetooth events.
+  void AddBluetoothObserver(
+      chromeos::cros_healthd::mojom::CrosHealthdBluetoothObserverPtr observer);
+
   // Subscribes the client to power events.
   void AddPowerObserver(
       chromeos::cros_healthd::mojom::CrosHealthdPowerObserverPtr observer);
