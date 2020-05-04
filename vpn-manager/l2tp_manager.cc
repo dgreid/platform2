@@ -40,6 +40,11 @@ const char kMaxRedialsParameter[] = "30";
 // Path to pid file that contains pid for xl2tpd process.
 const char kXl2tpdPidFilePath[] = "/run/l2tpipsec_vpn/xl2tpd.pid";
 
+// xl2tpd uses fgets with a size 1024 buffer to get configuration lines. If a
+// configuration line was longer than that and didn't contain the comment
+// delimiter ';', it could be used to populate multiple configuration options.
+constexpr size_t kXl2tpdMaxConfigurationLength = 1023;
+
 }  // namespace
 
 L2tpManager::L2tpManager(bool default_route,
@@ -128,10 +133,30 @@ bool L2tpManager::Initialize(const sockaddr_storage& remote_address) {
   return true;
 }
 
-static void AddString(std::string* config,
+static bool AddString(std::string* config,
                       const char* key,
                       const std::string& value) {
-  config->append(StringPrintf("%s = %s\n", key, value.c_str()));
+  if (value.find('\n') != value.npos) {
+    std::string escaped_value = value;
+    // Escape newlines prior to logging.
+    size_t pos;
+    while ((pos = escaped_value.find('\n')) != escaped_value.npos) {
+      escaped_value.replace(pos, 1, "\\n");
+    }
+    LOG(ERROR) << key << " value may not contain a newline: '" << escaped_value
+               << "'";
+    return false;
+  }
+
+  auto line = StringPrintf("%s = %s\n", key, value.c_str());
+  if (line.size() > kXl2tpdMaxConfigurationLength) {
+    LOG(ERROR) << "Line may not exceed " << kXl2tpdMaxConfigurationLength
+               << " characters: '" << line << "'";
+    return false;
+  }
+
+  config->append(line);
+  return true;
 }
 
 static void AddBool(std::string* config, const char* key, bool value) {
@@ -149,24 +174,30 @@ bool L2tpManager::CreatePppLogFifo() {
   return false;
 }
 
-std::string L2tpManager::FormatL2tpdConfiguration(
+base::Optional<std::string> L2tpManager::FormatL2tpdConfiguration(
     const std::string& ppp_config_path) {
   std::string l2tpd_config;
+  bool success = true;
   l2tpd_config.append(StringPrintf("[lac %s]\n", kL2tpConnectionName));
-  AddString(&l2tpd_config, "lns", remote_address_text_);
+  success &= AddString(&l2tpd_config, "lns", remote_address_text_);
   AddBool(&l2tpd_config, "require chap", require_chap_);
   AddBool(&l2tpd_config, "refuse pap", refuse_pap_);
   AddBool(&l2tpd_config, "require authentication", require_authentication_);
-  AddString(&l2tpd_config, "name", user_);
+  success &= AddString(&l2tpd_config, "name", user_);
   if (VLOG_IS_ON(4)) {
     AddBool(&l2tpd_config, "ppp debug", true);
   }
-  AddString(&l2tpd_config, "pppoptfile", ppp_config_path);
+  success &= AddString(&l2tpd_config, "pppoptfile", ppp_config_path);
   AddBool(&l2tpd_config, "length bit", length_bit_);
-  AddString(&l2tpd_config, "bps", kBpsParameter);
-  AddString(&l2tpd_config, "redial", kRedialParameter);
-  AddString(&l2tpd_config, "redial timeout", kRedialTimeoutParameter);
-  AddString(&l2tpd_config, "max redials", kMaxRedialsParameter);
+  success &= AddString(&l2tpd_config, "bps", kBpsParameter);
+  success &= AddString(&l2tpd_config, "redial", kRedialParameter);
+  success &=
+      AddString(&l2tpd_config, "redial timeout", kRedialTimeoutParameter);
+  success &= AddString(&l2tpd_config, "max redials", kMaxRedialsParameter);
+
+  if (!success) {
+    return base::nullopt;
+  }
   return l2tpd_config;
 }
 
@@ -240,10 +271,15 @@ bool L2tpManager::Terminate() {
 
 bool L2tpManager::Start() {
   FilePath pppd_config_path = temp_path().Append("pppd.conf");
-  std::string l2tpd_config = FormatL2tpdConfiguration(pppd_config_path.value());
+  auto l2tpd_config = FormatL2tpdConfiguration(pppd_config_path.value());
+  if (!l2tpd_config) {
+    LOG(ERROR) << "Failed to write xl2tpd configuration";
+    RegisterError(kServiceErrorInvalidArgument);
+    return false;
+  }
   FilePath l2tpd_config_path = temp_path().Append("l2tpd.conf");
-  if (!base::WriteFile(l2tpd_config_path, l2tpd_config.c_str(),
-                       l2tpd_config.size())) {
+  if (!base::WriteFile(l2tpd_config_path, l2tpd_config.value().c_str(),
+                       l2tpd_config.value().size())) {
     LOG(ERROR) << "Unable to write l2tpd config to "
                << l2tpd_config_path.value();
     RegisterError(kServiceErrorInternal);
