@@ -653,7 +653,7 @@ TEST_F(SafeFDTest, Rmdir_Recursive_KeepGoing) {
   ASSERT_TRUE(base::IsDirectoryEmpty(sub_dir_path_));
 }
 
-TEST_F(SafeFDTest, Rmdir_Recursive_StopOnError) {
+TEST_F(SafeFDTest, DISABLED_Rmdir_Recursive_StopOnError) {
   ASSERT_TRUE(SetupSubdir());
 
   ASSERT_TRUE(base::CreateDirectory(sub_dir_path_.Append(kSubdirName)));
