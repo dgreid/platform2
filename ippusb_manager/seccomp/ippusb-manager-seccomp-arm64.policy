@@ -28,7 +28,7 @@ getgid: 1
 getrandom: arg2 in 0xfffffffd
 getresgid: 1
 getresuid: 1
-getrlimit: 1;
+getrlimit: 1
 getsockname: 1
 gettid: 1
 gettimeofday: 1
