@@ -167,6 +167,8 @@ namespace switches {
                                    "lock_to_single_user_mount_until_reboot",
                                    "get_rsu_device_id",
                                    "check_health",
+                                   "start_fingerprint_auth_session",
+                                   "end_fingerprint_auth_session",
                                    NULL};
   enum ActionEnum {
     ACTION_MOUNT_EX,
@@ -246,6 +248,8 @@ namespace switches {
     ACTION_LOCK_TO_SINGLE_USER_MOUNT_UNTIL_REBOOT,
     ACTION_GET_RSU_DEVICE_ID,
     ACTION_CHECK_HEALTH,
+    ACTION_START_FINGERPRINT_AUTH_SESSION,
+    ACTION_END_FINGERPRINT_AUTH_SESSION,
   };
   static const char kUserSwitch[] = "user";
   static const char kPasswordSwitch[] = "password";
@@ -873,6 +877,52 @@ int main(int argc, char **argv) {
       return reply.error();
     }
     printf("Mount succeeded.\n");
+  } else if (!strcmp(switches::kActions
+                         [switches::ACTION_START_FINGERPRINT_AUTH_SESSION],
+                     action.c_str())) {
+    cryptohome::AccountIdentifier id;
+    if (!BuildAccountId(cl, &id))
+      return 1;
+
+    cryptohome::StartFingerprintAuthSessionRequest req;
+
+    brillo::glib::ScopedArray account_ary(GArrayFromProtoBuf(id));
+    brillo::glib::ScopedArray req_ary(GArrayFromProtoBuf(req));
+    if (!account_ary.get() || !req_ary.get())
+      return 1;
+
+    cryptohome::BaseReply reply;
+    brillo::glib::ScopedError error;
+
+    GArray* out_reply = NULL;
+    if (!org_chromium_CryptohomeInterface_start_fingerprint_auth_session(
+            proxy.gproxy(), account_ary.get(), req_ary.get(),
+            &out_reply, &brillo::Resetter(&error).lvalue())) {
+      printf("StartFingerprintAuthSession call failed: %s", error->message);
+      return 1;
+    }
+    ParseBaseReply(out_reply, &reply, true /* print_reply */);
+    if (reply.has_error()) {
+      printf("Fingerprint auth session failed to start.\n");
+      return reply.error();
+    }
+  } else if (!strcmp(switches::kActions
+                         [switches::ACTION_END_FINGERPRINT_AUTH_SESSION],
+                     action.c_str())) {
+    cryptohome::EndFingerprintAuthSessionRequest req;
+    brillo::glib::ScopedArray req_ary(GArrayFromProtoBuf(req));
+    if (!req_ary.get())
+      return 1;
+
+    brillo::glib::ScopedError error;
+    GArray* out_reply = NULL;
+    if (!org_chromium_CryptohomeInterface_end_fingerprint_auth_session(
+            proxy.gproxy(), req_ary.get(),
+            &out_reply, &brillo::Resetter(&error).lvalue())) {
+      printf("EndFingerprintAuthSession call failed: %s", error->message);
+      return 1;
+    }
+    // EndFingerprintAuthSession always succeeds.
   } else if (!strcmp(switches::kActions[switches::ACTION_REMOVE_KEY_EX],
                 action.c_str())) {
     cryptohome::AccountIdentifier id;
