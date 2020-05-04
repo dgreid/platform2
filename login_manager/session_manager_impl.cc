@@ -733,16 +733,16 @@ bool SessionManagerImpl::LoginScreenStorageStore(
     const std::vector<uint8_t>& in_metadata,
     uint64_t in_value_size,
     const base::ScopedFD& in_value_fd) {
-  if (!user_sessions_.empty()) {
-    *error = CreateError(
-        DBUS_ERROR_FAILED,
-        "can't store login screen data while there are active user sessions.");
-    return false;
-  }
-
   LoginScreenStorageMetadata metadata;
   if (!metadata.ParseFromArray(in_metadata.data(), in_metadata.size())) {
     *error = CreateError(DBUS_ERROR_INVALID_ARGS, "metadata parsing failed.");
+    return false;
+  }
+
+  if (!metadata.clear_on_session_exit() && !user_sessions_.empty()) {
+    *error = CreateError(DBUS_ERROR_FAILED,
+                         "can't store persistent login screen data while there "
+                         "are active user sessions.");
     return false;
   }
 
