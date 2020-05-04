@@ -363,7 +363,7 @@ TEST(ConnectorTest, CompareFrames) {
 
   // It's expected have two similar but not exactly same frames captured in the
   // short period with MJPEG and NV12. The normal values are around 0.7~0.8.
-  EXPECT_GE(ssim, 0.4);
+  EXPECT_GE(ssim, 0.3);
 
   // If the frames are exactly same (ssim = 1.0), the frame is likely broken
   // such as all pixels are black. Set the threshold as 0.99 for potential jpeg
