@@ -208,6 +208,32 @@ do.
       </arg>
     </method>
 
+    <method name="StartFingerprintAuthSession">
+      <annotation name="org.chromium.DBus.Method.Kind"
+                  value="async"/>
+      <arg name="request" type="ay" direction="in">
+        <annotation name="org.chromium.DBus.Argument.ProtobufClass"
+                    value="user_data_auth::StartFingerprintAuthSessionRequest" />
+      </arg>
+      <arg name="reply" type="ay" direction="out">
+        <annotation name="org.chromium.DBus.Argument.ProtobufClass"
+                    value="user_data_auth::StartFingerprintAuthSessionReply" />
+      </arg>
+    </method>
+
+    <method name="EndFingerprintAuthSession">
+      <annotation name="org.chromium.DBus.Method.Kind"
+                  value="async"/>
+      <arg name="request" type="ay" direction="in">
+        <annotation name="org.chromium.DBus.Argument.ProtobufClass"
+                    value="user_data_auth::EndFingerprintAuthSessionRequest" />
+      </arg>
+      <arg name="reply" type="ay" direction="out">
+        <annotation name="org.chromium.DBus.Argument.ProtobufClass"
+                    value="user_data_auth::EndFingerprintAuthSessionReply" />
+      </arg>
+    </method>
+
     <method name="StartMigrateToDircrypto">
       <annotation name="org.chromium.DBus.Method.Kind"
                   value="async"/>

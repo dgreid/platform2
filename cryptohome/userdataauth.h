@@ -317,6 +317,18 @@ class UserDataAuth {
   // Return true if this device is enterprise owned.
   bool IsEnterpriseOwned() { return enterprise_owned_; }
 
+  // ============= Fingerprint Auth Related Public Methods ==============
+
+  // Start fingerprint auth session asynchronously for the user specified in
+  // |request|, and call |on_done|.
+  void StartFingerprintAuthSession(
+      const user_data_auth::StartFingerprintAuthSessionRequest& request,
+      base::OnceCallback<void(
+          const user_data_auth::StartFingerprintAuthSessionReply&)> on_done);
+
+  // End the current fingerprint auth session.
+  void EndFingerprintAuthSession();
+
   // ========= Firmware Management Parameters Related Public Methods =========
 
   // Retrieve the firmware management parameters. Returns
@@ -670,9 +682,18 @@ class UserDataAuth {
       base::OnceCallback<void(user_data_auth::CryptohomeErrorCode)> on_done,
       std::unique_ptr<Credentials> credentials);
 
+  // ================ Fingerprint Auth Related Methods ==================
+
   // Called on Mount thread. This creates a dbus proxy for Biometrics Daemon
   // and connects to signals.
   void CreateFingerprintManager();
+
+  // Called on Mount thread when fingerprint auth session starts or fails to
+  // start.
+  void OnFingerprintStartAuthSessionResp(
+      base::OnceCallback<void(
+          const user_data_auth::StartFingerprintAuthSessionReply&)> on_done,
+      bool success);
 
   // =============== Periodic Maintenance Related Methods ===============
 

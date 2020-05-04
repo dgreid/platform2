@@ -2431,12 +2431,41 @@ void LegacyCryptohomeInterfaceAdaptor::StartFingerprintAuthSession(
     std::unique_ptr<
         brillo::dbus_utils::DBusMethodResponse<cryptohome::BaseReply>> response,
     const cryptohome::AccountIdentifier& in_account_id,
-    const cryptohome::StartFingerprintAuthSessionRequest& in_request) {}
+    const cryptohome::StartFingerprintAuthSessionRequest& in_request) {
+  auto response_shared =
+      std::make_shared<SharedDBusMethodResponse<cryptohome::BaseReply>>(
+          std::move(response));
+
+  user_data_auth::StartFingerprintAuthSessionRequest request;
+  request.mutable_account_id()->CopyFrom(in_account_id);
+  userdataauth_proxy_->StartFingerprintAuthSessionAsync(
+      request,
+      base::Bind(&LegacyCryptohomeInterfaceAdaptor::ForwardBaseReplyErrorCode<
+                     user_data_auth::StartFingerprintAuthSessionReply>,
+                 response_shared),
+      base::Bind(&LegacyCryptohomeInterfaceAdaptor::ForwardError<
+                     cryptohome::BaseReply>,
+                 base::Unretained(this), response_shared));
+}
 
 void LegacyCryptohomeInterfaceAdaptor::EndFingerprintAuthSession(
     std::unique_ptr<
         brillo::dbus_utils::DBusMethodResponse<cryptohome::BaseReply>> response,
-    const cryptohome::EndFingerprintAuthSessionRequest& in_request) {}
+    const cryptohome::EndFingerprintAuthSessionRequest& in_request) {
+  auto response_shared =
+      std::make_shared<SharedDBusMethodResponse<cryptohome::BaseReply>>(
+          std::move(response));
+
+  user_data_auth::EndFingerprintAuthSessionRequest request;
+  userdataauth_proxy_->EndFingerprintAuthSessionAsync(
+      request,
+      base::Bind(&LegacyCryptohomeInterfaceAdaptor::ForwardBaseReplyErrorCode<
+                     user_data_auth::EndFingerprintAuthSessionReply>,
+                 response_shared),
+      base::Bind(&LegacyCryptohomeInterfaceAdaptor::ForwardError<
+                     cryptohome::BaseReply>,
+                 base::Unretained(this), response_shared));
+}
 
 void LegacyCryptohomeInterfaceAdaptor::GetFirmwareManagementParameters(
     std::unique_ptr<

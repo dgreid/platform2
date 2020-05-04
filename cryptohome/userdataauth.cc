@@ -2343,6 +2343,60 @@ UserDataAuth::InstallAttributesStatusToProtoEnum(
   return user_data_auth::InstallAttributesState::INVALID;
 }
 
+void UserDataAuth::OnFingerprintStartAuthSessionResp(
+    base::OnceCallback<
+        void(const user_data_auth::StartFingerprintAuthSessionReply&)> on_done,
+    bool success) {
+  VLOG(1) << "Start fingerprint auth session result: " << success;
+  user_data_auth::StartFingerprintAuthSessionReply reply;
+  if (!success) {
+    reply.set_error(user_data_auth::CryptohomeErrorCode::
+                        CRYPTOHOME_ERROR_FINGERPRINT_ERROR_INTERNAL);
+  }
+  std::move(on_done).Run(reply);
+}
+
+void UserDataAuth::StartFingerprintAuthSession(
+    const user_data_auth::StartFingerprintAuthSessionRequest& request,
+    base::OnceCallback<void(
+        const user_data_auth::StartFingerprintAuthSessionReply&)> on_done) {
+  AssertOnMountThread();
+  user_data_auth::StartFingerprintAuthSessionReply reply;
+
+  if (!request.has_account_id()) {
+    LOG(ERROR) << "StartFingerprintAuthSessionRequest must have account_id";
+    reply.set_error(user_data_auth::CRYPTOHOME_ERROR_INVALID_ARGUMENT);
+    std::move(on_done).Run(reply);
+    return;
+  }
+
+  std::string account_id = GetAccountId(request.account_id());
+  if (account_id.empty()) {
+    LOG(ERROR)
+        << "StartFingerprintAuthSessionRequest must have vaid account_id.";
+    reply.set_error(user_data_auth::CRYPTOHOME_ERROR_INVALID_ARGUMENT);
+    std::move(on_done).Run(reply);
+    return;
+  }
+
+  const std::string obfuscated_username =
+      BuildObfuscatedUsername(account_id, system_salt_);
+  if (!homedirs_->Exists(obfuscated_username)) {
+    reply.set_error(user_data_auth::CRYPTOHOME_ERROR_ACCOUNT_NOT_FOUND);
+    std::move(on_done).Run(reply);
+    return;
+  }
+
+  fingerprint_manager_->StartAuthSessionAsyncForUser(
+      obfuscated_username,
+      base::Bind(&UserDataAuth::OnFingerprintStartAuthSessionResp,
+                 base::Unretained(this), base::Passed(std::move(on_done))));
+}
+
+void UserDataAuth::EndFingerprintAuthSession() {
+  fingerprint_manager_->EndAuthSession();
+}
+
 user_data_auth::CryptohomeErrorCode
 UserDataAuth::GetFirmwareManagementParameters(
     user_data_auth::FirmwareManagementParameters* fwmp) {

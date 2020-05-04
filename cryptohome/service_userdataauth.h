@@ -144,6 +144,26 @@ class UserDataAuthAdaptor
                         user_data_auth::MigrateKeyReply>> response,
                     const user_data_auth::MigrateKeyRequest& in_request);
 
+  void StartFingerprintAuthSession(
+      std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
+          user_data_auth::StartFingerprintAuthSessionReply>> response,
+      const user_data_auth::StartFingerprintAuthSessionRequest& in_request)
+      override;
+  void DoStartFingerprintAuthSession(
+      std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
+          user_data_auth::StartFingerprintAuthSessionReply>> response,
+      const user_data_auth::StartFingerprintAuthSessionRequest& in_request);
+  void DoStartFingerprintAuthSessionDone(
+      std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
+          user_data_auth::StartFingerprintAuthSessionReply>> response,
+      const user_data_auth::StartFingerprintAuthSessionReply& reply);
+
+  void EndFingerprintAuthSession(
+      std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
+          user_data_auth::EndFingerprintAuthSessionReply>> response,
+      const user_data_auth::EndFingerprintAuthSessionRequest& in_request)
+      override;
+
   void StartMigrateToDircrypto(
       std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
           user_data_auth::StartMigrateToDircryptoReply>> response,
