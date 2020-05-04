@@ -45,6 +45,34 @@ const char kXl2tpdPidFilePath[] = "/run/l2tpipsec_vpn/xl2tpd.pid";
 // delimiter ';', it could be used to populate multiple configuration options.
 constexpr size_t kXl2tpdMaxConfigurationLength = 1023;
 
+bool AddString(std::string* config, const char* key, const std::string& value) {
+  if (value.find('\n') != value.npos) {
+    std::string escaped_value = value;
+    // Escape newlines prior to logging.
+    size_t pos;
+    while ((pos = escaped_value.find('\n')) != escaped_value.npos) {
+      escaped_value.replace(pos, 1, "\\n");
+    }
+    LOG(ERROR) << key << " value may not contain a newline: '" << escaped_value
+               << "'";
+    return false;
+  }
+
+  auto line = StringPrintf("%s = %s\n", key, value.c_str());
+  if (line.size() > kXl2tpdMaxConfigurationLength) {
+    LOG(ERROR) << "Line may not exceed " << kXl2tpdMaxConfigurationLength
+               << " characters: '" << line << "'";
+    return false;
+  }
+
+  config->append(line);
+  return true;
+}
+
+void AddBool(std::string* config, const char* key, bool value) {
+  config->append(StringPrintf("%s = %s\n", key, value ? "yes" : "no"));
+}
+
 }  // namespace
 
 L2tpManager::L2tpManager(bool default_route,
@@ -131,36 +159,6 @@ bool L2tpManager::Initialize(const sockaddr_storage& remote_address) {
     LOG(WARNING) << "Passing a password on the command-line is insecure";
   }
   return true;
-}
-
-static bool AddString(std::string* config,
-                      const char* key,
-                      const std::string& value) {
-  if (value.find('\n') != value.npos) {
-    std::string escaped_value = value;
-    // Escape newlines prior to logging.
-    size_t pos;
-    while ((pos = escaped_value.find('\n')) != escaped_value.npos) {
-      escaped_value.replace(pos, 1, "\\n");
-    }
-    LOG(ERROR) << key << " value may not contain a newline: '" << escaped_value
-               << "'";
-    return false;
-  }
-
-  auto line = StringPrintf("%s = %s\n", key, value.c_str());
-  if (line.size() > kXl2tpdMaxConfigurationLength) {
-    LOG(ERROR) << "Line may not exceed " << kXl2tpdMaxConfigurationLength
-               << " characters: '" << line << "'";
-    return false;
-  }
-
-  config->append(line);
-  return true;
-}
-
-static void AddBool(std::string* config, const char* key, bool value) {
-  config->append(StringPrintf("%s = %s\n", key, value ? "yes" : "no"));
 }
 
 bool L2tpManager::CreatePppLogFifo() {
