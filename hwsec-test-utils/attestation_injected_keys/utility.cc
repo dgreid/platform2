@@ -14,15 +14,15 @@ namespace hwsec_test_utils {
 namespace {
 
 constexpr char kDefaultACAPublicKey[] =
-    "A2976637E113CC457013F4334312A416395B08D4B2A9724FC9BAD65D0290F39C"
-    "866D1163C2CD6474A24A55403C968CF78FA153C338179407FE568C6E550949B1"
-    "B3A80731BA9311EC16F8F66060A2C550914D252DB90B44D19BC6C15E923FFCFB"
-    "E8A366038772803EE57C7D7E5B3D5E8090BF0960D4F6A6644CB9A456708508F0"
-    "6C19245486C3A49F807AB07C65D5E9954F4F8832BC9F882E9EE1AAA2621B1F43"
-    "4083FD98758745CBFFD6F55DA699B2EE983307C14C9990DDFB48897F26DF8FB2"
-    "CFFF03E631E62FAE59CBF89525EDACD1F7BBE0BA478B5418E756FF3E14AC9970"
-    "D334DB04A1DF267D2343C75E5D282A287060D345981ABDA0B2506AD882579FEF";
-constexpr char kDefaultACAPublicKeyID[] = "\x00\xc7\x0e\x50\xb1";
+    "d1808eaef97c87f98f4bf982523d34800e15e417333082b29791e85489794ffb"
+    "a053c194d55ecb97593b7762421d60dce7b92171788064cb51c45a78afac368d"
+    "e6944039787c400c9479bc49e67a191c51ed8cb92083b070c6a3531d9eca8173"
+    "3c2021ef21f9ed63a8116aeecd120428fc1220ad2475dab6aa968def6888ddab"
+    "295ae7ea9eb2b39398b5b044dcab98a404ac506afe3fd8dcf0b382072487dc17"
+    "7bb20b20b07baac5599e6e50aca73dd68cc92403f05a6638847ac782333a90d6"
+    "7e3d19b3e82560498efa96a231b5a0089bf131db827fec2925f56bdbd8c9f69b"
+    "ee89eebde9d872d303daa2f8e3cc567468779e80609680304e6dbdc7a3023d73";
+constexpr char kDefaultACAPublicKeyID[] = "CaEnc";
 
 constexpr char kDefaultVASigningPublicKey[] =
     "e7cb0cc9d2f904ec3f09a379b8fe09a7ef621f15657523138e886ebbc000826e"
@@ -45,19 +45,6 @@ constexpr char kDefaultVAEncryptionPublicKey[] =
     "adde56c522e1369a9fb5175ea5e8ebd8c35c0cd16ee1d6930f34821f12f46459";
 constexpr char kDefaultVAEncryptionPublicKeyID[] = "VaEnc";
 
-// Ignores the extra null-terminated element and converts only the effective
-// part to std::string.
-// This is copied from //src/platform2/attestation/server/google_keys.cc, and it
-// will be removed right after we alter all the keys to the well-known ones for
-// testing because the local testing infrastructure doesn't care about the key
-// id so it can be set to just a human-readable string.
-template <size_t size>
-std::string ZeroTerminatedCharArrayToString(
-    const char (&array)[size]) noexcept {
-  CHECK_GE(size, 0);
-  return std::string(std::begin(array), std::end(array) - 1);
-}
-
 }  // namespace
 
 attestation::DefaultGoogleRsaPublicKeySet GenerateAttestationGoogleKeySet() {
@@ -65,7 +52,7 @@ attestation::DefaultGoogleRsaPublicKeySet GenerateAttestationGoogleKeySet() {
   attestation::GoogleRsaPublicKey key;
 
   key.set_modulus_in_hex(kDefaultACAPublicKey);
-  key.set_key_id(ZeroTerminatedCharArrayToString(kDefaultACAPublicKeyID));
+  key.set_key_id(kDefaultACAPublicKeyID);
   *keyset.mutable_default_ca_encryption_key() = std::move(key);
 
   key.set_modulus_in_hex(kDefaultVASigningPublicKey);
