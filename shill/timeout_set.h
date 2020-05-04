@@ -12,14 +12,10 @@
 #include <vector>
 
 #include <base/cancelable_callback.h>
+#include <base/threading/thread_task_runner_handle.h>
 #include <base/time/time.h>
 
-#include "shill/event_dispatcher.h"
-
 namespace shill {
-
-template <typename T>
-class TimeoutSetTest;
 
 // Class representing a set of elements, in which each element has its own
 // lifetime. When the lifetime of an element has expired the element will be
@@ -31,10 +27,6 @@ class TimeoutSetTest;
 // being suspended. Thus elements cannot be expected to be removed exactly when
 // their lifetime is expired, but they are guaranteed not to be removed prior to
 // the expiration of their lifetime.
-//
-// Note that this class currently uses no synchronization methods. Therefore
-// insertions should be called on the |dispatcher_| thread so that there are no
-// race conditions involving elements being inserted while timeouts occur.
 template <typename T>
 class TimeoutSet {
  public:
@@ -49,8 +41,6 @@ class TimeoutSet {
     }
   };
   using const_iterator = typename std::vector<TimeElement>::const_iterator;
-
-  explicit TimeoutSet(EventDispatcher* dispatcher) : dispatcher_(dispatcher) {}
 
   virtual ~TimeoutSet() { Clear(); }
 
@@ -75,22 +65,12 @@ class TimeoutSet {
       }
     }
     // Perform element insertion.
-    base::TimeTicks now = TimeNow();
     base::TimeTicks deathtime =
-        lifetime.is_max() ? base::TimeTicks::Max() : now + lifetime;
+        lifetime.is_max() ? base::TimeTicks::Max() : TimeNow() + lifetime;
     elements_.push_back({std::move(element), deathtime});
     std::push_heap(elements_.begin(), elements_.end());
 
-    if (elements_[0].deathtime.is_max()) {
-      return;
-    }
-
-    int64_t shortest_lifetime = (elements_[0].deathtime - now).InMilliseconds();
-    timeout_callback_.Reset(
-        base::Bind(&TimeoutSet::OnTimeout, base::Unretained(this)));
-    dispatcher_->PostDelayedTask(
-        FROM_HERE, timeout_callback_.callback(),
-        std::max(shortest_lifetime, static_cast<int64_t>(0)));
+    SetUpTimeoutTask();
   }
 
   // Remove all elements and cancel any pending timeout.
@@ -114,34 +94,40 @@ class TimeoutSet {
   const_iterator cend() const { return elements_.cend(); }
 
  private:
+  template <typename U>
+  friend class TimeoutSetTest;
+
   virtual base::TimeTicks TimeNow() const { return base::TimeTicks::Now(); }
 
   void OnTimeout() {
     std::vector<T> removed_elements;
     // Invalidate all elements that have timed out.
-    base::TimeTicks now = TimeNow();
-    while (!elements_.empty() && elements_[0].deathtime <= now) {
+    while (!elements_.empty() && elements_[0].deathtime <= TimeNow()) {
       removed_elements.push_back(std::move(elements_[0].element));
       std::pop_heap(elements_.begin(), elements_.end());
       elements_.pop_back();
     }
-    // Post task for earliest subsequent timeout.
-    if (!elements_.empty() && !elements_[0].deathtime.is_max()) {
-      int64_t shortest_lifetime =
-          (elements_[0].deathtime - now).InMilliseconds();
-      timeout_callback_.Reset(
-          base::Bind(&TimeoutSet::OnTimeout, base::Unretained(this)));
-      dispatcher_->PostDelayedTask(
-          FROM_HERE, timeout_callback_.callback(),
-          std::max(shortest_lifetime, static_cast<int64_t>(0)));
-    }
+    SetUpTimeoutTask();
 
     if (!inform_callback_.is_null()) {
       inform_callback_.Run(std::move(removed_elements));
     }
   }
 
-  friend class TimeoutSetTest<T>;
+  void SetUpTimeoutTask() {
+    if (elements_.empty() || elements_[0].deathtime.is_max()) {
+      return;
+    }
+
+    int64_t shortest_lifetime =
+        (elements_[0].deathtime - TimeNow()).InMilliseconds();
+    int64_t delay = std::max(shortest_lifetime, static_cast<int64_t>(0));
+    timeout_callback_.Reset(
+        base::Bind(&TimeoutSet::OnTimeout, base::Unretained(this)));
+    base::ThreadTaskRunnerHandle::Get()->PostDelayedTask(
+        FROM_HERE, timeout_callback_.callback(),
+        base::TimeDelta::FromMilliseconds(delay));
+  }
 
   std::vector<TimeElement> elements_;
 
@@ -149,7 +135,6 @@ class TimeoutSet {
   base::CancelableClosure timeout_callback_;
   // Called at the end of OnTimeout to inform user of timeout.
   base::Callback<void(std::vector<T>)> inform_callback_;
-  EventDispatcher* dispatcher_;
 };
 
 }  // namespace shill

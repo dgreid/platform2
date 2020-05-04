@@ -10,11 +10,11 @@
 #include <vector>
 
 #include <base/bind.h>
+#include <base/message_loop/message_loop.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 #include "shill/logging.h"
-#include "shill/mock_event_dispatcher.h"
 #include "shill/net/ip_address.h"
 
 using testing::_;
@@ -66,7 +66,7 @@ struct TestData<IPAddress> {
 template <typename T>
 class TimeoutSetTest : public Test {
  public:
-  TimeoutSetTest() : current_time_(0), elements_(&current_time_, &dispatcher_) {
+  TimeoutSetTest() : current_time_(0), elements_(&current_time_) {
     elements_.SetInformCallback(
         base::Bind(&TimeoutSetTest::OnTimeout, base::Unretained(this)));
   }
@@ -74,8 +74,8 @@ class TimeoutSetTest : public Test {
  protected:
   class TestTimeoutSet : public TimeoutSet<T> {
    public:
-    TestTimeoutSet(const int64_t* current_time, EventDispatcher* dispatcher)
-        : TimeoutSet<T>(dispatcher), current_time_(current_time) {}
+    explicit TestTimeoutSet(const int64_t* current_time)
+        : TimeoutSet<T>(), current_time_(current_time) {}
 
    private:
     base::TimeTicks TimeNow() const override {
@@ -94,10 +94,10 @@ class TimeoutSetTest : public Test {
   }
 
   int64_t current_time_;
-  MockEventDispatcher dispatcher_;
   TestData<T> data_;
   TestTimeoutSet elements_;
   std::vector<T> timeout_elements_;
+  base::MessageLoop message_loop_;
 };
 
 typedef ::testing::Types<char, int, float, IPAddress> TestTypes;
@@ -106,7 +106,6 @@ TYPED_TEST_CASE(TimeoutSetTest, TestTypes);
 TYPED_TEST(TimeoutSetTest, EmptyInsertion) {
   EXPECT_TRUE(this->elements_.IsEmpty());
 
-  EXPECT_CALL(this->dispatcher_, PostDelayedTask(_, _, _));
   this->elements_.Insert(this->data_.data[0],
                          base::TimeDelta::FromMilliseconds(10));
   EXPECT_FALSE(this->elements_.IsEmpty());
@@ -117,7 +116,6 @@ TYPED_TEST(TimeoutSetTest, EmptyInsertion) {
 }
 
 TYPED_TEST(TimeoutSetTest, SingleTimeout) {
-  EXPECT_CALL(this->dispatcher_, PostDelayedTask(_, _, _)).Times(AtLeast(1));
   this->elements_.Insert(this->data_.data[0],
                          base::TimeDelta::FromMilliseconds(10));
 
@@ -129,7 +127,6 @@ TYPED_TEST(TimeoutSetTest, SingleTimeout) {
 }
 
 TYPED_TEST(TimeoutSetTest, MultipleSequentialTimeouts) {
-  EXPECT_CALL(this->dispatcher_, PostDelayedTask(_, _, _)).Times(AtLeast(1));
   this->elements_.Insert(this->data_.data[0],
                          base::TimeDelta::FromMilliseconds(10));
   this->elements_.Insert(this->data_.data[1],
@@ -145,7 +142,6 @@ TYPED_TEST(TimeoutSetTest, MultipleSequentialTimeouts) {
 }
 
 TYPED_TEST(TimeoutSetTest, MultipleSequentialTimeoutsWithInfiniteLifetime) {
-  EXPECT_CALL(this->dispatcher_, PostDelayedTask(_, _, _)).Times(AtLeast(1));
   this->elements_.Insert(this->data_.data[0],
                          base::TimeDelta::FromMilliseconds(10));
   this->elements_.Insert(this->data_.data[1],
@@ -169,7 +165,6 @@ TYPED_TEST(TimeoutSetTest, MultipleSequentialTimeoutsWithInfiniteLifetime) {
 
 // Single timeout has multiple elements expiring.
 TYPED_TEST(TimeoutSetTest, MultiTimeout) {
-  EXPECT_CALL(this->dispatcher_, PostDelayedTask(_, _, _)).Times(AtLeast(1));
   this->elements_.Insert(this->data_.data[0],
                          base::TimeDelta::FromMilliseconds(10));
   this->elements_.Insert(this->data_.data[1],
@@ -182,7 +177,6 @@ TYPED_TEST(TimeoutSetTest, MultiTimeout) {
 
 // Single timeout has multiple elements expiring.
 TYPED_TEST(TimeoutSetTest, MultiTimeoutWithInfiniteLifetime) {
-  EXPECT_CALL(this->dispatcher_, PostDelayedTask(_, _, _)).Times(AtLeast(1));
   this->elements_.Insert(this->data_.data[0],
                          base::TimeDelta::FromMilliseconds(10));
   this->elements_.Insert(this->data_.data[1],
@@ -202,7 +196,6 @@ TYPED_TEST(TimeoutSetTest, MultiTimeoutWithInfiniteLifetime) {
 }
 
 TYPED_TEST(TimeoutSetTest, InsertResetTimeout) {
-  EXPECT_CALL(this->dispatcher_, PostDelayedTask(_, _, _)).Times(AtLeast(1));
   this->elements_.Insert(this->data_.data[0],
                          base::TimeDelta::FromMilliseconds(20));
   this->elements_.Insert(this->data_.data[1],
