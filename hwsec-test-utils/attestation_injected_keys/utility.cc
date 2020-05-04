@@ -35,15 +35,15 @@ constexpr char kDefaultVASigningPublicKey[] =
     "a3f52077d50aaaf82aadb7273483702ffc17d68f0f413459edca974d76ca3c9f";
 
 constexpr char kDefaultVAEncryptionPublicKey[] =
-    "edba5e723da811e41636f792c7a77aef633fbf39b542aa537c93c93eaba7a3b1"
-    "0bc3e484388c13d625ef5573358ec9e7fbeb6baaaa87ca87d93fb61bf5760e29"
-    "6813c435763ed2c81f631e26e3ff1a670261cdc3c39a4640b6bbf4ead3d6587b"
-    "e43ef7f1f08e7596b628ec0b44c9b7ad71c9ee3a1258852c7a986c7614f0c4ec"
-    "f0ce147650a53b6aa9ae107374a2d6d4e7922065f2f6eb537a994372e1936c87"
-    "eb08318611d44daf6044f8527687dc7ce5319b51eae6ab12bee6bd16e59c499e"
-    "fa53d80232ae886c7ee9ad8bc1cbd6e4ac55cb8fa515671f7e7ad66e98769f52"
-    "c3c309f98bf08a3b8fbb0166e97906151b46402217e65c5d01ddac8514340e8b";
-constexpr char kDefaultVAEncryptionPublicKeyID[] = "\x00\x4a\xe2\xdc\xae";
+    "bc435db064ecf44b650ead16f2934035a0e6ecfc76c4f3f7c26ce459482c66f6"
+    "747b8e510c03e94808608f076b4d3ad3470d710c1b8d731cbe2d4c53e2df7367"
+    "7ced201df57c8c86503cc2442faa71c88a66f86726b5791b8d7888df1357defb"
+    "d1b5cddffe10e2ec9ef7a47eede4d74c33ca4e34f0801bed065188f035e729ff"
+    "f10b46432ed320f993d75ecccebff88d197a0f20dfefa438d5f58c69578e6037"
+    "821943721c21daeab845716f4823748ea8080a4bb43786e1cc70f3363bfb98d5"
+    "1a3b77a5b3a44b18a029296ad075e93df31abe2105c68a6fafb8b47ad52ec01e"
+    "adde56c522e1369a9fb5175ea5e8ebd8c35c0cd16ee1d6930f34821f12f46459";
+constexpr char kDefaultVAEncryptionPublicKeyID[] = "VaEnc";
 
 // Ignores the extra null-terminated element and converts only the effective
 // part to std::string.
@@ -72,8 +72,7 @@ attestation::DefaultGoogleRsaPublicKeySet GenerateAttestationGoogleKeySet() {
   *keyset.mutable_default_va_signing_key() = std::move(key);
 
   key.set_modulus_in_hex(kDefaultVAEncryptionPublicKey);
-  key.set_key_id(
-      ZeroTerminatedCharArrayToString(kDefaultVAEncryptionPublicKeyID));
+  key.set_key_id(kDefaultVAEncryptionPublicKeyID);
   *keyset.mutable_default_va_encryption_key() = std::move(key);
 
   return keyset;
