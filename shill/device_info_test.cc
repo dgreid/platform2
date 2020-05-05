@@ -1364,6 +1364,10 @@ TEST_F(DeviceInfoTechnologyTest, WiFi) {
   EXPECT_EQ(Technology::kWifi, GetDeviceTechnology());
   CreateInfoFile("type", base::NumberToString(ARPHRD_IEEE80211_RADIOTAP));
   EXPECT_EQ(Technology::kWiFiMonitor, GetDeviceTechnology());
+  // mac80211_hwsim creates ARPHRD_IEEE80211_RADIOTAP devices that don't list
+  // DEVTYPE=wlan.
+  CreateInfoFile("uevent", "INTERFACE=hwsim0");
+  EXPECT_EQ(Technology::kWiFiMonitor, GetDeviceTechnology());
 }
 
 TEST_F(DeviceInfoTechnologyTest, Bridge) {

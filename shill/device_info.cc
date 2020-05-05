@@ -373,6 +373,12 @@ Technology DeviceInfo::GetDeviceTechnology(const string& iface_name,
     return Technology::kCellular;
   }
 
+  if (arp_type == ARPHRD_IEEE80211_RADIOTAP) {
+    SLOG(this, 2) << StringPrintf("%s: wifi device %s is in monitor mode",
+                                  __func__, iface_name.c_str());
+    return Technology::kWiFiMonitor;
+  }
+
   string contents;
   if (!GetDeviceInfoContents(iface_name, kInterfaceUevent, &contents)) {
     LOG(INFO) << StringPrintf("%s: device %s has no uevent file", __func__,
@@ -387,11 +393,6 @@ Technology DeviceInfo::GetDeviceTechnology(const string& iface_name,
     SLOG(this, 2) << StringPrintf(
         "%s: device %s has wifi signature in uevent file", __func__,
         iface_name.c_str());
-    if (arp_type == ARPHRD_IEEE80211_RADIOTAP) {
-      SLOG(this, 2) << StringPrintf("%s: wifi device %s is in monitor mode",
-                                    __func__, iface_name.c_str());
-      return Technology::kWiFiMonitor;
-    }
     return Technology::kWifi;
   }
 
