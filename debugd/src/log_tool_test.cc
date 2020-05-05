@@ -59,8 +59,8 @@ class LogToolTest : public testing::Test {
     return static_cast<FakeLog*>(log_tool_->arc_bug_report_log_.get());
   }
 
-  std::string GetArcBugReport(const std::string& username) {
-    return log_tool_->GetArcBugReport(username);
+  std::string GetArcBugReport(const std::string& username, bool* is_backup) {
+    return log_tool_->GetArcBugReport(username, is_backup);
   }
 
   org::chromium::CryptohomeInterfaceProxyMock* GetCryptHomeProxy() {
@@ -86,7 +86,26 @@ TEST_F(LogToolTest, GetArcBugReport_ReturnsContents_WhenFileExists) {
         return true;
       })));
 
-  std::string report = GetArcBugReport("username");
+  bool is_backup;
+  std::string report = GetArcBugReport("username", &is_backup);
+
+  EXPECT_EQ(report, "test");
+  EXPECT_TRUE(is_backup);
+}
+
+TEST_F(LogToolTest, GetArcBugReport_Succeeds_WhenIsBackupIsNull) {
+  std::string userhash = "userhash";
+  base::FilePath logPath =
+      temp_dir_.GetPath().Append(userhash).Append("arc-bugreport.log");
+  EXPECT_TRUE(WriteFile(logPath, "test"));
+  SetArcBugReportBackup(userhash);
+  EXPECT_CALL(*GetCryptHomeProxy(), GetSanitizedUsername("username", _, _, _))
+      .WillOnce(WithArg<1>(Invoke([&userhash](std::string* out_sanitized) {
+        *out_sanitized = userhash;
+        return true;
+      })));
+
+  std::string report = GetArcBugReport("username", nullptr /*is_backup*/);
 
   EXPECT_EQ(report, "test");
 }
@@ -104,9 +123,11 @@ TEST_F(LogToolTest, GetArcBugReport_DeletesFile_WhenBackupNotSet) {
         return true;
       })));
 
-  std::string report = GetArcBugReport("username");
+  bool is_backup;
+  std::string report = GetArcBugReport("username", &is_backup);
 
   EXPECT_EQ(report, "fake");
+  EXPECT_FALSE(is_backup);
   EXPECT_FALSE(base::PathExists(logPath));
 }
 

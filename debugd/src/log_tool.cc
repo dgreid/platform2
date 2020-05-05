@@ -50,6 +50,7 @@ const char kRoot[] = "root";
 const char kShell[] = "/bin/sh";
 constexpr char kLsbReleasePath[] = "/etc/lsb-release";
 constexpr char kArcBugReportBackupFileName[] = "arc-bugreport.log";
+constexpr char kArcBugReportBackupKey[] = "arc-bugreport-backup";
 constexpr char kDaemonStoreBaseDir[] = "/run/daemon-store/debugd/";
 
 // Minimum time in seconds needed to allow shill to test active connections.
@@ -709,7 +710,7 @@ LogTool::LogMap LogTool::GetAllDebugLogs() {
   LogMap result;
   GetLogsFrom(kCommandLogs, &result);
   GetLogsFrom(kExtraLogs, &result);
-  result[arc_bug_report_log_->GetName()] = GetArcBugReport("");
+  result[arc_bug_report_log_->GetName()] = GetArcBugReport("", nullptr);
   GetLsbReleaseInfo(&result);
   GetOsReleaseInfo(&result);
   return result;
@@ -723,8 +724,12 @@ void LogTool::GetBigFeedbackLogs(const base::ScopedFD& fd,
   base::DictionaryValue dictionary;
   GetLogsInDictionary(kCommandLogs, &dictionary);
   GetLogsInDictionary(kFeedbackLogs, &dictionary);
+  bool is_backup;
+  std::string arc_bug_report = GetArcBugReport(username, &is_backup);
+  dictionary.SetKey(kArcBugReportBackupKey,
+                    base::Value(is_backup ? "true" : "false"));
   dictionary.SetKey(arc_bug_report_log_->GetName(),
-                    base::Value(GetArcBugReport(username)));
+                    base::Value(arc_bug_report));
   GetLsbReleaseInfo(&map);
   GetOsReleaseInfo(&map);
   PopulateDictionaryValue(map, &dictionary);
@@ -750,7 +755,11 @@ std::string GetSanitizedUsername(
   return sanitized_username;
 }
 
-std::string LogTool::GetArcBugReport(const std::string& username) {
+std::string LogTool::GetArcBugReport(const std::string& username,
+                                     bool* is_backup) {
+  if (is_backup) {
+    *is_backup = true;
+  }
   std::string userhash =
       GetSanitizedUsername(cryptohome_proxy_.get(), username);
 
@@ -763,6 +772,9 @@ std::string LogTool::GetArcBugReport(const std::string& username) {
     // or the file did not exist, attempt to delete the file.
     if (!userhash.empty()) {
       DeleteArcBugReportBackup(userhash);
+    }
+    if (is_backup) {
+      *is_backup = false;
     }
     contents = arc_bug_report_log_->GetLogData();
   }
