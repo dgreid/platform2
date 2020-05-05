@@ -21,13 +21,23 @@
                   value="dlcservice::DlcModuleList"/>
     </arg>
   </method>
-  <method name="Uninstall">
+  <method name="InstallDlc">
     <tp:docstring>
-      Uninstall a Downloadable Content (DLC) module.
+      Install a Downloadable Content (DLC).
     </tp:docstring>
     <arg name="id" type="s" direction="in">
       <tp:docstring>
-        ID of the DLC module.
+        The ID of the DLC.
+      </tp:docstring>
+    </arg>
+  </method>
+  <method name="Uninstall">
+    <tp:docstring>
+      Uninstall a Downloadable Content (DLC).
+    </tp:docstring>
+    <arg name="id" type="s" direction="in">
+      <tp:docstring>
+        The ID of the DLC.
       </tp:docstring>
     </arg>
   </method>

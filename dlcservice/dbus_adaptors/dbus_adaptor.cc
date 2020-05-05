@@ -37,6 +37,10 @@ bool DBusService::Install(brillo::ErrorPtr* err,
                                dlc_module_list_in.omaha_url(), err);
 }
 
+bool DBusService::InstallDlc(brillo::ErrorPtr* err, const std::string& id_in) {
+  return dlc_service_->Install({id_in}, /*omaha_url=*/"", err);
+}
+
 bool DBusService::Uninstall(brillo::ErrorPtr* err, const string& id_in) {
   return dlc_service_->Uninstall(id_in, err);
 }

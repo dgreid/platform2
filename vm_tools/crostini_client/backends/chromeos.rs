@@ -145,7 +145,7 @@ const NOTIFY_VM_STARTING_METHOD: &str = "NotifyVmStarting";
 const DLC_SERVICE_INTERFACE: &str = "org.chromium.DlcServiceInterface";
 const DLC_SERVICE_PATH: &str = "/org/chromium/DlcService";
 const DLC_SERVICE_NAME: &str = "org.chromium.DlcService";
-const DLC_INSTALL_METHOD: &str = "Install";
+const DLC_INSTALL_METHOD: &str = "InstallDlc";
 const DLC_GET_STATE_METHOD: &str = "GetDlcState";
 
 enum ChromeOSError {
@@ -386,17 +386,13 @@ impl ChromeOS {
     }
 
     fn init_dlc_install(&mut self, name: &str) -> Result<(), Box<dyn Error>> {
-        let mut request = DlcModuleList::new();
-        let module = request.dlc_module_infos.push_default();
-        module.dlc_id = name.to_owned();
-
         let method = Message::new_method_call(
             DLC_SERVICE_NAME,
             DLC_SERVICE_PATH,
             DLC_SERVICE_INTERFACE,
             DLC_INSTALL_METHOD,
         )?
-        .append1(request.write_to_bytes()?);
+        .append1(name);
 
         self.connection
             .send_with_reply_and_block(method, DEFAULT_TIMEOUT_MS)
