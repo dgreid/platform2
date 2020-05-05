@@ -5,9 +5,13 @@
 #include "runtime_probe/utils/value_utils.h"
 
 #include <memory>
+#include <utility>
 #include <vector>
 
+#include <base/values.h>
+
 namespace runtime_probe {
+
 // Append the given |prefix| to each key in the |dict_value|.
 void PrependToDVKey(base::DictionaryValue* dict_value,
                     const std::string& prefix) {
@@ -24,4 +28,16 @@ void PrependToDVKey(base::DictionaryValue* dict_value,
     dict_value->SetString(prefix + key, tmp->GetString());
   }
 }
+
+bool RenameKey(base::Value* dv,
+               const std::string& old_key,
+               const std::string& new_key) {
+  auto value = dv->FindKey(old_key);
+  if (!value)
+    return false;
+  dv->SetKey(new_key, std::move(*value));
+  dv->RemoveKey(old_key);
+  return true;
+}
+
 }  // namespace runtime_probe

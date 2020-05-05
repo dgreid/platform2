@@ -35,6 +35,9 @@ message ProbeRequest {
     vpd_cached = 3;
     network = 4;
     camera = 5;
+    stylus = 6;
+    touchpad = 7;
+    touchscreen = 8;
   }
   repeated SupportCategory categories = 1;
   // This option allows clients to retrieve data with privacy implication from
@@ -53,7 +56,7 @@ message Information {
 
 // TODO(b/158765173): Collect the possible HW interface types into an enum.
 
-// Things about audio_codec
+// Things about audio_codec.
 message AudioCodec {
   message Fields {
     // The name of the codec presents in sysfs.
@@ -67,7 +70,7 @@ message AudioCodec {
   Information information = 3;
 }
 
-// Things about battery
+// Things about battery.
 message Battery {
   // TODO(itspeter): Add more fileds for battery.
   message Fields {
@@ -120,7 +123,7 @@ message Battery {
   Information information = 3;
 }
 
-// Things about storage
+// Things about storage.
 message Storage {
   message Fields {
     // The path of this storage in system. It is useful if caller needs to
@@ -198,7 +201,7 @@ message VpdCached {
   Information information = 3;
 }
 
-// Things about network
+// Things about network.
 message Network {
   message Fields {
     // The path of this network in system. It is useful if caller needs to
@@ -275,6 +278,32 @@ message Camera {
   Information information = 3;
 }
 
+// Things about input_device.
+message InputDevice {
+  message Fields {
+    // The name of the device.
+    string name = 1;
+    // The pathname of the sysfs entry of that device.
+    string path = 2;
+    // The event of the device.
+    string event = 3;
+    // The bus number, 16 bits.
+    uint32 bus = 4;
+    // The vendor code, 16 bits.
+    uint32 vendor = 5;
+    // The product code, 16 bits.
+    uint32 product = 6;
+    // The version number, 16 bits.
+    uint32 version = 7;
+  }
+  // Component alias.
+  string name = 1;
+  // Component's details.
+  Fields values = 2;
+  // Component probe info.
+  Information information = 3;
+}
+
 // A ProbeResult contains all potential probe results. For category not
 // existed or not requested for probing, field is expected to be empty.
 message ProbeResult {
@@ -291,4 +320,7 @@ message ProbeResult {
   repeated VpdCached vpd_cached = 5;
   repeated Network network = 7;
   repeated Camera camera = 8;
+  repeated InputDevice stylus = 9;
+  repeated InputDevice touchpad = 10;
+  repeated InputDevice touchscreen = 11;
 }

@@ -15,10 +15,13 @@
 #include <base/strings/string_util.h>
 #include <pcrecpp.h>
 
+#include "runtime_probe/utils/value_utils.h"
+
 namespace runtime_probe {
 
 namespace {
 constexpr auto kInputDevicesPath = "/proc/bus/input/devices";
+const pcrecpp::RE kEventPatternRe(R"(event[\d]+)");
 
 base::Value LoadInputDevices() {
   base::Value results(base::Value::Type::LIST);
@@ -30,7 +33,6 @@ base::Value LoadInputDevices() {
   }
 
   base::Value data(base::Value::Type::DICTIONARY);
-  pcrecpp::RE kEventPatternRe(R"(event[\d]+)");
   auto input_devices_lines = base::SplitStringPiece(
       input_devices_str, "\n", base::TRIM_WHITESPACE, base::SPLIT_WANT_ALL);
   for (const auto& line : input_devices_lines) {
@@ -39,6 +41,7 @@ base::Value LoadInputDevices() {
       const auto& content = line.substr(3);
       if (prefix == 'I') {
         if (!data.DictEmpty()) {
+          RenameKey(&data, "sysfs", "path");
           results.GetList().push_back(std::move(data));
           data = base::Value(base::Value::Type::DICTIONARY);
         }
@@ -81,6 +84,7 @@ base::Value LoadInputDevices() {
     }
   }
   if (!data.DictEmpty()) {
+    RenameKey(&data, "sysfs", "path");
     results.GetList().push_back(std::move(data));
   }
   return results;

@@ -14,6 +14,11 @@ namespace runtime_probe {
 void PrependToDVKey(base::DictionaryValue* dict_value,
                     const std::string& prefix);
 
+// Change the name of key |old_key| to |new_key|.
+bool RenameKey(base::Value* dv,
+               const std::string& old_key,
+               const std::string& new_key);
+
 }  // namespace runtime_probe
 
 #endif  // RUNTIME_PROBE_UTILS_VALUE_UTILS_H_
