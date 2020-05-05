@@ -87,6 +87,7 @@ class AndroidOciWrapperTest : public ::testing::Test {
   void ExpectDestroy(int exit_code) {
     const std::vector<std::string> argv = {
         AndroidOciWrapper::kRunOciPath, AndroidOciWrapper::kRunOciLogging,
+        AndroidOciWrapper::kRunOciConfigPath,
         AndroidOciWrapper::kRunOciDestroyCommand,
         AndroidOciWrapper::kContainerId};
     EXPECT_CALL(system_utils_, LaunchAndWait(argv, _))

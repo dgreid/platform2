@@ -63,6 +63,9 @@ class AndroidOciWrapper : public ContainerManagerInterface {
   constexpr static char kRunOciKillSignal[] = "--signal=KILL";
   // Command sent to run_oci to clean up container.
   constexpr static char kRunOciDestroyCommand[] = "destroy";
+  // Argument to specify the location of the container's config.
+  constexpr static char kRunOciConfigPath[] =
+      "--container_path=/opt/google/containers/android";
 
   // Path to folder that contains all FDs this process opens.
   constexpr static char kProcFdPath[] = "/proc/self/fd";

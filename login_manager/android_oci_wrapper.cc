@@ -28,6 +28,7 @@ constexpr char AndroidOciWrapper::kRunOciStartCommand[];
 constexpr char AndroidOciWrapper::kRunOciKillCommand[];
 constexpr char AndroidOciWrapper::kRunOciKillSignal[];
 constexpr char AndroidOciWrapper::kRunOciDestroyCommand[];
+constexpr char AndroidOciWrapper::kRunOciConfigPath[];
 constexpr char AndroidOciWrapper::kProcFdPath[];
 
 AndroidOciWrapper::AndroidOciWrapper(SystemUtils* system_utils,
@@ -137,7 +138,8 @@ bool AndroidOciWrapper::StartContainer(const std::vector<std::string>& env,
     // without cleaning up the container directory. Run run_oci again to make
     // sure the directory is gone.
     std::vector<std::string> argv = {kRunOciPath, kRunOciLogging,
-                                     kRunOciDestroyCommand, kContainerId};
+                                     kRunOciConfigPath, kRunOciDestroyCommand,
+                                     kContainerId};
     int exit_code = -1;
     if (!system_utils_->LaunchAndWait(argv, &exit_code)) {
       PLOG(ERROR) << "Failed to run run_oci";
@@ -217,8 +219,9 @@ void AndroidOciWrapper::ExecuteRunOciToStartContainer(
   if (system_utils_->setsid() < 0)
     PLOG(FATAL) << "Failed to create a new session";
 
-  constexpr const char* const args[] = {
-      kRunOciPath, kRunOciLogging, kRunOciStartCommand, kContainerId, nullptr};
+  constexpr const char* const args[] = {kRunOciPath,       kRunOciLogging,
+                                        kRunOciConfigPath, kRunOciStartCommand,
+                                        kContainerId,      nullptr};
 
   // Increase oom_score_adj to -100.
   // Android system processes should be killable in case they exhibit memory
@@ -267,7 +270,8 @@ void AndroidOciWrapper::CleanUpContainer() {
 
   LOG(INFO) << "Cleaning up container " << pid;
   std::vector<std::string> argv = {kRunOciPath, kRunOciLogging,
-                                   kRunOciDestroyCommand, kContainerId};
+                                   kRunOciConfigPath, kRunOciDestroyCommand,
+                                   kContainerId};
 
   int exit_code = -1;
   if (!system_utils_->LaunchAndWait(argv, &exit_code)) {

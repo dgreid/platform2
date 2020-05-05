@@ -580,12 +580,6 @@ int RunOci(const base::FilePath& bundle_dir,
     return -1;
   }
 
-  if (!base::CreateSymbolicLink(container_config_file,
-                                container_dir.Append(kConfigJsonFilename))) {
-    PLOG(ERROR) << "Failed to create the config.json symlink";
-    return -1;
-  }
-
   // Create an empty file, just to tag this container as being
   // run_oci-managed.
   const base::FilePath tag_file = container_dir.Append(kRunOciFilename);
@@ -885,23 +879,15 @@ int OciKill(const std::string& container_id, int kill_signal) {
   return 0;
 }
 
-base::FilePath GetBundlePath(const base::FilePath& container_config_file) {
-  base::FilePath bundle_path;
-  if (!base::ReadSymbolicLink(container_config_file, &bundle_path)) {
-    PLOG(ERROR) << "Failed to read symlink " << container_config_file.value();
-    return base::FilePath();
-  }
-  return bundle_path.DirName();
-}
-
-int OciDestroy(const std::string& container_id) {
+int OciDestroy(const base::FilePath& bundle_dir,
+               const std::string& container_id) {
   RestoreLogRedirection(container_id);
   LOG(INFO) << "Destroying container " << container_id;
 
   const base::FilePath container_dir =
       base::FilePath(kRunContainersPath).Append(container_id);
   const base::FilePath container_config_file =
-      container_dir.Append(kConfigJsonFilename);
+      bundle_dir.Append(kConfigJsonFilename);
 
   if (!base::PathExists(container_dir)) {
     LOG(INFO) << "Container " << container_id << " has already been destroyed";
@@ -930,8 +916,7 @@ int OciDestroy(const std::string& container_id) {
 
   // We are committed to cleaning everything up now.
   RunHooks(oci_config->post_stop_hooks, &container_pid, container_id,
-           GetBundlePath(container_config_file), container_dir, "poststop",
-           "stopped");
+           bundle_dir, container_dir, "poststop", "stopped");
   CleanUpContainer(container_dir);
 
   LOG(INFO) << "Container " << container_id << " destroyed";
@@ -1154,7 +1139,7 @@ int main(int argc, char** argv) {
   } else if (command == "kill") {
     return run_oci::OciKill(container_id, kill_signal);
   } else if (command == "destroy") {
-    return run_oci::OciDestroy(container_id);
+    return run_oci::OciDestroy(bundle_dir, container_id);
   } else {
     LOG(ERROR) << "Unknown command '" << command << "'";
     run_oci::print_help(argv[0]);
