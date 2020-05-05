@@ -113,7 +113,7 @@ int ImageProcessor::ConvertFormat(const FrameBuffer& in_frame,
       case V4L2_PIX_FMT_YVU420:     // YV12
       case V4L2_PIX_FMT_YVU420M: {  // YM21, multiple planes YV12
         int res =
-            libyuv::YUY2ToI420(in_frame.GetData(), in_frame.GetWidth() * 2,
+            libyuv::YUY2ToI420(in_frame.GetData(), in_frame.GetStride(),
                                out_frame->GetData(FrameBuffer::YPLANE),
                                out_frame->GetStride(FrameBuffer::YPLANE),
                                out_frame->GetData(FrameBuffer::UPLANE),
@@ -127,7 +127,7 @@ int ImageProcessor::ConvertFormat(const FrameBuffer& in_frame,
       case V4L2_PIX_FMT_NV12:     // NV12
       case V4L2_PIX_FMT_NV12M: {  // NM12
         int res =
-            libyuv::YUY2ToNV12(in_frame.GetData(), in_frame.GetWidth() * 2,
+            libyuv::YUY2ToNV12(in_frame.GetData(), in_frame.GetStride(),
                                out_frame->GetData(FrameBuffer::YPLANE),
                                out_frame->GetStride(FrameBuffer::YPLANE),
                                out_frame->GetData(FrameBuffer::UPLANE),

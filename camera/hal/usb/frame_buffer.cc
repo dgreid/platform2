@@ -207,6 +207,9 @@ int V4L2FrameBuffer::Map() {
     case V4L2_PIX_FMT_MJPEG:
       stride_[0] = data_size_;
       break;
+    case V4L2_PIX_FMT_YUYV:
+      stride_[0] = width_ * 2;
+      break;
     default:
       LOGF(WARNING) << "The strides for pixel format "
                     << FormatToString(fourcc_) << " are not given.";
