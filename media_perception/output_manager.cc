@@ -334,18 +334,16 @@ void OutputManager::HandleAppearances(
 
 void OutputManager::HandleSmartFraming(
     const std::vector<uint8_t>& bytes) {
-  if (!one_touch_autozoom_handler_ptr_.is_bound()) {
+  if (one_touch_autozoom_handler_ptr_.is_bound() &&
+      one_touch_autozoom_handler_ptr_.get() != nullptr) {
+   one_touch_autozoom_handler_ptr_->OnSmartFraming(bytes);
+  } else if (software_autozoom_handler_ptr_.is_bound() &&
+      software_autozoom_handler_ptr_.get() != nullptr) {
+   software_autozoom_handler_ptr_->OnSmartFraming(bytes);
+  } else {
     LOG(WARNING)
-        << "Got smart framing proto but handler ptr is not bound.";
-    return;
+        << "Got smart framing but handler ptr is not bound.";
   }
-
-  if (one_touch_autozoom_handler_ptr_.get() == nullptr) {
-    LOG(ERROR) << "Handler ptr is null.";
-    return;
-  }
-
-  one_touch_autozoom_handler_ptr_->OnSmartFraming(bytes);
 }
 
 }  // namespace mri
