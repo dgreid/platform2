@@ -11,6 +11,7 @@
 #include <vector>
 
 #include <base/callback.h>
+#include <brillo/errors/error_codes.h>
 #include <chromeos/dbus/service_constants.h>
 #include <google-lpa/lpa/core/lpa.h>
 
@@ -19,12 +20,6 @@
 using lpa::proto::ProfileInfo;
 
 namespace hermes {
-
-namespace {
-
-const char kHermesErrorDomain[] = "Hermes";
-
-}  // namespace
 
 Manager::Manager(const scoped_refptr<dbus::Bus>& bus, LpaContext* context)
     : org::chromium::Hermes::ManagerAdaptor(this),
@@ -72,7 +67,7 @@ void Manager::InstallProfileFromEvent(
     const std::string& /*in_smdp_address*/,
     const std::string& /*in_event_id*/) {
   response->ReplyWithError(
-      FROM_HERE, kHermesErrorDomain, "UnsupportedMethod",
+      FROM_HERE, brillo::errors::dbus::kDomain, kErrorUnsupported,
       "This method is not supported until crbug.com/1071470 is implemented");
 }
 
@@ -86,7 +81,8 @@ void Manager::UninstallProfile(std::unique_ptr<DBusResponse<>> response,
     }
   }
   if (!matching_profile) {
-    response->ReplyWithError(FROM_HERE, kHermesErrorDomain, "InvalidParameter",
+    response->ReplyWithError(FROM_HERE, brillo::errors::dbus::kDomain,
+                             kErrorInvalidParameter,
                              "Could not find Profile " + in_profile.value());
     return;
   }

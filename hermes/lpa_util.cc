@@ -8,12 +8,12 @@
 #include <memory>
 
 #include <brillo/array_utils.h>
+#include <brillo/errors/error_codes.h>
+#include <chromeos/dbus/service_constants.h>
 
 namespace hermes {
 
 namespace {
-
-const char kErrorDomain[] = "GoogleLpa";
 
 struct ErrorInfo {
   constexpr ErrorInfo(int lpa_code,
@@ -31,26 +31,26 @@ struct ErrorInfo {
 // Note that lpa error codes are not constexpr atm.
 const auto kErrors = brillo::make_array<ErrorInfo>(
     ErrorInfo(lpa::core::Lpa::kWrongState,
-              "WrongState",
+              kErrorWrongState,
               "Invalid state for requested method"),
     ErrorInfo(lpa::core::Lpa::kIccidNotFound, "InvalidIccid", "Invalid iccid"),
     ErrorInfo(lpa::core::Lpa::kProfileAlreadyEnabled,
-              "ProfileAlreadyEnabled",
+              kErrorAlreadyEnabled,
               "Requested method provided an already-enabled profile"),
     ErrorInfo(lpa::core::Lpa::kProfileAlreadyDisabled,
-              "ProfileAlreadyDisabled",
+              kErrorAlreadyDisabled,
               "Requested method provided a disabled profile"),
     ErrorInfo(lpa::core::Lpa::kNeedConfirmationCode,
-              "NeedConfirmationCode",
+              kErrorNeedConfirmationCode,
               "Need confirmation code"),
     ErrorInfo(lpa::core::Lpa::kInvalidActivationCode,
-              "InvalidActivationCode",
+              kErrorInvalidActivationCode,
               "Invalid activation code"),
     ErrorInfo(lpa::core::Lpa::kFailedToSendNotifications,
-              "SendNotificationError",
+              kErrorSendNotificationFailure,
               "Failed to send notifications"),
     ErrorInfo(lpa::core::Lpa::kNoOpForTestingProfile,
-              "NoOpForTestingProfile",
+              kErrorTestProfileInProd,
               "Non-test mode cannot use test profile"));
 
 }  // namespace
@@ -62,12 +62,12 @@ brillo::ErrorPtr LpaErrorToBrillo(const base::Location& location, int error) {
 
   for (auto& info : kErrors) {
     if (info.lpa_code_ == error) {
-      return brillo::Error::Create(location, kErrorDomain, info.error_code_,
-                                   info.error_message_);
+      return brillo::Error::Create(location, brillo::errors::dbus::kDomain,
+                                   info.error_code_, info.error_message_);
     }
   }
-  return brillo::Error::Create(location, kErrorDomain, "Unknown",
-                               "Unknown error");
+  return brillo::Error::Create(location, brillo::errors::dbus::kDomain,
+                               kErrorUnknown, "Unknown error");
 }
 
 }  // namespace hermes
