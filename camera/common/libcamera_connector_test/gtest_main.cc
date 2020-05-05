@@ -16,6 +16,8 @@
 #include <libyuv.h>
 #include <linux/videodev2.h>
 
+#include "common/libcamera_connector_test/i420_buffer.h"
+#include "common/libcamera_connector_test/util.h"
 #include "cros-camera/camera_service_connector.h"
 #include "cros-camera/common.h"
 
@@ -31,44 +33,6 @@ constexpr cros_cam_format_info_t kTestFormats[] = {
     {V4L2_PIX_FMT_NV12, 640, 480, 30},
     {V4L2_PIX_FMT_MJPEG, 640, 480, 30},
 };
-
-std::string FacingToString(int facing) {
-  switch (facing) {
-    case CROS_CAM_FACING_BACK:
-      return "back";
-    case CROS_CAM_FACING_FRONT:
-      return "front";
-    case CROS_CAM_FACING_EXTERNAL:
-      return "external";
-    default:
-      return "unknown";
-  }
-}
-
-std::string FourccToString(uint32_t fourcc) {
-  std::string result = "0000";
-  for (int i = 0; i < 4; i++) {
-    auto c = static_cast<char>(fourcc & 0xFF);
-    if (c <= 0x1f || c >= 0x7f) {
-      return base::StringPrintf("%#x", fourcc);
-    }
-    result[i] = c;
-    fourcc >>= 8;
-  }
-  return result;
-}
-
-std::string CameraFormatInfoToString(const cros_cam_format_info_t& info) {
-  return base::StringPrintf("%s %4ux%4u %3ufps",
-                            FourccToString(info.fourcc).c_str(), info.width,
-                            info.height, info.fps);
-}
-
-bool IsSameFormat(const cros_cam_format_info_t& fmt1,
-                  const cros_cam_format_info_t& fmt2) {
-  return fmt1.fourcc == fmt2.fourcc && fmt1.width == fmt2.width &&
-         fmt1.height == fmt2.height && fmt1.fps == fmt2.fps;
-}
 
 }  // namespace
 
@@ -86,74 +50,6 @@ class ConnectorEnvironment : public ::testing::Environment {
     EXPECT_EQ(cros_cam_exit(), 0);
     LOGF(INFO) << "Camera connector exited";
   }
-};
-
-class I420Buffer {
- public:
-  explicit I420Buffer(int width = 0, int height = 0)
-      : width_(width), height_(height), data_(DataSize()) {}
-
-  static I420Buffer Create(const cros_cam_frame_t* frame) {
-    const cros_cam_format_info_t& format = frame->format;
-    I420Buffer buf(format.width, format.height);
-
-    const cros_cam_plane_t* planes = frame->planes;
-
-    auto expect_empty = [&](const cros_cam_plane_t& plane) {
-      EXPECT_EQ(plane.size, 0);
-      EXPECT_EQ(plane.stride, 0);
-      EXPECT_EQ(plane.data, nullptr);
-    };
-
-    switch (format.fourcc) {
-      case V4L2_PIX_FMT_NV12: {
-        expect_empty(planes[2]);
-        expect_empty(planes[3]);
-        int ret = libyuv::NV12ToI420(
-            planes[0].data, planes[0].stride, planes[1].data, planes[1].stride,
-            buf.DataY(), buf.StrideY(), buf.DataU(), buf.StrideU(), buf.DataY(),
-            buf.StrideV(), buf.Width(), buf.Height());
-        EXPECT_EQ(ret, 0) << "invalid NV12 frame";
-        break;
-      }
-      case V4L2_PIX_FMT_MJPEG: {
-        expect_empty(planes[1]);
-        expect_empty(planes[2]);
-        expect_empty(planes[3]);
-        int ret = libyuv::MJPGToI420(
-            planes[0].data, planes[0].size, buf.DataY(), buf.StrideY(),
-            buf.DataU(), buf.StrideU(), buf.DataV(), buf.StrideV(),
-            format.width, format.height, buf.Width(), buf.Height());
-        EXPECT_EQ(ret, 0) << "invalid MJPEG frame";
-        break;
-      }
-      default:
-        ADD_FAILURE() << "unexpected fourcc: " << FourccToString(format.fourcc);
-    }
-    return buf;
-  }
-
-  int Width() const { return width_; }
-  int Height() const { return height_; }
-
-  int StrideY() const { return width_; }
-  int StrideU() const { return (width_ + 1) / 2; }
-  int StrideV() const { return (width_ + 1) / 2; }
-
-  uint8_t* DataY() { return data_.data(); }
-  uint8_t* DataU() { return DataY() + StrideY() * Height(); }
-  uint8_t* DataV() { return DataU() + StrideU() * HalfHeight(); }
-
- private:
-  int HalfHeight() const { return (height_ + 1) / 2; }
-  int HalfWidth() const { return (width_ + 1) / 2; }
-  int DataSize() const {
-    return StrideY() * Height() + (StrideU() + StrideV()) * HalfHeight();
-  }
-
-  int width_;
-  int height_;
-  std::vector<uint8_t> data_;
 };
 
 class FrameCapturer {
