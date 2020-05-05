@@ -18,7 +18,7 @@ string CryptoRot47::GetId() const {
   return kId;
 }
 
-bool CryptoRot47::Encrypt(const string& plaintext, string* ciphertext) {
+bool CryptoRot47::Encrypt(const string& plaintext, string* ciphertext) const {
   const int kRotSize = 94;
   const int kRotHalf = kRotSize / 2;
   const char kRotMin = '!';
@@ -35,7 +35,7 @@ bool CryptoRot47::Encrypt(const string& plaintext, string* ciphertext) {
   return true;
 }
 
-bool CryptoRot47::Decrypt(const string& ciphertext, string* plaintext) {
+bool CryptoRot47::Decrypt(const string& ciphertext, string* plaintext) const {
   // ROT47 is self-reciprocal.
   return Encrypt(ciphertext, plaintext);
 }

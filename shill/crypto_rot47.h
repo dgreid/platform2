@@ -20,8 +20,10 @@ class CryptoRot47 : public CryptoInterface {
 
   // Inherited from CryptoInterface.
   std::string GetId() const override;
-  bool Encrypt(const std::string& plaintext, std::string* ciphertext) override;
-  bool Decrypt(const std::string& ciphertext, std::string* plaintext) override;
+  bool Encrypt(const std::string& plaintext,
+               std::string* ciphertext) const override;
+  bool Decrypt(const std::string& ciphertext,
+               std::string* plaintext) const override;
 
  private:
   DISALLOW_COPY_AND_ASSIGN(CryptoRot47);

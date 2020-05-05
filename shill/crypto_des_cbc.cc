@@ -31,13 +31,13 @@ string CryptoDesCbc::GetId() const {
   return kId;
 }
 
-bool CryptoDesCbc::Encrypt(const string& plaintext, string* ciphertext) {
+bool CryptoDesCbc::Encrypt(const string& plaintext, string* ciphertext) const {
   // Never encrypt. We'll fall back to rot47 which doesn't depend on
   // the owner key which may change due to rotation.
   return false;
 }
 
-bool CryptoDesCbc::Decrypt(const string& ciphertext, string* plaintext) {
+bool CryptoDesCbc::Decrypt(const string& ciphertext, string* plaintext) const {
   CHECK_EQ(kBlockSize, key_.size());
   CHECK_EQ(kBlockSize, iv_.size());
   int version = 1;
@@ -63,8 +63,11 @@ bool CryptoDesCbc::Decrypt(const string& ciphertext, string* plaintext) {
 
   // The IV is modified in place.
   vector<char> iv = iv_;
+  // We don't expect the key to be modified, but cbc_crypt() takes a non const*.
+  // This ensures that |key_| will not be modified and avoids a cast.
+  std::vector<char> key = key_;
   int rv =
-      cbc_crypt(key_.data(), data.data(), data.size(), DES_DECRYPT, iv.data());
+      cbc_crypt(key.data(), data.data(), data.size(), DES_DECRYPT, iv.data());
   if (DES_FAILED(rv)) {
     LOG(ERROR) << "DES-CBC decryption failed.";
     return false;

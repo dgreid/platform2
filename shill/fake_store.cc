@@ -195,7 +195,7 @@ bool FakeStore::SetStringList(const string& group,
 
 bool FakeStore::GetCryptedString(const string& group,
                                  const string& key,
-                                 string* value) {
+                                 string* value) const {
   return GetString(group, key, value);
 }
 

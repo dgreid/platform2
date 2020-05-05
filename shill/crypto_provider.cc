@@ -32,7 +32,7 @@ void CryptoProvider::Init() {
   cryptos_.push_back(std::make_unique<CryptoRot47>());
 }
 
-string CryptoProvider::Encrypt(const string& plaintext) {
+string CryptoProvider::Encrypt(const string& plaintext) const {
   for (auto& crypto : cryptos_) {
     string ciphertext;
     if (crypto->Encrypt(plaintext, &ciphertext)) {
@@ -44,7 +44,7 @@ string CryptoProvider::Encrypt(const string& plaintext) {
   return plaintext;
 }
 
-string CryptoProvider::Decrypt(const string& ciphertext) {
+string CryptoProvider::Decrypt(const string& ciphertext) const {
   for (auto& crypto : cryptos_) {
     const string prefix = crypto->GetId() + ":";
     if (base::StartsWith(ciphertext, prefix, base::CompareCase::SENSITIVE)) {

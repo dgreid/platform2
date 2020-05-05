@@ -90,7 +90,7 @@ class MockStore : public StoreInterface {
   MOCK_METHOD(bool,
               GetCryptedString,
               (const std::string&, const std::string&, std::string*),
-              (override));
+              (const, override));
   MOCK_METHOD(bool,
               SetCryptedString,
               (const std::string&, const std::string&, const std::string&),

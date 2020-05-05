@@ -19,11 +19,11 @@ class CryptoInterface {
 
   // Encrypts |plaintext| into |ciphertext|. Returns true on success.
   virtual bool Encrypt(const std::string& plaintext,
-                       std::string* ciphertext) = 0;
+                       std::string* ciphertext) const = 0;
 
   // Decrypts |ciphertext| into |plaintext|. Returns true on success.
   virtual bool Decrypt(const std::string& ciphertext,
-                       std::string* plaintext) = 0;
+                       std::string* plaintext) const = 0;
 };
 
 }  // namespace shill

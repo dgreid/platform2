@@ -25,12 +25,12 @@ class CryptoProvider {
   // Returns |plaintext| encrypted by the highest priority available crypto
   // module capable of performing the operation. If no module succeeds, returns
   // |plaintext| as is.
-  std::string Encrypt(const std::string& plaintext);
+  std::string Encrypt(const std::string& plaintext) const;
 
   // Returns |ciphertext| decrypted by the highest priority available crypto
   // module capable of performing the operation. If no module succeeds, returns
   // |ciphertext| as is.
-  std::string Decrypt(const std::string& ciphertext);
+  std::string Decrypt(const std::string& ciphertext) const;
 
   void set_key_matter_file(const base::FilePath& path) {
     key_matter_file_ = path;

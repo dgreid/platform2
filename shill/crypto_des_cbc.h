@@ -33,8 +33,10 @@ class CryptoDesCbc : public CryptoInterface {
 
   // Inherited from CryptoInterface.
   std::string GetId() const override;
-  bool Encrypt(const std::string& plaintext, std::string* ciphertext) override;
-  bool Decrypt(const std::string& ciphertext, std::string* plaintext) override;
+  bool Encrypt(const std::string& plaintext,
+               std::string* ciphertext) const override;
+  bool Decrypt(const std::string& ciphertext,
+               std::string* plaintext) const override;
 
   const std::vector<char>& key() const { return key_; }
   const std::vector<char>& iv() const { return iv_; }

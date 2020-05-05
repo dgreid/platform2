@@ -73,7 +73,7 @@ class FakeStore : public StoreInterface {
   // KeyFileStore::SetCryptedString() for details.
   bool GetCryptedString(const std::string& group,
                         const std::string& key,
-                        std::string* value) override;
+                        std::string* value) const override;
   bool SetCryptedString(const std::string& group,
                         const std::string& key,
                         const std::string& value) override;

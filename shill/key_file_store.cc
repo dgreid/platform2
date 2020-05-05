@@ -661,7 +661,7 @@ bool KeyFileStore::SetStringList(const string& group,
 
 bool KeyFileStore::GetCryptedString(const string& group,
                                     const string& key,
-                                    string* value) {
+                                    string* value) const {
   if (!GetString(group, key, value)) {
     return false;
   }

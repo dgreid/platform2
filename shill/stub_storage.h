@@ -90,7 +90,7 @@ class StubStorage : public StoreInterface {
   }
   bool GetCryptedString(const std::string& group,
                         const std::string& key,
-                        std::string* value) override {
+                        std::string* value) const override {
     return false;
   }
   bool SetCryptedString(const std::string& group,

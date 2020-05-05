@@ -148,7 +148,7 @@ class StoreInterface {
   // simply test for the presence of this value.
   virtual bool GetCryptedString(const std::string& group,
                                 const std::string& key,
-                                std::string* value) = 0;
+                                std::string* value) const = 0;
 
   // Associates |group|:|key| with a string |value| after encrypting it. Returns
   // true on success, false otherwise.
