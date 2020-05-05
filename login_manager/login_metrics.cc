@@ -44,6 +44,7 @@ const char kLoginMetricsFlagFile[] = "per_boot_flag";
 const char kMetricsDir[] = "/var/lib/metrics";
 
 const char kArcCumulativeUseTimeMetric[] = "Arc.CumulativeUseTime";
+const char kLoginMountNamespaceMetric[] = "Login.MountNamespaceCreationSuccess";
 
 }  // namespace
 
@@ -68,6 +69,10 @@ LoginMetrics::LoginMetrics(const base::FilePath& per_boot_flag_dir)
 }
 
 LoginMetrics::~LoginMetrics() {}
+
+void LoginMetrics::SendNamespaceCreationResult(bool status) {
+  metrics_lib_.SendBoolToUMA(kLoginMountNamespaceMetric, status);
+}
 
 void LoginMetrics::SendConsumerAllowsNewUsers(bool allowed) {
   int uma_code = allowed ? ANY_USER_ALLOWED : ONLY_WHITELISTED_ALLOWED;

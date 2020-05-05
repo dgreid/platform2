@@ -92,6 +92,10 @@ class LoginMetrics {
   explicit LoginMetrics(const base::FilePath& per_boot_flag_dir);
   virtual ~LoginMetrics();
 
+  // Sends metric reporting whether the mount namespace creation succeeded or
+  // failed.
+  virtual void SendNamespaceCreationResult(bool status);
+
   // Sends metric reporting whether the Owner of this non-enrolled device has
   // chosen to allow arbitrary users to sign in or not.
   virtual void SendConsumerAllowsNewUsers(bool allowed);
