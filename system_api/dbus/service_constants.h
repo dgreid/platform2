@@ -643,4 +643,16 @@ const char kLockToSingleUserServiceName[] = "org.chromium.LockToSingleUser";
 const char kNotifyVmStartingMethod[] = "NotifyVmStarting";
 }  // namespace lock_to_single_user
 
+namespace memory_pressure {
+const char kMemoryPressureInterface[] = "org.chromium.MemoryPressure";
+const char kMemoryPressureServicePath[] = "/org/chromium/MemoryPressure";
+const char kMemoryPressureServiceName[] = "org.chromium.MemoryPressure";
+// Method names.
+const char kGetAvailableMemoryKBMethod[] = "GetAvailableMemoryKB";
+const char kGetMemoryMarginKBMethod[] = "GetMemoryMarginKB";
+// Signals.
+const char kCriticalMemoryPressure[] = "CriticalMemoryPressure";
+const char kModerateMemoryPressure[] = "ModerateMemoryPressure";
+}  // namespace memory_pressure
+
 #endif  // SYSTEM_API_DBUS_SERVICE_CONSTANTS_H_
