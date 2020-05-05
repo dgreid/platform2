@@ -101,13 +101,13 @@ class HomeDirs {
 
   // Determines the state of the free disk space based on the following
   // thresholds:
-  //   kAboveTarget: free_disk_space >= kTargetFreeSpaceAfterCleanup
-  //   kAboveThreshold: kTargetFreeSpaceAfterCleanup > free_disk_space =>
-  //                      kFreeSpaceThresholdToTriggerCleanup
-  //   kNeedNormalCleanup: kFreeSpaceThresholdToTriggerCleanup >
+  //   kAboveTarget: free_disk_space >= target_free_space_
+  //   kAboveThreshold: target_free_space_ > free_disk_space =>
+  //                      normal_cleanup_threshold_
+  //   kNeedNormalCleanup: normal_cleanup_threshold_ >
   //                      free_disk_space =>
-  //                      kFreeSpaceThresholdToTriggerAggressiveCleanup
-  //   kNeedAggressiveCleanup: kFreeSpaceThresholdToTriggerAggressiveCleanup >
+  //                      aggressive_cleanup_threshold_
+  //   kNeedAggressiveCleanup: aggressive_cleanup_threshold_ >
   //                      free_disk_space
   virtual FreeSpaceState GetFreeDiskSpaceState(base::Optional<int64_t>) const;
 
@@ -301,6 +301,17 @@ class HomeDirs {
   // that PCR was extended.
   virtual bool SetLockedToSingleUser() const;
 
+  // Disk cleanup thresholds setters.
+  void set_cleanup_threshold(uint64_t cleanup_threshold) {
+    normal_cleanup_threshold_ = cleanup_threshold;
+  }
+  void set_aggressive_cleanup_threshold(uint64_t aggressive_cleanup_threshold) {
+    aggressive_cleanup_threshold_ = aggressive_cleanup_threshold;
+  }
+  void set_target_free_space(uint64_t target_free_space) {
+    target_free_space_ = target_free_space;
+  }
+
   // Accessors. Mostly used for unit testing. These do not take ownership of
   // passed-in pointers.
   // TODO(wad) Should this update default_crypto_.set_platform()?
@@ -437,6 +448,12 @@ class HomeDirs {
   brillo::SecureBlob system_salt_;
   chaps::TokenManagerClient chaps_client_;
   base::Optional<base::Time> last_free_disk_space_ = base::nullopt;
+
+  // Disk cleanup thresholds. Can be set using command line flags.
+  uint64_t normal_cleanup_threshold_ = kFreeSpaceThresholdToTriggerCleanup;
+  uint64_t aggressive_cleanup_threshold_ =
+    kFreeSpaceThresholdToTriggerAggressiveCleanup;
+  uint64_t target_free_space_ = kTargetFreeSpaceAfterCleanup;
 
   // The container a not-shifted system UID in ARC++ container (AID_SYSTEM).
   static constexpr uid_t kAndroidSystemUid = 1000;

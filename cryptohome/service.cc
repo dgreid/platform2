@@ -4114,6 +4114,19 @@ void Service::PreMountCallback() {
 #endif  // USE_TMP2
 }
 
+void Service::set_cleanup_threshold(uint64_t cleanup_threshold) {
+  homedirs_->set_cleanup_threshold(cleanup_threshold);
+}
+
+void Service::set_aggressive_cleanup_threshold
+    (uint64_t aggressive_cleanup_threshold) {
+  homedirs_->set_aggressive_cleanup_threshold(aggressive_cleanup_threshold);
+}
+
+void Service::set_target_free_space(uint64_t target_free_space) {
+  homedirs_->set_target_free_space(target_free_space);
+}
+
 void Service::PostTaskToEventLoop(base::OnceClosure task) {
   event_source_.AddEvent(std::make_unique<ClosureEvent>(std::move(task)));
 }

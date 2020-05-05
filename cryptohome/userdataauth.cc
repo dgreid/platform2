@@ -737,6 +737,19 @@ void UserDataAuth::ResetAllTPMContext() {
   }
 }
 
+void UserDataAuth::set_cleanup_threshold(uint64_t cleanup_threshold) {
+  homedirs_->set_cleanup_threshold(cleanup_threshold);
+}
+
+void UserDataAuth::set_aggressive_cleanup_threshold
+    (uint64_t aggressive_cleanup_threshold) {
+  homedirs_->set_aggressive_cleanup_threshold(aggressive_cleanup_threshold);
+}
+
+void UserDataAuth::set_target_free_space(uint64_t target_free_space) {
+  homedirs_->set_target_free_space(target_free_space);
+}
+
 void UserDataAuth::OwnershipCallback(bool status, bool took_ownership) {
   // Note that this function should only be called once during the lifetime of
   // this process, extra calls will be dropped.

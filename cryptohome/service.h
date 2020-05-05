@@ -242,6 +242,10 @@ class Service : public brillo::dbus::AbstractDbusService,
     force_ecryptfs_ = force_ecryptfs;
   }
 
+  void set_cleanup_threshold(uint64_t cleanup_threshold);
+  void set_aggressive_cleanup_threshold(uint64_t aggressive_cleanup_threshold);
+  void set_target_free_space(uint64_t target_free_space);
+
   virtual void set_boot_lockbox(BootLockbox* boot_lockbox) {
     boot_lockbox_ = boot_lockbox;
   }

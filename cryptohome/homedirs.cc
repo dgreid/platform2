@@ -405,11 +405,11 @@ HomeDirs::FreeSpaceState HomeDirs::GetFreeDiskSpaceState(
   }
 
   int64_t value = free_disk_space.value();
-  if (value >= kTargetFreeSpaceAfterCleanup) {
+  if (value >= target_free_space_) {
     return HomeDirs::FreeSpaceState::kAboveTarget;
-  } else if (value >= kFreeSpaceThresholdToTriggerCleanup) {
+  } else if (value >= normal_cleanup_threshold_) {
     return HomeDirs::FreeSpaceState::kAboveThreshold;
-  } else if (value >= kFreeSpaceThresholdToTriggerAggressiveCleanup) {
+  } else if (value >= aggressive_cleanup_threshold_) {
     return HomeDirs::FreeSpaceState::kNeedNormalCleanup;
   } else {
     return HomeDirs::FreeSpaceState::kNeedAggressiveCleanup;

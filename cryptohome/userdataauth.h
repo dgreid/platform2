@@ -142,6 +142,11 @@ class UserDataAuth {
   // main() because there's a command line switch for selecting this.
   void set_legacy_mount(bool legacy) { legacy_mount_ = legacy; }
 
+  // Set thresholds for automatic disk cleanup.
+  void set_cleanup_threshold(uint64_t cleanup_threshold);
+  void set_aggressive_cleanup_threshold(uint64_t aggressive_cleanup_threshold);
+  void set_target_free_space(uint64_t target_free_space);
+
   // Set the |low_disk_space_callback_| variable. This is usually called by the
   // DBus adaptor.
   void SetLowDiskSpaceCallback(const base::Callback<void(uint64_t)>& callback) {
