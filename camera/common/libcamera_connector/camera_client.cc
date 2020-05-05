@@ -286,6 +286,10 @@ void CameraClient::OnGotCameraInfo(int32_t result, mojom::CameraInfoPtr info) {
 void CameraClient::SendCameraInfo() {
   VLOGF_ENTER();
 
+  if (cam_info_callback_ == nullptr) {
+    return;
+  }
+
   for (auto& camera_id : camera_id_list_) {
     auto it = camera_info_map_.find(camera_id);
     if (camera_info_map_.find(camera_id) == camera_info_map_.end()) {

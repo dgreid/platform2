@@ -4,6 +4,7 @@
  * found in the LICENSE file.
  */
 
+#include <set>
 #include <vector>
 
 #include <base/command_line.h>
@@ -270,6 +271,14 @@ class CameraClient {
     }
   }
 
+  size_t GetNumberOfCameras() {
+    std::set<int> ids;
+    for (const auto& info : camera_infos_) {
+      ids.insert(info.id);
+    }
+    return ids.size();
+  }
+
   int FindIdForFormat(const cros_cam_format_info_t& format) {
     for (const auto& info : camera_infos_) {
       for (int i = 0; i < info.format_count; i++) {
@@ -320,9 +329,16 @@ class CaptureTest
 };
 
 TEST(ConnectorTest, GetInfo) {
-  CameraClient client;
-  client.ProbeCameraInfo();
-  client.DumpCameraInfo();
+  CameraClient client1;
+  client1.ProbeCameraInfo();
+  client1.DumpCameraInfo();
+
+  // Check that we can unsubscribe the info callback.
+  ASSERT_EQ(0, cros_cam_get_cam_info(nullptr, nullptr));
+
+  CameraClient client2;
+  client2.ProbeCameraInfo();
+  ASSERT_EQ(client1.GetNumberOfCameras(), client2.GetNumberOfCameras());
 }
 
 TEST_P(CaptureTest, OneFrame) {

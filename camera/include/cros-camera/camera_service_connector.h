@@ -181,8 +181,8 @@ CROS_CAMERA_EXPORT int cros_cam_exit();
 //   There is possible to start capture from callback
 //
 // Params:
-//   callback - callback used to receive information about each camera
-//   context  - arbitrary contex data that directly passed to their callback
+//   callback - callback to receive camera information, or null to unsubscribe
+//   context  - arbitrary context data that directly passed to their callback
 // Returns:
 //   0  - on success
 //   <0 - on failure
