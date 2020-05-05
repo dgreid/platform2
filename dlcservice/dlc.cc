@@ -35,7 +35,7 @@ vector<FilePath> DlcBase::GetPathsToDelete(const DlcId& id) {
           JoinPaths(system_state->dlc_prefs_dir(), id)};
 }
 
-// TODO(ahassani): Instead of initlialize function, create a factory method so
+// TODO(ahassani): Instead of initialize function, create a factory method so
 // we can develop different types of DLC classes.
 bool DlcBase::Initialize() {
   const auto* system_state = SystemState::Get();
