@@ -50,3 +50,13 @@ accept: 1
 recvfrom: 1
 sendto:1
 getsockopt: arg1 == SOL_SOCKET
+socketpair: 1
+alarm: 1
+setsockopt: 1
+sendmmsg: 1
+getpeername: 1
+getsockname: 1
+clone: 1
+setpriority: 1
+prctl: arg0 == PR_SET_NAME
+madvise: 1

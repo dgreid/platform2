@@ -17,12 +17,12 @@ rt_sigprocmask: 1
 send: 1
 recvmsg: 1
 gettimeofday: 1
-geteuid32: 1
+geteuid: 1
 sendmsg: 1
 write: 1
-getuid32: 1
-getgid32: 1
-getegid32: 1
+getuid: 1
+getgid: 1
+getegid: 1
 signalfd4: 1
 brk: 1
 getpid: 1
@@ -31,7 +31,7 @@ rt_sigaction: 1
 socket: arg0 == AF_UNIX || arg0 == AF_INET || arg0 == AF_INET6
 connect: 1
 pipe2: 1
-fcntl64: 1
+fcntl: 1
 execve: 1
 uname: 1
 access: 1
@@ -44,8 +44,8 @@ ioctl: arg1 == TCGETS || arg1 == SIOCGIFFLAGS || arg1 == SIOCSIFFLAGS
 _llseek: 1
 epoll_create1: 1
 clock_getres: 1
-getresuid32: 1
-getresgid32: 1
+getresuid: 1
+getresgid: 1
 getsockname: 1
 restart_syscall: 1
 exit: 1
@@ -72,5 +72,17 @@ bind: 1
 listen: 1
 accept: 1
 recvfrom: 1
-sendto:1
+sendto: 1
 getsockopt: arg1 == SOL_SOCKET
+socketpair: 1
+poll: 1
+alarm: 1
+setsockopt: 1
+sendmmsg: 1
+getpeername: 1
+getsockname: 1
+setpriority: 1
+madvise: 1
+creat: 1
+rmdir: 1
+unlink: 1
