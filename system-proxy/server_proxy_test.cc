@@ -112,10 +112,10 @@ class ServerProxyTest : public ::testing::Test {
 };
 
 TEST_F(ServerProxyTest, FetchCredentials) {
-  Credentials credentials;
+  worker::Credentials credentials;
   credentials.set_username(kUsername);
   credentials.set_password(kPassword);
-  WorkerConfigs configs;
+  worker::WorkerConfigs configs;
   *configs.mutable_credentials() = credentials;
   RedirectStdPipes();
 
@@ -129,10 +129,10 @@ TEST_F(ServerProxyTest, FetchCredentials) {
 }
 
 TEST_F(ServerProxyTest, FetchListeningAddress) {
-  SocketAddress address;
+  worker::SocketAddress address;
   address.set_addr(INADDR_ANY);
   address.set_port(kTestPort);
-  WorkerConfigs configs;
+  worker::WorkerConfigs configs;
   *configs.mutable_listening_address() = address;
   // Redirect the worker stdin and stdout pipes.
   RedirectStdPipes();
@@ -179,7 +179,7 @@ TEST_F(ServerProxyTest, HandleConnectRequest) {
   EXPECT_CALL(*server_proxy_, GetStdoutPipe())
       .WillOnce(Return(stdout_write_fd_.get()));
   brillo_loop_.RunOnce(false);
-  WorkerRequest request;
+  worker::WorkerRequest request;
   // Read the request from the worker's stdout output.
   ASSERT_TRUE(ReadProtobuf(stdout_read_fd_.get(), &request));
   ASSERT_TRUE(request.has_proxy_resolution_request());
@@ -190,10 +190,10 @@ TEST_F(ServerProxyTest, HandleConnectRequest) {
   EXPECT_EQ(1, server_proxy_->pending_proxy_resolution_requests_.size());
 
   // Write reply with a fake proxy to the worker's standard input.
-  ProxyResolutionReply reply;
+  worker::ProxyResolutionReply reply;
   reply.set_target_url(request.proxy_resolution_request().target_url());
   reply.add_proxy_servers(kFakeProxyAddress);
-  WorkerConfigs configs;
+  worker::WorkerConfigs configs;
   *configs.mutable_proxy_resolution_reply() = reply;
 
   ASSERT_TRUE(WriteProtobuf(stdin_write_fd_.get(), configs));

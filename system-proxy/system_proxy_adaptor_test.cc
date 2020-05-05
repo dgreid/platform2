@@ -114,7 +114,7 @@ TEST_F(SystemProxyAdaptorTest, SetSystemTrafficCredentials) {
   adaptor_->SetSystemTrafficCredentials(proto_blob);
   brillo_loop_.RunOnce(false);
 
-  WorkerConfigs config;
+  worker::WorkerConfigs config;
   ASSERT_TRUE(ReadProtobuf(read_scoped_fd.get(), &config));
   EXPECT_TRUE(config.has_credentials());
   EXPECT_EQ(config.credentials().username(), kUser);

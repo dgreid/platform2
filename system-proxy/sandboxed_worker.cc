@@ -91,10 +91,10 @@ bool SandboxedWorker::Start() {
 
 void SandboxedWorker::SetUsernameAndPassword(const std::string& username,
                                              const std::string& password) {
-  Credentials credentials;
+  worker::Credentials credentials;
   credentials.set_username(username);
   credentials.set_password(password);
-  WorkerConfigs configs;
+  worker::WorkerConfigs configs;
   *configs.mutable_credentials() = credentials;
   if (!WriteProtobuf(stdin_pipe_.get(), configs)) {
     LOG(ERROR) << "Failed to set credentials for worker " << pid_;
@@ -102,10 +102,10 @@ void SandboxedWorker::SetUsernameAndPassword(const std::string& username,
 }
 
 bool SandboxedWorker::SetListeningAddress(uint32_t addr, int port) {
-  SocketAddress address;
+  worker::SocketAddress address;
   address.set_addr(addr);
   address.set_port(port);
-  WorkerConfigs configs;
+  worker::WorkerConfigs configs;
   *configs.mutable_listening_address() = address;
 
   if (!WriteProtobuf(stdin_pipe_.get(), configs)) {
@@ -137,7 +137,7 @@ bool SandboxedWorker::IsRunning() {
 }
 
 void SandboxedWorker::OnMessageReceived() {
-  WorkerRequest request;
+  worker::WorkerRequest request;
 
   if (!ReadProtobuf(stdout_pipe_.get(), &request)) {
     LOG(ERROR) << "Failed to read request from worker " << pid_;
@@ -150,7 +150,7 @@ void SandboxedWorker::OnMessageReceived() {
   }
 
   if (request.has_proxy_resolution_request()) {
-    const ProxyResolutionRequest& proxy_request =
+    const worker::ProxyResolutionRequest& proxy_request =
         request.proxy_resolution_request();
 
     // This callback will always be called with at least one proxy entry. Even
@@ -208,7 +208,7 @@ void SandboxedWorker::OnProxyResolved(
     const std::string& target_url,
     bool success,
     const std::vector<std::string>& proxy_servers) {
-  ProxyResolutionReply reply;
+  worker::ProxyResolutionReply reply;
   reply.set_target_url(target_url);
 
   // Only http and direct proxies are supported at the moment.
@@ -221,7 +221,7 @@ void SandboxedWorker::OnProxyResolved(
     }
   }
 
-  WorkerConfigs configs;
+  worker::WorkerConfigs configs;
   *configs.mutable_proxy_resolution_reply() = reply;
 
   if (!WriteProtobuf(stdin_pipe_.get(), configs)) {

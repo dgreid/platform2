@@ -68,9 +68,9 @@ void ServerProxy::ResolveProxy(const std::string& target_url,
     it->second.push_back(std::move(callback));
     return;
   }
-  ProxyResolutionRequest proxy_request;
+  worker::ProxyResolutionRequest proxy_request;
   proxy_request.set_target_url(target_url);
-  WorkerRequest request;
+  worker::WorkerRequest request;
   *request.mutable_proxy_resolution_request() = proxy_request;
   if (!WriteProtobuf(GetStdoutPipe(), request)) {
     LOG(ERROR) << "Failed to send proxy resolution request for url: "
@@ -82,7 +82,7 @@ void ServerProxy::ResolveProxy(const std::string& target_url,
 }
 
 void ServerProxy::HandleStdinReadable() {
-  WorkerConfigs config;
+  worker::WorkerConfigs config;
   if (!ReadProtobuf(GetStdinPipe(), &config)) {
     LOG(ERROR) << "Error decoding protobuf configurations." << std::endl;
     return;
@@ -108,7 +108,7 @@ void ServerProxy::HandleStdinReadable() {
 
   if (config.has_proxy_resolution_reply()) {
     std::list<std::string> proxies;
-    const ProxyResolutionReply& reply = config.proxy_resolution_reply();
+    const worker::ProxyResolutionReply& reply = config.proxy_resolution_reply();
     for (auto const& proxy : reply.proxy_servers())
       proxies.push_back(proxy);
 
