@@ -56,13 +56,6 @@ class ManagerTest : public testing::Test {
                                                  Manager::kBooleanMetricMax));
   }
 
-  void ExpectConverterSuccess() {
-    EXPECT_CALL(*metrics_library_,
-                SendEnumToUMA(Manager::kMetricConverterResult,
-                              Manager::kBooleanMetricSuccess,
-                              Manager::kBooleanMetricMax));
-  }
-
   void CompareImages(const std::string& path_a, const std::string& path_b) {
     brillo::ProcessImpl diff;
     diff.AddArg("/usr/bin/perceptualdiff");
@@ -91,6 +84,7 @@ TEST_F(ManagerTest, ScanBlackAndWhiteSuccess) {
 
   ScanParameters parameters;
   parameters.format = kGrayscale;
+  parameters.bytes_per_line = 11;
   parameters.pixels_per_line = 85;
   parameters.lines = 29;
   parameters.depth = 1;
@@ -104,7 +98,6 @@ TEST_F(ManagerTest, ScanBlackAndWhiteSuccess) {
   base::ScopedFD scan_fd(scan.TakePlatformFile());
 
   ExpectScanSuccess();
-  ExpectConverterSuccess();
   EXPECT_TRUE(manager_.ScanImage(nullptr, "TestDevice", scan_fd,
                                  brillo::VariantDictionary()));
   CompareImages("./test_images/bw.png", output_path_.value());
@@ -123,6 +116,7 @@ TEST_F(ManagerTest, ScanGrayscaleSuccess) {
   parameters.pixels_per_line = 32;
   parameters.lines = 32;
   parameters.depth = 8;
+  parameters.bytes_per_line = parameters.pixels_per_line * parameters.depth / 8;
   device->SetScanParameters(parameters);
 
   sane_client_->SetDeviceForName("TestDevice", std::move(device));
@@ -133,7 +127,6 @@ TEST_F(ManagerTest, ScanGrayscaleSuccess) {
   base::ScopedFD scan_fd(scan.TakePlatformFile());
 
   ExpectScanSuccess();
-  ExpectConverterSuccess();
   EXPECT_TRUE(manager_.ScanImage(nullptr, "TestDevice", scan_fd,
                                  brillo::VariantDictionary()));
   CompareImages("./test_images/gray.png", output_path_.value());
@@ -149,6 +142,7 @@ TEST_F(ManagerTest, ScanColorSuccess) {
 
   ScanParameters parameters;
   parameters.format = kRGB;
+  parameters.bytes_per_line = 98 * 3;
   parameters.pixels_per_line = 98;
   parameters.lines = 50;
   parameters.depth = 8;
@@ -162,7 +156,6 @@ TEST_F(ManagerTest, ScanColorSuccess) {
   base::ScopedFD scan_fd(scan.TakePlatformFile());
 
   ExpectScanSuccess();
-  ExpectConverterSuccess();
   EXPECT_TRUE(manager_.ScanImage(nullptr, "TestDevice", scan_fd,
                                  brillo::VariantDictionary()));
   CompareImages("./test_images/color.png", output_path_.value());

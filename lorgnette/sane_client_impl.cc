@@ -214,6 +214,7 @@ bool SaneDeviceImpl::GetScanParameters(brillo::ErrorPtr* error,
       return false;
   }
 
+  parameters->bytes_per_line = params.bytes_per_line;
   parameters->pixels_per_line = params.pixels_per_line;
   parameters->lines = params.lines;
   parameters->depth = params.depth;

@@ -22,6 +22,7 @@ enum FrameFormat {
 
 struct ScanParameters {
   FrameFormat format;
+  int bytes_per_line;
   int pixels_per_line;
   int lines;
   int depth;

@@ -20,6 +20,7 @@ pkg_config("target_defaults_deps") {
     "libchrome-${libbase_ver}",
     "libmetrics-${libbase_ver}",
     "libminijail",
+    "libpng",
     "sane-backends",
   ]
 }

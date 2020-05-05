@@ -21,7 +21,6 @@
 #include "lorgnette/sane_client.h"
 
 namespace brillo {
-class Process;
 
 namespace dbus_utils {
 class ExportedObjectManager;
@@ -64,10 +63,6 @@ class Manager : public org::chromium::lorgnette::ManagerAdaptor,
     kBooleanMetricMax
   };
 
-  static const char kScanConverterPath[];
-  static const char kScanImageFormattedDeviceListCmd[];
-  static const char kScanImagePath[];
-  static const int kTimeoutAfterKillSeconds;
   static const char kMetricScanResult[];
   static const char kMetricConverterResult[];
 
