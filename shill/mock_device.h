@@ -43,7 +43,7 @@ class MockDevice : public Device {
               (bool, Error*, const ResultCallback&),
               (override));
   MOCK_METHOD(void, Scan, (Error*, const std::string&), (override));
-  MOCK_METHOD(bool, Load, (StoreInterface*), (override));
+  MOCK_METHOD(bool, Load, (const StoreInterface*), (override));
   MOCK_METHOD(bool, Save, (StoreInterface*), (override));
   MOCK_METHOD(void, DisableIPv6, (), (override));
   MOCK_METHOD(void, EnableIPv6, (), (override));

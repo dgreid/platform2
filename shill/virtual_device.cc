@@ -35,7 +35,7 @@ VirtualDevice::VirtualDevice(Manager* manager,
 
 VirtualDevice::~VirtualDevice() = default;
 
-bool VirtualDevice::Load(StoreInterface* /*storage*/) {
+bool VirtualDevice::Load(const StoreInterface* /*storage*/) {
   // Virtual devices have no persistent state.
   return true;
 }

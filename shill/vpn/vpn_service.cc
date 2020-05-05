@@ -118,7 +118,7 @@ ConnectionConstRefPtr VPNService::GetUnderlyingConnection() const {
   return underlying_service->connection();
 }
 
-bool VPNService::Load(StoreInterface* storage) {
+bool VPNService::Load(const StoreInterface* storage) {
   return Service::Load(storage) &&
          driver_->Load(storage, GetStorageIdentifier());
 }

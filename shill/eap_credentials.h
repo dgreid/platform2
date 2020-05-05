@@ -47,7 +47,7 @@ class EapCredentials {
   virtual bool IsConnectableUsingPassphrase() const;
 
   // Loads EAP properties from |storage| in group |id|.
-  virtual void Load(StoreInterface* store, const std::string& id);
+  virtual void Load(const StoreInterface* store, const std::string& id);
 
   // Output metrics about this EAP connection to |metrics| with technology
   // |technology|.

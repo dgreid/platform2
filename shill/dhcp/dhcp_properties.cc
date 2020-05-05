@@ -63,7 +63,7 @@ void DhcpProperties::InitPropertyStore(PropertyStore* store) {
   }
 }
 
-void DhcpProperties::Load(StoreInterface* storage, const string& id) {
+void DhcpProperties::Load(const StoreInterface* storage, const string& id) {
   SLOG(this, 2) << __func__;
   properties_.Clear();
   for (const auto& name : kPropertyNames) {

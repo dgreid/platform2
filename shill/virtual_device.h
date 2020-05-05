@@ -28,7 +28,7 @@ class VirtualDevice : public Device {
                 Technology technology);
   ~VirtualDevice() override;
 
-  bool Load(StoreInterface* storage) override;
+  bool Load(const StoreInterface* storage) override;
   bool Save(StoreInterface* storage) override;
 
   void Start(Error* error,

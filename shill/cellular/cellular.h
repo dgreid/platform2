@@ -101,7 +101,7 @@ class Cellular : public Device,
   std::string GetStorageIdentifier() const override;
 
   // Load configuration for the device from |storage|.
-  bool Load(StoreInterface* storage) override;
+  bool Load(const StoreInterface* storage) override;
 
   // Save configuration for the device to |storage|.
   bool Save(StoreInterface* storage) override;

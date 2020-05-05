@@ -97,7 +97,7 @@ void ThirdPartyVpnDriver::InitPropertyStore(PropertyStore* store) {
               &ThirdPartyVpnDriver::ClearExtensionId, nullptr)));
 }
 
-bool ThirdPartyVpnDriver::Load(StoreInterface* storage,
+bool ThirdPartyVpnDriver::Load(const StoreInterface* storage,
                                const std::string& storage_id) {
   bool return_value = VPNDriver::Load(storage, storage_id);
   if (adaptor_interface_ == nullptr) {

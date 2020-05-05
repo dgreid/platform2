@@ -42,7 +42,8 @@ class VPNDriver {
 
   virtual void InitPropertyStore(PropertyStore* store);
 
-  virtual bool Load(StoreInterface* storage, const std::string& storage_id);
+  virtual bool Load(const StoreInterface* storage,
+                    const std::string& storage_id);
   virtual bool Save(StoreInterface* storage,
                     const std::string& storage_id,
                     bool save_credentials);

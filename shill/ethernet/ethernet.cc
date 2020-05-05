@@ -189,7 +189,7 @@ void Ethernet::LinkEvent(unsigned int flags, unsigned int change) {
   }
 }
 
-bool Ethernet::Load(StoreInterface* storage) {
+bool Ethernet::Load(const StoreInterface* storage) {
   const string id = GetStorageIdentifier();
   if (!storage->ContainsGroup(id)) {
     SLOG(this, 2) << "Device is not available in the persistent store: " << id;

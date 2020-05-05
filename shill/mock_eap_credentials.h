@@ -20,7 +20,10 @@ class MockEapCredentials : public EapCredentials {
 
   MOCK_METHOD(bool, IsConnectable, (), (const, override));
   MOCK_METHOD(bool, IsConnectableUsingPassphrase, (), (const, override));
-  MOCK_METHOD(void, Load, (StoreInterface*, const std::string&), (override));
+  MOCK_METHOD(void,
+              Load,
+              (const StoreInterface*, const std::string&),
+              (override));
   MOCK_METHOD(void,
               OutputConnectionMetrics,
               (Metrics*, Technology),

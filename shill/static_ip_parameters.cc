@@ -59,7 +59,7 @@ void StaticIPParameters::PlumbPropertyStore(PropertyStore* store) {
               &StaticIPParameters::SetStaticIP)));
 }
 
-void StaticIPParameters::Load(StoreInterface* storage,
+void StaticIPParameters::Load(const StoreInterface* storage,
                               const string& storage_id) {
   KeyValueStore args;
   for (const auto& property : kProperties) {

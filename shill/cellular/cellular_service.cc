@@ -134,7 +134,7 @@ bool CellularService::IsLoadableFrom(const StoreInterface& storage) const {
   return !GetLoadableStorageIdentifier(storage).empty();
 }
 
-bool CellularService::Load(StoreInterface* storage) {
+bool CellularService::Load(const StoreInterface* storage) {
   string id = GetLoadableStorageIdentifier(*storage);
   if (id.empty()) {
     LOG(WARNING) << "No service with matching properties found";
@@ -434,7 +434,7 @@ bool CellularService::SetApn(const Stringmap& value, Error* error) {
   return true;
 }
 
-void CellularService::LoadApn(StoreInterface* storage,
+void CellularService::LoadApn(const StoreInterface* storage,
                               const string& storage_group,
                               const string& keytag,
                               Stringmap* apn_info) {
@@ -444,7 +444,7 @@ void CellularService::LoadApn(StoreInterface* storage,
   LoadApnField(storage, storage_group, keytag, kApnPasswordProperty, apn_info);
 }
 
-bool CellularService::LoadApnField(StoreInterface* storage,
+bool CellularService::LoadApnField(const StoreInterface* storage,
                                    const string& storage_group,
                                    const string& keytag,
                                    const string& apntag,

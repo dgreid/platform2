@@ -34,7 +34,7 @@ class StaticIPParameters {
   void PlumbPropertyStore(PropertyStore* store);
 
   // Load static IP parameters from a persistent store with id |storage_id|.
-  void Load(StoreInterface* storage, const std::string& storage_id);
+  void Load(const StoreInterface* storage, const std::string& storage_id);
 
   // Save static IP parameters to a persistent store with id |storage_id|.
   void Save(StoreInterface* storage, const std::string& storage_id);

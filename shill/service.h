@@ -265,7 +265,7 @@ class Service : public base::RefCounted<Service> {
   virtual bool Is8021x() const { return false; }
 
   // Loads the service from persistent |storage|. Returns true on success.
-  virtual bool Load(StoreInterface* storage);
+  virtual bool Load(const StoreInterface* storage);
 
   // Indicate to service that it is no longer persisted to storage.  It
   // should purge any stored profile state (e.g., credentials).  Returns
@@ -517,7 +517,7 @@ class Service : public base::RefCounted<Service> {
 
   // Retrieves |key| from |id| in |storage| to |value|.  If this key does
   // not exist, assign |default_value| to |value|.
-  static void LoadString(StoreInterface* storage,
+  static void LoadString(const StoreInterface* storage,
                          const std::string& id,
                          const std::string& key,
                          const std::string& default_value,

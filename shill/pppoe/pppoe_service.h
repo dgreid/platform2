@@ -35,7 +35,7 @@ class PPPoEService : public EthernetService, public RpcTaskDelegate {
   PPPoEService(Manager* manager, base::WeakPtr<Ethernet> ethernet);
   ~PPPoEService() override;
 
-  bool Load(StoreInterface* storage) override;
+  bool Load(const StoreInterface* storage) override;
   bool Save(StoreInterface* storage) override;
   bool Unload() override;
 

@@ -115,7 +115,7 @@ void PPPoEService::OnDisconnect(Error* error, const char* reason) {
   manager()->OnInnerDevicesChanged();
 }
 
-bool PPPoEService::Load(StoreInterface* storage) {
+bool PPPoEService::Load(const StoreInterface* storage) {
   if (!Service::Load(storage)) {
     return false;
   }

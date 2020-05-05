@@ -99,7 +99,7 @@ class WiFiService : public Service {
 
   // Override Load and Save from parent Service class.  We will call
   // the parent method.
-  bool Load(StoreInterface* storage) override;
+  bool Load(const StoreInterface* storage) override;
   bool Save(StoreInterface* storage) override;
   bool Unload() override;
 

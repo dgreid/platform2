@@ -57,7 +57,7 @@ class MockService : public Service {
               GetLoadableStorageIdentifier,
               (const StoreInterface&),
               (const, override));
-  MOCK_METHOD(bool, Load, (StoreInterface*), (override));
+  MOCK_METHOD(bool, Load, (const StoreInterface*), (override));
   MOCK_METHOD(bool, Unload, (), (override));
   MOCK_METHOD(bool, Save, (StoreInterface*), (override));
   MOCK_METHOD(void, Configure, (const KeyValueStore&, Error*), (override));

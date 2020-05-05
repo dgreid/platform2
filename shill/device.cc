@@ -430,7 +430,7 @@ const string& Device::UniqueName() const {
   return link_name_;
 }
 
-bool Device::Load(StoreInterface* storage) {
+bool Device::Load(const StoreInterface* storage) {
   const string id = GetStorageIdentifier();
   if (!storage->ContainsGroup(id)) {
     SLOG(this, 2) << "Device is not available in the persistent store: " << id;

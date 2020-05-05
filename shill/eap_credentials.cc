@@ -293,7 +293,7 @@ bool EapCredentials::IsConnectableUsingPassphrase() const {
   return !identity_.empty() && !password_.empty();
 }
 
-void EapCredentials::Load(StoreInterface* storage, const string& id) {
+void EapCredentials::Load(const StoreInterface* storage, const string& id) {
   // Authentication properties.
   storage->GetCryptedString(id, kStorageEapAnonymousIdentity,
                             &anonymous_identity_);

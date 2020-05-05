@@ -243,7 +243,7 @@ class Device : public base::RefCounted<Device> {
   // Load configuration for the device from |storage|.  This may include
   // instantiating non-visible services for which configuration has been
   // stored.
-  virtual bool Load(StoreInterface* storage);
+  virtual bool Load(const StoreInterface* storage);
 
   // Save configuration for the device to |storage|.
   virtual bool Save(StoreInterface* storage);

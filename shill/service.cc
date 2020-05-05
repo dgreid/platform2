@@ -599,7 +599,7 @@ bool Service::IsLoadableFrom(const StoreInterface& storage) const {
   return storage.ContainsGroup(GetStorageIdentifier());
 }
 
-bool Service::Load(StoreInterface* storage) {
+bool Service::Load(const StoreInterface* storage) {
   const string id = GetStorageIdentifier();
   if (!storage->ContainsGroup(id)) {
     LOG(WARNING) << "Service is not available in the persistent store: " << id;
@@ -1482,7 +1482,7 @@ void Service::HelpRegisterConstDerivedString(
 }
 
 // static
-void Service::LoadString(StoreInterface* storage,
+void Service::LoadString(const StoreInterface* storage,
                          const string& id,
                          const string& key,
                          const string& default_value,

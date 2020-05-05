@@ -45,7 +45,7 @@ class CellularService : public Service {
   std::string GetLoadableStorageIdentifier(
       const StoreInterface& storage) const override;
   bool IsLoadableFrom(const StoreInterface& storage) const override;
-  bool Load(StoreInterface* storage) override;
+  bool Load(const StoreInterface* storage) override;
   bool Save(StoreInterface* storage) override;
 
   const CellularRefPtr& cellular() const { return cellular_; }
@@ -156,11 +156,11 @@ class CellularService : public Service {
 
   Stringmap GetApn(Error* error);
   bool SetApn(const Stringmap& value, Error* error);
-  static void LoadApn(StoreInterface* storage,
+  static void LoadApn(const StoreInterface* storage,
                       const std::string& storage_group,
                       const std::string& keytag,
                       Stringmap* apn_info);
-  static bool LoadApnField(StoreInterface* storage,
+  static bool LoadApnField(const StoreInterface* storage,
                            const std::string& storage_group,
                            const std::string& keytag,
                            const std::string& apntag,

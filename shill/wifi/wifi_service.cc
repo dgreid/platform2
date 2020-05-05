@@ -340,7 +340,7 @@ bool WiFiService::IsVisible() const {
   return HasEndpoints() || IsConnected() || IsConnecting();
 }
 
-bool WiFiService::Load(StoreInterface* storage) {
+bool WiFiService::Load(const StoreInterface* storage) {
   string id = GetLoadableStorageIdentifier(*storage);
   if (id.empty()) {
     return false;

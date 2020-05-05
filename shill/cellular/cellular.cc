@@ -211,7 +211,7 @@ string Cellular::GetStorageIdentifier() const {
   return "device_" + GetEquipmentIdentifier();
 }
 
-bool Cellular::Load(StoreInterface* storage) {
+bool Cellular::Load(const StoreInterface* storage) {
   const string id = GetStorageIdentifier();
   if (!storage->ContainsGroup(id)) {
     LOG(WARNING) << "Device is not available in the persistent store: " << id;

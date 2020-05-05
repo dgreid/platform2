@@ -22,7 +22,10 @@ class MockDhcpProperties : public DhcpProperties {
               Save,
               (StoreInterface*, const std::string&),
               (const, override));
-  MOCK_METHOD(void, Load, (StoreInterface*, const std::string&), (override));
+  MOCK_METHOD(void,
+              Load,
+              (const StoreInterface*, const std::string&),
+              (override));
 
  private:
   DISALLOW_COPY_AND_ASSIGN(MockDhcpProperties);

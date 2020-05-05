@@ -32,7 +32,7 @@ class DhcpProperties {
   void InitPropertyStore(PropertyStore* store);
 
   // Loads DHCP properties from |storage| in group |id|.
-  virtual void Load(StoreInterface* store, const std::string& id);
+  virtual void Load(const StoreInterface* store, const std::string& id);
 
   // Saves DHCP properties to |storage| in group |id|.
   virtual void Save(StoreInterface* store, const std::string& id) const;

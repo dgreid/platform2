@@ -44,7 +44,7 @@ VPNDriver::VPNDriver(Manager* manager,
 
 VPNDriver::~VPNDriver() = default;
 
-bool VPNDriver::Load(StoreInterface* storage, const string& storage_id) {
+bool VPNDriver::Load(const StoreInterface* storage, const string& storage_id) {
   SLOG(this, 2) << __func__;
   for (size_t i = 0; i < property_count_; i++) {
     if ((properties_[i].flags & Property::kEphemeral)) {
