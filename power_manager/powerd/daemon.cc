@@ -500,6 +500,8 @@ void Daemon::HandleLidClosed() {
   state_controller_->HandleLidStateChange(LidState::CLOSED);
   for (auto controller : all_backlight_controllers_)
     controller->HandleLidStateChange(LidState::CLOSED);
+
+  dbus_wrapper_->EmitBareSignal(kLidClosedSignal);
 }
 
 void Daemon::HandleLidOpened() {
@@ -509,6 +511,8 @@ void Daemon::HandleLidOpened() {
   input_device_controller_->SetLidState(LidState::OPEN);
   for (auto controller : all_backlight_controllers_)
     controller->HandleLidStateChange(LidState::OPEN);
+
+  dbus_wrapper_->EmitBareSignal(kLidOpenedSignal);
 }
 
 void Daemon::HandlePowerButtonEvent(ButtonState state) {
