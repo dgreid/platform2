@@ -388,9 +388,8 @@ void StateController::Init(Delegate* delegate,
       base::Bind(&StateController::HandleUpdateEngineStatusUpdateSignal,
                  weak_ptr_factory_.GetWeakPtr()));
 
-  ml_decision_dbus_proxy_ =
-      dbus_wrapper_->GetObjectProxy(machine_learning::kMlDecisionServiceName,
-                                    machine_learning::kMlDecisionServicePath);
+  ml_decision_dbus_proxy_ = dbus_wrapper_->GetObjectProxy(
+      chromeos::kMlDecisionServiceName, chromeos::kMlDecisionServicePath);
   dbus_wrapper_->RegisterForServiceAvailability(
       ml_decision_dbus_proxy_,
       base::Bind(&StateController::HandleMlDecisionServiceAvailable,
@@ -1383,8 +1382,9 @@ void StateController::HandleMlDecisionServiceAvailable(bool available) {
 }
 
 void StateController::RequestSmartDimDecision() {
-  dbus::MethodCall method_call(machine_learning::kMlDecisionServiceInterface,
-                               machine_learning::kShouldDeferScreenDimMethod);
+  dbus::MethodCall method_call(
+      chromeos::kMlDecisionServiceInterface,
+      chromeos::kMlDecisionServiceShouldDeferScreenDimMethod);
 
   dbus_wrapper_->CallMethodAsync(
       ml_decision_dbus_proxy_, &method_call, kSmartDimDecisionTimeout,
@@ -1408,8 +1408,9 @@ void StateController::HandleSmartDimResponse(dbus::Response* response) {
 
   if (!response) {
     LOG(ERROR) << "D-Bus method call to "
-               << machine_learning::kMlDecisionServiceInterface << "."
-               << machine_learning::kShouldDeferScreenDimMethod << " failed";
+               << chromeos::kMlDecisionServiceInterface << "."
+               << chromeos::kMlDecisionServiceShouldDeferScreenDimMethod
+               << " failed";
     return;
   }
 
@@ -1417,8 +1418,9 @@ void StateController::HandleSmartDimResponse(dbus::Response* response) {
   bool should_defer_screen_dim = false;
   if (!reader.PopBool(&should_defer_screen_dim)) {
     LOG(ERROR) << "Unable to read info from "
-               << machine_learning::kMlDecisionServiceInterface << "."
-               << machine_learning::kShouldDeferScreenDimMethod << " response";
+               << chromeos::kMlDecisionServiceInterface << "."
+               << chromeos::kMlDecisionServiceShouldDeferScreenDimMethod
+               << " response";
     return;
   }
 
