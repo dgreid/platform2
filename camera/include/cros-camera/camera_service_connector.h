@@ -59,9 +59,9 @@ enum {
 // Format descriptor
 typedef struct cros_cam_format_info_t_ {
   uint32_t fourcc;  // format type (FOURCC code)
-  unsigned width;   // frame width in pixels
-  unsigned height;  // frame heght in pixels
-  unsigned fps;     // frame rate in frames per second
+  int width;        // frame width in pixels
+  int height;       // frame heght in pixels
+  int fps;          // frame rate in frames per second
 } cros_cam_format_info_t;
 
 // Camera descriptor
@@ -70,7 +70,7 @@ typedef struct cros_cam_info_t_ {
   int id;                               // device id
   int facing;                           // one of lens facing enum value
   const char* name;                     // user friendly camera name, UTF8
-  unsigned format_count;                // number of format descriptors
+  int format_count;                     // number of format descriptors
   cros_cam_format_info_t* format_info;  // pointer to array of formats
   void* reserved[8];                    // reserved for future use
 } cros_cam_info_t;
@@ -89,13 +89,13 @@ typedef struct cros_cam_info_t_ {
 //   <>0 - deregister callback
 typedef int (*cros_cam_get_cam_info_cb_t)(void* context,
                                           const cros_cam_info_t* info,
-                                          unsigned is_removed);
+                                          int is_removed);
 
 // Plane descriptor
 //   Stores the data for a plane of a frame.
 typedef struct cros_cam_plane_t_ {
-  unsigned stride;    // stride (pixel line) size in bytes, 0 if unused
-  unsigned size;      // size of the data, 0 if the data plane is unused
+  int stride;         // stride (pixel line) size in bytes, 0 if unused
+  int size;           // size of the data, 0 if the data plane is unused
   uint8_t* data;      // data, null if unused
   void* reserved[8];  // reserved for future use
 } cros_cam_plane_t;

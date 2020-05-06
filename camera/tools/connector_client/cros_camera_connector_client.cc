@@ -22,7 +22,7 @@ namespace cros {
 
 int OnGotCameraInfo(void* context,
                     const cros_cam_info_t* info,
-                    unsigned is_removed) {
+                    int is_removed) {
   // TODO(b/151047930): Support hot-plugging when external camera is supported.
   CHECK_EQ(is_removed, 0u);
 
@@ -41,7 +41,7 @@ int OnGotCameraInfo(void* context,
   LOGF(INFO) << "Gotten camera info of " << info->id
              << " (name = " << info->name
              << ", format_count = " << info->format_count << ")";
-  for (unsigned i = 0; i < info->format_count; ++i) {
+  for (int i = 0; i < info->format_count; ++i) {
     LOGF(INFO) << "format = " << GetDrmFormatName(info->format_info[i].fourcc)
                << ", width = " << info->format_info[i].width
                << ", height = " << info->format_info[i].height

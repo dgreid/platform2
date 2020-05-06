@@ -264,9 +264,9 @@ void CameraClient::OnGotCameraInfo(int32_t result, mojom::CameraInfoPtr info) {
 
     cros_cam_format_info_t info = {
         .fourcc = fourcc,
-        .width = static_cast<unsigned>(width),
-        .height = static_cast<unsigned>(height),
-        .fps = static_cast<unsigned>(round(1e9 / duration_ns)),
+        .width = static_cast<int>(width),
+        .height = static_cast<int>(height),
+        .fps = static_cast<int>(round(1e9 / duration_ns)),
     };
     format_info.push_back(std::move(info));
   }
@@ -300,7 +300,7 @@ void CameraClient::SendCameraInfo() {
         .id = camera_id,
         .facing = it->second.facing,
         .name = it->second.name.c_str(),
-        .format_count = static_cast<unsigned>(it->second.format_info.size()),
+        .format_count = static_cast<int>(it->second.format_info.size()),
         .format_info = it->second.format_info.data()};
 
     int ret =

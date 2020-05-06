@@ -117,7 +117,7 @@ void CameraClientOps::ProcessCaptureResult(
           .format = request_format_,
           .planes = {{
                          .stride = 0,
-                         .size = blob->jpeg_size,
+                         .size = static_cast<int>(blob->jpeg_size),
                          .data = static_cast<uint8_t*>(data) + unaligned_offset,
                      },
                      {.size = 0},
@@ -167,11 +167,11 @@ void CameraClientOps::ProcessCaptureResult(
       cros_cam_frame_t frame = {
           .format = request_format_,
           .planes = {
-              {.stride = buffer_handle->strides[0],
-               .size = buffer_handle->sizes->at(0),
+              {.stride = static_cast<int>(buffer_handle->strides[0]),
+               .size = static_cast<int>(buffer_handle->sizes->at(0)),
                .data = static_cast<uint8_t*>(y_ptr) + y_unaligned_offset},
-              {.stride = buffer_handle->strides[1],
-               .size = buffer_handle->sizes->at(1),
+              {.stride = static_cast<int>(buffer_handle->strides[1]),
+               .size = static_cast<int>(buffer_handle->sizes->at(1)),
                .data = static_cast<uint8_t*>(cb_ptr) + cb_unaligned_offset},
               {.size = 0},
               {.size = 0}}};

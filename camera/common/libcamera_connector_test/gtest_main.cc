@@ -187,7 +187,7 @@ class CameraClient {
   }
 
  private:
-  int GotCameraInfo(const cros_cam_info_t* info, unsigned is_removed) {
+  int GotCameraInfo(const cros_cam_info_t* info, int is_removed) {
     EXPECT_FALSE(camera_info_frozen_) << "unexpected hotplug events";
     EXPECT_EQ(is_removed, 0) << "unexpected removing events";
     EXPECT_GT(info->format_count, 0) << "no available formats";
@@ -198,7 +198,7 @@ class CameraClient {
 
   static int GetCamInfoCallback(void* context,
                                 const cros_cam_info_t* info,
-                                unsigned is_removed) {
+                                int is_removed) {
     auto* self = reinterpret_cast<CameraClient*>(context);
     return self->GotCameraInfo(info, is_removed);
   }

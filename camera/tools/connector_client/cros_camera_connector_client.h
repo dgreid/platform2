@@ -18,9 +18,7 @@
 
 namespace cros {
 
-int OnGotCameraInfo(void* context,
-                    const cros_cam_info_t* info,
-                    unsigned is_removed);
+int OnGotCameraInfo(void* context, const cros_cam_info_t* info, int is_removed);
 
 int OnFrameAvailable(void* context, const cros_cam_frame_t* frame);
 
