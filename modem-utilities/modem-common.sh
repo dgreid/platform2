@@ -169,11 +169,12 @@ esim_status() {
 
 esim_install() {
   local activation_code="$1"
+  local confirmation_code="$2"
   [ -z "${activation_code}" ] && error_exit "No activation_code provided."
 
   dbus_call "${HERMES}" "${HERMES_MANAGER_OBJECT}" \
             "${HERMES_MANAGER_IFACE}.InstallProfileFromActivationCode" \
-            string:"${activation_code}"
+            string:"${activation_code}" string:"${confirmation_code}"
 }
 
 esim_uninstall() {

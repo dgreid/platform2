@@ -34,10 +34,11 @@ class Manager : public org::chromium::Hermes::ManagerInterface,
   // to be installed.
   void InstallProfileFromActivationCode(
       std::unique_ptr<DBusResponse<dbus::ObjectPath>> response,
-      const std::string& in_activation_code) override;
-  void InstallPendingProfile(
-      std::unique_ptr<DBusResponse<>> response,
-      const dbus::ObjectPath& in_pending_profile) override;
+      const std::string& in_activation_code,
+      const std::string& in_confirmation_code) override;
+  void InstallPendingProfile(std::unique_ptr<DBusResponse<>> response,
+                             const dbus::ObjectPath& in_pending_profile,
+                             const std::string& in_confirmation_code) override;
   void UninstallProfile(std::unique_ptr<DBusResponse<>> response,
                         const dbus::ObjectPath& in_profile) override;
   // Update the PendingProfiles property.

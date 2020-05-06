@@ -137,7 +137,7 @@ usage() {
   echo "  activate [-modem <modem>] [<carrier>]        Activate modem"
   echo "  connect [-modem <modem>] [phone number]      Connect modem"
   echo "  esim status                                  Display eSIM status"
-  echo "  esim install <activation_code>               Install eSIM profile"
+  echo "  esim install <activation> [<confirmation>]   Install eSIM profile"
   echo "  esim uninstall <iccid>                       Uninstall eSIM profile"
   echo "  esim enable <iccid>                          Enable eSIM profile"
   echo "  esim disable <iccid>                         Disable eSIM profile"

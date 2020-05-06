@@ -17,6 +17,11 @@
         Activation code of the profile to install.
       </tp:docstring>
     </arg>
+    <arg name="confirmation_code" type="s" direction="in">
+      <tp:docstring>
+        Confirmation code of the profile to install, or "" if none.
+      </tp:docstring>
+    </arg>
     <arg name="profile" type="o" direction="out">
       <tp:docstring>
         Profile object representing the newly-installed profile.
@@ -29,6 +34,11 @@
     </tp:docstring>
     <annotation name="org.chromium.DBus.Method.Kind" value="async" />
     <arg name="pending_profile" type="o" direction="in" />
+    <arg name="confirmation_code" type="s" direction="in">
+      <tp:docstring>
+        Confirmation code of the profile to install, or "" if none.
+      </tp:docstring>
+    </arg>
   </method>
   <method name="UninstallProfile">
     <tp:docstring>

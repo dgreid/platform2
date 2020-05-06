@@ -37,7 +37,8 @@ Manager::Manager(const scoped_refptr<dbus::Bus>& bus, LpaContext* context)
 
 void Manager::InstallProfileFromActivationCode(
     std::unique_ptr<DBusResponse<dbus::ObjectPath>> response,
-    const std::string& in_activation_code) {
+    const std::string& in_activation_code,
+    const std::string& in_confirmation_code) {
   auto profile_cb = [response{std::shared_ptr<DBusResponse<dbus::ObjectPath>>(
                          std::move(response))},
                      this](lpa::proto::ProfileInfo& info, int error) {
@@ -66,13 +67,15 @@ void Manager::InstallProfileFromActivationCode(
   lpa::core::Lpa::DownloadOptions options;
   options.enable_profile = false;
   options.allow_policy_rules = false;
+  options.confirmation_code = in_confirmation_code;
   context_->lpa->DownloadProfile(in_activation_code, std::move(options),
                                  context_->executor, std::move(profile_cb));
 }
 
 void Manager::InstallPendingProfile(
     std::unique_ptr<DBusResponse<>> response,
-    const dbus::ObjectPath& /*in_pending_profile*/) {
+    const dbus::ObjectPath& /*in_pending_profile*/,
+    const std::string& /*in_confirmation_code*/) {
   response->ReplyWithError(
       FROM_HERE, brillo::errors::dbus::kDomain, kErrorUnsupported,
       "This method is not supported until crbug.com/1071470 is implemented");
