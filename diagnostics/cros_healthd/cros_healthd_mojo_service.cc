@@ -29,6 +29,7 @@ CrosHealthdMojoService::CrosHealthdMojoService(
     CachedVpdFetcher* cached_vpd_fetcher,
     FanFetcher* fan_fetcher,
     BluetoothEvents* bluetooth_events,
+    LidEvents* lid_events,
     PowerEvents* power_events,
     CrosHealthdRoutineService* routine_service)
     : backlight_fetcher_(backlight_fetcher),
@@ -36,6 +37,7 @@ CrosHealthdMojoService::CrosHealthdMojoService(
       cached_vpd_fetcher_(cached_vpd_fetcher),
       fan_fetcher_(fan_fetcher),
       bluetooth_events_(bluetooth_events),
+      lid_events_(lid_events),
       power_events_(power_events),
       routine_service_(routine_service) {
   DCHECK(backlight_fetcher_);
@@ -43,6 +45,7 @@ CrosHealthdMojoService::CrosHealthdMojoService(
   DCHECK(cached_vpd_fetcher_);
   DCHECK(fan_fetcher_);
   DCHECK(bluetooth_events_);
+  DCHECK(lid_events_);
   DCHECK(power_events_);
   DCHECK(routine_service_);
 }
@@ -196,6 +199,11 @@ void CrosHealthdMojoService::RunBatteryDischargeRoutine(
 void CrosHealthdMojoService::AddBluetoothObserver(
     chromeos::cros_healthd::mojom::CrosHealthdBluetoothObserverPtr observer) {
   bluetooth_events_->AddObserver(std::move(observer));
+}
+
+void CrosHealthdMojoService::AddLidObserver(
+    chromeos::cros_healthd::mojom::CrosHealthdLidObserverPtr observer) {
+  lid_events_->AddObserver(std::move(observer));
 }
 
 void CrosHealthdMojoService::AddPowerObserver(

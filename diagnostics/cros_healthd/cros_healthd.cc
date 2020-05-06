@@ -26,6 +26,7 @@
 #include "diagnostics/common/system/powerd_adapter_impl.h"
 #include "diagnostics/cros_healthd/cros_healthd_routine_service_impl.h"
 #include "diagnostics/cros_healthd/events/bluetooth_events_impl.h"
+#include "diagnostics/cros_healthd/events/lid_events_impl.h"
 #include "diagnostics/cros_healthd/events/power_events_impl.h"
 
 namespace diagnostics {
@@ -67,6 +68,8 @@ CrosHealthd::CrosHealthd()
   bluetooth_events_ =
       std::make_unique<BluetoothEventsImpl>(bluetooth_client_.get());
 
+  lid_events_ = std::make_unique<LidEventsImpl>(powerd_adapter_.get());
+
   power_events_ = std::make_unique<PowerEventsImpl>(powerd_adapter_.get());
 
   routine_service_ = std::make_unique<CrosHealthdRoutineServiceImpl>(
@@ -75,7 +78,7 @@ CrosHealthd::CrosHealthd()
   mojo_service_ = std::make_unique<CrosHealthdMojoService>(
       backlight_fetcher_.get(), battery_fetcher_.get(),
       cached_vpd_fetcher_.get(), fan_fetcher_.get(), bluetooth_events_.get(),
-      power_events_.get(), routine_service_.get());
+      lid_events_.get(), power_events_.get(), routine_service_.get());
 
   binding_set_.set_connection_error_handler(
       base::Bind(&CrosHealthd::OnDisconnect, base::Unretained(this)));

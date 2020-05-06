@@ -23,6 +23,7 @@ source_set("libcros_healthd_events") {
   all_dependent_configs = [ ":libcros_healthd_events_pkg_deps" ]
   sources = [
     "bluetooth_events_impl.cc",
+    "lid_events_impl.cc",
     "power_events_impl.cc",
   ]
 }
@@ -49,6 +50,7 @@ if (use.test) {
     ]
     sources = [
       "bluetooth_events_impl_test.cc",
+      "lid_events_impl_test.cc",
       "power_events_impl_test.cc",
     ]
   }

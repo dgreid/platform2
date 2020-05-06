@@ -26,6 +26,7 @@
 #include "diagnostics/cros_healthd/cros_healthd_mojo_service.h"
 #include "diagnostics/cros_healthd/cros_healthd_routine_service.h"
 #include "diagnostics/cros_healthd/events/bluetooth_events_impl.h"
+#include "diagnostics/cros_healthd/events/lid_events_impl.h"
 #include "diagnostics/cros_healthd/events/power_events_impl.h"
 #include "diagnostics/cros_healthd/utils/backlight_utils.h"
 #include "diagnostics/cros_healthd/utils/battery_utils.h"
@@ -150,12 +151,13 @@ class CrosHealthdMojoServiceTest : public testing::Test {
     fan_fetcher_ = std::make_unique<FanFetcher>(mock_debugd_proxy_.get());
     bluetooth_events_ =
         std::make_unique<BluetoothEventsImpl>(fake_bluetooth_client_.get());
+    lid_events_ = std::make_unique<LidEventsImpl>(fake_powerd_adapter_.get());
     power_events_ =
         std::make_unique<PowerEventsImpl>(fake_powerd_adapter_.get());
     service_ = std::make_unique<CrosHealthdMojoService>(
         backlight_fetcher_.get(), battery_fetcher_.get(),
         cached_vpd_fetcher_.get(), fan_fetcher_.get(), bluetooth_events_.get(),
-        power_events_.get(), &routine_service_);
+        lid_events_.get(), power_events_.get(), &routine_service_);
   }
 
   CrosHealthdMojoService* service() { return service_.get(); }
@@ -177,6 +179,7 @@ class CrosHealthdMojoServiceTest : public testing::Test {
   std::unique_ptr<CachedVpdFetcher> cached_vpd_fetcher_;
   std::unique_ptr<FanFetcher> fan_fetcher_;
   std::unique_ptr<BluetoothEventsImpl> bluetooth_events_;
+  std::unique_ptr<LidEventsImpl> lid_events_;
   std::unique_ptr<PowerEventsImpl> power_events_;
   std::unique_ptr<CrosHealthdMojoService> service_;
 };

@@ -16,6 +16,7 @@
 
 #include "diagnostics/cros_healthd/cros_healthd_routine_service.h"
 #include "diagnostics/cros_healthd/events/bluetooth_events.h"
+#include "diagnostics/cros_healthd/events/lid_events.h"
 #include "diagnostics/cros_healthd/events/power_events.h"
 #include "diagnostics/cros_healthd/utils/backlight_utils.h"
 #include "diagnostics/cros_healthd/utils/battery_utils.h"
@@ -42,6 +43,7 @@ class CrosHealthdMojoService final
   // |cached_vpd_fetcher| - CachedVpdFetcher implementation.
   // |fan_fetcher| - FanFetcher implementation.
   // |bluetooth_events| - BluetoothEvents implementation.
+  // |lid_events| - LidEvents implementation.
   // |power_events| - PowerEvents implementation.
   // |routine_service| - CrosHealthdRoutineService implementation.
   CrosHealthdMojoService(BacklightFetcher* backlight_fetcher,
@@ -49,6 +51,7 @@ class CrosHealthdMojoService final
                          CachedVpdFetcher* cached_vpd_fetcher,
                          FanFetcher* fan_fetcher,
                          BluetoothEvents* bluetooth_events,
+                         LidEvents* lid_events,
                          PowerEvents* power_events,
                          CrosHealthdRoutineService* routine_service);
   ~CrosHealthdMojoService() override;
@@ -106,6 +109,8 @@ class CrosHealthdMojoService final
   void AddBluetoothObserver(
       chromeos::cros_healthd::mojom::CrosHealthdBluetoothObserverPtr observer)
       override;
+  void AddLidObserver(chromeos::cros_healthd::mojom::CrosHealthdLidObserverPtr
+                          observer) override;
   void AddPowerObserver(
       chromeos::cros_healthd::mojom::CrosHealthdPowerObserverPtr observer)
       override;
@@ -143,6 +148,8 @@ class CrosHealthdMojoService final
   FanFetcher* fan_fetcher_;
   // Unowned. The BluetoothEvents instance should outlive this instance.
   BluetoothEvents* const bluetooth_events_ = nullptr;
+  // Unowned. The lid events should outlive this instance.
+  LidEvents* const lid_events_ = nullptr;
   // Unowned. The power events should outlive this instance.
   PowerEvents* const power_events_ = nullptr;
   // Unowned. The routine service should outlive this instance.
