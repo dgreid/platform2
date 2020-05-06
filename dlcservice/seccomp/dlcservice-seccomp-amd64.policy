@@ -60,3 +60,5 @@ connect: 1
 sendto: 1
 socket: arg0 == AF_UNIX
 gettimeofday: 1
+flock: 1
+prlimit64: 1
