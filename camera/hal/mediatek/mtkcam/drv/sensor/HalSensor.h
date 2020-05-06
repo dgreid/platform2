@@ -131,13 +131,20 @@ class HalSensor : public IHalSensor {
   MUINT32 mScenarioId;
   MUINT32 mHdrMode;
   MUINT32 mPdafMode;
+  MUINT32 mDgainRatio;
   MUINT32 mFramerate;  // max frame rate: unit linelength
   MUINT32 m_LineTimeInus;
   MUINT32 m_vblank;
   MUINT32 m_pixClk;
   MUINT32 m_linelength;
+  MUINT32 m_margin;
+  MUINT32 m_minShutter;
+  MUINT32 m_maxFramelength;
   MUINT32 m_framelength;
+  MUINT32 m_SensorGainBase;
   MUINT32 m_SensorGainFactor;
+  MUINT32 m_SensorGainMapSize;
+  struct imgsensor_agc_param_struct* m_SensorAgcParam;
 };
 };      // namespace NSHalSensor
 };      // namespace NSCam

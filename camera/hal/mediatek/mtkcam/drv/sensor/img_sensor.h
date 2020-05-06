@@ -17,6 +17,9 @@
 #ifndef CAMERA_HAL_MEDIATEK_MTKCAM_DRV_SENSOR_IMG_SENSOR_H_
 #define CAMERA_HAL_MEDIATEK_MTKCAM_DRV_SENSOR_IMG_SENSOR_H_
 
+#define SENSOR_GAIN_MAP_SIZE 17
+#define GAIN_BASE_3A 1024
+
 enum IMGSENSOR_MODE {
   IMGSENSOR_MODE_INIT,
   IMGSENSOR_MODE_PREVIEW,
@@ -77,10 +80,19 @@ struct imgsensor_struct {
   MUINT8 i2c_write_id; /* record current sensor's i2c write id */
 };
 
+/* SENSOR PRIVATE STRUCT FOR AGC PARAMETER */
+struct imgsensor_agc_param_struct {
+  MUINT32 auto_pregain;
+  MUINT32 col_code;
+};
+
 /* SENSOR PRIVATE STRUCT FOR CONSTANT*/
 struct imgsensor_info_struct {
   MUINT32 sensor_id;      /* record sensor id defined in Kd_imgsensor.h */
   MUINT32 checksum_value; /* checksum value for Camera Auto Test */
+
+  struct imgsensor_agc_param_struct sensor_agc_param_map[SENSOR_GAIN_MAP_SIZE];
+
   struct imgsensor_mode_struct pre; /* preview scenario relative information */
   struct imgsensor_mode_struct cap; /* capture scenario relative information */
   struct imgsensor_mode_struct cap1;

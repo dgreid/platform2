@@ -28,6 +28,7 @@ struct IMGSENSOR_SENSOR_LIST gimgsensor_sensor_list[MAX_NUM_OF_SUPPORT_SENSOR] =
         {OV2685_SENSOR_ID, SENSOR_DRVNAME_OV2685_MIPI_RAW, NULL},
         {OV8856_SENSOR_ID, SENSOR_DRVNAME_OV8856_MIPI_RAW, NULL},
         {OV02A10_SENSOR_ID, SENSOR_DRVNAME_OV02A10_MIPI_RAW, NULL},
+        {GC5035_SENSOR_ID, SENSOR_DRVNAME_GC5035_MIPI_RAW, NULL},
         /*  ADD sensor driver before this line */
         {0, {0}, NULL}, /* end of list */
 };
@@ -58,7 +59,7 @@ static SENSOR_WINSIZE_INFO_STRUCT gImgsensor_winsize_info[][SCENARIO_ID_MAX] = {
         {1600, 1200, 0, 0, 1600, 1200, 1600, 1200, 0, 0, 1600, 1200, 0, 0, 1600,
          1200}, /* hs video */
         {1600, 1200, 0, 0, 1600, 1200, 1600, 1200, 0, 0, 1600, 1200, 0, 0, 1600,
-         1200} /*slim video */
+         1200} /* slim video */
     },
     {// ov8856
      {3296, 2480, 0, 0, 3296, 2480, 3264, 2448, 0, 0, 3264, 2448, 0, 0, 3264,
@@ -81,7 +82,20 @@ static SENSOR_WINSIZE_INFO_STRUCT gImgsensor_winsize_info[][SCENARIO_ID_MAX] = {
         {1600, 1200, 0, 0, 1600, 1200, 1600, 1200, 0, 0, 1600, 1200, 0, 0, 1600,
          1200}, /* hs video */
         {1600, 1200, 0, 0, 1600, 1200, 1600, 1200, 0, 0, 1600, 1200, 0, 0, 1600,
-         1200} /*slim video */
+         1200} /* slim video */
+    },
+    {
+        // gc5035
+        {2592, 1944, 0, 0, 2592, 1944, 2592, 1944, 0, 0, 2592, 1944, 0, 0, 2592,
+         1944}, /* preview */
+        {2592, 1944, 0, 0, 2592, 1944, 2592, 1944, 0, 0, 2592, 1944, 0, 0, 2592,
+         1944}, /* capture */
+        {2592, 1944, 0, 0, 2592, 1944, 1296, 972, 0, 0, 1296, 972, 0, 0, 1296,
+         972}, /* video */
+        {2592, 1944, 656, 492, 1280, 960, 640, 480, 0, 0, 640, 480, 0, 0, 640,
+         480}, /* hs video */
+        {2592, 1944, 16, 252, 2560, 1440, 1280, 720, 0, 0, 1280, 720, 0, 0,
+         1280, 720} /* slim video */
     },
 };
 
@@ -91,6 +105,11 @@ static struct imgsensor_info_struct gImgsensor_info[] = {
             OV5695_SENSOR_ID, /* record sensor id defined in Kd_imgsensor.h */
 
         .checksum_value = 0x6c259b92, /* checksum value for Camera Auto Test */
+
+        .sensor_agc_param_map =
+            {
+                {0, 0},
+            },
 
         .pre =
             {
@@ -344,6 +363,11 @@ static struct imgsensor_info_struct gImgsensor_info[] = {
 
         .checksum_value = 0x6c259b92, /* checksum value for Camera Auto Test */
 
+        .sensor_agc_param_map =
+            {
+                {0, 0},
+            },
+
         .pre =
             {
                 /*data rate 1099.20 Mbps/lane */
@@ -596,6 +620,11 @@ static struct imgsensor_info_struct gImgsensor_info[] = {
 
         .checksum_value = 0xb1893b4f, /* checksum value for Camera Auto Test */
 
+        .sensor_agc_param_map =
+            {
+                {0, 0},
+            },
+
         .pre =
             {
                 .pclk = 144000000,   /*record different mode's pclk*/
@@ -830,6 +859,11 @@ static struct imgsensor_info_struct gImgsensor_info[] = {
             OV02A10_SENSOR_ID, /* record sensor id defined in Kd_imgsensor.h */
 
         .checksum_value = 0xb1893b4f, /* checksum value for Camera Auto Test */
+
+        .sensor_agc_param_map =
+            {
+                {0, 0},
+            },
 
         .pre =
             {
@@ -1072,6 +1106,280 @@ static struct imgsensor_info_struct gImgsensor_info[] = {
         .SensorHightSampling = 0,
         .SensorPacketECCOrder = 1,
         .SensorGainfactor = 6,
+        .SensorHFlip = 0,
+        .SensorVFlip = 0,
+    },
+    {
+        .sensor_id =
+            GC5035_SENSOR_ID, /* record sensor id defined in Kd_imgsensor.h */
+
+        .checksum_value = 0xcde448ca, /* checksum value for Camera Auto Test */
+
+        .sensor_agc_param_map =
+            {
+                /* GC5035 */
+                {256, 0},
+                {302, 1},
+                {358, 2},
+                {425, 3},
+                {502, 8},
+                {599, 9},
+                {717, 10},
+                {845, 11},
+                {998, 12},
+                {1203, 13},
+                {1434, 14},
+                {1710, 15},
+                {1997, 16},
+                {2355, 17},
+                {2816, 18},
+                {3318, 19},
+                {3994, 20},
+            },
+
+        .pre =
+            {
+                /*data rate 1099.20 Mbps/lane */
+                .pclk = 175200000,   /* record different mode's pclk */
+                .linelength = 2920,  /* record different mode's linelength */
+                .framelength = 2008, /* record different mode's framelength */
+                .startx = 0, /* record different mode's startx of grabwindow */
+                .starty = 0, /* record different mode's starty of grabwindow */
+                .grabwindow_width =
+                    2592, /* record different mode's width of grabwindow */
+                .grabwindow_height =
+                    1944, /* record different mode's height of grabwindow */
+                /*     following for MIPIDataLowPwr2HighSpeedSettleDelayCount by
+                   different scenario    */
+                .mipi_data_lp2hs_settle_dc = 85, /* unit , ns */
+                /*     following for GetDefaultFramerateByScenario()    */
+                .max_framerate = 300,
+            },
+        .cap =
+            {
+                /*data rate 1499.20 Mbps/lane */
+                .pclk = 175200000,
+                .linelength = 2920,
+                .framelength = 2008,
+                .startx = 0,
+                .starty = 0,
+                .grabwindow_width = 2592,
+                .grabwindow_height = 1944,
+                .mipi_data_lp2hs_settle_dc = 85, /* unit , ns */
+                .max_framerate = 300,
+            },
+        .cap1 =
+            {
+                /*data rate 1499.20 Mbps/lane */
+                .pclk = 141600000,
+                .linelength = 2920,
+                .framelength = 2008,
+                .startx = 0,
+                .starty = 0,
+                .grabwindow_width = 2592,
+                .grabwindow_height = 1944,
+                .mipi_data_lp2hs_settle_dc = 85, /* unit , ns */
+                .max_framerate = 240,
+            },
+
+        .normal_video =
+            {
+                /*data rate 1499.20 Mbps/lane */
+                .pclk = 87600000,
+                .linelength = 1460,
+                .framelength = 2008,
+                .startx = 0,
+                .starty = 0,
+                .grabwindow_width = 1296,
+                .grabwindow_height = 972,
+                .mipi_data_lp2hs_settle_dc = 85, /* unit , ns */
+                .max_framerate = 300,
+            },
+        .hs_video =
+            {
+                /*data rate 600 Mbps/lane */
+                .pclk = 175200000,
+                .linelength = 1896,
+                .framelength = 1536,
+                .startx = 0,
+                .starty = 0,
+                .grabwindow_width = 1280,
+                .grabwindow_height = 720,
+                .mipi_data_lp2hs_settle_dc = 85, /* unit , ns */
+                .max_framerate = 600,
+            },
+        .slim_video =
+            {
+                /*data rate 792 Mbps/lane */
+                .pclk = 87600000,
+                .linelength = 1460,
+                .framelength = 2008,
+                .startx = 0,
+                .starty = 0,
+                .grabwindow_width = 1280,
+                .grabwindow_height = 720,
+                .mipi_data_lp2hs_settle_dc = 85, /* unit , ns */
+                .max_framerate = 300,
+            },
+        .custom1 =
+            {
+                /*data rate 1099.20 Mbps/lane */
+                .pclk = 531000000,   /* record different mode's pclk */
+                .linelength = 6024,  /* record different mode's linelength */
+                .framelength = 2896, /* record different mode's framelength */
+                .startx = 0, /* record different mode's startx of grabwindow */
+                .starty = 0, /* record different mode's starty of grabwindow */
+                .grabwindow_width =
+                    2672, /* record different mode's width of grabwindow */
+                .grabwindow_height =
+                    2008, /* record different mode's height of grabwindow */
+                /*         following for
+                   MIPIDataLowPwr2HighSpeedSettleDelayCount by different
+                   scenario    */
+                .mipi_data_lp2hs_settle_dc = 85, /* unit , ns */
+                /*         following for GetDefaultFramerateByScenario() */
+                .max_framerate = 300,
+            },
+
+        .custom2 =
+            {
+                /*data rate 1099.20 Mbps/lane */
+                .pclk = 531000000,   /* record different mode's pclk */
+                .linelength = 6024,  /* record different mode's linelength */
+                .framelength = 2896, /* record different mode's framelength */
+                .startx = 0, /* record different mode's startx of grabwindow */
+                .starty = 0, /* record different mode's starty of grabwindow */
+                .grabwindow_width =
+                    2672, /* record different mode's width of grabwindow */
+                .grabwindow_height =
+                    2008, /* record different mode's height of grabwindow */
+                /*     following for MIPIDataLowPwr2HighSpeedSettleDelayCount by
+                   different scenario    */
+                .mipi_data_lp2hs_settle_dc = 85, /* unit , ns */
+                /*     following for GetDefaultFramerateByScenario()    */
+                .max_framerate = 300,
+            },
+        .custom3 =
+            {
+                /*data rate 1099.20 Mbps/lane */
+                .pclk = 531000000,   /* record different mode's pclk */
+                .linelength = 6024,  /* record different mode's linelength */
+                .framelength = 2896, /* record different mode's framelength */
+                .startx = 0, /* record different mode's startx of grabwindow */
+                .starty = 0, /* record different mode's starty of grabwindow */
+                .grabwindow_width =
+                    2672, /* record different mode's width of grabwindow */
+                .grabwindow_height =
+                    2008, /* record different mode's height of grabwindow */
+                /*     following for MIPIDataLowPwr2HighSpeedSettleDelayCount by
+                   different scenario    */
+                .mipi_data_lp2hs_settle_dc = 85, /* unit , ns */
+                /*     following for GetDefaultFramerateByScenario()    */
+                .max_framerate = 300,
+            },
+        .custom4 =
+            {
+                /*data rate 1099.20 Mbps/lane */
+                .pclk = 531000000,   /* record different mode's pclk */
+                .linelength = 6024,  /* record different mode's linelength */
+                .framelength = 2896, /* record different mode's framelength */
+                .startx = 0, /* record different mode's startx of grabwindow */
+                .starty = 0, /* record different mode's starty of grabwindow */
+                .grabwindow_width =
+                    2672, /* record different mode's width of grabwindow */
+                .grabwindow_height =
+                    2008, /* record different mode's height of grabwindow */
+                /*     following for MIPIDataLowPwr2HighSpeedSettleDelayCount by
+                   different scenario    */
+                .mipi_data_lp2hs_settle_dc = 85, /* unit , ns */
+                /*     following for GetDefaultFramerateByScenario()    */
+                .max_framerate = 300,
+            },
+        .custom5 =
+            {
+                /*data rate 1099.20 Mbps/lane */
+                .pclk = 531000000,   /* record different mode's pclk */
+                .linelength = 6024,  /* record different mode's linelength */
+                .framelength = 2896, /* record different mode's framelength */
+                .startx = 0, /* record different mode's startx of grabwindow */
+                .starty = 0, /* record different mode's starty of grabwindow */
+                .grabwindow_width =
+                    2672, /* record different mode's width of grabwindow */
+                .grabwindow_height =
+                    2008, /* record different mode's height of grabwindow */
+                /*     following for MIPIDataLowPwr2HighSpeedSettleDelayCount by
+                   different scenario    */
+                .mipi_data_lp2hs_settle_dc = 85, /* unit , ns */
+                /*     following for GetDefaultFramerateByScenario()    */
+                .max_framerate = 300,
+            },
+        .ae_shut_delay_frame = 0,
+        /* shutter delay frame for AE cycle, 2 frame with
+           ispGain_delay-shut_delay=2-0=2 */
+        .ae_sensor_gain_delay_frame = 0,
+        /* sensor gain delay frame for AE cycle,2 frame with
+           ispGain_delay-sensor_gain_delay=2-0=2 */
+        .ae_ispGain_delay_frame = 2, /* isp gain delay frame for AE cycle */
+        .ihdr_support = 0,           /* 1, support; 0,not support */
+        .ihdr_le_firstline = 0,      /* 1,le first ; 0, se first */
+        .temperature_support = 1,    /* 1, support; 0,not support */
+        .sensor_mode_num = 5,        /* support sensor mode num */
+
+        .cap_delay_frame = 2,      /* enter capture delay frame num */
+        .pre_delay_frame = 2,      /* enter preview delay frame num */
+        .video_delay_frame = 2,    /* enter video delay frame num */
+        .hs_video_delay_frame = 2, /* enter high speed video  delay frame num */
+        .slim_video_delay_frame = 2, /* enter slim video delay frame num */
+
+        .margin = 16,     /* sensor framelength & shutter margin */
+        .min_shutter = 4, /* min shutter */
+        .max_frame_length =
+            0x3fff, /* max framelength by sensor register's limitation */
+
+        .isp_driving_current = ISP_DRIVING_6MA, /* mclk driving current */
+        .sensor_interface_type =
+            SENSOR_INTERFACE_TYPE_MIPI, /* sensor_interface_type */
+        .mipi_sensor_type =
+            MIPI_OPHY_NCSI2, /* 0,MIPI_OPHY_NCSI2;  1,MIPI_OPHY_CSI2 */
+        .mipi_settle_delay_mode = MIPI_SETTLEDELAY_AUTO,
+        /* 0,MIPI_SETTLEDELAY_AUTO; 1,MIPI_SETTLEDELAY_MANNUAL */
+        .sensor_output_dataformat =
+            SENSOR_OUTPUT_FORMAT_RAW_R, /* sensor output first pixel color */
+        .mclk = 24, /* mclk value, suggest 24 or 26 for 24Mhz or 26Mhz */
+        /* record sensor support all write id addr, only support 4must end with
+           0xff */
+        .i2c_speed = 400,                    /* i2c read/write speed */
+        .mipi_lane_num = SENSOR_MIPI_4_LANE, /* mipi lane num */
+
+        .SensorClockPolarity = SENSOR_CLOCK_POLARITY_LOW,
+        .SensorClockFallingPolarity = SENSOR_CLOCK_POLARITY_LOW,
+        .SensorHsyncPolarity = SENSOR_CLOCK_POLARITY_LOW,
+        .SensorVsyncPolarity = SENSOR_CLOCK_POLARITY_LOW,
+        .SensorInterruptDelayLines = 4,
+        .SensorResetActiveHigh = false,
+        .SensorResetDelayCount = 5,
+        .SensorMasterClockSwitch = 0,
+        .PDAF_Support = PDAF_SUPPORT_CAMSV,
+/* 0: NO PDAF, 1: PDAF Raw Data mode, 2:PDAF VC mode */
+#if defined(GC5035_ZHDR)
+        .HDR_Support = 3, /*0: NO HDR, 1: iHDR, 2:mvHDR, 3:zHDR */
+        /*0: no support, 1: G0,R0.B0, 2: G0,R0.B1, 3: G0,R1.B0, 4: G0,R1.B1 */
+        /*5: G1,R0.B0, 6: G1,R0.B1, 7: G1,R1.B0, 8: G1,R1.B1 */
+        .ZHDR_Mode = 8,
+#else
+        .HDR_Support = 2,
+#endif
+        .SensorClockDividCount = 3,
+        .SensorClockRisingCount = 0,
+        .SensorClockFallingCount = 2,
+        .SensorPixelClockCount = 3,
+        .SensorDataLatchCount = 2,
+        .MIPIDataLowPwr2HighSpeedTermDelayCount = 0,
+        .MIPICLKLowPwr2HighSpeedTermDelayCount = 0,
+        .SensorWidthSampling = 0,
+        .SensorHightSampling = 0,
+        .SensorPacketECCOrder = 1,
+        .SensorGainfactor = 2,
         .SensorHFlip = 0,
         .SensorVFlip = 0,
     }};

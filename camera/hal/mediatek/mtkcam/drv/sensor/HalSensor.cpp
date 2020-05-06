@@ -366,6 +366,7 @@ HalSensor::HalSensor()
       mScenarioId(0),
       mHdrMode(0),
       mPdafMode(0),
+      mDgainRatio(0),
       mFramerate(0) {
   memset(&mSensorDynamicInfo, 0, sizeof(SensorDynamicInfo));
 }
@@ -701,9 +702,20 @@ MBOOL HalSensor::configure(MUINT const uCountOfParam,
   m_pixClk = pix_clk;
   m_linelength = line_length;
   m_framelength = framelength;
+  m_margin = pImgsensorInfo->margin;
+  m_minShutter = pImgsensorInfo->min_shutter;
+  m_maxFramelength = pImgsensorInfo->max_frame_length;
   m_LineTimeInus = (line_length * 1000000 + ((pix_clk / 1000) - 1)) /
                    (pix_clk / 1000);  // 1000 base , 33657 mean 33.657 us
   m_SensorGainFactor = pImgsensorInfo->SensorGainfactor;
+  m_SensorGainBase = GAIN_BASE_3A >> m_SensorGainFactor;
+  mDgainRatio = m_SensorGainBase;
+  m_SensorGainMapSize = sizeof(pImgsensorInfo->sensor_agc_param_map) /
+                        sizeof(pImgsensorInfo->sensor_agc_param_map[0]);
+  m_SensorAgcParam = pImgsensorInfo->sensor_agc_param_map;
+  if (!m_SensorAgcParam) {
+    CAM_LOGW("sensorIdx (%d), m_SensorAgcParam is NULL\n", sensorIdx);
+  }
 
   aFormat.pad = 0;
   aFormat.which = V4L2_SUBDEV_FORMAT_ACTIVE;
@@ -759,7 +771,7 @@ MINT HalSensor::sendCommand(MUINT indexDual,
   IMGSENSOR_SENSOR_IDX sensorIdx = IMGSENSOR_SENSOR_IDX_MAP(indexDual);
   int sensor_fd = HalSensorList::singleton()->querySensorFd(sensorIdx);
   v4l2_control control;
-  unsigned int u32temp = 0, u32temp1 = 0;
+  unsigned int u32temp = 0, u32temp1 = 0, u32temp2 = 0;
 
   switch (cmd) {
     case SENSOR_CMD_GET_SENSOR_PIXELMODE:
@@ -829,17 +841,52 @@ MINT HalSensor::sendCommand(MUINT indexDual,
     case SENSOR_CMD_SET_SENSOR_GAIN:
       if ((reinterpret_cast<MUINT32*>(arg1) != NULL) &&
           (arg1_size == sizeof(MUINT32))) {
-        control.id = V4L2_CID_ANALOGUE_GAIN;
-        u32temp = *reinterpret_cast<MUINT32*>(arg1);
-        control.value = u32temp >> m_SensorGainFactor;
-        CAM_LOGD("SENSOR_GAIN %d(%d) m_SensorGainFactor %d", control.value,
-                 u32temp, m_SensorGainFactor);
-        ret = ioctl(sensor_fd, VIDIOC_S_CTRL, &control);
-        if (ret < 0) {
-          CAM_LOGE("[%s] set SENSOR GAIN fail %d", __FUNCTION__, control.value);
+        if (m_SensorAgcParam->auto_pregain) {
+          u32temp = *reinterpret_cast<MUINT32*>(arg1);
+          u32temp1 = u32temp >> m_SensorGainFactor;
+          for (u32temp2 = m_SensorGainMapSize - 1; u32temp2 > 0; u32temp2--) {
+            if (u32temp1 >= m_SensorAgcParam[u32temp2].auto_pregain) {
+              break;
+            }
+          }
+
+          control.id = V4L2_CID_ANALOGUE_GAIN;
+          control.value = m_SensorAgcParam[u32temp2].col_code;
+          ret = ioctl(sensor_fd, VIDIOC_S_CTRL, &control);
+          if (ret < 0) {
+            CAM_LOGE("[%s] set SENSOR A-GAIN fail %d\n", __FUNCTION__,
+                     control.value);
+          }
+
+          if (m_SensorAgcParam[u32temp2].auto_pregain) {
+            u32temp1 = u32temp1 * mDgainRatio /
+                       (m_SensorAgcParam[u32temp2].auto_pregain);
+          } else {
+            CAM_LOGE("AGC index (%d), auto_pregain is NULL\n", u32temp2);
+            return MFALSE;
+          }
+
+          CAM_LOGD("Mapped AGC PARAM pregain(%d)\n",
+                   m_SensorAgcParam[u32temp2].auto_pregain);
+          control.id = V4L2_CID_DIGITAL_GAIN;
+          control.value = u32temp1;
+          ret = ioctl(sensor_fd, VIDIOC_S_CTRL, &control);
+          if (ret < 0) {
+            CAM_LOGE("[%s] set SENSOR D-GAIN fail %d\n", __FUNCTION__,
+                     control.value);
+          }
+        } else {
+          control.id = V4L2_CID_ANALOGUE_GAIN;
+          u32temp = *reinterpret_cast<MUINT32*>(arg1);
+          control.value = u32temp >> m_SensorGainFactor;
+          ret = ioctl(sensor_fd, VIDIOC_S_CTRL, &control);
+          if (ret < 0) {
+            CAM_LOGE("[%s] set SENSOR A-GAIN fail %d\n", __FUNCTION__,
+                     control.value);
+          }
         }
       } else {
-        CAM_LOGE("%s(0x%x) wrong input params", __FUNCTION__, cmd);
+        CAM_LOGE("%s(0x%x) wrong input params\n", __FUNCTION__, cmd);
         ret = MFALSE;
       }
       break;
@@ -859,10 +906,19 @@ MINT HalSensor::sendCommand(MUINT indexDual,
           CAM_LOGE("[%s] set SENSOR VBLANK fail %d", __FUNCTION__,
                    control.value);
         }
+        u32temp = (u32temp < m_minShutter) ? m_minShutter : u32temp;
+        u32temp = (u32temp > (m_maxFramelength - m_margin))
+                      ? (m_maxFramelength - m_margin)
+                      : u32temp;
+        u32temp1 = u32temp & ~3;
+        if (u32temp1 > 0) {
+          mDgainRatio = m_SensorGainBase * u32temp / u32temp1;
+        } else {
+          CAM_LOGW("[%s] too small exp-lines, using SensorGainBase\n",
+                   __FUNCTION__);
+        }
         control.id = V4L2_CID_EXPOSURE;
-        control.value = u32temp;
-        CAM_LOGD("EXP_TIME %d(%d) m_LineTimeInus %d vblank %d", u32temp,
-                 *(MUINT32*)arg1, m_LineTimeInus, m_vblank);
+        control.value = u32temp1;
         ret = ioctl(sensor_fd, VIDIOC_S_CTRL, &control);
         if (ret < 0) {
           CAM_LOGE("[%s] set SENSOR EXPOSURE fail %d", __FUNCTION__,
