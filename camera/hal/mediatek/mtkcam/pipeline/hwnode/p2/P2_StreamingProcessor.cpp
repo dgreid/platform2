@@ -297,7 +297,7 @@ MBOOL StreamingProcessor::prepareOutputs(
         mapping_ratio = static_cast<float>(sensorSize.w / inRRZOSize.w);
         zoomRatio = static_cast<float>(sensorSize.w / cropRect_control.s.w);
         if (zoomRatio > 1.0) {
-          MY_LOGW("p2 zoomRatio %f", zoomRatio);
+          MY_LOGI("p2 zoomRatio %f", zoomRatio);
         }
       }
     }
