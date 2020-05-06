@@ -27,6 +27,36 @@ using std::string;
 
 namespace lorgnette {
 
+namespace {
+
+// Checks that the scan parameters in |params| are supported by our scanning
+// and PNG conversion logic.
+bool ValidateParams(brillo::ErrorPtr* error, const ScanParameters& params) {
+  if (params.depth != 1 && params.depth != 8) {
+    brillo::Error::AddToPrintf(error, FROM_HERE, brillo::errors::dbus::kDomain,
+                               kManagerServiceError,
+                               "Invalid scan bit depth %d", params.depth);
+    return false;
+  }
+
+  if (params.depth == 1 && params.format != kGrayscale) {
+    brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
+                         kManagerServiceError,
+                         "Cannot have bit depth of 1 with non-grayscale scan");
+    return false;
+  }
+
+  if (params.lines < 0) {
+    brillo::Error::AddTo(
+        error, FROM_HERE, brillo::errors::dbus::kDomain, kManagerServiceError,
+        "Cannot handle scanning of files with unknown lengths");
+    return false;
+  }
+  return true;
+}
+
+}  // namespace
+
 // static
 const char Manager::kScanConverterPath[] = "/usr/bin/pnm2png";
 const int Manager::kTimeoutAfterKillSeconds = 1;
@@ -154,24 +184,7 @@ bool Manager::ScanImage(brillo::ErrorPtr* error,
   if (!device->GetScanParameters(error, &params))
     return false;
 
-  if (params.depth != 1 && params.depth != 8) {
-    brillo::Error::AddToPrintf(error, FROM_HERE, brillo::errors::dbus::kDomain,
-                               kManagerServiceError,
-                               "Invalid scan bit depth %d", params.depth);
-    return false;
-  }
-
-  if (params.depth == 1 && params.format != kGrayscale) {
-    brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
-                         kManagerServiceError,
-                         "Cannot have bit depth of 1 with non-grayscale scan");
-    return false;
-  }
-
-  if (params.lines < 0) {
-    brillo::Error::AddTo(
-        error, FROM_HERE, brillo::errors::dbus::kDomain, kManagerServiceError,
-        "Cannot handle scanning of files with unknown lengths");
+  if (!ValidateParams(error, params)) {
     return false;
   }
 
