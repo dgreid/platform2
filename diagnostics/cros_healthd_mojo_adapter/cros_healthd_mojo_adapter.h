@@ -103,6 +103,10 @@ class CrosHealthdMojoAdapter final {
   void AddBluetoothObserver(
       chromeos::cros_healthd::mojom::CrosHealthdBluetoothObserverPtr observer);
 
+  // Subscribes the client to lid events.
+  void AddLidObserver(
+      chromeos::cros_healthd::mojom::CrosHealthdLidObserverPtr observer);
+
   // Subscribes the client to power events.
   void AddPowerObserver(
       chromeos::cros_healthd::mojom::CrosHealthdPowerObserverPtr observer);
