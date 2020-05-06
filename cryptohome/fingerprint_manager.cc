@@ -133,17 +133,14 @@ void FingerprintManager::OnAuthScanDone(dbus::Signal* signal) {
     VLOG(1) << "Authentication failed: scan result: "
             << biod::ScanResultToString(
                    static_cast<biod::ScanResult>(result.scan_result));
-    if (auth_scan_done_callback_)
-      auth_scan_done_callback_.Run(FingerprintScanStatus::FAILED_RETRY_ALLOWED);
+    ProcessRetry();
     return;
   }
 
   if (std::find(result.user_ids.begin(), result.user_ids.end(),
                 current_user_) == result.user_ids.end()) {
     VLOG(1) << "Authentication failed: not matched.";
-    // TODO(yichengli): Maintain a retry count for the same user.
-    if (auth_scan_done_callback_)
-      auth_scan_done_callback_.Run(FingerprintScanStatus::FAILED_RETRY_ALLOWED);
+    ProcessRetry();
     return;
   }
 
@@ -151,6 +148,20 @@ void FingerprintManager::OnAuthScanDone(dbus::Signal* signal) {
   if (auth_scan_done_callback_)
     auth_scan_done_callback_.Run(FingerprintScanStatus::SUCCESS);
   state_ = State::AUTH_SESSION_LOCKED;
+}
+
+void FingerprintManager::ProcessRetry() {
+  retry_left_--;
+
+  FingerprintScanStatus error;
+  if (retry_left_ <= 0) {
+    state_ = State::AUTH_SESSION_LOCKED;
+    error = FingerprintScanStatus::FAILED_RETRY_NOT_ALLOWED;
+  } else {
+    error = FingerprintScanStatus::FAILED_RETRY_ALLOWED;
+  }
+  if (auth_scan_done_callback_)
+    auth_scan_done_callback_.Run(error);
 }
 
 void FingerprintManager::SetAuthScanDoneCallback(
@@ -177,6 +188,7 @@ void FingerprintManager::SetUserAndRunClientCallback(
   // Set |current_user_| to |user| if auth session started successfully.
   if (success) {
     current_user_ = user;
+    retry_left_ = kMaxFingerprintRetries;
     state_ = State::AUTH_SESSION_OPEN;
   } else {
     Reset();

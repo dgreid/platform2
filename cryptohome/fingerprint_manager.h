@@ -13,6 +13,7 @@
 namespace cryptohome {
 
 const char kCrosFpBiometricsManagerRelativePath[] = "/CrosFpBiometricsManager";
+const int kMaxFingerprintRetries = 5;
 
 enum class FingerprintScanStatus {
   SUCCESS = 0,
@@ -130,6 +131,10 @@ class FingerprintManager {
       const std::string& user,
       bool success);
 
+  // Calculates the retry count left in the current auth session, and run
+  // |auth_scan_done_callback_|.
+  void ProcessRetry();
+
   void Reset();
 
   // The default BiometricsManagerProxyBase object.
@@ -142,6 +147,8 @@ class FingerprintManager {
   State state_ = State::NO_AUTH_SESSION;
   // The obfuscated username tied to the current auth session.
   std::string current_user_;
+  // The number of retries left in the current auth session.
+  int retry_left_ = 0;
   base::WeakPtrFactory<FingerprintManager> weak_factory_;
   base::PlatformThreadId mount_thread_id_;
 };
