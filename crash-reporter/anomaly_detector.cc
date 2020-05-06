@@ -142,11 +142,12 @@ constexpr char crash_report_rlimit[] =
 // optional to make sure the old format still gets accepted. Once we no longer
 // care about kernel version 3.10 and earlier, we can update the code to require
 // CPU and PID to be present unconditionally.
-constexpr LazyRE2 header = {R"(^WARNING:(?: CPU: \d+ PID: \d+)? at (.+))"};
+constexpr LazyRE2 header = {
+    R"(^\[\s*\S+\] WARNING:(?: CPU: \d+ PID: \d+)? at (.+))"};
 
 MaybeCrashReport KernelParser::ParseLogEntry(const std::string& line) {
   if (last_line_ == LineType::None) {
-    if (line.find(cut_here) == 0)
+    if (line.find(cut_here) != std::string::npos)
       last_line_ = LineType::Start;
   } else if (last_line_ == LineType::Start || last_line_ == LineType::Header) {
     std::string info;
@@ -176,7 +177,7 @@ MaybeCrashReport KernelParser::ParseLogEntry(const std::string& line) {
       last_line_ = LineType::None;
     }
   } else if (last_line_ == LineType::Body) {
-    if (line.find(end_trace) == 0) {
+    if (line.find(end_trace) != std::string::npos) {
       last_line_ = LineType::None;
       std::string text_tmp;
       text_tmp.swap(text_);
@@ -203,12 +204,9 @@ constexpr char begin_suspend_error_stats[] =
     "Error writing to /sys/power/state: ";
 constexpr char end_suspend_error_stats[] =
     "--- end /sys/kernel/debug/suspend_stats ---";
-constexpr LazyRE2 last_failed_dev = {
-    R"(\s*last_failed_dev: (.+))"};
-constexpr LazyRE2 last_failed_errno = {
-    R"(\s*last_failed_errno: (.+))"};
-constexpr LazyRE2 last_failed_step = {
-    R"(\s*last_failed_step: (.+))"};
+constexpr LazyRE2 last_failed_dev = {R"(\s*last_failed_dev: (.+))"};
+constexpr LazyRE2 last_failed_errno = {R"(\s*last_failed_errno: (.+))"};
+constexpr LazyRE2 last_failed_step = {R"(\s*last_failed_step: (.+))"};
 
 MaybeCrashReport SuspendParser::ParseLogEntry(const std::string& line) {
   if (last_line_ == LineType::None &&

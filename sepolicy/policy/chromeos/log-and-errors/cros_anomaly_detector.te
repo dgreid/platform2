@@ -5,6 +5,8 @@ cros_dbus_client(cros_anomaly_detector)
 uma_writer(cros_anomaly_detector)
 
 allow cros_anomaly_detector cros_syslog:file r_file_perms;
+allow cros_anomaly_detector cros_var_log_upstart:file r_file_perms;
+r_dir_file(cros_anomaly_detector, cros_var_log_audit);
 
 tmp_file(cros_anomaly_detector, file, , cros_minijail_minijail_tmp_file);
 

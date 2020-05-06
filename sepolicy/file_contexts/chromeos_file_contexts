@@ -204,6 +204,7 @@ include(sepolicy/file_contexts/sysfs_contexts)
 /var/log/tlsdate.log            u:object_r:cros_tlsdate_log:s0
 /var/log/tpm-firmware-updater.log u:object_r:cros_var_log_tpm_firmware_updater:s0
 /var/log/ui(/.*)?               u:object_r:cros_var_log_ui:s0
+/var/log/upstart.log            u:object_r:cros_var_log_upstart:s0
 /var/log/vmlog(/.*)?            u:object_r:cros_var_log_vmlog:s0
 /var/spool                      u:object_r:cros_var_spool:s0
 /var/spool/cron-lite(/.*)?      u:object_r:cros_periodic_scheduler_cache_t:s0

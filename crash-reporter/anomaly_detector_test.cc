@@ -125,9 +125,11 @@ void RunCrashReporterPeriodicUpdate(CrashReporterParser* parser) {
 }  // namespace
 
 TEST(AnomalyDetectorTest, KernelWarning) {
-  ParserRun second{.find_this = "ttm_bo_vm.c"s,
-                   .replace_with = "file_one.c"s,
-                   .expected_text = "0x19e/0x1ab [ttm]()\nModules linked in"s};
+  ParserRun second{
+      .find_this = "ttm_bo_vm.c"s,
+      .replace_with = "file_one.c"s,
+      .expected_text =
+          "0x19e/0x1ab [ttm]()\n[ 3955.309298] Modules linked in"s};
   ParserTest<KernelParser>("TEST_WARNING", {simple_run, second});
 }
 

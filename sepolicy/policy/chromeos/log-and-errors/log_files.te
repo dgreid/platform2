@@ -14,3 +14,4 @@ filetrans_pattern(chromeos_domain, cros_var_log, cros_var_log_session_manager, f
 filetrans_pattern(chromeos_domain, cros_var_log, cros_var_log_atrus, file, "atrus.log");
 filetrans_pattern(chromeos_domain, cros_var_log, cros_var_log_tpm_firmware_updater, file, "tpm-firmware-updater.log");
 filetrans_pattern(chromeos_domain, cros_var_log, cros_var_log_recover_duts, dir, "recover_duts");
+filetrans_pattern(chromeos_domain, cros_var_log, cros_var_log_upstart, file, "upstart.log");

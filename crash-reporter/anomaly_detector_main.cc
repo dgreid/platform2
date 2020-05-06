@@ -2,7 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// Lines in log files are parsed by a LogReader and a Parser each defined
+// in anomaly_detector_log_reader.h and anomaly_detector.h. LogReader uses
+// TextFileReader class to open a log file. TextFileReader is responsible for
+// detecting log rotation and reopening the newly created log file.
+
 #include "crash-reporter/anomaly_detector.h"
+#include "crash-reporter/anomaly_detector_log_reader.h"
 
 #include <memory>
 #include <random>
@@ -14,6 +20,7 @@
 #include <base/memory/ref_counted.h>
 #include <base/message_loop/message_loop.h>
 #include <base/time/default_clock.h>
+#include <base/threading/platform_thread.h>
 #include <brillo/flag_helper.h>
 #include <brillo/process/process.h>
 #include <brillo/syslog_logging.h>
@@ -22,8 +29,6 @@
 #include <dbus/exported_object.h>
 #include <dbus/message.h>
 #include <metrics/metrics_library.h>
-
-#include <systemd/sd-journal.h>
 
 #include "crash-reporter/paths.h"
 #include "crash-reporter/util.h"
@@ -43,93 +48,16 @@
 constexpr base::TimeDelta kTimeBetweenPeriodicUpdates =
     base::TimeDelta::FromSeconds(10);
 
-struct JournalEntry {
-  // Value of SYSLOG_IDENTIFIER. Generally, the program's short name.
-  std::string tag;
-  std::string message;
-  uint64_t monotonic_usec;
-};
+const base::FilePath kMessageLogPath("/var/log/messages");
 
-class Journal {
- public:
-  Journal() {
-    int ret = sd_journal_open(&j_, SD_JOURNAL_SYSTEM | SD_JOURNAL_LOCAL_ONLY);
-    CHECK_GE(ret, 0) << "Could not open journal: " << strerror(-ret);
-    // Go directly to the end of the file.  We don't want to parse the same
-    // anomalies multiple times on reboot/restart.  We might miss some
-    // anomalies, but so be it---it's too hard to keep track reliably of the
-    // last parsed position in the syslog.
-    SeekToEnd();
-  }
+const base::FilePath kAuditLogPath("/var/log/audit/audit.log");
 
-  base::Optional<JournalEntry> GetNextEntry() {
-    if (!MoveToNext()) {
-      return base::nullopt;
-    }
-    auto tag = GetFieldValue("SYSLOG_IDENTIFIER");
-    auto message = GetFieldValue("MESSAGE");
-    if (tag && message) {
-      uint64_t monotonic_usec;
-      sd_id128_t ignore;
-      int ret = sd_journal_get_monotonic_usec(j_, &monotonic_usec, &ignore);
-      CHECK_GE(ret, 0) << "Failed to get monotonic timestamp from journal: "
-                       << strerror(-ret);
-      JournalEntry je{std::move(*tag), std::move(*message), monotonic_usec};
-      return je;
-    } else {
-      return GetNextEntry();
-    }
-  }
+const base::FilePath kUpstartLogPath("/var/log/upstart.log");
 
- private:
-  void SeekToEnd() {
-    int ret = sd_journal_seek_tail(j_);
-    CHECK_GE(ret, 0) << "Could not seek to end of journal: " << strerror(-ret);
-  }
+constexpr base::TimeDelta kSleepBetweenLoop =
+    base::TimeDelta::FromMilliseconds(100);
 
-  // Returns true if a next entry was found, false otherwise.
-  bool MoveToNext() {
-    int ret = sd_journal_next(j_);
-    CHECK_GE(ret, 0) << "Failed to iterate to next journal entry: "
-                     << strerror(-ret);
-    if (ret == 0) {
-      /* Reached the end, let's wait for changes, and try again. */
-      ret = sd_journal_wait(j_, kTimeBetweenPeriodicUpdates.InMicroseconds());
-      if (ret == SD_JOURNAL_NOP) {
-        // Timeout.
-        return false;
-      }
-      CHECK_GE(ret, 0) << "Failed to wait for journal changes: "
-                       << strerror(-ret);
-      return MoveToNext();
-    }
-
-    return true;
-  }
-
-  base::Optional<std::string> GetFieldValue(const std::string& field) {
-    const char* data = nullptr;
-    size_t length = 0;
-    int ret =
-        sd_journal_get_data(j_, field.c_str(), (const void**)&data, &length);
-    if (ret == -EBADMSG) {
-      LOG(WARNING) << "Ignoring corrupt journal entry: " << field;
-      return base::nullopt;
-    }
-    if (ret == -ENOENT)
-      return base::nullopt;
-    CHECK_GE(ret, 0) << "Failed to read field '" << field
-                     << "' from journal: " << strerror(-ret);
-    data += field.length() + 1;
-    length -= field.length() + 1;
-
-    return std::string(data, length);
-  }
-
-  sd_journal* j_ = 0;
-};
-
-// Prepares for sending D-Bus signals.  Returns a D-Bus object, which provides
+// Prepares for sending D-Bus signals. Returns a D-Bus object, which provides
 // a handle for sending signals.
 scoped_refptr<dbus::Bus> SetUpDBus(void) {
   // Connect the bus.
@@ -204,8 +132,6 @@ int main(int argc, char* argv[]) {
   std::bernoulli_distribution drop_service_failure_report(
       1.0 - 1.0 / util::GetServiceFailureWeight());
 
-  Journal j;
-
   base::FilePath path = base::FilePath(paths::kSystemRunStateDirectory)
                             .Append(paths::kAnomalyDetectorReady);
   if (base::WriteFile(path, "", 0) == -1) {
@@ -226,36 +152,53 @@ int main(int argc, char* argv[]) {
 
   base::Time last_periodic_update = base::Time::Now();
 
+  // If any log file is missing, the LogReader will try to reopen the file on
+  // GetNextEntry method call. After multiple attempts however LogReader will
+  // give up and logs the error. Note that some boards do not have SELinux and
+  // thus no audit.log.
+  anomaly::AuditReader audit_reader(kAuditLogPath, anomaly::kAuditLogPattern);
+  anomaly::MessageReader message_reader(kMessageLogPath,
+                                        anomaly::kMessageLogPattern);
+  anomaly::MessageReader upstart_reader(kUpstartLogPath,
+                                        anomaly::kUpstartLogPattern);
+  anomaly::LogReader* log_readers[]{&audit_reader, &message_reader,
+                                    &upstart_reader};
+
   while (true) {
-    base::Optional<JournalEntry> entry = j.GetNextEntry();
-    if (entry) {
-      anomaly::MaybeCrashReport crash_report;
-      if (parsers.count(entry->tag) > 0) {
-        crash_report = parsers[entry->tag]->ParseLogEntry(entry->message);
-      } else if (entry->tag.compare(0, 3, "VM(") == 0) {
-        crash_report =
-            termina_parser->ParseLogEntry(entry->tag, entry->message);
-      }
-
-      if (crash_report) {
-        if (!FLAGS_testonly_send_all) {
-          if (entry->tag == "audit" && drop_audit_report(gen)) {
-            continue;
-          } else if (entry->tag == "init" && drop_service_failure_report(gen)) {
-            LOG(INFO) << "Dropping service failure report: "
-                      << crash_report->text;
-            continue;
-          }
+    for (auto* reader : log_readers) {
+      anomaly::LogEntry entry;
+      while (reader->GetNextEntry(&entry)) {
+        anomaly::MaybeCrashReport crash_report;
+        if (parsers.count(entry.tag) > 0) {
+          crash_report = parsers[entry.tag]->ParseLogEntry(entry.message);
+        } else if (entry.tag.compare(0, 3, "VM(") == 0) {
+          crash_report =
+              termina_parser->ParseLogEntry(entry.tag, entry.message);
         }
-        RunCrashReporter(crash_report->flag, crash_report->text);
-      }
 
-      // Handle OOM messages.
-      if (entry->tag == "kernel" &&
-          entry->message.find("Out of memory: Kill process") !=
-              std::string::npos)
-        exported_object->SendSignal(
-            MakeOomSignal(entry->monotonic_usec / 1000).get());
+        if (crash_report) {
+          if (!FLAGS_testonly_send_all) {
+            if (entry.tag == "audit" && drop_audit_report(gen)) {
+              continue;
+            } else if (entry.tag == "init" &&
+                       drop_service_failure_report(gen)) {
+              LOG(INFO) << "Dropping service failure report: "
+                        << crash_report->text;
+              continue;
+            }
+          }
+          RunCrashReporter(crash_report->flag, crash_report->text);
+        }
+
+        // Handle OOM messages.
+        if (entry.tag == "kernel" &&
+            entry.message.find("Out of memory: Kill process") !=
+                std::string::npos)
+          exported_object->SendSignal(
+              MakeOomSignal(
+                  static_cast<int>(entry.timestamp.ToDoubleT() * 1000))
+                  .get());
+      }
     }
 
     if (last_periodic_update <=
@@ -265,5 +208,7 @@ int main(int argc, char* argv[]) {
       }
       last_periodic_update = base::Time::Now();
     }
+
+    base::PlatformThread::Sleep(kSleepBetweenLoop);
   }
 }

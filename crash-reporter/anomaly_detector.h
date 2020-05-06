@@ -2,14 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// anomaly_detector examines the system journal (using journalctl) and looks for
-// messages matching particular patterns. When it finds one, it invokes
-// crash_reporter appropriately to report the issue.
-//
-// This file (and the associated .cc file) contains logic to parse journal
+// anomaly_detector examines the log files, namely /var/log/messages,
+// /var/log/upstart.log, and /var/log/audit/audit.log, using
+// anomaly::LogReader and looks for messages matching particular patterns. When
+// it finds one, it invokes crash_reporter appropriately to report the issue.
+
+// This file (and the associated .cc file) contains logic to parse log
 // entries and determine whether to invoke crash_reporter (or how to invoke it).
-// The logic to read the journal and execute crash_reporter live in
-// anomaly_detector_main.cc.
+// The logic to read from plaintext files lives in
+// anomaly_detector_text_file_reader.h and anomaly_detector_log_reader.h. The
+// logic to setup LogReader, pass entries to corresponding parser and execute
+// crash_reporter lives in anomaly_detector_main.cc.
 
 #ifndef CRASH_REPORTER_ANOMALY_DETECTOR_H_
 #define CRASH_REPORTER_ANOMALY_DETECTOR_H_

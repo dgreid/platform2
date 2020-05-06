@@ -18,7 +18,9 @@ group("all") {
   }
   if (use.test) {
     deps += [
+      ":anomaly_detector_log_reader_test",
       ":anomaly_detector_test",
+      ":anomaly_detector_text_file_reader_test",
       ":crash_reporter_test",
     ]
   }
@@ -194,7 +196,9 @@ executable("anomaly_detector") {
   configs += [ ":anomaly_detector_config" ]
   sources = [
     "anomaly_detector.cc",
+    "anomaly_detector_log_reader.cc",
     "anomaly_detector_main.cc",
+    "anomaly_detector_text_file_reader.cc",
   ]
   deps = [ ":libcrash" ]
   libs = [
@@ -338,6 +342,43 @@ if (use.test) {
     sources = [
       "anomaly_detector.cc",
       "anomaly_detector_test.cc",
+      "test_util.cc",
+    ]
+    deps = [
+      ":libcrash",
+      "//common-mk/testrunner:testrunner",
+    ]
+    libs = [ "system_api-anomaly_detector-protos" ]
+  }
+
+  executable("anomaly_detector_text_file_reader_test") {
+    configs += [
+      "//common-mk:test",
+      ":anomaly_detector_config",
+      ":crash_reporter_test_config",
+    ]
+    sources = [
+      "anomaly_detector_text_file_reader.cc",
+      "anomaly_detector_text_file_reader_test.cc",
+      "test_util.cc",
+    ]
+    deps = [
+      ":libcrash",
+      "//common-mk/testrunner:testrunner",
+    ]
+    libs = [ "system_api-anomaly_detector-protos" ]
+  }
+
+  executable("anomaly_detector_log_reader_test") {
+    configs += [
+      "//common-mk:test",
+      ":anomaly_detector_config",
+      ":crash_reporter_test_config",
+    ]
+    sources = [
+      "anomaly_detector_log_reader.cc",
+      "anomaly_detector_log_reader_test.cc",
+      "anomaly_detector_text_file_reader.cc",
       "test_util.cc",
     ]
     deps = [

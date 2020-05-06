@@ -224,6 +224,7 @@ type cros_var_log_recover_duts, file_type, cros_log_type, cros_file_type, cros_v
 type cros_var_log_session_manager, file_type, cros_log_type, cros_file_type, cros_var_file_type, cros_rotate_by_cleanup_logs_file_type;
 type cros_var_log_tpm_firmware_updater, file_type, cros_log_type, cros_file_type, cros_var_file_type, cros_rotate_by_cleanup_logs_file_type;
 type cros_var_log_ui, file_type, cros_log_type, cros_file_type, cros_var_file_type;
+type cros_var_log_upstart, file_type, cros_log_type, cros_file_type, cros_var_file_type, cros_rotate_by_cleanup_logs_file_type;
 type cros_var_log_vmlog, file_type, cros_log_type, cros_file_type, cros_var_file_type;
 
 # /var/spool
