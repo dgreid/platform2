@@ -128,6 +128,7 @@ if (use.test) {
       "dlc_manager_test.cc",
       "dlc_service_test.cc",
       "dlc_test.cc",
+      "error_test.cc",
       "prefs_test.cc",
       "system_state_test.cc",
       "test_utils.cc",
