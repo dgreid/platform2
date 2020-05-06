@@ -37,13 +37,13 @@ class PowerdEventServiceImplTest : public ::testing::Test {
   void SetUp() override {
     service_ = std::make_unique<PowerdEventServiceImpl>(&fake_powerd_adapter_);
     service_->AddObserver(&observer_);
-    EXPECT_TRUE(fake_powerd_adapter_.HasObserver(service_.get()));
+    EXPECT_TRUE(fake_powerd_adapter_.HasPowerObserver(service_.get()));
   }
 
   void TearDown() override {
     service_->RemoveObserver(&observer_);
     service_.reset();
-    EXPECT_FALSE(fake_powerd_adapter_.HasObserver(service_.get()));
+    EXPECT_FALSE(fake_powerd_adapter_.HasPowerObserver(service_.get()));
   }
 
  protected:

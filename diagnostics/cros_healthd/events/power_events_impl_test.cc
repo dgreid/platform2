@@ -61,7 +61,8 @@ class PowerEventsImplTest : public testing::Test {
         std::make_unique<PowerEventsImpl>(&fake_powerd_adapter_);
     // Before any observers have been added, we shouldn't have subscribed to
     // powerd_adapter.
-    ASSERT_FALSE(fake_powerd_adapter_.HasObserver(power_events_impl_.get()));
+    ASSERT_FALSE(
+        fake_powerd_adapter_.HasPowerObserver(power_events_impl_.get()));
 
     mojo_ipc::CrosHealthdPowerObserverPtr observer_ptr;
     mojo_ipc::CrosHealthdPowerObserverRequest observer_request(
@@ -71,7 +72,8 @@ class PowerEventsImplTest : public testing::Test {
     power_events_impl_->AddObserver(std::move(observer_ptr));
     // Now that an observer has been added, we should have subscribed to
     // powerd_adapter.
-    ASSERT_TRUE(fake_powerd_adapter_.HasObserver(power_events_impl_.get()));
+    ASSERT_TRUE(
+        fake_powerd_adapter_.HasPowerObserver(power_events_impl_.get()));
   }
 
   PowerEventsImpl* power_events_impl() { return power_events_impl_.get(); }
@@ -232,7 +234,7 @@ TEST_F(PowerEventsImplTest, UnsubscribeFromPowerdAdapterWhenAllObserversLost) {
   power_manager::SuspendDone suspend_done;
   fake_adapter()->EmitSuspendDoneSignal(suspend_done);
 
-  EXPECT_FALSE(fake_adapter()->HasObserver(power_events_impl()));
+  EXPECT_FALSE(fake_adapter()->HasPowerObserver(power_events_impl()));
 }
 
 }  // namespace diagnostics

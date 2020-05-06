@@ -18,7 +18,7 @@ namespace diagnostics {
 
 // Production implementation of the PowerEvents interface.
 class PowerEventsImpl final : public PowerEvents,
-                              public PowerdAdapter::Observer {
+                              public PowerdAdapter::PowerObserver {
  public:
   explicit PowerEventsImpl(PowerdAdapter* powerd_adapter);
   PowerEventsImpl(const PowerEventsImpl&) = delete;

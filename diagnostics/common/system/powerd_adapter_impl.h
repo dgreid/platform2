@@ -29,8 +29,10 @@ class PowerdAdapterImpl : public PowerdAdapter {
   ~PowerdAdapterImpl() override;
 
   // PowerdAdapter overrides:
-  void AddObserver(Observer* observer) override;
-  void RemoveObserver(Observer* observer) override;
+  void AddPowerObserver(PowerObserver* observer) override;
+  void RemovePowerObserver(PowerObserver* observer) override;
+  void AddLidObserver(LidObserver* observer) override;
+  void RemoveLidObserver(LidObserver* observer) override;
 
  private:
   // Handles PowerSupplyPoll signals emitted by powerd daemon.
@@ -45,7 +47,14 @@ class PowerdAdapterImpl : public PowerdAdapter {
   // Handles SuspendDone signals emitted by powerd daemon.
   void HandleSuspendDone(dbus::Signal* signal);
 
-  base::ObserverList<Observer> observers_;
+  // Handles LidClosed signals emitted by powerd daemon.
+  void HandleLidClosed(dbus::Signal* signal);
+
+  // Handles LidOpened signals emitted by powerd daemon.
+  void HandleLidOpened(dbus::Signal* signal);
+
+  base::ObserverList<PowerObserver> power_observers_;
+  base::ObserverList<LidObserver> lid_observers_;
 
   base::WeakPtrFactory<PowerdAdapterImpl> weak_ptr_factory_;
 

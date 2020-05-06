@@ -20,7 +20,7 @@ namespace diagnostics {
 // PowerdAdapter, parses proto messages and notifes it's observers about power
 // events.
 class PowerdEventServiceImpl : public PowerdEventService,
-                               public PowerdAdapter::Observer {
+                               public PowerdAdapter::PowerObserver {
  public:
   explicit PowerdEventServiceImpl(PowerdAdapter* powerd_adapter);
 

@@ -17,13 +17,13 @@ PowerEventsImpl::PowerEventsImpl(PowerdAdapter* powerd_adapter)
 
 PowerEventsImpl::~PowerEventsImpl() {
   if (is_observing_powerd_)
-    powerd_adapter_->RemoveObserver(this);
+    powerd_adapter_->RemovePowerObserver(this);
 }
 
 void PowerEventsImpl::AddObserver(
     chromeos::cros_healthd::mojom::CrosHealthdPowerObserverPtr observer) {
   if (!is_observing_powerd_) {
-    powerd_adapter_->AddObserver(this);
+    powerd_adapter_->AddPowerObserver(this);
     is_observing_powerd_ = true;
   }
   observers_.AddPtr(std::move(observer));
@@ -106,7 +106,7 @@ void PowerEventsImpl::StopObservingPowerdIfNecessary() {
   if (!observers_.empty())
     return;
 
-  powerd_adapter_->RemoveObserver(this);
+  powerd_adapter_->RemovePowerObserver(this);
   is_observing_powerd_ = false;
 }
 

@@ -14,9 +14,10 @@ namespace diagnostics {
 // Adapter for communication with powerd daemon.
 class PowerdAdapter {
  public:
-  class Observer : public base::CheckedObserver {
+  // Observes general power events.
+  class PowerObserver : public base::CheckedObserver {
    public:
-    virtual ~Observer() = default;
+    virtual ~PowerObserver() = default;
 
     virtual void OnPowerSupplyPollSignal(
         const power_manager::PowerSupplyProperties& power_supply) = 0;
@@ -28,10 +29,22 @@ class PowerdAdapter {
         const power_manager::SuspendDone& suspend_done) = 0;
   };
 
+  // Observes lid events.
+  class LidObserver : public base::CheckedObserver {
+   public:
+    virtual ~LidObserver() = default;
+
+    virtual void OnLidClosedSignal() = 0;
+    virtual void OnLidOpenedSignal() = 0;
+  };
+
   virtual ~PowerdAdapter() = default;
 
-  virtual void AddObserver(Observer* observer) = 0;
-  virtual void RemoveObserver(Observer* observer) = 0;
+  virtual void AddPowerObserver(PowerObserver* observer) = 0;
+  virtual void RemovePowerObserver(PowerObserver* observer) = 0;
+
+  virtual void AddLidObserver(LidObserver* observer) = 0;
+  virtual void RemoveLidObserver(LidObserver* observer) = 0;
 };
 
 }  // namespace diagnostics

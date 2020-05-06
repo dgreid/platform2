@@ -14,11 +14,11 @@ namespace diagnostics {
 PowerdEventServiceImpl::PowerdEventServiceImpl(PowerdAdapter* powerd_adapter)
     : powerd_adapter_(powerd_adapter) {
   DCHECK(powerd_adapter_);
-  powerd_adapter_->AddObserver(this);
+  powerd_adapter_->AddPowerObserver(this);
 }
 
 PowerdEventServiceImpl::~PowerdEventServiceImpl() {
-  powerd_adapter_->RemoveObserver(this);
+  powerd_adapter_->RemovePowerObserver(this);
 }
 
 void PowerdEventServiceImpl::AddObserver(

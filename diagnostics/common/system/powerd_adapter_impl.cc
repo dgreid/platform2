@@ -62,18 +62,38 @@ PowerdAdapterImpl::PowerdAdapterImpl(const scoped_refptr<dbus::Bus>& bus)
                              base::Bind(&PowerdAdapterImpl::HandleSuspendDone,
                                         weak_ptr_factory_.GetWeakPtr()),
                              base::Bind(&HandleSignalConnected));
+  bus_proxy->ConnectToSignal(power_manager::kPowerManagerInterface,
+                             power_manager::kLidClosedSignal,
+                             base::Bind(&PowerdAdapterImpl::HandleLidClosed,
+                                        weak_ptr_factory_.GetWeakPtr()),
+                             base::Bind(&HandleSignalConnected));
+  bus_proxy->ConnectToSignal(power_manager::kPowerManagerInterface,
+                             power_manager::kLidOpenedSignal,
+                             base::Bind(&PowerdAdapterImpl::HandleLidOpened,
+                                        weak_ptr_factory_.GetWeakPtr()),
+                             base::Bind(&HandleSignalConnected));
 }
 
 PowerdAdapterImpl::~PowerdAdapterImpl() = default;
 
-void PowerdAdapterImpl::AddObserver(Observer* observer) {
+void PowerdAdapterImpl::AddPowerObserver(PowerObserver* observer) {
   DCHECK(observer);
-  observers_.AddObserver(observer);
+  power_observers_.AddObserver(observer);
 }
 
-void PowerdAdapterImpl::RemoveObserver(Observer* observer) {
+void PowerdAdapterImpl::RemovePowerObserver(PowerObserver* observer) {
   DCHECK(observer);
-  observers_.RemoveObserver(observer);
+  power_observers_.RemoveObserver(observer);
+}
+
+void PowerdAdapterImpl::AddLidObserver(LidObserver* observer) {
+  DCHECK(observer);
+  lid_observers_.AddObserver(observer);
+}
+
+void PowerdAdapterImpl::RemoveLidObserver(LidObserver* observer) {
+  DCHECK(observer);
+  lid_observers_.RemoveObserver(observer);
 }
 
 void PowerdAdapterImpl::HandlePowerSupplyPoll(dbus::Signal* signal) {
@@ -86,7 +106,7 @@ void PowerdAdapterImpl::HandlePowerSupplyPoll(dbus::Signal* signal) {
     return;
   }
 
-  for (auto& observer : observers_)
+  for (auto& observer : power_observers_)
     observer.OnPowerSupplyPollSignal(proto);
 }
 
@@ -100,7 +120,7 @@ void PowerdAdapterImpl::HandleSuspendImminent(dbus::Signal* signal) {
     return;
   }
 
-  for (auto& observer : observers_)
+  for (auto& observer : power_observers_)
     observer.OnSuspendImminentSignal(proto);
 }
 
@@ -114,7 +134,7 @@ void PowerdAdapterImpl::HandleDarkSuspendImminent(dbus::Signal* signal) {
     return;
   }
 
-  for (auto& observer : observers_)
+  for (auto& observer : power_observers_)
     observer.OnDarkSuspendImminentSignal(proto);
 }
 
@@ -128,8 +148,18 @@ void PowerdAdapterImpl::HandleSuspendDone(dbus::Signal* signal) {
     return;
   }
 
-  for (auto& observer : observers_)
+  for (auto& observer : power_observers_)
     observer.OnSuspendDoneSignal(proto);
+}
+
+void PowerdAdapterImpl::HandleLidClosed(dbus::Signal* signal) {
+  for (auto& observer : lid_observers_)
+    observer.OnLidClosedSignal();
+}
+
+void PowerdAdapterImpl::HandleLidOpened(dbus::Signal* signal) {
+  for (auto& observer : lid_observers_)
+    observer.OnLidOpenedSignal();
 }
 
 }  // namespace diagnostics
