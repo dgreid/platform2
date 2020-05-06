@@ -83,7 +83,7 @@ class DlcBase {
 
   // This is called after the update_engine finishes the installation of a
   // DLC. This marks the DLC as installed and mounts the DLC image.
-  bool FinishInstall(brillo::ErrorPtr* err);
+  bool FinishInstall(bool installed_by_ue, brillo::ErrorPtr* err);
 
   // Cancels the ongoing installation of this DLC. The state will be set to
   // uninstalled after this call if successful.

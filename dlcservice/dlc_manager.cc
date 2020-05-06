@@ -202,7 +202,10 @@ bool DlcManager::Install(const DlcId& id,
 
   // Otherwise proceed to install the DLC.
   if (!dlc->Install(err)) {
-    LOG(ERROR) << "Failed to initialize installation for DLC=" << id;
+    Error::AddInternalTo(
+        err, FROM_HERE, error::kFailedInternal,
+        base::StringPrintf("Failed to initialize installation for DLC=%s",
+                           id.c_str()));
     return false;
   }
 
@@ -238,7 +241,8 @@ bool DlcManager::FinishInstall(ErrorPtr* err) {
     ErrorPtr tmp_err;
     // Only try to finish install for DLCs that were in installing phase. Other
     // DLCs should not be finished this route.
-    if (dlc.IsInstalling() && !dlc.FinishInstall(&tmp_err))
+    if (dlc.IsInstalling() &&
+        !dlc.FinishInstall(/*installed_by_ue=*/true, &tmp_err))
       ret = false;
   }
   if (!ret)

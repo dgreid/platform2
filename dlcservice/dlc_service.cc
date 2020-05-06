@@ -73,6 +73,19 @@ void DlcService::Initialize() {
 bool DlcService::Install(const DlcId& id,
                          const string& omaha_url,
                          ErrorPtr* err) {
+  bool result = InstallInternal(id, omaha_url, err);
+  // Only send error metrics in here. Install success metrics is sent in
+  // |DlcBase|.
+  if (!result) {
+    SystemState::Get()->metrics()->SendInstallResultFailure(err);
+    Error::ConvertToDbusError(err);
+  }
+  return result;
+}
+
+bool DlcService::InstallInternal(const DlcId& id,
+                                 const string& omaha_url,
+                                 ErrorPtr* err) {
   // TODO(ahassani): Currently, we create the DLC images even if later we find
   // out the update_engine is busy and we have to delete the images. It would be
   // better to know the update_engine status beforehand so we can tell the DLC
@@ -199,7 +212,6 @@ void DlcService::PeriodicInstallCheck() {
     if (GetUpdateEngineStatus()) {
       ErrorPtr tmp_error;
       if (!HandleStatusResult(&tmp_error)) {
-        DCHECK(tmp_error.get());  // TODO(crbug.com/1069121): Add to metrics.
         return;
       }
     }
@@ -228,11 +240,12 @@ bool DlcService::HandleStatusResult(brillo::ErrorPtr* err) {
 
   const StatusResult& status = SystemState::Get()->update_engine_status();
   if (!status.is_install()) {
-    *err = Error::Create(
-        FROM_HERE, kErrorInternal,
+    *err = Error::CreateInternal(
+        FROM_HERE, error::kFailedInstallInUpdateEngine,
         "Signal from update_engine indicates that it's not for an install, but "
         "dlcservice was waiting for an install.");
     CancelInstall(*err);
+    SystemState::Get()->metrics()->SendInstallResultFailure(err);
     return false;
   }
 
@@ -245,14 +258,17 @@ bool DlcService::HandleStatusResult(brillo::ErrorPtr* err) {
     case Operation::IDLE:
       LOG(INFO)
           << "Signal from update_engine, proceeding to complete installation.";
+      // Send metrics in |DlcBase::FinishInstall| and not here since we might
+      // be executing this call for multiple DLCs.
       if (!dlc_manager_->FinishInstall(err)) {
         LOG(ERROR) << "Failed to finish install.";
         return false;
       }
       return true;
     case Operation::REPORTING_ERROR_EVENT:
-      *err = Error::Create(FROM_HERE, kErrorInternal,
-                           "update_engine indicates reporting failure.");
+      *err =
+          Error::CreateInternal(FROM_HERE, error::kFailedInstallInUpdateEngine,
+                                "update_engine indicates reporting failure.");
       break;
     // Only when update_engine's |Operation::DOWNLOADING| should the DLC send
     // |DlcState::INSTALLING|. Majority of the install process for DLC(s) is
@@ -268,6 +284,7 @@ bool DlcService::HandleStatusResult(brillo::ErrorPtr* err) {
   }
 
   CancelInstall(*err);
+  SystemState::Get()->metrics()->SendInstallResultFailure(err);
   return false;
 }
 
@@ -291,7 +308,7 @@ void DlcService::OnStatusUpdateAdvancedSignal(
 
   ErrorPtr err;
   if (!HandleStatusResult(&err))
-    DCHECK(err.get());  // TODO(crbug.com/1069121): Add to metrics.
+    DCHECK(err.get());
 }
 
 void DlcService::OnStatusUpdateAdvancedSignalConnected(

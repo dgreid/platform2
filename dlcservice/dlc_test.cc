@@ -14,6 +14,7 @@
 #include "dlcservice/test_utils.h"
 #include "dlcservice/utils.h"
 
+using dlcservice::metrics::InstallResult;
 using testing::_;
 using testing::ElementsAre;
 using testing::Return;
@@ -42,18 +43,16 @@ class DlcBaseTestRemovable : public DlcBaseTest {
         .WillOnce(Return("/dev/sdb5"));
     EXPECT_CALL(*mock_boot_device, IsRemovableDevice(_)).WillOnce(Return(true));
 
-    auto mock_metrics_library =
-        std::make_unique<testing::StrictMock<MetricsLibraryMock>>();
-    metrics_library_ = mock_metrics_library.get();
+    auto mock_metrics = std::make_unique<testing::StrictMock<MockMetrics>>();
+    mock_metrics_ = mock_metrics.get();
 
     SystemState::Initialize(
         std::move(mock_image_loader_proxy_),
         std::move(mock_update_engine_proxy_),
         std::move(mock_session_manager_proxy_), &mock_state_change_reporter_,
         std::make_unique<BootSlot>(std::move(mock_boot_device)),
-        std::make_unique<Metrics>(std::move(mock_metrics_library)),
-        manifest_path_, preloaded_content_path_, content_path_, prefs_path_,
-        users_path_, &clock_, /*for_test=*/true);
+        std::move(mock_metrics), manifest_path_, preloaded_content_path_,
+        content_path_, prefs_path_, users_path_, &clock_, /*for_test=*/true);
   }
 
  private:
@@ -101,6 +100,8 @@ TEST_F(DlcBaseTest, InstallWithUECompletion) {
   EXPECT_CALL(*mock_image_loader_proxy_ptr_, LoadDlcImage(_, _, _, _, _, _))
       .WillOnce(DoAll(SetArgPointee<3>(mount_path_.value()), Return(true)));
   EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(2);
+  EXPECT_CALL(*mock_metrics_,
+              SendInstallResult(InstallResult::kSuccessNewInstall));
 
   EXPECT_TRUE(dlc.Install(&err_));
   InstallWithUpdateEngine({kFirstDlc});
@@ -108,7 +109,7 @@ TEST_F(DlcBaseTest, InstallWithUECompletion) {
   dlc.InstallCompleted(&err_);
   EXPECT_EQ(dlc.GetState().state(), DlcState::INSTALLING);
 
-  dlc.FinishInstall(&err_);
+  dlc.FinishInstall(/*installed_by_ue=*/true, &err_);
   EXPECT_EQ(dlc.GetState().state(), DlcState::INSTALLED);
   EXPECT_TRUE(dlc.IsVerified());
 }
@@ -123,13 +124,15 @@ TEST_F(DlcBaseTest, InstallWithoutUECompletion) {
   EXPECT_CALL(*mock_image_loader_proxy_ptr_, LoadDlcImage(_, _, _, _, _, _))
       .WillOnce(DoAll(SetArgPointee<3>(mount_path_.value()), Return(true)));
   EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(2);
+  EXPECT_CALL(*mock_metrics_,
+              SendInstallResult(InstallResult::kSuccessNewInstall));
 
   EXPECT_TRUE(dlc.Install(&err_));
   InstallWithUpdateEngine({kFirstDlc});
   // UE doesn't call InstallComplete anymore. But we still verify.
   EXPECT_EQ(dlc.GetState().state(), DlcState::INSTALLING);
 
-  dlc.FinishInstall(&err_);
+  dlc.FinishInstall(/*installed_by_ue=*/true, &err_);
   EXPECT_EQ(dlc.GetState().state(), DlcState::INSTALLED);
   EXPECT_TRUE(dlc.IsVerified());
 }
@@ -219,6 +222,8 @@ TEST_F(DlcBaseTest, BootingFromNonRemovableDeviceKeepsPreloadedDLCs) {
   EXPECT_CALL(*mock_image_loader_proxy_ptr_, LoadDlcImage(_, _, _, _, _, _))
       .WillOnce(DoAll(SetArgPointee<3>(mount_path_.value()), Return(true)));
   EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(2);
+  EXPECT_CALL(*mock_metrics_,
+              SendInstallResult(InstallResult::kSuccessAlreadyInstalled));
 
   EXPECT_TRUE(dlc.Install(&err_));
 
@@ -238,6 +243,8 @@ TEST_F(DlcBaseTestRemovable, BootingFromRemovableDeviceKeepsPreloadedDLCs) {
   EXPECT_CALL(*mock_image_loader_proxy_ptr_, LoadDlcImage(_, _, _, _, _, _))
       .WillOnce(DoAll(SetArgPointee<3>(mount_path_.value()), Return(true)));
   EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(2);
+  EXPECT_CALL(*mock_metrics_,
+              SendInstallResult(InstallResult::kSuccessAlreadyInstalled));
 
   EXPECT_TRUE(dlc.Install(&err_));
 
@@ -287,6 +294,8 @@ TEST_F(DlcBaseTest, PreloadingSkippedOnAlreadyVerifiedDlc) {
               SetDlcActiveValue(_, kThirdDlc, _, _))
       .WillOnce(Return(true));
   EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(2);
+  EXPECT_CALL(*mock_metrics_,
+              SendInstallResult(InstallResult::kSuccessAlreadyInstalled));
 
   EXPECT_TRUE(dlc.Install(&err_));
   EXPECT_TRUE(dlc.IsInstalled());
@@ -310,6 +319,8 @@ TEST_F(DlcBaseTest, PreloadingSkippedOnAlreadyExistingAndVerifiableDlc) {
               SetDlcActiveValue(_, kThirdDlc, _, _))
       .WillOnce(Return(true));
   EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(2);
+  EXPECT_CALL(*mock_metrics_,
+              SendInstallResult(InstallResult::kSuccessAlreadyInstalled));
 
   EXPECT_TRUE(dlc.Install(&err_));
   EXPECT_TRUE(dlc.IsInstalled());
@@ -379,6 +390,8 @@ TEST_F(DlcBaseTest, ImageOnDiskButNotVerifiedInstalls) {
               SetDlcActiveValue(_, kSecondDlc, _, _))
       .WillOnce(Return(true));
   EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(2);
+  EXPECT_CALL(*mock_metrics_,
+              SendInstallResult(InstallResult::kSuccessAlreadyInstalled));
 
   EXPECT_TRUE(dlc.Install(&err_));
   EXPECT_TRUE(dlc.IsInstalled());
@@ -401,6 +414,8 @@ TEST_F(DlcBaseTest, ImageOnDiskVerifiedInstalls) {
               SetDlcActiveValue(_, kSecondDlc, _, _))
       .WillOnce(Return(true));
   EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(2);
+  EXPECT_CALL(*mock_metrics_,
+              SendInstallResult(InstallResult::kSuccessAlreadyInstalled));
 
   EXPECT_TRUE(dlc.Install(&err_));
   EXPECT_TRUE(dlc.IsInstalled());
@@ -417,6 +432,8 @@ TEST_F(DlcBaseTest, VerifyDlcImageOnUEFailureToCompleteInstall) {
               LoadDlcImage(kSecondDlc, _, _, _, _, _))
       .WillOnce(DoAll(SetArgPointee<3>(mount_path_.value()), Return(true)));
   EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(2);
+  EXPECT_CALL(*mock_metrics_,
+              SendInstallResult(InstallResult::kSuccessNewInstall));
 
   EXPECT_TRUE(dlc.Install(&err_));
   EXPECT_TRUE(dlc.IsInstalling());
@@ -424,7 +441,7 @@ TEST_F(DlcBaseTest, VerifyDlcImageOnUEFailureToCompleteInstall) {
   // Intentionally skip over setting verified mark before |FinishInstall()|.
   InstallWithUpdateEngine({kSecondDlc});
 
-  EXPECT_TRUE(dlc.FinishInstall(&err_));
+  EXPECT_TRUE(dlc.FinishInstall(/*installed_by_ue=*/true, &err_));
   EXPECT_TRUE(dlc.IsInstalled());
 }
 
@@ -507,11 +524,13 @@ TEST_F(DlcBaseTest, InstallIncreasesRefCount) {
   EXPECT_CALL(*mock_image_loader_proxy_ptr_, LoadDlcImage(_, _, _, _, _, _))
       .WillOnce(DoAll(SetArgPointee<3>(mount_path_.value()), Return(true)));
   EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(2);
+  EXPECT_CALL(*mock_metrics_,
+              SendInstallResult(InstallResult::kSuccessNewInstall));
 
   EXPECT_TRUE(dlc.Install(&err_));
   InstallWithUpdateEngine({kFirstDlc});
   dlc.InstallCompleted(&err_);
-  dlc.FinishInstall(&err_);
+  dlc.FinishInstall(/*installed_by_ue=*/true, &err_);
 
   EXPECT_TRUE(dlc.IsInstalled());
   auto ref_count_file = JoinPaths(SystemState::Get()->dlc_prefs_dir(),

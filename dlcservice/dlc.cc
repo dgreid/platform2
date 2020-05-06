@@ -163,11 +163,11 @@ bool DlcBase::CreateDlc(ErrorPtr* err) {
   for (const auto& path :
        {content_id_path_, content_package_path_, prefs_path_}) {
     if (!CreateDir(path)) {
-      state_.set_last_error_code(kErrorInternal);
-      *err = Error::Create(
-          FROM_HERE, state_.last_error_code(),
+      *err = Error::CreateInternal(
+          FROM_HERE, error::kFailedToCreateDirectory,
           base::StringPrintf("Failed to create directory %s for DLC=%s",
                              path.value().c_str(), id_.c_str()));
+      state_.set_last_error_code(Error::GetDbusErrorCode(*err));
       return false;
     }
   }
@@ -353,6 +353,8 @@ bool DlcBase::Install(ErrorPtr* err) {
     case DlcState::INSTALLING:
       // If the image is already in this state, nothing need to be done. It is
       // already being installed.
+      // Skip reporting this scenario to the metrics, since the Install call
+      // might be from the same client, and reporting this is not useful.
       return true;
     case DlcState::INSTALLED:
       // If the image is already installed, we need to finish the install so it
@@ -364,7 +366,7 @@ bool DlcBase::Install(ErrorPtr* err) {
   }
 
   // Let's try to finish the installation.
-  if (!FinishInstall(err)) {
+  if (!FinishInstall(/*installed_by_ue=*/false, err)) {
     return false;
   }
 
@@ -373,7 +375,9 @@ bool DlcBase::Install(ErrorPtr* err) {
   return true;
 }
 
-bool DlcBase::FinishInstall(ErrorPtr* err) {
+bool DlcBase::FinishInstall(bool installed_by_ue, ErrorPtr* err) {
+  DCHECK(err);
+  DCHECK(err->get() == NULL);  // Check there is no error set.
   switch (state_.state()) {
     case DlcState::INSTALLED:
     case DlcState::INSTALLING:
@@ -390,11 +394,15 @@ bool DlcBase::FinishInstall(ErrorPtr* err) {
         break;
       } else {
         // By now, the image is either not verified or it is not mounted.
-        state_.set_last_error_code(kErrorInternal);
-        *err = Error::Create(
-            FROM_HERE, state_.last_error_code(),
-            base::StringPrintf("Cannot mount image for DLC=%s", id_.c_str()));
+        // The error is empty only if verification was not successful, since
+        // |Mount| would have set the error otherwise.
+        if (err->get() == NULL)
+          *err = Error::CreateInternal(
+              FROM_HERE, error::kFailedToVerifyImage,
+              base::StringPrintf("Cannot verify image for DLC=%s",
+                                 id_.c_str()));
 
+        SystemState::Get()->metrics()->SendInstallResultFailure(err);
         ErrorPtr tmp_err;
         if (!CancelInstall(*err, &tmp_err))
           LOG(ERROR) << "Failed during install finalization for DLC=" << id_;
@@ -413,12 +421,13 @@ bool DlcBase::FinishInstall(ErrorPtr* err) {
   // Now that we are sure the image is installed, we can go ahead and set it as
   // active. Failure to set the metadata flags should not fail the install.
   SetActiveValue(true);
+  SystemState::Get()->metrics()->SendInstallResultSuccess(installed_by_ue);
 
   return true;
 }
 
 bool DlcBase::CancelInstall(const ErrorPtr& err_in, ErrorPtr* err) {
-  state_.set_last_error_code(err_in->GetCode());
+  state_.set_last_error_code(Error::GetDbusErrorCode(err_in));
   ChangeState(DlcState::NOT_INSTALLED);
 
   // Consider as not installed even if delete fails below, correct errors
@@ -438,15 +447,16 @@ bool DlcBase::Mount(ErrorPtr* err) {
               ? imageloader::kSlotNameA
               : imageloader::kSlotNameB,
           &mount_point, nullptr, kImageLoaderTimeoutMs)) {
-    state_.set_last_error_code(kErrorInternal);
-    *err = Error::Create(FROM_HERE, state_.last_error_code(),
-                         "Imageloader is unavailable for LoadDlcImage().");
+    *err =
+        Error::CreateInternal(FROM_HERE, error::kFailedToMountImage,
+                              "Imageloader is unavailable for LoadDlcImage().");
+    state_.set_last_error_code(Error::GetDbusErrorCode(*err));
     return false;
   }
   if (mount_point.empty()) {
-    state_.set_last_error_code(kErrorInternal);
-    *err = Error::Create(FROM_HERE, state_.last_error_code(),
-                         "Imageloader LoadDlcImage() call failed.");
+    *err = Error::CreateInternal(FROM_HERE, error::kFailedToMountImage,
+                                 "Imageloader LoadDlcImage() call failed.");
+    state_.set_last_error_code(Error::GetDbusErrorCode(*err));
     return false;
   }
   mount_point_ = FilePath(mount_point);

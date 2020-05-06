@@ -55,6 +55,7 @@ class DlcService : public DlcServiceInterface {
   ~DlcService() override;
 
   void Initialize() override;
+  // Calls |InstallInternal| and sends the metrics for unsuccessful installs.
   bool Install(const DlcId& id,
                const std::string& omaha_url,
                brillo::ErrorPtr* err) override;
@@ -110,6 +111,11 @@ class DlcService : public DlcServiceInterface {
 
   // Gets update_engine's operation status and saves it in |SystemState|.
   bool GetUpdateEngineStatus();
+
+  // Installs a DLC without sending metrics when the install fails.
+  bool InstallInternal(const DlcId& id,
+                       const std::string& omaha_url,
+                       brillo::ErrorPtr* err);
 
   // Called on receiving update_engine's |StatusUpdate| signal.
   void OnStatusUpdateAdvancedSignal(

@@ -15,13 +15,13 @@
 #include <brillo/message_loops/fake_message_loop.h>
 #include <dlcservice/proto_bindings/dlcservice.pb.h>
 #include <imageloader/dbus-proxy-mocks.h>
-#include <metrics/metrics_library_mock.h>
 #include <session_manager/dbus-proxy-mocks.h>
 #include <update_engine/proto_bindings/update_engine.pb.h>
 #include <update_engine/dbus-proxy-mocks.h>
 
 #include "dlcservice/dlc.h"
 #include "dlcservice/dlc_service.h"
+#include "dlcservice/mock_metrics.h"
 #include "dlcservice/mock_state_change_reporter.h"
 
 namespace dlcservice {
@@ -85,7 +85,7 @@ class BaseTest : public testing::Test {
   std::unique_ptr<SessionManagerProxyMock> mock_session_manager_proxy_;
   SessionManagerProxyMock* mock_session_manager_proxy_ptr_;
 
-  MetricsLibraryMock* metrics_library_;
+  MockMetrics* mock_metrics_;
 
   MockStateChangeReporter mock_state_change_reporter_;
 

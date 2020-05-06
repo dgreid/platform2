@@ -12,6 +12,7 @@
 #include "dlcservice/test_utils.h"
 #include "dlcservice/utils.h"
 
+using dlcservice::metrics::InstallResult;
 using std::string;
 using testing::_;
 using testing::ElementsAre;
@@ -31,6 +32,8 @@ class DlcManagerTest : public BaseTest {
     EXPECT_CALL(*mock_update_engine_proxy_ptr_,
                 SetDlcActiveValue(true, id, _, _))
         .WillOnce(Return(true));
+    EXPECT_CALL(*mock_metrics_,
+                SendInstallResult(InstallResult::kSuccessNewInstall));
 
     bool external_install_needed = false;
     EXPECT_TRUE(dlc_manager_->Install(id, &external_install_needed, &err_));
@@ -74,6 +77,8 @@ TEST_F(DlcManagerTest, PreloadAllowedDlcTest) {
   EXPECT_CALL(*mock_update_engine_proxy_ptr_,
               SetDlcActiveValue(true, kThirdDlc, _, _))
       .WillOnce(Return(true));
+  EXPECT_CALL(*mock_metrics_,
+              SendInstallResult(InstallResult::kSuccessAlreadyInstalled));
   EXPECT_THAT(dlc_manager_->GetInstalled(), ElementsAre());
   EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(2);
 
@@ -98,6 +103,8 @@ TEST_F(DlcManagerTest, PreloadAllowedWithBadPreinstalledDlcTest) {
               SetDlcActiveValue(true, kThirdDlc, _, _))
       .WillOnce(Return(true));
   EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(2);
+  EXPECT_CALL(*mock_metrics_,
+              SendInstallResult(InstallResult::kSuccessAlreadyInstalled));
 
   EXPECT_THAT(dlc_manager_->GetInstalled(), ElementsAre());
   bool external_install_needed = false;
