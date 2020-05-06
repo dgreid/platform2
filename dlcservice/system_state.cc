@@ -28,6 +28,7 @@ SystemState::SystemState(
         session_manager_proxy,
     StateChangeReporterInterface* state_change_reporter,
     std::unique_ptr<BootSlot> boot_slot,
+    std::unique_ptr<Metrics> metrics,
     const base::FilePath& manifest_dir,
     const base::FilePath& preloaded_content_dir,
     const base::FilePath& content_dir,
@@ -38,6 +39,7 @@ SystemState::SystemState(
       update_engine_proxy_(std::move(update_engine_proxy)),
       session_manager_proxy_(std::move(session_manager_proxy)),
       state_change_reporter_(state_change_reporter),
+      metrics_(std::move(metrics)),
       manifest_dir_(manifest_dir),
       preloaded_content_dir_(preloaded_content_dir),
       content_dir_(content_dir),
@@ -61,6 +63,7 @@ void SystemState::Initialize(
         session_manager_proxy,
     StateChangeReporterInterface* state_change_reporter,
     std::unique_ptr<BootSlot> boot_slot,
+    std::unique_ptr<Metrics> metrics,
     const base::FilePath& manifest_dir,
     const base::FilePath& preloaded_content_dir,
     const base::FilePath& content_dir,
@@ -73,8 +76,8 @@ void SystemState::Initialize(
   g_instance_.reset(new SystemState(
       std::move(image_loader_proxy), std::move(update_engine_proxy),
       std::move(session_manager_proxy), state_change_reporter,
-      std::move(boot_slot), manifest_dir, preloaded_content_dir, content_dir,
-      prefs_dir, users_dir, clock));
+      std::move(boot_slot), std::move(metrics), manifest_dir,
+      preloaded_content_dir, content_dir, prefs_dir, users_dir, clock));
 }
 
 // static
@@ -96,6 +99,10 @@ org::chromium::UpdateEngineInterfaceProxyInterface* SystemState::update_engine()
 org::chromium::SessionManagerInterfaceProxyInterface*
 SystemState::session_manager() const {
   return session_manager_proxy_.get();
+}
+
+Metrics* SystemState::metrics() const {
+  return metrics_.get();
 }
 
 StateChangeReporterInterface* SystemState::state_change_reporter() const {
