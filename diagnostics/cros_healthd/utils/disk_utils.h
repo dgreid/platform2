@@ -39,7 +39,7 @@ class DiskFetcher {
           output_info);
 
   // Gets the /dev/... name for |sys_path| output parameter, which should be a
-  // /sys/class/block/... name. This utilizes libudev. Also returns the driver
+  // /sys/block/... name. This utilizes libudev. Also returns the driver
   // |subsystems| output parameter for use in determining the "type" of the
   // block device. If the call is successful, base::nullopt is returned. If an
   // error occurred, a ProbeError is returned and the output parameters do not

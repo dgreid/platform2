@@ -13,7 +13,6 @@
 #include <utility>
 #include <vector>
 
-#include <base/files/file_enumerator.h>
 #include <base/optional.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_split.h>
@@ -22,6 +21,7 @@
 
 #include "diagnostics/common/file_utils.h"
 #include "diagnostics/cros_healthd/utils/error_utils.h"
+#include "diagnostics/cros_healthd/utils/storage/device_lister.h"
 
 namespace diagnostics {
 
@@ -34,6 +34,8 @@ constexpr char kDevStatFileName[] = "stat";
 constexpr char kDevStatRegex[] =
     R"(\s*\d+\s+\d+\s+(\d+)\s+(\d+)\s+\d+\s+\d+\s+(\d+)\s+(\d+))";
 
+constexpr char kSysBlockPath[] = "sys/block/";
+
 // POD struct which holds the number of sectors read and written by a device.
 struct SectorStats {
   uint64_t read;
@@ -45,38 +47,11 @@ struct SectorStats {
 std::vector<base::FilePath> GetNonRemovableBlockDevices(
     const base::FilePath& root) {
   std::vector<base::FilePath> res;
-  const base::FilePath storage_dir_path(root.Append("sys/class/block/"));
-  base::FileEnumerator storage_dir_it(storage_dir_path, true,
-                                      base::FileEnumerator::SHOW_SYM_LINKS |
-                                          base::FileEnumerator::FILES |
-                                          base::FileEnumerator::DIRECTORIES);
+  StorageDeviceLister lister;
+  auto device_names = lister.ListDevices(root);
 
-  while (true) {
-    const auto storage_path = storage_dir_it.Next();
-    if (storage_path.empty())
-      break;
-
-    // Skip Loopback, dm-verity, or zram devices.
-    if (base::StartsWith(storage_path.BaseName().value(), "loop",
-                         base::CompareCase::SENSITIVE) ||
-        base::StartsWith(storage_path.BaseName().value(), "dm-",
-                         base::CompareCase::SENSITIVE) ||
-        base::StartsWith(storage_path.BaseName().value(), "zram",
-                         base::CompareCase::SENSITIVE)) {
-      continue;
-    }
-
-    // Only return non-removable devices
-    int64_t removable = 0;
-    if (!ReadInteger(storage_path, "removable", &base::StringToInt64,
-                     &removable) ||
-        removable) {
-      VLOG(1) << "Storage device " << storage_path.value()
-              << " does not specify the removable property or is removable.";
-      continue;
-    }
-
-    res.push_back(storage_path);
+  for (auto d : device_names) {
+    res.push_back(root.Append(kSysBlockPath).Append(d));
   }
 
   return res;
