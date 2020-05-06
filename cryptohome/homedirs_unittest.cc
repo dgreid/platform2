@@ -23,6 +23,7 @@
 #include "cryptohome/credentials.h"
 #include "cryptohome/crypto_error.h"
 #include "cryptohome/cryptolib.h"
+#include "cryptohome/disk_cleanup.h"
 #include "cryptohome/make_tests.h"
 #include "cryptohome/mock_crypto.h"
 #include "cryptohome/mock_platform.h"
@@ -449,14 +450,14 @@ TEST_P(HomeDirsTest, IsFreeableDiskSpaceAvailable) {
       .WillOnce(Return(is_mounted2));
 
   homedirs_.set_enterprise_owned(true);
-  EXPECT_TRUE(homedirs_.IsFreeableDiskSpaceAvailable());
+  EXPECT_TRUE(homedirs_.disk_cleanup()->IsFreeableDiskSpaceAvailable());
 
   // Does not check dirs as it is not enterprise enrolled
   homedirs_.set_enterprise_owned(false);
-  EXPECT_FALSE(homedirs_.IsFreeableDiskSpaceAvailable());
+  EXPECT_FALSE(homedirs_.disk_cleanup()->IsFreeableDiskSpaceAvailable());
 
   homedirs_.set_enterprise_owned(true);
-  EXPECT_FALSE(homedirs_.IsFreeableDiskSpaceAvailable());
+  EXPECT_FALSE(homedirs_.disk_cleanup()->IsFreeableDiskSpaceAvailable());
 }
 
 TEST_P(HomeDirsTest, GetUnmountedAndroidDataCount) {
@@ -706,10 +707,10 @@ TEST_P(FreeDiskSpaceTest, InitializeTimeCacheWithNoTime) {
   // Now skip the deletion steps by not having a legit owner.
   set_policy(false, "", false, "");
 
-  homedirs_.FreeDiskSpace();
+  homedirs_.disk_cleanup()->FreeDiskSpace();
 
   // Could not delete user, so it doesn't have enough space yet.
-  EXPECT_FALSE(homedirs_.HasTargetFreeSpace());
+  EXPECT_FALSE(homedirs_.disk_cleanup()->HasTargetFreeSpace());
 }
 
 TEST_P(FreeDiskSpaceTest, InitializeTimeCacheWithOneTime) {
@@ -796,9 +797,9 @@ TEST_P(FreeDiskSpaceTest, InitializeTimeCacheWithOneTime) {
   // Now skip the deletion steps by not having a legit owner.
   set_policy(false, "", false, "");
 
-  homedirs_.FreeDiskSpace();
+  homedirs_.disk_cleanup()->FreeDiskSpace();
 
-  EXPECT_FALSE(homedirs_.HasTargetFreeSpace());
+  EXPECT_FALSE(homedirs_.disk_cleanup()->HasTargetFreeSpace());
 }
 
 TEST_P(FreeDiskSpaceTest, TimeCacheSkipNormalCleanupIfNotActive) {
@@ -886,7 +887,7 @@ TEST_P(FreeDiskSpaceTest, TimeCacheSkipNormalCleanupIfNotActive) {
       // Stop after GCache cleanup.
       .WillRepeatedly(Return(kTargetFreeSpaceAfterCleanup + 1));
 
-  homedirs_.FreeDiskSpace();
+  homedirs_.disk_cleanup()->FreeDiskSpace();
 
   // Simulate logout
   EXPECT_CALL(timestamp_cache_, GetLastUserActivityTimestamp(homedir_paths_[2]))
@@ -901,9 +902,9 @@ TEST_P(FreeDiskSpaceTest, TimeCacheSkipNormalCleanupIfNotActive) {
 
       .WillRepeatedly(Return(0));
 
-  homedirs_.FreeDiskSpace();
+  homedirs_.disk_cleanup()->FreeDiskSpace();
 
-  EXPECT_FALSE(homedirs_.HasTargetFreeSpace());
+  EXPECT_FALSE(homedirs_.disk_cleanup()->HasTargetFreeSpace());
 }
 
 TEST_P(FreeDiskSpaceTest, TimeCacheSkipAggressiveCleanupIfNotActive) {
@@ -1010,7 +1011,7 @@ TEST_P(FreeDiskSpaceTest, TimeCacheSkipAggressiveCleanupIfNotActive) {
       // Stop after Android cleanup
       .WillRepeatedly(Return(kTargetFreeSpaceAfterCleanup + 1));
 
-  homedirs_.FreeDiskSpace();
+  homedirs_.disk_cleanup()->FreeDiskSpace();
 
   // Simulate logout
   EXPECT_CALL(timestamp_cache_, GetLastUserActivityTimestamp(homedir_paths_[2]))
@@ -1040,9 +1041,9 @@ TEST_P(FreeDiskSpaceTest, TimeCacheSkipAggressiveCleanupIfNotActive) {
 
       .WillRepeatedly(Return(0));
 
-  homedirs_.FreeDiskSpace();
+  homedirs_.disk_cleanup()->FreeDiskSpace();
 
-  EXPECT_FALSE(homedirs_.HasTargetFreeSpace());
+  EXPECT_FALSE(homedirs_.disk_cleanup()->HasTargetFreeSpace());
 }
 
 TEST_P(FreeDiskSpaceTest, NoCacheCleanup) {
@@ -1050,9 +1051,9 @@ TEST_P(FreeDiskSpaceTest, NoCacheCleanup) {
   EXPECT_CALL(platform_, AmountOfFreeDiskSpace(kTestRoot))
       .WillRepeatedly(Return(kTargetFreeSpaceAfterCleanup + 1));
 
-  homedirs_.FreeDiskSpace();
+  homedirs_.disk_cleanup()->FreeDiskSpace();
 
-  EXPECT_TRUE(homedirs_.HasTargetFreeSpace());
+  EXPECT_TRUE(homedirs_.disk_cleanup()->HasTargetFreeSpace());
 }
 
 TEST_P(FreeDiskSpaceTest, OnlyCacheCleanup) {
@@ -1096,9 +1097,9 @@ TEST_P(FreeDiskSpaceTest, OnlyCacheCleanup) {
   ExpectTimestampCacheInitialization();
   ExpectTrackedDirectoriesEnumeration();
 
-  homedirs_.FreeDiskSpace();
+  homedirs_.disk_cleanup()->FreeDiskSpace();
 
-  EXPECT_TRUE(homedirs_.HasTargetFreeSpace());
+  EXPECT_TRUE(homedirs_.disk_cleanup()->HasTargetFreeSpace());
 }
 
 TEST_P(FreeDiskSpaceTest, GCacheCleanup) {
@@ -1212,9 +1213,9 @@ TEST_P(FreeDiskSpaceTest, GCacheCleanup) {
                          _))
       .WillOnce(Return(true));
 
-  homedirs_.FreeDiskSpace();
+  homedirs_.disk_cleanup()->FreeDiskSpace();
 
-  EXPECT_TRUE(homedirs_.HasTargetFreeSpace());
+  EXPECT_TRUE(homedirs_.disk_cleanup()->HasTargetFreeSpace());
 }
 
 TEST_P(FreeDiskSpaceTest, CacheAndGCacheCleanup) {
@@ -1298,12 +1299,12 @@ TEST_P(FreeDiskSpaceTest, CacheAndGCacheCleanup) {
   ExpectTimestampCacheInitialization();
   ExpectTrackedDirectoriesEnumeration();
 
-  homedirs_.FreeDiskSpace();
+  homedirs_.disk_cleanup()->FreeDiskSpace();
 
   // Should finish cleaning up because the free space size exceeds
   // |kFreeSpaceThresholdToTriggerAggressiveCleanup| after deleting gcache,
   // although it's still below |kTargetFreeSpaceAfterCleanup|.
-  EXPECT_FALSE(homedirs_.HasTargetFreeSpace());
+  EXPECT_FALSE(homedirs_.disk_cleanup()->HasTargetFreeSpace());
 }
 
 TEST_P(FreeDiskSpaceTest, CacheAndGCacheAndAndroidCleanup) {
@@ -1454,12 +1455,12 @@ TEST_P(FreeDiskSpaceTest, CacheAndGCacheAndAndroidCleanup) {
   EXPECT_CALL(platform_, DeleteFile(code_cache_dir.Append("bar"), true))
       .WillOnce(Return(true));
 
-  homedirs_.FreeDiskSpace();
+  homedirs_.disk_cleanup()->FreeDiskSpace();
 
   // Should finish cleaning up because the free space size exceeds
   // |kFreeSpaceThresholdToTriggerAggressiveCleanup| after deleting Android
   // cache, although it's still below |kTargetFreeSpaceAfterCleanup|.
-  EXPECT_FALSE(homedirs_.HasTargetFreeSpace());
+  EXPECT_FALSE(homedirs_.disk_cleanup()->HasTargetFreeSpace());
 }
 
 TEST_P(FreeDiskSpaceTest, CleanUpOneUser) {
@@ -1483,9 +1484,9 @@ TEST_P(FreeDiskSpaceTest, CleanUpOneUser) {
         .WillRepeatedly(Return(homedir_times_[i]));
   }
 
-  homedirs_.FreeDiskSpace();
+  homedirs_.disk_cleanup()->FreeDiskSpace();
 
-  EXPECT_TRUE(homedirs_.HasTargetFreeSpace());
+  EXPECT_TRUE(homedirs_.disk_cleanup()->HasTargetFreeSpace());
 }
 
 TEST_P(FreeDiskSpaceTest, CleanUpMultipleUsers) {
@@ -1514,9 +1515,9 @@ TEST_P(FreeDiskSpaceTest, CleanUpMultipleUsers) {
         .WillRepeatedly(Return(homedir_times_[i]));
   }
 
-  homedirs_.FreeDiskSpace();
+  homedirs_.disk_cleanup()->FreeDiskSpace();
 
-  EXPECT_TRUE(homedirs_.HasTargetFreeSpace());
+  EXPECT_TRUE(homedirs_.disk_cleanup()->HasTargetFreeSpace());
 }
 
 TEST_P(FreeDiskSpaceTest, EnterpriseCleanUpAllUsersButLast_LoginScreen) {
@@ -1544,9 +1545,9 @@ TEST_P(FreeDiskSpaceTest, EnterpriseCleanUpAllUsersButLast_LoginScreen) {
   ExpectDeletedLECredentialEnumeration(homedir_paths_[1]);
   ExpectDeletedLECredentialEnumeration(homedir_paths_[2]);
 
-  homedirs_.FreeDiskSpace();
+  homedirs_.disk_cleanup()->FreeDiskSpace();
 
-  EXPECT_FALSE(homedirs_.HasTargetFreeSpace());
+  EXPECT_FALSE(homedirs_.disk_cleanup()->HasTargetFreeSpace());
 }
 
 
@@ -1594,9 +1595,9 @@ TEST_P(FreeDiskSpaceTest, EnterpriseCleanUpAllUsersButLast_UserLoggedIn) {
   ExpectDeletedLECredentialEnumeration(homedir_paths_[1]);
   ExpectDeletedLECredentialEnumeration(homedir_paths_[3]);
 
-  homedirs_.FreeDiskSpace();
+  homedirs_.disk_cleanup()->FreeDiskSpace();
 
-  EXPECT_FALSE(homedirs_.HasTargetFreeSpace());
+  EXPECT_FALSE(homedirs_.disk_cleanup()->HasTargetFreeSpace());
 }
 
 TEST_P(FreeDiskSpaceTest, CleanUpMultipleNonadjacentUsers) {
@@ -1634,9 +1635,9 @@ TEST_P(FreeDiskSpaceTest, CleanUpMultipleNonadjacentUsers) {
   EXPECT_CALL(timestamp_cache_, GetLastUserActivityTimestamp(homedir_paths_[3]))
       .WillRepeatedly(Return(homedir_times_[1]));
 
-  homedirs_.FreeDiskSpace();
+  homedirs_.disk_cleanup()->FreeDiskSpace();
 
-  EXPECT_TRUE(homedirs_.HasTargetFreeSpace());
+  EXPECT_TRUE(homedirs_.disk_cleanup()->HasTargetFreeSpace());
 }
 
 TEST_P(FreeDiskSpaceTest, NoOwnerNoEnterpriseNoCleanup) {
@@ -1660,9 +1661,9 @@ TEST_P(FreeDiskSpaceTest, NoOwnerNoEnterpriseNoCleanup) {
   ExpectCacheDirCleanupCalls(4);
   ExpectTimestampCacheInitialization();
 
-  homedirs_.FreeDiskSpace();
+  homedirs_.disk_cleanup()->FreeDiskSpace();
 
-  EXPECT_FALSE(homedirs_.HasTargetFreeSpace());
+  EXPECT_FALSE(homedirs_.disk_cleanup()->HasTargetFreeSpace());
 }
 
 TEST_P(FreeDiskSpaceTest, ConsumerEphemeralUsers) {
@@ -1711,9 +1712,9 @@ TEST_P(FreeDiskSpaceTest, ConsumerEphemeralUsers) {
   EXPECT_CALL(platform_, DeleteFile(homedir_paths_[3], true))
     .Times(0);
 
-  homedirs_.FreeDiskSpace();
+  homedirs_.disk_cleanup()->FreeDiskSpace();
 
-  EXPECT_TRUE(homedirs_.HasTargetFreeSpace());
+  EXPECT_TRUE(homedirs_.disk_cleanup()->HasTargetFreeSpace());
 }
 
 TEST_P(FreeDiskSpaceTest, EnterpriseEphemeralUsers) {
@@ -1764,9 +1765,9 @@ TEST_P(FreeDiskSpaceTest, EnterpriseEphemeralUsers) {
     .WillOnce(Return(true))
     .WillOnce(Return(true));
 
-  homedirs_.FreeDiskSpace();
+  homedirs_.disk_cleanup()->FreeDiskSpace();
 
-  EXPECT_TRUE(homedirs_.HasTargetFreeSpace());
+  EXPECT_TRUE(homedirs_.disk_cleanup()->HasTargetFreeSpace());
 }
 
 TEST_P(FreeDiskSpaceTest, DontCleanUpMountedUser) {
@@ -1829,9 +1830,9 @@ TEST_P(FreeDiskSpaceTest, DontCleanUpMountedUser) {
         .WillRepeatedly(Return(homedir_times_[i]));
   }
 
-  homedirs_.FreeDiskSpace();
+  homedirs_.disk_cleanup()->FreeDiskSpace();
 
-  EXPECT_FALSE(homedirs_.HasTargetFreeSpace());
+  EXPECT_FALSE(homedirs_.disk_cleanup()->HasTargetFreeSpace());
 }
 
 TEST_P(HomeDirsTest, GoodDecryptTest) {

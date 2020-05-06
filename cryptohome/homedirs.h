@@ -51,21 +51,20 @@ extern const char kMountDir[];
 
 class Credentials;
 class Crypto;
+class DiskCleanup;
 class Platform;
 class UserOldestActivityTimestampCache;
 class VaultKeyset;
 
 class HomeDirs {
  public:
-  // Entries are sorted by the severity of the lack of free space. See
-  // FreeDiskSpaceState for thresholds.
-  enum class FreeSpaceState {
-    kError,                  // error while determining the amount of free disk
-                             // space
-    kAboveTarget,            // above target free disk space for cleanup result
-    kAboveThreshold,         // above cleanup threshold but below cleanup target
-    kNeedNormalCleanup,      // below threshold for normal cleanup
-    kNeedAggressiveCleanup,  // below threshold for aggressive cleanup
+  // HomeDir contains lists properties of users profiles.
+  struct HomeDir {
+    // Path in /home/.shadow/
+    base::FilePath shadow;
+    // Path in /home/user/
+    base::FilePath user;
+    bool is_mounted = false;
   };
 
   HomeDirs();
@@ -85,34 +84,6 @@ class HomeDirs {
   // Initializes this HomeDirs object. Returns true for success.
   virtual bool Init(Platform* platform, Crypto* crypto,
                     UserOldestActivityTimestampCache *cache);
-
-  // Checks if it is possible to free up disk space
-  virtual bool IsFreeableDiskSpaceAvailable();
-
-  // Frees disk space for unused cryptohomes. If the available disk space is
-  // below |kFreeSpaceThresholdToTriggerCleanup|, attempts to free space until
-  // it goes up to |kTargetFreeSpaceAfterCleanup|.
-  virtual void FreeDiskSpace();
-
-  // Return the available disk space in bytes for home directories, or nullopt
-  // on failure.
-  virtual base::Optional<int64_t> AmountOfFreeDiskSpace() const;
-
-  // Determines the state of the free disk space based on the following
-  // thresholds:
-  //   kAboveTarget: free_disk_space >= target_free_space_
-  //   kAboveThreshold: target_free_space_ > free_disk_space =>
-  //                      normal_cleanup_threshold_
-  //   kNeedNormalCleanup: normal_cleanup_threshold_ >
-  //                      free_disk_space =>
-  //                      aggressive_cleanup_threshold_
-  //   kNeedAggressiveCleanup: aggressive_cleanup_threshold_ >
-  //                      free_disk_space
-  virtual FreeSpaceState GetFreeDiskSpaceState(base::Optional<int64_t>) const;
-
-  // Uses AmountOfFreeDiskSpace to get the current amount of free disk space and
-  // to determine the state of the free disk space.
-  virtual FreeSpaceState GetFreeDiskSpaceState() const;
 
   // Removes all cryptohomes owned by anyone other than the owner user (if set),
   // regardless of free disk space.
@@ -301,24 +272,22 @@ class HomeDirs {
   // that PCR was extended.
   virtual bool SetLockedToSingleUser() const;
 
-  // Disk cleanup thresholds setters.
-  void set_cleanup_threshold(uint64_t cleanup_threshold) {
-    normal_cleanup_threshold_ = cleanup_threshold;
-  }
-  void set_aggressive_cleanup_threshold(uint64_t aggressive_cleanup_threshold) {
-    aggressive_cleanup_threshold_ = aggressive_cleanup_threshold;
-  }
-  void set_target_free_space(uint64_t target_free_space) {
-    target_free_space_ = target_free_space;
-  }
+  // Get the list of cryptohomes on the system.
+  virtual std::vector<HomeDir> GetHomeDirs();
+
+  // Called during disk cleanup if the timestamp cache is not yet
+  // initialized. Loads the last activity timestamp from the vault keyset.
+  virtual void AddUserTimestampToCache(const base::FilePath& user_dir);
 
   // Accessors. Mostly used for unit testing. These do not take ownership of
   // passed-in pointers.
   // TODO(wad) Should this update default_crypto_.set_platform()?
   void set_platform(Platform *value) { platform_ = value; }
   Platform* platform() { return platform_; }
-  void set_shadow_root(const base::FilePath& value) { shadow_root_ = value; }
-  const base::FilePath& shadow_root() const { return shadow_root_; }
+  virtual void set_shadow_root(const base::FilePath& value) {
+    shadow_root_ = value;
+  }
+  virtual const base::FilePath& shadow_root() const { return shadow_root_; }
   virtual void set_enterprise_owned(bool value) { enterprise_owned_ = value; }
   virtual bool enterprise_owned() const { return enterprise_owned_; }
   void set_policy_provider(policy::PolicyProvider* value) {
@@ -327,6 +296,8 @@ class HomeDirs {
   policy::PolicyProvider* policy_provider() { return policy_provider_; }
   void set_crypto(Crypto* value) { crypto_ = value; }
   Crypto* crypto() const { return crypto_; }
+  virtual DiskCleanup* disk_cleanup() const { return cleanup_; }
+  virtual void set_disk_cleanup(DiskCleanup* cleanup) { cleanup_ = cleanup; }
   void set_mount_factory(MountFactory* value) { mount_factory_ = value; }
   MountFactory* mount_factory() const { return mount_factory_; }
   void set_vault_keyset_factory(VaultKeysetFactory* value) {
@@ -335,22 +306,9 @@ class HomeDirs {
   VaultKeysetFactory* vault_keyset_factory() const {
     return vault_keyset_factory_;
   }
-
   void set_use_tpm(bool use_tpm) { use_tpm_ = use_tpm; }
 
-  // Returns true if there is now at least |kTargetFreeSpaceAfterCleanup|
-  // amount of free disk space or false otherwise.
-  bool HasTargetFreeSpace() const;
-
  private:
-  struct HomeDir {
-    // Path in /home/.shadow/
-    base::FilePath shadow;
-    // Path in /home/user/
-    base::FilePath user;
-    bool is_mounted = false;
-  };
-
   base::TimeDelta GetUserInactivityThresholdForRemoval();
   // Loads the device policy, either by initializing it or reloading the
   // existing one.
@@ -366,8 +324,6 @@ class HomeDirs {
       const base::FilePath& tracked_dir_name,
       base::FilePath* out);
 
-  // Get the list of cryptohomes on the system
-  std::vector<HomeDir> GetHomeDirs();
   // Removes all mounted homedirs from the vector
   void FilterMountedHomedirs(std::vector<HomeDir>* homedirs);
   // Removes all homedirs that have not been active since the cutoff
@@ -378,28 +334,17 @@ class HomeDirs {
   void RemoveNonOwnerCryptohomesInternal(const std::vector<HomeDir>& homedirs);
   // Callback used during RemoveNonOwnerCryptohomes()
   void RemoveNonOwnerCryptohomesCallback(const base::FilePath& user_dir);
-  // Callback used during FreeDiskSpace().
-  void DeleteCacheCallback(const base::FilePath& user_dir);
-  // Callback used during FreeDiskSpace().
-  void DeleteGCacheTmpCallback(const base::FilePath& user_dir);
-  // Callback used during FreeDiskSpace().
-  void DeleteAndroidCacheCallback(const base::FilePath& user_dir);
   // Recursively deletes all contents of a directory while leaving the directory
   // itself intact.
   void DeleteDirectoryContents(const base::FilePath& dir);
   // Deletes all directories under the supplied directory whose basename is not
   // the same as the obfuscated owner name.
   void RemoveNonOwnerDirectories(const base::FilePath& prefix);
-  // Callback used during FreeDiskSpace() if the timestamp cache is not yet
-  // initialized. Loads the last activity timestamp from the vault keyset.
-  void AddUserTimestampToCacheCallback(const base::FilePath& user_dir);
   // Loads the serialized vault keyset for the supplied obfuscated username.
   // Returns true for success, false for failure.
   bool LoadVaultKeysetForUser(const std::string& obfuscated_user,
                               int index,
                               VaultKeyset* keyset) const;
-  // An implementation function for public FreeDiskSpace interface.
-  void FreeDiskSpaceInternal();
 
   // Helper function to check if the directory contains subdirectory that looks
   // like encrypted android-data (see definition of looks-like-android-data in
@@ -446,22 +391,14 @@ class HomeDirs {
   Crypto* crypto_;
   std::unique_ptr<MountFactory> default_mount_factory_;
   MountFactory* mount_factory_;
+  std::unique_ptr<DiskCleanup> default_cleanup_;
+  DiskCleanup* cleanup_;
   // TODO(wad) Collapse all factories into a single manufacturing plant to save
   //           some pointers.
   std::unique_ptr<VaultKeysetFactory> default_vault_keyset_factory_;
   VaultKeysetFactory* vault_keyset_factory_;
   brillo::SecureBlob system_salt_;
   chaps::TokenManagerClient chaps_client_;
-  base::Optional<base::Time> last_free_disk_space_ = base::nullopt;
-  base::Optional<base::Time> last_normal_disk_cleanup_complete_ = base::nullopt;
-  base::Optional<base::Time> last_aggressive_disk_cleanup_complete_ =
-      base::nullopt;
-
-  // Disk cleanup thresholds. Can be set using command line flags.
-  uint64_t normal_cleanup_threshold_ = kFreeSpaceThresholdToTriggerCleanup;
-  uint64_t aggressive_cleanup_threshold_ =
-    kFreeSpaceThresholdToTriggerAggressiveCleanup;
-  uint64_t target_free_space_ = kTargetFreeSpaceAfterCleanup;
 
   // The container a not-shifted system UID in ARC++ container (AID_SYSTEM).
   static constexpr uid_t kAndroidSystemUid = 1000;

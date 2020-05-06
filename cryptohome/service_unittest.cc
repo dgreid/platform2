@@ -38,11 +38,13 @@
 #include "cryptohome/credentials.h"
 #include "cryptohome/crypto.h"
 #include "cryptohome/crypto_error.h"
+#include "cryptohome/disk_cleanup.h"
 #include "cryptohome/glib_transition.h"
 #include "cryptohome/interface.h"
 #include "cryptohome/make_tests.h"
 #include "cryptohome/mock_arc_disk_quota.h"
 #include "cryptohome/mock_crypto.h"
+#include "cryptohome/mock_disk_cleanup.h"
 #include "cryptohome/mock_fingerprint_manager.h"
 #include "cryptohome/mock_firmware_management_parameters.h"
 #include "cryptohome/mock_homedirs.h"
@@ -72,6 +74,7 @@ using ::testing::InvokeWithoutArgs;
 using ::testing::Mock;
 using ::testing::NiceMock;
 using ::testing::Return;
+using ::testing::ReturnRef;
 using ::testing::SaveArg;
 using ::testing::SaveArgPointee;
 using ::testing::SetArgPointee;
@@ -207,10 +210,11 @@ class ServiceTestNotInitialized : public ::testing::Test {
     homedirs_.set_crypto(&crypto_);
     homedirs_.set_platform(&platform_);
     tpm_init_.set_tpm(&tpm_);
-
+    ON_CALL(homedirs_, shadow_root()).WillByDefault(ReturnRef(kShadowRoot));
+    ON_CALL(homedirs_, disk_cleanup()).WillByDefault(Return(&cleanup_));
     ON_CALL(homedirs_, Init(_, _, _)).WillByDefault(Return(true));
-    ON_CALL(homedirs_, AmountOfFreeDiskSpace()).WillByDefault(
-        Return(kFreeSpaceThresholdToTriggerCleanup));
+    ON_CALL(cleanup_, AmountOfFreeDiskSpace())
+        .WillByDefault(Return(kFreeSpaceThresholdToTriggerCleanup));
     ON_CALL(boot_attributes_, Load()).WillByDefault(Return(true));
     // Empty token list by default.  The effect is that there are no attempts
     // to unload tokens unless a test explicitly sets up the token list.
@@ -259,6 +263,7 @@ class ServiceTestNotInitialized : public ::testing::Test {
   NiceMock<MockTpmInit> tpm_init_;
   NiceMock<MockCrypto> crypto_;
   NiceMock<MockHomeDirs> homedirs_;
+  NiceMock<MockDiskCleanup> cleanup_;
   NiceMock<MockInstallAttributes> attrs_;
   NiceMock<MockBootLockbox> lockbox_;
   NiceMock<MockBootAttributes> boot_attributes_;
@@ -270,6 +275,7 @@ class ServiceTestNotInitialized : public ::testing::Test {
   NiceMock<MockKeyChallengeServiceFactory> key_challenge_service_factory_;
   FakeEventSourceSink event_sink_;
   scoped_refptr<MockMount> mount_;
+  base::FilePath kShadowRoot = base::FilePath("/home/.shadow");
   // Declare service_ last so it gets destroyed before all the mocks. This is
   // important because otherwise the background thread may call into mocks that
   // have already been destroyed.
@@ -323,9 +329,7 @@ TEST_F(ServiceTestNotInitialized, CheckAsyncTestCredentials) {
       std::unique_ptr<NiceMock<policy::MockDevicePolicy>>(
           new NiceMock<policy::MockDevicePolicy>));
   real_homedirs.set_policy_provider(&policy_provider);
-  // Avoid calling FreeDiskSpace routine.
-  EXPECT_CALL(platform_, AmountOfFreeDiskSpace(_))
-      .WillRepeatedly(Return(kMinFreeSpaceInBytes * 2));
+  real_homedirs.set_disk_cleanup(&cleanup_);
   service_.set_homedirs(&real_homedirs);
   service_.set_crypto(&real_crypto);
   service_.Initialize();
@@ -394,7 +398,7 @@ TEST_F(ServiceTestNotInitialized, CheckAutoCleanupCallback) {
   base::Lock lock;
 
   // These will be invoked from the mount thread.
-  EXPECT_CALL(homedirs_, FreeDiskSpace()).WillRepeatedly(Invoke([&]() {
+  EXPECT_CALL(cleanup_, FreeDiskSpace()).WillRepeatedly(Invoke([&]() {
     base::AutoLock scoped_lock(lock);
     ++free_disk_space_count;
   }));
@@ -438,7 +442,7 @@ TEST_F(ServiceTestNotInitialized, CheckAutoCleanupCallback) {
 TEST_F(ServiceTestNotInitialized, CheckAutoCleanupCallbackFirst) {
   // Checks that DoAutoCleanup() is called first right after init.
   // Service will schedule first cleanup right after its init.
-  EXPECT_CALL(homedirs_, FreeDiskSpace()).Times(1);
+  EXPECT_CALL(cleanup_, FreeDiskSpace()).Times(1);
   service_.set_low_disk_notification_period_ms(1000);  // 1s - long enough
   service_.Initialize();
   // short delay to see the first invocation
@@ -456,16 +460,23 @@ static gboolean SignalCounter(GSignalInvocationHint *ihint,
 
 TEST_F(ServiceTestNotInitialized, CheckLowDiskCallback) {
   // Checks that LowDiskCallback is called periodically.
-  EXPECT_CALL(homedirs_, AmountOfFreeDiskSpace())
+  EXPECT_CALL(cleanup_, AmountOfFreeDiskSpace())
       .Times(AtLeast(5))
       .WillOnce(Return(kFreeSpaceThresholdToTriggerCleanup + 1))
       .WillOnce(Return(kFreeSpaceThresholdToTriggerCleanup + 1))
       .WillOnce(Return(kFreeSpaceThresholdToTriggerCleanup + 1))
       .WillOnce(Return(kFreeSpaceThresholdToTriggerCleanup - 1))
       .WillRepeatedly(Return(kFreeSpaceThresholdToTriggerCleanup + 1));
+  EXPECT_CALL(cleanup_, GetFreeDiskSpaceState(_))
+      .Times(AtLeast(5))
+      .WillOnce(Return(DiskCleanup::FreeSpaceState::kAboveThreshold))
+      .WillOnce(Return(DiskCleanup::FreeSpaceState::kAboveThreshold))
+      .WillOnce(Return(DiskCleanup::FreeSpaceState::kAboveThreshold))
+      .WillOnce(Return(DiskCleanup::FreeSpaceState::kNeedNormalCleanup))
+      .WillRepeatedly(Return(DiskCleanup::FreeSpaceState::kAboveThreshold));
   // Checks that DoAutoCleanup is called second time ahead of schedule
   // if disk space goes below threshold and recovers back to normal.
-  EXPECT_CALL(homedirs_, FreeDiskSpace()).Times(2);
+  EXPECT_CALL(cleanup_, FreeDiskSpace()).Times(2);
 
   service_.set_low_disk_notification_period_ms(2);
 
@@ -488,15 +499,21 @@ TEST_F(ServiceTestNotInitialized, CheckLowDiskCallback) {
 }
 
 TEST_F(ServiceTestNotInitialized, CheckLowDiskCallbackFreeDiskSpaceOnce) {
-  EXPECT_CALL(homedirs_, AmountOfFreeDiskSpace())
+  EXPECT_CALL(cleanup_, AmountOfFreeDiskSpace())
       .Times(AtLeast(5))
       .WillOnce(Return(kFreeSpaceThresholdToTriggerCleanup + 1))
       .WillOnce(Return(kFreeSpaceThresholdToTriggerCleanup + 1))
       .WillOnce(Return(kFreeSpaceThresholdToTriggerCleanup + 1))
       .WillRepeatedly(Return(kFreeSpaceThresholdToTriggerCleanup - 1));
+  EXPECT_CALL(cleanup_, GetFreeDiskSpaceState(_))
+      .Times(AtLeast(5))
+      .WillOnce(Return(DiskCleanup::FreeSpaceState::kAboveThreshold))
+      .WillOnce(Return(DiskCleanup::FreeSpaceState::kAboveThreshold))
+      .WillOnce(Return(DiskCleanup::FreeSpaceState::kAboveThreshold))
+      .WillRepeatedly(Return(DiskCleanup::FreeSpaceState::kNeedNormalCleanup));
   // Checks that DoAutoCleanup is called second time ahead of schedule
   // if disk space goes below threshold and stays below forever.
-  EXPECT_CALL(homedirs_, FreeDiskSpace()).Times(2);
+  EXPECT_CALL(cleanup_, FreeDiskSpace()).Times(2);
 
   service_.set_low_disk_notification_period_ms(2);
 
@@ -2281,28 +2298,28 @@ TEST_F(ServiceTest, InstallAttributesStatusQueries) {
   EXPECT_FALSE(GetInstallAttributesIsInvalid(&service_));
   EXPECT_FALSE(GetInstallAttributesIsFirstInstall(&service_));
 
-  Mock::VerifyAndClear(&homedirs_);
+  Mock::VerifyAndClearExpectations(&homedirs_);
   EXPECT_CALL(attrs_, status())
       .WillRepeatedly(Return(InstallAttributes::Status::kTpmNotOwned));
   EXPECT_FALSE(GetInstallAttributesIsReady(&service_));
   EXPECT_FALSE(GetInstallAttributesIsInvalid(&service_));
   EXPECT_FALSE(GetInstallAttributesIsFirstInstall(&service_));
 
-  Mock::VerifyAndClear(&homedirs_);
+  Mock::VerifyAndClearExpectations(&homedirs_);
   EXPECT_CALL(attrs_, status())
       .WillRepeatedly(Return(InstallAttributes::Status::kFirstInstall));
   EXPECT_TRUE(GetInstallAttributesIsReady(&service_));
   EXPECT_FALSE(GetInstallAttributesIsInvalid(&service_));
   EXPECT_TRUE(GetInstallAttributesIsFirstInstall(&service_));
 
-  Mock::VerifyAndClear(&homedirs_);
+  Mock::VerifyAndClearExpectations(&homedirs_);
   EXPECT_CALL(attrs_, status())
       .WillRepeatedly(Return(InstallAttributes::Status::kValid));
   EXPECT_TRUE(GetInstallAttributesIsReady(&service_));
   EXPECT_FALSE(GetInstallAttributesIsInvalid(&service_));
   EXPECT_FALSE(GetInstallAttributesIsFirstInstall(&service_));
 
-  Mock::VerifyAndClear(&homedirs_);
+  Mock::VerifyAndClearExpectations(&homedirs_);
   EXPECT_CALL(attrs_, status())
       .WillRepeatedly(Return(InstallAttributes::Status::kInvalid));
   EXPECT_TRUE(GetInstallAttributesIsReady(&service_));

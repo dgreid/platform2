@@ -20,8 +20,10 @@
 #include "cryptohome/cryptohome_common.h"
 #include "cryptohome/cryptohome_metrics.h"
 #include "cryptohome/cryptolib.h"
+#include "cryptohome/homedirs.h"
 #include "cryptohome/mock_arc_disk_quota.h"
 #include "cryptohome/mock_crypto.h"
+#include "cryptohome/mock_disk_cleanup.h"
 #include "cryptohome/mock_fingerprint_manager.h"
 #include "cryptohome/mock_firmware_management_parameters.h"
 #include "cryptohome/mock_homedirs.h"
@@ -53,6 +55,7 @@ using ::testing::NiceMock;
 using ::testing::Pointee;
 using ::testing::Property;
 using ::testing::Return;
+using ::testing::ReturnRef;
 using ::testing::SaveArgPointee;
 using ::testing::SetArgPointee;
 using ::testing::WithArgs;
@@ -109,8 +112,10 @@ class UserDataAuthTestNotInitialized : public ::testing::Test {
     userdataauth_->set_disable_threading(true);
     homedirs_.set_crypto(&crypto_);
     homedirs_.set_platform(&platform_);
+    ON_CALL(homedirs_, disk_cleanup).WillByDefault(Return(&cleanup_));
+    ON_CALL(homedirs_, shadow_root()).WillByDefault(ReturnRef(kShadowRoot));
     ON_CALL(homedirs_, Init(_, _, _)).WillByDefault(Return(true));
-    ON_CALL(homedirs_, AmountOfFreeDiskSpace())
+    ON_CALL(cleanup_, AmountOfFreeDiskSpace())
         .WillByDefault(Return(kFreeSpaceThresholdToTriggerCleanup));
     // Empty token list by default.  The effect is that there are no attempts
     // to unload tokens unless a test explicitly sets up the token list.
@@ -154,6 +159,10 @@ class UserDataAuthTestNotInitialized : public ::testing::Test {
 
   // Mock HomeDirs object, will be passed to UserDataAuth for its internal use.
   NiceMock<MockHomeDirs> homedirs_;
+
+  // Mock DiskCleanup object, will be passed to UserDataAuth for its internal
+  // use.
+  NiceMock<MockDiskCleanup> cleanup_;
 
   // Mock InstallAttributes object, will be passed to UserDataAuth for its
   // internal use.
@@ -207,6 +216,9 @@ class UserDataAuthTestNotInitialized : public ::testing::Test {
   // This is important because otherwise the background thread may call into
   // mocks that have already been destroyed.
   std::unique_ptr<UserDataAuth> userdataauth_;
+
+  // Passed to homedirs_.
+  base::FilePath kShadowRoot = base::FilePath("/home/.shadow");
 
  private:
   DISALLOW_COPY_AND_ASSIGN(UserDataAuthTestNotInitialized);
@@ -2869,7 +2881,7 @@ TEST_F(UserDataAuthTestThreaded, CheckAutoCleanupCallback) {
                            base::WaitableEvent::InitialState::NOT_SIGNALED);
 
   // These will be invoked from the mount thread.
-  EXPECT_CALL(homedirs_, FreeDiskSpace())
+  EXPECT_CALL(cleanup_, FreeDiskSpace())
       .Times(AtLeast(3))
       .WillRepeatedly(Invoke([&lock, &free_disk_space_count, &done] {
         // The time will move forward enough to trigger the next call every
@@ -2938,7 +2950,7 @@ TEST_F(UserDataAuthTestThreaded, CheckAutoCleanupCallback) {
 TEST_F(UserDataAuthTestThreaded, CheckAutoCleanupCallbackFirst) {
   // Checks that DoAutoCleanup() is called first right after init.
   // Service will schedule first cleanup right after its init.
-  EXPECT_CALL(homedirs_, FreeDiskSpace()).Times(1);
+  EXPECT_CALL(cleanup_, FreeDiskSpace()).Times(1);
 
   InitializeUserDataAuth();
 
@@ -2950,17 +2962,22 @@ TEST_F(UserDataAuthTestThreaded, CheckAutoCleanupCallbackFirst) {
 
 TEST_F(UserDataAuthTestThreaded, CheckLowDiskCallback) {
   // Checks that LowDiskCallback is called periodically.
-  EXPECT_CALL(homedirs_, AmountOfFreeDiskSpace())
+  EXPECT_CALL(cleanup_, AmountOfFreeDiskSpace())
       .Times(AtLeast(3))
       .WillOnce(Return(kFreeSpaceThresholdToTriggerCleanup + 1))
       .WillOnce(Return(kFreeSpaceThresholdToTriggerCleanup - 1))
       .WillRepeatedly(Return(kFreeSpaceThresholdToTriggerCleanup + 1));
+  EXPECT_CALL(cleanup_, GetFreeDiskSpaceState(_))
+      .Times(AtLeast(3))
+      .WillOnce(Return(DiskCleanup::FreeSpaceState::kAboveThreshold))
+      .WillOnce(Return(DiskCleanup::FreeSpaceState::kNeedNormalCleanup))
+      .WillRepeatedly(Return(DiskCleanup::FreeSpaceState::kAboveThreshold));
 
   // DoAutoCleanup gets called once upon initialization, as verified by
   // CheckAutoCleanupCallbackFirst test. Here we check that it's called a second
   // time, and ahead of schedule (which is 1 hour, and this test is much
   // shorter), if disk space goes below threshold and recovers back to normal.
-  EXPECT_CALL(homedirs_, FreeDiskSpace()).Times(2);
+  EXPECT_CALL(cleanup_, FreeDiskSpace()).Times(2);
 
   userdataauth_->set_low_disk_notification_period_ms(2);
 
@@ -2977,15 +2994,20 @@ TEST_F(UserDataAuthTestThreaded, CheckLowDiskCallback) {
 }
 
 TEST_F(UserDataAuthTestThreaded, CheckLowDiskCallbackFreeDiskSpaceOnce) {
-  EXPECT_CALL(homedirs_, AmountOfFreeDiskSpace())
+  EXPECT_CALL(cleanup_, AmountOfFreeDiskSpace())
       .Times(AtLeast(4))
       .WillOnce(Return(kFreeSpaceThresholdToTriggerCleanup + 1))
       .WillRepeatedly(Return(kFreeSpaceThresholdToTriggerCleanup - 1));
+  EXPECT_CALL(cleanup_, GetFreeDiskSpaceState(_))
+      .Times(AtLeast(4))
+      .WillOnce(Return(DiskCleanup::FreeSpaceState::kAboveThreshold))
+      .WillRepeatedly(Return(DiskCleanup::FreeSpaceState::kNeedNormalCleanup));
+
   // Checks that DoAutoCleanup is called only once ahead of schedule if disk
   // space goes below threshold and stays below forever. Note that it's 2 times
   // here because it gets called once during Initialize(), see note in
   // CheckLowDiskCallback test.
-  EXPECT_CALL(homedirs_, FreeDiskSpace()).Times(2);
+  EXPECT_CALL(cleanup_, FreeDiskSpace()).Times(2);
 
   userdataauth_->set_low_disk_notification_period_ms(2);
 

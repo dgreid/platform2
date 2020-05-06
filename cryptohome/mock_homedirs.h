@@ -18,6 +18,7 @@
 #include "cryptohome/mount.h"
 
 namespace cryptohome {
+class DiskCleanup;
 class VaultKeyset;
 
 class MockHomeDirs : public HomeDirs {
@@ -29,8 +30,9 @@ class MockHomeDirs : public HomeDirs {
               Init,
               (Platform*, Crypto*, UserOldestActivityTimestampCache*),
               (override));
-  MOCK_METHOD(void, FreeDiskSpace, (), (override));
+  MOCK_METHOD(void, RemoveNonOwnerCryptohomes, (), (override));
   MOCK_METHOD(bool, GetPlainOwner, (std::string*), (override));
+  MOCK_METHOD(bool, AreEphemeralUsersEnabled, (), (override));
   MOCK_METHOD(bool, AreCredentialsValid, (const Credentials&), (override));
   MOCK_METHOD(bool,
               GetValidKeyset,
@@ -81,8 +83,6 @@ class MockHomeDirs : public HomeDirs {
               (override));
   MOCK_METHOD(bool, ForceRemoveKeyset, (const std::string&, int), (override));
   MOCK_METHOD(bool, MoveKeyset, (const std::string&, int, int), (override));
-  MOCK_METHOD(base::Optional<int64_t>, AmountOfFreeDiskSpace,
-              (), (const, override));
   MOCK_METHOD(int32_t, GetUnmountedAndroidDataCount, (), (override));
 
   MOCK_METHOD(bool,
@@ -93,6 +93,10 @@ class MockHomeDirs : public HomeDirs {
   MOCK_METHOD(bool, SetLockedToSingleUser, (), (const, override));
   MOCK_METHOD(void, set_enterprise_owned, (bool), (override));
   MOCK_METHOD(bool, enterprise_owned, (), (const, override));
+  MOCK_METHOD(void, set_shadow_root, (const base::FilePath&), (override));
+  MOCK_METHOD(const base::FilePath&, shadow_root, (), (const, override));
+  MOCK_METHOD(void, set_disk_cleanup, (DiskCleanup*), (override));
+  MOCK_METHOD(DiskCleanup*, disk_cleanup, (), (const, override));
 
   // Some unit tests require that MockHomeDirs actually call the real
   // GetPlainOwner() function. In those cases, you can use this function

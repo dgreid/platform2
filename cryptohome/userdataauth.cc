@@ -21,6 +21,7 @@
 #include "cryptohome/cryptohome_common.h"
 #include "cryptohome/cryptohome_metrics.h"
 #include "cryptohome/cryptolib.h"
+#include "cryptohome/disk_cleanup.h"
 #include "cryptohome/key_challenge_service.h"
 #include "cryptohome/key_challenge_service_impl.h"
 #include "cryptohome/obfuscated_username.h"
@@ -767,16 +768,17 @@ void UserDataAuth::ResetAllTPMContext() {
 }
 
 void UserDataAuth::set_cleanup_threshold(uint64_t cleanup_threshold) {
-  homedirs_->set_cleanup_threshold(cleanup_threshold);
+  homedirs_->disk_cleanup()->set_cleanup_threshold(cleanup_threshold);
 }
 
 void UserDataAuth::set_aggressive_cleanup_threshold
     (uint64_t aggressive_cleanup_threshold) {
-  homedirs_->set_aggressive_cleanup_threshold(aggressive_cleanup_threshold);
+  homedirs_->disk_cleanup()->set_aggressive_cleanup_threshold(
+      aggressive_cleanup_threshold);
 }
 
 void UserDataAuth::set_target_free_space(uint64_t target_free_space) {
-  homedirs_->set_target_free_space(target_free_space);
+  homedirs_->disk_cleanup()->set_target_free_space(target_free_space);
 }
 
 void UserDataAuth::OwnershipCallback(bool status, bool took_ownership) {
@@ -2730,7 +2732,7 @@ void UserDataAuth::ResetDictionaryAttackMitigation() {
 }
 
 void UserDataAuth::DoAutoCleanup() {
-  homedirs_->FreeDiskSpace();
+  homedirs_->disk_cleanup()->FreeDiskSpace();
   last_auto_cleanup_time_ = platform_->GetCurrentTime();
 }
 
@@ -2739,13 +2741,15 @@ void UserDataAuth::LowDiskCallback() {
   DCHECK(!disable_threading_);
 
   bool low_disk_space_signal_emitted = false;
-  auto free_disk_space = homedirs_->AmountOfFreeDiskSpace();
-  auto free_space_state = homedirs_->GetFreeDiskSpaceState(free_disk_space);
-  if (free_space_state == HomeDirs::FreeSpaceState::kError) {
+  auto free_disk_space = homedirs_->disk_cleanup()->AmountOfFreeDiskSpace();
+  auto free_space_state =
+      homedirs_->disk_cleanup()->GetFreeDiskSpaceState(free_disk_space);
+  if (free_space_state == DiskCleanup::FreeSpaceState::kError) {
     LOG(ERROR) << "Error getting free disk space";
-  } else if (free_space_state == HomeDirs::FreeSpaceState::kNeedNormalCleanup ||
+  } else if (free_space_state ==
+                 DiskCleanup::FreeSpaceState::kNeedNormalCleanup ||
              free_space_state ==
-                 HomeDirs::FreeSpaceState::kNeedAggressiveCleanup) {
+                 DiskCleanup::FreeSpaceState::kNeedAggressiveCleanup) {
     low_disk_space_callback_.Run(
         static_cast<uint64_t>(free_disk_space.value()));
     low_disk_space_signal_emitted = true;
@@ -2760,9 +2764,10 @@ void UserDataAuth::LowDiskCallback() {
   // We shouldn't repeat cleanups on every minute if the disk space
   // stays below the threshold. Trigger it only if there was no notification
   // previously or if enterprise owned and free space can be reclaimed.
-  const bool early_cleanup_needed = low_disk_space_signal_emitted &&
-                                    (!low_disk_space_signal_was_emitted_ ||
-                                     homedirs_->IsFreeableDiskSpaceAvailable());
+  const bool early_cleanup_needed =
+      low_disk_space_signal_emitted &&
+      (!low_disk_space_signal_was_emitted_ ||
+       homedirs_->disk_cleanup()->IsFreeableDiskSpaceAvailable());
 
   if (time_for_auto_cleanup || early_cleanup_needed) {
     DoAutoCleanup();

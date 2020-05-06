@@ -28,6 +28,7 @@
 #include "cryptohome/cryptohome_metrics.h"
 #include "cryptohome/cryptolib.h"
 #include "cryptohome/dircrypto_util.h"
+#include "cryptohome/disk_cleanup.h"
 #include "cryptohome/mount.h"
 #include "cryptohome/mount_helper.h"
 #include "cryptohome/obfuscated_username.h"
@@ -72,20 +73,6 @@ std::string GetSerializedKeysetLabel(const SerializedVaultKeyset& serialized,
   return serialized.key_data().label();
 }
 
-void RemoveAllRemovableFiles(Platform* platform, const FilePath& dir) {
-  std::unique_ptr<FileEnumerator> file_enumerator(
-      platform->GetFileEnumerator(dir, true, base::FileEnumerator::FILES));
-  for (FilePath file = file_enumerator->Next(); !file.empty();
-       file = file_enumerator->Next()) {
-    if (platform->HasNoDumpFileAttribute(file)
-        || platform->HasExtendedFileAttribute(file, kRemovableFileAttribute) ) {
-      if (!platform->DeleteFile(file, false)) {
-        PLOG(WARNING) << "DeleteFile: " << file.value();
-      }
-    }
-  }
-}
-
 }  // namespace
 
 HomeDirs::HomeDirs()
@@ -99,6 +86,8 @@ HomeDirs::HomeDirs()
       crypto_(NULL),
       default_mount_factory_(new MountFactory()),
       mount_factory_(default_mount_factory_.get()),
+      default_cleanup_(new DiskCleanup()),
+      cleanup_(default_cleanup_.get()),
       default_vault_keyset_factory_(new VaultKeysetFactory()),
       vault_keyset_factory_(default_vault_keyset_factory_.get()),
       use_tpm_(false) {}
@@ -123,324 +112,15 @@ bool HomeDirs::Init(Platform* platform, Crypto* crypto,
   crypto_ = crypto;
   timestamp_cache_ = cache;
 
+  if (!cleanup_->Init(this, platform_, timestamp_cache_))
+    return false;
+
   LoadDevicePolicy();
   if (!platform_->DirectoryExists(shadow_root_)) {
     platform_->CreateDirectory(shadow_root_);
     platform_->RestoreSELinuxContexts(shadow_root_, true);
   }
   return GetSystemSalt(NULL);
-}
-
-bool HomeDirs::IsFreeableDiskSpaceAvailable() {
-  if (!enterprise_owned_)
-    return false;
-
-  const auto homedirs = GetHomeDirs();
-
-  int unmounted_cryptohomes =
-      std::count_if(homedirs.begin(), homedirs.end(),
-                    [](auto& dir) { return !dir.is_mounted; });
-
-  return unmounted_cryptohomes > 0;
-}
-
-void HomeDirs::FreeDiskSpace() {
-  auto free_space = AmountOfFreeDiskSpace();
-
-  switch (GetFreeDiskSpaceState(free_space)) {
-    case HomeDirs::FreeSpaceState::kAboveTarget:
-    case HomeDirs::FreeSpaceState::kAboveThreshold:
-      // Already have enough space. No need to clean up.
-      return;
-
-    case HomeDirs::FreeSpaceState::kNeedNormalCleanup:
-    case HomeDirs::FreeSpaceState::kNeedAggressiveCleanup:
-      // trigger cleanup
-      break;
-
-    case HomeDirs::FreeSpaceState::kError:
-      LOG(ERROR) << "Failed to get the amount of free disk space";
-      return;
-    default:
-      LOG(ERROR) << "Unhandled free disk state";
-      return;
-  }
-
-  auto now = platform_->GetCurrentTime();
-
-  if (last_free_disk_space_) {
-    auto diff = now - *last_free_disk_space_;
-
-    ReportTimeBetweenFreeDiskSpace(diff.InSeconds());
-  }
-
-  last_free_disk_space_ = now;
-
-  base::ElapsedTimer total_timer;
-
-  FreeDiskSpaceInternal();
-
-  int cleanup_time = total_timer.Elapsed().InMilliseconds();
-  ReportFreeDiskSpaceTotalTime(cleanup_time);
-  VLOG(1) << "Disk cleanup took " << cleanup_time << "ms.";
-
-  auto after_cleanup = AmountOfFreeDiskSpace();
-  if (!after_cleanup) {
-    LOG(ERROR) << "Failed to get the amount of free disk space";
-    return;
-  }
-
-  ReportFreeDiskSpaceTotalFreedInMb(
-      MAX(0, after_cleanup.value() - free_space.value()) / 1024 / 1024);
-
-  LOG(INFO) << "Disk cleanup complete.";
-}
-
-void HomeDirs::FreeDiskSpaceInternal() {
-  // If ephemeral users are enabled, remove all cryptohomes except those
-  // currently mounted or belonging to the owner.
-  // |AreEphemeralUsers| will reload the policy to guarantee freshness.
-  if (AreEphemeralUsersEnabled()) {
-    RemoveNonOwnerCryptohomes();
-    ReportDiskCleanupProgress(
-        DiskCleanupProgress::kEphemeralUserProfilesCleaned);
-    return;
-  }
-
-  auto homedirs = GetHomeDirs();
-
-  // Initialize user timestamp cache if it has not been yet. This reads the
-  // last-activity time from each homedir's SerializedVaultKeyset.  This value
-  // is only updated in the value keyset on unmount and every 24 hrs, so a
-  // currently logged in user probably doesn't have an up to date value. This
-  // is okay, since we don't delete currently logged in homedirs anyway.  (See
-  // Mount::UpdateCurrentUserActivityTimestamp()).
-  if (!timestamp_cache_->initialized()) {
-    timestamp_cache_->Initialize();
-    for (const auto& dir : homedirs) {
-      HomeDirs::AddUserTimestampToCacheCallback(dir.shadow);
-    }
-  }
-
-  auto unmounted_homedirs = homedirs;
-  FilterMountedHomedirs(&unmounted_homedirs);
-
-  std::sort(unmounted_homedirs.begin(), unmounted_homedirs.end(),
-            [&](const HomeDirs::HomeDir& a, const HomeDirs::HomeDir& b) {
-              return timestamp_cache_->GetLastUserActivityTimestamp(a.shadow) >
-                     timestamp_cache_->GetLastUserActivityTimestamp(b.shadow);
-            });
-
-  auto normal_cleanup_homedirs = unmounted_homedirs;
-
-  if (last_normal_disk_cleanup_complete_) {
-    base::Time cutoff = last_normal_disk_cleanup_complete_.value();
-    FilterHomedirsProcessedBeforeCutoff(cutoff, &normal_cleanup_homedirs);
-  }
-
-  // Clean Cache directories for every unmounted user that has logged out after
-  // the last normal cleanup happened.
-  for (auto dir = normal_cleanup_homedirs.rbegin();
-       dir != normal_cleanup_homedirs.rend(); dir++) {
-    HomeDirs::DeleteCacheCallback(dir->shadow);
-
-    if (HasTargetFreeSpace()) {
-      ReportDiskCleanupProgress(
-          DiskCleanupProgress::kBrowserCacheCleanedAboveTarget);
-      return;
-    }
-  }
-
-  auto freeDiskSpace = AmountOfFreeDiskSpace();
-  if (!freeDiskSpace) {
-    LOG(ERROR) << "Failed to get the amount of free space";
-    return;
-  }
-
-  bool earlyStop = false;
-
-  // Clean GCache directories for every unmounted user that has logged out after
-  // after the last normal cleanup happened.
-  for (auto dir = normal_cleanup_homedirs.rbegin();
-       dir != normal_cleanup_homedirs.rend(); dir++) {
-    HomeDirs::DeleteGCacheTmpCallback(dir->shadow);
-
-    if (HasTargetFreeSpace()) {
-      earlyStop = true;
-      break;
-    }
-  }
-
-  if (!earlyStop)
-    last_normal_disk_cleanup_complete_ = platform_->GetCurrentTime();
-
-  const auto old_free_disk_space = freeDiskSpace;
-  freeDiskSpace = AmountOfFreeDiskSpace();
-  if (!freeDiskSpace) {
-    LOG(ERROR) << "Failed to get the amount of free space";
-    return;
-  }
-
-  const int64_t freed_gcache_space = freeDiskSpace.value() -
-    old_free_disk_space.value();
-  // Report only if something was deleted.
-  if (freed_gcache_space > 0) {
-    ReportFreedGCacheDiskSpaceInMb(freed_gcache_space / 1024 / 1024);
-  }
-
-  switch (GetFreeDiskSpaceState(freeDiskSpace)) {
-    case HomeDirs::FreeSpaceState::kAboveTarget:
-      ReportDiskCleanupProgress(
-        DiskCleanupProgress::kGoogleDriveCacheCleanedAboveTarget);
-      return;
-    case HomeDirs::FreeSpaceState::kAboveThreshold:
-    case HomeDirs::FreeSpaceState::kNeedNormalCleanup:
-      ReportDiskCleanupProgress(
-        DiskCleanupProgress::kGoogleDriveCacheCleanedAboveMinimum);
-      return;
-    case HomeDirs::FreeSpaceState::kNeedAggressiveCleanup:
-      // continue cleanup
-      break;
-    case HomeDirs::FreeSpaceState::kError:
-      LOG(ERROR) << "Failed to get the amount of free space";
-      return;
-    default:
-      LOG(ERROR) << "Unhandled free disk state";
-      return;
-  }
-
-  auto aggressive_cleanup_homedirs = unmounted_homedirs;
-
-  if (last_aggressive_disk_cleanup_complete_) {
-    base::Time cutoff = last_aggressive_disk_cleanup_complete_.value();
-    FilterHomedirsProcessedBeforeCutoff(cutoff, &aggressive_cleanup_homedirs);
-  }
-
-  // Clean Android cache directories for every unmounted user that has logged
-  // out after after the last normal cleanup happened.
-  for (auto dir = aggressive_cleanup_homedirs.rbegin();
-       dir != aggressive_cleanup_homedirs.rend(); dir++) {
-    HomeDirs::DeleteAndroidCacheCallback(dir->shadow);
-
-    if (HasTargetFreeSpace()) {
-      earlyStop = true;
-      break;
-    }
-  }
-
-  if (!earlyStop)
-    last_aggressive_disk_cleanup_complete_ = platform_->GetCurrentTime();
-
-  switch (GetFreeDiskSpaceState()) {
-    case HomeDirs::FreeSpaceState::kAboveTarget:
-      ReportDiskCleanupProgress(
-        DiskCleanupProgress::kAndroidCacheCleanedAboveTarget);
-      return;
-    case HomeDirs::FreeSpaceState::kAboveThreshold:
-    case HomeDirs::FreeSpaceState::kNeedNormalCleanup:
-      ReportDiskCleanupProgress(
-        DiskCleanupProgress::kAndroidCacheCleanedAboveMinimum);
-      return;
-    case HomeDirs::FreeSpaceState::kNeedAggressiveCleanup:
-      // continue cleanup
-      break;
-    case HomeDirs::FreeSpaceState::kError:
-      LOG(ERROR) << "Failed to get the amount of free space";
-      return;
-    default:
-      LOG(ERROR) << "Unhandled free disk state";
-      return;
-  }
-
-  // Delete old users, the oldest first. Count how many are deleted.
-  // Don't delete anyone if we don't know who the owner is.
-  // For consumer devices, don't delete the device owner. Enterprise-enrolled
-  // devices have no owner, so don't delete the most-recent user.
-  int deleted_users_count = 0;
-  std::string owner;
-  if (!enterprise_owned_ && !GetOwner(&owner))
-    return;
-
-  int mounted_cryptohomes_count = homedirs.size() - unmounted_homedirs.size();
-
-  for (auto dir = unmounted_homedirs.rbegin(); dir != unmounted_homedirs.rend();
-       dir++) {
-    std::string obfuscated = dir->shadow.BaseName().value();
-
-    if (enterprise_owned_) {
-      // Leave the most-recent user on the device intact.
-      // The most-recent user is the first in unmounted_homedirs.
-      if (dir == unmounted_homedirs.rend() - 1 &&
-          mounted_cryptohomes_count == 0) {
-        LOG(INFO) << "Skipped deletion of the most recent device user.";
-        continue;
-      }
-    } else if (obfuscated == owner) {
-      // We never delete the device owner.
-      LOG(INFO) << "Skipped deletion of the device owner.";
-      continue;
-    }
-
-    LOG(INFO) << "Freeing disk space by deleting user " << dir->shadow.value();
-    RemoveLECredentials(obfuscated);
-    platform_->DeleteFile(dir->shadow, true);
-    timestamp_cache_->RemoveUser(dir->shadow);
-    ++deleted_users_count;
-
-    if (HasTargetFreeSpace())
-      break;
-  }
-
-  if (deleted_users_count > 0) {
-    ReportDeletedUserProfiles(deleted_users_count);
-  }
-
-  // We had a chance to delete a user only if any unmounted homes existed.
-  if (unmounted_homedirs.size() > 0) {
-    ReportDiskCleanupProgress(
-        HasTargetFreeSpace()
-            ? DiskCleanupProgress::kWholeUserProfilesCleanedAboveTarget
-            : DiskCleanupProgress::kWholeUserProfilesCleaned);
-  } else {
-    ReportDiskCleanupProgress(DiskCleanupProgress::kNoUnmountedCryptohomes);
-  }
-}
-
-base::Optional<int64_t> HomeDirs::AmountOfFreeDiskSpace() const {
-  int64_t free_space = platform_->AmountOfFreeDiskSpace(shadow_root_);
-
-  if (free_space < 0) {
-    return base::nullopt;
-  } else {
-    return free_space;
-  }
-}
-
-HomeDirs::FreeSpaceState HomeDirs::GetFreeDiskSpaceState() const {
-  return GetFreeDiskSpaceState(AmountOfFreeDiskSpace());
-}
-
-HomeDirs::FreeSpaceState HomeDirs::GetFreeDiskSpaceState(
-    base::Optional<int64_t> free_disk_space) const {
-
-  if (!free_disk_space) {
-    return HomeDirs::FreeSpaceState::kError;
-  }
-
-  int64_t value = free_disk_space.value();
-  if (value >= target_free_space_) {
-    return HomeDirs::FreeSpaceState::kAboveTarget;
-  } else if (value >= normal_cleanup_threshold_) {
-    return HomeDirs::FreeSpaceState::kAboveThreshold;
-  } else if (value >= aggressive_cleanup_threshold_) {
-    return HomeDirs::FreeSpaceState::kNeedNormalCleanup;
-  } else {
-    return HomeDirs::FreeSpaceState::kNeedAggressiveCleanup;
-  }
-}
-
-bool HomeDirs::HasTargetFreeSpace() const {
-  return GetFreeDiskSpaceState() == HomeDirs::FreeSpaceState::kAboveTarget;
 }
 
 void HomeDirs::LoadDevicePolicy() {
@@ -1293,107 +973,7 @@ bool HomeDirs::GetTrackedDirectoryForDirCrypto(
   return true;
 }
 
-void HomeDirs::DeleteCacheCallback(const FilePath& user_dir) {
-  FilePath cache;
-  if (!GetTrackedDirectory(
-          user_dir, FilePath(kUserHomeSuffix).Append(kCacheDir), &cache)) {
-    LOG(ERROR) << "Failed to locate the cache directory.";
-    return;
-  }
-  VLOG(1) << "Deleting Cache " << cache.value();
-  DeleteDirectoryContents(cache);
-}
-
-void HomeDirs::DeleteGCacheTmpCallback(const FilePath& user_dir) {
-  // GCache dirs that can be completely removed on low space.
-  const FilePath kRemovableGCacheDirs[] = {
-      FilePath(kUserHomeSuffix)
-          .Append(kGCacheDir)
-          .Append(kGCacheVersion1Dir)
-          .Append(kGCacheTmpDir),
-  };
-
-  for (const auto& dir : kRemovableGCacheDirs) {
-    FilePath gcachetmp;
-    if (!GetTrackedDirectory(user_dir, dir, &gcachetmp)) {
-      LOG(ERROR) << "Failed to locate GCache temp directory " << dir.value();
-      continue;
-    }
-    VLOG(1) << "Deleting GCache " << gcachetmp.value();
-    DeleteDirectoryContents(gcachetmp);
-  }
-
-  // GCache dirs that contain files marked as removable.
-  const FilePath kCleanableGCacheDirs[] = {
-      FilePath(kUserHomeSuffix).Append(kGCacheDir).Append(kGCacheVersion1Dir),
-      FilePath(kUserHomeSuffix).Append(kGCacheDir).Append(kGCacheVersion2Dir),
-  };
-
-  for (const auto& dir : kCleanableGCacheDirs) {
-    FilePath gcache_dir;
-    if (!GetTrackedDirectory(user_dir, dir, &gcache_dir)) {
-      LOG(ERROR) << "Failed to locate GCache directory " << dir.value();
-      continue;
-    }
-
-    VLOG(1) << "Cleaning removable files in " << gcache_dir.value();
-    RemoveAllRemovableFiles(platform_, gcache_dir);
-  }
-}
-
-void HomeDirs::DeleteAndroidCacheCallback(const FilePath& user_dir) {
-  FilePath root;
-  if (!GetTrackedDirectory(user_dir, FilePath(kRootHomeSuffix), &root)) {
-    LOG(ERROR) << "Failed to locate the root directory.";
-    return;
-  }
-  // The package directory stores the inodes of the cache directory and code
-  // cache directory in the kAndroidCacheInodeAttribute xattr and
-  // kAndroidCodeCacheInodeAttribute xattr.  Data is stored under
-  // root/android-data/data/data/<package name>/[code_]cache. It is not
-  // desirable to make all package name directories unencrypted, they
-  // are not marked as tracked directory.
-  // TODO(crbug/625872): Mark root/android/data/data/ as pass through.
-
-  // A set of parent directory/inode combinations.  We need the parent directory
-  // as the inodes may have been re-used elsewhere if the cache directory was
-  // deleted.
-  std::set<std::pair<const FilePath, ino_t>> cache_inodes;
-  std::unique_ptr<cryptohome::FileEnumerator> file_enumerator(
-      platform_->GetFileEnumerator(root, true,
-                                   base::FileEnumerator::DIRECTORIES));
-  FilePath next_path;
-  while (!(next_path = file_enumerator->Next()).empty()) {
-    ino_t inode = file_enumerator->GetInfo().stat().st_ino;
-    std::pair<const FilePath, ino_t> parent_inode_pair =
-        std::make_pair(next_path.DirName(), inode);
-    if (cache_inodes.find(parent_inode_pair) != cache_inodes.end()) {
-      VLOG(1) << "Deleting Android Cache " << next_path.value();
-      std::vector<FilePath> entry_list;
-      platform_->EnumerateDirectoryEntries(next_path, false, &entry_list);
-      for (const FilePath& entry : entry_list)
-        platform_->DeleteFile(entry, true);
-      cache_inodes.erase(parent_inode_pair);
-    }
-    for (const char* attribute :
-         {kAndroidCacheInodeAttribute, kAndroidCodeCacheInodeAttribute}) {
-      if (platform_->HasExtendedFileAttribute(next_path, attribute)) {
-        uint64_t inode;
-        if (platform_->GetExtendedFileAttribute(next_path,
-                                                attribute,
-                                                reinterpret_cast<char*>(&inode),
-                                                sizeof(inode))) {
-          // Because FileEnumerator processes all entries in a directory before
-          // continuing to sub-directories we can assume that the inode is added
-          // here before the directory that has the inode is processed.
-          cache_inodes.insert(std::make_pair(next_path, inode));
-        }
-      }
-    }
-  }
-}
-
-void HomeDirs::AddUserTimestampToCacheCallback(const FilePath& user_dir) {
+void HomeDirs::AddUserTimestampToCache(const FilePath& user_dir) {
   const std::string obfuscated_username = user_dir.BaseName().value();
   //  Add a timestamp for every key.
   std::vector<int> key_indices;

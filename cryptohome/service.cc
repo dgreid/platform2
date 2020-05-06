@@ -59,6 +59,7 @@
 #include "cryptohome/cryptohome_metrics.h"
 #include "cryptohome/cryptolib.h"
 #include "cryptohome/dbus_transition.h"
+#include "cryptohome/disk_cleanup.h"
 #include "cryptohome/firmware_management_parameters.h"
 #include "cryptohome/glib_transition.h"
 #include "cryptohome/install_attributes.h"
@@ -3738,7 +3739,7 @@ gboolean Service::GetStatusString(gchar** OUT_status, GError** error) {
 }
 
 void Service::DoAutoCleanup() {
-  homedirs_->FreeDiskSpace();
+  homedirs_->disk_cleanup()->FreeDiskSpace();
   last_auto_cleanup_time_ = platform_->GetCurrentTime();
 }
 
@@ -3752,12 +3753,15 @@ void Service::UpdateCurrentUserActivityTimestamp() {
 // Called on Mount thread.
 void Service::LowDiskCallback() {
   bool low_disk_space_signal_emitted = false;
-  auto free_disk_space = homedirs_->AmountOfFreeDiskSpace();
-  auto free_space_state = homedirs_->GetFreeDiskSpaceState(free_disk_space);
-  if (free_space_state == HomeDirs::FreeSpaceState::kError) {
+  auto free_disk_space = homedirs_->disk_cleanup()->AmountOfFreeDiskSpace();
+  auto free_space_state =
+      homedirs_->disk_cleanup()->GetFreeDiskSpaceState(free_disk_space);
+  if (free_space_state == DiskCleanup::FreeSpaceState::kError) {
     LOG(ERROR) << "Error getting free disk space";
-  } else if (free_space_state == HomeDirs::FreeSpaceState::kNeedNormalCleanup ||
-        free_space_state == HomeDirs::FreeSpaceState::kNeedAggressiveCleanup) {
+  } else if (free_space_state ==
+                 DiskCleanup::FreeSpaceState::kNeedNormalCleanup ||
+             free_space_state ==
+                 DiskCleanup::FreeSpaceState::kNeedAggressiveCleanup) {
     g_signal_emit(cryptohome_, low_disk_space_signal_,
                   0 /* signal detail (not used) */,
                   static_cast<uint64_t>(free_disk_space.value()));
@@ -3773,9 +3777,10 @@ void Service::LowDiskCallback() {
   // We shouldn't repeat cleanups on every minute if the disk space
   // stays below the threshold. Trigger it only if there was no notification
   // previously or if enterprise owned and free space can be reclaimed.
-  const bool early_cleanup_needed = low_disk_space_signal_emitted &&
-                                    (!low_disk_space_signal_was_emitted_ ||
-                                     homedirs_->IsFreeableDiskSpaceAvailable());
+  const bool early_cleanup_needed =
+      low_disk_space_signal_emitted &&
+      (!low_disk_space_signal_was_emitted_ ||
+       homedirs_->disk_cleanup()->IsFreeableDiskSpaceAvailable());
 
   if (time_for_auto_cleanup || early_cleanup_needed)
     DoAutoCleanup();
@@ -4245,16 +4250,17 @@ void Service::PreMountCallback() {
 }
 
 void Service::set_cleanup_threshold(uint64_t cleanup_threshold) {
-  homedirs_->set_cleanup_threshold(cleanup_threshold);
+  homedirs_->disk_cleanup()->set_cleanup_threshold(cleanup_threshold);
 }
 
 void Service::set_aggressive_cleanup_threshold
     (uint64_t aggressive_cleanup_threshold) {
-  homedirs_->set_aggressive_cleanup_threshold(aggressive_cleanup_threshold);
+  homedirs_->disk_cleanup()->set_aggressive_cleanup_threshold(
+      aggressive_cleanup_threshold);
 }
 
 void Service::set_target_free_space(uint64_t target_free_space) {
-  homedirs_->set_target_free_space(target_free_space);
+  homedirs_->disk_cleanup()->set_target_free_space(target_free_space);
 }
 
 void Service::PostTaskToEventLoop(base::OnceClosure task) {
