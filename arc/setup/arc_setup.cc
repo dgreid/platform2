@@ -1159,9 +1159,6 @@ void ArcSetup::CreateAndroidCmdlineFile(
       "androidboot.dev_mode=%d "
       "androidboot.disable_runas=%d "
       "androidboot.host_is_in_vm=%d "
-      // TODO(jschettler): Remove androidboot.vm once ro.boot.vm is no longer
-      // used.
-      "androidboot.vm=%d "
       "androidboot.debuggable=%d "
       "androidboot.lcd_density=%d "
       "androidboot.native_bridge=%s "
@@ -1173,8 +1170,8 @@ void ArcSetup::CreateAndroidCmdlineFile(
       "%s" /* Play Store auto-update mode */
       "androidboot.disable_system_default_app=%d "
       "androidboot.boottime_offset=%" PRId64 "\n" /* in nanoseconds */,
-      is_dev_mode, !is_dev_mode, is_inside_vm, is_inside_vm, is_debuggable,
-      arc_lcd_density, native_bridge.c_str(), arc_file_picker, arc_custom_tabs,
+      is_dev_mode, !is_dev_mode, is_inside_vm, is_debuggable, arc_lcd_density,
+      native_bridge.c_str(), arc_file_picker, arc_custom_tabs,
       arc_print_spooler, arc_camera_mode.c_str(), chromeos_channel.c_str(),
       GetPlayStoreAutoUpdateParam(play_store_auto_update).c_str(),
       disable_system_default_app,
