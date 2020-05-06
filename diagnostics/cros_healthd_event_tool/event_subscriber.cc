@@ -30,6 +30,15 @@ void EventSubscriber::SubscribeToBluetoothEvents() {
   mojo_adapter_.AddBluetoothObserver(std::move(observer_ptr));
 }
 
+void EventSubscriber::SubscribeToLidEvents() {
+  mojo_ipc::CrosHealthdLidObserverPtr observer_ptr;
+  mojo_ipc::CrosHealthdLidObserverRequest observer_request(
+      mojo::MakeRequest(&observer_ptr));
+  lid_subscriber_ =
+      std::make_unique<LidSubscriber>(std::move(observer_request));
+  mojo_adapter_.AddLidObserver(std::move(observer_ptr));
+}
+
 void EventSubscriber::SubscribeToPowerEvents() {
   mojo_ipc::CrosHealthdPowerObserverPtr observer_ptr;
   mojo_ipc::CrosHealthdPowerObserverRequest observer_request(

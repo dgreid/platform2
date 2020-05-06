@@ -22,6 +22,7 @@ source_set("libcros_healthd_event_tool") {
   sources = [
     "bluetooth_subscriber.cc",
     "event_subscriber.cc",
+    "lid_subscriber.cc",
     "power_subscriber.cc",
   ]
 }
