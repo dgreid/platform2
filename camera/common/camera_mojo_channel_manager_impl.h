@@ -81,8 +81,8 @@ class CameraMojoChannelManagerImpl final : public CameraMojoChannelManager {
 
   static void TearDownMojoEnvLockedOnThread();
 
-  // Error handler for camera dispatcher Mojo channel.
-  static void OnDispatcherError();
+  // Resets the dispatcher.
+  static void ResetDispatcherPtr();
 
   // The Mojo channel to CameraHalDispatcher in Chrome. All the Mojo
   // communication to |dispatcher_| happens on |ipc_thread_|.
@@ -90,6 +90,8 @@ class CameraMojoChannelManagerImpl final : public CameraMojoChannelManager {
 
   // Used to cancel pending futures when error occurs.
   std::unique_ptr<cros::CancellationRelay> cancellation_relay_;
+
+  static ino_t bound_socket_inode_num_;
 
   // A mutex to guard static variable.
   static base::NoDestructor<base::Lock> static_lock_;

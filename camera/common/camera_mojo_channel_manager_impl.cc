@@ -6,10 +6,13 @@
 
 #include "common/camera_mojo_channel_manager_impl.h"
 
+#include <grp.h>
+
 #include <string>
 #include <utility>
 
 #include <base/bind.h>
+#include <base/files/file_util.h>
 #include <base/logging.h>
 #include <base/no_destructor.h>
 #include <mojo/core/embedder/embedder.h>
@@ -20,9 +23,52 @@
 
 namespace cros {
 
+namespace {
+
+constexpr ino_t kInvalidInodeNum = 0;
+
+// Gets the socket file by |socket_path| and checks if it is in correct group
+// and has correct permission. Returns |kInvalidInodeNum| if it is invalid.
+// Otherwise, returns its inode number.
+ino_t GetSocketInodeNumber(const base::FilePath& socket_path) {
+  // Ensure that socket file is ready before trying to connect the dispatcher.
+  struct group arc_camera_group;
+  struct group* result = nullptr;
+  char buf[1024];
+  if (HANDLE_EINTR(getgrnam_r(constants::kArcCameraGroup, &arc_camera_group,
+                              buf, sizeof(buf), &result)) != 0 ||
+      !result) {
+    // TODO(crbug.com/1053569): Remove the log once we solve the race condition
+    // issue.
+    LOGF(INFO) << "Failed to get group information of the socket file";
+    return kInvalidInodeNum;
+  }
+
+  int mode;
+  if (!base::GetPosixFilePermissions(socket_path, &mode) || mode != 0660) {
+    // TODO(crbug.com/1053569): Remove the log once we solve the race condition
+    // issue.
+    LOGF(INFO) << "The socket file is not ready (Unexpected permission)";
+    return kInvalidInodeNum;
+  }
+
+  struct stat st;
+  if (stat(socket_path.value().c_str(), &st) ||
+      st.st_gid != arc_camera_group.gr_gid) {
+    // TODO(crbug.com/1053569): Remove the log once we solve the race condition
+    // issue.
+    LOGF(INFO) << "The socket file is not ready (Unexpected group id)";
+    return kInvalidInodeNum;
+  }
+  return st.st_ino;
+}
+
+}  // namespace
+
 // static
 base::NoDestructor<mojom::CameraHalDispatcherPtr>
     CameraMojoChannelManagerImpl::dispatcher_;
+ino_t CameraMojoChannelManagerImpl::bound_socket_inode_num_ = kInvalidInodeNum;
 base::NoDestructor<base::Lock> CameraMojoChannelManagerImpl::static_lock_;
 bool CameraMojoChannelManagerImpl::mojo_initialized_ = false;
 base::Thread* CameraMojoChannelManagerImpl::ipc_thread_ = nullptr;
@@ -173,9 +219,13 @@ void CameraMojoChannelManagerImpl::EnsureDispatcherConnectedOnIpcThread() {
     return;
   }
 
-  mojo::ScopedMessagePipeHandle child_pipe;
-
   base::FilePath socket_path(constants::kCrosCameraSocketPathString);
+  ino_t socket_inode_num = GetSocketInodeNumber(socket_path);
+  if (socket_inode_num == kInvalidInodeNum) {
+    return;
+  }
+
+  mojo::ScopedMessagePipeHandle child_pipe;
   MojoResult result = cros::CreateMojoChannelToParentByUnixDomainSocket(
       socket_path, &child_pipe);
   if (result != MOJO_RESULT_OK) {
@@ -187,7 +237,8 @@ void CameraMojoChannelManagerImpl::EnsureDispatcherConnectedOnIpcThread() {
       mojom::CameraHalDispatcherPtrInfo(std::move(child_pipe), 0u),
       ipc_thread_->task_runner());
   dispatcher_->set_connection_error_handler(
-      base::Bind(&CameraMojoChannelManagerImpl::OnDispatcherError));
+      base::Bind(&CameraMojoChannelManagerImpl::ResetDispatcherPtr));
+  bound_socket_inode_num_ = socket_inode_num;
 
   LOGF(INFO) << "Connected to CameraHalDispatcher";
 
@@ -199,7 +250,18 @@ void CameraMojoChannelManagerImpl::ConnectToDispatcherOnIpcThread(
     base::Closure on_connection_error) {
   DCHECK(ipc_thread_->task_runner()->BelongsToCurrentThread());
 
+  base::FilePath socket_path(constants::kCrosCameraSocketPathString);
   if (dispatcher_->is_bound()) {
+    // If the dispatcher is already bound but the inode number of the socket is
+    // unreadable or has been changed, we assume the other side of the
+    // dispatcher (Chrome) might be destroyed. As a result, we fire the on error
+    // event here in case it is not fired correctly.
+    if (bound_socket_inode_num_ != GetSocketInodeNumber(socket_path)) {
+      on_connection_error.Run();
+      ResetDispatcherPtr();
+    } else {
+      on_connection_established.Run();
+    }
     return;
   }
 
@@ -216,7 +278,7 @@ void CameraMojoChannelManagerImpl::ConnectToDispatcherOnIpcThread(
   };
   dispatcher_->set_connection_error_handler(
       base::Bind(callbacks_combined,
-                 base::Bind(&CameraMojoChannelManagerImpl::OnDispatcherError),
+                 base::Bind(&CameraMojoChannelManagerImpl::ResetDispatcherPtr),
                  std::move(on_connection_error)));
   on_connection_established.Run();
 }
@@ -260,11 +322,12 @@ void CameraMojoChannelManagerImpl::CreateJpegEncodeAcceleratorOnIpcThread(
 }
 
 // static
-void CameraMojoChannelManagerImpl::OnDispatcherError() {
+void CameraMojoChannelManagerImpl::ResetDispatcherPtr() {
   DCHECK(ipc_thread_->task_runner()->BelongsToCurrentThread());
   VLOGF_ENTER();
   LOGF(ERROR) << "Mojo channel to CameraHalDispatcher is broken";
   dispatcher_->reset();
+  bound_socket_inode_num_ = kInvalidInodeNum;
 }
 
 }  // namespace cros

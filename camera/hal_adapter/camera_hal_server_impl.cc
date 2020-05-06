@@ -88,42 +88,6 @@ void CameraHalServerImpl::OnSocketFileStatusChange(
   VLOGF_ENTER();
   DCHECK(main_task_runner_->BelongsToCurrentThread());
 
-  if (binding_.is_bound()) {
-    LOGF(INFO)
-        << "Reset the connection since the bound socket file has been changed";
-    ExitOnMainThread(ECONNRESET);
-  }
-
-  // Ensure that socket file is ready before trying to connect the dispatcher.
-  struct group arc_camera_group;
-  struct group* result = nullptr;
-  char buf[1024];
-  if (HANDLE_EINTR(getgrnam_r(constants::kArcCameraGroup, &arc_camera_group,
-                              buf, sizeof(buf), &result)) != 0 ||
-      !result) {
-    // TODO(crbug.com/1053569): Remove the log once we solve the race condition
-    // issue.
-    LOGF(INFO) << "Failed to get group information of the socket file";
-    return;
-  }
-
-  int mode;
-  if (!base::GetPosixFilePermissions(socket_path, &mode) || mode != 0660) {
-    // TODO(crbug.com/1053569): Remove the log once we solve the race condition
-    // issue.
-    LOGF(INFO) << "The socket file is not ready (Unexpected permission)";
-    return;
-  }
-
-  struct stat st;
-  if (stat(socket_path.value().c_str(), &st) ||
-      st.st_gid != arc_camera_group.gr_gid) {
-    // TODO(crbug.com/1053569): Remove the log once we solve the race condition
-    // issue.
-    LOGF(INFO) << "The socket file is not ready (Unexpected group id)";
-    return;
-  }
-
   camera_mojo_channel_manager_->ConnectToDispatcher(
       base::Bind(&CameraHalServerImpl::RegisterCameraHal,
                  base::Unretained(this)),
@@ -186,6 +150,10 @@ void CameraHalServerImpl::LoadCameraHal() {
 void CameraHalServerImpl::RegisterCameraHal() {
   VLOGF_ENTER();
   DCHECK(ipc_task_runner_->BelongsToCurrentThread());
+
+  if (binding_.is_bound()) {
+    return;
+  }
 
   mojom::CameraHalServerPtr server_ptr;
   binding_.Bind(mojo::MakeRequest(&server_ptr));
