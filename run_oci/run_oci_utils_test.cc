@@ -41,8 +41,19 @@ TEST(RunOciUtilsTest, TestOpenOciConfigSafely) {
     EXPECT_EQ(content, std::string(result.first.begin(), result.first.end()));
   }
 
-  // TODO(yusukes): Verify OpenOciConfigSafely returns EPERM when the file is
-  // not on an exec filesystem.
+  // Verify OpenOciConfigSafely returns EPERM when the file is not on an exec
+  // filesystem.
+  {
+    // The QEMU emulator we use to run unit tests on simulated ARM boards does
+    // not fully support statvfs(2). OpenOciConfigSafely's ST_NOEXEC check
+    // doesn't work for that reason.
+#if !defined(ARCH_CPU_ARM_FAMILY)
+    errno = 0;
+    brillo::SafeFD fd(OpenOciConfigSafely(base::FilePath("/proc/cpuinfo")));
+    EXPECT_EQ(EPERM, errno);
+    EXPECT_FALSE(fd.is_valid());
+#endif
+  }
 }
 
 }  // namespace
