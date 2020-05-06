@@ -126,7 +126,7 @@ bool DlcBase::InstallCompleted(ErrorPtr* err) {
   if (!Prefs(*this, SystemState::Get()->active_boot_slot())
            .Create(kDlcPrefVerified)) {
     *err = Error::Create(
-        kErrorInternal,
+        FROM_HERE, kErrorInternal,
         base::StringPrintf("Failed to mark active DLC=%s as verified.",
                            id_.c_str()));
     return false;
@@ -139,7 +139,7 @@ bool DlcBase::UpdateCompleted(ErrorPtr* err) const {
   if (!Prefs(*this, SystemState::Get()->inactive_boot_slot())
            .Create(kDlcPrefVerified)) {
     *err = Error::Create(
-        kErrorInternal,
+        FROM_HERE, kErrorInternal,
         base::StringPrintf("Failed to mark inactive DLC=%s as verified.",
                            id_.c_str()));
     return false;
@@ -151,7 +151,7 @@ bool DlcBase::MakeReadyForUpdate(ErrorPtr* err) const {
   if (!Prefs(*this, SystemState::Get()->inactive_boot_slot())
            .Delete(kDlcPrefVerified)) {
     *err = Error::Create(
-        kErrorInternal,
+        FROM_HERE, kErrorInternal,
         base::StringPrintf("Failed to mark inactive DLC=%s as not-verified.",
                            id_.c_str()));
     return false;
@@ -169,7 +169,7 @@ bool DlcBase::Create(ErrorPtr* err) {
   for (const auto& path : {content_id_path_, content_package_path_}) {
     if (!CreateDir(path)) {
       *err = Error::Create(
-          kErrorInternal,
+          FROM_HERE, kErrorInternal,
           base::StringPrintf("Failed to create directory %s for DLC=%s",
                              path.value().c_str(), id_.c_str()));
       return false;
@@ -178,10 +178,11 @@ bool DlcBase::Create(ErrorPtr* err) {
 
   const int64_t image_size = manifest_.preallocated_size();
   if (image_size <= 0) {
-    *err = Error::Create(
-        kErrorInternal, base::StringPrintf("Preallocated size=%" PRId64
-                                           " in manifest is illegal for DLC=%s",
-                                           image_size, id_.c_str()));
+    *err =
+        Error::Create(FROM_HERE, kErrorInternal,
+                      base::StringPrintf("Preallocated size=%" PRId64
+                                         " in manifest is illegal for DLC=%s",
+                                         image_size, id_.c_str()));
     return false;
   }
 
@@ -190,7 +191,7 @@ bool DlcBase::Create(ErrorPtr* err) {
     FilePath image_path = GetImagePath(slot);
     if (!CreateFile(image_path, image_size)) {
       *err = Error::Create(
-          kErrorAllocation,
+          FROM_HERE, kErrorAllocation,
           base::StringPrintf("Failed to create image file %s for DLC=%s",
                              image_path.value().c_str(), id_.c_str()));
       return false;
@@ -362,7 +363,8 @@ void DlcBase::PreloadImage() {
 bool DlcBase::InitInstall(ErrorPtr* err) {
   if (!base::PathExists(prefs_path_)) {
     if (!CreateDir(prefs_path_)) {
-      *err = Error::Create(kErrorInternal, "Failed to create prefs directory.");
+      *err = Error::Create(FROM_HERE, kErrorInternal,
+                           "Failed to create prefs directory.");
       return false;
     }
   }
@@ -425,7 +427,7 @@ bool DlcBase::FinishInstall(ErrorPtr* err) {
       if (!Prefs(*this, SystemState::Get()->active_boot_slot())
                .Exists(kDlcPrefVerified)) {
         *err =
-            Error::Create(kErrorInternal,
+            Error::Create(FROM_HERE, kErrorInternal,
                           base::StringPrintf("Cannot mount image which is not "
                                              "marked as verified for DLC=%s",
                                              id_.c_str()));
@@ -473,12 +475,12 @@ bool DlcBase::Mount(ErrorPtr* err) {
               ? imageloader::kSlotNameA
               : imageloader::kSlotNameB,
           &mount_point, nullptr, kImageLoaderTimeoutMs)) {
-    *err = Error::Create(kErrorInternal,
+    *err = Error::Create(FROM_HERE, kErrorInternal,
                          "Imageloader is unavailable for LoadDlcImage().");
     return false;
   }
   if (mount_point.empty()) {
-    *err = Error::Create(kErrorInternal,
+    *err = Error::Create(FROM_HERE, kErrorInternal,
                          "Imageloader LoadDlcImage() call failed.");
     return false;
   }
@@ -491,12 +493,12 @@ bool DlcBase::Unmount(ErrorPtr* err) {
   bool success = false;
   if (!SystemState::Get()->image_loader()->UnloadDlcImage(
           id_, package_, &success, nullptr, kImageLoaderTimeoutMs)) {
-    *err = Error::Create(kErrorInternal,
+    *err = Error::Create(FROM_HERE, kErrorInternal,
                          "Imageloader is unavailable for UnloadDlcImage().");
     return false;
   }
   if (!success) {
-    *err = Error::Create(kErrorInternal,
+    *err = Error::Create(FROM_HERE, kErrorInternal,
                          "Imageloader UnloadDlcImage() call failed.");
     return false;
   }
@@ -544,7 +546,7 @@ bool DlcBase::DeleteInternal(ErrorPtr* err) {
 
   if (!undeleted_paths.empty()) {
     *err = Error::Create(
-        kErrorInternal,
+        FROM_HERE, kErrorInternal,
         base::StringPrintf("DLC directories (%s) could not be deleted.",
                            base::JoinString(undeleted_paths, ",").c_str()));
     return false;
@@ -559,7 +561,7 @@ bool DlcBase::Delete(ErrorPtr* err) {
       return DeleteInternal(err);
     case DlcState::INSTALLING:
       *err = Error::Create(
-          kErrorBusy,
+          FROM_HERE, kErrorBusy,
           base::StringPrintf("Trying to delete a currently installing DLC=%s",
                              id_.c_str()));
       return false;

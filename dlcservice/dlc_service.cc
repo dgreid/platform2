@@ -72,7 +72,8 @@ bool DlcService::Install(const DlcIdList& dlcs,
                          ErrorPtr* err) {
   // If an install is already in progress, dlcservice is busy.
   if (dlc_manager_->IsInstalling()) {
-    *err = Error::Create(kErrorBusy, "Another install is already in progress.");
+    *err = Error::Create(FROM_HERE, kErrorBusy,
+                         "Another install is already in progress.");
     LOG(ERROR) << Error::ToString(*err);
     return false;
   }
@@ -80,7 +81,7 @@ bool DlcService::Install(const DlcIdList& dlcs,
   // Check what state update_engine is in.
   Operation update_engine_op;
   if (!GetUpdateEngineStatus(&update_engine_op)) {
-    *err = Error::Create(kErrorInternal,
+    *err = Error::Create(FROM_HERE, kErrorInternal,
                          "Failed to get the status of Update Engine.");
     LOG(ERROR) << Error::ToString(*err);
     return false;
@@ -88,15 +89,15 @@ bool DlcService::Install(const DlcIdList& dlcs,
   switch (update_engine_op) {
     case update_engine::UPDATED_NEED_REBOOT:
       *err =
-          Error::Create(kErrorNeedReboot,
+          Error::Create(FROM_HERE, kErrorNeedReboot,
                         "Update Engine applied update, device needs a reboot.");
       LOG(ERROR) << Error::ToString(*err);
       return false;
     case update_engine::IDLE:
       break;
     default:
-      *err =
-          Error::Create(kErrorBusy, "Update Engine is performing operations.");
+      *err = Error::Create(FROM_HERE, kErrorBusy,
+                           "Update Engine is performing operations.");
       LOG(ERROR) << Error::ToString(*err);
       return false;
   }
@@ -133,8 +134,9 @@ bool DlcService::Install(const DlcIdList& dlcs,
     LOG(ERROR) << "Update Engine failed to install requested DLCs: "
                << (tmp_err ? Error::ToString(tmp_err)
                            : "Missing error from update engine proxy.");
-    *err = Error::Create(
-        kErrorBusy, "Update Engine failed to schedule install operations.");
+    *err =
+        Error::Create(FROM_HERE, kErrorBusy,
+                      "Update Engine failed to schedule install operations.");
     LOG(ERROR) << Error::ToString(*err);
     // dlcservice must cancel the install by communicating to dlc_manager who
     // manages the DLC(s), as update_engine won't be able to install the
@@ -159,7 +161,7 @@ bool DlcService::Purge(const string& id_in, brillo::ErrorPtr* err) {
   if (!dlc_manager_->IsInstalling()) {
     Operation op;
     if (!GetUpdateEngineStatus(&op)) {
-      *err = Error::Create(kErrorInternal,
+      *err = Error::Create(FROM_HERE, kErrorInternal,
                            "Failed to get the status of Update Engine");
       LOG(ERROR) << Error::ToString(*err);
       return false;
@@ -169,7 +171,8 @@ bool DlcService::Purge(const string& id_in, brillo::ErrorPtr* err) {
       case update_engine::UPDATED_NEED_REBOOT:
         break;
       default:
-        *err = Error::Create(kErrorBusy, "Install or update is in progress.");
+        *err = Error::Create(FROM_HERE, kErrorBusy,
+                             "Install or update is in progress.");
         LOG(ERROR) << Error::ToString(*err);
         return false;
     }

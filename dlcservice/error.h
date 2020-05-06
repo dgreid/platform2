@@ -14,7 +14,8 @@ namespace dlcservice {
 class Error {
  public:
   // Returns the D-Bus error object with error code and error message set.
-  static brillo::ErrorPtr Create(const std::string& code,
+  static brillo::ErrorPtr Create(const base::Location& location,
+                                 const std::string& code,
                                  const std::string& msg);
 
   // Returns a string representation of D-Bus error object used to help logging.

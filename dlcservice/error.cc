@@ -10,9 +10,10 @@
 namespace dlcservice {
 
 // static
-brillo::ErrorPtr Error::Create(const std::string& code,
+brillo::ErrorPtr Error::Create(const base::Location& location,
+                               const std::string& code,
                                const std::string& msg) {
-  return brillo::Error::Create(FROM_HERE, brillo::errors::dbus::kDomain, code,
+  return brillo::Error::Create(location, brillo::errors::dbus::kDomain, code,
                                msg);
 }
 

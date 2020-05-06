@@ -123,7 +123,7 @@ bool DlcManager::GetDlcState(const DlcId& id, DlcState* state, ErrorPtr* err) {
   DCHECK(err);
   if (!IsSupported(id)) {
     *err = Error::Create(
-        kErrorInvalidDlc,
+        FROM_HERE, kErrorInvalidDlc,
         base::StringPrintf("Cannot get state for unsupported DLC=%s",
                            id.c_str()));
     return false;
@@ -148,7 +148,7 @@ bool DlcManager::InstallCompleted(const DlcIdList& ids, brillo::ErrorPtr* err) {
   }
   if (!ret)
     *err = Error::Create(
-        kErrorInvalidDlc,
+        FROM_HERE, kErrorInvalidDlc,
         base::StringPrintf("Failed to mark all installed DLCs as verified."));
   return ret;
 }
@@ -167,7 +167,7 @@ bool DlcManager::UpdateCompleted(const DlcIdList& ids, brillo::ErrorPtr* err) {
   }
   if (!ret)
     *err = Error::Create(
-        kErrorInvalidDlc,
+        FROM_HERE, kErrorInvalidDlc,
         base::StringPrintf("Failed to mark all updated DLCs as hashed."));
   return ret;
 }
@@ -175,7 +175,7 @@ bool DlcManager::UpdateCompleted(const DlcIdList& ids, brillo::ErrorPtr* err) {
 bool DlcManager::InitInstall(const DlcIdList& dlcs, ErrorPtr* err) {
   DCHECK(err);
   if (dlcs.empty()) {
-    *err = Error::Create(kErrorInvalidDlc,
+    *err = Error::Create(FROM_HERE, kErrorInvalidDlc,
                          "Must provide at least one DLC to install.");
     return false;
   }
@@ -184,7 +184,7 @@ bool DlcManager::InitInstall(const DlcIdList& dlcs, ErrorPtr* err) {
   for (const auto& id : dlcs) {
     if (!IsSupported(id)) {
       *err = Error::Create(
-          kErrorInvalidDlc,
+          FROM_HERE, kErrorInvalidDlc,
           base::StringPrintf("Trying to install unsupported DLC=%s",
                              id.c_str()));
       return false;
@@ -198,7 +198,7 @@ bool DlcManager::InitInstall(const DlcIdList& dlcs, ErrorPtr* err) {
     DlcBase& dlc = supported_.find(id)->second;
     if (!dlc.InitInstall(&tmp_err)) {
       *err = Error::Create(
-          kErrorInternal,
+          FROM_HERE, kErrorInternal,
           base::StringPrintf(
               "Failed to initialize installation of images for DLC %s",
               id.c_str()));
@@ -213,7 +213,7 @@ bool DlcManager::Delete(const DlcId& id, ErrorPtr* err) {
   DCHECK(err);
   if (!IsSupported(id)) {
     *err = Error::Create(
-        kErrorInvalidDlc,
+        FROM_HERE, kErrorInvalidDlc,
         base::StringPrintf("Trying to delete unsupported DLC=%s", id.c_str()));
     return false;
   }
@@ -230,8 +230,8 @@ bool DlcManager::FinishInstall(ErrorPtr* err) {
       ret = false;
   }
   if (!ret)
-    *err =
-        Error::Create(kErrorInternal, "Not all DLC(s) successfully mounted.");
+    *err = Error::Create(FROM_HERE, kErrorInternal,
+                         "Not all DLC(s) successfully mounted.");
   return ret;
 }
 
