@@ -25,6 +25,11 @@ profile_link_root="${shill_state_root}/user_profiles"
 profile_link_dir="${profile_link_root}/${profile_user}"
 username_hash=""
 
+if [ -z "${user}" ]; then
+  logger -t "${script_name}" "Unexpected empty user"
+  exit 1
+fi
+
 # We should not load multiple network profiles.  If a profile link
 # directory already exists, we should go no further.
 if [ -e "${profile_link_dir}" ]; then
@@ -32,21 +37,14 @@ if [ -e "${profile_link_dir}" ]; then
   exit 0
 fi
 
-if [ -n "${user}" ]; then
-  system_path="$(cryptohome-path system "${user}")"
-  profile_base="/run/daemon-store/shill"
-  if [ ! -d "${profile_base}" ]; then
-    logger -t "${script_name}" \
-      "Daemon-store dir ${profile_base} does not exist"
-    exit 1
-  fi
-  username_hash="$(basename "${system_path}")"
-else
-  # If no user is given, create a temporary profile directory which will
-  # be erased on logout.
-  profile_base="${shill_state_root}/guest_user_profile"
-  rm -rf "${profile_base}"
+system_path="$(cryptohome-path system "${user}")"
+profile_base="/run/daemon-store/shill"
+if [ ! -d "${profile_base}" ]; then
+  logger -t "${script_name}" \
+    "Daemon-store dir ${profile_base} does not exist"
+  exit 1
 fi
+username_hash="$(basename "${system_path}")"
 
 profile_dir="${profile_base}/${username_hash}"
 profile="${profile_dir}/shill.profile"
