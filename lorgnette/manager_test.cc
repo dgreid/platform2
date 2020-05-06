@@ -63,14 +63,15 @@ class ManagerTest : public testing::Test {
                               Manager::kBooleanMetricMax));
   }
 
-  bool CompareImages(const std::string& path_a, const std::string& path_b) {
+  void CompareImages(const std::string& path_a, const std::string& path_b) {
     brillo::ProcessImpl diff;
     diff.AddArg("/usr/bin/perceptualdiff");
     diff.AddArg("-verbose");
     diff.AddIntOption("-threshold", 1);
     diff.AddArg(path_a);
     diff.AddArg(path_b);
-    return diff.Run() == 0;
+    EXPECT_EQ(diff.Run(), 0)
+        << path_a << " and " << path_b << " are not the same image";
   }
 
   SaneClientFake* sane_client_;
@@ -106,7 +107,36 @@ TEST_F(ManagerTest, ScanBlackAndWhiteSuccess) {
   ExpectConverterSuccess();
   EXPECT_TRUE(manager_.ScanImage(nullptr, "TestDevice", scan_fd,
                                  brillo::VariantDictionary()));
-  EXPECT_TRUE(CompareImages("./test_images/bw.png", output_path_.value()));
+  CompareImages("./test_images/bw.png", output_path_.value());
+}
+
+TEST_F(ManagerTest, ScanGrayscaleSuccess) {
+  std::string contents;
+  ASSERT_TRUE(base::ReadFileToString(base::FilePath("./test_images/gray.pnm"),
+                                     &contents));
+  std::vector<uint8_t> image_data(contents.begin(), contents.end());
+  std::unique_ptr<SaneDeviceFake> device = std::make_unique<SaneDeviceFake>();
+  device->SetScanData(image_data);
+
+  ScanParameters parameters;
+  parameters.format = kGrayscale;
+  parameters.pixels_per_line = 32;
+  parameters.lines = 32;
+  parameters.depth = 8;
+  device->SetScanParameters(parameters);
+
+  sane_client_->SetDeviceForName("TestDevice", std::move(device));
+
+  base::File scan(output_path_,
+                  base::File::FLAG_CREATE | base::File::FLAG_WRITE);
+  ASSERT_TRUE(scan.IsValid());
+  base::ScopedFD scan_fd(scan.TakePlatformFile());
+
+  ExpectScanSuccess();
+  ExpectConverterSuccess();
+  EXPECT_TRUE(manager_.ScanImage(nullptr, "TestDevice", scan_fd,
+                                 brillo::VariantDictionary()));
+  CompareImages("./test_images/gray.png", output_path_.value());
 }
 
 TEST_F(ManagerTest, ScanColorSuccess) {
@@ -135,7 +165,7 @@ TEST_F(ManagerTest, ScanColorSuccess) {
   ExpectConverterSuccess();
   EXPECT_TRUE(manager_.ScanImage(nullptr, "TestDevice", scan_fd,
                                  brillo::VariantDictionary()));
-  EXPECT_TRUE(CompareImages("./test_images/color.png", output_path_.value()));
+  CompareImages("./test_images/color.png", output_path_.value());
 }
 
 TEST_F(ManagerTest, ScanFailNoDevice) {
@@ -188,6 +218,22 @@ TEST_F(ManagerTest, ScanFailToRead) {
   ASSERT_TRUE(scan.IsValid());
   base::ScopedFD scan_fd(scan.TakePlatformFile());
 
+  ExpectScanFailure();
+  EXPECT_FALSE(manager_.ScanImage(nullptr, "TestDevice", scan_fd,
+                                  brillo::VariantDictionary()));
+}
+
+TEST_F(ManagerTest, ScanFailBadFd) {
+  std::string contents;
+  ASSERT_TRUE(base::ReadFileToString(base::FilePath("./test_images/color.pnm"),
+                                     &contents));
+  std::vector<uint8_t> image_data(contents.begin(), contents.end());
+  std::unique_ptr<SaneDeviceFake> device = std::make_unique<SaneDeviceFake>();
+  device->SetScanData(image_data);
+  device->SetStartScanResult(true);
+  sane_client_->SetDeviceForName("TestDevice", std::move(device));
+
+  base::ScopedFD scan_fd;
   ExpectScanFailure();
   EXPECT_FALSE(manager_.ScanImage(nullptr, "TestDevice", scan_fd,
                                   brillo::VariantDictionary()));
