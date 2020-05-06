@@ -8,7 +8,7 @@
 
 int main(int argc, char** argv) {
   brillo::OpenLog("dlcservice", true);
-  brillo::InitLog(brillo::kLogToSyslog);
+  brillo::InitLog(brillo::kLogToSyslog | brillo::kLogHeader);
 
   return dlcservice::Daemon().Run();
 }
