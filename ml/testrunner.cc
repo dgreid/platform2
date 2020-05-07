@@ -3,9 +3,7 @@
 // found in the LICENSE file.
 
 #include <base/at_exit.h>
-#include <base/command_line.h>
 #include <base/threading/thread_task_runner_handle.h>
-#include <brillo/flag_helper.h>
 #include <brillo/message_loops/base_message_loop.h>
 #include <brillo/test_helpers.h>
 #include <mojo/core/embedder/embedder.h>
