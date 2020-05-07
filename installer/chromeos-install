@@ -42,8 +42,6 @@ DEFINE_boolean preserve_stateful ${FLAGS_FALSE} \
 using this option as this may make the stateful partition not mountable."
 DEFINE_string payload_image "" "Path to a Chromium OS image to install onto \
 the device's hard drive"
-DEFINE_string gpt_layout "" "Path to a script for pre-defined GPT partition \
-layout"
 DEFINE_string pmbr_code "" "Path to PMBR code to be installed"
 DEFINE_string target_bios "" "Bios type to boot with (see postinst --bios)"
 DEFINE_boolean mtd_layout ${FLAGS_FALSE} "This system uses MTD for \
@@ -252,8 +250,7 @@ get_root_device() {
 
 # Check for optional payload image
 check_payload_image() {
-  if [ "${FLAGS_skip_rootfs}" -eq "${FLAGS_TRUE}" ] && \
-      [ -s "${FLAGS_gpt_layout}" ]; then
+  if [ "${FLAGS_skip_rootfs}" -eq "${FLAGS_TRUE}" ]; then
     # Usually this is used for partition setup.
     SRC=""
     ROOT=""
