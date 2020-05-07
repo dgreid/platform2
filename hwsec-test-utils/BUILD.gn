@@ -7,6 +7,7 @@ import("//common-mk/pkg_config.gni")
 group("all") {
   deps = [
     ":attestation-injected-keys",
+    ":fake_pca_agentd",
     ":hwsec-test-va",
   ]
   if (use.test) {
@@ -57,6 +58,30 @@ executable("hwsec-test-va") {
 source_set("verified_access_library") {
   configs += [ ":target_defaults" ]
   sources = [ "verified_access/verified_access.cc" ]
+}
+
+executable("fake_pca_agentd") {
+  configs += [ ":target_defaults" ]
+  sources = [
+    "fake_pca_agent/main.cc",
+  ]
+  deps = [
+    ":fake_pca_agent_library",
+  ]
+  pkg_deps = [
+    # system_api depends on protobuf (or protobuf-lite). It must appear
+    # before protobuf here or the linker flags won't be in the right
+    # order.
+    "system_api",
+    "protobuf",
+  ]
+}
+
+source_set("fake_pca_agent_library") {
+  configs += [ ":target_defaults" ]
+  sources = [
+    "fake_pca_agent/service.cc",
+  ]
 }
 
 if (use.test) {
