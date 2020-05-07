@@ -590,7 +590,16 @@ HELP_bt_console='
 '
 EXEC_bt_console='/usr/bin/bluetoothctl'
 cmd_bt_console() (
-  "${EXEC_bt_console}" "${1:+--agent=$1}"
+  if [ $# -gt 1 ]; then
+    help "too many arguments"
+    return 1
+  fi
+
+  if [ $# -eq 0 ]; then
+    "${EXEC_bt_console}"
+  else
+    "${EXEC_bt_console}" --agent="$1"
+  fi
 )
 
 USAGE_cras='[ enable <flag> | disable <flag> | telephony <event> [arg] ]'
