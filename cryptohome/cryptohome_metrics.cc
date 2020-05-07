@@ -7,6 +7,7 @@
 #include <string>
 
 #include <base/logging.h>
+#include <base/macros.h>
 #include <base/stl_util.h>
 #include <metrics/metrics_library.h>
 #include <metrics/timer.h>
@@ -86,7 +87,7 @@ constexpr char kOOPMountCleanupResultHistogram[] =
 
 // Histogram parameters. This should match the order of 'TimerType'.
 // Min and max samples are in milliseconds.
-const TimerHistogramParams kTimerHistogramParams[cryptohome::kNumTimerTypes] = {
+const TimerHistogramParams kTimerHistogramParams[] = {
     {"Cryptohome.TimeToMountAsync", 0, 4000, 50},
     {"Cryptohome.TimeToMountSync", 0, 4000, 50},
     {"Cryptohome.TimeToMountGuestAsync", 0, 4000, 50},
@@ -113,7 +114,13 @@ const TimerHistogramParams kTimerHistogramParams[cryptohome::kNumTimerTypes] = {
     // The out-of-process cleanup operation includes a call to waitpid(2) with
     // a 1-second timeout, so make the max sample a bit higher than that.
     {"Cryptohome.TimeToPerformOOPMountCleanup", 0, 1100, 50},
+    // Latency of the UserSession::Verify operation that gets invoked on session
+    // unlock.
+    {"Cryptohome.TimeSessionUnlock", 0, 4000, 50},
 };
+
+static_assert(arraysize(kTimerHistogramParams) == cryptohome::kNumTimerTypes,
+              "kTimerHistogramParams out of sync with enum TimerType");
 
 constexpr char kCryptohomeDeprecatedApiHistogramName[] =
     "Cryptohome.DeprecatedApiCalled";
