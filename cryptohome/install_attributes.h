@@ -13,6 +13,7 @@
 #include <base/files/file_path.h>
 #include <base/macros.h>
 #include <base/observer_list.h>
+#include <base/observer_list_types.h>
 #include <base/values.h>
 #include <brillo/secure_blob.h>
 
@@ -46,7 +47,7 @@ class InstallAttributes {
                     // Note that COUNT should always be the last element.
   };
 
-  class Observer {
+  class Observer : public base::CheckedObserver {
    public:
     virtual void OnFinalized() = 0;
   };

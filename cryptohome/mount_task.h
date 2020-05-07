@@ -28,7 +28,8 @@
 #include <base/atomic_sequence_num.h>
 #include <base/atomicops.h>
 #include <base/memory/ref_counted.h>
-#include <base/synchronization/cancellation_flag.h>
+#include <base/observer_list_types.h>
+#include <base/synchronization/atomic_flag.h>
 #include <base/synchronization/waitable_event.h>
 #include <base/threading/thread.h>
 #include <brillo/process.h>
@@ -177,7 +178,7 @@ class MountTaskResult : public CryptohomeEventBase {
   bool guest_;
 };
 
-class MountTaskObserver {
+class MountTaskObserver : public base::CheckedObserver {
  public:
   MountTaskObserver() {}
   virtual ~MountTaskObserver() {}
@@ -205,14 +206,10 @@ class MountTask : public base::RefCountedThreadSafe<MountTask> {
 
   // Allow cancellation to be sent from the main thread. This must be checked
   // in each inherited Run().
-  virtual void Cancel() {
-    base::subtle::Release_Store(&cancel_flag_, 1);
-  }
+  virtual void Cancel() { cancel_flag_.Set(); }
 
   // Indicate if cancellation was requested.
-  virtual bool IsCanceled() {
-    return base::subtle::Acquire_Load(&cancel_flag_) != 0;
-  }
+  virtual bool IsCanceled() { return cancel_flag_.IsSet(); }
 
   // Gets the asynchronous call id of this task
   int sequence_id() {
@@ -264,8 +261,7 @@ class MountTask : public base::RefCountedThreadSafe<MountTask> {
   int sequence_id_;
 
   // Checked before all Run() calls to cancel.
-  // base::CancellationFlag isn't available in CrOS yet.
-  base::subtle::Atomic32 cancel_flag_;
+  base::AtomicFlag cancel_flag_;
 
  private:
   // Signal will call Signal on the completion event if it is set

@@ -5,7 +5,7 @@
 #include <base/bind.h>
 #include <base/json/json_writer.h>
 #include <base/strings/string_util.h>
-#include <base/sys_info.h>
+#include <base/system/sys_info.h>
 #include <base/threading/thread_task_runner_handle.h>
 #include <brillo/cryptohome.h>
 #include <chaps/isolate.h>
