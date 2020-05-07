@@ -12,7 +12,10 @@ group("all") {
     ":ml_service",
   ]
   if (use.test) {
-    deps += [ ":ml_service_test" ]
+    deps += [
+      ":ml_cmdline_test",
+      ":ml_service_test",
+    ]
   }
   if (use.fuzzer) {
     deps += [
@@ -100,6 +103,15 @@ static_library("ml_common") {
   ]
 }
 
+static_library("ml_cmdline_common") {
+  deps = [
+    ":ml_common",
+  ]
+  sources = [
+    "simple.cc",
+  ]
+}
+
 executable("ml_service") {
   deps = [
     ":ml_common",
@@ -112,11 +124,10 @@ executable("ml_service") {
 executable("ml_cmdline") {
   include_dirs = [ "${sysroot}/usr/include/tensorflow" ]
   deps = [
-    ":ml_common",
+    ":ml_cmdline_common",
   ]
   sources = [
     "command_line.cc",
-    "simple.cc",
   ]
 }
 
@@ -152,6 +163,17 @@ if (use.test) {
     if (use.ondevice_handwriting) {
       defines = [ "ML_SUPPORT_HANDWRITING" ]
     }
+  }
+  executable("ml_cmdline_test") {
+    configs += [ "//common-mk:test" ]
+    include_dirs = [ "${sysroot}/usr/include/tensorflow" ]
+    deps = [
+      ":ml_cmdline_common",
+    ]
+    sources = [
+      "simple_test.cc",
+      "testrunner.cc",
+    ]
   }
 }
 

@@ -121,7 +121,7 @@ AddResult Add(const double x, const double y) {
     return result;
   }
 
-  result.status = "Inference succeeded.";
+  result.status = "OK";
   return result;
 }
 
