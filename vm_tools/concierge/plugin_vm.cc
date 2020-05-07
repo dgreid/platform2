@@ -79,10 +79,11 @@ std::unique_ptr<PluginVm> PluginVm::Create(
     base::FilePath runtime_dir,
     std::unique_ptr<patchpanel::Client> network_client,
     int subnet_index,
+    bool enable_vnet_hdr,
     std::unique_ptr<SeneschalServerProxy> seneschal_server_proxy,
     dbus::ObjectProxy* vmplugin_service_proxy) {
   auto vm = base::WrapUnique(new PluginVm(
-      std::move(id), std::move(network_client), subnet_index,
+      std::move(id), std::move(network_client), subnet_index, enable_vnet_hdr,
       std::move(seneschal_server_proxy), vmplugin_service_proxy,
       std::move(iso_dir), std::move(root_dir), std::move(runtime_dir)));
 
@@ -576,6 +577,7 @@ void PluginVm::VmToolsStateChanged(bool running) {
 PluginVm::PluginVm(VmId id,
                    std::unique_ptr<patchpanel::Client> network_client,
                    int subnet_index,
+                   bool enable_vnet_hdr,
                    std::unique_ptr<SeneschalServerProxy> seneschal_server_proxy,
                    dbus::ObjectProxy* vmplugin_service_proxy,
                    base::FilePath iso_dir,
@@ -585,6 +587,7 @@ PluginVm::PluginVm(VmId id,
       id_(std::move(id)),
       iso_dir_(std::move(iso_dir)),
       subnet_index_(subnet_index),
+      enable_vnet_hdr_(enable_vnet_hdr),
       seneschal_server_proxy_(std::move(seneschal_server_proxy)),
       vmplugin_service_proxy_(vmplugin_service_proxy),
       usb_last_handle_(0) {
@@ -621,7 +624,7 @@ bool PluginVm::Start(uint32_t cpus,
 
   // Open the tap device.
   base::ScopedFD tap_fd = OpenTapDevice(
-      network_device.ifname(), false /*vnet_hdr*/, nullptr /*ifname_out*/);
+      network_device.ifname(), enable_vnet_hdr_, nullptr /*ifname_out*/);
   if (!tap_fd.is_valid()) {
     LOG(ERROR) << "Unable to open and configure TAP device "
                << network_device.ifname();

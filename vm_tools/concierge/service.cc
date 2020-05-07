@@ -1604,6 +1604,7 @@ std::unique_ptr<dbus::Response> Service::StartPluginVm(
       vm_id, request.cpus(), std::move(params), std::move(stateful_dir),
       std::move(iso_dir), root_dir.Take(), runtime_dir.Take(),
       std::move(network_client), request.subnet_index(),
+      request.net_options().enable_vnet_hdr(),
       std::move(seneschal_server_proxy), vmplugin_service_proxy_);
   if (!vm) {
     LOG(ERROR) << "Unable to start VM";

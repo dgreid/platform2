@@ -45,6 +45,7 @@ class PluginVm final : public VmBaseImpl {
       base::FilePath runtime_dir,
       std::unique_ptr<patchpanel::Client> network_client,
       int subnet_index,
+      bool enable_vnet_hdr,
       std::unique_ptr<SeneschalServerProxy> seneschal_server_proxy,
       dbus::ObjectProxy* vmplugin_service_proxy);
   ~PluginVm() override;
@@ -97,6 +98,7 @@ class PluginVm final : public VmBaseImpl {
   PluginVm(const VmId id,
            std::unique_ptr<patchpanel::Client> network_client,
            int subnet_index,
+           bool enable_vnet_hdr,
            std::unique_ptr<SeneschalServerProxy> seneschal_server_proxy,
            dbus::ObjectProxy* vmplugin_service_proxy,
            base::FilePath iso_dir,
@@ -133,6 +135,8 @@ class PluginVm final : public VmBaseImpl {
   std::unique_ptr<patchpanel::Subnet> subnet_;
   // The requested subnet index.
   const int subnet_index_;
+  // Toggles the use of the IFF_VNET_HDR option on the TAP device.
+  const bool enable_vnet_hdr_;
 
   // Proxy to the server providing shared directory access for this VM.
   std::unique_ptr<SeneschalServerProxy> seneschal_server_proxy_;
