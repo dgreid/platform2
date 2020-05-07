@@ -9,7 +9,7 @@
 #include "base/files/file_util.h"
 #include "base/files/scoped_temp_dir.h"
 #include "base/run_loop.h"
-#include "base/sys_info.h"
+#include "base/system/sys_info.h"
 #include "base/threading/thread_local.h"
 #include "base/time/time.h"
 #include "metrics/cumulative_metrics.h"

@@ -10,7 +10,7 @@
 #include "base/files/file_util.h"
 #include "base/files/scoped_temp_dir.h"
 #include "base/logging.h"
-#include "base/sys_info.h"
+#include "base/system/sys_info.h"
 #include "metrics/metrics_library_mock.h"
 #include "metrics/serialization/metric_sample.h"
 #include "metrics/uploader/metrics_log.h"

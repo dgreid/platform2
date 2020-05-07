@@ -9,13 +9,13 @@
 #include <vector>
 
 #include <base/bind.h>
+#include <base/hash/sha1.h>
 #include <base/logging.h>
 #include <base/metrics/histogram.h>
 #include <base/metrics/histogram_base.h>
 #include <base/metrics/histogram_snapshot_manager.h>
 #include <base/metrics/sparse_histogram.h>
 #include <base/metrics/statistics_recorder.h>
-#include <base/sha1.h>
 #include <base/threading/thread_task_runner_handle.h>
 
 #include "metrics/serialization/metric_sample.h"

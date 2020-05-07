@@ -14,14 +14,14 @@
 
 #include <base/files/file_path.h>
 #include <base/files/file_util.h>
-#include <base/hash.h>
+#include <base/hash/hash.h>
 #include <base/logging.h>
 #include <base/stl_util.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_split.h>
 #include <base/strings/string_util.h>
 #include <base/strings/stringprintf.h>
-#include <base/sys_info.h>
+#include <base/system/sys_info.h>
 #include <base/threading/thread_task_runner_handle.h>
 #include <chromeos/dbus/service_constants.h>
 #include <dbus/dbus.h>

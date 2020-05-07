@@ -7,7 +7,7 @@
 #include <base/bind.h>
 #include <base/files/file_path.h>
 #include <base/strings/string_util.h>
-#include <base/sys_info.h>
+#include <base/system/sys_info.h>
 #include <memory>
 #include <utility>
 
