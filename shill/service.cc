@@ -256,13 +256,14 @@ Service::Service(Manager* manager, Technology technology)
 
   dhcp_properties_->InitPropertyStore(&store_);
 
-  SLOG(this, 1) << technology << " service " << serial_number_
+  SLOG(this, 1) << technology << " Service " << serial_number_
                 << " constructed.";
 }
 
 Service::~Service() {
   metrics()->DeregisterService(*this);
-  SLOG(this, 1) << "Service " << serial_number_ << " destroyed.";
+  SLOG(this, 1) << technology() << " Service " << serial_number_
+                << " destroyed.";
 }
 
 void Service::AutoConnect() {
