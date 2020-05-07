@@ -242,6 +242,19 @@ Properties	string ArcVpn.TunnelChrome [writeonly]
 			This property is relevant only for services
 			associated with a CDMA cellular device.
 
+		string Cellular.ICCID [readonly]
+
+			(Cellular only) The Integrated Circuit Card Identifier
+			of the SIM associated with the service if applicable.
+
+		string Cellular.IMSI [readonly]
+
+			(Cellular only) The International Mobile Subscriber
+			Identity of the SIM associated with the service.
+			All Cellular Services are uniqulely tied to an IMSI.
+			(If no IMSI is available, a shared entry with an empty
+			IMSI will be used to persist service properties).
+
 		dict Cellular.ServingOperator [readonly] [GSM only]
 			(Cellular only) Description of the operator on whose
 			network the modem is currently registered, if any.

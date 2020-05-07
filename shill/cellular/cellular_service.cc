@@ -80,6 +80,8 @@ CellularService::CellularService(Manager* manager,
   store->RegisterConstString(kActivationStateProperty, &activation_state_);
   HelpRegisterDerivedStringmap(kCellularApnProperty, &CellularService::GetApn,
                                &CellularService::SetApn);
+  store->RegisterConstString(kIccidProperty, &iccid_);
+  store->RegisterConstString(kImsiProperty, &imsi_);
   store->RegisterConstStringmap(kCellularLastGoodApnProperty,
                                 &last_good_apn_info_);
   store->RegisterConstString(kNetworkTechnologyProperty, &network_technology_);
