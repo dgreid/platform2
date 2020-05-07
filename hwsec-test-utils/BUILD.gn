@@ -97,6 +97,7 @@ executable("fake_pca_agentd") {
 source_set("fake_pca_agent_library") {
   configs += [ ":target_defaults" ]
   sources = [
+    "fake_pca_agent/issue_certificate.cc",
     "fake_pca_agent/pca_factory.cc",
     "fake_pca_agent/service.cc",
   ]
