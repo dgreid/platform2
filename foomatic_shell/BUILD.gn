@@ -1,0 +1,66 @@
+# Copyright 2020 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//common-mk/pkg_config.gni")
+
+group("all") {
+  deps = []
+  if (use.test) {
+    deps += [ ":foomatic_shell_test" ]
+  }
+  if (use.fuzzer) {
+    deps += [ ":foomatic_shell_fuzzer" ]
+  }
+}
+
+pkg_config("target_defaults") {
+  pkg_deps = [
+    "libbrillo",
+    "libchrome-${libbase_ver}",
+  ]
+}
+
+if (use.test) {
+  executable("foomatic_shell_test") {
+    configs += [
+      "//common-mk:test",
+      ":target_defaults",
+    ]
+    sources = [
+      "grammar.h",
+      "parser.cc",
+      "parser.h",
+      "parser_test.cc",
+      "scanner.cc",
+      "scanner.h",
+      "scanner_test.cc",
+    ]
+    deps = [
+      "//common-mk/testrunner",
+    ]
+  }
+}
+
+if (use.fuzzer) {
+  pkg_config("libchrome_test_config") {
+    pkg_deps = [
+      "libchrome-${libbase_ver}",
+      "libchrome-test-${libbase_ver}",
+    ]
+  }
+  executable("foomatic_shell_fuzzer") {
+    configs += [
+      "//common-mk/common_fuzzer",
+      ":libchrome_test_config",
+    ]
+    sources = [
+      "grammar.h",
+      "parser.cc",
+      "parser.h",
+      "parser_fuzzer.cc",
+      "scanner.cc",
+      "scanner.h",
+    ]
+  }
+}

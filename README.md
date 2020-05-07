@@ -59,6 +59,7 @@ copies.
 | [easy-unlock](./easy-unlock/) | Daemon for handling Easy Unlock requests (e.g. unlocking Chromebooks with an Android device) |
 | [feedback](./feedback/) | Daemon for headless systems that want to gather feedback (normally Chrome manages it) |
 | [fitpicker](./fitpicker/) ||
+| [foomatic_shell](./foomatic_shell/) | Simple shell used by the foomatic-rip package |
 | [glib-bridge](./glib-bridge/) | library for libchrome-glib message loop interoperation |
 | [goldfishd](./goldfishd/) | Android Emulator Daemon |
 | [hammerd](./hammerd/) | Firmware updater utility for hammer hardware |
