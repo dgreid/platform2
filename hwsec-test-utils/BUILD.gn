@@ -77,10 +77,15 @@ source_set("verified_access_library") {
 executable("fake_pca_agentd") {
   configs += [ ":target_defaults" ]
   sources = [ "fake_pca_agent/main.cc" ]
-  deps = [ ":fake_pca_agent_library" ]
+  deps = [
+    ":common_library",
+    ":fake_pca_agent_library",
+  ]
 
   # NOSORT
   pkg_deps = [
+    "openssl",
+
     # system_api depends on protobuf (or protobuf-lite). It must appear
     # before protobuf here or the linker flags won't be in the right
     # order.
@@ -91,7 +96,23 @@ executable("fake_pca_agentd") {
 
 source_set("fake_pca_agent_library") {
   configs += [ ":target_defaults" ]
-  sources = [ "fake_pca_agent/service.cc" ]
+  sources = [
+    "fake_pca_agent/pca_factory.cc",
+    "fake_pca_agent/service.cc",
+  ]
+  if (use.tpm2) {
+    sources += [
+      "fake_pca_agent/pca_certify_v2.cc",
+      "fake_pca_agent/pca_enroll_v2.cc",
+    ]
+    libs = [ "trunks" ]
+  } else {
+    sources += [
+      "fake_pca_agent/pca_certify_v1.cc",
+      "fake_pca_agent/pca_enroll_v1.cc",
+    ]
+    libs = [ "tspi" ]
+  }
 }
 
 if (use.test) {
@@ -108,9 +129,23 @@ if (use.test) {
     sources = [ "verified_access/verified_access_test.cc" ]
     deps = [
       ":common_library",
+      ":fake_pca_agent_library",
       ":verified_access_library",
       "//common-mk/testrunner",
     ]
+    if (use.tpm2) {
+      sources += [
+        "fake_pca_agent/pca_certify_v2_test.cc",
+        "fake_pca_agent/pca_enroll_v2_test.cc",
+      ]
+      libs = [ "trunks" ]
+    } else {
+      sources += [
+        "fake_pca_agent/pca_certify_v1_test.cc",
+        "fake_pca_agent/pca_enroll_v1_test.cc",
+      ]
+      libs = [ "tspi" ]
+    }
 
     # NOSORT
     pkg_deps = [
