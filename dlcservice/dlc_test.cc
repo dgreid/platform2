@@ -157,4 +157,40 @@ TEST_F(DlcBaseTest, GetUsedBytesOnDisk) {
   EXPECT_EQ(dlc.GetUsedBytesOnDisk(), expected_size);
 }
 
+TEST_F(DlcBaseTest, ImageOnDiskButNotVerifiedInstalls) {
+  DlcBase dlc(kSecondDlc);
+  dlc.Initialize();
+
+  SetUpDlcWithSlots(kSecondDlc);
+
+  EXPECT_EQ(dlc.GetState().state(), DlcState::NOT_INSTALLED);
+  EXPECT_CALL(*mock_image_loader_proxy_ptr_,
+              LoadDlcImage(kSecondDlc, _, _, _, _, _))
+      .WillOnce(DoAll(SetArgPointee<3>(mount_path_.value()), Return(true)));
+  EXPECT_CALL(*mock_update_engine_proxy_ptr_,
+              SetDlcActiveValue(_, kSecondDlc, _, _))
+      .WillOnce(Return(true));
+  EXPECT_TRUE(dlc.InitInstall(&err_));
+  EXPECT_TRUE(dlc.IsInstalled());
+}
+
+TEST_F(DlcBaseTest, ImageOnDiskVerifiedInstalls) {
+  DlcBase dlc(kSecondDlc);
+  dlc.Initialize();
+
+  EXPECT_TRUE(Prefs(dlc, SystemState::Get()->active_boot_slot())
+                  .Create(kDlcPrefVerified));
+  SetUpDlcWithSlots(kSecondDlc);
+
+  EXPECT_EQ(dlc.GetState().state(), DlcState::NOT_INSTALLED);
+  EXPECT_CALL(*mock_image_loader_proxy_ptr_,
+              LoadDlcImage(kSecondDlc, _, _, _, _, _))
+      .WillOnce(DoAll(SetArgPointee<3>(mount_path_.value()), Return(true)));
+  EXPECT_CALL(*mock_update_engine_proxy_ptr_,
+              SetDlcActiveValue(_, kSecondDlc, _, _))
+      .WillOnce(Return(true));
+  EXPECT_TRUE(dlc.InitInstall(&err_));
+  EXPECT_TRUE(dlc.IsInstalled());
+}
+
 }  // namespace dlcservice

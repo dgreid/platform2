@@ -151,6 +151,37 @@ bool CreateFile(const base::FilePath& path, int64_t size) {
   return ResizeFile(path, size) && SetFilePermissions(path, kDlcFilePerms);
 }
 
+bool HashFile(const base::FilePath& path, vector<uint8_t>* sha256) {
+  base::File f(path, base::File::FLAG_OPEN | base::File::FLAG_READ);
+  if (!f.IsValid()) {
+    PLOG(ERROR) << "Failed to read file at " << path.value()
+                << ", reason: " << base::File::ErrorToString(f.error_details());
+    return false;
+  }
+
+  auto length = f.GetLength();
+  if (length < 0) {
+    LOG(ERROR) << "Failed to get length for file at " << path.value();
+    return false;
+  }
+
+  constexpr int64_t kMaxBufSize = 4096;
+  unique_ptr<SecureHash> hash(SecureHash::Create(SecureHash::SHA256));
+
+  vector<char> buf(kMaxBufSize);
+  for (; length > 0; length -= kMaxBufSize) {
+    int bytes = std::min(kMaxBufSize, length);
+    if (f.ReadAtCurrentPos(buf.data(), bytes) != bytes) {
+      PLOG(ERROR) << "Failed to read from file at " << path.value();
+      return false;
+    }
+    hash->Update(buf.data(), bytes);
+  }
+  sha256->resize(crypto::kSHA256Length);
+  hash->Finish(sha256->data(), sha256->size());
+  return true;
+}
+
 bool CopyAndHashFile(const base::FilePath& from,
                      const base::FilePath& to,
                      vector<uint8_t>* sha256) {

@@ -116,6 +116,10 @@ class DlcBase {
   //  - If inactive image size is less than size in manifest, increase it.
   bool ValidateInactiveImage() const;
 
+  // Returns true if the DLC image in the current active slot matches the hash
+  // of that in the rootfs manifest for the DLC.
+  bool Verify();
+
   // Helper used to load in (copy + cleanup) preloadable files for the DLC.
   bool PreloadedCopier();
 

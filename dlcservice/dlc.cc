@@ -246,6 +246,31 @@ bool DlcBase::ValidateInactiveImage() const {
   return true;
 }
 
+bool DlcBase::Verify() {
+  auto image_path = GetImagePath(SystemState::Get()->active_boot_slot());
+  vector<uint8_t> image_sha256;
+  if (!HashFile(image_path, &image_sha256)) {
+    LOG(ERROR) << "Failed to hash image file: " << image_path.value();
+    return false;
+  }
+  const auto& manifest_image_sha256 = manifest_.image_sha256();
+  if (image_sha256 != manifest_image_sha256) {
+    LOG(WARNING) << "Verification failed for image file: " << image_path.value()
+                 << ". Expected: "
+                 << base::HexEncode(manifest_image_sha256.data(),
+                                    manifest_image_sha256.size())
+                 << " Found: "
+                 << base::HexEncode(image_sha256.data(), image_sha256.size());
+    return false;
+  }
+  ErrorPtr err;
+  if (!InstallCompleted(&err)) {
+    LOG(ERROR) << Error::ToString(err);
+    return false;
+  }
+  return true;
+}
+
 bool DlcBase::PreloadedCopier() {
   FilePath image_preloaded_path =
       JoinPaths(SystemState::Get()->preloaded_content_dir(), id_, package_,
@@ -371,13 +396,14 @@ bool DlcBase::InitInstall(ErrorPtr* err) {
 
   switch (state_.state()) {
     case DlcState::NOT_INSTALLED:
-      if (IsVerified() && (ValidateInactiveImage() || true) && !TryMount(err)) {
-        return false;
-      }
-
       if (IsActiveImagePresent()) {
+        if ((IsVerified() || Verify()) && (ValidateInactiveImage() || true) &&
+            TryMount(err)) {
+          LOG(INFO) << "Image verified and marked installed for DLC=" << id_;
+          break;
+        }
         LOG(WARNING) << "Deleting the image for DLC=" << id_
-                     << " as verified missing.";
+                     << " as failed to verify.";
         if (!DeleteInternal(err)) {
           if (!CancelInstall(err))
             LOG(ERROR) << "Failed during install initialization: "

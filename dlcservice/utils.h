@@ -60,6 +60,9 @@ bool CreateFile(const base::FilePath& path, int64_t size);
 // resize.
 bool ResizeFile(const base::FilePath& path, int64_t size);
 
+// Hashes the file at |path|.
+bool HashFile(const base::FilePath& path, std::vector<uint8_t>* sha256);
+
 // Copies and hashes the |from| file.
 bool CopyAndHashFile(const base::FilePath& from,
                      const base::FilePath& to,

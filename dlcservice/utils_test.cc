@@ -149,6 +149,45 @@ TEST_F(FixtureUtilsTest, CopyAndHashFile) {
   CheckPerms(dst_path, kDlcFilePerms);
 }
 
+TEST_F(FixtureUtilsTest, HashFile) {
+  auto src_path = JoinPaths(scoped_temp_dir_.GetPath(), "src_file");
+  EXPECT_TRUE(CreateFile(src_path, 10));
+
+  std::string file_content;
+  EXPECT_TRUE(base::ReadFileToString(src_path, &file_content));
+
+  std::vector<uint8_t> expected_sha256(crypto::kSHA256Length);
+  crypto::SHA256HashString(file_content, expected_sha256.data(),
+                           expected_sha256.size());
+
+  std::vector<uint8_t> actual_sha256;
+  EXPECT_TRUE(HashFile(src_path, &actual_sha256));
+  EXPECT_THAT(actual_sha256, testing::ElementsAreArray(expected_sha256));
+}
+
+TEST_F(FixtureUtilsTest, HashEmptyFile) {
+  auto src_path = JoinPaths(scoped_temp_dir_.GetPath(), "src_file");
+  EXPECT_TRUE(CreateFile(src_path, 0));
+
+  std::string file_content;
+  EXPECT_TRUE(base::ReadFileToString(src_path, &file_content));
+
+  std::vector<uint8_t> expected_sha256(crypto::kSHA256Length);
+  crypto::SHA256HashString(file_content, expected_sha256.data(),
+                           expected_sha256.size());
+
+  std::vector<uint8_t> actual_sha256;
+  EXPECT_TRUE(HashFile(src_path, &actual_sha256));
+  EXPECT_THAT(actual_sha256, testing::ElementsAreArray(expected_sha256));
+}
+
+TEST_F(FixtureUtilsTest, HashMissingFile) {
+  auto src_path = JoinPaths(scoped_temp_dir_.GetPath(), "src_file");
+
+  std::vector<uint8_t> actual_sha256;
+  EXPECT_FALSE(HashFile(src_path, &actual_sha256));
+}
+
 TEST(UtilsTest, JoinPathsTest) {
   EXPECT_EQ(JoinPaths(base::FilePath(kDlcRootPath), kDlcId).value(),
             "/tmp/dlc/id");
