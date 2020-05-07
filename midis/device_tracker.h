@@ -13,6 +13,7 @@
 
 #include <base/files/scoped_file.h>
 #include <base/observer_list.h>
+#include <base/observer_list_types.h>
 #include <gtest/gtest_prod.h>
 
 #include "midis/device.h"
@@ -31,7 +32,7 @@ class DeviceTracker {
   bool InitDeviceTracker();
   void ListDevices(std::vector<arc::mojom::MidisDeviceInfoPtr>* list);
 
-  class Observer {
+  class Observer : public base::CheckedObserver {
    public:
     virtual ~Observer() {}
     // Function which is executed when a MIDI device is added or removed
