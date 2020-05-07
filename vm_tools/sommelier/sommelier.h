@@ -175,7 +175,6 @@ struct sl_context {
   } atoms[ATOM_LAST + 1];
   xcb_visualid_t visual_ids[256];
   xcb_colormap_t colormaps[256];
-  int virgl_transfer_xfer;
 };
 
 struct sl_compositor {
