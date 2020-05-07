@@ -355,6 +355,8 @@ void DlcBase::PreloadImage() {
       LOG(ERROR) << "Failed to delete preloaded DLC=" << id_;
     }
   }
+
+  LOG(INFO) << "Successfully preloaded DLC=" << id_;
 }
 
 bool DlcBase::InitInstall(ErrorPtr* err) {
@@ -372,6 +374,8 @@ bool DlcBase::InitInstall(ErrorPtr* err) {
       }
 
       if (IsActiveImagePresent()) {
+        LOG(WARNING) << "Deleting the image for DLC=" << id_
+                     << " as verified missing.";
         if (!DeleteInternal(err)) {
           if (!CancelInstall(err))
             LOG(ERROR) << "Failed during install initialization: "
