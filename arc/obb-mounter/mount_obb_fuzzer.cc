@@ -54,7 +54,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 
   // Put all remaining bytes in the file.
   auto path = base::FilePath(file_path);
-  base::File file(path, base::File::FLAG_CREATE_ALWAYS);
+  base::File file(path,
+                  base::File::FLAG_CREATE_ALWAYS | base::File::FLAG_WRITE);
   if (!file.created()) {
     LOG(ERROR) << "Failed to create " << file_path.value();
     return 0;
