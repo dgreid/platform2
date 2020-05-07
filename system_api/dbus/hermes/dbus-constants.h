@@ -7,9 +7,11 @@
 
 namespace hermes {
 
-const char kHermesInterface[] = "org.chromium.Hermes";
-const char kHermesServicePath[] = "/org/chromium/Hermes";
+// Hermes D-Bus service identifiers.
 const char kHermesServiceName[] = "org.chromium.Hermes";
+const char kHermesManagerInterface[] = "org.chromium.Hermes.Manager";
+const char kHermesManagerPath[] = "/org/chromium/Hermes";
+const char kHermesProfileInterface[] = "org.chromium.Hermes.Profile";
 
 namespace manager {
 
