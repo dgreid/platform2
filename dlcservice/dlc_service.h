@@ -68,7 +68,7 @@ class DlcService : public DlcServiceInterface {
   static const size_t kUECheckTimeout = 5;
 
   DlcService();
-  virtual ~DlcService();
+  ~DlcService() override;
 
   void Initialize() override;
   bool Install(const DlcIdList& dlcs,
@@ -135,8 +135,8 @@ class DlcService : public DlcServiceInterface {
                                              const std::string& signal_name,
                                              bool success);
 
-  org::chromium::UpdateEngineInterfaceProxyInterface* update_engine_proxy_;
-  std::unique_ptr<DlcManager> dlc_manager_;
+  org::chromium::UpdateEngineInterfaceProxyInterface* update_engine_proxy_{};
+  std::unique_ptr<DlcManager> dlc_manager_{};
 
   // Holds the ML task id of the delayed |PeriodicInstallCheck()| if an install
   // is in progress.

@@ -8,6 +8,7 @@
 #include <map>
 #include <set>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <base/files/file_path.h>
@@ -27,7 +28,7 @@ using DlcId = std::string;
 
 class DlcBase {
  public:
-  explicit DlcBase(const DlcId& id) : id_(id), is_verified_(false) {}
+  explicit DlcBase(DlcId id) : id_(std::move(id)), is_verified_(false) {}
   virtual ~DlcBase() = default;
 
   // Returns the list of directories related to a DLC for deletion.

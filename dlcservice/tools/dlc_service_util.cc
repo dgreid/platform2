@@ -72,7 +72,7 @@ class DlcServiceUtil : public brillo::Daemon {
  public:
   DlcServiceUtil(int argc, const char** argv)
       : argc_(argc), argv_(argv), weak_ptr_factory_(this) {}
-  ~DlcServiceUtil() {}
+  ~DlcServiceUtil() override = default;
 
  private:
   bool InitDlcModuleList(const string& omaha_url, const string& dlc_ids) {
@@ -342,7 +342,7 @@ class DlcServiceUtil : public brillo::Daemon {
     PrintToFileOrStdout(dump, json);
   }
 
-  std::unique_ptr<DlcServiceInterfaceProxy> dlc_service_proxy_;
+  std::unique_ptr<DlcServiceInterfaceProxy> dlc_service_proxy_{};
 
   // argc and argv passed to main().
   int argc_;

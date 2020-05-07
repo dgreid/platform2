@@ -42,7 +42,7 @@ class FixtureUtilsTest : public testing::Test {
     base::ScopedFD fd(brillo::OpenSafely(path, O_RDONLY, 0));
     EXPECT_TRUE(fd.is_valid());
 
-    struct stat stat;
+    struct stat stat {};
     EXPECT_EQ(0, fstat(fd.get(), &stat));
     return stat.st_blksize * stat.st_blocks < stat.st_size;
   }

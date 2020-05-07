@@ -4,7 +4,7 @@
 
 #include "dlcservice/boot/boot_slot.h"
 
-#include <limits.h>
+#include <climits>
 #include <utility>
 
 #include <base/files/file_util.h>
@@ -22,7 +22,7 @@ namespace dlcservice {
 BootSlot::BootSlot(unique_ptr<BootDeviceInterface> boot_device)
     : boot_device_(std::move(boot_device)) {}
 
-BootSlot::~BootSlot() {}
+BootSlot::~BootSlot() = default;
 
 bool BootSlot::GetCurrentSlot(string* boot_disk_name_out,
                               Slot* current_slot_out,

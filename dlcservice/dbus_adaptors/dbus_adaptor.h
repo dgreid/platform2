@@ -58,13 +58,13 @@ class DBusAdaptor : public org::chromium::DlcServiceInterfaceAdaptor,
  public:
   // Will take the ownership of |dbus_service|.
   explicit DBusAdaptor(std::unique_ptr<DBusService> dbus_service);
-  ~DBusAdaptor() = default;
+  ~DBusAdaptor() override = default;
 
   // |DlcService::Observer| override.
   void SendInstallStatus(const InstallStatus& status) override;
 
  private:
-  std::unique_ptr<DBusService> dbus_service_;
+  std::unique_ptr<DBusService> dbus_service_{};
 
   DISALLOW_COPY_AND_ASSIGN(DBusAdaptor);
 };

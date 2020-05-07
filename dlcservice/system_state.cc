@@ -4,7 +4,7 @@
 
 #include "dlcservice/system_state.h"
 
-#include <limits.h>
+#include <climits>
 #include <string>
 #include <utility>
 
@@ -106,7 +106,7 @@ const base::FilePath& SystemState::prefs_dir() const {
   return prefs_dir_;
 }
 
-const base::FilePath SystemState::dlc_prefs_dir() const {
+base::FilePath SystemState::dlc_prefs_dir() const {
   return prefs_dir_.Append("dlc");
 }
 

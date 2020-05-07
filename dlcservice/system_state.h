@@ -49,7 +49,7 @@ class SystemState {
   const base::FilePath& preloaded_content_dir() const;
   const base::FilePath& content_dir() const;
   const base::FilePath& prefs_dir() const;
-  const base::FilePath dlc_prefs_dir() const;
+  base::FilePath dlc_prefs_dir() const;
 
   // Getting active and inactive boot slots easily.
   BootSlot::Slot active_boot_slot() const;
@@ -72,14 +72,14 @@ class SystemState {
 
  private:
   std::unique_ptr<org::chromium::ImageLoaderInterfaceProxyInterface>
-      image_loader_proxy_;
+      image_loader_proxy_{};
   std::unique_ptr<org::chromium::UpdateEngineInterfaceProxyInterface>
-      update_engine_proxy_;
+      update_engine_proxy_{};
   base::FilePath manifest_dir_;
   base::FilePath preloaded_content_dir_;
   base::FilePath content_dir_;
   base::FilePath prefs_dir_;
-  BootSlot::Slot active_boot_slot_;
+  BootSlot::Slot active_boot_slot_{};
   bool is_device_removable_;
 
   static std::unique_ptr<SystemState> g_instance_;
