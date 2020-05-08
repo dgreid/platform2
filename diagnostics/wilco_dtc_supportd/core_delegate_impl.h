@@ -14,6 +14,7 @@
 #include "diagnostics/common/system/debugd_adapter.h"
 #include "diagnostics/common/system/powerd_adapter.h"
 #include "diagnostics/wilco_dtc_supportd/core.h"
+#include "diagnostics/wilco_dtc_supportd/probe_service.h"
 #include "diagnostics/wilco_dtc_supportd/telemetry/bluetooth_event_service.h"
 #include "diagnostics/wilco_dtc_supportd/telemetry/ec_event_service.h"
 #include "diagnostics/wilco_dtc_supportd/telemetry/powerd_event_service.h"
@@ -43,6 +44,8 @@ class CoreDelegateImpl final : public Core::Delegate {
   std::unique_ptr<EcEventService> CreateEcEventService() override;
   std::unique_ptr<PowerdEventService> CreatePowerdEventService(
       PowerdAdapter* powerd_adapter) override;
+  std::unique_ptr<ProbeService> CreateProbeService(
+      ProbeService::Delegate* delegate) override;
 
  private:
   // Unowned. The daemon must outlive this instance.

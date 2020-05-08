@@ -369,6 +369,28 @@ using RequestBluetoothDataNotificationTestParam =
         &grpc_api::WilcoDtcSupportd::AsyncService::
             RequestRequestBluetoothDataNotification>;
 
+void FillProtobufForTest(
+    grpc_api::GetStatefulPartitionAvailableCapacityRequest* req) {
+  // Message has no fields
+}
+
+void FillProtobufForTest(
+    grpc_api::GetStatefulPartitionAvailableCapacityResponse* res) {
+  res->set_status(
+      grpc_api::GetStatefulPartitionAvailableCapacityResponse_Status_STATUS_OK);
+  res->set_available_capacity_mb(4200);
+}
+
+using GetStatefulPartitionAvailableCapacityTestParam =
+    DpslRequesterImplServerTestParam<
+        grpc_api::GetStatefulPartitionAvailableCapacityRequest,
+        grpc_api::GetStatefulPartitionAvailableCapacityResponse,
+        &DpslRequesterImpl::GetStatefulPartitionAvailableCapacity,
+        decltype(&grpc_api::WilcoDtcSupportd::AsyncService::
+                     RequestGetStatefulPartitionAvailableCapacity),
+        &grpc_api::WilcoDtcSupportd::AsyncService::
+            RequestGetStatefulPartitionAvailableCapacity>;
+
 class TestDsplMultiRequesterServer {
  public:
   explicit TestDsplMultiRequesterServer(const std::string& uri)
@@ -655,7 +677,8 @@ using DpslRequesterImplServerTestTypes =
                      GetConfigurationDataTestParam,
                      GetVpdFieldTestParam,
                      GetDriveSystemDataTestParam,
-                     RequestBluetoothDataNotificationTestParam>;
+                     RequestBluetoothDataNotificationTestParam,
+                     GetStatefulPartitionAvailableCapacityTestParam>;
 TYPED_TEST_CASE(DpslRequesterImplServerTest, DpslRequesterImplServerTestTypes);
 
 TYPED_TEST(DpslRequesterImplServerTest, CallGrpcMethodFromMainThread) {

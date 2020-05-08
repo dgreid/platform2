@@ -21,6 +21,9 @@
 
 #include "diagnostics/common/bind_utils.h"
 #include "diagnostics/wilco_dtc_supportd/json_utils.h"
+#include "diagnostics/wilco_dtc_supportd/probe_service_impl.h"
+
+#include "mojo/cros_healthd_probe.mojom.h"
 
 namespace diagnostics {
 
@@ -108,6 +111,7 @@ Core::Core(const std::vector<std::string>& grpc_service_uris,
       grpc_server_(base::ThreadTaskRunnerHandle::Get(), grpc_service_uris_) {
   DCHECK(delegate);
   ec_event_service_ = delegate_->CreateEcEventService();
+  probe_service_ = delegate->CreateProbeService(this);
   DCHECK(ec_event_service_);
   ec_event_service_->AddObserver(this);
 }
@@ -491,6 +495,14 @@ void Core::RequestBluetoothDataNotification() {
 
   NotifyClientsBluetoothAdapterState(
       bluetooth_event_service_->GetLatestEvent());
+}
+
+void Core::ProbeTelemetryInfo(
+    std::vector<chromeos::cros_healthd::mojom::ProbeCategoryEnum> categories,
+    ProbeTelemetryInfoCallback callback) {
+  VLOG(1) << "Core::ProbeTelemetryInfo";
+  probe_service_->ProbeTelemetryInfo(std::move(categories),
+                                     std::move(callback));
 }
 
 void Core::SendGrpcUiMessageToWilcoDtc(

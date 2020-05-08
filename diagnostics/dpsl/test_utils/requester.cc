@@ -63,6 +63,7 @@ int main(int argc, char** argv) {
                 "GetOsVersion,"
                 "GetProcData,"
                 "GetRoutineUpdate,"
+                "GetStatefulPartitionAvailableCapacity,"
                 "GetSysfsData,"
                 "GetVpdField,"
                 "PerformWebRequest,"
@@ -146,6 +147,11 @@ EXAMPLE USAGE
   } else if (FLAGS_message_name == "GetRoutineUpdate") {
     request_succeeded = diagnostics::MakeRequest(
         requester.get(), &diagnostics::DpslRequester::GetRoutineUpdate,
+        FLAGS_message_body, callback);
+  } else if (FLAGS_message_name == "GetStatefulPartitionAvailableCapacity") {
+    request_succeeded = diagnostics::MakeRequest(
+        requester.get(),
+        &diagnostics::DpslRequester::GetStatefulPartitionAvailableCapacity,
         FLAGS_message_body, callback);
   } else if (FLAGS_message_name == "GetSysfsData") {
     request_succeeded = diagnostics::MakeRequest(

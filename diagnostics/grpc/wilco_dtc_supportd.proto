@@ -660,7 +660,5 @@ message GetStatefulPartitionAvailableCapacityResponse {
 
   // Stateful partition available capacity, rounded down to
   // multiples of 100MB.
-  // TODO(b/153633602): This is currently a dummy implementation, yielding a
-  // fixed value.
   int32 available_capacity_mb = 2;
 }

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <cstdint>
 #include <iterator>
 #include <memory>
 #include <string>
@@ -31,6 +32,7 @@
 #include "diagnostics/wilco_dtc_supportd/telemetry/mock_system_files_service.h"
 #include "diagnostics/wilco_dtc_supportd/telemetry/mock_system_info_service.h"
 
+#include "mojo/cros_healthd_probe.mojom.h"
 #include "wilco_dtc_supportd.pb.h"  // NOLINT(build/include)
 
 using testing::_;
@@ -293,6 +295,12 @@ class MockGrpcServiceDelegate : public GrpcService::Delegate {
               (DriveSystemDataType, const GetDriveSystemDataCallback&),
               (override));
   MOCK_METHOD(void, RequestBluetoothDataNotification, (), (override));
+  MOCK_METHOD(
+      void,
+      ProbeTelemetryInfo,
+      (std::vector<chromeos::cros_healthd::mojom::ProbeCategoryEnum> categories,
+       ProbeTelemetryInfoCallback callback),
+      (override));
 };
 
 // Tests for the GrpcService class.
@@ -866,6 +874,111 @@ TEST_F(GrpcServiceTest, RequestBluetoothDataNotification) {
 
   run_loop.Run();
 }
+
+class GetStatefulPartitionAvailableCapacityTest
+    : public GrpcServiceTest,
+      public testing::WithParamInterface<std::tuple<
+          base::Callback<chromeos::cros_healthd::mojom::TelemetryInfoPtr()>,
+          grpc_api::GetStatefulPartitionAvailableCapacityResponse::Status,
+          int32_t>> {
+ protected:
+  // Accessors to individual test parameters from the test parameter tuple
+  // returned by gtest's GetParam():
+
+  chromeos::cros_healthd::mojom::TelemetryInfoPtr get_probe_response() const {
+    return std::get<0>(GetParam()).Run();
+  }
+
+  grpc_api::GetStatefulPartitionAvailableCapacityResponse::Status
+  get_expected_status() const {
+    return std::get<1>(GetParam());
+  }
+
+  int32_t get_expected_capacity() const { return std::get<2>(GetParam()); }
+};
+
+TEST_P(GetStatefulPartitionAvailableCapacityTest, All) {
+  const std::vector<chromeos::cros_healthd::mojom::ProbeCategoryEnum>
+      kExpectedCategories{
+          chromeos::cros_healthd::mojom::ProbeCategoryEnum::kStatefulPartition};
+
+  chromeos::cros_healthd::mojom::TelemetryInfoPtr probe_response =
+      get_probe_response();
+
+  EXPECT_CALL(*delegate(), ProbeTelemetryInfo(kExpectedCategories, _))
+      .WillOnce(WithArgs<1>(Invoke(
+          [&probe_response](
+              MockGrpcServiceDelegate::ProbeTelemetryInfoCallback callback) {
+            std::move(callback).Run(std::move(probe_response));
+          })));
+
+  auto callback_impl =
+      [](grpc_api::GetStatefulPartitionAvailableCapacityResponse::Status status,
+         int32_t expected_capacity, base::Closure loop_callback,
+         std::unique_ptr<
+             grpc_api::GetStatefulPartitionAvailableCapacityResponse> reply) {
+        EXPECT_EQ(reply->status(), status);
+        EXPECT_EQ(reply->available_capacity_mb(), expected_capacity);
+        loop_callback.Run();
+      };
+
+  base::RunLoop run_loop;
+  auto callback = base::Bind(callback_impl, get_expected_status(),
+                             get_expected_capacity(), run_loop.QuitClosure());
+  service()->GetStatefulPartitionAvailableCapacity(
+      std::make_unique<
+          grpc_api::GetStatefulPartitionAvailableCapacityRequest>(),
+      callback);
+  run_loop.Run();
+}
+
+INSTANTIATE_TEST_CASE_P(
+    ,
+    GetStatefulPartitionAvailableCapacityTest,
+    testing::Values(
+        std::make_tuple(
+            base::Bind([]() {
+              return chromeos::cros_healthd::mojom::TelemetryInfoPtr(nullptr);
+            }),
+            grpc_api::GetStatefulPartitionAvailableCapacityResponse::
+                STATUS_ERROR_REQUEST_PROCESSING,
+            0),
+        std::make_tuple(
+            base::Bind([]() {
+              return chromeos::cros_healthd::mojom::TelemetryInfo::New();
+            }),
+            grpc_api::GetStatefulPartitionAvailableCapacityResponse::
+                STATUS_ERROR_REQUEST_PROCESSING,
+            0),
+        std::make_tuple(
+            base::Bind([]() {
+              auto probe_response =
+                  chromeos::cros_healthd::mojom::TelemetryInfo::New();
+              probe_response->stateful_partition_result =
+                  chromeos::cros_healthd::mojom::StatefulPartitionResult::
+                      NewError(chromeos::cros_healthd::mojom::ProbeError::New(
+                          chromeos::cros_healthd::mojom::ErrorType::
+                              kSystemUtilityError,
+                          ""));
+              return probe_response;
+            }),
+            grpc_api::GetStatefulPartitionAvailableCapacityResponse::
+                STATUS_ERROR_REQUEST_PROCESSING,
+            0),
+        std::make_tuple(
+            base::Bind([]() {
+              constexpr uint64_t kAvailableBytes = 220403699712ull;
+              auto probe_response =
+                  chromeos::cros_healthd::mojom::TelemetryInfo::New();
+              probe_response
+                  ->stateful_partition_result = chromeos::cros_healthd::mojom::
+                  StatefulPartitionResult::NewPartitionInfo(
+                      chromeos::cros_healthd::mojom::StatefulPartitionInfo::New(
+                          kAvailableBytes, 0));
+              return probe_response;
+            }),
+            grpc_api::GetStatefulPartitionAvailableCapacityResponse::STATUS_OK,
+            220400)));
 
 class GrpcServiceWithMockSystemInfoServiceTest : public GrpcServiceTest {
  public:

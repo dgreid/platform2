@@ -35,6 +35,7 @@
 #include "diagnostics/wilco_dtc_supportd/telemetry/powerd_event_service.h"
 
 #include "mojo/cros_healthd.mojom.h"
+#include "mojo/cros_healthd_probe.mojom.h"
 #include "mojo/wilco_dtc_supportd.mojom.h"
 #include "wilco_dtc.grpc.pb.h"           // NOLINT(build/include)
 #include "wilco_dtc_supportd.grpc.pb.h"  // NOLINT(build/include)
@@ -104,6 +105,11 @@ class Core final : public DBusService::Delegate,
     // more than once.
     virtual std::unique_ptr<PowerdEventService> CreatePowerdEventService(
         PowerdAdapter* powerd_adapter) = 0;
+
+    // Creates ProbeService. For performance reason, must be called no
+    // more than once.
+    virtual std::unique_ptr<ProbeService> CreateProbeService(
+        ProbeService::Delegate* delegate) = 0;
   };
 
   // |grpc_service_uris| are the URIs on which the gRPC interface exposed by the
@@ -190,6 +196,9 @@ class Core final : public DBusService::Delegate,
   void GetDriveSystemData(DriveSystemDataType data_type,
                           const GetDriveSystemDataCallback& callback) override;
   void RequestBluetoothDataNotification() override;
+  void ProbeTelemetryInfo(
+      std::vector<chromeos::cros_healthd::mojom::ProbeCategoryEnum> categories,
+      ProbeTelemetryInfoCallback callback) override;
 
   // MojoService::Delegate overrides:
   void SendGrpcUiMessageToWilcoDtc(
@@ -309,7 +318,7 @@ class Core final : public DBusService::Delegate,
   // wilco_dtc_supportd daemon.
   RoutineService routine_service_{this /* delegate */};
 
-  std::unique_ptr<ProbeService> probe_filtering_service_;
+  std::unique_ptr<ProbeService> probe_service_;
 
   DISALLOW_COPY_AND_ASSIGN(Core);
 };

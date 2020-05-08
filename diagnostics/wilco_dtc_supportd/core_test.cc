@@ -55,6 +55,7 @@
 #include "diagnostics/wilco_dtc_supportd/ec_constants.h"
 #include "diagnostics/wilco_dtc_supportd/fake_browser.h"
 #include "diagnostics/wilco_dtc_supportd/fake_diagnostics_service.h"
+#include "diagnostics/wilco_dtc_supportd/fake_probe_service.h"
 #include "diagnostics/wilco_dtc_supportd/fake_wilco_dtc.h"
 #include "diagnostics/wilco_dtc_supportd/telemetry/ec_event_service.h"
 #include "diagnostics/wilco_dtc_supportd/telemetry/ec_event_test_utils.h"
@@ -125,12 +126,14 @@ class FakeCoreDelegate : public Core::Delegate {
         passed_ec_event_service_(std::make_unique<FakeEcEventService>()),
         passed_powerd_event_service_(
             std::make_unique<FakePowerdEventService>()),
+        passed_probe_service_(std::make_unique<FakeProbeService>()),
         bluetooth_client_(passed_bluetooth_client_.get()),
         debugd_adapter_(passed_debugd_adapter_.get()),
         powerd_adapter_(passed_powerd_adapter_.get()),
         bluetooth_event_service_(passed_bluetooth_event_service_.get()),
         ec_event_service_(passed_ec_event_service_.get()),
-        powerd_event_service_(passed_powerd_event_service_.get()) {}
+        powerd_event_service_(passed_powerd_event_service_.get()),
+        probe_service_(passed_probe_service_.get()) {}
 
   std::unique_ptr<mojo::Binding<MojomWilcoDtcSupportdServiceFactory>>
   BindMojoServiceFactory(
@@ -190,6 +193,14 @@ class FakeCoreDelegate : public Core::Delegate {
     return std::move(passed_powerd_event_service_);
   }
 
+  // Must be called no more than once.
+  std::unique_ptr<ProbeService> CreateProbeService(
+      ProbeService::Delegate* delegate) override {
+    DCHECK(delegate);
+    DCHECK(passed_probe_service_);
+    return std::move(passed_probe_service_);
+  }
+
   StrictMock<MockDebugdAdapter>* debugd_adapter() const {
     return debugd_adapter_;
   }
@@ -203,6 +214,8 @@ class FakeCoreDelegate : public Core::Delegate {
   FakePowerdEventService* powerd_event_service() const {
     return powerd_event_service_;
   }
+
+  FakeProbeService* probe_service() const { return probe_service_; }
 
   MOCK_METHOD(mojo::Binding<MojomWilcoDtcSupportdServiceFactory>*,
               BindMojoServiceFactoryImpl,
@@ -218,6 +231,7 @@ class FakeCoreDelegate : public Core::Delegate {
   std::unique_ptr<FakeBluetoothEventService> passed_bluetooth_event_service_;
   std::unique_ptr<FakeEcEventService> passed_ec_event_service_;
   std::unique_ptr<FakePowerdEventService> passed_powerd_event_service_;
+  std::unique_ptr<FakeProbeService> passed_probe_service_;
 
   // Pointers to objects originally stored in |passed_*| members. These allow
   // continued access by tests even after the corresponding Create* method has
@@ -229,6 +243,7 @@ class FakeCoreDelegate : public Core::Delegate {
   FakeBluetoothEventService* bluetooth_event_service_;
   FakeEcEventService* ec_event_service_;
   FakePowerdEventService* powerd_event_service_;
+  FakeProbeService* probe_service_;
 };
 
 // Matches gRPC Bluetooth AdapterData and BluetoothEventService AdapterData.
@@ -573,6 +588,39 @@ TEST_F(StartedCoreTest, MojoBootstrapSuccessThenAbort) {
   mojo_service_factory_interface_ptr()->reset();
   base::RunLoop().RunUntilIdle();
   Mock::VerifyAndClearExpectations(core_delegate());
+}
+
+// Test that the method |ProbeTelemetryInfo()| calls into
+// ProbeService
+TEST_F(StartedCoreTest, ProbeTelemetryInfo) {
+  using ProbeTelemetryInfoCallback =
+      base::OnceCallback<void(chromeos::cros_healthd::mojom::TelemetryInfoPtr)>;
+  const auto kCategories =
+      std::vector<chromeos::cros_healthd::mojom::ProbeCategoryEnum>{
+          chromeos::cros_healthd::mojom::ProbeCategoryEnum::kFan,
+          chromeos::cros_healthd::mojom::ProbeCategoryEnum::kCpu,
+          chromeos::cros_healthd::mojom::ProbeCategoryEnum::kStatefulPartition};
+
+  core_delegate()->probe_service()->SetProbeTelemetryInfoCallback(base::Bind(
+      [](std::vector<chromeos::cros_healthd::mojom::ProbeCategoryEnum>
+             expected_categories,
+         std::vector<chromeos::cros_healthd::mojom::ProbeCategoryEnum>
+             received_categories,
+         ProbeTelemetryInfoCallback received_callback) {
+        EXPECT_EQ(expected_categories, received_categories);
+        std::move(received_callback).Run(nullptr);
+      },
+      kCategories));
+
+  base::RunLoop run_loop;
+  static_cast<GrpcService::Delegate*>(core())->ProbeTelemetryInfo(
+      kCategories, base::Bind(
+                       [](base::Closure loop_closure,
+                          chromeos::cros_healthd::mojom::TelemetryInfoPtr) {
+                         loop_closure.Run();
+                       },
+                       run_loop.QuitClosure()));
+  run_loop.Run();
 }
 
 // Test that the method |RequestBluetoothDataNotification()| exposed by

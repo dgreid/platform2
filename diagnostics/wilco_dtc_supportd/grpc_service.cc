@@ -21,6 +21,8 @@
 #include "diagnostics/wilco_dtc_supportd/telemetry/system_files_service_impl.h"
 #include "diagnostics/wilco_dtc_supportd/telemetry/system_info_service_impl.h"
 
+#include "mojo/cros_healthd_probe.mojom.h"
+
 namespace diagnostics {
 
 // The total size of "string" and "bytes" fields in one
@@ -230,6 +232,32 @@ void ForwardGetDriveSystemDataResponse(
     reply->set_status(
         grpc_api::GetDriveSystemDataResponse::STATUS_ERROR_REQUEST_PROCESSING);
   }
+  callback.Run(std::move(reply));
+}
+
+// Extracts stateful partition info from cros_healthd's TelemetryInfo
+// and moves it into a gRPC response.
+void ForwardGetStatefulPartitionAvailableCapacity(
+    const GetStatefulPartitionAvailableCapacityCallback& callback,
+    chromeos::cros_healthd::mojom::TelemetryInfoPtr info) {
+  auto reply = std::make_unique<
+      grpc_api::GetStatefulPartitionAvailableCapacityResponse>();
+
+  if (!info || !info->stateful_partition_result ||
+      !info->stateful_partition_result->is_partition_info()) {
+    reply->set_status(grpc_api::GetStatefulPartitionAvailableCapacityResponse::
+                          STATUS_ERROR_REQUEST_PROCESSING);
+    callback.Run(std::move(reply));
+    return;
+  }
+
+  reply->set_status(
+      grpc_api::GetStatefulPartitionAvailableCapacityResponse::STATUS_OK);
+  // Reduce to MB and round down to multiple of 100MB.
+  uint64_t available_space =
+      info->stateful_partition_result->get_partition_info()->available_space;
+  reply->set_available_capacity_mb((available_space / 1000 / 1000 / 100) * 100);
+
   callback.Run(std::move(reply));
 }
 
@@ -780,14 +808,11 @@ void GrpcService::GetStatefulPartitionAvailableCapacity(
     const GetStatefulPartitionAvailableCapacityCallback& callback) {
   DCHECK(request);
 
-  // TODO(rbock@google.com, b/153633602): Obtain real response!
-  auto reply = std::make_unique<
-      grpc_api::GetStatefulPartitionAvailableCapacityResponse>();
-  reply->set_status(
-      grpc_api::GetStatefulPartitionAvailableCapacityResponse::STATUS_OK);
-  reply->set_available_capacity_mb(4200);
-
-  callback.Run(std::move(reply));
+  std::vector<chromeos::cros_healthd::mojom::ProbeCategoryEnum> categories{
+      chromeos::cros_healthd::mojom::ProbeCategoryEnum::kStatefulPartition};
+  delegate_->ProbeTelemetryInfo(
+      std::move(categories),
+      base::Bind(&ForwardGetStatefulPartitionAvailableCapacity, callback));
 }
 
 void GrpcService::AddFileDump(

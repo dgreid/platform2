@@ -18,6 +18,7 @@
 #include "diagnostics/wilco_dtc_supportd/telemetry/system_files_service.h"
 #include "diagnostics/wilco_dtc_supportd/telemetry/system_info_service.h"
 
+#include "mojo/cros_healthd_probe.mojom.h"
 #include "wilco_dtc_supportd.pb.h"  // NOLINT(build/include)
 
 namespace diagnostics {
@@ -83,6 +84,8 @@ class GrpcService final {
         base::Callback<void(const std::string& json_configuration_data)>;
     using GetDriveSystemDataCallback =
         base::Callback<void(const std::string& payload, bool success)>;
+    using ProbeTelemetryInfoCallback = base::OnceCallback<void(
+        chromeos::cros_healthd::mojom::TelemetryInfoPtr)>;
 
     virtual ~Delegate() = default;
 
@@ -156,6 +159,14 @@ class GrpcService final {
     // Calls wilco_dtc_supportd daemon |RequestBluetoothDataNotification|
     // method.
     virtual void RequestBluetoothDataNotification() = 0;
+
+    // Called when gRPC |GetStatefulPartitionAvailableCapacty| was called.
+    //
+    // Calls cros_healthd's probe service.
+    virtual void ProbeTelemetryInfo(
+        std::vector<chromeos::cros_healthd::mojom::ProbeCategoryEnum>
+            categories,
+        ProbeTelemetryInfoCallback callback) = 0;
   };
 
   using SendMessageToUiCallback =

@@ -294,6 +294,7 @@ if (use.test) {
       "wilco_dtc_supportd/ec_constants_test.cc",
       "wilco_dtc_supportd/fake_browser.cc",
       "wilco_dtc_supportd/fake_diagnostics_service.cc",
+      "wilco_dtc_supportd/fake_probe_service.cc",
       "wilco_dtc_supportd/fake_wilco_dtc.cc",
       "wilco_dtc_supportd/grpc_service_test.cc",
       "wilco_dtc_supportd/mock_mojo_client.cc",

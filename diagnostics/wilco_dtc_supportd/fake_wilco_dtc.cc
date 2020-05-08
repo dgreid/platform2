@@ -102,6 +102,15 @@ void FakeWilcoDtc::RequestBluetoothDataNotification(
       request, callback);
 }
 
+void FakeWilcoDtc::GetStatefulPartitionAvailableCapacity(
+    const grpc_api::GetStatefulPartitionAvailableCapacityRequest& request,
+    const GetStatefulPartitionAvailableCapacityCallback& callback) {
+  wilco_dtc_supportd_grp_client_.CallRpc(
+      &grpc_api::WilcoDtcSupportd::Stub::
+          AsyncGetStatefulPartitionAvailableCapacity,
+      request, callback);
+}
+
 void FakeWilcoDtc::GetAvailableRoutines(
     const GetAvailableRoutinesCallback& callback) {
   grpc_api::GetAvailableRoutinesRequest request;

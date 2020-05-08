@@ -17,6 +17,7 @@
 #include "diagnostics/common/system/bluetooth_client_impl.h"
 #include "diagnostics/common/system/debugd_adapter_impl.h"
 #include "diagnostics/common/system/powerd_adapter_impl.h"
+#include "diagnostics/wilco_dtc_supportd/probe_service_impl.h"
 #include "diagnostics/wilco_dtc_supportd/telemetry/bluetooth_event_service_impl.h"
 #include "diagnostics/wilco_dtc_supportd/telemetry/ec_event_service.h"
 #include "diagnostics/wilco_dtc_supportd/telemetry/powerd_event_service_impl.h"
@@ -95,6 +96,12 @@ std::unique_ptr<PowerdEventService> CoreDelegateImpl::CreatePowerdEventService(
     PowerdAdapter* powerd_adapter) {
   DCHECK(powerd_adapter);
   return std::make_unique<PowerdEventServiceImpl>(powerd_adapter);
+}
+
+std::unique_ptr<ProbeService> CoreDelegateImpl::CreateProbeService(
+    ProbeService::Delegate* delegate) {
+  DCHECK(delegate);
+  return std::make_unique<ProbeServiceImpl>(delegate);
 }
 
 }  // namespace diagnostics

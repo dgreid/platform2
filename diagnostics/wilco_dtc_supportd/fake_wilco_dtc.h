@@ -49,6 +49,9 @@ class FakeWilcoDtc final {
       std::unique_ptr<grpc_api::GetDriveSystemDataResponse>)>;
   using RequestBluetoothDataNotificationCallback = base::Callback<void(
       std::unique_ptr<grpc_api::RequestBluetoothDataNotificationResponse>)>;
+  using GetStatefulPartitionAvailableCapacityCallback = base::Callback<void(
+      std::unique_ptr<
+          grpc_api::GetStatefulPartitionAvailableCapacityResponse>)>;
   using HandleConfigurationDataChangedCallback = base::Callback<void(
       std::unique_ptr<grpc_api::HandleConfigurationDataChangedResponse>)>;
   using HandleBluetoothDataChangedCallback = base::Callback<void(
@@ -86,6 +89,9 @@ class FakeWilcoDtc final {
   void RequestBluetoothDataNotification(
       const grpc_api::RequestBluetoothDataNotificationRequest& request,
       const RequestBluetoothDataNotificationCallback& callback);
+  void GetStatefulPartitionAvailableCapacity(
+      const grpc_api::GetStatefulPartitionAvailableCapacityRequest& request,
+      const GetStatefulPartitionAvailableCapacityCallback& callback);
   void GetAvailableRoutines(const GetAvailableRoutinesCallback& callback);
 
   // Sets up the passed callback to be used for subsequent
