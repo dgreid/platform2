@@ -208,9 +208,13 @@ void ProxyConnectJob::OnClientReadReady() {
     return;
   }
 
+  // The proxy resolution service in Chrome expects a proper URL, formatted as
+  // scheme://host:port. It's safe to assume only https will be used for the
+  // target url.
   std::move(resolve_proxy_callback_)
-      .Run(target_url_, base::Bind(&ProxyConnectJob::OnProxyResolution,
-                                   base::Unretained(this)));
+      .Run(base::StringPrintf("https://%s", target_url_.c_str()),
+           base::Bind(&ProxyConnectJob::OnProxyResolution,
+                      base::Unretained(this)));
 }
 
 bool ProxyConnectJob::TryReadHttpHeader(std::vector<char>* raw_request) {

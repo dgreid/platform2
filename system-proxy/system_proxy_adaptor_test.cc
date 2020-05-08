@@ -6,6 +6,7 @@
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+#include <list>
 #include <utility>
 
 #include <base/bind.h>
@@ -15,12 +16,14 @@
 #include <base/files/scoped_file.h>
 #include <base/memory/weak_ptr.h>
 #include <base/message_loop/message_loop.h>
+#include <base/strings/stringprintf.h>
 #include <brillo/dbus/async_event_sequencer.h>
 #include <brillo/dbus/dbus_object.h>
 #include <brillo/message_loops/base_message_loop.h>
 #include <dbus/object_path.h>
 #include <dbus/message.h>
 #include <dbus/mock_bus.h>
+#include <dbus/mock_exported_object.h>
 #include <dbus/mock_object_proxy.h>
 #include <chromeos/dbus/service_constants.h>
 
@@ -36,6 +39,12 @@ namespace system_proxy {
 namespace {
 const char kUser[] = "proxy_user";
 const char kPassword[] = "proxy_password";
+const char kLocalProxyHostPort[] = "local.proxy.url:3128";
+const char kObjectPath[] = "/object/path";
+
+// Stub completion callback for RegisterAsync().
+void DoNothing(bool /* unused */) {}
+
 }  // namespace
 
 class FakeSandboxedWorker : public SandboxedWorker {
@@ -49,6 +58,10 @@ class FakeSandboxedWorker : public SandboxedWorker {
   bool Start() override { return is_running_ = true; }
   bool Stop() override { return is_running_ = false; }
   bool IsRunning() override { return is_running_; }
+
+  std::string local_proxy_host_and_port() override {
+    return kLocalProxyHostPort;
+  }
 
  private:
   bool is_running_;
@@ -69,21 +82,36 @@ class FakeSystemProxyAdaptor : public SystemProxyAdaptor {
         weak_ptr_factory_.GetWeakPtr());
   }
   bool ConnectNamespace(SandboxedWorker* worker, bool user_traffic) override {
+    OnNamespaceConnected(worker, user_traffic);
     return true;
   }
 
  private:
+  FRIEND_TEST(SystemProxyAdaptorTest, ConnectNamespace);
+  FRIEND_TEST(SystemProxyAdaptorTest, ProxyResolutionFilter);
+
   base::WeakPtrFactory<FakeSystemProxyAdaptor> weak_ptr_factory_;
 };
 
 class SystemProxyAdaptorTest : public ::testing::Test {
  public:
   SystemProxyAdaptorTest() {
-    const dbus::ObjectPath object_path("/object/path");
+    const dbus::ObjectPath object_path(kObjectPath);
+
+    // Mock out D-Bus initialization.
+    mock_exported_object_ =
+        base::MakeRefCounted<dbus::MockExportedObject>(bus_.get(), object_path);
+
+    EXPECT_CALL(*bus_, GetExportedObject(_))
+        .WillRepeatedly(Return(mock_exported_object_.get()));
+
+    EXPECT_CALL(*mock_exported_object_, ExportMethod(_, _, _, _))
+        .Times(testing::AnyNumber());
 
     adaptor_.reset(new FakeSystemProxyAdaptor(
         std::make_unique<brillo::dbus_utils::DBusObject>(nullptr, bus_,
                                                          object_path)));
+    adaptor_->RegisterAsync(base::BindRepeating(&DoNothing));
     mock_patchpanel_proxy_ = base::MakeRefCounted<dbus::MockObjectProxy>(
         bus_.get(), patchpanel::kPatchPanelServiceName,
         dbus::ObjectPath(patchpanel::kPatchPanelServicePath));
@@ -93,10 +121,24 @@ class SystemProxyAdaptorTest : public ::testing::Test {
   SystemProxyAdaptorTest& operator=(const SystemProxyAdaptorTest&) = delete;
   ~SystemProxyAdaptorTest() override = default;
 
+  void OnWorkerActive(dbus::Signal* signal) {
+    EXPECT_EQ(signal->GetInterface(), "org.chromium.SystemProxy");
+    EXPECT_EQ(signal->GetMember(), "WorkerActive");
+
+    dbus::MessageReader signal_reader(signal);
+    system_proxy::WorkerActiveSignalDetails details;
+    EXPECT_TRUE(signal_reader.PopArrayOfBytesAsProto(&details));
+    EXPECT_EQ(kLocalProxyHostPort, details.local_proxy_url());
+    active_worker_signal_called_ = true;
+  }
+
  protected:
+  bool active_worker_signal_called_ = false;
+  scoped_refptr<dbus::MockBus> bus_ = new dbus::MockBus(dbus::Bus::Options());
+  scoped_refptr<dbus::MockExportedObject> mock_exported_object_;
   // SystemProxyAdaptor instance that creates fake worker processes.
   std::unique_ptr<FakeSystemProxyAdaptor> adaptor_;
-  scoped_refptr<dbus::MockBus> bus_ = new dbus::MockBus(dbus::Bus::Options());
+
   scoped_refptr<dbus::MockObjectProxy> mock_patchpanel_proxy_;
   base::MessageLoopForIO loop_;
   brillo::BaseMessageLoop brillo_loop_{&loop_};
@@ -155,6 +197,46 @@ TEST_F(SystemProxyAdaptorTest, ShutDown) {
 
   adaptor_->ShutDown();
   EXPECT_FALSE(adaptor_->system_services_worker_->IsRunning());
+}
+
+TEST_F(SystemProxyAdaptorTest, ConnectNamespace) {
+  EXPECT_FALSE(active_worker_signal_called_);
+  EXPECT_CALL(*mock_exported_object_, SendSignal(_))
+      .WillOnce(Invoke(this, &SystemProxyAdaptorTest::OnWorkerActive));
+
+  adaptor_->system_services_worker_ = adaptor_->CreateWorker();
+  adaptor_->ConnectNamespace(adaptor_->system_services_worker_.get(),
+                             /* user_traffic= */ false);
+  EXPECT_TRUE(active_worker_signal_called_);
+}
+
+TEST_F(SystemProxyAdaptorTest, ProxyResolutionFilter) {
+  std::vector<std::string> proxy_list = {
+      base::StringPrintf("%s%s", "http://", kLocalProxyHostPort),
+      "http://test.proxy.com", "https://test.proxy.com", "direct://"};
+
+  adaptor_->system_services_worker_ = adaptor_->CreateWorker();
+  int fds[2];
+  ASSERT_TRUE(base::CreateLocalNonBlockingPipe(fds));
+  base::ScopedFD read_scoped_fd(fds[0]);
+  // Reset the worker stdin pipe to read the input from the other endpoint.
+  adaptor_->system_services_worker_->stdin_pipe_.reset(fds[1]);
+  adaptor_->system_services_worker_->OnProxyResolved("target_url", true,
+                                                     proxy_list);
+
+  brillo_loop_.RunOnce(false);
+
+  worker::WorkerConfigs config;
+  ASSERT_TRUE(ReadProtobuf(read_scoped_fd.get(), &config));
+  EXPECT_TRUE(config.has_proxy_resolution_reply());
+  std::list<std::string> proxies;
+  const worker::ProxyResolutionReply& reply = config.proxy_resolution_reply();
+  for (auto const& proxy : reply.proxy_servers())
+    proxies.push_back(proxy);
+
+  EXPECT_EQ("target_url", reply.target_url());
+  EXPECT_EQ(2, proxies.size());
+  EXPECT_EQ("http://test.proxy.com", proxies.front());
 }
 
 }  // namespace system_proxy

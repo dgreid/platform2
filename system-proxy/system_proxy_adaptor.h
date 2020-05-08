@@ -54,11 +54,15 @@ class SystemProxyAdaptor : public org::chromium::SystemProxyAdaptor,
  protected:
   virtual std::unique_ptr<SandboxedWorker> CreateWorker();
   virtual bool ConnectNamespace(SandboxedWorker* worker, bool user_traffic);
+  // Triggers the |WorkerActive| signal.
+  void OnNamespaceConnected(SandboxedWorker* worker, bool user_traffic);
 
  private:
   friend class SystemProxyAdaptorTest;
   FRIEND_TEST(SystemProxyAdaptorTest, SetSystemTrafficCredentials);
   FRIEND_TEST(SystemProxyAdaptorTest, ShutDown);
+  FRIEND_TEST(SystemProxyAdaptorTest, ConnectNamespace);
+  FRIEND_TEST(SystemProxyAdaptorTest, ProxyResolutionFilter);
 
   void SetCredentialsTask(SandboxedWorker* worker,
                           const std::string& username,
@@ -68,7 +72,7 @@ class SystemProxyAdaptor : public org::chromium::SystemProxyAdaptor,
 
   bool StartWorker(SandboxedWorker* worker, bool user_traffic);
 
-// Called when the patchpanel D-Bus service becomes available.
+  // Called when the patchpanel D-Bus service becomes available.
   void OnPatchpanelServiceAvailable(bool is_available);
 
   // The callback of |GetChromeProxyServersAsync|.

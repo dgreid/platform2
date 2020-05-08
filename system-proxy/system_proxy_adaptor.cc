@@ -193,8 +193,21 @@ bool SystemProxyAdaptor::ConnectNamespace(SandboxedWorker* worker,
   }
 
   worker->SetNetNamespaceLifelineFd(std::move(result.first));
-  return worker->SetListeningAddress(result.second.peer_ipv4_address(),
-                                     kProxyPort);
+  if (!worker->SetListeningAddress(result.second.host_ipv4_address(),
+                                   kProxyPort)) {
+    return false;
+  }
+  OnNamespaceConnected(worker, user_traffic);
+  return true;
+}
+
+void SystemProxyAdaptor::OnNamespaceConnected(SandboxedWorker* worker,
+                                              bool user_traffic) {
+  WorkerActiveSignalDetails details;
+  details.set_traffic_origin(user_traffic ? TrafficOrigin::USER
+                                          : TrafficOrigin::SYSTEM);
+  details.set_local_proxy_url(worker->local_proxy_host_and_port());
+  SendWorkerActiveSignal(SerializeProto(details));
 }
 
 }  // namespace system_proxy

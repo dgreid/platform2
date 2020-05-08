@@ -34,7 +34,7 @@ class SandboxedWorker {
   void SetUsernameAndPassword(const std::string& username,
                               const std::string& password);
   // Sends the listening address and port to the worker via communication
-  // pipes.
+  // pipes and sets |local_proxy_host_and_port_|.
   bool SetListeningAddress(uint32_t addr, int port);
 
   // Terminates the child process by sending a SIGTERM signal.
@@ -46,9 +46,15 @@ class SandboxedWorker {
 
   pid_t pid() { return pid_; }
 
+  // Returns the address of the local proxy as host:port.
+  virtual std::string local_proxy_host_and_port() {
+    return local_proxy_host_and_port_;
+  }
+
  private:
   friend class SystemProxyAdaptorTest;
   FRIEND_TEST(SystemProxyAdaptorTest, SetSystemTrafficCredentials);
+  FRIEND_TEST(SystemProxyAdaptorTest, ProxyResolutionFilter);
 
   void OnMessageReceived();
   void OnErrorReceived();
@@ -59,6 +65,7 @@ class SandboxedWorker {
                        bool success,
                        const std::vector<std::string>& proxy_servers);
 
+  std::string local_proxy_host_and_port_;
   bool is_being_terminated_ = false;
   ScopedMinijail jail_;
   base::ScopedFD stdin_pipe_;

@@ -30,5 +30,16 @@
       </arg>
       <annotation name="org.chromium.DBus.Method.Kind" value="simple"/>
     </method>
+    <signal name="WorkerActive">
+      <tp:docstring>
+        Signal emitted when a system proxy worker is active and accepting traffic.
+      </tp:docstring>
+      <arg name="details" type="ay">
+        <tp:docstring>
+          Serialized WorkerActiveSignalDetails message.
+        </tp:docstring>
+      </arg>
+      <annotation name="org.chromium.DBus.Method.Kind" value="simple"/>
+    </signal>
   </interface>
 </node>

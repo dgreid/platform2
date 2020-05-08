@@ -16,7 +16,9 @@
 #include <base/callback_helpers.h>
 #include <base/files/file_util.h>
 #include <base/strings/string_util.h>
+#include <base/strings/stringprintf.h>
 #include <brillo/http/http_transport.h>
+#include <chromeos/patchpanel/net_util.h>
 #include <google/protobuf/repeated_field.h>
 
 #include "bindings/worker_common.pb.h"
@@ -114,6 +116,10 @@ bool SandboxedWorker::SetListeningAddress(uint32_t addr, int port) {
     LOG(ERROR) << "Failed to set local proxy address for worker " << pid_;
     return false;
   }
+  local_proxy_host_and_port_ = base::StringPrintf(
+      "%s:%d", patchpanel::IPv4AddressToString(addr).c_str(), port);
+  LOG(INFO) << "Set proxy address " << local_proxy_host_and_port_
+            << " for worker " << pid_;
   return true;
 }
 
@@ -227,7 +233,10 @@ void SandboxedWorker::OnProxyResolved(
                          base::CompareCase::INSENSITIVE_ASCII) ||
         base::StartsWith(proxy, kPrefixDirect,
                          base::CompareCase::INSENSITIVE_ASCII)) {
-      reply.add_proxy_servers(proxy);
+      // Make sure the local proxy doesn't try to connect to itself.
+      if (proxy.find(local_proxy_host_and_port()) == std::string::npos) {
+        reply.add_proxy_servers(proxy);
+      }
     }
   }
 
