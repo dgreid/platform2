@@ -555,9 +555,13 @@ bool DlcBase::IsActiveImagePresent() const {
 bool DlcBase::DeleteInternal(ErrorPtr* err) {
   vector<string> undeleted_paths;
   for (const auto& path : GetPathsToDelete(id_)) {
-    if (!base::DeleteFile(path, true)) {
-      PLOG(ERROR) << "Failed to delete path=" << path;
-      undeleted_paths.push_back(path.value());
+    if (base::PathExists(path)) {
+      if (!base::DeleteFile(path, true)) {
+        PLOG(ERROR) << "Failed to delete path=" << path;
+        undeleted_paths.push_back(path.value());
+      } else {
+        LOG(INFO) << "Deleted path=" << path;
+      }
     }
   }
   // Failure to set DLC to inactive should not fail uninstall.
