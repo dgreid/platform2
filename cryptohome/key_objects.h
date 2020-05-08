@@ -36,6 +36,12 @@ struct KeyBlobs {
   base::Optional<brillo::SecureBlob> authorization_data_iv;
   // The reset secret used for LE credentials.
   base::Optional<brillo::SecureBlob> reset_secret;
+  // The key used for existing data encrypted with libscrypt.
+  base::Optional<brillo::SecureBlob> scrypt_key;
+  // The key for scrypt wrapped chaps key.
+  base::Optional<brillo::SecureBlob> chaps_scrypt_key;
+  // The scrypt wrapped reset seed.
+  base::Optional<brillo::SecureBlob> scrypt_wrapped_reset_seed_key;
 };
 
 }  // namespace cryptohome

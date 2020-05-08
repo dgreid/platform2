@@ -320,11 +320,6 @@ class Crypto {
                                 const brillo::SecureBlob& vkk_key,
                                 const brillo::SecureBlob& vkk_iv) const;
 
-  void DecryptAuthorizationData(const SerializedVaultKeyset& serialized,
-                                VaultKeyset* keyset,
-                                const brillo::SecureBlob& vkk_key,
-                                const brillo::SecureBlob& vkk_iv) const;
-
   bool IsTPMPubkeyHash(const std::string& hash, CryptoError* error) const;
 
   // Computes the PCR digest for default state as well as the future digest
