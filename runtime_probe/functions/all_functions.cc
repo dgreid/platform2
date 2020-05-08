@@ -17,6 +17,7 @@
 #include "runtime_probe/functions/generic_network.h"
 #include "runtime_probe/functions/generic_storage.h"
 #include "runtime_probe/functions/input_device.h"
+#include "runtime_probe/functions/memory.h"
 #include "runtime_probe/functions/mmc_storage.h"
 #include "runtime_probe/functions/nvme_storage.h"
 #include "runtime_probe/functions/sequence.h"
