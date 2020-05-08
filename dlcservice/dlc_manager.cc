@@ -37,8 +37,12 @@ void DlcManager::Initialize() {
     if (IsSupported(id))
       continue;
     for (const auto& path : DlcBase::GetPathsToDelete(id))
-      if (!base::DeleteFile(path, /*recursive=*/true))
-        PLOG(ERROR) << "Failed to delete path=" << path;
+      if (base::PathExists(path)) {
+        if (!base::DeleteFile(path, /*recursive=*/true))
+          PLOG(ERROR) << "Failed to delete path=" << path;
+        else
+          LOG(INFO) << "Deleted path=" << path << " for deprecated DLC=" << id;
+      }
   }
 
   PreloadDlcs();
@@ -161,7 +165,7 @@ bool DlcManager::UpdateCompleted(const DlcIdList& ids, brillo::ErrorPtr* err) {
       LOG(WARNING) << "Trying to complete update for unsupported DLC=" << id;
       ret = false;
     } else if (!supported_.find(id)->second.UpdateCompleted(err)) {
-      PLOG(WARNING) << Error::ToString(*err);
+      LOG(WARNING) << Error::ToString(*err);
       ret = false;
     }
   }
@@ -246,8 +250,8 @@ bool DlcManager::CancelInstall(ErrorPtr* err) {
   for (auto& pr : supported_) {
     auto& dlc = pr.second;
     if (!dlc.CancelInstall(err)) {
-      PLOG(ERROR) << "Failed during install cancellation: "
-                  << Error::ToString(*err);
+      LOG(ERROR) << "Failed during install cancellation: "
+                 << Error::ToString(*err);
       ret = false;
     }
   }

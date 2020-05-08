@@ -344,8 +344,8 @@ void DlcBase::PreloadImage() {
   // has the correct hash.
   ErrorPtr tmp_err;
   if (!DeleteInternal(&tmp_err)) {
-    PLOG(ERROR) << "Failed to delete prior to preloading DLC=" << id_ << ", "
-                << Error::ToString(tmp_err);
+    LOG(ERROR) << "Failed to delete prior to preloading DLC=" << id_ << ", "
+               << Error::ToString(tmp_err);
     return;
   }
 
@@ -486,8 +486,8 @@ bool DlcBase::CancelInstall(ErrorPtr* err) {
   // Consider as not installed even if delete fails below, correct errors
   // will be propagated later and should not block on further installs.
   if (!DeleteInternal(err)) {
-    PLOG(ERROR) << "Failed during install cancellation: "
-                << Error::ToString(*err) << " for DLC " << id_;
+    LOG(ERROR) << "Failed during install cancellation: "
+               << Error::ToString(*err) << " for DLC " << id_;
     return false;
   }
   return true;
