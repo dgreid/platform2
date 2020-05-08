@@ -319,11 +319,7 @@
           Username of the user for which the logs are requested.
         </tp:docstring>
       </arg>
-      <!--
-        TODO(b/149874690) Change back to normal after clients are updated.
-        Changed to raw to temporarily introduce optional username parameter.
-      -->
-      <annotation name="org.chromium.DBus.Method.Kind" value="raw"/>
+      <annotation name="org.chromium.DBus.Method.Kind" value="simple"/>
     </method>
     <method name="BackupArcBugReport">
       <tp:docstring>

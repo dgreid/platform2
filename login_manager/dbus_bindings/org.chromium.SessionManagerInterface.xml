@@ -595,12 +595,7 @@
     <method name="StopArcInstance">
       <arg name="account_id" type="s" direction="in" />
       <arg name="should_backup_log" type="b" direction="in" />
-      <!--
-        TODO(b/149874690) Change back to normal after clients are updated.
-        Changed to raw to temporarily introduce optional account_id and
-        should_backup_log parameter.
-       -->
-      <annotation name="org.chromium.DBus.Method.Kind" value="raw"/>
+      <annotation name="org.chromium.DBus.Method.Kind" value="normal"/>
     </method>
 
     <!--

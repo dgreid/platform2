@@ -107,10 +107,7 @@ class DebugdDBusAdaptor : public org::chromium::debugdAdaptor,
   std::string GetLog(const std::string& name) override;
   std::map<std::string, std::string> GetAllLogs() override;
   void GetBigFeedbackLogs(const base::ScopedFD& fd,
-                          const std::string& username);
-  // TODO(b/149874690) Remove this overload when clients are updated.
-  void GetBigFeedbackLogs(dbus::MethodCall* method_call,
-                          brillo::dbus_utils::ResponseSender sender) override;
+                          const std::string& username) override;
 
   void BackupArcBugReport(const std::string& userhash) override;
   void DeleteArcBugReportBackup(const std::string& userhash) override;

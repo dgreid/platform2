@@ -205,32 +205,6 @@ void DebugdDBusAdaptor::GetBigFeedbackLogs(const base::ScopedFD& fd,
   log_tool_->GetBigFeedbackLogs(fd, username);
 }
 
-void DebugdDBusAdaptor::GetBigFeedbackLogs(
-    dbus::MethodCall* method_call, brillo::dbus_utils::ResponseSender sender) {
-  dbus::MessageReader reader(method_call);
-  std::unique_ptr<dbus::Response> response;
-
-  base::ScopedFD fd;
-  if (!reader.PopFileDescriptor(&fd)) {
-    LOG(ERROR) << "GetBigFeedbackLogs called with incorrect parameters: "
-               << method_call->ToString();
-
-    response = dbus::ErrorResponse::FromMethodCall(
-        method_call, DBUS_ERROR_INVALID_ARGS,
-        "Required parameter |outfd| is missing.");
-  } else {
-    std::string username;
-    if (!reader.PopString(&username)) {
-      username = "";
-    }
-
-    GetBigFeedbackLogs(fd, username);
-    response = dbus::Response::FromMethodCall(method_call);
-  }
-
-  std::move(sender).Run(std::move(response));
-}
-
 void DebugdDBusAdaptor::BackupArcBugReport(const std::string& userhash) {
   log_tool_->BackupArcBugReport(userhash);
 }

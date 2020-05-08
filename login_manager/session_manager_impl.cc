@@ -1363,28 +1363,6 @@ bool SessionManagerImpl::StopArcInstance(brillo::ErrorPtr* error,
 #endif  // USE_CHEETS
 }
 
-void SessionManagerImpl::StopArcInstance(
-    dbus::MethodCall* method_call, brillo::dbus_utils::ResponseSender sender) {
-  dbus::MessageReader reader(method_call);
-
-  std::string account_id;
-  bool should_backup_log;
-  if (!reader.PopString(&account_id) || !reader.PopBool(&should_backup_log)) {
-    should_backup_log = false;
-    account_id = "";
-  }
-
-  std::unique_ptr<brillo::Error> error;
-  std::unique_ptr<dbus::Response> response;
-  if (StopArcInstance(&error, account_id, should_backup_log)) {
-    response = dbus::Response::FromMethodCall(method_call);
-  } else {
-    response = brillo::dbus_utils::GetDBusError(method_call, error.get());
-  }
-
-  std::move(sender).Run(std::move(response));
-}
-
 bool SessionManagerImpl::SetArcCpuRestriction(brillo::ErrorPtr* error,
                                               uint32_t in_restriction_state) {
 #if USE_CHEETS
