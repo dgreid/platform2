@@ -640,6 +640,12 @@ class WakeOnWiFiTest : public ::testing::Test {
     wake_on_wifi_->wake_on_wifi_max_ssids_ = 999;
     wake_on_wifi_->dark_resume_history_.time_ = &time_;
 
+    // Change timer for testing.
+    wake_on_wifi_->wake_to_scan_timer_ =
+        timers::SimpleAlarmTimer::CreateForTesting();
+    wake_on_wifi_->dhcp_lease_renewal_timer_ =
+        timers::SimpleAlarmTimer::CreateForTesting();
+
     ON_CALL(netlink_manager_, SendNl80211Message(_, _, _, _))
         .WillByDefault(Return(true));
   }
@@ -934,29 +940,29 @@ class WakeOnWiFiTest : public ::testing::Test {
   }
 
   void StartDHCPLeaseRenewalTimer() {
-    wake_on_wifi_->dhcp_lease_renewal_timer_.Start(
+    wake_on_wifi_->dhcp_lease_renewal_timer_->Start(
         FROM_HERE, base::TimeDelta::FromSeconds(kTimeToNextLeaseRenewalLong),
         Bind(&WakeOnWiFiTest::OnTimerWakeDoNothing, Unretained(this)));
   }
 
   void StartWakeToScanTimer() {
-    wake_on_wifi_->wake_to_scan_timer_.Start(
+    wake_on_wifi_->wake_to_scan_timer_->Start(
         FROM_HERE, base::TimeDelta::FromSeconds(kTimeToNextLeaseRenewalLong),
         Bind(&WakeOnWiFiTest::OnTimerWakeDoNothing, Unretained(this)));
   }
 
   void StopDHCPLeaseRenewalTimer() {
-    wake_on_wifi_->dhcp_lease_renewal_timer_.Stop();
+    wake_on_wifi_->dhcp_lease_renewal_timer_->Stop();
   }
 
-  void StopWakeToScanTimer() { wake_on_wifi_->wake_to_scan_timer_.Stop(); }
+  void StopWakeToScanTimer() { wake_on_wifi_->wake_to_scan_timer_->Stop(); }
 
   bool DHCPLeaseRenewalTimerIsRunning() {
-    return wake_on_wifi_->dhcp_lease_renewal_timer_.IsRunning();
+    return wake_on_wifi_->dhcp_lease_renewal_timer_->IsRunning();
   }
 
   bool WakeToScanTimerIsRunning() {
-    return wake_on_wifi_->wake_to_scan_timer_.IsRunning();
+    return wake_on_wifi_->wake_to_scan_timer_->IsRunning();
   }
 
   void SetDarkResumeActionsTimeoutMilliseconds(int64_t timeout) {

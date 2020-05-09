@@ -7,6 +7,7 @@
 #include <errno.h>
 #include <linux/nl80211.h>
 #include <stdio.h>
+#include <sys/timerfd.h>
 
 #include <algorithm>
 #include <set>
@@ -116,6 +117,8 @@ WakeOnWiFi::WakeOnWiFi(NetlinkManager* netlink_manager,
   netlink_handler_ =
       Bind(&WakeOnWiFi::OnWakeupReasonReceived, weak_ptr_factory_.GetWeakPtr());
   netlink_manager_->AddBroadcastHandler(netlink_handler_);
+  dhcp_lease_renewal_timer_ = timers::SimpleAlarmTimer::Create();
+  wake_to_scan_timer_ = timers::SimpleAlarmTimer::Create();
 }
 
 WakeOnWiFi::~WakeOnWiFi() {
@@ -1547,8 +1550,8 @@ void WakeOnWiFi::OnBeforeSuspend(
 void WakeOnWiFi::OnAfterResume() {
 #if !defined(DISABLE_WAKE_ON_WIFI)
   SLOG(this, 1) << __func__;
-  wake_to_scan_timer_.Stop();
-  dhcp_lease_renewal_timer_.Stop();
+  wake_to_scan_timer_->Stop();
+  dhcp_lease_renewal_timer_->Stop();
   if (WakeOnWiFiPacketEnabledAndSupported() ||
       WakeOnWiFiDarkConnectEnabledAndSupported()) {
     // Unconditionally disable wake on WiFi on resume if these features
@@ -1607,8 +1610,8 @@ void WakeOnWiFi::OnDarkResume(
     // thrashing. Stop this by disabling wake on WiFi on the NIC, and
     // starting the wake to scan timer so that normal wake on WiFi behavior
     // resumes only |wake_to_scan_period_seconds_| later.
-    dhcp_lease_renewal_timer_.Stop();
-    wake_to_scan_timer_.Start(
+    dhcp_lease_renewal_timer_->Stop();
+    wake_to_scan_timer_->Start(
         FROM_HERE, base::TimeDelta::FromSeconds(wake_to_scan_period_seconds_),
         Bind(&WakeOnWiFi::OnTimerWakeDoNothing, base::Unretained(this)));
     DisableWakeOnWiFi();
@@ -1694,11 +1697,11 @@ void WakeOnWiFi::BeforeSuspendActions(
                     << "Enabling wake on disconnect";
       wake_on_wifi_triggers_.insert(kWakeTriggerDisconnect);
       wake_on_wifi_triggers_.erase(kWakeTriggerSSID);
-      wake_to_scan_timer_.Stop();
+      wake_to_scan_timer_->Stop();
       if (start_lease_renewal_timer) {
         // Timer callback is NO-OP since dark resume logic (the
         // kWakeTriggerUnsupported case) will initiate DHCP lease renewal.
-        dhcp_lease_renewal_timer_.Start(
+        dhcp_lease_renewal_timer_->Start(
             FROM_HERE, base::TimeDelta::FromSeconds(time_to_next_lease_renewal),
             Bind(&WakeOnWiFi::OnTimerWakeDoNothing, base::Unretained(this)));
       }
@@ -1707,7 +1710,7 @@ void WakeOnWiFi::BeforeSuspendActions(
       // connecting, and remove all networks so scans triggered in dark resume
       // are passive.
       remove_supplicant_networks_callback.Run();
-      dhcp_lease_renewal_timer_.Stop();
+      dhcp_lease_renewal_timer_->Stop();
       wake_on_wifi_triggers_.erase(kWakeTriggerDisconnect);
       if (!wake_on_ssid_whitelist_.empty()) {
         SLOG(this, 3) << __func__ << ": "
@@ -1729,7 +1732,7 @@ void WakeOnWiFi::BeforeSuspendActions(
         // NIC to wake on.
         // Timer callback is NO-OP since dark resume logic (the
         // kWakeTriggerUnsupported case) will initiate a passive scan.
-        wake_to_scan_timer_.Start(
+        wake_to_scan_timer_->Start(
             FROM_HERE,
             base::TimeDelta::FromSeconds(wake_to_scan_period_seconds_),
             Bind(&WakeOnWiFi::OnTimerWakeDoNothing, base::Unretained(this)));
