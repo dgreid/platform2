@@ -88,7 +88,9 @@ std::vector<std::unique_ptr<base::Value>> ParseChromeUploadsLog(
   std::vector<std::string> lines = base::SplitString(
       contents, "\n", base::TRIM_WHITESPACE, base::SPLIT_WANT_NONEMPTY);
   for (const auto& line : lines) {
-    std::unique_ptr<base::Value> json = base::JSONReader::Read(line);
+    // TODO(crbug.com/1054279): migrate to base::JSONReader::Read after
+    // libchrome uprev.
+    std::unique_ptr<base::Value> json = base::JSONReader::ReadDeprecated(line);
     rows.push_back(std::move(json));
   }
 

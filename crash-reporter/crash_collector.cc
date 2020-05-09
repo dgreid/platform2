@@ -28,7 +28,7 @@
 #include <base/logging.h>
 #include <base/posix/eintr_wrapper.h>
 #include <base/run_loop.h>
-#include <base/scoped_clear_errno.h>
+#include <base/scoped_clear_last_error.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_split.h>
 #include <base/strings/string_util.h>
@@ -425,7 +425,7 @@ int CrashCollector::WriteNewFile(const FilePath& filename,
   }
 
   if (!base::WriteFileDescriptor(fd.get(), data, size)) {
-    base::ScopedClearErrno restore_error;
+    base::ScopedClearLastError restore_error;
     fd.reset();
     return -1;
   }
