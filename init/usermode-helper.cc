@@ -26,7 +26,7 @@ int main(int argc, const char* argv[]) {
     // Allow users to run this directly and figure out what it is.  It's not
     // uncommon for curious people to run it directly or pass --help.
     if (argc == 1 || strcmp(argv[1], "-h") == 0 ||
-        strcmp(argv[1], "--help") == 0) {
+        strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-help") == 0) {
       LOG(INFO) << "usermode-helper securely filters the programs the kernel "
                 << "is allowed to run.";
       return 0;
