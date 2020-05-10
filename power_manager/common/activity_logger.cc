@@ -39,9 +39,7 @@ base::TimeDelta BaseActivityLogger::GetOngoingTimerDelayForTest() const {
 bool BaseActivityLogger::TriggerStoppedTimerForTest() {
   if (!stopped_timer_.IsRunning())
     return false;
-  base::Closure task = stopped_timer_.user_task();
-  stopped_timer_.Stop();
-  task.Run();
+  stopped_timer_.FireNow();
   return true;
 }
 
