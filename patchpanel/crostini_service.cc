@@ -23,6 +23,8 @@ namespace patchpanel {
 namespace {
 constexpr int32_t kInvalidID = 0;
 constexpr int kDbusTimeoutMs = 200;
+// The maximum number of ADB sideloading query failures before stopping.
+constexpr int kAdbSideloadMaxTry = 5;
 constexpr base::TimeDelta kAdbSideloadUpdateDelay =
     base::TimeDelta::FromMilliseconds(5000);
 
@@ -273,6 +275,10 @@ void CrostiniService::StopAdbPortForwarding(const std::string& ifname) {
 }
 
 void CrostiniService::CheckAdbSideloadingStatus() {
+  static int num_try = 0;
+  if (num_try >= kAdbSideloadMaxTry)
+    return;
+
   dbus::ObjectProxy* proxy = bus_->GetObjectProxy(
       login_manager::kSessionManagerServiceName,
       dbus::ObjectPath(login_manager::kSessionManagerServicePath));
@@ -288,6 +294,7 @@ void CrostiniService::CheckAdbSideloadingStatus() {
         base::BindOnce(&CrostiniService::CheckAdbSideloadingStatus,
                        weak_factory_.GetWeakPtr()),
         kAdbSideloadUpdateDelay);
+    num_try++;
     return;
   }
 
