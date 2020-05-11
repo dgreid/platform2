@@ -23,6 +23,8 @@
 #include <brillo/data_encoding.h>
 #include <crypto/sha2.h>
 #include <openssl/objects.h>
+#include <policy/device_policy.h>
+#include <policy/libpolicy.h>
 #if USE_TPM2
 #include <trunks/tpm_utility.h>
 #endif
@@ -2978,8 +2980,18 @@ void AttestationService::SignEnterpriseChallengeTask(
   KeyInfo key_info;
   // EUK -> Enterprise User Key
   // EMK -> Enterprise Machine Key
-  key_info.set_key_type(is_user_specific ? EUK : EMK);
-  key_info.set_domain(request.domain());
+  if (is_user_specific) {
+    key_info.set_key_type(EUK);
+    key_info.set_domain(request.domain());
+  } else {
+    // For machine key, the customer_id should be included, not the domain
+    // name.
+    key_info.set_key_type(EMK);
+    if (!PopulateCustomerId(&key_info)) {
+      result->set_status(STATUS_UNEXPECTED_DEVICE_ERROR);
+      return;
+    }
+  }
   key_info.set_device_id(request.device_id());
 
   base::Optional<CertifiedKey> key_for_certificate_and_spkac;
@@ -3303,6 +3315,26 @@ KeyType AttestationService::GetEndorsementKeyType() const {
 
 KeyType AttestationService::GetAttestationIdentityKeyType() const {
   return tpm_utility_->GetVersion() == TPM_2_0 ? KEY_TYPE_ECC : KEY_TYPE_RSA;
+}
+
+bool AttestationService::PopulateCustomerId(KeyInfo* key_info) {
+  if (!policy_provider_.get())
+    policy_provider_ = std::make_unique<policy::PolicyProvider>();
+  policy_provider_->Reload();
+
+  // If device_policy is still not loaded, return an error.
+  if (!policy_provider_->device_policy_is_loaded()) {
+    LOG(ERROR) << __func__ << ": Failed to get device policy.";
+    return false;
+  }
+  std::string customer_id;
+  if (!policy_provider_->GetDevicePolicy().GetCustomerId(&customer_id) ||
+      customer_id.empty()) {
+    LOG(ERROR) << __func__ << ": Failed to get customer ID.";
+    return false;
+  }
+  key_info->set_customer_id(customer_id);
+  return true;
 }
 
 base::WeakPtr<AttestationService> AttestationService::GetWeakPtr() {

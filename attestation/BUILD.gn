@@ -220,6 +220,7 @@ executable("attestationd") {
     ":local_proto_include",
     ":target_defaults",
   ]
+  libs = [ "policy" ]
   deps = [
     ":common_library",
     ":proto_library",
@@ -333,12 +334,16 @@ if (use.test) {
       sources += [ "common/tpm_utility_v2_test.cc" ]
       libs = [
         "hwsec_test",
+        "policy",
         "tpm_manager_test",
         "trunks_test",
       ]
     } else {
       sources += [ "common/tpm_utility_common_test.cc" ]
-      libs = [ "hwsec_test" ]
+      libs = [
+        "hwsec_test",
+        "policy",
+      ]
     }
     deps = [
       ":client_library",

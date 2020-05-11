@@ -24,6 +24,7 @@
 #include <base/threading/thread.h>
 #include <brillo/secure_blob.h>
 #include <gtest/gtest_prod.h>
+#include <policy/libpolicy.h>
 
 #include "attestation/common/crypto_utility.h"
 #include "attestation/common/crypto_utility_impl.h"
@@ -183,6 +184,11 @@ class AttestationService : public AttestationInterface {
 
   void set_google_keys(GoogleKeys google_keys) {
     google_keys_ = std::move(google_keys);
+  }
+
+  void set_policy_provider(
+      policy::PolicyProvider* policy_provider) {
+    policy_provider_.reset(policy_provider);
   }
 
  private:
@@ -495,6 +501,9 @@ class AttestationService : public AttestationInterface {
   // Prepares the attestation system for enrollment with an ACA.
   void PrepareForEnrollment(InitializeCompleteCallback callback);
 
+  // Gets the customerId from the policy data and populates in |key_info|.
+  bool PopulateCustomerId(KeyInfo* key_info);
+
   // Returns an iterator pointing to the identity certificate for the given
   // |identity| and given Privacy CA.
   virtual IdentityCertificateMap::iterator FindIdentityCertificate(
@@ -802,6 +811,9 @@ class AttestationService : public AttestationInterface {
   // allow synchronous implementation of complex methods. This is intentionally
   // declared after the thread-owned members.
   std::unique_ptr<ServiceWorkerThread> worker_thread_;
+
+  // The device policy provider, used to get device policy data.
+  std::unique_ptr<policy::PolicyProvider> policy_provider_;
 
   // Declared last so any weak pointers are destroyed first.
   base::WeakPtrFactory<AttestationService> weak_factory_;

@@ -18,6 +18,8 @@
 #include <brillo/errors/error.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+#include <policy/mock_device_policy.h>
+#include <policy/mock_libpolicy.h>
 #if USE_TPM2
 #include <trunks/tpm_utility.h>
 #endif
@@ -106,7 +108,7 @@ KeyInfo CreateMachineChallengeKeyInfoWithSPKAC(
 
   KeyInfo key_info;
   key_info.set_key_type(EMK);
-  key_info.set_domain("domain");
+  key_info.set_customer_id("customer_id");
   key_info.set_device_id("device_id");
   key_info.set_certificate(pem_certificate_of_key_for_spkac);
   key_info.set_signed_public_key_and_challenge(spkac);
@@ -148,6 +150,8 @@ class AttestationServiceBaseTest : public testing::Test {
     service_->set_tpm_utility(&mock_tpm_utility_);
     service_->set_hwid("fake_hwid");
     service_->set_pca_agent_proxy(&fake_pca_agent_proxy_);
+    mock_policy_provider_ = new StrictMock<policy::MockPolicyProvider>();
+    service_->set_policy_provider(mock_policy_provider_);
     // Setup a fake wrapped EK certificate by default.
     (*mock_database_.GetMutableProtobuf()
         ->mutable_credentials()
@@ -250,6 +254,16 @@ class AttestationServiceBaseTest : public testing::Test {
     return key.SerializeAsString();
   }
 
+  void ExpectGetCustomerId(std::string customer_id) {
+    EXPECT_CALL(*mock_policy_provider_, Reload()).WillOnce(Return(true));
+    EXPECT_CALL(*mock_policy_provider_, device_policy_is_loaded())
+        .WillOnce(Return(true));
+    EXPECT_CALL(*mock_policy_provider_, GetDevicePolicy())
+        .WillOnce(ReturnRef(mock_device_policy_));
+    EXPECT_CALL(mock_device_policy_, GetCustomerId(_))
+        .WillOnce(DoAll(SetArgPointee<0>(customer_id), Return(true)));
+  }
+
   // Verify Attestation CA-related data, including the default CA's identity
   // credential.
   void VerifyACAData(const AttestationDatabase& db,
@@ -304,6 +318,8 @@ class AttestationServiceBaseTest : public testing::Test {
   NiceMock<MockDatabase> mock_database_;
   NiceMock<MockKeyStore> mock_key_store_;
   NiceMock<MockTpmUtility> mock_tpm_utility_;
+  StrictMock<policy::MockPolicyProvider>* mock_policy_provider_;  // Not Owned.
+  StrictMock<policy::MockDevicePolicy> mock_device_policy_;
   StrictMock<pca_agent::client::FakePcaAgentProxy> fake_pca_agent_proxy_{
       kTpmVersionUnderTest};
   std::unique_ptr<AttestationService> service_;
@@ -883,6 +899,7 @@ TEST_P(AttestationServiceEnterpriseTest,
   std::string expected_key_info_str;
   expected_key_info.SerializeToString(&expected_key_info_str);
 
+  ExpectGetCustomerId("customer_id");
   EXPECT_CALL(
       mock_crypto_utility_,
       VerifySignatureUsingHexKey(
@@ -927,7 +944,7 @@ TEST_P(AttestationServiceEnterpriseTest,
   SignEnterpriseChallengeRequest request;
   request.set_va_type(va_type_);
   request.set_key_label("label");
-  request.set_domain(expected_key_info.domain());
+  request.set_domain("to_be_ignored");
   request.set_device_id(expected_key_info.device_id());
   request.set_include_signed_public_key(true);
   request.set_key_name_for_spkac(kKeyNameForSpkac);
