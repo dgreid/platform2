@@ -23,6 +23,9 @@ enum QualificationStatus {
   UNQUALIFIED = 0;
   REJECTED = 1;
   QUALIFIED = 2;
+  // This category has at least one ComponentInfo defined, but we cannot match
+  // any known components in the probe result.
+  NO_MATCH = 3;
 }
 
 message ComponentInfo {

@@ -18,6 +18,21 @@ namespace hardware_verifier {
 namespace {
 
 constexpr auto kGenericComponentName = "generic";
+constexpr auto kNoMatchComponentName = "NO_MATCH";
+
+void AddFoundComponentInfo(
+    HwVerificationReport* hw_verification_report,
+    const runtime_probe::ProbeRequest_SupportCategory& component_category,
+    const std::string& comp_name,
+    const QualificationStatus status) {
+  auto* found_comp_info = hw_verification_report->add_found_component_infos();
+  found_comp_info->set_component_category(component_category);
+  found_comp_info->set_component_uuid(comp_name);
+  found_comp_info->set_qualification_status(status);
+  if (status != QualificationStatus::QUALIFIED) {
+    hw_verification_report->set_is_compliant(false);
+  }
+}
 
 }  // namespace
 
@@ -82,6 +97,11 @@ VerifierImpl::VerifierImpl() {
 base::Optional<HwVerificationReport> VerifierImpl::Verify(
     const runtime_probe::ProbeResult& probe_result,
     const HwVerificationSpec& hw_verification_spec) const {
+  // A dictionary of 'expected_component_category => seen'.
+  std::map<int, bool> seen_comp;
+  // Collect the categories of generic components we found.
+  std::set<int> seen_generic_comp;
+
   // A dictionary which maps (component_category, component_uuid) to its
   // qualification status.
   std::map<int, std::map<std::string, QualificationStatus>> qual_status_dict;
@@ -97,6 +117,9 @@ base::Optional<HwVerificationReport> VerifierImpl::Verify(
           << "The verification spec contains duplicated component infos.";
       return base::nullopt;
     }
+
+    // We expect to see this component in probe result.
+    seen_comp[category] = false;
   }
 
   // A dictionary which maps component_category to the field names in the
@@ -143,6 +166,7 @@ base::Optional<HwVerificationReport> VerifierImpl::Verify(
       // If the component name is "generic", add it to |generic_device_info|
       // in the report.
       if (comp_name == kGenericComponentName) {
+        seen_generic_comp.insert(comp_category_info.enum_value);
         if (!comp_category_info.report_comp_values_field) {
           VLOG(1) << "Ignore the generic component of ("
                   << comp_category_info.enum_name << ") category.";
@@ -175,16 +199,26 @@ base::Optional<HwVerificationReport> VerifierImpl::Verify(
                    << ", uuid=" << comp_name << ").";
         return base::nullopt;
       }
-      auto* found_comp_info =
-          hw_verification_report.add_found_component_infos();
-      found_comp_info->set_component_category(
+      // TODO(b147654337): How about components that are "missing", that is:
+      //   - It is expected on the system (according to SKU or MODEL).
+      //   - We cannot find this in generic nor non-generic components.
+      AddFoundComponentInfo(
+          &hw_verification_report,
           static_cast<runtime_probe::ProbeRequest_SupportCategory>(
-              comp_category_info.enum_value));
-      found_comp_info->set_component_uuid(comp_name);
-      found_comp_info->set_qualification_status(qual_status_it->second);
-      if (qual_status_it->second != QualificationStatus::QUALIFIED) {
-        hw_verification_report.set_is_compliant(false);
-      }
+              comp_category_info.enum_value),
+          comp_name, qual_status_it->second);
+      seen_comp[comp_category_info.enum_value] = true;
+    }
+  }
+
+  for (const auto& it : seen_comp) {
+    // We have found a generic component in this category, but this doesn't have
+    // any qualification status.
+    if (!it.second && seen_generic_comp.count(it.first)) {
+      AddFoundComponentInfo(
+          &hw_verification_report,
+          static_cast<runtime_probe::ProbeRequest_SupportCategory>(it.first),
+          kNoMatchComponentName, QualificationStatus::NO_MATCH);
     }
   }
 
