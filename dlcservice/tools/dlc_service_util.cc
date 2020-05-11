@@ -44,14 +44,14 @@ using std::vector;
 namespace {
 
 constexpr uid_t kRootUid = 0;
-constexpr uid_t kChronosUid = 1000;
-constexpr char kChronosUser[] = "chronos";
-constexpr char kChronosGroup[] = "chronos";
+constexpr uid_t kDlcServiceUid = 20118;
+constexpr char kDlcServiceUser[] = "dlcservice";
+constexpr char kDlcServiceGroup[] = "dlcservice";
 
 void EnterMinijail() {
   ScopedMinijail jail(minijail_new());
-  CHECK_EQ(0, minijail_change_user(jail.get(), kChronosUser));
-  CHECK_EQ(0, minijail_change_group(jail.get(), kChronosGroup));
+  CHECK_EQ(0, minijail_change_user(jail.get(), kDlcServiceUser));
+  CHECK_EQ(0, minijail_change_group(jail.get(), kDlcServiceGroup));
   minijail_inherit_usergroups(jail.get());
   minijail_no_new_privs(jail.get());
   minijail_enter(jail.get());
@@ -366,10 +366,10 @@ int main(int argc, const char** argv) {
     case kRootUid:
       EnterMinijail();
       break;
-    case kChronosUid:
+    case kDlcServiceUid:
       break;
     default:
-      LOG(ERROR) << "dlcservice_util can only be run as root or chronos";
+      LOG(ERROR) << "dlcservice_util can only be run as root or dlcservice";
       return 1;
   }
   DlcServiceUtil client(argc, argv);
