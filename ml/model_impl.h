@@ -74,6 +74,10 @@ class ModelImpl : public chromeos::machine_learning::mojom::Model {
   void CreateGraphExecutor(
       chromeos::machine_learning::mojom::GraphExecutorRequest request,
       CreateGraphExecutorCallback callback) override;
+  void CreateGraphExecutorWithOptions(
+      chromeos::machine_learning::mojom::GraphExecutorOptionsPtr options,
+      chromeos::machine_learning::mojom::GraphExecutorRequest request,
+      CreateGraphExecutorCallback callback) override;
 
   // Remove a graph executor from our hosted set.
   void EraseGraphExecutor(std::list<GraphExecutorImpl>::const_iterator it);

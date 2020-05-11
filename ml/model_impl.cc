@@ -10,6 +10,7 @@
 #include <base/bind.h>
 #include <base/bind_helpers.h>
 #include <tensorflow/lite/context.h>
+#include <tensorflow/lite/delegates/nnapi/nnapi_delegate.h>
 #include <tensorflow/lite/interpreter.h>
 #include <tensorflow/lite/kernels/register.h>
 
@@ -27,6 +28,8 @@ namespace ml {
 
 using ::chromeos::machine_learning::mojom::CreateGraphExecutorResult;
 using ::chromeos::machine_learning::mojom::GraphExecutor;
+using ::chromeos::machine_learning::mojom::GraphExecutorOptions;
+using ::chromeos::machine_learning::mojom::GraphExecutorOptionsPtr;
 using ::chromeos::machine_learning::mojom::GraphExecutorRequest;
 using ::chromeos::machine_learning::mojom::ModelRequest;
 
@@ -90,6 +93,15 @@ int ModelImpl::num_graph_executors_for_testing() const {
 
 void ModelImpl::CreateGraphExecutor(GraphExecutorRequest request,
                                     CreateGraphExecutorCallback callback) {
+  auto options = GraphExecutorOptions::New(false);
+  CreateGraphExecutorWithOptions(std::move(options), std::move(request),
+                                 std::move(callback));
+}
+
+void ModelImpl::CreateGraphExecutorWithOptions(
+    GraphExecutorOptionsPtr options,
+    GraphExecutorRequest request,
+    CreateGraphExecutorCallback callback) {
   DCHECK(!metrics_model_name_.empty());
 
   RequestMetrics<CreateGraphExecutorResult> request_metrics(
@@ -117,6 +129,25 @@ void ModelImpl::CreateGraphExecutor(GraphExecutorRequest request,
     request_metrics.RecordRequestEvent(
         CreateGraphExecutorResult::MODEL_INTERPRETATION_ERROR);
     return;
+  }
+
+  // If requested, load and apply NNAPI
+  if (options->use_nnapi) {
+    auto delegate = tflite::NnApiDelegate();
+    if (!delegate) {
+      LOG(ERROR) << "NNAPI requested but not available.";
+      std::move(callback).Run(CreateGraphExecutorResult::NNAPI_UNAVAILABLE);
+      request_metrics.RecordRequestEvent(
+          CreateGraphExecutorResult::NNAPI_UNAVAILABLE);
+      return;
+    }
+    if (interpreter->ModifyGraphWithDelegate(delegate) != kTfLiteOk) {
+      LOG(ERROR) << "Could not use NNAPI delegate.";
+      std::move(callback).Run(CreateGraphExecutorResult::NNAPI_USE_ERROR);
+      request_metrics.RecordRequestEvent(
+          CreateGraphExecutorResult::NNAPI_USE_ERROR);
+      return;
+    }
   }
 
   // Allocate memory for tensors.

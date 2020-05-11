@@ -38,12 +38,20 @@ enum BuiltinModelId {
   SEARCH_RANKER_20190923 = 6,
 };
 
+// Options for creating the executor.  Options are used for testing and
+// development. They are not typically used in normal, production code.
+struct GraphExecutorOptions {
+  bool use_nnapi;
+};
+
 // These values are persisted to logs. Entries should not be renumbered and
 // numeric values should never be reused.
 enum CreateGraphExecutorResult {
   OK = 0,
   MODEL_INTERPRETATION_ERROR = 1,
   MEMORY_ALLOCATION_ERROR = 2,
+  NNAPI_UNAVAILABLE = 3,
+  NNAPI_USE_ERROR = 4,
 };
 
 // Model specification for builtin models.
@@ -77,5 +85,12 @@ struct FlatBufferModelSpec {
 // separate GraphExecutor instances.
 interface Model {
   CreateGraphExecutor(GraphExecutor& request) =>
+      (CreateGraphExecutorResult result);
+
+  // This function is temporary. We plan to rationalize this interface and
+  // sync it with the interfaces at chromeos/service/machine_learning.
+  // See crbug/1081597.
+  CreateGraphExecutorWithOptions(GraphExecutorOptions options,
+                                 GraphExecutor& request) =>
       (CreateGraphExecutorResult result);
 };

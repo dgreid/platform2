@@ -26,6 +26,7 @@ using ::chromeos::machine_learning::mojom::BuiltinModelSpecPtr;
 using ::chromeos::machine_learning::mojom::CreateGraphExecutorResult;
 using ::chromeos::machine_learning::mojom::ExecuteResult;
 using ::chromeos::machine_learning::mojom::GraphExecutorPtr;
+using ::chromeos::machine_learning::mojom::GraphExecutorOptions;
 using ::chromeos::machine_learning::mojom::LoadModelResult;
 using ::chromeos::machine_learning::mojom::MachineLearningServicePtr;
 using ::chromeos::machine_learning::mojom::ModelPtr;
@@ -47,7 +48,7 @@ TensorPtr NewSingleValueTensor(const double value) {
 
 }  // namespace
 
-AddResult Add(const double x, const double y) {
+AddResult Add(const double x, const double y, bool use_nnapi) {
   AddResult result = {"Not completed.", -1.0};
 
   // Create ML Service
@@ -76,14 +77,15 @@ AddResult Add(const double x, const double y) {
   // Get graph executor for model.
   GraphExecutorPtr graph_executor;
   bool graph_executor_ok = false;
-  model->CreateGraphExecutor(mojo::MakeRequest(&graph_executor),
-                             base::Bind(
-                                 [](bool* const graph_executor_ok,
-                                    const CreateGraphExecutorResult result) {
-                                   *graph_executor_ok =
-                                       result == CreateGraphExecutorResult::OK;
-                                 },
-                                 &graph_executor_ok));
+  auto options = GraphExecutorOptions::New(use_nnapi);
+  model->CreateGraphExecutorWithOptions(
+      std::move(options), mojo::MakeRequest(&graph_executor),
+      base::Bind(
+          [](bool* const graph_executor_ok,
+             const CreateGraphExecutorResult result) {
+            *graph_executor_ok = result == CreateGraphExecutorResult::OK;
+          },
+          &graph_executor_ok));
   base::RunLoop().RunUntilIdle();
   if (!model_load_ok) {
     result.status = "Failed to get graph executor";

@@ -11,7 +11,8 @@ namespace simple {
 namespace {
 
 void TestAdd(const double x, const double y, const double expected) {
-  auto result = Add(x, y);
+  // TODO(avg): tests for NNAPI, when available
+  auto result = Add(x, y, false);
   ASSERT_NEAR(result.sum, expected, 0.0001);
   ASSERT_EQ(result.status, "OK");
 }
