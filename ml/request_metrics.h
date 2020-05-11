@@ -15,7 +15,7 @@
 #include <base/logging.h>
 #include <base/macros.h>
 #include <base/process/process_metrics.h>
-#include <base/sys_info.h>
+#include <base/system/sys_info.h>
 #include <base/time/time.h>
 #include <metrics/metrics_library.h>
 

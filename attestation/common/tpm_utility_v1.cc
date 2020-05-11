@@ -7,9 +7,9 @@
 #include <arpa/inet.h>
 #include <base/files/file_path.h>
 #include <base/files/file_util.h>
+#include <base/hash/sha1.h>
 #include <base/logging.h>
 #include <base/memory/free_deleter.h>
-#include <base/sha1.h>
 #include <base/stl_util.h>
 #include <brillo/secure_blob.h>
 #include <crypto/libcrypto-compat.h>

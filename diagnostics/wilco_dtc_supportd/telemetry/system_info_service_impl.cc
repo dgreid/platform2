@@ -6,7 +6,7 @@
 
 #include <base/logging.h>
 #include <base/strings/string_number_conversions.h>
-#include <base/sys_info.h>
+#include <base/system/sys_info.h>
 
 namespace diagnostics {
 

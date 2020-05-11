@@ -13,10 +13,10 @@
 #include <base/bind.h>
 #include <base/files/file_path.h>
 #include <base/files/file_util.h>
+#include <base/hash/sha1.h>
 #include <base/json/json_writer.h>
 #include <base/logging.h>
 #include <base/macros.h>
-#include <base/sha1.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/stringprintf.h>
 #include <base/values.h>

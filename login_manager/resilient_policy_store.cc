@@ -9,8 +9,8 @@
 
 #include <base/containers/adapters.h>
 #include <base/files/file_util.h>
+#include <base/hash/sha1.h>
 #include <base/logging.h>
-#include <base/sha1.h>
 #include <base/strings/string_number_conversions.h>
 #include <policy/policy_util.h>
 #include <policy/resilient_policy_util.h>

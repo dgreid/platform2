@@ -7,8 +7,8 @@
 #include <cstdint>
 #include <memory>
 
+#include <base/hash/sha1.h>
 #include <base/logging.h>
-#include <base/sha1.h>
 #include <base/stl_util.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/sys_byteorder.h>

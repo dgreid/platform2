@@ -11,12 +11,12 @@
 #include <base/bind.h>
 #include <base/files/file_path.h>
 #include <base/files/file_util.h>
+#include <base/hash/sha1.h>
 #include <base/location.h>
 #include <base/logging.h>
 #include <base/macros.h>
 #include <base/memory/ref_counted.h>
 #include <base/optional.h>
-#include <base/sha1.h>
 #include <base/stl_util.h>
 #include <crypto/libcrypto-compat.h>
 #include <crypto/scoped_openssl_types.h>

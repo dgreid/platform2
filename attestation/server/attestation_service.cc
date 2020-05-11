@@ -14,7 +14,7 @@
 #include <attestation/proto_bindings/attestation_ca.pb.h>
 #include <base/bind.h>
 #include <base/callback.h>
-#include <base/sha1.h>
+#include <base/hash/sha1.h>
 #include <base/stl_util.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/stringprintf.h>

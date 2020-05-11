@@ -10,9 +10,9 @@
 
 #include <base/files/file_path.h>
 #include <base/files/file_util.h>
+#include <base/hash/sha1.h>
 #include <base/logging.h>
 #include <base/optional.h>
-#include <base/sha1.h>
 #include <base/strings/string_number_conversions.h>
 #include <google/protobuf/text_format.h>
 #include <vboot/crossystem.h>

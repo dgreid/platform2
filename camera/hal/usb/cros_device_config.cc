@@ -6,7 +6,7 @@
 
 #include "hal/usb/cros_device_config.h"
 
-#include <base/sys_info.h>
+#include <base/system/sys_info.h>
 
 #include "cros-camera/common.h"
 

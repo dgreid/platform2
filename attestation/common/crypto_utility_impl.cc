@@ -9,7 +9,7 @@
 #include <vector>
 
 #include <arpa/inet.h>
-#include <base/sha1.h>
+#include <base/hash/sha1.h>
 #include <base/stl_util.h>
 #include <base/strings/string_number_conversions.h>
 #include <crypto/libcrypto-compat.h>

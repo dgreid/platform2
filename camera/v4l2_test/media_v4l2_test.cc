@@ -13,7 +13,7 @@
 #include <base/files/file_util.h>
 #include <base/strings/string_util.h>
 #include <base/strings/stringprintf.h>
-#include <base/sys_info.h>
+#include <base/system/sys_info.h>
 #include <base/time/time.h>
 #include <brillo/flag_helper.h>
 #include <gmock/gmock.h>

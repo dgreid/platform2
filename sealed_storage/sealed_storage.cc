@@ -8,8 +8,8 @@
 
 #include <base/bind.h>
 #include <base/bind_helpers.h>
+#include <base/hash/sha1.h>
 #include <base/run_loop.h>
-#include <base/sha1.h>
 #include <base/strings/string_number_conversions.h>
 #include <crypto/scoped_openssl_types.h>
 #include <crypto/sha2.h>

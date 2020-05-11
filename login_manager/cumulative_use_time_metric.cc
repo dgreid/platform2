@@ -9,7 +9,7 @@
 
 #include <base/bind.h>
 #include <base/files/file_util.h>
-#include <base/hash.h>
+#include <base/hash/hash.h>
 #include <base/json/json_reader.h>
 #include <base/json/json_writer.h>
 #include <base/values.h>
