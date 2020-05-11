@@ -387,8 +387,7 @@ void ArcService::AddDevice(const std::string& ifname) {
     return;
   }
 
-  std::string host_ifname = base::StringPrintf("arc_%s", ifname.c_str());
-  auto device = std::make_unique<Device>(ifname, host_ifname, ifname,
+  auto device = std::make_unique<Device>(ifname, ArcBridgeName(ifname), ifname,
                                          std::move(config), opts);
 
   StartDevice(device.get());

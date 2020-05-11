@@ -32,10 +32,8 @@ constexpr pid_t kTestPID = -2;
 constexpr char kDefaultIfname[] = "vmtap%d";
 constexpr char kTunDev[] = "/dev/net/tun";
 
-}  // namespace
-
-std::string ArcVethHostName(const std::string& ifname) {
-  std::string n = "veth" + ifname;
+std::string PrefixIfname(const std::string& prefix, const std::string& ifname) {
+  std::string n = prefix + ifname;
   if (n.length() < IFNAMSIZ)
     return n;
 
@@ -45,6 +43,16 @@ std::string ArcVethHostName(const std::string& ifname) {
   n.resize(IFNAMSIZ - 1);
   n[n.length() - 1] = c;
   return n;
+}
+
+}  // namespace
+
+std::string ArcVethHostName(const std::string& ifname) {
+  return PrefixIfname("veth", ifname);
+}
+
+std::string ArcBridgeName(const std::string& ifname) {
+  return PrefixIfname("arc_", ifname);
 }
 
 Datapath::Datapath(MinijailedProcessRunner* process_runner)

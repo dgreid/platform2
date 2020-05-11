@@ -26,6 +26,9 @@ typedef int (*ioctl_t)(int, ioctl_req_t, ...);
 // Returns for given interface name the host name of a ARC veth pair.
 std::string ArcVethHostName(const std::string& ifname);
 
+// Returns the ARC bridge interface name for the given interface.
+std::string ArcBridgeName(const std::string& ifname);
+
 // ARC networking data path configuration utility.
 // IPV4 addresses are always specified in singular dotted-form (a.b.c.d)
 // (not in CIDR representation

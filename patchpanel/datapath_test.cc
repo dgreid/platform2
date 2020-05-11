@@ -506,4 +506,14 @@ TEST(DatapathTest, ArcVethHostName) {
   EXPECT_LT(ifname.length(), IFNAMSIZ);
 }
 
+TEST(DatapathTest, ArcBridgeName) {
+  EXPECT_EQ("arc_eth0", ArcBridgeName("eth0"));
+  EXPECT_EQ("arc_rmnet0", ArcBridgeName("rmnet0"));
+  EXPECT_EQ("arc_rmnet_data0", ArcBridgeName("rmnet_data0"));
+  EXPECT_EQ("arc_ifnamsiz_i0", ArcBridgeName("ifnamsiz_ifnam0"));
+  auto ifname = ArcBridgeName("exceeds_ifnamesiz_checkanyway");
+  EXPECT_EQ("arc_exceeds_ify", ifname);
+  EXPECT_LT(ifname.length(), IFNAMSIZ);
+}
+
 }  // namespace patchpanel
