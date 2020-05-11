@@ -309,6 +309,30 @@ std::set<uint8_t> Camera3Device::StaticInfo::GetAvailableToneMapModes() const {
   return modes;
 }
 
+std::set<std::pair<int32_t, int32_t>>
+Camera3Device::StaticInfo::GetAvailableFpsRanges() const {
+  camera_metadata_ro_entry_t entry;
+  if (find_camera_metadata_ro_entry(
+          characteristics_, ANDROID_CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES,
+          &entry) != 0) {
+    ADD_FAILURE() << "Cannot find the metadata "
+                     "ANDROID_CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES";
+    return {};
+  }
+  if (entry.count % 2 != 0) {
+    ADD_FAILURE() << "Unexpected amount of entries of "
+                     "ANDROID_CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES";
+    return {};
+  }
+  std::set<std::pair<int32_t, int32_t>> available_fps_ranges;
+  for (size_t i = 0; i < entry.count; i += 2) {
+    int32_t min_fps = entry.data.i32[i];
+    int32_t max_fps = entry.data.i32[i + 1];
+    available_fps_ranges.insert({min_fps, max_fps});
+  }
+  return available_fps_ranges;
+}
+
 void Camera3Device::StaticInfo::GetStreamConfigEntry(
     camera_metadata_ro_entry_t* entry) const {
   entry->count = 0;

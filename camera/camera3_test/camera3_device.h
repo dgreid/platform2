@@ -8,6 +8,7 @@
 #include <map>
 #include <memory>
 #include <set>
+#include <utility>
 #include <vector>
 
 #include <base/callback.h>
@@ -172,6 +173,9 @@ class Camera3Device::StaticInfo {
   // Get available tone map modes
   std::set<uint8_t> GetAvailableToneMapModes() const;
 
+  // Get available fps ranges
+  std::set<std::pair<int32_t, int32_t>> GetAvailableFpsRanges() const;
+
   // Get available formats for a given direction
   // direction: ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_OUTPUT or
   //            ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_INPUT
@@ -256,11 +260,11 @@ class Camera3Device::StaticInfo {
   // Get available request keys
   std::set<int32_t> GetAvailableRequestKeys() const;
 
- private:
   // Return the supported hardware level of the device, or fail if no value is
   // reported
   uint8_t GetHardwareLevel() const;
 
+ private:
   bool IsHardwareLevelAtLeast(int32_t level) const;
 
   std::set<uint8_t> GetAvailableModes(int32_t key,

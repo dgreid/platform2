@@ -40,7 +40,8 @@ enum {
 bool isHardwareLevelSupported(int actual_level, int required_level);
 
 // Get recording parameter list of camera id, width, height and frame rate
-std::vector<std::tuple<int, int32_t, int32_t, float>> ParseRecordingParams();
+std::vector<std::tuple<int, int32_t, int32_t, float, bool>>
+ParseRecordingParams();
 
 class CameraModuleCallbacksHandler {
  public:

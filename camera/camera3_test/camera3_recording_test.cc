@@ -29,7 +29,7 @@ void Camera3RecordingFixture::ProcessRecordingResult(
 class Camera3BasicRecordingTest
     : public Camera3RecordingFixture,
       public ::testing::WithParamInterface<
-          std::tuple<int32_t, int32_t, int32_t, float>> {
+          std::tuple<int32_t, int32_t, int32_t, float, bool>> {
  public:
   const int32_t kRecordingDurationMs = 3000;
   // Margin of frame duration in percetange. The value is adopted from
@@ -42,21 +42,29 @@ class Camera3BasicRecordingTest
       : Camera3RecordingFixture(std::vector<int>(1, std::get<0>(GetParam()))),
         cam_id_(std::get<0>(GetParam())),
         recording_resolution_(std::get<1>(GetParam()), std::get<2>(GetParam())),
-        recording_frame_rate_(std::get<3>(GetParam())) {}
+        recording_frame_rate_(std::get<3>(GetParam())),
+        support_constant_framerate_(std::get<4>(GetParam())) {}
 
  protected:
   // |duration_ms|: total duration of recording in milliseconds
   // |frame_duration_ms|: duration of each frame in milliseconds
-  void ValidateRecordingFrameRate(float duration_ms, float frame_duration_ms);
+  void ValidateConstantFrameRate(float duration_ms, float frame_duration_ms);
+
+  // Finds the valid recording fps range in metadata according to
+  // |recording_frame_rate_| and |support_constant_framerate_| and fills the
+  // values in |fps_range|.
+  bool FindValidRecordingFpsRange(int32_t* fps_range);
 
   int cam_id_;
 
   ResolutionInfo recording_resolution_;
 
   float recording_frame_rate_;
+
+  bool support_constant_framerate_;
 };
 
-void Camera3BasicRecordingTest::ValidateRecordingFrameRate(
+void Camera3BasicRecordingTest::ValidateConstantFrameRate(
     float duration_ms, float frame_duration_ms) {
   ASSERT_NE(0, duration_ms);
   ASSERT_NE(0, frame_duration_ms);
@@ -90,6 +98,32 @@ void Camera3BasicRecordingTest::ValidateRecordingFrameRate(
       << ", tolerance " << kFrameDropRateTolerance;
 }
 
+bool Camera3BasicRecordingTest::FindValidRecordingFpsRange(int32_t* fps_range) {
+  std::set<std::pair<int32_t, int32_t>> available_fps_ranges =
+      cam_service_.GetStaticInfo(cam_id_)->GetAvailableFpsRanges();
+  for (auto& range : available_fps_ranges) {
+    if (support_constant_framerate_) {
+      // Find [fps, fps] for device supports constant frame rate.
+      if (range.first == recording_frame_rate_ &&
+          range.second == recording_frame_rate_) {
+        fps_range[0] = range.first;
+        fps_range[1] = range.second;
+        return true;
+      }
+    } else {
+      // Find [min, max] that fulfill |min <= fps <= max| for device which does
+      // not support constant frame rate.
+      if (range.first <= recording_frame_rate_ &&
+          recording_frame_rate_ <= range.second) {
+        fps_range[0] = range.first;
+        fps_range[1] = range.second;
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 TEST_P(Camera3BasicRecordingTest, BasicRecording) {
 #define ARRAY_SIZE(A) (sizeof(A) / sizeof(*(A)))
   // Choose a preview resolution that is equal to or smaller than full HD so as
@@ -115,21 +149,31 @@ TEST_P(Camera3BasicRecordingTest, BasicRecording) {
   ResolutionInfo jpeg_resolution(0, 0);
   cam_service_.StartPreview(cam_id_, preview_resolution, jpeg_resolution,
                             recording_resolution_);
-
   ScopedCameraMetadata recording_metadata(
       clone_camera_metadata(cam_service_.ConstructDefaultRequestSettings(
           cam_id_, CAMERA3_TEMPLATE_VIDEO_RECORD)));
   ASSERT_NE(nullptr, recording_metadata.get());
-  int32_t fps_range[] = {static_cast<int32_t>(recording_frame_rate_),
-                         static_cast<int32_t>(recording_frame_rate_)};
+
+  int32_t fps_range[2];
+  bool is_found = FindValidRecordingFpsRange(fps_range);
+  ASSERT_EQ(is_found, true);
+
   EXPECT_EQ(0, UpdateMetadata(ANDROID_CONTROL_AE_TARGET_FPS_RANGE, fps_range,
                               ARRAY_SIZE(fps_range), &recording_metadata));
   cam_service_.StartRecording(cam_id_, recording_metadata.get());
   usleep(kRecordingDurationMs * 1000);
   cam_service_.StopRecording(cam_id_);
-  float frame_duration_ms = 1000.0 / recording_frame_rate_;
-  float duration_ms = sensor_timestamp_map_[cam_id_].size() * frame_duration_ms;
-  ValidateRecordingFrameRate(duration_ms, frame_duration_ms);
+
+  if (support_constant_framerate_) {
+    float frame_duration_ms = 1000.0 / recording_frame_rate_;
+    float duration_ms =
+        sensor_timestamp_map_[cam_id_].size() * frame_duration_ms;
+    ValidateConstantFrameRate(duration_ms, frame_duration_ms);
+  } else {
+    ASSERT_EQ(cam_service_.GetStaticInfo(cam_id_)->GetHardwareLevel(),
+              ANDROID_INFO_SUPPORTED_HARDWARE_LEVEL_EXTERNAL);
+    ASSERT_GT(sensor_timestamp_map_[cam_id_].size(), 0);
+  }
 
   cam_service_.StopPreview(cam_id_);
 }
