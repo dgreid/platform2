@@ -496,4 +496,14 @@ TEST(DatapathTest, AddIPv4Route) {
   EXPECT_EQ(route2, captured_routes[3]);
 }
 
+TEST(DatapathTest, ArcVethHostName) {
+  EXPECT_EQ("vetheth0", ArcVethHostName("eth0"));
+  EXPECT_EQ("vethrmnet0", ArcVethHostName("rmnet0"));
+  EXPECT_EQ("vethrmnet_data0", ArcVethHostName("rmnet_data0"));
+  EXPECT_EQ("vethifnamsiz_i0", ArcVethHostName("ifnamsiz_ifnam0"));
+  auto ifname = ArcVethHostName("exceeds_ifnamesiz_checkanyway");
+  EXPECT_EQ("vethexceeds_ify", ifname);
+  EXPECT_LT(ifname.length(), IFNAMSIZ);
+}
+
 }  // namespace patchpanel

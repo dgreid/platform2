@@ -246,14 +246,14 @@ class ContainerImplTest : public testing::Test {
       EXPECT_CALL(*datapath_, AddBridge(StrEq("arcbr0"), kArcHostIP, 30))
           .WillOnce(Return(true));
       EXPECT_CALL(*datapath_,
-                  AddVirtualInterfacePair(StrEq("veth_arc0"), StrEq("arc0")))
+                  AddVirtualInterfacePair(StrEq("vetharc0"), StrEq("arc0")))
           .WillOnce(Return(true));
       EXPECT_CALL(*datapath_, ConfigureInterface(StrEq("arc0"), _, kArcGuestIP,
                                                  30, true, _))
           .WillOnce(Return(true));
-      EXPECT_CALL(*datapath_, ToggleInterface(StrEq("veth_arc0"), true))
+      EXPECT_CALL(*datapath_, ToggleInterface(StrEq("vetharc0"), true))
           .WillOnce(Return(true));
-      EXPECT_CALL(*datapath_, AddToBridge(StrEq("arcbr0"), StrEq("veth_arc0")))
+      EXPECT_CALL(*datapath_, AddToBridge(StrEq("arcbr0"), StrEq("vetharc0")))
           .WillOnce(Return(true));
 
       impl->Start(kTestPID);
@@ -284,14 +284,14 @@ TEST_F(ContainerImplTest, Start) {
   EXPECT_CALL(*datapath_, AddBridge(StrEq("arcbr0"), kArcHostIP, 30))
       .WillOnce(Return(true));
   EXPECT_CALL(*datapath_,
-              AddVirtualInterfacePair(StrEq("veth_arc0"), StrEq("arc0")))
+              AddVirtualInterfacePair(StrEq("vetharc0"), StrEq("arc0")))
       .WillOnce(Return(true));
   EXPECT_CALL(*datapath_,
               ConfigureInterface(StrEq("arc0"), _, kArcGuestIP, 30, true, _))
       .WillOnce(Return(true));
-  EXPECT_CALL(*datapath_, ToggleInterface(StrEq("veth_arc0"), true))
+  EXPECT_CALL(*datapath_, ToggleInterface(StrEq("vetharc0"), true))
       .WillOnce(Return(true));
-  EXPECT_CALL(*datapath_, AddToBridge(StrEq("arcbr0"), StrEq("veth_arc0")))
+  EXPECT_CALL(*datapath_, AddToBridge(StrEq("arcbr0"), StrEq("vetharc0")))
       .WillOnce(Return(true));
   EXPECT_CALL(forwarder_, StartForwarding(_, _, _, _)).Times(0);
   Impl(false)->Start(kTestPID);
@@ -301,7 +301,7 @@ TEST_F(ContainerImplTest, Start_FailsToCreateInterface_Android) {
   EXPECT_CALL(*datapath_, AddBridge(StrEq("arcbr0"), kArcHostIP, 30))
       .WillOnce(Return(true));
   EXPECT_CALL(*datapath_,
-              AddVirtualInterfacePair(StrEq("veth_arc0"), StrEq("arc0")))
+              AddVirtualInterfacePair(StrEq("vetharc0"), StrEq("arc0")))
       .WillOnce(Return(false));
   EXPECT_CALL(*datapath_, ConfigureInterface(_, _, _, _, _, _)).Times(0);
   EXPECT_CALL(*datapath_, RemoveBridge(_)).Times(0);
@@ -312,12 +312,12 @@ TEST_F(ContainerImplTest, OnStartDevice_FailsToConfigureInterface_Android) {
   EXPECT_CALL(*datapath_, AddBridge(StrEq("arcbr0"), kArcHostIP, 30))
       .WillOnce(Return(true));
   EXPECT_CALL(*datapath_,
-              AddVirtualInterfacePair(StrEq("veth_arc0"), StrEq("arc0")))
+              AddVirtualInterfacePair(StrEq("vetharc0"), StrEq("arc0")))
       .WillOnce(Return(true));
   EXPECT_CALL(*datapath_,
               ConfigureInterface(StrEq("arc0"), _, kArcGuestIP, 30, true, _))
       .WillOnce(Return(false));
-  EXPECT_CALL(*datapath_, ToggleInterface(StrEq("veth_arc0"), true)).Times(0);
+  EXPECT_CALL(*datapath_, ToggleInterface(StrEq("vetharc0"), true)).Times(0);
   EXPECT_CALL(*datapath_, RemoveInterface(StrEq("arc0")));
   EXPECT_CALL(*datapath_, RemoveBridge(_)).Times(0);
   Impl(false)->Start(kTestPID);
@@ -325,15 +325,15 @@ TEST_F(ContainerImplTest, OnStartDevice_FailsToConfigureInterface_Android) {
 
 TEST_F(ContainerImplTest, OnStartDevice) {
   EXPECT_CALL(*datapath_,
-              AddVirtualInterfacePair(StrEq("veth_eth0"), StrEq("eth0")))
+              AddVirtualInterfacePair(StrEq("vetheth0"), StrEq("eth0")))
       .WillOnce(Return(true));
   EXPECT_CALL(*datapath_,
               ConfigureInterface(StrEq("eth0"), _, Ipv4Addr(100, 115, 92, 10),
                                  30, true, _))
       .WillOnce(Return(true));
-  EXPECT_CALL(*datapath_, ToggleInterface(StrEq("veth_eth0"), true))
+  EXPECT_CALL(*datapath_, ToggleInterface(StrEq("vetheth0"), true))
       .WillOnce(Return(true));
-  EXPECT_CALL(*datapath_, AddToBridge(StrEq("arc_eth0"), StrEq("veth_eth0")))
+  EXPECT_CALL(*datapath_, AddToBridge(StrEq("arc_eth0"), StrEq("vetheth0")))
       .WillOnce(Return(true));
   EXPECT_CALL(forwarder_,
               StartForwarding(StrEq("eth0"), StrEq("arc_eth0"), _, _));
@@ -345,14 +345,14 @@ TEST_F(ContainerImplTest, OnStartDevice) {
 TEST_F(ContainerImplTest, Stop) {
   EXPECT_CALL(*datapath_,
               MaskInterfaceFlags(StrEq("arcbr0"), IFF_DEBUG, IFF_UP));
-  EXPECT_CALL(*datapath_, RemoveInterface(StrEq("veth_arc0")));
+  EXPECT_CALL(*datapath_, RemoveInterface(StrEq("vetharc0")));
   EXPECT_CALL(forwarder_, StopForwarding(_, _, _, _)).Times(0);
 
   Impl()->Stop(kTestPID);
 }
 
 TEST_F(ContainerImplTest, OnStopDevice) {
-  EXPECT_CALL(*datapath_, RemoveInterface(StrEq("veth_eth0")));
+  EXPECT_CALL(*datapath_, RemoveInterface(StrEq("vetheth0")));
   EXPECT_CALL(forwarder_,
               StopForwarding(StrEq("eth0"), StrEq("arc_eth0"), _, _));
 

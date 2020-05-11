@@ -34,12 +34,17 @@ constexpr char kTunDev[] = "/dev/net/tun";
 
 }  // namespace
 
-std::string ArcVethHostName(std::string ifname) {
-  return "veth_" + ifname;
-}
+std::string ArcVethHostName(const std::string& ifname) {
+  std::string n = "veth" + ifname;
+  if (n.length() < IFNAMSIZ)
+    return n;
 
-std::string ArcVethPeerName(std::string ifname) {
-  return "peer_" + ifname;
+  // Best effort attempt to preserve the interface number, assuming it's the
+  // last char in the name.
+  auto c = ifname[ifname.length() - 1];
+  n.resize(IFNAMSIZ - 1);
+  n[n.length() - 1] = c;
+  return n;
 }
 
 Datapath::Datapath(MinijailedProcessRunner* process_runner)

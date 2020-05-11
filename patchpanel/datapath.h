@@ -24,10 +24,7 @@ using ioctl_req_t = unsigned long;
 typedef int (*ioctl_t)(int, ioctl_req_t, ...);
 
 // Returns for given interface name the host name of a ARC veth pair.
-std::string ArcVethHostName(std::string ifname);
-
-// Returns for given interface name the peer name of a ARC veth pair.
-std::string ArcVethPeerName(std::string ifname);
+std::string ArcVethHostName(const std::string& ifname);
 
 // ARC networking data path configuration utility.
 // IPV4 addresses are always specified in singular dotted-form (a.b.c.d)
