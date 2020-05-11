@@ -75,36 +75,20 @@ class DlcServiceUtil : public brillo::Daemon {
   ~DlcServiceUtil() override = default;
 
  private:
-  bool InitDlcModuleList(const string& omaha_url, const string& dlc_ids) {
-    const auto& dlc_ids_list = SplitString(dlc_ids, ":", base::TRIM_WHITESPACE,
-                                           base::SPLIT_WANT_NONEMPTY);
-    if (dlc_ids_list.empty()) {
-      LOG(ERROR) << "Please specify a list of DLC modules.";
-      return false;
-    }
-    dlc_module_list_str_ = dlc_ids;
-    dlc_module_list_.set_omaha_url(omaha_url);
-    for (const string& dlc_id : dlc_ids_list) {
-      DlcModuleInfo* dlc_module_info = dlc_module_list_.add_dlc_module_infos();
-      dlc_module_info->set_dlc_id(dlc_id);
-    }
-    return true;
-  }
-
   int OnEventLoopStarted() override {
     // "--install" related flags.
-    DEFINE_bool(install, false, "Install a given list of DLC modules.");
+    DEFINE_bool(install, false, "Install a single DLC.");
     DEFINE_string(omaha_url, "",
                   "Overrides the default Omaha URL in the update_engine.");
 
     // "--uninstall" related flags.
-    DEFINE_bool(uninstall, false, "Uninstall a given list of DLC modules.");
+    DEFINE_bool(uninstall, false, "Uninstall a single DLC.");
 
     // "--purge" related flags.
-    DEFINE_bool(purge, false, "Purge a given list of DLC modules.");
+    DEFINE_bool(purge, false, "Purge a single DLC.");
 
     // "--install", "--purge", and "--uninstall" related flags.
-    DEFINE_string(dlc_ids, "", "Colon separated list of DLC IDs.");
+    DEFINE_string(dlc_ids, "", "The ID of the DLC.");
 
     // "--list" related flags.
     DEFINE_bool(list, false, "List installed DLC(s).");
@@ -129,15 +113,17 @@ class DlcServiceUtil : public brillo::Daemon {
 
     // Called with "--list".
     if (FLAGS_list) {
-      if (!GetInstalled(&dlc_module_list_))
+      DlcModuleList dlc_module_list;
+      if (!GetInstalled(&dlc_module_list))
         return EX_SOFTWARE;
-      PrintInstalled(FLAGS_dump);
+      PrintInstalled(FLAGS_dump, dlc_module_list);
       Quit();
       return EX_OK;
     }
 
-    if (!InitDlcModuleList(FLAGS_omaha_url, FLAGS_dlc_ids))
-      return EX_SOFTWARE;
+    CHECK(!FLAGS_dlc_ids.empty()) << "Please specify a single DLC ID.";
+    dlc_id_ = FLAGS_dlc_ids;
+    omaha_url_ = FLAGS_omaha_url;
 
     // Called with "--install".
     if (FLAGS_install) {
@@ -193,14 +179,14 @@ class DlcServiceUtil : public brillo::Daemon {
   void OnInstallStatus(const dlcservice::InstallStatus& install_status) {
     switch (install_status.status()) {
       case dlcservice::Status::COMPLETED:
-        LOG(INFO) << "Install successful!: '" << dlc_module_list_str_ << "'.";
+        LOG(INFO) << "Install successful!: '" << dlc_id_ << "'.";
         Quit();
         break;
       case dlcservice::Status::RUNNING:
         LOG(INFO) << "Install in progress: " << install_status.progress();
         break;
       case dlcservice::Status::FAILED:
-        LOG(ERROR) << "Failed to install: '" << dlc_module_list_str_
+        LOG(ERROR) << "Failed to install: '" << dlc_id_
                    << "' with error code: " << install_status.error_code();
         QuitWithExitCode(EX_SOFTWARE);
         break;
@@ -223,9 +209,9 @@ class DlcServiceUtil : public brillo::Daemon {
   // installed. False otherwise.
   bool Install() {
     brillo::ErrorPtr err;
-    LOG(INFO) << "Attempting to install DLC modules: " << dlc_module_list_str_;
-    if (!dlc_service_proxy_->Install(dlc_module_list_, &err)) {
-      LOG(ERROR) << "Failed to install: " << dlc_module_list_str_ << ", "
+    LOG(INFO) << "Attempting to install DLC modules: " << dlc_id_;
+    if (!dlc_service_proxy_->InstallWithOmahaUrl(dlc_id_, omaha_url_, &err)) {
+      LOG(ERROR) << "Failed to install: " << dlc_id_ << ", "
                  << ErrorPtrStr(err);
       return false;
     }
@@ -238,18 +224,15 @@ class DlcServiceUtil : public brillo::Daemon {
   bool Uninstall(bool purge) {
     auto cmd_str = purge ? "purge" : "uninstall";
     brillo::ErrorPtr err;
-    for (const auto& dlc_module : dlc_module_list_.dlc_module_infos()) {
-      const string& dlc_id = dlc_module.dlc_id();
-      LOG(INFO) << "Attempting to " << cmd_str << " DLC: " << dlc_id;
-      bool result = purge ? dlc_service_proxy_->Purge(dlc_id, &err)
-                          : dlc_service_proxy_->Uninstall(dlc_id, &err);
-      if (!result) {
-        LOG(ERROR) << "Failed to " << cmd_str << " DLC: " << dlc_id << ", "
-                   << ErrorPtrStr(err);
-        return false;
-      }
-      LOG(INFO) << "'" << dlc_id << "' successfully " << cmd_str << "ed.";
+    LOG(INFO) << "Attempting to " << cmd_str << " DLC: " << dlc_id_;
+    bool result = purge ? dlc_service_proxy_->Purge(dlc_id_, &err)
+                        : dlc_service_proxy_->Uninstall(dlc_id_, &err);
+    if (!result) {
+      LOG(ERROR) << "Failed to " << cmd_str << " DLC: " << dlc_id_ << ", "
+                 << ErrorPtrStr(err);
+      return false;
     }
+    LOG(INFO) << "'" << dlc_id_ << "' successfully " << cmd_str << "ed.";
     return true;
   }
 
@@ -292,9 +275,10 @@ class DlcServiceUtil : public brillo::Daemon {
     }
   }
 
-  void PrintInstalled(const string& dump) {
+  void PrintInstalled(const string& dump,
+                      const DlcModuleList& dlc_module_list) {
     DictionaryValue dict;
-    for (const auto& dlc_module_info : dlc_module_list_.dlc_module_infos()) {
+    for (const auto& dlc_module_info : dlc_module_list.dlc_module_infos()) {
       const auto& id = dlc_module_info.dlc_id();
       const auto& packages = GetPackages(id);
       if (packages.empty())
@@ -348,10 +332,8 @@ class DlcServiceUtil : public brillo::Daemon {
   int argc_;
   const char** argv_;
 
-  // A list of DLC module IDs being installed.
-  DlcModuleList dlc_module_list_;
-  // A string representation of |dlc_module_list_|.
-  string dlc_module_list_str_;
+  // The ID of the current DLC.
+  string dlc_id_;
   // Customized Omaha server URL (empty being the default URL).
   string omaha_url_;
 

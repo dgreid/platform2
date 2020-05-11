@@ -27,18 +27,14 @@ namespace dlcservice {
 DBusService::DBusService(DlcServiceInterface* dlc_service)
     : dlc_service_(dlc_service) {}
 
-bool DBusService::Install(brillo::ErrorPtr* err,
-                          const DlcModuleList& dlc_module_list_in) {
-  // Remove duplicates.
-  set<DlcId> unique_ids;
-  for (const auto& dlc_module : dlc_module_list_in.dlc_module_infos())
-    unique_ids.insert(dlc_module.dlc_id());
-  return dlc_service_->Install({unique_ids.begin(), unique_ids.end()},
-                               dlc_module_list_in.omaha_url(), err);
+bool DBusService::InstallDlc(brillo::ErrorPtr* err, const std::string& id_in) {
+  return dlc_service_->Install(id_in, /*omaha_url=*/"", err);
 }
 
-bool DBusService::InstallDlc(brillo::ErrorPtr* err, const std::string& id_in) {
-  return dlc_service_->Install({id_in}, /*omaha_url=*/"", err);
+bool DBusService::InstallWithOmahaUrl(brillo::ErrorPtr* err,
+                                      const std::string& id_in,
+                                      const std::string& omaha_url_in) {
+  return dlc_service_->Install(id_in, omaha_url_in, err);
 }
 
 bool DBusService::Uninstall(brillo::ErrorPtr* err, const string& id_in) {

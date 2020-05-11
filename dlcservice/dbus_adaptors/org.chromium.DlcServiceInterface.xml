@@ -7,20 +7,6 @@
 <node name="/org/chromium/DlcService"
   xmlns:tp="http://telepathy.freedesktop.org/wiki/DbusSpec#extensions-v0">
 <interface name="org.chromium.DlcServiceInterface">
-  <method name="Install">
-    <tp:docstring>
-      Install a list of Downloadable Content (DLC).
-    </tp:docstring>
-    <arg name="dlc_module_list" type="ay" direction="in">
-      <tp:docstring>
-        A serialized protobuf (DlcModuleList,
-        platform2/system_api/dbus/dlcservice/dlcservice.proto) of a list of
-        DLC modules to install.
-      </tp:docstring>
-      <annotation name="org.chromium.DBus.Argument.ProtobufClass"
-                  value="dlcservice::DlcModuleList"/>
-    </arg>
-  </method>
   <method name="InstallDlc">
     <tp:docstring>
       Install a Downloadable Content (DLC).
@@ -28,6 +14,21 @@
     <arg name="id" type="s" direction="in">
       <tp:docstring>
         The ID of the DLC.
+      </tp:docstring>
+    </arg>
+  </method>
+  <method name="InstallWithOmahaUrl">
+    <tp:docstring>
+      Install a DLC with a given Omaha URL.
+    </tp:docstring>
+    <arg name="id" type="s" direction="in">
+      <tp:docstring>
+        The ID of the DLC.
+      </tp:docstring>
+    </arg>
+    <arg name="omaha_url" type="s" direction="in">
+      <tp:docstring>
+        The Omaha URL to install the DLC from.
       </tp:docstring>
     </arg>
   </method>

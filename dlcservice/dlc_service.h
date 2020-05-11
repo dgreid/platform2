@@ -40,7 +40,7 @@ class DlcServiceInterface {
 
   // Initializes the state of dlcservice.
   virtual void Initialize() = 0;
-  virtual bool Install(const DlcIdList& dlcs,
+  virtual bool Install(const DlcId& id,
                        const std::string& omaha_url,
                        brillo::ErrorPtr* err) = 0;
   virtual bool Uninstall(const std::string& id_in, brillo::ErrorPtr* err) = 0;
@@ -71,7 +71,7 @@ class DlcService : public DlcServiceInterface {
   ~DlcService() override;
 
   void Initialize() override;
-  bool Install(const DlcIdList& dlcs,
+  bool Install(const DlcId& id,
                const std::string& omaha_url,
                brillo::ErrorPtr* err) override;
   bool Uninstall(const std::string& id_in, brillo::ErrorPtr* err) override;
@@ -91,6 +91,7 @@ class DlcService : public DlcServiceInterface {
  private:
   friend class DlcServiceTest;
   FRIEND_TEST(DlcServiceTest, OnStatusUpdateSignalTest);
+  FRIEND_TEST(DlcServiceTest, MountFailureTest);
   FRIEND_TEST(DlcServiceTest, OnStatusUpdateSignalDlcRootTest);
   FRIEND_TEST(DlcServiceTest, OnStatusUpdateSignalNoRemountTest);
   FRIEND_TEST(DlcServiceTest, ReportingFailureCleanupTest);

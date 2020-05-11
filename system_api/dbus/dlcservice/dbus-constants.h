@@ -12,7 +12,7 @@ constexpr char kDlcServiceServicePath[] = "/org/chromium/DlcService";
 constexpr char kDlcServiceServiceName[] = "org.chromium.DlcService";
 
 constexpr char kGetInstalledMethod[] = "GetInstalled";
-constexpr char kInstallMethod[] = "Install";
+constexpr char kInstallMethod[] = "InstallDlc";
 constexpr char kInstallDlcMethod[] = "InstallDlc";
 constexpr char kUninstallMethod[] = "Uninstall";
 constexpr char kPurgeMethod[] = "Purge";

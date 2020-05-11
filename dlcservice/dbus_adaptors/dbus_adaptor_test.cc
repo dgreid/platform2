@@ -36,31 +36,19 @@ class DBusServiceTest : public BaseTest {
   DISALLOW_COPY_AND_ASSIGN(DBusServiceTest);
 };
 
-TEST_F(DBusServiceTest, Install) {
-  EXPECT_CALL(*dlc_service_, Install(DlcIdList({kFirstDlc, kSecondDlc}),
-                                     kDefaultOmahaUrl, &err_))
+TEST_F(DBusServiceTest, InstallDlc) {
+  EXPECT_CALL(*dlc_service_, Install(kFirstDlc, "", &err_))
       .WillOnce(Return(true));
 
-  DlcModuleList dlc_list;
-  dlc_list.set_omaha_url(kDefaultOmahaUrl);
-  for (const auto& id : {kFirstDlc, kSecondDlc}) {
-    dlc_list.add_dlc_module_infos()->set_dlc_id(id);
-  }
-  EXPECT_TRUE(dbus_service_->Install(&err_, dlc_list));
+  EXPECT_TRUE(dbus_service_->InstallDlc(&err_, kFirstDlc));
 }
 
-// Tries to install duplicate DLCs.
-TEST_F(DBusServiceTest, InstallDuplicate) {
-  EXPECT_CALL(*dlc_service_, Install(DlcIdList({kFirstDlc, kSecondDlc}),
-                                     kDefaultOmahaUrl, &err_))
+TEST_F(DBusServiceTest, InstallWithOmahaUrl) {
+  EXPECT_CALL(*dlc_service_, Install(kFirstDlc, kDefaultOmahaUrl, &err_))
       .WillOnce(Return(true));
 
-  DlcModuleList dlc_list;
-  dlc_list.set_omaha_url(kDefaultOmahaUrl);
-  for (const auto& id : {kFirstDlc, kSecondDlc, kSecondDlc}) {
-    dlc_list.add_dlc_module_infos()->set_dlc_id(id);
-  }
-  EXPECT_TRUE(dbus_service_->Install(&err_, dlc_list));
+  EXPECT_TRUE(
+      dbus_service_->InstallWithOmahaUrl(&err_, kFirstDlc, kDefaultOmahaUrl));
 }
 
 TEST_F(DBusServiceTest, GetInstalled) {

@@ -73,7 +73,7 @@ const DlcBase* DlcService::GetDlc(const DlcId& id) {
   return dlc_manager_->GetDlc(id);
 }
 
-bool DlcService::Install(const DlcIdList& dlcs,
+bool DlcService::Install(const DlcId& id,
                          const string& omaha_url,
                          ErrorPtr* err) {
   // If an install is already in progress, dlcservice is busy.
@@ -104,7 +104,7 @@ bool DlcService::Install(const DlcIdList& dlcs,
       return false;
   }
 
-  if (!dlc_manager_->InitInstall(dlcs, err)) {
+  if (!dlc_manager_->InitInstall(id, err)) {
     LOG(ERROR) << Error::ToString(*err);
     return false;
   }

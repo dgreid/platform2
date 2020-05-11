@@ -176,39 +176,26 @@ bool DlcManager::UpdateCompleted(const DlcIdList& ids, brillo::ErrorPtr* err) {
   return ret;
 }
 
-bool DlcManager::InitInstall(const DlcIdList& dlcs, ErrorPtr* err) {
+bool DlcManager::InitInstall(const DlcId& id, ErrorPtr* err) {
   DCHECK(err);
-  if (dlcs.empty()) {
-    *err = Error::Create(FROM_HERE, kErrorInvalidDlc,
-                         "Must provide at least one DLC to install.");
-    return false;
-  }
-
   // Don't even start installing if we have some unsupported DLC request.
-  for (const auto& id : dlcs) {
-    if (!IsSupported(id)) {
-      *err = Error::Create(
-          FROM_HERE, kErrorInvalidDlc,
-          base::StringPrintf("Trying to install unsupported DLC=%s",
-                             id.c_str()));
-      return false;
-    }
+  if (!IsSupported(id)) {
+    *err = Error::Create(
+        FROM_HERE, kErrorInvalidDlc,
+        base::StringPrintf("Trying to install unsupported DLC=%s", id.c_str()));
+    return false;
   }
 
   DCHECK(!IsInstalling());
 
-  ErrorPtr tmp_err;
-  for (const auto& id : dlcs) {
-    DlcBase& dlc = supported_.find(id)->second;
-    if (!dlc.InitInstall(&tmp_err)) {
-      *err = Error::Create(
-          FROM_HERE, kErrorInternal,
-          base::StringPrintf(
-              "Failed to initialize installation of images for DLC %s",
-              id.c_str()));
-      CancelInstall(&tmp_err);
-      return false;
-    }
+  DlcBase& dlc = supported_.find(id)->second;
+  if (!dlc.InitInstall(err)) {
+    LOG(ERROR) << "Failed to initialize installation for DLC=" << id;
+    ErrorPtr tmp_err;
+    if (!CancelInstall(&tmp_err))
+      LOG(ERROR) << "Failed to cancel installation for DLC=" << id
+                 << ", with error: " << Error::ToString(tmp_err);
+    return false;
   }
   return true;
 }
