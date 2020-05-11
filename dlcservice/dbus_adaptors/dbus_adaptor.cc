@@ -83,13 +83,13 @@ bool DBusService::GetDlcState(brillo::ErrorPtr* err,
 }
 
 bool DBusService::InstallCompleted(brillo::ErrorPtr* err,
-                                   const vector<string>& dlcs) {
-  return dlc_service_->InstallCompleted(dlcs, err);
+                                   const vector<string>& ids_in) {
+  return dlc_service_->InstallCompleted(ids_in, err);
 }
 
 bool DBusService::UpdateCompleted(brillo::ErrorPtr* err,
-                                  const vector<string>& dlcs) {
-  return dlc_service_->UpdateCompleted(dlcs, err);
+                                  const vector<string>& ids_in) {
+  return dlc_service_->UpdateCompleted(ids_in, err);
 }
 
 DBusAdaptor::DBusAdaptor(unique_ptr<DBusService> dbus_service)

@@ -43,10 +43,10 @@ class DBusService : public org::chromium::DlcServiceInterfaceInterface {
                        std::vector<std::string>* dlc_ids_out) override;
   // Only for update_engine to call.
   bool InstallCompleted(brillo::ErrorPtr* err,
-                        const std::vector<std::string>& dlcs) override;
+                        const std::vector<std::string>& ids_in) override;
   // Only for update_engine to call.
   bool UpdateCompleted(brillo::ErrorPtr* err,
-                       const std::vector<std::string>& dlcs) override;
+                       const std::vector<std::string>& ids_in) override;
 
  private:
   DlcServiceInterface* dlc_service_;

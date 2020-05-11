@@ -151,13 +151,13 @@ bool DlcService::Install(const DlcId& id,
   return true;
 }
 
-bool DlcService::Uninstall(const string& id_in, brillo::ErrorPtr* err) {
+bool DlcService::Uninstall(const string& id, brillo::ErrorPtr* err) {
   // TODO(crbug.com/1069162): Uninstall should remove based on ref-counting
   // logic.
-  return Purge(id_in, err);
+  return Purge(id, err);
 }
 
-bool DlcService::Purge(const string& id_in, brillo::ErrorPtr* err) {
+bool DlcService::Purge(const string& id, brillo::ErrorPtr* err) {
   // Check that an update isn't in progress.
   if (!dlc_manager_->IsInstalling()) {
     Operation op;
@@ -176,13 +176,13 @@ bool DlcService::Purge(const string& id_in, brillo::ErrorPtr* err) {
         return false;
     }
   }
-  return dlc_manager_->Delete(id_in, err);
+  return dlc_manager_->Delete(id, err);
 }
 
-bool DlcService::GetDlcState(const std::string& id_in,
+bool DlcService::GetDlcState(const std::string& id,
                              DlcState* dlc_state,
                              ErrorPtr* err) {
-  return dlc_manager_->GetDlcState(id_in, dlc_state, err);
+  return dlc_manager_->GetDlcState(id, dlc_state, err);
 }
 
 DlcIdList DlcService::GetInstalled() {
@@ -197,12 +197,12 @@ DlcIdList DlcService::GetDlcsToUpdate() {
   return dlc_manager_->GetDlcsToUpdate();
 }
 
-bool DlcService::InstallCompleted(const DlcIdList& ids_in, ErrorPtr* err) {
-  return dlc_manager_->InstallCompleted(ids_in, err);
+bool DlcService::InstallCompleted(const DlcIdList& ids, ErrorPtr* err) {
+  return dlc_manager_->InstallCompleted(ids, err);
 }
 
-bool DlcService::UpdateCompleted(const DlcIdList& ids_in, ErrorPtr* err) {
-  return dlc_manager_->UpdateCompleted(ids_in, err);
+bool DlcService::UpdateCompleted(const DlcIdList& ids, ErrorPtr* err) {
+  return dlc_manager_->UpdateCompleted(ids, err);
 }
 
 void DlcService::SendFailedSignalAndCleanup() {

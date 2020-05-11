@@ -116,16 +116,16 @@ class DlcServiceTest : public BaseTest {
     EXPECT_EQ(install_status.state(), InstallStatus::IDLE);
   }
 
-  void CheckDlcState(const DlcId& id_in,
-                     const DlcState::State& state_in,
+  void CheckDlcState(const DlcId& id,
+                     const DlcState::State& expected_state,
                      bool fail = false) {
-    DlcState state;
+    DlcState actual_state;
     if (fail) {
-      EXPECT_FALSE(dlc_service_->GetDlcState(id_in, &state, &err_));
+      EXPECT_FALSE(dlc_service_->GetDlcState(id, &actual_state, &err_));
       return;
     }
-    EXPECT_TRUE(dlc_service_->GetDlcState(id_in, &state, &err_));
-    EXPECT_EQ(state_in, state.state());
+    EXPECT_TRUE(dlc_service_->GetDlcState(id, &actual_state, &err_));
+    EXPECT_EQ(expected_state, actual_state.state());
   }
 
  protected:

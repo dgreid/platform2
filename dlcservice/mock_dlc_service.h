@@ -24,11 +24,11 @@ class MockDlcService : public DlcServiceInterface {
               (override));
   MOCK_METHOD(bool,
               Uninstall,
-              (const std::string& id_in, brillo::ErrorPtr* err),
+              (const std::string& id, brillo::ErrorPtr* err),
               (override));
   MOCK_METHOD(bool,
               Purge,
-              (const std::string& id_in, brillo::ErrorPtr* err),
+              (const std::string& id, brillo::ErrorPtr* err),
               (override));
   MOCK_METHOD(DlcIdList, GetInstalled, (), (override));
   MOCK_METHOD(DlcIdList, GetExistingDlcs, (), (override));
@@ -36,17 +36,17 @@ class MockDlcService : public DlcServiceInterface {
   MOCK_METHOD((const DlcBase*), GetDlc, (const DlcId& id), (override));
   MOCK_METHOD(bool,
               GetDlcState,
-              (const std::string& id_in,
+              (const std::string& id,
                DlcState* dlc_state_out,
                brillo::ErrorPtr* err),
               (override));
   MOCK_METHOD(bool,
               InstallCompleted,
-              (const DlcIdList& ids_in, brillo::ErrorPtr* err),
+              (const DlcIdList& ids, brillo::ErrorPtr* err),
               (override));
   MOCK_METHOD(bool,
               UpdateCompleted,
-              (const DlcIdList& ids_in, brillo::ErrorPtr* err),
+              (const DlcIdList& ids, brillo::ErrorPtr* err),
               (override));
   MOCK_METHOD(void, AddObserver, (Observer * observer), (override));
 
