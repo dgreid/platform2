@@ -281,11 +281,11 @@ trunks::TPM_RC GenerateEccSessionSalt(const trunks::TPMT_PUBLIC& public_area,
   const EVP_MD* digest_type = EVP_sha256();
   unsigned int final_seed_size = 0;
   if (!EVP_DigestInit(ctx.get(), digest_type) ||
-      !EVP_DigestUpdate(
-          ctx.get(), marshaled_counter, arraysize(marshaled_counter)) ||
+      !EVP_DigestUpdate(ctx.get(), marshaled_counter,
+                        base::size(marshaled_counter)) ||
       !EVP_DigestUpdate(ctx.get(), z_value.buffer, z_value.size) ||
-      !EVP_DigestUpdate(
-          ctx.get(), kSessionKeyLabelValue, kSessionKeyLabelLength) ||
+      !EVP_DigestUpdate(ctx.get(), kSessionKeyLabelValue,
+                        kSessionKeyLabelLength) ||
       !EVP_DigestUpdate(ctx.get(), party_u_info.buffer, party_u_info.size) ||
       !EVP_DigestUpdate(ctx.get(), party_v_info.buffer, party_v_info.size) ||
       !EVP_DigestFinal(ctx.get(),
