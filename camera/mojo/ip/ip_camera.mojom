@@ -42,3 +42,8 @@ interface IpCameraDetector {
   // existing listener.
   RegisterConnectionListener(IpCameraConnectionListener listener);
 };
+
+interface IpCameraProxy {
+  Init(IpCameraDevice& device_request) => (bool success, IpCameraStream stream);
+  Destroy();
+};
