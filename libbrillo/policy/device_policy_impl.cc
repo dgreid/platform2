@@ -705,6 +705,15 @@ bool DevicePolicyImpl::GetDeviceDirectoryApiId(
   return true;
 }
 
+bool DevicePolicyImpl::GetCustomerId(
+    std::string* customer_id_out) const {
+  if (!policy_data_.has_obfuscated_customer_id())
+    return false;
+
+  *customer_id_out = policy_data_.obfuscated_customer_id();
+  return true;
+}
+
 bool DevicePolicyImpl::VerifyPolicyFile(const base::FilePath& policy_path) {
   if (!verify_root_ownership_) {
     return true;

@@ -357,4 +357,27 @@ TEST_F(DevicePolicyImplTest, GetDeviceDirectoryApiId_NotSet) {
   EXPECT_TRUE(id.empty());
 }
 
+// Should only write a value and return true as the ID should be present.
+TEST_F(DevicePolicyImplTest, GetCustomerId_Set) {
+  constexpr char kDummyCustomerId[] = "customerId";
+
+  em::PolicyData policy_data;
+  policy_data.set_obfuscated_customer_id(kDummyCustomerId);
+
+  device_policy_.set_policy_data_for_testing(policy_data);
+
+  std::string id;
+  EXPECT_TRUE(device_policy_.GetCustomerId(&id));
+  EXPECT_EQ(kDummyCustomerId, id);
+}
+
+TEST_F(DevicePolicyImplTest, GetCustomerId_NotSet) {
+  em::PolicyData policy_data;
+  device_policy_.set_policy_data_for_testing(policy_data);
+
+  std::string id;
+  EXPECT_FALSE(device_policy_.GetCustomerId(&id));
+  EXPECT_TRUE(id.empty());
+}
+
 }  // namespace policy

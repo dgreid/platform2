@@ -240,6 +240,12 @@ class DevicePolicy {
   virtual bool GetDeviceDirectoryApiId(
       std::string* directory_api_id_out) const = 0;
 
+  // Writes the value of the Customer ID to |customer_id_out|.
+  // Returns true on success, false if the ID is not available (eg if the device
+  // is not enrolled).
+  virtual bool GetCustomerId(
+      std::string* customer_id_out) const = 0;
+
  private:
   // Verifies that the policy signature is correct.
   virtual bool VerifyPolicySignature() = 0;
