@@ -25,7 +25,7 @@ struct Config {
   // Formatting of logs which are shown.
   std::string output;
   // Number to limit the lines of logs shown
-  std::string lines;
+  int lines = -1;
   // Boot ID to show messages only from the specific boot.
   base::Optional<std::string> boot;
   // String to show message for the specified syslog identifier
@@ -48,6 +48,8 @@ struct Config {
   bool no_pager = false;
   // Flag to print a help text instead of logs.
   bool show_help = false;
+  // Flag to follow appended contents.
+  bool follow = false;
 };
 
 }  // namespace croslog

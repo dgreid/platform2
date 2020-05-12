@@ -15,6 +15,14 @@ static_library("libcroslog_static") {
   sources = [
     "config.cc",
     "config.h",
+    "file_change_watcher.cc",
+    "file_change_watcher.h",
+    "log_entry_reader.cc",
+    "log_entry_reader.h",
+    "multiplexer.cc",
+    "multiplexer.h",
+    "viewer_plaintext.cc",
+    "viewer_plaintext.h",
   ]
   configs += [ ":target_defaults" ]
 }
@@ -32,7 +40,11 @@ executable("croslog") {
 
 if (use.test) {
   executable("run_tests") {
-    sources = [ "config_test.cc" ]
+    sources = [
+      "config_test.cc",
+      "file_change_watcher_test.cc",
+      "log_entry_reader_test.cc",
+    ]
     configs += [
       "//common-mk:test",
       ":target_defaults",

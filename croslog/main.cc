@@ -8,9 +8,13 @@
 #include <base/command_line.h>
 #include <base/logging.h>
 #include <base/macros.h>
+#include <base/files/file.h>
+#include <base/files/file_descriptor_watcher_posix.h>
 #include <base/process/launch.h>
+#include <base/strings/string_number_conversions.h>
 
 #include "croslog/config.h"
+#include "croslog/viewer_plaintext.h"
 
 namespace {
 static const char* kJournalctlCmdPath = "/usr/bin/journalctl";
@@ -28,9 +32,9 @@ bool LaunchJournalctlAndWait(const croslog::Config& config) {
     journalctl_command_line.push_back(config.output);
   }
 
-  if (!config.lines.empty()) {
+  if (config.lines >= 0) {
     journalctl_command_line.push_back("--lines");
-    journalctl_command_line.push_back(config.lines);
+    journalctl_command_line.push_back(base::NumberToString(config.lines));
   }
 
   if (config.boot.has_value()) {
@@ -76,6 +80,10 @@ bool LaunchJournalctlAndWait(const croslog::Config& config) {
     journalctl_command_line.push_back("--no-pager");
   }
 
+  if (config.follow) {
+    journalctl_command_line.push_back("--follow");
+  }
+
   base::Process process(
       base::LaunchProcess(journalctl_command_line, base::LaunchOptions()));
   if (!process.IsValid())
@@ -102,9 +110,10 @@ int main(int argc, char* argv[]) {
   switch (config.source) {
     case croslog::SourceMode::JOURNAL_LOG:
       return LaunchJournalctlAndWait(config) ? 0 : 1;
-    case croslog::SourceMode::PLAINTEXT_LOG:
+    case croslog::SourceMode::PLAINTEXT_LOG: {
       // TODO(yoshiki): Implement the reader of plaintext logs.
-      LOG(ERROR) << "Plaintext log is not supported yet.";
-      return 1;
+      croslog::ViewerPlaintext viewer;
+      return viewer.Run(config) ? 0 : 1;
+    }
   }
 }

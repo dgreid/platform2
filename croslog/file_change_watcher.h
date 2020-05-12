@@ -1,0 +1,34 @@
+// Copyright 2020 The Chromium OS Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#ifndef CROSLOG_FILE_CHANGE_WATCHER_H_
+#define CROSLOG_FILE_CHANGE_WATCHER_H_
+
+#include "base/callback.h"
+#include "base/files/file_path.h"
+#include "base/memory/singleton.h"
+
+namespace croslog {
+
+class InotifyReader;
+
+class FileChangeWatcher {
+ public:
+  static FileChangeWatcher* GetInstance();
+
+  // Add a handler to retrieve file change events.
+  virtual bool AddWatch(const base::FilePath& path, base::Closure callback) = 0;
+  // Remove a handler to retrieve file change events.
+  virtual void RemoveWatch(const base::FilePath& path) = 0;
+
+ protected:
+  FileChangeWatcher();
+
+ private:
+  DISALLOW_COPY_AND_ASSIGN(FileChangeWatcher);
+};
+
+}  // namespace croslog
+
+#endif  // CROSLOG_FILE_CHANGE_WATCHER_H_
