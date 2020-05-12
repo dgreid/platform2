@@ -308,9 +308,6 @@ void Camera3DeviceImpl::AddStreamOnThread(int format,
     stream.height = height;
     stream.format = format;
     stream.crop_rotate_scale_degrees = crop_rotate_scale_degrees;
-    if (format == HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED) {
-      stream.usage = GRALLOC_USAGE_HW_COMPOSER | GRALLOC_USAGE_HW_TEXTURE;
-    }
     cur_stream.push_back(stream);
   }
 }
