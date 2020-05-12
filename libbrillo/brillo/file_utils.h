@@ -144,6 +144,48 @@ BRILLO_EXPORT bool WriteBlobToFileAtomic(const base::FilePath& path,
                            blob.size(), mode);
 }
 
+// ComputeDirectoryDiskUsage() is similar to base::ComputeDirectorySize() in
+// libbase, but it returns the actual disk usage instead of the apparent size.
+// In another word, ComputeDirectoryDiskUsage() behaves like "du -s
+// --apparent-size", and ComputeDirectorySize() behaves like "du -s". The
+// primary difference is that sparse file and files on filesystem with
+// transparent compression will report smaller file size than
+// ComputeDirectorySize(). Returns the total used bytes.
+// The following behaviours of this function is guaranteed and is verified by
+// unit tests:
+// - This function recursively processes directory down the tree, so disk space
+// used by files in all the subdirectories are counted.
+// - Symbolic links will not be followed (the size of link itself is counted,
+// the target is not)
+// - Hidden files are counted as well.
+// The following behaviours are not guaranteed, and it is recommended to avoid
+// them in the field. Their current behaviour is provided for reference only:
+// - This function doesn't care about filesystem boundaries, so it'll cross
+// filesystem boundary to count file size if there's one in the specified
+// directory.
+// - Hard links will be treated like normal files, so they could be
+// over-reported.
+// - Directories that the current user doesn't have permission to list/stat will
+// be ignored, and an error will be logged but the returned result could be
+// under-reported without error in the returned value.
+// - Deduplication (should the filesystem support it) is ignored, and the result
+// could be over-reported.
+// - Doesn't check if |root_path| exists, a non-existent directory will results
+// in 0 bytes without any error.
+// - There are no limit on the depth of file system tree, the program will crash
+// if it run out of memory to hold the entire depth of file system tree.
+// - If the directory is modified during this function call, there's no
+// guarantee on if the function will count the updated or original file system
+// state. The function could choose to count the updated state for one file and
+// original state for another file.
+// - Non-POSIX system is not supported.
+// - Disk space used by directory (and its subdirectories) itself is counted.
+//
+// Parameters
+//   root_path - The directory to compute the size for
+BRILLO_EXPORT int64_t
+ComputeDirectoryDiskUsage(const base::FilePath& root_path);
+
 }  // namespace brillo
 
 #endif  // LIBBRILLO_BRILLO_FILE_UTILS_H_

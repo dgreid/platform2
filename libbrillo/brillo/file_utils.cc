@@ -11,6 +11,7 @@
 #include <utility>
 #include <vector>
 
+#include <base/files/file_enumerator.h>
 #include <base/files/file_path.h>
 #include <base/files/file_util.h>
 #include <base/logging.h>
@@ -504,6 +505,21 @@ bool WriteToFileAtomic(const base::FilePath& path,
   }
 
   return true;
+}
+
+int64_t ComputeDirectoryDiskUsage(const base::FilePath& root_path) {
+  int64_t running_blocks = 0;
+  base::FileEnumerator file_iter(root_path, true,
+                                 base::FileEnumerator::FILES |
+                                     base::FileEnumerator::DIRECTORIES |
+                                     base::FileEnumerator::SHOW_SYM_LINKS);
+  while (!file_iter.Next().empty()) {
+    // st_blocks in struct stat is the number of S_BLKSIZE (512) bytes sized
+    // blocks occupied by this file.
+    running_blocks += file_iter.GetInfo().stat().st_blocks;
+  }
+  // Each block is S_BLKSIZE (512) bytes so *S_BLKSIZE.
+  return running_blocks * S_BLKSIZE;
 }
 
 }  // namespace brillo
