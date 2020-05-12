@@ -59,6 +59,8 @@ MockPlatform::MockPlatform()
       .WillByDefault(CallRename());
   ON_CALL(*this, ComputeDirectorySize(_))
       .WillByDefault(CallComputeDirectorySize());
+  ON_CALL(*this, ComputeDirectoryDiskUsage(_))
+      .WillByDefault(CallComputeDirectoryDiskUsage());
   ON_CALL(*this, SetupProcessKeyring())
       .WillByDefault(Return(true));
   ON_CALL(*this, GetDirCryptoKeyState(_))

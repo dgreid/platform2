@@ -362,6 +362,16 @@ class Platform {
   // Returns the directory size if it was acquired, and -1 on failure.
   virtual int64_t ComputeDirectorySize(const base::FilePath& path);
 
+  // Returns the disk usage of a directory at |path| if it exists.
+  // The difference between this and ComputeDirectorySize() is that this
+  // computes the disk space used/occupied by the directory, instead of the
+  // apparent size.
+  //
+  // Parameters
+  //   path - Path of the directory to check
+  // Returns the directory disk usage in bytes.
+  virtual int64_t ComputeDirectoryDiskUsage(const base::FilePath& path);
+
   // Opens a file, if possible, returning a FILE*. If not, returns NULL.
   //
   // Parameters

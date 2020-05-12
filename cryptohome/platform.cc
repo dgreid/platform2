@@ -601,6 +601,10 @@ int64_t Platform::ComputeDirectorySize(const FilePath& path) {
   return base::ComputeDirectorySize(path);
 }
 
+int64_t Platform::ComputeDirectoryDiskUsage(const FilePath& path) {
+  return brillo::ComputeDirectoryDiskUsage(path);
+}
+
 FILE* Platform::CreateAndOpenTemporaryFile(FilePath* path) {
   return base::CreateAndOpenTemporaryFile(path);
 }

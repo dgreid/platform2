@@ -85,6 +85,9 @@ ACTION(CallRename) { return Platform().Rename(arg0, arg1); }
 ACTION(CallComputeDirectorySize) {
   return Platform().ComputeDirectorySize(arg0);
 }
+ACTION(CallComputeDirectoryDiskUsage) {
+  return Platform().ComputeDirectoryDiskUsage(arg0);
+}
 ACTION(CallStatVFS) { return Platform().StatVFS(arg0, arg1); }
 ACTION(CallReportFilesystemDetails) {
   return Platform().ReportFilesystemDetails(arg0, arg1);
@@ -178,6 +181,10 @@ class MockPlatform : public Platform {
   MOCK_METHOD(bool, GetFileSize, (const base::FilePath&, int64_t*), (override));
   MOCK_METHOD(int64_t,
               ComputeDirectorySize,
+              (const base::FilePath&),
+              (override));
+  MOCK_METHOD(int64_t,
+              ComputeDirectoryDiskUsage,
               (const base::FilePath&),
               (override));
   MOCK_METHOD(FILE*,
