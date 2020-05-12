@@ -276,6 +276,13 @@ void DeviceInfo::RegisterDevice(const DeviceRefPtr& device) {
   if (device->technology().IsPrimaryConnectivityTechnology()) {
     manager_->RegisterDevice(device);
   }
+
+  // Provide |device| with any information that was received prior to its
+  // construction/registration.
+  const auto& address = GetPrimaryIPv6Address(device->interface_index());
+  if (address) {
+    device->OnIPv6AddressChanged(address);
+  }
 }
 
 FilePath DeviceInfo::GetDeviceInfoPath(const string& iface_name,
