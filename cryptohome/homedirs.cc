@@ -1602,7 +1602,7 @@ int64_t HomeDirs::ComputeSize(const std::string& account_id) {
     // It's either ephemeral or the user doesn't exist. In either case, we check
     // /home/user/$hash.
     FilePath user_home_dir = brillo::cryptohome::home::GetUserPath(account_id);
-    size = platform_->ComputeDirectorySize(user_home_dir);
+    size = platform_->ComputeDirectoryDiskUsage(user_home_dir);
   } else {
     // Note that we'll need to handle both ecryptfs and dircrypto.
     // dircrypto:
@@ -1616,10 +1616,10 @@ int64_t HomeDirs::ComputeSize(const std::string& account_id) {
     FilePath vault_dir = user_dir.Append(kEcryptfsVaultDir);
     if (platform_->DirectoryExists(vault_dir)) {
       // ecryptfs
-      size = platform_->ComputeDirectorySize(vault_dir);
+      size = platform_->ComputeDirectoryDiskUsage(vault_dir);
     } else {
       // dircrypto
-      size = platform_->ComputeDirectorySize(mount_dir);
+      size = platform_->ComputeDirectoryDiskUsage(mount_dir);
     }
   }
   if (size > 0) {

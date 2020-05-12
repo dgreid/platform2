@@ -298,9 +298,9 @@ TEST_P(HomeDirsTest, ComputeSizeDircrypto) {
 
   constexpr int64_t expected_bytes = 123456789012345;
   constexpr int64_t unexpected_bytes = 98765432154321;
-  EXPECT_CALL(platform_, ComputeDirectorySize(mount_dir))
+  EXPECT_CALL(platform_, ComputeDirectoryDiskUsage(mount_dir))
       .WillOnce(Return(expected_bytes));
-  ON_CALL(platform_, ComputeDirectorySize(vault_dir))
+  ON_CALL(platform_, ComputeDirectoryDiskUsage(vault_dir))
       .WillByDefault(Return(unexpected_bytes));
 
   EXPECT_EQ(expected_bytes, homedirs_.ComputeSize(kDefaultUsers[0].username));
@@ -323,9 +323,9 @@ TEST_P(HomeDirsTest, ComputeSizeEcryptfs) {
 
   constexpr int64_t expected_bytes = 123456789012345;
   constexpr int64_t unexpected_bytes = 98765432154321;
-  EXPECT_CALL(platform_, ComputeDirectorySize(vault_dir))
+  EXPECT_CALL(platform_, ComputeDirectoryDiskUsage(vault_dir))
       .WillOnce(Return(expected_bytes));
-  ON_CALL(platform_, ComputeDirectorySize(mount_dir))
+  ON_CALL(platform_, ComputeDirectoryDiskUsage(mount_dir))
       .WillByDefault(Return(unexpected_bytes));
 
   EXPECT_EQ(expected_bytes, homedirs_.ComputeSize(kDefaultUsers[0].username));
@@ -349,13 +349,13 @@ TEST_P(HomeDirsTest, ComputeSizeEphemeral) {
 
   constexpr int64_t expected_bytes = 123456789012345;
   constexpr int64_t unexpected_bytes = 98765432154321;
-  EXPECT_CALL(platform_, ComputeDirectorySize(user_dir))
+  EXPECT_CALL(platform_, ComputeDirectoryDiskUsage(user_dir))
       .WillOnce(Return(expected_bytes));
-  ON_CALL(platform_, ComputeDirectorySize(mount_dir))
+  ON_CALL(platform_, ComputeDirectoryDiskUsage(mount_dir))
       .WillByDefault(Return(unexpected_bytes));
-  ON_CALL(platform_, ComputeDirectorySize(vault_dir))
+  ON_CALL(platform_, ComputeDirectoryDiskUsage(vault_dir))
       .WillByDefault(Return(unexpected_bytes));
-  ON_CALL(platform_, ComputeDirectorySize(shadow_home))
+  ON_CALL(platform_, ComputeDirectoryDiskUsage(shadow_home))
       .WillByDefault(Return(unexpected_bytes));
 
   EXPECT_EQ(expected_bytes, homedirs_.ComputeSize(kDefaultUsers[0].username));

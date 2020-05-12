@@ -167,6 +167,7 @@ class HomeDirs {
   // Return 0 if the given user is invalid of non-existent.
   // Negative values are reserved for future cases whereby we need to do some
   // form of error reporting.
+  // Note that this method calculates the disk usage instead of apparent size.
   virtual int64_t ComputeSize(const std::string& account_id);
 
   // Returns true if the supplied Credentials are a valid (username, passkey)
