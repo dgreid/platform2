@@ -80,7 +80,6 @@ bool DlcService::Install(const DlcIdList& dlcs,
   if (dlc_manager_->IsInstalling()) {
     *err = Error::Create(FROM_HERE, kErrorBusy,
                          "Another install is already in progress.");
-    LOG(ERROR) << Error::ToString(*err);
     return false;
   }
 
@@ -89,7 +88,6 @@ bool DlcService::Install(const DlcIdList& dlcs,
   if (!GetUpdateEngineStatus(&update_engine_op)) {
     *err = Error::Create(FROM_HERE, kErrorInternal,
                          "Failed to get the status of Update Engine.");
-    LOG(ERROR) << Error::ToString(*err);
     return false;
   }
   switch (update_engine_op) {
@@ -97,14 +95,12 @@ bool DlcService::Install(const DlcIdList& dlcs,
       *err =
           Error::Create(FROM_HERE, kErrorNeedReboot,
                         "Update Engine applied update, device needs a reboot.");
-      LOG(ERROR) << Error::ToString(*err);
       return false;
     case update_engine::IDLE:
       break;
     default:
       *err = Error::Create(FROM_HERE, kErrorBusy,
                            "Update Engine is performing operations.");
-      LOG(ERROR) << Error::ToString(*err);
       return false;
   }
 
@@ -143,7 +139,6 @@ bool DlcService::Install(const DlcIdList& dlcs,
     *err =
         Error::Create(FROM_HERE, kErrorBusy,
                       "Update Engine failed to schedule install operations.");
-    LOG(ERROR) << Error::ToString(*err);
     // dlcservice must cancel the install by communicating to dlc_manager who
     // manages the DLC(s), as update_engine won't be able to install the
     // initialized DLC(s) for installation.
@@ -169,7 +164,6 @@ bool DlcService::Purge(const string& id_in, brillo::ErrorPtr* err) {
     if (!GetUpdateEngineStatus(&op)) {
       *err = Error::Create(FROM_HERE, kErrorInternal,
                            "Failed to get the status of Update Engine");
-      LOG(ERROR) << Error::ToString(*err);
       return false;
     }
     switch (op) {
@@ -179,23 +173,16 @@ bool DlcService::Purge(const string& id_in, brillo::ErrorPtr* err) {
       default:
         *err = Error::Create(FROM_HERE, kErrorBusy,
                              "Install or update is in progress.");
-        LOG(ERROR) << Error::ToString(*err);
         return false;
     }
   }
-  bool ret = dlc_manager_->Delete(id_in, err);
-  if (!ret)
-    LOG(ERROR) << Error::ToString(*err);
-  return ret;
+  return dlc_manager_->Delete(id_in, err);
 }
 
 bool DlcService::GetDlcState(const std::string& id_in,
                              DlcState* dlc_state,
                              ErrorPtr* err) {
-  bool ret = dlc_manager_->GetDlcState(id_in, dlc_state, err);
-  if (!ret)
-    LOG(ERROR) << Error::ToString(*err);
-  return ret;
+  return dlc_manager_->GetDlcState(id_in, dlc_state, err);
 }
 
 DlcIdList DlcService::GetInstalled() {
@@ -211,17 +198,11 @@ DlcIdList DlcService::GetDlcsToUpdate() {
 }
 
 bool DlcService::InstallCompleted(const DlcIdList& ids_in, ErrorPtr* err) {
-  bool ret = dlc_manager_->InstallCompleted(ids_in, err);
-  if (!ret)
-    LOG(ERROR) << Error::ToString(*err);
-  return ret;
+  return dlc_manager_->InstallCompleted(ids_in, err);
 }
 
 bool DlcService::UpdateCompleted(const DlcIdList& ids_in, ErrorPtr* err) {
-  bool ret = dlc_manager_->UpdateCompleted(ids_in, err);
-  if (!ret)
-    LOG(ERROR) << Error::ToString(*err);
-  return ret;
+  return dlc_manager_->UpdateCompleted(ids_in, err);
 }
 
 void DlcService::SendFailedSignalAndCleanup() {
