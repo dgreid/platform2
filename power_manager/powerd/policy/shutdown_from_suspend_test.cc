@@ -15,6 +15,10 @@
 namespace power_manager {
 namespace policy {
 
+namespace {
+constexpr auto kRunLoopDelay = base::TimeDelta::FromMilliseconds(200);
+}
+
 class ShutdownFromSuspendTest : public ::testing::Test {
  public:
   ShutdownFromSuspendTest()
@@ -76,8 +80,7 @@ TEST_F(ShutdownFromSuspendTest, TestShutdownPath) {
   EXPECT_EQ(shutdown_from_suspend_.PrepareForSuspendAttempt(),
             ShutdownFromSuspend::Action::SUSPEND);
   base::TimeDelta run_loop_for =
-      base::TimeDelta::FromSeconds(kShutdownAfterSecs) +
-      base::TimeDelta::FromMilliseconds(1);
+      base::TimeDelta::FromSeconds(kShutdownAfterSecs) + kRunLoopDelay;
   runner_.StartLoop(run_loop_for);
   // Fake a dark resume.
   shutdown_from_suspend_.HandleDarkResume();
@@ -93,8 +96,7 @@ TEST_F(ShutdownFromSuspendTest, TestOnLinePower) {
   Init(true, kShutdownAfterSecs);
   shutdown_from_suspend_.PrepareForSuspendAttempt();
   base::TimeDelta run_loop_for =
-      base::TimeDelta::FromSeconds(kShutdownAfterSecs) +
-      base::TimeDelta::FromMilliseconds(1);
+      base::TimeDelta::FromSeconds(kShutdownAfterSecs) + kRunLoopDelay;
   runner_.StartLoop(run_loop_for);
   // Fake a dark resume.
   shutdown_from_suspend_.HandleDarkResume();
@@ -118,8 +120,7 @@ TEST_F(ShutdownFromSuspendTest, TestFullResume) {
   Init(true, kShutdownAfterSecs);
   shutdown_from_suspend_.PrepareForSuspendAttempt();
   base::TimeDelta run_loop_for =
-      base::TimeDelta::FromSeconds(kShutdownAfterSecs) +
-      base::TimeDelta::FromMilliseconds(1);
+      base::TimeDelta::FromSeconds(kShutdownAfterSecs) + kRunLoopDelay;
   runner_.StartLoop(run_loop_for);
   // Fake a full resume.
   shutdown_from_suspend_.HandleFullResume();
