@@ -1,8 +1,23 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 
-<node name="/org/chromium/SystemProxy"
-      xmlns:tp="http://telepathy.freedesktop.org/wiki/DbusSpec#extensions-v0">
+<node name="/org/chromium/SystemProxy" xmlns:tp="http://telepathy.freedesktop.org/wiki/DbusSpec#extensions-v0">
   <interface name="org.chromium.SystemProxy">
+    <method name="SetAuthenticationDetails">
+      <tp:docstring>
+        Sets the credentails for authenticating system services and ARC++ apps to the remote web proxy and the Kerberos availability flag.
+      </tp:docstring>
+      <arg name="request" type="ay" direction="in">
+        <tp:docstring>
+          Serialized SetAuthenticationDetailsRequest message.
+        </tp:docstring>
+      </arg>
+      <arg name="response" type="ay" direction="out">
+        <tp:docstring>
+          Serialized SetAuthenticationDetailsResponse message.
+        </tp:docstring>
+      </arg>
+      <annotation name="org.chromium.DBus.Method.Kind" value="simple" />
+    </method>
     <method name="SetSystemTrafficCredentials">
       <tp:docstring>
         Sets the credentails for authenticating system services to the remote web proxy.

@@ -43,6 +43,8 @@ class SystemProxyAdaptor : public org::chromium::SystemProxyAdaptor,
           completion_callback);
 
   // org::chromium::SystemProxyInterface: (see org.chromium.SystemProxy.xml).
+  std::vector<uint8_t> SetAuthenticationDetails(
+      const std::vector<uint8_t>& request_blob) override;
   std::vector<uint8_t> SetSystemTrafficCredentials(
       const std::vector<uint8_t>& request_blob) override;
   std::vector<uint8_t> ShutDown() override;
@@ -59,6 +61,7 @@ class SystemProxyAdaptor : public org::chromium::SystemProxyAdaptor,
 
  private:
   friend class SystemProxyAdaptorTest;
+  FRIEND_TEST(SystemProxyAdaptorTest, SetAuthenticationDetails);
   FRIEND_TEST(SystemProxyAdaptorTest, SetSystemTrafficCredentials);
   FRIEND_TEST(SystemProxyAdaptorTest, ShutDown);
   FRIEND_TEST(SystemProxyAdaptorTest, ConnectNamespace);
@@ -71,6 +74,11 @@ class SystemProxyAdaptor : public org::chromium::SystemProxyAdaptor,
   void ShutDownTask();
 
   bool StartWorker(SandboxedWorker* worker, bool user_traffic);
+
+  // Checks if a worker process exists and if not creates one and sends a
+  // request to patchpanel to setup the network namespace for it. Returns true
+  // if the worker exists or was created successfully, false otherwise.
+  bool CreateWorkerIfNeeded(bool user_traffic);
 
   // Called when the patchpanel D-Bus service becomes available.
   void OnPatchpanelServiceAvailable(bool is_available);

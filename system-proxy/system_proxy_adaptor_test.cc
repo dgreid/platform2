@@ -178,6 +178,44 @@ TEST_F(SystemProxyAdaptorTest, SetSystemTrafficCredentials) {
   EXPECT_EQ(config.credentials().password(), kPassword);
 }
 
+TEST_F(SystemProxyAdaptorTest, SetAuthenticationDetails) {
+  EXPECT_CALL(*bus_, GetObjectProxy(patchpanel::kPatchPanelServiceName, _))
+      .WillOnce(Return(mock_patchpanel_proxy_.get()));
+
+  EXPECT_FALSE(adaptor_->system_services_worker_.get());
+  SetAuthenticationDetailsRequest request;
+  Credentials credentials;
+  credentials.set_username(kUser);
+  credentials.set_password(kPassword);
+  *request.mutable_credentials() = credentials;
+  request.set_traffic_type(TrafficOrigin::SYSTEM);
+
+  std::vector<uint8_t> proto_blob(request.ByteSizeLong());
+  request.SerializeToArray(proto_blob.data(), proto_blob.size());
+
+  // First create a worker object.
+  adaptor_->SetAuthenticationDetails(proto_blob);
+  ASSERT_TRUE(brillo_loop_.RunOnce(/*may_block=*/false));
+
+  ASSERT_TRUE(adaptor_->system_services_worker_.get());
+  EXPECT_TRUE(adaptor_->system_services_worker_->IsRunning());
+
+  int fds[2];
+  EXPECT_TRUE(base::CreateLocalNonBlockingPipe(fds));
+  base::ScopedFD read_scoped_fd(fds[0]);
+  // Reset the worker stdin pipe to read the input from the other endpoint.
+  adaptor_->system_services_worker_->stdin_pipe_.reset(fds[1]);
+
+  adaptor_->SetAuthenticationDetails(proto_blob);
+  ASSERT_TRUE(brillo_loop_.RunOnce(/*may_block=*/false));
+
+  worker::WorkerConfigs config;
+  ASSERT_TRUE(ReadProtobuf(read_scoped_fd.get(), &config));
+  EXPECT_TRUE(config.has_credentials());
+  EXPECT_EQ(config.credentials().username(), kUser);
+  EXPECT_EQ(config.credentials().password(), kPassword);
+}
+
 TEST_F(SystemProxyAdaptorTest, ShutDown) {
   EXPECT_CALL(*bus_, GetObjectProxy(patchpanel::kPatchPanelServiceName, _))
       .WillOnce(Return(mock_patchpanel_proxy_.get()));

@@ -21,6 +21,11 @@ namespace system_proxy {
 namespace {
 
 constexpr int kProxyPort = 3128;
+constexpr char kNoCredentialsSpecifiedError[] =
+    "No authentication credentials specified";
+constexpr char kOnlySystemTrafficSupportedError[] =
+    "Only system services traffic is currenly supported";
+constexpr char kFailedToStartWorkerError[] = "Failed to start worker process";
 
 // Serializes |proto| to a vector of bytes.
 std::vector<uint8_t> SerializeProto(
@@ -59,6 +64,52 @@ void SystemProxyAdaptor::RegisterAsync(
   dbus_object_->RegisterAsync(completion_callback);
 }
 
+std::vector<uint8_t> SystemProxyAdaptor::SetAuthenticationDetails(
+    const std::vector<uint8_t>& request_blob) {
+  LOG(INFO) << "Received set authentication details request.";
+
+  SetAuthenticationDetailsRequest request;
+  const std::string error_message =
+      DeserializeProto(FROM_HERE, &request, request_blob);
+
+  SetAuthenticationDetailsResponse response;
+  if (!error_message.empty()) {
+    response.set_error_message(error_message);
+    return SerializeProto(response);
+  }
+
+  if (!request.has_credentials() && !request.has_kerberos_enabled()) {
+    response.set_error_message(kNoCredentialsSpecifiedError);
+    return SerializeProto(response);
+  }
+
+  if (request.traffic_type() != TrafficOrigin::SYSTEM) {
+    response.set_error_message(kOnlySystemTrafficSupportedError);
+    return SerializeProto(response);
+  }
+
+  if (!CreateWorkerIfNeeded(/* user_traffic */ false)) {
+    response.set_error_message(kFailedToStartWorkerError);
+    return SerializeProto(response);
+  }
+
+  if (request.has_credentials()) {
+    if (!request.credentials().has_username() ||
+        !request.credentials().has_password()) {
+      response.set_error_message(kNoCredentialsSpecifiedError);
+      return SerializeProto(response);
+    }
+    brillo::MessageLoop::current()->PostTask(
+        FROM_HERE, base::Bind(&SystemProxyAdaptor::SetCredentialsTask,
+                              weak_ptr_factory_.GetWeakPtr(),
+                              system_services_worker_.get(),
+                              request.credentials().username(),
+                              request.credentials().password()));
+  }
+
+  return SerializeProto(response);
+}
+
 std::vector<uint8_t> SystemProxyAdaptor::SetSystemTrafficCredentials(
     const std::vector<uint8_t>& request_blob) {
   LOG(INFO) << "Received set credentials request.";
@@ -75,27 +126,13 @@ std::vector<uint8_t> SystemProxyAdaptor::SetSystemTrafficCredentials(
 
   if (!request.has_system_services_username() ||
       !request.has_system_services_password()) {
-    response.set_error_message("No credentials specified");
+    response.set_error_message(kNoCredentialsSpecifiedError);
     return SerializeProto(response);
   }
 
-  if (!system_services_worker_) {
-    system_services_worker_ = CreateWorker();
-    if (!StartWorker(system_services_worker_.get(),
-                     /* user_traffic= */ false)) {
-      system_services_worker_.reset();
-
-      response.set_error_message("Failed to start worker process");
-      return SerializeProto(response);
-    }
-    // patchpanel_proxy is owned by |dbus_object_->bus_|.
-    dbus::ObjectProxy* patchpanel_proxy =
-        dbus_object_->GetBus()->GetObjectProxy(
-            patchpanel::kPatchPanelServiceName,
-            dbus::ObjectPath(patchpanel::kPatchPanelServicePath));
-    patchpanel_proxy->WaitForServiceToBeAvailable(
-        base::Bind(&SystemProxyAdaptor::OnPatchpanelServiceAvailable,
-                   weak_ptr_factory_.GetWeakPtr()));
+  if (!CreateWorkerIfNeeded(/* user_traffic */ false)) {
+    response.set_error_message(kFailedToStartWorkerError);
+    return SerializeProto(response);
   }
 
   brillo::MessageLoop::current()->PostTask(
@@ -143,6 +180,31 @@ void SystemProxyAdaptor::GetChromeProxyServersAsync(
 
 std::unique_ptr<SandboxedWorker> SystemProxyAdaptor::CreateWorker() {
   return std::make_unique<SandboxedWorker>(weak_ptr_factory_.GetWeakPtr());
+}
+
+bool SystemProxyAdaptor::CreateWorkerIfNeeded(bool user_traffic) {
+  if (user_traffic) {
+    // Not supported at the moment.
+    return false;
+  }
+  if (system_services_worker_) {
+    return true;
+  }
+
+  system_services_worker_ = CreateWorker();
+  if (!StartWorker(system_services_worker_.get(),
+                   /* user_traffic= */ false)) {
+    system_services_worker_.reset();
+    return false;
+  }
+  // patchpanel_proxy is owned by |dbus_object_->bus_|.
+  dbus::ObjectProxy* patchpanel_proxy = dbus_object_->GetBus()->GetObjectProxy(
+      patchpanel::kPatchPanelServiceName,
+      dbus::ObjectPath(patchpanel::kPatchPanelServicePath));
+  patchpanel_proxy->WaitForServiceToBeAvailable(
+      base::Bind(&SystemProxyAdaptor::OnPatchpanelServiceAvailable,
+                 weak_ptr_factory_.GetWeakPtr()));
+  return true;
 }
 
 void SystemProxyAdaptor::SetCredentialsTask(SandboxedWorker* worker,
