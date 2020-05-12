@@ -156,9 +156,11 @@ class DeviceInfo : public base::SupportsWeakPtr<DeviceInfo> {
     uint64_t rx_bytes;
     uint64_t tx_bytes;
 
-    // This flag indicates that link information has not been retrieved yet;
-    // only the ip_addresses field is valid.
-    bool has_addresses_only;
+    // This flag indicates that a link add RTNL message has been received for
+    // this interface. This is used to behave differently for the first link add
+    // message received for this interface index; |device| is unsuitable because
+    // some interfaces may undergo delayed Device creation.
+    bool received_add_link;
 
     Technology technology;
   };

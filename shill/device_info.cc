@@ -706,13 +706,12 @@ void DeviceInfo::AddLinkMsgHandler(const RTNLMessage& msg) {
     DeregisterDevice(dev_index);
   }
 
-  bool new_device = !base::ContainsKey(infos_, dev_index) ||
-                    infos_[dev_index].has_addresses_only;
+  bool new_device = !infos_[dev_index].received_add_link;
   SLOG(this, 2) << __func__
                 << base::StringPrintf(
                        "(index=%d, flags=0x%x, change=0x%x), new_device=%d",
                        dev_index, flags, change, new_device);
-  infos_[dev_index].has_addresses_only = false;
+  infos_[dev_index].received_add_link = true;
   infos_[dev_index].flags = flags;
 
   RetrieveLinkStatistics(dev_index, msg);
@@ -1138,18 +1137,13 @@ void DeviceInfo::LinkMsgHandler(const RTNLMessage& msg) {
 void DeviceInfo::AddressMsgHandler(const RTNLMessage& msg) {
   SLOG(this, 2) << __func__;
   DCHECK(msg.type() == RTNLMessage::kTypeAddress);
-  int interface_index = msg.interface_index();
-  if (!base::ContainsKey(infos_, interface_index)) {
-    SLOG(this, 2) << "Got advance address information for unknown index "
-                  << interface_index;
-    infos_[interface_index].has_addresses_only = true;
-  }
   const RTNLMessage::AddressStatus& status = msg.address_status();
   IPAddress address(msg.family(),
                     msg.HasAttribute(IFA_LOCAL) ? msg.GetAttribute(IFA_LOCAL)
                                                 : msg.GetAttribute(IFA_ADDRESS),
                     status.prefix_len);
 
+  int interface_index = msg.interface_index();
   SLOG_IF(Device, 2, msg.HasAttribute(IFA_LOCAL))
       << "Found local address attribute for interface " << interface_index;
 
@@ -1429,7 +1423,7 @@ DeviceInfo::Info::Info()
     : flags(0),
       rx_bytes(0),
       tx_bytes(0),
-      has_addresses_only(false),
+      received_add_link(false),
       technology(Technology::kUnknown) {}
 
 }  // namespace shill
