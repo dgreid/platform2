@@ -90,6 +90,9 @@ class DlcServiceUtil : public brillo::Daemon {
     // "--install", "--purge", and "--uninstall" related flags.
     DEFINE_string(dlc_ids, "", "The ID of the DLC.");
 
+    // "--dlc_state" related flags.
+    DEFINE_bool(dlc_state, false, "Get the state of a given DLC.");
+
     // "--list" related flags.
     DEFINE_bool(list, false, "List installed DLC(s).");
     DEFINE_string(dump, "",
@@ -98,10 +101,11 @@ class DlcServiceUtil : public brillo::Daemon {
     brillo::FlagHelper::Init(argc_, argv_, "dlcservice_util");
 
     // Enforce mutually exclusive flags.
-    vector<bool> exclusive_flags = {FLAGS_install, FLAGS_uninstall, FLAGS_list};
+    vector<bool> exclusive_flags = {FLAGS_install, FLAGS_uninstall, FLAGS_list,
+                                    FLAGS_dlc_state};
     if (std::count(exclusive_flags.begin(), exclusive_flags.end(), true) != 1) {
-      LOG(ERROR) << "Only one of --install, --uninstall, --purge, --list must "
-                 << "be set.";
+      LOG(ERROR) << "Only one of --install, --uninstall, --purge, --list, "
+                    "--dlc_state must be set.";
       return EX_SOFTWARE;
     }
 
@@ -153,6 +157,16 @@ class DlcServiceUtil : public brillo::Daemon {
         Quit();
         return EX_OK;
       }
+    }
+
+    // Called with "--dlc_state".
+    if (FLAGS_dlc_state) {
+      dlcservice::DlcState state;
+      if (!GetDlcState(&state))
+        return EX_SOFTWARE;
+      PrintDLCState(FLAGS_dump, state);
+      Quit();
+      return EX_OK;
     }
 
     Quit();
@@ -236,6 +250,25 @@ class DlcServiceUtil : public brillo::Daemon {
     return true;
   }
 
+  // Gets the state of current DLC module.
+  bool GetDlcState(dlcservice::DlcState* state) {
+    brillo::ErrorPtr err;
+    if (!dlc_service_proxy_->GetDlcState(dlc_id_, state, &err)) {
+      LOG(ERROR) << "Failed to get state of DLC " << dlc_id_ << ", "
+                 << ErrorPtrStr(err);
+      return false;
+    }
+    return true;
+  }
+
+  // Prints the DLC state.
+  void PrintDLCState(const string& dump, const dlcservice::DlcState& state) {
+    DictionaryValue dict;
+    dict.SetKey("state", Value(state.state()));
+
+    PrintToFileOrStdout(dump, dict);
+  }
+
   // Retrieves a list of all installed DLC modules. Returns true if the list is
   // retrieved successfully, false otherwise. Sets the given error pointer on
   // failure.
@@ -266,12 +299,18 @@ class DlcServiceUtil : public brillo::Daemon {
   }
 
   // Helper to print to file, or stdout if |path| is empty.
-  void PrintToFileOrStdout(const string& path, const string& content) {
+  void PrintToFileOrStdout(const string& path, const DictionaryValue& dict) {
+    string json;
+    if (!base::JSONWriter::WriteWithOptions(
+            dict, base::JSONWriter::OPTIONS_PRETTY_PRINT, &json)) {
+      LOG(ERROR) << "Failed to write json.";
+      return;
+    }
     if (!path.empty()) {
-      if (!dlcservice::WriteToFile(FilePath(path), content))
+      if (!dlcservice::WriteToFile(FilePath(path), json))
         PLOG(ERROR) << "Failed to write to file " << path;
     } else {
-      std::cout << content;
+      std::cout << json;
     }
   }
 
@@ -317,13 +356,7 @@ class DlcServiceUtil : public brillo::Daemon {
       dict.Set(id, std::move(dlc_info_list));
     }
 
-    string json;
-    if (!base::JSONWriter::WriteWithOptions(
-            dict, base::JSONWriter::OPTIONS_PRETTY_PRINT, &json)) {
-      LOG(ERROR) << "Failed to write json.";
-      return;
-    }
-    PrintToFileOrStdout(dump, json);
+    PrintToFileOrStdout(dump, dict);
   }
 
   std::unique_ptr<DlcServiceInterfaceProxy> dlc_service_proxy_{};
