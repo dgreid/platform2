@@ -326,7 +326,8 @@ In the tables below,
 | Attribute | Type   | RegEx     | Required | Oneof Group | Build-only | Description |
 | --------- | ------ | --------- | -------- | ----------- | ---------- | ----------- |
 | build-properties | [build-properties](#build_properties) |  | True |  | False |  |
-| hardware-features | [hardware-features](#hardware_features) |  | False |  | False |  |
+| hardware-features | [hardware-features](#hardware_features) |  | False |  | False | Defines hardware_features.xml file provided to ARC during initialization.  |
+| media-profiles | [media-profiles](#media_profiles) |  | False |  | False | Defines media_profiles.xml file provided to ARC during initialization.  |
 | scale | integer |  | False |  | False | The screen density value in dpi that will be used for ARC apps. This value should be from the list of DPIs in android cdd. |
 
 ### build-properties
@@ -341,6 +342,12 @@ In the tables below,
 | product | string |  | True |  | False | Product name to report in 'ro.product.name'. This may be the device name, or it can be something else, to allow several devices to be grouped into one product. |
 
 ### hardware-features
+| Attribute | Type   | RegEx     | Required | Oneof Group | Build-only | Description |
+| --------- | ------ | --------- | -------- | ----------- | ---------- | ----------- |
+| build-path | string |  | True |  | True | Source of the file relative to the build system. |
+| system-path | string |  | True |  | False | Installation path for the file on the system image. |
+
+### media-profiles
 | Attribute | Type   | RegEx     | Required | Oneof Group | Build-only | Description |
 | --------- | ------ | --------- | -------- | ----------- | ---------- | ----------- |
 | build-path | string |  | True |  | True | Source of the file relative to the build system. |

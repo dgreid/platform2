@@ -234,7 +234,16 @@ properties:
                       type: string
                       pattern: "(^([a-zA-Z0-9\\.\\-]+,)*[a-zA-Z0-9\\.\\-]+$)|(^\\*$)"
                   additionalProperties: false
-                hardware-features: *system_file_v2
+                hardware-features:
+                  <<: *system_file_v2
+                  description: |
+                    Defines hardware_features.xml file provided to ARC during
+                    initialization.
+                media-profiles:
+                  <<: *system_file_v2
+                  description: |
+                    Defines media_profiles.xml file provided to ARC during
+                    initialization.
                 scale:
                   type: integer
                   description: The screen density value in dpi that will be used
