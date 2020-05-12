@@ -25,7 +25,9 @@ namespace camera3_test {
 
 HalDeviceConnector::HalDeviceConnector(int cam_id, camera3_device_t* cam_device)
     : cam_device_(cam_device),
-      dev_thread_("Camera3TestHalDeviceConnectorThread") {}
+      dev_thread_("Camera3TestHalDeviceConnectorThread") {
+  DETACH_FROM_THREAD(thread_checker_);
+}
 
 HalDeviceConnector::~HalDeviceConnector() {
   int result = -EIO;
@@ -56,7 +58,7 @@ int HalDeviceConnector::Initialize(const camera3_callback_ops_t* callback_ops) {
 
 void HalDeviceConnector::InitializeOnThread(
     const camera3_callback_ops_t* callback_ops, int* result) {
-  ASSERT_TRUE(thread_checker_.CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   if (!cam_device_) {
     *result = -ENODEV;
     return;
@@ -80,7 +82,7 @@ int HalDeviceConnector::ConfigureStreams(
 
 void HalDeviceConnector::ConfigureStreamsOnThread(
     camera3_stream_configuration_t* stream_list, int* result) {
-  ASSERT_TRUE(thread_checker_.CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   if (!cam_device_) {
     *result = -ENODEV;
     return;
@@ -101,7 +103,7 @@ const camera_metadata_t* HalDeviceConnector::ConstructDefaultRequestSettings(
 
 void HalDeviceConnector::ConstructDefaultRequestSettingsOnThread(
     int type, const camera_metadata_t** result) {
-  ASSERT_TRUE(thread_checker_.CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   if (cam_device_) {
     *result =
         cam_device_->ops->construct_default_request_settings(cam_device_, type);
@@ -120,7 +122,7 @@ int HalDeviceConnector::ProcessCaptureRequest(
 
 void HalDeviceConnector::ProcessCaptureRequestOnThread(
     camera3_capture_request_t* request, int* result) {
-  ASSERT_TRUE(thread_checker_.CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   VLOGF_ENTER();
   if (!cam_device_) {
     *result = -ENODEV;
