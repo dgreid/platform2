@@ -878,7 +878,7 @@ bool TestSession(CK_SESSION_HANDLE session) {
       {CKA_CLASS, &class_value, sizeof(class_value)},
   };
 
-  CK_RV result = C_FindObjectsInit(session, attributes, arraysize(attributes));
+  CK_RV result = C_FindObjectsInit(session, attributes, base::size(attributes));
   LOG(INFO) << "C_FindObjectsInit: " << chaps::CK_RVToString(result);
   if (result != CKR_OK) {
     return false;
