@@ -6,6 +6,7 @@
 #define DIAGNOSTICS_COMMON_SYSTEM_BLUETOOTH_CLIENT_H_
 
 #include <string>
+#include <vector>
 
 #include <base/observer_list.h>
 #include <base/observer_list_types.h>
@@ -94,6 +95,26 @@ class BluetoothClient {
 
   BluetoothClient();
   virtual ~BluetoothClient();
+
+  // Returns the list of object paths, in an undefined order, of objects
+  // implementing the bluetooth_adapter::kBluetoothAdapterInterface interface.
+  virtual std::vector<dbus::ObjectPath> GetAdapters() = 0;
+
+  // Returns the list of object paths, in an undefined order, of objects
+  // implementing the bluetooth_device::kBluetoothDeviceInterface interface.
+  virtual std::vector<dbus::ObjectPath> GetDevices() = 0;
+
+  // Returns an AdapterProperties pointer for the given |adapter_path| or NULL
+  // if the object manager has not been informed of that object's existence or
+  // the interface's properties.
+  virtual const AdapterProperties* GetAdapterProperties(
+      const dbus::ObjectPath& adapter_path) = 0;
+
+  // Returns a DeviceProperties pointer for the given |device_path| or NULL if
+  // the object manager has not been informed of that object's existence or
+  // the interface's properties.
+  virtual const DeviceProperties* GetDeviceProperties(
+      const dbus::ObjectPath& device_path) = 0;
 
   void AddObserver(Observer* observer);
   void RemoveObserver(Observer* observer);

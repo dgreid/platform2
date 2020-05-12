@@ -5,6 +5,8 @@
 #ifndef DIAGNOSTICS_COMMON_SYSTEM_FAKE_BLUETOOTH_CLIENT_H_
 #define DIAGNOSTICS_COMMON_SYSTEM_FAKE_BLUETOOTH_CLIENT_H_
 
+#include <vector>
+
 #include <base/macros.h>
 #include <dbus/object_path.h>
 
@@ -16,6 +18,14 @@ class FakeBluetoothClient : public BluetoothClient {
  public:
   FakeBluetoothClient();
   ~FakeBluetoothClient() override;
+
+  // BluetoothClient overrides:
+  std::vector<dbus::ObjectPath> GetAdapters() override;
+  std::vector<dbus::ObjectPath> GetDevices() override;
+  const BluetoothClient::AdapterProperties* GetAdapterProperties(
+      const dbus::ObjectPath& adapter_path) override;
+  const BluetoothClient::DeviceProperties* GetDeviceProperties(
+      const dbus::ObjectPath& device_path) override;
 
   bool HasObserver(Observer* observer) const;
 

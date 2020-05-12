@@ -6,6 +6,7 @@
 #define DIAGNOSTICS_COMMON_SYSTEM_BLUETOOTH_CLIENT_IMPL_H_
 
 #include <string>
+#include <vector>
 
 #include <dbus/bus.h>
 #include <base/memory/ref_counted.h>
@@ -25,6 +26,14 @@ class BluetoothClientImpl final : public BluetoothClient,
  public:
   explicit BluetoothClientImpl(const scoped_refptr<dbus::Bus>& bus);
   ~BluetoothClientImpl();
+
+  // BluetoothClient overrides:
+  std::vector<dbus::ObjectPath> GetAdapters() override;
+  std::vector<dbus::ObjectPath> GetDevices() override;
+  const BluetoothClient::AdapterProperties* GetAdapterProperties(
+      const dbus::ObjectPath& adapter_path) override;
+  const BluetoothClient::DeviceProperties* GetDeviceProperties(
+      const dbus::ObjectPath& device_path) override;
 
   // dbus::ObjectManager::Interface overrides:
   dbus::PropertySet* CreateProperties(

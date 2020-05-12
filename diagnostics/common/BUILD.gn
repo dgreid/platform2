@@ -49,6 +49,7 @@ if (use.test) {
       "mojo_test_utils.cc",
       "system/fake_bluetooth_client.cc",
       "system/fake_powerd_adapter.cc",
+      "system/mock_bluetooth_client.cc",
       "system/mock_debugd_adapter.cc",
     ]
   }

@@ -4,6 +4,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 #include <base/bind.h>
 #include <base/macros.h>
@@ -22,6 +23,7 @@
 #include "diagnostics/common/system/bluetooth_client_impl.h"
 
 using ::testing::_;
+using ::testing::ElementsAreArray;
 using ::testing::Mock;
 using ::testing::NotNull;
 using ::testing::Return;
@@ -195,6 +197,123 @@ class BluetoothClientImplTest : public ::testing::Test {
 
   DISALLOW_COPY_AND_ASSIGN(BluetoothClientImplTest);
 };
+
+TEST_F(BluetoothClientImplTest, GetAdapters) {
+  const std::vector<dbus::ObjectPath> kAdapterPaths = {kAdapterPath};
+  EXPECT_CALL(
+      *object_manager(),
+      GetObjectsWithInterface(bluetooth_adapter::kBluetoothAdapterInterface))
+      .WillOnce(Return(kAdapterPaths));
+
+  std::vector<dbus::ObjectPath> adapter_paths =
+      bluetooth_client()->GetAdapters();
+  EXPECT_THAT(adapter_paths, ElementsAreArray(kAdapterPaths));
+}
+
+TEST_F(BluetoothClientImplTest, GetDevices) {
+  const std::vector<dbus::ObjectPath> kDevicePaths = {kDevicePath};
+  EXPECT_CALL(
+      *object_manager(),
+      GetObjectsWithInterface(bluetooth_device::kBluetoothDeviceInterface))
+      .WillOnce(Return(kDevicePaths));
+
+  std::vector<dbus::ObjectPath> device_paths = bluetooth_client()->GetDevices();
+  EXPECT_THAT(device_paths, ElementsAreArray(kDevicePaths));
+}
+
+TEST_F(BluetoothClientImplTest, GetAdapterProperties) {
+  const auto kProperties = GetAdapterProperties();
+  EXPECT_CALL(*object_manager(),
+              GetProperties(kAdapterPath,
+                            bluetooth_adapter::kBluetoothAdapterInterface))
+      .WillOnce(Return(kProperties.get()));
+
+  auto adapter_properties =
+      bluetooth_client()->GetAdapterProperties(kAdapterPath);
+  ASSERT_TRUE(adapter_properties);
+  EXPECT_THAT(*adapter_properties, AdapterPropertiesEquals(kProperties.get()));
+}
+
+TEST_F(BluetoothClientImplTest, GetAdapterPropertiesNullProperties) {
+  EXPECT_CALL(*object_manager(),
+              GetProperties(kAdapterPath,
+                            bluetooth_adapter::kBluetoothAdapterInterface))
+      .WillOnce(Return(nullptr));
+
+  EXPECT_FALSE(bluetooth_client()->GetAdapterProperties(kAdapterPath));
+}
+
+TEST_F(BluetoothClientImplTest, GetAdapterPropertiesInvalidProperties) {
+  auto properties = GetAdapterProperties();
+  EXPECT_CALL(*object_manager(),
+              GetProperties(kAdapterPath,
+                            bluetooth_adapter::kBluetoothAdapterInterface))
+      .Times(4)
+      .WillRepeatedly(Return(properties.get()));
+
+  properties->address.set_valid(false);
+  EXPECT_FALSE(bluetooth_client()->GetAdapterProperties(kAdapterPath));
+  properties->address.set_valid(true);
+
+  properties->name.set_valid(false);
+  EXPECT_FALSE(bluetooth_client()->GetAdapterProperties(kAdapterPath));
+  properties->name.set_valid(true);
+
+  properties->powered.set_valid(false);
+  EXPECT_FALSE(bluetooth_client()->GetAdapterProperties(kAdapterPath));
+  properties->powered.set_valid(true);
+
+  auto adapter_properties =
+      bluetooth_client()->GetAdapterProperties(kAdapterPath);
+  ASSERT_TRUE(adapter_properties);
+  EXPECT_THAT(*adapter_properties, AdapterPropertiesEquals(properties.get()));
+}
+
+TEST_F(BluetoothClientImplTest, GetDeviceProperties) {
+  const auto kProperties = GetDeviceProperties();
+  EXPECT_CALL(
+      *object_manager(),
+      GetProperties(kDevicePath, bluetooth_device::kBluetoothDeviceInterface))
+      .WillOnce(Return(kProperties.get()));
+
+  auto device_properties = bluetooth_client()->GetDeviceProperties(kDevicePath);
+  ASSERT_TRUE(device_properties);
+  EXPECT_THAT(*device_properties, DevicePropertiesEquals(kProperties.get()));
+}
+
+TEST_F(BluetoothClientImplTest, GetDevicePropertiesNullProperties) {
+  EXPECT_CALL(
+      *object_manager(),
+      GetProperties(kDevicePath, bluetooth_device::kBluetoothDeviceInterface))
+      .WillOnce(Return(nullptr));
+
+  EXPECT_FALSE(bluetooth_client()->GetDeviceProperties(kDevicePath));
+}
+
+TEST_F(BluetoothClientImplTest, GetDevicePropertiesInvalidProperties) {
+  auto properties = GetDeviceProperties();
+  EXPECT_CALL(
+      *object_manager(),
+      GetProperties(kDevicePath, bluetooth_device::kBluetoothDeviceInterface))
+      .Times(4)
+      .WillRepeatedly(Return(properties.get()));
+
+  properties->address.set_valid(false);
+  EXPECT_FALSE(bluetooth_client()->GetDeviceProperties(kDevicePath));
+  properties->address.set_valid(true);
+
+  properties->name.set_valid(false);
+  EXPECT_FALSE(bluetooth_client()->GetDeviceProperties(kDevicePath));
+  properties->name.set_valid(true);
+
+  properties->connected.set_valid(false);
+  EXPECT_FALSE(bluetooth_client()->GetDeviceProperties(kDevicePath));
+  properties->connected.set_valid(true);
+
+  auto device_properties = bluetooth_client()->GetDeviceProperties(kDevicePath);
+  ASSERT_TRUE(device_properties);
+  EXPECT_THAT(*device_properties, DevicePropertiesEquals(properties.get()));
+}
 
 TEST_F(BluetoothClientImplTest, AdapterAddedNullProperties) {
   EXPECT_CALL(*object_manager(), GetProperties(kAdapterPath, _))

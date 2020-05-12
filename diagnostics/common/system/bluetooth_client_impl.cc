@@ -48,6 +48,51 @@ BluetoothClientImpl::~BluetoothClientImpl() {
       bluetooth_device::kBluetoothDeviceInterface);
 }
 
+std::vector<dbus::ObjectPath> BluetoothClientImpl::GetAdapters() {
+  VLOG(3) << __func__;
+
+  return object_manager_->GetObjectsWithInterface(
+      bluetooth_adapter::kBluetoothAdapterInterface);
+}
+
+std::vector<dbus::ObjectPath> BluetoothClientImpl::GetDevices() {
+  VLOG(3) << __func__;
+
+  return object_manager_->GetObjectsWithInterface(
+      bluetooth_device::kBluetoothDeviceInterface);
+}
+
+const BluetoothClient::AdapterProperties*
+BluetoothClientImpl::GetAdapterProperties(
+    const dbus::ObjectPath& adapter_path) {
+  VLOG(3) << __func__ << " " << adapter_path.value();
+
+  auto adapter_properties =
+      static_cast<AdapterProperties*>(object_manager_->GetProperties(
+          adapter_path, bluetooth_adapter::kBluetoothAdapterInterface));
+  if (!adapter_properties || !AreAdapterPropertiesValid(*adapter_properties)) {
+    VLOG(3) << "No valid properties found for " << adapter_path.value();
+    return nullptr;
+  }
+
+  return adapter_properties;
+}
+
+const BluetoothClient::DeviceProperties*
+BluetoothClientImpl::GetDeviceProperties(const dbus::ObjectPath& device_path) {
+  VLOG(3) << __func__ << " " << device_path.value();
+
+  auto device_properties =
+      static_cast<DeviceProperties*>(object_manager_->GetProperties(
+          device_path, bluetooth_device::kBluetoothDeviceInterface));
+  if (!device_properties || !AreDevicePropertiesValid(*device_properties)) {
+    VLOG(3) << "No valid properties found for " << device_path.value();
+    return nullptr;
+  }
+
+  return device_properties;
+}
+
 dbus::PropertySet* BluetoothClientImpl::CreateProperties(
     dbus::ObjectProxy* object_proxy,
     const dbus::ObjectPath& object_path,
