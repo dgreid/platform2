@@ -18,6 +18,7 @@
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_util.h>
 #include <base/strings/stringprintf.h>
+#include <base/sys_info.h>
 #include <brillo/key_value_store.h>
 #include <chromeos/constants/vm_tools.h>
 
@@ -53,17 +54,12 @@ void OneTimeSetup(const Datapath& datapath) {
 
   // Load networking modules needed by Android that are not compiled in the
   // kernel. Android does not allow auto-loading of kernel modules.
-  // These must succeed.
+  // Expected for all kernels.
   if (runner.modprobe_all({
           // The netfilter modules needed by netd for iptables commands.
           "ip6table_filter",
           "ip6t_ipv6header",
           "ip6t_REJECT",
-          // The xfrm modules needed for Android's ipsec APIs.
-          "xfrm4_mode_transport",
-          "xfrm4_mode_tunnel",
-          "xfrm6_mode_transport",
-          "xfrm6_mode_tunnel",
           // The ipsec modules for AH and ESP encryption for ipv6.
           "ah6",
           "esp6",
@@ -71,6 +67,19 @@ void OneTimeSetup(const Datapath& datapath) {
     LOG(ERROR) << "One or more required kernel modules failed to load."
                << " Some Android functionality may be broken.";
   }
+  // The xfrm modules needed for Android's ipsec APIs on kernels < 5.4.
+  int32_t major, minor, fix;
+  base::SysInfo::OperatingSystemVersionNumbers(&major, &minor, &fix);
+  if ((major < 5 || (major == 5 && minor < 4)) && runner.modprobe_all({
+                                                      "xfrm4_mode_transport",
+                                                      "xfrm4_mode_tunnel",
+                                                      "xfrm6_mode_transport",
+                                                      "xfrm6_mode_tunnel",
+                                                  }) != 0) {
+    LOG(ERROR) << "One or more required kernel modules failed to load."
+               << " Some Android functionality may be broken.";
+  }
+
   // Optional modules.
   if (runner.modprobe_all({
           // This module is not available in kernels < 3.18
