@@ -7,14 +7,15 @@
 #include <attestation/proto_bindings/attestation_ca.pb.h>
 #include <attestation/proto_bindings/pca_agent.pb.h>
 #include <base/bind.h>
+#include <base/bind_helpers.h>
 #include <base/callback.h>
 #include <base/message_loop/message_loop.h>
 #include <base/run_loop.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_util.h>
+#include <base/synchronization/waitable_event.h>
 #include <brillo/data_encoding.h>
 #include <brillo/errors/error.h>
-#include <chromeos/libhwsec/message_loop_idle.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #if USE_TPM2
@@ -156,10 +157,11 @@ class AttestationServiceBaseTest : public testing::Test {
         ->mutable_credentials()
         ->mutable_encrypted_endorsement_credentials())[TEST_ACA]
         .set_wrapping_key_id("test");
-    CHECK(service_->Initialize());
     // Run out initialize task(s) to avoid any race conditions with tests that
     // need to change the default setup.
-    WaitUntilIdleForTesting();
+    CHECK(
+        CallAndWait(base::BindOnce(&AttestationService::InitializeWithCallback,
+                                   base::Unretained(service_.get()))));
   }
 
  protected:
@@ -171,10 +173,17 @@ class AttestationServiceBaseTest : public testing::Test {
 
   base::Closure QuitClosure() { return run_loop_.QuitClosure(); }
 
-  void WaitUntilIdleForTesting() {
-    hwsec::MessageLoopIdleEvent idle_event(
-        service_->worker_thread_->message_loop());
-    idle_event.Wait();
+  template <typename T>
+  T CallAndWait(
+      base::OnceCallback<T(AttestationService::InitializeCompleteCallback)>
+          func) {
+    base::WaitableEvent done(base::WaitableEvent::ResetPolicy::AUTOMATIC,
+                             base::WaitableEvent::InitialState::NOT_SIGNALED);
+    T val = std::move(func).Run(
+        base::BindOnce([](base::WaitableEvent* done, bool) { done->Signal(); },
+                       base::Unretained(&done)));
+    done.Wait();
+    return val;
   }
 
   void SetUpIdentity(int identity) {
@@ -327,9 +336,9 @@ TEST_F(AttestationServiceBaseTest, MigrateAttestationDatabase) {
   mock_database_.SaveChanges();
 
   // Simulate login.
-  CHECK(service_->Initialize());
-  WaitUntilIdleForTesting();
-  service_->PrepareForEnrollment();
+  CHECK(CallAndWait(base::BindOnce(&AttestationService::InitializeWithCallback,
+                                   base::Unretained(service_.get()))));
+  service_->PrepareForEnrollment(base::DoNothing());
 
   const auto& const_db = mock_database_.GetProtobuf();
   // The default encrypted endorsement credential has been migrated.
@@ -397,9 +406,9 @@ TEST_F(AttestationServiceBaseTest,
   mock_database_.SaveChanges();
 
   // Simulate login.
-  CHECK(service_->Initialize());
-  WaitUntilIdleForTesting();
-  service_->PrepareForEnrollment();
+  CHECK(CallAndWait(base::BindOnce(&AttestationService::InitializeWithCallback,
+                                   base::Unretained(service_.get()))));
+  service_->PrepareForEnrollment(base::DoNothing());
 
   const auto& const_db = mock_database_.GetProtobuf();
   // The default encrypted endorsement credential has been migrated.
@@ -454,9 +463,9 @@ TEST_F(AttestationServiceBaseTest,
   mock_database_.SaveChanges();
 
   // Simulate second login.
-  CHECK(service_->Initialize());
-  WaitUntilIdleForTesting();
-  service_->PrepareForEnrollment();
+  CHECK(CallAndWait(base::BindOnce(&AttestationService::InitializeWithCallback,
+                                   base::Unretained(service_.get()))));
+  service_->PrepareForEnrollment(base::DoNothing());
 
   const auto& const_db = mock_database_.GetProtobuf();
   // The encrypted endorsement credentials have both been migrated.
@@ -1956,8 +1965,8 @@ TEST_P(AttestationServiceTest, PrepareForEnrollment) {
   // Schedule initialization again to make sure it runs after this point.
   EXPECT_CALL(mock_tpm_utility_, GetNVDataSize(_, _))
       .WillRepeatedly(DoAll(SetArgPointee<1>(9487), Return(true)));
-  CHECK(service_->Initialize());
-  WaitUntilIdleForTesting();
+  CHECK(CallAndWait(base::BindOnce(&AttestationService::InitializeWithCallback,
+                                   base::Unretained(service_.get()))));
   // One identity has been created.
   EXPECT_EQ(1, mock_database_.GetProtobuf().identities().size());
   const AttestationDatabase::Identity& identity_data =
@@ -2006,8 +2015,8 @@ TEST_P(AttestationServiceTest,
       .WillRepeatedly(Return(false));
 
   // Schedule initialization again to make sure it runs after this point.
-  CHECK(service_->Initialize());
-  WaitUntilIdleForTesting();
+  CHECK(CallAndWait(base::BindOnce(&AttestationService::InitializeWithCallback,
+                                   base::Unretained(service_.get()))));
 
   // One identity has been created.
   EXPECT_EQ(1, mock_database_.GetProtobuf().identities().size());
@@ -2045,8 +2054,8 @@ TEST_P(AttestationServiceTest,
       .WillRepeatedly(Return(true));
 
   // Schedule initialization again to make sure it runs after this point.
-  CHECK(service_->Initialize());
-  WaitUntilIdleForTesting();
+  CHECK(CallAndWait(base::BindOnce(&AttestationService::InitializeWithCallback,
+                                   base::Unretained(service_.get()))));
 
   // One identity has been created.
   EXPECT_EQ(1, mock_database_.GetProtobuf().identities().size());
@@ -2078,8 +2087,8 @@ TEST_P(AttestationServiceTest,
       .WillRepeatedly(Return(false));
 
   // Schedule initialization again to make sure it runs after this point.
-  CHECK(service_->Initialize());
-  WaitUntilIdleForTesting();
+  CHECK(CallAndWait(base::BindOnce(&AttestationService::InitializeWithCallback,
+                                   base::Unretained(service_.get()))));
 
   EXPECT_FALSE(mock_database_.GetProtobuf().has_identity_key());
   EXPECT_FALSE(mock_database_.GetProtobuf().has_identity_binding());
@@ -2095,8 +2104,8 @@ TEST_P(AttestationServiceTest, PrepareForEnrollmentNoPublicKey) {
   EXPECT_CALL(mock_tpm_utility_, GetEndorsementPublicKey(_, _))
       .WillRepeatedly(Return(false));
   // Schedule initialization again to make sure it runs after this point.
-  CHECK(service_->Initialize());
-  WaitUntilIdleForTesting();
+  CHECK(CallAndWait(base::BindOnce(&AttestationService::InitializeWithCallback,
+                                   base::Unretained(service_.get()))));
   EXPECT_FALSE(mock_database_.GetProtobuf().has_credentials());
   EXPECT_FALSE(mock_database_.GetProtobuf().has_identity_key());
   EXPECT_FALSE(mock_database_.GetProtobuf().has_identity_binding());
@@ -2110,8 +2119,8 @@ TEST_P(AttestationServiceTest, PrepareForEnrollmentNoCert) {
   EXPECT_CALL(mock_tpm_utility_, GetEndorsementCertificate(_, _))
       .WillRepeatedly(Return(false));
   // Schedule initialization again to make sure it runs after this point.
-  CHECK(service_->Initialize());
-  WaitUntilIdleForTesting();
+  CHECK(CallAndWait(base::BindOnce(&AttestationService::InitializeWithCallback,
+                                   base::Unretained(service_.get()))));
   EXPECT_FALSE(mock_database_.GetProtobuf().has_credentials());
   EXPECT_FALSE(mock_database_.GetProtobuf().has_identity_key());
   EXPECT_FALSE(mock_database_.GetProtobuf().has_identity_binding());
@@ -2125,8 +2134,8 @@ TEST_P(AttestationServiceTest, PrepareForEnrollmentFailAIK) {
   EXPECT_CALL(mock_tpm_utility_, CreateIdentity(_, _))
       .WillRepeatedly(Return(false));
   // Schedule initialization again to make sure it runs after this point.
-  CHECK(service_->Initialize());
-  WaitUntilIdleForTesting();
+  CHECK(CallAndWait(base::BindOnce(&AttestationService::InitializeWithCallback,
+                                   base::Unretained(service_.get()))));
   // No identity was created.
   EXPECT_EQ(0, mock_database_.GetProtobuf().identities().size());
   // And no credentials were stored.
@@ -2139,8 +2148,8 @@ TEST_P(AttestationServiceTest, PrepareForEnrollmentFailQuote) {
   EXPECT_CALL(mock_tpm_utility_, QuotePCR(_, _, _, _, _))
       .WillRepeatedly(Return(false));
   // Schedule initialization again to make sure it runs after this point.
-  CHECK(service_->Initialize());
-  WaitUntilIdleForTesting();
+  CHECK(CallAndWait(base::BindOnce(&AttestationService::InitializeWithCallback,
+                                   base::Unretained(service_.get()))));
   EXPECT_FALSE(mock_database_.GetProtobuf().has_credentials());
   EXPECT_FALSE(mock_database_.GetProtobuf().has_identity_key());
   EXPECT_FALSE(mock_database_.GetProtobuf().has_identity_binding());

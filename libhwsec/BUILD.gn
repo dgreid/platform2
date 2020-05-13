@@ -40,9 +40,7 @@ static_library("libhwsec_test") {
     "//common-mk:nouse_thin_archive",
   ]
   configs -= [ "//common-mk:use_thin_archive" ]
-  sources = [
-    "message_loop_idle.cc",
-  ]
+  sources = []
   if (!use.tpm2) {
     sources += [ "test_utils/tpm1/test_fixture.cc" ]
   }
@@ -78,7 +76,6 @@ if (use.test) {
     ]
     sources = [
       "crypto_utility_test.cc",
-      "message_loop_idle_test.cc",
       "task_dispatching_framework_test.cc",
     ]
     deps = [

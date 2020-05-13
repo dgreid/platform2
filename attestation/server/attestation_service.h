@@ -69,6 +69,7 @@ class AttestationService : public AttestationInterface {
  public:
   using IdentityCertificateMap = google::protobuf::
       Map<int, attestation::AttestationDatabase_IdentityCertificate>;
+  using InitializeCompleteCallback = base::OnceCallback<void(bool)>;
 
   // The index of the first identity.
   static constexpr int kFirstIdentity = 0;
@@ -152,6 +153,9 @@ class AttestationService : public AttestationInterface {
       const GetCertifiedNvIndexRequest& request,
       const GetCertifiedNvIndexCallback& callback) override;
 
+  // Same as initialize but calls callback when tasks finish.
+  bool InitializeWithCallback(InitializeCompleteCallback callback);
+
   // Return the type of the endorsement key (EK).
   KeyType GetEndorsementKeyType() const;
 
@@ -233,7 +237,7 @@ class AttestationService : public AttestationInterface {
   }
 
   // Initialization to be run on the worker thread.
-  void InitializeTask();
+  void InitializeTask(InitializeCompleteCallback callback);
 
   // Checks if |database_| needs to be migrated to the latest data model and
   // do so if needed. Returns true if migration was needed and successful.
@@ -489,7 +493,7 @@ class AttestationService : public AttestationInterface {
   base::Optional<std::string> GetEndorsementCertificate() const;
 
   // Prepares the attestation system for enrollment with an ACA.
-  void PrepareForEnrollment();
+  void PrepareForEnrollment(InitializeCompleteCallback callback);
 
   // Returns an iterator pointing to the identity certificate for the given
   // |identity| and given Privacy CA.

@@ -13,6 +13,7 @@
 
 #include <attestation/proto_bindings/attestation_ca.pb.h>
 #include <base/bind.h>
+#include <base/bind_helpers.h>
 #include <base/callback.h>
 #include <base/hash/sha1.h>
 #include <base/stl_util.h>
@@ -395,6 +396,11 @@ AttestationService::AttestationService(brillo::SecureBlob* abe_data)
     : abe_data_(abe_data), weak_factory_(this) {}
 
 bool AttestationService::Initialize() {
+  return InitializeWithCallback(base::DoNothing());
+}
+
+bool AttestationService::InitializeWithCallback(
+    InitializeCompleteCallback callback) {
   if (!worker_thread_) {
     worker_thread_.reset(new ServiceWorkerThread(this));
     worker_thread_->StartWithOptions(
@@ -411,12 +417,12 @@ bool AttestationService::Initialize() {
     pca_agent_proxy_ = default_pca_agent_proxy_.get();
   }
   worker_thread_->task_runner()->PostTask(
-      FROM_HERE,
-      base::Bind(&AttestationService::InitializeTask, base::Unretained(this)));
+      FROM_HERE, base::BindOnce(&AttestationService::InitializeTask,
+                                base::Unretained(this), std::move(callback)));
   return true;
 }
 
-void AttestationService::InitializeTask() {
+void AttestationService::InitializeTask(InitializeCompleteCallback callback) {
   if (!tpm_utility_) {
     default_tpm_utility_.reset(TpmUtilityFactory::New());
     CHECK(default_tpm_utility_->Initialize());
@@ -454,11 +460,12 @@ void AttestationService::InitializeTask() {
   }
   if (!IsPreparedForEnrollment()) {
     worker_thread_->task_runner()->PostTask(
-        FROM_HERE, base::Bind(&AttestationService::PrepareForEnrollment,
-                              base::Unretained(this)));
+        FROM_HERE, base::BindOnce(&AttestationService::PrepareForEnrollment,
+                                  base::Unretained(this), std::move(callback)));
   } else {
     // Ignore errors. If failed this time, will be re-attempted on next boot.
     tpm_utility_->RemoveOwnerDependency();
+    std::move(callback).Run(false);
   }
 }
 
@@ -1573,15 +1580,18 @@ bool AttestationService::GetSubjectPublicKeyInfo(
   }
 }
 
-void AttestationService::PrepareForEnrollment() {
+void AttestationService::PrepareForEnrollment(
+    InitializeCompleteCallback callback) {
   if (IsPreparedForEnrollment()) {
+    std::move(callback).Run(true);
     return;
   }
   if (!tpm_utility_->IsTpmReady()) {
     // Try again later.
     worker_thread_->task_runner()->PostDelayedTask(
-        FROM_HERE, base::Bind(&AttestationService::PrepareForEnrollment,
-                              base::Unretained(this)),
+        FROM_HERE,
+        base::BindOnce(&AttestationService::PrepareForEnrollment,
+                       base::Unretained(this), std::move(callback)),
         base::TimeDelta::FromSeconds(3));
     return;
   }
@@ -1595,6 +1605,7 @@ void AttestationService::PrepareForEnrollment() {
   if (!tpm_utility_->GetEndorsementPublicKey(key_type, &ek_public_key)) {
     LOG(ERROR) << __func__ << ": Failed to get EK public key with key_type "
                << key_type;
+    std::move(callback).Run(false);
     return;
   }
   LOG(INFO) << "GetEndorsementPublicKey done. (from start: "
@@ -1604,6 +1615,7 @@ void AttestationService::PrepareForEnrollment() {
   if (!tpm_utility_->GetEndorsementCertificate(key_type, &ek_certificate)) {
     LOG(ERROR) << __func__ << ": Failed to get " << GetKeyTypeName(key_type)
                << " EK certificate.";
+    std::move(callback).Run(false);
     return;
   }
   LOG(INFO) << "GetEndorsementCertificate done. (from start: "
@@ -1612,6 +1624,7 @@ void AttestationService::PrepareForEnrollment() {
   // Create a new AIK and PCR quotes for the first identity with default
   // identity features.
   if (CreateIdentity(default_identity_features_) < 0) {
+    std::move(callback).Run(false);
     return;
   }
   LOG(INFO) << "CreateIdentity done. (from start: "
@@ -1629,6 +1642,7 @@ void AttestationService::PrepareForEnrollment() {
 
   if (!database_->SaveChanges()) {
     LOG(ERROR) << "Attestation: Failed to write database.";
+    std::move(callback).Run(false);
     return;
   }
 
@@ -1639,6 +1653,7 @@ void AttestationService::PrepareForEnrollment() {
   base::TimeDelta delta = (base::TimeTicks::Now() - start);
   LOG(INFO) << "Attestation: Prepared successfully (" << delta.InMilliseconds()
             << "ms) with " << GetKeyTypeName(key_type) << " EK.";
+  std::move(callback).Run(true);
 }
 
 int AttestationService::CreateIdentity(int identity_features) {
