@@ -566,14 +566,6 @@ constexpr char kArcCameraServiceInterface[] = "org.chromium.ArcCamera";
 constexpr char kStartServiceMethod[] = "StartService";
 }  // namespace arc_camera
 
-// DEPRECATED, DO NOT USE
-namespace machine_learning {
-constexpr char kMlDecisionServiceName[] = "org.chromium.MlDecisionService";
-constexpr char kMlDecisionServicePath[] = "/org/chromium/MlDecisionService";
-constexpr char kMlDecisionServiceInterface[] = "org.chromium.MlDecisionService";
-constexpr char kShouldDeferScreenDimMethod[] = "ShouldDeferScreenDim";
-}  // namespace machine_learning
-
 namespace modemfwd {
 const char kModemfwdInterface[] = "org.chromium.Modemfwd";
 const char kModemfwdServicePath[] = "/org/chromium/Modemfwd";

@@ -169,9 +169,9 @@ class StateControllerTest : public testing::Test {
         update_engine_proxy_(dbus_wrapper_.GetObjectProxy(
             update_engine::kUpdateEngineServiceName,
             update_engine::kUpdateEngineServicePath)),
-        ml_decision_proxy_(dbus_wrapper_.GetObjectProxy(
-            machine_learning::kMlDecisionServiceName,
-            machine_learning::kMlDecisionServicePath)),
+        ml_decision_proxy_(
+            dbus_wrapper_.GetObjectProxy(chromeos::kMlDecisionServiceName,
+                                         chromeos::kMlDecisionServicePath)),
         now_(base::TimeTicks::FromInternalValue(1000)),
         default_ac_suspend_delay_(base::TimeDelta::FromSeconds(120)),
         default_ac_screen_off_delay_(base::TimeDelta::FromSeconds(100)),
@@ -316,8 +316,9 @@ class StateControllerTest : public testing::Test {
     }
 
     if (proxy == ml_decision_proxy_ &&
-        call->GetInterface() == machine_learning::kMlDecisionServiceInterface &&
-        call->GetMember() == machine_learning::kShouldDeferScreenDimMethod) {
+        call->GetInterface() == chromeos::kMlDecisionServiceInterface &&
+        call->GetMember() ==
+            chromeos::kMlDecisionServiceShouldDeferScreenDimMethod) {
       if (simulate_smart_dim_timeout_)
         return nullptr;
 
@@ -2156,7 +2157,7 @@ TEST_F(StateControllerTest, ScreenDimImminent) {
   const base::TimeDelta kDimImminentDelay =
       kDimDelay - StateController::kScreenDimImminentInterval;
   ASSERT_TRUE(StepTimeAndTriggerTimeout(kDimImminentDelay));
-  EXPECT_EQ(machine_learning::kShouldDeferScreenDimMethod,
+  EXPECT_EQ(chromeos::kMlDecisionServiceShouldDeferScreenDimMethod,
             GetDBusMethodCalls());
   ASSERT_TRUE(StepTimeAndTriggerTimeout(kDimDelay));
   EXPECT_EQ(kScreenDim, delegate_.GetActions());
@@ -2182,7 +2183,7 @@ TEST_F(StateControllerTest, ScreenDimImminent) {
 
   ResetLastStepDelay();
   ASSERT_TRUE(StepTimeAndTriggerTimeout(kScaledDimImminentDelay));
-  EXPECT_EQ(machine_learning::kShouldDeferScreenDimMethod,
+  EXPECT_EQ(chromeos::kMlDecisionServiceShouldDeferScreenDimMethod,
             GetDBusMethodCalls());
   base::RunLoop().RunUntilIdle();
 
@@ -2192,7 +2193,7 @@ TEST_F(StateControllerTest, ScreenDimImminent) {
   controller_.HandleDisplayModeChange(DisplayMode::NORMAL);
   ResetLastStepDelay();
   ASSERT_TRUE(StepTimeAndTriggerTimeout(kDimImminentDelay));
-  EXPECT_EQ(machine_learning::kShouldDeferScreenDimMethod,
+  EXPECT_EQ(chromeos::kMlDecisionServiceShouldDeferScreenDimMethod,
             GetDBusMethodCalls());
   base::RunLoop().RunUntilIdle();
   EXPECT_TRUE(controller_.screen_dim_deferred_for_testing());
@@ -2200,7 +2201,7 @@ TEST_F(StateControllerTest, ScreenDimImminent) {
   // Reset the timer and wait for the screen to be dimmed.
   ResetLastStepDelay();
   ASSERT_TRUE(StepTimeAndTriggerTimeout(kDimImminentDelay));
-  EXPECT_EQ(machine_learning::kShouldDeferScreenDimMethod,
+  EXPECT_EQ(chromeos::kMlDecisionServiceShouldDeferScreenDimMethod,
             GetDBusMethodCalls());
   EXPECT_EQ(kNoActions, delegate_.GetActions());
   ASSERT_TRUE(StepTimeAndTriggerTimeout(kDimDelay));
@@ -2227,7 +2228,7 @@ TEST_F(StateControllerTest, ScreenDimImminent) {
   ASSERT_TRUE(StepTimeAndTriggerTimeout(kDimImminentDelay));
   base::RunLoop().RunUntilIdle();
   EXPECT_FALSE(controller_.screen_dim_deferred_for_testing());
-  EXPECT_EQ(machine_learning::kShouldDeferScreenDimMethod,
+  EXPECT_EQ(chromeos::kMlDecisionServiceShouldDeferScreenDimMethod,
             GetDBusMethodCalls());
 
   // Simulate D-Bus method call timeouts, it shouldn't block subsequent
@@ -2241,7 +2242,8 @@ TEST_F(StateControllerTest, ScreenDimImminent) {
     ResetLastStepDelay();
     ASSERT_TRUE(StepTimeAndTriggerTimeout(kDimImminentDelay));
     base::RunLoop().RunUntilIdle();
-    method_calls.push_back(machine_learning::kShouldDeferScreenDimMethod);
+    method_calls.push_back(
+        chromeos::kMlDecisionServiceShouldDeferScreenDimMethod);
   }
   EXPECT_EQ(base::JoinString(method_calls, ","), GetDBusMethodCalls());
 }
