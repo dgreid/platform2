@@ -23,6 +23,7 @@
 #include "diagnostics/cros_healthd/system/mock_context.h"
 #include "diagnostics/cros_healthd/utils/backlight_utils.h"
 #include "diagnostics/cros_healthd/utils/battery_utils.h"
+#include "diagnostics/cros_healthd/utils/disk_utils.h"
 #include "diagnostics/cros_healthd/utils/fan_utils.h"
 #include "diagnostics/cros_healthd/utils/vpd_utils.h"
 #include "mojo/cros_healthd.mojom.h"
@@ -138,14 +139,15 @@ class CrosHealthdMojoServiceTest : public testing::Test {
   BacklightFetcher backlight_fetcher_{&mock_context_};
   BatteryFetcher battery_fetcher_{&mock_context_};
   CachedVpdFetcher cached_vpd_fetcher_{&mock_context_};
+  DiskFetcher disk_fetcher_;
   FanFetcher fan_fetcher_{&mock_context_};
   BluetoothEventsImpl bluetooth_events_{&mock_context_};
   LidEventsImpl lid_events_{&mock_context_};
   PowerEventsImpl power_events_{&mock_context_};
-  CrosHealthdMojoService service_{&backlight_fetcher_,  &battery_fetcher_,
-                                  &cached_vpd_fetcher_, &fan_fetcher_,
-                                  &bluetooth_events_,   &lid_events_,
-                                  &power_events_,       &routine_service_};
+  CrosHealthdMojoService service_{
+      &backlight_fetcher_, &battery_fetcher_, &cached_vpd_fetcher_,
+      &disk_fetcher_,      &fan_fetcher_,     &bluetooth_events_,
+      &lid_events_,        &power_events_,    &routine_service_};
 };
 
 // Test that we can request the battery capacity routine.

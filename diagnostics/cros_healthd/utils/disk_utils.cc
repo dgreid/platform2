@@ -11,6 +11,7 @@
 #include <sys/ioctl.h>
 #include <sys/mount.h>
 #include <utility>
+#include <vector>
 
 #include <base/files/file_enumerator.h>
 #include <base/optional.h>
@@ -81,63 +82,6 @@ std::vector<base::FilePath> GetNonRemovableBlockDevices(
   return res;
 }
 
-// Gets the size of the drive in bytes and the size of the drive's sectors in
-// bytes, given the /dev node. If the call is successful, base::nullopt is
-// returned. If an error occurred, a ProbeError is returned and neither
-// |size_in_bytes| nor |sector_size_in_bytes| contain valid information.
-base::Optional<mojo_ipc::ProbeErrorPtr> GetDeviceAndSectorSizesInBytes(
-    const base::FilePath& dev_path,
-    uint64_t* size_in_bytes,
-    uint64_t* sector_size_in_bytes) {
-  DCHECK(size_in_bytes);
-  DCHECK(sector_size_in_bytes);
-
-  int fd = open(dev_path.value().c_str(), O_RDONLY, 0);
-  if (fd < 0) {
-    return CreateAndLogProbeError(
-        mojo_ipc::ErrorType::kSystemUtilityError,
-        "Could not open " + dev_path.value() + " for ioctl access");
-  }
-
-  base::ScopedFD scoped_fd(fd);
-
-  // Get the device size.
-  uint64_t size = 0;
-  int res = ioctl(fd, BLKGETSIZE64, &size);
-  if (res != 0) {
-    return CreateAndLogProbeError(mojo_ipc::ErrorType::kSystemUtilityError,
-                                  "Unable to run ioctl(" + std::to_string(fd) +
-                                      ", BLKGETSIZE64, &size) => " +
-                                      std::to_string(res) + " for " +
-                                      dev_path.value());
-  }
-
-  DCHECK_GE(size, 0);
-  VLOG(1) << "Found size of " << dev_path.value() << " is "
-          << std::to_string(size);
-
-  *size_in_bytes = size;
-
-  // Get the sector size.
-  uint64_t sector_size = 0;
-  res = ioctl(fd, BLKSSZGET, &sector_size);
-  if (res != 0) {
-    return CreateAndLogProbeError(mojo_ipc::ErrorType::kSystemUtilityError,
-                                  "Unable to run ioctl(" + std::to_string(fd) +
-                                      ", BLKSSZGET, &sector_size) => " +
-                                      std::to_string(res) + " for " +
-                                      dev_path.value());
-  }
-
-  DCHECK_GE(sector_size, 0);
-  VLOG(1) << "Found sector size of " << dev_path.value() << " is "
-          << std::to_string(sector_size);
-
-  *sector_size_in_bytes = sector_size;
-
-  return base::nullopt;
-}
-
 // Fill the output with a colon-separated list of subsystems. For example,
 // "block:mmc:mmc_host:pci". Similar output is returned by `lsblk -o
 // SUBSYSTEMS`. If the call is successful, |subsystem_output| is populated with
@@ -168,47 +112,6 @@ base::Optional<mojo_ipc::ProbeErrorPtr> GetUdevDeviceSubsystems(
   }
 
   *subsystem_output = base::JoinString(subsystems, ":");
-  return base::nullopt;
-}
-
-// Gets the /dev/... name for |sys_path| output parameter, which should be a
-// /sys/class/block/... name. This utilizes libudev. Also returns the driver
-// |subsystems| output parameter for use in determining the "type" of the block
-// device. If the call is successful, base::nullopt is returned. If an error
-// occurred, a ProbeError is returned and the output parameters do not contain
-// valid information.
-base::Optional<mojo_ipc::ProbeErrorPtr> GatherSysPathRelatedInfo(
-    const base::FilePath& sys_path,
-    base::FilePath* devnode_path,
-    std::string* subsystems) {
-  DCHECK(devnode_path);
-  DCHECK(subsystems);
-
-  udev* udev = udev_new();
-  if (udev == nullptr) {
-    return CreateAndLogProbeError(
-        mojo_ipc::ErrorType::kSystemUtilityError,
-        "Unable to get udev reference when processing " + sys_path.value());
-  }
-
-  udev_device* device =
-      udev_device_new_from_syspath(udev, sys_path.value().c_str());
-  if (device == nullptr) {
-    return CreateAndLogProbeError(
-        mojo_ipc::ErrorType::kSystemUtilityError,
-        "Unable to get udev_device for " + sys_path.value());
-  }
-
-  auto error = GetUdevDeviceSubsystems(device, subsystems);
-  if (error.has_value()) {
-    error.value()->msg = "Unable to get the udev device subsystems for " +
-                         sys_path.value() + ": " + error.value()->msg;
-    return error;
-  }
-
-  *devnode_path = base::FilePath{udev_device_get_devnode(device)};
-  udev_device_unref(device);
-  udev_unref(udev);
   return base::nullopt;
 }
 
@@ -279,7 +182,36 @@ base::Optional<mojo_ipc::ProbeErrorPtr> GetReadWriteStats(
   return base::nullopt;
 }
 
-base::Optional<mojo_ipc::ProbeErrorPtr> FetchNonRemovableBlockDeviceInfo(
+}  // namespace
+
+DiskFetcher::DiskFetcher() = default;
+
+DiskFetcher::~DiskFetcher() = default;
+
+mojo_ipc::NonRemovableBlockDeviceResultPtr
+DiskFetcher::FetchNonRemovableBlockDevicesInfo(const base::FilePath& root) {
+  std::vector<mojo_ipc::NonRemovableBlockDeviceInfoPtr> devices{};
+
+  for (const base::FilePath& sys_path : GetNonRemovableBlockDevices(root)) {
+    VLOG(1) << "Processing the node " << sys_path.value();
+    mojo_ipc::NonRemovableBlockDeviceInfoPtr info;
+    auto error = FetchNonRemovableBlockDeviceInfo(sys_path, &info);
+    if (error.has_value()) {
+      return mojo_ipc::NonRemovableBlockDeviceResult::NewError(
+          std::move(error.value()));
+    }
+    DCHECK_NE(info->path, "");
+    DCHECK_NE(info->size, 0);
+    DCHECK_NE(info->type, "");
+    devices.push_back(std::move(info));
+  }
+
+  return mojo_ipc::NonRemovableBlockDeviceResult::NewBlockDeviceInfo(
+      std::move(devices));
+}
+
+base::Optional<mojo_ipc::ProbeErrorPtr>
+DiskFetcher::FetchNonRemovableBlockDeviceInfo(
     const base::FilePath& sys_path,
     mojo_ipc::NonRemovableBlockDeviceInfoPtr* output_info) {
   DCHECK(output_info);
@@ -329,29 +261,92 @@ base::Optional<mojo_ipc::ProbeErrorPtr> FetchNonRemovableBlockDeviceInfo(
   return base::nullopt;
 }
 
-}  // namespace
+base::Optional<mojo_ipc::ProbeErrorPtr> DiskFetcher::GatherSysPathRelatedInfo(
+    const base::FilePath& sys_path,
+    base::FilePath* devnode_path,
+    std::string* subsystems) {
+  DCHECK(devnode_path);
+  DCHECK(subsystems);
 
-mojo_ipc::NonRemovableBlockDeviceResultPtr FetchNonRemovableBlockDevicesInfo(
-    const base::FilePath& root) {
-  // We'll fill out this |devices| vector with the return value.
-  std::vector<mojo_ipc::NonRemovableBlockDeviceInfoPtr> devices{};
-
-  for (const base::FilePath& sys_path : GetNonRemovableBlockDevices(root)) {
-    VLOG(1) << "Processing the node " << sys_path.value();
-    mojo_ipc::NonRemovableBlockDeviceInfoPtr info;
-    auto error = FetchNonRemovableBlockDeviceInfo(sys_path, &info);
-    if (error.has_value()) {
-      return mojo_ipc::NonRemovableBlockDeviceResult::NewError(
-          std::move(error.value()));
-    }
-    DCHECK_NE(info->path, "");
-    DCHECK_NE(info->size, 0);
-    DCHECK_NE(info->type, "");
-    devices.push_back(std::move(info));
+  udev* udev = udev_new();
+  if (udev == nullptr) {
+    return CreateAndLogProbeError(
+        mojo_ipc::ErrorType::kSystemUtilityError,
+        "Unable to get udev reference when processing " + sys_path.value());
   }
 
-  return mojo_ipc::NonRemovableBlockDeviceResult::NewBlockDeviceInfo(
-      std::move(devices));
+  udev_device* device =
+      udev_device_new_from_syspath(udev, sys_path.value().c_str());
+  if (device == nullptr) {
+    return CreateAndLogProbeError(
+        mojo_ipc::ErrorType::kSystemUtilityError,
+        "Unable to get udev_device for " + sys_path.value());
+  }
+
+  auto error = GetUdevDeviceSubsystems(device, subsystems);
+  if (error.has_value()) {
+    error.value()->msg = "Unable to get the udev device subsystems for " +
+                         sys_path.value() + ": " + error.value()->msg;
+    return error;
+  }
+
+  *devnode_path = base::FilePath{udev_device_get_devnode(device)};
+  udev_device_unref(device);
+  udev_unref(udev);
+  return base::nullopt;
+}
+
+base::Optional<mojo_ipc::ProbeErrorPtr>
+DiskFetcher::GetDeviceAndSectorSizesInBytes(const base::FilePath& dev_path,
+                                            uint64_t* size_in_bytes,
+                                            uint64_t* sector_size_in_bytes) {
+  DCHECK(size_in_bytes);
+  DCHECK(sector_size_in_bytes);
+
+  int fd = open(dev_path.value().c_str(), O_RDONLY, 0);
+  if (fd < 0) {
+    return CreateAndLogProbeError(
+        mojo_ipc::ErrorType::kSystemUtilityError,
+        "Could not open " + dev_path.value() + " for ioctl access");
+  }
+
+  base::ScopedFD scoped_fd(fd);
+
+  // Get the device size.
+  uint64_t size = 0;
+  int res = ioctl(fd, BLKGETSIZE64, &size);
+  if (res != 0) {
+    return CreateAndLogProbeError(mojo_ipc::ErrorType::kSystemUtilityError,
+                                  "Unable to run ioctl(" + std::to_string(fd) +
+                                      ", BLKGETSIZE64, &size) => " +
+                                      std::to_string(res) + " for " +
+                                      dev_path.value());
+  }
+
+  DCHECK_GE(size, 0);
+  VLOG(1) << "Found size of " << dev_path.value() << " is "
+          << std::to_string(size);
+
+  *size_in_bytes = size;
+
+  // Get the sector size.
+  uint64_t sector_size = 0;
+  res = ioctl(fd, BLKSSZGET, &sector_size);
+  if (res != 0) {
+    return CreateAndLogProbeError(mojo_ipc::ErrorType::kSystemUtilityError,
+                                  "Unable to run ioctl(" + std::to_string(fd) +
+                                      ", BLKSSZGET, &sector_size) => " +
+                                      std::to_string(res) + " for " +
+                                      dev_path.value());
+  }
+
+  DCHECK_GE(sector_size, 0);
+  VLOG(1) << "Found sector size of " << dev_path.value() << " is "
+          << std::to_string(sector_size);
+
+  *sector_size_in_bytes = sector_size;
+
+  return base::nullopt;
 }
 
 }  // namespace diagnostics

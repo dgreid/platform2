@@ -29,6 +29,7 @@ CrosHealthdMojoService::CrosHealthdMojoService(
     BacklightFetcher* backlight_fetcher,
     BatteryFetcher* battery_fetcher,
     CachedVpdFetcher* cached_vpd_fetcher,
+    DiskFetcher* disk_fetcher,
     FanFetcher* fan_fetcher,
     BluetoothEvents* bluetooth_events,
     LidEvents* lid_events,
@@ -37,6 +38,7 @@ CrosHealthdMojoService::CrosHealthdMojoService(
     : backlight_fetcher_(backlight_fetcher),
       battery_fetcher_(battery_fetcher),
       cached_vpd_fetcher_(cached_vpd_fetcher),
+      disk_fetcher_(disk_fetcher),
       fan_fetcher_(fan_fetcher),
       bluetooth_events_(bluetooth_events),
       lid_events_(lid_events),
@@ -45,6 +47,7 @@ CrosHealthdMojoService::CrosHealthdMojoService(
   DCHECK(backlight_fetcher_);
   DCHECK(battery_fetcher_);
   DCHECK(cached_vpd_fetcher_);
+  DCHECK(disk_fetcher_);
   DCHECK(fan_fetcher_);
   DCHECK(bluetooth_events_);
   DCHECK(lid_events_);
@@ -234,7 +237,8 @@ void CrosHealthdMojoService::ProbeTelemetryInfo(
       }
       case ProbeCategoryEnum::kNonRemovableBlockDevices: {
         telemetry_info.block_device_result =
-            FetchNonRemovableBlockDevicesInfo(base::FilePath("/"));
+            disk_fetcher_->FetchNonRemovableBlockDevicesInfo(
+                base::FilePath("/"));
         break;
       }
       case ProbeCategoryEnum::kTimezone: {
