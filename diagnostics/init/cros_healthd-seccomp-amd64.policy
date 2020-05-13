@@ -18,7 +18,7 @@ poll: 1
 rt_sigprocmask: 1
 gettid: 1
 getrandom: 1
-ioctl: arg1 == BLKGETSIZE64 || arg1 == TCGETS
+ioctl: arg1 == BLKGETSIZE64 || arg1 == TCGETS || arg1 == BLKSSZGET
 geteuid: 1
 brk: 1
 getuid: 1

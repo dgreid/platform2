@@ -112,11 +112,17 @@ void DisplayBlockDeviceInfo(
   }
 
   const auto& block_devices = block_device_result->get_block_device_info();
-  std::cout << "path,size,type,manfid,name,serial" << std::endl;
+  std::cout << "path,size,type,manfid,name,serial,bytes_read_since_last_boot,"
+               "bytes_written_since_last_boot,read_time_seconds_since_last_"
+               "boot,write_time_seconds_since_last_boot"
+            << std::endl;
   for (const auto& device : block_devices) {
     std::cout << device->path << "," << device->size << "," << device->type
               << "," << device->manufacturer_id << "," << device->name << ","
-              << device->serial << std::endl;
+              << device->serial << "," << device->bytes_read_since_last_boot
+              << "," << device->bytes_written_since_last_boot << ","
+              << device->read_time_seconds_since_last_boot << ","
+              << device->write_time_seconds_since_last_boot << std::endl;
   }
 }
 

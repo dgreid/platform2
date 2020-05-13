@@ -17,6 +17,7 @@
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_split.h>
 #include <base/strings/string_util.h>
+#include <re2/re2.h>
 
 #include "diagnostics/common/file_utils.h"
 #include "diagnostics/cros_healthd/utils/error_utils.h"
@@ -26,6 +27,17 @@ namespace diagnostics {
 namespace {
 
 namespace mojo_ipc = ::chromeos::cros_healthd::mojom;
+
+constexpr char kDevStatFileName[] = "stat";
+
+constexpr char kDevStatRegex[] =
+    R"(\s*\d+\s+\d+\s+(\d+)\s+(\d+)\s+\d+\s+\d+\s+(\d+)\s+(\d+))";
+
+// POD struct which holds the number of sectors read and written by a device.
+struct SectorStats {
+  uint64_t read;
+  uint64_t written;
+};
 
 // Look through all the block devices and find the ones that are explicitly
 // non-removable.
@@ -69,13 +81,17 @@ std::vector<base::FilePath> GetNonRemovableBlockDevices(
   return res;
 }
 
-// Gets the size of the drive in bytes, given the /dev node. If the call is
-// successful, |size_in_bytes| contains the size of the device and base::nullopt
-// is returned. If an error occurred, a ProbeError is returned and
-// |size_in_bytes| does not contain valid information.
-base::Optional<mojo_ipc::ProbeErrorPtr> GetDriveDeviceSizeInBytes(
-    const base::FilePath& dev_path, uint64_t* size_in_bytes) {
+// Gets the size of the drive in bytes and the size of the drive's sectors in
+// bytes, given the /dev node. If the call is successful, base::nullopt is
+// returned. If an error occurred, a ProbeError is returned and neither
+// |size_in_bytes| nor |sector_size_in_bytes| contain valid information.
+base::Optional<mojo_ipc::ProbeErrorPtr> GetDeviceAndSectorSizesInBytes(
+    const base::FilePath& dev_path,
+    uint64_t* size_in_bytes,
+    uint64_t* sector_size_in_bytes) {
   DCHECK(size_in_bytes);
+  DCHECK(sector_size_in_bytes);
+
   int fd = open(dev_path.value().c_str(), O_RDONLY, 0);
   if (fd < 0) {
     return CreateAndLogProbeError(
@@ -84,6 +100,8 @@ base::Optional<mojo_ipc::ProbeErrorPtr> GetDriveDeviceSizeInBytes(
   }
 
   base::ScopedFD scoped_fd(fd);
+
+  // Get the device size.
   uint64_t size = 0;
   int res = ioctl(fd, BLKGETSIZE64, &size);
   if (res != 0) {
@@ -99,6 +117,23 @@ base::Optional<mojo_ipc::ProbeErrorPtr> GetDriveDeviceSizeInBytes(
           << std::to_string(size);
 
   *size_in_bytes = size;
+
+  // Get the sector size.
+  uint64_t sector_size = 0;
+  res = ioctl(fd, BLKSSZGET, &sector_size);
+  if (res != 0) {
+    return CreateAndLogProbeError(mojo_ipc::ErrorType::kSystemUtilityError,
+                                  "Unable to run ioctl(" + std::to_string(fd) +
+                                      ", BLKSSZGET, &sector_size) => " +
+                                      std::to_string(res) + " for " +
+                                      dev_path.value());
+  }
+
+  DCHECK_GE(sector_size, 0);
+  VLOG(1) << "Found sector size of " << dev_path.value() << " is "
+          << std::to_string(sector_size);
+
+  *sector_size_in_bytes = sector_size;
 
   return base::nullopt;
 }
@@ -177,22 +212,102 @@ base::Optional<mojo_ipc::ProbeErrorPtr> GatherSysPathRelatedInfo(
   return base::nullopt;
 }
 
+// When successful, populates |read_time_seconds|, |write_time_seconds| and
+// |sector_stats| with information from the disk corresponding to |sys_path| and
+// returns base::nullopt. On failure, returns an appropriate error, and none of
+// the output variables are valid.
+base::Optional<mojo_ipc::ProbeErrorPtr> GetReadWriteStats(
+    const base::FilePath& sys_path,
+    uint64_t* read_time_seconds,
+    uint64_t* write_time_seconds,
+    SectorStats* sector_stats) {
+  DCHECK(read_time_seconds);
+  DCHECK(write_time_seconds);
+  DCHECK(sector_stats);
+
+  std::string stat_contents;
+  if (!ReadAndTrimString(sys_path, kDevStatFileName, &stat_contents)) {
+    return CreateAndLogProbeError(
+        mojo_ipc::ErrorType::kFileReadError,
+        "Unable to read " + sys_path.Append(kDevStatFileName).value());
+  }
+
+  std::string read_time_ms;
+  std::string write_time_ms;
+  std::string sectors_read;
+  std::string sectors_written;
+  if (!RE2::PartialMatch(stat_contents, kDevStatRegex, &sectors_read,
+                         &read_time_ms, &sectors_written, &write_time_ms)) {
+    return CreateAndLogProbeError(
+        mojo_ipc::ErrorType::kParseError,
+        "Unable to parse " + sys_path.Append(kDevStatFileName).value() + ": " +
+            stat_contents);
+  }
+
+  uint64_t read_time_ms_int;
+  if (!base::StringToUint64(read_time_ms, &read_time_ms_int)) {
+    return CreateAndLogProbeError(
+        mojo_ipc::ErrorType::kParseError,
+        "Failed to convert read_time_ms to unsigned integer: " + read_time_ms);
+  }
+
+  uint64_t write_time_ms_int;
+  if (!base::StringToUint64(write_time_ms, &write_time_ms_int)) {
+    return CreateAndLogProbeError(
+        mojo_ipc::ErrorType::kParseError,
+        "Failed to convert write_time_ms to unsigned integer: " +
+            write_time_ms);
+  }
+
+  if (!base::StringToUint64(sectors_read, &sector_stats->read)) {
+    return CreateAndLogProbeError(
+        mojo_ipc::ErrorType::kParseError,
+        "Failed to convert sectors_read to unsigned integer: " + sectors_read);
+  }
+
+  if (!base::StringToUint64(sectors_written, &sector_stats->written)) {
+    return CreateAndLogProbeError(
+        mojo_ipc::ErrorType::kParseError,
+        "Failed to convert sectors_written to unsigned integer: " +
+            sectors_written);
+  }
+
+  // Convert from ms to seconds.
+  *read_time_seconds = read_time_ms_int / 1000;
+  *write_time_seconds = write_time_ms_int / 1000;
+
+  return base::nullopt;
+}
+
 base::Optional<mojo_ipc::ProbeErrorPtr> FetchNonRemovableBlockDeviceInfo(
     const base::FilePath& sys_path,
     mojo_ipc::NonRemovableBlockDeviceInfoPtr* output_info) {
   DCHECK(output_info);
   mojo_ipc::NonRemovableBlockDeviceInfo info;
 
+  SectorStats sector_stats;
+  auto error = GetReadWriteStats(
+      sys_path, &info.read_time_seconds_since_last_boot,
+      &info.write_time_seconds_since_last_boot, &sector_stats);
+  if (error.has_value())
+    return error;
+
   base::FilePath devnode_path;
-  auto error = GatherSysPathRelatedInfo(sys_path, &devnode_path, &info.type);
+  error = GatherSysPathRelatedInfo(sys_path, &devnode_path, &info.type);
   if (error.has_value())
     return error;
 
   info.path = devnode_path.value();
 
-  error = GetDriveDeviceSizeInBytes(devnode_path, &info.size);
+  uint64_t sector_size;
+  error =
+      GetDeviceAndSectorSizesInBytes(devnode_path, &info.size, &sector_size);
   if (error.has_value())
     return error;
+
+  // Convert from sectors to bytes.
+  info.bytes_written_since_last_boot = sector_size * sector_stats.written;
+  info.bytes_read_since_last_boot = sector_size * sector_stats.read;
 
   const auto device_path = sys_path.Append("device");
 
