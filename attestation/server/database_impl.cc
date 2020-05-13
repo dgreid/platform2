@@ -30,8 +30,8 @@ const mode_t kDatabasePermissions = 0600;
 
 namespace attestation {
 
-DatabaseImpl::DatabaseImpl(CryptoUtility* crypto)
-    : io_(this), crypto_(crypto) {}
+DatabaseImpl::DatabaseImpl(CryptoUtility* crypto, TpmUtility* tpm_utility)
+    : io_(this), crypto_(crypto), tpm_utility_(tpm_utility) {}
 
 DatabaseImpl::~DatabaseImpl() {
   brillo::SecureMemset(base::data(database_key_), 0, database_key_.size());
@@ -130,6 +130,11 @@ bool DatabaseImpl::EncryptProtobuf(std::string* encrypted_output) {
     return false;
   }
   if (database_key_.empty() || sealed_database_key_.empty()) {
+    if (!tpm_utility_->IsPCR0Valid()) {
+      LOG(ERROR) << __func__ << "Invalid PCR0 value, aborting.";
+      return false;
+    }
+
     if (!crypto_->CreateSealedKey(&database_key_, &sealed_database_key_)) {
       LOG(ERROR) << "Failed to generate database key.";
       return false;
@@ -144,6 +149,11 @@ bool DatabaseImpl::EncryptProtobuf(std::string* encrypted_output) {
 }
 
 bool DatabaseImpl::DecryptProtobuf(const std::string& encrypted_input) {
+  if (!tpm_utility_->IsPCR0Valid()) {
+    LOG(ERROR) << __func__ << "Invalid PCR0 value.";
+    // UnsealKey below will fail.
+  }
+
   if (!crypto_->UnsealKey(encrypted_input, &database_key_,
                           &sealed_database_key_)) {
     LOG(ERROR) << "Attestation: Could not unseal decryption key.";

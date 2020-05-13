@@ -446,7 +446,7 @@ void AttestationService::InitializeTask(InitializeCompleteCallback callback) {
   if (database_) {
     existing_database = true;
   } else {
-    default_database_.reset(new DatabaseImpl(crypto_utility_));
+    default_database_.reset(new DatabaseImpl(crypto_utility_, tpm_utility_));
     existing_database = default_database_->Initialize();
     database_ = default_database_.get();
   }
@@ -1563,7 +1563,10 @@ int AttestationService::ChooseTemporalIndex(const std::string& user,
   new_record->set_origin_hash(origin_hash);
   new_record->set_user_hash(user_hash);
   new_record->set_temporal_index(least_used_index);
-  database_->SaveChanges();
+  if (!database_->SaveChanges()) {
+    LOG(ERROR) << "Failed to save attestation db when choosing temporal index";
+    // TODO(louiscollard): Check if any further actions are necessary.
+  }
   return least_used_index;
 }
 
@@ -1602,6 +1605,11 @@ void AttestationService::PrepareForEnrollment(
   }
   base::TimeTicks start = base::TimeTicks::Now();
   LOG(INFO) << "Attestation: Preparing for enrollment...";
+
+  if (!tpm_utility_->IsPCR0Valid()) {
+    LOG(ERROR) << __func__ << "Invalid PCR0 value, aborting.";
+    return;
+  }
 
   KeyType key_type = GetEndorsementKeyType();
 
@@ -1921,6 +1929,11 @@ bool AttestationService::ActivateAttestationKeyInternal(
     }
   }
   if (save_certificate) {
+    if (!tpm_utility_->IsPCR0Valid()) {
+      LOG(ERROR) << __func__ << "Invalid PCR0 value, aborting.";
+      return false;
+    }
+
     int index;
     AttestationDatabase_IdentityCertificate* identity_certificate =
         FindOrCreateIdentityCertificate(identity, aca_type, &index);
@@ -2346,6 +2359,9 @@ void AttestationService::VerifyTask(
   if (!VerifyIdentityBinding(identity_data.identity_binding())) {
     LOG(ERROR) << __func__ << ": Bad identity binding.";
     return;
+  }
+  if (!tpm_utility_->IsPCR0Valid()) {
+    LOG(ERROR) << __func__ << ": Bad PCR0 value.";
   }
   if (!VerifyPCR0Quote(identity_public_key_info,
                        identity_data.pcr_quotes().at(0))) {
@@ -3221,7 +3237,9 @@ void AttestationService::GetEnrollmentIdTask(
       enrollment_id = ComputeEnterpriseEnrollmentId();
       if (!enrollment_id.empty()) {
         database_->GetMutableProtobuf()->set_enrollment_id(enrollment_id);
-        database_->SaveChanges();
+        if (!database_->SaveChanges()) {
+          LOG(WARNING) << __func__ << "Failed to save attestation db.";
+        }
       }
     }
   }

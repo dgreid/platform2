@@ -102,6 +102,9 @@ class TpmUtilityV2 : public TpmUtilityCommon {
                            std::string* public_key_tpm_format,
                            std::string* private_key_blob);
 
+ protected:
+  std::string GetPCRValueForMode(const std::string& mode) override;
+
  private:
   // Gets the specified endorsement key. Returns true on success and provides
   // the |key_handle|.

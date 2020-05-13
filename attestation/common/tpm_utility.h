@@ -133,6 +133,15 @@ class TpmUtility {
   // populates |_pcr_value|.
   virtual bool ReadPCR(uint32_t pcr_index, std::string* pcr_value) = 0;
 
+  // Some older boards are affected by a bug in AP firmware where PCR0 is
+  // extended on resume from S3 (rather than just on initial boot), causing
+  // PCR0 to have an invalid/unexpected value (different from the expected
+  // value immediately after a normal boot).
+  //
+  // This function returns true iff the value of PCR0 is valid. If PCR0
+  // is not valid, then it should not be used (eq quoted or used to seal data).
+  virtual bool IsPCR0Valid() = 0;
+
   // Gets the data size for the NV data at |nv_index| and stores it into
   // |nv_size| if successful. Returns true for success, false otherwise.
   virtual bool GetNVDataSize(uint32_t nv_index, uint16_t* nv_size) const = 0;

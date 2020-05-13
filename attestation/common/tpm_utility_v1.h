@@ -82,6 +82,9 @@ class TpmUtilityV1 : public TpmUtilityCommon {
 
   bool GetRsuDeviceId(std::string* device_id) override;
 
+ protected:
+  std::string GetPCRValueForMode(const std::string& mode) override;
+
  private:
   // Populates |context_handle| with a valid TSS_HCONTEXT and |tpm_handle|
   // with its matching TPM object iff the context can be created and a TPM

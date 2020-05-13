@@ -11,6 +11,7 @@
 #include <string>
 
 #include "attestation/common/crypto_utility.h"
+#include "attestation/common/tpm_utility.h"
 
 namespace attestation {
 
@@ -28,7 +29,7 @@ class DatabaseIO {
 class DatabaseImpl : public Database, public DatabaseIO {
  public:
   // Does not take ownership of pointers.
-  explicit DatabaseImpl(CryptoUtility* crypto);
+  explicit DatabaseImpl(CryptoUtility* crypto, TpmUtility* tpm_utility);
   ~DatabaseImpl() override;
 
   // Reads and decrypts any existing database on disk synchronously. Must be
@@ -60,6 +61,7 @@ class DatabaseImpl : public Database, public DatabaseIO {
   AttestationDatabase protobuf_;
   DatabaseIO* io_;
   CryptoUtility* crypto_;
+  TpmUtility* tpm_utility_;
   std::string database_key_;
   std::string sealed_database_key_;
 };

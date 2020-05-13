@@ -9,6 +9,7 @@
 #include <gtest/gtest.h>
 
 #include "attestation/common/mock_crypto_utility.h"
+#include "attestation/common/mock_tpm_utility.h"
 #include "attestation/server/database_impl.h"
 
 using testing::_;
@@ -29,9 +30,11 @@ class DatabaseImplTest : public testing::Test, public DatabaseIO {
  public:
   ~DatabaseImplTest() override = default;
   void SetUp() override {
-    database_.reset(new DatabaseImpl(&mock_crypto_utility_));
+    database_.reset(
+        new DatabaseImpl(&mock_crypto_utility_, &mock_tpm_utility_));
     database_->set_io(this);
     InitializeFakeData();
+    EXPECT_CALL(mock_tpm_utility_, IsPCR0Valid()).WillRepeatedly(Return(true));
     database_->Initialize();
   }
 
@@ -63,6 +66,7 @@ class DatabaseImplTest : public testing::Test, public DatabaseIO {
   bool fake_persistent_data_readable_{true};
   bool fake_persistent_data_writable_{true};
   NiceMock<MockCryptoUtility> mock_crypto_utility_;
+  NiceMock<MockTpmUtility> mock_tpm_utility_;
   std::unique_ptr<DatabaseImpl> database_;
 };
 
