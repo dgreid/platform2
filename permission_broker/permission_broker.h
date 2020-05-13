@@ -48,6 +48,11 @@ class PermissionBroker : public org::chromium::PermissionBrokerAdaptor,
   bool OpenPath(brillo::ErrorPtr* error,
                 const std::string& in_path,
                 brillo::dbus_utils::FileDescriptor* out_fd) override;
+  bool OpenPathWithDroppedPrivileges(
+      brillo::ErrorPtr* error,
+      const std::string& in_path,
+      uint32_t drop_privileges_mask,
+      brillo::dbus_utils::FileDescriptor* out_fd) override;
   bool RequestTcpPortAccess(uint16_t in_port,
                             const std::string& in_interface,
                             const base::ScopedFD& dbus_fd) override;
@@ -84,6 +89,11 @@ class PermissionBroker : public org::chromium::PermissionBrokerAdaptor,
       uint16_t in_pid,
       int64_t in_delay) override;
   bool IsAdbSideloadingEnabled();
+  bool OpenPathImpl(
+    brillo::ErrorPtr* error,
+    const std::string& in_path,
+    uint32_t drop_privileges_mask,
+    brillo::dbus_utils::FileDescriptor* out_fd);
 
   RuleEngine rule_engine_;
   brillo::dbus_utils::DBusObject dbus_object_;

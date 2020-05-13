@@ -59,7 +59,9 @@ const uint16_t kLinuxFoundationUsbVendorId = 0x1d6b;
 const char kErrorDomainPermissionBroker[] = "permission_broker";
 const char kPermissionDeniedError[] = "permission_denied";
 const char kOpenFailedError[] = "open_failed";
-}
+
+constexpr uint32_t kAllInterfacesMask = ~0U;
+}  // namespace
 
 namespace permission_broker {
 
@@ -108,42 +110,15 @@ bool PermissionBroker::CheckPathAccess(const std::string& in_path) {
 bool PermissionBroker::OpenPath(brillo::ErrorPtr* error,
                                 const std::string& in_path,
                                 brillo::dbus_utils::FileDescriptor* out_fd) {
-  Rule::Result rule_result = rule_engine_.ProcessPath(in_path);
-  if (rule_result != Rule::ALLOW && rule_result != Rule::ALLOW_WITH_LOCKDOWN
-      && rule_result != Rule::ALLOW_WITH_DETACH) {
-    brillo::Error::AddToPrintf(
-        error, FROM_HERE, kErrorDomainPermissionBroker, kPermissionDeniedError,
-        "Permission to open '%s' denied", in_path.c_str());
-    return false;
-  }
+  return OpenPathImpl(error, in_path, kAllInterfacesMask, out_fd);
+}
 
-  base::ScopedFD fd(HANDLE_EINTR(open(in_path.c_str(), O_RDWR)));
-  if (!fd.is_valid()) {
-    brillo::errors::system::AddSystemError(error, FROM_HERE, errno);
-    brillo::Error::AddToPrintf(error, FROM_HERE, kErrorDomainPermissionBroker,
-                                 kOpenFailedError, "Failed to open path '%s'",
-                                 in_path.c_str());
-    return false;
-  }
-
-  uint32_t mask = -1U;
-  if (rule_result == Rule::ALLOW_WITH_LOCKDOWN) {
-    if (ioctl(fd.get(), USBDEVFS_DROP_PRIVILEGES, &mask) < 0) {
-      brillo::errors::system::AddSystemError(error, FROM_HERE, errno);
-      brillo::Error::AddToPrintf(
-          error, FROM_HERE, kErrorDomainPermissionBroker, kOpenFailedError,
-          "USBDEVFS_DROP_PRIVILEGES ioctl failed on '%s'", in_path.c_str());
-      return false;
-    }
-  }
-
-  if (rule_result == Rule::ALLOW_WITH_DETACH) {
-    if (!usb_driver_tracker_.DetachPathFromKernel(fd.get(), in_path))
-      return false;
-  }
-
-  *out_fd = fd.get();
-  return true;
+bool PermissionBroker::OpenPathWithDroppedPrivileges(
+    brillo::ErrorPtr* error,
+    const std::string& in_path,
+    uint32_t drop_privileges_mask,
+    brillo::dbus_utils::FileDescriptor* out_fd) {
+  return OpenPathImpl(error, in_path, drop_privileges_mask, out_fd);
 }
 
 bool PermissionBroker::RequestLoopbackTcpPortLockdown(
@@ -259,5 +234,56 @@ bool PermissionBroker::IsAdbSideloadingEnabled() {
 
   return adb_sideloading_enabled;
 }
+
+bool PermissionBroker::OpenPathImpl(
+    brillo::ErrorPtr* error,
+    const std::string& in_path,
+    uint32_t drop_privileges_mask,
+    brillo::dbus_utils::FileDescriptor* out_fd) {
+  Rule::Result rule_result = rule_engine_.ProcessPath(in_path);
+  if (rule_result != Rule::ALLOW && rule_result != Rule::ALLOW_WITH_LOCKDOWN &&
+      rule_result != Rule::ALLOW_WITH_DETACH) {
+    brillo::Error::AddToPrintf(
+        error, FROM_HERE, kErrorDomainPermissionBroker, kPermissionDeniedError,
+        "Permission to open '%s' denied", in_path.c_str());
+    return false;
+  }
+
+  base::ScopedFD fd(HANDLE_EINTR(open(in_path.c_str(), O_RDWR)));
+  if (!fd.is_valid()) {
+    brillo::errors::system::AddSystemError(error, FROM_HERE, errno);
+    brillo::Error::AddToPrintf(error, FROM_HERE, kErrorDomainPermissionBroker,
+                               kOpenFailedError, "Failed to open path '%s'",
+                               in_path.c_str());
+    return false;
+  }
+
+  if (rule_result == Rule::ALLOW_WITH_DETACH) {
+    if (!usb_driver_tracker_.DetachPathFromKernel(fd.get(), in_path))
+      return false;
+  }
+
+  // When the rule result is ALLOW_WITH_LOCKDOWN and the mask is
+  // |kAllInterfacesMask| (allowing all interfaces), we still call the
+  // USBDEVFS_DROP_PRIVILEGES ioctl.
+  // This prevents the use of the USBDEVFS_DISCONNECT ioctl as well as
+  // USBDEVFS_SETCONFIGURATION and USBDEVFS_RESET when these could be used to
+  // detach a kernel driver by changing the device configuration. That's the
+  // "drop privileges" part.
+  if (rule_result == Rule::ALLOW_WITH_LOCKDOWN ||
+      drop_privileges_mask != kAllInterfacesMask) {
+    if (ioctl(fd.get(), USBDEVFS_DROP_PRIVILEGES, &drop_privileges_mask) < 0) {
+      brillo::errors::system::AddSystemError(error, FROM_HERE, errno);
+      brillo::Error::AddToPrintf(
+          error, FROM_HERE, kErrorDomainPermissionBroker, kOpenFailedError,
+          "USBDEVFS_DROP_PRIVILEGES ioctl failed on '%s'", in_path.c_str());
+      return false;
+    }
+  }
+
+  *out_fd = std::move(fd);
+  return true;
+}
+
 
 }  // namespace permission_broker
