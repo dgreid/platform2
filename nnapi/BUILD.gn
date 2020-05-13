@@ -1,0 +1,42 @@
+# Copyright 2020 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//common-mk/pkg_config.gni")
+
+libcutils_src = "../aosp/system/core/libcutils"
+
+group("all") {
+  deps = [
+    ":libcutils",
+  ]
+  if (use.test) {
+    deps += [ ":libcutils_testrunner" ]
+  }
+}
+
+static_library("libcutils") {
+  include_dirs = [ "${libcutils_src}/include" ]
+  sources = [
+    "${libcutils_src}/config_utils.cpp",
+    "${libcutils_src}/hashmap.cpp",
+    "${libcutils_src}/klog.cpp",
+    "${libcutils_src}/load_file.cpp",
+    "${libcutils_src}/native_handle.cpp",
+    "${libcutils_src}/threads.cpp",
+  ]
+}
+
+if (use.test) {
+  executable("libcutils_testrunner") {
+    configs += [ "//common-mk:test" ]
+    include_dirs = [ "${libcutils_src}/include" ]
+    deps = [
+      ":libcutils",
+      "//common-mk/testrunner:testrunner",
+    ]
+    sources = [
+      "${libcutils_src}/native_handle_test.cpp",
+    ]
+  }
+}
