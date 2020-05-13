@@ -959,25 +959,15 @@ void SmbFilesystem::ReadDirInternal(std::unique_ptr<DirentryRequest> request,
     inode_stat.st_mode = MakeStatModeBits(inode_stat.st_mode);
 
     const base::FilePath entry_path = dir_path.Append(filename);
-    ino_t entry_inode = inode_map_.IncInodeRef(entry_path);
-    // Immediately forget this inode reference. Readdir shouldn't increment
-    // the refcount, and this information is advisory to userspace and not used
-    // by the kernel.
-    bool forgotten = inode_map_.Forget(entry_inode, 1);
+    ino_t entry_inode = inode_map_.GetWeakInode(entry_path);
     if (!request->AddEntry(filename, entry_inode, inode_stat.st_mode,
                            next_offset)) {
       // Response buffer full.
       break;
     }
 
-    if (!forgotten) {
-      // Only cache if the inode still exists. Unfortunately, this will not
-      // cache for newly seen entries, which is likely most new navigations of
-      // large directories. Effectievely rendering this performance optimization
-      // useless.
-      inode_stat = MakeStat(entry_inode, inode_stat);
-      AddCachedInodeStat(inode_stat);
-    }
+    inode_stat = MakeStat(entry_inode, inode_stat);
+    AddCachedInodeStat(inode_stat);
   }
 
   request->ReplyDone();

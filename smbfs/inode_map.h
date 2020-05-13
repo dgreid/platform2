@@ -24,10 +24,21 @@ class InodeMap {
   explicit InodeMap(ino_t root_inode);
   ~InodeMap();
 
+  // Return an inode for |path| without incrementing the refcount. If |path|
+  // does not have a corresponding inode, create a weak inode with a refcount of
+  // 0. The weak inode will not exist for the purpose of any other function
+  // except GetWeakInode() and IncInodeRef(). Namely, GetPath(inode) will return
+  // the empty path, and PathExists(path) will return false.  Future calls to
+  // GetWeakInode() or IncInodeRef() will return the same inode until the inode
+  // is forgotten by calling Forget(). |path| must be an absolute path, and not
+  // contain any relative components (i.e. '.' and '..').
+  ino_t GetWeakInode(const base::FilePath& path);
+
   // Increment the inode refcount for |path| by 1 and return the inode number.
-  // If |path| does not have a corresponding inode, create a new one with a
-  // refcount of 1. |path| must be an absolute path, and not contain any
-  // relative components (i.e. '.' and '..').
+  // If the inode for |path| is weak (see above), return the same inode and set
+  // its refcount to 1. If |path| does not have a corresponding inode, create a
+  // new one with a refcount of 1. |path| must be an absolute path, and not
+  // contain any relative components (i.e. '.' and '..').
   ino_t IncInodeRef(const base::FilePath& path);
 
   // Return the path corresponding to the file |inode|. If the inode does not
@@ -49,6 +60,10 @@ class InodeMap {
 
  private:
   struct Entry;
+
+  // Returns the Entry for |path|. If no existing entry exists, a new one is
+  // created with a refcount of 0.
+  Entry* GetEntryByPath(const base::FilePath& path);
 
   const ino_t root_inode_;
   ino_t seq_num_;

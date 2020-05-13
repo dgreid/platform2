@@ -113,6 +113,13 @@ TEST(InodeMapTest, TestForgetTooMany) {
   EXPECT_DEATH(map.Forget(inode1, 2), "Check failed.*");
 }
 
+TEST(InodeMapTest, TestForgetWeak) {
+  InodeMap map(kRootInode);
+
+  ino_t inode1 = map.GetWeakInode(base::FilePath(kFilePath1));
+  EXPECT_DEATH(map.Forget(inode1, 1), "Check failed.*");
+}
+
 TEST(InodeMapTest, TestUpdatePath) {
   InodeMap map(kRootInode);
 
@@ -131,6 +138,35 @@ TEST(InodeMapTest, TestUpdatePath) {
   EXPECT_NE(inode2, inode1);
   EXPECT_EQ(inode2, map.IncInodeRef(base::FilePath(kFilePath1)));
   EXPECT_EQ(base::FilePath(kFilePath1), map.GetPath(inode2));
+}
+
+TEST(InodeMapTest, TestGetWeakInode) {
+  InodeMap map(kRootInode);
+
+  ino_t inode1 = map.GetWeakInode(base::FilePath(kFilePath1));
+  EXPECT_FALSE(map.PathExists(base::FilePath(kFilePath1)));
+  EXPECT_TRUE(map.GetPath(inode1).empty());
+  ino_t inode2 = map.IncInodeRef(base::FilePath(kFilePath2));
+  EXPECT_TRUE(map.PathExists(base::FilePath(kFilePath2)));
+  EXPECT_GT(inode2, inode1);
+
+  // Return the same inode in future calls to GetWeakInode(). The inode remains
+  // weak.
+  EXPECT_EQ(inode1, map.GetWeakInode(base::FilePath(kFilePath1)));
+  EXPECT_FALSE(map.PathExists(base::FilePath(kFilePath1)));
+  EXPECT_TRUE(map.GetPath(inode1).empty());
+
+  // Solidify the inode.
+  EXPECT_EQ(inode1, map.IncInodeRef(base::FilePath(kFilePath1)));
+  EXPECT_TRUE(map.PathExists(base::FilePath(kFilePath1)));
+  EXPECT_EQ(map.GetPath(inode1), base::FilePath(kFilePath1));
+
+  // Forgetting and creating a new weak inode should return a different inode.
+  EXPECT_TRUE(map.Forget(inode1, 1));
+  ino_t inode3 = map.GetWeakInode(base::FilePath(kFilePath1));
+  EXPECT_FALSE(map.PathExists(base::FilePath(kFilePath1)));
+  EXPECT_TRUE(map.GetPath(inode3).empty());
+  EXPECT_GT(inode3, inode1);
 }
 
 }  // namespace
