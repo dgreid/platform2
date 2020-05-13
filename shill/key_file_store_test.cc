@@ -73,7 +73,6 @@ TEST_F(KeyFileStoreTest, OpenClose) {
   EXPECT_TRUE(store_->IsEmpty());
   ASSERT_TRUE(store_->Open());
   EXPECT_TRUE(store_->key_file_);
-  EXPECT_EQ(1, store_->crypto_.cryptos_.size());
   ASSERT_TRUE(store_->Close());
   EXPECT_FALSE(store_->key_file_);
   FileEnumerator file_enumerator(temp_dir_.GetPath(), false /* not recursive */,

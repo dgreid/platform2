@@ -9,7 +9,6 @@
 
 #include <base/strings/string_util.h>
 
-#include "shill/crypto_des_cbc.h"
 #include "shill/crypto_rot47.h"
 #include "shill/logging.h"
 
@@ -17,22 +16,11 @@ using std::string;
 
 namespace shill {
 
-const char CryptoProvider::kKeyMatterFile[] = "/var/lib/whitelist/owner.key";
-
-CryptoProvider::CryptoProvider() : key_matter_file_(kKeyMatterFile) {}
-
-void CryptoProvider::Init() {
-  cryptos_.clear();
-
-  // Register the crypto modules in priority order -- highest priority first.
-  auto des_cbc = std::make_unique<CryptoDesCbc>();
-  if (des_cbc->LoadKeyMatter(key_matter_file_)) {
-    cryptos_.push_back(std::move(des_cbc));
-  }
+CryptoProvider::CryptoProvider() {
   cryptos_.push_back(std::make_unique<CryptoRot47>());
 }
 
-string CryptoProvider::Encrypt(const string& plaintext) const {
+base::Optional<string> CryptoProvider::Encrypt(const string& plaintext) const {
   for (auto& crypto : cryptos_) {
     string ciphertext;
     if (crypto->Encrypt(plaintext, &ciphertext)) {
@@ -40,11 +28,11 @@ string CryptoProvider::Encrypt(const string& plaintext) const {
       return prefix + ciphertext;
     }
   }
-  LOG(WARNING) << "Unable to encrypt text, returning as is.";
-  return plaintext;
+  LOG(ERROR) << "Failed to encrypt string";
+  return base::nullopt;
 }
 
-string CryptoProvider::Decrypt(const string& ciphertext) const {
+base::Optional<string> CryptoProvider::Decrypt(const string& ciphertext) const {
   for (auto& crypto : cryptos_) {
     const string prefix = crypto->GetId() + ":";
     if (base::StartsWith(ciphertext, prefix, base::CompareCase::SENSITIVE)) {
@@ -58,8 +46,8 @@ string CryptoProvider::Decrypt(const string& ciphertext) const {
       return plaintext;
     }
   }
-  LOG(WARNING) << "Unable to decrypt text, returning as is.";
-  return ciphertext;
+  LOG(ERROR) << "Failed to decrypt string";
+  return base::nullopt;
 }
 
 }  // namespace shill

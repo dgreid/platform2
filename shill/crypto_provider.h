@@ -9,45 +9,36 @@
 #include <string>
 #include <vector>
 
-#include <base/files/file_path.h>
-#include <gtest/gtest_prod.h>  // for FRIEND_TEST
+#include <base/optional.h>
 
 #include "shill/crypto_interface.h"
 
 namespace shill {
 
+// Top-level class for encryption and decryption. Provides backwards
+// compatibility for ease of creating new crypto modules and gracefully
+// migrating data from older to newer modules.
 class CryptoProvider {
  public:
   CryptoProvider();
 
-  void Init();
+  // CryptoProvider is not copyable or movable.
+  CryptoProvider(const CryptoProvider&) = delete;
+  CryptoProvider& operator=(const CryptoProvider&) = delete;
 
   // Returns |plaintext| encrypted by the highest priority available crypto
   // module capable of performing the operation. If no module succeeds, returns
-  // |plaintext| as is.
-  std::string Encrypt(const std::string& plaintext) const;
+  // base::nullopt.
+  base::Optional<std::string> Encrypt(const std::string& plaintext) const;
 
   // Returns |ciphertext| decrypted by the highest priority available crypto
   // module capable of performing the operation. If no module succeeds, returns
-  // |ciphertext| as is.
-  std::string Decrypt(const std::string& ciphertext) const;
-
-  void set_key_matter_file(const base::FilePath& path) {
-    key_matter_file_ = path;
-  }
+  // base::nullopt.
+  base::Optional<std::string> Decrypt(const std::string& ciphertext) const;
 
  private:
-  FRIEND_TEST(CryptoProviderTest, Init);
-  FRIEND_TEST(KeyFileStoreTest, OpenClose);
-
-  static const char kKeyMatterFile[];
-
   // Registered crypto modules in high to low priority order.
   std::vector<std::unique_ptr<CryptoInterface>> cryptos_;
-
-  base::FilePath key_matter_file_;
-
-  DISALLOW_COPY_AND_ASSIGN(CryptoProvider);
 };
 
 }  // namespace shill

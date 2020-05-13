@@ -408,7 +408,6 @@ bool KeyFileStore::IsEmpty() const {
 
 bool KeyFileStore::Open() {
   CHECK(!key_file_);
-  crypto_.Init();
   if (IsEmpty()) {
     LOG(INFO) << "Creating a new key file at " << path_.value();
     base::File f(path_, base::File::FLAG_CREATE_ALWAYS | base::File::FLAG_READ |
@@ -666,7 +665,11 @@ bool KeyFileStore::GetCryptedString(const string& group,
     return false;
   }
   if (value) {
-    *value = crypto_.Decrypt(*value);
+    auto plaintext = crypto_.Decrypt(*value);
+    if (!plaintext.has_value()) {
+      return false;
+    }
+    *value = std::move(plaintext).value();
   }
   return true;
 }
@@ -674,7 +677,9 @@ bool KeyFileStore::GetCryptedString(const string& group,
 bool KeyFileStore::SetCryptedString(const string& group,
                                     const string& key,
                                     const string& value) {
-  return SetString(group, key, crypto_.Encrypt(value));
+  auto ciphertext = crypto_.Encrypt(value);
+  CHECK(ciphertext.has_value());
+  return SetString(group, key, std::move(ciphertext).value());
 }
 
 bool KeyFileStore::DoesGroupMatchProperties(
