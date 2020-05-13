@@ -13,7 +13,7 @@
 #include <base/files/file_path.h>
 #include <gtest/gtest_prod.h>  // for FRIEND_TEST
 
-#include "shill/crypto_provider.h"
+#include "shill/crypto.h"
 #include "shill/store_interface.h"
 
 namespace shill {
@@ -92,7 +92,6 @@ class KeyFileStore : public StoreInterface {
   bool DoesGroupMatchProperties(const std::string& group,
                                 const KeyValueStore& properties) const;
 
-  CryptoProvider crypto_;
   std::unique_ptr<KeyFile> key_file_;
   const base::FilePath path_;
 

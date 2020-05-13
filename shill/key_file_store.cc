@@ -395,7 +395,7 @@ class KeyFileStore::KeyFile {
 const char KeyFileStore::kCorruptSuffix[] = ".corrupted";
 
 KeyFileStore::KeyFileStore(const base::FilePath& path)
-    : crypto_(), key_file_(nullptr), path_(path) {
+    : key_file_(nullptr), path_(path) {
   CHECK(!path_.empty());
 }
 
@@ -665,7 +665,7 @@ bool KeyFileStore::GetCryptedString(const string& group,
     return false;
   }
   if (value) {
-    auto plaintext = crypto_.Decrypt(*value);
+    auto plaintext = Crypto::Decrypt(*value);
     if (!plaintext.has_value()) {
       return false;
     }
@@ -677,9 +677,7 @@ bool KeyFileStore::GetCryptedString(const string& group,
 bool KeyFileStore::SetCryptedString(const string& group,
                                     const string& key,
                                     const string& value) {
-  auto ciphertext = crypto_.Encrypt(value);
-  CHECK(ciphertext.has_value());
-  return SetString(group, key, std::move(ciphertext).value());
+  return SetString(group, key, Crypto::Encrypt(value));
 }
 
 bool KeyFileStore::DoesGroupMatchProperties(
