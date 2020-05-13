@@ -151,6 +151,21 @@ constexpr char kZygotePreloadDoneFile[] = ".preload_done";
 constexpr const char* kBinFmtMiscEntryNames[] = {"arm_dyn", "arm_exe",
                                                  "arm64_dyn", "arm64_exe"};
 
+
+// These are board-specific configuration settings, which are managed through
+// the chromeos-config architecture.
+// For details, see:
+// https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/chromeos-config/#arc
+//
+// Board-specific config files are automatically managed/generated via project config repos.
+// For details, see:
+// https://chromium.googlesource.com/chromiumos/config/
+// For an example, see:
+// https://chromium.googlesource.com/chromiumos/config/+/refs/heads/master/test/project/fake/fake/sw_build_config/platform/chromeos-config/generated/arc/
+constexpr char kHardwareFeaturesSetting[] = "/arc/hardware-features";
+constexpr char kMediaProfilesSetting[] = "/arc/media-profiles";
+constexpr char kSystemPath[] = "system-path";
+
 constexpr uid_t kHostRootUid = 0;
 constexpr gid_t kHostRootGid = 0;
 
@@ -840,28 +855,45 @@ void ArcSetup::ApplyPerBoardConfigurations() {
 
 void ArcSetup::ApplyPerBoardConfigurationsInternal(
     const base::FilePath& oem_mount_directory) {
-  // Detect camera device and generate camera profiles.
-  const base::FilePath generate_camera_profile(
-      "/usr/bin/generate_camera_profile");
-  if (base::PathExists(generate_camera_profile)) {
-    EXIT_IF(!LaunchAndWait({generate_camera_profile.value()}));
+  auto config = std::make_unique<brillo::CrosConfig>();
+  config->Init();
 
-    const base::FilePath generated_media_profile_xml =
-        base::FilePath(arc_paths_->camera_profile_dir)
-            .Append(arc_paths_->media_profile_file);
+  base::FilePath media_profile_xml =
+      base::FilePath(arc_paths_->camera_profile_dir)
+          .Append(arc_paths_->media_profile_file);
+
+  std::string media_profile_setting;
+  if (config->GetString(kMediaProfilesSetting, kSystemPath,
+                        &media_profile_setting)) {
+    media_profile_xml = base::FilePath(media_profile_setting);
+  } else {
+    // TODO(chromium:1083652) Remove dynamic shell scripts once all overlays
+    // are migrated to static XML config.
+    const base::FilePath generate_camera_profile(
+        "/usr/bin/generate_camera_profile");
+    if (base::PathExists(generate_camera_profile))
+      EXIT_IF(!LaunchAndWait({generate_camera_profile.value()}));
+  }
+
+  if (base::PathExists(media_profile_xml)) {
     const base::FilePath new_media_profile_xml =
         base::FilePath(oem_mount_directory)
             .Append("etc")
             .Append(arc_paths_->media_profile_file);
-    if (base::PathExists(generated_media_profile_xml)) {
-      EXIT_IF(
-          !base::CopyFile(generated_media_profile_xml, new_media_profile_xml));
-      EXIT_IF(
-          !Chown(kHostArcCameraUid, kHostArcCameraGid, new_media_profile_xml));
-    }
+    EXIT_IF(
+        !base::CopyFile(media_profile_xml, new_media_profile_xml));
+    EXIT_IF(
+        !Chown(kHostArcCameraUid, kHostArcCameraGid, new_media_profile_xml));
   }
 
-  const base::FilePath hardware_features_xml("/etc/hardware_features.xml");
+  base::FilePath hardware_features_xml("/etc/hardware_features.xml");
+
+  std::string hw_feature_setting;
+  if (config->GetString(kHardwareFeaturesSetting, kSystemPath,
+                        &hw_feature_setting)) {
+    hardware_features_xml = base::FilePath(hw_feature_setting);
+  }
+
   if (!base::PathExists(hardware_features_xml))
     return;
 
@@ -870,6 +902,8 @@ void ArcSetup::ApplyPerBoardConfigurationsInternal(
           .Append(arc_paths_->platform_xml_file_relative);
   EXIT_IF(!base::CopyFile(hardware_features_xml, platform_xml_file));
 
+  // TODO(chromium:1083652) Remove dynamic shell scripts once all overlays
+  // are migrated to static XML config.
   const base::FilePath board_hardware_features(
       "/usr/sbin/board_hardware_features");
   if (!base::PathExists(board_hardware_features))
