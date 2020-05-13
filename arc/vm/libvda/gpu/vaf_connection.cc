@@ -32,6 +32,9 @@
 #include <mojo/public/cpp/system/platform_handle.h>
 #include <sys/eventfd.h>
 
+#include "arc/vm/libvda/gpu/mojom/video_decode_accelerator.mojom.h"
+#include "arc/vm/libvda/gpu/mojom/video_encode_accelerator.mojom.h"
+
 namespace arc {
 
 namespace {

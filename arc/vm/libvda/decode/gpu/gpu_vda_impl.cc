@@ -29,6 +29,7 @@
 
 #include "arc/vm/libvda/gbm_util.h"
 #include "arc/vm/libvda/gpu/format_util.h"
+#include "arc/vm/libvda/gpu/mojom/video_decode_accelerator.mojom.h"
 
 namespace arc {
 namespace {
