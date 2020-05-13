@@ -160,16 +160,16 @@ int main(int argc, char* argv[]) {
   brillo::InitLog(flags);
   // read whole abe_data_file before we init minijail.
   std::string abe_data_hex = ReadAbeDataFileContents();
-  brillo::SecureBlob abe_data;
-  if (!GetAttestationEnrollmentData(abe_data_hex, &abe_data)) {
-    LOG(ERROR) << "Invalid attestation-based enterprise enrollment data.";
-  }
   // Reads the system salt before we init minijail.
   if (!brillo::cryptohome::home::EnsureSystemSaltIsLoaded()) {
     LOG(FATAL) << "Failed to ensure system salt to be loaded into memory.";
   }
 
   PLOG_IF(FATAL, daemon(0, 0) == -1) << "Failed to daemonize";
+  brillo::SecureBlob abe_data;
+  if (!GetAttestationEnrollmentData(abe_data_hex, &abe_data)) {
+    LOG(ERROR) << "Invalid attestation-based enterprise enrollment data.";
+  }
   AttestationDaemon daemon(abe_data, ReadGoogleKeysIfExists());
   LOG(INFO) << "Attestation Daemon Started.";
   InitMinijailSandbox();
