@@ -111,11 +111,14 @@ class CrosConfigHostTest(unittest.TestCase):
   def testGetArcFiles(self):
     config = CrosConfig(self.filepath)
     arc_files = config.GetArcFiles()
-    self.assertEqual(
-        arc_files,
-        [BaseFile(
-            source='some/hardware_features',
-            dest='/usr/share/chromeos-config/sbin/some/hardware_features')])
+    self.assertEqual(arc_files, [
+        BaseFile(
+            source='some/hardware_features.xml',
+            dest='/etc/some_hardware_features.xml'),
+        BaseFile(
+            source='some/media_profiles.xml',
+            dest='/etc/some_media_profiles.xml'),
+    ])
 
   def testGetBluetoothFiles(self):
     config = CrosConfig(self.filepath)

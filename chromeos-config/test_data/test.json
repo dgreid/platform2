@@ -10,7 +10,10 @@
             "product": "some"
           },
           "hardware-features": {
-            "system-path": "/usr/share/chromeos-config/sbin/some/hardware_features"
+            "system-path": "/etc/some_hardware_features.xml"
+          },
+          "media-profiles": {
+            "system-path": "/etc/some_media_profiles.xml"
           }
         },
         "audio": {
@@ -75,7 +78,10 @@
             "product": "some"
           },
           "hardware-features": {
-            "system-path": "/usr/share/chromeos-config/sbin/some/hardware_features"
+            "system-path": "/etc/some_hardware_features.xml"
+          },
+          "media-profiles": {
+            "system-path": "/etc/some_media_profiles.xml"
           }
         },
         "audio": {
@@ -166,7 +172,10 @@
             "product": "whitelabel"
           },
           "hardware-features": {
-            "system-path": "/usr/share/chromeos-config/sbin/some/hardware_features"
+            "system-path": "/etc/some_hardware_features.xml"
+          },
+          "media-profiles": {
+            "system-path": "/etc/some_media_profiles.xml"
           }
         },
         "bluetooth": {
@@ -218,7 +227,10 @@
             "product": "whitelabel"
           },
           "hardware-features": {
-            "system-path": "/usr/share/chromeos-config/sbin/some/hardware_features"
+            "system-path": "/etc/some_hardware_features.xml"
+          },
+          "media-profiles": {
+            "system-path": "/etc/some_media_profiles.xml"
           }
         },
         "bluetooth": {
@@ -270,7 +282,10 @@
             "product": "whitelabel"
           },
           "hardware-features": {
-            "system-path": "/usr/share/chromeos-config/sbin/some/hardware_features"
+            "system-path": "/etc/some_hardware_features.xml"
+          },
+          "media-profiles": {
+            "system-path": "/etc/some_media_profiles.xml"
           }
         },
         "bluetooth": {
@@ -322,7 +337,10 @@
             "product": "whitelabel"
           },
           "hardware-features": {
-            "system-path": "/usr/share/chromeos-config/sbin/some/hardware_features"
+            "system-path": "/etc/some_hardware_features.xml"
+          },
+          "media-profiles": {
+            "system-path": "/etc/some_media_profiles.xml"
           }
         },
         "bluetooth": {

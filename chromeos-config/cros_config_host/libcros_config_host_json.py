@@ -97,11 +97,15 @@ class DeviceConfigJson(DeviceConfig):
     return result
 
   def _GetSystemFileV2(self, path):
-    config = self.GetProperties(path)
-    if config:
-      return [BaseFile(config['build-path'], config['system-path'])]
-    else:
-      return []
+    return self._GetSystemFilesV2([path])
+
+  def _GetSystemFilesV2(self, paths):
+    result = []
+    for path in paths:
+      config = self.GetProperties(path)
+      if config:
+        result.append(BaseFile(config['build-path'], config['system-path']))
+    return result
 
   def GetFirmwareConfig(self):
     firmware = self.GetProperties('/firmware')
@@ -119,7 +123,9 @@ class DeviceConfigJson(DeviceConfig):
     return self._GetSymlinkedFiles('/detachable-base')
 
   def GetArcFiles(self):
-    return self._GetSystemFileV2('/arc/hardware-features')
+    return self._GetSystemFilesV2([
+        '/arc/hardware-features',
+        '/arc/media-profiles'])
 
   def GetAudioFiles(self):
     return self._GetFiles('/audio/main')

@@ -40,8 +40,11 @@ some_base_config: &some_base_config
   name: "{{$name}}"
   arc:
     hardware-features:
-      build-path: "some/hardware_features"
-      system-path: "/usr/share/chromeos-config/sbin/some/hardware_features"
+      build-path: "some/hardware_features.xml"
+      system-path: "/etc/some_hardware_features.xml"
+    media-profiles:
+      build-path: "some/media_profiles.xml"
+      system-path: "/etc/some_media_profiles.xml"
     build-properties:
       first-api-level: "27"
       product: "{{$name}}"
