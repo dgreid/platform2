@@ -83,6 +83,7 @@ enum {
   PROPERTY_WM_TRANSIENT_FOR,
   PROPERTY_WM_NORMAL_HINTS,
   PROPERTY_WM_CLIENT_LEADER,
+  PROPERTY_WM_PROTOCOLS,
   PROPERTY_MOTIF_WM_HINTS,
   PROPERTY_NET_STARTUP_ID,
   PROPERTY_NET_WM_STATE,
@@ -401,8 +402,10 @@ static void sl_set_input_focus(struct sl_context* ctx,
     if (!window->managed)
       return;
 
-    xcb_send_event(ctx->connection, 0, window->id, XCB_EVENT_MASK_NO_EVENT,
-                   (char*)&event);
+    if (window->focus_model_take_focus) {
+      xcb_send_event(ctx->connection, 0, window->id, XCB_EVENT_MASK_NO_EVENT,
+                     (char*)&event);
+    }
 
     xcb_set_input_focus(ctx->connection, XCB_INPUT_FOCUS_NONE, window->id,
                         XCB_CURRENT_TIME);
@@ -1437,6 +1440,7 @@ static void sl_create_window(struct sl_context* ctx,
   window->startup_id = NULL;
   window->dark_frame = 0;
   window->size_flags = P_POSITION;
+  window->focus_model_take_focus = 0;
   window->min_width = 0;
   window->min_height = 0;
   window->max_width = 0;
@@ -1608,6 +1612,7 @@ static void sl_handle_map_request(struct sl_context* ctx,
       {PROPERTY_WM_TRANSIENT_FOR, XCB_ATOM_WM_TRANSIENT_FOR},
       {PROPERTY_WM_NORMAL_HINTS, XCB_ATOM_WM_NORMAL_HINTS},
       {PROPERTY_WM_CLIENT_LEADER, ctx->atoms[ATOM_WM_CLIENT_LEADER].value},
+      {PROPERTY_WM_PROTOCOLS, ctx->atoms[ATOM_WM_PROTOCOLS].value},
       {PROPERTY_MOTIF_WM_HINTS, ctx->atoms[ATOM_MOTIF_WM_HINTS].value},
       {PROPERTY_NET_STARTUP_ID, ctx->atoms[ATOM_NET_STARTUP_ID].value},
       {PROPERTY_NET_WM_STATE, ctx->atoms[ATOM_NET_WM_STATE].value},
@@ -1694,6 +1699,15 @@ static void sl_handle_map_request(struct sl_context* ctx,
       case PROPERTY_WM_CLIENT_LEADER:
         if (xcb_get_property_value_length(reply) >= 4)
           window->client_leader = *((uint32_t*)xcb_get_property_value(reply));
+        break;
+      case PROPERTY_WM_PROTOCOLS:
+        reply_atoms = xcb_get_property_value(reply);
+        for (i = 0;
+             i < xcb_get_property_value_length(reply) / sizeof(xcb_atom_t);
+             ++i) {
+          if (reply_atoms[i] == ctx->atoms[ATOM_WM_TAKE_FOCUS].value)
+            window->focus_model_take_focus = 1;
+        }
         break;
       case PROPERTY_MOTIF_WM_HINTS:
         if (xcb_get_property_value_length(reply) >= sizeof(mwm_hints))

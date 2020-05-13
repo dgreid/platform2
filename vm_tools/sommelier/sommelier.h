@@ -470,6 +470,7 @@ struct sl_window {
   char* startup_id;
   int dark_frame;
   uint32_t size_flags;
+  int focus_model_take_focus;
   int min_width;
   int min_height;
   int max_width;
