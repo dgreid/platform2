@@ -42,6 +42,8 @@ constexpr std::pair<const char*,
         {"fan", chromeos::cros_healthd::mojom::ProbeCategoryEnum::kFan},
         {"stateful_partition",
          chromeos::cros_healthd::mojom::ProbeCategoryEnum::kStatefulPartition},
+        {"bluetooth",
+         chromeos::cros_healthd::mojom::ProbeCategoryEnum::kBluetooth},
 };
 
 std::string ErrorTypeToString(chromeos::cros_healthd::mojom::ErrorType type) {
@@ -123,6 +125,22 @@ void DisplayBlockDeviceInfo(
               << "," << device->bytes_written_since_last_boot << ","
               << device->read_time_seconds_since_last_boot << ","
               << device->write_time_seconds_since_last_boot << std::endl;
+  }
+}
+
+void DisplayBluetoothInfo(
+    const chromeos::cros_healthd::mojom::BluetoothResultPtr& bluetooth_result) {
+  if (bluetooth_result->is_error()) {
+    DisplayError(bluetooth_result->get_error());
+    return;
+  }
+
+  const auto& adapters = bluetooth_result->get_bluetooth_adapter_info();
+  std::cout << "name,address,powered,num_connected_devices" << std::endl;
+  for (const auto& adapter : adapters) {
+    std::cout << adapter->name << "," << adapter->address << ","
+              << (adapter->powered ? "true" : "false") << ","
+              << adapter->num_connected_devices << std::endl;
   }
 }
 
@@ -318,6 +336,10 @@ void DisplayTelemetryInfo(
   const auto& stateful_partition_result = info->stateful_partition_result;
   if (stateful_partition_result)
     DisplayStatefulPartitionInfo(stateful_partition_result);
+
+  const auto& bluetooth_result = info->bluetooth_result;
+  if (bluetooth_result)
+    DisplayBluetoothInfo(bluetooth_result);
 }
 
 // Create a stringified list of the category names for use in help.

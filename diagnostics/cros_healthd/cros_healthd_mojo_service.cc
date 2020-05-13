@@ -28,6 +28,7 @@ namespace mojo_ipc = ::chromeos::cros_healthd::mojom;
 CrosHealthdMojoService::CrosHealthdMojoService(
     BacklightFetcher* backlight_fetcher,
     BatteryFetcher* battery_fetcher,
+    BluetoothFetcher* bluetooth_fetcher,
     CachedVpdFetcher* cached_vpd_fetcher,
     DiskFetcher* disk_fetcher,
     FanFetcher* fan_fetcher,
@@ -37,6 +38,7 @@ CrosHealthdMojoService::CrosHealthdMojoService(
     CrosHealthdRoutineService* routine_service)
     : backlight_fetcher_(backlight_fetcher),
       battery_fetcher_(battery_fetcher),
+      bluetooth_fetcher_(bluetooth_fetcher),
       cached_vpd_fetcher_(cached_vpd_fetcher),
       disk_fetcher_(disk_fetcher),
       fan_fetcher_(fan_fetcher),
@@ -46,6 +48,7 @@ CrosHealthdMojoService::CrosHealthdMojoService(
       routine_service_(routine_service) {
   DCHECK(backlight_fetcher_);
   DCHECK(battery_fetcher_);
+  DCHECK(bluetooth_fetcher_);
   DCHECK(cached_vpd_fetcher_);
   DCHECK(disk_fetcher_);
   DCHECK(fan_fetcher_);
@@ -262,6 +265,11 @@ void CrosHealthdMojoService::ProbeTelemetryInfo(
       case ProbeCategoryEnum::kStatefulPartition: {
         telemetry_info.stateful_partition_result =
             FetchStatefulPartitionInfo(base::FilePath("/"));
+        break;
+      }
+      case ProbeCategoryEnum::kBluetooth: {
+        telemetry_info.bluetooth_result =
+            bluetooth_fetcher_->FetchBluetoothInfo();
         break;
       }
     }

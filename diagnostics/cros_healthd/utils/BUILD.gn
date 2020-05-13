@@ -30,6 +30,7 @@ source_set("libcros_healthd_utils") {
   sources = [
     "backlight_utils.cc",
     "battery_utils.cc",
+    "bluetooth_utils.cc",
     "cpu_file_helpers.cc",
     "cpu_utils.cc",
     "disk_utils.cc",
@@ -66,6 +67,7 @@ if (use.test) {
     sources = [
       "backlight_utils_test.cc",
       "battery_utils_test.cc",
+      "bluetooth_utils_test.cc",
       "cpu_file_helpers_test.cc",
       "cpu_utils_test.cc",
       "fan_utils_test.cc",

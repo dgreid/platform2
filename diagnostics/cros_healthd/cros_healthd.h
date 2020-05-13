@@ -23,6 +23,7 @@
 #include "diagnostics/cros_healthd/system/context.h"
 #include "diagnostics/cros_healthd/utils/backlight_utils.h"
 #include "diagnostics/cros_healthd/utils/battery_utils.h"
+#include "diagnostics/cros_healthd/utils/bluetooth_utils.h"
 #include "diagnostics/cros_healthd/utils/disk_utils.h"
 #include "diagnostics/cros_healthd/utils/fan_utils.h"
 #include "diagnostics/cros_healthd/utils/vpd_utils.h"
@@ -85,6 +86,8 @@ class CrosHealthd final
   // and regular) by using the available D-Bus proxies. It also uses
   // |cros_config_| to determine which of those metrics a device supports.
   std::unique_ptr<BatteryFetcher> battery_fetcher_;
+  // |bluetooth_fetcher_| is responsible for collecting Bluetooth information.
+  std::unique_ptr<BluetoothFetcher> bluetooth_fetcher_;
   // |cached_vpd_fetcher_| is responsible for collecting cached VPD metrics and
   // uses |cros_config_| to determine which of those metrics a device supports.
   std::unique_ptr<CachedVpdFetcher> cached_vpd_fetcher_;

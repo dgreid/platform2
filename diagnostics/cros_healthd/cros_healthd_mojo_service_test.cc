@@ -23,6 +23,7 @@
 #include "diagnostics/cros_healthd/system/mock_context.h"
 #include "diagnostics/cros_healthd/utils/backlight_utils.h"
 #include "diagnostics/cros_healthd/utils/battery_utils.h"
+#include "diagnostics/cros_healthd/utils/bluetooth_utils.h"
 #include "diagnostics/cros_healthd/utils/disk_utils.h"
 #include "diagnostics/cros_healthd/utils/fan_utils.h"
 #include "diagnostics/cros_healthd/utils/vpd_utils.h"
@@ -126,9 +127,17 @@ class CrosHealthdMojoServiceTest : public testing::Test {
  protected:
   CrosHealthdMojoServiceTest() { mojo::core::Init(); }
 
-  void SetUp() override { ASSERT_TRUE(mock_context_.Initialize()); }
+  void SetUp() override {
+    ASSERT_TRUE(mock_context_.Initialize());
+    bluetooth_fetcher_ =
+        std::make_unique<BluetoothFetcher>(mock_context_.bluetooth_client());
+    service_ = std::make_unique<CrosHealthdMojoService>(
+        &backlight_fetcher_, &battery_fetcher_, bluetooth_fetcher_.get(),
+        &cached_vpd_fetcher_, &disk_fetcher_, &fan_fetcher_, &bluetooth_events_,
+        &lid_events_, &power_events_, &routine_service_);
+  }
 
-  CrosHealthdMojoService* service() { return &service_; }
+  CrosHealthdMojoService* service() { return service_.get(); }
 
   MockCrosHealthdRoutineService* routine_service() { return &routine_service_; }
 
@@ -138,16 +147,14 @@ class CrosHealthdMojoServiceTest : public testing::Test {
   MockContext mock_context_;
   BacklightFetcher backlight_fetcher_{&mock_context_};
   BatteryFetcher battery_fetcher_{&mock_context_};
+  std::unique_ptr<BluetoothFetcher> bluetooth_fetcher_;
   CachedVpdFetcher cached_vpd_fetcher_{&mock_context_};
   DiskFetcher disk_fetcher_;
   FanFetcher fan_fetcher_{&mock_context_};
   BluetoothEventsImpl bluetooth_events_{&mock_context_};
   LidEventsImpl lid_events_{&mock_context_};
   PowerEventsImpl power_events_{&mock_context_};
-  CrosHealthdMojoService service_{
-      &backlight_fetcher_, &battery_fetcher_, &cached_vpd_fetcher_,
-      &disk_fetcher_,      &fan_fetcher_,     &bluetooth_events_,
-      &lid_events_,        &power_events_,    &routine_service_};
+  std::unique_ptr<CrosHealthdMojoService> service_;
 };
 
 // Test that we can request the battery capacity routine.

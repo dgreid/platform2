@@ -34,6 +34,9 @@ CrosHealthd::CrosHealthd()
 
   battery_fetcher_ = std::make_unique<BatteryFetcher>(&context_);
 
+  bluetooth_fetcher_ =
+      std::make_unique<BluetoothFetcher>(context_.bluetooth_client());
+
   cached_vpd_fetcher_ = std::make_unique<CachedVpdFetcher>(&context_);
 
   disk_fetcher_ = std::make_unique<DiskFetcher>();
@@ -51,9 +54,9 @@ CrosHealthd::CrosHealthd()
 
   mojo_service_ = std::make_unique<CrosHealthdMojoService>(
       backlight_fetcher_.get(), battery_fetcher_.get(),
-      cached_vpd_fetcher_.get(), disk_fetcher_.get(), fan_fetcher_.get(),
-      bluetooth_events_.get(), lid_events_.get(), power_events_.get(),
-      routine_service_.get());
+      bluetooth_fetcher_.get(), cached_vpd_fetcher_.get(), disk_fetcher_.get(),
+      fan_fetcher_.get(), bluetooth_events_.get(), lid_events_.get(),
+      power_events_.get(), routine_service_.get());
 
   binding_set_.set_connection_error_handler(
       base::Bind(&CrosHealthd::OnDisconnect, base::Unretained(this)));
