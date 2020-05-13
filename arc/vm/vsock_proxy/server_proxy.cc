@@ -22,9 +22,10 @@
 #include <base/files/scoped_file.h>
 #include <base/logging.h>
 #include <base/posix/eintr_wrapper.h>
+#include <base/posix/unix_domain_socket.h>
+#include <base/stl_util.h>
 #include <base/synchronization/waitable_event.h>
 #include <base/threading/thread_task_runner_handle.h>
-#include <base/posix/unix_domain_socket.h>
 #include <brillo/userdb_utils.h>
 
 #include "arc/vm/vsock_proxy/file_descriptor_util.h"
@@ -179,7 +180,7 @@ bool ServerProxy::Initialize() {
       {.fd = vsock.get(), .events = POLLIN},
       {.fd = virtwl_socket_.get(), .events = POLLIN},
   };
-  if (HANDLE_EINTR(poll(fds, arraysize(fds), -1)) == -1) {
+  if (HANDLE_EINTR(poll(fds, base::size(fds), -1)) == -1) {
     PLOG(ERROR) << "poll() failed";
     return false;
   }
