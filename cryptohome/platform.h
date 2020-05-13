@@ -355,17 +355,9 @@ class Platform {
   // Returns true if the size was acquired and false otherwise.
   virtual bool GetFileSize(const base::FilePath& path, int64_t* size);
 
-  // Returns the size of a directory at |path| if it exists.
-  //
-  // Parameters
-  //   path - Path of the directory to check
-  // Returns the directory size if it was acquired, and -1 on failure.
-  virtual int64_t ComputeDirectorySize(const base::FilePath& path);
-
   // Returns the disk usage of a directory at |path| if it exists.
-  // The difference between this and ComputeDirectorySize() is that this
-  // computes the disk space used/occupied by the directory, instead of the
-  // apparent size.
+  // Note that this computes the disk space used/occupied by the directory,
+  // instead of the apparent size.
   //
   // Parameters
   //   path - Path of the directory to check

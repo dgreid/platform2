@@ -82,9 +82,6 @@ ACTION(CallReadFileToSecureBlob) {
 }
 ACTION(CallCopy) { return Platform().Copy(arg0, arg1); }
 ACTION(CallRename) { return Platform().Rename(arg0, arg1); }
-ACTION(CallComputeDirectorySize) {
-  return Platform().ComputeDirectorySize(arg0);
-}
 ACTION(CallComputeDirectoryDiskUsage) {
   return Platform().ComputeDirectoryDiskUsage(arg0);
 }
@@ -179,10 +176,6 @@ class MockPlatform : public Platform {
   MOCK_METHOD(bool, FileExists, (const base::FilePath&), (override));
   MOCK_METHOD(int, Access, (const base::FilePath&, uint32_t), (override));
   MOCK_METHOD(bool, GetFileSize, (const base::FilePath&, int64_t*), (override));
-  MOCK_METHOD(int64_t,
-              ComputeDirectorySize,
-              (const base::FilePath&),
-              (override));
   MOCK_METHOD(int64_t,
               ComputeDirectoryDiskUsage,
               (const base::FilePath&),

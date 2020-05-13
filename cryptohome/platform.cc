@@ -597,10 +597,6 @@ bool Platform::GetFileSize(const FilePath& path, int64_t* size) {
   return base::GetFileSize(path, size);
 }
 
-int64_t Platform::ComputeDirectorySize(const FilePath& path) {
-  return base::ComputeDirectorySize(path);
-}
-
 int64_t Platform::ComputeDirectoryDiskUsage(const FilePath& path) {
   return brillo::ComputeDirectoryDiskUsage(path);
 }

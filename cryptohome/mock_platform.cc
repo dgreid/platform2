@@ -57,8 +57,6 @@ MockPlatform::MockPlatform()
       .WillByDefault(CallReadFileToSecureBlob());
   ON_CALL(*this, Rename(_, _))
       .WillByDefault(CallRename());
-  ON_CALL(*this, ComputeDirectorySize(_))
-      .WillByDefault(CallComputeDirectorySize());
   ON_CALL(*this, ComputeDirectoryDiskUsage(_))
       .WillByDefault(CallComputeDirectoryDiskUsage());
   ON_CALL(*this, SetupProcessKeyring())
