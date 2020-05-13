@@ -66,17 +66,7 @@ class DlcManager {
   //   True on success, otherwise false.
   bool InitInstall(const DlcId& id, brillo::ErrorPtr* err);
 
-  // Install Step 2:
-  // To get the actual list of DLC(s) to pass into update_engine.
-  // If the returned list of DLC(s) are empty there are no missing DLC(s) to
-  // inform update_engine to install and can move onto the next step.
-  // Args:
-  //   none
-  // Return:
-  //   Will return all the DLC(s) that update_engine needs to download/install.
-  DlcIdList GetMissingInstalls();
-
-  // Install Step 3a:
+  // Install Step 2a:
   // Once the missing DLC(s) are installed or there were no missing DLC(s), this
   // call is still required to finish the installation.
   // If there were missing DLC(s) that were newly installed, this call will go
@@ -89,7 +79,7 @@ class DlcManager {
   //   True on success, otherwise false.
   bool FinishInstall(brillo::ErrorPtr* err);
 
-  // Install Step 3b:
+  // Install Step 2b:
   // If for any reason, the init'ed DLC(s) should not follow through with
   // mounting it can be cancelled by invoking this. The call may fail, in
   // which case the errors will reflect the causes and provide insight in ways

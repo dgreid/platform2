@@ -12,6 +12,7 @@
 #include <base/files/file_enumerator.h>
 #include <base/files/file_util.h>
 #include <base/files/scoped_temp_dir.h>
+#include <base/strings/stringprintf.h>
 #include <base/strings/string_util.h>
 #include <brillo/errors/error.h>
 #include <chromeos/dbus/service_constants.h>
@@ -109,22 +110,29 @@ bool DlcService::Install(const DlcId& id,
     return false;
   }
 
-  // This is the unique DLC(s) that actually need to be installed.
-  DlcIdList unique_dlcs_to_install = dlc_manager_->GetMissingInstalls();
-  // Check if there is nothing to install.
-  if (unique_dlcs_to_install.size() == 0) {
-    SendOnInstallStatusSignal(Status::COMPLETED, kErrorNone,
-                              dlc_manager_->GetSupported(), 1.);
-    return true;
+  switch (dlc_manager_->GetDlc(id)->GetState().state()) {
+    case DlcState::NOT_INSTALLED:
+      *err = Error::Create(
+          FROM_HERE, kErrorInternal,
+          base::StringPrintf("DLC (%s) is not installing.", id.c_str()));
+      return false;
+    case DlcState::INSTALLING:
+      break;
+    case DlcState::INSTALLED:
+      SendOnInstallStatusSignal(Status::COMPLETED, kErrorNone,
+                                dlc_manager_->GetSupported(), 1.);
+      return true;
+    default:
+      NOTREACHED();
+      return false;
   }
 
-  LOG(INFO) << "Sending request to update_engine to install DLCs="
-            << base::JoinString(unique_dlcs_to_install, ",");
+  LOG(INFO) << "Sending request to update_engine to install DLC=" << id;
 
   // Invokes update_engine to install the DLC.
   ErrorPtr tmp_err;
-  if (!SystemState::Get()->update_engine()->AttemptInstall(
-          omaha_url, unique_dlcs_to_install, &tmp_err)) {
+  if (!SystemState::Get()->update_engine()->AttemptInstall(omaha_url, {id},
+                                                           &tmp_err)) {
     // TODO(kimjae): need update engine to propagate correct error message by
     // passing in |ErrorPtr| and being set within update engine, current default
     // is to indicate that update engine is updating because there is no way an

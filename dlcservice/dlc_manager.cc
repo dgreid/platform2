@@ -116,12 +116,6 @@ DlcIdList DlcManager::GetSupported() {
   return ToDlcIdList(supported_, [](const DlcBase&) { return true; });
 }
 
-DlcIdList DlcManager::GetMissingInstalls() {
-  // Only return the DLC(s) that aren't already installed.
-  return ToDlcIdList(supported_,
-                     [](const DlcBase& dlc) { return dlc.IsInstalling(); });
-}
-
 bool DlcManager::GetDlcState(const DlcId& id, DlcState* state, ErrorPtr* err) {
   DCHECK(state);
   DCHECK(err);
