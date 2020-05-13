@@ -16,6 +16,7 @@
 #include <base/files/file_descriptor_watcher_posix.h>
 #include <base/files/scoped_file.h>
 #include <base/macros.h>
+#include <base/memory/ref_counted.h>
 #include <base/memory/weak_ptr.h>
 
 #include "arc/vm/vsock_proxy/message.pb.h"
@@ -28,11 +29,13 @@ class LocalFile {
  public:
   // |can_send_fds| must be true to send/receive FDs using this object.
   // |error_handler| will be run on async IO error.
+  // |blocking_task_runner| will be used to perform regular file IO.
   // TODO(hashimoto): Change the interface to report all IO errors via
   // |error_handler|, instead of synchronously returning bool.
   LocalFile(base::ScopedFD fd,
             bool can_send_fds,
-            base::OnceClosure error_handler);
+            base::OnceClosure error_handler,
+            scoped_refptr<base::TaskRunner> blocking_task_runner);
   ~LocalFile();
 
   // Reads the message from the file descriptor.
@@ -49,16 +52,14 @@ class LocalFile {
   // Returns true iff the whole message is written.
   bool Write(std::string blob, std::vector<base::ScopedFD> fds);
 
-  // Reads |count| bytes from the file starting at |offset|.
-  // Returns whether pread() is supported or not.
-  // If supported, the result will be constructed in |response|.
-  bool Pread(uint64_t count,
-             uint64_t offset,
-             arc_proxy::PreadResponse* response);
+  // Reads |count| bytes from the file starting at |offset| and runs the
+  // callback with the result.
+  using PreadCallback = base::OnceCallback<void(arc_proxy::PreadResponse)>;
+  void Pread(uint64_t count, uint64_t offset, PreadCallback callback);
 
-  // Fills the file descriptor's stat attribute to the |response|.
-  // Returns whether fstat(2) is supported or not.
-  bool Fstat(arc_proxy::FstatResponse* response);
+  // Runs the callback with the file descriptor's stat attribute.
+  using FstatCallback = base::OnceCallback<void(arc_proxy::FstatResponse)>;
+  void Fstat(FstatCallback callback);
 
  private:
   void TrySendMsg();
@@ -74,6 +75,8 @@ class LocalFile {
   };
   std::deque<Data> pending_write_;
   std::unique_ptr<base::FileDescriptorWatcher::Controller> writable_watcher_;
+
+  scoped_refptr<base::TaskRunner> blocking_task_runner_;
 
   base::WeakPtrFactory<LocalFile> weak_factory_{this};
   DISALLOW_COPY_AND_ASSIGN(LocalFile);

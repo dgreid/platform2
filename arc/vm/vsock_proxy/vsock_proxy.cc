@@ -25,9 +25,11 @@
 namespace arc {
 namespace {
 
-std::unique_ptr<LocalFile> CreateFile(base::ScopedFD fd,
-                                      arc_proxy::FileDescriptor::Type fd_type,
-                                      base::OnceClosure error_handler) {
+std::unique_ptr<LocalFile> CreateFile(
+    base::ScopedFD fd,
+    arc_proxy::FileDescriptor::Type fd_type,
+    base::OnceClosure error_handler,
+    scoped_refptr<base::TaskRunner> blocking_task_runner) {
   switch (fd_type) {
     case arc_proxy::FileDescriptor::SOCKET_STREAM:
     case arc_proxy::FileDescriptor::SOCKET_DGRAM:
@@ -38,7 +40,7 @@ std::unique_ptr<LocalFile> CreateFile(base::ScopedFD fd,
       flags = fcntl(fd.get(), F_SETFL, flags | O_NONBLOCK);
       PCHECK(flags != -1);
       return std::make_unique<LocalFile>(std::move(fd), true,
-                                         std::move(error_handler));
+                                         std::move(error_handler), nullptr);
     }
     case arc_proxy::FileDescriptor::FIFO_READ:
     case arc_proxy::FileDescriptor::FIFO_WRITE: {
@@ -48,11 +50,11 @@ std::unique_ptr<LocalFile> CreateFile(base::ScopedFD fd,
       flags = fcntl(fd.get(), F_SETFL, flags | O_NONBLOCK);
       PCHECK(flags != -1);
       return std::make_unique<LocalFile>(std::move(fd), false,
-                                         std::move(error_handler));
+                                         std::move(error_handler), nullptr);
     }
     case arc_proxy::FileDescriptor::REGULAR_FILE:
-      return std::make_unique<LocalFile>(std::move(fd), false,
-                                         std::move(error_handler));
+      return std::make_unique<LocalFile>(
+          std::move(fd), false, std::move(error_handler), blocking_task_runner);
     case arc_proxy::FileDescriptor::TRANSPORTABLE:
       return nullptr;
     default:
@@ -72,6 +74,8 @@ VSockProxy::VSockProxy(Delegate* delegate)
   message_watcher_ = base::FileDescriptorWatcher::WatchReadable(
       delegate_->GetPollFd(), base::BindRepeating(&VSockProxy::OnVSockReadReady,
                                                   weak_factory_.GetWeakPtr()));
+
+  CHECK(blocking_task_thread_.Start());
 }
 
 VSockProxy::~VSockProxy() {
@@ -98,7 +102,8 @@ int64_t VSockProxy::RegisterFileDescriptor(
 
   auto file = CreateFile(std::move(fd), fd_type,
                          base::BindOnce(&VSockProxy::HandleLocalFileError,
-                                        weak_factory_.GetWeakPtr(), handle));
+                                        weak_factory_.GetWeakPtr(), handle),
+                         blocking_task_thread_.task_runner());
   std::unique_ptr<base::FileDescriptorWatcher::Controller> controller;
   if (fd_type != arc_proxy::FileDescriptor::REGULAR_FILE &&
       fd_type != arc_proxy::FileDescriptor::TRANSPORTABLE) {
@@ -179,11 +184,13 @@ bool VSockProxy::HandleMessage(arc_proxy::VSockMessage* message,
     case arc_proxy::VSockMessage::kConnectResponse:
       return OnConnectResponse(message->mutable_connect_response());
     case arc_proxy::VSockMessage::kPreadRequest:
-      return OnPreadRequest(message->mutable_pread_request());
+      OnPreadRequest(message->mutable_pread_request());
+      return true;
     case arc_proxy::VSockMessage::kPreadResponse:
       return OnPreadResponse(message->mutable_pread_response());
     case arc_proxy::VSockMessage::kFstatRequest:
-      return OnFstatRequest(message->mutable_fstat_request());
+      OnFstatRequest(message->mutable_fstat_request());
+      return true;
     case arc_proxy::VSockMessage::kFstatResponse:
       return OnFstatResponse(message->mutable_fstat_response());
     default:
@@ -353,29 +360,29 @@ bool VSockProxy::OnConnectResponse(arc_proxy::ConnectResponse* response) {
   return true;
 }
 
-bool VSockProxy::OnPreadRequest(arc_proxy::PreadRequest* request) {
-  arc_proxy::VSockMessage reply;
-  auto* response = reply.mutable_pread_response();
-  response->set_cookie(request->cookie());
-
-  OnPreadRequestInternal(request, response);
-
-  return delegate_->SendMessage(reply, {});
-}
-
-void VSockProxy::OnPreadRequestInternal(arc_proxy::PreadRequest* request,
-                                        arc_proxy::PreadResponse* response) {
+void VSockProxy::OnPreadRequest(arc_proxy::PreadRequest* request) {
   auto it = fd_map_.find(request->handle());
   if (it == fd_map_.end()) {
     LOG(ERROR) << "Couldn't find handle: handle=" << request->handle();
-    response->set_error_code(EBADF);
+    arc_proxy::PreadResponse response;
+    response.set_error_code(EBADF);
+    SendPreadResponse(request->cookie(), response);
     return;
   }
+  it->second.file->Pread(
+      request->count(), request->offset(),
+      base::BindOnce(&VSockProxy::SendPreadResponse, weak_factory_.GetWeakPtr(),
+                     request->cookie()));
+}
 
-  if (!it->second.file->Pread(request->count(), request->offset(), response)) {
-    response->set_error_code(EINVAL);
-    return;
-  }
+void VSockProxy::SendPreadResponse(int64_t cookie,
+                                   arc_proxy::PreadResponse response) {
+  response.set_cookie(cookie);
+  arc_proxy::VSockMessage reply;
+  *reply.mutable_pread_response() = std::move(response);
+
+  if (!delegate_->SendMessage(reply, {}))
+    Stop();
 }
 
 bool VSockProxy::OnPreadResponse(arc_proxy::PreadResponse* response) {
@@ -392,32 +399,28 @@ bool VSockProxy::OnPreadResponse(arc_proxy::PreadResponse* response) {
   return true;
 }
 
-bool VSockProxy::OnFstatRequest(arc_proxy::FstatRequest* request) {
-  arc_proxy::VSockMessage reply;
-  auto* response = reply.mutable_fstat_response();
-  response->set_cookie(request->cookie());
-
-  OnFstatRequestInternal(request, response);
-
-  return delegate_->SendMessage(reply, {});
-}
-
-void VSockProxy::OnFstatRequestInternal(arc_proxy::FstatRequest* request,
-                                        arc_proxy::FstatResponse* response) {
+void VSockProxy::OnFstatRequest(arc_proxy::FstatRequest* request) {
   auto it = fd_map_.find(request->handle());
   if (it == fd_map_.end()) {
     LOG(ERROR) << "Couldn't find handle: handle=" << request->handle();
-    response->set_error_code(EBADF);
+    arc_proxy::FstatResponse response;
+    response.set_error_code(EBADF);
+    SendFstatResponse(request->cookie(), std::move(response));
     return;
   }
+  it->second.file->Fstat(base::BindOnce(&VSockProxy::SendFstatResponse,
+                                        weak_factory_.GetWeakPtr(),
+                                        request->cookie()));
+}
 
-  if (!it->second.file->Fstat(response)) {
-    // According to man, it seems like stat family needs to be supported for
-    // all file descriptor types, so there's no good errno is defined to reject
-    // the request. Thus, use EOPNOTSUPP, meaning the fstat is not supported.
-    response->set_error_code(EOPNOTSUPP);
-    return;
-  }
+void VSockProxy::SendFstatResponse(int64_t cookie,
+                                   arc_proxy::FstatResponse response) {
+  response.set_cookie(cookie);
+  arc_proxy::VSockMessage reply;
+  *reply.mutable_fstat_response() = std::move(response);
+
+  if (!delegate_->SendMessage(reply, {}))
+    Stop();
 }
 
 bool VSockProxy::OnFstatResponse(arc_proxy::FstatResponse* response) {

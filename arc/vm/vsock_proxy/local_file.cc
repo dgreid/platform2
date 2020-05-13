@@ -17,6 +17,7 @@
 #include <base/bind.h>
 #include <base/logging.h>
 #include <base/posix/eintr_wrapper.h>
+#include <base/task_runner_util.h>
 
 #include "arc/vm/vsock_proxy/file_descriptor_util.h"
 
@@ -24,12 +25,22 @@ namespace arc {
 
 LocalFile::LocalFile(base::ScopedFD fd,
                      bool can_send_fds,
-                     base::OnceClosure error_handler)
+                     base::OnceClosure error_handler,
+                     scoped_refptr<base::TaskRunner> blocking_task_runner)
     : fd_(std::move(fd)),
       can_send_fds_(can_send_fds),
-      error_handler_(std::move(error_handler)) {}
+      error_handler_(std::move(error_handler)),
+      blocking_task_runner_(blocking_task_runner) {}
 
-LocalFile::~LocalFile() = default;
+LocalFile::~LocalFile() {
+  // Asynchronous tasks running on the blocking task runner may be using the FD.
+  // Post a task to destruct the FD on the task runner after all tasks finish.
+  if (blocking_task_runner_) {
+    blocking_task_runner_->PostTask(
+        FROM_HERE,
+        base::BindOnce([](base::ScopedFD fd) {}, base::Passed(std::move(fd_))));
+  }
+}
 
 LocalFile::ReadResult LocalFile::Read() {
   // Get the amont of readable data (for pipes or stream sockets) or the size of
@@ -68,32 +79,45 @@ bool LocalFile::Write(std::string blob, std::vector<base::ScopedFD> fds) {
   return true;
 }
 
-bool LocalFile::Pread(uint64_t count,
-                      uint64_t offset,
-                      arc_proxy::PreadResponse* response) {
-  std::string buffer;
-  buffer.resize(count);
-  int result = HANDLE_EINTR(pread(fd_.get(), &buffer[0], count, offset));
-  if (result < 0) {
-    response->set_error_code(errno);
-  } else {
-    buffer.resize(result);
-    response->set_error_code(0);
-    *response->mutable_blob() = std::move(buffer);
-  }
-  return true;
+void LocalFile::Pread(uint64_t count, uint64_t offset, PreadCallback callback) {
+  base::PostTaskAndReplyWithResult(
+      blocking_task_runner_.get(), FROM_HERE,
+      base::BindOnce(
+          [](int fd, uint64_t count, uint64_t offset) {
+            arc_proxy::PreadResponse response;
+            std::string buffer;
+            buffer.resize(count);
+            int result = HANDLE_EINTR(pread(fd, &buffer[0], count, offset));
+            if (result < 0) {
+              response.set_error_code(errno);
+            } else {
+              buffer.resize(result);
+              response.set_error_code(0);
+              response.set_blob(std::move(buffer));
+            }
+            return response;
+          },
+          fd_.get(), count, offset),
+      std::move(callback));
 }
 
-bool LocalFile::Fstat(arc_proxy::FstatResponse* response) {
-  struct stat st;
-  int result = fstat(fd_.get(), &st);
-  if (result < 0) {
-    response->set_error_code(errno);
-  } else {
-    response->set_error_code(0);
-    response->set_size(st.st_size);
-  }
-  return true;
+void LocalFile::Fstat(FstatCallback callback) {
+  base::PostTaskAndReplyWithResult(blocking_task_runner_.get(), FROM_HERE,
+                                   base::BindOnce(
+                                       [](int fd) {
+                                         arc_proxy::FstatResponse response;
+                                         struct stat st;
+                                         int result = fstat(fd, &st);
+                                         if (result < 0) {
+                                           response.set_error_code(errno);
+                                         } else {
+                                           response.set_error_code(0);
+                                           response.set_size(st.st_size);
+                                         }
+                                         return response;
+                                       },
+                                       fd_.get()),
+                                   std::move(callback));
 }
 
 void LocalFile::TrySendMsg() {

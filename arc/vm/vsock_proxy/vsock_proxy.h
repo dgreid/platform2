@@ -16,6 +16,7 @@
 #include <base/files/scoped_file.h>
 #include <base/macros.h>
 #include <base/memory/weak_ptr.h>
+#include <base/threading/thread.h>
 
 #include "arc/vm/vsock_proxy/message.pb.h"
 
@@ -124,13 +125,11 @@ class VSockProxy {
   bool OnDataInternal(arc_proxy::Data* data);
   bool OnConnectRequest(arc_proxy::ConnectRequest* request);
   bool OnConnectResponse(arc_proxy::ConnectResponse* response);
-  bool OnPreadRequest(arc_proxy::PreadRequest* request);
-  void OnPreadRequestInternal(arc_proxy::PreadRequest* request,
-                              arc_proxy::PreadResponse* response);
+  void OnPreadRequest(arc_proxy::PreadRequest* request);
+  void SendPreadResponse(int64_t cookie, arc_proxy::PreadResponse response);
   bool OnPreadResponse(arc_proxy::PreadResponse* response);
-  bool OnFstatRequest(arc_proxy::FstatRequest* request);
-  void OnFstatRequestInternal(arc_proxy::FstatRequest* request,
-                              arc_proxy::FstatResponse* response);
+  void OnFstatRequest(arc_proxy::FstatRequest* request);
+  void SendFstatResponse(int64_t cookie, arc_proxy::FstatResponse response);
   bool OnFstatResponse(arc_proxy::FstatResponse* response);
 
   // Callback called when local file descriptor gets ready to read.
@@ -152,6 +151,8 @@ class VSockProxy {
 
   Delegate* delegate_;
   std::unique_ptr<base::FileDescriptorWatcher::Controller> message_watcher_;
+
+  base::Thread blocking_task_thread_{"BlockingThread"};
 
   // Map from a |handle| (see message.proto for details) to a file
   // instance wrapping the file descriptor and its watcher.

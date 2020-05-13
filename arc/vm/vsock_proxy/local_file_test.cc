@@ -34,25 +34,43 @@
 namespace arc {
 namespace {
 
-TEST(LocalFileTest, ReadErrorIoctl) {
+template <typename T>
+void StoreArgument(T* out, T in) {
+  *out = std::move(in);
+}
+
+class LocalFileTest : public testing::Test {
+ public:
+  LocalFileTest() = default;
+  ~LocalFileTest() override = default;
+  LocalFileTest(const LocalFileTest&) = delete;
+  LocalFileTest& operator=(const LocalFileTest&) = delete;
+
+ protected:
+  base::MessageLoop message_loop_;
+};
+
+TEST_F(LocalFileTest, ReadErrorIoctl) {
   // Pass a /dev/null FD which doesn't support iotctl(FIONREAD).
   base::ScopedFD fd(HANDLE_EINTR(open("/dev/null", O_RDONLY)));
-  auto read_result = LocalFile(std::move(fd), true, base::DoNothing()).Read();
+  auto read_result =
+      LocalFile(std::move(fd), true, base::DoNothing(), nullptr).Read();
   EXPECT_EQ(ENOTTY, read_result.error_code);
 }
 
-TEST(LocalFileTest, ReadErrorRecvmsg) {
+TEST_F(LocalFileTest, ReadErrorRecvmsg) {
   auto pipes = CreatePipe();
   ASSERT_TRUE(pipes.has_value());
   // Put some data.
   ASSERT_TRUE(base::WriteFileDescriptor(pipes->second.get(), "a", 1));
   // Pipe doesn't support recvmsg, but can_send_fds==true is specified.
   auto read_result =
-      LocalFile(std::move(pipes->first), true, base::DoNothing()).Read();
+      LocalFile(std::move(pipes->first), true, base::DoNothing(), nullptr)
+          .Read();
   EXPECT_EQ(ENOTSOCK, read_result.error_code);
 }
 
-TEST(LocalFileTest, Pread) {
+TEST_F(LocalFileTest, Pread) {
   base::ScopedTempDir temp_dir;
   ASSERT_TRUE(temp_dir.CreateUniqueTempDir());
   const base::FilePath file_path = temp_dir.GetPath().Append("test_file.txt");
@@ -65,28 +83,39 @@ TEST(LocalFileTest, Pread) {
   ASSERT_TRUE(fd.is_valid());
 
   LocalFile stream(std::move(fd), false,
-                   base::BindOnce([]() { ADD_FAILURE(); }));
+                   base::BindOnce([]() { ADD_FAILURE(); }),
+                   message_loop_.task_runner());
   arc_proxy::PreadResponse response;
-  ASSERT_TRUE(stream.Pread(10, 10, &response));
+  stream.Pread(
+      10, 10,
+      base::BindOnce(&StoreArgument<arc_proxy::PreadResponse>, &response));
+  base::RunLoop().RunUntilIdle();
   EXPECT_EQ(0, response.error_code());
   EXPECT_EQ("klmnopqrst", response.blob());
 
   // Test for EOF. Result |blob| should contain only the available bytes.
-  ASSERT_TRUE(stream.Pread(10, 20, &response));
+  stream.Pread(
+      10, 20,
+      base::BindOnce(&StoreArgument<arc_proxy::PreadResponse>, &response));
+  base::RunLoop().RunUntilIdle();
   EXPECT_EQ(0, response.error_code());
   EXPECT_EQ("uvwxyz", response.blob());
 }
 
-TEST(LocalFileTest, PreadError) {
+TEST_F(LocalFileTest, PreadError) {
   // Use -1 (invalid file descriptor) to let pread(2) return error in Pread().
   LocalFile stream{base::ScopedFD(), false,
-                   base::BindOnce([]() { ADD_FAILURE(); })};
+                   base::BindOnce([]() { ADD_FAILURE(); }),
+                   message_loop_.task_runner()};
   arc_proxy::PreadResponse response;
-  ASSERT_TRUE(stream.Pread(10, 10, &response));
+  stream.Pread(
+      10, 10,
+      base::BindOnce(&StoreArgument<arc_proxy::PreadResponse>, &response));
+  base::RunLoop().RunUntilIdle();
   EXPECT_EQ(EBADF, response.error_code());
 }
 
-TEST(LocalFileTest, Fstat) {
+TEST_F(LocalFileTest, Fstat) {
   base::ScopedTempDir temp_dir;
   ASSERT_TRUE(temp_dir.CreateUniqueTempDir());
   const base::FilePath file_path = temp_dir.GetPath().Append("test_file.txt");
@@ -99,19 +128,25 @@ TEST(LocalFileTest, Fstat) {
   ASSERT_TRUE(fd.is_valid());
 
   LocalFile stream(std::move(fd), false,
-                   base::BindOnce([]() { ADD_FAILURE(); }));
+                   base::BindOnce([]() { ADD_FAILURE(); }),
+                   message_loop_.task_runner());
   arc_proxy::FstatResponse response;
-  ASSERT_TRUE(stream.Fstat(&response));
+  stream.Fstat(
+      base::BindOnce(&StoreArgument<arc_proxy::FstatResponse>, &response));
+  base::RunLoop().RunUntilIdle();
   EXPECT_EQ(0, response.error_code());
   EXPECT_EQ(26, response.size());
 }
 
-TEST(LocalFileTest, FstatError) {
+TEST_F(LocalFileTest, FstatError) {
   // Use -1 (invalid file descriptor) to let pread(2) return error in Pread().
   LocalFile stream{base::ScopedFD(), false,
-                   base::BindOnce([]() { ADD_FAILURE(); })};
+                   base::BindOnce([]() { ADD_FAILURE(); }),
+                   message_loop_.task_runner()};
   arc_proxy::FstatResponse response;
-  ASSERT_TRUE(stream.Fstat(&response));
+  stream.Fstat(
+      base::BindOnce(&StoreArgument<arc_proxy::FstatResponse>, &response));
+  base::RunLoop().RunUntilIdle();
   EXPECT_EQ(EBADF, response.error_code());
 }
 
@@ -124,9 +159,9 @@ class SocketStreamTest : public testing::Test {
   void SetUp() override {
     auto sockets = CreateSocketPair(SOCK_STREAM | SOCK_NONBLOCK);
     ASSERT_TRUE(sockets.has_value());
-    stream_ =
-        std::make_unique<LocalFile>(std::move(sockets.value().first), true,
-                                    base::BindOnce([]() { ADD_FAILURE(); }));
+    stream_ = std::make_unique<LocalFile>(
+        std::move(sockets.value().first), true,
+        base::BindOnce([]() { ADD_FAILURE(); }), nullptr);
     socket_ = std::move(sockets.value().second);
   }
 
@@ -235,7 +270,8 @@ TEST_F(SocketStreamTest, WriteError) {
       base::BindOnce([](bool* run) { *run = true; }, &error_handler_was_run);
   // Write to a non-socket FD.
   base::ScopedFD fd(HANDLE_EINTR(open("/dev/null", O_RDONLY)));
-  LocalFile(std::move(fd), true, std::move(error_handler)).Write(kData, {});
+  LocalFile(std::move(fd), true, std::move(error_handler), nullptr)
+      .Write(kData, {});
   EXPECT_TRUE(error_handler_was_run);
 }
 
@@ -248,9 +284,9 @@ class SocketSeqpacketTest : public testing::Test {
   void SetUp() override {
     auto sockets = CreateSocketPair(SOCK_SEQPACKET | SOCK_NONBLOCK);
     ASSERT_TRUE(sockets.has_value());
-    seqpacket_ =
-        std::make_unique<LocalFile>(std::move(sockets.value().first), true,
-                                    base::BindOnce([]() { ADD_FAILURE(); }));
+    seqpacket_ = std::make_unique<LocalFile>(
+        std::move(sockets.value().first), true,
+        base::BindOnce([]() { ADD_FAILURE(); }), nullptr);
     socket_ = std::move(sockets.value().second);
   }
 
@@ -331,7 +367,7 @@ TEST_F(PipeStreamTest, Read) {
   ASSERT_TRUE(base::WriteFileDescriptor(write_fd_.get(), kData, sizeof(kData)));
 
   auto read_result = LocalFile(std::move(read_fd_), false,
-                               base::BindOnce([]() { ADD_FAILURE(); }))
+                               base::BindOnce([]() { ADD_FAILURE(); }), nullptr)
                          .Read();
   EXPECT_EQ(0, read_result.error_code);
   EXPECT_EQ(base::StringPiece(kData, sizeof(kData)), read_result.blob);
@@ -343,7 +379,7 @@ TEST_F(PipeStreamTest, ReadEOF) {
   write_fd_.reset();
 
   auto read_result = LocalFile(std::move(read_fd_), false,
-                               base::BindOnce([]() { ADD_FAILURE(); }))
+                               base::BindOnce([]() { ADD_FAILURE(); }), nullptr)
                          .Read();
   EXPECT_EQ(0, read_result.error_code);
   EXPECT_TRUE(read_result.blob.empty());
@@ -353,7 +389,7 @@ TEST_F(PipeStreamTest, ReadEOF) {
 TEST_F(PipeStreamTest, Write) {
   constexpr char kData[] = "abcdefghijklmnopqrstuvwxyz";
   ASSERT_TRUE(LocalFile(std::move(write_fd_), false,
-                        base::BindOnce([]() { ADD_FAILURE(); }))
+                        base::BindOnce([]() { ADD_FAILURE(); }), nullptr)
                   .Write(std::string(kData, sizeof(kData)), {}));
 
   std::string read_data;
@@ -373,8 +409,9 @@ TEST_F(PipeStreamTest, WriteFD) {
   bool error_handler_was_run = false;
   base::OnceClosure error_handler =
       base::BindOnce([](bool* run) { *run = true; }, &error_handler_was_run);
-  EXPECT_TRUE(LocalFile(std::move(write_fd_), false, std::move(error_handler))
-                  .Write(std::string(kData, sizeof(kData)), std::move(fds)));
+  EXPECT_TRUE(
+      LocalFile(std::move(write_fd_), false, std::move(error_handler), nullptr)
+          .Write(std::string(kData, sizeof(kData)), std::move(fds)));
   EXPECT_TRUE(error_handler_was_run);
 }
 
@@ -383,7 +420,7 @@ TEST_F(PipeStreamTest, PendingWrite) {
   ASSERT_NE(-1, pipe_size);
 
   LocalFile stream(std::move(write_fd_), false,
-                   base::BindOnce([]() { ADD_FAILURE(); }));
+                   base::BindOnce([]() { ADD_FAILURE(); }), nullptr);
 
   const std::string data1(pipe_size, 'a');
   const std::string data2(pipe_size, 'b');
