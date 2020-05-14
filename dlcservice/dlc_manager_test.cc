@@ -40,6 +40,7 @@ class DlcManagerTest : public BaseTest {
 TEST_F(DlcManagerTest, PreloadAllowedDlcTest) {
   // The third DLC has pre-loaded flag on.
   SetUpDlcWithoutSlots(kThirdDlc);
+  dlc_manager_->Initialize();
 
   EXPECT_CALL(*mock_image_loader_proxy_ptr_, LoadDlcImage(_, _, _, _, _, _))
       .WillOnce(DoAll(SetArgPointee<3>(mount_path_.value()), Return(true)));
@@ -51,7 +52,7 @@ TEST_F(DlcManagerTest, PreloadAllowedDlcTest) {
       .WillOnce(Return(true));
   EXPECT_THAT(dlc_manager_->GetInstalled(), ElementsAre());
 
-  dlc_manager_->Initialize();
+  EXPECT_TRUE(dlc_manager_->InitInstall(kThirdDlc, &err_));
 
   EXPECT_THAT(dlc_manager_->GetInstalled(), ElementsAre(kThirdDlc));
   EXPECT_FALSE(dlc_manager_->GetDlc(kThirdDlc)->GetRoot().value().empty());
@@ -62,6 +63,7 @@ TEST_F(DlcManagerTest, PreloadAllowedWithBadPreinstalledDlcTest) {
   // The third DLC has pre-loaded flag on.
   SetUpDlcWithSlots(kThirdDlc);
   SetUpDlcWithoutSlots(kThirdDlc);
+  dlc_manager_->Initialize();
 
   EXPECT_CALL(*mock_image_loader_proxy_ptr_, LoadDlcImage(_, _, _, _, _, _))
       .WillOnce(DoAll(SetArgPointee<3>(mount_path_.value()), Return(true)));
@@ -73,7 +75,7 @@ TEST_F(DlcManagerTest, PreloadAllowedWithBadPreinstalledDlcTest) {
       .WillOnce(Return(true));
   EXPECT_THAT(dlc_manager_->GetInstalled(), ElementsAre());
 
-  dlc_manager_->Initialize();
+  EXPECT_TRUE(dlc_manager_->InitInstall(kThirdDlc, &err_));
 
   EXPECT_THAT(dlc_manager_->GetInstalled(), ElementsAre(kThirdDlc));
   EXPECT_FALSE(dlc_manager_->GetDlc(kThirdDlc)->GetRoot().value().empty());

@@ -22,16 +22,19 @@ using brillo::ErrorPtr;
 namespace dlcservice {
 
 void DlcManager::Initialize() {
-  auto system_state = SystemState::Get();
   // Initialize supported DLC(s).
-  for (const auto& id : ScanDirectory(system_state->manifest_dir())) {
+  for (const auto& id : ScanDirectory(SystemState::Get()->manifest_dir())) {
     auto result = supported_.emplace(id, id);
     if (!result.first->second.Initialize()) {
       LOG(ERROR) << "Failed to initialize DLC " << id;
       supported_.erase(id);
     }
   }
+  CleanupUnsupportedDlcs();
+}
 
+void DlcManager::CleanupUnsupportedDlcs() {
+  auto system_state = SystemState::Get();
   // Delete deprecated DLC(s) in content directory.
   for (const auto& id : ScanDirectory(system_state->content_dir())) {
     if (IsSupported(id))
@@ -45,7 +48,23 @@ void DlcManager::Initialize() {
       }
   }
 
-  PreloadDlcs();
+  // Delete the unsupported/preload not allowed DLC(s) in the preloaded
+  // directory.
+  auto preloaded_content_dir = system_state->preloaded_content_dir();
+  for (const auto& id : ScanDirectory(preloaded_content_dir)) {
+    if (IsSupported(id)) {
+      auto* dlc = GetDlc(id);
+      if (dlc->IsPreloadAllowed())
+        continue;
+    }
+    // Preloading is not allowed for this image so it will be deleted.
+    auto path = JoinPaths(preloaded_content_dir, id);
+    if (!base::DeleteFile(path, /*recursive=*/true))
+      PLOG(ERROR) << "Failed to delete path=" << path;
+    else
+      LOG(INFO) << "Deleted path=" << path
+                << " for unsupported/preload not allowed DLC=" << id;
+  }
 }
 
 bool DlcManager::IsSupported(const DlcId& id) {
@@ -64,31 +83,6 @@ const DlcBase* DlcManager::GetDlc(const DlcId& id) {
   const auto& iter = supported_.find(id);
   CHECK(iter != supported_.end()) << "Passed invalid DLC: " << id;
   return &iter->second;
-}
-
-// Loads the preloadable DLC(s) from preloaded content directory by scanning the
-// preloaded DLC(s) and verifying the validity to be preloaded before doing
-// so.
-void DlcManager::PreloadDlcs() {
-  auto preloaded_dir = SystemState::Get()->preloaded_content_dir();
-  // Load all preloaded DLC(s) into |content_dir_| one by one.
-  for (const auto& id : ScanDirectory(preloaded_dir)) {
-    if (!IsSupported(id)) {
-      LOG(ERROR) << "Preloading is not allowed for unsupported DLC=" << id;
-      auto preloaded_path = JoinPaths(preloaded_dir, id);
-      if (!base::DeleteFile(preloaded_path, /*recursive=*/true))
-        PLOG(ERROR) << "Failed to delete path=" << preloaded_path.value();
-      continue;
-    }
-
-    auto& dlc = supported_.find(id)->second;
-    if (!dlc.IsPreloadAllowed()) {
-      LOG(ERROR) << "Preloading is not allowed for DLC=" << id;
-      continue;
-    }
-
-    dlc.PreloadImage();
-  }
 }
 
 DlcIdList DlcManager::GetInstalled() {
@@ -181,14 +175,15 @@ bool DlcManager::InitInstall(const DlcId& id, ErrorPtr* err) {
   }
 
   DCHECK(!IsInstalling());
-
   DlcBase& dlc = supported_.find(id)->second;
+  // Try preloading the DLC prior to initializing an installation.
+  ErrorPtr tmp_err;
+  if (dlc.Preload(&tmp_err))
+    return true;
+
+  // Otherwise proceed with the setup for update_engine to overwrite.
   if (!dlc.InitInstall(err)) {
     LOG(ERROR) << "Failed to initialize installation for DLC=" << id;
-    ErrorPtr tmp_err;
-    if (!CancelInstall(&tmp_err))
-      LOG(ERROR) << "Failed to cancel installation for DLC=" << id
-                 << ", with error: " << Error::ToString(tmp_err);
     return false;
   }
   return true;

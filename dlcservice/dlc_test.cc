@@ -92,41 +92,41 @@ TEST_F(DlcBaseTest, MakeReadyForUpdate) {
   EXPECT_FALSE(prefs.Exists(kDlcPrefVerified));
 }
 
-TEST_F(DlcBaseTest, BootingFromRemovableDeviceDeletesPreloadedDLCs) {
-  DlcBase dlc(kSecondDlc);
+TEST_F(DlcBaseTest, BootingFromNonRemovableDeviceDeletesPreloadedDLCs) {
+  DlcBase dlc(kThirdDlc);
   dlc.Initialize();
-  SetUpDlcWithoutSlots(kSecondDlc);
+  SetUpDlcWithoutSlots(kThirdDlc);
 
-  auto image_path = JoinPaths(preloaded_content_path_, kSecondDlc, kPackage,
+  auto image_path = JoinPaths(preloaded_content_path_, kThirdDlc, kPackage,
                               kDlcImageFileName);
   EXPECT_TRUE(base::PathExists(image_path));
 
   EXPECT_CALL(*mock_update_engine_proxy_ptr_,
-              SetDlcActiveValue(_, kSecondDlc, _, _))
+              SetDlcActiveValue(_, kThirdDlc, _, _))
       .WillRepeatedly(Return(true));
   EXPECT_CALL(*mock_image_loader_proxy_ptr_, LoadDlcImage(_, _, _, _, _, _))
       .WillOnce(DoAll(SetArgPointee<3>(mount_path_.value()), Return(true)));
-  dlc.PreloadImage();
+  EXPECT_TRUE(dlc.Preload(&err_));
 
   // Preloaded DLC image should be deleted.
   EXPECT_FALSE(base::PathExists(image_path));
 }
 
-TEST_F(DlcBaseTestRemovable, BootingFromNonRemovableDeviceKeepsPreloadedDLCs) {
-  DlcBase dlc(kSecondDlc);
+TEST_F(DlcBaseTestRemovable, BootingFromRemovableDeviceKeepsPreloadedDLCs) {
+  DlcBase dlc(kThirdDlc);
   dlc.Initialize();
-  SetUpDlcWithoutSlots(kSecondDlc);
+  SetUpDlcWithoutSlots(kThirdDlc);
 
-  auto image_path = JoinPaths(preloaded_content_path_, kSecondDlc, kPackage,
+  auto image_path = JoinPaths(preloaded_content_path_, kThirdDlc, kPackage,
                               kDlcImageFileName);
   EXPECT_TRUE(base::PathExists(image_path));
 
   EXPECT_CALL(*mock_update_engine_proxy_ptr_,
-              SetDlcActiveValue(_, kSecondDlc, _, _))
+              SetDlcActiveValue(_, kThirdDlc, _, _))
       .WillRepeatedly(Return(true));
   EXPECT_CALL(*mock_image_loader_proxy_ptr_, LoadDlcImage(_, _, _, _, _, _))
       .WillOnce(DoAll(SetArgPointee<3>(mount_path_.value()), Return(true)));
-  dlc.PreloadImage();
+  EXPECT_TRUE(dlc.Preload(&err_));
 
   // Preloaded DLC image should still exists.
   EXPECT_TRUE(base::PathExists(image_path));

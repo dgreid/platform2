@@ -105,8 +105,8 @@ class DlcManager {
   bool Delete(const DlcId& id, brillo::ErrorPtr* err);
 
  private:
-  // Preloads preloadable DLCs from preloaded content directory.
-  void PreloadDlcs();
+  // Removes all unsupported/deprecated DLC files and images.
+  void CleanupUnsupportedDlcs();
 
   bool IsSupported(const DlcId& id);
 

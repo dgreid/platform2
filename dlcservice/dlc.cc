@@ -52,6 +52,8 @@ bool DlcBase::Initialize() {
   content_id_path_ = content_dir.Append(id_);
   content_package_path_ = content_id_path_.Append(package_);
   prefs_path_ = system_state->dlc_prefs_dir().Append(id_);
+  preloaded_image_path_ = JoinPaths(system_state->preloaded_content_dir(), id_,
+                                    package_, kDlcImageFileName);
 
   state_.set_state(DlcState::NOT_INSTALLED);
 
@@ -265,28 +267,29 @@ bool DlcBase::Verify() {
   }
   ErrorPtr err;
   if (!InstallCompleted(&err)) {
-    LOG(ERROR) << Error::ToString(err);
+    LOG(WARNING) << Error::ToString(err);
     return false;
   }
   return true;
 }
 
-bool DlcBase::PreloadedCopier() {
-  FilePath image_preloaded_path =
-      JoinPaths(SystemState::Get()->preloaded_content_dir(), id_, package_,
-                kDlcImageFileName);
+bool DlcBase::PreloadedCopier(ErrorPtr* err) {
   int64_t max_image_size = manifest_.preallocated_size();
   // Scope the |image_preloaded| file so it always closes before deleting.
   {
     int64_t image_preloaded_size;
-    if (!base::GetFileSize(image_preloaded_path, &image_preloaded_size)) {
-      LOG(ERROR) << "Failed to get preloaded DLC (" << id_ << ") size.";
+    if (!base::GetFileSize(preloaded_image_path_, &image_preloaded_size)) {
+      auto err_str = base::StringPrintf(
+          "Failed to get preloaded DLC (%s) size.", id_.c_str());
+      *err = Error::Create(FROM_HERE, kErrorInternal, err_str);
       return false;
     }
     if (image_preloaded_size > max_image_size) {
-      LOG(ERROR) << "Preloaded DLC (" << id_ << ") is (" << image_preloaded_size
-                 << ") larger than the preallocated size (" << max_image_size
-                 << ") in manifest.";
+      auto err_str = base::StringPrintf(
+          "Preloaded DLC (%s) is (%" PRId64
+          ") larger than the preallocated size (%" PRId64 ") in the manifest.",
+          id_.c_str(), image_preloaded_size, max_image_size);
+      *err = Error::Create(FROM_HERE, kErrorInternal, err_str);
       return false;
     }
   }
@@ -303,71 +306,87 @@ bool DlcBase::PreloadedCopier() {
   // TODO(kimjae): when preloaded images are place into unencrypted, this
   // operation can be a move.
   vector<uint8_t> image_sha256;
-  if (!CopyAndHashFile(image_preloaded_path, image_boot_path, &image_sha256)) {
-    LOG(ERROR) << "Failed to preload DLC (" << id_ << ") into boot slot path ("
-               << image_boot_path << ")";
+  if (!CopyAndHashFile(preloaded_image_path_, image_boot_path, &image_sha256)) {
+    auto err_str =
+        base::StringPrintf("Failed to copy preload DLC (%s) into path %s",
+                           id_.c_str(), image_boot_path.value().c_str());
+    *err = Error::Create(FROM_HERE, kErrorInternal, err_str);
     return false;
   }
 
-  if (image_sha256 != manifest_.image_sha256()) {
-    LOG(ERROR) << "Image is corrupted or modified for DLC=" << id_ << ". "
-               << "Expected: "
-               << base::HexEncode(manifest_.image_sha256().data(),
-                                  manifest_.image_sha256().size())
-               << " Found: "
-               << base::HexEncode(image_sha256.data(), image_sha256.size());
-
+  auto manifest_image_sha256 = manifest_.image_sha256();
+  if (image_sha256 != manifest_image_sha256) {
+    auto err_str = base::StringPrintf(
+        "Image is corrupted or modified for DLC=%s. Expected: %s Found: %s",
+        id_.c_str(),
+        base::HexEncode(manifest_image_sha256.data(),
+                        manifest_image_sha256.size())
+            .c_str(),
+        base::HexEncode(image_sha256.data(), image_sha256.size()).c_str());
+    *err = Error::Create(FROM_HERE, kErrorInternal, err_str);
     return false;
   }
 
   if (!ResizeFile(image_boot_path, max_image_size)) {
-    LOG(ERROR) << "Image failed to resize for DLC=" << id_
-               << ", Path=" << image_boot_path << " ,Size=" << max_image_size;
+    auto err_str = base::StringPrintf(
+        "Failed to resize image for DLC=%s, Path=%s, Size=%" PRId64,
+        id_.c_str(), image_boot_path.value().c_str(), max_image_size);
+    *err = Error::Create(FROM_HERE, kErrorInternal, err_str);
     return false;
   }
 
-  ErrorPtr tmp_err;
-  if (!InstallCompleted(&tmp_err)) {
-    LOG(ERROR) << Error::ToString(tmp_err);
+  if (!InstallCompleted(err)) {
+    LOG(ERROR) << "Failed to complete preloading for DLC=" << id_;
     return false;
   }
 
   return true;
 }
 
-void DlcBase::PreloadImage() {
+bool DlcBase::Preload(ErrorPtr* err) {
+  if (!IsPreloadAllowed()) {
+    auto err_str =
+        base::StringPrintf("Preloading not allowed for DLC=%s", id_.c_str());
+    *err = Error::Create(FROM_HERE, kErrorInternal, err_str);
+    return false;
+  }
+
+  if (!base::PathExists(preloaded_image_path_)) {
+    auto err_str =
+        base::StringPrintf("Preloading image missing for DLC=%s", id_.c_str());
+    *err = Error::Create(FROM_HERE, kErrorInternal, err_str);
+    return false;
+  }
+
   // Deleting DLC(s) that might already be installed as preloading DLC
   // take precedence in order to allow stale DLC in cache to be cleared.
-  // Loading should be run prior to preloading, to enforce this strict
-  // precedence.
   // TODO(crbug.com/1059445): Verify before deleting that image to preload
   // has the correct hash.
-  ErrorPtr tmp_err;
-  if (!DeleteInternal(&tmp_err)) {
-    LOG(ERROR) << "Failed to delete prior to preloading DLC=" << id_ << ", "
-               << Error::ToString(tmp_err);
-    return;
+  if (!DeleteInternal(err)) {
+    LOG(ERROR) << "Failed to delete prior to preloading DLC=" << id_;
+    return false;
   }
 
-  if (!InitInstall(&tmp_err)) {
-    LOG(ERROR) << "Failed to create preloaded DLC=" << id_ << ", "
-               << Error::ToString(tmp_err);
-    return;
+  if (!InitInstall(err)) {
+    LOG(ERROR) << "Failed to initialize preloaded DLC=" << id_;
+    return false;
   }
 
-  if (!PreloadedCopier()) {
-    LOG(ERROR) << "Something went wrong during preloading DLC (" << id_
-               << "), please check for previous errors.";
+  if (!PreloadedCopier(err)) {
+    LOG(ERROR) << "Failed to copy preloaded DLC=" << id_;
+    ErrorPtr tmp_err;
     if (!CancelInstall(&tmp_err))
-      LOG(WARNING) << Error::ToString(tmp_err);
-    return;
+      LOG(ERROR) << Error::ToString(tmp_err);
+    return false;
   }
 
   // When the copying is successful, go ahead and finish installation.
-  if (!FinishInstall(&tmp_err)) {
-    LOG(ERROR) << "Failed to finish installation for preloaded DLC=" << id_
-               << ", " << Error::ToString(tmp_err);
-    return;
+  if (!FinishInstall(err)) {
+    LOG(ERROR) << "Failed to finish prealoding DLC=" << id_;
+    ErrorPtr tmp_err;
+    if (!CancelInstall(&tmp_err))
+      LOG(ERROR) << Error::ToString(tmp_err);
+    return false;
   }
 
   // Don't remove preloaded DLC images when booted from removable device,
@@ -377,12 +396,12 @@ void DlcBase::PreloadImage() {
     // Delete the preloaded DLC only after both copies into A and B succeed as
     // well as mounting.
     const auto path = SystemState::Get()->preloaded_content_dir().Append(id_);
-    if (!base::DeleteFile(path, true)) {
-      LOG(ERROR) << "Failed to delete preloaded DLC=" << id_;
-    }
+    if (!base::DeleteFile(path, true))
+      PLOG(ERROR) << "Failed to delete preloaded DLC image=" << path.value();
   }
 
   LOG(INFO) << "Successfully preloaded DLC=" << id_;
+  return true;
 }
 
 bool DlcBase::InitInstall(ErrorPtr* err) {

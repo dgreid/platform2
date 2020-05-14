@@ -69,12 +69,12 @@ class DlcBase {
   // Returns the amount of disk space this DLC is using right now.
   uint64_t GetUsedBytesOnDisk() const;
 
-  // Returns true if the DLC module has a boolean true for 'preload-allowed'
+  // Returns true if the DLC has a boolean true for 'preload-allowed'
   // attribute in the manifest for the given |id| and |package|.
   bool IsPreloadAllowed() const;
 
-  // Loads the preloadable DLC from preloaded content directory.
-  void PreloadImage();
+  // Installs the preloadable DLC from preloaded content directory.
+  bool Preload(brillo::ErrorPtr* err);
 
   // Initializes the installation like creating the necessary files, etc.
   bool InitInstall(brillo::ErrorPtr* err);
@@ -121,7 +121,7 @@ class DlcBase {
   bool Verify();
 
   // Helper used to load in (copy + cleanup) preloadable files for the DLC.
-  bool PreloadedCopier();
+  bool PreloadedCopier(brillo::ErrorPtr* err);
 
   // Mounts the DLC image.
   bool Mount(brillo::ErrorPtr* err);
@@ -151,6 +151,7 @@ class DlcBase {
   base::FilePath content_id_path_;
   base::FilePath content_package_path_;
   base::FilePath prefs_path_;
+  base::FilePath preloaded_image_path_;
 
   // True if the pref |kDlcPrefVerified| exists.
   bool is_verified_;
