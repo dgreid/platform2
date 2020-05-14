@@ -28,6 +28,7 @@ namespace {
 using ::brillo::dbus_utils::MockDBusMethodResponse;
 
 using ::testing::_;
+using ::testing::Matcher;
 using ::testing::MatchesRegex;
 using ::testing::Return;
 using ::testing::SetArgPointee;
@@ -56,7 +57,7 @@ const std::string ExpectedU2fGenerateRequestRegex() {
   static const std::string request_regex =
       base::HexEncode(kRpIdHash.data(), kRpIdHash.size()) +  // AppId
       std::string("(EE){32}") +                              // User Secret
-      std::string("03") +                                    // U2F_AUTH_ENFORCE
+      std::string("08") +       // U2F_UV_ENABLED_KH
       std::string("(00){32}");  // Auth time secret hash
   return request_regex;
 }
@@ -97,12 +98,15 @@ const std::string ExpectedU2fSignCheckOnlyRequestRegex() {
 }
 
 // Dummy cr50 U2F_GENERATE_RESP.
-const struct u2f_generate_resp kU2fGenerateResponse = {
+const struct u2f_generate_versioned_resp kU2fGenerateVersionedResponse = {
     .pubKey = {.pointFormat = 0xAB,
                .x = {[0 ... 31] = 0xAB},
                .y = {[0 ... 31] = 0xAB}},
-    .keyHandle = {.origin_seed = {[0 ... 31] = 0xFD},
-                  .hmac = {[0 ... 31] = 0xFD}}};
+    .keyHandle = {.header = {.version = 0xFD,
+                             .origin_seed = {[0 ... 31] = 0xFD},
+                             .kh_hmac = {[0 ... 31] = 0xFD}},
+                  .authorization_salt = {[0 ... 15] = 0xFD},
+                  .authorization_hmac = {[0 ... 31] = 0xFD}}};
 
 // Dummy cr50 U2F_SIGN_RESP.
 const struct u2f_sign_resp kU2fSignResponse = {.sig_r = {[0 ... 31] = 0x12},
@@ -198,7 +202,8 @@ class WebAuthnHandlerTest : public ::testing::Test {
       std::vector<uint8_t>* credential_id,
       std::vector<uint8_t>* credential_pubkey) {
     return handler_->DoU2fGenerate(kRpIdHash, presence_requirement,
-                                   credential_id, credential_pubkey);
+                                   /* uv_compatible = */ true, credential_id,
+                                   credential_pubkey);
   }
 
   GetAssertionResponse::GetAssertionStatus DoU2fSign(
@@ -274,32 +279,20 @@ TEST_F(WebAuthnHandlerTest, DoU2fGenerateNoSecret) {
       MakeCredentialResponse::INTERNAL_ERROR);
 }
 
-TEST_F(WebAuthnHandlerTest, DoU2fGeneratePresenceNoPresence) {
+TEST_F(WebAuthnHandlerTest, DoU2fGenerateSuccess) {
   ExpectGetUserSecret();
   EXPECT_CALL(
       mock_tpm_proxy_,
-      SendU2fGenerate(StructMatchesRegex(ExpectedU2fGenerateRequestRegex()), _))
-      .WillRepeatedly(Return(kCr50StatusNotAllowed));
-  std::vector<uint8_t> cred_id, cred_pubkey;
-  EXPECT_EQ(
-      DoU2fGenerate(PresenceRequirement::kPowerButton, &cred_id, &cred_pubkey),
-      MakeCredentialResponse::VERIFICATION_FAILED);
-  presence_requested_expected_ = kMaxRetries;
-}
-
-TEST_F(WebAuthnHandlerTest, DoU2fGeneratePresenceSuccess) {
-  ExpectGetUserSecret();
-  EXPECT_CALL(
-      mock_tpm_proxy_,
-      SendU2fGenerate(StructMatchesRegex(ExpectedU2fGenerateRequestRegex()), _))
+      SendU2fGenerate(StructMatchesRegex(ExpectedU2fGenerateRequestRegex()),
+                      Matcher<u2f_generate_versioned_resp*>(_)))
       .WillOnce(Return(kCr50StatusNotAllowed))
-      .WillOnce(DoAll(SetArgPointee<1>(kU2fGenerateResponse),
+      .WillOnce(DoAll(SetArgPointee<1>(kU2fGenerateVersionedResponse),
                       Return(kCr50StatusSuccess)));
   std::vector<uint8_t> cred_id, cred_pubkey;
   EXPECT_EQ(
       DoU2fGenerate(PresenceRequirement::kPowerButton, &cred_id, &cred_pubkey),
       MakeCredentialResponse::SUCCESS);
-  EXPECT_EQ(cred_id, std::vector<uint8_t>(64, 0xFD));
+  EXPECT_EQ(cred_id, std::vector<uint8_t>(113, 0xFD));
   EXPECT_EQ(cred_pubkey, std::vector<uint8_t>(65, 0xAB));
   presence_requested_expected_ = 1;
 }
@@ -314,10 +307,10 @@ TEST_F(WebAuthnHandlerTest, DoU2fSignNoSecret) {
 
 TEST_F(WebAuthnHandlerTest, DoU2fSignPresenceNoPresence) {
   ExpectGetUserSecret();
-  EXPECT_CALL(
-      mock_tpm_proxy_,
-      SendU2fSign(
-          StructMatchesRegex(ExpectedDeterministicU2fSignRequestRegex()), _))
+  EXPECT_CALL(mock_tpm_proxy_,
+              SendU2fSign(Matcher<const u2f_sign_req&>(StructMatchesRegex(
+                              ExpectedDeterministicU2fSignRequestRegex())),
+                          _))
       .WillRepeatedly(Return(kCr50StatusNotAllowed));
   std::vector<uint8_t> signature;
   EXPECT_EQ(DoU2fSign(kHashToSign, kKeyHandle,
@@ -328,10 +321,10 @@ TEST_F(WebAuthnHandlerTest, DoU2fSignPresenceNoPresence) {
 
 TEST_F(WebAuthnHandlerTest, DoU2fSignPresenceSuccess) {
   ExpectGetUserSecret();
-  EXPECT_CALL(
-      mock_tpm_proxy_,
-      SendU2fSign(
-          StructMatchesRegex(ExpectedDeterministicU2fSignRequestRegex()), _))
+  EXPECT_CALL(mock_tpm_proxy_,
+              SendU2fSign(Matcher<const u2f_sign_req&>(StructMatchesRegex(
+                              ExpectedDeterministicU2fSignRequestRegex())),
+                          _))
       .WillOnce(Return(kCr50StatusNotAllowed))
       .WillOnce(DoAll(SetArgPointee<1>(kU2fSignResponse),
                       Return(kCr50StatusSuccess)));
@@ -399,7 +392,7 @@ TEST_F(WebAuthnHandlerTest, MakeCredentialNoSecret) {
   ASSERT_TRUE(called);
 }
 
-TEST_F(WebAuthnHandlerTest, MakeCredentialPresenceNoPresence) {
+TEST_F(WebAuthnHandlerTest, MakeCredentialSuccess) {
   MakeCredentialRequest request;
   request.set_rp_id(kRpId);
   request.set_verification_type(VerificationType::VERIFICATION_USER_PRESENCE);
@@ -407,35 +400,10 @@ TEST_F(WebAuthnHandlerTest, MakeCredentialPresenceNoPresence) {
   ExpectGetUserSecret();
   EXPECT_CALL(
       mock_tpm_proxy_,
-      SendU2fGenerate(StructMatchesRegex(ExpectedU2fGenerateRequestRegex()), _))
-      .WillRepeatedly(Return(kCr50StatusNotAllowed));
-
-  auto mock_method_response =
-      std::make_unique<MockDBusMethodResponse<MakeCredentialResponse>>();
-  bool called = false;
-  mock_method_response->set_return_callback(base::Bind(
-      [](bool* called_ptr, const MakeCredentialResponse& resp) {
-        EXPECT_EQ(resp.status(), MakeCredentialResponse::VERIFICATION_FAILED);
-        *called_ptr = true;
-      },
-      &called));
-
-  handler_->MakeCredential(std::move(mock_method_response), request);
-  presence_requested_expected_ = kMaxRetries;
-  ASSERT_TRUE(called);
-}
-
-TEST_F(WebAuthnHandlerTest, MakeCredentialPresenceSuccess) {
-  MakeCredentialRequest request;
-  request.set_rp_id(kRpId);
-  request.set_verification_type(VerificationType::VERIFICATION_USER_PRESENCE);
-
-  ExpectGetUserSecret();
-  EXPECT_CALL(
-      mock_tpm_proxy_,
-      SendU2fGenerate(StructMatchesRegex(ExpectedU2fGenerateRequestRegex()), _))
+      SendU2fGenerate(StructMatchesRegex(ExpectedU2fGenerateRequestRegex()),
+                      Matcher<u2f_generate_versioned_resp*>(_)))
       .WillOnce(Return(kCr50StatusNotAllowed))
-      .WillOnce(DoAll(SetArgPointee<1>(kU2fGenerateResponse),
+      .WillOnce(DoAll(SetArgPointee<1>(kU2fGenerateVersionedResponse),
                       Return(kCr50StatusSuccess)));
 
   const std::string expected_authenticator_data_regex =
@@ -444,8 +412,8 @@ TEST_F(WebAuthnHandlerTest, MakeCredentialPresenceSuccess) {
           "41"          // Flag: user present, attested credential data included
           "(..){4}"     // Signature counter
           "(00){16}"    // AAGUID
-          "0040"        // Credential ID length
-          "(FD){64}"    // Credential ID, from kU2fGenerateResponse
+          "0071"        // Credential ID length
+          "(FD){113}"   // Credential ID, from kU2fGenerateVersionedResponse
                         // CBOR encoded credential public key:
           "A5"          // Start a CBOR map of 5 elements
           "01"          // unsigned(1), COSE key type field
@@ -456,10 +424,10 @@ TEST_F(WebAuthnHandlerTest, MakeCredentialPresenceSuccess) {
           "01"          // unsigned(1), COSE EC key curve
           "21"          // negative(1) = -2, COSE EC key x coordinate field
           "5820"        // Start a CBOR array of 32 bytes
-          "(AB){32}"    // x coordinate, from kU2fGenerateResponse
+          "(AB){32}"    // x coordinate, from kU2fGenerateVersionedResponse
           "22"          // negative(2) = -3, COSE EC key y coordinate field
           "5820"        // Start a CBOR array of 32 bytes
-          "(AB){32}");  // y coordinate, from kU2fGenerateResponse
+          "(AB){32}");  // y coordinate, from kU2fGenerateVersionedResponse
 
   auto mock_method_response =
       std::make_unique<MockDBusMethodResponse<MakeCredentialResponse>>();
@@ -574,10 +542,10 @@ TEST_F(WebAuthnHandlerTest, GetAssertionInvalidKeyHandle) {
   // we won't DoU2fSign.
   ExpectGetUserSecret();
 
-  EXPECT_CALL(
-      mock_tpm_proxy_,
-      SendU2fSign(StructMatchesRegex(ExpectedU2fSignCheckOnlyRequestRegex()),
-                  _))
+  EXPECT_CALL(mock_tpm_proxy_,
+              SendU2fSign(Matcher<const u2f_sign_req&>(StructMatchesRegex(
+                              ExpectedU2fSignCheckOnlyRequestRegex())),
+                          _))
       .WillOnce(Return(kCr50StatusPasswordRequired));
 
   auto mock_method_response =
@@ -604,13 +572,15 @@ TEST_F(WebAuthnHandlerTest, GetAssertionPresenceNoPresence) {
 
   ExpectGetUserSecretForTimes(2);
 
-  EXPECT_CALL(
-      mock_tpm_proxy_,
-      SendU2fSign(StructMatchesRegex(ExpectedU2fSignCheckOnlyRequestRegex()),
-                  _))
+  EXPECT_CALL(mock_tpm_proxy_,
+              SendU2fSign(Matcher<const u2f_sign_req&>(StructMatchesRegex(
+                              ExpectedU2fSignCheckOnlyRequestRegex())),
+                          _))
       .WillOnce(Return(kCr50StatusSuccess));
   EXPECT_CALL(mock_tpm_proxy_,
-              SendU2fSign(StructMatchesRegex(ExpectedU2fSignRequestRegex()), _))
+              SendU2fSign(Matcher<const u2f_sign_req&>(StructMatchesRegex(
+                              ExpectedU2fSignRequestRegex())),
+                          _))
       .WillRepeatedly(Return(kCr50StatusNotAllowed));
 
   auto mock_method_response =
@@ -638,13 +608,15 @@ TEST_F(WebAuthnHandlerTest, GetAssertionPresenceSuccess) {
 
   ExpectGetUserSecretForTimes(2);
 
-  EXPECT_CALL(
-      mock_tpm_proxy_,
-      SendU2fSign(StructMatchesRegex(ExpectedU2fSignCheckOnlyRequestRegex()),
-                  _))
+  EXPECT_CALL(mock_tpm_proxy_,
+              SendU2fSign(Matcher<const u2f_sign_req&>(StructMatchesRegex(
+                              ExpectedU2fSignCheckOnlyRequestRegex())),
+                          _))
       .WillOnce(Return(kCr50StatusSuccess));
   EXPECT_CALL(mock_tpm_proxy_,
-              SendU2fSign(StructMatchesRegex(ExpectedU2fSignRequestRegex()), _))
+              SendU2fSign(Matcher<const u2f_sign_req&>(StructMatchesRegex(
+                              ExpectedU2fSignRequestRegex())),
+                          _))
       .WillOnce(Return(kCr50StatusNotAllowed))
       .WillOnce(DoAll(SetArgPointee<1>(kU2fSignResponse),
                       Return(kCr50StatusSuccess)));
@@ -684,10 +656,10 @@ TEST_F(WebAuthnHandlerTest, HasCredentialsNoMatch) {
   request.add_credential_id(std::string(sizeof(struct u2f_key_handle), 0xab));
 
   ExpectGetUserSecret();
-  EXPECT_CALL(
-      mock_tpm_proxy_,
-      SendU2fSign(StructMatchesRegex(ExpectedU2fSignCheckOnlyRequestRegex()),
-                  _))
+  EXPECT_CALL(mock_tpm_proxy_,
+              SendU2fSign(Matcher<const u2f_sign_req&>(StructMatchesRegex(
+                              ExpectedU2fSignCheckOnlyRequestRegex())),
+                          _))
       .WillOnce(Return(kCr50StatusPasswordRequired));
 
   auto resp = handler_->HasCredentials(request);
@@ -700,10 +672,10 @@ TEST_F(WebAuthnHandlerTest, HasCredentialsOneMatch) {
   request.add_credential_id(std::string(sizeof(struct u2f_key_handle), 0xab));
 
   ExpectGetUserSecret();
-  EXPECT_CALL(
-      mock_tpm_proxy_,
-      SendU2fSign(StructMatchesRegex(ExpectedU2fSignCheckOnlyRequestRegex()),
-                  _))
+  EXPECT_CALL(mock_tpm_proxy_,
+              SendU2fSign(Matcher<const u2f_sign_req&>(StructMatchesRegex(
+                              ExpectedU2fSignCheckOnlyRequestRegex())),
+                          _))
       .WillOnce(Return(kCr50StatusSuccess));
 
   auto resp = handler_->HasCredentials(request);

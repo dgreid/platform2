@@ -44,6 +44,8 @@ class TpmVendorCommandProxy : public trunks::TrunksDBusProxy {
   // response was invalid.
   virtual uint32_t SendU2fGenerate(const struct u2f_generate_req& req,
                                    u2f_generate_resp* resp_out);
+  virtual uint32_t SendU2fGenerate(const struct u2f_generate_req& req,
+                                   u2f_generate_versioned_resp* resp_out);
 
   // Sends the VENDOR_CC_U2F_SIGN command to cr50, and populates
   // resp_out with the reply.
@@ -53,6 +55,8 @@ class TpmVendorCommandProxy : public trunks::TrunksDBusProxy {
   // Returns the TPM response code, or kVendorRcInvalidResponse if the
   // response was invalid.
   virtual uint32_t SendU2fSign(const struct u2f_sign_req& req,
+                               u2f_sign_resp* resp_out);
+  virtual uint32_t SendU2fSign(const struct u2f_sign_versioned_req& req,
                                u2f_sign_resp* resp_out);
 
   // Sends the VENDOR_CC_U2F_ATTEST command to cr50, and populates
@@ -90,6 +94,9 @@ class TpmVendorCommandProxy : public trunks::TrunksDBusProxy {
   uint32_t VendorCommandStruct(uint16_t cc,
                                const Request& input,
                                Response* output);
+
+  template <typename Request>
+  uint32_t SendU2fSignGeneric(const Request& req, u2f_sign_resp* resp_out);
 
   // Sends the VENDOR_CC_U2F_APDU command to the TPM with |req| as the
   // ISO7816-4:2005 APDU data and writes in |resp| sent back by the TPM.

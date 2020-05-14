@@ -23,6 +23,7 @@ namespace {
 
 using ::testing::_;
 using ::testing::ContainsRegex;
+using ::testing::Matcher;
 using ::testing::MatchesRegex;
 using ::testing::NiceMock;
 using ::testing::Return;
@@ -215,9 +216,9 @@ TEST_F(U2fMessageHandlerTest, RegisterSuccess) {
       .keyHandle = {.origin_seed = {[0 ... 31] = 0xFD},
                     .hmac = {[0 ... 31] = 0xFD}}};
 
-  EXPECT_CALL(
-      mock_tpm_proxy_,
-      SendU2fGenerate(StructMatchesRegex(expected_cr50_request_regex), _))
+  EXPECT_CALL(mock_tpm_proxy_,
+              SendU2fGenerate(StructMatchesRegex(expected_cr50_request_regex),
+                              Matcher<u2f_generate_resp*>(_)))
       .WillOnce(DoAll(SetArgPointee<1>(cr50_response), Return(kCr50Success)));
 
   std::string adpu_response = AdpuToHexString(
@@ -279,7 +280,8 @@ TEST_F(U2fMessageHandlerTest, RegisterSecretNotAvailable) {
 TEST_F(U2fMessageHandlerTest, RegisterNoPresence) {
   ExpectGetUserSecret();
 
-  EXPECT_CALL(mock_tpm_proxy_, SendU2fGenerate(_, _))
+  EXPECT_CALL(mock_tpm_proxy_,
+              SendU2fGenerate(_, Matcher<u2f_generate_resp*>(_)))
       .WillOnce(Return(kCr50NotAllowed));
 
   CheckResponseForMsg(kRequestRegisterPrefix, kChallenge, kAppId,
@@ -291,7 +293,8 @@ TEST_F(U2fMessageHandlerTest, RegisterNoPresence) {
 TEST_F(U2fMessageHandlerTest, RegisterCr50UnknownError) {
   ExpectGetUserSecret();
 
-  EXPECT_CALL(mock_tpm_proxy_, SendU2fGenerate(_, _))
+  EXPECT_CALL(mock_tpm_proxy_,
+              SendU2fGenerate(_, Matcher<u2f_generate_resp*>(_)))
       .WillOnce(Return(4324523 /* Random Unknown Error */));
 
   CheckResponseForMsg(kRequestRegisterPrefix, kChallenge, kAppId,
@@ -348,7 +351,8 @@ TEST_F(U2fMessageHandlerTest, RegisterG2fWhenDisabledSuccess) {
   ExpectGetUserSecret();
 
   EXPECT_CALL(mock_tpm_proxy_,
-              SendU2fGenerate(StructMatchesRegex(kCr50ExpectedGenReqRegex), _))
+              SendU2fGenerate(StructMatchesRegex(kCr50ExpectedGenReqRegex),
+                              Matcher<u2f_generate_resp*>(_)))
       .WillOnce(DoAll(SetArgPointee<1>(kCr50GenResp), Return(kCr50Success)));
 
   std::string adpu_response = AdpuToHexString(ProcessMsg(
@@ -374,7 +378,8 @@ TEST_F(U2fMessageHandlerTest, RegisterG2fSuccess) {
   ExpectGetUserSecretForTimes(2);
 
   EXPECT_CALL(mock_tpm_proxy_,
-              SendU2fGenerate(StructMatchesRegex(kCr50ExpectedGenReqRegex), _))
+              SendU2fGenerate(StructMatchesRegex(kCr50ExpectedGenReqRegex),
+                              Matcher<u2f_generate_resp*>(_)))
       .WillOnce(DoAll(SetArgPointee<1>(kCr50GenResp), Return(kCr50Success)));
 
   EXPECT_CALL(mock_tpm_proxy_, GetG2fCertificate(_))
@@ -423,7 +428,8 @@ TEST_F(U2fMessageHandlerTest, RegisterG2fNoPresence) {
 
   ExpectGetUserSecret();
 
-  EXPECT_CALL(mock_tpm_proxy_, SendU2fGenerate(_, _))
+  EXPECT_CALL(mock_tpm_proxy_,
+              SendU2fGenerate(_, Matcher<u2f_generate_resp*>(_)))
       .WillOnce(Return(kCr50NotAllowed));
 
   CheckResponseForMsg(kRequestRegisterG2fPrefix, kChallenge, kAppId,
@@ -442,7 +448,8 @@ TEST_F(U2fMessageHandlerTest, RegisterG2fAttestSecretNotAvailable) {
       .WillOnce(Return(base::Optional<brillo::SecureBlob>()));
 
   EXPECT_CALL(mock_tpm_proxy_,
-              SendU2fGenerate(StructMatchesRegex(kCr50ExpectedGenReqRegex), _))
+              SendU2fGenerate(StructMatchesRegex(kCr50ExpectedGenReqRegex),
+                              Matcher<u2f_generate_resp*>(_)))
       .WillOnce(DoAll(SetArgPointee<1>(kCr50GenResp), Return(kCr50Success)));
 
   EXPECT_CALL(mock_tpm_proxy_, GetG2fCertificate(_))
@@ -459,7 +466,8 @@ TEST_F(U2fMessageHandlerTest, RegisterG2fAttestFails) {
   ExpectGetUserSecretForTimes(2);
 
   EXPECT_CALL(mock_tpm_proxy_,
-              SendU2fGenerate(StructMatchesRegex(kCr50ExpectedGenReqRegex), _))
+              SendU2fGenerate(StructMatchesRegex(kCr50ExpectedGenReqRegex),
+                              Matcher<u2f_generate_resp*>(_)))
       .WillOnce(DoAll(SetArgPointee<1>(kCr50GenResp), Return(kCr50Success)));
 
   EXPECT_CALL(mock_tpm_proxy_, GetG2fCertificate(_))
@@ -499,7 +507,9 @@ TEST_F(U2fMessageHandlerTest, AuthenticateSuccess) {
                                         .sig_s = {[0 ... 31] = 0x55}};
 
   EXPECT_CALL(mock_tpm_proxy_,
-              SendU2fSign(StructMatchesRegex(expected_cr50_request_regex), _))
+              SendU2fSign(Matcher<const u2f_sign_req&>(
+                              StructMatchesRegex(expected_cr50_request_regex)),
+                          _))
       .WillOnce(DoAll(SetArgPointee<1>(cr50_response), Return(kCr50Success)));
 
   ExpectIncrementCounter();
@@ -538,7 +548,9 @@ TEST_F(U2fMessageHandlerTest, AuthenticateWithFallbackSuccess) {
       "43";           // U2F_AUTH_ENFORCE | LEGACY_KH_FALLBACK
 
   EXPECT_CALL(mock_tpm_proxy_,
-              SendU2fSign(StructMatchesRegex(expected_cr50_request_regex), _))
+              SendU2fSign(Matcher<const u2f_sign_req&>(
+                              StructMatchesRegex(expected_cr50_request_regex)),
+                          _))
       .WillOnce(Return(kCr50Success));
 
   ExpectIncrementCounter();
@@ -574,7 +586,7 @@ TEST_F(U2fMessageHandlerTest, AuthenticateNoPresence) {
   ExpectGetCounter();
   ExpectGetUserSecret();
 
-  EXPECT_CALL(mock_tpm_proxy_, SendU2fSign(_, _))
+  EXPECT_CALL(mock_tpm_proxy_, SendU2fSign(Matcher<const u2f_sign_req&>(_), _))
       .WillOnce(Return(kCr50NotAllowed));
 
   CheckResponseForMsg(kRequestAuthenticatePrefix, kChallenge, kAppId,
@@ -588,7 +600,7 @@ TEST_F(U2fMessageHandlerTest, AuthenticateInvalidKeyHandle) {
   ExpectGetCounter();
   ExpectGetUserSecret();
 
-  EXPECT_CALL(mock_tpm_proxy_, SendU2fSign(_, _))
+  EXPECT_CALL(mock_tpm_proxy_, SendU2fSign(Matcher<const u2f_sign_req&>(_), _))
       .WillOnce(Return(kCr50PasswordRequired));
 
   CheckResponseForMsg(kRequestAuthenticatePrefix, kChallenge, kAppId,
@@ -599,7 +611,7 @@ TEST_F(U2fMessageHandlerTest, AuthenticateCr50UnknownError) {
   ExpectGetCounter();
   ExpectGetUserSecret();
 
-  EXPECT_CALL(mock_tpm_proxy_, SendU2fSign(_, _))
+  EXPECT_CALL(mock_tpm_proxy_, SendU2fSign(Matcher<const u2f_sign_req&>(_), _))
       .WillOnce(Return(43423 /* Random Unknown Error */));
 
   CheckResponseForMsg(kRequestAuthenticatePrefix, kChallenge, kAppId,
@@ -615,7 +627,7 @@ TEST_F(U2fMessageHandlerTest, AuthenticateCounterCouldNotUpdate) {
   struct u2f_sign_resp cr50_response = {.sig_r = {[0 ... 31] = 0xFF},
                                         .sig_s = {[0 ... 31] = 0x55}};
 
-  EXPECT_CALL(mock_tpm_proxy_, SendU2fSign(_, _))
+  EXPECT_CALL(mock_tpm_proxy_, SendU2fSign(Matcher<const u2f_sign_req&>(_), _))
       .WillOnce(DoAll(SetArgPointee<1>(cr50_response), Return(kCr50Success)));
 
   ExpectIncrementCounterFails();
@@ -641,9 +653,10 @@ TEST_F(U2fMessageHandlerTest, AuthenticateCheckOnlySuccess) {
       "[0-9A-F]{64}"  // Hash
       "07";           // U2F_AUTH_CHECK_ONLY
 
-  EXPECT_CALL(
-      mock_tpm_proxy_,
-      SendU2fSign(StructMatchesRegex(expected_cr50_request_regex), nullptr))
+  EXPECT_CALL(mock_tpm_proxy_,
+              SendU2fSign(Matcher<const u2f_sign_req&>(
+                              StructMatchesRegex(expected_cr50_request_regex)),
+                          nullptr))
       .WillOnce(Return(kCr50Success));
 
   // A success response for this kind of message is indicate by a 'presence
@@ -663,9 +676,10 @@ TEST_F(U2fMessageHandlerTest, AuthenticateCheckOnlyInvalidKeyHandle) {
       "[0-9A-F]{64}"  // Hash
       "07";           // U2F_AUTH_CHECK_ONLY
 
-  EXPECT_CALL(
-      mock_tpm_proxy_,
-      SendU2fSign(StructMatchesRegex(expected_cr50_request_regex), nullptr))
+  EXPECT_CALL(mock_tpm_proxy_,
+              SendU2fSign(Matcher<const u2f_sign_req&>(
+                              StructMatchesRegex(expected_cr50_request_regex)),
+                          nullptr))
       .WillOnce(Return(kCr50PasswordRequired));
 
   CheckResponseForMsg(kRequestAuthenticateCheckOnlyPrefix, kChallenge, kAppId,

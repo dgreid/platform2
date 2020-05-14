@@ -245,8 +245,15 @@ void WebAuthnHandler::DoMakeCredential(
   std::vector<uint8_t> credential_id;
   std::vector<uint8_t> credential_public_key;
 
-  MakeCredentialResponse::MakeCredentialStatus generate_status = DoU2fGenerate(
-      rp_id_hash, presence_requirement, &credential_id, &credential_public_key);
+  // TODO(yichengli): Make this a parameter of MakeCredential once we support
+  // UP-only (non-consumer) credentials in WebAuthnHandler.
+  // UV-compatible means the credential works with power button, fingerprint or
+  // PIN.
+  bool uv_compatible = true;
+
+  MakeCredentialResponse::MakeCredentialStatus generate_status =
+      DoU2fGenerate(rp_id_hash, presence_requirement, uv_compatible,
+                    &credential_id, &credential_public_key);
 
   if (generate_status != MakeCredentialResponse::SUCCESS) {
     response.set_status(generate_status);
@@ -346,6 +353,7 @@ void WebAuthnHandler::CallAndWaitForPresence(std::function<uint32_t()> fn,
 MakeCredentialResponse::MakeCredentialStatus WebAuthnHandler::DoU2fGenerate(
     const std::vector<uint8_t>& rp_id_hash,
     PresenceRequirement presence_requirement,
+    bool uv_compatible,
     std::vector<uint8_t>* credential_id,
     std::vector<uint8_t>* credential_public_key) {
   DCHECK(rp_id_hash.size() == SHA256_DIGEST_LENGTH);
@@ -354,30 +362,51 @@ MakeCredentialResponse::MakeCredentialStatus WebAuthnHandler::DoU2fGenerate(
     return MakeCredentialResponse::INTERNAL_ERROR;
   }
 
-  if (presence_requirement != PresenceRequirement::kPowerButton) {
-    // TODO(yichengli): Add support for requiring fingerprint GPIO active.
-    return MakeCredentialResponse::INTERNAL_ERROR;
-  }
-
-  struct u2f_generate_req generate_req = {
-      .flags = U2F_AUTH_ENFORCE  // Require user presence, consume.
-  };
+  struct u2f_generate_req generate_req = {};
   util::VectorToObject(rp_id_hash, generate_req.appId);
   util::VectorToObject(*user_secret, generate_req.userSecret);
 
-  struct u2f_generate_resp generate_resp = {};
+  if (uv_compatible) {
+    generate_req.flags |= U2F_UV_ENABLED_KH;
+    struct u2f_generate_versioned_resp generate_resp = {};
+    if (presence_requirement != PresenceRequirement::kPowerButton) {
+      // TODO(yichengli): SendU2fGenerate directly.
+      return MakeCredentialResponse::INTERNAL_ERROR;
+    }
+    return SendU2fGenerateWaitForPresence(&generate_req, &generate_resp,
+                                          credential_id, credential_public_key);
+  } else {
+    // Non-versioned KH must be signed with power button press.
+    if (presence_requirement != PresenceRequirement::kPowerButton)
+      return MakeCredentialResponse::INTERNAL_ERROR;
+    // Require user presence, consume.
+    generate_req.flags |= U2F_AUTH_ENFORCE;
+    struct u2f_generate_resp generate_resp = {};
+    return SendU2fGenerateWaitForPresence(&generate_req, &generate_resp,
+                                          credential_id, credential_public_key);
+  }
+}
 
+template <typename Response>
+MakeCredentialResponse::MakeCredentialStatus
+WebAuthnHandler::SendU2fGenerateWaitForPresence(
+    struct u2f_generate_req* generate_req,
+    Response* generate_resp,
+    std::vector<uint8_t>* credential_id,
+    std::vector<uint8_t>* credential_public_key) {
   uint32_t generate_status = -1;
   base::AutoLock(tpm_proxy_->GetLock());
   CallAndWaitForPresence(
-      [this, &generate_req, &generate_resp]() {
-        return tpm_proxy_->SendU2fGenerate(generate_req, &generate_resp);
+      [this, generate_req, generate_resp]() {
+        return tpm_proxy_->SendU2fGenerate(*generate_req, generate_resp);
       },
       &generate_status);
+  brillo::SecureMemset(&generate_req->userSecret, 0,
+                       sizeof(generate_req->userSecret));
 
   if (generate_status == 0) {
-    util::AppendToVector(generate_resp.pubKey, credential_public_key);
-    util::AppendToVector(generate_resp.keyHandle, credential_id);
+    util::AppendToVector(generate_resp->pubKey, credential_public_key);
+    util::AppendToVector(generate_resp->keyHandle, credential_id);
     return MakeCredentialResponse::SUCCESS;
   }
 
@@ -518,33 +547,56 @@ GetAssertionResponse::GetAssertionStatus WebAuthnHandler::DoU2fSign(
     return GetAssertionResponse::INTERNAL_ERROR;
   }
 
-  if (presence_requirement != PresenceRequirement::kPowerButton) {
-    // TODO(yichengli): Add support for requiring fingerprint GPIO active.
-    return GetAssertionResponse::INTERNAL_ERROR;
+  if (credential_id.size() == sizeof(u2f_versioned_key_handle)) {
+    // Allow waiving presence if sign_req.authTimeSecret is correct.
+    struct u2f_sign_versioned_req sign_req = {};
+    util::VectorToObject(rp_id_hash, sign_req.appId);
+    util::VectorToObject(*user_secret, sign_req.userSecret);
+    util::VectorToObject(credential_id, &sign_req.keyHandle);
+    util::VectorToObject(hash_to_sign, sign_req.hash);
+    struct u2f_sign_resp sign_resp = {};
+
+    if (presence_requirement != PresenceRequirement::kPowerButton) {
+      // TODO(yichengli): SendU2fSign directly, without U2F_AUTH_ENFORCE
+      return GetAssertionResponse::INTERNAL_ERROR;
+    }
+
+    return SendU2fSignWaitForPresence(&sign_req, &sign_resp, signature);
+  } else {
+    // Non-versioned KH must be signed with power button press.
+    if (presence_requirement != PresenceRequirement::kPowerButton)
+      return GetAssertionResponse::INTERNAL_ERROR;
+
+    struct u2f_sign_req sign_req = {
+        .flags = U2F_AUTH_ENFORCE  // Require user presence, consume.
+    };
+    util::VectorToObject(rp_id_hash, sign_req.appId);
+    util::VectorToObject(*user_secret, sign_req.userSecret);
+    util::VectorToObject(credential_id, &sign_req.keyHandle);
+    util::VectorToObject(hash_to_sign, sign_req.hash);
+
+    struct u2f_sign_resp sign_resp = {};
+    return SendU2fSignWaitForPresence(&sign_req, &sign_resp, signature);
   }
+}
 
-  struct u2f_sign_req sign_req = {
-      .flags = U2F_AUTH_ENFORCE  // Require user presence, consume.
-  };
-  util::VectorToObject(rp_id_hash, sign_req.appId);
-  util::VectorToObject(*user_secret, sign_req.userSecret);
-  util::VectorToObject(credential_id, &sign_req.keyHandle);
-  util::VectorToObject(hash_to_sign, sign_req.hash);
-
-  struct u2f_sign_resp sign_resp = {};
-
+template <typename Request>
+GetAssertionResponse::GetAssertionStatus
+WebAuthnHandler::SendU2fSignWaitForPresence(Request* sign_req,
+                                            struct u2f_sign_resp* sign_resp,
+                                            std::vector<uint8_t>* signature) {
   uint32_t sign_status = -1;
   base::AutoLock(tpm_proxy_->GetLock());
   CallAndWaitForPresence(
-      [this, &sign_req, &sign_resp]() {
-        return tpm_proxy_->SendU2fSign(sign_req, &sign_resp);
+      [this, sign_req, sign_resp]() {
+        return tpm_proxy_->SendU2fSign(*sign_req, sign_resp);
       },
       &sign_status);
-  brillo::SecureMemset(&sign_req.userSecret, 0, sizeof(sign_req.userSecret));
+  brillo::SecureMemset(&sign_req->userSecret, 0, sizeof(sign_req->userSecret));
 
   if (sign_status == 0) {
     base::Optional<std::vector<uint8_t>> opt_signature =
-        util::SignatureToDerBytes(sign_resp.sig_r, sign_resp.sig_s);
+        util::SignatureToDerBytes(sign_resp->sig_r, sign_resp->sig_s);
     if (!opt_signature.has_value()) {
       return GetAssertionResponse::INTERNAL_ERROR;
     }
@@ -594,15 +646,29 @@ WebAuthnHandler::DoU2fSignCheckOnly(const std::vector<uint8_t>& rp_id_hash,
     return HasCredentialsResponse::INTERNAL_ERROR;
   }
 
-  struct u2f_sign_req sign_req = {.flags = U2F_AUTH_CHECK_ONLY};
-  util::VectorToObject(rp_id_hash, sign_req.appId);
-  util::VectorToObject(*user_secret, sign_req.userSecret);
-  util::VectorToObject(credential_id, &sign_req.keyHandle);
+  uint32_t sign_status;
 
-  struct u2f_sign_resp sign_resp;
-  base::AutoLock(tpm_proxy_->GetLock());
-  uint32_t sign_status = tpm_proxy_->SendU2fSign(sign_req, &sign_resp);
-  brillo::SecureMemset(&sign_req.userSecret, 0, sizeof(sign_req.userSecret));
+  if (credential_id.size() == sizeof(u2f_versioned_key_handle)) {
+    struct u2f_sign_versioned_req sign_req = {.flags = U2F_AUTH_CHECK_ONLY};
+    util::VectorToObject(rp_id_hash, sign_req.appId);
+    util::VectorToObject(*user_secret, sign_req.userSecret);
+    util::VectorToObject(credential_id, &sign_req.keyHandle);
+
+    struct u2f_sign_resp sign_resp;
+    base::AutoLock(tpm_proxy_->GetLock());
+    sign_status = tpm_proxy_->SendU2fSign(sign_req, &sign_resp);
+    brillo::SecureMemset(&sign_req.userSecret, 0, sizeof(sign_req.userSecret));
+  } else {
+    struct u2f_sign_req sign_req = {.flags = U2F_AUTH_CHECK_ONLY};
+    util::VectorToObject(rp_id_hash, sign_req.appId);
+    util::VectorToObject(*user_secret, sign_req.userSecret);
+    util::VectorToObject(credential_id, &sign_req.keyHandle);
+
+    struct u2f_sign_resp sign_resp;
+    base::AutoLock(tpm_proxy_->GetLock());
+    sign_status = tpm_proxy_->SendU2fSign(sign_req, &sign_resp);
+    brillo::SecureMemset(&sign_req.userSecret, 0, sizeof(sign_req.userSecret));
+  }
 
   // Return status of 0 indicates the credential is valid.
   return (sign_status == 0) ? HasCredentialsResponse::SUCCESS

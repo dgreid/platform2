@@ -136,11 +136,28 @@ uint32_t TpmVendorCommandProxy::SendU2fApdu(const std::string& req,
 
 uint32_t TpmVendorCommandProxy::SendU2fGenerate(
     const struct u2f_generate_req& req, struct u2f_generate_resp* resp_out) {
+  if ((req.flags & U2F_UV_ENABLED_KH) != 0) {
+    LOG(ERROR) << "Invalid flags in u2f_generate request.";
+    return -1;
+  }
+
   return VendorCommandStruct(kVendorCcU2fGenerate, req, resp_out);
 }
 
-uint32_t TpmVendorCommandProxy::SendU2fSign(const struct u2f_sign_req& req,
-                                            struct u2f_sign_resp* resp_out) {
+uint32_t TpmVendorCommandProxy::SendU2fGenerate(
+    const struct u2f_generate_req& req,
+    struct u2f_generate_versioned_resp* resp_out) {
+  if ((req.flags & U2F_UV_ENABLED_KH) == 0) {
+    LOG(ERROR) << "Invalid flags in u2f_generate request.";
+    return -1;
+  }
+
+  return VendorCommandStruct(kVendorCcU2fGenerate, req, resp_out);
+}
+
+template <typename Request>
+uint32_t TpmVendorCommandProxy::SendU2fSignGeneric(
+    const Request& req, struct u2f_sign_resp* resp_out) {
   std::string output_str;
   uint32_t resp_code =
       VendorCommand(kVendorCcU2fSign, RequestToString(req), &output_str);
@@ -149,7 +166,8 @@ uint32_t TpmVendorCommandProxy::SendU2fSign(const struct u2f_sign_req& req,
     // A success response may or may not have a body, depending on whether the
     // request was a full sign request, or simply a 'check only' request, to
     // test ownership of the specified key handle.
-    if (req.flags == U2F_AUTH_CHECK_ONLY && output_str.size() == 0) {
+    if (((req.flags & U2F_AUTH_CHECK_ONLY) == U2F_AUTH_CHECK_ONLY) &&
+        output_str.size() == 0) {
       // We asked to test ownership of a key handle; success response code
       // indicates it is owned. No response body expected.
       return resp_code;
@@ -166,6 +184,16 @@ uint32_t TpmVendorCommandProxy::SendU2fSign(const struct u2f_sign_req& req,
   }
 
   return resp_code;
+}
+
+uint32_t TpmVendorCommandProxy::SendU2fSign(const struct u2f_sign_req& req,
+                                            u2f_sign_resp* resp) {
+  return SendU2fSignGeneric(req, resp);
+}
+
+uint32_t TpmVendorCommandProxy::SendU2fSign(
+    const struct u2f_sign_versioned_req& req, u2f_sign_resp* resp) {
+  return SendU2fSignGeneric(req, resp);
 }
 
 uint32_t TpmVendorCommandProxy::SendU2fAttest(

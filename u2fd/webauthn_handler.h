@@ -110,6 +110,15 @@ class WebAuthnHandler {
   MakeCredentialResponse::MakeCredentialStatus DoU2fGenerate(
       const std::vector<uint8_t>& rp_id_hash,
       PresenceRequirement presence_requirement,
+      bool uv_compatible,
+      std::vector<uint8_t>* credential_id,
+      std::vector<uint8_t>* credential_public_key);
+
+  // Repeatedly send u2f_generate request to the TPM if there's no presence.
+  template <typename Response>
+  MakeCredentialResponse::MakeCredentialStatus SendU2fGenerateWaitForPresence(
+      struct u2f_generate_req* generate_req,
+      Response* generate_resp,
       std::vector<uint8_t>* credential_id,
       std::vector<uint8_t>* credential_public_key);
 
@@ -123,6 +132,13 @@ class WebAuthnHandler {
       const std::vector<uint8_t>& hash_to_sign,
       const std::vector<uint8_t>& credential_id,
       PresenceRequirement presence_requirement,
+      std::vector<uint8_t>* signature);
+
+  // Repeatedly send u2f_sign request to the TPM if there's no presence.
+  template <typename Request>
+  GetAssertionResponse::GetAssertionStatus SendU2fSignWaitForPresence(
+      Request* sign_req,
+      struct u2f_sign_resp* sign_resp,
       std::vector<uint8_t>* signature);
 
   // Runs a U2F_SIGN command with "check only" flag to check whether
