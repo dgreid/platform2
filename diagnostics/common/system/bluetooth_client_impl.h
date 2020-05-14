@@ -25,7 +25,7 @@ class BluetoothClientImpl final : public BluetoothClient,
                                   public dbus::ObjectManager::Interface {
  public:
   explicit BluetoothClientImpl(const scoped_refptr<dbus::Bus>& bus);
-  ~BluetoothClientImpl();
+  ~BluetoothClientImpl() override;
 
   // BluetoothClient overrides:
   std::vector<dbus::ObjectPath> GetAdapters() override;
