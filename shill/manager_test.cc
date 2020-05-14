@@ -723,12 +723,12 @@ TEST_F(ManagerTest, GetProperties) {
     brillo::VariantDictionary props;
     Error error;
     bool expected = true;
-    manager()->mutable_store()->SetBoolProperty(kOfflineModeProperty, expected,
+    manager()->mutable_store()->SetBoolProperty(kArpGatewayProperty, expected,
                                                 &error);
     manager()->store().GetProperties(&props, &error);
-    ASSERT_FALSE(props.find(kOfflineModeProperty) == props.end());
-    EXPECT_TRUE(props[kOfflineModeProperty].IsTypeCompatible<bool>());
-    EXPECT_EQ(props[kOfflineModeProperty].Get<bool>(), expected);
+    ASSERT_FALSE(props.find(kArpGatewayProperty) == props.end());
+    EXPECT_TRUE(props[kArpGatewayProperty].IsTypeCompatible<bool>());
+    EXPECT_EQ(props[kArpGatewayProperty].Get<bool>(), expected);
   }
 }
 
@@ -1410,9 +1410,9 @@ TEST_F(ManagerTest, PopProfileWithUnload) {
 TEST_F(ManagerTest, SetProperty) {
   {
     Error error;
-    const bool offline_mode = true;
+    const bool arp_gateway = false;
     EXPECT_TRUE(manager()->mutable_store()->SetAnyProperty(
-        kOfflineModeProperty, brillo::Any(offline_mode), &error));
+        kArpGatewayProperty, brillo::Any(arp_gateway), &error));
   }
   {
     Error error;
@@ -1430,7 +1430,7 @@ TEST_F(ManagerTest, SetProperty) {
   {
     Error error;
     EXPECT_FALSE(manager()->mutable_store()->SetAnyProperty(
-        kOfflineModeProperty, PropertyStoreTest::kStringV, &error));
+        kArpGatewayProperty, PropertyStoreTest::kStringV, &error));
     EXPECT_EQ(Error::kInvalidArguments, error.type());
   }
   // Attempt to write R/O property should return InvalidArgs.

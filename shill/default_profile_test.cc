@@ -75,23 +75,23 @@ TEST_F(DefaultProfileTest, GetProperties) {
     brillo::VariantDictionary props;
     Error error;
     profile_->store().GetProperties(&props, &error);
-    ASSERT_FALSE(props.find(kOfflineModeProperty) == props.end());
-    EXPECT_TRUE(props[kOfflineModeProperty].IsTypeCompatible<bool>());
-    EXPECT_FALSE(props[kOfflineModeProperty].Get<bool>());
+    ASSERT_FALSE(props.find(kArpGatewayProperty) == props.end());
+    EXPECT_TRUE(props[kArpGatewayProperty].IsTypeCompatible<bool>());
+    EXPECT_EQ(props[kArpGatewayProperty].Get<bool>(), properties_.arp_gateway);
   }
-  properties_.offline_mode = true;
+  properties_.arp_gateway = false;
   {
     brillo::VariantDictionary props;
     Error error;
     profile_->store().GetProperties(&props, &error);
-    ASSERT_FALSE(props.find(kOfflineModeProperty) == props.end());
-    EXPECT_TRUE(props[kOfflineModeProperty].IsTypeCompatible<bool>());
-    EXPECT_TRUE(props[kOfflineModeProperty].Get<bool>());
+    ASSERT_FALSE(props.find(kArpGatewayProperty) == props.end());
+    EXPECT_TRUE(props[kArpGatewayProperty].IsTypeCompatible<bool>());
+    EXPECT_EQ(props[kArpGatewayProperty].Get<bool>(), properties_.arp_gateway);
   }
   {
     Error error(Error::kInvalidProperty, "");
-    EXPECT_FALSE(profile_->mutable_store()->SetBoolProperty(
-        kOfflineModeProperty, true, &error));
+    EXPECT_FALSE(profile_->mutable_store()->SetBoolProperty(kArpGatewayProperty,
+                                                            true, &error));
   }
 }
 
@@ -106,9 +106,6 @@ TEST_F(DefaultProfileTest, Save) {
       .WillOnce(Return(true));
   EXPECT_CALL(*storage, SetString(DefaultProfile::kStorageId,
                                   DefaultProfile::kStorageHostName, ""))
-      .WillOnce(Return(true));
-  EXPECT_CALL(*storage, SetBool(DefaultProfile::kStorageId,
-                                DefaultProfile::kStorageOfflineMode, false))
       .WillOnce(Return(true));
   EXPECT_CALL(*storage, SetString(DefaultProfile::kStorageId,
                                   DefaultProfile::kStorageCheckPortalList, ""))
@@ -153,10 +150,6 @@ TEST_F(DefaultProfileTest, LoadManagerDefaultProperties) {
                                   DefaultProfile::kStorageHostName,
                                   &manager_props.host_name))
       .WillOnce(Return(false));
-  EXPECT_CALL(*storage, GetBool(DefaultProfile::kStorageId,
-                                DefaultProfile::kStorageOfflineMode,
-                                &manager_props.offline_mode))
-      .WillOnce(Return(false));
   EXPECT_CALL(*storage, GetString(DefaultProfile::kStorageId,
                                   DefaultProfile::kStorageCheckPortalList,
                                   &manager_props.check_portal_list))
@@ -186,7 +179,6 @@ TEST_F(DefaultProfileTest, LoadManagerDefaultProperties) {
                                   manager()->dhcp_properties_.get());
   EXPECT_TRUE(manager_props.arp_gateway);
   EXPECT_EQ("", manager_props.host_name);
-  EXPECT_FALSE(manager_props.offline_mode);
   EXPECT_EQ(PortalDetector::kDefaultCheckPortalList,
             manager_props.check_portal_list);
   EXPECT_EQ(Resolver::kDefaultIgnoredSearchList,
@@ -210,9 +202,6 @@ TEST_F(DefaultProfileTest, LoadManagerProperties) {
   EXPECT_CALL(*storage, GetString(DefaultProfile::kStorageId,
                                   DefaultProfile::kStorageHostName, _))
       .WillOnce(DoAll(SetArgPointee<2>(host_name), Return(true)));
-  EXPECT_CALL(*storage, GetBool(DefaultProfile::kStorageId,
-                                DefaultProfile::kStorageOfflineMode, _))
-      .WillOnce(DoAll(SetArgPointee<2>(true), Return(true)));
   const string portal_list("technology1,technology2");
   EXPECT_CALL(*storage, GetString(DefaultProfile::kStorageId,
                                   DefaultProfile::kStorageCheckPortalList, _))
@@ -249,7 +238,6 @@ TEST_F(DefaultProfileTest, LoadManagerProperties) {
                                   manager()->dhcp_properties_.get());
   EXPECT_FALSE(manager_props.arp_gateway);
   EXPECT_EQ(host_name, manager_props.host_name);
-  EXPECT_TRUE(manager_props.offline_mode);
   EXPECT_EQ(portal_list, manager_props.check_portal_list);
   EXPECT_EQ(ignored_paths, manager_props.ignored_dns_search_paths);
   EXPECT_EQ(link_monitor_technologies, manager_props.link_monitor_technologies);

@@ -30,7 +30,6 @@ if len(sys.argv) < 2:
     print('  scan [type]')
     print('  enable <type>')
     print('  disable <type>')
-    print('  offlinemode [on|off]')
     print('')
     print('  dev <interface>')
     print('  dev <interface> networks')
@@ -297,14 +296,6 @@ def main():
             manager.DisableTechnology(sys.argv[2])
         else:
             manager.DisableTechnology('')
-
-    elif sys.argv[1] in ['offlinemode', 'flightmode']:
-        if len(sys.argv) > 2:
-            active = flimflam.make_dbus_boolean(sys.argv[2])
-            manager.SetProperty('OfflineMode', active)
-        else:
-            properties = manager.GetProperties()
-            print('Offline mode is %s' % (properties['OfflineMode']))
 
     elif sys.argv[1] == 'dev':
         properties = manager.GetProperties()

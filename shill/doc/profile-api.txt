@@ -32,7 +32,7 @@ Device and IPConfig objects go in the global profile (if any).
 This ensures that enable/disable state is maintained between users
 (and reboots); or possibly discarded (e.g. for testing).
 
-Likewise global state like Offline mode is stored in the global profile
+Likewise global state like ArpGateway is stored in the global profile
 (see above).
 
 
@@ -135,14 +135,6 @@ Properties	string CheckPortalList [readonly]
 		string Name [readonly]
 
 			Name of this profile.
-
-		boolean OfflineMode [readonly]
-
-			The setting for switching all radios on or
-			off. This setting is recorded only in the
-			default profile as it affects all users and is
-			used pre-login.  To alter this setting set the
-			Manager.OfflineMode property.
 
 		string PortalURL [readonly]
 

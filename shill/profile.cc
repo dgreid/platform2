@@ -47,7 +47,6 @@ Profile::Profile(Manager* manager,
   store_.RegisterConstString(kNameProperty, &name_.identifier);
   store_.RegisterConstString(kUserHashProperty, &name_.user_hash);
 
-  // kOfflineModeProperty: Registered in DefaultProfile
   // kPortalURLProperty: Registered in DefaultProfile
 
   HelpRegisterConstDerivedRpcIdentifiers(kServicesProperty,

@@ -22,6 +22,13 @@
 #endif  // DISABLE_WIFI
 
 namespace shill {
+
+namespace {
+// OfflineMode was removed in crrev.com/c/2202196.
+// This was left here to remove OfflineMode entries from profiles.
+const char kStorageOfflineMode[] = "OfflineMode";
+}  // namespace
+
 // static
 const char DefaultProfile::kDefaultId[] = "default";
 // static
@@ -46,8 +53,6 @@ const char DefaultProfile::kStorageName[] = "Name";
 const char DefaultProfile::kStorageNoAutoConnectTechnologies[] =
     "NoAutoConnectTechnologies";
 // static
-const char DefaultProfile::kStorageOfflineMode[] = "OfflineMode";
-// static
 const char DefaultProfile::kStorageProhibitedTechnologies[] =
     "ProhibitedTechnologies";
 
@@ -69,7 +74,6 @@ DefaultProfile::DefaultProfile(Manager* manager,
                              &manager_props.link_monitor_technologies);
   store->RegisterConstString(kNoAutoConnectTechnologiesProperty,
                              &manager_props.no_auto_connect_technologies);
-  store->RegisterConstBool(kOfflineModeProperty, &manager_props.offline_mode);
   store->RegisterConstString(kProhibitedTechnologiesProperty,
                              &manager_props.prohibited_technologies);
   set_persistent_profile_path(
@@ -83,8 +87,6 @@ void DefaultProfile::LoadManagerProperties(Manager::Properties* manager_props,
   storage()->GetBool(kStorageId, kStorageArpGateway,
                      &manager_props->arp_gateway);
   storage()->GetString(kStorageId, kStorageHostName, &manager_props->host_name);
-  storage()->GetBool(kStorageId, kStorageOfflineMode,
-                     &manager_props->offline_mode);
   if (!storage()->GetString(kStorageId, kStorageCheckPortalList,
                             &manager_props->check_portal_list)) {
     manager_props->check_portal_list = PortalDetector::kDefaultCheckPortalList;
@@ -138,10 +140,12 @@ bool DefaultProfile::ConfigureService(const ServiceRefPtr& service) {
 }
 
 bool DefaultProfile::Save() {
+  // OfflineMode was removed in crrev.com/c/2202196.
+  storage()->DeleteKey(kStorageId, kStorageOfflineMode);
+
   storage()->SetBool(kStorageId, kStorageArpGateway, props_.arp_gateway);
   storage()->SetString(kStorageId, kStorageHostName, props_.host_name);
   storage()->SetString(kStorageId, kStorageName, GetFriendlyName());
-  storage()->SetBool(kStorageId, kStorageOfflineMode, props_.offline_mode);
   storage()->SetString(kStorageId, kStorageCheckPortalList,
                        props_.check_portal_list);
   storage()->SetInt(kStorageId, kStorageConnectionIdSalt,

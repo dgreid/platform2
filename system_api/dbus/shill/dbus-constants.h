@@ -110,7 +110,6 @@ const char kCheckPortalListProperty[] = "CheckPortalList";
 const char kIgnoredDNSSearchPathsProperty[] = "IgnoredDNSSearchPaths";
 const char kLinkMonitorTechnologiesProperty[] = "LinkMonitorTechnologies";
 const char kNoAutoConnectTechnologiesProperty[] = "NoAutoConnectTechnologies";
-const char kOfflineModeProperty[] = "OfflineMode";
 const char kProhibitedTechnologiesProperty[] = "ProhibitedTechnologies";
 
 // DHCP property names for both Manager and Service.

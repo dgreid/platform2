@@ -244,7 +244,6 @@ Manager::Manager(ControlInterface* control_interface,
                         &props_.link_monitor_technologies);
   store_.RegisterString(kNoAutoConnectTechnologiesProperty,
                         &props_.no_auto_connect_technologies);
-  store_.RegisterBool(kOfflineModeProperty, &props_.offline_mode);
   store_.RegisterConstString(kPortalHttpUrlProperty, &props_.portal_http_url);
   store_.RegisterConstString(kPortalHttpsUrlProperty, &props_.portal_https_url);
   HelpRegisterDerivedString(kPortalFallbackUrlsStringProperty,

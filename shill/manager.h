@@ -66,11 +66,9 @@ class Manager : public base::SupportsWeakPtr<Manager> {
   struct Properties {
    public:
     Properties()
-        : offline_mode(false),
-          arp_gateway(true),
+        : arp_gateway(true),
           connection_id_salt(0),
           minimum_mtu(IPConfig::kUndefinedMTU) {}
-    bool offline_mode;
     std::string check_portal_list;
     std::string portal_http_url;
     std::string portal_https_url;

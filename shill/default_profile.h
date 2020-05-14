@@ -72,7 +72,6 @@ class DefaultProfile : public Profile {
   static const char kStorageLinkMonitorTechnologies[];
   static const char kStorageName[];
   static const char kStorageNoAutoConnectTechnologies[];
-  static const char kStorageOfflineMode[];
   static const char kStorageProhibitedTechnologies[];
 
   const std::string profile_id_;
