@@ -77,7 +77,7 @@ std::vector<uint8_t> StorageInfo::ToDBusFormat() const {
   protobuf.set_storage_description(storage_description_);
   protobuf.set_volume_identifier(volume_identifier_);
 
-  int size = protobuf.ByteSize();
+  size_t size = protobuf.ByteSizeLong();
   std::vector<uint8_t> serialized_proto;
   serialized_proto.resize(size);
   CHECK_GT(size, 0);

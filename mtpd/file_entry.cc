@@ -66,7 +66,7 @@ MtpFileEntry FileEntry::ToProtobuf() const {
 
 std::vector<uint8_t> FileEntry::ToDBusFormat() const {
   MtpFileEntry protobuf = ToProtobuf();
-  int size = protobuf.ByteSize();
+  size_t size = protobuf.ByteSizeLong();
   std::vector<uint8_t> serialized_proto;
   serialized_proto.resize(size);
   CHECK_GT(size, 0);
@@ -94,7 +94,7 @@ std::vector<uint8_t> FileEntry::FileEntriesToDBusFormat(
     MtpFileEntry* added_entry = protobuf.add_file_entries();
     *added_entry = entry_protobuf;
   }
-  int size = protobuf.ByteSize();
+  size_t size = protobuf.ByteSizeLong();
   serialized_proto.resize(size);
   CHECK_GT(size, 0);
   CHECK(protobuf.SerializeToArray(&serialized_proto.front(), size));
