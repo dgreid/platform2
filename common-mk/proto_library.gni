@@ -178,8 +178,14 @@ template("proto_library") {
       deps += invoker.deps
     }
 
-    # Protobuf 3.7.0 introduced generated code that is sometimes unreachable.
-    cflags_cc = [ "-Wno-unreachable-code" ]
+    cflags_cc = [
+      # Protobuf 3.7.0 introduced generated code that is sometimes unreachable.
+      "-Wno-unreachable-code",
+
+      # Protobuf 3.11.4 generates deprecated declarations which lead to warnings
+      # that shouldn't be treated as errors in generated code.
+      "-Wno-deprecated-declarations",
+    ]
   }
 }
 
