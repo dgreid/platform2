@@ -22,6 +22,7 @@ group("all") {
     ":system_api-kerberos-protos",
     ":system_api-login_manager-goprotos",
     ":system_api-login_manager-protos",
+    ":system_api-lorgnette-protos",
     ":system_api-metrics_event-goprotos",
     ":system_api-metrics_event-protos",
     ":system_api-oobe_config-protos",
@@ -164,6 +165,15 @@ goproto_library("system_api-login_manager-goprotos") {
   proto_in_dir = "dbus/login_manager"
   proto_out_dir = "go/src/chromiumos/system_api/login_manager_proto"
   sources = [ "${proto_in_dir}/policy_descriptor.proto" ]
+}
+
+proto_library("system_api-lorgnette-protos") {
+  proto_in_dir = "dbus/lorgnette"
+  proto_out_dir = "include/lorgnette/proto_bindings"
+  sources = [
+    "${proto_in_dir}/lorgnette_service.proto",
+  ]
+  standalone = true
 }
 
 proto_library("system_api-chaps-protos") {
