@@ -12,6 +12,7 @@ use getopts::Options;
 
 use backends::{Backend, ContainerSource, DiskOpType, VmFeatures};
 use frontends::Frontend;
+use proto::system_api::cicerone_service::StartLxdContainerRequest_PrivilegeLevel;
 use EnvMap;
 
 enum VmcError {
@@ -33,10 +34,14 @@ enum VmcError {
     ExpectedVmPort,
     InvalidEmail,
     MissingActiveSession,
+    ExpectedPrivilegedFlagValue,
     UnknownSubcommand(String),
 }
 
 use self::VmcError::*;
+
+// Optional flag used with "vmc container" command. Use this with the getopts crate API.
+static PRIVILEGED_FLAG: &str = "privileged";
 
 // Remove useless expression items that the `try_command!()` macro captures and stringifies when
 // generating a `VmcError::Command`.
@@ -104,6 +109,9 @@ impl fmt::Display for VmcError {
                 f,
                 "missing active session corresponding to $CROS_USER_ID_HASH"
             ),
+            ExpectedPrivilegedFlagValue => {
+                write!(f, "Expected <true/false> after the privileged flag")
+            }
             UnknownSubcommand(s) => write!(f, "no such subcommand: `{}`", s),
         }
     }
@@ -416,30 +424,52 @@ impl<'a, 'b, 'c> Command<'a, 'b, 'c> {
     }
 
     fn container(&mut self) -> VmcResult {
-        let (vm_name, container_name, source) = match self.args.len() {
+        let mut opts = Options::new();
+        opts.optopt(
+            "p",
+            PRIVILEGED_FLAG,
+            "is the container privileged. only takes effect on boards that support privileged containers",
+            "true / false",
+        );
+        let matches = opts
+            .parse(self.args)
+            .map_err(|_| ExpectedPrivilegedFlagValue)?;
+
+        // The privileged flag is optional but when its given it must be followed by a valid value.
+        let privilege_level = match matches.opt_str(PRIVILEGED_FLAG) {
+            Some(s) => match s.as_str() {
+                "True" | "true" => StartLxdContainerRequest_PrivilegeLevel::PRIVILEGED,
+                "False" | "false" => StartLxdContainerRequest_PrivilegeLevel::UNPRIVILEGED,
+                _ => return Err(ExpectedPrivilegedFlagValue.into()),
+            },
+            None => StartLxdContainerRequest_PrivilegeLevel::UNCHANGED,
+        };
+
+        let required_args = &matches.free;
+        let (vm_name, container_name, source) = match required_args.len() {
             2 => (
-                self.args[0],
-                self.args[1],
+                required_args[0].as_str(),
+                required_args[1].as_str(),
                 ContainerSource::ImageServer {
                     image_server: "https://storage.googleapis.com/cros-containers/%d".to_string(),
                     image_alias: "debian/buster".to_string(),
                 },
             ),
             4 => (
-                self.args[0],
-                self.args[1],
+                required_args[0].as_str(),
+                required_args[1].as_str(),
                 // If this argument looks like an absolute path, treat it and the following
                 // parameter as local paths to tarballs.  Otherwise, assume they are an
                 // image server URL and image alias.
-                if self.args[2].starts_with("/") {
+                if required_args[2].starts_with("/") {
                     ContainerSource::Tarballs {
-                        rootfs_path: self.args[2].to_string(),
-                        metadata_path: self.args[3].to_string(),
+                        rootfs_path: required_args[2].clone(),
+                        metadata_path: required_args[3].clone(),
                     }
                 } else {
                     ContainerSource::ImageServer {
-                        image_server: self.args[2].to_string(),
-                        image_alias: self.args[3].to_string(),
+                        image_server: required_args[2].clone(),
+                        image_alias: required_args[3].clone(),
                     }
                 },
             ),
@@ -469,9 +499,17 @@ impl<'a, 'b, 'c> Command<'a, 'b, 'c> {
             container_name,
             username
         ));
-        try_command!(self
-            .backend
-            .container_start(vm_name, &user_id_hash, container_name));
+
+        // If the container was already running then this will update the privilege level of the
+        // container if |privilege_level| is not |UNCHANGED|. This will take into effect on next
+        // container boot.
+        try_command!(self.backend.container_start(
+            vm_name,
+            &user_id_hash,
+            container_name,
+            privilege_level
+        ));
+
         try_command!(self
             .backend
             .vsh_exec_container(vm_name, &user_id_hash, container_name));
@@ -556,7 +594,7 @@ const USAGE: &str = r#"
      list |
      share <vm name> <path> |
      unshare <vm name> <path> |
-     container <vm name> <container name> [ (<image server> <image alias>) | (<rootfs path> <metadata path>)] |
+     container <vm name> <container name> [ (<image server> <image alias>) | (<rootfs path> <metadata path>)] [ --privileged <true/false> ]
      usb-attach <vm name> <bus>:<device> |
      usb-detach <vm name> <port> |
      usb-list <vm name> |
@@ -804,6 +842,7 @@ mod tests {
                 _vm_name: &str,
                 _user_id_hash: &str,
                 _container_name: &str,
+                _privileged: StartLxdContainerRequest_PrivilegeLevel,
             ) -> Result<(), Box<dyn Error>> {
                 Ok(())
             }
@@ -818,12 +857,68 @@ mod tests {
             }
         }
 
+        // How |PRIVILEGED_FLAG| appears on the command line.
+        const PRIVILEGED_FLAG_CMDLINE: &str = "--privileged";
+
         let environ = vec![("CROS_USER_ID_HASH", "fake_hash")]
             .into_iter()
             .collect();
         for args in CONTAINER_ARGS {
             if let Err(e) = Vmc.run(&mut SessionsListBackend, args, &environ) {
                 panic!("test args failed: {:?}: {}", args, e)
+            }
+        }
+
+        // Test "--privileged" flag.
+        const DUMMY_PRIVILEGED_SUCCESS_ARGS: &[&[&str]] = &[
+            &[
+                "vmc",
+                "container",
+                "termina",
+                "penguin",
+                PRIVILEGED_FLAG_CMDLINE,
+                "true",
+            ],
+            &[
+                "vmc",
+                "container",
+                "termina",
+                PRIVILEGED_FLAG_CMDLINE,
+                "false",
+                "penguin",
+            ],
+            &[
+                "vmc",
+                "container",
+                PRIVILEGED_FLAG_CMDLINE,
+                "true",
+                "termina",
+                "penguin",
+            ],
+        ];
+
+        for args in DUMMY_PRIVILEGED_SUCCESS_ARGS {
+            if let Err(e) = Vmc.run(&mut SessionsListBackend, args, &environ) {
+                panic!("test args failed: {:?}: {}", args, e)
+            }
+        }
+
+        const DUMMY_PRIVILEGED_FAILURE_ARGS: &[&[&str]] = &[
+            &["vmc", "container", PRIVILEGED_FLAG_CMDLINE],
+            &["vmc", "container", PRIVILEGED_FLAG_CMDLINE, "termina"],
+            &["vmc", "container", PRIVILEGED_FLAG_CMDLINE, "termina"],
+            &[
+                "vmc",
+                "container",
+                PRIVILEGED_FLAG_CMDLINE,
+                "termina",
+                "penguin",
+            ],
+        ];
+
+        for args in DUMMY_PRIVILEGED_FAILURE_ARGS {
+            if let Ok(()) = Vmc.run(&mut SessionsListBackend, args, &environ) {
+                panic!("test args should have failed: {:?}", args)
             }
         }
     }

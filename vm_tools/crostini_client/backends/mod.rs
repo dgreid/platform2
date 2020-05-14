@@ -7,6 +7,8 @@ mod chromeos;
 use std::error::Error;
 use std::fmt;
 
+use proto::system_api::cicerone_service::StartLxdContainerRequest_PrivilegeLevel;
+
 pub use self::chromeos::ChromeOS;
 
 struct UnimplementedError {
@@ -343,6 +345,7 @@ impl_backend! {
             vm_name: &str,
             user_id_hash: &str,
             container_name: &str,
+            privilege_level: StartLxdContainerRequest_PrivilegeLevel,
         ) -> Result<(), Box<dyn Error>>;
 
         /// Sets up the `username` in `container_name`, inside the `vm_name`, owned by

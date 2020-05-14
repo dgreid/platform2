@@ -1226,12 +1226,13 @@ impl ChromeOS {
         vm_name: &str,
         user_id_hash: &str,
         container_name: &str,
+        privilege_level: StartLxdContainerRequest_PrivilegeLevel,
     ) -> Result<(), Box<dyn Error>> {
         let mut request = StartLxdContainerRequest::new();
         request.vm_name = vm_name.to_owned();
         request.container_name = container_name.to_owned();
         request.owner_id = user_id_hash.to_owned();
-        request.async = true;
+        request.privilege_level = privilege_level;
 
         let response: StartLxdContainerResponse = self.sync_protobus(
             Message::new_method_call(
@@ -1245,7 +1246,10 @@ impl ChromeOS {
 
         use self::StartLxdContainerResponse_Status::*;
         match response.status {
-            STARTING => {
+            // |REMAPPING| happens when the privilege level of a container was changed before this
+            // boot. It's a long running operation and when it happens it's returned in lieu of
+            // |STARTING|. It makes sense to treat them the same way.
+            STARTING | REMAPPING => {
                 // TODO: listen for signal before calling the D-Bus method.
                 let _signal: cicerone_service::ContainerStartedSignal = self
                     .protobus_wait_for_signal_timeout(
@@ -1662,13 +1666,14 @@ impl Backend for ChromeOS {
         vm_name: &str,
         user_id_hash: &str,
         container_name: &str,
+        privilege_level: StartLxdContainerRequest_PrivilegeLevel,
     ) -> Result<(), Box<dyn Error>> {
         self.start_vm_infrastructure(user_id_hash)?;
         if self.is_plugin_vm(vm_name, user_id_hash)? {
             return Err(NotAvailableForPluginVm.into());
         }
 
-        self.start_container(vm_name, user_id_hash, container_name)
+        self.start_container(vm_name, user_id_hash, container_name, privilege_level)
     }
 
     fn container_setup_user(

@@ -13,6 +13,7 @@
 #include <vector>
 
 #include <base/macros.h>
+#include <base/optional.h>
 #include <vm_cicerone/proto_bindings/cicerone_service.pb.h>
 #include <vm_protos/proto_bindings/container_guest.grpc.pb.h>
 #include <vm_protos/proto_bindings/tremplin.grpc.pb.h>
@@ -256,6 +257,7 @@ class VirtualMachine {
       const std::string& container_private_key,
       const std::string& host_public_key,
       const std::string& token,
+      tremplin::StartContainerRequest::PrivilegeLevel privilege_level,
       std::string* out_error);
 
   // Gets the primary user of an LXD container.

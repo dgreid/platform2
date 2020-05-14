@@ -349,6 +349,7 @@ VirtualMachine::StartLxdContainerStatus VirtualMachine::StartLxdContainer(
     const std::string& container_private_key,
     const std::string& host_public_key,
     const std::string& token,
+    tremplin::StartContainerRequest::PrivilegeLevel privilege_level,
     std::string* out_error) {
   DCHECK(out_error);
   if (!tremplin_stub_) {
@@ -363,6 +364,7 @@ VirtualMachine::StartLxdContainerStatus VirtualMachine::StartLxdContainer(
   request.set_container_private_key(container_private_key);
   request.set_host_public_key(host_public_key);
   request.set_token(token);
+  request.set_privilege_level(privilege_level);
 
   grpc::ClientContext ctx;
   ctx.set_deadline(gpr_time_add(

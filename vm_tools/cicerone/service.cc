@@ -292,6 +292,22 @@ void SetTimezoneForContainer(VirtualMachine* vm,
   }
 }
 
+base::Optional<tremplin::StartContainerRequest_PrivilegeLevel>
+ConvertPrivilegeLevelFromCiceroneToTremplin(
+    StartLxdContainerRequest_PrivilegeLevel privilege_level) {
+  switch (privilege_level) {
+    case StartLxdContainerRequest_PrivilegeLevel_UNCHANGED:
+      return tremplin::StartContainerRequest_PrivilegeLevel_UNCHANGED;
+    case StartLxdContainerRequest_PrivilegeLevel_UNPRIVILEGED:
+      return tremplin::StartContainerRequest_PrivilegeLevel_UNPRIVILEGED;
+    case StartLxdContainerRequest_PrivilegeLevel_PRIVILEGED:
+      return tremplin::StartContainerRequest_PrivilegeLevel_PRIVILEGED;
+    default:
+      LOG(ERROR) << "Bad privilege level value: " << privilege_level;
+      return base::nullopt;
+  }
+}
+
 class CiceroneGrpcCallbacks final : public grpc::Server::GlobalCallbacks {
  public:
   static void Register() {
@@ -2123,9 +2139,16 @@ std::unique_ptr<dbus::Response> Service::StartLxdContainer(
   CHECK(container);
   container->set_drivefs_mount_path(request.drivefs_mount_path());
 
-  VirtualMachine::StartLxdContainerStatus status =
-      vm->StartLxdContainer(container_name, container_private_key,
-                            host_public_key, container_token, &error_msg);
+  auto privilege_level =
+      ConvertPrivilegeLevelFromCiceroneToTremplin(request.privilege_level());
+  if (!privilege_level) {
+    response.set_failure_reason("bad privilege level value");
+    writer.AppendProtoAsArrayOfBytes(response);
+    return dbus_response;
+  }
+  VirtualMachine::StartLxdContainerStatus status = vm->StartLxdContainer(
+      container_name, container_private_key, host_public_key, container_token,
+      *privilege_level, &error_msg);
 
   switch (status) {
     case VirtualMachine::StartLxdContainerStatus::UNKNOWN:

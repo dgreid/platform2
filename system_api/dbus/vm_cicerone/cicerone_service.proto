@@ -632,6 +632,21 @@ message StartLxdContainerRequest {
 
   // Full path where drivefs is mounted (/media/fuse/drivefs-<drivefs-hash>).
   string drivefs_mount_path = 5;
+
+  // Represents the privilege level with which a container should be started. If
+  // the container is already running this should take effect on the next boot.
+  enum PrivilegeLevel {
+    // Don't change the privilege level of the container.
+    UNCHANGED = 0;
+
+    // Make the container unprivileged.
+    UNPRIVILEGED = 1;
+
+    // Make the container privileged.
+    PRIVILEGED = 2;
+  }
+
+  PrivilegeLevel privilege_level = 6;
 }
 
 // OsRelease encapsulates a subset of the os-release info as documented
