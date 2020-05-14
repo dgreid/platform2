@@ -178,6 +178,9 @@ executable("attestation_client") {
 # A library for server code.
 config("server_library_config") {
   libs = [ "chaps" ]
+
+  # TODO(crbug.com/1082873) Remove after fixing usage of deprecated declarations.
+  cflags_cc = [ "-Wno-error=deprecated-declarations" ]
 }
 
 source_set("server_library") {
