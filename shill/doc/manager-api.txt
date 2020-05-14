@@ -411,53 +411,59 @@ Signals		PropertyChanged(string name, variant value)
 			current state and so can avoid to be woken up when
 			other details changes.
 
-Properties 	object ActiveProfile [readwrite]
+Properties 	object ActiveProfile [readonly]
 
-			Object path of the current active profile.
+			Object path of the top-most Profile in the Profile stack.
+
+		string AlwaysOnVpnPackage [readwrite]
+
+			Package name of an Android VPN app to use as the "AlwaysOnVpn"
+			connection. When this property is not "", all user traffic will be
+			blackholed unless we are connected to an ARC VPN using the
+			corresponding Android app.
 
 		boolean ArpGateway [readwrite]
 
-			Specifies whether the DHCP client should be
-			configured to perform the extra step of performing
-			an ARP of the gateway IP address.  This provides
-			a level of assurance that the issued IP address is
-			valid and not blocked in some manner unknown by the
-			DHCP server.
+			Specifies whether the DHCP client should be configured to perform
+			the extra step of performing an ARP of the gateway IP address.  This
+			provides a level of assurance that the issued IP address is valid
+			and not blocked in some manner unknown by the DHCP server.
 
 		array{string} AvailableTechnologies [readonly]
 
-			The list of available technologies. The strings
-			are the same as the ones from the service types.
+			The list of technologies for which at least one Device exists (see
+			the caveat in Devices). Order carries no meaning and is not
+			guaranteed to be consistent.
 
 		string CheckPortalList [readwrite]
 
-			The list of technologies for which captive portal
-			checking is enabled.  This is a comma-separated
-			string; e.g. "wifi,cellular,vpn".
+			The list of technologies for which "captive portal checking"--really
+			just connectivity sanity checks--is enabled.  This is a
+			comma-separated string; e.g. "wifi,cellular,vpn".
 
 		array{string} ClaimedDevices [readonly]
 
-			The list of the names of devices that have been claimed by
-			the current DeviceClaimer (if it exists).
+			The list of the names of devices that have been claimed by the
+			current DeviceClaimer (if it exists).
 
 		array{string} ConnectedTechnologies [readonly]
 
-			The list of connected technologies. The strings
-			are the same as the ones from the service type.
+			The list of technologies for which at least one Device is connected
+			(see the caveat in Devices). Order carries no meaning and is not
+			guaranteed to be consistent.
 
 		string ConnectionState [readonly]
 
-			The state of the highest ranked connected service.
-			The value of this property is "idle" if there are
-			no connected services.  Otherwise this can be any
-			of the connected service states, e.g, "portal" or
-			"online".
+			The state of the highest ranked connected service.  The value of
+			this property is "idle" if there are no connected services.
+			Otherwise this can be any of the connected service states, e.g,
+			"ready" or "online".
 
 		object DefaultService [readonly]
 
 			The object path of the connected Service with the highest
-			priority. If there is no connected Service, returns the
-			"/" object path.
+			priority. If there is no connected Service, returns the "/" object
+			path.
 
 		string DefaultTechnology [readonly]
 
@@ -465,107 +471,99 @@ Properties 	object ActiveProfile [readwrite]
 
 		array{object} Devices [readonly]
 
-			List of physical Device object paths. No virtual Devices
-			are contained in this list *except* for any PPPDevices
-			being used by active PPPoEServices.
+			List of physical Device object paths. No virtual Devices are
+			contained in this list *except* for any PPPDevices being used by
+			active PPPoEServices. Order carries no meaning and is not guaranteed
+			to be consistent.
 
 		string DHCPProperty.Hostname [readwrite]
 
-			Optional setting to configure DHCP requests.  Some DHCP
-			servers may register a DNS entry on behalf of this
-			hostname; others may just make available a table for
-			administrators to tell what machines are on their
-			network.
+			Optional setting to configure DHCP requests.  Some DHCP servers may
+			register a DNS entry on behalf of this hostname; others may just
+			make available a table for administrators to tell what machines are
+			on their network.
 
-			The default for this name is empty, which means that the
-			system will not report a hostname.  When this property
-			is set it will be persisted in the default profile.
+			The default for this name is empty, which means that the system will
+			not report a hostname.  When this property is set it will be
+			persisted in the default profile.
 
 		string DHCPProperty.VendorClass [readwrite]
 
-			Optional setting to configure DHCP requests.  This
-			setting can be used to identify the vendor that
-			manufactured the client hardware, the software in use,
-			or an industry consortium to which the vendor belongs.
+			Optional setting to configure DHCP requests.  This setting can be
+			used to identify the vendor that manufactured the client hardware,
+			the software in use, or an industry consortium to which the vendor
+			belongs.
 
-			The default for this property is empty, which means the
-			system will not report a Vendor Class.  When set, this
-			property will override the default setting and be
-			persisted in the default profile.
+			The default for this property is empty, which means the system will
+			not report a Vendor Class.  When set, this property will override
+			the default setting and be persisted in the default profile.
 
 		bool DisableVHT [readwrite]
 
-			Disables 802.11ac Very High Throughput (VHT)
-			connections, reverting to 802.11n.
+			Disables 802.11ac Very High Throughput (VHT) connections, reverting
+			to 802.11n.
 
 		array{string} EnabledTechnologies [readonly]
 
-			The list of enabled technologies. The strings
-			are the same as the ones from the service types.
+			The list of technologies for which at least one Device is enabled
+			(see the caveat in Devices). Order carries no meaning and is not
+			guaranteed to be consistent.
 
 		string IgnoredDNSSearchPaths [readwrite]
 
-			A comma-separated list of DNS domain suffixes
-			which should be ignored when creating a DNS
-			search list from DHCP-provided parameters.
-			This list will be consulted every time DHCP
-			information is updated (while connecting to
-			a network, or when a DHCP lease is renewed).
+			A comma-separated list of DNS domain suffixes which should be
+			ignored when creating a DNS search list from DHCP-provided
+			parameters. This list will be consulted every time DHCP information
+			is updated (while connecting to a network, or when a DHCP lease is
+			renewed).
 
 		string LinkMonitorTechnologies [readwrite]
 
-			The list of technologies for which thie Link
-			Monitor will be enabled.  The Link monitor
-			periodically checks for connectivity to the
-			default gateway using ARP requests.
+			The list of technologies for which the Link Monitor will be
+			enabled. The Link monitor periodically checks for connectivity to
+			the default gateway using ARP requests.
 
 		string NoAutoConnectTechnologies [readwrite]
 
-			The list of technologies for which auto-connect is
-			disabled.  This is a comma-separated string, e.g.
-			"cellular,wifi".
+			The list of technologies for which auto-connect is disabled. This is
+			a comma-separated string, e.g. "cellular,wifi".
 
-		string PortalURL [readonly]
+		string PortalFallbackUrlsString [readwrite]
 
-			The URL to use when doing captive portal checking.
-			When a service reaches the "ready" state and
-			captive portal checking is enabled for it; an
-			HTTP GET of this URL is done.  If this fails
-			with a 204 error then the service is moved
-			to the "online" state.  Otherwise the service
-			is assumed to be not online and marked in a
-			"portal" state.  Note that this check may fail
-			for multiple reasons that are indicated in the
-			Error property of the service.
+			Comma-separated string of URLs used for HTTP connectivity
+			verification after the first connectivity verification trial. The
+			order of these URLs has no meaning.
+
+		string PortalHttpUrl [readonly]
+
+			The URL to use when doing connectivity verification over HTTP.
+
+		string PortalHttpsUrl [readonly]
+
+			The URL to use when doing connectivity verification over HTTPS.
 
 		string ProhibitedTechnologies [readwrite]
 
-			The list of technologies that should be disabled
-			and prohibited from being enabled.  This is a
-			comma-separated string, e.g.  "cellular,wifi".  All
-			devices that are one of these technology types will be
-			immediately disabled persistently, and when a new device
-			of this type appears, it will be disabled by default.
-			Attempts to enable such a device using the
-			EnableTechnology will fail.  The strings are the same
-			as the ones from the service types.
-
-		int32 PortalCheckInterval [readwrite]
-
-			The interval in seconds between re-checking a
-			service in the portal state.
+			The list of technologies whose Devices should be disabled and
+			prohibited from being enabled. This is a comma-separated string,
+			e.g. "cellular,wifi". All Devices that are one of these technology
+			types will be immediately disabled persistently, and when a new
+			Device of this type appears, it will be disabled by default.
+			Attempts to enable such a Device using the EnableTechnology will
+			fail. Order carries no meaning and is not guaranteed to be
+			consistent.
 
 		array{object} Profiles [readonly]
 
-			List of Profile object paths.
+			List of Profile object paths in the Profile stack. Elements are
+			ordered from top of the stack to bottom.
 
 		array{object} Services [readonly]
 
-			List of Service object paths that are visible. The first
-			Service is always the primary connected Service on the
-			system (if there is one). Services in a more connected
-			state always come before Services in a less connected
-			state. In order:
+			List of Service object paths that are visible. The first Service is
+			always the primary connected Service on the system (if there is
+			one). Services in a more connected state always come before Services
+			in a less connected state. In order:
 			  * "online"
 			  * "ready"
 			  * "no-connectivity", "redirect-found", or "portal-suspected"
@@ -573,12 +571,11 @@ Properties 	object ActiveProfile [readwrite]
 			  * "idle" or "disconnecting"
 			  * "failure"
 
-			Between unconnected Services, connectable Services come
-			before unconnectable Services. Within the same state
-			"bucket", Services are ordered based on Technology type
-			(see SetServiceOrder). Services in the same state bucket
-			and with the same Technology type are then compared with
-			the following (in order):
+			Between unconnected Services, connectable Services come before
+			unconnectable Services. Within the same state "bucket", Services are
+			ordered based on Technology type (see SetServiceOrder). Services in
+			the same state bucket and with the same Technology type are then
+			compared with the following (in order):
 			  * "Priority"
 			  * "ManagedCredentials"
 			  * "AutoConnect"
@@ -587,70 +584,61 @@ Properties 	object ActiveProfile [readwrite]
 			  * If the Service has ever connected
 			  * "Strength"
 
-			Finally, if two Services have all of those in common, the
-			Service that was created first will be placed before the
-			other Service.
+			Finally, if two Services have all of those in common, the Service
+			that was created first will be placed before the other Service.
 
-			This list represents the available services for the
-			current selected profile. If the profile gets changed
-			then this list will be updated.
+			This list represents the available services for the current selected
+			profile. If the profile gets changed then this list will be updated.
 
-			The same list is available via the profile object
-			itself. It is just provided here for convenience of
-			applications only dealing with the current active
-			profile.
+			The same list is available via the profile object itself. It is just
+			provided here for convenience of applications only dealing with the
+			current active profile.
 
 		array{object} ServiceCompleteList [readonly]
 
-			Complete list of Service object paths, including those
-			that are not currently visible.  For example, WiFi
-			Services that are stored in a loaded Profile but
-			cannot currently be connected are presented in this
-			list.
+			Complete list of Service object paths, including those that are not
+			currently visible.  For example, WiFi Services that are stored in a
+			loaded Profile but cannot currently be connected are presented in
+			this list.
 
-			The Services are listed in the same Service sorting
-			order as the "Services" property above.  Change
-			events for this property are not emitted.
+			The Services are listed in the same Service sorting order as the
+			"Services" property above.  Change events for this property are not
+			emitted.
 
 		array{object} ServiceWatchList [readonly]
 
-			List of Service object paths that are in a
-			'non-idle' state.  This indicates the set of Services
-			which are currently listed as associating, configuring,
-			or some other state other than idle, failure or
-			unknown.  This allows a caller to use this property
-			indication to track which Services should be monitored
+			List of Service object paths that are in a 'non-idle' state. This
+			indicates the set of Services which are currently listed as
+			associating, configuring, or some other state other than idle,
+			failure, disconnecting, or unknown.  This allows a caller to use
+			this property indication to track which Services should be monitored
 			for state changes.
 
-			The Services are listed in the same Service sorting
-			order as the "Services" property above, and a change
-			event for this property is emitted every time the
-			Service list is reordered, even if this list has not
-			changed.
+			The Services are listed in the same Service sorting order as the
+			"Services" property above, and a change event for this property is
+			emitted every time the Service list is reordered, even if this list
+			has not changed.
 
 		string State [readonly]
 
-			The global connection state of a system. Possible
-			values are "online" if at least one connection exists
-			and "offline" if no device is connected.
+			The global connection state of a system. Possible values are
+			"online" if at least one connection exists and "offline" if no
+			device is connected.
 
 		array{string} UninitializedTechnologies [readonly]
 
-			The list of uninitialized technologies. An
-			uninitialized technology is a technology that has at
-			least one device that is not initialized yet (i.e.
-			the Device object is not created yet). The strings
-			are the same as the ones from the service types.
+			The list of uninitialized technologies. An uninitialized technology
+			is a technology that has at least one Device that is not initialized
+			yet (i.e.  the Device object is not created yet). The strings are
+			the same as the ones from the service types.
 
 		bool WakeOnLanEnabled [readwrite]
 
-			Specifies whether the Wake on LAN feature should be
-			enabled on new Ethernet links.  Currently connected
-			links are un-affected.
+			Specifies whether the Wake on LAN feature should be enabled on new
+			Ethernet links. Currently connected links are un-affected.
 
 		bool WiFi.GlobalFTEnabled [readwrite]
 
-			Specifies whether or not 802.11r Fast BSS Transition
-			should be used. This global switch, in addition to the
-			WiFi.FTEnabled service property, needs to be turned on
-			in order for FT to be used.
+			Specifies whether or not 802.11r Fast BSS Transition should be
+			used. This global switch, in addition to the WiFi.FTEnabled service
+			property, needs to be turned on in order for FT to be used.
