@@ -79,9 +79,10 @@ std::unique_ptr<SaneDevice> SaneClientImpl::ConnectToDevice(
   SANE_Handle handle;
   SANE_Status status = sane_open(device_name.c_str(), &handle);
   if (status != SANE_STATUS_GOOD) {
-    brillo::Error::AddToPrintf(
-        error, FROM_HERE, brillo::errors::dbus::kDomain, kManagerServiceError,
-        "Unable to open device '%s'", device_name.c_str());
+    brillo::Error::AddToPrintf(error, FROM_HERE, brillo::errors::dbus::kDomain,
+                               kManagerServiceError,
+                               "Unable to open device '%s': %s",
+                               device_name.c_str(), sane_strstatus(status));
     return nullptr;
   }
 
@@ -126,7 +127,8 @@ bool SaneDeviceImpl::SetScanResolution(brillo::ErrorPtr* error,
   if (status != SANE_STATUS_GOOD) {
     brillo::Error::AddToPrintf(error, FROM_HERE, brillo::errors::dbus::kDomain,
                                kManagerServiceError,
-                               "Unable to set resolution to %d", resolution);
+                               "Unable to set resolution to %d: %s", resolution,
+                               sane_strstatus(status));
     return false;
   }
   if (should_reload)
@@ -151,9 +153,10 @@ bool SaneDeviceImpl::SetScanMode(brillo::ErrorPtr* error,
   if (should_reload)
     LoadOptions(error);
   if (status != SANE_STATUS_GOOD) {
-    brillo::Error::AddToPrintf(
-        error, FROM_HERE, brillo::errors::dbus::kDomain, kManagerServiceError,
-        "Unable to set scan mode to %s", scan_mode.c_str());
+    brillo::Error::AddToPrintf(error, FROM_HERE, brillo::errors::dbus::kDomain,
+                               kManagerServiceError,
+                               "Unable to set scan mode to %s: %s",
+                               scan_mode.c_str(), sane_strstatus(status));
     return false;
   }
   return true;
@@ -168,10 +171,12 @@ bool SaneDeviceImpl::StartScan(brillo::ErrorPtr* error) {
 
   SANE_Status status = sane_start(handle_);
   if (status != SANE_STATUS_GOOD) {
-    brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
-                         kManagerServiceError, "Failed to start scan");
+    brillo::Error::AddToPrintf(error, FROM_HERE, brillo::errors::dbus::kDomain,
+                               kManagerServiceError, "Failed to start scan: %s",
+                               sane_strstatus(status));
     return false;
   }
+
   scan_running_ = true;
   return true;
 }
@@ -194,9 +199,9 @@ bool SaneDeviceImpl::GetScanParameters(brillo::ErrorPtr* error,
   SANE_Parameters params;
   SANE_Status status = sane_get_parameters(handle_, &params);
   if (status != SANE_STATUS_GOOD) {
-    brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
-                         kManagerServiceError,
-                         "Failed to read scan parameters");
+    brillo::Error::AddToPrintf(
+        error, FROM_HERE, brillo::errors::dbus::kDomain, kManagerServiceError,
+        "Failed to read scan parameters: %s", sane_strstatus(status));
     return false;
   }
 
@@ -258,7 +263,7 @@ bool SaneDeviceImpl::ReadScanData(brillo::ErrorPtr* error,
     default:
       brillo::Error::AddToPrintf(
           error, FROM_HERE, brillo::errors::dbus::kDomain, kManagerServiceError,
-          "sane_read() failed: %d", status);
+          "sane_read() failed: %s", sane_strstatus(status));
       return false;
   }
 }

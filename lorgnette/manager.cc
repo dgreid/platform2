@@ -242,6 +242,8 @@ bool Manager::ScanImage(brillo::ErrorPtr* error,
     return false;
   }
 
+  LOG(INFO) << "Scanning image from device " << device_name;
+
   std::unique_ptr<SaneDevice> device =
       sane_client_->ConnectToDevice(error, device_name);
   if (!device)
@@ -251,6 +253,9 @@ bool Manager::ScanImage(brillo::ErrorPtr* error,
   string scan_mode;
   if (!ExtractScanOptions(error, scan_properties, &resolution, &scan_mode))
     return false;
+
+  LOG(INFO) << "User requested scan mode: '" << scan_mode
+            << "' and resolution: " << resolution;
 
   if (resolution != 0 && !device->SetScanResolution(error, resolution))
     return false;
