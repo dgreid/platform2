@@ -20,6 +20,7 @@
 #include "diagnostics/cros_healthd/utils/memory_utils.h"
 #include "diagnostics/cros_healthd/utils/stateful_partition_utils.h"
 #include "diagnostics/cros_healthd/utils/timezone_utils.h"
+#include "mojo/cros_healthd_probe.mojom.h"
 
 namespace diagnostics {
 namespace mojo_ipc = ::chromeos::cros_healthd::mojom;

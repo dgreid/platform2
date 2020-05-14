@@ -13,7 +13,9 @@ namespace diagnostics {
 bool IsJsonValid(base::StringPiece json, std::string* json_error_message) {
   DCHECK(json_error_message);
   int json_error_code = base::JSONReader::JSON_NO_ERROR;
-  base::JSONReader::ReadAndReturnError(
+  // TODO(crbug.com/1054279): use base::JSONReader::ReadAndReturnValueWithError
+  // after uprev to r680000.
+  base::JSONReader::ReadAndReturnErrorDeprecated(
       json, base::JSONParserOptions::JSON_ALLOW_TRAILING_COMMAS,
       &json_error_code, json_error_message, nullptr, nullptr);
   return json_error_code == base::JSONReader::JSON_NO_ERROR;

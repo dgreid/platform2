@@ -23,6 +23,7 @@
 #include "diagnostics/cros_healthd/utils/fan_utils.h"
 #include "diagnostics/cros_healthd/utils/vpd_utils.h"
 #include "mojo/cros_healthd.mojom.h"
+#include "mojo/cros_healthd_diagnostics.mojom.h"
 
 namespace diagnostics {
 

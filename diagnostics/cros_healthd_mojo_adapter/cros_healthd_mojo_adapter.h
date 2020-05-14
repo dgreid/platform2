@@ -15,6 +15,9 @@
 #include "diagnostics/cros_healthd_mojo_adapter/cros_healthd_mojo_adapter_delegate.h"
 #include "diagnostics/cros_healthd_mojo_adapter/cros_healthd_mojo_adapter_delegate_impl.h"
 #include "mojo/cros_healthd.mojom.h"
+#include "mojo/cros_healthd_diagnostics.mojom.h"
+#include "mojo/cros_healthd_events.mojom.h"
+#include "mojo/cros_healthd_probe.mojom.h"
 
 namespace diagnostics {
 
