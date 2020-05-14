@@ -141,13 +141,21 @@ if (use.test) {
     ]
     sources = [
       "graph_executor_impl_test.cc",
-      "handwriting_test.cc",
       "machine_learning_service_impl_test.cc",
       "model_impl_test.cc",
       "test_utils.cc",
       "testrunner.cc",
       "util_test.cc",
     ]
+
+    # TODO(honglinyu) Now we only do the unit test of handwriting when asan is
+    # disabled. This is because using the current version of libhandwriting.so
+    # requires enabling RTLD_DEEPBIND in dlopen, which is not compatible with
+    # asan (see https://crbug.com/1082632). This unit test should be always
+    # enabled again after RTLD_DEEPBIND is avoided.
+    if (!use.asan) {
+      sources += [ "handwriting_test.cc" ]
+    }
 
     # TODO(charleszhao) this macro is only used in the unit test file
     # "handwriting_test.cc". After the mojo API is implemented, maybe we should

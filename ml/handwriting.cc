@@ -25,8 +25,12 @@ HandwritingLibrary::HandwritingLibrary()
       destroy_handwriting_recognizer_(nullptr) {
   // Load the library with an option preferring own symbols. Otherwise the
   // library will try to call, e.g., external tflite, which leads to crash.
+  // But this can only be done when the "sanitizer" is not enabled (see,
+  // https://crbug.com/1082632).
   base::NativeLibraryOptions native_library_options;
+#if !__has_feature(address_sanitizer)
   native_library_options.prefer_own_symbols = true;
+#endif
   library_.emplace(base::LoadNativeLibraryWithOptions(
       base::FilePath(kHandwritingLibraryPath), native_library_options,
       nullptr));
