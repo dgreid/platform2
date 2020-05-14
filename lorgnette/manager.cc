@@ -386,7 +386,7 @@ bool Manager::ExtractScanOptions(
     const brillo::VariantDictionary& scan_properties,
     uint32_t* resolution_out,
     string* mode_out) {
-  uint32_t resolution;
+  uint32_t resolution = 0;
   string mode;
   for (const auto& property : scan_properties) {
     const string& property_name = property.first;
@@ -403,7 +403,7 @@ bool Manager::ExtractScanOptions(
       }
     } else if (property_name == kScanPropertyResolution &&
                property_value.IsTypeCompatible<uint32_t>()) {
-      resolution = property_value.Get<unsigned int>();
+      resolution = property_value.Get<uint32_t>();
     } else {
       brillo::Error::AddToPrintf(
           error, FROM_HERE, brillo::errors::dbus::kDomain, kManagerServiceError,
