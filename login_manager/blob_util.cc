@@ -14,7 +14,7 @@ namespace login_manager {
 std::vector<uint8_t> SerializeAsBlob(
     const google::protobuf::MessageLite& message) {
   std::vector<uint8_t> result;
-  result.resize(message.ByteSize());
+  result.resize(message.ByteSizeLong());
   CHECK(message.SerializeToArray(result.data(), result.size()))
       << "Failed to serialize protobuf.";
   return result;
