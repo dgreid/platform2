@@ -781,18 +781,17 @@ FilePath HomeDirs::GetVaultKeysetPath(const std::string& obfuscated,
       .AddExtension(base::NumberToString(index));
 }
 
-void HomeDirs::RemoveNonOwnerCryptohomesCallback(const FilePath& user_dir) {
+void HomeDirs::RemoveNonOwnerCryptohomesCallback(
+    const std::string& obfuscated) {
   if (!enterprise_owned_) {  // Enterprise owned? Delete it all.
     std::string owner;
-    if (!GetOwner(&owner) ||  // No owner? bail.
-        // Don't delete the owner's cryptohome!
-        // TODO(wad,ellyjones) Add GetUser*Path-helpers
-        user_dir == shadow_root_.Append(owner))
-    return;
+    if (!GetOwner(&owner) || obfuscated == owner)
+      return;
   }
   // Once we're sure this is not the owner's cryptohome, delete it.
-  RemoveLECredentials(user_dir.BaseName().value());
-  platform_->DeleteFile(user_dir, true);
+  RemoveLECredentials(obfuscated);
+  FilePath shadow_dir = shadow_root_.Append(obfuscated);
+  platform_->DeleteFile(shadow_dir, true);
 }
 
 void HomeDirs::RemoveNonOwnerCryptohomes() {
@@ -813,7 +812,7 @@ void HomeDirs::RemoveNonOwnerCryptohomesInternal(
     return;
 
   for (const auto& dir : homedirs) {
-    HomeDirs::RemoveNonOwnerCryptohomesCallback(dir.shadow);
+    HomeDirs::RemoveNonOwnerCryptohomesCallback(dir.obfuscated);
   }
 
   // TODO(ellyjones): is this valuable? These two directories should just be
@@ -832,26 +831,24 @@ std::vector<HomeDirs::HomeDir> HomeDirs::GetHomeDirs() {
   for (const auto& entry : entries) {
     HomeDirs::HomeDir dir;
 
-    dir.shadow = entry;
+    dir.obfuscated = entry.BaseName().value();
 
-    const std::string obfuscated = entry.BaseName().value();
-
-    if (!brillo::cryptohome::home::IsSanitizedUserName(obfuscated))
+    if (!brillo::cryptohome::home::IsSanitizedUserName(dir.obfuscated))
       continue;
 
-    dir.user = brillo::cryptohome::home::GetHashedUserPath(obfuscated);
-
-    if (!platform_->DirectoryExists(dir.user))
+    if (!platform_->DirectoryExists(
+            brillo::cryptohome::home::GetHashedUserPath(dir.obfuscated)))
       continue;
 
     ret.push_back(dir);
   }
 
   std::vector<FilePath> user_paths;
-  std::transform(ret.begin(), ret.end(), std::back_inserter(user_paths),
-    [] (const HomeDirs::HomeDir& homedir) {
-      return homedir.user;
-    });
+  std::transform(
+      ret.begin(), ret.end(), std::back_inserter(user_paths),
+      [](const HomeDirs::HomeDir& homedir) {
+        return brillo::cryptohome::home::GetHashedUserPath(homedir.obfuscated);
+      });
 
   auto is_mounted = platform_->AreDirectoriesMounted(user_paths);
 
@@ -881,7 +878,7 @@ void HomeDirs::FilterHomedirsProcessedBeforeCutoff(
       std::remove_if(homedirs->begin(), homedirs->end(),
                      [&](const HomeDirs::HomeDir& dir) {
                        return timestamp_cache_->GetLastUserActivityTimestamp(
-                                  dir.shadow) < cutoff;
+                                  dir.obfuscated) < cutoff;
                      }),
       homedirs->end());
 }
@@ -973,12 +970,11 @@ bool HomeDirs::GetTrackedDirectoryForDirCrypto(
   return true;
 }
 
-void HomeDirs::AddUserTimestampToCache(const FilePath& user_dir) {
-  const std::string obfuscated_username = user_dir.BaseName().value();
+void HomeDirs::AddUserTimestampToCache(const std::string& obfuscated) {
   //  Add a timestamp for every key.
   std::vector<int> key_indices;
   // Failure is okay since the loop falls through.
-  GetVaultKeysets(obfuscated_username, &key_indices);
+  GetVaultKeysets(obfuscated, &key_indices);
   std::unique_ptr<VaultKeyset> keyset(
       vault_keyset_factory()->New(platform_, crypto_));
   // Collect the most recent time for a given user by walking all
@@ -986,7 +982,7 @@ void HomeDirs::AddUserTimestampToCache(const FilePath& user_dir) {
   // TODO(wad,?) Move non-key vault metadata to a standalone file.
   base::Time timestamp = base::Time();
   for (int index : key_indices) {
-    if (LoadVaultKeysetForUser(obfuscated_username, index, keyset.get()) &&
+    if (LoadVaultKeysetForUser(obfuscated, index, keyset.get()) &&
         keyset->serialized().has_last_activity_timestamp()) {
       const base::Time t = base::Time::FromInternalValue(
           keyset->serialized().last_activity_timestamp());
@@ -995,7 +991,7 @@ void HomeDirs::AddUserTimestampToCache(const FilePath& user_dir) {
     }
   }
   if (!timestamp.is_null()) {
-      timestamp_cache_->AddExistingUser(user_dir, timestamp);
+    timestamp_cache_->AddExistingUser(obfuscated, timestamp);
   }
 }
 
@@ -1455,13 +1451,12 @@ int32_t HomeDirs::GetUnmountedAndroidDataCount() {
         if (dir.is_mounted)
           return false;
 
-        const std::string obfuscated = dir.shadow.BaseName().value();
-
-        if (EcryptfsCryptohomeExists(obfuscated))
+        if (EcryptfsCryptohomeExists(dir.obfuscated))
           return false;
 
+        FilePath shadow_dir = shadow_root_.Append(dir.obfuscated);
         FilePath root_home_dir;
-        return GetTrackedDirectory(dir.shadow, FilePath(kRootHomeSuffix),
+        return GetTrackedDirectory(shadow_dir, FilePath(kRootHomeSuffix),
                                    &root_home_dir) &&
                MayContainAndroidData(root_home_dir);
       });

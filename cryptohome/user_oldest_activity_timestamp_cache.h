@@ -6,8 +6,8 @@
 #define CRYPTOHOME_USER_OLDEST_ACTIVITY_TIMESTAMP_CACHE_H_
 
 #include <map>
+#include <string>
 
-#include <base/files/file_path.h>
 #include <base/macros.h>
 #include <base/time/time.h>
 
@@ -31,23 +31,22 @@ class UserOldestActivityTimestampCache {
   }
 
   // Adds a user to the cache with specified oldest activity timestamp.
-  virtual void AddExistingUser(const base::FilePath& vault,
-                               base::Time timestamp);
+  virtual void AddExistingUser(const std::string& user, base::Time timestamp);
 
   // Updates a user in the cache with specified oldest activity timestamp.
-  virtual void UpdateExistingUser(const base::FilePath& vault,
+  virtual void UpdateExistingUser(const std::string& user,
                                   base::Time timestamp);
 
   // Remove a user from the cache.
-  virtual void RemoveUser(const base::FilePath& vault);
+  virtual void RemoveUser(const std::string& user);
 
   // Returns the last activity timestamp for a user. For users without a
   // timestamp it returns a NULL time.
   virtual base::Time GetLastUserActivityTimestamp(
-      const base::FilePath& vault) const;
+      const std::string& user) const;
 
  private:
-  std::map<base::FilePath, base::Time> users_timestamp_lookup_;
+  std::map<std::string, base::Time> users_timestamp_lookup_;
   bool initialized_;
 
   DISALLOW_COPY_AND_ASSIGN(UserOldestActivityTimestampCache);

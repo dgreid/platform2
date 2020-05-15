@@ -58,12 +58,9 @@ class VaultKeyset;
 
 class HomeDirs {
  public:
-  // HomeDir contains lists properties of users profiles.
+  // HomeDir contains lists the current user profiles.
   struct HomeDir {
-    // Path in /home/.shadow/
-    base::FilePath shadow;
-    // Path in /home/user/
-    base::FilePath user;
+    std::string obfuscated;
     bool is_mounted = false;
   };
 
@@ -277,7 +274,7 @@ class HomeDirs {
 
   // Called during disk cleanup if the timestamp cache is not yet
   // initialized. Loads the last activity timestamp from the vault keyset.
-  virtual void AddUserTimestampToCache(const base::FilePath& user_dir);
+  virtual void AddUserTimestampToCache(const std::string& obfuscated);
 
   // Accessors. Mostly used for unit testing. These do not take ownership of
   // passed-in pointers.
@@ -333,7 +330,7 @@ class HomeDirs {
   // cleanup.
   void RemoveNonOwnerCryptohomesInternal(const std::vector<HomeDir>& homedirs);
   // Callback used during RemoveNonOwnerCryptohomes()
-  void RemoveNonOwnerCryptohomesCallback(const base::FilePath& user_dir);
+  void RemoveNonOwnerCryptohomesCallback(const std::string& obfuscated);
   // Recursively deletes all contents of a directory while leaving the directory
   // itself intact.
   void DeleteDirectoryContents(const base::FilePath& dir);

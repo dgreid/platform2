@@ -836,8 +836,7 @@ bool Mount::UpdateCurrentUserActivityTimestamp(int time_shift_sec) {
       return false;
     }
     if (user_timestamp_cache_->initialized()) {
-      user_timestamp_cache_->UpdateExistingUser(
-          FilePath(GetUserDirectoryForUser(obfuscated_username)), timestamp);
+      user_timestamp_cache_->UpdateExistingUser(obfuscated_username, timestamp);
     }
     return true;
   }

@@ -166,18 +166,19 @@ void DiskCleanup::FreeDiskSpaceInternal() {
   if (!timestamp_cache_->initialized()) {
     timestamp_cache_->Initialize();
     for (const auto& dir : homedirs) {
-      homedirs_->AddUserTimestampToCache(dir.shadow);
+      homedirs_->AddUserTimestampToCache(dir.obfuscated);
     }
   }
 
   auto unmounted_homedirs = homedirs;
   FilterMountedHomedirs(&unmounted_homedirs);
 
-  std::sort(unmounted_homedirs.begin(), unmounted_homedirs.end(),
-            [&](const HomeDirs::HomeDir& a, const HomeDirs::HomeDir& b) {
-              return timestamp_cache_->GetLastUserActivityTimestamp(a.shadow) >
-                     timestamp_cache_->GetLastUserActivityTimestamp(b.shadow);
-            });
+  std::sort(
+      unmounted_homedirs.begin(), unmounted_homedirs.end(),
+      [&](const HomeDirs::HomeDir& a, const HomeDirs::HomeDir& b) {
+        return timestamp_cache_->GetLastUserActivityTimestamp(a.obfuscated) >
+               timestamp_cache_->GetLastUserActivityTimestamp(b.obfuscated);
+      });
 
   auto normal_cleanup_homedirs = unmounted_homedirs;
 
@@ -190,7 +191,7 @@ void DiskCleanup::FreeDiskSpaceInternal() {
   // the last normal cleanup happened.
   for (auto dir = normal_cleanup_homedirs.rbegin();
        dir != normal_cleanup_homedirs.rend(); dir++) {
-    routines_->DeleteUserCache(dir->shadow.BaseName().value());
+    routines_->DeleteUserCache(dir->obfuscated);
 
     if (HasTargetFreeSpace()) {
       ReportDiskCleanupProgress(
@@ -211,7 +212,7 @@ void DiskCleanup::FreeDiskSpaceInternal() {
   // after the last normal cleanup happened.
   for (auto dir = normal_cleanup_homedirs.rbegin();
        dir != normal_cleanup_homedirs.rend(); dir++) {
-    routines_->DeleteUserGCache(dir->shadow.BaseName().value());
+    routines_->DeleteUserGCache(dir->obfuscated);
 
     if (HasTargetFreeSpace()) {
       earlyStop = true;
@@ -268,7 +269,7 @@ void DiskCleanup::FreeDiskSpaceInternal() {
   // out after after the last normal cleanup happened.
   for (auto dir = aggressive_cleanup_homedirs.rbegin();
        dir != aggressive_cleanup_homedirs.rend(); dir++) {
-    routines_->DeleteUserAndroidCache(dir->shadow.BaseName().value());
+    routines_->DeleteUserAndroidCache(dir->obfuscated);
 
     if (HasTargetFreeSpace()) {
       earlyStop = true;
@@ -315,8 +316,6 @@ void DiskCleanup::FreeDiskSpaceInternal() {
 
   for (auto dir = unmounted_homedirs.rbegin(); dir != unmounted_homedirs.rend();
        dir++) {
-    std::string obfuscated = dir->shadow.BaseName().value();
-
     if (homedirs_->enterprise_owned()) {
       // Leave the most-recent user on the device intact.
       // The most-recent user is the first in unmounted_homedirs.
@@ -325,15 +324,15 @@ void DiskCleanup::FreeDiskSpaceInternal() {
         LOG(INFO) << "Skipped deletion of the most recent device user.";
         continue;
       }
-    } else if (obfuscated == owner) {
+    } else if (dir->obfuscated == owner) {
       // We never delete the device owner.
       LOG(INFO) << "Skipped deletion of the device owner.";
       continue;
     }
 
-    LOG(INFO) << "Freeing disk space by deleting user " << obfuscated;
-    routines_->DeleteUserProfile(obfuscated);
-    timestamp_cache_->RemoveUser(dir->shadow);
+    LOG(INFO) << "Freeing disk space by deleting user " << dir->obfuscated;
+    routines_->DeleteUserProfile(dir->obfuscated);
+    timestamp_cache_->RemoveUser(dir->obfuscated);
     ++deleted_users_count;
 
     if (HasTargetFreeSpace())
@@ -371,7 +370,7 @@ void DiskCleanup::FilterHomedirsProcessedBeforeCutoff(
       std::remove_if(homedirs->begin(), homedirs->end(),
                      [&](const HomeDirs::HomeDir& dir) {
                        return timestamp_cache_->GetLastUserActivityTimestamp(
-                                  dir.shadow) < cutoff;
+                                  dir.obfuscated) < cutoff;
                      }),
       homedirs->end());
 }

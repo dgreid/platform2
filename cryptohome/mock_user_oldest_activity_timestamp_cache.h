@@ -7,7 +7,8 @@
 
 #include "cryptohome/user_oldest_activity_timestamp_cache.h"
 
-#include <base/files/file_path.h>
+#include <string>
+
 #include <base/time/time.h>
 
 #include <gmock/gmock.h>
@@ -24,16 +25,16 @@ class MockUserOldestActivityTimestampCache :
   MOCK_METHOD(bool, initialized, (), (const, override));
   MOCK_METHOD(void,
               AddExistingUser,
-              (const base::FilePath&, base::Time),
+              (const std::string&, base::Time),
               (override));
   MOCK_METHOD(void,
               UpdateExistingUser,
-              (const base::FilePath&, base::Time),
+              (const std::string&, base::Time),
               (override));
-  MOCK_METHOD(void, RemoveUser, (const base::FilePath&), (override));
+  MOCK_METHOD(void, RemoveUser, (const std::string&), (override));
   MOCK_METHOD(base::Time,
               GetLastUserActivityTimestamp,
-              (const base::FilePath&),
+              (const std::string&),
               (const, override));
 };
 }  // namespace cryptohome

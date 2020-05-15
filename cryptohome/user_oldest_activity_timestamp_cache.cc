@@ -4,13 +4,11 @@
 
 #include "cryptohome/user_oldest_activity_timestamp_cache.h"
 
+#include <string>
 #include <utility>
 
-#include <base/files/file_path.h>
 #include <base/logging.h>
 #include <base/time/time.h>
-
-using base::FilePath;
 
 namespace cryptohome {
 
@@ -19,27 +17,28 @@ void UserOldestActivityTimestampCache::Initialize() {
   initialized_ = true;
 }
 
-void UserOldestActivityTimestampCache::AddExistingUser(
-    const FilePath& vault, base::Time timestamp) {
+void UserOldestActivityTimestampCache::AddExistingUser(const std::string& user,
+                                                       base::Time timestamp) {
   CHECK(initialized_);
-  users_timestamp_lookup_.insert(std::make_pair(vault, timestamp));
+  users_timestamp_lookup_.insert(std::make_pair(user, timestamp));
 }
 
 void UserOldestActivityTimestampCache::UpdateExistingUser(
-    const FilePath& vault, base::Time timestamp) {
+    const std::string& user,
+    base::Time timestamp) {
   CHECK(initialized_);
-  users_timestamp_lookup_[vault] = timestamp;
+  users_timestamp_lookup_[user] = timestamp;
 }
 
-void UserOldestActivityTimestampCache::RemoveUser(const base::FilePath& vault) {
+void UserOldestActivityTimestampCache::RemoveUser(const std::string& user) {
   CHECK(initialized_);
-  users_timestamp_lookup_.erase(vault);
+  users_timestamp_lookup_.erase(user);
 }
 
 base::Time UserOldestActivityTimestampCache::GetLastUserActivityTimestamp(
-    const base::FilePath& vault) const {
+    const std::string& user) const {
   CHECK(initialized_);
-  auto it = users_timestamp_lookup_.find(vault);
+  auto it = users_timestamp_lookup_.find(user);
 
   if (it == users_timestamp_lookup_.end()) {
     return base::Time();

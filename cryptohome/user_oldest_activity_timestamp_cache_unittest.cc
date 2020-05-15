@@ -6,11 +6,8 @@
 
 #include "cryptohome/user_oldest_activity_timestamp_cache.h"
 
-#include <base/files/file_path.h>
 #include <base/logging.h>
 #include <gtest/gtest.h>
-
-using base::FilePath;
 
 namespace {
 const base::Time::Exploded feb1st2011_exploded = { 2011, 2, 2, 1 };
@@ -28,15 +25,15 @@ TEST(UserOldestActivityTimestampCache, GetLastUserActivityTimestamp) {
   UserOldestActivityTimestampCache cache;
   cache.Initialize();
 
-  cache.AddExistingUser(FilePath("b"), time_mar1);
-  EXPECT_EQ(cache.GetLastUserActivityTimestamp(FilePath("b")), time_mar1);
+  cache.AddExistingUser("b", time_mar1);
+  EXPECT_EQ(cache.GetLastUserActivityTimestamp("b"), time_mar1);
 
-  cache.AddExistingUser(FilePath("c"), time_feb1);
-  EXPECT_EQ(cache.GetLastUserActivityTimestamp(FilePath("c")), time_feb1);
-  cache.UpdateExistingUser(FilePath("c"), time_mar1);
-  EXPECT_EQ(cache.GetLastUserActivityTimestamp(FilePath("c")), time_mar1);
-  cache.RemoveUser(FilePath("c"));
-  EXPECT_TRUE(cache.GetLastUserActivityTimestamp(FilePath("c")).is_null());
+  cache.AddExistingUser("c", time_feb1);
+  EXPECT_EQ(cache.GetLastUserActivityTimestamp("c"), time_feb1);
+  cache.UpdateExistingUser("c", time_mar1);
+  EXPECT_EQ(cache.GetLastUserActivityTimestamp("c"), time_mar1);
+  cache.RemoveUser("c");
+  EXPECT_TRUE(cache.GetLastUserActivityTimestamp("c").is_null());
 }
 
 }  // namespace cryptohome
