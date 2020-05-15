@@ -838,7 +838,7 @@ class AuthPolicyTest : public testing::Test {
   // Checks whether the user |policy| is empty.
   static void CheckUserPolicyEmpty(const em::CloudPolicySettings& policy) {
     em::CloudPolicySettings empty_policy;
-    EXPECT_EQ(policy.ByteSize(), empty_policy.ByteSize());
+    EXPECT_EQ(policy.ByteSizeLong(), empty_policy.ByteSizeLong());
   }
 
   // Does not validate user policy. Use if you're testing something unrelated.
@@ -849,7 +849,7 @@ class AuthPolicyTest : public testing::Test {
   static void CheckDevicePolicyEmpty(
       const em::ChromeDeviceSettingsProto& policy) {
     em::ChromeDeviceSettingsProto empty_policy;
-    EXPECT_EQ(policy.ByteSize(), empty_policy.ByteSize());
+    EXPECT_EQ(policy.ByteSizeLong(), empty_policy.ByteSizeLong());
   }
 
   // Does not validate device policy. Use if you're testing something unrelated.
