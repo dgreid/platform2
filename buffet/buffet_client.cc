@@ -313,9 +313,10 @@ class Daemon final : public brillo::DBusDaemon {
                        ManagerProxyInterface* manager_proxy) {
     ErrorPtr error;
     std::string error_message;
+    // TODO(crbug/1054279): use new ReadAndReturnError after libchrome uprev.
     std::unique_ptr<base::Value> json(
-        base::JSONReader::ReadAndReturnError(value, base::JSON_PARSE_RFC,
-                                             nullptr, &error_message)
+        base::JSONReader::ReadAndReturnErrorDeprecated(
+            value, base::JSON_PARSE_RFC, nullptr, &error_message)
             .release());
     if (!json) {
       Error::AddTo(&error, FROM_HERE, brillo::errors::json::kDomain,

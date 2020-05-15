@@ -259,9 +259,10 @@ void Manager::SetXmppChannel(DBusMethodResponsePtr<> response,
 void Manager::AddCommand(DBusMethodResponsePtr<std::string> response,
                          const std::string& json_command) {
   std::string error_message;
+  // TODO(crbug/1054279): Use new ReadAndReturnError API after libchrome uprev.
   std::unique_ptr<base::Value> value(
-      base::JSONReader::ReadAndReturnError(json_command, base::JSON_PARSE_RFC,
-                                           nullptr, &error_message)
+      base::JSONReader::ReadAndReturnErrorDeprecated(
+          json_command, base::JSON_PARSE_RFC, nullptr, &error_message)
           .release());
   const base::DictionaryValue* command{nullptr};
   if (!value || !value->GetAsDictionary(&command)) {
