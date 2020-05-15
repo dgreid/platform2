@@ -6,6 +6,7 @@ import("//common-mk/pkg_config.gni")
 
 group("all") {
   deps = [
+    ":arc-apply-per-board-config",
     ":arc-create-data",
     ":arc-remove-data",
     ":arc-remove-stale-data",
@@ -80,50 +81,38 @@ static_library("libarc_setup") {
 }
 
 executable("arc-setup") {
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
   configs += [ ":target_defaults" ]
-  deps = [
-    ":libarc_setup",
-  ]
+  deps = [ ":libarc_setup" ]
 }
 
 executable("arc-remove-data") {
-  sources = [
-    "arc_remove_data_main.cc",
-  ]
+  sources = [ "arc_remove_data_main.cc" ]
   configs += [ ":target_defaults" ]
-  deps = [
-    ":libarc_setup",
-  ]
+  deps = [ ":libarc_setup" ]
 }
 
 executable("arc-remove-stale-data") {
-  sources = [
-    "arc_remove_stale_data_main.cc",
-  ]
+  sources = [ "arc_remove_stale_data_main.cc" ]
   configs += [ ":target_defaults" ]
-  deps = [
-    ":libarc_setup",
-  ]
+  deps = [ ":libarc_setup" ]
+}
+
+executable("arc-apply-per-board-config") {
+  sources = [ "arc_apply_per_board_config_main.cc" ]
+  configs += [ ":target_defaults" ]
+  deps = [ ":libarc_setup" ]
 }
 
 executable("arc-create-data") {
-  sources = [
-    "arc_create_data_main.cc",
-  ]
+  sources = [ "arc_create_data_main.cc" ]
   configs += [ ":target_defaults" ]
-  deps = [
-    ":libarc_setup",
-  ]
+  deps = [ ":libarc_setup" ]
 }
 
 action("mkdir_squashfs_source_dir") {
   inputs = []
-  outputs = [
-    "${root_gen_dir}/squashfs_source_dir",
-  ]
+  outputs = [ "${root_gen_dir}/squashfs_source_dir" ]
   script = "//common-mk/file_generator_wrapper.py"
   args = [
     "mkdir",
@@ -133,15 +122,9 @@ action("mkdir_squashfs_source_dir") {
 }
 
 action("generate_squashfs") {
-  deps = [
-    ":mkdir_squashfs_source_dir",
-  ]
-  inputs = [
-    "${root_gen_dir}/squashfs_source_dir",
-  ]
-  outputs = [
-    "${root_out_dir}/dev-rootfs.squashfs",
-  ]
+  deps = [ ":mkdir_squashfs_source_dir" ]
+  inputs = [ "${root_gen_dir}/squashfs_source_dir" ]
+  outputs = [ "${root_out_dir}/dev-rootfs.squashfs" ]
   script = "//common-mk/file_generator_wrapper.py"
   args = [
     "mksquashfs",
@@ -209,12 +192,8 @@ if (use.fuzzer) {
       "//common-mk/common_fuzzer",
       ":target_defaults",
     ]
-    sources = [
-      "arc_setup_util_find_all_properties_fuzzer.cc",
-    ]
-    deps = [
-      ":libarc_setup",
-    ]
+    sources = [ "arc_setup_util_find_all_properties_fuzzer.cc" ]
+    deps = [ ":libarc_setup" ]
   }
 
   executable("arc_setup_util_find_fingerprint_and_sdk_version_fuzzer") {
@@ -222,11 +201,7 @@ if (use.fuzzer) {
       "//common-mk/common_fuzzer",
       ":target_defaults",
     ]
-    sources = [
-      "arc_setup_util_find_fingerprint_and_sdk_version_fuzzer.cc",
-    ]
-    deps = [
-      ":libarc_setup",
-    ]
+    sources = [ "arc_setup_util_find_fingerprint_and_sdk_version_fuzzer.cc" ]
+    deps = [ ":libarc_setup" ]
   }
 }

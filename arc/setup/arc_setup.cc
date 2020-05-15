@@ -89,6 +89,7 @@ constexpr char kAndroidMutableSource[] =
     "/opt/google/containers/android/rootfs/android-data";
 constexpr char kAndroidRootfsDirectory[] =
     "/opt/google/containers/android/rootfs/root";
+constexpr char kArcVmPerBoardConfigPath[] = "/run/arcvm/host_generated/oem";
 constexpr char kOldApkCacheDir[] =
     "/mnt/stateful_partition/unencrypted/cache/apk";
 constexpr char kApkCacheDir[] = "/mnt/stateful_partition/unencrypted/apkcache";
@@ -476,6 +477,7 @@ bool IsChromeOSUserAvailable(Mode mode) {
     case Mode::REMOVE_DATA:
     case Mode::REMOVE_STALE_DATA:
       return true;
+    case Mode::APPLY_PER_BOARD_CONFIG:
     case Mode::SETUP:
     case Mode::STOP:
     case Mode::ONETIME_SETUP:
@@ -610,8 +612,9 @@ ArcSetup::ArcSetup(Mode mode, const base::FilePath& config_json)
       arc_mounter_(GetDefaultMounter()),
       arc_paths_(ArcPaths::Create(mode_, config_)),
       arc_setup_metrics_(std::make_unique<ArcSetupMetrics>()) {
-  CHECK(mode == Mode::CREATE_DATA || mode == Mode::REMOVE_DATA ||
-        mode == Mode::REMOVE_STALE_DATA || !config_json.empty());
+  CHECK(mode == Mode::APPLY_PER_BOARD_CONFIG || mode == Mode::CREATE_DATA ||
+        mode == Mode::REMOVE_DATA || mode == Mode::REMOVE_STALE_DATA ||
+        !config_json.empty());
 }
 
 ArcSetup::~ArcSetup() = default;
@@ -820,8 +823,6 @@ void ArcSetup::CreateContainerFilesAndDirectories() {
       {"/sbin/initctl", "start", "--no-wait", "arc-kmsg-logger"}));
 }
 
-// Note: This function must be in sync with arcvm-per-board-features.conf in
-// platform2/arc/vm/scripts/init/.
 void ArcSetup::ApplyPerBoardConfigurations() {
   EXIT_IF(!brillo::MkdirRecursively(
                arc_paths_->oem_mount_directory.Append("etc"), 0755)
@@ -834,6 +835,13 @@ void ArcSetup::ApplyPerBoardConfigurations() {
                arc_paths_->oem_mount_directory.Append("etc/permissions"), 0755)
                .is_valid());
 
+  ApplyPerBoardConfigurationsInternal(arc_paths_->oem_mount_directory);
+}
+
+// Note: This function must be in sync with arcvm-per-board-features.conf in
+// platform2/arc/vm/scripts/init/.
+void ArcSetup::ApplyPerBoardConfigurationsInternal(
+    const base::FilePath& oem_mount_directory) {
   // Detect camera device and generate camera profiles.
   const base::FilePath generate_camera_profile(
       "/usr/bin/generate_camera_profile");
@@ -844,7 +852,7 @@ void ArcSetup::ApplyPerBoardConfigurations() {
         base::FilePath(arc_paths_->camera_profile_dir)
             .Append(arc_paths_->media_profile_file);
     const base::FilePath new_media_profile_xml =
-        base::FilePath(arc_paths_->oem_mount_directory)
+        base::FilePath(oem_mount_directory)
             .Append("etc")
             .Append(arc_paths_->media_profile_file);
     if (base::PathExists(generated_media_profile_xml)) {
@@ -860,7 +868,7 @@ void ArcSetup::ApplyPerBoardConfigurations() {
     return;
 
   const base::FilePath platform_xml_file =
-      base::FilePath(arc_paths_->oem_mount_directory)
+      base::FilePath(oem_mount_directory)
           .Append(arc_paths_->platform_xml_file_relative);
   EXIT_IF(!base::CopyFile(hardware_features_xml, platform_xml_file));
 
@@ -2286,6 +2294,10 @@ void ArcSetup::OnRemoveStaleData() {
   }
 }
 
+void ArcSetup::OnApplyPerBoardConfig() {
+  ApplyPerBoardConfigurationsInternal(base::FilePath(kArcVmPerBoardConfigPath));
+}
+
 void ArcSetup::OnCreateData() {
   // Bind mounting is not needed here because ARCVM does not use
   // |kAndroidRootfsDirectory|.
@@ -2375,6 +2387,9 @@ void ArcSetup::Run() {
       break;
     case Mode::PRE_CHROOT:
       OnPreChroot();
+      break;
+    case Mode::APPLY_PER_BOARD_CONFIG:
+      OnApplyPerBoardConfig();
       break;
     case Mode::CREATE_DATA:
       OnCreateData();
