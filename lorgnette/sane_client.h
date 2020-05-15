@@ -9,11 +9,18 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <vector>
 
 #include <brillo/errors/error.h>
 #include <sane/sane.h>
 
 namespace lorgnette {
+
+struct ValidOptionValues {
+  std::vector<uint32_t> resolutions;
+  std::vector<std::string> sources;
+  std::vector<std::string> color_modes;
+};
 
 enum FrameFormat {
   kGrayscale,
@@ -34,6 +41,9 @@ struct ScanParameters {
 class SaneDevice {
  public:
   virtual ~SaneDevice() {}
+
+  virtual bool GetValidOptionValues(brillo::ErrorPtr* error,
+                                    ValidOptionValues* values) = 0;
 
   virtual bool SetScanResolution(brillo::ErrorPtr* error, int resolution) = 0;
   virtual bool SetScanMode(brillo::ErrorPtr* error,

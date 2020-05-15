@@ -5,7 +5,6 @@
 #include "lorgnette/sane_client_impl.h"
 
 #include <map>
-#include <vector>
 
 #include <base/logging.h>
 #include <chromeos/dbus/service_constants.h>
@@ -109,6 +108,47 @@ SaneDeviceImpl::~SaneDeviceImpl() {
     sane_close(handle_);
   base::AutoLock auto_lock(open_devices_->first);
   open_devices_->second.erase(name_);
+}
+
+bool SaneDeviceImpl::GetValidOptionValues(brillo::ErrorPtr* error,
+                                          ValidOptionValues* values_out) {
+  if (!handle_) {
+    brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
+                         kManagerServiceError, "No scanner connected");
+    return false;
+  }
+
+  if (!values_out) {
+    brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
+                         kManagerServiceError,
+                         "'values_out' pointer cannot be null");
+    return false;
+  }
+
+  ValidOptionValues values;
+  if (!GetValidIntOptionValues(error, kResolution, &values.resolutions)) {
+    brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
+                         kManagerServiceError,
+                         "Failed to get valid values for resolution setting");
+    return false;
+  }
+
+  if (!GetValidStringOptionValues(error, kSource, &values.sources)) {
+    brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
+                         kManagerServiceError,
+                         "Failed to get valid values for sources setting");
+    return false;
+  }
+
+  if (!GetValidStringOptionValues(error, kScanMode, &values.color_modes)) {
+    brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
+                         kManagerServiceError,
+                         "Failed to get valid values for scan modes setting");
+    return false;
+  }
+
+  *values_out = values;
+  return true;
 }
 
 bool SaneDeviceImpl::SetScanResolution(brillo::ErrorPtr* error,
@@ -351,6 +391,11 @@ bool SaneDeviceImpl::LoadOptions(brillo::ErrorPtr* error) {
       options_[kScanMode].index = i;
       options_[kScanMode].type = opt->type;
       options_[kScanMode].value.s = NULL;
+    } else if ((opt->type == SANE_TYPE_STRING) &&
+               strcmp(opt->name, SANE_NAME_SCAN_SOURCE) == 0) {
+      options_[kSource].index = i;
+      options_[kSource].type = opt->type;
+      options_[kSource].value.s = NULL;
     }
   }
 
@@ -386,6 +431,83 @@ SANE_Status SaneDeviceImpl::SetOption(SaneOption* option, bool* should_reload) {
   }
 
   return status;
+}
+
+bool SaneDeviceImpl::GetValidStringOptionValues(
+    brillo::ErrorPtr* error,
+    ScanOption option,
+    std::vector<std::string>* values_out) {
+  if (!values_out)
+    return false;
+
+  if (options_.count(option) == 0) {
+    return false;
+  }
+
+  int index = options_[option].index;
+  const SANE_Option_Descriptor* opt =
+      sane_get_option_descriptor(handle_, index);
+  if (!opt) {
+    brillo::Error::AddToPrintf(
+        error, FROM_HERE, brillo::errors::dbus::kDomain, kManagerServiceError,
+        "Unable to get option descriptor (%d) for device", index);
+    return false;
+  }
+
+  if (opt->constraint_type != SANE_CONSTRAINT_STRING_LIST) {
+    brillo::Error::AddToPrintf(
+        error, FROM_HERE, brillo::errors::dbus::kDomain, kManagerServiceError,
+        "Invalid option constraint type %d", opt->constraint_type);
+    return false;
+  }
+
+  std::vector<std::string> values;
+  for (const SANE_String_Const* s = opt->constraint.string_list; s; s++) {
+    values.push_back(*s);
+  }
+
+  *values_out = values;
+  return true;
+}
+
+bool SaneDeviceImpl::GetValidIntOptionValues(
+    brillo::ErrorPtr* error,
+    ScanOption option,
+    std::vector<uint32_t>* values_out) {
+  if (!values_out)
+    return false;
+
+  if (options_.count(option) == 0) {
+    return false;
+  }
+
+  int index = options_[option].index;
+  const SANE_Option_Descriptor* opt =
+      sane_get_option_descriptor(handle_, index);
+  if (!opt) {
+    brillo::Error::AddToPrintf(
+        error, FROM_HERE, brillo::errors::dbus::kDomain, kManagerServiceError,
+        "Unable to get option descriptor (%d) for device", index);
+    return false;
+  }
+
+  if (opt->constraint_type != SANE_CONSTRAINT_WORD_LIST) {
+    brillo::Error::AddToPrintf(
+        error, FROM_HERE, brillo::errors::dbus::kDomain, kManagerServiceError,
+        "Invalid option constraint type %d", opt->constraint_type);
+    return false;
+  }
+
+  std::vector<uint32_t> values;
+  int num_values = opt->constraint.word_list[0];
+  for (int i = 1; i <= num_values; i++) {
+    SANE_Word w = opt->constraint.word_list[i];
+    int value = opt->type == SANE_TYPE_FIXED ? SANE_UNFIX(w) : w;
+    values.push_back(value);
+  }
+
+  *values_out = values;
+  return true;
 }
 
 }  // namespace lorgnette

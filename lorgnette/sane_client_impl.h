@@ -11,6 +11,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
+#include <vector>
 
 #include <base/synchronization/lock.h>
 #include <brillo/errors/error.h>
@@ -49,6 +50,9 @@ class SaneDeviceImpl : public SaneDevice {
  public:
   ~SaneDeviceImpl();
 
+  bool GetValidOptionValues(brillo::ErrorPtr* error,
+                            ValidOptionValues* values) override;
+
   bool SetScanResolution(brillo::ErrorPtr* error, int resolution) override;
   bool SetScanMode(brillo::ErrorPtr* error,
                    const std::string& scan_mode) override;
@@ -64,6 +68,7 @@ class SaneDeviceImpl : public SaneDevice {
   enum ScanOption {
     kResolution,
     kScanMode,
+    kSource,
   };
 
   class SaneOption {
@@ -86,6 +91,14 @@ class SaneDeviceImpl : public SaneDevice {
                  std::shared_ptr<DeviceSet> open_devices);
   bool LoadOptions(brillo::ErrorPtr* error);
   SANE_Status SetOption(SaneOption* option, bool* should_reload);
+
+  bool GetValidStringOptionValues(brillo::ErrorPtr* error,
+                                  ScanOption option,
+                                  std::vector<std::string>* values_out);
+
+  bool GetValidIntOptionValues(brillo::ErrorPtr* error,
+                               ScanOption option,
+                               std::vector<uint32_t>* values_out);
 
   SANE_Handle handle_;
   std::string name_;

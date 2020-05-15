@@ -50,6 +50,9 @@ class SaneDeviceFake : public SaneDevice {
   SaneDeviceFake();
   ~SaneDeviceFake();
 
+  bool GetValidOptionValues(brillo::ErrorPtr* error,
+                            ValidOptionValues* values) override;
+
   bool SetScanResolution(brillo::ErrorPtr* error, int resolution) override;
   bool SetScanMode(brillo::ErrorPtr* error,
                    const std::string& scan_mode) override;
@@ -61,12 +64,14 @@ class SaneDeviceFake : public SaneDevice {
                     size_t count,
                     size_t* read_out) override;
 
+  void SetValidOptionValues(const base::Optional<ValidOptionValues>& values);
   void SetStartScanResult(bool result);
   void SetScanParameters(const base::Optional<ScanParameters>& params);
   void SetReadScanDataResult(bool result);
   void SetScanData(const std::vector<uint8_t>& scan_data);
 
  private:
+  base::Optional<ValidOptionValues> values_;
   bool start_scan_result_;
   bool read_scan_data_result_;
   bool scan_running_;

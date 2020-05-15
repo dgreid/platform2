@@ -66,6 +66,15 @@ SaneDeviceFake::SaneDeviceFake()
 
 SaneDeviceFake::~SaneDeviceFake() {}
 
+bool SaneDeviceFake::GetValidOptionValues(brillo::ErrorPtr* error,
+                                          ValidOptionValues* values) {
+  if (!values || !values_.has_value())
+    return false;
+
+  *values = values_.value();
+  return true;
+}
+
 bool SaneDeviceFake::SetScanResolution(brillo::ErrorPtr*, int) {
   return true;
 }
@@ -117,6 +126,11 @@ bool SaneDeviceFake::ReadScanData(brillo::ErrorPtr*,
 
   scan_data_offset_ += to_copy;
   return true;
+}
+
+void SaneDeviceFake::SetValidOptionValues(
+    const base::Optional<ValidOptionValues>& values) {
+  values_ = values;
 }
 
 void SaneDeviceFake::SetStartScanResult(bool result) {
