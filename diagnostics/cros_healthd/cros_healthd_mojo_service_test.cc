@@ -125,17 +125,9 @@ class CrosHealthdMojoServiceTest : public testing::Test {
  protected:
   CrosHealthdMojoServiceTest() { mojo::core::Init(); }
 
-  void SetUp() override {
-    ASSERT_TRUE(mock_context_.Initialize());
-    power_events_ =
-        std::make_unique<PowerEventsImpl>(mock_context_.powerd_adapter());
-    service_ = std::make_unique<CrosHealthdMojoService>(
-        &backlight_fetcher_, &battery_fetcher_, &cached_vpd_fetcher_,
-        &fan_fetcher_, &bluetooth_events_, &lid_events_, power_events_.get(),
-        &routine_service_);
-  }
+  void SetUp() override { ASSERT_TRUE(mock_context_.Initialize()); }
 
-  CrosHealthdMojoService* service() { return service_.get(); }
+  CrosHealthdMojoService* service() { return &service_; }
 
   MockCrosHealthdRoutineService* routine_service() { return &routine_service_; }
 
@@ -149,8 +141,11 @@ class CrosHealthdMojoServiceTest : public testing::Test {
   FanFetcher fan_fetcher_{&mock_context_};
   BluetoothEventsImpl bluetooth_events_{&mock_context_};
   LidEventsImpl lid_events_{&mock_context_};
-  std::unique_ptr<PowerEventsImpl> power_events_;
-  std::unique_ptr<CrosHealthdMojoService> service_;
+  PowerEventsImpl power_events_{&mock_context_};
+  CrosHealthdMojoService service_{&backlight_fetcher_,  &battery_fetcher_,
+                                  &cached_vpd_fetcher_, &fan_fetcher_,
+                                  &bluetooth_events_,   &lid_events_,
+                                  &power_events_,       &routine_service_};
 };
 
 // Test that we can request the battery capacity routine.

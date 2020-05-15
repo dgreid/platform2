@@ -10,20 +10,19 @@
 
 namespace diagnostics {
 
-PowerEventsImpl::PowerEventsImpl(PowerdAdapter* powerd_adapter)
-    : powerd_adapter_(powerd_adapter) {
-  DCHECK(powerd_adapter_);
+PowerEventsImpl::PowerEventsImpl(Context* context) : context_(context) {
+  DCHECK(context_);
 }
 
 PowerEventsImpl::~PowerEventsImpl() {
   if (is_observing_powerd_)
-    powerd_adapter_->RemovePowerObserver(this);
+    context_->powerd_adapter()->RemovePowerObserver(this);
 }
 
 void PowerEventsImpl::AddObserver(
     chromeos::cros_healthd::mojom::CrosHealthdPowerObserverPtr observer) {
   if (!is_observing_powerd_) {
-    powerd_adapter_->AddPowerObserver(this);
+    context_->powerd_adapter()->AddPowerObserver(this);
     is_observing_powerd_ = true;
   }
   observers_.AddPtr(std::move(observer));
@@ -106,7 +105,7 @@ void PowerEventsImpl::StopObservingPowerdIfNecessary() {
   if (!observers_.empty())
     return;
 
-  powerd_adapter_->RemovePowerObserver(this);
+  context_->powerd_adapter()->RemovePowerObserver(this);
   is_observing_powerd_ = false;
 }
 

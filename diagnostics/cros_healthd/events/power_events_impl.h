@@ -10,8 +10,8 @@
 #include <power_manager/proto_bindings/power_supply_properties.pb.h>
 #include <power_manager/proto_bindings/suspend.pb.h>
 
-#include "diagnostics/common/system/powerd_adapter.h"
 #include "diagnostics/cros_healthd/events/power_events.h"
+#include "diagnostics/cros_healthd/system/context.h"
 #include "mojo/cros_healthd_events.mojom.h"
 
 namespace diagnostics {
@@ -20,7 +20,7 @@ namespace diagnostics {
 class PowerEventsImpl final : public PowerEvents,
                               public PowerdAdapter::PowerObserver {
  public:
-  explicit PowerEventsImpl(PowerdAdapter* powerd_adapter);
+  explicit PowerEventsImpl(Context* context);
   PowerEventsImpl(const PowerEventsImpl&) = delete;
   PowerEventsImpl& operator=(const PowerEventsImpl&) = delete;
   ~PowerEventsImpl() override;
@@ -75,7 +75,7 @@ class PowerEventsImpl final : public PowerEvents,
       observers_;
 
   // Unowned pointer. Should outlive this instance.
-  PowerdAdapter* const powerd_adapter_ = nullptr;
+  Context* const context_ = nullptr;
 };
 
 }  // namespace diagnostics

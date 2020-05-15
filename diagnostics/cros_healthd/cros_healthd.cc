@@ -42,7 +42,7 @@ CrosHealthd::CrosHealthd()
 
   lid_events_ = std::make_unique<LidEventsImpl>(&context_);
 
-  power_events_ = std::make_unique<PowerEventsImpl>(context_.powerd_adapter());
+  power_events_ = std::make_unique<PowerEventsImpl>(&context_);
 
   routine_service_ = std::make_unique<CrosHealthdRoutineServiceImpl>(
       context_.debugd_adapter(), &routine_factory_impl_);

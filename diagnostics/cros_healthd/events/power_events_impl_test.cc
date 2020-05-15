@@ -16,6 +16,7 @@
 
 #include "diagnostics/common/system/fake_powerd_adapter.h"
 #include "diagnostics/cros_healthd/events/power_events_impl.h"
+#include "diagnostics/cros_healthd/system/mock_context.h"
 #include "mojo/cros_healthd_events.mojom.h"
 
 namespace diagnostics {
@@ -57,28 +58,28 @@ class PowerEventsImplTest : public testing::Test {
   PowerEventsImplTest& operator=(const PowerEventsImplTest&) = delete;
 
   void SetUp() override {
-    power_events_impl_ =
-        std::make_unique<PowerEventsImpl>(&fake_powerd_adapter_);
+    ASSERT_TRUE(mock_context_.Initialize());
+
     // Before any observers have been added, we shouldn't have subscribed to
     // powerd_adapter.
-    ASSERT_FALSE(
-        fake_powerd_adapter_.HasPowerObserver(power_events_impl_.get()));
+    ASSERT_FALSE(fake_adapter()->HasPowerObserver(&power_events_impl_));
 
     mojo_ipc::CrosHealthdPowerObserverPtr observer_ptr;
     mojo_ipc::CrosHealthdPowerObserverRequest observer_request(
         mojo::MakeRequest(&observer_ptr));
     observer_ = std::make_unique<StrictMock<MockCrosHealthdPowerObserver>>(
         std::move(observer_request));
-    power_events_impl_->AddObserver(std::move(observer_ptr));
+    power_events_impl_.AddObserver(std::move(observer_ptr));
     // Now that an observer has been added, we should have subscribed to
     // powerd_adapter.
-    ASSERT_TRUE(
-        fake_powerd_adapter_.HasPowerObserver(power_events_impl_.get()));
+    ASSERT_TRUE(fake_adapter()->HasPowerObserver(&power_events_impl_));
   }
 
-  PowerEventsImpl* power_events_impl() { return power_events_impl_.get(); }
+  PowerEventsImpl* power_events_impl() { return &power_events_impl_; }
 
-  FakePowerdAdapter* fake_adapter() { return &fake_powerd_adapter_; }
+  FakePowerdAdapter* fake_adapter() {
+    return mock_context_.fake_powerd_adapter();
+  }
 
   MockCrosHealthdPowerObserver* mock_observer() { return observer_.get(); }
 
@@ -96,9 +97,9 @@ class PowerEventsImplTest : public testing::Test {
 
  private:
   base::test::ScopedTaskEnvironment scoped_task_environment_;
-  FakePowerdAdapter fake_powerd_adapter_;
+  MockContext mock_context_;
   std::unique_ptr<StrictMock<MockCrosHealthdPowerObserver>> observer_;
-  std::unique_ptr<PowerEventsImpl> power_events_impl_;
+  PowerEventsImpl power_events_impl_{&mock_context_};
 };
 
 // Test that we can receive AC inserted events from powerd's AC proto.
