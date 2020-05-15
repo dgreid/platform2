@@ -130,7 +130,7 @@ bool EncryptLegacyAttestationDatabase(
           brillo::SecureBlob::Combine(
               brillo::SecureBlob(std::string(kIVForTest)), encrypted_output))
           .to_string());
-  serialized_encrypted_data->resize(encrypted_data.ByteSize());
+  serialized_encrypted_data->resize(encrypted_data.ByteSizeLong());
   encrypted_data.SerializeWithCachedSizesToArray(
       serialized_encrypted_data->data());
   return true;
@@ -249,7 +249,7 @@ TEST(LocalDataMigrationTest, UnsealOwnerPasswordFromSerializedTpmStatus) {
   FakeTpm fake_tpm;
   expected_tpm_status.set_owner_password(
       SealString("owner password", &fake_tpm));
-  brillo::SecureBlob serialized_tpm_status(expected_tpm_status.ByteSize());
+  brillo::SecureBlob serialized_tpm_status(expected_tpm_status.ByteSizeLong());
   ASSERT_TRUE(expected_tpm_status.SerializeWithCachedSizesToArray(
       serialized_tpm_status.data()));
   brillo::SecureBlob owner_password;
@@ -408,7 +408,7 @@ TEST(LocalDataMigratorTest, MigrateOwnerPasswordIfNeeded) {
   LegacyTpmStatus expected_tpm_status;
   expected_tpm_status.set_owner_password(
       SealString("owner password", &fake_tpm));
-  brillo::SecureBlob serialized_tpm_status(expected_tpm_status.ByteSize());
+  brillo::SecureBlob serialized_tpm_status(expected_tpm_status.ByteSizeLong());
   ASSERT_TRUE(expected_tpm_status.SerializeWithCachedSizesToArray(
       serialized_tpm_status.data()));
 
