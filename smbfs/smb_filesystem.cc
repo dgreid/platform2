@@ -900,12 +900,6 @@ void SmbFilesystem::ReadDirInternal(std::unique_ptr<DirentryRequest> request,
     return;
   }
 
-  if (offset < 0) {
-    // A previous readdir() returned -1 as the next offset, which implies EOF.
-    request->ReplyDone();
-    return;
-  }
-
   SMBCFILE* dir = LookupOpenFile(file_handle);
   if (!dir) {
     request->ReplyError(EBADF);

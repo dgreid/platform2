@@ -120,11 +120,14 @@ class SambaInterface {
   // Returns 0 on success and errno on failure.
   virtual int CloseDirectory(SMBCFILE* dir) WARN_UNUSED_RESULT = 0;
 
-  // Seeks |offset| entries into |directory|.
+  // Seeks |offset| entries into |directory|. |offset| should be 0 to seek to
+  // the beginning of the directory, or a value returned by TellDirectory().
   // Returns 0 on success and errno on failure.
   virtual int SeekDirectory(SMBCFILE* dir, off_t offset) WARN_UNUSED_RESULT = 0;
 
-  // Retrieve the current offset in |dir| into |out_offset|.
+  // Retrieve the current offset in |dir| into |out_offset|. The value returned
+  // in |out_offset| is opaque and should not be interpreted. It should only be
+  // passed into SeekDirectory().
   // Returns 0 on success and errno on failure.
   virtual int TellDirectory(SMBCFILE* dir,
                             off_t* out_offset) WARN_UNUSED_RESULT = 0;

@@ -313,6 +313,11 @@ int SambaInterfaceImpl::TellDirectory(SMBCFILE* dir, off_t* out_offset) {
   DCHECK(dir);
   DCHECK(out_offset);
 
+  // Explicitly set |errno| to 0 to detect error cases. On 32-bit platforms,
+  // smbc_telldir_ctx_() can return <0 in normal cases since internally,
+  // libsmbclient does a signed cast of a pointer to off_t.
+  errno = 0;
+
   *out_offset = smbc_telldir_ctx_(context_, dir);
   if (*out_offset < 0 && errno) {
     return errno;
