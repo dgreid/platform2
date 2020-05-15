@@ -8,20 +8,19 @@
 
 namespace diagnostics {
 
-BluetoothEventsImpl::BluetoothEventsImpl(BluetoothClient* bluetooth_client)
-    : bluetooth_client_(bluetooth_client) {
-  DCHECK(bluetooth_client_);
+BluetoothEventsImpl::BluetoothEventsImpl(Context* context) : context_(context) {
+  DCHECK(context_);
 }
 
 BluetoothEventsImpl::~BluetoothEventsImpl() {
   if (is_observing_bluetooth_client_)
-    bluetooth_client_->RemoveObserver(this);
+    context_->bluetooth_client()->RemoveObserver(this);
 }
 
 void BluetoothEventsImpl::AddObserver(
     chromeos::cros_healthd::mojom::CrosHealthdBluetoothObserverPtr observer) {
   if (!is_observing_bluetooth_client_) {
-    bluetooth_client_->AddObserver(this);
+    context_->bluetooth_client()->AddObserver(this);
     is_observing_bluetooth_client_ = true;
   }
 
@@ -82,7 +81,7 @@ void BluetoothEventsImpl::StopObservingBluetoothClientIfNecessary() {
   if (!observers_.empty())
     return;
 
-  bluetooth_client_->RemoveObserver(this);
+  context_->bluetooth_client()->RemoveObserver(this);
   is_observing_bluetooth_client_ = false;
 }
 

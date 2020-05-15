@@ -8,8 +8,8 @@
 #include <dbus/object_path.h>
 #include <mojo/public/cpp/bindings/interface_ptr_set.h>
 
-#include "diagnostics/common/system/bluetooth_client.h"
 #include "diagnostics/cros_healthd/events/bluetooth_events.h"
+#include "diagnostics/cros_healthd/system/context.h"
 #include "mojo/cros_healthd_events.mojom.h"
 
 namespace diagnostics {
@@ -18,7 +18,7 @@ namespace diagnostics {
 class BluetoothEventsImpl final : public BluetoothEvents,
                                   public BluetoothClient::Observer {
  public:
-  explicit BluetoothEventsImpl(BluetoothClient* bluetooth_client);
+  explicit BluetoothEventsImpl(Context* context);
   BluetoothEventsImpl(const BluetoothEventsImpl&) = delete;
   BluetoothEventsImpl& operator=(const BluetoothEventsImpl&) = delete;
   ~BluetoothEventsImpl() override;
@@ -63,7 +63,7 @@ class BluetoothEventsImpl final : public BluetoothEvents,
       observers_;
 
   // Unowned pointer. Should outlive this instance.
-  BluetoothClient* const bluetooth_client_ = nullptr;
+  Context* const context_ = nullptr;
 };
 
 }  // namespace diagnostics

@@ -19,6 +19,7 @@ source_set("libcros_healthd_events") {
   deps = [
     "//diagnostics:diagnostics_mojo_bindings",
     "//diagnostics/common:libcommon",
+    "//diagnostics/cros_healthd/system:libcros_healthd_system",
   ]
   all_dependent_configs = [ ":libcros_healthd_events_pkg_deps" ]
   sources = [
@@ -47,6 +48,7 @@ if (use.test) {
       "//common-mk/testrunner:testrunner",
       "//diagnostics:diagnostics_mojo_bindings",
       "//diagnostics/common:libcommon_test_utils",
+      "//diagnostics/cros_healthd/system:libcros_healthd_system_test_utils",
     ]
     sources = [
       "bluetooth_events_impl_test.cc",

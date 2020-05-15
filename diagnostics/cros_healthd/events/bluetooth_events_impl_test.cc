@@ -19,6 +19,7 @@
 #include "diagnostics/common/system/bluetooth_client.h"
 #include "diagnostics/common/system/fake_bluetooth_client.h"
 #include "diagnostics/cros_healthd/events/bluetooth_events_impl.h"
+#include "diagnostics/cros_healthd/system/mock_context.h"
 #include "mojo/cros_healthd_events.mojom.h"
 
 namespace diagnostics {
@@ -85,9 +86,11 @@ class BluetoothEventsImplTest : public testing::Test {
   BluetoothEventsImplTest& operator=(const BluetoothEventsImplTest&) = delete;
 
   void SetUp() override {
+    ASSERT_TRUE(mock_context_.Initialize());
+
     // Before any observers have been added, we shouldn't have subscribed to
     // BluetoothClient.
-    ASSERT_FALSE(fake_bluetooth_client_.HasObserver(&bluetooth_events_impl_));
+    ASSERT_FALSE(fake_bluetooth_client()->HasObserver(&bluetooth_events_impl_));
 
     mojo_ipc::CrosHealthdBluetoothObserverPtr observer_ptr;
     mojo_ipc::CrosHealthdBluetoothObserverRequest observer_request(
@@ -97,7 +100,7 @@ class BluetoothEventsImplTest : public testing::Test {
     bluetooth_events_impl_.AddObserver(std::move(observer_ptr));
     // Now that an observer has been added, we should have subscribed to
     // BluetoothClient.
-    ASSERT_TRUE(fake_bluetooth_client_.HasObserver(&bluetooth_events_impl_));
+    ASSERT_TRUE(fake_bluetooth_client()->HasObserver(&bluetooth_events_impl_));
   }
 
   BluetoothEventsImpl* bluetooth_events_impl() {
@@ -105,7 +108,7 @@ class BluetoothEventsImplTest : public testing::Test {
   }
 
   FakeBluetoothClient* fake_bluetooth_client() {
-    return &fake_bluetooth_client_;
+    return mock_context_.fake_bluetooth_client();
   }
 
   MockCrosHealthdBluetoothObserver* mock_observer() { return observer_.get(); }
@@ -129,8 +132,8 @@ class BluetoothEventsImplTest : public testing::Test {
  private:
   base::test::ScopedTaskEnvironment scoped_task_environment_;
 
-  FakeBluetoothClient fake_bluetooth_client_;
-  BluetoothEventsImpl bluetooth_events_impl_{&fake_bluetooth_client_};
+  MockContext mock_context_;
+  BluetoothEventsImpl bluetooth_events_impl_{&mock_context_};
   std::unique_ptr<StrictMock<MockCrosHealthdBluetoothObserver>> observer_;
 };
 

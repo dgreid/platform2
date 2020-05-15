@@ -38,8 +38,7 @@ CrosHealthd::CrosHealthd()
 
   fan_fetcher_ = std::make_unique<FanFetcher>(&context_);
 
-  bluetooth_events_ =
-      std::make_unique<BluetoothEventsImpl>(context_.bluetooth_client());
+  bluetooth_events_ = std::make_unique<BluetoothEventsImpl>(&context_);
 
   lid_events_ = std::make_unique<LidEventsImpl>(context_.powerd_adapter());
 
