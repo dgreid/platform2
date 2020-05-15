@@ -27,9 +27,8 @@ constexpr char kSkuNumberFileName[] = "sku_number";
 
 }  // namespace
 
-CachedVpdFetcher::CachedVpdFetcher(brillo::CrosConfigInterface* cros_config)
-    : cros_config_(cros_config) {
-  DCHECK(cros_config_);
+CachedVpdFetcher::CachedVpdFetcher(Context* context) : context_(context) {
+  DCHECK(context_);
 }
 
 CachedVpdFetcher::~CachedVpdFetcher() = default;
@@ -38,8 +37,8 @@ CachedVpdResultPtr CachedVpdFetcher::FetchCachedVpdInfo(
     const base::FilePath& root_dir) {
   CachedVpdInfo vpd_info;
   std::string has_sku_number;
-  cros_config_->GetString(kCachedVpdPropertiesPath, kHasSkuNumberProperty,
-                          &has_sku_number);
+  context_->cros_config()->GetString(kCachedVpdPropertiesPath,
+                                     kHasSkuNumberProperty, &has_sku_number);
   if (has_sku_number == "true") {
     std::string sku_number;
     if (!ReadAndTrimString(root_dir.Append(kRelativeSkuNumberDir),

@@ -127,8 +127,6 @@ class CrosHealthdMojoServiceTest : public testing::Test {
 
   void SetUp() override {
     ASSERT_TRUE(mock_context_.Initialize());
-    cached_vpd_fetcher_ =
-        std::make_unique<CachedVpdFetcher>(mock_context_.cros_config());
     fan_fetcher_ = std::make_unique<FanFetcher>(mock_context_.debugd_proxy());
     bluetooth_events_ =
         std::make_unique<BluetoothEventsImpl>(mock_context_.bluetooth_client());
@@ -137,7 +135,7 @@ class CrosHealthdMojoServiceTest : public testing::Test {
     power_events_ =
         std::make_unique<PowerEventsImpl>(mock_context_.powerd_adapter());
     service_ = std::make_unique<CrosHealthdMojoService>(
-        &backlight_fetcher_, &battery_fetcher_, cached_vpd_fetcher_.get(),
+        &backlight_fetcher_, &battery_fetcher_, &cached_vpd_fetcher_,
         fan_fetcher_.get(), bluetooth_events_.get(), lid_events_.get(),
         power_events_.get(), &routine_service_);
   }
@@ -152,7 +150,7 @@ class CrosHealthdMojoServiceTest : public testing::Test {
   MockContext mock_context_;
   BacklightFetcher backlight_fetcher_{&mock_context_};
   BatteryFetcher battery_fetcher_{&mock_context_};
-  std::unique_ptr<CachedVpdFetcher> cached_vpd_fetcher_;
+  CachedVpdFetcher cached_vpd_fetcher_{&mock_context_};
   std::unique_ptr<FanFetcher> fan_fetcher_;
   std::unique_ptr<BluetoothEventsImpl> bluetooth_events_;
   std::unique_ptr<LidEventsImpl> lid_events_;

@@ -6,15 +6,15 @@
 #define DIAGNOSTICS_CROS_HEALTHD_UTILS_VPD_UTILS_H_
 
 #include <base/files/file_path.h>
-#include <chromeos/chromeos-config/libcros_config/cros_config_interface.h>
 
+#include "diagnostics/cros_healthd/system/context.h"
 #include "mojo/cros_healthd_probe.mojom.h"
 
 namespace diagnostics {
 
 class CachedVpdFetcher final {
  public:
-  explicit CachedVpdFetcher(brillo::CrosConfigInterface* cros_config);
+  explicit CachedVpdFetcher(Context* context);
   CachedVpdFetcher(const CachedVpdFetcher&) = delete;
   CachedVpdFetcher& operator=(const CachedVpdFetcher&) = delete;
   ~CachedVpdFetcher();
@@ -26,7 +26,7 @@ class CachedVpdFetcher final {
 
  private:
   // Unowned pointer that outlives this CachedVpdFetcher instance.
-  brillo::CrosConfigInterface* cros_config_;
+  Context* const context_ = nullptr;
 };
 
 }  // namespace diagnostics

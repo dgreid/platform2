@@ -2,16 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <memory>
 #include <string>
 
 #include <base/files/file_path.h>
 #include <base/files/scoped_temp_dir.h>
 #include <base/optional.h>
-#include <chromeos/chromeos-config/libcros_config/fake_cros_config.h>
 #include <gtest/gtest.h>
 
 #include "diagnostics/common/file_test_utils.h"
+#include "diagnostics/cros_healthd/system/mock_context.h"
 #include "diagnostics/cros_healthd/utils/vpd_utils.h"
 
 namespace diagnostics {
@@ -30,15 +29,14 @@ const char kFakeSKUNumber[] = "ABCD&^A";
 
 class VpdUtilsTest : public ::testing::Test {
  protected:
-  VpdUtilsTest() {
-    fake_cros_config_ = std::make_unique<brillo::FakeCrosConfig>();
-    cached_vpd_fetcher_ =
-        std::make_unique<CachedVpdFetcher>(fake_cros_config_.get());
-  }
+  VpdUtilsTest() = default;
   VpdUtilsTest(const VpdUtilsTest&) = delete;
   VpdUtilsTest& operator=(const VpdUtilsTest&) = delete;
 
-  void SetUp() override { ASSERT_TRUE(temp_dir_.CreateUniqueTempDir()); }
+  void SetUp() override {
+    ASSERT_TRUE(mock_context_.Initialize());
+    ASSERT_TRUE(temp_dir_.CreateUniqueTempDir());
+  }
 
   const base::FilePath& GetTempDirPath() const {
     DCHECK(temp_dir_.IsValid());
@@ -46,17 +44,17 @@ class VpdUtilsTest : public ::testing::Test {
   }
 
   CachedVpdResultPtr FetchCachedVpdInfo(const base::FilePath& root_dir) {
-    return cached_vpd_fetcher_->FetchCachedVpdInfo(root_dir);
+    return cached_vpd_fetcher_.FetchCachedVpdInfo(root_dir);
   }
 
   void SetHasSkuNumberString(const std::string& val) {
-    fake_cros_config_->SetString(kCachedVpdPropertiesPath,
-                                 kHasSkuNumberProperty, val);
+    mock_context_.fake_cros_config()->SetString(kCachedVpdPropertiesPath,
+                                                kHasSkuNumberProperty, val);
   }
 
  private:
-  std::unique_ptr<brillo::FakeCrosConfig> fake_cros_config_;
-  std::unique_ptr<CachedVpdFetcher> cached_vpd_fetcher_;
+  MockContext mock_context_;
+  CachedVpdFetcher cached_vpd_fetcher_{&mock_context_};
   base::ScopedTempDir temp_dir_;
 };
 
