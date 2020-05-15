@@ -10,20 +10,19 @@
 
 namespace diagnostics {
 
-LidEventsImpl::LidEventsImpl(PowerdAdapter* powerd_adapter)
-    : powerd_adapter_(powerd_adapter) {
-  DCHECK(powerd_adapter_);
+LidEventsImpl::LidEventsImpl(Context* context) : context_(context) {
+  DCHECK(context_);
 }
 
 LidEventsImpl::~LidEventsImpl() {
   if (is_observing_powerd_)
-    powerd_adapter_->RemoveLidObserver(this);
+    context_->powerd_adapter()->RemoveLidObserver(this);
 }
 
 void LidEventsImpl::AddObserver(
     chromeos::cros_healthd::mojom::CrosHealthdLidObserverPtr observer) {
   if (!is_observing_powerd_) {
-    powerd_adapter_->AddLidObserver(this);
+    context_->powerd_adapter()->AddLidObserver(this);
     is_observing_powerd_ = true;
   }
   observers_.AddPtr(std::move(observer));
@@ -51,7 +50,7 @@ void LidEventsImpl::StopObservingPowerdIfNecessary() {
   if (!observers_.empty())
     return;
 
-  powerd_adapter_->RemoveLidObserver(this);
+  context_->powerd_adapter()->RemoveLidObserver(this);
   is_observing_powerd_ = false;
 }
 

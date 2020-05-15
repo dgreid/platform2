@@ -7,8 +7,8 @@
 
 #include <mojo/public/cpp/bindings/interface_ptr_set.h>
 
-#include "diagnostics/common/system/powerd_adapter.h"
 #include "diagnostics/cros_healthd/events/lid_events.h"
+#include "diagnostics/cros_healthd/system/context.h"
 #include "mojo/cros_healthd_events.mojom.h"
 
 namespace diagnostics {
@@ -17,7 +17,7 @@ namespace diagnostics {
 class LidEventsImpl final : public LidEvents,
                             public PowerdAdapter::LidObserver {
  public:
-  explicit LidEventsImpl(PowerdAdapter* powerd_adapter);
+  explicit LidEventsImpl(Context* context);
   LidEventsImpl(const LidEventsImpl&) = delete;
   LidEventsImpl& operator=(const LidEventsImpl&) = delete;
   ~LidEventsImpl() override;
@@ -48,7 +48,7 @@ class LidEventsImpl final : public LidEvents,
       observers_;
 
   // Unowned pointer. Should outlive this instance.
-  PowerdAdapter* const powerd_adapter_ = nullptr;
+  Context* const context_ = nullptr;
 };
 
 }  // namespace diagnostics

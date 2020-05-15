@@ -40,7 +40,7 @@ CrosHealthd::CrosHealthd()
 
   bluetooth_events_ = std::make_unique<BluetoothEventsImpl>(&context_);
 
-  lid_events_ = std::make_unique<LidEventsImpl>(context_.powerd_adapter());
+  lid_events_ = std::make_unique<LidEventsImpl>(&context_);
 
   power_events_ = std::make_unique<PowerEventsImpl>(context_.powerd_adapter());
 
