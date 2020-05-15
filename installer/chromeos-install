@@ -587,17 +587,20 @@ install_stateful() {
       dev_image
     "
 
-    for f in $(find ${ROOT}/opt/google/dlc -name '*.json'); do
-      local f_path=$(dirname "${f}")
-      local dlc_package=$(basename "${f_path}")
-      local dlc_id=$(basename $(dirname "${f_path}"))
-      if grep '\"preload-allowed\":\s*true' "${f}"; then
-        dirlist="
-          ${dirlist}
-          var_overlay/cache/dlc-images/${dlc_id}/${dlc_package}
-        "
-      fi
-    done
+    local rootfs_dlc="${ROOT}/opt/google/dlc"
+    if [ -d "${rootfs_dlc}" ]; then
+     for f in $(find "${rootfs_dlc}" -name "*.json"); do
+       local f_path=$(dirname "${f}")
+       local dlc_package=$(basename "${f_path}")
+       local dlc_id=$(basename $(dirname "${f_path}"))
+       if grep '\"preload-allowed\":\s*true' "${f}"; then
+         dirlist="
+           ${dirlist}
+           var_overlay/cache/dlc-images/${dlc_id}/${dlc_package}
+         "
+       fi
+     done
+    fi
   fi
 
   if crossystem 'devsw_boot?1' ; then
