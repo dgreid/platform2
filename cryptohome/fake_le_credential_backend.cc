@@ -73,7 +73,7 @@ bool FakeLECredentialBackend::InsertCredential(
         valid_pcr_criteria[0].digest);
   }
 
-  cred_metadata->resize(cred_metadata_entry.ByteSize());
+  cred_metadata->resize(cred_metadata_entry.ByteSizeLong());
   if (!cred_metadata_entry.SerializeToArray(cred_metadata->data(),
                                             cred_metadata->size())) {
     LOG(ERROR) << "Couldn't serialize cred metadata, label: " << label;
@@ -179,7 +179,7 @@ bool FakeLECredentialBackend::CheckCredential(
     metadata_tmp.set_attempt_count(metadata_tmp.attempt_count() + 1);
   }
 
-  new_cred_metadata->resize(metadata_tmp.ByteSize());
+  new_cred_metadata->resize(metadata_tmp.ByteSizeLong());
   if (!metadata_tmp.SerializeToArray(new_cred_metadata->data(),
                                      new_cred_metadata->size())) {
     LOG(ERROR) << "Couldn't serialize new cred metadata, label: " << label;
@@ -243,7 +243,7 @@ bool FakeLECredentialBackend::ResetCredential(
     *err = LE_TPM_ERROR_INVALID_RESET_SECRET;
   }
 
-  new_cred_metadata->resize(metadata_tmp.ByteSize());
+  new_cred_metadata->resize(metadata_tmp.ByteSizeLong());
   if (!metadata_tmp.SerializeToArray(new_cred_metadata->data(),
                                      new_cred_metadata->size())) {
     LOG(ERROR) << "Couldn't serialize new cred metadata, label: " << label;
@@ -350,7 +350,7 @@ bool FakeLECredentialBackend::ReplayLogOperation(
     metadata_tmp.set_attempt_count(metadata_tmp.attempt_count() + 1);
   }
 
-  new_cred_metadata->resize(metadata_tmp.ByteSize());
+  new_cred_metadata->resize(metadata_tmp.ByteSizeLong());
   if (!metadata_tmp.SerializeToArray(new_cred_metadata->data(),
                                      new_cred_metadata->size())) {
     LOG(ERROR) << "Couldn't serialize new cred metadata, label: " << label;

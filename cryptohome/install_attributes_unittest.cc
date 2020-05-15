@@ -81,7 +81,7 @@ class InstallAttributesTest : public ::testing::Test {
     attr->set_name(kTestName);
     attr->set_value(std::string(reinterpret_cast<const char*>(kTestData),
                                 strlen(kTestData)));
-    data.resize(proto.ByteSize());
+    data.resize(proto.ByteSizeLong());
     CHECK(proto.SerializeWithCachedSizesToArray(data.data()));
     return data;
   }

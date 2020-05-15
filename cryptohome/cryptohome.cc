@@ -468,7 +468,13 @@ bool ConfirmRemove(const std::string& user) {
 }
 
 GArray* GArrayFromProtoBuf(const google::protobuf::MessageLite& pb) {
-  guint len = pb.ByteSize();
+  size_t len_raw = pb.ByteSizeLong();
+  if (len_raw > G_MAXUINT) {
+    printf("Protocol buffer too large.\n");
+    return NULL;
+  }
+
+  guint len = len_raw;
   GArray* ary = g_array_sized_new(FALSE, FALSE, 1, len);
   g_array_set_size(ary, len);
   if (!pb.SerializeToArray(ary->data, len)) {

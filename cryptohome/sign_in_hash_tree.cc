@@ -128,7 +128,7 @@ bool SignInHashTree::StoreLabel(const Label& label,
     leaf_data.set_credential_metadata(cred_metadata.data(),
                                       cred_metadata.size());
 
-    std::vector<uint8_t> merged_blob(leaf_data.ByteSize());
+    std::vector<uint8_t> merged_blob(leaf_data.ByteSizeLong());
     if (!leaf_data.SerializeToArray(merged_blob.data(), merged_blob.size())) {
       LOG(ERROR) << "Couldn't serialize leaf data, label: " << label.value();
       return false;

@@ -901,7 +901,7 @@ bool Mount::StoreVaultKeysetForUser(
     LOG(ERROR) << "Attempted to store an invalid key index: " << index;
     return false;
   }
-  brillo::Blob final_blob(serialized.ByteSize());
+  brillo::Blob final_blob(serialized.ByteSizeLong());
   serialized.SerializeWithCachedSizesToArray(
       static_cast<google::protobuf::uint8*>(final_blob.data()));
   return platform_->WriteFileAtomicDurable(

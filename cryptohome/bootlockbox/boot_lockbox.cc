@@ -171,7 +171,7 @@ bool BootLockbox::LoadKey() {
 }
 
 bool BootLockbox::SaveKey() {
-  brillo::SecureBlob protobuf(key_.ByteSize());
+  brillo::SecureBlob protobuf(key_.ByteSizeLong());
   if (!key_.SerializeToArray(protobuf.data(), protobuf.size())) {
     LOG(ERROR) << "Failed to serialize boot-lockbox key.";
     return false;

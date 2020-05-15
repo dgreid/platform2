@@ -91,7 +91,7 @@ bool BootAttributes::FlushAndSign() {
   }
 
   brillo::Blob content;
-  content.resize(message.ByteSize());
+  content.resize(message.ByteSizeLong());
   message.SerializeWithCachedSizesToArray(content.data());
 
   brillo::SecureBlob signature;

@@ -304,7 +304,7 @@ int InstallAttributes::Count() const {
 }
 
 bool InstallAttributes::SerializeAttributes(brillo::Blob* out_bytes) {
-  out_bytes->resize(attributes_->ByteSize());
+  out_bytes->resize(attributes_->ByteSizeLong());
   attributes_->SerializeWithCachedSizesToArray(
     static_cast<google::protobuf::uint8*>(out_bytes->data()));
   return true;

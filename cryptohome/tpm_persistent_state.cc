@@ -223,7 +223,7 @@ bool TpmPersistentState::StoreTpmStatus() {
     platform_->DeleteFile(kTpmStatusFile, false);
   }
 
-  SecureBlob final_blob(tpm_status_.ByteSize());
+  SecureBlob final_blob(tpm_status_.ByteSizeLong());
   tpm_status_.SerializeWithCachedSizesToArray(
       static_cast<google::protobuf::uint8*>(final_blob.data()));
   return platform_->WriteSecureBlobToFileAtomicDurable(kTpmStatusFile,

@@ -149,7 +149,7 @@ class CryptoTest : public ::testing::Test {
 
   static void GetSerializedBlob(const SerializedVaultKeyset& serialized,
                                 SecureBlob* blob) {
-    SecureBlob final_blob(serialized.ByteSize());
+    SecureBlob final_blob(serialized.ByteSizeLong());
     serialized.SerializeWithCachedSizesToArray(
         static_cast<google::protobuf::uint8*>(final_blob.data()));
     blob->swap(final_blob);

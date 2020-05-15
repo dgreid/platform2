@@ -225,7 +225,7 @@ class MountTest
 
   bool StoreSerializedKeyset(const SerializedVaultKeyset& serialized,
                              TestUser *user) {
-    user->credentials.resize(serialized.ByteSize());
+    user->credentials.resize(serialized.ByteSizeLong());
     serialized.SerializeWithCachedSizesToArray(
         static_cast<google::protobuf::uint8*>(&user->credentials[0]));
     return true;

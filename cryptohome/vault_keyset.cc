@@ -283,7 +283,7 @@ bool VaultKeyset::Save(const FilePath& filename) {
   CHECK(platform_);
   if (!encrypted_)
     return false;
-  brillo::Blob contents(serialized_.ByteSize());
+  brillo::Blob contents(serialized_.ByteSizeLong());
   google::protobuf::uint8* buf =
       static_cast<google::protobuf::uint8*>(contents.data());
   serialized_.SerializeWithCachedSizesToArray(buf);

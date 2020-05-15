@@ -140,7 +140,7 @@ class TpmInitTest : public ::testing::Test {
   }
 
   void SetTpmStatus(const TpmStatus& tpm_status) {
-    brillo::Blob file_data(tpm_status.ByteSize());
+    brillo::Blob file_data(tpm_status.ByteSizeLong());
     tpm_status.SerializeWithCachedSizesToArray(file_data.data());
     EXPECT_TRUE(FileWrite(kTpmStatusFile, file_data));
   }

@@ -67,7 +67,7 @@ class BootAttributesTest : public testing::Test {
     attr->set_name("test1");
     attr->set_value("1234");
 
-    brillo::Blob blob(message.ByteSize());
+    brillo::Blob blob(message.ByteSizeLong());
     message.SerializeWithCachedSizesToArray(blob.data());
     files_[FilePath(BootAttributes::kAttributeFile)] = blob;
 
