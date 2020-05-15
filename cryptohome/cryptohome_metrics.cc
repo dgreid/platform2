@@ -119,7 +119,7 @@ const TimerHistogramParams kTimerHistogramParams[] = {
     {"Cryptohome.TimeSessionUnlock", 0, 4000, 50},
 };
 
-static_assert(arraysize(kTimerHistogramParams) == cryptohome::kNumTimerTypes,
+static_assert(base::size(kTimerHistogramParams) == cryptohome::kNumTimerTypes,
               "kTimerHistogramParams out of sync with enum TimerType");
 
 constexpr char kCryptohomeDeprecatedApiHistogramName[] =
