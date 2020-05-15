@@ -36,7 +36,7 @@ CrosHealthd::CrosHealthd()
 
   cached_vpd_fetcher_ = std::make_unique<CachedVpdFetcher>(&context_);
 
-  fan_fetcher_ = std::make_unique<FanFetcher>(context_.debugd_proxy());
+  fan_fetcher_ = std::make_unique<FanFetcher>(&context_);
 
   bluetooth_events_ =
       std::make_unique<BluetoothEventsImpl>(context_.bluetooth_client());

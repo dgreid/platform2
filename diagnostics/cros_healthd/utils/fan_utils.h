@@ -9,7 +9,7 @@
 
 #include <base/files/file_path.h>
 
-#include "debugd/dbus-proxies.h"
+#include "diagnostics/cros_healthd/system/context.h"
 #include "mojo/cros_healthd_probe.mojom.h"
 
 namespace diagnostics {
@@ -24,7 +24,7 @@ constexpr base::TimeDelta kDebugdDBusTimeout = base::TimeDelta::FromSeconds(10);
 // cros_healthd.
 class FanFetcher {
  public:
-  explicit FanFetcher(org::chromium::debugdProxyInterface* debugd_proxy);
+  explicit FanFetcher(Context* context);
   FanFetcher(const FanFetcher&) = delete;
   FanFetcher& operator=(const FanFetcher&) = delete;
   ~FanFetcher();
@@ -36,7 +36,7 @@ class FanFetcher {
 
  private:
   // Unowned pointer that outlives this FanFetcher instance.
-  org::chromium::debugdProxyInterface* debugd_proxy_;
+  Context* const context_ = nullptr;
 };
 
 }  // namespace diagnostics

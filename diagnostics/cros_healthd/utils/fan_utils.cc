@@ -29,9 +29,8 @@ constexpr auto kFanSpeedRegex = R"(Fan \d+ RPM: (\d+))";
 
 }  // namespace
 
-FanFetcher::FanFetcher(org::chromium::debugdProxyInterface* debugd_proxy)
-    : debugd_proxy_(debugd_proxy) {
-  DCHECK(debugd_proxy_);
+FanFetcher::FanFetcher(Context* context) : context_(context) {
+  DCHECK(context_);
 }
 
 FanFetcher::~FanFetcher() = default;
@@ -48,8 +47,8 @@ mojo_ipc::FanResultPtr FanFetcher::FetchFanInfo(
 
   std::string debugd_result;
   brillo::ErrorPtr error;
-  if (!debugd_proxy_->CollectFanSpeed(&debugd_result, &error,
-                                      kDebugdDBusTimeout.InMilliseconds())) {
+  if (!context_->debugd_proxy()->CollectFanSpeed(
+          &debugd_result, &error, kDebugdDBusTimeout.InMilliseconds())) {
     return mojo_ipc::FanResult::NewError(CreateAndLogProbeError(
         mojo_ipc::ErrorType::kSystemUtilityError,
         "Failed to collect fan speed from debugd: " + error->GetCode() + " " +

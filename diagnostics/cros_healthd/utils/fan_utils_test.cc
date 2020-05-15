@@ -5,7 +5,6 @@
 #include <inttypes.h>
 
 #include <cstdint>
-#include <memory>
 #include <string>
 
 #include <base/files/file_path.h>
@@ -18,6 +17,7 @@
 #include <gtest/gtest.h>
 
 #include "debugd/dbus-proxy-mocks.h"
+#include "diagnostics/cros_healthd/system/mock_context.h"
 #include "diagnostics/cros_healthd/utils/fan_utils.h"
 
 namespace diagnostics {
@@ -40,11 +40,10 @@ constexpr uint64_t kOverflowingValue = 0xFFFFFFFFFF;
 
 class FanUtilsTest : public ::testing::Test {
  protected:
-  FanUtilsTest() {
-    fan_fetcher_ = std::make_unique<FanFetcher>(&mock_debugd_proxy_);
-  }
+  FanUtilsTest() = default;
 
   void SetUp() override {
+    ASSERT_TRUE(mock_context_.Initialize());
     ASSERT_TRUE(temp_dir_.CreateUniqueTempDir());
     ASSERT_TRUE(
         base::CreateDirectory(GetTempDirPath().Append(kRelativeCrosEcPath)));
@@ -55,15 +54,15 @@ class FanUtilsTest : public ::testing::Test {
     return temp_dir_.GetPath();
   }
 
-  FanFetcher* fan_fetcher() { return fan_fetcher_.get(); }
+  FanFetcher* fan_fetcher() { return &fan_fetcher_; }
 
   org::chromium::debugdProxyMock* mock_debugd_proxy() {
-    return &mock_debugd_proxy_;
+    return mock_context_.mock_debugd_proxy();
   }
 
  private:
-  StrictMock<org::chromium::debugdProxyMock> mock_debugd_proxy_;
-  std::unique_ptr<FanFetcher> fan_fetcher_;
+  MockContext mock_context_;
+  FanFetcher fan_fetcher_{&mock_context_};
   base::ScopedTempDir temp_dir_;
 };
 
