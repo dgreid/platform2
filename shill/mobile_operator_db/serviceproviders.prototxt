@@ -9338,22 +9338,6 @@ mno {
 
 mno {
   data {
-    uuid : "cd37fef7-296e-4da8-b822-f41817a6f066"
-    country : "nl"
-    localized_name {
-      name : "Orange"
-    }
-    mccmnc : "20420"
-    mobile_apn {
-      apn : "internet"
-      username : "orange"
-      password : "orange"
-    }
-  }
-}
-
-mno {
-  data {
     uuid : "d1d4554d-62be-462c-a1c7-412208572b56"
     country : "nl"
     localized_name {
