@@ -67,7 +67,7 @@ class Test : public ::testing::Test {
   void Initialize() {
     EXPECT_CALL(*collector_, SetUpDBus()).WillRepeatedly(testing::Return());
 
-    collector_->Initialize(IsFeedbackAllowed, false, false, "", false);
+    collector_->Initialize(IsFeedbackAllowed, false, false, false);
     ClearLog();
   }
 

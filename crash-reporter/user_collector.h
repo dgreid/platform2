@@ -42,7 +42,6 @@ class UserCollector : public UserCollectorBase {
                   bool generate_diagnostics,
                   bool core2md_failure,
                   bool directory_failure,
-                  const std::string& filter_in,
                   FilterOutFunction filter_out,
                   bool early);
 

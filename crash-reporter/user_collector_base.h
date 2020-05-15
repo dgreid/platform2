@@ -25,7 +25,6 @@ class UserCollectorBase : public CrashCollector {
   void Initialize(IsFeedbackAllowedFunction is_metrics_allowed,
                   bool generate_diagnostics,
                   bool directory_failure,
-                  const std::string& filter_in,
                   bool early);
 
   // Handle a specific user crash.  Returns true on success.
@@ -125,7 +124,6 @@ class UserCollectorBase : public CrashCollector {
 
   bool generate_diagnostics_ = false;
   bool directory_failure_ = false;
-  std::string filter_in_;
 };
 
 #endif  // CRASH_REPORTER_USER_COLLECTOR_BASE_H_

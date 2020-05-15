@@ -428,7 +428,6 @@ int main(int argc, char* argv[]) {
                "and then pass to debugd for immediate upload.)");
   DEFINE_bool(core2md_failure, false, "Core2md failure test");
   DEFINE_bool(directory_failure, false, "Spool directory failure test");
-  DEFINE_string(filter_in, "", "Ignore all crashes but this for testing");
   DEFINE_bool(
       always_allow_feedback, false,
       "Force if feedback is allowed check to return true, used for tests only");
@@ -454,6 +453,10 @@ int main(int argc, char* argv[]) {
   } else {
     brillo::OpenLog(my_path.BaseName().value().c_str(), true);
     brillo::InitLog(brillo::kLogToSyslog);
+  }
+
+  if (util::SkipCrashCollection(argc, argv)) {
+    return 0;
   }
 
   if (FLAGS_always_allow_feedback) {
@@ -505,8 +508,7 @@ int main(int argc, char* argv[]) {
   ArcCollector arc_collector;
   arc_collector.Initialize(IsFeedbackAllowed,
                            true,  // generate_diagnostics
-                           FLAGS_directory_failure, FLAGS_filter_in,
-                           false /* early */);
+                           FLAGS_directory_failure, false /* early */);
   // Filter out ARC processes.
   if (ArcCollector::IsArcRunning())
     filter_out = std::bind(&ArcCollector::IsArcProcess, &arc_collector,
@@ -515,8 +517,7 @@ int main(int argc, char* argv[]) {
   user_collector.Initialize(my_path.value(), IsFeedbackAllowed,
                             true,  // generate_diagnostics
                             FLAGS_core2md_failure, FLAGS_directory_failure,
-                            FLAGS_filter_in, std::move(filter_out),
-                            FLAGS_early);
+                            std::move(filter_out), FLAGS_early);
   UncleanShutdownCollector unclean_shutdown_collector;
   unclean_shutdown_collector.Initialize(IsFeedbackAllowed, FLAGS_early);
 

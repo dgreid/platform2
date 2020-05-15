@@ -38,6 +38,14 @@ bool IsOfficialImage();
 // Returns true if we are mocking metrics consent as granted.
 bool HasMockConsent();
 
+// Returns true if we should skip crash collection (based on the filter-in
+// file).
+// Specifically, if the file exists, crash_reporter will exit early unless its
+// contents are a substring of the command-line parameters.
+// Alternatively, if the file contains the string "none", then crash_reporter
+// will always exit early.
+bool SkipCrashCollection(int argc, char* argv[]);
+
 // Change group ownership of "file" to "group", and grant g+rw (optionally x).
 bool SetGroupAndPermissions(const base::FilePath& file,
                             const char* group,

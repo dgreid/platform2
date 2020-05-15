@@ -80,6 +80,11 @@ constexpr char kMockConsent[] = "mock-consent";
 // ready for anomalies.
 constexpr char kAnomalyDetectorReady[] = "anomaly-detector-ready";
 
+// Base name of file whose contents tell us which crashes, if any, to filter.
+// Used for tests only. Exact details of how the file is interpreted can be
+// found on the method documentation of `utils::SkipCrashCollection`
+constexpr char kFilterInFile[] = "filter-in";
+
 // Base name of file whose existence indicates uploading of device coredumps is
 // allowed.
 constexpr char kDeviceCoredumpUploadAllowed[] =

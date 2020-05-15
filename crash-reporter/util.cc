@@ -8,6 +8,7 @@
 #include <signal.h>
 #include <stdlib.h>
 
+#include <algorithm>
 #include <map>
 #include <memory>
 
@@ -108,6 +109,59 @@ bool HasMockConsent() {
   }
   return base::PathExists(
       paths::GetAt(paths::kSystemRunStateDirectory, paths::kMockConsent));
+}
+
+bool SkipCrashCollection(int argc, char* argv[]) {
+  // Don't skip crashes on real Chromebooks; this is for testing.
+  // We can't use IsTestImage because that's always false if a crash test is in
+  // progress.
+  if (!IsReallyTestImage()) {
+    return false;
+  }
+
+  base::FilePath file =
+      paths::GetAt(paths::kSystemRunStateDirectory, paths::kFilterInFile);
+  if (!base::PathExists(file)) {
+    return false;
+  }
+
+  std::string contents;
+  if (!base::ReadFileToString(file, &contents)) {
+    LOG(WARNING) << "Failed to read " << file;
+    return false;
+  }
+
+  std::vector<std::string> args(argv + 1, argv + argc);
+  std::string command_line = base::JoinString(args, " ");
+
+  // If the command line consists solely of these flags, it's always allowed
+  // (regardless of filter-in state).
+  // These flags are always accepted because they do not create crash files.
+  // Tests may wish to verify or depend on their effects while also blocking all
+  // crashes (using a filter-in of "none").
+  const std::vector<std::string> allowlist = {
+      "--init",
+      "--clean_shutdown",
+      "--log_to_stderr",
+  };
+
+  bool all_args_allowed = true;
+  for (auto it = args.begin(); it != args.end() && all_args_allowed; ++it) {
+    if (std::find(allowlist.begin(), allowlist.end(), *it) == allowlist.end()) {
+      all_args_allowed = false;
+    }
+  }
+  if (all_args_allowed) {
+    return false;
+  }
+
+  if (contents == "none" || command_line.find(contents) == std::string::npos) {
+    // Doesn't match, so skip this crash.
+    LOG(WARNING) << "Ignoring crash invocation '" << command_line << "' due to "
+                 << "filter_in=" << contents << ".";
+    return true;
+  }
+  return false;
 }
 
 bool SetGroupAndPermissions(const base::FilePath& file,

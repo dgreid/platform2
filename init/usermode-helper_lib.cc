@@ -16,10 +16,6 @@ bool IsTestCaseFlag(const char* arg) {
          std::string_view(arg) == "--directory_failure";
 }
 
-bool IsFilterIn(const char* arg) {
-  return base::StartsWith(arg, "--filter_in=", base::CompareCase::SENSITIVE);
-}
-
 // Processes core dumps from the kernel when a crash is detected.
 // Controlled via /proc/sys/kernel/core_pattern.
 bool ValidateCrashReporter(int argc, const char* argv[]) {
@@ -36,13 +32,6 @@ bool ValidateCrashReporter(int argc, const char* argv[]) {
     return true;
   }
 
-  // Allow for testing invocations.
-  if (argc == 3 &&
-      base::StartsWith(argv[1], "--user=", base::CompareCase::SENSITIVE) &&
-      IsFilterIn(argv[2])) {
-    return true;
-  }
-
   // Allow for crash-reporter crash testing invocations.
   if (argc == 3 &&
       base::StartsWith(argv[1], "--user=", base::CompareCase::SENSITIVE) &&
@@ -54,18 +43,17 @@ bool ValidateCrashReporter(int argc, const char* argv[]) {
   // transitioned from autotest to Tast, having 2 different versions.
   // TODO(crbug.com/1040335): Remove the former one after removing the
   // logging_UserCrash autotest.
-  if (argc == 4 &&
+  if (argc == 3 &&
       base::StartsWith(argv[1], "--user=", base::CompareCase::SENSITIVE) &&
-      ((IsTestCaseFlag(argv[2]) && IsFilterIn(argv[3])) ||
-       (IsFilterIn(argv[2]) && IsTestCaseFlag(argv[3])))) {
+      IsTestCaseFlag(argv[2])) {
     return true;
   }
 
   // crrev.comc/c/2043542 applies the verbose logging flag.
   // TODO(crbug.com/1043801) Remove this after finishing investigation.
-  if (argc == 4 &&
+  if (argc == 3 &&
       base::StartsWith(argv[1], "--user=", base::CompareCase::SENSITIVE) &&
-      IsFilterIn(argv[2]) && std::string_view(argv[3]) == "-v=2") {
+      std::string_view(argv[2]) == "-v=2") {
     return true;
   }
 

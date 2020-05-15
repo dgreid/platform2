@@ -354,6 +354,9 @@ runtime details here.
 *   `/run/crash_reporter/mock-consent`: Used by integration tests to tell
     the crash system to act as if the user had given consent for crashes to be
     collected and uploaded.
+*   `/run/crash_reporter/filter-in`: Used by integration tests to tell the
+    crash_reporter to ignore invocations unless the command line contains
+    the contents of this file as a substring.
 *   `/run/lock/crash_sender`: Used by [crash_sender] to guarantee only one
     upload instance is active at a time.
 

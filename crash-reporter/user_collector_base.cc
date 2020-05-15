@@ -67,13 +67,11 @@ void UserCollectorBase::Initialize(
     IsFeedbackAllowedFunction is_feedback_allowed_function,
     bool generate_diagnostics,
     bool directory_failure,
-    const std::string& filter_in,
     bool early) {
   CrashCollector::Initialize(is_feedback_allowed_function, early);
   initialized_ = true;
   generate_diagnostics_ = generate_diagnostics;
   directory_failure_ = directory_failure;
-  filter_in_ = filter_in;
 }
 
 bool UserCollectorBase::HandleCrash(const std::string& crash_attributes,
@@ -103,16 +101,6 @@ bool UserCollectorBase::HandleCrash(const std::string& crash_attributes,
     // We don't always use the kernel's since it truncates the name to
     // 16 characters.
     exec = StringPrintf("supplied_%s", kernel_supplied_name.c_str());
-  }
-
-  // Allow us to test the crash reporting mechanism successfully even if
-  // other parts of the system crash.
-  if (!filter_in_.empty() && (filter_in_ == "none" || filter_in_ != exec)) {
-    // We use a different format message to make it more obvious in tests
-    // which crashes are test generated and which are real.
-    LOG(WARNING) << "Ignoring crash from " << exec << "[" << pid << "] while "
-                 << "filter_in=" << filter_in_ << ".";
-    return true;
   }
 
   std::string reason;

@@ -63,7 +63,7 @@ class UserCollectorTest : public ::testing::Test {
 
     const pid_t pid = getpid();
     collector_.Initialize(
-        kFilePath, IsMetrics, false, false, false, "",
+        kFilePath, IsMetrics, false, false, false,
         [pid](pid_t p) { return p == pid + 1; }, false);
     // Setup paths for output files.
     test_core_pattern_file_ = test_dir_.Append("core_pattern");

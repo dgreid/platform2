@@ -28,25 +28,25 @@ TEST(ValidateProgramArgs, GoodCrashReporter) {
   EXPECT_TRUE(ValidateProgramArgs(
       {"/sbin/crash_reporter", "--early", "--log_to_stderr", "--user=foo"}));
   EXPECT_TRUE(ValidateProgramArgs(
-      {"/sbin/crash_reporter", "--user=foo", "--filter_in=blah"}));
-  EXPECT_TRUE(ValidateProgramArgs({"/sbin/crash_reporter", "--user=foo",
-                                   "--core2md_failure", "--filter_in=blah"}));
-  EXPECT_TRUE(ValidateProgramArgs({"/sbin/crash_reporter", "--user=foo",
-                                   "--filter_in=blah", "--core2md_failure"}));
-  EXPECT_TRUE(ValidateProgramArgs({"/sbin/crash_reporter", "--user=foo",
-                                   "--directory_failure", "--filter_in=blah"}));
+      {"/sbin/crash_reporter", "--user=foo", "--core2md_failure"}));
+  EXPECT_TRUE(ValidateProgramArgs(
+      {"/sbin/crash_reporter", "--user=foo", "--directory_failure"}));
   EXPECT_TRUE(ValidateProgramArgs(
       {"/sbin/crash_reporter", "--user=foo", "--crash_test"}));
 
   // crrev.com/c/2043542 applies the verbose logging flag.
   // TODO(crbug.com/1043801) Remove this after finishing investigation.
-  EXPECT_TRUE(ValidateProgramArgs(
-      {"/sbin/crash_reporter", "--user=foo", "--filter_in=blah", "-v=2"}));
+  EXPECT_TRUE(
+      ValidateProgramArgs({"/sbin/crash_reporter", "--user=foo", "-v=2"}));
 }
 
 TEST(ValidateProgramArgs, BadCrashReporter) {
   EXPECT_FALSE(ValidateProgramArgs({"/sbin/crash_reporter"}));
   EXPECT_FALSE(ValidateProgramArgs({"/sbin/crash_reporter", "--init"}));
+  EXPECT_FALSE(ValidateProgramArgs(
+      {"/sbin/crash_reporter", "--user=foo", "--filter_in=blah"}));
+  EXPECT_FALSE(ValidateProgramArgs({"/sbin/crash_reporter", "--user=foo",
+                                    "--filter_in=blah", "--core2md_failure"}));
 }
 
 TEST(ValidateProgramArgs, GoodModprobe) {

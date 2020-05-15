@@ -90,12 +90,10 @@ void UserCollector::Initialize(
     bool generate_diagnostics,
     bool core2md_failure,
     bool directory_failure,
-    const std::string& filter_in,
     FilterOutFunction filter_out,
     bool early) {
   UserCollectorBase::Initialize(is_feedback_allowed_function,
-                                generate_diagnostics, directory_failure,
-                                filter_in, early);
+                                generate_diagnostics, directory_failure, early);
   our_path_ = our_path;
   core2md_failure_ = core2md_failure;
   filter_out_ = std::move(filter_out);
