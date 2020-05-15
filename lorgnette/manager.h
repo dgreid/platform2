@@ -8,6 +8,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <vector>
 
 #include <base/callback.h>
 #include <base/files/scoped_file.h>
@@ -49,6 +50,9 @@ class Manager : public org::chromium::lorgnette::ManagerAdaptor,
   // Implementation of MethodInterface.
   bool ListScanners(brillo::ErrorPtr* error,
                     ScannerInfo* scanner_list) override;
+  bool GetScannerCapabilities(brillo::ErrorPtr* error,
+                              const std::string& device_name,
+                              std::vector<uint8_t>* capabilities) override;
   bool ScanImage(brillo::ErrorPtr* error,
                  const std::string& device_name,
                  const base::ScopedFD& outfd,

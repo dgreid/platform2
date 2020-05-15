@@ -4,6 +4,8 @@
 
 #include "lorgnette/manager.h"
 
+#include <stdint.h>
+
 #include <memory>
 #include <string>
 #include <utility>
@@ -18,6 +20,8 @@
 #include <brillo/variant_dictionary.h>
 #include <chromeos/dbus/service_constants.h>
 #include <gtest/gtest.h>
+#include <gmock/gmock.h>
+#include <lorgnette/proto_bindings/lorgnette_service.pb.h>
 #include <metrics/metrics_library_mock.h>
 #include <sane/sane.h>
 
@@ -26,6 +30,7 @@
 
 using base::ScopedFD;
 using brillo::VariantDictionary;
+using ::testing::ElementsAre;
 
 namespace lorgnette {
 
@@ -73,6 +78,33 @@ class ManagerTest : public testing::Test {
   base::ScopedTempDir temp_dir_;
   base::FilePath output_path_;
 };
+
+TEST_F(ManagerTest, GetScannerCapabilitiesSuccess) {
+  std::unique_ptr<SaneDeviceFake> device = std::make_unique<SaneDeviceFake>();
+  ValidOptionValues opts;
+  opts.resolutions = {100, 200, 300, 600};
+  opts.sources = {"FB", "Negative", "Automatic Document Feeder"};
+  opts.color_modes = {kScanPropertyModeColor};
+  device->SetValidOptionValues(opts);
+  sane_client_->SetDeviceForName("TestDevice", std::move(device));
+
+  std::vector<uint8_t> serialized;
+  EXPECT_TRUE(
+      manager_.GetScannerCapabilities(nullptr, "TestDevice", &serialized));
+
+  ScannerCapabilities caps;
+  EXPECT_TRUE(caps.ParseFromArray(serialized.data(), serialized.size()));
+
+  EXPECT_THAT(caps.resolutions(), ElementsAre(100, 200, 300, 600));
+
+  EXPECT_EQ(caps.sources().size(), 2);
+  EXPECT_EQ(caps.sources()[0].type(), SOURCE_PLATEN);
+  EXPECT_EQ(caps.sources()[0].name(), "FB");
+  EXPECT_EQ(caps.sources()[1].type(), SOURCE_ADF_SIMPLEX);
+  EXPECT_EQ(caps.sources()[1].name(), "Automatic Document Feeder");
+
+  EXPECT_THAT(caps.color_modes(), ElementsAre(MODE_COLOR));
+}
 
 TEST_F(ManagerTest, ScanBlackAndWhiteSuccess) {
   std::string contents;

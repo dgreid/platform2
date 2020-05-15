@@ -9,8 +9,8 @@
 #include <stdint.h>
 
 #include <algorithm>
+#include <cctype>
 #include <utility>
-#include <vector>
 
 #include <base/callback_helpers.h>
 #include <base/files/file.h>
@@ -18,6 +18,7 @@
 #include <base/strings/string_number_conversions.h>
 #include <brillo/type_name_undecorate.h>
 #include <chromeos/dbus/service_constants.h>
+#include <lorgnette/proto_bindings/lorgnette_service.pb.h>
 #include <png.h>
 
 #include "lorgnette/daemon.h"
@@ -178,6 +179,25 @@ base::ScopedFILE SetupOutputFile(brillo::ErrorPtr* error,
   return file;
 }
 
+base::Optional<SourceType> GuessSourceType(const std::string& name) {
+  std::string lowercase = name;
+  for (int i = 0; i < lowercase.size(); i++) {
+    lowercase[i] = std::tolower(lowercase[i]);
+  }
+
+  if (lowercase == "fb" || lowercase == "flatbed")
+    return SOURCE_PLATEN;
+
+  if (lowercase == "adf" || lowercase == "adf front" ||
+      lowercase == "automatic document feeder")
+    return SOURCE_ADF_SIMPLEX;
+
+  if (lowercase == "adf duplex")
+    return SOURCE_ADF_DUPLEX;
+
+  return base::nullopt;
+}
+
 }  // namespace
 
 const char Manager::kMetricScanResult[] = "DocumentScan.ScanResult";
@@ -229,6 +249,64 @@ bool Manager::ListScanners(brillo::ErrorPtr* error,
   epson_probe::ProbeForScanners(firewall_manager_.get(), &scanners);
 
   *scanner_list = scanners;
+  return true;
+}
+
+bool Manager::GetScannerCapabilities(brillo::ErrorPtr* error,
+                                     const std::string& device_name,
+                                     std::vector<uint8_t>* capabilities_out) {
+  if (!capabilities_out) {
+    brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
+                         kManagerServiceError,
+                         "'capabilities_out' must be non-null");
+    return false;
+  }
+
+  if (!sane_client_) {
+    brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
+                         kManagerServiceError, "No connection to SANE");
+    return false;
+  }
+
+  std::unique_ptr<SaneDevice> device =
+      sane_client_->ConnectToDevice(error, device_name);
+  if (!device)
+    return false;
+
+  ValidOptionValues options;
+  if (!device->GetValidOptionValues(error, &options))
+    return false;
+
+  ScannerCapabilities capabilities;
+  for (const uint32_t resolution : options.resolutions) {
+    capabilities.add_resolutions(resolution);
+  }
+
+  for (const std::string& source_name : options.sources) {
+    base::Optional<SourceType> type = GuessSourceType(source_name);
+    if (type.has_value()) {
+      DocumentSource* source = capabilities.add_sources();
+      source->set_type(type.value());
+      source->set_name(source_name);
+    } else {
+      LOG(INFO) << "Ignoring source '" << source_name << "' of unknown type.";
+    }
+  }
+
+  for (const std::string& mode : options.color_modes) {
+    if (mode == kScanPropertyModeLineart)
+      capabilities.add_color_modes(MODE_LINEART);
+    else if (mode == kScanPropertyModeGray)
+      capabilities.add_color_modes(MODE_GRAYSCALE);
+    else if (mode == kScanPropertyModeColor)
+      capabilities.add_color_modes(MODE_COLOR);
+  }
+
+  std::vector<uint8_t> serialized;
+  serialized.resize(capabilities.ByteSizeLong());
+  capabilities.SerializeToArray(serialized.data(), serialized.size());
+
+  *capabilities_out = std::move(serialized);
   return true;
 }
 

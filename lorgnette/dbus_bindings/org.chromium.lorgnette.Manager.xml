@@ -18,6 +18,21 @@ ns-v0">
         </tp:docstring>
       </arg>
     </method>
+    <method name="GetScannerCapabilities">
+      <tp:docstring>
+        Returns the supported capabilities for scanner |device_name|.
+      </tp:docstring>
+      <arg name="device_name" type="s" direction="in">
+        <tp:docstring>
+          Device name (gained from "ListScanners").
+        </tp:docstring>
+      </arg>
+      <arg name="capabilities" type="ay" direction="out">
+        <tp:docstring>
+          Serialized ScannerCapabilities proto.
+        </tp:docstring>
+      </arg>
+    </method>
     <method name="ScanImage">
       <tp:docstring>
         Initiates a scan on |device_name|, and output PNG data to |outfd|.

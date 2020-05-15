@@ -19,7 +19,9 @@ pkg_config("target_defaults_deps") {
     "libmetrics-${libbase_ver}",
     "libminijail",
     "libpng",
+    "protobuf-lite",
     "sane-backends",
+    "system_api",
   ]
 }
 
