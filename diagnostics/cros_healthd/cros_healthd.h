@@ -9,26 +9,18 @@
 #include <string>
 
 #include <base/files/scoped_file.h>
-#include <base/memory/scoped_refptr.h>
 #include <brillo/daemons/dbus_daemon.h>
-#include <brillo/dbus/dbus_connection.h>
 #include <brillo/dbus/dbus_object.h>
-#include <chromeos/chromeos-config/libcros_config/cros_config.h>
-#include <dbus/bus.h>
-#include <dbus/object_proxy.h>
 #include <mojo/core/embedder/scoped_ipc_support.h>
 #include <mojo/public/cpp/bindings/binding_set.h>
 
-#include "debugd/dbus-proxies.h"
-#include "diagnostics/common/system/bluetooth_client.h"
-#include "diagnostics/common/system/debugd_adapter_impl.h"
-#include "diagnostics/common/system/powerd_adapter.h"
 #include "diagnostics/cros_healthd/cros_healthd_mojo_service.h"
 #include "diagnostics/cros_healthd/cros_healthd_routine_factory_impl.h"
 #include "diagnostics/cros_healthd/cros_healthd_routine_service.h"
 #include "diagnostics/cros_healthd/events/bluetooth_events.h"
 #include "diagnostics/cros_healthd/events/lid_events.h"
 #include "diagnostics/cros_healthd/events/power_events.h"
+#include "diagnostics/cros_healthd/system/context.h"
 #include "diagnostics/cros_healthd/utils/backlight_utils.h"
 #include "diagnostics/cros_healthd/utils/battery_utils.h"
 #include "diagnostics/cros_healthd/utils/fan_utils.h"
@@ -80,31 +72,10 @@ class CrosHealthd final
 
   std::unique_ptr<mojo::core::ScopedIPCSupport> ipc_support_;
 
-  // This should be the only connection to D-Bus. Use |connection_| to get the
-  // |dbus_bus_|.
-  brillo::DBusConnection connection_;
-  // Single |dbus_bus_| object used by cros_healthd to initiate the
-  // |debugd_proxy_| and |power_manager_proxy_|.
-  scoped_refptr<dbus::Bus> dbus_bus_;
-  // Use the |bluetooth_client_| to subscribe to notifications for D-Bus objects
-  // representing Bluetooth adapters and devices.
-  std::unique_ptr<BluetoothClient> bluetooth_client_;
-  // Use the |debugd_proxy_| to make calls to debugd. Example: cros_healthd
-  // calls out to debugd when it needs to collect smart battery metrics like
-  // manufacture_date_smart and temperature_smart.
-  std::unique_ptr<org::chromium::debugdProxy> debugd_proxy_;
-  // Use the |debugd_adapter_| to make calls to debugd. Example:
-  // cros_healthd calls out to debugd with async callbacks when it
-  // needs to trigger nvme self-test or collect data like progress info.
-  std::unique_ptr<DebugdAdapterImpl> debugd_adapter_;
-  // Use the |power_manager_proxy_| (owned by |dbus_bus_|) to make calls to
-  // power_manager. Example: cros_healthd calls out to power_manager when it
-  // needs to collect battery metrics like cycle count.
-  dbus::ObjectProxy* power_manager_proxy_;
-  // Use |powerd_adapter_| to subscribe to notifications from powerd.
-  std::unique_ptr<PowerdAdapter> powerd_adapter_;
-  // Use |cros_config_| to determine which metrics a device supports.
-  std::unique_ptr<brillo::CrosConfig> cros_config_;
+  // Provides access to helper objects. Used by various telemetry fetchers,
+  // event implementations and diagnostic routines.
+  Context context_;
+
   // |backlight_fetcher_| is responsible for collecting metrics related to
   // the device's backlights. It uses |cros_config_| to determine whether or not
   // the device has a backlight.

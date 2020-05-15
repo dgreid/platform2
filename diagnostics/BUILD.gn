@@ -108,6 +108,7 @@ source_set("libcros_healthd") {
     ":diagnostics_mojo_bindings",
     ":libcros_healthd_utils",
     "//diagnostics/cros_healthd/events:libcros_healthd_events",
+    "//diagnostics/cros_healthd/system:libcros_healthd_system",
     "//diagnostics/routines:libdiag_routine",
   ]
   all_dependent_configs = [ ":libcros_healthd_pkg_deps" ]
@@ -217,6 +218,7 @@ if (use.test) {
       ":libcros_healthd",
       "../common-mk/testrunner:testrunner",
       "//diagnostics/common:libcommon_test_utils",
+      "//diagnostics/cros_healthd/system:libcros_healthd_system_test_utils",
       "//diagnostics/routines:libroutine_test_utils",
     ]
     sources = [

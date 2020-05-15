@@ -15,15 +15,10 @@
 #include <base/unguessable_token.h>
 #include <dbus/cros_healthd/dbus-constants.h>
 #include <dbus/object_path.h>
-#include <dbus/power_manager/dbus-constants.h>
 #include <mojo/core/embedder/embedder.h>
 #include <mojo/public/cpp/bindings/interface_request.h>
 #include <mojo/public/cpp/platform/platform_channel_endpoint.h>
 #include <mojo/public/cpp/system/invitation.h>
-
-#include "debugd/dbus-proxies.h"
-#include "diagnostics/common/system/bluetooth_client_impl.h"
-#include "diagnostics/common/system/powerd_adapter_impl.h"
 #include "diagnostics/cros_healthd/cros_healthd_routine_service_impl.h"
 #include "diagnostics/cros_healthd/events/bluetooth_events_impl.h"
 #include "diagnostics/cros_healthd/events/lid_events_impl.h"
@@ -33,47 +28,29 @@ namespace diagnostics {
 
 CrosHealthd::CrosHealthd()
     : DBusServiceDaemon(kCrosHealthdServiceName /* service_name */) {
-  // Set up only one |connection_| to D-Bus which cros_healthd can use to
-  // initiate the |debugd_proxy_| and a |power_manager_proxy_|.
-  dbus_bus_ = connection_.Connect();
-  CHECK(dbus_bus_) << "Failed to connect to the D-Bus system bus.";
+  CHECK(context_.Initialize()) << "Failed to initialize context.";
 
-  bluetooth_client_ = std::make_unique<BluetoothClientImpl>(dbus_bus_);
-
-  debugd_proxy_ = std::make_unique<org::chromium::debugdProxy>(dbus_bus_);
-  debugd_adapter_ = std::make_unique<DebugdAdapterImpl>(
-      std::make_unique<org::chromium::debugdProxy>(dbus_bus_));
-
-  // TODO(crbug/1074476): Remove |power_manager_proxy_| once |powerd_adapter_|
-  // supports all the methods we call on |power_manager_proxy_|.
-  power_manager_proxy_ = dbus_bus_->GetObjectProxy(
-      power_manager::kPowerManagerServiceName,
-      dbus::ObjectPath(power_manager::kPowerManagerServicePath));
-
-  powerd_adapter_ = std::make_unique<PowerdAdapterImpl>(dbus_bus_);
-
-  cros_config_ = std::make_unique<brillo::CrosConfig>();
-  // Init should always succeed on unibuild boards.
-  CHECK(cros_config_->Init());
-
-  backlight_fetcher_ = std::make_unique<BacklightFetcher>(cros_config_.get());
+  backlight_fetcher_ =
+      std::make_unique<BacklightFetcher>(context_.cros_config());
 
   battery_fetcher_ = std::make_unique<BatteryFetcher>(
-      debugd_proxy_.get(), power_manager_proxy_, cros_config_.get());
+      context_.debugd_proxy(), context_.power_manager_proxy(),
+      context_.cros_config());
 
-  cached_vpd_fetcher_ = std::make_unique<CachedVpdFetcher>(cros_config_.get());
+  cached_vpd_fetcher_ =
+      std::make_unique<CachedVpdFetcher>(context_.cros_config());
 
-  fan_fetcher_ = std::make_unique<FanFetcher>(debugd_proxy_.get());
+  fan_fetcher_ = std::make_unique<FanFetcher>(context_.debugd_proxy());
 
   bluetooth_events_ =
-      std::make_unique<BluetoothEventsImpl>(bluetooth_client_.get());
+      std::make_unique<BluetoothEventsImpl>(context_.bluetooth_client());
 
-  lid_events_ = std::make_unique<LidEventsImpl>(powerd_adapter_.get());
+  lid_events_ = std::make_unique<LidEventsImpl>(context_.powerd_adapter());
 
-  power_events_ = std::make_unique<PowerEventsImpl>(powerd_adapter_.get());
+  power_events_ = std::make_unique<PowerEventsImpl>(context_.powerd_adapter());
 
   routine_service_ = std::make_unique<CrosHealthdRoutineServiceImpl>(
-      debugd_adapter_.get(), &routine_factory_impl_);
+      context_.debugd_adapter(), &routine_factory_impl_);
 
   mojo_service_ = std::make_unique<CrosHealthdMojoService>(
       backlight_fetcher_.get(), battery_fetcher_.get(),

@@ -11,23 +11,16 @@
 #include <base/message_loop/message_loop.h>
 #include <base/optional.h>
 #include <base/run_loop.h>
-#include <chromeos/chromeos-config/libcros_config/fake_cros_config.h>
-#include <dbus/mock_bus.h>
-#include <dbus/mock_object_proxy.h>
-#include <dbus/object_path.h>
-#include <dbus/power_manager/dbus-constants.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <mojo/core/embedder/embedder.h>
 
-#include "debugd/dbus-proxy-mocks.h"
-#include "diagnostics/common/system/fake_bluetooth_client.h"
-#include "diagnostics/common/system/fake_powerd_adapter.h"
 #include "diagnostics/cros_healthd/cros_healthd_mojo_service.h"
 #include "diagnostics/cros_healthd/cros_healthd_routine_service.h"
 #include "diagnostics/cros_healthd/events/bluetooth_events_impl.h"
 #include "diagnostics/cros_healthd/events/lid_events_impl.h"
 #include "diagnostics/cros_healthd/events/power_events_impl.h"
+#include "diagnostics/cros_healthd/system/mock_context.h"
 #include "diagnostics/cros_healthd/utils/backlight_utils.h"
 #include "diagnostics/cros_healthd/utils/battery_utils.h"
 #include "diagnostics/cros_healthd/utils/fan_utils.h"
@@ -130,30 +123,24 @@ class MockCrosHealthdRoutineService : public CrosHealthdRoutineService {
 // Tests for the CrosHealthddMojoService class.
 class CrosHealthdMojoServiceTest : public testing::Test {
  protected:
-  CrosHealthdMojoServiceTest() {
-    mojo::core::Init();
-    mock_debugd_proxy_ = std::make_unique<org::chromium::debugdProxyMock>();
-    options_.bus_type = dbus::Bus::SYSTEM;
-    mock_bus_ = new dbus::MockBus(options_);
-    mock_power_manager_proxy_ = new dbus::MockObjectProxy(
-        mock_bus_.get(), power_manager::kPowerManagerServiceName,
-        dbus::ObjectPath(power_manager::kPowerManagerServicePath));
-    fake_powerd_adapter_ = std::make_unique<FakePowerdAdapter>();
-    fake_bluetooth_client_ = std::make_unique<FakeBluetoothClient>();
-    fake_cros_config_ = std::make_unique<brillo::FakeCrosConfig>();
+  CrosHealthdMojoServiceTest() { mojo::core::Init(); }
+
+  void SetUp() override {
+    ASSERT_TRUE(mock_context_.Initialize());
     backlight_fetcher_ =
-        std::make_unique<BacklightFetcher>(fake_cros_config_.get());
+        std::make_unique<BacklightFetcher>(mock_context_.cros_config());
     battery_fetcher_ = std::make_unique<BatteryFetcher>(
-        mock_debugd_proxy_.get(), mock_power_manager_proxy_.get(),
-        fake_cros_config_.get());
+        mock_context_.debugd_proxy(), mock_context_.power_manager_proxy(),
+        mock_context_.cros_config());
     cached_vpd_fetcher_ =
-        std::make_unique<CachedVpdFetcher>(fake_cros_config_.get());
-    fan_fetcher_ = std::make_unique<FanFetcher>(mock_debugd_proxy_.get());
+        std::make_unique<CachedVpdFetcher>(mock_context_.cros_config());
+    fan_fetcher_ = std::make_unique<FanFetcher>(mock_context_.debugd_proxy());
     bluetooth_events_ =
-        std::make_unique<BluetoothEventsImpl>(fake_bluetooth_client_.get());
-    lid_events_ = std::make_unique<LidEventsImpl>(fake_powerd_adapter_.get());
+        std::make_unique<BluetoothEventsImpl>(mock_context_.bluetooth_client());
+    lid_events_ =
+        std::make_unique<LidEventsImpl>(mock_context_.powerd_adapter());
     power_events_ =
-        std::make_unique<PowerEventsImpl>(fake_powerd_adapter_.get());
+        std::make_unique<PowerEventsImpl>(mock_context_.powerd_adapter());
     service_ = std::make_unique<CrosHealthdMojoService>(
         backlight_fetcher_.get(), battery_fetcher_.get(),
         cached_vpd_fetcher_.get(), fan_fetcher_.get(), bluetooth_events_.get(),
@@ -167,13 +154,7 @@ class CrosHealthdMojoServiceTest : public testing::Test {
  private:
   base::MessageLoop message_loop_;
   StrictMock<MockCrosHealthdRoutineService> routine_service_;
-  std::unique_ptr<org::chromium::debugdProxyMock> mock_debugd_proxy_;
-  dbus::Bus::Options options_;
-  scoped_refptr<dbus::MockBus> mock_bus_;
-  scoped_refptr<dbus::MockObjectProxy> mock_power_manager_proxy_;
-  std::unique_ptr<FakePowerdAdapter> fake_powerd_adapter_;
-  std::unique_ptr<FakeBluetoothClient> fake_bluetooth_client_;
-  std::unique_ptr<brillo::FakeCrosConfig> fake_cros_config_;
+  MockContext mock_context_;
   std::unique_ptr<BacklightFetcher> backlight_fetcher_;
   std::unique_ptr<BatteryFetcher> battery_fetcher_;
   std::unique_ptr<CachedVpdFetcher> cached_vpd_fetcher_;
