@@ -55,9 +55,8 @@ base::Optional<mojo_ipc::ProbeErrorPtr> FetchBacklightInfoForPath(
 
 }  // namespace
 
-BacklightFetcher::BacklightFetcher(brillo::CrosConfigInterface* cros_config)
-    : cros_config_(cros_config) {
-  DCHECK(cros_config_);
+BacklightFetcher::BacklightFetcher(Context* context) : context_(context) {
+  DCHECK(context_);
 }
 BacklightFetcher::~BacklightFetcher() = default;
 
@@ -66,8 +65,8 @@ mojo_ipc::BacklightResultPtr BacklightFetcher::FetchBacklightInfo(
   std::vector<mojo_ipc::BacklightInfoPtr> backlights;
 
   std::string has_backlight;
-  cros_config_->GetString(kBacklightPropertiesPath, kHasBacklightProperty,
-                          &has_backlight);
+  context_->cros_config()->GetString(kBacklightPropertiesPath,
+                                     kHasBacklightProperty, &has_backlight);
   if (has_backlight == "false")
     return mojo_ipc::BacklightResult::NewBacklightInfo(std::move(backlights));
 

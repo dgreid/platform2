@@ -8,15 +8,15 @@
 #include <vector>
 
 #include <base/files/file_path.h>
-#include <chromeos/chromeos-config/libcros_config/cros_config_interface.h>
 
+#include "diagnostics/cros_healthd/system/context.h"
 #include "mojo/cros_healthd_probe.mojom.h"
 
 namespace diagnostics {
 
 class BacklightFetcher final {
  public:
-  explicit BacklightFetcher(brillo::CrosConfigInterface* cros_config);
+  explicit BacklightFetcher(Context* context);
   BacklightFetcher(const BacklightFetcher&) = delete;
   BacklightFetcher& operator=(const BacklightFetcher&) = delete;
   ~BacklightFetcher();
@@ -28,7 +28,7 @@ class BacklightFetcher final {
 
  private:
   // Unowned pointer that should outlive this instance.
-  brillo::CrosConfigInterface* cros_config_;
+  Context* const context_ = nullptr;
 };
 
 }  // namespace diagnostics

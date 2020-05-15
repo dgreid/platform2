@@ -30,8 +30,7 @@ CrosHealthd::CrosHealthd()
     : DBusServiceDaemon(kCrosHealthdServiceName /* service_name */) {
   CHECK(context_.Initialize()) << "Failed to initialize context.";
 
-  backlight_fetcher_ =
-      std::make_unique<BacklightFetcher>(context_.cros_config());
+  backlight_fetcher_ = std::make_unique<BacklightFetcher>(&context_);
 
   battery_fetcher_ = std::make_unique<BatteryFetcher>(&context_);
 

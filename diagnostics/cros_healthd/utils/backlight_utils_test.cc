@@ -3,17 +3,16 @@
 // found in the LICENSE file.
 
 #include <functional>
-#include <memory>
 #include <string>
 #include <vector>
 
 #include <base/files/file_path.h>
 #include <base/files/scoped_temp_dir.h>
-#include <chromeos/chromeos-config/libcros_config/fake_cros_config.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 #include "diagnostics/common/file_test_utils.h"
+#include "diagnostics/cros_healthd/system/mock_context.h"
 #include "diagnostics/cros_healthd/utils/backlight_utils.h"
 #include "mojo/cros_healthd_probe.mojom.h"
 
@@ -60,15 +59,14 @@ MATCHER_P(MatchesBacklightInfoPtr, ptr, "") {
 
 class BacklightUtilsTest : public ::testing::Test {
  protected:
-  BacklightUtilsTest() {
-    fake_cros_config_ = std::make_unique<brillo::FakeCrosConfig>();
-    backlight_fetcher_ =
-        std::make_unique<BacklightFetcher>(fake_cros_config_.get());
-  }
+  BacklightUtilsTest() = default;
   BacklightUtilsTest(const BacklightUtilsTest&) = delete;
   BacklightUtilsTest& operator=(const BacklightUtilsTest&) = delete;
 
-  void SetUp() override { ASSERT_TRUE(temp_dir_.CreateUniqueTempDir()); }
+  void SetUp() override {
+    ASSERT_TRUE(mock_context_.Initialize());
+    ASSERT_TRUE(temp_dir_.CreateUniqueTempDir());
+  }
 
   const base::FilePath& GetTempDirPath() const {
     DCHECK(temp_dir_.IsValid());
@@ -76,17 +74,17 @@ class BacklightUtilsTest : public ::testing::Test {
   }
 
   BacklightResultPtr FetchBacklightInfo(const base::FilePath& root_dir) {
-    return backlight_fetcher_->FetchBacklightInfo(root_dir);
+    return backlight_fetcher_.FetchBacklightInfo(root_dir);
   }
 
   void SetHasBacklightString(const std::string& val) {
-    fake_cros_config_->SetString(kBacklightPropertiesPath,
-                                 kHasBacklightProperty, val);
+    mock_context_.fake_cros_config()->SetString(kBacklightPropertiesPath,
+                                                kHasBacklightProperty, val);
   }
 
  private:
-  std::unique_ptr<brillo::FakeCrosConfig> fake_cros_config_;
-  std::unique_ptr<BacklightFetcher> backlight_fetcher_;
+  MockContext mock_context_;
+  BacklightFetcher backlight_fetcher_{&mock_context_};
   base::ScopedTempDir temp_dir_;
 };
 
