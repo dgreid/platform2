@@ -90,6 +90,7 @@ copies.
 | [midis](./midis/) | [MIDI](https://en.wikipedia.org/wiki/MIDI) service |
 | [mist](./mist/) | Modem USB Interface Switching Tool |
 | [ml](./ml/) | Machine learning service |
+| [ml_benchmark](./ml_benchmark/) | ML performance benchmark for Chrome OS |
 | [modem-utilities](./modem-utilities/) ||
 | [modemfwd](./modemfwd/) | Daemon for managing modem firmware updaters |
 | [mtpd](./mtpd/) | Daemon for handling Media Transfer Protocol (MTP) with devices (e.g. phones) |

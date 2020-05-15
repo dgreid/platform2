@@ -1,0 +1,48 @@
+syntax = "proto3";
+
+package chrome.ml_benchmark;
+
+enum AccelerationMode {
+  NO_ACCELERATION = 0;
+  NNAPI = 1;
+}
+
+// For details on what each of the fields do
+// Refer to the CrOS ML Benchmarking Suite Design Document
+// at go/cros-ml-benchmark-suite
+message CrOSBenchmarkConfig {
+  AccelerationMode acceleration_mode = 1;
+  // benchmark-specific configurations
+  SodaBenchmarkConfig soda_config = 2;
+}
+
+// Benchmark-specific configurations
+message SodaBenchmarkConfig {
+  // Path to the SoDA configuration file, for speech recognition
+  // this is usually dictation.config
+  string soda_config_file_path = 1;
+  // Whether to test with
+  // - Realtime audio, which tests the latency of the audio
+  // - Non-realtime audio, which tests the Real time factor (RTF)
+  bool realtime_audio = 2;
+  // number of times to test each input file
+  int32 num_runs = 3;
+  // Input files to test
+  repeated string input_filename = 4;
+}
+
+enum BenchmarkReturnStatus {
+  OK = 0;
+  INCORRECT_CONFIGURATION = 1;
+  INITIALIZATION_FAILED = 2;
+  BENCHMARK_TIMED_OUT = 3;
+  RUNTIME_ERROR = 4;
+}
+
+message BenchmarkResults {
+  BenchmarkReturnStatus status = 1;
+  string results_message = 2;
+  // TODO(franklinh) use this field to report accuracy in benchmark loader
+  float total_accuracy = 3;
+  int64 average_latency_in_us = 4;
+}

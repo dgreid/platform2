@@ -1,0 +1,51 @@
+# Copyright 2019 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//common-mk/pkg_config.gni")
+import("//common-mk/proto_library.gni")
+
+group("all") {
+  deps = [ ":ml_benchmark" ]
+  if (use.test) {
+    deps += [ ":ml_benchmark_test" ]
+  }
+}
+
+pkg_config("target_defaults") {
+  include_dirs = [ "${sysroot}/usr/include/tensorflow" ]
+  libs = [ "tensorflowlite" ]
+  pkg_deps = [
+    "libbrillo",
+    "libchrome-${libbase_ver}",
+  ]
+}
+
+proto_library("ml_benchmark_config_proto") {
+  proto_in_dir = "proto"
+  proto_out_dir = "include/proto"
+  sources = [ "${proto_in_dir}/benchmark_config.proto" ]
+}
+
+executable("ml_benchmark") {
+  sources = [ "main.cc" ]
+  configs += [ ":target_defaults" ]
+  deps = [ ":ml_benchmark_config_proto" ]
+  pkg_deps = [ "protobuf" ]
+}
+
+if (use.test) {
+  pkg_config("ml_benchmark_test_config") {
+    pkg_deps = [ "libchrome-test-${libbase_ver}" ]
+  }
+
+  executable("ml_benchmark_test") {
+    sources = [ "ml_benchmark_test.cc" ]
+    configs += [
+      "//common-mk:test",
+      ":ml_benchmark_test_config",
+      ":target_defaults",
+    ]
+    deps = [ "//common-mk/testrunner" ]
+  }
+}
