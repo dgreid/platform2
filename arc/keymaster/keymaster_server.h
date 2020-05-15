@@ -5,10 +5,13 @@
 #ifndef ARC_KEYMASTER_KEYMASTER_SERVER_H_
 #define ARC_KEYMASTER_KEYMASTER_SERVER_H_
 
+#include <memory>
 #include <vector>
 
+#include <base/location.h>
 #include <base/macros.h>
 #include <base/memory/scoped_refptr.h>
+#include <base/threading/thread.h>
 #include <keymaster/android_keymaster.h>
 #include <mojo/keymaster.mojom.h>
 
@@ -18,12 +21,14 @@ namespace arc {
 namespace keymaster {
 
 // KeymasterServer is a Mojo implementation of the Keymaster 3 HIDL interface.
-// It fulfills requests by forwarding them to the Android Keymaster.
+// It fulfills requests using the reference Android Keymaster implementation.
 class KeymasterServer : public arc::mojom::KeymasterServer {
  public:
-  explicit KeymasterServer(const scoped_refptr<dbus::Bus>& bus);
-
-  ~KeymasterServer() override = default;
+  KeymasterServer();
+  // Not copyable nor assignable.
+  KeymasterServer(const KeymasterServer&) = delete;
+  KeymasterServer& operator=(const KeymasterServer&) = delete;
+  ~KeymasterServer() override;
 
   void SetSystemVersion(uint32_t osVersion, uint32_t osPatchLevel) override;
 
@@ -66,11 +71,48 @@ class KeymasterServer : public arc::mojom::KeymasterServer {
   void Abort(uint64_t operationHandle, AbortCallback callback) override;
 
  private:
-  // Owned by |keymaster_|.
-  context::ArcKeymasterContext* context_;
-  ::keymaster::AndroidKeymaster keymaster_;
+  class Backend {
+   public:
+    Backend();
+    // Not copyable nor assignable.
+    Backend(const Backend&) = delete;
+    Backend& operator=(const Backend&) = delete;
+    ~Backend();
 
-  DISALLOW_COPY_AND_ASSIGN(KeymasterServer);
+    context::ArcKeymasterContext* context() { return context_; }
+
+    ::keymaster::AndroidKeymaster* keymaster() { return &keymaster_; }
+
+   private:
+    // Owned by |keymaster_|.
+    context::ArcKeymasterContext* context_;
+    ::keymaster::AndroidKeymaster keymaster_;
+  };
+
+  // Runs the AndroidKeymaster operation |member| with |request| as input in the
+  // background |backend_thread_|.
+  //
+  // The given |callback| is run with the output of the keymaster operation,
+  // after being posted to the original task runner that called this method.
+  template <typename KmMember, typename KmRequest, typename KmResponse>
+  void RunKeymasterRequest(
+      const base::Location& location,
+      KmMember member,
+      std::unique_ptr<KmRequest> request,
+      base::OnceCallback<void(std::unique_ptr<KmResponse>)> callback);
+
+  // Encapsulates all fields that should only be accessed from the background
+  // |backend_thread_|.
+  //
+  // This must be created before |backend_thread_| and outlive it. There are no
+  // other thread safety requirements during construction or destruction.
+  Backend backend_;
+
+  // Thread where Keymaster operations are executed.
+  //
+  // |base::Thread| guarantees that destruction waits until any leftover tasks
+  // are executed, so this must be destroyed before |backend_| is.
+  base::Thread backend_thread_;
 };
 
 }  // namespace keymaster

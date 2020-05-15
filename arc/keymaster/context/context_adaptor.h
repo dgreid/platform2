@@ -25,7 +25,7 @@ namespace context {
 //   fetched multiple times.
 class ContextAdaptor {
  public:
-  explicit ContextAdaptor(const scoped_refptr<::dbus::Bus>& bus);
+  ContextAdaptor();
   // Not copyable nor assignable.
   ContextAdaptor(const ContextAdaptor&) = delete;
   ContextAdaptor& operator=(const ContextAdaptor&) = delete;
@@ -53,6 +53,8 @@ class ContextAdaptor {
   // Returns the email of the primary signed in user, or base::nullopt if
   // there's an error in the DBus call
   base::Optional<std::string> FetchPrimaryUserEmail();
+
+  scoped_refptr<::dbus::Bus> GetBus();
 
   scoped_refptr<::dbus::Bus> bus_;
   // Initially nullopt, then populated in the corresponding fetch operation.

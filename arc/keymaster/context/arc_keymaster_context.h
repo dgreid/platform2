@@ -9,7 +9,6 @@
 #include <base/memory/scoped_refptr.h>
 #include <base/optional.h>
 #include <brillo/secure_blob.h>
-#include <dbus/bus.h>
 #include <hardware/keymaster_defs.h>
 #include <keymaster/authorization_set.h>
 #include <keymaster/contexts/pure_soft_keymaster_context.h>
@@ -27,7 +26,7 @@ namespace context {
 // Defines specific behavior for ARC Keymaster in Chrome OS.
 class ArcKeymasterContext : public ::keymaster::PureSoftKeymasterContext {
  public:
-  explicit ArcKeymasterContext(const scoped_refptr<::dbus::Bus>& bus);
+  ArcKeymasterContext();
   ~ArcKeymasterContext() override;
   // Not copyable nor assignable.
   ArcKeymasterContext(const ArcKeymasterContext&) = delete;

@@ -43,7 +43,6 @@ class ChapsClientTest : public ::testing::Test {
  public:
   ChapsClientTest()
       : chaps_mock_(/* is_initialized */ true),
-        context_adaptor_(scoped_refptr<::dbus::Bus>()),
         chaps_client_(context_adaptor_.GetWeakPtr()) {}
 
   uint32_t FakeGetAttributeValue(const brillo::SecureBlob& isolate_credential,

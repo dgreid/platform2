@@ -252,7 +252,7 @@ class ContextTestPeer {
 class ArcKeymasterContextTest : public ::testing::Test {
  protected:
   ArcKeymasterContextTest()
-      : context_(new ArcKeymasterContext(scoped_refptr<::dbus::Bus>())),
+      : context_(new ArcKeymasterContext()),
         keymaster_(context_, kKeymasterOperationTableSize),
         key_material_(kBlob1.data(), kBlob1.size()),
         valid_key_blob_(kValidKeyBlob1.data(), kValidKeyBlob1.size()),

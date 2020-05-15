@@ -122,8 +122,7 @@ bool UnpackFromArcKeyData(const KeyData& key_data,
 
 }  // anonymous namespace
 
-ArcKeymasterContext::ArcKeymasterContext(const scoped_refptr<::dbus::Bus>& bus)
-    : context_adaptor_(bus) {}
+ArcKeymasterContext::ArcKeymasterContext() = default;
 
 ArcKeymasterContext::~ArcKeymasterContext() = default;
 

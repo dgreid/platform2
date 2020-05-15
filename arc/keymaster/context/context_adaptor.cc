@@ -16,10 +16,28 @@ namespace arc {
 namespace keymaster {
 namespace context {
 
-ContextAdaptor::ContextAdaptor(const scoped_refptr<::dbus::Bus>& bus)
-    : bus_(bus), weak_ptr_factory_(this) {}
+namespace {
+
+scoped_refptr<::dbus::Bus> InitDBusInCurrentTaskRunner() {
+  dbus::Bus::Options options;
+  options.bus_type = dbus::Bus::SYSTEM;
+  scoped_refptr<::dbus::Bus> bus = new dbus::Bus(options);
+  CHECK(bus->Connect()) << "Failed to initialize adaptor DBus connection";
+  return bus;
+}
+
+}  // namespace
+
+ContextAdaptor::ContextAdaptor() : weak_ptr_factory_(this) {}
 
 ContextAdaptor::~ContextAdaptor() = default;
+
+scoped_refptr<::dbus::Bus> ContextAdaptor::GetBus() {
+  // Ensure |bus_| is initialized before usages.
+  if (!bus_)
+    bus_ = InitDBusInCurrentTaskRunner();
+  return bus_;
+}
 
 base::Optional<std::string> ContextAdaptor::FetchPrimaryUserEmail() {
   // Short circuit if the results is already cached.
@@ -32,7 +50,7 @@ base::Optional<std::string> ContextAdaptor::FetchPrimaryUserEmail() {
   brillo::ErrorPtr error;
 
   // Make dbus call.
-  org::chromium::SessionManagerInterfaceProxy session_manager_proxy(bus_);
+  org::chromium::SessionManagerInterfaceProxy session_manager_proxy(GetBus());
   if (!session_manager_proxy.RetrievePrimarySession(
           &user_email, &sanitized_username, &error)) {
     std::string error_message = error ? error->GetMessage() : "Unknown error.";
@@ -56,7 +74,7 @@ base::Optional<CK_SLOT_ID> ContextAdaptor::FetchPrimaryUserSlot() {
     return base::nullopt;
 
   // Create a dbus proxy.
-  dbus::ObjectProxy* cryptohome_proxy = bus_->GetObjectProxy(
+  dbus::ObjectProxy* cryptohome_proxy = GetBus()->GetObjectProxy(
       cryptohome::kCryptohomeServiceName,
       dbus::ObjectPath(cryptohome::kCryptohomeServicePath));
 
