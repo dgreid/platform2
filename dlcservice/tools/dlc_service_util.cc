@@ -88,7 +88,7 @@ class DlcServiceUtil : public brillo::Daemon {
     DEFINE_bool(purge, false, "Purge a single DLC.");
 
     // "--install", "--purge", and "--uninstall" related flags.
-    DEFINE_string(dlc_ids, "", "The ID of the DLC.");
+    DEFINE_string(id, "", "The ID of the DLC.");
 
     // "--dlc_state" related flags.
     DEFINE_bool(dlc_state, false, "Get the state of a given DLC.");
@@ -125,8 +125,8 @@ class DlcServiceUtil : public brillo::Daemon {
       return EX_OK;
     }
 
-    CHECK(!FLAGS_dlc_ids.empty()) << "Please specify a single DLC ID.";
-    dlc_id_ = FLAGS_dlc_ids;
+    CHECK(!FLAGS_id.empty()) << "Please specify a single DLC ID.";
+    dlc_id_ = FLAGS_id;
     omaha_url_ = FLAGS_omaha_url;
 
     // Called with "--install".
