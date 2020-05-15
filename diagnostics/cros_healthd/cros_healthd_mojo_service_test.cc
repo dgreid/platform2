@@ -129,9 +129,6 @@ class CrosHealthdMojoServiceTest : public testing::Test {
     ASSERT_TRUE(mock_context_.Initialize());
     backlight_fetcher_ =
         std::make_unique<BacklightFetcher>(mock_context_.cros_config());
-    battery_fetcher_ = std::make_unique<BatteryFetcher>(
-        mock_context_.debugd_proxy(), mock_context_.power_manager_proxy(),
-        mock_context_.cros_config());
     cached_vpd_fetcher_ =
         std::make_unique<CachedVpdFetcher>(mock_context_.cros_config());
     fan_fetcher_ = std::make_unique<FanFetcher>(mock_context_.debugd_proxy());
@@ -142,9 +139,9 @@ class CrosHealthdMojoServiceTest : public testing::Test {
     power_events_ =
         std::make_unique<PowerEventsImpl>(mock_context_.powerd_adapter());
     service_ = std::make_unique<CrosHealthdMojoService>(
-        backlight_fetcher_.get(), battery_fetcher_.get(),
-        cached_vpd_fetcher_.get(), fan_fetcher_.get(), bluetooth_events_.get(),
-        lid_events_.get(), power_events_.get(), &routine_service_);
+        backlight_fetcher_.get(), &battery_fetcher_, cached_vpd_fetcher_.get(),
+        fan_fetcher_.get(), bluetooth_events_.get(), lid_events_.get(),
+        power_events_.get(), &routine_service_);
   }
 
   CrosHealthdMojoService* service() { return service_.get(); }
@@ -156,7 +153,7 @@ class CrosHealthdMojoServiceTest : public testing::Test {
   StrictMock<MockCrosHealthdRoutineService> routine_service_;
   MockContext mock_context_;
   std::unique_ptr<BacklightFetcher> backlight_fetcher_;
-  std::unique_ptr<BatteryFetcher> battery_fetcher_;
+  BatteryFetcher battery_fetcher_{&mock_context_};
   std::unique_ptr<CachedVpdFetcher> cached_vpd_fetcher_;
   std::unique_ptr<FanFetcher> fan_fetcher_;
   std::unique_ptr<BluetoothEventsImpl> bluetooth_events_;

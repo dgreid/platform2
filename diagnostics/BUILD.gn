@@ -76,6 +76,7 @@ source_set("libcros_healthd_utils") {
   deps = [
     ":diagnostics_mojo_bindings",
     "//diagnostics/common:libcommon",
+    "//diagnostics/cros_healthd/system:libcros_healthd_system",
   ]
   all_dependent_configs = [ ":libcros_healthd_utils_pkg_deps" ]
   sources = [
@@ -247,6 +248,7 @@ if (use.test) {
       ":libcros_healthd_utils",
       "../common-mk/testrunner:testrunner",
       "//diagnostics/common:libcommon_test_utils",
+      "//diagnostics/cros_healthd/system:libcros_healthd_system_test_utils",
     ]
     sources = [
       "cros_healthd/utils/backlight_utils_test.cc",

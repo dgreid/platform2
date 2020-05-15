@@ -33,9 +33,7 @@ CrosHealthd::CrosHealthd()
   backlight_fetcher_ =
       std::make_unique<BacklightFetcher>(context_.cros_config());
 
-  battery_fetcher_ = std::make_unique<BatteryFetcher>(
-      context_.debugd_proxy(), context_.power_manager_proxy(),
-      context_.cros_config());
+  battery_fetcher_ = std::make_unique<BatteryFetcher>(&context_);
 
   cached_vpd_fetcher_ =
       std::make_unique<CachedVpdFetcher>(context_.cros_config());

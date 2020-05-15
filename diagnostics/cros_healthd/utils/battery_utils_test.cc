@@ -10,30 +10,24 @@
 #include <base/memory/scoped_refptr.h>
 #include <base/time/time.h>
 #include <brillo/errors/error.h>
-#include <chromeos/chromeos-config/libcros_config/fake_cros_config.h>
 #include <chromeos/dbus/service_constants.h>
 #include <dbus/message.h>
-#include <dbus/mock_bus.h>
-#include <dbus/mock_object_proxy.h>
-#include <dbus/object_path.h>
 #include <dbus/power_manager/dbus-constants.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 #include "debugd/dbus-proxy-mocks.h"
+#include "diagnostics/cros_healthd/system/mock_context.h"
 #include "diagnostics/cros_healthd/utils/battery_utils.h"
 #include "power_manager/proto_bindings/power_supply_properties.pb.h"
 
 namespace diagnostics {
 
 using ::chromeos::cros_healthd::mojom::ErrorType;
-using ::dbus::MockBus;
-using ::dbus::MockObjectProxy;
 using ::testing::_;
 using ::testing::DoAll;
 using ::testing::Invoke;
 using ::testing::Return;
-using ::testing::StrictMock;
 using ::testing::WithArg;
 
 namespace {
@@ -84,48 +78,37 @@ constexpr base::TimeDelta kPowerManagerDBusTimeout =
 
 class BatteryUtilsTest : public ::testing::Test {
  protected:
-  BatteryUtilsTest() {
-    options_.bus_type = dbus::Bus::SYSTEM;
-    mock_bus_ = new dbus::MockBus(options_);
-    mock_power_manager_proxy_ = new dbus::MockObjectProxy(
-        mock_bus_.get(), power_manager::kPowerManagerServiceName,
-        dbus::ObjectPath(power_manager::kPowerManagerServicePath));
-    fake_cros_config_ = std::make_unique<brillo::FakeCrosConfig>();
-    battery_fetcher_ = std::make_unique<BatteryFetcher>(
-        &mock_debugd_proxy_, mock_power_manager_proxy_.get(),
-        fake_cros_config_.get());
+  BatteryUtilsTest() = default;
+
+  void SetUp() override {
+    ASSERT_TRUE(mock_context_.Initialize());
+    SetHasSmartBatteryInfo("true");
   }
 
-  void SetUp() override { SetHasSmartBatteryInfo("true"); }
-
-  BatteryFetcher* battery_fetcher() { return battery_fetcher_.get(); }
+  BatteryFetcher* battery_fetcher() { return &battery_fetcher_; }
 
   org::chromium::debugdProxyMock* mock_debugd_proxy() {
-    return &mock_debugd_proxy_;
+    return mock_context_.mock_debugd_proxy();
   }
 
   dbus::MockObjectProxy* mock_power_manager_proxy() {
-    return mock_power_manager_proxy_.get();
+    return mock_context_.mock_power_manager_proxy();
   }
 
   void SetPsuType(const std::string& type) {
-    fake_cros_config_->SetString(kHardwarePropertiesPath, kPsuTypeProperty,
-                                 type);
+    mock_context_.fake_cros_config()->SetString(kHardwarePropertiesPath,
+                                                kPsuTypeProperty, type);
   }
 
   void SetHasSmartBatteryInfo(const std::string& has_smart_battery_info) {
-    fake_cros_config_->SetString(kBatteryPropertiesPath,
-                                 kHasSmartBatteryInfoProperty,
-                                 has_smart_battery_info);
+    mock_context_.fake_cros_config()->SetString(kBatteryPropertiesPath,
+                                                kHasSmartBatteryInfoProperty,
+                                                has_smart_battery_info);
   }
 
  private:
-  dbus::Bus::Options options_;
-  scoped_refptr<dbus::MockBus> mock_bus_;
-  StrictMock<org::chromium::debugdProxyMock> mock_debugd_proxy_;
-  scoped_refptr<dbus::MockObjectProxy> mock_power_manager_proxy_;
-  std::unique_ptr<brillo::FakeCrosConfig> fake_cros_config_;
-  std::unique_ptr<BatteryFetcher> battery_fetcher_;
+  MockContext mock_context_;
+  BatteryFetcher battery_fetcher_{&mock_context_};
 };
 
 // Test that we can fetch all battery metrics correctly.

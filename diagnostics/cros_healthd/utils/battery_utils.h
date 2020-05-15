@@ -9,10 +9,8 @@
 #include <vector>
 
 #include <base/optional.h>
-#include <chromeos/chromeos-config/libcros_config/cros_config_interface.h>
-#include <dbus/object_proxy.h>
 
-#include "debugd/dbus-proxies.h"
+#include "diagnostics/cros_healthd/system/context.h"
 #include "mojo/cros_healthd_probe.mojom.h"
 
 namespace diagnostics {
@@ -22,9 +20,7 @@ namespace diagnostics {
 // is collected from ectool via debugd.
 class BatteryFetcher {
  public:
-  BatteryFetcher(org::chromium::debugdProxyInterface* debugd_proxy,
-                 dbus::ObjectProxy* power_manager_proxy,
-                 brillo::CrosConfigInterface* cros_config);
+  explicit BatteryFetcher(Context* context);
   BatteryFetcher(const BatteryFetcher&) = delete;
   BatteryFetcher& operator=(const BatteryFetcher&) = delete;
   ~BatteryFetcher();
@@ -67,13 +63,7 @@ class BatteryFetcher {
   bool HasSmartBatteryInfo();
 
   // Unowned pointer that outlives this BatteryFetcher instance.
-  org::chromium::debugdProxyInterface* debugd_proxy_;
-
-  // Unowned pointer that outlives this BatteryFetcher instance.
-  dbus::ObjectProxy* power_manager_proxy_;
-
-  // Unowned pointer that outlives this BatteryFetcher instance.
-  brillo::CrosConfigInterface* cros_config_;
+  Context* const context_ = nullptr;
 };
 
 }  // namespace diagnostics

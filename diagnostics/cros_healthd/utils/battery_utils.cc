@@ -24,6 +24,7 @@
 #include <dbus/bus.h>
 #include <dbus/message.h>
 #include <dbus/object_proxy.h>
+#include <dbus/power_manager/dbus-constants.h>
 #include <re2/re2.h>
 
 #include "diagnostics/cros_healthd/utils/error_utils.h"
@@ -73,16 +74,8 @@ std::string ConvertSmartBatteryManufactureDate(uint32_t manufacture_date) {
 
 }  // namespace
 
-BatteryFetcher::BatteryFetcher(
-    org::chromium::debugdProxyInterface* debugd_proxy,
-    dbus::ObjectProxy* power_manager_proxy,
-    brillo::CrosConfigInterface* cros_config)
-    : debugd_proxy_(debugd_proxy),
-      power_manager_proxy_(power_manager_proxy),
-      cros_config_(cros_config) {
-  DCHECK(debugd_proxy_);
-  DCHECK(power_manager_proxy_);
-  DCHECK(cros_config_);
+BatteryFetcher::BatteryFetcher(Context* context) : context_(context) {
+  DCHECK(context_);
 }
 
 BatteryFetcher::~BatteryFetcher() = default;
@@ -94,7 +87,7 @@ mojo_ipc::BatteryResultPtr BatteryFetcher::FetchBatteryInfo() {
   mojo_ipc::BatteryInfo info;
   dbus::MethodCall method_call(power_manager::kPowerManagerInterface,
                                power_manager::kGetPowerSupplyPropertiesMethod);
-  auto response = power_manager_proxy_->CallMethodAndBlock(
+  auto response = context_->power_manager_proxy()->CallMethodAndBlock(
       &method_call, kPowerManagerDBusTimeout.InMilliseconds());
   if (!response) {
     return mojo_ipc::BatteryResult::NewError(CreateAndLogProbeError(
@@ -193,8 +186,8 @@ base::Optional<mojo_ipc::ProbeErrorPtr> BatteryFetcher::GetSmartBatteryMetric(
     T* metric_value) {
   brillo::ErrorPtr error;
   std::string debugd_result;
-  if (!debugd_proxy_->CollectSmartBatteryMetric(metric_name, &debugd_result,
-                                                &error, kDebugdDBusTimeout)) {
+  if (!context_->debugd_proxy()->CollectSmartBatteryMetric(
+          metric_name, &debugd_result, &error, kDebugdDBusTimeout)) {
     return CreateAndLogProbeError(mojo_ipc::ErrorType::kSystemUtilityError,
                                   "Failed retrieving " + metric_name +
                                       " from debugd: " + error->GetCode() +
@@ -223,14 +216,16 @@ base::Optional<mojo_ipc::ProbeErrorPtr> BatteryFetcher::GetSmartBatteryMetric(
 
 bool BatteryFetcher::HasBattery() {
   std::string psu_type;
-  cros_config_->GetString(kHardwarePropertiesPath, kPsuTypeProperty, &psu_type);
+  context_->cros_config()->GetString(kHardwarePropertiesPath, kPsuTypeProperty,
+                                     &psu_type);
   return psu_type != "AC_only";
 }
 
 bool BatteryFetcher::HasSmartBatteryInfo() {
   std::string has_smart_battery_info;
-  cros_config_->GetString(kBatteryPropertiesPath, kHasSmartBatteryInfoProperty,
-                          &has_smart_battery_info);
+  context_->cros_config()->GetString(kBatteryPropertiesPath,
+                                     kHasSmartBatteryInfoProperty,
+                                     &has_smart_battery_info);
   return has_smart_battery_info == "true";
 }
 
