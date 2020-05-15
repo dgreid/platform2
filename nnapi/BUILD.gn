@@ -4,18 +4,37 @@
 
 import("//common-mk/pkg_config.gni")
 
+libbase_src = "../aosp/system/core/base"
 libcutils_src = "../aosp/system/core/libcutils"
+libutils_src = "../aosp/system/core/libutils"
 
 group("all") {
   deps = [
-    ":libcutils",
+    ":libnnapi-base",
+    ":libnnapi-cutils",
+    ":libnnapi-utils",
   ]
   if (use.test) {
-    deps += [ ":libcutils_testrunner" ]
+    deps += [
+      ":libnnapi-base_testrunner",
+      ":libnnapi-cutils_testrunner",
+      ":libnnapi-utils_testrunner",
+    ]
   }
 }
 
-static_library("libcutils") {
+static_library("libnnapi-base") {
+  include_dirs = [ "${libbase_src}/include" ]
+  sources = [
+    "${libbase_src}/chrono_utils.cpp",
+    "${libbase_src}/errors_unix.cpp",
+    "${libbase_src}/file.cpp",
+    "${libbase_src}/mapped_file.cpp",
+    "${libbase_src}/strings.cpp",
+  ]
+}
+
+static_library("libnnapi-cutils") {
   include_dirs = [ "${libcutils_src}/include" ]
   sources = [
     "${libcutils_src}/config_utils.cpp",
@@ -27,16 +46,51 @@ static_library("libcutils") {
   ]
 }
 
+static_library("libnnapi-utils") {
+  include_dirs = [
+    "${libcutils_src}/include",
+    "${libutils_src}/include",
+  ]
+  sources = [
+    "${libutils_src}/Errors.cpp",
+    "${libutils_src}/JenkinsHash.cpp",
+    "${libutils_src}/NativeHandle.cpp",
+    "${libutils_src}/Timers.cpp",
+  ]
+}
+
 if (use.test) {
-  executable("libcutils_testrunner") {
+  executable("libnnapi-base_testrunner") {
     configs += [ "//common-mk:test" ]
-    include_dirs = [ "${libcutils_src}/include" ]
+    include_dirs = [ "${libbase_src}/include" ]
     deps = [
-      ":libcutils",
+      ":libnnapi-base",
       "//common-mk/testrunner:testrunner",
     ]
     sources = [
-      "${libcutils_src}/native_handle_test.cpp",
+      "${libbase_src}/chrono_utils_test.cpp",
+      "${libbase_src}/endian_test.cpp",
+      "${libbase_src}/errors_test.cpp",
+      "${libbase_src}/mapped_file_test.cpp",
+      "${libbase_src}/strings_test.cpp",
     ]
+  }
+  executable("libnnapi-cutils_testrunner") {
+    configs += [ "//common-mk:test" ]
+    include_dirs = [ "${libcutils_src}/include" ]
+    deps = [
+      ":libnnapi-cutils",
+      "//common-mk/testrunner:testrunner",
+    ]
+    sources = [ "${libcutils_src}/native_handle_test.cpp" ]
+  }
+  executable("libnnapi-utils_testrunner") {
+    configs += [ "//common-mk:test" ]
+    include_dirs = [ "${libutils_src}/include" ]
+    deps = [
+      ":libnnapi-utils",
+      "//common-mk/testrunner:testrunner",
+    ]
+    sources = [ "${libutils_src}/Mutex_test.cpp" ]
   }
 }
