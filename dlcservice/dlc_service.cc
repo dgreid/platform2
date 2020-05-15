@@ -70,10 +70,6 @@ void DlcService::Initialize() {
   dlc_manager_->Initialize();
 }
 
-const DlcBase* DlcService::GetDlc(const DlcId& id) {
-  return dlc_manager_->GetDlc(id);
-}
-
 bool DlcService::Install(const DlcId& id,
                          const string& omaha_url,
                          ErrorPtr* err) {
@@ -110,7 +106,7 @@ bool DlcService::Install(const DlcId& id,
     return false;
   }
 
-  switch (dlc_manager_->GetDlc(id)->GetState().state()) {
+  switch (GetDlc(id)->GetState().state()) {
     case DlcState::NOT_INSTALLED:
       *err = Error::Create(
           FROM_HERE, kErrorInternal,
@@ -187,10 +183,8 @@ bool DlcService::Purge(const string& id, brillo::ErrorPtr* err) {
   return dlc_manager_->Delete(id, err);
 }
 
-bool DlcService::GetDlcState(const std::string& id,
-                             DlcState* dlc_state,
-                             ErrorPtr* err) {
-  return dlc_manager_->GetDlcState(id, dlc_state, err);
+const DlcBase* DlcService::GetDlc(const DlcId& id) {
+  return dlc_manager_->GetDlc(id);
 }
 
 DlcIdList DlcService::GetInstalled() {
@@ -365,7 +359,7 @@ void DlcService::SendOnInstallStatusSignal(const dlcservice::Status& status,
   install_status.set_error_code(error_code);
   DlcModuleList* dlc_list = install_status.mutable_dlc_module_list();
   for (const auto& id : ids) {
-    const auto* dlc = dlc_manager_->GetDlc(id);
+    const auto* dlc = GetDlc(id);
     dlc_list->add_dlc_module_infos()->set_dlc_id(id);
     dlc_list->add_dlc_module_infos()->set_dlc_root(dlc->GetRoot().value());
   }

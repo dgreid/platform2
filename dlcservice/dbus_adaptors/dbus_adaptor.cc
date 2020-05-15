@@ -10,11 +10,13 @@
 #include <utility>
 #include <vector>
 
+#include <base/strings/stringprintf.h>
 #include <brillo/errors/error.h>
 #include <chromeos/dbus/service_constants.h>
 #include <dbus/dlcservice/dbus-constants.h>
 
 #include "dlcservice/dlc.h"
+#include "dlcservice/error.h"
 #include "dlcservice/utils.h"
 
 using std::set;
@@ -79,7 +81,15 @@ bool DBusService::GetDlcsToUpdate(brillo::ErrorPtr* err,
 bool DBusService::GetDlcState(brillo::ErrorPtr* err,
                               const string& id_in,
                               DlcState* dlc_state_out) {
-  return dlc_service_->GetDlcState(id_in, dlc_state_out, err);
+  const auto* dlc = dlc_service_->GetDlc(id_in);
+  if (dlc == nullptr) {
+    *err = Error::Create(
+        FROM_HERE, kErrorInvalidDlc,
+        base::StringPrintf("Requested unsupported DLC=%s.", id_in.c_str()));
+    return false;
+  }
+  *dlc_state_out = dlc->GetState();
+  return true;
 }
 
 bool DBusService::InstallCompleted(brillo::ErrorPtr* err,

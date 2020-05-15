@@ -81,7 +81,10 @@ bool DlcManager::IsInstalling() {
 
 const DlcBase* DlcManager::GetDlc(const DlcId& id) {
   const auto& iter = supported_.find(id);
-  CHECK(iter != supported_.end()) << "Passed invalid DLC: " << id;
+  if (iter == supported_.end()) {
+    LOG(ERROR) << "Passed invalid DLC: " << id;
+    return nullptr;
+  }
   return &iter->second;
 }
 
@@ -108,21 +111,6 @@ DlcIdList DlcManager::GetDlcsToUpdate() {
 
 DlcIdList DlcManager::GetSupported() {
   return ToDlcIdList(supported_, [](const DlcBase&) { return true; });
-}
-
-bool DlcManager::GetDlcState(const DlcId& id, DlcState* state, ErrorPtr* err) {
-  DCHECK(state);
-  DCHECK(err);
-  if (!IsSupported(id)) {
-    *err = Error::Create(
-        FROM_HERE, kErrorInvalidDlc,
-        base::StringPrintf("Cannot get state for unsupported DLC=%s",
-                           id.c_str()));
-    return false;
-  }
-
-  *state = supported_.find(id)->second.GetState();
-  return true;
 }
 
 bool DlcManager::InstallCompleted(const DlcIdList& ids, brillo::ErrorPtr* err) {

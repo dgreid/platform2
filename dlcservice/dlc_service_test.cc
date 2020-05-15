@@ -116,16 +116,10 @@ class DlcServiceTest : public BaseTest {
     EXPECT_EQ(install_status.state(), InstallStatus::IDLE);
   }
 
-  void CheckDlcState(const DlcId& id,
-                     const DlcState::State& expected_state,
-                     bool fail = false) {
-    DlcState actual_state;
-    if (fail) {
-      EXPECT_FALSE(dlc_service_->GetDlcState(id, &actual_state, &err_));
-      return;
-    }
-    EXPECT_TRUE(dlc_service_->GetDlcState(id, &actual_state, &err_));
-    EXPECT_EQ(expected_state, actual_state.state());
+  void CheckDlcState(const DlcId& id, const DlcState::State& expected_state) {
+    const auto* dlc = dlc_service_->GetDlc(id);
+    EXPECT_NE(dlc, nullptr);
+    EXPECT_EQ(expected_state, dlc->GetState().state());
   }
 
  protected:
@@ -283,7 +277,7 @@ TEST_F(DlcServiceTest, UninstallInvalidDlcTest) {
   EXPECT_CALL(*mock_update_engine_proxy_ptr_, GetStatusAdvanced(_, _, _))
       .WillOnce(Return(true));
   EXPECT_FALSE(dlc_service_->Uninstall(id, &err_));
-  CheckDlcState(id, DlcState::NOT_INSTALLED, /*fail=*/true);
+  EXPECT_EQ(err_->GetCode(), kErrorInvalidDlc);
 }
 
 TEST_F(DlcServiceTest, UninstallUnmountFailureTest) {
@@ -387,7 +381,7 @@ TEST_F(DlcServiceTest, InstallInvalidDlcTest) {
 
   const string id = "bad-dlc-id";
   EXPECT_FALSE(dlc_service_->Install(id, kDefaultOmahaUrl, &err_));
-  CheckDlcState(id, DlcState::NOT_INSTALLED, /*fail=*/true);
+  EXPECT_EQ(err_->GetCode(), kErrorInvalidDlc);
 }
 
 TEST_F(DlcServiceTest, InstallTest) {

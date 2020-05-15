@@ -9,7 +9,6 @@
 
 #include <base/macros.h>
 #include <brillo/errors/error.h>
-#include <dlcservice/proto_bindings/dlcservice.pb.h>
 
 #include "dlcservice/dlc.h"
 
@@ -43,9 +42,6 @@ class DlcManager {
 
   // Returns the list of all supported DLC(s).
   DlcIdList GetSupported();
-
-  // Returns true and sets |state| if the DLC is supported.
-  bool GetDlcState(const DlcId& id, DlcState* state, brillo::ErrorPtr* err);
 
   // Persists the verified pref for given DLC(s) on install completion.
   bool InstallCompleted(const DlcIdList& ids, brillo::ErrorPtr* err);
