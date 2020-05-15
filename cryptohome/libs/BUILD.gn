@@ -222,6 +222,10 @@ static_library("libcrostpm") {
       "tspi",
     ]
   }
+
+  # TODO(crbug.com/1082873): Remove after fixing usage of protobuf
+  # deprecated declarations.
+  cflags_cc = [ "-Wno-error=deprecated-declarations" ]
 }
 
 generate_dbus_adaptors("userdataauth_adaptors") {
