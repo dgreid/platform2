@@ -164,10 +164,8 @@ class ClobberState {
   virtual void ForceDelay();
 
   // Returns vector of files to be preserved. All FilePaths are relative to
-  // stateful_. |preserve_sensitive_files| includes sensitive files as a part of
-  // preservation (eg. crash reports, clobber log).
-  std::vector<base::FilePath> GetPreservedFilesList(
-      bool preserve_sensitive_files);
+  // stateful_.
+  std::vector<base::FilePath> GetPreservedFilesList();
 
   // Determines if the given device (under |dev_|) is backed by a rotational
   // hard drive.

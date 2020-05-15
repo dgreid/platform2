@@ -50,7 +50,6 @@ constexpr char kPowerWashCountPath[] = "unencrypted/preserve/powerwash_count";
 constexpr char kClobberLogPath[] = "/tmp/clobber-state.log";
 constexpr char kBioWashPath[] = "/usr/bin/bio_wash";
 constexpr char kPreservedFilesTarPath[] = "/tmp/preserve.tar";
-constexpr char kPreservedCrashPath[] = "unencrypted/preserve/crash";
 constexpr char kStatefulClobberLogPath[] = "unencrypted/clobber.log";
 // The presence of this file indicates that crash report collection across
 // clobber is disabled in developer mode.
@@ -181,15 +180,6 @@ void AppendFileToLog(const base::FilePath& file) {
 // Attempt to save logs from the boot when the clobber happened into the
 // stateful partition.
 void CollectClobberCrashReports() {
-  // Check for the creation of the preserve crash directory.
-  base::FilePath preserved_crash_directory =
-      base::FilePath(kStatefulPath).AppendASCII(kPreservedCrashPath);
-
-  if (!base::PathExists(preserved_crash_directory)) {
-    LOG(INFO) << "Creating preserved crash directory.";
-    base::CreateDirectory(preserved_crash_directory);
-  }
-
   brillo::ProcessImpl crash_reporter_early_collect;
   crash_reporter_early_collect.AddArg("/sbin/crash_reporter");
   crash_reporter_early_collect.AddArg("--early");
@@ -200,25 +190,6 @@ void CollectClobberCrashReports() {
     LOG(WARNING) << "Unable to collect logs and crashes from current run.";
 
   return;
-}
-
-// Check if device is enrolled.
-bool IsDeviceEnrolled() {
-  brillo::ProcessImpl vpd_enrollment_check;
-  base::FilePath temp_output_file;
-  base::CreateTemporaryFile(&temp_output_file);
-
-  vpd_enrollment_check.AddArg("/usr/sbin/vpd_get_value");
-  vpd_enrollment_check.AddArg("check_enrollment");
-  vpd_enrollment_check.RedirectOutput(temp_output_file.value());
-
-  if (vpd_enrollment_check.Run() != 0)
-    return false;
-
-  int enrollment_check_value = 0;
-
-  return ReadFileToInt(temp_output_file, &enrollment_check_value) &&
-         enrollment_check_value == 1;
 }
 
 bool CreateEncryptedRebootVault() {
@@ -847,8 +818,7 @@ ClobberState::ClobberState(const Arguments& args,
       dev_("/dev"),
       sys_("/sys") {}
 
-std::vector<base::FilePath> ClobberState::GetPreservedFilesList(
-    bool preserve_sensitive_files) {
+std::vector<base::FilePath> ClobberState::GetPreservedFilesList() {
   std::vector<std::string> stateful_paths;
   // Preserve these files in safe mode. (Please request a privacy review before
   // adding files.)
@@ -914,23 +884,6 @@ std::vector<base::FilePath> ClobberState::GetPreservedFilesList(
       preserved_files.push_back(
           base::FilePath("unencrypted/import_extensions/extensions")
               .Append(name.BaseName()));
-    }
-  }
-
-  // Attempt to save the files in "unencrypted/preserve/crash". This is useful
-  // when the stateful partition can be mounted but we cannot mount the
-  // encrypted stateful mount.
-  if (preserve_sensitive_files) {
-    base::FilePath preserve_crash_directory(
-        stateful_.Append(kPreservedCrashPath));
-    if (base::PathExists(preserve_crash_directory)) {
-      base::FileEnumerator enumerator(preserve_crash_directory, false,
-                                      base::FileEnumerator::FileType::FILES);
-      for (auto name = enumerator.Next(); !name.empty();
-           name = enumerator.Next()) {
-        preserved_files.push_back(
-            base::FilePath(kPreservedCrashPath).Append(name.BaseName()));
-      }
     }
   }
 
@@ -1035,8 +988,7 @@ int ClobberState::Run() {
                      false /* recursive */);
   }
 
-  std::vector<base::FilePath> preserved_files =
-      GetPreservedFilesList(user_triggered_powerwash);
+  std::vector<base::FilePath> preserved_files = GetPreservedFilesList();
   for (const base::FilePath& fp : preserved_files) {
     LOG(INFO) << "Preserving file: " << fp.value();
   }
@@ -1186,10 +1138,9 @@ int ClobberState::Run() {
     LOG(WARNING) << "Restoring clobber.log failed with code " << ret;
   }
 
-  // Attempt to collect crashes into the preserved crash directory. Do not
-  // collect crashes if sensitive files should not be preserved.
-  if (!user_triggered_powerwash &&
-      (preserve_dev_mode_crash_reports || IsDeviceEnrolled())) {
+  // Attempt to collect crashes into the reboot vault crash directory. Do not
+  // collect crashes if this is a user triggered powerwash.
+  if (preserve_sensitive_files) {
     if (CreateEncryptedRebootVault())
       CollectClobberCrashReports();
   }
