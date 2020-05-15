@@ -93,7 +93,7 @@ void DoNothing(bool /* unused */) {}
 // Serializes |message| as byte array.
 ByteArray SerializeAsBlob(const google::protobuf::MessageLite& message) {
   ByteArray result;
-  result.resize(message.ByteSize());
+  result.resize(message.ByteSizeLong());
   CHECK(message.SerializeToArray(result.data(), result.size()));
   return result;
 }
