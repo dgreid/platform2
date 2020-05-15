@@ -23,7 +23,6 @@ class UserCollectorBase : public CrashCollector {
       CrashDirectorySelectionMethod crash_directory_selection_method);
 
   void Initialize(IsFeedbackAllowedFunction is_metrics_allowed,
-                  bool generate_diagnostics,
                   bool directory_failure,
                   bool early);
 
@@ -92,6 +91,10 @@ class UserCollectorBase : public CrashCollector {
   static const char* kGroupId;
 
  private:
+  // Send DBus message announcing the crash. Virtual so that we can mock out
+  // during unit tests.
+  virtual void AccounceUserCrash();
+
   virtual bool ShouldDump(pid_t pid,
                           uid_t uid,
                           const std::string& exec,
@@ -122,7 +125,6 @@ class UserCollectorBase : public CrashCollector {
                                 base::FilePath* crash_file_path,
                                 bool* out_of_capacity);
 
-  bool generate_diagnostics_ = false;
   bool directory_failure_ = false;
 };
 

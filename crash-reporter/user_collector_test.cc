@@ -47,6 +47,7 @@ class UserCollectorMock : public UserCollector {
               GetCommandLine,
               (pid_t),
               (const, override));
+  MOCK_METHOD(void, AccounceUserCrash, ());
 };
 
 class UserCollectorTest : public ::testing::Test {
@@ -63,7 +64,7 @@ class UserCollectorTest : public ::testing::Test {
 
     const pid_t pid = getpid();
     collector_.Initialize(
-        kFilePath, IsMetrics, false, false, false,
+        kFilePath, IsMetrics, false, false,
         [pid](pid_t p) { return p == pid + 1; }, false);
     // Setup paths for output files.
     test_core_pattern_file_ = test_dir_.Append("core_pattern");
@@ -71,6 +72,9 @@ class UserCollectorTest : public ::testing::Test {
     test_core_pipe_limit_file_ = test_dir_.Append("core_pipe_limit");
     collector_.set_core_pipe_limit_file(test_core_pipe_limit_file_.value());
     collector_.set_filter_path(test_dir_.Append("no_filter").value());
+    base::FilePath crash_dir = test_dir_.Append("crash_dir");
+    ASSERT_TRUE(base::CreateDirectory(crash_dir));
+    collector_.set_crash_directory_for_test(crash_dir);
     pid_ = pid;
 
     brillo::ClearLog();
@@ -287,6 +291,7 @@ TEST_F(UserCollectorTest, ShouldDumpUserConsentProductionImage) {
 
 TEST_F(UserCollectorTest, HandleCrashWithoutConsent) {
   s_metrics = false;
+  EXPECT_CALL(collector_, AccounceUserCrash()).Times(0);
   collector_.HandleCrash("20:10:1000:1000:ignored", "foobar");
   if (!VmSupport::Get()) {
     EXPECT_TRUE(FindLog("Received crash notification for foobar[20] sig 10"));
@@ -295,6 +300,11 @@ TEST_F(UserCollectorTest, HandleCrashWithoutConsent) {
 
 TEST_F(UserCollectorTest, HandleNonChromeCrashWithConsent) {
   s_metrics = true;
+  int expected_accounce_calls = 1;
+  if (VmSupport::Get()) {
+    expected_accounce_calls = 0;
+  }
+  EXPECT_CALL(collector_, AccounceUserCrash()).Times(expected_accounce_calls);
   collector_.HandleCrash("5:2:1000:1000:ignored", "chromeos-wm");
   if (!VmSupport::Get()) {
     EXPECT_TRUE(
@@ -304,6 +314,7 @@ TEST_F(UserCollectorTest, HandleNonChromeCrashWithConsent) {
 
 TEST_F(UserCollectorTest, HandleChromeCrashWithConsent) {
   s_metrics = true;
+  EXPECT_CALL(collector_, AccounceUserCrash()).Times(0);
   collector_.HandleCrash("5:2:1000:1000:ignored", "chrome");
   if (!VmSupport::Get()) {
     EXPECT_TRUE(FindLog("Received crash notification for chrome[5] sig 2"));
@@ -313,6 +324,7 @@ TEST_F(UserCollectorTest, HandleChromeCrashWithConsent) {
 
 TEST_F(UserCollectorTest, HandleSuppliedChromeCrashWithConsent) {
   s_metrics = true;
+  EXPECT_CALL(collector_, AccounceUserCrash()).Times(0);
   collector_.HandleCrash("0:2:1000:1000:chrome", nullptr);
   if (!VmSupport::Get()) {
     EXPECT_TRUE(

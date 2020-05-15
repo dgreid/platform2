@@ -34,12 +34,9 @@ class UserCollector : public UserCollectorBase {
   // Initialize the user crash collector for detection of crashes,
   // given the path to this executable, metrics collection enabled
   // oracle, and system logger facility. Crash detection/reporting
-  // is not enabled until Enable is called. |generate_diagnostics|
-  // is used to indicate whether or not to try to generate a minidump
-  // from crashes.
+  // is not enabled until Enable is called.
   void Initialize(const std::string& our_path,
                   IsFeedbackAllowedFunction is_metrics_allowed,
-                  bool generate_diagnostics,
                   bool core2md_failure,
                   bool directory_failure,
                   FilterOutFunction filter_out,

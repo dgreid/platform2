@@ -507,7 +507,6 @@ int main(int argc, char* argv[]) {
 #if USE_CHEETS
   ArcCollector arc_collector;
   arc_collector.Initialize(IsFeedbackAllowed,
-                           true,  // generate_diagnostics
                            FLAGS_directory_failure, false /* early */);
   // Filter out ARC processes.
   if (ArcCollector::IsArcRunning())
@@ -515,7 +514,6 @@ int main(int argc, char* argv[]) {
                            std::placeholders::_1);
 #endif
   user_collector.Initialize(my_path.value(), IsFeedbackAllowed,
-                            true,  // generate_diagnostics
                             FLAGS_core2md_failure, FLAGS_directory_failure,
                             std::move(filter_out), FLAGS_early);
   UncleanShutdownCollector unclean_shutdown_collector;

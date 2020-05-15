@@ -24,7 +24,29 @@ const char kStatePrefix[] = "State:\t";
 const char kUptimeField[] = "ptime";
 const char kUserCrashSignal[] = "org.chromium.CrashReporter.UserCrash";
 
-void AccounceUserCrash() {
+}  // namespace
+
+const char* UserCollectorBase::kUserId = "Uid:\t";
+const char* UserCollectorBase::kGroupId = "Gid:\t";
+
+UserCollectorBase::UserCollectorBase(
+    const std::string& collector_name,
+    CrashDirectorySelectionMethod crash_directory_selection_method)
+    : CrashCollector(collector_name,
+                     crash_directory_selection_method,
+                     kNormalCrashSendMode,
+                     collector_name) {}
+
+void UserCollectorBase::Initialize(
+    IsFeedbackAllowedFunction is_feedback_allowed_function,
+    bool directory_failure,
+    bool early) {
+  CrashCollector::Initialize(is_feedback_allowed_function, early);
+  initialized_ = true;
+  directory_failure_ = directory_failure;
+}
+
+void UserCollectorBase::AccounceUserCrash() {
   brillo::ProcessImpl dbus;
   dbus.AddArg("/usr/bin/dbus-send");
   dbus.AddArg("--type=signal");
@@ -48,30 +70,6 @@ void AccounceUserCrash() {
   // processes.  Such a system is in a unusable state and will need
   // to be restarted anyway.
   dbus.Release();
-}
-
-}  // namespace
-
-const char* UserCollectorBase::kUserId = "Uid:\t";
-const char* UserCollectorBase::kGroupId = "Gid:\t";
-
-UserCollectorBase::UserCollectorBase(
-    const std::string& collector_name,
-    CrashDirectorySelectionMethod crash_directory_selection_method)
-    : CrashCollector(collector_name,
-                     crash_directory_selection_method,
-                     kNormalCrashSendMode,
-                     collector_name) {}
-
-void UserCollectorBase::Initialize(
-    IsFeedbackAllowedFunction is_feedback_allowed_function,
-    bool generate_diagnostics,
-    bool directory_failure,
-    bool early) {
-  CrashCollector::Initialize(is_feedback_allowed_function, early);
-  initialized_ = true;
-  generate_diagnostics_ = generate_diagnostics;
-  directory_failure_ = directory_failure;
 }
 
 bool UserCollectorBase::HandleCrash(const std::string& crash_attributes,
@@ -124,17 +122,14 @@ bool UserCollectorBase::HandleCrash(const std::string& crash_attributes,
 
     AddExtraMetadata(exec, pid);
 
-    if (generate_diagnostics_) {
-      bool out_of_capacity = false;
-      ErrorType error_type =
-          ConvertAndEnqueueCrash(pid, exec, supplied_ruid, supplied_rgid,
-                                 crash_time, &out_of_capacity);
-      if (error_type != kErrorNone) {
-        if (!out_of_capacity) {
-          EnqueueCollectionErrorLog(error_type);
-        }
-        return false;
+    bool out_of_capacity = false;
+    ErrorType error_type = ConvertAndEnqueueCrash(
+        pid, exec, supplied_ruid, supplied_rgid, crash_time, &out_of_capacity);
+    if (error_type != kErrorNone) {
+      if (!out_of_capacity) {
+        EnqueueCollectionErrorLog(error_type);
       }
+      return false;
     }
   }
 
