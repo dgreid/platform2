@@ -136,7 +136,7 @@ void GetAssertion(dbus::ObjectProxy* proxy,
     LOG(INFO) << "credential_id: " << HexEncodeStr(assertion.credential_id());
     LOG(INFO) << "authenticator_data: "
               << HexEncodeStr(assertion.authenticator_data());
-    LOG(INFO) << "signature: " << HexEncodeStr(assertion.signature().data());
+    LOG(INFO) << "signature: " << HexEncodeStr(assertion.signature());
   }
 }
 
