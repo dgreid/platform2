@@ -11,6 +11,7 @@
 #include <base/files/file_descriptor_watcher_posix.h>
 #include <base/files/scoped_file.h>
 #include <base/memory/weak_ptr.h>
+#include <base/observer_list_types.h>
 
 namespace base {
 class FilePath;
@@ -22,7 +23,7 @@ namespace garcon {
 
 class AnsiblePlaybookApplication {
  public:
-  class Observer {
+  class Observer : public base::CheckedObserver {
    public:
     virtual void OnApplyAnsiblePlaybookCompletion(
         bool success, const std::string& failure_reason) = 0;

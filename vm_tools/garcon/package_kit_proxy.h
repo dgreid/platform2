@@ -14,6 +14,7 @@
 #include <base/macros.h>
 #include <base/message_loop/message_loop.h>
 #include <base/observer_list.h>
+#include <base/observer_list_types.h>
 #include <base/sequence_checker.h>
 #include <base/synchronization/lock.h>
 #include <dbus/bus.h>
@@ -28,7 +29,7 @@ namespace garcon {
 // for handling software installation/removal.
 class PackageKitProxy {
  public:
-  class PackageKitObserver {
+  class PackageKitObserver : public base::CheckedObserver {
    public:
     virtual ~PackageKitObserver() {}
     virtual void OnInstallCompletion(const std::string& command_uuid,
@@ -156,7 +157,7 @@ class PackageKitProxy {
     std::string error;
   };
 
-  class PackageKitDeathObserver {
+  class PackageKitDeathObserver : public base::CheckedObserver {
    public:
     virtual ~PackageKitDeathObserver() {}
     // Invoked when the name owner changed signal is received indicating loss
