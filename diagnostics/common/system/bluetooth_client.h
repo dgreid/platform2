@@ -10,7 +10,6 @@
 
 #include <base/observer_list.h>
 #include <base/observer_list_types.h>
-#include <base/macros.h>
 #include <dbus/object_path.h>
 #include <dbus/object_proxy.h>
 #include <dbus/property.h>
@@ -94,6 +93,8 @@ class BluetoothClient {
   };
 
   BluetoothClient();
+  BluetoothClient(const BluetoothClient&) = delete;
+  BluetoothClient& operator=(const BluetoothClient&) = delete;
   virtual ~BluetoothClient();
 
   // Returns the list of object paths, in an undefined order, of objects
@@ -121,9 +122,6 @@ class BluetoothClient {
 
  protected:
   base::ObserverList<Observer> observers_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(BluetoothClient);
 };
 
 }  // namespace diagnostics

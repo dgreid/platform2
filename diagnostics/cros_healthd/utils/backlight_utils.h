@@ -8,7 +8,6 @@
 #include <vector>
 
 #include <base/files/file_path.h>
-#include <base/macros.h>
 #include <chromeos/chromeos-config/libcros_config/cros_config_interface.h>
 
 #include "mojo/cros_healthd_probe.mojom.h"
@@ -18,6 +17,8 @@ namespace diagnostics {
 class BacklightFetcher final {
  public:
   explicit BacklightFetcher(brillo::CrosConfigInterface* cros_config);
+  BacklightFetcher(const BacklightFetcher&) = delete;
+  BacklightFetcher& operator=(const BacklightFetcher&) = delete;
   ~BacklightFetcher();
 
   // Returns a structure with either the device's backlight info or the error
@@ -28,8 +29,6 @@ class BacklightFetcher final {
  private:
   // Unowned pointer that should outlive this instance.
   brillo::CrosConfigInterface* cros_config_;
-
-  DISALLOW_COPY_AND_ASSIGN(BacklightFetcher);
 };
 
 }  // namespace diagnostics

@@ -9,7 +9,6 @@
 
 #include <base/files/file_path.h>
 #include <base/files/scoped_temp_dir.h>
-#include <base/macros.h>
 #include <chromeos/chromeos-config/libcros_config/fake_cros_config.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -66,6 +65,8 @@ class BacklightUtilsTest : public ::testing::Test {
     backlight_fetcher_ =
         std::make_unique<BacklightFetcher>(fake_cros_config_.get());
   }
+  BacklightUtilsTest(const BacklightUtilsTest&) = delete;
+  BacklightUtilsTest& operator=(const BacklightUtilsTest&) = delete;
 
   void SetUp() override { ASSERT_TRUE(temp_dir_.CreateUniqueTempDir()); }
 
@@ -87,8 +88,6 @@ class BacklightUtilsTest : public ::testing::Test {
   std::unique_ptr<brillo::FakeCrosConfig> fake_cros_config_;
   std::unique_ptr<BacklightFetcher> backlight_fetcher_;
   base::ScopedTempDir temp_dir_;
-
-  DISALLOW_COPY_AND_ASSIGN(BacklightUtilsTest);
 };
 
 // Test that backlight info can be read when it exists.

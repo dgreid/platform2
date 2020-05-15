@@ -8,7 +8,6 @@
 #include <base/bind.h>
 #include <base/bind_helpers.h>
 #include <base/callback.h>
-#include <base/macros.h>
 #include <brillo/errors/error.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -51,6 +50,8 @@ class DebugdAdapterImplTest : public ::testing::Test {
         debugd_adapter_(std::make_unique<DebugdAdapterImpl>(
             std::unique_ptr<org::chromium::debugdProxyMock>(
                 debugd_proxy_mock_))) {}
+  DebugdAdapterImplTest(const DebugdAdapterImplTest&) = delete;
+  DebugdAdapterImplTest& operator=(const DebugdAdapterImplTest&) = delete;
 
  protected:
   StrictMock<MockCallback> callback_;
@@ -59,9 +60,6 @@ class DebugdAdapterImplTest : public ::testing::Test {
   StrictMock<org::chromium::debugdProxyMock>* debugd_proxy_mock_;
 
   std::unique_ptr<DebugdAdapter> debugd_adapter_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(DebugdAdapterImplTest);
 };
 
 // Tests that GetSmartAttributes calls callback with output on success.

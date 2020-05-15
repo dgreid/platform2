@@ -7,7 +7,6 @@
 #include <vector>
 
 #include <base/bind.h>
-#include <base/macros.h>
 #include <base/memory/ref_counted.h>
 #include <base/message_loop/message_loop.h>
 #include <base/run_loop.h>
@@ -108,7 +107,8 @@ class BluetoothClientImplTest : public ::testing::Test {
             bluez_object_manager::kBluezObjectManagerServiceName,
             dbus::ObjectPath(
                 bluez_object_manager::kBluezObjectManagerServicePath))) {}
-
+  BluetoothClientImplTest(const BluetoothClientImplTest&) = delete;
+  BluetoothClientImplTest& operator=(const BluetoothClientImplTest&) = delete;
   ~BluetoothClientImplTest() override {
     EXPECT_CALL(
         *dbus_object_manager_,
@@ -194,8 +194,6 @@ class BluetoothClientImplTest : public ::testing::Test {
   // |dbus_object_manager_|.
   dbus::ObjectManager::Interface* adapter_manager_interface_;
   dbus::ObjectManager::Interface* device_manager_interface_;
-
-  DISALLOW_COPY_AND_ASSIGN(BluetoothClientImplTest);
 };
 
 TEST_F(BluetoothClientImplTest, GetAdapters) {

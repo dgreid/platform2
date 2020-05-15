@@ -9,7 +9,6 @@
 #include <memory>
 #include <string>
 
-#include <base/macros.h>
 #include <base/optional.h>
 #include <base/time/default_tick_clock.h>
 #include <base/time/tick_clock.h>
@@ -31,6 +30,8 @@ class DiagActions final {
   DiagActions(base::TimeDelta polling_interval,
               base::TimeDelta maximum_execution_time,
               const base::TickClock* tick_clock = nullptr);
+  DiagActions(const DiagActions&) = delete;
+  DiagActions& operator=(const DiagActions&) = delete;
   ~DiagActions();
 
   // Print a list of routines available on the platform. Returns true iff all
@@ -108,8 +109,6 @@ class DiagActions final {
   // Unowned pointer which should outlive this instance. Allows the default tick
   // clock to be overridden for testing.
   const base::TickClock* tick_clock_;
-
-  DISALLOW_COPY_AND_ASSIGN(DiagActions);
 };
 
 }  // namespace diagnostics

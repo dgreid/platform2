@@ -8,8 +8,6 @@
 #include <cstdint>
 #include <vector>
 
-#include <base/macros.h>
-
 #include "mojo/cros_healthd.mojom.h"
 
 namespace diagnostics {
@@ -21,14 +19,13 @@ class FakeProbeService final
   using ProbeCategoryEnum = chromeos::cros_healthd::mojom::ProbeCategoryEnum;
 
   FakeProbeService();
+  FakeProbeService(const FakeProbeService&) = delete;
+  FakeProbeService& operator=(const FakeProbeService&) = delete;
   ~FakeProbeService() override;
 
   // chromeos::cros_healthd::mojom::CrosHealthdProbeService overrides:
   void ProbeTelemetryInfo(const std::vector<ProbeCategoryEnum>& categories,
                           ProbeTelemetryInfoCallback callback) override;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(FakeProbeService);
 };
 
 }  // namespace diagnostics

@@ -10,7 +10,6 @@
 #include <vector>
 
 #include <base/callback.h>
-#include <base/macros.h>
 #include <base/optional.h>
 #include <mojo/public/cpp/bindings/binding_set.h>
 
@@ -55,6 +54,8 @@ class CrosHealthdMojoService final
                          LidEvents* lid_events,
                          PowerEvents* power_events,
                          CrosHealthdRoutineService* routine_service);
+  CrosHealthdMojoService(const CrosHealthdMojoService&) = delete;
+  CrosHealthdMojoService& operator=(const CrosHealthdMojoService&) = delete;
   ~CrosHealthdMojoService() override;
 
   // chromeos::cros_healthd::mojom::CrosHealthdDiagnosticsService overrides:
@@ -155,8 +156,6 @@ class CrosHealthdMojoService final
   PowerEvents* const power_events_ = nullptr;
   // Unowned. The routine service should outlive this instance.
   CrosHealthdRoutineService* const routine_service_;
-
-  DISALLOW_COPY_AND_ASSIGN(CrosHealthdMojoService);
 };
 
 }  // namespace diagnostics

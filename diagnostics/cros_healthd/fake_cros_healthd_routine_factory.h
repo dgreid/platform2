@@ -9,7 +9,6 @@
 #include <memory>
 #include <string>
 
-#include <base/macros.h>
 #include <base/optional.h>
 
 #include "diagnostics/cros_healthd/cros_healthd_routine_factory.h"
@@ -23,6 +22,9 @@ namespace diagnostics {
 class FakeCrosHealthdRoutineFactory final : public CrosHealthdRoutineFactory {
  public:
   FakeCrosHealthdRoutineFactory();
+  FakeCrosHealthdRoutineFactory(const FakeCrosHealthdRoutineFactory&) = delete;
+  FakeCrosHealthdRoutineFactory& operator=(
+      const FakeCrosHealthdRoutineFactory&) = delete;
   ~FakeCrosHealthdRoutineFactory() override;
 
   // Sets the number of times that Start(), Resume(), and Cancel() are expected
@@ -91,8 +93,6 @@ class FakeCrosHealthdRoutineFactory final : public CrosHealthdRoutineFactory {
   // Number of times that any created routines expect their Cancel() method to
   // be called.
   int num_expected_cancel_calls_;
-
-  DISALLOW_COPY_AND_ASSIGN(FakeCrosHealthdRoutineFactory);
 };
 
 }  // namespace diagnostics

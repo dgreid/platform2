@@ -9,7 +9,6 @@
 #include <base/base64.h>
 #include <base/files/file_path.h>
 #include <base/files/scoped_temp_dir.h>
-#include <base/macros.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
@@ -37,6 +36,8 @@ constexpr char kNvmeError[] = "NVMe Status:Unknown";
 class NvmeSelfTestRoutineTest : public testing::Test {
  protected:
   NvmeSelfTestRoutineTest() = default;
+  NvmeSelfTestRoutineTest(const NvmeSelfTestRoutineTest&) = delete;
+  NvmeSelfTestRoutineTest& operator=(const NvmeSelfTestRoutineTest&) = delete;
 
   DiagnosticRoutine* routine() { return routine_.get(); }
 
@@ -63,8 +64,6 @@ class NvmeSelfTestRoutineTest : public testing::Test {
 
  private:
   std::unique_ptr<NvmeSelfTestRoutine> routine_;
-
-  DISALLOW_COPY_AND_ASSIGN(NvmeSelfTestRoutineTest);
 };
 
 // Test that the NvmeSelfTest routine for short-time passes if it starts without

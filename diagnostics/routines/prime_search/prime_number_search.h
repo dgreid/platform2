@@ -7,13 +7,13 @@
 
 #include <cstdint>
 
-#include <base/macros.h>
-
 namespace diagnostics {
 
 class PrimeNumberSearch {
  public:
   explicit PrimeNumberSearch(uint64_t max_num);
+  PrimeNumberSearch(const PrimeNumberSearch&) = delete;
+  PrimeNumberSearch& operator=(const PrimeNumberSearch&) = delete;
   virtual ~PrimeNumberSearch() = default;
 
   virtual bool IsPrime(uint64_t num) const;
@@ -26,8 +26,6 @@ class PrimeNumberSearch {
   const uint64_t max_num_ = 0;
 
   uint64_t expected_prime_num_count_ = 0;
-
-  DISALLOW_COPY_AND_ASSIGN(PrimeNumberSearch);
 };
 
 }  // namespace diagnostics

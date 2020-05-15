@@ -8,7 +8,6 @@
 
 #include <base/files/file_path.h>
 #include <base/files/scoped_temp_dir.h>
-#include <base/macros.h>
 #include <gtest/gtest.h>
 
 #include "diagnostics/common/file_test_utils.h"
@@ -38,6 +37,8 @@ std::string FakeBadFileContents() {
 class BatteryRoutineTest : public testing::Test {
  protected:
   BatteryRoutineTest() = default;
+  BatteryRoutineTest(const BatteryRoutineTest&) = delete;
+  BatteryRoutineTest& operator=(const BatteryRoutineTest&) = delete;
 
   void SetUp() override {
     ASSERT_TRUE(temp_dir_.CreateUniqueTempDir());
@@ -73,8 +74,6 @@ class BatteryRoutineTest : public testing::Test {
   std::unique_ptr<BatteryRoutine> routine_;
   mojo_ipc::RoutineUpdate update_{0, mojo::ScopedHandle(),
                                   mojo_ipc::RoutineUpdateUnion::New()};
-
-  DISALLOW_COPY_AND_ASSIGN(BatteryRoutineTest);
 };
 
 // Test that the battery routine fails if charge_full_design does not exist.

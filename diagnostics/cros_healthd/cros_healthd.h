@@ -9,7 +9,6 @@
 #include <string>
 
 #include <base/files/scoped_file.h>
-#include <base/macros.h>
 #include <base/memory/scoped_refptr.h>
 #include <brillo/daemons/dbus_daemon.h>
 #include <brillo/dbus/dbus_connection.h>
@@ -44,6 +43,8 @@ class CrosHealthd final
       public chromeos::cros_healthd::mojom::CrosHealthdServiceFactory {
  public:
   CrosHealthd();
+  CrosHealthd(const CrosHealthd&) = delete;
+  CrosHealthd& operator=(const CrosHealthd&) = delete;
   ~CrosHealthd() override;
 
  private:
@@ -147,8 +148,6 @@ class CrosHealthd final
   // Connects BootstrapMojoConnection with the methods of the D-Bus object
   // exposed by the cros_healthd daemon.
   std::unique_ptr<brillo::dbus_utils::DBusObject> dbus_object_;
-
-  DISALLOW_COPY_AND_ASSIGN(CrosHealthd);
 };
 
 }  // namespace diagnostics

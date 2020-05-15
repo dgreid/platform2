@@ -9,7 +9,6 @@
 #include <memory>
 #include <string>
 
-#include <base/macros.h>
 #include <brillo/errors/error.h>
 
 #include "diagnostics/common/system/debugd_adapter.h"
@@ -53,6 +52,8 @@ class NvmeSelfTestRoutine final : public DiagnosticRoutine {
 
   NvmeSelfTestRoutine(DebugdAdapter* debugd_adapter,
                       SelfTestType self_test_type);
+  NvmeSelfTestRoutine(const NvmeSelfTestRoutine&) = delete;
+  NvmeSelfTestRoutine& operator=(const NvmeSelfTestRoutine&) = delete;
   ~NvmeSelfTestRoutine() override;
 
   // DiagnosticRoutine overrides:
@@ -95,8 +96,6 @@ class NvmeSelfTestRoutine final : public DiagnosticRoutine {
   std::string status_message_;
 
   base::WeakPtrFactory<NvmeSelfTestRoutine> weak_ptr_routine_{this};
-
-  DISALLOW_COPY_AND_ASSIGN(NvmeSelfTestRoutine);
 };
 
 }  // namespace diagnostics

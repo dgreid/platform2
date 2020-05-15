@@ -7,7 +7,6 @@
 
 #include <memory>
 
-#include <base/macros.h>
 #include <base/memory/ref_counted.h>
 #include <base/memory/weak_ptr.h>
 #include <base/observer_list.h>
@@ -25,7 +24,8 @@ namespace diagnostics {
 class PowerdAdapterImpl : public PowerdAdapter {
  public:
   explicit PowerdAdapterImpl(const scoped_refptr<dbus::Bus>& bus);
-
+  PowerdAdapterImpl(const PowerdAdapterImpl&) = delete;
+  PowerdAdapterImpl& operator=(const PowerdAdapterImpl&) = delete;
   ~PowerdAdapterImpl() override;
 
   // PowerdAdapter overrides:
@@ -57,8 +57,6 @@ class PowerdAdapterImpl : public PowerdAdapter {
   base::ObserverList<LidObserver> lid_observers_;
 
   base::WeakPtrFactory<PowerdAdapterImpl> weak_ptr_factory_;
-
-  DISALLOW_COPY_AND_ASSIGN(PowerdAdapterImpl);
 };
 
 }  // namespace diagnostics

@@ -11,7 +11,6 @@
 
 #include <base/cancelable_callback.h>
 #include <base/files/file_path.h>
-#include <base/macros.h>
 #include <base/memory/weak_ptr.h>
 #include <base/optional.h>
 #include <base/time/default_tick_clock.h>
@@ -35,6 +34,8 @@ class BatteryDischargeRoutine final : public DiagnosticRoutine {
                           uint32_t maximum_discharge_percent_allowed,
                           const base::FilePath& root_dir = base::FilePath("/"),
                           const base::TickClock* tick_clock = nullptr);
+  BatteryDischargeRoutine(const BatteryDischargeRoutine&) = delete;
+  BatteryDischargeRoutine& operator=(const BatteryDischargeRoutine&) = delete;
 
   // DiagnosticRoutine overrides:
   ~BatteryDischargeRoutine() override;
@@ -83,8 +84,6 @@ class BatteryDischargeRoutine final : public DiagnosticRoutine {
 
   // Must be the last class member.
   base::WeakPtrFactory<BatteryDischargeRoutine> weak_ptr_factory_{this};
-
-  DISALLOW_COPY_AND_ASSIGN(BatteryDischargeRoutine);
 };
 
 }  // namespace diagnostics

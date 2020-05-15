@@ -10,7 +10,6 @@
 #include <base/files/file_path.h>
 #include <base/files/file_util.h>
 #include <base/files/scoped_temp_dir.h>
-#include <base/macros.h>
 #include <base/test/scoped_task_environment.h>
 #include <base/time/time.h>
 #include <gtest/gtest.h>
@@ -52,6 +51,9 @@ constexpr base::TimeDelta kQuarterDuration = kFullDuration / 4;
 class BatteryDischargeRoutineTest : public testing::Test {
  protected:
   BatteryDischargeRoutineTest() { mojo::core::Init(); }
+  BatteryDischargeRoutineTest(const BatteryDischargeRoutineTest&) = delete;
+  BatteryDischargeRoutineTest& operator=(const BatteryDischargeRoutineTest&) =
+      delete;
 
   void SetUp() override { ASSERT_TRUE(temp_dir_.CreateUniqueTempDir()); }
 
@@ -103,8 +105,6 @@ class BatteryDischargeRoutineTest : public testing::Test {
       base::test::ScopedTaskEnvironment::MainThreadType::MOCK_TIME};
   base::ScopedTempDir temp_dir_;
   std::unique_ptr<BatteryDischargeRoutine> routine_;
-
-  DISALLOW_COPY_AND_ASSIGN(BatteryDischargeRoutineTest);
 };
 
 // Test that the routine can be created with the default tick clock and root

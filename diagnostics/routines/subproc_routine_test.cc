@@ -9,7 +9,6 @@
 #include <utility>
 #include <vector>
 
-#include <base/macros.h>
 #include <base/command_line.h>
 #include <base/test/simple_test_tick_clock.h>
 #include <gmock/gmock.h>
@@ -63,6 +62,8 @@ class MockDiagProcessAdapter : public DiagProcessAdapter {
 class SubprocRoutineTest : public Test {
  protected:
   SubprocRoutineTest() = default;
+  SubprocRoutineTest(const SubprocRoutineTest&) = delete;
+  SubprocRoutineTest& operator=(const SubprocRoutineTest&) = delete;
 
   SubprocRoutine* routine() { return routine_.get(); }
 
@@ -138,8 +139,6 @@ class SubprocRoutineTest : public Test {
   std::unique_ptr<SubprocRoutine> routine_;
   mojo_ipc::RoutineUpdate update_{0, mojo::ScopedHandle(),
                                   mojo_ipc::RoutineUpdateUnion::New()};
-
-  DISALLOW_COPY_AND_ASSIGN(SubprocRoutineTest);
 };
 
 TEST_F(SubprocRoutineTest, InvokeSubprocWithSuccess) {

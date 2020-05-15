@@ -124,6 +124,10 @@ class FakeNonInteractiveDiagnosticRoutine final : public FakeDiagnosticRoutine {
       int num_expected_start_calls,
       int num_expected_resume_calls,
       int num_expected_cancel_calls);
+  FakeNonInteractiveDiagnosticRoutine(
+      const FakeNonInteractiveDiagnosticRoutine&) = delete;
+  FakeNonInteractiveDiagnosticRoutine& operator=(
+      const FakeNonInteractiveDiagnosticRoutine&) = delete;
   ~FakeNonInteractiveDiagnosticRoutine() override;
 
   // FakeDiagnosticRoutine overrides:
@@ -134,8 +138,6 @@ class FakeNonInteractiveDiagnosticRoutine final : public FakeDiagnosticRoutine {
   // Used to populate the noninteractive_routine_update for calls to
   // PopulateStatusUpdate.
   const std::string status_message_;
-
-  DISALLOW_COPY_AND_ASSIGN(FakeNonInteractiveDiagnosticRoutine);
 };
 
 FakeNonInteractiveDiagnosticRoutine::FakeNonInteractiveDiagnosticRoutine(

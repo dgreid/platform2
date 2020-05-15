@@ -9,7 +9,6 @@
 #include <string>
 #include <vector>
 
-#include <base/macros.h>
 #include <base/optional.h>
 
 #include "diagnostics/cros_healthd_mojo_adapter/cros_healthd_mojo_adapter_delegate.h"
@@ -29,6 +28,8 @@ class CrosHealthdMojoAdapter final {
   // Override |delegate| for testing only.
   explicit CrosHealthdMojoAdapter(
       CrosHealthdMojoAdapterDelegate* delegate = nullptr);
+  CrosHealthdMojoAdapter(const CrosHealthdMojoAdapter&) = delete;
+  CrosHealthdMojoAdapter& operator=(const CrosHealthdMojoAdapter&) = delete;
   ~CrosHealthdMojoAdapter();
 
   // Gets telemetry information from cros_healthd.
@@ -143,8 +144,6 @@ class CrosHealthdMojoAdapter final {
   // event-related mojo methods.
   chromeos::cros_healthd::mojom::CrosHealthdEventServicePtr
       cros_healthd_event_service_;
-
-  DISALLOW_COPY_AND_ASSIGN(CrosHealthdMojoAdapter);
 };
 
 }  // namespace diagnostics

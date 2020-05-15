@@ -9,7 +9,6 @@
 #include <string>
 
 #include <base/files/scoped_file.h>
-#include <base/macros.h>
 #include <mojo/public/cpp/system/handle.h>
 
 namespace diagnostics {
@@ -19,6 +18,8 @@ namespace diagnostics {
 class FakeMojoFdGenerator final {
  public:
   FakeMojoFdGenerator();
+  FakeMojoFdGenerator(const FakeMojoFdGenerator&) = delete;
+  FakeMojoFdGenerator& operator=(const FakeMojoFdGenerator&) = delete;
   ~FakeMojoFdGenerator();
 
   // Returns a duplicate of the file descriptor held by this instance.
@@ -30,8 +31,6 @@ class FakeMojoFdGenerator final {
 
  private:
   base::ScopedFD fd_;
-
-  DISALLOW_COPY_AND_ASSIGN(FakeMojoFdGenerator);
 };
 
 // Gets a content of a passed mojo::Handle.

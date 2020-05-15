@@ -9,7 +9,6 @@
 #include <base/base64.h>
 #include <base/files/file_path.h>
 #include <base/files/scoped_temp_dir.h>
-#include <base/macros.h>
 #include <gtest/gtest.h>
 
 #include "diagnostics/common/mojo_utils.h"
@@ -44,6 +43,8 @@ constexpr char kInvaildWearLevel[] = "AAAAAAAAAAAAAAAAAAA";
 class NvmeWearLevelRoutineTest : public testing::Test {
  protected:
   NvmeWearLevelRoutineTest() = default;
+  NvmeWearLevelRoutineTest(const NvmeWearLevelRoutineTest&) = delete;
+  NvmeWearLevelRoutineTest& operator=(const NvmeWearLevelRoutineTest&) = delete;
 
   DiagnosticRoutine* routine() { return routine_.get(); }
 
@@ -68,8 +69,6 @@ class NvmeWearLevelRoutineTest : public testing::Test {
 
  private:
   std::unique_ptr<NvmeWearLevelRoutine> routine_;
-
-  DISALLOW_COPY_AND_ASSIGN(NvmeWearLevelRoutineTest);
 };
 
 // Tests that the NvmeWearLevel routine passes if wear level less than

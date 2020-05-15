@@ -11,7 +11,6 @@
 #include <string>
 
 #include <base/command_line.h>
-#include <base/macros.h>
 #include <base/process/process.h>
 #include <base/time/default_tick_clock.h>
 
@@ -65,6 +64,8 @@ class SubprocRoutine final : public DiagnosticRoutine {
                  std::unique_ptr<base::TickClock> tick_clock,
                  const std::list<base::CommandLine>& command_lines,
                  uint32_t predicted_duration_in_seconds);
+  SubprocRoutine(const SubprocRoutine&) = delete;
+  SubprocRoutine& operator=(const SubprocRoutine&) = delete;
   ~SubprocRoutine() override;
 
   // DiagnosticRoutine overrides:
@@ -133,8 +134,6 @@ class SubprocRoutine final : public DiagnosticRoutine {
   // |start_ticks_| records the time when the routine began. This is used with
   // |predicted_duration_in_seconds_| to report on progress percentate.
   base::TimeTicks start_ticks_;
-
-  DISALLOW_COPY_AND_ASSIGN(SubprocRoutine);
 };
 
 }  // namespace diagnostics

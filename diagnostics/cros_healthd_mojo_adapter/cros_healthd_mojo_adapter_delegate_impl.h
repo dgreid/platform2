@@ -7,7 +7,6 @@
 
 #include <memory>
 
-#include <base/macros.h>
 #include <base/threading/thread.h>
 #include <mojo/core/embedder/scoped_ipc_support.h>
 
@@ -20,6 +19,10 @@ class CrosHealthdMojoAdapterDelegateImpl final
     : public CrosHealthdMojoAdapterDelegate {
  public:
   CrosHealthdMojoAdapterDelegateImpl();
+  CrosHealthdMojoAdapterDelegateImpl(
+      const CrosHealthdMojoAdapterDelegateImpl&) = delete;
+  CrosHealthdMojoAdapterDelegateImpl& operator=(
+      const CrosHealthdMojoAdapterDelegateImpl&) = delete;
   ~CrosHealthdMojoAdapterDelegateImpl() override;
 
   // CrosHealthdMojoAdapterDelegate overrides:
@@ -32,8 +35,6 @@ class CrosHealthdMojoAdapterDelegateImpl final
   base::Thread dbus_thread_{"D-Bus Thread"};
 
   std::unique_ptr<mojo::core::ScopedIPCSupport> ipc_support_;
-
-  DISALLOW_COPY_AND_ASSIGN(CrosHealthdMojoAdapterDelegateImpl);
 };
 
 }  // namespace diagnostics

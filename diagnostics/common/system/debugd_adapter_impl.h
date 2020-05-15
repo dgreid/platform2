@@ -16,7 +16,8 @@ class DebugdAdapterImpl final : public DebugdAdapter {
  public:
   explicit DebugdAdapterImpl(
       std::unique_ptr<org::chromium::debugdProxyInterface> debugd_proxy);
-
+  DebugdAdapterImpl(const DebugdAdapterImpl&) = delete;
+  DebugdAdapterImpl& operator=(const DebugdAdapterImpl&) = delete;
   ~DebugdAdapterImpl() override;
 
   // DebugdAdapter overrides:
@@ -32,8 +33,6 @@ class DebugdAdapterImpl final : public DebugdAdapter {
 
  private:
   std::unique_ptr<org::chromium::debugdProxyInterface> debugd_proxy_;
-
-  DISALLOW_COPY_AND_ASSIGN(DebugdAdapterImpl);
 };
 
 }  // namespace diagnostics

@@ -8,7 +8,6 @@
 #include <vector>
 
 #include <base/files/file_path.h>
-#include <base/macros.h>
 
 #include "debugd/dbus-proxies.h"
 #include "mojo/cros_healthd_probe.mojom.h"
@@ -26,6 +25,8 @@ constexpr base::TimeDelta kDebugdDBusTimeout = base::TimeDelta::FromSeconds(10);
 class FanFetcher {
  public:
   explicit FanFetcher(org::chromium::debugdProxyInterface* debugd_proxy);
+  FanFetcher(const FanFetcher&) = delete;
+  FanFetcher& operator=(const FanFetcher&) = delete;
   ~FanFetcher();
 
   // Returns either a list of data about each of the device's fans or the error
@@ -36,8 +37,6 @@ class FanFetcher {
  private:
   // Unowned pointer that outlives this FanFetcher instance.
   org::chromium::debugdProxyInterface* debugd_proxy_;
-
-  DISALLOW_COPY_AND_ASSIGN(FanFetcher);
 };
 
 }  // namespace diagnostics

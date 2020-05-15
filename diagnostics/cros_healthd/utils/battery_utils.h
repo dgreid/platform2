@@ -8,7 +8,6 @@
 #include <string>
 #include <vector>
 
-#include <base/macros.h>
 #include <base/optional.h>
 #include <chromeos/chromeos-config/libcros_config/cros_config_interface.h>
 #include <dbus/object_proxy.h>
@@ -26,6 +25,8 @@ class BatteryFetcher {
   BatteryFetcher(org::chromium::debugdProxyInterface* debugd_proxy,
                  dbus::ObjectProxy* power_manager_proxy,
                  brillo::CrosConfigInterface* cros_config);
+  BatteryFetcher(const BatteryFetcher&) = delete;
+  BatteryFetcher& operator=(const BatteryFetcher&) = delete;
   ~BatteryFetcher();
 
   // Returns a structure with either the device's battery info or the error that
@@ -73,8 +74,6 @@ class BatteryFetcher {
 
   // Unowned pointer that outlives this BatteryFetcher instance.
   brillo::CrosConfigInterface* cros_config_;
-
-  DISALLOW_COPY_AND_ASSIGN(BatteryFetcher);
 };
 
 }  // namespace diagnostics

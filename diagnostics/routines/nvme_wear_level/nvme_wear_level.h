@@ -9,7 +9,6 @@
 #include <memory>
 #include <string>
 
-#include <base/macros.h>
 #include <brillo/errors/error.h>
 
 #include "diagnostics/common/system/debugd_adapter.h"
@@ -32,6 +31,8 @@ class NvmeWearLevelRoutine final : public DiagnosticRoutine {
 
   NvmeWearLevelRoutine(DebugdAdapter* debugd_adapter,
                        uint32_t wear_level_threshold);
+  NvmeWearLevelRoutine(const NvmeWearLevelRoutine&) = delete;
+  NvmeWearLevelRoutine& operator=(const NvmeWearLevelRoutine&) = delete;
   ~NvmeWearLevelRoutine() override;
 
   // DiagnosticRoutine overrides:
@@ -63,8 +64,6 @@ class NvmeWearLevelRoutine final : public DiagnosticRoutine {
   std::string status_message_;
 
   base::WeakPtrFactory<NvmeWearLevelRoutine> weak_ptr_routine_{this};
-
-  DISALLOW_COPY_AND_ASSIGN(NvmeWearLevelRoutine);
 };
 
 }  // namespace diagnostics

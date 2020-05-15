@@ -9,7 +9,6 @@
 #include <string>
 
 #include <base/files/file_path.h>
-#include <base/macros.h>
 
 #include "diagnostics/routines/diag_routine.h"
 
@@ -30,6 +29,8 @@ extern const char kBatteryRoutineFailedMessage[];
 class BatteryRoutine final : public DiagnosticRoutine {
  public:
   BatteryRoutine(uint32_t low_mah, uint32_t high_mah);
+  BatteryRoutine(const BatteryRoutine&) = delete;
+  BatteryRoutine& operator=(const BatteryRoutine&) = delete;
 
   // DiagnosticRoutine overrides:
   ~BatteryRoutine() override;
@@ -55,8 +56,6 @@ class BatteryRoutine final : public DiagnosticRoutine {
   uint32_t high_mah_;
   std::string status_message_;
   base::FilePath root_dir_{"/"};
-
-  DISALLOW_COPY_AND_ASSIGN(BatteryRoutine);
 };
 
 }  // namespace diagnostics

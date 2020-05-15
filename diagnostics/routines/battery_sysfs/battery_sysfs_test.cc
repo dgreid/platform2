@@ -8,7 +8,6 @@
 
 #include <base/files/file_path.h>
 #include <base/files/scoped_temp_dir.h>
-#include <base/macros.h>
 #include <base/strings/string_split.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -67,6 +66,8 @@ std::string ConstructOutput() {
 class BatterySysfsRoutineTest : public testing::Test {
  protected:
   BatterySysfsRoutineTest() { mojo::core::Init(); }
+  BatterySysfsRoutineTest(const BatterySysfsRoutineTest&) = delete;
+  BatterySysfsRoutineTest& operator=(const BatterySysfsRoutineTest&) = delete;
 
   void SetUp() override {
     ASSERT_TRUE(temp_dir_.CreateUniqueTempDir());
@@ -121,8 +122,6 @@ class BatterySysfsRoutineTest : public testing::Test {
   std::unique_ptr<BatterySysfsRoutine> routine_;
   mojo_ipc::RoutineUpdate update_{0, mojo::ScopedHandle(),
                                   mojo_ipc::RoutineUpdateUnion::New()};
-
-  DISALLOW_COPY_AND_ASSIGN(BatterySysfsRoutineTest);
 };
 
 // Test that the battery_sysfs routine fails if the cycle count is too high.

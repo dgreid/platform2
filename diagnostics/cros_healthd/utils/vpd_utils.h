@@ -6,7 +6,6 @@
 #define DIAGNOSTICS_CROS_HEALTHD_UTILS_VPD_UTILS_H_
 
 #include <base/files/file_path.h>
-#include <base/macros.h>
 #include <chromeos/chromeos-config/libcros_config/cros_config_interface.h>
 
 #include "mojo/cros_healthd_probe.mojom.h"
@@ -16,6 +15,8 @@ namespace diagnostics {
 class CachedVpdFetcher final {
  public:
   explicit CachedVpdFetcher(brillo::CrosConfigInterface* cros_config);
+  CachedVpdFetcher(const CachedVpdFetcher&) = delete;
+  CachedVpdFetcher& operator=(const CachedVpdFetcher&) = delete;
   ~CachedVpdFetcher();
 
   // Returns either a structure with the cached VPD fields or the error that
@@ -26,8 +27,6 @@ class CachedVpdFetcher final {
  private:
   // Unowned pointer that outlives this CachedVpdFetcher instance.
   brillo::CrosConfigInterface* cros_config_;
-
-  DISALLOW_COPY_AND_ASSIGN(CachedVpdFetcher);
 };
 
 }  // namespace diagnostics

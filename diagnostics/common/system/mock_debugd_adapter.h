@@ -5,7 +5,6 @@
 #ifndef DIAGNOSTICS_COMMON_SYSTEM_MOCK_DEBUGD_ADAPTER_H_
 #define DIAGNOSTICS_COMMON_SYSTEM_MOCK_DEBUGD_ADAPTER_H_
 
-#include <base/macros.h>
 #include <gmock/gmock.h>
 
 #include "diagnostics/common/system/debugd_adapter.h"
@@ -15,6 +14,8 @@ namespace diagnostics {
 class MockDebugdAdapter : public DebugdAdapter {
  public:
   MockDebugdAdapter();
+  MockDebugdAdapter(const MockDebugdAdapter&) = delete;
+  MockDebugdAdapter& operator=(const MockDebugdAdapter&) = delete;
   ~MockDebugdAdapter() override;
 
   MOCK_METHOD(void,
@@ -38,9 +39,6 @@ class MockDebugdAdapter : public DebugdAdapter {
               GetNvmeLog,
               (uint32_t, uint32_t, bool, const StringResultCallback&),
               (override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockDebugdAdapter);
 };
 
 }  // namespace diagnostics

@@ -10,7 +10,6 @@
 #include <string>
 #include <vector>
 
-#include <base/macros.h>
 #include <base/optional.h>
 
 #include "diagnostics/common/system/debugd_adapter_impl.h"
@@ -26,6 +25,9 @@ class CrosHealthdRoutineServiceImpl final : public CrosHealthdRoutineService {
  public:
   CrosHealthdRoutineServiceImpl(DebugdAdapter* debugd_adapter,
                                 CrosHealthdRoutineFactory* routine_factory);
+  CrosHealthdRoutineServiceImpl(const CrosHealthdRoutineServiceImpl&) = delete;
+  CrosHealthdRoutineServiceImpl& operator=(
+      const CrosHealthdRoutineServiceImpl&) = delete;
   ~CrosHealthdRoutineServiceImpl() override;
 
   // CrosHealthdRoutineService overrides:
@@ -133,8 +135,6 @@ class CrosHealthdRoutineServiceImpl final : public CrosHealthdRoutineService {
   // Responsible for making the routines. Unowned pointer that should outlive
   // this instance.
   CrosHealthdRoutineFactory* routine_factory_ = nullptr;
-
-  DISALLOW_COPY_AND_ASSIGN(CrosHealthdRoutineServiceImpl);
 };
 
 }  // namespace diagnostics

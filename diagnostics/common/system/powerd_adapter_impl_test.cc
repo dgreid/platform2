@@ -8,7 +8,6 @@
 #include <unordered_map>
 
 #include <base/callback.h>
-#include <base/macros.h>
 #include <base/memory/ref_counted.h>
 #include <dbus/message.h>
 #include <dbus/mock_bus.h>
@@ -90,6 +89,9 @@ class BasePowerdAdapterImplTest : public ::testing::Test {
             dbus_bus_.get(),
             power_manager::kPowerManagerServiceName,
             dbus::ObjectPath(power_manager::kPowerManagerServicePath))) {}
+  BasePowerdAdapterImplTest(const BasePowerdAdapterImplTest&) = delete;
+  BasePowerdAdapterImplTest& operator=(const BasePowerdAdapterImplTest&) =
+      delete;
 
   void SetUp() override {
     EXPECT_CALL(*dbus_bus_,
@@ -154,8 +156,6 @@ class BasePowerdAdapterImplTest : public ::testing::Test {
 
   std::unordered_map<std::string, base::Callback<void(dbus::Signal* signal)>>
       on_signal_callbacks_;
-
-  DISALLOW_COPY_AND_ASSIGN(BasePowerdAdapterImplTest);
 };
 
 // This is a parameterized test with the following parameters:
@@ -169,6 +169,8 @@ class PowerdAdapterImplTest
                          PowerSignalType /* expected_received_signal_type */>> {
  public:
   PowerdAdapterImplTest() = default;
+  PowerdAdapterImplTest(const PowerdAdapterImplTest&) = delete;
+  PowerdAdapterImplTest& operator=(const PowerdAdapterImplTest&) = delete;
 
  protected:
   // Accessors to individual test parameters from the test parameter tuple
@@ -180,9 +182,6 @@ class PowerdAdapterImplTest
   expected_received_signal_type() const {
     return std::get<1>(GetParam());
   }
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(PowerdAdapterImplTest);
 };
 
 TEST_P(PowerdAdapterImplTest, OnPowerSignal) {

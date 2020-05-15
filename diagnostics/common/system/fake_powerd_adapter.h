@@ -5,7 +5,6 @@
 #ifndef DIAGNOSTICS_COMMON_SYSTEM_FAKE_POWERD_ADAPTER_H_
 #define DIAGNOSTICS_COMMON_SYSTEM_FAKE_POWERD_ADAPTER_H_
 
-#include <base/macros.h>
 #include <base/observer_list.h>
 #include <power_manager/proto_bindings/power_supply_properties.pb.h>
 #include <power_manager/proto_bindings/suspend.pb.h>
@@ -17,6 +16,8 @@ namespace diagnostics {
 class FakePowerdAdapter : public PowerdAdapter {
  public:
   FakePowerdAdapter();
+  FakePowerdAdapter(const FakePowerdAdapter&) = delete;
+  FakePowerdAdapter& operator=(const FakePowerdAdapter&) = delete;
   ~FakePowerdAdapter() override;
 
   // PowerdAdapter overrides:
@@ -42,8 +43,6 @@ class FakePowerdAdapter : public PowerdAdapter {
  private:
   base::ObserverList<PowerObserver> power_observers_;
   base::ObserverList<LidObserver> lid_observers_;
-
-  DISALLOW_COPY_AND_ASSIGN(FakePowerdAdapter);
 };
 
 }  // namespace diagnostics

@@ -8,7 +8,6 @@
 
 #include <base/files/file_path.h>
 #include <base/files/scoped_temp_dir.h>
-#include <base/macros.h>
 #include <base/optional.h>
 #include <gtest/gtest.h>
 
@@ -32,6 +31,8 @@ constexpr char kPowerSupplyDirectoryPath[] =
 class AcPowerRoutineTest : public testing::Test {
  protected:
   AcPowerRoutineTest() = default;
+  AcPowerRoutineTest(const AcPowerRoutineTest&) = delete;
+  AcPowerRoutineTest& operator=(const AcPowerRoutineTest&) = delete;
 
   void SetUp() override { ASSERT_TRUE(temp_dir_.CreateUniqueTempDir()); }
 
@@ -71,8 +72,6 @@ class AcPowerRoutineTest : public testing::Test {
  private:
   base::ScopedTempDir temp_dir_;
   std::unique_ptr<AcPowerRoutine> routine_;
-
-  DISALLOW_COPY_AND_ASSIGN(AcPowerRoutineTest);
 };
 
 // Test that the routine passes when expecting an online power supply.

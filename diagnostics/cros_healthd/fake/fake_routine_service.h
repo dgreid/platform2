@@ -8,7 +8,6 @@
 #include <cstdint>
 #include <string>
 
-#include <base/macros.h>
 #include <base/optional.h>
 
 #include "mojo/cros_healthd.mojom.h"
@@ -24,6 +23,8 @@ class FakeRoutineService final
   using RunRoutineResponse = chromeos::cros_healthd::mojom::RunRoutineResponse;
 
   FakeRoutineService();
+  FakeRoutineService(const FakeRoutineService&) = delete;
+  FakeRoutineService& operator=(const FakeRoutineService&) = delete;
   ~FakeRoutineService() override;
 
   // chromeos::cros_healthd::mojom::CrosHealthdDiagnosticsService overrides:
@@ -74,9 +75,6 @@ class FakeRoutineService final
       uint32_t length_seconds,
       uint32_t maximum_discharge_percent_allowed,
       RunBatteryDischargeRoutineCallback callback) override;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(FakeRoutineService);
 };
 
 }  // namespace diagnostics

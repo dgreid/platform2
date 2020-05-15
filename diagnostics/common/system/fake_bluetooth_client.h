@@ -7,7 +7,6 @@
 
 #include <vector>
 
-#include <base/macros.h>
 #include <dbus/object_path.h>
 
 #include "diagnostics/common/system/bluetooth_client.h"
@@ -17,6 +16,8 @@ namespace diagnostics {
 class FakeBluetoothClient : public BluetoothClient {
  public:
   FakeBluetoothClient();
+  FakeBluetoothClient(const FakeBluetoothClient&) = delete;
+  FakeBluetoothClient& operator=(const FakeBluetoothClient&) = delete;
   ~FakeBluetoothClient() override;
 
   // BluetoothClient overrides:
@@ -39,9 +40,6 @@ class FakeBluetoothClient : public BluetoothClient {
   void EmitDeviceRemoved(const dbus::ObjectPath& object_path) const;
   void EmitDevicePropertyChanged(const dbus::ObjectPath& object_path,
                                  const DeviceProperties& properties) const;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(FakeBluetoothClient);
 };
 
 }  // namespace diagnostics

@@ -4,7 +4,6 @@
 
 #include <cstdint>
 
-#include <base/macros.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
@@ -20,12 +19,12 @@ class MockPrimeNumberSearchTest : public PrimeNumberSearch {
  public:
   explicit MockPrimeNumberSearchTest(uint64_t max_num)
       : PrimeNumberSearch(max_num) {}
+  MockPrimeNumberSearchTest(const MockPrimeNumberSearchTest&) = delete;
+  MockPrimeNumberSearchTest& operator=(const MockPrimeNumberSearchTest&) =
+      delete;
   ~MockPrimeNumberSearchTest() {}
 
   MOCK_METHOD(bool, IsPrime, (uint64_t num), (const, override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockPrimeNumberSearchTest);
 };
 
 }  // namespace

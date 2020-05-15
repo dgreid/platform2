@@ -35,6 +35,8 @@ class VpdUtilsTest : public ::testing::Test {
     cached_vpd_fetcher_ =
         std::make_unique<CachedVpdFetcher>(fake_cros_config_.get());
   }
+  VpdUtilsTest(const VpdUtilsTest&) = delete;
+  VpdUtilsTest& operator=(const VpdUtilsTest&) = delete;
 
   void SetUp() override { ASSERT_TRUE(temp_dir_.CreateUniqueTempDir()); }
 
@@ -56,8 +58,6 @@ class VpdUtilsTest : public ::testing::Test {
   std::unique_ptr<brillo::FakeCrosConfig> fake_cros_config_;
   std::unique_ptr<CachedVpdFetcher> cached_vpd_fetcher_;
   base::ScopedTempDir temp_dir_;
-
-  DISALLOW_COPY_AND_ASSIGN(VpdUtilsTest);
 };
 
 // Test that we can read the cached VPD info, when it exists.

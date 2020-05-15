@@ -9,7 +9,6 @@
 #include <string>
 
 #include <base/files/file_path.h>
-#include <base/macros.h>
 #include <base/optional.h>
 
 #include "diagnostics/routines/diag_routine.h"
@@ -37,6 +36,8 @@ class AcPowerRoutine final : public DiagnosticRoutine {
       chromeos::cros_healthd::mojom::AcPowerStatusEnum expected_status,
       const base::Optional<std::string>& expected_power_type,
       const base::FilePath& root_dir = base::FilePath("/"));
+  AcPowerRoutine(const AcPowerRoutine&) = delete;
+  AcPowerRoutine& operator=(const AcPowerRoutine&) = delete;
 
   // DiagnosticRoutine overrides:
   ~AcPowerRoutine() override;
@@ -69,8 +70,6 @@ class AcPowerRoutine final : public DiagnosticRoutine {
   base::FilePath root_dir_;
   // A measure of how far along the routine is, reported in all status updates.
   uint32_t progress_percent_ = 0;
-
-  DISALLOW_COPY_AND_ASSIGN(AcPowerRoutine);
 };
 
 }  // namespace diagnostics

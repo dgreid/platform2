@@ -16,6 +16,8 @@ namespace diagnostics {
 class DiagProcessAdapterImpl final : public DiagProcessAdapter {
  public:
   DiagProcessAdapterImpl();
+  DiagProcessAdapterImpl(const DiagProcessAdapterImpl&) = delete;
+  DiagProcessAdapterImpl& operator=(const DiagProcessAdapterImpl&) = delete;
   ~DiagProcessAdapterImpl() override;
   base::TerminationStatus GetStatus(
       const base::ProcessHandle& handle) const override;
@@ -25,8 +27,6 @@ class DiagProcessAdapterImpl final : public DiagProcessAdapter {
 
  private:
   std::string exe_path_;
-
-  DISALLOW_COPY_AND_ASSIGN(DiagProcessAdapterImpl);
 };
 
 }  // namespace diagnostics

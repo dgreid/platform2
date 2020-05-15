@@ -10,7 +10,6 @@
 #include <string>
 
 #include <base/files/file_path.h>
-#include <base/macros.h>
 
 #include "diagnostics/routines/diag_routine.h"
 
@@ -46,6 +45,8 @@ class BatterySysfsRoutine final : public DiagnosticRoutine {
  public:
   BatterySysfsRoutine(uint32_t maximum_cycle_count,
                       uint32_t percent_battery_wear_allowed);
+  BatterySysfsRoutine(const BatterySysfsRoutine&) = delete;
+  BatterySysfsRoutine& operator=(const BatterySysfsRoutine&) = delete;
 
   // DiagnosticRoutine overrides:
   ~BatterySysfsRoutine() override;
@@ -75,8 +76,6 @@ class BatterySysfsRoutine final : public DiagnosticRoutine {
   std::map<std::string, std::string> battery_sysfs_log_;
   std::string status_message_;
   base::FilePath root_dir_{"/"};
-
-  DISALLOW_COPY_AND_ASSIGN(BatterySysfsRoutine);
 };
 
 }  // namespace diagnostics

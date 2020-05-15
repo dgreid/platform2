@@ -9,7 +9,6 @@
 #include <memory>
 #include <string>
 
-#include <base/macros.h>
 #include <base/optional.h>
 
 #include "diagnostics/cros_healthd/cros_healthd_routine_factory.h"
@@ -20,6 +19,9 @@ namespace diagnostics {
 class CrosHealthdRoutineFactoryImpl final : public CrosHealthdRoutineFactory {
  public:
   CrosHealthdRoutineFactoryImpl();
+  CrosHealthdRoutineFactoryImpl(const CrosHealthdRoutineFactoryImpl&) = delete;
+  CrosHealthdRoutineFactoryImpl& operator=(
+      const CrosHealthdRoutineFactoryImpl&) = delete;
   ~CrosHealthdRoutineFactoryImpl() override;
 
   // CrosHealthdRoutineFactory overrides:
@@ -55,9 +57,6 @@ class CrosHealthdRoutineFactoryImpl final : public CrosHealthdRoutineFactory {
   std::unique_ptr<DiagnosticRoutine> MakeBatteryDischargeRoutine(
       base::TimeDelta exec_duration,
       uint32_t maximum_discharge_percent_allowed) override;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(CrosHealthdRoutineFactoryImpl);
 };
 
 }  // namespace diagnostics
