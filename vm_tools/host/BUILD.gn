@@ -140,6 +140,10 @@ static_library("libconcierge") {
     "system_api",
     "vm_protos",
   ]
+
+  # TODO(crbug.com/1082873): Remove after fixing usage of deprecated
+  # declarations.
+  cflags_cc = [ "-Wno-error=deprecated-declarations" ]
 }
 
 executable("vm_concierge") {
@@ -193,6 +197,10 @@ executable("cicerone_client") {
     "protobuf",
     "system_api",
   ]
+
+  # TODO(crbug.com/1082873): Remove after fixing usage of deprecated
+  # declarations.
+  cflags_cc = [ "-Wno-error=deprecated-declarations" ]
 }
 
 static_library("libseneschal") {
