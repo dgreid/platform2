@@ -31,6 +31,7 @@ class MockHomeDirs : public HomeDirs {
               (Platform*, Crypto*, UserOldestActivityTimestampCache*),
               (override));
   MOCK_METHOD(void, RemoveNonOwnerCryptohomes, (), (override));
+  MOCK_METHOD(bool, GetOwner, (std::string*), (override));
   MOCK_METHOD(bool, GetPlainOwner, (std::string*), (override));
   MOCK_METHOD(bool, AreEphemeralUsersEnabled, (), (override));
   MOCK_METHOD(bool, AreCredentialsValid, (const Credentials&), (override));
@@ -83,6 +84,7 @@ class MockHomeDirs : public HomeDirs {
               (override));
   MOCK_METHOD(bool, ForceRemoveKeyset, (const std::string&, int), (override));
   MOCK_METHOD(bool, MoveKeyset, (const std::string&, int, int), (override));
+  MOCK_METHOD(void, RemoveLECredentials, (const std::string&), (override));
   MOCK_METHOD(int32_t, GetUnmountedAndroidDataCount, (), (override));
 
   MOCK_METHOD(bool,
@@ -91,6 +93,11 @@ class MockHomeDirs : public HomeDirs {
               (const, override));
 
   MOCK_METHOD(bool, SetLockedToSingleUser, (), (const, override));
+  MOCK_METHOD(std::vector<HomeDir>, GetHomeDirs, (), (override));
+  MOCK_METHOD(void,
+              AddUserTimestampToCache,
+              (const std::string& obfuscated),
+              (override));
   MOCK_METHOD(void, set_enterprise_owned, (bool), (override));
   MOCK_METHOD(bool, enterprise_owned, (), (const, override));
   MOCK_METHOD(void, set_shadow_root, (const base::FilePath&), (override));
