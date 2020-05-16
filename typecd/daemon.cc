@@ -2,14 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <base/logging.h>
-
 #include "typecd/daemon.h"
 
-int main(int argc, char* argv[]) {
-  LOG(INFO) << "Starting Type C daemon.\n";
-  typecd::Daemon daemon;
+namespace typecd {
 
-  daemon.Run();
+Daemon::Daemon()
+    : weak_factory_(this) {}
+
+Daemon::~Daemon() {}
+
+int Daemon::OnInit() {
+  LOG(INFO) << "Daemon started.";
   return 0;
 }
+
+}  // namespace typecd

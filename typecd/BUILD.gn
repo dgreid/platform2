@@ -12,13 +12,19 @@ group("all") {
 }
 
 pkg_config("target_defaults") {
-  pkg_deps = [ "libchrome-${libbase_ver}" ]
+  pkg_deps = [
+    "libbrillo",
+    "libchrome-${libbase_ver}",
+  ]
 }
 
 executable("typecd") {
   configs += [ ":target_defaults" ]
   deps = [ ":typecd_common" ]
-  sources = [ "main.cc" ]
+  sources = [
+    "daemon.cc",
+    "main.cc",
+  ]
 }
 
 static_library("typecd_common") {
