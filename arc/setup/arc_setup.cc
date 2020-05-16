@@ -838,8 +838,6 @@ void ArcSetup::ApplyPerBoardConfigurations() {
   ApplyPerBoardConfigurationsInternal(arc_paths_->oem_mount_directory);
 }
 
-// Note: This function must be in sync with arcvm-per-board-features.conf in
-// platform2/arc/vm/scripts/init/.
 void ArcSetup::ApplyPerBoardConfigurationsInternal(
     const base::FilePath& oem_mount_directory) {
   // Detect camera device and generate camera profiles.
