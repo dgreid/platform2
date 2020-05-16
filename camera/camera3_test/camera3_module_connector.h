@@ -19,6 +19,7 @@
 #include "common/vendor_tag_manager.h"
 #include "mojo/core/embedder/scoped_ipc_support.h"
 #include "mojo/cros_camera_service.mojom.h"
+#include "mojo/camera_common.mojom.h"
 
 namespace camera3_test {
 
