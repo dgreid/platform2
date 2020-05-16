@@ -334,8 +334,8 @@ class DlcServiceUtil : public brillo::Daemon {
         dlc_info->SetKey("version", Value(manifest.version()));
         dlc_info->SetKey(
             "preallocated_size",
-            Value(base::Int64ToString(manifest.preallocated_size())));
-        dlc_info->SetKey("size", Value(base::Int64ToString(manifest.size())));
+            Value(base::NumberToString(manifest.preallocated_size())));
+        dlc_info->SetKey("size", Value(base::NumberToString(manifest.size())));
         dlc_info->SetKey("image_type", Value(manifest.image_type()));
         switch (manifest.fs_type()) {
           case imageloader::FileSystem::kExt4:
