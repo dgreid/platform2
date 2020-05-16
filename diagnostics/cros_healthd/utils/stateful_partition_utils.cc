@@ -7,7 +7,7 @@
 #include <cstdint>
 
 #include <base/files/file_path.h>
-#include <base/sys_info.h>
+#include <base/system/sys_info.h>
 
 #include "diagnostics/cros_healthd/utils/error_utils.h"
 
