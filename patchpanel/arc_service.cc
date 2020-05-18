@@ -7,6 +7,7 @@
 #include <linux/rtnetlink.h>
 #include <net/if.h>
 #include <sys/ioctl.h>
+#include <sys/utsname.h>
 
 #include <utility>
 #include <vector>
@@ -45,6 +46,22 @@ constexpr std::array<const char*, 2> kEthernetInterfacePrefixes{{"eth", "usb"}};
 constexpr std::array<const char*, 2> kWifiInterfacePrefixes{{"wlan", "mlan"}};
 constexpr std::array<const char*, 2> kCellInterfacePrefixes{{"wwan", "rmnet"}};
 
+bool KernelVersion(int* major, int* minor) {
+  struct utsname u;
+  if (uname(&u) != 0) {
+    PLOG(ERROR) << "uname failed";
+    *major = *minor = 0;
+    return false;
+  }
+  int unused;
+  if (sscanf(u.release, "%d.%d.%d", major, minor, &unused) != 3) {
+    LOG(ERROR) << "unexpected release string: " << u.release;
+    *major = *minor = 0;
+    return false;
+  }
+  return true;
+}
+
 void OneTimeSetup(const Datapath& datapath) {
   static bool done = false;
   if (done)
@@ -68,14 +85,15 @@ void OneTimeSetup(const Datapath& datapath) {
                << " Some Android functionality may be broken.";
   }
   // The xfrm modules needed for Android's ipsec APIs on kernels < 5.4.
-  int32_t major, minor, fix;
-  base::SysInfo::OperatingSystemVersionNumbers(&major, &minor, &fix);
-  if ((major < 5 || (major == 5 && minor < 4)) && runner.modprobe_all({
-                                                      "xfrm4_mode_transport",
-                                                      "xfrm4_mode_tunnel",
-                                                      "xfrm6_mode_transport",
-                                                      "xfrm6_mode_tunnel",
-                                                  }) != 0) {
+  int major, minor;
+  if (KernelVersion(&major, &minor) &&
+      (major < 5 || (major == 5 && minor < 4)) &&
+      runner.modprobe_all({
+          "xfrm4_mode_transport",
+          "xfrm4_mode_tunnel",
+          "xfrm6_mode_transport",
+          "xfrm6_mode_tunnel",
+      }) != 0) {
     LOG(ERROR) << "One or more required kernel modules failed to load."
                << " Some Android functionality may be broken.";
   }
