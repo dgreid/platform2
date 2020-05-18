@@ -128,13 +128,9 @@ class Platform2(object):
 
     if self.host:
       self.sysroot = '/'
-      self.pkgconfig = 'pkg-config'
     else:
-      board_vars = self.get_portageq_envvars(['SYSROOT', 'PKG_CONFIG'],
-                                             board=board)
-
+      board_vars = self.get_portageq_envvars(['SYSROOT'], board=board)
       self.sysroot = board_vars['SYSROOT']
-      self.pkgconfig = board_vars['PKG_CONFIG']
 
     if libdir:
       self.libdir = libdir
@@ -206,9 +202,9 @@ class Platform2(object):
   def get_build_environment(self):
     """Returns a dict containing environment variables we will use to run GN.
 
-    We do this to set the various CC/CXX/AR names for the target board.
+    We do this to set the various toolchain names for the target board.
     """
-    varnames = ['CHOST', 'AR', 'CC', 'CXX']
+    varnames = ['CHOST', 'AR', 'CC', 'CXX', 'PKG_CONFIG']
     if not self.host and not self.board:
       for v in varnames:
         os.environ.setdefault(v, '')
@@ -218,6 +214,7 @@ class Platform2(object):
         'AR': 'ar',
         'CC': 'gcc',
         'CXX': 'g++',
+        'PKG_CONFIG': 'pkg-config',
     }
 
     env = os.environ.copy()
@@ -282,7 +279,6 @@ class Platform2(object):
 
     args = {
         'OS': 'linux',
-        'pkg-config': self.pkgconfig,
         'sysroot': self.sysroot,
         'libdir': self.libdir,
         'build_root': self.get_buildroot(),
@@ -325,6 +321,8 @@ class Platform2(object):
         'cc': buildenv.get('CC_target', buildenv.get('CC', '')),
         'cxx': buildenv.get('CXX_target', buildenv.get('CXX', '')),
         'ar': buildenv.get('AR_target', buildenv.get('AR', '')),
+        'pkg-config': buildenv.get('PKG_CONFIG_target',
+                                   buildenv.get('PKG_CONFIG', '')),
     }
     gn_args['clang_cc'] = 'clang' in gn_args['cc']
     gn_args['clang_cxx'] = 'clang' in gn_args['cxx']
