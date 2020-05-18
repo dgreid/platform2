@@ -43,6 +43,9 @@ if (use.test) {
       ":typecd_common",
       "//common-mk/testrunner:testrunner",
     ]
-    sources = [ "partner_test.cc" ]
+    sources = [
+      "partner_test.cc",
+      "udev_monitor_test.cc",
+    ]
   }
 }

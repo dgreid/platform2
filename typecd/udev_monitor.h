@@ -12,7 +12,7 @@
 #include <string>
 #include <utility>
 
-#include <brillo/udev/udev.h>
+#include <brillo/udev/mock_udev.h>
 #include <gtest/gtest_prod.h>
 
 namespace typecd {
@@ -31,6 +31,14 @@ class UdevMonitor {
   bool ScanDevices();
 
  private:
+  friend class UdevMonitorTest;
+  FRIEND_TEST(UdevMonitorTest, TestBasic);
+
+  // Set the |udev_| pointer to a MockUdev device. *Only* used by unit tests.
+  void SetUdev(std::unique_ptr<brillo::MockUdev> udev) {
+    udev_ = std::move(udev);
+  }
+
   // Handle a udev event which causes a Type C device to be added.
   bool HandleDeviceAdded(const std::string& path);
 
