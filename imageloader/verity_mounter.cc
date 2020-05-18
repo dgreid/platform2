@@ -49,7 +49,7 @@ using dm_task_ptr = std::unique_ptr<dm_task, void (*)(dm_task*)>;
 enum class MountStatus { FAIL, RETRY, SUCCESS };
 
 constexpr int GET_LOOP_DEVICE_MAX_RETRY = 5;
-constexpr int DMSETUP_TIMEOUT_SECONDS = 3;
+constexpr int DMSETUP_TIMEOUT_SECONDS = 6;
 
 // Fetches the device mapper table entry with the specified name and writes the
 // type and parameters into the provided pointers.
