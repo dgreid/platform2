@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 
 use std::error::Error;
-use std::fmt;
+use std::path::Path;
+use std::{fmt, fs};
+
 use std::io::{stdout, Write};
 
 use getopts::Options;
@@ -41,6 +43,26 @@ use self::VmcError::*;
 fn trim_routine(s: &str) -> String {
     s.trim_start_matches("self.backend.")
         .replace(char::is_whitespace, "")
+}
+
+fn get_user_hash(environ: &EnvMap) -> Result<String, VmcError> {
+    if let Some(hash) = environ.get("CROS_USER_ID_HASH").map(|s| String::from(*s)) {
+        return Ok(hash);
+    }
+    // If there is only one user, use the hash without it needing to be set.
+    // This is useful when you ssh to test devices as root.
+    let mut entries = fs::read_dir(Path::new("/home/user")).map_err(|_| ExpectedCrosUserIdHash)?;
+    let first = entries.next().ok_or(ExpectedCrosUserIdHash)?;
+    // If there's another user cryptohome, it's ambiguous which to use so require it to be
+    // specified manually.
+    match entries.next() {
+        Some(_) => Err(ExpectedCrosUserIdHash),
+        None => first.map_err(|_| ExpectedCrosUserIdHash).and_then(|f| {
+            f.file_name()
+                .into_string()
+                .map_err(|_| ExpectedCrosUserIdHash)
+        }),
+    }
 }
 
 impl fmt::Display for VmcError {
@@ -141,10 +163,7 @@ impl<'a, 'b, 'c> Command<'a, 'b, 'c> {
         }
 
         let vm_name = &matches.free[0];
-        let user_id_hash = self
-            .environ
-            .get("CROS_USER_ID_HASH")
-            .ok_or(ExpectedCrosUserIdHash)?;
+        let user_id_hash = get_user_hash(self.environ)?;
         let features = VmFeatures {
             gpu: matches.opt_present("enable-gpu"),
             software_tpm: matches.opt_present("software-tpm"),
@@ -152,9 +171,9 @@ impl<'a, 'b, 'c> Command<'a, 'b, 'c> {
         };
 
         self.metrics_send_sample("Vm.VmcStart");
-        try_command!(self.backend.vm_start(vm_name, user_id_hash, features));
+        try_command!(self.backend.vm_start(vm_name, &user_id_hash, features));
         self.metrics_send_sample("Vm.VmcStartSuccess");
-        try_command!(self.backend.vsh_exec(vm_name, user_id_hash));
+        try_command!(self.backend.vsh_exec(vm_name, &user_id_hash));
 
         Ok(())
     }
@@ -165,12 +184,9 @@ impl<'a, 'b, 'c> Command<'a, 'b, 'c> {
         }
 
         let vm_name = self.args[0];
-        let user_id_hash = self
-            .environ
-            .get("CROS_USER_ID_HASH")
-            .ok_or(ExpectedCrosUserIdHash)?;
+        let user_id_hash = get_user_hash(self.environ)?;
 
-        try_command!(self.backend.vm_stop(vm_name, user_id_hash));
+        try_command!(self.backend.vm_stop(vm_name, &user_id_hash));
 
         Ok(())
     }
@@ -193,21 +209,18 @@ impl<'a, 'b, 'c> Command<'a, 'b, 'c> {
             _ => return Err(ExpectedVmAndMaybeFileName.into()),
         };
 
-        let user_id_hash = self
-            .environ
-            .get("CROS_USER_ID_HASH")
-            .ok_or(ExpectedCrosUserIdHash)?;
+        let user_id_hash = get_user_hash(self.environ)?;
 
         if let Some(uuid) = try_command!(self.backend.vm_create(
             vm_name,
-            user_id_hash,
+            &user_id_hash,
             plugin_vm,
             file_name,
             removable_media,
             params,
         )) {
             println!("VM creation in progress: {}", uuid);
-            self.wait_disk_op_completion(&uuid, user_id_hash, DiskOpType::Create)?;
+            self.wait_disk_op_completion(&uuid, &user_id_hash, DiskOpType::Create)?;
         }
         Ok(())
     }
@@ -218,12 +231,9 @@ impl<'a, 'b, 'c> Command<'a, 'b, 'c> {
         }
 
         let vm_name = self.args[0];
-        let user_id_hash = self
-            .environ
-            .get("CROS_USER_ID_HASH")
-            .ok_or(ExpectedCrosUserIdHash)?;
+        let user_id_hash = get_user_hash(self.environ)?;
 
-        match self.backend.disk_destroy(vm_name, user_id_hash) {
+        match self.backend.disk_destroy(vm_name, &user_id_hash) {
             Ok(()) => Ok(()),
             Err(e) => {
                 self.metrics_send_sample("Vm.DiskEraseFailed");
@@ -240,7 +250,7 @@ impl<'a, 'b, 'c> Command<'a, 'b, 'c> {
     ) -> VmcResult {
         loop {
             let (done, progress) =
-                try_command!(self.backend.wait_disk_op(&uuid, user_id_hash, op_type));
+                try_command!(self.backend.wait_disk_op(&uuid, &user_id_hash, op_type));
             if done {
                 println!("\rOperation completed successfully");
                 return Ok(());
@@ -259,15 +269,12 @@ impl<'a, 'b, 'c> Command<'a, 'b, 'c> {
         let vm_name = self.args[0];
         let size: u64 = self.args[1].parse().or(Err(ExpectedSize))?;
 
-        let user_id_hash = self
-            .environ
-            .get("CROS_USER_ID_HASH")
-            .ok_or(ExpectedCrosUserIdHash)?;
+        let user_id_hash = get_user_hash(self.environ)?;
 
-        match try_command!(self.backend.disk_resize(vm_name, user_id_hash, size)) {
+        match try_command!(self.backend.disk_resize(vm_name, &user_id_hash, size)) {
             Some(uuid) => {
                 println!("Resize in progress: {}", uuid);
-                self.wait_disk_op_completion(&uuid, user_id_hash, DiskOpType::Resize)?;
+                self.wait_disk_op_completion(&uuid, &user_id_hash, DiskOpType::Resize)?;
             }
             None => {
                 println!("Operation completed successfully");
@@ -296,20 +303,17 @@ impl<'a, 'b, 'c> Command<'a, 'b, 'c> {
             None
         };
 
-        let user_id_hash = self
-            .environ
-            .get("CROS_USER_ID_HASH")
-            .ok_or(ExpectedCrosUserIdHash)?;
+        let user_id_hash = get_user_hash(self.environ)?;
 
         if let Some(uuid) = try_command!(self.backend.vm_export(
             vm_name,
-            user_id_hash,
+            &user_id_hash,
             file_name,
             digest_option,
             removable_media
         )) {
             println!("Export in progress: {}", uuid);
-            self.wait_disk_op_completion(&uuid, user_id_hash, DiskOpType::Create)?;
+            self.wait_disk_op_completion(&uuid, &user_id_hash, DiskOpType::Create)?;
         }
         Ok(())
     }
@@ -326,20 +330,17 @@ impl<'a, 'b, 'c> Command<'a, 'b, 'c> {
             _ => return Err(ExpectedVmAndFileName.into()),
         };
 
-        let user_id_hash = self
-            .environ
-            .get("CROS_USER_ID_HASH")
-            .ok_or(ExpectedCrosUserIdHash)?;
+        let user_id_hash = get_user_hash(self.environ)?;
 
         if let Some(uuid) = try_command!(self.backend.vm_import(
             vm_name,
-            user_id_hash,
+            &user_id_hash,
             plugin_vm,
             file_name,
             removable_media
         )) {
             println!("Import in progress: {}", uuid);
-            self.wait_disk_op_completion(&uuid, user_id_hash, DiskOpType::Create)?;
+            self.wait_disk_op_completion(&uuid, &user_id_hash, DiskOpType::Create)?;
         }
         Ok(())
     }
@@ -350,15 +351,12 @@ impl<'a, 'b, 'c> Command<'a, 'b, 'c> {
         }
 
         let uuid = self.args[0];
-        let user_id_hash = self
-            .environ
-            .get("CROS_USER_ID_HASH")
-            .ok_or(ExpectedCrosUserIdHash)?;
+        let user_id_hash = get_user_hash(self.environ)?;
 
         let (done, progress) =
             try_command!(self
                 .backend
-                .disk_op_status(uuid, user_id_hash, DiskOpType::Create));
+                .disk_op_status(uuid, &user_id_hash, DiskOpType::Create));
         if done {
             println!("Operation completed successfully");
         } else {
@@ -372,12 +370,9 @@ impl<'a, 'b, 'c> Command<'a, 'b, 'c> {
             return Err(ExpectedNoArgs.into());
         }
 
-        let user_id_hash = self
-            .environ
-            .get("CROS_USER_ID_HASH")
-            .ok_or(ExpectedCrosUserIdHash)?;
+        let user_id_hash = get_user_hash(self.environ)?;
 
-        let (disk_image_list, total_size) = try_command!(self.backend.disk_list(user_id_hash));
+        let (disk_image_list, total_size) = try_command!(self.backend.disk_list(&user_id_hash));
         for disk in disk_image_list {
             let mut extra_info = String::new();
             if let Some(min_size) = disk.min_size {
@@ -398,14 +393,11 @@ impl<'a, 'b, 'c> Command<'a, 'b, 'c> {
             return Err(ExpectedVmAndPath.into());
         }
 
-        let user_id_hash = self
-            .environ
-            .get("CROS_USER_ID_HASH")
-            .ok_or(ExpectedCrosUserIdHash)?;
+        let user_id_hash = get_user_hash(self.environ)?;
 
         let vm_name = self.args[0];
         let path = self.args[1];
-        let vm_path = try_command!(self.backend.vm_share_path(vm_name, user_id_hash, path));
+        let vm_path = try_command!(self.backend.vm_share_path(vm_name, &user_id_hash, path));
         println!("{} is available at path {}", path, vm_path);
         Ok(())
     }
@@ -415,14 +407,11 @@ impl<'a, 'b, 'c> Command<'a, 'b, 'c> {
             return Err(ExpectedVmAndPath.into());
         }
 
-        let user_id_hash = self
-            .environ
-            .get("CROS_USER_ID_HASH")
-            .ok_or(ExpectedCrosUserIdHash)?;
+        let user_id_hash = get_user_hash(self.environ)?;
 
         let vm_name = self.args[0];
         let path = self.args[1];
-        try_command!(self.backend.vm_unshare_path(vm_name, user_id_hash, path));
+        try_command!(self.backend.vm_unshare_path(vm_name, &user_id_hash, path));
         Ok(())
     }
 
@@ -457,15 +446,12 @@ impl<'a, 'b, 'c> Command<'a, 'b, 'c> {
             _ => return Err(ExpectedVmAndContainer.into()),
         };
 
-        let user_id_hash = self
-            .environ
-            .get("CROS_USER_ID_HASH")
-            .ok_or(ExpectedCrosUserIdHash)?;
+        let user_id_hash = get_user_hash(self.environ)?;
 
         let sessions = try_command!(self.backend.sessions_list());
         let email = sessions
             .iter()
-            .find(|(_, hash)| hash == user_id_hash)
+            .find(|(_, hash)| hash == &user_id_hash)
             .map(|(email, _)| email)
             .ok_or(MissingActiveSession)?;
 
@@ -476,19 +462,19 @@ impl<'a, 'b, 'c> Command<'a, 'b, 'c> {
 
         try_command!(self
             .backend
-            .container_create(vm_name, user_id_hash, container_name, source));
+            .container_create(vm_name, &user_id_hash, container_name, source));
         try_command!(self.backend.container_setup_user(
             vm_name,
-            user_id_hash,
+            &user_id_hash,
             container_name,
             username
         ));
         try_command!(self
             .backend
-            .container_start(vm_name, user_id_hash, container_name));
+            .container_start(vm_name, &user_id_hash, container_name));
         try_command!(self
             .backend
-            .vsh_exec_container(vm_name, user_id_hash, container_name));
+            .vsh_exec_container(vm_name, &user_id_hash, container_name));
 
         Ok(())
     }
@@ -508,12 +494,9 @@ impl<'a, 'b, 'c> Command<'a, 'b, 'c> {
             _ => return Err(ExpectedVmBusDevice.into()),
         };
 
-        let user_id_hash = self
-            .environ
-            .get("CROS_USER_ID_HASH")
-            .ok_or(ExpectedCrosUserIdHash)?;
+        let user_id_hash = get_user_hash(self.environ)?;
 
-        let guest_port = try_command!(self.backend.usb_attach(vm_name, user_id_hash, bus, device));
+        let guest_port = try_command!(self.backend.usb_attach(vm_name, &user_id_hash, bus, device));
 
         println!(
             "usb device at bus={} device={} attached to vm {} at port={}",
@@ -529,12 +512,9 @@ impl<'a, 'b, 'c> Command<'a, 'b, 'c> {
             _ => return Err(ExpectedVmPort.into()),
         };
 
-        let user_id_hash = self
-            .environ
-            .get("CROS_USER_ID_HASH")
-            .ok_or(ExpectedCrosUserIdHash)?;
+        let user_id_hash = get_user_hash(self.environ)?;
 
-        try_command!(self.backend.usb_detach(vm_name, user_id_hash, port));
+        try_command!(self.backend.usb_detach(vm_name, &user_id_hash, port));
 
         println!("usb device detached from port {}", port);
 
@@ -547,12 +527,9 @@ impl<'a, 'b, 'c> Command<'a, 'b, 'c> {
         }
 
         let vm_name = self.args[0];
-        let user_id_hash = self
-            .environ
-            .get("CROS_USER_ID_HASH")
-            .ok_or(ExpectedCrosUserIdHash)?;
+        let user_id_hash = get_user_hash(self.environ)?;
 
-        let devices = try_command!(self.backend.usb_list(vm_name, user_id_hash));
+        let devices = try_command!(self.backend.usb_list(vm_name, &user_id_hash));
         if devices.is_empty() {
             println!("No attached usb devices");
         }
