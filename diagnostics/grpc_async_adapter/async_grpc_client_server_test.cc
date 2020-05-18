@@ -632,9 +632,8 @@ TEST_F(AsyncGrpcClientServerTest, RpcServerStartedAfter) {
 
   base::TimeDelta duration = base::TimeTicks::Now() - start;
 
-  // Check the reduced initial reconnect time. Forgiving time comparison.
-  EXPECT_LT(duration.InMilliseconds(),
-            5 * kInitialGrpcReconnectBackoffTime.InMilliseconds());
+  // Check the reduced initial reconnect time. 1 second is the gRPC default.
+  EXPECT_LT(duration.InMilliseconds(), 1000);
 }
 
 }  // namespace diagnostics
