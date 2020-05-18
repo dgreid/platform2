@@ -16,6 +16,7 @@
 #include "diagnostics/common/system/bluetooth_client.h"
 #include "diagnostics/common/system/debugd_adapter.h"
 #include "diagnostics/common/system/powerd_adapter.h"
+#include "diagnostics/cros_healthd/system/system_config_interface.h"
 
 namespace org {
 namespace chromium {
@@ -60,9 +61,9 @@ class Context {
   // Use the object returned by powerd_adapter() to subscribe to notifications
   // from powerd.
   PowerdAdapter* powerd_adapter() const;
-  // Use the object returned by cros_config() to determine which metrics a
-  // device supports.
-  brillo::CrosConfigInterface* cros_config() const;
+  // Use the object returned by system_config() to determine which conditional
+  // features a device supports.
+  SystemConfigInterface* system_config() const;
 
  private:
   // Allows MockContext to override the default helper objects.
@@ -74,6 +75,10 @@ class Context {
   // Used by this object to initiate D-Bus clients.
   scoped_refptr<dbus::Bus> dbus_bus_;
 
+  // Used by this object to initialize the SystemConfig. Used for reading
+  // cros_config properties to determine device feature support.
+  std::unique_ptr<brillo::CrosConfigInterface> cros_config_;
+
   // Members accessed via the accessor functions defined above.
   std::unique_ptr<BluetoothClient> bluetooth_client_;
   std::unique_ptr<org::chromium::debugdProxyInterface> debugd_proxy_;
@@ -81,7 +86,7 @@ class Context {
   // Owned by |dbus_bus_|.
   dbus::ObjectProxy* power_manager_proxy_;
   std::unique_ptr<PowerdAdapter> powerd_adapter_;
-  std::unique_ptr<brillo::CrosConfigInterface> cros_config_;
+  std::unique_ptr<SystemConfigInterface> system_config_;
 };
 
 }  // namespace diagnostics

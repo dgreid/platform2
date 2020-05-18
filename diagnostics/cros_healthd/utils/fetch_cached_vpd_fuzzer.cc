@@ -16,13 +16,6 @@
 
 namespace diagnostics {
 
-namespace {
-
-constexpr char kCachedVpdPropertiesPath[] = "/cros-healthd/cached-vpd";
-constexpr char kHasSkuNumberProperty[] = "has-sku-number";
-
-}  // namespace
-
 class Environment {
  public:
   Environment() {
@@ -38,8 +31,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 
   MockContext mock_context;
   mock_context.Initialize();
-  mock_context.fake_cros_config()->SetString(kCachedVpdPropertiesPath,
-                                             kHasSkuNumberProperty, "true");
+  mock_context.fake_system_config()->SetHasSkuNumberProperty(true);
   CachedVpdFetcher cached_vpd_fetcher{&mock_context};
   auto cached_vpd_info =
       cached_vpd_fetcher.FetchCachedVpdInfo(base::FilePath(file_path));

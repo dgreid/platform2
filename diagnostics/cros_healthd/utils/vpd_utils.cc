@@ -20,8 +20,6 @@ using ::chromeos::cros_healthd::mojom::CachedVpdResult;
 using ::chromeos::cros_healthd::mojom::CachedVpdResultPtr;
 using ::chromeos::cros_healthd::mojom::ErrorType;
 
-constexpr char kCachedVpdPropertiesPath[] = "/cros-healthd/cached-vpd";
-constexpr char kHasSkuNumberProperty[] = "has-sku-number";
 constexpr char kRelativeSkuNumberDir[] = "sys/firmware/vpd/ro/";
 constexpr char kSkuNumberFileName[] = "sku_number";
 
@@ -36,10 +34,7 @@ CachedVpdFetcher::~CachedVpdFetcher() = default;
 CachedVpdResultPtr CachedVpdFetcher::FetchCachedVpdInfo(
     const base::FilePath& root_dir) {
   CachedVpdInfo vpd_info;
-  std::string has_sku_number;
-  context_->cros_config()->GetString(kCachedVpdPropertiesPath,
-                                     kHasSkuNumberProperty, &has_sku_number);
-  if (has_sku_number == "true") {
+  if (context_->system_config()->HasSkuNumberProperty()) {
     std::string sku_number;
     if (!ReadAndTrimString(root_dir.Append(kRelativeSkuNumberDir),
                            kSkuNumberFileName, &sku_number)) {

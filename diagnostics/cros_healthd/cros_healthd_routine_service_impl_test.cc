@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <cstdint>
+#include <set>
 #include <string>
 #include <utility>
 #include <vector>
@@ -15,6 +16,7 @@
 #include "diagnostics/common/system/mock_debugd_adapter.h"
 #include "diagnostics/cros_healthd/cros_healthd_routine_service_impl.h"
 #include "diagnostics/cros_healthd/fake_cros_healthd_routine_factory.h"
+#include "diagnostics/cros_healthd/system/mock_context.h"
 #include "diagnostics/routines/routine_test_utils.h"
 #include "mojo/cros_healthd_diagnostics.mojom.h"
 
@@ -36,37 +38,8 @@ struct RoutineUpdateCommandTestParams {
   int num_expected_cancel_calls;
 };
 
-}  // namespace
-
-// Tests for the CrosHealthdRoutineServiceImpl class.
-class CrosHealthdRoutineServiceImplTest : public testing::Test {
- protected:
-  CrosHealthdRoutineServiceImpl* service() { return &service_; }
-
-  FakeCrosHealthdRoutineFactory* routine_factory() { return &routine_factory_; }
-
-  mojo_ipc::RoutineUpdatePtr ExecuteGetRoutineUpdate(
-      int32_t id,
-      mojo_ipc::DiagnosticRoutineCommandEnum command,
-      bool include_output) {
-    mojo_ipc::RoutineUpdate update{/*progress_percent=*/0, mojo::ScopedHandle(),
-                                   mojo_ipc::RoutineUpdateUnion::New()};
-    service_.GetRoutineUpdate(id, command, include_output, &update);
-    return mojo_ipc::RoutineUpdate::New(update.progress_percent,
-                                        std::move(update.output),
-                                        std::move(update.routine_update_union));
-  }
-
- private:
-  FakeCrosHealthdRoutineFactory routine_factory_;
-  StrictMock<MockDebugdAdapter> mock_debugd_adapter_;
-  CrosHealthdRoutineServiceImpl service_{&mock_debugd_adapter_,
-                                         &routine_factory_};
-};
-
-// Test that GetAvailableRoutines returns the expected list of routines.
-TEST_F(CrosHealthdRoutineServiceImplTest, GetAvailableRoutines) {
-  const std::vector<mojo_ipc::DiagnosticRoutineEnum> kAvailableRoutines = {
+std::set<mojo_ipc::DiagnosticRoutineEnum> GetAllAvailableRoutines() {
+  return std::set<mojo_ipc::DiagnosticRoutineEnum>{
       mojo_ipc::DiagnosticRoutineEnum::kUrandom,
       mojo_ipc::DiagnosticRoutineEnum::kBatteryCapacity,
       mojo_ipc::DiagnosticRoutineEnum::kBatteryHealth,
@@ -80,8 +53,125 @@ TEST_F(CrosHealthdRoutineServiceImplTest, GetAvailableRoutines) {
       mojo_ipc::DiagnosticRoutineEnum::kDiskRead,
       mojo_ipc::DiagnosticRoutineEnum::kPrimeSearch,
       mojo_ipc::DiagnosticRoutineEnum::kBatteryDischarge};
+}
+
+std::set<mojo_ipc::DiagnosticRoutineEnum> GetBatteryRoutines() {
+  return std::set<mojo_ipc::DiagnosticRoutineEnum>{
+      mojo_ipc::DiagnosticRoutineEnum::kBatteryCapacity,
+      mojo_ipc::DiagnosticRoutineEnum::kBatteryHealth,
+      mojo_ipc::DiagnosticRoutineEnum::kBatteryDischarge};
+}
+
+std::set<mojo_ipc::DiagnosticRoutineEnum> GetNvmeRoutines() {
+  return std::set<mojo_ipc::DiagnosticRoutineEnum>{
+      mojo_ipc::DiagnosticRoutineEnum::kNvmeWearLevel,
+      mojo_ipc::DiagnosticRoutineEnum::kNvmeSelfTest};
+}
+
+std::set<mojo_ipc::DiagnosticRoutineEnum> GetSmartCtlRoutines() {
+  return std::set<mojo_ipc::DiagnosticRoutineEnum>{
+      mojo_ipc::DiagnosticRoutineEnum::kSmartctlCheck};
+}
+
+}  // namespace
+
+// Tests for the CrosHealthdRoutineServiceImpl class.
+class CrosHealthdRoutineServiceImplTest : public testing::Test {
+ protected:
+  void SetUp() override {
+    ASSERT_TRUE(mock_context_.Initialize());
+    mock_context_.fake_system_config()->SetHasBattery(true);
+    mock_context_.fake_system_config()->SetNvmeSupported(true);
+    mock_context_.fake_system_config()->SetSmartCtrlSupported(true);
+
+    CreateService();
+  }
+
+  // The service needs to be recreated anytime the underlying conditions for
+  // which tests are populated change.
+  void CreateService() {
+    service_ = std::make_unique<CrosHealthdRoutineServiceImpl>(
+        &mock_context_, &routine_factory_);
+  }
+
+  CrosHealthdRoutineServiceImpl* service() { return service_.get(); }
+
+  FakeCrosHealthdRoutineFactory* routine_factory() { return &routine_factory_; }
+
+  MockContext* mock_context() { return &mock_context_; }
+
+  mojo_ipc::RoutineUpdatePtr ExecuteGetRoutineUpdate(
+      int32_t id,
+      mojo_ipc::DiagnosticRoutineCommandEnum command,
+      bool include_output) {
+    mojo_ipc::RoutineUpdate update{/*progress_percent=*/0, mojo::ScopedHandle(),
+                                   mojo_ipc::RoutineUpdateUnion::New()};
+    service_->GetRoutineUpdate(id, command, include_output, &update);
+    return mojo_ipc::RoutineUpdate::New(update.progress_percent,
+                                        std::move(update.output),
+                                        std::move(update.routine_update_union));
+  }
+
+ private:
+  FakeCrosHealthdRoutineFactory routine_factory_;
+  MockContext mock_context_;
+  std::unique_ptr<CrosHealthdRoutineServiceImpl> service_;
+};
+
+// Test that GetAvailableRoutines() returns the expected list of routines when
+// all routines are supported.
+TEST_F(CrosHealthdRoutineServiceImplTest, GetAvailableRoutines) {
   auto reply = service()->GetAvailableRoutines();
-  EXPECT_EQ(reply, kAvailableRoutines);
+  std::set<mojo_ipc::DiagnosticRoutineEnum> reply_set(reply.begin(),
+                                                      reply.end());
+  EXPECT_EQ(reply_set, GetAllAvailableRoutines());
+}
+
+// Test that GetAvailableRoutines returns the expected list of routines when
+// battery routines are not supported.
+TEST_F(CrosHealthdRoutineServiceImplTest, GetAvailableRoutinesNoBattery) {
+  mock_context()->fake_system_config()->SetHasBattery(false);
+  CreateService();
+  auto reply = service()->GetAvailableRoutines();
+  std::set<mojo_ipc::DiagnosticRoutineEnum> reply_set(reply.begin(),
+                                                      reply.end());
+  auto expected_routines = GetAllAvailableRoutines();
+  for (auto r : GetBatteryRoutines())
+    expected_routines.erase(r);
+
+  EXPECT_EQ(reply_set, expected_routines);
+}
+
+// Test that GetAvailableRoutines returns the expected list of routines when
+// NVME routines are not supported.
+TEST_F(CrosHealthdRoutineServiceImplTest, GetAvailableRoutinesNoNvme) {
+  mock_context()->fake_system_config()->SetNvmeSupported(false);
+  CreateService();
+  auto reply = service()->GetAvailableRoutines();
+  std::set<mojo_ipc::DiagnosticRoutineEnum> reply_set(reply.begin(),
+                                                      reply.end());
+
+  auto expected_routines = GetAllAvailableRoutines();
+  for (const auto r : GetNvmeRoutines())
+    expected_routines.erase(r);
+
+  EXPECT_EQ(reply_set, expected_routines);
+}
+
+// Test that GetAvailableRoutines returns the expected list of routines when
+// Smartctl routines are not supported.
+TEST_F(CrosHealthdRoutineServiceImplTest, GetAvailableRoutinesNoSmartctl) {
+  mock_context()->fake_system_config()->SetSmartCtrlSupported(false);
+  CreateService();
+  auto reply = service()->GetAvailableRoutines();
+  std::set<mojo_ipc::DiagnosticRoutineEnum> reply_set(reply.begin(),
+                                                      reply.end());
+
+  auto expected_routines = GetAllAvailableRoutines();
+  for (const auto r : GetSmartCtlRoutines())
+    expected_routines.erase(r);
+
+  EXPECT_EQ(reply_set, expected_routines);
 }
 
 // Test that getting the status of a routine that doesn't exist returns an
@@ -306,6 +396,21 @@ TEST_F(CrosHealthdRoutineServiceImplTest, AccessStoppedRoutine) {
   VerifyNonInteractiveUpdate(update->routine_update_union,
                              mojo_ipc::DiagnosticRoutineStatusEnum::kError,
                              kRoutineDoesNotExistStatusMessage);
+}
+
+// Test that an unsupported routine cannot be run.
+TEST_F(CrosHealthdRoutineServiceImplTest, RunUnsupportedRoutine) {
+  mock_context()->fake_system_config()->SetSmartCtrlSupported(false);
+  CreateService();
+  routine_factory()->SetNonInteractiveStatus(
+      mojo_ipc::DiagnosticRoutineStatusEnum::kUnsupported,
+      /*status_message=*/"", /*progress_percent=*/0,
+      /*output=*/"");
+  mojo_ipc::RunRoutineResponse response;
+  service()->RunSmartctlCheckRoutine(&response.id, &response.status);
+  EXPECT_EQ(response.id, mojo_ipc::kFailedToStartId);
+  EXPECT_EQ(response.status,
+            mojo_ipc::DiagnosticRoutineStatusEnum::kUnsupported);
 }
 
 // Tests for the GetRoutineUpdate() method of RoutineService with different

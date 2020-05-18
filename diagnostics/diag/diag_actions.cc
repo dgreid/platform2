@@ -59,7 +59,8 @@ const struct {
     {"Cancelled", mojo_ipc::DiagnosticRoutineStatusEnum::kCancelled},
     {"Failed to start", mojo_ipc::DiagnosticRoutineStatusEnum::kFailedToStart},
     {"Removed", mojo_ipc::DiagnosticRoutineStatusEnum::kRemoved},
-    {"Cancelling", mojo_ipc::DiagnosticRoutineStatusEnum::kCancelling}};
+    {"Cancelling", mojo_ipc::DiagnosticRoutineStatusEnum::kCancelling},
+    {"Unsupported", mojo_ipc::DiagnosticRoutineStatusEnum::kUnsupported}};
 
 const struct {
   const char* readable_user_message;

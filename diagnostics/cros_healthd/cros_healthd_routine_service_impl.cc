@@ -28,17 +28,19 @@ void SetErrorRoutineUpdate(const std::string& status_message,
 }  // namespace
 
 CrosHealthdRoutineServiceImpl::CrosHealthdRoutineServiceImpl(
-    DebugdAdapter* debugd_adapter, CrosHealthdRoutineFactory* routine_factory)
-    : debugd_adapter_(debugd_adapter), routine_factory_(routine_factory) {
-  DCHECK(debugd_adapter_);
+    Context* context, CrosHealthdRoutineFactory* routine_factory)
+    : context_(context), routine_factory_(routine_factory) {
+  DCHECK(context_);
   DCHECK(routine_factory_);
+  PopulateAvailableRoutines();
 }
 
 CrosHealthdRoutineServiceImpl::~CrosHealthdRoutineServiceImpl() = default;
 
 std::vector<mojo_ipc::DiagnosticRoutineEnum>
 CrosHealthdRoutineServiceImpl::GetAvailableRoutines() {
-  return available_routines_;
+  return std::vector<mojo_ipc::DiagnosticRoutineEnum>(
+      available_routines_.begin(), available_routines_.end());
 }
 
 void CrosHealthdRoutineServiceImpl::RunBatteryCapacityRoutine(
@@ -47,7 +49,7 @@ void CrosHealthdRoutineServiceImpl::RunBatteryCapacityRoutine(
     int32_t* id,
     mojo_ipc::DiagnosticRoutineStatusEnum* status) {
   RunRoutine(routine_factory_->MakeBatteryCapacityRoutine(low_mah, high_mah),
-             id, status);
+             mojo_ipc::DiagnosticRoutineEnum::kBatteryCapacity, id, status);
 }
 
 void CrosHealthdRoutineServiceImpl::RunBatteryHealthRoutine(
@@ -57,19 +59,21 @@ void CrosHealthdRoutineServiceImpl::RunBatteryHealthRoutine(
     mojo_ipc::DiagnosticRoutineStatusEnum* status) {
   RunRoutine(routine_factory_->MakeBatteryHealthRoutine(
                  maximum_cycle_count, percent_battery_wear_allowed),
-             id, status);
+             mojo_ipc::DiagnosticRoutineEnum::kBatteryHealth, id, status);
 }
 
 void CrosHealthdRoutineServiceImpl::RunUrandomRoutine(
     uint32_t length_seconds,
     int32_t* id,
     mojo_ipc::DiagnosticRoutineStatusEnum* status) {
-  RunRoutine(routine_factory_->MakeUrandomRoutine(length_seconds), id, status);
+  RunRoutine(routine_factory_->MakeUrandomRoutine(length_seconds),
+             mojo_ipc::DiagnosticRoutineEnum::kUrandom, id, status);
 }
 
 void CrosHealthdRoutineServiceImpl::RunSmartctlCheckRoutine(
     int32_t* id, mojo_ipc::DiagnosticRoutineStatusEnum* status) {
-  RunRoutine(routine_factory_->MakeSmartctlCheckRoutine(), id, status);
+  RunRoutine(routine_factory_->MakeSmartctlCheckRoutine(),
+             mojo_ipc::DiagnosticRoutineEnum::kSmartctlCheck, id, status);
 }
 
 void CrosHealthdRoutineServiceImpl::RunAcPowerRoutine(
@@ -79,21 +83,23 @@ void CrosHealthdRoutineServiceImpl::RunAcPowerRoutine(
     mojo_ipc::DiagnosticRoutineStatusEnum* status) {
   RunRoutine(routine_factory_->MakeAcPowerRoutine(expected_status,
                                                   expected_power_type),
-             id, status);
+             mojo_ipc::DiagnosticRoutineEnum::kAcPower, id, status);
 }
 
 void CrosHealthdRoutineServiceImpl::RunCpuCacheRoutine(
     base::TimeDelta exec_duration,
     int32_t* id,
     mojo_ipc::DiagnosticRoutineStatusEnum* status) {
-  RunRoutine(routine_factory_->MakeCpuCacheRoutine(exec_duration), id, status);
+  RunRoutine(routine_factory_->MakeCpuCacheRoutine(exec_duration),
+             mojo_ipc::DiagnosticRoutineEnum::kCpuCache, id, status);
 }
 
 void CrosHealthdRoutineServiceImpl::RunCpuStressRoutine(
     base::TimeDelta exec_duration,
     int32_t* id,
     mojo_ipc::DiagnosticRoutineStatusEnum* status) {
-  RunRoutine(routine_factory_->MakeCpuStressRoutine(exec_duration), id, status);
+  RunRoutine(routine_factory_->MakeCpuStressRoutine(exec_duration),
+             mojo_ipc::DiagnosticRoutineEnum::kCpuStress, id, status);
 }
 
 void CrosHealthdRoutineServiceImpl::RunFloatingPointAccuracyRoutine(
@@ -101,25 +107,26 @@ void CrosHealthdRoutineServiceImpl::RunFloatingPointAccuracyRoutine(
     int32_t* id,
     mojo_ipc::DiagnosticRoutineStatusEnum* status) {
   RunRoutine(routine_factory_->MakeFloatingPointAccuracyRoutine(exec_duration),
-             id, status);
+             mojo_ipc::DiagnosticRoutineEnum::kFloatingPointAccuracy, id,
+             status);
 }
 
 void CrosHealthdRoutineServiceImpl::RunNvmeWearLevelRoutine(
     uint32_t wear_level_threshold,
     int32_t* id,
     mojo_ipc::DiagnosticRoutineStatusEnum* status) {
-  RunRoutine(routine_factory_->MakeNvmeWearLevelRoutine(debugd_adapter_,
-                                                        wear_level_threshold),
-             id, status);
+  RunRoutine(routine_factory_->MakeNvmeWearLevelRoutine(
+                 context_->debugd_adapter(), wear_level_threshold),
+             mojo_ipc::DiagnosticRoutineEnum::kNvmeWearLevel, id, status);
 }
 
 void CrosHealthdRoutineServiceImpl::RunNvmeSelfTestRoutine(
     mojo_ipc::NvmeSelfTestTypeEnum nvme_self_test_type,
     int32_t* id,
     mojo_ipc::DiagnosticRoutineStatusEnum* status) {
-  RunRoutine(routine_factory_->MakeNvmeSelfTestRoutine(debugd_adapter_,
-                                                       nvme_self_test_type),
-             id, status);
+  RunRoutine(routine_factory_->MakeNvmeSelfTestRoutine(
+                 context_->debugd_adapter(), nvme_self_test_type),
+             mojo_ipc::DiagnosticRoutineEnum::kNvmeSelfTest, id, status);
 }
 
 void CrosHealthdRoutineServiceImpl::RunDiskReadRoutine(
@@ -130,7 +137,7 @@ void CrosHealthdRoutineServiceImpl::RunDiskReadRoutine(
     mojo_ipc::DiagnosticRoutineStatusEnum* status) {
   RunRoutine(
       routine_factory_->MakeDiskReadRoutine(type, exec_duration, file_size_mb),
-      id, status);
+      mojo_ipc::DiagnosticRoutineEnum::kDiskRead, id, status);
 }
 
 void CrosHealthdRoutineServiceImpl::RunPrimeSearchRoutine(
@@ -139,7 +146,7 @@ void CrosHealthdRoutineServiceImpl::RunPrimeSearchRoutine(
     int32_t* id,
     mojo_ipc::DiagnosticRoutineStatusEnum* status) {
   RunRoutine(routine_factory_->MakePrimeSearchRoutine(exec_duration, max_num),
-             id, status);
+             mojo_ipc::DiagnosticRoutineEnum::kPrimeSearch, id, status);
 }
 
 void CrosHealthdRoutineServiceImpl::RunBatteryDischargeRoutine(
@@ -149,7 +156,7 @@ void CrosHealthdRoutineServiceImpl::RunBatteryDischargeRoutine(
     MojomCrosHealthdDiagnosticRoutineStatusEnum* status) {
   RunRoutine(routine_factory_->MakeBatteryDischargeRoutine(
                  exec_duration, maximum_discharge_percent_allowed),
-             id, status);
+             mojo_ipc::DiagnosticRoutineEnum::kBatteryDischarge, id, status);
 }
 
 void CrosHealthdRoutineServiceImpl::GetRoutineUpdate(
@@ -191,11 +198,19 @@ void CrosHealthdRoutineServiceImpl::GetRoutineUpdate(
 
 void CrosHealthdRoutineServiceImpl::RunRoutine(
     std::unique_ptr<DiagnosticRoutine> routine,
+    mojo_ipc::DiagnosticRoutineEnum routine_enum,
     int32_t* id_out,
     mojo_ipc::DiagnosticRoutineStatusEnum* status) {
   DCHECK(routine);
   DCHECK(id_out);
   DCHECK(status);
+
+  if (!available_routines_.count(routine_enum)) {
+    *status = mojo_ipc::DiagnosticRoutineStatusEnum::kUnsupported;
+    *id_out = mojo_ipc::kFailedToStartId;
+    LOG(ERROR) << routine_enum << " is not supported on this device";
+    return;
+  }
 
   CHECK(next_id_ < std::numeric_limits<int32_t>::max())
       << "Maximum number of routines exceeded.";
@@ -208,6 +223,35 @@ void CrosHealthdRoutineServiceImpl::RunRoutine(
 
   *id_out = id;
   *status = active_routines_[id]->GetStatus();
+}
+
+void CrosHealthdRoutineServiceImpl::PopulateAvailableRoutines() {
+  // Routines that are supported on all devices.
+  available_routines_ = {
+      mojo_ipc::DiagnosticRoutineEnum::kUrandom,
+      mojo_ipc::DiagnosticRoutineEnum::kAcPower,
+      mojo_ipc::DiagnosticRoutineEnum::kCpuCache,
+      mojo_ipc::DiagnosticRoutineEnum::kCpuStress,
+      mojo_ipc::DiagnosticRoutineEnum::kFloatingPointAccuracy,
+      mojo_ipc::DiagnosticRoutineEnum::kDiskRead,
+      mojo_ipc::DiagnosticRoutineEnum::kPrimeSearch};
+
+  if (context_->system_config()->HasBattery()) {
+    available_routines_.insert(
+        mojo_ipc::DiagnosticRoutineEnum::kBatteryCapacity);
+    available_routines_.insert(mojo_ipc::DiagnosticRoutineEnum::kBatteryHealth);
+    available_routines_.insert(
+        mojo_ipc::DiagnosticRoutineEnum::kBatteryDischarge);
+  }
+
+  if (context_->system_config()->NvmeSupported()) {
+    available_routines_.insert(mojo_ipc::DiagnosticRoutineEnum::kNvmeWearLevel);
+    available_routines_.insert(mojo_ipc::DiagnosticRoutineEnum::kNvmeSelfTest);
+  }
+
+  if (context_->system_config()->SmartCtlSupported()) {
+    available_routines_.insert(mojo_ipc::DiagnosticRoutineEnum::kSmartctlCheck);
+  }
 }
 
 }  // namespace diagnostics

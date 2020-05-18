@@ -62,6 +62,10 @@ bool GetGrpcStatusFromMojoStatus(
         kCancelling:
       *grpc_status_out = grpc_api::ROUTINE_STATUS_CANCELLING;
       return true;
+    case chromeos::cros_healthd::mojom::DiagnosticRoutineStatusEnum::
+        kUnsupported:
+      *grpc_status_out = grpc_api::ROUTINE_STATUS_ERROR;
+      return true;
   }
   LOG(ERROR) << "Unknown mojo routine status: "
              << static_cast<int>(mojo_status);

@@ -26,8 +26,6 @@ using ::chromeos::cros_healthd::mojom::BacklightResultPtr;
 using ::chromeos::cros_healthd::mojom::ErrorType;
 using ::testing::UnorderedElementsAreArray;
 
-constexpr char kBacklightPropertiesPath[] = "/cros-healthd/backlight";
-constexpr char kHasBacklightProperty[] = "has-backlight";
 constexpr char kRelativeBacklightDirectoryPath[] = "sys/class/backlight";
 constexpr char kBrightnessFileName[] = "brightness";
 constexpr char kMaxBrightnessFileName[] = "max_brightness";
@@ -77,9 +75,8 @@ class BacklightUtilsTest : public ::testing::Test {
     return backlight_fetcher_.FetchBacklightInfo(root_dir);
   }
 
-  void SetHasBacklightString(const std::string& val) {
-    mock_context_.fake_cros_config()->SetString(kBacklightPropertiesPath,
-                                                kHasBacklightProperty, val);
+  void SetHasBacklight(const bool val) {
+    mock_context_.fake_system_config()->SetHasBacklight(val);
   }
 
  private:
@@ -226,7 +223,7 @@ TEST_F(BacklightUtilsTest,
 // Test that we return an empty BacklightInfo list when cros_config says it
 // doesn't exist.
 TEST_F(BacklightUtilsTest, TestCrosConfigReportsNoBacklight) {
-  SetHasBacklightString("false");
+  SetHasBacklight(false);
 
   auto backlight_result = FetchBacklightInfo(GetTempDirPath());
   ASSERT_TRUE(backlight_result->is_backlight_info());

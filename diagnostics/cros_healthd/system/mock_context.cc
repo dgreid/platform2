@@ -30,7 +30,7 @@ bool MockContext::Initialize() {
   debugd_adapter_ = std::make_unique<testing::StrictMock<MockDebugdAdapter>>();
   power_manager_proxy_ = mock_power_manager_proxy_.get();
   powerd_adapter_ = std::make_unique<FakePowerdAdapter>();
-  cros_config_ = std::make_unique<brillo::FakeCrosConfig>();
+  system_config_ = std::make_unique<FakeSystemConfig>();
 
   return true;
 }
@@ -57,8 +57,8 @@ FakePowerdAdapter* MockContext::fake_powerd_adapter() const {
   return static_cast<FakePowerdAdapter*>(powerd_adapter_.get());
 }
 
-brillo::FakeCrosConfig* MockContext::fake_cros_config() const {
-  return static_cast<brillo::FakeCrosConfig*>(cros_config_.get());
+FakeSystemConfig* MockContext::fake_system_config() const {
+  return static_cast<FakeSystemConfig*>(system_config_.get());
 }
 
 }  // namespace diagnostics

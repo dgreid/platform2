@@ -12,6 +12,7 @@
 #include "diagnostics/common/system/bluetooth_client_impl.h"
 #include "diagnostics/common/system/debugd_adapter_impl.h"
 #include "diagnostics/common/system/powerd_adapter_impl.h"
+#include "diagnostics/cros_healthd/system/system_config.h"
 
 namespace diagnostics {
 
@@ -39,11 +40,14 @@ bool Context::Initialize() {
   powerd_adapter_ = std::make_unique<PowerdAdapterImpl>(dbus_bus_);
 
   cros_config_ = std::make_unique<brillo::CrosConfig>();
+
   // Init should always succeed on unibuild boards.
   if (!static_cast<brillo::CrosConfig*>(cros_config_.get())->Init()) {
-    LOG(ERROR) << "Initializing cros_config failed.";
+    LOG(ERROR) << "Unable to initialize cros_config";
     return false;
   }
+
+  system_config_ = std::make_unique<SystemConfig>(cros_config_.get());
 
   return true;
 }
@@ -68,8 +72,8 @@ PowerdAdapter* Context::powerd_adapter() const {
   return powerd_adapter_.get();
 }
 
-brillo::CrosConfigInterface* Context::cros_config() const {
-  return cros_config_.get();
+SystemConfigInterface* Context::system_config() const {
+  return system_config_.get();
 }
 
 }  // namespace diagnostics

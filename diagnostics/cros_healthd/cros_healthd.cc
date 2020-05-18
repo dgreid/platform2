@@ -50,7 +50,7 @@ CrosHealthd::CrosHealthd()
   power_events_ = std::make_unique<PowerEventsImpl>(&context_);
 
   routine_service_ = std::make_unique<CrosHealthdRoutineServiceImpl>(
-      context_.debugd_adapter(), &routine_factory_impl_);
+      &context_, &routine_factory_impl_);
 
   mojo_service_ = std::make_unique<CrosHealthdMojoService>(
       backlight_fetcher_.get(), battery_fetcher_.get(),

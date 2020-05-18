@@ -37,18 +37,6 @@ namespace {
 
 namespace mojo_ipc = ::chromeos::cros_healthd::mojom;
 
-// The path used to check a device's master configuration hardware properties.
-constexpr char kHardwarePropertiesPath[] = "/hardware-properties";
-// The master configuration property that specifies a device's PSU type.
-constexpr char kPsuTypeProperty[] = "psu-type";
-
-// The path used to check a device's master configuration cros_healthd battery
-// properties.
-constexpr char kBatteryPropertiesPath[] = "/cros-healthd/battery";
-// The master configuration property that indicates whether a device has Smart
-// Battery info.
-constexpr char kHasSmartBatteryInfoProperty[] = "has-smart-battery-info";
-
 // The name of the Smart Battery manufacture date metric.
 constexpr char kManufactureDateSmart[] = "manufacture_date_smart";
 // The name of the Smart Battery temperature metric.
@@ -82,7 +70,7 @@ BatteryFetcher::BatteryFetcher(Context* context) : context_(context) {
 BatteryFetcher::~BatteryFetcher() = default;
 
 mojo_ipc::BatteryResultPtr BatteryFetcher::FetchBatteryInfo() {
-  if (!HasBattery())
+  if (!context_->system_config()->HasBattery())
     return mojo_ipc::BatteryResult::NewBatteryInfo(mojo_ipc::BatteryInfoPtr());
 
   mojo_ipc::BatteryInfo info;
@@ -101,7 +89,7 @@ mojo_ipc::BatteryResultPtr BatteryFetcher::FetchBatteryInfo() {
     return mojo_ipc::BatteryResult::NewError(std::move(error.value()));
   }
 
-  if (HasSmartBatteryInfo()) {
+  if (context_->system_config()->HasSmartBattery()) {
     error = PopulateSmartBatteryInfo(&info);
     if (error.has_value()) {
       return mojo_ipc::BatteryResult::NewError(std::move(error.value()));
@@ -213,21 +201,6 @@ base::Optional<mojo_ipc::ProbeErrorPtr> BatteryFetcher::GetSmartBatteryMetric(
   }
 
   return base::nullopt;
-}
-
-bool BatteryFetcher::HasBattery() {
-  std::string psu_type;
-  context_->cros_config()->GetString(kHardwarePropertiesPath, kPsuTypeProperty,
-                                     &psu_type);
-  return psu_type != "AC_only";
-}
-
-bool BatteryFetcher::HasSmartBatteryInfo() {
-  std::string has_smart_battery_info;
-  context_->cros_config()->GetString(kBatteryPropertiesPath,
-                                     kHasSmartBatteryInfoProperty,
-                                     &has_smart_battery_info);
-  return has_smart_battery_info == "true";
 }
 
 }  // namespace diagnostics

@@ -32,18 +32,6 @@ using ::testing::WithArg;
 
 namespace {
 
-// The path used to check a device's master configuration hardware properties.
-constexpr char kHardwarePropertiesPath[] = "/hardware-properties";
-// The master configuration property that specifies a device's PSU type.
-constexpr char kPsuTypeProperty[] = "psu-type";
-
-// The path used to check a device's master configuration cros_healthd battery
-// properties.
-constexpr char kBatteryPropertiesPath[] = "/cros-healthd/battery";
-// The master configuration property that indicates whether a device has Smart
-// Battery info.
-constexpr char kHasSmartBatteryInfoProperty[] = "has-smart-battery-info";
-
 // Arbitrary test values for the various battery metrics.
 constexpr power_manager::PowerSupplyProperties_BatteryState kBatteryStateFull =
     power_manager::PowerSupplyProperties_BatteryState_FULL;
@@ -82,7 +70,7 @@ class BatteryUtilsTest : public ::testing::Test {
 
   void SetUp() override {
     ASSERT_TRUE(mock_context_.Initialize());
-    SetHasSmartBatteryInfo("true");
+    SetHasSmartBatteryInfo(true);
   }
 
   BatteryFetcher* battery_fetcher() { return &battery_fetcher_; }
@@ -95,15 +83,12 @@ class BatteryUtilsTest : public ::testing::Test {
     return mock_context_.mock_power_manager_proxy();
   }
 
-  void SetPsuType(const std::string& type) {
-    mock_context_.fake_cros_config()->SetString(kHardwarePropertiesPath,
-                                                kPsuTypeProperty, type);
+  void SetHasBattery(const bool value) {
+    mock_context_.fake_system_config()->SetHasBattery(value);
   }
 
-  void SetHasSmartBatteryInfo(const std::string& has_smart_battery_info) {
-    mock_context_.fake_cros_config()->SetString(kBatteryPropertiesPath,
-                                                kHasSmartBatteryInfoProperty,
-                                                has_smart_battery_info);
+  void SetHasSmartBatteryInfo(const bool value) {
+    mock_context_.fake_system_config()->SetHasSmartBattery(value);
   }
 
  private:
@@ -314,7 +299,7 @@ TEST_F(BatteryUtilsTest, SmartMetricRegexFailure) {
 // Test that Smart Battery metrics are not fetched when a device does not have a
 // Smart Battery.
 TEST_F(BatteryUtilsTest, NoSmartBattery) {
-  SetHasSmartBatteryInfo("false");
+  SetHasSmartBatteryInfo(false);
 
   // Set the mock power manager response.
   power_manager::PowerSupplyProperties power_supply_proto;
@@ -339,7 +324,7 @@ TEST_F(BatteryUtilsTest, NoSmartBattery) {
 
 // Test that no battery info is returned when a device does not have a battery.
 TEST_F(BatteryUtilsTest, NoBattery) {
-  SetPsuType("AC_only");
+  SetHasBattery(false);
   auto battery_result = battery_fetcher()->FetchBatteryInfo();
   ASSERT_TRUE(battery_result->get_battery_info().is_null());
 }

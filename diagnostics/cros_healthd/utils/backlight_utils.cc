@@ -21,8 +21,6 @@ namespace {
 
 namespace mojo_ipc = ::chromeos::cros_healthd::mojom;
 
-constexpr char kBacklightPropertiesPath[] = "/cros-healthd/backlight";
-constexpr char kHasBacklightProperty[] = "has-backlight";
 constexpr char kRelativeBacklightDirectoryPath[] = "sys/class/backlight";
 
 // Fetches backlight information for a specific sysfs path. On success,
@@ -64,10 +62,7 @@ mojo_ipc::BacklightResultPtr BacklightFetcher::FetchBacklightInfo(
     const base::FilePath& root) {
   std::vector<mojo_ipc::BacklightInfoPtr> backlights;
 
-  std::string has_backlight;
-  context_->cros_config()->GetString(kBacklightPropertiesPath,
-                                     kHasBacklightProperty, &has_backlight);
-  if (has_backlight == "false")
+  if (!context_->system_config()->HasBacklight())
     return mojo_ipc::BacklightResult::NewBacklightInfo(std::move(backlights));
 
   base::FileEnumerator backlight_dirs(

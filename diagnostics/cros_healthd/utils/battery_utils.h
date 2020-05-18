@@ -55,13 +55,6 @@ class BatteryFetcher {
           convert_string_to_num,
       T* metric_value);
 
-  // Returns true if the device's config indicates the device has a battery.
-  bool HasBattery();
-
-  // Returns true if the device's config indicates the device has Smart Battery
-  // info.
-  bool HasSmartBatteryInfo();
-
   // Unowned pointer that outlives this BatteryFetcher instance.
   Context* const context_ = nullptr;
 };

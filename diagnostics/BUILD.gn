@@ -21,6 +21,7 @@ group("all") {
       "//diagnostics/common:libcommon_test",
       "//diagnostics/cros_healthd:cros_healthd_test",
       "//diagnostics/cros_healthd/events:libcros_healthd_events_test",
+      "//diagnostics/cros_healthd/system:system_config_test",
       "//diagnostics/cros_healthd/utils:libcros_healthd_utils_test",
       "//diagnostics/cros_healthd_mojo_adapter:cros_healthd_mojo_adapter_test",
       "//diagnostics/grpc_async_adapter:libgrpc_async_adapter_test",

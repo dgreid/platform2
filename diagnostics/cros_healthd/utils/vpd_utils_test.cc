@@ -20,8 +20,6 @@ namespace {
 using ::chromeos::cros_healthd::mojom::CachedVpdResultPtr;
 using ::chromeos::cros_healthd::mojom::ErrorType;
 
-const char kCachedVpdPropertiesPath[] = "/cros-healthd/cached-vpd";
-const char kHasSkuNumberProperty[] = "has-sku-number";
 const char kRelativeSKUNumberPath[] = "sys/firmware/vpd/ro/sku_number";
 const char kFakeSKUNumber[] = "ABCD&^A";
 
@@ -47,9 +45,8 @@ class VpdUtilsTest : public ::testing::Test {
     return cached_vpd_fetcher_.FetchCachedVpdInfo(root_dir);
   }
 
-  void SetHasSkuNumberString(const std::string& val) {
-    mock_context_.fake_cros_config()->SetString(kCachedVpdPropertiesPath,
-                                                kHasSkuNumberProperty, val);
+  void SetHasSkuNumber(const bool val) {
+    mock_context_.fake_system_config()->SetHasSkuNumberProperty(val);
   }
 
  private:
@@ -63,7 +60,7 @@ TEST_F(VpdUtilsTest, TestFetchCachedVpdInfo) {
   base::FilePath root_dir = GetTempDirPath();
   EXPECT_TRUE(WriteFileAndCreateParentDirs(
       root_dir.Append(kRelativeSKUNumberPath), kFakeSKUNumber));
-  SetHasSkuNumberString("true");
+  SetHasSkuNumber(true);
   auto vpd_result = FetchCachedVpdInfo(root_dir);
   ASSERT_TRUE(vpd_result->is_vpd_info());
   const auto& vpd_info = vpd_result->get_vpd_info();
@@ -73,7 +70,7 @@ TEST_F(VpdUtilsTest, TestFetchCachedVpdInfo) {
 
 // Test that reading cached VPD info that does not exist returns an error.
 TEST_F(VpdUtilsTest, TestFetchCachedVpdInfoNoFile) {
-  SetHasSkuNumberString("true");
+  SetHasSkuNumber(true);
   auto vpd_result = FetchCachedVpdInfo(GetTempDirPath());
   ASSERT_TRUE(vpd_result->is_error());
   EXPECT_EQ(vpd_result->get_error()->type, ErrorType::kFileReadError);
@@ -82,6 +79,7 @@ TEST_F(VpdUtilsTest, TestFetchCachedVpdInfoNoFile) {
 // Test that no sku_number is returned when the device does not have a SKU
 // number.
 TEST_F(VpdUtilsTest, TestFetchCachedVpdInfoNoSkuNumber) {
+  SetHasSkuNumber(false);
   auto vpd_result = FetchCachedVpdInfo(base::FilePath());
   ASSERT_TRUE(vpd_result->is_vpd_info());
   const auto& vpd_info = vpd_result->get_vpd_info();

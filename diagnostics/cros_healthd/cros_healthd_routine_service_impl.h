@@ -7,14 +7,15 @@
 
 #include <map>
 #include <memory>
+#include <set>
 #include <string>
 #include <vector>
 
 #include <base/optional.h>
 
-#include "diagnostics/common/system/debugd_adapter_impl.h"
 #include "diagnostics/cros_healthd/cros_healthd_routine_factory.h"
 #include "diagnostics/cros_healthd/cros_healthd_routine_service.h"
+#include "diagnostics/cros_healthd/system/context.h"
 #include "diagnostics/routines/diag_routine.h"
 #include "mojo/cros_healthd.mojom.h"
 
@@ -23,7 +24,7 @@ namespace diagnostics {
 // Production implementation of the CrosHealthdRoutineService interface.
 class CrosHealthdRoutineServiceImpl final : public CrosHealthdRoutineService {
  public:
-  CrosHealthdRoutineServiceImpl(DebugdAdapter* debugd_adapter,
+  CrosHealthdRoutineServiceImpl(Context* context,
                                 CrosHealthdRoutineFactory* routine_factory);
   CrosHealthdRoutineServiceImpl(const CrosHealthdRoutineServiceImpl&) = delete;
   CrosHealthdRoutineServiceImpl& operator=(
@@ -100,8 +101,13 @@ class CrosHealthdRoutineServiceImpl final : public CrosHealthdRoutineService {
  private:
   void RunRoutine(
       std::unique_ptr<DiagnosticRoutine> routine,
+      chromeos::cros_healthd::mojom::DiagnosticRoutineEnum routine_enum,
       int32_t* id_out,
       chromeos::cros_healthd::mojom::DiagnosticRoutineStatusEnum* status);
+
+  // Checks what routines are supported on the device and populates the member
+  // available_routines_.
+  void PopulateAvailableRoutines();
 
   // Map from IDs to instances of diagnostics routines that have
   // been started.
@@ -111,27 +117,10 @@ class CrosHealthdRoutineServiceImpl final : public CrosHealthdRoutineService {
   int32_t next_id_ = 1;
   // Each of the supported diagnostic routines. Must be kept in sync with the
   // enums in diagnostics/mojo/cros_health_diagnostics.mojom.
-  std::vector<chromeos::cros_healthd::mojom::DiagnosticRoutineEnum>
-      available_routines_{
-          chromeos::cros_healthd::mojom::DiagnosticRoutineEnum::kUrandom,
-          chromeos::cros_healthd::mojom::DiagnosticRoutineEnum::
-              kBatteryCapacity,
-          chromeos::cros_healthd::mojom::DiagnosticRoutineEnum::kBatteryHealth,
-          chromeos::cros_healthd::mojom::DiagnosticRoutineEnum::kSmartctlCheck,
-          chromeos::cros_healthd::mojom::DiagnosticRoutineEnum::kAcPower,
-          chromeos::cros_healthd::mojom::DiagnosticRoutineEnum::kCpuCache,
-          chromeos::cros_healthd::mojom::DiagnosticRoutineEnum::kCpuStress,
-          chromeos::cros_healthd::mojom::DiagnosticRoutineEnum::
-              kFloatingPointAccuracy,
-          chromeos::cros_healthd::mojom::DiagnosticRoutineEnum::kNvmeWearLevel,
-          chromeos::cros_healthd::mojom::DiagnosticRoutineEnum::kNvmeSelfTest,
-          chromeos::cros_healthd::mojom::DiagnosticRoutineEnum::kDiskRead,
-          chromeos::cros_healthd::mojom::DiagnosticRoutineEnum::kPrimeSearch,
-          chromeos::cros_healthd::mojom::DiagnosticRoutineEnum::
-              kBatteryDischarge};
-  // Responsible for making async calls to debugd. Unowned pointer that should
-  // outlive this instance.
-  DebugdAdapter* debugd_adapter_ = nullptr;
+  std::set<chromeos::cros_healthd::mojom::DiagnosticRoutineEnum>
+      available_routines_;
+  // Unowned pointer that should outlive this instance.
+  Context* const context_ = nullptr;
   // Responsible for making the routines. Unowned pointer that should outlive
   // this instance.
   CrosHealthdRoutineFactory* routine_factory_ = nullptr;
