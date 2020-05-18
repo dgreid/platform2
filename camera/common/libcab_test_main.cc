@@ -20,8 +20,6 @@
 
 namespace libcab_test {
 
-// This test should be run against the fake libcam_algo.so created with
-// fake_libcam_algo.cc.
 class CameraAlgorithmBridgeFixture : public testing::Test,
                                      public camera_algorithm_callback_ops_t {
  public:
@@ -30,7 +28,8 @@ class CameraAlgorithmBridgeFixture : public testing::Test,
   CameraAlgorithmBridgeFixture() : req_id_(0) {
     CameraAlgorithmBridgeFixture::return_callback =
         CameraAlgorithmBridgeFixture::ReturnCallbackForwarder;
-    bridge_ = cros::CameraAlgorithmBridge::CreateVendorAlgoInstance();
+    bridge_ = cros::CameraAlgorithmBridge::CreateInstance(
+        cros::CameraAlgorithmBackend::kTest);
     if (!bridge_ || bridge_->Initialize(this) != 0) {
       ADD_FAILURE() << "Failed to initialize camera algorithm bridge";
       return;
@@ -96,7 +95,7 @@ TEST_F(CameraAlgorithmBridgeFixture, BasicOperation) {
   base::SharedMemory shm;
   ASSERT_TRUE(shm.CreateAndMapAnonymous(kShmBufferSize))
       << "Failed to create shared memory";
-  int32_t handle = bridge_->RegisterBuffer(shm.handle().fd);
+  int32_t handle = bridge_->RegisterBuffer(shm.handle().GetHandle());
   ASSERT_LE(0, handle) << "Handle should be of positive value";
   std::vector<uint8_t> req_header(1, REQUEST_TEST_COMMAND_NORMAL);
   Request(req_header, handle);
@@ -116,7 +115,7 @@ TEST_F(CameraAlgorithmBridgeFixture, InvalidFdOrHandle) {
   base::SharedMemory shm;
   ASSERT_TRUE(shm.CreateAndMapAnonymous(kShmBufferSize))
       << "Failed to create shared memory";
-  handle = bridge_->RegisterBuffer(shm.handle().fd);
+  handle = bridge_->RegisterBuffer(shm.handle().GetHandle());
   ASSERT_LE(0, handle) << "Handle should be of positive value";
   std::vector<uint8_t> req_header(1, REQUEST_TEST_COMMAND_NORMAL);
   Request(req_header, handle - 1);
@@ -133,7 +132,7 @@ TEST_F(CameraAlgorithmBridgeFixture, InvalidFdOrHandle) {
   std::vector<int32_t> handles({handle});
   bridge_->DeregisterBuffers(handles);
 
-  int fd = shm.handle().fd;
+  int fd = shm.handle().GetHandle();
   base::SharedMemory::CloseHandle(shm.handle());
   ASSERT_GT(0, bridge_->RegisterBuffer(fd))
       << "Registering invalid fd should have failed";
@@ -147,7 +146,7 @@ TEST_F(CameraAlgorithmBridgeFixture, MultiRequests) {
   for (uint32_t i = 0; i < kNumberOfFds; i++) {
     ASSERT_TRUE(shms[i].CreateAndMapAnonymous(kShmBufferSize))
         << "Failed to create shared memory";
-    handles[i] = bridge_->RegisterBuffer(shms[i].handle().fd);
+    handles[i] = bridge_->RegisterBuffer(shms[i].handle().GetHandle());
     ASSERT_LE(0, handles[i]) << "Handle should be of positive value";
   }
   for (const auto handle : handles) {
@@ -175,13 +174,14 @@ TEST_F(CameraAlgorithmBridgeFixture, DeadLockRecovery) {
   timeout.tv_sec += 1;
   ASSERT_NE(0, sem_timedwait(&return_sem_, &timeout));
   // Reconnect the bridge.
-  bridge_ = cros::CameraAlgorithmBridge::CreateVendorAlgoInstance();
+  bridge_ = cros::CameraAlgorithmBridge::CreateInstance(
+      cros::CameraAlgorithmBackend::kTest);
   ASSERT_NE(nullptr, bridge_);
   ASSERT_EQ(0, bridge_->Initialize(this));
   base::SharedMemory shm;
   ASSERT_TRUE(shm.CreateAndMapAnonymous(kShmBufferSize))
       << "Failed to create shared memory";
-  int32_t handle = bridge_->RegisterBuffer(shm.handle().fd);
+  int32_t handle = bridge_->RegisterBuffer(shm.handle().GetHandle());
   ASSERT_LE(0, handle) << "Handle should be of positive value";
   req_header = std::vector<uint8_t>(1, REQUEST_TEST_COMMAND_NORMAL);
   Request(req_header, handle);
@@ -193,8 +193,6 @@ TEST_F(CameraAlgorithmBridgeFixture, DeadLockRecovery) {
   bridge_->DeregisterBuffers(handles);
 }
 
-// This test should be run against the fake libcam_algo.so created with
-// fake_libcam_algo.cc.
 class CameraAlgorithmBridgeStatusFixture : public CameraAlgorithmBridgeFixture {
  public:
   CameraAlgorithmBridgeStatusFixture() {}

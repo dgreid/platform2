@@ -55,7 +55,7 @@ class CROS_CAMERA_EXPORT CameraMojoChannelManager {
 
   // Create a new CameraAlgorithmOpsPtr.
   virtual mojom::CameraAlgorithmOpsPtr CreateCameraAlgorithmOpsPtr(
-      const std::string& socket_path) = 0;
+      const std::string& socket_path, const std::string& pipe_name) = 0;
 };
 
 }  // namespace cros

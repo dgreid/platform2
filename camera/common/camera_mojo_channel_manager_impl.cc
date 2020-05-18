@@ -152,7 +152,7 @@ bool CameraMojoChannelManagerImpl::CreateJpegEncodeAccelerator(
 
 mojom::CameraAlgorithmOpsPtr
 CameraMojoChannelManagerImpl::CreateCameraAlgorithmOpsPtr(
-    const std::string& socket_path) {
+    const std::string& socket_path, const std::string& pipe_name) {
   VLOGF_ENTER();
   base::AutoLock l(*static_lock_);
 
@@ -166,7 +166,7 @@ CameraMojoChannelManagerImpl::CreateCameraAlgorithmOpsPtr(
 
   base::FilePath socket_file_path(socket_path);
   MojoResult result = cros::CreateMojoChannelToChildByUnixDomainSocket(
-      socket_file_path, &parent_pipe);
+      socket_file_path, &parent_pipe, pipe_name);
   if (result != MOJO_RESULT_OK) {
     LOGF(WARNING) << "Failed to create Mojo Channel to "
                   << socket_file_path.value();

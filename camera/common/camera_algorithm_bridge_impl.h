@@ -28,7 +28,7 @@ namespace cros {
 
 class CameraAlgorithmBridgeImpl : public CameraAlgorithmBridge {
  public:
-  explicit CameraAlgorithmBridgeImpl(const std::string& socket_path);
+  explicit CameraAlgorithmBridgeImpl(CameraAlgorithmBackend backend);
 
   ~CameraAlgorithmBridgeImpl();
 
@@ -68,8 +68,8 @@ class CameraAlgorithmBridgeImpl : public CameraAlgorithmBridge {
 
   void DeregisterBuffersOnIpcThread(std::vector<int32_t> buffer_handles);
 
-  // Name of the socket that the bridge should connect to.
-  const std::string socket_path_;
+  // The algorithm backend this bridge is created for.
+  CameraAlgorithmBackend algo_backend_;
 
   // Return callback registered by HAL
   const camera_algorithm_callback_ops_t* callback_ops_;

@@ -27,27 +27,15 @@
 namespace cros {
 
 // static
-std::unique_ptr<CameraAlgorithmBridge>
-CameraAlgorithmBridge::CreateVendorAlgoInstance() {
+std::unique_ptr<CameraAlgorithmBridge> CameraAlgorithmBridge::CreateInstance(
+    CameraAlgorithmBackend backend) {
   VLOGF_ENTER();
-  return std::make_unique<CameraAlgorithmBridgeImpl>(
-      cros::constants::kCrosCameraAlgoSocketPathString);
-}
-
-// static
-std::unique_ptr<CameraAlgorithmBridge>
-CameraAlgorithmBridge::CreateGPUAlgoInstance() {
-  VLOGF_ENTER();
-  if (access(cros::constants::kCrosCameraGPUAlgoSocketPathString, R_OK) != 0) {
-    return nullptr;
-  }
-  return std::make_unique<CameraAlgorithmBridgeImpl>(
-      cros::constants::kCrosCameraGPUAlgoSocketPathString);
+  return std::make_unique<CameraAlgorithmBridgeImpl>(backend);
 }
 
 CameraAlgorithmBridgeImpl::CameraAlgorithmBridgeImpl(
-    const std::string& socket_path)
-    : socket_path_(socket_path),
+    CameraAlgorithmBackend backend)
+    : algo_backend_(backend),
       callback_ops_(nullptr),
       ipc_thread_("IPC thread") {
   mojo_channel_manager_ = CameraMojoChannelManager::CreateInstance();
@@ -159,8 +147,20 @@ void CameraAlgorithmBridgeImpl::InitializeOnIpcThread(
     DestroyOnIpcThread();
   }
 
-  interface_ptr_ =
-      mojo_channel_manager_->CreateCameraAlgorithmOpsPtr(socket_path_);
+  switch (algo_backend_) {
+    case CameraAlgorithmBackend::kVendorCpu:
+      interface_ptr_ = mojo_channel_manager_->CreateCameraAlgorithmOpsPtr(
+          cros::constants::kCrosCameraAlgoSocketPathString, "vendor_cpu");
+      break;
+    case CameraAlgorithmBackend::kGoogleGpu:
+      interface_ptr_ = mojo_channel_manager_->CreateCameraAlgorithmOpsPtr(
+          cros::constants::kCrosCameraGPUAlgoSocketPathString, "google_gpu");
+      break;
+    case CameraAlgorithmBackend::kTest:
+      interface_ptr_ = mojo_channel_manager_->CreateCameraAlgorithmOpsPtr(
+          cros::constants::kCrosCameraAlgoSocketPathString, "test");
+      break;
+  }
   if (!interface_ptr_) {
     LOGF(ERROR) << "Failed to connect to the server";
     cb.Run(-EAGAIN);

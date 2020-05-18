@@ -5,7 +5,7 @@
 group("all") {
   deps = [
     ":libcab_test",
-    ":libcam_algo",
+    ":libcam_algo_test",
   ]
 }
 
@@ -14,7 +14,7 @@ pkg_config("target_defaults") {
   configs = [ "//camera/build:cros_camera_common" ]
 }
 
-shared_library("libcam_algo") {
+shared_library("libcam_algo_test") {
   sources = [ "//camera/common/fake_libcam_algo.cc" ]
   configs += [ ":target_defaults" ]
 }

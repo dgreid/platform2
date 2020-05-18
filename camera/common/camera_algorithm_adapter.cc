@@ -23,6 +23,24 @@
 
 namespace cros {
 
+namespace {
+
+const char* GetAlgorithmLibraryName(const std::string& pipe_name) {
+  if (pipe_name == "vendor_cpu") {
+    return "libcam_algo.so";
+  }
+  if (pipe_name == "google_gpu") {
+    return "libcam_gpu_algo.so";
+  }
+  if (pipe_name == "test") {
+    return "libcam_algo_test.so";
+  }
+  NOTREACHED() << "Unknown message pipe name: " << pipe_name;
+  return "";
+}
+
+}  // namespace
+
 CameraAlgorithmAdapter::CameraAlgorithmAdapter()
     : algo_impl_(CameraAlgorithmOpsImpl::GetInstance()),
       algo_dll_handle_(nullptr),
@@ -30,29 +48,26 @@ CameraAlgorithmAdapter::CameraAlgorithmAdapter()
 
 CameraAlgorithmAdapter::~CameraAlgorithmAdapter() = default;
 
-void CameraAlgorithmAdapter::Run(std::string mojo_token,
-                                 base::ScopedFD channel,
-                                 const std::string& algo_lib_name) {
+void CameraAlgorithmAdapter::Run(std::string pipe_name,
+                                 base::ScopedFD channel) {
   VLOGF_ENTER();
   auto future = cros::Future<void>::Create(&relay_);
   ipc_lost_cb_ = cros::GetFutureCallback(future);
   ipc_thread_.StartWithOptions(
       base::Thread::Options(base::MessageLoop::TYPE_IO, 0));
   ipc_thread_.task_runner()->PostTask(
-      FROM_HERE, base::Bind(&CameraAlgorithmAdapter::InitializeOnIpcThread,
-                            base::Unretained(this), mojo_token,
-                            base::Passed(&channel), algo_lib_name));
+      FROM_HERE,
+      base::Bind(&CameraAlgorithmAdapter::InitializeOnIpcThread,
+                 base::Unretained(this), pipe_name, base::Passed(&channel)));
   future->Wait(-1);
   ipc_thread_.Stop();
   VLOGF_EXIT();
 }
 
-void CameraAlgorithmAdapter::InitializeOnIpcThread(
-    std::string mojo_token,
-    base::ScopedFD channel,
-    const std::string& algo_lib_name) {
+void CameraAlgorithmAdapter::InitializeOnIpcThread(std::string pipe_name,
+                                                   base::ScopedFD channel) {
   DCHECK(ipc_thread_.task_runner()->BelongsToCurrentThread());
-  VLOGF(1) << "Setting up message pipe";
+  VLOGF(1) << "Setting up message pipe, name: " << pipe_name;
   mojo::core::Init();
   ipc_support_ = std::make_unique<mojo::core::ScopedIPCSupport>(
       ipc_thread_.task_runner(),
@@ -60,10 +75,11 @@ void CameraAlgorithmAdapter::InitializeOnIpcThread(
   mojo::IncomingInvitation invitation = mojo::IncomingInvitation::Accept(
       mojo::PlatformChannelEndpoint(mojo::PlatformHandle(std::move(channel))));
   mojom::CameraAlgorithmOpsRequest request(
-      invitation.ExtractMessagePipe(mojo_token));
+      invitation.ExtractMessagePipe(pipe_name));
 
   VLOGF_ENTER();
-  algo_dll_handle_ = dlopen(algo_lib_name.c_str(), RTLD_NOW);
+  const char* algo_lib_name = GetAlgorithmLibraryName(pipe_name);
+  algo_dll_handle_ = dlopen(algo_lib_name, RTLD_NOW);
   if (!algo_dll_handle_) {
     LOGF(ERROR) << "Failed to dlopen: " << dlerror();
     DestroyOnIpcThread();

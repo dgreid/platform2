@@ -49,7 +49,7 @@ class CameraMojoChannelManagerImpl final : public CameraMojoChannelManager {
   // This API uses domain socket to connect to the Algo adapter as a parent to
   // create Mojo channel, and then return mojom::CameraAlgorithmOpsPtr.
   mojom::CameraAlgorithmOpsPtr CreateCameraAlgorithmOpsPtr(
-      const std::string& socket_path) final;
+      const std::string& socket_path, const std::string& pipe_name) final;
 
  protected:
   friend class CameraMojoChannelManager;

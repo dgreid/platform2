@@ -17,6 +17,16 @@
 
 namespace cros {
 
+// Specifies the backend algorithm service that will be connected through IPC.
+enum class CameraAlgorithmBackend {
+  // Platform-specific 3A and extra algorithms running on CPU.
+  kVendorCpu,
+  // Google camera algorithms using GPU, e.g. Portrait Mode.
+  kGoogleGpu,
+  // For testing.
+  kTest,
+};
+
 // The class is for a camera HAL to access camera algorithm library.
 //
 // The class is thread-safe.
@@ -24,7 +34,7 @@ namespace cros {
 // Example usage:
 //
 //  #include <cros-camera/camera_algorithm_bridge.h>
-//  auto algo = CameraAlgorithmBridge::CreateVendorAlgoInstance();
+//  auto algo = CameraAlgorithmBridge::CreateInstance(backend);
 //  algo->Initialize(this);
 //  std::vector<int32_t> handles(2);
 //  handles[0] = algo->RegisterBuffer(buffer_fd0);
@@ -42,14 +52,8 @@ class CROS_CAMERA_EXPORT CameraAlgorithmBridge {
   //
   // Returns:
   //    Unique pointer to instance on success; nullptr on failure.
-  static std::unique_ptr<CameraAlgorithmBridge> CreateVendorAlgoInstance();
-
-  // This method creates and returns the CameraAlgorithmBridge instance of
-  // algorithms using GPU.
-  //
-  // Returns:
-  //    Unique pointer to instance on success; nullptr on failure.
-  static std::unique_ptr<CameraAlgorithmBridge> CreateGPUAlgoInstance();
+  static std::unique_ptr<CameraAlgorithmBridge> CreateInstance(
+      CameraAlgorithmBackend backend);
 
   virtual ~CameraAlgorithmBridge() {}
 

@@ -85,12 +85,6 @@ bool IsRecoverableError(int err) {
          errno == ENOMEM || errno == ENOBUFS;
 }
 
-std::string GenerateRandomToken() {
-  char random_bytes[16];
-  base::RandBytes(random_bytes, 16);
-  return base::HexEncode(random_bytes, 16);
-}
-
 }  // namespace
 
 bool CreateServerUnixDomainSocket(const base::FilePath& socket_path,
@@ -231,7 +225,8 @@ MojoResult CreateMojoChannelToParentByUnixDomainSocket(
 
 MojoResult CreateMojoChannelToChildByUnixDomainSocket(
     const base::FilePath& socket_path,
-    mojo::ScopedMessagePipeHandle* parent_pipe) {
+    mojo::ScopedMessagePipeHandle* parent_pipe,
+    const std::string& pipe_name) {
   base::ScopedFD client_socket_fd = CreateClientUnixDomainSocket(socket_path);
   if (!client_socket_fd.is_valid()) {
     LOGF(WARNING) << "Failed to connect to " << socket_path.value();
@@ -242,25 +237,24 @@ MojoResult CreateMojoChannelToChildByUnixDomainSocket(
   mojo::OutgoingInvitation invitation;
   mojo::PlatformChannel channel;
 
-  const std::string token = GenerateRandomToken();
   mojo::ScopedMessagePipeHandle message_pipe =
-      invitation.AttachMessagePipe(token);
+      invitation.AttachMessagePipe(pipe_name);
   mojo::OutgoingInvitation::Send(std::move(invitation),
                                  base::kNullProcessHandle,
                                  channel.TakeLocalEndpoint());
-  VLOGF(1) << "Invitation sent, token: " << token;
+  VLOGF(1) << "Invitation sent, message pipe: " << pipe_name;
 
   std::vector<base::ScopedFD> handles;
   handles.emplace_back(
       channel.TakeRemoteEndpoint().TakePlatformHandle().TakeFD());
 
-  struct iovec iov = {const_cast<char*>(token.data()), token.size()};
+  struct iovec iov = {const_cast<char*>(pipe_name.data()), pipe_name.size()};
   if (mojo::SendmsgWithHandles(client_socket_fd.get(), &iov, 1, handles) ==
       -1) {
-    PLOGF(ERROR) << "Failed to send token and handle";
+    PLOGF(ERROR) << "Failed to send message and handle";
     return MOJO_RESULT_INTERNAL;
   }
-  VLOGF(1) << "Token and handle sent";
+  VLOGF(1) << "Message and handle sent";
 
   *parent_pipe = std::move(message_pipe);
   return MOJO_RESULT_OK;

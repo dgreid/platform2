@@ -53,7 +53,7 @@ int main(int argc, char** argv) {
       (FLAGS_type == "vendor")
           ? cros::constants::kCrosCameraAlgoSocketPathString
           : cros::constants::kCrosCameraGPUAlgoSocketPathString);
-  // Creat unix socket to receive the adapter token and connection handle
+  // Create unix socket to receive the adapter token and connection handle
   int fd = -1;
   if (!cros::CreateServerUnixDomainSocket(socket_file_path, &fd)) {
     LOGF(ERROR) << "CreateSreverUnixDomainSocket failed";
@@ -80,10 +80,10 @@ int main(int argc, char** argv) {
       LOGF(ERROR) << "Failed to accept client connect request";
       return EXIT_FAILURE;
     }
-    const size_t kTokenLength = 33;
-    char recv_buf[kTokenLength] = {0};
+    constexpr size_t kMaxMessageLength = 33;
+    char recv_buf[kMaxMessageLength] = {0};
     std::vector<base::ScopedFD> platform_handles;
-    if (mojo::SocketRecvmsg(connection_fd.get(), recv_buf, sizeof(recv_buf),
+    if (mojo::SocketRecvmsg(connection_fd.get(), recv_buf, sizeof(recv_buf) - 1,
                             &platform_handles, true) == 0) {
       LOGF(ERROR) << "Failed to receive message";
       return EXIT_FAILURE;
@@ -93,16 +93,14 @@ int main(int argc, char** argv) {
       return EXIT_FAILURE;
     }
 
-    VLOGF(1) << "Message from client " << std::string(recv_buf);
+    VLOGF(1) << "Message from client: " << recv_buf;
     if (pid > 0) {
       kill(pid, SIGTERM);
     }
     pid = fork();
     if (pid == 0) {
       cros::CameraAlgorithmAdapter adapter;
-      adapter.Run(
-          std::string(recv_buf), std::move(platform_handles[0]),
-          (FLAGS_type == "vendor") ? "libcam_algo.so" : "libcam_gpu_algo.so");
+      adapter.Run(std::string(recv_buf), std::move(platform_handles[0]));
       exit(0);
     } else if (pid < 0) {
       LOGF(ERROR) << "Fork failed";

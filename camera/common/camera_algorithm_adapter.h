@@ -29,14 +29,10 @@ class CameraAlgorithmAdapter {
 
   // Build up IPC and load the camera algorithm library. This method returns
   // when the IPC connection is lost.
-  void Run(std::string mojo_token,
-           base::ScopedFD channel,
-           const std::string& algo_lib_name);
+  void Run(std::string pipe_name, base::ScopedFD channel);
 
  private:
-  void InitializeOnIpcThread(std::string mojo_token,
-                             base::ScopedFD channel,
-                             const std::string& algo_lib_name);
+  void InitializeOnIpcThread(std::string pipe_name, base::ScopedFD channel);
 
   void DestroyOnIpcThread();
 
