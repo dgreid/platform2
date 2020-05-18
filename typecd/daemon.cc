@@ -6,13 +6,19 @@
 
 namespace typecd {
 
-Daemon::Daemon()
-    : weak_factory_(this) {}
+Daemon::Daemon() : udev_monitor_(new UdevMonitor()), weak_factory_(this) {}
 
 Daemon::~Daemon() {}
 
 int Daemon::OnInit() {
   LOG(INFO) << "Daemon started.";
+  if (!udev_monitor_->InitUdev()) {
+    LOG(ERROR) << "udev init failed.";
+    return -1;
+  }
+
+  udev_monitor_->ScanDevices();
+
   return 0;
 }
 

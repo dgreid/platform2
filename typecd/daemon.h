@@ -10,6 +10,8 @@
 #include <base/memory/weak_ptr.h>
 #include <brillo/daemons/daemon.h>
 
+#include "typecd/udev_monitor.h"
+
 namespace typecd {
 
 class Daemon : public brillo::Daemon {
@@ -21,6 +23,7 @@ class Daemon : public brillo::Daemon {
   int OnInit() override;
 
  private:
+  std::unique_ptr<UdevMonitor> udev_monitor_;
   base::WeakPtrFactory<Daemon> weak_factory_;
 
   DISALLOW_COPY_AND_ASSIGN(Daemon);

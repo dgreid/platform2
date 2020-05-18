@@ -15,6 +15,7 @@ pkg_config("target_defaults") {
   pkg_deps = [
     "libbrillo",
     "libchrome-${libbase_ver}",
+    "libudev",
   ]
 }
 
@@ -29,7 +30,10 @@ executable("typecd") {
 
 static_library("typecd_common") {
   all_dependent_configs = [ ":target_defaults" ]
-  sources = [ "partner.cc" ]
+  sources = [
+    "partner.cc",
+    "udev_monitor.cc",
+  ]
 }
 
 if (use.test) {
