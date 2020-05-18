@@ -18,7 +18,7 @@
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_util.h>
 #include <base/strings/stringprintf.h>
-#include <base/sys_info.h>
+#include <base/system/sys_info.h>
 #include <brillo/key_value_store.h>
 #include <chromeos/constants/vm_tools.h>
 

@@ -943,7 +943,7 @@ void Manager::CheckConnectedNamespaces() {
     return;
   }
 
-  base::MessageLoopForIO::current()->task_runner()->PostDelayedTask(
+  base::ThreadTaskRunnerHandle::Get()->PostDelayedTask(
       FROM_HERE,
       base::Bind(&Manager::CheckConnectedNamespaces,
                  weak_factory_.GetWeakPtr()),
