@@ -197,7 +197,7 @@ message GetSysfsDataResponse {
 // Parameters for the PerformWebRequest RPC.
 //
 // NOTE: The total size of all "string" and "bytes" fields in the request must
-// not exceed 1 MB (1'000'000 bytes).
+// not exceed 1 MB (1 000 000 bytes).
 message PerformWebRequestParameter {
   // HTTP request method.
   enum HttpMethod {
@@ -250,7 +250,7 @@ message PerformWebRequestResponse {
   // |STATUS_HTTP_ERROR|.
   int32 http_status = 2;
   // Body of the HTTP response.
-  // The length does not exceed 1MB (1'000'000 bytes). This field is set when
+  // The length does not exceed 1MB (1 000 000 bytes). This field is set when
   // |status| is |STATUS_OK| or |STATUS_HTTP_ERROR|.
   bytes response_body = 3;
 }
@@ -519,7 +519,7 @@ message GetConfigurationDataRequest {}
 
 // Return value for the GetConfigurationData RPC.
 message GetConfigurationDataResponse {
-  // Configuration data. The length does not exeed 20'000 bytes.
+  // Configuration data. The length does not exceed 20 000 bytes.
   // If there is no pre-loaded configuration data, the string is empty.
   string json_configuration_data = 1;
 }
@@ -659,6 +659,6 @@ message GetStatefulPartitionAvailableCapacityResponse {
   Status status = 1;
 
   // Stateful partition available capacity, rounded down to
-  // multiples of 100MB.
+  // multiples of 100MB (100 000 000 bytes).
   int32 available_capacity_mb = 2;
 }
