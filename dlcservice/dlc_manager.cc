@@ -164,11 +164,6 @@ bool DlcManager::InitInstall(const DlcId& id, ErrorPtr* err) {
 
   DCHECK(!IsInstalling());
   DlcBase& dlc = supported_.find(id)->second;
-  // Try preloading the DLC prior to initializing an installation.
-  ErrorPtr tmp_err;
-  if (dlc.Preload(&tmp_err))
-    return true;
-
   // Otherwise proceed with the setup for update_engine to overwrite.
   if (!dlc.InitInstall(err)) {
     LOG(ERROR) << "Failed to initialize installation for DLC=" << id;

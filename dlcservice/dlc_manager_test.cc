@@ -33,7 +33,7 @@ class DlcManagerTest : public BaseTest {
 
 TEST_F(DlcManagerTest, PreloadAllowedDlcTest) {
   // The third DLC has pre-loaded flag on.
-  SetUpDlcWithoutSlots(kThirdDlc);
+  SetUpDlcPreloadedImage(kThirdDlc);
   dlc_manager_->Initialize();
 
   EXPECT_CALL(*mock_image_loader_proxy_ptr_, LoadDlcImage(_, _, _, _, _, _))
@@ -56,7 +56,7 @@ TEST_F(DlcManagerTest, PreloadAllowedDlcTest) {
 TEST_F(DlcManagerTest, PreloadAllowedWithBadPreinstalledDlcTest) {
   // The third DLC has pre-loaded flag on.
   SetUpDlcWithSlots(kThirdDlc);
-  SetUpDlcWithoutSlots(kThirdDlc);
+  SetUpDlcPreloadedImage(kThirdDlc);
   dlc_manager_->Initialize();
 
   EXPECT_CALL(*mock_image_loader_proxy_ptr_, LoadDlcImage(_, _, _, _, _, _))
@@ -77,7 +77,7 @@ TEST_F(DlcManagerTest, PreloadAllowedWithBadPreinstalledDlcTest) {
 }
 
 TEST_F(DlcManagerTest, PreloadNotAllowedDlcTest) {
-  SetUpDlcWithoutSlots(kSecondDlc);
+  SetUpDlcPreloadedImage(kSecondDlc);
 
   EXPECT_THAT(dlc_manager_->GetInstalled(), ElementsAre());
 

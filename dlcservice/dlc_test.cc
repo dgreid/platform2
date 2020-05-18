@@ -95,7 +95,8 @@ TEST_F(DlcBaseTest, MakeReadyForUpdate) {
 TEST_F(DlcBaseTest, BootingFromNonRemovableDeviceDeletesPreloadedDLCs) {
   DlcBase dlc(kThirdDlc);
   dlc.Initialize();
-  SetUpDlcWithoutSlots(kThirdDlc);
+  // Place preloaded images.
+  SetUpDlcPreloadedImage(kThirdDlc);
 
   auto image_path = JoinPaths(preloaded_content_path_, kThirdDlc, kPackage,
                               kDlcImageFileName);
@@ -106,7 +107,7 @@ TEST_F(DlcBaseTest, BootingFromNonRemovableDeviceDeletesPreloadedDLCs) {
       .WillRepeatedly(Return(true));
   EXPECT_CALL(*mock_image_loader_proxy_ptr_, LoadDlcImage(_, _, _, _, _, _))
       .WillOnce(DoAll(SetArgPointee<3>(mount_path_.value()), Return(true)));
-  EXPECT_TRUE(dlc.Preload(&err_));
+  EXPECT_TRUE(dlc.InitInstall(&err_));
 
   // Preloaded DLC image should be deleted.
   EXPECT_FALSE(base::PathExists(image_path));
@@ -115,7 +116,8 @@ TEST_F(DlcBaseTest, BootingFromNonRemovableDeviceDeletesPreloadedDLCs) {
 TEST_F(DlcBaseTestRemovable, BootingFromRemovableDeviceKeepsPreloadedDLCs) {
   DlcBase dlc(kThirdDlc);
   dlc.Initialize();
-  SetUpDlcWithoutSlots(kThirdDlc);
+  // Place preloaded images.
+  SetUpDlcPreloadedImage(kThirdDlc);
 
   auto image_path = JoinPaths(preloaded_content_path_, kThirdDlc, kPackage,
                               kDlcImageFileName);
@@ -126,7 +128,7 @@ TEST_F(DlcBaseTestRemovable, BootingFromRemovableDeviceKeepsPreloadedDLCs) {
       .WillRepeatedly(Return(true));
   EXPECT_CALL(*mock_image_loader_proxy_ptr_, LoadDlcImage(_, _, _, _, _, _))
       .WillOnce(DoAll(SetArgPointee<3>(mount_path_.value()), Return(true)));
-  EXPECT_TRUE(dlc.Preload(&err_));
+  EXPECT_TRUE(dlc.InitInstall(&err_));
 
   // Preloaded DLC image should still exists.
   EXPECT_TRUE(base::PathExists(image_path));

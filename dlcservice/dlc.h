@@ -73,9 +73,6 @@ class DlcBase {
   // attribute in the manifest for the given |id| and |package|.
   bool IsPreloadAllowed() const;
 
-  // Installs the preloadable DLC from preloaded content directory.
-  bool Preload(brillo::ErrorPtr* err);
-
   // Initializes the installation like creating the necessary files, etc.
   bool InitInstall(brillo::ErrorPtr* err);
 
@@ -122,6 +119,14 @@ class DlcBase {
 
   // Helper used to load in (copy + cleanup) preloadable files for the DLC.
   bool PreloadedCopier(brillo::ErrorPtr* err);
+
+  // Installs the preloadable DLC from preloaded content directory.
+  bool Preload(brillo::ErrorPtr* err);
+
+  // Creates the DLC image based on the fields from the manifest if the DLC is
+  // not installed. If the DLC image exists or is installed already, some
+  // verifications are passed to validate that the DLC is mounted.
+  bool SetupInitInstall(brillo::ErrorPtr* err);
 
   // Mounts the DLC image.
   bool Mount(brillo::ErrorPtr* err);

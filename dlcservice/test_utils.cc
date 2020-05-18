@@ -109,7 +109,7 @@ void BaseTest::CreateImageFileWithRightSize(const base::FilePath& image_path,
 }
 
 // Will create |path|/|id|/|package|/dlc.img file.
-void BaseTest::SetUpDlcWithoutSlots(const DlcId& id) {
+void BaseTest::SetUpDlcPreloadedImage(const DlcId& id) {
   base::FilePath image_path =
       JoinPaths(preloaded_content_path_, id, kPackage, kDlcImageFileName);
   base::CreateDirectory(image_path.DirName());

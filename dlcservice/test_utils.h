@@ -43,7 +43,7 @@ class BaseTest : public testing::Test {
                                     const std::string& package);
 
   // Will create |path|/|id|/|package|/dlc.img file.
-  void SetUpDlcWithoutSlots(const std::string& id);
+  void SetUpDlcPreloadedImage(const std::string& id);
 
   // Will create |path/|id|/|package|/dlc_[a|b]/dlc.img files.
   void SetUpDlcWithSlots(const std::string& id);

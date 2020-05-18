@@ -344,20 +344,6 @@ bool DlcBase::PreloadedCopier(ErrorPtr* err) {
 }
 
 bool DlcBase::Preload(ErrorPtr* err) {
-  if (!IsPreloadAllowed()) {
-    auto err_str =
-        base::StringPrintf("Preloading not allowed for DLC=%s", id_.c_str());
-    *err = Error::Create(FROM_HERE, kErrorInternal, err_str);
-    return false;
-  }
-
-  if (!base::PathExists(preloaded_image_path_)) {
-    auto err_str =
-        base::StringPrintf("Preloading image missing for DLC=%s", id_.c_str());
-    *err = Error::Create(FROM_HERE, kErrorInternal, err_str);
-    return false;
-  }
-
   // Deleting DLC(s) that might already be installed as preloading DLC
   // take precedence in order to allow stale DLC in cache to be cleared.
   // TODO(crbug.com/1059445): Verify before deleting that image to preload
@@ -367,7 +353,7 @@ bool DlcBase::Preload(ErrorPtr* err) {
     return false;
   }
 
-  if (!InitInstall(err)) {
+  if (!SetupInitInstall(err)) {
     LOG(ERROR) << "Failed to initialize preloaded DLC=" << id_;
     return false;
   }
@@ -382,7 +368,7 @@ bool DlcBase::Preload(ErrorPtr* err) {
 
   // When the copying is successful, go ahead and finish installation.
   if (!FinishInstall(err)) {
-    LOG(ERROR) << "Failed to finish prealoding DLC=" << id_;
+    LOG(ERROR) << "Failed to finish preloading DLC=" << id_;
     ErrorPtr tmp_err;
     if (!CancelInstall(&tmp_err))
       LOG(ERROR) << Error::ToString(tmp_err);
@@ -404,15 +390,7 @@ bool DlcBase::Preload(ErrorPtr* err) {
   return true;
 }
 
-bool DlcBase::InitInstall(ErrorPtr* err) {
-  if (!base::PathExists(prefs_path_)) {
-    if (!CreateDir(prefs_path_)) {
-      *err = Error::Create(FROM_HERE, kErrorInternal,
-                           "Failed to create prefs directory.");
-      return false;
-    }
-  }
-
+bool DlcBase::SetupInitInstall(ErrorPtr* err) {
   switch (state_.state()) {
     case DlcState::NOT_INSTALLED:
       if (IsActiveImagePresent()) {
@@ -460,6 +438,23 @@ bool DlcBase::InitInstall(ErrorPtr* err) {
                           : "Missing error from update engine proxy.");
   }
   return true;
+}
+
+bool DlcBase::InitInstall(ErrorPtr* err) {
+  if (!base::PathExists(prefs_path_)) {
+    if (!CreateDir(prefs_path_)) {
+      *err = Error::Create(FROM_HERE, kErrorInternal,
+                           "Failed to create prefs directory.");
+      return false;
+    }
+  }
+  if (IsPreloadAllowed() && base::PathExists(preloaded_image_path_)) {
+    if (Preload(err))
+      return true;
+    LOG(ERROR) << "Failed to preload DLC=" << id_
+               << " continuing with normal installation.";
+  }
+  return SetupInitInstall(err);
 }
 
 bool DlcBase::FinishInstall(ErrorPtr* err) {
