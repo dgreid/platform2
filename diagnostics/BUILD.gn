@@ -8,24 +8,24 @@ group("all") {
   deps = [
     ":cros_healthd",
     ":telem",
-    ":wilco_dtc_supportd",
     "//diagnostics/cros_healthd_event_tool:cros-health-event",
     "//diagnostics/diag:diag",
     "//diagnostics/routines:floating-point-accuracy",
     "//diagnostics/routines:prime-search",
     "//diagnostics/routines:smartctl-check",
     "//diagnostics/routines:urandom",
+    "//diagnostics/wilco_dtc_supportd:wilco_dtc_supportd",
   ]
   if (use.test) {
     deps += [
       ":cros_healthd_test",
       ":libcros_healthd_utils_test",
-      ":wilco_dtc_supportd_test",
       "//diagnostics/common:libcommon_test",
       "//diagnostics/cros_healthd/events:libcros_healthd_events_test",
       "//diagnostics/cros_healthd_mojo_adapter:cros_healthd_mojo_adapter_test",
       "//diagnostics/grpc_async_adapter:libgrpc_async_adapter_test",
       "//diagnostics/routines:routine_test",
+      "//diagnostics/wilco_dtc_supportd:wilco_dtc_supportd_test",
     ]
   }
   if (use.fuzzer) {
@@ -101,48 +101,6 @@ source_set("libcros_healthd") {
   ]
 }
 
-# Library that provides core functionality for the wilco_dtc_supportd daemon.
-pkg_config("libwilco_dtc_supportd_pkg_deps") {
-  pkg_deps = [
-    "dbus-1",
-    "libbrillo",
-    "libchrome-${libbase_ver}",
-    "libmojo-${libbase_ver}",
-    "system_api",
-  ]
-}
-
-source_set("libwilco_dtc_supportd") {
-  deps = [
-    "//diagnostics/common:libcommon",
-    "//diagnostics/constants:libconstants",
-    "//diagnostics/grpc:wilco_dtc_grpc_protos",
-    "//diagnostics/grpc_async_adapter:libgrpc_async_adapter",
-    "//diagnostics/mojo:diagnostics_mojo_bindings",
-    "//diagnostics/routines:libdiag_routine",
-  ]
-  all_dependent_configs = [ ":libwilco_dtc_supportd_pkg_deps" ]
-  sources = [
-    "wilco_dtc_supportd/core.cc",
-    "wilco_dtc_supportd/core_delegate_impl.cc",
-    "wilco_dtc_supportd/daemon.cc",
-    "wilco_dtc_supportd/dbus_service.cc",
-    "wilco_dtc_supportd/ec_constants.cc",
-    "wilco_dtc_supportd/grpc_service.cc",
-    "wilco_dtc_supportd/json_utils.cc",
-    "wilco_dtc_supportd/mojo_service.cc",
-    "wilco_dtc_supportd/probe_service_impl.cc",
-    "wilco_dtc_supportd/routine_service.cc",
-    "wilco_dtc_supportd/telemetry/bluetooth_event_service.cc",
-    "wilco_dtc_supportd/telemetry/bluetooth_event_service_impl.cc",
-    "wilco_dtc_supportd/telemetry/ec_event_service.cc",
-    "wilco_dtc_supportd/telemetry/powerd_event_service_impl.cc",
-    "wilco_dtc_supportd/telemetry/system_files_service.cc",
-    "wilco_dtc_supportd/telemetry/system_files_service_impl.cc",
-    "wilco_dtc_supportd/telemetry/system_info_service_impl.cc",
-  ]
-}
-
 # The cros_healthd daemon executable.
 pkg_config("cros_healthd_pkg_deps") {
   pkg_deps = [ "libbrillo" ]
@@ -151,16 +109,6 @@ pkg_config("cros_healthd_pkg_deps") {
 executable("cros_healthd") {
   deps = [ ":libcros_healthd" ]
   sources = [ "cros_healthd/main.cc" ]
-}
-
-# The wilco_dtc_supportd daemon executable.
-pkg_config("wilco_dtc_supportd_pkg_deps") {
-  pkg_deps = [ "libbrillo" ]
-}
-
-executable("wilco_dtc_supportd") {
-  deps = [ ":libwilco_dtc_supportd" ]
-  sources = [ "wilco_dtc_supportd/main.cc" ]
 }
 
 # The telemetry tool executable.
@@ -240,52 +188,6 @@ if (use.test) {
       "cros_healthd/utils/stateful_partition_utils_test.cc",
       "cros_healthd/utils/timezone_utils_test.cc",
       "cros_healthd/utils/vpd_utils_test.cc",
-    ]
-  }
-
-  pkg_config("wilco_dtc_supportd_test_pkg_deps") {
-    pkg_deps = [
-      "libchrome-${libbase_ver}",
-      "libchrome-test-${libbase_ver}",
-    ]
-  }
-
-  executable("wilco_dtc_supportd_test") {
-    configs += [
-      ":wilco_dtc_supportd_test_pkg_deps",
-      "//common-mk:test",
-    ]
-    deps = [
-      ":libwilco_dtc_supportd",
-      "../common-mk/testrunner:testrunner",
-      "//diagnostics/common:libcommon",
-      "//diagnostics/common:libcommon_test_utils",
-    ]
-    sources = [
-      "wilco_dtc_supportd/core_test.cc",
-      "wilco_dtc_supportd/dbus_service_test.cc",
-      "wilco_dtc_supportd/ec_constants_test.cc",
-      "wilco_dtc_supportd/fake_browser.cc",
-      "wilco_dtc_supportd/fake_diagnostics_service.cc",
-      "wilco_dtc_supportd/fake_probe_service.cc",
-      "wilco_dtc_supportd/fake_wilco_dtc.cc",
-      "wilco_dtc_supportd/grpc_service_test.cc",
-      "wilco_dtc_supportd/mock_mojo_client.cc",
-      "wilco_dtc_supportd/mojo_service_test.cc",
-      "wilco_dtc_supportd/probe_service_impl_test.cc",
-      "wilco_dtc_supportd/routine_service_test.cc",
-      "wilco_dtc_supportd/telemetry/bluetooth_event_service_impl_test.cc",
-      "wilco_dtc_supportd/telemetry/ec_event_service_test.cc",
-      "wilco_dtc_supportd/telemetry/ec_event_test_utils.cc",
-      "wilco_dtc_supportd/telemetry/ec_event_test_utils_test.cc",
-      "wilco_dtc_supportd/telemetry/fake_bluetooth_event_service.cc",
-      "wilco_dtc_supportd/telemetry/fake_ec_event_service.cc",
-      "wilco_dtc_supportd/telemetry/fake_powerd_event_service.cc",
-      "wilco_dtc_supportd/telemetry/mock_system_files_service.cc",
-      "wilco_dtc_supportd/telemetry/mock_system_info_service.cc",
-      "wilco_dtc_supportd/telemetry/powerd_event_service_impl_test.cc",
-      "wilco_dtc_supportd/telemetry/system_files_service_impl_test.cc",
-      "wilco_dtc_supportd/telemetry/system_info_service_impl_test.cc",
     ]
   }
 }
