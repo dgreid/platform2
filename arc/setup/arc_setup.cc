@@ -151,14 +151,13 @@ constexpr char kZygotePreloadDoneFile[] = ".preload_done";
 constexpr const char* kBinFmtMiscEntryNames[] = {"arm_dyn", "arm_exe",
                                                  "arm64_dyn", "arm64_exe"};
 
-
 // These are board-specific configuration settings, which are managed through
 // the chromeos-config architecture.
 // For details, see:
 // https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/chromeos-config/#arc
 //
-// Board-specific config files are automatically managed/generated via project config repos.
-// For details, see:
+// Board-specific config files are automatically managed/generated via project
+// config repos. For details, see:
 // https://chromium.googlesource.com/chromiumos/config/
 // For an example, see:
 // https://chromium.googlesource.com/chromiumos/config/+/refs/heads/master/test/project/fake/fake/sw_build_config/platform/chromeos-config/generated/arc/
@@ -2328,6 +2327,17 @@ void ArcSetup::OnRemoveStaleData() {
 
 void ArcSetup::OnApplyPerBoardConfig() {
   ApplyPerBoardConfigurationsInternal(base::FilePath(kArcVmPerBoardConfigPath));
+
+  // Unlike ARC container, ARCVM's platform.xml has to be owned by chronos.
+  brillo::SafeFD fd;
+  brillo::SafeFD::Error err;
+  std::tie(fd, err) = brillo::SafeFD::Root().first.OpenExistingFile(
+      base::FilePath(kArcVmPerBoardConfigPath)
+          .Append(kPlatformXmlFileRelative));
+  if (err == brillo::SafeFD::Error::kDoesNotExist)
+    return;  // the board does not have the file.
+  EXIT_IF(!fd.is_valid());
+  EXIT_IF(fchown(fd.get(), kHostChronosUid, kHostChronosGid));
 }
 
 void ArcSetup::OnCreateData() {

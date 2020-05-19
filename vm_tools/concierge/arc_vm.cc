@@ -59,8 +59,8 @@ constexpr char kCustomParameterFilePath[] = "/etc/arcvm_dev.conf";
 constexpr char kKeyToOverrideKernelPath[] = "KERNEL_PATH";
 
 // Shared directories and their tags
-constexpr char kHostGeneratedSharedDir[] = "/run/arcvm/host_generated";
-constexpr char kHostGeneratedSharedDirTag[] = "host_generated";
+constexpr char kOemEtcSharedDir[] = "/run/arcvm/host_generated/oem/etc";
+constexpr char kOemEtcSharedDirTag[] = "oem_etc";
 
 // Uid and gid mappings for the android data directory. This is a
 // comma-separated list of 3 values: <start of range inside the user namespace>
@@ -71,8 +71,10 @@ constexpr char kAndroidUidMap[] =
 constexpr char kAndroidGidMap[] =
     "0 655360 1065,1065 20119 1,1066 656426 3934,5000 600 50,5050 660410 "
     "1994950";
-// For |kHostGeneratedSharedDir|, map host's chronos to guest's root.
-constexpr char kHostGeneratedUgidMap[] = "0 1000 1";
+
+// For |kOemEtcSharedDir|, map host's chronos to guest's root, also arc-camera
+// (603) to vendor_arc_camera (5003).
+constexpr char kOemEtcUgidMap[] = "0 1000 1, 5000 600 50";
 
 base::ScopedFD ConnectVSock(int cid) {
   DLOG(INFO) << "Creating VSOCK...";
@@ -213,10 +215,9 @@ bool ArcVm::Start(base::FilePath kernel,
 
   const std::string rootfs_flag = rootfs_writable() ? "--rwdisk" : "--disk";
 
-  std::string host_generated_shared_dir = base::StringPrintf(
+  std::string oem_etc_shared_dir = base::StringPrintf(
       "%s:%s:type=fs:cache=always:uidmap=%s:gidmap=%s:timeout=3600",
-      kHostGeneratedSharedDir, kHostGeneratedSharedDirTag,
-      kHostGeneratedUgidMap, kHostGeneratedUgidMap);
+      kOemEtcSharedDir, kOemEtcSharedDirTag, kOemEtcUgidMap, kOemEtcUgidMap);
 
   std::string shared_data = CreateSharedDataParam(data_dir, "data", true);
   std::string shared_data_media =
@@ -241,7 +242,7 @@ bool ArcVm::Start(base::FilePath kernel,
     { "--android-fstab",   fstab.value() },
     { "--pstore",          base::StringPrintf("path=%s,size=%d",
                               pstore_path.value().c_str(), pstore_size) },
-    { "--shared-dir",     std::move(host_generated_shared_dir) },
+    { "--shared-dir",     std::move(oem_etc_shared_dir) },
     { "--shared-dir",     std::move(shared_data) },
     { "--shared-dir",     std::move(shared_data_media) },
     { "--params",         base::JoinString(params, " ") },
