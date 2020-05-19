@@ -7,59 +7,30 @@ import("//common-mk/pkg_config.gni")
 # Library with utilities common to both cros_healthd and wilco_dtc_supportd.
 pkg_config("libcommon_pkg_deps") {
   pkg_deps = [
-    "dbus-1",
-    "libbrillo-${libbase_ver}",
     "libchrome-${libbase_ver}",
-    "libdebugd-client",
     "libmojo-${libbase_ver}",
-    "protobuf",
-    "system_api",
   ]
 }
 
 source_set("libcommon") {
   configs += [ ":libcommon_pkg_deps" ]
+  public_deps = [ "system:libsystem" ]
   sources = [
     "file_utils.cc",
     "mojo_utils.cc",
-    "system/bluetooth_client.cc",
-    "system/bluetooth_client_impl.cc",
-    "system/debugd_adapter_impl.cc",
-    "system/powerd_adapter_impl.cc",
   ]
 }
 
 if (use.test || use.fuzzer) {
-  # Library with common utilities only to be used during testing.
-  pkg_config("libcommon_test_utils_pkg_deps") {
-    pkg_deps = [
-      "libchrome-${libbase_ver}",
-      "libdebugd-client-test",
-      "libmojo-${libbase_ver}",
-    ]
-  }
-
   source_set("libcommon_test_utils") {
-    configs += [ ":libcommon_test_utils_pkg_deps" ]
-    deps = [ ":libcommon" ]
+    configs += [ ":libcommon_pkg_deps" ]
+    deps = [
+      ":libcommon",
+      "system:libsystem_test_utils",
+    ]
     sources = [
       "file_test_utils.cc",
       "mojo_test_utils.cc",
-      "system/fake_bluetooth_client.cc",
-      "system/fake_powerd_adapter.cc",
-      "system/mock_bluetooth_client.cc",
-      "system/mock_debugd_adapter.cc",
-    ]
-  }
-
-  pkg_config("libcommon_test_pkg_deps") {
-    pkg_deps = [
-      "libbrillo-${libbase_ver}",
-      "libchrome-${libbase_ver}",
-      "libchrome-test-${libbase_ver}",
-      "libdebugd-client",
-      "libdebugd-client-test",
-      "libmojo-${libbase_ver}",
     ]
   }
 }
@@ -67,19 +38,15 @@ if (use.test || use.fuzzer) {
 if (use.test) {
   executable("libcommon_test") {
     configs += [
-      ":libcommon_test_pkg_deps",
+      ":libcommon_pkg_deps",
       "//common-mk:test",
     ]
     deps = [
       ":libcommon",
       ":libcommon_test_utils",
+      "system:libsystem_test",
       "//common-mk/testrunner:testrunner",
     ]
-    sources = [
-      "mojo_utils_test.cc",
-      "system/bluetooth_client_impl_test.cc",
-      "system/debugd_adapter_impl_test.cc",
-      "system/powerd_adapter_impl_test.cc",
-    ]
+    sources = [ "mojo_utils_test.cc" ]
   }
 }
