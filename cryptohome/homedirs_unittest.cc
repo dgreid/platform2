@@ -276,7 +276,7 @@ TEST_P(HomeDirsTest, RenameCryptohome) {
   EXPECT_TRUE(homedirs_.Rename(kNewUserId, kDefaultUsers[0].username));
 }
 
-TEST_P(HomeDirsTest, ComputeSizeDircrypto) {
+TEST_P(HomeDirsTest, ComputeDiskUsageDircrypto) {
   FilePath base_path(test_helper_.users[0].base_path);
   // /home/.shadow in production code.
   FilePath shadow_home =
@@ -303,10 +303,11 @@ TEST_P(HomeDirsTest, ComputeSizeDircrypto) {
   ON_CALL(platform_, ComputeDirectoryDiskUsage(vault_dir))
       .WillByDefault(Return(unexpected_bytes));
 
-  EXPECT_EQ(expected_bytes, homedirs_.ComputeSize(kDefaultUsers[0].username));
+  EXPECT_EQ(expected_bytes,
+            homedirs_.ComputeDiskUsage(kDefaultUsers[0].username));
 }
 
-TEST_P(HomeDirsTest, ComputeSizeEcryptfs) {
+TEST_P(HomeDirsTest, ComputeDiskUsageEcryptfs) {
   FilePath base_path(test_helper_.users[0].base_path);
   FilePath shadow_home =
       homedirs_.shadow_root().Append(base_path.BaseName().value());
@@ -328,10 +329,11 @@ TEST_P(HomeDirsTest, ComputeSizeEcryptfs) {
   ON_CALL(platform_, ComputeDirectoryDiskUsage(mount_dir))
       .WillByDefault(Return(unexpected_bytes));
 
-  EXPECT_EQ(expected_bytes, homedirs_.ComputeSize(kDefaultUsers[0].username));
+  EXPECT_EQ(expected_bytes,
+            homedirs_.ComputeDiskUsage(kDefaultUsers[0].username));
 }
 
-TEST_P(HomeDirsTest, ComputeSizeEphemeral) {
+TEST_P(HomeDirsTest, ComputeDiskUsageEphemeral) {
   FilePath base_path(test_helper_.users[0].base_path);
   FilePath shadow_home =
       homedirs_.shadow_root().Append(base_path.BaseName().value());
@@ -358,14 +360,15 @@ TEST_P(HomeDirsTest, ComputeSizeEphemeral) {
   ON_CALL(platform_, ComputeDirectoryDiskUsage(shadow_home))
       .WillByDefault(Return(unexpected_bytes));
 
-  EXPECT_EQ(expected_bytes, homedirs_.ComputeSize(kDefaultUsers[0].username));
+  EXPECT_EQ(expected_bytes,
+            homedirs_.ComputeDiskUsage(kDefaultUsers[0].username));
 }
 
-TEST_P(HomeDirsTest, ComputeSizeWithNonexistentUser) {
+TEST_P(HomeDirsTest, ComputeDiskUsageWithNonexistentUser) {
   // If the specified user doesn't exist, there is no directory for the user, so
-  // ComputeSize should return 0.
+  // ComputeDiskUsage should return 0.
   const char kNonExistentUserId[] = "non_existent_user";
-  EXPECT_EQ(0, homedirs_.ComputeSize(kNonExistentUserId));
+  EXPECT_EQ(0, homedirs_.ComputeDiskUsage(kNonExistentUserId));
 }
 
 TEST_P(HomeDirsTest, GetTrackedDirectoryForDirCrypto) {

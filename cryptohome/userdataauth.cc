@@ -2257,8 +2257,8 @@ bool UserDataAuth::IsLowEntropyCredentialSupported() {
 int64_t UserDataAuth::GetAccountDiskUsage(
     const cryptohome::AccountIdentifier& account) {
   // Note that if the given |account| is invalid or non-existent, then HomeDirs'
-  // implementation of ComputeSize is specified to return 0.
-  return homedirs_->ComputeSize(GetAccountId(account));
+  // implementation of ComputeDiskUsage is specified to return 0.
+  return homedirs_->ComputeDiskUsage(GetAccountId(account));
 }
 
 bool UserDataAuth::IsArcQuotaSupported() {

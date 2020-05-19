@@ -168,7 +168,7 @@ class HomeDirs {
   // Negative values are reserved for future cases whereby we need to do some
   // form of error reporting.
   // Note that this method calculates the disk usage instead of apparent size.
-  virtual int64_t ComputeSize(const std::string& account_id);
+  virtual int64_t ComputeDiskUsage(const std::string& account_id);
 
   // Returns true if the supplied Credentials are a valid (username, passkey)
   // pair.

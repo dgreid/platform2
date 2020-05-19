@@ -1973,8 +1973,8 @@ void Service::DoGetAccountDiskUsage(AccountIdentifier* identifier,
   }
 
   BaseReply reply;
-  reply.MutableExtension(GetAccountDiskUsageReply::reply)->set_size(
-      homedirs_->ComputeSize(GetAccountId(*identifier)));
+  reply.MutableExtension(GetAccountDiskUsageReply::reply)
+      ->set_size(homedirs_->ComputeDiskUsage(GetAccountId(*identifier)));
 
   SendReply(context, reply);
 }

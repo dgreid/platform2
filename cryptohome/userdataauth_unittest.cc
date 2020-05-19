@@ -1593,7 +1593,7 @@ TEST_F(UserDataAuthTest, GetAccountDiskUsage) {
   account.set_account_id(kUsername1);
 
   constexpr int64_t kHomedirSize = 12345678912345;
-  EXPECT_CALL(homedirs_, ComputeSize(kUsername1))
+  EXPECT_CALL(homedirs_, ComputeDiskUsage(kUsername1))
       .WillOnce(Return(kHomedirSize));
   EXPECT_EQ(kHomedirSize, userdataauth_->GetAccountDiskUsage(account));
 }

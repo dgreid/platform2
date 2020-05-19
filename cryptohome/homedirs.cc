@@ -1584,7 +1584,7 @@ bool HomeDirs::Rename(const std::string& account_id_from,
   return user_dir_renamed;
 }
 
-int64_t HomeDirs::ComputeSize(const std::string& account_id) {
+int64_t HomeDirs::ComputeDiskUsage(const std::string& account_id) {
   // BuildObfuscatedUsername below doesn't accept empty username.
   if (account_id.empty()) {
     // Empty account is always non-existent, return 0 as specified.
@@ -1592,8 +1592,8 @@ int64_t HomeDirs::ComputeSize(const std::string& account_id) {
   }
 
   // Note that for ephemeral mounts, there could be a vault that's not
-  // ephemeral, but the current mount is ephemeral. In this case, ComputeSize()
-  // return the non ephemeral on disk vault's size.
+  // ephemeral, but the current mount is ephemeral. In this case,
+  // ComputeDiskUsage() return the non ephemeral on disk vault's size.
   std::string obfuscated = BuildObfuscatedUsername(account_id, system_salt_);
   FilePath user_dir = FilePath(shadow_root_).Append(obfuscated);
 

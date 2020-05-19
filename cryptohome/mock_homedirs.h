@@ -41,7 +41,7 @@ class MockHomeDirs : public HomeDirs {
               Rename,
               (const std::string&, const std::string&),
               (override));
-  MOCK_METHOD(int64_t, ComputeSize, (const std::string&), (override));
+  MOCK_METHOD(int64_t, ComputeDiskUsage, (const std::string&), (override));
   MOCK_METHOD(bool,
               Migrate,
               (const Credentials&,
