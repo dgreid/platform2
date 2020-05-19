@@ -7,7 +7,6 @@ import("//common-mk/proto_library.gni")
 
 group("all") {
   deps = [
-    ":diagnostics_dpsl_demo_vm",
     "test_utils:diagnostics_dpsl_test_listener",
     "test_utils:diagnostics_dpsl_test_requester",
   ]
@@ -38,16 +37,6 @@ source_set("libdpsl") {
     "internal/dpsl_rpc_server_impl.cc",
     "internal/dpsl_thread_context_impl.cc",
   ]
-}
-
-# Executables for DPSL demos.
-executable("diagnostics_dpsl_demo_vm") {
-  configs += [ ":common_pkg_deps" ]
-  deps = [
-    ":libdpsl",
-    "//diagnostics/grpc:wilco_dtc_grpc_protos",
-  ]
-  sources = [ "demo_single_thread/main.cc" ]
 }
 
 if (use.test) {
