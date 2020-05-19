@@ -20,7 +20,7 @@ int main(int argc, char** argv) {
   DEFINE_string(imei, "", "IMEI number");
   DEFINE_string(matching_id, "", "Profile's matching ID number");
   brillo::FlagHelper::Init(argc, argv, "Chromium OS eSIM LPD Daemon");
-  brillo::InitLog(brillo::kLogToStderrIfTty);
+  brillo::InitLog(brillo::kLogToSyslog | brillo::kLogToStderrIfTty);
   logging::SetMinLogLevel(FLAGS_log_level);
 
   hermes::Daemon daemon;
