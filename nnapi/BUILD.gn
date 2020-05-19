@@ -23,15 +23,68 @@ group("all") {
   }
 }
 
+pkg_config("target_defaults") {
+  cflags = [
+    "-Wall",
+    "-Werror",
+    "-Wextra",
+  ]
+  cflags_cc = [ "-std=c++17" ]
+  defines = []
+  pkg_deps = [ "libbrillo" ]
+}
+
 static_library("libnnapi-base") {
   include_dirs = [ "${libbase_src}/include" ]
+  configs += [ ":target_defaults" ]
   sources = [
     "${libbase_src}/chrono_utils.cpp",
     "${libbase_src}/errors_unix.cpp",
     "${libbase_src}/file.cpp",
     "${libbase_src}/mapped_file.cpp",
+    "${libbase_src}/parsebool.cpp",
+    "${libbase_src}/process.cpp",
+    "${libbase_src}/properties.cpp",
+    "${libbase_src}/stringprintf.cpp",
     "${libbase_src}/strings.cpp",
+    "${libbase_src}/threads.cpp",
   ]
+}
+
+if (use.test) {
+  executable("libnnapi-base_testrunner") {
+    configs += [
+      "//common-mk:test",
+      ":target_defaults",
+    ]
+    include_dirs = [ "${libbase_src}/include" ]
+    deps = [
+      ":libnnapi-base",
+      "//common-mk/testrunner:testrunner",
+    ]
+    sources = [
+      "${libbase_src}/chrono_utils_test.cpp",
+      "${libbase_src}/endian_test.cpp",
+      "${libbase_src}/errors_test.cpp",
+
+      # TODO(b/157009593) - Expected unit tests are failing.
+      # "${libbase_src}/expected_test.cpp",
+      "${libbase_src}/macros_test.cpp",
+      "${libbase_src}/mapped_file_test.cpp",
+      "${libbase_src}/no_destructor_test.cpp",
+      "${libbase_src}/parsebool_test.cpp",
+      "${libbase_src}/parsedouble_test.cpp",
+      "${libbase_src}/parseint_test.cpp",
+      "${libbase_src}/process_test.cpp",
+      "${libbase_src}/properties_test.cpp",
+
+      # TODO(b/157089900): android-base/format.h requires libfmt.
+      # "${libbase_src}/result_test.cpp",
+      "${libbase_src}/scopeguard_test.cpp",
+      "${libbase_src}/stringprintf_test.cpp",
+      "${libbase_src}/strings_test.cpp",
+    ]
+  }
 }
 
 static_library("libnnapi-cutils") {
@@ -60,21 +113,6 @@ static_library("libnnapi-utils") {
 }
 
 if (use.test) {
-  executable("libnnapi-base_testrunner") {
-    configs += [ "//common-mk:test" ]
-    include_dirs = [ "${libbase_src}/include" ]
-    deps = [
-      ":libnnapi-base",
-      "//common-mk/testrunner:testrunner",
-    ]
-    sources = [
-      "${libbase_src}/chrono_utils_test.cpp",
-      "${libbase_src}/endian_test.cpp",
-      "${libbase_src}/errors_test.cpp",
-      "${libbase_src}/mapped_file_test.cpp",
-      "${libbase_src}/strings_test.cpp",
-    ]
-  }
   executable("libnnapi-cutils_testrunner") {
     configs += [ "//common-mk:test" ]
     include_dirs = [ "${libcutils_src}/include" ]
