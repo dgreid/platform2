@@ -266,6 +266,19 @@ bool IioDeviceImpl::IsBufferEnabled(size_t* count) const {
   return enabled;
 }
 
+base::Optional<int32_t> IioDeviceImpl::GetBufferFd() {
+  if (!CreateBuffer())
+    return base::nullopt;
+
+  int32_t fd = iio_buffer_get_poll_fd(buffer_.get());
+  if (fd < 0) {
+    LOG(ERROR) << "Failed to get poll fd: " << fd;
+    return base::nullopt;
+  }
+
+  return fd;
+}
+
 bool IioDeviceImpl::ReadEvent(std::vector<uint8_t>* event) {
   if (!CreateBuffer())
     return false;

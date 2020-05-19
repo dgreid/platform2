@@ -106,7 +106,11 @@ class LIBMEMS_EXPORT IioDevice {
   virtual base::Optional<size_t> GetSampleSize() const = 0;
 
   // Enables the IIO buffer on this device and configures it to return
-  // |num| samples on access. It returns false on failure.
+  // |num| samples on access. This buffer's lifetime can exceed that of the
+  // IioContext, and that it's caller responsibility to know when to let go of
+  // the buffer with DisableBuffer if at all.
+  // It should not be used along with GetBufferFd or ReadEvent.
+  // Returns false on failure.
   virtual bool EnableBuffer(size_t num) = 0;
 
   // Disables the IIO buffer on this device. Returns false on failure.
@@ -116,9 +120,18 @@ class LIBMEMS_EXPORT IioDevice {
   // If it is enabled, it sets |num| to the number of samples.
   virtual bool IsBufferEnabled(size_t* num = nullptr) const = 0;
 
-  // Creates a buffer to read one event, and fills |event| with the sample's
-  // payload.
-  // Returns false on failure.
+  // Creates the IIO buffer if it doesn't exist, and gets the file descriptor to
+  // poll for events. Returns base::nullopt on failure.
+  // The buffer's lifetime is managed by the IioDevice, which will be disabled
+  // when the IioDevice along with the IioContext gets destroyed. It should not
+  // be used along with EnableBuffer.
+  virtual base::Optional<int32_t> GetBufferFd() = 0;
+
+  // Creates the IIO buffer if it doesn't exist, and fills |sample| with the
+  // sample's payload. Returns false on failure.
+  // The buffer's lifetime is managed by the IioDevice, which will be disabled
+  // when the IioDevice along with the IioContext gets destroyed. It should not
+  // be used along with EnableBuffer.
   virtual bool ReadEvent(std::vector<uint8_t>* event) = 0;
 
  protected:

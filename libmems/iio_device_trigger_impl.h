@@ -75,6 +75,7 @@ class LIBMEMS_EXPORT IioDeviceTriggerImpl : public IioDevice {
   bool DisableBuffer() override { return false; }
   bool IsBufferEnabled(size_t* num = nullptr) const override { return false; }
 
+  base::Optional<int32_t> GetBufferFd() override { return base::nullopt; }
   bool ReadEvent(std::vector<uint8_t>* event) override { return false; }
 
  private:

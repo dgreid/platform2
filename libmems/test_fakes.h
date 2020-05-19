@@ -91,6 +91,7 @@ class LIBMEMS_EXPORT FakeIioDevice : public IioDevice {
     return base::nullopt;
   }
 
+  base::Optional<int32_t> GetBufferFd() override { return base::nullopt; }
   bool ReadEvent(std::vector<uint8_t>* event) override { return false; }
 
  private:
