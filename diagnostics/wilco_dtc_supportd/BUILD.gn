@@ -19,6 +19,7 @@ pkg_config("libwilco_dtc_supportd_pkg_deps") {
 source_set("libwilco_dtc_supportd") {
   configs += [ ":libwilco_dtc_supportd_pkg_deps" ]
   deps = [
+    "telemetry:libtelemetry",
     "//diagnostics/common:libcommon",
     "//diagnostics/constants:libconstants",
     "//diagnostics/grpc:wilco_dtc_grpc_protos",
@@ -38,13 +39,6 @@ source_set("libwilco_dtc_supportd") {
     "mojo_service.cc",
     "probe_service_impl.cc",
     "routine_service.cc",
-    "telemetry/bluetooth_event_service.cc",
-    "telemetry/bluetooth_event_service_impl.cc",
-    "telemetry/ec_event_service.cc",
-    "telemetry/powerd_event_service_impl.cc",
-    "telemetry/system_files_service.cc",
-    "telemetry/system_files_service_impl.cc",
-    "telemetry/system_info_service_impl.cc",
   ]
 }
 
@@ -69,6 +63,7 @@ if (use.test) {
     ]
     deps = [
       ":libwilco_dtc_supportd",
+      "telemetry:telemetry_test",
       "//common-mk/testrunner:testrunner",
       "//diagnostics/common:libcommon",
       "//diagnostics/common:libcommon_test_utils",
@@ -86,18 +81,6 @@ if (use.test) {
       "mojo_service_test.cc",
       "probe_service_impl_test.cc",
       "routine_service_test.cc",
-      "telemetry/bluetooth_event_service_impl_test.cc",
-      "telemetry/ec_event_service_test.cc",
-      "telemetry/ec_event_test_utils.cc",
-      "telemetry/ec_event_test_utils_test.cc",
-      "telemetry/fake_bluetooth_event_service.cc",
-      "telemetry/fake_ec_event_service.cc",
-      "telemetry/fake_powerd_event_service.cc",
-      "telemetry/mock_system_files_service.cc",
-      "telemetry/mock_system_info_service.cc",
-      "telemetry/powerd_event_service_impl_test.cc",
-      "telemetry/system_files_service_impl_test.cc",
-      "telemetry/system_info_service_impl_test.cc",
     ]
   }
 }

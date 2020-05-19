@@ -19,7 +19,6 @@
 #include <base/threading/simple_thread.h>
 
 #include "diagnostics/wilco_dtc_supportd/ec_constants.h"
-#include "mojo/wilco_dtc_supportd.mojom.h"
 
 namespace diagnostics {
 

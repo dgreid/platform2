@@ -20,8 +20,7 @@
 #include <base/logging.h>
 #include <base/memory/ref_counted.h>
 #include <base/posix/eintr_wrapper.h>
-
-#include "mojo/wilco_dtc_supportd.mojom.h"
+#include <base/threading/thread_task_runner_handle.h>
 
 namespace diagnostics {
 
