@@ -168,7 +168,11 @@ void DBusProtocolHandler::AddHandlerSuccess(
     ProtocolHandlerProxyInterface* proxy,
     const std::string& remote_handler_id) {
   auto p = request_handlers_.find(handler_id);
-  CHECK(p != request_handlers_.end());
+  if (p == request_handlers_.end()) {
+    // The handler was already removed. This can happen if RemoveHandler is
+    // called between when AddHandler runs and when this callback runs.
+    return;
+  }
   p->second.remote_handler_ids.emplace(proxy, remote_handler_id);
 
   remote_handler_id_map_.emplace(remote_handler_id, handler_id);
