@@ -23,18 +23,12 @@
       </tp:docstring>
     </arg>
   </method>
-  <method name="InstallProfileFromEvent">
+  <method name="InstallPendingProfile">
     <tp:docstring>
-      Install a profile onto the eUICC using an Event from the SM-DS.
+      Install a profile onto the eUICC using a pending Profile from SM-DS.
     </tp:docstring>
     <annotation name="org.chromium.DBus.Method.Kind" value="async" />
-    <arg name="smdp_address" type="s" direction="in" />
-    <arg name="event_id" type="s" direction="in" />
-    <arg name="profile" type="o" direction="out">
-      <tp:docstring>
-        Profile object representing the newly-installed profile.
-      </tp:docstring>
-    </arg>
+    <arg name="pending_profile" type="o" direction="in" />
   </method>
   <method name="UninstallProfile">
     <tp:docstring>
@@ -49,14 +43,10 @@
   </method>
   <method name="RequestPendingEvents">
     <tp:docstring>
-      Request Events from SM-DS.
+      Request Events from SM-DS. Will update the PendingProfiles property as
+      needed prior to returning.
     </tp:docstring>
     <annotation name="org.chromium.DBus.Method.Kind" value="async" />
-    <arg name="events" type="a(ss)" direction="out">
-      <tp:docstring>
-        List of (SM-DP+ Address, EventId) pairs representing pending Events.
-      </tp:docstring>
-    </arg>
   </method>
   <method name="SetTestMode">
     <tp:docstring>
@@ -65,6 +55,7 @@
     <annotation name="org.chromium.DBus.Method.Kind" value="simple" />
     <arg name="is_test_mode" type="b" direction="in" />
   </method>
-  <property name="Profiles" type="ao" access="read" />
+  <property name="InstalledProfiles" type="ao" access="read" />
+  <property name="PendingProfiles" type="ao" access="read" />
 </interface>
 </node>

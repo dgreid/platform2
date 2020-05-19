@@ -31,6 +31,7 @@ Manager::Manager(const scoped_refptr<dbus::Bus>& bus, LpaContext* context)
   RegisterWithDBusObject(&dbus_object_);
   dbus_object_.RegisterAndBlock();
 
+  SetPendingProfiles({});
   RetrieveInstalledProfiles();
 }
 
@@ -39,15 +40,22 @@ void Manager::InstallProfileFromActivationCode(
     const std::string& in_activation_code) {
   auto profile_cb = [response{std::shared_ptr<DBusResponse<dbus::ObjectPath>>(
                          std::move(response))},
-                     this](lpa::proto::ProfileInfo& profile, int error) {
+                     this](lpa::proto::ProfileInfo& info, int error) {
     auto decoded_error = LpaErrorToBrillo(FROM_HERE, error);
     if (decoded_error) {
       response->ReplyWithError(decoded_error.get());
       return;
     }
-    profiles_.push_back(std::make_unique<Profile>(bus_, context_, profile));
-    UpdateProfilesProperty();
-    response->Return(profiles_.back()->object_path());
+    auto profile = Profile::Create(bus_, context_, info);
+    if (!profile) {
+      response->ReplyWithError(FROM_HERE, brillo::errors::dbus::kDomain,
+                               kErrorInternalLpaFailure,
+                               "Failed to create Profile object");
+      return;
+    }
+    installed_profiles_.push_back(std::move(profile));
+    UpdateInstalledProfilesProperty();
+    response->Return(installed_profiles_.back()->object_path());
   };
   if (in_activation_code.empty()) {
     context_->lpa->GetDefaultProfileFromSmdp("", context_->executor,
@@ -62,10 +70,9 @@ void Manager::InstallProfileFromActivationCode(
                                  context_->executor, std::move(profile_cb));
 }
 
-void Manager::InstallProfileFromEvent(
-    std::unique_ptr<DBusResponse<dbus::ObjectPath>> response,
-    const std::string& /*in_smdp_address*/,
-    const std::string& /*in_event_id*/) {
+void Manager::InstallPendingProfile(
+    std::unique_ptr<DBusResponse<>> response,
+    const dbus::ObjectPath& /*in_pending_profile*/) {
   response->ReplyWithError(
       FROM_HERE, brillo::errors::dbus::kDomain, kErrorUnsupported,
       "This method is not supported until crbug.com/1071470 is implemented");
@@ -74,7 +81,7 @@ void Manager::InstallProfileFromEvent(
 void Manager::UninstallProfile(std::unique_ptr<DBusResponse<>> response,
                                const dbus::ObjectPath& in_profile) {
   const Profile* matching_profile = nullptr;
-  for (auto& profile : profiles_) {
+  for (auto& profile : installed_profiles_) {
     if (profile->object_path() == in_profile) {
       matching_profile = profile.get();
       break;
@@ -88,7 +95,7 @@ void Manager::UninstallProfile(std::unique_ptr<DBusResponse<>> response,
   }
 
   // Wait for lpa call to complete successfully before removing element from
-  // |profiles_|.
+  // |installed_profiles_|.
   auto profile_cb =
       [response{std::shared_ptr<DBusResponse<>>(std::move(response))},
        in_profile, this](int error) {
@@ -98,45 +105,52 @@ void Manager::UninstallProfile(std::unique_ptr<DBusResponse<>> response,
           return;
         }
 
-        auto iter = std::find_if(profiles_.begin(), profiles_.end(),
-                                 [in_profile](const auto& profile) {
-                                   return profile->object_path() == in_profile;
-                                 });
-        CHECK(iter != profiles_.end());
-        profiles_.erase(iter);
-        UpdateProfilesProperty();
+        auto iter =
+            std::find_if(installed_profiles_.begin(), installed_profiles_.end(),
+                         [in_profile](const auto& profile) {
+                           return profile->object_path() == in_profile;
+                         });
+        CHECK(iter != installed_profiles_.end());
+        installed_profiles_.erase(iter);
+        UpdateInstalledProfilesProperty();
         response->Return();
       };
   context_->lpa->DeleteProfile(matching_profile->GetIccid(), context_->executor,
                                std::move(profile_cb));
 }
 
-void Manager::RequestPendingEvents(
-    std::unique_ptr<DBusResponse<std::vector<Event>>> response) {
+void Manager::RequestPendingEvents(std::unique_ptr<DBusResponse<>> response) {
   // TODO(crbug.com/1071470) This is stubbed until google-lpa supports SM-DS.
-  response->Return({});
+  //
+  // Note that there will need to be some way to store the Event Record info
+  // (SM-DP+ address and event id) for each pending Profile.
+  response->Return();
 }
 
-void Manager::UpdateProfilesProperty() {
+void Manager::UpdateInstalledProfilesProperty() {
   std::vector<dbus::ObjectPath> profile_paths;
-  for (auto& profile : profiles_) {
+  for (auto& profile : installed_profiles_) {
     profile_paths.push_back(profile->object_path());
   }
-  SetProfiles(profile_paths);
+  SetInstalledProfiles(profile_paths);
 }
 
 void Manager::RetrieveInstalledProfiles() {
-  auto cb = [this](std::vector<lpa::proto::ProfileInfo>& profiles, int error) {
+  auto cb = [this](std::vector<lpa::proto::ProfileInfo>& profile_infos,
+                   int error) {
     auto decoded_error = LpaErrorToBrillo(FROM_HERE, error);
     if (decoded_error) {
       LOG(ERROR) << "Failed to retrieve installed profiles";
       return;
     }
 
-    for (auto& profile : profiles) {
-      profiles_.push_back(std::make_unique<Profile>(bus_, context_, profile));
+    for (auto& info : profile_infos) {
+      auto profile = Profile::Create(bus_, context_, info);
+      if (profile) {
+        installed_profiles_.push_back(std::move(profile));
+      }
     }
-    UpdateProfilesProperty();
+    UpdateInstalledProfilesProperty();
   };
   context_->lpa->GetInstalledProfiles(context_->executor, std::move(cb));
 }

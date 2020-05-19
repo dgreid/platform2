@@ -44,12 +44,24 @@ const char kProfileClassProperty[] = "ProfileClass";
 const char kServiceProviderProperty[] = "ServiceProvider";
 const char kStateProperty[] = "State";
 
+// Values for kStateProperty.
+enum State {
+  // Notified about from SM-DS but not installed.
+  kPending = 0,
+  // Installed on eUICC but not active.
+  kInactive = 1,
+  // Installed and active. Only one Profile may be active on a single eUICC.
+  kActive = 2,
+};
+
 }  // namespace profile
 
 // Error codes.
 const char kErrorAlreadyDisabled[] =
     "org.chromium.Hermes.Error.AlreadyDisabled";
 const char kErrorAlreadyEnabled[] = "org.chromium.Hermes.Error.AlreadyEnabled";
+const char kErrorInternalLpaFailure[] =
+    "org.chromium.Hermes.Error.InternalLpaFailure";
 const char kErrorInvalidActivationCode[] =
     "org.chromium.Hermes.Error.InvalidActivationCode";
 const char kErrorInvalidIccid[] = "org.chromium.Hermes.Error.InvalidIccid";
@@ -57,6 +69,7 @@ const char kErrorInvalidParameter[] =
     "org.chromium.Hermes.Error.InvalidParameter";
 const char kErrorNeedConfirmationCode[] =
     "org.chromium.Hermes.Error.NeedConfirmationCode";
+const char kErrorPendingProfile[] = "org.chromium.Hermes.Error.PendingProfile";
 const char kErrorSendNotificationFailure[] =
     "org.chromium.Hermes.Error.SendNotificationFailure";
 const char kErrorTestProfileInProd[] =

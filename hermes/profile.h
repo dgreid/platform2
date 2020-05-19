@@ -21,9 +21,10 @@ class Profile : public org::chromium::Hermes::ProfileInterface,
   template <typename... T>
   using DBusResponse = brillo::dbus_utils::DBusMethodResponse<T...>;
 
-  Profile(const scoped_refptr<dbus::Bus>& bus,
-          LpaContext* context,
-          const lpa::proto::ProfileInfo& profile);
+  static std::unique_ptr<Profile> Create(
+      const scoped_refptr<dbus::Bus>& bus,
+      LpaContext* lpa_context,
+      const lpa::proto::ProfileInfo& profile);
 
   // org::chromium::Hermes::ProfileInterface overrides.
   void Enable(std::unique_ptr<DBusResponse<>> resp) override;
@@ -32,6 +33,8 @@ class Profile : public org::chromium::Hermes::ProfileInterface,
   const dbus::ObjectPath& object_path() const { return object_path_; }
 
  private:
+  Profile(const scoped_refptr<dbus::Bus>& bus, dbus::ObjectPath object_path);
+
   // org::chromium::Hermes::ProfileAdaptor override.
   bool ValidateNickname(brillo::ErrorPtr* error,
                         const std::string& value) override;

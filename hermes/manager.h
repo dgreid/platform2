@@ -23,8 +23,6 @@ class Manager : public org::chromium::Hermes::ManagerInterface,
                 public org::chromium::Hermes::ManagerAdaptor {
  public:
   using ByteArray = std::vector<uint8_t>;
-  // (SM-DP+ Address, EventId) representing an Event received from a SM-DS.
-  using Event = std::tuple<std::string, std::string>;
 
   template <typename... T>
   using DBusResponse = brillo::dbus_utils::DBusMethodResponse<T...>;
@@ -37,20 +35,19 @@ class Manager : public org::chromium::Hermes::ManagerInterface,
   void InstallProfileFromActivationCode(
       std::unique_ptr<DBusResponse<dbus::ObjectPath>> response,
       const std::string& in_activation_code) override;
-  void InstallProfileFromEvent(
-      std::unique_ptr<DBusResponse<dbus::ObjectPath>> response,
-      const std::string& in_smdp_address,
-      const std::string& in_event_id) override;
+  void InstallPendingProfile(
+      std::unique_ptr<DBusResponse<>> response,
+      const dbus::ObjectPath& in_pending_profile) override;
   void UninstallProfile(std::unique_ptr<DBusResponse<>> response,
                         const dbus::ObjectPath& in_profile) override;
-  void RequestPendingEvents(
-      std::unique_ptr<DBusResponse<std::vector<Event>>> response) override;
+  // Update the PendingProfiles property.
+  void RequestPendingEvents(std::unique_ptr<DBusResponse<>> response) override;
   // Set/unset test mode. Normally, only production profiles may be
   // downloaded. In test mode, only test profiles may be downloaded.
   void SetTestMode(bool in_is_test_mode) override;
 
  private:
-  void UpdateProfilesProperty();
+  void UpdateInstalledProfilesProperty();
 
   // Update |profiles_| with all profiles installed on the eUICC.
   void RetrieveInstalledProfiles();
@@ -60,7 +57,8 @@ class Manager : public org::chromium::Hermes::ManagerInterface,
 
   LpaContext* context_;
 
-  std::vector<std::unique_ptr<Profile>> profiles_;
+  std::vector<std::unique_ptr<Profile>> installed_profiles_;
+  std::vector<std::unique_ptr<Profile>> pending_profiles_;
 
   DISALLOW_COPY_AND_ASSIGN(Manager);
 };
