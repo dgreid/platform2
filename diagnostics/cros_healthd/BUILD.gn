@@ -1,0 +1,67 @@
+# Copyright 2020 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//common-mk/pkg_config.gni")
+
+# Library that provides core functionality for the cros_healthd daemon.
+pkg_config("libcros_healthd_pkg_deps") {
+  pkg_deps = [
+    "dbus-1",
+    "libbrillo",
+    "libchrome-${libbase_ver}",
+    "libdebugd-client",
+    "libmojo-${libbase_ver}",
+  ]
+}
+
+source_set("libcros_healthd") {
+  deps = [
+    "events:libcros_healthd_events",
+    "system:libcros_healthd_system",
+    "utils:libcros_healthd_utils",
+    "//diagnostics/mojo:diagnostics_mojo_bindings",
+    "//diagnostics/routines:libdiag_routine",
+  ]
+  all_dependent_configs = [ ":libcros_healthd_pkg_deps" ]
+  sources = [
+    "cros_healthd.cc",
+    "cros_healthd_mojo_service.cc",
+    "cros_healthd_routine_factory_impl.cc",
+    "cros_healthd_routine_service_impl.cc",
+  ]
+}
+
+executable("cros_healthd") {
+  deps = [ ":libcros_healthd" ]
+  sources = [ "main.cc" ]
+}
+
+if (use.test) {
+  pkg_config("cros_healthd_test_pkg_deps") {
+    pkg_deps = [
+      "libchrome-${libbase_ver}",
+      "libchrome-test-${libbase_ver}",
+      "libdebugd-client-test",
+    ]
+  }
+
+  executable("cros_healthd_test") {
+    configs += [
+      ":cros_healthd_test_pkg_deps",
+      "//common-mk:test",
+    ]
+    deps = [
+      ":libcros_healthd",
+      "system:libcros_healthd_system_test_utils",
+      "//common-mk/testrunner:testrunner",
+      "//diagnostics/common:libcommon_test_utils",
+      "//diagnostics/routines:libroutine_test_utils",
+    ]
+    sources = [
+      "cros_healthd_mojo_service_test.cc",
+      "cros_healthd_routine_service_impl_test.cc",
+      "fake_cros_healthd_routine_factory.cc",
+    ]
+  }
+}
