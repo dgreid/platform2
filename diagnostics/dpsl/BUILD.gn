@@ -8,8 +8,8 @@ import("//common-mk/proto_library.gni")
 group("all") {
   deps = [
     ":diagnostics_dpsl_demo_vm",
-    ":diagnostics_dpsl_test_listener",
-    ":diagnostics_dpsl_test_requester",
+    "test_utils:diagnostics_dpsl_test_listener",
+    "test_utils:diagnostics_dpsl_test_requester",
   ]
   if (use.test) {
     deps += [ ":libdpsl_test" ]
@@ -40,12 +40,6 @@ source_set("libdpsl") {
   ]
 }
 
-source_set("libdpslutil") {
-  configs += [ ":common_pkg_deps" ]
-  deps = [ ":libdpsl" ]
-  sources = [ "test_utils/common.cc" ]
-}
-
 # Executables for DPSL demos.
 executable("diagnostics_dpsl_demo_vm") {
   configs += [ ":common_pkg_deps" ]
@@ -54,26 +48,6 @@ executable("diagnostics_dpsl_demo_vm") {
     "//diagnostics/grpc:wilco_dtc_grpc_protos",
   ]
   sources = [ "demo_single_thread/main.cc" ]
-}
-
-# Executables for E2E VM tests.
-executable("diagnostics_dpsl_test_listener") {
-  configs += [ ":common_pkg_deps" ]
-  deps = [
-    ":libdpslutil",
-    "//diagnostics/grpc:wilco_dtc_grpc_protos",
-  ]
-  sources = [ "test_utils/listener.cc" ]
-}
-
-# Executables for E2E VM tests.
-executable("diagnostics_dpsl_test_requester") {
-  configs += [ ":common_pkg_deps" ]
-  deps = [
-    ":libdpslutil",
-    "//diagnostics/grpc:wilco_dtc_grpc_protos",
-  ]
-  sources = [ "test_utils/requester.cc" ]
 }
 
 if (use.test) {
@@ -91,7 +65,7 @@ if (use.test) {
     ]
     deps = [
       ":libdpsl",
-      "../../common-mk/testrunner:testrunner",
+      "//common-mk/testrunner:testrunner",
     ]
     sources = [
       "internal/dpsl_global_context_impl_test.cc",
