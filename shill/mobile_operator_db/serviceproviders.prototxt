@@ -4589,45 +4589,21 @@ mno {
 
 mno {
   data {
-    uuid : "ce2b568e-210b-4714-898f-f8d986e09248"
+    uuid : "a16b8cd6-4296-4294-a25f-7df70b142f57"
     country : "gb"
     localized_name {
-      name : "Orange"
+      name : "EE Internet"
     }
+    mccmnc : "23430"
     mccmnc : "23433"
     mccmnc : "23434"
     mobile_apn {
-      apn : "orangeinternet"
-      localized_name {
-        name : "Contract"
-      }
-      username : "orange"
-      password : "orange"
-      dns : "193.35.133.10"
-      dns : "193.35.134.10"
-    }
-    mobile_apn {
-      apn : "internetvpn"
-      localized_name {
-        name : "Contract (with VPN)"
-      }
-      username : "orange"
-      password : "orange"
-      dns : "193.35.133.10"
-      dns : "193.35.134.10"
-    }
-    mobile_apn {
-      apn : "orangewap"
-      localized_name {
-        name : "Orange WAP"
-      }
-      username : "orange"
-      password : "multimedia"
-      dns : "158.43.192.1"
-      dns : "158.43.128.1"
+      apn : "everywhere"
+      username : "eesecure"
+      password : "secure"
+      authentication : PAP
     }
   }
-
   mvno {
     mvno_filter {
       type : MCCMNC
@@ -4648,29 +4624,6 @@ mno {
         username : "hpdatasim"
         password : "hpdatasim"
       }
-    }
-  }
-}
-
-mno {
-  data {
-    uuid : "5b21ac02-3508-4c27-b8ef-b145e7a71ee7"
-    country : "gb"
-    localized_name {
-      name : "T-Mobile"
-    }
-    mccmnc : "23430"
-    mobile_apn {
-      apn : "general.t-mobile.uk"
-      username : "User"
-      password : "mms"
-      dns : "149.254.201.126"
-      dns : "149.254.192.126"
-    }
-    mobile_apn {
-      apn : "general.t-mobile.uk"
-      dns : "149.254.230.7"
-      dns : "149.254.199.126"
     }
   }
 }
