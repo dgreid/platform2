@@ -7,6 +7,8 @@
 #include <algorithm>
 
 #include <base/stl_util.h>
+#include <base/files/file_util.h>
+#include <base/command_line.h>
 
 namespace camera3_test {
 
@@ -221,6 +223,67 @@ TEST_P(Camera3SimpleStillCaptureTest, PerformanceTest) {
 }
 
 // Test parameters:
+// - Camera ID
+class Camera3DumpSimpleStillCaptureTest : public Camera3SimpleStillCaptureTest {
+ public:
+  Camera3DumpSimpleStillCaptureTest() : dump_path_(GetCommandLineDumpPath()) {}
+
+  void ProcessStillCaptureResult(int cam_id,
+                                 uint32_t frame_number,
+                                 ScopedCameraMetadata metadata,
+                                 ScopedBufferHandle buffer) override;
+
+ protected:
+  base::FilePath dump_path_;
+
+  inline base::FilePath GetCommandLineDumpPath() {
+    return base::CommandLine::ForCurrentProcess()->GetSwitchValuePath(
+        "dump_still_capture_path");
+  }
+};
+
+void Camera3DumpSimpleStillCaptureTest::ProcessStillCaptureResult(
+    int cam_id,
+    uint32_t frame_number,
+    ScopedCameraMetadata metadata,
+    ScopedBufferHandle buffer) {
+  size_t jpeg_max_size = jpeg_max_sizes_[cam_id_];
+  void* buf_addr = nullptr;
+  ASSERT_EQ(0, Camera3TestGralloc::GetInstance()->Lock(
+                   *buffer, 0, 0, 0, jpeg_max_size, 1, &buf_addr));
+  ASSERT_NE(nullptr, buf_addr);
+
+  {
+    // Ensure buffer unlock process is executed when exiting from ASSERT_XX.
+    struct UnlockBuf {
+      void operator()(buffer_handle_t* handle) {
+        Camera3TestGralloc::GetInstance()->Unlock(*handle);
+      }
+    };
+    std::unique_ptr<buffer_handle_t, UnlockBuf> unlock(buffer.get());
+
+    auto jpeg_blob = reinterpret_cast<camera3_jpeg_blob_t*>(
+        static_cast<uint8_t*>(buf_addr) + jpeg_max_size -
+        sizeof(camera3_jpeg_blob_t));
+    ASSERT_LE(buf_addr, static_cast<void*>(jpeg_blob));
+    ASSERT_EQ(CAMERA3_JPEG_BLOB_ID, jpeg_blob->jpeg_blob_id);
+
+    auto jpeg_size = jpeg_blob->jpeg_size;
+    ASSERT_EQ(jpeg_size,
+              base::WriteFile(dump_path_, static_cast<const char*>(buf_addr),
+                              jpeg_size));
+  }
+}
+
+TEST_P(Camera3DumpSimpleStillCaptureTest, DumpCaptureResult) {
+  // Run only if --dump_still_capture_path argument presented.
+  if (dump_path_.empty()) {
+    GTEST_SKIP();
+  }
+  TakePictureTest(1);
+}
+
+// Test parameters:
 // - Camera ID, preview resolution, JPEG resolution
 class Camera3JpegResolutionTest
     : public Camera3StillCaptureFixture,
@@ -293,5 +356,10 @@ INSTANTIATE_TEST_CASE_P(
     Camera3StillCaptureTest,
     Camera3JpegResolutionTest,
     ::testing::ValuesIn(IterateCameraIdPreviewJpegResolution()));
+
+INSTANTIATE_TEST_CASE_P(
+    Camera3StillCaptureTest,
+    Camera3DumpSimpleStillCaptureTest,
+    ::testing::ValuesIn(Camera3Module().GetTestCameraIds()));
 
 }  // namespace camera3_test
