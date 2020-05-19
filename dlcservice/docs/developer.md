@@ -95,7 +95,9 @@ Within the build file, the implementation should include at least the
 `src_install` function. Within `src_install`, all the DLC content should be
 installed using the special path prefix `$(dlc_get_path)`. This means, that
 before installing any DLC files, you have add the prefix `$(dlc_get_path)` to
-`into, insinto` and `exeinto`. See example below.
+`into, insinto` and `exeinto`. See example below.<br/>
+Note: `dlc_get_path` is a function, not a variable, so it's surrounded by
+parenthesis instead of brackets.
 
 See an example of a DLC ebuild: [dummy-dlc]
 
