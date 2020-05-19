@@ -13,6 +13,11 @@
 
 #include "cros-disks/quote.h"
 
+#ifndef MS_NOSYMFOLLOW
+// Added locally in kernel 5.4, upstream TBD.
+#define MS_NOSYMFOLLOW 256
+#endif
+
 namespace cros_disks {
 
 const char MountOptions::kOptionBind[] = "bind";
@@ -165,6 +170,18 @@ std::pair<MountOptions::Flags, std::string> MountOptions::ToMountFlagsAndData()
       flags |= MS_NOSUID;
     } else if (option == kOptionSynchronous) {
       flags |= MS_SYNCHRONOUS;
+    } else if (option == kOptionNoSymFollow) {
+      flags |= MS_NOSYMFOLLOW;
+      // Pass the nosymfollow option as both a flag and a string option for
+      // compatibility across kernels.  The mount syscall ignores unknown flags,
+      // so kernels that don't have MS_NOSYMFOLLOW will pick up nosymfollow from
+      // the data parameter through the chromiumos LSM.  Kernels that do have
+      // MS_NOSYMFOLLOW will pick up the same behavior directly from the flag;
+      // our LSM ignores the string option in that case.
+      //
+      // TODO(b/152074038): Remove the string option once all devices have been
+      // upreved to a kernel that supports MS_NOSYMFOLLOW (currently 5.4+).
+      data.push_back(option);
     } else {
       data.push_back(option);
     }
