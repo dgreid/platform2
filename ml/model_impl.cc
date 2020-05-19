@@ -93,7 +93,7 @@ int ModelImpl::num_graph_executors_for_testing() const {
 
 void ModelImpl::CreateGraphExecutor(GraphExecutorRequest request,
                                     CreateGraphExecutorCallback callback) {
-  auto options = GraphExecutorOptions::New(false);
+  auto options = GraphExecutorOptions::New(/*use_nnapi=*/false);
   CreateGraphExecutorWithOptions(std::move(options), std::move(request),
                                  std::move(callback));
 }
@@ -133,7 +133,7 @@ void ModelImpl::CreateGraphExecutorWithOptions(
 
   // If requested, load and apply NNAPI
   if (options->use_nnapi) {
-    auto delegate = tflite::NnApiDelegate();
+    TfLiteDelegate* delegate = tflite::NnApiDelegate();
     if (!delegate) {
       LOG(ERROR) << "NNAPI requested but not available.";
       std::move(callback).Run(CreateGraphExecutorResult::NNAPI_UNAVAILABLE);

@@ -48,7 +48,7 @@ TensorPtr NewSingleValueTensor(const double value) {
 
 }  // namespace
 
-AddResult Add(const double x, const double y, bool use_nnapi) {
+AddResult Add(const double x, const double y, const bool use_nnapi) {
   AddResult result = {"Not completed.", -1.0};
 
   // Create ML Service
