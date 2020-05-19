@@ -22,6 +22,12 @@
 
 using base::FilePath;
 using brillo::FindLog;
+using ::testing::_;
+using ::testing::AllOf;
+using ::testing::EndsWith;
+using ::testing::Property;
+using ::testing::Return;
+using ::testing::StartsWith;
 
 namespace {
 
@@ -47,7 +53,14 @@ class UserCollectorMock : public UserCollector {
               GetCommandLine,
               (pid_t),
               (const, override));
-  MOCK_METHOD(void, AccounceUserCrash, ());
+  MOCK_METHOD(void, AccounceUserCrash, (), (override));
+  MOCK_METHOD(ErrorType,
+              ConvertCoreToMinidump,
+              (pid_t pid,
+               const base::FilePath&,
+               const base::FilePath&,
+               const base::FilePath&),
+              (override));
 };
 
 class UserCollectorTest : public ::testing::Test {
@@ -72,9 +85,9 @@ class UserCollectorTest : public ::testing::Test {
     test_core_pipe_limit_file_ = test_dir_.Append("core_pipe_limit");
     collector_.set_core_pipe_limit_file(test_core_pipe_limit_file_.value());
     collector_.set_filter_path(test_dir_.Append("no_filter").value());
-    base::FilePath crash_dir = test_dir_.Append("crash_dir");
-    ASSERT_TRUE(base::CreateDirectory(crash_dir));
-    collector_.set_crash_directory_for_test(crash_dir);
+    crash_dir_ = test_dir_.Append("crash_dir");
+    ASSERT_TRUE(base::CreateDirectory(crash_dir_));
+    collector_.set_crash_directory_for_test(crash_dir_);
     pid_ = pid;
 
     brillo::ClearLog();
@@ -109,6 +122,7 @@ class UserCollectorTest : public ::testing::Test {
   UserCollectorMock collector_;
   pid_t pid_;
   FilePath test_dir_;
+  FilePath crash_dir_;
   FilePath test_core_pattern_file_;
   FilePath test_core_pipe_limit_file_;
   base::ScopedTempDir scoped_temp_dir_;
@@ -289,46 +303,89 @@ TEST_F(UserCollectorTest, ShouldDumpUserConsentProductionImage) {
   EXPECT_EQ("handling", reason);
 }
 
+// HandleCrashWithoutConsent tests that we do not attempt to create a dmp file
+// if we don't have user consent to collect crash data.
 TEST_F(UserCollectorTest, HandleCrashWithoutConsent) {
   s_metrics = false;
   EXPECT_CALL(collector_, AccounceUserCrash()).Times(0);
-  collector_.HandleCrash("20:10:1000:1000:ignored", "foobar");
+  EXPECT_CALL(collector_, ConvertCoreToMinidump(_, _, _, _)).Times(0);
+  // The "--user" arg passed to us from the kernel. man 5 core and read
+  // UserCollector::GetPattern() for more.
+  constexpr char kernel_user_arg[] = "20:10:1000:1000:ignored";
+  EXPECT_TRUE(collector_.HandleCrash(kernel_user_arg, "foobar"));
   if (!VmSupport::Get()) {
     EXPECT_TRUE(FindLog("Received crash notification for foobar[20] sig 10"));
   }
 }
 
+// HandleNonChromeCrashWithConsent tests that we will create a dmp file if we
+// (a) have user consent to collect crash data and
+// (b) the process is not a Chrome process.
 TEST_F(UserCollectorTest, HandleNonChromeCrashWithConsent) {
   s_metrics = true;
-  int expected_accounce_calls = 1;
+  // Note the _ which is different from the - in the original |force_exec|
+  // passed to HandleCrash. This is due to the CrashCollector::Sanitize call in
+  // FormatDumpBasename.
+  const std::string crash_prefix = crash_dir_.Append("chromeos_wm").value();
+  int expected_mock_calls = 1;
   if (VmSupport::Get()) {
-    expected_accounce_calls = 0;
+    expected_mock_calls = 0;
   }
-  EXPECT_CALL(collector_, AccounceUserCrash()).Times(expected_accounce_calls);
-  collector_.HandleCrash("5:2:1000:1000:ignored", "chromeos-wm");
+  EXPECT_CALL(collector_, AccounceUserCrash()).Times(expected_mock_calls);
+  // NOTE: The '5' which appears in several strings below is the pid of the
+  // simulated crashing process.
+  EXPECT_CALL(collector_,
+              ConvertCoreToMinidump(
+                  5, FilePath("/tmp/crash_reporter/5"),
+                  Property(&FilePath::value,
+                           AllOf(StartsWith(crash_prefix), EndsWith("core"))),
+                  Property(&FilePath::value,
+                           AllOf(StartsWith(crash_prefix), EndsWith("dmp")))))
+      .Times(expected_mock_calls)
+      .WillRepeatedly(Return(CrashCollector::kErrorNone));
+  // The "--user" arg passed to us from the kernel. man 5 core and read
+  // UserCollector::GetPattern() for more.
+  constexpr char kernel_user_arg[] = "5:2:1000:1000:ignored";
+  EXPECT_TRUE(collector_.HandleCrash(kernel_user_arg, "chromeos-wm"));
   if (!VmSupport::Get()) {
     EXPECT_TRUE(
         FindLog("Received crash notification for chromeos-wm[5] sig 2"));
   }
 }
 
+// HandleChromeCrashWithConsent tests that we do not attempt to create a dmp
+// file if the process is named chrome. This is because we expect Chrome's own
+// crash handling library (Breakpad or Crashpad) to call us directly -- see
+// chrome_collector.h.
 TEST_F(UserCollectorTest, HandleChromeCrashWithConsent) {
   s_metrics = true;
   EXPECT_CALL(collector_, AccounceUserCrash()).Times(0);
-  collector_.HandleCrash("5:2:1000:1000:ignored", "chrome");
+  EXPECT_CALL(collector_, ConvertCoreToMinidump(_, _, _, _)).Times(0);
+  // The "--user" arg passed to us from the kernel. man 5 core and read
+  // UserCollector::GetPattern() for more.
+  constexpr char kernel_user_arg[] = "5:2:1000:1000:ignored";
+  EXPECT_TRUE(collector_.HandleCrash(kernel_user_arg, "chrome"));
   if (!VmSupport::Get()) {
     EXPECT_TRUE(FindLog("Received crash notification for chrome[5] sig 2"));
     EXPECT_TRUE(FindLog(kChromeIgnoreMsg));
   }
 }
 
+// HandleSuppliedChromeCrashWithConsent also tests that we do not attempt to
+// create a dmp file if the process is named chrome. This differs only in the
+// fact that we are using the kernel's supplied name instead of the |force_exec|
+// name. This is actually much closer to the real usage.
 TEST_F(UserCollectorTest, HandleSuppliedChromeCrashWithConsent) {
   s_metrics = true;
   EXPECT_CALL(collector_, AccounceUserCrash()).Times(0);
-  collector_.HandleCrash("0:2:1000:1000:chrome", nullptr);
+  EXPECT_CALL(collector_, ConvertCoreToMinidump(_, _, _, _)).Times(0);
+  // The "--user" arg passed to us from the kernel. man 5 core and read
+  // UserCollector::GetPattern() for more.
+  constexpr char kernel_user_arg[] = "5:2:1000:1000:chrome";
+  EXPECT_TRUE(collector_.HandleCrash(kernel_user_arg, nullptr));
   if (!VmSupport::Get()) {
     EXPECT_TRUE(
-        FindLog("Received crash notification for supplied_chrome[0] sig 2"));
+        FindLog("Received crash notification for supplied_chrome[5] sig 2"));
     EXPECT_TRUE(FindLog(kChromeIgnoreMsg));
   }
 }
