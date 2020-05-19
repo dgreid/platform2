@@ -27,37 +27,37 @@ $RepeatedMsgReduction on
 $IncludeConfig /etc/rsyslog.d/*.conf
 
 # Keep network stuff in /var/log/net.log
-if (($programname == 'shill') or \
+if (($programname == 'charon') or \
     ($programname == 'dhcpcd') or \
-    ($programname == 'wpa_supplicant') or \
     ($programname == 'hermes') or \
-    ($programname == 'ModemManager') or \
+    ($programname == 'l2tpipsec_vpn') or \
     ($programname == 'mist') or \
+    ($programname == 'ModemManager') or \
     ($programname == 'nss-get-cert') or \
     ($programname == 'openvpn') or \
     ($programname == 'openvpn-script') or \
-    ($programname == 'l2tpipsec_vpn') or \
     ($programname == 'patchpaneld') or \
     ($programname == 'pppd') or \
     ($programname == 'pseudomodem') or \
-    ($programname == 'charon')) then -/var/log/net.log
+    ($programname == 'shill') or \
+    ($programname == 'wpa_supplicant')) then -/var/log/net.log
 
 # Log important (EMERG..ERR) network stuff in /var/log/messages too,
 # but discard anything less severe
-if (($programname == 'shill') or \
+if (($programname == 'charon') or \
     ($programname == 'dhcpcd') or \
-    ($programname == 'wpa_supplicant') or \
     ($programname == 'hermes') or \
-    ($programname == 'ModemManager') or \
+    ($programname == 'l2tpipsec_vpn') or \
     ($programname == 'mist') or \
+    ($programname == 'ModemManager') or \
     ($programname == 'nss-get-cert') or \
     ($programname == 'openvpn') or \
     ($programname == 'openvpn-script') or \
-    ($programname == 'l2tpipsec_vpn') or \
     ($programname == 'patchpaneld') or \
     ($programname == 'pppd') or \
     ($programname == 'pseudomodem') or \
-    ($programname == 'charon')) and $syslogseverity >= '4' then ~
+    ($programname == 'shill') or \
+    ($programname == 'wpa_supplicant')) and $syslogseverity >= '4' then ~
 
 # Keep Upstart logs in /var/log/upstart.log
 # Since these go through the kernel ring buffer, the $programname is 'kernel'.
