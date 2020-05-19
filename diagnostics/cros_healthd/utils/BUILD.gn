@@ -1,0 +1,99 @@
+# Copyright 2020 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//common-mk/pkg_config.gni")
+
+# Library that provides utilities used by cros_healthd.
+pkg_config("libcros_healthd_utils_pkg_deps") {
+  pkg_deps = [
+    "dbus-1",
+    "libbrillo",
+    "libchrome-${libbase_ver}",
+    "libcros_config",
+    "libdebugd-client",
+    "libmojo-${libbase_ver}",
+    "libudev",
+    "protobuf",
+    "re2",
+    "system_api",
+  ]
+}
+
+source_set("libcros_healthd_utils") {
+  deps = [
+    "//diagnostics/common:libcommon",
+    "//diagnostics/cros_healthd/system:libcros_healthd_system",
+    "//diagnostics/mojo:diagnostics_mojo_bindings",
+  ]
+  all_dependent_configs = [ ":libcros_healthd_utils_pkg_deps" ]
+  sources = [
+    "backlight_utils.cc",
+    "battery_utils.cc",
+    "cpu_file_helpers.cc",
+    "cpu_utils.cc",
+    "disk_utils.cc",
+    "fan_utils.cc",
+    "memory_utils.cc",
+    "stateful_partition_utils.cc",
+    "timezone_utils.cc",
+    "vpd_utils.cc",
+  ]
+}
+
+if (use.test) {
+  pkg_config("libcros_healthd_utils_test_pkg_deps") {
+    pkg_deps = [
+      "libchrome-${libbase_ver}",
+      "libchrome-test-${libbase_ver}",
+      "libcros_config",
+      "libdebugd-client-test",
+      "system_api",
+    ]
+  }
+
+  executable("libcros_healthd_utils_test") {
+    configs += [
+      ":libcros_healthd_utils_test_pkg_deps",
+      "//common-mk:test",
+    ]
+    deps = [
+      ":libcros_healthd_utils",
+      "//common-mk/testrunner:testrunner",
+      "//diagnostics/common:libcommon_test_utils",
+      "//diagnostics/cros_healthd/system:libcros_healthd_system_test_utils",
+    ]
+    sources = [
+      "backlight_utils_test.cc",
+      "battery_utils_test.cc",
+      "cpu_file_helpers_test.cc",
+      "cpu_utils_test.cc",
+      "fan_utils_test.cc",
+      "memory_utils_test.cc",
+      "stateful_partition_utils_test.cc",
+      "timezone_utils_test.cc",
+      "vpd_utils_test.cc",
+    ]
+  }
+}
+
+if (use.fuzzer) {
+  executable("fetch_block_device_fuzzer") {
+    configs += [ "//common-mk/common_fuzzer:common_fuzzer" ]
+    deps = [ ":libcros_healthd_utils" ]
+    sources = [ "fetch_block_device_fuzzer.cc" ]
+  }
+
+  pkg_config("fetch_cached_vpd_fuzzer_pkg_deps") {
+    pkg_deps = [ "libcros_config" ]
+  }
+
+  executable("fetch_cached_vpd_fuzzer") {
+    configs += [
+      ":fetch_cached_vpd_fuzzer_pkg_deps",
+      "//common-mk/common_fuzzer:common_fuzzer",
+    ]
+    deps = [ ":libcros_healthd_utils" ]
+    sources = [ "fetch_cached_vpd_fuzzer.cc" ]
+  }
+}

@@ -19,9 +19,9 @@ group("all") {
   if (use.test) {
     deps += [
       ":cros_healthd_test",
-      ":libcros_healthd_utils_test",
       "//diagnostics/common:libcommon_test",
       "//diagnostics/cros_healthd/events:libcros_healthd_events_test",
+      "//diagnostics/cros_healthd/utils:libcros_healthd_utils_test",
       "//diagnostics/cros_healthd_mojo_adapter:cros_healthd_mojo_adapter_test",
       "//diagnostics/grpc_async_adapter:libgrpc_async_adapter_test",
       "//diagnostics/routines:routine_test",
@@ -30,47 +30,10 @@ group("all") {
   }
   if (use.fuzzer) {
     deps += [
-      ":fetch_block_device_fuzzer",
-      ":fetch_cached_vpd_fuzzer",
+      "//diagnostics/cros_healthd/utils:fetch_block_device_fuzzer",
+      "//diagnostics/cros_healthd/utils:fetch_cached_vpd_fuzzer",
     ]
   }
-}
-
-# Library that provides utilities used by cros_healthd.
-pkg_config("libcros_healthd_utils_pkg_deps") {
-  pkg_deps = [
-    "dbus-1",
-    "libbrillo",
-    "libchrome-${libbase_ver}",
-    "libcros_config",
-    "libdebugd-client",
-    "libmojo-${libbase_ver}",
-    "libudev",
-    "protobuf",
-    "re2",
-    "system_api",
-  ]
-}
-
-source_set("libcros_healthd_utils") {
-  deps = [
-    "//diagnostics/common:libcommon",
-    "//diagnostics/cros_healthd/system:libcros_healthd_system",
-    "//diagnostics/mojo:diagnostics_mojo_bindings",
-  ]
-  all_dependent_configs = [ ":libcros_healthd_utils_pkg_deps" ]
-  sources = [
-    "cros_healthd/utils/backlight_utils.cc",
-    "cros_healthd/utils/battery_utils.cc",
-    "cros_healthd/utils/cpu_file_helpers.cc",
-    "cros_healthd/utils/cpu_utils.cc",
-    "cros_healthd/utils/disk_utils.cc",
-    "cros_healthd/utils/fan_utils.cc",
-    "cros_healthd/utils/memory_utils.cc",
-    "cros_healthd/utils/stateful_partition_utils.cc",
-    "cros_healthd/utils/timezone_utils.cc",
-    "cros_healthd/utils/vpd_utils.cc",
-  ]
 }
 
 # Library that provides core functionality for the cros_healthd daemon.
@@ -86,9 +49,9 @@ pkg_config("libcros_healthd_pkg_deps") {
 
 source_set("libcros_healthd") {
   deps = [
-    ":libcros_healthd_utils",
     "//diagnostics/cros_healthd/events:libcros_healthd_events",
     "//diagnostics/cros_healthd/system:libcros_healthd_system",
+    "//diagnostics/cros_healthd/utils:libcros_healthd_utils",
     "//diagnostics/mojo:diagnostics_mojo_bindings",
     "//diagnostics/routines:libdiag_routine",
   ]
@@ -140,60 +103,5 @@ if (use.test) {
       "cros_healthd/cros_healthd_routine_service_impl_test.cc",
       "cros_healthd/fake_cros_healthd_routine_factory.cc",
     ]
-  }
-
-  pkg_config("libcros_healthd_utils_test_pkg_deps") {
-    pkg_deps = [
-      "libchrome-${libbase_ver}",
-      "libchrome-test-${libbase_ver}",
-      "libcros_config",
-      "libdebugd-client-test",
-      "system_api",
-    ]
-  }
-
-  executable("libcros_healthd_utils_test") {
-    configs += [
-      ":libcros_healthd_utils_test_pkg_deps",
-      "//common-mk:test",
-    ]
-    deps = [
-      ":libcros_healthd_utils",
-      "../common-mk/testrunner:testrunner",
-      "//diagnostics/common:libcommon_test_utils",
-      "//diagnostics/cros_healthd/system:libcros_healthd_system_test_utils",
-    ]
-    sources = [
-      "cros_healthd/utils/backlight_utils_test.cc",
-      "cros_healthd/utils/battery_utils_test.cc",
-      "cros_healthd/utils/cpu_file_helpers_test.cc",
-      "cros_healthd/utils/cpu_utils_test.cc",
-      "cros_healthd/utils/fan_utils_test.cc",
-      "cros_healthd/utils/memory_utils_test.cc",
-      "cros_healthd/utils/stateful_partition_utils_test.cc",
-      "cros_healthd/utils/timezone_utils_test.cc",
-      "cros_healthd/utils/vpd_utils_test.cc",
-    ]
-  }
-}
-
-if (use.fuzzer) {
-  executable("fetch_block_device_fuzzer") {
-    configs += [ "//common-mk/common_fuzzer:common_fuzzer" ]
-    deps = [ ":libcros_healthd_utils" ]
-    sources = [ "cros_healthd/utils/fetch_block_device_fuzzer.cc" ]
-  }
-
-  pkg_config("fetch_cached_vpd_fuzzer_pkg_deps") {
-    pkg_deps = [ "libcros_config" ]
-  }
-
-  executable("fetch_cached_vpd_fuzzer") {
-    configs += [
-      ":fetch_cached_vpd_fuzzer_pkg_deps",
-      "//common-mk/common_fuzzer:common_fuzzer",
-    ]
-    deps = [ ":libcros_healthd_utils" ]
-    sources = [ "cros_healthd/utils/fetch_cached_vpd_fuzzer.cc" ]
   }
 }
