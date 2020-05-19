@@ -7,13 +7,13 @@ import("//common-mk/pkg_config.gni")
 group("all") {
   deps = [
     ":cros_healthd",
-    ":telem",
     "//diagnostics/cros_healthd_event_tool:cros-health-event",
     "//diagnostics/diag:diag",
     "//diagnostics/routines:floating-point-accuracy",
     "//diagnostics/routines:prime-search",
     "//diagnostics/routines:smartctl-check",
     "//diagnostics/routines:urandom",
+    "//diagnostics/telem:telem",
     "//diagnostics/wilco_dtc_supportd:wilco_dtc_supportd",
   ]
   if (use.test) {
@@ -109,21 +109,6 @@ pkg_config("cros_healthd_pkg_deps") {
 executable("cros_healthd") {
   deps = [ ":libcros_healthd" ]
   sources = [ "cros_healthd/main.cc" ]
-}
-
-# The telemetry tool executable.
-pkg_config("telem_pkg_deps") {
-  pkg_deps = [
-    "libbrillo",
-    "libchrome-${libbase_ver}",
-  ]
-}
-
-executable("telem") {
-  deps =
-      [ "//diagnostics/cros_healthd_mojo_adapter:libcros_healthd_mojo_adapter" ]
-  configs += [ ":telem_pkg_deps" ]
-  sources = [ "telem/main.cc" ]
 }
 
 if (use.test) {
