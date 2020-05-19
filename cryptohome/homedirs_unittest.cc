@@ -572,13 +572,13 @@ class FreeDiskSpaceTest : public HomeDirsTest {
         .WillRepeatedly(Return(true));
     EXPECT_CALL(timestamp_cache_, Initialize()).Times(1);
 
-    MockVaultKeyset* vk[arraysize(kHomedirs)];
+    MockVaultKeyset* vk[base::size(kHomedirs)];
     EXPECT_CALL(vault_keyset_factory_, New(_, _))
         .WillOnce(Return(vk[0] = new MockVaultKeyset()))
         .WillOnce(Return(vk[1] = new MockVaultKeyset()))
         .WillOnce(Return(vk[2] = new MockVaultKeyset()))
         .WillOnce(Return(vk[3] = new MockVaultKeyset()));
-    for (size_t i = 0; i < arraysize(vk); ++i) {
+    for (size_t i = 0; i < base::size(vk); ++i) {
       EXPECT_CALL(*vk[i], Load(_)).WillRepeatedly(Return(false));
     }
     homedirs_.set_vault_keyset_factory(&vault_keyset_factory_);
@@ -857,13 +857,13 @@ TEST_P(FreeDiskSpaceTest, TimeCacheSkipNormalCleanupIfNotActive) {
   EXPECT_CALL(timestamp_cache_, Initialize()).Times(1);
 
   // It then walks the user vault to populate.
-  MockVaultKeyset* vk[arraysize(kHomedirs)];
+  MockVaultKeyset* vk[base::size(kHomedirs)];
   EXPECT_CALL(vault_keyset_factory_, New(_, _))
       .WillOnce(Return(vk[0] = new MockVaultKeyset()))
       .WillOnce(Return(vk[1] = new MockVaultKeyset()))
       .WillOnce(Return(vk[2] = new MockVaultKeyset()))
       .WillOnce(Return(vk[3] = new MockVaultKeyset()));
-  for (size_t i = 0; i < arraysize(vk); ++i) {
+  for (size_t i = 0; i < base::size(vk); ++i) {
     EXPECT_CALL(*vk[i], Load(_)).WillRepeatedly(Return(false));
   }
   homedirs_.set_vault_keyset_factory(&vault_keyset_factory_);
@@ -958,13 +958,13 @@ TEST_P(FreeDiskSpaceTest, TimeCacheSkipAggressiveCleanupIfNotActive) {
   EXPECT_CALL(timestamp_cache_, Initialize()).Times(1);
 
   // It then walks the user vault to populate.
-  MockVaultKeyset* vk[arraysize(kHomedirs)];
+  MockVaultKeyset* vk[base::size(kHomedirs)];
   EXPECT_CALL(vault_keyset_factory_, New(_, _))
       .WillOnce(Return(vk[0] = new MockVaultKeyset()))
       .WillOnce(Return(vk[1] = new MockVaultKeyset()))
       .WillOnce(Return(vk[2] = new MockVaultKeyset()))
       .WillOnce(Return(vk[3] = new MockVaultKeyset()));
-  for (size_t i = 0; i < arraysize(vk); ++i) {
+  for (size_t i = 0; i < base::size(vk); ++i) {
     EXPECT_CALL(*vk[i], Load(_)).WillRepeatedly(Return(false));
   }
   homedirs_.set_vault_keyset_factory(&vault_keyset_factory_);
