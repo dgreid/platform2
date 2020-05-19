@@ -79,7 +79,7 @@ source_set("libdiag_routine") {
   configs += [ ":libdiag_routine_pkg_deps" ]
   deps = [
     "//diagnostics/common:libcommon",
-    "//diagnostics/mojo:diagnostics_mojo_bindings",
+    "//diagnostics/mojo:cros_healthd_mojo_bindings",
   ]
   sources = [
     "ac_power/ac_power.cc",
@@ -111,7 +111,7 @@ if (use.test) {
   }
 
   source_set("libroutine_test_utils") {
-    deps = [ "//diagnostics/mojo:diagnostics_mojo_bindings" ]
+    deps = [ "//diagnostics/mojo:cros_healthd_mojo_bindings" ]
     configs += [
       ":libroutine_test_utils_pkg_deps",
       "//common-mk:test",

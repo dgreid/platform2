@@ -25,10 +25,7 @@ source_set("libtelemetry") {
 if (use.test) {
   source_set("telemetry_test") {
     configs += [ ":libtelemetry_pkg_deps" ]
-    deps = [
-      "//diagnostics/common:libcommon_test_utils",
-      "//diagnostics/mojo:diagnostics_mojo_bindings",
-    ]
+    deps = [ "//diagnostics/common:libcommon_test_utils" ]
     sources = [
       "bluetooth_event_service_impl_test.cc",
       "ec_event_service_test.cc",

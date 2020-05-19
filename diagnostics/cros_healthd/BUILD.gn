@@ -20,7 +20,7 @@ source_set("libcros_healthd") {
     "events:libcros_healthd_events",
     "system:libcros_healthd_system",
     "utils:libcros_healthd_utils",
-    "//diagnostics/mojo:diagnostics_mojo_bindings",
+    "//diagnostics/mojo:cros_healthd_mojo_bindings",
     "//diagnostics/routines:libdiag_routine",
   ]
   sources = [

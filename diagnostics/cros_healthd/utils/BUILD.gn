@@ -25,7 +25,7 @@ source_set("libcros_healthd_utils") {
   deps = [
     "//diagnostics/common:libcommon",
     "//diagnostics/cros_healthd/system:libcros_healthd_system",
-    "//diagnostics/mojo:diagnostics_mojo_bindings",
+    "//diagnostics/mojo:cros_healthd_mojo_bindings",
   ]
   sources = [
     "backlight_utils.cc",

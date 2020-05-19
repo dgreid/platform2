@@ -17,7 +17,7 @@ source_set("libdiag") {
   deps = [
     "//diagnostics/common:libcommon",
     "//diagnostics/cros_healthd_mojo_adapter:libcros_healthd_mojo_adapter",
-    "//diagnostics/mojo:diagnostics_mojo_bindings",
+    "//diagnostics/mojo:cros_healthd_mojo_bindings",
   ]
   sources = [ "diag_actions.cc" ]
 }
@@ -33,7 +33,7 @@ pkg_config("diag_pkg_deps") {
 executable("diag") {
   deps = [
     ":libdiag",
-    "//diagnostics/mojo:diagnostics_mojo_bindings",
+    "//diagnostics/mojo:cros_healthd_mojo_bindings",
   ]
   configs += [ ":diag_pkg_deps" ]
   sources = [ "main.cc" ]

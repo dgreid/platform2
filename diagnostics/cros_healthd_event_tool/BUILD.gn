@@ -17,7 +17,7 @@ source_set("libcros_healthd_event_tool") {
   configs += [ ":libcros_healthd_event_tool_pkg_deps" ]
   deps = [
     "//diagnostics/cros_healthd_mojo_adapter:libcros_healthd_mojo_adapter",
-    "//diagnostics/mojo:diagnostics_mojo_bindings",
+    "//diagnostics/mojo:cros_healthd_mojo_bindings",
   ]
   sources = [
     "bluetooth_subscriber.cc",

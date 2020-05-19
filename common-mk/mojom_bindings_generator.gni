@@ -226,7 +226,8 @@ template("generate_mojom_bindings") {
                            ])
   }
 
-  pkg_config("generate_mojom_bindings_pkg_deps") {
+  target_pkg_deps_name = target_name + "_pkg_deps"
+  pkg_config(target_pkg_deps_name) {
     pkg_deps = [
       "libchrome-${libbase_ver}",
       "libmojo-${libbase_ver}",
@@ -253,7 +254,7 @@ template("generate_mojom_bindings") {
                              "standalone",
                              "use_pic",
                            ])
-    all_dependent_configs = [ ":generate_mojom_bindings_pkg_deps" ]
+    all_dependent_configs = [ ":${target_pkg_deps_name}" ]
     if (defined(invoker.all_dependent_configs)) {
       all_dependent_configs += invoker.all_dependent_configs
     }
