@@ -56,6 +56,9 @@ bool DlcBase::Initialize() {
                                     package_, kDlcImageFileName);
 
   state_.set_state(DlcState::NOT_INSTALLED);
+  state_.set_id(id_);
+  state_.set_progress(0);
+  state_.set_last_error_code(kErrorNone);
 
   is_verified_ =
       Prefs(*this, system_state->active_boot_slot()).Exists(kDlcPrefVerified);
@@ -127,8 +130,9 @@ base::FilePath DlcBase::GetRoot() const {
 bool DlcBase::InstallCompleted(ErrorPtr* err) {
   if (!Prefs(*this, SystemState::Get()->active_boot_slot())
            .Create(kDlcPrefVerified)) {
+    state_.set_last_error_code(kErrorInternal);
     *err = Error::Create(
-        FROM_HERE, kErrorInternal,
+        FROM_HERE, state_.last_error_code(),
         base::StringPrintf("Failed to mark active DLC=%s as verified.",
                            id_.c_str()));
     return false;
@@ -137,7 +141,7 @@ bool DlcBase::InstallCompleted(ErrorPtr* err) {
   return true;
 }
 
-bool DlcBase::UpdateCompleted(ErrorPtr* err) const {
+bool DlcBase::UpdateCompleted(ErrorPtr* err) {
   if (!Prefs(*this, SystemState::Get()->inactive_boot_slot())
            .Create(kDlcPrefVerified)) {
     *err = Error::Create(
@@ -149,7 +153,7 @@ bool DlcBase::UpdateCompleted(ErrorPtr* err) const {
   return true;
 }
 
-bool DlcBase::MakeReadyForUpdate(ErrorPtr* err) const {
+bool DlcBase::MakeReadyForUpdate(ErrorPtr* err) {
   if (!Prefs(*this, SystemState::Get()->inactive_boot_slot())
            .Delete(kDlcPrefVerified)) {
     *err = Error::Create(
@@ -171,8 +175,9 @@ bool DlcBase::CreateDlc(ErrorPtr* err) {
   for (const auto& path :
        {content_id_path_, content_package_path_, prefs_path_}) {
     if (!CreateDir(path)) {
+      state_.set_last_error_code(kErrorInternal);
       *err = Error::Create(
-          FROM_HERE, kErrorInternal,
+          FROM_HERE, state_.last_error_code(),
           base::StringPrintf("Failed to create directory %s for DLC=%s",
                              path.value().c_str(), id_.c_str()));
       return false;
@@ -183,15 +188,16 @@ bool DlcBase::CreateDlc(ErrorPtr* err) {
   for (const auto& slot : {BootSlot::Slot::A, BootSlot::Slot::B}) {
     FilePath image_path = GetImagePath(slot);
     if (!CreateFile(image_path, manifest_.preallocated_size())) {
+      state_.set_last_error_code(kErrorAllocation);
       *err = Error::Create(
-          FROM_HERE, kErrorAllocation,
+          FROM_HERE, state_.last_error_code(),
           base::StringPrintf("Failed to create image file %s for DLC=%s",
                              image_path.value().c_str(), id_.c_str()));
       return false;
     }
   }
 
-  state_.set_state(DlcState::INSTALLING);
+  ChangeState(DlcState::INSTALLING);
   return true;
 }
 
@@ -400,7 +406,7 @@ bool DlcBase::SetupInitInstall(ErrorPtr* err) {
       // required that even installed DLC images need to be mounted again.
       if (!TryMount(err)) {
         LOG(ERROR) << Error::ToString(*err);
-        state_.set_state(DlcState::NOT_INSTALLED);
+        ChangeState(DlcState::NOT_INSTALLED);
         return false;
       }
       break;
@@ -444,8 +450,9 @@ bool DlcBase::FinishInstall(ErrorPtr* err) {
           LOG(WARNING) << "Missing verification mark for DLC=" << id_
                        << ", but verified to be a valid image.";
         } else {
+          state_.set_last_error_code(kErrorInternal);
           *err = Error::Create(
-              FROM_HERE, kErrorInternal,
+              FROM_HERE, state_.last_error_code(),
               base::StringPrintf("Cannot mount image which is not "
                                  "marked as verified for DLC=%s",
                                  id_.c_str()));
@@ -495,17 +502,19 @@ bool DlcBase::Mount(ErrorPtr* err) {
               ? imageloader::kSlotNameA
               : imageloader::kSlotNameB,
           &mount_point, nullptr, kImageLoaderTimeoutMs)) {
-    *err = Error::Create(FROM_HERE, kErrorInternal,
+    state_.set_last_error_code(kErrorInternal);
+    *err = Error::Create(FROM_HERE, state_.last_error_code(),
                          "Imageloader is unavailable for LoadDlcImage().");
     return false;
   }
   if (mount_point.empty()) {
-    *err = Error::Create(FROM_HERE, kErrorInternal,
+    state_.set_last_error_code(kErrorInternal);
+    *err = Error::Create(FROM_HERE, state_.last_error_code(),
                          "Imageloader LoadDlcImage() call failed.");
     return false;
   }
   mount_point_ = FilePath(mount_point);
-  state_.set_state(DlcState::INSTALLED);
+  ChangeState(DlcState::INSTALLED);
   return true;
 }
 
@@ -513,23 +522,28 @@ bool DlcBase::Unmount(ErrorPtr* err) {
   bool success = false;
   if (!SystemState::Get()->image_loader()->UnloadDlcImage(
           id_, package_, &success, nullptr, kImageLoaderTimeoutMs)) {
-    *err = Error::Create(FROM_HERE, kErrorInternal,
+    state_.set_last_error_code(kErrorInternal);
+    *err = Error::Create(FROM_HERE, state_.last_error_code(),
                          "Imageloader is unavailable for UnloadDlcImage().");
     return false;
   }
   if (!success) {
-    *err = Error::Create(FROM_HERE, kErrorInternal,
+    state_.set_last_error_code(kErrorInternal);
+    *err = Error::Create(FROM_HERE, state_.last_error_code(),
                          "Imageloader UnloadDlcImage() call failed.");
     return false;
   }
-  state_.set_state(DlcState::NOT_INSTALLED);
+
+  // TODO(crbug.com/1069162): Currently, when we do unmount, we remove the DLC
+  // too. So we should not change the state here. But once we switched to
+  // ref-counting, and we only do unmount, then state could be changed here too.
   return true;
 }
 
 bool DlcBase::TryMount(ErrorPtr* err) {
   if (!mount_point_.empty() && base::PathExists(GetRoot())) {
     LOG(INFO) << "Skipping mount as already mounted at " << GetRoot();
-    state_.set_state(DlcState::INSTALLED);
+    ChangeState(DlcState::INSTALLED);
     return true;
   }
 
@@ -565,12 +579,13 @@ bool DlcBase::DeleteInternal(ErrorPtr* err) {
     LOG(WARNING) << "Failed to set DLC(" << id_ << ") to inactive."
                  << (tmp_err ? Error::ToString(tmp_err)
                              : "Missing error from update engine proxy.");
-  state_.set_state(DlcState::NOT_INSTALLED);
+  ChangeState(DlcState::NOT_INSTALLED);
   is_verified_ = false;
 
   if (!undeleted_paths.empty()) {
+    state_.set_last_error_code(kErrorInternal);
     *err = Error::Create(
-        FROM_HERE, kErrorInternal,
+        FROM_HERE, state_.last_error_code(),
         base::StringPrintf("DLC directories (%s) could not be deleted.",
                            base::JoinString(undeleted_paths, ",").c_str()));
     return false;
@@ -584,8 +599,9 @@ bool DlcBase::Delete(ErrorPtr* err) {
       LOG(WARNING) << "Trying to uninstall not installed DLC=" << id_;
       return DeleteInternal(err);
     case DlcState::INSTALLING:
+      state_.set_last_error_code(kErrorBusy);
       *err = Error::Create(
-          FROM_HERE, kErrorBusy,
+          FROM_HERE, state_.last_error_code(),
           base::StringPrintf("Trying to delete a currently installing DLC=%s",
                              id_.c_str()));
       return false;
@@ -594,6 +610,47 @@ bool DlcBase::Delete(ErrorPtr* err) {
     default:
       NOTREACHED();
       return false;
+  }
+}
+
+void DlcBase::ChangeState(DlcState::State state) {
+  switch (state) {
+    case DlcState::NOT_INSTALLED:
+      state_.set_state(state);
+      state_.set_progress(0);
+      state_.clear_root_path();
+      break;
+
+    case DlcState::INSTALLING:
+      state_.set_state(state);
+      state_.set_progress(0);
+      state_.set_last_error_code(kErrorNone);
+      break;
+
+    case DlcState::INSTALLED:
+      state_.set_state(state);
+      state_.set_progress(1.0);
+      state_.set_root_path(mount_point_.value());
+      break;
+
+    default:
+      NOTREACHED();
+  }
+
+  LOG(INFO) << "Changing DLC=" << id_ << " state to " << state_.state();
+  SystemState::Get()->state_change_reporter()->DlcStateChanged(state_);
+}
+
+void DlcBase::ChangeProgress(double progress) {
+  if (state_.state() != DlcState::INSTALLING) {
+    LOG(WARNING) << "Cannot change the progress if DLC is not being installed.";
+    return;
+  }
+
+  // Make sure the progress is not decreased.
+  if (state_.progress() < progress) {
+    state_.set_progress(std::min(progress, 1.0));
+    SystemState::Get()->state_change_reporter()->DlcStateChanged(state_);
   }
 }
 

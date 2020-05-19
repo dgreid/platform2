@@ -50,9 +50,13 @@ void Daemon::RegisterDBusObjectsAsync(
 
   bus_for_proxies_ = dbus_connection_for_proxies_.Connect();
   CHECK(bus_for_proxies_);
-  // |SystemState| must be:
-  //  - Initialized after |bus_for_proxies_|.
-  //  - Initialized before |DlcService|.
+
+  dlc_service_ = std::make_unique<DlcService>();
+
+  auto dbus_service = std::make_unique<DBusService>(dlc_service_.get());
+  dbus_adaptor_ = std::make_unique<DBusAdaptor>(std::move(dbus_service));
+  dlc_service_->AddObserver(dbus_adaptor_.get());
+
   SystemState::Initialize(
       std::make_unique<org::chromium::ImageLoaderInterfaceProxy>(
           bus_for_proxies_),
@@ -60,17 +64,13 @@ void Daemon::RegisterDBusObjectsAsync(
           bus_for_proxies_),
       std::make_unique<org::chromium::SessionManagerInterfaceProxy>(
           bus_for_proxies_),
+      dbus_adaptor_.get(),
       std::make_unique<BootSlot>(std::make_unique<BootDevice>()),
       base::FilePath(imageloader::kDlcManifestRootpath),
       base::FilePath(kDlcPreloadedImageRootpath),
       base::FilePath(imageloader::kDlcImageRootpath),
       base::FilePath(kDlcServicePrefsPath), base::FilePath(kUsersPath));
   CHECK(SystemState::Get());
-  dlc_service_ = std::make_unique<DlcService>();
-
-  auto dbus_service = std::make_unique<DBusService>(dlc_service_.get());
-  dbus_adaptor_ = std::make_unique<DBusAdaptor>(std::move(dbus_service));
-  dlc_service_->AddObserver(dbus_adaptor_.get());
 
   dbus_adaptor_->RegisterWithDBusObject(dbus_object_.get());
   dbus_object_->RegisterAsync(

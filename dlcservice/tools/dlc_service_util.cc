@@ -132,10 +132,10 @@ class DlcServiceUtil : public brillo::Daemon {
     // Called with "--install".
     if (FLAGS_install) {
       // Set up callbacks
-      dlc_service_proxy_->RegisterOnInstallStatusSignalHandler(
-          base::Bind(&DlcServiceUtil::OnInstallStatus,
+      dlc_service_proxy_->RegisterDlcStateChangedSignalHandler(
+          base::Bind(&DlcServiceUtil::OnDlcStateChanged,
                      weak_ptr_factory_.GetWeakPtr()),
-          base::Bind(&DlcServiceUtil::OnInstallStatusConnect,
+          base::Bind(&DlcServiceUtil::OnDlcStateChangedConnect,
                      weak_ptr_factory_.GetWeakPtr()));
       if (Install()) {
         // Don't |Quit()| as we will need to wait for signal of install.
@@ -189,19 +189,20 @@ class DlcServiceUtil : public brillo::Daemon {
     return true;
   }
 
-  // Callback invoked on receiving |OnInstallStatus| signal.
-  void OnInstallStatus(const dlcservice::InstallStatus& install_status) {
-    switch (install_status.status()) {
-      case dlcservice::Status::COMPLETED:
-        LOG(INFO) << "Install successful!: '" << dlc_id_ << "'.";
+  // Callback invoked on receiving |OnDlcStateChanged| signal.
+  void OnDlcStateChanged(const dlcservice::DlcState& dlc_state) {
+    switch (dlc_state.state()) {
+      case dlcservice::DlcState::INSTALLED:
+        LOG(INFO) << "Install successful for DLC: " << dlc_id_;
         Quit();
         break;
-      case dlcservice::Status::RUNNING:
-        LOG(INFO) << "Install in progress: " << install_status.progress();
+      case dlcservice::DlcState::INSTALLING:
+        LOG(INFO) << static_cast<int>(dlc_state.progress() * 100)
+                  << "% installed DLC: " << dlc_id_;
         break;
-      case dlcservice::Status::FAILED:
-        LOG(ERROR) << "Failed to install: '" << dlc_id_
-                   << "' with error code: " << install_status.error_code();
+      case dlcservice::DlcState::NOT_INSTALLED:
+        LOG(ERROR) << "Failed to install DLC: " << dlc_id_
+                   << " with error code: " << dlc_state.last_error_code();
         QuitWithExitCode(EX_SOFTWARE);
         break;
       default:
@@ -209,10 +210,10 @@ class DlcServiceUtil : public brillo::Daemon {
     }
   }
 
-  // Callback invoked on connecting |OnInstallStatus| signal.
-  void OnInstallStatusConnect(const string& interface_name,
-                              const string& signal_name,
-                              bool success) {
+  // Callback invoked on connecting |OnDlcStateChanged| signal.
+  void OnDlcStateChangedConnect(const string& interface_name,
+                                const string& signal_name,
+                                bool success) {
     if (!success) {
       LOG(ERROR) << "Error connecting " << interface_name << "." << signal_name;
       QuitWithExitCode(EX_SOFTWARE);

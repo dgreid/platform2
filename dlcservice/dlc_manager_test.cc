@@ -42,6 +42,7 @@ TEST_F(DlcManagerTest, PreloadAllowedDlcTest) {
               SetDlcActiveValue(true, kThirdDlc, _, _))
       .WillOnce(Return(true));
   EXPECT_THAT(dlc_manager_->GetInstalled(), ElementsAre());
+  EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(2);
 
   EXPECT_TRUE(dlc_manager_->InitInstall(kThirdDlc, &err_));
 
@@ -61,10 +62,10 @@ TEST_F(DlcManagerTest, PreloadAllowedWithBadPreinstalledDlcTest) {
   EXPECT_CALL(*mock_update_engine_proxy_ptr_,
               SetDlcActiveValue(true, kThirdDlc, _, _))
       .WillOnce(Return(true));
+  EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(2);
+
   EXPECT_THAT(dlc_manager_->GetInstalled(), ElementsAre());
-
   EXPECT_TRUE(dlc_manager_->InitInstall(kThirdDlc, &err_));
-
   EXPECT_THAT(dlc_manager_->GetInstalled(), ElementsAre(kThirdDlc));
   EXPECT_FALSE(dlc_manager_->GetDlc(kThirdDlc)->GetRoot().value().empty());
   CheckDlcState(kThirdDlc, DlcState::INSTALLED);

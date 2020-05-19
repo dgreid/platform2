@@ -18,6 +18,7 @@
 
 #include "dlcservice/dlc.h"
 #include "dlcservice/dlc_service.h"
+#include "dlcservice/mock_state_change_reporter.h"
 
 namespace dlcservice {
 
@@ -26,6 +27,11 @@ extern const char kSecondDlc[];
 extern const char kThirdDlc[];
 extern const char kPackage[];
 extern const char kDefaultOmahaUrl[];
+
+MATCHER_P3(CheckDlcStateProto, state, progress, root_path, "") {
+  return arg.state() == state && arg.progress() == progress &&
+         arg.root_path() == root_path;
+};
 
 int64_t GetFileSize(const base::FilePath& path);
 
@@ -75,6 +81,8 @@ class BaseTest : public testing::Test {
       org::chromium::SessionManagerInterfaceProxyMock;
   std::unique_ptr<SessionManagerProxyMock> mock_session_manager_proxy_;
   SessionManagerProxyMock* mock_session_manager_proxy_ptr_;
+
+  MockStateChangeReporter mock_state_change_reporter_;
 
  private:
   DISALLOW_COPY_AND_ASSIGN(BaseTest);

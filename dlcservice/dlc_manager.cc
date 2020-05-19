@@ -102,7 +102,7 @@ DlcIdList DlcManager::GetExistingDlcs() {
 
 DlcIdList DlcManager::GetDlcsToUpdate() {
   ErrorPtr tmp_err;
-  for (const auto& pr : supported_)
+  for (auto& pr : supported_)
     if (!pr.second.MakeReadyForUpdate(&tmp_err))
       PLOG(WARNING) << Error::ToString(tmp_err);
   return ToDlcIdList(supported_,
@@ -215,6 +215,15 @@ bool DlcManager::CancelInstall(ErrorPtr* err) {
     }
   }
   return ret;
+}
+
+void DlcManager::ChangeProgress(double progress) {
+  for (auto& pr : supported_) {
+    auto& dlc = pr.second;
+    if (dlc.IsInstalling()) {
+      dlc.ChangeProgress(progress);
+    }
+  }
 }
 
 }  // namespace dlcservice

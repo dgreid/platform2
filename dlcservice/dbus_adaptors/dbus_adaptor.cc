@@ -110,4 +110,10 @@ void DBusAdaptor::SendInstallStatus(const InstallStatus& status) {
   SendOnInstallStatusSignal(status);
 }
 
+void DBusAdaptor::DlcStateChanged(const DlcState& dlc_state) {
+  brillo::MessageLoop::current()->PostTask(
+      FROM_HERE, base::Bind(&DBusAdaptor::SendDlcStateChangedSignal,
+                            base::Unretained(this), dlc_state));
+}
+
 }  // namespace dlcservice

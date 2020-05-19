@@ -100,6 +100,9 @@ class DlcManager {
   //   is a failure. Uninstalling a DLC that is installing is also a failure.
   bool Delete(const DlcId& id, brillo::ErrorPtr* err);
 
+  // Changes the progress on all DLCs being installed to |progress|.
+  void ChangeProgress(double progress);
+
  private:
   // Removes all unsupported/deprecated DLC files and images.
   void CleanupUnsupportedDlcs();

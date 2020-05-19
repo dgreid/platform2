@@ -34,7 +34,17 @@ namespace dlcservice {
 
 DlcService::DlcService()
     : scheduled_period_ue_check_id_(MessageLoop::kTaskIdNull),
-      weak_ptr_factory_(this) {
+      weak_ptr_factory_(this) {}
+
+DlcService::~DlcService() {
+  if (scheduled_period_ue_check_id_ != MessageLoop::kTaskIdNull &&
+      !brillo::MessageLoop::current()->CancelTask(
+          scheduled_period_ue_check_id_))
+    LOG(ERROR)
+        << "Failed to cancel delayed update_engine check during cleanup.";
+}
+
+void DlcService::Initialize() {
   auto system_state = SystemState::Get();
   const auto prefs_dir = system_state->dlc_prefs_dir();
   if (!base::PathExists(prefs_dir)) {
@@ -56,17 +66,7 @@ DlcService::DlcService()
                  weak_ptr_factory_.GetWeakPtr()),
       base::Bind(&DlcService::OnSessionStateChangedSignalConnected,
                  weak_ptr_factory_.GetWeakPtr()));
-}
 
-DlcService::~DlcService() {
-  if (scheduled_period_ue_check_id_ != MessageLoop::kTaskIdNull &&
-      !brillo::MessageLoop::current()->CancelTask(
-          scheduled_period_ue_check_id_))
-    LOG(ERROR)
-        << "Failed to cancel delayed update_engine check during cleanup.";
-}
-
-void DlcService::Initialize() {
   dlc_manager_->Initialize();
 }
 
@@ -317,6 +317,10 @@ bool DlcService::HandleStatusResult(const StatusResult& status_result) {
       SendOnInstallStatusSignal(Status::RUNNING, kErrorNone,
                                 dlc_manager_->GetSupported(),
                                 status_result.progress());
+
+      // TODO(ahassani): Add unittest for this.
+      dlc_manager_->ChangeProgress(status_result.progress());
+
       FALLTHROUGH;
     default:
       SchedulePeriodicInstallCheck(true);

@@ -92,15 +92,24 @@ class DlcBase {
   bool InstallCompleted(brillo::ErrorPtr* err);
 
   // Is called when the inactive DLC image is updated and verified.
-  bool UpdateCompleted(brillo::ErrorPtr* err) const;
+  bool UpdateCompleted(brillo::ErrorPtr* err);
 
   // Makes the DLC ready to be updated. Returns false if anything goes wrong.
-  bool MakeReadyForUpdate(brillo::ErrorPtr* err) const;
+  bool MakeReadyForUpdate(brillo::ErrorPtr* err);
+
+  // Changes the install progress on this DLC. Only changes if the |progress| is
+  // greater than the current progress value.
+  void ChangeProgress(double progress);
 
  private:
   friend class DBusServiceTest;
   FRIEND_TEST(DBusServiceTest, GetInstalled);
   FRIEND_TEST(DlcBaseTest, GetUsedBytesOnDisk);
+  FRIEND_TEST(DlcBaseTest, DefaultState);
+  FRIEND_TEST(DlcBaseTest, ChangeStateNotInstalled);
+  FRIEND_TEST(DlcBaseTest, ChangeStateInstalling);
+  FRIEND_TEST(DlcBaseTest, ChangeStateInstalled);
+  FRIEND_TEST(DlcBaseTest, ChangeProgress);
 
   // Returns the path to the DLC image given the slot number.
   base::FilePath GetImagePath(BootSlot::Slot slot) const;
@@ -145,6 +154,10 @@ class DlcBase {
 
   // Deletes all directories related to this DLC.
   bool DeleteInternal(brillo::ErrorPtr* err);
+
+  // Changes the state of the current DLC. It also notifies the state change
+  // reporter that a state change has been made.
+  void ChangeState(DlcState::State state);
 
   DlcId id_;
   std::string package_;

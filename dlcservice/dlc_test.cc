@@ -39,13 +39,13 @@ class DlcBaseTestRemovable : public DlcBaseTest {
         .WillOnce(Return("/dev/sdb5"));
     EXPECT_CALL(*mock_boot_device, IsRemovableDevice(_)).WillOnce(Return(true));
 
-    SystemState::Initialize(std::move(mock_image_loader_proxy_),
-                            std::move(mock_update_engine_proxy_),
-                            std::move(mock_session_manager_proxy_),
-                            std::make_unique<BootSlot>(move(mock_boot_device)),
-                            manifest_path_, preloaded_content_path_,
-                            content_path_, prefs_path_, users_path_,
-                            /*for_test=*/true);
+    SystemState::Initialize(
+        std::move(mock_image_loader_proxy_),
+        std::move(mock_update_engine_proxy_),
+        std::move(mock_session_manager_proxy_), &mock_state_change_reporter_,
+        std::make_unique<BootSlot>(move(mock_boot_device)), manifest_path_,
+        preloaded_content_path_, content_path_, prefs_path_, users_path_,
+        /*for_test=*/true);
   }
 
  private:
@@ -107,6 +107,8 @@ TEST_F(DlcBaseTest, BootingFromNonRemovableDeviceDeletesPreloadedDLCs) {
       .WillRepeatedly(Return(true));
   EXPECT_CALL(*mock_image_loader_proxy_ptr_, LoadDlcImage(_, _, _, _, _, _))
       .WillOnce(DoAll(SetArgPointee<3>(mount_path_.value()), Return(true)));
+  EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(2);
+
   EXPECT_TRUE(dlc.InitInstall(&err_));
 
   // Preloaded DLC image should be deleted.
@@ -128,6 +130,8 @@ TEST_F(DlcBaseTestRemovable, BootingFromRemovableDeviceKeepsPreloadedDLCs) {
       .WillRepeatedly(Return(true));
   EXPECT_CALL(*mock_image_loader_proxy_ptr_, LoadDlcImage(_, _, _, _, _, _))
       .WillOnce(DoAll(SetArgPointee<3>(mount_path_.value()), Return(true)));
+  EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(2);
+
   EXPECT_TRUE(dlc.InitInstall(&err_));
 
   // Preloaded DLC image should still exists.
@@ -174,6 +178,8 @@ TEST_F(DlcBaseTest, ImageOnDiskButNotVerifiedInstalls) {
   EXPECT_CALL(*mock_update_engine_proxy_ptr_,
               SetDlcActiveValue(_, kSecondDlc, _, _))
       .WillOnce(Return(true));
+  EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(2);
+
   EXPECT_TRUE(dlc.InitInstall(&err_));
   EXPECT_TRUE(dlc.IsInstalled());
 }
@@ -193,6 +199,8 @@ TEST_F(DlcBaseTest, ImageOnDiskVerifiedInstalls) {
   EXPECT_CALL(*mock_update_engine_proxy_ptr_,
               SetDlcActiveValue(_, kSecondDlc, _, _))
       .WillOnce(Return(true));
+  EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(2);
+
   EXPECT_TRUE(dlc.InitInstall(&err_));
   EXPECT_TRUE(dlc.IsInstalled());
 }
@@ -204,15 +212,87 @@ TEST_F(DlcBaseTest, VerifyDlcImageOnUEFailureToCompleteInstall) {
   EXPECT_CALL(*mock_update_engine_proxy_ptr_,
               SetDlcActiveValue(_, kSecondDlc, _, _))
       .WillOnce(Return(true));
+  EXPECT_CALL(*mock_image_loader_proxy_ptr_,
+              LoadDlcImage(kSecondDlc, _, _, _, _, _))
+      .WillOnce(DoAll(SetArgPointee<3>(mount_path_.value()), Return(true)));
+  EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(2);
+
   EXPECT_TRUE(dlc.InitInstall(&err_));
   EXPECT_TRUE(dlc.IsInstalling());
 
   // Intentionally skip over setting verified mark before |FinishInstall()|.
-  EXPECT_CALL(*mock_image_loader_proxy_ptr_,
-              LoadDlcImage(kSecondDlc, _, _, _, _, _))
-      .WillOnce(DoAll(SetArgPointee<3>(mount_path_.value()), Return(true)));
+
   EXPECT_TRUE(dlc.FinishInstall(&err_));
   EXPECT_TRUE(dlc.IsInstalled());
+}
+
+TEST_F(DlcBaseTest, DefaultState) {
+  DlcBase dlc(kFirstDlc);
+  dlc.Initialize();
+  dlc.mount_point_ = base::FilePath("foo-path");
+
+  DlcState state = dlc.GetState();
+  EXPECT_EQ(state.id(), kFirstDlc);
+  EXPECT_EQ(state.state(), DlcState::NOT_INSTALLED);
+  EXPECT_EQ(state.progress(), 0);
+  EXPECT_EQ(state.root_path(), "");
+}
+
+TEST_F(DlcBaseTest, ChangeStateNotInstalled) {
+  DlcBase dlc(kFirstDlc);
+  dlc.Initialize();
+  dlc.mount_point_ = base::FilePath("foo-path");
+
+  EXPECT_CALL(
+      mock_state_change_reporter_,
+      DlcStateChanged(CheckDlcStateProto(DlcState::NOT_INSTALLED, 0, "")));
+  dlc.ChangeState(DlcState::NOT_INSTALLED);
+}
+
+TEST_F(DlcBaseTest, ChangeStateInstalling) {
+  DlcBase dlc(kFirstDlc);
+  dlc.Initialize();
+  dlc.mount_point_ = base::FilePath("foo-path");
+
+  EXPECT_CALL(mock_state_change_reporter_,
+              DlcStateChanged(CheckDlcStateProto(DlcState::INSTALLING, 0, "")));
+  dlc.ChangeState(DlcState::INSTALLING);
+}
+
+TEST_F(DlcBaseTest, ChangeStateInstalled) {
+  DlcBase dlc(kFirstDlc);
+  dlc.Initialize();
+  dlc.mount_point_ = base::FilePath("foo-path");
+
+  EXPECT_CALL(mock_state_change_reporter_,
+              DlcStateChanged(
+                  CheckDlcStateProto(DlcState::INSTALLED, 1.0, "foo-path")));
+  dlc.ChangeState(DlcState::INSTALLED);
+}
+
+TEST_F(DlcBaseTest, ChangeProgress) {
+  DlcBase dlc(kFirstDlc);
+  dlc.Initialize();
+
+  // Any state other than installing should not change the progress.
+  EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(0);
+  dlc.ChangeProgress(0.5);
+
+  EXPECT_CALL(mock_state_change_reporter_,
+              DlcStateChanged(CheckDlcStateProto(DlcState::INSTALLING, 0, "")));
+  dlc.ChangeState(DlcState::INSTALLING);
+
+  EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(CheckDlcStateProto(
+                                               DlcState::INSTALLING, 0.5, "")));
+  dlc.ChangeProgress(0.5);
+
+  // Lower progress should not send signal.
+  EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(0);
+  dlc.ChangeProgress(0.3);
+
+  // Same progress should not send the signal.
+  EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(0);
+  dlc.ChangeProgress(0.5);
 }
 
 }  // namespace dlcservice
