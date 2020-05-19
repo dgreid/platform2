@@ -92,8 +92,8 @@ force_flash() {
   local device="$1"
   [ -z "${device}" ] && error_exit "No device_id provided."
 
-  dbus_call "${MODEMFWD}" "${MODEMFWD_OBJECT}" "${MODEMFWD_IFACE}.ForceFlash" \
-    "string:${device}"
+  dbus_call_with_timeout "${MODEMFWD}" 120000 "${MODEMFWD_OBJECT}" \
+    "${MODEMFWD_IFACE}.ForceFlash" "string:${device}"
 }
 
 #

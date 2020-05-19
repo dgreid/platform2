@@ -111,6 +111,18 @@ dbus_call() {
     "${object}" "${method}" "$@"
 }
 
+# Invokes a DBus method on a DBus object with the specified timeout.
+dbus_call_with_timeout() {
+  local dest="$1"
+  local timeout_ms="$2"
+  local object="$3"
+  local method="$4"
+  shift 4
+
+  dbus-send --system --print-reply --fixed --dest="${dest}" \
+    --reply-timeout="${timeout_ms}" "${object}" "${method}" "$@"
+}
+
 # Gets a DBus property of an interface of a DBus object.
 dbus_property() {
   local dest="$1"
