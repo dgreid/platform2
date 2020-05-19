@@ -127,12 +127,6 @@ class Core final : public DBusService::Delegate,
     grpc_service_.set_root_dir_for_testing(root_dir);
   }
 
-  // Overrides EC event fd events for |poll()| function in |ec_event_service_|
-  // service in tests.
-  void set_ec_event_service_fd_events_for_testing(int16_t events) {
-    ec_event_service_->set_event_fd_events_for_testing(events);
-  }
-
   // Starts gRPC servers, gRPC clients and EC event service.
   bool Start();
 
@@ -191,6 +185,7 @@ class Core final : public DBusService::Delegate,
   void ProbeTelemetryInfo(
       std::vector<chromeos::cros_healthd::mojom::ProbeCategoryEnum> categories,
       ProbeTelemetryInfoCallback callback) override;
+  EcEventService* GetEcEventService() override;
 
   // MojoService::Delegate overrides:
   void SendGrpcUiMessageToWilcoDtc(

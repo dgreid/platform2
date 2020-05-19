@@ -15,6 +15,7 @@
 #include <base/macros.h>
 #include <google/protobuf/repeated_field.h>
 
+#include "diagnostics/wilco_dtc_supportd/telemetry/ec_event_service.h"
 #include "diagnostics/wilco_dtc_supportd/telemetry/system_files_service.h"
 #include "diagnostics/wilco_dtc_supportd/telemetry/system_info_service.h"
 
@@ -167,6 +168,9 @@ class GrpcService final {
         std::vector<chromeos::cros_healthd::mojom::ProbeCategoryEnum>
             categories,
         ProbeTelemetryInfoCallback callback) = 0;
+
+    // Gets a pointer to the EcEventService.
+    virtual EcEventService* GetEcEventService() = 0;
   };
 
   using SendMessageToUiCallback =

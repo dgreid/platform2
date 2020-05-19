@@ -471,7 +471,8 @@ class StartedCoreTest : public CoreTest {
 
   // Creates FIFO to emulates the EC event file used by EC event service.
   void SetUpEcEventService() {
-    core()->set_ec_event_service_fd_events_for_testing(POLLIN);
+    core_delegate()->ec_event_service()->set_event_fd_events_for_testing(
+        POLLIN);
     ASSERT_TRUE(base::CreateDirectory(ec_event_file_path().DirName()));
     ASSERT_EQ(mkfifo(ec_event_file_path().value().c_str(), 0600), 0);
   }

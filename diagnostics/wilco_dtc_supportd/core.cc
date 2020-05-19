@@ -481,6 +481,11 @@ void Core::ProbeTelemetryInfo(
                                      std::move(callback));
 }
 
+EcEventService* Core::GetEcEventService() {
+  DCHECK(ec_event_service_);
+  return ec_event_service_.get();
+}
+
 void Core::SendGrpcUiMessageToWilcoDtc(
     base::StringPiece json_message,
     const SendGrpcUiMessageToWilcoDtcCallback& callback) {

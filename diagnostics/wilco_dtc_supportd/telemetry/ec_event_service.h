@@ -7,6 +7,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <string>
 
 #include <base/callback.h>
 #include <base/files/file_path.h>
@@ -188,6 +189,23 @@ class EcEventService {
     virtual void OnEcEvent(const EcEvent& ec_event) = 0;
   };
 
+  struct GetEcTelemetryResponse {
+    enum Status {
+      STATUS_UNSET,
+      // The EC telemetry command was successfully completed.
+      STATUS_OK,
+      // The EC telemetry command was rejected due to the empty request payload.
+      STATUS_ERROR_INPUT_PAYLOAD_EMPTY,
+      // The EC telemetry command was rejected due to the request payload being
+      // too large.
+      STATUS_ERROR_INPUT_PAYLOAD_MAX_SIZE_EXCEEDED,
+      // The EC telemetry command was failed due to EC driver error.
+      STATUS_ERROR_ACCESSING_DRIVER,
+    };
+    Status status;
+    std::string payload;
+  };
+
   EcEventService();
   virtual ~EcEventService();
 
@@ -196,6 +214,9 @@ class EcEventService {
 
   // Shuts down service.
   void ShutDown(base::Closure on_shutdown_callback);
+
+  // Reads the telemetry information.
+  GetEcTelemetryResponse GetEcTelemetry(const std::string& request_payload);
 
   // Overrides the file system root directory for file operations in tests.
   void set_root_dir_for_testing(const base::FilePath& root_dir) {

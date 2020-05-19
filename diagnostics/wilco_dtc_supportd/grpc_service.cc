@@ -4,17 +4,13 @@
 
 #include "diagnostics/wilco_dtc_supportd/grpc_service.h"
 
-#include <fcntl.h>
-#include <unistd.h>
 #include <cstdint>
 #include <iterator>
 #include <utility>
 
 #include <base/bind.h>
 #include <base/files/file_util.h>
-#include <base/files/scoped_file.h>
 #include <base/logging.h>
-#include <base/posix/eintr_wrapper.h>
 #include <base/strings/string_util.h>
 
 #include "diagnostics/wilco_dtc_supportd/ec_constants.h"
@@ -261,6 +257,28 @@ void ForwardGetStatefulPartitionAvailableCapacity(
   callback.Run(std::move(reply));
 }
 
+// Maps GetEcTelemetryResponse::Status in EcEventService to
+// grpc_api::GetEcTelemetryResponse::Status. This is 1:1 mapping.
+grpc_api::GetEcTelemetryResponse::Status GetGrpcEcTelemetryStatus(
+    EcEventService::GetEcTelemetryResponse::Status status) {
+  switch (status) {
+    case (EcEventService::GetEcTelemetryResponse::STATUS_UNSET):
+      return grpc_api::GetEcTelemetryResponse::STATUS_UNSET;
+    case (EcEventService::GetEcTelemetryResponse::STATUS_OK):
+      return grpc_api::GetEcTelemetryResponse::STATUS_OK;
+    case (EcEventService::GetEcTelemetryResponse::
+              STATUS_ERROR_INPUT_PAYLOAD_EMPTY):
+      return grpc_api::GetEcTelemetryResponse::STATUS_ERROR_INPUT_PAYLOAD_EMPTY;
+    case (EcEventService::GetEcTelemetryResponse::
+              STATUS_ERROR_INPUT_PAYLOAD_MAX_SIZE_EXCEEDED):
+      return grpc_api::GetEcTelemetryResponse::
+          STATUS_ERROR_INPUT_PAYLOAD_MAX_SIZE_EXCEEDED;
+    case (
+        EcEventService::GetEcTelemetryResponse::STATUS_ERROR_ACCESSING_DRIVER):
+      return grpc_api::GetEcTelemetryResponse::STATUS_ERROR_ACCESSING_DRIVER;
+  }
+}
+
 }  // namespace
 
 GrpcService::GrpcService(Delegate* delegate)
@@ -409,65 +427,13 @@ void GrpcService::GetEcTelemetry(
     std::unique_ptr<grpc_api::GetEcTelemetryRequest> request,
     const GetEcTelemetryCallback& callback) {
   DCHECK(request);
+
+  auto response = delegate_->GetEcEventService()->GetEcTelemetry(
+      std::move(request->payload()));
+
   auto reply = std::make_unique<grpc_api::GetEcTelemetryResponse>();
-  if (request->payload().empty()) {
-    LOG(ERROR) << "GetEcTelemetry gRPC request payload is empty";
-    reply->set_status(
-        grpc_api::GetEcTelemetryResponse::STATUS_ERROR_INPUT_PAYLOAD_EMPTY);
-    callback.Run(std::move(reply));
-    return;
-  }
-  if (request->payload().length() > kEcGetTelemetryPayloadMaxSize) {
-    LOG(ERROR) << "GetEcTelemetry gRPC request payload size is exceeded: "
-               << request->payload().length() << " vs "
-               << kEcGetTelemetryPayloadMaxSize << " allowed";
-    reply->set_status(grpc_api::GetEcTelemetryResponse::
-                          STATUS_ERROR_INPUT_PAYLOAD_MAX_SIZE_EXCEEDED);
-    callback.Run(std::move(reply));
-    return;
-  }
-
-  base::FilePath telemetry_file_path =
-      root_dir_.Append(kEcGetTelemetryFilePath);
-
-  // Use base::ScopedFD to operate with non-seekable files.
-  base::ScopedFD telemetry_file(
-      HANDLE_EINTR(open(telemetry_file_path.value().c_str(), O_RDWR)));
-
-  if (!telemetry_file.is_valid()) {
-    VPLOG(2) << "GetEcTelemetry gRPC can not open the "
-             << "telemetry node: " << telemetry_file_path.value();
-    reply->set_status(
-        grpc_api::GetEcTelemetryResponse::STATUS_ERROR_ACCESSING_DRIVER);
-    callback.Run(std::move(reply));
-    return;
-  }
-
-  int write_result =
-      HANDLE_EINTR(write(telemetry_file.get(), request->payload().c_str(),
-                         request->payload().length()));
-  if (write_result != request->payload().length()) {
-    VPLOG(2) << "GetEcTelemetry gRPC can not write request payload to the "
-             << "telemetry node: " << telemetry_file_path.value();
-    reply->set_status(
-        grpc_api::GetEcTelemetryResponse::STATUS_ERROR_ACCESSING_DRIVER);
-    callback.Run(std::move(reply));
-    return;
-  }
-
-  // Reply payload must be empty in case of any failure.
-  char file_content[kEcGetTelemetryPayloadMaxSize];
-  int read_result = HANDLE_EINTR(
-      read(telemetry_file.get(), file_content, kEcGetTelemetryPayloadMaxSize));
-  if (read_result > 0) {
-    reply->set_status(grpc_api::GetEcTelemetryResponse::STATUS_OK);
-    reply->set_payload(file_content, read_result);
-  } else {
-    VPLOG(2) << "GetEcTelemetry gRPC can not read EC telemetry command "
-             << "response from telemetry node: " << telemetry_file_path.value();
-    reply->set_status(
-        grpc_api::GetEcTelemetryResponse::STATUS_ERROR_ACCESSING_DRIVER);
-  }
+  reply->set_status(GetGrpcEcTelemetryStatus(response.status));
+  reply->set_payload(std::move(response.payload));
   callback.Run(std::move(reply));
 }
 

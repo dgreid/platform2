@@ -17,6 +17,7 @@
 
 #include <base/bind.h>
 #include <base/files/file_path.h>
+#include <base/files/scoped_file.h>
 #include <base/logging.h>
 #include <base/memory/ref_counted.h>
 #include <base/posix/eintr_wrapper.h>
@@ -224,6 +225,62 @@ void EcEventService::ShutDown(base::Closure on_shutdown_callback) {
   on_shutdown_callback_ = on_shutdown_callback;
 
   ShutDownMonitoringThread();
+}
+
+EcEventService::GetEcTelemetryResponse EcEventService::GetEcTelemetry(
+    const std::string& request_payload) {
+  auto reply = GetEcTelemetryResponse();
+  if (request_payload.empty()) {
+    LOG(ERROR) << "GetEcTelemetry request payload was empty";
+    reply.status = GetEcTelemetryResponse::STATUS_ERROR_INPUT_PAYLOAD_EMPTY;
+    return reply;
+  }
+  if (request_payload.length() > kEcGetTelemetryPayloadMaxSize) {
+    LOG(ERROR) << "GetEcTelemetry request payload size was exceeded: "
+               << request_payload.length() << " vs "
+               << kEcGetTelemetryPayloadMaxSize << " allowed";
+    reply.status =
+        GetEcTelemetryResponse::STATUS_ERROR_INPUT_PAYLOAD_MAX_SIZE_EXCEEDED;
+    return reply;
+  }
+
+  base::FilePath telemetry_file_path =
+      root_dir_.Append(kEcGetTelemetryFilePath);
+
+  // Use base::ScopedFD to operate with non-seekable files.
+  base::ScopedFD telemetry_file(
+      HANDLE_EINTR(open(telemetry_file_path.value().c_str(), O_RDWR)));
+
+  if (!telemetry_file.is_valid()) {
+    VPLOG(2) << "GetEcTelemetry could not open the "
+             << "telemetry node: " << telemetry_file_path.value();
+    reply.status = GetEcTelemetryResponse::STATUS_ERROR_ACCESSING_DRIVER;
+    return reply;
+  }
+
+  int write_result = HANDLE_EINTR(write(
+      telemetry_file.get(), request_payload.c_str(), request_payload.length()));
+  if (write_result != request_payload.length()) {
+    VPLOG(2) << "GetEcTelemetry could not write request payload to the "
+             << "telemetry node: " << telemetry_file_path.value();
+    reply.status = GetEcTelemetryResponse::STATUS_ERROR_ACCESSING_DRIVER;
+    return reply;
+  }
+
+  // Reply payload must be empty in case of any failure.
+  char file_content[kEcGetTelemetryPayloadMaxSize];
+  int read_result = HANDLE_EINTR(
+      read(telemetry_file.get(), file_content, kEcGetTelemetryPayloadMaxSize));
+  if (read_result == 0) {
+    VPLOG(2) << "GetEcTelemetry could not read EC telemetry command "
+             << "response from telemetry node: " << telemetry_file_path.value();
+    reply.status = GetEcTelemetryResponse::STATUS_ERROR_ACCESSING_DRIVER;
+    return reply;
+  }
+
+  reply.status = GetEcTelemetryResponse::STATUS_OK;
+  reply.payload = std::string(file_content, read_result);
+  return reply;
 }
 
 void EcEventService::AddObserver(EcEventService::Observer* observer) {
