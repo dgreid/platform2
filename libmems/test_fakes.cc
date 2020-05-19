@@ -4,7 +4,12 @@
 
 #include "libmems/test_fakes.h"
 
+#include <sys/eventfd.h>
+
+#include <base/files/file_util.h>
 #include <base/logging.h>
+#include "base/posix/eintr_wrapper.h"
+#include <base/stl_util.h>
 
 #include "libmems/common_types.h"
 
@@ -55,6 +60,22 @@ bool FakeIioChannel::WriteDoubleAttribute(const std::string& name,
                                           double value) {
   double_attributes_[name] = value;
   return true;
+}
+
+base::Optional<int64_t> FakeIioChannel::GetData(int index) {
+  if (!enabled_ || index < 0 || index >= base::size(kFakeAccelSamples))
+    return base::nullopt;
+
+  auto raw = ReadNumberAttribute(kRawAttr);
+  if (raw.has_value())
+    return raw;
+
+  for (int i = 0; i < base::size(kFakeAccelChns); ++i) {
+    if (id_.compare(kFakeAccelChns[i]) == 0)
+      return kFakeAccelSamples[index][i];
+  }
+
+  return base::nullopt;
 }
 
 FakeIioDevice::FakeIioDevice(FakeIioContext* ctx,
@@ -130,6 +151,126 @@ bool FakeIioDevice::IsBufferEnabled(size_t* n) const {
   if (n && buffer_enabled_)
     *n = buffer_length_;
   return buffer_enabled_;
+}
+
+base::Optional<int32_t> FakeIioDevice::GetBufferFd() {
+  if (disabled_fd_)
+    return base::nullopt;
+
+  if (!CreateBuffer())
+    return base::nullopt;
+
+  return sample_fd_.get();
+}
+base::Optional<IioDevice::IioSample> FakeIioDevice::ReadSample() {
+  if (disabled_fd_)
+    return base::nullopt;
+
+  if (!failed_read_queue_.empty()) {
+    CHECK_GE(failed_read_queue_.top(), sample_index_);
+    if (failed_read_queue_.top() == sample_index_) {
+      failed_read_queue_.pop();
+      return base::nullopt;
+    }
+  }
+
+  if (!CreateBuffer())
+    return base::nullopt;
+
+  if (!ReadByte())
+    return base::nullopt;
+
+  base::Optional<double> freq_opt = ReadDoubleAttribute(kSamplingFrequencyAttr);
+  if (!freq_opt.has_value()) {
+    LOG(ERROR) << "sampling_frequency not set";
+    return base::nullopt;
+  }
+  double frequency = freq_opt.value();
+  if (frequency <= 0.0) {
+    LOG(ERROR) << "Invalid frequency: " << frequency;
+    return base::nullopt;
+  }
+
+  IioDevice::IioSample sample;
+  for (auto channel : channels_) {
+    auto value = channel.second->GetData(sample_index_);
+    if (!value.has_value()) {
+      LOG(ERROR) << "Channel: " << channel.second->GetId() << " has no sample";
+      return base::nullopt;
+    }
+
+    sample[channel.second->GetId()] = value.value();
+  }
+
+  sample_index_ += 1;
+
+  if (sample_index_ < base::size(kFakeAccelSamples)) {
+    if (!WriteByte())
+      return base::nullopt;
+  }
+
+  return sample;
+}
+
+void FakeIioDevice::DisableFd() {
+  disabled_fd_ = true;
+  if (readable_fd_)
+    CHECK(ReadByte());
+}
+
+void FakeIioDevice::AddFailedReadAtKthSample(int k) {
+  CHECK_GE(k, sample_index_);
+
+  failed_read_queue_.push(k);
+}
+
+bool FakeIioDevice::CreateBuffer() {
+  CHECK(!disabled_fd_);
+
+  if (sample_fd_.is_valid())
+    return true;
+
+  int fd = eventfd(0, 0);
+  CHECK_GE(fd, 0);
+  sample_fd_.reset(fd);
+
+  if (sample_index_ >= base::size(kFakeAccelSamples))
+    return true;
+
+  if (!WriteByte()) {
+    ClosePipes();
+    return false;
+  }
+
+  return true;
+}
+
+bool FakeIioDevice::WriteByte() {
+  if (!sample_fd_.is_valid())
+    return false;
+
+  CHECK(!readable_fd_);
+  uint64_t val = 1;
+  CHECK_EQ(write(sample_fd_.get(), &val, sizeof(uint64_t)), sizeof(uint64_t));
+  readable_fd_ = true;
+
+  return true;
+}
+
+bool FakeIioDevice::ReadByte() {
+  if (!sample_fd_.is_valid())
+    return false;
+
+  CHECK(readable_fd_);
+  int64_t val = 1;
+  CHECK_EQ(read(sample_fd_.get(), &val, sizeof(uint64_t)), sizeof(uint64_t));
+  readable_fd_ = false;
+
+  return true;
+}
+
+void FakeIioDevice::ClosePipes() {
+  sample_fd_.reset();
 }
 
 void FakeIioContext::AddDevice(FakeIioDevice* device) {

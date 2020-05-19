@@ -5,6 +5,8 @@
 #ifndef LIBMEMS_COMMON_TYPES_H_
 #define LIBMEMS_COMMON_TYPES_H_
 
+#include <vector>
+
 namespace libmems {
 
 constexpr int kErrorBufferSize = 256;
@@ -17,6 +19,9 @@ constexpr char kTriggerIdPrefix[] = "trigger";
 constexpr char kFrequencyAttr[] = "frequency";
 constexpr char kSamplingFrequencyAttr[] = "sampling_frequency";
 constexpr char kHWFifoTimeoutAttr[] = "buffer/hwfifo_timeout";
+
+constexpr char kRawAttr[] = "raw";
+constexpr char kTimestampAttr[] = "timestamp";
 
 }  // namespace libmems
 
