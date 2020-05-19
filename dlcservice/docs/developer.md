@@ -51,10 +51,12 @@ Required:
     minimum required at the launch time to accommodate future size growth
     (recommendation is 130% of the DLC size).
 
-Optional:
+Optional (Add these only if you kow exactly what you are doing otherwise do not
+add them):
 *    `DLC_ID` - Unique ID. Format of an ID has a few restrictions:
      *    It should not be empty.
-     *    It should only contain alphanumeric characters (a-zA-Z0-9) and `-` (dash).
+     *    It should only contain alphanumeric characters (a-zA-Z0-9) and `-`
+          (dash).
      *    The first letter cannot be dash.
      *    No underscore.
      *    It has a maximum length of 40 characters.
