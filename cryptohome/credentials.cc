@@ -4,9 +4,10 @@
 
 #include "cryptohome/credentials.h"
 
-#include "cryptohome/obfuscated_username.h"
+#include <brillo/cryptohome.h>
 
 using brillo::SecureBlob;
+using brillo::cryptohome::home::SanitizeUserNameWithSalt;
 
 namespace cryptohome {
 
@@ -23,7 +24,7 @@ Credentials& Credentials::operator=(const Credentials& rhs) = default;
 
 std::string Credentials::GetObfuscatedUsername(
     const SecureBlob& system_salt) const {
-  return BuildObfuscatedUsername(username_, system_salt);
+  return SanitizeUserNameWithSalt(username_, system_salt);
 }
 
 }  // namespace cryptohome

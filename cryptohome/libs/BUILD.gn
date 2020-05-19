@@ -299,7 +299,6 @@ static_library("libcryptohome") {
     "../mount_stack.cc",
     "../mount_task.cc",
     "../mount_utils.cc",
-    "../obfuscated_username.cc",
     "../out_of_process_mount_helper.cc",
     "../service.cc",
     "../service_distributed.cc",

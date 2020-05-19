@@ -27,7 +27,6 @@
 #include "cryptohome/cryptohome_metrics.h"
 #include "cryptohome/mount_constants.h"
 #include "cryptohome/mount_utils.h"
-#include "cryptohome/obfuscated_username.h"
 
 #include "cryptohome/namespace_mounter_ipc.pb.h"
 

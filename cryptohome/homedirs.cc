@@ -31,7 +31,6 @@
 #include "cryptohome/disk_cleanup.h"
 #include "cryptohome/mount.h"
 #include "cryptohome/mount_helper.h"
-#include "cryptohome/obfuscated_username.h"
 #include "cryptohome/platform.h"
 #include "cryptohome/user_oldest_activity_timestamp_cache.h"
 #include "cryptohome/vault_keyset.h"
@@ -40,6 +39,7 @@
 #include "signed_secret.pb.h"  // NOLINT(build/include)
 
 using base::FilePath;
+using brillo::cryptohome::home::SanitizeUserNameWithSalt;
 using brillo::SecureBlob;
 
 namespace cryptohome {
@@ -1028,7 +1028,7 @@ bool HomeDirs::GetOwner(std::string* owner) {
 
   if (!GetSystemSalt(NULL))
     return false;
-  *owner = BuildObfuscatedUsername(plain_owner, system_salt_);
+  *owner = SanitizeUserNameWithSalt(plain_owner, system_salt_);
   return true;
 }
 
@@ -1051,7 +1051,7 @@ bool HomeDirs::GetSystemSalt(SecureBlob* blob) {
 }
 
 bool HomeDirs::Remove(const std::string& username) {
-  std::string obfuscated = BuildObfuscatedUsername(username, system_salt_);
+  std::string obfuscated = SanitizeUserNameWithSalt(username, system_salt_);
   RemoveLECredentials(obfuscated);
 
   FilePath user_dir = shadow_root_.Append(obfuscated);
@@ -1069,9 +1069,9 @@ bool HomeDirs::Rename(const std::string& account_id_from,
   }
 
   const std::string obfuscated_from =
-      BuildObfuscatedUsername(account_id_from, system_salt_);
+      SanitizeUserNameWithSalt(account_id_from, system_salt_);
   const std::string obfuscated_to =
-      BuildObfuscatedUsername(account_id_to, system_salt_);
+      SanitizeUserNameWithSalt(account_id_to, system_salt_);
 
   const FilePath user_dir_from = shadow_root_.Append(obfuscated_from);
   const FilePath user_path_from =
@@ -1164,7 +1164,7 @@ bool HomeDirs::Rename(const std::string& account_id_from,
 }
 
 int64_t HomeDirs::ComputeDiskUsage(const std::string& account_id) {
-  // BuildObfuscatedUsername below doesn't accept empty username.
+  // SanitizeUserNameWithSalt below doesn't accept empty username.
   if (account_id.empty()) {
     // Empty account is always non-existent, return 0 as specified.
     return 0;
@@ -1173,7 +1173,7 @@ int64_t HomeDirs::ComputeDiskUsage(const std::string& account_id) {
   // Note that for ephemeral mounts, there could be a vault that's not
   // ephemeral, but the current mount is ephemeral. In this case,
   // ComputeDiskUsage() return the non ephemeral on disk vault's size.
-  std::string obfuscated = BuildObfuscatedUsername(account_id, system_salt_);
+  std::string obfuscated = SanitizeUserNameWithSalt(account_id, system_salt_);
   FilePath user_dir = FilePath(shadow_root_).Append(obfuscated);
 
   int64_t size = 0;

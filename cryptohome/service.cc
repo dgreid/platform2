@@ -68,7 +68,6 @@
 #include "cryptohome/key_challenge_service_factory.h"
 #include "cryptohome/key_challenge_service_factory_impl.h"
 #include "cryptohome/mount.h"
-#include "cryptohome/obfuscated_username.h"
 #include "cryptohome/platform.h"
 #include "cryptohome/service_distributed.h"
 #include "cryptohome/stateful_recovery.h"
@@ -80,6 +79,7 @@
 using base::FilePath;
 using brillo::Blob;
 using brillo::BlobFromString;
+using brillo::cryptohome::home::SanitizeUserNameWithSalt;
 using brillo::SecureBlob;
 
 // Forcibly namespace the dbus-bindings generated server bindings instead of
@@ -1187,7 +1187,7 @@ void Service::DoCheckKeyEx(std::unique_ptr<AccountIdentifier> identifier,
 
   if (authorization->key().data().type() == KeyData::KEY_TYPE_FINGERPRINT) {
     const std::string obfuscated_username =
-        BuildObfuscatedUsername(GetAccountId(*identifier), system_salt_);
+        SanitizeUserNameWithSalt(GetAccountId(*identifier), system_salt_);
     BaseReply reply;
     if (!fingerprint_manager_) {
       // Fingerprint manager failed to initialize, or the device may not
@@ -1381,7 +1381,7 @@ void Service::DoMassRemoveKeys(
                            authorization_request->key().secret().end()));
   credentials.set_key_data(authorization_request->key().data());
   const std::string obfuscated_username =
-      BuildObfuscatedUsername(username, system_salt_);
+      SanitizeUserNameWithSalt(username, system_salt_);
   if (!homedirs_->Exists(obfuscated_username)) {
     reply.set_error(CRYPTOHOME_ERROR_ACCOUNT_NOT_FOUND);
     SendReply(context, reply);
@@ -1466,7 +1466,7 @@ void Service::DoListKeysEx(AccountIdentifier* identifier,
   }
   BaseReply reply;
   const std::string obfuscated_username =
-      BuildObfuscatedUsername(username, system_salt_);
+      SanitizeUserNameWithSalt(username, system_salt_);
   if (!homedirs_->Exists(obfuscated_username)) {
     reply.set_error(CRYPTOHOME_ERROR_ACCOUNT_NOT_FOUND);
     SendReply(context, reply);
@@ -1532,7 +1532,7 @@ void Service::DoGetKeyDataEx(AccountIdentifier* identifier,
 
   BaseReply reply;
   const std::string obfuscated_username =
-      BuildObfuscatedUsername(GetAccountId(*identifier), system_salt_);
+      SanitizeUserNameWithSalt(GetAccountId(*identifier), system_salt_);
   if (!homedirs_->Exists(obfuscated_username)) {
     reply.set_error(CRYPTOHOME_ERROR_ACCOUNT_NOT_FOUND);
     SendReply(context, reply);
@@ -2479,7 +2479,7 @@ void Service::TryLightweightChallengeResponseCheckKeyEx(
 
   const std::string& account_id = GetAccountId(*identifier);
   const std::string obfuscated_username =
-      BuildObfuscatedUsername(account_id, system_salt_);
+      SanitizeUserNameWithSalt(account_id, system_salt_);
 
   std::unique_ptr<KeyChallengeService> key_challenge_service =
       key_challenge_service_factory_->New(
@@ -2549,7 +2549,7 @@ void Service::DoFullChallengeResponseCheckKeyEx(
 
   const std::string& account_id = GetAccountId(*identifier);
   const std::string obfuscated_username =
-      BuildObfuscatedUsername(account_id, system_salt_);
+      SanitizeUserNameWithSalt(account_id, system_salt_);
 
   BaseReply reply;
 
@@ -2625,7 +2625,7 @@ void Service::DoChallengeResponseMountEx(
 
   const std::string& account_id = GetAccountId(*identifier);
   const std::string obfuscated_username =
-      BuildObfuscatedUsername(account_id, system_salt_);
+      SanitizeUserNameWithSalt(account_id, system_salt_);
   const KeyData key_data = authorization->key().data();
 
   if (!authorization->has_key_delegate() ||
@@ -3545,7 +3545,7 @@ void Service::DoStartFingerprintAuthSession(
 
   BaseReply reply;
   const std::string obfuscated_username =
-      BuildObfuscatedUsername(GetAccountId(*identifier), system_salt_);
+      SanitizeUserNameWithSalt(GetAccountId(*identifier), system_salt_);
   if (!homedirs_->Exists(obfuscated_username)) {
     reply.set_error(CRYPTOHOME_ERROR_ACCOUNT_NOT_FOUND);
     SendReply(context, reply);
@@ -4079,7 +4079,7 @@ gboolean Service::NeedsDircryptoMigration(const GArray* account_id,
   }
 
   const std::string obfuscated_username =
-      BuildObfuscatedUsername(GetAccountId(*identifier), system_salt_);
+      SanitizeUserNameWithSalt(GetAccountId(*identifier), system_salt_);
   if (!homedirs_->Exists(obfuscated_username)) {
     LOG(ERROR) << "Unknown user.";
     return FALSE;
@@ -4190,7 +4190,7 @@ gboolean Service::LockToSingleUserMountUntilReboot(
   }
 
   const std::string obfuscated_username =
-      BuildObfuscatedUsername(GetAccountId(request_pb.account_id()),
+      SanitizeUserNameWithSalt(GetAccountId(request_pb.account_id()),
                               system_salt_);
   mount_thread_.task_runner()->PostTask(
       FROM_HERE,

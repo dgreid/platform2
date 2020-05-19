@@ -37,7 +37,6 @@
 #include "cryptohome/crypto.h"
 #include "cryptohome/cryptolib.h"
 #include "cryptohome/mount.h"
-#include "cryptohome/obfuscated_username.h"
 #include "cryptohome/pkcs11_init.h"
 #include "cryptohome/platform.h"
 
@@ -51,6 +50,7 @@
 using base::FilePath;
 using base::StringPrintf;
 using brillo::SecureBlob;
+using brillo::cryptohome::home::SanitizeUserNameWithSalt;
 
 namespace {
 // Number of days that the set_current_user_old action uses when updating the
@@ -1595,9 +1595,8 @@ int main(int argc, char **argv) {
       printf("%s\n", result);
     } else {
       // Use libbrillo directly if we are not using dbus/cryptohome.
-      printf("%s\n", cryptohome::BuildObfuscatedUsername(account_id,
-                                                         GetSystemSalt(proxy))
-                         .c_str());
+      printf("%s\n", SanitizeUserNameWithSalt(account_id,
+                                              GetSystemSalt(proxy)).c_str());
     }
   } else if (!strcmp(switches::kActions[switches::ACTION_GET_SYSTEM_SALT],
                      action.c_str())) {
@@ -1633,8 +1632,8 @@ int main(int argc, char **argv) {
     }
 
     FilePath vault_path = FilePath("/home/.shadow")
-                              .Append(cryptohome::BuildObfuscatedUsername(
-                                  account_id, GetSystemSalt(proxy)))
+                              .Append(SanitizeUserNameWithSalt(account_id,
+                                      GetSystemSalt(proxy)))
                               .Append("master.0");
     brillo::Blob contents;
     if (!platform.ReadFile(vault_path, &contents)) {

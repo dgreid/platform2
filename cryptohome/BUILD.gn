@@ -456,7 +456,6 @@ if (use.test) {
       "mount_stack_unittest.cc",
       "mount_task_unittest.cc",
       "mount_unittest.cc",
-      "obfuscated_username_unittest.cc",
       "out_of_process_mount_helper_test.cc",
       "persistent_lookup_table_unittest.cc",
       "pkcs11_keystore_unittest.cc",

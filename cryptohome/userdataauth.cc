@@ -26,7 +26,6 @@
 #include "cryptohome/key_challenge_service.h"
 #include "cryptohome/key_challenge_service_factory.h"
 #include "cryptohome/key_challenge_service_factory_impl.h"
-#include "cryptohome/obfuscated_username.h"
 #include "cryptohome/stateful_recovery.h"
 #include "cryptohome/tpm.h"
 #include "cryptohome/user_oldest_activity_timestamp_cache.h"
@@ -34,6 +33,7 @@
 
 using base::FilePath;
 using brillo::Blob;
+using brillo::cryptohome::home::SanitizeUserNameWithSalt;
 using brillo::SecureBlob;
 
 namespace cryptohome {
@@ -1449,7 +1449,7 @@ void UserDataAuth::DoChallengeResponseMount(
 
   const std::string& account_id = GetAccountId(request.account());
   const std::string obfuscated_username =
-      BuildObfuscatedUsername(account_id, system_salt_);
+      SanitizeUserNameWithSalt(account_id, system_salt_);
   const KeyData key_data = request.authorization().key().data();
 
   if (!request.authorization().has_key_delegate() ||
@@ -1893,7 +1893,7 @@ void UserDataAuth::CheckKey(
       return;
     }
     if (!fingerprint_manager_->HasAuthSessionForUser(
-            BuildObfuscatedUsername(account_id, system_salt_))) {
+            SanitizeUserNameWithSalt(account_id, system_salt_))) {
       std::move(on_done).Run(user_data_auth::CryptohomeErrorCode::
                                  CRYPTOHOME_ERROR_FINGERPRINT_DENIED);
       return;
@@ -2027,7 +2027,7 @@ void UserDataAuth::TryLightweightChallengeResponseCheckKey(
 
   const std::string& account_id = GetAccountId(identifier);
   const std::string obfuscated_username =
-      BuildObfuscatedUsername(account_id, system_salt_);
+      SanitizeUserNameWithSalt(account_id, system_salt_);
 
   base::Optional<KeyData> found_session_key_data;
   for (const auto& mount_pair : mounts_) {
@@ -2095,7 +2095,7 @@ void UserDataAuth::DoFullChallengeResponseCheckKey(
 
   const std::string& account_id = GetAccountId(identifier);
   const std::string obfuscated_username =
-      BuildObfuscatedUsername(account_id, system_salt_);
+      SanitizeUserNameWithSalt(account_id, system_salt_);
 
   // KeyChallengeService is tasked with contacting the challenge response D-Bus
   // service that'll provide the response once we send the challenge.
@@ -2280,7 +2280,7 @@ user_data_auth::CryptohomeErrorCode UserDataAuth::ListKeys(
   }
 
   const std::string obfuscated_username =
-      BuildObfuscatedUsername(account_id, system_salt_);
+      SanitizeUserNameWithSalt(account_id, system_salt_);
   if (!homedirs_->Exists(obfuscated_username)) {
     return user_data_auth::CRYPTOHOME_ERROR_ACCOUNT_NOT_FOUND;
   }
@@ -2313,7 +2313,7 @@ user_data_auth::CryptohomeErrorCode UserDataAuth::GetKeyData(
   }
 
   const std::string obfuscated_username =
-      BuildObfuscatedUsername(account_id, system_salt_);
+      SanitizeUserNameWithSalt(account_id, system_salt_);
   if (!homedirs_->Exists(obfuscated_username)) {
     return user_data_auth::CRYPTOHOME_ERROR_ACCOUNT_NOT_FOUND;
   }
@@ -2516,7 +2516,7 @@ void UserDataAuth::StartMigrateToDircrypto(
 user_data_auth::CryptohomeErrorCode UserDataAuth::NeedsDircryptoMigration(
     const cryptohome::AccountIdentifier& account, bool* result) {
   const std::string obfuscated_username =
-      BuildObfuscatedUsername(GetAccountId(account), system_salt_);
+      SanitizeUserNameWithSalt(GetAccountId(account), system_salt_);
   if (!homedirs_->Exists(obfuscated_username)) {
     LOG(ERROR) << "Unknown user in NeedsDircryptoMigration.";
     return user_data_auth::CRYPTOHOME_ERROR_ACCOUNT_NOT_FOUND;
@@ -2696,7 +2696,7 @@ void UserDataAuth::StartFingerprintAuthSession(
   }
 
   const std::string obfuscated_username =
-      BuildObfuscatedUsername(account_id, system_salt_);
+      SanitizeUserNameWithSalt(account_id, system_salt_);
   if (!homedirs_->Exists(obfuscated_username)) {
     reply.set_error(user_data_auth::CRYPTOHOME_ERROR_ACCOUNT_NOT_FOUND);
     std::move(on_done).Run(reply);
@@ -2804,7 +2804,7 @@ user_data_auth::CryptohomeErrorCode
 UserDataAuth::LockToSingleUserMountUntilReboot(
     const cryptohome::AccountIdentifier& account_id) {
   const std::string obfuscated_username =
-      BuildObfuscatedUsername(GetAccountId(account_id), system_salt_);
+      SanitizeUserNameWithSalt(GetAccountId(account_id), system_salt_);
 
   homedirs_->SetLockedToSingleUser();
   brillo::Blob pcr_value;

@@ -41,11 +41,11 @@
 #include "cryptohome/mock_tpm_init.h"
 #include "cryptohome/mock_user_session.h"
 #include "cryptohome/mock_vault_keyset.h"
-#include "cryptohome/obfuscated_username.h"
 #include "cryptohome/protobuf_test_utils.h"
 #include "cryptohome/tpm.h"
 
 using base::FilePath;
+using brillo::cryptohome::home::SanitizeUserNameWithSalt;
 using brillo::SecureBlob;
 
 using ::testing::_;
@@ -155,7 +155,7 @@ class UserDataAuthTestNotInitialized : public ::testing::Test {
   std::string GetObfuscatedUsername(const std::string& username) {
     brillo::SecureBlob salt;
     AssignSalt(CRYPTOHOME_DEFAULT_SALT_LENGTH, &salt);
-    return BuildObfuscatedUsername(username, salt);
+    return SanitizeUserNameWithSalt(username, salt);
   }
 
   // Helper function for creating a brillo::Error

@@ -44,7 +44,6 @@
 #include "cryptohome/dircrypto_util.h"
 #include "cryptohome/homedirs.h"
 #include "cryptohome/mount_utils.h"
-#include "cryptohome/obfuscated_username.h"
 #include "cryptohome/pkcs11_init.h"
 #include "cryptohome/platform.h"
 #include "cryptohome/tpm.h"

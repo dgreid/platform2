@@ -21,13 +21,13 @@
 
 #include "cryptohome/cryptohome_common.h"
 #include "cryptohome/homedirs.h"
-#include "cryptohome/obfuscated_username.h"
 
 using base::FilePath;
 using base::StringPrintf;
 using brillo::cryptohome::home::GetRootPath;
 using brillo::cryptohome::home::GetUserPath;
 using brillo::cryptohome::home::SanitizeUserName;
+using brillo::cryptohome::home::SanitizeUserNameWithSalt;
 
 namespace {
 constexpr uid_t kMountOwnerUid = 0;
@@ -814,7 +814,7 @@ bool MountHelper::PrepareEphemeralDevice(
 
 bool MountHelper::PerformEphemeralMount(const std::string& username) {
   const std::string obfuscated_username =
-      BuildObfuscatedUsername(username, system_salt_);
+      SanitizeUserNameWithSalt(username, system_salt_);
 
   if (!PrepareEphemeralDevice(obfuscated_username)) {
     LOG(ERROR) << "Can't prepare ephemeral device";
