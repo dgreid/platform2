@@ -15,8 +15,8 @@ pkg_config("libcros_healthd_event_tool_pkg_deps") {
 
 source_set("libcros_healthd_event_tool") {
   deps = [
-    "//diagnostics:diagnostics_mojo_bindings",
     "//diagnostics/cros_healthd_mojo_adapter:libcros_healthd_mojo_adapter",
+    "//diagnostics/mojo:diagnostics_mojo_bindings",
   ]
   all_dependent_configs = [ ":libcros_healthd_event_tool_pkg_deps" ]
   sources = [

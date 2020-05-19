@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//common-mk/mojom_bindings_generator.gni")
 import("//common-mk/pkg_config.gni")
 
 group("all") {
@@ -37,25 +36,6 @@ group("all") {
   }
 }
 
-# Library with generated Mojo API definitions.
-pkg_config("diagnostics_mojo_bindings_pkg_deps") {
-  pkg_deps = [
-    "libchrome-${libbase_ver}",
-    "libmojo-${libbase_ver}",
-  ]
-}
-
-generate_mojom_bindings("diagnostics_mojo_bindings") {
-  public_configs = [ ":diagnostics_mojo_bindings_pkg_deps" ]
-  sources = [
-    "mojo/cros_healthd.mojom",
-    "mojo/cros_healthd_diagnostics.mojom",
-    "mojo/cros_healthd_events.mojom",
-    "mojo/cros_healthd_probe.mojom",
-    "mojo/wilco_dtc_supportd.mojom",
-  ]
-}
-
 # Library that provides utilities used by cros_healthd.
 pkg_config("libcros_healthd_utils_pkg_deps") {
   pkg_deps = [
@@ -74,9 +54,9 @@ pkg_config("libcros_healthd_utils_pkg_deps") {
 
 source_set("libcros_healthd_utils") {
   deps = [
-    ":diagnostics_mojo_bindings",
     "//diagnostics/common:libcommon",
     "//diagnostics/cros_healthd/system:libcros_healthd_system",
+    "//diagnostics/mojo:diagnostics_mojo_bindings",
   ]
   all_dependent_configs = [ ":libcros_healthd_utils_pkg_deps" ]
   sources = [
@@ -106,10 +86,10 @@ pkg_config("libcros_healthd_pkg_deps") {
 
 source_set("libcros_healthd") {
   deps = [
-    ":diagnostics_mojo_bindings",
     ":libcros_healthd_utils",
     "//diagnostics/cros_healthd/events:libcros_healthd_events",
     "//diagnostics/cros_healthd/system:libcros_healthd_system",
+    "//diagnostics/mojo:diagnostics_mojo_bindings",
     "//diagnostics/routines:libdiag_routine",
   ]
   all_dependent_configs = [ ":libcros_healthd_pkg_deps" ]
@@ -134,11 +114,11 @@ pkg_config("libwilco_dtc_supportd_pkg_deps") {
 
 source_set("libwilco_dtc_supportd") {
   deps = [
-    ":diagnostics_mojo_bindings",
     "//diagnostics/common:libcommon",
     "//diagnostics/constants:libconstants",
     "//diagnostics/grpc:wilco_dtc_grpc_protos",
     "//diagnostics/grpc_async_adapter:libgrpc_async_adapter",
+    "//diagnostics/mojo:diagnostics_mojo_bindings",
     "//diagnostics/routines:libdiag_routine",
   ]
   all_dependent_configs = [ ":libwilco_dtc_supportd_pkg_deps" ]

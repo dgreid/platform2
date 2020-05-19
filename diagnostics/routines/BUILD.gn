@@ -77,8 +77,8 @@ pkg_config("libdiag_routine_pkg_deps") {
 
 source_set("libdiag_routine") {
   deps = [
-    "//diagnostics:diagnostics_mojo_bindings",
     "//diagnostics/common:libcommon",
+    "//diagnostics/mojo:diagnostics_mojo_bindings",
   ]
   all_dependent_configs = [ ":libdiag_routine_pkg_deps" ]
   sources = [
@@ -111,7 +111,7 @@ if (use.test) {
   }
 
   source_set("libroutine_test_utils") {
-    deps = [ "//diagnostics:diagnostics_mojo_bindings" ]
+    deps = [ "//diagnostics/mojo:diagnostics_mojo_bindings" ]
     configs += [
       ":libroutine_test_utils_pkg_deps",
       "//common-mk:test",
