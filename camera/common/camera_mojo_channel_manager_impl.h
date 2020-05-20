@@ -86,7 +86,7 @@ class CameraMojoChannelManagerImpl final : public CameraMojoChannelManager {
 
   // The Mojo channel to CameraHalDispatcher in Chrome. All the Mojo
   // communication to |dispatcher_| happens on |ipc_thread_|.
-  static base::NoDestructor<mojom::CameraHalDispatcherPtr> dispatcher_;
+  static mojom::CameraHalDispatcherPtr dispatcher_;
 
   // Used to cancel pending futures when error occurs.
   std::unique_ptr<cros::CancellationRelay> cancellation_relay_;
@@ -95,6 +95,7 @@ class CameraMojoChannelManagerImpl final : public CameraMojoChannelManager {
 
   // A mutex to guard static variable.
   static base::NoDestructor<base::Lock> static_lock_;
+  static mojo::core::ScopedIPCSupport* ipc_support_;
   static bool mojo_initialized_;
 
   DISALLOW_COPY_AND_ASSIGN(CameraMojoChannelManagerImpl);
