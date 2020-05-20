@@ -1633,6 +1633,19 @@ cmd_battery_test() (
   echo "Battery discharged ${bat_diff}% in ${test_length} second(s)."
 )
 
+# Set the help string so crosh can discover us automatically.
+HELP_diag=''
+EXEC_diag='/usr/bin/diag'
+cmd_diag() (
+  # diag does its own parameter validation. Aside from a single D-Bus command to
+  # bootstrap a mojo connection to cros_healthd, diag only sends mojo commands
+  # and does no work itself.
+  diag "$@"
+)
+help_diag() (
+  diag --help
+)
+
 USAGE_dump_emk=''
 HELP_dump_emk='
   Show the EMK (Enterprise Machine Key).

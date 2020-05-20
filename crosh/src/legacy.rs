@@ -20,6 +20,7 @@ const BASE_COMMANDS: &[&str] = &[
     "connectivity",
     "cras",
     "cryptohome_status",
+    "diag",
     "dmesg",
     "dump_emk",
     "enroll_status",
