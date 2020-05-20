@@ -45,8 +45,6 @@ pkg_config("target_defaults") {
     "libcryptohome-client",
     "liblzma",
     "libminijail",
-    "libpcrecpp",
-    "re2",
     "vboot_host",
   ]
 }
