@@ -16,12 +16,12 @@ pkg_config("libcros_healthd_events_pkg_deps") {
 }
 
 source_set("libcros_healthd_events") {
+  configs += [ ":libcros_healthd_events_pkg_deps" ]
   deps = [
     "//diagnostics/common:libcommon",
     "//diagnostics/cros_healthd/system:libcros_healthd_system",
     "//diagnostics/mojo:diagnostics_mojo_bindings",
   ]
-  all_dependent_configs = [ ":libcros_healthd_events_pkg_deps" ]
   sources = [
     "bluetooth_events_impl.cc",
     "lid_events_impl.cc",
