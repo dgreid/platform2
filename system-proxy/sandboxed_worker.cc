@@ -176,7 +176,7 @@ void SandboxedWorker::SetNetNamespaceLifelineFd(
     base::ScopedFD net_namespace_lifeline_fd) {
   // Sanity check that only one network namespace is setup for the worker
   // process.
-  DCHECK(!net_namespace_lifeline_fd.is_valid());
+  DCHECK(!net_namespace_lifeline_fd_.is_valid());
   net_namespace_lifeline_fd_ = std::move(net_namespace_lifeline_fd);
 }
 
