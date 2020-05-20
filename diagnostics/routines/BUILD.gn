@@ -4,8 +4,7 @@
 
 import("//common-mk/pkg_config.gni")
 
-# The urandom tool executable.
-pkg_config("urandom_pkg_deps") {
+pkg_config("common_pkg_deps") {
   pkg_deps = [
     "libbrillo",
     "libchrome-${libbase_ver}",
@@ -13,45 +12,27 @@ pkg_config("urandom_pkg_deps") {
 }
 
 executable("urandom") {
-  configs += [ ":urandom_pkg_deps" ]
+  configs += [ ":common_pkg_deps" ]
   sources = [ "urandom/main.cc" ]
 }
 
-# The smartctl-check tool executable.
 pkg_config("smartctl-check_pkg_deps") {
-  pkg_deps = [
-    "libbrillo",
-    "libchrome-${libbase_ver}",
-    "libdebugd-client",
-  ]
+  pkg_deps = [ "libdebugd-client" ]
 }
 
 executable("smartctl-check") {
-  configs += [ ":smartctl-check_pkg_deps" ]
+  configs += [
+    ":smartctl-check_pkg_deps",
+    ":common_pkg_deps",
+  ]
   sources = [
     "smartctl_check/main.cc",
     "smartctl_check/smartctl_check_utils.cc",
   ]
 }
 
-# The floating-point-accuracy tool executable.
-pkg_config("floating-point-accuracy_pkg_deps") {
-  pkg_deps = [
-    "libbrillo-${libbase_ver}",
-    "libchrome-${libbase_ver}",
-  ]
-}
-
-# The prime_search tool executable.
-pkg_config("prime_search_pkg_deps") {
-  pkg_deps = [
-    "libbrillo",
-    "libchrome-${libbase_ver}",
-  ]
-}
-
 executable("floating-point-accuracy") {
-  configs += [ ":floating-point-accuracy_pkg_deps" ]
+  configs += [ ":common_pkg_deps" ]
   cflags_cc = [
     "-msse",
     "-mno-mmx",
@@ -60,23 +41,15 @@ executable("floating-point-accuracy") {
 }
 
 executable("prime-search") {
-  configs += [ ":prime_search_pkg_deps" ]
+  configs += [ ":common_pkg_deps" ]
   sources = [
     "prime_search/main.cc",
     "prime_search/prime_number_search.cc",
   ]
 }
 
-# Library that provides the diagnostic routine interface.
-pkg_config("libdiag_routine_pkg_deps") {
-  pkg_deps = [
-    "libbrillo",
-    "libchrome-${libbase_ver}",
-  ]
-}
-
 source_set("libdiag_routine") {
-  configs += [ ":libdiag_routine_pkg_deps" ]
+  configs += [ ":common_pkg_deps" ]
   deps = [
     "//diagnostics/common:libcommon",
     "//diagnostics/mojo:cros_healthd_mojo_bindings",
@@ -102,39 +75,18 @@ source_set("libdiag_routine") {
 }
 
 if (use.test) {
-  # Libraries for unit tests.
-  pkg_config("libroutine_test_utils_pkg_deps") {
-    pkg_deps = [
-      "libchrome-${libbase_ver}",
-      "libmojo-${libbase_ver}",
-    ]
-  }
-
   source_set("libroutine_test_utils") {
+    configs += [ "//common-mk:test" ]
     deps = [ "//diagnostics/mojo:cros_healthd_mojo_bindings" ]
-    configs += [
-      ":libroutine_test_utils_pkg_deps",
-      "//common-mk:test",
-    ]
     sources = [ "routine_test_utils.cc" ]
   }
 
-  pkg_config("routine_test_pkg_deps") {
-    pkg_deps = [
-      "libchrome-${libbase_ver}",
-      "libchrome-test-${libbase_ver}",
-    ]
-  }
-
   executable("routine_test") {
-    configs += [
-      "//common-mk:test",
-      ":routine_test_pkg_deps",
-    ]
+    configs += [ "//common-mk:test" ]
     deps = [
       ":libdiag_routine",
       ":libroutine_test_utils",
-      "../../common-mk/testrunner:testrunner",
+      "//common-mk/testrunner:testrunner",
       "//diagnostics/common:libcommon",
       "//diagnostics/common:libcommon_test_utils",
     ]
