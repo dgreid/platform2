@@ -17,9 +17,9 @@ extern const char kCpuPresentFile[];
 extern const char kCStateNameFile[];
 extern const char kCStateTimeFile[];
 // Files read from the CPU policy directory.
-extern const char kCpuPolicyScalingMaxFreqFile[];
-extern const char kCpuPolicyScalingCurFreqFile[];
-extern const char kCpuPolicyCpuinfoMaxFreqFile[];
+extern const char kCpuScalingMaxFreqFile[];
+extern const char kCpuScalingCurFreqFile[];
+extern const char kCpuinfoMaxFreqFile[];
 
 // Returns an absolute path to the CPU directory. On a real device, this will be
 // /sys/devices/system/cpu.
@@ -31,11 +31,12 @@ base::FilePath GetCpuDirectoryPath(const base::FilePath& root_dir);
 base::FilePath GetCStateDirectoryPath(const base::FilePath& root_dir,
                                       const std::string& logical_id);
 
-// Returns an absolute path to the CPU policy directory for the logical CPU with
+// Returns an absolute path to the CPU freq directory for the logical CPU with
 // ID |logical_id|. On a real device, this will be
-// /sys/devices/system/cpu/cpufreq/policy|logical_id|.
-base::FilePath GetCpuPolicyDirectoryPath(const base::FilePath& root_dir,
-                                         const std::string& logical_id);
+// /sys/devices/system/cpu/cpufreq/policy|logical_id| if the CPU has a governing
+// policy, or sys/devices/system/cpu/|logical_id|/cpufreq without.
+base::FilePath GetCpuFreqDirectoryPath(const base::FilePath& root_dir,
+                                       const std::string& logical_id);
 
 // Returns an absolute path to the cpuinfo file on procfs. On a real device,
 // this will be /proc/cpuinfo.

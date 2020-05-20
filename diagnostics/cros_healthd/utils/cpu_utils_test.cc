@@ -41,7 +41,11 @@ constexpr char kFirstCStateDir[] = "state0";
 constexpr char kNonIntegralFileContents[] = "Not an integer!";
 
 constexpr char kBadCpuinfoContents[] =
-    "processor\t: 0\nmodel name\t: Dank CPU 1 @ 8.90GHz\n\n";
+    "processor\t: 0\nmodel \t: Dank CPU 1 @ 8.90GHz\n\n";
+constexpr char kNoPhysicalIdCpuinfoContents[] =
+    "processor\t: 0\nmodel name\t: Dank CPU 1 @ 8.90GHz\n\n"
+    "processor\t: 1\nmodel name\t: Dank CPU 1 @ 8.90GHzn\n\n"
+    "processor\t: 12\nmodel name\t: Dank CPU 2 @ 2.80GHz\n\n";
 constexpr char kFakeCpuinfoContents[] =
     "processor\t: 0\nmodel name\t: Dank CPU 1 @ 8.90GHz\nphysical id\t: 0\n\n"
     "processor\t: 1\nmodel name\t: Dank CPU 1 @ 8.90GHz\nphysical id\t: 0\n\n"
@@ -221,13 +225,12 @@ class CpuUtilsTest : public testing::Test {
                        const std::string scaling_max_freq_contents,
                        const std::string scaling_cur_freq_contents,
                        const std::string& logical_id) {
-    WritePolicyFile(logical_id, kCpuPolicyCpuinfoMaxFreqFile,
-                    cpuinfo_max_freq_contents);
+    WritePolicyFile(logical_id, kCpuinfoMaxFreqFile, cpuinfo_max_freq_contents);
 
-    WritePolicyFile(logical_id, kCpuPolicyScalingMaxFreqFile,
+    WritePolicyFile(logical_id, kCpuScalingMaxFreqFile,
                     scaling_max_freq_contents);
 
-    WritePolicyFile(logical_id, kCpuPolicyScalingCurFreqFile,
+    WritePolicyFile(logical_id, kCpuScalingCurFreqFile,
                     scaling_cur_freq_contents);
   }
 
@@ -252,7 +255,7 @@ class CpuUtilsTest : public testing::Test {
   void WritePolicyFile(const std::string& logical_id,
                        const std::string& file_name,
                        const std::string& file_contents) {
-    auto policy_dir = GetCpuPolicyDirectoryPath(temp_dir_path(), logical_id);
+    auto policy_dir = GetCpuFreqDirectoryPath(temp_dir_path(), logical_id);
     ASSERT_TRUE(WriteFileAndCreateParentDirs(policy_dir.Append(file_name),
                                              file_contents));
   }
@@ -299,6 +302,42 @@ TEST_F(CpuUtilsTest, TestFetchCpuInfo) {
   VerifyLogicalCpu(kThirdFakeMaxClockSpeed, kThirdFakeScalingMaxFrequency,
                    kThirdFakeScalingCurrentFrequency, kThirdFakeIdleTime,
                    GetCStateVector(kThirdLogicalId), second_logical_cpus[0]);
+}
+
+// Test that we handle a cpuinfo file for processors without physical_ids.
+TEST_F(CpuUtilsTest, NoPhysicalIdCpuinfoFile) {
+  ASSERT_TRUE(WriteFileAndCreateParentDirs(GetProcCpuInfoPath(temp_dir_path()),
+                                           kNoPhysicalIdCpuinfoContents));
+
+  auto cpu_result = FetchCpuInfo(temp_dir_path());
+
+  ASSERT_TRUE(cpu_result->is_cpu_info());
+  const auto& cpu_info = cpu_result->get_cpu_info();
+  EXPECT_EQ(cpu_info->num_total_threads, kExpectedNumTotalThreads);
+  const auto& physical_cpus = cpu_info->physical_cpus;
+  ASSERT_EQ(physical_cpus.size(), 3);
+  const auto& first_physical_cpu = physical_cpus[0];
+  ASSERT_FALSE(first_physical_cpu.is_null());
+  EXPECT_EQ(first_physical_cpu->model_name, kFirstFakeModelName);
+  const auto& first_logical_cpus = first_physical_cpu->logical_cpus;
+  ASSERT_EQ(first_logical_cpus.size(), 1);
+  VerifyLogicalCpu(kFirstFakeMaxClockSpeed, kFirstFakeScalingMaxFrequency,
+                   kFirstFakeScalingCurrentFrequency, kFirstFakeIdleTime,
+                   GetCStateVector(kFirstLogicalId), first_logical_cpus[0]);
+  const auto& second_physical_cpu = physical_cpus[1];
+  ASSERT_FALSE(second_physical_cpu.is_null());
+  const auto& second_logical_cpu = second_physical_cpu->logical_cpus;
+  ASSERT_EQ(second_logical_cpu.size(), 1);
+  VerifyLogicalCpu(kSecondFakeMaxClockSpeed, kSecondFakeScalingMaxFrequency,
+                   kSecondFakeScalingCurrentFrequency, kSecondFakeIdleTime,
+                   GetCStateVector(kSecondLogicalId), second_logical_cpu[0]);
+  const auto& third_physical_cpu = physical_cpus[2];
+  ASSERT_FALSE(third_physical_cpu.is_null());
+  const auto& third_logical_cpu = third_physical_cpu->logical_cpus;
+  ASSERT_EQ(third_logical_cpu.size(), 1);
+  VerifyLogicalCpu(kThirdFakeMaxClockSpeed, kThirdFakeScalingMaxFrequency,
+                   kThirdFakeScalingCurrentFrequency, kThirdFakeIdleTime,
+                   GetCStateVector(kThirdLogicalId), third_logical_cpu[0]);
 }
 
 // Test that we handle a missing cpuinfo file.
@@ -380,10 +419,10 @@ TEST_F(CpuUtilsTest, IncorrectlyFormattedPresentFile) {
 
 // Test that we handle a missing cpuinfo_max_freq file.
 TEST_F(CpuUtilsTest, MissingCpuinfoMaxFreqFile) {
-  ASSERT_TRUE(base::DeleteFile(
-      GetCpuPolicyDirectoryPath(temp_dir_path(), kFirstLogicalId)
-          .Append(kCpuPolicyCpuinfoMaxFreqFile),
-      false));
+  ASSERT_TRUE(
+      base::DeleteFile(GetCpuFreqDirectoryPath(temp_dir_path(), kFirstLogicalId)
+                           .Append(kCpuinfoMaxFreqFile),
+                       false));
 
   auto cpu_result = FetchCpuInfo(temp_dir_path());
 
@@ -394,8 +433,8 @@ TEST_F(CpuUtilsTest, MissingCpuinfoMaxFreqFile) {
 // Test that we handle an incorrectly-formatted cpuinfo_max_freq file.
 TEST_F(CpuUtilsTest, IncorrectlyFormattedCpuinfoMaxFreqFile) {
   ASSERT_TRUE(WriteFileAndCreateParentDirs(
-      GetCpuPolicyDirectoryPath(temp_dir_path(), kFirstLogicalId)
-          .Append(kCpuPolicyCpuinfoMaxFreqFile),
+      GetCpuFreqDirectoryPath(temp_dir_path(), kFirstLogicalId)
+          .Append(kCpuinfoMaxFreqFile),
       kNonIntegralFileContents));
 
   auto cpu_result = FetchCpuInfo(temp_dir_path());
@@ -406,10 +445,10 @@ TEST_F(CpuUtilsTest, IncorrectlyFormattedCpuinfoMaxFreqFile) {
 
 // Test that we handle a missing scaling_max_freq file.
 TEST_F(CpuUtilsTest, MissingScalingMaxFreqFile) {
-  ASSERT_TRUE(base::DeleteFile(
-      GetCpuPolicyDirectoryPath(temp_dir_path(), kFirstLogicalId)
-          .Append(kCpuPolicyScalingMaxFreqFile),
-      false));
+  ASSERT_TRUE(
+      base::DeleteFile(GetCpuFreqDirectoryPath(temp_dir_path(), kFirstLogicalId)
+                           .Append(kCpuScalingMaxFreqFile),
+                       false));
 
   auto cpu_result = FetchCpuInfo(temp_dir_path());
 
@@ -420,8 +459,8 @@ TEST_F(CpuUtilsTest, MissingScalingMaxFreqFile) {
 // Test that we handle an incorrectly-formatted scaling_max_freq file.
 TEST_F(CpuUtilsTest, IncorrectlyFormattedScalingMaxFreqFile) {
   ASSERT_TRUE(WriteFileAndCreateParentDirs(
-      GetCpuPolicyDirectoryPath(temp_dir_path(), kFirstLogicalId)
-          .Append(kCpuPolicyScalingMaxFreqFile),
+      GetCpuFreqDirectoryPath(temp_dir_path(), kFirstLogicalId)
+          .Append(kCpuScalingMaxFreqFile),
       kNonIntegralFileContents));
 
   auto cpu_result = FetchCpuInfo(temp_dir_path());
@@ -432,10 +471,10 @@ TEST_F(CpuUtilsTest, IncorrectlyFormattedScalingMaxFreqFile) {
 
 // Test that we handle a missing scaling_cur_freq file.
 TEST_F(CpuUtilsTest, MissingScalingCurFreqFile) {
-  ASSERT_TRUE(base::DeleteFile(
-      GetCpuPolicyDirectoryPath(temp_dir_path(), kFirstLogicalId)
-          .Append(kCpuPolicyScalingCurFreqFile),
-      false));
+  ASSERT_TRUE(
+      base::DeleteFile(GetCpuFreqDirectoryPath(temp_dir_path(), kFirstLogicalId)
+                           .Append(kCpuScalingCurFreqFile),
+                       false));
 
   auto cpu_result = FetchCpuInfo(temp_dir_path());
 
@@ -446,8 +485,8 @@ TEST_F(CpuUtilsTest, MissingScalingCurFreqFile) {
 // Test that we handle an incorrectly-formatted scaling_cur_freq file.
 TEST_F(CpuUtilsTest, IncorrectlyFormattedScalingCurFreqFile) {
   ASSERT_TRUE(WriteFileAndCreateParentDirs(
-      GetCpuPolicyDirectoryPath(temp_dir_path(), kFirstLogicalId)
-          .Append(kCpuPolicyScalingCurFreqFile),
+      GetCpuFreqDirectoryPath(temp_dir_path(), kFirstLogicalId)
+          .Append(kCpuScalingCurFreqFile),
       kNonIntegralFileContents));
 
   auto cpu_result = FetchCpuInfo(temp_dir_path());

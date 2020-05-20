@@ -55,6 +55,10 @@ mojo_ipc::CpuArchitectureEnum GetArchitecture() {
   std::string machine = ss.str();
   if (machine == "x86_64")
     return mojo_ipc::CpuArchitectureEnum::kX86_64;
+  else if (machine == "aarch64")
+    return mojo_ipc::CpuArchitectureEnum::kAArch64;
+  else if (machine == "armv7l")
+    return mojo_ipc::CpuArchitectureEnum::kArmv7l;
 
   return mojo_ipc::CpuArchitectureEnum::kUnknown;
 }
@@ -164,14 +168,16 @@ bool ParseProcessor(const std::string& processor,
       base::TrimWhitespaceASCII(key_value.second, base::TRIM_ALL, physical_id);
     else if (key_value.first.find(kModelNameKey) != std::string::npos)
       base::TrimWhitespaceASCII(key_value.second, base::TRIM_ALL, model_name);
-
-    if (!processor_id->empty() && !physical_id->empty() &&
-        !model_name->empty()) {
-      return true;
-    }
   }
 
-  return false;
+  // If the processor does not have a distinction between physical_id and
+  // processor_id, make them the same value.
+  if (!processor_id->empty() && physical_id->empty()) {
+    *physical_id = *processor_id;
+  }
+
+  return (!processor_id->empty() && !physical_id->empty() &&
+          !model_name->empty());
 }
 
 // Aggregates data from |processor_info| and |logical_ids_to_idle_times| to form
@@ -222,31 +228,29 @@ mojo_ipc::CpuResultPtr GetCpuInfoFromProcessorInfo(
     }
     logical_cpu.c_states = std::move(c_states.value());
 
-    auto policy_dir = GetCpuPolicyDirectoryPath(root_dir, processor_id);
-    if (!ReadInteger(policy_dir, kCpuPolicyCpuinfoMaxFreqFile,
-                     &base::StringToUint, &logical_cpu.max_clock_speed_khz)) {
+    auto cpufreq_dir = GetCpuFreqDirectoryPath(root_dir, processor_id);
+    if (!ReadInteger(cpufreq_dir, kCpuinfoMaxFreqFile, &base::StringToUint,
+                     &logical_cpu.max_clock_speed_khz)) {
       return mojo_ipc::CpuResult::NewError(CreateAndLogProbeError(
           mojo_ipc::ErrorType::kFileReadError,
           "Unable to read max CPU frequency file to integer: " +
-              policy_dir.Append(kCpuPolicyCpuinfoMaxFreqFile).value()));
+              cpufreq_dir.Append(kCpuinfoMaxFreqFile).value()));
     }
 
-    if (!ReadInteger(policy_dir, kCpuPolicyScalingMaxFreqFile,
-                     &base::StringToUint,
+    if (!ReadInteger(cpufreq_dir, kCpuScalingMaxFreqFile, &base::StringToUint,
                      &logical_cpu.scaling_max_frequency_khz)) {
       return mojo_ipc::CpuResult::NewError(CreateAndLogProbeError(
           mojo_ipc::ErrorType::kFileReadError,
           "Unable to read scaling max frequency file to integer: " +
-              policy_dir.Append(kCpuPolicyScalingMaxFreqFile).value()));
+              cpufreq_dir.Append(kCpuScalingMaxFreqFile).value()));
     }
 
-    if (!ReadInteger(policy_dir, kCpuPolicyScalingCurFreqFile,
-                     &base::StringToUint,
+    if (!ReadInteger(cpufreq_dir, kCpuScalingCurFreqFile, &base::StringToUint,
                      &logical_cpu.scaling_current_frequency_khz)) {
       return mojo_ipc::CpuResult::NewError(CreateAndLogProbeError(
           mojo_ipc::ErrorType::kFileReadError,
           "Unable to read scaling current frequency file to integer: " +
-              policy_dir.Append(kCpuPolicyScalingCurFreqFile).value()));
+              cpufreq_dir.Append(kCpuScalingCurFreqFile).value()));
     }
 
     // Add this logical CPU to the corresponding physical CPU.

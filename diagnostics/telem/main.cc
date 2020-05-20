@@ -68,6 +68,10 @@ std::string GetArchitectureString(CpuArchitectureEnum architecture) {
       return "unknown";
     case CpuArchitectureEnum::kX86_64:
       return "x86_64";
+    case CpuArchitectureEnum::kAArch64:
+      return "aarch64";
+    case CpuArchitectureEnum::kArmv7l:
+      return "armv7l";
   }
 }
 
