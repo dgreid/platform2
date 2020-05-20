@@ -32,10 +32,21 @@ Chrome OS DLC is an extension of the Chrome OS package (ebuild).
 
 The workflow of a DLC developer involves following few tasks:
 
+* [Enable DLC for your board]
 * [Create a DLC]
 * [Write platform code to request DLC]
 * [Install a DLC for dev/test]
 * [Write tests for a DLC]
+
+## Enable DLC for your board
+
+To enable DLCs for your board, you have to add the `USE flags` `dlc` and
+`dlc_test` to the overlay of the board you are building for.
+If DLC was not previously enabled for your board, you will have to build and
+flash a new image to your DUT before deploying your first DLC, since the
+`dlcservice` user permissions are not yet in devices without DLC support.
+
+See example: [overlay-eve make.defaults]
 
 ## Create a DLC
 
@@ -157,6 +168,7 @@ Modifying a Chrome OS DLC is the same as modifying a Chrome OS package (ebuild).
 A DLC is updated at the same time the device itself is updated.
 
 [dlcservice]: https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/dlcservice
+[Enable DLC for your board]: #Enable-DLC-for-your-board
 [Create a DLC]: #Create-a-DLC
 [Write platform code to request DLC]: #Write-platform-code-to-request-DLC
 [Install a DLC for dev/test]: #install-a-dlc-for-devtest
@@ -166,5 +178,6 @@ A DLC is updated at the same time the device itself is updated.
 [imageloader_impl.cc]: https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/imageloader/imageloader_impl.cc
 [tast]: go/tast
 [tast-deps]: go/tast-deps
-[dummy-dlc]: https://source.corp.google.com/chromeos_public/src/third_party/chromiumos-overlay/chromeos-base/dummy-dlc/dummy-dlc-1.0.0.ebuild
+[dummy-dlc]: https://chromium.googlesource.com/chromiumos/overlays/chromiumos-overlay/+/refs/heads/master/chromeos-base/dummy-dlc/dummy-dlc-1.0.0.ebuild
 [dummy-dlc config]: https://chromium.googlesource.com/chromiumos/overlays/chromiumos-overlay/+/refs/heads/master/chromeos/config/env/chromeos-base/dummy-dlc
+[overlay-eve make.defaults]: https://chromium.googlesource.com/chromiumos/overlays/board-overlays/+/refs/heads/master/overlay-eve/profiles/base/make.defaults
