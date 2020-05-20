@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//common-mk/pkg_config.gni")
-import("//common-mk/proto_library.gni")
 
 group("all") {
   deps = [
@@ -40,16 +39,9 @@ source_set("libdpsl") {
 }
 
 if (use.test) {
-  pkg_config("libdpsl_test_pkg_deps") {
-    pkg_deps = [
-      "libchrome-${libbase_ver}",
-      "libchrome-test-${libbase_ver}",
-    ]
-  }
-
   executable("libdpsl_test") {
     configs += [
-      ":libdpsl_test_pkg_deps",
+      ":common_pkg_deps",
       "//common-mk:test",
     ]
     deps = [
