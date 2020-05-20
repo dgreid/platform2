@@ -12,6 +12,8 @@
 #include <base/memory/ptr_util.h>
 #include <brillo/errors/error.h>
 
+#include "debugd/dbus-proxies.h"
+
 namespace diagnostics {
 
 namespace {

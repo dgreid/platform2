@@ -10,12 +10,12 @@ pkg_config("libcros_healthd_pkg_deps") {
     "dbus-1",
     "libbrillo",
     "libchrome-${libbase_ver}",
-    "libdebugd-client",
     "libmojo-${libbase_ver}",
   ]
 }
 
 source_set("libcros_healthd") {
+  configs += [ ":libcros_healthd_pkg_deps" ]
   deps = [
     "events:libcros_healthd_events",
     "system:libcros_healthd_system",
@@ -23,7 +23,6 @@ source_set("libcros_healthd") {
     "//diagnostics/mojo:diagnostics_mojo_bindings",
     "//diagnostics/routines:libdiag_routine",
   ]
-  all_dependent_configs = [ ":libcros_healthd_pkg_deps" ]
   sources = [
     "cros_healthd.cc",
     "cros_healthd_mojo_service.cc",
@@ -42,7 +41,6 @@ if (use.test) {
     pkg_deps = [
       "libchrome-${libbase_ver}",
       "libchrome-test-${libbase_ver}",
-      "libdebugd-client-test",
     ]
   }
 

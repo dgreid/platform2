@@ -7,8 +7,13 @@
 
 #include <memory>
 
-#include "debugd/dbus-proxies.h"
 #include "diagnostics/common/system/debugd_adapter.h"
+
+namespace org {
+namespace chromium {
+class debugdProxyInterface;
+}  // namespace chromium
+}  // namespace org
 
 namespace diagnostics {
 
