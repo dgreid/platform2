@@ -249,6 +249,12 @@ bool ArcVm::Start(base::FilePath kernel,
     { "--params",         base::JoinString(params, " ") },
   };
   // clang-format on
+
+  // Enable virtio-video decoder device on x86 platforms.
+  // TODO(b/151399776): Enable video decoder on all platforms.
+  if (USE_VIRTIO_VIDEO_DECODER)
+    args.emplace_back("--video-decoder", "");
+
   for (const auto& fd : tap_fds) {
     args.emplace_back("--tap-fd", std::to_string(fd.get()));
   }
