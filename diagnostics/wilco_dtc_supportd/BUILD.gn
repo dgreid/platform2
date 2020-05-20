@@ -10,6 +10,7 @@ pkg_config("libwilco_dtc_supportd_pkg_deps") {
     "dbus-1",
     "libbrillo",
     "libchrome-${libbase_ver}",
+    "libdebugd-client",
     "libmojo-${libbase_ver}",
     "system_api",
   ]
