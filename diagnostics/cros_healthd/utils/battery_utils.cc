@@ -27,6 +27,7 @@
 #include <dbus/power_manager/dbus-constants.h>
 #include <re2/re2.h>
 
+#include "debugd/dbus-proxies.h"
 #include "diagnostics/cros_healthd/utils/error_utils.h"
 #include "power_manager/proto_bindings/power_supply_properties.pb.h"
 

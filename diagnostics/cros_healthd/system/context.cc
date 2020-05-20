@@ -8,6 +8,7 @@
 #include <chromeos/chromeos-config/libcros_config/cros_config.h>
 #include <dbus/power_manager/dbus-constants.h>
 
+#include "debugd/dbus-proxies.h"
 #include "diagnostics/common/system/bluetooth_client_impl.h"
 #include "diagnostics/common/system/debugd_adapter_impl.h"
 #include "diagnostics/common/system/powerd_adapter_impl.h"

@@ -17,8 +17,8 @@ pkg_config("libcros_healthd_system_pkg_deps") {
 }
 
 source_set("libcros_healthd_system") {
+  configs += [ ":libcros_healthd_system_pkg_deps" ]
   deps = [ "//diagnostics/common:libcommon" ]
-  all_dependent_configs = [ ":libcros_healthd_system_pkg_deps" ]
   sources = [ "context.cc" ]
 }
 
@@ -29,17 +29,18 @@ if (use.test) {
       "dbus-1",
       "libchrome-${libbase_ver}",
       "libcros_config",
+      "libdebugd-client",
       "libdebugd-client-test",
       "system_api",
     ]
   }
 
   source_set("libcros_healthd_system_test_utils") {
+    configs += [ ":libcros_healthd_system_test_utils_pkg_deps" ]
     deps = [
       ":libcros_healthd_system",
       "//diagnostics/common:libcommon_test_utils",
     ]
-    all_dependent_configs = [ ":libcros_healthd_system_test_utils_pkg_deps" ]
     sources = [ "mock_context.cc" ]
   }
 }

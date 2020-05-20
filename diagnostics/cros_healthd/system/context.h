@@ -13,10 +13,15 @@
 #include <dbus/bus.h>
 #include <dbus/object_proxy.h>
 
-#include "debugd/dbus-proxies.h"
 #include "diagnostics/common/system/bluetooth_client.h"
 #include "diagnostics/common/system/debugd_adapter.h"
 #include "diagnostics/common/system/powerd_adapter.h"
+
+namespace org {
+namespace chromium {
+class debugdProxyInterface;
+}  // namespace chromium
+}  // namespace org
 
 namespace diagnostics {
 

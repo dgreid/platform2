@@ -9,6 +9,8 @@
 #include <dbus/power_manager/dbus-constants.h>
 #include <gmock/gmock.h>
 
+#include "debugd/dbus-proxy-mocks.h"
+
 namespace diagnostics {
 
 MockContext::MockContext() = default;

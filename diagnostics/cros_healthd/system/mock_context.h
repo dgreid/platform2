@@ -11,11 +11,16 @@
 #include <dbus/mock_object_proxy.h>
 #include <dbus/object_path.h>
 
-#include "debugd/dbus-proxy-mocks.h"
 #include "diagnostics/common/system/fake_bluetooth_client.h"
 #include "diagnostics/common/system/fake_powerd_adapter.h"
 #include "diagnostics/common/system/mock_debugd_adapter.h"
 #include "diagnostics/cros_healthd/system/context.h"
+
+namespace org {
+namespace chromium {
+class debugdProxyMock;
+}  // namespace chromium
+}  // namespace org
 
 namespace diagnostics {
 
