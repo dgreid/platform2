@@ -1770,8 +1770,6 @@ std::unique_ptr<dbus::Response> Service::StartArcVm(
 
   // Start the VM and build the response.
   ArcVmFeatures features;
-  // We need gpu for running ARCVM.
-  features.gpu = true;
   features.rootfs_writable = request.rootfs_writable();
 
   const auto pstore_path = GetFilePathFromName(

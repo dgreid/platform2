@@ -232,6 +232,7 @@ bool ArcVm::Start(base::FilePath kernel,
     { rootfs_flag,         rootfs.value() },
     { "--cid",             std::to_string(vsock_cid_) },
     { "--socket",          GetVmSocketPath() },
+    { "--gpu",             "" },
     { "--wayland-sock",    kWaylandSocket },
     { "--wayland-sock",    "/run/arcvm/mojo/mojo-proxy.sock,name=mojo" },
     { "--wayland-dmabuf",  "" },
@@ -251,9 +252,6 @@ bool ArcVm::Start(base::FilePath kernel,
   for (const auto& fd : tap_fds) {
     args.emplace_back("--tap-fd", std::to_string(fd.get()));
   }
-
-  if (features_.gpu)
-    args.emplace_back("--gpu", "");
 
   // Add any extra disks.
   for (const auto& disk : disks) {

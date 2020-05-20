@@ -129,8 +129,6 @@ class TerminaVm final : public VmBaseImpl {
   // The VM's cid.
   uint32_t cid() const { return vsock_cid_; }
 
-  bool enable_gpu() const { return features_.gpu; }
-
   // The 9p server managed by seneschal that provides access to shared files for
   // this VM.  Returns 0 if there is no seneschal server associated with this
   // VM.
