@@ -10,6 +10,7 @@
 #include <string>
 #include <vector>
 
+#include <base/containers/flat_map.h>
 #include <base/files/file_path.h>
 #include <base/macros.h>
 #include <base/optional.h>
@@ -26,6 +27,8 @@ class IioChannel;
 // configure channels, trigger and buffer for a sensor.
 class LIBMEMS_EXPORT IioDevice {
  public:
+  using IioSample = base::flat_map<std::string, int64_t>;
+
   virtual ~IioDevice() = default;
 
   // Returns the IIO context that contains this device.
@@ -127,12 +130,12 @@ class LIBMEMS_EXPORT IioDevice {
   // be used along with EnableBuffer.
   virtual base::Optional<int32_t> GetBufferFd() = 0;
 
-  // Creates the IIO buffer if it doesn't exist, and fills |sample| with the
-  // sample's payload. Returns false on failure.
+  // Creates the IIO buffer if it doesn't exist, and reads & returns one sample.
+  // Returns base::nullopt on failure.
   // The buffer's lifetime is managed by the IioDevice, which will be disabled
   // when the IioDevice along with the IioContext gets destroyed. It should not
   // be used along with EnableBuffer.
-  virtual bool ReadEvent(std::vector<uint8_t>* event) = 0;
+  virtual base::Optional<IioSample> ReadSample() = 0;
 
  protected:
   IioDevice() = default;

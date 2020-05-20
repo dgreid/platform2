@@ -92,7 +92,7 @@ class LIBMEMS_EXPORT FakeIioDevice : public IioDevice {
   }
 
   base::Optional<int32_t> GetBufferFd() override { return base::nullopt; }
-  bool ReadEvent(std::vector<uint8_t>* event) override { return false; }
+  base::Optional<IioSample> ReadSample() override { return base::nullopt; }
 
  private:
   FakeIioContext* context_;

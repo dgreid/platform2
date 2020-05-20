@@ -66,13 +66,15 @@ class LIBMEMS_EXPORT IioDeviceImpl : public IioDevice {
   bool IsBufferEnabled(size_t* num = nullptr) const override;
 
   base::Optional<int32_t> GetBufferFd() override;
-  bool ReadEvent(std::vector<uint8_t>* event) override;
+  base::Optional<IioSample> ReadSample() override;
 
  private:
   static void IioBufferDeleter(iio_buffer* buffer);
 
   void EnableAllChannels();
   bool CreateBuffer();
+
+  IioSample DeserializeSample(const uint8_t* src);
 
   IioContextImpl* context_;  // non-owned
   iio_device* const device_;       // non-owned

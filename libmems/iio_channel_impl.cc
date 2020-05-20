@@ -79,4 +79,40 @@ base::Optional<int64_t> IioChannelImpl::ReadNumberAttribute(
   return val;
 }
 
+base::Optional<int64_t> IioChannelImpl::Convert(const uint8_t* src) const {
+  const iio_data_format* format = iio_channel_get_data_format(channel_);
+  if (!format) {
+    LOG(WARNING) << "Cannot find format of channel: " << GetId();
+    return base::nullopt;
+  }
+
+  size_t len = format->length;
+  if (len == 0)
+    return 0;
+
+  int64_t value;
+  iio_channel_convert(channel_, &value, src);
+
+  if (format->is_signed && len < CHAR_BIT * sizeof(int64_t)) {
+    int64_t mask = 1LL << (len - 1);
+
+    if (mask & value) {
+      // Doing sign extension
+      value |= (~0LL) << len;
+    }
+  }
+
+  return value;
+}
+
+base::Optional<uint64_t> IioChannelImpl::Length() const {
+  const iio_data_format* format = iio_channel_get_data_format(channel_);
+  if (!format) {
+    LOG(WARNING) << "Cannot find format of channel: " << GetId();
+    return base::nullopt;
+  }
+
+  return format->length;
+}
+
 }  // namespace libmems

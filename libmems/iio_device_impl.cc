@@ -281,11 +281,9 @@ base::Optional<int32_t> IioDeviceImpl::GetBufferFd() {
   return fd;
 }
 
-bool IioDeviceImpl::ReadEvent(std::vector<uint8_t>* event) {
+base::Optional<IioDevice::IioSample> IioDeviceImpl::ReadSample() {
   if (!CreateBuffer())
-    return false;
-
-  event->clear();
+    return base::nullopt;
 
   ssize_t ret = iio_buffer_refill(buffer_.get());
   if (ret < 0) {
@@ -294,7 +292,7 @@ bool IioDeviceImpl::ReadEvent(std::vector<uint8_t>* event) {
     LOG(ERROR) << "Unable to refill buffer: " << errMsg;
     buffer_.reset();
 
-    return false;
+    return base::nullopt;
   }
 
   const auto buf_step = iio_buffer_step(buffer_.get());
@@ -306,17 +304,12 @@ bool IioDeviceImpl::ReadEvent(std::vector<uint8_t>* event) {
                << ", sample_size: " << sample_size;
     buffer_.reset();
 
-    return false;
+    return base::nullopt;
   }
 
   uint8_t* start = reinterpret_cast<uint8_t*>(iio_buffer_start(buffer_.get()));
-  size_t len = reinterpret_cast<intptr_t>(iio_buffer_end(buffer_.get())) -
-               reinterpret_cast<intptr_t>(start);
 
-  event->reserve(len);
-  event->insert(event->begin(), start, start + len);
-
-  return true;
+  return DeserializeSample(start);
 }
 
 // static
@@ -348,6 +341,35 @@ bool IioDeviceImpl::CreateBuffer() {
   }
 
   return true;
+}
+
+IioDevice::IioSample IioDeviceImpl::DeserializeSample(const uint8_t* src) {
+  IioSample event;
+  int64_t pos = 0;
+
+  for (IioChannel* chn_base : GetAllChannels()) {
+    IioChannelImpl* chn = dynamic_cast<IioChannelImpl*>(chn_base);
+    if (!chn->IsEnabled())
+      continue;
+
+    size_t len = chn->Length().value_or(0);
+    if (len == 0)
+      continue;
+    len /= CHAR_BIT;
+
+    size_t space_in_block = sizeof(int64_t) - (pos % sizeof(int64_t));
+    if (len > space_in_block) {
+      pos += space_in_block;
+    }
+
+    base::Optional<int64_t> value = chn->Convert(src + pos);
+    pos += len;
+
+    if (value.has_value())
+      event[chn->GetId()] = value.value();
+  }
+
+  return event;
 }
 
 }  // namespace libmems
