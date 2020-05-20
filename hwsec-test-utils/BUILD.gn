@@ -75,12 +75,10 @@ source_set("verified_access_library") {
 
 executable("fake_pca_agentd") {
   configs += [ ":target_defaults" ]
-  sources = [
-    "fake_pca_agent/main.cc",
-  ]
-  deps = [
-    ":fake_pca_agent_library",
-  ]
+  sources = [ "fake_pca_agent/main.cc" ]
+  deps = [ ":fake_pca_agent_library" ]
+
+  # NOSORT
   pkg_deps = [
     # system_api depends on protobuf (or protobuf-lite). It must appear
     # before protobuf here or the linker flags won't be in the right
@@ -92,9 +90,7 @@ executable("fake_pca_agentd") {
 
 source_set("fake_pca_agent_library") {
   configs += [ ":target_defaults" ]
-  sources = [
-    "fake_pca_agent/service.cc",
-  ]
+  sources = [ "fake_pca_agent/service.cc" ]
 }
 
 if (use.test) {
