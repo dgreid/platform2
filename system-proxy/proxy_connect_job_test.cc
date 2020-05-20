@@ -91,6 +91,18 @@ TEST_F(ProxyConnectJobTest, SuccessfulConnection) {
   EXPECT_EQ(kProxyServerUrl, connect_job_->proxy_servers_.front());
 }
 
+TEST_F(ProxyConnectJobTest, SuccessfulConnectionAltEnding) {
+  connect_job_->Start();
+  char validConnRequest[] =
+      "CONNECT www.example.server.com:443 HTTP/1.1\r\n\n";
+  cros_client_socket_->SendTo(validConnRequest, std::strlen(validConnRequest));
+  brillo_loop_.RunOnce(false);
+
+  EXPECT_EQ("www.example.server.com:443", connect_job_->target_url_);
+  EXPECT_EQ(1, connect_job_->proxy_servers_.size());
+  EXPECT_EQ(kProxyServerUrl, connect_job_->proxy_servers_.front());
+}
+
 TEST_F(ProxyConnectJobTest, BadHttpRequestWrongMethod) {
   connect_job_->Start();
   char badConnRequest[] = "GET www.example.server.com:443 HTTP/1.1\r\n\r\n";

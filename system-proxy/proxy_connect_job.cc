@@ -45,10 +45,12 @@ constexpr base::TimeDelta kCurlConnectTimeout = base::TimeDelta::FromMinutes(2);
 constexpr base::TimeDelta kWaitClientConnectTimeout =
     base::TimeDelta::FromMinutes(2);
 constexpr size_t kMaxBadRequestPrintSize = 120;
-// This sequence is used to identify the end of a HTTP header which should be an
-// empty line. Note: all HTTP header lines end with CRLF. HTTP connect requests
-// don't have a body so end of header is end of request.
-const std::string_view kCrlfCrlf = "\r\n\r\n";
+// The elements in this array are used to identify the end of a HTTP header
+// which should be an empty line. Note: all HTTP header lines end with CRLF.
+// RFC7230, section 3.5 allow LF (without CR) as a valid end of header. HTTP
+// connect requests don't have a body so end of header is end of request.
+static const std::array<std::string, 2> kValidHttpHeaderEnd = {"\r\n\n",
+                                                               "\r\n\r\n"};
 
 // HTTP error codes and messages with origin information for debugging (RFC723,
 // section 6.1).
@@ -62,12 +64,17 @@ const std::string_view kHttpBadGateway =
     "HTTP/1.1 502 Bad Gateway - Origin: local proxy\r\n\r\n";
 
 // Verifies if the http headers are ending with an http empty line, meaning a
-// line that contains only CR LF preceded by a line ending with CRLF.
+// line that contains only CRLF or LF preceded by a line ending with CRLF.
 bool IsEndingWithHttpEmptyLine(const char* headers, int headers_size) {
-  return headers_size > kCrlfCrlf.size() &&
-         std::memcmp(kCrlfCrlf.data(),
-                     headers + headers_size - kCrlfCrlf.size(),
-                     kCrlfCrlf.size()) == 0;
+  for (const auto& header_end : kValidHttpHeaderEnd) {
+    if (headers_size > header_end.size() &&
+        std::memcmp(header_end.data(),
+                    headers + headers_size - header_end.size(),
+                    header_end.size()) == 0) {
+      return true;
+    }
+  }
+  return false;
 }
 
 // CURLOPT_HEADERFUNCTION callback implementation that only returns the headers
