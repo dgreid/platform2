@@ -9,6 +9,8 @@
 #include <map>
 #include <utility>
 
+#include <base/no_destructor.h>
+
 namespace cros {
 
 namespace {
@@ -17,7 +19,7 @@ using VidPidPair = std::pair<std::string, std::string>;
 using QuirksMap = std::map<VidPidPair, uint32_t>;
 
 const QuirksMap& GetQuirksMap() {
-  static const QuirksMap kQuirksMap = {
+  static const base::NoDestructor<QuirksMap> kQuirksMap({
       // Logitech Webcam Pro 9000 (b/138159048)
       {{"046d", "0809"}, kQuirkPreferMjpeg},
       // Huddly GO (crbug.com/1010557)
@@ -30,8 +32,8 @@ const QuirksMap& GetQuirksMap() {
       {{"046d", "0876"}, kQuirkRestartOnTimeout},
       // IPEVO Ziggi-HD Plus
       {{"1778", "0225"}, kQuirkDisableFrameRateSetting},
-  };
-  return kQuirksMap;
+  });
+  return *kQuirksMap;
 }
 
 }  // namespace
