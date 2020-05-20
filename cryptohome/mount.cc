@@ -757,7 +757,8 @@ bool Mount::IsNonEphemeralMounted() const {
 
 bool Mount::OwnsMountPoint(const FilePath& path) const {
   return (mounter_ && mounter_->IsPathMounted(path)) ||
-         (out_of_process_mounter_ && mounter_->IsPathMounted(path));
+         (out_of_process_mounter_ &&
+          out_of_process_mounter_->IsPathMounted(path));
 }
 
 bool Mount::CreateCryptohome(const Credentials& credentials) const {
