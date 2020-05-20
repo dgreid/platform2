@@ -5,10 +5,7 @@
 import("//common-mk/pkg_config.gni")
 
 pkg_config("libtelemetry_pkg_deps") {
-  pkg_deps = [
-    "libchrome-${libbase_ver}",
-    "system_api",
-  ]
+  pkg_deps = [ "libchrome-${libbase_ver}" ]
 }
 
 source_set("libtelemetry") {
@@ -26,21 +23,11 @@ source_set("libtelemetry") {
 }
 
 if (use.test) {
-  pkg_config("telemetry_test_pkg_deps") {
-    pkg_deps = [
-      "libchrome-${libbase_ver}",
-      "libchrome-test-${libbase_ver}",
-    ]
-  }
-
   source_set("telemetry_test") {
-    configs += [
-      ":telemetry_test_pkg_deps",
-      "//common-mk:test",
-    ]
+    configs += [ ":libtelemetry_pkg_deps" ]
     deps = [
-      "//common-mk/testrunner:testrunner",
       "//diagnostics/common:libcommon_test_utils",
+      "//diagnostics/mojo:diagnostics_mojo_bindings",
     ]
     sources = [
       "bluetooth_event_service_impl_test.cc",

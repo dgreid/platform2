@@ -4,20 +4,17 @@
 
 import("//common-mk/pkg_config.gni")
 
-# Library that provides core functionality for the wilco_dtc_supportd daemon.
-pkg_config("libwilco_dtc_supportd_pkg_deps") {
+pkg_config("common_pkg_deps") {
   pkg_deps = [
-    "dbus-1",
     "libbrillo",
     "libchrome-${libbase_ver}",
     "libdebugd-client",
-    "libmojo-${libbase_ver}",
-    "system_api",
   ]
 }
 
+# Library that provides core functionality for the wilco_dtc_supportd daemon.
 source_set("libwilco_dtc_supportd") {
-  configs += [ ":libwilco_dtc_supportd_pkg_deps" ]
+  configs += [ ":common_pkg_deps" ]
   deps = [
     "telemetry:libtelemetry",
     "//diagnostics/common:libcommon",
@@ -25,12 +22,10 @@ source_set("libwilco_dtc_supportd") {
     "//diagnostics/grpc:wilco_dtc_grpc_protos",
     "//diagnostics/grpc_async_adapter:libgrpc_async_adapter",
     "//diagnostics/mojo:diagnostics_mojo_bindings",
-    "//diagnostics/routines:libdiag_routine",
   ]
   sources = [
     "core.cc",
     "core_delegate_impl.cc",
-    "daemon.cc",
     "dbus_service.cc",
     "ec_constants.cc",
     "grpc_client_manager.cc",
@@ -43,30 +38,24 @@ source_set("libwilco_dtc_supportd") {
 }
 
 executable("wilco_dtc_supportd") {
+  configs += [ ":common_pkg_deps" ]
   deps = [ ":libwilco_dtc_supportd" ]
-  sources = [ "main.cc" ]
+  sources = [
+    "daemon.cc",
+    "main.cc",
+  ]
 }
 
 if (use.test) {
-  pkg_config("wilco_dtc_supportd_test_pkg_deps") {
-    pkg_deps = [
-      "libbrillo",
-      "libchrome-${libbase_ver}",
-      "libchrome-test-${libbase_ver}",
-    ]
-  }
-
   executable("wilco_dtc_supportd_test") {
     configs += [
-      ":wilco_dtc_supportd_test_pkg_deps",
+      ":common_pkg_deps",
       "//common-mk:test",
     ]
     deps = [
       ":libwilco_dtc_supportd",
       "telemetry:telemetry_test",
       "//common-mk/testrunner:testrunner",
-      "//diagnostics/common:libcommon",
-      "//diagnostics/common:libcommon_test_utils",
     ]
     sources = [
       "core_test.cc",
