@@ -153,18 +153,6 @@ bool DlcBase::UpdateCompleted(ErrorPtr* err) {
   return true;
 }
 
-bool DlcBase::MakeReadyForUpdate(ErrorPtr* err) {
-  if (!Prefs(*this, SystemState::Get()->inactive_boot_slot())
-           .Delete(kDlcPrefVerified)) {
-    *err = Error::Create(
-        FROM_HERE, kErrorInternal,
-        base::StringPrintf("Failed to mark inactive DLC=%s as not-verified.",
-                           id_.c_str()));
-    return false;
-  }
-  return true;
-}
-
 FilePath DlcBase::GetImagePath(BootSlot::Slot slot) const {
   return JoinPaths(content_package_path_, BootSlot::ToString(slot),
                    kDlcImageFileName);
@@ -201,46 +189,27 @@ bool DlcBase::CreateDlc(ErrorPtr* err) {
   return true;
 }
 
-bool DlcBase::ValidateInactiveImage() const {
-  const FilePath& inactive_image_path =
-      GetImagePath(SystemState::Get()->inactive_boot_slot());
-  const int64_t& max_image_size = manifest_.preallocated_size();
-
-  if (!base::PathExists(inactive_image_path)) {
-    LOG(WARNING) << "The DLC image " << inactive_image_path.value()
-                 << " does not exist.";
-    if (!CreateFile(inactive_image_path, max_image_size)) {
-      LOG(ERROR) << "Failed to create inactive image "
-                 << inactive_image_path.value()
-                 << " during validation for DLC=" << id_;
-      return false;
-    }
+bool DlcBase::MakeReadyForUpdate() const {
+  // Deleting the inactive verified pref should always happen before anything
+  // else here otherwise if we failed to delete, on a reboot after an update, we
+  // might assume the image is verified, which is not.
+  if (!Prefs(*this, SystemState::Get()->inactive_boot_slot())
+           .Delete(kDlcPrefVerified)) {
+    PLOG(ERROR) << "Failed to mark inactive DLC=" << id_ << " as not-verified.";
+    return false;
   }
 
-  // Different scenarios possible to hit this flow:
-  //  - Inactive and manifest size are the same -> Do nothing.
-  //
-  // TODO(crbug.com/943780): This requires further design updates to both
-  //  dlcservice and upate_engine in order to fully handle. Solution pending.
-  //  - Update applied and not rebooted -> Do nothing. A lot more corner cases
-  //    than just always keeping active and inactive image sizes the same.
-  //
-  //  - Update applied and rebooted -> Try fixing up inactive image.
-  int64_t inactive_image_size;
-  if (!base::GetFileSize(inactive_image_path, &inactive_image_size)) {
-    LOG(ERROR) << "Failed to get inactive image size DLC=" << id_;
-  } else {
-    // When |inactive_image_size| is less than the size permitted in the
-    // manifest, this means that we rebooted into an update.
-    if (inactive_image_size < max_image_size) {
-      // Only increasing size, the inactive DLC is still usable in case of
-      // reverts.
-      if (!ResizeFile(inactive_image_path, max_image_size)) {
-        LOG(ERROR) << "Failed to increase inactive image, update_engine may "
-                      "face problems in updating when stateful is full later.";
-        return false;
-      }
-    }
+  if (!IsVerified()) {
+    return false;
+  }
+
+  const FilePath& inactive_image_path =
+      GetImagePath(SystemState::Get()->inactive_boot_slot());
+  if (!CreateFile(inactive_image_path, manifest_.preallocated_size())) {
+    LOG(ERROR) << "Failed to create inactive image "
+               << inactive_image_path.value() << " when making DLC=" << id_
+               << " ready for update.";
+    return false;
   }
   return true;
 }
@@ -391,17 +360,13 @@ bool DlcBase::SetupInitInstall(ErrorPtr* err) {
         return false;
       }
       if (image_present_before_creation) {
-        if ((IsVerified() || Verify()) && (ValidateInactiveImage() || true) &&
-            TryMount(err)) {
+        if ((IsVerified() || Verify()) && TryMount(err)) {
           LOG(INFO) << "Image verified and marked installed for DLC=" << id_;
-          break;
         }
       }
       break;
     }
     case DlcState::INSTALLED:
-      if (!ValidateInactiveImage())
-        LOG(ERROR) << "Bad inactive image for DLC=" << id_;
       // Tests that run at times will unmount all loopback devices, hence it's
       // required that even installed DLC images need to be mounted again.
       if (!TryMount(err)) {

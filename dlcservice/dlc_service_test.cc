@@ -134,39 +134,6 @@ class DlcServiceTest : public BaseTest {
   DISALLOW_COPY_AND_ASSIGN(DlcServiceTest);
 };
 
-TEST_F(DlcServiceTest,
-       MimicUpdateRebootInstallWherePreallocatedSizeIncreasedTest) {
-  Install(kFirstDlc);
-
-  // Check A and B images.
-  for (const auto& slot : {kDlcDirAName, kDlcDirBName})
-    EXPECT_TRUE(base::PathExists(JoinPaths(content_path_, kFirstDlc, kPackage,
-                                           slot, kDlcImageFileName)));
-  base::FilePath inactive_img_path =
-      GetDlcImagePath(content_path_, kFirstDlc, kPackage,
-                      SystemState::Get()->inactive_boot_slot());
-  imageloader::Manifest manifest;
-  dlcservice::GetDlcManifest(manifest_path_, kFirstDlc, kPackage, &manifest);
-  int64_t inactive_img_size = manifest.preallocated_size();
-  int64_t new_inactive_img_size = inactive_img_size / 2;
-  EXPECT_TRUE(new_inactive_img_size < inactive_img_size);
-
-  ResizeFile(inactive_img_path, new_inactive_img_size);
-  EXPECT_EQ(new_inactive_img_size, GetFileSize(inactive_img_path));
-
-  CheckDlcState(kFirstDlc, DlcState::INSTALLED);
-  EXPECT_CALL(*mock_update_engine_proxy_ptr_, GetStatusAdvanced(_, _, _))
-      .WillOnce(Return(true));
-  EXPECT_CALL(*mock_update_engine_proxy_ptr_,
-              SetDlcActiveValue(true, kFirstDlc, _, _))
-      .WillOnce(Return(true));
-  EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(1);
-
-  EXPECT_TRUE(dlc_service_->Install(kFirstDlc, kDefaultOmahaUrl, &err_));
-  CheckDlcState(kFirstDlc, DlcState::INSTALLED);
-  EXPECT_EQ(inactive_img_size, GetFileSize(inactive_img_path));
-}
-
 TEST_F(DlcServiceTest, GetInstalledTest) {
   Install(kFirstDlc);
 

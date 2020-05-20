@@ -101,12 +101,8 @@ DlcIdList DlcManager::GetExistingDlcs() {
 }
 
 DlcIdList DlcManager::GetDlcsToUpdate() {
-  ErrorPtr tmp_err;
-  for (auto& pr : supported_)
-    if (!pr.second.MakeReadyForUpdate(&tmp_err))
-      PLOG(WARNING) << Error::ToString(tmp_err);
-  return ToDlcIdList(supported_,
-                     [](const DlcBase& dlc) { return dlc.IsVerified(); });
+  return ToDlcIdList(
+      supported_, [](const DlcBase& dlc) { return dlc.MakeReadyForUpdate(); });
 }
 
 DlcIdList DlcManager::GetSupported() {

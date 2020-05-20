@@ -85,10 +85,29 @@ TEST_F(DlcBaseTest, UpdateCompleted) {
 TEST_F(DlcBaseTest, MakeReadyForUpdate) {
   DlcBase dlc(kSecondDlc);
   dlc.Initialize();
+  dlc.is_verified_ = true;
+
+  // Make sure the function recreates the inactive image.
+  auto inactive_image_path =
+      dlc.GetImagePath(SystemState::Get()->inactive_boot_slot());
+  base::DeleteFile(inactive_image_path, /*recursive=*/false);
+  EXPECT_FALSE(base::PathExists(inactive_image_path));
 
   auto prefs = Prefs(dlc, SystemState::Get()->inactive_boot_slot());
   EXPECT_TRUE(prefs.Create(kDlcPrefVerified));
-  EXPECT_TRUE(dlc.MakeReadyForUpdate(&err_));
+  EXPECT_TRUE(dlc.MakeReadyForUpdate());
+  EXPECT_TRUE(base::PathExists(inactive_image_path));
+  EXPECT_FALSE(prefs.Exists(kDlcPrefVerified));
+}
+
+TEST_F(DlcBaseTest, MakeReadyForUpdateNotVerfied) {
+  DlcBase dlc(kSecondDlc);
+  dlc.Initialize();
+
+  auto prefs = Prefs(dlc, SystemState::Get()->inactive_boot_slot());
+  EXPECT_TRUE(prefs.Create(kDlcPrefVerified));
+  // Since DLC is not verfied, it should return false.
+  EXPECT_FALSE(dlc.MakeReadyForUpdate());
   EXPECT_FALSE(prefs.Exists(kDlcPrefVerified));
 }
 

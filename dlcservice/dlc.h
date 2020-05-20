@@ -94,8 +94,9 @@ class DlcBase {
   // Is called when the inactive DLC image is updated and verified.
   bool UpdateCompleted(brillo::ErrorPtr* err);
 
-  // Makes the DLC ready to be updated. Returns false if anything goes wrong.
-  bool MakeReadyForUpdate(brillo::ErrorPtr* err);
+  // Makes the DLC ready to be updated (creates and resizes the inactive
+  // image). Returns false if anything goes wrong.
+  bool MakeReadyForUpdate() const;
 
   // Changes the install progress on this DLC. Only changes if the |progress| is
   // greater than the current progress value.
@@ -110,6 +111,7 @@ class DlcBase {
   FRIEND_TEST(DlcBaseTest, ChangeStateInstalling);
   FRIEND_TEST(DlcBaseTest, ChangeStateInstalled);
   FRIEND_TEST(DlcBaseTest, ChangeProgress);
+  FRIEND_TEST(DlcBaseTest, MakeReadyForUpdate);
 
   // Returns the path to the DLC image given the slot number.
   base::FilePath GetImagePath(BootSlot::Slot slot) const;
@@ -119,11 +121,6 @@ class DlcBase {
   // know the files are already there. This allows us to create any new DLC
   // files that didn't exist on a previous version of the DLC.
   bool CreateDlc(brillo::ErrorPtr* err);
-
-  // Validate that:
-  //  - If inactive image for DLC is missing, try creating it.
-  //  - If inactive image size is less than size in manifest, increase it.
-  bool ValidateInactiveImage() const;
 
   // Returns true if the DLC image in the current active slot matches the hash
   // of that in the rootfs manifest for the DLC.
