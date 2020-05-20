@@ -29,7 +29,9 @@ bool PrintProto(const google::protobuf::Message& message) {
   }
 
   // Then convert the JSON back to a base::Value.
-  std::unique_ptr<base::Value> body = base::JSONReader::Read(body_json);
+  // TODO(crbug/1054279): use new Read API after libchrome uprev.
+  std::unique_ptr<base::Value> body =
+      base::JSONReader::ReadDeprecated(body_json);
   if (!body) {
     std::cerr << "Failed to parse JSON to base::Value: " << body_json << '\n';
     return false;

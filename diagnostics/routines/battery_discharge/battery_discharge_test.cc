@@ -102,7 +102,7 @@ class BatteryDischargeRoutineTest : public testing::Test {
 
  private:
   base::test::ScopedTaskEnvironment scoped_task_environment_{
-      base::test::ScopedTaskEnvironment::MainThreadType::MOCK_TIME};
+      base::test::ScopedTaskEnvironment::TimeSource::MOCK_TIME};
   base::ScopedTempDir temp_dir_;
   std::unique_ptr<BatteryDischargeRoutine> routine_;
 };
