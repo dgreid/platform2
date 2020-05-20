@@ -195,4 +195,22 @@ TEST_F(DlcBaseTest, ImageOnDiskVerifiedInstalls) {
   EXPECT_TRUE(dlc.IsInstalled());
 }
 
+TEST_F(DlcBaseTest, VerifyDlcImageOnUEFailureToCompleteInstall) {
+  DlcBase dlc(kSecondDlc);
+  dlc.Initialize();
+
+  EXPECT_CALL(*mock_update_engine_proxy_ptr_,
+              SetDlcActiveValue(_, kSecondDlc, _, _))
+      .WillOnce(Return(true));
+  EXPECT_TRUE(dlc.InitInstall(&err_));
+  EXPECT_TRUE(dlc.IsInstalling());
+
+  // Intentionally skip over setting verified mark before |FinishInstall()|.
+  EXPECT_CALL(*mock_image_loader_proxy_ptr_,
+              LoadDlcImage(kSecondDlc, _, _, _, _, _))
+      .WillOnce(DoAll(SetArgPointee<3>(mount_path_.value()), Return(true)));
+  EXPECT_TRUE(dlc.FinishInstall(&err_));
+  EXPECT_TRUE(dlc.IsInstalled());
+}
+
 }  // namespace dlcservice

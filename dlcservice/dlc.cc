@@ -469,17 +469,26 @@ bool DlcBase::FinishInstall(ErrorPtr* err) {
       return true;
     case DlcState::INSTALLING: {
       bool ret = true;
-      if (!Prefs(*this, SystemState::Get()->active_boot_slot())
-               .Exists(kDlcPrefVerified)) {
-        *err =
-            Error::Create(FROM_HERE, kErrorInternal,
-                          base::StringPrintf("Cannot mount image which is not "
-                                             "marked as verified for DLC=%s",
-                                             id_.c_str()));
-        LOG(ERROR) << "Failed during install finalization: "
-                   << Error::ToString(*err);
-        ret = false;
-      } else if (!Mount(err)) {
+      if (!IsVerified()) {
+        // If the verified pref is missing, call into |Verify()| to hash the DLC
+        // image and set the verified pref if hashing is successful. This is
+        // to combat update_engine failing to call into |InstallCompleted()|
+        // even after a successful DLC installation.
+        if (Verify()) {
+          LOG(WARNING) << "Missing verification mark for DLC=" << id_
+                       << ", but verified to be a valid image.";
+        } else {
+          *err = Error::Create(
+              FROM_HERE, kErrorInternal,
+              base::StringPrintf("Cannot mount image which is not "
+                                 "marked as verified for DLC=%s",
+                                 id_.c_str()));
+          LOG(ERROR) << "Failed during install finalization: "
+                     << Error::ToString(*err);
+          ret = false;
+        }
+      }
+      if (ret && !Mount(err)) {
         LOG(ERROR) << "Failed during install finalization: "
                    << Error::ToString(*err) << " for DLC=" << id_;
         ret = false;
