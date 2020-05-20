@@ -14,7 +14,7 @@ pkg_config("libgrpc_async_adapter_exported_pkg_deps") {
 }
 
 source_set("libgrpc_async_adapter") {
-  all_dependent_configs = [ ":libgrpc_async_adapter_exported_pkg_deps" ]
+  configs += [ ":libgrpc_async_adapter_exported_pkg_deps" ]
   libs = [ "grpc" ]
   sources = [
     "async_grpc_client.cc",
@@ -41,7 +41,7 @@ if (use.test) {
     ]
   }
   source_set("libgrpc_async_adapter_test_rpcs") {
-    all_dependent_configs = [ ":libgrpc_async_adapter_test_rpcs_pkg_deps" ]
+    configs += [ ":libgrpc_async_adapter_test_rpcs_pkg_deps" ]
     deps = [ ":libgrpc_async_adapter_test_rpcs_protolib" ]
   }
 
