@@ -1,0 +1,91 @@
+# Copyright 2020 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+clock_gettime: 1
+pread64: 1
+pwrite64: 1
+wait4: 1
+gettid: 1
+stat64: 1
+nanosleep: 1
+sched_yield: 1
+epoll_wait: 1
+openat: 1
+recvmsg: 1
+futex: 1
+send: 1
+kill: 1
+gettimeofday: 1
+ioctl: arg1 == TCGETS || arg1 == BLKGETSIZE64 || arg1 == BLKSSZGET
+epoll_ctl: 1
+write: 1
+rt_sigaction: 1
+read: 1
+mmap2: arg2 in ~PROT_EXEC || arg2 in ~PROT_WRITE
+close: 1
+lstat64: 1
+mprotect: arg2 in ~PROT_EXEC || arg2 in ~PROT_WRITE
+brk: 1
+sched_getaffinity: 1
+fstat64: 1
+fcntl64: 1
+munmap: 1
+getppid: 1
+set_robust_list: 1
+sendmsg: 1
+readlinkat: 1
+clone: 1
+madvise: 1
+exit: 1
+getcpu: 1
+getpid: 1
+access: 1
+rt_sigprocmask: 1
+poll: 1
+dup: 1
+getdents64: 1
+socketpair: 1
+sched_setaffinity: 1
+uname: 1
+exit_group: 1
+execve: 1
+ARM_set_tls: 1
+set_tid_address: 1
+ugetrlimit: 1
+_llseek: 1
+geteuid32: 1
+getrandom: 1
+dup2: 1
+prlimit64: 1
+prctl: arg0 == PR_SET_NO_NEW_PRIVS
+sysinfo: 1
+arm_fadvise64_64: 1
+unlink: 1
+getuid32: 1
+getgid32: 1
+getegid32: 1
+signalfd4: 1
+shmctl: 1
+getpriority: 1
+getrusage: 1
+socket: arg0 == AF_UNIX
+connect: 1
+statfs64: 1
+pipe2: 1
+getsockname: 1
+statfs: 1
+ftruncate: 1
+ftruncate64: 1
+shmget: 1
+shmat: 1
+setsid: 1
+setpriority: 1
+restart_syscall: 1
+shmdt: 1
+epoll_create1: 1
+clock_getres: 1
+getresuid32: 1
+getresgid32: 1
+readlink: 1
+fsync: 1
+rt_sigreturn: 1
