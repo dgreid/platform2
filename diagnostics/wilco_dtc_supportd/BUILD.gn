@@ -17,6 +17,7 @@ pkg_config("libwilco_dtc_supportd_pkg_deps") {
 }
 
 source_set("libwilco_dtc_supportd") {
+  configs += [ ":libwilco_dtc_supportd_pkg_deps" ]
   deps = [
     "//diagnostics/common:libcommon",
     "//diagnostics/constants:libconstants",
@@ -25,7 +26,6 @@ source_set("libwilco_dtc_supportd") {
     "//diagnostics/mojo:diagnostics_mojo_bindings",
     "//diagnostics/routines:libdiag_routine",
   ]
-  all_dependent_configs = [ ":libwilco_dtc_supportd_pkg_deps" ]
   sources = [
     "core.cc",
     "core_delegate_impl.cc",
@@ -55,6 +55,7 @@ executable("wilco_dtc_supportd") {
 if (use.test) {
   pkg_config("wilco_dtc_supportd_test_pkg_deps") {
     pkg_deps = [
+      "libbrillo",
       "libchrome-${libbase_ver}",
       "libchrome-test-${libbase_ver}",
     ]
