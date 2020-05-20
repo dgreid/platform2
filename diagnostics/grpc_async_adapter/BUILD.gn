@@ -5,16 +5,13 @@
 import("//common-mk/pkg_config.gni")
 import("//common-mk/proto_library.gni")
 
-# Library that adopts gRPC core async interface to a libchrome-friendly one.
-pkg_config("libgrpc_async_adapter_exported_pkg_deps") {
-  pkg_deps = [
-    "grpc++",
-    "libchrome-${libbase_ver}",
-  ]
+pkg_config("libgrpc_async_adapter_pkg_deps") {
+  pkg_deps = [ "libchrome-${libbase_ver}" ]
 }
 
+# Library that adopts gRPC core async interface to a libchrome-friendly one.
 source_set("libgrpc_async_adapter") {
-  configs += [ ":libgrpc_async_adapter_exported_pkg_deps" ]
+  configs += [ ":libgrpc_async_adapter_pkg_deps" ]
   libs = [ "grpc" ]
   sources = [
     "async_grpc_client.cc",
@@ -27,36 +24,29 @@ source_set("libgrpc_async_adapter") {
 }
 
 if (use.test) {
-  proto_library("libgrpc_async_adapter_test_rpcs_protolib") {
-    proto_in_dir = "."
-    proto_out_dir = "include"
-    sources = [ "test_rpcs.proto" ]
-    gen_grpc = true
-  }
-
   pkg_config("libgrpc_async_adapter_test_rpcs_pkg_deps") {
     pkg_deps = [
       "grpc++",
       "protobuf",
     ]
   }
-  source_set("libgrpc_async_adapter_test_rpcs") {
-    configs += [ ":libgrpc_async_adapter_test_rpcs_pkg_deps" ]
-    deps = [ ":libgrpc_async_adapter_test_rpcs_protolib" ]
-  }
 
-  pkg_config("libgrpc_async_adapter_test_pkg_deps") {
-    pkg_deps = [ "libchrome-test-${libbase_ver}" ]
+  proto_library("libgrpc_async_adapter_test_rpcs_protolib") {
+    configs = [ ":libgrpc_async_adapter_test_rpcs_pkg_deps" ]
+    gen_grpc = true
+    proto_in_dir = "."
+    proto_out_dir = "include"
+    sources = [ "test_rpcs.proto" ]
   }
 
   executable("libgrpc_async_adapter_test") {
     configs += [
       "//common-mk:test",
-      ":libgrpc_async_adapter_test_pkg_deps",
+      ":libgrpc_async_adapter_pkg_deps",
     ]
     deps = [
       ":libgrpc_async_adapter",
-      ":libgrpc_async_adapter_test_rpcs",
+      ":libgrpc_async_adapter_test_rpcs_protolib",
       "//common-mk/testrunner:testrunner",
     ]
     sources = [
