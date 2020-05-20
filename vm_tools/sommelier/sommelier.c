@@ -2936,8 +2936,11 @@ static int sl_handle_x_connection_event(int fd, uint32_t mask, void* data) {
   xcb_generic_event_t* event;
   uint32_t count = 0;
 
-  if ((mask & WL_EVENT_HANGUP) || (mask & WL_EVENT_ERROR))
-    return 0;
+  if ((mask & WL_EVENT_HANGUP) || (mask & WL_EVENT_ERROR)) {
+    fprintf(stderr, "Got error or hangup (mask %d) on X connection, exiting\n",
+            mask);
+    exit(EXIT_SUCCESS);
+  }
 
   while ((event = xcb_poll_for_event(ctx->connection))) {
     switch (event->response_type & ~SEND_EVENT_MASK) {
@@ -3287,8 +3290,13 @@ static int sl_handle_display_ready_event(int fd, uint32_t mask, void* data) {
   int bytes_read = 0;
   pid_t pid;
 
-  if (!(mask & WL_EVENT_READABLE))
-    return 0;
+  if (!(mask & WL_EVENT_READABLE)) {
+    fprintf(stderr,
+            "Got error or hangup on display ready connection"
+            " (mask %d), exiting\n",
+            mask);
+    exit(EXIT_SUCCESS);
+  }
 
   display_name[0] = ':';
   do {
@@ -3357,6 +3365,14 @@ static int sl_handle_virtwl_ctx_event(int fd, uint32_t mask, void* data) {
   int fd_count;
   int rv;
 
+  if (!(mask & WL_EVENT_READABLE)) {
+    fprintf(stderr,
+            "Got error or hangup on virtwl ctx fd"
+            " (mask %d), exiting\n",
+            mask);
+    exit(EXIT_SUCCESS);
+  }
+
   ioctl_recv->len = max_recv_size;
   rv = ioctl(fd, VIRTWL_IOCTL_RECV, ioctl_recv);
   if (rv) {
@@ -3415,6 +3431,14 @@ static int sl_handle_virtwl_socket_event(int fd, uint32_t mask, void* data) {
   int fd_count = 0;
   int rv;
   int i;
+
+  if (!(mask & WL_EVENT_READABLE)) {
+    fprintf(stderr,
+            "Got error or hangup on virtwl socket"
+            " (mask %d), exiting\n",
+            mask);
+    exit(EXIT_SUCCESS);
+  }
 
   buffer_iov.iov_base = send_data;
   buffer_iov.iov_len = max_send_size;
