@@ -16,22 +16,22 @@ group("all") {
   }
 }
 
-# Library that provides the DPSL (diagnostics processor support library)
-# interface.
-pkg_config("libdpsl_pkg_deps") {
+pkg_config("common_pkg_deps") {
   pkg_deps = [
     "libbrillo",
     "libchrome-${libbase_ver}",
   ]
 }
 
+# Library that provides the DPSL (diagnostics processor support library)
+# interface.
 source_set("libdpsl") {
+  configs += [ ":common_pkg_deps" ]
   deps = [
     "//diagnostics/constants:libconstants",
     "//diagnostics/grpc:wilco_dtc_grpc_protos",
     "//diagnostics/grpc_async_adapter:libgrpc_async_adapter",
   ]
-  configs += [ ":libdpsl_pkg_deps" ]
   sources = [
     "internal/dpsl_global_context_impl.cc",
     "internal/dpsl_requester_impl.cc",
@@ -41,13 +41,14 @@ source_set("libdpsl") {
 }
 
 source_set("libdpslutil") {
+  configs += [ ":common_pkg_deps" ]
   deps = [ ":libdpsl" ]
-  configs += [ ":libdpsl_pkg_deps" ]
   sources = [ "test_utils/common.cc" ]
 }
 
 # Executables for DPSL demos.
 executable("diagnostics_dpsl_demo_vm") {
+  configs += [ ":common_pkg_deps" ]
   deps = [
     ":libdpsl",
     "//diagnostics/grpc:wilco_dtc_grpc_protos",
@@ -57,6 +58,7 @@ executable("diagnostics_dpsl_demo_vm") {
 
 # Executables for E2E VM tests.
 executable("diagnostics_dpsl_test_listener") {
+  configs += [ ":common_pkg_deps" ]
   deps = [
     ":libdpslutil",
     "//diagnostics/grpc:wilco_dtc_grpc_protos",
@@ -66,6 +68,7 @@ executable("diagnostics_dpsl_test_listener") {
 
 # Executables for E2E VM tests.
 executable("diagnostics_dpsl_test_requester") {
+  configs += [ ":common_pkg_deps" ]
   deps = [
     ":libdpslutil",
     "//diagnostics/grpc:wilco_dtc_grpc_protos",
