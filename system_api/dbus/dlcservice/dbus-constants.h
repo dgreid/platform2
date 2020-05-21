@@ -17,7 +17,6 @@ constexpr char kInstallDlcMethod[] = "InstallDlc";
 constexpr char kUninstallMethod[] = "Uninstall";
 constexpr char kPurgeMethod[] = "Purge";
 constexpr char kGetExistingDlcsMethod[] = "GetExistingDlcs";
-constexpr char kOnInstallStatusSignal[] = "OnInstallStatus";
 constexpr char kDlcStateChangedSignal[] = "DlcStateChanged";
 
 // Error Codes from dlcservice.

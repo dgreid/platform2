@@ -35,34 +35,6 @@ using update_engine::StatusResult;
 
 namespace dlcservice {
 
-namespace {
-
-class DlcServiceTestObserver : public DlcServiceInterface::Observer {
- public:
-  DlcServiceTestObserver() = default;
-
-  void SendInstallStatus(const InstallStatus& install_status) override {
-    install_status_.emplace(install_status);
-  }
-
-  bool IsSendInstallStatusCalled() { return install_status_.has_value(); }
-
-  InstallStatus GetInstallStatus() {
-    EXPECT_TRUE(install_status_.has_value())
-        << "SendInstallStatus() was not called.";
-    base::Optional<InstallStatus> tmp;
-    tmp.swap(install_status_);
-    return *tmp;
-  }
-
- private:
-  base::Optional<InstallStatus> install_status_;
-
-  DISALLOW_COPY_AND_ASSIGN(DlcServiceTestObserver);
-};
-
-}  // namespace
-
 class DlcServiceTest : public BaseTest {
  public:
   DlcServiceTest() = default;
@@ -84,10 +56,6 @@ class DlcServiceTest : public BaseTest {
         .Times(1);
 
     dlc_service_ = std::make_unique<DlcService>();
-
-    dlc_service_test_observer_ = std::make_unique<DlcServiceTestObserver>();
-    dlc_service_->AddObserver(dlc_service_test_observer_.get());
-
     dlc_service_->Initialize();
   }
 
@@ -112,9 +80,6 @@ class DlcServiceTest : public BaseTest {
     dlc_service_->OnStatusUpdateAdvancedSignal(status_result);
 
     CheckDlcState(id, DlcState::INSTALLED);
-    auto install_status = dlc_service_test_observer_->GetInstallStatus();
-    EXPECT_EQ(install_status.status(), Status::COMPLETED);
-    EXPECT_EQ(install_status.state(), InstallStatus::IDLE);
   }
 
   void CheckDlcState(const DlcId& id, const DlcState::State& expected_state) {
@@ -128,7 +93,6 @@ class DlcServiceTest : public BaseTest {
   brillo::BaseMessageLoop loop_{&base_loop_};
 
   std::unique_ptr<DlcService> dlc_service_;
-  std::unique_ptr<DlcServiceTestObserver> dlc_service_test_observer_;
 
  private:
   DISALLOW_COPY_AND_ASSIGN(DlcServiceTest);
@@ -727,9 +691,6 @@ TEST_F(DlcServiceTest, ReportingFailureSignalTest) {
     dlc_service_->OnStatusUpdateAdvancedSignal(status_result);
   }
 
-  EXPECT_EQ(dlc_service_test_observer_->GetInstallStatus().status(),
-            Status::FAILED);
-
   CheckDlcState(kSecondDlc, DlcState::NOT_INSTALLED);
 }
 
@@ -848,21 +809,15 @@ TEST_F(DlcServiceTest, OnStatusUpdateSignalDownloadProgressTest) {
   for (const auto& op : install_operation_sequence) {
     status_result.set_current_operation(op);
     dlc_service_->OnStatusUpdateAdvancedSignal(status_result);
-    EXPECT_FALSE(dlc_service_test_observer_->IsSendInstallStatusCalled());
   }
 
   status_result.set_current_operation(Operation::DOWNLOADING);
   dlc_service_->OnStatusUpdateAdvancedSignal(status_result);
-  EXPECT_EQ(dlc_service_test_observer_->GetInstallStatus().status(),
-            Status::RUNNING);
 
   EXPECT_TRUE(dlc_service_->InstallCompleted({kSecondDlc}, &err_));
 
   status_result.set_current_operation(Operation::IDLE);
   dlc_service_->OnStatusUpdateAdvancedSignal(status_result);
-  auto install_status = dlc_service_test_observer_->GetInstallStatus();
-  EXPECT_EQ(install_status.status(), Status::COMPLETED);
-  EXPECT_EQ(install_status.state(), InstallStatus::IDLE);
 
   CheckDlcState(kSecondDlc, DlcState::INSTALLED);
 }

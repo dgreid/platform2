@@ -42,7 +42,6 @@ class MockDlcService : public DlcServiceInterface {
               UpdateCompleted,
               (const DlcIdList& ids, brillo::ErrorPtr* err),
               (override));
-  MOCK_METHOD(void, AddObserver, (Observer * observer), (override));
 
  private:
   DISALLOW_COPY_AND_ASSIGN(MockDlcService);

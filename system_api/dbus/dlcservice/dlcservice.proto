@@ -91,29 +91,3 @@ message DlcState {
   // The last error code happened on for this DLC.
   string last_error_code = 5;
 }
-
-// TODO(crbug.com/1071260): Deprecate Status.
-// This is the message that indicates how the install progress is running and
-// dlcservice will always end with |COMPLETE| or |FAILED| when finished.
-enum Status {
-  COMPLETED = 0;
-  RUNNING = 1;
-  FAILED = 2;
-}
-
-// This message is sent from DLC Service via OnInstallStatus signal.
-// Throughout the install progress, dlcservice will signal out this message.
-// TODO(crbug.com/1071260): Deprecate InstallStatus.
-message InstallStatus {
-  DlcModuleList dlc_module_list = 1;
-  string error_code = 2;
-  Status status = 3;
-  double progress = 4;
-
-  // The current state of dlcservice.
-  enum State {
-    IDLE = 0;
-    INSTALLING = 1;
-  }
-  State state = 5;
-}

@@ -131,18 +131,6 @@
       </tp:docstring>
     </arg>
   </method>
-  <signal name="OnInstallStatus">
-		<!-- DEPRECATED, DON NOT USE -->
-    <arg name="install_status" type="ay" >
-      <tp:docstring>
-        A serialized protobuf (InstallStatus,
-        platform2/system_api/dbus/dlcservice/dlcservice.proto) of install
-        operation status.
-      </tp:docstring>
-      <annotation name="org.chromium.DBus.Argument.ProtobufClass"
-                  value="dlcservice::InstallStatus"/>
-    </arg>
-  </signal>
   <signal name="DlcStateChanged">
     <arg name="state" type="ay" >
       <tp:docstring>

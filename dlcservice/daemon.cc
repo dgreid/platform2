@@ -55,7 +55,6 @@ void Daemon::RegisterDBusObjectsAsync(
 
   auto dbus_service = std::make_unique<DBusService>(dlc_service_.get());
   dbus_adaptor_ = std::make_unique<DBusAdaptor>(std::move(dbus_service));
-  dlc_service_->AddObserver(dbus_adaptor_.get());
 
   SystemState::Initialize(
       std::make_unique<org::chromium::ImageLoaderInterfaceProxy>(

@@ -115,8 +115,6 @@ bool DlcService::Install(const DlcId& id,
     case DlcState::INSTALLING:
       break;
     case DlcState::INSTALLED:
-      SendOnInstallStatusSignal(Status::COMPLETED, kErrorNone,
-                                dlc_manager_->GetSupported(), 1.);
       return true;
     default:
       NOTREACHED();
@@ -211,8 +209,6 @@ void DlcService::SendFailedSignalAndCleanup() {
   ErrorPtr tmp_err;
   if (!dlc_manager_->CancelInstall(&tmp_err))
     LOG(ERROR) << Error::ToString(tmp_err);
-  SendOnInstallStatusSignal(Status::FAILED, kErrorInternal,
-                            dlc_manager_->GetSupported(), 0.);
 }
 
 void DlcService::PeriodicInstallCheck() {
@@ -308,16 +304,11 @@ bool DlcService::HandleStatusResult(const StatusResult& status_result) {
       LOG(ERROR) << "Signal from update_engine indicates reporting failure.";
       SendFailedSignalAndCleanup();
       return false;
-    // Only when update_engine's |Operation::DOWNLOADING| should dlcservice send
-    // a signal out for |InstallStatus| for |Status::RUNNING|. Majority of the
-    // install process for DLC(s) is during |Operation::DOWNLOADING|, this also
-    // means that only a single growth from 0.0 to 1.0 for progress reporting
-    // will happen.
+    // Only when update_engine's |Operation::DOWNLOADING| should the DLC send
+    // |DlcState::INSTALLING|. Majority of the install process for DLC(s) is
+    // during |Operation::DOWNLOADING|, this also means that only a single
+    // growth from 0.0 to 1.0 for progress reporting will happen.
     case Operation::DOWNLOADING:
-      SendOnInstallStatusSignal(Status::RUNNING, kErrorNone,
-                                dlc_manager_->GetSupported(),
-                                status_result.progress());
-
       // TODO(ahassani): Add unittest for this.
       dlc_manager_->ChangeProgress(status_result.progress());
 
@@ -338,42 +329,6 @@ bool DlcService::GetUpdateEngineStatus(Operation* operation) {
   return true;
 }
 
-void DlcService::AddObserver(DlcService::Observer* observer) {
-  observers_.push_back(observer);
-}
-
-void DlcService::SendOnInstallStatusSignal(const dlcservice::Status& status,
-                                           const std::string& error_code,
-                                           const DlcIdList& ids,
-                                           double progress) {
-  InstallStatus install_status;
-  install_status.set_status(status);
-  switch (status) {
-    case COMPLETED:
-    case FAILED:
-      install_status.set_state(InstallStatus::IDLE);
-      break;
-    case RUNNING:
-      install_status.set_state(InstallStatus::INSTALLING);
-      break;
-    default:
-      NOTREACHED();
-  }
-
-  install_status.set_error_code(error_code);
-  DlcModuleList* dlc_list = install_status.mutable_dlc_module_list();
-  for (const auto& id : ids) {
-    const auto* dlc = GetDlc(id);
-    dlc_list->add_dlc_module_infos()->set_dlc_id(id);
-    dlc_list->add_dlc_module_infos()->set_dlc_root(dlc->GetRoot().value());
-  }
-  install_status.set_progress(progress);
-
-  for (const auto& observer : observers_) {
-    observer->SendInstallStatus(install_status);
-  }
-}
-
 void DlcService::OnStatusUpdateAdvancedSignal(
     const StatusResult& status_result) {
   if (!HandleStatusResult(status_result))
@@ -382,13 +337,8 @@ void DlcService::OnStatusUpdateAdvancedSignal(
   ErrorPtr tmp_err;
   if (!dlc_manager_->FinishInstall(&tmp_err)) {
     LOG(ERROR) << Error::ToString(tmp_err);
-    SendOnInstallStatusSignal(Status::FAILED, kErrorInternal,
-                              dlc_manager_->GetSupported(), 0.);
     return;
   }
-
-  SendOnInstallStatusSignal(Status::COMPLETED, kErrorNone,
-                            dlc_manager_->GetSupported(), 1.);
 }
 
 void DlcService::OnStatusUpdateAdvancedSignalConnected(

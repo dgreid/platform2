@@ -55,15 +55,11 @@ class DBusService : public org::chromium::DlcServiceInterfaceInterface {
 };
 
 class DBusAdaptor : public org::chromium::DlcServiceInterfaceAdaptor,
-                    public DlcService::Observer,
                     public StateChangeReporterInterface {
  public:
   // Will take the ownership of |dbus_service|.
   explicit DBusAdaptor(std::unique_ptr<DBusService> dbus_service);
   ~DBusAdaptor() override = default;
-
-  // |DlcService::Observer| override.
-  void SendInstallStatus(const InstallStatus& status) override;
 
   // |StateChangeReporterInterface| overrides.
   void DlcStateChanged(const DlcState& dlc_state) override;

@@ -27,15 +27,6 @@ namespace dlcservice {
 
 class DlcServiceInterface {
  public:
-  // |DlcService| calls the registered implementation of this class when a
-  // |StatusResult| signal needs to be propagated.
-  class Observer {
-   public:
-    virtual ~Observer() = default;
-
-    virtual void SendInstallStatus(const InstallStatus& status) = 0;
-  };
-
   virtual ~DlcServiceInterface() = default;
 
   // Initializes the state of dlcservice.
@@ -52,9 +43,6 @@ class DlcServiceInterface {
   virtual bool InstallCompleted(const DlcIdList& ids,
                                 brillo::ErrorPtr* err) = 0;
   virtual bool UpdateCompleted(const DlcIdList& ids, brillo::ErrorPtr* err) = 0;
-
-  // Adds a new observer to report install result status changes.
-  virtual void AddObserver(Observer* observer) = 0;
 };
 
 // DlcService manages life-cycles of DLCs (Downloadable Content) and provides an
@@ -78,7 +66,6 @@ class DlcService : public DlcServiceInterface {
   DlcIdList GetDlcsToUpdate() override;
   bool InstallCompleted(const DlcIdList& ids, brillo::ErrorPtr* err) override;
   bool UpdateCompleted(const DlcIdList& ids, brillo::ErrorPtr* err) override;
-  void AddObserver(Observer* observer) override;
 
  private:
   friend class DlcServiceTest;
@@ -113,12 +100,6 @@ class DlcService : public DlcServiceInterface {
   // Gets update_engine's operation status.
   bool GetUpdateEngineStatus(update_engine::Operation* operation);
 
-  // Send |OnInstallStatus| D-Bus signal.
-  void SendOnInstallStatusSignal(const dlcservice::Status& status,
-                                 const std::string& error_code,
-                                 const DlcIdList& ids,
-                                 double progress);
-
   // Called on receiving update_engine's |StatusUpdate| signal.
   void OnStatusUpdateAdvancedSignal(
       const update_engine::StatusResult& status_result);
@@ -146,9 +127,6 @@ class DlcService : public DlcServiceInterface {
   // Indicates whether a retry to check update_engine's status during an install
   // needs to happen to make sure the install completion signal is not lost.
   bool scheduled_period_ue_check_retry_ = false;
-
-  // The list of observers that will be called when a new status is ready.
-  std::vector<Observer*> observers_;
 
   base::WeakPtrFactory<DlcService> weak_ptr_factory_;
 
