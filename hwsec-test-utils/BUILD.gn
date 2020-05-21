@@ -103,8 +103,10 @@ source_set("fake_pca_agent_library") {
   ]
   if (use.tpm2) {
     sources += [
+      "fake_pca_agent/kdf.cc",
       "fake_pca_agent/pca_certify_v2.cc",
       "fake_pca_agent/pca_enroll_v2.cc",
+      "fake_pca_agent/tpm2_struct_utils.cc",
     ]
     libs = [ "trunks" ]
   } else {
