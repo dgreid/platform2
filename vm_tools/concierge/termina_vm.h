@@ -16,7 +16,7 @@
 #include <base/files/file_path.h>
 #include <base/macros.h>
 #include <base/time/time.h>
-#include <brillo/process.h>
+#include <brillo/process/process.h>
 #include <chromeos/patchpanel/mac_address_generator.h>
 #include <chromeos/patchpanel/subnet.h>
 #include <patchpanel/proto_bindings/patchpanel_service.pb.h>

@@ -17,7 +17,7 @@
 #include "base/strings/string_split.h"
 #include "base/strings/string_util.h"
 #include "base/synchronization/waitable_event.h"
-#include "brillo/process.h"
+#include <brillo/process/process.h>
 #include "brillo/syslog_logging.h"
 #include "components/feedback/feedback_common.h"
 #include "feedback/feedback_service_interface.h"

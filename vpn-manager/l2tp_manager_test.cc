@@ -4,7 +4,7 @@
 
 #include <base/files/scoped_temp_dir.h>
 #include <base/logging.h>
-#include <brillo/process_mock.h>
+#include <brillo/process/process_mock.h>
 #include <brillo/syslog_logging.h>
 #include <brillo/test_helpers.h>
 #include <gtest/gtest.h>

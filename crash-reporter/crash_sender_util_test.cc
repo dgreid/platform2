@@ -30,7 +30,7 @@
 #include <base/values.h>
 #include <brillo/flag_helper.h>
 #include <brillo/key_value_store.h>
-#include <brillo/process.h>
+#include <brillo/process/process.h>
 #include <chromeos/dbus/service_constants.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>

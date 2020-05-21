@@ -38,7 +38,7 @@
 #include <base/threading/platform_thread.h>
 #include <base/time/time.h>
 #include <brillo/file_utils.h>
-#include <brillo/process.h>
+#include <brillo/process/process.h>
 #include <brillo/userdb_utils.h>
 #include <chromeos/dbus/service_constants.h>
 

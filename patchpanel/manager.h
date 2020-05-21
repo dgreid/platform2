@@ -14,7 +14,7 @@
 
 #include <base/memory/weak_ptr.h>
 #include <brillo/daemons/dbus_daemon.h>
-#include <brillo/process_reaper.h>
+#include <brillo/process/process_reaper.h>
 #include <chromeos/dbus/service_constants.h>
 #include <patchpanel/proto_bindings/patchpanel_service.pb.h>
 

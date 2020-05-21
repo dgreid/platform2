@@ -9,7 +9,7 @@
 
 #include <base/files/file_util.h>
 #include <base/strings/string_util.h>
-#include <brillo/process.h>
+#include <brillo/process/process.h>
 #include <crypto/scoped_openssl_types.h>
 #include <openssl/evp.h>
 #include <openssl/pem.h>

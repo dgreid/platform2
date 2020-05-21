@@ -9,7 +9,7 @@
 #include <memory>
 
 #include <base/time/time.h>
-#include <brillo/process.h>
+#include <brillo/process/process.h>
 
 #include "diagnostics/routines/subproc_routine.h"
 #include "mojo/cros_healthd_diagnostics.mojom.h"

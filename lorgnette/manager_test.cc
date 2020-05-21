@@ -16,7 +16,7 @@
 #include <base/files/file_util.h>
 #include <base/files/scoped_file.h>
 #include <base/files/scoped_temp_dir.h>
-#include <brillo/process.h>
+#include <brillo/process/process.h>
 #include <brillo/variant_dictionary.h>
 #include <chromeos/dbus/service_constants.h>
 #include <gtest/gtest.h>

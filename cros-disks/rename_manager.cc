@@ -11,7 +11,7 @@
 #include <base/bind.h>
 #include <base/files/file_util.h>
 #include <base/logging.h>
-#include <brillo/process.h>
+#include <brillo/process/process.h>
 
 #include "cros-disks/filesystem_label.h"
 #include "cros-disks/platform.h"

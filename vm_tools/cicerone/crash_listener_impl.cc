@@ -14,7 +14,7 @@
 #include <base/strings/string_util.h>
 #include <base/threading/thread_task_runner_handle.h>
 #include <brillo/key_value_store.h>
-#include <brillo/process.h>
+#include <brillo/process/process.h>
 #include <google/protobuf/io/zero_copy_stream_impl.h>
 #include <google/protobuf/text_format.h>
 

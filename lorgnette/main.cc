@@ -7,7 +7,7 @@
 
 #include <base/bind.h>
 #include <base/logging.h>
-#include <brillo/process.h>
+#include <brillo/process/process.h>
 #include <brillo/syslog_logging.h>
 
 #include "lorgnette/daemon.h"

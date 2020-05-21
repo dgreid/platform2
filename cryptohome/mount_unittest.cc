@@ -24,7 +24,7 @@
 #include <base/strings/string_number_conversions.h>
 #include <base/time/time.h>
 #include <brillo/cryptohome.h>
-#include <brillo/process_mock.h>
+#include <brillo/process/process_mock.h>
 #include <brillo/secure_blob.h>
 #include <chromeos/constants/cryptohome.h>
 #include <gtest/gtest.h>

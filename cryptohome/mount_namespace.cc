@@ -9,7 +9,7 @@
 
 #include <base/files/file.h>
 #include <base/logging.h>
-#include <brillo/process.h>
+#include <brillo/process/process.h>
 
 namespace cryptohome {
 

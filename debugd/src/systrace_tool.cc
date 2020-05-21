@@ -8,7 +8,7 @@
 #include <vector>
 
 #include <base/strings/string_split.h>
-#include <brillo/process.h>
+#include <brillo/process/process.h>
 
 #include "debugd/src/constants.h"
 #include "debugd/src/helper_utils.h"

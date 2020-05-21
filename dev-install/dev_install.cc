@@ -21,7 +21,7 @@
 #include <base/strings/string_split.h>
 #include <base/strings/string_util.h>
 #include <brillo/key_value_store.h>
-#include <brillo/process.h>
+#include <brillo/process/process.h>
 #include <vboot/crossystem.h>
 
 namespace dev_install {

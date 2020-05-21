@@ -20,7 +20,7 @@
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_split.h>
 #include <base/strings/string_util.h>
-#include <brillo/process.h>
+#include <brillo/process/process.h>
 #include <brillo/userdb_utils.h>
 #include <openssl/pem.h>
 #include <openssl/x509.h>

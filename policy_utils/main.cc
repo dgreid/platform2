@@ -8,7 +8,7 @@
 #include <base/posix/eintr_wrapper.h>
 #include <base/strings/string_util.h>
 #include <brillo/flag_helper.h>
-#include <brillo/process.h>
+#include <brillo/process/process.h>
 
 #include "policy_utils/policy_tool.h"
 

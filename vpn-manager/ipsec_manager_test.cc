@@ -8,7 +8,7 @@
 #include <base/logging.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/stringprintf.h>
-#include <brillo/process_mock.h>
+#include <brillo/process/process_mock.h>
 #include <brillo/syslog_logging.h>
 #include <brillo/test_helpers.h>
 #include <gtest/gtest.h>

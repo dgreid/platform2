@@ -12,7 +12,7 @@
 #include <base/logging.h>
 #include <base/stl_util.h>
 #include <base/strings/stringprintf.h>
-#include <brillo/process.h>
+#include <brillo/process/process.h>
 
 #include "cros-disks/filesystem_label.h"
 #include "cros-disks/format_manager_observer_interface.h"

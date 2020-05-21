@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIBBRILLO_BRILLO_PROCESS_MOCK_H_
-#define LIBBRILLO_BRILLO_PROCESS_MOCK_H_
+#ifndef LIBBRILLO_BRILLO_PROCESS_PROCESS_MOCK_H_
+#define LIBBRILLO_BRILLO_PROCESS_PROCESS_MOCK_H_
 
 #include <string>
 
 #include <base/files/file_path.h>
 #include <gmock/gmock.h>
 
-#include "brillo/process.h"
+#include <brillo/process/process.h>
 
 namespace brillo {
 
@@ -46,4 +46,4 @@ class ProcessMock : public Process {
 
 }  // namespace brillo
 
-#endif  // LIBBRILLO_BRILLO_PROCESS_MOCK_H_
+#endif  // LIBBRILLO_BRILLO_PROCESS_PROCESS_MOCK_H_

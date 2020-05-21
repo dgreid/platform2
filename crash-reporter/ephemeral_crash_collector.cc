@@ -6,7 +6,7 @@
 
 #include <base/files/file_enumerator.h>
 #include <base/files/file_util.h>
-#include <brillo/process.h>
+#include <brillo/process/process.h>
 
 #include <string>
 

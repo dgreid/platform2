@@ -10,7 +10,7 @@
 #include <string>
 
 #include <base/macros.h>
-#include <brillo/process_reaper.h>
+#include <brillo/process/process_reaper.h>
 
 #include "cros-disks/sandboxed_process.h"
 

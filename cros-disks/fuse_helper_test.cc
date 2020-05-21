@@ -9,7 +9,7 @@
 
 #include <base/strings/string_split.h>
 #include <base/strings/string_util.h>
-#include <brillo/process_reaper.h>
+#include <brillo/process/process_reaper.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 

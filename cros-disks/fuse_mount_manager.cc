@@ -10,7 +10,7 @@
 
 #include <base/files/file_path.h>
 #include <base/logging.h>
-#include <brillo/process_reaper.h>
+#include <brillo/process/process_reaper.h>
 
 #include "cros-disks/drivefs_helper.h"
 #include "cros-disks/fuse_helper.h"

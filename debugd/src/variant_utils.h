@@ -7,7 +7,7 @@
 
 #include <string>
 #include <brillo/errors/error.h>
-#include <brillo/process.h>
+#include <brillo/process/process.h>
 #include <brillo/type_name_undecorate.h>
 #include <brillo/variant_dictionary.h>
 

@@ -15,7 +15,7 @@
 #include <base/files/file_util.h>
 #include <base/logging.h>
 #include <base/stl_util.h>
-#include <brillo/process_reaper.h>
+#include <brillo/process/process_reaper.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 

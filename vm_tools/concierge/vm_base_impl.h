@@ -12,7 +12,7 @@
 
 #include <base/macros.h>
 #include <base/files/scoped_temp_dir.h>
-#include <brillo/process.h>
+#include <brillo/process/process.h>
 #include <chromeos/patchpanel/client.h>
 
 namespace patchpanel {

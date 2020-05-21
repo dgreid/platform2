@@ -21,7 +21,7 @@
 #include <base/optional.h>
 #include <base/sequence_checker.h>
 #include <base/threading/thread.h>
-#include <brillo/process.h>
+#include <brillo/process/process.h>
 #include <dbus/bus.h>
 #include <dbus/exported_object.h>
 #include <dbus/message.h>

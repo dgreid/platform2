@@ -7,7 +7,7 @@
 #include <string>
 
 #include <base/files/file_path.h>
-#include <brillo/process_reaper.h>
+#include <brillo/process/process_reaper.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 

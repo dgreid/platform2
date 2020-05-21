@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIBBRILLO_BRILLO_PROCESS_REAPER_H_
-#define LIBBRILLO_BRILLO_PROCESS_REAPER_H_
+#ifndef LIBBRILLO_BRILLO_PROCESS_PROCESS_REAPER_H_
+#define LIBBRILLO_BRILLO_PROCESS_PROCESS_REAPER_H_
 
 #include <sys/wait.h>
 
@@ -70,4 +70,4 @@ class BRILLO_EXPORT ProcessReaper final {
 
 }  // namespace brillo
 
-#endif  // LIBBRILLO_BRILLO_PROCESS_REAPER_H_
+#endif  // LIBBRILLO_BRILLO_PROCESS_PROCESS_REAPER_H_

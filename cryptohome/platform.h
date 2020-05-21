@@ -23,7 +23,7 @@
 #include <base/files/file_path.h>
 #include <base/macros.h>
 #include <base/optional.h>
-#include <brillo/process.h>
+#include <brillo/process/process.h>
 #include <brillo/secure_blob.h>
 #include <gtest/gtest_prod.h>
 

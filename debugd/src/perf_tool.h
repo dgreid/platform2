@@ -17,7 +17,7 @@
 #include <base/optional.h>
 #include <brillo/asynchronous_signal_handler.h>
 #include <brillo/errors/error.h>
-#include <brillo/process_reaper.h>
+#include <brillo/process/process_reaper.h>
 
 #include "debugd/src/sandboxed_process.h"
 

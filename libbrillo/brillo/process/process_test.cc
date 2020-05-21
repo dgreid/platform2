@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "brillo/process.h"
+#include "brillo/process/process.h"
 
 #include <unistd.h>
 
@@ -11,7 +11,7 @@
 #include <base/files/scoped_temp_dir.h>
 #include <gtest/gtest.h>
 
-#include "brillo/process_mock.h"
+#include "brillo/process/process_mock.h"
 #include "brillo/test_helpers.h"
 #include "brillo/unittest_utils.h"
 

@@ -9,7 +9,7 @@
 #include <memory>
 
 #include <base/logging.h>
-#include <brillo/process.h>
+#include <brillo/process/process.h>
 #include <fuzzer/FuzzedDataProvider.h>
 #include <gmock/gmock.h>
 #include <metrics/metrics_library_mock.h>

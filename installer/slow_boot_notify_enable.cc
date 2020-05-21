@@ -7,7 +7,7 @@
 
 #include <base/files/file_path.h>
 #include <base/files/file_util.h>
-#include <brillo/process.h>
+#include <brillo/process/process.h>
 #include <vboot/crossystem.h>
 
 #include "installer/slow_boot_notify.h"

@@ -18,7 +18,7 @@
 #include <base/stl_util.h>
 #include <base/strings/string_util.h>
 #include <base/strings/stringprintf.h>
-#include <brillo/process.h>
+#include <brillo/process/process.h>
 
 #include "crash-reporter/user_collector_base.h"
 #include "crash-reporter/util.h"

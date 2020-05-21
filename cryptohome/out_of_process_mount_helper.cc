@@ -20,7 +20,7 @@
 #include <base/logging.h>
 #include <base/strings/stringprintf.h>
 #include <brillo/cryptohome.h>
-#include <brillo/process.h>
+#include <brillo/process/process.h>
 #include <brillo/secure_blob.h>
 
 #include "cryptohome/cryptohome_common.h"

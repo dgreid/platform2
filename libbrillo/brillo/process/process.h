@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIBBRILLO_BRILLO_PROCESS_H_
-#define LIBBRILLO_BRILLO_PROCESS_H_
+#ifndef LIBBRILLO_BRILLO_PROCESS_PROCESS_H_
+#define LIBBRILLO_BRILLO_PROCESS_PROCESS_H_
 
 #include <sys/types.h>
 
@@ -241,4 +241,4 @@ class BRILLO_EXPORT ProcessImpl : public Process {
 
 }  // namespace brillo
 
-#endif  // LIBBRILLO_BRILLO_PROCESS_H_
+#endif  // LIBBRILLO_BRILLO_PROCESS_PROCESS_H_

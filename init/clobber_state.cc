@@ -33,7 +33,7 @@
 #include <base/strings/string_split.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_util.h>
-#include <brillo/process.h>
+#include <brillo/process/process.h>
 #include <rootdev/rootdev.h>
 #include <vboot/cgpt_params.h>
 #include <vboot/vboot_host.h>

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "brillo/process_information.h"
+#include "brillo/process/process_information.h"
 
 namespace brillo {
 

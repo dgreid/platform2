@@ -21,7 +21,7 @@
 #include <base/strings/stringize_macros.h>
 #include <base/time/time.h>
 #include <brillo/key_value_store.h>
-#include <brillo/process.h>
+#include <brillo/process/process.h>
 
 #include "crash-reporter/arc_util.h"
 #include "crash-reporter/util.h"

@@ -11,7 +11,7 @@
 #include <base/files/file_path.h>
 #include <base/time/clock.h>
 #include <base/time/time.h>
-#include <brillo/process.h>
+#include <brillo/process/process.h>
 #include <brillo/streams/stream.h>
 #include <session_manager/dbus-proxies.h>
 

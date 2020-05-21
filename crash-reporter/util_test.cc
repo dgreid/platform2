@@ -16,7 +16,7 @@
 #include <base/rand_util.h>
 #include <base/test/simple_test_clock.h>
 #include <base/time/time.h>
-#include <brillo/process.h>
+#include <brillo/process/process.h>
 #include <brillo/streams/memory_stream.h>
 #include <gtest/gtest.h>
 

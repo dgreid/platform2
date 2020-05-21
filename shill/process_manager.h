@@ -17,8 +17,8 @@
 #include <base/location.h>
 #include <base/memory/weak_ptr.h>
 #include <brillo/minijail/minijail.h>
-#include <brillo/process.h>
-#include <brillo/process_reaper.h>
+#include <brillo/process/process.h>
+#include <brillo/process/process_reaper.h>
 #include <libminijail.h>
 
 namespace shill {

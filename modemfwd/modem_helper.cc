@@ -15,7 +15,7 @@
 #include <base/strings/string_split.h>
 #include <base/strings/string_util.h>
 #include <base/strings/stringprintf.h>
-#include <brillo/process.h>
+#include <brillo/process/process.h>
 #include <chromeos/switches/modemfwd_switches.h>
 
 namespace modemfwd {

@@ -13,7 +13,7 @@
 #include <base/files/scoped_temp_dir.h>
 #include <base/logging.h>
 #include <brillo/flag_helper.h>
-#include <brillo/process.h>
+#include <brillo/process/process.h>
 #include <brillo/syslog_logging.h>
 
 #include "vpn-manager/daemon.h"

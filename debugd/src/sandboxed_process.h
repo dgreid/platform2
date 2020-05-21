@@ -8,7 +8,7 @@
 #include <string>
 #include <vector>
 
-#include <brillo/process.h>
+#include <brillo/process/process.h>
 
 namespace debugd {
 

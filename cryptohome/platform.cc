@@ -59,7 +59,7 @@
 #include <base/threading/thread.h>
 #include <base/time/time.h>
 #include <brillo/file_utils.h>
-#include <brillo/process.h>
+#include <brillo/process/process.h>
 #include <brillo/secure_blob.h>
 #include <openssl/rand.h>
 #include <secure_erase_file/secure_erase_file.h>

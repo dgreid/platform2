@@ -16,7 +16,7 @@
 #include <base/strings/pattern.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_util.h>
-#include <brillo/process.h>
+#include <brillo/process/process.h>
 
 using ::base::FilePath;
 using ::base::StringPrintf;

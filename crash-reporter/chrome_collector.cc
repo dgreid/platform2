@@ -15,7 +15,7 @@
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_util.h>
 #include <brillo/data_encoding.h>
-#include <brillo/process.h>
+#include <brillo/process/process.h>
 #include <brillo/syslog_logging.h>
 
 #include "crash-reporter/util.h"

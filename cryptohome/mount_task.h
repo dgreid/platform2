@@ -32,7 +32,7 @@
 #include <base/synchronization/atomic_flag.h>
 #include <base/synchronization/waitable_event.h>
 #include <base/threading/thread.h>
-#include <brillo/process.h>
+#include <brillo/process/process.h>
 #include <brillo/secure_blob.h>
 
 #include "cryptohome/credentials.h"

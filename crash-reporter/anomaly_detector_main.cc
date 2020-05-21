@@ -15,7 +15,7 @@
 #include <base/message_loop/message_loop.h>
 #include <base/time/default_clock.h>
 #include <brillo/flag_helper.h>
-#include <brillo/process.h>
+#include <brillo/process/process.h>
 #include <brillo/syslog_logging.h>
 #include <chromeos/dbus/service_constants.h>
 #include <dbus/bus.h>

@@ -10,7 +10,7 @@
 #include <base/files/file_descriptor_watcher_posix.h>
 #include <base/macros.h>
 #include <brillo/daemons/dbus_daemon.h>
-#include <brillo/process_reaper.h>
+#include <brillo/process/process_reaper.h>
 
 #include "cros-disks/archive_manager.h"
 #include "cros-disks/cros_disks_server.h"

@@ -35,7 +35,7 @@
 #include <base/strings/stringprintf.h>
 #include <base/threading/thread_task_runner_handle.h>
 #include <brillo/key_value_store.h>
-#include <brillo/process.h>
+#include <brillo/process/process.h>
 #include <brillo/syslog_logging.h>
 #include <brillo/userdb_utils.h>
 #include <debugd/dbus-constants.h>

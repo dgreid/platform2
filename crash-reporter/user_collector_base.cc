@@ -10,7 +10,7 @@
 #include <base/files/file_util.h>
 #include <base/strings/string_split.h>
 #include <base/strings/stringprintf.h>
-#include <brillo/process.h>
+#include <brillo/process/process.h>
 
 #include "crash-reporter/util.h"
 

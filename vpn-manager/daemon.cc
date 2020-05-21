@@ -13,7 +13,7 @@
 #include <base/files/file_path.h>
 #include <base/files/file_util.h>
 #include <base/logging.h>
-#include <brillo/process.h>
+#include <brillo/process/process.h>
 
 using ::brillo::Process;
 using ::brillo::ProcessImpl;

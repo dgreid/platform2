@@ -9,7 +9,7 @@
 #include <base/bind.h>
 #include <base/bind_helpers.h>
 #include <base/location.h>
-#include <brillo/process.h>
+#include <brillo/process/process.h>
 #include <dbus/object_path.h>
 
 using std::string;

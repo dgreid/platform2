@@ -28,7 +28,7 @@
 #include <base/memory/weak_ptr.h>
 #include <base/strings/stringprintf.h>
 #include <base/strings/string_util.h>
-#include <brillo/process_reaper.h>
+#include <brillo/process/process_reaper.h>
 
 #include "cros-disks/error_logger.h"
 #include "cros-disks/mount_point.h"

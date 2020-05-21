@@ -16,7 +16,7 @@
 
 #include <base/files/file_util.h>
 #include <base/files/scoped_temp_dir.h>
-#include <brillo/process.h>
+#include <brillo/process/process.h>
 #include <gtest/gtest.h>
 
 #include "init/crossystem.h"

@@ -18,7 +18,7 @@
 #include <base/strings/string_number_conversions.h>
 
 #include <brillo/file_utils.h>
-#include <brillo/process.h>
+#include <brillo/process/process.h>
 
 #include "cryptohome/cryptolib.h"
 #include "cryptohome/mount_encrypted/mount_encrypted.h"

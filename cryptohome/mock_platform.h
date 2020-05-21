@@ -15,7 +15,7 @@
 #include <base/files/file_path.h>
 #include <base/files/file_util.h>
 #include <base/time/time.h>
-#include <brillo/process_mock.h>
+#include <brillo/process/process_mock.h>
 #include <gmock/gmock.h>
 
 #include "cryptohome/platform.h"

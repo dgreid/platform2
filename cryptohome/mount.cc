@@ -28,7 +28,7 @@
 #include <chaps/isolate.h>
 #include <chaps/token_manager_client.h>
 #include <brillo/cryptohome.h>
-#include <brillo/process.h>
+#include <brillo/process/process.h>
 #include <brillo/scoped_umask.h>
 #include <brillo/secure_blob.h>
 #include <chromeos/constants/cryptohome.h>
