@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef HWSEC_TEST_UTILS_FAKE_PCA_TPM1_STRUCT_UTILS_H_
-#define HWSEC_TEST_UTILS_FAKE_PCA_TPM1_STRUCT_UTILS_H_
+#ifndef HWSEC_TEST_UTILS_FAKE_PCA_AGENT_TPM1_STRUCT_UTILS_H_
+#define HWSEC_TEST_UTILS_FAKE_PCA_AGENT_TPM1_STRUCT_UTILS_H_
 
 #if USE_TPM2
 #error "This file is used for TPM1.2 only"
@@ -35,7 +35,12 @@ std::string Serialize(TPM_ASYM_CA_CONTENTS* contents);
 // Serialize |contents| of |TPM_SYM_CA_ATTESTATION| type.
 std::string Serialize(TPM_SYM_CA_ATTESTATION* contents);
 
+// Parse |serialized| into |TPM_CERTIFY_INFO| and get the public key digest
+// stored in it.
+base::Optional<std::string> ParseDigestFromTpmCertifyInfo(
+    const std::string& serialized);
+
 }  // namespace fake_pca_agent
 }  // namespace hwsec_test_utils
 
-#endif  // HWSEC_TEST_UTILS_FAKE_PCA_TPM1_STRUCT_UTILS_H_
+#endif  // HWSEC_TEST_UTILS_FAKE_PCA_AGENT_TPM1_STRUCT_UTILS_H_

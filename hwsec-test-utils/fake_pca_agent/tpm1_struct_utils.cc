@@ -4,6 +4,7 @@
 
 #include "hwsec-test-utils/fake_pca_agent/tpm1_struct_utils.h"
 
+#include <memory>
 #include <string>
 
 #include <arpa/inet.h>
@@ -148,6 +149,22 @@ std::string Serialize(TPM_SYM_CA_ATTESTATION* contents) {
   UINT64 offset = 0;
   Trspi_LoadBlob_SYM_CA_ATTESTATION(&offset, blob.get(), contents);
   return std::string(blob.get(), blob.get() + offset);
+}
+
+base::Optional<std::string> ParseDigestFromTpmCertifyInfo(
+    const std::string& serialized) {
+  TPM_CERTIFY_INFO parsed{};
+  uint64_t offset = 0;
+  TSS_RESULT result = Trspi_UnloadBlob_CERTIFY_INFO(
+      &offset, reinterpret_cast<BYTE*>(const_cast<char*>(serialized.data())),
+      &parsed);
+  if (result != TSS_SUCCESS) {
+    TPM_LOG(ERROR, result) << "Failed to parse TPM_CERTIFY_INFO.";
+    return {};
+  }
+  return std::string(
+      parsed.pubkeyDigest.digest,
+      parsed.pubkeyDigest.digest + sizeof(parsed.pubkeyDigest.digest));
 }
 
 }  // namespace fake_pca_agent
