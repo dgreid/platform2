@@ -8,6 +8,8 @@
 #include "hwsec-test-utils/fake_pca_agent/pca_base.h"
 
 #include <attestation/proto_bindings/attestation_ca.pb.h>
+#include <base/optional.h>
+#include <crypto/scoped_openssl_types.h>
 
 namespace hwsec_test_utils {
 namespace fake_pca_agent {
@@ -31,6 +33,12 @@ class PcaEnrollV1 : public PcaBase<attestation::AttestationEnrollmentRequest,
   bool Verify() override;
   bool Generate() override;
   bool Write(attestation::AttestationEnrollmentResponse* response) override;
+
+ private:
+  crypto::ScopedEVP_PKEY endorsement_key_;
+  crypto::ScopedEVP_PKEY identity_key_;
+  base::Optional<attestation::EncryptedIdentityCredential>
+      encrypted_identity_credential_;
 };
 
 }  // namespace fake_pca_agent
