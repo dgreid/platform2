@@ -49,6 +49,25 @@ class KeyDeriverDirect : public KeyDeriverBase {
   std::string ToHmacKey(const std::string& seed) const override;
 };
 
+// Derives a seed to AES and HMAC key with Sha256(HEADER||seed), where the
+// HEADER is "ENCRYPT"/"HMAC", respectively.
+class KeyDeriverSha256WithHeader : public KeyDeriverBase {
+ public:
+  KeyDeriverSha256WithHeader() = default;
+  ~KeyDeriverSha256WithHeader() = default;
+
+  // Not copyable or movable.
+  KeyDeriverSha256WithHeader(const KeyDeriverSha256WithHeader&) = delete;
+  KeyDeriverSha256WithHeader(KeyDeriverSha256WithHeader&&) = delete;
+  KeyDeriverSha256WithHeader& operator=(const KeyDeriverSha256WithHeader&) =
+      delete;
+  KeyDeriverSha256WithHeader& operator=(KeyDeriverSha256WithHeader&&) = delete;
+
+  // Overrides.
+  std::string ToAesKey(const std::string& seed) const override;
+  std::string ToHmacKey(const std::string& seed) const override;
+};
+
 // Indicates the success of an operation or the failure case of an operation.
 enum class ReturnStatus {
   kSuccess,

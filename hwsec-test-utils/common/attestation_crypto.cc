@@ -7,11 +7,21 @@
 #include <string>
 
 #include <base/optional.h>
+#include <crypto/sha2.h>
 
 #include "hwsec-test-utils/common/openssl_utility.h"
 
 namespace hwsec_test_utils {
 namespace attestation_crypto {
+
+namespace {
+
+// Servers prepend these 2 headers to the same seed to calculate AES key and
+// HMAC key respectively.
+constexpr char kHashHeaderForEncrypt[] = "ENCRYPT";
+constexpr char kHashHeaderForMac[] = "MAC";
+
+}  // namespace
 
 std::string KeyDeriverDirect::ToAesKey(const std::string& seed) const {
   return seed;
@@ -19,6 +29,16 @@ std::string KeyDeriverDirect::ToAesKey(const std::string& seed) const {
 
 std::string KeyDeriverDirect::ToHmacKey(const std::string& seed) const {
   return seed;
+}
+
+std::string KeyDeriverSha256WithHeader::ToAesKey(
+    const std::string& seed) const {
+  return crypto::SHA256HashString(kHashHeaderForEncrypt + seed);
+}
+
+std::string KeyDeriverSha256WithHeader::ToHmacKey(
+    const std::string& seed) const {
+  return crypto::SHA256HashString(kHashHeaderForMac + seed);
 }
 
 ReturnStatus Decrypt(const attestation::EncryptedData& encrypted_data_proto,
