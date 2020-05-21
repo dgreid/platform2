@@ -1,0 +1,21 @@
+// Copyright 2020 The Chromium OS Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#include <android/hidl/allocator/1.0/IAllocator.h>
+#include <gtest/gtest.h>
+
+using ::android::hardware::hidl_memory;
+using ::android::hidl::allocator::V1_0::IAllocator;
+
+// TODO(slangley): Update test when the allocator is implemented.
+TEST(SharedPointerAllocatorTest, Allocate) {
+  auto allocator = IAllocator::getService("ashmem");
+  hidl_memory memory;
+  allocator->allocate(1024, [&](bool success, const hidl_memory& mem) {
+      ASSERT_FALSE(success);
+      memory = mem;
+    });
+  ASSERT_FALSE(memory.valid());
+  ASSERT_EQ(0, memory.size());
+}

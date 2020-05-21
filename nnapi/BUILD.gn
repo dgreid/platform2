@@ -175,6 +175,7 @@ static_library("libhidl") {
     "${libbase_src}/include",
     "${libhidl_src}/base/include",
     "${libhidl_src}/libhidlmemory/include",
+    "libhidl",
   ]
   deps = [
     ":libbase",
@@ -186,6 +187,13 @@ static_library("libhidl") {
     "${libhidl_src}/base/Status.cpp",
     "${libhidl_src}/libhidlmemory/HidlMemoryToken.cpp",
     "${libhidl_src}/libhidlmemory/mapping.cpp",
+    "libhidl/allocator/IAllocator.cpp",
+    "libhidl/allocator/shared_pointer_allocator.cpp",
+    "libhidl/base/IBase.cpp",
+    "libhidl/memory/IMapper.cpp",
+    "libhidl/memory/IMemory.cpp",
+    "libhidl/memory/shared_pointer_mapper.cpp",
+    "libhidl/memory/shared_pointer_memory.cpp",
   ]
 }
 
@@ -205,7 +213,11 @@ if (use.test) {
       ":liblog",
       "//common-mk/testrunner:testrunner",
     ]
-    sources = [ "libhidl/tests/hidl_support_test.cpp" ]
+    sources = [
+      "libhidl/tests/hidl_support_test.cpp",
+      "libhidl/tests/shared_pointer_allocator_test.cpp",
+      "libhidl/tests/shared_pointer_mapper_test.cpp",
+    ]
   }
 }
 
@@ -248,7 +260,9 @@ static_library("libutils") {
     "//common-mk:pic",
     ":target_defaults",
   ]
+  deps = [ ":liblog" ]
   include_dirs = [
+    "${libbase_src}/include",
     "${libcutils_src}/include",
     "${libutils_src}/include",
   ]
@@ -256,7 +270,12 @@ static_library("libutils") {
     "${libutils_src}/Errors.cpp",
     "${libutils_src}/JenkinsHash.cpp",
     "${libutils_src}/NativeHandle.cpp",
+    "${libutils_src}/RefBase.cpp",
+    "${libutils_src}/SharedBuffer.cpp",
+    "${libutils_src}/StrongPointer.cpp",
     "${libutils_src}/Timers.cpp",
+    "${libutils_src}/VectorImpl.cpp",
+    "${libutils_src}/misc.cpp",
   ]
 }
 
@@ -271,6 +290,12 @@ if (use.test) {
       ":libutils",
       "//common-mk/testrunner:testrunner",
     ]
-    sources = [ "${libutils_src}/Mutex_test.cpp" ]
+    sources = [
+      "${libutils_src}/Mutex_test.cpp",
+      "${libutils_src}/RefBase_test.cpp",
+      "${libutils_src}/SharedBuffer_test.cpp",
+      "${libutils_src}/StrongPointer_test.cpp",
+      "${libutils_src}/Vector_test.cpp",
+    ]
   }
 }
