@@ -17,6 +17,7 @@ group("all") {
       ":datapath_fuzzer",
       ":multicast_forwarder_fuzzer",
       ":ndproxy_fuzzer",
+      ":patchpanel_client_fuzzer",
     ]
   }
   if (use.test) {
@@ -154,6 +155,19 @@ if (use.fuzzer) {
     ]
     sources = [ "datapath_fuzzer.cc" ]
     deps = [ ":libpatchpanel" ]
+  }
+
+  executable("patchpanel_client_fuzzer") {
+    configs += [
+      "//common-mk/common_fuzzer",
+      ":target_defaults",
+      ":fuzzing_config",
+    ]
+    sources = [ "client_fuzzer.cc" ]
+    deps = [
+      ":libpatchpanel",
+      ":libpatchpanel-client",
+    ]
   }
 }
 
