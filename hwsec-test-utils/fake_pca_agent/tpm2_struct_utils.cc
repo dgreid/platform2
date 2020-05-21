@@ -18,6 +18,8 @@ namespace fake_pca_agent {
 
 namespace {
 
+constexpr int kWellKnownExponent = 65537;
+
 crypto::ScopedBIGNUM StringToBignum(const std::string& s) {
   crypto::ScopedBIGNUM bn(BN_bin2bn(
       reinterpret_cast<const unsigned char*>(s.data()), s.length(), nullptr));
@@ -27,6 +29,49 @@ crypto::ScopedBIGNUM StringToBignum(const std::string& s) {
     return nullptr;
   }
   return bn;
+}
+
+crypto::ScopedEVP_PKEY TpmtPublicToRsaKey(
+    const trunks::TPMT_PUBLIC& tpmt_public) {
+  CHECK_EQ(tpmt_public.type, trunks::TPM_ALG_RSA);
+
+  crypto::ScopedRSA rsa(RSA_new());
+  crypto::ScopedBIGNUM e(BN_new());
+  if (!rsa || !e) {
+    LOG(ERROR) << __func__
+               << ": Failed to allocate RSA or BIGNUMs: " << GetOpenSSLError();
+    return nullptr;
+  }
+
+  if (BN_set_word(e.get(), kWellKnownExponent) != 1) {
+    LOG(ERROR) << __func__ << ": Failed to create BIGNUM of exponent: "
+               << GetOpenSSLError();
+    return nullptr;
+  }
+
+  crypto::ScopedBIGNUM n = StringToBignum(
+      trunks::StringFrom_TPM2B_PUBLIC_KEY_RSA(tpmt_public.unique.rsa));
+  if (!n) {
+    LOG(ERROR) << __func__ << ": Failed to create BIGNUM of modulus.";
+    return nullptr;
+  }
+
+  if (RSA_set0_key(rsa.get(), n.release(), e.release(), nullptr) != 1) {
+    LOG(ERROR) << __func__ << ": Failed to set exponent or modulus.";
+    return nullptr;
+  }
+  crypto::ScopedEVP_PKEY key(EVP_PKEY_new());
+  if (!key) {
+    LOG(ERROR) << __func__
+               << ": Failed to call EVP_PKEY_new: " << GetOpenSSLError();
+    return nullptr;
+  }
+  if (EVP_PKEY_set1_RSA(key.get(), rsa.get()) != 1) {
+    LOG(ERROR) << __func__
+               << ": Failed to call EVP_PKEY_set1_RSA: " << GetOpenSSLError();
+    return nullptr;
+  }
+  return key;
 }
 
 crypto::ScopedEVP_PKEY TpmtPublicToECCKey(
@@ -100,7 +145,7 @@ crypto::ScopedEVP_PKEY TpmtPublicToEVP(std::string serialized,
   crypto::ScopedEVP_PKEY key;
   switch (parsed.type) {
     case trunks::TPM_ALG_RSA:
-      LOG(ERROR) << __func__ << ": Not implemented for RSA key type.";
+      key = TpmtPublicToRsaKey(parsed);
       break;
     case trunks::TPM_ALG_ECC:
       key = TpmtPublicToECCKey(parsed);
