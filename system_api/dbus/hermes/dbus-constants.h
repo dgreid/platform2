@@ -75,6 +75,9 @@ enum State {
 const char kErrorAlreadyDisabled[] =
     "org.chromium.Hermes.Error.AlreadyDisabled";
 const char kErrorAlreadyEnabled[] = "org.chromium.Hermes.Error.AlreadyEnabled";
+const char kErrorBadNotification[] =
+    "org.chromium.Hermes.Error.BadNotification";
+const char kErrorBadRequest[] = "org.chromium.Hermes.Error.BadRequest";
 const char kErrorInternalLpaFailure[] =
     "org.chromium.Hermes.Error.InternalLpaFailure";
 const char kErrorInvalidActivationCode[] =
@@ -82,9 +85,16 @@ const char kErrorInvalidActivationCode[] =
 const char kErrorInvalidIccid[] = "org.chromium.Hermes.Error.InvalidIccid";
 const char kErrorInvalidParameter[] =
     "org.chromium.Hermes.Error.InvalidParameter";
+const char kErrorMalformedResponse[] =
+    "org.chromium.Hermes.Error.MalformedResponse";
 const char kErrorNeedConfirmationCode[] =
     "org.chromium.Hermes.Error.NeedConfirmationCode";
+const char kErrorNoResponse[] = "org.chromium.Hermes.Error.NoResponse";
 const char kErrorPendingProfile[] = "org.chromium.Hermes.Error.PendingProfile";
+const char kErrorSendApduFailure[] =
+    "org.chromium.Hermes.Error.SendApduFailure";
+const char kErrorSendHttpsFailure[] =
+    "org.chromium.Hermes.Error.SendHttpsFailure";
 const char kErrorSendNotificationFailure[] =
     "org.chromium.Hermes.Error.SendNotificationFailure";
 const char kErrorTestProfileInProd[] =
