@@ -13,6 +13,7 @@ const char kManagerServiceError[] = "org.chromium.lorgnette.Error";
 
 // Methods.
 const char kListScannersMethod[] = "ListScanners";
+const char kListScannersProtoMethod[] = "ListScannersProto";
 const char kGetScannerCapabilitiesMethod[] = "GetScannerCapabilities";
 const char kScanImageMethod[] = "ScanImage";
 

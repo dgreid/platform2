@@ -32,6 +32,26 @@ enum ColorMode {
   MODE_COLOR = 2;
 }
 
+// An object representing one scanner.
+message ScannerInfo {
+  // The name of the scanner, as reported by SANE.
+  string name = 1;
+
+  // The manufacturer of the scanner.
+  string manufacturer = 2;
+
+  // The particular model of scanner.
+  string model = 3;
+
+  // The type of the scanner, e.g. "video camera", "flatbed scanner".
+  string type = 4;
+}
+
+// Information returned from a ListScanners dbus request.
+message ListScannersResponse {
+  repeated ScannerInfo scanners = 1;
+}
+
 // Information returned from a GetScannerCapabilities dbus request.
 message ScannerCapabilities {
   // Discrete scanning resolutions.
