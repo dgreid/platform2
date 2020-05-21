@@ -42,6 +42,8 @@
 
 namespace diagnostics {
 
+class GrpcClientManager;
+
 // Integrates together all pieces which implement separate IPC services exposed
 // by the wilco_dtc_supportd daemon and IPC clients.
 class Core final : public DBusService::Delegate,
@@ -114,19 +116,9 @@ class Core final : public DBusService::Delegate,
 
   // |grpc_service_uris| are the URIs on which the gRPC interface exposed by the
   // wilco_dtc_supportd daemon will be listening.
-  // |ui_message_receiver_wilco_dtc_grpc_uri| is the URI which is
-  // used for making requests to the gRPC interface exposed by the
-  // wilco_dtc daemon which is explicitly eligible to receive
-  // messages from UI extension (hosted by browser), no other gRPC client
-  // recieves messages from UI extension.
-  // |wilco_dtc_grpc_uris| is the list of URI's which are used for
-  // making requests to the gRPC interface exposed by the wilco_dtc
-  // daemons. Should not contain the URI equal to
-  // |ui_message_receiver_wilco_dtc_grpc_uri|.
-  Core(const std::vector<std::string>& grpc_service_uris,
-       const std::string& ui_message_receiver_wilco_dtc_grpc_uri,
-       const std::vector<std::string>& wilco_dtc_grpc_uris,
-       Delegate* delegate);
+  Core(Delegate* delegate,
+       const GrpcClientManager* grpc_client_manager,
+       const std::vector<std::string>& grpc_service_uris);
   ~Core() override;
 
   // Overrides the file system root directory for file operations in tests.
@@ -144,12 +136,12 @@ class Core final : public DBusService::Delegate,
   // Starts gRPC servers, gRPC clients and EC event service.
   bool Start();
 
-  // Performs asynchronous shutdown and cleanup of gRPC servers, gRPC clients
+  // Performs asynchronous shutdown and cleanup of gRPC servers
   // and EC event service. Destroys |dbus_object_| object.
   // This must be used before deleting this instance in case Start() was
   // called and returned success - in that case, the instance must be
   // destroyed only after |on_shutdown_callback| has been called.
-  void ShutDown(const base::Closure& on_shutdown_callback);
+  void ShutDown(base::OnceClosure on_shutdown_callback);
 
   // Register the D-Bus object that the wilco_dtc_supportd daemon exposes and
   // tie methods exposed by this object with the actual implementation.
@@ -248,29 +240,18 @@ class Core final : public DBusService::Delegate,
 
   // gRPC-related members:
 
+  // Unowned.
+  // Allows to make outgoing requests to the gRPC interfaces exposed by the
+  // wilco_dtc daemons.
+  const GrpcClientManager* grpc_client_manager_;
   // gRPC URIs on which the |grpc_server_| is listening for incoming requests.
   const std::vector<std::string> grpc_service_uris_;
-  // gRPC URI which is used by
-  // |ui_message_receiver_wilco_dtc_grpc_client_| for sending UI
-  // messages and EC notifications over the gRPC interface.
-  const std::string ui_message_receiver_wilco_dtc_grpc_uri_;
-  // gRPC URIs which are used by |wilco_dtc_grpc_clients_| for
-  // accessing the gRPC interface exposed by the wilco_dtc daemons.
-  const std::vector<std::string> wilco_dtc_grpc_uris_;
   // Implementation of the gRPC interface exposed by the wilco_dtc_supportd
   // daemon.
   GrpcService grpc_service_{this /* delegate */};
   // Connects |grpc_service_| with the gRPC server that listens for incoming
   // requests.
   AsyncGrpcServer<grpc_api::WilcoDtcSupportd::AsyncService> grpc_server_;
-  // Allows to make outgoing requests to the gRPC interfaces exposed by the
-  // wilco_dtc daemons.
-  std::vector<std::unique_ptr<AsyncGrpcClient<grpc_api::WilcoDtc>>>
-      wilco_dtc_grpc_clients_;
-  // The pre-defined gRPC client that is allowed to respond to UI messages.
-  // Owned by |wilco_dtc_grpc_clients_|.
-  AsyncGrpcClient<grpc_api::WilcoDtc>*
-      ui_message_receiver_wilco_dtc_grpc_client_;
 
   // D-Bus-related members:
 

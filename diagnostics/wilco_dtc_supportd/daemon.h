@@ -14,6 +14,7 @@
 
 #include "diagnostics/wilco_dtc_supportd/core.h"
 #include "diagnostics/wilco_dtc_supportd/core_delegate_impl.h"
+#include "diagnostics/wilco_dtc_supportd/grpc_client_manager.h"
 
 namespace diagnostics {
 
@@ -34,6 +35,7 @@ class Daemon final : public brillo::DBusServiceDaemon {
   // done within timeout.
   void ForceShutdown();
 
+  GrpcClientManager grpc_client_manager_;
   CoreDelegateImpl wilco_dtc_supportd_core_delegate_impl_{this /* daemon */};
   std::unique_ptr<mojo::core::ScopedIPCSupport> ipc_support_;
   Core wilco_dtc_supportd_core_;

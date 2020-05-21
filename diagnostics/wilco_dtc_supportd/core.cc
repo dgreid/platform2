@@ -20,6 +20,7 @@
 #include <dbus/wilco_dtc_supportd/dbus-constants.h>
 #include <mojo/public/cpp/system/message_pipe.h>
 
+#include "diagnostics/wilco_dtc_supportd/grpc_client_manager.h"
 #include "diagnostics/wilco_dtc_supportd/json_utils.h"
 #include "diagnostics/wilco_dtc_supportd/probe_service_impl.h"
 
@@ -99,17 +100,15 @@ bool ConvertPowerEventToGrpc(
 
 }  // namespace
 
-Core::Core(const std::vector<std::string>& grpc_service_uris,
-           const std::string& ui_message_receiver_wilco_dtc_grpc_uri,
-           const std::vector<std::string>& wilco_dtc_grpc_uris,
-           Delegate* delegate)
+Core::Core(Delegate* delegate,
+           const GrpcClientManager* grpc_client_manager,
+           const std::vector<std::string>& grpc_service_uris)
     : delegate_(delegate),
+      grpc_client_manager_(grpc_client_manager),
       grpc_service_uris_(grpc_service_uris),
-      ui_message_receiver_wilco_dtc_grpc_uri_(
-          ui_message_receiver_wilco_dtc_grpc_uri),
-      wilco_dtc_grpc_uris_(wilco_dtc_grpc_uris),
       grpc_server_(base::ThreadTaskRunnerHandle::Get(), grpc_service_uris_) {
   DCHECK(delegate);
+  DCHECK(grpc_client_manager_);
   ec_event_service_ = delegate_->CreateEcEventService();
   probe_service_ = delegate->CreateProbeService(this);
   DCHECK(ec_event_service_);
@@ -186,25 +185,6 @@ bool Core::Start() {
   VLOG(0) << "Successfully started gRPC server listening on "
           << base::JoinString(grpc_service_uris_, ",");
 
-  // Start the gRPC clients that talk to the wilco_dtc daemon.
-  for (const auto& uri : wilco_dtc_grpc_uris_) {
-    wilco_dtc_grpc_clients_.push_back(
-        std::make_unique<AsyncGrpcClient<grpc_api::WilcoDtc>>(
-            base::ThreadTaskRunnerHandle::Get(), uri));
-    VLOG(0) << "Created gRPC wilco_dtc client on " << uri;
-  }
-
-  // Start the gRPC client that is allowed to receive UI messages as a normal
-  // gRPC client that talks to the wilco_dtc daemon.
-  wilco_dtc_grpc_clients_.push_back(
-      std::make_unique<AsyncGrpcClient<grpc_api::WilcoDtc>>(
-          base::ThreadTaskRunnerHandle::Get(),
-          ui_message_receiver_wilco_dtc_grpc_uri_));
-  VLOG(0) << "Created gRPC wilco_dtc client on "
-          << ui_message_receiver_wilco_dtc_grpc_uri_;
-  ui_message_receiver_wilco_dtc_grpc_client_ =
-      wilco_dtc_grpc_clients_.back().get();
-
   // Start EC event service.
   if (!ec_event_service_->Start()) {
     LOG(WARNING)
@@ -214,18 +194,14 @@ bool Core::Start() {
   return true;
 }
 
-void Core::ShutDown(const base::Closure& on_shutdown_callback) {
+void Core::ShutDown(base::OnceClosure on_shutdown_callback) {
   VLOG(1) << "Tearing down gRPC server, gRPC wilco_dtc clients, "
              "EC event service and D-Bus server";
   UnsubscribeFromEventServices();
-  const base::Closure barrier_closure = base::BarrierClosure(
-      wilco_dtc_grpc_clients_.size() + 2, on_shutdown_callback);
+  const base::Closure barrier_closure =
+      base::BarrierClosure(2, std::move(on_shutdown_callback));
   ec_event_service_->ShutDown(barrier_closure);
   grpc_server_.ShutDown(barrier_closure);
-  for (const auto& client : wilco_dtc_grpc_clients_) {
-    client->ShutDown(barrier_closure);
-  }
-  ui_message_receiver_wilco_dtc_grpc_client_ = nullptr;
 
   dbus_object_.reset();
 }
@@ -510,7 +486,7 @@ void Core::SendGrpcUiMessageToWilcoDtc(
     const SendGrpcUiMessageToWilcoDtcCallback& callback) {
   VLOG(1) << "Core::SendGrpcMessageToWilcoDtc";
 
-  if (!ui_message_receiver_wilco_dtc_grpc_client_) {
+  if (!grpc_client_manager_->GetUiClient()) {
     VLOG(1) << "The UI message is discarded since the recipient has been shut "
             << "down.";
     callback.Run(std::string() /* response_json_message */);
@@ -521,7 +497,7 @@ void Core::SendGrpcUiMessageToWilcoDtc(
   request.set_json_message(json_message.data() ? json_message.data() : "",
                            json_message.length());
 
-  ui_message_receiver_wilco_dtc_grpc_client_->CallRpc(
+  grpc_client_manager_->GetUiClient()->CallRpc(
       &grpc_api::WilcoDtc::Stub::AsyncHandleMessageFromUi, request,
       base::Bind(
           [](const SendGrpcUiMessageToWilcoDtcCallback& callback,
@@ -554,7 +530,7 @@ void Core::NotifyConfigurationDataChangedToWilcoDtc() {
   VLOG(1) << "Core::NotifyConfigurationDataChanged";
 
   grpc_api::HandleConfigurationDataChangedRequest request;
-  for (auto& client : wilco_dtc_grpc_clients_) {
+  for (auto& client : grpc_client_manager_->GetClients()) {
     client->CallRpc(
         &grpc_api::WilcoDtc::Stub::AsyncHandleConfigurationDataChanged, request,
         base::Bind(
@@ -591,7 +567,7 @@ void Core::OnPowerdEvent(PowerEventType type) {
   grpc_api::HandlePowerNotificationRequest request;
   request.set_power_event(grpc_type);
 
-  for (auto& client : wilco_dtc_grpc_clients_) {
+  for (auto& client : grpc_client_manager_->GetClients()) {
     client->CallRpc(
         &grpc_api::WilcoDtc::Stub::AsyncHandlePowerNotification, request,
         base::Bind([](std::unique_ptr<grpc_api::HandlePowerNotificationResponse>
@@ -659,7 +635,7 @@ void Core::SendGrpcEcEventToWilcoDtc(const EcEvent& ec_event) {
   request.set_type(ec_event.type);
   request.set_payload(&ec_event.payload, payload_size);
 
-  for (auto& client : wilco_dtc_grpc_clients_) {
+  for (auto& client : grpc_client_manager_->GetClients()) {
     client->CallRpc(
         &grpc_api::WilcoDtc::Stub::AsyncHandleEcNotification, request,
         base::Bind([](std::unique_ptr<grpc_api::HandleEcNotificationResponse>
@@ -712,7 +688,7 @@ void Core::NotifyClientsBluetoothAdapterState(
     }
   }
 
-  for (auto& client : wilco_dtc_grpc_clients_) {
+  for (auto& client : grpc_client_manager_->GetClients()) {
     client->CallRpc(
         &grpc_api::WilcoDtc::Stub::AsyncHandleBluetoothDataChanged, request,
         base::Bind(

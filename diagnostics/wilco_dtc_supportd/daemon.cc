@@ -6,6 +6,7 @@
 
 #include <cstdlib>
 
+#include <base/barrier_closure.h>
 #include <base/callback.h>
 #include <base/location.h>
 #include <base/logging.h>
@@ -16,6 +17,7 @@
 #include <mojo/core/embedder/embedder.h>
 
 #include "diagnostics/constants/grpc_constants.h"
+#include "diagnostics/wilco_dtc_supportd/service_util.h"
 
 namespace diagnostics {
 
@@ -26,11 +28,10 @@ constexpr base::TimeDelta kForceShutdownDelayTimeDelta =
 
 Daemon::Daemon()
     : DBusServiceDaemon(kWilcoDtcSupportdServiceName /* service_name */),
-      wilco_dtc_supportd_core_({GetWilcoDtcSupportdGrpcHostVsockUri(),
-                                kWilcoDtcSupportdGrpcDomainSocketUri},
-                               GetUiMessageReceiverWilcoDtcGrpcHostVsockUri(),
-                               {GetWilcoDtcGrpcHostVsockUri()},
-                               &wilco_dtc_supportd_core_delegate_impl_) {}
+      wilco_dtc_supportd_core_(&wilco_dtc_supportd_core_delegate_impl_,
+                               &grpc_client_manager_,
+                               {GetWilcoDtcSupportdGrpcHostVsockUri(),
+                                kWilcoDtcSupportdGrpcDomainSocketUri}) {}
 
 Daemon::~Daemon() = default;
 
@@ -40,14 +41,14 @@ int Daemon::OnInit() {
   if (exit_code != EXIT_SUCCESS)
     return exit_code;
 
+  grpc_client_manager_.Start(GetUiMessageReceiverWilcoDtcGrpcHostVsockUri(),
+                             {GetWilcoDtcGrpcHostVsockUri()});
+
   if (!wilco_dtc_supportd_core_.Start()) {
     LOG(ERROR) << "Shutting down due to fatal initialization failure";
-    base::RunLoop run_loop;
-    wilco_dtc_supportd_core_.ShutDown(run_loop.QuitClosure());
-    run_loop.Run();
+    ShutDownServicesInRunLoop(&wilco_dtc_supportd_core_, &grpc_client_manager_);
     return EXIT_FAILURE;
   }
-
   // Init the Mojo Embedder API. The call to InitIPCSupport() is balanced with
   // the ShutdownIPCSupport() one in OnShutdown().
   mojo::core::Init();
@@ -69,12 +70,11 @@ void Daemon::OnShutdown(int* error_code) {
   // Gracefully tear down pieces that require asynchronous shutdown.
   VLOG(1) << "Shutting down";
 
-  base::RunLoop run_loop;
-  wilco_dtc_supportd_core_.ShutDown(run_loop.QuitClosure());
   // Allow time for Core to gracefully shut down all threads.
   force_shutdown_timer_.Start(FROM_HERE, kForceShutdownDelayTimeDelta, this,
                               &Daemon::ForceShutdown);
-  run_loop.Run();
+
+  ShutDownServicesInRunLoop(&wilco_dtc_supportd_core_, &grpc_client_manager_);
 
   VLOG(0) << "Shutting down with code " << *error_code;
 }

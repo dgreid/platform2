@@ -57,6 +57,8 @@
 #include "diagnostics/wilco_dtc_supportd/fake_diagnostics_service.h"
 #include "diagnostics/wilco_dtc_supportd/fake_probe_service.h"
 #include "diagnostics/wilco_dtc_supportd/fake_wilco_dtc.h"
+#include "diagnostics/wilco_dtc_supportd/grpc_client_manager.h"
+#include "diagnostics/wilco_dtc_supportd/service_util.h"
 #include "diagnostics/wilco_dtc_supportd/telemetry/ec_event_service.h"
 #include "diagnostics/wilco_dtc_supportd/telemetry/ec_event_test_utils.h"
 #include "diagnostics/wilco_dtc_supportd/telemetry/fake_bluetooth_event_service.h"
@@ -277,12 +279,9 @@ class CoreTest : public testing::Test {
  protected:
   CoreTest() { InitializeMojo(); }
 
-  void CreateCore(const std::vector<std::string>& grpc_service_uris,
-                  const std::string& ui_message_receiver_wilco_dtc_grpc_uri,
-                  const std::vector<std::string>& wilco_dtc_grpc_uris) {
-    core_ = std::make_unique<Core>(grpc_service_uris,
-                                   ui_message_receiver_wilco_dtc_grpc_uri,
-                                   wilco_dtc_grpc_uris, &core_delegate_);
+  void CreateCore(const std::vector<std::string>& grpc_service_uris) {
+    core_ = std::make_unique<Core>(&core_delegate_, &grpc_client_manager_,
+                                   grpc_service_uris);
   }
 
   Core* core() {
@@ -291,6 +290,8 @@ class CoreTest : public testing::Test {
   }
 
   FakeCoreDelegate* core_delegate() { return &core_delegate_; }
+
+  GrpcClientManager grpc_client_manager_;
 
  private:
   // Initialize the Mojo subsystem.
@@ -306,12 +307,10 @@ class CoreTest : public testing::Test {
 // Test successful shutdown after failed start.
 TEST_F(CoreTest, FailedStartAndSuccessfulShutdown) {
   // Invalid gRPC service URI.
-  CreateCore({""}, "", {""});
+  CreateCore({""});
   EXPECT_FALSE(core()->Start());
 
-  base::RunLoop run_loop;
-  core()->ShutDown(run_loop.QuitClosure());
-  run_loop.Run();
+  ShutDownServicesInRunLoop(core());
 }
 
 // Tests for the Core class which started successfully.
@@ -331,13 +330,14 @@ class StartedCoreTest : public CoreTest {
     wilco_dtc_grpc_uri_ = base::StringPrintf(
         kWilcoDtcGrpcUriTemplate, temp_dir_.GetPath().value().c_str());
 
-    CreateCore({wilco_dtc_supportd_grpc_uri_},
-               ui_message_receiver_wilco_dtc_grpc_uri_, {wilco_dtc_grpc_uri_});
+    CreateCore({wilco_dtc_supportd_grpc_uri_});
     core()->set_root_dir_for_testing(temp_dir_.GetPath());
 
     SetUpEcEventService();
 
     ASSERT_TRUE(core()->Start());
+    grpc_client_manager_.Start(ui_message_receiver_wilco_dtc_grpc_uri_,
+                               {wilco_dtc_grpc_uri_});
 
     SetUpEcEventServiceFifoWriteEnd();
 
@@ -351,9 +351,7 @@ class StartedCoreTest : public CoreTest {
   void TearDown() override {
     SetDBusShutdownExpectations();
 
-    base::RunLoop run_loop;
-    core()->ShutDown(run_loop.QuitClosure());
-    run_loop.Run();
+    ShutDownServicesInRunLoop(core(), &grpc_client_manager_);
 
     CoreTest::TearDown();
   }
