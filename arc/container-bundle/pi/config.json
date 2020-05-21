@@ -501,6 +501,14 @@
 			]
 		},
 		{
+			"destination": "/vendor/build.prop",
+			"type": "bind",
+			"source": "/run/arc/host_generated/vendor_build.prop",
+			"options": [
+				"bind"
+			]
+		},
+		{
 			"destination": "/mnt",
 			"type": "tmpfs",
 			"source": "tmpfs",
