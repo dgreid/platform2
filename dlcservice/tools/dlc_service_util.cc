@@ -101,8 +101,8 @@ class DlcServiceUtil : public brillo::Daemon {
     brillo::FlagHelper::Init(argc_, argv_, "dlcservice_util");
 
     // Enforce mutually exclusive flags.
-    vector<bool> exclusive_flags = {FLAGS_install, FLAGS_uninstall, FLAGS_list,
-                                    FLAGS_dlc_state};
+    vector<bool> exclusive_flags = {FLAGS_install, FLAGS_uninstall, FLAGS_purge,
+                                    FLAGS_list, FLAGS_dlc_state};
     if (std::count(exclusive_flags.begin(), exclusive_flags.end(), true) != 1) {
       LOG(ERROR) << "Only one of --install, --uninstall, --purge, --list, "
                     "--dlc_state must be set.";
