@@ -111,6 +111,7 @@ source_set("fake_pca_agent_library") {
     sources += [
       "fake_pca_agent/pca_certify_v1.cc",
       "fake_pca_agent/pca_enroll_v1.cc",
+      "fake_pca_agent/tpm1_struct_utils.cc",
     ]
     libs = [ "tspi" ]
   }
