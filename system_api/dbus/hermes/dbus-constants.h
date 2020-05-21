@@ -18,7 +18,7 @@ namespace manager {
 // Manager methods.
 const char kInstallProfileFromActivationCode[] =
     "InstallProfileFromActivationCode";
-const char kInstallProfileFromEvent[] = "InstallProfileFromEvent";
+const char kInstallPendingProfile[] = "InstallPendingProfile";
 const char kUninstallProfile[] = "UninstallProfile";
 const char kRequestPendingEvents[] = "RequestPendingEvents";
 const char kSetTestMode[] = "SetTestMode";
