@@ -32,6 +32,21 @@ base::Optional<profile::State> LpaProfileStateToHermes(
   }
 }
 
+base::Optional<profile::ProfileClass> LpaProfileClassToHermes(
+    lpa::proto::ProfileClass cls) {
+  switch (cls) {
+    case lpa::proto::TESTING:
+      return profile::kTesting;
+    case lpa::proto::PROVISIONING:
+      return profile::kProvisioning;
+    case lpa::proto::OPERATIONAL:
+      return profile::kOperational;
+    default:
+      LOG(ERROR) << "Unrecognized lpa ProfileClass: " << cls;
+      return base::nullopt;
+  }
+}
+
 }  // namespace
 
 // static
@@ -58,7 +73,13 @@ std::unique_ptr<Profile> Profile::Create(
     return nullptr;
   }
   profile->SetState(state.value());
-  profile->SetProfileClass(profile_info.profile_class());
+  auto cls = LpaProfileClassToHermes(profile_info.profile_class());
+  if (!cls.has_value()) {
+    LOG(ERROR) << "Failed to create Profile for iccid " << profile_info.iccid()
+               << "; invalid ProfileClass " << profile_info.profile_class();
+    return nullptr;
+  }
+  profile->SetProfileClass(cls.value());
   profile->SetName(profile_info.profile_name());
   profile->SetNickname(profile_info.profile_nickname());
 

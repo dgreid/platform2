@@ -44,6 +44,21 @@ const char kProfileClassProperty[] = "ProfileClass";
 const char kServiceProviderProperty[] = "ServiceProvider";
 const char kStateProperty[] = "State";
 
+// Values for kProfileClassProperty.
+enum ProfileClass {
+  kTesting = 0,
+  // Profile for provisioning a non-kProvisioning Profile. Should NOT be shown
+  // to users normally. From the spec:
+  //
+  // Provisioning Profiles and their associated Profile Metadata SHALL not be
+  // visible to the End User in the LUI. As a result, Provisioning Profiles
+  // SHALL not be selectable by the End User nor deletable through any End User
+  // action, including eUICC Memory Reset.
+  kProvisioning = 1,
+  // Profile available for normal servicing of user connectivity needs.
+  kOperational = 2,
+};
+
 // Values for kStateProperty.
 enum State {
   // Notified about from SM-DS but not installed.
