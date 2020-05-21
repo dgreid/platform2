@@ -2,4 +2,5 @@ set noparent
 tomhughes@chromium.org
 adlr@chromium.org
 
-# COMPONENT: UI>Shell>Fingerprint
+# MONORAIL COMPONENT (Public users only): UI>Shell>Fingerprint
+# GOOGLERS: http://go/cros-fp-bug
