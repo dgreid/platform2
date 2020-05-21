@@ -7,6 +7,8 @@
 
 #include "hwsec-test-utils/fake_pca_agent/pca_base.h"
 
+#include <string>
+
 #include <attestation/proto_bindings/attestation_ca.pb.h>
 
 namespace hwsec_test_utils {
@@ -32,6 +34,12 @@ class PcaCertifyV2
   bool Verify() override;
   bool Generate() override;
   bool Write(attestation::AttestationCertificateResponse* response) override;
+
+ private:
+  crypto::ScopedEVP_PKEY identity_key_;
+  crypto::ScopedEVP_PKEY certified_key_;
+  std::string certified_key_name_;
+  base::Optional<std::string> issued_certificate_der_;
 };
 
 }  // namespace fake_pca_agent
