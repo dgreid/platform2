@@ -226,12 +226,12 @@ void Manager::RegisterAsync(
   firewall_manager_->Init(bus);
 }
 
-bool Manager::ListScanners(brillo::ErrorPtr* error,
-                           Manager::ScannerInfo* scanner_list_out) {
+base::Optional<std::vector<lorgnette::ScannerInfo>>
+Manager::GenerateScannerList(brillo::ErrorPtr* error) {
   if (!sane_client_) {
     brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
                          kManagerServiceError, "No connection to SANE");
-    return false;
+    return base::nullopt;
   }
 
   firewall_manager_->RequestScannerPortAccess();
@@ -241,14 +241,27 @@ bool Manager::ListScanners(brillo::ErrorPtr* error,
 
   std::vector<lorgnette::ScannerInfo> scanners;
   if (!sane_client_->ListDevices(error, &scanners)) {
-    return false;
+    return base::nullopt;
   }
   activity_callback_.Run();
 
-  Manager::ScannerInfo scanner_list;
-  epson_probe::ProbeForScanners(firewall_manager_.get(), &scanner_list);
+  std::vector<lorgnette::ScannerInfo> probed_scanners =
+      epson_probe::ProbeForScanners(firewall_manager_.get());
+  activity_callback_.Run();
+  scanners.insert(scanners.end(), probed_scanners.begin(),
+                  probed_scanners.end());
+  return scanners;
+}
 
-  for (const lorgnette::ScannerInfo& scanner : scanners) {
+bool Manager::ListScanners(brillo::ErrorPtr* error,
+                           Manager::ScannerInfo* scanner_list_out) {
+  base::Optional<std::vector<lorgnette::ScannerInfo>> scanners =
+      GenerateScannerList(error);
+  if (!scanners.has_value())
+    return false;
+
+  ScannerInfo scanner_list;
+  for (const lorgnette::ScannerInfo& scanner : scanners.value()) {
     std::map<std::string, std::string> scanner_info;
     scanner_info[kScannerPropertyManufacturer] = scanner.manufacturer();
     scanner_info[kScannerPropertyModel] = scanner.model();
@@ -257,6 +270,26 @@ bool Manager::ListScanners(brillo::ErrorPtr* error,
   }
 
   *scanner_list_out = std::move(scanner_list);
+  return true;
+}
+
+bool Manager::ListScannersProto(brillo::ErrorPtr* error,
+                                std::vector<uint8_t>* scanner_list_out) {
+  base::Optional<std::vector<lorgnette::ScannerInfo>> scanners =
+      GenerateScannerList(error);
+  if (!scanners.has_value())
+    return false;
+
+  ListScannersResponse response;
+  for (lorgnette::ScannerInfo& scanner : scanners.value()) {
+    *response.add_scanners() = std::move(scanner);
+  }
+
+  std::vector<uint8_t> serialized;
+  serialized.resize(response.ByteSizeLong());
+  response.SerializeToArray(serialized.data(), serialized.size());
+
+  *scanner_list_out = std::move(serialized);
   return true;
 }
 

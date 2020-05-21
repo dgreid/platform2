@@ -13,6 +13,7 @@
 
 #include <map>
 #include <string>
+#include <unordered_set>
 
 #include <base/files/scoped_file.h>
 #include <base/logging.h>
@@ -107,8 +108,8 @@ static bool CreateBroadcastSocket(int *broadcast_socket, uint16_t *port) {
   return true;
 }
 
-static void SendProbeAndListen(uint16_t probe_socket,
-                               Manager::ScannerInfo* scanner_list) {
+static std::vector<ScannerInfo> SendProbeAndListen(uint16_t probe_socket) {
+  std::vector<ScannerInfo> scanners;
   struct sockaddr_in broadcast;
   memset(&broadcast, 0, sizeof(broadcast));
   broadcast.sin_family = AF_INET;
@@ -121,9 +122,10 @@ static void SendProbeAndListen(uint16_t probe_socket,
   if (result != sizeof(kProbePacket)) {
     LOG(ERROR) << "sendto() returns " << result
                << ": " << (result < 0 ? strerror(errno) : "");
-    return;
+    return scanners;
   }
 
+  std::unordered_set<std::string> names;
   struct timeval maximum_wait_duration = { kReplyWaitTimeSeconds, 0 };
   struct timeval now, end_time;
   CHECK(GetTimeMonotonic(&now));
@@ -165,13 +167,16 @@ static void SendProbeAndListen(uint16_t probe_socket,
       char* ip_address_string = inet_ntoa(remote.sin_addr);
       std::string device_name =
           std::string(kEpsonDeviceNamePrefix) + ip_address_string;
-      if (!base::ContainsKey(*scanner_list, device_name)) {
+
+      if (names.count(device_name) == 0) {
+        names.insert(device_name);
         // We don't use anything from the response; neither does sane-backends.
-        std::map<std::string, std::string> scanner_info;
-        scanner_info[kScannerPropertyManufacturer] = kScannerManufacturerEpson;
-        scanner_info[kScannerPropertyModel] = kScannerModelNetwork;
-        scanner_info[kScannerPropertyType] = kScannerTypeFlatbed;
-        (*scanner_list)[device_name] = scanner_info;
+        ScannerInfo info;
+        info.set_name(device_name);
+        info.set_manufacturer(kScannerManufacturerEpson);
+        info.set_model(kScannerModelNetwork);
+        info.set_type(kScannerTypeFlatbed);
+        scanners.push_back(info);
       } else {
         LOG(INFO) << "Not adding device " << device_name
                   << "; already in list";
@@ -182,19 +187,20 @@ static void SendProbeAndListen(uint16_t probe_socket,
 
     CHECK(GetTimeMonotonic(&now));
   } while (timercmp(&now, &end_time, <));
+  return scanners;
 }
 
-void ProbeForScanners(FirewallManager* firewall_manager,
-                      Manager::ScannerInfo* scanner_list) {
+std::vector<ScannerInfo> ProbeForScanners(FirewallManager* firewall_manager) {
   int probe_socket;
   uint16_t local_port;
   if (!CreateBroadcastSocket(&probe_socket, &local_port)) {
-    return;
+    return std::vector<ScannerInfo>();
   }
   base::ScopedFD scoped_socket(probe_socket);
   firewall_manager->RequestUdpPortAccess(local_port);
-  SendProbeAndListen(probe_socket, scanner_list);
+  std::vector<ScannerInfo> scanners = SendProbeAndListen(probe_socket);
   firewall_manager->ReleaseUdpPortAccess(local_port);
+  return scanners;
 }
 
 }  // namespace epson_probe

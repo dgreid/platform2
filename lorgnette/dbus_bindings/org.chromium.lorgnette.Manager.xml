@@ -18,6 +18,16 @@ ns-v0">
         </tp:docstring>
       </arg>
     </method>
+    <method name="ListScannersProto">
+      <tp:docstring>
+      </tp:docstring>
+      <arg name="scanner_list" type="ay" direction="out">
+        <tp:docstring>
+          The list of connected scanners. Returns a protobuf representing a list
+          of SaneDevice structs as provided by SANE.
+        </tp:docstring>
+      </arg>
+    </method>
     <method name="GetScannerCapabilities">
       <tp:docstring>
         Returns the supported capabilities for scanner |device_name|.

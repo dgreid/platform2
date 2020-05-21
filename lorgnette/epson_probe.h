@@ -5,6 +5,10 @@
 #ifndef LORGNETTE_EPSON_PROBE_H_
 #define LORGNETTE_EPSON_PROBE_H_
 
+#include <vector>
+
+#include <lorgnette/proto_bindings/lorgnette_service.pb.h>
+
 #include "lorgnette/manager.h"
 
 // Method for probing for Epson-based network scanners.  The code in
@@ -20,10 +24,8 @@ class FirewallManager;
 namespace epson_probe {
 
 // Probe for Epson-based network scanners.  Use |firewall_manager| to request
-// firewall permissions for receiving probe replies.  Return any new entries
-// into |scanner_list|.
-void ProbeForScanners(FirewallManager* firewall_manager,
-                      Manager::ScannerInfo* scanner_list);
+// firewall permissions for receiving probe replies.  Return any new entries.
+std::vector<ScannerInfo> ProbeForScanners(FirewallManager* firewall_manager);
 
 }  // namespace epson_probe
 
