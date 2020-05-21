@@ -41,6 +41,14 @@ enum LECredActionType {
   LE_CRED_ACTION_MAX,
 };
 
+// Indication of whether EVKK's encryption is TPM backed.
+// Entries should not be renumbered and numeric values should never be reused.
+enum EvkkEncryptionType {
+  kScryptBackedEncryption,
+  kTpmBackedEncryption,
+  kEvkkEncryptionTypeNumBuckets
+};
+
 // These values are persisted to logs. Entries should not be renumbered and
 // numeric values should never be reused.
 enum CryptohomeError {
@@ -290,6 +298,10 @@ void OverrideMetricsLibraryForTesting(MetricsLibraryInterface* lib);
 // Reset the internally used MetricsLibrary for testing purpose. This is usually
 // used with OverrideMetricsLibraryForTesting().
 void ClearMetricsLibraryForTesting();
+
+// The |encryption_type| value is reported to the
+// "Cryptohome.EvkkEncryptionType" enum histogram.
+void ReportEvkkEncryptionType(EvkkEncryptionType encryption_type);
 
 // The |error| value is reported to the "Cryptohome.Errors" enum histogram.
 void ReportCryptohomeError(CryptohomeError error);

@@ -23,6 +23,8 @@ struct TimerHistogramParams {
   int num_buckets;
 };
 
+constexpr char kEvkkEncryptionTypeHistogram[] =
+    "Cryptohome.EvkkEncryptionType";
 constexpr char kCryptohomeErrorHistogram[] = "Cryptohome.Errors";
 constexpr char kDictionaryAttackResetStatusHistogram[] =
     "Platform.TPM.DictionaryAttackResetStatus";
@@ -173,6 +175,15 @@ void OverrideMetricsLibraryForTesting(MetricsLibraryInterface* lib) {
 
 void ClearMetricsLibraryForTesting() {
   g_metrics = nullptr;
+}
+
+void ReportEvkkEncryptionType(EvkkEncryptionType encryption_type) {
+  if (!g_metrics) {
+    return;
+  }
+  g_metrics->SendEnumToUMA(kEvkkEncryptionTypeHistogram,
+                           encryption_type,
+                           kEvkkEncryptionTypeNumBuckets);
 }
 
 void ReportCryptohomeError(CryptohomeError error) {

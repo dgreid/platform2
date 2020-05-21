@@ -62,6 +62,7 @@ bool TpmAuthBlock::Derive(const AuthInput& auth_input,
                           const AuthBlockState& state,
                           KeyBlobs* key_out_data,
                           CryptoError* error) {
+  ReportEvkkEncryptionType(kTpmBackedEncryption);
   DCHECK(key_out_data);
   CHECK(state.vault_keyset != base::nullopt);
 

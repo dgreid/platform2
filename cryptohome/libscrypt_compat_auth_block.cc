@@ -6,6 +6,7 @@
 
 #include <unistd.h>
 
+#include "cryptohome/cryptohome_metrics.h"
 #include "cryptohome/cryptolib.h"
 #include "cryptohome/key_objects.h"
 #include "cryptohome/libscrypt_compat.h"
@@ -44,6 +45,7 @@ bool LibScryptCompatAuthBlock::Derive(const AuthInput& auth_input,
                                       const AuthBlockState& state,
                                       KeyBlobs* key_blobs,
                                       CryptoError* error) {
+  ReportEvkkEncryptionType(kScryptBackedEncryption);
   const SerializedVaultKeyset& serialized = state.vault_keyset.value();
   const brillo::SecureBlob input_key = auth_input.user_input.value();
 
