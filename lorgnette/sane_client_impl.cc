@@ -4,11 +4,11 @@
 
 #include "lorgnette/sane_client_impl.h"
 
-#include <map>
-
 #include <base/logging.h>
 #include <chromeos/dbus/service_constants.h>
 #include <sane/saneopts.h>
+
+#include "lorgnette/dbus_adaptors/org.chromium.lorgnette.Manager.h"
 
 namespace lorgnette {
 
@@ -29,7 +29,7 @@ SaneClientImpl::~SaneClientImpl() {
 }
 
 bool SaneClientImpl::ListDevices(brillo::ErrorPtr* error,
-                                 Manager::ScannerInfo* info_out) {
+                                 std::vector<ScannerInfo>* scanners_out) {
   base::AutoLock auto_lock(lock_);
   const SANE_Device** device_list;
   SANE_Status status = sane_get_devices(&device_list, SANE_FALSE);
@@ -40,32 +40,38 @@ bool SaneClientImpl::ListDevices(brillo::ErrorPtr* error,
     return false;
   }
 
-  return DeviceListToScannerInfo(device_list, info_out);
+  return DeviceListToScannerInfo(device_list, scanners_out);
 }
 
 // static
-bool SaneClientImpl::DeviceListToScannerInfo(const SANE_Device** device_list,
-                                             Manager::ScannerInfo* info_out) {
-  if (!device_list || !info_out) {
+bool SaneClientImpl::DeviceListToScannerInfo(
+    const SANE_Device** device_list, std::vector<ScannerInfo>* scanners_out) {
+  if (!device_list || !scanners_out) {
+    LOG(ERROR) << "'device_list' and 'scanners_out' cannot be NULL";
     return false;
   }
 
-  Manager::ScannerInfo scanners;
+  std::unordered_set<std::string> names;
+  std::vector<ScannerInfo> scanners;
   for (int i = 0; device_list[i]; i++) {
     const SANE_Device* dev = device_list[i];
     if (!dev->name || strcmp(dev->name, "") == 0)
       continue;
 
-    if (scanners.count(dev->name) != 0)
+    if (names.count(dev->name) != 0) {
+      LOG(ERROR) << "Duplicate device name: " << dev->name;
       return false;
+    }
+    names.insert(dev->name);
 
-    std::map<std::string, std::string> scanner_info;
-    scanner_info[kScannerPropertyManufacturer] = dev->vendor ? dev->vendor : "";
-    scanner_info[kScannerPropertyModel] = dev->model ? dev->model : "";
-    scanner_info[kScannerPropertyType] = dev->type ? dev->type : "";
-    scanners[dev->name] = scanner_info;
+    ScannerInfo info;
+    info.set_name(dev->name);
+    info.set_manufacturer(dev->vendor ? dev->vendor : "");
+    info.set_model(dev->model ? dev->model : "");
+    info.set_type(dev->type ? dev->type : "");
+    scanners.push_back(info);
   }
-  *info_out = scanners;
+  *scanners_out = scanners;
   return true;
 }
 

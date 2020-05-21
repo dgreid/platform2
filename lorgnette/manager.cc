@@ -227,7 +227,7 @@ void Manager::RegisterAsync(
 }
 
 bool Manager::ListScanners(brillo::ErrorPtr* error,
-                           Manager::ScannerInfo* scanner_list) {
+                           Manager::ScannerInfo* scanner_list_out) {
   if (!sane_client_) {
     brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
                          kManagerServiceError, "No connection to SANE");
@@ -239,15 +239,24 @@ bool Manager::ListScanners(brillo::ErrorPtr* error,
       base::BindOnce([](FirewallManager* fm) { fm->ReleaseAllPortsAccess(); },
                      firewall_manager_.get()));
 
-  ScannerInfo scanners;
+  std::vector<lorgnette::ScannerInfo> scanners;
   if (!sane_client_->ListDevices(error, &scanners)) {
     return false;
   }
   activity_callback_.Run();
 
-  epson_probe::ProbeForScanners(firewall_manager_.get(), &scanners);
+  Manager::ScannerInfo scanner_list;
+  epson_probe::ProbeForScanners(firewall_manager_.get(), &scanner_list);
 
-  *scanner_list = scanners;
+  for (const lorgnette::ScannerInfo& scanner : scanners) {
+    std::map<std::string, std::string> scanner_info;
+    scanner_info[kScannerPropertyManufacturer] = scanner.manufacturer();
+    scanner_info[kScannerPropertyModel] = scanner.model();
+    scanner_info[kScannerPropertyType] = scanner.type();
+    scanner_list[scanner.name()] = scanner_info;
+  }
+
+  *scanner_list_out = std::move(scanner_list);
   return true;
 }
 

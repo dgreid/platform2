@@ -15,9 +15,9 @@
 
 #include <base/synchronization/lock.h>
 #include <brillo/errors/error.h>
+#include <lorgnette/proto_bindings/lorgnette_service.pb.h>
 #include <sane/sane.h>
 
-#include "lorgnette/manager.h"
 #include "lorgnette/sane_client.h"
 
 namespace lorgnette {
@@ -30,12 +30,12 @@ class SaneClientImpl : public SaneClient {
   ~SaneClientImpl();
 
   bool ListDevices(brillo::ErrorPtr* error,
-                   Manager::ScannerInfo* info_out) override;
+                   std::vector<ScannerInfo>* scanners_out) override;
   std::unique_ptr<SaneDevice> ConnectToDevice(
       brillo::ErrorPtr* error, const std::string& device_name) override;
 
   static bool DeviceListToScannerInfo(const SANE_Device** device_list,
-                                      Manager::ScannerInfo* info_out);
+                                      std::vector<ScannerInfo>* scanners_out);
 
  private:
   SaneClientImpl();

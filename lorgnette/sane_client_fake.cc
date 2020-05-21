@@ -14,13 +14,11 @@ namespace lorgnette {
 
 // static
 bool SaneClientFake::ListDevices(brillo::ErrorPtr* error,
-                                 Manager::ScannerInfo* info_out) {
-  base::AutoLock auto_lock(lock_);
-
+                                 std::vector<ScannerInfo>* scanners_out) {
   if (!list_devices_result_)
     return false;
 
-  *info_out = scanners_;
+  *scanners_out = scanners_;
   return true;
 }
 
@@ -42,16 +40,20 @@ void SaneClientFake::AddDevice(const std::string& name,
                                const std::string& manufacturer,
                                const std::string& model,
                                const std::string& type) {
-  std::map<std::string, std::string> scanner_info;
-  scanner_info[kScannerPropertyManufacturer] = manufacturer;
-  scanner_info[kScannerPropertyModel] = model;
-  scanner_info[kScannerPropertyType] = type;
-
-  scanners_[name] = scanner_info;
+  ScannerInfo info;
+  info.set_name(name);
+  info.set_manufacturer(manufacturer);
+  info.set_model(model);
+  info.set_type(type);
+  scanners_.push_back(info);
 }
 
 void SaneClientFake::RemoveDevice(const std::string& name) {
-  scanners_.erase(name);
+  for (auto it = scanners_.begin(); it != scanners_.end(); it++) {
+    if (it->name() == name) {
+      scanners_.erase(it);
+    }
+  }
 }
 
 void SaneClientFake::SetDeviceForName(const std::string& device_name,

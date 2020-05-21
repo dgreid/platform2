@@ -12,9 +12,7 @@
 #include <vector>
 
 #include <base/optional.h>
-#include <base/synchronization/lock.h>
 
-#include "lorgnette/manager.h"
 #include "lorgnette/sane_client.h"
 
 namespace lorgnette {
@@ -24,7 +22,7 @@ class SaneDeviceFake;
 class SaneClientFake : public SaneClient {
  public:
   bool ListDevices(brillo::ErrorPtr* error,
-                   Manager::ScannerInfo* info_out) override;
+                   std::vector<ScannerInfo>* scanners_out) override;
   std::unique_ptr<SaneDevice> ConnectToDevice(
       brillo::ErrorPtr* error, const std::string& device_name) override;
 
@@ -39,10 +37,9 @@ class SaneClientFake : public SaneClient {
                         std::unique_ptr<SaneDeviceFake> device);
 
  private:
-  base::Lock lock_;
   std::map<std::string, std::unique_ptr<SaneDeviceFake>> devices_;
   bool list_devices_result_;
-  Manager::ScannerInfo scanners_;
+  std::vector<ScannerInfo> scanners_;
 };
 
 class SaneDeviceFake : public SaneDevice {

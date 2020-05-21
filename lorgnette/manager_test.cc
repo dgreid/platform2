@@ -320,7 +320,7 @@ class SaneClientTest : public testing::Test {
   const SANE_Device* one_device_[2] = {&dev_, NULL};
   const SANE_Device* two_devices_[3] = {&dev_, &dev_two_, NULL};
 
-  Manager::ScannerInfo info_;
+  std::vector<ScannerInfo> info_;
 };
 
 TEST_F(SaneClientTest, ScannerInfoFromDeviceListInvalidParameters) {
@@ -336,11 +336,11 @@ TEST_F(SaneClientTest, ScannerInfoFromDeviceListNoDevices) {
 
 TEST_F(SaneClientTest, ScannerInfoFromDeviceListOneDevice) {
   EXPECT_TRUE(SaneClientImpl::DeviceListToScannerInfo(one_device_, &info_));
-  EXPECT_EQ(info_.size(), 1);
-  EXPECT_EQ(info_.count(dev_.name), 1);
-  EXPECT_EQ(info_[dev_.name]["Manufacturer"], dev_.vendor);
-  EXPECT_EQ(info_[dev_.name]["Model"], dev_.model);
-  EXPECT_EQ(info_[dev_.name]["Type"], dev_.type);
+  ASSERT_EQ(info_.size(), 1);
+  EXPECT_EQ(info_[0].name(), dev_.name);
+  EXPECT_EQ(info_[0].manufacturer(), dev_.vendor);
+  EXPECT_EQ(info_[0].model(), dev_.model);
+  EXPECT_EQ(info_[0].type(), dev_.type);
 }
 
 TEST_F(SaneClientTest, ScannerInfoFromDeviceListNullFields) {
@@ -352,29 +352,29 @@ TEST_F(SaneClientTest, ScannerInfoFromDeviceListNullFields) {
   dev_ = CreateTestDevice();
   dev_.vendor = NULL;
   EXPECT_TRUE(SaneClientImpl::DeviceListToScannerInfo(one_device_, &info_));
-  EXPECT_EQ(info_.size(), 1);
-  EXPECT_EQ(info_.count(dev_.name), 1);
-  EXPECT_EQ(info_[dev_.name]["Manufacturer"], "");
-  EXPECT_EQ(info_[dev_.name]["Model"], dev_.model);
-  EXPECT_EQ(info_[dev_.name]["Type"], dev_.type);
+  ASSERT_EQ(info_.size(), 1);
+  EXPECT_EQ(info_[0].name(), dev_.name);
+  EXPECT_EQ(info_[0].manufacturer(), "");
+  EXPECT_EQ(info_[0].model(), dev_.model);
+  EXPECT_EQ(info_[0].type(), dev_.type);
 
   dev_ = CreateTestDevice();
   dev_.model = NULL;
   EXPECT_TRUE(SaneClientImpl::DeviceListToScannerInfo(one_device_, &info_));
-  EXPECT_EQ(info_.size(), 1);
-  EXPECT_EQ(info_.count(dev_.name), 1);
-  EXPECT_EQ(info_[dev_.name]["Manufacturer"], dev_.vendor);
-  EXPECT_EQ(info_[dev_.name]["Model"], "");
-  EXPECT_EQ(info_[dev_.name]["Type"], dev_.type);
+  ASSERT_EQ(info_.size(), 1);
+  EXPECT_EQ(info_[0].name(), dev_.name);
+  EXPECT_EQ(info_[0].manufacturer(), dev_.vendor);
+  EXPECT_EQ(info_[0].model(), "");
+  EXPECT_EQ(info_[0].type(), dev_.type);
 
   dev_ = CreateTestDevice();
   dev_.type = NULL;
   EXPECT_TRUE(SaneClientImpl::DeviceListToScannerInfo(one_device_, &info_));
-  EXPECT_EQ(info_.size(), 1);
-  EXPECT_EQ(info_.count(dev_.name), 1);
-  EXPECT_EQ(info_[dev_.name]["Manufacturer"], dev_.vendor);
-  EXPECT_EQ(info_[dev_.name]["Model"], dev_.model);
-  EXPECT_EQ(info_[dev_.name]["Type"], "");
+  ASSERT_EQ(info_.size(), 1);
+  EXPECT_EQ(info_[0].name(), dev_.name);
+  EXPECT_EQ(info_[0].manufacturer(), dev_.vendor);
+  EXPECT_EQ(info_[0].model(), dev_.model);
+  EXPECT_EQ(info_[0].type(), "");
 }
 
 TEST_F(SaneClientTest, ScannerInfoFromDeviceListMultipleDevices) {
@@ -383,16 +383,16 @@ TEST_F(SaneClientTest, ScannerInfoFromDeviceListMultipleDevices) {
   dev_two_.name = "Test Device 2";
   dev_two_.vendor = "Test Vendor 2";
   EXPECT_TRUE(SaneClientImpl::DeviceListToScannerInfo(two_devices_, &info_));
-  EXPECT_EQ(info_.size(), 2);
-  EXPECT_EQ(info_.count(dev_.name), 1);
-  EXPECT_EQ(info_[dev_.name]["Manufacturer"], dev_.vendor);
-  EXPECT_EQ(info_[dev_.name]["Model"], dev_.model);
-  EXPECT_EQ(info_[dev_.name]["Type"], dev_.type);
+  ASSERT_EQ(info_.size(), 2);
+  EXPECT_EQ(info_[0].name(), dev_.name);
+  EXPECT_EQ(info_[0].manufacturer(), dev_.vendor);
+  EXPECT_EQ(info_[0].model(), dev_.model);
+  EXPECT_EQ(info_[0].type(), dev_.type);
 
-  EXPECT_EQ(info_.count(dev_two_.name), 1);
-  EXPECT_EQ(info_[dev_two_.name]["Manufacturer"], dev_two_.vendor);
-  EXPECT_EQ(info_[dev_two_.name]["Model"], dev_two_.model);
-  EXPECT_EQ(info_[dev_two_.name]["Type"], dev_.type);
+  EXPECT_EQ(info_[1].name(), dev_two_.name);
+  EXPECT_EQ(info_[1].manufacturer(), dev_two_.vendor);
+  EXPECT_EQ(info_[1].model(), dev_two_.model);
+  EXPECT_EQ(info_[1].type(), dev_two_.type);
 }
 
 }  // namespace lorgnette

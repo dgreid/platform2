@@ -6,12 +6,12 @@
 #define LORGNETTE_SANE_CLIENT_H_
 
 #include <cstdint>
-#include <map>
 #include <memory>
 #include <string>
 #include <vector>
 
 #include <brillo/errors/error.h>
+#include <lorgnette/proto_bindings/lorgnette_service.pb.h>
 #include <sane/sane.h>
 
 namespace lorgnette {
@@ -64,11 +64,11 @@ class SaneDevice {
 // user must be careful to ensure that is the case.
 class SaneClient {
  public:
-  typedef std::map<std::string, std::map<std::string, std::string>> ScannerInfo;
-
   virtual ~SaneClient() {}
 
-  virtual bool ListDevices(brillo::ErrorPtr* error, ScannerInfo* info_out) = 0;
+  virtual bool ListDevices(
+      brillo::ErrorPtr* error,
+      std::vector<lorgnette::ScannerInfo>* scanners_out) = 0;
   virtual std::unique_ptr<SaneDevice> ConnectToDevice(
       brillo::ErrorPtr* error, const std::string& device_name) = 0;
 };
