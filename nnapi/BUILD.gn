@@ -6,6 +6,9 @@ import("//common-mk/pkg_config.gni")
 
 libbase_src = "../aosp/system/core/base"
 libcutils_src = "../aosp/system/core/libcutils"
+# TODO(crbug.com/1083354) - Use files from the liblog mirror onces it's
+# available.
+liblog_src = "liblog/external/liblog"
 libutils_src = "../aosp/system/core/libutils"
 
 group("all") {
@@ -35,12 +38,18 @@ pkg_config("target_defaults") {
 }
 
 static_library("libnnapi-base") {
-  include_dirs = [ "${libbase_src}/include" ]
+  include_dirs = [
+    "${libbase_src}/include",
+    "${liblog_src}/include",
+  ]
   configs += [ ":target_defaults" ]
   sources = [
     "${libbase_src}/chrono_utils.cpp",
+    "${libbase_src}/cmsg.cpp",
     "${libbase_src}/errors_unix.cpp",
     "${libbase_src}/file.cpp",
+    "${libbase_src}/liblog_symbols.cpp",
+    "${libbase_src}/logging.cpp",
     "${libbase_src}/mapped_file.cpp",
     "${libbase_src}/parsebool.cpp",
     "${libbase_src}/process.cpp",
@@ -57,18 +66,27 @@ if (use.test) {
       "//common-mk:test",
       ":target_defaults",
     ]
-    include_dirs = [ "${libbase_src}/include" ]
+    include_dirs = [
+      "${libbase_src}/include",
+      "${liblog_src}/include",
+    ]
+    cflags_cc = [
+      # For logging_test.cc
+      "-Wno-unreachable-code",
+    ]
     deps = [
       ":libnnapi-base",
       "//common-mk/testrunner:testrunner",
     ]
     sources = [
       "${libbase_src}/chrono_utils_test.cpp",
+      "${libbase_src}/cmsg_test.cpp",
       "${libbase_src}/endian_test.cpp",
       "${libbase_src}/errors_test.cpp",
 
       # TODO(b/157009593) - Expected unit tests are failing.
       # "${libbase_src}/expected_test.cpp",
+      "${libbase_src}/logging_test.cpp",
       "${libbase_src}/macros_test.cpp",
       "${libbase_src}/mapped_file_test.cpp",
       "${libbase_src}/no_destructor_test.cpp",
@@ -83,6 +101,7 @@ if (use.test) {
       "${libbase_src}/scopeguard_test.cpp",
       "${libbase_src}/stringprintf_test.cpp",
       "${libbase_src}/strings_test.cpp",
+      "${libbase_src}/test_utils.cpp",
     ]
   }
 }
