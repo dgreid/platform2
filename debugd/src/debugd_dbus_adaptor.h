@@ -213,7 +213,6 @@ class DebugdDBusAdaptor : public org::chromium::debugdAdaptor,
       const std::string& sandbox_info,
       const std::string& probe_statement,
       brillo::dbus_utils::FileDescriptor* outfd) override;
-  bool CollectFanSpeed(brillo::ErrorPtr* error, std::string* output) override;
   bool CollectSmartBatteryMetric(brillo::ErrorPtr* error,
                                  const std::string& metric_name,
                                  std::string* output) override;

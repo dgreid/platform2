@@ -17,8 +17,6 @@ class CrosHealthdTool {
   CrosHealthdTool() = default;
   ~CrosHealthdTool() = default;
 
-  bool CollectFanSpeed(brillo::ErrorPtr* error, std::string* output);
-
   bool CollectSmartBatteryMetric(brillo::ErrorPtr* error,
                                  const std::string& metric_name,
                                  std::string* output);

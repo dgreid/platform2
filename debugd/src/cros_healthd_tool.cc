@@ -49,7 +49,6 @@ const std::map<std::string, std::string> kMetricNameToOffset = {
     {"manufacture_date_smart", "0x1b"},
 };
 // The ectool command used to collect fan speed in RPM.
-constexpr char kGetFanRpmCommand[] = "pwmgetfanrpm";
 
 // Returns the ectool policy file corresponding to the provided
 // |ectool_command|.
@@ -102,18 +101,6 @@ bool RunEctoolWithArgs(brillo::ErrorPtr* error,
 }
 
 }  // namespace
-
-bool CrosHealthdTool::CollectFanSpeed(brillo::ErrorPtr* error,
-                                      std::string* output) {
-  const auto seccomp_policy_path =
-      base::FilePath(kSandboxDirPath)
-          .Append(GetEctoolPolicyFile(kGetFanRpmCommand));
-  std::vector<std::string> ectool_args = {kGetFanRpmCommand};
-  if (!RunEctoolWithArgs(error, seccomp_policy_path, ectool_args, output))
-    return false;
-
-  return true;
-}
 
 // Note that this is a short-term solution to retrieving battery metrics.
 // A long term solution is being discussed at: crbug.com/1047277.

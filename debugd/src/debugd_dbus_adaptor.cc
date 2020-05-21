@@ -599,11 +599,6 @@ bool DebugdDBusAdaptor::EvaluateProbeFunction(
                                             probe_statement, outfd);
 }
 
-bool DebugdDBusAdaptor::CollectFanSpeed(brillo::ErrorPtr* error,
-                                        std::string* output) {
-  return cros_healthd_tool_->CollectFanSpeed(error, output);
-}
-
 bool DebugdDBusAdaptor::CollectSmartBatteryMetric(
     brillo::ErrorPtr* error,
     const std::string& metric_name,

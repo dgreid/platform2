@@ -1185,18 +1185,6 @@
       </arg>
       <annotation name="org.chromium.DBus.Method.Kind" value="simple"/>
     </method>
-    <method name="CollectFanSpeed">
-      <tp:docstring>
-        Runs ectool's pwmgetfanrpm command with pre-defined sandbox options in
-        rootfs to retrieve fan speed.
-      </tp:docstring>
-      <arg name="output" type="s" direction="out">
-        <tp:docstring>
-          Output of the ectool pwmgetfanrpm command.
-        </tp:docstring>
-      </arg>
-      <annotation name="org.chromium.DBus.Method.Kind" value="normal"/>
-    </method>
     <method name="CollectSmartBatteryMetric">
       <tp:docstring>
         Runs the ectool i2cread command with pre-defined
