@@ -55,9 +55,9 @@ UserPolicyServiceFactory::~UserPolicyServiceFactory() {}
 
 std::unique_ptr<PolicyService> UserPolicyServiceFactory::Create(
     const std::string& username) {
-  using brillo::cryptohome::home::GetDaemonPath;
+  using brillo::cryptohome::home::GetDaemonStorePath;
   base::FilePath policy_dir(
-      GetDaemonPath(username, kDaemonName).Append(kPolicyDir));
+      GetDaemonStorePath(username, kDaemonName).Append(kPolicyDir));
   if (!base::CreateDirectory(policy_dir)) {
     PLOG(ERROR) << "Failed to create user policy directory.";
     return nullptr;
