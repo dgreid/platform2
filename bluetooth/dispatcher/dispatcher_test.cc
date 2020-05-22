@@ -29,8 +29,10 @@ class DispatcherTest : public ::testing::Test {
   void SetUp() override {
     bus_ = new dbus::MockBus(dbus::Bus::Options());
     EXPECT_CALL(*bus_, AssertOnOriginThread()).Times(AnyNumber());
+#if BASE_VER < 679961
     EXPECT_CALL(*bus_, GetDBusTaskRunner())
         .WillOnce(Return(message_loop_.task_runner().get()));
+#endif
     EXPECT_CALL(*bus_, AssertOnDBusThread()).Times(AnyNumber());
     EXPECT_CALL(*bus_, Connect()).WillRepeatedly(Return(false));
 
@@ -56,10 +58,12 @@ class DispatcherTest : public ::testing::Test {
         std::make_unique<ExportedObjectManagerWrapper>(
             bus_, std::move(exported_object_manager));
 
+#if BASE_VER < 679961
     // Force MessageLoop to run pending tasks as effect of instantiating
     // MockObjectManager. Needed to avoid memory leaks because pending tasks
     // are unowned pointers that will only self destruct after being run.
     base::RunLoop().RunUntilIdle();
+#endif
     dispatcher_ = std::make_unique<Dispatcher>(
         bus_, exported_object_manager_wrapper_.get());
   }
@@ -104,7 +108,9 @@ class DispatcherTest : public ::testing::Test {
     dispatcher_->Shutdown();
   }
 
+#if BASE_VER < 679961
   base::MessageLoop message_loop_;
+#endif
   scoped_refptr<dbus::MockBus> bus_;
   scoped_refptr<dbus::MockObjectProxy> object_manager_object_proxy_;
   scoped_refptr<dbus::MockObjectManager> source_object_manager_;
