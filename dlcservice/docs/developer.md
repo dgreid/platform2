@@ -90,10 +90,10 @@ add them):
     for test images.
     (Default is false)
 *   `DLC_ENABLED` - Override being a DLC.
-    When set to false, `$(dlc_get_path)` will point to `/` and everything will
-    be installed into the rootfs instead of the DLC path. This allows the use
-    of the same ebuild file to create a DLC under special conditions (i.e. Make
-    a package a DLC for certain boards or install in rootfs for others).
+    When set to false, `$(dlc_add_path)` will not modify the path and everything
+    will be installed into the rootfs instead of the DLC path. This allows the
+    use of the same ebuild file to create a DLC under special conditions (i.e.
+    Make a package a DLC for certain boards or install in rootfs for others).
     (Default is true)
 *   `DLC_USED_BY` - Defines who is the user of this DLC. This is
     primarily used by DLCs that have visibility and privacy issues among users
@@ -104,11 +104,9 @@ add them):
 
 Within the build file, the implementation should include at least the
 `src_install` function. Within `src_install`, all the DLC content should be
-installed using the special path prefix `$(dlc_get_path)`. This means, that
-before installing any DLC files, you have add the prefix `$(dlc_get_path)` to
-`into, insinto` and `exeinto`. See example below.<br/>
-Note: `dlc_get_path` is a function, not a variable, so it's surrounded by
-parenthesis instead of brackets.
+installed using the special path prefix set by `$(dlc_add_path )`. This means,
+that before installing any DLC files, you have to add the dlc prefix path to
+`into, insinto` and `exeinto` using `$(dlc_add_path your_path)`.
 
 See an example of a DLC ebuild: [dummy-dlc]
 
