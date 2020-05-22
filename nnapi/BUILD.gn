@@ -6,6 +6,7 @@ import("//common-mk/pkg_config.gni")
 
 libbase_src = "../aosp/system/core/base"
 libcutils_src = "../aosp/system/core/libcutils"
+libhidl_src = "../aosp/system/libhidl"
 
 # TODO(crbug.com/1083354) - Use files from the liblog mirror once it's
 # available.
@@ -21,6 +22,7 @@ group("all") {
     deps += [
       ":libbase_testrunner",
       ":libcutils_testrunner",
+      ":libhidl_testrunner",
       ":libutils_testrunner",
     ]
   }
@@ -32,12 +34,15 @@ config("target_defaults") {
     "-Werror",
     "-Wextra",
   ]
+  include_dirs = [
+    "includes",
+    "${libbase_src}/include",
+    "${libcutils_src}/include",
+    "${liblog_src}/include",
+    "${libutils_src}/include",
+  ]
   cflags_cc = [ "-std=c++17" ]
   defines = []
-  include_dirs = [
-    "${libbase_src}/include",
-    "${liblog_src}/include",
-  ]
 }
 
 static_library("libnnapi-support") {
@@ -50,6 +55,7 @@ static_library("libnnapi-support") {
   deps = [
     ":libbase",
     ":libcutils",
+    ":libhidl",
     ":libutils",
   ]
 }
@@ -137,6 +143,39 @@ static_library("libcutils") {
     "${libcutils_src}/native_handle.cpp",
     "${libcutils_src}/threads.cpp",
   ]
+}
+
+static_library("libhidl") {
+  include_dirs = [
+    "${libbase_src}/include",
+    "${libhidl_src}/base/include",
+    "${libhidl_src}/libhidlmemory/include",
+  ]
+  configs += [ ":target_defaults" ]
+  deps = [ ":libbase" ]
+  sources = [
+    "${libhidl_src}/base/HidlInternal.cpp",
+    "${libhidl_src}/base/HidlSupport.cpp",
+  ]
+}
+
+if (use.test) {
+  executable("libhidl_testrunner") {
+    configs += [
+      ":target_defaults",
+      "//common-mk:test",
+    ]
+    include_dirs = [
+      "${libhidl_src}/include",
+      "${libhidl_src}/base/include",
+    ]
+    deps = [
+      ":libcutils",
+      ":libhidl",
+      "//common-mk/testrunner:testrunner",
+    ]
+    sources = [ "libhidl/tests/hidl_support_test.cpp" ]
+  }
 }
 
 static_library("libutils") {
