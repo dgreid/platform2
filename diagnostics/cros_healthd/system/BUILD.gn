@@ -22,12 +22,13 @@ source_set("libcros_healthd_system") {
   sources = [ "context.cc" ]
 }
 
-if (use.test) {
-  # Libraries for unit tests.
+if (use.test || use.fuzzer) {
+  # Libraries for unit tests and fuzzers.
   pkg_config("libcros_healthd_system_test_utils_pkg_deps") {
     pkg_deps = [
       "dbus-1",
       "libchrome-${libbase_ver}",
+      "libchrome-test-${libbase_ver}",
       "libcros_config",
       "libdebugd-client",
       "libdebugd-client-test",
@@ -36,7 +37,10 @@ if (use.test) {
   }
 
   source_set("libcros_healthd_system_test_utils") {
-    configs += [ ":libcros_healthd_system_test_utils_pkg_deps" ]
+    configs += [
+      ":libcros_healthd_system_test_utils_pkg_deps",
+      "//common-mk:test",
+    ]
     deps = [
       ":libcros_healthd_system",
       "//diagnostics/common:libcommon_test_utils",

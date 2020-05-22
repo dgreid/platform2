@@ -26,8 +26,9 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   // Generate a random string.
   std::string file_path(data, data + size);
 
+  DiskFetcher disk_fetcher;
   auto block_device_info =
-      FetchNonRemovableBlockDevicesInfo(base::FilePath(file_path));
+      disk_fetcher.FetchNonRemovableBlockDevicesInfo(base::FilePath(file_path));
 
   return 0;
 }

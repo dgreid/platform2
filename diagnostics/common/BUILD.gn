@@ -29,7 +29,7 @@ source_set("libcommon") {
   ]
 }
 
-if (use.test) {
+if (use.test || use.fuzzer) {
   # Library with common utilities only to be used during testing.
   pkg_config("libcommon_test_utils_pkg_deps") {
     pkg_deps = [
@@ -62,7 +62,9 @@ if (use.test) {
       "libmojo-${libbase_ver}",
     ]
   }
+}
 
+if (use.test) {
   executable("libcommon_test") {
     configs += [
       ":libcommon_test_pkg_deps",

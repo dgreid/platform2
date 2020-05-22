@@ -11,6 +11,7 @@
 #include <base/logging.h>
 #include <chromeos/chromeos-config/libcros_config/fake_cros_config.h>
 
+#include "diagnostics/cros_healthd/system/mock_context.h"
 #include "diagnostics/cros_healthd/utils/vpd_utils.h"
 
 namespace diagnostics {
@@ -35,14 +36,13 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   // Generate a random string.
   std::string file_path(data, data + size);
 
-  std::unique_ptr<brillo::FakeCrosConfig> fake_cros_config =
-      std::make_unique<brillo::FakeCrosConfig>();
-  fake_cros_config->SetString(kCachedVpdPropertiesPath, kHasSkuNumberProperty,
-                              "true");
-  std::unique_ptr<CachedVpdFetcher> cached_vpd_fetcher =
-      std::make_unique<CachedVpdFetcher>(fake_cros_config.get());
+  MockContext mock_context;
+  mock_context.Initialize();
+  mock_context.fake_cros_config()->SetString(kCachedVpdPropertiesPath,
+                                             kHasSkuNumberProperty, "true");
+  CachedVpdFetcher cached_vpd_fetcher{&mock_context};
   auto cached_vpd_info =
-      cached_vpd_fetcher->FetchCachedVpdInfo(base::FilePath(file_path));
+      cached_vpd_fetcher.FetchCachedVpdInfo(base::FilePath(file_path));
 
   return 0;
 }
