@@ -6,27 +6,27 @@ import("//common-mk/pkg_config.gni")
 
 libbase_src = "../aosp/system/core/base"
 libcutils_src = "../aosp/system/core/libcutils"
-# TODO(crbug.com/1083354) - Use files from the liblog mirror onces it's
+
+# TODO(crbug.com/1083354) - Use files from the liblog mirror once it's
 # available.
 liblog_src = "liblog/external/liblog"
 libutils_src = "../aosp/system/core/libutils"
 
 group("all") {
   deps = [
-    ":libnnapi-base",
-    ":libnnapi-cutils",
-    ":libnnapi-utils",
+    ":libnnapi-support",
+    ":libnnapi-support_pc",
   ]
   if (use.test) {
     deps += [
-      ":libnnapi-base_testrunner",
-      ":libnnapi-cutils_testrunner",
-      ":libnnapi-utils_testrunner",
+      ":libbase_testrunner",
+      ":libcutils_testrunner",
+      ":libutils_testrunner",
     ]
   }
 }
 
-pkg_config("target_defaults") {
+config("target_defaults") {
   cflags = [
     "-Wall",
     "-Werror",
@@ -34,14 +34,35 @@ pkg_config("target_defaults") {
   ]
   cflags_cc = [ "-std=c++17" ]
   defines = []
-  pkg_deps = [ "libbrillo" ]
-}
-
-static_library("libnnapi-base") {
   include_dirs = [
     "${libbase_src}/include",
     "${liblog_src}/include",
   ]
+}
+
+static_library("libnnapi-support") {
+  configs += [
+    "//common-mk:nouse_thin_archive",
+    ":target_defaults",
+  ]
+  configs -= [ "//common-mk:use_thin_archive" ]
+  complete_static_lib = true
+  deps = [
+    ":libbase",
+    ":libcutils",
+    ":libutils",
+  ]
+}
+
+generate_pkg_config("libnnapi-support_pc") {
+  deps = [ ":libnnapi-support" ]
+  output_name = "libnnapi-support"
+  description = "Support libraries for Neural Networks API"
+  version = "0.1"
+  libs = [ "-lnnapi-support" ]
+}
+
+static_library("libbase") {
   configs += [ ":target_defaults" ]
   sources = [
     "${libbase_src}/chrono_utils.cpp",
@@ -61,7 +82,7 @@ static_library("libnnapi-base") {
 }
 
 if (use.test) {
-  executable("libnnapi-base_testrunner") {
+  executable("libbase_testrunner") {
     configs += [
       "//common-mk:test",
       ":target_defaults",
@@ -75,7 +96,7 @@ if (use.test) {
       "-Wno-unreachable-code",
     ]
     deps = [
-      ":libnnapi-base",
+      ":libbase",
       "//common-mk/testrunner:testrunner",
     ]
     sources = [
@@ -106,7 +127,7 @@ if (use.test) {
   }
 }
 
-static_library("libnnapi-cutils") {
+static_library("libcutils") {
   include_dirs = [ "${libcutils_src}/include" ]
   sources = [
     "${libcutils_src}/config_utils.cpp",
@@ -118,7 +139,7 @@ static_library("libnnapi-cutils") {
   ]
 }
 
-static_library("libnnapi-utils") {
+static_library("libutils") {
   include_dirs = [
     "${libcutils_src}/include",
     "${libutils_src}/include",
@@ -132,20 +153,20 @@ static_library("libnnapi-utils") {
 }
 
 if (use.test) {
-  executable("libnnapi-cutils_testrunner") {
+  executable("libcutils_testrunner") {
     configs += [ "//common-mk:test" ]
     include_dirs = [ "${libcutils_src}/include" ]
     deps = [
-      ":libnnapi-cutils",
+      ":libcutils",
       "//common-mk/testrunner:testrunner",
     ]
     sources = [ "${libcutils_src}/native_handle_test.cpp" ]
   }
-  executable("libnnapi-utils_testrunner") {
+  executable("libutils_testrunner") {
     configs += [ "//common-mk:test" ]
     include_dirs = [ "${libutils_src}/include" ]
     deps = [
-      ":libnnapi-utils",
+      ":libutils",
       "//common-mk/testrunner:testrunner",
     ]
     sources = [ "${libutils_src}/Mutex_test.cpp" ]
