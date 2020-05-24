@@ -67,8 +67,8 @@ bool DBusService::GetExistingDlcs(brillo::ErrorPtr* err,
 }
 
 bool DBusService::GetDlcsToUpdate(brillo::ErrorPtr* err,
-                                  std::vector<std::string>* dlc_ids_out) {
-  *dlc_ids_out = dlc_service_->GetDlcsToUpdate();
+                                  std::vector<std::string>* ids_out) {
+  *ids_out = dlc_service_->GetDlcsToUpdate();
   return true;
 }
 

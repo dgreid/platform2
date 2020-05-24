@@ -40,7 +40,7 @@ class DBusService : public org::chromium::DlcServiceInterfaceInterface {
                        DlcsWithContent* dlc_list_out) override;
   // Only for update_engine to call.
   bool GetDlcsToUpdate(brillo::ErrorPtr* err,
-                       std::vector<std::string>* dlc_ids_out) override;
+                       std::vector<std::string>* ids_out) override;
   // Only for update_engine to call.
   bool InstallCompleted(brillo::ErrorPtr* err,
                         const std::vector<std::string>& ids_in) override;

@@ -59,7 +59,7 @@
     </tp:docstring>
     <arg name="ids" type="as" direction="out">
       <tp:docstring>
-        A list of DLC Ids of installed DLCs.
+        A list of DLC IDs of installed DLCs.
       </tp:docstring>
     </arg>
   </method>
@@ -82,9 +82,9 @@
       Returns a list of DLCs that need to be updated. The implementation needs
       to make sure the target DLC images are ready to be updated.
     </tp:docstring>
-    <arg name="dlc_ids" type="as" direction="out">
+    <arg name="ids" type="as" direction="out">
       <tp:docstring>
-        A list of DLC Ids for DLCs that need to be updated.
+        A list of DLC IDs for DLCs that need to be updated.
       </tp:docstring>
     </arg>
   </method>
