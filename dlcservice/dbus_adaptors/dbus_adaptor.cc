@@ -47,14 +47,8 @@ bool DBusService::Purge(brillo::ErrorPtr* err, const string& id_in) {
   return dlc_service_->Purge(id_in, err);
 }
 
-bool DBusService::GetInstalled(brillo::ErrorPtr* err,
-                               DlcModuleList* dlc_module_list_out) {
-  DlcIdList ids = dlc_service_->GetInstalled();
-  for (const auto& id : ids) {
-    auto* dlc_info = dlc_module_list_out->add_dlc_module_infos();
-    dlc_info->set_dlc_id(id);
-    dlc_info->set_dlc_root(dlc_service_->GetDlc(id)->GetRoot().value());
-  }
+bool DBusService::GetInstalled(brillo::ErrorPtr* err, vector<string>* ids_out) {
+  *ids_out = dlc_service_->GetInstalled();
   return true;
 }
 

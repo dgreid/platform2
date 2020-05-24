@@ -57,14 +57,10 @@
       Returns a list of installed Downloadable Content (DLC) IDs that are
       installed.
     </tp:docstring>
-    <arg name="dlc_module_list" type="ay" direction="out">
+    <arg name="ids" type="as" direction="out">
       <tp:docstring>
-        A serialized protobuf (DlcModuleList,
-        platform2/system_api/dbus/dlcservice/dlcservice.proto) of a list of
-        installed DLC modules.
+        A list of DLC Ids of installed DLCs.
       </tp:docstring>
-      <annotation name="org.chromium.DBus.Argument.ProtobufClass"
-                  value="dlcservice::DlcModuleList"/>
     </arg>
   </method>
   <method name="GetExistingDlcs">

@@ -35,8 +35,7 @@ using base::DictionaryValue;
 using base::FilePath;
 using base::ListValue;
 using base::Value;
-using dlcservice::DlcModuleInfo;
-using dlcservice::DlcModuleList;
+using dlcservice::DlcState;
 using org::chromium::DlcServiceInterfaceProxy;
 using std::string;
 using std::vector;
@@ -117,10 +116,10 @@ class DlcServiceUtil : public brillo::Daemon {
 
     // Called with "--list".
     if (FLAGS_list) {
-      DlcModuleList dlc_module_list;
-      if (!GetInstalled(&dlc_module_list))
+      vector<DlcState> installed_dlcs;
+      if (!GetInstalled(&installed_dlcs))
         return EX_SOFTWARE;
-      PrintInstalled(FLAGS_dump, dlc_module_list);
+      PrintInstalled(FLAGS_dump, installed_dlcs);
       Quit();
       return EX_OK;
     }
@@ -161,8 +160,8 @@ class DlcServiceUtil : public brillo::Daemon {
 
     // Called with "--dlc_state".
     if (FLAGS_dlc_state) {
-      dlcservice::DlcState state;
-      if (!GetDlcState(&state))
+      DlcState state;
+      if (!GetDlcState(dlc_id_, &state))
         return EX_SOFTWARE;
       PrintDLCState(FLAGS_dump, state);
       Quit();
@@ -190,17 +189,17 @@ class DlcServiceUtil : public brillo::Daemon {
   }
 
   // Callback invoked on receiving |OnDlcStateChanged| signal.
-  void OnDlcStateChanged(const dlcservice::DlcState& dlc_state) {
+  void OnDlcStateChanged(const DlcState& dlc_state) {
     switch (dlc_state.state()) {
-      case dlcservice::DlcState::INSTALLED:
+      case DlcState::INSTALLED:
         LOG(INFO) << "Install successful for DLC: " << dlc_id_;
         Quit();
         break;
-      case dlcservice::DlcState::INSTALLING:
+      case DlcState::INSTALLING:
         LOG(INFO) << static_cast<int>(dlc_state.progress() * 100)
                   << "% installed DLC: " << dlc_id_;
         break;
-      case dlcservice::DlcState::NOT_INSTALLED:
+      case DlcState::NOT_INSTALLED:
         LOG(ERROR) << "Failed to install DLC: " << dlc_id_
                    << " with error code: " << dlc_state.last_error_code();
         QuitWithExitCode(EX_SOFTWARE);
@@ -252,9 +251,9 @@ class DlcServiceUtil : public brillo::Daemon {
   }
 
   // Gets the state of current DLC module.
-  bool GetDlcState(dlcservice::DlcState* state) {
+  bool GetDlcState(const string& id, DlcState* state) {
     brillo::ErrorPtr err;
-    if (!dlc_service_proxy_->GetDlcState(dlc_id_, state, &err)) {
+    if (!dlc_service_proxy_->GetDlcState(id, state, &err)) {
       LOG(ERROR) << "Failed to get state of DLC " << dlc_id_ << ", "
                  << ErrorPtrStr(err);
       return false;
@@ -263,7 +262,7 @@ class DlcServiceUtil : public brillo::Daemon {
   }
 
   // Prints the DLC state.
-  void PrintDLCState(const string& dump, const dlcservice::DlcState& state) {
+  void PrintDLCState(const string& dump, const DlcState& state) {
     DictionaryValue dict;
     dict.SetKey("state", Value(state.state()));
 
@@ -273,12 +272,19 @@ class DlcServiceUtil : public brillo::Daemon {
   // Retrieves a list of all installed DLC modules. Returns true if the list is
   // retrieved successfully, false otherwise. Sets the given error pointer on
   // failure.
-  bool GetInstalled(DlcModuleList* dlc_module_list) {
+  bool GetInstalled(vector<DlcState>* dlcs) {
     brillo::ErrorPtr err;
-    if (!dlc_service_proxy_->GetInstalled(dlc_module_list, &err)) {
+    vector<string> ids;
+    if (!dlc_service_proxy_->GetInstalled(&ids, &err)) {
       LOG(ERROR) << "Failed to get the list of installed DLC modules, "
                  << ErrorPtrStr(err);
       return false;
+    }
+
+    for (const auto& id : ids) {
+      DlcState dlc_state;
+      if (GetDlcState(id, &dlc_state))
+        dlcs->push_back(dlc_state);
     }
     return true;
   }
@@ -315,11 +321,10 @@ class DlcServiceUtil : public brillo::Daemon {
     }
   }
 
-  void PrintInstalled(const string& dump,
-                      const DlcModuleList& dlc_module_list) {
+  void PrintInstalled(const string& dump, const vector<DlcState>& dlcs) {
     DictionaryValue dict;
-    for (const auto& dlc_module_info : dlc_module_list.dlc_module_infos()) {
-      const auto& id = dlc_module_info.dlc_id();
+    for (const auto& dlc_state : dlcs) {
+      const auto& id = dlc_state.id();
       const auto& packages = GetPackages(id);
       if (packages.empty())
         continue;
@@ -351,7 +356,7 @@ class DlcServiceUtil : public brillo::Daemon {
                                    FilePath(imageloader::kDlcManifestRootpath),
                                    id, package, dlcservice::kManifestName)
                                    .value()));
-        dlc_info->SetKey("root_mount", Value(dlc_module_info.dlc_root()));
+        dlc_info->SetKey("root_mount", Value(dlc_state.root_path()));
         dlc_info_list->Append(std::move(dlc_info));
       }
       dict.Set(id, std::move(dlc_info_list));

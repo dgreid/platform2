@@ -15,6 +15,7 @@
 using base::FilePath;
 using brillo::ErrorPtr;
 using testing::_;
+using testing::ElementsAre;
 using testing::Return;
 
 namespace dlcservice {
@@ -55,22 +56,9 @@ TEST_F(DBusServiceTest, GetInstalled) {
   EXPECT_CALL(*dlc_service_, GetInstalled())
       .WillOnce(Return(DlcIdList({kFirstDlc, kSecondDlc})));
 
-  DlcBase first_dlc(kFirstDlc);
-  DlcBase second_dlc(kSecondDlc);
-  first_dlc.mount_point_ = FilePath("foo-path-1");
-  second_dlc.mount_point_ = FilePath("foo-path-2");
-  EXPECT_CALL(*dlc_service_, GetDlc(kFirstDlc)).WillOnce(Return(&first_dlc));
-  EXPECT_CALL(*dlc_service_, GetDlc(kSecondDlc)).WillOnce(Return(&second_dlc));
-
-  DlcModuleList dlc_list;
-  EXPECT_TRUE(dbus_service_->GetInstalled(&err_, &dlc_list));
-
-  EXPECT_EQ(dlc_list.omaha_url(), "");
-  EXPECT_EQ(dlc_list.dlc_module_infos_size(), 2);
-  EXPECT_EQ(dlc_list.dlc_module_infos()[0].dlc_id(), kFirstDlc);
-  EXPECT_EQ(dlc_list.dlc_module_infos()[0].dlc_root(), "foo-path-1/root");
-  EXPECT_EQ(dlc_list.dlc_module_infos()[1].dlc_id(), kSecondDlc);
-  EXPECT_EQ(dlc_list.dlc_module_infos()[1].dlc_root(), "foo-path-2/root");
+  DlcIdList ids;
+  EXPECT_TRUE(dbus_service_->GetInstalled(&err_, &ids));
+  EXPECT_THAT(ids, ElementsAre(kFirstDlc, kSecondDlc));
 }
 
 TEST_F(DBusServiceTest, GetExistingDlcs) {
