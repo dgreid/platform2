@@ -424,6 +424,28 @@ void Datapath::RemoveOutboundIPv4(const std::string& ifname) {
       "filter", {"-D", "FORWARD", "-o", ifname, "-j", "ACCEPT", "-w"});
 }
 
+bool Datapath::AddSNATMarkRules() {
+  if (process_runner_->iptables(
+          "filter", {"-A", "FORWARD", "-m", "mark", "--mark", "1", "-j",
+                     "ACCEPT", "-w"}) != 0) {
+    return false;
+  }
+  if (process_runner_->iptables(
+          "nat", {"-A", "POSTROUTING", "-m", "mark", "--mark", "1", "-j",
+                  "MASQUERADE", "-w"}) != 0) {
+    RemoveSNATMarkRules();
+    return false;
+  }
+  return true;
+}
+
+void Datapath::RemoveSNATMarkRules() {
+  process_runner_->iptables("nat", {"-D", "POSTROUTING", "-m", "mark", "--mark",
+                                    "1", "-j", "MASQUERADE", "-w"});
+  process_runner_->iptables("filter", {"-D", "FORWARD", "-m", "mark", "--mark",
+                                       "1", "-j", "ACCEPT", "-w"});
+}
+
 bool Datapath::AddOutboundIPv4SNATMark(const std::string& ifname) {
   return process_runner_->iptables(
              "mangle", {"-A", "PREROUTING", "-i", ifname, "-j", "MARK",
@@ -433,6 +455,18 @@ bool Datapath::AddOutboundIPv4SNATMark(const std::string& ifname) {
 void Datapath::RemoveOutboundIPv4SNATMark(const std::string& ifname) {
   process_runner_->iptables("mangle", {"-D", "PREROUTING", "-i", ifname, "-j",
                                        "MARK", "--set-mark", "1", "-w"});
+}
+
+bool Datapath::AddForwardEstablishedRule() {
+  return process_runner_->iptables(
+             "filter", {"-A", "FORWARD", "-m", "state", "--state",
+                        "ESTABLISHED,RELATED", "-j", "ACCEPT", "-w"}) == 0;
+}
+
+void Datapath::RemoveForwardEstablishedRule() {
+  process_runner_->iptables("filter",
+                            {"-D", "FORWARD", "-m", "state", "--state",
+                             "ESTABLISHED,RELATED", "-j", "ACCEPT", "-w"});
 }
 
 bool Datapath::MaskInterfaceFlags(const std::string& ifname,

@@ -117,12 +117,21 @@ class Datapath {
   virtual bool AddOutboundIPv4(const std::string& ifname);
   virtual void RemoveOutboundIPv4(const std::string& ifname);
 
+  // Creates (or deletes) the forwarding and postrouting rules for SNAT
+  // fwmarked IPv4 traffic.
+  virtual bool AddSNATMarkRules();
+  virtual void RemoveSNATMarkRules();
+
   // Create (or delete) a mangle PREROUTING rule for marking IPv4 traffic
   // outgoing of |ifname| with the SNAT fwmark value 0x1.
   // TODO(hugobenichi) Refer to RoutingService to obtain the fwmark value and
   // add a fwmark mask in the generated rule.
   virtual bool AddOutboundIPv4SNATMark(const std::string& ifname);
   virtual void RemoveOutboundIPv4SNATMark(const std::string& ifname);
+
+  // Create (or delete) a forward rule for established connections.
+  virtual bool AddForwardEstablishedRule();
+  virtual void RemoveForwardEstablishedRule();
 
   // Methods supporting IPv6 configuration for ARC.
   virtual bool MaskInterfaceFlags(const std::string& ifname,

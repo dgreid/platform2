@@ -245,6 +245,15 @@ void Manager::InitialSetup() {
                << " IPv6 functionality may be broken.";
   }
 
+  if (!datapath_->AddSNATMarkRules()) {
+    LOG(ERROR) << "Failed to install SNAT mark rules."
+               << " Guest connectivity may be broken.";
+  }
+  if (!datapath_->AddForwardEstablishedRule()) {
+    LOG(ERROR) << "Failed to install forwarding rule for established"
+               << " connections.";
+  }
+
   routing_svc_ = std::make_unique<RoutingService>();
 
   nd_proxy_->RegisterDeviceMessageHandler(base::Bind(
@@ -275,6 +284,9 @@ void Manager::OnShutdown(int* exit_code) {
     connected_namespaces_fdkeys.push_back(kv.first);
   for (const int fdkey : connected_namespaces_fdkeys)
     DisconnectNamespace(fdkey);
+
+  datapath_->RemoveForwardEstablishedRule();
+  datapath_->RemoveSNATMarkRules();
 
   auto& runner = datapath_->runner();
   // Restore original local port range.

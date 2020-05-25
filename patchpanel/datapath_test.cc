@@ -496,6 +496,58 @@ TEST(DatapathTest, AddIPv4Route) {
   EXPECT_EQ(route2, captured_routes[3]);
 }
 
+TEST(DatapathTest, AddSNATMarkRules) {
+  MockProcessRunner runner;
+  EXPECT_CALL(runner, iptables(StrEq("filter"),
+                               ElementsAre("-A", "FORWARD", "-m", "mark",
+                                           "--mark", "1", "-j", "ACCEPT", "-w"),
+                               true));
+  EXPECT_CALL(runner,
+              iptables(StrEq("nat"),
+                       ElementsAre("-A", "POSTROUTING", "-m", "mark", "--mark",
+                                   "1", "-j", "MASQUERADE", "-w"),
+                       true));
+  Datapath datapath(&runner);
+  datapath.AddSNATMarkRules();
+}
+
+TEST(DatapathTest, RemoveSNATMarkRules) {
+  MockProcessRunner runner;
+  EXPECT_CALL(runner, iptables(StrEq("filter"),
+                               ElementsAre("-D", "FORWARD", "-m", "mark",
+                                           "--mark", "1", "-j", "ACCEPT", "-w"),
+                               true));
+  EXPECT_CALL(runner,
+              iptables(StrEq("nat"),
+                       ElementsAre("-D", "POSTROUTING", "-m", "mark", "--mark",
+                                   "1", "-j", "MASQUERADE", "-w"),
+                       true));
+  Datapath datapath(&runner);
+  datapath.RemoveSNATMarkRules();
+}
+
+TEST(DatapathTest, AddForwardEstablishedRule) {
+  MockProcessRunner runner;
+  EXPECT_CALL(runner,
+              iptables(StrEq("filter"),
+                       ElementsAre("-A", "FORWARD", "-m", "state", "--state",
+                                   "ESTABLISHED,RELATED", "-j", "ACCEPT", "-w"),
+                       true));
+  Datapath datapath(&runner);
+  datapath.AddForwardEstablishedRule();
+}
+
+TEST(DatapathTest, RemoveForwardEstablishedRule) {
+  MockProcessRunner runner;
+  EXPECT_CALL(runner,
+              iptables(StrEq("filter"),
+                       ElementsAre("-D", "FORWARD", "-m", "state", "--state",
+                                   "ESTABLISHED,RELATED", "-j", "ACCEPT", "-w"),
+                       true));
+  Datapath datapath(&runner);
+  datapath.RemoveForwardEstablishedRule();
+}
+
 TEST(DatapathTest, ArcVethHostName) {
   EXPECT_EQ("vetheth0", ArcVethHostName("eth0"));
   EXPECT_EQ("vethrmnet0", ArcVethHostName("rmnet0"));
