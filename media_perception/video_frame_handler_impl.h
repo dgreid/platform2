@@ -16,6 +16,7 @@
 #include "media_perception/shared_memory_provider.h"
 #include "media_perception/video_capture_service_client.h"
 #include "mojom/device_factory.mojom.h"
+#include "mojom/video_frame_handler.mojom.h"
 
 namespace mri {
 

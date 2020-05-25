@@ -7,6 +7,8 @@
 #include <utility>
 
 #include "base/logging.h"
+#include "mojom/scoped_access_permission.mojom.h"
+#include "mojom/video_capture_types.mojom.h"
 
 namespace mri {
 

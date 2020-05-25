@@ -10,7 +10,9 @@
 #include <memory>
 
 #include "media_perception/shared_memory_provider.h"
+#include "mojom/producer.mojom.h"
 #include "mojom/video_source_provider.mojom.h"
+#include "mojom/virtual_device.mojom.h"
 
 namespace mri {
 

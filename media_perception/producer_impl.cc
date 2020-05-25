@@ -9,6 +9,7 @@
 
 #include "base/logging.h"
 #include "mojom/constants.mojom.h"
+#include "mojom/video_capture_types.mojom.h"
 
 namespace mri {
 

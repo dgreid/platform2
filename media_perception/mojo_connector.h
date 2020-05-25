@@ -24,6 +24,7 @@
 #include "media_perception/rtanalytics.h"
 #include "media_perception/video_capture_service_client.h"
 #include "mojom/media_perception_service.mojom.h"
+#include "mojom/video_source.mojom.h"
 
 namespace mri {
 
