@@ -219,6 +219,11 @@ void Manager::InitialSetup() {
   LOG(INFO) << "DBus service interface ready";
 
   auto& runner = datapath_->runner();
+  // Enable IPv4 packet forwarding
+  if (runner.sysctl_w("net.ipv4.ip_forward", "1") != 0) {
+    LOG(ERROR) << "Failed to update net.ipv4.ip_forward."
+               << " Guest connectivity will not work correctly.";
+  }
   // Limit local port range: Android owns 47104-61000.
   // TODO(garrick): The original history behind this tweak is gone. Some
   // investigation is needed to see if it is still applicable.
@@ -271,12 +276,19 @@ void Manager::OnShutdown(int* exit_code) {
   for (const int fdkey : connected_namespaces_fdkeys)
     DisconnectNamespace(fdkey);
 
+  auto& runner = datapath_->runner();
   // Restore original local port range.
   // TODO(garrick): The original history behind this tweak is gone. Some
   // investigation is needed to see if it is still applicable.
-  if (datapath_->runner().sysctl_w("net.ipv4.ip_local_port_range",
-                                   "32768 61000") != 0) {
+  if (runner.sysctl_w("net.ipv4.ip_local_port_range", "32768 61000") != 0) {
     LOG(ERROR) << "Failed to restore local port range";
+  }
+  // Disable packet forwarding
+  if (runner.sysctl_w("net.ipv6.conf.all.forwarding", "0") != 0) {
+    LOG(ERROR) << "Failed to restore net.ipv6.conf.all.forwarding.";
+  }
+  if (runner.sysctl_w("net.ipv4.ip_forward", "0") != 0) {
+    LOG(ERROR) << "Failed to restore net.ipv4.ip_forward.";
   }
 }
 
