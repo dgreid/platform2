@@ -122,17 +122,31 @@ TEST_F(ProxyConnectJobTest, BadHttpRequestWrongMethod) {
   EXPECT_EQ(expected_http_response, actual_response);
 }
 
-TEST_F(ProxyConnectJobTest, BadHttpRequestNoEmptyLine) {
+TEST_F(ProxyConnectJobTest, SlowlorisTimeout) {
+  // Add a TaskRunner where we can control time.
+  scoped_refptr<base::TestMockTimeTaskRunner> task_runner{
+      new base::TestMockTimeTaskRunner()};
+  brillo_loop_ = nullptr;
+  brillo_loop_ = std::make_unique<brillo::BaseMessageLoop>(task_runner);
+  base::TestMockTimeTaskRunner::ScopedContext scoped_context(task_runner.get());
+
   connect_job_->Start();
   // No empty line after http message.
   char badConnRequest[] = "CONNECT www.example.server.com:443 HTTP/1.1\r\n";
   cros_client_socket_->SendTo(badConnRequest, std::strlen(badConnRequest));
-  brillo_loop_->RunOnce(false);
+  task_runner->RunUntilIdle();
+
+  EXPECT_EQ(1, task_runner->GetPendingTaskCount());
+  constexpr base::TimeDelta kDoubleWaitClientConnectTimeout =
+      base::TimeDelta::FromSeconds(4);
+  // Move the time ahead so that the client connection timeout callback is
+  // triggered.
+  task_runner->FastForwardBy(kDoubleWaitClientConnectTimeout);
 
   EXPECT_EQ("", connect_job_->target_url_);
   EXPECT_EQ(0, connect_job_->proxy_servers_.size());
   const std::string expected_http_response =
-      "HTTP/1.1 400 Bad Request - Origin: local proxy\r\n\r\n";
+      "HTTP/1.1 408 Request Timeout - Origin: local proxy\r\n\r\n";
   std::vector<char> buf(expected_http_response.size());
   ASSERT_TRUE(
       base::ReadFromFD(cros_client_socket_->fd(), buf.data(), buf.size()));
@@ -278,6 +292,23 @@ TEST_F(HttpServerProxyConnectJobTest, SuccessfulConnection) {
   connect_job_->Start();
   cros_client_socket_->SendTo(kValidConnectRequest,
                               std::strlen(kValidConnectRequest));
+  brillo_loop_->RunOnce(false);
+  EXPECT_EQ("www.example.server.com:443", connect_job_->target_url_);
+  EXPECT_EQ(1, connect_job_->proxy_servers_.size());
+  EXPECT_EQ(http_test_server_.GetUrl(), connect_job_->proxy_servers_.front());
+  EXPECT_TRUE(forwarder_created_);
+}
+
+TEST_F(HttpServerProxyConnectJobTest, MultipleReadConnectRequest) {
+  AddServerReply(HttpTestServer::HttpConnectReply::kOk);
+  http_test_server_.Start();
+  connect_job_->Start();
+  char part1[] = "CONNECT www.example.server.com:443 HTTP/1.1\r\n";
+  char part2[] = "\r\n";
+  cros_client_socket_->SendTo(part1, std::strlen(part1));
+  // Process the partial CONNECT request.
+  brillo_loop_->RunOnce(false);
+  cros_client_socket_->SendTo(part2, std::strlen(part2));
   brillo_loop_->RunOnce(false);
   EXPECT_EQ("www.example.server.com:443", connect_job_->target_url_);
   EXPECT_EQ(1, connect_job_->proxy_servers_.size());
@@ -443,4 +474,45 @@ TEST_F(HttpServerProxyConnectJobTest, CancelIfBadCredentials) {
   EXPECT_EQ(expected_http_response, actual_response);
 }
 
+//  This test verifies that any data sent by a client immediately after the end
+//  of the HTTP CONNECT request is cached correctly.
+TEST_F(HttpServerProxyConnectJobTest, BufferedClientData) {
+  char connectRequestwithData[] =
+      "CONNECT www.example.server.com:443 HTTP/1.1\r\n\r\nTest body";
+  AddServerReply(HttpTestServer::HttpConnectReply::kAuthRequiredBasic);
+  AddServerReply(HttpTestServer::HttpConnectReply::kOk);
+  http_test_server_.Start();
+
+  AddHttpAuthEntry(http_test_server_.GetUrl(), "Basic", "\"My Proxy\"",
+                   kCredentials);
+  connect_job_->Start();
+
+  cros_client_socket_->SendTo(connectRequestwithData,
+                              std::strlen(connectRequestwithData));
+  brillo_loop_->RunOnce(false);
+
+  const std::string expected = "Test body";
+  const std::string actual(connect_job_->connect_data_.data(),
+                           connect_job_->connect_data_.size());
+}
+
+TEST_F(HttpServerProxyConnectJobTest, BufferedClientDataAltEnding) {
+  char connectRequestwithData[] =
+      "CONNECT www.example.server.com:443 HTTP/1.1\r\n\nTest body";
+  AddServerReply(HttpTestServer::HttpConnectReply::kAuthRequiredBasic);
+  AddServerReply(HttpTestServer::HttpConnectReply::kOk);
+  http_test_server_.Start();
+
+  AddHttpAuthEntry(http_test_server_.GetUrl(), "Basic", "\"My Proxy\"",
+                   kCredentials);
+  connect_job_->Start();
+
+  cros_client_socket_->SendTo(connectRequestwithData,
+                              std::strlen(connectRequestwithData));
+  brillo_loop_->RunOnce(false);
+
+  const std::string expected = "Test body";
+  const std::string actual(connect_job_->connect_data_.data(),
+                           connect_job_->connect_data_.size());
+}
 }  // namespace system_proxy

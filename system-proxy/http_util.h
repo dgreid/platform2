@@ -22,6 +22,15 @@ using SchemeRealmPairList = std::vector<std::pair<std::string, std::string>>;
 // line that contains only CRLF or LF preceded by a line ending with CRLF.
 bool IsEndingWithHttpEmptyLine(const base::StringPiece& http_header_line);
 
+// Analyses |input| and attempts to find a complete HTTP request (request line,
+// headers and end of message). Returns false if it is not found or only a
+// partial HTTP request is in |input|. Returns true if an HTTP request is found,
+// and puts the HTTP request into *|out_http_request|, including the end tag
+// (two newlines). Any remaining data is put into *|out_remaining_data|.
+bool ExtractHTTPRequest(const std::vector<char>& input,
+                        std::vector<char>* out_http_request,
+                        std::vector<char>* out_remaining_data);
+
 // Parses the first line of the http CONNECT request and extracts the URI
 // authority, defined in RFC3986, section 3.2, as the host name and port number
 // separated by a colon. The destination URI is specified in the request line

@@ -38,10 +38,26 @@ bool IsEndingWithHttpEmptyLine(const base::StringPiece& http_header_line) {
   return false;
 }
 
+bool ExtractHTTPRequest(const std::vector<char>& input,
+                        std::vector<char>* out_http_request,
+                        std::vector<char>* out_remaining_data) {
+  for (const auto& header_end : kValidHttpHeaderEnd) {
+    auto it = std::search(input.begin(), input.end(), header_end.c_str(),
+                          header_end.c_str() + header_end.length());
+    if (it == input.end())
+      continue;
+    it += header_end.length();
+    *out_http_request = {input.begin(), it};
+    *out_remaining_data = {it, input.end()};
+    return true;
+  }
+  return false;
+}
+
 std::string GetUriAuthorityFromHttpHeader(
     const base::StringPiece& http_request) {
   // Request-Line ends with CRLF (RFC2616, section 5.1).
-  size_t i = http_request.find_first_of("\r\n");
+  size_t i = http_request.find("\r\n");
   if (i == base::StringPiece::npos)
     return std::string();
   // Elements are delimited by non-breaking space (SP).

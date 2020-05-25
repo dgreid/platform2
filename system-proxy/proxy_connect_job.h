@@ -94,20 +94,21 @@ class ProxyConnectJob {
   FRIEND_TEST(ServerProxyTest, HandleConnectRequest);
   FRIEND_TEST(ProxyConnectJobTest, BadHttpRequestWrongMethod);
   FRIEND_TEST(ProxyConnectJobTest, BadHttpRequestNoEmptyLine);
+  FRIEND_TEST(ProxyConnectJobTest, SlowlorisTimeout);
   FRIEND_TEST(HttpServerProxyConnectJobTest, SuccessfulConnection);
   FRIEND_TEST(HttpServerProxyConnectJobTest, SuccessfulConnectionAltEnding);
   FRIEND_TEST(HttpServerProxyConnectJobTest, ResendWithCredentials);
   FRIEND_TEST(HttpServerProxyConnectJobTest, NoCredentials);
   FRIEND_TEST(HttpServerProxyConnectJobTest, KerberosAuth);
   FRIEND_TEST(HttpServerProxyConnectJobTest, AuthenticationTimeout);
-
-  // Reads data from the socket into |raw_request| until the first empty line,
-  // which would mark the end of the HTTP request header.
-  // This method does not validate the headers.
-  bool TryReadHttpHeader(std::vector<char>* raw_request);
+  FRIEND_TEST(HttpServerProxyConnectJobTest, MultipleReadConnectRequest);
+  FRIEND_TEST(HttpServerProxyConnectJobTest, BufferedClientData);
+  FRIEND_TEST(HttpServerProxyConnectJobTest, BufferedClientDataAltEnding);
 
   // Called when the client socket is ready for reading.
   void OnClientReadReady();
+
+  void HandleClientHTTPRequest(const base::StringPiece& http_request);
 
   // Called from |OnProxyResolution|, after the proxy for |target_url_| is
   // resolved.
@@ -149,6 +150,15 @@ class ProxyConnectJob {
   bool authentication_timer_started_ = false;
 
   std::string credentials_;
+  // CONNECT request and playload data read from the client socket. The client
+  // may send the HTTP CONNECT request across multiple socket writes.
+  // |connect_data_| will cache the partial messages until we receive the end of
+  // the HTTP request. It's also possible that the client will start forwarding
+  // data without waiting for a reply from the server (RFC2817, section-5.2).
+  // Any data read from the client socket which is not part of the HTTP CONNECT
+  // message will be stored in |connect_data_| and forwarded to the remote proxy
+  // after a successful connection is established.
+  std::vector<char> connect_data_;
   std::list<std::string> proxy_servers_;
   ResolveProxyCallback resolve_proxy_callback_;
   AuthenticationRequiredCallback auth_required_callback_;

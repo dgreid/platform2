@@ -42,14 +42,13 @@ constexpr int kMaxHttpRequestHeadersSize = 8000;
 constexpr base::TimeDelta kCurlConnectTimeout =
     base::TimeDelta::FromSeconds(30);
 constexpr base::TimeDelta kWaitClientConnectTimeout =
-    base::TimeDelta::FromSeconds(15);
+    base::TimeDelta::FromSeconds(2);
 // Time to wait for proxy authentication credentials to be fetched from the
 // browser. The credentials are retrieved either from the Network Service or, if
 // the Network Service doesn't have them, directly from the user via a login
 // dialogue.
 constexpr base::TimeDelta kCredentialsRequestTimeout =
     base::TimeDelta::FromMinutes(1);
-constexpr size_t kMaxBadRequestPrintSize = 120;
 
 constexpr int64_t kHttpCodeProxyAuthRequired = 407;
 
@@ -134,7 +133,7 @@ ProxyConnectJob::~ProxyConnectJob() = default;
 bool ProxyConnectJob::Start() {
   // Make the socket non-blocking.
   if (!base::SetNonBlocking(client_socket_->fd())) {
-    PLOG(ERROR) << *this << " Failed to mark the socket as non-blocking.";
+    PLOG(ERROR) << *this << " Failed to mark the socket as non-blocking";
     client_socket_->SendTo(kHttpInternalServerError.data(),
                            kHttpInternalServerError.size());
     return false;
@@ -149,6 +148,31 @@ bool ProxyConnectJob::Start() {
 }
 
 void ProxyConnectJob::OnClientReadReady() {
+  // The first message should be a HTTP CONNECT request.
+  std::vector<char> buf(kMaxHttpRequestHeadersSize);
+  size_t read_byte_count = 0;
+
+  read_byte_count = client_socket_->RecvFrom(buf.data(), buf.size());
+  if (read_byte_count < 0) {
+    LOG(ERROR) << *this << " Failure to read client request";
+    OnError(kHttpBadRequest);
+    return;
+  }
+  connect_data_.insert(connect_data_.end(), buf.begin(),
+                       buf.begin() + read_byte_count);
+
+  std::vector<char> connect_request, payload_data;
+  if (!ExtractHTTPRequest(connect_data_, &connect_request, &payload_data)) {
+    LOG(INFO) << "Received partial HTTP request";
+    return;
+  }
+  connect_data_ = payload_data;
+  HandleClientHTTPRequest(
+      base::StringPiece(connect_request.data(), connect_request.size()));
+}
+
+void ProxyConnectJob::HandleClientHTTPRequest(
+    const base::StringPiece& http_request) {
   if (!read_watcher_) {
     // The connection has timed out while waiting for the client's HTTP CONNECT
     // request. See |OnClientConnectTimeout|.
@@ -157,26 +181,11 @@ void ProxyConnectJob::OnClientReadReady() {
   client_connect_timeout_callback_.Cancel();
   // Stop watching.
   read_watcher_.reset();
-  // The first message should be a HTTP CONNECT request.
-  std::vector<char> connect_request;
-  if (!TryReadHttpHeader(&connect_request)) {
-    std::string encoded;
-    base::Base64Encode(
-        base::StringPiece(connect_request.data(), connect_request.size()),
-        &encoded);
-    LOG(ERROR) << *this
-               << " Failure to read proxy CONNECT request. Base 64 encoded "
-                  "request message from client: "
-               << encoded;
-    OnError(kHttpBadRequest);
-    return;
-  }
-  base::StringPiece request(connect_request.data(), connect_request.size());
-  target_url_ = GetUriAuthorityFromHttpHeader(request);
+  target_url_ = GetUriAuthorityFromHttpHeader(http_request);
   if (target_url_.empty()) {
-    LOG(ERROR)
-        << *this
-        << " Failed to extract target url from the HTTP CONNECT request.";
+    std::string encoded;
+    base::Base64Encode(http_request, &encoded);
+    LOG(ERROR) << *this << " Failed to parse HTTP CONNECT request " << encoded;
     OnError(kHttpBadRequest);
     return;
   }
@@ -188,33 +197,6 @@ void ProxyConnectJob::OnClientReadReady() {
       .Run(base::StringPrintf("https://%s", target_url_.c_str()),
            base::Bind(&ProxyConnectJob::OnProxyResolution,
                       weak_ptr_factory_.GetWeakPtr()));
-}
-
-bool ProxyConnectJob::TryReadHttpHeader(std::vector<char>* raw_request) {
-  size_t read_byte_count = 0;
-  raw_request->resize(kMaxHttpRequestHeadersSize);
-
-  // Read byte-by-byte and stop when reading an empty line (only CRLF) or when
-  // exceeding the max buffer size.
-  // TODO(acostinas, chromium:1064536) This may have some measurable performance
-  // impact. We should read larger blocks of data, consume the HTTP headers,
-  // cache the tunneled payload that may have already been included (e.g. TLS
-  // ClientHello) and send it to server after the connection is established.
-  while (read_byte_count < kMaxHttpRequestHeadersSize) {
-    if (client_socket_->RecvFrom(raw_request->data() + read_byte_count, 1) <=
-        0) {
-      raw_request->resize(std::min(read_byte_count, kMaxBadRequestPrintSize));
-      return false;
-    }
-    ++read_byte_count;
-
-    if (IsEndingWithHttpEmptyLine(
-            base::StringPiece(raw_request->data(), read_byte_count))) {
-      raw_request->resize(read_byte_count);
-      return true;
-    }
-  }
-  return false;
 }
 
 void ProxyConnectJob::OnProxyResolution(
@@ -357,6 +339,11 @@ void ProxyConnectJob::DoCurlServerConnection() {
     std::move(setup_finished_callback_).Run(nullptr, this);
     return;
   }
+  // Send the buffered playload data to the remote server.
+  if (!connect_data_.empty()) {
+    server_conn->SendTo(connect_data_.data(), connect_data_.size());
+    connect_data_.clear();
+  }
 
   auto fwd = std::make_unique<patchpanel::SocketForwarder>(
       base::StringPrintf("%d-%d", client_socket_->fd(), server_conn->fd()),
@@ -420,7 +407,7 @@ void ProxyConnectJob::OnClientConnectTimeout() {
   read_watcher_.reset();
   LOG(ERROR) << *this
              << " Connection timed out while waiting for the client to send a "
-                "connect request.";
+                "connect request";
   OnError(kHttpConnectionTimeout);
 }
 
