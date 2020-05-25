@@ -26,9 +26,9 @@ class DlcManager {
   // Initializes the state of DlcManager.
   void Initialize();
 
-  // Returns true when an install is currently running.
-  // If the desire is to |Initnstall()| again, then |FinishInstall()| or
-  // |CancelInstall()| should be called before |InitInstall()|'ing again.
+  // Returns true when an install is currently running.  If the desire is to
+  // |Install()| again, then |FinishInstall()| or |CancelInstall()| should be
+  // called before |Install()|'ing again.
   bool IsInstalling();
 
   // Returns the list of installed DLCs.
@@ -57,10 +57,14 @@ class DlcManager {
   // install DLC(s) and other files that require creation are handled.
   // Args:
   //   id: The DLC ID that needs to be installed.
+  //   external_install_needed: It is set to true if we need to actually install
+  //     the DLC through update_engine.
   //   err: The error that's set when returned false.
   // Return:
   //   True on success, otherwise false.
-  bool InitInstall(const DlcId& id, brillo::ErrorPtr* err);
+  bool Install(const DlcId& id,
+               bool* external_install_needed,
+               brillo::ErrorPtr* err);
 
   // Install Step 2a:
   // Once the missing DLC(s) are installed or there were no missing DLC(s), this
@@ -85,6 +89,9 @@ class DlcManager {
   // Return:
   //   True on success, otherwise false.
   bool CancelInstall(brillo::ErrorPtr* err);
+
+  // Same as above, but we know exactly which DLC should be cancelled.
+  bool CancelInstall(const DlcId& id, brillo::ErrorPtr* err);
 
   // DLC Deletion Flow
 

@@ -69,6 +69,7 @@ class DlcService : public DlcServiceInterface {
 
  private:
   friend class DlcServiceTest;
+  FRIEND_TEST(DlcServiceTest, InstallCannotSetDlcActiveValue);
   FRIEND_TEST(DlcServiceTest, OnStatusUpdateSignalTest);
   FRIEND_TEST(DlcServiceTest, MountFailureTest);
   FRIEND_TEST(DlcServiceTest, OnStatusUpdateSignalDlcRootTest);
@@ -81,6 +82,13 @@ class DlcService : public DlcServiceInterface {
   FRIEND_TEST(
       DlcServiceTest,
       OnStatusUpdateSignalSubsequentialBadOrNonInstalledDlcsNonBlocking);
+
+  // Install the DLC with ID |id| through update_engine by sending a request to
+  // it.
+  bool InstallWithUpdateEngine(const DlcId& id,
+                               const std::string& omaha_url,
+                               brillo::ErrorPtr* err);
+
   // Sends a signal indicating failure to install and cleans up prepped DLC(s).
   void SendFailedSignalAndCleanup();
 

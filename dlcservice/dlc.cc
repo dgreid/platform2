@@ -311,48 +311,10 @@ bool DlcBase::PreloadedCopier(ErrorPtr* err) {
   return true;
 }
 
-bool DlcBase::Preload(ErrorPtr* err) {
-  if (!SetupInitInstall(err)) {
-    LOG(ERROR) << "Failed to initialize preloaded DLC=" << id_;
-    return false;
-  }
-
-  if (!PreloadedCopier(err)) {
-    LOG(ERROR) << "Failed to copy preloaded DLC=" << id_;
-    ErrorPtr tmp_err;
-    if (!CancelInstall(&tmp_err))
-      LOG(ERROR) << Error::ToString(tmp_err);
-    return false;
-  }
-
-  // When the copying is successful, go ahead and finish installation.
-  if (!FinishInstall(err)) {
-    LOG(ERROR) << "Failed to finish preloading DLC=" << id_;
-    ErrorPtr tmp_err;
-    if (!CancelInstall(&tmp_err))
-      LOG(ERROR) << Error::ToString(tmp_err);
-    return false;
-  }
-
-  // Don't remove preloaded DLC images when booted from removable device,
-  // otherwise chromeos-install script will not be able to install stateful
-  // partition correctly with preloaded DLC images.
-  if (!SystemState::Get()->IsDeviceRemovable()) {
-    // Delete the preloaded DLC only after both copies into A and B succeed as
-    // well as mounting.
-    const auto path = SystemState::Get()->preloaded_content_dir().Append(id_);
-    if (!base::DeleteFile(path, true))
-      PLOG(ERROR) << "Failed to delete preloaded DLC image=" << path.value();
-  }
-
-  LOG(INFO) << "Successfully preloaded DLC=" << id_;
-  return true;
-}
-
-bool DlcBase::SetupInitInstall(ErrorPtr* err) {
+bool DlcBase::Install(ErrorPtr* err) {
+  bool preloaded = false;
   switch (state_.state()) {
-    case DlcState::NOT_INSTALLED: {
-      bool image_present_before_creation = IsActiveImagePresent();
+    case DlcState::NOT_INSTALLED:
       // Always try to create the DLC files and directories to make sure they
       // all exist before we start the install.
       if (!CreateDlc(err)) {
@@ -361,90 +323,104 @@ bool DlcBase::SetupInitInstall(ErrorPtr* err) {
                      << Error::ToString(*err);
         return false;
       }
-      if (image_present_before_creation) {
-        if ((IsVerified() || Verify()) && TryMount(err)) {
-          LOG(INFO) << "Image verified and marked installed for DLC=" << id_;
+
+      // TODO(ahassani): Before preloading, we should try to verify the current
+      // image and only if it did not verify, we should preload it otherwise
+      // when running from removable devices or when we fail to remove the
+      // preloaded copy because of permission issues or IO errors, we don't have
+      // to preload it each time the dlcservice is started.
+      if (IsPreloadAllowed() && base::PathExists(preloaded_image_path_)) {
+        if (PreloadedCopier(err)) {
+          preloaded = true;
+          break;
+        } else {
+          LOG(ERROR) << "Prealoading failed, so assuming install failure.";
+          return false;
         }
       }
-      break;
-    }
-    case DlcState::INSTALLED:
-      // Tests that run at times will unmount all loopback devices, hence it's
-      // required that even installed DLC images need to be mounted again.
-      if (!TryMount(err)) {
-        LOG(ERROR) << Error::ToString(*err);
-        ChangeState(DlcState::NOT_INSTALLED);
-        return false;
+
+      if (!IsVerified()) {
+        // By now if the image is not verified, it needs to be installed through
+        // update_engine. So don't go any further.
+        return true;
       }
+
       break;
     case DlcState::INSTALLING:
+      // If the image is already in this state, nothing need to be done. It is
+      // already being installed.
+      return true;
+    case DlcState::INSTALLED:
+      // If the image is already installed, we need to finish the install so it
+      // gets mounted in case it has been unmounted externally.
+      break;
     default:
       NOTREACHED();
       return false;
   }
-  // Failure to set the metadata flags should not fail the install.
+
+  // Let's try to finish the installation.
+  if (!FinishInstall(err)) {
+    CancelInstall(err);
+    return false;
+  }
+
+  // Don't remove preloaded DLC images when booted from removable device,
+  // otherwise chromeos-install script will not be able to install stateful
+  // partition correctly with preloaded DLC images.
+  if (preloaded && !SystemState::Get()->IsDeviceRemovable()) {
+    // Delete the preloaded DLC only after both copies into A and B succeed as
+    // well as mounting.
+    const auto path = SystemState::Get()->preloaded_content_dir().Append(id_);
+    if (!base::DeleteFile(path, true))
+      PLOG(ERROR) << "Failed to delete preloaded DLC image=" << path.value();
+  }
+  return true;
+}
+
+bool DlcBase::FinishInstall(ErrorPtr* err) {
+  switch (state_.state()) {
+    case DlcState::INSTALLED:
+    case DlcState::INSTALLING:
+      if (!IsVerified()) {
+        // If the image is not verified, try to verify it. This is to combat
+        // update_engine failing to call into |InstallCompleted()| even after a
+        // successful DLC installation.
+        if (Verify()) {
+          LOG(WARNING) << "Missing verification mark for DLC=" << id_
+                       << ", but verified to be a valid image.";
+        }
+      }
+      if (IsVerified() && Mount(err)) {
+        break;
+      } else {
+        // By now, the image is either not verified or it is not mounted.
+        state_.set_last_error_code(kErrorInternal);
+        *err = Error::Create(
+            FROM_HERE, state_.last_error_code(),
+            base::StringPrintf("Cannot mount image for DLC=%s", id_.c_str()));
+        ErrorPtr tmp_err;
+        if (!DeleteInternal(&tmp_err))
+          LOG(ERROR) << "Failed during install finalization: "
+                     << Error::ToString(tmp_err) << " for DLC=" << id_;
+        return false;
+      }
+    case DlcState::NOT_INSTALLED:
+      // Should not try to finish install on a not-installed DLC.
+    default:
+      NOTREACHED();
+      return false;
+  }
+
+  // Now that we are sure the image is installed, we can go ahead and set it as
+  // active. Failure to set the metadata flags should not fail the install.
   if (!SystemState::Get()->update_engine()->SetDlcActiveValue(true, id_, err)) {
     LOG(WARNING) << "Update Engine failed to set DLC to active:" << id_
                  << (*err ? Error::ToString(*err)
                           : "Missing error from update engine proxy.");
   }
+
   return true;
-}
-
-bool DlcBase::InitInstall(ErrorPtr* err) {
-  if (IsPreloadAllowed() && base::PathExists(preloaded_image_path_)) {
-    if (Preload(err))
-      return true;
-    LOG(ERROR) << "Failed to preload DLC=" << id_
-               << " continuing with normal installation.";
-  }
-  return SetupInitInstall(err);
-}
-
-bool DlcBase::FinishInstall(ErrorPtr* err) {
-  switch (state_.state()) {
-    case DlcState::NOT_INSTALLED:
-    case DlcState::INSTALLED:
-      return true;
-    case DlcState::INSTALLING: {
-      bool ret = true;
-      if (!IsVerified()) {
-        // If the verified pref is missing, call into |Verify()| to hash the DLC
-        // image and set the verified pref if hashing is successful. This is
-        // to combat update_engine failing to call into |InstallCompleted()|
-        // even after a successful DLC installation.
-        if (Verify()) {
-          LOG(WARNING) << "Missing verification mark for DLC=" << id_
-                       << ", but verified to be a valid image.";
-        } else {
-          state_.set_last_error_code(kErrorInternal);
-          *err = Error::Create(
-              FROM_HERE, state_.last_error_code(),
-              base::StringPrintf("Cannot mount image which is not "
-                                 "marked as verified for DLC=%s",
-                                 id_.c_str()));
-          LOG(ERROR) << "Failed during install finalization: "
-                     << Error::ToString(*err);
-          ret = false;
-        }
-      }
-      if (ret && !Mount(err)) {
-        LOG(ERROR) << "Failed during install finalization: "
-                   << Error::ToString(*err) << " for DLC=" << id_;
-        ret = false;
-      }
-      if (!ret) {
-        ErrorPtr tmp_err;
-        if (!DeleteInternal(&tmp_err))
-          LOG(ERROR) << "Failed during install finalization: "
-                     << Error::ToString(tmp_err) << " for DLC=" << id_;
-      }
-      return ret;
-    }
-    default:
-      NOTREACHED();
-      return false;
-  }
 }
 
 bool DlcBase::CancelInstall(ErrorPtr* err) {
@@ -507,21 +483,6 @@ bool DlcBase::Unmount(ErrorPtr* err) {
   return true;
 }
 
-bool DlcBase::TryMount(ErrorPtr* err) {
-  if (!mount_point_.empty() && base::PathExists(GetRoot())) {
-    LOG(INFO) << "Skipping mount as already mounted at " << GetRoot();
-    ChangeState(DlcState::INSTALLED);
-    return true;
-  }
-
-  if (!Mount(err)) {
-    LOG(ERROR) << "DLC thought to have been installed, but maybe is in a "
-               << "bad state. DLC=" << id_ << ", " << Error::ToString(*err);
-    return false;
-  }
-  return true;
-}
-
 bool DlcBase::IsActiveImagePresent() const {
   return base::PathExists(GetImagePath(SystemState::Get()->active_boot_slot()));
 }
@@ -539,13 +500,6 @@ bool DlcBase::DeleteInternal(ErrorPtr* err) {
       }
     }
   }
-  // Failure to set DLC to inactive should not fail uninstall.
-  ErrorPtr tmp_err;
-  if (!SystemState::Get()->update_engine()->SetDlcActiveValue(false, id_,
-                                                              &tmp_err))
-    LOG(WARNING) << "Failed to set DLC(" << id_ << ") to inactive."
-                 << (tmp_err ? Error::ToString(tmp_err)
-                             : "Missing error from update engine proxy.");
   ChangeState(DlcState::NOT_INSTALLED);
   is_verified_ = false;
 
@@ -563,17 +517,28 @@ bool DlcBase::DeleteInternal(ErrorPtr* err) {
 bool DlcBase::Delete(ErrorPtr* err) {
   switch (state_.state()) {
     case DlcState::NOT_INSTALLED:
+      // We still have to delete the DLC, in case we never mounted in this
+      // session.
       LOG(WARNING) << "Trying to uninstall not installed DLC=" << id_;
-      return DeleteInternal(err);
+      FALLTHROUGH;
+    case DlcState::INSTALLED: {
+      ErrorPtr tmp_err;
+      if (!SystemState::Get()->update_engine()->SetDlcActiveValue(false, id_,
+                                                                  &tmp_err))
+        LOG(WARNING) << "Failed to set DLC(" << id_ << ") to inactive."
+                     << (tmp_err ? Error::ToString(tmp_err)
+                                 : "Missing error from update engine proxy.");
+      return Unmount(err) && DeleteInternal(err);
+    }
     case DlcState::INSTALLING:
+      // We cannot delete the image while it is being installed by the
+      // update_engine.
       state_.set_last_error_code(kErrorBusy);
       *err = Error::Create(
           FROM_HERE, state_.last_error_code(),
           base::StringPrintf("Trying to delete a currently installing DLC=%s",
                              id_.c_str()));
       return false;
-    case DlcState::INSTALLED:
-      return Unmount(err) && DeleteInternal(err);
     default:
       NOTREACHED();
       return false;

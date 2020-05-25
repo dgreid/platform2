@@ -65,9 +65,6 @@ class DlcServiceTest : public BaseTest {
   void Install(const DlcId& id) {
     EXPECT_CALL(*mock_update_engine_proxy_ptr_, GetStatusAdvanced(_, _, _))
         .WillOnce(Return(true));
-    EXPECT_CALL(*mock_update_engine_proxy_ptr_,
-                SetDlcActiveValue(true, id, _, _))
-        .WillOnce(Return(true));
     EXPECT_CALL(*mock_update_engine_proxy_ptr_, AttemptInstall(_, _, _, _))
         .WillOnce(DoAll(
             WithArg<1>(Invoke(this, &DlcServiceTest::InstallWithUpdateEngine)),
@@ -77,6 +74,9 @@ class DlcServiceTest : public BaseTest {
     EXPECT_CALL(*mock_image_loader_proxy_ptr_, LoadDlcImage(id, _, _, _, _, _))
         .WillOnce(DoAll(SetArgPointee<3>(mount_path_.value()), Return(true)));
     EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(2);
+    EXPECT_CALL(*mock_update_engine_proxy_ptr_,
+                SetDlcActiveValue(true, id, _, _))
+        .WillOnce(Return(true));
 
     EXPECT_TRUE(dlc_service_->Install(id, kDefaultOmahaUrl, &err_));
 
@@ -113,7 +113,6 @@ TEST_F(DlcServiceTest, GetInstalledTest) {
 
   EXPECT_THAT(dlcs, ElementsAre(kFirstDlc));
   EXPECT_FALSE(dlc_service_->GetDlc(kFirstDlc)->GetRoot().value().empty());
-  CheckDlcState(kFirstDlc, DlcState::INSTALLED);
 }
 
 TEST_F(DlcServiceTest, GetExistingDlcs) {
@@ -197,6 +196,8 @@ TEST_F(DlcServiceTest, UninstallNotInstalledIsValidTest) {
   EXPECT_CALL(*mock_update_engine_proxy_ptr_,
               SetDlcActiveValue(false, kSecondDlc, _, _))
       .WillOnce(Return(false));
+  EXPECT_CALL(*mock_image_loader_proxy_ptr_, UnloadDlcImage(_, _, _, _, _))
+      .WillOnce(DoAll(SetArgPointee<2>(true), Return(true)));
   EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(1);
 
   EXPECT_TRUE(dlc_service_->Uninstall(kSecondDlc, &err_));
@@ -235,6 +236,9 @@ TEST_F(DlcServiceTest, UninstallUnmountFailureTest) {
       .WillOnce(Return(true));
   EXPECT_CALL(*mock_image_loader_proxy_ptr_, UnloadDlcImage(_, _, _, _, _))
       .WillOnce(DoAll(SetArgPointee<2>(false), Return(true)));
+  EXPECT_CALL(*mock_update_engine_proxy_ptr_,
+              SetDlcActiveValue(false, kFirstDlc, _, _))
+      .WillOnce(Return(true));
 
   EXPECT_FALSE(dlc_service_->Uninstall(kFirstDlc, &err_));
   EXPECT_TRUE(base::PathExists(JoinPaths(content_path_, kFirstDlc)));
@@ -248,6 +252,9 @@ TEST_F(DlcServiceTest, UninstallImageLoaderFailureTest) {
       .WillOnce(Return(true));
   EXPECT_CALL(*mock_image_loader_proxy_ptr_, UnloadDlcImage(_, _, _, _, _))
       .WillOnce(Return(false));
+  EXPECT_CALL(*mock_update_engine_proxy_ptr_,
+              SetDlcActiveValue(false, kFirstDlc, _, _))
+      .WillOnce(Return(true));
 
   // |ImageLoader| not available.
   EXPECT_FALSE(dlc_service_->Uninstall(kFirstDlc, &err_));
@@ -292,9 +299,6 @@ TEST_F(DlcServiceTest, UninstallInstallingFails) {
       .WillOnce(Return(true));
   EXPECT_CALL(*mock_update_engine_proxy_ptr_, AttemptInstall(_, _, _, _))
       .WillOnce(Return(true));
-  EXPECT_CALL(*mock_update_engine_proxy_ptr_,
-              SetDlcActiveValue(true, kSecondDlc, _, _))
-      .WillOnce(Return(true));
   EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(1);
 
   EXPECT_TRUE(dlc_service_->Install(kSecondDlc, kDefaultOmahaUrl, &err_));
@@ -313,8 +317,6 @@ TEST_F(DlcServiceTest, UninstallInstallingButInstalledFails) {
       .WillOnce(Return(true));
   EXPECT_CALL(*mock_update_engine_proxy_ptr_, SetDlcActiveValue(false, _, _, _))
       .WillOnce(Return(true));
-  EXPECT_CALL(*mock_update_engine_proxy_ptr_, SetDlcActiveValue(true, _, _, _))
-      .WillOnce(Return(true));
   EXPECT_CALL(*mock_image_loader_proxy_ptr_, UnloadDlcImage(_, _, _, _, _))
       .WillOnce(DoAll(SetArgPointee<2>(true), Return(true)));
   EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(2);
@@ -327,9 +329,6 @@ TEST_F(DlcServiceTest, UninstallInstallingButInstalledFails) {
 }
 
 TEST_F(DlcServiceTest, InstallInvalidDlcTest) {
-  EXPECT_CALL(*mock_update_engine_proxy_ptr_, GetStatusAdvanced(_, _, _))
-      .WillOnce(Return(true));
-
   const string id = "bad-dlc-id";
   EXPECT_FALSE(dlc_service_->Install(id, kDefaultOmahaUrl, &err_));
   EXPECT_EQ(err_->GetCode(), kErrorInvalidDlc);
@@ -343,13 +342,7 @@ TEST_F(DlcServiceTest, InstallTest) {
       .WillOnce(Return(true));
   EXPECT_CALL(*mock_update_engine_proxy_ptr_, AttemptInstall(_, _, _, _))
       .WillOnce(Return(true));
-  EXPECT_CALL(*mock_update_engine_proxy_ptr_,
-              SetDlcActiveValue(true, kSecondDlc, _, _))
-      .WillOnce(Return(true));
   EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(1);
-
-  auto dlc_prefs_path = prefs_path_.Append("dlc").Append(kSecondDlc);
-  EXPECT_FALSE(base::PathExists(dlc_prefs_path));
 
   EXPECT_THAT(dlc_service_->GetInstalled(), ElementsAre(kFirstDlc));
 
@@ -359,24 +352,6 @@ TEST_F(DlcServiceTest, InstallTest) {
   // Should remain same as it's not stamped verfied.
   EXPECT_THAT(dlc_service_->GetInstalled(), ElementsAre(kFirstDlc));
 
-  constexpr int expected_permissions = 0755;
-  int permissions;
-  base::FilePath module_path = JoinPaths(content_path_, kSecondDlc, kPackage);
-  base::GetPosixFilePermissions(module_path, &permissions);
-  EXPECT_EQ(permissions, expected_permissions);
-  base::FilePath image_a_path =
-      GetDlcImagePath(content_path_, kSecondDlc, kPackage, BootSlot::Slot::A);
-  base::GetPosixFilePermissions(image_a_path.DirName(), &permissions);
-  EXPECT_EQ(permissions, expected_permissions);
-  base::FilePath image_b_path =
-      GetDlcImagePath(content_path_, kSecondDlc, kPackage, BootSlot::Slot::B);
-  base::GetPosixFilePermissions(image_b_path.DirName(), &permissions);
-  EXPECT_EQ(permissions, expected_permissions);
-
-  EXPECT_TRUE(base::PathExists(dlc_prefs_path));
-  base::GetPosixFilePermissions(dlc_prefs_path, &permissions);
-  EXPECT_EQ(permissions, expected_permissions);
-
   // TODO(ahassani): Add more install process liked |InstallCompleted|, etc.
 }
 
@@ -384,11 +359,12 @@ TEST_F(DlcServiceTest, InstallAlreadyInstalledValid) {
   Install(kFirstDlc);
 
   SetMountPath(mount_path_.value());
-  EXPECT_CALL(*mock_update_engine_proxy_ptr_, GetStatusAdvanced(_, _, _))
-      .WillOnce(Return(true));
   EXPECT_CALL(*mock_update_engine_proxy_ptr_,
               SetDlcActiveValue(true, kFirstDlc, _, _))
       .WillOnce(Return(true));
+  EXPECT_CALL(*mock_image_loader_proxy_ptr_,
+              LoadDlcImage(kFirstDlc, _, _, _, _, _))
+      .WillOnce(DoAll(SetArgPointee<3>(mount_path_.value()), Return(true)));
   EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(1);
 
   EXPECT_TRUE(dlc_service_->Install(kFirstDlc, kDefaultOmahaUrl, &err_));
@@ -397,8 +373,6 @@ TEST_F(DlcServiceTest, InstallAlreadyInstalledValid) {
 }
 
 TEST_F(DlcServiceTest, InstallCannotSetDlcActiveValue) {
-  Install(kFirstDlc);
-
   SetMountPath(mount_path_.value());
   EXPECT_CALL(*mock_update_engine_proxy_ptr_, GetStatusAdvanced(_, _, _))
       .WillOnce(Return(true));
@@ -407,10 +381,20 @@ TEST_F(DlcServiceTest, InstallCannotSetDlcActiveValue) {
   EXPECT_CALL(*mock_update_engine_proxy_ptr_,
               SetDlcActiveValue(true, kSecondDlc, _, _))
       .WillOnce(Return(false));
-  EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(1);
+  EXPECT_CALL(*mock_image_loader_proxy_ptr_,
+              LoadDlcImage(kSecondDlc, _, _, _, _, _))
+      .WillOnce(DoAll(SetArgPointee<3>(mount_path_.value()), Return(true)));
+  EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(2);
 
   EXPECT_TRUE(dlc_service_->Install(kSecondDlc, kDefaultOmahaUrl, &err_));
-  CheckDlcState(kSecondDlc, DlcState::INSTALLING);
+  EXPECT_TRUE(dlc_service_->InstallCompleted({kSecondDlc}, &err_));
+
+  StatusResult status_result;
+  status_result.set_is_install(true);
+  status_result.set_current_operation(Operation::IDLE);
+  dlc_service_->OnStatusUpdateAdvancedSignal(status_result);
+
+  CheckDlcState(kSecondDlc, DlcState::INSTALLED);
 }
 
 TEST_F(DlcServiceTest, InstallUpdateEngineDownThenBackUpTest) {
@@ -420,10 +404,7 @@ TEST_F(DlcServiceTest, InstallUpdateEngineDownThenBackUpTest) {
       .WillOnce(Return(true));
   EXPECT_CALL(*mock_update_engine_proxy_ptr_, AttemptInstall(_, _, _, _))
       .WillOnce(Return(true));
-  EXPECT_CALL(*mock_update_engine_proxy_ptr_,
-              SetDlcActiveValue(true, kSecondDlc, _, _))
-      .WillOnce(Return(true));
-  EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(1);
+  EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(3);
 
   EXPECT_FALSE(dlc_service_->Install(kSecondDlc, kDefaultOmahaUrl, &err_));
   EXPECT_TRUE(dlc_service_->Install(kSecondDlc, kDefaultOmahaUrl, &err_));
@@ -431,8 +412,6 @@ TEST_F(DlcServiceTest, InstallUpdateEngineDownThenBackUpTest) {
 }
 
 TEST_F(DlcServiceTest, InstallUpdateEngineBusyThenFreeTest) {
-  Install(kFirstDlc);
-
   SetMountPath(mount_path_.value());
   StatusResult status_result;
   status_result.set_current_operation(Operation::UPDATED_NEED_REBOOT);
@@ -441,37 +420,24 @@ TEST_F(DlcServiceTest, InstallUpdateEngineBusyThenFreeTest) {
       .WillOnce(Return(true));
   EXPECT_CALL(*mock_update_engine_proxy_ptr_, AttemptInstall(_, _, _, _))
       .WillOnce(Return(true));
-  EXPECT_CALL(*mock_update_engine_proxy_ptr_,
-              SetDlcActiveValue(true, kSecondDlc, _, _))
-      .WillOnce(Return(true));
-  EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(1);
+  EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(3);
 
   EXPECT_FALSE(dlc_service_->Install(kSecondDlc, kDefaultOmahaUrl, &err_));
   EXPECT_TRUE(dlc_service_->Install(kSecondDlc, kDefaultOmahaUrl, &err_));
-  CheckDlcState(kFirstDlc, DlcState::INSTALLED);
   CheckDlcState(kSecondDlc, DlcState::INSTALLING);
 }
 
 TEST_F(DlcServiceTest, InstallFailureCleansUp) {
-  Install(kFirstDlc);
-
   SetMountPath(mount_path_.value());
   EXPECT_CALL(*mock_update_engine_proxy_ptr_, GetStatusAdvanced(_, _, _))
       .WillOnce(Return(true));
   EXPECT_CALL(*mock_update_engine_proxy_ptr_, AttemptInstall(_, _, _, _))
       .WillOnce(Return(false));
-  EXPECT_CALL(*mock_update_engine_proxy_ptr_,
-              SetDlcActiveValue(true, kSecondDlc, _, _))
-      .WillOnce(Return(true));
-  EXPECT_CALL(*mock_update_engine_proxy_ptr_,
-              SetDlcActiveValue(false, kSecondDlc, _, _))
-      .WillOnce(Return(true));
   EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(2);
 
   EXPECT_FALSE(dlc_service_->Install(kSecondDlc, kDefaultOmahaUrl, &err_));
 
   EXPECT_FALSE(base::PathExists(JoinPaths(content_path_, kSecondDlc)));
-  CheckDlcState(kFirstDlc, DlcState::INSTALLED);
   CheckDlcState(kSecondDlc, DlcState::NOT_INSTALLED);
 }
 
@@ -480,9 +446,6 @@ TEST_F(DlcServiceTest, InstallUrlTest) {
       .WillOnce(Return(true));
   EXPECT_CALL(*mock_update_engine_proxy_ptr_,
               AttemptInstall(kDefaultOmahaUrl, _, _, _))
-      .WillOnce(Return(true));
-  EXPECT_CALL(*mock_update_engine_proxy_ptr_,
-              SetDlcActiveValue(true, kSecondDlc, _, _))
       .WillOnce(Return(true));
   EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(1);
 
@@ -499,8 +462,6 @@ TEST_F(DlcServiceTest, InstallAlreadyInstalledThatGotUnmountedTest) {
   EXPECT_TRUE(base::PathExists(mount_path_root));
   EXPECT_TRUE(base::DeleteFile(mount_path_root, true));
 
-  EXPECT_CALL(*mock_update_engine_proxy_ptr_, GetStatusAdvanced(_, _, _))
-      .WillOnce(Return(true));
   EXPECT_CALL(*mock_image_loader_proxy_ptr_, LoadDlcImage(_, _, _, _, _, _))
       .WillOnce(DoAll(SetArgPointee<3>(mount_path_.value()), Return(true)));
   EXPECT_CALL(*mock_update_engine_proxy_ptr_,
@@ -608,12 +569,6 @@ TEST_F(DlcServiceTest, MountFailureTest) {
       .WillRepeatedly(Return(true));
   EXPECT_CALL(*mock_update_engine_proxy_ptr_, AttemptInstall(_, _, _, _))
       .WillOnce(Return(true));
-  EXPECT_CALL(*mock_update_engine_proxy_ptr_,
-              SetDlcActiveValue(true, kSecondDlc, _, _))
-      .WillOnce(Return(true));
-  EXPECT_CALL(*mock_update_engine_proxy_ptr_,
-              SetDlcActiveValue(false, kSecondDlc, _, _))
-      .WillOnce(Return(true));
   EXPECT_CALL(*mock_image_loader_proxy_ptr_, LoadDlcImage(_, _, _, _, _, _))
       .WillOnce(DoAll(SetArgPointee<3>(""), Return(true)));
   EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(2);
@@ -637,12 +592,6 @@ TEST_F(DlcServiceTest, ReportingFailureCleanupTest) {
   EXPECT_CALL(*mock_update_engine_proxy_ptr_, GetStatusAdvanced(_, _, _))
       .WillRepeatedly(Return(true));
   EXPECT_CALL(*mock_update_engine_proxy_ptr_, AttemptInstall(_, _, _, _))
-      .WillOnce(Return(true));
-  EXPECT_CALL(*mock_update_engine_proxy_ptr_,
-              SetDlcActiveValue(true, kSecondDlc, _, _))
-      .WillOnce(Return(true));
-  EXPECT_CALL(*mock_update_engine_proxy_ptr_,
-              SetDlcActiveValue(false, kSecondDlc, _, _))
       .WillOnce(Return(true));
   EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(2);
 
@@ -673,12 +622,6 @@ TEST_F(DlcServiceTest, ReportingFailureSignalTest) {
       .WillRepeatedly(Return(true));
   EXPECT_CALL(*mock_update_engine_proxy_ptr_, AttemptInstall(_, _, _, _))
       .WillOnce(Return(true));
-  EXPECT_CALL(*mock_update_engine_proxy_ptr_,
-              SetDlcActiveValue(true, kSecondDlc, _, _))
-      .WillOnce(Return(true));
-  EXPECT_CALL(*mock_update_engine_proxy_ptr_,
-              SetDlcActiveValue(false, kSecondDlc, _, _))
-      .WillOnce(Return(true));
   EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(2);
 
   EXPECT_TRUE(dlc_service_->Install(kSecondDlc, kDefaultOmahaUrl, &err_));
@@ -707,12 +650,6 @@ TEST_F(DlcServiceTest, ProbableUpdateEngineRestartCleanupTest) {
       .WillRepeatedly(Return(true));
   EXPECT_CALL(*mock_update_engine_proxy_ptr_, AttemptInstall(_, _, _, _))
       .WillOnce(Return(true));
-  EXPECT_CALL(*mock_update_engine_proxy_ptr_,
-              SetDlcActiveValue(true, kSecondDlc, _, _))
-      .WillOnce(Return(true));
-  EXPECT_CALL(*mock_update_engine_proxy_ptr_,
-              SetDlcActiveValue(false, kSecondDlc, _, _))
-      .WillOnce(Return(true));
   EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(2);
 
   EXPECT_TRUE(dlc_service_->Install(kSecondDlc, kDefaultOmahaUrl, &err_));
@@ -735,12 +672,6 @@ TEST_F(DlcServiceTest, UpdateEngineFailSafeTest) {
       .WillOnce(Return(false));
   EXPECT_CALL(*mock_update_engine_proxy_ptr_, AttemptInstall(_, _, _, _))
       .WillOnce(Return(true));
-  EXPECT_CALL(*mock_update_engine_proxy_ptr_,
-              SetDlcActiveValue(true, kSecondDlc, _, _))
-      .WillOnce(Return(true));
-  EXPECT_CALL(*mock_update_engine_proxy_ptr_,
-              SetDlcActiveValue(false, kSecondDlc, _, _))
-      .WillOnce(Return(true));
   EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(2);
 
   EXPECT_TRUE(dlc_service_->Install(kSecondDlc, kDefaultOmahaUrl, &err_));
@@ -761,12 +692,6 @@ TEST_F(DlcServiceTest, UpdateEngineFailAfterSignalsSafeTest) {
       .WillOnce(Return(true))
       .WillOnce(Return(false));
   EXPECT_CALL(*mock_update_engine_proxy_ptr_, AttemptInstall(_, _, _, _))
-      .WillOnce(Return(true));
-  EXPECT_CALL(*mock_update_engine_proxy_ptr_,
-              SetDlcActiveValue(true, kSecondDlc, _, _))
-      .WillOnce(Return(true));
-  EXPECT_CALL(*mock_update_engine_proxy_ptr_,
-              SetDlcActiveValue(false, kSecondDlc, _, _))
       .WillOnce(Return(true));
   EXPECT_CALL(*mock_image_loader_proxy_ptr_, LoadDlcImage(_, _, _, _, _, _))
       .WillRepeatedly(
@@ -838,12 +763,6 @@ TEST_F(DlcServiceTest,
   for (int i = 0; i < 5; i++) {
     EXPECT_CALL(*mock_update_engine_proxy_ptr_, AttemptInstall(_, _, _, _))
         .WillOnce(Return(true));
-    EXPECT_CALL(*mock_update_engine_proxy_ptr_,
-                SetDlcActiveValue(true, kSecondDlc, _, _))
-        .WillOnce(Return(true));
-    EXPECT_CALL(*mock_update_engine_proxy_ptr_,
-                SetDlcActiveValue(false, kSecondDlc, _, _))
-        .WillOnce(Return(true));
     EXPECT_CALL(*mock_image_loader_proxy_ptr_, LoadDlcImage(_, _, _, _, _, _))
         .WillOnce(Return(false));
     EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(2);
@@ -866,12 +785,6 @@ TEST_F(DlcServiceTest, PeriodCheckUpdateEngineInstallSignalRaceChecker) {
   EXPECT_CALL(*mock_update_engine_proxy_ptr_, GetStatusAdvanced(_, _, _))
       .WillRepeatedly(Return(true));
   EXPECT_CALL(*mock_update_engine_proxy_ptr_, AttemptInstall(_, _, _, _))
-      .WillOnce(Return(true));
-  EXPECT_CALL(*mock_update_engine_proxy_ptr_,
-              SetDlcActiveValue(true, kSecondDlc, _, _))
-      .WillOnce(Return(true));
-  EXPECT_CALL(*mock_update_engine_proxy_ptr_,
-              SetDlcActiveValue(false, kSecondDlc, _, _))
       .WillOnce(Return(true));
   EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(2);
 

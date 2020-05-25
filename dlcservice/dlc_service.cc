@@ -73,13 +73,38 @@ void DlcService::Initialize() {
 bool DlcService::Install(const DlcId& id,
                          const string& omaha_url,
                          ErrorPtr* err) {
-  // If an install is already in progress, dlcservice is busy.
-  if (dlc_manager_->IsInstalling()) {
-    *err = Error::Create(FROM_HERE, kErrorBusy,
-                         "Another install is already in progress.");
+  // TODO(ahassani): Currently, we create the DLC images even if later we find
+  // out the update_engine is busy and we have to delete the images. It would be
+  // better to know the update_engine status beforehand so we can tell the DLC
+  // to not create the images, just load them if it can. We can do this more
+  // reliably by caching the last status we saw from update_engine, rather than
+  // pulling for it on every install request. That would also allows us to
+  // properly queue the incoming install requests.
+
+  // Try to install and figure out if install through update_engine is needed.
+  bool external_install_needed = false;
+  if (!dlc_manager_->Install(id, &external_install_needed, err)) {
+    LOG(ERROR) << Error::ToString(*err);
     return false;
   }
 
+  // Install through update_engine only if needed.
+  if (external_install_needed && !InstallWithUpdateEngine(id, omaha_url, err)) {
+    // dlcservice must cancel the install as update_engine won't be able to
+    // install the initialized DLC.
+    ErrorPtr tmp_err;
+    if (!dlc_manager_->CancelInstall(id, &tmp_err))
+      LOG(ERROR) << Error::ToString(tmp_err);
+
+    return false;
+  }
+
+  return true;
+}
+
+bool DlcService::InstallWithUpdateEngine(const DlcId& id,
+                                         const string& omaha_url,
+                                         ErrorPtr* err) {
   // Check what state update_engine is in.
   Operation update_engine_op;
   if (!GetUpdateEngineStatus(&update_engine_op)) {
@@ -101,25 +126,6 @@ bool DlcService::Install(const DlcId& id,
       return false;
   }
 
-  if (!dlc_manager_->InitInstall(id, err)) {
-    LOG(ERROR) << Error::ToString(*err);
-    return false;
-  }
-
-  switch (GetDlc(id)->GetState().state()) {
-    case DlcState::NOT_INSTALLED:
-      *err = Error::Create(
-          FROM_HERE, kErrorInternal,
-          base::StringPrintf("DLC (%s) is not installing.", id.c_str()));
-      return false;
-    case DlcState::INSTALLING:
-      break;
-    case DlcState::INSTALLED:
-      return true;
-    default:
-      NOTREACHED();
-      return false;
-  }
 
   LOG(INFO) << "Sending request to update_engine to install DLC=" << id;
 
@@ -141,11 +147,6 @@ bool DlcService::Install(const DlcId& id,
     *err =
         Error::Create(FROM_HERE, kErrorBusy,
                       "Update Engine failed to schedule install operations.");
-    // dlcservice must cancel the install by communicating to dlc_manager who
-    // manages the DLC(s), as update_engine won't be able to install the
-    // initialized DLC(s) for installation.
-    if (!dlc_manager_->CancelInstall(&tmp_err))
-      LOG(ERROR) << Error::ToString(tmp_err);
     return false;
   }
 

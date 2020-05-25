@@ -44,8 +44,9 @@ TEST_F(DlcManagerTest, PreloadAllowedDlcTest) {
   EXPECT_THAT(dlc_manager_->GetInstalled(), ElementsAre());
   EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(2);
 
-  EXPECT_TRUE(dlc_manager_->InitInstall(kThirdDlc, &err_));
-
+  bool external_install_needed = false;
+  EXPECT_TRUE(
+      dlc_manager_->Install(kThirdDlc, &external_install_needed, &err_));
   EXPECT_THAT(dlc_manager_->GetInstalled(), ElementsAre(kThirdDlc));
   EXPECT_FALSE(dlc_manager_->GetDlc(kThirdDlc)->GetRoot().value().empty());
   CheckDlcState(kThirdDlc, DlcState::INSTALLED);
@@ -65,7 +66,9 @@ TEST_F(DlcManagerTest, PreloadAllowedWithBadPreinstalledDlcTest) {
   EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(2);
 
   EXPECT_THAT(dlc_manager_->GetInstalled(), ElementsAre());
-  EXPECT_TRUE(dlc_manager_->InitInstall(kThirdDlc, &err_));
+  bool external_install_needed = false;
+  EXPECT_TRUE(
+      dlc_manager_->Install(kThirdDlc, &external_install_needed, &err_));
   EXPECT_THAT(dlc_manager_->GetInstalled(), ElementsAre(kThirdDlc));
   EXPECT_FALSE(dlc_manager_->GetDlc(kThirdDlc)->GetRoot().value().empty());
   CheckDlcState(kThirdDlc, DlcState::INSTALLED);

@@ -52,6 +52,93 @@ class DlcBaseTestRemovable : public DlcBaseTest {
   DISALLOW_COPY_AND_ASSIGN(DlcBaseTestRemovable);
 };
 
+TEST_F(DlcBaseTest, CreateDlc) {
+  DlcBase dlc(kFirstDlc);
+  dlc.Initialize();
+
+  EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(1);
+
+  EXPECT_TRUE(dlc.Install(&err_));
+
+  constexpr int expected_permissions = 0755;
+  int permissions;
+  base::FilePath module_path = JoinPaths(content_path_, kFirstDlc, kPackage);
+  base::GetPosixFilePermissions(module_path, &permissions);
+  EXPECT_EQ(permissions, expected_permissions);
+  base::FilePath image_a_path =
+      GetDlcImagePath(content_path_, kFirstDlc, kPackage, BootSlot::Slot::A);
+  base::GetPosixFilePermissions(image_a_path.DirName(), &permissions);
+  EXPECT_EQ(permissions, expected_permissions);
+  base::FilePath image_b_path =
+      GetDlcImagePath(content_path_, kFirstDlc, kPackage, BootSlot::Slot::B);
+  base::GetPosixFilePermissions(image_b_path.DirName(), &permissions);
+  EXPECT_EQ(permissions, expected_permissions);
+
+  base::FilePath dlc_prefs_path = JoinPaths(prefs_path_, "dlc", kFirstDlc);
+  EXPECT_TRUE(base::PathExists(dlc_prefs_path));
+  base::GetPosixFilePermissions(dlc_prefs_path, &permissions);
+  EXPECT_EQ(permissions, expected_permissions);
+
+  EXPECT_EQ(dlc.GetState().state(), DlcState::INSTALLING);
+}
+
+TEST_F(DlcBaseTest, InstallWithUECompletion) {
+  DlcBase dlc(kFirstDlc);
+  dlc.Initialize();
+
+  EXPECT_CALL(*mock_update_engine_proxy_ptr_,
+              SetDlcActiveValue(_, kFirstDlc, _, _))
+      .WillRepeatedly(Return(true));
+  EXPECT_CALL(*mock_image_loader_proxy_ptr_, LoadDlcImage(_, _, _, _, _, _))
+      .WillOnce(DoAll(SetArgPointee<3>(mount_path_.value()), Return(true)));
+  EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(2);
+
+  EXPECT_TRUE(dlc.Install(&err_));
+  InstallWithUpdateEngine({kFirstDlc});
+  // UE calls this.
+  dlc.InstallCompleted(&err_);
+  EXPECT_EQ(dlc.GetState().state(), DlcState::INSTALLING);
+
+  dlc.FinishInstall(&err_);
+  EXPECT_EQ(dlc.GetState().state(), DlcState::INSTALLED);
+  EXPECT_TRUE(dlc.IsVerified());
+}
+
+TEST_F(DlcBaseTest, InstallWithoutUECompletion) {
+  DlcBase dlc(kFirstDlc);
+  dlc.Initialize();
+
+  EXPECT_CALL(*mock_update_engine_proxy_ptr_,
+              SetDlcActiveValue(_, kFirstDlc, _, _))
+      .WillRepeatedly(Return(true));
+  EXPECT_CALL(*mock_image_loader_proxy_ptr_, LoadDlcImage(_, _, _, _, _, _))
+      .WillOnce(DoAll(SetArgPointee<3>(mount_path_.value()), Return(true)));
+  EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(2);
+
+  EXPECT_TRUE(dlc.Install(&err_));
+  InstallWithUpdateEngine({kFirstDlc});
+  // UE doesn't call InstallComplete anymore. But we still verify.
+  EXPECT_EQ(dlc.GetState().state(), DlcState::INSTALLING);
+
+  dlc.FinishInstall(&err_);
+  EXPECT_EQ(dlc.GetState().state(), DlcState::INSTALLED);
+  EXPECT_TRUE(dlc.IsVerified());
+}
+
+TEST_F(DlcBaseTest, InstallWhenInstalling) {
+  DlcBase dlc(kFirstDlc);
+  dlc.Initialize();
+
+  EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(1);
+
+  EXPECT_TRUE(dlc.Install(&err_));
+  EXPECT_EQ(dlc.GetState().state(), DlcState::INSTALLING);
+
+  // A second install should do nothing.
+  EXPECT_TRUE(dlc.Install(&err_));
+  EXPECT_EQ(dlc.GetState().state(), DlcState::INSTALLING);
+}
+
 TEST_F(DlcBaseTest, VerifiedOnInitialization) {
   DlcBase dlc(kSecondDlc);
 
@@ -128,7 +215,7 @@ TEST_F(DlcBaseTest, BootingFromNonRemovableDeviceDeletesPreloadedDLCs) {
       .WillOnce(DoAll(SetArgPointee<3>(mount_path_.value()), Return(true)));
   EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(2);
 
-  EXPECT_TRUE(dlc.InitInstall(&err_));
+  EXPECT_TRUE(dlc.Install(&err_));
 
   // Preloaded DLC image should be deleted.
   EXPECT_FALSE(base::PathExists(image_path));
@@ -151,7 +238,7 @@ TEST_F(DlcBaseTestRemovable, BootingFromRemovableDeviceKeepsPreloadedDLCs) {
       .WillOnce(DoAll(SetArgPointee<3>(mount_path_.value()), Return(true)));
   EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(2);
 
-  EXPECT_TRUE(dlc.InitInstall(&err_));
+  EXPECT_TRUE(dlc.Install(&err_));
 
   // Preloaded DLC image should still exists.
   EXPECT_TRUE(base::PathExists(image_path));
@@ -192,26 +279,20 @@ TEST_F(DlcBaseTest, ImageOnDiskButNotVerifiedInstalls) {
   InstallWithUpdateEngine({kSecondDlc});
 
   EXPECT_EQ(dlc.GetState().state(), DlcState::NOT_INSTALLED);
-  EXPECT_CALL(*mock_image_loader_proxy_ptr_,
-              LoadDlcImage(kSecondDlc, _, _, _, _, _))
-      .WillOnce(DoAll(SetArgPointee<3>(mount_path_.value()), Return(true)));
-  EXPECT_CALL(*mock_update_engine_proxy_ptr_,
-              SetDlcActiveValue(_, kSecondDlc, _, _))
-      .WillOnce(Return(true));
-  EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(2);
+  EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(1);
 
-  EXPECT_TRUE(dlc.InitInstall(&err_));
-  EXPECT_TRUE(dlc.IsInstalled());
+  EXPECT_TRUE(dlc.Install(&err_));
+  EXPECT_TRUE(dlc.IsInstalling());
 }
 
 TEST_F(DlcBaseTest, ImageOnDiskVerifiedInstalls) {
   DlcBase dlc(kSecondDlc);
-  dlc.Initialize();
-
   EXPECT_TRUE(Prefs(dlc, SystemState::Get()->active_boot_slot())
                   .Create(kDlcPrefVerified));
   SetUpDlcWithSlots(kSecondDlc);
   InstallWithUpdateEngine({kSecondDlc});
+
+  dlc.Initialize();
 
   EXPECT_EQ(dlc.GetState().state(), DlcState::NOT_INSTALLED);
   EXPECT_CALL(*mock_image_loader_proxy_ptr_,
@@ -222,7 +303,7 @@ TEST_F(DlcBaseTest, ImageOnDiskVerifiedInstalls) {
       .WillOnce(Return(true));
   EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(2);
 
-  EXPECT_TRUE(dlc.InitInstall(&err_));
+  EXPECT_TRUE(dlc.Install(&err_));
   EXPECT_TRUE(dlc.IsInstalled());
 }
 
@@ -238,7 +319,7 @@ TEST_F(DlcBaseTest, VerifyDlcImageOnUEFailureToCompleteInstall) {
       .WillOnce(DoAll(SetArgPointee<3>(mount_path_.value()), Return(true)));
   EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(2);
 
-  EXPECT_TRUE(dlc.InitInstall(&err_));
+  EXPECT_TRUE(dlc.Install(&err_));
   EXPECT_TRUE(dlc.IsInstalling());
 
   // Intentionally skip over setting verified mark before |FinishInstall()|.

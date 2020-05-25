@@ -148,7 +148,9 @@ bool DlcManager::UpdateCompleted(const DlcIdList& ids, brillo::ErrorPtr* err) {
   return ret;
 }
 
-bool DlcManager::InitInstall(const DlcId& id, ErrorPtr* err) {
+bool DlcManager::Install(const DlcId& id,
+                         bool* external_install_needed,
+                         ErrorPtr* err) {
   DCHECK(err);
   // Don't even start installing if we have some unsupported DLC request.
   if (!IsSupported(id)) {
@@ -158,13 +160,21 @@ bool DlcManager::InitInstall(const DlcId& id, ErrorPtr* err) {
     return false;
   }
 
-  DCHECK(!IsInstalling());
   DlcBase& dlc = supported_.find(id)->second;
-  // Otherwise proceed with the setup for update_engine to overwrite.
-  if (!dlc.InitInstall(err)) {
+  // If the DLC is being installed, nothing can be done anymore.
+  if (dlc.IsInstalling()) {
+    return true;
+  }
+
+  // Otherwise proceed to install the DLC.
+  if (!dlc.Install(err)) {
     LOG(ERROR) << "Failed to initialize installation for DLC=" << id;
     return false;
   }
+
+  // If the DLC is now in installing state, it means it now needs update_engine
+  // installation.
+  *external_install_needed = dlc.IsInstalling();
   return true;
 }
 
@@ -185,13 +195,28 @@ bool DlcManager::FinishInstall(ErrorPtr* err) {
   for (auto& pair : supported_) {
     auto& dlc = pair.second;
     ErrorPtr tmp_err;
-    if (!dlc.FinishInstall(&tmp_err))
+    // Only try to finish install for DLCs that were in installing phase. Other
+    // DLCs should not be finished this route.
+    if (dlc.IsInstalling() && !dlc.FinishInstall(&tmp_err))
       ret = false;
   }
   if (!ret)
     *err = Error::Create(FROM_HERE, kErrorInternal,
                          "Not all DLC(s) successfully mounted.");
   return ret;
+}
+
+bool DlcManager::CancelInstall(const DlcId& id, ErrorPtr* err) {
+  DCHECK(err);
+  if (!IsSupported(id)) {
+    *err = Error::Create(
+        FROM_HERE, kErrorInvalidDlc,
+        base::StringPrintf("Trying to cancle install for unsupported DLC=%s",
+                           id.c_str()));
+    return false;
+  }
+
+  return supported_.find(id)->second.CancelInstall(err);
 }
 
 bool DlcManager::CancelInstall(ErrorPtr* err) {
