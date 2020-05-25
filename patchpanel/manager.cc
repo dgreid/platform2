@@ -261,6 +261,11 @@ void Manager::InitialSetup() {
     LOG(ERROR) << "Failed to set up wifi masquerade";
   }
 
+  if (!datapath_->AddOutboundIPv4SNATMark("vmtap+")) {
+    LOG(ERROR) << "Failed to set up NAT for TAP devices."
+               << " Guest connectivity may be broken.";
+  }
+
   routing_svc_ = std::make_unique<RoutingService>();
 
   nd_proxy_->RegisterDeviceMessageHandler(base::Bind(
@@ -292,6 +297,7 @@ void Manager::OnShutdown(int* exit_code) {
   for (const int fdkey : connected_namespaces_fdkeys)
     DisconnectNamespace(fdkey);
 
+  datapath_->RemoveOutboundIPv4SNATMark("vmtap+");
   datapath_->RemoveInterfaceSNAT("wwan+");
   datapath_->RemoveForwardEstablishedRule();
   datapath_->RemoveSNATMarkRules();
