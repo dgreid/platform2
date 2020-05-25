@@ -31,6 +31,7 @@ config("target_defaults") {
     "-Werror",
     "-Wextra",
   ]
+  cflags_cc = [ "-std=c++17" ]
   include_dirs = [
     "includes",
     "${libbase_src}/include",
@@ -38,7 +39,6 @@ config("target_defaults") {
     "${liblog_src}/include",
     "${libutils_src}/include",
   ]
-  cflags_cc = [ "-std=c++17" ]
   defines = []
 }
 
@@ -131,6 +131,7 @@ if (use.test) {
 }
 
 static_library("libcutils") {
+  configs += [ ":target_defaults" ]
   include_dirs = [ "${libcutils_src}/include" ]
   sources = [
     "${libcutils_src}/config_utils.cpp",
@@ -142,13 +143,28 @@ static_library("libcutils") {
   ]
 }
 
+if (use.test) {
+  executable("libcutils_testrunner") {
+    configs += [
+      "//common-mk:test",
+      ":target_defaults",
+    ]
+    include_dirs = [ "${libcutils_src}/include" ]
+    deps = [
+      ":libcutils",
+      "//common-mk/testrunner:testrunner",
+    ]
+    sources = [ "${libcutils_src}/native_handle_test.cpp" ]
+  }
+}
+
 static_library("libhidl") {
+  configs += [ ":target_defaults" ]
   include_dirs = [
     "${libbase_src}/include",
     "${libhidl_src}/base/include",
     "${libhidl_src}/libhidlmemory/include",
   ]
-  configs += [ ":target_defaults" ]
   deps = [ ":libbase" ]
   sources = [
     "${libhidl_src}/base/HidlInternal.cpp",
@@ -159,8 +175,8 @@ static_library("libhidl") {
 if (use.test) {
   executable("libhidl_testrunner") {
     configs += [
-      ":target_defaults",
       "//common-mk:test",
+      ":target_defaults",
     ]
     include_dirs = [
       "${libhidl_src}/include",
@@ -176,6 +192,7 @@ if (use.test) {
 }
 
 static_library("libutils") {
+  configs += [ ":target_defaults" ]
   include_dirs = [
     "${libcutils_src}/include",
     "${libutils_src}/include",
@@ -189,17 +206,11 @@ static_library("libutils") {
 }
 
 if (use.test) {
-  executable("libcutils_testrunner") {
-    configs += [ "//common-mk:test" ]
-    include_dirs = [ "${libcutils_src}/include" ]
-    deps = [
-      ":libcutils",
-      "//common-mk/testrunner:testrunner",
-    ]
-    sources = [ "${libcutils_src}/native_handle_test.cpp" ]
-  }
   executable("libutils_testrunner") {
-    configs += [ "//common-mk:test" ]
+    configs += [
+      "//common-mk:test",
+      ":target_defaults",
+    ]
     include_dirs = [ "${libutils_src}/include" ]
     deps = [
       ":libutils",
