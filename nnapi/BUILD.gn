@@ -7,10 +7,7 @@ import("//common-mk/pkg_config.gni")
 libbase_src = "../aosp/system/core/base"
 libcutils_src = "../aosp/system/core/libcutils"
 libhidl_src = "../aosp/system/libhidl"
-
-# TODO(crbug.com/1083354) - Use files from the liblog mirror once it's
-# available.
-liblog_src = "liblog/external/liblog"
+liblog_src = "../aosp/system/core/liblog"
 libutils_src = "../aosp/system/core/libutils"
 
 group("all") {
