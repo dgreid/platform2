@@ -254,6 +254,13 @@ void Manager::InitialSetup() {
                << " connections.";
   }
 
+  // TODO(chromium:898210): Move interface-specific masquerading setup to shill;
+  // such that we can better set up the masquerade rules based on connection
+  // type rather than interface names.
+  if (!datapath_->AddInterfaceSNAT("wwan+")) {
+    LOG(ERROR) << "Failed to set up wifi masquerade";
+  }
+
   routing_svc_ = std::make_unique<RoutingService>();
 
   nd_proxy_->RegisterDeviceMessageHandler(base::Bind(
@@ -285,6 +292,7 @@ void Manager::OnShutdown(int* exit_code) {
   for (const int fdkey : connected_namespaces_fdkeys)
     DisconnectNamespace(fdkey);
 
+  datapath_->RemoveInterfaceSNAT("wwan+");
   datapath_->RemoveForwardEstablishedRule();
   datapath_->RemoveSNATMarkRules();
 

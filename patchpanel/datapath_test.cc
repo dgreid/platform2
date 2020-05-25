@@ -548,6 +548,26 @@ TEST(DatapathTest, RemoveForwardEstablishedRule) {
   datapath.RemoveForwardEstablishedRule();
 }
 
+TEST(DatapathTest, AddInterfaceSNAT) {
+  MockProcessRunner runner;
+  EXPECT_CALL(runner, iptables(StrEq("nat"),
+                               ElementsAre("-A", "POSTROUTING", "-o", "wwan+",
+                                           "-j", "MASQUERADE", "-w"),
+                               true));
+  Datapath datapath(&runner);
+  datapath.AddInterfaceSNAT("wwan+");
+}
+
+TEST(DatapathTest, RemoveInterfaceSNAT) {
+  MockProcessRunner runner;
+  EXPECT_CALL(runner, iptables(StrEq("nat"),
+                               ElementsAre("-D", "POSTROUTING", "-o", "wwan+",
+                                           "-j", "MASQUERADE", "-w"),
+                               true));
+  Datapath datapath(&runner);
+  datapath.RemoveInterfaceSNAT("wwan+");
+}
+
 TEST(DatapathTest, ArcVethHostName) {
   EXPECT_EQ("vetheth0", ArcVethHostName("eth0"));
   EXPECT_EQ("vethrmnet0", ArcVethHostName("rmnet0"));

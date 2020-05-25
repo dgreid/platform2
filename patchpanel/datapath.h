@@ -122,6 +122,9 @@ class Datapath {
   virtual bool AddSNATMarkRules();
   virtual void RemoveSNATMarkRules();
 
+  virtual bool AddInterfaceSNAT(const std::string& ifname);
+  virtual void RemoveInterfaceSNAT(const std::string& ifname);
+
   // Create (or delete) a mangle PREROUTING rule for marking IPv4 traffic
   // outgoing of |ifname| with the SNAT fwmark value 0x1.
   // TODO(hugobenichi) Refer to RoutingService to obtain the fwmark value and

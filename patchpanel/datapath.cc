@@ -446,6 +446,16 @@ void Datapath::RemoveSNATMarkRules() {
                                        "1", "-j", "ACCEPT", "-w"});
 }
 
+bool Datapath::AddInterfaceSNAT(const std::string& ifname) {
+  return process_runner_->iptables("nat", {"-A", "POSTROUTING", "-o", ifname,
+                                           "-j", "MASQUERADE", "-w"}) == 0;
+}
+
+void Datapath::RemoveInterfaceSNAT(const std::string& ifname) {
+  process_runner_->iptables(
+      "nat", {"-D", "POSTROUTING", "-o", ifname, "-j", "MASQUERADE", "-w"});
+}
+
 bool Datapath::AddOutboundIPv4SNATMark(const std::string& ifname) {
   return process_runner_->iptables(
              "mangle", {"-A", "PREROUTING", "-i", ifname, "-j", "MARK",
