@@ -65,6 +65,19 @@ TEST_F(DpslThreadContextImplBaseDeathTest, CreateAndSave) {
                "Duplicate DpslThreadContext instances");
 }
 
+TEST_F(DpslThreadContextImplBaseDeathTest, RunLoopTwice) {
+  ASSERT_DEATH(
+      [global_context = global_context_.get()]() {
+        auto thread_context = DpslThreadContext::Create(global_context);
+        thread_context->PostTask(
+            std::function<void()>([thread_context = thread_context.get()]() {
+              thread_context->RunEventLoop();
+            }));
+        thread_context->RunEventLoop();
+      }(),
+      "Called from already running message loop");
+}
+
 class DpslThreadContextImplMainThreadTest
     : public DpslThreadContextImplBaseTest {
  public:
@@ -184,15 +197,6 @@ TEST_F(DpslThreadContextImplDeathTest, PostDelayedTaskInvalidDelay) {
       "Delay must be non-negative");
 }
 
-TEST_F(DpslThreadContextImplDeathTest, RunLoopTwice) {
-  main_thread_context_->PostTask(
-      std::function<void()>([thread_context = main_thread_context_.get()]() {
-        thread_context->RunEventLoop();
-      }));
-
-  ASSERT_DEATH(main_thread_context_->RunEventLoop(),
-               "Called from already running message loop");
-}
 
 class DpslThreadContextImplMultiThreadTest
     : public DpslThreadContextImplMainThreadTest {
