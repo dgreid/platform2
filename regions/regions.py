@@ -758,7 +758,7 @@ UNCONFIRMED_REGIONS_LIST = [
                               'Asia/Choibalsan'], ['mn', 'ru'], KML.ANSI,
         'Mongolia'),
     Region(
-        'mh', 'xkb:mh::mah', ['Pacific/Majuro'], ['mh' 'en-MH'], KML.ANSI,
+        'mh', 'xkb:mh::mah', ['Pacific/Majuro'], ['mh', 'en-MH'], KML.ANSI,
         'Marshall Islands'),
     Region(
         'mk', 'xkb:mk::mkd', 'Europe/Skopje', ['mk', 'sq', 'tr'], KML.ANSI,
