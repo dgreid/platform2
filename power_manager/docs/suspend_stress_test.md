@@ -78,7 +78,7 @@ Simply pass `memory_check` option to suspend_stress_test script to verify that
 memory does not get corrupted during suspend/resume process.
 
 ```sh
-# suspend_stress_test --count=2500 --suspend_min=5 --suspend_max=10 ---memory_check
+# suspend_stress_test --count=2500 --suspend_min=5 --suspend_max=10 --memory_check
 ```
 
 [go/suspend-stress-test]: http:/go/suspend-stress-test]
