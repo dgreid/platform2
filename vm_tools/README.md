@@ -104,9 +104,9 @@ wrapper around the [p9](#p9) rust library.
 ## vsh
 
 `vsh` is a vsock-based remote shell utility. `vshd` runs on the guest/server,
-and `vsh` runs on the host/client. For now, this is only capable of launching
-a shell on the VM itself, but this may later be extended to launch a shell in
-a specific container inside of the VM.
+and `vsh` runs on the host/client.
+
+For more detailed docs, see [`vsh`](vsh/).
 
 ## vm_syslog
 
