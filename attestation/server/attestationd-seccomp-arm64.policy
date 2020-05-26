@@ -48,6 +48,7 @@ newfstatat: 1
 lseek: 1
 fcntl: 1
 faccessat: 1
+flock: 1
 
 futex: 1
 set_robust_list: 1

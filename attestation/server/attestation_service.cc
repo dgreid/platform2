@@ -1608,6 +1608,9 @@ void AttestationService::PrepareForEnrollment(
 
   if (!tpm_utility_->IsPCR0Valid()) {
     LOG(ERROR) << __func__ << "Invalid PCR0 value, aborting.";
+    metrics_.ReportAttestationOpsStatus(
+        kAttestationPrepareForEnrollment,
+        AttestationOpsStatus::kInvalidPcr0Value);
     return;
   }
 
@@ -1666,6 +1669,8 @@ void AttestationService::PrepareForEnrollment(
   base::TimeDelta delta = (base::TimeTicks::Now() - start);
   LOG(INFO) << "Attestation: Prepared successfully (" << delta.InMilliseconds()
             << "ms) with " << GetKeyTypeName(key_type) << " EK.";
+  metrics_.ReportAttestationOpsStatus(kAttestationPrepareForEnrollment,
+                                      AttestationOpsStatus::kSuccess);
   std::move(callback).Run(true);
 }
 
@@ -1931,6 +1936,9 @@ bool AttestationService::ActivateAttestationKeyInternal(
   if (save_certificate) {
     if (!tpm_utility_->IsPCR0Valid()) {
       LOG(ERROR) << __func__ << "Invalid PCR0 value, aborting.";
+      metrics_.ReportAttestationOpsStatus(
+          kAttestationActivateAttestationKey,
+          AttestationOpsStatus::kInvalidPcr0Value);
       return false;
     }
 
@@ -2362,6 +2370,8 @@ void AttestationService::VerifyTask(
   }
   if (!tpm_utility_->IsPCR0Valid()) {
     LOG(ERROR) << __func__ << ": Bad PCR0 value.";
+    metrics_.ReportAttestationOpsStatus(
+        kAttestationVerify, AttestationOpsStatus::kInvalidPcr0Value);
   }
   if (!VerifyPCR0Quote(identity_public_key_info,
                        identity_data.pcr_quotes().at(0))) {

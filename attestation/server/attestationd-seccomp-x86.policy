@@ -55,6 +55,7 @@ stat64: 1
 lstat64: 1
 _llseek: 1
 fcntl64: 1
+flock: 1
 
 futex: 1
 set_robust_list: 1

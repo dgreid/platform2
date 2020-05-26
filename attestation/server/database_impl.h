@@ -12,6 +12,7 @@
 
 #include "attestation/common/crypto_utility.h"
 #include "attestation/common/tpm_utility.h"
+#include "attestation/server/attestation_service_metrics.h"
 
 namespace attestation {
 
@@ -62,6 +63,7 @@ class DatabaseImpl : public Database, public DatabaseIO {
   DatabaseIO* io_;
   CryptoUtility* crypto_;
   TpmUtility* tpm_utility_;
+  AttestationServiceMetrics metrics_;
   std::string database_key_;
   std::string sealed_database_key_;
 };

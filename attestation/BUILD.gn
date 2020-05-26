@@ -190,6 +190,7 @@ source_set("server_library") {
   sources = [
     "server/attestation_flow.cc",
     "server/attestation_service.cc",
+    "server/attestation_service_metrics.cc",
     "server/certificate_queue.cc",
     "server/database_impl.cc",
     "server/dbus_service.cc",
@@ -210,7 +211,10 @@ source_set("server_library") {
 
 # The attestation daemon.
 pkg_config("attestationd_config") {
-  pkg_deps = [ "libminijail" ]
+  pkg_deps = [
+    "libmetrics-${libbase_ver}",
+    "libminijail",
+  ]
 }
 
 executable("attestationd") {
@@ -305,6 +309,7 @@ if (use.test) {
     pkg_deps = [
       "libbrillo-test",
       "libchrome-test-${libbase_ver}",
+      "libmetrics-${libbase_ver}",
     ]
   }
   executable("attestation_testrunner") {

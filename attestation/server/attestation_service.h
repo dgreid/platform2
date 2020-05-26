@@ -31,6 +31,7 @@
 #include "attestation/common/tpm_utility_factory.h"
 #include "attestation/pca_agent/dbus-proxies.h"
 #include "attestation/server/attestation_flow.h"
+#include "attestation/server/attestation_service_metrics.h"
 #include "attestation/server/certificate_queue.h"
 #include "attestation/server/database.h"
 #include "attestation/server/database_impl.h"
@@ -750,6 +751,8 @@ class AttestationService : public AttestationInterface {
                            SignEnterpriseChallengeSuccess);
   FRIEND_TEST_ALL_PREFIXES(AttestationServiceEnterpriseTest,
                            SignEnterpriseChallengeUseKeyForSPKAC);
+
+  AttestationServiceMetrics metrics_;
 
   // Other than initialization and destruction, these are used only by the
   // worker thread.
