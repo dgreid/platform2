@@ -6,9 +6,12 @@
 
 #include <base/logging.h>
 #include <brillo/udev/udev_enumerate.h>
+#include <re2/re2.h>
 
 namespace {
 
+constexpr char kPartnerRegex[] = R"(port(\d+)-partner)";
+constexpr char kPortRegex[] = R"(port(\d+))";
 constexpr char kTypeCSubsystem[] = "typec";
 
 }  // namespace
@@ -43,18 +46,33 @@ bool UdevMonitor::ScanDevices() {
   }
 
   while (entry != nullptr) {
-    HandleDeviceAdded(std::string(entry->GetName()));
+    HandleDeviceAdded(base::FilePath(std::string(entry->GetName())));
     entry = entry->GetNext();
   }
 
   return true;
 }
 
-bool UdevMonitor::HandleDeviceAdded(const std::string& path) {
+void UdevMonitor::AddObserver(Observer* obs) {
+  observer_list_.AddObserver(obs);
+}
+
+void UdevMonitor::RemoveObserver(Observer* obs) {
+  observer_list_.RemoveObserver(obs);
+}
+
+bool UdevMonitor::HandleDeviceAdded(const base::FilePath& path) {
+  auto name = path.BaseName();
+
   LOG(INFO) << "Found device: " << path;
 
-  // TODO(b/152251292): Actually handle this.
-  NOTIMPLEMENTED();
+  for (Observer& observer : observer_list_) {
+    if (RE2::FullMatch(name.value(), kPortRegex))
+      observer.OnPortAddedOrRemoved(path, true);
+    else if (RE2::FullMatch(name.value(), kPartnerRegex))
+      observer.OnPartnerAddedOrRemoved(path, true);
+  }
+
   return true;
 }
 

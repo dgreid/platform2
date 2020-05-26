@@ -16,6 +16,7 @@ pkg_config("target_defaults") {
     "libbrillo",
     "libchrome-${libbase_ver}",
     "libudev",
+    "re2",
   ]
 }
 

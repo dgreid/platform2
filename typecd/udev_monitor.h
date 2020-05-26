@@ -12,6 +12,9 @@
 #include <string>
 #include <utility>
 
+#include <base/files/file_path.h>
+#include <base/observer_list.h>
+#include <base/observer_list_types.h>
 #include <brillo/udev/mock_udev.h>
 #include <gtest/gtest_prod.h>
 
@@ -30,6 +33,30 @@ class UdevMonitor {
   // notifications to other classes.
   bool ScanDevices();
 
+  class Observer : public base::CheckedObserver {
+   public:
+    virtual ~Observer() {}
+    // Callback that is executed when a port is connected or disconnected.
+    //
+    // The |path| argument refers to the sysfs device path of the port.
+    // The |added| argument is set to true if the port was added, and false
+    // otherwise.
+    virtual void OnPortAddedOrRemoved(const base::FilePath& path,
+                                      bool added) = 0;
+
+    // Callback that is executed when a port partner is connected or
+    // disconnected.
+    //
+    // The |path| argument refers to the sysfs device path of the port partner.
+    // The |added| argument is set to true if the port was added, and false
+    // otherwise.
+    virtual void OnPartnerAddedOrRemoved(const base::FilePath& path,
+                                         bool added) = 0;
+  };
+
+  void AddObserver(Observer* obs);
+  void RemoveObserver(Observer* obs);
+
  private:
   friend class UdevMonitorTest;
   FRIEND_TEST(UdevMonitorTest, TestBasic);
@@ -40,9 +67,10 @@ class UdevMonitor {
   }
 
   // Handle a udev event which causes a Type C device to be added.
-  bool HandleDeviceAdded(const std::string& path);
+  bool HandleDeviceAdded(const base::FilePath& path);
 
   std::unique_ptr<brillo::Udev> udev_;
+  base::ObserverList<Observer> observer_list_;
 };
 
 }  // namespace typecd
