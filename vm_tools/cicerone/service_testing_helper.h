@@ -70,6 +70,8 @@ class ServiceTestingHelper {
     kUpgradeContainer,
     kCancelUpgradeContainer,
     kStartLxd,
+    kAddFileWatch,
+    kRemoveFileWatch,
 
     kNumDbusCalls
   };

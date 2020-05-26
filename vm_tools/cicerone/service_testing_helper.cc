@@ -508,6 +508,8 @@ void ServiceTestingHelper::SetDbusCallbackNames() {
   dbus_callbacks_[kCancelUpgradeContainer].method_name =
       kCancelUpgradeContainerMethod;
   dbus_callbacks_[kStartLxd].method_name = kStartLxdMethod;
+  dbus_callbacks_[kAddFileWatch].method_name = kAddFileWatchMethod;
+  dbus_callbacks_[kRemoveFileWatch].method_name = kRemoveFileWatchMethod;
 
   // Check we didn't forget any.
   for (const auto& callback_info : dbus_callbacks_) {
