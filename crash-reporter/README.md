@@ -317,8 +317,6 @@ These paths are guaranteed to persist across boots.
     previous kernel crashes to the previous OS version that was running.
 *   `/var/lib/crash_reporter/pending_clean_shutdown`: Used by the
     [unclean_shutdown_collector].
-*   `/var/lib/crash_sender_paused`: Used by autotests to pause [crash_sender].
-    *This should be moved to `/run/crash_reporter/crash_sender_paused`.*
 *   `/var/lib/crash_sender/`: Non-volatile state that [crash_sender] maintains.
     Used to keep track of how many reports have been uploaded (and when) so we
     can regulate our limits. Do not add any additional files to this directory
@@ -346,6 +344,46 @@ runtime details here.
 *   `/run/crash_reporter/`: Used by all crash-reporter tools (i.e. both
     [crash_reporter] and [crash_sender]) for runtime state.
     *This should be moved to `/run/crash-reporter/` as the project name.*
+*   `/run/lock/crash_sender`: Used by [crash_sender] to guarantee only one
+    upload instance is active at a time.
+
+These are used to communicate with [metrics_daemon].
+
+*   `/run/metrics/external/crash-reporter/kernel-crash-detected`: Used by
+    [crash_reporter] to signal the [metrics_daemon] that a kernel
+    crash occurred.
+    Also used by integration tests to verify this functionality.
+*   `/run/metrics/external/crash-reporter/unclean-shutdown-detected`: Used by
+    [crash_reporter] to signal the [metrics_daemon] that an unclean
+    shutdown occurred.
+    Also used by integration tests to verify this functionality.
+
+This is used to communicate with [powerd].
+
+*   `/run/crash_reporter/boot-collector-done`: Used by [crash_reporter] to
+    signal the [powerd] that boot collector has successfully completed per-boot
+    crash collection.
+    Also used by integration tests that rely on the boot collector.
+
+*** aside
+This poor man's IPC with `/run` files was done historically because the
+[crash-reporter.conf] init and [crash-boot-collect.conf] were one script that
+always executed early and before [metrics_daemon] started.
+However, now we can make [crash-boot-collect.conf] wait for [metrics_daemon],
+we should be able to switch to its more standard existing IPC methods.
+***
+
+### Test-related paths
+*   `/var/lib/crash_sender_paused`: Used by integration tests to pause
+    [crash_sender].
+    *This should be moved to `/run/crash_reporter/crash_sender_paused`.*
+*   `/var/spool/crash/mock-consent`: Used by integration tests to persist mock
+    consent across reboots. This file should be created with a small number
+    greater than 0 (like 2). It will be deleted after that number of reboots.
+*   `/var/spool/crash/crash-test-in-progress`: Used by integration tests to
+    persist crash test in progress state across reboots. This file should be
+    created with a small number greater than 0 (like 2). It will be deleted
+    after that number of reboots.
 *   `/run/crash_reporter/crash-test-in-progress`: Used by integration tests to
     tell tools they are being exercised by an integration test that tests the
     crash system itself and to adjust their behavior accordingly.
@@ -357,31 +395,10 @@ runtime details here.
 *   `/run/crash_reporter/filter-in`: Used by integration tests to tell the
     crash_reporter to ignore invocations unless the command line contains
     the contents of this file as a substring.
-*   `/run/lock/crash_sender`: Used by [crash_sender] to guarantee only one
-    upload instance is active at a time.
-
-These are used to communicate with [metrics_daemon].
-
-*   `/run/metrics/external/crash-reporter/kernel-crash-detected`: Used by
-    [crash_reporter] to signal the [metrics_daemon] that a kernel
-    crash occurred.
-*   `/run/metrics/external/crash-reporter/unclean-shutdown-detected`: Used by
-    [crash_reporter] to signal the [metrics_daemon] that an unclean
-    shutdown occurred.
-
-This is used to communicate with [powerd].
-
-*   `/run/crash_reporter/boot-collector-done`: Used by [crash_reporter] to
-    signal the [powerd] that boot collector has successfully completed per-boot
-    crash collection.
-
-*** aside
-This poor man's IPC with `/run` files was done historically because the
-[crash-reporter.conf] init and [crash-boot-collect.conf] were one script that
-always executed early and before [metrics_daemon] started.
-However, now we can make [crash-boot-collect.conf] wait for [metrics_daemon],
-we should be able to switch to its more standard existing IPC methods.
-***
+*   `/mnt/stateful_partition/etc/collect_chrome_crashes`: Used by autotests
+    to let [crash_reporter] collect browser crashes directly (normally it
+    ignores them and lets Chrome handle things).
+    *This should be moved to `/run/crash-reporter/collect_chrome_crashes`.*
 
 ### Temporary Paths (/tmp)
 
@@ -409,10 +426,6 @@ Here's any other random paths we handle.
     Created on dev images automatically.
     *This should be moved to `/etc/crash-reporter/leave-core`, and duplicated
     in `/run/crash-reporter/` so people don't have to modify the rootfs.*
-*   `/mnt/stateful_partition/etc/collect_chrome_crashes`: Used by autotests
-    to let [crash_reporter] collect browser crashes directly (normally it
-    ignores them and lets Chrome handle things).
-    *This should be moved to `/run/crash-reporter/collect_chrome_crashes`.*
 
 ## Crash Report Format
 
