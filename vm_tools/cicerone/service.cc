@@ -870,8 +870,7 @@ void Service::ContainerExportProgress(
     ExportLxdContainerProgressSignal* progress_signal,
     bool* result,
     base::WaitableEvent* event) {
-  *result =
-      SendMessage(kExportLxdContainerProgressSignal, cid, progress_signal);
+  *result = SendSignal(kExportLxdContainerProgressSignal, cid, progress_signal);
   event->Signal();
 }
 
@@ -880,8 +879,7 @@ void Service::ContainerImportProgress(
     ImportLxdContainerProgressSignal* progress_signal,
     bool* result,
     base::WaitableEvent* event) {
-  *result =
-      SendMessage(kImportLxdContainerProgressSignal, cid, progress_signal);
+  *result = SendSignal(kImportLxdContainerProgressSignal, cid, progress_signal);
   event->Signal();
 }
 
@@ -890,7 +888,7 @@ void Service::ContainerUpgradeProgress(
     UpgradeContainerProgressSignal* progress_signal,
     bool* result,
     base::WaitableEvent* event) {
-  *result = SendMessage(kUpgradeContainerProgressSignal, cid, progress_signal);
+  *result = SendSignal(kUpgradeContainerProgressSignal, cid, progress_signal);
   event->Signal();
 }
 
@@ -898,7 +896,7 @@ void Service::StartLxdProgress(const uint32_t cid,
                                StartLxdProgressSignal* progress_signal,
                                bool* result,
                                base::WaitableEvent* event) {
-  *result = SendMessage(kStartLxdProgressSignal, cid, progress_signal);
+  *result = SendSignal(kStartLxdProgressSignal, cid, progress_signal);
   event->Signal();
 }
 
@@ -1072,33 +1070,8 @@ void Service::InstallLinuxPackageProgress(
     InstallLinuxPackageProgressSignal* progress_signal,
     bool* result,
     base::WaitableEvent* event) {
-  DCHECK(sequence_checker_.CalledOnValidSequence());
-  CHECK(progress_signal);
-  CHECK(result);
-  CHECK(event);
-  *result = false;
-  VirtualMachine* vm;
-  std::string owner_id;
-  std::string vm_name;
-
-  if (!GetVirtualMachineForCidOrToken(cid, "", &vm, &owner_id, &vm_name)) {
-    event->Signal();
-    return;
-  }
-  std::string container_name = vm->GetContainerNameForToken(container_token);
-  if (container_name.empty()) {
-    event->Signal();
-    return;
-  }
-
-  // Send the D-Bus signal out updating progress/completion for the install.
-  dbus::Signal signal(kVmCiceroneInterface, kInstallLinuxPackageProgressSignal);
-  progress_signal->set_vm_name(vm_name);
-  progress_signal->set_container_name(container_name);
-  progress_signal->set_owner_id(owner_id);
-  dbus::MessageWriter(&signal).AppendProtoAsArrayOfBytes(*progress_signal);
-  exported_object_->SendSignal(&signal);
-  *result = true;
+  *result = SendSignal(kInstallLinuxPackageProgressSignal, container_token, cid,
+                       progress_signal);
   event->Signal();
 }
 
@@ -1108,33 +1081,8 @@ void Service::UninstallPackageProgress(
     UninstallPackageProgressSignal* progress_signal,
     bool* result,
     base::WaitableEvent* event) {
-  DCHECK(sequence_checker_.CalledOnValidSequence());
-  CHECK(progress_signal);
-  CHECK(result);
-  CHECK(event);
-  *result = false;
-  VirtualMachine* vm;
-  std::string owner_id;
-  std::string vm_name;
-
-  if (!GetVirtualMachineForCidOrToken(cid, "", &vm, &owner_id, &vm_name)) {
-    event->Signal();
-    return;
-  }
-  std::string container_name = vm->GetContainerNameForToken(container_token);
-  if (container_name.empty()) {
-    event->Signal();
-    return;
-  }
-
-  // Send the D-Bus signal out updating progress/completion for the uninstall.
-  dbus::Signal signal(kVmCiceroneInterface, kUninstallPackageProgressSignal);
-  progress_signal->set_vm_name(vm_name);
-  progress_signal->set_container_name(container_name);
-  progress_signal->set_owner_id(owner_id);
-  dbus::MessageWriter(&signal).AppendProtoAsArrayOfBytes(*progress_signal);
-  exported_object_->SendSignal(&signal);
-  *result = true;
+  *result = SendSignal(kUninstallPackageProgressSignal, container_token, cid,
+                       progress_signal);
   event->Signal();
 }
 
@@ -1144,36 +1092,8 @@ void Service::ApplyAnsiblePlaybookProgress(
     ApplyAnsiblePlaybookProgressSignal* progress_signal,
     bool* result,
     base::WaitableEvent* event) {
-  DCHECK(sequence_checker_.CalledOnValidSequence());
-  CHECK(progress_signal);
-  CHECK(result);
-  CHECK(event);
-  *result = false;
-  VirtualMachine* vm;
-  std::string owner_id;
-  std::string vm_name;
-
-  if (!GetVirtualMachineForCidOrToken(cid, "", &vm, &owner_id, &vm_name)) {
-    LOG(ERROR) << "No VM for cid or token";
-    event->Signal();
-    return;
-  }
-  std::string container_name = vm->GetContainerNameForToken(container_token);
-  if (container_name.empty()) {
-    LOG(ERROR) << "No container name for token";
-    event->Signal();
-    return;
-  }
-
-  // Send the D-Bus signal out updating progress/completion for the application.
-  dbus::Signal signal(kVmCiceroneInterface,
-                      kApplyAnsiblePlaybookProgressSignal);
-  progress_signal->set_vm_name(vm_name);
-  progress_signal->set_container_name(container_name);
-  progress_signal->set_owner_id(owner_id);
-  dbus::MessageWriter(&signal).AppendProtoAsArrayOfBytes(*progress_signal);
-  exported_object_->SendSignal(&signal);
-  *result = true;
+  *result = SendSignal(kApplyAnsiblePlaybookProgressSignal, container_token,
+                       cid, progress_signal);
   event->Signal();
 }
 

@@ -328,28 +328,63 @@ class Service final {
                                       std::string* name_out);
 
  private:
-  // Sends a D-Bus signal to inform listeners on update for the progress or
-  // completion of the message specified by |method_name|. It will use |cid| to
-  // resolve the request to a VM. |progress_signal| should have all related
-  // fields set. Signals |event| when done.
+  // Sends the |signal_name| D-Bus signal with |signal_proto| as its contents.
+  // It will use |cid| to lookup VM and owner, and set these fields on
+  // |signal_proto| before sending it.
   template <typename T>
-  bool SendMessage(const std::string& method_name,
-                   const uint32_t cid,
-                   T* progress_signal) {
+  bool SendSignal(const std::string& signal_name,
+                  const uint32_t cid,
+                  T* signal_proto) {
     DCHECK(sequence_checker_.CalledOnValidSequence());
-    CHECK(progress_signal);
+    CHECK(signal_proto);
     VirtualMachine* vm;
     std::string owner_id;
     std::string vm_name;
 
     if (!GetVirtualMachineForCidOrToken(cid, "", &vm, &owner_id, &vm_name)) {
+      LOG(ERROR) << "Could not get virtual machine for cid";
       return false;
     }
 
-    dbus::Signal signal(kVmCiceroneInterface, method_name);
-    progress_signal->set_vm_name(std::move(vm_name));
-    progress_signal->set_owner_id(std::move(owner_id));
-    dbus::MessageWriter(&signal).AppendProtoAsArrayOfBytes(*progress_signal);
+    dbus::Signal signal(kVmCiceroneInterface, signal_name);
+    signal_proto->set_vm_name(std::move(vm_name));
+    signal_proto->set_owner_id(std::move(owner_id));
+    dbus::MessageWriter(&signal).AppendProtoAsArrayOfBytes(*signal_proto);
+    exported_object_->SendSignal(&signal);
+    return true;
+  }
+
+  // Sends the |signal_name| D-Bus signal with |signal_proto| as its contents.
+  // It will use |cid| and |container_token| to lookup VM, owner, and container
+  // name, and set these fields on |signal_proto| before sending it.
+  template <typename T>
+  bool SendSignal(const std::string& signal_name,
+                  const std::string& container_token,
+                  const uint32_t cid,
+                  T* signal_proto) {
+    DCHECK(sequence_checker_.CalledOnValidSequence());
+    CHECK(signal_proto);
+    VirtualMachine* vm;
+    std::string owner_id;
+    std::string vm_name;
+
+    if (!GetVirtualMachineForCidOrToken(cid, container_token, &vm, &owner_id,
+                                        &vm_name)) {
+      LOG(ERROR) << "Could not get virtual machine for cid";
+      return false;
+    }
+
+    std::string container_name = vm->GetContainerNameForToken(container_token);
+    if (container_name.empty()) {
+      LOG(ERROR) << "Could not get container name for token";
+      return false;
+    }
+
+    dbus::Signal signal(kVmCiceroneInterface, signal_name);
+    signal_proto->set_vm_name(std::move(vm_name));
+    signal_proto->set_container_name(std::move(container_name));
+    signal_proto->set_owner_id(std::move(owner_id));
+    dbus::MessageWriter(&signal).AppendProtoAsArrayOfBytes(*signal_proto);
     exported_object_->SendSignal(&signal);
     return true;
   }
