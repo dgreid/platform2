@@ -107,6 +107,16 @@ class Camera3TestGralloc {
   //    V4L2 pixel format on success; 0 on failure.
   static uint32_t GetV4L2PixelFormat(buffer_handle_t buffer);
 
+  // Get the width of the buffer handle.
+  // Returns:
+  //    The width; 0 if |buffer| is invalid.
+  static uint32_t GetWidth(buffer_handle_t buffer);
+
+  // Get the height of the buffer handle.
+  // Returns:
+  //    The height; 0 if |buffer| is invalid.
+  static uint32_t GetHeight(buffer_handle_t buffer);
+
  private:
   Camera3TestGralloc();
 

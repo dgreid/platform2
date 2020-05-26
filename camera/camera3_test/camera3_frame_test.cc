@@ -1734,7 +1734,8 @@ class Camera3PortraitModeTest : public Camera3FrameFixture,
   bool GetPortraitModeVendorTags(uint32_t* portrait_mode_vendor_tag,
                                  uint32_t* segmentation_result_vendor_tag);
 
-  bool LoadTestImage(uint32_t width, uint32_t height);
+  bool LoadTestImage();
+  void TakePortraitModePictureTest(bool has_face);
 
   ScopedCameraMetadata result_metadata_;
   ScopedBufferHandle yuv_buffer_handle_;
@@ -1775,7 +1776,10 @@ bool Camera3PortraitModeTest::GetPortraitModeVendorTags(
   return true;
 }
 
-bool Camera3PortraitModeTest::LoadTestImage(uint32_t width, uint32_t height) {
+bool Camera3PortraitModeTest::LoadTestImage() {
+  auto* gralloc = Camera3TestGralloc::GetInstance();
+  uint32_t width = gralloc->GetWidth(*yuv_buffer_handle_);
+  uint32_t height = gralloc->GetHeight(*yuv_buffer_handle_);
   base::CommandLine* cmd_line = base::CommandLine::ForCurrentProcess();
   base::FilePath portrait_mode_test_data_path =
       cmd_line->GetSwitchValuePath("portrait_mode_test_data");
@@ -1822,7 +1826,6 @@ bool Camera3PortraitModeTest::LoadTestImage(uint32_t width, uint32_t height) {
     return false;
   }
 
-  auto gralloc = Camera3TestGralloc::GetInstance();
   struct android_ycbcr ycbcr_info;
   if (gralloc->LockYCbCr(*yuv_buffer_handle_, 0, 0, 0, width, height,
                          &ycbcr_info) != 0) {
@@ -1854,7 +1857,37 @@ bool Camera3PortraitModeTest::LoadTestImage(uint32_t width, uint32_t height) {
   return res;
 }
 
-TEST_P(Camera3PortraitModeTest, BasicOperation) {
+static bool FillImageWithBlackColor(buffer_handle_t buffer) {
+  auto* gralloc = Camera3TestGralloc::GetInstance();
+  uint32_t width = gralloc->GetWidth(buffer);
+  uint32_t height = gralloc->GetHeight(buffer);
+  struct android_ycbcr ycbcr_info;
+  if (gralloc->LockYCbCr(buffer, 0, 0, 0, width, height, &ycbcr_info) != 0) {
+    LOGF(ERROR) << "Failed to lock YUV buffer";
+    return false;
+  }
+  uint32_t v4l2_format = cros::CameraBufferManager::GetV4L2PixelFormat(buffer);
+  bool res = false;
+  switch (v4l2_format) {
+    case V4L2_PIX_FMT_NV12:
+    case V4L2_PIX_FMT_NV12M:
+      std::fill(
+          static_cast<uint8_t*>(ycbcr_info.y),
+          static_cast<uint8_t*>(ycbcr_info.y) + ycbcr_info.ystride * height, 0);
+      std::fill(static_cast<uint8_t*>(ycbcr_info.cb),
+                static_cast<uint8_t*>(ycbcr_info.cb) +
+                    ycbcr_info.cstride * height / 2,
+                0x80U);
+      res = true;
+      break;
+    default:
+      LOGF(ERROR) << "Unsupported format " << FormatToString(v4l2_format);
+  }
+  gralloc->Unlock(buffer);
+  return res;
+}
+
+void Camera3PortraitModeTest::TakePortraitModePictureTest(bool has_face) {
   uint32_t portrait_mode_vendor_tag;
   uint32_t segmentation_result_vendor_tag;
   if (!GetPortraitModeVendorTags(&portrait_mode_vendor_tag,
@@ -1906,7 +1939,11 @@ TEST_P(Camera3PortraitModeTest, BasicOperation) {
     return it == streams.end() ? nullptr : *it;
   };
   // prepare input_buffer
-  ASSERT_TRUE(LoadTestImage(resolution.Width(), resolution.Height()));
+  if (has_face) {
+    ASSERT_TRUE(LoadTestImage());
+  } else {
+    ASSERT_TRUE(FillImageWithBlackColor(*yuv_buffer_handle_));
+  }
   auto in_buffer = std::move(yuv_buffer_handle_);
   auto in_stream = GetStream(HAL_PIXEL_FORMAT_YCbCr_420_888, false);
   ASSERT_NE(in_stream, nullptr);
@@ -1951,7 +1988,20 @@ TEST_P(Camera3PortraitModeTest, BasicOperation) {
       << get_camera_metadata_tag_name(segmentation_result_vendor_tag)
       << " in result metadata";
   ASSERT_EQ(1, entry.count);
-  ASSERT_EQ(0, entry.data.u8[0]) << "Portrait mode failed";
+  if (has_face) {
+    ASSERT_EQ(0, entry.data.u8[0]) << "Portrait mode failed";
+  } else {
+    ASSERT_EQ(1, entry.data.u8[0])
+        << "Portrait mode should have failed with no face in the picture";
+  }
+}
+
+TEST_P(Camera3PortraitModeTest, BasicOperation) {
+  TakePortraitModePictureTest(true);
+}
+
+TEST_P(Camera3PortraitModeTest, NoFace) {
+  TakePortraitModePictureTest(false);
 }
 
 INSTANTIATE_TEST_CASE_P(
