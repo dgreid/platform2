@@ -120,6 +120,10 @@ class Container {
                       uint32_t tcp4_port,
                       std::string* out_error);
 
+  bool AddFileWatch(const std::string& path, std::string* out_error);
+
+  bool RemoveFileWatch(const std::string& path, std::string* out_error);
+
  private:
   std::string name_;
   std::string token_;

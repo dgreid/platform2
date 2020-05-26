@@ -1236,6 +1236,8 @@ bool Service::Init(
       {kUpgradeContainerMethod, &Service::UpgradeContainer},
       {kCancelUpgradeContainerMethod, &Service::CancelUpgradeContainer},
       {kStartLxdMethod, &Service::StartLxd},
+      {kAddFileWatchMethod, &Service::AddFileWatch},
+      {kRemoveFileWatchMethod, &Service::RemoveFileWatch},
   };
 
   for (const auto& iter : kServiceMethods) {
@@ -2940,6 +2942,122 @@ std::unique_ptr<dbus::Response> Service::StartLxd(
   response.set_failure_reason(error_msg);
   writer.AppendProtoAsArrayOfBytes(response);
   return dbus_response;
+}
+
+std::unique_ptr<dbus::Response> Service::AddFileWatch(
+    dbus::MethodCall* method_call) {
+  DCHECK(sequence_checker_.CalledOnValidSequence());
+  LOG(INFO) << "Received AddFileWatch request";
+  std::unique_ptr<dbus::Response> dbus_response(
+      dbus::Response::FromMethodCall(method_call));
+
+  dbus::MessageReader reader(method_call);
+  dbus::MessageWriter writer(dbus_response.get());
+
+  AddFileWatchRequest request;
+  AddFileWatchResponse response;
+  response.set_status(AddFileWatchResponse::FAILED);
+  if (!reader.PopArrayOfBytesAsProto(&request)) {
+    LOG(ERROR) << "Unable to parse AddFileWatchRequest from message";
+    response.set_failure_reason("unable to parse request protobuf");
+    writer.AppendProtoAsArrayOfBytes(response);
+    return dbus_response;
+  }
+  base::FilePath file_path(request.path());
+  if (file_path.IsAbsolute() || file_path.ReferencesParent()) {
+    LOG(ERROR) << "Invalid path format";
+    response.set_failure_reason("invalid path format");
+    writer.AppendProtoAsArrayOfBytes(response);
+    return dbus_response;
+  }
+
+  VirtualMachine* vm = FindVm(request.owner_id(), request.vm_name());
+  if (!vm) {
+    LOG(ERROR) << "Requested VM does not exist:" << request.vm_name();
+    response.set_failure_reason("requested VM does not exist");
+    writer.AppendProtoAsArrayOfBytes(response);
+    return dbus_response;
+  }
+  Container* container = vm->GetContainerForName(request.container_name());
+  if (!container) {
+    LOG(ERROR) << "Requested container does not exist: "
+               << request.container_name();
+    response.set_failure_reason("requested container does not exist");
+    writer.AppendProtoAsArrayOfBytes(response);
+    return dbus_response;
+  }
+
+  std::string error_msg;
+  if (container->AddFileWatch(request.path(), &error_msg)) {
+    response.set_status(AddFileWatchResponse::SUCCEEDED);
+  } else {
+    response.set_failure_reason(error_msg);
+  }
+  writer.AppendProtoAsArrayOfBytes(response);
+  return dbus_response;
+}
+
+std::unique_ptr<dbus::Response> Service::RemoveFileWatch(
+    dbus::MethodCall* method_call) {
+  DCHECK(sequence_checker_.CalledOnValidSequence());
+  LOG(INFO) << "Received RemoveFileWatch request";
+  std::unique_ptr<dbus::Response> dbus_response(
+      dbus::Response::FromMethodCall(method_call));
+
+  dbus::MessageReader reader(method_call);
+  dbus::MessageWriter writer(dbus_response.get());
+
+  RemoveFileWatchRequest request;
+  RemoveFileWatchResponse response;
+  response.set_status(RemoveFileWatchResponse::FAILED);
+  if (!reader.PopArrayOfBytesAsProto(&request)) {
+    LOG(ERROR) << "Unable to parse RemoveFileWatchRequest from message";
+    response.set_failure_reason("unable to parse request protobuf");
+    writer.AppendProtoAsArrayOfBytes(response);
+    return dbus_response;
+  }
+  base::FilePath file_path(request.path());
+  if (file_path.IsAbsolute() || file_path.ReferencesParent()) {
+    LOG(ERROR) << "Invalid path format";
+    response.set_failure_reason("invalid path format");
+    writer.AppendProtoAsArrayOfBytes(response);
+    return dbus_response;
+  }
+
+  VirtualMachine* vm = FindVm(request.owner_id(), request.vm_name());
+  if (!vm) {
+    LOG(ERROR) << "Requested VM does not exist:" << request.vm_name();
+    response.set_failure_reason("requested VM does not exist");
+    writer.AppendProtoAsArrayOfBytes(response);
+    return dbus_response;
+  }
+  Container* container = vm->GetContainerForName(request.container_name());
+  if (!container) {
+    LOG(ERROR) << "Requested container does not exist: "
+               << request.container_name();
+    response.set_failure_reason("requested container does not exist");
+    writer.AppendProtoAsArrayOfBytes(response);
+    return dbus_response;
+  }
+
+  std::string error_msg;
+  if (container->RemoveFileWatch(request.path(), &error_msg)) {
+    response.set_status(RemoveFileWatchResponse::SUCCEEDED);
+  } else {
+    response.set_failure_reason(error_msg);
+  }
+  writer.AppendProtoAsArrayOfBytes(response);
+  return dbus_response;
+}
+
+void Service::FileWatchTriggered(const std::string& container_token,
+                                 const uint32_t cid,
+                                 FileWatchTriggeredSignal* changed_signal,
+                                 bool* result,
+                                 base::WaitableEvent* event) {
+  *result = SendSignal(kFileWatchTriggeredSignal, container_token, cid,
+                       changed_signal);
+  event->Signal();
 }
 
 bool Service::GetVirtualMachineForCidOrToken(const uint32_t cid,

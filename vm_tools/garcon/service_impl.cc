@@ -464,5 +464,36 @@ grpc::Status ServiceImpl::ConfigureForArcSideload(
   return grpc::Status::OK;
 }
 
+grpc::Status ServiceImpl::AddFileWatch(
+    grpc::ServerContext* ctx,
+    const vm_tools::container::AddFileWatchRequest* request,
+    vm_tools::container::AddFileWatchResponse* response) {
+  std::string error_msg;
+  if (host_notifier_->AddFileWatch(base::FilePath(request->path()),
+                                   &error_msg)) {
+    response->set_status(vm_tools::container::AddFileWatchResponse::SUCCEEDED);
+  } else {
+    response->set_status(vm_tools::container::AddFileWatchResponse::FAILED);
+    response->set_failure_reason(error_msg);
+  }
+  return grpc::Status::OK;
+}
+
+grpc::Status ServiceImpl::RemoveFileWatch(
+    grpc::ServerContext* ctx,
+    const vm_tools::container::RemoveFileWatchRequest* request,
+    vm_tools::container::RemoveFileWatchResponse* response) {
+  std::string error_msg;
+  if (host_notifier_->RemoveFileWatch(base::FilePath(request->path()),
+                                      &error_msg)) {
+    response->set_status(
+        vm_tools::container::RemoveFileWatchResponse::SUCCEEDED);
+  } else {
+    response->set_status(vm_tools::container::RemoveFileWatchResponse::FAILED);
+    response->set_failure_reason(error_msg);
+  }
+  return grpc::Status::OK;
+}
+
 }  // namespace garcon
 }  // namespace vm_tools

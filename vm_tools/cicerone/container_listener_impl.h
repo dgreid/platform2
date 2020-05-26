@@ -73,6 +73,10 @@ class ContainerListenerImpl final
       grpc::ServerContext* ctx,
       const vm_tools::container::UpdateMimeTypesRequest* request,
       vm_tools::EmptyMessage* response) override;
+  grpc::Status FileWatchTriggered(
+      grpc::ServerContext* ctx,
+      const vm_tools::container::FileWatchTriggeredInfo* request,
+      vm_tools::EmptyMessage* response) override;
 
  private:
   // Returns 0 on failure, otherwise the parsed vsock cid from a

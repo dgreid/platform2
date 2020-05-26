@@ -341,5 +341,54 @@ Container::ConfigureForArcSideload(std::string* out_error) {
   return container_response.status();
 }
 
+bool Container::AddFileWatch(const std::string& path, std::string* out_error) {
+  vm_tools::container::AddFileWatchRequest container_request;
+  vm_tools::container::AddFileWatchResponse container_response;
+  container_request.set_path(path);
+
+  grpc::ClientContext ctx;
+  ctx.set_deadline(gpr_time_add(
+      gpr_now(GPR_CLOCK_MONOTONIC),
+      gpr_time_from_seconds(kDefaultTimeoutSeconds, GPR_TIMESPAN)));
+
+  grpc::Status status =
+      garcon_stub_->AddFileWatch(&ctx, container_request, &container_response);
+  if (!status.ok()) {
+    LOG(ERROR) << "Failed to add file watch: " << status.error_message()
+               << " code: " << status.error_code();
+    out_error->assign("gRPC failure adding file watch: " +
+                      status.error_message());
+    return false;
+  }
+  out_error->assign(container_response.failure_reason());
+  return container_response.status() ==
+         vm_tools::container::AddFileWatchResponse::SUCCEEDED;
+}
+
+bool Container::RemoveFileWatch(const std::string& path,
+                                std::string* out_error) {
+  vm_tools::container::RemoveFileWatchRequest container_request;
+  vm_tools::container::RemoveFileWatchResponse container_response;
+  container_request.set_path(path);
+
+  grpc::ClientContext ctx;
+  ctx.set_deadline(gpr_time_add(
+      gpr_now(GPR_CLOCK_MONOTONIC),
+      gpr_time_from_seconds(kDefaultTimeoutSeconds, GPR_TIMESPAN)));
+
+  grpc::Status status = garcon_stub_->RemoveFileWatch(&ctx, container_request,
+                                                      &container_response);
+  if (!status.ok()) {
+    LOG(ERROR) << "Failed to remove file watch: " << status.error_message()
+               << " code: " << status.error_code();
+    out_error->assign("gRPC failure removing file watch: " +
+                      status.error_message());
+    return false;
+  }
+  out_error->assign(container_response.failure_reason());
+  return container_response.status() ==
+         vm_tools::container::RemoveFileWatchResponse::SUCCEEDED;
+}
+
 }  // namespace cicerone
 }  // namespace vm_tools

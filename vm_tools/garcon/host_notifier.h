@@ -7,6 +7,8 @@
 
 #include <memory>
 #include <string>
+#include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 #include <base/files/file_descriptor_watcher_posix.h>
@@ -67,6 +69,12 @@ class HostNotifier : public PackageKitProxy::PackageKitObserver,
       AnsiblePlaybookApplication** ansible_playbook_application_ptr);
   void RemoveAnsiblePlaybookApplication();
 
+  // Watch files in the specified directory and notify if there are changes.
+  // This is used by FilesApp. |path| is relative to $HOME.
+  bool AddFileWatch(const base::FilePath& path, std::string* error_msg);
+  // Stop watching files in |path| relative to $HOME.
+  bool RemoveFileWatch(const base::FilePath& path, std::string* error_msg);
+
  private:
   // Callback structure for SendAppListToHost callback chain.
   struct AppListBuilderState {
@@ -118,6 +126,13 @@ class HostNotifier : public PackageKitProxy::PackageKitObserver,
   // files.
   void MimeTypesChanged(const base::FilePath& path, bool error);
 
+  // Notifies host that a file has changed in a watched directory.
+  void SendFileWatchTriggeredToHost(const base::FilePath& path);
+
+  // Called when a file changes in a watched directory from AddFileWatch().
+  // |absolute_path| must be converted to a path relative to $HOME.
+  void FileWatchTriggered(const base::FilePath& absolute_path, bool error);
+
   // Creates a ContainerListener::Stub, defaulting to vsock but falling back
   // to IPv4 if the host doesn't support vsock.
   void SetUpContainerListenerStub(const std::string& host_ip);
@@ -152,6 +167,18 @@ class HostNotifier : public PackageKitProxy::PackageKitObserver,
   // True if there is currently a delayed task pending for updating the
   // MIME types list.
   bool update_mime_types_posted_;
+
+  // Watchers for tracking paths requested via AddFilePathWatcher.  This is used
+  // by FilesApp.
+  std::unordered_map<base::FilePath, std::unique_ptr<base::FilePathWatcher>>
+      file_path_watchers_;
+
+  // Timestamps of when last change was notified.
+  std::unordered_map<base::FilePath, base::TimeTicks> file_watch_last_change_;
+
+  // Contains directories for which there is a delayed task pending to notify
+  // that a file has changed.
+  std::unordered_set<base::FilePath> file_watch_change_posted_;
 
   // Closure for stopping the MessageLoop.  Posted to the thread's TaskRunner
   // when this program receives a SIGTERM.

@@ -78,6 +78,16 @@ class ServiceImpl final : public vm_tools::container::Garcon::Service {
       const vm_tools::container::ConfigureForArcSideloadRequest* request,
       vm_tools::container::ConfigureForArcSideloadResponse* response) override;
 
+  grpc::Status AddFileWatch(
+      grpc::ServerContext* ctx,
+      const vm_tools::container::AddFileWatchRequest* request,
+      vm_tools::container::AddFileWatchResponse* response) override;
+
+  grpc::Status RemoveFileWatch(
+      grpc::ServerContext* ctx,
+      const vm_tools::container::RemoveFileWatchRequest* request,
+      vm_tools::container::RemoveFileWatchResponse* response) override;
+
  private:
   PackageKitProxy* package_kit_proxy_;  // Not owned.
   base::TaskRunner* task_runner_;

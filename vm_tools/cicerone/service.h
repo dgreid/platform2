@@ -317,6 +317,17 @@ class Service final {
                        bool* result,
                        base::WaitableEvent* event);
 
+  // Sends a D-Bus signal to inform that a file has changed within the watched
+  // directory. It will use |cid| to resolve the request to a VM and then
+  // |container_token| to resolve it to a container. |triggered_signal| should
+  // have all related fields from the container request set in it. |result| is
+  // set to true on success, false otherwise. Signals |event| when done.
+  void FileWatchTriggered(const std::string& container_token,
+                          const uint32_t cid,
+                          FileWatchTriggeredSignal* triggered_signal,
+                          bool* result,
+                          base::WaitableEvent* event);
+
   // Gets the VirtualMachine that corresponds to a container at |cid|
   // or the |vm_token| for the VM itself and sets |vm_out| to the
   // VirtualMachine, |owner_id_out| to the owner id of the VM, and |name_out| to
@@ -504,6 +515,13 @@ class Service final {
 
   // Handles a request to start LXD.
   std::unique_ptr<dbus::Response> StartLxd(dbus::MethodCall* method_call);
+
+  // Handles a request to add a file watch.
+  std::unique_ptr<dbus::Response> AddFileWatch(dbus::MethodCall* method_call);
+
+  // Handles a request to remove a file watch.
+  std::unique_ptr<dbus::Response> RemoveFileWatch(
+      dbus::MethodCall* method_call);
 
   // Gets the container's SSH keys from concierge.
   bool GetContainerSshKeys(const std::string& owner_id,

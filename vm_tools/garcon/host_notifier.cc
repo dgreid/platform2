@@ -48,7 +48,7 @@ constexpr char kMimeTypesFilePath[] = "/etc/mime.types";
 constexpr char kUserMimeTypesFile[] = ".mime.types";
 // Duration over which we coalesce changes to the desktop file system.
 constexpr base::TimeDelta kFilesystemChangeCoalesceTime =
-    base::TimeDelta::FromSeconds(5);
+    base::TimeDelta::FromSeconds(3);
 // Delimiter for the end of a URL scheme.
 constexpr char kUrlSchemeDelimiter[] = "://";
 
@@ -715,6 +715,108 @@ void HostNotifier::SetUpContainerListenerStub(const std::string& host_ip) {
       grpc::CreateChannel(base::StringPrintf("vsock:%d:%u", VMADDR_CID_HOST,
                                              vm_tools::kGarconPort),
                           grpc::InsecureChannelCredentials()));
+}
+
+bool HostNotifier::AddFileWatch(const base::FilePath& path,
+                                std::string* error_msg) {
+  if (path.IsAbsolute() || path.ReferencesParent()) {
+    LOG(ERROR) << "Invalid path";
+    *error_msg = "invalid path";
+    return false;
+  }
+  if (file_path_watchers_.count(path) > 0) {
+    LOG(ERROR) << "Already watching path";
+    *error_msg = "already watching path";
+    return false;
+  }
+  std::unique_ptr<base::FilePathWatcher> watcher =
+      std::make_unique<base::FilePathWatcher>();
+  base::FilePath path_in_home = base::GetHomeDir().Append(path);
+
+  task_runner_->PostTask(
+      FROM_HERE,
+      base::BindOnce(base::IgnoreResult(&base::FilePathWatcher::Watch),
+                     base::Unretained(watcher.get()), path_in_home,
+                     /*recursive=*/false,
+                     base::BindRepeating(&HostNotifier::FileWatchTriggered,
+                                         base::Unretained(this))));
+
+  file_path_watchers_[path] = std::move(watcher);
+  return true;
+}
+
+bool HostNotifier::RemoveFileWatch(const base::FilePath& path,
+                                   std::string* error_msg) {
+  if (path.IsAbsolute() || path.ReferencesParent()) {
+    LOG(ERROR) << "Invalid path";
+    *error_msg = "invalid path";
+    return false;
+  }
+  if (file_path_watchers_.count(path) == 0) {
+    LOG(ERROR) << "Not watching path";
+    *error_msg = "not watching path";
+    return false;
+  }
+  task_runner_->DeleteSoon(FROM_HERE, file_path_watchers_[path].release());
+  file_path_watchers_.erase(path);
+  file_watch_last_change_.erase(path);
+  return true;
+}
+
+void HostNotifier::SendFileWatchTriggeredToHost(const base::FilePath& path) {
+  vm_tools::container::FileWatchTriggeredInfo info;
+  info.set_token(token_);
+  info.set_path(path.value());
+  vm_tools::EmptyMessage empty;
+
+  // Update pending flag and time when last sent.
+  file_watch_change_posted_.erase(path);
+  file_watch_last_change_[path] = base::TimeTicks::Now();
+
+  // Now make the gRPC call to notify the host.
+  grpc::ClientContext ctx;
+  grpc::Status status = stub_->FileWatchTriggered(&ctx, info, &empty);
+  if (!status.ok()) {
+    LOG(WARNING) << "Failed to notify host of FilePathWatcher change: "
+                 << status.error_message();
+  }
+}
+
+void HostNotifier::FileWatchTriggered(const base::FilePath& absolute_path,
+                                      bool error) {
+  if (error) {
+    // This should never occur because the implementation for Linux never calls
+    // this with an error.
+    LOG(ERROR) << "Error detected in file path watcher";
+    return;
+  }
+
+  base::FilePath home = base::GetHomeDir();
+  base::FilePath path;
+  if (absolute_path != home && !home.AppendRelativePath(absolute_path, &path)) {
+    LOG(ERROR) << "Unexpected path not under $HOME";
+    return;
+  }
+
+  // Coalesce these calls if we have one pending.
+  if (file_watch_change_posted_.count(path) > 0) {
+    return;
+  }
+
+  // Send right away if it has been long enough since the last one, else post
+  // delayed task.
+  base::TimeDelta time_since_last =
+      base::TimeTicks::Now() - file_watch_last_change_[path];
+  if (time_since_last > kFilesystemChangeCoalesceTime) {
+    SendFileWatchTriggeredToHost(path);
+  } else {
+    task_runner_->PostDelayedTask(
+        FROM_HERE,
+        base::Bind(&HostNotifier::SendFileWatchTriggeredToHost,
+                   base::Unretained(this), path),
+        kFilesystemChangeCoalesceTime - time_since_last);
+    file_watch_change_posted_.insert(path);
+  }
 }
 
 }  // namespace garcon
