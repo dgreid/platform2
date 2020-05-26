@@ -27,9 +27,12 @@ using std::string;
 using std::vector;
 using testing::_;
 using testing::ElementsAre;
+using testing::Invoke;
 using testing::Return;
 using testing::SetArgPointee;
 using testing::StrictMock;
+using testing::WithArg;
+using testing::WithArgs;
 using update_engine::Operation;
 using update_engine::StatusResult;
 
@@ -66,13 +69,18 @@ class DlcServiceTest : public BaseTest {
                 SetDlcActiveValue(true, id, _, _))
         .WillOnce(Return(true));
     EXPECT_CALL(*mock_update_engine_proxy_ptr_, AttemptInstall(_, _, _, _))
-        .WillOnce(Return(true));
+        .WillOnce(DoAll(
+            WithArg<1>(Invoke(this, &DlcServiceTest::InstallWithUpdateEngine)),
+            WithArgs<1, 2>(
+                Invoke(dlc_service_.get(), &DlcService::InstallCompleted)),
+            Return(true)));
     EXPECT_CALL(*mock_image_loader_proxy_ptr_, LoadDlcImage(id, _, _, _, _, _))
         .WillOnce(DoAll(SetArgPointee<3>(mount_path_.value()), Return(true)));
     EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(2);
 
     EXPECT_TRUE(dlc_service_->Install(id, kDefaultOmahaUrl, &err_));
-    EXPECT_TRUE(dlc_service_->InstallCompleted({id}, &err_));
+
+    CheckDlcState(id, DlcState::INSTALLING);
 
     StatusResult status_result;
     status_result.set_is_install(true);

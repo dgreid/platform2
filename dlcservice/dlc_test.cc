@@ -189,6 +189,7 @@ TEST_F(DlcBaseTest, ImageOnDiskButNotVerifiedInstalls) {
   dlc.Initialize();
 
   SetUpDlcWithSlots(kSecondDlc);
+  InstallWithUpdateEngine({kSecondDlc});
 
   EXPECT_EQ(dlc.GetState().state(), DlcState::NOT_INSTALLED);
   EXPECT_CALL(*mock_image_loader_proxy_ptr_,
@@ -210,6 +211,7 @@ TEST_F(DlcBaseTest, ImageOnDiskVerifiedInstalls) {
   EXPECT_TRUE(Prefs(dlc, SystemState::Get()->active_boot_slot())
                   .Create(kDlcPrefVerified));
   SetUpDlcWithSlots(kSecondDlc);
+  InstallWithUpdateEngine({kSecondDlc});
 
   EXPECT_EQ(dlc.GetState().state(), DlcState::NOT_INSTALLED);
   EXPECT_CALL(*mock_image_loader_proxy_ptr_,
@@ -240,6 +242,7 @@ TEST_F(DlcBaseTest, VerifyDlcImageOnUEFailureToCompleteInstall) {
   EXPECT_TRUE(dlc.IsInstalling());
 
   // Intentionally skip over setting verified mark before |FinishInstall()|.
+  InstallWithUpdateEngine({kSecondDlc});
 
   EXPECT_TRUE(dlc.FinishInstall(&err_));
   EXPECT_TRUE(dlc.IsInstalled());

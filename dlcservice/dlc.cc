@@ -217,10 +217,11 @@ bool DlcBase::MakeReadyForUpdate() const {
 bool DlcBase::Verify() {
   auto image_path = GetImagePath(SystemState::Get()->active_boot_slot());
   vector<uint8_t> image_sha256;
-  if (!HashFile(image_path, &image_sha256)) {
+  if (!HashFile(image_path, manifest_.size(), &image_sha256)) {
     LOG(ERROR) << "Failed to hash image file: " << image_path.value();
     return false;
   }
+
   const auto& manifest_image_sha256 = manifest_.image_sha256();
   if (image_sha256 != manifest_image_sha256) {
     LOG(WARNING) << "Verification failed for image file: " << image_path.value()
@@ -272,7 +273,8 @@ bool DlcBase::PreloadedCopier(ErrorPtr* err) {
   // TODO(kimjae): when preloaded images are place into unencrypted, this
   // operation can be a move.
   vector<uint8_t> image_sha256;
-  if (!CopyAndHashFile(preloaded_image_path_, image_boot_path, &image_sha256)) {
+  if (!CopyAndHashFile(preloaded_image_path_, image_boot_path, manifest_.size(),
+                       &image_sha256)) {
     auto err_str =
         base::StringPrintf("Failed to copy preload DLC (%s) into path %s",
                            id_.c_str(), image_boot_path.value().c_str());

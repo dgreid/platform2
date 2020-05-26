@@ -2,7 +2,7 @@
   "description": "unittest only description",
   "fs-type": "squashfs",
   "id": "second-dlc",
-  "image-sha256-hash": "9f1dcbc35c350d6027f98be0f5c8b43b42ca52b7604459c0c42be3aa88913d47",
+  "image-sha256-hash": "4fdd600892f7d61608383a6f94b6b68a8630b65c0976dea3f5e410d4c4ff0bbd",
   "image-type": "dlc",
   "is-removable": true,
   "manifest-version": 1,

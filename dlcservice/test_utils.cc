@@ -4,7 +4,9 @@
 
 #include "dlcservice/test_utils.h"
 
+#include <string>
 #include <utility>
+#include <vector>
 
 #include <base/files/file_path.h>
 #include <base/files/file_util.h>
@@ -23,6 +25,7 @@
 #include "dlcservice/utils.h"
 
 using std::string;
+using std::vector;
 using testing::_;
 using testing::Return;
 using testing::SetArgPointee;
@@ -99,31 +102,41 @@ int64_t GetFileSize(const base::FilePath& path) {
   return file_size;
 }
 
-void BaseTest::CreateImageFileWithRightSize(const base::FilePath& image_path,
-                                            const base::FilePath& manifest_path,
-                                            const DlcId& id,
-                                            const string& package) {
-  imageloader::Manifest manifest;
-  dlcservice::GetDlcManifest(manifest_path, id, package, &manifest);
-  CreateFile(image_path, manifest.preallocated_size());
-}
-
 // Will create |path|/|id|/|package|/dlc.img file.
 void BaseTest::SetUpDlcPreloadedImage(const DlcId& id) {
+  imageloader::Manifest manifest;
+  dlcservice::GetDlcManifest(manifest_path_, id, kPackage, &manifest);
+
   base::FilePath image_path =
       JoinPaths(preloaded_content_path_, id, kPackage, kDlcImageFileName);
-  base::CreateDirectory(image_path.DirName());
-  CreateImageFileWithRightSize(image_path, manifest_path_, id, kPackage);
+  CreateFile(image_path, manifest.size());
+
+  string data(manifest.size(), '1');
+  WriteToFile(image_path, data);
 }
 
 // Will create |path/|id|/|package|/dlc_[a|b]/dlc.img files.
 void BaseTest::SetUpDlcWithSlots(const DlcId& id) {
+  imageloader::Manifest manifest;
+  dlcservice::GetDlcManifest(manifest_path_, id, kPackage, &manifest);
+
   // Create DLC content sub-directories and empty images.
   for (const auto& slot : {BootSlot::Slot::A, BootSlot::Slot::B}) {
     base::FilePath image_path =
         GetDlcImagePath(content_path_, id, kPackage, slot);
-    base::CreateDirectory(image_path.DirName());
-    CreateImageFileWithRightSize(image_path, manifest_path_, id, kPackage);
+    CreateFile(image_path, manifest.preallocated_size());
+  }
+}
+
+void BaseTest::InstallWithUpdateEngine(const vector<string>& ids) {
+  for (const auto& id : ids) {
+    imageloader::Manifest manifest;
+    dlcservice::GetDlcManifest(manifest_path_, id, kPackage, &manifest);
+    base::FilePath image_path = GetDlcImagePath(
+        content_path_, id, kPackage, SystemState::Get()->active_boot_slot());
+
+    string data(manifest.size(), '1');
+    WriteToFile(image_path, data);
   }
 }
 

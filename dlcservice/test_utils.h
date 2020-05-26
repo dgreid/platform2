@@ -7,6 +7,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 #include <base/files/file_path.h>
 #include <base/files/scoped_temp_dir.h>
@@ -43,16 +44,14 @@ class BaseTest : public testing::Test {
 
   void SetUpFilesAndDirectories();
 
-  void CreateImageFileWithRightSize(const base::FilePath& image_path,
-                                    const base::FilePath& manifest_path,
-                                    const std::string& id,
-                                    const std::string& package);
-
   // Will create |path|/|id|/|package|/dlc.img file.
-  void SetUpDlcPreloadedImage(const std::string& id);
+  void SetUpDlcPreloadedImage(const DlcId& id);
 
   // Will create |path/|id|/|package|/dlc_[a|b]/dlc.img files.
-  void SetUpDlcWithSlots(const std::string& id);
+  void SetUpDlcWithSlots(const DlcId& id);
+
+  // Mimics an installation form update_engine on the current boot slot.
+  void InstallWithUpdateEngine(const std::vector<std::string>& ids);
 
   void SetMountPath(const std::string& mount_path_expected);
 

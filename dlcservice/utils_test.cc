@@ -154,11 +154,21 @@ TEST_F(FixtureUtilsTest, CopyAndHashFile) {
                            expected_sha256.size());
 
   std::vector<uint8_t> actual_sha256;
-  EXPECT_TRUE(CopyAndHashFile(src_path, dst_path, &actual_sha256));
+  EXPECT_TRUE(CopyAndHashFile(src_path, dst_path, GetFileSize(src_path),
+                              &actual_sha256));
   EXPECT_THAT(actual_sha256, testing::ElementsAreArray(expected_sha256));
 
   EXPECT_TRUE(base::PathExists(dst_path));
   CheckPerms(dst_path, kDlcFilePerms);
+}
+
+TEST_F(FixtureUtilsTest, CopyAndHashFileFailOnSize) {
+  auto src_path = JoinPaths(scoped_temp_dir_.GetPath(), "src_file");
+  auto dst_path = JoinPaths(scoped_temp_dir_.GetPath(), "dst_file");
+  EXPECT_TRUE(CreateFile(src_path, 10));
+
+  std::vector<uint8_t> actual_sha256;
+  EXPECT_FALSE(CopyAndHashFile(src_path, dst_path, 11, &actual_sha256));
 }
 
 TEST_F(FixtureUtilsTest, HashFile) {
@@ -173,8 +183,16 @@ TEST_F(FixtureUtilsTest, HashFile) {
                            expected_sha256.size());
 
   std::vector<uint8_t> actual_sha256;
-  EXPECT_TRUE(HashFile(src_path, &actual_sha256));
+  EXPECT_TRUE(HashFile(src_path, GetFileSize(src_path), &actual_sha256));
   EXPECT_THAT(actual_sha256, testing::ElementsAreArray(expected_sha256));
+}
+
+TEST_F(FixtureUtilsTest, HashFileFailOnSize) {
+  auto src_path = JoinPaths(scoped_temp_dir_.GetPath(), "src_file");
+  EXPECT_TRUE(CreateFile(src_path, 10));
+
+  std::vector<uint8_t> actual_sha256;
+  EXPECT_FALSE(HashFile(src_path, 11, &actual_sha256));
 }
 
 TEST_F(FixtureUtilsTest, HashEmptyFile) {
@@ -189,7 +207,7 @@ TEST_F(FixtureUtilsTest, HashEmptyFile) {
                            expected_sha256.size());
 
   std::vector<uint8_t> actual_sha256;
-  EXPECT_TRUE(HashFile(src_path, &actual_sha256));
+  EXPECT_TRUE(HashFile(src_path, 0, &actual_sha256));
   EXPECT_THAT(actual_sha256, testing::ElementsAreArray(expected_sha256));
 }
 
@@ -197,7 +215,7 @@ TEST_F(FixtureUtilsTest, HashMissingFile) {
   auto src_path = JoinPaths(scoped_temp_dir_.GetPath(), "src_file");
 
   std::vector<uint8_t> actual_sha256;
-  EXPECT_FALSE(HashFile(src_path, &actual_sha256));
+  EXPECT_FALSE(HashFile(src_path, 0, &actual_sha256));
 }
 
 TEST(UtilsTest, JoinPathsTest) {
