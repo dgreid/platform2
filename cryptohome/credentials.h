@@ -34,12 +34,7 @@ class Credentials final {
   std::string GetObfuscatedUsername(
       const brillo::SecureBlob& system_salt) const;
 
-  // Returns the user's passkey
-  //
-  // Parameters
-  //  passkey - A SecureBlob where the passkey should be written to.
-  //
-  void GetPasskey(brillo::SecureBlob* passkey) const;
+  const brillo::SecureBlob& passkey() const { return passkey_; }
 
   // Getter and setter for the associated KeyData.
   void set_key_data(const KeyData& data) { key_data_ = data; }

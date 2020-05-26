@@ -669,11 +669,8 @@ TEST_P(MountTest, CurrentCredentialsTest) {
 
 MATCHER_P(CredentialsEqual, credentials, "") {
   const Credentials& expected_creds = credentials;
-  brillo::SecureBlob l;
-  brillo::SecureBlob r;
-  expected_creds.GetPasskey(&l);
-  arg.GetPasskey(&r);
-  return expected_creds.username() == arg.username() && l == r;
+  return expected_creds.username() == arg.username() &&
+         expected_creds.passkey() == arg.passkey();
 }
 
 TEST_P(MountTest, PropagateCredentialsToUser) {
@@ -1544,8 +1541,6 @@ TEST_P(MountTest, MountCryptohomeLECredentials) {
   SerializedVaultKeyset serialized;
   MountError error;
   int key_index = -1;
-  SecureBlob passkey;
-  pin_credentials_->GetPasskey(&passkey);
   ASSERT_TRUE(mount_->DecryptVaultKeyset(*pin_credentials_, &pin_vault_keyset,
                                          &serialized, &key_index, &error));
 }
@@ -1579,8 +1574,6 @@ TEST_P(MountTest, MountCryptohomeLECredentialsMigrate) {
   SerializedVaultKeyset serialized;
   MountError error;
   int key_index = -1;
-  SecureBlob passkey;
-  pin_credentials_->GetPasskey(&passkey);
   ASSERT_TRUE(mount_->DecryptVaultKeyset(*pin_credentials_, &pin_vault_keyset,
                                          &serialized, &key_index, &error));
 
@@ -1615,8 +1608,6 @@ TEST_P(MountTest, MountCryptohomeLECredentialsMigrationFails) {
   SerializedVaultKeyset serialized;
   MountError error;
   int key_index = -1;
-  SecureBlob passkey;
-  pin_credentials_->GetPasskey(&passkey);
   ASSERT_TRUE(mount_->DecryptVaultKeyset(*pin_credentials_, &pin_vault_keyset,
                                          &serialized, &key_index, &error));
 

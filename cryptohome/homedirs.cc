@@ -491,9 +491,6 @@ bool HomeDirs::GetValidKeyset(const Credentials& creds,
     return false;
   }
 
-  SecureBlob passkey;
-  creds.GetPasskey(&passkey);
-
   bool any_keyset_exists = false;
   CryptoError last_crypto_error = CryptoError::CE_NONE;
   for (int index : key_indices) {
@@ -513,7 +510,8 @@ bool HomeDirs::GetValidKeyset(const Credentials& creds,
       continue;
     bool locked_to_single_user =
         platform_->FileExists(base::FilePath(kLockedToSingleUserFile));
-    if (vk->Decrypt(passkey, locked_to_single_user, &last_crypto_error)) {
+    if (vk->Decrypt(creds.passkey(), locked_to_single_user,
+                    &last_crypto_error)) {
       if (key_index)
         *key_index = index;
       return true;
@@ -843,8 +841,7 @@ CryptohomeErrorCode HomeDirs::UpdateKeyset(
   }
 
   // TODO(wad,dkrahn): Add privilege dropping.
-  SecureBlob passkey;
-  credentials.GetPasskey(&passkey);
+  SecureBlob passkey = credentials.passkey();
   if (key_changes->has_secret()) {
     SecureBlob new_passkey(key_changes->secret().begin(),
                            key_changes->secret().end());
@@ -921,9 +918,8 @@ CryptohomeErrorCode HomeDirs::AddKeyset(
   if (!vk->serialized().has_wrapped_reset_seed()) {
     LOG(INFO) << "Keyset lacks reset_seed; generating one.";
     vk->CreateRandomResetSeed();
-    brillo::SecureBlob passkey;
-    existing_credentials.GetPasskey(&passkey);
-    if (!vk->Encrypt(passkey, obfuscated) || !vk->Save(vk->source_file())) {
+    if (!vk->Encrypt(existing_credentials.passkey(), obfuscated) ||
+        !vk->Save(vk->source_file())) {
       LOG(WARNING) << "Failed to re-encrypt the old keyset";
       return CRYPTOHOME_ERROR_BACKING_STORE_FAILURE;
     }
@@ -1631,8 +1627,6 @@ int64_t HomeDirs::ComputeDiskUsage(const std::string& account_id) {
 bool HomeDirs::Migrate(const Credentials& newcreds,
                        const SecureBlob& oldkey,
                        scoped_refptr<Mount> user_mount) {
-  SecureBlob newkey;
-  newcreds.GetPasskey(&newkey);
   Credentials oldcreds(newcreds.username().c_str(), oldkey);
   std::string obfuscated = newcreds.GetObfuscatedUsername(system_salt_);
   if (!user_mount) {
@@ -1702,7 +1696,8 @@ bool HomeDirs::Migrate(const Credentials& newcreds,
     SecureBlob auth_data;
     std::string username = newcreds.username();
     FilePath salt_file = GetChapsTokenSaltPath(username);
-    if (!crypto_->PasskeyToTokenAuthData(newkey, salt_file, &auth_data) ||
+    if (!crypto_->PasskeyToTokenAuthData(newcreds.passkey(), salt_file,
+                                         &auth_data) ||
         !crypto_->PasskeyToTokenAuthData(oldkey, salt_file, &old_auth_data)) {
       // On failure, token data may be partially migrated. Ideally, the user
       // will re-attempt with the same passphrase.
@@ -1715,7 +1710,7 @@ bool HomeDirs::Migrate(const Credentials& newcreds,
   int new_key_index = -1;
   // For a labeled key with the same label as the old key,
   //  this will overwrite the existing keyset file.
-  if (AddKeyset(oldcreds, newkey, key_data, true, &new_key_index) !=
+  if (AddKeyset(oldcreds, newcreds.passkey(), key_data, true, &new_key_index) !=
       CRYPTOHOME_ERROR_NOT_SET) {
     LOG(ERROR) << "Migrate: failed to add the new keyset";
     return false;

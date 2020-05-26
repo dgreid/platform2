@@ -52,9 +52,7 @@ void VerifySuccessfulChallengeCredentialsGenerateNewResult(
     const SecureBlob& expected_passkey) {
   ASSERT_TRUE(result.credentials);
   EXPECT_EQ(expected_username, result.credentials->username());
-  SecureBlob passkey;
-  result.credentials->GetPasskey(&passkey);
-  EXPECT_EQ(expected_passkey, passkey);
+  EXPECT_EQ(expected_passkey, result.credentials->passkey());
   EXPECT_EQ(KeyData::KEY_TYPE_CHALLENGE_RESPONSE,
             result.credentials->key_data().type());
 }
@@ -65,9 +63,7 @@ void VerifySuccessfulChallengeCredentialsDecryptResult(
     const SecureBlob& expected_passkey) {
   ASSERT_TRUE(result.credentials);
   EXPECT_EQ(expected_username, result.credentials->username());
-  SecureBlob passkey;
-  result.credentials->GetPasskey(&passkey);
-  EXPECT_EQ(expected_passkey, passkey);
+  EXPECT_EQ(expected_passkey, result.credentials->passkey());
   EXPECT_EQ(KeyData::KEY_TYPE_CHALLENGE_RESPONSE,
             result.credentials->key_data().type());
 }

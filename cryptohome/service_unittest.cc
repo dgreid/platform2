@@ -1224,10 +1224,8 @@ TEST_F(ServiceExTest, MountPublicUsesPublicMountPasskey) {
         .WillOnce(testing::Invoke([](const Credentials& credentials,
                                      const Mount::MountArgs& mount_args,
                                      MountError* error) {
-            brillo::SecureBlob passkey;
-            credentials.GetPasskey(&passkey);
             // Tests that the passkey is filled when public_mount is set.
-            EXPECT_FALSE(passkey.empty());
+            EXPECT_FALSE(credentials.passkey().empty());
             return true;
         }));
     return true;
@@ -1477,11 +1475,8 @@ TEST_F(ChallengeResponseServiceExTest, FallbackLightweightCheckKey) {
 
 MATCHER_P(CredentialsEqual, credentials, "") {
   const Credentials& expected_creds = credentials;
-  brillo::SecureBlob l;
-  brillo::SecureBlob r;
-  expected_creds.GetPasskey(&l);
-  arg.GetPasskey(&r);
-  return expected_creds.username() == arg.username() && l == r;
+  return expected_creds.username() == arg.username() &&
+         expected_creds.passkey() == arg.passkey();
 }
 
 TEST_F(ServiceExTest, MigrateKeyTest) {

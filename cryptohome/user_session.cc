@@ -37,15 +37,10 @@ bool UserSession::SetUser(const Credentials& credentials) {
   const auto plaintext =
       CryptoLib::CreateSecureRandomBlob(kUserSessionIdLength);
 
-  SecureBlob passkey;
-  credentials.GetPasskey(&passkey);
-
   SecureBlob aes_key;
   SecureBlob aes_iv;
-  if (!CryptoLib::PasskeyToAesKey(passkey,
-                                  key_salt_,
-                                  cryptohome::kDefaultPasswordRounds,
-                                  &aes_key,
+  if (!CryptoLib::PasskeyToAesKey(credentials.passkey(), key_salt_,
+                                  cryptohome::kDefaultPasswordRounds, &aes_key,
                                   &aes_iv)) {
     return false;
   }
@@ -80,15 +75,10 @@ bool UserSession::Verify(const Credentials& credentials) const {
     return false;
   }
 
-  SecureBlob passkey;
-  credentials.GetPasskey(&passkey);
-
   SecureBlob aes_key;
   SecureBlob aes_iv;
-  if (!CryptoLib::PasskeyToAesKey(passkey,
-                                  key_salt_,
-                                  cryptohome::kDefaultPasswordRounds,
-                                  &aes_key,
+  if (!CryptoLib::PasskeyToAesKey(credentials.passkey(), key_salt_,
+                                  cryptohome::kDefaultPasswordRounds, &aes_key,
                                   &aes_iv)) {
     return false;
   }

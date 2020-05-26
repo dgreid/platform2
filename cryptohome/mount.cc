@@ -662,7 +662,7 @@ bool Mount::MountCryptohomeInner(const Credentials& credentials,
   }
 
   if (is_pkcs11_passkey_migration_required_) {
-    credentials.GetPasskey(&legacy_pkcs11_passkey_);
+    legacy_pkcs11_passkey_ = credentials.passkey();
   }
 
   // Start file attribute cleaner service.
@@ -1006,8 +1006,7 @@ bool Mount::AddVaultKeyset(const Credentials& credentials,
                            VaultKeyset* vault_keyset,
                            SerializedVaultKeyset* serialized) const {
   // We don't do passkey to wrapper conversion because it is salted during save
-  SecureBlob passkey;
-  credentials.GetPasskey(&passkey);
+  const SecureBlob passkey = credentials.passkey();
 
   std::string obfuscated_username =
       credentials.GetObfuscatedUsername(system_salt_);

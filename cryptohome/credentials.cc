@@ -28,8 +28,4 @@ std::string Credentials::GetObfuscatedUsername(
   return BuildObfuscatedUsername(username_, system_salt);
 }
 
-void Credentials::GetPasskey(SecureBlob* passkey) const {
-  *passkey = passkey_;
-}
-
 }  // namespace cryptohome

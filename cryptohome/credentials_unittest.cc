@@ -42,10 +42,9 @@ TEST(CredentialsTest, GetObfuscatedUsernameTest) {
             credentials.GetObfuscatedUsername(fake_salt));
 }
 
-TEST(CredentialsTest, GetPasskeyTest) {
+TEST(CredentialsTest, PasskeyTest) {
   Credentials credentials(kFakeUser, SecureBlob(kFakePasskey));
-  SecureBlob passkey;
-  credentials.GetPasskey(&passkey);
+  const SecureBlob passkey = credentials.passkey();
   EXPECT_EQ(strlen(kFakePasskey), passkey.size());
   EXPECT_EQ(0, memcmp(kFakePasskey, passkey.data(), passkey.size()));
 }

@@ -1882,10 +1882,8 @@ TEST_F(UserDataAuthExTest, MountPublicUsesPublicMountPasskey) {
         .WillOnce(testing::Invoke([](const Credentials& credentials,
                                      const Mount::MountArgs& mount_args,
                                      MountError* error) {
-          brillo::SecureBlob passkey;
-          credentials.GetPasskey(&passkey);
           // Tests that the passkey is filled when public_mount is set.
-          EXPECT_FALSE(passkey.empty());
+          EXPECT_FALSE(credentials.passkey().empty());
           return true;
         }));
     return true;

@@ -2655,9 +2655,8 @@ TEST_P(KeysetManagementTest, AddKeysetNoResetSeedSuccess) {
 
   std::string old_file_name("master.0");
 
-  SecureBlob oldkey;
+  const SecureBlob oldkey = credentials_->passkey();
   SecureBlob newkey;
-  credentials_->GetPasskey(&oldkey);
   cryptohome::Crypto::PasswordToPasskey("why not", system_salt_, &newkey);
   int index = -1;
 
