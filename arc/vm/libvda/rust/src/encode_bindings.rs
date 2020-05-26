@@ -1,4 +1,4 @@
-// Copyright 2019 The Chromium OS Authors. All rights reserved.
+// Copyright 2020 The Chromium OS Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -22,6 +22,7 @@ bindgen arc/vm/libvda/libvda_encode.h \
   --whitelist-function "init_encode_session" \
   --whitelist-function "close_encode_session" \
   --whitelist-function "vea_.*" \
+  --whitelist-type "vea_.*" \
   -- \
   -I .
 */
@@ -389,6 +390,11 @@ fn bindgen_test_layout_vea_config() {
     );
 }
 pub type vea_config_t = vea_config;
+pub const vea_error_ILLEGAL_STATE_ERROR: vea_error = 0;
+pub const vea_error_INVALID_ARGUMENT_ERROR: vea_error = 1;
+pub const vea_error_PLATFORM_FAILURE_ERROR: vea_error = 2;
+pub type vea_error = u32;
+pub use self::vea_error as vea_error_t;
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct vea_session_info {
@@ -431,6 +437,294 @@ fn bindgen_test_layout_vea_session_info() {
 pub type vea_session_info_t = vea_session_info;
 pub type vea_input_buffer_id_t = i32;
 pub type vea_output_buffer_id_t = i32;
+pub const vea_event_type_REQUIRE_INPUT_BUFFERS: vea_event_type = 0;
+pub const vea_event_type_PROCESSED_INPUT_BUFFER: vea_event_type = 1;
+pub const vea_event_type_PROCESSED_OUTPUT_BUFFER: vea_event_type = 2;
+pub const vea_event_type_VEA_FLUSH_RESPONSE: vea_event_type = 3;
+pub const vea_event_type_VEA_NOTIFY_ERROR: vea_event_type = 4;
+pub type vea_event_type = u32;
+pub use self::vea_event_type as vea_event_type_t;
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct vea_require_input_buffers_event_data {
+    pub input_count: u32,
+    pub input_frame_width: u32,
+    pub input_frame_height: u32,
+    pub output_buffer_size: u32,
+}
+#[test]
+fn bindgen_test_layout_vea_require_input_buffers_event_data() {
+    assert_eq!(
+        ::std::mem::size_of::<vea_require_input_buffers_event_data>(),
+        16usize,
+        concat!(
+            "Size of: ",
+            stringify!(vea_require_input_buffers_event_data)
+        )
+    );
+    assert_eq!(
+        ::std::mem::align_of::<vea_require_input_buffers_event_data>(),
+        4usize,
+        concat!(
+            "Alignment of ",
+            stringify!(vea_require_input_buffers_event_data)
+        )
+    );
+    assert_eq!(
+        unsafe {
+            &(*(::std::ptr::null::<vea_require_input_buffers_event_data>())).input_count as *const _
+                as usize
+        },
+        0usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(vea_require_input_buffers_event_data),
+            "::",
+            stringify!(input_count)
+        )
+    );
+    assert_eq!(
+        unsafe {
+            &(*(::std::ptr::null::<vea_require_input_buffers_event_data>())).input_frame_width
+                as *const _ as usize
+        },
+        4usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(vea_require_input_buffers_event_data),
+            "::",
+            stringify!(input_frame_width)
+        )
+    );
+    assert_eq!(
+        unsafe {
+            &(*(::std::ptr::null::<vea_require_input_buffers_event_data>())).input_frame_height
+                as *const _ as usize
+        },
+        8usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(vea_require_input_buffers_event_data),
+            "::",
+            stringify!(input_frame_height)
+        )
+    );
+    assert_eq!(
+        unsafe {
+            &(*(::std::ptr::null::<vea_require_input_buffers_event_data>())).output_buffer_size
+                as *const _ as usize
+        },
+        12usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(vea_require_input_buffers_event_data),
+            "::",
+            stringify!(output_buffer_size)
+        )
+    );
+}
+pub type vea_require_input_buffers_event_data_t = vea_require_input_buffers_event_data;
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct vea_processed_output_buffer_event_data {
+    pub output_buffer_id: vea_output_buffer_id_t,
+    pub payload_size: u32,
+    pub key_frame: u8,
+    pub timestamp: i64,
+}
+#[test]
+fn bindgen_test_layout_vea_processed_output_buffer_event_data() {
+    assert_eq!(
+        ::std::mem::size_of::<vea_processed_output_buffer_event_data>(),
+        24usize,
+        concat!(
+            "Size of: ",
+            stringify!(vea_processed_output_buffer_event_data)
+        )
+    );
+    assert_eq!(
+        ::std::mem::align_of::<vea_processed_output_buffer_event_data>(),
+        8usize,
+        concat!(
+            "Alignment of ",
+            stringify!(vea_processed_output_buffer_event_data)
+        )
+    );
+    assert_eq!(
+        unsafe {
+            &(*(::std::ptr::null::<vea_processed_output_buffer_event_data>())).output_buffer_id
+                as *const _ as usize
+        },
+        0usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(vea_processed_output_buffer_event_data),
+            "::",
+            stringify!(output_buffer_id)
+        )
+    );
+    assert_eq!(
+        unsafe {
+            &(*(::std::ptr::null::<vea_processed_output_buffer_event_data>())).payload_size
+                as *const _ as usize
+        },
+        4usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(vea_processed_output_buffer_event_data),
+            "::",
+            stringify!(payload_size)
+        )
+    );
+    assert_eq!(
+        unsafe {
+            &(*(::std::ptr::null::<vea_processed_output_buffer_event_data>())).key_frame as *const _
+                as usize
+        },
+        8usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(vea_processed_output_buffer_event_data),
+            "::",
+            stringify!(key_frame)
+        )
+    );
+    assert_eq!(
+        unsafe {
+            &(*(::std::ptr::null::<vea_processed_output_buffer_event_data>())).timestamp as *const _
+                as usize
+        },
+        16usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(vea_processed_output_buffer_event_data),
+            "::",
+            stringify!(timestamp)
+        )
+    );
+}
+pub type vea_processed_output_buffer_event_data_t = vea_processed_output_buffer_event_data;
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub union vea_event_data {
+    pub require_input_buffers: vea_require_input_buffers_event_data_t,
+    pub processed_input_buffer_id: vea_input_buffer_id_t,
+    pub processed_output_buffer: vea_processed_output_buffer_event_data_t,
+    pub flush_done: u8,
+    pub error: vea_error_t,
+    _bindgen_union_align: [u64; 3usize],
+}
+#[test]
+fn bindgen_test_layout_vea_event_data() {
+    assert_eq!(
+        ::std::mem::size_of::<vea_event_data>(),
+        24usize,
+        concat!("Size of: ", stringify!(vea_event_data))
+    );
+    assert_eq!(
+        ::std::mem::align_of::<vea_event_data>(),
+        8usize,
+        concat!("Alignment of ", stringify!(vea_event_data))
+    );
+    assert_eq!(
+        unsafe {
+            &(*(::std::ptr::null::<vea_event_data>())).require_input_buffers as *const _ as usize
+        },
+        0usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(vea_event_data),
+            "::",
+            stringify!(require_input_buffers)
+        )
+    );
+    assert_eq!(
+        unsafe {
+            &(*(::std::ptr::null::<vea_event_data>())).processed_input_buffer_id as *const _
+                as usize
+        },
+        0usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(vea_event_data),
+            "::",
+            stringify!(processed_input_buffer_id)
+        )
+    );
+    assert_eq!(
+        unsafe {
+            &(*(::std::ptr::null::<vea_event_data>())).processed_output_buffer as *const _ as usize
+        },
+        0usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(vea_event_data),
+            "::",
+            stringify!(processed_output_buffer)
+        )
+    );
+    assert_eq!(
+        unsafe { &(*(::std::ptr::null::<vea_event_data>())).flush_done as *const _ as usize },
+        0usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(vea_event_data),
+            "::",
+            stringify!(flush_done)
+        )
+    );
+    assert_eq!(
+        unsafe { &(*(::std::ptr::null::<vea_event_data>())).error as *const _ as usize },
+        0usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(vea_event_data),
+            "::",
+            stringify!(error)
+        )
+    );
+}
+pub type vea_event_data_t = vea_event_data;
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct vea_event {
+    pub event_type: vea_event_type_t,
+    pub event_data: vea_event_data_t,
+}
+#[test]
+fn bindgen_test_layout_vea_event() {
+    assert_eq!(
+        ::std::mem::size_of::<vea_event>(),
+        32usize,
+        concat!("Size of: ", stringify!(vea_event))
+    );
+    assert_eq!(
+        ::std::mem::align_of::<vea_event>(),
+        8usize,
+        concat!("Alignment of ", stringify!(vea_event))
+    );
+    assert_eq!(
+        unsafe { &(*(::std::ptr::null::<vea_event>())).event_type as *const _ as usize },
+        0usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(vea_event),
+            "::",
+            stringify!(event_type)
+        )
+    );
+    assert_eq!(
+        unsafe { &(*(::std::ptr::null::<vea_event>())).event_data as *const _ as usize },
+        8usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(vea_event),
+            "::",
+            stringify!(event_data)
+        )
+    );
+}
+pub type vea_event_t = vea_event;
 extern "C" {
     pub fn initialize_encode(type_: vea_impl_type_t) -> *mut ::std::os::raw::c_void;
 }
