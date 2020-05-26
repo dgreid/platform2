@@ -12,7 +12,7 @@ Run this module to display all known regions (use --help to see options).
 from __future__ import print_function
 
 import argparse
-import collections
+import collections.abc
 import json
 import re
 import sys
@@ -50,7 +50,6 @@ class Enum(frozenset):
 
 class RegionException(Exception):
   """Exception in Region handling."""
-  pass
 
 
 def MakeList(value):
@@ -60,7 +59,7 @@ def MakeList(value):
     A list of elements from "value" if it is iterable (except string);
     otherwise, a list contains only one element.
   """
-  if (isinstance(value, collections.Iterable) and
+  if (isinstance(value, collections.abc.Iterable) and
       not isinstance(value, str)):
     return list(value)
   return [value]
