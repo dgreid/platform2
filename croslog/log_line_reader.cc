@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "croslog/log_entry_reader.h"
+#include "croslog/log_line_reader.h"
 
+#include <string>
 #include <utility>
 
 #include <fcntl.h>
@@ -17,19 +18,27 @@
 
 namespace croslog {
 
+namespace {
+const uint8_t kEmptyBuffer[] = {};
+}  // anonymous namespace
+
 // 256 MB limit.
 // TODO(yoshiki): adjust it to an appropriate value.
 constexpr size_t kMaxFileSize = 256l * 1024 * 1024 - 1;
 
-LogEntryReader::LogEntryReader() = default;
+LogLineReader::LogLineReader(Backend backend_mode)
+    : backend_mode_(backend_mode) {}
 
-LogEntryReader::~LogEntryReader() {
+LogLineReader::~LogLineReader() {
   if (file_change_watcher_)
     file_change_watcher_->RemoveWatch(file_path_);
 }
 
-void LogEntryReader::OpenFile(const base::FilePath& file_path,
-                              bool install_change_watcher) {
+void LogLineReader::OpenFile(const base::FilePath& file_path) {
+  CHECK(backend_mode_ == Backend::FILE ||
+        backend_mode_ == Backend::FILE_FOLLOW);
+
+  // Ensure the values are not initialized.
   CHECK(file_path_.empty());
   CHECK(buffer_ == nullptr);
 
@@ -39,14 +48,15 @@ void LogEntryReader::OpenFile(const base::FilePath& file_path,
     return;
   }
   file_path_ = file_path;
+  pos_ = 0;
 
-  if (install_change_watcher) {
+  if (backend_mode_ == Backend::FILE_FOLLOW) {
     // Race may happen when the file rotates just after file opens.
     // TODO(yoshiki): detect the race.
     file_change_watcher_ = FileChangeWatcher::GetInstance();
     bool ret = file_change_watcher_->AddWatch(
-        file_path_, base::BindRepeating(&LogEntryReader::OnChanged,
-                                        base::Unretained(this)));
+        file_path_,
+        base::BindRepeating(&LogLineReader::OnChanged, base::Unretained(this)));
     if (!ret) {
       LOG(ERROR) << "Failed to install FileChangeWatcher for " << file_path_
                  << ".";
@@ -57,21 +67,25 @@ void LogEntryReader::OpenFile(const base::FilePath& file_path,
   Remap();
 }
 
-void LogEntryReader::OpenMemoryBufferForTest(const char* buffer, size_t size) {
-  CHECK(file_path_.empty());
+void LogLineReader::OpenMemoryBufferForTest(const char* buffer, size_t size) {
+  CHECK(backend_mode_ == Backend::MEMORY_FOR_TEST);
 
   buffer_ = (const uint8_t*)buffer;
   buffer_size_ = size;
 }
 
-void LogEntryReader::SetPositionLast() {
+void LogLineReader::SetPositionLast() {
   pos_ = buffer_size_;
 
   while (pos_ >= 1 && buffer_[pos_ - 1] != '\n')
     pos_--;
 }
 
-void LogEntryReader::Remap() {
+void LogLineReader::Remap() {
+  CHECK(backend_mode_ == Backend::FILE ||
+        backend_mode_ == Backend::FILE_FOLLOW);
+
+  // Ensure the file path is initialized.
   CHECK(!file_path_.empty());
 
   int64_t file_size = file_.GetLength();
@@ -94,35 +108,48 @@ void LogEntryReader::Remap() {
     }
   }
 
+  mmap_.reset();
+  buffer_ = nullptr;
+  buffer_size_ = 0;
+
+  if (file_size == 0) {
+    // Returning without (re)mmapping, since mmapping an empty file fails.
+    buffer_ = kEmptyBuffer;
+    return;
+  }
+
   base::File file_duplicated = file_.Duplicate();
 
   base::MemoryMappedFile::Region mmap_region;
   mmap_region.offset = 0;
   mmap_region.size = file_size;
 
-  mmap_ = std::make_unique<base::MemoryMappedFile>();
-  bool mmap_result = mmap_->Initialize(std::move(file_duplicated), mmap_region);
+  auto new_mmap = std::make_unique<base::MemoryMappedFile>();
+  bool mmap_result =
+      new_mmap->Initialize(std::move(file_duplicated), mmap_region);
 
   if (!mmap_result) {
-    buffer_ = nullptr;
-    buffer_size_ = 0;
+    LOG(ERROR) << "Doing mmap (" << file_path_ << ") failed.";
+    // resetting position.
+    pos_ = 0;
     return;
   }
 
+  std::swap(mmap_, new_mmap);
   buffer_ = mmap_->data();
   buffer_size_ = file_size;
 }
 
-RawLogLineUnsafe LogEntryReader::Forward() {
+base::Optional<std::string> LogLineReader::Forward() {
   CHECK(buffer_ != nullptr);
 
   if (pos_ != 0 && buffer_[pos_ - 1] != '\n') {
     LOG(WARNING) << "The file looks changed unexpectedly. The lines read may "
-        << "be broken.";
+                 << "be broken.";
   }
 
   if (pos_ >= buffer_size_)
-    return RawLogLineUnsafe();
+    return base::nullopt;
 
   off_t pos_line_end = -1;
   for (off_t i = pos_; i < buffer_size_; i++) {
@@ -134,26 +161,26 @@ RawLogLineUnsafe LogEntryReader::Forward() {
 
   if (pos_line_end == -1) {
     // Reach EOF without '\n'.
-    return RawLogLineUnsafe();
+    return base::nullopt;
   }
 
   size_t pos_line_start = pos_;
   size_t line_length = pos_line_end - pos_;
   pos_ = pos_line_end + 1;
 
-  return RawLogLineUnsafe((const char*)buffer_ + pos_line_start, line_length);
+  return GetString(pos_line_start, line_length);
 }
 
-RawLogLineUnsafe LogEntryReader::Backward() {
+base::Optional<std::string> LogLineReader::Backward() {
   CHECK(buffer_ != nullptr);
 
   if (pos_ != 0 && buffer_[pos_ - 1] != '\n') {
     LOG(WARNING) << "The file looks changed unexpectedly. The lines read may "
-        << "be broken.";
+                 << "be broken.";
   }
 
   if (pos_ == 0)
-    return RawLogLineUnsafe();
+    return base::nullopt;
 
   off_t last_start = pos_ - 1;
   while (last_start > 0 && buffer_[last_start - 1] != '\n') {
@@ -162,21 +189,31 @@ RawLogLineUnsafe LogEntryReader::Backward() {
 
   size_t line_length = pos_ - last_start - 1;
   pos_ = last_start;
-  return RawLogLineUnsafe((const char*)buffer_ + last_start, line_length);
+  return GetString(last_start, line_length);
 }
 
-void LogEntryReader::AddObserver(Observer* obs) {
+void LogLineReader::AddObserver(Observer* obs) {
   observers_.AddObserver(obs);
 }
 
-void LogEntryReader::RemoveObserver(Observer* obs) {
+void LogLineReader::RemoveObserver(Observer* obs) {
   observers_.RemoveObserver(obs);
 }
 
-void LogEntryReader::OnChanged() {
+std::string LogLineReader::GetString(off_t offset, size_t length) const {
+  CHECK(buffer_ != nullptr);
+  CHECK_GE(offset, 0);
+  CHECK_LE((offset + length), buffer_size_);
+
+  return std::string(reinterpret_cast<const char*>(buffer_ + offset), length);
+}
+
+void LogLineReader::OnChanged() {
+  CHECK(backend_mode_ == Backend::FILE_FOLLOW);
+
   Remap();
   for (Observer& obs : observers_)
-    obs.OnFileChanged();
+    obs.OnFileChanged(this);
 }
 
 }  // namespace croslog

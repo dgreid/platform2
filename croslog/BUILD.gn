@@ -17,8 +17,13 @@ static_library("libcroslog_static") {
     "config.h",
     "file_change_watcher.cc",
     "file_change_watcher.h",
-    "log_entry_reader.cc",
-    "log_entry_reader.h",
+    "log_entry.cc",
+    "log_entry.h",
+    "log_line_reader.cc",
+    "log_line_reader.h",
+    "log_parser.h",
+    "log_parser_syslog.cc",
+    "log_parser_syslog.h",
     "multiplexer.cc",
     "multiplexer.h",
     "viewer_plaintext.cc",
@@ -44,7 +49,9 @@ if (use.test) {
     sources = [
       "config_test.cc",
       "file_change_watcher_test.cc",
-      "log_entry_reader_test.cc",
+      "log_line_reader_test.cc",
+      "log_parser_syslog_test.cc",
+      "multiplexer_test.cc",
     ]
     run_test = true
     defines = [ "UNIT_TEST" ]

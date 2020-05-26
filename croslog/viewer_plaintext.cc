@@ -2,10 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "croslog/viewer_plaintext.h"
+
+#include <memory>
 #include <unistd.h>
+
 #include "base/files/file_util.h"
 
-#include "croslog/viewer_plaintext.h"
+#include "croslog/log_parser_syslog.h"
 
 namespace croslog {
 
@@ -25,6 +29,7 @@ bool ViewerPlaintext::Run(const croslog::Config& config) {
   bool install_change_watcher = config.follow;
   for (size_t i = 0; i < base::size(kLogSources); i++) {
     multiplexer_.AddSource(base::FilePath(kLogSources[i]),
+                           std::make_unique<LogParserSyslog>(),
                            install_change_watcher);
   }
 
@@ -52,17 +57,17 @@ void ViewerPlaintext::OnLogFileChanged() {
 
 void ViewerPlaintext::ReadRemainingLogs() {
   while (true) {
-    const RawLogLineUnsafe& s = multiplexer_.Forward();
-    if (s.data() == nullptr)
+    const MaybeLogEntry& e = multiplexer_.Forward();
+    if (!e.has_value())
       return;
+    const std::string& s = e->entire_line();
     if (!s.empty())
       WriteOutput(s);
-    if (s.empty() || s[s.size() - 1] != '\n')
-      WriteOutput("\n", 1);
+    WriteOutput("\n", 1);
   }
 }
 
-void ViewerPlaintext::WriteOutput(const RawLogLineUnsafe& str) {
+void ViewerPlaintext::WriteOutput(const std::string& str) {
   WriteOutput(str.data(), str.size());
 }
 

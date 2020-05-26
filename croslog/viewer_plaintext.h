@@ -5,6 +5,8 @@
 #ifndef CROSLOG_VIEWER_PLAINTEXT_H_
 #define CROSLOG_VIEWER_PLAINTEXT_H_
 
+#include <string>
+
 #include "base/bind.h"
 #include "base/message_loop/message_loop.h"
 #include "base/run_loop.h"
@@ -35,7 +37,7 @@ class ViewerPlaintext : public Multiplexer::Observer {
 
   void ReadRemainingLogs();
 
-  void WriteOutput(const RawLogLineUnsafe& str);
+  void WriteOutput(const std::string& str);
   void WriteOutput(const char* str, size_t size);
 
   Multiplexer multiplexer_;

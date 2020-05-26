@@ -38,8 +38,7 @@ class InotifyReaderThread : public base::PlatformThread::Delegate {
   // Must be called on the main thread.
   InotifyReaderThread(scoped_refptr<base::SequencedTaskRunner> task_runner,
                       Delegate* delegate)
-      : task_runner_(std::move(task_runner)),
-        delegate_(delegate) {
+      : task_runner_(std::move(task_runner)), delegate_(delegate) {
     DCHECK(delegate_);
     DCHECK(task_runner_->RunsTasksInCurrentSequence());
   }
