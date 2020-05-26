@@ -41,7 +41,7 @@ enum BuiltinModelId {
 // Options for creating the executor.  Options are used for testing and
 // development. They are not typically used in normal, production code.
 struct GraphExecutorOptions {
-  bool use_nnapi;
+  bool use_nnapi = false;
 };
 
 // These values are persisted to logs. Entries should not be renumbered and
