@@ -237,6 +237,16 @@ void FakeSamplesObserver::OnErrorOccurred(cros::mojom::ObserverErrorType type) {
     quit_closure_.Run();
 }
 
+mojo::PendingRemote<cros::mojom::SensorDeviceSamplesObserver>
+FakeSamplesObserver::GetRemote() {
+  CHECK(!receiver_.is_bound());
+  auto remote = receiver_.BindNewPipeAndPassRemote(ipc_task_runner_);
+  CHECK(remote);
+  CHECK(receiver_.is_bound());
+
+  return remote;
+}
+
 FakeSamplesObserver::FakeSamplesObserver(
     scoped_refptr<base::SingleThreadTaskRunner> ipc_task_runner,
     base::Closure quit_closure,

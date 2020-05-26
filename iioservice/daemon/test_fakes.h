@@ -87,6 +87,8 @@ class FakeSamplesObserver : public cros::mojom::SensorDeviceSamplesObserver {
 
   void OnErrorOccurred(cros::mojom::ObserverErrorType type) override;
 
+  mojo::PendingRemote<cros::mojom::SensorDeviceSamplesObserver> GetRemote();
+
  private:
   FakeSamplesObserver(
       scoped_refptr<base::SingleThreadTaskRunner> ipc_task_runner,
