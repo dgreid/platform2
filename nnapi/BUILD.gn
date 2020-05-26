@@ -20,6 +20,7 @@ group("all") {
       ":libbase_testrunner",
       ":libcutils_testrunner",
       ":libhidl_testrunner",
+      ":liblog_testrunner",
       ":libutils_testrunner",
     ]
   }
@@ -53,6 +54,7 @@ static_library("libnnapi-support") {
     ":libbase",
     ":libcutils",
     ":libhidl",
+    ":liblog",
     ":libutils",
   ]
 }
@@ -80,6 +82,7 @@ static_library("libbase") {
     "${libbase_src}/properties.cpp",
     "${libbase_src}/stringprintf.cpp",
     "${libbase_src}/strings.cpp",
+    "${libbase_src}/test_utils.cpp",
     "${libbase_src}/threads.cpp",
   ]
 }
@@ -100,6 +103,7 @@ if (use.test) {
     ]
     deps = [
       ":libbase",
+      ":liblog",
       "//common-mk/testrunner:testrunner",
     ]
     sources = [
@@ -125,7 +129,6 @@ if (use.test) {
       "${libbase_src}/scopeguard_test.cpp",
       "${libbase_src}/stringprintf_test.cpp",
       "${libbase_src}/strings_test.cpp",
-      "${libbase_src}/test_utils.cpp",
     ]
   }
 }
@@ -185,9 +188,41 @@ if (use.test) {
     deps = [
       ":libcutils",
       ":libhidl",
+      ":liblog",
       "//common-mk/testrunner:testrunner",
     ]
     sources = [ "libhidl/tests/hidl_support_test.cpp" ]
+  }
+}
+
+static_library("liblog") {
+  configs += [ ":target_defaults" ]
+  include_dirs = [ "${liblog_src}/include" ]
+  deps = [ ":libbase" ]
+  sources = [
+    "${liblog_src}/log_time.cpp",
+    "${liblog_src}/logger_write.cpp",
+    "${liblog_src}/logprint.cpp",
+    "${liblog_src}/properties.cpp",
+  ]
+}
+
+if (use.test) {
+  executable("liblog_testrunner") {
+    configs += [
+      "//common-mk:test",
+      ":target_defaults",
+    ]
+    include_dirs = [ "${liblog_src}/include" ]
+    deps = [
+      ":libbase",
+      ":liblog",
+      "//common-mk/testrunner:testrunner",
+    ]
+    sources = [
+      "${liblog_src}/tests/liblog_default_tag.cpp",
+      "${liblog_src}/tests/log_time_test.cpp",
+    ]
   }
 }
 
