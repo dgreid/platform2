@@ -68,19 +68,12 @@ class Manager : public org::chromium::lorgnette::ManagerAdaptor,
   };
 
   static const char kMetricScanResult[];
-  static const char kMetricConverterResult[];
 
   static bool ExtractScanOptions(
       brillo::ErrorPtr* error,
       const brillo::VariantDictionary& scan_properties,
       uint32_t* resolution_out,
       std::string* mode_out);
-
-  // Converts the formatted output of "scanimage" to a map of attribute-data
-  // mappings suitable for returning to a caller to the ListScanners DBus
-  // method.
-  static ScannerInfo ScannerInfoFromString(
-      const std::string& scanner_info_string);
 
   std::unique_ptr<brillo::dbus_utils::DBusObject> dbus_object_;
   base::Callback<void()> activity_callback_;

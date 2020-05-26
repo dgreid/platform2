@@ -201,7 +201,6 @@ base::Optional<SourceType> GuessSourceType(const std::string& name) {
 }  // namespace
 
 const char Manager::kMetricScanResult[] = "DocumentScan.ScanResult";
-const char Manager::kMetricConverterResult[] = "DocumentScan.ConverterResult";
 
 Manager::Manager(base::Callback<void()> activity_callback,
                  std::unique_ptr<SaneClient> sane_client)
