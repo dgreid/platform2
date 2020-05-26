@@ -592,22 +592,24 @@ struct Mounts {
   const FilePath dst;
 };
 
-const Mounts kShadowMounts[] = {
-  { FilePath("/home/.shadow/a"), FilePath("/home/user/0")},
+const std::vector<Mounts> kShadowMounts = {
   { FilePath("/home/.shadow/a"), FilePath("/home/root/0")},
-  { FilePath("/home/.shadow/b"), FilePath("/home/user/1")},
+  { FilePath("/home/.shadow/a"), FilePath("/home/user/0")},
   { FilePath("/home/.shadow/a"), FilePath("/home/chronos/user")},
-  { FilePath("/home/.shadow/b"), FilePath("/home/root/1")},
-  { FilePath("/home/user/b/Downloads"),
-    FilePath("/home/user/b/MyFiles/Downloads")},
-  { FilePath("/home/chronos/u-b/Downloads"),
-    FilePath("/home/chronos/u-b/MyFiles/Downloads")},
-  { FilePath("/home/chronos/user/Downloads"),
+  { FilePath("/home/.shadow/a/Downloads"),
     FilePath("/home/chronos/user/MyFiles/Downloads")},
+  { FilePath("/home/.shadow/a/server/run"), FilePath("/daemon-store/server/a")},
+  { FilePath("/home/.shadow/b"), FilePath("/home/root/1")},
+  { FilePath("/home/.shadow/b"), FilePath("/home/user/1")},
+  { FilePath("/home/.shadow/b/Downloads"),
+    FilePath("/home/chronos/u-b/MyFiles/Downloads")},
+  { FilePath("/home/.shadow/b/Downloads"),
+    FilePath("/home/user/b/MyFiles/Downloads")},
+  { FilePath("/home/.shadow/b/server/run"), FilePath("/daemon-store/server/b")},
 };
-const int kShadowMountsCount = 8;
 
-const Mounts kLoopDevMounts[] = {
+// Ephemeral mounts must be at the beginning.
+const std::vector<Mounts> kLoopDevMounts = {
     { FilePath("/dev/loop7"), FilePath("/run/cryptohome/ephemeral_mount/1")},
     { FilePath("/dev/loop7"), FilePath("/home/user/0")},
     { FilePath("/dev/loop7"), FilePath("/home/root/0")},
@@ -617,15 +619,17 @@ const Mounts kLoopDevMounts[] = {
     { FilePath("/dev/loop2"), FilePath("/home/root/1")},
     { FilePath("/dev/loop2"), FilePath("/home/user/1")},
 };
+
+// The number of mount for loop7.
 const int kEphemeralMountsCount = 5;
 
-const Platform::LoopDevice kLoopDevices[] = {
+const std::vector<Platform::LoopDevice> kLoopDevices = {
     { FilePath("/mnt/stateful_partition/encrypted.block"),
       FilePath("/dev/loop0")},
     { FilePath("/run/cryptohome/ephemeral_data/1"), FilePath("/dev/loop7")},
 };
 
-const FilePath kSparseFiles[] = {
+const std::vector<FilePath> kSparseFiles = {
     FilePath("/run/cryptohome/ephemeral_data/2"),
     FilePath("/run/cryptohome/ephemeral_data/1"),
 };
@@ -633,26 +637,24 @@ const FilePath kSparseFiles[] = {
 bool StaleShadowMounts(
     const FilePath& from_prefix,
     std::multimap<const FilePath, const FilePath>* mounts) {
-  if (from_prefix.value() == "/home/.shadow") {
-    if (!mounts)
-      return true;
-    const struct Mounts* m = &kShadowMounts[0];
-    for (int i = 0; i < kShadowMountsCount; ++i, ++m) {
-      mounts->insert(
-          std::pair<const FilePath, const FilePath>(m->src, m->dst));
+  int i = 0;
+
+  for (const auto& m : kShadowMounts) {
+    if (m.src.value().find(from_prefix.value()) == 0) {
+      i++;
+      if (mounts)
+        mounts->insert(std::make_pair(m.src, m.dst));
     }
-    return true;
   }
-  return false;
+  return i > 0;
 }
 
 bool LoopDeviceMounts(
     std::multimap<const FilePath, const FilePath>* mounts) {
   if (!mounts)
     return false;
-  const Mounts* m = kLoopDevMounts;
-  for (int i = 0; i < base::size(kLoopDevMounts); ++i, ++m)
-    mounts->insert(std::make_pair(m->src, m->dst));
+  for (const auto& m : kLoopDevMounts)
+    mounts->insert(std::make_pair(m.src, m.dst));
   return true;
 }
 
@@ -660,8 +662,7 @@ bool EnumerateSparseFiles(const base::FilePath& path, bool is_recursive,
                           std::vector<base::FilePath>* ent_list) {
   if (path != FilePath(kEphemeralCryptohomeDir).Append(kSparseFileDir))
     return false;
-  ent_list->insert(ent_list->end(), std::begin(kSparseFiles),
-      std::end(kSparseFiles));
+  ent_list->insert(ent_list->begin(), kSparseFiles.begin(), kSparseFiles.end());
   return true;
 }
 
@@ -673,8 +674,7 @@ TEST_F(ServiceTest, CleanUpStale_NoOpenFiles_Ephemeral) {
   EXPECT_CALL(platform_, GetMountsBySourcePrefix(homedirs_.shadow_root(), _))
     .WillOnce(Return(false));
   EXPECT_CALL(platform_, GetAttachedLoopDevices())
-    .WillRepeatedly(Return(std::vector<Platform::LoopDevice>(
-        std::begin(kLoopDevices), std::end(kLoopDevices))));
+    .WillRepeatedly(Return(kLoopDevices));
   EXPECT_CALL(platform_, GetLoopDeviceMounts(_))
     .WillOnce(Invoke(LoopDeviceMounts));
   EXPECT_CALL(platform_,
@@ -704,8 +704,7 @@ TEST_F(ServiceTest, CleanUpStale_OpenLegacy_Ephemeral) {
   EXPECT_CALL(platform_, GetMountsBySourcePrefix(homedirs_.shadow_root(), _))
     .WillOnce(Return(false));
   EXPECT_CALL(platform_, GetAttachedLoopDevices())
-    .WillRepeatedly(Return(std::vector<Platform::LoopDevice>(
-        std::begin(kLoopDevices), std::end(kLoopDevices))));
+    .WillRepeatedly(Return(kLoopDevices));
   EXPECT_CALL(platform_, GetLoopDeviceMounts(_))
     .WillOnce(Invoke(LoopDeviceMounts));
   EXPECT_CALL(platform_,
@@ -715,11 +714,16 @@ TEST_F(ServiceTest, CleanUpStale_OpenLegacy_Ephemeral) {
   EXPECT_CALL(platform_, GetProcessesWithOpenFiles(_, _))
     .Times(kEphemeralMountsCount - 1);
   std::vector<ProcessInformation> processes(1);
+  std::vector<std::string> cmd_line(1, "test");
   processes[0].set_process_id(1);
+  processes[0].set_cmd_line(&cmd_line);
   EXPECT_CALL(platform_,
       GetProcessesWithOpenFiles(FilePath("/home/chronos/user"), _))
     .Times(1)
     .WillRepeatedly(SetArgPointee<1>(processes));
+
+  EXPECT_CALL(platform_, GetMountsBySourcePrefix(FilePath("/dev/loop7"), _))
+    .WillOnce(Return(false));
 
   EXPECT_CALL(platform_, Unmount(_, _, _))
     .Times(0);
@@ -734,8 +738,7 @@ TEST_F(ServiceTest, CleanUpStale_OpenLegacy_Ephemeral_Forced) {
   EXPECT_CALL(platform_, GetMountsBySourcePrefix(homedirs_.shadow_root(), _))
     .WillOnce(Return(false));
   EXPECT_CALL(platform_, GetAttachedLoopDevices())
-    .WillRepeatedly(Return(std::vector<Platform::LoopDevice>(
-        std::begin(kLoopDevices), std::end(kLoopDevices))));
+    .WillRepeatedly(Return(kLoopDevices));
   EXPECT_CALL(platform_, GetLoopDeviceMounts(_))
     .WillOnce(Invoke(LoopDeviceMounts));
   EXPECT_CALL(platform_,
@@ -773,9 +776,9 @@ TEST_F(ServiceTest, CleanUpStale_EmptyMap_NoOpenFiles_ShadowOnly) {
           FilePath(kEphemeralCryptohomeDir).Append(kSparseFileDir), _, _))
     .WillOnce(Return(false));
   EXPECT_CALL(platform_, GetProcessesWithOpenFiles(_, _))
-    .Times(kShadowMountsCount);
+    .Times(kShadowMounts.size());
   EXPECT_CALL(platform_, Unmount(_, true, _))
-    .Times(kShadowMountsCount)
+    .Times(kShadowMounts.size())
     .WillRepeatedly(Return(true));
   EXPECT_FALSE(service_.CleanUpStaleMounts(false));
 }
@@ -785,8 +788,10 @@ TEST_F(ServiceTest, CleanUpStale_EmptyMap_OpenLegacy_ShadowOnly) {
   // and some open filehandles to the legacy homedir, all mounts without
   // filehandles are unmounted.
 
+  // Called by CleanUpStaleMounts and each time a directory is excluded.
   EXPECT_CALL(platform_, GetMountsBySourcePrefix(_, _))
-    .WillOnce(Invoke(StaleShadowMounts));
+    .Times(4)
+    .WillRepeatedly(Invoke(StaleShadowMounts));
   EXPECT_CALL(platform_, GetAttachedLoopDevices())
     .WillRepeatedly(Return(std::vector<Platform::LoopDevice>()));
   EXPECT_CALL(platform_, GetLoopDeviceMounts(_))
@@ -796,20 +801,28 @@ TEST_F(ServiceTest, CleanUpStale_EmptyMap_OpenLegacy_ShadowOnly) {
           FilePath(kEphemeralCryptohomeDir).Append(kSparseFileDir), _, _))
     .WillOnce(Return(false));
   std::vector<ProcessInformation> processes(1);
+  std::vector<std::string> cmd_line(1, "test");
   processes[0].set_process_id(1);
+  processes[0].set_cmd_line(&cmd_line);
+  // In addition to /home/chronos/user mount point, /home/.shadow/a/Downloads
+  // is not considered anymore, as it is under /home/.shadow/a.
   EXPECT_CALL(platform_, GetProcessesWithOpenFiles(_, _))
-    .Times(kShadowMountsCount - 1);
+    .Times(kShadowMounts.size() - 3);
   EXPECT_CALL(platform_,
       GetProcessesWithOpenFiles(FilePath("/home/chronos/user"), _))
     .Times(1)
     .WillRepeatedly(SetArgPointee<1>(processes));
+  // Given /home/chronos/user is still used, a is still used, so only
+  // b mounts should be removed.
   EXPECT_CALL(
       platform_,
       Unmount(Property(&FilePath::value,
-                       AnyOf(EndsWith("/1"), EndsWith("/MyFiles/Downloads"))),
+                       AnyOf(EndsWith("/1"), EndsWith("b/MyFiles/Downloads"))),
               true, _))
-      .Times(5)
+      .Times(4)
       .WillRepeatedly(Return(true));
+  EXPECT_CALL(platform_, Unmount(FilePath("/daemon-store/server/b"), true, _))
+      .WillOnce(Return(true));
   EXPECT_TRUE(service_.CleanUpStaleMounts(false));
 }
 
@@ -851,7 +864,8 @@ TEST_F(ServiceTestNotInitialized,
                              &error_code, &result, nullptr));
   ASSERT_EQ(TRUE, result);
   EXPECT_CALL(platform_, GetMountsBySourcePrefix(_, _))
-    .WillOnce(Invoke(StaleShadowMounts));
+    .Times(4)
+    .WillRepeatedly(Invoke(StaleShadowMounts));
   EXPECT_CALL(platform_, GetAttachedLoopDevices())
     .WillRepeatedly(Return(std::vector<Platform::LoopDevice>()));
   EXPECT_CALL(platform_, GetLoopDeviceMounts(_))
@@ -860,8 +874,10 @@ TEST_F(ServiceTestNotInitialized,
       EnumerateDirectoryEntries(
           FilePath(kEphemeralCryptohomeDir).Append(kSparseFileDir), _, _))
     .WillOnce(Return(false));
+  // Only 5 look ups: user/1 and root/1 are owned, children of these
+  // directories are excluded.
   EXPECT_CALL(platform_, GetProcessesWithOpenFiles(_, _))
-    .Times(kShadowMountsCount);
+    .Times(5);
 
   EXPECT_CALL(*mount, OwnsMountPoint(_))
     .WillRepeatedly(Return(false));
@@ -876,12 +892,12 @@ TEST_F(ServiceTestNotInitialized,
     .WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, Unmount(FilePath("/home/chronos/user"), true, _))
     .WillOnce(Return(true));
-
   EXPECT_CALL(platform_, Unmount(Property(&FilePath::value,
-                                          EndsWith("/MyFiles/Downloads")),
+                                          EndsWith("user/MyFiles/Downloads")),
                                  true, _))
-      .Times(3)
-      .WillRepeatedly(Return(true));
+    .WillOnce(Return(true));
+  EXPECT_CALL(platform_, Unmount(FilePath("/daemon-store/server/a"), true, _))
+      .WillOnce(Return(true));
 
   std::vector<std::string> fake_token_list;
   fake_token_list.push_back("/home/chronos/user/token");
@@ -895,8 +911,9 @@ TEST_F(ServiceTestNotInitialized,
               UnloadToken(_, FilePath("/home/chronos/user/token")))
       .Times(1);
 
-  // Expect that CleanUpStaleMounts() tells us it skipped no mounts.
-  EXPECT_FALSE(service_.CleanUpStaleMounts(false));
+  // Expect that CleanUpStaleMounts() tells us it skipped mounts since 1 is
+  // still logged in.
+  EXPECT_TRUE(service_.CleanUpStaleMounts(false));
 }
 
 class ServiceExTest : public ServiceTest {

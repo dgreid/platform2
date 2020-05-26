@@ -441,6 +441,8 @@ bool Service::FilterActiveMounts(
     std::multimap<const FilePath, const FilePath>* active_mounts,
     bool force) {
   bool skipped = false;
+  std::set<const FilePath> children_to_preserve;
+
   for (auto match = mounts->begin(); match != mounts->end(); ) {
     auto curr = match;
     bool keep = false;
@@ -452,25 +454,47 @@ bool Service::FilterActiveMounts(
         for (const auto& mount_pair : mounts_) {
           if (mount_pair.second->OwnsMountPoint(match->second)) {
             keep = true;
-            break;
+            // If !force, other mount points not owned scanned after should
+            // be preserved as well.
+            if (force)
+              break;
           }
         }
       }
-      // Optionally, ignore mounts with open files.
+      // Ignore mounts pointing to children of used mounts.
       if (!force) {
+        if (children_to_preserve.find(match->second) !=
+            children_to_preserve.end()) {
+          keep = true;
+          skipped = true;
+          LOG(WARNING) << "Stale mount " << match->second.value()
+                       << " from " << match->first.value()
+                       << " is a just a child.";
+        }
+      }
+
+      // Optionally, ignore mounts with open files.
+      if (!keep && !force) {
         std::vector<ProcessInformation> processes;
         platform_->GetProcessesWithOpenFiles(match->second, &processes);
         if (processes.size()) {
           LOG(WARNING) << "Stale mount " << match->second.value()
                        << " from " << match->first.value()
-                       << " has active holders.";
+                       << " has " << processes.size() << " active holders. "
+                       << "First one " << processes[0].get_cmd_line()[0];
           keep = true;
           skipped = true;
         }
       }
     }
-    // Delete anything that shouldn't be unmounted.
     if (keep) {
+      std::multimap<const FilePath, const FilePath> children;
+      LOG(WARNING) << "Looking for children of " << curr->first;
+      platform_->GetMountsBySourcePrefix(curr->first, &children);
+      for (const auto& child : children) {
+        children_to_preserve.insert(child.second);
+      }
+
       active_mounts->insert(curr, match);
       mounts->erase(curr, match);
     }

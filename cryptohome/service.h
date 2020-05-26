@@ -863,8 +863,9 @@ virtual gboolean InstallAttributesIsFirstInstall(gboolean* OUT_first_install,
   // Called periodically to fetch alerts data from TPM and upload it to UMA.
   virtual void UploadAlertsDataCallback();
   // Filters out active mounts from |mounts|, populating |active_mounts| set.
-  // If |force| is set, stale mounts with open files are ignored.
-  // Returns true if stale mount filtered out because of open files.
+  // If |force| is false, it ignores stale mounts that that have open files
+  // and mount points connected to children of the mount source.
+  // Returns true if any stale mount filtered out because of open files.
   virtual bool FilterActiveMounts(
       std::multimap<const base::FilePath, const base::FilePath>* mounts,
       std::multimap<const base::FilePath, const base::FilePath>* active_mounts,
