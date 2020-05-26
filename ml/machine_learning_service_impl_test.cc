@@ -195,6 +195,7 @@ using ::chromeos::machine_learning::mojom::ExecuteResult;
 using ::chromeos::machine_learning::mojom::FlatBufferModelSpec;
 using ::chromeos::machine_learning::mojom::FlatBufferModelSpecPtr;
 using ::chromeos::machine_learning::mojom::GraphExecutorPtr;
+using ::chromeos::machine_learning::mojom::HandwritingRecognitionQuery;
 using ::chromeos::machine_learning::mojom::HandwritingRecognitionQueryPtr;
 using ::chromeos::machine_learning::mojom::HandwritingRecognizerPtr;
 using ::chromeos::machine_learning::mojom::HandwritingRecognizerResult;
@@ -990,8 +991,8 @@ TEST(TextClassifierSelectionTest, WrongInput) {
   ASSERT_TRUE(infer_callback_done);
 }
 
-// Tests that the HandwritingRecognizer is properly constructed and destructed.
-TEST(ModelLoadAndInferenceTest, HandwritingRecognizer) {
+// Tests that the HandwritingRecognizer recognition returns expected scores.
+TEST(HandwritingRecognizerTest, GetExpectedScores) {
   // Nothing to test on an unsupported platform.
   if (ml::HandwritingLibrary::GetInstance()->GetStatus() ==
       ml::HandwritingLibrary::Status::kNotSupported) {
@@ -1080,6 +1081,54 @@ TEST(ModelLoadAndInferenceTest, HandwritingRecognizer) {
     base::RunLoop().RunUntilIdle();
     ASSERT_TRUE(infer_callback_done);
   }
+}
+
+// Tests that the HandwritingRecognizer Recognition should fail on empty ink.
+TEST(HandwritingRecognizerTest, FailOnEmptyInk) {
+  // Nothing to test on an unsupported platform.
+  if (ml::HandwritingLibrary::GetInstance()->GetStatus() ==
+      ml::HandwritingLibrary::Status::kNotSupported) {
+    return;
+  }
+
+  MachineLearningServicePtr ml_service;
+  const MachineLearningServiceImplForTesting ml_service_impl(
+      mojo::MakeRequest(&ml_service).PassMessagePipe());
+
+  // Load recognizer.
+  HandwritingRecognizerPtr recognizer;
+  bool model_callback_done = false;
+  ml_service->LoadHandwritingModel(
+      mojo::MakeRequest(&recognizer),
+      base::Bind(
+          [](bool* model_callback_done, const LoadModelResult result) {
+            ASSERT_EQ(result, LoadModelResult::OK);
+            *model_callback_done = true;
+          },
+          &model_callback_done));
+  base::RunLoop().RunUntilIdle();
+  ASSERT_TRUE(model_callback_done);
+  ASSERT_TRUE(recognizer.is_bound());
+
+  HandwritingRecognitionQueryPtr query = HandwritingRecognitionQuery::New();
+  query->max_num_results = 1;
+
+  // Perform inference.
+  bool infer_callback_done = false;
+  recognizer->Recognize(std::move(query),
+                        base::Bind(
+                            [](bool* infer_callback_done,
+                               const HandwritingRecognizerResultPtr result) {
+                              // Check that the inference failed.
+                              EXPECT_EQ(
+                                  result->status,
+                                  HandwritingRecognizerResult::Status::ERROR);
+                              EXPECT_EQ(result->candidates.size(), 0);
+                              *infer_callback_done = true;
+                            },
+                            &infer_callback_done));
+  base::RunLoop().RunUntilIdle();
+  ASSERT_TRUE(infer_callback_done);
 }
 
 }  // namespace

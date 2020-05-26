@@ -130,9 +130,8 @@ HandwritingRecognizerResultFromProto(
     const chrome_knowledge::HandwritingRecognizerResult& result_proto) {
   HandwritingRecognizerResultPtr result = HandwritingRecognizerResult::New();
 
-  // For status.
-  result->status =
-      static_cast<HandwritingRecognizerResult::Status>(result_proto.status());
+  // For status; set default value as OK.
+  result->status = HandwritingRecognizerResult::Status::OK;
 
   // For candidates.
   if (!result_proto.candidates().empty()) {

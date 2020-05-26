@@ -5,6 +5,7 @@
 #include "ml/handwriting_recognizer_impl.h"
 
 #include <utility>
+#include <vector>
 
 #include "ml/handwriting_proto_mojom_conversion.h"
 
@@ -12,7 +13,9 @@ namespace ml {
 namespace {
 
 using ::chromeos::machine_learning::mojom::HandwritingRecognitionQueryPtr;
+using ::chromeos::machine_learning::mojom::HandwritingRecognizerCandidatePtr;
 using ::chromeos::machine_learning::mojom::HandwritingRecognizerRequest;
+using ::chromeos::machine_learning::mojom::HandwritingRecognizerResult;
 
 // Returns paths of the current HandwritingRecognizerModel.
 chrome_knowledge::HandwritingRecognizerModelPaths GetModelPaths() {
@@ -70,11 +73,18 @@ HandwritingRecognizerImpl::~HandwritingRecognizerImpl() {
 void HandwritingRecognizerImpl::Recognize(HandwritingRecognitionQueryPtr query,
                                           RecognizeCallback callback) {
   chrome_knowledge::HandwritingRecognizerResult result_proto;
-  ml::HandwritingLibrary::GetInstance()->RecognizeHandwriting(
-      recognizer_, HandwritingRecognitionQueryToProto(std::move(query)),
-      &result_proto);
 
-  std::move(callback).Run(HandwritingRecognizerResultFromProto(result_proto));
+  if (ml::HandwritingLibrary::GetInstance()->RecognizeHandwriting(
+          recognizer_, HandwritingRecognitionQueryToProto(std::move(query)),
+          &result_proto)) {
+    // Recognition succeeded, run callback on the result.
+    std::move(callback).Run(HandwritingRecognizerResultFromProto(result_proto));
+  } else {
+    // Recognition failed, run callback on empty result and status = ERROR.
+    std::move(callback).Run(HandwritingRecognizerResult::New(
+        HandwritingRecognizerResult::Status::ERROR,
+        std::vector<HandwritingRecognizerCandidatePtr>()));
+  }
 }
 
 }  // namespace ml
