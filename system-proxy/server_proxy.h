@@ -53,6 +53,7 @@ class ServerProxy {
  protected:
   virtual int GetStdinPipe();
   virtual int GetStdoutPipe();
+  virtual void HandleStdinReadable();
 
  private:
   friend class ServerProxyTest;
@@ -62,7 +63,6 @@ class ServerProxy {
   FRIEND_TEST(ServerProxyTest, HandlePendingJobs);
   FRIEND_TEST(ServerProxyTest, SetupConnection);
 
-  void HandleStdinReadable();
   bool HandleSignal(const struct signalfd_siginfo& siginfo);
 
   void CreateListeningSocket();
