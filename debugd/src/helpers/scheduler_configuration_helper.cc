@@ -6,6 +6,7 @@
 
 #include <libminijail.h>
 #include <scoped_minijail.h>
+#include <sys/prctl.h>
 
 #include <string>
 
@@ -17,8 +18,15 @@
 #include <build/buildflag.h>
 #include <chromeos/dbus/service_constants.h>
 
+// Not all Linux kernels have this defined.
+#ifndef PR_SET_CORE_SCHED
+// TODO(b/152605392): Replace this with the final upstream interface.
+#define PR_SET_CORE_SCHED 0x200
+#endif
+
 using debugd::scheduler_configuration::kConservativeScheduler;
 using debugd::scheduler_configuration::kPerformanceScheduler;
+using debugd::scheduler_configuration::kCoreIsolationScheduler;
 
 namespace {
 
@@ -58,11 +66,13 @@ int main(int argc, char* argv[]) {
 
   std::string policy_flag = std::string("Set to either ") +
                             kConservativeScheduler + " or " +
+                            kCoreIsolationScheduler + " or " +
                             kPerformanceScheduler + ".";
   DEFINE_string(policy, "", policy_flag.c_str());
   brillo::FlagHelper::Init(argc, argv, "scheduler_configuration_helper");
 
   if (FLAGS_policy != kConservativeScheduler &&
+      FLAGS_policy != kCoreIsolationScheduler &&
       FLAGS_policy != kPerformanceScheduler) {
     LOG(INFO) << "Unknown policy \"" << FLAGS_policy << "\", defaulting to "
               << kConservativeScheduler;
@@ -83,6 +93,22 @@ int main(int argc, char* argv[]) {
   }
 
   EnterSandbox();
+
+  // By default, Chrome prefers to use core isolation scheduling, which keeps
+  // hyper-threading enabled globally, but puts renderer processes into
+  // untrusted execution groups. Chrome does not know which kernels support core
+  // scheduling, so debugd makes that decision, and defaults to conservative if
+  // core scheduling is not supported.
+  if (FLAGS_policy == kCoreIsolationScheduler) {
+    int ret = prctl(PR_SET_CORE_SCHED, 2);
+    DCHECK_LT(ret, 0);  // This should never succeed.
+    if (errno == ERANGE) {
+      // The kernel supports the call but we gave it a bogus argument.
+      FLAGS_policy = kPerformanceScheduler;
+    } else {
+      FLAGS_policy = kConservativeScheduler;
+    }
+  }
 
   int status = 1;
   size_t num_cores_disabled = 0;
