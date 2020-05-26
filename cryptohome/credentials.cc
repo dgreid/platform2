@@ -4,8 +4,6 @@
 
 #include "cryptohome/credentials.h"
 
-#include <cstring>
-
 #include "cryptohome/obfuscated_username.h"
 
 using brillo::SecureBlob;
@@ -14,8 +12,8 @@ namespace cryptohome {
 
 Credentials::Credentials() = default;
 
-Credentials::Credentials(const char* username, const SecureBlob& passkey)
-    : username_(username, strlen(username)), passkey_(passkey) {}
+Credentials::Credentials(const std::string& username, const SecureBlob& passkey)
+    : username_(username), passkey_(passkey) {}
 
 Credentials::Credentials(const Credentials& rhs) = default;
 

@@ -1193,7 +1193,7 @@ void UserDataAuth::DoMount(
   }
 
   auto credentials = std::make_unique<Credentials>(
-      account_id.c_str(), SecureBlob(request.authorization().key().secret()));
+      account_id, SecureBlob(request.authorization().key().secret()));
   // Everything else can be the default.
   credentials->set_key_data(request.authorization().key().data());
 
@@ -1606,7 +1606,7 @@ user_data_auth::CryptohomeErrorCode UserDataAuth::AddKey(
 
   const std::string& auth_key_secret =
       request.authorization_request().key().secret();
-  Credentials credentials(account_id.c_str(), SecureBlob(auth_key_secret));
+  Credentials credentials(account_id, SecureBlob(auth_key_secret));
 
   credentials.set_key_data(request.authorization_request().key().data());
 
@@ -1663,7 +1663,7 @@ user_data_auth::CryptohomeErrorCode UserDataAuth::AddDataRestoreKey(
 
   const std::string& auth_key_secret =
       request.authorization_request().key().secret();
-  Credentials credentials(account_id.c_str(), SecureBlob(auth_key_secret));
+  Credentials credentials(account_id, SecureBlob(auth_key_secret));
   credentials.set_key_data(request.authorization_request().key().data());
   if (!homedirs_->Exists(credentials.GetObfuscatedUsername(system_salt_))) {
     return user_data_auth::CRYPTOHOME_ERROR_ACCOUNT_NOT_FOUND;
@@ -1750,7 +1750,7 @@ void UserDataAuth::CheckKey(
     return;
   }
 
-  Credentials credentials(account_id.c_str(), SecureBlob(auth_secret));
+  Credentials credentials(account_id, SecureBlob(auth_secret));
   credentials.set_key_data(request.authorization_request().key().data());
 
   const std::string obfuscated_username =
@@ -1904,7 +1904,7 @@ user_data_auth::CryptohomeErrorCode UserDataAuth::RemoveKey(
     return user_data_auth::CRYPTOHOME_ERROR_INVALID_ARGUMENT;
   }
 
-  Credentials credentials(account_id.c_str(), SecureBlob(auth_secret));
+  Credentials credentials(account_id, SecureBlob(auth_secret));
 
   credentials.set_key_data(request.authorization_request().key().data());
 
@@ -1949,7 +1949,7 @@ user_data_auth::CryptohomeErrorCode UserDataAuth::MassRemoveKeys(
     return user_data_auth::CRYPTOHOME_ERROR_INVALID_ARGUMENT;
   }
 
-  Credentials credentials(account_id.c_str(), SecureBlob(auth_secret));
+  Credentials credentials(account_id, SecureBlob(auth_secret));
 
   credentials.set_key_data(request.authorization_request().key().data());
 
@@ -2109,7 +2109,7 @@ user_data_auth::CryptohomeErrorCode UserDataAuth::UpdateKey(
     return user_data_auth::CRYPTOHOME_ERROR_INVALID_ARGUMENT;
   }
 
-  Credentials credentials(account_id.c_str(), SecureBlob(auth_secret));
+  Credentials credentials(account_id, SecureBlob(auth_secret));
   credentials.set_key_data(auth_key.data());
 
   if (!homedirs_->Exists(credentials.GetObfuscatedUsername(system_salt_))) {
@@ -2142,7 +2142,7 @@ user_data_auth::CryptohomeErrorCode UserDataAuth::MigrateKey(
     return user_data_auth::CRYPTOHOME_ERROR_INVALID_ARGUMENT;
   }
 
-  Credentials credentials(account_id.c_str(), SecureBlob(request.secret()));
+  Credentials credentials(account_id, SecureBlob(request.secret()));
 
   scoped_refptr<cryptohome::Mount> mount = GetMountForUser(account_id);
   if (!homedirs_->Migrate(

@@ -206,8 +206,7 @@ void ChallengeCredentialsDecryptOperation::ProceedIfChallengesDone() {
   if (!salt_signature_ || !unsealed_secret_)
     return;
   auto credentials = std::make_unique<Credentials>(
-      account_id_.c_str(),
-      ConstructPasskey(*unsealed_secret_, *salt_signature_));
+      account_id_, ConstructPasskey(*unsealed_secret_, *salt_signature_));
   credentials->set_key_data(key_data_);
   Resolve(Tpm::kTpmRetryNone, std::move(credentials));
   // |this| can be already destroyed at this point.

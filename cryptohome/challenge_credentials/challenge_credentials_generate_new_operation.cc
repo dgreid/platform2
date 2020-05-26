@@ -201,7 +201,7 @@ void ChallengeCredentialsGenerateNewOperation::ProceedIfComputationsDone() {
   if (!salt_signature_ || !tpm_protected_secret_value_)
     return;
   auto credentials = std::make_unique<Credentials>(
-      account_id_.c_str(),
+      account_id_,
       ConstructPasskey(*tpm_protected_secret_value_, *salt_signature_));
   credentials->set_key_data(key_data_);
   credentials->set_challenge_credentials_keyset_info(

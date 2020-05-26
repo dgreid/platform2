@@ -1627,7 +1627,7 @@ int64_t HomeDirs::ComputeDiskUsage(const std::string& account_id) {
 bool HomeDirs::Migrate(const Credentials& newcreds,
                        const SecureBlob& oldkey,
                        scoped_refptr<Mount> user_mount) {
-  Credentials oldcreds(newcreds.username().c_str(), oldkey);
+  Credentials oldcreds(newcreds.username(), oldkey);
   std::string obfuscated = newcreds.GetObfuscatedUsername(system_salt_);
   if (!user_mount) {
     user_mount = mount_factory_->New();

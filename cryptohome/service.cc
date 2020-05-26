@@ -1199,7 +1199,7 @@ void Service::DoCheckKeyEx(std::unique_ptr<AccountIdentifier> identifier,
     return;
   }
 
-  Credentials credentials(GetAccountId(*identifier).c_str(),
+  Credentials credentials(GetAccountId(*identifier),
                           SecureBlob(authorization->key().secret().begin(),
                                      authorization->key().secret().end()));
   credentials.set_key_data(authorization->key().data());
@@ -1293,7 +1293,7 @@ void Service::DoRemoveKeyEx(AccountIdentifier* identifier,
   }
 
   BaseReply reply;
-  Credentials credentials(GetAccountId(*identifier).c_str(),
+  Credentials credentials(GetAccountId(*identifier),
                           SecureBlob(authorization->key().secret().begin(),
                                      authorization->key().secret().end()));
   credentials.set_key_data(authorization->key().data());
@@ -1361,9 +1361,8 @@ void Service::DoMassRemoveKeys(
   }
   BaseReply reply;
   Credentials credentials(
-      username.c_str(),
-      SecureBlob(authorization_request->key().secret().begin(),
-                 authorization_request->key().secret().end()));
+      username, SecureBlob(authorization_request->key().secret().begin(),
+                           authorization_request->key().secret().end()));
   credentials.set_key_data(authorization_request->key().data());
   const std::string obfuscated_username =
       BuildObfuscatedUsername(username, system_salt_);
@@ -1593,7 +1592,7 @@ void Service::DoMigrateKeyEx(AccountIdentifier* account,
     return;
   }
 
-  Credentials credentials(account->account_id().c_str(),
+  Credentials credentials(account->account_id(),
                           SecureBlob(migrate_request->secret()));
 
   scoped_refptr<cryptohome::Mount> mount =
@@ -1680,7 +1679,7 @@ void Service::DoAddKeyEx(AccountIdentifier* identifier,
     return;
   }
 
-  Credentials credentials(GetAccountId(*identifier).c_str(),
+  Credentials credentials(GetAccountId(*identifier),
                           SecureBlob(authorization->key().secret().begin(),
                                      authorization->key().secret().end()));
   credentials.set_key_data(authorization->key().data());
@@ -1752,7 +1751,7 @@ void Service::DoAddDataRestoreKey(AccountIdentifier* identifier,
   const auto data_restore_key =
       CryptoLib::CreateSecureRandomBlob(kDefaultDataRestoreKeyLength);
   new_key_data.set_label(kDataRestoreKeyLabel);
-  Credentials credentials(GetAccountId(*identifier).c_str(),
+  Credentials credentials(GetAccountId(*identifier),
                           SecureBlob(authorization->key().secret().begin(),
                                      authorization->key().secret().end()));
   credentials.set_key_data(authorization->key().data());
@@ -1836,7 +1835,7 @@ void Service::DoUpdateKeyEx(AccountIdentifier* identifier,
     return;
   }
 
-  Credentials credentials(GetAccountId(*identifier).c_str(),
+  Credentials credentials(GetAccountId(*identifier),
                           SecureBlob(authorization->key().secret().begin(),
                                      authorization->key().secret().end()));
   credentials.set_key_data(authorization->key().data());
@@ -2347,8 +2346,8 @@ void Service::DoMountEx(std::unique_ptr<AccountIdentifier> identifier,
   }
 
   auto credentials = std::make_unique<Credentials>(
-      account_id.c_str(), SecureBlob(authorization->key().secret().begin(),
-                                     authorization->key().secret().end()));
+      account_id, SecureBlob(authorization->key().secret().begin(),
+                             authorization->key().secret().end()));
   // Everything else can be the default.
   credentials->set_key_data(authorization->key().data());
 

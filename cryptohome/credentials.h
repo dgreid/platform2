@@ -19,7 +19,7 @@ namespace cryptohome {
 class Credentials final {
  public:
   Credentials();
-  Credentials(const char* username, const brillo::SecureBlob& passkey);
+  Credentials(const std::string& username, const brillo::SecureBlob& passkey);
   Credentials(const Credentials& rhs);
   ~Credentials();
 
