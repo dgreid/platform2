@@ -151,12 +151,12 @@ TEST_F(BacklightUtilsTest, TestFetchBacklightInfoOneBadOneGoodDirectory) {
   EXPECT_EQ(backlight_result->get_error()->type, ErrorType::kFileReadError);
 }
 
-// Test that fetching backlight info returns an empty list when no backlight
-// directories exist.
+// Test that fetching backlight info returns an error when no backlight
+// directories exist, but the device has a backlight.
 TEST_F(BacklightUtilsTest, TestFetchBacklightInfoNoDirectories) {
   auto backlight_result = FetchBacklightInfo(GetTempDirPath());
-  ASSERT_TRUE(backlight_result->is_backlight_info());
-  EXPECT_EQ(backlight_result->get_backlight_info().size(), 0);
+  ASSERT_TRUE(backlight_result->is_error());
+  EXPECT_EQ(backlight_result->get_error()->type, ErrorType::kFileReadError);
 }
 
 // Test that fetching backlight info returns an error when the brightness file

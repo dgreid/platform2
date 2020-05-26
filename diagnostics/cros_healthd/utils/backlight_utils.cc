@@ -89,6 +89,13 @@ mojo_ipc::BacklightResultPtr BacklightFetcher::FetchBacklightInfo(
     backlights.push_back(std::move(backlight));
   }
 
+  if (backlights.empty()) {
+    return mojo_ipc::BacklightResult::NewError(CreateAndLogProbeError(
+        mojo_ipc::ErrorType::kFileReadError,
+        "Device supports backlight, but no backlight information found in " +
+            root.AppendASCII(kRelativeBacklightDirectoryPath).value()));
+  }
+
   return mojo_ipc::BacklightResult::NewBacklightInfo(std::move(backlights));
 }
 
