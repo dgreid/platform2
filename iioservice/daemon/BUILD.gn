@@ -1,0 +1,71 @@
+# Copyright 2020 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//common-mk/pkg_config.gni")
+
+group("all") {
+  deps = [ ":iioservice" ]
+
+  if (use.test) {
+    deps += [ ":iioservice_testrunner" ]
+  }
+}
+
+pkg_config("target_defaults_pkg_deps") {
+  pkg_deps = [
+    "libbrillo",
+    "libchrome-${libbase_ver}",
+    "libmojo-${libbase_ver}",
+  ]
+}
+
+static_library("libiioservice") {
+  configs += [ ":target_defaults_pkg_deps" ]
+
+  sources = [ "samples_handler.cc" ]
+  public_pkg_deps = [ "libmems" ]
+
+  deps = [
+    "//iioservice/libiioservice_ipc:libiioservice_ipc",
+    "//iioservice/libiioservice_ipc:libiioservice_ipc_mojom",
+  ]
+}
+
+executable("iioservice") {
+  configs += [ ":target_defaults_pkg_deps" ]
+
+  sources = [ "main.cc" ]
+  deps = [ ":libiioservice" ]
+}
+
+if (use.test) {
+  pkg_config("iioservice_testrunner_pkg_deps") {
+    pkg_deps = [
+      "libbrillo-test",
+      "libchrome-test-${libbase_ver}",
+      "libiio",
+    ]
+  }
+
+  executable("iioservice_testrunner") {
+    configs += [
+      "//common-mk:test",
+      ":iioservice_testrunner_pkg_deps",
+      ":target_defaults_pkg_deps",
+    ]
+
+    deps = [
+      ":libiioservice",
+      "//common-mk/testrunner",
+    ]
+
+    pkg_deps = [ "libmems_test_support" ]
+
+    sources = [
+      "samples_handler_test.cc",
+      "test_fakes.cc",
+      "testrunner.cc",
+    ]
+  }
+}
