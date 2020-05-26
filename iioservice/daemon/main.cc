@@ -2,11 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <atomic>
+#include <csignal>
+
 #include <base/logging.h>
-#include <brillo/daemons/daemon.h>
+
+#include "iioservice/daemon/daemon.h"
 
 int main() {
-  brillo::Daemon daemon;
+  LOG(INFO) << "Starting iioservice";
+  iioservice::Daemon daemon;
   daemon.Run();
   LOG(INFO) << "Daemon stopped";
 

@@ -24,8 +24,10 @@ static_library("libiioservice") {
   configs += [ ":target_defaults_pkg_deps" ]
 
   sources = [
+    "daemon.cc",
     "samples_handler.cc",
     "sensor_device_impl.cc",
+    "sensor_hal_server_impl.cc",
     "sensor_service_impl.cc",
   ]
   public_pkg_deps = [ "libmems" ]
@@ -69,6 +71,7 @@ if (use.test) {
     sources = [
       "samples_handler_test.cc",
       "sensor_device_impl_test.cc",
+      "sensor_hal_server_impl_test.cc",
       "sensor_service_impl_test.cc",
       "test_fakes.cc",
       "testrunner.cc",

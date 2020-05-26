@@ -22,7 +22,7 @@
 
 namespace iioservice {
 
-class SensorServiceImpl final : public cros::mojom::SensorService {
+class SensorServiceImpl : public cros::mojom::SensorService {
  public:
   static void SensorServiceImplDeleter(SensorServiceImpl* service);
   using ScopedSensorServiceImpl =
@@ -32,7 +32,8 @@ class SensorServiceImpl final : public cros::mojom::SensorService {
       scoped_refptr<base::SequencedTaskRunner> ipc_task_runner,
       std::unique_ptr<libmems::IioContext> context);
 
-  void AddReceiver(mojo::PendingReceiver<cros::mojom::SensorService> request);
+  virtual void AddReceiver(
+      mojo::PendingReceiver<cros::mojom::SensorService> request);
 
   // using GetDeviceIdsCallback = base::OnceCallback<void(const
   // std::vector<int32_t>&)>;
@@ -47,10 +48,11 @@ class SensorServiceImpl final : public cros::mojom::SensorService {
       int32_t iio_device_id,
       mojo::PendingReceiver<cros::mojom::SensorDevice> device_request) override;
 
- private:
+ protected:
   SensorServiceImpl(scoped_refptr<base::SequencedTaskRunner> ipc_task_runner,
                     std::unique_ptr<libmems::IioContext> context);
 
+ private:
   void SetDeviceTypes();
 
   scoped_refptr<base::SequencedTaskRunner> ipc_task_runner_;
