@@ -1022,6 +1022,12 @@ void UserDataAuth::MountGuest(
         user_data_auth::CryptohomeErrorCode::CRYPTOHOME_ERROR_MOUNT_FATAL);
   }
 
+  if (reply.error() ==
+      user_data_auth::CryptohomeErrorCode::CRYPTOHOME_ERROR_NOT_SET) {
+    // We only report the guest mount time for successful cases.
+    ReportTimerStop(kAsyncGuestMountTimer);
+  }
+
   // TODO(b/137073669): Cleanup guest_mount if mount failed.
   std::move(on_done).Run(reply);
 }
