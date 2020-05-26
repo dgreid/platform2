@@ -38,8 +38,20 @@ static_library("typecd_common") {
 }
 
 if (use.test) {
+  pkg_config("test_defaults") {
+    pkg_deps = [
+      "libbrillo-test",
+      "libchrome-test-${libbase_ver}",
+      "libudev",
+      "re2",
+    ]
+  }
+
   executable("typecd_testrunner") {
-    configs += [ "//common-mk:test" ]
+    configs += [
+      ":test_defaults",
+      "//common-mk:test",
+    ]
     deps = [
       ":typecd_common",
       "//common-mk/testrunner:testrunner",

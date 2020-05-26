@@ -17,7 +17,10 @@ int Daemon::OnInit() {
     return -1;
   }
 
+  // Add any observers to |udev_monitor_| here.
+
   udev_monitor_->ScanDevices();
+  udev_monitor_->BeginMonitoring();
 
   return 0;
 }

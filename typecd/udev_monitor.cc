@@ -4,6 +4,7 @@
 
 #include "typecd/udev_monitor.h"
 
+#include <base/bind.h>
 #include <base/logging.h>
 #include <brillo/udev/udev_enumerate.h>
 #include <re2/re2.h>
@@ -12,7 +13,6 @@ namespace {
 
 constexpr char kPartnerRegex[] = R"(port(\d+)-partner)";
 constexpr char kPortRegex[] = R"(port(\d+))";
-constexpr char kTypeCSubsystem[] = "typec";
 
 }  // namespace
 
@@ -53,6 +53,41 @@ bool UdevMonitor::ScanDevices() {
   return true;
 }
 
+bool UdevMonitor::BeginMonitoring() {
+  udev_monitor_ = udev_->CreateMonitorFromNetlink(kUdevMonitorName);
+  if (!udev_monitor_) {
+    LOG(ERROR) << "Failed to create udev monitor.";
+    return false;
+  }
+
+  if (!udev_monitor_->FilterAddMatchSubsystemDeviceType(kTypeCSubsystem,
+                                                        nullptr)) {
+    PLOG(ERROR) << "Failed to add typec subsystem to udev monitor.";
+    return false;
+  }
+
+  if (!udev_monitor_->EnableReceiving()) {
+    PLOG(ERROR) << "Failed to enable receiving for udev monitor.";
+    return false;
+  }
+
+  int fd = udev_monitor_->GetFileDescriptor();
+  if (fd == brillo::UdevMonitor::kInvalidFileDescriptor) {
+    PLOG(ERROR) << "Couldn't get udev monitor fd.";
+    return false;
+  }
+
+  udev_monitor_watcher_ = base::FileDescriptorWatcher::WatchReadable(
+      fd, base::BindRepeating(&UdevMonitor::HandleUdevEvent,
+                              base::Unretained(this)));
+  if (!udev_monitor_watcher_) {
+    LOG(ERROR) << "Couldn't start watcher for udev monitor fd.";
+    return false;
+  }
+
+  return true;
+}
+
 void UdevMonitor::AddObserver(Observer* obs) {
   observer_list_.AddObserver(obs);
 }
@@ -74,6 +109,31 @@ bool UdevMonitor::HandleDeviceAdded(const base::FilePath& path) {
   }
 
   return true;
+}
+
+void UdevMonitor::HandleUdevEvent() {
+  auto device = udev_monitor_->ReceiveDevice();
+  if (!device) {
+    LOG(ERROR) << "Udev receive device failed.";
+    return;
+  }
+
+  auto path = base::FilePath(device->GetSysPath());
+  if (path.empty()) {
+    LOG(ERROR) << "Failed to get device syspath.";
+    return;
+  }
+
+  auto action = std::string(device->GetAction());
+  if (action.empty()) {
+    LOG(ERROR) << "Failed to get device action.";
+    return;
+  }
+
+  if (action == "add")
+    HandleDeviceAdded(path);
+  else if (action == "remove")
+    NOTIMPLEMENTED();
 }
 
 }  // namespace typecd
