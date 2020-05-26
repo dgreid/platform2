@@ -213,6 +213,15 @@ message UpdateMimeTypesRequest {
   map<string, string> mime_type_mappings = 2;
 }
 
+// For notifying a watched directory has a change.
+message FileWatchTriggeredInfo {
+  // The security token the container was given.
+  string token = 1;
+
+  // The watched directory in the container relative to $HOME that has a change.
+  string path = 2;
+}
+
 // Service that is notified of events from a container.
 service ContainerListener {
   // Called by each container when it starts up to indicate that it is ready to
@@ -257,6 +266,10 @@ service ContainerListener {
   // Called by a container to update the MIME type associations for this
   // container.
   rpc UpdateMimeTypes(UpdateMimeTypesRequest) returns (EmptyMessage);
+
+  // Called by a container when there is a change in a watched directory. Used
+  // for FilesApp.
+  rpc FileWatchTriggered(FileWatchTriggeredInfo) returns (EmptyMessage);
 
   // If adding more rpc's, please update ContainerListenerFuzzerSingleAction as
   // well.

@@ -328,6 +328,12 @@ DEFINE_PROTO_FUZZER(
             &context, &action.start_lxd_progress(), &tremplin_response);
         break;
 
+      case vm_tools::container::ContainerListenerFuzzerSingleAction::
+          kFileWatchTriggeredInfo:
+        container_listener->FileWatchTriggered(
+            &context, &action.file_watch_triggered_info(), &response);
+        break;
+
       default:
         NOTREACHED();
     }

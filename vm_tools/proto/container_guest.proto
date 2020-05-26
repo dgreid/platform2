@@ -269,6 +269,56 @@ message ConfigureForArcSideloadResponse {
   string failure_reason = 2;
 }
 
+// Request to watch files and notify if there are changes.
+message AddFileWatchRequest {
+  // Directory in container relative to $HOME to watch.
+  string path = 1;
+}
+
+message AddFileWatchResponse {
+  enum Status {
+    // The current status is unknown.
+    UNKNOWN = 0;
+
+    // Watch added successfully.
+    SUCCEEDED = 2;
+
+    // Add watch failed.
+    FAILED = 1;
+  }
+
+  // Add watch status.
+  Status status = 1;
+
+  // The failure_reason if the watcher could not be added.
+  string failure_reason = 2;
+}
+
+// Request to stop watching files.
+message RemoveFileWatchRequest {
+  // Directory in container relative to $HOME to stop watching.
+  string path = 1;
+}
+
+message RemoveFileWatchResponse {
+  enum Status {
+    // The current status is unknown.
+    UNKNOWN = 0;
+
+    // Watch removed successfully.
+    SUCCEEDED = 2;
+
+    // Remove watch failed.
+    FAILED = 1;
+  }
+
+  // Remove watch status.
+  Status status = 1;
+
+  // The failure_reason if the watcher could not be removed.
+  string failure_reason = 2;
+}
+
 // Implemented by garcon inside of the container.
 service Garcon {
   // Called to launch an application in a container.
@@ -308,4 +358,11 @@ service Garcon {
   // Configure the container to allow sideloading android apps.
   rpc ConfigureForArcSideload(ConfigureForArcSideloadRequest)
       returns (ConfigureForArcSideloadResponse);
+
+  // Watch files in the specified directory and notify if there are changes.
+  // This is used by FilesApp.
+  rpc AddFileWatch(AddFileWatchRequest) returns (AddFileWatchResponse);
+
+  // Stop watching files in the specified directory.
+  rpc RemoveFileWatch(RemoveFileWatchRequest) returns (RemoveFileWatchResponse);
 }
