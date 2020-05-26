@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <tuple>
 
+#include <base/barrier_closure.h>
 #include <base/bind.h>
 #include <base/files/file_util.h>
 #include <base/files/scoped_file.h>
@@ -19,7 +20,6 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "diagnostics/common/bind_utils.h"
 #include "diagnostics/wilco_dtc_supportd/ec_constants.h"
 #include "diagnostics/wilco_dtc_supportd/telemetry/ec_event_service.h"
 #include "diagnostics/wilco_dtc_supportd/telemetry/ec_event_test_utils.h"
@@ -177,7 +177,7 @@ TEST_F(StartedEcEventServiceTest, ReadEvent) {
 
 TEST_F(StartedEcEventServiceTest, ReadManyEvent) {
   base::RunLoop run_loop;
-  base::RepeatingClosure callback = BarrierClosure(
+  base::RepeatingClosure callback = base::BarrierClosure(
       2 /* num_closures */, run_loop.QuitClosure() /* done closure */);
   const uint16_t data1[] = {0xaaaa, 0xbbbb, 0xcccc, 0xdddd, 0xeeee, 0xffff};
   EmitEcEventAndSetObserverExpectations(

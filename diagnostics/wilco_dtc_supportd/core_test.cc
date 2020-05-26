@@ -17,6 +17,7 @@
 #include <utility>
 #include <vector>
 
+#include <base/barrier_closure.h>
 #include <base/bind.h>
 #include <base/callback.h>
 #include <base/files/file_path.h>
@@ -43,7 +44,6 @@
 #include <mojo/public/cpp/bindings/interface_ptr.h>
 #include <mojo/public/cpp/bindings/interface_request.h>
 
-#include "diagnostics/common/bind_utils.h"
 #include "diagnostics/common/file_test_utils.h"
 #include "diagnostics/common/mojo_test_utils.h"
 #include "diagnostics/common/mojo_utils.h"
@@ -643,7 +643,7 @@ TEST_F(StartedCoreTest, HandleRequestBluetoothDataNotification) {
 
   {
     base::RunLoop run_loop;
-    auto barrier_closure = BarrierClosure(2, run_loop.QuitClosure());
+    auto barrier_closure = base::BarrierClosure(2, run_loop.QuitClosure());
 
     auto update_callback = base::BindRepeating(
         [](const base::Closure& callback,
@@ -673,7 +673,7 @@ TEST_F(StartedCoreTest, HandleRequestBluetoothDataNotification) {
         };
 
     base::RunLoop run_loop;
-    auto barrier_closure = BarrierClosure(3, run_loop.QuitClosure());
+    auto barrier_closure = base::BarrierClosure(3, run_loop.QuitClosure());
 
     grpc_api::HandleBluetoothDataChangedRequest
         fake_wilco_dtc_bluetooth_grpc_request;
@@ -787,7 +787,7 @@ TEST_F(BootstrappedCoreTest, SendGrpcUiMessageToWilcoDtc) {
   constexpr char kJsonMessageResponse[] = "{\"message\": \"pong\"}";
 
   base::RunLoop run_loop;
-  const auto barrier_closure = BarrierClosure(2, run_loop.QuitClosure());
+  const auto barrier_closure = base::BarrierClosure(2, run_loop.QuitClosure());
 
   fake_ui_message_receiver_wilco_dtc()->set_handle_message_from_ui_callback(
       barrier_closure);
@@ -840,7 +840,7 @@ TEST_F(BootstrappedCoreTest, SendGrpcUiMessageToWilcoDtcInvalidResponseJSON) {
   constexpr char kJsonMessageResponse[] = "{'key': 'value'}";
 
   base::RunLoop run_loop;
-  const auto barrier_closure = BarrierClosure(2, run_loop.QuitClosure());
+  const auto barrier_closure = base::BarrierClosure(2, run_loop.QuitClosure());
 
   fake_ui_message_receiver_wilco_dtc()->set_handle_message_from_ui_callback(
       barrier_closure);
@@ -895,7 +895,7 @@ TEST_F(BootstrappedCoreTest, GetCrosHealthdDiagnosticsService) {
 TEST_F(BootstrappedCoreTest, NotifyConfigurationDataChanged) {
   base::RunLoop run_loop;
   const base::Closure barrier_closure =
-      BarrierClosure(2, run_loop.QuitClosure());
+      base::BarrierClosure(2, run_loop.QuitClosure());
 
   fake_ui_message_receiver_wilco_dtc()->set_configuration_data_changed_callback(
       barrier_closure);
@@ -1118,7 +1118,7 @@ TEST_F(BootstrappedCoreTest, HandleBluetoothDataChanged) {
       };
 
   base::RunLoop run_loop;
-  auto barrier_closure = BarrierClosure(2, run_loop.QuitClosure());
+  auto barrier_closure = base::BarrierClosure(2, run_loop.QuitClosure());
 
   grpc_api::HandleBluetoothDataChangedRequest
       fake_wilco_dtc_bluetooth_grpc_request;
@@ -1165,8 +1165,8 @@ class EcEventServiceBootstrappedCoreTest
   void ExpectAllFakeWilcoDtcReceivedEcEvents(
       const std::multiset<GrpcEvent>& expected_ec_events) {
     base::RunLoop run_loop;
-    auto barrier_closure =
-        BarrierClosure(2 * expected_ec_events.size(), run_loop.QuitClosure());
+    auto barrier_closure = base::BarrierClosure(2 * expected_ec_events.size(),
+                                                run_loop.QuitClosure());
 
     std::multiset<GrpcEvent> fake_wilco_dtc_ec_events;
     std::multiset<GrpcEvent> fake_ui_message_receiver_wilco_dtc_ec_events;
@@ -1341,7 +1341,7 @@ TEST_P(PowerdEventServiceBootstrappedCoreTest, PowerEvent) {
   core_delegate()->powerd_event_service()->EmitPowerEvent(power_event());
 
   base::RunLoop run_loop;
-  auto barrier_closure = BarrierClosure(2, run_loop.QuitClosure());
+  auto barrier_closure = base::BarrierClosure(2, run_loop.QuitClosure());
 
   grpc_api::HandlePowerNotificationRequest::PowerEvent
       fake_wilco_dtc_power_event;

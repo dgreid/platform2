@@ -8,6 +8,7 @@
 #include <cstddef>
 #include <utility>
 
+#include <base/barrier_closure.h>
 #include <base/bind.h>
 #include <base/files/file_util.h>
 #include <base/logging.h>
@@ -19,7 +20,6 @@
 #include <dbus/wilco_dtc_supportd/dbus-constants.h>
 #include <mojo/public/cpp/system/message_pipe.h>
 
-#include "diagnostics/common/bind_utils.h"
 #include "diagnostics/wilco_dtc_supportd/json_utils.h"
 #include "diagnostics/wilco_dtc_supportd/probe_service_impl.h"
 
@@ -218,8 +218,8 @@ void Core::ShutDown(const base::Closure& on_shutdown_callback) {
   VLOG(1) << "Tearing down gRPC server, gRPC wilco_dtc clients, "
              "EC event service and D-Bus server";
   UnsubscribeFromEventServices();
-  const base::Closure barrier_closure =
-      BarrierClosure(wilco_dtc_grpc_clients_.size() + 2, on_shutdown_callback);
+  const base::Closure barrier_closure = base::BarrierClosure(
+      wilco_dtc_grpc_clients_.size() + 2, on_shutdown_callback);
   ec_event_service_->ShutDown(barrier_closure);
   grpc_server_.ShutDown(barrier_closure);
   for (const auto& client : wilco_dtc_grpc_clients_) {

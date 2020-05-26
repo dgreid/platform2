@@ -4,10 +4,9 @@
 
 #include "diagnostics/wilco_dtc_supportd/fake_wilco_dtc.h"
 
+#include <base/barrier_closure.h>
 #include <base/run_loop.h>
 #include <base/threading/thread_task_runner_handle.h>
-
-#include "diagnostics/common/bind_utils.h"
 
 namespace diagnostics {
 
@@ -42,7 +41,7 @@ FakeWilcoDtc::~FakeWilcoDtc() {
   // Wait until both gRPC server and client get shut down.
   base::RunLoop run_loop;
   const base::Closure barrier_closure =
-      BarrierClosure(2, run_loop.QuitClosure());
+      base::BarrierClosure(2, run_loop.QuitClosure());
   grpc_server_.ShutDown(barrier_closure);
   wilco_dtc_supportd_grp_client_.ShutDown(barrier_closure);
   run_loop.Run();

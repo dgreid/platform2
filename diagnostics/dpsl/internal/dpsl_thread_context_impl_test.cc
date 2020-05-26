@@ -7,6 +7,7 @@
 #include <string>
 #include <vector>
 
+#include <base/barrier_closure.h>
 #include <base/bind.h>
 #include <base/logging.h>
 #include <base/macros.h>
@@ -14,7 +15,6 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "diagnostics/common/bind_utils.h"
 #include "diagnostics/dpsl/internal/dpsl_global_context_impl.h"
 #include "diagnostics/dpsl/internal/dpsl_thread_context_impl.h"
 #include "diagnostics/dpsl/internal/test_dpsl_background_thread.h"
@@ -249,11 +249,11 @@ class DpslThreadContextImplMultiThreadTest
 
 TEST_F(DpslThreadContextImplMultiThreadTest, PostTask) {
   base::Closure quit_closure =
-      BarrierClosure(3, base::Bind(
-                            [](DpslThreadContext* main_thread_context) {
-                              main_thread_context->QuitEventLoop();
-                            },
-                            main_thread_context_.get()));
+      base::BarrierClosure(3, base::Bind(
+                                  [](DpslThreadContext* main_thread_context) {
+                                    main_thread_context->QuitEventLoop();
+                                  },
+                                  main_thread_context_.get()));
 
   background_thread_context()->PostTask(
       CreateAddToQueueTaskForBackground(1, quit_closure));
@@ -270,11 +270,11 @@ TEST_F(DpslThreadContextImplMultiThreadTest, PostTask) {
 
 TEST_F(DpslThreadContextImplMultiThreadTest, PostDelayedTask) {
   base::Closure quit_closure =
-      BarrierClosure(3, base::Bind(
-                            [](DpslThreadContext* main_thread_context) {
-                              main_thread_context->QuitEventLoop();
-                            },
-                            main_thread_context_.get()));
+      base::BarrierClosure(3, base::Bind(
+                                  [](DpslThreadContext* main_thread_context) {
+                                    main_thread_context->QuitEventLoop();
+                                  },
+                                  main_thread_context_.get()));
 
   background_thread_context()->PostDelayedTask(
       CreateAddToQueueTaskForBackground(3, quit_closure), 200);

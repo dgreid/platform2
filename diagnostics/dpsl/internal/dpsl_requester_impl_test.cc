@@ -8,6 +8,7 @@
 #include <string>
 #include <utility>
 
+#include <base/barrier_closure.h>
 #include <base/bind.h>
 #include <base/files/scoped_temp_dir.h>
 #include <base/strings/stringprintf.h>
@@ -16,7 +17,6 @@
 #include <google/protobuf/util/message_differencer.h>
 #include <gtest/gtest.h>
 
-#include "diagnostics/common/bind_utils.h"
 #include "diagnostics/common/protobuf_test_utils.h"
 #include "diagnostics/constants/grpc_constants.h"
 #include "diagnostics/dpsl/internal/dpsl_global_context_impl.h"
@@ -537,11 +537,11 @@ TEST_F(DpslRequesterImplWithRequesterTest, MultiRequest) {
   server.SetPerformWebRequestResponseToReplyWith(response2);
 
   auto quit_closure =
-      BarrierClosure(2, base::Bind(
-                            [](DpslThreadContext* main_thread_context) {
-                              main_thread_context->QuitEventLoop();
-                            },
-                            main_thread_context_.get()));
+      base::BarrierClosure(2, base::Bind(
+                                  [](DpslThreadContext* main_thread_context) {
+                                    main_thread_context->QuitEventLoop();
+                                  },
+                                  main_thread_context_.get()));
 
   requester_->SendMessageToUi(
       std::make_unique<grpc_api::SendMessageToUiRequest>(request1),
