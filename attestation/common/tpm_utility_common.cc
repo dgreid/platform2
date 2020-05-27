@@ -15,6 +15,10 @@ namespace attestation {
 TpmUtilityCommon::TpmUtilityCommon()
     : tpm_manager_utility_(new tpm_manager::TpmManagerUtility()) {}
 
+TpmUtilityCommon::TpmUtilityCommon(
+    tpm_manager::TpmManagerUtility* tpm_manager_utility)
+    : tpm_manager_utility_(tpm_manager_utility) {}
+
 TpmUtilityCommon::~TpmUtilityCommon() {}
 
 bool TpmUtilityCommon::Initialize() {

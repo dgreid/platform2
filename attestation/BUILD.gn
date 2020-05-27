@@ -105,7 +105,10 @@ source_set("common_library") {
     ":proto_library_proto",
   ]
   if (use.tpm2) {
-    sources += [ "common/tpm_utility_v2.cc" ]
+    sources += [
+      "common/tpm_utility_common.cc",
+      "common/tpm_utility_v2.cc",
+    ]
     all_dependent_configs += [ ":common_library_with_tpm2_config" ]
   } else {
     sources += [

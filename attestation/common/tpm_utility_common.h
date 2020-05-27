@@ -19,6 +19,9 @@ namespace attestation {
 class TpmUtilityCommon : public TpmUtility {
  public:
   TpmUtilityCommon();
+  // Testing constructor.
+  explicit TpmUtilityCommon(
+      tpm_manager::TpmManagerUtility* tpm_manager_utility);
   ~TpmUtilityCommon() override;
 
   // TpmUtility methods.

@@ -11,6 +11,7 @@
 #include <tpm_manager-client/tpm_manager/dbus-constants.h>
 
 #include "attestation/common/tpm_utility_v2.h"
+#include <tpm_manager/client/mock_tpm_manager_utility.h>
 #include "tpm_manager/common/mock_tpm_nvram_interface.h"
 #include "tpm_manager/common/mock_tpm_ownership_interface.h"
 #include "trunks/mock_blob_parser.h"
@@ -52,16 +53,6 @@ class TpmUtilityTest : public testing::Test {
     tpm_status_.set_owned(true);
     tpm_status_.mutable_local_data()->set_endorsement_password(
         kDefaultPassword);
-    ON_CALL(mock_tpm_owner_, GetTpmStatus(_, _))
-        .WillByDefault(
-            WithArg<1>(Invoke(this, &TpmUtilityTest::FakeGetTpmStatus)));
-    ON_CALL(mock_tpm_owner_, RemoveOwnerDependency(_, _))
-        .WillByDefault(Invoke(this,
-                              &TpmUtilityTest::FakeRemoveOwnerDependency));
-    // Setup fake nvram.
-    ON_CALL(mock_tpm_nvram_, ReadSpace(_, _))
-        .WillByDefault(Invoke(this, &TpmUtilityTest::FakeReadSpace));
-    // Setup a default public key.
     ON_CALL(mock_tpm_utility_, GetKeyPublicArea(_, _))
         .WillByDefault(DoAll(SetArgPointee<1>(GetValidRsaPublicKey(nullptr)),
                              Return(TPM_RC_SUCCESS)));
@@ -69,33 +60,14 @@ class TpmUtilityTest : public testing::Test {
     trunks_factory_for_test_.set_tpm(&mock_tpm_);
     trunks_factory_for_test_.set_tpm_utility(&mock_tpm_utility_);
     trunks_factory_for_test_.set_blob_parser(&mock_blob_parser_);
-    tpm_utility_.reset(new TpmUtilityV2(&mock_tpm_owner_, &mock_tpm_nvram_,
-                                        &trunks_factory_for_test_));
+    mock_tpm_manager_utility_ =
+        new NiceMock<tpm_manager::MockTpmManagerUtility>();
+    tpm_utility_.reset(
+        new TpmUtilityV2(mock_tpm_manager_utility_, &trunks_factory_for_test_));
     tpm_utility_->Initialize();
   }
 
  protected:
-  void FakeGetTpmStatus(
-      const tpm_manager::TpmOwnershipInterface::GetTpmStatusCallback&
-          callback) {
-    callback.Run(tpm_status_);
-  }
-
-  void FakeReadSpace(
-      const tpm_manager::ReadSpaceRequest& request,
-      const tpm_manager::TpmNvramInterface::ReadSpaceCallback& callback) {
-    last_read_space_request_ = request;
-    callback.Run(next_read_space_reply_);
-  }
-
-  void FakeRemoveOwnerDependency(
-      const tpm_manager::RemoveOwnerDependencyRequest& request,
-      const tpm_manager::TpmOwnershipInterface::RemoveOwnerDependencyCallback&
-          callback) {
-    last_remove_dependency_request_ = request;
-    callback.Run(next_remove_dependency_reply_);
-  }
-
   trunks::TPMT_PUBLIC GetValidRsaPublicKey(
       std::string* serialized_public_area) {
     constexpr char kValidModulusHex[] =
@@ -154,14 +126,17 @@ class TpmUtilityTest : public testing::Test {
     return public_area;
   }
 
-  tpm_manager::GetTpmStatusReply tpm_status_;
-  tpm_manager::ReadSpaceRequest last_read_space_request_;
-  tpm_manager::ReadSpaceReply next_read_space_reply_;
-  tpm_manager::RemoveOwnerDependencyRequest last_remove_dependency_request_;
-  tpm_manager::RemoveOwnerDependencyReply next_remove_dependency_reply_;
+  void ExpectGetTpmStatus() {
+    tpm_manager::LocalData local_data;
+    local_data.set_owner_password("password");
+    local_data.set_endorsement_password("endorsement_password");
+    EXPECT_CALL(*mock_tpm_manager_utility_, GetTpmStatus(_, _, _))
+        .WillOnce(DoAll(SetArgPointee<2>(local_data), Return(true)));
+  }
 
-  NiceMock<tpm_manager::MockTpmOwnershipInterface> mock_tpm_owner_;
-  NiceMock<tpm_manager::MockTpmNvramInterface> mock_tpm_nvram_;
+  tpm_manager::GetTpmStatusReply tpm_status_;
+
+  tpm_manager::MockTpmManagerUtility* mock_tpm_manager_utility_;
   NiceMock<trunks::MockTpm> mock_tpm_;
   NiceMock<trunks::MockTpmUtility> mock_tpm_utility_;
   NiceMock<trunks::MockBlobParser> mock_blob_parser_;
@@ -169,16 +144,8 @@ class TpmUtilityTest : public testing::Test {
   std::unique_ptr<TpmUtilityV2> tpm_utility_;
 };
 
-TEST_F(TpmUtilityTest, IsTpmReady) {
-  EXPECT_TRUE(tpm_utility_->IsTpmReady());
-}
-
-TEST_F(TpmUtilityTest, IsTpmReadyNotOwned) {
-  tpm_status_.set_owned(false);
-  EXPECT_FALSE(tpm_utility_->IsTpmReady());
-}
-
 TEST_F(TpmUtilityTest, ActivateIdentity) {
+  ExpectGetTpmStatus();
   trunks::TPM2B_DIGEST fake_credential =
       trunks::Make_TPM2B_DIGEST("fake_credential");
   EXPECT_CALL(mock_tpm_, ActivateCredentialSync(_, _, _, _, _, _, _, _))
@@ -204,6 +171,7 @@ TEST_F(TpmUtilityTest, ActivateIdentityFailLoadIdentityKey) {
 }
 
 TEST_F(TpmUtilityTest, ActivateIdentityFailLoadEndorsementKey) {
+  ExpectGetTpmStatus();
   EXPECT_CALL(mock_tpm_utility_, GetEndorsementKey(_, _, _, _))
       .WillOnce(Return(TPM_RC_FAILURE));
   std::string credential;
@@ -223,6 +191,7 @@ TEST_F(TpmUtilityTest, ActivateIdentityNoEndorsementPassword) {
 }
 
 TEST_F(TpmUtilityTest, ActivateIdentityError) {
+  ExpectGetTpmStatus();
   EXPECT_CALL(mock_tpm_, ActivateCredentialSync(_, _, _, _, _, _, _, _))
       .WillOnce(Return(TPM_RC_FAILURE));
   std::string credential;
@@ -444,6 +413,7 @@ TEST_F(TpmUtilityTest, UnsealFail) {
 }
 
 TEST_F(TpmUtilityTest, GetEndorsementPublicKey) {
+  ExpectGetTpmStatus();
   std::string key;
   EXPECT_TRUE(tpm_utility_->GetEndorsementPublicKey(KEY_TYPE_RSA, &key));
   EXPECT_CALL(mock_tpm_utility_, GetKeyPublicArea(_, _))
@@ -456,47 +426,54 @@ TEST_F(TpmUtilityTest, GetEndorsementPublicKeyModulusSuccess) {
   EXPECT_CALL(mock_tpm_utility_, GetPublicRSAEndorsementKeyModulus(_))
       .WillRepeatedly(Return(TPM_RC_SUCCESS));
   std::string key;
-  EXPECT_TRUE(tpm_utility_->GetEndorsementPublicKeyModulus(
-      KEY_TYPE_RSA, &key));
+  EXPECT_TRUE(tpm_utility_->GetEndorsementPublicKeyModulus(KEY_TYPE_RSA, &key));
   // The key type ECC is not implemented yet.
-  EXPECT_FALSE(tpm_utility_->GetEndorsementPublicKeyModulus(
-      KEY_TYPE_ECC, &key));
+  EXPECT_FALSE(
+      tpm_utility_->GetEndorsementPublicKeyModulus(KEY_TYPE_ECC, &key));
 }
 
 TEST_F(TpmUtilityTest, GetEndorsementPublicKeyModulusNoKey) {
   EXPECT_CALL(mock_tpm_utility_, GetPublicRSAEndorsementKeyModulus(_))
       .WillRepeatedly(Return(TPM_RC_FAILURE));
   std::string key;
-  EXPECT_FALSE(tpm_utility_->GetEndorsementPublicKeyModulus(
-      KEY_TYPE_RSA, &key));
+  EXPECT_FALSE(
+      tpm_utility_->GetEndorsementPublicKeyModulus(KEY_TYPE_RSA, &key));
   EXPECT_TRUE(key.empty());
-  EXPECT_FALSE(tpm_utility_->GetEndorsementPublicKeyModulus(
-      KEY_TYPE_ECC, &key));
+  EXPECT_FALSE(
+      tpm_utility_->GetEndorsementPublicKeyModulus(KEY_TYPE_ECC, &key));
   EXPECT_TRUE(key.empty());
 }
 
-TEST_F(TpmUtilityTest, GetEndorsementCertificate) {
+TEST_F(TpmUtilityTest, GetEndorsementCertificateRsa) {
+  EXPECT_CALL(
+      *mock_tpm_manager_utility_,
+      ReadSpace(trunks::kRsaEndorsementCertificateNonRealIndex, false, _))
+      .WillOnce(DoAll(SetArgPointee<2>("rsa_cert"), Return(true)));
   std::string certificate;
   EXPECT_TRUE(
       tpm_utility_->GetEndorsementCertificate(KEY_TYPE_RSA, &certificate));
-  EXPECT_TRUE(last_read_space_request_.has_index());
-  last_read_space_request_.Clear();
+  EXPECT_EQ("rsa_cert", certificate);
+}
+
+TEST_F(TpmUtilityTest, GetEndorsementCertificateEcc) {
+  EXPECT_CALL(
+      *mock_tpm_manager_utility_,
+      ReadSpace(trunks::kEccEndorsementCertificateNonRealIndex, false, _))
+      .WillOnce(DoAll(SetArgPointee<2>("ecc_cert"), Return(true)));
+  std::string certificate;
   EXPECT_TRUE(
       tpm_utility_->GetEndorsementCertificate(KEY_TYPE_ECC, &certificate));
-  EXPECT_TRUE(last_read_space_request_.has_index());
+  EXPECT_EQ("ecc_cert", certificate);
 }
 
 TEST_F(TpmUtilityTest, GetEndorsementCertificateNoCert) {
-  next_read_space_reply_.set_result(
-      tpm_manager::NVRAM_RESULT_SPACE_DOES_NOT_EXIST);
+  EXPECT_CALL(
+      *mock_tpm_manager_utility_,
+      ReadSpace(trunks::kRsaEndorsementCertificateNonRealIndex, false, _))
+      .WillOnce(Return(false));
   std::string certificate;
   EXPECT_FALSE(
       tpm_utility_->GetEndorsementCertificate(KEY_TYPE_RSA, &certificate));
-  EXPECT_TRUE(last_read_space_request_.has_index());
-  last_read_space_request_.Clear();
-  EXPECT_FALSE(
-      tpm_utility_->GetEndorsementCertificate(KEY_TYPE_ECC, &certificate));
-  EXPECT_TRUE(last_read_space_request_.has_index());
 }
 
 TEST_F(TpmUtilityTest, Unbind) {
@@ -801,14 +778,6 @@ TEST_F(TpmUtilityTest, CertifyNVFail) {
                                        "fake_key_blob", &quoted_data, &quote));
   EXPECT_EQ(quoted_data, "");
   EXPECT_EQ(quote, "");
-}
-
-TEST_F(TpmUtilityTest, RemoveOwnerDependency) {
-  EXPECT_TRUE(tpm_utility_->RemoveOwnerDependency());
-  EXPECT_EQ(tpm_manager::kTpmOwnerDependency_Attestation,
-            last_remove_dependency_request_.owner_dependency());
-  next_remove_dependency_reply_.set_status(tpm_manager::STATUS_DEVICE_ERROR);
-  EXPECT_FALSE(tpm_utility_->RemoveOwnerDependency());
 }
 
 }  // namespace attestation
