@@ -1358,6 +1358,7 @@ void Manager::RegisterService(const ServiceRefPtr& to_manage) {
 }
 
 void Manager::DeregisterService(const ServiceRefPtr& to_forget) {
+  SLOG(this, 2) << "Deregistering service " << to_forget->log_name();
   for (auto it = services_.begin(); it != services_.end(); ++it) {
     if (to_forget->serial_number() == (*it)->serial_number()) {
       DLOG_IF(FATAL, (*it)->connection())

@@ -40,10 +40,13 @@ class CellularServiceProviderTest : public testing::Test {
   ~CellularServiceProviderTest() override = default;
 
   void SetUp() override {
+    provider_.Start();
     provider_.set_profile_for_testing(profile_);
     EXPECT_CALL(*profile_, GetConstStorage()).WillRepeatedly(Return(&storage_));
     EXPECT_CALL(*profile_, GetStorage()).WillRepeatedly(Return(&storage_));
   }
+
+  void TearDown() override { provider_.Stop(); }
 
   // TODO(b/154014577): Provide eID for identifying sim cards once supported.
   CellularRefPtr CreateDevice(const std::string& imsi,
@@ -56,7 +59,7 @@ class CellularServiceProviderTest : public testing::Test {
     return cellular;
   }
 
-  // TODO(b/154014577): Provide eUICCID once supported.
+  // TODO(b/154014577): Provide eID once supported.
   void SetupCellularStore(const std::string& identifier,
                           const std::string& imsi,
                           const std::string& iccid,
@@ -100,9 +103,16 @@ TEST_F(CellularServiceProviderTest, LoadService) {
   EXPECT_EQ("imsi1", service->imsi());
   EXPECT_EQ("iccid1", service->iccid());
   EXPECT_EQ("iccid1", service->sim_card_id());
+  EXPECT_TRUE(service->IsVisible());
 
-  // Ensure services are unloaded correctly.
+  // RemoveServicesForDevice does not destroy the services, but they should no
+  // longer be marked as visible.
   provider()->RemoveServicesForDevice(device.get());
+  EXPECT_EQ(1u, GetProviderServices().size());
+  EXPECT_FALSE(service->IsVisible());
+
+  // Stopping should remove all services.
+  provider()->Stop();
   EXPECT_EQ(0u, GetProviderServices().size());
 }
 
@@ -140,6 +150,38 @@ TEST_F(CellularServiceProviderTest, LoadMultipleServicesFromProfile) {
   // cellular_1a should be returned.
   EXPECT_EQ("imsi1a", service->imsi());
   EXPECT_EQ("iccid1", service->iccid());
+}
+
+// When a SIM or eSIM is switched the Cellular Device will be rebuilt,
+// generating a new call to LoadServicesForDevice with a different ICCID. This
+// should remove services with the previous ICCID.
+TEST_F(CellularServiceProviderTest, SwitchDeviceIccid) {
+  CellularRefPtr device = CreateDevice("imsi1", "iccid1");
+  CellularServiceRefPtr service =
+      provider()->LoadServicesForDevice(device.get());
+  ASSERT_TRUE(service);
+  EXPECT_EQ("imsi1", service->imsi());
+  EXPECT_EQ(1u, GetProviderServices().size());
+  unsigned int serial_number1 = service->serial_number();
+
+  // Removing services for the device does not destroy the services, but they
+  // should no longer be marked as visible.
+  provider()->RemoveServicesForDevice(device.get());
+  EXPECT_EQ(1u, GetProviderServices().size());
+  EXPECT_FALSE(service->IsVisible());
+
+  // Adding a device with a new ICCID should create a new service with a
+  // different serial number.
+  device = CreateDevice("imsi2", "iccid2");
+  service = provider()->LoadServicesForDevice(device.get());
+  ASSERT_TRUE(service);
+  EXPECT_EQ("imsi2", service->imsi());
+  EXPECT_EQ(1u, GetProviderServices().size());
+  EXPECT_NE(serial_number1, service->serial_number());
+
+  // Stopping should remove all services.
+  provider()->Stop();
+  EXPECT_EQ(0u, GetProviderServices().size());
 }
 
 }  // namespace shill

@@ -102,11 +102,16 @@ CellularService::~CellularService() {
 void CellularService::SetDevice(Cellular* device) {
   SLOG(this, 2) << __func__ << ": " << (device ? device->iccid() : "None");
   cellular_ = device;
+  Error ignored_error;
+  adaptor()->EmitRpcIdentifierChanged(kDeviceProperty,
+                                      GetDeviceRpcId(&ignored_error));
+  adaptor()->EmitBoolChanged(kVisibleProperty,
+                             GetVisibleProperty(&ignored_error));
   if (!cellular_)
     return;
   SetConnectable(!!device);
   set_friendly_name(cellular_->CreateDefaultFriendlyServiceName());
-  activation_type_ = kActivationTypeUnknown;
+  SetActivationType(kActivationTypeUnknown);
 
   // Update the ICCID and Sim Card ID to match |device|. This could potentially
   // happen if a SIM was reprogrammed with an IMSI from another SIM Card, e.g.
@@ -219,6 +224,10 @@ bool CellularService::Save(StoreInterface* storage) {
   storage->DeleteKey(id, "Cellular.Imei");
   storage->DeleteKey(id, "Cellular.Meid");
   return true;
+}
+
+bool CellularService::IsVisible() const {
+  return !!cellular_;
 }
 
 void CellularService::SetActivationType(ActivationType type) {

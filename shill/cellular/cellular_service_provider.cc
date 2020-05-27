@@ -196,21 +196,30 @@ CellularServiceRefPtr CellularServiceProvider::LoadServicesForDevice(
     active_service->SetDevice(device);
     AddService(active_service);
   }
+
+  // Remove any remaining services not associated with |device|.
+  std::vector<CellularServiceRefPtr> services_to_remove;
+  for (CellularServiceRefPtr& service : services_) {
+    if (!service->cellular())
+      services_to_remove.push_back(service);
+  }
+  for (CellularServiceRefPtr& service : services_to_remove)
+    RemoveService(service);
   return active_service;
 }
 
 void CellularServiceProvider::RemoveServicesForDevice(Cellular* device) {
   std::string sim_card_id = device->GetSimCardId();
   LOG(INFO) << __func__ << ": " << sim_card_id;
-  std::vector<CellularServiceRefPtr> services_to_remove;
+  // Set |device| to null for services associated with |device|. When a new
+  // Cellular device is created (e.g. after a modem resets after a sim swap),
+  // services not matching the new device will be removed in
+  // LoadServicesForDevice(). This allows services to continue to exist during a
+  // modem reset when Modem and Cellular may get temporarily destroyed.
   for (CellularServiceRefPtr& service : services_) {
-    if (service->sim_card_id() != sim_card_id)
-      continue;
-    services_to_remove.push_back(service);
-    service->SetDevice(nullptr);
+    if (service->cellular() == device)
+      service->SetDevice(nullptr);
   }
-  for (CellularServiceRefPtr& service : services_to_remove)
-    RemoveService(service);
 }
 
 void CellularServiceProvider::AddService(CellularServiceRefPtr service) {
