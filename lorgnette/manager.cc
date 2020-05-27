@@ -264,11 +264,6 @@ bool Manager::ListScanners(brillo::ErrorPtr* error,
   return true;
 }
 
-bool Manager::ListScannersProto(brillo::ErrorPtr* error,
-                                std::vector<uint8_t>* scanner_list_out) {
-  return ListScanners(error, scanner_list_out);
-}
-
 bool Manager::GetScannerCapabilities(brillo::ErrorPtr* error,
                                      const std::string& device_name,
                                      std::vector<uint8_t>* capabilities_out) {

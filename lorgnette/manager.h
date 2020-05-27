@@ -49,8 +49,6 @@ class Manager : public org::chromium::lorgnette::ManagerAdaptor,
   // Implementation of MethodInterface.
   bool ListScanners(brillo::ErrorPtr* error,
                     std::vector<uint8_t>* scanner_list_out) override;
-  bool ListScannersProto(brillo::ErrorPtr* error,
-                         std::vector<uint8_t>* scanner_list_out) override;
   bool GetScannerCapabilities(brillo::ErrorPtr* error,
                               const std::string& device_name,
                               std::vector<uint8_t>* capabilities) override;
