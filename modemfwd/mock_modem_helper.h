@@ -30,6 +30,7 @@ class MockModemHelper : public ModemHelper {
               (const base::FilePath&, const std::string&),
               (override));
   MOCK_METHOD(bool, FlashModeCheck, (), (override));
+  MOCK_METHOD(bool, Reboot, (), (override));
 };
 
 }  // namespace modemfwd

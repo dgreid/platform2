@@ -26,6 +26,7 @@
 namespace {
 
 constexpr base::TimeDelta kWedgeCheckDelay = base::TimeDelta::FromMinutes(5);
+constexpr base::TimeDelta kRebootCheckDelay = base::TimeDelta::FromMinutes(1);
 
 std::string ToOnOffString(bool b) {
   return b ? "on" : "off";
@@ -195,11 +196,31 @@ void Daemon::ForceFlashIfWedged(const std::string& device_id,
   if (device_ids_seen_.count(device_id) > 0)
     return;
 
-  if (!helper->FlashModeCheck())
+  if (!helper->FlashModeCheck()) {
+    if (helper->Reboot()) {
+      base::ThreadTaskRunnerHandle::Get()->PostDelayedTask(
+          FROM_HERE,
+          base::Bind(&Daemon::ForceFlashIfNeverAppeared,
+                     weak_ptr_factory_.GetWeakPtr(), device_id),
+          kRebootCheckDelay);
+    } else {
+      EVLOG(1) << "Couldn't reboot modem with device ID [" << device_id
+               << "], it may not be present";
+    }
     return;
+  }
 
   LOG(INFO) << "Modem with device ID [" << device_id
             << "] appears to be wedged, attempting recovery";
+  ForceFlash(device_id);
+}
+
+void Daemon::ForceFlashIfNeverAppeared(const std::string& device_id) {
+  if (device_ids_seen_.count(device_id) > 0)
+    return;
+
+  LOG(INFO) << "Modem with device ID [" << device_id
+            << "] did not appear after reboot, attempting recovery";
   ForceFlash(device_id);
 }
 

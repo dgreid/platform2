@@ -46,6 +46,7 @@ class ModemHelper {
   virtual bool FlashCarrierFirmware(const base::FilePath& path_to_fw,
                                     const std::string& version) = 0;
 
+  virtual bool Reboot() = 0;
   virtual bool FlashModeCheck() = 0;
 };
 

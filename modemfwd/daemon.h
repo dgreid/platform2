@@ -82,6 +82,7 @@ class Daemon : public brillo::DBusServiceDaemon {
   void CheckForWedgedModems();
   void ForceFlashIfWedged(const std::string& device_id,
                           ModemHelper* modem_helper);
+  void ForceFlashIfNeverAppeared(const std::string& device_id);
 
   base::FilePath journal_file_path_;
   base::FilePath helper_dir_path_;

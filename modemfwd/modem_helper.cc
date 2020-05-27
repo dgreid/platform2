@@ -210,6 +210,10 @@ class ModemHelperImpl : public ModemHelper {
     return base::TrimWhitespaceASCII(output, base::TRIM_ALL) == "true";
   }
 
+  bool Reboot() override {
+    return RunHelperProcess(helper_info_, {kReboot}, nullptr);
+  }
+
  private:
   HelperInfo helper_info_;
 
