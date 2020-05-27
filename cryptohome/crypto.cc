@@ -27,6 +27,7 @@ extern "C" {
 #include <scrypt/scryptenc.h>
 }
 
+#include "cryptohome/challenge_credential_auth_block.h"
 #include "cryptohome/cryptohome_common.h"
 #include "cryptohome/cryptohome_metrics.h"
 #include "cryptohome/cryptolib.h"
@@ -458,18 +459,6 @@ bool Crypto::DecryptScrypt(const SerializedVaultKeyset& serialized,
   return true;
 }
 
-bool Crypto::DecryptChallengeCredential(const SerializedVaultKeyset& serialized,
-                                        const SecureBlob& key,
-                                        CryptoError* error,
-                                        VaultKeyset* vault_keyset) const {
-  if (!(serialized.flags() & SerializedVaultKeyset::SCRYPT_WRAPPED)) {
-    LOG(ERROR) << "Invalid flags for challenge-protected keyset";
-    *error = CryptoError::CE_OTHER_FATAL;
-    return false;
-  }
-  return DecryptScrypt(serialized, key, error, vault_keyset);
-}
-
 bool Crypto::NeedsPcrBinding(const uint64_t& label) const {
   DCHECK(le_manager_)
       << "le_manage_ doesn't exist when calling NeedsPcrBinding()";
@@ -507,8 +496,14 @@ bool Crypto::DecryptVaultKeyset(const SerializedVaultKeyset& serialized,
   }
 
   if (flags & SerializedVaultKeyset::SIGNATURE_CHALLENGE_PROTECTED) {
-    return DecryptChallengeCredential(serialized, vault_key, error,
-                                      vault_keyset);
+    AuthInput user_input = {vault_key};
+    AuthBlockState auth_state = {serialized};
+    KeyBlobs vkk_data;
+    ChallengeCredentialAuthBlock auth_block;
+    if (!auth_block.Derive(user_input, auth_state, &vkk_data, error)) {
+      return false;
+    }
+    return UnwrapVaultKeyset(serialized, vkk_data, vault_keyset, error);
   }
 
   // For non-LE credentials: Check if the vault keyset was Scrypt-wrapped
