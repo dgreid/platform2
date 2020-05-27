@@ -158,7 +158,7 @@ bool NVRamBootLockbox::FlushAndUpdate(const KeyValueMap& keyvals) {
     (*mutable_map)[it->first] = it->second;
   }
 
-  brillo::Blob content(message.ByteSize());
+  brillo::Blob content(message.ByteSizeLong());
   message.SerializeWithCachedSizesToArray(content.data());
 
   brillo::Blob digest_blob = CryptoLib::Sha256(content);
