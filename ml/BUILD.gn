@@ -25,10 +25,6 @@ group("all") {
   }
 }
 
-source_set("mojo_bindings_traits") {
-  sources = [ "mojom/time_mojom_traits.h" ]
-}
-
 generate_mojom_bindings("ml_mojo_bindings") {
   mojo_root = "${platform2_root}"
   sources = [
@@ -44,7 +40,11 @@ generate_mojom_bindings("ml_mojo_bindings") {
     "--typemap",
     rebase_path("mojom/type_mappings.json"),
   ]
-  deps = [ ":mojo_bindings_traits" ]
+}
+
+source_set("ml_mojo_bindings_lib") {
+  sources = [ "mojom/time_mojom_traits.h" ]
+  public_deps = [ ":ml_mojo_bindings" ]
 }
 
 pkg_config("ml_common_pkg_deps") {
@@ -80,10 +80,8 @@ static_library("ml_common") {
     "textclassifier",
   ]
   pkg_deps = [ "protobuf" ]
-  deps = [
-    ":ml_handwriting_proto",
-    ":ml_mojo_bindings",
-  ]
+  deps = [ ":ml_handwriting_proto" ]
+  public_deps = [ ":ml_mojo_bindings_lib" ]
   all_dependent_configs = [ ":ml_common_pkg_deps" ]
   sources = [
     "daemon.cc",
