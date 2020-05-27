@@ -70,7 +70,7 @@ bool MessageStream::Read(arc_proxy::VSockMessage* message,
 }
 
 bool MessageStream::Write(const arc_proxy::VSockMessage& message) {
-  const uint64_t size = message.ByteSize();
+  const uint64_t size = message.ByteSizeLong();
   buf_.resize(sizeof(size) + size);
 
   struct Frame {
