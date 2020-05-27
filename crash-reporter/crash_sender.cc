@@ -4,6 +4,7 @@
 
 #include <stdlib.h>
 #include <sys/capability.h>
+#include <sys/mount.h>  // for MS_SLAVE
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -52,6 +53,9 @@ void SetUpSandbox(struct minijail* jail) {
   minijail_namespace_pids(jail);
   minijail_remount_proc_readonly(jail);
   minijail_namespace_vfs(jail);
+  // Remount mounts as MS_SLAVE to prevent crash_reporter from holding on to
+  // mounts that might be unmounted in the root mount namespace.
+  minijail_remount_mode(jail, MS_SLAVE);
   minijail_mount_tmp(jail);
   minijail_namespace_uts(jail);
   minijail_forward_signals(jail);
