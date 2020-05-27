@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2018 Intel Corporation.
+ * Copyright (C) 2017-2020 Intel Corporation.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,7 +26,6 @@
 #include "ParameterWorker.h"
 #include "PlatformData.h"
 #include "SkyCamProxy.h"
-#include "RuntimeParamsHelper.h"
 #include "IPU3AicToFwEncoder.h"
 #include "NodeTypes.h"
 
@@ -46,6 +45,10 @@ ParameterWorker::ParameterWorker(std::shared_ptr<cros::V4L2VideoNode> node,
 {
     LOG1("%s, mPipeType %d", __FUNCTION__, mPipeType);
     CLEAR(mIspPipes);
+    CLEAR(mRuntimeParamsOutFrameParams);
+    CLEAR(mRuntimeParamsResCfgParams);
+    CLEAR(mRuntimeParamsInFrameParams);
+    CLEAR(mRuntimeParamsRec);
     CLEAR(mRuntimeParams);
     CLEAR(mCpfData);
     CLEAR(mGridInfo);
@@ -54,7 +57,6 @@ ParameterWorker::ParameterWorker(std::shared_ptr<cros::V4L2VideoNode> node,
 ParameterWorker::~ParameterWorker()
 {
     LOG1("%s, mPipeType %d", __FUNCTION__, mPipeType);
-    RuntimeParamsHelper::deleteAiStructs(mRuntimeParams);
     for (int i = 0; i < NUM_ISP_PIPES; i++) {
         delete mIspPipes[i];
         mIspPipes[i] = nullptr;
@@ -72,7 +74,15 @@ status_t ParameterWorker::configure(std::shared_ptr<GraphConfig> &config)
         return NO_INIT;
     }
 
-    RuntimeParamsHelper::allocateAiStructs(mRuntimeParams);
+    CLEAR(mRuntimeParamsOutFrameParams);
+    CLEAR(mRuntimeParamsResCfgParams);
+    CLEAR(mRuntimeParamsInFrameParams);
+    CLEAR(mRuntimeParamsRec);
+    CLEAR(mRuntimeParams);
+    mRuntimeParams.output_frame_params = &mRuntimeParamsOutFrameParams;
+    mRuntimeParams.frame_resolution_parameters = &mRuntimeParamsResCfgParams;
+    mRuntimeParams.input_frame_params = &mRuntimeParamsInFrameParams;
+    mRuntimeParams.focus_rect = &mRuntimeParamsRec;
 
     GraphConfig::NodesPtrVector sinks;
     std::string name = "csi_be:output";
@@ -96,13 +106,13 @@ status_t ParameterWorker::configure(std::shared_ptr<GraphConfig> &config)
         CheckError(ret != OK, ret, "Failed to get pipe config main pipe");
 
         overrideCPFFMode(&pipeConfig, config);
-        fillAicInputParams(sensorParams, pipeConfig, mRuntimeParams);
+        fillAicInputParams(sensorParams, pipeConfig, &mRuntimeParams);
     } else if (config->doesNodeExist("imgu:vf")) {
         ret = getPipeConfig(pipeConfig, config, GC_VF);
         CheckError(ret != OK, ret, "Failed to get pipe config vf pipe");
 
         overrideCPFFMode(&pipeConfig, config);
-        fillAicInputParams(sensorParams, pipeConfig, mRuntimeParams);
+        fillAicInputParams(sensorParams, pipeConfig, &mRuntimeParams);
     } else {
         LOGE("PipeType %d config is wrong", mPipeType);
         return BAD_VALUE;
@@ -186,7 +196,11 @@ status_t ParameterWorker::prepareRun(std::shared_ptr<DeviceMessage> msg)
         return OK;
     }
 
-    updateAicInputParams(mMsg, mRuntimeParams);
+    if (mPipeType == GraphConfig::PIPE_STILL) {
+        // always update LSC for still pipe
+        mMsg->pMsg.processingSettings->captureSettings->aiqResults.saResults.lsc_update = true;
+    }
+    updateAicInputParams(mMsg, &mRuntimeParams);
     LOG2("frame use %d, timestamp %lld", mRuntimeParams.frame_use, mRuntimeParams.time_stamp);
     if (mSkyCamAIC)
         mSkyCamAIC->Run(mRuntimeParams);
@@ -238,103 +252,77 @@ status_t ParameterWorker::postRun()
     return OK;
 }
 
-void ParameterWorker::updateAicInputParams(std::shared_ptr<DeviceMessage> msg, IPU3AICRuntimeParams &runtimeParams) const
+void ParameterWorker::updateAicInputParams(const std::shared_ptr<DeviceMessage> &msg,
+                                           IPU3AICRuntimeParams *params) const
 {
-    runtimeParams.time_stamp = msg->pMsg.processingSettings->captureSettings->timestamp / 1000; //microsecond unit
-    runtimeParams.manual_brightness = msg->pMsg.processingSettings->captureSettings->ispSettings.manualSettings.manualBrightness;
-    runtimeParams.manual_contrast = msg->pMsg.processingSettings->captureSettings->ispSettings.manualSettings.manualContrast;
-    runtimeParams.manual_hue = msg->pMsg.processingSettings->captureSettings->ispSettings.manualSettings.manualHue;
-    runtimeParams.manual_saturation = msg->pMsg.processingSettings->captureSettings->ispSettings.manualSettings.manualSaturation;
-    runtimeParams.manual_sharpness = msg->pMsg.processingSettings->captureSettings->ispSettings.manualSettings.manualSharpness;
-    intel::RuntimeParamsHelper::copyPaResults(runtimeParams, msg->pMsg.processingSettings->captureSettings->aiqResults.paResults);
-    if (mPipeType == GraphConfig::PIPE_STILL) {
-        // always update LSC for still pipe
-        msg->pMsg.processingSettings->captureSettings->aiqResults.saResults.lsc_update = true;
-    }
-    intel::RuntimeParamsHelper::copySaResults(runtimeParams, msg->pMsg.processingSettings->captureSettings->aiqResults.saResults);
-    intel::RuntimeParamsHelper::copyWeightGrid(runtimeParams, msg->pMsg.processingSettings->captureSettings->aiqResults.aeResults.weight_grid);
-    runtimeParams.isp_vamem_type = 0; //???
+    CheckError(!params, VOID_VALUE, "@%s, params is nullptr", __func__);
 
-    ia_aiq_exposure_parameters *pExposure_parameters;
-    pExposure_parameters = (ia_aiq_exposure_parameters*) runtimeParams.exposure_results;
-    pExposure_parameters->exposure_time_us = msg->pMsg.processingSettings->captureSettings->aiqResults.aeResults.exposures->exposure->exposure_time_us;
-    pExposure_parameters->analog_gain = msg->pMsg.processingSettings->captureSettings->aiqResults.aeResults.exposures->exposure->analog_gain;
-    pExposure_parameters->aperture_fn = msg->pMsg.processingSettings->captureSettings->aiqResults.aeResults.exposures->exposure->aperture_fn;
-    pExposure_parameters->digital_gain = msg->pMsg.processingSettings->captureSettings->aiqResults.aeResults.exposures->exposure->digital_gain;
-    pExposure_parameters->iso = msg->pMsg.processingSettings->captureSettings->aiqResults.aeResults.exposures->exposure->iso;
-    pExposure_parameters->nd_filter_enabled = msg->pMsg.processingSettings->captureSettings->aiqResults.aeResults.exposures->exposure->nd_filter_enabled;
-    pExposure_parameters->total_target_exposure = msg->pMsg.processingSettings->captureSettings->aiqResults.aeResults.exposures->exposure->total_target_exposure;
+    const std::shared_ptr<CaptureUnitSettings>& settings =
+        msg->pMsg.processingSettings->captureSettings;
 
-    ia_aiq_awb_results *pAwb_results;
-    pAwb_results = (ia_aiq_awb_results*) runtimeParams.awb_results;
-    pAwb_results->accurate_b_per_g = msg->pMsg.processingSettings->captureSettings->aiqResults.awbResults.accurate_b_per_g;
-    pAwb_results->accurate_r_per_g = msg->pMsg.processingSettings->captureSettings->aiqResults.awbResults.accurate_r_per_g;
-    pAwb_results->cct_estimate = msg->pMsg.processingSettings->captureSettings->aiqResults.awbResults.cct_estimate;
-    pAwb_results->distance_from_convergence = msg->pMsg.processingSettings->captureSettings->aiqResults.awbResults.distance_from_convergence;
-    pAwb_results->final_b_per_g = msg->pMsg.processingSettings->captureSettings->aiqResults.awbResults.final_b_per_g;
-    pAwb_results->final_r_per_g = msg->pMsg.processingSettings->captureSettings->aiqResults.awbResults.final_r_per_g;
-
-    ia_aiq_gbce_results *pGbce_results;
-    pGbce_results = (ia_aiq_gbce_results*) runtimeParams.gbce_results;
-    pGbce_results->b_gamma_lut = msg->pMsg.processingSettings->captureSettings->aiqResults.gbceResults.b_gamma_lut;
-    pGbce_results->g_gamma_lut = msg->pMsg.processingSettings->captureSettings->aiqResults.gbceResults.g_gamma_lut;
-    pGbce_results->gamma_lut_size = msg->pMsg.processingSettings->captureSettings->aiqResults.gbceResults.gamma_lut_size;
-    pGbce_results->r_gamma_lut = msg->pMsg.processingSettings->captureSettings->aiqResults.gbceResults.r_gamma_lut;
-    pGbce_results->tone_map_lut = msg->pMsg.processingSettings->captureSettings->aiqResults.gbceResults.tone_map_lut;
-    pGbce_results->tone_map_lut_size = msg->pMsg.processingSettings->captureSettings->aiqResults.gbceResults.tone_map_lut_size;
+    params->time_stamp = settings->timestamp / 1000; //microsecond unit
+    params->manual_brightness = settings->ispSettings.manualSettings.manualBrightness;
+    params->manual_contrast = settings->ispSettings.manualSettings.manualContrast;
+    params->manual_hue = settings->ispSettings.manualSettings.manualHue;
+    params->manual_saturation = settings->ispSettings.manualSettings.manualSaturation;
+    params->manual_sharpness = settings->ispSettings.manualSettings.manualSharpness;
+    params->pa_results = &settings->aiqResults.paResults;
+    params->sa_results = &settings->aiqResults.saResults;
+    params->weight_grid = settings->aiqResults.aeResults.weight_grid;
+    params->isp_vamem_type = 0;
+    params->exposure_results = settings->aiqResults.aeResults.exposures->exposure;
+    params->awb_results = &settings->aiqResults.awbResults;
+    params->gbce_results = &settings->aiqResults.gbceResults;
 }
 
-void ParameterWorker::fillAicInputParams(ia_aiq_frame_params &sensorFrameParams, PipeConfig &pipeCfg, IPU3AICRuntimeParams &runtimeParams) const
+void ParameterWorker::fillAicInputParams(const ia_aiq_frame_params &sensorFrameParams,
+                                         const PipeConfig &pipeCfg,
+                                         IPU3AICRuntimeParams *params)
 {
-    aic_resolution_config_parameters_t *pAicResolutionConfigParams;
-    ia_aiq_output_frame_parameters_t *pOutput_frame_params;
-    aic_input_frame_parameters_t *pInput_frame_params;
+    CheckError(!params, VOID_VALUE, "@%s, params is nullptr", __func__);
 
     //Fill AIC input frame params
-    pInput_frame_params = (aic_input_frame_parameters_t*)runtimeParams.input_frame_params;
-    pInput_frame_params->sensor_frame_params = sensorFrameParams;
-    pInput_frame_params->fix_flip_x = 0;
-    pInput_frame_params->fix_flip_y = 0;
-//    pInput_frame_params->sensor_frame_params.horizontal_scaling_numerator /= pModeData->binning_factor_x;
-//    pInput_frame_params->sensor_frame_params.vertical_scaling_numerator /= pModeData->binning_factor_y;
-
+    aic_input_frame_parameters_t *inFrameParams = &mRuntimeParamsInFrameParams;
+    inFrameParams->sensor_frame_params = sensorFrameParams;
+    inFrameParams->fix_flip_x = 0;
+    inFrameParams->fix_flip_y = 0;
 
     //Fill AIC output frame params
-    pOutput_frame_params = (ia_aiq_output_frame_parameters_t*)runtimeParams.output_frame_params;
+    ia_aiq_output_frame_parameters_t *outFrameParams = &mRuntimeParamsOutFrameParams;
+    outFrameParams->height =
+        params->input_frame_params->sensor_frame_params.cropped_image_height;
+    outFrameParams->width =
+        params->input_frame_params->sensor_frame_params.cropped_image_width;
 
-    pOutput_frame_params->height = runtimeParams.input_frame_params->sensor_frame_params.cropped_image_height;
-    pOutput_frame_params->width = runtimeParams.input_frame_params->sensor_frame_params.cropped_image_width;
-
-    pAicResolutionConfigParams = (aic_resolution_config_parameters_t*)runtimeParams.frame_resolution_parameters;
-    // Temporary assigning values to m_AicResolutionConfigParams until KS property will give the information.
+    aic_resolution_config_parameters_t *resCfgParams = &mRuntimeParamsResCfgParams;
+    // Temporary assigning values to resCfgParams until KS property will give the information.
     // IF crop is the offset between the sensor output and the IF cropping.
     // Currently assuming that the ISP crops in the middle.
     // Need to consider bayer order
 
-    pAicResolutionConfigParams->horizontal_IF_crop = ((pipeCfg.csi_be_width - pipeCfg.input_feeder_out_width) / 2);
-    pAicResolutionConfigParams->vertical_IF_crop = ((pipeCfg.csi_be_height - pipeCfg.input_feeder_out_height) / 2);
-    pAicResolutionConfigParams->BDSin_img_width = pipeCfg.input_feeder_out_width;
-    pAicResolutionConfigParams->BDSin_img_height = pipeCfg.input_feeder_out_height;
-    pAicResolutionConfigParams->BDSout_img_width = pipeCfg.bds_out_width;
-    pAicResolutionConfigParams->BDSout_img_height = pipeCfg.bds_out_height;
-    pAicResolutionConfigParams->BDS_horizontal_padding =
-                          (uint16_t)(ALIGN128(pipeCfg.bds_out_width) - pipeCfg.bds_out_width);
+    resCfgParams->horizontal_IF_crop = (pipeCfg.csi_be_width - pipeCfg.input_feeder_out_width) / 2;
+    resCfgParams->vertical_IF_crop = (pipeCfg.csi_be_height - pipeCfg.input_feeder_out_height) / 2;
+    resCfgParams->BDSin_img_width = pipeCfg.input_feeder_out_width;
+    resCfgParams->BDSin_img_height = pipeCfg.input_feeder_out_height;
+    resCfgParams->BDSout_img_width = pipeCfg.bds_out_width;
+    resCfgParams->BDSout_img_height = pipeCfg.bds_out_height;
+    resCfgParams->BDS_horizontal_padding =
+        static_cast<uint16_t>(ALIGN128(pipeCfg.bds_out_width) - pipeCfg.bds_out_width);
 
-    runtimeParams.frame_resolution_parameters = pAicResolutionConfigParams;
+    LOG2("AIC res CFG params: IF Crop %dx%d, BDS In %dx%d, BDS Out %dx%d, BDS Padding %d",
+         resCfgParams->horizontal_IF_crop,
+         resCfgParams->vertical_IF_crop,
+         resCfgParams->BDSin_img_width,
+         resCfgParams->BDSin_img_height,
+         resCfgParams->BDSout_img_width,
+         resCfgParams->BDSout_img_height,
+         resCfgParams->BDS_horizontal_padding);
 
-    LOGD("AIC res CFG params: IF Crop %dx%d, BDS In %dx%d, BDS Out %dx%d, BDS Padding %d",
-            pAicResolutionConfigParams->horizontal_IF_crop,
-            pAicResolutionConfigParams->vertical_IF_crop,
-            pAicResolutionConfigParams->BDSin_img_width,
-            pAicResolutionConfigParams->BDSin_img_height,
-            pAicResolutionConfigParams->BDSout_img_width,
-            pAicResolutionConfigParams->BDSout_img_height,
-            pAicResolutionConfigParams->BDS_horizontal_padding);
+    LOG2("Sensor/cio2 Output %dx%d, effective input %dx%d",
+         pipeCfg.csi_be_width, pipeCfg.csi_be_height,
+         pipeCfg.input_feeder_out_width, pipeCfg.input_feeder_out_height);
 
-    LOGD("Sensor/cio2 Output %dx%d, effective input %dx%d",
-            pipeCfg.csi_be_width, pipeCfg.csi_be_height, pipeCfg.input_feeder_out_width, pipeCfg.input_feeder_out_height);
-
-    runtimeParams.mode_index = pipeCfg.cpff_mode_hint;
+    params->mode_index = pipeCfg.cpff_mode_hint;
 }
 
 status_t ParameterWorker::getPipeConfig(PipeConfig &pipeCfg, std::shared_ptr<GraphConfig> &config, const string &pin) const

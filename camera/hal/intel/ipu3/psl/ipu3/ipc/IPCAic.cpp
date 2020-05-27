@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2017 Intel Corporation
+ * Copyright (C) 2016-2020 Intel Corporation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +22,6 @@
 #include "common/UtilityMacros.h"
 #include "LogHelper.h"
 #include "IPCAic.h"
-#include "RuntimeParamsHelper.h"
 
 namespace cros {
 namespace intel {

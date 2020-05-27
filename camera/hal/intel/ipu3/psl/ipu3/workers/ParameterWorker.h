@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2018 Intel Corporation.
+ * Copyright (C) 2017-2020 Intel Corporation.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -89,6 +89,7 @@ public:
     void dump();
 
 private:
+    DISALLOW_COPY_AND_ASSIGN(ParameterWorker);
     struct CsiBeOut {
         int width;
         int height;
@@ -105,8 +106,11 @@ private:
         CPFF_HD,
         CPFF_VGA,
     };
-    void updateAicInputParams(std::shared_ptr<DeviceMessage> msg, IPU3AICRuntimeParams &runtimeParams) const;
-    void fillAicInputParams(ia_aiq_frame_params &sensorFrameParams, PipeConfig &pipeCfg, IPU3AICRuntimeParams &runtimeParams) const;
+    void updateAicInputParams(const std::shared_ptr<DeviceMessage> &msg,
+                              IPU3AICRuntimeParams *params) const;
+    void fillAicInputParams(const ia_aiq_frame_params &sensorFrameParams,
+                            const PipeConfig &pipeCfg,
+                            IPU3AICRuntimeParams *params);
     status_t setGridInfo(uint32_t csiBeWidth);
     status_t getPipeConfig(PipeConfig &pipeCfg, std::shared_ptr<GraphConfig> &config, const string &pin) const;
     void overrideCPFFMode(PipeConfig *pipeCfg, std::shared_ptr<GraphConfig> &config);
@@ -115,6 +119,10 @@ private:
     GraphConfig::PipeType mPipeType;
     std::shared_ptr<SkyCamProxy> mSkyCamAIC;
 
+    ia_aiq_output_frame_parameters_t mRuntimeParamsOutFrameParams; // used by mRuntimeParams
+    aic_resolution_config_parameters_t mRuntimeParamsResCfgParams; // used by mRuntimeParams
+    aic_input_frame_parameters_t mRuntimeParamsInFrameParams; // used by mRuntimeParams
+    ia_rectangle mRuntimeParamsRec; // used by mRuntimeParams
     IPU3AICRuntimeParams mRuntimeParams;
 
     IPU3ISPPipe *mIspPipes[NUM_ISP_PIPES];

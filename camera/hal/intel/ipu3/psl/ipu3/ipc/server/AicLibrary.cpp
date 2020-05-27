@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2018 Intel Corporation.
+ * Copyright (C) 2016-2020 Intel Corporation.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,6 @@
 
 #include "UtilityMacros.h"
 #include "AicLibrary.h"
-#include "RuntimeParamsHelper.h"
 #include "LogHelper.h"
 #include "ia_cmc_parser.h"
 
