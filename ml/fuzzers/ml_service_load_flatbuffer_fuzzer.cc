@@ -37,6 +37,7 @@ class Environment {
  public:
   Environment() {
     logging::SetMinLogLevel(logging::LOG_FATAL);  // <- DISABLE LOGGING.
+    mojo::core::Init();
   }
 };
 
@@ -47,7 +48,6 @@ class MLServiceFuzzer {
   MLServiceFuzzer() = default;
   ~MLServiceFuzzer() = default;
   void SetUp() {
-    mojo::core::Init();
     ipc_support_ = std::make_unique<mojo::core::ScopedIPCSupport>(
         base::ThreadTaskRunnerHandle::Get(),
         mojo::core::ScopedIPCSupport::ShutdownPolicy::FAST);
@@ -94,7 +94,6 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   base::MessageLoopForIO message_loop;
   brillo::BaseMessageLoop brillo_loop(&message_loop);
   brillo_loop.SetAsCurrent();
-
 
   ml::MLServiceFuzzer fuzzer;
   fuzzer.SetUp();

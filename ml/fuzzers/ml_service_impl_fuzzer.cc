@@ -65,7 +65,6 @@ class MLServiceFuzzer {
   ~MLServiceFuzzer() = default;
 
   void SetUp() {
-    mojo::core::Init();
     ipc_support_ = std::make_unique<mojo::core::ScopedIPCSupport>(
         base::ThreadTaskRunnerHandle::Get(),
         mojo::core::ScopedIPCSupport::ShutdownPolicy::FAST);
@@ -155,7 +154,16 @@ class MLServiceFuzzer {
 
 }  // namespace ml
 
+class Environment {
+ public:
+  Environment() {
+    logging::SetMinLogLevel(logging::LOG_FATAL);  // <- DISABLE LOGGING.
+    mojo::core::Init();
+  }
+};
+
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
+  static Environment environment;
   base::AtExitManager at_exit_manager;
 
   // Mock main task runner
