@@ -31,7 +31,6 @@ class ExportedObjectManager;
 
 namespace lorgnette {
 
-class Minijail;
 class FirewallManager;
 
 class Manager : public org::chromium::lorgnette::ManagerAdaptor,
