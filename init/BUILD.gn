@@ -10,6 +10,7 @@ group("all") {
     ":cros_sysrq_init",
     ":file_attrs_cleaner_tool",
     ":net_poll_tool",
+    ":periodic_scheduler",
     ":static_node_tool",
     ":usermode-helper",
   ]
@@ -17,6 +18,7 @@ group("all") {
     deps += [
       ":clobber_state_test",
       ":file_attrs_cleaner_test",
+      ":periodic_scheduler_test",
       ":usermode-helper_test",
     ]
   }
@@ -63,6 +65,14 @@ executable("file_attrs_cleaner_tool") {
   configs += [ ":target_defaults" ]
   deps = [ ":file_attrs_cleaner_lib" ]
   sources = [ "file_attrs_cleaner_tool.cc" ]
+}
+
+executable("periodic_scheduler") {
+  configs += [ ":target_defaults" ]
+  sources = [
+    "periodic_scheduler.cc",
+    "periodic_scheduler_main.cc",
+  ]
 }
 
 executable("cros_sysrq_init") {
@@ -126,6 +136,19 @@ if (use.test) {
       ":file_attrs_cleaner_lib",
       "//common-mk/testrunner",
     ]
+  }
+
+  executable("periodic_scheduler_test") {
+    configs += [
+      "//common-mk:test",
+      ":target_defaults",
+      ":test_config",
+    ]
+    sources = [
+      "periodic_scheduler.cc",
+      "periodic_scheduler_test.cc",
+    ]
+    deps = [ "//common-mk/testrunner" ]
   }
 
   executable("usermode-helper_test") {
