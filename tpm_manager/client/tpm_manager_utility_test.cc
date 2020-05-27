@@ -17,7 +17,9 @@ namespace {
 
 using ::testing::_;
 using ::testing::ByRef;
+using ::testing::DoAll;
 using ::testing::NiceMock;
+using ::testing::SaveArg;
 using ::testing::Test;
 using ::testing::WithArg;
 
@@ -62,6 +64,11 @@ class TpmManagerUtilityTest : public Test {
             ByRef(reset_dictionary_attack_lock_reply_)));
   }
   void SetUp() override { ASSERT_TRUE(tpm_manager_utility_.Initialize()); }
+
+  void RunReadSpaceTest(bool use_owner_auth,
+                        tpm_manager::NvramResult result,
+                        base::Optional<std::string> value,
+                        bool expect_success);
 
   NiceMock<tpm_manager::MockTpmOwnershipInterface> mock_tpm_owner_;
   NiceMock<tpm_manager::MockTpmNvramInterface> mock_tpm_nvram_;
@@ -162,8 +169,8 @@ TEST_F(TpmManagerUtilityTest, GetVersionInfo) {
 }
 
 TEST_F(TpmManagerUtilityTest, GetVersionInfoFail) {
-  EXPECT_FALSE(tpm_manager_utility_.GetVersionInfo(
-      nullptr, nullptr, nullptr, nullptr, nullptr, nullptr));
+  EXPECT_FALSE(tpm_manager_utility_.GetVersionInfo(nullptr, nullptr, nullptr,
+                                                   nullptr, nullptr, nullptr));
 
   uint32_t family;
   uint64_t spec_level;
@@ -309,6 +316,57 @@ TEST_F(TpmManagerUtilityTest, OwnershipTakenSignal) {
   // Tests if the null parameters break the code.
   EXPECT_TRUE(tpm_manager_utility_.GetOwnershipTakenSignalStatus(
       nullptr, nullptr, nullptr));
+}
+
+void TpmManagerUtilityTest::RunReadSpaceTest(bool use_owner_auth,
+                                             tpm_manager::NvramResult result,
+                                             base::Optional<std::string> value,
+                                             bool expect_success) {
+  constexpr uint32_t kNvIndex = 0x0123456;
+  tpm_manager::ReadSpaceRequest request;
+
+  tpm_manager::ReadSpaceReply reply;
+  reply.set_result(result);
+  if (value) {
+    reply.set_data(*value);
+  }
+
+  EXPECT_CALL(mock_tpm_nvram_, ReadSpace(_, _))
+      .WillOnce(
+          DoAll(SaveArg<0>(&request), InvokeCallbackArgument<1>(ByRef(reply))));
+
+  std::string output;
+  EXPECT_EQ(expect_success,
+            tpm_manager_utility_.ReadSpace(kNvIndex, use_owner_auth, &output));
+
+  EXPECT_EQ(kNvIndex, request.index());
+  EXPECT_EQ(use_owner_auth, request.use_owner_authorization());
+
+  if (value) {
+    EXPECT_EQ(output, *value);
+  }
+}
+
+TEST_F(TpmManagerUtilityTest, ReadSpace) {
+  RunReadSpaceTest(false /* owner auth */, tpm_manager::NVRAM_RESULT_SUCCESS,
+                   "notarealnvramspace", true /* success */);
+}
+
+TEST_F(TpmManagerUtilityTest, ReadSpaceOwnerAuth) {
+  RunReadSpaceTest(true /* owner auth */, tpm_manager::NVRAM_RESULT_SUCCESS,
+                   "notarealnvramspace", true /* success */);
+}
+
+TEST_F(TpmManagerUtilityTest, ReadSpaceNvRamSpaceDoesNotExist) {
+  RunReadSpaceTest(false /* owner auth */,
+                   tpm_manager::NVRAM_RESULT_SPACE_DOES_NOT_EXIST, {},
+                   false /* success */);
+}
+
+TEST_F(TpmManagerUtilityTest, ReadSpaceError) {
+  RunReadSpaceTest(false /* owner auth */,
+                   tpm_manager::NVRAM_RESULT_ACCESS_DENIED, {},
+                   false /* success */);
 }
 
 }  // namespace tpm_manager

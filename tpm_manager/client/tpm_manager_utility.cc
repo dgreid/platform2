@@ -215,10 +215,25 @@ bool TpmManagerUtility::ResetDictionaryAttackLock() {
 bool TpmManagerUtility::ReadSpace(uint32_t index,
                                   bool use_owner_auth,
                                   std::string* output) {
-  // TODO(cylai): implement this function and test it once the server side
-  // implementation is ready.
-  DCHECK(false) << "Not implemented";
-  return false;
+  tpm_manager::ReadSpaceRequest request;
+  request.set_index(index);
+  request.set_use_owner_authorization(use_owner_auth);
+  tpm_manager::ReadSpaceReply response;
+  SendTpmManagerRequestAndWait(
+      base::Bind(&tpm_manager::TpmNvramInterface::ReadSpace,
+                 base::Unretained(tpm_nvram_), request),
+      &response);
+  if (response.result() == tpm_manager::NVRAM_RESULT_SPACE_DOES_NOT_EXIST) {
+    LOG(ERROR) << __func__ << ": NV Index [" << index << "] does not exist.";
+    return false;
+  }
+  if (response.result() != tpm_manager::NVRAM_RESULT_SUCCESS) {
+    LOG(ERROR) << __func__ << ": Failed to read NV index [" << index << "]"
+               << response.result();
+    return false;
+  }
+  *output = response.data();
+  return true;
 }
 
 bool TpmManagerUtility::GetOwnershipTakenSignalStatus(bool* is_successful,
