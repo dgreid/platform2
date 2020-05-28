@@ -50,7 +50,13 @@ pkg_config("target_defaults_pkg_deps") {
 
 config("target_defaults") {
   configs = [ ":target_defaults_pkg_deps" ]
-  defines = [ "OS_CHROMEOS" ]
+  defines = [
+    "OS_CHROMEOS",
+    "USE_ARCVM=${use.arcvm}",
+    "USE_HOUDINI=${use.houdini}",
+    "USE_HOUDINI64=${use.houdini64}",
+    "USE_NDK_TRANSLATION=${use.ndk_translation}",
+  ]
 }
 
 static_library("libarc_setup") {
@@ -64,19 +70,6 @@ static_library("libarc_setup") {
     "priv_code_verifier.cc",
   ]
   configs += [ ":target_defaults" ]
-  defines = []
-  if (defined(use.arcvm) && use.arcvm) {
-    defines += [ "USE_ARCVM=1" ]
-  }
-  if (defined(use.houdini) && use.houdini) {
-    defines += [ "USE_HOUDINI=1" ]
-  }
-  if (defined(use.houdini64) && use.houdini64) {
-    defines += [ "USE_HOUDINI64=1" ]
-  }
-  if (defined(use.ndk_translation) && use.ndk_translation) {
-    defines += [ "USE_NDK_TRANSLATION=1" ]
-  }
   libs = [ "bootstat" ]
 }
 
@@ -173,11 +166,6 @@ if (use.test) {
       ":arc-setup_testrunner_pkg_deps",
       ":target_defaults",
     ]
-
-    defines = []
-    if (defined(use.arcvm) && use.arcvm) {
-      defines += [ "USE_ARCVM=1" ]
-    }
 
     deps = [
       ":libarc_setup",

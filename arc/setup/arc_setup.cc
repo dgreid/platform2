@@ -747,13 +747,13 @@ void ArcSetup::SetUpBinFmtMisc(ArcBinaryTranslationType bin_type) {
 void ArcSetup::SetUpAndroidData(bool bind_mount) {
   mode_t android_data_mode = 0700;
   gid_t android_data_gid = kRootGid;
-#if defined(USE_ARCVM)
-  // When ARCVM is enabled on the board, allow vm_concierge to access the
-  // directory. Note that vm_concierge runs as ugid crosvm in minijail.
-  uid_t dummy_uid;
-  EXIT_IF(!GetUserId("crosvm", &dummy_uid, &android_data_gid));
-  android_data_mode = 0750;
-#endif
+  if (USE_ARCVM) {
+    // When ARCVM is enabled on the board, allow vm_concierge to access the
+    // directory. Note that vm_concierge runs as ugid crosvm in minijail.
+    uid_t dummy_uid;
+    EXIT_IF(!GetUserId("crosvm", &dummy_uid, &android_data_gid));
+    android_data_mode = 0750;
+  }
   EXIT_IF(!InstallDirectory(android_data_mode, kRootUid, android_data_gid,
                             arc_paths_->android_data_directory));
 
@@ -761,13 +761,13 @@ void ArcSetup::SetUpAndroidData(bool bind_mount) {
   EXIT_IF(!InstallDirectory(0771, kSystemUid, kSystemGid,
                             arc_paths_->android_data_directory.Append("data")));
 
-#if defined(USE_ARCVM)
-  // For ARCVM, create /data/media too since crosvm exports the directory via
-  // virtio-fs.
-  EXIT_IF(!InstallDirectory(
-      0770, kMediaUid, kMediaGid,
-      arc_paths_->android_data_directory.Append("data").Append("media")));
-#endif
+  if (USE_ARCVM) {
+    // For ARCVM, create /data/media too since crosvm exports the directory via
+    // virtio-fs.
+    EXIT_IF(!InstallDirectory(
+        0770, kMediaUid, kMediaGid,
+        arc_paths_->android_data_directory.Append("data").Append("media")));
+  }
 
   if (!bind_mount)
     return;
@@ -2276,8 +2276,7 @@ void ArcSetup::OnRemoveStaleData() {
 
   brillo::SafeFD root = brillo::SafeFD::Root().first;
 
-#if defined(USE_ARCVM)
-  {
+  if (USE_ARCVM) {
     // On ARCVM, stale *.odex files are kept in /data/vendor/arc.
     base::FilePath arcvm_stale_odex = arc_paths_->android_data_directory.Append(
         "data/vendor/arc/old_arc_executables_pre_ota");
@@ -2292,7 +2291,6 @@ void ArcSetup::OnRemoveStaleData() {
                  << arcvm_stale_odex.value();
     }
   }
-#endif
 
   // Moving data to android_data_old no longer has race conditions so it is safe
   // to delete the entire directory.

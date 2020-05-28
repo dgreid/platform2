@@ -30,22 +30,9 @@ class TimeDelta;
 
 namespace arc {
 
-#if defined(USE_HOUDINI64)
-constexpr bool kUseHoudini64 = true;
-constexpr bool kUseHoudini = true;
-#elif defined(USE_HOUDINI)
-constexpr bool kUseHoudini64 = false;
-constexpr bool kUseHoudini = true;
-#else
-constexpr bool kUseHoudini64 = false;
-constexpr bool kUseHoudini = false;
-#endif  // USE_HOUDINI
-
-#if defined(USE_NDK_TRANSLATION)
-constexpr bool kUseNdkTranslation = true;
-#else
-constexpr bool kUseNdkTranslation = false;
-#endif  // USE_NDK_TRANSLATION
+constexpr bool kUseHoudini64 = USE_HOUDINI64;
+constexpr bool kUseHoudini = USE_HOUDINI;
+constexpr bool kUseNdkTranslation = USE_NDK_TRANSLATION;
 
 // A class that provides mount(2) and umount(2) wrappers. They return true on
 // success.
