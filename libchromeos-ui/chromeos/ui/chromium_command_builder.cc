@@ -560,6 +560,9 @@ void ChromiumCommandBuilder::AddUiFlags() {
   if (UseFlagIsSet("video_capture_use_gpu_memory_buffer"))
     AddArg("--video-capture-use-gpu-memory-buffer");
 
+  if (UseFlagIsSet("diable_yuv420_biplanar"))
+    AddArg("--disable-yuv420-biplanar");
+
   // Allow Chrome to access GPU memory information despite /sys/kernel/debug
   // being owned by debugd. This limits the security attack surface versus
   // leaving the whole debug directory world-readable: http://crbug.com/175828
