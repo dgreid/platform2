@@ -659,6 +659,6 @@ message GetStatefulPartitionAvailableCapacityResponse {
   Status status = 1;
 
   // Stateful partition available capacity, rounded down to
-  // multiples of 100MB (100 000 000 bytes).
+  // multiples of 100MiB (100 * 1024 * 1024 bytes).
   int32 available_capacity_mb = 2;
 }

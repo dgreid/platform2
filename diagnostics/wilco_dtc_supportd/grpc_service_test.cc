@@ -978,7 +978,7 @@ INSTANTIATE_TEST_CASE_P(
               return probe_response;
             }),
             grpc_api::GetStatefulPartitionAvailableCapacityResponse::STATUS_OK,
-            220400)));
+            210100)));
 
 class GrpcServiceWithMockSystemInfoServiceTest : public GrpcServiceTest {
  public:

@@ -253,10 +253,10 @@ void ForwardGetStatefulPartitionAvailableCapacity(
 
   reply->set_status(
       grpc_api::GetStatefulPartitionAvailableCapacityResponse::STATUS_OK);
-  // Reduce to MB and round down to multiple of 100MB.
+  // Reduce to MiB and round down to multiple of 100MiB.
   uint64_t available_space =
       info->stateful_partition_result->get_partition_info()->available_space;
-  reply->set_available_capacity_mb((available_space / 1000 / 1000 / 100) * 100);
+  reply->set_available_capacity_mb((available_space / 1024 / 1024 / 100) * 100);
 
   callback.Run(std::move(reply));
 }
