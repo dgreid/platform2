@@ -331,10 +331,6 @@ class Manager : public base::SupportsWeakPtr<Manager> {
   virtual DeviceRefPtr GetEnabledDeviceWithTechnology(
       Technology technology) const;
 
-  // Return a Device with link_name |link_name| in the enabled state.
-  virtual DeviceRefPtr GetEnabledDeviceByLinkName(
-      const std::string& link_name) const;
-
   // Returns true if at least one connection exists, and false if there's no
   // connected service.
   virtual bool IsConnected() const;

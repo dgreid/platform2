@@ -116,10 +116,6 @@ class MockManager : public Manager {
               GetEnabledDeviceWithTechnology,
               (Technology),
               (const, override));
-  MOCK_METHOD(DeviceRefPtr,
-              GetEnabledDeviceByLinkName,
-              (const std::string&),
-              (const, override));
   MOCK_METHOD(int, GetMinimumMTU, (), (const, override));
   MOCK_METHOD(bool,
               ShouldAcceptHostnameFrom,

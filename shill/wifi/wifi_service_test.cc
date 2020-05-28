@@ -456,28 +456,6 @@ TEST_F(WiFiServiceTest, ConnectReportBSSes) {
   wifi_service->Connect(nullptr, "in test");
 }
 
-TEST_F(WiFiServiceTest, ConnectWithPreferredDevice) {
-  // Setup service, device, and endpoints.
-  WiFiServiceRefPtr wifi_service = MakeServiceWithMockManager();
-  const string kDeviceName1 = "test_device1";
-  const string kDeviceName2 = "test_device2";
-  scoped_refptr<MockWiFi> wifi1 = MakeSimpleWiFi(kDeviceName1);
-  scoped_refptr<MockWiFi> wifi2 = MakeSimpleWiFi(kDeviceName2);
-  WiFiEndpointRefPtr endpoint1 =
-      MakeOpenEndpointWithWiFi(wifi1, "a", "00:00:00:00:00:01", 0, 0);
-  WiFiEndpointRefPtr endpoint2 =
-      MakeOpenEndpointWithWiFi(wifi2, "a", "00:00:00:00:00:01", 0, 0);
-
-  wifi_service->SetPreferredDevice(kDeviceName1, nullptr);
-  wifi_service->AddEndpoint(endpoint1);
-  wifi_service->AddEndpoint(endpoint2);
-  EXPECT_EQ(wifi1, wifi_service->wifi_);
-
-  EXPECT_CALL(*wifi1, ConnectTo(wifi_service.get(), _));
-  EXPECT_CALL(*wifi2, ConnectTo(_, _)).Times(0);
-  wifi_service->Connect(nullptr, "in test");
-}
-
 TEST_F(WiFiServiceTest, ConnectTaskWPA) {
   WiFiServiceRefPtr wifi_service = MakeServiceWithWiFi(kSecurityWpa);
   EXPECT_CALL(*wifi(), ConnectTo(wifi_service.get(), _));
@@ -1608,37 +1586,6 @@ TEST_F(WiFiServiceUpdateFromEndpointsTest, WarningOnDisconnect) {
   service->RemoveEndpoint(ok_endpoint);
 }
 
-TEST_F(WiFiServiceUpdateFromEndpointsTest, AddEndpointWithPreferredDevice) {
-  // Setup service, device, and endpoints.
-  WiFiServiceRefPtr wifi_service = MakeServiceWithMockManager();
-  const string kDeviceName1 = "test_device1";
-  const string kDeviceName2 = "test_device2";
-  scoped_refptr<MockWiFi> wifi1 = MakeSimpleWiFi(kDeviceName1);
-  scoped_refptr<MockWiFi> wifi2 = MakeSimpleWiFi(kDeviceName2);
-  // Best signal for endpoint associated with the preferred device.
-  const int16_t kPreferredDeviceBestSignal = -40;
-  WiFiEndpointRefPtr endpoint0 = MakeOpenEndpointWithWiFi(
-      wifi2, "a", "00:00:00:00:00:01", 0, kPreferredDeviceBestSignal + 10);
-  WiFiEndpointRefPtr endpoint1 = MakeOpenEndpointWithWiFi(
-      wifi1, "a", "00:00:00:00:00:01", 0, kPreferredDeviceBestSignal - 10);
-  WiFiEndpointRefPtr endpoint2 = MakeOpenEndpointWithWiFi(
-      wifi1, "a", "00:00:00:00:00:01", 0, kPreferredDeviceBestSignal);
-  WiFiEndpointRefPtr endpoint3 = MakeOpenEndpointWithWiFi(
-      wifi2, "a", "00:00:00:00:00:01", 0, kPreferredDeviceBestSignal + 10);
-
-  wifi_service->SetPreferredDevice(kDeviceName1, nullptr);
-
-  wifi_service->AddEndpoint(endpoint0);
-  wifi_service->AddEndpoint(endpoint1);
-  wifi_service->AddEndpoint(endpoint2);
-  wifi_service->AddEndpoint(endpoint3);
-  EXPECT_EQ(wifi1, wifi_service->wifi_);
-  // Service should display the signal strength of the best signal endpoint
-  // that's associated with the preferred device.
-  EXPECT_EQ(WiFiService::SignalToStrength(kPreferredDeviceBestSignal),
-            wifi_service->strength());
-}
-
 MATCHER_P(IsSetwiseEqual, expected_set, "") {
   set<uint16_t> arg_set(arg.begin(), arg.end());
   return arg_set == expected_set;
@@ -2035,101 +1982,14 @@ TEST_F(WiFiServiceTest, IsVisible) {
   Mock::VerifyAndClearExpectations(adaptor);
 }
 
-TEST_F(WiFiServiceTest, ConfigurePreferredDevice) {
-  const string kDeviceName = "test_device";
-
-  WiFiServiceRefPtr service = MakeGenericService();
-  KeyValueStore args;
-  args.Set<string>(kWifiPreferredDeviceProperty, kDeviceName);
-
-  // With no wifi device.
-  Error error;
-  service->Configure(args, &error);
-  EXPECT_EQ(Error::kSuccess, error.type());
-  EXPECT_EQ(kDeviceName, service->preferred_device_);
-
-  // With non-preferred wifi device.
-  SetWiFiForService(service, wifi());
-  service->Configure(args, &error);
-  EXPECT_EQ(Error::kSuccess, error.type());
-  EXPECT_EQ(nullptr, service->wifi_);
-  EXPECT_EQ(kDeviceName, service->preferred_device_);
-
-  // With preferred wifi device.
-  scoped_refptr<MockWiFi> preferred_wifi = MakeSimpleWiFi(kDeviceName);
-  SetWiFiForService(service, preferred_wifi);
-  service->Configure(args, &error);
-  EXPECT_EQ(Error::kSuccess, error.type());
-  EXPECT_EQ(preferred_wifi, service->wifi_);
-  EXPECT_EQ(kDeviceName, service->preferred_device_);
-}
-
-TEST_F(WiFiServiceTest, LoadAndUnloadPreferredDevice) {
-  WiFiServiceRefPtr service = MakeGenericService();
-  NiceMock<MockStore> mock_store;
-  const string kStorageId = service->GetStorageIdentifier();
-  EXPECT_CALL(mock_store, ContainsGroup(StrEq(kStorageId)))
-      .WillRepeatedly(Return(true));
-  set<string> groups;
-  groups.insert(kStorageId);
-  EXPECT_CALL(mock_store, GetGroupsWithProperties(ContainsWiFiProperties(
-                              simple_ssid(), kModeManaged, kSecurityWep)))
-      .WillRepeatedly(Return(groups));
-  EXPECT_CALL(mock_store, GetBool(_, _, _)).WillRepeatedly(Return(false));
-  const string kDeviceName = "test_device";
-  EXPECT_CALL(mock_store, GetString(StrEq(kStorageId),
-                                    WiFiService::kStoragePreferredDevice, _))
-      .WillRepeatedly(DoAll(SetArgPointee<2>(kDeviceName), Return(true)));
-  EXPECT_CALL(mock_store,
-              GetString(StrEq(kStorageId),
-                        StrNe(WiFiService::kStoragePreferredDevice), _))
-      .WillRepeatedly(Return(false));
-
-  // With no wifi device.
-  EXPECT_TRUE(service->Load(&mock_store));
-  EXPECT_EQ(kDeviceName, service->preferred_device_);
-  service->Unload();
-  EXPECT_EQ("", service->preferred_device_);
-
-  // With non-preferred wifi device.
-  SetWiFiForService(service, wifi());
-  EXPECT_TRUE(service->Load(&mock_store));
-  EXPECT_EQ(nullptr, service->wifi_);
-  EXPECT_EQ(kDeviceName, service->preferred_device_);
-  service->Unload();
-  EXPECT_EQ("", service->preferred_device_);
-
-  // With preferred wifi device.
-  scoped_refptr<MockWiFi> preferred_wifi = MakeSimpleWiFi(kDeviceName);
-  SetWiFiForService(service, preferred_wifi);
-  EXPECT_TRUE(service->Load(&mock_store));
-  EXPECT_EQ(preferred_wifi, service->wifi_);
-  EXPECT_EQ(kDeviceName, service->preferred_device_);
-  service->Unload();
-  EXPECT_EQ("", service->preferred_device_);
-}
-
 TEST_F(WiFiServiceTest, ChooseDevice) {
-  const string kDeviceName1 = "test_device1";
-  const string kDeviceName2 = "test_device2";
-  scoped_refptr<MockWiFi> wifi1 = MakeSimpleWiFi(kDeviceName1);
-  scoped_refptr<MockWiFi> wifi2 = MakeSimpleWiFi(kDeviceName2);
+  scoped_refptr<MockWiFi> wifi = MakeSimpleWiFi("test_wifi");
   WiFiServiceRefPtr service = MakeServiceWithMockManager();
 
-  // No preferred device.
-  EXPECT_CALL(*mock_manager(), GetEnabledDeviceByLinkName(_)).Times(0);
   EXPECT_CALL(*mock_manager(),
               GetEnabledDeviceWithTechnology(Technology(Technology::kWifi)))
-      .WillOnce(Return(wifi1));
-  EXPECT_EQ(wifi1, service->ChooseDevice());
-  Mock::VerifyAndClearExpectations(mock_manager());
-
-  // With preferred device.
-  service->SetPreferredDevice(kDeviceName2, nullptr);
-  EXPECT_CALL(*mock_manager(), GetEnabledDeviceByLinkName(kDeviceName2))
-      .WillOnce(Return(wifi2));
-  EXPECT_CALL(*mock_manager(), GetEnabledDeviceWithTechnology(_)).Times(0);
-  EXPECT_EQ(wifi2, service->ChooseDevice());
+      .WillOnce(Return(wifi));
+  EXPECT_EQ(wifi, service->ChooseDevice());
   Mock::VerifyAndClearExpectations(mock_manager());
 }
 
