@@ -9,7 +9,7 @@ import("//common-mk/pkg_config.gni")
 group("all") {
   deps = [
     ":dbus_bindings",
-    ":mojo_bindings",
+    ":mojo_bindings_lib",
     ":smbfs",
   ]
   if (use.test) {
@@ -77,7 +77,7 @@ static_library("libsmbfs") {
   configs += [ ":target_defaults" ]
   deps = [
     ":dbus_bindings",
-    ":mojo_bindings",
+    ":mojo_bindings_lib",
   ]
 }
 
@@ -85,13 +85,6 @@ generate_dbus_proxies("dbus_bindings") {
   sources = [ "dbus_bindings/org.chromium.SmbFs.xml" ]
   proxy_output_file = "include/smbfs/dbus-proxies.h"
   mock_output_file = "include/smbfs/dbus-proxy-mocks.h"
-}
-
-source_set("mojo_bindings_traits") {
-  sources = [
-    "mojom/file_path_mojom_traits.h",
-    "mojom/password_mojom_traits.h",
-  ]
 }
 
 generate_mojom_bindings("mojo_bindings") {
@@ -106,7 +99,14 @@ generate_mojom_bindings("mojo_bindings") {
     rebase_path("mojom/type_mappings.json"),
   ]
   configs = [ ":target_defaults" ]
-  deps = [ ":mojo_bindings_traits" ]
+}
+
+source_set("mojo_bindings_lib") {
+  sources = [
+    "mojom/file_path_mojom_traits.h",
+    "mojom/password_mojom_traits.h",
+  ]
+  public_deps = [ ":mojo_bindings" ]
 }
 
 executable("smbfs") {
