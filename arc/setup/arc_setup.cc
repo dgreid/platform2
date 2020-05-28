@@ -505,26 +505,6 @@ bool IsChromeOSUserAvailable(Mode mode) {
   }
 }
 
-bool IsArcVmActive() {
-  brillo::SafeFD fd;
-  brillo::SafeFD::Error err;
-  std::tie(fd, err) = brillo::SafeFD::Root().first.OpenExistingFile(
-      base::FilePath("/run/chrome/is_arcvm"));
-  if (err == brillo::SafeFD::Error::kDoesNotExist) {
-    return false;
-  }
-  EXIT_IF(!fd.is_valid());
-
-  std::vector<char> buf;
-  std::tie(buf, err) = fd.ReadContents();
-  EXIT_IF(err != brillo::SafeFD::Error::kNoError);
-
-  int active = 0;
-  EXIT_IF(!base::StringToInt(std::string(buf.begin(), buf.end()), &active));
-
-  return active == 1;
-}
-
 }  // namespace
 
 // A struct that holds all the FilePaths ArcSetup uses.
@@ -2295,7 +2275,9 @@ void ArcSetup::OnRemoveStaleData() {
   constexpr int kRmdirMaxDepth = 768;
 
   brillo::SafeFD root = brillo::SafeFD::Root().first;
-  if (IsArcVmActive()) {
+
+#if defined(USE_ARCVM)
+  {
     // On ARCVM, stale *.odex files are kept in /data/vendor/arc.
     base::FilePath arcvm_stale_odex = arc_paths_->android_data_directory.Append(
         "data/vendor/arc/old_arc_executables_pre_ota");
@@ -2310,6 +2292,7 @@ void ArcSetup::OnRemoveStaleData() {
                  << arcvm_stale_odex.value();
     }
   }
+#endif
 
   // Moving data to android_data_old no longer has race conditions so it is safe
   // to delete the entire directory.
