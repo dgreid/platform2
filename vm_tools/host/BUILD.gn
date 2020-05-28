@@ -131,6 +131,7 @@ static_library("libconcierge") {
     "../concierge/service_plugin.cc",
     "../concierge/shared_data.cc",
     "../concierge/shill_client.cc",
+    "../concierge/sigchld_handler.cc",
     "../concierge/ssh_keys.cc",
     "../concierge/startup_listener_impl.cc",
     "../concierge/tap_device_builder.cc",

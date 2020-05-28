@@ -33,7 +33,7 @@ std::unique_ptr<dbus::Response> Service::StartArcVm(
   StartArcVmRequest request;
   StartVmResponse response;
   auto helper_result = StartVmHelper<StartArcVmRequest>(
-      method_call, &reader, &writer, true /* allow_zero_cpus */);
+      &reader, &writer, true /* allow_zero_cpus */);
   if (!helper_result) {
     return dbus_response;
   }
@@ -184,7 +184,7 @@ std::unique_ptr<dbus::Response> Service::StartArcVm(
       std::move(kernel), std::move(rootfs), std::move(fstab), request.cpus(),
       std::move(*pstore_path), pstore_size, std::move(disks), vsock_cid,
       std::move(data_dir), std::move(network_client), std::move(server_proxy),
-      std::move(runtime_dir), features, std::move(params));
+      std::move(runtime_dir), features, std::move(params), sigchld_handler_);
   if (!vm) {
     LOG(ERROR) << "Unable to start VM";
 

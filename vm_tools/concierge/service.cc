@@ -188,6 +188,38 @@ void HandleSynchronousDBusMethodCall(
   std::move(response_sender).Run(std::move(response));
 }
 
+template <class Request, class Response>
+void HandleAsyncDbusMethod(
+    base::Callback<Future<Response>(Request)> handler,
+    dbus::MethodCall* method_call,
+    dbus::ExportedObject::ResponseSender response_sender) {
+  std::unique_ptr<dbus::Response> dbus_response(
+      dbus::Response::FromMethodCall(method_call));
+  Request req;
+  Response resp;
+
+  if (!dbus::MessageReader(method_call).PopArrayOfBytesAsProto(&req)) {
+    // Request::descriptor().name() - no member named 'descriptor' in Request
+    // Probably need a newer grpc version
+    LOG(ERROR) << "Unable to parse " << req.GetTypeName() << " from message";
+    resp.set_success(false);
+    resp.set_failure_reason("unable to parse protobuf");
+    dbus::MessageWriter(dbus_response.get()).AppendProtoAsArrayOfBytes(resp);
+    response_sender.Run(std::move(dbus_response));
+    return;
+  }
+
+  handler.Run(std::move(req))
+      .ThenNoReject(base::BindOnce(
+          [](dbus::ExportedObject::ResponseSender response_sender,
+             std::unique_ptr<dbus::Response> dbus_response, Response response) {
+            dbus::MessageWriter(dbus_response.get())
+                .AppendProtoAsArrayOfBytes(response);
+            response_sender.Run(std::move(dbus_response));
+          },
+          std::move(response_sender), std::move(dbus_response)));
+}
+
 // Posted to a grpc thread to startup a listener service. Puts a copy of
 // the pointer to the grpc server in |server_copy| and then signals |event|.
 // It will listen on the address specified in |listener_address|.
@@ -284,6 +316,10 @@ base::FilePath GetLatestVMPath() {
       latest_version = version;
       latest_path = path;
     }
+  }
+
+  if (latest_path.empty()) {
+    LOG(INFO) << "Cannot find a valid VM under " << kVmDefaultPath;
   }
 
   return latest_path;
@@ -694,11 +730,8 @@ bool Service::Init() {
   using ServiceMethod =
       std::unique_ptr<dbus::Response> (Service::*)(dbus::MethodCall*);
   const std::map<const char*, ServiceMethod> kServiceMethods = {
-      {kStartVmMethod, &Service::StartVm},
       {kStartPluginVmMethod, &Service::StartPluginVm},
       {kStartArcVmMethod, &Service::StartArcVm},
-      {kStopVmMethod, &Service::StopVm},
-      {kStopAllVmsMethod, &Service::StopAllVms},
       {kSuspendVmMethod, &Service::SuspendVm},
       {kResumeVmMethod, &Service::ResumeVm},
       {kGetVmInfoMethod, &Service::GetVmInfo},
@@ -706,7 +739,6 @@ bool Service::Init() {
        &Service::GetVmEnterpriseReportingInfo},
       {kAdjustVmMethod, &Service::AdjustVm},
       {kCreateDiskImageMethod, &Service::CreateDiskImage},
-      {kDestroyDiskImageMethod, &Service::DestroyDiskImage},
       {kResizeDiskImageMethod, &Service::ResizeDiskImage},
       {kExportDiskImageMethod, &Service::ExportDiskImage},
       {kImportDiskImageMethod, &Service::ImportDiskImage},
@@ -728,6 +760,45 @@ bool Service::Init() {
         kVmConciergeInterface, iter.first,
         base::Bind(&HandleSynchronousDBusMethodCall,
                    base::Bind(iter.second, base::Unretained(this))));
+    if (!ret) {
+      LOG(ERROR) << "Failed to export method " << iter.first;
+      return false;
+    }
+  }
+
+  using AsyncServiceMethod = base::Callback<void(
+      dbus::MethodCall*, dbus::ExportedObject::ResponseSender)>;
+  const std::map<const char*, AsyncServiceMethod> kAsyncServiceMethods = {
+      {kStopVmMethod,
+       base::Bind(&HandleAsyncDbusMethod<StopVmRequest, StopVmResponse>,
+                  base::Bind(&Service::StopVm, base::Unretained(this)))},
+  };
+
+  // TODO(woodychow): Migrate these functions to AsyncServiceMethod when C++17
+  // is available. The problem is, responses of the functions below have
+  // different initial state. Also, they can have no request/response message
+  // type. It is hard to handle all these cleanly without if constexpr in C++17.
+  using AsyncServiceMethodOld = void (Service::*)(
+      dbus::MethodCall*, dbus::ExportedObject::ResponseSender);
+  const std::map<const char*, AsyncServiceMethodOld> kAsyncServiceMethodsOld = {
+      {kStartVmMethod, &Service::StartVm},
+      {kDestroyDiskImageMethod, &Service::DestroyDiskImage},
+      {kStopAllVmsMethod, &Service::StopAllVms},
+  };
+
+  for (const auto& iter : kAsyncServiceMethodsOld) {
+    bool ret = exported_object_->ExportMethodAndBlock(
+        kVmConciergeInterface, iter.first,
+        base::Bind(iter.second, base::Unretained(this)));
+    if (!ret) {
+      LOG(ERROR) << "Failed to export method " << iter.first;
+      return false;
+    }
+  }
+
+  for (const auto& iter : kAsyncServiceMethods) {
+    bool ret = exported_object_->ExportMethodAndBlock(
+        kVmConciergeInterface, iter.first, std::move(iter.second));
     if (!ret) {
       LOG(ERROR) << "Failed to export method " << iter.first;
       return false;
@@ -879,18 +950,25 @@ void Service::HandleChildExit() {
                    << pid;
     }
 
-    // See if this is a process we launched.
-    auto iter = std::find_if(vms_.begin(), vms_.end(), [=](auto& pair) {
-      VmInterface::Info info = pair.second->GetInfo();
-      return pid == info.pid;
-    });
+    // If the VM is in the middle of a shutdown call, a handler should've been
+    // registered. The handler will call NotifyVmStopped and remove the VM from
+    // the map. Search Shutdown() in this file for details.
+    //
+    // In other words, only unintended shutdowns should be handled by the if
+    if (!sigchld_handler_->Received(pid)) {
+      // See if this is a process we launched.
+      auto iter = std::find_if(vms_.begin(), vms_.end(), [=](auto& pair) {
+        VmInterface::Info info = pair.second->GetInfo();
+        return pid == info.pid;
+      });
 
-    if (iter != vms_.end()) {
-      // Notify that the VM has exited.
-      NotifyVmStopped(iter->first, iter->second->GetInfo().cid);
+      if (iter != vms_.end()) {
+        // Notify that the VM has exited.
+        NotifyVmStopped(iter->first, iter->second->GetInfo().cid);
 
-      // Now remove it from the vm list.
-      vms_.erase(iter);
+        // Now remove it from the vm list.
+        vms_.erase(iter);
+      }
     }
   }
 }
@@ -901,49 +979,58 @@ void Service::HandleSigterm() {
   base::ThreadTaskRunnerHandle::Get()->PostTask(FROM_HERE, quit_closure_);
 }
 
-std::unique_ptr<dbus::Response> Service::StartVm(
-    dbus::MethodCall* method_call) {
+void Service::StartVm(dbus::MethodCall* method_call,
+                      dbus::ExportedObject::ResponseSender response_sender) {
   LOG(INFO) << "Received StartVm request";
 
   std::unique_ptr<dbus::Response> dbus_response(
       dbus::Response::FromMethodCall(method_call));
   dbus::MessageReader reader(method_call);
   dbus::MessageWriter writer(dbus_response.get());
+
+  auto helper_result = StartVmHelper<StartVmRequest>(
+      &reader, &writer, true /* allow_zero_cpus */);
+  if (!helper_result) {
+    response_sender.Run(std::move(dbus_response));
+    return;
+  }
+
   StartVmRequest request;
   StartVmResponse response;
-  auto helper_result = StartVmHelper<StartVmRequest>(
-      method_call, &reader, &writer, true /* allow_zero_cpus */);
-  if (!helper_result) {
-    return dbus_response;
-  }
   std::tie(request, response) = *helper_result;
   VmInfo* vm_info = response.mutable_vm_info();
   vm_info->set_vm_type(request.start_termina() ? VmInfo::TERMINA
                                                : VmInfo::UNKNOWN);
 
+  auto report_error = [&response_sender, &response,
+                       &dbus_response](std::string reason) {
+    response.set_failure_reason(std::move(reason));
+    dbus::MessageWriter(dbus_response.get())
+        .AppendProtoAsArrayOfBytes(response);
+    response_sender.Run(std::move(dbus_response));
+  };
+
   // Make sure we have our signal connected if starting a Termina VM.
   if (request.start_termina() && !is_tremplin_started_signal_connected_) {
     LOG(ERROR) << "Can't start Termina VM without TremplinStartedSignal";
-    response.set_failure_reason("TremplinStartedSignal not connected");
-    writer.AppendProtoAsArrayOfBytes(response);
-    return dbus_response;
+    report_error("TremplinStartedSignal not connected");
+    return;
   }
 
   if (request.disks_size() > kMaxExtraDisks) {
     LOG(ERROR) << "Rejecting request with " << request.disks_size()
                << " extra disks";
-    response.set_failure_reason("Too many extra disks");
-    writer.AppendProtoAsArrayOfBytes(response);
-    return dbus_response;
+    report_error("Too many extra disks");
+    return;
   }
 
   const bool is_dev_mode_enabled = IsDevModeEnabled();
   if (request.allow_untrusted() && !is_dev_mode_enabled) {
-    LOG(ERROR) << "Allow untrusted flag not respected in verified mode";
-    response.set_failure_reason(
-        "Allow untrusted flag not respected in verified mode");
-    writer.AppendProtoAsArrayOfBytes(response);
-    return dbus_response;
+    constexpr char err_msg[] =
+        "Allow untrusted flag not respected in verified mode";
+    LOG(ERROR) << err_msg;
+    report_error(err_msg);
+    return;
   }
 
   base::FilePath kernel, rootfs, tools_disk;
@@ -960,9 +1047,8 @@ std::unique_ptr<dbus::Response> Service::StartVm(
     base::FilePath vm_path = GetVmImagePath(request.vm().dlc_id(), &error);
     if (vm_path.empty()) {
       LOG(ERROR) << error;
-      response.set_failure_reason(error);
-      writer.AppendProtoAsArrayOfBytes(response);
-      return dbus_response;
+      report_error(error);
+      return;
     }
     kernel = vm_path.Append(kVmKernelName);
     rootfs = vm_path.Append(kVmRootfsName);
@@ -977,16 +1063,14 @@ std::unique_ptr<dbus::Response> Service::StartVm(
 
   if (!base::PathExists(kernel)) {
     LOG(ERROR) << "Missing VM kernel path: " << kernel.value();
-    response.set_failure_reason("Kernel path does not exist");
-    writer.AppendProtoAsArrayOfBytes(response);
-    return dbus_response;
+    report_error("Kernel path does not exist");
+    return;
   }
 
   if (!base::PathExists(rootfs)) {
     LOG(ERROR) << "Missing VM rootfs path: " << rootfs.value();
-    response.set_failure_reason("Rootfs path does not exist");
-    writer.AppendProtoAsArrayOfBytes(response);
-    return dbus_response;
+    report_error("Rootfs path does not exist");
+    return;
   }
 
   const bool is_untrusted_vm =
@@ -999,9 +1083,8 @@ std::unique_ptr<dbus::Response> Service::StartVm(
       untrusted_vm_check_result.skip_host_checks;
   if (is_untrusted_vm && !is_untrusted_vm_allowed) {
     LOG(ERROR) << "Untrusted VMs are not allowed";
-    response.set_failure_reason("Untrusted VMs are not allowed");
-    writer.AppendProtoAsArrayOfBytes(response);
-    return dbus_response;
+    report_error("Untrusted VMs are not allowed");
+    return;
   }
 
   // For untrusted VMs -
@@ -1014,9 +1097,8 @@ std::unique_ptr<dbus::Response> Service::StartVm(
       // l1tf and mds mitigations then fail to start an untrusted VM.
       case UntrustedVMUtils::MitigationStatus::VULNERABLE: {
         LOG(ERROR) << "Host vulnerable against untrusted VM";
-        response.set_failure_reason("Host vulnerable against untrusted VM");
-        writer.AppendProtoAsArrayOfBytes(response);
-        return dbus_response;
+        report_error("Host vulnerable against untrusted VM");
+        return;
       }
 
       // At this point SMT should not be a security issue. As
@@ -1053,9 +1135,8 @@ std::unique_ptr<dbus::Response> Service::StartVm(
 
   if (request.disks().size() == 0) {
     LOG(ERROR) << "Missing required stateful disk";
-    response.set_failure_reason("Missing required stateful disk");
-    writer.AppendProtoAsArrayOfBytes(response);
-    return dbus_response;
+    report_error("Missing required stateful disk");
+    return;
   }
 
   // Assume the stateful device is the first disk in the request.
@@ -1065,18 +1146,15 @@ std::unique_ptr<dbus::Response> Service::StartVm(
   int64_t stateful_size = -1;
   if (!base::GetFileSize(stateful_path, &stateful_size)) {
     LOG(ERROR) << "Could not determine stateful disk size";
-    response.set_failure_reason(
-        "Internal error: unable to determine stateful disk size");
-    writer.AppendProtoAsArrayOfBytes(response);
-    return dbus_response;
+    report_error("Internal error: unable to determine stateful disk size");
+    return;
   }
 
   for (const auto& disk : request.disks()) {
     if (!base::PathExists(base::FilePath(disk.path()))) {
       LOG(ERROR) << "Missing disk path: " << disk.path();
-      response.set_failure_reason("One or more disk paths do not exist");
-      writer.AppendProtoAsArrayOfBytes(response);
-      return dbus_response;
+      report_error("One or more disk paths do not exist");
+      return;
     }
 
     disks.push_back(TerminaVm::Disk{
@@ -1091,37 +1169,33 @@ std::unique_ptr<dbus::Response> Service::StartVm(
   if (request.use_fd_for_storage()) {
     // We only allow untrusted VMs to mount extra storage.
     if (!is_untrusted_vm) {
-      LOG(ERROR) << "use_fd_for_storage is set for a trusted VM";
-
-      response.set_failure_reason("use_fd_for_storage is set for a trusted VM");
-      writer.AppendProtoAsArrayOfBytes(response);
-      return dbus_response;
+      constexpr char err_msg[] = "use_fd_for_storage is set for a trusted VM";
+      LOG(ERROR) << err_msg;
+      report_error(err_msg);
+      return;
     }
 
     if (!reader.PopFileDescriptor(&storage_fd)) {
-      LOG(ERROR) << "use_fd_for_storage is set but no fd found";
-
-      response.set_failure_reason("use_fd_for_storage is set but no fd found");
-      writer.AppendProtoAsArrayOfBytes(response);
-      return dbus_response;
+      constexpr char err_msg[] = "use_fd_for_storage is set but no fd found";
+      LOG(ERROR) << err_msg;
+      report_error(err_msg);
+      return;
     }
     // Clear close-on-exec as this FD needs to be passed to crosvm.
     int raw_fd = storage_fd.get();
     int flags = fcntl(raw_fd, F_GETFD);
     if (flags == -1) {
-      LOG(ERROR) << "Failed to get flags for passed fd";
-
-      response.set_failure_reason("Failed to get flags for passed fd");
-      writer.AppendProtoAsArrayOfBytes(response);
-      return dbus_response;
+      constexpr char err_msg[] = "Failed to get flags for passed fd";
+      LOG(ERROR) << err_msg;
+      report_error(err_msg);
+      return;
     }
     flags &= ~FD_CLOEXEC;
     if (fcntl(raw_fd, F_SETFD, flags) == -1) {
-      LOG(ERROR) << "Failed to clear close-on-exec flag for fd";
-
-      response.set_failure_reason("Failed to clear close-on-exec flag for fd");
-      writer.AppendProtoAsArrayOfBytes(response);
-      return dbus_response;
+      constexpr char err_msg[] = "Failed to clear close-on-exec flag for fd";
+      LOG(ERROR) << err_msg;
+      report_error(err_msg);
+      return;
     }
 
     base::FilePath fd_path = base::FilePath(kProcFileDescriptorsPath)
@@ -1137,11 +1211,8 @@ std::unique_ptr<dbus::Response> Service::StartVm(
   if (!base::CreateTemporaryDirInDir(base::FilePath(kRuntimeDir), "vm.",
                                      &runtime_dir)) {
     PLOG(ERROR) << "Unable to create runtime directory for VM";
-
-    response.set_failure_reason(
-        "Internal error: unable to create runtime directory");
-    writer.AppendProtoAsArrayOfBytes(response);
-    return dbus_response;
+    report_error("Internal error: unable to create runtime directory");
+    return;
   }
 
   base::FilePath log_path = GetVmLogPath(request.owner_id(), request.name());
@@ -1149,22 +1220,20 @@ std::unique_ptr<dbus::Response> Service::StartVm(
   // Allocate resources for the VM.
   uint32_t vsock_cid = vsock_cid_pool_.Allocate();
   if (vsock_cid == 0) {
-    LOG(ERROR) << "Unable to allocate vsock context id";
-
-    response.set_failure_reason("Unable to allocate vsock cid");
-    writer.AppendProtoAsArrayOfBytes(response);
-    return dbus_response;
+    constexpr char err_msg[] = "Unable to allocate vsock cid";
+    LOG(ERROR) << err_msg;
+    report_error(err_msg);
+    return;
   }
   vm_info->set_cid(vsock_cid);
 
   std::unique_ptr<patchpanel::Client> network_client =
       patchpanel::Client::New();
   if (!network_client) {
-    LOG(ERROR) << "Unable to open networking service client";
-
-    response.set_failure_reason("Unable to open network service client");
-    writer.AppendProtoAsArrayOfBytes(response);
-    return dbus_response;
+    constexpr char err_msg[] = "Unable to open network service client";
+    LOG(ERROR) << err_msg;
+    report_error(err_msg);
+    return;
   }
 
   uint32_t seneschal_server_port = next_seneschal_server_port_++;
@@ -1172,11 +1241,10 @@ std::unique_ptr<dbus::Response> Service::StartVm(
       SeneschalServerProxy::CreateVsockProxy(
           seneschal_service_proxy_, seneschal_server_port, vsock_cid, {}, {});
   if (!server_proxy) {
-    LOG(ERROR) << "Unable to start shared directory server";
-
-    response.set_failure_reason("Unable to start shared directory server");
-    writer.AppendProtoAsArrayOfBytes(response);
-    return dbus_response;
+    constexpr char err_msg[] = "Unable to start shared directory server";
+    LOG(ERROR) << err_msg;
+    report_error(err_msg);
+    return;
   }
 
   uint32_t seneschal_server_handle = server_proxy->handle();
@@ -1216,14 +1284,14 @@ std::unique_ptr<dbus::Response> Service::StartVm(
       std::move(network_client), std::move(server_proxy),
       std::move(runtime_dir), std::move(log_path), std::move(rootfs_device),
       std::move(stateful_device), std::move(stateful_size), features,
-      request.start_termina());
+      request.start_termina(), sigchld_handler_);
   if (!vm) {
-    LOG(ERROR) << "Unable to start VM";
+    constexpr char err_msg[] = "Unable to start VM";
+    LOG(ERROR) << err_msg;
 
     startup_listener_.RemovePendingVm(vsock_cid);
-    response.set_failure_reason("Unable to start VM");
-    writer.AppendProtoAsArrayOfBytes(response);
-    return dbus_response;
+    report_error(err_msg);
+    return;
   }
 
   // Wait for the VM to finish starting up and for maitre'd to signal that it's
@@ -1233,28 +1301,26 @@ std::unique_ptr<dbus::Response> Service::StartVm(
                << " seconds";
 
     startup_listener_.RemovePendingVm(vsock_cid);
-    response.set_failure_reason("VM failed to start in time");
-    writer.AppendProtoAsArrayOfBytes(response);
-    return dbus_response;
+    report_error("VM failed to start in time");
+    return;
   }
 
   // maitre'd is ready.  Finish setting up the VM.
   if (!vm->ConfigureNetwork(nameservers_, search_domains_)) {
-    LOG(ERROR) << "Failed to configure VM network";
-
-    response.set_failure_reason("Failed to configure VM network");
-    writer.AppendProtoAsArrayOfBytes(response);
-    return dbus_response;
+    constexpr char err_msg[] = "Failed to configure VM network";
+    LOG(ERROR) << err_msg;
+    report_error(err_msg);
+    return;
   }
 
   // Mount the tools disk if it exists.
   if (!tools_device.empty()) {
     if (!vm->Mount(tools_device, kToolsMountPath, kToolsFsType, MS_RDONLY,
                    "")) {
-      LOG(ERROR) << "Failed to mount tools disk";
-      response.set_failure_reason("Failed to mount tools disk");
-      writer.AppendProtoAsArrayOfBytes(response);
-      return dbus_response;
+      constexpr char err_msg[] = "Failed to mount tools disk";
+      LOG(ERROR) << err_msg;
+      report_error(err_msg);
+      return;
     }
   }
 
@@ -1274,19 +1340,17 @@ std::unique_ptr<dbus::Response> Service::StartVm(
       LOG(ERROR) << "Failed to mount " << disk.path() << " -> "
                  << disk.mount_point();
 
-      response.set_failure_reason("Failed to mount extra disk");
-      writer.AppendProtoAsArrayOfBytes(response);
-      return dbus_response;
+      report_error("Failed to mount extra disk");
+      return;
     }
   }
 
   // Mount the 9p server.
   if (!vm->Mount9P(seneschal_server_port, "/mnt/shared")) {
-    LOG(ERROR) << "Failed to mount shared directory";
-
-    response.set_failure_reason("Failed to mount shared directory");
-    writer.AppendProtoAsArrayOfBytes(response);
-    return dbus_response;
+    constexpr char err_msg[] = "Failed to mount shared directory";
+    LOG(ERROR) << err_msg;
+    report_error(err_msg);
+    return;
   }
 
   // Notify cicerone that we have started a VM.
@@ -1301,10 +1365,9 @@ std::unique_ptr<dbus::Response> Service::StartVm(
   if (request.start_termina() &&
       !StartTermina(vm.get(), is_untrusted_vm /* allow_privileged_containers */,
                     &failure_reason, &mount_result)) {
-    response.set_failure_reason(std::move(failure_reason));
     response.set_mount_result((StartVmResponse::MountResult)mount_result);
-    writer.AppendProtoAsArrayOfBytes(response);
-    return dbus_response;
+    report_error(std::move(failure_reason));
+    return;
   }
   response.set_mount_result((StartVmResponse::MountResult)mount_result);
 
@@ -1323,9 +1386,8 @@ std::unique_ptr<dbus::Response> Service::StartVm(
                                /* target_dir= */ "0")) {
       LOG(ERROR) << "Failed to mount " << external_disk_path;
 
-      response.set_failure_reason("Failed to mount extra disk");
-      writer.AppendProtoAsArrayOfBytes(response);
-      return dbus_response;
+      report_error("Failed to mount extra disk");
+      return;
     }
   }
 
@@ -1339,66 +1401,74 @@ std::unique_ptr<dbus::Response> Service::StartVm(
   SendVmStartedSignal(vm_id, *vm_info, response.status());
 
   vms_[vm_id] = std::move(vm);
-  return dbus_response;
+  response_sender.Run(std::move(dbus_response));
 }
 
-std::unique_ptr<dbus::Response> Service::StopVm(dbus::MethodCall* method_call) {
+Future<StopVmResponse> Service::StopVm(StopVmRequest request) {
   DCHECK(sequence_checker_.CalledOnValidSequence());
   LOG(INFO) << "Received StopVm request";
-
-  std::unique_ptr<dbus::Response> dbus_response(
-      dbus::Response::FromMethodCall(method_call));
-
-  dbus::MessageReader reader(method_call);
-  dbus::MessageWriter writer(dbus_response.get());
-
-  StopVmRequest request;
-  StopVmResponse response;
-
-  if (!reader.PopArrayOfBytesAsProto(&request)) {
-    LOG(ERROR) << "Unable to parse StopVmRequest from message";
-
-    response.set_failure_reason("Unable to parse protobuf");
-    writer.AppendProtoAsArrayOfBytes(response);
-    return dbus_response;
-  }
 
   auto iter = FindVm(request.owner_id(), request.name());
   if (iter == vms_.end()) {
     LOG(ERROR) << "Requested VM does not exist";
     // This is not an error to Chrome
+    StopVmResponse response;
     response.set_success(true);
-    writer.AppendProtoAsArrayOfBytes(response);
-    return dbus_response;
+    return ResolvedFuture(std::move(response));
   }
+
+  struct Context {
+    base::WeakPtr<Service> service;
+    StopVmRequest request;
+    StopVmResponse report_error(std::string err) {
+      LOG(ERROR) << err;
+      StopVmResponse response;
+      response.set_failure_reason(std::move(err));
+      return response;
+    }
+  } ctx;
+  ctx.service = weak_ptr_factory_.GetWeakPtr();
+  ctx.request = std::move(request);
 
   // Notify that we are about to stop a VM.
   NotifyVmStopping(iter->first, iter->second->GetInfo().cid);
 
-  if (!iter->second->Shutdown()) {
-    LOG(ERROR) << "Unable to shut down VM";
+  return iter->second->Shutdown().ThenNoReject(base::BindOnce(
+      [](Context ctx, bool success) {
+        if (!success) {
+          return ctx.report_error("Unable to shut down VM");
+        }
 
-    response.set_failure_reason("Unable to shut down VM");
-    writer.AppendProtoAsArrayOfBytes(response);
-    return dbus_response;
-  }
+        if (!ctx.service) {
+          return ctx.report_error("Service has been destroyed");
+        }
 
-  // Notify that we have stopped a VM.
-  NotifyVmStopped(iter->first, iter->second->GetInfo().cid);
+        auto iter =
+            ctx.service->FindVm(ctx.request.owner_id(), ctx.request.name());
+        // The entry might have already been removed by HandleChildExit
+        if (iter != ctx.service->vms_.end()) {
+          // Notify that we have stopped a VM.
+          ctx.service->NotifyVmStopped(iter->first,
+                                       iter->second->GetInfo().cid);
+          ctx.service->vms_.erase(iter);
+        }
 
-  vms_.erase(iter);
-  response.set_success(true);
-  writer.AppendProtoAsArrayOfBytes(response);
-
-  return dbus_response;
+        StopVmResponse response;
+        response.set_success(true);
+        return response;
+      },
+      std::move(ctx)));
 }
 
-std::unique_ptr<dbus::Response> Service::StopAllVms(
-    dbus::MethodCall* method_call) {
+void Service::StopAllVms(dbus::MethodCall* method_call,
+                         dbus::ExportedObject::ResponseSender response_sender) {
   DCHECK(sequence_checker_.CalledOnValidSequence());
   LOG(INFO) << "Received StopAllVms request";
 
-  // Spawn a thread for each VM to shut it down.
+  std::unique_ptr<dbus::Response> dbus_response(
+      dbus::Response::FromMethodCall(method_call));
+
+  std::vector<Future<bool>> futures;
   for (auto& iter : vms_) {
     // Copy out cid from the VM object, as we will need it after the VM has been
     // destructed.
@@ -1410,15 +1480,30 @@ std::unique_ptr<dbus::Response> Service::StopAllVms(
     // Resetting the unique_ptr will call the destructor for that VM,
     // which will try stopping it normally (and then forcibly) it if
     // it hasn't stopped yet.
-    iter.second.reset();
-
-    // Notify that we have stopped a VM.
-    NotifyVmStopped(iter.first, cid);
+    futures.push_back(iter.second->Shutdown());
   }
 
-  vms_.clear();
+  Collect(base::SequencedTaskRunnerHandle::Get(), std::move(futures))
+      .ThenNoReject(base::BindOnce(
+          [](base::WeakPtr<Service> service, dbus::MethodCall* method_call,
+             dbus::ExportedObject::ResponseSender response_sender,
+             // vms goes out of scope after all the shutdown methods have
+             // returned
+             VmMap vms, std::vector<bool> results) {
+            if (service) {
+              for (auto& iter : vms) {
+                // Notify that we have stopped a VM. Send regardless of
+                // success/fail
+                service->NotifyVmStopped(iter.first,
+                                         iter.second->GetInfo().cid);
+              }
+            }
 
-  return nullptr;
+            response_sender.Run(dbus::Response::FromMethodCall(method_call));
+            LOG(INFO) << "Stopped all VMs";
+          },
+          weak_ptr_factory_.GetWeakPtr(), method_call,
+          std::move(response_sender), std::move(vms_)));
 }
 
 std::unique_ptr<dbus::Response> Service::SuspendVm(
@@ -1990,118 +2075,150 @@ std::unique_ptr<dbus::Response> Service::CreateDiskImage(
   return dbus_response;
 }
 
-std::unique_ptr<dbus::Response> Service::DestroyDiskImage(
-    dbus::MethodCall* method_call) {
+void Service::DestroyDiskImage(
+    dbus::MethodCall* method_call,
+    dbus::ExportedObject::ResponseSender response_sender) {
   DCHECK(sequence_checker_.CalledOnValidSequence());
   LOG(INFO) << "Received DestroyDiskImage request";
 
   std::unique_ptr<dbus::Response> dbus_response(
       dbus::Response::FromMethodCall(method_call));
-
-  dbus::MessageReader reader(method_call);
   dbus::MessageWriter writer(dbus_response.get());
 
   DestroyDiskImageRequest request;
-  DestroyDiskImageResponse response;
 
-  if (!reader.PopArrayOfBytesAsProto(&request)) {
+  if (!dbus::MessageReader(method_call).PopArrayOfBytesAsProto(&request)) {
     LOG(ERROR) << "Unable to parse DestroyDiskImageRequest from message";
+    DestroyDiskImageResponse response;
     response.set_status(DISK_STATUS_FAILED);
     response.set_failure_reason("Unable to parse DestroyDiskRequest");
 
     writer.AppendProtoAsArrayOfBytes(response);
-    return dbus_response;
+    response_sender.Run(std::move(dbus_response));
+    return;
   }
 
+  struct Context {
+    base::WeakPtr<Service> service;
+    std::unique_ptr<dbus::Response> dbus_response;
+    dbus::ExportedObject::ResponseSender response_sender;
+    DestroyDiskImageRequest request;
+
+    void send_response(DiskImageStatus status,
+                       std::string failure_reason = "") {
+      DestroyDiskImageResponse response;
+      response.set_status(status);
+      response.set_failure_reason(std::move(failure_reason));
+      dbus::MessageWriter(dbus_response.get())
+          .AppendProtoAsArrayOfBytes(response);
+      response_sender.Run(std::move(dbus_response));
+    }
+  } ctx;
+  ctx.service = weak_ptr_factory_.GetWeakPtr();
+  ctx.dbus_response = std::move(dbus_response);
+  ctx.response_sender = std::move(response_sender);
+  ctx.request = std::move(request);
+  Future<Context> future;
+
   // Stop the associated VM if it is still running.
-  auto iter = FindVm(request.cryptohome_id(), request.disk_path());
+  auto iter = FindVm(ctx.request.cryptohome_id(), ctx.request.disk_path());
   if (iter != vms_.end()) {
     LOG(INFO) << "Shutting down VM";
 
     // Notify that we are about to stop a VM.
     NotifyVmStopping(iter->first, iter->second->GetInfo().cid);
-    if (!iter->second->Shutdown()) {
-      LOG(ERROR) << "Unable to shut down VM";
+    future = iter->second->Shutdown().Then(base::BindOnce(
+        [](Context ctx, bool success) {
+          if (!ctx.service) {
+            LOG(ERROR) << "Service has been destroyed";
+            ctx.send_response(DISK_STATUS_FAILED, "Service has been destroyed");
+            return Reject<Context>();
+          }
+          if (!success) {
+            LOG(ERROR) << "Unable to shut down VM";
+            ctx.send_response(DISK_STATUS_FAILED, "Unable to shut down VM");
+            return Reject<Context>();
+          }
 
-      response.set_status(DISK_STATUS_FAILED);
-      response.set_failure_reason("Unable to shut down VM");
-      writer.AppendProtoAsArrayOfBytes(response);
-      return dbus_response;
+          auto iter = ctx.service->FindVm(ctx.request.cryptohome_id(),
+                                          ctx.request.disk_path());
+          // The entry might have already been removed by HandleChildExit
+          if (iter != ctx.service->vms_.end()) {
+            // Notify that we have stopped a VM.
+            ctx.service->NotifyVmStopped(iter->first,
+                                         iter->second->GetInfo().cid);
+            ctx.service->vms_.erase(iter);
+          }
+
+          return Resolve<Context>(std::move(ctx));
+        },
+        std::move(ctx)));
+  } else {
+    future = ResolvedFuture(std::move(ctx));
+  }
+
+  future.ThenNoReject(base::BindOnce([](Context ctx) {
+    if (!ctx.service) {
+      LOG(ERROR) << "Service has been destroyed";
+      ctx.send_response(DISK_STATUS_FAILED, "Service has been destroyed");
+      return;
     }
 
-    // Notify that we have stopped a VM.
-    NotifyVmStopped(iter->first, iter->second->GetInfo().cid);
-    vms_.erase(iter);
-  }
-
-  base::FilePath disk_path;
-  StorageLocation location;
-  if (!CheckVmExists(request.disk_path(), request.cryptohome_id(), &disk_path,
-                     &location)) {
-    response.set_status(DISK_STATUS_DOES_NOT_EXIST);
-    response.set_failure_reason("No such image");
-    writer.AppendProtoAsArrayOfBytes(response);
-    return dbus_response;
-  }
-
-  if (!EraseGuestSshKeys(request.cryptohome_id(), request.disk_path())) {
-    // Don't return a failure here, just log an error because this is only a
-    // side effect and not what the real request is about.
-    LOG(ERROR) << "Failed removing guest SSH keys for VM "
-               << request.disk_path();
-  }
-
-  if (location == STORAGE_CRYPTOHOME_PLUGINVM) {
-    // Plugin VMs need to be unregistered before we can delete them.
-    VmId vm_id(request.cryptohome_id(), request.disk_path());
-    bool registered;
-    if (!pvm::dispatcher::IsVmRegistered(vmplugin_service_proxy_, vm_id,
-                                         &registered)) {
-      response.set_status(DISK_STATUS_FAILED);
-      response.set_failure_reason(
-          "failed to check Plugin VM registration status");
-      writer.AppendProtoAsArrayOfBytes(response);
-
-      return dbus_response;
+    base::FilePath disk_path;
+    StorageLocation location;
+    if (!CheckVmExists(ctx.request.disk_path(), ctx.request.cryptohome_id(),
+                       &disk_path, &location)) {
+      ctx.send_response(DISK_STATUS_DOES_NOT_EXIST, "No such image");
+      return;
     }
 
-    if (registered &&
-        !pvm::dispatcher::UnregisterVm(vmplugin_service_proxy_, vm_id)) {
-      response.set_status(DISK_STATUS_FAILED);
-      response.set_failure_reason("failed to unregister Plugin VM");
-      writer.AppendProtoAsArrayOfBytes(response);
-
-      return dbus_response;
+    if (!EraseGuestSshKeys(ctx.request.cryptohome_id(),
+                           ctx.request.disk_path())) {
+      // Don't return a failure here, just log an error because this is only a
+      // side effect and not what the real request is about.
+      LOG(ERROR) << "Failed removing guest SSH keys for VM "
+                 << ctx.request.disk_path();
     }
 
-    base::FilePath iso_dir;
-    if (GetPluginIsoDirectory(vm_id.name(), vm_id.owner_id(),
-                              false /* create */, &iso_dir) &&
-        base::PathExists(iso_dir) &&
-        !base::DeleteFile(iso_dir, true /* recursive */)) {
-      LOG(ERROR) << "Unable to remove ISO directory for " << vm_id.name();
+    if (location == STORAGE_CRYPTOHOME_PLUGINVM) {
+      // Plugin VMs need to be unregistered before we can delete them.
+      VmId vm_id(ctx.request.cryptohome_id(), ctx.request.disk_path());
+      bool registered;
+      if (!pvm::dispatcher::IsVmRegistered(ctx.service->vmplugin_service_proxy_,
+                                           vm_id, &registered)) {
+        ctx.send_response(DISK_STATUS_FAILED,
+                          "failed to check Plugin VM registration status");
+        return;
+      }
 
-      response.set_status(DISK_STATUS_FAILED);
-      response.set_failure_reason("Unable to remove ISO directory");
-      writer.AppendProtoAsArrayOfBytes(response);
+      if (registered && !pvm::dispatcher::UnregisterVm(
+                            ctx.service->vmplugin_service_proxy_, vm_id)) {
+        ctx.send_response(DISK_STATUS_FAILED, "failed to unregister Plugin VM");
+        return;
+      }
 
-      return dbus_response;
+      base::FilePath iso_dir;
+      if (GetPluginIsoDirectory(vm_id.name(), vm_id.owner_id(),
+                                false /* create */, &iso_dir) &&
+          base::PathExists(iso_dir) &&
+          !base::DeleteFile(iso_dir, true /* recursive */)) {
+        LOG(ERROR) << "Unable to remove ISO directory for " << vm_id.name();
+
+        ctx.send_response(DISK_STATUS_FAILED, "Unable to remove ISO directory");
+        return;
+      }
     }
-  }
 
-  if (!base::DeleteFile(
-          disk_path, location == STORAGE_CRYPTOHOME_PLUGINVM /* recursive */)) {
-    response.set_status(DISK_STATUS_FAILED);
-    response.set_failure_reason("Disk removal failed");
-    writer.AppendProtoAsArrayOfBytes(response);
+    if (!base::DeleteFile(
+            disk_path,
+            location == STORAGE_CRYPTOHOME_PLUGINVM /* recursive */)) {
+      ctx.send_response(DISK_STATUS_FAILED, "Disk removal failed");
+      return;
+    }
 
-    return dbus_response;
-  }
-
-  response.set_status(DISK_STATUS_DESTROYED);
-  writer.AppendProtoAsArrayOfBytes(response);
-
-  return dbus_response;
+    ctx.send_response(DISK_STATUS_DESTROYED);
+    return;
+  }));
 }
 
 std::unique_ptr<dbus::Response> Service::ResizeDiskImage(
@@ -2972,12 +3089,13 @@ void Service::NotifyCiceroneOfVmStarted(const VmId& vm_id,
   request.set_vm_token(std::move(vm_token));
   request.set_pid(pid);
   writer.AppendProtoAsArrayOfBytes(request);
-  std::unique_ptr<dbus::Response> dbus_response =
-      cicerone_service_proxy_->CallMethodAndBlock(
-          &method_call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT);
-  if (!dbus_response) {
-    LOG(ERROR) << "Failed notifying cicerone of VM startup";
-  }
+  cicerone_service_proxy_->CallMethod(
+      &method_call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT,
+      base::BindOnce([](dbus::Response* dbus_response) {
+        if (!dbus_response) {
+          LOG(ERROR) << "Failed notifying cicerone of VM startup";
+        }
+      }));
 }
 
 void Service::SendVmStartedSignal(const VmId& vm_id,
@@ -3032,9 +3150,15 @@ void Service::NotifyVmStopped(const VmId& vm_id, int64_t cid) {
   request.set_owner_id(vm_id.owner_id());
   request.set_vm_name(vm_id.name());
   writer.AppendProtoAsArrayOfBytes(request);
-  std::unique_ptr<dbus::Response> dbus_response =
-      cicerone_service_proxy_->CallMethodAndBlock(
-          &method_call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT);
+  cicerone_service_proxy_->CallMethod(
+      &method_call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT,
+      base::BindOnce(&Service::NotifyVmStoppedCallback,
+                     weak_ptr_factory_.GetWeakPtr(), vm_id, cid));
+}
+
+void Service::NotifyVmStoppedCallback(VmId vm_id,
+                                      int64_t cid,
+                                      dbus::Response* dbus_response) {
   if (!dbus_response) {
     LOG(ERROR) << "Failed notifying cicerone of VM stopped";
   }

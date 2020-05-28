@@ -29,6 +29,8 @@
 #include <chromeos/constants/vm_tools.h>
 #include <vboot/crossystem.h>
 
+#include "vm_tools/concierge/grpc_future_util.h"
+#include "vm_tools/concierge/shared_data.h"
 #include "vm_tools/concierge/tap_device_builder.h"
 #include "vm_tools/concierge/vm_util.h"
 
@@ -41,9 +43,6 @@ constexpr char kCrosvmSocket[] = "arcvm.sock";
 
 // Path to the wayland socket.
 constexpr char kWaylandSocket[] = "/run/chrome/wayland-0";
-
-// How long to wait before timing out on child process exits.
-constexpr base::TimeDelta kChildExitTimeout = base::TimeDelta::FromSeconds(10);
 
 // The CPU cgroup where all the ARCVM's crosvm processes should belong to.
 constexpr char kArcvmCpuCgroup[] = "/sys/fs/cgroup/cpu/vms/arc";
@@ -137,11 +136,13 @@ ArcVm::ArcVm(int32_t vsock_cid,
              std::unique_ptr<patchpanel::Client> network_client,
              std::unique_ptr<SeneschalServerProxy> seneschal_server_proxy,
              base::FilePath runtime_dir,
-             ArcVmFeatures features)
+             ArcVmFeatures features,
+             std::weak_ptr<SigchldHandler> weak_async_sigchld_handler)
     : VmBaseImpl(std::move(network_client)),
       vsock_cid_(vsock_cid),
       seneschal_server_proxy_(std::move(seneschal_server_proxy)),
-      features_(features) {
+      features_(features),
+      weak_async_sigchld_handler_(std::move(weak_async_sigchld_handler)) {
   CHECK(base::DirectoryExists(runtime_dir));
 
   // Take ownership of the runtime directory.
@@ -149,10 +150,12 @@ ArcVm::ArcVm(int32_t vsock_cid,
 }
 
 ArcVm::~ArcVm() {
-  Shutdown();
+  if (!already_shut_down_) {
+    Shutdown().Get();
+  }
 }
 
-std::unique_ptr<ArcVm> ArcVm::Create(
+std::shared_ptr<ArcVm> ArcVm::Create(
     base::FilePath kernel,
     base::FilePath rootfs,
     base::FilePath fstab,
@@ -166,10 +169,11 @@ std::unique_ptr<ArcVm> ArcVm::Create(
     std::unique_ptr<SeneschalServerProxy> seneschal_server_proxy,
     base::FilePath runtime_dir,
     ArcVmFeatures features,
-    std::vector<std::string> params) {
-  auto vm = base::WrapUnique(new ArcVm(vsock_cid, std::move(network_client),
-                                       std::move(seneschal_server_proxy),
-                                       std::move(runtime_dir), features));
+    std::vector<std::string> params,
+    std::weak_ptr<SigchldHandler> weak_async_sigchld_handler) {
+  auto vm = std::shared_ptr<ArcVm>(new ArcVm(
+      vsock_cid, std::move(network_client), std::move(seneschal_server_proxy),
+      std::move(runtime_dir), features, std::move(weak_async_sigchld_handler)));
 
   if (!vm->Start(std::move(kernel), std::move(rootfs), std::move(fstab), cpus,
                  std::move(pstore_path), pstore_size, std::move(disks),
@@ -327,7 +331,9 @@ bool ArcVm::Start(base::FilePath kernel,
   return true;
 }
 
-bool ArcVm::Shutdown() {
+Future<bool> ArcVm::Shutdown() {
+  DCHECK(!already_shut_down_);
+  already_shut_down_ = true;
   // Notify arc-patchpanel that ARCVM is down.
   // This should run before the process existence check below since we still
   // want to release the network resources on crash.
@@ -342,50 +348,49 @@ bool ArcVm::Shutdown() {
   if (!CheckProcessExists(process_.pid())) {
     LOG(INFO) << "ARCVM process is already gone. Do nothing";
     process_.Release();
-    return true;
+    return ResolvedFuture(true);
   }
 
   LOG(INFO) << "Shutting down ARCVM";
 
+  // Release first, such that we don't have to call it in different paths later.
+  const uint32_t pid = process_.Release();
+
+  Future<bool> future =
+      WatchSigchld(weak_async_sigchld_handler_, pid, kChildExitTimeout);
+
   // Ask arc-powerctl running on the guest to power off the VM.
   // TODO(yusukes): We should call ShutdownArcVm() only after the guest side
   // service is fully started. b/143711798
-  if (ShutdownArcVm(vsock_cid_) &&
-      WaitForChild(process_.pid(), kChildExitTimeout)) {
-    LOG(INFO) << "ARCVM is shut down";
-    process_.Release();
-    return true;
+  if (!ShutdownArcVm(vsock_cid_)) {
+    // This sets the future to false. Otherwise, wait for the sigchld signal
+    CancelWatchSigchld(weak_async_sigchld_handler_, pid);
   }
 
-  LOG(WARNING) << "Failed to shut down ARCVM gracefully. Trying to turn it "
-               << "down via the crosvm socket.";
-  RunCrosvmCommand("stop", GetVmSocketPath());
+  future =
+      future
+          .Then(base::BindOnce(
+              [](std::shared_ptr<ArcVm> arcvm, uint32_t pid, bool exited) {
+                if (exited) {
+                  LOG(INFO) << "ARCVM is shut down";
+                  return Reject<Future<bool>>();
+                }
 
-  // We can't actually trust the exit codes that crosvm gives us so just see if
-  // it exited.
-  if (WaitForChild(process_.pid(), kChildExitTimeout)) {
-    process_.Release();
-    return true;
-  }
+                LOG(WARNING) << "Failed to shut down ARCVM gracefully. "
+                                "Trying to turn it "
+                             << "down via the crosvm socket.";
+                RunCrosvmCommand("stop", arcvm->GetVmSocketPath());
 
-  LOG(WARNING) << "Failed to stop VM " << vsock_cid_ << " via crosvm socket";
+                // We can't actually trust the exit codes that crosvm gives
+                // us so just see if it exited.
+                return Resolve(WatchSigchld(arcvm->weak_async_sigchld_handler_,
+                                            pid, kChildExitTimeout));
+              },
+              shared_from_this(), pid))
+          .Flatten();
 
-  // Kill the process with SIGTERM.
-  if (process_.Kill(SIGTERM, kChildExitTimeout.InSeconds())) {
-    process_.Release();
-    return true;
-  }
-
-  LOG(WARNING) << "Failed to kill VM " << vsock_cid_ << " with SIGTERM";
-
-  // Kill it with fire.
-  if (process_.Kill(SIGKILL, kChildExitTimeout.InSeconds())) {
-    process_.Release();
-    return true;
-  }
-
-  LOG(ERROR) << "Failed to kill VM " << vsock_cid_ << " with SIGKILL";
-  return false;
+  return KillCrosvmProcess(weak_async_sigchld_handler_, pid, cid(),
+                           std::move(future));
 }
 
 bool ArcVm::AttachUsbDevice(uint8_t bus,

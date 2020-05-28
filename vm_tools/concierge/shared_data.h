@@ -5,6 +5,7 @@
 #ifndef VM_TOOLS_CONCIERGE_SHARED_DATA_H_
 #define VM_TOOLS_CONCIERGE_SHARED_DATA_H_
 
+#include <memory>
 #include <string>
 #include <tuple>
 
@@ -34,6 +35,9 @@ constexpr char kRuntimeDir[] = "/run/vm";
 // Only allow hex digits in the cryptohome id.
 constexpr char kValidCryptoHomeCharacters[] = "abcdefABCDEF0123456789";
 
+// How long to wait before timing out on child process exits.
+constexpr base::TimeDelta kChildExitTimeout = base::TimeDelta::FromSeconds(10);
+
 // Gets the path to the file given the name, user id, location, and extension.
 base::Optional<base::FilePath> GetFilePathFromName(
     const std::string& cryptohome_id,
@@ -55,8 +59,7 @@ bool GetPluginIsoDirectory(const std::string& vm_id,
 
 template <class StartXXRequest>
 base::Optional<std::tuple<StartXXRequest, StartVmResponse>>
-Service::StartVmHelper(dbus::MethodCall* method_call,
-                       dbus::MessageReader* reader,
+Service::StartVmHelper(dbus::MessageReader* reader,
                        dbus::MessageWriter* writer,
                        bool allow_zero_cpus) {
   DCHECK(sequence_checker_.CalledOnValidSequence());
@@ -124,6 +127,21 @@ Service::StartVmHelper(dbus::MethodCall* method_call,
 
   return std::make_tuple(request, response);
 }
+
+// Common routine for both ArcVm and TerminaVm. The returned future is
+// set to true on success, and set to false on failure.
+Future<bool> KillCrosvmProcess(std::weak_ptr<SigchldHandler> weak_handler,
+                               uint32_t pid,
+                               uint32_t cid,
+                               Future<bool> future);
+
+// Wrapper to SigchldHandler::WatchSigchld
+Future<bool> WatchSigchld(std::weak_ptr<SigchldHandler> weak_handler,
+                          pid_t pid,
+                          base::TimeDelta timeout);
+
+// Wrapper to SigchldHandler::CancelWatchSigchld
+bool CancelWatchSigchld(std::weak_ptr<SigchldHandler> weak_handler, pid_t pid);
 
 }  // namespace concierge
 }  // namespace vm_tools

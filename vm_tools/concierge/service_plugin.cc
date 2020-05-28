@@ -104,7 +104,7 @@ std::unique_ptr<dbus::Response> Service::StartPluginVm(
   StartPluginVmRequest request;
   StartVmResponse response;
   auto helper_result = StartVmHelper<StartPluginVmRequest>(
-      method_call, &reader, &writer, true /* allow_zero_cpus */);
+      &reader, &writer, true /* allow_zero_cpus */);
   if (!helper_result) {
     return dbus_response;
   }
@@ -228,7 +228,7 @@ std::unique_ptr<dbus::Response> Service::StartPluginVm(
   VmId vm_id(request.owner_id(), request.name());
   SendVmStartingUpSignal(vm_id, *vm_info);
 
-  std::unique_ptr<PluginVm> vm = PluginVm::Create(
+  std::shared_ptr<PluginVm> vm = PluginVm::Create(
       vm_id, request.cpus(), std::move(params), std::move(stateful_dir),
       std::move(iso_dir), root_dir.Take(), runtime_dir.Take(),
       std::move(network_client), request.subnet_index(),

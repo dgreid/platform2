@@ -17,12 +17,16 @@
 #include <chromeos/patchpanel/mac_address_generator.h>
 #include <vm_concierge/proto_bindings/concierge_service.pb.h>
 
+#include "vm_tools/concierge/grpc_future_util.h"
 #include "vm_tools/concierge/seneschal_server_proxy.h"
+#include "vm_tools/concierge/sigchld_handler.h"
 #include "vm_tools/concierge/vm_base_impl.h"
 #include "vm_tools/concierge/vsock_cid_pool.h"
 
 namespace vm_tools {
 namespace concierge {
+
+struct SigchldHelper;
 
 struct ArcVmFeatures {
   // Whether the guest kernel root file system is writable.
@@ -33,7 +37,8 @@ struct ArcVmFeatures {
 };
 
 // Represents a single instance of a running termina VM.
-class ArcVm final : public VmBaseImpl {
+class ArcVm final : public VmBaseImpl,
+                    public std::enable_shared_from_this<ArcVm> {
  public:
   // Describes a disk image to be mounted inside the VM.
   struct Disk {
@@ -46,7 +51,7 @@ class ArcVm final : public VmBaseImpl {
 
   // Starts a new virtual machine.  Returns nullptr if the virtual machine
   // failed to start for any reason.
-  static std::unique_ptr<ArcVm> Create(
+  static std::shared_ptr<ArcVm> Create(
       base::FilePath kernel,
       base::FilePath rootfs,
       base::FilePath fstab,
@@ -60,11 +65,9 @@ class ArcVm final : public VmBaseImpl {
       std::unique_ptr<SeneschalServerProxy> seneschal_server_proxy,
       base::FilePath runtime_dir,
       ArcVmFeatures features,
-      std::vector<std::string> params);
+      std::vector<std::string> params,
+      std::weak_ptr<SigchldHandler> weak_async_sigchld_handler);
   ~ArcVm() override;
-
-  // The pid of the child process.
-  pid_t pid() { return process_.pid(); }
 
   // The VM's cid.
   uint32_t cid() const { return vsock_cid_; }
@@ -84,7 +87,7 @@ class ArcVm final : public VmBaseImpl {
   uint32_t IPv4Address() const;
 
   // VmInterface overrides.
-  bool Shutdown() override;
+  Future<bool> Shutdown() override;
   VmInterface::Info GetInfo() override;
   // Currently only implemented for termina, returns "Not implemented".
   bool GetVmEnterpriseReportingInfo(
@@ -120,7 +123,8 @@ class ArcVm final : public VmBaseImpl {
         std::unique_ptr<patchpanel::Client> network_client,
         std::unique_ptr<SeneschalServerProxy> seneschal_server_proxy,
         base::FilePath runtime_dir,
-        ArcVmFeatures features);
+        ArcVmFeatures features,
+        std::weak_ptr<SigchldHandler> weak_async_sigchld_handler);
 
   void HandleSuspendImminent() override;
   void HandleSuspendDone() override;
@@ -149,6 +153,12 @@ class ArcVm final : public VmBaseImpl {
 
   // Flags passed to vmc start.
   ArcVmFeatures features_;
+
+  // Register to the main thread's signal handler for async sigchld waiting
+  std::weak_ptr<SigchldHandler> weak_async_sigchld_handler_;
+
+  // Prevent calling Shutdown twice (manual shutdown and destructor)
+  bool already_shut_down_ = false;
 
   DISALLOW_COPY_AND_ASSIGN(ArcVm);
 };
