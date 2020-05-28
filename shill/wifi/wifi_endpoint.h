@@ -222,13 +222,12 @@ class WiFiEndpoint : public base::RefCounted<WiFiEndpoint> {
   // Private setter used in unit tests.
   void set_security_mode(const std::string& mode) { security_mode_ = mode; }
 
-  // TODO(quiche): make const?
-  std::vector<uint8_t> ssid_;
-  std::vector<uint8_t> bssid_;
+  const std::vector<uint8_t> ssid_;
+  const std::vector<uint8_t> bssid_;
   std::string ssid_string_;
-  std::string ssid_hex_;
-  std::string bssid_string_;
-  std::string bssid_hex_;
+  const std::string ssid_hex_;
+  const std::string bssid_string_;
+  const std::string bssid_hex_;
   std::string country_code_;
   int16_t signal_strength_;
   base::TimeTicks last_seen_;

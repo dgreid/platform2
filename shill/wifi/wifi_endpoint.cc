@@ -41,15 +41,18 @@ WiFiEndpoint::WiFiEndpoint(ControlInterface* control_interface,
                            const RpcIdentifier& rpc_id,
                            const KeyValueStore& properties,
                            Metrics* metrics)
-    : frequency_(0),
+    : ssid_(properties.Get<vector<uint8_t>>(WPASupplicant::kBSSPropertySSID)),
+      bssid_(properties.Get<vector<uint8_t>>(WPASupplicant::kBSSPropertyBSSID)),
+      ssid_hex_(base::HexEncode(ssid_.data(), ssid_.size())),
+      bssid_string_(Device::MakeStringFromHardwareAddress(bssid_)),
+      bssid_hex_(base::HexEncode(bssid_.data(), bssid_.size())),
+      frequency_(0),
       physical_mode_(Metrics::kWiFiNetworkPhyModeUndef),
       ieee80211w_required_(false),
       metrics_(metrics),
       control_interface_(control_interface),
       device_(device),
       rpc_id_(rpc_id) {
-  ssid_ = properties.Get<vector<uint8_t>>(WPASupplicant::kBSSPropertySSID);
-  bssid_ = properties.Get<vector<uint8_t>>(WPASupplicant::kBSSPropertyBSSID);
   signal_strength_ = properties.Get<int16_t>(WPASupplicant::kBSSPropertySignal);
   if (properties.Contains<uint32_t>(WPASupplicant::kBSSPropertyAge)) {
     last_seen_ = base::TimeTicks::Now() -
@@ -80,9 +83,6 @@ WiFiEndpoint::WiFiEndpoint(ControlInterface* control_interface,
 
   ssid_string_ = string(ssid_.begin(), ssid_.end());
   WiFi::SanitizeSSID(&ssid_string_);
-  ssid_hex_ = base::HexEncode(ssid_.data(), ssid_.size());
-  bssid_string_ = Device::MakeStringFromHardwareAddress(bssid_);
-  bssid_hex_ = base::HexEncode(bssid_.data(), bssid_.size());
 
   CheckForTetheringSignature();
 }
