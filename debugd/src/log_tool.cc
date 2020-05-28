@@ -138,7 +138,7 @@ const std::vector<Log> kCommandLogs {
   {kFile, "cheets_log", "/var/log/arc.log"},
   {kFile, "clobber.log", "/var/log/clobber.log"},
   {kFile, "clobber-state.log", "/var/log/clobber-state.log"},
-  {kCommand, "chromeos-pgmem", "/usr/bin/chromeos-pgmem"},
+  {kCommand, "chromeos-pgmem", "/usr/bin/chromeos-pgmem", kRoot, kRoot},
   {kFile, "chrome_system_log", "/var/log/chrome/chrome"},
   {kFile, "chrome_system_log.PREVIOUS", "/var/log/chrome/chrome.PREVIOUS"},
   // There might be more than one record, so grab them all.
