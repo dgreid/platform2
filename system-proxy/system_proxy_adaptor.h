@@ -25,6 +25,7 @@ class DBusObject;
 
 namespace system_proxy {
 
+class KerberosClient;
 class SandboxedWorker;
 
 // Implementation of the SystemProxy D-Bus interface.
@@ -63,6 +64,7 @@ class SystemProxyAdaptor : public org::chromium::SystemProxyAdaptor,
   friend class SystemProxyAdaptorTest;
   FRIEND_TEST(SystemProxyAdaptorTest, SetAuthenticationDetails);
   FRIEND_TEST(SystemProxyAdaptorTest, SetSystemTrafficCredentials);
+  FRIEND_TEST(SystemProxyAdaptorTest, KerberosEnabled);
   FRIEND_TEST(SystemProxyAdaptorTest, ShutDown);
   FRIEND_TEST(SystemProxyAdaptorTest, ConnectNamespace);
   FRIEND_TEST(SystemProxyAdaptorTest, ProxyResolutionFilter);
@@ -70,6 +72,10 @@ class SystemProxyAdaptor : public org::chromium::SystemProxyAdaptor,
   void SetCredentialsTask(SandboxedWorker* worker,
                           const std::string& username,
                           const std::string& password);
+
+  void SetKerberosEnabledTask(SandboxedWorker* worker,
+                              bool kerberos_enabled,
+                              const std::string& principal_name);
 
   void ShutDownTask();
 
@@ -92,6 +98,8 @@ class SystemProxyAdaptor : public org::chromium::SystemProxyAdaptor,
   // Worker that authenticates and forwards to a remote web proxy traffic
   // coming form ARC++ apps.
   std::unique_ptr<SandboxedWorker> arc_worker_;
+  std::unique_ptr<KerberosClient> kerberos_client_;
+
   std::unique_ptr<brillo::dbus_utils::DBusObject> dbus_object_;
   base::WeakPtrFactory<SystemProxyAdaptor> weak_ptr_factory_;
 };

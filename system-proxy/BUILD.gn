@@ -67,6 +67,7 @@ pkg_config("target_defaults") {
 static_library("libsystemproxy") {
   configs += [ ":target_defaults" ]
   sources = [
+    "kerberos_client.cc",
     "protobuf_util.cc",
     "sandboxed_worker.cc",
     "system_proxy_adaptor.cc",
@@ -122,6 +123,7 @@ if (use.test) {
     ]
     all_dependent_pkg_deps = [ "libcurl" ]
     sources = [
+      "kerberos_client_test.cc",
       "proxy_connect_job_test.cc",
       "server_proxy_test.cc",
       "system_proxy_adaptor_test.cc",

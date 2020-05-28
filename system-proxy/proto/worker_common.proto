@@ -41,11 +41,20 @@ message WorkerRequest {
   }
 }
 
+message KerberosConfig {
+  optional bool enabled = 1;
+  // Path to the Kerberos credential cache.
+  optional bytes krb5cc_path = 2;
+  // Path to the Kerberos configuration data.
+  optional bytes krb5conf_path = 3;
+}
+
 message WorkerConfigs {
   oneof params {
     Credentials credentials = 1;
     // The local proxy listening address.
     SocketAddress listening_address = 2;
     ProxyResolutionReply proxy_resolution_reply = 3;
+    KerberosConfig kerberos_config = 4;
   }
 }

@@ -33,6 +33,12 @@ class SandboxedWorker {
   // Sends the username and password to the worker via communication pipes.
   void SetUsernameAndPassword(const std::string& username,
                               const std::string& password);
+  // Sends the availability of kerberos auth to the worker via communication
+  // pipes.
+  bool SetKerberosEnabled(bool enabled,
+                          const std::string& krb5_conf_path,
+                          const std::string& krb5_ccache_path);
+
   // Sends the listening address and port to the worker via communication
   // pipes and sets |local_proxy_host_and_port_|.
   bool SetListeningAddress(uint32_t addr, int port);
@@ -55,6 +61,7 @@ class SandboxedWorker {
   friend class SystemProxyAdaptorTest;
   FRIEND_TEST(SystemProxyAdaptorTest, SetSystemTrafficCredentials);
   FRIEND_TEST(SystemProxyAdaptorTest, SetAuthenticationDetails);
+  FRIEND_TEST(SystemProxyAdaptorTest, KerberosEnabled);
   FRIEND_TEST(SystemProxyAdaptorTest, ProxyResolutionFilter);
 
   void OnMessageReceived();

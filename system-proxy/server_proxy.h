@@ -82,6 +82,9 @@ class ServerProxy {
   void OnProxyResolved(const std::string& target_url,
                        const std::list<std::string>& proxy_servers);
 
+  // Sets the environment variables for kerberos authentication.
+  void SetKerberosEnv(bool kerberos_enabled);
+
   // The proxy listening address in network-byte order.
   uint32_t listening_addr_ = 0;
   int listening_port_;
@@ -89,7 +92,7 @@ class ServerProxy {
   // The user name and password to use for proxy authentication in the format
   // compatible with libcurl's CURLOPT_USERPWD: both user name and password URL
   // encoded and separated by colon.
-  std::string credentials_;
+  std::string credentials_ = ":";
 
   std::unique_ptr<patchpanel::Socket> listening_fd_;
 

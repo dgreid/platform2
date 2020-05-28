@@ -40,7 +40,7 @@ munmap: 1
 set_tid_address: 1
 set_robust_list: 1
 prlimit64: 1
-ioctl: arg1 == TCGETS || arg1 == SIOCGIFFLAGS || arg1 == SIOCSIFFLAGS || arg1 == FIONREAD || arg1 == TIOCGWINSZ
+ioctl: arg1 == TCGETS || arg1 == SIOCGIFFLAGS || arg1 == SIOCSIFFLAGS || arg1 == FIONREAD || arg1 == TIOCGWINSZ || arg1 == FIONBIO
 lseek: 1
 epoll_create1: 1
 clock_getres: 1

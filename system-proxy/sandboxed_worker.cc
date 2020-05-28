@@ -123,6 +123,23 @@ bool SandboxedWorker::SetListeningAddress(uint32_t addr, int port) {
   return true;
 }
 
+bool SandboxedWorker::SetKerberosEnabled(bool enabled,
+                                         const std::string& krb5_conf_path,
+                                         const std::string& krb5_ccache_path) {
+  worker::KerberosConfig kerberos_config;
+  kerberos_config.set_enabled(enabled);
+  kerberos_config.set_krb5cc_path(krb5_ccache_path);
+  kerberos_config.set_krb5conf_path(krb5_conf_path);
+  worker::WorkerConfigs configs;
+  *configs.mutable_kerberos_config() = kerberos_config;
+
+  if (!WriteProtobuf(stdin_pipe_.get(), configs)) {
+    LOG(ERROR) << "Failed to set kerberos enabled for worker " << pid_;
+    return false;
+  }
+  return true;
+}
+
 bool SandboxedWorker::Stop() {
   if (is_being_terminated_)
     return true;

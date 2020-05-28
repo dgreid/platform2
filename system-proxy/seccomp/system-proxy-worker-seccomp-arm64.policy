@@ -20,7 +20,7 @@ set_tid_address: 1
 set_robust_list: 1
 rt_sigprocmask: 1
 getrlimit: 1
-ioctl: arg1 == TCGETS || arg1 == SIOCGIFFLAGS || arg1 == SIOCSIFFLAGS || arg1 == FIONREAD || arg1 == TIOCGWINSZ
+ioctl: arg1 == TCGETS || arg1 == SIOCGIFFLAGS || arg1 == SIOCSIFFLAGS || arg1 == FIONREAD || arg1 == TIOCGWINSZ || arg1 == FIONBIO
 _llseek: 1
 getpid: 1
 socket: arg0 == AF_UNIX || arg0 == AF_INET || arg0 == AF_INET6 || arg0 == AF_NETLINK

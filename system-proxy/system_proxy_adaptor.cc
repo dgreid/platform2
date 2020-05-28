@@ -14,6 +14,7 @@
 #include <chromeos/patchpanel/client.h>
 #include <dbus/object_proxy.h>
 
+#include "system-proxy/kerberos_client.h"
 #include "system_proxy/proto_bindings/system_proxy_service.pb.h"
 #include "system-proxy/sandboxed_worker.h"
 
@@ -53,7 +54,9 @@ SystemProxyAdaptor::SystemProxyAdaptor(
     std::unique_ptr<brillo::dbus_utils::DBusObject> dbus_object)
     : org::chromium::SystemProxyAdaptor(this),
       dbus_object_(std::move(dbus_object)),
-      weak_ptr_factory_(this) {}
+      weak_ptr_factory_(this) {
+  kerberos_client_ = std::make_unique<KerberosClient>(dbus_object_->GetBus());
+}
 
 SystemProxyAdaptor::~SystemProxyAdaptor() = default;
 
@@ -105,6 +108,18 @@ std::vector<uint8_t> SystemProxyAdaptor::SetAuthenticationDetails(
                               system_services_worker_.get(),
                               request.credentials().username(),
                               request.credentials().password()));
+  }
+
+  if (request.has_kerberos_enabled()) {
+    std::string principal_name = request.has_active_principal_name()
+                                     ? request.active_principal_name()
+                                     : std::string();
+
+    brillo::MessageLoop::current()->PostTask(
+        FROM_HERE, base::Bind(&SystemProxyAdaptor::SetKerberosEnabledTask,
+                              weak_ptr_factory_.GetWeakPtr(),
+                              system_services_worker_.get(),
+                              request.kerberos_enabled(), principal_name));
   }
 
   return SerializeProto(response);
@@ -212,6 +227,21 @@ void SystemProxyAdaptor::SetCredentialsTask(SandboxedWorker* worker,
                                             const std::string& password) {
   DCHECK(worker);
   worker->SetUsernameAndPassword(username, password);
+}
+
+void SystemProxyAdaptor::SetKerberosEnabledTask(
+    SandboxedWorker* worker,
+    bool kerberos_enabled,
+    const std::string& principal_name) {
+  DCHECK(worker);
+
+  worker->SetKerberosEnabled(kerberos_enabled,
+                             kerberos_client_->krb5_conf_path(),
+                             kerberos_client_->krb5_ccache_path());
+  kerberos_client_->SetKerberosEnabled(kerberos_enabled);
+  if (kerberos_enabled) {
+    kerberos_client_->SetPrincipalName(principal_name);
+  }
 }
 
 void SystemProxyAdaptor::ShutDownTask() {

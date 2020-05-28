@@ -26,8 +26,10 @@
 #include <dbus/mock_exported_object.h>
 #include <dbus/mock_object_proxy.h>
 #include <chromeos/dbus/service_constants.h>
+#include <dbus/kerberos/dbus-constants.h>
 
 #include "bindings/worker_common.pb.h"
+#include "system-proxy/kerberos_client.h"
 #include "system_proxy/proto_bindings/system_proxy_service.pb.h"
 #include "system-proxy/protobuf_util.h"
 #include "system-proxy/sandboxed_worker.h"
@@ -39,6 +41,7 @@ namespace system_proxy {
 namespace {
 const char kUser[] = "proxy_user";
 const char kPassword[] = "proxy_password";
+const char kPrincipalName[] = "user@TEST";
 const char kLocalProxyHostPort[] = "local.proxy.url:3128";
 const char kObjectPath[] = "/object/path";
 
@@ -87,6 +90,7 @@ class FakeSystemProxyAdaptor : public SystemProxyAdaptor {
   }
 
  private:
+  FRIEND_TEST(SystemProxyAdaptorTest, KerberosEnabled);
   FRIEND_TEST(SystemProxyAdaptorTest, ConnectNamespace);
   FRIEND_TEST(SystemProxyAdaptorTest, ProxyResolutionFilter);
 
@@ -107,6 +111,12 @@ class SystemProxyAdaptorTest : public ::testing::Test {
 
     EXPECT_CALL(*mock_exported_object_, ExportMethod(_, _, _, _))
         .Times(testing::AnyNumber());
+
+    mock_kerberos_proxy_ = base::MakeRefCounted<dbus::MockObjectProxy>(
+        bus_.get(), kerberos::kKerberosServiceName,
+        dbus::ObjectPath(kerberos::kKerberosServicePath));
+    EXPECT_CALL(*bus_, GetObjectProxy(kerberos::kKerberosServiceName, _))
+        .WillRepeatedly(Return(mock_kerberos_proxy_.get()));
 
     adaptor_.reset(new FakeSystemProxyAdaptor(
         std::make_unique<brillo::dbus_utils::DBusObject>(nullptr, bus_,
@@ -135,6 +145,8 @@ class SystemProxyAdaptorTest : public ::testing::Test {
   std::unique_ptr<FakeSystemProxyAdaptor> adaptor_;
 
   scoped_refptr<dbus::MockObjectProxy> mock_patchpanel_proxy_;
+  scoped_refptr<dbus::MockObjectProxy> mock_kerberos_proxy_;
+
   base::MessageLoopForIO loop_;
   brillo::BaseMessageLoop brillo_loop_{&loop_};
 };
@@ -209,6 +221,42 @@ TEST_F(SystemProxyAdaptorTest, SetAuthenticationDetails) {
   EXPECT_TRUE(config.has_credentials());
   EXPECT_EQ(config.credentials().username(), kUser);
   EXPECT_EQ(config.credentials().password(), kPassword);
+}
+
+TEST_F(SystemProxyAdaptorTest, KerberosEnabled) {
+  adaptor_->system_services_worker_ = adaptor_->CreateWorker();
+  ASSERT_TRUE(adaptor_->system_services_worker_.get());
+
+  int fds[2];
+  ASSERT_TRUE(base::CreateLocalNonBlockingPipe(fds));
+  base::ScopedFD read_scoped_fd(fds[0]);
+  // Reset the worker stdin pipe to read the input from the other endpoint.
+  adaptor_->system_services_worker_->stdin_pipe_.reset(fds[1]);
+
+  SetAuthenticationDetailsRequest request;
+  request.set_kerberos_enabled(true);
+  request.set_active_principal_name(kPrincipalName);
+  request.set_traffic_type(TrafficOrigin::SYSTEM);
+
+  std::vector<uint8_t> proto_blob(request.ByteSizeLong());
+  request.SerializeToArray(proto_blob.data(), proto_blob.size());
+
+  // First create a worker object.
+  adaptor_->SetAuthenticationDetails(proto_blob);
+  brillo_loop_.RunOnce(false);
+
+  // Expect that the availability of kerberos auth has been sent to the worker.
+  worker::WorkerConfigs config;
+  ASSERT_TRUE(ReadProtobuf(read_scoped_fd.get(), &config));
+  EXPECT_TRUE(config.has_kerberos_config());
+  EXPECT_TRUE(config.kerberos_config().enabled());
+  EXPECT_EQ(config.kerberos_config().krb5cc_path(), "/tmp/ccache");
+  EXPECT_EQ(config.kerberos_config().krb5conf_path(), "/tmp/krb5.conf");
+
+  // Expect that the availability of kerberos auth has been sent to the kerberos
+  // client.
+  EXPECT_TRUE(adaptor_->kerberos_client_->kerberos_enabled_);
+  EXPECT_EQ(adaptor_->kerberos_client_->principal_name_, kPrincipalName);
 }
 
 TEST_F(SystemProxyAdaptorTest, ShutDown) {

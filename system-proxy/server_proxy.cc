@@ -31,6 +31,15 @@ namespace system_proxy {
 namespace {
 
 constexpr int kMaxConn = 100;
+// Name of the environment variable that points to the location of the kerberos
+// credentials (ticket) cache.
+constexpr char kKrb5CCEnvKey[] = "KRB5CCNAME";
+// Name of the environment variable that points to the kerberos configuration
+// file which contains information regarding the locations of KDCs and admin
+// servers for the Kerberos realms of interest, defaults for the current realm
+// and for Kerberos applications, and mappings of hostnames onto Kerberos
+// realms.
+constexpr char kKrb5ConfEnvKey[] = "KRB5_CONFIG";
 
 // Returns the URL encoded value of |text|. It also verifies if the string was
 // already encoded and, if true it returns it unmodified.
@@ -113,6 +122,21 @@ void ServerProxy::HandleStdinReadable() {
       proxies.push_back(proxy);
 
     OnProxyResolved(reply.target_url(), proxies);
+  }
+
+  if (config.has_kerberos_config()) {
+    if (config.kerberos_config().enabled()) {
+      // Set the environment variables that allow libcurl to use the existing
+      // kerberos ticket for proxy authentication. The files to which the env
+      // variables point to are maintained by the parent process.
+      setenv(kKrb5ConfEnvKey, config.kerberos_config().krb5conf_path().c_str(),
+             /* overwrite = */ 1);
+      setenv(kKrb5CCEnvKey, config.kerberos_config().krb5cc_path().c_str(),
+             /* overwrite = */ 1);
+    } else {
+      unsetenv(kKrb5ConfEnvKey);
+      unsetenv(kKrb5CCEnvKey);
+    }
   }
 }
 
