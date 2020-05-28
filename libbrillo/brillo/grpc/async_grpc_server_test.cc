@@ -14,10 +14,10 @@
 #include <base/threading/thread_task_runner_handle.h>
 #include <gtest/gtest.h>
 
-#include "diagnostics/grpc_async_adapter/async_grpc_server.h"
+#include "brillo/grpc/async_grpc_server.h"
 #include "test_rpcs.grpc.pb.h"  // NOLINT(build/include)
 
-namespace diagnostics {
+namespace brillo {
 
 namespace {
 
@@ -108,4 +108,4 @@ TEST_F(AsyncGrpcServerTest, ErrorUnavailablePathSkippingShutdown) {
   DestroyServer();
 }
 
-}  // namespace diagnostics
+}  // namespace brillo

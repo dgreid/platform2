@@ -13,8 +13,8 @@
 #include <base/macros.h>
 #include <base/optional.h>
 
-#include "diagnostics/grpc_async_adapter/async_grpc_client.h"
-#include "diagnostics/grpc_async_adapter/async_grpc_server.h"
+#include <brillo/grpc/async_grpc_client.h>
+#include <brillo/grpc/async_grpc_server.h>
 
 #include "wilco_dtc.grpc.pb.h"           // NOLINT(build/include)
 #include "wilco_dtc_supportd.grpc.pb.h"  // NOLINT(build/include)
@@ -146,9 +146,9 @@ class FakeWilcoDtc final {
 
  private:
   using AsyncGrpcWilcoDtcServer =
-      AsyncGrpcServer<grpc_api::WilcoDtc::AsyncService>;
+      brillo::AsyncGrpcServer<grpc_api::WilcoDtc::AsyncService>;
   using AsyncGrpcWilcoDtcSupportdClient =
-      AsyncGrpcClient<grpc_api::WilcoDtcSupportd>;
+      brillo::AsyncGrpcClient<grpc_api::WilcoDtcSupportd>;
 
   // Receives gRPC request and saves json message from request in
   // |handle_message_from_ui_actual_json_message_|.

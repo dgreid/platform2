@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef DIAGNOSTICS_GRPC_ASYNC_ADAPTER_RPC_STATE_H_
-#define DIAGNOSTICS_GRPC_ASYNC_ADAPTER_RPC_STATE_H_
+#ifndef LIBBRILLO_BRILLO_GRPC_RPC_STATE_H_
+#define LIBBRILLO_BRILLO_GRPC_RPC_STATE_H_
 
 #include <memory>
 #include <utility>
@@ -12,6 +12,7 @@
 #include <base/callback.h>
 #include <base/macros.h>
 #include <base/memory/weak_ptr.h>
+#include <brillo/brillo_export.h>
 #include <grpcpp/grpcpp.h>
 #include <grpcpp/support/async_unary_call.h>
 
@@ -19,7 +20,7 @@ namespace base {
 class SequencedTaskRunner;
 }
 
-namespace diagnostics {
+namespace brillo {
 namespace internal {
 
 // Base class which holds the state of an expected or incoming RPC. Provides an
@@ -39,7 +40,9 @@ namespace internal {
 //     a reply.
 // (*) Destroyed when gRPC is done sending the reply for the incoming rpc, or
 //     when the AsyncGrpcServer is shutting down.
-class RpcStateBase {
+//
+// This class has to be exported as RpcState is a templated class
+class BRILLO_EXPORT RpcStateBase {
  public:
   RpcStateBase();
   virtual ~RpcStateBase();
@@ -169,6 +172,6 @@ class RpcState final : public RpcStateBase {
 };
 
 }  // namespace internal
-}  // namespace diagnostics
+}  // namespace brillo
 
-#endif  // DIAGNOSTICS_GRPC_ASYNC_ADAPTER_RPC_STATE_H_
+#endif  // LIBBRILLO_BRILLO_GRPC_RPC_STATE_H_

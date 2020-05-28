@@ -10,6 +10,7 @@
 #include <base/files/scoped_temp_dir.h>
 #include <base/strings/stringprintf.h>
 #include <base/threading/thread_task_runner_handle.h>
+#include <brillo/grpc/async_grpc_client.h>
 #include <gmock/gmock.h>
 #include <google/protobuf/util/message_differencer.h>
 #include <gtest/gtest.h>
@@ -25,7 +26,6 @@
 #include "diagnostics/dpsl/public/dpsl_rpc_server.h"
 #include "diagnostics/dpsl/public/dpsl_thread_context.h"
 #include "diagnostics/dpsl/test_utils/common.h"
-#include "diagnostics/grpc_async_adapter/async_grpc_client.h"
 
 #include "wilco_dtc.grpc.pb.h"           // NOLINT(build/include)
 #include "wilco_dtc_supportd.grpc.pb.h"  // NOLINT(build/include)
@@ -243,7 +243,7 @@ class DpslRpcServerImplUnixSocketTest : public DpslRpcServerImplTest {
     ASSERT_TRUE(dpsl_rpc_server_->Init());
 
     wilco_dtc_grpc_client_ =
-        std::make_unique<AsyncGrpcClient<grpc_api::WilcoDtc>>(
+        std::make_unique<brillo::AsyncGrpcClient<grpc_api::WilcoDtc>>(
             base::ThreadTaskRunnerHandle::Get(), grpc_server_uri_string());
   }
 
@@ -289,7 +289,8 @@ class DpslRpcServerImplUnixSocketTest : public DpslRpcServerImplTest {
  protected:
   base::ScopedTempDir temp_dir_;
 
-  std::unique_ptr<AsyncGrpcClient<grpc_api::WilcoDtc>> wilco_dtc_grpc_client_;
+  std::unique_ptr<brillo::AsyncGrpcClient<grpc_api::WilcoDtc>>
+      wilco_dtc_grpc_client_;
   std::unique_ptr<DpslRpcServerImpl> dpsl_rpc_server_;
 
  private:

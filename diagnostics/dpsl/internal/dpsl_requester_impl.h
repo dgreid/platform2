@@ -15,9 +15,9 @@
 #include <base/memory/weak_ptr.h>
 #include <base/sequence_checker_impl.h>
 #include <base/single_thread_task_runner.h>
+#include <brillo/grpc/async_grpc_client.h>
 
 #include "diagnostics/dpsl/public/dpsl_requester.h"
-#include "diagnostics/grpc_async_adapter/async_grpc_client.h"
 
 #include "wilco_dtc_supportd.grpc.pb.h"  // NOLINT(build/include)
 
@@ -74,7 +74,7 @@ class DpslRequesterImpl final : public DpslRequester {
 
  private:
   using AsyncGrpcWilcoDtcSupportdClient =
-      AsyncGrpcClient<grpc_api::WilcoDtcSupportd>;
+      brillo::AsyncGrpcClient<grpc_api::WilcoDtcSupportd>;
 
   // Posts a task to the main thread that runs CallGrpcClientMethod() with the
   // specified arguments.

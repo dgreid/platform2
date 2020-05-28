@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef DIAGNOSTICS_GRPC_ASYNC_ADAPTER_GRPC_COMPLETION_QUEUE_DISPATCHER_H_
-#define DIAGNOSTICS_GRPC_ASYNC_ADAPTER_GRPC_COMPLETION_QUEUE_DISPATCHER_H_
+#ifndef LIBBRILLO_BRILLO_GRPC_GRPC_COMPLETION_QUEUE_DISPATCHER_H_
+#define LIBBRILLO_BRILLO_GRPC_GRPC_COMPLETION_QUEUE_DISPATCHER_H_
 
 #include <map>
 #include <memory>
@@ -13,13 +13,14 @@
 #include <base/memory/ref_counted.h>
 #include <base/sequence_checker_impl.h>
 #include <base/threading/simple_thread.h>
+#include <brillo/brillo_export.h>
 #include <grpcpp/grpcpp.h>
 
 namespace base {
 class SequencedTaskRunner;
 }
 
-namespace diagnostics {
+namespace brillo {
 namespace internal {
 class MonitoringThreadDelegate;
 }
@@ -33,7 +34,7 @@ class MonitoringThreadDelegate;
 // to its constructor.
 // This class assumes that every tag that is received from the |CompletionQueue|
 // is expected, i.e. that |RegisterTag| has been called for every tag.
-class GrpcCompletionQueueDispatcher {
+class BRILLO_EXPORT GrpcCompletionQueueDispatcher {
  public:
   // Callbacks of this type will be called on the task runner passed
   // to the constructor when an expected event is available on the monitored
@@ -116,6 +117,6 @@ class GrpcCompletionQueueDispatcher {
   DISALLOW_COPY_AND_ASSIGN(GrpcCompletionQueueDispatcher);
 };
 
-}  // namespace diagnostics
+}  // namespace brillo
 
-#endif  // DIAGNOSTICS_GRPC_ASYNC_ADAPTER_GRPC_COMPLETION_QUEUE_DISPATCHER_H_
+#endif  // LIBBRILLO_BRILLO_GRPC_GRPC_COMPLETION_QUEUE_DISPATCHER_H_

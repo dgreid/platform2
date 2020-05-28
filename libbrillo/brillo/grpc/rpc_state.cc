@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "diagnostics/grpc_async_adapter/rpc_state.h"
+#include "brillo/grpc/rpc_state.h"
 
-namespace diagnostics {
+namespace brillo {
 namespace internal {
 
 RpcStateBase::RpcStateBase() = default;
@@ -12,4 +12,4 @@ RpcStateBase::RpcStateBase() = default;
 RpcStateBase::~RpcStateBase() = default;
 
 }  // namespace internal
-}  // namespace diagnostics
+}  // namespace brillo

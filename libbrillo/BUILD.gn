@@ -16,6 +16,7 @@ group("all") {
   ]
   if (use.test) {
     deps += [
+      ":libbrillo-grpc_tests",
       ":libbrillo_tests",
       ":libinstallattributes_tests",
       ":libpolicy_tests",
@@ -189,6 +190,24 @@ libbrillo_sublibs = [
     all_dependent_pkg_deps = [ "protobuf" ]
     sources = [ "brillo/proto_file_io.cc" ]
   },
+
+  {
+    library_name = "brillo-grpc"
+    public_pkg_deps = [ "grpc" ]
+    all_dependent_pkg_deps = [
+      "gpr",
+      "grpc++",
+      "protobuf",
+    ]
+    sources = [
+      "brillo/grpc/async_grpc_client.cc",
+      "brillo/grpc/async_grpc_constants.cc",
+      "brillo/grpc/async_grpc_server.cc",
+      "brillo/grpc/grpc_completion_queue_dispatcher.cc",
+      "brillo/grpc/rpc_state.cc",
+      "brillo/grpc/time_util.cc",
+    ]
+  },
 ]
 
 if (use.udev) {
@@ -241,13 +260,14 @@ generate_pkg_config("libbrillo-${libbase_ver}_pc") {
   output_name = "libbrillo-${libbase_ver}"
   description = "brillo base library"
   version = libbase_ver
+  requires = []
   requires_private = default_pkg_deps
   foreach(sublib, libbrillo_sublibs) {
     if (defined(sublib.pkg_deps)) {
       requires_private += sublib.pkg_deps
     }
     if (defined(sublib.public_pkg_deps)) {
-      requires_private += sublib.public_pkg_deps
+      requires += sublib.public_pkg_deps
     }
     if (defined(sublib.all_dependent_pkg_deps)) {
       requires_private += sublib.all_dependent_pkg_deps
@@ -262,13 +282,14 @@ generate_pkg_config("libbrillo_pc") {
   output_name = "libbrillo"
   description = "brillo base library"
   version = libbase_ver
+  requires = []
   requires_private = default_pkg_deps
   foreach(sublib, libbrillo_sublibs) {
     if (defined(sublib.pkg_deps)) {
       requires_private += sublib.pkg_deps
     }
     if (defined(sublib.public_pkg_deps)) {
-      requires_private += sublib.public_pkg_deps
+      requires += sublib.public_pkg_deps
     }
     if (defined(sublib.all_dependent_pkg_deps)) {
       requires_private += sublib.all_dependent_pkg_deps
@@ -483,6 +504,12 @@ if (use.test) {
     proto_out_dir = "include/brillo/dbus"
     sources = [ "${proto_in_dir}/test.proto" ]
   }
+  proto_library("grpc_test_rpcs_protolib") {
+    proto_in_dir = "brillo/grpc"
+    proto_out_dir = "include"
+    sources = [ "${proto_in_dir}/test_rpcs.proto" ]
+    gen_grpc = true
+  }
   executable("libbrillo_tests") {
     configs += [
       "//common-mk:test",
@@ -604,6 +631,23 @@ if (use.test) {
       "policy/tests/libpolicy_test.cc",
       "policy/tests/policy_util_test.cc",
       "policy/tests/resilient_policy_util_test.cc",
+    ]
+  }
+
+  executable("libbrillo-grpc_tests") {
+    configs += [
+      "//common-mk:test",
+      ":target_defaults",
+    ]
+    deps = [
+      ":grpc_test_rpcs_protolib",
+      ":libbrillo-grpc",
+      "../common-mk/testrunner:testrunner",
+    ]
+    sources = [
+      "brillo/grpc/async_grpc_client_server_test.cc",
+      "brillo/grpc/async_grpc_server_test.cc",
+      "brillo/grpc/grpc_completion_queue_dispatcher_test.cc",
     ]
   }
 }

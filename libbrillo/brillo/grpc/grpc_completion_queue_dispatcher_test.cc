@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "diagnostics/grpc_async_adapter/grpc_completion_queue_dispatcher.h"
+#include "brillo/grpc/grpc_completion_queue_dispatcher.h"
 
 #include <list>
 #include <memory>
@@ -21,9 +21,9 @@
 #include <grpcpp/grpcpp.h>
 #include <gtest/gtest.h>
 
-#include "diagnostics/grpc_async_adapter/time_util.h"
+#include "brillo/grpc/time_util.h"
 
-namespace diagnostics {
+namespace brillo {
 
 namespace {
 
@@ -253,4 +253,4 @@ TEST_F(GrpcCompletionQueueDispatcherTest, ReregisterTag) {
   ShutdownDispatcher();
 }
 
-}  // namespace diagnostics
+}  // namespace brillo

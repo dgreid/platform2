@@ -6,7 +6,7 @@
 
 syntax = "proto3";
 
-package diagnostics.test_rpcs;
+package test_rpcs;
 
 message EmptyRpcRequest {}
 message EmptyRpcResponse {}

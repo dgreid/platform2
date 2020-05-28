@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "diagnostics/grpc_async_adapter/async_grpc_constants.h"
+#include "brillo/grpc/async_grpc_constants.h"
 
-namespace diagnostics {
+namespace brillo {
 
 const int kMaxGrpcMessageSize = 4 * 1024 * 1024;
 
@@ -17,4 +17,4 @@ const base::TimeDelta kMaxGrpcReconnectBackoffTime =
 
 const base::TimeDelta kRpcDeadline = base::TimeDelta::FromMinutes(1);
 
-}  // namespace diagnostics
+}  // namespace brillo

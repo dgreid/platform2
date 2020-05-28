@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "diagnostics/grpc_async_adapter/async_grpc_server.h"
+#include "brillo/grpc/async_grpc_server.h"
 
 #include <base/logging.h>
 
-#include "diagnostics/grpc_async_adapter/async_grpc_constants.h"
+#include "brillo/grpc/async_grpc_constants.h"
 
-namespace diagnostics {
+namespace brillo {
 namespace internal {
 
 AsyncGrpcServerBase::AsyncGrpcServerBase(
@@ -138,4 +138,4 @@ void AsyncGrpcServerBase::OnResponseSent(
     std::unique_ptr<RpcStateBase> rpc_state, bool ok) {}
 
 }  // namespace internal
-}  // namespace diagnostics
+}  // namespace brillo

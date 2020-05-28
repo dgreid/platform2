@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "diagnostics/grpc_async_adapter/grpc_completion_queue_dispatcher.h"
+#include "brillo/grpc/grpc_completion_queue_dispatcher.h"
 
 #include <utility>
 
@@ -11,7 +11,7 @@
 #include <base/logging.h>
 #include <base/sequenced_task_runner.h>
 
-namespace diagnostics {
+namespace brillo {
 namespace internal {
 
 // This is the background ("monitoring") thread delegate used by
@@ -170,4 +170,4 @@ void GrpcCompletionQueueDispatcher::OnShutdown() {
   }
 }
 
-}  // namespace diagnostics
+}  // namespace brillo

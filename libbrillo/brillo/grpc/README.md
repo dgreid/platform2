@@ -44,8 +44,8 @@ requests.
 ```
 void OnSomeRpc(
     std::unique_ptr<SomeRpcRequest> request,
-    const base::Callback<void (std::unique_ptr<SomeRpcResponse>)>
-            response_callback ) {
+    const base::Callback<void(std::unique_ptr<SomeRpcResponse>)>&
+            response_callback) {
   // Call |response_callback.Run(response)| when you have a response!
 }
 

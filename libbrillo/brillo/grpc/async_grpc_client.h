@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef DIAGNOSTICS_GRPC_ASYNC_ADAPTER_ASYNC_GRPC_CLIENT_H_
-#define DIAGNOSTICS_GRPC_ASYNC_ADAPTER_ASYNC_GRPC_CLIENT_H_
+#ifndef LIBBRILLO_BRILLO_GRPC_ASYNC_GRPC_CLIENT_H_
+#define LIBBRILLO_BRILLO_GRPC_ASYNC_GRPC_CLIENT_H_
 
 #include <memory>
 #include <string>
@@ -17,20 +17,23 @@
 #include <base/memory/ref_counted.h>
 #include <base/sequenced_task_runner.h>
 #include <base/time/time.h>
+#include <brillo/brillo_export.h>
 #include <grpcpp/grpcpp.h>
 #include <grpcpp/support/async_unary_call.h>
 
-#include "diagnostics/grpc_async_adapter/async_grpc_constants.h"
-#include "diagnostics/grpc_async_adapter/grpc_completion_queue_dispatcher.h"
-#include "diagnostics/grpc_async_adapter/time_util.h"
+#include "brillo/grpc/async_grpc_constants.h"
+#include "brillo/grpc/grpc_completion_queue_dispatcher.h"
+#include "brillo/grpc/time_util.h"
 
-namespace diagnostics {
+namespace brillo {
 namespace internal {
 
 // Base class for a gRPC client that supports sending RPCs to an endpoint and
 // posting a task on a task runner when the response has been received. This
 // base class is not specific to a Stub or Service.
-class AsyncGrpcClientBase {
+//
+// This class has to be exported as AsyncGrpcClient is a templated class
+class BRILLO_EXPORT AsyncGrpcClientBase {
  public:
   // Type of the callback which will be called when an RPC response is
   // available.
@@ -173,6 +176,6 @@ class AsyncGrpcClient final : public internal::AsyncGrpcClientBase {
   DISALLOW_COPY_AND_ASSIGN(AsyncGrpcClient);
 };
 
-}  // namespace diagnostics
+}  // namespace brillo
 
-#endif  // DIAGNOSTICS_GRPC_ASYNC_ADAPTER_ASYNC_GRPC_CLIENT_H_
+#endif  // LIBBRILLO_BRILLO_GRPC_ASYNC_GRPC_CLIENT_H_

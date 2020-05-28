@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "diagnostics/grpc_async_adapter/async_grpc_client.h"
+#include "brillo/grpc/async_grpc_client.h"
 
-#include "diagnostics/grpc_async_adapter/async_grpc_constants.h"
+#include "brillo/grpc/async_grpc_constants.h"
 
-namespace diagnostics {
+namespace brillo {
 namespace internal {
 
 AsyncGrpcClientBase::AsyncGrpcClientBase(
@@ -38,4 +38,4 @@ std::shared_ptr<grpc::Channel> AsyncGrpcClientBase::CreateGrpcChannel(
 }
 
 }  // namespace internal
-}  // namespace diagnostics
+}  // namespace brillo

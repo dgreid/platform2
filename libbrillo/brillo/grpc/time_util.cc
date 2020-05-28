@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "diagnostics/grpc_async_adapter/time_util.h"
+#include "brillo/grpc/time_util.h"
 
 #include <grpc/support/time.h>
 
-namespace diagnostics {
+namespace brillo {
 
 gpr_timespec GprTimespecWithDeltaFromNow(base::TimeDelta delta) {
   return gpr_time_add(
@@ -14,4 +14,4 @@ gpr_timespec GprTimespecWithDeltaFromNow(base::TimeDelta delta) {
       gpr_time_from_millis(delta.InMilliseconds(), GPR_TIMESPAN));
 }
 
-}  // namespace diagnostics
+}  // namespace brillo

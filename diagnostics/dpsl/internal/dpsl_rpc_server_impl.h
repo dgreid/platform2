@@ -11,9 +11,9 @@
 #include <base/callback.h>
 #include <base/macros.h>
 #include <base/sequence_checker_impl.h>
+#include <brillo/grpc/async_grpc_server.h>
 
 #include "diagnostics/dpsl/public/dpsl_rpc_server.h"
-#include "diagnostics/grpc_async_adapter/async_grpc_server.h"
 
 #include "wilco_dtc.grpc.pb.h"  // NOLINT(build/include)
 #include "wilco_dtc.pb.h"       // NOLINT(build/include)
@@ -72,7 +72,7 @@ class DpslRpcServerImpl final : public DpslRpcServer {
   // Unowned.
   DpslRpcHandler* const rpc_handler_;
 
-  AsyncGrpcServer<grpc_api::WilcoDtc::AsyncService> async_grpc_server_;
+  brillo::AsyncGrpcServer<grpc_api::WilcoDtc::AsyncService> async_grpc_server_;
 
   base::SequenceCheckerImpl sequence_checker_;
 

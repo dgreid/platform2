@@ -14,13 +14,14 @@
 #include <base/macros.h>
 #include <base/memory/ref_counted.h>
 #include <base/strings/string_piece.h>
+#include <brillo/grpc/async_grpc_client.h>
+#include <brillo/grpc/async_grpc_server.h>
 #include <dbus/bus.h>
 
 #include "diagnostics/common/system/bluetooth_client.h"
 #include "diagnostics/common/system/debugd_adapter.h"
 #include "diagnostics/common/system/powerd_adapter.h"
-#include "diagnostics/grpc_async_adapter/async_grpc_client.h"
-#include "diagnostics/grpc_async_adapter/async_grpc_server.h"
+#include "diagnostics/wilco_dtc_supportd/dbus_service.h"
 #include "diagnostics/wilco_dtc_supportd/grpc_service.h"
 #include "diagnostics/wilco_dtc_supportd/mojo_service.h"
 #include "diagnostics/wilco_dtc_supportd/probe_service.h"
@@ -199,7 +200,8 @@ class Core final : public GrpcService::Delegate,
   GrpcService grpc_service_{this /* delegate */};
   // Connects |grpc_service_| with the gRPC server that listens for incoming
   // requests.
-  AsyncGrpcServer<grpc_api::WilcoDtcSupportd::AsyncService> grpc_server_;
+  brillo::AsyncGrpcServer<grpc_api::WilcoDtcSupportd::AsyncService>
+      grpc_server_;
 
   // Mojo-related members:
 

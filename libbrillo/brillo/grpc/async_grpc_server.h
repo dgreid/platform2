@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef DIAGNOSTICS_GRPC_ASYNC_ADAPTER_ASYNC_GRPC_SERVER_H_
-#define DIAGNOSTICS_GRPC_ASYNC_ADAPTER_ASYNC_GRPC_SERVER_H_
+#ifndef LIBBRILLO_BRILLO_GRPC_ASYNC_GRPC_SERVER_H_
+#define LIBBRILLO_BRILLO_GRPC_ASYNC_GRPC_SERVER_H_
 
 #include <map>
 #include <memory>
@@ -16,13 +16,14 @@
 #include <base/macros.h>
 #include <base/memory/ref_counted.h>
 #include <base/sequenced_task_runner.h>
+#include <brillo/brillo_export.h>
 #include <grpcpp/grpcpp.h>
 #include <grpcpp/support/async_unary_call.h>
 
-#include "diagnostics/grpc_async_adapter/grpc_completion_queue_dispatcher.h"
-#include "diagnostics/grpc_async_adapter/rpc_state.h"
+#include "brillo/grpc/grpc_completion_queue_dispatcher.h"
+#include "brillo/grpc/rpc_state.h"
 
-namespace diagnostics {
+namespace brillo {
 namespace internal {
 
 // Base class for the asynchronous RPC Server, contains functionality that does
@@ -34,7 +35,7 @@ namespace internal {
 // |RpcStateBase| interface of the |RpcState| objects. This interface hides the
 // RPC-specific details (such as RequestType, ResponseType) and acts as proxy
 // towards gRPC and the application's RPC handler.
-class AsyncGrpcServerBase {
+class BRILLO_EXPORT AsyncGrpcServerBase {
  public:
   // A factory function which creates an |RpcStateBase| for an expected
   // RPC type.
@@ -228,6 +229,6 @@ class AsyncGrpcServer final : public internal::AsyncGrpcServerBase {
   DISALLOW_COPY_AND_ASSIGN(AsyncGrpcServer);
 };
 
-}  // namespace diagnostics
+}  // namespace brillo
 
-#endif  // DIAGNOSTICS_GRPC_ASYNC_ADAPTER_ASYNC_GRPC_SERVER_H_
+#endif  // LIBBRILLO_BRILLO_GRPC_ASYNC_GRPC_SERVER_H_

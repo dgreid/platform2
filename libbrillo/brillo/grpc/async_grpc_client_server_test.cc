@@ -20,12 +20,12 @@
 #include <grpcpp/grpcpp.h>
 #include <gtest/gtest.h>
 
-#include "diagnostics/grpc_async_adapter/async_grpc_client.h"
-#include "diagnostics/grpc_async_adapter/async_grpc_constants.h"
-#include "diagnostics/grpc_async_adapter/async_grpc_server.h"
+#include "brillo/grpc/async_grpc_client.h"
+#include "brillo/grpc/async_grpc_constants.h"
+#include "brillo/grpc/async_grpc_server.h"
 #include "test_rpcs.grpc.pb.h"  // NOLINT(build/include)
 
-namespace diagnostics {
+namespace brillo {
 
 namespace {
 
@@ -636,4 +636,4 @@ TEST_F(AsyncGrpcClientServerTest, RpcServerStartedAfter) {
   EXPECT_LT(duration.InMilliseconds(), 1000);
 }
 
-}  // namespace diagnostics
+}  // namespace brillo

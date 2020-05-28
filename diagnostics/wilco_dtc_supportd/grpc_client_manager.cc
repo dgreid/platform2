@@ -21,7 +21,7 @@ void GrpcClientManager::Start(
   // Start the gRPC clients that talk to the wilco_dtc daemon.
   for (const auto& uri : wilco_dtc_grpc_client_uris) {
     wilco_dtc_grpc_clients_.push_back(
-        std::make_unique<AsyncGrpcClient<grpc_api::WilcoDtc>>(
+        std::make_unique<brillo::AsyncGrpcClient<grpc_api::WilcoDtc>>(
             base::ThreadTaskRunnerHandle::Get(), uri));
     VLOG(0) << "Created gRPC wilco_dtc client on " << uri;
   }
@@ -29,7 +29,7 @@ void GrpcClientManager::Start(
   // Start the gRPC client that is allowed to receive UI messages as a normal
   // gRPC client that talks to the wilco_dtc daemon.
   wilco_dtc_grpc_clients_.push_back(
-      std::make_unique<AsyncGrpcClient<grpc_api::WilcoDtc>>(
+      std::make_unique<brillo::AsyncGrpcClient<grpc_api::WilcoDtc>>(
           base::ThreadTaskRunnerHandle::Get(),
           ui_message_receiver_wilco_dtc_grpc_uri));
   VLOG(0) << "Created gRPC wilco_dtc client on "
@@ -47,11 +47,12 @@ void GrpcClientManager::ShutDown(base::OnceClosure on_shutdown_callback) {
   ui_message_receiver_wilco_dtc_grpc_client_ = nullptr;
 }
 
-AsyncGrpcClient<grpc_api::WilcoDtc>* GrpcClientManager::GetUiClient() const {
+brillo::AsyncGrpcClient<grpc_api::WilcoDtc>* GrpcClientManager::GetUiClient()
+    const {
   return ui_message_receiver_wilco_dtc_grpc_client_;
 }
 
-const std::vector<std::unique_ptr<AsyncGrpcClient<grpc_api::WilcoDtc>>>&
+const std::vector<std::unique_ptr<brillo::AsyncGrpcClient<grpc_api::WilcoDtc>>>&
 GrpcClientManager::GetClients() const {
   return wilco_dtc_grpc_clients_;
 }

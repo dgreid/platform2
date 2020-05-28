@@ -13,6 +13,7 @@
 #include <base/files/scoped_temp_dir.h>
 #include <base/strings/stringprintf.h>
 #include <base/threading/thread_task_runner_handle.h>
+#include <brillo/grpc/async_grpc_server.h>
 #include <gmock/gmock.h>
 #include <google/protobuf/util/message_differencer.h>
 #include <gtest/gtest.h>
@@ -26,7 +27,6 @@
 #include "diagnostics/dpsl/public/dpsl_global_context.h"
 #include "diagnostics/dpsl/public/dpsl_requester.h"
 #include "diagnostics/dpsl/public/dpsl_thread_context.h"
-#include "diagnostics/grpc_async_adapter/async_grpc_server.h"
 
 namespace diagnostics {
 
@@ -483,7 +483,8 @@ class TestDsplMultiRequesterServer {
   int handle_send_message_to_ui_called_ = 0;
   int handle_perform_web_request_called_ = 0;
 
-  AsyncGrpcServer<grpc_api::WilcoDtcSupportd::AsyncService> async_grpc_server_;
+  brillo::AsyncGrpcServer<grpc_api::WilcoDtcSupportd::AsyncService>
+      async_grpc_server_;
 
   DISALLOW_COPY_AND_ASSIGN(TestDsplMultiRequesterServer);
 };
@@ -620,7 +621,8 @@ class TestDsplRequesterServer {
 
   int handle_call_called_ = 0;
 
-  AsyncGrpcServer<grpc_api::WilcoDtcSupportd::AsyncService> async_grpc_server_;
+  brillo::AsyncGrpcServer<grpc_api::WilcoDtcSupportd::AsyncService>
+      async_grpc_server_;
 
   DISALLOW_COPY_AND_ASSIGN(TestDsplRequesterServer);
 };

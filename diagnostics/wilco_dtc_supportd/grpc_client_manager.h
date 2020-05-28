@@ -6,12 +6,11 @@
 #define DIAGNOSTICS_WILCO_DTC_SUPPORTD_GRPC_CLIENT_MANAGER_H_
 
 #include <base/callback_forward.h>
+#include <brillo/grpc/async_grpc_client.h>
 
 #include <memory>
 #include <string>
 #include <vector>
-
-#include "diagnostics/grpc_async_adapter/async_grpc_client.h"
 
 #include "wilco_dtc.grpc.pb.h"  // NOLINT(build/include)
 
@@ -43,20 +42,21 @@ class GrpcClientManager final {
   void ShutDown(base::OnceClosure on_shutdown_callback);
 
   // Returns a pointer to the ui client
-  AsyncGrpcClient<grpc_api::WilcoDtc>* GetUiClient() const;
+  brillo::AsyncGrpcClient<grpc_api::WilcoDtc>* GetUiClient() const;
 
   // Returns a reference the managed grpc clients
-  const std::vector<std::unique_ptr<AsyncGrpcClient<grpc_api::WilcoDtc>>>&
+  const std::vector<
+      std::unique_ptr<brillo::AsyncGrpcClient<grpc_api::WilcoDtc>>>&
   GetClients() const;
 
  private:
   // Allows to make outgoing requests to the gRPC interfaces exposed by the
   // wilco_dtc daemons.
-  std::vector<std::unique_ptr<AsyncGrpcClient<grpc_api::WilcoDtc>>>
+  std::vector<std::unique_ptr<brillo::AsyncGrpcClient<grpc_api::WilcoDtc>>>
       wilco_dtc_grpc_clients_;
   // The pre-defined gRPC client that is allowed to respond to UI messages.
   // Owned by |wilco_dtc_grpc_clients_|.
-  AsyncGrpcClient<grpc_api::WilcoDtc>*
+  brillo::AsyncGrpcClient<grpc_api::WilcoDtc>*
       ui_message_receiver_wilco_dtc_grpc_client_ = nullptr;
 };
 

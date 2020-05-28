@@ -20,7 +20,6 @@ source_set("libwilco_dtc_supportd") {
     "//diagnostics/common:libcommon",
     "//diagnostics/constants:libconstants",
     "//diagnostics/grpc:wilco_dtc_grpc_protos",
-    "//diagnostics/grpc_async_adapter:libgrpc_async_adapter",
     "//diagnostics/mojo:cros_healthd_mojo_bindings",
     "//diagnostics/mojo:wilco_dtc_supportd_mojo_bindings",
   ]
