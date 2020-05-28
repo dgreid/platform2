@@ -123,17 +123,11 @@ void OneTimeSetup(const Datapath& datapath) {
 }
 
 bool IsArcVm() {
-  if (test::guest == GuestMessage::ARC_VM) {
+  if (test::guest != GuestMessage::UNKNOWN_GUEST) {
     LOG(WARNING) << "Overridden for testing";
-    return true;
+    return test::guest == GuestMessage::ARC_VM;
   }
-
-  const base::FilePath path("/run/chrome/is_arcvm");
-  std::string contents;
-  if (!base::ReadFileToString(path, &contents)) {
-    PLOG(ERROR) << "Could not read " << path.value();
-  }
-  return contents == "1";
+  return USE_ARCVM;
 }
 
 GuestMessage::GuestType ArcGuest() {
