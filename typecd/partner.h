@@ -9,6 +9,7 @@
 #include <memory>
 #include <utility>
 
+#include <base/files/file_path.h>
 #include <gtest/gtest_prod.h>
 
 #include "typecd/alt_mode.h"
@@ -19,6 +20,8 @@ namespace typecd {
 // class is used to maintain the state associated with the partner.
 class Partner {
  public:
+  explicit Partner(const base::FilePath& syspath);
+
   // Setters and Getters for PD identity information.
   void SetIdHeaderVDO(uint32_t id_header_vdo) {
     id_header_vdo_ = id_header_vdo;
@@ -58,6 +61,8 @@ class Partner {
   uint32_t id_header_vdo_;
   uint32_t cert_stat_vdo_;
   uint32_t product_vdo_;
+  // Sysfs path used to access partner PD information.
+  base::FilePath syspath_;
 };
 
 }  // namespace typecd

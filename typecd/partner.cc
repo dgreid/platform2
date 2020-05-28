@@ -8,6 +8,8 @@
 
 namespace typecd {
 
+Partner::Partner(const base::FilePath& syspath) : syspath_(syspath) {}
+
 void Partner::AddAltMode(int index, uint16_t svid, uint32_t vdo) {
   alt_modes_.emplace(index, std::make_unique<AltMode>(svid, vdo));
 }

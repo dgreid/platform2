@@ -7,6 +7,8 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "typecd/test_constants.h"
+
 namespace typecd {
 
 namespace {
@@ -27,7 +29,7 @@ class PartnerTest : public ::testing::Test {};
 
 // Check that calls of AddAltMode() done explicitly function correctly.
 TEST_F(PartnerTest, TestAltModeManualAddition) {
-  Partner p;
+  Partner p((base::FilePath(kFakePort0PartnerSysPath)));
 
   p.AddAltMode(0, kDPSvid, kDPVdo);
   p.AddAltMode(1, kTBTSvid, kTBTVdo);

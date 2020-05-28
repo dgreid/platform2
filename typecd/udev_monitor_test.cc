@@ -14,6 +14,8 @@
 #include <brillo/unittest_utils.h>
 #include <gtest/gtest.h>
 
+#include "typecd/test_constants.h"
+
 using testing::_;
 using testing::ByMove;
 using testing::Return;
@@ -22,10 +24,6 @@ using testing::StrEq;
 namespace typecd {
 
 namespace {
-
-constexpr char kFakePort0SysPath[] = "/sys/class/typec/port0";
-constexpr char kFakePort0PartnerSysPath[] =
-    "/sys/class/typec/port0/port0-partner";
 
 // A really dumb observer to verify that UdevMonitor is invoking the right
 // callbacks.

@@ -33,6 +33,7 @@ static_library("typecd_common") {
   all_dependent_configs = [ ":target_defaults" ]
   sources = [
     "partner.cc",
+    "port.cc",
     "udev_monitor.cc",
   ]
 }
@@ -58,6 +59,7 @@ if (use.test) {
     ]
     sources = [
       "partner_test.cc",
+      "port_test.cc",
       "udev_monitor_test.cc",
     ]
   }
