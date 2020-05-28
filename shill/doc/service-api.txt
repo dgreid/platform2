@@ -1218,7 +1218,7 @@ Properties	string ArcVpn.TunnelChrome [writeonly]
 
 			If the service type is "wifi", then this property
 			holds a passphrase used in setting up services of
-			type "wep", "wpa", "rsn", "psk", or a private
+			type "wep", "wpa", "rsn", "wpa3", "psk", or a private
 			key password used in setting up services of
 			type "802_1x".
 
@@ -1505,8 +1505,16 @@ Properties	string ArcVpn.TunnelChrome [writeonly]
 
 			Possible values are: "none" (no privacy),
 			"wep" (fixed key WEP), "wpa" (WPA-PSK), "rsn"
-			(IEEE 802.11i-PSK), "psk" (either "wpa" or "rsn"),
-			and "802_1x" (IEEE 802.11i with 802.1x authentication).
+			(IEEE 802.11i-PSK), "wpa3" (WPA3-SAE), "psk" ("wpa",
+			"rsn", "or "wpa3"), and "802_1x" (IEEE 802.11i with
+			802.1x authentication).
+
+			Note that "psk" is used as a catch-all for non-WEP
+			passphrase-based key management protocols (WPA, WPA-2,
+			and WPA-3) before we know which one is in use. See also
+			SecurityClass. Also note that WPA3-SAE is technically
+			also an RSN protocol, so we use the Wi-Fi Alliance
+			designation (WPA3) for clarity.
 
 			This property is only present for WiFi services.
 
@@ -1514,12 +1522,14 @@ Properties	string ArcVpn.TunnelChrome [writeonly]
 
 			If the service type is "wifi", then this property is
 			present and contains the security class of the service.
-			The security class groups together WPA and WPA-2 networks,
-			to allow for seamless roaming between them.
+			The security class groups together WPA, WPA-2, and
+			WPA-3 networks, to allow for seamless roaming between
+			them.
 
 			Possible values are: "none" (no privacy),
-			"wep" (fixed key WEP), "psk" (WPA-PSK or IEEE 802.11i-PSK),
-			and "802_1x" (IEEE 802.11i with 802.1x authentication).
+			"wep" (fixed key WEP), "psk" (WPA-PSK, IEEE
+			802.11i-PSK, WPA3-SAE), and "802_1x" (IEEE 802.11i with
+			802.1x authentication).
 
 			This property is only present for WiFi services.
 

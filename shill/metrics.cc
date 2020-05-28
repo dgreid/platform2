@@ -630,6 +630,8 @@ Metrics::WiFiSecurity Metrics::WiFiSecurityStringToEnum(
     return kWiFiSecurity8021x;
   } else if (security == kSecurityPsk) {
     return kWiFiSecurityPsk;
+  } else if (security == kSecurityWpa3) {
+    return kWiFiSecurityWpa3;
   } else {
     return kWiFiSecurityUnknown;
   }

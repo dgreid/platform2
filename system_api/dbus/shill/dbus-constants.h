@@ -535,12 +535,13 @@ const char kTypePPPoE[] = "pppoe";
 const char kModeManaged[] = "managed";
 
 // Flimflam security options.
-const char kSecurityWpa[] = "wpa";
-const char kSecurityWep[] = "wep";
-const char kSecurityRsn[] = "rsn";
-const char kSecurity8021x[] = "802_1x";
-const char kSecurityPsk[] = "psk";
 const char kSecurityNone[] = "none";
+const char kSecurityWep[] = "wep";
+const char kSecurityPsk[] = "psk";
+const char kSecurityWpa[] = "wpa";
+const char kSecurityRsn[] = "rsn";
+const char kSecurityWpa3[] = "wpa3";
+const char kSecurity8021x[] = "802_1x";
 
 // Compress option values as expected by OpenVPN.
 const char kOpenVPNCompressFramingOnly[] = "";

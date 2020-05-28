@@ -142,6 +142,7 @@ class Metrics : public DefaultServiceObserver {
     kWiFiSecurityRsn = 4,
     kWiFiSecurity8021x = 5,
     kWiFiSecurityPsk = 6,
+    kWiFiSecurityWpa3 = 7,
 
     kWiFiSecurityMax
   };
