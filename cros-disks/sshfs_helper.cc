@@ -39,6 +39,7 @@ const char* const kEnforcedOptions[] = {
     "PasswordAuthentication=no",
     "BatchMode=yes",
     "follow_symlinks",
+    "cache=no",
 };
 
 const char* const kFilteredOptions[] = {
