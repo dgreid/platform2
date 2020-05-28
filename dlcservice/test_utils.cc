@@ -102,17 +102,19 @@ int64_t GetFileSize(const base::FilePath& path) {
   return file_size;
 }
 
-// Will create |path|/|id|/|package|/dlc.img file.
-void BaseTest::SetUpDlcPreloadedImage(const DlcId& id) {
+base::FilePath BaseTest::SetUpDlcPreloadedImage(const DlcId& id) {
   imageloader::Manifest manifest;
   dlcservice::GetDlcManifest(manifest_path_, id, kPackage, &manifest);
 
   base::FilePath image_path =
       JoinPaths(preloaded_content_path_, id, kPackage, kDlcImageFileName);
   CreateFile(image_path, manifest.size());
+  EXPECT_TRUE(base::PathExists(image_path));
 
   string data(manifest.size(), '1');
   WriteToFile(image_path, data);
+
+  return image_path;
 }
 
 // Will create |path/|id|/|package|/dlc_[a|b]/dlc.img files.

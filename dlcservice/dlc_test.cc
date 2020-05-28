@@ -202,11 +202,7 @@ TEST_F(DlcBaseTest, BootingFromNonRemovableDeviceDeletesPreloadedDLCs) {
   DlcBase dlc(kThirdDlc);
   dlc.Initialize();
   // Place preloaded images.
-  SetUpDlcPreloadedImage(kThirdDlc);
-
-  auto image_path = JoinPaths(preloaded_content_path_, kThirdDlc, kPackage,
-                              kDlcImageFileName);
-  EXPECT_TRUE(base::PathExists(image_path));
+  base::FilePath image_path = SetUpDlcPreloadedImage(kThirdDlc);
 
   EXPECT_CALL(*mock_update_engine_proxy_ptr_,
               SetDlcActiveValue(_, kThirdDlc, _, _))
@@ -225,11 +221,7 @@ TEST_F(DlcBaseTestRemovable, BootingFromRemovableDeviceKeepsPreloadedDLCs) {
   DlcBase dlc(kThirdDlc);
   dlc.Initialize();
   // Place preloaded images.
-  SetUpDlcPreloadedImage(kThirdDlc);
-
-  auto image_path = JoinPaths(preloaded_content_path_, kThirdDlc, kPackage,
-                              kDlcImageFileName);
-  EXPECT_TRUE(base::PathExists(image_path));
+  base::FilePath image_path = SetUpDlcPreloadedImage(kThirdDlc);
 
   EXPECT_CALL(*mock_update_engine_proxy_ptr_,
               SetDlcActiveValue(_, kThirdDlc, _, _))
@@ -242,6 +234,29 @@ TEST_F(DlcBaseTestRemovable, BootingFromRemovableDeviceKeepsPreloadedDLCs) {
 
   // Preloaded DLC image should still exists.
   EXPECT_TRUE(base::PathExists(image_path));
+}
+
+TEST_F(DlcBaseTest, PreloadCopyShouldMarkUnverified) {
+  DlcBase dlc(kThirdDlc);
+  dlc.Initialize();
+  SetUpDlcPreloadedImage(kThirdDlc);
+
+  // Don't preload the image so we can simulate a preload failure.
+  EXPECT_TRUE(dlc.InstallCompleted(&err_));
+  EXPECT_FALSE(dlc.PreloadedCopier(&err_));
+  EXPECT_FALSE(dlc.IsVerified());
+}
+
+TEST_F(DlcBaseTest, PreloadCopyFailOnInvalidFileSize) {
+  DlcBase dlc(kThirdDlc);
+  dlc.Initialize();
+  base::FilePath image_path = SetUpDlcPreloadedImage(kThirdDlc);
+  EXPECT_TRUE(ResizeFile(image_path, 10));
+
+  EXPECT_TRUE(dlc.InstallCompleted(&err_));
+  EXPECT_FALSE(dlc.PreloadedCopier(&err_));
+  // This failure should not render the image as unverified.
+  EXPECT_TRUE(dlc.IsVerified());
 }
 
 TEST_F(DlcBaseTest, HasContent) {
@@ -269,6 +284,17 @@ TEST_F(DlcBaseTest, GetUsedBytesOnDisk) {
   EXPECT_GT(expected_size, 0);
 
   EXPECT_EQ(dlc.GetUsedBytesOnDisk(), expected_size);
+}
+
+TEST_F(DlcBaseTest, MarkUnverified) {
+  DlcBase dlc(kFirstDlc);
+  dlc.Initialize();
+
+  EXPECT_TRUE(dlc.InstallCompleted(&err_));
+  EXPECT_TRUE(dlc.IsVerified());
+
+  dlc.MarkUnverified();
+  EXPECT_FALSE(dlc.IsVerified());
 }
 
 TEST_F(DlcBaseTest, ImageOnDiskButNotVerifiedInstalls) {

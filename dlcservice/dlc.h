@@ -115,6 +115,9 @@ class DlcBase {
   FRIEND_TEST(DlcBaseTest, ChangeStateInstalled);
   FRIEND_TEST(DlcBaseTest, ChangeProgress);
   FRIEND_TEST(DlcBaseTest, MakeReadyForUpdate);
+  FRIEND_TEST(DlcBaseTest, MarkUnverified);
+  FRIEND_TEST(DlcBaseTest, PreloadCopyShouldMarkUnverified);
+  FRIEND_TEST(DlcBaseTest, PreloadCopyFailOnInvalidFileSize);
 
   // Returns the path to the DLC image given the slot number.
   base::FilePath GetImagePath(BootSlot::Slot slot) const;
@@ -124,6 +127,9 @@ class DlcBase {
   // know the files are already there. This allows us to create any new DLC
   // files that didn't exist on a previous version of the DLC.
   bool CreateDlc(brillo::ErrorPtr* err);
+
+  // Mark the current active DLC image as unverified.
+  void MarkUnverified();
 
   // Returns true if the DLC image in the current active slot matches the hash
   // of that in the rootfs manifest for the DLC.

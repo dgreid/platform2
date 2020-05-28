@@ -44,8 +44,9 @@ class BaseTest : public testing::Test {
 
   void SetUpFilesAndDirectories();
 
-  // Will create |path|/|id|/|package|/dlc.img file.
-  void SetUpDlcPreloadedImage(const DlcId& id);
+  // Will create |path|/|id|/|package|/dlc.img file. Will return the path to the
+  // generated preloaded image.
+  base::FilePath SetUpDlcPreloadedImage(const DlcId& id);
 
   // Will create |path/|id|/|package|/dlc_[a|b]/dlc.img files.
   void SetUpDlcWithSlots(const DlcId& id);

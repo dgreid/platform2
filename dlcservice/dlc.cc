@@ -214,6 +214,13 @@ bool DlcBase::MakeReadyForUpdate() const {
   return true;
 }
 
+void DlcBase::MarkUnverified() {
+  if (!Prefs(*this, SystemState::Get()->active_boot_slot())
+      .Delete(kDlcPrefVerified))
+    LOG(ERROR) << "Failed to mark the image as unverified for DLC=" << id_;
+  is_verified_ = false;
+}
+
 bool DlcBase::Verify() {
   auto image_path = GetImagePath(SystemState::Get()->active_boot_slot());
   vector<uint8_t> image_sha256;
@@ -241,43 +248,34 @@ bool DlcBase::Verify() {
 }
 
 bool DlcBase::PreloadedCopier(ErrorPtr* err) {
-  int64_t max_image_size = manifest_.preallocated_size();
-  // Scope the |image_preloaded| file so it always closes before deleting.
-  {
-    int64_t image_preloaded_size;
-    if (!base::GetFileSize(preloaded_image_path_, &image_preloaded_size)) {
-      auto err_str = base::StringPrintf(
-          "Failed to get preloaded DLC (%s) size.", id_.c_str());
-      *err = Error::Create(FROM_HERE, kErrorInternal, err_str);
-      return false;
-    }
-    if (image_preloaded_size > max_image_size) {
-      auto err_str = base::StringPrintf(
-          "Preloaded DLC (%s) is (%" PRId64
-          ") larger than the preallocated size (%" PRId64 ") in the manifest.",
-          id_.c_str(), image_preloaded_size, max_image_size);
-      *err = Error::Create(FROM_HERE, kErrorInternal, err_str);
-      return false;
-    }
+  int64_t preloaded_image_size;
+  if (!base::GetFileSize(preloaded_image_path_, &preloaded_image_size)) {
+    auto err_str = base::StringPrintf("Failed to get preloaded DLC (%s) size.",
+                                      id_.c_str());
+    *err = Error::Create(FROM_HERE, kErrorInternal, err_str);
+    return false;
+  }
+  if (preloaded_image_size != manifest_.size()) {
+    auto err_str = base::StringPrintf(
+        "Preloaded DLC (%s) is (%" PRId64 ") different than the size (%" PRId64
+        ") in the manifest.",
+        id_.c_str(), preloaded_image_size, manifest_.size());
+    *err = Error::Create(FROM_HERE, kErrorInternal, err_str);
+    return false;
   }
 
-  // Based on the current boot slot, copy the preloadable image.
-  FilePath image_boot_path, image_non_boot_path;
-  if (SystemState::Get()->active_boot_slot() == BootSlot::Slot::A) {
-    image_boot_path = GetImagePath(BootSlot::Slot::A);
-    image_non_boot_path = GetImagePath(BootSlot::Slot::B);
-  } else {
-    image_boot_path = GetImagePath(BootSlot::Slot::B);
-    image_non_boot_path = GetImagePath(BootSlot::Slot::A);
-  }
-  // TODO(kimjae): when preloaded images are place into unencrypted, this
+  // Before touching the image, we need to mark it as unverified.
+  MarkUnverified();
+
+  // TODO(kimjae): When preloaded images are place into unencrypted, this
   // operation can be a move.
+  FilePath image_path = GetImagePath(SystemState::Get()->active_boot_slot());
   vector<uint8_t> image_sha256;
-  if (!CopyAndHashFile(preloaded_image_path_, image_boot_path, manifest_.size(),
+  if (!CopyAndHashFile(preloaded_image_path_, image_path, manifest_.size(),
                        &image_sha256)) {
     auto err_str =
         base::StringPrintf("Failed to copy preload DLC (%s) into path %s",
-                           id_.c_str(), image_boot_path.value().c_str());
+                           id_.c_str(), image_path.value().c_str());
     *err = Error::Create(FROM_HERE, kErrorInternal, err_str);
     return false;
   }
@@ -291,14 +289,6 @@ bool DlcBase::PreloadedCopier(ErrorPtr* err) {
                         manifest_image_sha256.size())
             .c_str(),
         base::HexEncode(image_sha256.data(), image_sha256.size()).c_str());
-    *err = Error::Create(FROM_HERE, kErrorInternal, err_str);
-    return false;
-  }
-
-  if (!ResizeFile(image_boot_path, max_image_size)) {
-    auto err_str = base::StringPrintf(
-        "Failed to resize image for DLC=%s, Path=%s, Size=%" PRId64,
-        id_.c_str(), image_boot_path.value().c_str(), max_image_size);
     *err = Error::Create(FROM_HERE, kErrorInternal, err_str);
     return false;
   }
