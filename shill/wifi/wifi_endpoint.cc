@@ -75,7 +75,7 @@ WiFiEndpoint::WiFiEndpoint(ControlInterface* control_interface,
 
   network_mode_ =
       ParseMode(properties.Get<string>(WPASupplicant::kBSSPropertyMode));
-  set_security_mode(ParseSecurity(properties, &security_flags_));
+  security_mode_ = ParseSecurity(properties, &security_flags_);
   has_rsn_property_ =
       properties.Contains<KeyValueStore>(WPASupplicant::kPropertyRSN);
   has_wpa_property_ =
@@ -139,7 +139,7 @@ void WiFiEndpoint::PropertiesChanged(const KeyValueStore& properties) {
 
   const char* new_security_mode = ParseSecurity(properties, &security_flags_);
   if (new_security_mode != security_mode()) {
-    set_security_mode(new_security_mode);
+    security_mode_ = new_security_mode;
     SLOG(this, 2) << "WiFiEndpoint " << bssid_string_ << " security is now "
                   << security_mode();
     should_notify = true;
