@@ -27,6 +27,7 @@ type cros_arc_keymasterd_exec, exec_type, file_type, cros_file_type, cros_system
 type cros_arc_obb_mounter_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_arc_oemcrypto_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_arc_setup_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
+type cros_arcvm_boot_notification_server_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_atrusd_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_attestationd_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_audispd_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
