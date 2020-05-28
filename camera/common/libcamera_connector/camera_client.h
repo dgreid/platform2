@@ -7,19 +7,21 @@
 #ifndef CAMERA_COMMON_LIBCAMERA_CONNECTOR_CAMERA_CLIENT_H_
 #define CAMERA_COMMON_LIBCAMERA_CONNECTOR_CAMERA_CLIENT_H_
 
-#include <list>
 #include <map>
 #include <memory>
 #include <queue>
+#include <set>
 #include <string>
 #include <vector>
 
 #include <base/bind.h>
 #include <base/synchronization/lock.h>
+#include <base/thread_annotations.h>
 #include <base/threading/thread.h>
 #include <mojo/public/cpp/bindings/binding.h>
 
 #include "common/libcamera_connector/camera_client_ops.h"
+#include "common/libcamera_connector/camera_module_callbacks.h"
 #include "common/libcamera_connector/types.h"
 #include "cros-camera/camera_service_connector.h"
 #include "mojo/camera_common.mojom.h"
@@ -149,21 +151,34 @@ class CameraClient final : public mojom::CameraHalClient {
   void RegisterClient(RegisterClientCallback register_client_callback);
 
   // Closes the message pipe associated with this client.
-  void CloseOnThread();
+  void CloseOnIpcThread();
 
   void ResetClientState();
 
-  void GetNumberOfCameras();
+  // Gets the camera info of all the cameras connected to the device.
+  void GetAllCameraInfo();
 
   void OnGotNumberOfCameras(int32_t num_builtin_cameras);
 
-  void GetCameraInfo(int32_t camera_id);
+  void SetCallbacks();
 
-  void OnGotCameraInfo(int32_t result, mojom::CameraInfoPtr info);
+  void OnSetCallbacks(int32_t result);
 
-  void SendCameraInfo();
+  void GetCameraInfo();
 
-  void SendCameraInfoInternal(const cros_cam_info_t& cam_info, int is_removed);
+  void OnGotCameraInfo(int32_t camera_id,
+                       int32_t result,
+                       mojom::CameraInfoPtr info);
+
+  void SendCameraInfo(const std::set<int32_t>& camera_id_set, int is_removed);
+
+  void SendCameraInfoAsync(const std::set<int32_t>& camera_id_set,
+                           int is_removed);
+
+  void SendCameraInfoAsyncOnInfoThread(std::set<int32_t> camera_id_set,
+                                       int is_removed);
+
+  void GenerateAndSendCameraInfo(int32_t camera_id, int is_removed);
 
   // PushSessionRequest is called by anyone initiating a SessionRequest from
   // a different thread.
@@ -171,7 +186,7 @@ class CameraClient final : public mojom::CameraHalClient {
 
   // Pushes |request| into |pending_session_requests_| and calls
   // TryProcessSessionRequests().
-  void PushSessionRequestOnThread(SessionRequest request);
+  void PushSessionRequestOnIpcThread(SessionRequest request);
 
   // Tries to process session requests in |pending_session_requests_| in a FIFO
   // order. Note that we may process multiple session requests at once due to
@@ -187,34 +202,44 @@ class CameraClient final : public mojom::CameraHalClient {
   // TODO(lnishan): Take camera id as input for multi-device streaming.
   void FlushInflightSessionRequests(int error);
 
-  int StartCaptureOnThread(SessionRequest* request);
+  int StartCaptureOnIpcThread(SessionRequest* request);
 
   void OnOpenedDevice(int32_t result);
 
-  int StopCaptureOnThread(SessionRequest* request);
+  int StopCaptureOnIpcThread(SessionRequest* request);
 
   void OnClosedDevice(int32_t result);
 
   bool IsDeviceActive(int device);
+
+  void OnDeviceStatusChange(int32_t camera_id, bool is_present);
 
   void SendCaptureResult(const cros_cam_capture_result_t& result);
 
   void OnStoppedCaptureFromCallback(int result);
 
   base::Thread ipc_thread_;
+  base::Thread info_thread_;
   mojom::CameraModulePtr camera_module_;
   mojo::Binding<mojom::CameraHalClient> camera_hal_client_;
+  CameraModuleCallbacks camera_module_callbacks_;
 
   IntOnceCallback init_callback_;
 
-  cros_cam_get_cam_info_cb_t cam_info_callback_;
-  void* cam_info_context_;
-  std::list<int32_t> camera_id_list_;
-  std::list<int32_t>::iterator camera_id_iter_;
-  std::map<int32_t, CameraInfo> camera_info_map_;
-  // Lock that protects |cam_info_callback_|, |cam_info_context_|,
-  // |camera_id_list_| and |camera_info_map_|.
   base::Lock camera_info_lock_;
+  cros_cam_get_cam_info_cb_t cam_info_callback_ GUARDED_BY(camera_info_lock_);
+  void* cam_info_context_ GUARDED_BY(camera_info_lock_);
+  // |camera_id_set_| stores the set of present camera IDs. It's identical to
+  // the keys in |camera_info_map_| but we kept a set to allow a quick access to
+  // the list of all the present cameras.
+  std::set<int32_t> camera_id_set_ GUARDED_BY(camera_info_lock_);
+  std::map<int32_t, CameraInfo> camera_info_map_ GUARDED_BY(camera_info_lock_);
+  // |pending_camera_id_set_| stores the camera IDs on which we haven't called
+  // CameraModule::GetCameraInfo().
+  std::set<int32_t> pending_camera_id_set_;
+  // |processing_camera_id_set_| stores the camera IDs on which we have called
+  // CameraModule::GetCameraInfo() but haven't received the info.
+  std::set<int32_t> processing_camera_id_set_;
 
   // TODO(lnishan): Support multi-device streaming by using a mapping from
   // camera ID to SessionContext.

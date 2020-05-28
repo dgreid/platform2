@@ -9,8 +9,12 @@
 #include <vector>
 
 #include <base/command_line.h>
+#include <base/process/launch.h>
 #include <base/posix/safe_strerror.h>
 #include <base/stl_util.h>
+#include <base/strings/string_piece.h>
+#include <base/strings/string_split.h>
+#include <base/strings/string_util.h>
 #include <base/strings/stringprintf.h>
 #include <base/synchronization/waitable_event.h>
 #include <base/threading/thread.h>
@@ -32,11 +36,41 @@ namespace {
 
 constexpr auto kDefaultTimeout = base::TimeDelta::FromSeconds(5);
 
-// These should be supported on all devices.
-constexpr cros_cam_format_info_t kTestFormats[] = {
-    {V4L2_PIX_FMT_NV12, 640, 480, 30},
-    {V4L2_PIX_FMT_MJPEG, 640, 480, 30},
-};
+// TODO(b/151047930): Test hotplugging with vivid.
+bool IsVividLoaded() {
+  std::string output;
+  if (!base::GetAppOutput({"lsmod"}, &output)) {
+    return false;
+  }
+
+  std::vector<base::StringPiece> lines = base::SplitStringPieceUsingSubstr(
+      output, "\n", base::KEEP_WHITESPACE, base::SPLIT_WANT_NONEMPTY);
+
+  return std::any_of(lines.begin(), lines.end(), [](const auto& line) {
+    return base::StartsWith(line, "vivid", base::CompareCase::SENSITIVE);
+  });
+}
+
+const std::array<cros_cam_format_info_t, 2> GetTestFormats() {
+  // TODO(b/151047930): Wait for vivid to be loaded in Tast test.
+  static bool vivid_loaded = IsVividLoaded();
+  if (vivid_loaded) {
+    // vivid is an upstream Linux kernel module we use for testing and only
+    // supports 640x480 up to 25fps.
+    return {{{V4L2_PIX_FMT_NV12, 640, 480, 25},
+             {V4L2_PIX_FMT_MJPEG, 640, 480, 25}}};
+  } else {
+    // All camera modules on Chrome OS are required to support this.
+    return {{{V4L2_PIX_FMT_NV12, 640, 480, 30},
+             {V4L2_PIX_FMT_MJPEG, 640, 480, 30}}};
+  }
+}
+
+cros_cam_format_info_t GetTestFormat() {
+  auto test_formats = GetTestFormats();
+  EXPECT_GE(test_formats.size(), 1u);
+  return test_formats[0];
+}
 
 }  // namespace
 
@@ -313,17 +347,19 @@ TEST_P(CaptureTest, ThreeSeconds) {
 TEST(ConnectorTest, CompareFrames) {
   CameraClient client;
   client.ProbeCameraInfo();
+  auto test_formats = GetTestFormats();
+  CHECK_GE(test_formats.size(), 2u);
 
-  int id = client.FindIdForFormat(kTestFormats[0]);
+  int id = client.FindIdForFormat(test_formats[0]);
   ASSERT_NE(id, -1);
 
   FrameCapturer capturer;
   capturer.SetNumFrames(1);
 
-  ASSERT_EQ(capturer.Run(id, kTestFormats[0]), 1);
+  ASSERT_EQ(capturer.Run(id, test_formats[0]), 1);
   I420Buffer frame1 = capturer.LastI420Frame();
 
-  ASSERT_EQ(capturer.Run(id, kTestFormats[1]), 1);
+  ASSERT_EQ(capturer.Run(id, test_formats[1]), 1);
   I420Buffer frame2 = capturer.LastI420Frame();
 
   double ssim = libyuv::I420Ssim(
@@ -346,7 +382,7 @@ TEST(ConnectorTest, CompareFrames) {
 TEST(ConnectorTest, RestartCrosCameraIdle) {
   CameraClient client;
   FrameCapturer capturer;
-  cros_cam_format_info_t format = kTestFormats[0];
+  auto format = GetTestFormat();
 
   client.ProbeCameraInfo();
   client.RestartCrosCamera();
@@ -360,7 +396,7 @@ TEST(ConnectorTest, RestartCrosCameraIdle) {
 TEST(ConnectorTest, RestartCrosCameraActive) {
   CameraClient client;
   FrameCapturer capturer;
-  cros_cam_format_info_t format = kTestFormats[0];
+  auto format = GetTestFormat();
 
   client.ProbeCameraInfo();
   int id = client.FindIdForFormat(format);
@@ -377,7 +413,7 @@ TEST(ConnectorTest, RestartCrosCameraActive) {
 
 INSTANTIATE_TEST_SUITE_P(ConnectorTest,
                          CaptureTest,
-                         ::testing::ValuesIn(kTestFormats),
+                         ::testing::ValuesIn(GetTestFormats()),
                          [](const auto& info) {
                            const cros_cam_format_info_t& fmt = info.param;
                            return base::StringPrintf(

@@ -84,8 +84,11 @@ base::flat_set<int32_t> GetAvailableFramerates(
 namespace cros {
 
 CameraClient::CameraClient()
-    : ipc_thread_("CamClient"),
+    : ipc_thread_("CamClientIpc"),
+      info_thread_("CamClientInfo"),
       camera_hal_client_(this),
+      camera_module_callbacks_(base::Bind(&CameraClient::OnDeviceStatusChange,
+                                          base::Unretained(this))),
       cam_info_callback_(nullptr) {}
 
 void CameraClient::Init(RegisterClientCallback register_client_callback,
@@ -94,6 +97,11 @@ void CameraClient::Init(RegisterClientCallback register_client_callback,
       base::Thread::Options(base::MessagePumpType::IO, 0));
   if (!ret) {
     LOGF(ERROR) << "Failed to start IPC thread";
+    std::move(init_callback).Run(-ENODEV);
+    return;
+  }
+  if (!info_thread_.Start()) {
+    LOGF(ERROR) << "Failed to start camera info callback thread";
     std::move(init_callback).Run(-ENODEV);
     return;
   }
@@ -109,8 +117,9 @@ int CameraClient::Exit() {
   int ret = StopCapture(context_.info.camera_id);
   ipc_thread_.task_runner()->PostTask(
       FROM_HERE,
-      base::BindOnce(&CameraClient::CloseOnThread, base::Unretained(this)));
+      base::BindOnce(&CameraClient::CloseOnIpcThread, base::Unretained(this)));
   ipc_thread_.Stop();
+  info_thread_.Stop();
   // The stop might fail due to the camera already being closed. Ignore the
   // failure.
   if (ret == -EIO) {
@@ -127,7 +136,7 @@ int CameraClient::SetCameraInfoCallback(cros_cam_get_cam_info_cb_t callback,
 
   cam_info_callback_ = callback;
   cam_info_context_ = context;
-  SendCameraInfo();
+  SendCameraInfo(camera_id_set_, /*is_removed=*/0);
   return 0;
 }
 
@@ -169,7 +178,7 @@ void CameraClient::SetUpChannel(mojom::CameraModulePtr camera_module) {
   camera_module_.set_connection_error_handler(
       base::Bind(&CameraClient::ResetClientState, base::Unretained(this)));
 
-  GetNumberOfCameras();
+  GetAllCameraInfo();
 }
 
 void CameraClient::RegisterClient(
@@ -182,7 +191,7 @@ void CameraClient::RegisterClient(
   std::move(register_client_callback).Run(std::move(client_ptr));
 }
 
-void CameraClient::CloseOnThread() {
+void CameraClient::CloseOnIpcThread() {
   VLOGF_ENTER();
   DCHECK(ipc_thread_.task_runner()->BelongsToCurrentThread());
 
@@ -196,12 +205,11 @@ void CameraClient::ResetClientState() {
 
   LOGF(WARNING) << "Mojo connection to HAL server disconnected";
   // Notify the user that cameras are down.
-  for (auto id : camera_id_list_) {
-    cros_cam_info_t info = {.id = id, .format_count = 0};
-    SendCameraInfoInternal(info, /*is_removed=*/1);
-  }
-  camera_id_list_.clear();
+  SendCameraInfoAsync(camera_id_set_, /*is_removed=*/1);
+  camera_id_set_.clear();
   camera_info_map_.clear();
+  pending_camera_id_set_ = {};
+  processing_camera_id_set_.clear();
   if (init_callback_) {
     // If mojo disconnects during initialization, we can wait for the mojo
     // connection to come back and re-do the initialization. In addition, We
@@ -233,7 +241,7 @@ void CameraClient::ResetClientState() {
   context_.client_ops.Reset();
 }
 
-void CameraClient::GetNumberOfCameras() {
+void CameraClient::GetAllCameraInfo() {
   VLOGF_ENTER();
   DCHECK(ipc_thread_.task_runner()->BelongsToCurrentThread());
 
@@ -249,51 +257,72 @@ void CameraClient::OnGotNumberOfCameras(int32_t num_builtin_cameras) {
   LOGF(INFO) << "Number of builtin cameras: " << num_builtin_cameras;
 
   for (int32_t i = 0; i < num_builtin_cameras; ++i) {
-    camera_id_list_.push_back(i);
+    pending_camera_id_set_.insert(i);
   }
-  if (num_builtin_cameras == 0) {
-    if (init_callback_) {
-      std::move(init_callback_).Run(0);
-    }
-    return;
-  }
-  camera_id_iter_ = camera_id_list_.begin();
-  GetCameraInfo(*camera_id_iter_);
+  SetCallbacks();
 }
 
-void CameraClient::GetCameraInfo(int32_t camera_id) {
+void CameraClient::SetCallbacks() {
   VLOGF_ENTER();
   DCHECK(ipc_thread_.task_runner()->BelongsToCurrentThread());
 
-  camera_module_->GetCameraInfo(
-      camera_id,
-      base::Bind(&CameraClient::OnGotCameraInfo, base::Unretained(this)));
+  camera_module_->SetCallbacksAssociated(
+      camera_module_callbacks_.GetModuleCallbacks(),
+      base::Bind(&CameraClient::OnSetCallbacks, base::Unretained(this)));
 }
 
-void CameraClient::OnGotCameraInfo(int32_t result, mojom::CameraInfoPtr info) {
+void CameraClient::OnSetCallbacks(int32_t result) {
+  VLOGF_ENTER();
+  DCHECK(ipc_thread_.task_runner()->BelongsToCurrentThread());
+
+  if (result != 0) {
+    LOGF(ERROR) << "Failed to set callbacks" << base::safe_strerror(-result);
+    if (init_callback_) {
+      std::move(init_callback_).Run(-ENODEV);
+    }
+    return;
+  }
+  // After SetCallbacks(), it is guaranteed that all present cameras are probed.
+  size_t num_cameras = pending_camera_id_set_.size() +
+                       processing_camera_id_set_.size() + camera_id_set_.size();
+  if (num_cameras == 0) {
+    LOGF(ERROR) << "No built-in or connected cameras found";
+    if (init_callback_) {
+      std::move(init_callback_).Run(-ENODEV);
+    }
+    return;
+  }
+  GetCameraInfo();
+}
+
+void CameraClient::GetCameraInfo() {
+  VLOGF_ENTER();
+  DCHECK(ipc_thread_.task_runner()->BelongsToCurrentThread());
+
+  for (auto it = pending_camera_id_set_.begin();
+       it != pending_camera_id_set_.end();) {
+    int32_t camera_id = *it;
+    it = pending_camera_id_set_.erase(it);
+    processing_camera_id_set_.insert(camera_id);
+    camera_module_->GetCameraInfo(
+        camera_id, base::Bind(&CameraClient::OnGotCameraInfo,
+                              base::Unretained(this), camera_id));
+  }
+}
+
+void CameraClient::OnGotCameraInfo(int32_t camera_id,
+                                   int32_t result,
+                                   mojom::CameraInfoPtr info) {
   VLOGF_ENTER();
   DCHECK(ipc_thread_.task_runner()->BelongsToCurrentThread());
   base::AutoLock l(camera_info_lock_);
 
-  int32_t camera_id = *camera_id_iter_;
-  ++camera_id_iter_;
   if (result != 0) {
     LOGF(ERROR) << "Failed to get camera info of " << camera_id << ": "
                 << base::safe_strerror(-result);
+    processing_camera_id_set_.erase(camera_id);
     if (init_callback_) {
       std::move(init_callback_).Run(-ENODEV);
-    } else {
-      // Caveat: If the error happened after initialization, the user has no way
-      // to be notified of the failure, and simply won't know this camera
-      // exists.
-      if (camera_id_iter_ == camera_id_list_.end()) {
-        // Still send existing camera info since we might have some cameras
-        // available.
-        SendCameraInfo();
-      } else {
-        // Try the next camera. It might succeed.
-        GetCameraInfo(*camera_id_iter_);
-      }
     }
     return;
   }
@@ -340,44 +369,77 @@ void CameraClient::OnGotCameraInfo(int32_t result, mojom::CameraInfoPtr info) {
       info->static_camera_characteristics,
       mojom::CameraMetadataTag::ANDROID_JPEG_MAX_SIZE)[0];
 
-  if (camera_id_iter_ == camera_id_list_.end()) {
-    if (init_callback_) {
+  camera_id_set_.insert(camera_id);
+  processing_camera_id_set_.erase(camera_id);
+
+  if (init_callback_) {
+    if (processing_camera_id_set_.empty()) {
+      // TODO(lnishan): Initialize all states when multi-device streaming is
+      // supported.
       context_.state = SessionState::kIdle;
       std::move(init_callback_).Run(0);
-    } else {
-      SendCameraInfo();
     }
+  } else if (cam_info_callback_) {
+    SendCameraInfoAsync({camera_id}, /*is_removed=*/0);
+  }
+}
+
+void CameraClient::SendCameraInfo(const std::set<int32_t>& camera_id_set,
+                                  int is_removed) {
+  VLOGF_ENTER();
+  camera_info_lock_.AssertAcquired();
+
+  for (auto& camera_id : camera_id_set) {
+    GenerateAndSendCameraInfo(camera_id, is_removed);
+  }
+}
+
+void CameraClient::SendCameraInfoAsync(const std::set<int32_t>& camera_id_set,
+                                       int is_removed) {
+  VLOGF_ENTER();
+
+  info_thread_.task_runner()->PostTask(
+      FROM_HERE,
+      base::BindOnce(&CameraClient::SendCameraInfoAsyncOnInfoThread,
+                     base::Unretained(this), camera_id_set, is_removed));
+}
+
+void CameraClient::SendCameraInfoAsyncOnInfoThread(
+    std::set<int32_t> camera_id_set, int is_removed) {
+  VLOGF_ENTER();
+  DCHECK(info_thread_.task_runner()->BelongsToCurrentThread());
+  base::AutoLock l(camera_info_lock_);
+
+  for (auto& camera_id : camera_id_set) {
+    GenerateAndSendCameraInfo(camera_id, is_removed);
+  }
+}
+
+void CameraClient::GenerateAndSendCameraInfo(int32_t camera_id,
+                                             int is_removed) {
+  VLOGF_ENTER();
+  camera_info_lock_.AssertAcquired();
+
+  // Generate camera info
+  cros_cam_info_t cam_info;
+  if (is_removed) {
+    cam_info = {.id = camera_id};
   } else {
-    GetCameraInfo(*camera_id_iter_);
-  }
-}
-
-void CameraClient::SendCameraInfo() {
-  VLOGF_ENTER();
-  camera_info_lock_.AssertAcquired();
-
-  for (auto& camera_id : camera_id_list_) {
     auto it = camera_info_map_.find(camera_id);
-    if (camera_info_map_.find(camera_id) == camera_info_map_.end()) {
+    if (it == camera_info_map_.end()) {
       LOGF(ERROR) << "Cannot find the info of camera " << camera_id;
-      continue;
+      return;
     }
-    cros_cam_info_t cam_info = {
+    auto& camera_info = it->second;
+    cam_info = {
         .id = camera_id,
-        .facing = it->second.facing,
-        .name = it->second.name.c_str(),
-        .format_count = static_cast<int>(it->second.format_info.size()),
-        .format_info = it->second.format_info.data()};
-
-    SendCameraInfoInternal(cam_info, /*is_removed=*/0);
+        .facing = camera_info.facing,
+        .name = camera_info.name.c_str(),
+        .format_count = static_cast<int>(camera_info.format_info.size()),
+        .format_info = camera_info.format_info.data()};
   }
-}
 
-void CameraClient::SendCameraInfoInternal(const cros_cam_info_t& cam_info,
-                                          int is_removed) {
-  VLOGF_ENTER();
-  camera_info_lock_.AssertAcquired();
-
+  // Send camera info
   if (cam_info_callback_ == nullptr) {
     return;
   }
@@ -393,11 +455,11 @@ void CameraClient::PushSessionRequest(SessionRequest request) {
   VLOGF_ENTER();
 
   ipc_thread_.task_runner()->PostTask(
-      FROM_HERE, base::BindOnce(&CameraClient::PushSessionRequestOnThread,
+      FROM_HERE, base::BindOnce(&CameraClient::PushSessionRequestOnIpcThread,
                                 base::Unretained(this), std::move(request)));
 }
 
-void CameraClient::PushSessionRequestOnThread(SessionRequest request) {
+void CameraClient::PushSessionRequestOnIpcThread(SessionRequest request) {
   VLOGF_ENTER();
   DCHECK(ipc_thread_.task_runner()->BelongsToCurrentThread());
 
@@ -421,9 +483,9 @@ int CameraClient::ProcessSessionRequest(SessionRequest* request) {
 
   switch (request->type) {
     case SessionRequestType::kStart:
-      return StartCaptureOnThread(request);
+      return StartCaptureOnIpcThread(request);
     case SessionRequestType::kStop:
-      return StopCaptureOnThread(request);
+      return StopCaptureOnIpcThread(request);
     default:
       LOGF(ERROR) << "Unexpected session request type";
       std::move(request->result_callback).Run(-EINVAL);
@@ -442,7 +504,7 @@ void CameraClient::FlushInflightSessionRequests(int error) {
   }
 }
 
-int CameraClient::StartCaptureOnThread(SessionRequest* request) {
+int CameraClient::StartCaptureOnIpcThread(SessionRequest* request) {
   VLOGF_ENTER();
   DCHECK(ipc_thread_.task_runner()->BelongsToCurrentThread());
 
@@ -507,7 +569,7 @@ void CameraClient::OnOpenedDevice(int32_t result) {
   TryProcessSessionRequests();
 }
 
-int CameraClient::StopCaptureOnThread(SessionRequest* request) {
+int CameraClient::StopCaptureOnIpcThread(SessionRequest* request) {
   VLOGF_ENTER();
   DCHECK(ipc_thread_.task_runner()->BelongsToCurrentThread());
 
@@ -577,6 +639,21 @@ bool CameraClient::IsDeviceActive(int device) {
   return camera_info_map_.find(device) != camera_info_map_.end();
 }
 
+void CameraClient::OnDeviceStatusChange(int32_t camera_id, bool is_present) {
+  VLOGF_ENTER();
+  DCHECK(ipc_thread_.task_runner()->BelongsToCurrentThread());
+
+  LOGF(INFO) << camera_id << " is " << (is_present ? "present" : "absent");
+  if (is_present) {
+    pending_camera_id_set_.insert(camera_id);
+    GetCameraInfo();
+  } else {
+    camera_id_set_.erase(camera_id);
+    camera_info_map_.erase(camera_id);
+    SendCameraInfoAsync({camera_id}, /*is_removed=*/1);
+  }
+}
+
 void CameraClient::SendCaptureResult(const cros_cam_capture_result_t& result) {
   VLOGF_ENTER();
   DCHECK(ipc_thread_.task_runner()->BelongsToCurrentThread());
@@ -611,7 +688,7 @@ void CameraClient::SendCaptureResult(const cros_cam_capture_result_t& result) {
                               .result_callback = base::BindOnce(
                                   &CameraClient::OnStoppedCaptureFromCallback,
                                   base::Unretained(this))};
-    PushSessionRequestOnThread(std::move(request));
+    PushSessionRequestOnIpcThread(std::move(request));
     CHECK_EQ(context_.state, SessionState::kStopping);
   }
 }

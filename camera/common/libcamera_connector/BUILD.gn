@@ -12,6 +12,7 @@ shared_library("libcamera_connector") {
     "//camera/common/libcamera_connector/camera_client.cc",
     "//camera/common/libcamera_connector/camera_client_ops.cc",
     "//camera/common/libcamera_connector/camera_metadata_utils.cc",
+    "//camera/common/libcamera_connector/camera_module_callbacks.cc",
     "//camera/common/libcamera_connector/camera_service_connector.cc",
     "//camera/common/libcamera_connector/camera_service_connector_impl.cc",
     "//camera/common/libcamera_connector/stream_buffer_manager.cc",
