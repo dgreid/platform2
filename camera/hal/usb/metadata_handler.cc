@@ -60,7 +60,8 @@ class MetadataUpdater {
     }
     if (metadata_->update(tag, data) != 0) {
       ok_ = false;
-      LOGF(ERROR) << "Update metadata with tag " << tag << " failed";
+      LOGF(ERROR) << "Update metadata with tag " << std::hex << std::showbase
+                  << tag << " failed";
     }
   }
 
@@ -864,6 +865,14 @@ int MetadataHandler::FillMetadataFromDeviceInfo(
           std::vector<int32_t>{range.minimum, range.maximum, range.step});
       update_request(kVendorTagControlTilt, range.default_value);
     }
+
+    if (V4L2CameraDevice::GetControlRange(device_info.device_path, kControlZoom,
+                                          &range)) {
+      update_static(
+          kVendorTagControlZoomRange,
+          std::vector<int32_t>{range.minimum, range.maximum, range.step});
+      update_request(kVendorTagControlZoom, range.default_value);
+    }
   }
 
   return update_static.ok() && update_request.ok() ? 0 : -EINVAL;
@@ -991,6 +1000,11 @@ int MetadataHandler::PreHandleRequest(int frame_number,
     device_->SetControlValue(kControlTilt, entry.data.i32[0]);
   }
 
+  if (metadata->exists(kVendorTagControlZoom)) {
+    camera_metadata_entry entry = metadata->find(kVendorTagControlZoom);
+    device_->SetControlValue(kControlZoom, entry.data.i32[0]);
+  }
+
   current_frame_number_ = frame_number;
   return 0;
 }
@@ -1086,6 +1100,10 @@ int MetadataHandler::PostHandleRequest(int frame_number,
   if (metadata->exists(kVendorTagControlTilt) &&
       device_->GetControlValue(kControlTilt, &value))
     update_request(kVendorTagControlTilt, value);
+
+  if (metadata->exists(kVendorTagControlZoom) &&
+      device_->GetControlValue(kControlZoom, &value))
+    update_request(kVendorTagControlZoom, value);
 
   return 0;
 }

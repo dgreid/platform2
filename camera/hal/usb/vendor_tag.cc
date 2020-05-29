@@ -40,6 +40,9 @@ const VendorTagManager& VendorTagOps::GetVendorTagManager() {
     m.Add(kVendorTagControlTilt, kVendorControlSectionName, "tilt", TYPE_INT32);
     m.Add(kVendorTagControlTiltRange, kVendorControlSectionName, "tiltRange",
           TYPE_INT32);
+    m.Add(kVendorTagControlZoom, kVendorControlSectionName, "zoom", TYPE_INT32);
+    m.Add(kVendorTagControlZoomRange, kVendorControlSectionName, "zoomRange",
+          TYPE_INT32);
     return m;
   }();
   return manager;

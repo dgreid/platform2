@@ -36,6 +36,7 @@ enum ControlType {
   kControlSaturation,
   kControlSharpness,
   kControlTilt,
+  kControlZoom,
 };
 
 // The class is thread-safe.

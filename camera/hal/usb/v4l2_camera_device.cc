@@ -55,6 +55,9 @@ const int ControlTypeToCid(ControlType type) {
     case kControlTilt:
       return V4L2_CID_TILT_ABSOLUTE;
 
+    case kControlZoom:
+      return V4L2_CID_ZOOM_ABSOLUTE;
+
     default:
       NOTREACHED() << "Unexpected control type " << type;
       return -1;
@@ -80,6 +83,9 @@ const std::string ControlTypeToString(ControlType type) {
 
     case kControlTilt:
       return "tilt";
+
+    case kControlZoom:
+      return "zoom";
 
     default:
       NOTREACHED() << "Unexpected control type " << type;

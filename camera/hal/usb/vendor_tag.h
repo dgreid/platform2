@@ -40,7 +40,9 @@ enum VendorTags : uint32_t {
   kVendorTagControlSharpnessRange,
   kVendorTagControlTilt,
   kVendorTagControlTiltRange,
-  kVendorTagEnd = kVendorTagControlTiltRange,
+  kVendorTagControlZoom,
+  kVendorTagControlZoomRange,
+  kVendorTagEnd = kVendorTagControlZoomRange,
 };
 
 static_assert(kVendorTagEnd < kUsbHalVendorTagEnd,
