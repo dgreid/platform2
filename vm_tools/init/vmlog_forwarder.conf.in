@@ -7,9 +7,10 @@ author         "chromium-os-dev@chromium.org"
 
 # Starts the VM log forwarding service, which is responsible for collecting
 # logs from VMs, scrubbing the contents, and then forwarding them to /dev/log
-# or to a specified file.
-start on (starting vm_concierge or starting wilco_dtc)
-stop on (stopped vm_concierge and stopped wilco_dtc)
+# or to a specified file. Dependent services are injected dynamically by the
+# associated ebuild.
+start on @dependent_start_services@
+stop on @dependent_stop_services@
 respawn
 
 pre-start script
