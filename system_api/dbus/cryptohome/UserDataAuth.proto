@@ -14,6 +14,7 @@ option optimize_for = LITE_RUNTIME;
 
 package user_data_auth;
 
+import "fido.proto";
 import "key.proto";
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -80,6 +81,8 @@ enum CryptohomeErrorCode {
   // Fingerprint match failed and maximum retry count reached.
   CRYPTOHOME_ERROR_FINGERPRINT_DENIED = 44;
   CRYPTOHOME_ERROR_VAULT_UNRECOVERABLE = 45;
+  CRYPTOHOME_ERROR_FIDO_MAKE_CREDENTIAL_FAILED = 46;
+  CRYPTOHOME_ERROR_FIDO_GET_ASSERTION_FAILED = 47;
 }
 
 // This is used by MountRequest to store details about the mount to create
@@ -870,4 +873,30 @@ message CheckHealthRequest {}
 // Output parameters for CheckHealth()
 message CheckHealthReply {
   bool requires_powerwash = 2;
+}
+
+// Fido make credential public key options.
+message FidoMakeCredentialRequest {
+  cryptohome.AccountIdentifier account_id = 1;
+  cryptohome.fido.PublicKeyCredentialCreationOptions make_credential_options =
+      2;
+}
+
+// Fido make credential response.
+message FidoMakeCredentialReply {
+  CryptohomeErrorCode error = 1;
+  // Contains MakeCredentialAuthenticatorResponse.
+  cryptohome.fido.MakeCredentialAuthenticatorResponse make_credential_response =
+      2;
+}
+
+// Fido challenge
+message FidoGetAssertionRequest {
+  cryptohome.fido.PublicKeyCredentialRequestOptions get_assertion_options = 1;
+}
+
+message FidoGetAssertionReply {
+  CryptohomeErrorCode error = 1;
+  // Contains GetAssertionAuthenticatorResponse.
+  cryptohome.fido.GetAssertionAuthenticatorResponse get_assertion_response = 2;
 }

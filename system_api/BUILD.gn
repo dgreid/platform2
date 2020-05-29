@@ -115,6 +115,7 @@ goproto_library("system_api-cryptohome-goprotos") {
   proto_in_dir = "dbus/cryptohome"
   proto_out_dir = "go/src/chromiumos/system_api/cryptohome_proto"
   sources = [
+    "${proto_in_dir}/fido.proto",
     "${proto_in_dir}/key.proto",
     "${proto_in_dir}/rpc.proto",
   ]

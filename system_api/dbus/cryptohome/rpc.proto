@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 //
 // The messages in this file comprise the DBus/Proto interface for
-// Cryptohome where there is an AccountIdentifer argument, an
+// Cryptohome where there is an AccountIdentifier argument, an
 // AuthorizationRequest (if needed for the call), and the call's
 // parameters as <Call>Request.
 //
@@ -77,6 +77,8 @@ enum CryptohomeErrorCode {
   // Fingerprint match failed and maximum retry count reached.
   CRYPTOHOME_ERROR_FINGERPRINT_DENIED = 44;
   CRYPTOHOME_ERROR_VAULT_UNRECOVERABLE = 45;
+  CRYPTOHOME_ERROR_FIDO_MAKE_CREDENTIAL_FAILED = 46;
+  CRYPTOHOME_ERROR_FIDO_GET_ASSERTION_FAILED = 47;
 }
 
 message AccountIdentifier {
