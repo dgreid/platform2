@@ -39,7 +39,8 @@ Intel3AClient::Intel3AClient():
     mNotifyCallback = base::Bind(&Intel3AClient::notifyHandler, base::Unretained(this));
     Intel3AClient::notify = notifyCallback;
 
-    mBridge = cros::CameraAlgorithmBridge::CreateVendorAlgoInstance();
+    mBridge = cros::CameraAlgorithmBridge::CreateInstance(
+        cros::CameraAlgorithmBackend::kVendorCpu);
     CheckError(!mBridge, VOID_VALUE, "@%s, mBridge is nullptr", __FUNCTION__);
     CheckError((mBridge->Initialize(this) != 0), VOID_VALUE, "@%s, call mBridge->Initialize fail", __FUNCTION__);
 
