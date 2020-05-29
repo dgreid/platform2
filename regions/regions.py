@@ -17,7 +17,7 @@ import json
 import re
 import sys
 
-import yaml
+import yaml  # pylint: disable=import-error
 
 
 # The regular expression to check values in Region.keyboards and Region.locales.
@@ -33,7 +33,7 @@ LOCALE_PATTERN = re.compile(r'^(\w+)(-[A-Z0-9]+)?$')
 class Enum(frozenset):
   """An enumeration type.
 
-  Usage:
+  Examples:
     To create a enum object:
       dummy_enum = Enum(['A', 'B', 'C'])
 
@@ -1180,7 +1180,10 @@ def BuildRegionsDict(include_all=False):
 REGIONS = BuildRegionsDict()
 
 
-def main(args=sys.argv[1:], out=None):
+def main(args=None, out=None):
+  if args is None:
+    args = sys.argv[1:]
+
   parser = argparse.ArgumentParser(description=(
       'Display all known regions and their parameters. '))
   parser.add_argument('--format',
@@ -1199,7 +1202,7 @@ def main(args=sys.argv[1:], out=None):
 
   if args.overlay is not None:
     with open(args.overlay) as f:
-      exec(f.read())
+      exec(f.read())  # pylint: disable=exec-used
 
   if args.all:
     # Add an additional 'confirmed' property to help identifying region status,
