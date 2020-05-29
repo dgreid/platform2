@@ -495,12 +495,14 @@ void Manager::PushProfileInternal(const Profile::Identifier& ident,
 
     LoadProperties(default_profile);
     profile = default_profile;
+    LOG(INFO) << "Push default profile.";
   } else {
     profile = new Profile(this, ident, user_storage_path_, true);
     if (!profile->InitStorage(Profile::kOpenExisting, error)) {
       // |error| will have been populated by InitStorage().
       return;
     }
+    LOG(INFO) << "Push user profile: " << ident.user;
   }
 
   profiles_.push_back(profile);
@@ -558,12 +560,17 @@ void Manager::InsertUserProfile(const string& name,
   }
   ident.user_hash = user_hash;
   PushProfileInternal(ident, path, error);
-  has_user_session_ = true;
 }
 
 void Manager::PopProfileInternal() {
   CHECK(!profiles_.empty());
   ProfileRefPtr active_profile = profiles_.back();
+  const std::string& user = active_profile->GetUser();
+  if (user.empty()) {
+    LOG(INFO) << "Pop default profile.";
+  } else {
+    LOG(INFO) << "Pop user profile: " << user;
+  }
   profiles_.pop_back();
   for (auto it = services_.begin(); it != services_.end();) {
     (*it)->ClearExplicitlyDisconnected();
@@ -610,6 +617,13 @@ void Manager::OnProfilesChanged() {
   adaptor_->EmitRpcIdentifierArrayChanged(kProfilesProperty,
                                           EnumerateProfiles(&unused_error));
   Profile::SaveUserProfileList(user_profile_list_path_, profiles_);
+  has_user_session_ = false;
+  for (const ProfileRefPtr& profile : profiles_) {
+    if (!profile->GetUser().empty()) {
+      has_user_session_ = true;
+      break;
+    }
+  }
 }
 
 void Manager::PopProfile(const string& name, Error* error) {
@@ -650,7 +664,6 @@ void Manager::PopAllUserProfiles(Error* /*error*/) {
   while (!profiles_.empty() && !profiles_.back()->GetUser().empty()) {
     PopProfileInternal();
   }
-  has_user_session_ = false;
 }
 
 void Manager::RemoveProfile(const string& name, Error* error) {
