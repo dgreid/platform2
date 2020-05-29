@@ -477,6 +477,9 @@ REGIONS_LIST = [
     Region(
         'hr', 'xkb:hr::scr', 'Europe/Zagreb', ['hr', 'en-GB'], KML.ISO,
         'Croatia'),
+    Region(
+        'kz', ['xkb:kz::kaz', 'xkb:ru::rus', 'xkb:us::eng'],
+        ['Asia/Almaty', 'Asia/Aqtobe'], ['kk', 'ru'], KML.ANSI, 'Kazakhstan'),
     ]
 
 """A list of :py:class:`regions.Region` objects for
@@ -949,10 +952,6 @@ UNCONFIRMED_REGIONS_LIST = [
     Region(
         'sc', 'xkb:sc::eng', 'Indian/Mahe', ['en-SC', 'fr-SC'], KML.ANSI,
         'Seychelles'),
-    Region(
-        'kz', 'xkb:kz::kaz', ['Asia/Almaty', 'Asia/Qyzylorda', 'Asia/Aqtobe',
-                              'Asia/Aqtau'], ['kk', 'ru'], KML.ANSI,
-        'Kazakhstan'),
     Region(
         'ky', 'xkb:ky::eng', 'America/Cayman', 'en-KY', KML.ANSI,
         'Cayman Islands'),
