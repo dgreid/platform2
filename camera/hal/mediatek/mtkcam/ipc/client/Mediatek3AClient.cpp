@@ -50,7 +50,8 @@ Mediatek3AClient::Mediatek3AClient()
       base::Bind(&Mediatek3AClient::notifyHandler, base::Unretained(this));
   Mediatek3AClient::notify = notifyCallback;
 
-  mBridge = cros::CameraAlgorithmBridge::CreateVendorAlgoInstance();
+  mBridge = cros::CameraAlgorithmBridge::CreateInstance(
+      cros::CameraAlgorithmBackend::kVendorCpu);
   CheckError(!mBridge, VOID_VALUE, "@%s, mBridge is nullptr", __FUNCTION__);
   CheckError((mBridge->Initialize(this) != 0), VOID_VALUE,
              "@%s, call mBridge->Initialize fail", __FUNCTION__);
@@ -84,7 +85,8 @@ void Mediatek3AClient::tryReconnectBridge() {
       base::Bind(&Mediatek3AClient::notifyHandler, base::Unretained(this));
   Mediatek3AClient::notify = notifyCallback;
 
-  mBridge = cros::CameraAlgorithmBridge::CreateVendorAlgoInstance();
+  mBridge = cros::CameraAlgorithmBridge::CreateInstance(
+      cros::CameraAlgorithmBackend::kVendorCpu);
   CheckError(!mBridge, VOID_VALUE, "@%s, mBridge is nullptr", __FUNCTION__);
   CheckError((mBridge->Initialize(this) != 0), VOID_VALUE,
              "@%s, call mBridge->Initialize fail", __FUNCTION__);
