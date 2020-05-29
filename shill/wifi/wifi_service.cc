@@ -605,13 +605,9 @@ KeyValueStore WiFiService::GetSupplicantConfigurationParameters() const {
   }
   params.Set<string>(WPASupplicant::kNetworkPropertyEapKeyManagement, key_mgmt);
 
-  if (ieee80211w_required_) {
-    // TODO(pstew): We should also enable IEEE 802.11w if the user
-    // explicitly enables support for this through a service / device
-    // property.  crbug.com/219950
-    params.Set<uint32_t>(WPASupplicant::kNetworkPropertyIeee80211w,
-                         WPASupplicant::kNetworkIeee80211wEnabled);
-  }
+  // "Enabled" means "negotiate." Let's always do that.
+  params.Set<uint32_t>(WPASupplicant::kNetworkPropertyIeee80211w,
+                       WPASupplicant::kNetworkIeee80211wEnabled);
 
   params.Set<vector<uint8_t>>(WPASupplicant::kNetworkPropertySSID, ssid_);
 
