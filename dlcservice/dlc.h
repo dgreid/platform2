@@ -116,6 +116,7 @@ class DlcBase {
   FRIEND_TEST(DlcBaseTest, ChangeProgress);
   FRIEND_TEST(DlcBaseTest, MakeReadyForUpdate);
   FRIEND_TEST(DlcBaseTest, MarkUnverified);
+  FRIEND_TEST(DlcBaseTest, MarkVerified);
   FRIEND_TEST(DlcBaseTest, PreloadCopyShouldMarkUnverified);
   FRIEND_TEST(DlcBaseTest, PreloadCopyFailOnInvalidFileSize);
 
@@ -128,8 +129,11 @@ class DlcBase {
   // files that didn't exist on a previous version of the DLC.
   bool CreateDlc(brillo::ErrorPtr* err);
 
+  // Mark the current active DLC image as verified.
+  bool MarkVerified();
+
   // Mark the current active DLC image as unverified.
-  void MarkUnverified();
+  bool MarkUnverified();
 
   // Returns true if the DLC image in the current active slot matches the hash
   // of that in the rootfs manifest for the DLC.

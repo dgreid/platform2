@@ -799,12 +799,8 @@ TEST_F(DlcServiceTest, PeriodCheckUpdateEngineInstallSignalRaceChecker) {
 }
 
 TEST_F(DlcServiceTest, InstallCompleted) {
-  auto active_boot_slot = SystemState::Get()->active_boot_slot();
-  EXPECT_FALSE(
-      Prefs(DlcBase(kSecondDlc), active_boot_slot).Exists(kDlcPrefVerified));
   EXPECT_TRUE(dlc_service_->InstallCompleted({kSecondDlc}, &err_));
-  EXPECT_TRUE(
-      Prefs(DlcBase(kSecondDlc), active_boot_slot).Exists(kDlcPrefVerified));
+  EXPECT_TRUE(dlc_service_->GetDlc(kSecondDlc)->IsVerified());
 }
 
 TEST_F(DlcServiceTest, UpdateCompleted) {

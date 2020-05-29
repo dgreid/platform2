@@ -242,7 +242,7 @@ TEST_F(DlcBaseTest, PreloadCopyShouldMarkUnverified) {
   SetUpDlcPreloadedImage(kThirdDlc);
 
   // Don't preload the image so we can simulate a preload failure.
-  EXPECT_TRUE(dlc.InstallCompleted(&err_));
+  EXPECT_TRUE(dlc.MarkVerified());
   EXPECT_FALSE(dlc.PreloadedCopier(&err_));
   EXPECT_FALSE(dlc.IsVerified());
 }
@@ -253,7 +253,7 @@ TEST_F(DlcBaseTest, PreloadCopyFailOnInvalidFileSize) {
   base::FilePath image_path = SetUpDlcPreloadedImage(kThirdDlc);
   EXPECT_TRUE(ResizeFile(image_path, 10));
 
-  EXPECT_TRUE(dlc.InstallCompleted(&err_));
+  EXPECT_TRUE(dlc.MarkVerified());
   EXPECT_FALSE(dlc.PreloadedCopier(&err_));
   // This failure should not render the image as unverified.
   EXPECT_TRUE(dlc.IsVerified());
@@ -286,15 +286,26 @@ TEST_F(DlcBaseTest, GetUsedBytesOnDisk) {
   EXPECT_EQ(dlc.GetUsedBytesOnDisk(), expected_size);
 }
 
+TEST_F(DlcBaseTest, MarkVerified) {
+  DlcBase dlc(kFirstDlc);
+  dlc.Initialize();
+
+  EXPECT_FALSE(dlc.IsVerified());
+  EXPECT_TRUE(dlc.MarkVerified());
+  EXPECT_TRUE(dlc.IsVerified());
+  EXPECT_TRUE(Prefs(DlcBase(kFirstDlc), SystemState::Get()->active_boot_slot())
+                  .Exists(kDlcPrefVerified));
+}
+
 TEST_F(DlcBaseTest, MarkUnverified) {
   DlcBase dlc(kFirstDlc);
   dlc.Initialize();
 
-  EXPECT_TRUE(dlc.InstallCompleted(&err_));
-  EXPECT_TRUE(dlc.IsVerified());
-
-  dlc.MarkUnverified();
+  EXPECT_TRUE(dlc.MarkVerified());
+  EXPECT_TRUE(dlc.MarkUnverified());
   EXPECT_FALSE(dlc.IsVerified());
+  EXPECT_FALSE(Prefs(DlcBase(kFirstDlc), SystemState::Get()->active_boot_slot())
+                   .Exists(kDlcPrefVerified));
 }
 
 TEST_F(DlcBaseTest, ImageOnDiskButNotVerifiedInstalls) {

@@ -128,8 +128,7 @@ base::FilePath DlcBase::GetRoot() const {
 }
 
 bool DlcBase::InstallCompleted(ErrorPtr* err) {
-  if (!Prefs(*this, SystemState::Get()->active_boot_slot())
-           .Create(kDlcPrefVerified)) {
+  if (!MarkVerified()) {
     state_.set_last_error_code(kErrorInternal);
     *err = Error::Create(
         FROM_HERE, state_.last_error_code(),
@@ -137,7 +136,6 @@ bool DlcBase::InstallCompleted(ErrorPtr* err) {
                            id_.c_str()));
     return false;
   }
-  is_verified_ = true;
   return true;
 }
 
@@ -214,11 +212,16 @@ bool DlcBase::MakeReadyForUpdate() const {
   return true;
 }
 
-void DlcBase::MarkUnverified() {
-  if (!Prefs(*this, SystemState::Get()->active_boot_slot())
-      .Delete(kDlcPrefVerified))
-    LOG(ERROR) << "Failed to mark the image as unverified for DLC=" << id_;
+bool DlcBase::MarkVerified() {
+  is_verified_ = true;
+  return Prefs(*this, SystemState::Get()->active_boot_slot())
+      .Create(kDlcPrefVerified);
+}
+
+bool DlcBase::MarkUnverified() {
   is_verified_ = false;
+  return Prefs(*this, SystemState::Get()->active_boot_slot())
+      .Delete(kDlcPrefVerified);
 }
 
 bool DlcBase::Verify() {
@@ -239,10 +242,10 @@ bool DlcBase::Verify() {
                  << base::HexEncode(image_sha256.data(), image_sha256.size());
     return false;
   }
-  ErrorPtr err;
-  if (!InstallCompleted(&err)) {
-    LOG(WARNING) << Error::ToString(err);
-    return false;
+
+  if (!MarkVerified()) {
+    LOG(WARNING) << "Failed to mark the image as verified, but temporarily"
+                 << " we assume the image is verified.";
   }
   return true;
 }
@@ -293,9 +296,9 @@ bool DlcBase::PreloadedCopier(ErrorPtr* err) {
     return false;
   }
 
-  if (!InstallCompleted(err)) {
-    LOG(ERROR) << "Failed to complete preloading for DLC=" << id_;
-    return false;
+  if (!MarkVerified()) {
+    LOG(ERROR) << "Failed to mark the image for DLC=" << id_
+               << " verified. But temporarily assuming it is verified.";
   }
 
   return true;
@@ -491,7 +494,7 @@ bool DlcBase::DeleteInternal(ErrorPtr* err) {
     }
   }
   ChangeState(DlcState::NOT_INSTALLED);
-  is_verified_ = false;
+  MarkUnverified();
 
   if (!undeleted_paths.empty()) {
     state_.set_last_error_code(kErrorInternal);
