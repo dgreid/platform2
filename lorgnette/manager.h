@@ -12,7 +12,6 @@
 
 #include <base/callback.h>
 #include <base/files/scoped_file.h>
-#include <base/optional.h>
 #include <brillo/variant_dictionary.h>
 #include <brillo/errors/error.h>
 #include <metrics/metrics_library.h>
@@ -37,8 +36,6 @@ class FirewallManager;
 class Manager : public org::chromium::lorgnette::ManagerAdaptor,
                 public org::chromium::lorgnette::ManagerInterface {
  public:
-  typedef std::map<std::string, std::map<std::string, std::string>> ScannerInfo;
-
   Manager(base::Callback<void()> activity_callback,
           std::unique_ptr<SaneClient> sane_client);
   Manager(const Manager&) = delete;
@@ -51,7 +48,7 @@ class Manager : public org::chromium::lorgnette::ManagerAdaptor,
 
   // Implementation of MethodInterface.
   bool ListScanners(brillo::ErrorPtr* error,
-                    ScannerInfo* scanner_list) override;
+                    std::vector<uint8_t>* scanner_list_out) override;
   bool ListScannersProto(brillo::ErrorPtr* error,
                          std::vector<uint8_t>* scanner_list_out) override;
   bool GetScannerCapabilities(brillo::ErrorPtr* error,
@@ -78,12 +75,6 @@ class Manager : public org::chromium::lorgnette::ManagerAdaptor,
       const brillo::VariantDictionary& scan_properties,
       uint32_t* resolution_out,
       std::string* mode_out);
-
-  // Get a list of attached scanners from SANE.
-  // This method is used to share an implementation between ListScanners and
-  // ListScannersProto, and will be deleted once migration is complete.
-  base::Optional<std::vector<lorgnette::ScannerInfo>> GenerateScannerList(
-      brillo::ErrorPtr* error);
 
   std::unique_ptr<brillo::dbus_utils::DBusObject> dbus_object_;
   base::Callback<void()> activity_callback_;

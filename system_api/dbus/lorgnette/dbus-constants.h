@@ -17,11 +17,6 @@ const char kListScannersProtoMethod[] = "ListScannersProto";
 const char kGetScannerCapabilitiesMethod[] = "GetScannerCapabilities";
 const char kScanImageMethod[] = "ScanImage";
 
-// Attributes of scanners returned from "ListScanners".
-const char kScannerPropertyManufacturer[] = "Manufacturer";
-const char kScannerPropertyModel[] = "Model";
-const char kScannerPropertyType[] = "Type";
-
 // Parameters supplied to a "ScanImage" request.
 const char kScanPropertyMode[] = "Mode";
 const char kScanPropertyModeColor[] = "Color";

@@ -66,9 +66,8 @@ class SaneClient {
  public:
   virtual ~SaneClient() {}
 
-  virtual bool ListDevices(
-      brillo::ErrorPtr* error,
-      std::vector<lorgnette::ScannerInfo>* scanners_out) = 0;
+  virtual bool ListDevices(brillo::ErrorPtr* error,
+                           std::vector<ScannerInfo>* scanners_out) = 0;
   virtual std::unique_ptr<SaneDevice> ConnectToDevice(
       brillo::ErrorPtr* error, const std::string& device_name) = 0;
 };

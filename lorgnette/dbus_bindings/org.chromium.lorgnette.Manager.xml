@@ -6,15 +6,10 @@ ns-v0">
     <method name="ListScanners">
       <tp:docstring>
       </tp:docstring>
-      <arg name="scanner_list" type="a{sa{ss}}" direction="out">
+      <arg name="scanner_list" type="ay" direction="out">
         <tp:docstring>
-          The list of attached scanners.  Returns a dict keyed by the string
-          name of the device, which can be passed as the first argument to
-          the "ScanImage" call.  For each device, the possible dict keys are:
-
-            Manufacturer (string): Name of the manufacturer of the device.
-            Model (string): Model name of the device.
-            Type (string): Type of device (e.g, "flatbed scanner").
+          The list of connected scanners. Returns a protobuf representing a list
+          of SaneDevice structs as provided by SANE.
         </tp:docstring>
       </arg>
     </method>
