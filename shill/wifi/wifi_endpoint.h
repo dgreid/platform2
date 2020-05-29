@@ -30,6 +30,7 @@ class WiFiEndpoint : public base::RefCounted<WiFiEndpoint> {
   struct SecurityFlags {
     bool rsn_8021x = false;
     bool rsn_psk = false;
+    bool rsn_sae = false;
     bool wpa_8021x = false;
     bool wpa_psk = false;
     bool privacy = false;
@@ -127,7 +128,11 @@ class WiFiEndpoint : public base::RefCounted<WiFiEndpoint> {
   // for 802.11k/r/v features
   FRIEND_TEST(WiFiEndpointTest, Ap80211krvSupported);
 
-  enum KeyManagement { kKeyManagement802_1x, kKeyManagementPSK };
+  enum KeyManagement {
+    kKeyManagement802_1x,
+    kKeyManagementPSK,
+    kKeyManagementSAE
+  };
 
   // Build a simple WiFiEndpoint, for testing purposes.
   static WiFiEndpointRefPtr MakeEndpoint(ControlInterface* control_interface,

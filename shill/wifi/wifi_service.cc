@@ -120,6 +120,7 @@ WiFiService::WiFiService(Manager* manager,
     // Passphrases are not mandatory for 802.1X.
     need_passphrase_ = false;
   } else if (security_ == kSecurityPsk) {
+    // TODO(crbug.com/942973): include SAE, once it's validated.
     SetEAPKeyManagement(WPASupplicant::kKeyManagementWPAPSK);
   } else if (security_ == kSecurityWep) {
     SetEAPKeyManagement(WPASupplicant::kKeyModeNone);
@@ -242,7 +243,7 @@ bool WiFiService::SetPassphrase(const string& passphrase, Error* error) {
   if (security_ == kSecurityWep) {
     ValidateWEPPassphrase(passphrase, error);
   } else if (security_ == kSecurityPsk || security_ == kSecurityWpa ||
-             security_ == kSecurityRsn) {
+             security_ == kSecurityRsn || security_ == kSecurityWpa3) {
     ValidateWPAPassphrase(passphrase, error);
   } else {
     error->Populate(Error::kNotSupported);
@@ -561,8 +562,9 @@ KeyValueStore WiFiService::GetSupplicantConfigurationParameters() const {
 
   if (Is8021x()) {
     eap()->PopulateSupplicantProperties(certificate_file_.get(), &params);
-  } else if (security_ == kSecurityPsk || security_ == kSecurityRsn ||
-             security_ == kSecurityWpa) {
+  } else if (security_ == kSecurityPsk || security_ == kSecurityWpa3 ||
+             security_ == kSecurityRsn || security_ == kSecurityWpa) {
+    // NB: WPA3-SAE uses RSN protocol.
     const string psk_proto =
         base::StringPrintf("%s %s", WPASupplicant::kSecurityModeWPA,
                            WPASupplicant::kSecurityModeRSN);
@@ -656,7 +658,8 @@ void WiFiService::UpdateConnectable() {
   } else if (Is8021x()) {
     is_connectable = Is8021xConnectable();
   } else if (security_ == kSecurityWep || security_ == kSecurityWpa ||
-             security_ == kSecurityPsk || security_ == kSecurityRsn) {
+             security_ == kSecurityPsk || security_ == kSecurityRsn ||
+             security_ == kSecurityWpa3) {
     need_passphrase_ = passphrase_.empty();
     is_connectable = !need_passphrase_;
   }
@@ -781,7 +784,8 @@ void WiFiService::UpdateSecurity() {
     algorithm = kCryptoRc4;
     key_rotation = true;
     endpoint_auth = false;
-  } else if (security_ == kSecurityRsn) {
+  } else if (security_ == kSecurityRsn || security_ == kSecurityWpa3) {
+    // TODO(crbug.com/942973): weigh WPA3 more highly?
     algorithm = kCryptoAes;
     key_rotation = true;
     endpoint_auth = false;
@@ -964,7 +968,8 @@ bool WiFiService::CheckWEPPrefix(const string& passphrase, Error* error) {
 
 // static
 string WiFiService::ComputeSecurityClass(const string& security) {
-  if (security == kSecurityRsn || security == kSecurityWpa) {
+  if (security == kSecurityRsn || security == kSecurityWpa ||
+      security == kSecurityWpa3) {
     return kSecurityPsk;
   } else {
     return security;
@@ -985,7 +990,8 @@ bool WiFiService::IsValidMode(const string& mode) {
 bool WiFiService::IsValidSecurityMethod(const string& method) {
   return method == kSecurityNone || method == kSecurityWep ||
          method == kSecurityPsk || method == kSecurityWpa ||
-         method == kSecurityRsn || method == kSecurity8021x;
+         method == kSecurityRsn || method == kSecurityWpa3 ||
+         method == kSecurity8021x;
 }
 
 // static

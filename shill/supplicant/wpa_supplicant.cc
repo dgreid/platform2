@@ -91,6 +91,7 @@ const char WPASupplicant::kKeyManagementWPAEAP[] = "WPA-EAP";
 const char WPASupplicant::kKeyManagementWPAPSK[] = "WPA-PSK";
 const char WPASupplicant::kKeyManagementMethodSuffixEAP[] = "-eap";
 const char WPASupplicant::kKeyManagementMethodSuffixPSK[] = "-psk";
+const char WPASupplicant::kKeyManagementMethodSAE[] = "sae";
 const char WPASupplicant::kKeyModeNone[] = "NONE";
 const char WPASupplicant::kNetworkBgscanMethodLearn[] = "learn";
 // None is not a real method name, but we interpret 'none' as a request that

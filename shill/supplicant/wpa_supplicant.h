@@ -85,6 +85,7 @@ class WPASupplicant {
   static const char kKeyManagementIeee8021X[];
   static const char kKeyManagementMethodSuffixEAP[];
   static const char kKeyManagementMethodSuffixPSK[];
+  static const char kKeyManagementMethodSAE[];
   static const char kKeyModeNone[];
   static const char kNetworkBgscanMethodLearn[];
   // None is not a real method name, but we interpret 'none' as a request that

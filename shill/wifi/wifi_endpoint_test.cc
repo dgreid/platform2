@@ -230,6 +230,10 @@ TEST_F(WiFiEndpointTest, ParseSecurityWPA802_1x) {
                ParseSecurity(MakeSecurityArgs("WPA", "something-eap")));
 }
 
+TEST_F(WiFiEndpointTest, ParseSecurityRSNSAE) {
+  EXPECT_STREQ(kSecurityWpa3, ParseSecurity(MakeSecurityArgs("RSN", "sae")));
+}
+
 TEST_F(WiFiEndpointTest, ParseSecurityRSNPSK) {
   EXPECT_STREQ(kSecurityRsn,
                ParseSecurity(MakeSecurityArgs("RSN", "something-psk")));
@@ -849,6 +853,14 @@ TEST_F(WiFiEndpointTest, HasRsnWpaProperties) {
     WiFiEndpointRefPtr endpoint =
         MakeEndpoint(nullptr, wifi(), "ssid", "00:00:00:00:00:01", flags);
     EXPECT_TRUE(endpoint->has_wpa_property());
+    EXPECT_TRUE(endpoint->has_rsn_property());
+  }
+  {
+    WiFiEndpoint::SecurityFlags flags;
+    flags.rsn_sae = true;
+    WiFiEndpointRefPtr endpoint =
+        MakeEndpoint(nullptr, wifi(), "ssid", "00:00:00:00:00:01", flags);
+    EXPECT_FALSE(endpoint->has_wpa_property());
     EXPECT_TRUE(endpoint->has_rsn_property());
   }
 }
