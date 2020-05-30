@@ -246,12 +246,6 @@ class Metrics : public DefaultServiceObserver {
     kScanResultMax
   };
 
-  enum ServiceFixupProfileType {
-    kMetricServiceFixupDefaultProfile,
-    kMetricServiceFixupUserProfile,
-    kMetricServiceFixupMax
-  };
-
   enum TerminationActionResult {
     kTerminationActionResultSuccess,
     kTerminationActionResultFailure,
@@ -792,9 +786,6 @@ class Metrics : public DefaultServiceObserver {
   static const char kMetricDarkResumeScanNumRetries[];
   static const int kMetricDarkResumeScanNumRetriesMax;
   static const int kMetricDarkResumeScanNumRetriesMin;
-
-  // WiFiService Entry Fixup.
-  static const char kMetricServiceFixupEntriesSuffix[];
 
   // Cellular specific statistics.
   static const char kMetricCellular3GPPRegistrationDelayedDrop[];

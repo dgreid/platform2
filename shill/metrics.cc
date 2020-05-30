@@ -263,9 +263,6 @@ const int Metrics::kSuspendDurationMax = 86400;
 const int Metrics::kSuspendDurationNumBuckets = 60;
 
 // static
-const char Metrics::kMetricServiceFixupEntriesSuffix[] = "ServiceFixupEntries";
-
-// static
 const uint16_t Metrics::kWiFiBandwidth5MHz = 5;
 const uint16_t Metrics::kWiFiBandwidth20MHz = 20;
 const uint16_t Metrics::kWiFiFrequency2412 = 2412;

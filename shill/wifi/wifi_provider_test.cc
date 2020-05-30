@@ -350,13 +350,6 @@ class WiFiProviderTest : public testing::Test {
   void LoadConnectCountByFrequency(time_t today_seconds) {
     provider_.time_ = &time_;
     EXPECT_CALL(time_, GetSecondsSinceEpoch()).WillOnce(Return(today_seconds));
-    const string kGroupId =
-        StringPrintf("%s_0_0_%s_%s", kTypeWifi, kModeManaged, kSecurityNone);
-    EXPECT_CALL(default_profile_storage_, GetString(kGroupId, _, _))
-        .WillRepeatedly(Return(true));
-    set<string> groups;
-    groups.insert(kGroupId);
-    EXPECT_CALL(default_profile_storage_, GetGroups()).WillOnce(Return(groups));
     // Provide data for block[0] through block[2] (block[3] is empty).
     EXPECT_CALL(
         default_profile_storage_,
@@ -1466,22 +1459,6 @@ TEST_F(WiFiProviderTest, OnServiceUnloaded) {
 TEST_F(WiFiProviderTest, LoadAndFixupServiceEntriesDefaultProfile) {
   // We test LoadAndFixupServiceEntries indirectly since it calls a static
   // method in WiFiService.
-  EXPECT_CALL(metrics_,
-              SendEnumToUMA("Network.Shill.Wifi.ServiceFixupEntries",
-                            Metrics::kMetricServiceFixupDefaultProfile,
-                            Metrics::kMetricServiceFixupMax))
-      .Times(1);
-  EXPECT_CALL(default_profile_storage_, Flush()).Times(1);
-  const string kGroupId =
-      StringPrintf("%s_0_0_%s_%s", kTypeWifi, kModeManaged, kSecurityNone);
-  EXPECT_CALL(default_profile_storage_, GetString(kGroupId, _, _))
-      .WillRepeatedly(Return(false));
-  EXPECT_CALL(default_profile_storage_, SetString(kGroupId, _, _))
-      .WillRepeatedly(Return(true));
-  set<string> groups;
-  groups.insert(kGroupId);
-  EXPECT_CALL(default_profile_storage_, GetGroups())
-      .WillRepeatedly(Return(groups));
   EXPECT_CALL(
       default_profile_storage_,
       GetStringList(WiFiProvider::kStorageId,
@@ -1510,35 +1487,11 @@ TEST_F(WiFiProviderTest, LoadAndFixupServiceEntriesDefaultProfile) {
 }
 
 TEST_F(WiFiProviderTest, LoadAndFixupServiceEntriesUserProfile) {
-  EXPECT_CALL(metrics_, SendEnumToUMA("Network.Shill.Wifi.ServiceFixupEntries",
-                                      Metrics::kMetricServiceFixupUserProfile,
-                                      Metrics::kMetricServiceFixupMax))
-      .Times(1);
-  EXPECT_CALL(user_profile_storage_, Flush()).Times(1);
-  const string kGroupId =
-      StringPrintf("%s_0_0_%s_%s", kTypeWifi, kModeManaged, kSecurityNone);
-  EXPECT_CALL(user_profile_storage_, GetString(kGroupId, _, _))
-      .WillRepeatedly(Return(false));
-  EXPECT_CALL(user_profile_storage_, SetString(kGroupId, _, _))
-      .WillRepeatedly(Return(true));
-  set<string> groups;
-  groups.insert(kGroupId);
-  EXPECT_CALL(user_profile_storage_, GetGroups())
-      .WillRepeatedly(Return(groups));
   EXPECT_CALL(user_profile_storage_, GetStringList(_, _, _)).Times(0);
   LoadAndFixupServiceEntries(user_profile_.get());
 }
 
 TEST_F(WiFiProviderTest, LoadAndFixupServiceEntriesNothingToDo) {
-  EXPECT_CALL(metrics_, SendEnumToUMA(_, _, _)).Times(0);
-  EXPECT_CALL(default_profile_storage_, Flush()).Times(0);
-  const string kGroupId =
-      StringPrintf("%s_0_0_%s_%s", kTypeWifi, kModeManaged, kSecurityNone);
-  EXPECT_CALL(default_profile_storage_, GetString(kGroupId, _, _))
-      .WillRepeatedly(Return(true));
-  set<string> groups;
-  groups.insert(kGroupId);
-  EXPECT_CALL(default_profile_storage_, GetGroups()).WillOnce(Return(groups));
   EXPECT_CALL(
       default_profile_storage_,
       GetStringList(WiFiProvider::kStorageId,
@@ -1696,14 +1649,7 @@ TEST_F(WiFiProviderTest, FrequencyMapAgingIllegalDay) {
       kFirstWeek + WiFiProvider::kWeeksToKeepFrequencyCounts - 1;
   const time_t kThisWeekSeconds = kThisWeek * kSecondsPerWeek;
   EXPECT_CALL(time_, GetSecondsSinceEpoch()).WillOnce(Return(kThisWeekSeconds));
-  const string kGroupId =
-      StringPrintf("%s_0_0_%s_%s", kTypeWifi, kModeManaged, kSecurityNone);
-  EXPECT_CALL(default_profile_storage_, GetString(kGroupId, _, _))
-      .WillRepeatedly(Return(true));
-  set<string> groups;
-  groups.insert(kGroupId);
   // Instead of block[1], return a block without the date.
-  EXPECT_CALL(default_profile_storage_, GetGroups()).WillOnce(Return(groups));
   EXPECT_CALL(
       default_profile_storage_,
       GetStringList(WiFiProvider::kStorageId,

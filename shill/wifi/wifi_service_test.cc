@@ -314,53 +314,6 @@ const char WiFiServiceUpdateFromEndpointsTest::kGoodEndpointBssId[] =
 const char WiFiServiceUpdateFromEndpointsTest::kBadEndpointBssId[] =
     "00:00:00:00:00:03";
 
-class WiFiServiceFixupStorageTest : public WiFiServiceTest {
- protected:
-  void AddGroup(string group_name) { groups_.insert(group_name); }
-
-  void AddServiceEntry(bool has_type,
-                       bool has_mode,
-                       bool has_security,
-                       bool has_security_class) {
-    int index = groups_.size();
-    string id = base::StringPrintf("%s_%d_%d_%s_%s", kTypeWifi, index, index,
-                                   kModeManaged, kSecurityWpa);
-    AddGroup(id);
-    EXPECT_CALL(store_, GetString(id, WiFiService::kStorageType, _))
-        .WillOnce(Return(has_type));
-    if (!has_type) {
-      EXPECT_CALL(store_, SetString(id, WiFiService::kStorageType, kTypeWifi));
-    }
-    EXPECT_CALL(store_, GetString(id, WiFiService::kStorageMode, _))
-        .WillOnce(Return(has_mode));
-    if (!has_mode) {
-      EXPECT_CALL(store_,
-                  SetString(id, WiFiService::kStorageMode, kModeManaged));
-    }
-    EXPECT_CALL(store_, GetString(id, WiFiService::kStorageSecurity, _))
-        .WillOnce(Return(has_security));
-    if (!has_security) {
-      EXPECT_CALL(store_,
-                  SetString(id, WiFiService::kStorageSecurity, kSecurityWpa));
-    }
-    EXPECT_CALL(store_, GetString(id, WiFiService::kStorageSecurityClass, _))
-        .WillOnce(Return(has_security_class));
-    if (!has_security_class) {
-      EXPECT_CALL(store_, SetString(id, WiFiService::kStorageSecurityClass,
-                                    kSecurityPsk));
-    }
-  }
-
-  bool FixupServiceEntries() {
-    EXPECT_CALL(store_, GetGroups()).WillOnce(Return(groups_));
-    return WiFiService::FixupServiceEntries(&store_);
-  }
-
- private:
-  StrictMock<MockStore> store_;
-  set<string> groups_;
-};
-
 TEST_F(WiFiServiceTest, Constructor) {
   string histogram = metrics()->GetFullMetricName(
       Metrics::kMetricTimeToJoinMillisecondsSuffix, Technology::kWifi);
@@ -1178,77 +1131,6 @@ TEST_F(WiFiServiceTest, UnloadAndClearCache8021x) {
   EXPECT_CALL(*wifi(), ClearCachedCredentials(service.get())).Times(1);
   EXPECT_CALL(*wifi(), DisconnectFrom(service.get())).Times(1);
   service->Unload();
-}
-
-TEST_F(WiFiServiceTest, ParseStorageIdentifierNone) {
-  WiFiServiceRefPtr service = MakeSimpleService(kSecurityNone);
-  const string storage_id = service->GetStorageIdentifier();
-  string address;
-  string mode;
-  string security;
-  EXPECT_TRUE(
-      service->ParseStorageIdentifier(storage_id, &address, &mode, &security));
-  EXPECT_EQ(base::ToLowerASCII(GetAnyDeviceAddress()), address);
-  EXPECT_EQ(kModeManaged, mode);
-  EXPECT_EQ(kSecurityNone, security);
-}
-
-TEST_F(WiFiServiceTest, ParseStorageIdentifier8021x) {
-  // Do a separate test for 802.1x, since kSecurity8021x contains a "_",
-  // which needs to be dealt with specially in the parser.
-  WiFiServiceRefPtr service = MakeSimpleService(kSecurity8021x);
-  const string storage_id = service->GetStorageIdentifier();
-  string address;
-  string mode;
-  string security;
-  EXPECT_TRUE(
-      service->ParseStorageIdentifier(storage_id, &address, &mode, &security));
-  EXPECT_EQ(base::ToLowerASCII(GetAnyDeviceAddress()), address);
-  EXPECT_EQ(kModeManaged, mode);
-  EXPECT_EQ(kSecurity8021x, security);
-}
-
-TEST_F(WiFiServiceFixupStorageTest, FixedEntries) {
-  const string kNonWiFiId = "vpn_foo";
-  const string kUnparsableWiFiId = "wifi_foo";
-
-  AddGroup(kNonWiFiId);
-  AddGroup(kUnparsableWiFiId);
-  AddServiceEntry(true, true, true, true);
-  AddServiceEntry(false, false, false, false);
-  AddServiceEntry(true, true, true, true);
-  AddServiceEntry(false, false, false, false);
-  EXPECT_TRUE(FixupServiceEntries());
-}
-
-TEST_F(WiFiServiceFixupStorageTest, NoFixedEntries) {
-  const string kNonWiFiId = "vpn_foo";
-  const string kUnparsableWiFiId = "wifi_foo";
-
-  AddGroup(kNonWiFiId);
-  AddGroup(kUnparsableWiFiId);
-  AddServiceEntry(true, true, true, true);
-  EXPECT_FALSE(FixupServiceEntries());
-}
-
-TEST_F(WiFiServiceFixupStorageTest, MissingTypeProperty) {
-  AddServiceEntry(false, true, true, true);
-  EXPECT_TRUE(FixupServiceEntries());
-}
-
-TEST_F(WiFiServiceFixupStorageTest, MissingModeProperty) {
-  AddServiceEntry(true, false, true, true);
-  EXPECT_TRUE(FixupServiceEntries());
-}
-
-TEST_F(WiFiServiceFixupStorageTest, MissingSecurityProperty) {
-  AddServiceEntry(true, true, false, true);
-  EXPECT_TRUE(FixupServiceEntries());
-}
-
-TEST_F(WiFiServiceFixupStorageTest, MissingSecurityClassProperty) {
-  AddServiceEntry(true, true, true, false);
-  EXPECT_TRUE(FixupServiceEntries());
 }
 
 TEST_F(WiFiServiceTest, Connectable) {

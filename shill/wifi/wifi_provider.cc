@@ -525,16 +525,6 @@ void WiFiProvider::LoadAndFixupServiceEntries(Profile* profile) {
   CHECK(profile);
   StoreInterface* storage = profile->GetStorage();
   bool is_default_profile = profile->IsDefault();
-  if (WiFiService::FixupServiceEntries(storage)) {
-    storage->Flush();
-    Metrics::ServiceFixupProfileType profile_type =
-        is_default_profile ? Metrics::kMetricServiceFixupDefaultProfile
-                           : Metrics::kMetricServiceFixupUserProfile;
-    metrics()->SendEnumToUMA(
-        metrics()->GetFullMetricName(Metrics::kMetricServiceFixupEntriesSuffix,
-                                     Technology::kWifi),
-        profile_type, Metrics::kMetricServiceFixupMax);
-  }
   // TODO(wdg): Determine how this should be structured for, currently
   // non-existant, autotests.  |kStorageFrequencies| should only exist in the
   // default profile except for autotests where a test_profile is pushed.  This

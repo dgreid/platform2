@@ -972,59 +972,6 @@ int16_t WiFiService::SignalLevel() const {
 }
 
 // static
-bool WiFiService::ParseStorageIdentifier(const string& storage_name,
-                                         string* address,
-                                         string* mode,
-                                         string* security) {
-  vector<string> wifi_parts = base::SplitString(
-      storage_name, "_", base::TRIM_WHITESPACE, base::SPLIT_WANT_ALL);
-  if ((wifi_parts.size() != 5 && wifi_parts.size() != 6) ||
-      wifi_parts[0] != kTypeWifi) {
-    return false;
-  }
-  *address = wifi_parts[1];
-  *mode = wifi_parts[3];
-  if (wifi_parts.size() == 5) {
-    *security = wifi_parts[4];
-  } else {
-    // Account for security type "802_1x" which got split up above.
-    *security = wifi_parts[4] + "_" + wifi_parts[5];
-  }
-  return true;
-}
-
-// static
-bool WiFiService::FixupServiceEntries(StoreInterface* storage) {
-  bool fixed_entry = false;
-  set<string> groups = storage->GetGroups();
-  for (const auto& id : groups) {
-    string device_address, network_mode, security;
-    if (!ParseStorageIdentifier(id, &device_address, &network_mode,
-                                &security)) {
-      continue;
-    }
-    if (!storage->GetString(id, kStorageType, nullptr)) {
-      storage->SetString(id, kStorageType, kTypeWifi);
-      fixed_entry = true;
-    }
-    if (!storage->GetString(id, kStorageMode, nullptr)) {
-      storage->SetString(id, kStorageMode, network_mode);
-      fixed_entry = true;
-    }
-    if (!storage->GetString(id, kStorageSecurity, nullptr)) {
-      storage->SetString(id, kStorageSecurity, security);
-      fixed_entry = true;
-    }
-    if (!storage->GetString(id, kStorageSecurityClass, nullptr)) {
-      storage->SetString(id, kStorageSecurityClass,
-                         ComputeSecurityClass(security));
-      fixed_entry = true;
-    }
-  }
-  return fixed_entry;
-}
-
-// static
 bool WiFiService::IsValidMode(const string& mode) {
   return mode == kModeManaged;
 }

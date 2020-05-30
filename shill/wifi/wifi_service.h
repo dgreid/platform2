@@ -59,15 +59,6 @@ class WiFiService : public Service {
 
   // wifi_<MAC>_<BSSID>_<mode_string>_<security_string>
   std::string GetStorageIdentifier() const override;
-  static bool ParseStorageIdentifier(const std::string& storage_name,
-                                     std::string* address,
-                                     std::string* mode,
-                                     std::string* security);
-
-  // Iterate over |storage| looking for WiFi servces with "old-style"
-  // properties that don't include explicit type/mode/security, and add
-  // these properties.  Returns true if any entries were fixed.
-  static bool FixupServiceEntries(StoreInterface* storage);
 
   // Validate |mode| against all valid and supported service modes.
   static bool IsValidMode(const std::string& mode);
