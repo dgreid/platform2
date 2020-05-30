@@ -4,7 +4,7 @@
 
 #include "shill/net/rtnl_message.h"
 
-#include <net/if.h>
+#include <net/if.h>  // NB: order matters; this conflicts with <linux/if.h>
 #include <arpa/inet.h>
 #include <linux/fib_rules.h>
 #include <linux/if_addr.h>
@@ -15,8 +15,9 @@
 #include <string.h>
 #include <sys/socket.h>
 
-#include <memory>
 #include <map>
+#include <memory>
+#include <utility>
 
 #include <base/logging.h>
 #include <base/strings/string_util.h>
@@ -190,7 +191,7 @@ std::map<uint8_t, std::string> kRouteProtocols = {
     {RTPROT_NTK, "NTK"},
     {RTPROT_DHCP, "DHCP"},
     {RTPROT_MROUTED, "MROUTED"},
-    {RTPROT_BABEL,"BABEL"},
+    {RTPROT_BABEL, "BABEL"},
     // The following protocols are not defined on Linux 4.14
     {186 /* RTPROT_BGP */, "BGP"},
     {187 /* RTPROT_ISIS */, "ISIS"},
