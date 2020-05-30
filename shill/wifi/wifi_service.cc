@@ -197,6 +197,8 @@ void WiFiService::SetEAPKeyManagement(const string& key_management) {
 
 void WiFiService::AddEndpoint(const WiFiEndpointConstRefPtr& endpoint) {
   DCHECK(endpoint->ssid() == ssid());
+  DCHECK(ComputeSecurityClass(endpoint->security_mode()) ==
+         ComputeSecurityClass(security_));
   endpoints_.insert(endpoint);
   UpdateFromEndpoints();
 }
@@ -220,6 +222,8 @@ void WiFiService::RemoveEndpoint(const WiFiEndpointConstRefPtr& endpoint) {
 void WiFiService::NotifyCurrentEndpoint(
     const WiFiEndpointConstRefPtr& endpoint) {
   DCHECK(!endpoint || (endpoints_.find(endpoint) != endpoints_.end()));
+  DCHECK(!endpoint || (ComputeSecurityClass(endpoint->security_mode()) ==
+                       ComputeSecurityClass(security_)));
   current_endpoint_ = endpoint;
   UpdateFromEndpoints();
 }
@@ -438,12 +442,8 @@ void WiFiService::SendPostReadyStateMetrics(
       static_cast<Metrics::WiFiNetworkPhyMode>(physical_mode_),
       Metrics::kWiFiNetworkPhyModeMax);
 
-  string security_mode = security_;
-  if (current_endpoint_) {
-    security_mode = current_endpoint_->security_mode();
-  }
   Metrics::WiFiSecurity security_uma =
-      Metrics::WiFiSecurityStringToEnum(security_mode);
+      Metrics::WiFiSecurityStringToEnum(security_);
   DCHECK(security_uma != Metrics::kWiFiSecurityUnknown);
   metrics()->SendEnumToUMA(
       metrics()->GetFullMetricName(Metrics::kMetricNetworkSecuritySuffix,
@@ -713,6 +713,7 @@ void WiFiService::UpdateFromEndpoints() {
   string country_code;
   Stringmap vendor_information;
   uint16_t physical_mode = Metrics::kWiFiNetworkPhyModeUndef;
+  string security;
   // Represent "unknown raw signal strength" as 0.
   raw_signal_strength_ = 0;
   if (representative_endpoint) {
@@ -723,7 +724,12 @@ void WiFiService::UpdateFromEndpoints() {
     country_code = representative_endpoint->country_code();
     vendor_information = representative_endpoint->GetVendorInformation();
     physical_mode = representative_endpoint->physical_mode();
+    security = representative_endpoint->security_mode();
+  } else {
+    // If all endpoints disappear, reset back to the general Class.
+    security = ComputeSecurityClass(security_);
   }
+  CHECK(!security.empty());
 
   if (frequency_ != frequency) {
     frequency_ = frequency;
@@ -748,7 +754,15 @@ void WiFiService::UpdateFromEndpoints() {
   }
   adaptor()->EmitUint16sChanged(kWifiFrequencyListProperty, frequency_list_);
   SetStrength(SignalToStrength(signal));
+
+  if (security != security_) {
+    security_ = security;
+  }
+
+  // Either cipher_8021x_ or security_ may have changed. Recomputing is
+  // harmless.
   UpdateSecurity();
+
   NotifyIfVisibilityChanged();
 }
 
@@ -1019,14 +1033,11 @@ string WiFiService::GetDefaultStorageIdentifier() const {
 }
 
 string WiFiService::GetSecurity(Error* /*error*/) {
-  if (current_endpoint_) {
-    return current_endpoint_->security_mode();
-  }
-  return security_;
+  return security();
 }
 
-string WiFiService::GetSecurityClass(Error* error) {
-  return ComputeSecurityClass(GetSecurity(error));
+string WiFiService::GetSecurityClass(Error* /*error*/) {
+  return security_class();
 }
 
 void WiFiService::ClearCachedCredentials() {

@@ -122,12 +122,15 @@ class WiFiServiceTest : public PropertyStoreTest {
         nullptr, wifi, ssid, bssid, WPASupplicant::kNetworkModeInfrastructure,
         frequency, signal_dbm);
   }
+  WiFiServiceRefPtr MakeServiceSSID(const string& security_class,
+                                    const string& ssid) {
+    const vector<uint8_t> ssid_bytes(ssid.begin(), ssid.end());
+    return new WiFiService(manager(), &provider_, ssid_bytes, kModeManaged,
+                           security_class, false);
+  }
   WiFiServiceRefPtr MakeSimpleService(const string& security_class) {
     return new WiFiService(manager(), &provider_, simple_ssid_, kModeManaged,
                            security_class, false);
-  }
-  WiFiServiceRefPtr MakeGenericService() {
-    return MakeSimpleService(kSecurityWep);
   }
   void SetWiFi(WiFiServiceRefPtr service, WiFiRefPtr wifi) {
     service->SetWiFi(wifi);  // Has side-effects.
@@ -199,12 +202,38 @@ MATCHER_P3(ContainsWiFiProperties, ssid, mode, security_class, "") {
 
 class WiFiServiceSecurityTest : public WiFiServiceTest {
  public:
+  // Create a service with a secured endpoint.
+  WiFiServiceRefPtr SetupSecureService(const string& security) {
+    string security_class = WiFiService::ComputeSecurityClass(security);
+    WiFiServiceRefPtr service = MakeSimpleService(security_class);
+
+    // For security classes, we don't need an endpoint.
+    if (security == security_class)
+      return service;
+
+    // For others, we need an endpoint to help specialize the Service.
+    WiFiEndpoint::SecurityFlags flags;
+    if (security == kSecurityWpa) {
+      flags.wpa_psk = true;
+    } else if (security == kSecurityRsn) {
+      flags.rsn_psk = true;
+    } else {
+      EXPECT_TRUE(false) << security;
+      return nullptr;
+    }
+    WiFiEndpointRefPtr endpoint =
+        MakeEndpoint("a", "00:00:00:00:00:01", 0, 0, flags);
+    service->AddEndpoint(endpoint);
+    EXPECT_EQ(security, service->security());
+    return service;
+  }
+
   // Test that a service that is created with security |from_security|
   // gets its SecurityClass mapped to |to_security|.
   void TestSecurityMapping(const string& from_security,
                            const string& to_security_class) {
-    WiFiServiceRefPtr wifi_service = MakeSimpleService(from_security);
-    EXPECT_EQ(to_security_class, wifi_service->GetSecurityClass(nullptr));
+    WiFiServiceRefPtr wifi_service = SetupSecureService(from_security);
+    EXPECT_EQ(to_security_class, wifi_service->security_class());
   }
 
   // Test whether a service of type |service_security| can load from a
@@ -215,7 +244,8 @@ class WiFiServiceSecurityTest : public WiFiServiceTest {
   bool TestLoadMapping(const string& service_security,
                        const string& storage_security_class,
                        bool expectation) {
-    WiFiServiceRefPtr wifi_service = MakeSimpleService(service_security);
+    WiFiServiceRefPtr wifi_service = SetupSecureService(service_security);
+
     NiceMock<MockStore> mock_store;
     EXPECT_CALL(mock_store, GetGroupsWithProperties(_))
         .WillRepeatedly(Return(set<string>()));
@@ -253,7 +283,7 @@ class WiFiServiceUpdateFromEndpointsTest : public WiFiServiceTest {
         kBadEndpointStrength(WiFiService::SignalToStrength(kBadEndpointSignal)),
         kGoodEndpointStrength(
             WiFiService::SignalToStrength(kGoodEndpointSignal)),
-        service(MakeGenericService()),
+        service(MakeSimpleService(kSecurityNone)),
         adaptor(*GetAdaptor(service.get())) {
     ok_endpoint = MakeOpenEndpoint(simple_ssid_string(), kOkEndpointBssId,
                                    kOkEndpointFrequency, kOkEndpointSignal);
@@ -823,6 +853,21 @@ TEST_F(WiFiServiceSecurityTest, LoadMapping) {
   EXPECT_TRUE(TestLoadMapping(kSecurityWep, kSecurityPsk, false));
 }
 
+TEST_F(WiFiServiceSecurityTest, EndpointsDisappear) {
+  WiFiServiceRefPtr service = MakeSimpleService(kSecurityPsk);
+  WiFiEndpoint::SecurityFlags flags;
+  flags.rsn_psk = true;
+  WiFiEndpointRefPtr endpoint =
+      MakeEndpoint("a", "00:00:00:00:00:01", 0, 0, flags);
+  service->AddEndpoint(endpoint);
+  EXPECT_EQ(kSecurityRsn, service->security());
+  EXPECT_EQ(kSecurityPsk, service->security_class());
+
+  service->RemoveEndpoint(endpoint);
+  EXPECT_EQ(kSecurityPsk, service->security());
+  EXPECT_EQ(kSecurityPsk, service->security_class());
+}
+
 TEST_F(WiFiServiceTest, LoadAndUnloadPassphrase) {
   WiFiServiceRefPtr service = MakeSimpleService(kSecurityPsk);
   NiceMock<MockStore> mock_store;
@@ -1149,6 +1194,30 @@ TEST_F(WiFiServiceTest, AutoConnect) {
   EXPECT_FALSE(service->IsAutoConnectable(&reason));
 }
 
+TEST_F(WiFiServiceTest, PreferWPA2OverWPA) {
+  string ssid0 = "a", ssid1 = "b";
+  WiFiServiceRefPtr service0 = MakeServiceSSID(kSecurityPsk, ssid0);
+  WiFiServiceRefPtr service1 = MakeServiceSSID(kSecurityPsk, ssid1);
+
+  WiFiEndpoint::SecurityFlags rsn_flags;
+  rsn_flags.rsn_psk = true;
+  WiFiEndpoint::SecurityFlags wpa_flags;
+  wpa_flags.wpa_psk = true;
+  WiFiEndpointRefPtr rsn_endpoint =
+      MakeEndpoint(ssid0, "00:00:00:00:00:01", 0, 0, rsn_flags);
+  WiFiEndpointRefPtr wpa_endpoint =
+      MakeEndpoint(ssid1, "00:00:00:00:00:02", 0, 0, wpa_flags);
+  service0->AddEndpoint(rsn_endpoint);
+  service1->AddEndpoint(wpa_endpoint);
+
+  EXPECT_EQ(kSecurityRsn, service0->security());
+  EXPECT_EQ(kSecurityWpa, service1->security());
+
+  const auto& ret =
+      Service::Compare(service0, service1, false, vector<Technology>());
+  EXPECT_TRUE(ret.first);
+}
+
 TEST_F(WiFiServiceTest, ClearWriteOnlyDerivedProperty) {
   WiFiServiceRefPtr wifi_service = MakeSimpleService(kSecurityWep);
 
@@ -1450,19 +1519,6 @@ TEST_F(WiFiServiceUpdateFromEndpointsTest, FrequencyList) {
                                           vector<uint16_t>{}));
   service->RemoveEndpoint(same_freq_as_ok_endpoint);
   Mock::VerifyAndClearExpectations(&adaptor);
-}
-
-TEST_F(WiFiServiceTest, SecurityFromCurrentEndpoint) {
-  WiFiServiceRefPtr service(MakeSimpleService(kSecurityPsk));
-  EXPECT_EQ(kSecurityPsk, service->GetSecurity(nullptr));
-  WiFiEndpointRefPtr endpoint =
-      MakeOpenEndpoint(simple_ssid_string(), "00:00:00:00:00:00", 0, 0);
-  service->AddEndpoint(endpoint);
-  EXPECT_EQ(kSecurityPsk, service->GetSecurity(nullptr));
-  service->NotifyCurrentEndpoint(endpoint);
-  EXPECT_EQ(kSecurityNone, service->GetSecurity(nullptr));
-  service->NotifyCurrentEndpoint(nullptr);
-  EXPECT_EQ(kSecurityPsk, service->GetSecurity(nullptr));
 }
 
 TEST_F(WiFiServiceTest, UpdateSecurity) {

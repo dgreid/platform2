@@ -80,6 +80,8 @@ class WiFiService : public Service {
   }
   uint16_t physical_mode() const { return physical_mode_; }
   uint16_t frequency() const { return frequency_; }
+  const std::string& security() const { return security_; }
+  std::string security_class() const { return ComputeSecurityClass(security_); }
 
   // WiFi services can load from profile entries other than their current
   // storage identifier.  Override the methods from the parent Service
@@ -176,7 +178,6 @@ class WiFiService : public Service {
   FRIEND_TEST(MetricsTest, WiFiServicePostReady);
   FRIEND_TEST(MetricsTest, WiFiServicePostReadyEAP);
   FRIEND_TEST(WiFiMainTest, CurrentBSSChangedUpdateServiceEndpoint);
-  FRIEND_TEST(WiFiProviderTest, OnEndpointAddedWithSecurity);  // security_
   FRIEND_TEST(WiFiServiceTest, AutoConnect);
   FRIEND_TEST(WiFiServiceTest, ClearWriteOnlyDerivedProperty);  // passphrase_
   FRIEND_TEST(WiFiServiceTest, ComputeCipher8021x);
@@ -192,7 +193,6 @@ class WiFiService : public Service {
   FRIEND_TEST(WiFiServiceTest, SetPassphraseForNonPassphraseService);
   FRIEND_TEST(WiFiServiceTest, LoadAndUnloadPassphrase);
   FRIEND_TEST(WiFiServiceTest, LoadPassphraseClearCredentials);
-  FRIEND_TEST(WiFiServiceTest, SecurityFromCurrentEndpoint);  // GetSecurity
   FRIEND_TEST(WiFiServiceTest, SetPassphraseResetHasEverConnected);
   FRIEND_TEST(WiFiServiceTest, SetPassphraseRemovesCachedCredentials);
   FRIEND_TEST(WiFiServiceTest, SignalToStrength);  // SignalToStrength
@@ -254,13 +254,13 @@ class WiFiService : public Service {
   // Create a default group name for this WiFi service.
   std::string GetDefaultStorageIdentifier() const;
 
-  // Return the security of this service.  If connected, the security
-  // reported from the currently connected endpoint is returned.  Otherwise
+  // Return the security of this service.  If visible, the security
+  // reported from the representative endpoint is returned.  Otherwise
   // the configured security for the service is returned.
   std::string GetSecurity(Error* error);
 
-  // Return the security class of this service.  If connected, the
-  // security class of the currently connected endpoint is returned.
+  // Return the security class of this service.  If visible, the
+  // security class of the representative endpoint is returned.
   // Otherwise the configured security class for the service is
   // returned.
   //
@@ -301,7 +301,8 @@ class WiFiService : public Service {
   // Properties
   std::string passphrase_;
   bool need_passphrase_;
-  const std::string security_;
+  // The current security mode. May be updated based on detected BSS.
+  std::string security_;
   // TODO(cmasone): see if the below can be pulled from the endpoint associated
   // with this service instead.
   const std::string mode_;
