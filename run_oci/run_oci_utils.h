@@ -79,6 +79,11 @@ bool Pipe(base::ScopedFD* read_fd, base::ScopedFD* write_fd, int flags);
 // returns an invalid FD.
 brillo::SafeFD OpenOciConfigSafely(const base::FilePath& config_path);
 
+// Like OpenOciConfigSafely, but for unittest, allowing callers to control
+// whether to check exec filesystem.
+brillo::SafeFD OpenOciConfigSafelyForTest(const base::FilePath& config_path,
+                                          bool enable_noexec_check);
+
 }  // namespace run_oci
 
 #endif  // RUN_OCI_RUN_OCI_UTILS_H_

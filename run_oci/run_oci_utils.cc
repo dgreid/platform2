@@ -351,7 +351,8 @@ bool Pipe(base::ScopedFD* read_fd, base::ScopedFD* write_fd, int flags) {
   return true;
 }
 
-brillo::SafeFD OpenOciConfigSafely(const base::FilePath& config_path) {
+brillo::SafeFD OpenOciConfigSafelyInternal(const base::FilePath& config_path,
+                                           bool enable_noexec_check) {
   brillo::SafeFD::SafeFDResult result(
       brillo::SafeFD::Root().first.OpenExistingFile(config_path,
                                                     O_RDONLY | O_CLOEXEC));
@@ -369,14 +370,24 @@ brillo::SafeFD OpenOciConfigSafely(const base::FilePath& config_path) {
     return brillo::SafeFD();
   }
 
-  // Don't check the flag on a test image. security.RunOCI relies on configs on
-  // a writable partition.
-  if (!IsTestImage() && (buf.f_flag & ST_NOEXEC)) {
+  if (enable_noexec_check && (buf.f_flag & ST_NOEXEC)) {
     LOG(ERROR) << config_path.value() << " is on a noexec filesystem";
     errno = EPERM;
     return brillo::SafeFD();
   }
   return fd;
+}
+
+brillo::SafeFD OpenOciConfigSafely(const base::FilePath& config_path) {
+  // Don't check the flag on a test image. security.RunOCI relies on configs on
+  // a writable partition.
+  return OpenOciConfigSafelyInternal(config_path,
+                                     !IsTestImage() /* enable_noexec_check */);
+}
+
+brillo::SafeFD OpenOciConfigSafelyForTest(const base::FilePath& config_path,
+                                          bool enable_noexec_check) {
+  return OpenOciConfigSafelyInternal(config_path, enable_noexec_check);
 }
 
 }  // namespace run_oci

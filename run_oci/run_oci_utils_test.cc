@@ -34,7 +34,13 @@ TEST(RunOciUtilsTest, TestOpenOciConfigSafely) {
   ASSERT_EQ(content.size(),
             base::WriteFile(config_file, content.data(), content.size()));
   {
+    // TODO(crbug/1090237): QEMU emulated boards seem to produce weird f_flag
+    // for fstatvfs. Skip check ST_NOEXEC on ARM family unittest.
+#if defined(ARCH_CPU_ARM_FAMILY)
+    brillo::SafeFD fd(OpenOciConfigSafelyForTest(config_file, false));
+#else
     brillo::SafeFD fd(OpenOciConfigSafely(config_file));
+#endif
     EXPECT_TRUE(fd.is_valid());
     auto result = fd.ReadContents();
     ASSERT_FALSE(brillo::SafeFD::IsError(result.second));
