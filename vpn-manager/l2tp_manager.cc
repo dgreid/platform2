@@ -40,9 +40,10 @@ const char kMaxRedialsParameter[] = "30";
 // Path to pid file that contains pid for xl2tpd process.
 const char kXl2tpdPidFilePath[] = "/run/l2tpipsec_vpn/xl2tpd.pid";
 
-// xl2tpd uses fgets with a size 1024 buffer to get configuration lines. If a
-// configuration line was longer than that and didn't contain the comment
-// delimiter ';', it could be used to populate multiple configuration options.
+// xl2tpd (1.3.12 at the time of writing) uses fgets with a size 1024 buffer to
+// get configuration lines. If a configuration line was longer than that and
+// didn't contain the comment delimiter ';', it could be used to populate
+// multiple configuration options.
 constexpr size_t kXl2tpdMaxConfigurationLength = 1023;
 
 bool AddString(std::string* config, const char* key, const std::string& value) {
