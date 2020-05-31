@@ -383,6 +383,7 @@ void LegacyCryptohomeInterfaceAdaptor::GetSanitizedUsername(
           std::move(response));
 
   user_data_auth::GetSanitizedUsernameRequest request;
+  request.set_username(in_username);
   misc_proxy_->GetSanitizedUsernameAsync(
       request,
       base::Bind(
