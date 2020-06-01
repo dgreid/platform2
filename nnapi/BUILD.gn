@@ -46,6 +46,7 @@ config("target_defaults") {
 static_library("libnnapi-support") {
   configs += [
     "//common-mk:nouse_thin_archive",
+    "//common-mk:pic",
     ":target_defaults",
   ]
   configs -= [ "//common-mk:use_thin_archive" ]
@@ -68,7 +69,10 @@ generate_pkg_config("libnnapi-support_pc") {
 }
 
 static_library("libbase") {
-  configs += [ ":target_defaults" ]
+  configs += [
+    "//common-mk:pic",
+    ":target_defaults",
+  ]
   sources = [
     "${libbase_src}/chrono_utils.cpp",
     "${libbase_src}/cmsg.cpp",
@@ -134,7 +138,10 @@ if (use.test) {
 }
 
 static_library("libcutils") {
-  configs += [ ":target_defaults" ]
+  configs += [
+    "//common-mk:pic",
+    ":target_defaults",
+  ]
   include_dirs = [ "${libcutils_src}/include" ]
   sources = [
     "${libcutils_src}/config_utils.cpp",
@@ -162,7 +169,10 @@ if (use.test) {
 }
 
 static_library("libhidl") {
-  configs += [ ":target_defaults" ]
+  configs += [
+    "//common-mk:pic",
+    ":target_defaults",
+  ]
   include_dirs = [
     "${libbase_src}/include",
     "${libhidl_src}/base/include",
@@ -196,7 +206,10 @@ if (use.test) {
 }
 
 static_library("liblog") {
-  configs += [ ":target_defaults" ]
+  configs += [
+    "//common-mk:pic",
+    ":target_defaults",
+  ]
   include_dirs = [ "${liblog_src}/include" ]
   deps = [ ":libbase" ]
   sources = [
@@ -227,7 +240,10 @@ if (use.test) {
 }
 
 static_library("libutils") {
-  configs += [ ":target_defaults" ]
+  configs += [
+    "//common-mk:pic",
+    ":target_defaults",
+  ]
   include_dirs = [
     "${libcutils_src}/include",
     "${libutils_src}/include",
