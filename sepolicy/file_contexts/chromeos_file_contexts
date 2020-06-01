@@ -94,6 +94,7 @@ include(sepolicy/file_contexts/sysfs_contexts)
 /usr/sbin/ModemManager          u:object_r:cros_modem_manager_exec:s0
 /usr/sbin/accelerator-logs      u:object_r:cros_accelerator_logs_exec:s0
 /usr/sbin/apk-cache-cleaner-jailed u:object_r:cros_apk_cache_cleaner_jailed_exec:s0
+/usr/sbin/arc-apply-per-board-config u:object_r:cros_arc_apply_per_board_config_exec:s0
 /usr/sbin/arc-keymasterd        u:object_r:cros_arc_keymasterd_exec:s0
 /usr/sbin/arc-oemcrypto         u:object_r:cros_arc_oemcrypto_exec:s0
 /usr/sbin/arc-setup             u:object_r:cros_arc_setup_exec:s0
