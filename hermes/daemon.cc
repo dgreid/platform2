@@ -12,6 +12,7 @@
 #include <google-lpa/lpa/core/lpa.h>
 
 #include "hermes/card_qrtr.h"
+#include "hermes/context.h"
 #include "hermes/socket_qrtr.h"
 
 namespace hermes {
@@ -29,14 +30,12 @@ Daemon::Daemon()
       .SetSmdsClientFactory(&smds_)
       .SetLogger(&logger_);
   lpa_ = b.Build();
-
-  context_.executor = &executor_;
-  context_.lpa = lpa_.get();
 }
 
 void Daemon::RegisterDBusObjectsAsync(
     brillo::dbus_utils::AsyncEventSequencer* sequencer) {
-  manager_ = std::make_unique<Manager>(bus_, &context_);
+  Context::Initialize(bus_, lpa_.get(), &executor_);
+  manager_ = std::make_unique<Manager>();
 }
 
 }  // namespace hermes

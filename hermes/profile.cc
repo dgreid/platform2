@@ -11,6 +11,7 @@
 #include <base/optional.h>
 #include <chromeos/dbus/service_constants.h>
 
+#include "hermes/executor.h"
 #include "hermes/lpa_util.h"
 
 namespace hermes {
@@ -51,12 +52,10 @@ base::Optional<profile::ProfileClass> LpaProfileClassToHermes(
 
 // static
 std::unique_ptr<Profile> Profile::Create(
-    const scoped_refptr<dbus::Bus>& bus,
-    LpaContext* lpa_context,
     const lpa::proto::ProfileInfo& profile_info) {
   CHECK(profile_info.has_iccid());
   auto profile = std::unique_ptr<Profile>(
-      new Profile(bus, dbus::ObjectPath(kBasePath + profile_info.iccid())));
+      new Profile(dbus::ObjectPath(kBasePath + profile_info.iccid())));
 
   // Initialize properties.
   profile->SetIccid(profile_info.iccid());
@@ -83,7 +82,6 @@ std::unique_ptr<Profile> Profile::Create(
   profile->SetName(profile_info.profile_name());
   profile->SetNickname(profile_info.profile_nickname());
 
-  profile->context_ = lpa_context;
   profile->RegisterWithDBusObject(&profile->dbus_object_);
   profile->dbus_object_.RegisterAndBlock();
 
@@ -91,11 +89,11 @@ std::unique_ptr<Profile> Profile::Create(
   return profile;
 }
 
-Profile::Profile(const scoped_refptr<dbus::Bus>& bus,
-                 dbus::ObjectPath object_path)
+Profile::Profile(dbus::ObjectPath object_path)
     : org::chromium::Hermes::ProfileAdaptor(this),
+      context_(Context::Get()),
       object_path_(std::move(object_path)),
-      dbus_object_(nullptr, bus, object_path_) {}
+      dbus_object_(nullptr, context_->bus(), object_path_) {}
 
 void Profile::Enable(std::unique_ptr<DBusResponse<>> response) {
   if (GetState() == profile::kPending) {
@@ -115,7 +113,8 @@ void Profile::Enable(std::unique_ptr<DBusResponse<>> response) {
     SetState(profile::kActive);
     response->Return();
   };
-  context_->lpa->EnableProfile(GetIccid(), context_->executor, std::move(cb));
+  context_->lpa()->EnableProfile(GetIccid(), context_->executor(),
+                                 std::move(cb));
 }
 
 void Profile::Disable(std::unique_ptr<DBusResponse<>> response) {
@@ -136,13 +135,14 @@ void Profile::Disable(std::unique_ptr<DBusResponse<>> response) {
     SetState(profile::kInactive);
     response->Return();
   };
-  context_->lpa->DisableProfile(GetIccid(), context_->executor, std::move(cb));
+  context_->lpa()->DisableProfile(GetIccid(), context_->executor(),
+                                  std::move(cb));
 }
 
 bool Profile::ValidateNickname(brillo::ErrorPtr* /*error*/,
                                const std::string& value) {
-  context_->lpa->SetProfileNickname(
-      GetIccid(), value, context_->executor, [](int error) {
+  context_->lpa()->SetProfileNickname(
+      GetIccid(), value, context_->executor(), [](int error) {
         auto decoded_error = LpaErrorToBrillo(FROM_HERE, error);
         if (decoded_error) {
           LOG(ERROR) << "Failed to set profile nickname: "

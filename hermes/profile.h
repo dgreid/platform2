@@ -10,8 +10,8 @@
 
 #include <google-lpa/lpa/core/lpa.h>
 
+#include "hermes/context.h"
 #include "hermes/dbus_bindings/org.chromium.Hermes.Profile.h"
-#include "hermes/lpa_util.h"
 
 namespace hermes {
 
@@ -22,8 +22,6 @@ class Profile : public org::chromium::Hermes::ProfileInterface,
   using DBusResponse = brillo::dbus_utils::DBusMethodResponse<T...>;
 
   static std::unique_ptr<Profile> Create(
-      const scoped_refptr<dbus::Bus>& bus,
-      LpaContext* lpa_context,
       const lpa::proto::ProfileInfo& profile);
 
   // org::chromium::Hermes::ProfileInterface overrides.
@@ -33,16 +31,15 @@ class Profile : public org::chromium::Hermes::ProfileInterface,
   const dbus::ObjectPath& object_path() const { return object_path_; }
 
  private:
-  Profile(const scoped_refptr<dbus::Bus>& bus, dbus::ObjectPath object_path);
+  explicit Profile(dbus::ObjectPath object_path);
 
   // org::chromium::Hermes::ProfileAdaptor override.
   bool ValidateNickname(brillo::ErrorPtr* error,
                         const std::string& value) override;
 
+  Context* context_;
   dbus::ObjectPath object_path_;
   brillo::dbus_utils::DBusObject dbus_object_;
-
-  LpaContext* context_;
 };
 
 }  // namespace hermes

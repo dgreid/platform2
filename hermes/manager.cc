@@ -15,19 +15,19 @@
 #include <chromeos/dbus/service_constants.h>
 #include <google-lpa/lpa/core/lpa.h>
 
+#include "hermes/executor.h"
 #include "hermes/lpa_util.h"
 
 using lpa::proto::ProfileInfo;
 
 namespace hermes {
 
-Manager::Manager(const scoped_refptr<dbus::Bus>& bus, LpaContext* context)
+Manager::Manager()
     : org::chromium::Hermes::ManagerAdaptor(this),
-      bus_(bus),
+      context_(Context::Get()),
       dbus_object_(nullptr,
-                   bus_,
-                   org::chromium::Hermes::ManagerAdaptor::GetObjectPath()),
-      context_(context) {
+                   context_->bus(),
+                   org::chromium::Hermes::ManagerAdaptor::GetObjectPath()) {
   RegisterWithDBusObject(&dbus_object_);
   dbus_object_.RegisterAndBlock();
 
@@ -47,7 +47,7 @@ void Manager::InstallProfileFromActivationCode(
       response->ReplyWithError(decoded_error.get());
       return;
     }
-    auto profile = Profile::Create(bus_, context_, info);
+    auto profile = Profile::Create(info);
     if (!profile) {
       response->ReplyWithError(FROM_HERE, brillo::errors::dbus::kDomain,
                                kErrorInternalLpaFailure,
@@ -59,8 +59,8 @@ void Manager::InstallProfileFromActivationCode(
     response->Return(installed_profiles_.back()->object_path());
   };
   if (in_activation_code.empty()) {
-    context_->lpa->GetDefaultProfileFromSmdp("", context_->executor,
-                                             std::move(profile_cb));
+    context_->lpa()->GetDefaultProfileFromSmdp("", context_->executor(),
+                                               std::move(profile_cb));
     return;
   }
 
@@ -68,8 +68,8 @@ void Manager::InstallProfileFromActivationCode(
   options.enable_profile = false;
   options.allow_policy_rules = false;
   options.confirmation_code = in_confirmation_code;
-  context_->lpa->DownloadProfile(in_activation_code, std::move(options),
-                                 context_->executor, std::move(profile_cb));
+  context_->lpa()->DownloadProfile(in_activation_code, std::move(options),
+                                   context_->executor(), std::move(profile_cb));
 }
 
 void Manager::InstallPendingProfile(
@@ -118,8 +118,8 @@ void Manager::UninstallProfile(std::unique_ptr<DBusResponse<>> response,
         UpdateInstalledProfilesProperty();
         response->Return();
       };
-  context_->lpa->DeleteProfile(matching_profile->GetIccid(), context_->executor,
-                               std::move(profile_cb));
+  context_->lpa()->DeleteProfile(matching_profile->GetIccid(),
+                                 context_->executor(), std::move(profile_cb));
 }
 
 void Manager::RequestPendingEvents(std::unique_ptr<DBusResponse<>> response) {
@@ -148,14 +148,14 @@ void Manager::RetrieveInstalledProfiles() {
     }
 
     for (auto& info : profile_infos) {
-      auto profile = Profile::Create(bus_, context_, info);
+      auto profile = Profile::Create(info);
       if (profile) {
         installed_profiles_.push_back(std::move(profile));
       }
     }
     UpdateInstalledProfilesProperty();
   };
-  context_->lpa->GetInstalledProfiles(context_->executor, std::move(cb));
+  context_->lpa()->GetInstalledProfiles(context_->executor(), std::move(cb));
 }
 
 void Manager::SetTestMode(bool /*in_is_test_mode*/) {

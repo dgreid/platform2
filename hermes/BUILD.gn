@@ -43,6 +43,7 @@ static_library("libhermes") {
   sources = [
     "apdu.cc",
     "card_qrtr.cc",
+    "context.cc",
     "daemon.cc",
     "executor.cc",
     "lpa_util.cc",

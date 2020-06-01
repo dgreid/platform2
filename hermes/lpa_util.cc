@@ -10,6 +10,7 @@
 #include <brillo/array_utils.h>
 #include <brillo/errors/error_codes.h>
 #include <chromeos/dbus/service_constants.h>
+#include <google-lpa/lpa/core/lpa.h>
 
 namespace hermes {
 

@@ -14,6 +14,7 @@
 #include <google-lpa/lpa/core/lpa.h>
 #include <google-lpa/lpa/data/proto/profile_info.pb.h>
 
+#include "hermes/context.h"
 #include "hermes/dbus_bindings/org.chromium.Hermes.Manager.h"
 #include "hermes/profile.h"
 
@@ -27,7 +28,7 @@ class Manager : public org::chromium::Hermes::ManagerInterface,
   template <typename... T>
   using DBusResponse = brillo::dbus_utils::DBusMethodResponse<T...>;
 
-  Manager(const scoped_refptr<dbus::Bus>& bus, LpaContext* context);
+  Manager();
 
   // org::chromium::Hermes::ManagerInterface overrides.
   // Install a profile. An empty activation code will cause the default profile
@@ -53,10 +54,8 @@ class Manager : public org::chromium::Hermes::ManagerInterface,
   // Update |profiles_| with all profiles installed on the eUICC.
   void RetrieveInstalledProfiles();
 
-  const scoped_refptr<dbus::Bus>& bus_;
+  Context* context_;
   brillo::dbus_utils::DBusObject dbus_object_;
-
-  LpaContext* context_;
 
   std::vector<std::unique_ptr<Profile>> installed_profiles_;
   std::vector<std::unique_ptr<Profile>> pending_profiles_;

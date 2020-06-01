@@ -7,19 +7,9 @@
 
 #include <memory>
 
-#include <brillo/dbus/dbus_method_response.h>
 #include <brillo/errors/error.h>
-#include <google-lpa/lpa/core/lpa.h>
-
-#include "hermes/executor.h"
 
 namespace hermes {
-
-// Context needed to interact with the google-lpa library.
-struct LpaContext {
-  lpa::core::Lpa* lpa;
-  Executor* executor;
-};
 
 // Create a brillo Error from an Lpa error code. Return nullptr if no error.
 brillo::ErrorPtr LpaErrorToBrillo(const base::Location& location, int error);

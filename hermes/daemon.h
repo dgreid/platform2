@@ -14,7 +14,6 @@
 
 #include "hermes/executor.h"
 #include "hermes/logger.h"
-#include "hermes/lpa_util.h"
 #include "hermes/manager.h"
 #include "hermes/smdp.h"
 #include "hermes/smds.h"
@@ -38,7 +37,6 @@ class Daemon : public brillo::DBusServiceDaemon {
   std::unique_ptr<lpa::card::EuiccCard> card_;
   std::unique_ptr<lpa::core::Lpa> lpa_;
 
-  LpaContext context_;
   std::unique_ptr<Manager> manager_;
 
   DISALLOW_COPY_AND_ASSIGN(Daemon);
