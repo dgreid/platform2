@@ -93,7 +93,7 @@ class ArcBugReportLog : public LogTool::Log {
 
 // NOTE: IF YOU ADD AN ENTRY TO THIS LIST, PLEASE:
 // * add a row to http://go/cros-feedback-audit and fill it out
-// * email cros-monitoring-forensics@
+// * email cros-telemetry@
 // (Eventually we'll have a better process, but for now please do this.)
 const std::vector<Log> kCommandLogs {
   // We need to enter init's mount namespace because it has /home/chronos
