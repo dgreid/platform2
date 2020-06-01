@@ -163,7 +163,7 @@ base::Optional<int32_t> FakeIioDevice::GetBufferFd() {
   return sample_fd_.get();
 }
 base::Optional<IioDevice::IioSample> FakeIioDevice::ReadSample() {
-  if (disabled_fd_)
+  if (is_paused_ || disabled_fd_)
     return base::nullopt;
 
   if (!failed_read_queue_.empty()) {
@@ -205,7 +205,9 @@ base::Optional<IioDevice::IioSample> FakeIioDevice::ReadSample() {
   sample_index_ += 1;
 
   if (sample_index_ < base::size(kFakeAccelSamples)) {
-    if (!WriteByte())
+    if (pause_index_.has_value() && sample_index_ == pause_index_.value())
+      SetPause();
+    else if (!WriteByte())
       return base::nullopt;
   }
 
@@ -224,6 +226,29 @@ void FakeIioDevice::AddFailedReadAtKthSample(int k) {
   failed_read_queue_.push(k);
 }
 
+void FakeIioDevice::SetPauseCallbackAtKthSamples(
+    int k, base::OnceCallback<void()> callback) {
+  CHECK_GE(k, sample_index_);
+  CHECK_LE(k, base::size(kFakeAccelSamples));
+  CHECK(!pause_index_.has_value());  // pause callback hasn't been set
+
+  pause_index_ = k;
+  pause_callback_ = std::move(callback);
+
+  if (pause_index_.value() != sample_index_)
+    return;
+
+  SetPause();
+}
+
+void FakeIioDevice::ResumeReadingSamples() {
+  CHECK(is_paused_);
+
+  is_paused_ = false;
+  if (sample_fd_.is_valid() && !readable_fd_)
+    CHECK(WriteByte());
+}
+
 bool FakeIioDevice::CreateBuffer() {
   CHECK(!disabled_fd_);
 
@@ -234,11 +259,11 @@ bool FakeIioDevice::CreateBuffer() {
   CHECK_GE(fd, 0);
   sample_fd_.reset(fd);
 
-  if (sample_index_ >= base::size(kFakeAccelSamples))
+  if (sample_index_ >= base::size(kFakeAccelSamples) || is_paused_)
     return true;
 
   if (!WriteByte()) {
-    ClosePipes();
+    ClosePipe();
     return false;
   }
 
@@ -269,8 +294,16 @@ bool FakeIioDevice::ReadByte() {
   return true;
 }
 
-void FakeIioDevice::ClosePipes() {
+void FakeIioDevice::ClosePipe() {
   sample_fd_.reset();
+}
+
+void FakeIioDevice::SetPause() {
+  is_paused_ = true;
+  pause_index_.reset();
+  std::move(pause_callback_).Run();
+  if (readable_fd_)
+    CHECK(ReadByte());
 }
 
 void FakeIioContext::AddDevice(FakeIioDevice* device) {

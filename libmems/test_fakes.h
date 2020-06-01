@@ -15,6 +15,7 @@
 #include <utility>
 #include <vector>
 
+#include <base/callback.h>
 #include <base/files/scoped_file.h>
 
 #include "libmems/export.h"
@@ -224,11 +225,22 @@ class LIBMEMS_EXPORT FakeIioDevice : public IioDevice {
   // times. The user should make sure the kth sample hasn't been read.
   void AddFailedReadAtKthSample(int k);
 
+  // Pauses at kth sample. |callback| is run when (k-1)th sample is retrieved or
+  // when this function is called and |k| == |sample_index_|.
+  // The user should make sure that there wasn't a pause set and not occurred
+  // yet, |k| doesn't exceeds fake data's size, and the kth sample hasn't been
+  // read.
+  void SetPauseCallbackAtKthSamples(int k, base::OnceCallback<void()> callback);
+  // Resumes reading after being paused.
+  // The user should make sure this device is paused.
+  void ResumeReadingSamples();
+
  private:
   bool CreateBuffer();
   bool WriteByte();
   bool ReadByte();
-  void ClosePipes();
+  void ClosePipe();
+  void SetPause();
 
   FakeIioContext* context_;
   std::string name_;
@@ -250,6 +262,10 @@ class LIBMEMS_EXPORT FakeIioDevice : public IioDevice {
 
   bool disabled_fd_ = false;
   std::priority_queue<int> failed_read_queue_;
+
+  bool is_paused_ = false;
+  base::Optional<int> pause_index_;
+  base::OnceCallback<void()> pause_callback_;
 };
 
 class LIBMEMS_EXPORT FakeIioContext : public IioContext {
