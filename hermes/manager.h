@@ -49,10 +49,21 @@ class Manager : public org::chromium::Hermes::ManagerInterface,
   void SetTestMode(bool in_is_test_mode) override;
 
  private:
+  void OnProfileInstalled(
+      const lpa::proto::ProfileInfo& profile_info,
+      int error,
+      std::shared_ptr<DBusResponse<dbus::ObjectPath>> response);
+  void OnProfileUninstalled(const dbus::ObjectPath& profile_path,
+                            int error,
+                            std::shared_ptr<DBusResponse<>> response);
+
   void UpdateInstalledProfilesProperty();
 
+  // Request the eUICC to provide all installed profiles.
+  void RequestInstalledProfiles();
   // Update |profiles_| with all profiles installed on the eUICC.
-  void RetrieveInstalledProfiles();
+  void OnInstalledProfilesReceived(
+      const std::vector<lpa::proto::ProfileInfo>& profile_infos, int error);
 
   Context* context_;
   brillo::dbus_utils::DBusObject dbus_object_;

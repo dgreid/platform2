@@ -32,7 +32,7 @@ Manager::Manager()
   dbus_object_.RegisterAndBlock();
 
   SetPendingProfiles({});
-  RetrieveInstalledProfiles();
+  RequestInstalledProfiles();
 }
 
 void Manager::InstallProfileFromActivationCode(
@@ -42,21 +42,7 @@ void Manager::InstallProfileFromActivationCode(
   auto profile_cb = [response{std::shared_ptr<DBusResponse<dbus::ObjectPath>>(
                          std::move(response))},
                      this](lpa::proto::ProfileInfo& info, int error) {
-    auto decoded_error = LpaErrorToBrillo(FROM_HERE, error);
-    if (decoded_error) {
-      response->ReplyWithError(decoded_error.get());
-      return;
-    }
-    auto profile = Profile::Create(info);
-    if (!profile) {
-      response->ReplyWithError(FROM_HERE, brillo::errors::dbus::kDomain,
-                               kErrorInternalLpaFailure,
-                               "Failed to create Profile object");
-      return;
-    }
-    installed_profiles_.push_back(std::move(profile));
-    UpdateInstalledProfilesProperty();
-    response->Return(installed_profiles_.back()->object_path());
+    OnProfileInstalled(info, error, std::move(response));
   };
   if (in_activation_code.empty()) {
     context_->lpa()->GetDefaultProfileFromSmdp("", context_->executor(),
@@ -97,29 +83,12 @@ void Manager::UninstallProfile(std::unique_ptr<DBusResponse<>> response,
     return;
   }
 
-  // Wait for lpa call to complete successfully before removing element from
-  // |installed_profiles_|.
-  auto profile_cb =
+  context_->lpa()->DeleteProfile(
+      matching_profile->GetIccid(), context_->executor(),
       [response{std::shared_ptr<DBusResponse<>>(std::move(response))},
        in_profile, this](int error) {
-        auto decoded_error = LpaErrorToBrillo(FROM_HERE, error);
-        if (decoded_error) {
-          response->ReplyWithError(decoded_error.get());
-          return;
-        }
-
-        auto iter =
-            std::find_if(installed_profiles_.begin(), installed_profiles_.end(),
-                         [in_profile](const auto& profile) {
-                           return profile->object_path() == in_profile;
-                         });
-        CHECK(iter != installed_profiles_.end());
-        installed_profiles_.erase(iter);
-        UpdateInstalledProfilesProperty();
-        response->Return();
-      };
-  context_->lpa()->DeleteProfile(matching_profile->GetIccid(),
-                                 context_->executor(), std::move(profile_cb));
+        OnProfileUninstalled(in_profile, error, std::move(response));
+      });
 }
 
 void Manager::RequestPendingEvents(std::unique_ptr<DBusResponse<>> response) {
@@ -130,6 +99,12 @@ void Manager::RequestPendingEvents(std::unique_ptr<DBusResponse<>> response) {
   response->Return();
 }
 
+void Manager::SetTestMode(bool /*in_is_test_mode*/) {
+  // TODO(akhouderchah) This is a no-op until the Lpa interface allows for
+  // switching certificate directory without recreating the Lpa object.
+  NOTIMPLEMENTED();
+}
+
 void Manager::UpdateInstalledProfilesProperty() {
   std::vector<dbus::ObjectPath> profile_paths;
   for (auto& profile : installed_profiles_) {
@@ -138,30 +113,73 @@ void Manager::UpdateInstalledProfilesProperty() {
   SetInstalledProfiles(profile_paths);
 }
 
-void Manager::RetrieveInstalledProfiles() {
-  auto cb = [this](std::vector<lpa::proto::ProfileInfo>& profile_infos,
-                   int error) {
-    auto decoded_error = LpaErrorToBrillo(FROM_HERE, error);
-    if (decoded_error) {
-      LOG(ERROR) << "Failed to retrieve installed profiles";
-      return;
-    }
+void Manager::OnProfileInstalled(
+    const lpa::proto::ProfileInfo& profile_info,
+    int error,
+    std::shared_ptr<DBusResponse<dbus::ObjectPath>> response) {
+  auto decoded_error = LpaErrorToBrillo(FROM_HERE, error);
+  if (decoded_error) {
+    response->ReplyWithError(decoded_error.get());
+    return;
+  }
 
-    for (auto& info : profile_infos) {
-      auto profile = Profile::Create(info);
-      if (profile) {
-        installed_profiles_.push_back(std::move(profile));
-      }
-    }
-    UpdateInstalledProfilesProperty();
-  };
-  context_->lpa()->GetInstalledProfiles(context_->executor(), std::move(cb));
+  auto profile = Profile::Create(profile_info);
+  if (!profile) {
+    response->ReplyWithError(FROM_HERE, brillo::errors::dbus::kDomain,
+                             kErrorInternalLpaFailure,
+                             "Failed to create Profile object");
+    return;
+  }
+
+  installed_profiles_.push_back(std::move(profile));
+  UpdateInstalledProfilesProperty();
+  response->Return(installed_profiles_.back()->object_path());
 }
 
-void Manager::SetTestMode(bool /*in_is_test_mode*/) {
-  // TODO(akhouderchah) This is a no-op until the Lpa interface allows for
-  // switching certificate directory without recreating the Lpa object.
-  NOTIMPLEMENTED();
+void Manager::OnProfileUninstalled(const dbus::ObjectPath& profile_path,
+                                   int error,
+                                   std::shared_ptr<DBusResponse<>> response) {
+  auto decoded_error = LpaErrorToBrillo(FROM_HERE, error);
+  if (decoded_error) {
+    response->ReplyWithError(decoded_error.get());
+    return;
+  }
+
+  auto iter = installed_profiles_.begin();
+  for (; iter != installed_profiles_.end(); ++iter) {
+    if ((*iter)->object_path() == profile_path) {
+      break;
+    }
+  }
+  CHECK(iter != installed_profiles_.end());
+  installed_profiles_.erase(iter);
+  UpdateInstalledProfilesProperty();
+  response->Return();
+}
+
+void Manager::RequestInstalledProfiles() {
+  context_->lpa()->GetInstalledProfiles(
+      context_->executor(),
+      [this](std::vector<lpa::proto::ProfileInfo>& profile_infos, int error) {
+        OnInstalledProfilesReceived(profile_infos, error);
+      });
+}
+
+void Manager::OnInstalledProfilesReceived(
+    const std::vector<lpa::proto::ProfileInfo>& profile_infos, int error) {
+  auto decoded_error = LpaErrorToBrillo(FROM_HERE, error);
+  if (decoded_error) {
+    LOG(ERROR) << "Failed to retrieve installed profiles";
+    return;
+  }
+
+  for (const auto& info : profile_infos) {
+    auto profile = Profile::Create(info);
+    if (profile) {
+      installed_profiles_.push_back(std::move(profile));
+    }
+  }
+  UpdateInstalledProfilesProperty();
 }
 
 }  // namespace hermes
