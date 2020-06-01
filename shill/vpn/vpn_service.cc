@@ -17,6 +17,7 @@
 #include "shill/manager.h"
 #include "shill/profile.h"
 #include "shill/property_accessor.h"
+#include "shill/store_interface.h"
 #include "shill/technology.h"
 #include "shill/vpn/vpn_driver.h"
 #include "shill/vpn/vpn_provider.h"
@@ -121,6 +122,14 @@ ConnectionConstRefPtr VPNService::GetUnderlyingConnection() const {
 bool VPNService::Load(const StoreInterface* storage) {
   return Service::Load(storage) &&
          driver_->Load(storage, GetStorageIdentifier());
+}
+
+void VPNService::MigrateDeprecatedStorage(StoreInterface* storage) {
+  Service::MigrateDeprecatedStorage(storage);
+
+  const string id = GetStorageIdentifier();
+  CHECK(storage->ContainsGroup(id));
+  driver_->MigrateDeprecatedStorage(storage, id);
 }
 
 bool VPNService::Save(StoreInterface* storage) {

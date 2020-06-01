@@ -179,7 +179,9 @@ bool Profile::UpdateService(const ServiceRefPtr& service) {
 bool Profile::LoadService(const ServiceRefPtr& service) {
   if (!ContainsService(service))
     return false;
-  return service->Load(storage_.get());
+  bool ret = service->Load(storage_.get());
+  service->MigrateDeprecatedStorage(storage_.get());
+  return ret;
 }
 
 bool Profile::ConfigureService(const ServiceRefPtr& service) {

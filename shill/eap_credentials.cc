@@ -332,6 +332,9 @@ void EapCredentials::Load(const StoreInterface* storage, const string& id) {
   storage->GetBool(id, kStorageEapUseSystemCAs, &use_system_cas_);
 }
 
+void EapCredentials::MigrateDeprecatedStorage(StoreInterface* storage,
+                                              const string& id) const {}
+
 void EapCredentials::OutputConnectionMetrics(Metrics* metrics,
                                              Technology technology) const {
   Metrics::EapOuterProtocol outer_protocol =

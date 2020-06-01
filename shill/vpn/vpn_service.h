@@ -27,6 +27,7 @@ class VPNService : public Service {
   std::string GetStorageIdentifier() const override;
   bool IsAlwaysOnVpn(const std::string& package) const override;
   bool Load(const StoreInterface* storage) override;
+  void MigrateDeprecatedStorage(StoreInterface* storage) override;
   bool Save(StoreInterface* storage) override;
   bool Unload() override;
   void EnableAndRetainAutoConnect() override;

@@ -655,6 +655,17 @@ bool Service::Load(const StoreInterface* storage) {
   return true;
 }
 
+void Service::MigrateDeprecatedStorage(StoreInterface* storage) {
+  const string id = GetStorageIdentifier();
+  CHECK(storage->ContainsGroup(id));
+
+#if !defined(DISABLE_WIFI) || !defined(DISABLE_WIRED_8021X)
+  if (eap()) {
+    eap()->MigrateDeprecatedStorage(storage, id);
+  }
+#endif  // DISABLE_WIFI || DISABLE_WIRED_8021X
+}
+
 bool Service::Unload() {
   auto_connect_ = IsAutoConnectByDefault();
   retain_auto_connect_ = false;

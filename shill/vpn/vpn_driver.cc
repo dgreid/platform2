@@ -76,6 +76,11 @@ bool VPNDriver::Load(const StoreInterface* storage, const string& storage_id) {
   return true;
 }
 
+void VPNDriver::MigrateDeprecatedStorage(StoreInterface* storage,
+                                         const string& storage_id) {
+  SLOG(this, 2) << __func__;
+}
+
 bool VPNDriver::Save(StoreInterface* storage,
                      const string& storage_id,
                      bool save_credentials) {

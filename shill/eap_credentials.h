@@ -49,6 +49,9 @@ class EapCredentials {
   // Loads EAP properties from |storage| in group |id|.
   virtual void Load(const StoreInterface* store, const std::string& id);
 
+  void MigrateDeprecatedStorage(StoreInterface* storage,
+                                const std::string& id) const;
+
   // Output metrics about this EAP connection to |metrics| with technology
   // |technology|.
   virtual void OutputConnectionMetrics(Metrics* metrics,

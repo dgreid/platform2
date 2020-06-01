@@ -350,6 +350,10 @@ bool WiFiService::Load(const StoreInterface* storage) {
   return true;
 }
 
+void WiFiService::MigrateDeprecatedStorage(StoreInterface* storage) {
+  Service::MigrateDeprecatedStorage(storage);
+}
+
 bool WiFiService::Save(StoreInterface* storage) {
   // Save properties common to all Services.
   if (!Service::Save(storage)) {
