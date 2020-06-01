@@ -45,13 +45,19 @@ static string ObjectID(const WiFiService* w) {
 }
 }  // namespace Logging
 
+namespace {
+// Deprecated to migrate from ROT47 to plaintext.
+// TODO(crbug.com/1084279) Remove after migration is complete.
+const char kStorageDeprecatedPassphrase[] = "Passphrase";
+}  // namespace
+
 const char WiFiService::kAutoConnNoEndpoint[] = "no endpoints";
 const char WiFiService::kAnyDeviceAddress[] = "any";
 const int WiFiService::kSuspectedCredentialFailureThreshold = 3;
 
+const char WiFiService::kStorageCredentialPassphrase[] = "WiFi.Passphrase";
 const char WiFiService::kStorageHiddenSSID[] = "WiFi.HiddenSSID";
 const char WiFiService::kStorageMode[] = "WiFi.Mode";
-const char WiFiService::kStoragePassphrase[] = "Passphrase";
 const char WiFiService::kStorageSecurityClass[] = "WiFi.SecurityClass";
 const char WiFiService::kStorageSSID[] = "SSID";
 
@@ -341,7 +347,8 @@ bool WiFiService::Load(const StoreInterface* storage) {
   // Load() as they are provided from the scan.
 
   string passphrase;
-  if (storage->GetCryptedString(id, kStoragePassphrase, &passphrase)) {
+  if (storage->GetCryptedString(id, kStorageDeprecatedPassphrase,
+                                kStorageCredentialPassphrase, &passphrase)) {
     if (SetPassphraseInternal(passphrase, Service::kReasonCredentialsLoaded)) {
       SLOG(this, 3) << "Loaded passphrase in WiFiService::Load.";
     }
@@ -360,6 +367,12 @@ void WiFiService::MigrateDeprecatedStorage(StoreInterface* storage) {
   // Deprecated keys. TODO: Remove after M89.
   storage->DeleteKey(id, "WiFi.Security");
   storage->DeleteKey(id, "WiFi.FTEnabled");
+
+  // Migrate from ROT47 to plaintext.
+  // TODO(crbug.com/1084279) Remove after migration is complete.
+  if (storage->DeleteKey(id, kStorageDeprecatedPassphrase)) {
+    storage->SetString(id, kStorageCredentialPassphrase, passphrase_);
+  }
 }
 
 bool WiFiService::Save(StoreInterface* storage) {
@@ -372,7 +385,7 @@ bool WiFiService::Save(StoreInterface* storage) {
   const string id = GetStorageIdentifier();
   storage->SetBool(id, kStorageHiddenSSID, hidden_ssid_);
   storage->SetString(id, kStorageMode, mode_);
-  storage->SetCryptedString(id, kStoragePassphrase, passphrase_);
+  storage->SetString(id, kStorageCredentialPassphrase, passphrase_);
   storage->SetString(id, kStorageSecurityClass,
                      ComputeSecurityClass(security_));
   storage->SetString(id, kStorageSSID, hex_ssid_);

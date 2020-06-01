@@ -89,12 +89,11 @@ class MockStore : public StoreInterface {
               (override));
   MOCK_METHOD(bool,
               GetCryptedString,
-              (const std::string&, const std::string&, std::string*),
+              (const std::string&,
+               const std::string&,
+               const std::string&,
+               std::string*),
               (const, override));
-  MOCK_METHOD(bool,
-              SetCryptedString,
-              (const std::string&, const std::string&, const std::string&),
-              (override));
 
  private:
   DISALLOW_COPY_AND_ASSIGN(MockStore);

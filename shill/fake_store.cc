@@ -194,15 +194,10 @@ bool FakeStore::SetStringList(const string& group,
 }
 
 bool FakeStore::GetCryptedString(const string& group,
-                                 const string& key,
+                                 const std::string& deprecated_key,
+                                 const std::string& plaintext_key,
                                  string* value) const {
-  return GetString(group, key, value);
-}
-
-bool FakeStore::SetCryptedString(const string& group,
-                                 const string& key,
-                                 const string& value) {
-  return SetString(group, key, value);
+  return GetString(group, plaintext_key, value);
 }
 
 // Private methods.

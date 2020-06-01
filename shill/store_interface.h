@@ -141,19 +141,19 @@ class StoreInterface {
                              const std::string& key,
                              const std::vector<std::string>& value) = 0;
 
-  // Gets and decrypts string |value| associated with |group|:|key|. Returns
-  // true on success and false on failure (including when |group|:|key| is not
-  // present in the store).  It is not an error to pass NULL as |value| to
-  // simply test for the presence of this value.
+  // Gets the string associated with |group|:|plaintext_key|. If that doesn't
+  // exist, gets and decrypts string |value| associated with
+  // |group|:|deprecated_key|. Returns true on success and false on failure
+  // (including when neither |group|:|plaintext_key| nor
+  // |group|:|deprecated_key| are present in the store).  It is not an error to
+  // pass NULL as |value| to simply test for the presence of this value.
+  //
+  // For migration from ROT47 to plaintext. New usecases should use GetString.
+  // TODO(crbug.com/1084279) Remove after migration is complete.
   virtual bool GetCryptedString(const std::string& group,
-                                const std::string& key,
+                                const std::string& deprecated_key,
+                                const std::string& plaintext_key,
                                 std::string* value) const = 0;
-
-  // Associates |group|:|key| with a string |value| after encrypting it. Returns
-  // true on success, false otherwise.
-  virtual bool SetCryptedString(const std::string& group,
-                                const std::string& key,
-                                const std::string& value) = 0;
 };
 
 // Creates a store, implementing StoreInterface, at the specified |path|.

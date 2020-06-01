@@ -74,12 +74,12 @@ class KeyFileStore : public StoreInterface {
   bool SetStringList(const std::string& group,
                      const std::string& key,
                      const std::vector<std::string>& value) override;
+  // For migration from ROT47 to plaintext. New usecases should use GetString.
+  // TODO(crbug.com/1084279) Remove after migration is complete.
   bool GetCryptedString(const std::string& group,
-                        const std::string& key,
+                        const std::string& deprecated_key,
+                        const std::string& plaintext_key,
                         std::string* value) const override;
-  bool SetCryptedString(const std::string& group,
-                        const std::string& key,
-                        const std::string& value) override;
 
  private:
   FRIEND_TEST(KeyFileStoreTest, OpenClose);

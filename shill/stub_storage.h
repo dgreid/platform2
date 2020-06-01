@@ -89,13 +89,9 @@ class StubStorage : public StoreInterface {
     return false;
   }
   bool GetCryptedString(const std::string& group,
-                        const std::string& key,
+                        const std::string& deprecated_key,
+                        const std::string& plaintext_key,
                         std::string* value) const override {
-    return false;
-  }
-  bool SetCryptedString(const std::string& group,
-                        const std::string& key,
-                        const std::string& value) override {
     return false;
   }
 };

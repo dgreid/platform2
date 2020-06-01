@@ -885,12 +885,14 @@ TEST_F(WiFiServiceTest, LoadAndUnloadPassphrase) {
       .WillRepeatedly(Return(groups));
   EXPECT_CALL(mock_store, GetBool(_, _, _)).WillRepeatedly(Return(false));
   const string kPassphrase = "passphrase";
-  EXPECT_CALL(mock_store, GetCryptedString(StrEq(kStorageId),
-                                           WiFiService::kStoragePassphrase, _))
-      .WillRepeatedly(DoAll(SetArgPointee<2>(kPassphrase), Return(true)));
   EXPECT_CALL(mock_store,
-              GetCryptedString(StrEq(kStorageId),
-                               StrNe(WiFiService::kStoragePassphrase), _))
+              GetCryptedString(StrEq(kStorageId), _,
+                               WiFiService::kStorageCredentialPassphrase, _))
+      .WillRepeatedly(DoAll(SetArgPointee<3>(kPassphrase), Return(true)));
+  EXPECT_CALL(
+      mock_store,
+      GetCryptedString(StrEq(kStorageId), _,
+                       StrNe(WiFiService::kStorageCredentialPassphrase), _))
       .WillRepeatedly(Return(false));
   EXPECT_TRUE(service->need_passphrase_);
   EXPECT_TRUE(service->Load(&mock_store));
@@ -919,12 +921,14 @@ TEST_F(WiFiServiceTest, LoadPassphraseClearCredentials) {
                               simple_ssid(), kModeManaged, kSecurityPsk)))
       .WillRepeatedly(Return(groups));
   EXPECT_CALL(mock_store, GetBool(_, _, _)).WillRepeatedly(Return(false));
-  EXPECT_CALL(mock_store, GetCryptedString(StrEq(kStorageId),
-                                           WiFiService::kStoragePassphrase, _))
-      .WillRepeatedly(DoAll(SetArgPointee<2>(kPassphrase), Return(true)));
   EXPECT_CALL(mock_store,
-              GetCryptedString(StrEq(kStorageId),
-                               StrNe(WiFiService::kStoragePassphrase), _))
+              GetCryptedString(StrEq(kStorageId), _,
+                               WiFiService::kStorageCredentialPassphrase, _))
+      .WillRepeatedly(DoAll(SetArgPointee<3>(kPassphrase), Return(true)));
+  EXPECT_CALL(
+      mock_store,
+      GetCryptedString(StrEq(kStorageId), _,
+                       StrNe(WiFiService::kStorageCredentialPassphrase), _))
       .WillRepeatedly(Return(false));
   EXPECT_CALL(mock_store,
               GetBool(kStorageId, Service::kStorageHasEverConnected, _))

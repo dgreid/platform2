@@ -26,9 +26,9 @@ class WiFiService : public Service {
  public:
   // TODO(pstew): Storage constants shouldn't need to be public
   // crbug.com/208736
+  static const char kStorageCredentialPassphrase[];
   static const char kStorageHiddenSSID[];
   static const char kStorageMode[];
-  static const char kStoragePassphrase[];
   static const char kStorageSecurityClass[];
   static const char kStorageSSID[];
 

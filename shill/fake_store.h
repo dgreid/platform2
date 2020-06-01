@@ -69,14 +69,10 @@ class FakeStore : public StoreInterface {
   bool SetStringList(const std::string& group,
                      const std::string& key,
                      const std::vector<std::string>& value) override;
-  // GetCryptedString is non-const for legacy reasons. See
-  // KeyFileStore::SetCryptedString() for details.
   bool GetCryptedString(const std::string& group,
-                        const std::string& key,
+                        const std::string& deprecated_key,
+                        const std::string& plaintext_key,
                         std::string* value) const override;
-  bool SetCryptedString(const std::string& group,
-                        const std::string& key,
-                        const std::string& value) override;
 
  private:
   template <typename T>

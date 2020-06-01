@@ -62,16 +62,11 @@ std::string AddAdditionalInnerEapParams(const std::string& inner_eap) {
   return inner_eap + " " + WPASupplicant::kFlagInnerEapNoMSCHAPV2Retry;
 }
 
-void SaveCryptedStringOrClear(StoreInterface* storage,
-                              const string& id,
-                              const string& key,
-                              const string& value) {
-  if (value.empty()) {
-    storage->DeleteKey(id, key);
-    return;
-  }
-  storage->SetCryptedString(id, key, value);
-}
+// Deprecated to migrate from ROT47 to plaintext.
+// TODO(crbug.com/1084279) Remove after migration is complete.
+const char kStorageDeprecatedEapAnonymousIdentity[] = "EAP.AnonymousIdentity";
+const char kStorageDeprecatedEapIdentity[] = "EAP.Identity";
+const char kStorageDeprecatedEapPassword[] = "EAP.Password";
 
 }  // namespace
 
@@ -82,19 +77,22 @@ static string ObjectID(const EapCredentials* e) {
 }
 }  // namespace Logging
 
-const char EapCredentials::kStorageEapAnonymousIdentity[] =
-    "EAP.AnonymousIdentity";
+const char EapCredentials::kStorageCredentialEapAnonymousIdentity[] =
+    "EAP.Credential.AnonymousIdentity";
+const char EapCredentials::kStorageCredentialEapIdentity[] =
+    "EAP.Credential.Identity";
+const char EapCredentials::kStorageCredentialEapPassword[] =
+    "EAP.Credential.Password";
+
 const char EapCredentials::kStorageEapCACertID[] = "EAP.CACertID";
 const char EapCredentials::kStorageEapCACertPEM[] = "EAP.CACertPEM";
 const char EapCredentials::kStorageEapCertID[] = "EAP.CertID";
 const char EapCredentials::kStorageEapEap[] = "EAP.EAP";
-const char EapCredentials::kStorageEapIdentity[] = "EAP.Identity";
 const char EapCredentials::kStorageEapInnerEap[] = "EAP.InnerEAP";
 const char EapCredentials::kStorageEapTLSVersionMax[] = "EAP.TLSVersionMax";
 const char EapCredentials::kStorageEapKeyID[] = "EAP.KeyID";
 const char EapCredentials::kStorageEapKeyManagement[] = "EAP.KeyMgmt";
 const char EapCredentials::kStorageEapPin[] = "EAP.PIN";
-const char EapCredentials::kStorageEapPassword[] = "EAP.Password";
 const char EapCredentials::kStorageEapSubjectMatch[] = "EAP.SubjectMatch";
 const char EapCredentials::kStorageEapUseProactiveKeyCaching[] =
     "EAP.UseProactiveKeyCaching";
@@ -306,15 +304,18 @@ bool EapCredentials::IsConnectableUsingPassphrase() const {
 
 void EapCredentials::Load(const StoreInterface* storage, const string& id) {
   // Authentication properties.
-  storage->GetCryptedString(id, kStorageEapAnonymousIdentity,
+  storage->GetCryptedString(id, kStorageDeprecatedEapAnonymousIdentity,
+                            kStorageCredentialEapAnonymousIdentity,
                             &anonymous_identity_);
   storage->GetString(id, kStorageEapCertID, &cert_id_);
-  storage->GetCryptedString(id, kStorageEapIdentity, &identity_);
+  storage->GetCryptedString(id, kStorageDeprecatedEapIdentity,
+                            kStorageCredentialEapIdentity, &identity_);
   storage->GetString(id, kStorageEapKeyID, &key_id_);
   string key_management;
   storage->GetString(id, kStorageEapKeyManagement, &key_management);
   SetKeyManagement(key_management, nullptr);
-  storage->GetCryptedString(id, kStorageEapPassword, &password_);
+  storage->GetCryptedString(id, kStorageDeprecatedEapPassword,
+                            kStorageCredentialEapPassword, &password_);
   storage->GetString(id, kStorageEapPin, &pin_);
   storage->GetBool(id, kStorageEapUseLoginPassword, &use_login_password_);
 
@@ -333,7 +334,23 @@ void EapCredentials::Load(const StoreInterface* storage, const string& id) {
 }
 
 void EapCredentials::MigrateDeprecatedStorage(StoreInterface* storage,
-                                              const string& id) const {}
+                                              const string& id) const {
+  // Note that if we found any of these keys, then we already know that
+  // save_credentials was true during the last Save, and therefore can set the
+  // new (key, plaintext_value).
+  //
+  // TODO(crbug.com/1084279) Remove after migration is complete.
+  if (storage->DeleteKey(id, kStorageDeprecatedEapAnonymousIdentity)) {
+    storage->SetString(id, kStorageCredentialEapAnonymousIdentity,
+                       anonymous_identity_);
+  }
+  if (storage->DeleteKey(id, kStorageDeprecatedEapIdentity)) {
+    storage->SetString(id, kStorageCredentialEapIdentity, identity_);
+  }
+  if (storage->DeleteKey(id, kStorageDeprecatedEapPassword)) {
+    storage->SetString(id, kStorageCredentialEapPassword, password_);
+  }
+}
 
 void EapCredentials::OutputConnectionMetrics(Metrics* metrics,
                                              Technology technology) const {
@@ -356,18 +373,19 @@ void EapCredentials::Save(StoreInterface* storage,
                           const string& id,
                           bool save_credentials) const {
   // Authentication properties.
-  SaveCryptedStringOrClear(storage, id, kStorageEapAnonymousIdentity,
-                           save_credentials ? anonymous_identity_ : "");
+  Service::SaveStringOrClear(storage, id,
+                             kStorageCredentialEapAnonymousIdentity,
+                             save_credentials ? anonymous_identity_ : "");
   Service::SaveStringOrClear(storage, id, kStorageEapCertID,
                              save_credentials ? cert_id_ : "");
-  SaveCryptedStringOrClear(storage, id, kStorageEapIdentity,
-                           save_credentials ? identity_ : "");
+  Service::SaveStringOrClear(storage, id, kStorageCredentialEapIdentity,
+                             save_credentials ? identity_ : "");
   Service::SaveStringOrClear(storage, id, kStorageEapKeyID,
                              save_credentials ? key_id_ : "");
   Service::SaveStringOrClear(storage, id, kStorageEapKeyManagement,
                              key_management_);
-  SaveCryptedStringOrClear(storage, id, kStorageEapPassword,
-                           save_credentials ? password_ : "");
+  Service::SaveStringOrClear(storage, id, kStorageCredentialEapPassword,
+                             save_credentials ? password_ : "");
   Service::SaveStringOrClear(storage, id, kStorageEapPin,
                              save_credentials ? pin_ : "");
   storage->SetBool(id, kStorageEapUseLoginPassword, use_login_password_);

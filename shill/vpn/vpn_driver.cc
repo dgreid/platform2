@@ -31,6 +31,10 @@ static string ObjectID(const VPNDriver* v) {
 }
 }  // namespace Logging
 
+// TODO(crbug.com/1084279) Migrate back to storing property names after crypto
+// code is removed.
+const char VPNDriver::kCredentialPrefix[] = "Credential.";
+
 VPNDriver::VPNDriver(Manager* manager,
                      ProcessManager* process_manager,
                      const Property* properties,
@@ -62,10 +66,11 @@ bool VPNDriver::Load(const StoreInterface* storage, const string& storage_id) {
       }
     } else {
       string value;
-      bool loaded =
-          (properties_[i].flags & Property::kCredential)
-              ? storage->GetCryptedString(storage_id, property, &value)
-              : storage->GetString(storage_id, property, &value);
+      bool loaded = (properties_[i].flags & Property::kCredential)
+                        ? storage->GetCryptedString(
+                              storage_id, property,
+                              string(kCredentialPrefix) + property, &value)
+                        : storage->GetString(storage_id, property, &value);
       if (loaded) {
         args_.Set<string>(property, value);
       } else {
@@ -79,6 +84,24 @@ bool VPNDriver::Load(const StoreInterface* storage, const string& storage_id) {
 void VPNDriver::MigrateDeprecatedStorage(StoreInterface* storage,
                                          const string& storage_id) {
   SLOG(this, 2) << __func__;
+  // Migrate from ROT47 to plaintext.
+  // TODO(crbug.com/1084279) Migrate back to not using kCredentialPrefix once
+  // ROT47 migration is complete.
+  for (size_t i = 0; i < property_count_; i++) {
+    if (!(properties_[i].flags & Property::kCredential)) {
+      continue;
+    }
+
+    CHECK(!(properties_[i].flags & Property::kArray))
+        << "Property cannot be both an array and a credential";
+    string deprecated_key = properties_[i].property;
+    string credentials_key = string(kCredentialPrefix) + deprecated_key;
+
+    if (storage->DeleteKey(storage_id, deprecated_key)) {
+      string value = args_.Get<string>(properties_[i].property);
+      storage->SetString(storage_id, credentials_key, value);
+    }
+  }
 }
 
 bool VPNDriver::Save(StoreInterface* storage,
@@ -100,17 +123,18 @@ bool VPNDriver::Save(StoreInterface* storage,
       Strings value = args_.Get<Strings>(property);
       storage->SetStringList(storage_id, property, value);
     } else {
+      string storage_key = property;
+      if (credential) {
+        storage_key = string(kCredentialPrefix) + storage_key;
+      }
+
       if (!args_.Contains<string>(property) ||
           (credential && !save_credentials)) {
-        storage->DeleteKey(storage_id, property);
+        storage->DeleteKey(storage_id, storage_key);
         continue;
       }
       string value = args_.Get<string>(property);
-      if (credential) {
-        storage->SetCryptedString(storage_id, property, value);
-      } else {
-        storage->SetString(storage_id, property, value);
-      }
+      storage->SetString(storage_id, storage_key, value);
     }
   }
   return true;

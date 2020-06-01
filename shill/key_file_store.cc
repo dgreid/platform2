@@ -656,9 +656,14 @@ bool KeyFileStore::SetStringList(const string& group,
 }
 
 bool KeyFileStore::GetCryptedString(const string& group,
-                                    const string& key,
+                                    const string& deprecated_key,
+                                    const string& plaintext_key,
                                     string* value) const {
-  if (!GetString(group, key, value)) {
+  if (GetString(group, plaintext_key, value)) {
+    return true;
+  }
+
+  if (!GetString(group, deprecated_key, value)) {
     return false;
   }
   if (value) {
@@ -669,12 +674,6 @@ bool KeyFileStore::GetCryptedString(const string& group,
     *value = std::move(plaintext).value();
   }
   return true;
-}
-
-bool KeyFileStore::SetCryptedString(const string& group,
-                                    const string& key,
-                                    const string& value) {
-  return SetString(group, key, Crypto::Encrypt(value));
 }
 
 bool KeyFileStore::DoesGroupMatchProperties(

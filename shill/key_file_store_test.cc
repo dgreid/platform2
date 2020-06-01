@@ -31,11 +31,6 @@ using testing::Test;
 
 namespace shill {
 
-namespace {
-const char kPlainText[] = "This is a test!";
-const char kROT47Text[] = "rot47:%9:D :D 2 E6DEP";
-}  // namespace
-
 class KeyFileStoreTest : public Test {
  public:
   KeyFileStoreTest() = default;
@@ -764,33 +759,29 @@ TEST_F(KeyFileStoreTest, EscapeSeparatorInList) {
             ReadKeyFile());
 }
 
-TEST_F(KeyFileStoreTest, GetCryptedString) {
+TEST_F(KeyFileStoreTest, GetDeprecatedCryptedString) {
+  static const char kPlainText[] = "This is a test!";
+  static const char kROT47Text[] = "rot47:%9:D :D 2 E6DEP";
+
   static const char kGroup[] = "crypto-group";
-  static const char kKey[] = "secret";
+  static const char kDeprecatedKey[] = "deprecated";
+  static const char kPlaintextKey[] = "plaintext";
   WriteKeyFile(
       base::StringPrintf("[%s]\n"
                          "%s=%s\n",
-                         kGroup, kKey, kROT47Text));
+                         kGroup, kDeprecatedKey, kROT47Text));
   ASSERT_TRUE(store_->Open());
   string value;
-  EXPECT_TRUE(store_->GetCryptedString(kGroup, kKey, &value));
+  EXPECT_TRUE(
+      store_->GetCryptedString(kGroup, kDeprecatedKey, kPlaintextKey, &value));
   EXPECT_EQ(kPlainText, value);
-  EXPECT_FALSE(store_->GetCryptedString("something-else", kKey, &value));
-  EXPECT_FALSE(store_->GetCryptedString(kGroup, "non-secret", &value));
-  EXPECT_TRUE(store_->GetCryptedString(kGroup, kKey, nullptr));
+  EXPECT_FALSE(store_->GetCryptedString("something-else", kDeprecatedKey,
+                                        kPlaintextKey, &value));
+  EXPECT_FALSE(store_->GetCryptedString(kGroup, "non-secret-deprecated",
+                                        "non-secret", &value));
+  EXPECT_TRUE(
+      store_->GetCryptedString(kGroup, kDeprecatedKey, kPlaintextKey, nullptr));
   ASSERT_TRUE(store_->Close());
-}
-
-TEST_F(KeyFileStoreTest, SetCryptedString) {
-  static const char kGroup[] = "crypted-string-group";
-  static const char kKey[] = "test-string";
-  ASSERT_TRUE(store_->Open());
-  ASSERT_TRUE(store_->SetCryptedString(kGroup, kKey, kPlainText));
-  ASSERT_TRUE(store_->Close());
-  EXPECT_EQ(base::StringPrintf("[%s]\n"
-                               "%s=%s\n",
-                               kGroup, kKey, kROT47Text),
-            ReadKeyFile());
 }
 
 TEST_F(KeyFileStoreTest, PersistAcrossClose) {

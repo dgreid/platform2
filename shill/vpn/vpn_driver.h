@@ -109,6 +109,8 @@ class VPNDriver {
  private:
   friend class VPNDriverTest;
 
+  static const char kCredentialPrefix[];
+
   void ClearMappedStringProperty(const size_t& index, Error* error);
   void ClearMappedStringsProperty(const size_t& index, Error* error);
   std::string GetMappedStringProperty(const size_t& index, Error* error);

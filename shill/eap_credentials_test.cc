@@ -215,22 +215,25 @@ TEST_F(EapCredentialsTest, IsEapAuthenticationProperty) {
 TEST_F(EapCredentialsTest, LoadAndSave) {
   MockStore store;
   // For the values we're not testing...
-  EXPECT_CALL(store, GetCryptedString(_, _, _)).WillRepeatedly(Return(false));
+  EXPECT_CALL(store, GetCryptedString(_, _, _, _))
+      .WillRepeatedly(Return(false));
   EXPECT_CALL(store, GetString(_, _, _)).WillRepeatedly(Return(false));
 
   const string kId("storage-id");
   const string kIdentity("Purple Onion");
-  EXPECT_CALL(store,
-              GetCryptedString(kId, EapCredentials::kStorageEapIdentity, _))
-      .WillOnce(DoAll(SetArgPointee<2>(kIdentity), Return(true)));
+  EXPECT_CALL(
+      store, GetCryptedString(kId, _,
+                              EapCredentials::kStorageCredentialEapIdentity, _))
+      .WillOnce(DoAll(SetArgPointee<3>(kIdentity), Return(true)));
   const string kManagement("Shave and a Haircut");
   EXPECT_CALL(store,
               GetString(kId, EapCredentials::kStorageEapKeyManagement, _))
       .WillOnce(DoAll(SetArgPointee<2>(kManagement), Return(true)));
   const string kPassword("Two Bits");
-  EXPECT_CALL(store,
-              GetCryptedString(kId, EapCredentials::kStorageEapPassword, _))
-      .WillOnce(DoAll(SetArgPointee<2>(kPassword), Return(true)));
+  EXPECT_CALL(
+      store, GetCryptedString(kId, _,
+                              EapCredentials::kStorageCredentialEapPassword, _))
+      .WillOnce(DoAll(SetArgPointee<3>(kPassword), Return(true)));
 
   eap_.Load(&store, kId);
   Mock::VerifyAndClearExpectations(&store);
@@ -242,23 +245,26 @@ TEST_F(EapCredentialsTest, LoadAndSave) {
   // Authentication properties are deleted from the store if they are empty,
   // so we expect the fields that we haven't set to be deleted.
   EXPECT_CALL(store, DeleteKey(_, _)).Times(AnyNumber());
-  EXPECT_CALL(store, SetCryptedString(_, _, _)).Times(0);
-  EXPECT_CALL(store, DeleteKey(kId, EapCredentials::kStorageEapIdentity));
+  EXPECT_CALL(store,
+              DeleteKey(kId, EapCredentials::kStorageCredentialEapIdentity));
   EXPECT_CALL(store, SetString(kId, EapCredentials::kStorageEapKeyManagement,
                                kManagement));
-  EXPECT_CALL(store, DeleteKey(kId, EapCredentials::kStorageEapPassword));
+  EXPECT_CALL(store,
+              DeleteKey(kId, EapCredentials::kStorageCredentialEapPassword));
   eap_.Save(&store, kId, false);
   Mock::VerifyAndClearExpectations(&store);
 
   // Authentication properties are deleted from the store if they are empty,
   // so we expect the fields that we haven't set to be deleted.
   EXPECT_CALL(store, DeleteKey(_, _)).Times(AnyNumber());
-  EXPECT_CALL(store, SetCryptedString(kId, EapCredentials::kStorageEapIdentity,
-                                      kIdentity));
+  EXPECT_CALL(
+      store,
+      SetString(kId, EapCredentials::kStorageCredentialEapIdentity, kIdentity));
   EXPECT_CALL(store, SetString(kId, EapCredentials::kStorageEapKeyManagement,
                                kManagement));
-  EXPECT_CALL(store, SetCryptedString(kId, EapCredentials::kStorageEapPassword,
-                                      kPassword));
+  EXPECT_CALL(
+      store,
+      SetString(kId, EapCredentials::kStorageCredentialEapPassword, kPassword));
   eap_.Save(&store, kId, true);
 }
 

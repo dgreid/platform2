@@ -11,12 +11,10 @@
 
 namespace shill {
 
-// Top-level interface for encryption and decryption. Currently only uses ROT47.
+// Used to migrate Profile storage from the old ROT47 format to plaintext.
+// TODO(crbug.com/1084279) Remove this and friends after migration to plaintext
+// is complete.
 namespace Crypto {
-
-// Returns |plaintext| encrypted by the highest priority available crypto
-// module capable of performing the operation.
-std::string Encrypt(const std::string& plaintext);
 
 // Returns |ciphertext| decrypted by the highest priority available crypto
 // module capable of performing the operation. If no module succeeds, returns

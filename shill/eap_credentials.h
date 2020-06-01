@@ -99,18 +99,19 @@ class EapCredentials {
   friend class EapCredentialsTest;
   FRIEND_TEST(EapCredentialsTest, LoadAndSave);
 
-  static const char kStorageEapAnonymousIdentity[];
+  static const char kStorageCredentialEapAnonymousIdentity[];
+  static const char kStorageCredentialEapIdentity[];
+  static const char kStorageCredentialEapPassword[];
+
   static const char kStorageEapCACertID[];
   static const char kStorageEapCACertPEM[];
   static const char kStorageEapCertID[];
   static const char kStorageEapEap[];
-  static const char kStorageEapIdentity[];
   static const char kStorageEapInnerEap[];
   static const char kStorageEapTLSVersionMax[];
   static const char kStorageEapKeyID[];
   static const char kStorageEapKeyManagement[];
   static const char kStorageEapPin[];
-  static const char kStorageEapPassword[];
   static const char kStorageEapSubjectMatch[];
   static const char kStorageEapUseProactiveKeyCaching[];
   static const char kStorageEapUseSystemCAs[];

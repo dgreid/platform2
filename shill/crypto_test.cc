@@ -13,18 +13,13 @@ using testing::Test;
 namespace shill {
 
 namespace {
-const char kEmptyText[] = "";
 const char kPlainText[] = "This is a test!";
 const char kROT47Text[] = "rot47:%9:D :D 2 E6DEP";
 }  // namespace
 
-TEST(CryptoTest, Encrypt) {
-  EXPECT_EQ(kROT47Text, Crypto::Encrypt(kPlainText));
-}
-
 TEST(CryptoTest, DecryptNonROT47Fails) {
   EXPECT_FALSE(Crypto::Decrypt(kPlainText));
-  EXPECT_FALSE(Crypto::Decrypt(kEmptyText));
+  EXPECT_FALSE(Crypto::Decrypt(""));
 }
 
 TEST(CryptoTest, DecryptROT47Succeeds) {
