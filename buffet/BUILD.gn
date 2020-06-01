@@ -81,6 +81,7 @@ executable("buffet") {
 executable("buffet_client") {
   sources = [ "buffet_client.cc" ]
   configs += [ ":target_defaults" ]
+  deps = [ ":generate_buffet_proxies" ]
 }
 
 if (use.test) {
