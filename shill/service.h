@@ -523,15 +523,12 @@ class Service : public base::RefCounted<Service> {
                          const std::string& default_value,
                          std::string* value);
 
-  // Assigns |value| to |key| in |storage| if |value| is non-empty and |save| is
-  // true. Otherwise, removes |key| from |storage|. If |crypted| is true, the
-  // value is encrypted.
-  static void SaveString(StoreInterface* storage,
-                         const std::string& id,
-                         const std::string& key,
-                         const std::string& value,
-                         bool crypted,
-                         bool save);
+  // Assigns |value| to |key| in |storage| if |value| is non-empty; otherwise,
+  // removes |key| from |storage|.
+  static void SaveStringOrClear(StoreInterface* storage,
+                                const std::string& id,
+                                const std::string& key,
+                                const std::string& value);
 
   static void SetNextSerialNumberForTesting(unsigned int next_serial_number);
 
@@ -705,10 +702,6 @@ class Service : public base::RefCounted<Service> {
   FRIEND_TEST(ServiceTest, RecheckPortal);
   FRIEND_TEST(ServiceTest, Save);
   FRIEND_TEST(ServiceTest, SaveMeteredOverride);
-  FRIEND_TEST(ServiceTest, SaveString);
-  FRIEND_TEST(ServiceTest, SaveStringCrypted);
-  FRIEND_TEST(ServiceTest, SaveStringDontSave);
-  FRIEND_TEST(ServiceTest, SaveStringEmpty);
   FRIEND_TEST(ServiceTest, SecurityLevel);
   FRIEND_TEST(ServiceTest, SetCheckPortal);
   FRIEND_TEST(ServiceTest, SetConnectableFull);

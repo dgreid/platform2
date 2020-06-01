@@ -705,7 +705,7 @@ bool Service::Save(StoreInterface* storage) {
     storage->SetString(id, kStorageCheckPortal, check_portal_);
   }
 
-  SaveString(storage, id, kStorageGUID, guid_, false, true);
+  SaveStringOrClear(storage, id, kStorageGUID, guid_);
   storage->SetBool(id, kStorageHasEverConnected, has_ever_connected_);
   storage->SetString(id, kStorageName, friendly_name_);
   if (priority_ != kPriorityNone) {
@@ -713,9 +713,9 @@ bool Service::Save(StoreInterface* storage) {
   } else {
     storage->DeleteKey(id, kStoragePriority);
   }
-  SaveString(storage, id, kStorageProxyConfig, proxy_config_, false, true);
+  SaveStringOrClear(storage, id, kStorageProxyConfig, proxy_config_);
   storage->SetBool(id, kStorageSaveCredentials, save_credentials_);
-  SaveString(storage, id, kStorageUIData, ui_data_, false, true);
+  SaveStringOrClear(storage, id, kStorageUIData, ui_data_);
 
   storage->SetInt(id, kStorageConnectionId, connection_id_);
   storage->SetBool(id, kStorageDNSAutoFallback, is_dns_auto_fallback_allowed_);
@@ -1496,18 +1496,12 @@ void Service::LoadString(const StoreInterface* storage,
 }
 
 // static
-void Service::SaveString(StoreInterface* storage,
-                         const string& id,
-                         const string& key,
-                         const string& value,
-                         bool crypted,
-                         bool save) {
-  if (value.empty() || !save) {
+void Service::SaveStringOrClear(StoreInterface* storage,
+                                const string& id,
+                                const string& key,
+                                const string& value) {
+  if (value.empty()) {
     storage->DeleteKey(id, key);
-    return;
-  }
-  if (crypted) {
-    storage->SetCryptedString(id, key, value);
     return;
   }
   storage->SetString(id, key, value);

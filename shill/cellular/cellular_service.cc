@@ -215,11 +215,11 @@ bool CellularService::Save(StoreInterface* storage) {
   const string id = GetStorageIdentifier();
   SaveApn(storage, id, GetUserSpecifiedApn(), kStorageAPN);
   SaveApn(storage, id, GetLastGoodApn(), kStorageLastGoodAPN);
-  SaveString(storage, id, kStorageIccid, iccid_, false, true);
-  SaveString(storage, id, kStorageImsi, imsi_, false, true);
-  SaveString(storage, id, kStoragePPPUsername, ppp_username_, false, true);
-  SaveString(storage, id, kStoragePPPPassword, ppp_password_, false, true);
-  SaveString(storage, id, kStorageSimCardId, sim_card_id_, false, true);
+  SaveStringOrClear(storage, id, kStorageIccid, iccid_);
+  SaveStringOrClear(storage, id, kStorageImsi, imsi_);
+  SaveStringOrClear(storage, id, kStoragePPPUsername, ppp_username_);
+  SaveStringOrClear(storage, id, kStoragePPPPassword, ppp_password_);
+  SaveStringOrClear(storage, id, kStorageSimCardId, sim_card_id_);
   // Delete deprecated keys. TODO: Remove after M84.
   storage->DeleteKey(id, "Cellular.Imei");
   storage->DeleteKey(id, "Cellular.Meid");

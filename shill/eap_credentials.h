@@ -143,16 +143,6 @@ class EapCredentials {
       void (EapCredentials::*clear)(Error* error),
       const std::string* default_value);
 
-  // Assigns |value| to |key| in |storage| if |value| is non-empty and |save| is
-  // true. Otherwise, removes |key| from |storage|. If |crypted| is true, the
-  // value is encrypted.
-  static void SaveString(StoreInterface* storage,
-                         const std::string& id,
-                         const std::string& key,
-                         const std::string& value,
-                         bool crypted,
-                         bool save);
-
   // Setters for write-only RPC properties.
   bool SetEapPassword(const std::string& password, Error* error);
 

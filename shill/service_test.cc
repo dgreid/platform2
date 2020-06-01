@@ -515,36 +515,20 @@ TEST_F(ServiceTest, LoadAutoConnect) {
   EXPECT_TRUE(service_->retain_auto_connect());
 }
 
-TEST_F(ServiceTest, SaveString) {
+TEST_F(ServiceTest, SaveStringNonEmpty) {
   MockStore storage;
   static const char kKey[] = "test-key";
   static const char kData[] = "test-data";
   EXPECT_CALL(storage, SetString(storage_id_, kKey, kData))
       .WillOnce(Return(true));
-  service_->SaveString(&storage, storage_id_, kKey, kData, false, true);
-}
-
-TEST_F(ServiceTest, SaveStringCrypted) {
-  MockStore storage;
-  static const char kKey[] = "test-key";
-  static const char kData[] = "test-data";
-  EXPECT_CALL(storage, SetCryptedString(storage_id_, kKey, kData))
-      .WillOnce(Return(true));
-  service_->SaveString(&storage, storage_id_, kKey, kData, true, true);
-}
-
-TEST_F(ServiceTest, SaveStringDontSave) {
-  MockStore storage;
-  static const char kKey[] = "test-key";
-  EXPECT_CALL(storage, DeleteKey(storage_id_, kKey)).WillOnce(Return(true));
-  service_->SaveString(&storage, storage_id_, kKey, "data", false, false);
+  service_->SaveStringOrClear(&storage, storage_id_, kKey, kData);
 }
 
 TEST_F(ServiceTest, SaveStringEmpty) {
   MockStore storage;
   static const char kKey[] = "test-key";
   EXPECT_CALL(storage, DeleteKey(storage_id_, kKey)).WillOnce(Return(true));
-  service_->SaveString(&storage, storage_id_, kKey, "", true, true);
+  service_->SaveStringOrClear(&storage, storage_id_, kKey, "");
 }
 
 TEST_F(ServiceTest, Save) {

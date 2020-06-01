@@ -62,6 +62,17 @@ std::string AddAdditionalInnerEapParams(const std::string& inner_eap) {
   return inner_eap + " " + WPASupplicant::kFlagInnerEapNoMSCHAPV2Retry;
 }
 
+void SaveCryptedStringOrClear(StoreInterface* storage,
+                              const string& id,
+                              const string& key,
+                              const string& value) {
+  if (value.empty()) {
+    storage->DeleteKey(id, key);
+    return;
+  }
+  storage->SetCryptedString(id, key, value);
+}
+
 }  // namespace
 
 namespace Logging {
@@ -342,37 +353,35 @@ void EapCredentials::Save(StoreInterface* storage,
                           const string& id,
                           bool save_credentials) const {
   // Authentication properties.
-  Service::SaveString(storage, id, kStorageEapAnonymousIdentity,
-                      anonymous_identity_, true, save_credentials);
-  Service::SaveString(storage, id, kStorageEapCertID, cert_id_, false,
-                      save_credentials);
-  Service::SaveString(storage, id, kStorageEapIdentity, identity_, true,
-                      save_credentials);
-  Service::SaveString(storage, id, kStorageEapKeyID, key_id_, false,
-                      save_credentials);
-  Service::SaveString(storage, id, kStorageEapKeyManagement, key_management_,
-                      false, true);
-  Service::SaveString(storage, id, kStorageEapPassword, password_, true,
-                      save_credentials);
-  Service::SaveString(storage, id, kStorageEapPin, pin_, false,
-                      save_credentials);
+  SaveCryptedStringOrClear(storage, id, kStorageEapAnonymousIdentity,
+                           save_credentials ? anonymous_identity_ : "");
+  Service::SaveStringOrClear(storage, id, kStorageEapCertID,
+                             save_credentials ? cert_id_ : "");
+  SaveCryptedStringOrClear(storage, id, kStorageEapIdentity,
+                           save_credentials ? identity_ : "");
+  Service::SaveStringOrClear(storage, id, kStorageEapKeyID,
+                             save_credentials ? key_id_ : "");
+  Service::SaveStringOrClear(storage, id, kStorageEapKeyManagement,
+                             key_management_);
+  SaveCryptedStringOrClear(storage, id, kStorageEapPassword,
+                           save_credentials ? password_ : "");
+  Service::SaveStringOrClear(storage, id, kStorageEapPin,
+                             save_credentials ? pin_ : "");
   storage->SetBool(id, kStorageEapUseLoginPassword, use_login_password_);
 
   // Non-authentication properties.
-  Service::SaveString(storage, id, kStorageEapCACertID, ca_cert_id_, false,
-                      true);
+  Service::SaveStringOrClear(storage, id, kStorageEapCACertID, ca_cert_id_);
   if (ca_cert_pem_.empty()) {
     storage->DeleteKey(id, kStorageEapCACertPEM);
   } else {
     storage->SetStringList(id, kStorageEapCACertPEM, ca_cert_pem_);
   }
-  Service::SaveString(storage, id, kStorageEapEap, eap_, false, true);
-  Service::SaveString(storage, id, kStorageEapInnerEap, inner_eap_, false,
-                      true);
-  Service::SaveString(storage, id, kStorageEapTLSVersionMax, tls_version_max_,
-                      false, true);
-  Service::SaveString(storage, id, kStorageEapSubjectMatch, subject_match_,
-                      false, true);
+  Service::SaveStringOrClear(storage, id, kStorageEapEap, eap_);
+  Service::SaveStringOrClear(storage, id, kStorageEapInnerEap, inner_eap_);
+  Service::SaveStringOrClear(storage, id, kStorageEapTLSVersionMax,
+                             tls_version_max_);
+  Service::SaveStringOrClear(storage, id, kStorageEapSubjectMatch,
+                             subject_match_);
   storage->SetStringList(id, kStorageEapSubjectAlternativeNameMatch,
                          subject_alternative_name_match_list_);
   storage->SetBool(id, kStorageEapUseProactiveKeyCaching,
