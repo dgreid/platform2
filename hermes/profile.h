@@ -8,6 +8,7 @@
 #include <memory>
 #include <string>
 
+#include <base/memory/weak_ptr.h>
 #include <google-lpa/lpa/core/lpa.h>
 
 #include "hermes/context.h"
@@ -33,6 +34,9 @@ class Profile : public org::chromium::Hermes::ProfileInterface,
  private:
   explicit Profile(dbus::ObjectPath object_path);
 
+  void OnEnabled(int error, std::shared_ptr<DBusResponse<>> response);
+  void OnDisabled(int error, std::shared_ptr<DBusResponse<>> response);
+
   // org::chromium::Hermes::ProfileAdaptor override.
   bool ValidateNickname(brillo::ErrorPtr* error,
                         const std::string& value) override;
@@ -40,6 +44,8 @@ class Profile : public org::chromium::Hermes::ProfileInterface,
   Context* context_;
   dbus::ObjectPath object_path_;
   brillo::dbus_utils::DBusObject dbus_object_;
+
+  base::WeakPtrFactory<Profile> weak_factory_;
 };
 
 }  // namespace hermes

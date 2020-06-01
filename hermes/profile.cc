@@ -93,7 +93,8 @@ Profile::Profile(dbus::ObjectPath object_path)
     : org::chromium::Hermes::ProfileAdaptor(this),
       context_(Context::Get()),
       object_path_(std::move(object_path)),
-      dbus_object_(nullptr, context_->bus(), object_path_) {}
+      dbus_object_(nullptr, context_->bus(), object_path_),
+      weak_factory_(this) {}
 
 void Profile::Enable(std::unique_ptr<DBusResponse<>> response) {
   if (GetState() == profile::kPending) {
@@ -103,18 +104,15 @@ void Profile::Enable(std::unique_ptr<DBusResponse<>> response) {
     return;
   }
 
-  auto cb = [response{std::shared_ptr<DBusResponse<>>(std::move(response))},
-             this](int error) {
-    auto decoded_error = LpaErrorToBrillo(FROM_HERE, error);
-    if (decoded_error) {
-      response->ReplyWithError(decoded_error.get());
-      return;
-    }
-    SetState(profile::kActive);
-    response->Return();
-  };
-  context_->lpa()->EnableProfile(GetIccid(), context_->executor(),
-                                 std::move(cb));
+  LOG(INFO) << "Enabling profile: " << object_path_.value();
+  context_->lpa()->EnableProfile(
+      GetIccid(), context_->executor(),
+      [response{std::shared_ptr<DBusResponse<>>(std::move(response))},
+       weak{weak_factory_.GetWeakPtr()}](int error) {
+        if (weak) {
+          weak->OnEnabled(error, std::move(response));
+        }
+      });
 }
 
 void Profile::Disable(std::unique_ptr<DBusResponse<>> response) {
@@ -125,18 +123,41 @@ void Profile::Disable(std::unique_ptr<DBusResponse<>> response) {
     return;
   }
 
-  auto cb = [response{std::shared_ptr<DBusResponse<>>(std::move(response))},
-             this](int error) {
-    auto decoded_error = LpaErrorToBrillo(FROM_HERE, error);
-    if (decoded_error) {
-      response->ReplyWithError(decoded_error.get());
-      return;
-    }
-    SetState(profile::kInactive);
-    response->Return();
-  };
-  context_->lpa()->DisableProfile(GetIccid(), context_->executor(),
-                                  std::move(cb));
+  LOG(INFO) << "Disabling profile: " << object_path_.value();
+  context_->lpa()->DisableProfile(
+      GetIccid(), context_->executor(),
+      [response{std::shared_ptr<DBusResponse<>>(std::move(response))},
+       weak{weak_factory_.GetWeakPtr()}](int error) {
+        if (weak) {
+          weak->OnDisabled(error, std::move(response));
+        }
+      });
+}
+
+void Profile::OnEnabled(int error, std::shared_ptr<DBusResponse<>> response) {
+  auto decoded_error = LpaErrorToBrillo(FROM_HERE, error);
+  if (decoded_error) {
+    LOG(INFO) << "Failed enabling profile: " << object_path_.value()
+              << " (error " << decoded_error << ")";
+    response->ReplyWithError(decoded_error.get());
+    return;
+  }
+  LOG(INFO) << "Enabled profile: " << object_path_.value();
+  SetState(profile::kActive);
+  response->Return();
+}
+
+void Profile::OnDisabled(int error, std::shared_ptr<DBusResponse<>> response) {
+  auto decoded_error = LpaErrorToBrillo(FROM_HERE, error);
+  if (decoded_error) {
+    LOG(INFO) << "Failed disabling profile: " << object_path_.value()
+              << " (error " << decoded_error << ")";
+    response->ReplyWithError(decoded_error.get());
+    return;
+  }
+  LOG(INFO) << "Disabled profile: " << object_path_.value();
+  SetState(profile::kInactive);
+  response->Return();
 }
 
 bool Profile::ValidateNickname(brillo::ErrorPtr* /*error*/,
