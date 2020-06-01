@@ -327,7 +327,7 @@ bool DlcBase::Install(ErrorPtr* err) {
           preloaded = true;
           break;
         } else {
-          LOG(ERROR) << "Prealoading failed, so assuming install failure.";
+          LOG(ERROR) << "Preloading failed, so assuming install failure.";
           return false;
         }
       }
